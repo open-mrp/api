@@ -44,6 +44,9 @@ func BatchPresenter(meta *resourcekit.LoadMeta, b *pb.BatchInfo) apiresource.Bat
 	}
 
 	item := batchRef(b.ItemId, constants.ObjectTypeItem, b.ItemSku)
+	if item != nil && b.ItemDescription != nil && *b.ItemDescription != "" {
+		item.Handle = b.ItemDescription
+	}
 
 	scanningStation := batchRef(ptrutil.Deref(b.ScanningStationId), constants.ObjectTypeScanningStation, ptrutil.Deref(b.ScanningStationName))
 
@@ -61,6 +64,9 @@ func BatchPresenter(meta *resourcekit.LoadMeta, b *pb.BatchInfo) apiresource.Bat
 	machines := make([]apiresource.Entity, 0, len(b.Machines))
 	for _, m := range b.Machines {
 		if ref := batchRef(m.Id, constants.ObjectTypeMachine, m.Name); ref != nil {
+			if m.SerialNumber != "" {
+				ref.Handle = &m.SerialNumber
+			}
 			machines = append(machines, *ref)
 		}
 	}

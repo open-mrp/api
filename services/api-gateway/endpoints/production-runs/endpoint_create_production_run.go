@@ -18,10 +18,15 @@ type CreateProductionRunRequest struct {
 	//
 	// Accepts either an account user ID or a user ID; it is resolved and stored as the account user.
 	ResponsibleUserID string `json:"responsible_user_id" validate:"required"`
+	// Batches of work to plan on the new run, at most 500; add more with the add-batches endpoint, or use bulk create.
+	//
+	// Created in the same transaction as the run, so either the run and all of its batches are created or nothing is. Omit to create an empty run and add batches later.
+	Batches []AddBatchInputRequest `json:"batches,omitzero" validate:"omitempty,max=500,dive"`
 }
 
 var sampleCreateProductionRunRequest = &CreateProductionRunRequest{
 	ResponsibleUserID: apiresource.SampleUserID,
+	Batches:           sampleAddBatchesToProductionRunRequest.Batches,
 }
 
 func (*CreateProductionRunRequest) SchemaExample() any {
@@ -30,7 +35,7 @@ func (*CreateProductionRunRequest) SchemaExample() any {
 
 // Creates a production run.
 //
-// The run number is assigned automatically as the next sequential number for the account. The new run starts empty and neither started nor completed; add the work to be run with the add-batches endpoint.
+// The run number is assigned automatically as the next sequential number for the account. The new run is neither started nor completed. Its work can be planned up front with `batches`, or added later with the add-batches endpoint.
 type CreateProductionRunEndpoint struct{}
 
 func (e *CreateProductionRunEndpoint) Materialize() *apiendpoint.APIEndpoint[*CreateProductionRunRequest, *apiresource.ProductionRun] {

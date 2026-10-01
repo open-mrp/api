@@ -4,6 +4,7 @@ import (
 	"time"
 
 	"github.com/open-mrp/api/shared/pagination"
+	"github.com/shopspring/decimal"
 )
 
 // ProductionRun represents a full production run domain model.
@@ -38,12 +39,23 @@ type ProductionRunExportBatch struct {
 	ScannedAt      *time.Time
 }
 
+// ProductionRunBatchSummary totals a run's batches of one item in one unit.
+type ProductionRunBatchSummary struct {
+	ItemID           string
+	ItemSKU          string
+	UnitID           string
+	UnitAbbreviation string
+	Quantity         decimal.Decimal
+	BatchCount       int32
+}
+
 type ProductionRun struct {
 	ID                string
 	Number            string `audit:"number"`
 	ResponsibleUserID string `audit:"responsible_user_id"`
 	AccountID         string
-	BatchCount        int32      `audit:"batch_count"`
+	BatchCount        int32 `audit:"batch_count"`
+	BatchSummaries    []ProductionRunBatchSummary
 	StartedAt         *time.Time `audit:"started_at"`
 	CompletedAt       *time.Time `audit:"completed_at"`
 	CreatedAt         time.Time
@@ -62,6 +74,7 @@ type ProductionRunSummary struct {
 	Number            string
 	ResponsibleUserID string
 	BatchCount        int32
+	BatchSummaries    []ProductionRunBatchSummary
 	StartedAt         *time.Time
 	CompletedAt       *time.Time
 	CreatedAt         time.Time
@@ -103,6 +116,8 @@ type GetProductionRunParams struct {
 type CreateProductionRunParams struct {
 	AccountID         string
 	ResponsibleUserID string
+	// Batches are planned on the run in the same transaction that creates it.
+	Batches []AddBatchInput
 }
 
 // UpdateProductionRunParams holds the parameters for updating a production run.
@@ -135,6 +150,7 @@ type AddBatchInput struct {
 	Waste             *CreateQuantityParams
 	ProductionStepID  *string
 	ScanningStationID *string
+	MachineIDs        []string
 }
 
 // BulkCreateBatchParams is a single batch in a bulk production run create, with the
@@ -201,6 +217,8 @@ type ListBatchesByProductionRunParams struct {
 	Cursor          *string
 	Limit           int32
 	SearchQuery     *string
+	// Scope is a constants.ProductionRunBatchScope; nil means flow.
+	Scope *string
 }
 
 // ListBatchesByProductionRunResult holds paginated batches for a production run.

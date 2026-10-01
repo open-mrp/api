@@ -314,6 +314,7 @@ SELECT
     b.production_run_id,
     i.id AS item_id,
     i.sku AS item_sku,
+    i.description AS item_description,
     q.id AS quantity_id,
     q.value AS quantity_value,
     qu.id AS quantity_unit_id,
@@ -368,6 +369,7 @@ type GetBatchRow struct {
 	ProductionRunID          sql.NullString
 	ItemID                   string
 	ItemSku                  string
+	ItemDescription          sql.NullString
 	QuantityID               string
 	QuantityValue            string
 	QuantityUnitID           string
@@ -406,6 +408,7 @@ func (q *Queries) GetBatch(ctx context.Context, arg GetBatchParams) (GetBatchRow
 		&i.ProductionRunID,
 		&i.ItemID,
 		&i.ItemSku,
+		&i.ItemDescription,
 		&i.QuantityID,
 		&i.QuantityValue,
 		&i.QuantityUnitID,
@@ -654,66 +657,20 @@ func (q *Queries) GetBatchFlowTraversalInfo(ctx context.Context, arg GetBatchFlo
 	return i, err
 }
 
-const getBatchLots = `-- name: GetBatchLots :many
-SELECT DISTINCT l.lot_number, 'material' AS lot_type
-FROM inventory_issue ii
-JOIN lot l ON ii.lot_id = l.id
-WHERE ii.batch_id = ?
-AND l.lot_number IS NOT NULL
-UNION
-SELECT DISTINCT l.lot_number, 'material' AS lot_type
-FROM inventory_issue ii
-JOIN inventory_allocation ia ON ia.inventory_issue_id = ii.id
-JOIN inventory_receipt ir ON ia.inventory_receipt_id = ir.id
-JOIN lot l ON ir.lot_id = l.id
-WHERE ii.batch_id = ?
-AND l.lot_number IS NOT NULL
-`
-
-type GetBatchLotsParams struct {
-	BatchID sql.NullString
-}
-
-type GetBatchLotsRow struct {
-	LotNumber string
-	LotType   string
-}
-
-func (q *Queries) GetBatchLots(ctx context.Context, arg GetBatchLotsParams) ([]GetBatchLotsRow, error) {
-	rows, err := q.db.QueryContext(ctx, getBatchLots, arg.BatchID, arg.BatchID)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	var items []GetBatchLotsRow
-	for rows.Next() {
-		var i GetBatchLotsRow
-		if err := rows.Scan(&i.LotNumber, &i.LotType); err != nil {
-			return nil, err
-		}
-		items = append(items, i)
-	}
-	if err := rows.Close(); err != nil {
-		return nil, err
-	}
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-	return items, nil
-}
-
 const getBatchMachines = `-- name: GetBatchMachines :many
 SELECT
     m.id,
-    m.name
+    m.name,
+    m.serial_number
 FROM _batches_machines bm
 JOIN machine m ON bm.B = m.id
 WHERE bm.A = ?
 `
 
 type GetBatchMachinesRow struct {
-	ID   string
-	Name string
+	ID           string
+	Name         string
+	SerialNumber string
 }
 
 func (q *Queries) GetBatchMachines(ctx context.Context, batchID string) ([]GetBatchMachinesRow, error) {
@@ -725,7 +682,7 @@ func (q *Queries) GetBatchMachines(ctx context.Context, batchID string) ([]GetBa
 	var items []GetBatchMachinesRow
 	for rows.Next() {
 		var i GetBatchMachinesRow
-		if err := rows.Scan(&i.ID, &i.Name); err != nil {
+		if err := rows.Scan(&i.ID, &i.Name, &i.SerialNumber); err != nil {
 			return nil, err
 		}
 		items = append(items, i)
@@ -847,6 +804,164 @@ func (q *Queries) LinkBatchMachine(ctx context.Context, arg LinkBatchMachinePara
 	return err
 }
 
+const listBatchBasesByIDs = `-- name: ListBatchBasesByIDs :many
+SELECT
+    b.id,
+    b.account_id,
+    b.closed_at,
+    b.scanned_at,
+    b.created_at,
+    b.updated_at,
+    b.production_run_id,
+    i.id AS item_id,
+    i.sku AS item_sku,
+    q.id AS quantity_id,
+    q.value AS quantity_value,
+    qu.id AS quantity_unit_id,
+    qu.abbreviation AS quantity_unit_abbreviation,
+    qu.unit_dimension_code AS quantity_unit_type,
+    sq.id AS seconds_quantity_id,
+    sq.value AS seconds_quantity_value,
+    su.id AS seconds_unit_id,
+    su.abbreviation AS seconds_unit_abbreviation,
+    su.unit_dimension_code AS seconds_unit_type,
+    wq.id AS waste_quantity_id,
+    wq.value AS waste_quantity_value,
+    wu.id AS waste_unit_id,
+    wu.abbreviation AS waste_unit_abbreviation,
+    wu.unit_dimension_code AS waste_unit_type,
+    ss.id AS scanning_station_id,
+    ss.name AS scanning_station_name,
+    d.id AS department_id,
+    d.name AS department_name,
+    ps.id AS production_step_id,
+    ps.name AS production_step_name,
+    pr.id AS production_run_id_2,
+    pr.number AS production_run_number
+FROM batch b
+JOIN item i ON b.item_id = i.id
+JOIN quantity q ON b.quantity_id = q.id
+JOIN unit qu ON q.unit_id = qu.id
+LEFT JOIN quantity sq ON b.seconds_quantity_id = sq.id
+LEFT JOIN unit su ON sq.unit_id = su.id
+LEFT JOIN quantity wq ON b.waste_quantity_id = wq.id
+LEFT JOIN unit wu ON wq.unit_id = wu.id
+LEFT JOIN scanning_station ss ON b.scanning_station_id = ss.id
+LEFT JOIN department d ON ss.department_id = d.id
+LEFT JOIN production_step ps ON b.production_step_id = ps.id
+LEFT JOIN production_run pr ON b.production_run_id = pr.id
+WHERE b.id IN (/*SLICE:ids*/?)
+AND b.account_id = ?
+`
+
+type ListBatchBasesByIDsParams struct {
+	Ids       []string
+	AccountID string
+}
+
+type ListBatchBasesByIDsRow struct {
+	ID                       string
+	AccountID                string
+	ClosedAt                 sql.NullTime
+	ScannedAt                sql.NullTime
+	CreatedAt                time.Time
+	UpdatedAt                time.Time
+	ProductionRunID          sql.NullString
+	ItemID                   string
+	ItemSku                  string
+	QuantityID               string
+	QuantityValue            string
+	QuantityUnitID           string
+	QuantityUnitAbbreviation string
+	QuantityUnitType         string
+	SecondsQuantityID        sql.NullString
+	SecondsQuantityValue     sql.NullString
+	SecondsUnitID            sql.NullString
+	SecondsUnitAbbreviation  sql.NullString
+	SecondsUnitType          sql.NullString
+	WasteQuantityID          sql.NullString
+	WasteQuantityValue       sql.NullString
+	WasteUnitID              sql.NullString
+	WasteUnitAbbreviation    sql.NullString
+	WasteUnitType            sql.NullString
+	ScanningStationID        sql.NullString
+	ScanningStationName      sql.NullString
+	DepartmentID             sql.NullString
+	DepartmentName           sql.NullString
+	ProductionStepID         sql.NullString
+	ProductionStepName       sql.NullString
+	ProductionRunID2         sql.NullString
+	ProductionRunNumber      sql.NullString
+}
+
+// The bulk form of GetBatchBase; same columns, so rows convert to GetBatchBaseRow.
+func (q *Queries) ListBatchBasesByIDs(ctx context.Context, arg ListBatchBasesByIDsParams) ([]ListBatchBasesByIDsRow, error) {
+	query := listBatchBasesByIDs
+	var queryParams []interface{}
+	if len(arg.Ids) > 0 {
+		for _, v := range arg.Ids {
+			queryParams = append(queryParams, v)
+		}
+		query = strings.Replace(query, "/*SLICE:ids*/?", strings.Repeat(",?", len(arg.Ids))[1:], 1)
+	} else {
+		query = strings.Replace(query, "/*SLICE:ids*/?", "NULL", 1)
+	}
+	queryParams = append(queryParams, arg.AccountID)
+	rows, err := q.db.QueryContext(ctx, query, queryParams...)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []ListBatchBasesByIDsRow
+	for rows.Next() {
+		var i ListBatchBasesByIDsRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.AccountID,
+			&i.ClosedAt,
+			&i.ScannedAt,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+			&i.ProductionRunID,
+			&i.ItemID,
+			&i.ItemSku,
+			&i.QuantityID,
+			&i.QuantityValue,
+			&i.QuantityUnitID,
+			&i.QuantityUnitAbbreviation,
+			&i.QuantityUnitType,
+			&i.SecondsQuantityID,
+			&i.SecondsQuantityValue,
+			&i.SecondsUnitID,
+			&i.SecondsUnitAbbreviation,
+			&i.SecondsUnitType,
+			&i.WasteQuantityID,
+			&i.WasteQuantityValue,
+			&i.WasteUnitID,
+			&i.WasteUnitAbbreviation,
+			&i.WasteUnitType,
+			&i.ScanningStationID,
+			&i.ScanningStationName,
+			&i.DepartmentID,
+			&i.DepartmentName,
+			&i.ProductionStepID,
+			&i.ProductionStepName,
+			&i.ProductionRunID2,
+			&i.ProductionRunNumber,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const listBatchesByScanningStationBackward = `-- name: ListBatchesByScanningStationBackward :many
 SELECT
     b.id,
@@ -858,6 +973,7 @@ SELECT
     b.production_run_id,
     i.id AS item_id,
     i.sku AS item_sku,
+    i.description AS item_description,
     q.id AS quantity_id,
     q.value AS quantity_value,
     qu.id AS quantity_unit_id,
@@ -924,6 +1040,7 @@ type ListBatchesByScanningStationBackwardRow struct {
 	ProductionRunID          sql.NullString
 	ItemID                   string
 	ItemSku                  string
+	ItemDescription          sql.NullString
 	QuantityID               string
 	QuantityValue            string
 	QuantityUnitID           string
@@ -975,6 +1092,7 @@ func (q *Queries) ListBatchesByScanningStationBackward(ctx context.Context, arg 
 			&i.ProductionRunID,
 			&i.ItemID,
 			&i.ItemSku,
+			&i.ItemDescription,
 			&i.QuantityID,
 			&i.QuantityValue,
 			&i.QuantityUnitID,
@@ -1021,6 +1139,7 @@ SELECT
     b.production_run_id,
     i.id AS item_id,
     i.sku AS item_sku,
+    i.description AS item_description,
     q.id AS quantity_id,
     q.value AS quantity_value,
     qu.id AS quantity_unit_id,
@@ -1088,6 +1207,7 @@ type ListBatchesByScanningStationForwardRow struct {
 	ProductionRunID          sql.NullString
 	ItemID                   string
 	ItemSku                  string
+	ItemDescription          sql.NullString
 	QuantityID               string
 	QuantityValue            string
 	QuantityUnitID           string
@@ -1140,6 +1260,7 @@ func (q *Queries) ListBatchesByScanningStationForward(ctx context.Context, arg L
 			&i.ProductionRunID,
 			&i.ItemID,
 			&i.ItemSku,
+			&i.ItemDescription,
 			&i.QuantityID,
 			&i.QuantityValue,
 			&i.QuantityUnitID,

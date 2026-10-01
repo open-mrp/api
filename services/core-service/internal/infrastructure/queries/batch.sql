@@ -9,6 +9,7 @@ SELECT
     b.production_run_id,
     i.id AS item_id,
     i.sku AS item_sku,
+    i.description AS item_description,
     q.id AS quantity_id,
     q.value AS quantity_value,
     qu.id AS quantity_unit_id,
@@ -96,6 +97,56 @@ LEFT JOIN production_run pr ON b.production_run_id = pr.id
 WHERE b.id = sqlc.arg('id')
 AND b.account_id = sqlc.arg('account_id');
 
+-- name: ListBatchBasesByIDs :many
+-- The bulk form of GetBatchBase; same columns, so rows convert to GetBatchBaseRow.
+SELECT
+    b.id,
+    b.account_id,
+    b.closed_at,
+    b.scanned_at,
+    b.created_at,
+    b.updated_at,
+    b.production_run_id,
+    i.id AS item_id,
+    i.sku AS item_sku,
+    q.id AS quantity_id,
+    q.value AS quantity_value,
+    qu.id AS quantity_unit_id,
+    qu.abbreviation AS quantity_unit_abbreviation,
+    qu.unit_dimension_code AS quantity_unit_type,
+    sq.id AS seconds_quantity_id,
+    sq.value AS seconds_quantity_value,
+    su.id AS seconds_unit_id,
+    su.abbreviation AS seconds_unit_abbreviation,
+    su.unit_dimension_code AS seconds_unit_type,
+    wq.id AS waste_quantity_id,
+    wq.value AS waste_quantity_value,
+    wu.id AS waste_unit_id,
+    wu.abbreviation AS waste_unit_abbreviation,
+    wu.unit_dimension_code AS waste_unit_type,
+    ss.id AS scanning_station_id,
+    ss.name AS scanning_station_name,
+    d.id AS department_id,
+    d.name AS department_name,
+    ps.id AS production_step_id,
+    ps.name AS production_step_name,
+    pr.id AS production_run_id_2,
+    pr.number AS production_run_number
+FROM batch b
+JOIN item i ON b.item_id = i.id
+JOIN quantity q ON b.quantity_id = q.id
+JOIN unit qu ON q.unit_id = qu.id
+LEFT JOIN quantity sq ON b.seconds_quantity_id = sq.id
+LEFT JOIN unit su ON sq.unit_id = su.id
+LEFT JOIN quantity wq ON b.waste_quantity_id = wq.id
+LEFT JOIN unit wu ON wq.unit_id = wu.id
+LEFT JOIN scanning_station ss ON b.scanning_station_id = ss.id
+LEFT JOIN department d ON ss.department_id = d.id
+LEFT JOIN production_step ps ON b.production_step_id = ps.id
+LEFT JOIN production_run pr ON b.production_run_id = pr.id
+WHERE b.id IN (sqlc.slice('ids'))
+AND b.account_id = sqlc.arg('account_id');
+
 -- GetBatchFlowOutgoing returns the downstream batches the given batch feeds.
 --
 -- _batch_flow follows the Prisma implicit self-m2m mapping (same rule as
@@ -125,6 +176,7 @@ SELECT
     b.production_run_id,
     i.id AS item_id,
     i.sku AS item_sku,
+    i.description AS item_description,
     q.id AS quantity_id,
     q.value AS quantity_value,
     qu.id AS quantity_unit_id,
@@ -183,6 +235,7 @@ SELECT
     b.production_run_id,
     i.id AS item_id,
     i.sku AS item_sku,
+    i.description AS item_description,
     q.id AS quantity_id,
     q.value AS quantity_value,
     qu.id AS quantity_unit_id,
@@ -352,7 +405,8 @@ WHERE id = sqlc.arg('id') AND account_id = sqlc.arg('account_id');
 -- name: GetBatchMachines :many
 SELECT
     m.id,
-    m.name
+    m.name,
+    m.serial_number
 FROM _batches_machines bm
 JOIN machine m ON bm.B = m.id
 WHERE bm.A = sqlc.arg('batch_id');
@@ -391,21 +445,6 @@ ORDER BY b.production_run_id, b.created_at, b.id;
 
 -- name: IsBatchInAccount :one
 SELECT COUNT(*) FROM batch WHERE id = sqlc.arg('id') AND account_id = sqlc.arg('account_id');
-
--- name: GetBatchLots :many
-SELECT DISTINCT l.lot_number, 'material' AS lot_type
-FROM inventory_issue ii
-JOIN lot l ON ii.lot_id = l.id
-WHERE ii.batch_id = sqlc.arg('batch_id')
-AND l.lot_number IS NOT NULL
-UNION
-SELECT DISTINCT l.lot_number, 'material' AS lot_type
-FROM inventory_issue ii
-JOIN inventory_allocation ia ON ia.inventory_issue_id = ii.id
-JOIN inventory_receipt ir ON ia.inventory_receipt_id = ir.id
-JOIN lot l ON ir.lot_id = l.id
-WHERE ii.batch_id = sqlc.arg('batch_id')
-AND l.lot_number IS NOT NULL;
 
 -- FindPossibleInitSteps returns the steps a batch can be initialized at from a given scanning station: the steps at that station that produce the batch's own item.
 --

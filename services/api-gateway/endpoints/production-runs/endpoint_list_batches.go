@@ -15,12 +15,16 @@ import (
 type ListBatchesByProductionRunRequest struct {
 	// Production run ID.
 	ProductionRunID string `path:"id" validate:"required"`
+	// Which batches to return.
+	//
+	// `flow` (the default) follows the batch flow around the run's batches as described above. `run` returns only the batches created under the run itself, as they were planned on it.
+	Scope *constants.ProductionRunBatchScope `query:"scope"`
 	apiresource.PaginationRequest
 }
 
 // Returns a paginated list of the batches that make up a production run, most recently created first.
 //
-// The result is not limited to the batches recorded directly against the run. Starting from those batches, the batch flow is followed downstream to the batches they feed and upstream to the batches that feed them while that branch is still open, so the whole in-progress flow around the run is returned.
+// By default the result is not limited to the batches recorded directly against the run. Starting from those batches, the batch flow is followed downstream to the batches they feed and upstream to the batches that feed them while that branch is still open, so the whole in-progress flow around the run is returned. Pass `scope=run` for only the run's own batches.
 //
 // The `q` search term matches a batch ID, item SKU, scanning station name, department name, production step name, run number, lot number, or machine name.
 type ListBatchesByProductionRunEndpoint struct{}

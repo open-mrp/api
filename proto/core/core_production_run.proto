@@ -71,6 +71,16 @@ message BulkCreateProductionRunsResponse {
 }
 
 // ProductionRunInfo represents a full production run resource.
+// ProductionRunBatchSummaryInfo totals a run's batches of one item in one unit.
+message ProductionRunBatchSummaryInfo {
+  string item_id = 1;
+  string item_sku = 2;
+  string unit_id = 3;
+  string unit_abbreviation = 4;
+  string quantity_value = 5;
+  int32 batch_count = 6;
+}
+
 message ProductionRunInfo {
   string id = 1;
   string number = 2;
@@ -84,6 +94,7 @@ message ProductionRunInfo {
   optional string responsible_user_status_code = 10;
   optional google.protobuf.Timestamp responsible_user_created_at = 11;
   optional google.protobuf.Timestamp responsible_user_updated_at = 12;
+  repeated ProductionRunBatchSummaryInfo batch_summaries = 13;
 }
 
 // ProductionRunSummaryInfo represents a production run for list views.
@@ -100,6 +111,7 @@ message ProductionRunSummaryInfo {
   optional string responsible_user_status_code = 10;
   optional google.protobuf.Timestamp responsible_user_created_at = 11;
   optional google.protobuf.Timestamp responsible_user_updated_at = 12;
+  repeated ProductionRunBatchSummaryInfo batch_summaries = 13;
 }
 
 message ListProductionRunsRequest {
@@ -135,6 +147,7 @@ message GetProductionRunResponse {
 
 message CreateProductionRunRequest {
   string responsible_user_id = 1;
+  repeated AddBatchInput batches = 2;
 }
 
 message CreateProductionRunResponse {
@@ -165,6 +178,7 @@ message AddBatchInput {
   optional string waste_unit_id = 7;
   optional string production_step_id = 8;
   optional string scanning_station_id = 9;
+  repeated string machine_ids = 10;
 }
 
 message AddBatchesToProductionRunRequest {
@@ -181,6 +195,7 @@ message ListBatchesByProductionRunRequest {
   optional string cursor = 2;
   int32 limit = 3;
   optional string query = 4;
+  optional string scope = 5;
 }
 
 message ListBatchesByProductionRunResponse {

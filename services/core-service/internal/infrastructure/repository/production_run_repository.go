@@ -10,12 +10,15 @@ import (
 
 	"github.com/open-mrp/api/services/core-service/internal/domain"
 	"github.com/open-mrp/api/services/core-service/internal/infrastructure/sqlc"
+	"github.com/open-mrp/api/shared/constants"
 	"github.com/open-mrp/api/shared/db"
 	apierror "github.com/open-mrp/api/shared/errors"
 	"github.com/open-mrp/api/shared/id"
 	"github.com/open-mrp/api/shared/pagination"
 	"github.com/open-mrp/api/shared/safeconv"
 	"github.com/open-mrp/api/shared/tracing"
+	"github.com/shopspring/decimal"
+	"go.opentelemetry.io/otel/trace"
 )
 
 var productionRunRepoTracer = tracing.GetTracer("core-service.production_run_repository")
@@ -36,7 +39,7 @@ func buildProductionRunSearchParams(query *string) (numberQuery gosql.NullString
 		return gosql.NullString{}, gosql.NullString{}
 	}
 	return gosql.NullString{String: "%" + db.EscapeLike(*query) + "%", Valid: true},
-		gosql.NullString{String: *query + "%", Valid: true}
+		gosql.NullString{String: db.EscapeLike(*query) + "%", Valid: true}
 }
 
 func buildProductionRunListFilters(params domain.ListProductionRunsParams) (
@@ -217,13 +220,14 @@ func (r *productionRunRepoImpl) List(ctx context.Context, params domain.ListProd
 				runs[i] = mapBackwardProductionRunRow(row)
 			}
 			result, pageInfo := pagination.BuildPageString(runs, params.Limit, cursorDir, productionRunSummaryCreatedAt, productionRunSummaryID)
-			return &domain.ListProductionRunsResult{ProductionRuns: result, PageInfo: pageInfo}, nil
+			return r.listResultWithSummaries(ctx, span, params.AccountID, result, pageInfo)
 		}
 
 		// Forward with cursor
 		rows, err := r.queries.ListProductionRunsForward(ctx, sqlc.ListProductionRunsForwardParams{
 			AccountID:            params.AccountID,
 			SearchQuery:          searchQuery,
+			BatchIDQuery:         batchIDQuery,
 			IncludeStatusFilter:  includeStatusFilter,
 			StatusOpen:           statusOpen,
 			StatusClosed:         statusClosed,
@@ -245,13 +249,14 @@ func (r *productionRunRepoImpl) List(ctx context.Context, params domain.ListProd
 			runs[i] = mapForwardProductionRunRow(row)
 		}
 		result, pageInfo := pagination.BuildPageString(runs, params.Limit, cursorDir, productionRunSummaryCreatedAt, productionRunSummaryID)
-		return &domain.ListProductionRunsResult{ProductionRuns: result, PageInfo: pageInfo}, nil
+		return r.listResultWithSummaries(ctx, span, params.AccountID, result, pageInfo)
 	}
 
 	// No cursor — first page
 	rows, err := r.queries.ListProductionRunsForward(ctx, sqlc.ListProductionRunsForwardParams{
 		AccountID:            params.AccountID,
 		SearchQuery:          searchQuery,
+		BatchIDQuery:         batchIDQuery,
 		IncludeStatusFilter:  includeStatusFilter,
 		StatusOpen:           statusOpen,
 		StatusClosed:         statusClosed,
@@ -273,7 +278,7 @@ func (r *productionRunRepoImpl) List(ctx context.Context, params domain.ListProd
 		runs[i] = mapForwardProductionRunRow(row)
 	}
 	result, pageInfo := pagination.BuildPageString(runs, params.Limit, cursorDir, productionRunSummaryCreatedAt, productionRunSummaryID)
-	return &domain.ListProductionRunsResult{ProductionRuns: result, PageInfo: pageInfo}, nil
+	return r.listResultWithSummaries(ctx, span, params.AccountID, result, pageInfo)
 }
 
 // resolvedResponsibleUserID prefers the account_user id resolved by the query; legacy rows store a user id in responsible_user_id and may have no account_user match, in which case the raw value is kept.
@@ -383,6 +388,12 @@ func (r *productionRunRepoImpl) Get(ctx context.Context, params domain.GetProduc
 	if row.CompletedAt.Valid {
 		run.CompletedAt = &row.CompletedAt.Time
 	}
+
+	summaries, apiErr := r.batchSummariesByRun(ctx, params.AccountID, []string{run.ID})
+	if apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
+	run.BatchSummaries = summaries[run.ID]
 
 	return run, nil
 }
@@ -618,205 +629,235 @@ func (r *productionRunRepoImpl) ListBatchesByRun(ctx context.Context, params dom
 	ctx, span := productionRunRepoTracer.Start(ctx, "repository.production_run.list_batches_by_run")
 	defer span.End()
 
-	// Step 1: Get initial batch IDs in the production run.
-	initialRows, err := r.queries.GetBatchIDsByProductionRun(ctx, sqlc.GetBatchIDsByProductionRunParams{
+	initialRows, err := r.queries.ListRunBatchTraversal(ctx, sqlc.ListRunBatchTraversalParams{
 		ProductionRunID: gosql.NullString{String: params.ProductionRunID, Valid: true},
 		AccountID:       params.AccountID,
 	})
 	if apiErr := db.MapSQLError(err); apiErr != nil {
 		return nil, tracing.Trace(span, apiErr)
 	}
-
-	// Step 2: BFS traversal following batch flow graph.
-	// Matches Dashboard behavior: always traverse downstream (out), only traverse upstream (in) for active branches (open or leading to open batches).
-	visited := make(map[string]bool)
-	batchIDs := make(map[string]bool)
-	activeBranchBatches := make(map[string]bool)
-
-	type queueEntry struct {
-		id       string
-		isClosed bool
+	initial := make([]batchTraversalRef, len(initialRows))
+	for i, row := range initialRows {
+		initial[i] = batchTraversalRef{id: row.ID, closed: row.ClosedAt.Valid, createdAt: row.CreatedAt}
 	}
 
-	queue := make([]queueEntry, 0, len(initialRows))
-	for _, row := range initialRows {
-		queue = append(queue, queueEntry{id: row.ID, isClosed: row.ClosedAt.Valid})
-	}
-
-	for len(queue) > 0 {
-		current := queue[0]
-		queue = queue[1:]
-
-		if visited[current.id] {
-			continue
-		}
-		visited[current.id] = true
-		batchIDs[current.id] = true
-
-		isOpen := !current.isClosed
-
-		// Get outgoing (downstream) batches.
-		outgoing, err := r.queries.GetBatchFlowOutgoing(ctx, current.id)
-		if apiErr := db.MapSQLError(err); apiErr != nil {
+	refs := initial
+	if params.Scope == nil || *params.Scope != string(constants.ProductionRunBatchScopeRun) {
+		walked, apiErr := r.walkBatchFlow(ctx, params.AccountID, initial)
+		if apiErr != nil {
 			return nil, tracing.Trace(span, apiErr)
 		}
+		refs = walked
+	}
+
+	// A search matches on hydrated fields (SKU, station, lots, ...), so every candidate is loaded.
+	if params.SearchQuery != nil && strings.TrimSpace(*params.SearchQuery) != "" {
+		ids := make([]string, len(refs))
+		for i, ref := range refs {
+			ids[i] = ref.id
+		}
+		batches, apiErr := r.hydrateBatches(ctx, params.AccountID, ids)
+		if apiErr != nil {
+			return nil, tracing.Trace(span, apiErr)
+		}
+		q := strings.ToLower(strings.TrimSpace(*params.SearchQuery))
+		matched := make([]*domain.Batch, 0, len(batches))
+		for _, b := range batches {
+			if batchMatchesSearch(b, q) {
+				matched = append(matched, b)
+			}
+		}
+		page, pageInfo, apiErr := paginateByCreatedAt(matched,
+			func(b *domain.Batch) time.Time { return b.CreatedAt },
+			func(b *domain.Batch) string { return b.ID },
+			params.Cursor, params.Limit)
+		if apiErr != nil {
+			return nil, tracing.Trace(span, apiErr)
+		}
+		return &domain.ListBatchesByProductionRunResult{Batches: page, PageInfo: pageInfo}, nil
+	}
+
+	// Otherwise page on the lightweight refs and load only the page.
+	pageRefs, pageInfo, apiErr := paginateByCreatedAt(refs,
+		func(ref batchTraversalRef) time.Time { return ref.createdAt },
+		func(ref batchTraversalRef) string { return ref.id },
+		params.Cursor, params.Limit)
+	if apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
+	ids := make([]string, len(pageRefs))
+	for i, ref := range pageRefs {
+		ids[i] = ref.id
+	}
+	hydrated, apiErr := r.hydrateBatches(ctx, params.AccountID, ids)
+	if apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
+	byID := make(map[string]*domain.Batch, len(hydrated))
+	for _, b := range hydrated {
+		byID[b.ID] = b
+	}
+	page := make([]*domain.Batch, 0, len(pageRefs))
+	for _, ref := range pageRefs {
+		if b, ok := byID[ref.id]; ok {
+			page = append(page, b)
+		}
+	}
+	return &domain.ListBatchesByProductionRunResult{Batches: page, PageInfo: pageInfo}, nil
+}
+
+// batchTraversalRef is what the flow walk and pagination need of a batch.
+type batchTraversalRef struct {
+	id        string
+	closed    bool
+	createdAt time.Time
+}
+
+// walkBatchFlow follows the batch flow out from a run's batches: always downstream, and
+// upstream only along branches that are open or lead to an open batch. It visits batches in
+// the same order as a node-at-a-time breadth-first walk, but loads the edges and closed
+// state of every batch waiting in the queue at once, so its queries grow with the depth of
+// the flow rather than its size. Batches outside the account are never visited.
+func (r *productionRunRepoImpl) walkBatchFlow(ctx context.Context, accountID string, initial []batchTraversalRef) ([]batchTraversalRef, *apierror.APIError) {
+	known := make(map[string]batchTraversalRef, len(initial))
+	queue := make([]string, 0, len(initial))
+	for _, ref := range initial {
+		known[ref.id] = ref
+		queue = append(queue, ref.id)
+	}
+
+	incoming := make(map[string][]string)
+	outgoing := make(map[string][]string)
+	loaded := make(map[string]bool)
+	visited := make(map[string]bool)
+	active := make(map[string]bool)
+	var result []batchTraversalRef
+
+	for head := 0; head < len(queue); head++ {
+		current := queue[head]
+		if visited[current] {
+			continue
+		}
+
+		if !loaded[current] {
+			if apiErr := r.loadFlowFrontier(ctx, accountID, queue[head:], visited, loaded, known, incoming, outgoing); apiErr != nil {
+				return nil, apiErr
+			}
+		}
+
+		visited[current] = true
+		result = append(result, known[current])
 
 		hasActiveDownstream := false
-		for _, outID := range outgoing {
-			if activeBranchBatches[outID] {
+		for _, out := range outgoing[current] {
+			if active[out] {
 				hasActiveDownstream = true
 				break
 			}
 		}
-
-		if isOpen || hasActiveDownstream {
-			activeBranchBatches[current.id] = true
-
-			// Traverse upstream (in) only for active branches.
-			incoming, err := r.queries.GetBatchFlowIncoming(ctx, current.id)
-			if apiErr := db.MapSQLError(err); apiErr != nil {
-				return nil, tracing.Trace(span, apiErr)
-			}
-			for _, inID := range incoming {
-				if !visited[inID] {
-					closedAt, err := r.queries.GetBatchClosedAt(ctx, sqlc.GetBatchClosedAtParams{
-						ID:        inID,
-						AccountID: params.AccountID,
-					})
-					if err != nil {
-						continue
-					}
-					queue = append(queue, queueEntry{id: inID, isClosed: closedAt.Valid})
+		if !known[current].closed || hasActiveDownstream {
+			active[current] = true
+			for _, in := range incoming[current] {
+				if _, inAccount := known[in]; inAccount && !visited[in] {
+					queue = append(queue, in)
 				}
 			}
 		}
-
-		// Always traverse downstream (out).
-		for _, outID := range outgoing {
-			if !visited[outID] {
-				closedAt, err := r.queries.GetBatchClosedAt(ctx, sqlc.GetBatchClosedAtParams{
-					ID:        outID,
-					AccountID: params.AccountID,
-				})
-				if err != nil {
-					continue
-				}
-				queue = append(queue, queueEntry{id: outID, isClosed: closedAt.Valid})
+		for _, out := range outgoing[current] {
+			if _, inAccount := known[out]; inAccount && !visited[out] {
+				queue = append(queue, out)
 			}
 		}
 	}
-
-	// Step 3: Fetch full batch data + machines + lots + flow IDs for all collected IDs.
-	batches := make([]*domain.Batch, 0, len(batchIDs))
-	for id := range batchIDs {
-		row, err := r.queries.GetBatch(ctx, sqlc.GetBatchParams{
-			ID:        id,
-			AccountID: params.AccountID,
-		})
-		if apiErr := db.MapSQLError(err); apiErr != nil {
-			return nil, tracing.Trace(span, apiErr)
-		}
-
-		batch := mapBatchRow(row)
-
-		machineRows, err := r.queries.GetBatchMachines(ctx, id)
-		if apiErr := db.MapSQLError(err); apiErr != nil {
-			return nil, tracing.Trace(span, apiErr)
-		}
-		machines := make([]domain.LightMachine, len(machineRows))
-		for i, m := range machineRows {
-			machines[i] = domain.LightMachine{ID: m.ID, Name: m.Name}
-		}
-		batch.Machines = machines
-
-		// Fetch lots (material lots from inventory issues/allocations).
-		lotRows, err := r.queries.GetBatchLots(ctx, sqlc.GetBatchLotsParams{
-			BatchID: gosql.NullString{String: id, Valid: true},
-		})
-		if apiErr := db.MapSQLError(err); apiErr != nil {
-			return nil, tracing.Trace(span, apiErr)
-		}
-		seenLots := make(map[string]bool)
-		lots := make([]domain.BatchLot, 0, len(lotRows))
-		for _, l := range lotRows {
-			if !seenLots[l.LotNumber] {
-				seenLots[l.LotNumber] = true
-				lots = append(lots, domain.BatchLot{LotNumber: l.LotNumber, Type: l.LotType})
-			}
-		}
-		// Add production run lot number if present.
-		if batch.ProductionRun != nil && batch.ProductionRun.Number != "" {
-			if !seenLots[batch.ProductionRun.Number] {
-				lots = append(lots, domain.BatchLot{LotNumber: batch.ProductionRun.Number, Type: "productionRun"})
-			}
-		}
-		batch.Lots = lots
-
-		// Fetch input/output batch IDs from flow graph.
-		incomingIDs, err := r.queries.GetBatchFlowIncoming(ctx, id)
-		if apiErr := db.MapSQLError(err); apiErr != nil {
-			return nil, tracing.Trace(span, apiErr)
-		}
-		batch.InputBatchIDs = incomingIDs
-
-		outgoingIDs, err := r.queries.GetBatchFlowOutgoing(ctx, id)
-		if apiErr := db.MapSQLError(err); apiErr != nil {
-			return nil, tracing.Trace(span, apiErr)
-		}
-		batch.OutputBatchIDs = outgoingIDs
-
-		batches = append(batches, batch)
-	}
-
-	sorted, pageInfo, apiErr := paginateBatchesForProductionRun(batches, params)
-	if apiErr != nil {
-		return nil, tracing.Trace(span, apiErr)
-	}
-	return &domain.ListBatchesByProductionRunResult{Batches: sorted, PageInfo: pageInfo}, nil
+	return result, nil
 }
 
-func paginateBatchesForProductionRun(batches []*domain.Batch, params domain.ListBatchesByProductionRunParams) ([]*domain.Batch, pagination.PageInfo, *apierror.APIError) {
-	sort.Slice(batches, func(i, j int) bool {
-		if !batches[i].CreatedAt.Equal(batches[j].CreatedAt) {
-			return batches[i].CreatedAt.After(batches[j].CreatedAt)
+// loadFlowFrontier loads, in two queries, the edges of every queued batch not yet loaded and
+// the closed state of each neighbour those edges reach.
+func (r *productionRunRepoImpl) loadFlowFrontier(
+	ctx context.Context, accountID string, pending []string,
+	visited, loaded map[string]bool, known map[string]batchTraversalRef,
+	incoming, outgoing map[string][]string,
+) *apierror.APIError {
+	frontier := make([]string, 0, len(pending))
+	for _, id := range pending {
+		if !visited[id] && !loaded[id] {
+			loaded[id] = true
+			frontier = append(frontier, id)
 		}
-		return batches[i].ID > batches[j].ID
-	})
-
-	filtered := batches
-	if params.SearchQuery != nil && *params.SearchQuery != "" {
-		q := strings.ToLower(strings.TrimSpace(*params.SearchQuery))
-		out := make([]*domain.Batch, 0, len(batches))
-		for _, b := range batches {
-			if batchMatchesSearch(b, q) {
-				out = append(out, b)
-			}
-		}
-		filtered = out
 	}
+
+	edges, err := r.queries.ListBatchFlowEdgesForBatches(ctx, sqlc.ListBatchFlowEdgesForBatchesParams{DownstreamIds: frontier, UpstreamIds: frontier})
+	if apiErr := db.MapSQLError(err); apiErr != nil {
+		return apiErr
+	}
+	inFrontier := make(map[string]bool, len(frontier))
+	for _, id := range frontier {
+		inFrontier[id] = true
+	}
+	var unknown []string
+	seen := make(map[string]bool)
+	note := func(id string) {
+		if _, ok := known[id]; !ok && !seen[id] {
+			seen[id] = true
+			unknown = append(unknown, id)
+		}
+	}
+	for _, e := range edges {
+		if inFrontier[e.DownstreamID] {
+			incoming[e.DownstreamID] = append(incoming[e.DownstreamID], e.UpstreamID)
+			note(e.UpstreamID)
+		}
+		if inFrontier[e.UpstreamID] {
+			outgoing[e.UpstreamID] = append(outgoing[e.UpstreamID], e.DownstreamID)
+			note(e.DownstreamID)
+		}
+	}
+
+	if len(unknown) == 0 {
+		return nil
+	}
+	rows, err := r.queries.ListBatchTraversalByIDs(ctx, sqlc.ListBatchTraversalByIDsParams{Ids: unknown, AccountID: accountID})
+	if apiErr := db.MapSQLError(err); apiErr != nil {
+		return apiErr
+	}
+	for _, row := range rows {
+		known[row.ID] = batchTraversalRef{id: row.ID, closed: row.ClosedAt.Valid, createdAt: row.CreatedAt}
+	}
+	return nil
+}
+
+// paginateByCreatedAt orders items newest first (ties by ID) and cuts the page after the cursor.
+func paginateByCreatedAt[T any](items []T, createdAt func(T) time.Time, idOf func(T) string, cursor *string, limit int32) ([]T, pagination.PageInfo, *apierror.APIError) {
+	sort.Slice(items, func(i, j int) bool {
+		if !createdAt(items[i]).Equal(createdAt(items[j])) {
+			return createdAt(items[i]).After(createdAt(items[j]))
+		}
+		return idOf(items[i]) > idOf(items[j])
+	})
 
 	start := 0
 	var cursorDir *pagination.Direction
-	if params.Cursor != nil && *params.Cursor != "" {
-		cur, err := pagination.DecodeStringCursor(*params.Cursor)
+	if cursor != nil && *cursor != "" {
+		cur, err := pagination.DecodeStringCursor(*cursor)
 		if err != nil {
 			return nil, pagination.PageInfo{}, apierror.NewValidationErrorWithParam("Invalid pagination cursor.", "cursor")
 		}
 		cursorDir = &cur.Direction
 		found := false
-		for i, b := range filtered {
-			if b.ID == cur.ID {
+		for i, item := range items {
+			if idOf(item) == cur.ID {
 				start = i + 1
 				found = true
 				break
 			}
 		}
 		if !found {
-			return []*domain.Batch{}, pagination.PageInfo{}, nil
+			return []T{}, pagination.PageInfo{}, nil
 		}
 	}
 
-	lim := params.Limit
+	lim := limit
 	if lim <= 0 {
 		lim = 100
 	}
@@ -824,19 +865,13 @@ func paginateBatchesForProductionRun(batches []*domain.Batch, params domain.List
 		lim = 1000
 	}
 
-	if start > len(filtered) {
-		return []*domain.Batch{}, pagination.PageInfo{}, nil
-	}
-
-	window := filtered[start:]
+	window := items[start:]
 	if len(window) > int(lim)+1 {
 		window = window[:lim+1]
 	}
 
-	result, pageInfo := pagination.BuildPageString(window, lim, cursorDir,
-		func(b *domain.Batch) time.Time { return b.CreatedAt },
-		func(b *domain.Batch) string { return b.ID })
-	return result, pageInfo, nil
+	page, pageInfo := pagination.BuildPageString(window, lim, cursorDir, createdAt, idOf)
+	return page, pageInfo, nil
 }
 
 func batchMatchesSearch(b *domain.Batch, q string) bool {
@@ -874,4 +909,141 @@ func batchMatchesSearch(b *domain.Batch, q string) bool {
 		sb.WriteString(strings.ToLower(m.Name))
 	}
 	return strings.Contains(sb.String(), q)
+}
+
+// hydrateBatches loads full batches with their machines, lots, and flow neighbours in a
+// fixed number of queries, however many batches are asked for.
+func (r *productionRunRepoImpl) hydrateBatches(ctx context.Context, accountID string, ids []string) ([]*domain.Batch, *apierror.APIError) {
+	if len(ids) == 0 {
+		return []*domain.Batch{}, nil
+	}
+
+	rows, err := r.queries.ListBatchesByIDs(ctx, sqlc.ListBatchesByIDsParams{Ids: ids, AccountID: accountID})
+	if apiErr := db.MapSQLError(err); apiErr != nil {
+		return nil, apiErr
+	}
+	// Only batches that proved to be in the account get their relations loaded.
+	found := make([]string, len(rows))
+	nullIDs := make([]gosql.NullString, len(rows))
+	for i, row := range rows {
+		found[i] = row.ID
+		nullIDs[i] = gosql.NullString{String: row.ID, Valid: true}
+	}
+	if len(found) == 0 {
+		return []*domain.Batch{}, nil
+	}
+
+	machineRows, err := r.queries.ListMachinesForBatches(ctx, found)
+	if apiErr := db.MapSQLError(err); apiErr != nil {
+		return nil, apiErr
+	}
+	machinesByBatch := make(map[string][]domain.LightMachine)
+	for _, m := range machineRows {
+		machinesByBatch[m.BatchID] = append(machinesByBatch[m.BatchID], domain.LightMachine{ID: m.ID, Name: m.Name, SerialNumber: m.SerialNumber})
+	}
+
+	lotRows, err := r.queries.ListLotsForBatches(ctx, sqlc.ListLotsForBatchesParams{IssuedBatchIds: nullIDs, AllocatedBatchIds: nullIDs})
+	if apiErr := db.MapSQLError(err); apiErr != nil {
+		return nil, apiErr
+	}
+	lotsByBatch := make(map[string][]domain.BatchLot)
+	for _, l := range lotRows {
+		lotsByBatch[l.BatchID.String] = append(lotsByBatch[l.BatchID.String], domain.BatchLot{LotNumber: l.LotNumber, Type: l.LotType})
+	}
+
+	edges, err := r.queries.ListBatchFlowEdgesForBatches(ctx, sqlc.ListBatchFlowEdgesForBatchesParams{DownstreamIds: found, UpstreamIds: found})
+	if apiErr := db.MapSQLError(err); apiErr != nil {
+		return nil, apiErr
+	}
+	inputsByBatch := make(map[string][]string)
+	outputsByBatch := make(map[string][]string)
+	for _, e := range edges {
+		inputsByBatch[e.DownstreamID] = append(inputsByBatch[e.DownstreamID], e.UpstreamID)
+		outputsByBatch[e.UpstreamID] = append(outputsByBatch[e.UpstreamID], e.DownstreamID)
+	}
+
+	batches := make([]*domain.Batch, len(rows))
+	for i, row := range rows {
+		batch := mapBatchRow(sqlc.GetBatchRow(row))
+
+		machines := machinesByBatch[row.ID]
+		if machines == nil {
+			machines = []domain.LightMachine{}
+		}
+		batch.Machines = machines
+
+		seenLots := make(map[string]bool)
+		lots := make([]domain.BatchLot, 0, len(lotsByBatch[row.ID])+1)
+		for _, l := range lotsByBatch[row.ID] {
+			if !seenLots[l.LotNumber] {
+				seenLots[l.LotNumber] = true
+				lots = append(lots, l)
+			}
+		}
+		if batch.ProductionRun != nil && batch.ProductionRun.Number != "" && !seenLots[batch.ProductionRun.Number] {
+			lots = append(lots, domain.BatchLot{LotNumber: batch.ProductionRun.Number, Type: "productionRun"})
+		}
+		batch.Lots = lots
+
+		batch.InputBatchIDs = inputsByBatch[row.ID]
+		batch.OutputBatchIDs = outputsByBatch[row.ID]
+
+		batches[i] = batch
+	}
+	return batches, nil
+}
+
+// batchSummariesByRun totals the given runs' batches per item and unit, in one query.
+func (r *productionRunRepoImpl) batchSummariesByRun(ctx context.Context, accountID string, runIDs []string) (map[string][]domain.ProductionRunBatchSummary, *apierror.APIError) {
+	out := make(map[string][]domain.ProductionRunBatchSummary, len(runIDs))
+	if len(runIDs) == 0 {
+		return out, nil
+	}
+	ids := make([]gosql.NullString, len(runIDs))
+	for i, id := range runIDs {
+		ids[i] = gosql.NullString{String: id, Valid: true}
+		out[id] = []domain.ProductionRunBatchSummary{}
+	}
+
+	rows, err := r.queries.ListProductionRunBatchSummaries(ctx, sqlc.ListProductionRunBatchSummariesParams{
+		AccountID:        accountID,
+		ProductionRunIds: ids,
+	})
+	if apiErr := db.MapSQLError(err); apiErr != nil {
+		return nil, apiErr
+	}
+	for _, row := range rows {
+		// sqlc cannot type a CAST, so the driver's []byte comes through as any.
+		raw, _ := row.QuantityValue.([]byte)
+		quantity, err := decimal.NewFromString(string(raw))
+		if err != nil {
+			return nil, apierror.NewInternalError(err, "Issue reading a production run's batch total.")
+		}
+		runID := row.ProductionRunID.String
+		out[runID] = append(out[runID], domain.ProductionRunBatchSummary{
+			ItemID:           row.ItemID,
+			ItemSKU:          row.ItemSku,
+			UnitID:           row.UnitID,
+			UnitAbbreviation: row.UnitAbbreviation,
+			Quantity:         quantity,
+			BatchCount:       safeconv.Int64ToInt32(row.BatchCount),
+		})
+	}
+	return out, nil
+}
+
+// listResultWithSummaries attaches each listed run's batch totals.
+func (r *productionRunRepoImpl) listResultWithSummaries(ctx context.Context, span trace.Span, accountID string, runs []*domain.ProductionRunSummary, pageInfo pagination.PageInfo) (*domain.ListProductionRunsResult, *apierror.APIError) {
+	ids := make([]string, len(runs))
+	for i, run := range runs {
+		ids[i] = run.ID
+	}
+	summaries, apiErr := r.batchSummariesByRun(ctx, accountID, ids)
+	if apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
+	for _, run := range runs {
+		run.BatchSummaries = summaries[run.ID]
+	}
+	return &domain.ListProductionRunsResult{ProductionRuns: runs, PageInfo: pageInfo}, nil
 }

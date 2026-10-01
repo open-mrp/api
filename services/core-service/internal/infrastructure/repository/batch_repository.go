@@ -5,6 +5,7 @@ import (
 	gosql "database/sql"
 	"errors"
 	"sort"
+	"strings"
 	"time"
 
 	"github.com/shopspring/decimal"
@@ -44,8 +45,9 @@ func mapBatchRow(row sqlc.GetBatchRow) *domain.Batch {
 	b := &domain.Batch{
 		ID: row.ID,
 		Item: domain.LightItem{
-			ID:  row.ItemID,
-			SKU: row.ItemSku,
+			ID:          row.ItemID,
+			SKU:         row.ItemSku,
+			Description: db.StringFromNullString(row.ItemDescription),
 		},
 		Quantity: domain.BatchQuantity{
 			ID:      row.QuantityID,
@@ -209,8 +211,9 @@ func mapForwardBatchRow(row sqlc.ListBatchesByScanningStationForwardRow) *domain
 	b := &domain.Batch{
 		ID: row.ID,
 		Item: domain.LightItem{
-			ID:  row.ItemID,
-			SKU: row.ItemSku,
+			ID:          row.ItemID,
+			SKU:         row.ItemSku,
+			Description: db.StringFromNullString(row.ItemDescription),
 		},
 		Quantity: domain.BatchQuantity{
 			ID:      row.QuantityID,
@@ -284,8 +287,9 @@ func mapBackwardBatchRow(row sqlc.ListBatchesByScanningStationBackwardRow) *doma
 	b := &domain.Batch{
 		ID: row.ID,
 		Item: domain.LightItem{
-			ID:  row.ItemID,
-			SKU: row.ItemSku,
+			ID:          row.ItemID,
+			SKU:         row.ItemSku,
+			Description: db.StringFromNullString(row.ItemDescription),
 		},
 		Quantity: domain.BatchQuantity{
 			ID:      row.QuantityID,
@@ -444,7 +448,7 @@ func (r *batchRepoImpl) FindBatchFlow(ctx context.Context, accountID, batchID st
 		}
 		machines := make([]domain.LightMachine, len(machineRows))
 		for i, m := range machineRows {
-			machines[i] = domain.LightMachine{ID: m.ID, Name: m.Name}
+			machines[i] = domain.LightMachine{ID: m.ID, Name: m.Name, SerialNumber: m.SerialNumber}
 		}
 		batch.Machines = machines
 
@@ -1478,3 +1482,102 @@ func (r *batchRepoImpl) DeleteMany(ctx context.Context, accountID string, batchI
 
 // Ensure compile-time interface compliance.
 var _ domain.BatchRepo = (*batchRepoImpl)(nil)
+
+func (r *batchRepoImpl) CreateMany(ctx context.Context, batches []domain.NewBatch) ([]*domain.BaseBatch, *apierror.APIError) {
+	ctx, span := batchRepoTracer.Start(ctx, "repository.batch.create_many")
+	defer span.End()
+
+	if len(batches) == 0 {
+		return []*domain.BaseBatch{}, nil
+	}
+
+	const (
+		quantityTuple = "(?, ?, ?, NOW(3), NOW(3))"
+		batchTuple    = "(?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(3), NOW(3))"
+		machineTuple  = "(?, ?)"
+	)
+
+	var quantityTuples, batchTuples, machineTuples []string
+	var quantityArgs, batchArgs, machineArgs []any
+	addQuantity := func(q *domain.CreateQuantityParams) (gosql.NullString, *apierror.APIError) {
+		if q == nil {
+			return gosql.NullString{}, nil
+		}
+		quantityID, apiErr := id.GenID(id.QuantityIDPrefix, nil)
+		if apiErr != nil {
+			return gosql.NullString{}, apiErr
+		}
+		quantityTuples = append(quantityTuples, quantityTuple)
+		quantityArgs = append(quantityArgs, quantityID, q.Measure.String(), q.UnitID)
+		return gosql.NullString{String: quantityID, Valid: true}, nil
+	}
+
+	ids := make([]string, len(batches))
+	for i, b := range batches {
+		ids[i] = b.ID
+		quantityID, apiErr := addQuantity(&b.Quantity)
+		if apiErr != nil {
+			return nil, tracing.Trace(span, apiErr)
+		}
+		secondsID, apiErr := addQuantity(b.Seconds)
+		if apiErr != nil {
+			return nil, tracing.Trace(span, apiErr)
+		}
+		wasteID, apiErr := addQuantity(b.Waste)
+		if apiErr != nil {
+			return nil, tracing.Trace(span, apiErr)
+		}
+
+		batchTuples = append(batchTuples, batchTuple)
+		batchArgs = append(batchArgs,
+			b.ID, b.AccountID, b.ItemID, quantityID.String,
+			secondsID, wasteID,
+			db.NullString(b.ProductionStepID), db.NullString(b.ScanningStationID), db.NullString(b.ProductionRunID),
+		)
+
+		for _, machineID := range b.MachineIDs {
+			if machineID == "" {
+				continue
+			}
+			machineTuples = append(machineTuples, machineTuple)
+			machineArgs = append(machineArgs, b.ID, machineID)
+		}
+	}
+
+	dbtx := r.queries.DB()
+
+	quantitySQL := "INSERT INTO quantity (id, value, unit_id, created_at, updated_at) VALUES " + strings.Join(quantityTuples, ", ")
+	if _, err := dbtx.ExecContext(ctx, quantitySQL, quantityArgs...); err != nil {
+		return nil, tracing.Trace(span, db.MapSQLError(err))
+	}
+
+	batchSQL := "INSERT INTO batch (id, account_id, item_id, quantity_id, seconds_quantity_id, waste_quantity_id, production_step_id, scanning_station_id, production_run_id, created_at, updated_at) VALUES " + strings.Join(batchTuples, ", ")
+	if _, err := dbtx.ExecContext(ctx, batchSQL, batchArgs...); err != nil {
+		return nil, tracing.Trace(span, db.MapSQLError(err))
+	}
+
+	// Attainment attributes production through this link; see LinkBatchMachine.
+	if len(machineTuples) > 0 {
+		machineSQL := "INSERT IGNORE INTO _batches_machines (A, B) VALUES " + strings.Join(machineTuples, ", ")
+		if _, err := dbtx.ExecContext(ctx, machineSQL, machineArgs...); err != nil {
+			return nil, tracing.Trace(span, db.MapSQLError(err))
+		}
+	}
+
+	rows, err := r.queries.ListBatchBasesByIDs(ctx, sqlc.ListBatchBasesByIDsParams{Ids: ids, AccountID: batches[0].AccountID})
+	if apiErr := db.MapSQLError(err); apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
+	byID := make(map[string]*domain.BaseBatch, len(rows))
+	for _, row := range rows {
+		byID[row.ID] = mapBaseBatchRow(sqlc.GetBatchBaseRow(row))
+	}
+	created := make([]*domain.BaseBatch, len(batches))
+	for i, b := range batches {
+		created[i] = byID[b.ID]
+		if created[i] == nil {
+			return nil, tracing.Trace(span, apierror.NewInvariantViolationError("A batch just inserted could not be read back."))
+		}
+	}
+	return created, nil
+}

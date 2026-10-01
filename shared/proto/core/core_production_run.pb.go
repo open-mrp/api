@@ -279,27 +279,113 @@ func (x *BulkCreateProductionRunsResponse) GetJob() *JobInfo {
 }
 
 // ProductionRunInfo represents a full production run resource.
+// ProductionRunBatchSummaryInfo totals a run's batches of one item in one unit.
+type ProductionRunBatchSummaryInfo struct {
+	state            protoimpl.MessageState `protogen:"open.v1"`
+	ItemId           string                 `protobuf:"bytes,1,opt,name=item_id,json=itemId,proto3" json:"item_id,omitempty"`
+	ItemSku          string                 `protobuf:"bytes,2,opt,name=item_sku,json=itemSku,proto3" json:"item_sku,omitempty"`
+	UnitId           string                 `protobuf:"bytes,3,opt,name=unit_id,json=unitId,proto3" json:"unit_id,omitempty"`
+	UnitAbbreviation string                 `protobuf:"bytes,4,opt,name=unit_abbreviation,json=unitAbbreviation,proto3" json:"unit_abbreviation,omitempty"`
+	QuantityValue    string                 `protobuf:"bytes,5,opt,name=quantity_value,json=quantityValue,proto3" json:"quantity_value,omitempty"`
+	BatchCount       int32                  `protobuf:"varint,6,opt,name=batch_count,json=batchCount,proto3" json:"batch_count,omitempty"`
+	unknownFields    protoimpl.UnknownFields
+	sizeCache        protoimpl.SizeCache
+}
+
+func (x *ProductionRunBatchSummaryInfo) Reset() {
+	*x = ProductionRunBatchSummaryInfo{}
+	mi := &file_core_core_production_run_proto_msgTypes[4]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ProductionRunBatchSummaryInfo) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ProductionRunBatchSummaryInfo) ProtoMessage() {}
+
+func (x *ProductionRunBatchSummaryInfo) ProtoReflect() protoreflect.Message {
+	mi := &file_core_core_production_run_proto_msgTypes[4]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ProductionRunBatchSummaryInfo.ProtoReflect.Descriptor instead.
+func (*ProductionRunBatchSummaryInfo) Descriptor() ([]byte, []int) {
+	return file_core_core_production_run_proto_rawDescGZIP(), []int{4}
+}
+
+func (x *ProductionRunBatchSummaryInfo) GetItemId() string {
+	if x != nil {
+		return x.ItemId
+	}
+	return ""
+}
+
+func (x *ProductionRunBatchSummaryInfo) GetItemSku() string {
+	if x != nil {
+		return x.ItemSku
+	}
+	return ""
+}
+
+func (x *ProductionRunBatchSummaryInfo) GetUnitId() string {
+	if x != nil {
+		return x.UnitId
+	}
+	return ""
+}
+
+func (x *ProductionRunBatchSummaryInfo) GetUnitAbbreviation() string {
+	if x != nil {
+		return x.UnitAbbreviation
+	}
+	return ""
+}
+
+func (x *ProductionRunBatchSummaryInfo) GetQuantityValue() string {
+	if x != nil {
+		return x.QuantityValue
+	}
+	return ""
+}
+
+func (x *ProductionRunBatchSummaryInfo) GetBatchCount() int32 {
+	if x != nil {
+		return x.BatchCount
+	}
+	return 0
+}
+
 type ProductionRunInfo struct {
-	state                     protoimpl.MessageState `protogen:"open.v1"`
-	Id                        string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
-	Number                    string                 `protobuf:"bytes,2,opt,name=number,proto3" json:"number,omitempty"`
-	ResponsibleUserId         string                 `protobuf:"bytes,3,opt,name=responsible_user_id,json=responsibleUserId,proto3" json:"responsible_user_id,omitempty"`
-	ResponsibleUserName       *string                `protobuf:"bytes,4,opt,name=responsible_user_name,json=responsibleUserName,proto3,oneof" json:"responsible_user_name,omitempty"`
-	BatchCount                int32                  `protobuf:"varint,5,opt,name=batch_count,json=batchCount,proto3" json:"batch_count,omitempty"`
-	StartedAt                 *timestamppb.Timestamp `protobuf:"bytes,6,opt,name=started_at,json=startedAt,proto3,oneof" json:"started_at,omitempty"`
-	CompletedAt               *timestamppb.Timestamp `protobuf:"bytes,7,opt,name=completed_at,json=completedAt,proto3,oneof" json:"completed_at,omitempty"`
-	CreatedAt                 *timestamppb.Timestamp `protobuf:"bytes,8,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
-	UpdatedAt                 *timestamppb.Timestamp `protobuf:"bytes,9,opt,name=updated_at,json=updatedAt,proto3" json:"updated_at,omitempty"`
-	ResponsibleUserStatusCode *string                `protobuf:"bytes,10,opt,name=responsible_user_status_code,json=responsibleUserStatusCode,proto3,oneof" json:"responsible_user_status_code,omitempty"`
-	ResponsibleUserCreatedAt  *timestamppb.Timestamp `protobuf:"bytes,11,opt,name=responsible_user_created_at,json=responsibleUserCreatedAt,proto3,oneof" json:"responsible_user_created_at,omitempty"`
-	ResponsibleUserUpdatedAt  *timestamppb.Timestamp `protobuf:"bytes,12,opt,name=responsible_user_updated_at,json=responsibleUserUpdatedAt,proto3,oneof" json:"responsible_user_updated_at,omitempty"`
+	state                     protoimpl.MessageState           `protogen:"open.v1"`
+	Id                        string                           `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	Number                    string                           `protobuf:"bytes,2,opt,name=number,proto3" json:"number,omitempty"`
+	ResponsibleUserId         string                           `protobuf:"bytes,3,opt,name=responsible_user_id,json=responsibleUserId,proto3" json:"responsible_user_id,omitempty"`
+	ResponsibleUserName       *string                          `protobuf:"bytes,4,opt,name=responsible_user_name,json=responsibleUserName,proto3,oneof" json:"responsible_user_name,omitempty"`
+	BatchCount                int32                            `protobuf:"varint,5,opt,name=batch_count,json=batchCount,proto3" json:"batch_count,omitempty"`
+	StartedAt                 *timestamppb.Timestamp           `protobuf:"bytes,6,opt,name=started_at,json=startedAt,proto3,oneof" json:"started_at,omitempty"`
+	CompletedAt               *timestamppb.Timestamp           `protobuf:"bytes,7,opt,name=completed_at,json=completedAt,proto3,oneof" json:"completed_at,omitempty"`
+	CreatedAt                 *timestamppb.Timestamp           `protobuf:"bytes,8,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
+	UpdatedAt                 *timestamppb.Timestamp           `protobuf:"bytes,9,opt,name=updated_at,json=updatedAt,proto3" json:"updated_at,omitempty"`
+	ResponsibleUserStatusCode *string                          `protobuf:"bytes,10,opt,name=responsible_user_status_code,json=responsibleUserStatusCode,proto3,oneof" json:"responsible_user_status_code,omitempty"`
+	ResponsibleUserCreatedAt  *timestamppb.Timestamp           `protobuf:"bytes,11,opt,name=responsible_user_created_at,json=responsibleUserCreatedAt,proto3,oneof" json:"responsible_user_created_at,omitempty"`
+	ResponsibleUserUpdatedAt  *timestamppb.Timestamp           `protobuf:"bytes,12,opt,name=responsible_user_updated_at,json=responsibleUserUpdatedAt,proto3,oneof" json:"responsible_user_updated_at,omitempty"`
+	BatchSummaries            []*ProductionRunBatchSummaryInfo `protobuf:"bytes,13,rep,name=batch_summaries,json=batchSummaries,proto3" json:"batch_summaries,omitempty"`
 	unknownFields             protoimpl.UnknownFields
 	sizeCache                 protoimpl.SizeCache
 }
 
 func (x *ProductionRunInfo) Reset() {
 	*x = ProductionRunInfo{}
-	mi := &file_core_core_production_run_proto_msgTypes[4]
+	mi := &file_core_core_production_run_proto_msgTypes[5]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -311,7 +397,7 @@ func (x *ProductionRunInfo) String() string {
 func (*ProductionRunInfo) ProtoMessage() {}
 
 func (x *ProductionRunInfo) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_production_run_proto_msgTypes[4]
+	mi := &file_core_core_production_run_proto_msgTypes[5]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -324,7 +410,7 @@ func (x *ProductionRunInfo) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ProductionRunInfo.ProtoReflect.Descriptor instead.
 func (*ProductionRunInfo) Descriptor() ([]byte, []int) {
-	return file_core_core_production_run_proto_rawDescGZIP(), []int{4}
+	return file_core_core_production_run_proto_rawDescGZIP(), []int{5}
 }
 
 func (x *ProductionRunInfo) GetId() string {
@@ -411,28 +497,36 @@ func (x *ProductionRunInfo) GetResponsibleUserUpdatedAt() *timestamppb.Timestamp
 	return nil
 }
 
+func (x *ProductionRunInfo) GetBatchSummaries() []*ProductionRunBatchSummaryInfo {
+	if x != nil {
+		return x.BatchSummaries
+	}
+	return nil
+}
+
 // ProductionRunSummaryInfo represents a production run for list views.
 type ProductionRunSummaryInfo struct {
-	state                     protoimpl.MessageState `protogen:"open.v1"`
-	Id                        string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
-	Number                    string                 `protobuf:"bytes,2,opt,name=number,proto3" json:"number,omitempty"`
-	ResponsibleUserId         string                 `protobuf:"bytes,3,opt,name=responsible_user_id,json=responsibleUserId,proto3" json:"responsible_user_id,omitempty"`
-	ResponsibleUserName       *string                `protobuf:"bytes,4,opt,name=responsible_user_name,json=responsibleUserName,proto3,oneof" json:"responsible_user_name,omitempty"`
-	BatchCount                int32                  `protobuf:"varint,5,opt,name=batch_count,json=batchCount,proto3" json:"batch_count,omitempty"`
-	StartedAt                 *timestamppb.Timestamp `protobuf:"bytes,6,opt,name=started_at,json=startedAt,proto3,oneof" json:"started_at,omitempty"`
-	CompletedAt               *timestamppb.Timestamp `protobuf:"bytes,7,opt,name=completed_at,json=completedAt,proto3,oneof" json:"completed_at,omitempty"`
-	CreatedAt                 *timestamppb.Timestamp `protobuf:"bytes,8,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
-	UpdatedAt                 *timestamppb.Timestamp `protobuf:"bytes,9,opt,name=updated_at,json=updatedAt,proto3" json:"updated_at,omitempty"`
-	ResponsibleUserStatusCode *string                `protobuf:"bytes,10,opt,name=responsible_user_status_code,json=responsibleUserStatusCode,proto3,oneof" json:"responsible_user_status_code,omitempty"`
-	ResponsibleUserCreatedAt  *timestamppb.Timestamp `protobuf:"bytes,11,opt,name=responsible_user_created_at,json=responsibleUserCreatedAt,proto3,oneof" json:"responsible_user_created_at,omitempty"`
-	ResponsibleUserUpdatedAt  *timestamppb.Timestamp `protobuf:"bytes,12,opt,name=responsible_user_updated_at,json=responsibleUserUpdatedAt,proto3,oneof" json:"responsible_user_updated_at,omitempty"`
+	state                     protoimpl.MessageState           `protogen:"open.v1"`
+	Id                        string                           `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	Number                    string                           `protobuf:"bytes,2,opt,name=number,proto3" json:"number,omitempty"`
+	ResponsibleUserId         string                           `protobuf:"bytes,3,opt,name=responsible_user_id,json=responsibleUserId,proto3" json:"responsible_user_id,omitempty"`
+	ResponsibleUserName       *string                          `protobuf:"bytes,4,opt,name=responsible_user_name,json=responsibleUserName,proto3,oneof" json:"responsible_user_name,omitempty"`
+	BatchCount                int32                            `protobuf:"varint,5,opt,name=batch_count,json=batchCount,proto3" json:"batch_count,omitempty"`
+	StartedAt                 *timestamppb.Timestamp           `protobuf:"bytes,6,opt,name=started_at,json=startedAt,proto3,oneof" json:"started_at,omitempty"`
+	CompletedAt               *timestamppb.Timestamp           `protobuf:"bytes,7,opt,name=completed_at,json=completedAt,proto3,oneof" json:"completed_at,omitempty"`
+	CreatedAt                 *timestamppb.Timestamp           `protobuf:"bytes,8,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
+	UpdatedAt                 *timestamppb.Timestamp           `protobuf:"bytes,9,opt,name=updated_at,json=updatedAt,proto3" json:"updated_at,omitempty"`
+	ResponsibleUserStatusCode *string                          `protobuf:"bytes,10,opt,name=responsible_user_status_code,json=responsibleUserStatusCode,proto3,oneof" json:"responsible_user_status_code,omitempty"`
+	ResponsibleUserCreatedAt  *timestamppb.Timestamp           `protobuf:"bytes,11,opt,name=responsible_user_created_at,json=responsibleUserCreatedAt,proto3,oneof" json:"responsible_user_created_at,omitempty"`
+	ResponsibleUserUpdatedAt  *timestamppb.Timestamp           `protobuf:"bytes,12,opt,name=responsible_user_updated_at,json=responsibleUserUpdatedAt,proto3,oneof" json:"responsible_user_updated_at,omitempty"`
+	BatchSummaries            []*ProductionRunBatchSummaryInfo `protobuf:"bytes,13,rep,name=batch_summaries,json=batchSummaries,proto3" json:"batch_summaries,omitempty"`
 	unknownFields             protoimpl.UnknownFields
 	sizeCache                 protoimpl.SizeCache
 }
 
 func (x *ProductionRunSummaryInfo) Reset() {
 	*x = ProductionRunSummaryInfo{}
-	mi := &file_core_core_production_run_proto_msgTypes[5]
+	mi := &file_core_core_production_run_proto_msgTypes[6]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -444,7 +538,7 @@ func (x *ProductionRunSummaryInfo) String() string {
 func (*ProductionRunSummaryInfo) ProtoMessage() {}
 
 func (x *ProductionRunSummaryInfo) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_production_run_proto_msgTypes[5]
+	mi := &file_core_core_production_run_proto_msgTypes[6]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -457,7 +551,7 @@ func (x *ProductionRunSummaryInfo) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ProductionRunSummaryInfo.ProtoReflect.Descriptor instead.
 func (*ProductionRunSummaryInfo) Descriptor() ([]byte, []int) {
-	return file_core_core_production_run_proto_rawDescGZIP(), []int{5}
+	return file_core_core_production_run_proto_rawDescGZIP(), []int{6}
 }
 
 func (x *ProductionRunSummaryInfo) GetId() string {
@@ -544,6 +638,13 @@ func (x *ProductionRunSummaryInfo) GetResponsibleUserUpdatedAt() *timestamppb.Ti
 	return nil
 }
 
+func (x *ProductionRunSummaryInfo) GetBatchSummaries() []*ProductionRunBatchSummaryInfo {
+	if x != nil {
+		return x.BatchSummaries
+	}
+	return nil
+}
+
 type ListProductionRunsRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Cursor        *string                `protobuf:"bytes,1,opt,name=cursor,proto3,oneof" json:"cursor,omitempty"`
@@ -560,7 +661,7 @@ type ListProductionRunsRequest struct {
 
 func (x *ListProductionRunsRequest) Reset() {
 	*x = ListProductionRunsRequest{}
-	mi := &file_core_core_production_run_proto_msgTypes[6]
+	mi := &file_core_core_production_run_proto_msgTypes[7]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -572,7 +673,7 @@ func (x *ListProductionRunsRequest) String() string {
 func (*ListProductionRunsRequest) ProtoMessage() {}
 
 func (x *ListProductionRunsRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_production_run_proto_msgTypes[6]
+	mi := &file_core_core_production_run_proto_msgTypes[7]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -585,7 +686,7 @@ func (x *ListProductionRunsRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListProductionRunsRequest.ProtoReflect.Descriptor instead.
 func (*ListProductionRunsRequest) Descriptor() ([]byte, []int) {
-	return file_core_core_production_run_proto_rawDescGZIP(), []int{6}
+	return file_core_core_production_run_proto_rawDescGZIP(), []int{7}
 }
 
 func (x *ListProductionRunsRequest) GetCursor() string {
@@ -654,7 +755,7 @@ type ListProductionRunsResponse struct {
 
 func (x *ListProductionRunsResponse) Reset() {
 	*x = ListProductionRunsResponse{}
-	mi := &file_core_core_production_run_proto_msgTypes[7]
+	mi := &file_core_core_production_run_proto_msgTypes[8]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -666,7 +767,7 @@ func (x *ListProductionRunsResponse) String() string {
 func (*ListProductionRunsResponse) ProtoMessage() {}
 
 func (x *ListProductionRunsResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_production_run_proto_msgTypes[7]
+	mi := &file_core_core_production_run_proto_msgTypes[8]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -679,7 +780,7 @@ func (x *ListProductionRunsResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListProductionRunsResponse.ProtoReflect.Descriptor instead.
 func (*ListProductionRunsResponse) Descriptor() ([]byte, []int) {
-	return file_core_core_production_run_proto_rawDescGZIP(), []int{7}
+	return file_core_core_production_run_proto_rawDescGZIP(), []int{8}
 }
 
 func (x *ListProductionRunsResponse) GetProductionRuns() []*ProductionRunSummaryInfo {
@@ -705,7 +806,7 @@ type ExportProductionRunsRequest struct {
 
 func (x *ExportProductionRunsRequest) Reset() {
 	*x = ExportProductionRunsRequest{}
-	mi := &file_core_core_production_run_proto_msgTypes[8]
+	mi := &file_core_core_production_run_proto_msgTypes[9]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -717,7 +818,7 @@ func (x *ExportProductionRunsRequest) String() string {
 func (*ExportProductionRunsRequest) ProtoMessage() {}
 
 func (x *ExportProductionRunsRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_production_run_proto_msgTypes[8]
+	mi := &file_core_core_production_run_proto_msgTypes[9]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -730,7 +831,7 @@ func (x *ExportProductionRunsRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ExportProductionRunsRequest.ProtoReflect.Descriptor instead.
 func (*ExportProductionRunsRequest) Descriptor() ([]byte, []int) {
-	return file_core_core_production_run_proto_rawDescGZIP(), []int{8}
+	return file_core_core_production_run_proto_rawDescGZIP(), []int{9}
 }
 
 func (x *ExportProductionRunsRequest) GetQuery() string {
@@ -749,7 +850,7 @@ type ExportProductionRunsResponse struct {
 
 func (x *ExportProductionRunsResponse) Reset() {
 	*x = ExportProductionRunsResponse{}
-	mi := &file_core_core_production_run_proto_msgTypes[9]
+	mi := &file_core_core_production_run_proto_msgTypes[10]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -761,7 +862,7 @@ func (x *ExportProductionRunsResponse) String() string {
 func (*ExportProductionRunsResponse) ProtoMessage() {}
 
 func (x *ExportProductionRunsResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_production_run_proto_msgTypes[9]
+	mi := &file_core_core_production_run_proto_msgTypes[10]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -774,7 +875,7 @@ func (x *ExportProductionRunsResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ExportProductionRunsResponse.ProtoReflect.Descriptor instead.
 func (*ExportProductionRunsResponse) Descriptor() ([]byte, []int) {
-	return file_core_core_production_run_proto_rawDescGZIP(), []int{9}
+	return file_core_core_production_run_proto_rawDescGZIP(), []int{10}
 }
 
 func (x *ExportProductionRunsResponse) GetJob() *JobInfo {
@@ -793,7 +894,7 @@ type GetProductionRunRequest struct {
 
 func (x *GetProductionRunRequest) Reset() {
 	*x = GetProductionRunRequest{}
-	mi := &file_core_core_production_run_proto_msgTypes[10]
+	mi := &file_core_core_production_run_proto_msgTypes[11]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -805,7 +906,7 @@ func (x *GetProductionRunRequest) String() string {
 func (*GetProductionRunRequest) ProtoMessage() {}
 
 func (x *GetProductionRunRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_production_run_proto_msgTypes[10]
+	mi := &file_core_core_production_run_proto_msgTypes[11]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -818,7 +919,7 @@ func (x *GetProductionRunRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetProductionRunRequest.ProtoReflect.Descriptor instead.
 func (*GetProductionRunRequest) Descriptor() ([]byte, []int) {
-	return file_core_core_production_run_proto_rawDescGZIP(), []int{10}
+	return file_core_core_production_run_proto_rawDescGZIP(), []int{11}
 }
 
 func (x *GetProductionRunRequest) GetId() string {
@@ -837,7 +938,7 @@ type GetProductionRunResponse struct {
 
 func (x *GetProductionRunResponse) Reset() {
 	*x = GetProductionRunResponse{}
-	mi := &file_core_core_production_run_proto_msgTypes[11]
+	mi := &file_core_core_production_run_proto_msgTypes[12]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -849,7 +950,7 @@ func (x *GetProductionRunResponse) String() string {
 func (*GetProductionRunResponse) ProtoMessage() {}
 
 func (x *GetProductionRunResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_production_run_proto_msgTypes[11]
+	mi := &file_core_core_production_run_proto_msgTypes[12]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -862,7 +963,7 @@ func (x *GetProductionRunResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetProductionRunResponse.ProtoReflect.Descriptor instead.
 func (*GetProductionRunResponse) Descriptor() ([]byte, []int) {
-	return file_core_core_production_run_proto_rawDescGZIP(), []int{11}
+	return file_core_core_production_run_proto_rawDescGZIP(), []int{12}
 }
 
 func (x *GetProductionRunResponse) GetProductionRun() *ProductionRunInfo {
@@ -875,13 +976,14 @@ func (x *GetProductionRunResponse) GetProductionRun() *ProductionRunInfo {
 type CreateProductionRunRequest struct {
 	state             protoimpl.MessageState `protogen:"open.v1"`
 	ResponsibleUserId string                 `protobuf:"bytes,1,opt,name=responsible_user_id,json=responsibleUserId,proto3" json:"responsible_user_id,omitempty"`
+	Batches           []*AddBatchInput       `protobuf:"bytes,2,rep,name=batches,proto3" json:"batches,omitempty"`
 	unknownFields     protoimpl.UnknownFields
 	sizeCache         protoimpl.SizeCache
 }
 
 func (x *CreateProductionRunRequest) Reset() {
 	*x = CreateProductionRunRequest{}
-	mi := &file_core_core_production_run_proto_msgTypes[12]
+	mi := &file_core_core_production_run_proto_msgTypes[13]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -893,7 +995,7 @@ func (x *CreateProductionRunRequest) String() string {
 func (*CreateProductionRunRequest) ProtoMessage() {}
 
 func (x *CreateProductionRunRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_production_run_proto_msgTypes[12]
+	mi := &file_core_core_production_run_proto_msgTypes[13]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -906,7 +1008,7 @@ func (x *CreateProductionRunRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CreateProductionRunRequest.ProtoReflect.Descriptor instead.
 func (*CreateProductionRunRequest) Descriptor() ([]byte, []int) {
-	return file_core_core_production_run_proto_rawDescGZIP(), []int{12}
+	return file_core_core_production_run_proto_rawDescGZIP(), []int{13}
 }
 
 func (x *CreateProductionRunRequest) GetResponsibleUserId() string {
@@ -914,6 +1016,13 @@ func (x *CreateProductionRunRequest) GetResponsibleUserId() string {
 		return x.ResponsibleUserId
 	}
 	return ""
+}
+
+func (x *CreateProductionRunRequest) GetBatches() []*AddBatchInput {
+	if x != nil {
+		return x.Batches
+	}
+	return nil
 }
 
 type CreateProductionRunResponse struct {
@@ -925,7 +1034,7 @@ type CreateProductionRunResponse struct {
 
 func (x *CreateProductionRunResponse) Reset() {
 	*x = CreateProductionRunResponse{}
-	mi := &file_core_core_production_run_proto_msgTypes[13]
+	mi := &file_core_core_production_run_proto_msgTypes[14]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -937,7 +1046,7 @@ func (x *CreateProductionRunResponse) String() string {
 func (*CreateProductionRunResponse) ProtoMessage() {}
 
 func (x *CreateProductionRunResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_production_run_proto_msgTypes[13]
+	mi := &file_core_core_production_run_proto_msgTypes[14]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -950,7 +1059,7 @@ func (x *CreateProductionRunResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CreateProductionRunResponse.ProtoReflect.Descriptor instead.
 func (*CreateProductionRunResponse) Descriptor() ([]byte, []int) {
-	return file_core_core_production_run_proto_rawDescGZIP(), []int{13}
+	return file_core_core_production_run_proto_rawDescGZIP(), []int{14}
 }
 
 func (x *CreateProductionRunResponse) GetProductionRun() *ProductionRunInfo {
@@ -971,7 +1080,7 @@ type UpdateProductionRunRequest struct {
 
 func (x *UpdateProductionRunRequest) Reset() {
 	*x = UpdateProductionRunRequest{}
-	mi := &file_core_core_production_run_proto_msgTypes[14]
+	mi := &file_core_core_production_run_proto_msgTypes[15]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -983,7 +1092,7 @@ func (x *UpdateProductionRunRequest) String() string {
 func (*UpdateProductionRunRequest) ProtoMessage() {}
 
 func (x *UpdateProductionRunRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_production_run_proto_msgTypes[14]
+	mi := &file_core_core_production_run_proto_msgTypes[15]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -996,7 +1105,7 @@ func (x *UpdateProductionRunRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use UpdateProductionRunRequest.ProtoReflect.Descriptor instead.
 func (*UpdateProductionRunRequest) Descriptor() ([]byte, []int) {
-	return file_core_core_production_run_proto_rawDescGZIP(), []int{14}
+	return file_core_core_production_run_proto_rawDescGZIP(), []int{15}
 }
 
 func (x *UpdateProductionRunRequest) GetId() string {
@@ -1029,7 +1138,7 @@ type UpdateProductionRunResponse struct {
 
 func (x *UpdateProductionRunResponse) Reset() {
 	*x = UpdateProductionRunResponse{}
-	mi := &file_core_core_production_run_proto_msgTypes[15]
+	mi := &file_core_core_production_run_proto_msgTypes[16]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1041,7 +1150,7 @@ func (x *UpdateProductionRunResponse) String() string {
 func (*UpdateProductionRunResponse) ProtoMessage() {}
 
 func (x *UpdateProductionRunResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_production_run_proto_msgTypes[15]
+	mi := &file_core_core_production_run_proto_msgTypes[16]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1054,7 +1163,7 @@ func (x *UpdateProductionRunResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use UpdateProductionRunResponse.ProtoReflect.Descriptor instead.
 func (*UpdateProductionRunResponse) Descriptor() ([]byte, []int) {
-	return file_core_core_production_run_proto_rawDescGZIP(), []int{15}
+	return file_core_core_production_run_proto_rawDescGZIP(), []int{16}
 }
 
 func (x *UpdateProductionRunResponse) GetProductionRun() *ProductionRunInfo {
@@ -1073,7 +1182,7 @@ type DeleteProductionRunRequest struct {
 
 func (x *DeleteProductionRunRequest) Reset() {
 	*x = DeleteProductionRunRequest{}
-	mi := &file_core_core_production_run_proto_msgTypes[16]
+	mi := &file_core_core_production_run_proto_msgTypes[17]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1085,7 +1194,7 @@ func (x *DeleteProductionRunRequest) String() string {
 func (*DeleteProductionRunRequest) ProtoMessage() {}
 
 func (x *DeleteProductionRunRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_production_run_proto_msgTypes[16]
+	mi := &file_core_core_production_run_proto_msgTypes[17]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1098,7 +1207,7 @@ func (x *DeleteProductionRunRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use DeleteProductionRunRequest.ProtoReflect.Descriptor instead.
 func (*DeleteProductionRunRequest) Descriptor() ([]byte, []int) {
-	return file_core_core_production_run_proto_rawDescGZIP(), []int{16}
+	return file_core_core_production_run_proto_rawDescGZIP(), []int{17}
 }
 
 func (x *DeleteProductionRunRequest) GetId() string {
@@ -1119,13 +1228,14 @@ type AddBatchInput struct {
 	WasteUnitId       *string                `protobuf:"bytes,7,opt,name=waste_unit_id,json=wasteUnitId,proto3,oneof" json:"waste_unit_id,omitempty"`
 	ProductionStepId  *string                `protobuf:"bytes,8,opt,name=production_step_id,json=productionStepId,proto3,oneof" json:"production_step_id,omitempty"`
 	ScanningStationId *string                `protobuf:"bytes,9,opt,name=scanning_station_id,json=scanningStationId,proto3,oneof" json:"scanning_station_id,omitempty"`
+	MachineIds        []string               `protobuf:"bytes,10,rep,name=machine_ids,json=machineIds,proto3" json:"machine_ids,omitempty"`
 	unknownFields     protoimpl.UnknownFields
 	sizeCache         protoimpl.SizeCache
 }
 
 func (x *AddBatchInput) Reset() {
 	*x = AddBatchInput{}
-	mi := &file_core_core_production_run_proto_msgTypes[17]
+	mi := &file_core_core_production_run_proto_msgTypes[18]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1137,7 +1247,7 @@ func (x *AddBatchInput) String() string {
 func (*AddBatchInput) ProtoMessage() {}
 
 func (x *AddBatchInput) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_production_run_proto_msgTypes[17]
+	mi := &file_core_core_production_run_proto_msgTypes[18]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1150,7 +1260,7 @@ func (x *AddBatchInput) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use AddBatchInput.ProtoReflect.Descriptor instead.
 func (*AddBatchInput) Descriptor() ([]byte, []int) {
-	return file_core_core_production_run_proto_rawDescGZIP(), []int{17}
+	return file_core_core_production_run_proto_rawDescGZIP(), []int{18}
 }
 
 func (x *AddBatchInput) GetItemId() string {
@@ -1216,6 +1326,13 @@ func (x *AddBatchInput) GetScanningStationId() string {
 	return ""
 }
 
+func (x *AddBatchInput) GetMachineIds() []string {
+	if x != nil {
+		return x.MachineIds
+	}
+	return nil
+}
+
 type AddBatchesToProductionRunRequest struct {
 	state           protoimpl.MessageState `protogen:"open.v1"`
 	ProductionRunId string                 `protobuf:"bytes,1,opt,name=production_run_id,json=productionRunId,proto3" json:"production_run_id,omitempty"`
@@ -1226,7 +1343,7 @@ type AddBatchesToProductionRunRequest struct {
 
 func (x *AddBatchesToProductionRunRequest) Reset() {
 	*x = AddBatchesToProductionRunRequest{}
-	mi := &file_core_core_production_run_proto_msgTypes[18]
+	mi := &file_core_core_production_run_proto_msgTypes[19]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1238,7 +1355,7 @@ func (x *AddBatchesToProductionRunRequest) String() string {
 func (*AddBatchesToProductionRunRequest) ProtoMessage() {}
 
 func (x *AddBatchesToProductionRunRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_production_run_proto_msgTypes[18]
+	mi := &file_core_core_production_run_proto_msgTypes[19]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1251,7 +1368,7 @@ func (x *AddBatchesToProductionRunRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use AddBatchesToProductionRunRequest.ProtoReflect.Descriptor instead.
 func (*AddBatchesToProductionRunRequest) Descriptor() ([]byte, []int) {
-	return file_core_core_production_run_proto_rawDescGZIP(), []int{18}
+	return file_core_core_production_run_proto_rawDescGZIP(), []int{19}
 }
 
 func (x *AddBatchesToProductionRunRequest) GetProductionRunId() string {
@@ -1277,7 +1394,7 @@ type AddBatchesToProductionRunResponse struct {
 
 func (x *AddBatchesToProductionRunResponse) Reset() {
 	*x = AddBatchesToProductionRunResponse{}
-	mi := &file_core_core_production_run_proto_msgTypes[19]
+	mi := &file_core_core_production_run_proto_msgTypes[20]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1289,7 +1406,7 @@ func (x *AddBatchesToProductionRunResponse) String() string {
 func (*AddBatchesToProductionRunResponse) ProtoMessage() {}
 
 func (x *AddBatchesToProductionRunResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_production_run_proto_msgTypes[19]
+	mi := &file_core_core_production_run_proto_msgTypes[20]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1302,7 +1419,7 @@ func (x *AddBatchesToProductionRunResponse) ProtoReflect() protoreflect.Message 
 
 // Deprecated: Use AddBatchesToProductionRunResponse.ProtoReflect.Descriptor instead.
 func (*AddBatchesToProductionRunResponse) Descriptor() ([]byte, []int) {
-	return file_core_core_production_run_proto_rawDescGZIP(), []int{19}
+	return file_core_core_production_run_proto_rawDescGZIP(), []int{20}
 }
 
 func (x *AddBatchesToProductionRunResponse) GetBatches() []*BaseBatchInfo {
@@ -1318,13 +1435,14 @@ type ListBatchesByProductionRunRequest struct {
 	Cursor          *string                `protobuf:"bytes,2,opt,name=cursor,proto3,oneof" json:"cursor,omitempty"`
 	Limit           int32                  `protobuf:"varint,3,opt,name=limit,proto3" json:"limit,omitempty"`
 	Query           *string                `protobuf:"bytes,4,opt,name=query,proto3,oneof" json:"query,omitempty"`
+	Scope           *string                `protobuf:"bytes,5,opt,name=scope,proto3,oneof" json:"scope,omitempty"`
 	unknownFields   protoimpl.UnknownFields
 	sizeCache       protoimpl.SizeCache
 }
 
 func (x *ListBatchesByProductionRunRequest) Reset() {
 	*x = ListBatchesByProductionRunRequest{}
-	mi := &file_core_core_production_run_proto_msgTypes[20]
+	mi := &file_core_core_production_run_proto_msgTypes[21]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1336,7 +1454,7 @@ func (x *ListBatchesByProductionRunRequest) String() string {
 func (*ListBatchesByProductionRunRequest) ProtoMessage() {}
 
 func (x *ListBatchesByProductionRunRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_production_run_proto_msgTypes[20]
+	mi := &file_core_core_production_run_proto_msgTypes[21]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1349,7 +1467,7 @@ func (x *ListBatchesByProductionRunRequest) ProtoReflect() protoreflect.Message 
 
 // Deprecated: Use ListBatchesByProductionRunRequest.ProtoReflect.Descriptor instead.
 func (*ListBatchesByProductionRunRequest) Descriptor() ([]byte, []int) {
-	return file_core_core_production_run_proto_rawDescGZIP(), []int{20}
+	return file_core_core_production_run_proto_rawDescGZIP(), []int{21}
 }
 
 func (x *ListBatchesByProductionRunRequest) GetProductionRunId() string {
@@ -1380,6 +1498,13 @@ func (x *ListBatchesByProductionRunRequest) GetQuery() string {
 	return ""
 }
 
+func (x *ListBatchesByProductionRunRequest) GetScope() string {
+	if x != nil && x.Scope != nil {
+		return *x.Scope
+	}
+	return ""
+}
+
 type ListBatchesByProductionRunResponse struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Batches       []*BatchInfo           `protobuf:"bytes,1,rep,name=batches,proto3" json:"batches,omitempty"`
@@ -1390,7 +1515,7 @@ type ListBatchesByProductionRunResponse struct {
 
 func (x *ListBatchesByProductionRunResponse) Reset() {
 	*x = ListBatchesByProductionRunResponse{}
-	mi := &file_core_core_production_run_proto_msgTypes[21]
+	mi := &file_core_core_production_run_proto_msgTypes[22]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1402,7 +1527,7 @@ func (x *ListBatchesByProductionRunResponse) String() string {
 func (*ListBatchesByProductionRunResponse) ProtoMessage() {}
 
 func (x *ListBatchesByProductionRunResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_production_run_proto_msgTypes[21]
+	mi := &file_core_core_production_run_proto_msgTypes[22]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1415,7 +1540,7 @@ func (x *ListBatchesByProductionRunResponse) ProtoReflect() protoreflect.Message
 
 // Deprecated: Use ListBatchesByProductionRunResponse.ProtoReflect.Descriptor instead.
 func (*ListBatchesByProductionRunResponse) Descriptor() ([]byte, []int) {
-	return file_core_core_production_run_proto_rawDescGZIP(), []int{21}
+	return file_core_core_production_run_proto_rawDescGZIP(), []int{22}
 }
 
 func (x *ListBatchesByProductionRunResponse) GetBatches() []*BatchInfo {
@@ -1458,7 +1583,15 @@ const file_core_core_production_run_proto_rawDesc = "" +
 	"\x1fBulkCreateProductionRunsRequest\x12K\n" +
 	"\x0fproduction_runs\x18\x01 \x03(\v2\".core.BulkCreateProductionRunInputR\x0eproductionRuns\"C\n" +
 	" BulkCreateProductionRunsResponse\x12\x1f\n" +
-	"\x03job\x18\x01 \x01(\v2\r.core.JobInfoR\x03job\"\xe0\x06\n" +
+	"\x03job\x18\x01 \x01(\v2\r.core.JobInfoR\x03job\"\xe1\x01\n" +
+	"\x1dProductionRunBatchSummaryInfo\x12\x17\n" +
+	"\aitem_id\x18\x01 \x01(\tR\x06itemId\x12\x19\n" +
+	"\bitem_sku\x18\x02 \x01(\tR\aitemSku\x12\x17\n" +
+	"\aunit_id\x18\x03 \x01(\tR\x06unitId\x12+\n" +
+	"\x11unit_abbreviation\x18\x04 \x01(\tR\x10unitAbbreviation\x12%\n" +
+	"\x0equantity_value\x18\x05 \x01(\tR\rquantityValue\x12\x1f\n" +
+	"\vbatch_count\x18\x06 \x01(\x05R\n" +
+	"batchCount\"\xae\a\n" +
 	"\x11ProductionRunInfo\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x16\n" +
 	"\x06number\x18\x02 \x01(\tR\x06number\x12.\n" +
@@ -1476,13 +1609,14 @@ const file_core_core_production_run_proto_rawDesc = "" +
 	"\x1cresponsible_user_status_code\x18\n" +
 	" \x01(\tH\x03R\x19responsibleUserStatusCode\x88\x01\x01\x12^\n" +
 	"\x1bresponsible_user_created_at\x18\v \x01(\v2\x1a.google.protobuf.TimestampH\x04R\x18responsibleUserCreatedAt\x88\x01\x01\x12^\n" +
-	"\x1bresponsible_user_updated_at\x18\f \x01(\v2\x1a.google.protobuf.TimestampH\x05R\x18responsibleUserUpdatedAt\x88\x01\x01B\x18\n" +
+	"\x1bresponsible_user_updated_at\x18\f \x01(\v2\x1a.google.protobuf.TimestampH\x05R\x18responsibleUserUpdatedAt\x88\x01\x01\x12L\n" +
+	"\x0fbatch_summaries\x18\r \x03(\v2#.core.ProductionRunBatchSummaryInfoR\x0ebatchSummariesB\x18\n" +
 	"\x16_responsible_user_nameB\r\n" +
 	"\v_started_atB\x0f\n" +
 	"\r_completed_atB\x1f\n" +
 	"\x1d_responsible_user_status_codeB\x1e\n" +
 	"\x1c_responsible_user_created_atB\x1e\n" +
-	"\x1c_responsible_user_updated_at\"\xe7\x06\n" +
+	"\x1c_responsible_user_updated_at\"\xb5\a\n" +
 	"\x18ProductionRunSummaryInfo\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x16\n" +
 	"\x06number\x18\x02 \x01(\tR\x06number\x12.\n" +
@@ -1500,7 +1634,8 @@ const file_core_core_production_run_proto_rawDesc = "" +
 	"\x1cresponsible_user_status_code\x18\n" +
 	" \x01(\tH\x03R\x19responsibleUserStatusCode\x88\x01\x01\x12^\n" +
 	"\x1bresponsible_user_created_at\x18\v \x01(\v2\x1a.google.protobuf.TimestampH\x04R\x18responsibleUserCreatedAt\x88\x01\x01\x12^\n" +
-	"\x1bresponsible_user_updated_at\x18\f \x01(\v2\x1a.google.protobuf.TimestampH\x05R\x18responsibleUserUpdatedAt\x88\x01\x01B\x18\n" +
+	"\x1bresponsible_user_updated_at\x18\f \x01(\v2\x1a.google.protobuf.TimestampH\x05R\x18responsibleUserUpdatedAt\x88\x01\x01\x12L\n" +
+	"\x0fbatch_summaries\x18\r \x03(\v2#.core.ProductionRunBatchSummaryInfoR\x0ebatchSummariesB\x18\n" +
 	"\x16_responsible_user_nameB\r\n" +
 	"\v_started_atB\x0f\n" +
 	"\r_completed_atB\x1f\n" +
@@ -1534,9 +1669,10 @@ const file_core_core_production_run_proto_rawDesc = "" +
 	"\x17GetProductionRunRequest\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\"Z\n" +
 	"\x18GetProductionRunResponse\x12>\n" +
-	"\x0eproduction_run\x18\x01 \x01(\v2\x17.core.ProductionRunInfoR\rproductionRun\"L\n" +
+	"\x0eproduction_run\x18\x01 \x01(\v2\x17.core.ProductionRunInfoR\rproductionRun\"{\n" +
 	"\x1aCreateProductionRunRequest\x12.\n" +
-	"\x13responsible_user_id\x18\x01 \x01(\tR\x11responsibleUserId\"]\n" +
+	"\x13responsible_user_id\x18\x01 \x01(\tR\x11responsibleUserId\x12-\n" +
+	"\abatches\x18\x02 \x03(\v2\x13.core.AddBatchInputR\abatches\"]\n" +
 	"\x1bCreateProductionRunResponse\x12>\n" +
 	"\x0eproduction_run\x18\x01 \x01(\v2\x17.core.ProductionRunInfoR\rproductionRun\"\xa1\x01\n" +
 	"\x1aUpdateProductionRunRequest\x12\x0e\n" +
@@ -1548,7 +1684,7 @@ const file_core_core_production_run_proto_rawDesc = "" +
 	"\x1bUpdateProductionRunResponse\x12>\n" +
 	"\x0eproduction_run\x18\x01 \x01(\v2\x17.core.ProductionRunInfoR\rproductionRun\",\n" +
 	"\x1aDeleteProductionRunRequest\x12\x0e\n" +
-	"\x02id\x18\x01 \x01(\tR\x02id\"\xfe\x03\n" +
+	"\x02id\x18\x01 \x01(\tR\x02id\"\x9f\x04\n" +
 	"\rAddBatchInput\x12\x17\n" +
 	"\aitem_id\x18\x01 \x01(\tR\x06itemId\x12%\n" +
 	"\x0equantity_value\x18\x02 \x01(\tR\rquantityValue\x12(\n" +
@@ -1559,7 +1695,10 @@ const file_core_core_production_run_proto_rawDesc = "" +
 	"wasteValue\x88\x01\x01\x12'\n" +
 	"\rwaste_unit_id\x18\a \x01(\tH\x03R\vwasteUnitId\x88\x01\x01\x121\n" +
 	"\x12production_step_id\x18\b \x01(\tH\x04R\x10productionStepId\x88\x01\x01\x123\n" +
-	"\x13scanning_station_id\x18\t \x01(\tH\x05R\x11scanningStationId\x88\x01\x01B\x10\n" +
+	"\x13scanning_station_id\x18\t \x01(\tH\x05R\x11scanningStationId\x88\x01\x01\x12\x1f\n" +
+	"\vmachine_ids\x18\n" +
+	" \x03(\tR\n" +
+	"machineIdsB\x10\n" +
 	"\x0e_seconds_valueB\x12\n" +
 	"\x10_seconds_unit_idB\x0e\n" +
 	"\f_waste_valueB\x10\n" +
@@ -1570,14 +1709,16 @@ const file_core_core_production_run_proto_rawDesc = "" +
 	"\x11production_run_id\x18\x01 \x01(\tR\x0fproductionRunId\x12-\n" +
 	"\abatches\x18\x02 \x03(\v2\x13.core.AddBatchInputR\abatches\"R\n" +
 	"!AddBatchesToProductionRunResponse\x12-\n" +
-	"\abatches\x18\x01 \x03(\v2\x13.core.BaseBatchInfoR\abatches\"\xb2\x01\n" +
+	"\abatches\x18\x01 \x03(\v2\x13.core.BaseBatchInfoR\abatches\"\xd7\x01\n" +
 	"!ListBatchesByProductionRunRequest\x12*\n" +
 	"\x11production_run_id\x18\x01 \x01(\tR\x0fproductionRunId\x12\x1b\n" +
 	"\x06cursor\x18\x02 \x01(\tH\x00R\x06cursor\x88\x01\x01\x12\x14\n" +
 	"\x05limit\x18\x03 \x01(\x05R\x05limit\x12\x19\n" +
-	"\x05query\x18\x04 \x01(\tH\x01R\x05query\x88\x01\x01B\t\n" +
+	"\x05query\x18\x04 \x01(\tH\x01R\x05query\x88\x01\x01\x12\x19\n" +
+	"\x05scope\x18\x05 \x01(\tH\x02R\x05scope\x88\x01\x01B\t\n" +
 	"\a_cursorB\b\n" +
-	"\x06_query\"|\n" +
+	"\x06_queryB\b\n" +
+	"\x06_scope\"|\n" +
 	"\"ListBatchesByProductionRunResponse\x12)\n" +
 	"\abatches\x18\x01 \x03(\v2\x0f.core.BatchInfoR\abatches\x12+\n" +
 	"\tpage_info\x18\x02 \x01(\v2\x0e.core.PageInfoR\bpageInfo2\xf8\x06\n" +
@@ -1604,94 +1745,98 @@ func file_core_core_production_run_proto_rawDescGZIP() []byte {
 	return file_core_core_production_run_proto_rawDescData
 }
 
-var file_core_core_production_run_proto_msgTypes = make([]protoimpl.MessageInfo, 22)
+var file_core_core_production_run_proto_msgTypes = make([]protoimpl.MessageInfo, 23)
 var file_core_core_production_run_proto_goTypes = []any{
 	(*BulkCreateBatchInput)(nil),               // 0: core.BulkCreateBatchInput
 	(*BulkCreateProductionRunInput)(nil),       // 1: core.BulkCreateProductionRunInput
 	(*BulkCreateProductionRunsRequest)(nil),    // 2: core.BulkCreateProductionRunsRequest
 	(*BulkCreateProductionRunsResponse)(nil),   // 3: core.BulkCreateProductionRunsResponse
-	(*ProductionRunInfo)(nil),                  // 4: core.ProductionRunInfo
-	(*ProductionRunSummaryInfo)(nil),           // 5: core.ProductionRunSummaryInfo
-	(*ListProductionRunsRequest)(nil),          // 6: core.ListProductionRunsRequest
-	(*ListProductionRunsResponse)(nil),         // 7: core.ListProductionRunsResponse
-	(*ExportProductionRunsRequest)(nil),        // 8: core.ExportProductionRunsRequest
-	(*ExportProductionRunsResponse)(nil),       // 9: core.ExportProductionRunsResponse
-	(*GetProductionRunRequest)(nil),            // 10: core.GetProductionRunRequest
-	(*GetProductionRunResponse)(nil),           // 11: core.GetProductionRunResponse
-	(*CreateProductionRunRequest)(nil),         // 12: core.CreateProductionRunRequest
-	(*CreateProductionRunResponse)(nil),        // 13: core.CreateProductionRunResponse
-	(*UpdateProductionRunRequest)(nil),         // 14: core.UpdateProductionRunRequest
-	(*UpdateProductionRunResponse)(nil),        // 15: core.UpdateProductionRunResponse
-	(*DeleteProductionRunRequest)(nil),         // 16: core.DeleteProductionRunRequest
-	(*AddBatchInput)(nil),                      // 17: core.AddBatchInput
-	(*AddBatchesToProductionRunRequest)(nil),   // 18: core.AddBatchesToProductionRunRequest
-	(*AddBatchesToProductionRunResponse)(nil),  // 19: core.AddBatchesToProductionRunResponse
-	(*ListBatchesByProductionRunRequest)(nil),  // 20: core.ListBatchesByProductionRunRequest
-	(*ListBatchesByProductionRunResponse)(nil), // 21: core.ListBatchesByProductionRunResponse
-	(*ItemIdentifier)(nil),                     // 22: core.ItemIdentifier
-	(*UnitIdentifier)(nil),                     // 23: core.UnitIdentifier
-	(*ObjectIdentifier)(nil),                   // 24: core.ObjectIdentifier
-	(*JobInfo)(nil),                            // 25: core.JobInfo
-	(*timestamppb.Timestamp)(nil),              // 26: google.protobuf.Timestamp
-	(*PageInfo)(nil),                           // 27: core.PageInfo
-	(*BaseBatchInfo)(nil),                      // 28: core.BaseBatchInfo
-	(*BatchInfo)(nil),                          // 29: core.BatchInfo
-	(*emptypb.Empty)(nil),                      // 30: google.protobuf.Empty
+	(*ProductionRunBatchSummaryInfo)(nil),      // 4: core.ProductionRunBatchSummaryInfo
+	(*ProductionRunInfo)(nil),                  // 5: core.ProductionRunInfo
+	(*ProductionRunSummaryInfo)(nil),           // 6: core.ProductionRunSummaryInfo
+	(*ListProductionRunsRequest)(nil),          // 7: core.ListProductionRunsRequest
+	(*ListProductionRunsResponse)(nil),         // 8: core.ListProductionRunsResponse
+	(*ExportProductionRunsRequest)(nil),        // 9: core.ExportProductionRunsRequest
+	(*ExportProductionRunsResponse)(nil),       // 10: core.ExportProductionRunsResponse
+	(*GetProductionRunRequest)(nil),            // 11: core.GetProductionRunRequest
+	(*GetProductionRunResponse)(nil),           // 12: core.GetProductionRunResponse
+	(*CreateProductionRunRequest)(nil),         // 13: core.CreateProductionRunRequest
+	(*CreateProductionRunResponse)(nil),        // 14: core.CreateProductionRunResponse
+	(*UpdateProductionRunRequest)(nil),         // 15: core.UpdateProductionRunRequest
+	(*UpdateProductionRunResponse)(nil),        // 16: core.UpdateProductionRunResponse
+	(*DeleteProductionRunRequest)(nil),         // 17: core.DeleteProductionRunRequest
+	(*AddBatchInput)(nil),                      // 18: core.AddBatchInput
+	(*AddBatchesToProductionRunRequest)(nil),   // 19: core.AddBatchesToProductionRunRequest
+	(*AddBatchesToProductionRunResponse)(nil),  // 20: core.AddBatchesToProductionRunResponse
+	(*ListBatchesByProductionRunRequest)(nil),  // 21: core.ListBatchesByProductionRunRequest
+	(*ListBatchesByProductionRunResponse)(nil), // 22: core.ListBatchesByProductionRunResponse
+	(*ItemIdentifier)(nil),                     // 23: core.ItemIdentifier
+	(*UnitIdentifier)(nil),                     // 24: core.UnitIdentifier
+	(*ObjectIdentifier)(nil),                   // 25: core.ObjectIdentifier
+	(*JobInfo)(nil),                            // 26: core.JobInfo
+	(*timestamppb.Timestamp)(nil),              // 27: google.protobuf.Timestamp
+	(*PageInfo)(nil),                           // 28: core.PageInfo
+	(*BaseBatchInfo)(nil),                      // 29: core.BaseBatchInfo
+	(*BatchInfo)(nil),                          // 30: core.BatchInfo
+	(*emptypb.Empty)(nil),                      // 31: google.protobuf.Empty
 }
 var file_core_core_production_run_proto_depIdxs = []int32{
-	22, // 0: core.BulkCreateBatchInput.item:type_name -> core.ItemIdentifier
-	23, // 1: core.BulkCreateBatchInput.quantity_unit:type_name -> core.UnitIdentifier
-	23, // 2: core.BulkCreateBatchInput.seconds_unit:type_name -> core.UnitIdentifier
-	23, // 3: core.BulkCreateBatchInput.waste_unit:type_name -> core.UnitIdentifier
-	24, // 4: core.BulkCreateBatchInput.scanning_station:type_name -> core.ObjectIdentifier
+	23, // 0: core.BulkCreateBatchInput.item:type_name -> core.ItemIdentifier
+	24, // 1: core.BulkCreateBatchInput.quantity_unit:type_name -> core.UnitIdentifier
+	24, // 2: core.BulkCreateBatchInput.seconds_unit:type_name -> core.UnitIdentifier
+	24, // 3: core.BulkCreateBatchInput.waste_unit:type_name -> core.UnitIdentifier
+	25, // 4: core.BulkCreateBatchInput.scanning_station:type_name -> core.ObjectIdentifier
 	0,  // 5: core.BulkCreateProductionRunInput.batches:type_name -> core.BulkCreateBatchInput
 	1,  // 6: core.BulkCreateProductionRunsRequest.production_runs:type_name -> core.BulkCreateProductionRunInput
-	25, // 7: core.BulkCreateProductionRunsResponse.job:type_name -> core.JobInfo
-	26, // 8: core.ProductionRunInfo.started_at:type_name -> google.protobuf.Timestamp
-	26, // 9: core.ProductionRunInfo.completed_at:type_name -> google.protobuf.Timestamp
-	26, // 10: core.ProductionRunInfo.created_at:type_name -> google.protobuf.Timestamp
-	26, // 11: core.ProductionRunInfo.updated_at:type_name -> google.protobuf.Timestamp
-	26, // 12: core.ProductionRunInfo.responsible_user_created_at:type_name -> google.protobuf.Timestamp
-	26, // 13: core.ProductionRunInfo.responsible_user_updated_at:type_name -> google.protobuf.Timestamp
-	26, // 14: core.ProductionRunSummaryInfo.started_at:type_name -> google.protobuf.Timestamp
-	26, // 15: core.ProductionRunSummaryInfo.completed_at:type_name -> google.protobuf.Timestamp
-	26, // 16: core.ProductionRunSummaryInfo.created_at:type_name -> google.protobuf.Timestamp
-	26, // 17: core.ProductionRunSummaryInfo.updated_at:type_name -> google.protobuf.Timestamp
-	26, // 18: core.ProductionRunSummaryInfo.responsible_user_created_at:type_name -> google.protobuf.Timestamp
-	26, // 19: core.ProductionRunSummaryInfo.responsible_user_updated_at:type_name -> google.protobuf.Timestamp
-	5,  // 20: core.ListProductionRunsResponse.production_runs:type_name -> core.ProductionRunSummaryInfo
-	27, // 21: core.ListProductionRunsResponse.page_info:type_name -> core.PageInfo
-	25, // 22: core.ExportProductionRunsResponse.job:type_name -> core.JobInfo
-	4,  // 23: core.GetProductionRunResponse.production_run:type_name -> core.ProductionRunInfo
-	4,  // 24: core.CreateProductionRunResponse.production_run:type_name -> core.ProductionRunInfo
-	4,  // 25: core.UpdateProductionRunResponse.production_run:type_name -> core.ProductionRunInfo
-	17, // 26: core.AddBatchesToProductionRunRequest.batches:type_name -> core.AddBatchInput
-	28, // 27: core.AddBatchesToProductionRunResponse.batches:type_name -> core.BaseBatchInfo
-	29, // 28: core.ListBatchesByProductionRunResponse.batches:type_name -> core.BatchInfo
-	27, // 29: core.ListBatchesByProductionRunResponse.page_info:type_name -> core.PageInfo
-	6,  // 30: core.CoreProductionRunService.ListProductionRuns:input_type -> core.ListProductionRunsRequest
-	8,  // 31: core.CoreProductionRunService.ExportProductionRuns:input_type -> core.ExportProductionRunsRequest
-	10, // 32: core.CoreProductionRunService.GetProductionRun:input_type -> core.GetProductionRunRequest
-	12, // 33: core.CoreProductionRunService.CreateProductionRun:input_type -> core.CreateProductionRunRequest
-	14, // 34: core.CoreProductionRunService.UpdateProductionRun:input_type -> core.UpdateProductionRunRequest
-	16, // 35: core.CoreProductionRunService.DeleteProductionRun:input_type -> core.DeleteProductionRunRequest
-	18, // 36: core.CoreProductionRunService.AddBatchesToProductionRun:input_type -> core.AddBatchesToProductionRunRequest
-	20, // 37: core.CoreProductionRunService.ListBatchesByProductionRun:input_type -> core.ListBatchesByProductionRunRequest
-	2,  // 38: core.CoreProductionRunService.BulkCreateProductionRuns:input_type -> core.BulkCreateProductionRunsRequest
-	7,  // 39: core.CoreProductionRunService.ListProductionRuns:output_type -> core.ListProductionRunsResponse
-	9,  // 40: core.CoreProductionRunService.ExportProductionRuns:output_type -> core.ExportProductionRunsResponse
-	11, // 41: core.CoreProductionRunService.GetProductionRun:output_type -> core.GetProductionRunResponse
-	13, // 42: core.CoreProductionRunService.CreateProductionRun:output_type -> core.CreateProductionRunResponse
-	15, // 43: core.CoreProductionRunService.UpdateProductionRun:output_type -> core.UpdateProductionRunResponse
-	30, // 44: core.CoreProductionRunService.DeleteProductionRun:output_type -> google.protobuf.Empty
-	19, // 45: core.CoreProductionRunService.AddBatchesToProductionRun:output_type -> core.AddBatchesToProductionRunResponse
-	21, // 46: core.CoreProductionRunService.ListBatchesByProductionRun:output_type -> core.ListBatchesByProductionRunResponse
-	3,  // 47: core.CoreProductionRunService.BulkCreateProductionRuns:output_type -> core.BulkCreateProductionRunsResponse
-	39, // [39:48] is the sub-list for method output_type
-	30, // [30:39] is the sub-list for method input_type
-	30, // [30:30] is the sub-list for extension type_name
-	30, // [30:30] is the sub-list for extension extendee
-	0,  // [0:30] is the sub-list for field type_name
+	26, // 7: core.BulkCreateProductionRunsResponse.job:type_name -> core.JobInfo
+	27, // 8: core.ProductionRunInfo.started_at:type_name -> google.protobuf.Timestamp
+	27, // 9: core.ProductionRunInfo.completed_at:type_name -> google.protobuf.Timestamp
+	27, // 10: core.ProductionRunInfo.created_at:type_name -> google.protobuf.Timestamp
+	27, // 11: core.ProductionRunInfo.updated_at:type_name -> google.protobuf.Timestamp
+	27, // 12: core.ProductionRunInfo.responsible_user_created_at:type_name -> google.protobuf.Timestamp
+	27, // 13: core.ProductionRunInfo.responsible_user_updated_at:type_name -> google.protobuf.Timestamp
+	4,  // 14: core.ProductionRunInfo.batch_summaries:type_name -> core.ProductionRunBatchSummaryInfo
+	27, // 15: core.ProductionRunSummaryInfo.started_at:type_name -> google.protobuf.Timestamp
+	27, // 16: core.ProductionRunSummaryInfo.completed_at:type_name -> google.protobuf.Timestamp
+	27, // 17: core.ProductionRunSummaryInfo.created_at:type_name -> google.protobuf.Timestamp
+	27, // 18: core.ProductionRunSummaryInfo.updated_at:type_name -> google.protobuf.Timestamp
+	27, // 19: core.ProductionRunSummaryInfo.responsible_user_created_at:type_name -> google.protobuf.Timestamp
+	27, // 20: core.ProductionRunSummaryInfo.responsible_user_updated_at:type_name -> google.protobuf.Timestamp
+	4,  // 21: core.ProductionRunSummaryInfo.batch_summaries:type_name -> core.ProductionRunBatchSummaryInfo
+	6,  // 22: core.ListProductionRunsResponse.production_runs:type_name -> core.ProductionRunSummaryInfo
+	28, // 23: core.ListProductionRunsResponse.page_info:type_name -> core.PageInfo
+	26, // 24: core.ExportProductionRunsResponse.job:type_name -> core.JobInfo
+	5,  // 25: core.GetProductionRunResponse.production_run:type_name -> core.ProductionRunInfo
+	18, // 26: core.CreateProductionRunRequest.batches:type_name -> core.AddBatchInput
+	5,  // 27: core.CreateProductionRunResponse.production_run:type_name -> core.ProductionRunInfo
+	5,  // 28: core.UpdateProductionRunResponse.production_run:type_name -> core.ProductionRunInfo
+	18, // 29: core.AddBatchesToProductionRunRequest.batches:type_name -> core.AddBatchInput
+	29, // 30: core.AddBatchesToProductionRunResponse.batches:type_name -> core.BaseBatchInfo
+	30, // 31: core.ListBatchesByProductionRunResponse.batches:type_name -> core.BatchInfo
+	28, // 32: core.ListBatchesByProductionRunResponse.page_info:type_name -> core.PageInfo
+	7,  // 33: core.CoreProductionRunService.ListProductionRuns:input_type -> core.ListProductionRunsRequest
+	9,  // 34: core.CoreProductionRunService.ExportProductionRuns:input_type -> core.ExportProductionRunsRequest
+	11, // 35: core.CoreProductionRunService.GetProductionRun:input_type -> core.GetProductionRunRequest
+	13, // 36: core.CoreProductionRunService.CreateProductionRun:input_type -> core.CreateProductionRunRequest
+	15, // 37: core.CoreProductionRunService.UpdateProductionRun:input_type -> core.UpdateProductionRunRequest
+	17, // 38: core.CoreProductionRunService.DeleteProductionRun:input_type -> core.DeleteProductionRunRequest
+	19, // 39: core.CoreProductionRunService.AddBatchesToProductionRun:input_type -> core.AddBatchesToProductionRunRequest
+	21, // 40: core.CoreProductionRunService.ListBatchesByProductionRun:input_type -> core.ListBatchesByProductionRunRequest
+	2,  // 41: core.CoreProductionRunService.BulkCreateProductionRuns:input_type -> core.BulkCreateProductionRunsRequest
+	8,  // 42: core.CoreProductionRunService.ListProductionRuns:output_type -> core.ListProductionRunsResponse
+	10, // 43: core.CoreProductionRunService.ExportProductionRuns:output_type -> core.ExportProductionRunsResponse
+	12, // 44: core.CoreProductionRunService.GetProductionRun:output_type -> core.GetProductionRunResponse
+	14, // 45: core.CoreProductionRunService.CreateProductionRun:output_type -> core.CreateProductionRunResponse
+	16, // 46: core.CoreProductionRunService.UpdateProductionRun:output_type -> core.UpdateProductionRunResponse
+	31, // 47: core.CoreProductionRunService.DeleteProductionRun:output_type -> google.protobuf.Empty
+	20, // 48: core.CoreProductionRunService.AddBatchesToProductionRun:output_type -> core.AddBatchesToProductionRunResponse
+	22, // 49: core.CoreProductionRunService.ListBatchesByProductionRun:output_type -> core.ListBatchesByProductionRunResponse
+	3,  // 50: core.CoreProductionRunService.BulkCreateProductionRuns:output_type -> core.BulkCreateProductionRunsResponse
+	42, // [42:51] is the sub-list for method output_type
+	33, // [33:42] is the sub-list for method input_type
+	33, // [33:33] is the sub-list for extension type_name
+	33, // [33:33] is the sub-list for extension extendee
+	0,  // [0:33] is the sub-list for field type_name
 }
 
 func init() { file_core_core_production_run_proto_init() }
@@ -1703,20 +1848,20 @@ func file_core_core_production_run_proto_init() {
 	file_core_core_fuzzy_identifiers_proto_init()
 	file_core_core_async_proto_init()
 	file_core_core_production_run_proto_msgTypes[0].OneofWrappers = []any{}
-	file_core_core_production_run_proto_msgTypes[4].OneofWrappers = []any{}
 	file_core_core_production_run_proto_msgTypes[5].OneofWrappers = []any{}
 	file_core_core_production_run_proto_msgTypes[6].OneofWrappers = []any{}
-	file_core_core_production_run_proto_msgTypes[8].OneofWrappers = []any{}
-	file_core_core_production_run_proto_msgTypes[14].OneofWrappers = []any{}
-	file_core_core_production_run_proto_msgTypes[17].OneofWrappers = []any{}
-	file_core_core_production_run_proto_msgTypes[20].OneofWrappers = []any{}
+	file_core_core_production_run_proto_msgTypes[7].OneofWrappers = []any{}
+	file_core_core_production_run_proto_msgTypes[9].OneofWrappers = []any{}
+	file_core_core_production_run_proto_msgTypes[15].OneofWrappers = []any{}
+	file_core_core_production_run_proto_msgTypes[18].OneofWrappers = []any{}
+	file_core_core_production_run_proto_msgTypes[21].OneofWrappers = []any{}
 	type x struct{}
 	out := protoimpl.TypeBuilder{
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_core_core_production_run_proto_rawDesc), len(file_core_core_production_run_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   22,
+			NumMessages:   23,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

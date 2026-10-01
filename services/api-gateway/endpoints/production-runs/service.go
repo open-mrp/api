@@ -118,6 +118,7 @@ func (m *productionRunSvcImpl) GetProductionRun(ctx context.Context, req *Retrie
 func (m *productionRunSvcImpl) CreateProductionRun(ctx context.Context, req *CreateProductionRunRequest) (*apiresource.ProductionRun, *apierror.APIError) {
 	pbReq := &pb.CreateProductionRunRequest{
 		ResponsibleUserId: req.ResponsibleUserID,
+		Batches:           addBatchInputsToProto(req.Batches),
 	}
 
 	resp, apiErr := grpcutil.CallRPC(ctx, productionRunEpSvcTracer, "service.production_runs.create", domain.ServiceName,
@@ -170,24 +171,9 @@ func (m *productionRunSvcImpl) DeleteProductionRun(ctx context.Context, req *Del
 }
 
 func (m *productionRunSvcImpl) AddBatchesToProductionRun(ctx context.Context, req *AddBatchesToProductionRunRequest) (*apiresource.List[apiresource.Batch], *apierror.APIError) {
-	pbBatches := make([]*pb.AddBatchInput, len(req.Batches))
-	for i, b := range req.Batches {
-		pbBatches[i] = &pb.AddBatchInput{
-			ItemId:            b.ItemID,
-			QuantityValue:     b.QuantityValue,
-			QuantityUnitId:    b.QuantityUnitID,
-			SecondsValue:      b.SecondsValue.Ptr(),
-			SecondsUnitId:     b.SecondsUnitID.Ptr(),
-			WasteValue:        b.WasteValue.Ptr(),
-			WasteUnitId:       b.WasteUnitID.Ptr(),
-			ProductionStepId:  b.ProductionStepID.Ptr(),
-			ScanningStationId: b.ScanningStationID.Ptr(),
-		}
-	}
-
 	pbReq := &pb.AddBatchesToProductionRunRequest{
 		ProductionRunId: req.ProductionRunID,
-		Batches:         pbBatches,
+		Batches:         addBatchInputsToProto(req.Batches),
 	}
 
 	resp, apiErr := grpcutil.CallRPC(ctx, productionRunEpSvcTracer, "service.production_runs.add_batches", domain.ServiceName,
@@ -240,6 +226,7 @@ func (m *productionRunSvcImpl) ListBatchesByProductionRun(ctx context.Context, r
 	pbReq := &pb.ListBatchesByProductionRunRequest{
 		ProductionRunId: req.ProductionRunID,
 		Limit:           req.Limit,
+		Scope:           req.Scope.StringPtr(),
 	}
 	if req.Cursor != nil {
 		pbReq.Cursor = req.Cursor
@@ -259,14 +246,34 @@ func (m *productionRunSvcImpl) ListBatchesByProductionRun(ctx context.Context, r
 	return listBatchesFromProto(ctx, resp), nil
 }
 
+func addBatchInputsToProto(batches []AddBatchInputRequest) []*pb.AddBatchInput {
+	pbBatches := make([]*pb.AddBatchInput, len(batches))
+	for i, b := range batches {
+		pbBatches[i] = &pb.AddBatchInput{
+			ItemId:            b.ItemID,
+			QuantityValue:     b.QuantityValue,
+			QuantityUnitId:    b.QuantityUnitID,
+			SecondsValue:      b.SecondsValue.Ptr(),
+			SecondsUnitId:     b.SecondsUnitID.Ptr(),
+			WasteValue:        b.WasteValue.Ptr(),
+			WasteUnitId:       b.WasteUnitID.Ptr(),
+			ProductionStepId:  b.ProductionStepID.Ptr(),
+			ScanningStationId: b.ScanningStationID.Ptr(),
+			MachineIds:        b.MachineIDs,
+		}
+	}
+	return pbBatches
+}
+
 func productionRunFromSummaryProto(info *pb.ProductionRunSummaryInfo) apiresource.ProductionRun {
 	s := apiresource.ProductionRun{
-		ID:         info.Id,
-		Object:     constants.ObjectTypeProductionRun,
-		Number:     info.Number,
-		BatchCount: info.BatchCount,
-		CreatedAt:  grpcutil.TimestampToTime(info.CreatedAt),
-		UpdatedAt:  grpcutil.TimestampToTime(info.UpdatedAt),
+		ID:             info.Id,
+		Object:         constants.ObjectTypeProductionRun,
+		Number:         info.Number,
+		BatchCount:     info.BatchCount,
+		BatchSummaries: grpcutil.ProductionRunBatchSummariesFromProto(info.BatchSummaries),
+		CreatedAt:      grpcutil.TimestampToTime(info.CreatedAt),
+		UpdatedAt:      grpcutil.TimestampToTime(info.UpdatedAt),
 	}
 
 	// responsible_user is an expandable reference: the FK id is stashed in
@@ -297,12 +304,13 @@ func productionRunListFromProto(ctx context.Context, resp *pb.ListProductionRuns
 // resolves on ?include=responsible_user.
 func ProductionRunFromProto(info *pb.ProductionRunInfo) apiresource.ProductionRun {
 	d := apiresource.ProductionRun{
-		ID:         info.Id,
-		Object:     constants.ObjectTypeProductionRun,
-		Number:     info.Number,
-		BatchCount: info.BatchCount,
-		CreatedAt:  grpcutil.TimestampToTime(info.CreatedAt),
-		UpdatedAt:  grpcutil.TimestampToTime(info.UpdatedAt),
+		ID:             info.Id,
+		Object:         constants.ObjectTypeProductionRun,
+		Number:         info.Number,
+		BatchCount:     info.BatchCount,
+		BatchSummaries: grpcutil.ProductionRunBatchSummariesFromProto(info.BatchSummaries),
+		CreatedAt:      grpcutil.TimestampToTime(info.CreatedAt),
+		UpdatedAt:      grpcutil.TimestampToTime(info.UpdatedAt),
 	}
 
 	d.StartedAt = grpcutil.TimestampToTimePtr(info.StartedAt)

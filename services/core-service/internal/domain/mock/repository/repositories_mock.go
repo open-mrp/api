@@ -6215,6 +6215,21 @@ func (mr *MockBatchRepoMockRecorder) Create(ctx, id, params any) *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Create", reflect.TypeOf((*MockBatchRepo)(nil).Create), ctx, id, params)
 }
 
+// CreateMany mocks base method.
+func (m *MockBatchRepo) CreateMany(ctx context.Context, batches []domain.NewBatch) ([]*domain.BaseBatch, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "CreateMany", ctx, batches)
+	ret0, _ := ret[0].([]*domain.BaseBatch)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
+}
+
+// CreateMany indicates an expected call of CreateMany.
+func (mr *MockBatchRepoMockRecorder) CreateMany(ctx, batches any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateMany", reflect.TypeOf((*MockBatchRepo)(nil).CreateMany), ctx, batches)
+}
+
 // Delete mocks base method.
 func (m *MockBatchRepo) Delete(ctx context.Context, accountID, batchID string) (*domain.BaseBatch, *apierror.APIError) {
 	m.ctrl.T.Helper()

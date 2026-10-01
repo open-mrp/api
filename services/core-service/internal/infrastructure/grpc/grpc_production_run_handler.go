@@ -2,11 +2,14 @@ package grpc
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/shopspring/decimal"
 
 	"github.com/open-mrp/api/services/core-service/internal/domain"
+	"github.com/open-mrp/api/shared/constants"
 	"github.com/open-mrp/api/shared/contracts"
+	apierror "github.com/open-mrp/api/shared/errors"
 	pb "github.com/open-mrp/api/shared/proto/core"
 
 	"google.golang.org/protobuf/types/known/emptypb"
@@ -19,12 +22,28 @@ type productionRunGRPCHandler struct {
 	productionRunSvc domain.ProductionRunSvc
 }
 
+func batchSummariesToProto(in []domain.ProductionRunBatchSummary) []*pb.ProductionRunBatchSummaryInfo {
+	out := make([]*pb.ProductionRunBatchSummaryInfo, len(in))
+	for i, s := range in {
+		out[i] = &pb.ProductionRunBatchSummaryInfo{
+			ItemId:           s.ItemID,
+			ItemSku:          s.ItemSKU,
+			UnitId:           s.UnitID,
+			UnitAbbreviation: s.UnitAbbreviation,
+			QuantityValue:    s.Quantity.String(),
+			BatchCount:       s.BatchCount,
+		}
+	}
+	return out
+}
+
 func productionRunToProto(pr *domain.ProductionRun) *pb.ProductionRunInfo {
 	info := &pb.ProductionRunInfo{
 		Id:                pr.ID,
 		Number:            pr.Number,
 		ResponsibleUserId: pr.ResponsibleUserID,
 		BatchCount:        pr.BatchCount,
+		BatchSummaries:    batchSummariesToProto(pr.BatchSummaries),
 		CreatedAt:         timestamppb.New(pr.CreatedAt),
 		UpdatedAt:         timestamppb.New(pr.UpdatedAt),
 	}
@@ -55,6 +74,7 @@ func productionRunSummaryToProto(pr *domain.ProductionRunSummary) *pb.Production
 		Number:            pr.Number,
 		ResponsibleUserId: pr.ResponsibleUserID,
 		BatchCount:        pr.BatchCount,
+		BatchSummaries:    batchSummariesToProto(pr.BatchSummaries),
 		CreatedAt:         timestamppb.New(pr.CreatedAt),
 		UpdatedAt:         timestamppb.New(pr.UpdatedAt),
 	}
@@ -97,11 +117,13 @@ func (h *productionRunGRPCHandler) ListProductionRuns(ctx context.Context, req *
 		return nil, contracts.NewMissingGRPCRequestDataError()
 	}
 
-	// Default status to "open" to match Dashboard behavior (only show non-completed runs).
+	// Omitted means open runs only; "all" drops the filter.
 	status := req.Status
 	if status == nil {
-		defaultStatus := "open"
+		defaultStatus := string(constants.ProductionRunStatusOpen)
 		status = &defaultStatus
+	} else if *status == string(constants.ProductionRunStatusAll) {
+		status = nil
 	}
 
 	params := domain.ListProductionRunsParams{
@@ -163,8 +185,14 @@ func (h *productionRunGRPCHandler) CreateProductionRun(ctx context.Context, req 
 	ctx, finalizeIdempotency := contracts.WithIdempotencyTracking(ctx)
 	defer finalizeIdempotency()
 
+	batches, apiErr := addBatchInputsFromProto(req.Batches)
+	if apiErr != nil {
+		return nil, contracts.ConvertAPIErrorToGRPC(apiErr)
+	}
+
 	params := domain.CreateProductionRunParams{
 		ResponsibleUserID: req.ResponsibleUserId,
+		Batches:           batches,
 	}
 
 	result, apiErr := h.productionRunSvc.CreateProductionRun(ctx, params)
@@ -267,36 +295,9 @@ func (h *productionRunGRPCHandler) AddBatchesToProductionRun(ctx context.Context
 	ctx, finalizeIdempotency := contracts.WithIdempotencyTracking(ctx)
 	defer finalizeIdempotency()
 
-	batches := make([]domain.AddBatchInput, len(req.Batches))
-	for i, b := range req.Batches {
-		measure, _ := decimal.NewFromString(b.QuantityValue)
-		input := domain.AddBatchInput{
-			ItemID: b.ItemId,
-			Quantity: domain.CreateQuantityParams{
-				Measure: measure,
-				UnitID:  b.QuantityUnitId,
-			},
-			ProductionStepID:  b.ProductionStepId,
-			ScanningStationID: b.ScanningStationId,
-		}
-
-		if b.SecondsValue != nil && b.SecondsUnitId != nil {
-			secMeasure, _ := decimal.NewFromString(*b.SecondsValue)
-			input.Seconds = &domain.CreateQuantityParams{
-				Measure: secMeasure,
-				UnitID:  *b.SecondsUnitId,
-			}
-		}
-
-		if b.WasteValue != nil && b.WasteUnitId != nil {
-			wasteMeasure, _ := decimal.NewFromString(*b.WasteValue)
-			input.Waste = &domain.CreateQuantityParams{
-				Measure: wasteMeasure,
-				UnitID:  *b.WasteUnitId,
-			}
-		}
-
-		batches[i] = input
+	batches, apiErr := addBatchInputsFromProto(req.Batches)
+	if apiErr != nil {
+		return nil, contracts.ConvertAPIErrorToGRPC(apiErr)
 	}
 
 	params := domain.AddBatchesToProductionRunParams{
@@ -329,6 +330,7 @@ func (h *productionRunGRPCHandler) ListBatchesByProductionRun(ctx context.Contex
 		Cursor:          req.Cursor,
 		Limit:           req.Limit,
 		SearchQuery:     req.Query,
+		Scope:           req.Scope,
 	}
 
 	result, apiErr := h.productionRunSvc.ListBatchesByProductionRun(ctx, params)
@@ -350,4 +352,52 @@ func (h *productionRunGRPCHandler) ListBatchesByProductionRun(ctx context.Contex
 			HasPrevPage: result.PageInfo.HasPrevPage,
 		},
 	}, nil
+}
+
+// addBatchInputsFromProto parses planned batches, rejecting any value that is not a decimal
+// rather than letting it become zero.
+func addBatchInputsFromProto(in []*pb.AddBatchInput) ([]domain.AddBatchInput, *apierror.APIError) {
+	parse := func(value, param string) (decimal.Decimal, *apierror.APIError) {
+		d, err := decimal.NewFromString(value)
+		if err != nil {
+			return decimal.Decimal{}, apierror.NewValidationErrorWithParam(fmt.Sprintf("%q is not a decimal.", value), param)
+		}
+		return d, nil
+	}
+
+	batches := make([]domain.AddBatchInput, len(in))
+	for i, b := range in {
+		param := func(field string) string { return fmt.Sprintf("batches[%d].%s", i, field) }
+
+		measure, apiErr := parse(b.QuantityValue, param("quantity_value"))
+		if apiErr != nil {
+			return nil, apiErr
+		}
+		input := domain.AddBatchInput{
+			ItemID:            b.ItemId,
+			Quantity:          domain.CreateQuantityParams{Measure: measure, UnitID: b.QuantityUnitId},
+			ProductionStepID:  b.ProductionStepId,
+			ScanningStationID: b.ScanningStationId,
+			MachineIDs:        b.MachineIds,
+		}
+
+		// Seconds and waste are recorded only when their unit is given.
+		if b.SecondsValue != nil && b.SecondsUnitId != nil {
+			secMeasure, apiErr := parse(*b.SecondsValue, param("seconds_value"))
+			if apiErr != nil {
+				return nil, apiErr
+			}
+			input.Seconds = &domain.CreateQuantityParams{Measure: secMeasure, UnitID: *b.SecondsUnitId}
+		}
+		if b.WasteValue != nil && b.WasteUnitId != nil {
+			wasteMeasure, apiErr := parse(*b.WasteValue, param("waste_value"))
+			if apiErr != nil {
+				return nil, apiErr
+			}
+			input.Waste = &domain.CreateQuantityParams{Measure: wasteMeasure, UnitID: *b.WasteUnitId}
+		}
+
+		batches[i] = input
+	}
+	return batches, nil
 }

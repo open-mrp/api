@@ -51,13 +51,14 @@ func LoadProductionRuns(ctx context.Context, ids []string) (map[string]any, *api
 
 func productionRunReferenceFromProto(info *pb.ProductionRunInfo) *apiresource.ProductionRun {
 	return &apiresource.ProductionRun{
-		ID:          info.Id,
-		Object:      constants.ObjectTypeProductionRun,
-		Number:      info.Number,
-		BatchCount:  info.BatchCount,
-		StartedAt:   grpcutil.TimestampToTimePtr(info.StartedAt),
-		CompletedAt: grpcutil.TimestampToTimePtr(info.CompletedAt),
-		CreatedAt:   grpcutil.TimestampToTime(info.CreatedAt),
-		UpdatedAt:   grpcutil.TimestampToTime(info.UpdatedAt),
+		ID:             info.Id,
+		Object:         constants.ObjectTypeProductionRun,
+		Number:         info.Number,
+		BatchCount:     info.BatchCount,
+		BatchSummaries: grpcutil.ProductionRunBatchSummariesFromProto(info.BatchSummaries),
+		StartedAt:      grpcutil.TimestampToTimePtr(info.StartedAt),
+		CompletedAt:    grpcutil.TimestampToTimePtr(info.CompletedAt),
+		CreatedAt:      grpcutil.TimestampToTime(info.CreatedAt),
+		UpdatedAt:      grpcutil.TimestampToTime(info.UpdatedAt),
 	}
 }

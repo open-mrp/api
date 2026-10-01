@@ -824,7 +824,9 @@ resources:
               bulk_delete_sales_orders_request: '#/components/schemas/BulkDeleteSalesOrdersRequest'
               commitment_quote_step: '#/components/schemas/CommitmentQuoteStep'
               issue_sales_order_request: '#/components/schemas/IssueSalesOrderRequest'
+              list_production_run_batch_summary: '#/components/schemas/List_ProductionRunBatchSummary'
               production_run: '#/components/schemas/ProductionRun'
+              production_run_batch_summary: '#/components/schemas/ProductionRunBatchSummary'
               quote_sales_order_commitment_request: '#/components/schemas/QuoteSalesOrderCommitmentRequest'
               quote_sales_order_commitment_response: '#/components/schemas/QuoteSalesOrderCommitmentResponse'
               quote_sales_order_freight_response: '#/components/schemas/QuoteSalesOrderFreightResponse'
@@ -2021,7 +2023,6 @@ resources:
               create: post /v1/operations/production-runs/{id}/batches
               list: get /v1/operations/production-runs/{id}/batches
             models:
-              add_batch_input_request: '#/components/schemas/AddBatchInputRequest'
               add_batches_to_production_run_request: '#/components/schemas/AddBatchesToProductionRunRequest'
           actions:
             methods:
@@ -2033,6 +2034,7 @@ resources:
               bulk_create_production_runs_request: '#/components/schemas/BulkCreateProductionRunsRequest'
               export_production_runs_request: '#/components/schemas/ExportProductionRunsRequest'
         models:
+          add_batch_input_request: '#/components/schemas/AddBatchInputRequest'
           create_production_run_request: '#/components/schemas/CreateProductionRunRequest'
           list_production_run: '#/components/schemas/List_ProductionRun'
           update_production_run_request: '#/components/schemas/UpdateProductionRunRequest'

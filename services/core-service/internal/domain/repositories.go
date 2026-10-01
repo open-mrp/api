@@ -557,6 +557,8 @@ type BatchRepo interface {
 	FindAvailableBatchesInFlow(ctx context.Context, accountID string, batchIDs []string, productionStepID string) ([]BaseBatch, *apierror.APIError)
 	FindOutputBatches(ctx context.Context, accountID, batchID string) ([]BaseBatch, *apierror.APIError)
 	Create(ctx context.Context, id string, params CreateBatchParams) (*BaseBatch, *apierror.APIError)
+	// CreateMany inserts the batches in a fixed number of statements, however many there are, and returns them in input order.
+	CreateMany(ctx context.Context, batches []NewBatch) ([]*BaseBatch, *apierror.APIError)
 	MarkAsScanned(ctx context.Context, accountID, batchID string) *apierror.APIError
 	ConnectProductionStep(ctx context.Context, accountID, batchID, productionStepID string) *apierror.APIError
 	ConnectScanningStation(ctx context.Context, accountID, batchID, scanningStationID string) *apierror.APIError

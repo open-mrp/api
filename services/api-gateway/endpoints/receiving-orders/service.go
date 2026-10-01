@@ -72,15 +72,17 @@ func (m *receivingOrderSvcImpl) ListReceivingOrders(ctx context.Context, req *Li
 
 	if req.StartDate != nil {
 		t, err := grpcutil.ParseDateString(*req.StartDate)
-		if err == nil {
-			pbReq.StartDate = timestamppb.New(t)
+		if err != nil {
+			return nil, apierror.NewValidationErrorWithParam("Must be a date (YYYY-MM-DD).", "starts_at")
 		}
+		pbReq.StartDate = timestamppb.New(t)
 	}
 	if req.EndDate != nil {
 		t, err := grpcutil.ParseEndDateString(*req.EndDate)
-		if err == nil {
-			pbReq.EndDate = timestamppb.New(t)
+		if err != nil {
+			return nil, apierror.NewValidationErrorWithParam("Must be a date (YYYY-MM-DD).", "ends_at")
 		}
+		pbReq.EndDate = timestamppb.New(t)
 	}
 
 	resp, apiErr := grpcutil.CallRPC(ctx, receivingOrderSvcTracer, "service.receiving_orders.list", domain.ServiceName,
@@ -141,14 +143,16 @@ func (m *receivingOrderSvcImpl) StockReceivingOrder(ctx context.Context, req *St
 		for j, a := range li.Allocations {
 			allocations[j] = &pb.StorageAllocationInfo{
 				LocationId: a.LocationID.Ptr(),
-				Quantity:   a.Quantity,
+				Quantity:   &pb.QuantityInput{Value: a.Quantity.Value, UnitId: a.Quantity.UnitID},
 			}
 		}
 		lineItems[i] = &pb.StockingLineItemInfo{
 			ReceivingOrderLineId: li.ReceivingOrderLineID,
 			LotNumber:            li.LotNumber.Ptr(),
-			RejectedQuantity:     li.RejectedQuantity.Ptr(),
 			Allocations:          allocations,
+		}
+		if rq, ok := li.RejectedQuantity.Value(); ok {
+			lineItems[i].RejectedQuantity = &pb.QuantityInput{Value: rq.Value, UnitId: rq.UnitID}
 		}
 	}
 
@@ -221,8 +225,8 @@ func (m *receivingOrderSvcImpl) UpdateReceivingOrderLine(ctx context.Context, re
 		ReceivingOrderId: req.ReceivingOrderID,
 		Id:               req.LineID,
 	}
-	if v, ok := req.QuantityValue.Value(); ok {
-		pbReq.QuantityValue = &v
+	if q, ok := req.Quantity.Value(); ok {
+		pbReq.Quantity = &pb.QuantityInput{Value: q.Value, UnitId: q.UnitID}
 	}
 
 	resp, apiErr := grpcutil.CallRPC(ctx, receivingOrderSvcTracer, "service.receiving_orders.update_line", domain.ServiceName,
@@ -239,6 +243,7 @@ func (m *receivingOrderSvcImpl) UpdateReceivingOrderLine(ctx context.Context, re
 	}
 
 	result := receivingOrderLineFromProto(resp.Line, units)
+	stashReceivingOrderLineMeta(resourcekit.GetLoadMeta(ctx), resp.Line, &result)
 	return &result, nil
 }
 
@@ -262,6 +267,7 @@ func (m *receivingOrderSvcImpl) VoidReceivingOrderLine(ctx context.Context, req 
 	}
 
 	result := receivingOrderLineFromProto(resp.Line, units)
+	stashReceivingOrderLineMeta(resourcekit.GetLoadMeta(ctx), resp.Line, &result)
 	return &result, nil
 }
 
@@ -285,6 +291,7 @@ func (m *receivingOrderSvcImpl) ReceiveReceivingOrderLine(ctx context.Context, r
 	}
 
 	result := receivingOrderLineFromProto(resp.Line, units)
+	stashReceivingOrderLineMeta(resourcekit.GetLoadMeta(ctx), resp.Line, &result)
 	return &result, nil
 }
 
@@ -422,6 +429,7 @@ func receivingOrderTotalsFromProto(info *pb.ReceivingOrderTotalsInfo) *apiresour
 	return &apiresource.ReceivingOrderTotals{
 		Object:   constants.ObjectTypeReceivingOrderTotals,
 		Ordered:  amountOrZero(info.OrderedAmount),
+		Received: stage(info.ReceivedAmount),
 		Stocked:  stage(info.StockedAmount),
 		Rejected: stage(info.RejectedAmount),
 	}

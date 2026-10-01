@@ -441,8 +441,13 @@ SELECT STRAIGHT_JOIN
     qu.abbreviation AS quantity_unit_abbreviation,
     qu.unit_dimension_code AS quantity_unit_type,
     -- Quantity received
-    (SELECT COALESCE(SUM(rolq.value), 0) FROM receiving_order_line rol
+    -- Each receiving line is converted into the ordered unit before it is added: a line can be
+    -- received in any unit of the item's group, and the response labels the sum with the ordered unit.
+    (SELECT COALESCE(SUM(CASE WHEN rolq.unit_id = qu.id THEN rolq.value
+            ELSE rolq.value * rolu.ratio_numerator * qu.ratio_denominator / (rolu.ratio_denominator * qu.ratio_numerator) END), 0)
+        FROM receiving_order_line rol
         JOIN quantity rolq ON rolq.id = rol.quantity_id
+        JOIN unit rolu ON rolu.id = rolq.unit_id
         WHERE rol.sales_order_line_id = sol.id) AS quantity_received_value,
     -- Unit price
     up.id AS unit_price_id,
@@ -515,8 +520,13 @@ SELECT STRAIGHT_JOIN
     qu.abbreviation AS quantity_unit_abbreviation,
     qu.unit_dimension_code AS quantity_unit_type,
     -- Quantity received
-    (SELECT COALESCE(SUM(rolq.value), 0) FROM receiving_order_line rol
+    -- Each receiving line is converted into the ordered unit before it is added: a line can be
+    -- received in any unit of the item's group, and the response labels the sum with the ordered unit.
+    (SELECT COALESCE(SUM(CASE WHEN rolq.unit_id = qu.id THEN rolq.value
+            ELSE rolq.value * rolu.ratio_numerator * qu.ratio_denominator / (rolu.ratio_denominator * qu.ratio_numerator) END), 0)
+        FROM receiving_order_line rol
         JOIN quantity rolq ON rolq.id = rol.quantity_id
+        JOIN unit rolu ON rolu.id = rolq.unit_id
         WHERE rol.sales_order_line_id = sol.id) AS quantity_received_value,
     -- Unit price
     up.id AS unit_price_id,
@@ -590,8 +600,13 @@ SELECT STRAIGHT_JOIN
     qu.abbreviation AS quantity_unit_abbreviation,
     qu.unit_dimension_code AS quantity_unit_type,
     -- Quantity received
-    (SELECT COALESCE(SUM(rolq.value), 0) FROM receiving_order_line rol
+    -- Each receiving line is converted into the ordered unit before it is added: a line can be
+    -- received in any unit of the item's group, and the response labels the sum with the ordered unit.
+    (SELECT COALESCE(SUM(CASE WHEN rolq.unit_id = qu.id THEN rolq.value
+            ELSE rolq.value * rolu.ratio_numerator * qu.ratio_denominator / (rolu.ratio_denominator * qu.ratio_numerator) END), 0)
+        FROM receiving_order_line rol
         JOIN quantity rolq ON rolq.id = rol.quantity_id
+        JOIN unit rolu ON rolu.id = rolq.unit_id
         WHERE rol.sales_order_line_id = sol.id) AS quantity_received_value,
     -- Unit price
     up.id AS unit_price_id,

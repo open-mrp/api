@@ -6,6 +6,7 @@ import (
 
 	apiendpoint "github.com/open-mrp/api/services/api-gateway/pkg/endpoint"
 	apiexample "github.com/open-mrp/api/services/api-gateway/pkg/example"
+	apirequest "github.com/open-mrp/api/services/api-gateway/pkg/request"
 	apiresource "github.com/open-mrp/api/services/api-gateway/pkg/resource"
 	"github.com/open-mrp/api/services/auth-service/pkg/types"
 	"github.com/open-mrp/api/shared/constants"
@@ -19,15 +20,14 @@ type UpdateReceivingOrderLineRequest struct {
 	ReceivingOrderID string `path:"receiving_order_id" validate:"required"`
 	// Receiving order line ID.
 	LineID string `path:"id" validate:"required"`
-	// New received quantity for the line, as a decimal string.
+	// New received quantity for the line, in any unit of the line's item. Must not be negative.
 	//
-	// When omitted, the line is returned unchanged.
-	QuantityValue field.Optional[string] `json:"quantity_value,omitzero"`
+	// The line takes the given unit as well as the value. When omitted, the line is returned unchanged.
+	Quantity field.Optional[apirequest.QuantityInput] `json:"quantity,omitzero"`
 }
 
-var sampleUpdateReceivingOrderLineQuantityValue = "50"
 var sampleUpdateReceivingOrderLineRequest = &UpdateReceivingOrderLineRequest{
-	QuantityValue: field.Some(sampleUpdateReceivingOrderLineQuantityValue),
+	Quantity: field.Some(apirequest.QuantityInput{Value: "50", UnitID: apiresource.SampleUnitID}),
 }
 
 func (*UpdateReceivingOrderLineRequest) SchemaExample() any {
@@ -37,6 +37,8 @@ func (*UpdateReceivingOrderLineRequest) SchemaExample() any {
 // Updates the received quantity on a receiving order line.
 //
 // Use this to record the quantity that actually arrived — a partial delivery, for example — before stocking the order. Nothing enters inventory until the order is stocked.
+//
+// A line that has been stocked, or a line of a completed order, cannot be changed.
 type UpdateReceivingOrderLineEndpoint struct{}
 
 func (e *UpdateReceivingOrderLineEndpoint) Materialize() *apiendpoint.APIEndpoint[*UpdateReceivingOrderLineRequest, *apiresource.ReceivingOrderLine] {
@@ -55,5 +57,6 @@ func (e *UpdateReceivingOrderLineEndpoint) Materialize() *apiendpoint.APIEndpoin
 		ServiceHandler: func(svc any) func(ctx context.Context, req *UpdateReceivingOrderLineRequest) (*apiresource.ReceivingOrderLine, *apierror.APIError) {
 			return svc.(ReceivingOrderSvc).UpdateReceivingOrderLine
 		},
+		IncludeConfig: receivingOrderLineIncludes(),
 	})
 }

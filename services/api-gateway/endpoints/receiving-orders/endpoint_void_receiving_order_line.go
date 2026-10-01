@@ -21,7 +21,9 @@ type VoidReceivingOrderLineRequest struct {
 
 // Voids a single receiving order line, resetting its receiving progress.
 //
-// The line's received quantity is reset to `0` and its stocked state is cleared, leaving the rest of the order untouched. The line itself is not deleted, and any inventory already stocked from it is not reversed.
+// The line's received quantity is reset to `0`, leaving the rest of the order untouched. The line itself is not deleted.
+//
+// A line that has been stocked, or a line of a completed order, cannot be voided; void the receiving order to reopen it.
 type VoidReceivingOrderLineEndpoint struct{}
 
 func (e *VoidReceivingOrderLineEndpoint) Materialize() *apiendpoint.APIEndpoint[*VoidReceivingOrderLineRequest, *apiresource.ReceivingOrderLine] {
@@ -40,5 +42,6 @@ func (e *VoidReceivingOrderLineEndpoint) Materialize() *apiendpoint.APIEndpoint[
 		ServiceHandler: func(svc any) func(ctx context.Context, req *VoidReceivingOrderLineRequest) (*apiresource.ReceivingOrderLine, *apierror.APIError) {
 			return svc.(ReceivingOrderSvc).VoidReceivingOrderLine
 		},
+		IncludeConfig: receivingOrderLineIncludes(),
 	})
 }

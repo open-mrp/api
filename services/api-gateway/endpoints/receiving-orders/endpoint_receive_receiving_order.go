@@ -17,9 +17,9 @@ type ReceiveReceivingOrderRequest struct {
 	ReceivingOrderID string `path:"id" validate:"required"`
 }
 
-// Records the full outstanding quantity as received on every unstocked line of a receiving order.
+// Records the full outstanding quantity as received on every purchase order line of a receiving order.
 //
-// Each unstocked line's quantity is set to what is still outstanding on its purchase order line — the ordered quantity less everything already stocked against that line — and lines with nothing outstanding are left as they are. Nothing enters inventory and no delivery is recorded; use Stock Receiving Order to put the received quantities away.
+// For each purchase order line with an unstocked receiving line, the oldest such line is set, in the ordered unit, to the ordered quantity less what the order line's other receiving lines already hold, stocked or not. Lines that already hold at least that much, and order lines already covered, are left as they are. Nothing enters inventory and no delivery is recorded; use Stock Receiving Order to put the received quantities away.
 type ReceiveReceivingOrderEndpoint struct{}
 
 func (e *ReceiveReceivingOrderEndpoint) Materialize() *apiendpoint.APIEndpoint[*ReceiveReceivingOrderRequest, *apiresource.ReceivingOrder] {
@@ -38,5 +38,6 @@ func (e *ReceiveReceivingOrderEndpoint) Materialize() *apiendpoint.APIEndpoint[*
 		ServiceHandler: func(svc any) func(ctx context.Context, req *ReceiveReceivingOrderRequest) (*apiresource.ReceivingOrder, *apierror.APIError) {
 			return svc.(ReceivingOrderSvc).ReceiveReceivingOrder
 		},
+		IncludeConfig: receivingOrderIncludes(),
 	})
 }

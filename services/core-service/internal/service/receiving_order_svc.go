@@ -3,10 +3,9 @@ package service
 import (
 	"context"
 	"fmt"
+	"slices"
 	"strings"
 	"time"
-
-	"github.com/shopspring/decimal"
 
 	"github.com/open-mrp/api/services/auth-service/pkg/types"
 	"github.com/open-mrp/api/services/core-service/internal/domain"
@@ -114,17 +113,18 @@ func (s *receivingOrderSvcImpl) ListReceivingOrders(ctx context.Context, params 
 		return nil, tracing.Trace(span, apiErr)
 	}
 
-	// Expand lines per order only when requested (so the list can serve the lines.order_line.product.item array filter).
-	for _, include := range params.Includes {
-		if include == "lines" {
-			for _, ro := range result.ReceivingOrders {
-				lines, apiErr := repo.ListLines(ctx, ro.ID)
-				if apiErr != nil {
-					return nil, tracing.Trace(span, apiErr)
-				}
-				ro.Lines = lines
-			}
-			break
+	// Expand lines only when requested, for the whole page in one query.
+	if slices.Contains(params.Includes, "lines") && len(result.ReceivingOrders) > 0 {
+		ids := make([]string, len(result.ReceivingOrders))
+		for i, ro := range result.ReceivingOrders {
+			ids[i] = ro.ID
+		}
+		byOrder, apiErr := repo.ListLinesForOrders(ctx, ids)
+		if apiErr != nil {
+			return nil, tracing.Trace(span, apiErr)
+		}
+		for _, ro := range result.ReceivingOrders {
+			ro.Lines = byOrder[ro.ID]
 		}
 	}
 
@@ -159,12 +159,6 @@ func (s *receivingOrderSvcImpl) GetReceivingOrder(ctx context.Context, params do
 	if apiErr != nil {
 		return nil, tracing.Trace(span, apiErr)
 	}
-
-	lines, apiErr := repo.ListLines(ctx, params.ReceivingOrderID)
-	if apiErr != nil {
-		return nil, tracing.Trace(span, apiErr)
-	}
-	order.Lines = lines
 
 	return order, nil
 }
@@ -236,6 +230,14 @@ func (s *receivingOrderSvcImpl) StockReceivingOrder(ctx context.Context, params 
 				return apiErr
 			}
 
+			stockable := make(map[string]struct{}, len(unstockedLines))
+			for _, line := range unstockedLines {
+				stockable[line.ID] = struct{}{}
+			}
+			if apiErr := validateStockingData(txCtx, txSvc.repos, params.AccountID, params.Data, old.Lines, stockable); apiErr != nil {
+				return apiErr
+			}
+
 			if len(unstockedLines) > 0 {
 				// Extract line IDs for stocking
 				lineIDs := make([]string, len(unstockedLines))
@@ -248,15 +250,19 @@ func (s *receivingOrderSvcImpl) StockReceivingOrder(ctx context.Context, params 
 					return apiErr
 				}
 
-				// Extract order line IDs for bulk create
+				// Open a line at zero for whatever is still to come on each order line this stocking left short.
 				orderLineIDs := make([]string, len(unstockedLines))
 				for i, line := range unstockedLines {
 					orderLineIDs[i] = line.OrderLineID
 				}
-
-				// Bulk create new lines for remaining quantities
-				if apiErr := txRepo.BulkCreateForRemainingQuantities(txCtx, params.ReceivingOrderID, orderLineIDs, params.AccountID); apiErr != nil {
+				progress, apiErr := txRepo.ListReceivingProgress(txCtx, params.AccountID, orderLineIDs)
+				if apiErr != nil {
 					return apiErr
+				}
+				for _, f := range followUpLines(progressByOrderLine(progress)) {
+					if apiErr := txRepo.OpenLine(txCtx, params.ReceivingOrderID, f.OrderLineID, f.UnitID); apiErr != nil {
+						return apiErr
+					}
 				}
 
 				// Check if all stocked -> mark complete
@@ -297,12 +303,6 @@ func (s *receivingOrderSvcImpl) StockReceivingOrder(ctx context.Context, params 
 			if apiErr != nil {
 				return apiErr
 			}
-
-			lines, apiErr := txRepo.ListLines(txCtx, params.ReceivingOrderID)
-			if apiErr != nil {
-				return apiErr
-			}
-			order.Lines = lines
 
 			result = order
 
@@ -370,49 +370,57 @@ func (s *receivingOrderSvcImpl) ReceiveReceivingOrder(ctx context.Context, recei
 		return cached.Data, cached.Error
 
 	case domain.RecoveryPointStarted:
-		repo := s.repos.NewReceivingOrderRepo()
-
-		// Find unstocked lines (enforceNonZero: false)
-		unstockedLines, apiErr := repo.FindUnstockedLineIDs(ctx, receivingOrderID, accountID, false)
-		if apiErr != nil {
-			return nil, tracing.Trace(span, apiErr)
-		}
-
-		// Fetch old state for audit diff
-		old, apiErr := repo.Get(ctx, accountID, receivingOrderID)
-		if apiErr != nil {
-			return nil, tracing.Trace(span, apiErr)
-		}
-
 		var result *domain.ReceivingOrder
+		apiErr = s.withTx(ctx, func(txCtx context.Context, txSvc *receivingOrderSvcImpl) *apierror.APIError {
+			txRepo := txSvc.repos.NewReceivingOrderRepo()
 
-		// Only process if there are unstocked lines to receive
-		if len(unstockedLines) > 0 {
-			orderLineIDs := make([]string, len(unstockedLines))
-			for i, line := range unstockedLines {
-				orderLineIDs[i] = line.OrderLineID
+			old, apiErr := txRepo.Get(txCtx, accountID, receivingOrderID)
+			if apiErr != nil {
+				return apiErr
 			}
 
-			apiErr = s.withTx(ctx, func(txCtx context.Context, txSvc *receivingOrderSvcImpl) *apierror.APIError {
-				txRepo := txSvc.repos.NewReceivingOrderRepo()
+			// Every unstocked line on an open order, counted or not.
+			unstockedLines, apiErr := txRepo.FindUnstockedLineIDs(txCtx, receivingOrderID, accountID, false)
+			if apiErr != nil {
+				return apiErr
+			}
 
-				if apiErr := txRepo.BulkReceiveRemainingQuantities(txCtx, receivingOrderID, orderLineIDs, accountID); apiErr != nil {
-					return apiErr
+			if len(unstockedLines) > 0 {
+				unstocked := make(map[string]struct{}, len(unstockedLines))
+				orderLineIDs := make([]string, 0, len(unstockedLines))
+				for _, line := range unstockedLines {
+					unstocked[line.ID] = struct{}{}
+					orderLineIDs = append(orderLineIDs, line.OrderLineID)
 				}
 
-				updated, apiErr := txRepo.Get(txCtx, accountID, receivingOrderID)
+				progress, apiErr := txRepo.ListReceivingProgress(txCtx, accountID, orderLineIDs)
 				if apiErr != nil {
 					return apiErr
 				}
 
-				lines, apiErr := txRepo.ListLines(txCtx, receivingOrderID)
-				if apiErr != nil {
-					return apiErr
+				// Each order line is finished on its oldest unstocked line, the one the dashboard shows as the line's entry. Any other unstocked line keeps what was counted on it, and counts toward what is already in.
+				for _, group := range progressByOrderLine(progress) {
+					for _, line := range group {
+						if _, ok := unstocked[line.ID]; !ok {
+							continue
+						}
+						if value, ok := receiveTarget(group, line.ID); ok {
+							if apiErr := txRepo.UpdateLineQuantity(txCtx, line.ID, value.String(), line.OrderedUnitID); apiErr != nil {
+								return apiErr
+							}
+						}
+						break
+					}
 				}
-				updated.Lines = lines
+			}
 
-				changes := audit.ComputeChanges(old, updated)
+			updated, apiErr := txRepo.Get(txCtx, accountID, receivingOrderID)
+			if apiErr != nil {
+				return apiErr
+			}
 
+			changes := audit.ComputeChanges(old, updated)
+			if len(changes) > 0 {
 				if apiErr := audit.NewPublisher().Publish(txCtx, txSvc.repos.NewOutboxRepo(), audit.EventData{
 					ServiceName:  domain.ServiceName,
 					Action:       constants.AuditActionUpdate,
@@ -422,34 +430,13 @@ func (s *receivingOrderSvcImpl) ReceiveReceivingOrder(ctx context.Context, recei
 				}); apiErr != nil {
 					return apiErr
 				}
-
-				result = updated
-
-				return txSvc.mediators().Idempotency.CacheSuccessResponse(txCtx, idempotencyKey.TypeID, result)
-			})
-
-			if apiErr != nil {
-				return nil, meds.Idempotency.CacheErrorResponse(ctx, idempotencyKey.TypeID, apiErr)
 			}
 
-			return result, nil
-		}
+			result = updated
 
-		order, apiErr := repo.Get(ctx, accountID, receivingOrderID)
-		if apiErr != nil {
-			return nil, tracing.Trace(span, apiErr)
-		}
-
-		lines, apiErr := repo.ListLines(ctx, receivingOrderID)
-		if apiErr != nil {
-			return nil, tracing.Trace(span, apiErr)
-		}
-		order.Lines = lines
-		result = order
-
-		apiErr = s.withTx(ctx, func(txCtx context.Context, txSvc *receivingOrderSvcImpl) *apierror.APIError {
 			return txSvc.mediators().Idempotency.CacheSuccessResponse(txCtx, idempotencyKey.TypeID, result)
 		})
+
 		if apiErr != nil {
 			return nil, meds.Idempotency.CacheErrorResponse(ctx, idempotencyKey.TypeID, apiErr)
 		}
@@ -530,12 +517,6 @@ func (s *receivingOrderSvcImpl) VoidReceivingOrder(ctx context.Context, receivin
 				return apiErr
 			}
 
-			lines, apiErr := txRepo.ListLines(txCtx, receivingOrderID)
-			if apiErr != nil {
-				return apiErr
-			}
-			updated.Lines = lines
-
 			changes := audit.ComputeChanges(old, updated)
 
 			if apiErr := audit.NewPublisher().Publish(txCtx, txSvc.repos.NewOutboxRepo(), audit.EventData{
@@ -593,7 +574,7 @@ func (s *receivingOrderSvcImpl) createDeliveryRecords(ctx context.Context, scope
 	}
 
 	// Count existing deliveries for number generation
-	deliveryCount, apiErr := deliveryRepo.CountByPurchaseOrder(ctx, purchaseOrderID)
+	deliveryCount, apiErr := deliveryRepo.CountByPurchaseOrder(ctx, params.AccountID, purchaseOrderID)
 	if apiErr != nil {
 		return apiErr
 	}
@@ -658,7 +639,8 @@ func (s *receivingOrderSvcImpl) createDeliveryRecords(ctx context.Context, scope
 			if apiErr != nil {
 				return apiErr
 			}
-			if apiErr := mutationRepo.CreateQuantityForInventory(ctx, dlQuantityID, allocation.Quantity.String(), up.QuantityUnitID); apiErr != nil {
+			// Recorded in the unit it was counted in; the dashboard's stocking dialog offers every unit of the item's group.
+			if apiErr := mutationRepo.CreateQuantityForInventory(ctx, dlQuantityID, allocation.Quantity.Value.String(), allocation.Quantity.UnitID); apiErr != nil {
 				return apiErr
 			}
 
@@ -696,7 +678,7 @@ func (s *receivingOrderSvcImpl) createDeliveryRecords(ctx context.Context, scope
 			if apiErr != nil {
 				return apiErr
 			}
-			if apiErr := mutationRepo.CreateQuantityForInventory(ctx, rcptQuantityID, allocation.Quantity.String(), up.QuantityUnitID); apiErr != nil {
+			if apiErr := mutationRepo.CreateQuantityForInventory(ctx, rcptQuantityID, allocation.Quantity.Value.String(), allocation.Quantity.UnitID); apiErr != nil {
 				return apiErr
 			}
 
@@ -714,14 +696,14 @@ func (s *receivingOrderSvcImpl) createDeliveryRecords(ctx context.Context, scope
 		}
 
 		// Process rejected quantity
-		if lineItem.RejectedQuantity != nil && lineItem.RejectedQuantity.GreaterThan(decimal.Zero) {
+		if lineItem.RejectedQuantity != nil && lineItem.RejectedQuantity.Value.IsPositive() {
 			hasRejected = true
 
 			rejQuantityID, apiErr := id.GenID(id.QuantityIDPrefix, nil)
 			if apiErr != nil {
 				return apiErr
 			}
-			if apiErr := mutationRepo.CreateQuantityForInventory(ctx, rejQuantityID, lineItem.RejectedQuantity.String(), up.QuantityUnitID); apiErr != nil {
+			if apiErr := mutationRepo.CreateQuantityForInventory(ctx, rejQuantityID, lineItem.RejectedQuantity.Value.String(), lineItem.RejectedQuantity.UnitID); apiErr != nil {
 				return apiErr
 			}
 
@@ -810,8 +792,8 @@ func (s *receivingOrderSvcImpl) createInventoryChangeLogs(ctx context.Context, t
 			if apiErr := mutationRepo.CreateInventoryChangeLog(ctx, domain.CreateInventoryChangeLogParams{
 				AccountID:         params.AccountID,
 				ItemID:            up.ItemID,
-				Measure:           allocation.Quantity,
-				UnitID:            up.QuantityUnitID,
+				Measure:           allocation.Quantity.Value,
+				UnitID:            allocation.Quantity.UnitID,
 				ActionType:        "system_action",
 				ResponsibleUserID: responsibleUserID,
 			}); apiErr != nil {
@@ -859,7 +841,7 @@ func (s *receivingOrderSvcImpl) stockedItemIDs(ctx context.Context, params domai
 // actually landed. The caller kicks the enqueuer after the commit, so this is a moment behind rather
 // than an idle poll behind.
 func (s *receivingOrderSvcImpl) requestAllocation(ctx context.Context, txSvc *receivingOrderSvcImpl, params domain.StockReceivingOrderParams) *apierror.APIError {
-	itemIDs, apiErr := s.stockedItemIDs(ctx, params)
+	itemIDs, apiErr := txSvc.stockedItemIDs(ctx, params)
 	if apiErr != nil {
 		return apiErr
 	}

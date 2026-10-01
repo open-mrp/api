@@ -772,6 +772,36 @@ var includesPutScenarioByOperationID = map[string]putIncludeScenario{
 			requireStatus(t, 200, st, body)
 		},
 	},
+	// Receive and void run once per include against the same seeded order and line. Each leaves the
+	// line unstocked and the order open, so they repeat cleanly; serial so no two write the line at once.
+	"receive-receiving-order": {
+		pathValues:              map[string]string{"id": SeedIncludePutReceivingOrderID},
+		buildBody:               func(_ string) map[string]any { return map[string]any{} },
+		extractTargets:          func(root map[string]any) []map[string]any { return extractRootObjectTyped(root, "receiving_order") },
+		disableParallelIncludes: true,
+	},
+	"void-receiving-order": {
+		pathValues:              map[string]string{"id": SeedIncludePutReceivingOrderID},
+		buildBody:               func(_ string) map[string]any { return map[string]any{} },
+		extractTargets:          func(root map[string]any) []map[string]any { return extractRootObjectTyped(root, "receiving_order") },
+		disableParallelIncludes: true,
+	},
+	"receive-receiving-order-line": {
+		pathValues: map[string]string{"receiving_order_id": SeedIncludePutReceivingOrderID, "id": SeedIncludePutReceivingOrderLineID},
+		buildBody:  func(_ string) map[string]any { return map[string]any{} },
+		extractTargets: func(root map[string]any) []map[string]any {
+			return extractRootObjectTyped(root, "receiving_order_line")
+		},
+		disableParallelIncludes: true,
+	},
+	"void-receiving-order-line": {
+		pathValues: map[string]string{"receiving_order_id": SeedIncludePutReceivingOrderID, "id": SeedIncludePutReceivingOrderLineID},
+		buildBody:  func(_ string) map[string]any { return map[string]any{} },
+		extractTargets: func(root map[string]any) []map[string]any {
+			return extractRootObjectTyped(root, "receiving_order_line")
+		},
+		disableParallelIncludes: true,
+	},
 	// The analytics sweeps take no path parameters and return their findings as a nested list, so the includes land on the rows.
 	"analyze-customer-pricing": {
 		pathValues: map[string]string{},

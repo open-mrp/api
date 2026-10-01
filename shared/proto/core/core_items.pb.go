@@ -2748,6 +2748,7 @@ type BatchInfo struct {
 	Lots                []*BatchLotInfo        `protobuf:"bytes,19,rep,name=lots,proto3" json:"lots,omitempty"`
 	InputBatchIds       []string               `protobuf:"bytes,20,rep,name=input_batch_ids,json=inputBatchIds,proto3" json:"input_batch_ids,omitempty"`
 	OutputBatchIds      []string               `protobuf:"bytes,21,rep,name=output_batch_ids,json=outputBatchIds,proto3" json:"output_batch_ids,omitempty"`
+	ItemDescription     *string                `protobuf:"bytes,23,opt,name=item_description,json=itemDescription,proto3,oneof" json:"item_description,omitempty"`
 	unknownFields       protoimpl.UnknownFields
 	sizeCache           protoimpl.SizeCache
 }
@@ -2934,6 +2935,13 @@ func (x *BatchInfo) GetOutputBatchIds() []string {
 		return x.OutputBatchIds
 	}
 	return nil
+}
+
+func (x *BatchInfo) GetItemDescription() string {
+	if x != nil && x.ItemDescription != nil {
+		return *x.ItemDescription
+	}
+	return ""
 }
 
 type BatchLotInfo struct {
@@ -6197,7 +6205,7 @@ const file_core_core_items_proto_rawDesc = "" +
 	"_closed_atB\r\n" +
 	"\v_scanned_atB\x10\n" +
 	"\x0e_department_idB\x12\n" +
-	"\x10_department_name\"\x97\n" +
+	"\x10_department_name\"\xdc\n" +
 	"\n" +
 	"\tBatchInfo\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x17\n" +
@@ -6226,7 +6234,8 @@ const file_core_core_items_proto_rawDesc = "" +
 	"\x0fdepartment_name\x18\x16 \x01(\tH\vR\x0edepartmentName\x88\x01\x01\x12&\n" +
 	"\x04lots\x18\x13 \x03(\v2\x12.core.BatchLotInfoR\x04lots\x12&\n" +
 	"\x0finput_batch_ids\x18\x14 \x03(\tR\rinputBatchIds\x12(\n" +
-	"\x10output_batch_ids\x18\x15 \x03(\tR\x0eoutputBatchIdsB\n" +
+	"\x10output_batch_ids\x18\x15 \x03(\tR\x0eoutputBatchIds\x12.\n" +
+	"\x10item_description\x18\x17 \x01(\tH\fR\x0fitemDescription\x88\x01\x01B\n" +
 	"\n" +
 	"\b_secondsB\b\n" +
 	"\x06_wasteB\x16\n" +
@@ -6240,7 +6249,8 @@ const file_core_core_items_proto_rawDesc = "" +
 	"_closed_atB\r\n" +
 	"\v_scanned_atB\x10\n" +
 	"\x0e_department_idB\x12\n" +
-	"\x10_department_name\"A\n" +
+	"\x10_department_nameB\x13\n" +
+	"\x11_item_description\"A\n" +
 	"\fBatchLotInfo\x12\x1d\n" +
 	"\n" +
 	"lot_number\x18\x01 \x01(\tR\tlotNumber\x12\x12\n" +

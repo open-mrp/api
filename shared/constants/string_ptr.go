@@ -135,6 +135,7 @@ func (m *JobStatus) StringPtr() *string                { return stringPtrEnum(m)
 func (m *JobType) StringPtr() *string                  { return stringPtrEnum(m) }
 func (s *PickStatus) StringPtr() *string               { return stringPtrEnum(s) }
 func (s *ProductionRunStatus) StringPtr() *string      { return stringPtrEnum(s) }
+func (s *ProductionRunBatchScope) StringPtr() *string  { return stringPtrEnum(s) }
 func (s *ReceivingOrderStatus) StringPtr() *string     { return stringPtrEnum(s) }
 func (s *TransactionAllocationStatus) StringPtr() *string {
 	return stringPtrEnum(s)

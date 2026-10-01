@@ -38,8 +38,6 @@ const cookieTTLSeconds = 300 // 5 minutes
 
 var idempotencyMiddlewareTracer = tracing.GetTracer("api-gateway.idempotency_middleware")
 
-const maxIdempotencyResponseSize = 1024 * 64
-
 // maxIdempotencyRequestBodySize bounds the request body buffered by the idempotency middleware so an unauthenticated client cannot exhaust gateway memory by sending a very large body with an Idempotency-Key header. The limit matches the per-endpoint JSON body cap in apiendpoint, so any request that would have been accepted downstream is still accepted here.
 const maxIdempotencyRequestBodySize = 1 << 20 // 1 MiB
 
@@ -83,15 +81,9 @@ func (r *responseRecorder) Write(b []byte) (int, error) {
 		// Capture cookies if WriteHeader wasn't called explicitly
 		r.captureCookies()
 	}
-	if r.body.Len() < maxIdempotencyResponseSize {
-		remaining := maxIdempotencyResponseSize - r.body.Len()
-		if len(b) <= remaining {
-			r.body.Write(b)
-		} else {
-			r.body.Write(b[:remaining])
-		}
-	}
-	return len(b), nil
+	// Keep the whole body: it is both what the client receives and what a retry replays,
+	// so a cut-off copy would be invalid JSON in both places.
+	return r.body.Write(b)
 }
 
 // flush writes the buffered headers, status, and body to the real ResponseWriter. Callers must invoke this exactly once after the idempotency record has been persisted.

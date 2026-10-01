@@ -257,16 +257,124 @@ ON DUPLICATE KEY UPDATE id = id;
 UPDATE batch SET production_run_id = sqlc.arg('production_run_id'), updated_at = NOW(3)
 WHERE id = sqlc.arg('id') AND account_id = sqlc.arg('account_id');
 
--- name: GetBatchIDsByProductionRun :many
-SELECT b.id, b.closed_at
+-- name: ListBatchesByIDs :many
+-- The bulk form of GetBatch; same columns, so rows convert to GetBatchRow.
+SELECT
+    b.id,
+    b.account_id,
+    b.closed_at,
+    b.scanned_at,
+    b.created_at,
+    b.updated_at,
+    b.production_run_id,
+    i.id AS item_id,
+    i.sku AS item_sku,
+    i.description AS item_description,
+    q.id AS quantity_id,
+    q.value AS quantity_value,
+    qu.id AS quantity_unit_id,
+    qu.abbreviation AS quantity_unit_abbreviation,
+    qu.unit_dimension_code AS quantity_unit_type,
+    sq.id AS seconds_quantity_id,
+    sq.value AS seconds_quantity_value,
+    su.id AS seconds_unit_id,
+    su.abbreviation AS seconds_unit_abbreviation,
+    su.unit_dimension_code AS seconds_unit_type,
+    wq.id AS waste_quantity_id,
+    wq.value AS waste_quantity_value,
+    wu.id AS waste_unit_id,
+    wu.abbreviation AS waste_unit_abbreviation,
+    wu.unit_dimension_code AS waste_unit_type,
+    ss.id AS scanning_station_id,
+    ss.name AS scanning_station_name,
+    d.id AS department_id,
+    d.name AS department_name,
+    ps.id AS production_step_id,
+    ps.name AS production_step_name,
+    pr.id AS production_run_id_2,
+    pr.number AS production_run_number
+FROM batch b
+JOIN item i ON b.item_id = i.id
+JOIN quantity q ON b.quantity_id = q.id
+JOIN unit qu ON q.unit_id = qu.id
+LEFT JOIN quantity sq ON b.seconds_quantity_id = sq.id
+LEFT JOIN unit su ON sq.unit_id = su.id
+LEFT JOIN quantity wq ON b.waste_quantity_id = wq.id
+LEFT JOIN unit wu ON wq.unit_id = wu.id
+LEFT JOIN scanning_station ss ON b.scanning_station_id = ss.id
+LEFT JOIN department d ON ss.department_id = d.id
+LEFT JOIN production_step ps ON b.production_step_id = ps.id
+LEFT JOIN production_run pr ON b.production_run_id = pr.id
+WHERE b.id IN (sqlc.slice('ids'))
+AND b.account_id = sqlc.arg('account_id');
+
+-- name: ListMachinesForBatches :many
+SELECT
+    bm.A AS batch_id,
+    m.id,
+    m.name,
+    m.serial_number
+FROM _batches_machines bm
+JOIN machine m ON bm.B = m.id
+WHERE bm.A IN (sqlc.slice('batch_ids'));
+
+-- name: ListLotsForBatches :many
+-- The lot numbers each batch consumed, directly or through allocated receipts.
+SELECT DISTINCT ii.batch_id, l.lot_number, 'material' AS lot_type
+FROM inventory_issue ii
+JOIN lot l ON ii.lot_id = l.id
+WHERE ii.batch_id IN (sqlc.slice('issued_batch_ids'))
+AND l.lot_number IS NOT NULL
+UNION
+SELECT DISTINCT ii.batch_id, l.lot_number, 'material' AS lot_type
+FROM inventory_issue ii
+JOIN inventory_allocation ia ON ia.inventory_issue_id = ii.id
+JOIN inventory_receipt ir ON ia.inventory_receipt_id = ir.id
+JOIN lot l ON ir.lot_id = l.id
+WHERE ii.batch_id IN (sqlc.slice('allocated_batch_ids'))
+AND l.lot_number IS NOT NULL;
+
+-- name: ListBatchFlowEdgesForBatches :many
+-- Every _batch_flow edge touching the given batches. A is downstream, B upstream.
+SELECT bf.A AS downstream_id, bf.B AS upstream_id
+FROM _batch_flow bf
+WHERE bf.A IN (sqlc.slice('downstream_ids'))
+UNION
+SELECT bf2.A AS downstream_id, bf2.B AS upstream_id
+FROM _batch_flow bf2
+WHERE bf2.B IN (sqlc.slice('upstream_ids'));
+
+-- name: ListProductionRunBatchSummaries :many
+-- The runs' planned output, totalled per item and unit.
+SELECT
+    b.production_run_id,
+    i.id AS item_id,
+    i.sku AS item_sku,
+    u.id AS unit_id,
+    u.abbreviation AS unit_abbreviation,
+    CAST(SUM(q.value) AS CHAR) AS quantity_value,
+    COUNT(*) AS batch_count
+FROM batch b
+JOIN item i ON b.item_id = i.id
+JOIN quantity q ON b.quantity_id = q.id
+JOIN unit u ON q.unit_id = u.id
+WHERE b.account_id = sqlc.arg('account_id')
+AND b.production_run_id IN (sqlc.slice('production_run_ids'))
+GROUP BY b.production_run_id, i.id, i.sku, u.id, u.abbreviation
+ORDER BY b.production_run_id, i.sku, u.abbreviation;
+
+-- name: ListRunBatchTraversal :many
+-- A run's own batches with what the flow walk and pagination need, and nothing more.
+SELECT b.id, b.closed_at, b.created_at
 FROM batch b
 WHERE b.production_run_id = sqlc.arg('production_run_id')
 AND b.account_id = sqlc.arg('account_id');
 
--- name: GetBatchClosedAt :one
-SELECT b.closed_at
+-- name: ListBatchTraversalByIDs :many
+-- Closed state and age of the given batches. A batch outside the account is simply absent.
+SELECT b.id, b.closed_at, b.created_at
 FROM batch b
-WHERE b.id = sqlc.arg('id')
+WHERE b.id IN (sqlc.slice('ids'))
 AND b.account_id = sqlc.arg('account_id');
 
 -- name: ExportProductionRuns :many

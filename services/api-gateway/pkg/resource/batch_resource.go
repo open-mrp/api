@@ -88,7 +88,7 @@ type Batch struct {
 	ID string `json:"id" validate:"required"`
 	// Resource type identifier.
 	Object constants.ObjectType `json:"object" validate:"required,enum=batch"`
-	// The item the batch produces, named by id and SKU.
+	// The item the batch produces, named by id and SKU, with the item's description as its handle.
 	//
 	// A reference rather than the catalog record: the batch query carries the item's id and SKU and
 	// nothing else, so the batch names the item instead of shipping a catalog object with every
@@ -116,7 +116,7 @@ type Batch struct {
 	//
 	// Only batches created by a production run have one; batches created by a move, merge, or split do not.
 	ProductionRun *ProductionRunReference `json:"production_run"`
-	// Machines used to produce the batch.
+	// Machines used to produce the batch, each named with its serial number as the handle.
 	Machines *List[Entity] `json:"machines"`
 	// Lot numbers that trace the batch's consumed materials and its production run.
 	Lots *List[BatchLot] `json:"lots"`

@@ -30,14 +30,15 @@ func batchToProto(b *domain.Batch) *pb.BatchInfo {
 	}
 
 	pbBatch := &pb.BatchInfo{
-		Id:        b.ID,
-		ItemId:    b.Item.ID,
-		ItemSku:   b.Item.SKU,
-		Quantity:  batchQuantityToProto(&b.Quantity),
-		Seconds:   batchQuantityToProto(b.Seconds),
-		Waste:     batchQuantityToProto(b.Waste),
-		CreatedAt: timestamppb.New(b.CreatedAt),
-		UpdatedAt: timestamppb.New(b.UpdatedAt),
+		Id:              b.ID,
+		ItemId:          b.Item.ID,
+		ItemSku:         b.Item.SKU,
+		ItemDescription: b.Item.Description,
+		Quantity:        batchQuantityToProto(&b.Quantity),
+		Seconds:         batchQuantityToProto(b.Seconds),
+		Waste:           batchQuantityToProto(b.Waste),
+		CreatedAt:       timestamppb.New(b.CreatedAt),
+		UpdatedAt:       timestamppb.New(b.UpdatedAt),
 	}
 
 	if b.ScanningStation != nil {
@@ -59,8 +60,9 @@ func batchToProto(b *domain.Batch) *pb.BatchInfo {
 		pbBatch.Machines = make([]*pb.LightMachineInfo, len(b.Machines))
 		for i, m := range b.Machines {
 			pbBatch.Machines[i] = &pb.LightMachineInfo{
-				Id:   m.ID,
-				Name: m.Name,
+				Id:           m.ID,
+				Name:         m.Name,
+				SerialNumber: m.SerialNumber,
 			}
 		}
 	}

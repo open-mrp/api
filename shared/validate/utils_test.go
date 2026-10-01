@@ -1133,3 +1133,28 @@ func TestValidate_NamesFieldsOnEmbeddedPointerStructs(t *testing.T) {
 		t.Errorf("expected param 'limit', got: %q", err.Param)
 	}
 }
+
+type nestedSliceTestStruct struct {
+	Batches []nestedSliceTestItem `json:"batches" validate:"required,min=1,dive"`
+}
+
+type nestedSliceTestItem struct {
+	QuantityValue string `json:"quantity_value" validate:"required,decimal"`
+}
+
+// A field inside a slice element is named by its JSON path, so a client can tell which
+// element of the array to highlight.
+func TestValidate_NamesNestedSliceFieldsByTheirJSONPath(t *testing.T) {
+	t.Parallel()
+
+	err := Validate(&nestedSliceTestStruct{Batches: []nestedSliceTestItem{{QuantityValue: "1"}, {QuantityValue: "abc"}}})
+	if err == nil {
+		t.Fatal("expected validation to fail")
+	}
+	if err.Param != "batches[1].quantity_value" {
+		t.Errorf("expected param 'batches[1].quantity_value', got: %q", err.Param)
+	}
+	if !strings.Contains(err.PublicMessage, "'batches[1].quantity_value'") {
+		t.Errorf("expected the message to name the JSON path, got: %s", err.PublicMessage)
+	}
+}

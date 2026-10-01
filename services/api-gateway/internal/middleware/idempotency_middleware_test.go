@@ -174,3 +174,31 @@ func TestIdempotencyScopeHash_AttackScenarioPrevented(t *testing.T) {
 		t.Error("SECURITY ISSUE: Same idempotency key with different target accounts produces same hash. Attacker could replay requests across accounts!")
 	}
 }
+
+// A response larger than any buffer cap must reach the client, and the cache, whole.
+func TestResponseRecorder_KeepsLargeBodiesWhole(t *testing.T) {
+	t.Parallel()
+
+	body := []byte(`{"data":"` + strings.Repeat("x", 200*1024) + `"}`)
+	rec := newResponseRecorder(httptest.NewRecorder())
+	rec.WriteHeader(http.StatusCreated)
+	for i := 0; i < len(body); i += 4096 {
+		end := min(i+4096, len(body))
+		if _, err := rec.Write(body[i:end]); err != nil {
+			t.Fatalf("write: %v", err)
+		}
+	}
+
+	if !bytes.Equal(rec.body.Bytes(), body) {
+		t.Fatalf("recorded %d bytes, want %d", rec.body.Len(), len(body))
+	}
+
+	out := httptest.NewRecorder()
+	rec.flush(out)
+	if out.Code != http.StatusCreated {
+		t.Errorf("status %d, want 201", out.Code)
+	}
+	if !bytes.Equal(out.Body.Bytes(), body) {
+		t.Errorf("client got %d bytes, want %d", out.Body.Len(), len(body))
+	}
+}

@@ -273,6 +273,7 @@ message BatchInfo {
   repeated BatchLotInfo lots = 19;
   repeated string input_batch_ids = 20;
   repeated string output_batch_ids = 21;
+  optional string item_description = 23;
 }
 message BatchLotInfo {
   string lot_number = 1;

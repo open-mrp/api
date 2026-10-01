@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"log/slog"
 
 	"github.com/shopspring/decimal"
 
@@ -792,11 +793,17 @@ func (s *batchSvcImpl) InitializeBatch(ctx context.Context, batchID, scanningSta
 			return nil, meds.Idempotency.CacheErrorResponse(ctx, idempotencyKey.TypeID, apiErr)
 		}
 
-		// After transaction: start production run, close if all batches scanned.
+		// After the transaction commits, so the close check sees every other scan that has
+		// committed; inside it, two last scans racing would each miss the other and neither
+		// would close the run.
 		if batch.ProductionRun != nil {
 			runRepo := s.repos.NewProductionRunQueryRepo()
-			_ = runRepo.Start(ctx, accountID, batch.ProductionRun.ID)
-			_ = runRepo.CloseIfAllBatchesScannedOrDeleted(ctx, accountID, batch.ProductionRun.ID)
+			if apiErr := runRepo.Start(ctx, accountID, batch.ProductionRun.ID); apiErr != nil {
+				slog.ErrorContext(ctx, "Failed to start production run after batch scan", "error", apiErr, "production_run_id", batch.ProductionRun.ID, "batch_id", batchID)
+			}
+			if apiErr := runRepo.CloseIfAllBatchesScannedOrDeleted(ctx, accountID, batch.ProductionRun.ID); apiErr != nil {
+				slog.ErrorContext(ctx, "Failed to close production run after batch scan", "error", apiErr, "production_run_id", batch.ProductionRun.ID, "batch_id", batchID)
+			}
 		}
 
 		return result, nil
@@ -2182,7 +2189,9 @@ func (s *batchSvcImpl) deleteBatchRow(ctx context.Context, identity *types.Ident
 	}
 
 	if batch.ProductionRun != nil {
-		_ = s.repos.NewProductionRunQueryRepo().CloseIfAllBatchesScannedOrDeleted(ctx, accountID, batch.ProductionRun.ID)
+		if apiErr := s.repos.NewProductionRunQueryRepo().CloseIfAllBatchesScannedOrDeleted(ctx, accountID, batch.ProductionRun.ID); apiErr != nil {
+			slog.ErrorContext(ctx, "Failed to close production run after batch delete", "error", apiErr, "production_run_id", batch.ProductionRun.ID, "batch_id", batch.ID)
+		}
 	}
 
 	return deleted, nil

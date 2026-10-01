@@ -199,65 +199,6 @@ func (q *Queries) FindSalesOrderIDsByProductionRunID(ctx context.Context, arg Fi
 	return items, nil
 }
 
-const getBatchClosedAt = `-- name: GetBatchClosedAt :one
-SELECT b.closed_at
-FROM batch b
-WHERE b.id = ?
-AND b.account_id = ?
-`
-
-type GetBatchClosedAtParams struct {
-	ID        string
-	AccountID string
-}
-
-func (q *Queries) GetBatchClosedAt(ctx context.Context, arg GetBatchClosedAtParams) (sql.NullTime, error) {
-	row := q.db.QueryRowContext(ctx, getBatchClosedAt, arg.ID, arg.AccountID)
-	var closed_at sql.NullTime
-	err := row.Scan(&closed_at)
-	return closed_at, err
-}
-
-const getBatchIDsByProductionRun = `-- name: GetBatchIDsByProductionRun :many
-SELECT b.id, b.closed_at
-FROM batch b
-WHERE b.production_run_id = ?
-AND b.account_id = ?
-`
-
-type GetBatchIDsByProductionRunParams struct {
-	ProductionRunID sql.NullString
-	AccountID       string
-}
-
-type GetBatchIDsByProductionRunRow struct {
-	ID       string
-	ClosedAt sql.NullTime
-}
-
-func (q *Queries) GetBatchIDsByProductionRun(ctx context.Context, arg GetBatchIDsByProductionRunParams) ([]GetBatchIDsByProductionRunRow, error) {
-	rows, err := q.db.QueryContext(ctx, getBatchIDsByProductionRun, arg.ProductionRunID, arg.AccountID)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	var items []GetBatchIDsByProductionRunRow
-	for rows.Next() {
-		var i GetBatchIDsByProductionRunRow
-		if err := rows.Scan(&i.ID, &i.ClosedAt); err != nil {
-			return nil, err
-		}
-		items = append(items, i)
-	}
-	if err := rows.Close(); err != nil {
-		return nil, err
-	}
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-	return items, nil
-}
-
 const getNextProductionRunNumberFull = `-- name: GetNextProductionRunNumberFull :one
 SELECT COALESCE(MAX(CAST(number AS UNSIGNED)), 0) + 1 AS next_number
 FROM production_run WHERE account_id = ?
@@ -383,6 +324,484 @@ func (q *Queries) IsProductionRunCompleted(ctx context.Context, arg IsProduction
 	var is_completed int32
 	err := row.Scan(&is_completed)
 	return is_completed, err
+}
+
+const listBatchFlowEdgesForBatches = `-- name: ListBatchFlowEdgesForBatches :many
+SELECT bf.A AS downstream_id, bf.B AS upstream_id
+FROM _batch_flow bf
+WHERE bf.A IN (/*SLICE:downstream_ids*/?)
+UNION
+SELECT bf2.A AS downstream_id, bf2.B AS upstream_id
+FROM _batch_flow bf2
+WHERE bf2.B IN (/*SLICE:upstream_ids*/?)
+`
+
+type ListBatchFlowEdgesForBatchesParams struct {
+	DownstreamIds []string
+	UpstreamIds   []string
+}
+
+type ListBatchFlowEdgesForBatchesRow struct {
+	DownstreamID string
+	UpstreamID   string
+}
+
+// Every _batch_flow edge touching the given batches. A is downstream, B upstream.
+func (q *Queries) ListBatchFlowEdgesForBatches(ctx context.Context, arg ListBatchFlowEdgesForBatchesParams) ([]ListBatchFlowEdgesForBatchesRow, error) {
+	query := listBatchFlowEdgesForBatches
+	var queryParams []interface{}
+	if len(arg.DownstreamIds) > 0 {
+		for _, v := range arg.DownstreamIds {
+			queryParams = append(queryParams, v)
+		}
+		query = strings.Replace(query, "/*SLICE:downstream_ids*/?", strings.Repeat(",?", len(arg.DownstreamIds))[1:], 1)
+	} else {
+		query = strings.Replace(query, "/*SLICE:downstream_ids*/?", "NULL", 1)
+	}
+	if len(arg.UpstreamIds) > 0 {
+		for _, v := range arg.UpstreamIds {
+			queryParams = append(queryParams, v)
+		}
+		query = strings.Replace(query, "/*SLICE:upstream_ids*/?", strings.Repeat(",?", len(arg.UpstreamIds))[1:], 1)
+	} else {
+		query = strings.Replace(query, "/*SLICE:upstream_ids*/?", "NULL", 1)
+	}
+	rows, err := q.db.QueryContext(ctx, query, queryParams...)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []ListBatchFlowEdgesForBatchesRow
+	for rows.Next() {
+		var i ListBatchFlowEdgesForBatchesRow
+		if err := rows.Scan(&i.DownstreamID, &i.UpstreamID); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listBatchTraversalByIDs = `-- name: ListBatchTraversalByIDs :many
+SELECT b.id, b.closed_at, b.created_at
+FROM batch b
+WHERE b.id IN (/*SLICE:ids*/?)
+AND b.account_id = ?
+`
+
+type ListBatchTraversalByIDsParams struct {
+	Ids       []string
+	AccountID string
+}
+
+type ListBatchTraversalByIDsRow struct {
+	ID        string
+	ClosedAt  sql.NullTime
+	CreatedAt time.Time
+}
+
+// Closed state and age of the given batches. A batch outside the account is simply absent.
+func (q *Queries) ListBatchTraversalByIDs(ctx context.Context, arg ListBatchTraversalByIDsParams) ([]ListBatchTraversalByIDsRow, error) {
+	query := listBatchTraversalByIDs
+	var queryParams []interface{}
+	if len(arg.Ids) > 0 {
+		for _, v := range arg.Ids {
+			queryParams = append(queryParams, v)
+		}
+		query = strings.Replace(query, "/*SLICE:ids*/?", strings.Repeat(",?", len(arg.Ids))[1:], 1)
+	} else {
+		query = strings.Replace(query, "/*SLICE:ids*/?", "NULL", 1)
+	}
+	queryParams = append(queryParams, arg.AccountID)
+	rows, err := q.db.QueryContext(ctx, query, queryParams...)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []ListBatchTraversalByIDsRow
+	for rows.Next() {
+		var i ListBatchTraversalByIDsRow
+		if err := rows.Scan(&i.ID, &i.ClosedAt, &i.CreatedAt); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listBatchesByIDs = `-- name: ListBatchesByIDs :many
+SELECT
+    b.id,
+    b.account_id,
+    b.closed_at,
+    b.scanned_at,
+    b.created_at,
+    b.updated_at,
+    b.production_run_id,
+    i.id AS item_id,
+    i.sku AS item_sku,
+    i.description AS item_description,
+    q.id AS quantity_id,
+    q.value AS quantity_value,
+    qu.id AS quantity_unit_id,
+    qu.abbreviation AS quantity_unit_abbreviation,
+    qu.unit_dimension_code AS quantity_unit_type,
+    sq.id AS seconds_quantity_id,
+    sq.value AS seconds_quantity_value,
+    su.id AS seconds_unit_id,
+    su.abbreviation AS seconds_unit_abbreviation,
+    su.unit_dimension_code AS seconds_unit_type,
+    wq.id AS waste_quantity_id,
+    wq.value AS waste_quantity_value,
+    wu.id AS waste_unit_id,
+    wu.abbreviation AS waste_unit_abbreviation,
+    wu.unit_dimension_code AS waste_unit_type,
+    ss.id AS scanning_station_id,
+    ss.name AS scanning_station_name,
+    d.id AS department_id,
+    d.name AS department_name,
+    ps.id AS production_step_id,
+    ps.name AS production_step_name,
+    pr.id AS production_run_id_2,
+    pr.number AS production_run_number
+FROM batch b
+JOIN item i ON b.item_id = i.id
+JOIN quantity q ON b.quantity_id = q.id
+JOIN unit qu ON q.unit_id = qu.id
+LEFT JOIN quantity sq ON b.seconds_quantity_id = sq.id
+LEFT JOIN unit su ON sq.unit_id = su.id
+LEFT JOIN quantity wq ON b.waste_quantity_id = wq.id
+LEFT JOIN unit wu ON wq.unit_id = wu.id
+LEFT JOIN scanning_station ss ON b.scanning_station_id = ss.id
+LEFT JOIN department d ON ss.department_id = d.id
+LEFT JOIN production_step ps ON b.production_step_id = ps.id
+LEFT JOIN production_run pr ON b.production_run_id = pr.id
+WHERE b.id IN (/*SLICE:ids*/?)
+AND b.account_id = ?
+`
+
+type ListBatchesByIDsParams struct {
+	Ids       []string
+	AccountID string
+}
+
+type ListBatchesByIDsRow struct {
+	ID                       string
+	AccountID                string
+	ClosedAt                 sql.NullTime
+	ScannedAt                sql.NullTime
+	CreatedAt                time.Time
+	UpdatedAt                time.Time
+	ProductionRunID          sql.NullString
+	ItemID                   string
+	ItemSku                  string
+	ItemDescription          sql.NullString
+	QuantityID               string
+	QuantityValue            string
+	QuantityUnitID           string
+	QuantityUnitAbbreviation string
+	QuantityUnitType         string
+	SecondsQuantityID        sql.NullString
+	SecondsQuantityValue     sql.NullString
+	SecondsUnitID            sql.NullString
+	SecondsUnitAbbreviation  sql.NullString
+	SecondsUnitType          sql.NullString
+	WasteQuantityID          sql.NullString
+	WasteQuantityValue       sql.NullString
+	WasteUnitID              sql.NullString
+	WasteUnitAbbreviation    sql.NullString
+	WasteUnitType            sql.NullString
+	ScanningStationID        sql.NullString
+	ScanningStationName      sql.NullString
+	DepartmentID             sql.NullString
+	DepartmentName           sql.NullString
+	ProductionStepID         sql.NullString
+	ProductionStepName       sql.NullString
+	ProductionRunID2         sql.NullString
+	ProductionRunNumber      sql.NullString
+}
+
+// The bulk form of GetBatch; same columns, so rows convert to GetBatchRow.
+func (q *Queries) ListBatchesByIDs(ctx context.Context, arg ListBatchesByIDsParams) ([]ListBatchesByIDsRow, error) {
+	query := listBatchesByIDs
+	var queryParams []interface{}
+	if len(arg.Ids) > 0 {
+		for _, v := range arg.Ids {
+			queryParams = append(queryParams, v)
+		}
+		query = strings.Replace(query, "/*SLICE:ids*/?", strings.Repeat(",?", len(arg.Ids))[1:], 1)
+	} else {
+		query = strings.Replace(query, "/*SLICE:ids*/?", "NULL", 1)
+	}
+	queryParams = append(queryParams, arg.AccountID)
+	rows, err := q.db.QueryContext(ctx, query, queryParams...)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []ListBatchesByIDsRow
+	for rows.Next() {
+		var i ListBatchesByIDsRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.AccountID,
+			&i.ClosedAt,
+			&i.ScannedAt,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+			&i.ProductionRunID,
+			&i.ItemID,
+			&i.ItemSku,
+			&i.ItemDescription,
+			&i.QuantityID,
+			&i.QuantityValue,
+			&i.QuantityUnitID,
+			&i.QuantityUnitAbbreviation,
+			&i.QuantityUnitType,
+			&i.SecondsQuantityID,
+			&i.SecondsQuantityValue,
+			&i.SecondsUnitID,
+			&i.SecondsUnitAbbreviation,
+			&i.SecondsUnitType,
+			&i.WasteQuantityID,
+			&i.WasteQuantityValue,
+			&i.WasteUnitID,
+			&i.WasteUnitAbbreviation,
+			&i.WasteUnitType,
+			&i.ScanningStationID,
+			&i.ScanningStationName,
+			&i.DepartmentID,
+			&i.DepartmentName,
+			&i.ProductionStepID,
+			&i.ProductionStepName,
+			&i.ProductionRunID2,
+			&i.ProductionRunNumber,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listLotsForBatches = `-- name: ListLotsForBatches :many
+SELECT DISTINCT ii.batch_id, l.lot_number, 'material' AS lot_type
+FROM inventory_issue ii
+JOIN lot l ON ii.lot_id = l.id
+WHERE ii.batch_id IN (/*SLICE:issued_batch_ids*/?)
+AND l.lot_number IS NOT NULL
+UNION
+SELECT DISTINCT ii.batch_id, l.lot_number, 'material' AS lot_type
+FROM inventory_issue ii
+JOIN inventory_allocation ia ON ia.inventory_issue_id = ii.id
+JOIN inventory_receipt ir ON ia.inventory_receipt_id = ir.id
+JOIN lot l ON ir.lot_id = l.id
+WHERE ii.batch_id IN (/*SLICE:allocated_batch_ids*/?)
+AND l.lot_number IS NOT NULL
+`
+
+type ListLotsForBatchesParams struct {
+	IssuedBatchIds    []sql.NullString
+	AllocatedBatchIds []sql.NullString
+}
+
+type ListLotsForBatchesRow struct {
+	BatchID   sql.NullString
+	LotNumber string
+	LotType   string
+}
+
+// The lot numbers each batch consumed, directly or through allocated receipts.
+func (q *Queries) ListLotsForBatches(ctx context.Context, arg ListLotsForBatchesParams) ([]ListLotsForBatchesRow, error) {
+	query := listLotsForBatches
+	var queryParams []interface{}
+	if len(arg.IssuedBatchIds) > 0 {
+		for _, v := range arg.IssuedBatchIds {
+			queryParams = append(queryParams, v)
+		}
+		query = strings.Replace(query, "/*SLICE:issued_batch_ids*/?", strings.Repeat(",?", len(arg.IssuedBatchIds))[1:], 1)
+	} else {
+		query = strings.Replace(query, "/*SLICE:issued_batch_ids*/?", "NULL", 1)
+	}
+	if len(arg.AllocatedBatchIds) > 0 {
+		for _, v := range arg.AllocatedBatchIds {
+			queryParams = append(queryParams, v)
+		}
+		query = strings.Replace(query, "/*SLICE:allocated_batch_ids*/?", strings.Repeat(",?", len(arg.AllocatedBatchIds))[1:], 1)
+	} else {
+		query = strings.Replace(query, "/*SLICE:allocated_batch_ids*/?", "NULL", 1)
+	}
+	rows, err := q.db.QueryContext(ctx, query, queryParams...)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []ListLotsForBatchesRow
+	for rows.Next() {
+		var i ListLotsForBatchesRow
+		if err := rows.Scan(&i.BatchID, &i.LotNumber, &i.LotType); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listMachinesForBatches = `-- name: ListMachinesForBatches :many
+SELECT
+    bm.A AS batch_id,
+    m.id,
+    m.name,
+    m.serial_number
+FROM _batches_machines bm
+JOIN machine m ON bm.B = m.id
+WHERE bm.A IN (/*SLICE:batch_ids*/?)
+`
+
+type ListMachinesForBatchesRow struct {
+	BatchID      string
+	ID           string
+	Name         string
+	SerialNumber string
+}
+
+func (q *Queries) ListMachinesForBatches(ctx context.Context, batchIds []string) ([]ListMachinesForBatchesRow, error) {
+	query := listMachinesForBatches
+	var queryParams []interface{}
+	if len(batchIds) > 0 {
+		for _, v := range batchIds {
+			queryParams = append(queryParams, v)
+		}
+		query = strings.Replace(query, "/*SLICE:batch_ids*/?", strings.Repeat(",?", len(batchIds))[1:], 1)
+	} else {
+		query = strings.Replace(query, "/*SLICE:batch_ids*/?", "NULL", 1)
+	}
+	rows, err := q.db.QueryContext(ctx, query, queryParams...)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []ListMachinesForBatchesRow
+	for rows.Next() {
+		var i ListMachinesForBatchesRow
+		if err := rows.Scan(
+			&i.BatchID,
+			&i.ID,
+			&i.Name,
+			&i.SerialNumber,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listProductionRunBatchSummaries = `-- name: ListProductionRunBatchSummaries :many
+SELECT
+    b.production_run_id,
+    i.id AS item_id,
+    i.sku AS item_sku,
+    u.id AS unit_id,
+    u.abbreviation AS unit_abbreviation,
+    CAST(SUM(q.value) AS CHAR) AS quantity_value,
+    COUNT(*) AS batch_count
+FROM batch b
+JOIN item i ON b.item_id = i.id
+JOIN quantity q ON b.quantity_id = q.id
+JOIN unit u ON q.unit_id = u.id
+WHERE b.account_id = ?
+AND b.production_run_id IN (/*SLICE:production_run_ids*/?)
+GROUP BY b.production_run_id, i.id, i.sku, u.id, u.abbreviation
+ORDER BY b.production_run_id, i.sku, u.abbreviation
+`
+
+type ListProductionRunBatchSummariesParams struct {
+	AccountID        string
+	ProductionRunIds []sql.NullString
+}
+
+type ListProductionRunBatchSummariesRow struct {
+	ProductionRunID  sql.NullString
+	ItemID           string
+	ItemSku          string
+	UnitID           string
+	UnitAbbreviation string
+	QuantityValue    interface{}
+	BatchCount       int64
+}
+
+// The runs' planned output, totalled per item and unit.
+func (q *Queries) ListProductionRunBatchSummaries(ctx context.Context, arg ListProductionRunBatchSummariesParams) ([]ListProductionRunBatchSummariesRow, error) {
+	query := listProductionRunBatchSummaries
+	var queryParams []interface{}
+	queryParams = append(queryParams, arg.AccountID)
+	if len(arg.ProductionRunIds) > 0 {
+		for _, v := range arg.ProductionRunIds {
+			queryParams = append(queryParams, v)
+		}
+		query = strings.Replace(query, "/*SLICE:production_run_ids*/?", strings.Repeat(",?", len(arg.ProductionRunIds))[1:], 1)
+	} else {
+		query = strings.Replace(query, "/*SLICE:production_run_ids*/?", "NULL", 1)
+	}
+	rows, err := q.db.QueryContext(ctx, query, queryParams...)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []ListProductionRunBatchSummariesRow
+	for rows.Next() {
+		var i ListProductionRunBatchSummariesRow
+		if err := rows.Scan(
+			&i.ProductionRunID,
+			&i.ItemID,
+			&i.ItemSku,
+			&i.UnitID,
+			&i.UnitAbbreviation,
+			&i.QuantityValue,
+			&i.BatchCount,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
 }
 
 const listProductionRunsBackward = `-- name: ListProductionRunsBackward :many
@@ -734,6 +1153,48 @@ func (q *Queries) ListProductionRunsForward(ctx context.Context, arg ListProduct
 			&i.UpdatedAt,
 			&i.BatchCount,
 		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listRunBatchTraversal = `-- name: ListRunBatchTraversal :many
+SELECT b.id, b.closed_at, b.created_at
+FROM batch b
+WHERE b.production_run_id = ?
+AND b.account_id = ?
+`
+
+type ListRunBatchTraversalParams struct {
+	ProductionRunID sql.NullString
+	AccountID       string
+}
+
+type ListRunBatchTraversalRow struct {
+	ID        string
+	ClosedAt  sql.NullTime
+	CreatedAt time.Time
+}
+
+// A run's own batches with what the flow walk and pagination need, and nothing more.
+func (q *Queries) ListRunBatchTraversal(ctx context.Context, arg ListRunBatchTraversalParams) ([]ListRunBatchTraversalRow, error) {
+	rows, err := q.db.QueryContext(ctx, listRunBatchTraversal, arg.ProductionRunID, arg.AccountID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []ListRunBatchTraversalRow
+	for rows.Next() {
+		var i ListRunBatchTraversalRow
+		if err := rows.Scan(&i.ID, &i.ClosedAt, &i.CreatedAt); err != nil {
 			return nil, err
 		}
 		items = append(items, i)

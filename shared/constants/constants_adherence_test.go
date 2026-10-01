@@ -283,6 +283,7 @@ var typeRegistry = map[string]any{
 	"SalesBreakdownGroupBy":           SalesBreakdownGroupBy(""),
 	"PickStatus":                      PickStatus(""),
 	"ProductionRunStatus":             ProductionRunStatus(""),
+	"ProductionRunBatchScope":         ProductionRunBatchScope(""),
 	"ReceivingOrderStatus":            ReceivingOrderStatus(""),
 	"TransactionAllocationStatus":     TransactionAllocationStatus(""),
 	"EmailInboxStatus":                EmailInboxStatus(""),

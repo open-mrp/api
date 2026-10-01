@@ -153,9 +153,13 @@ func (s *productionRunSvcImpl) CreateProductionRun(ctx context.Context, params d
 	accountUserRepo := s.repos.NewAccountUserRepo()
 	resolvedID, apiErr := accountUserRepo.ResolveAccountUserID(ctx, params.AccountID, params.ResponsibleUserID)
 	if apiErr != nil {
-		return nil, tracing.Trace(span, apierror.NewResourceNotFoundError("The responsible user was not found in this account."))
+		return nil, tracing.Trace(span, apierror.NewValidationErrorWithParam("The responsible user was not found in this account.", "responsible_user_id"))
 	}
 	params.ResponsibleUserID = resolvedID
+
+	if apiErr := validateAddBatchInputs(ctx, s.repos, params.AccountID, params.Batches); apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
 
 	productionRunID, apiErr := id.GenID(id.ProductionRunIDPrefix, nil)
 	if apiErr != nil {
@@ -190,6 +194,16 @@ func (s *productionRunSvcImpl) CreateProductionRun(ctx context.Context, params d
 			created, apiErr := txRepo.Create(txCtx, productionRunID, params, number)
 			if apiErr != nil {
 				return apiErr
+			}
+			if len(params.Batches) > 0 {
+				if _, apiErr := createBatchesForRun(txCtx, txSvc.repos, params.AccountID, productionRunID, params.Batches); apiErr != nil {
+					return apiErr
+				}
+				// Re-read so the batch count and totals include what was just planned.
+				created, apiErr = txRepo.Get(txCtx, domain.GetProductionRunParams{ProductionRunID: productionRunID, AccountID: params.AccountID})
+				if apiErr != nil {
+					return apiErr
+				}
 			}
 			result = created
 
@@ -264,7 +278,7 @@ func (s *productionRunSvcImpl) UpdateProductionRun(ctx context.Context, params d
 		accountUserRepo := s.repos.NewAccountUserRepo()
 		resolvedID, apiErr := accountUserRepo.ResolveAccountUserID(ctx, params.AccountID, *params.ResponsibleUserID)
 		if apiErr != nil {
-			return nil, tracing.Trace(span, apierror.NewResourceNotFoundError("The responsible user was not found in this account."))
+			return nil, tracing.Trace(span, apierror.NewValidationErrorWithParam("The responsible user was not found in this account.", "responsible_user_id"))
 		}
 		params.ResponsibleUserID = &resolvedID
 	}
@@ -496,6 +510,10 @@ func (s *productionRunSvcImpl) AddBatchesToProductionRun(ctx context.Context, pa
 		return nil, tracing.Trace(span, apierror.NewValidationError("Cannot add batches to a completed production run."))
 	}
 
+	if apiErr := validateAddBatchInputs(ctx, s.repos, params.AccountID, params.Batches); apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
+
 	meds := s.mediators()
 
 	idempotencyKey, apiErr := meds.Idempotency.UpsertIdempotencyKey(ctx, identity)
@@ -514,41 +532,11 @@ func (s *productionRunSvcImpl) AddBatchesToProductionRun(ctx context.Context, pa
 	case domain.RecoveryPointStarted:
 		var results []*domain.BaseBatch
 		apiErr = s.withTx(ctx, func(txCtx context.Context, txSvc *productionRunSvcImpl) *apierror.APIError {
-			batchRepo := txSvc.repos.NewBatchRepo()
-			prRepo := txSvc.repos.NewProductionRunRepo()
-
-			// Accumulated inside the transaction and published to `results` only once it has
-			// been built. Appending to the outer slice directly would double the batches if the
-			// transaction were ever run twice, and the caller would be told it created each one
-			// of them.
-			created := make([]*domain.BaseBatch, 0, len(params.Batches))
-
-			for _, input := range params.Batches {
-				batchID, apiErr := id.GenID(id.BatchIDPrefix, nil)
-				if apiErr != nil {
-					return apiErr
-				}
-
-				batch, apiErr := batchRepo.Create(txCtx, batchID, domain.CreateBatchParams{
-					AccountID:         params.AccountID,
-					ItemID:            input.ItemID,
-					Quantity:          input.Quantity,
-					Seconds:           input.Seconds,
-					Waste:             input.Waste,
-					ProductionStepID:  ptrutil.Deref(input.ProductionStepID),
-					ScanningStationID: ptrutil.Deref(input.ScanningStationID),
-				})
-				if apiErr != nil {
-					return apiErr
-				}
-
-				// Connect the batch to the production run.
-				if apiErr := prRepo.SetBatchProductionRunID(txCtx, params.AccountID, batchID, params.ProductionRunID); apiErr != nil {
-					return apiErr
-				}
-				batch.ProductionRunID = &params.ProductionRunID
-
-				created = append(created, batch)
+			// Published to `results` only once built, so a retried transaction cannot double the
+			// batches the caller is told it created.
+			created, apiErr := createBatchesForRun(txCtx, txSvc.repos, params.AccountID, params.ProductionRunID, params.Batches)
+			if apiErr != nil {
+				return apiErr
 			}
 
 			if apiErr := txSvc.mediators().ProductionRunActivity.NotifyBatchesAdded(txCtx, identity, run, len(created)); apiErr != nil {
@@ -590,5 +578,157 @@ func (s *productionRunSvcImpl) ListBatchesByProductionRun(ctx context.Context, p
 	params.AccountID = identity.Target.AccountID
 
 	repo := s.repos.NewProductionRunRepo()
+
+	// An unknown run is a 404, not an empty list.
+	if _, apiErr := repo.Get(ctx, domain.GetProductionRunParams{
+		ProductionRunID: params.ProductionRunID,
+		AccountID:       params.AccountID,
+	}); apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
+
 	return repo.ListBatchesByRun(ctx, params)
+}
+
+// validateAddBatchInputs checks planned batches against the account: a positive quantity,
+// non-negative seconds and waste, and every referenced item, unit, step, station, and
+// machine belonging to it. The foreign keys alone would accept another account's records.
+func validateAddBatchInputs(ctx context.Context, repos domain.RepoFactory, accountID string, inputs []domain.AddBatchInput) *apierror.APIError {
+	if len(inputs) == 0 {
+		return nil
+	}
+
+	var itemIdentifiers []domain.ItemIdentifier
+	var unitIdentifiers []domain.UnitIdentifier
+	var stationIdentifiers []domain.ObjectIdentifier
+	var machineIDs []string
+	for _, b := range inputs {
+		itemIdentifiers = append(itemIdentifiers, domain.ItemIdentifier{ID: b.ItemID})
+		unitIdentifiers = append(unitIdentifiers, domain.UnitIdentifier{ID: b.Quantity.UnitID})
+		if b.Seconds != nil {
+			unitIdentifiers = append(unitIdentifiers, domain.UnitIdentifier{ID: b.Seconds.UnitID})
+		}
+		if b.Waste != nil {
+			unitIdentifiers = append(unitIdentifiers, domain.UnitIdentifier{ID: b.Waste.UnitID})
+		}
+		if b.ScanningStationID != nil && *b.ScanningStationID != "" {
+			stationIdentifiers = append(stationIdentifiers, domain.ObjectIdentifier{ID: *b.ScanningStationID})
+		}
+		machineIDs = append(machineIDs, b.MachineIDs...)
+	}
+
+	items, apiErr := newItemIdentifierResolver(ctx, repos, accountID, itemIdentifiers)
+	if apiErr != nil {
+		return apiErr
+	}
+	units, apiErr := newUnitIdentifierResolver(ctx, repos, accountID, unitIdentifiers)
+	if apiErr != nil {
+		return apiErr
+	}
+	stationRepo := repos.NewScanningStationRepo()
+	stations, apiErr := newObjectIdentifierResolver(ctx, accountID, "scanning station", stationIdentifiers,
+		stationRepo.GetByIDs, stationRepo.FindByNames,
+		func(s *domain.ScanningStation) string { return s.ID },
+		func(s *domain.ScanningStation) string { return s.Name },
+	)
+	if apiErr != nil {
+		return apiErr
+	}
+
+	validMachineIDs := make(map[string]struct{})
+	if len(machineIDs) > 0 {
+		machines, apiErr := repos.NewMachineRepo().GetByIDs(ctx, accountID, machineIDs)
+		if apiErr != nil {
+			return apiErr
+		}
+		for _, m := range machines {
+			validMachineIDs[m.ID] = struct{}{}
+		}
+	}
+
+	stepQueryRepo := repos.NewProductionStepQueryRepo()
+	validStepIDs := make(map[string]struct{})
+	for j, b := range inputs {
+		param := func(field string) string { return fmt.Sprintf("batches[%d].%s", j, field) }
+
+		if !b.Quantity.Measure.IsPositive() {
+			return apierror.NewValidationErrorWithParam("Quantity must be greater than zero.", param("quantity_value"))
+		}
+		if b.Seconds != nil && b.Seconds.Measure.IsNegative() {
+			return apierror.NewValidationErrorWithParam("Seconds cannot be negative.", param("seconds_value"))
+		}
+		if b.Waste != nil && b.Waste.Measure.IsNegative() {
+			return apierror.NewValidationErrorWithParam("Waste cannot be negative.", param("waste_value"))
+		}
+
+		if _, apiErr := items.resolveOrError(domain.ItemIdentifier{ID: b.ItemID}, param("item_id")); apiErr != nil {
+			return apiErr
+		}
+		if _, apiErr := units.resolveOrError(domain.UnitIdentifier{ID: b.Quantity.UnitID}, param("quantity_unit_id")); apiErr != nil {
+			return apiErr
+		}
+		if b.Seconds != nil {
+			if _, apiErr := units.resolveOrError(domain.UnitIdentifier{ID: b.Seconds.UnitID}, param("seconds_unit_id")); apiErr != nil {
+				return apiErr
+			}
+		}
+		if b.Waste != nil {
+			if _, apiErr := units.resolveOrError(domain.UnitIdentifier{ID: b.Waste.UnitID}, param("waste_unit_id")); apiErr != nil {
+				return apiErr
+			}
+		}
+		if b.ScanningStationID != nil && *b.ScanningStationID != "" {
+			if _, apiErr := stations.resolveOrError(domain.ObjectIdentifier{ID: *b.ScanningStationID}, param("scanning_station_id")); apiErr != nil {
+				return apiErr
+			}
+		}
+		for k, machineID := range b.MachineIDs {
+			if _, ok := validMachineIDs[machineID]; !ok {
+				return apierror.NewValidationErrorWithParam(
+					fmt.Sprintf("Machine %q was not found.", machineID), param(fmt.Sprintf("machine_ids[%d]", k)))
+			}
+		}
+		if b.ProductionStepID != nil && *b.ProductionStepID != "" {
+			if _, ok := validStepIDs[*b.ProductionStepID]; !ok {
+				inAccount, apiErr := stepQueryRepo.IsInAccount(ctx, accountID, *b.ProductionStepID)
+				if apiErr != nil {
+					return apiErr
+				}
+				if !inAccount {
+					return apierror.NewValidationErrorWithParam(
+						fmt.Sprintf("Production step %q was not found.", *b.ProductionStepID), param("production_step_id"))
+				}
+				validStepIDs[*b.ProductionStepID] = struct{}{}
+			}
+		}
+	}
+
+	return nil
+}
+
+// createBatchesForRun writes planned batches onto a run in a fixed number of statements. It
+// consumes the caller's transaction.
+func createBatchesForRun(txCtx context.Context, repos domain.RepoFactory, accountID, productionRunID string, inputs []domain.AddBatchInput) ([]*domain.BaseBatch, *apierror.APIError) {
+	batches := make([]domain.NewBatch, len(inputs))
+	for i, input := range inputs {
+		batchID, apiErr := id.GenID(id.BatchIDPrefix, nil)
+		if apiErr != nil {
+			return nil, apiErr
+		}
+		batches[i] = domain.NewBatch{
+			ID: batchID,
+			CreateBatchParams: domain.CreateBatchParams{
+				AccountID:         accountID,
+				ItemID:            input.ItemID,
+				Quantity:          input.Quantity,
+				Seconds:           input.Seconds,
+				Waste:             input.Waste,
+				ProductionStepID:  ptrutil.Deref(input.ProductionStepID),
+				ScanningStationID: ptrutil.Deref(input.ScanningStationID),
+				ProductionRunID:   productionRunID,
+				MachineIDs:        input.MachineIDs,
+			},
+		}
+	}
+	return repos.NewBatchRepo().CreateMany(txCtx, batches)
 }

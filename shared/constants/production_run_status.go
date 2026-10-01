@@ -8,11 +8,13 @@ const (
 	ProductionRunStatusOpen ProductionRunStatus = "open"
 	// ProductionRunStatusClosed returns runs whose batches have all been scanned or deleted.
 	ProductionRunStatusClosed ProductionRunStatus = "closed"
+	// ProductionRunStatusAll returns runs regardless of whether they have completed.
+	ProductionRunStatusAll ProductionRunStatus = "all"
 )
 
 func (s ProductionRunStatus) IsValid() bool {
 	switch s {
-	case ProductionRunStatusOpen, ProductionRunStatusClosed:
+	case ProductionRunStatusOpen, ProductionRunStatusClosed, ProductionRunStatusAll:
 		return true
 	default:
 		return false
@@ -23,5 +25,6 @@ func (s ProductionRunStatus) EnumValues() []string {
 	return []string{
 		string(ProductionRunStatusOpen),
 		string(ProductionRunStatusClosed),
+		string(ProductionRunStatusAll),
 	}
 }

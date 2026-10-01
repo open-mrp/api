@@ -16,18 +16,18 @@ type ListProductionRunsRequest struct {
 	apiresource.PaginationRequest
 	// Filter by run status.
 	//
-	// A run is `open` until every batch in it has been scanned or deleted, at which point it completes and becomes `closed`. Only open runs are returned when this filter is omitted, so ask for `closed` explicitly to see finished runs.
+	// A run is `open` until every batch in it has been scanned or deleted, at which point it completes and becomes `closed`. Only open runs are returned when this filter is omitted; ask for `closed` to see finished runs, or `all` for both.
 	Status *constants.ProductionRunStatus `query:"status"`
 	// Only return runs containing at least one batch that produces any of these items.
 	ItemIDs []string `query:"item_ids"`
 	// Only return runs containing at least one batch that used any of these machines.
 	MachineIDs []string `query:"machine_ids"`
-	// Only return runs created on or after this date, formatted as `YYYY-MM-DD`.
-	StartDate *string `query:"starts_at"`
-	// Only return runs created before this date, formatted as `YYYY-MM-DD`.
+	// Only return runs created at or after this time: a `YYYY-MM-DD` date (the start of that day in UTC) or an RFC 3339 timestamp.
+	StartDate *string `query:"starts_at" validate:"omitempty,date_filter"`
+	// Only return runs created before this time: a `YYYY-MM-DD` date (the start of that day in UTC) or an RFC 3339 timestamp.
 	//
-	// The cutoff is the start of the given day, so runs created during that day are not returned; pass the following day to include them.
-	EndDate *string `query:"ends_at"`
+	// A date cuts off at the start of the given day, so runs created during that day are not returned; pass the following day to include them.
+	EndDate *string `query:"ends_at" validate:"omitempty,date_filter"`
 }
 
 // Returns a paginated list of production runs, most recently created first.

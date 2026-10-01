@@ -28,6 +28,8 @@ type LightUnit struct {
 type LightItem struct {
 	ID  string
 	SKU string
+	// Description is populated where the query provides it; nil otherwise.
+	Description *string
 	// Type is the item_type_code (e.g. "material", "part", "finished_good"). Populated where the query provides it; empty otherwise.
 	Type string
 }
@@ -52,8 +54,9 @@ type LightProductionRun struct {
 
 // LightMachine is a lightweight machine reference returned as a sub-resource.
 type LightMachine struct {
-	ID   string
-	Name string
+	ID           string
+	Name         string
+	SerialNumber string
 }
 
 // BatchQuantity represents a quantity with a unit.
@@ -144,6 +147,12 @@ type CreateBatchParams struct {
 	ProductionRunID   string
 	// MachineIDs are the machines the batch runs on. Attainment attributes production through this link, so a batch created without it is work no machine gets credit for.
 	MachineIDs []string
+}
+
+// NewBatch is one batch of a CreateMany, with its pre-generated ID.
+type NewBatch struct {
+	ID string
+	CreateBatchParams
 }
 
 // CreateQuantityParams holds the parameters for creating a quantity record.

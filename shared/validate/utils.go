@@ -520,11 +520,68 @@ func getFieldMetadata(fieldErr validator.FieldError, structValue any) fieldMetad
 		rv = rv.Elem()
 	}
 
+	if path, ok := nestedFieldPath(rv.Type(), fieldErr.StructNamespace()); ok {
+		return fieldMetadata{name: path, source: "field"}
+	}
+
 	if meta, found := lookupFieldMetadata(rv.Type(), fieldName); found {
 		return meta
 	}
 
 	return fieldMetadata{name: fieldName, source: "field"}
+}
+
+// nestedFieldPath maps the Go namespace of a field inside a nested struct or slice
+// ("Req.Batches[0].QuantityValue") to the JSON path the caller sent
+// ("batches[0].quantity_value"). ok is false for top-level fields, which
+// lookupFieldMetadata already names.
+func nestedFieldPath(rt reflect.Type, namespace string) (string, bool) {
+	segments := strings.Split(namespace, ".")
+	if len(segments) <= 2 {
+		return "", false
+	}
+
+	parts := make([]string, 0, len(segments)-1)
+	for _, segment := range segments[1:] {
+		name, index := segment, ""
+		if i := strings.IndexByte(segment, '['); i >= 0 {
+			name, index = segment[:i], segment[i:]
+		}
+
+		for rt.Kind() == reflect.Pointer {
+			rt = rt.Elem()
+		}
+		if rt.Kind() != reflect.Struct {
+			return "", false
+		}
+		meta, found := lookupFieldMetadata(rt, name)
+		if !found {
+			return "", false
+		}
+		field, found := rt.FieldByName(name)
+		if !found {
+			return "", false
+		}
+		// Embedded structs are flattened into their parent's JSON.
+		if !field.Anonymous || index != "" {
+			parts = append(parts, meta.name+index)
+		}
+
+		rt = field.Type
+		for range strings.Count(index, "[") {
+			for rt.Kind() == reflect.Pointer {
+				rt = rt.Elem()
+			}
+			if rt.Kind() != reflect.Slice && rt.Kind() != reflect.Array && rt.Kind() != reflect.Map {
+				return "", false
+			}
+			rt = rt.Elem()
+		}
+	}
+	if len(parts) <= 1 {
+		return "", false
+	}
+	return strings.Join(parts, "."), true
 }
 
 // lookupFieldMetadata finds a field by its Go name, descending into embedded structs.

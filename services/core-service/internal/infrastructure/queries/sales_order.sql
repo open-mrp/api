@@ -1559,6 +1559,49 @@ JOIN product p ON p.id = sol.product_id
 WHERE sol.sales_order_id = sqlc.arg('sales_order_id')
 AND p.product_type_code = 'sale';
 
+-- What each item on the order's sale lines still needs reserved: ordered less every issue the order
+-- already has for it, whatever its status — shipped issues are open or closed, and a reservation that
+-- survived a close is still reserved and must not be reserved twice. Expressed in the unit of the
+-- item's first line, since that is the unit the new reservation is written in.
+-- name: GetSalesOrderUnreservedRemainders :many
+SELECT
+    ordered.item_id,
+    lu.id AS unit_id,
+    CAST((ordered.base_value - COALESCE(issued.base_value, 0)) / (lu.ratio_numerator / lu.ratio_denominator) AS DECIMAL(65,30)) AS remaining_value
+FROM (
+    SELECT sol.item_id, SUM(q.value * (u.ratio_numerator / u.ratio_denominator)) AS base_value
+    FROM sales_order_line sol
+    JOIN quantity q ON q.id = sol.quantity_id
+    JOIN unit u ON u.id = q.unit_id
+    JOIN product p ON p.id = sol.product_id
+    WHERE sol.sales_order_id = sqlc.arg('sales_order_id')
+    AND p.product_type_code = 'sale'
+    AND sol.item_id IS NOT NULL
+    GROUP BY sol.item_id
+) ordered
+JOIN unit lu ON lu.id = (
+    SELECT q2.unit_id
+    FROM sales_order_line sol2
+    JOIN quantity q2 ON q2.id = sol2.quantity_id
+    JOIN product p2 ON p2.id = sol2.product_id
+    WHERE sol2.sales_order_id = sqlc.arg('sales_order_id')
+    AND sol2.item_id = ordered.item_id
+    AND p2.product_type_code = 'sale'
+    ORDER BY sol2.line_item_number, sol2.id
+    LIMIT 1
+)
+LEFT JOIN (
+    SELECT ii.item_id, SUM(q.value * (u.ratio_numerator / u.ratio_denominator)) AS base_value
+    FROM inventory_issue ii
+    JOIN quantity q ON q.id = ii.quantity_id
+    JOIN unit u ON u.id = q.unit_id
+    WHERE ii.order_id = sqlc.arg('order_id')
+    AND ii.account_id = sqlc.arg('account_id')
+    GROUP BY ii.item_id
+) issued ON issued.item_id = ordered.item_id
+WHERE ordered.base_value - COALESCE(issued.base_value, 0) > 0
+ORDER BY ordered.item_id;
+
 -- name: CreateReservedInventoryIssueForSalesOrder :exec
 INSERT INTO inventory_issue (id, account_id, item_id, quantity_id, status_code, order_id, created_at, updated_at)
 VALUES (sqlc.arg('id'), sqlc.arg('account_id'), sqlc.arg('item_id'), sqlc.arg('quantity_id'), 'reserved', sqlc.arg('order_id'), NOW(3), NOW(3));

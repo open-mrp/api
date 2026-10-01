@@ -14454,6 +14454,21 @@ func (mr *MockSalesOrderRepoMockRecorder) GetShipmentIDsForOrders(ctx, salesOrde
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetShipmentIDsForOrders", reflect.TypeOf((*MockSalesOrderRepo)(nil).GetShipmentIDsForOrders), ctx, salesOrderIDs)
 }
 
+// GetUnreservedRemainders mocks base method.
+func (m *MockSalesOrderRepo) GetUnreservedRemainders(ctx context.Context, accountID, salesOrderID string) ([]domain.SalesOrderItemRemainder, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetUnreservedRemainders", ctx, accountID, salesOrderID)
+	ret0, _ := ret[0].([]domain.SalesOrderItemRemainder)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
+}
+
+// GetUnreservedRemainders indicates an expected call of GetUnreservedRemainders.
+func (mr *MockSalesOrderRepoMockRecorder) GetUnreservedRemainders(ctx, accountID, salesOrderID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetUnreservedRemainders", reflect.TypeOf((*MockSalesOrderRepo)(nil).GetUnreservedRemainders), ctx, accountID, salesOrderID)
+}
+
 // HasShippedShipment mocks base method.
 func (m *MockSalesOrderRepo) HasShippedShipment(ctx context.Context, salesOrderID string) (bool, *apierror.APIError) {
 	m.ctrl.T.Helper()

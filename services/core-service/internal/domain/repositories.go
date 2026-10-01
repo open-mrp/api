@@ -1382,6 +1382,8 @@ type SalesOrderRepo interface {
 	SetProductionRunID(ctx context.Context, accountID, salesOrderID, productionRunID string) *apierror.APIError
 	GetSaleLinesForIssue(ctx context.Context, salesOrderID string) ([]SalesOrderSaleLineForIssue, *apierror.APIError)
 	CreateReservedInventoryIssue(ctx context.Context, id, accountID, itemID, quantityID, orderID string) *apierror.APIError
+	// GetUnreservedRemainders returns, per item on the order's sale lines, the ordered quantity not yet covered by any of the order's inventory issues.
+	GetUnreservedRemainders(ctx context.Context, accountID, salesOrderID string) ([]SalesOrderItemRemainder, *apierror.APIError)
 	GetAcknowledgementRecipients(ctx context.Context, salesOrderID string) ([]string, *apierror.APIError)
 	MarkAcknowledgementSent(ctx context.Context, accountID, salesOrderID string) *apierror.APIError
 	CreateEmailContact(ctx context.Context, id, salesOrderID, accountUserID, notificationTypeCode string) *apierror.APIError

@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.16.0](https://github.com/open-mrp/api/compare/v2.15.2...v2.16.0) (2026-10-01)
+
+
+### Features
+
+* **proto:** enhance production run and batch structures with new fields and validation ([#219](https://github.com/open-mrp/api/issues/219)) ([081923d](https://github.com/open-mrp/api/commit/081923d3fd1b2c6262855d4697af52580041e230))
+
 ## [2.15.2](https://github.com/open-mrp/api/compare/v2.15.1...v2.15.2) (2026-09-30)
 
 

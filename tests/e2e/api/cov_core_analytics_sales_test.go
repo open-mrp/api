@@ -374,6 +374,66 @@ func TestSalesAnalytics_InvoicesListTheShippedInvoice(t *testing.T) {
 	assert.Equal(t, shippedSaleRevenue, computedValue(t, inv, "revenue"))
 }
 
+// A filtered invoice page is chosen from the filter's lines, a page per customer merged newest first;
+// paging forward and back across several customers must list each invoice once, in order, both ways.
+func TestSalesAnalytics_InvoicesPageAcrossCustomersForwardAndBack(t *testing.T) {
+	t.Parallel()
+	var customers []string
+	for range 3 {
+		sale := shipSaleToNewCustomer(t)
+		awaitSalesSummary(t, sale.customerID, 1)
+		customers = append(customers, sale.customerID)
+	}
+	body := saleFilter(customers[0])
+	body["customer_ids"] = customers
+
+	type row struct {
+		id         string
+		invoicedAt string
+	}
+	page := func(params url.Values) ([]row, map[string]any) {
+		status, list, raw := putSales(t, salesInvoicesPath, params, body)
+		requireStatus(t, 200, status, raw)
+		var out []row
+		for _, inv := range jsonArray(list, "data") {
+			m := inv.(map[string]any)
+			assert.Contains(t, customers, jsonField(m, "customer_id"))
+			out = append(out, row{jsonField(m, "id"), jsonField(m, "invoiced_at")})
+		}
+		return out, jsonObject(list, "page_info")
+	}
+
+	var forward []row
+	params := url.Values{"limit": {"1"}}
+	var info map[string]any
+	for i := 0; i < 10; i++ {
+		var rows []row
+		rows, info = page(params)
+		forward = append(forward, rows...)
+		if jsonField(info, "has_next_page") != "true" {
+			break
+		}
+		params = url.Values{"limit": {"1"}, "cursor": {cursorFromURL(t, jsonField(info, "next_page_url"))}}
+	}
+	require.Len(t, forward, len(customers), "one invoice per customer")
+	seen := map[string]bool{}
+	for i, r := range forward {
+		assert.False(t, seen[r.id], "invoice %s listed twice", r.id)
+		seen[r.id] = true
+		if i > 0 {
+			assert.LessOrEqual(t, r.invoicedAt, forward[i-1].invoicedAt, "invoices are listed newest first")
+		}
+	}
+
+	var backward []row
+	for i := 0; i < 10 && jsonField(info, "has_prev_page") == "true"; i++ {
+		var rows []row
+		rows, info = page(url.Values{"limit": {"1"}, "cursor": {cursorFromURL(t, jsonField(info, "previous_page_url"))}})
+		backward = append(rows, backward...)
+	}
+	require.Equal(t, forward[:len(forward)-1], backward, "paging back retraces the pages before the last")
+}
+
 // --- Lines ---
 
 func TestSalesAnalytics_LinesArePricedInTheBaseUnit(t *testing.T) {

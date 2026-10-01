@@ -60,6 +60,44 @@ type salesFactQuery struct {
 	entityFiltered bool
 	// empty is set when a filter resolved to no buyers, so nothing can match.
 	empty bool
+	// filters are the entity filters set, each with the key that pins it ahead of the window.
+	filters []factFilter
+}
+
+// factFilter is one entity filter on sales_line_fact: the lines whose column is one of ids.
+type factFilter struct {
+	column, key string
+	ids         []string
+}
+
+// from is the FROM item for totalling q's lines. Left alone, a filtered total reads the whole window in
+// clustered order rather than look up the filter's matches; forcing the filters' keys stops that.
+func (q *salesFactQuery) from() string {
+	if len(q.filters) == 0 {
+		return "FROM sales_line_fact f"
+	}
+	keys := make([]string, len(q.filters))
+	for i, f := range q.filters {
+		keys[i] = f.key
+	}
+	return "FROM sales_line_fact f FORCE INDEX (" + strings.Join(keys, ", ") + ")"
+}
+
+// pinnedWhere is q's filters without a window, with filter pin narrowed to the one value id.
+func (q *salesFactQuery) pinnedWhere(pin int, id string) (string, []any) {
+	var sb strings.Builder
+	sb.WriteString("f.account_id = ? AND f.sales_order_type_code = 'sales_order'")
+	args := []any{q.accountID}
+	for i, f := range q.filters {
+		if i == pin {
+			sb.WriteString(" AND " + f.column + " = ?")
+			args = append(args, id)
+			continue
+		}
+		sb.WriteString(" AND " + f.column + " IN (" + placeholders(len(f.ids)) + ")")
+		args = append(args, stringsToAny(f.ids)...)
+	}
+	return sb.String(), args
 }
 
 func (q *salesFactQuery) add(clause string, args ...any) {
@@ -123,6 +161,18 @@ func (r *salesReportRepoImpl) newSalesFactQuery(ctx context.Context, f domain.Sa
 		q.addIn("f.buyer_account_id", buyers)
 	}
 	q.buyers, q.buyersFiltered = buyers, filtered
+
+	// Ordered from the usually narrowest filter, which the invoice page prefers among equals.
+	for _, ff := range []factFilter{
+		{"f.buyer_account_id", "sales_line_fact_buyer_idx", buyers},
+		{"f.item_id", "sales_line_fact_item_idx", f.ItemIDs},
+		{"f.sales_rep_id", "sales_line_fact_sales_rep_idx", f.SalesRepIDs},
+		{"f.product_line_id", "sales_line_fact_product_line_idx", f.ProductLineIDs},
+	} {
+		if len(ff.ids) > 0 {
+			q.filters = append(q.filters, ff)
+		}
+	}
 	return q, nil
 }
 
@@ -295,9 +345,9 @@ func (r *salesReportRepoImpl) GetSummary(ctx context.Context, params domain.Anal
 			*daily[i] = []domain.SalesTotals{}
 			continue
 		}
-		totalsQuery := "SELECT " + totalsColumns("TRUE", "") + " FROM sales_line_fact f WHERE " + q.where.String()
+		totalsQuery := "SELECT " + totalsColumns("TRUE", "") + " " + q.from() + " WHERE " + q.where.String()
 		dailyQuery := "SELECT DATE(CONVERT_TZ(f.invoiced_at, '+00:00', ?)) AS day, " + totalsColumns("TRUE", "") +
-			" FROM sales_line_fact f WHERE " + q.where.String() + " GROUP BY day ORDER BY day"
+			" " + q.from() + " WHERE " + q.where.String() + " GROUP BY day ORDER BY day"
 		if *totals[i], *daily[i], apiErr = r.summaryPeriod(ctx, totalsQuery, q.args, dailyQuery, append([]any{tz}, q.args...), includeCost); apiErr != nil {
 			return nil, tracing.Trace(span, apiErr)
 		}
@@ -504,8 +554,8 @@ func factBreakdownGrouped(q *salesFactQuery, params domain.AnalyzeSalesBreakdown
 		cmp, cmpArgs = periodCase(*params.ComparisonStartsAt, *params.ComparisonEndsAt)
 	}
 	args = append(args, repeatArgs(cmpArgs, 5)...)
-	grouped := fmt.Sprintf("SELECT %s AS k, %s, %s FROM sales_line_fact f WHERE %s GROUP BY %s",
-		column, totalsColumns(cur, "c_"), totalsColumns(cmp, "p_"), q.where.String(), column)
+	grouped := fmt.Sprintf("SELECT %s AS k, %s, %s %s WHERE %s GROUP BY %s",
+		column, totalsColumns(cur, "c_"), totalsColumns(cmp, "p_"), q.from(), q.where.String(), column)
 	return grouped, append(args, q.args...)
 }
 
@@ -622,28 +672,12 @@ func (r *salesReportRepoImpl) GetInvoicePage(ctx context.Context, params domain.
 		return &domain.SalesInvoicePage{}, nil
 	}
 
-	// Walk the account's invoices newest first on invoice_account_created_idx and keep those with a matching
-	// sale line, stopping at the page size. Left to itself the optimizer turns the EXISTS into a semi-join
-	// that reads every fact the account has before the LIMIT applies; NO_SEMIJOIN keeps it a per-invoice
-	// probe of sales_line_fact_invoice_idx.
-	var sb strings.Builder
-	args := []any{params.AccountID, params.StartsAt, params.EndsAt}
-	sb.WriteString(`SELECT i.id, i.number, i.created_at, so.buyer_account_id, COALESCE(a.name, '') FROM invoice i FORCE INDEX (invoice_account_created_idx)
-JOIN sales_order so ON so.id = i.sales_order_id
-LEFT JOIN account a ON a.id = so.buyer_account_id
-WHERE i.account_id = ? AND i.created_at >= ? AND i.created_at <= ?`)
-	seek, seekArgs, order := keysetPredicate(cursor, "i.created_at", "i.id")
-	if seek != "" {
-		sb.WriteString(" AND " + seek)
-		args = append(args, seekArgs...)
+	pin, apiErr := r.invoicePagePin(ctx, q, params, cursor)
+	if apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
 	}
-	sb.WriteString(" AND EXISTS (SELECT /*+ NO_SEMIJOIN() */ 1 FROM sales_line_fact f WHERE f.invoice_id = i.id AND ")
-	sb.WriteString(q.where.String())
-	args = append(args, q.args...)
-	sb.WriteString(") ORDER BY i.created_at " + order + ", i.id " + order + " LIMIT ?")
-	args = append(args, params.Limit+1)
-
-	rows, err := r.queries.DB().QueryContext(ctx, sb.String(), args...)
+	query, args := invoicePageQuery(q, pin, params, cursor)
+	rows, err := r.queries.DB().QueryContext(ctx, query, args...)
 	if err != nil {
 		return nil, tracing.Trace(span, db.MapSQLError(err))
 	}
@@ -707,6 +741,124 @@ FROM sales_line_fact f WHERE ` + q.where.String() + ` AND f.invoice_id IN (` + p
 		page.Invoices[i].Invoiced = t.invoiced
 	}
 	return page, nil
+}
+
+// invoicePagePin picks the filter an invoice page walks, by reading up to a page per value of each:
+// walking a dense filter to find a rare one's matches reads the dense one's whole window.
+func (r *salesReportRepoImpl) invoicePagePin(ctx context.Context, q *salesFactQuery, params domain.AnalyzeSalesInvoicesParams, cursor *pagination.StringCursor) (int, *apierror.APIError) {
+	if len(q.filters) < 2 {
+		return 0, nil
+	}
+	seek, seekArgs, order := keysetPredicate(cursor, "f.invoiced_at", "f.invoice_id")
+	if seek != "" {
+		seek = " AND " + seek
+	}
+	type cost struct {
+		capped          bool
+		matches, values int64
+		// reach is how far back the capped lines run: further means sparser.
+		reach time.Duration
+	}
+	less := func(a, b cost) bool {
+		switch {
+		case a.capped != b.capped:
+			return !a.capped
+		case !a.capped:
+			return a.matches < b.matches
+		case a.values != b.values:
+			return a.values < b.values
+		default:
+			return a.reach > b.reach
+		}
+	}
+	pin, best := 0, cost{}
+	for i, f := range q.filters {
+		limit := int64(len(f.ids)) * int64(params.Limit+1)
+		// One value is read in its key's order; several cannot be, and are only counted.
+		ordered := ""
+		if len(f.ids) == 1 {
+			ordered = " ORDER BY f.invoiced_at " + order
+		}
+		query := `SELECT COUNT(*), MIN(x.invoiced_at), MAX(x.invoiced_at) FROM (SELECT f.invoiced_at FROM sales_line_fact f FORCE INDEX (` + f.key +
+			`) WHERE f.account_id = ? AND f.sales_order_type_code = 'sales_order' AND ` + f.column + ` IN (` + placeholders(len(f.ids)) +
+			`) AND f.invoiced_at >= ? AND f.invoiced_at <= ?` + seek + ordered + ` LIMIT ?) x`
+		args := append(append([]any{q.accountID}, stringsToAny(f.ids)...), params.StartsAt, params.EndsAt)
+		args = append(append(args, seekArgs...), limit)
+		var matches int64
+		var first, last sql.NullTime
+		if err := r.queries.DB().QueryRowContext(ctx, query, args...).Scan(&matches, &first, &last); err != nil {
+			return 0, db.MapSQLError(err)
+		}
+		c := cost{capped: matches >= limit, matches: matches, values: int64(len(f.ids))}
+		if order == "DESC" {
+			c.reach = params.EndsAt.Sub(first.Time)
+		} else {
+			c.reach = last.Time.Sub(params.StartsAt)
+		}
+		if i == 0 || less(c, best) {
+			pin, best = i, c
+		}
+	}
+	return pin, nil
+}
+
+// invoicePageQuery selects a page (one past the limit) of the invoices with a line matching q.
+//
+// Unfiltered it walks the invoices, probing each for a line (NO_SEMIJOIN stops the probe becoming a
+// read of every fact). Filtered, that walk would read the whole window to find a rare customer's few,
+// so the page comes from the lines: a line's invoiced_at is its invoice's created_at, so each value of
+// filter pin is walked in page order on its key, and the per-value pages are merged.
+func invoicePageQuery(q *salesFactQuery, pin int, params domain.AnalyzeSalesInvoicesParams, cursor *pagination.StringCursor) (string, []any) {
+	var sb strings.Builder
+	var args []any
+	if len(q.filters) == 0 {
+		args = append(args, params.AccountID, params.StartsAt, params.EndsAt)
+		sb.WriteString(`SELECT i.id, i.number, i.created_at, so.buyer_account_id, COALESCE(a.name, '') FROM invoice i FORCE INDEX (invoice_account_created_idx)
+JOIN sales_order so ON so.id = i.sales_order_id
+LEFT JOIN account a ON a.id = so.buyer_account_id
+WHERE i.account_id = ? AND i.created_at >= ? AND i.created_at <= ?`)
+		seek, seekArgs, order := keysetPredicate(cursor, "i.created_at", "i.id")
+		if seek != "" {
+			sb.WriteString(" AND " + seek)
+			args = append(args, seekArgs...)
+		}
+		sb.WriteString(" AND EXISTS (SELECT /*+ NO_SEMIJOIN() */ 1 FROM sales_line_fact f WHERE f.invoice_id = i.id AND ")
+		sb.WriteString(q.where.String())
+		args = append(args, q.args...)
+		sb.WriteString(") ORDER BY i.created_at " + order + ", i.id " + order + " LIMIT ?")
+		return sb.String(), append(args, params.Limit+1)
+	}
+
+	seek, seekArgs, order := keysetPredicate(cursor, "f.invoiced_at", "f.invoice_id")
+	// The keys order a value's lines by (invoiced_at, invoice_line_id), not by invoice, so a branch walks
+	// to its page's last timestamp in key order, then takes every invoice at or past it: those tied at
+	// that timestamp are all read, whichever of them sort into the page.
+	bound, past := "MIN", ">="
+	if order == "ASC" {
+		bound, past = "MAX", "<="
+	}
+	sb.WriteString("SELECT i.id, i.number, i.created_at, so.buyer_account_id, COALESCE(a.name, '') FROM (\nSELECT u.invoiced_at, u.invoice_id FROM (")
+	for n, id := range q.filters[pin].ids {
+		if n > 0 {
+			sb.WriteString("\nUNION")
+		}
+		where, whereArgs := q.pinnedWhere(pin, id)
+		lines := "FROM sales_line_fact f FORCE INDEX (" + q.filters[pin].key + ") WHERE " + where + " AND f.invoiced_at >= ? AND f.invoiced_at <= ?"
+		lineArgs := append(append(append([]any{}, whereArgs...), params.StartsAt, params.EndsAt), seekArgs...)
+		if seek != "" {
+			lines += " AND " + seek
+		}
+		sb.WriteString("\n(SELECT DISTINCT f.invoiced_at, f.invoice_id " + lines + " AND f.invoiced_at " + past + " (SELECT " + bound +
+			"(b.invoiced_at) FROM (SELECT DISTINCT f.invoiced_at, f.invoice_id " + lines + " ORDER BY f.invoiced_at " + order + " LIMIT ?) b))")
+		args = append(append(append(args, lineArgs...), lineArgs...), params.Limit+1)
+	}
+	sb.WriteString("\n) u ORDER BY u.invoiced_at " + order + ", u.invoice_id " + order + " LIMIT ?\n) p")
+	sb.WriteString(`
+JOIN invoice i ON i.id = p.invoice_id
+JOIN sales_order so ON so.id = i.sales_order_id
+LEFT JOIN account a ON a.id = so.buyer_account_id
+ORDER BY i.created_at ` + order + ", i.id " + order)
+	return sb.String(), append(args, params.Limit+1)
 }
 
 func stringsToAny(ids []string) []any {

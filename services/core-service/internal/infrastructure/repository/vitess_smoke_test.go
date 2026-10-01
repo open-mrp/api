@@ -744,6 +744,20 @@ func TestVitessSmoke(t *testing.T) {
 		}
 		_, apiErr = reports.GetInvoicePage(ctx, domain.AnalyzeSalesInvoicesParams{SalesReportFilter: filter, Limit: 5})
 		checkAPI("GetInvoicePage filtered", apiErr)
+		// A filtered page walks one filter's key per value (UNION of ordered LIMITs), after counting each
+		// filter's lines to pick which; both directions seek on (invoiced_at, invoice_id).
+		byCustomer := unfiltered
+		byCustomer.CustomerIDs, byCustomer.ProductLineIDs = buyers, productLines
+		custPage, apiErr := reports.GetInvoicePage(ctx, domain.AnalyzeSalesInvoicesParams{SalesReportFilter: byCustomer, Limit: 1})
+		checkAPI("GetInvoicePage by customer", apiErr)
+		if custPage != nil && custPage.PageInfo.NextCursor != nil {
+			next, apiErr := reports.GetInvoicePage(ctx, domain.AnalyzeSalesInvoicesParams{SalesReportFilter: byCustomer, Limit: 1, Cursor: custPage.PageInfo.NextCursor})
+			checkAPI("GetInvoicePage by customer next", apiErr)
+			if next != nil && next.PageInfo.PrevCursor != nil {
+				_, apiErr = reports.GetInvoicePage(ctx, domain.AnalyzeSalesInvoicesParams{SalesReportFilter: byCustomer, Limit: 1, Cursor: next.PageInfo.PrevCursor})
+				checkAPI("GetInvoicePage by customer prev", apiErr)
+			}
+		}
 		linePage, apiErr := reports.GetLinePage(ctx, domain.ListSalesLinesParams{SalesReportFilter: unfiltered, HasWindow: true, Limit: 2})
 		checkAPI("GetLinePage", apiErr)
 		if linePage != nil && linePage.PageInfo.NextCursor != nil {
@@ -788,7 +802,10 @@ func TestVitessSmoke(t *testing.T) {
 		// Several product lines: summed per-line rows plus an exact invoice count from the facts.
 		twoLines := ragged
 		twoLines.ProductLineIDs = productLines[:2]
-		for _, f := range []domain.SalesReportFilter{ragged, oneLine, twoLines} {
+		// A customer filter: the customer breakdown forces the rollup's group key, the rest the lines' buyer key.
+		customers := ragged
+		customers.CustomerIDs = buyers
+		for _, f := range []domain.SalesReportFilter{ragged, oneLine, twoLines, customers} {
 			_, apiErr = reports.GetSummary(ctx, domain.AnalyzeSalesSummaryParams{SalesReportFilter: f, TZOffsetMinutes: -300}, true)
 			checkAPI("GetSummary from rollups", apiErr)
 			for _, groupBy := range constants.SalesBreakdownGroupBy("").EnumValues() {

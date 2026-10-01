@@ -153,6 +153,12 @@ func bestForcedAccess(t *testing.T, db *sql.DB, stmt explainedStatement, from, a
 }
 
 func (e *explainingDB) QueryRowContext(ctx context.Context, query string, args ...any) *sql.Row {
+	if strings.HasPrefix(strings.TrimSpace(query), "SELECT") {
+		// A failed explain surfaces when the statement itself runs below.
+		if plan, err := explainAnalyze(ctx, e.db, query, args...); err == nil {
+			e.statements = append(e.statements, explainedStatement{query: query, args: args, plan: plan})
+		}
+	}
 	return e.db.QueryRowContext(ctx, query, args...)
 }
 
@@ -620,4 +626,108 @@ func hasFullScan(plan, alias string) bool {
 func planCursorAt(at time.Time, id string, dir pagination.Direction) *string {
 	c := pagination.EncodeStringCursor(pagination.StringCursor{OccurredAt: at, ID: id, Direction: dir})
 	return &c
+}
+
+// aggregateSlack is the rows an aggregate may read beyond twice its floor: a few index entries at a
+// range's ends, and room for a floor of zero.
+const aggregateSlack = 50
+
+// aggregateTable is one table an aggregate reads, and the FROM item its statements read it through.
+type aggregateTable struct {
+	// table's statistics are swapped, and its scope-led indexes are the candidates each statement is
+	// replayed under.
+	table, scopeColumn string
+	// from is the FROM item ("FROM sales_line_fact f"), whose hint the replays replace; alias is its alias.
+	from, alias string
+}
+
+// aggregatePlanSuite is one aggregate endpoint's plan test: every case, run against a seeded corpus
+// under both statistics modes, and held to reading no more of each table than the request's scope.
+//
+// A list stops at a page; an aggregate cannot stop before it has read every row it totals, so its bar
+// is those rows. floor returns, per table alias, how many rows the request's scope covers there,
+// counted directly: the tenant, the window, and the most selective filter an index can pin, over
+// whichever source should answer — the rollup's buckets where the rollup can, the facts otherwise.
+// A request may read twice its floor, the allowance a plan also gets against the best forced index.
+type aggregatePlanSuite[P any] struct {
+	tables []aggregateTable
+	cases  []planCase[P]
+	// report runs the request against q, whose statements the suite explains.
+	report func(ctx context.Context, q *sqlc.Queries, p P) error
+	floor  func(t *testing.T, db *sql.DB, p P) map[string]float64
+}
+
+// run checks every case under both statistics modes. When a request reads more than twice its floor
+// of a table, it says which of two failures it is:
+//   - its statements read far more than with the best scope-led index forced on each: the planner (or
+//     a hint) chose badly, fixed in the query;
+//   - even the best reads more than the scope: an index that does not exist, or a source wider than
+//     the request needs (the facts where the rollup answers, the whole history for a window).
+func (s aggregatePlanSuite[P]) run(t *testing.T) {
+	db := planDB(t)
+	edb := &explainingDB{db: db}
+	q := sqlc.New(edb)
+	indexes := map[string][]string{}
+	for _, tb := range s.tables {
+		indexes[tb.alias] = scopeIndexes(t, db, tb.table, tb.scopeColumn)
+	}
+
+	for _, mode := range planStatsModes {
+		t.Run("stats="+mode, func(t *testing.T) {
+			for _, tb := range s.tables {
+				usePlanStats(t, db, tb.table, mode)
+			}
+			t.Cleanup(func() {
+				for _, tb := range s.tables {
+					usePlanStats(t, db, tb.table, "analyzed")
+				}
+			})
+			for _, tc := range s.cases {
+				t.Run(tc.name, func(t *testing.T) { s.check(t, db, edb, q, indexes, tc) })
+			}
+		})
+	}
+}
+
+func (s aggregatePlanSuite[P]) check(t *testing.T, db *sql.DB, edb *explainingDB, q *sqlc.Queries, indexes map[string][]string, tc planCase[P]) {
+	t.Helper()
+
+	edb.statements = nil
+	require.NoError(t, s.report(context.Background(), q, tc.params))
+	statements := edb.statements
+	floors := s.floor(t, db, tc.params)
+
+	for _, tb := range s.tables {
+		var got planAccess
+		var reading []explainedStatement
+		for _, stmt := range statements {
+			if !strings.Contains(stmt.query, tb.from) {
+				continue
+			}
+			a := tableAccess(stmt.plan, tb.alias)
+			got.rows += a.rows
+			got.indexes = append(got.indexes, a.indexes...)
+			reading = append(reading, stmt)
+		}
+		floor := floors[tb.alias]
+		if got.rows <= 2*floor+aggregateSlack {
+			continue
+		}
+
+		var best float64
+		var bestIndexes, plans []string
+		for _, stmt := range reading {
+			a, index := bestForcedAccess(t, db, stmt, tb.from, tb.alias, indexes[tb.alias])
+			best += a.rows
+			bestIndexes = append(bestIndexes, index)
+			plans = append(plans, stmt.plan)
+		}
+		if got.rows > 2*best+aggregateSlack {
+			t.Errorf("read %.0f %s rows via %v; forcing %v reads %.0f (its scope is %.0f)\n%s",
+				got.rows, tb.table, got.indexes, bestIndexes, best, floor, strings.Join(plans, "\n"))
+		} else {
+			t.Errorf("read %.0f %s rows via %v, and the best index (%v) reads %.0f; its scope is %.0f\n%s",
+				got.rows, tb.table, got.indexes, bestIndexes, best, floor, strings.Join(plans, "\n"))
+		}
+	}
 }

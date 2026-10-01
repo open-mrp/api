@@ -1,8 +1,8 @@
 -- +goose NO TRANSACTION
 -- +goose Up
--- The change log's list keys were descending. InnoDB scans an ascending key in both directions and a
--- descending one only forward, so a previous page (read oldest first) sorted the filter's whole range.
--- Rebuilt ascending under the same names, which the list's FORCE INDEX names.
+-- These list keys were descending. InnoDB scans an ascending key in both directions and a descending
+-- one only forward, so a previous page (read oldest first) sorted the filter's whole range. Rebuilt
+-- ascending under the same names, which the lists' FORCE INDEX names.
 ALTER TABLE `inventory_change_log`
   DROP KEY `inventory_change_log_account_created_idx`,
   ADD KEY `inventory_change_log_account_created_idx` (`account_id`, `created_at`, `id`),
@@ -13,7 +13,15 @@ ALTER TABLE `inventory_change_log`
   DROP KEY `inventory_change_log_acct_resp_user_created_idx`,
   ADD KEY `inventory_change_log_acct_resp_user_created_idx` (`account_id`, `responsible_user_id`, `created_at`, `id`);
 
+ALTER TABLE `batch`
+  DROP KEY `batch_account_id_scanning_station_id_scanned_at_id_idx`,
+  ADD KEY `batch_account_id_scanning_station_id_scanned_at_id_idx` (`account_id`, `scanning_station_id`, `scanned_at`, `id`);
+
 -- +goose Down
+ALTER TABLE `batch`
+  DROP KEY `batch_account_id_scanning_station_id_scanned_at_id_idx`,
+  ADD KEY `batch_account_id_scanning_station_id_scanned_at_id_idx` (`account_id`, `scanning_station_id`, `scanned_at` DESC, `id` DESC);
+
 ALTER TABLE `inventory_change_log`
   DROP KEY `inventory_change_log_account_created_idx`,
   ADD KEY `inventory_change_log_account_created_idx` (`account_id`, `created_at` DESC, `id` DESC),

@@ -135,14 +135,25 @@ func (s *salesOrderLineSvcImpl) CreateSalesOrderLine(ctx context.Context, params
 			return nil, tracing.Trace(span, apiErr)
 		}
 
+		// Validate order exists (and read its buyer for pricing).
+		order, apiErr := s.repos.NewSalesOrderRepo().Get(ctx, params.AccountID, params.SalesOrderID)
+		if apiErr != nil {
+			return nil, meds.Idempotency.CacheErrorResponse(ctx, idempotencyKey.TypeID, apiErr)
+		}
+
+		// A line added to an issued order is reserved like the lines issuing reserved. Its item is resolved here, before the transaction, so the transaction can take its ordering root first. See ledgerlock, Corollary A.
+		lockItemIDs, apiErr := s.lineItemIDsToLockForCreate(ctx, order, params)
+		if apiErr != nil {
+			return nil, meds.Idempotency.CacheErrorResponse(ctx, idempotencyKey.TypeID, apiErr)
+		}
+
 		var result *domain.SalesOrderLine
 		apiErr = s.withTx(ctx, func(txCtx context.Context, txSvc *salesOrderLineSvcImpl) *apierror.APIError {
 			txOrderRepo := txSvc.repos.NewSalesOrderRepo()
 			txLineRepo := txSvc.repos.NewSalesOrderLineRepo()
 			txPickLineRepo := txSvc.repos.NewPickLineRepo()
 
-			// Validate order exists (and read its buyer for pricing).
-			order, apiErr := txOrderRepo.Get(txCtx, params.AccountID, params.SalesOrderID)
+			scope, apiErr := ledgerlock.Acquire(txCtx, txSvc.repos.NewInventoryReservationRepo(), lockItemIDs)
 			if apiErr != nil {
 				return apiErr
 			}
@@ -191,6 +202,12 @@ func (s *salesOrderLineSvcImpl) CreateSalesOrderLine(ctx context.Context, params
 				}
 			}
 
+			if isSaleLine && created.ItemID != nil && order.SalesOrderStatusCode == string(constants.SalesOrderStatusCodeIssued) {
+				if apiErr := syncOrderReservations(txCtx, txSvc.repos, scope, params.AccountID, params.SalesOrderID, []string{*created.ItemID}); apiErr != nil {
+					return apiErr
+				}
+			}
+
 			return txSvc.mediators().Idempotency.CacheSuccessResponse(txCtx, idempotencyKey.TypeID, result)
 		})
 
@@ -203,6 +220,57 @@ func (s *salesOrderLineSvcImpl) CreateSalesOrderLine(ctx context.Context, params
 	default:
 		return nil, tracing.Trace(span, apierror.NewInvariantViolationError("Unexpected recovery point: "+idempotencyKey.RecoveryPoint))
 	}
+}
+
+// lineItemIDsToLockForCreate names the item a new line on an issued order will be reserved against.
+// Orders that are not issued reserve nothing, so they take no lock.
+func (s *salesOrderLineSvcImpl) lineItemIDsToLockForCreate(ctx context.Context, order *domain.SalesOrder, params domain.CreateSalesOrderLineParams) ([]string, *apierror.APIError) {
+	if order.SalesOrderStatusCode != string(constants.SalesOrderStatusCodeIssued) {
+		return nil, nil
+	}
+	if params.ItemID != nil {
+		return []string{*params.ItemID}, nil
+	}
+	products, apiErr := s.repos.NewProductRepo().GetByIDs(ctx, params.AccountID, []string{params.ProductID})
+	if apiErr != nil {
+		return nil, apiErr
+	}
+	itemIDs := make([]string, 0, len(products))
+	for _, product := range products {
+		if product.ItemID != "" {
+			itemIDs = append(itemIDs, product.ItemID)
+		}
+	}
+	return itemIDs, nil
+}
+
+// lineItemIDsToLockForUpdate names the items an edit to a line on an issued order may move its
+// reservation between — the item it has now and the one the edit points it at — and reports whether
+// the order is issued. Orders that are not issued reserve nothing, so they take no lock.
+func (s *salesOrderLineSvcImpl) lineItemIDsToLockForUpdate(ctx context.Context, params domain.UpdateSalesOrderLineParams) ([]string, bool, *apierror.APIError) {
+	order, apiErr := s.repos.NewSalesOrderRepo().Get(ctx, params.AccountID, params.SalesOrderID)
+	if apiErr != nil {
+		return nil, false, apiErr
+	}
+	if order.SalesOrderStatusCode != string(constants.SalesOrderStatusCodeIssued) {
+		return nil, false, nil
+	}
+	line, apiErr := s.repos.NewSalesOrderLineRepo().Get(ctx, params.SalesOrderLineID)
+	if apiErr != nil {
+		// The transaction reports the missing line with its own check.
+		if apierror.IsNotFound(apiErr) {
+			return nil, true, nil
+		}
+		return nil, false, apiErr
+	}
+	itemIDs := make([]string, 0, 2)
+	if line.ItemID != nil {
+		itemIDs = append(itemIDs, *line.ItemID)
+	}
+	if params.ItemID != nil {
+		itemIDs = append(itemIDs, *params.ItemID)
+	}
+	return itemIDs, true, nil
 }
 
 // resequenceOrderLines compacts an order's line_item_numbers to a contiguous 1..N in the
@@ -370,6 +438,72 @@ func reconcilePickForOrderLine(ctx context.Context, lineRepo domain.SalesOrderLi
 	return pickRepo.MarkFinishedIfAllPacked(ctx, pickID)
 }
 
+// syncOrderReservations brings an issued order's reservations for the given items back to what its
+// sale lines still have to ship. Issuing reserves each line once; a line added, resized, repointed or
+// removed afterwards would otherwise leave the item over- or under-reserved until the order closes.
+// An over-reserved item is released in full and then reserved again at the right amount, so the
+// release path frees anything an allocation was holding. The caller must hold the items' ledger lock.
+func syncOrderReservations(ctx context.Context, repos domain.RepoFactory, scope *ledgerlock.Scope, accountID, salesOrderID string, itemIDs []string) *apierror.APIError {
+	touched := make(map[string]bool, len(itemIDs))
+	for _, itemID := range itemIDs {
+		if itemID != "" {
+			touched[itemID] = true
+		}
+	}
+	if len(touched) == 0 {
+		return nil
+	}
+
+	orderRepo := repos.NewSalesOrderRepo()
+
+	excess, apiErr := orderRepo.GetExcessReservedItemIDs(ctx, accountID, salesOrderID)
+	if apiErr != nil {
+		return apiErr
+	}
+	toRelease := make([]string, 0, len(excess))
+	for _, itemID := range excess {
+		if touched[itemID] {
+			toRelease = append(toRelease, itemID)
+		}
+	}
+	if len(toRelease) > 0 {
+		released, apiErr := repos.NewInventoryReservationRepo().ReleaseReservedIssuesForOrderItems(ctx, scope, accountID, salesOrderID, toRelease)
+		if apiErr != nil {
+			return apiErr
+		}
+		if apiErr := mediator.EnqueueAllocateOpenIssues(ctx, repos, accountID, released...); apiErr != nil {
+			return apiErr
+		}
+	}
+
+	remainders, apiErr := orderRepo.GetUnreservedRemainders(ctx, accountID, salesOrderID)
+	if apiErr != nil {
+		return apiErr
+	}
+	lineRepo := repos.NewSalesOrderLineRepo()
+	for _, remainder := range remainders {
+		if !touched[remainder.ItemID] {
+			continue
+		}
+		qtyID, apiErr := id.GenID(id.QuantityIDPrefix, nil)
+		if apiErr != nil {
+			return apiErr
+		}
+		if apiErr := lineRepo.CreateQuantity(ctx, qtyID, remainder.RemainingValue, remainder.UnitID); apiErr != nil {
+			return apiErr
+		}
+		issueID, apiErr := id.GenID(id.InventoryIssueIDPrefix, nil)
+		if apiErr != nil {
+			return apiErr
+		}
+		if apiErr := orderRepo.CreateReservedInventoryIssue(ctx, issueID, accountID, remainder.ItemID, qtyID, salesOrderID); apiErr != nil {
+			return apiErr
+		}
+	}
+
+	return nil
+}
+
 // roundToNearestCent rounds a decimal string value to 2 decimal places.
 func roundToNearestCent(value string) string {
 	f, err := strconv.ParseFloat(value, 64)
@@ -435,11 +569,29 @@ func (s *salesOrderLineSvcImpl) UpdateSalesOrderLine(ctx context.Context, params
 		return cached.Data, cached.Error
 
 	case domain.RecoveryPointStarted:
+		// Only a change to what the line asks for moves its reservation; a price or description edit leaves it alone.
+		reservationChange := params.QuantityValue != nil || params.QuantityUnitID != nil || params.ProductID != nil || params.ItemID != nil
+
+		// The items the reservation sync may write — the line's item before and after — resolved here so the transaction can take their ordering root first. See ledgerlock, Corollary A.
+		var lockItemIDs []string
+		orderIssued := false
+		if reservationChange {
+			lockItemIDs, orderIssued, apiErr = s.lineItemIDsToLockForUpdate(ctx, params)
+			if apiErr != nil {
+				return nil, meds.Idempotency.CacheErrorResponse(ctx, idempotencyKey.TypeID, apiErr)
+			}
+		}
+
 		var result *domain.SalesOrderLine
 		apiErr = s.withTx(ctx, func(txCtx context.Context, txSvc *salesOrderLineSvcImpl) *apierror.APIError {
 			txLineRepo := txSvc.repos.NewSalesOrderLineRepo()
 			txOrderRepo := txSvc.repos.NewSalesOrderRepo()
 			txPickLineRepo := txSvc.repos.NewPickLineRepo()
+
+			scope, apiErr := ledgerlock.Acquire(txCtx, txSvc.repos.NewInventoryReservationRepo(), lockItemIDs)
+			if apiErr != nil {
+				return apiErr
+			}
 
 			// Validate line belongs to order and account owns the order
 			isInOrder, apiErr := txLineRepo.IsInOrder(txCtx, params.SalesOrderLineID, params.SalesOrderID, params.AccountID)
@@ -518,6 +670,19 @@ func (s *salesOrderLineSvcImpl) UpdateSalesOrderLine(ctx context.Context, params
 			isSaleLine := old.ProductTypeCode != nil && *old.ProductTypeCode == string(constants.ProductTypeCodeSale)
 			if pickID != nil && isSaleLine {
 				if apiErr := reconcilePickForOrderLine(txCtx, txLineRepo, txPickLineRepo, txSvc.repos.NewPickRepo(), params.AccountID, params.SalesOrderLineID, *pickID); apiErr != nil {
+					return apiErr
+				}
+			}
+
+			if reservationChange && isSaleLine && orderIssued {
+				itemIDs := make([]string, 0, 2)
+				if old.ItemID != nil {
+					itemIDs = append(itemIDs, *old.ItemID)
+				}
+				if updated.ItemID != nil {
+					itemIDs = append(itemIDs, *updated.ItemID)
+				}
+				if apiErr := syncOrderReservations(txCtx, txSvc.repos, scope, params.AccountID, params.SalesOrderID, itemIDs); apiErr != nil {
 					return apiErr
 				}
 			}
@@ -621,10 +786,13 @@ func (s *salesOrderLineSvcImpl) DeleteSalesOrderLine(ctx context.Context, params
 		return tracing.Trace(span, apiErr)
 	}
 
-	// Deleting the order's last line unissues it, releasing its reservations. The items that release will write are resolved here, before the transaction, so it can take their ordering root as its first statement. See ledgerlock, Corollary A.
+	// Deleting the order's last line unissues it, releasing its reservations; deleting any other sale line gives back that line's share of its item's reservation. The items either will write are resolved here, before the transaction, so it can take their ordering root as its first statement. See ledgerlock, Corollary A.
 	reservedItemIDs, apiErr := s.repos.NewInventoryReservationRepo().ListReservedItemIDsForOrders(ctx, params.AccountID, []string{params.SalesOrderID})
 	if apiErr != nil {
 		return tracing.Trace(span, apiErr)
+	}
+	if salesOrderLine.ItemID != nil {
+		reservedItemIDs = append(reservedItemIDs, *salesOrderLine.ItemID)
 	}
 
 	apiErr = s.withTx(ctx, func(txCtx context.Context, txSvc *salesOrderLineSvcImpl) *apierror.APIError {
@@ -716,6 +884,13 @@ func (s *salesOrderLineSvcImpl) DeleteSalesOrderLine(ctx context.Context, params
 				// Lines remain: finish the pick if every one that is left is packed.
 				if apiErr := txPickRepo.MarkFinishedIfAllPacked(txCtx, *pickID); apiErr != nil {
 					return apiErr
+				}
+
+				isSaleLine := salesOrderLine.ProductTypeCode != nil && *salesOrderLine.ProductTypeCode == string(constants.ProductTypeCodeSale)
+				if isSaleLine && salesOrderLine.ItemID != nil && order.SalesOrderStatusCode == string(constants.SalesOrderStatusCodeIssued) {
+					if apiErr := syncOrderReservations(txCtx, txSvc.repos, scope, params.AccountID, params.SalesOrderID, []string{*salesOrderLine.ItemID}); apiErr != nil {
+						return apiErr
+					}
 				}
 			}
 		}

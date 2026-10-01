@@ -1602,6 +1602,45 @@ LEFT JOIN (
 WHERE ordered.base_value - COALESCE(issued.base_value, 0) > 0
 ORDER BY ordered.item_id;
 
+-- The items the order has reserved more of than it still has to ship: ordered on its sale lines, less
+-- what has already shipped (open or closed issues). An item no sale line carries any more has nothing
+-- left to ship, so all of its reservation is excess.
+-- name: GetSalesOrderExcessReservedItemIDs :many
+SELECT reserved.item_id
+FROM (
+    SELECT ii.item_id, SUM(q.value * (u.ratio_numerator / u.ratio_denominator)) AS base_value
+    FROM inventory_issue ii
+    JOIN quantity q ON q.id = ii.quantity_id
+    JOIN unit u ON u.id = q.unit_id
+    WHERE ii.order_id = sqlc.arg('order_id')
+    AND ii.account_id = sqlc.arg('account_id')
+    AND ii.status_code = 'reserved'
+    GROUP BY ii.item_id
+) reserved
+LEFT JOIN (
+    SELECT sol.item_id, SUM(q.value * (u.ratio_numerator / u.ratio_denominator)) AS base_value
+    FROM sales_order_line sol
+    JOIN quantity q ON q.id = sol.quantity_id
+    JOIN unit u ON u.id = q.unit_id
+    JOIN product p ON p.id = sol.product_id
+    WHERE sol.sales_order_id = sqlc.arg('sales_order_id')
+    AND p.product_type_code = 'sale'
+    AND sol.item_id IS NOT NULL
+    GROUP BY sol.item_id
+) ordered ON ordered.item_id = reserved.item_id
+LEFT JOIN (
+    SELECT ii.item_id, SUM(q.value * (u.ratio_numerator / u.ratio_denominator)) AS base_value
+    FROM inventory_issue ii
+    JOIN quantity q ON q.id = ii.quantity_id
+    JOIN unit u ON u.id = q.unit_id
+    WHERE ii.order_id = sqlc.arg('order_id')
+    AND ii.account_id = sqlc.arg('account_id')
+    AND ii.status_code IN ('open', 'closed')
+    GROUP BY ii.item_id
+) shipped ON shipped.item_id = reserved.item_id
+WHERE reserved.base_value > GREATEST(COALESCE(ordered.base_value, 0) - COALESCE(shipped.base_value, 0), 0)
+ORDER BY reserved.item_id;
+
 -- name: CreateReservedInventoryIssueForSalesOrder :exec
 INSERT INTO inventory_issue (id, account_id, item_id, quantity_id, status_code, order_id, created_at, updated_at)
 VALUES (sqlc.arg('id'), sqlc.arg('account_id'), sqlc.arg('item_id'), sqlc.arg('quantity_id'), 'reserved', sqlc.arg('order_id'), NOW(3), NOW(3));

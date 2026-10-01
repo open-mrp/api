@@ -654,6 +654,64 @@ func (q *Queries) ListReservedIssuesForOrder(ctx context.Context, arg ListReserv
 	return items, nil
 }
 
+const listReservedIssuesForOrderItems = `-- name: ListReservedIssuesForOrderItems :many
+SELECT ii.id, ii.item_id, ii.quantity_id
+FROM inventory_issue ii
+WHERE ii.order_id = ?
+AND ii.account_id = ?
+AND ii.item_id IN (/*SLICE:item_ids*/?)
+AND ii.status_code = 'reserved'
+`
+
+type ListReservedIssuesForOrderItemsParams struct {
+	OrderID   sql.NullString
+	AccountID string
+	ItemIds   []string
+}
+
+type ListReservedIssuesForOrderItemsRow struct {
+	ID         string
+	ItemID     string
+	QuantityID string
+}
+
+// ListReservedIssuesForOrderItems is ListReservedIssuesForOrder narrowed to some of the order's items,
+// for a line edit that releases one item's reservation without touching the rest of the order.
+func (q *Queries) ListReservedIssuesForOrderItems(ctx context.Context, arg ListReservedIssuesForOrderItemsParams) ([]ListReservedIssuesForOrderItemsRow, error) {
+	query := listReservedIssuesForOrderItems
+	var queryParams []interface{}
+	queryParams = append(queryParams, arg.OrderID)
+	queryParams = append(queryParams, arg.AccountID)
+	if len(arg.ItemIds) > 0 {
+		for _, v := range arg.ItemIds {
+			queryParams = append(queryParams, v)
+		}
+		query = strings.Replace(query, "/*SLICE:item_ids*/?", strings.Repeat(",?", len(arg.ItemIds))[1:], 1)
+	} else {
+		query = strings.Replace(query, "/*SLICE:item_ids*/?", "NULL", 1)
+	}
+	rows, err := q.db.QueryContext(ctx, query, queryParams...)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []ListReservedIssuesForOrderItemsRow
+	for rows.Next() {
+		var i ListReservedIssuesForOrderItemsRow
+		if err := rows.Scan(&i.ID, &i.ItemID, &i.QuantityID); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const listReservedItemIDsForOrders = `-- name: ListReservedItemIDsForOrders :many
 SELECT DISTINCT ii.item_id
 FROM inventory_issue ii

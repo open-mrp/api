@@ -820,6 +820,8 @@ type InventoryReservationRepo interface {
 	ListReservedItemIDsForOrders(ctx context.Context, accountID string, orderIDs []string) ([]string, *apierror.APIError)
 	// ReleaseReservedIssuesForOrder deletes an order's reservations along with the allocations covering them, returning the receipts those allocations were holding down to `available`. Returns the items it touched, whose open demand the caller must enqueue allocation for after committing.
 	ReleaseReservedIssuesForOrder(ctx context.Context, scope *ledgerlock.Scope, accountID, orderID string) ([]string, *apierror.APIError)
+	// ReleaseReservedIssuesForOrderItems is ReleaseReservedIssuesForOrder limited to the given items of the order.
+	ReleaseReservedIssuesForOrderItems(ctx context.Context, scope *ledgerlock.Scope, accountID, orderID string, itemIDs []string) ([]string, *apierror.APIError)
 }
 
 // MaterialDemandRepo calculates material demand from a bill of materials.
@@ -1384,6 +1386,8 @@ type SalesOrderRepo interface {
 	CreateReservedInventoryIssue(ctx context.Context, id, accountID, itemID, quantityID, orderID string) *apierror.APIError
 	// GetUnreservedRemainders returns, per item on the order's sale lines, the ordered quantity not yet covered by any of the order's inventory issues.
 	GetUnreservedRemainders(ctx context.Context, accountID, salesOrderID string) ([]SalesOrderItemRemainder, *apierror.APIError)
+	// GetExcessReservedItemIDs returns the items the order has reserved more of than its sale lines still have to ship.
+	GetExcessReservedItemIDs(ctx context.Context, accountID, salesOrderID string) ([]string, *apierror.APIError)
 	GetAcknowledgementRecipients(ctx context.Context, salesOrderID string) ([]string, *apierror.APIError)
 	MarkAcknowledgementSent(ctx context.Context, accountID, salesOrderID string) *apierror.APIError
 	CreateEmailContact(ctx context.Context, id, salesOrderID, accountUserID, notificationTypeCode string) *apierror.APIError

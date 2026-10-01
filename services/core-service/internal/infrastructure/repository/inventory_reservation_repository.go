@@ -893,13 +893,57 @@ func (r *inventoryReservationRepo) ReleaseReservedIssuesForOrder(ctx context.Con
 	ctx, span := inventoryReservationRepoTracer.Start(ctx, "repository.inventory_reservation.release_reserved_issues_for_order")
 	defer span.End()
 
-	issues, err := r.queries.ListReservedIssuesForOrder(ctx, sqlc.ListReservedIssuesForOrderParams{
+	rows, err := r.queries.ListReservedIssuesForOrder(ctx, sqlc.ListReservedIssuesForOrderParams{
 		OrderID:   sql.NullString{String: orderID, Valid: true},
 		AccountID: accountID,
 	})
 	if apiErr := db.MapSQLError(err); apiErr != nil {
 		return nil, tracing.Trace(span, apiErr)
 	}
+
+	issues := make([]reservedIssueRef, 0, len(rows))
+	for _, row := range rows {
+		issues = append(issues, reservedIssueRef{ID: row.ID, ItemID: row.ItemID, QuantityID: row.QuantityID})
+	}
+	released, apiErr := r.releaseReservedIssues(ctx, scope, issues)
+	return released, tracing.Trace(span, apiErr)
+}
+
+// ReleaseReservedIssuesForOrderItems is ReleaseReservedIssuesForOrder for some of the order's items
+// only, for a line edit that leaves the rest of the order's reservations as they are. The same
+// obligation applies: enqueue allocation for the returned items after committing.
+func (r *inventoryReservationRepo) ReleaseReservedIssuesForOrderItems(ctx context.Context, scope *ledgerlock.Scope, accountID, orderID string, itemIDs []string) ([]string, *apierror.APIError) {
+	ctx, span := inventoryReservationRepoTracer.Start(ctx, "repository.inventory_reservation.release_reserved_issues_for_order_items")
+	defer span.End()
+
+	if len(itemIDs) == 0 {
+		return nil, nil
+	}
+
+	rows, err := r.queries.ListReservedIssuesForOrderItems(ctx, sqlc.ListReservedIssuesForOrderItemsParams{
+		OrderID:   sql.NullString{String: orderID, Valid: true},
+		AccountID: accountID,
+		ItemIds:   itemIDs,
+	})
+	if apiErr := db.MapSQLError(err); apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
+
+	issues := make([]reservedIssueRef, 0, len(rows))
+	for _, row := range rows {
+		issues = append(issues, reservedIssueRef{ID: row.ID, ItemID: row.ItemID, QuantityID: row.QuantityID})
+	}
+	released, apiErr := r.releaseReservedIssues(ctx, scope, issues)
+	return released, tracing.Trace(span, apiErr)
+}
+
+type reservedIssueRef struct {
+	ID         string
+	ItemID     string
+	QuantityID string
+}
+
+func (r *inventoryReservationRepo) releaseReservedIssues(ctx context.Context, scope *ledgerlock.Scope, issues []reservedIssueRef) ([]string, *apierror.APIError) {
 	if len(issues) == 0 {
 		return nil, nil
 	}
@@ -918,13 +962,13 @@ func (r *inventoryReservationRepo) ReleaseReservedIssuesForOrder(ctx context.Con
 	// the caller's transaction. See ledgerlock.
 	for _, itemID := range itemIDs {
 		if apiErr := scope.EnsureLocked(ctx, r, itemID); apiErr != nil {
-			return nil, tracing.Trace(span, apiErr)
+			return nil, apiErr
 		}
 	}
 
 	allocations, err := r.queries.FindAllocationsByIssueIDs(ctx, issueIDs)
 	if apiErr := db.MapSQLError(err); apiErr != nil {
-		return nil, tracing.Trace(span, apiErr)
+		return nil, apiErr
 	}
 
 	if len(allocations) > 0 {
@@ -940,28 +984,28 @@ func (r *inventoryReservationRepo) ReleaseReservedIssuesForOrder(ctx context.Con
 		}
 
 		if err := r.queries.DeleteAllocationsByIDs(ctx, allocationIDs); err != nil {
-			return nil, tracing.Trace(span, db.MapSQLError(err))
+			return nil, db.MapSQLError(err)
 		}
 		if err := r.queries.DeleteQuantitiesByIDs(ctx, quantityIDs); err != nil {
-			return nil, tracing.Trace(span, db.MapSQLError(err))
+			return nil, db.MapSQLError(err)
 		}
 		if err := r.queries.DeleteRatesByIDs(ctx, rateIDs); err != nil {
-			return nil, tracing.Trace(span, db.MapSQLError(err))
+			return nil, db.MapSQLError(err)
 		}
 		// Runs after the deletes so it weighs only the allocations that survived: a receipt another
 		// issue still fills stays as it was.
 		if err := r.queries.FreeReleasedReceipts(ctx, receiptIDs); err != nil {
-			return nil, tracing.Trace(span, db.MapSQLError(err))
+			return nil, db.MapSQLError(err)
 		}
 	}
 
 	if err := r.queries.DeleteInventoryIssuesByIDs(ctx, issueIDs); err != nil {
-		return nil, tracing.Trace(span, db.MapSQLError(err))
+		return nil, db.MapSQLError(err)
 	}
 	// After the issues, not before: the quantity is what inventory_issue.quantity_id points at, and
 	// deleting it first leaves the issue pointing at nothing for the rest of the transaction.
 	if err := r.queries.DeleteQuantitiesByIDs(ctx, issueQuantityIDs); err != nil {
-		return nil, tracing.Trace(span, db.MapSQLError(err))
+		return nil, db.MapSQLError(err)
 	}
 
 	return itemIDs, nil

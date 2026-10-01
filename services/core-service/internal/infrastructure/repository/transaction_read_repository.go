@@ -36,11 +36,23 @@ const transactionColumns = `
 	(SELECT COUNT(*) FROM transaction_allocation ta WHERE ta.transaction_id = t.id),
 	t.created_at, t.updated_at`
 
+// transactionListIndexes each yield an account's transactions in list order: one per equality filter
+// the list accepts, and one for none.
+var transactionListIndexes = []string{
+	"transaction_account_id_created_at_idx",
+	"transaction_account_id_is_fully_allocated_created_at_id_idx",
+	"transaction_account_id_transaction_type_code_created_at_id_idx",
+	"transaction_account_id_transaction_method_code_created_at_id_idx",
+	"transaction_account_id_adjustment_type_code_created_at_id_idx",
+	"transaction_account_id_customer_account_id_created_at_id_idx",
+}
+
 const transactionJoins = `
-FROM ` + "`transaction`" + ` t
 JOIN quantity q ON q.id = t.amount_id
 JOIN unit u ON u.id = q.unit_id
-JOIN transaction_type tt ON tt.code = t.transaction_type_code
+-- LEFT, though every type exists: an inner join to a four-row lookup lets the planner drive from it,
+-- probing t once per type and sorting the union instead of walking one index in list order.
+LEFT JOIN transaction_type tt ON tt.code = t.transaction_type_code
 JOIN account ba ON ba.id = t.customer_account_id
 LEFT JOIN account_relation ar ON ar.owner_account_id = t.account_id AND ar.counterparty_account_id = t.customer_account_id AND ar.account_relation_role_code = 'customer'
 LEFT JOIN transaction_method tm ON tm.code = t.transaction_method_code
@@ -167,6 +179,8 @@ func transactionSummaryOf(t *domain.Transaction) *domain.TransactionSummary {
 type transactionFilter struct {
 	where []string
 	args  []any
+	// indexes, when set, are FORCE INDEX'd on the transaction table.
+	indexes []string
 }
 
 func (f *transactionFilter) add(clause string, args ...any) {
@@ -201,6 +215,14 @@ func (f *transactionFilter) status(status *string) {
 	}
 }
 
+// transactionListInOrder reports whether one of transactionListIndexes can drive the list. None can
+// when it searches numbers (a FULLTEXT match), bounds funds_received_at (not the sort column), or
+// filters by customer group (a column of account_relation).
+func transactionListInOrder(params domain.ListTransactionsParams) bool {
+	return db.AllWordsPrefixQuery(params.Query) == "" && params.StartDate == nil && params.EndDate == nil &&
+		len(params.CustomerGroupIDs) == 0
+}
+
 // page applies the keyset for a cursor and returns the ORDER BY. Rows are read newest first; a
 // backward page reads the rows after the cursor oldest first, and BuildPageString reverses them.
 func (f *transactionFilter) page(cursor *pagination.StringCursor) string {
@@ -219,6 +241,10 @@ func (r *transactionRepoImpl) queryTransactions(ctx context.Context, f *transact
 	var sb strings.Builder
 	sb.WriteString("SELECT")
 	sb.WriteString(transactionColumns)
+	sb.WriteString("\nFROM `transaction` t")
+	if len(f.indexes) > 0 {
+		sb.WriteString(" FORCE INDEX (" + strings.Join(f.indexes, ", ") + ")")
+	}
 	sb.WriteString(transactionJoins)
 	if len(f.where) > 0 {
 		sb.WriteString("\nWHERE ")
@@ -286,6 +312,11 @@ func (r *transactionRepoImpl) List(ctx context.Context, params domain.ListTransa
 	}
 	if params.EndDate != nil {
 		f.add("t.funds_received_at <= ?", *params.EndDate)
+	}
+	// Left to itself, the planner reaches for the number key or merges single-column indexes, and reads
+	// every match to sort it; held to the in-order set, it stops at the page.
+	if transactionListInOrder(params) {
+		f.indexes = transactionListIndexes
 	}
 	orderBy := f.page(cur)
 

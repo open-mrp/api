@@ -12,6 +12,7 @@ import (
 
 	"github.com/open-mrp/api/services/core-service/internal/domain"
 	"github.com/open-mrp/api/services/core-service/internal/infrastructure/sqlc"
+	"github.com/open-mrp/api/services/core-service/internal/ledgerlock"
 )
 
 // Reopening a closed order reserves what it has not yet shipped, and only that. The remainder is
@@ -125,4 +126,97 @@ func (f *fixture) insertOrderIssue(t *testing.T, orderID, status, value, unitID 
 		 VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
 		iID, f.accountID, f.itemID, status, qID, orderID, createdAt, createdAt)
 	require.NoError(t, err)
+}
+
+// A line edit on an issued order releases only what the order has reserved beyond what it still has
+// to ship: ordered on its sale lines, less what has shipped. An item no line carries is all excess.
+func TestGetExcessReservedItemIDs(t *testing.T) {
+	f := newFixture(t)
+	base := time.Now().UTC().Add(-time.Hour).Truncate(time.Millisecond)
+	repo := NewSalesOrderRepo(sqlc.New(f.db))
+	saleProduct := f.insertProduct(t, f.itemID, "sale")
+
+	excess := func(orderID string) []string {
+		t.Helper()
+		got, apiErr := repo.GetExcessReservedItemIDs(context.Background(), f.accountID, orderID)
+		require.Nil(t, apiErr)
+		return got
+	}
+
+	t.Run("reservation matches the line", func(t *testing.T) {
+		orderID := f.nextID("or")
+		f.insertOrderLine(t, orderID, saleProduct, f.itemID, 1, "10", f.pair)
+		f.insertOrderIssue(t, orderID, "reserved", "20", f.each, base)
+
+		require.Empty(t, excess(orderID), "20 each is the 10 pair the line orders")
+	})
+
+	t.Run("line cut below its reservation", func(t *testing.T) {
+		orderID := f.nextID("or")
+		f.insertOrderLine(t, orderID, saleProduct, f.itemID, 1, "8", f.pair)
+		f.insertOrderIssue(t, orderID, "reserved", "10", f.pair, base)
+
+		require.Equal(t, []string{f.itemID}, excess(orderID))
+	})
+
+	t.Run("partly shipped, balance reserved", func(t *testing.T) {
+		orderID := f.nextID("or")
+		f.insertOrderLine(t, orderID, saleProduct, f.itemID, 1, "10", f.pair)
+		f.insertOrderIssue(t, orderID, "closed", "6", f.pair, base)
+		f.insertOrderIssue(t, orderID, "reserved", "4", f.pair, base)
+
+		require.Empty(t, excess(orderID))
+	})
+
+	t.Run("line removed", func(t *testing.T) {
+		orderID := f.nextID("or")
+		f.insertOrderIssue(t, orderID, "reserved", "1", f.pair, base)
+
+		require.Equal(t, []string{f.itemID}, excess(orderID))
+	})
+}
+
+// Releasing some of an order's items leaves its other reservations exactly as they were.
+func TestReleaseReservedIssuesForOrderItems_LeavesOtherItemsAlone(t *testing.T) {
+	f := newFixture(t)
+	base := time.Now().UTC().Add(-time.Hour).Truncate(time.Millisecond)
+	orderID := f.nextID("or")
+
+	released := f.insertReservedIssueForOrder(t, orderID, "4", f.each, base)
+
+	otherItem := f.itemID + "_other"
+	otherQty, otherIssue := f.nextID("qy"), f.nextID("ivis")
+	_, err := f.db.Exec(`INSERT INTO quantity (id, value, unit_id, created_at, updated_at) VALUES (?, '5', ?, NOW(3), NOW(3))`, otherQty, f.each)
+	require.NoError(t, err)
+	_, err = f.db.Exec(`INSERT INTO inventory_issue (id, account_id, item_id, status_code, quantity_id, order_id, created_at, updated_at)
+		VALUES (?, ?, ?, 'reserved', ?, ?, NOW(3), NOW(3))`, otherIssue, f.accountID, otherItem, otherQty, orderID)
+	require.NoError(t, err)
+	t.Cleanup(func() {
+		_, _ = f.db.Exec(`DELETE FROM inventory_issue WHERE id = ?`, otherIssue)
+		_, _ = f.db.Exec(`DELETE FROM quantity WHERE id = ?`, otherQty)
+		_, _ = f.db.Exec(`DELETE FROM inventory_item_lock WHERE item_id = ?`, otherItem)
+	})
+
+	a := f.actor(t, "line-edit")
+	scope, apiErr := ledgerlock.Acquire(context.Background(), a.repo, []string{f.itemID})
+	require.Nil(t, apiErr)
+	items, apiErr := a.repo.ReleaseReservedIssuesForOrderItems(context.Background(), scope, f.accountID, orderID, []string{f.itemID})
+	require.Nil(t, apiErr)
+	a.commit(t)
+
+	require.Equal(t, []string{f.itemID}, items)
+	var remaining []string
+	rows, err := f.db.Query(`SELECT id FROM inventory_issue WHERE order_id = ? AND status_code = 'reserved' ORDER BY id`, orderID)
+	require.NoError(t, err)
+	defer rows.Close()
+	for rows.Next() {
+		var issueID string
+		require.NoError(t, rows.Scan(&issueID))
+		remaining = append(remaining, issueID)
+	}
+	require.Equal(t, []string{otherIssue}, remaining, "issue %s was released; the other item's reservation must survive", released)
+
+	var qtyLeft int
+	require.NoError(t, f.db.QueryRow(`SELECT COUNT(*) FROM quantity q JOIN inventory_issue ii ON ii.quantity_id = q.id WHERE ii.id = ?`, released).Scan(&qtyLeft))
+	require.Zero(t, qtyLeft)
 }

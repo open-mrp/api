@@ -1,0 +1,385 @@
+{
+ "source": "augno_core/prod, mysql.innodb_table_stats and mysql.innodb_index_stats, last_update 2026-09-30 15:00:45 UTC",
+ "table": {
+  "n_rows": 26617,
+  "clustered_index_size": 481,
+  "sum_of_other_index_sizes": 2962
+ },
+ "indexes": [
+  {
+   "index": "FTS_DOC_ID_INDEX",
+   "stat": "n_diff_pfx01",
+   "value": 28297
+  },
+  {
+   "index": "FTS_DOC_ID_INDEX",
+   "stat": "n_leaf_pages",
+   "value": 71
+  },
+  {
+   "index": "FTS_DOC_ID_INDEX",
+   "stat": "size",
+   "value": 97
+  },
+  {
+   "index": "PRIMARY",
+   "stat": "n_diff_pfx01",
+   "value": 27327
+  },
+  {
+   "index": "PRIMARY",
+   "stat": "n_leaf_pages",
+   "value": 428
+  },
+  {
+   "index": "PRIMARY",
+   "stat": "size",
+   "value": 481
+  },
+  {
+   "index": "transaction_account_id_adjustment_type_code_created_at_id_idx",
+   "stat": "n_diff_pfx01",
+   "value": 0
+  },
+  {
+   "index": "transaction_account_id_adjustment_type_code_created_at_id_idx",
+   "stat": "n_diff_pfx02",
+   "value": 6
+  },
+  {
+   "index": "transaction_account_id_adjustment_type_code_created_at_id_idx",
+   "stat": "n_diff_pfx03",
+   "value": 7923
+  },
+  {
+   "index": "transaction_account_id_adjustment_type_code_created_at_id_idx",
+   "stat": "n_diff_pfx04",
+   "value": 28289
+  },
+  {
+   "index": "transaction_account_id_adjustment_type_code_created_at_id_idx",
+   "stat": "n_leaf_pages",
+   "value": 154
+  },
+  {
+   "index": "transaction_account_id_adjustment_type_code_created_at_id_idx",
+   "stat": "size",
+   "value": 225
+  },
+  {
+   "index": "transaction_account_id_created_at_idx",
+   "stat": "n_diff_pfx01",
+   "value": 0
+  },
+  {
+   "index": "transaction_account_id_created_at_idx",
+   "stat": "n_diff_pfx02",
+   "value": 7181
+  },
+  {
+   "index": "transaction_account_id_created_at_idx",
+   "stat": "n_diff_pfx03",
+   "value": 28560
+  },
+  {
+   "index": "transaction_account_id_created_at_idx",
+   "stat": "n_leaf_pages",
+   "value": 150
+  },
+  {
+   "index": "transaction_account_id_created_at_idx",
+   "stat": "size",
+   "value": 225
+  },
+  {
+   "index": "transaction_account_id_customer_account_id_created_at_id_idx",
+   "stat": "n_diff_pfx01",
+   "value": 0
+  },
+  {
+   "index": "transaction_account_id_customer_account_id_created_at_id_idx",
+   "stat": "n_diff_pfx02",
+   "value": 1260
+  },
+  {
+   "index": "transaction_account_id_customer_account_id_created_at_id_idx",
+   "stat": "n_diff_pfx03",
+   "value": 16393
+  },
+  {
+   "index": "transaction_account_id_customer_account_id_created_at_id_idx",
+   "stat": "n_diff_pfx04",
+   "value": 25599
+  },
+  {
+   "index": "transaction_account_id_customer_account_id_created_at_id_idx",
+   "stat": "n_leaf_pages",
+   "value": 276
+  },
+  {
+   "index": "transaction_account_id_customer_account_id_created_at_id_idx",
+   "stat": "size",
+   "value": 355
+  },
+  {
+   "index": "transaction_account_id_number_key",
+   "stat": "n_diff_pfx01",
+   "value": 0
+  },
+  {
+   "index": "transaction_account_id_number_key",
+   "stat": "n_diff_pfx02",
+   "value": 22492
+  },
+  {
+   "index": "transaction_account_id_number_key",
+   "stat": "n_leaf_pages",
+   "value": 198
+  },
+  {
+   "index": "transaction_account_id_number_key",
+   "stat": "size",
+   "value": 289
+  },
+  {
+   "index": "transaction_account_id_transaction_method_code_created_at_id_idx",
+   "stat": "n_diff_pfx01",
+   "value": 0
+  },
+  {
+   "index": "transaction_account_id_transaction_method_code_created_at_id_idx",
+   "stat": "n_diff_pfx02",
+   "value": 4
+  },
+  {
+   "index": "transaction_account_id_transaction_method_code_created_at_id_idx",
+   "stat": "n_diff_pfx03",
+   "value": 6939
+  },
+  {
+   "index": "transaction_account_id_transaction_method_code_created_at_id_idx",
+   "stat": "n_diff_pfx04",
+   "value": 29853
+  },
+  {
+   "index": "transaction_account_id_transaction_method_code_created_at_id_idx",
+   "stat": "n_leaf_pages",
+   "value": 157
+  },
+  {
+   "index": "transaction_account_id_transaction_method_code_created_at_id_idx",
+   "stat": "size",
+   "value": 225
+  },
+  {
+   "index": "transaction_account_id_transaction_type_code_created_at_id_idx",
+   "stat": "n_diff_pfx01",
+   "value": 0
+  },
+  {
+   "index": "transaction_account_id_transaction_type_code_created_at_id_idx",
+   "stat": "n_diff_pfx02",
+   "value": 3
+  },
+  {
+   "index": "transaction_account_id_transaction_type_code_created_at_id_idx",
+   "stat": "n_diff_pfx03",
+   "value": 8987
+  },
+  {
+   "index": "transaction_account_id_transaction_type_code_created_at_id_idx",
+   "stat": "n_diff_pfx04",
+   "value": 29601
+  },
+  {
+   "index": "transaction_account_id_transaction_type_code_created_at_id_idx",
+   "stat": "n_leaf_pages",
+   "value": 165
+  },
+  {
+   "index": "transaction_account_id_transaction_type_code_created_at_id_idx",
+   "stat": "size",
+   "value": 225
+  },
+  {
+   "index": "transaction_adjustment_type_code_idx",
+   "stat": "n_diff_pfx01",
+   "value": 6
+  },
+  {
+   "index": "transaction_adjustment_type_code_idx",
+   "stat": "n_diff_pfx02",
+   "value": 27510
+  },
+  {
+   "index": "transaction_adjustment_type_code_idx",
+   "stat": "n_leaf_pages",
+   "value": 69
+  },
+  {
+   "index": "transaction_adjustment_type_code_idx",
+   "stat": "size",
+   "value": 97
+  },
+  {
+   "index": "transaction_amount_id_key",
+   "stat": "n_diff_pfx01",
+   "value": 28374
+  },
+  {
+   "index": "transaction_amount_id_key",
+   "stat": "n_leaf_pages",
+   "value": 162
+  },
+  {
+   "index": "transaction_amount_id_key",
+   "stat": "size",
+   "value": 225
+  },
+  {
+   "index": "transaction_created_by_settlement_id_idx",
+   "stat": "n_diff_pfx01",
+   "value": 0
+  },
+  {
+   "index": "transaction_created_by_settlement_id_idx",
+   "stat": "n_diff_pfx02",
+   "value": 29344
+  },
+  {
+   "index": "transaction_created_by_settlement_id_idx",
+   "stat": "n_leaf_pages",
+   "value": 62
+  },
+  {
+   "index": "transaction_created_by_settlement_id_idx",
+   "stat": "size",
+   "value": 97
+  },
+  {
+   "index": "transaction_customer_account_id_idx",
+   "stat": "n_diff_pfx01",
+   "value": 1177
+  },
+  {
+   "index": "transaction_customer_account_id_idx",
+   "stat": "n_diff_pfx02",
+   "value": 29174
+  },
+  {
+   "index": "transaction_customer_account_id_idx",
+   "stat": "n_leaf_pages",
+   "value": 186
+  },
+  {
+   "index": "transaction_customer_account_id_idx",
+   "stat": "size",
+   "value": 225
+  },
+  {
+   "index": "transaction_open_credits_idx",
+   "stat": "n_diff_pfx01",
+   "value": 0
+  },
+  {
+   "index": "transaction_open_credits_idx",
+   "stat": "n_diff_pfx02",
+   "value": 1
+  },
+  {
+   "index": "transaction_open_credits_idx",
+   "stat": "n_diff_pfx03",
+   "value": 6581
+  },
+  {
+   "index": "transaction_open_credits_idx",
+   "stat": "n_diff_pfx04",
+   "value": 25738
+  },
+  {
+   "index": "transaction_open_credits_idx",
+   "stat": "n_leaf_pages",
+   "value": 166
+  },
+  {
+   "index": "transaction_open_credits_idx",
+   "stat": "size",
+   "value": 225
+  },
+  {
+   "index": "transaction_responsible_user_id_idx",
+   "stat": "n_diff_pfx01",
+   "value": 2
+  },
+  {
+   "index": "transaction_responsible_user_id_idx",
+   "stat": "n_diff_pfx02",
+   "value": 29350
+  },
+  {
+   "index": "transaction_responsible_user_id_idx",
+   "stat": "n_leaf_pages",
+   "value": 124
+  },
+  {
+   "index": "transaction_responsible_user_id_idx",
+   "stat": "size",
+   "value": 161
+  },
+  {
+   "index": "transaction_stripe_payment_id_key",
+   "stat": "n_diff_pfx01",
+   "value": 1845
+  },
+  {
+   "index": "transaction_stripe_payment_id_key",
+   "stat": "n_leaf_pages",
+   "value": 71
+  },
+  {
+   "index": "transaction_stripe_payment_id_key",
+   "stat": "size",
+   "value": 97
+  },
+  {
+   "index": "transaction_transaction_method_code_idx",
+   "stat": "n_diff_pfx01",
+   "value": 4
+  },
+  {
+   "index": "transaction_transaction_method_code_idx",
+   "stat": "n_diff_pfx02",
+   "value": 27787
+  },
+  {
+   "index": "transaction_transaction_method_code_idx",
+   "stat": "n_leaf_pages",
+   "value": 73
+  },
+  {
+   "index": "transaction_transaction_method_code_idx",
+   "stat": "size",
+   "value": 97
+  },
+  {
+   "index": "transaction_transaction_type_code_idx",
+   "stat": "n_diff_pfx01",
+   "value": 3
+  },
+  {
+   "index": "transaction_transaction_type_code_idx",
+   "stat": "n_diff_pfx02",
+   "value": 27116
+  },
+  {
+   "index": "transaction_transaction_type_code_idx",
+   "stat": "n_leaf_pages",
+   "value": 80
+  },
+  {
+   "index": "transaction_transaction_type_code_idx",
+   "stat": "size",
+   "value": 97
+  }
+ ]
+}

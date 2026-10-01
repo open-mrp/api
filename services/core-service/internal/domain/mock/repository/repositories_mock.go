@@ -8962,6 +8962,21 @@ func (mr *MockInventoryReservationRepoMockRecorder) ReleaseReservedIssuesForOrde
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ReleaseReservedIssuesForOrder", reflect.TypeOf((*MockInventoryReservationRepo)(nil).ReleaseReservedIssuesForOrder), ctx, scope, accountID, orderID)
 }
 
+// ReleaseReservedIssuesForOrderItems mocks base method.
+func (m *MockInventoryReservationRepo) ReleaseReservedIssuesForOrderItems(ctx context.Context, scope *ledgerlock.Scope, accountID, orderID string, itemIDs []string) ([]string, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ReleaseReservedIssuesForOrderItems", ctx, scope, accountID, orderID, itemIDs)
+	ret0, _ := ret[0].([]string)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
+}
+
+// ReleaseReservedIssuesForOrderItems indicates an expected call of ReleaseReservedIssuesForOrderItems.
+func (mr *MockInventoryReservationRepoMockRecorder) ReleaseReservedIssuesForOrderItems(ctx, scope, accountID, orderID, itemIDs any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ReleaseReservedIssuesForOrderItems", reflect.TypeOf((*MockInventoryReservationRepo)(nil).ReleaseReservedIssuesForOrderItems), ctx, scope, accountID, orderID, itemIDs)
+}
+
 // MockMaterialDemandRepo is a mock of MaterialDemandRepo interface.
 type MockMaterialDemandRepo struct {
 	ctrl     *gomock.Controller
@@ -14212,6 +14227,21 @@ func (m *MockSalesOrderRepo) GetCustomerLeadTimeChain(ctx context.Context, accou
 func (mr *MockSalesOrderRepoMockRecorder) GetCustomerLeadTimeChain(ctx, accountID, buyerAccountID any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetCustomerLeadTimeChain", reflect.TypeOf((*MockSalesOrderRepo)(nil).GetCustomerLeadTimeChain), ctx, accountID, buyerAccountID)
+}
+
+// GetExcessReservedItemIDs mocks base method.
+func (m *MockSalesOrderRepo) GetExcessReservedItemIDs(ctx context.Context, accountID, salesOrderID string) ([]string, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetExcessReservedItemIDs", ctx, accountID, salesOrderID)
+	ret0, _ := ret[0].([]string)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
+}
+
+// GetExcessReservedItemIDs indicates an expected call of GetExcessReservedItemIDs.
+func (mr *MockSalesOrderRepoMockRecorder) GetExcessReservedItemIDs(ctx, accountID, salesOrderID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetExcessReservedItemIDs", reflect.TypeOf((*MockSalesOrderRepo)(nil).GetExcessReservedItemIDs), ctx, accountID, salesOrderID)
 }
 
 // GetForCustomer mocks base method.

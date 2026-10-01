@@ -27,7 +27,7 @@ var planLegacyOnce sync.Once
 
 func ensureLegacyAnalyticsCorpus(t *testing.T) {
 	t.Helper()
-	ensureDeliveryCorpus(t)
+	ensureDeliveryPerformanceCorpus(t)
 	db := planDB(t)
 	planLegacyOnce.Do(func() {
 		var version string
@@ -43,26 +43,26 @@ func ensureLegacyAnalyticsCorpus(t *testing.T) {
 		exec("DELETE FROM invoice_line WHERE id LIKE 'ivln\\_planana\\_%'")
 		exec("DELETE FROM quantity WHERE id LIKE 'qy\\_planana\\_i%'")
 		exec("DELETE FROM rate WHERE id LIKE 'rt\\_planana\\_%'")
-		exec("DELETE FROM item WHERE account_id = ?", planSalesAccount)
+		exec("DELETE FROM item WHERE account_id = ?", planAnaAccount)
 		exec("DELETE FROM item_category WHERE id = 'ic_planana'")
 		exec("DELETE FROM unit_group WHERE id = 'ug_planana'")
 		exec("INSERT INTO unit_group (id, name, base_unit_id, unit_type_code) VALUES ('ug_planana', 'plantest', 'un_planana', 'quantity')")
 		exec("INSERT INTO item_category (id, name, item_category_type_code, unit_group_id) VALUES ('ic_planana', ?, 'product', 'ug_planana')", planLegacyCorpusVersion)
 		var itemVals []string
 		var itemArgs []any
-		for item := range planSalesItems {
+		for item := range planAnaItems {
 			itemVals = append(itemVals, "(?, ?, ?, ?, ?, 'product', ?, 'ic_planana')")
-			itemArgs = append(itemArgs, planSalesItemID(item), fmt.Sprintf("SKU-%05d", item), fmt.Sprintf("qy_planana_v%05d", item),
-				fmt.Sprintf("qy_planana_b%05d", item), planSalesAccount, fmt.Sprintf("rt_planana_c%05d", item))
+			itemArgs = append(itemArgs, planAnaItemID(item), fmt.Sprintf("SKU-%05d", item), fmt.Sprintf("qy_planana_v%05d", item),
+				fmt.Sprintf("qy_planana_b%05d", item), planAnaAccount, fmt.Sprintf("rt_planana_c%05d", item))
 		}
 		exec("INSERT INTO item (id, sku, unit_value_id, burn_rate_id, account_id, item_type_code, unit_cost_id, item_category_id) VALUES "+strings.Join(itemVals, ","), itemArgs...)
 
 		const batch = 500
-		for start := 0; start < planSalesInvoices; start += batch {
+		for start := 0; start < planAnaInvoices; start += batch {
 			var qVals, ilVals, rateVals []string
 			var qArgs, ilArgs, rateArgs []any
 			for i := start; i < start+batch; i++ {
-				at := planSalesInvoicedAt(i)
+				at := planAnaInvoicedAt(i)
 				for line := range 1 + planHash(i, 3)%6 {
 					rateVals = append(rateVals, "(?, ?, 'un_planana', 'un_planana', ?, ?)")
 					rateArgs = append(rateArgs, fmt.Sprintf("rt_planana_%07d_%d", i, line), fmt.Sprintf("%d.%02d", 1+planHash(i*8+line, 6)%100, planHash(i, 9)%100), at, at)
@@ -92,23 +92,23 @@ func legacyPlanCases(windowed bool) []planCase[legacyPlanRequest] {
 	type v = planValue[legacyPlanRequest]
 	dims := []planDim[legacyPlanRequest]{
 		{"customer", []v{
-			{"customer=large", func(p *legacyPlanRequest) { p.customerIDs = []string{planSalesBuyerID(0)} }},
-			{"customer=rare", func(p *legacyPlanRequest) { p.customerIDs = []string{planSalesBuyerID(planSalesRareBuyer)} }},
+			{"customer=large", func(p *legacyPlanRequest) { p.customerIDs = []string{planAnaBuyerID(0)} }},
+			{"customer=rare", func(p *legacyPlanRequest) { p.customerIDs = []string{planAnaBuyerID(planAnaRareBuyer)} }},
 		}},
 		{"group", []v{
 			{"group=big", func(p *legacyPlanRequest) { p.customerGroupIDs = []string{"ag_planana_big"} }},
 			{"group=small", func(p *legacyPlanRequest) { p.customerGroupIDs = []string{"ag_planana_small"} }},
 		}},
 		{"line", []v{
-			{"line=large", func(p *legacyPlanRequest) { p.productLineIDs = []string{planSalesLineID(0)} }},
-			{"line=rare", func(p *legacyPlanRequest) { p.productLineIDs = []string{planSalesLineID(planSalesRareLine)} }},
+			{"line=large", func(p *legacyPlanRequest) { p.productLineIDs = []string{planAnaLineID(0)} }},
+			{"line=rare", func(p *legacyPlanRequest) { p.productLineIDs = []string{planAnaLineID(planAnaRareLine)} }},
 		}},
 		{"rep", []v{
-			{"rep=large", func(p *legacyPlanRequest) { p.salesRepIDs = []string{planSalesRepID(0)} }},
-			{"rep=rare", func(p *legacyPlanRequest) { p.salesRepIDs = []string{planSalesRepID(planSalesRareRep)} }},
+			{"rep=large", func(p *legacyPlanRequest) { p.salesRepIDs = []string{planAnaRepID(0)} }},
+			{"rep=rare", func(p *legacyPlanRequest) { p.salesRepIDs = []string{planAnaRepID(planAnaRareRep)} }},
 		}},
 	}
-	last := planSalesInvoicedAt(planSalesInvoices - 1)
+	last := planAnaInvoicedAt(planAnaInvoices - 1)
 	window := func(start, end time.Time) func(*legacyPlanRequest) {
 		return func(p *legacyPlanRequest) { p.start, p.end = start, end }
 	}
@@ -129,7 +129,7 @@ func legacyPlanCases(windowed bool) []planCase[legacyPlanRequest] {
 func invoiceWindowFloor(t *testing.T, db *sql.DB, p legacyPlanRequest) (invoices, lines float64) {
 	t.Helper()
 	require.NoError(t, db.QueryRow(`SELECT COUNT(DISTINCT i.id), COUNT(il.id) FROM invoice i LEFT JOIN invoice_line il ON il.invoice_id = i.id
-		WHERE i.account_id = ? AND i.created_at >= ? AND i.created_at <= ?`, planSalesAccount, p.start, p.end).Scan(&invoices, &lines))
+		WHERE i.account_id = ? AND i.created_at >= ? AND i.created_at <= ?`, planAnaAccount, p.start, p.end).Scan(&invoices, &lines))
 	return invoices, lines
 }
 
@@ -144,7 +144,7 @@ func TestSalesEntries_ReadsItsScope(t *testing.T) {
 		},
 		cases: legacyPlanCases(true),
 		report: func(ctx context.Context, q *sqlc.Queries, p legacyPlanRequest) error {
-			_, apiErr := NewAnalyticsRepo(q).GetSalesEntries(ctx, domain.AnalyzeSalesParams{AccountID: planSalesAccount, StartDate: p.start, EndDate: p.end,
+			_, apiErr := NewAnalyticsRepo(q).GetSalesEntries(ctx, domain.AnalyzeSalesParams{AccountID: planAnaAccount, StartDate: p.start, EndDate: p.end,
 				ProductLineIDs: p.productLineIDs, CustomerIDs: p.customerIDs, SalesRepIDs: p.salesRepIDs, CustomerGroupIDs: p.customerGroupIDs})
 			if apiErr != nil {
 				return apiErr
@@ -172,7 +172,7 @@ func TestDeliveryEntries_ReadsItsScope(t *testing.T) {
 		tables: []aggregateTable{{table: "invoice", scopeColumn: "account_id", from: "FROM invoice inv", alias: "inv"}},
 		cases:  cases,
 		report: func(ctx context.Context, q *sqlc.Queries, p legacyPlanRequest) error {
-			_, apiErr := NewAnalyticsRepo(q).GetDeliveryAnalytics(ctx, domain.AnalyzeDeliveriesParams{AccountID: planSalesAccount, StartDate: p.start, EndDate: p.end})
+			_, apiErr := NewAnalyticsRepo(q).GetDeliveryAnalytics(ctx, domain.AnalyzeDeliveriesParams{AccountID: planAnaAccount, StartDate: p.start, EndDate: p.end})
 			if apiErr != nil {
 				return apiErr
 			}
@@ -198,7 +198,7 @@ func TestOrderEntries_ReadsItsScope(t *testing.T) {
 		},
 		cases: legacyPlanCases(false),
 		report: func(ctx context.Context, q *sqlc.Queries, p legacyPlanRequest) error {
-			_, apiErr := NewAnalyticsRepo(q).GetOrderEntries(ctx, domain.AnalyzeOrdersParams{AccountID: planSalesAccount,
+			_, apiErr := NewAnalyticsRepo(q).GetOrderEntries(ctx, domain.AnalyzeOrdersParams{AccountID: planAnaAccount,
 				ProductLineIDs: p.productLineIDs, CustomerIDs: p.customerIDs, SalesRepIDs: p.salesRepIDs, CustomerGroupIDs: p.customerGroupIDs})
 			if apiErr != nil {
 				return apiErr
@@ -210,7 +210,7 @@ func TestOrderEntries_ReadsItsScope(t *testing.T) {
 			// The invoiced quantities are aggregated over every open order's lines, whatever the filters.
 			require.NoError(t, db.QueryRow(`SELECT COUNT(DISTINCT so.id), COUNT(DISTINCT sol.id), COUNT(il.id) FROM sales_order so
 				JOIN sales_order_line sol ON sol.sales_order_id = so.id LEFT JOIN invoice_line il ON il.sales_order_line_id = sol.id
-				WHERE so.owner_account_id = ? AND so.sales_order_status_code = 'issued'`, planSalesAccount).Scan(&orders, &lines, &invoiced))
+				WHERE so.owner_account_id = ? AND so.sales_order_status_code = 'issued'`, planAnaAccount).Scan(&orders, &lines, &invoiced))
 			return map[string]float64{"so": 2 * orders, "sol": 2 * lines, "il": invoiced}
 		},
 	}.run(t)
@@ -238,17 +238,17 @@ func TestLegacyAnalytics_ResultsUnchanged(t *testing.T) {
 	got := map[string]string{}
 	for _, c := range legacyPlanCases(true) {
 		p := c.params
-		sales, apiErr := repo.GetSalesEntries(ctx, domain.AnalyzeSalesParams{AccountID: planSalesAccount, StartDate: p.start, EndDate: p.end,
+		sales, apiErr := repo.GetSalesEntries(ctx, domain.AnalyzeSalesParams{AccountID: planAnaAccount, StartDate: p.start, EndDate: p.end,
 			ProductLineIDs: p.productLineIDs, CustomerIDs: p.customerIDs, SalesRepIDs: p.salesRepIDs, CustomerGroupIDs: p.customerGroupIDs})
 		require.Nil(t, apiErr)
 		got["sales/"+c.name] = planDigest(t, unorderedRows(t, sales))
-		deliveries, apiErr := repo.GetDeliveryAnalytics(ctx, domain.AnalyzeDeliveriesParams{AccountID: planSalesAccount, StartDate: p.start, EndDate: p.end})
+		deliveries, apiErr := repo.GetDeliveryAnalytics(ctx, domain.AnalyzeDeliveriesParams{AccountID: planAnaAccount, StartDate: p.start, EndDate: p.end})
 		require.Nil(t, apiErr)
 		got["deliveries/"+c.name] = planDigest(t, deliveries)
 	}
 	for _, c := range legacyPlanCases(false) {
 		p := c.params
-		orders, apiErr := repo.GetOrderEntries(ctx, domain.AnalyzeOrdersParams{AccountID: planSalesAccount,
+		orders, apiErr := repo.GetOrderEntries(ctx, domain.AnalyzeOrdersParams{AccountID: planAnaAccount,
 			ProductLineIDs: p.productLineIDs, CustomerIDs: p.customerIDs, SalesRepIDs: p.salesRepIDs, CustomerGroupIDs: p.customerGroupIDs})
 		require.Nil(t, apiErr)
 		got["orders/"+c.name] = planDigest(t, unorderedRows(t, orders))

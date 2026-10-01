@@ -161,20 +161,6 @@ func TestSalesInvoicePage_MatchesTheInvoiceWalk(t *testing.T) {
 	db := planDB(t)
 	ctx := context.Background()
 	repo := &salesReportRepoImpl{queries: sqlc.New(db)}
-	ids := func(query string, args []any) []string {
-		rows, err := db.Query(query, args...)
-		require.NoError(t, err)
-		defer func() { _ = rows.Close() }()
-		var out []string
-		for rows.Next() {
-			var id, number, buyer, name string
-			var at time.Time
-			require.NoError(t, rows.Scan(&id, &number, &at, &buyer, &name))
-			out = append(out, strings.Join([]string{id, number, at.Format(time.RFC3339Nano), buyer, name}, "|"))
-		}
-		require.NoError(t, rows.Err())
-		return out
-	}
 	for _, c := range salesInvoicePlanCases() {
 		t.Run(c.name, func(t *testing.T) {
 			params := domain.AnalyzeSalesInvoicesParams{SalesReportFilter: c.params.SalesReportFilter, Limit: planInvoicePageLimit, Cursor: c.params.cursor}
@@ -187,10 +173,13 @@ func TestSalesInvoicePage_MatchesTheInvoiceWalk(t *testing.T) {
 			}
 			walk := *q
 			walk.filters = nil
-			want := ids(invoicePageQuery(&walk, 0, params, cursor))
+			want, apiErr := repo.invoicePageRows(ctx, &walk, 0, params, cursor)
+			require.Nil(t, apiErr)
 			// Whichever filter the page walks, it is the same page.
 			for pin := range q.filters {
-				require.Equal(t, want, ids(invoicePageQuery(q, pin, params, cursor)), "walking filter %d", pin)
+				got, apiErr := repo.invoicePageRows(ctx, q, pin, params, cursor)
+				require.Nil(t, apiErr)
+				require.Equal(t, want, got, "walking filter %d", pin)
 			}
 		})
 	}

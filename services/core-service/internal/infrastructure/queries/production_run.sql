@@ -113,6 +113,9 @@ WHERE id = sqlc.arg('id') AND account_id = sqlc.arg('account_id');
 
 -- name: ListBatchesByIDs :many
 -- The bulk form of GetBatch; same columns, so rows convert to GetBatchRow.
+-- A search hydrates a run's whole flow, thousands of ids, and past a few hundred the planner scans the
+-- table instead; FORCE INDEX keeps each id a primary-key lookup. The flow walk's other by-id reads
+-- below are pinned to their keys for the same reason.
 SELECT
     b.id,
     b.account_id,
@@ -147,7 +150,7 @@ SELECT
     ps.name AS production_step_name,
     pr.id AS production_run_id_2,
     pr.number AS production_run_number
-FROM batch b
+FROM batch b FORCE INDEX (PRIMARY)
 JOIN item i ON b.item_id = i.id
 JOIN quantity q ON b.quantity_id = q.id
 JOIN unit qu ON q.unit_id = qu.id
@@ -168,20 +171,20 @@ SELECT
     m.id,
     m.name,
     m.serial_number
-FROM _batches_machines bm
+FROM _batches_machines bm FORCE INDEX (_batches_machines_AB_unique)
 JOIN machine m ON bm.B = m.id
 WHERE bm.A IN (sqlc.slice('batch_ids'));
 
 -- name: ListLotsForBatches :many
 -- The lot numbers each batch consumed, directly or through allocated receipts.
 SELECT DISTINCT ii.batch_id, l.lot_number, 'material' AS lot_type
-FROM inventory_issue ii
+FROM inventory_issue ii FORCE INDEX (inventory_issue_batch_id_idx)
 JOIN lot l ON ii.lot_id = l.id
 WHERE ii.batch_id IN (sqlc.slice('issued_batch_ids'))
 AND l.lot_number IS NOT NULL
 UNION
 SELECT DISTINCT ii.batch_id, l.lot_number, 'material' AS lot_type
-FROM inventory_issue ii
+FROM inventory_issue ii FORCE INDEX (inventory_issue_batch_id_idx)
 JOIN inventory_allocation ia ON ia.inventory_issue_id = ii.id
 JOIN inventory_receipt ir ON ia.inventory_receipt_id = ir.id
 JOIN lot l ON ir.lot_id = l.id
@@ -191,11 +194,11 @@ AND l.lot_number IS NOT NULL;
 -- name: ListBatchFlowEdgesForBatches :many
 -- Every _batch_flow edge touching the given batches. A is downstream, B upstream.
 SELECT bf.A AS downstream_id, bf.B AS upstream_id
-FROM _batch_flow bf
+FROM _batch_flow bf FORCE INDEX (_batch_flow_AB_unique)
 WHERE bf.A IN (sqlc.slice('downstream_ids'))
 UNION
 SELECT bf2.A AS downstream_id, bf2.B AS upstream_id
-FROM _batch_flow bf2
+FROM _batch_flow bf2 FORCE INDEX (_batch_flow_B_index)
 WHERE bf2.B IN (sqlc.slice('upstream_ids'));
 
 -- name: ListProductionRunBatchSummaries :many
@@ -227,7 +230,7 @@ AND b.account_id = sqlc.arg('account_id');
 -- name: ListBatchTraversalByIDs :many
 -- Closed state and age of the given batches. A batch outside the account is simply absent.
 SELECT b.id, b.closed_at, b.created_at
-FROM batch b
+FROM batch b FORCE INDEX (PRIMARY)
 WHERE b.id IN (sqlc.slice('ids'))
 AND b.account_id = sqlc.arg('account_id');
 

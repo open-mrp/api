@@ -27,7 +27,7 @@ const (
 	planBatchSpan     = 2 * 365 * 24 * time.Hour
 
 	// planBatchCorpusVersion is bumped whenever the corpus's shape changes, so a stale one is rebuilt.
-	planBatchCorpusVersion = "Plan Test Batches v2"
+	planBatchCorpusVersion = "Plan Test Batches v4"
 
 	// planBatchRareSKU matches only the rare item's SKU; planBatchDenseSKU matches every item's.
 	planBatchRareSKU  = "ZQRARE"
@@ -140,6 +140,7 @@ func ensureBatchCorpus(t *testing.T) {
 		exec("DELETE bm FROM _batches_machines bm JOIN batch b ON b.id = bm.A WHERE b.account_id = ?", planBatchAccount)
 		exec("DELETE bf FROM _batch_flow bf JOIN batch b ON b.id = bf.A WHERE b.account_id = ?", planBatchAccount)
 		exec("DELETE FROM batch WHERE account_id = ?", planBatchAccount)
+		exec("DELETE FROM inventory_issue WHERE account_id = ?", planBatchAccount)
 		exec("DELETE FROM quantity WHERE id LIKE 'qu\\_planbat\\_%'")
 		exec("DELETE FROM production_run WHERE account_id = ?", planBatchAccount)
 		exec("DELETE FROM machine WHERE account_id = ?", planBatchAccount)
@@ -201,8 +202,8 @@ func ensureBatchCorpus(t *testing.T) {
 
 		const batch = 1_000
 		for start := 0; start < planBatchRows; start += batch {
-			var qVals, bVals, fVals, mVals []string
-			var qArgs, bArgs, fArgs, mArgs []any
+			var qVals, bVals, fVals, mVals, iVals []string
+			var qArgs, bArgs, fArgs, mArgs, iArgs []any
 			for i := start; i < start+batch; i++ {
 				createdAt := planBatchCreatedAt(i)
 				var station, scanned, closed, run any
@@ -219,11 +220,18 @@ func ensureBatchCorpus(t *testing.T) {
 					run = planBatchRunID(r)
 					mVals = append(mVals, "(?, ?)")
 					mArgs = append(mArgs, planBatchID(i), planBatchMachineID(planBatchMachine(i)))
-					// Each run batch flows into the next batch on another station.
-					if next := i + 1; next < planBatchRows && planBatchRun(next) < 0 && planBatchStation(next) > 0 {
-						fVals = append(fVals, "(?, ?)")
-						fArgs = append(fArgs, planBatchID(next), planBatchID(i))
+					// Run batches consume material: two issues each.
+					for k := range 2 {
+						iVals = append(iVals, "(?, ?, ?, 'issued', ?, ?, ?, ?, ?)")
+						iArgs = append(iArgs, fmt.Sprintf("inis_planbat_%06d_%d", i, k), planBatchAccount,
+							planBatchItemID((i*13+k)%planBatchItems), fmt.Sprintf("qu_planbat_is_%06d_%d", i, k), planBatchID(i),
+							createdAt, createdAt, createdAt)
 					}
+				}
+				// Batches flow in chains of five, each into the next.
+				if next := i + 1; i%5 != 4 && next < planBatchRows {
+					fVals = append(fVals, "(?, ?)")
+					fArgs = append(fArgs, planBatchID(next), planBatchID(i))
 				}
 				qID := fmt.Sprintf("qu_planbat_%06d", i)
 				qVals = append(qVals, "(?, '24', 'un_planbat', ?, ?)")
@@ -241,7 +249,11 @@ func ensureBatchCorpus(t *testing.T) {
 			if len(fVals) > 0 {
 				exec(`INSERT INTO _batch_flow (A, B) VALUES `+strings.Join(fVals, ","), fArgs...)
 			}
+			if len(iVals) > 0 {
+				exec(`INSERT INTO inventory_issue (id, account_id, item_id, status_code, quantity_id, batch_id, issued_at,
+				      created_at, updated_at) VALUES `+strings.Join(iVals, ","), iArgs...)
+			}
 		}
-		exec("ANALYZE TABLE batch, production_run, _batches_machines, _batch_flow, item")
+		exec("ANALYZE TABLE batch, production_run, _batches_machines, _batch_flow, item, inventory_issue")
 	})
 }

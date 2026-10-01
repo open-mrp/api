@@ -2099,12 +2099,105 @@ SELECT STRAIGHT_JOIN
     clu.unit_dimension_code AS credit_limit_unit_type,
     ar.created_at,
     ar.updated_at
-FROM account_relation ar FORCE INDEX (
-    account_relation_owner_role_created_idx,
-    account_relation_owner_role_group_created_idx,
-    account_relation_owner_role_rep_created_idx,
-    account_relation_owner_role_status_created_idx
-)
+FROM (
+  SELECT STRAIGHT_JOIN ar.id
+  FROM account_relation ar FORCE INDEX (
+      account_relation_owner_role_created_idx,
+      account_relation_owner_role_group_created_idx,
+      account_relation_owner_role_rep_created_idx,
+      account_relation_owner_role_status_created_idx,
+      account_relation_owner_role_carrier_created_idx,
+      account_relation_owner_role_carrier_option_created_idx,
+      account_relation_owner_role_payment_term_created_idx,
+      account_relation_owner_role_shipping_term_created_idx,
+      PRIMARY
+  )
+  INNER JOIN account a ON a.id = ar.counterparty_account_id
+  WHERE ar.owner_account_id = ?
+    AND ar.account_relation_role_code = 'customer'
+    AND (
+      ? IS NULL
+      OR a.name LIKE ?
+      OR ar.alias LIKE ?
+      OR ar.external_number LIKE ?
+      OR ar.notes LIKE ?
+      OR (SELECT sab.support_email FROM account_branding sab WHERE sab.owner_account_id = ar.counterparty_account_id) LIKE ?
+    )
+    AND (
+      ? = false
+      OR ar.account_group_id IN (/*SLICE:customer_group_ids*/?)
+    )
+    AND (
+      ? = false
+      OR ar.id IN (/*SLICE:pricing_relation_ids*/?)
+    )
+    AND (
+      ? = false
+      OR ar.default_sales_rep_id IN (/*SLICE:sales_rep_ids*/?)
+    )
+    AND (
+      ? = false
+      OR ar.account_status_code IN (/*SLICE:status_codes*/?)
+    )
+    AND (
+      ? = false
+      OR ar.shipping_term_id IN (/*SLICE:shipping_term_ids*/?)
+    )
+    AND (
+      ? = false
+      OR ar.payment_term_id IN (/*SLICE:payment_term_ids*/?)
+    )
+    AND (
+      ? = false
+      OR ar.commission_status_code IN (/*SLICE:commission_status_codes*/?)
+    )
+    AND (
+      ? = false
+      OR ar.freight_status_code IN (/*SLICE:freight_status_codes*/?)
+    )
+    AND (
+      ? = false
+      OR ar.default_carrier_id IN (/*SLICE:carrier_ids*/?)
+    )
+    AND (
+      ? = false
+      OR ar.default_carrier_option_id IN (/*SLICE:carrier_option_ids*/?)
+    )
+    AND (
+      ? = false
+      OR (
+        ? = true
+        AND EXISTS (SELECT 1 FROM account_relation car WHERE car.parent_account_relation_id = ar.id)
+      )
+      OR (
+        ? = false
+        AND NOT EXISTS (SELECT 1 FROM account_relation car WHERE car.parent_account_relation_id = ar.id)
+      )
+    )
+    AND (
+      (? IS NULL AND ? IS NULL AND ? IS NULL)
+      -- A probe of each customer's few addresses; as a semi-join the planner scans geolocation for each.
+      OR (
+        SELECT STRAIGHT_JOIN 1 FROM account_address aa
+        JOIN address addr ON addr.id = aa.address_id
+        JOIN geolocation g ON g.id = addr.geolocation_id
+        WHERE aa.account_id = ar.counterparty_account_id
+        AND (? IS NULL OR g.locality = ?)
+        AND (? IS NULL OR g.state = ?)
+        AND (? IS NULL OR g.postal_code = ?)
+        LIMIT 1
+      ) IS NOT NULL
+    )
+    AND (? IS NULL OR ar.created_at >= ?)
+    AND (? IS NULL OR ar.created_at <= ?)
+    AND (
+      ar.created_at > ?
+      OR (ar.created_at = ? AND ar.counterparty_account_id > ?)
+    )
+  ORDER BY ar.created_at ASC, ar.counterparty_account_id ASC
+  LIMIT ?
+) page
+JOIN account_relation ar ON ar.id = page.id
 INNER JOIN account a ON a.id = ar.counterparty_account_id
 LEFT JOIN account_branding ab ON ab.owner_account_id = ar.counterparty_account_id
 LEFT JOIN account_relation par ON par.id = ar.parent_account_relation_id
@@ -2123,91 +2216,7 @@ LEFT JOIN address sa ON sa.id = ar.default_shipping_address_id
 LEFT JOIN geolocation sg ON sg.id = sa.geolocation_id
 LEFT JOIN quantity clq ON clq.id = ar.credit_limit_id
 LEFT JOIN unit clu ON clu.id = clq.unit_id
-WHERE ar.owner_account_id = ?
-  AND ar.account_relation_role_code = 'customer'
-  AND (
-    ? IS NULL
-    OR a.name LIKE ?
-    OR ar.alias LIKE ?
-    OR ar.external_number LIKE ?
-    OR ar.notes LIKE ?
-    OR ab.support_email LIKE ?
-  )
-  AND (
-    ? = false
-    OR ar.account_group_id IN (/*SLICE:customer_group_ids*/?)
-  )
-  AND (
-    ? = false
-    OR EXISTS (
-      SELECT 1 FROM account_relation_price_group arpg
-      WHERE arpg.account_relation_id = ar.id
-      AND arpg.account_group_id IN (/*SLICE:pricing_group_ids*/?)
-    )
-  )
-  AND (
-    ? = false
-    OR ar.default_sales_rep_id IN (/*SLICE:sales_rep_ids*/?)
-  )
-  AND (
-    ? = false
-    OR ar.account_status_code IN (/*SLICE:status_codes*/?)
-  )
-  AND (
-    ? = false
-    OR ar.shipping_term_id IN (/*SLICE:shipping_term_ids*/?)
-  )
-  AND (
-    ? = false
-    OR ar.payment_term_id IN (/*SLICE:payment_term_ids*/?)
-  )
-  AND (
-    ? = false
-    OR ar.commission_status_code IN (/*SLICE:commission_status_codes*/?)
-  )
-  AND (
-    ? = false
-    OR ar.freight_status_code IN (/*SLICE:freight_status_codes*/?)
-  )
-  AND (
-    ? = false
-    OR ar.default_carrier_id IN (/*SLICE:carrier_ids*/?)
-  )
-  AND (
-    ? = false
-    OR ar.default_carrier_option_id IN (/*SLICE:carrier_option_ids*/?)
-  )
-  AND (
-    ? = false
-    OR (
-      ? = true
-      AND EXISTS (SELECT 1 FROM account_relation car WHERE car.parent_account_relation_id = ar.id)
-    )
-    OR (
-      ? = false
-      AND NOT EXISTS (SELECT 1 FROM account_relation car WHERE car.parent_account_relation_id = ar.id)
-    )
-  )
-  AND (
-    (? IS NULL AND ? IS NULL AND ? IS NULL)
-    OR EXISTS (
-      SELECT 1 FROM account_address aa
-      JOIN address addr ON addr.id = aa.address_id
-      JOIN geolocation g ON g.id = addr.geolocation_id
-      WHERE aa.account_id = ar.counterparty_account_id
-      AND (? IS NULL OR g.locality = ?)
-      AND (? IS NULL OR g.state = ?)
-      AND (? IS NULL OR g.postal_code = ?)
-    )
-  )
-  AND (? IS NULL OR ar.created_at >= ?)
-  AND (? IS NULL OR ar.created_at <= ?)
-  AND (
-    ar.created_at > ?
-    OR (ar.created_at = ? AND ar.counterparty_account_id > ?)
-  )
 ORDER BY ar.created_at ASC, ar.counterparty_account_id ASC
-LIMIT ?
 `
 
 type ListCustomersBackwardParams struct {
@@ -2216,7 +2225,7 @@ type ListCustomersBackwardParams struct {
 	IncludeCustomerGroupFilter    interface{}
 	CustomerGroupIds              []sql.NullString
 	IncludePricingGroupFilter     interface{}
-	PricingGroupIds               []string
+	PricingRelationIds            []string
 	IncludeSalesRepFilter         interface{}
 	SalesRepIds                   []sql.NullString
 	IncludeStatusFilter           interface{}
@@ -2347,15 +2356,14 @@ type ListCustomersBackwardRow struct {
 	UpdatedAt                             time.Time
 }
 
-// STRAIGHT_JOIN forces `ar` as the driving table. Without it the optimizer drives from one of the
-// seventeen hydration joins and runs every one of the owner's customer relations through all of
-// them before sorting — measured at 19,311 rows read to return 10.
-// FORCE INDEX restricts the optimizer to the four indexes that satisfy the ORDER BY
-// (created_at, counterparty_account_id) without a filesort: the plain owner_role index when no
-// filter narrows the set, and the group/rep/status variants when one does. Left to itself the
-// optimizer picks account_relation_owner_account_id_counterparty_account_id_ac_key on every
-// production execution — it satisfies the owner equality but not the ordering, so the whole set
-// goes through the joins and is then filesorted. Do not remove.
+// The page is chosen from account_relation alone (and account, which every listed relation has) and
+// joined to its seventeen hydration tables after, so a filter no key serves in list order reads only
+// the relations it examines, not their joins too. STRAIGHT_JOIN keeps account_relation driving.
+// FORCE INDEX holds the page to the keys that yield an owner's customers in list order: the plain
+// one when no filter narrows the set, a filter's own when one does. Left to itself the planner reads
+// account_relation_owner_account_id_counterparty_account_id_ac_key, which pins the owner but not the
+// order, and sorts every customer. PRIMARY is offered too, so a price group's
+// relations (resolved by ListPriceGroupRelationIDs) are read by id rather than found by walking.
 func (q *Queries) ListCustomersBackward(ctx context.Context, arg ListCustomersBackwardParams) ([]ListCustomersBackwardRow, error) {
 	query := listCustomersBackward
 	var queryParams []interface{}
@@ -2376,13 +2384,13 @@ func (q *Queries) ListCustomersBackward(ctx context.Context, arg ListCustomersBa
 		query = strings.Replace(query, "/*SLICE:customer_group_ids*/?", "NULL", 1)
 	}
 	queryParams = append(queryParams, arg.IncludePricingGroupFilter)
-	if len(arg.PricingGroupIds) > 0 {
-		for _, v := range arg.PricingGroupIds {
+	if len(arg.PricingRelationIds) > 0 {
+		for _, v := range arg.PricingRelationIds {
 			queryParams = append(queryParams, v)
 		}
-		query = strings.Replace(query, "/*SLICE:pricing_group_ids*/?", strings.Repeat(",?", len(arg.PricingGroupIds))[1:], 1)
+		query = strings.Replace(query, "/*SLICE:pricing_relation_ids*/?", strings.Repeat(",?", len(arg.PricingRelationIds))[1:], 1)
 	} else {
-		query = strings.Replace(query, "/*SLICE:pricing_group_ids*/?", "NULL", 1)
+		query = strings.Replace(query, "/*SLICE:pricing_relation_ids*/?", "NULL", 1)
 	}
 	queryParams = append(queryParams, arg.IncludeSalesRepFilter)
 	if len(arg.SalesRepIds) > 0 {
@@ -2699,12 +2707,106 @@ SELECT STRAIGHT_JOIN
     clu.unit_dimension_code AS credit_limit_unit_type,
     ar.created_at,
     ar.updated_at
-FROM account_relation ar FORCE INDEX (
-    account_relation_owner_role_created_idx,
-    account_relation_owner_role_group_created_idx,
-    account_relation_owner_role_rep_created_idx,
-    account_relation_owner_role_status_created_idx
-)
+FROM (
+  SELECT STRAIGHT_JOIN ar.id
+  FROM account_relation ar FORCE INDEX (
+      account_relation_owner_role_created_idx,
+      account_relation_owner_role_group_created_idx,
+      account_relation_owner_role_rep_created_idx,
+      account_relation_owner_role_status_created_idx,
+      account_relation_owner_role_carrier_created_idx,
+      account_relation_owner_role_carrier_option_created_idx,
+      account_relation_owner_role_payment_term_created_idx,
+      account_relation_owner_role_shipping_term_created_idx,
+      PRIMARY
+  )
+  INNER JOIN account a ON a.id = ar.counterparty_account_id
+  WHERE ar.owner_account_id = ?
+    AND ar.account_relation_role_code = 'customer'
+    AND (
+      ? IS NULL
+      OR a.name LIKE ?
+      OR ar.alias LIKE ?
+      OR ar.external_number LIKE ?
+      OR ar.notes LIKE ?
+      OR (SELECT sab.support_email FROM account_branding sab WHERE sab.owner_account_id = ar.counterparty_account_id) LIKE ?
+    )
+    AND (
+      ? = false
+      OR ar.account_group_id IN (/*SLICE:customer_group_ids*/?)
+    )
+    AND (
+      ? = false
+      OR ar.id IN (/*SLICE:pricing_relation_ids*/?)
+    )
+    AND (
+      ? = false
+      OR ar.default_sales_rep_id IN (/*SLICE:sales_rep_ids*/?)
+    )
+    AND (
+      ? = false
+      OR ar.account_status_code IN (/*SLICE:status_codes*/?)
+    )
+    AND (
+      ? = false
+      OR ar.shipping_term_id IN (/*SLICE:shipping_term_ids*/?)
+    )
+    AND (
+      ? = false
+      OR ar.payment_term_id IN (/*SLICE:payment_term_ids*/?)
+    )
+    AND (
+      ? = false
+      OR ar.commission_status_code IN (/*SLICE:commission_status_codes*/?)
+    )
+    AND (
+      ? = false
+      OR ar.freight_status_code IN (/*SLICE:freight_status_codes*/?)
+    )
+    AND (
+      ? = false
+      OR ar.default_carrier_id IN (/*SLICE:carrier_ids*/?)
+    )
+    AND (
+      ? = false
+      OR ar.default_carrier_option_id IN (/*SLICE:carrier_option_ids*/?)
+    )
+    AND (
+      ? = false
+      OR (
+        ? = true
+        AND EXISTS (SELECT 1 FROM account_relation car WHERE car.parent_account_relation_id = ar.id)
+      )
+      OR (
+        ? = false
+        AND NOT EXISTS (SELECT 1 FROM account_relation car WHERE car.parent_account_relation_id = ar.id)
+      )
+    )
+    AND (
+      (? IS NULL AND ? IS NULL AND ? IS NULL)
+      -- A probe of each customer's few addresses; as a semi-join the planner scans geolocation for each.
+      OR (
+        SELECT STRAIGHT_JOIN 1 FROM account_address aa
+        JOIN address addr ON addr.id = aa.address_id
+        JOIN geolocation g ON g.id = addr.geolocation_id
+        WHERE aa.account_id = ar.counterparty_account_id
+        AND (? IS NULL OR g.locality = ?)
+        AND (? IS NULL OR g.state = ?)
+        AND (? IS NULL OR g.postal_code = ?)
+        LIMIT 1
+      ) IS NOT NULL
+    )
+    AND (? IS NULL OR ar.created_at >= ?)
+    AND (? IS NULL OR ar.created_at <= ?)
+    AND (
+      ? IS NULL
+      OR ar.created_at < ?
+      OR (ar.created_at = ? AND ar.counterparty_account_id < ?)
+    )
+  ORDER BY ar.created_at DESC, ar.counterparty_account_id DESC
+  LIMIT ?
+) page
+JOIN account_relation ar ON ar.id = page.id
 INNER JOIN account a ON a.id = ar.counterparty_account_id
 LEFT JOIN account_branding ab ON ab.owner_account_id = ar.counterparty_account_id
 LEFT JOIN account_relation par ON par.id = ar.parent_account_relation_id
@@ -2723,92 +2825,7 @@ LEFT JOIN address sa ON sa.id = ar.default_shipping_address_id
 LEFT JOIN geolocation sg ON sg.id = sa.geolocation_id
 LEFT JOIN quantity clq ON clq.id = ar.credit_limit_id
 LEFT JOIN unit clu ON clu.id = clq.unit_id
-WHERE ar.owner_account_id = ?
-  AND ar.account_relation_role_code = 'customer'
-  AND (
-    ? IS NULL
-    OR a.name LIKE ?
-    OR ar.alias LIKE ?
-    OR ar.external_number LIKE ?
-    OR ar.notes LIKE ?
-    OR ab.support_email LIKE ?
-  )
-  AND (
-    ? = false
-    OR ar.account_group_id IN (/*SLICE:customer_group_ids*/?)
-  )
-  AND (
-    ? = false
-    OR EXISTS (
-      SELECT 1 FROM account_relation_price_group arpg
-      WHERE arpg.account_relation_id = ar.id
-      AND arpg.account_group_id IN (/*SLICE:pricing_group_ids*/?)
-    )
-  )
-  AND (
-    ? = false
-    OR ar.default_sales_rep_id IN (/*SLICE:sales_rep_ids*/?)
-  )
-  AND (
-    ? = false
-    OR ar.account_status_code IN (/*SLICE:status_codes*/?)
-  )
-  AND (
-    ? = false
-    OR ar.shipping_term_id IN (/*SLICE:shipping_term_ids*/?)
-  )
-  AND (
-    ? = false
-    OR ar.payment_term_id IN (/*SLICE:payment_term_ids*/?)
-  )
-  AND (
-    ? = false
-    OR ar.commission_status_code IN (/*SLICE:commission_status_codes*/?)
-  )
-  AND (
-    ? = false
-    OR ar.freight_status_code IN (/*SLICE:freight_status_codes*/?)
-  )
-  AND (
-    ? = false
-    OR ar.default_carrier_id IN (/*SLICE:carrier_ids*/?)
-  )
-  AND (
-    ? = false
-    OR ar.default_carrier_option_id IN (/*SLICE:carrier_option_ids*/?)
-  )
-  AND (
-    ? = false
-    OR (
-      ? = true
-      AND EXISTS (SELECT 1 FROM account_relation car WHERE car.parent_account_relation_id = ar.id)
-    )
-    OR (
-      ? = false
-      AND NOT EXISTS (SELECT 1 FROM account_relation car WHERE car.parent_account_relation_id = ar.id)
-    )
-  )
-  AND (
-    (? IS NULL AND ? IS NULL AND ? IS NULL)
-    OR EXISTS (
-      SELECT 1 FROM account_address aa
-      JOIN address addr ON addr.id = aa.address_id
-      JOIN geolocation g ON g.id = addr.geolocation_id
-      WHERE aa.account_id = ar.counterparty_account_id
-      AND (? IS NULL OR g.locality = ?)
-      AND (? IS NULL OR g.state = ?)
-      AND (? IS NULL OR g.postal_code = ?)
-    )
-  )
-  AND (? IS NULL OR ar.created_at >= ?)
-  AND (? IS NULL OR ar.created_at <= ?)
-  AND (
-    ? IS NULL
-    OR ar.created_at < ?
-    OR (ar.created_at = ? AND ar.counterparty_account_id < ?)
-  )
 ORDER BY ar.created_at DESC, ar.counterparty_account_id DESC
-LIMIT ?
 `
 
 type ListCustomersForwardParams struct {
@@ -2817,7 +2834,7 @@ type ListCustomersForwardParams struct {
 	IncludeCustomerGroupFilter    interface{}
 	CustomerGroupIds              []sql.NullString
 	IncludePricingGroupFilter     interface{}
-	PricingGroupIds               []string
+	PricingRelationIds            []string
 	IncludeSalesRepFilter         interface{}
 	SalesRepIds                   []sql.NullString
 	IncludeStatusFilter           interface{}
@@ -2948,15 +2965,14 @@ type ListCustomersForwardRow struct {
 	UpdatedAt                             time.Time
 }
 
-// STRAIGHT_JOIN forces `ar` as the driving table. Without it the optimizer drives from one of the
-// seventeen hydration joins and runs every one of the owner's customer relations through all of
-// them before sorting — measured at 19,311 rows read to return 10.
-// FORCE INDEX restricts the optimizer to the four indexes that satisfy the ORDER BY
-// (created_at, counterparty_account_id) without a filesort: the plain owner_role index when no
-// filter narrows the set, and the group/rep/status variants when one does. Left to itself the
-// optimizer picks account_relation_owner_account_id_counterparty_account_id_ac_key on every
-// production execution — it satisfies the owner equality but not the ordering, so the whole set
-// goes through the joins and is then filesorted. Do not remove.
+// The page is chosen from account_relation alone (and account, which every listed relation has) and
+// joined to its seventeen hydration tables after, so a filter no key serves in list order reads only
+// the relations it examines, not their joins too. STRAIGHT_JOIN keeps account_relation driving.
+// FORCE INDEX holds the page to the keys that yield an owner's customers in list order: the plain
+// one when no filter narrows the set, a filter's own when one does. Left to itself the planner reads
+// account_relation_owner_account_id_counterparty_account_id_ac_key, which pins the owner but not the
+// order, and sorts every customer. PRIMARY is offered too, so a price group's
+// relations (resolved by ListPriceGroupRelationIDs) are read by id rather than found by walking.
 func (q *Queries) ListCustomersForward(ctx context.Context, arg ListCustomersForwardParams) ([]ListCustomersForwardRow, error) {
 	query := listCustomersForward
 	var queryParams []interface{}
@@ -2977,13 +2993,13 @@ func (q *Queries) ListCustomersForward(ctx context.Context, arg ListCustomersFor
 		query = strings.Replace(query, "/*SLICE:customer_group_ids*/?", "NULL", 1)
 	}
 	queryParams = append(queryParams, arg.IncludePricingGroupFilter)
-	if len(arg.PricingGroupIds) > 0 {
-		for _, v := range arg.PricingGroupIds {
+	if len(arg.PricingRelationIds) > 0 {
+		for _, v := range arg.PricingRelationIds {
 			queryParams = append(queryParams, v)
 		}
-		query = strings.Replace(query, "/*SLICE:pricing_group_ids*/?", strings.Repeat(",?", len(arg.PricingGroupIds))[1:], 1)
+		query = strings.Replace(query, "/*SLICE:pricing_relation_ids*/?", strings.Repeat(",?", len(arg.PricingRelationIds))[1:], 1)
 	} else {
-		query = strings.Replace(query, "/*SLICE:pricing_group_ids*/?", "NULL", 1)
+		query = strings.Replace(query, "/*SLICE:pricing_relation_ids*/?", "NULL", 1)
 	}
 	queryParams = append(queryParams, arg.IncludeSalesRepFilter)
 	if len(arg.SalesRepIds) > 0 {
@@ -3304,6 +3320,46 @@ func (q *Queries) ListCustomersPriceGroups(ctx context.Context, relationIds []st
 			return nil, err
 		}
 		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listPriceGroupRelationIDs = `-- name: ListPriceGroupRelationIDs :many
+SELECT DISTINCT account_relation_id
+FROM account_relation_price_group
+WHERE account_group_id IN (/*SLICE:account_group_ids*/?)
+`
+
+// The relations in any of the price groups, so a customer list can read them by id.
+func (q *Queries) ListPriceGroupRelationIDs(ctx context.Context, accountGroupIds []string) ([]string, error) {
+	query := listPriceGroupRelationIDs
+	var queryParams []interface{}
+	if len(accountGroupIds) > 0 {
+		for _, v := range accountGroupIds {
+			queryParams = append(queryParams, v)
+		}
+		query = strings.Replace(query, "/*SLICE:account_group_ids*/?", strings.Repeat(",?", len(accountGroupIds))[1:], 1)
+	} else {
+		query = strings.Replace(query, "/*SLICE:account_group_ids*/?", "NULL", 1)
+	}
+	rows, err := q.db.QueryContext(ctx, query, queryParams...)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []string
+	for rows.Next() {
+		var account_relation_id string
+		if err := rows.Scan(&account_relation_id); err != nil {
+			return nil, err
+		}
+		items = append(items, account_relation_id)
 	}
 	if err := rows.Close(); err != nil {
 		return nil, err

@@ -1,0 +1,80 @@
+{
+ "source": "augno_core/prod, mysql.innodb_table_stats and mysql.innodb_index_stats, read 2026-10-01",
+ "table": {
+  "n_rows": 23959,
+  "clustered_index_size": 225,
+  "sum_of_other_index_sizes": 419
+ },
+ "indexes": [
+  {
+   "index": "FTS_DOC_ID_INDEX",
+   "stat": "n_diff_pfx01",
+   "value": 23979
+  },
+  {
+   "index": "FTS_DOC_ID_INDEX",
+   "stat": "n_leaf_pages",
+   "value": 67
+  },
+  {
+   "index": "FTS_DOC_ID_INDEX",
+   "stat": "size",
+   "value": 97
+  },
+  {
+   "index": "PRIMARY",
+   "stat": "n_diff_pfx01",
+   "value": 23959
+  },
+  {
+   "index": "PRIMARY",
+   "stat": "n_leaf_pages",
+   "value": 194
+  },
+  {
+   "index": "PRIMARY",
+   "stat": "size",
+   "value": 225
+  },
+  {
+   "index": "address_geolocation_id_idx",
+   "stat": "n_diff_pfx01",
+   "value": 20584
+  },
+  {
+   "index": "address_geolocation_id_idx",
+   "stat": "n_diff_pfx02",
+   "value": 23085
+  },
+  {
+   "index": "address_geolocation_id_idx",
+   "stat": "n_leaf_pages",
+   "value": 183
+  },
+  {
+   "index": "address_geolocation_id_idx",
+   "stat": "size",
+   "value": 225
+  },
+  {
+   "index": "address_receive_calendar_id_idx",
+   "stat": "n_diff_pfx01",
+   "value": 0
+  },
+  {
+   "index": "address_receive_calendar_id_idx",
+   "stat": "n_diff_pfx02",
+   "value": 23837
+  },
+  {
+   "index": "address_receive_calendar_id_idx",
+   "stat": "n_leaf_pages",
+   "value": 57
+  },
+  {
+   "index": "address_receive_calendar_id_idx",
+   "stat": "size",
+   "value": 97
+  }
+ ]
+}

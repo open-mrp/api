@@ -1,0 +1,495 @@
+{
+ "source": "augno_core/prod, mysql.innodb_table_stats and mysql.innodb_index_stats, read 2026-10-01",
+ "table": {
+  "n_rows": 3468,
+  "clustered_index_size": 161,
+  "sum_of_other_index_sizes": 613
+ },
+ "indexes": [
+  {
+   "index": "FTS_DOC_ID_INDEX",
+   "stat": "n_diff_pfx01",
+   "value": 3607
+  },
+  {
+   "index": "FTS_DOC_ID_INDEX",
+   "stat": "n_leaf_pages",
+   "value": 11
+  },
+  {
+   "index": "FTS_DOC_ID_INDEX",
+   "stat": "size",
+   "value": 12
+  },
+  {
+   "index": "PRIMARY",
+   "stat": "n_diff_pfx01",
+   "value": 3468
+  },
+  {
+   "index": "PRIMARY",
+   "stat": "n_leaf_pages",
+   "value": 102
+  },
+  {
+   "index": "PRIMARY",
+   "stat": "size",
+   "value": 161
+  },
+  {
+   "index": "account_relation_account_group_id_idx",
+   "stat": "n_diff_pfx01",
+   "value": 19
+  },
+  {
+   "index": "account_relation_account_group_id_idx",
+   "stat": "n_diff_pfx02",
+   "value": 3607
+  },
+  {
+   "index": "account_relation_account_group_id_idx",
+   "stat": "n_leaf_pages",
+   "value": 21
+  },
+  {
+   "index": "account_relation_account_group_id_idx",
+   "stat": "size",
+   "value": 22
+  },
+  {
+   "index": "account_relation_account_status_code_idx",
+   "stat": "n_diff_pfx01",
+   "value": 4
+  },
+  {
+   "index": "account_relation_account_status_code_idx",
+   "stat": "n_diff_pfx02",
+   "value": 3607
+  },
+  {
+   "index": "account_relation_account_status_code_idx",
+   "stat": "n_leaf_pages",
+   "value": 12
+  },
+  {
+   "index": "account_relation_account_status_code_idx",
+   "stat": "size",
+   "value": 13
+  },
+  {
+   "index": "account_relation_counterparty_account_id_idx",
+   "stat": "n_diff_pfx01",
+   "value": 3607
+  },
+  {
+   "index": "account_relation_counterparty_account_id_idx",
+   "stat": "n_diff_pfx02",
+   "value": 3607
+  },
+  {
+   "index": "account_relation_counterparty_account_id_idx",
+   "stat": "n_leaf_pages",
+   "value": 18
+  },
+  {
+   "index": "account_relation_counterparty_account_id_idx",
+   "stat": "size",
+   "value": 19
+  },
+  {
+   "index": "account_relation_credit_limit_id_key",
+   "stat": "n_diff_pfx01",
+   "value": 3
+  },
+  {
+   "index": "account_relation_credit_limit_id_key",
+   "stat": "n_leaf_pages",
+   "value": 11
+  },
+  {
+   "index": "account_relation_credit_limit_id_key",
+   "stat": "size",
+   "value": 12
+  },
+  {
+   "index": "account_relation_default_billing_address_id_idx",
+   "stat": "n_diff_pfx01",
+   "value": 3607
+  },
+  {
+   "index": "account_relation_default_billing_address_id_idx",
+   "stat": "n_diff_pfx02",
+   "value": 3607
+  },
+  {
+   "index": "account_relation_default_billing_address_id_idx",
+   "stat": "n_leaf_pages",
+   "value": 25
+  },
+  {
+   "index": "account_relation_default_billing_address_id_idx",
+   "stat": "size",
+   "value": 26
+  },
+  {
+   "index": "account_relation_default_carrier_id_idx",
+   "stat": "n_diff_pfx01",
+   "value": 5
+  },
+  {
+   "index": "account_relation_default_carrier_id_idx",
+   "stat": "n_diff_pfx02",
+   "value": 3607
+  },
+  {
+   "index": "account_relation_default_carrier_id_idx",
+   "stat": "n_leaf_pages",
+   "value": 18
+  },
+  {
+   "index": "account_relation_default_carrier_id_idx",
+   "stat": "size",
+   "value": 19
+  },
+  {
+   "index": "account_relation_default_carrier_option_id_idx",
+   "stat": "n_diff_pfx01",
+   "value": 4
+  },
+  {
+   "index": "account_relation_default_carrier_option_id_idx",
+   "stat": "n_diff_pfx02",
+   "value": 3607
+  },
+  {
+   "index": "account_relation_default_carrier_option_id_idx",
+   "stat": "n_leaf_pages",
+   "value": 19
+  },
+  {
+   "index": "account_relation_default_carrier_option_id_idx",
+   "stat": "size",
+   "value": 20
+  },
+  {
+   "index": "account_relation_default_sales_rep_id_idx",
+   "stat": "n_diff_pfx01",
+   "value": 11
+  },
+  {
+   "index": "account_relation_default_sales_rep_id_idx",
+   "stat": "n_diff_pfx02",
+   "value": 3607
+  },
+  {
+   "index": "account_relation_default_sales_rep_id_idx",
+   "stat": "n_leaf_pages",
+   "value": 15
+  },
+  {
+   "index": "account_relation_default_sales_rep_id_idx",
+   "stat": "size",
+   "value": 16
+  },
+  {
+   "index": "account_relation_default_shipping_address_id_idx",
+   "stat": "n_diff_pfx01",
+   "value": 3607
+  },
+  {
+   "index": "account_relation_default_shipping_address_id_idx",
+   "stat": "n_diff_pfx02",
+   "value": 3607
+  },
+  {
+   "index": "account_relation_default_shipping_address_id_idx",
+   "stat": "n_leaf_pages",
+   "value": 22
+  },
+  {
+   "index": "account_relation_default_shipping_address_id_idx",
+   "stat": "size",
+   "value": 23
+  },
+  {
+   "index": "account_relation_owner_account_id_counterparty_account_id_ac_key",
+   "stat": "n_diff_pfx01",
+   "value": 8
+  },
+  {
+   "index": "account_relation_owner_account_id_counterparty_account_id_ac_key",
+   "stat": "n_diff_pfx02",
+   "value": 3607
+  },
+  {
+   "index": "account_relation_owner_account_id_counterparty_account_id_ac_key",
+   "stat": "n_diff_pfx03",
+   "value": 3607
+  },
+  {
+   "index": "account_relation_owner_account_id_counterparty_account_id_ac_key",
+   "stat": "n_leaf_pages",
+   "value": 29
+  },
+  {
+   "index": "account_relation_owner_account_id_counterparty_account_id_ac_key",
+   "stat": "size",
+   "value": 30
+  },
+  {
+   "index": "account_relation_owner_role_created_idx",
+   "stat": "n_diff_pfx01",
+   "value": 8
+  },
+  {
+   "index": "account_relation_owner_role_created_idx",
+   "stat": "n_diff_pfx02",
+   "value": 11
+  },
+  {
+   "index": "account_relation_owner_role_created_idx",
+   "stat": "n_diff_pfx03",
+   "value": 3136
+  },
+  {
+   "index": "account_relation_owner_role_created_idx",
+   "stat": "n_diff_pfx04",
+   "value": 3607
+  },
+  {
+   "index": "account_relation_owner_role_created_idx",
+   "stat": "n_diff_pfx05",
+   "value": 3607
+  },
+  {
+   "index": "account_relation_owner_role_created_idx",
+   "stat": "n_leaf_pages",
+   "value": 32
+  },
+  {
+   "index": "account_relation_owner_role_created_idx",
+   "stat": "size",
+   "value": 33
+  },
+  {
+   "index": "account_relation_owner_role_group_created_idx",
+   "stat": "n_diff_pfx01",
+   "value": 8
+  },
+  {
+   "index": "account_relation_owner_role_group_created_idx",
+   "stat": "n_diff_pfx02",
+   "value": 11
+  },
+  {
+   "index": "account_relation_owner_role_group_created_idx",
+   "stat": "n_diff_pfx03",
+   "value": 22
+  },
+  {
+   "index": "account_relation_owner_role_group_created_idx",
+   "stat": "n_diff_pfx04",
+   "value": 3193
+  },
+  {
+   "index": "account_relation_owner_role_group_created_idx",
+   "stat": "n_diff_pfx05",
+   "value": 3607
+  },
+  {
+   "index": "account_relation_owner_role_group_created_idx",
+   "stat": "n_diff_pfx06",
+   "value": 3607
+  },
+  {
+   "index": "account_relation_owner_role_group_created_idx",
+   "stat": "n_leaf_pages",
+   "value": 48
+  },
+  {
+   "index": "account_relation_owner_role_group_created_idx",
+   "stat": "size",
+   "value": 97
+  },
+  {
+   "index": "account_relation_owner_role_rep_created_idx",
+   "stat": "n_diff_pfx01",
+   "value": 8
+  },
+  {
+   "index": "account_relation_owner_role_rep_created_idx",
+   "stat": "n_diff_pfx02",
+   "value": 11
+  },
+  {
+   "index": "account_relation_owner_role_rep_created_idx",
+   "stat": "n_diff_pfx03",
+   "value": 19
+  },
+  {
+   "index": "account_relation_owner_role_rep_created_idx",
+   "stat": "n_diff_pfx04",
+   "value": 3154
+  },
+  {
+   "index": "account_relation_owner_role_rep_created_idx",
+   "stat": "n_diff_pfx05",
+   "value": 3607
+  },
+  {
+   "index": "account_relation_owner_role_rep_created_idx",
+   "stat": "n_diff_pfx06",
+   "value": 3607
+  },
+  {
+   "index": "account_relation_owner_role_rep_created_idx",
+   "stat": "n_leaf_pages",
+   "value": 36
+  },
+  {
+   "index": "account_relation_owner_role_rep_created_idx",
+   "stat": "size",
+   "value": 97
+  },
+  {
+   "index": "account_relation_owner_role_status_created_idx",
+   "stat": "n_diff_pfx01",
+   "value": 8
+  },
+  {
+   "index": "account_relation_owner_role_status_created_idx",
+   "stat": "n_diff_pfx02",
+   "value": 11
+  },
+  {
+   "index": "account_relation_owner_role_status_created_idx",
+   "stat": "n_diff_pfx03",
+   "value": 13
+  },
+  {
+   "index": "account_relation_owner_role_status_created_idx",
+   "stat": "n_diff_pfx04",
+   "value": 3144
+  },
+  {
+   "index": "account_relation_owner_role_status_created_idx",
+   "stat": "n_diff_pfx05",
+   "value": 3607
+  },
+  {
+   "index": "account_relation_owner_role_status_created_idx",
+   "stat": "n_diff_pfx06",
+   "value": 3607
+  },
+  {
+   "index": "account_relation_owner_role_status_created_idx",
+   "stat": "n_leaf_pages",
+   "value": 36
+  },
+  {
+   "index": "account_relation_owner_role_status_created_idx",
+   "stat": "size",
+   "value": 97
+  },
+  {
+   "index": "account_relation_parent_account_relation_id_idx",
+   "stat": "n_diff_pfx01",
+   "value": 39
+  },
+  {
+   "index": "account_relation_parent_account_relation_id_idx",
+   "stat": "n_diff_pfx02",
+   "value": 3607
+  },
+  {
+   "index": "account_relation_parent_account_relation_id_idx",
+   "stat": "n_leaf_pages",
+   "value": 14
+  },
+  {
+   "index": "account_relation_parent_account_relation_id_idx",
+   "stat": "size",
+   "value": 15
+  },
+  {
+   "index": "account_relation_payment_term_id_idx",
+   "stat": "n_diff_pfx01",
+   "value": 16
+  },
+  {
+   "index": "account_relation_payment_term_id_idx",
+   "stat": "n_diff_pfx02",
+   "value": 3607
+  },
+  {
+   "index": "account_relation_payment_term_id_idx",
+   "stat": "n_leaf_pages",
+   "value": 14
+  },
+  {
+   "index": "account_relation_payment_term_id_idx",
+   "stat": "size",
+   "value": 15
+  },
+  {
+   "index": "account_relation_priority_code_idx",
+   "stat": "n_diff_pfx01",
+   "value": 2
+  },
+  {
+   "index": "account_relation_priority_code_idx",
+   "stat": "n_diff_pfx02",
+   "value": 3607
+  },
+  {
+   "index": "account_relation_priority_code_idx",
+   "stat": "n_leaf_pages",
+   "value": 13
+  },
+  {
+   "index": "account_relation_priority_code_idx",
+   "stat": "size",
+   "value": 14
+  },
+  {
+   "index": "account_relation_receive_calendar_id_idx",
+   "stat": "n_diff_pfx01",
+   "value": 1
+  },
+  {
+   "index": "account_relation_receive_calendar_id_idx",
+   "stat": "n_diff_pfx02",
+   "value": 3607
+  },
+  {
+   "index": "account_relation_receive_calendar_id_idx",
+   "stat": "n_leaf_pages",
+   "value": 11
+  },
+  {
+   "index": "account_relation_receive_calendar_id_idx",
+   "stat": "size",
+   "value": 12
+  },
+  {
+   "index": "account_relation_shipping_term_id_idx",
+   "stat": "n_diff_pfx01",
+   "value": 12
+  },
+  {
+   "index": "account_relation_shipping_term_id_idx",
+   "stat": "n_diff_pfx02",
+   "value": 3607
+  },
+  {
+   "index": "account_relation_shipping_term_id_idx",
+   "stat": "n_leaf_pages",
+   "value": 20
+  },
+  {
+   "index": "account_relation_shipping_term_id_idx",
+   "stat": "size",
+   "value": 21
+  }
+ ]
+}

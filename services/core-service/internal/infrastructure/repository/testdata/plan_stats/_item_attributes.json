@@ -1,0 +1,50 @@
+{
+ "source": "augno_core/prod, mysql.innodb_table_stats and mysql.innodb_index_stats, read 2026-10-01",
+ "table": {
+  "n_rows": 27050,
+  "clustered_index_size": 286,
+  "sum_of_other_index_sizes": 291
+ },
+ "indexes": [
+  {
+   "index": "_item_attributes_AB_unique",
+   "stat": "n_diff_pfx01",
+   "value": 335
+  },
+  {
+   "index": "_item_attributes_AB_unique",
+   "stat": "n_diff_pfx02",
+   "value": 27038
+  },
+  {
+   "index": "_item_attributes_AB_unique",
+   "stat": "n_leaf_pages",
+   "value": 234
+  },
+  {
+   "index": "_item_attributes_AB_unique",
+   "stat": "size",
+   "value": 286
+  },
+  {
+   "index": "_item_attributes_B_index",
+   "stat": "n_diff_pfx01",
+   "value": 4253
+  },
+  {
+   "index": "_item_attributes_B_index",
+   "stat": "n_diff_pfx02",
+   "value": 24225
+  },
+  {
+   "index": "_item_attributes_B_index",
+   "stat": "n_leaf_pages",
+   "value": 206
+  },
+  {
+   "index": "_item_attributes_B_index",
+   "stat": "size",
+   "value": 291
+  }
+ ]
+}

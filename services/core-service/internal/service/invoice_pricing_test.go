@@ -122,10 +122,23 @@ func TestInDocumentZone(t *testing.T) {
 		require.Equal(t, "09/08/2026 01:39 PM", got.Format("01/02/2006 03:04 PM"))
 	})
 
-	t.Run("falls back to the server zone without one", func(t *testing.T) {
-		require.Equal(t, at.Local(), inDocumentZone(at, nil))
-		require.Equal(t, at.Local(), inDocumentZone(at, &domain.ShippingAddress{}))
-		require.Equal(t, at.Local(), inDocumentZone(at, &domain.ShippingAddress{Timezone: poPtr("Not/AZone")}))
+	t.Run("derives the zone from the origin's country and state when none is stored", func(t *testing.T) {
+		got := inDocumentZone(at, &domain.ShippingAddress{Country: "US", State: "NC"})
+		require.Equal(t, "09/08/2026 01:39 PM", got.Format("01/02/2006 03:04 PM"))
+	})
+
+	// The dashboard stores a picked date as the last instant of that day in the user's zone, which in
+	// UTC is already the next day.
+	t.Run("keeps a date picked as the end of a day on that day", func(t *testing.T) {
+		endOfOct19 := time.Date(2026, 10, 20, 3, 59, 59, 999_000_000, time.UTC)
+		got := inDocumentZone(endOfOct19, &domain.ShippingAddress{Country: "US", State: "NC"})
+		require.Equal(t, "10/19/2026", got.Format("01/02/2006"))
+	})
+
+	t.Run("falls back to UTC when the zone cannot be known", func(t *testing.T) {
+		require.Equal(t, at, inDocumentZone(at, nil))
+		require.Equal(t, time.UTC, inDocumentZone(at, &domain.ShippingAddress{}).Location())
+		require.Equal(t, time.UTC, inDocumentZone(at, &domain.ShippingAddress{Timezone: poPtr("Not/AZone")}).Location())
 	})
 }
 

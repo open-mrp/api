@@ -946,15 +946,16 @@ func (r *salesOrderRepoImpl) GetAccountOriginAddress(ctx context.Context, accoun
 	}
 
 	return &domain.ShippingAddress{
-		Name:    row.Name,
-		Street1: nullSQLString(row.StreetLine1),
-		Street2: nullStringToPtr(row.StreetLine2),
-		City:    nullSQLString(row.Locality),
-		State:   nullSQLString(row.State),
-		Zip:     nullSQLString(row.PostalCode),
-		Country: row.Country,
-		Phone:   nullStringToPtr(row.Phone),
-		Email:   nullStringToPtr(row.Email),
+		Name:     row.Name,
+		Street1:  nullSQLString(row.StreetLine1),
+		Street2:  nullStringToPtr(row.StreetLine2),
+		City:     nullSQLString(row.Locality),
+		State:    nullSQLString(row.State),
+		Zip:      nullSQLString(row.PostalCode),
+		Country:  row.Country,
+		Phone:    nullStringToPtr(row.Phone),
+		Email:    nullStringToPtr(row.Email),
+		Timezone: nullStringToPtr(row.Timezone),
 	}, nil
 }
 

@@ -76,9 +76,9 @@ func TestBuildInvoiceDoc_IdentityComesFromTheInvoiceAndCustomer(t *testing.T) {
 	assert.Equal(t, "C-ORDER", doc.Header.CustomerNumber, "customer number comes from the order's customer")
 	assert.NotEqual(t, "ORD-1", doc.Header.CustomerNumber, "the order number must never stand in for it")
 
-	// The date carries a time, and renders in the server's zone as the dashboard's does — so the
-	// expectation is derived rather than hard-coded, or it would only hold in UTC.
-	assert.Equal(t, invoice.CreatedAt.Local().Format("01/02/2006 03:04 PM"), doc.Header.OrderDateLong)
+	// The date carries a time. With no origin address there is no merchant zone to read it in, so it
+	// renders in UTC.
+	assert.Equal(t, invoice.CreatedAt.UTC().Format("01/02/2006 03:04 PM"), doc.Header.OrderDateLong)
 	assert.Regexp(t, `^\d{2}/\d{2}/\d{4} \d{2}:\d{2} [AP]M$`, doc.Header.OrderDateLong)
 
 	// The order's terms and both addresses ride along.

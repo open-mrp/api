@@ -240,11 +240,14 @@ func (r *deliveryRepoImpl) Get(ctx context.Context, params domain.GetDeliveryPar
 	}, nil
 }
 
-func (r *deliveryRepoImpl) CountByPurchaseOrder(ctx context.Context, purchaseOrderID string) (int64, *apierror.APIError) {
+func (r *deliveryRepoImpl) CountByPurchaseOrder(ctx context.Context, accountID, purchaseOrderID string) (int64, *apierror.APIError) {
 	ctx, span := deliveryRepoTracer.Start(ctx, "repository.delivery.count_by_purchase_order")
 	defer span.End()
 
-	count, err := r.queries.CountDeliveriesByPurchaseOrder(ctx, purchaseOrderID)
+	count, err := r.queries.CountDeliveriesByPurchaseOrder(ctx, sqlc.CountDeliveriesByPurchaseOrderParams{
+		PurchaseOrderID: purchaseOrderID,
+		AccountID:       accountID,
+	})
 	if apiErr := db.MapSQLError(err); apiErr != nil {
 		return 0, tracing.Trace(span, apiErr)
 	}

@@ -45,19 +45,39 @@ SELECT
     so.number AS purchase_order_number,
     so.sales_order_status_code AS purchase_order_status,
     a.id AS supplier_id,
-    a.name AS supplier_name,
+    COALESCE(NULLIF(ar.alias, ''), a.name) AS supplier_name,
     ar.external_number AS supplier_number,
-    COUNT(rol.id) AS line_count
-FROM receiving_order ro
+    (SELECT COUNT(*) FROM receiving_order_line rol WHERE rol.receiving_order_id = ro.id) AS line_count
+FROM receiving_order ro FORCE INDEX (receiving_order_account_created_idx)
 JOIN sales_order so ON ro.order_id = so.id
-LEFT JOIN account_relation ar ON so.seller_account_id = ar.counterparty_account_id AND ar.owner_account_id = ro.account_id
-LEFT JOIN account a ON ar.counterparty_account_id = a.id
-LEFT JOIN receiving_order_line rol ON rol.receiving_order_id = ro.id
+LEFT JOIN account_relation ar ON ar.owner_account_id = ro.account_id
+    AND ar.counterparty_account_id = so.seller_account_id
+    AND ar.account_relation_role_code = 'supplier'
+LEFT JOIN account a ON a.id = so.seller_account_id
 WHERE ro.account_id = sqlc.arg('account_id')
+-- Search names the matching purchase orders up front, so walking the (account, created_at) key probes
+-- a set per row; matching on the joined columns instead joins the order, the supplier and its account
+-- for every row before it can reject it. The item and supplier filters stay correlated: a common item
+-- or supplier would materialize most of the account's orders, where the walk stops at the page.
 AND (
     sqlc.narg('search_query') IS NULL
     OR ro.number LIKE sqlc.narg('search_query')
-    OR so.number LIKE sqlc.narg('search_query')
+    OR ro.order_id IN (
+        SELECT sq.id FROM sales_order sq
+        WHERE sq.owner_account_id = sqlc.arg('account_id')
+        AND sq.sales_order_type_code = 'purchase_order'
+        AND (
+            sq.number LIKE sqlc.narg('search_query')
+            OR sq.customer_po_number LIKE sqlc.narg('search_query')
+            OR sq.seller_account_id IN (
+                SELECT sar.counterparty_account_id FROM account_relation sar
+                JOIN account sa ON sa.id = sar.counterparty_account_id
+                WHERE sar.owner_account_id = sqlc.arg('account_id')
+                AND sar.account_relation_role_code = 'supplier'
+                AND (sa.name LIKE sqlc.narg('search_query') OR sar.alias LIKE sqlc.narg('search_query') OR sar.external_number LIKE sqlc.narg('search_query'))
+            )
+        )
+    )
 )
 AND (
     sqlc.narg('status') IS NULL
@@ -90,7 +110,6 @@ AND (
     OR ro.created_at < sqlc.narg('cursor_created_at')
     OR (ro.created_at = sqlc.narg('cursor_created_at') AND ro.id < sqlc.narg('cursor_id'))
 )
-GROUP BY ro.id, ro.number, ro.completed_at, ro.created_at, ro.updated_at, so.id, so.number, a.id, a.name, ar.external_number
 ORDER BY ro.created_at DESC, ro.id DESC
 LIMIT ?;
 
@@ -105,19 +124,39 @@ SELECT
     so.number AS purchase_order_number,
     so.sales_order_status_code AS purchase_order_status,
     a.id AS supplier_id,
-    a.name AS supplier_name,
+    COALESCE(NULLIF(ar.alias, ''), a.name) AS supplier_name,
     ar.external_number AS supplier_number,
-    COUNT(rol.id) AS line_count
-FROM receiving_order ro
+    (SELECT COUNT(*) FROM receiving_order_line rol WHERE rol.receiving_order_id = ro.id) AS line_count
+FROM receiving_order ro FORCE INDEX (receiving_order_account_created_idx)
 JOIN sales_order so ON ro.order_id = so.id
-LEFT JOIN account_relation ar ON so.seller_account_id = ar.counterparty_account_id AND ar.owner_account_id = ro.account_id
-LEFT JOIN account a ON ar.counterparty_account_id = a.id
-LEFT JOIN receiving_order_line rol ON rol.receiving_order_id = ro.id
+LEFT JOIN account_relation ar ON ar.owner_account_id = ro.account_id
+    AND ar.counterparty_account_id = so.seller_account_id
+    AND ar.account_relation_role_code = 'supplier'
+LEFT JOIN account a ON a.id = so.seller_account_id
 WHERE ro.account_id = sqlc.arg('account_id')
+-- Search names the matching purchase orders up front, so walking the (account, created_at) key probes
+-- a set per row; matching on the joined columns instead joins the order, the supplier and its account
+-- for every row before it can reject it. The item and supplier filters stay correlated: a common item
+-- or supplier would materialize most of the account's orders, where the walk stops at the page.
 AND (
     sqlc.narg('search_query') IS NULL
     OR ro.number LIKE sqlc.narg('search_query')
-    OR so.number LIKE sqlc.narg('search_query')
+    OR ro.order_id IN (
+        SELECT sq.id FROM sales_order sq
+        WHERE sq.owner_account_id = sqlc.arg('account_id')
+        AND sq.sales_order_type_code = 'purchase_order'
+        AND (
+            sq.number LIKE sqlc.narg('search_query')
+            OR sq.customer_po_number LIKE sqlc.narg('search_query')
+            OR sq.seller_account_id IN (
+                SELECT sar.counterparty_account_id FROM account_relation sar
+                JOIN account sa ON sa.id = sar.counterparty_account_id
+                WHERE sar.owner_account_id = sqlc.arg('account_id')
+                AND sar.account_relation_role_code = 'supplier'
+                AND (sa.name LIKE sqlc.narg('search_query') OR sar.alias LIKE sqlc.narg('search_query') OR sar.external_number LIKE sqlc.narg('search_query'))
+            )
+        )
+    )
 )
 AND (
     sqlc.narg('status') IS NULL
@@ -149,7 +188,6 @@ AND (
     ro.created_at > sqlc.arg('cursor_created_at')
     OR (ro.created_at = sqlc.arg('cursor_created_at') AND ro.id > sqlc.arg('cursor_id'))
 )
-GROUP BY ro.id, ro.number, ro.completed_at, ro.created_at, ro.updated_at, so.id, so.number, a.id, a.name, ar.external_number
 ORDER BY ro.created_at ASC, ro.id ASC
 LIMIT ?;
 
@@ -164,19 +202,23 @@ SELECT
     so.number AS purchase_order_number,
     so.sales_order_status_code AS purchase_order_status,
     a.id AS supplier_id,
-    a.name AS supplier_name,
+    COALESCE(NULLIF(ar.alias, ''), a.name) AS supplier_name,
     ar.external_number AS supplier_number,
     so.note
 FROM receiving_order ro
 JOIN sales_order so ON ro.order_id = so.id
-LEFT JOIN account_relation ar ON so.seller_account_id = ar.counterparty_account_id AND ar.owner_account_id = ro.account_id
-LEFT JOIN account a ON ar.counterparty_account_id = a.id
+LEFT JOIN account_relation ar ON ar.owner_account_id = ro.account_id
+    AND ar.counterparty_account_id = so.seller_account_id
+    AND ar.account_relation_role_code = 'supplier'
+LEFT JOIN account a ON a.id = so.seller_account_id
 WHERE ro.id = sqlc.arg('id')
 AND ro.account_id = sqlc.arg('account_id');
 
--- name: ListReceivingOrderLinesByOrderID :many
+-- ListReceivingOrderLinesByOrderIDs lists the lines of one or more receiving orders, so a page of orders costs one query rather than one per order.
+-- name: ListReceivingOrderLinesByOrderIDs :many
 SELECT
     rol.id,
+    rol.receiving_order_id,
     rol.stocked_at,
     rol.created_at,
     rol.updated_at,
@@ -194,7 +236,14 @@ SELECT
     oq.value AS order_line_quantity_ordered,
     ou.id AS order_line_unit_id,
     ou.abbreviation AS order_line_unit_abbreviation,
-    (SELECT CAST(SUM(rq.value) AS CHAR) FROM delivery_line dl JOIN quantity rq ON dl.quantity_id = rq.id WHERE dl.receiving_order_line_id = rol.id AND dl.rejected_at IS NOT NULL) AS rejected_quantity_value
+    -- A refusal can be recorded in any unit of the item's group, so each is converted into the
+    -- line's own unit before it is added; the response labels the sum with that unit.
+    (SELECT CAST(SUM(CASE WHEN rq.unit_id = q.unit_id THEN rq.value
+            ELSE rq.value * rqu.ratio_numerator * qu.ratio_denominator / (rqu.ratio_denominator * qu.ratio_numerator) END) AS CHAR)
+        FROM delivery_line dl
+        JOIN quantity rq ON dl.quantity_id = rq.id
+        JOIN unit rqu ON rqu.id = rq.unit_id
+        WHERE dl.receiving_order_line_id = rol.id AND dl.rejected_at IS NOT NULL) AS rejected_quantity_value
 FROM receiving_order_line rol
 JOIN quantity q ON rol.quantity_id = q.id
 JOIN unit qu ON q.unit_id = qu.id
@@ -202,7 +251,7 @@ JOIN sales_order_line sol ON rol.sales_order_line_id = sol.id
 LEFT JOIN item i ON sol.item_id = i.id
 JOIN quantity oq ON sol.quantity_id = oq.id
 JOIN unit ou ON oq.unit_id = ou.id
-WHERE rol.receiving_order_id = sqlc.arg('receiving_order_id')
+WHERE rol.receiving_order_id IN (sqlc.slice('receiving_order_ids'))
 ORDER BY rol.created_at ASC, rol.id ASC;
 
 -- name: FindUnstockedLineIDs :many
@@ -223,18 +272,18 @@ AND (
 
 -- name: StockReceivingOrderLines :exec
 UPDATE receiving_order_line
-SET stocked_at = NOW(3)
+SET stocked_at = NOW(3), updated_at = NOW(3)
 WHERE id IN (sqlc.slice('line_ids'));
 
 -- name: MarkReceivingOrderCompleteByID :exec
 UPDATE receiving_order
-SET completed_at = NOW(3)
+SET completed_at = NOW(3), updated_at = NOW(3)
 WHERE id = sqlc.arg('id')
 AND account_id = sqlc.arg('account_id');
 
 -- name: MarkReceivingOrderIncompleteByID :exec
 UPDATE receiving_order
-SET completed_at = NULL
+SET completed_at = NULL, updated_at = NOW(3)
 WHERE id = sqlc.arg('id')
 AND account_id = sqlc.arg('account_id');
 
@@ -250,7 +299,7 @@ AND rol.stocked_at IS NULL;
 UPDATE receiving_order_line rol
 JOIN quantity q ON rol.quantity_id = q.id
 JOIN receiving_order ro ON rol.receiving_order_id = ro.id
-SET q.value = '0', rol.stocked_at = NULL
+SET q.value = '0', q.updated_at = NOW(3), rol.stocked_at = NULL, rol.updated_at = NOW(3)
 WHERE rol.receiving_order_id = sqlc.arg('receiving_order_id')
 AND ro.account_id = sqlc.arg('account_id')
 AND ro.completed_at IS NULL;
@@ -274,14 +323,14 @@ AND rol.id <> dup.keep_id;
 -- name: UpdateReceivingOrderLineQuantity :exec
 UPDATE quantity q
 JOIN receiving_order_line rol ON q.id = rol.quantity_id
-SET q.value = sqlc.arg('quantity_value')
+SET q.value = sqlc.arg('quantity_value'), q.unit_id = sqlc.arg('unit_id'), q.updated_at = NOW(3), rol.updated_at = NOW(3)
 WHERE rol.id = sqlc.arg('line_id');
 
 -- name: VoidReceivingOrderLine :exec
 UPDATE receiving_order_line rol
 JOIN quantity q ON rol.quantity_id = q.id
 JOIN receiving_order ro ON rol.receiving_order_id = ro.id
-SET q.value = '0', rol.stocked_at = NULL
+SET q.value = '0', q.updated_at = NOW(3), rol.stocked_at = NULL, rol.updated_at = NOW(3)
 WHERE rol.id = sqlc.arg('line_id')
 AND ro.account_id = sqlc.arg('account_id');
 
@@ -305,7 +354,14 @@ SELECT
     oq.value AS order_line_quantity_ordered,
     ou.id AS order_line_unit_id,
     ou.abbreviation AS order_line_unit_abbreviation,
-    (SELECT CAST(SUM(rq.value) AS CHAR) FROM delivery_line dl JOIN quantity rq ON dl.quantity_id = rq.id WHERE dl.receiving_order_line_id = rol.id AND dl.rejected_at IS NOT NULL) AS rejected_quantity_value
+    -- A refusal can be recorded in any unit of the item's group, so each is converted into the
+    -- line's own unit before it is added; the response labels the sum with that unit.
+    (SELECT CAST(SUM(CASE WHEN rq.unit_id = q.unit_id THEN rq.value
+            ELSE rq.value * rqu.ratio_numerator * qu.ratio_denominator / (rqu.ratio_denominator * qu.ratio_numerator) END) AS CHAR)
+        FROM delivery_line dl
+        JOIN quantity rq ON dl.quantity_id = rq.id
+        JOIN unit rqu ON rqu.id = rq.unit_id
+        WHERE dl.receiving_order_line_id = rol.id AND dl.rejected_at IS NOT NULL) AS rejected_quantity_value
 FROM receiving_order_line rol
 JOIN quantity q ON rol.quantity_id = q.id
 JOIN unit qu ON q.unit_id = qu.id
@@ -329,19 +385,33 @@ SELECT EXISTS(
     AND account_id = sqlc.arg('account_id')
 ) AS order_exists;
 
--- name: CalculateQuantityYetToBeReceived :one
+-- ListReceivingProgressForOrderLines lists every receiving line booked against the given purchase order lines, with what each was ordered for, so the caller can work out how much is still to come.
+--
+-- The unit ratios are returned rather than applied: a line can be received in any unit of the item's group, and converting in Go keeps the dashboard's decimal precision (shared/pricing) instead of MySQL's division scale.
+-- name: ListReceivingProgressForOrderLines :many
 SELECT
-    oq.value AS ordered_value,
-    COALESCE(SUM(CAST(rq.value AS DECIMAL(20,6))), 0) AS received_total,
-    ou.id AS unit_id
+    rol.id,
+    rol.sales_order_line_id AS order_line_id,
+    rol.stocked_at,
+    rol.created_at,
+    CAST(q.value AS CHAR) AS quantity_value,
+    q.unit_id AS quantity_unit_id,
+    CAST(qu.ratio_numerator AS CHAR) AS quantity_ratio_numerator,
+    CAST(qu.ratio_denominator AS CHAR) AS quantity_ratio_denominator,
+    CAST(oq.value AS CHAR) AS ordered_value,
+    oq.unit_id AS ordered_unit_id,
+    CAST(ou.ratio_numerator AS CHAR) AS ordered_ratio_numerator,
+    CAST(ou.ratio_denominator AS CHAR) AS ordered_ratio_denominator
 FROM receiving_order_line rol
-JOIN sales_order_line sol ON rol.sales_order_line_id = sol.id
-JOIN quantity oq ON sol.quantity_id = oq.id
-JOIN unit ou ON oq.unit_id = ou.id
-LEFT JOIN receiving_order_line all_rol ON all_rol.sales_order_line_id = sol.id
-LEFT JOIN quantity rq ON all_rol.quantity_id = rq.id
-WHERE rol.id = sqlc.arg('line_id')
-GROUP BY oq.value, ou.id;
+JOIN receiving_order ro ON ro.id = rol.receiving_order_id
+JOIN quantity q ON q.id = rol.quantity_id
+JOIN unit qu ON qu.id = q.unit_id
+JOIN sales_order_line sol ON sol.id = rol.sales_order_line_id
+JOIN quantity oq ON oq.id = sol.quantity_id
+JOIN unit ou ON ou.id = oq.unit_id
+WHERE rol.sales_order_line_id IN (sqlc.slice('order_line_ids'))
+AND ro.account_id = sqlc.arg('account_id')
+ORDER BY rol.created_at ASC, rol.id ASC;
 
 -- name: GetOrderedQuantityForLine :many
 SELECT
@@ -381,7 +451,8 @@ AND ro.account_id = sqlc.arg('account_id');
 -- name: CountDeliveriesByPurchaseOrder :one
 SELECT COUNT(*) AS delivery_count
 FROM delivery
-WHERE sales_order_id = sqlc.arg('purchase_order_id');
+WHERE sales_order_id = sqlc.arg('purchase_order_id')
+AND account_id = sqlc.arg('account_id');
 
 -- name: UpsertLot :exec
 INSERT IGNORE INTO lot (id, account_id, item_id, lot_number, created_at, updated_at)
@@ -450,7 +521,7 @@ WHERE id = sqlc.arg('id')
 AND buyer_account_id = sqlc.arg('account_id')
 AND sales_order_type_code = 'purchase_order';
 
--- GetReceivingOrderTotals aggregates a page of receiving orders in one pass: what their lines were ordered for, what has been stocked, and what was refused.
+-- GetReceivingOrderTotals aggregates a page of receiving orders in one pass: what their lines were ordered for, what has been received and stocked, and what was refused.
 --
 -- Batched over a slice of order ids rather than run per order, because the list endpoint needs this for every row (see docs/patterns/performant-list-endpoint-patterns.md).
 --
@@ -461,6 +532,7 @@ AND sales_order_type_code = 'purchase_order';
 SELECT
     g.receiving_order_id,
     CAST(COALESCE(SUM(g.ordered_amount), 0) AS CHAR) AS ordered_amount,
+    CAST(COALESCE(SUM(g.received_amount), 0) AS CHAR) AS received_amount,
     CAST(COALESCE(SUM(g.stocked_amount), 0) AS CHAR) AS stocked_amount,
     CAST(COALESCE(SUM(g.rejected_amount), 0) AS CHAR) AS rejected_amount
 FROM (
@@ -471,6 +543,8 @@ FROM (
         -- line-pricing skill); a receipt or a rejection can be counted in a different unit from the
         -- order line.
         MAX(CAST(CASE WHEN oq.unit_id = r.denominator_unit_id THEN oq.value * r.value ELSE (oq.value * oqu.ratio_numerator / oqu.ratio_denominator) * (r.value / (ru.ratio_numerator / ru.ratio_denominator)) END AS DECIMAL(30,10))) AS ordered_amount,
+        -- Received counts every line, stocked or not: what has been checked in at the dock, whether or not it has been put away yet.
+        SUM(CAST(CASE WHEN q.unit_id = r.denominator_unit_id THEN q.value * r.value ELSE (q.value * qu.ratio_numerator / qu.ratio_denominator) * (r.value / (ru.ratio_numerator / ru.ratio_denominator)) END AS DECIMAL(30,10))) AS received_amount,
         SUM(CASE WHEN rol.stocked_at IS NOT NULL THEN CAST(CASE WHEN q.unit_id = r.denominator_unit_id THEN q.value * r.value ELSE (q.value * qu.ratio_numerator / qu.ratio_denominator) * (r.value / (ru.ratio_numerator / ru.ratio_denominator)) END AS DECIMAL(30,10)) END) AS stocked_amount,
         -- Correlated rather than a derived table joined on receiving_order_line_id: a derived table
         -- has nothing to scope it to this page, so it aggregates every rejected delivery line in the

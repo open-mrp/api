@@ -3,6 +3,8 @@ package grpc
 import (
 	"context"
 
+	apierror "github.com/open-mrp/api/shared/errors"
+
 	"github.com/open-mrp/api/services/core-service/internal/domain"
 	"github.com/open-mrp/api/shared/contracts"
 	pb "github.com/open-mrp/api/shared/proto/core"
@@ -143,9 +145,10 @@ func receivingOrderLineToProto(l *domain.ReceivingOrderLine) *pb.ReceivingOrderL
 	return info
 }
 
-func stockingDataFromProto(d *pb.StockingDataInfo) domain.StockingData {
+// stockingDataFromProto reads the stocking request, rejecting a quantity that is not a decimal rather than recording it as zero.
+func stockingDataFromProto(d *pb.StockingDataInfo) (domain.StockingData, *apierror.APIError) {
 	if d == nil {
-		return domain.StockingData{}
+		return domain.StockingData{}, nil
 	}
 
 	lineItems := make([]domain.StockingLineItem, len(d.LineItems))
@@ -156,13 +159,19 @@ func stockingDataFromProto(d *pb.StockingDataInfo) domain.StockingData {
 		}
 
 		if li.RejectedQuantity != nil {
-			rq, _ := decimal.NewFromString(*li.RejectedQuantity)
+			rq, apiErr := receivedQuantityFromProto(li.RejectedQuantity, "line_items.rejected_quantity")
+			if apiErr != nil {
+				return domain.StockingData{}, apiErr
+			}
 			item.RejectedQuantity = &rq
 		}
 
 		allocations := make([]domain.StorageAllocation, len(li.Allocations))
 		for j, a := range li.Allocations {
-			qty, _ := decimal.NewFromString(a.Quantity)
+			qty, apiErr := receivedQuantityFromProto(a.Quantity, "line_items.allocations.quantity")
+			if apiErr != nil {
+				return domain.StockingData{}, apiErr
+			}
 			allocations[j] = domain.StorageAllocation{
 				LocationID: a.LocationId,
 				Quantity:   qty,
@@ -175,7 +184,21 @@ func stockingDataFromProto(d *pb.StockingDataInfo) domain.StockingData {
 
 	return domain.StockingData{
 		LineItems: lineItems,
+	}, nil
+}
+
+func receivedQuantityFromProto(q *pb.QuantityInput, param string) (domain.ReceivedQuantity, *apierror.APIError) {
+	if q == nil {
+		return domain.ReceivedQuantity{}, apierror.NewValidationErrorWithParam("A quantity is required.", param)
 	}
+	value, err := decimal.NewFromString(q.Value)
+	if err != nil {
+		return domain.ReceivedQuantity{}, apierror.NewValidationErrorWithParam("The quantity must be a decimal number.", param+".value")
+	}
+	if q.UnitId == "" {
+		return domain.ReceivedQuantity{}, apierror.NewValidationErrorWithParam("A unit is required.", param+".unit_id")
+	}
+	return domain.ReceivedQuantity{Value: value, UnitID: q.UnitId}, nil
 }
 
 // ListReceivingOrders returns a paginated list of receiving orders.
@@ -261,9 +284,14 @@ func (h *receivingGRPCHandler) StockReceivingOrder(ctx context.Context, req *pb.
 	ctx, finalizeIdempotency := contracts.WithIdempotencyTracking(ctx)
 	defer finalizeIdempotency()
 
+	data, apiErr := stockingDataFromProto(req.Data)
+	if apiErr != nil {
+		return nil, contracts.ConvertAPIErrorToGRPC(apiErr)
+	}
+
 	order, apiErr := h.receivingOrderSvc.StockReceivingOrder(ctx, domain.StockReceivingOrderParams{
 		ReceivingOrderID: req.Id,
-		Data:             stockingDataFromProto(req.Data),
+		Data:             data,
 	})
 	if apiErr != nil {
 		return nil, contracts.ConvertAPIErrorToGRPC(apiErr)
@@ -320,8 +348,12 @@ func (h *receivingGRPCHandler) UpdateReceivingOrderLine(ctx context.Context, req
 		LineID:           req.Id,
 	}
 
-	if req.QuantityValue != nil {
-		params.QuantityValue = req.QuantityValue
+	if req.Quantity != nil {
+		qty, apiErr := receivedQuantityFromProto(req.Quantity, "quantity")
+		if apiErr != nil {
+			return nil, contracts.ConvertAPIErrorToGRPC(apiErr)
+		}
+		params.Quantity = &qty
 	}
 
 	line, apiErr := h.receivingOrderLineSvc.UpdateReceivingOrderLine(ctx, params)
@@ -372,6 +404,7 @@ func receivingOrderTotalsToProto(t *domain.ReceivingOrderTotals) *pb.ReceivingOr
 	}
 	return &pb.ReceivingOrderTotalsInfo{
 		OrderedAmount:  t.OrderedAmount,
+		ReceivedAmount: t.ReceivedAmount,
 		StockedAmount:  t.StockedAmount,
 		RejectedAmount: t.RejectedAmount,
 	}

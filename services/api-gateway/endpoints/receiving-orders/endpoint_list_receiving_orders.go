@@ -22,15 +22,17 @@ type ListReceivingOrdersRequest struct {
 	ItemIDs []string `query:"item_ids"`
 	// Filter to orders whose originating purchase order was placed with any of the given supplier account IDs.
 	SupplierIDs []string `query:"supplier_ids"`
-	// Only return orders created on or after this date (`YYYY-MM-DD`).
+	// Only return orders created on or after this date (`YYYY-MM-DD`) or exact RFC 3339 timestamp.
 	StartDate *string `query:"starts_at"`
-	// Only return orders created on or before this date (`YYYY-MM-DD`), covering that whole day.
+	// Only return orders created on or before this date (`YYYY-MM-DD`), covering that whole day, or on or before this exact RFC 3339 timestamp.
 	EndDate *string `query:"ends_at"`
 }
 
 // Returns a paginated list of receiving orders for the current account, newest first.
 //
 // Only open (incomplete) orders are returned by default; pass `status` to change this.
+//
+// `q` matches part of the receiving order's number, its purchase order's number or customer PO number, or the supplier's name, alias or account number.
 type ListReceivingOrdersEndpoint struct{}
 
 func (e *ListReceivingOrdersEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListReceivingOrdersRequest, *apiresource.List[apiresource.ReceivingOrder]] {
@@ -49,10 +51,6 @@ func (e *ListReceivingOrdersEndpoint) Materialize() *apiendpoint.APIEndpoint[*Li
 		ServiceHandler: func(svc any) func(ctx context.Context, req *ListReceivingOrdersRequest) (*apiresource.List[apiresource.ReceivingOrder], *apierror.APIError) {
 			return svc.(ReceivingOrderSvc).ListReceivingOrders
 		},
-		IncludeConfig: apiendpoint.IncludesFor(apiendpoint.IncludesParams{
-			ObjectType: constants.ObjectTypeReceivingOrder,
-			// The item's unit group is offered because the receiving screens measure against it: a line is checked off in the unit it was ordered in, and the stocking dialog offers that group's units to put it away in.
-			Fields: []string{"supplier", "totals", "related", "related.purchase_order", "related.deliveries", "lines", "lines.item", "lines.order_line", "lines.order_line.item", "lines.order_line.quantity_ordered", "lines.order_line.quantity_ordered.unit", "lines.order_line.unit_price", "lines.order_line.unit_price.numerator_unit", "lines.order_line.unit_price.denominator_unit", "lines.quantity", "lines.quantity.unit", "lines.quantity_ordered", "lines.quantity_ordered.unit", "lines.item.category", "lines.item.category.unit_group", "lines.item.category.unit_group.base_unit", "lines.item.category.unit_group.associated_units", "lines.item.category.unit_group.associated_units.unit"},
-		}),
+		IncludeConfig: receivingOrderIncludes(),
 	})
 }

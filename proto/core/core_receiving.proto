@@ -5,6 +5,7 @@ package core;
 
 import "google/protobuf/timestamp.proto";
 import "core/core.proto";
+import "core/core_analytics.proto";
 
 option go_package = "shared/proto/core;core";
 
@@ -70,6 +71,8 @@ message DocumentRefInfo {
 // Every figure is an amount — the purchase order's agreed unit price times a quantity — because a receiving order's lines can each count in a different unit, and money is the only common denominator they have. The gateway divides two of these for completion, rather than dividing quantities that may not share a unit.
 message ReceivingOrderTotalsInfo {
   string ordered_amount = 1;
+  // Every line, stocked or not: what has been checked in, whether or not it has been put away.
+  string received_amount = 7;
   string stocked_amount = 3;
   string rejected_amount = 5;
   reserved 2, 4, 6;
@@ -135,14 +138,18 @@ message StockingDataInfo {
 message StockingLineItemInfo {
   string receiving_order_line_id = 1;
   optional string lot_number = 2;
-  optional string rejected_quantity = 3;
+  // A bare decimal before the unit was carried; the unit is now the caller's, not the line's.
+  reserved 3;
   repeated StorageAllocationInfo allocations = 4;
+  optional QuantityInput rejected_quantity = 5;
 }
 
 // StorageAllocationInfo represents a storage allocation.
 message StorageAllocationInfo {
   optional string location_id = 1;
-  string quantity = 2;
+  // A bare decimal before the unit was carried; the unit is now the caller's, not the line's.
+  reserved 2;
+  QuantityInput quantity = 3;
 }
 
 // List receiving orders
@@ -204,7 +211,10 @@ message VoidReceivingOrderResponse {
 message UpdateReceivingOrderLineRequest {
   string receiving_order_id = 1;
   string id = 2;
-  optional string quantity_value = 3;
+  // A bare decimal before the unit was carried.
+  reserved 3;
+  reserved "quantity_value";
+  optional QuantityInput quantity = 4;
 }
 
 message UpdateReceivingOrderLineResponse {

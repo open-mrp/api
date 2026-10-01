@@ -6,6 +6,7 @@ import (
 
 	apiendpoint "github.com/open-mrp/api/services/api-gateway/pkg/endpoint"
 	apiexample "github.com/open-mrp/api/services/api-gateway/pkg/example"
+	apirequest "github.com/open-mrp/api/services/api-gateway/pkg/request"
 	apiresource "github.com/open-mrp/api/services/api-gateway/pkg/resource"
 	"github.com/open-mrp/api/services/auth-service/pkg/types"
 	"github.com/open-mrp/api/shared/constants"
@@ -31,10 +32,10 @@ type StockLineItemRequest struct {
 	//
 	// A lot is created for the line's item if one with this number does not already exist for it. The lot applies to every allocation and to any rejected quantity on this line item.
 	LotNumber field.Optional[string] `json:"lot_number,omitzero"`
-	// Quantity refused on inspection, as a decimal string.
+	// Quantity refused on inspection, in any unit of the line's item.
 	//
-	// The refused quantity is recorded on the delivery and on the receiving order line's `rejected_quantity`, but never enters inventory.
-	RejectedQuantity field.Optional[string] `json:"rejected_quantity,omitzero"`
+	// The refused quantity is recorded on the delivery and on the receiving order line's `rejected_quantity`, but never enters inventory. Must not be negative.
+	RejectedQuantity field.Optional[apirequest.QuantityInput] `json:"rejected_quantity,omitzero"`
 	// Storage allocations for the quantity being accepted.
 	//
 	// Each allocation creates an inventory receipt for the given quantity at the given location, so a single line can be split across several locations.
@@ -47,8 +48,10 @@ type AllocationRequest struct {
 	//
 	// When omitted, the inventory receipt is created without a storage location.
 	LocationID field.Optional[string] `json:"location_id,omitzero"`
-	// Quantity to allocate, as a decimal string.
-	Quantity string `json:"quantity"`
+	// Quantity to put away here, in any unit of the line's item. Must be greater than zero.
+	//
+	// The inventory receipt, delivery line and inventory change log record it in this unit.
+	Quantity apirequest.QuantityInput `json:"quantity"`
 }
 
 var sampleStockLocationID = apiresource.SampleLocationID
@@ -59,7 +62,7 @@ var sampleStockReceivingOrderRequest = &StockReceivingOrderRequest{
 			Allocations: []AllocationRequest{
 				{
 					LocationID: field.Some(sampleStockLocationID),
-					Quantity:   "100",
+					Quantity:   apirequest.QuantityInput{Value: "100", UnitID: apiresource.SampleUnitID},
 				},
 			},
 		},
@@ -74,9 +77,11 @@ func (*StockReceivingOrderRequest) SchemaExample() any {
 //
 // Every unstocked line with a non-zero quantity is marked as stocked. For each entry in `line_items`, the allocations create inventory receipts at the given storage locations (and lot, if one was given), and any `rejected_quantity` is recorded as refused without entering inventory. One delivery is recorded for the whole stocking event, with a line per allocation and a line per refused quantity.
 //
+// Each entry must name a line of this order that is being stocked now, at most once, and its allocations and refusal together may not exceed the quantity received on that line. Otherwise the request is refused and nothing is stocked.
+//
 // The newly received stock is then applied to any open inventory issues for the same item, oldest first, so demand already waiting on the item is satisfied automatically.
 //
-// If a line was received short of its ordered quantity, a new unstocked line is created automatically for the remainder. Once every line is stocked, the order is marked complete and the originating purchase order is marked fulfilled.
+// If a purchase order line is still short once everything against it is stocked, a new unstocked line is opened for it at a quantity of `0`, in the ordered unit, for the rest to be received against. Once every line is stocked, the order is marked complete and the originating purchase order is marked fulfilled.
 //
 // A receiving order with no unstocked, non-zero lines is returned untouched: no delivery is recorded and no inventory is created.
 type StockReceivingOrderEndpoint struct{}
@@ -97,5 +102,6 @@ func (e *StockReceivingOrderEndpoint) Materialize() *apiendpoint.APIEndpoint[*St
 		ServiceHandler: func(svc any) func(ctx context.Context, req *StockReceivingOrderRequest) (*apiresource.ReceivingOrder, *apierror.APIError) {
 			return svc.(ReceivingOrderSvc).StockReceivingOrder
 		},
+		IncludeConfig: receivingOrderIncludes(),
 	})
 }

@@ -12,7 +12,6 @@ import (
 	apierror "github.com/open-mrp/api/shared/errors"
 	"github.com/open-mrp/api/shared/idempotency"
 	"github.com/open-mrp/api/shared/tracing"
-	"github.com/shopspring/decimal"
 )
 
 var receivingOrderLineSvcTracer = tracing.GetTracer("core-service.receiving_order_line_service")
@@ -135,13 +134,19 @@ func (s *receivingOrderLineSvcImpl) UpdateReceivingOrderLine(ctx context.Context
 		apiErr = s.withTx(ctx, func(txCtx context.Context, txSvc *receivingOrderLineSvcImpl) *apierror.APIError {
 			txRepo := txSvc.repos.NewReceivingOrderRepo()
 
-			old, apiErr := txRepo.GetLine(txCtx, params.LineID)
+			old, apiErr := changeableLine(txCtx, txRepo, params.AccountID, params.ReceivingOrderID, params.LineID)
 			if apiErr != nil {
 				return apiErr
 			}
 
-			if params.QuantityValue != nil {
-				if apiErr := txRepo.UpdateLineQuantity(txCtx, params.LineID, *params.QuantityValue); apiErr != nil {
+			if q := params.Quantity; q != nil {
+				if q.Value.IsNegative() {
+					return apierror.NewValidationErrorWithParam("The quantity must not be negative.", "quantity.value")
+				}
+				if apiErr := validateReceivedQuantityUnit(txCtx, txSvc.repos, params.AccountID, old, *q, "quantity.unit_id"); apiErr != nil {
+					return apiErr
+				}
+				if apiErr := txRepo.UpdateLineQuantity(txCtx, params.LineID, q.Value.String(), q.UnitID); apiErr != nil {
 					return apiErr
 				}
 			}
@@ -240,7 +245,7 @@ func (s *receivingOrderLineSvcImpl) VoidReceivingOrderLine(ctx context.Context, 
 		apiErr = s.withTx(ctx, func(txCtx context.Context, txSvc *receivingOrderLineSvcImpl) *apierror.APIError {
 			txRepo := txSvc.repos.NewReceivingOrderRepo()
 
-			old, apiErr := txRepo.GetLine(txCtx, lineID)
+			old, apiErr := changeableLine(txCtx, txRepo, accountID, receivingOrderID, lineID)
 			if apiErr != nil {
 				return apiErr
 			}
@@ -323,18 +328,6 @@ func (s *receivingOrderLineSvcImpl) ReceiveReceivingOrderLine(ctx context.Contex
 		return nil, tracing.Trace(span, apierror.NewResourceNotFoundError("Receiving order line not found."))
 	}
 
-	// Calculate quantity yet to be received
-	remainingValue, _, apiErr := repo.CalculateQuantityYetToBeReceived(ctx, lineID, accountID)
-	if apiErr != nil {
-		return nil, tracing.Trace(span, apiErr)
-	}
-
-	// Parse remaining as decimal, if > 0 update line quantity
-	remaining, err := decimal.NewFromString(remainingValue)
-	if err != nil {
-		return nil, tracing.Trace(span, apierror.NewInternalError(err, "Issue parsing remaining quantity."))
-	}
-
 	meds := s.mediators()
 
 	idempotencyKey, apiErr := meds.Idempotency.UpsertIdempotencyKey(ctx, identity)
@@ -355,13 +348,18 @@ func (s *receivingOrderLineSvcImpl) ReceiveReceivingOrderLine(ctx context.Contex
 		apiErr = s.withTx(ctx, func(txCtx context.Context, txSvc *receivingOrderLineSvcImpl) *apierror.APIError {
 			txRepo := txSvc.repos.NewReceivingOrderRepo()
 
-			old, apiErr := txRepo.GetLine(txCtx, lineID)
+			old, apiErr := changeableLine(txCtx, txRepo, accountID, receivingOrderID, lineID)
 			if apiErr != nil {
 				return apiErr
 			}
 
-			if remaining.GreaterThan(decimal.Zero) {
-				if apiErr := txRepo.UpdateLineQuantity(txCtx, lineID, remainingValue); apiErr != nil {
+			// Finish the line: it takes whatever of its order line the other receiving lines do not already hold, in the unit the order line was ordered in.
+			progress, apiErr := txRepo.ListReceivingProgress(txCtx, accountID, []string{old.OrderLineID})
+			if apiErr != nil {
+				return apiErr
+			}
+			if value, ok := receiveTarget(progressByOrderLine(progress)[old.OrderLineID], lineID); ok {
+				if apiErr := txRepo.UpdateLineQuantity(txCtx, lineID, value.String(), old.OrderLineUnitID); apiErr != nil {
 					return apiErr
 				}
 			}
@@ -396,4 +394,27 @@ func (s *receivingOrderLineSvcImpl) ReceiveReceivingOrderLine(ctx context.Contex
 	default:
 		return nil, tracing.Trace(span, apierror.NewInvariantViolationError("Unexpected recovery point: "+idempotencyKey.RecoveryPoint))
 	}
+}
+
+// changeableLine reads a line that is about to be changed, refusing one that can no longer be.
+//
+// A stocked line's quantity is what went into inventory, and a completed order's lines are all stocked; editing, voiding or re-receiving either would leave the receiving order disagreeing with the stock it booked, so the change is refused. Void the receiving order first to reopen it.
+func changeableLine(ctx context.Context, repo domain.ReceivingOrderRepo, accountID, receivingOrderID, lineID string) (*domain.ReceivingOrderLine, *apierror.APIError) {
+	order, apiErr := repo.Get(ctx, accountID, receivingOrderID)
+	if apiErr != nil {
+		return nil, apiErr
+	}
+	if order.CompletedAt != nil {
+		return nil, apierror.NewValidationError("The receiving order is complete; void it to change its lines.")
+	}
+	for _, line := range order.Lines {
+		if line.ID != lineID {
+			continue
+		}
+		if line.StockedAt != nil {
+			return nil, apierror.NewValidationError("The receiving order line has already been stocked.")
+		}
+		return line, nil
+	}
+	return nil, apierror.NewResourceNotFoundError("Receiving order line not found.")
 }

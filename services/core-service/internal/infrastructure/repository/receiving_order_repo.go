@@ -13,6 +13,7 @@ import (
 	apierror "github.com/open-mrp/api/shared/errors"
 	"github.com/open-mrp/api/shared/id"
 	"github.com/open-mrp/api/shared/pagination"
+	"github.com/open-mrp/api/shared/pricing"
 	"github.com/open-mrp/api/shared/safeconv"
 	"github.com/open-mrp/api/shared/tracing"
 	"github.com/shopspring/decimal"
@@ -313,6 +314,7 @@ func (r *receivingOrderRepoImpl) fetchReceivingOrderTotals(ctx context.Context, 
 	for _, row := range rows {
 		totals[row.ReceivingOrderID] = &domain.ReceivingOrderTotals{
 			OrderedAmount:  sqlValueToString(row.OrderedAmount),
+			ReceivedAmount: sqlValueToString(row.ReceivedAmount),
 			StockedAmount:  sqlValueToString(row.StockedAmount),
 			RejectedAmount: sqlValueToString(row.RejectedAmount),
 		}
@@ -332,14 +334,9 @@ func (r *receivingOrderRepoImpl) Get(ctx context.Context, accountID, receivingOr
 		return nil, tracing.Trace(span, apiErr)
 	}
 
-	lineRows, err := r.queries.ListReceivingOrderLinesByOrderID(ctx, receivingOrderID)
-	if apiErr := db.MapSQLError(err); apiErr != nil {
+	lines, apiErr := r.ListLines(ctx, receivingOrderID)
+	if apiErr != nil {
 		return nil, tracing.Trace(span, apiErr)
-	}
-
-	lines := make([]*domain.ReceivingOrderLine, len(lineRows))
-	for i, lr := range lineRows {
-		lines[i] = mapReceivingOrderLineRow(lr)
 	}
 
 	var completedAt *time.Time
@@ -351,8 +348,8 @@ func (r *receivingOrderRepoImpl) Get(ctx context.Context, accountID, receivingOr
 		supplierID = &row.SupplierID.String
 	}
 	var supplierName *string
-	if row.SupplierName.Valid {
-		supplierName = &row.SupplierName.String
+	if row.SupplierName != "" {
+		supplierName = &row.SupplierName
 	}
 	var supplierNumber *string
 	if row.SupplierNumber.Valid {
@@ -396,17 +393,37 @@ func (r *receivingOrderRepoImpl) ListLines(ctx context.Context, receivingOrderID
 	ctx, span := receivingOrderRepoTracer.Start(ctx, "repository.receiving_order.list_lines")
 	defer span.End()
 
-	rows, err := r.queries.ListReceivingOrderLinesByOrderID(ctx, receivingOrderID)
+	byOrder, apiErr := r.ListLinesForOrders(ctx, []string{receivingOrderID})
+	if apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
+
+	lines := byOrder[receivingOrderID]
+	if lines == nil {
+		lines = []*domain.ReceivingOrderLine{}
+	}
+	return lines, nil
+}
+
+func (r *receivingOrderRepoImpl) ListLinesForOrders(ctx context.Context, receivingOrderIDs []string) (map[string][]*domain.ReceivingOrderLine, *apierror.APIError) {
+	ctx, span := receivingOrderRepoTracer.Start(ctx, "repository.receiving_order.list_lines_for_orders")
+	defer span.End()
+
+	if len(receivingOrderIDs) == 0 {
+		return map[string][]*domain.ReceivingOrderLine{}, nil
+	}
+
+	rows, err := r.queries.ListReceivingOrderLinesByOrderIDs(ctx, receivingOrderIDs)
 	if apiErr := db.MapSQLError(err); apiErr != nil {
 		return nil, tracing.Trace(span, apiErr)
 	}
 
-	lines := make([]*domain.ReceivingOrderLine, len(rows))
-	for i, row := range rows {
-		lines[i] = mapReceivingOrderLineRow(row)
+	byOrder := make(map[string][]*domain.ReceivingOrderLine, len(receivingOrderIDs))
+	for _, row := range rows {
+		byOrder[row.ReceivingOrderID] = append(byOrder[row.ReceivingOrderID], mapReceivingOrderLineRow(row))
 	}
 
-	return lines, nil
+	return byOrder, nil
 }
 
 func (r *receivingOrderRepoImpl) FindUnstockedLineIDs(ctx context.Context, receivingOrderID, accountID string, enforceNonZero bool) ([]domain.UnstockedLine, *apierror.APIError) {
@@ -487,123 +504,125 @@ func (r *receivingOrderRepoImpl) MarkIncompleteByID(ctx context.Context, receivi
 	return nil
 }
 
-func (r *receivingOrderRepoImpl) BulkCreateForRemainingQuantities(ctx context.Context, receivingOrderID string, orderLineIDs []string, accountID string) *apierror.APIError {
-	ctx, span := receivingOrderRepoTracer.Start(ctx, "repository.receiving_order.bulk_create_for_remaining_quantities")
+func (r *receivingOrderRepoImpl) ListReceivingProgress(ctx context.Context, accountID string, orderLineIDs []string) ([]domain.ReceivingProgressLine, *apierror.APIError) {
+	ctx, span := receivingOrderRepoTracer.Start(ctx, "repository.receiving_order.list_receiving_progress")
 	defer span.End()
 
-	rows, err := r.queries.GetOrderedQuantityForLine(ctx, orderLineIDs)
+	if len(orderLineIDs) == 0 {
+		return nil, nil
+	}
+
+	rows, err := r.queries.ListReceivingProgressForOrderLines(ctx, sqlc.ListReceivingProgressForOrderLinesParams{
+		OrderLineIds: orderLineIDs,
+		AccountID:    accountID,
+	})
 	if apiErr := db.MapSQLError(err); apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
+
+	lines := make([]domain.ReceivingProgressLine, len(rows))
+	for i, row := range rows {
+		line, parseErr := mapReceivingProgressRow(row)
+		if parseErr != nil {
+			return nil, tracing.Trace(span, apierror.NewInternalError(parseErr, "Failed to read a receiving line's quantity."))
+		}
+		lines[i] = line
+	}
+
+	return lines, nil
+}
+
+func mapReceivingProgressRow(row sqlc.ListReceivingProgressForOrderLinesRow) (domain.ReceivingProgressLine, error) {
+	value, err := decimal.NewFromString(sqlValueToString(row.QuantityValue))
+	if err != nil {
+		return domain.ReceivingProgressLine{}, err
+	}
+	unitRatio, err := pricing.ParseUnitRatio(sqlValueToString(row.QuantityRatioNumerator), sqlValueToString(row.QuantityRatioDenominator))
+	if err != nil {
+		return domain.ReceivingProgressLine{}, err
+	}
+	ordered, err := decimal.NewFromString(sqlValueToString(row.OrderedValue))
+	if err != nil {
+		return domain.ReceivingProgressLine{}, err
+	}
+	orderedRatio, err := pricing.ParseUnitRatio(sqlValueToString(row.OrderedRatioNumerator), sqlValueToString(row.OrderedRatioDenominator))
+	if err != nil {
+		return domain.ReceivingProgressLine{}, err
+	}
+
+	line := domain.ReceivingProgressLine{
+		ID:               row.ID,
+		OrderLineID:      row.OrderLineID,
+		CreatedAt:        row.CreatedAt,
+		Value:            value,
+		UnitID:           row.QuantityUnitID,
+		UnitRatio:        unitRatio,
+		OrderedValue:     ordered,
+		OrderedUnitID:    row.OrderedUnitID,
+		OrderedUnitRatio: orderedRatio,
+	}
+	if row.StockedAt.Valid {
+		line.StockedAt = &row.StockedAt.Time
+	}
+	return line, nil
+}
+
+func (r *receivingOrderRepoImpl) OpenLine(ctx context.Context, receivingOrderID, orderLineID, unitID string) *apierror.APIError {
+	ctx, span := receivingOrderRepoTracer.Start(ctx, "repository.receiving_order.open_line")
+	defer span.End()
+
+	quantityID, apiErr := id.GenID(id.QuantityIDPrefix, nil)
+	if apiErr != nil {
+		return tracing.Trace(span, apiErr)
+	}
+	lineID, apiErr := id.GenID(id.ReceivingOrderLineIDPrefix, nil)
+	if apiErr != nil {
 		return tracing.Trace(span, apiErr)
 	}
 
-	for _, row := range rows {
-		ordered, oErr := decimal.NewFromString(row.OrderedValue)
-		if oErr != nil {
-			return tracing.Trace(span, apierror.NewInternalError(oErr, "Failed to parse ordered quantity value."))
-		}
+	if err := r.queries.CreateQuantity(ctx, sqlc.CreateQuantityParams{
+		ID:     quantityID,
+		Value:  "0",
+		UnitID: unitID,
+	}); err != nil {
+		return tracing.Trace(span, db.MapSQLError(err))
+	}
 
-		receivedStr := receivingOrderInterfaceToString(row.ReceivedTotal)
-		received, rErr := decimal.NewFromString(receivedStr)
-		if rErr != nil {
-			return tracing.Trace(span, apierror.NewInternalError(rErr, "Failed to parse received quantity value."))
-		}
-
-		remaining := ordered.Sub(received)
-		if remaining.LessThanOrEqual(decimal.Zero) {
-			continue
-		}
-
-		quantityID, apiErr := id.GenID(id.QuantityIDPrefix, nil)
-		if apiErr != nil {
-			return tracing.Trace(span, apiErr)
-		}
-
-		lineID, apiErr := id.GenID(id.ReceivingOrderLineIDPrefix, nil)
-		if apiErr != nil {
-			return tracing.Trace(span, apiErr)
-		}
-
-		if createErr := r.queries.CreateQuantity(ctx, sqlc.CreateQuantityParams{
-			ID:     quantityID,
-			Value:  remaining.String(),
-			UnitID: row.UnitID,
-		}); createErr != nil {
-			if apiErr := db.MapSQLError(createErr); apiErr != nil {
-				return tracing.Trace(span, apiErr)
-			}
-		}
-
-		if createErr := r.queries.CreateReceivingOrderLine(ctx, sqlc.CreateReceivingOrderLineParams{
-			ID:               lineID,
-			ReceivingOrderID: receivingOrderID,
-			QuantityID:       quantityID,
-			SalesOrderLineID: row.OrderLineID,
-		}); createErr != nil {
-			if apiErr := db.MapSQLError(createErr); apiErr != nil {
-				return tracing.Trace(span, apiErr)
-			}
-		}
+	if err := r.queries.CreateReceivingOrderLine(ctx, sqlc.CreateReceivingOrderLineParams{
+		ID:               lineID,
+		ReceivingOrderID: receivingOrderID,
+		QuantityID:       quantityID,
+		SalesOrderLineID: orderLineID,
+	}); err != nil {
+		return tracing.Trace(span, db.MapSQLError(err))
 	}
 
 	return nil
 }
 
-func (r *receivingOrderRepoImpl) BulkReceiveRemainingQuantities(ctx context.Context, receivingOrderID string, orderLineIDs []string, accountID string) *apierror.APIError {
-	ctx, span := receivingOrderRepoTracer.Start(ctx, "repository.receiving_order.bulk_receive_remaining_quantities")
+func (r *receivingOrderRepoImpl) GetUnitRatios(ctx context.Context, unitIDs []string) (map[string]pricing.UnitRatio, *apierror.APIError) {
+	ctx, span := receivingOrderRepoTracer.Start(ctx, "repository.receiving_order.get_unit_ratios")
 	defer span.End()
 
-	rows, err := r.queries.GetOrderedQuantityForLine(ctx, orderLineIDs)
+	if len(unitIDs) == 0 {
+		return map[string]pricing.UnitRatio{}, nil
+	}
+
+	rows, err := r.queries.GetUnitsByIDs(ctx, unitIDs)
 	if apiErr := db.MapSQLError(err); apiErr != nil {
-		return tracing.Trace(span, apiErr)
+		return nil, tracing.Trace(span, apiErr)
 	}
 
-	// Build a map of order line ID -> remaining quantity
-	remainingByOrderLine := make(map[string]decimal.Decimal)
+	ratios := make(map[string]pricing.UnitRatio, len(rows))
 	for _, row := range rows {
-		ordered, oErr := decimal.NewFromString(row.OrderedValue)
-		if oErr != nil {
-			return tracing.Trace(span, apierror.NewInternalError(oErr, "Failed to parse ordered quantity value."))
+		ratio, parseErr := pricing.ParseUnitRatio(row.RatioNumerator, row.RatioDenominator)
+		if parseErr != nil {
+			return nil, tracing.Trace(span, apierror.NewInternalError(parseErr, "Failed to read a unit's ratio."))
 		}
-
-		receivedStr := receivingOrderInterfaceToString(row.ReceivedTotal)
-		received, rErr := decimal.NewFromString(receivedStr)
-		if rErr != nil {
-			return tracing.Trace(span, apierror.NewInternalError(rErr, "Failed to parse received quantity value."))
-		}
-
-		remaining := ordered.Sub(received)
-		if remaining.GreaterThan(decimal.Zero) {
-			remainingByOrderLine[row.OrderLineID] = remaining
-		}
+		ratios[row.ID] = ratio
 	}
 
-	if len(remainingByOrderLine) == 0 {
-		return nil
-	}
-
-	// Find unstocked lines for this receiving order
-	unstockedLines, apiErr := r.FindUnstockedLineIDs(ctx, receivingOrderID, accountID, false)
-	if apiErr != nil {
-		return tracing.Trace(span, apiErr)
-	}
-
-	// Update the quantity of each unstocked line to the remaining amount
-	for _, line := range unstockedLines {
-		remaining, ok := remainingByOrderLine[line.OrderLineID]
-		if !ok {
-			continue
-		}
-
-		updateErr := r.queries.UpdateReceivingOrderLineQuantity(ctx, sqlc.UpdateReceivingOrderLineQuantityParams{
-			QuantityValue: remaining.String(),
-			LineID:        line.ID,
-		})
-		if updateApiErr := db.MapSQLError(updateErr); updateApiErr != nil {
-			return tracing.Trace(span, updateApiErr)
-		}
-	}
-
-	return nil
+	return ratios, nil
 }
 
 func (r *receivingOrderRepoImpl) VoidAllLines(ctx context.Context, receivingOrderID, accountID string) *apierror.APIError {
@@ -636,12 +655,13 @@ func (r *receivingOrderRepoImpl) DeleteDuplicateLines(ctx context.Context, recei
 	return nil
 }
 
-func (r *receivingOrderRepoImpl) UpdateLineQuantity(ctx context.Context, lineID string, quantityValue string) *apierror.APIError {
+func (r *receivingOrderRepoImpl) UpdateLineQuantity(ctx context.Context, lineID, quantityValue, unitID string) *apierror.APIError {
 	ctx, span := receivingOrderRepoTracer.Start(ctx, "repository.receiving_order.update_line_quantity")
 	defer span.End()
 
 	err := r.queries.UpdateReceivingOrderLineQuantity(ctx, sqlc.UpdateReceivingOrderLineQuantityParams{
 		QuantityValue: quantityValue,
+		UnitID:        unitID,
 		LineID:        lineID,
 	})
 	if apiErr := db.MapSQLError(err); apiErr != nil {
@@ -691,34 +711,6 @@ func (r *receivingOrderRepoImpl) IsLineInReceivingOrder(ctx context.Context, lin
 	}
 
 	return exists, nil
-}
-
-func (r *receivingOrderRepoImpl) CalculateQuantityYetToBeReceived(ctx context.Context, lineID, accountID string) (string, string, *apierror.APIError) {
-	ctx, span := receivingOrderRepoTracer.Start(ctx, "repository.receiving_order.calculate_quantity_yet_to_be_received")
-	defer span.End()
-
-	row, err := r.queries.CalculateQuantityYetToBeReceived(ctx, lineID)
-	if apiErr := db.MapSQLError(err); apiErr != nil {
-		return "", "", tracing.Trace(span, apiErr)
-	}
-
-	ordered, oErr := decimal.NewFromString(row.OrderedValue)
-	if oErr != nil {
-		return "", "", tracing.Trace(span, apierror.NewInternalError(oErr, "Failed to parse ordered quantity value."))
-	}
-
-	receivedStr := receivingOrderInterfaceToString(row.ReceivedTotal)
-	received, rErr := decimal.NewFromString(receivedStr)
-	if rErr != nil {
-		return "", "", tracing.Trace(span, apierror.NewInternalError(rErr, "Failed to parse received quantity value."))
-	}
-
-	remaining := ordered.Sub(received)
-	if remaining.LessThan(decimal.Zero) {
-		remaining = decimal.Zero
-	}
-
-	return remaining.String(), row.UnitID, nil
 }
 
 func (r *receivingOrderRepoImpl) IsInAccount(ctx context.Context, accountID, receivingOrderID string) (bool, *apierror.APIError) {
@@ -978,8 +970,8 @@ func mapForwardReceivingOrderRow(row sqlc.ListReceivingOrdersForwardRow) *domain
 		supplierID = &row.SupplierID.String
 	}
 	var supplierName *string
-	if row.SupplierName.Valid {
-		supplierName = &row.SupplierName.String
+	if row.SupplierName != "" {
+		supplierName = &row.SupplierName
 	}
 	var supplierNumber *string
 	if row.SupplierNumber.Valid {
@@ -1012,8 +1004,8 @@ func mapBackwardReceivingOrderRow(row sqlc.ListReceivingOrdersBackwardRow) *doma
 		supplierID = &row.SupplierID.String
 	}
 	var supplierName *string
-	if row.SupplierName.Valid {
-		supplierName = &row.SupplierName.String
+	if row.SupplierName != "" {
+		supplierName = &row.SupplierName
 	}
 	var supplierNumber *string
 	if row.SupplierNumber.Valid {
@@ -1036,7 +1028,7 @@ func mapBackwardReceivingOrderRow(row sqlc.ListReceivingOrdersBackwardRow) *doma
 	}
 }
 
-func mapReceivingOrderLineRow(row sqlc.ListReceivingOrderLinesByOrderIDRow) *domain.ReceivingOrderLine {
+func mapReceivingOrderLineRow(row sqlc.ListReceivingOrderLinesByOrderIDsRow) *domain.ReceivingOrderLine {
 	line := &domain.ReceivingOrderLine{
 		ID:                        row.ID,
 		QuantityID:                row.QuantityID,

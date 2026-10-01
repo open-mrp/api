@@ -21,7 +21,9 @@ type ReceiveReceivingOrderLineRequest struct {
 
 // Records the full outstanding quantity as received on a single receiving order line.
 //
-// Sets the line's quantity to what is still outstanding on its purchase order line — the ordered quantity less everything already recorded across the receiving lines for that order line — and returns the line unchanged when nothing is outstanding. Nothing enters inventory; use Stock Receiving Order to put the received quantity away.
+// Sets the line's quantity, in the ordered unit, to the ordered quantity less what the purchase order line's other receiving lines already hold, so that together they cover the order. A line that already holds at least that much, or whose order line is already covered, is returned unchanged. Nothing enters inventory; use Stock Receiving Order to put the received quantity away.
+//
+// A line that has been stocked, or a line of a completed order, cannot be received.
 type ReceiveReceivingOrderLineEndpoint struct{}
 
 func (e *ReceiveReceivingOrderLineEndpoint) Materialize() *apiendpoint.APIEndpoint[*ReceiveReceivingOrderLineRequest, *apiresource.ReceivingOrderLine] {
@@ -40,5 +42,6 @@ func (e *ReceiveReceivingOrderLineEndpoint) Materialize() *apiendpoint.APIEndpoi
 		ServiceHandler: func(svc any) func(ctx context.Context, req *ReceiveReceivingOrderLineRequest) (*apiresource.ReceivingOrderLine, *apierror.APIError) {
 			return svc.(ReceivingOrderSvc).ReceiveReceivingOrderLine
 		},
+		IncludeConfig: receivingOrderLineIncludes(),
 	})
 }

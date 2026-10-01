@@ -4,6 +4,7 @@ import (
 	"time"
 
 	"github.com/open-mrp/api/shared/pagination"
+	"github.com/open-mrp/api/shared/pricing"
 	"github.com/shopspring/decimal"
 )
 
@@ -75,7 +76,9 @@ type ReceivingOrderLine struct {
 //
 // Every figure is an amount — the purchase order's agreed unit price times a quantity — because a receiving order's lines can each count in a different unit, and money is the only common denominator they have. Completion is a ratio of two of these amounts for the same reason: summing quantities across lines would add pairs to metres.
 type ReceivingOrderTotals struct {
-	OrderedAmount  string
+	OrderedAmount string
+	// ReceivedAmount counts every line, stocked or not: what has been checked in, whether or not it has been put away.
+	ReceivedAmount string
 	StockedAmount  string
 	RejectedAmount string
 }
@@ -129,14 +132,20 @@ type StockingData struct {
 type StockingLineItem struct {
 	ReceivingOrderLineID string
 	LotNumber            *string
-	RejectedQuantity     *decimal.Decimal
+	RejectedQuantity     *ReceivedQuantity
 	Allocations          []StorageAllocation
 }
 
 // StorageAllocation represents a storage allocation for a stocking line item.
 type StorageAllocation struct {
 	LocationID *string
-	Quantity   decimal.Decimal
+	Quantity   ReceivedQuantity
+}
+
+// ReceivedQuantity is a quantity as the caller counted it: any unit of the item's group, not necessarily the one the line was ordered or received in.
+type ReceivedQuantity struct {
+	Value  decimal.Decimal
+	UnitID string
 }
 
 // UpdateReceivingOrderLineParams holds parameters for updating a receiving order line.
@@ -144,7 +153,23 @@ type UpdateReceivingOrderLineParams struct {
 	AccountID        string
 	ReceivingOrderID string
 	LineID           string
-	QuantityValue    *string
+	Quantity         *ReceivedQuantity
+}
+
+// ReceivingProgressLine is one receiving line booked against a purchase order line, with what that purchase order line asked for, so a caller can work out how much is still to come.
+//
+// Both quantities carry their unit's ratio because a line can be received in any unit of the item's group; compare them only after converting with pricing.ConvertQuantity.
+type ReceivingProgressLine struct {
+	ID               string
+	OrderLineID      string
+	StockedAt        *time.Time
+	CreatedAt        time.Time
+	Value            decimal.Decimal
+	UnitID           string
+	UnitRatio        pricing.UnitRatio
+	OrderedValue     decimal.Decimal
+	OrderedUnitID    string
+	OrderedUnitRatio pricing.UnitRatio
 }
 
 // UnstockedLine holds the ID and order line ID of an unstocked line.

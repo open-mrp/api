@@ -32,7 +32,7 @@ func TestBuildDeliveryListQuery_ArgsBindInPlaceholderOrder(t *testing.T) {
 		from  string
 	}{
 		{"walk", deliveryDriveListOrder, concat([]any{"ac_1", "%x%", "%x%", "accepted", "it_1", "ac_s1"}, tail),
-			"FROM delivery d FORCE INDEX (" + deliveryCreatedIndex + ", " + deliveryStatusIndex + ")"},
+			"FROM delivery d FORCE INDEX (" + deliveryStatusIndex + ")"},
 		{"suppliers", deliveryDriveSuppliers, concat([]any{"ac_s1", "ac_1", "%x%", "%x%", "accepted", "it_1"}, tail),
 			") matched JOIN delivery d ON d.id = matched.id"},
 		{"items", deliveryDriveItems, concat([]any{"it_1", "ac_1", "%x%", "%x%", "accepted", "ac_s1"}, tail),

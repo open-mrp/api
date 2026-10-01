@@ -48,8 +48,10 @@ type deliveryListQuery struct {
 }
 
 func (q deliveryListQuery) indexHint() []string {
+	// Never the created key beside the status key: the planner may swap to it for the order and walk it
+	// from the account's far end rather than range the status from the cursor.
 	if q.Status != nil {
-		return []string{deliveryCreatedIndex, deliveryStatusIndex}
+		return []string{deliveryStatusIndex}
 	}
 	return []string{deliveryCreatedIndex}
 }
@@ -75,6 +77,11 @@ func buildDeliveryListQuery(q deliveryListQuery) (string, []any) {
 	}
 	b.WriteString(" WHERE d.account_id = ?")
 	args = append(args, q.AccountID)
+	if !q.Search.Valid && len(q.SupplierIDs) == 0 {
+		// GetDeliveriesByIDs inner-joins the order: a delivery whose order is gone would take a page slot
+		// and then be dropped, leaving the page short.
+		b.WriteString(" AND EXISTS (SELECT 1 FROM sales_order so0 WHERE so0.id = d.sales_order_id)")
+	}
 	if q.Search.Valid {
 		b.WriteString(" AND (d.number LIKE ? OR so.number LIKE ?)")
 		args = append(args, q.Search.String, q.Search.String)

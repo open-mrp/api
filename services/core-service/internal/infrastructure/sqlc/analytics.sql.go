@@ -1954,7 +1954,8 @@ SELECT
         )
         AS DECIMAL(65,30)
     ) AS total_profit,
-    CAST(
+    -- Nothing invoiced yet leaves the per-unit price, cost, and profit undefined (x / 0): 0, as the row mapper reads a NULL.
+    COALESCE(CAST(
         (
             COALESCE(inv.qty_inv_norm, 0)
             *
@@ -1975,8 +1976,8 @@ SELECT
             0
         )
         AS DECIMAL(65,30)
-    ) AS unit_price,
-    CAST(
+    ), 0) AS unit_price,
+    COALESCE(CAST(
         (
             COALESCE(inv.qty_inv_norm, 0)
             *
@@ -1997,8 +1998,8 @@ SELECT
             0
         )
         AS DECIMAL(65,30)
-    ) AS unit_cost,
-    CAST(
+    ), 0) AS unit_cost,
+    COALESCE(CAST(
         (
             (
                 COALESCE(inv.qty_inv_norm, 0)
@@ -2033,7 +2034,7 @@ SELECT
             0
         )
         AS DECIMAL(65,30)
-    ) AS unit_profit,
+    ), 0) AS unit_profit,
     shipping_geolocation.state AS ship_to_state,
     shipping_geolocation.locality AS ship_to_city,
     shipping_geolocation.postal_code AS ship_to_zipcode,
@@ -2137,9 +2138,9 @@ type GetOrderEntriesRow struct {
 	TotalBackOrdered    string
 	TotalCost           string
 	TotalProfit         string
-	UnitPrice           string
-	UnitCost            string
-	UnitProfit          string
+	UnitPrice           interface{}
+	UnitCost            interface{}
+	UnitProfit          interface{}
 	ShipToState         sql.NullString
 	ShipToCity          sql.NullString
 	ShipToZipcode       sql.NullString

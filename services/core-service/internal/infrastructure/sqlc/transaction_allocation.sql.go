@@ -125,7 +125,7 @@ AND (? IS NULL OR (
 ))
 AND (? IS NULL OR t.transaction_type_code = ?)
 AND (? IS NULL OR ta.created_at >= ?)
-AND (? IS NULL OR ta.created_at < ?)
+AND (? IS NULL OR ta.created_at <= ?)
 AND (
     ? IS NULL
     OR (ta.created_at > ?)
@@ -255,7 +255,7 @@ AND (? IS NULL OR (
 ))
 AND (? IS NULL OR t.transaction_type_code = ?)
 AND (? IS NULL OR ta.created_at >= ?)
-AND (? IS NULL OR ta.created_at < ?)
+AND (? IS NULL OR ta.created_at <= ?)
 AND (
     ? IS NULL
     OR (ta.created_at < ?)

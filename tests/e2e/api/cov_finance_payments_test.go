@@ -476,6 +476,39 @@ func TestPayments_AllocationEntriesFindTheirCustomer(t *testing.T) {
 	assert.True(t, found, "searching the customer's name finds the entry")
 }
 
+// ends_at is inclusive. The dashboard's settle form dates an allocation at the end of its local day
+// (23:59:59.999) and the payments page bounds its range at that same instant, so a strict bound hid
+// every allocation dated on the range's last day.
+func TestPayments_AllocationEntriesIncludeOneAppliedAtTheRangeEnd(t *testing.T) {
+	t.Parallel()
+	inv := invoiceNewCustomer(t)
+	funds := time.Now().UTC().Add(-72 * time.Hour)
+	payment := createPayment(t, inv.customerID, "4.00", &funds, nil)
+	endOfDay := time.Now().UTC().Add(-48 * time.Hour).Truncate(24 * time.Hour).Add(24*time.Hour - time.Millisecond)
+	settle(t, map[string]any{"allocations": []any{map[string]any{
+		"transaction_id": jsonField(payment, "id"), "invoice_id": inv.invoiceID, "amount": "4.00",
+		"applied_at": endOfDay.Format(time.RFC3339Nano),
+	}}})
+	name := getCustomerName(t, inv.customerID)
+
+	for label, end := range map[string]string{
+		"a timestamp at the allocation's instant": endOfDay.Format(time.RFC3339Nano),
+		"the allocation's UTC date":               endOfDay.Format("2006-01-02"),
+	} {
+		rows, _ := listPayments(t, financeAllocationsPath, url.Values{
+			"q":         {name},
+			"starts_at": {endOfDay.Truncate(24 * time.Hour).Format(time.RFC3339Nano)},
+			"ends_at":   {end},
+			"limit":     {"100"},
+		})
+		found := false
+		for _, r := range rows {
+			found = found || jsonField(jsonObject(r, "transaction"), "id") == jsonField(payment, "id")
+		}
+		assert.True(t, found, "ends_at as %s includes the allocation", label)
+	}
+}
+
 func mustTime(t *testing.T, s string) time.Time {
 	t.Helper()
 	v, err := time.Parse(time.RFC3339Nano, s)

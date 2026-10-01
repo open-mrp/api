@@ -673,6 +673,18 @@ func TestVitessSmoke(t *testing.T) {
 			_, apiErr = schedule.CountUncommittedOrders(ctx, account, from, to, f)
 			checkAPI("CountUncommittedOrders", apiErr)
 		}
+		// The line-level sales and open-order analytics take the same resolved buyers; sales forces the invoice key.
+		analytics := NewAnalyticsRepo(q)
+		for _, p := range []domain.AnalyzeSalesParams{
+			{AccountID: account, StartDate: from, EndDate: to},
+			{AccountID: account, StartDate: from, EndDate: to, CustomerIDs: buyers, CustomerGroupIDs: groups, ProductLineIDs: productLines, SalesRepIDs: []string{"acus_none"}},
+		} {
+			_, apiErr := analytics.GetSalesEntries(ctx, p)
+			checkAPI("GetSalesEntries", apiErr)
+			_, apiErr = analytics.GetOrderEntries(ctx, domain.AnalyzeOrdersParams{AccountID: account, CustomerIDs: p.CustomerIDs, CustomerGroupIDs: p.CustomerGroupIDs,
+				ProductLineIDs: p.ProductLineIDs, SalesRepIDs: p.SalesRepIDs})
+			checkAPI("GetOrderEntries", apiErr)
+		}
 	})
 
 	t.Run("sales facts and reports", func(t *testing.T) {

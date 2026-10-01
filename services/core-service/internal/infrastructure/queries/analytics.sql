@@ -137,6 +137,8 @@ WHERE so.owner_account_id = sqlc.arg('owner_account_id')
   AND (sqlc.arg('include_customer_group_filter') = false OR ar.account_group_id IN (sqlc.slice('customer_group_ids')))
 GROUP BY order_year ORDER BY order_year ASC;
 
+-- GetSalesEntries reads the window's invoices first: left to choose, a customer-group or product-line filter made the optimizer start from that filter's every order or line ever invoiced.
+-- The customer and customer-group filters arrive resolved to the buyers they admit (resolveCustomerBuyers).
 -- name: GetSalesEntries :many
 SELECT
     il.id AS id,
@@ -342,7 +344,7 @@ SELECT
     geo.country AS ship_to_country,
     od.code AS order_discount_code
 FROM invoice_line il
-JOIN invoice inv ON inv.id = il.invoice_id
+JOIN invoice inv FORCE INDEX (invoice_account_created_idx) ON inv.id = il.invoice_id
 JOIN sales_order_line sol ON sol.id = il.sales_order_line_id
 JOIN sales_order so ON so.id = inv.sales_order_id
 JOIN product fg ON fg.id = sol.product_id
@@ -376,26 +378,10 @@ WHERE inv.account_id = sqlc.arg('owner_account_id')
   AND inv.created_at <= sqlc.arg('end_date')
   AND (sqlc.arg('include_sales_rep_filter') = false OR so.sales_rep_id IN (sqlc.slice('sales_rep_ids')))
   AND (sqlc.arg('include_product_line_filter') = false OR fg.product_line_id IN (sqlc.slice('product_line_ids')))
-  AND (sqlc.arg('include_customer_group_filter') = false OR ar.account_group_id IN (sqlc.slice('customer_group_ids')))
-  AND (sqlc.arg('include_customer_filter') = false OR (
-      so.buyer_account_id IN (sqlc.slice('customer_ids'))
-      OR EXISTS (
-          SELECT 1
-          FROM account_relation ar_child
-          WHERE ar_child.owner_account_id = so.owner_account_id
-            AND ar_child.account_relation_role_code = 'customer'
-            AND ar_child.counterparty_account_id = so.buyer_account_id
-            AND ar_child.parent_account_relation_id IN (
-                SELECT ar_parent.id
-                FROM account_relation ar_parent
-                WHERE ar_parent.owner_account_id = so.owner_account_id
-                  AND ar_parent.account_relation_role_code = 'customer'
-                  AND ar_parent.counterparty_account_id IN (sqlc.slice('customer_ids'))
-            )
-      )
-  ))
+  AND (sqlc.arg('include_buyer_filter') = false OR so.buyer_account_id IN (sqlc.slice('buyer_ids')))
 ORDER BY inv.created_at ASC;
 
+-- The customer and customer-group filters arrive resolved to the buyers they admit (resolveCustomerBuyers).
 -- name: GetOrderEntries :many
 SELECT
     sol.id AS id,
@@ -683,24 +669,7 @@ WHERE so.owner_account_id = sqlc.arg('owner_account_id')
   AND so.sales_order_status_code = 'issued'
   AND fg.product_type_code = 'sale'
   AND (sqlc.arg('include_sales_rep_filter') = false OR so.sales_rep_id IN (sqlc.slice('sales_rep_ids')))
-  AND (sqlc.arg('include_customer_filter') = false OR (
-      so.buyer_account_id IN (sqlc.slice('customer_ids'))
-      OR EXISTS (
-          SELECT 1
-          FROM account_relation ar_child
-          WHERE ar_child.owner_account_id = so.owner_account_id
-            AND ar_child.account_relation_role_code = 'customer'
-            AND ar_child.counterparty_account_id = so.buyer_account_id
-            AND ar_child.parent_account_relation_id IN (
-                SELECT ar_parent.id
-                FROM account_relation ar_parent
-                WHERE ar_parent.owner_account_id = so.owner_account_id
-                  AND ar_parent.account_relation_role_code = 'customer'
-                  AND ar_parent.counterparty_account_id IN (sqlc.slice('customer_ids'))
-            )
-      )
-  ))
-  AND (sqlc.arg('include_customer_group_filter') = false OR ar.account_group_id IN (sqlc.slice('customer_group_ids')))
+  AND (sqlc.arg('include_buyer_filter') = false OR so.buyer_account_id IN (sqlc.slice('buyer_ids')))
   AND (sqlc.arg('include_product_line_filter') = false OR fg.product_line_id IN (sqlc.slice('product_line_ids')))
 ORDER BY so.issued_at ASC;
 

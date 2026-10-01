@@ -2082,38 +2082,19 @@ WHERE so.owner_account_id = ?
   AND so.sales_order_status_code = 'issued'
   AND fg.product_type_code = 'sale'
   AND (? = false OR so.sales_rep_id IN (/*SLICE:sales_rep_ids*/?))
-  AND (? = false OR (
-      so.buyer_account_id IN (/*SLICE:customer_ids*/?)
-      OR EXISTS (
-          SELECT 1
-          FROM account_relation ar_child
-          WHERE ar_child.owner_account_id = so.owner_account_id
-            AND ar_child.account_relation_role_code = 'customer'
-            AND ar_child.counterparty_account_id = so.buyer_account_id
-            AND ar_child.parent_account_relation_id IN (
-                SELECT ar_parent.id
-                FROM account_relation ar_parent
-                WHERE ar_parent.owner_account_id = so.owner_account_id
-                  AND ar_parent.account_relation_role_code = 'customer'
-                  AND ar_parent.counterparty_account_id IN (/*SLICE:customer_ids*/?)
-            )
-      )
-  ))
-  AND (? = false OR ar.account_group_id IN (/*SLICE:customer_group_ids*/?))
+  AND (? = false OR so.buyer_account_id IN (/*SLICE:buyer_ids*/?))
   AND (? = false OR fg.product_line_id IN (/*SLICE:product_line_ids*/?))
 ORDER BY so.issued_at ASC
 `
 
 type GetOrderEntriesParams struct {
-	OwnerAccountID             string
-	IncludeSalesRepFilter      interface{}
-	SalesRepIds                []sql.NullString
-	IncludeCustomerFilter      interface{}
-	CustomerIds                []string
-	IncludeCustomerGroupFilter interface{}
-	CustomerGroupIds           []sql.NullString
-	IncludeProductLineFilter   interface{}
-	ProductLineIds             []sql.NullString
+	OwnerAccountID           string
+	IncludeSalesRepFilter    interface{}
+	SalesRepIds              []sql.NullString
+	IncludeBuyerFilter       interface{}
+	BuyerIds                 []string
+	IncludeProductLineFilter interface{}
+	ProductLineIds           []sql.NullString
 }
 
 type GetOrderEntriesRow struct {
@@ -2160,6 +2141,7 @@ type GetOrderEntriesRow struct {
 	OrderDiscountCode   sql.NullString
 }
 
+// The customer and customer-group filters arrive resolved to the buyers they admit (resolveCustomerBuyers).
 // ordered quantity and unit
 // aggregated invoice quantities (normalized to base)
 // prices and units
@@ -2178,31 +2160,14 @@ func (q *Queries) GetOrderEntries(ctx context.Context, arg GetOrderEntriesParams
 	} else {
 		query = strings.Replace(query, "/*SLICE:sales_rep_ids*/?", "NULL", 1)
 	}
-	queryParams = append(queryParams, arg.IncludeCustomerFilter)
-	if len(arg.CustomerIds) > 0 {
-		for _, v := range arg.CustomerIds {
+	queryParams = append(queryParams, arg.IncludeBuyerFilter)
+	if len(arg.BuyerIds) > 0 {
+		for _, v := range arg.BuyerIds {
 			queryParams = append(queryParams, v)
 		}
-		query = strings.Replace(query, "/*SLICE:customer_ids*/?", strings.Repeat(",?", len(arg.CustomerIds))[1:], 1)
+		query = strings.Replace(query, "/*SLICE:buyer_ids*/?", strings.Repeat(",?", len(arg.BuyerIds))[1:], 1)
 	} else {
-		query = strings.Replace(query, "/*SLICE:customer_ids*/?", "NULL", 1)
-	}
-	if len(arg.CustomerIds) > 0 {
-		for _, v := range arg.CustomerIds {
-			queryParams = append(queryParams, v)
-		}
-		query = strings.Replace(query, "/*SLICE:customer_ids*/?", strings.Repeat(",?", len(arg.CustomerIds))[1:], 1)
-	} else {
-		query = strings.Replace(query, "/*SLICE:customer_ids*/?", "NULL", 1)
-	}
-	queryParams = append(queryParams, arg.IncludeCustomerGroupFilter)
-	if len(arg.CustomerGroupIds) > 0 {
-		for _, v := range arg.CustomerGroupIds {
-			queryParams = append(queryParams, v)
-		}
-		query = strings.Replace(query, "/*SLICE:customer_group_ids*/?", strings.Repeat(",?", len(arg.CustomerGroupIds))[1:], 1)
-	} else {
-		query = strings.Replace(query, "/*SLICE:customer_group_ids*/?", "NULL", 1)
+		query = strings.Replace(query, "/*SLICE:buyer_ids*/?", "NULL", 1)
 	}
 	queryParams = append(queryParams, arg.IncludeProductLineFilter)
 	if len(arg.ProductLineIds) > 0 {
@@ -2957,7 +2922,7 @@ SELECT
     geo.country AS ship_to_country,
     od.code AS order_discount_code
 FROM invoice_line il
-JOIN invoice inv ON inv.id = il.invoice_id
+JOIN invoice inv FORCE INDEX (invoice_account_created_idx) ON inv.id = il.invoice_id
 JOIN sales_order_line sol ON sol.id = il.sales_order_line_id
 JOIN sales_order so ON so.id = inv.sales_order_id
 JOIN product fg ON fg.id = sol.product_id
@@ -2991,39 +2956,20 @@ WHERE inv.account_id = ?
   AND inv.created_at <= ?
   AND (? = false OR so.sales_rep_id IN (/*SLICE:sales_rep_ids*/?))
   AND (? = false OR fg.product_line_id IN (/*SLICE:product_line_ids*/?))
-  AND (? = false OR ar.account_group_id IN (/*SLICE:customer_group_ids*/?))
-  AND (? = false OR (
-      so.buyer_account_id IN (/*SLICE:customer_ids*/?)
-      OR EXISTS (
-          SELECT 1
-          FROM account_relation ar_child
-          WHERE ar_child.owner_account_id = so.owner_account_id
-            AND ar_child.account_relation_role_code = 'customer'
-            AND ar_child.counterparty_account_id = so.buyer_account_id
-            AND ar_child.parent_account_relation_id IN (
-                SELECT ar_parent.id
-                FROM account_relation ar_parent
-                WHERE ar_parent.owner_account_id = so.owner_account_id
-                  AND ar_parent.account_relation_role_code = 'customer'
-                  AND ar_parent.counterparty_account_id IN (/*SLICE:customer_ids*/?)
-            )
-      )
-  ))
+  AND (? = false OR so.buyer_account_id IN (/*SLICE:buyer_ids*/?))
 ORDER BY inv.created_at ASC
 `
 
 type GetSalesEntriesParams struct {
-	OwnerAccountID             string
-	StartDate                  time.Time
-	EndDate                    time.Time
-	IncludeSalesRepFilter      interface{}
-	SalesRepIds                []sql.NullString
-	IncludeProductLineFilter   interface{}
-	ProductLineIds             []sql.NullString
-	IncludeCustomerGroupFilter interface{}
-	CustomerGroupIds           []sql.NullString
-	IncludeCustomerFilter      interface{}
-	CustomerIds                []string
+	OwnerAccountID           string
+	StartDate                time.Time
+	EndDate                  time.Time
+	IncludeSalesRepFilter    interface{}
+	SalesRepIds              []sql.NullString
+	IncludeProductLineFilter interface{}
+	ProductLineIds           []sql.NullString
+	IncludeBuyerFilter       interface{}
+	BuyerIds                 []string
 }
 
 type GetSalesEntriesRow struct {
@@ -3069,6 +3015,8 @@ type GetSalesEntriesRow struct {
 	OrderDiscountCode   sql.NullString
 }
 
+// GetSalesEntries reads the window's invoices first: left to choose, a customer-group or product-line filter made the optimizer start from that filter's every order or line ever invoiced.
+// The customer and customer-group filters arrive resolved to the buyers they admit (resolveCustomerBuyers).
 func (q *Queries) GetSalesEntries(ctx context.Context, arg GetSalesEntriesParams) ([]GetSalesEntriesRow, error) {
 	query := getSalesEntries
 	var queryParams []interface{}
@@ -3093,31 +3041,14 @@ func (q *Queries) GetSalesEntries(ctx context.Context, arg GetSalesEntriesParams
 	} else {
 		query = strings.Replace(query, "/*SLICE:product_line_ids*/?", "NULL", 1)
 	}
-	queryParams = append(queryParams, arg.IncludeCustomerGroupFilter)
-	if len(arg.CustomerGroupIds) > 0 {
-		for _, v := range arg.CustomerGroupIds {
+	queryParams = append(queryParams, arg.IncludeBuyerFilter)
+	if len(arg.BuyerIds) > 0 {
+		for _, v := range arg.BuyerIds {
 			queryParams = append(queryParams, v)
 		}
-		query = strings.Replace(query, "/*SLICE:customer_group_ids*/?", strings.Repeat(",?", len(arg.CustomerGroupIds))[1:], 1)
+		query = strings.Replace(query, "/*SLICE:buyer_ids*/?", strings.Repeat(",?", len(arg.BuyerIds))[1:], 1)
 	} else {
-		query = strings.Replace(query, "/*SLICE:customer_group_ids*/?", "NULL", 1)
-	}
-	queryParams = append(queryParams, arg.IncludeCustomerFilter)
-	if len(arg.CustomerIds) > 0 {
-		for _, v := range arg.CustomerIds {
-			queryParams = append(queryParams, v)
-		}
-		query = strings.Replace(query, "/*SLICE:customer_ids*/?", strings.Repeat(",?", len(arg.CustomerIds))[1:], 1)
-	} else {
-		query = strings.Replace(query, "/*SLICE:customer_ids*/?", "NULL", 1)
-	}
-	if len(arg.CustomerIds) > 0 {
-		for _, v := range arg.CustomerIds {
-			queryParams = append(queryParams, v)
-		}
-		query = strings.Replace(query, "/*SLICE:customer_ids*/?", strings.Repeat(",?", len(arg.CustomerIds))[1:], 1)
-	} else {
-		query = strings.Replace(query, "/*SLICE:customer_ids*/?", "NULL", 1)
+		query = strings.Replace(query, "/*SLICE:buyer_ids*/?", "NULL", 1)
 	}
 	rows, err := q.db.QueryContext(ctx, query, queryParams...)
 	if err != nil {

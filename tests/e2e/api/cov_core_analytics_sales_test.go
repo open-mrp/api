@@ -434,6 +434,46 @@ func TestSalesAnalytics_InvoicesPageAcrossCustomersForwardAndBack(t *testing.T) 
 	require.Equal(t, forward[:len(forward)-1], backward, "paging back retraces the pages before the last")
 }
 
+// The line-level sales and open-order analytics resolve a customer filter to that customer's buyers:
+// each lists exactly the customer's lines, and a customer group it is not in excludes them.
+func TestSalesAnalytics_LegacyEntriesFilterByCustomer(t *testing.T) {
+	t.Parallel()
+	sale := shipSaleToNewCustomer(t)
+	awaitSalesSummary(t, sale.customerID, 1)
+	openCustomer := setupOrderCustomer(t)
+	issueOrderForCustomer(t, openCustomer, nil)
+
+	entries := func(path string, body map[string]any) []any {
+		t.Helper()
+		status, list, raw := putSales(t, path, nil, body)
+		requireStatus(t, 200, status, raw)
+		return jsonArray(list, "data")
+	}
+	now := time.Now().UTC()
+	window := func(extra map[string]any) map[string]any {
+		body := map[string]any{"starts_at": rfc3339(now.Add(-24 * time.Hour)), "ends_at": rfc3339(now.Add(24 * time.Hour))}
+		for k, v := range extra {
+			body[k] = v
+		}
+		return body
+	}
+
+	lines := entries("/v1/core/analytics/sales", window(map[string]any{"customer_ids": []string{sale.customerID}}))
+	require.Len(t, lines, 2, "the customer's two invoiced lines")
+	for _, l := range lines {
+		assert.Equal(t, sale.customerID, jsonField(l.(map[string]any), "customer_id"))
+	}
+	assert.Empty(t, entries("/v1/core/analytics/sales", window(map[string]any{
+		"customer_ids": []string{sale.customerID}, "customer_group_ids": []string{"ag_definitely_not_a_real_group"}})),
+		"a customer filter and a group the customer is not in admit no buyer")
+
+	orders := entries("/v1/core/analytics/orders", map[string]any{"customer_ids": []string{openCustomer}})
+	require.NotEmpty(t, orders, "the customer's open order is listed")
+	for _, o := range orders {
+		assert.Equal(t, openCustomer, jsonField(o.(map[string]any), "customer_id"))
+	}
+}
+
 // --- Lines ---
 
 func TestSalesAnalytics_LinesArePricedInTheBaseUnit(t *testing.T) {

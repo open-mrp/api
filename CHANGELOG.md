@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.16.1](https://github.com/open-mrp/api/compare/v2.16.0...v2.16.1) (2026-10-01)
+
+
+### Bug Fixes
+
+* **hubspot:** only link existing contacts on order sync ([#221](https://github.com/open-mrp/api/issues/221)) ([453f469](https://github.com/open-mrp/api/commit/453f4692149d5ad8b64a9fe76ee6408285b5002f))
+
 ## [2.16.0](https://github.com/open-mrp/api/compare/v2.15.2...v2.16.0) (2026-10-01)
 
 

@@ -176,38 +176,36 @@ func (r *salesReportRepoImpl) newSalesFactQuery(ctx context.Context, f domain.Sa
 	return q, nil
 }
 
-// resolveBuyers turns the customer and customer-group filters into the buyer accounts they admit, the way the dashboard's joins did: a customer matches itself and any account whose customer relation names it as parent; a group matches buyers whose customer relation is in it. filtered is false when neither filter is set.
 func (r *salesReportRepoImpl) resolveBuyers(ctx context.Context, f domain.SalesReportFilter) (buyers []string, filtered bool, apiErr *apierror.APIError) {
-	if len(f.CustomerIDs) == 0 && len(f.CustomerGroupIDs) == 0 {
+	return resolveCustomerBuyers(ctx, r.queries.DB(), f.AccountID, f.CustomerIDs, f.CustomerGroupIDs)
+}
+
+// resolveCustomerBuyers turns customer and customer-group filters into the buyer accounts they admit, the way the dashboard's joins did: a customer matches itself and any account whose customer relation names it as parent; a group matches buyers whose customer relation is in it. filtered is false when neither filter is set.
+func resolveCustomerBuyers(ctx context.Context, q sqlc.DBTX, accountID string, customerIDs, groupIDs []string) (buyers []string, filtered bool, apiErr *apierror.APIError) {
+	if len(customerIDs) == 0 && len(groupIDs) == 0 {
 		return nil, false, nil
 	}
 	var sets [][]string
-	if len(f.CustomerIDs) > 0 {
+	if len(customerIDs) > 0 {
 		query := `SELECT child.counterparty_account_id FROM account_relation child
 WHERE child.owner_account_id = ? AND child.account_relation_role_code = 'customer'
   AND child.parent_account_relation_id IN (
       SELECT parent.id FROM account_relation parent
       WHERE parent.owner_account_id = ? AND parent.account_relation_role_code = 'customer'
-        AND parent.counterparty_account_id IN (` + placeholders(len(f.CustomerIDs)) + `))`
-		args := []any{f.AccountID, f.AccountID}
-		for _, id := range f.CustomerIDs {
-			args = append(args, id)
-		}
-		children, apiErr := r.queryStrings(ctx, query, args...)
+        AND parent.counterparty_account_id IN (` + placeholders(len(customerIDs)) + `))`
+		args := append([]any{accountID, accountID}, stringsToAny(customerIDs)...)
+		children, apiErr := queryStringColumn(ctx, q, query, args...)
 		if apiErr != nil {
 			return nil, true, apiErr
 		}
-		sets = append(sets, append(append([]string{}, f.CustomerIDs...), children...))
+		sets = append(sets, append(append([]string{}, customerIDs...), children...))
 	}
-	if len(f.CustomerGroupIDs) > 0 {
+	if len(groupIDs) > 0 {
 		query := `SELECT counterparty_account_id FROM account_relation
 WHERE owner_account_id = ? AND account_relation_role_code = 'customer'
-  AND account_group_id IN (` + placeholders(len(f.CustomerGroupIDs)) + `)`
-		args := []any{f.AccountID}
-		for _, id := range f.CustomerGroupIDs {
-			args = append(args, id)
-		}
-		members, apiErr := r.queryStrings(ctx, query, args...)
+  AND account_group_id IN (` + placeholders(len(groupIDs)) + `)`
+		args := append([]any{accountID}, stringsToAny(groupIDs)...)
+		members, apiErr := queryStringColumn(ctx, q, query, args...)
 		if apiErr != nil {
 			return nil, true, apiErr
 		}
@@ -231,8 +229,8 @@ WHERE owner_account_id = ? AND account_relation_role_code = 'customer'
 	return dedupe(result), true, nil
 }
 
-func (r *salesReportRepoImpl) queryStrings(ctx context.Context, query string, args ...any) ([]string, *apierror.APIError) {
-	rows, err := r.queries.DB().QueryContext(ctx, query, args...)
+func queryStringColumn(ctx context.Context, q sqlc.DBTX, query string, args ...any) ([]string, *apierror.APIError) {
+	rows, err := q.QueryContext(ctx, query, args...)
 	if err != nil {
 		return nil, db.MapSQLError(err)
 	}

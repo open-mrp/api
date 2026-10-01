@@ -13,19 +13,15 @@ import (
 
 const countUncommittedOrders = `-- name: CountUncommittedOrders :one
 SELECT COUNT(*) AS uncommitted_count
-FROM sales_order so
-LEFT JOIN account_relation ar ON ar.owner_account_id = so.owner_account_id
-    AND ar.counterparty_account_id = so.buyer_account_id
-    AND ar.account_relation_role_code = 'customer'
+FROM sales_order so FORCE INDEX (sales_order_owner_ship_by_issued_idx, sales_order_owner_buyer_ship_by_idx, sales_order_owner_rep_ship_by_idx)
 WHERE so.owner_account_id = ?
   AND so.sales_order_type_code = 'sales_order'
-  AND so.sales_order_status_code <> 'estimate'
+  AND so.sales_order_status_code IN ('issued', 'fulfilled')
   AND so.ship_by_date IS NULL
   AND so.issued_at IS NOT NULL
   AND so.issued_at >= ?
   AND so.issued_at <= ?
   AND (? = false OR so.sales_rep_id IN (/*SLICE:sales_rep_ids*/?))
-  AND (? = false OR ar.account_group_id IN (/*SLICE:customer_group_ids*/?))
   AND (? = false OR EXISTS (
       SELECT 1
       FROM sales_order_line sol
@@ -34,37 +30,19 @@ WHERE so.owner_account_id = ?
         AND p.product_type_code = 'sale'
         AND p.product_line_id IN (/*SLICE:product_line_ids*/?)
   ))
-  AND (? = false OR (
-      so.buyer_account_id IN (/*SLICE:customer_ids*/?)
-      OR EXISTS (
-          SELECT 1
-          FROM account_relation ar_child
-          WHERE ar_child.owner_account_id = so.owner_account_id
-            AND ar_child.account_relation_role_code = 'customer'
-            AND ar_child.counterparty_account_id = so.buyer_account_id
-            AND ar_child.parent_account_relation_id IN (
-                SELECT ar_parent.id
-                FROM account_relation ar_parent
-                WHERE ar_parent.owner_account_id = so.owner_account_id
-                  AND ar_parent.account_relation_role_code = 'customer'
-                  AND ar_parent.counterparty_account_id IN (/*SLICE:customer_ids*/?)
-            )
-      )
-  ))
+  AND (? = false OR so.buyer_account_id IN (/*SLICE:buyer_ids*/?))
 `
 
 type CountUncommittedOrdersParams struct {
-	AccountID                  string
-	WindowStart                sql.NullTime
-	WindowEnd                  sql.NullTime
-	IncludeSalesRepFilter      interface{}
-	SalesRepIds                []sql.NullString
-	IncludeCustomerGroupFilter interface{}
-	CustomerGroupIds           []sql.NullString
-	IncludeProductLineFilter   interface{}
-	ProductLineIds             []sql.NullString
-	IncludeCustomerFilter      interface{}
-	CustomerIds                []string
+	AccountID                string
+	WindowStart              sql.NullTime
+	WindowEnd                sql.NullTime
+	IncludeSalesRepFilter    interface{}
+	SalesRepIds              []sql.NullString
+	IncludeProductLineFilter interface{}
+	ProductLineIds           []sql.NullString
+	IncludeBuyerFilter       interface{}
+	BuyerIds                 []string
 }
 
 // CountUncommittedOrders counts issued orders in the window that carry no ship-by date.
@@ -73,6 +51,7 @@ type CountUncommittedOrdersParams struct {
 // The same filters as the measured set, so the excluded count describes the same slice of the order book the rates do. An unfiltered count beside a filtered rate would read as "this customer has 40 uncommitted orders" when the 40 belong to the whole account.
 //
 // The product-line filter is an EXISTS rather than a join: this is a COUNT of orders, and joining the lines in would count an order once per line on it.
+// Every key here leads past the filter with ship_by_date, so the few orders without one are found without reading the window's committed ones.
 func (q *Queries) CountUncommittedOrders(ctx context.Context, arg CountUncommittedOrdersParams) (int64, error) {
 	query := countUncommittedOrders
 	var queryParams []interface{}
@@ -88,15 +67,6 @@ func (q *Queries) CountUncommittedOrders(ctx context.Context, arg CountUncommitt
 	} else {
 		query = strings.Replace(query, "/*SLICE:sales_rep_ids*/?", "NULL", 1)
 	}
-	queryParams = append(queryParams, arg.IncludeCustomerGroupFilter)
-	if len(arg.CustomerGroupIds) > 0 {
-		for _, v := range arg.CustomerGroupIds {
-			queryParams = append(queryParams, v)
-		}
-		query = strings.Replace(query, "/*SLICE:customer_group_ids*/?", strings.Repeat(",?", len(arg.CustomerGroupIds))[1:], 1)
-	} else {
-		query = strings.Replace(query, "/*SLICE:customer_group_ids*/?", "NULL", 1)
-	}
 	queryParams = append(queryParams, arg.IncludeProductLineFilter)
 	if len(arg.ProductLineIds) > 0 {
 		for _, v := range arg.ProductLineIds {
@@ -106,22 +76,14 @@ func (q *Queries) CountUncommittedOrders(ctx context.Context, arg CountUncommitt
 	} else {
 		query = strings.Replace(query, "/*SLICE:product_line_ids*/?", "NULL", 1)
 	}
-	queryParams = append(queryParams, arg.IncludeCustomerFilter)
-	if len(arg.CustomerIds) > 0 {
-		for _, v := range arg.CustomerIds {
+	queryParams = append(queryParams, arg.IncludeBuyerFilter)
+	if len(arg.BuyerIds) > 0 {
+		for _, v := range arg.BuyerIds {
 			queryParams = append(queryParams, v)
 		}
-		query = strings.Replace(query, "/*SLICE:customer_ids*/?", strings.Repeat(",?", len(arg.CustomerIds))[1:], 1)
+		query = strings.Replace(query, "/*SLICE:buyer_ids*/?", strings.Repeat(",?", len(arg.BuyerIds))[1:], 1)
 	} else {
-		query = strings.Replace(query, "/*SLICE:customer_ids*/?", "NULL", 1)
-	}
-	if len(arg.CustomerIds) > 0 {
-		for _, v := range arg.CustomerIds {
-			queryParams = append(queryParams, v)
-		}
-		query = strings.Replace(query, "/*SLICE:customer_ids*/?", strings.Repeat(",?", len(arg.CustomerIds))[1:], 1)
-	} else {
-		query = strings.Replace(query, "/*SLICE:customer_ids*/?", "NULL", 1)
+		query = strings.Replace(query, "/*SLICE:buyer_ids*/?", "NULL", 1)
 	}
 	row := q.db.QueryRowContext(ctx, query, queryParams...)
 	var uncommitted_count int64
@@ -134,13 +96,10 @@ SELECT DISTINCT
     so.id AS sales_order_id,
     p.product_line_id,
     pl.name AS product_line_name
-FROM sales_order so
+FROM sales_order so FORCE INDEX (sales_order_owner_status_ship_by_idx, sales_order_owner_buyer_ship_by_idx, sales_order_owner_rep_ship_by_idx)
 JOIN sales_order_line sol ON sol.sales_order_id = so.id
 JOIN product p ON p.id = sol.product_id
 JOIN product_line pl ON pl.id = p.product_line_id
-LEFT JOIN account_relation ar ON ar.owner_account_id = so.owner_account_id
-    AND ar.counterparty_account_id = so.buyer_account_id
-    AND ar.account_relation_role_code = 'customer'
 WHERE so.owner_account_id = ?
   AND so.sales_order_type_code = 'sales_order'
   -- Spelled as an IN-list over the closed status enum rather than <> 'estimate': the inequality leaves sales_order_owner_status_ship_by_idx unusable past its first column, so the ship-by range below degrades into a scan of every order on the account.
@@ -151,38 +110,19 @@ WHERE so.owner_account_id = ?
   AND so.ship_by_date <= ?
   AND (? = false OR so.sales_rep_id IN (/*SLICE:sales_rep_ids*/?))
   AND (? = false OR p.product_line_id IN (/*SLICE:product_line_ids*/?))
-  AND (? = false OR ar.account_group_id IN (/*SLICE:customer_group_ids*/?))
-  AND (? = false OR (
-      so.buyer_account_id IN (/*SLICE:customer_ids*/?)
-      OR EXISTS (
-          SELECT 1
-          FROM account_relation ar_child
-          WHERE ar_child.owner_account_id = so.owner_account_id
-            AND ar_child.account_relation_role_code = 'customer'
-            AND ar_child.counterparty_account_id = so.buyer_account_id
-            AND ar_child.parent_account_relation_id IN (
-                SELECT ar_parent.id
-                FROM account_relation ar_parent
-                WHERE ar_parent.owner_account_id = so.owner_account_id
-                  AND ar_parent.account_relation_role_code = 'customer'
-                  AND ar_parent.counterparty_account_id IN (/*SLICE:customer_ids*/?)
-            )
-      )
-  ))
+  AND (? = false OR so.buyer_account_id IN (/*SLICE:buyer_ids*/?))
 `
 
 type ListDeliveryOrderProductLinesParams struct {
-	AccountID                  string
-	WindowStart                sql.NullTime
-	WindowEnd                  sql.NullTime
-	IncludeSalesRepFilter      interface{}
-	SalesRepIds                []sql.NullString
-	IncludeProductLineFilter   interface{}
-	ProductLineIds             []sql.NullString
-	IncludeCustomerGroupFilter interface{}
-	CustomerGroupIds           []sql.NullString
-	IncludeCustomerFilter      interface{}
-	CustomerIds                []string
+	AccountID                string
+	WindowStart              sql.NullTime
+	WindowEnd                sql.NullTime
+	IncludeSalesRepFilter    interface{}
+	SalesRepIds              []sql.NullString
+	IncludeProductLineFilter interface{}
+	ProductLineIds           []sql.NullString
+	IncludeBuyerFilter       interface{}
+	BuyerIds                 []string
 }
 
 type ListDeliveryOrderProductLinesRow struct {
@@ -218,31 +158,14 @@ func (q *Queries) ListDeliveryOrderProductLines(ctx context.Context, arg ListDel
 	} else {
 		query = strings.Replace(query, "/*SLICE:product_line_ids*/?", "NULL", 1)
 	}
-	queryParams = append(queryParams, arg.IncludeCustomerGroupFilter)
-	if len(arg.CustomerGroupIds) > 0 {
-		for _, v := range arg.CustomerGroupIds {
+	queryParams = append(queryParams, arg.IncludeBuyerFilter)
+	if len(arg.BuyerIds) > 0 {
+		for _, v := range arg.BuyerIds {
 			queryParams = append(queryParams, v)
 		}
-		query = strings.Replace(query, "/*SLICE:customer_group_ids*/?", strings.Repeat(",?", len(arg.CustomerGroupIds))[1:], 1)
+		query = strings.Replace(query, "/*SLICE:buyer_ids*/?", strings.Repeat(",?", len(arg.BuyerIds))[1:], 1)
 	} else {
-		query = strings.Replace(query, "/*SLICE:customer_group_ids*/?", "NULL", 1)
-	}
-	queryParams = append(queryParams, arg.IncludeCustomerFilter)
-	if len(arg.CustomerIds) > 0 {
-		for _, v := range arg.CustomerIds {
-			queryParams = append(queryParams, v)
-		}
-		query = strings.Replace(query, "/*SLICE:customer_ids*/?", strings.Repeat(",?", len(arg.CustomerIds))[1:], 1)
-	} else {
-		query = strings.Replace(query, "/*SLICE:customer_ids*/?", "NULL", 1)
-	}
-	if len(arg.CustomerIds) > 0 {
-		for _, v := range arg.CustomerIds {
-			queryParams = append(queryParams, v)
-		}
-		query = strings.Replace(query, "/*SLICE:customer_ids*/?", strings.Repeat(",?", len(arg.CustomerIds))[1:], 1)
-	} else {
-		query = strings.Replace(query, "/*SLICE:customer_ids*/?", "NULL", 1)
+		query = strings.Replace(query, "/*SLICE:buyer_ids*/?", "NULL", 1)
 	}
 	rows, err := q.db.QueryContext(ctx, query, queryParams...)
 	if err != nil {
@@ -289,7 +212,7 @@ SELECT
             JOIN quantity plq ON plq.id = pl.quantity_id
             WHERE pl.sales_order_line_id = sol.id AND pl.packed_at IS NOT NULL)
     ), 0) AS DECIMAL(65,30)) AS quantity_packed
-FROM sales_order so
+FROM sales_order so FORCE INDEX (sales_order_owner_status_ship_by_idx, sales_order_owner_buyer_ship_by_idx, sales_order_owner_rep_ship_by_idx)
 JOIN sales_order_line sol ON sol.sales_order_id = so.id
 JOIN quantity q ON q.id = sol.quantity_id
 JOIN product p ON p.id = sol.product_id
@@ -308,24 +231,7 @@ WHERE so.owner_account_id = ?
   AND so.ship_by_date <= ?
   AND (? = false OR so.sales_rep_id IN (/*SLICE:sales_rep_ids*/?))
   AND (? = false OR p.product_line_id IN (/*SLICE:product_line_ids*/?))
-  AND (? = false OR ar.account_group_id IN (/*SLICE:customer_group_ids*/?))
-  AND (? = false OR (
-      so.buyer_account_id IN (/*SLICE:customer_ids*/?)
-      OR EXISTS (
-          SELECT 1
-          FROM account_relation ar_child
-          WHERE ar_child.owner_account_id = so.owner_account_id
-            AND ar_child.account_relation_role_code = 'customer'
-            AND ar_child.counterparty_account_id = so.buyer_account_id
-            AND ar_child.parent_account_relation_id IN (
-                SELECT ar_parent.id
-                FROM account_relation ar_parent
-                WHERE ar_parent.owner_account_id = so.owner_account_id
-                  AND ar_parent.account_relation_role_code = 'customer'
-                  AND ar_parent.counterparty_account_id IN (/*SLICE:customer_ids*/?)
-            )
-      )
-  ))
+  AND (? = false OR so.buyer_account_id IN (/*SLICE:buyer_ids*/?))
 GROUP BY so.id, so.number, so.buyer_account_id, buyer.name, ar.account_group_id, ag.name,
          so.sales_rep_id, so.ship_by_date, so.issued_at,
          so.first_ship_at, so.completed_at, so.sales_order_status_code,
@@ -334,17 +240,15 @@ ORDER BY so.ship_by_date, so.id
 `
 
 type ListDeliveryPerformanceOrdersParams struct {
-	AccountID                  string
-	WindowStart                sql.NullTime
-	WindowEnd                  sql.NullTime
-	IncludeSalesRepFilter      interface{}
-	SalesRepIds                []sql.NullString
-	IncludeProductLineFilter   interface{}
-	ProductLineIds             []sql.NullString
-	IncludeCustomerGroupFilter interface{}
-	CustomerGroupIds           []sql.NullString
-	IncludeCustomerFilter      interface{}
-	CustomerIds                []string
+	AccountID                string
+	WindowStart              sql.NullTime
+	WindowEnd                sql.NullTime
+	IncludeSalesRepFilter    interface{}
+	SalesRepIds              []sql.NullString
+	IncludeProductLineFilter interface{}
+	ProductLineIds           []sql.NullString
+	IncludeBuyerFilter       interface{}
+	BuyerIds                 []string
 }
 
 type ListDeliveryPerformanceOrdersRow struct {
@@ -369,12 +273,14 @@ type ListDeliveryPerformanceOrdersRow struct {
 // Delivery performance: did we ship what we promised, when we promised it.
 //
 // Measured against ship_by_date, which is the commitment stamped on the order at issue rather than anything recomputed later. An order whose customer's lead time has since been renegotiated is still judged against what it was actually promised.
+//
+// The customer and customer-group filters arrive resolved to the buyers they admit (resolveCustomerBuyers, which the sales reports also use), so "this customer" selects the same orders on every analytics page and is a plain column filter the order's keys can pin.
 // ListDeliveryPerformanceOrders returns every order carrying a commitment that came due inside the window, with what actually happened to it.
 //
 // Only orders with a ship_by_date participate: an order with no commitment cannot be late, and counting it as on time would inflate the rate with orders nobody promised anything about. The count of unstamped orders is reported separately so that exclusion is visible rather than silent.
 //
 // quantity_ordered and quantity_packed are aggregated over sale-type lines only, matching the fulfillment-progress math everywhere else — freight and credit lines are not shipped.
-// The customer, customer-group, product-line and sales-rep filters are spelled exactly as GetSalesEntries spells them, including the parent/child customer expansion. Two analytics pages that disagree about what "this customer" selects are worse than either being wrong on its own.
+// The order drives the join from a key on its due date: left to choose, a product-line filter made the optimizer start from that line's every order line ever sold.
 func (q *Queries) ListDeliveryPerformanceOrders(ctx context.Context, arg ListDeliveryPerformanceOrdersParams) ([]ListDeliveryPerformanceOrdersRow, error) {
 	query := listDeliveryPerformanceOrders
 	var queryParams []interface{}
@@ -399,31 +305,14 @@ func (q *Queries) ListDeliveryPerformanceOrders(ctx context.Context, arg ListDel
 	} else {
 		query = strings.Replace(query, "/*SLICE:product_line_ids*/?", "NULL", 1)
 	}
-	queryParams = append(queryParams, arg.IncludeCustomerGroupFilter)
-	if len(arg.CustomerGroupIds) > 0 {
-		for _, v := range arg.CustomerGroupIds {
+	queryParams = append(queryParams, arg.IncludeBuyerFilter)
+	if len(arg.BuyerIds) > 0 {
+		for _, v := range arg.BuyerIds {
 			queryParams = append(queryParams, v)
 		}
-		query = strings.Replace(query, "/*SLICE:customer_group_ids*/?", strings.Repeat(",?", len(arg.CustomerGroupIds))[1:], 1)
+		query = strings.Replace(query, "/*SLICE:buyer_ids*/?", strings.Repeat(",?", len(arg.BuyerIds))[1:], 1)
 	} else {
-		query = strings.Replace(query, "/*SLICE:customer_group_ids*/?", "NULL", 1)
-	}
-	queryParams = append(queryParams, arg.IncludeCustomerFilter)
-	if len(arg.CustomerIds) > 0 {
-		for _, v := range arg.CustomerIds {
-			queryParams = append(queryParams, v)
-		}
-		query = strings.Replace(query, "/*SLICE:customer_ids*/?", strings.Repeat(",?", len(arg.CustomerIds))[1:], 1)
-	} else {
-		query = strings.Replace(query, "/*SLICE:customer_ids*/?", "NULL", 1)
-	}
-	if len(arg.CustomerIds) > 0 {
-		for _, v := range arg.CustomerIds {
-			queryParams = append(queryParams, v)
-		}
-		query = strings.Replace(query, "/*SLICE:customer_ids*/?", strings.Repeat(",?", len(arg.CustomerIds))[1:], 1)
-	} else {
-		query = strings.Replace(query, "/*SLICE:customer_ids*/?", "NULL", 1)
+		query = strings.Replace(query, "/*SLICE:buyer_ids*/?", "NULL", 1)
 	}
 	rows, err := q.db.QueryContext(ctx, query, queryParams...)
 	if err != nil {

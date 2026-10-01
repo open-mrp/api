@@ -19,8 +19,11 @@ package repository
 
 import (
 	"context"
+	"crypto/sha256"
 	"database/sql"
+	"encoding/hex"
 	"encoding/json"
+	"flag"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -153,10 +156,12 @@ func bestForcedAccess(t *testing.T, db *sql.DB, stmt explainedStatement, from, a
 }
 
 func (e *explainingDB) QueryRowContext(ctx context.Context, query string, args ...any) *sql.Row {
-	if strings.HasPrefix(strings.TrimSpace(query), "SELECT") {
+	if isSelect(query) {
 		// A failed explain surfaces when the statement itself runs below.
 		if plan, err := explainAnalyze(ctx, e.db, query, args...); err == nil {
+			e.mu.Lock()
 			e.statements = append(e.statements, explainedStatement{query: query, args: args, plan: plan})
+			e.mu.Unlock()
 		}
 	}
 	return e.db.QueryRowContext(ctx, query, args...)
@@ -628,6 +633,36 @@ func planCursorAt(at time.Time, id string, dir pagination.Direction) *string {
 	return &c
 }
 
+var updatePlanResults = flag.Bool("update-plan-results", false, "rewrite testdata/plan_results from the current code")
+
+// planDigest is a short hash of v's JSON, for pinning a request's result.
+func planDigest(t *testing.T, v any) string {
+	t.Helper()
+	raw, err := json.Marshal(v)
+	require.NoError(t, err)
+	sum := sha256.Sum256(raw)
+	return hex.EncodeToString(sum[:8])
+}
+
+// checkPlanResults compares each request's result digest with testdata/plan_results/<file>, recorded
+// from the code before a plan change, or rewrites the file under -update-plan-results.
+func checkPlanResults(t *testing.T, file string, got map[string]string) {
+	t.Helper()
+	path := filepath.Join("testdata", "plan_results", file)
+	if *updatePlanResults {
+		raw, err := json.MarshalIndent(got, "", "  ")
+		require.NoError(t, err)
+		require.NoError(t, os.MkdirAll(filepath.Dir(path), 0o755))
+		require.NoError(t, os.WriteFile(path, append(raw, '\n'), 0o644))
+		return
+	}
+	raw, err := os.ReadFile(path)
+	require.NoError(t, err)
+	var want map[string]string
+	require.NoError(t, json.Unmarshal(raw, &want))
+	require.Equal(t, want, got)
+}
+
 // aggregateSlack is the rows an aggregate may read beyond twice its floor: a few index entries at a
 // range's ends, and room for a floor of zero.
 const aggregateSlack = 50
@@ -710,6 +745,9 @@ func (s aggregatePlanSuite[P]) check(t *testing.T, db *sql.DB, edb *explainingDB
 			reading = append(reading, stmt)
 		}
 		floor := floors[tb.alias]
+		if os.Getenv("PLAN_TEST_VERBOSE") != "" {
+			t.Logf("%s: read %.0f via %v; scope %.0f", tb.table, got.rows, got.indexes, floor)
+		}
 		if got.rows <= 2*floor+aggregateSlack {
 			continue
 		}

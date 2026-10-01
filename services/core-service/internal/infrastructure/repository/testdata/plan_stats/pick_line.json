@@ -1,0 +1,125 @@
+{
+ "source": "augno_core/prod, mysql.innodb_table_stats and mysql.innodb_index_stats, last_update 2026-09-28 16:19:41 UTC",
+ "table": {
+  "n_rows": 461086,
+  "clustered_index_size": 6322,
+  "sum_of_other_index_sizes": 21108
+ },
+ "indexes": [
+  {
+   "index": "PRIMARY",
+   "stat": "n_diff_pfx01",
+   "value": 447829
+  },
+  {
+   "index": "PRIMARY",
+   "stat": "n_leaf_pages",
+   "value": 5628
+  },
+  {
+   "index": "PRIMARY",
+   "stat": "size",
+   "value": 6451
+  },
+  {
+   "index": "pick_line_pick_id_idx",
+   "stat": "n_diff_pfx01",
+   "value": 108980
+  },
+  {
+   "index": "pick_line_pick_id_idx",
+   "stat": "n_diff_pfx02",
+   "value": 432336
+  },
+  {
+   "index": "pick_line_pick_id_idx",
+   "stat": "n_leaf_pages",
+   "value": 3258
+  },
+  {
+   "index": "pick_line_pick_id_idx",
+   "stat": "size",
+   "value": 3771
+  },
+  {
+   "index": "pick_line_pick_sol_qty_packed_idx",
+   "stat": "n_diff_pfx01",
+   "value": 117042
+  },
+  {
+   "index": "pick_line_pick_sol_qty_packed_idx",
+   "stat": "n_diff_pfx02",
+   "value": 488496
+  },
+  {
+   "index": "pick_line_pick_sol_qty_packed_idx",
+   "stat": "n_diff_pfx03",
+   "value": 438007
+  },
+  {
+   "index": "pick_line_pick_sol_qty_packed_idx",
+   "stat": "n_diff_pfx04",
+   "value": 446531
+  },
+  {
+   "index": "pick_line_pick_sol_qty_packed_idx",
+   "stat": "n_diff_pfx05",
+   "value": 437024
+  },
+  {
+   "index": "pick_line_pick_sol_qty_packed_idx",
+   "stat": "n_leaf_pages",
+   "value": 6557
+  },
+  {
+   "index": "pick_line_pick_sol_qty_packed_idx",
+   "stat": "size",
+   "value": 7679
+  },
+  {
+   "index": "pick_line_quantity_id_key",
+   "stat": "n_diff_pfx01",
+   "value": 452446
+  },
+  {
+   "index": "pick_line_quantity_id_key",
+   "stat": "n_leaf_pages",
+   "value": 3248
+  },
+  {
+   "index": "pick_line_quantity_id_key",
+   "stat": "size",
+   "value": 3771
+  },
+  {
+   "index": "pick_line_sol_packed_qty_idx",
+   "stat": "n_diff_pfx01",
+   "value": 453021
+  },
+  {
+   "index": "pick_line_sol_packed_qty_idx",
+   "stat": "n_diff_pfx02",
+   "value": 425395
+  },
+  {
+   "index": "pick_line_sol_packed_qty_idx",
+   "stat": "n_diff_pfx03",
+   "value": 431534
+  },
+  {
+   "index": "pick_line_sol_packed_qty_idx",
+   "stat": "n_diff_pfx04",
+   "value": 427186
+  },
+  {
+   "index": "pick_line_sol_packed_qty_idx",
+   "stat": "n_leaf_pages",
+   "value": 5116
+  },
+  {
+   "index": "pick_line_sol_packed_qty_idx",
+   "stat": "size",
+   "value": 5951
+  }
+ ]
+}

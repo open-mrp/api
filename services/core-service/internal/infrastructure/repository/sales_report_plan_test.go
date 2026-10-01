@@ -4,16 +4,9 @@ package repository
 
 import (
 	"context"
-	"crypto/sha256"
 	"database/sql"
-	"encoding/hex"
-	"encoding/json"
-	"flag"
 	"fmt"
 	"math"
-	"os"
-	"path/filepath"
-	"sort"
 	"strings"
 	"sync"
 	"testing"
@@ -644,8 +637,6 @@ func TestSalesSummary_ReadsItsScope(t *testing.T) {
 	}.run(t)
 }
 
-var updatePlanResults = flag.Bool("update-plan-results", false, "rewrite testdata/plan_results from the current code")
-
 // TestSalesReports_ResultsUnchanged pins what every plan-tested sales report returns on the corpus, so
 // a change made for its plan cannot change its answer: each request's result, read from the rollups
 // and from the lines alone, must hash to the digest recorded before the change.
@@ -656,12 +647,7 @@ func TestSalesReports_ResultsUnchanged(t *testing.T) {
 	q := sqlc.New(db)
 	ctx := context.Background()
 
-	digest := func(v any) string {
-		raw, err := json.Marshal(v)
-		require.NoError(t, err)
-		sum := sha256.Sum256(raw)
-		return hex.EncodeToString(sum[:8])
-	}
+	digest := func(v any) string { return planDigest(t, v) }
 	got := map[string]string{}
 	// A request read from the rollups and the same one read cold share a key.
 	record := func(report, name, d string) {
@@ -682,31 +668,5 @@ func TestSalesReports_ResultsUnchanged(t *testing.T) {
 		require.NoError(t, err)
 		record("summary", c.name, digest(s))
 	}
-
-	path := filepath.Join("testdata", "plan_results", "sales_reports.json")
-	if *updatePlanResults {
-		keys := make([]string, 0, len(got))
-		for k := range got {
-			keys = append(keys, k)
-		}
-		sort.Strings(keys)
-		var sb strings.Builder
-		sb.WriteString("{\n")
-		for i, k := range keys {
-			fmt.Fprintf(&sb, "  %q: %q", k, got[k])
-			if i < len(keys)-1 {
-				sb.WriteString(",")
-			}
-			sb.WriteString("\n")
-		}
-		sb.WriteString("}\n")
-		require.NoError(t, os.MkdirAll(filepath.Dir(path), 0o755))
-		require.NoError(t, os.WriteFile(path, []byte(sb.String()), 0o644))
-		return
-	}
-	raw, err := os.ReadFile(path)
-	require.NoError(t, err)
-	var want map[string]string
-	require.NoError(t, json.Unmarshal(raw, &want))
-	require.Equal(t, want, got)
+	checkPlanResults(t, "sales_reports.json", got)
 }

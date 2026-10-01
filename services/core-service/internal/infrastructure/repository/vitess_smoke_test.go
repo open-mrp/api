@@ -659,6 +659,22 @@ func TestVitessSmoke(t *testing.T) {
 		checkAPI("DeleteSettlementOwnedTransactions", locked.DeleteSettlementOwnedTransactions(ctx, acct, "sl_smoke"))
 	})
 
+	// Delivery performance forces the order's ship-by keys and takes customers resolved to buyers.
+	t.Run("delivery performance", func(t *testing.T) {
+		schedule := NewProductionScheduleInputRepo(q)
+		from, to := time.Date(2000, 1, 1, 0, 0, 0, 0, time.UTC), time.Now().UTC().AddDate(1, 0, 0)
+		for _, f := range []domain.DeliveryFilters{
+			{},
+			{CustomerIDs: buyers, CustomerGroupIDs: groups, ProductLineIDs: productLines, SalesRepIDs: []string{"acus_none"}},
+			{CustomerIDs: buyers},
+		} {
+			_, apiErr := schedule.ListDeliveryOutcomes(ctx, account, from, to, f)
+			checkAPI("ListDeliveryOutcomes", apiErr)
+			_, apiErr = schedule.CountUncommittedOrders(ctx, account, from, to, f)
+			checkAPI("CountUncommittedOrders", apiErr)
+		}
+	})
+
 	t.Run("sales facts and reports", func(t *testing.T) {
 		facts := NewSalesFactRepo(q)
 		invoices := ids("SELECT id FROM invoice")

@@ -108,6 +108,9 @@ func newItemListQuery(params domain.ListItemsParams, lineIDs []string) *itemList
 	q := &itemListQuery{catalogFilter: catalogFilter{search: db.NewCatalogSearch(params.Query)}}
 	q.add("i.account_id = ?", params.AccountID)
 	q.add("i.deleted_at IS NULL")
+	// The page holds only items the list hydrates, which inner-joins the category: one whose category was
+	// deleted would take a page slot and then be dropped, leaving the page short.
+	q.add("EXISTS (SELECT 1 FROM item_category pic WHERE pic.id = i.item_category_id)")
 	q.in("i.item_type_code", params.Types)
 	q.in("i.item_category_id", params.CategoryIDs)
 	q.types, q.categories = len(params.Types) > 0, len(params.CategoryIDs) > 0

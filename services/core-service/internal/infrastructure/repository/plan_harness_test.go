@@ -475,7 +475,7 @@ func (s listPlanSuite[P]) check(t *testing.T, db *sql.DB, edb *explainingDB, q *
 	// planner takes one when offered an unfiltered key beside a filter's, swapping the filter's range for
 	// the unfiltered key's order; how far it then reads depends on where the page lies, so it is failed
 	// on sight rather than only when this corpus makes it expensive.
-	if fullScanRe(s.alias).MatchString(stmt.plan) {
+	if hasFullScan(stmt.plan, s.alias) {
 		t.Errorf("full index scan of %s\n%s\n%s", s.table, stmt.query, stmt.plan)
 	}
 	got := tableAccess(stmt.plan, s.alias)
@@ -598,10 +598,22 @@ func (s lookupPlanSuite) run(t *testing.T) {
 	}
 }
 
-// fullScanRe matches a full index or table scan of alias in EXPLAIN ANALYZE's tree: "Index scan on t
-// using k", "Covering index scan on t …", "Table scan on t". Lookups and range scans don't match.
-func fullScanRe(alias string) *regexp.Regexp {
-	return regexp.MustCompile(`-> (?:Covering index scan|Index scan|Table scan) on ` + regexp.QuoteMeta(alias) + `(?: |$)`)
+// hasFullScan reports a full index or table scan of alias in EXPLAIN ANALYZE's tree: "Index scan on t
+// using k", "Covering index scan on t …", "Table scan on t". Lookups and range scans don't count, nor
+// a table scan of a materialized derived table that happens to share the alias.
+func hasFullScan(plan, alias string) bool {
+	re := regexp.MustCompile(`-> (?:Covering index scan|Index scan|Table scan) on ` + regexp.QuoteMeta(alias) + `(?: |$)`)
+	lines := strings.Split(plan, "\n")
+	for i, line := range lines {
+		if !re.MatchString(line) {
+			continue
+		}
+		if strings.Contains(line, "-> Table scan on ") && i+1 < len(lines) && strings.Contains(lines[i+1], "-> Materialize") {
+			continue
+		}
+		return true
+	}
+	return false
 }
 
 // planCursorAt is a cursor at at and id, paging in dir.

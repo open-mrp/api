@@ -4,12 +4,14 @@ package repository
 
 import (
 	"context"
+	"database/sql"
 	"testing"
 	"time"
 
 	"github.com/open-mrp/api/services/core-service/internal/domain"
 	"github.com/open-mrp/api/services/core-service/internal/infrastructure/sqlc"
 	"github.com/open-mrp/api/shared/pagination"
+	"github.com/stretchr/testify/require"
 )
 
 func salesLinePlanDims() []planDim[domain.ListSalesLinesParams] {
@@ -74,5 +76,59 @@ func TestSalesLineList_ReadsAboutAPage(t *testing.T) {
 			}
 			return nil
 		},
+		floor: salesLinePairFloor,
 	}.run(t)
+}
+
+// salesLinePairFloor is, for a request with two or more independent filters (customers, a sales rep,
+// an item, a product line), the lines its narrowest filter matches in its window; otherwise 0. Each
+// filter has a key in list order, but no key pins two: walking the narrowest filter's key with the
+// others checked per row reads at most that filter's range, and pair keys for every combination were
+// judged not worth their write cost on sales_line_fact (a few ms at this endpoint's traffic).
+func salesLinePairFloor(t *testing.T, db *sql.DB, p domain.ListSalesLinesParams) float64 {
+	t.Helper()
+	f := p.SalesReportFilter
+	only := domain.SalesReportFilter{AccountID: f.AccountID}
+	var filters []domain.SalesReportFilter
+	if len(f.CustomerIDs) > 0 || len(f.CustomerGroupIDs) > 0 {
+		c := only
+		c.CustomerIDs, c.CustomerGroupIDs = f.CustomerIDs, f.CustomerGroupIDs
+		filters = append(filters, c)
+	}
+	if len(f.SalesRepIDs) > 0 {
+		c := only
+		c.SalesRepIDs = f.SalesRepIDs
+		filters = append(filters, c)
+	}
+	if len(f.ItemIDs) > 0 {
+		c := only
+		c.ItemIDs = f.ItemIDs
+		filters = append(filters, c)
+	}
+	if len(f.ProductLineIDs) > 0 {
+		c := only
+		c.ProductLineIDs = f.ProductLineIDs
+		filters = append(filters, c)
+	}
+	if len(filters) < 2 {
+		return 0
+	}
+	var windows [][2]time.Time
+	if p.HasWindow {
+		windows = [][2]time.Time{{p.StartsAt, p.EndsAt}}
+	}
+	repo := &salesReportRepoImpl{queries: sqlc.New(db), mode: rollupAuto}
+	floor := -1.0
+	for _, one := range filters {
+		q, apiErr := repo.newSalesFactQuery(context.Background(), one, windows)
+		require.Nil(t, apiErr)
+		var n float64
+		if !q.empty {
+			require.NoError(t, db.QueryRow("SELECT COUNT(*) FROM sales_line_fact f WHERE "+q.where.String(), q.args...).Scan(&n))
+		}
+		if floor < 0 || n < floor {
+			floor = n
+		}
+	}
+	return floor
 }

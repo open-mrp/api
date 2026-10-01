@@ -61,6 +61,9 @@ func (r *transactionAllocationRepoImpl) ListEntries(ctx context.Context, params 
 
 	f := &transactionFilter{}
 	f.add("ta.account_id = ?", params.AccountID)
+	// The page holds only entries the list hydrates, which inner-joins the invoice: voiding a shipment
+	// deletes its invoice and leaves the allocations, which would take page slots and then be dropped.
+	f.add("EXISTS (SELECT 1 FROM invoice pinv WHERE pinv.id = ta.invoice_id)")
 	f.indexes = []string{allocationCreatedIndex}
 	if params.TransactionType != nil {
 		f.add("ta.transaction_type_code = ?", *params.TransactionType)

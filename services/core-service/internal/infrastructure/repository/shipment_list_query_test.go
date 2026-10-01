@@ -21,8 +21,10 @@ func TestBuildShipmentListQuery_IndexHintFollowsFilters(t *testing.T) {
 		want string
 	}{
 		{"unfiltered reads in order", shipmentListQuery{}, shipmentCreatedIndex},
-		{"status offers its key", shipmentListQuery{Status: new("packed")}, shipmentCreatedIndex + ", " + shipmentStatusIndex},
-		{"one customer offers the buyer key", shipmentListQuery{BuyerIDs: []string{"ac_c"}}, shipmentCreatedIndex + ", " + shipmentBuyerIndex},
+		// Never the created key beside a filter's: the planner may walk it from the far end instead.
+		{"status offers its key", shipmentListQuery{Status: new("packed")}, shipmentStatusIndex},
+		{"one customer offers the buyer key", shipmentListQuery{BuyerIDs: []string{"ac_c"}}, shipmentBuyerIndex},
+		{"status and one customer offer both", shipmentListQuery{Status: new("packed"), BuyerIDs: []string{"ac_c"}}, shipmentStatusIndex + ", " + shipmentBuyerIndex},
 		// A set's ranges of the buyer key come out of order, so walking it for the set would sort.
 		{"a customer set walks the others", shipmentListQuery{BuyerIDs: []string{"ac_c1", "ac_c2"}}, shipmentCreatedIndex},
 		{"a few customers read their ranges", shipmentListQuery{BuyerIDs: []string{"ac_c1", "ac_c2"}, Drive: shipmentDriveBuyers}, shipmentBuyerIndex},

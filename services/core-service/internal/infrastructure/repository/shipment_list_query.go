@@ -57,21 +57,34 @@ type shipmentListQuery struct {
 }
 
 // indexHint is the list-order keys a walk may use: the status key for a status, the buyer key for one
-// customer, and the created key always. A set of customers walks only the others, since reading its
-// ranges of the buyer key yields them out of order.
+// customer, or else the created key alone. Offered beside a filter's key, the created key may be
+// swapped in for the order and walked from the account's far end rather than ranged from the cursor.
+// A set of customers walks the others, since reading its ranges of the buyer key yields them out of
+// order.
 func (q shipmentListQuery) indexHint() []string {
 	if q.Drive == shipmentDriveBuyers {
 		return []string{shipmentBuyerIndex}
 	}
-	hint := []string{shipmentCreatedIndex}
+	var hint []string
 	if q.Status != nil {
 		hint = append(hint, shipmentStatusIndex)
 	}
 	if len(q.BuyerIDs) == 1 {
 		hint = append(hint, shipmentBuyerIndex)
 	}
+	if len(hint) == 0 {
+		hint = []string{shipmentCreatedIndex}
+	}
 	return hint
 }
+
+// shipmentListable is the rows GetShipmentsByIDs joins with inner joins, probed per shipment so the
+// page holds only shipments it will hydrate: a page id it dropped would leave the page short.
+const shipmentListable = " AND EXISTS (SELECT 1 FROM sales_order so0" +
+	" JOIN account_relation ar0 ON ar0.owner_account_id = so0.owner_account_id AND ar0.counterparty_account_id = so0.buyer_account_id" +
+	" JOIN account ba0 ON ba0.id = so0.buyer_account_id WHERE so0.id = s.sales_order_id)" +
+	" AND EXISTS (SELECT 1 FROM carrier cr0 WHERE cr0.id = s.carrier_id)" +
+	" AND EXISTS (SELECT 1 FROM shipment_status ss0 WHERE ss0.code = s.shipment_status_code)"
 
 // buildShipmentListQuery returns the query for one page of shipment ids (Limit rows, newest first
 // going forward) and its bind args. Only the predicates the caller set are emitted.
@@ -94,6 +107,7 @@ func buildShipmentListQuery(q shipmentListQuery) (string, []any) {
 	}
 	b.WriteString(" WHERE s.account_id = ?")
 	args = append(args, q.AccountID)
+	b.WriteString(shipmentListable)
 	if q.Status != nil {
 		b.WriteString(" AND s.shipment_status_code = ?")
 		args = append(args, *q.Status)

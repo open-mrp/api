@@ -426,6 +426,19 @@ func (r *customerRepoImpl) List(ctx context.Context, params domain.ListCustomers
 		parentAccountFilterValue = *params.IsParentAccount
 	}
 
+	// Resolved up front: as a subquery the planner walks the owner's customers to find the group's few.
+	var pricingRelationIDs []string
+	if includePricingGroupFilter {
+		ids, err := r.queries.ListPriceGroupRelationIDs(ctx, params.PricingGroupIDs)
+		if apiErr := db.MapSQLError(err); apiErr != nil {
+			return nil, tracing.Trace(span, apiErr)
+		}
+		if len(ids) == 0 {
+			return &domain.ListCustomersResult{Items: []*domain.Customer{}, PageInfo: pagination.PageInfo{}}, nil
+		}
+		pricingRelationIDs = ids
+	}
+
 	var cursorDir *pagination.Direction
 
 	if params.Cursor != nil {
@@ -442,7 +455,7 @@ func (r *customerRepoImpl) List(ctx context.Context, params domain.ListCustomers
 				IncludeCustomerGroupFilter:    includeCustomerGroupFilter,
 				CustomerGroupIds:              ensureNullStringSlice(params.CustomerGroupIDs),
 				IncludePricingGroupFilter:     includePricingGroupFilter,
-				PricingGroupIds:               ensureStringSlice(params.PricingGroupIDs),
+				PricingRelationIds:            ensureStringSlice(pricingRelationIDs),
 				IncludeSalesRepFilter:         includeSalesRepFilter,
 				SalesRepIds:                   ensureNullStringSlice(params.SalesRepIDs),
 				IncludeStatusFilter:           includeStatusFilter,
@@ -493,7 +506,7 @@ func (r *customerRepoImpl) List(ctx context.Context, params domain.ListCustomers
 			IncludeCustomerGroupFilter:    includeCustomerGroupFilter,
 			CustomerGroupIds:              ensureNullStringSlice(params.CustomerGroupIDs),
 			IncludePricingGroupFilter:     includePricingGroupFilter,
-			PricingGroupIds:               ensureStringSlice(params.PricingGroupIDs),
+			PricingRelationIds:            ensureStringSlice(pricingRelationIDs),
 			IncludeSalesRepFilter:         includeSalesRepFilter,
 			SalesRepIds:                   ensureNullStringSlice(params.SalesRepIDs),
 			IncludeStatusFilter:           includeStatusFilter,
@@ -544,7 +557,7 @@ func (r *customerRepoImpl) List(ctx context.Context, params domain.ListCustomers
 		IncludeCustomerGroupFilter:    includeCustomerGroupFilter,
 		CustomerGroupIds:              ensureNullStringSlice(params.CustomerGroupIDs),
 		IncludePricingGroupFilter:     includePricingGroupFilter,
-		PricingGroupIds:               ensureStringSlice(params.PricingGroupIDs),
+		PricingRelationIds:            ensureStringSlice(pricingRelationIDs),
 		IncludeSalesRepFilter:         includeSalesRepFilter,
 		SalesRepIds:                   ensureNullStringSlice(params.SalesRepIDs),
 		IncludeStatusFilter:           includeStatusFilter,

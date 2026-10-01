@@ -68,24 +68,6 @@ func mapItemBaseRow(id, sku string, description, notes gosql.NullString, itemTyp
 	}
 }
 
-func mapItemForwardBaseRow(row sqlc.ListItemsForwardBaseRow) *domain.Item {
-	return mapItemBaseRow(
-		row.ID, row.Sku, row.Description, row.Notes,
-		row.ItemTypeCode, row.ItemCategoryID, row.CategoryName, row.ItemCategoryTypeCode, row.CategoryUnitGroupID,
-		row.UnitValueID, row.UnitCostID, row.BurnRateID, row.AccountID,
-		row.IsDirty, row.CreatedAt, row.UpdatedAt, row.CategoryCreatedAt, row.CategoryUpdatedAt,
-	)
-}
-
-func mapItemBackwardBaseRow(row sqlc.ListItemsBackwardBaseRow) *domain.Item {
-	return mapItemBaseRow(
-		row.ID, row.Sku, row.Description, row.Notes,
-		row.ItemTypeCode, row.ItemCategoryID, row.CategoryName, row.ItemCategoryTypeCode, row.CategoryUnitGroupID,
-		row.UnitValueID, row.UnitCostID, row.BurnRateID, row.AccountID,
-		row.IsDirty, row.CreatedAt, row.UpdatedAt, row.CategoryCreatedAt, row.CategoryUpdatedAt,
-	)
-}
-
 func mapGetItemBaseRow(row sqlc.GetItemBaseRow) *domain.Item {
 	return mapItemBaseRow(
 		row.ID, row.Sku, row.Description, row.Notes,
@@ -475,169 +457,37 @@ func (r *itemRepoImpl) List(ctx context.Context, params domain.ListItemsParams) 
 	ctx, span := itemRepoTracer.Start(ctx, "repository.item.list")
 	defer span.End()
 
-	catSearch := db.NewCatalogSearch(params.Query)
-	searchQuery := catSearch.Contains
-	searchExact := catSearch.Exact
-	searchRankEnabled := catSearch.Contains.Valid
-	itemSearchRank := func(it *domain.Item) int32 {
-		return db.CatalogSearchRank(it.SKU, catSearch)
-	}
-	includeTypeFilter := len(params.Types) > 0
-	includeCategoryFilter := len(params.CategoryIDs) > 0
-	includeAttributeFilter := len(params.AttributeIDs) > 0
-	includeProductLineFilter := len(params.ProductLineIDs) > 0
-	includeCustomerFilter := len(params.CustomerIDs) > 0
-
-	types := params.Types
-	if types == nil {
-		types = []string{}
-	}
-	categoryIDs := params.CategoryIDs
-	if categoryIDs == nil {
-		categoryIDs = []string{}
-	}
-	attributeIDs := params.AttributeIDs
-	if attributeIDs == nil {
-		attributeIDs = []string{}
-	}
-	// product_line_ids column is nullable so sqlc generates []sql.NullString for this slice.
-	productLineIDs := make([]gosql.NullString, len(params.ProductLineIDs))
-	for i, id := range params.ProductLineIDs {
-		productLineIDs[i] = gosql.NullString{String: id, Valid: true}
-	}
-	customerIDs := params.CustomerIDs
-	if customerIDs == nil {
-		customerIDs = []string{}
-	}
-
-	var startDate, endDate gosql.NullTime
-	if params.StartDate != nil {
-		startDate = gosql.NullTime{Time: *params.StartDate, Valid: true}
-	}
-	if params.EndDate != nil {
-		endDate = gosql.NullTime{Time: *params.EndDate, Valid: true}
-	}
-
-	supplierID := gosql.NullString{}
-	if params.SupplierID != nil {
-		supplierID = gosql.NullString{String: *params.SupplierID, Valid: true}
-	}
-
+	var cur *pagination.StringCursor
 	var cursorDir *pagination.Direction
-	var items []*domain.Item
-
 	if params.Cursor != nil {
-		cur, err := pagination.DecodeStringCursor(*params.Cursor)
+		decoded, err := pagination.DecodeStringCursor(*params.Cursor)
 		if err != nil {
 			return nil, apierror.NewValidationErrorWithParam("Invalid pagination cursor.", "cursor")
 		}
-		cursorDir = &cur.Direction
-
-		if cur.Direction == pagination.DirectionBackward {
-			rows, err := r.queries.ListItemsBackwardBase(ctx, sqlc.ListItemsBackwardBaseParams{
-				AccountID:                params.AccountID,
-				IncludeTypeFilter:        includeTypeFilter,
-				ItemTypeCodes:            types,
-				IncludeCategoryFilter:    includeCategoryFilter,
-				CategoryIds:              categoryIDs,
-				IncludeAttributeFilter:   includeAttributeFilter,
-				AttributeIds:             attributeIDs,
-				SupplierID:               supplierID,
-				StartDate:                startDate,
-				EndDate:                  endDate,
-				SearchQuery:              searchQuery,
-				SearchExact:              searchExact,
-				SkuExactForMatch:         searchExact,
-				SearchPrefix:             catSearch.Prefix,
-				IsExactMatch:             params.IsExactMatch,
-				OnlyInitialSubassemblies: params.OnlyInitialSubassemblies,
-				IncludeProductLineFilter: includeProductLineFilter,
-				ProductLineIds:           productLineIDs,
-				IncludeCustomerFilter:    includeCustomerFilter,
-				CustomerIds:              customerIDs,
-				CursorMatchTier:          db.NullTierInt64Param(cur.MatchTier),
-				CursorCreatedAt:          cur.OccurredAt,
-				CursorID:                 cur.ID,
-				Limit:                    params.Limit + 1,
-			})
-			if apiErr := db.MapSQLError(err); apiErr != nil {
-				return nil, tracing.Trace(span, apiErr)
-			}
-			items = make([]*domain.Item, len(rows))
-			for i, row := range rows {
-				items[i] = mapItemBackwardBaseRow(row)
-			}
-		} else {
-			// Forward with cursor
-			rows, err := r.queries.ListItemsForwardBase(ctx, sqlc.ListItemsForwardBaseParams{
-				AccountID:                params.AccountID,
-				IncludeTypeFilter:        includeTypeFilter,
-				ItemTypeCodes:            types,
-				IncludeCategoryFilter:    includeCategoryFilter,
-				CategoryIds:              categoryIDs,
-				IncludeAttributeFilter:   includeAttributeFilter,
-				AttributeIds:             attributeIDs,
-				SupplierID:               supplierID,
-				StartDate:                startDate,
-				EndDate:                  endDate,
-				SearchQuery:              searchQuery,
-				SearchExact:              searchExact,
-				SkuExactForMatch:         searchExact,
-				SearchPrefix:             catSearch.Prefix,
-				IsExactMatch:             params.IsExactMatch,
-				OnlyInitialSubassemblies: params.OnlyInitialSubassemblies,
-				IncludeProductLineFilter: includeProductLineFilter,
-				ProductLineIds:           productLineIDs,
-				IncludeCustomerFilter:    includeCustomerFilter,
-				CustomerIds:              customerIDs,
-				CursorCreatedAt:          gosql.NullTime{Time: cur.OccurredAt, Valid: true},
-				CursorMatchTier:          db.NullTierInt64Param(cur.MatchTier),
-				CursorID:                 gosql.NullString{String: cur.ID, Valid: true},
-				Limit:                    params.Limit + 1,
-			})
-			if apiErr := db.MapSQLError(err); apiErr != nil {
-				return nil, tracing.Trace(span, apiErr)
-			}
-			items = make([]*domain.Item, len(rows))
-			for i, row := range rows {
-				items[i] = mapItemForwardBaseRow(row)
-			}
-		}
-	} else {
-		// No cursor — first page
-		rows, err := r.queries.ListItemsForwardBase(ctx, sqlc.ListItemsForwardBaseParams{
-			AccountID:                params.AccountID,
-			IncludeTypeFilter:        includeTypeFilter,
-			ItemTypeCodes:            types,
-			IncludeCategoryFilter:    includeCategoryFilter,
-			CategoryIds:              categoryIDs,
-			IncludeAttributeFilter:   includeAttributeFilter,
-			AttributeIds:             attributeIDs,
-			SupplierID:               supplierID,
-			StartDate:                startDate,
-			EndDate:                  endDate,
-			SearchQuery:              searchQuery,
-			SearchExact:              searchExact,
-			SkuExactForMatch:         searchExact,
-			SearchPrefix:             catSearch.Prefix,
-			IsExactMatch:             params.IsExactMatch,
-			OnlyInitialSubassemblies: params.OnlyInitialSubassemblies,
-			IncludeProductLineFilter: includeProductLineFilter,
-			ProductLineIds:           productLineIDs,
-			IncludeCustomerFilter:    includeCustomerFilter,
-			CustomerIds:              customerIDs,
-			Limit:                    params.Limit + 1,
-		})
-		if apiErr := db.MapSQLError(err); apiErr != nil {
-			return nil, tracing.Trace(span, apiErr)
-		}
-		items = make([]*domain.Item, len(rows))
-		for i, row := range rows {
-			items[i] = mapItemForwardBaseRow(row)
-		}
+		cur, cursorDir = &decoded, &decoded.Direction
 	}
 
-	result, pageInfo := pagination.BuildPageStringWithSearchRank(items, params.Limit, cursorDir, searchRankEnabled, itemCreatedAt, itemID, itemSearchRank)
+	// Resolved up front so the product key can drive a rare line instead of every item probing for it.
+	lineIDs, err := itemListLines(ctx, r.queries.DB(), params)
+	if apiErr := db.MapSQLError(err); apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
+	if lineIDs != nil && len(lineIDs) == 0 {
+		return &domain.ListItemsResult{Items: []*domain.Item{}, PageInfo: pagination.PageInfo{}}, nil
+	}
+
+	q := newItemListQuery(params, lineIDs)
+	orderBy, orderArgs := q.page(cur, "i.created_at", "i.id")
+	items, err := r.list(ctx, q, orderBy, orderArgs, params.Limit+1)
+	if apiErr := db.MapSQLError(err); apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
+
+	catSearch := q.search
+	itemSearchRank := func(it *domain.Item) int32 {
+		return db.CatalogSearchRank(it.SKU, catSearch)
+	}
+	result, pageInfo := pagination.BuildPageStringWithSearchRank(items, params.Limit, cursorDir, catSearch.Contains.Valid, itemCreatedAt, itemID, itemSearchRank)
 
 	if apiErr := applyItemStitches(ctx, r.queries, result, params.Includes); apiErr != nil {
 		return nil, tracing.Trace(span, apiErr)

@@ -1,0 +1,80 @@
+{
+ "source": "augno_core/prod, mysql.innodb_table_stats and mysql.innodb_index_stats, read 2026-10-01",
+ "table": {
+  "n_rows": 2282,
+  "clustered_index_size": 25,
+  "sum_of_other_index_sizes": 43
+ },
+ "indexes": [
+  {
+   "index": "PRIMARY",
+   "stat": "n_diff_pfx01",
+   "value": 2282
+  },
+  {
+   "index": "PRIMARY",
+   "stat": "n_leaf_pages",
+   "value": 24
+  },
+  {
+   "index": "PRIMARY",
+   "stat": "size",
+   "value": 25
+  },
+  {
+   "index": "product_item_id_key",
+   "stat": "n_diff_pfx01",
+   "value": 2200
+  },
+  {
+   "index": "product_item_id_key",
+   "stat": "n_leaf_pages",
+   "value": 15
+  },
+  {
+   "index": "product_item_id_key",
+   "stat": "size",
+   "value": 16
+  },
+  {
+   "index": "product_product_line_id_idx",
+   "stat": "n_diff_pfx01",
+   "value": 74
+  },
+  {
+   "index": "product_product_line_id_idx",
+   "stat": "n_diff_pfx02",
+   "value": 2200
+  },
+  {
+   "index": "product_product_line_id_idx",
+   "stat": "n_leaf_pages",
+   "value": 17
+  },
+  {
+   "index": "product_product_line_id_idx",
+   "stat": "size",
+   "value": 18
+  },
+  {
+   "index": "product_product_type_code_idx",
+   "stat": "n_diff_pfx01",
+   "value": 5
+  },
+  {
+   "index": "product_product_type_code_idx",
+   "stat": "n_diff_pfx02",
+   "value": 2200
+  },
+  {
+   "index": "product_product_type_code_idx",
+   "stat": "n_leaf_pages",
+   "value": 8
+  },
+  {
+   "index": "product_product_type_code_idx",
+   "stat": "size",
+   "value": 9
+  }
+ ]
+}

@@ -73,7 +73,7 @@ type explainedStatement struct {
 }
 
 func (e *explainingDB) QueryContext(ctx context.Context, query string, args ...any) (*sql.Rows, error) {
-	if strings.HasPrefix(strings.TrimSpace(query), "SELECT") {
+	if strings.HasPrefix(strings.TrimSpace(stripLeadingComments(query)), "SELECT") {
 		plan, err := explainAnalyze(ctx, e.db, query, args...)
 		if err != nil {
 			return nil, err
@@ -81,6 +81,18 @@ func (e *explainingDB) QueryContext(ctx context.Context, query string, args ...a
 		e.statements = append(e.statements, explainedStatement{query: query, args: args, plan: plan})
 	}
 	return e.db.QueryContext(ctx, query, args...)
+}
+
+// stripLeadingComments drops the "-- name: ..." lines sqlc puts ahead of its statements.
+func stripLeadingComments(query string) string {
+	for {
+		trimmed := strings.TrimSpace(query)
+		if !strings.HasPrefix(trimmed, "--") {
+			return trimmed
+		}
+		_, rest, _ := strings.Cut(trimmed, "\n")
+		query = rest
+	}
 }
 
 func explainAnalyze(ctx context.Context, db *sql.DB, query string, args ...any) (string, error) {
@@ -319,6 +331,23 @@ type listPlanSuite[P any] struct {
 	// filter no index can serve in list order (a FULLTEXT match, a range on a column the list does not
 	// sort by) cannot stop at a page, so the bar for such a request is reading only its matches.
 	floor func(t *testing.T, db *sql.DB, p P) float64
+	// joinScoped marks a table with no scope column of its own, scoped through a join (a product through
+	// its item): no key yields one tenant's rows in list order, so every request is held to its floor.
+	joinScoped bool
+	// statsTables (optional) are further tables the statement reads whose statistics are swapped too.
+	statsTables []string
+	// reads (optional) are the statement's other tables, each held to its fan-out of the listed table.
+	reads []planRead[P]
+}
+
+// planRead is another table a list statement reads: a filter's subquery, a joined lookup. It may read
+// fanout rows for each row read of the listed table, plus a page: a per-row probe. Or, when matches is
+// set, about as many rows as the filter matches there: the filter's rows read once, to drive from or
+// to semi-join against. More is a table scanned, or probed with a key that does not pin the row.
+type planRead[P any] struct {
+	alias   string
+	fanout  float64
+	matches func(t *testing.T, db *sql.DB, p P) float64
 }
 
 // planRowBudget is the most of the listed table one page may read: the page, plus room for residual
@@ -338,12 +367,18 @@ func (s listPlanSuite[P]) run(t *testing.T) {
 	db := planDB(t)
 	edb := &explainingDB{db: db}
 	q := sqlc.New(edb)
-	indexes := scopeIndexes(t, db, s.table, s.scopeColumn)
+	var indexes []string
+	if !s.joinScoped {
+		indexes = scopeIndexes(t, db, s.table, s.scopeColumn)
+	}
 
+	tables := append([]string{s.table}, s.statsTables...)
 	for _, mode := range planStatsModes {
 		t.Run("stats="+mode, func(t *testing.T) {
-			usePlanStats(t, db, s.table, mode)
-			t.Cleanup(func() { usePlanStats(t, db, s.table, "analyzed") })
+			for _, table := range tables {
+				usePlanStats(t, db, table, mode)
+				t.Cleanup(func() { usePlanStats(t, db, table, "analyzed") })
+			}
 			for _, tc := range s.cases {
 				t.Run(tc.name, func(t *testing.T) { s.check(t, db, edb, q, indexes, tc) })
 			}
@@ -362,12 +397,27 @@ func (s listPlanSuite[P]) check(t *testing.T, db *sql.DB, edb *explainingDB, q *
 			stmt = &edb.statements[i]
 		}
 	}
-	require.NotNil(t, stmt, "no statement read %q", s.from)
+	if stmt == nil {
+		return // answered without reading the table, e.g. filters that cannot match
+	}
 
 	got := tableAccess(stmt.plan, s.alias)
 	limit := s.limit(tc.params)
 	page := float64(limit + 1)
 	budget := planRowBudget(limit)
+	for _, r := range s.reads {
+		a := tableAccess(stmt.plan, r.alias)
+		if a.rows <= r.fanout*got.rows+budget {
+			continue
+		}
+		if r.matches != nil {
+			if m := r.matches(t, db, tc.params); a.rows <= 2*m+page {
+				continue
+			}
+		}
+		t.Errorf("read %.0f rows of %s via %v for %.0f %s rows; it fans out to %.0f per row\n%s",
+			a.rows, r.alias, a.indexes, got.rows, s.table, r.fanout, stmt.plan)
+	}
 	if got.rows <= budget {
 		return
 	}
@@ -379,6 +429,10 @@ func (s listPlanSuite[P]) check(t *testing.T, db *sql.DB, edb *explainingDB, q *
 		floor = s.floor(t, db, tc.params)
 	}
 	if floor > 0 && got.rows <= 2*floor+2*page {
+		return
+	}
+	if s.joinScoped {
+		t.Errorf("read %.0f %s rows via %v; the request matches only %.0f\n%s", got.rows, s.table, got.indexes, floor, stmt.plan)
 		return
 	}
 	best, bestIndex := bestForcedAccess(t, db, *stmt, s.from, s.alias, indexes)

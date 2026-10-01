@@ -1,4 +1,7 @@
 -- name: ListAddressesForward :many
+-- Addresses carry no account, so no key yields one account's in list order: the page is chosen from
+-- the account's links (STRAIGHT_JOIN, so neither address nor geolocation, which hold every tenant's
+-- rows, is scanned) and its rows joined after.
 SELECT
     a.id,
     a.name,
@@ -19,33 +22,42 @@ SELECT
     g.latitude,
     g.longitude,
     g.timezone
-FROM address a
+FROM (
+    SELECT STRAIGHT_JOIN a.id
+    FROM account_address aa
+    JOIN address a ON a.id = aa.address_id
+    JOIN geolocation g ON g.id = a.geolocation_id
+    WHERE aa.account_id = sqlc.arg('account_id')
+    AND (
+        sqlc.narg('search_query') IS NULL
+        OR a.name LIKE sqlc.narg('search_query')
+        OR g.street_line_1 LIKE sqlc.narg('search_query')
+        OR g.street_line_2 LIKE sqlc.narg('search_query')
+        OR g.locality LIKE sqlc.narg('search_query')
+        OR g.state LIKE sqlc.narg('search_query')
+        OR g.postal_code LIKE sqlc.narg('search_query')
+        OR g.country LIKE sqlc.narg('search_query')
+    )
+    AND (
+        sqlc.narg('drop_ship') IS NULL
+        OR a.is_drop_ship = sqlc.narg('drop_ship')
+    )
+    AND (
+        sqlc.narg('cursor_created_at') IS NULL
+        OR a.created_at < sqlc.narg('cursor_created_at')
+        OR (a.created_at = sqlc.narg('cursor_created_at') AND a.id < sqlc.narg('cursor_id'))
+    )
+    ORDER BY a.created_at DESC, a.id DESC
+    LIMIT ?
+) page
+JOIN address a ON a.id = page.id
 JOIN geolocation g ON a.geolocation_id = g.id
-JOIN account_address aa ON aa.address_id = a.id
-WHERE aa.account_id = sqlc.arg('account_id')
-AND (
-    sqlc.narg('search_query') IS NULL
-    OR a.name LIKE sqlc.narg('search_query')
-    OR g.street_line_1 LIKE sqlc.narg('search_query')
-    OR g.street_line_2 LIKE sqlc.narg('search_query')
-    OR g.locality LIKE sqlc.narg('search_query')
-    OR g.state LIKE sqlc.narg('search_query')
-    OR g.postal_code LIKE sqlc.narg('search_query')
-    OR g.country LIKE sqlc.narg('search_query')
-)
-AND (
-    sqlc.narg('drop_ship') IS NULL
-    OR a.is_drop_ship = sqlc.narg('drop_ship')
-)
-AND (
-    sqlc.narg('cursor_created_at') IS NULL
-    OR a.created_at < sqlc.narg('cursor_created_at')
-    OR (a.created_at = sqlc.narg('cursor_created_at') AND a.id < sqlc.narg('cursor_id'))
-)
-ORDER BY a.created_at DESC, a.id DESC
-LIMIT ?;
+ORDER BY a.created_at DESC, a.id DESC;
 
 -- name: ListAddressesBackward :many
+-- Addresses carry no account, so no key yields one account's in list order: the page is chosen from
+-- the account's links (STRAIGHT_JOIN, so neither address nor geolocation, which hold every tenant's
+-- rows, is scanned) and its rows joined after.
 SELECT
     a.id,
     a.name,
@@ -66,30 +78,36 @@ SELECT
     g.latitude,
     g.longitude,
     g.timezone
-FROM address a
+FROM (
+    SELECT STRAIGHT_JOIN a.id
+    FROM account_address aa
+    JOIN address a ON a.id = aa.address_id
+    JOIN geolocation g ON g.id = a.geolocation_id
+    WHERE aa.account_id = sqlc.arg('account_id')
+    AND (
+        sqlc.narg('search_query') IS NULL
+        OR a.name LIKE sqlc.narg('search_query')
+        OR g.street_line_1 LIKE sqlc.narg('search_query')
+        OR g.street_line_2 LIKE sqlc.narg('search_query')
+        OR g.locality LIKE sqlc.narg('search_query')
+        OR g.state LIKE sqlc.narg('search_query')
+        OR g.postal_code LIKE sqlc.narg('search_query')
+        OR g.country LIKE sqlc.narg('search_query')
+    )
+    AND (
+        sqlc.narg('drop_ship') IS NULL
+        OR a.is_drop_ship = sqlc.narg('drop_ship')
+    )
+    AND (
+        a.created_at > sqlc.arg('cursor_created_at')
+        OR (a.created_at = sqlc.arg('cursor_created_at') AND a.id > sqlc.arg('cursor_id'))
+    )
+    ORDER BY a.created_at ASC, a.id ASC
+    LIMIT ?
+) page
+JOIN address a ON a.id = page.id
 JOIN geolocation g ON a.geolocation_id = g.id
-JOIN account_address aa ON aa.address_id = a.id
-WHERE aa.account_id = sqlc.arg('account_id')
-AND (
-    sqlc.narg('search_query') IS NULL
-    OR a.name LIKE sqlc.narg('search_query')
-    OR g.street_line_1 LIKE sqlc.narg('search_query')
-    OR g.street_line_2 LIKE sqlc.narg('search_query')
-    OR g.locality LIKE sqlc.narg('search_query')
-    OR g.state LIKE sqlc.narg('search_query')
-    OR g.postal_code LIKE sqlc.narg('search_query')
-    OR g.country LIKE sqlc.narg('search_query')
-)
-AND (
-    sqlc.narg('drop_ship') IS NULL
-    OR a.is_drop_ship = sqlc.narg('drop_ship')
-)
-AND (
-    a.created_at > sqlc.arg('cursor_created_at')
-    OR (a.created_at = sqlc.arg('cursor_created_at') AND a.id > sqlc.arg('cursor_id'))
-)
-ORDER BY a.created_at ASC, a.id ASC
-LIMIT ?;
+ORDER BY a.created_at ASC, a.id ASC;
 
 -- name: GetAddress :one
 SELECT

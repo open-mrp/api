@@ -168,6 +168,110 @@ func TestVitessSmoke(t *testing.T) {
 		checkAPI("SalesOrder.GetLinesForOrders", apiErr)
 	})
 
+	// --- catalog and customer lists: page chosen in a derived table, keys forced, filters resolved first ---
+	t.Run("catalog and customer lists", func(t *testing.T) {
+		catAccount := ids("SELECT i.account_id FROM item i JOIN product p ON p.item_id = i.id GROUP BY i.account_id ORDER BY COUNT(*) DESC LIMIT 1")[0]
+		categories := ids("SELECT id FROM item_category WHERE account_id = ? LIMIT 2", catAccount)
+		attributes := append(ids("SELECT id FROM attribute WHERE account_id = ? LIMIT 2", catAccount), "attr_none")
+		suppliers := append(ids("SELECT supplier_account_id FROM supplier_material WHERE owner_account_id = ? LIMIT 1", catAccount), "ac_none")
+		customers := append(ids("SELECT counterparty_account_id FROM account_relation WHERE owner_account_id = ? AND account_relation_role_code = 'customer' LIMIT 2", catAccount), "ac_none")
+		search := "a"
+		from, to := time.Date(2000, 1, 1, 0, 0, 0, 0, time.UTC), time.Now().UTC().Add(time.Hour)
+
+		items := NewItemRepo(q)
+		// One per index hint and filter shape: the created, type, and category keys, the primary key for
+		// a filter on another table, a search's tier ordering, and the subassembly probe.
+		for name, p := range map[string]domain.ListItemsParams{
+			"plain":       {AccountID: catAccount, Limit: 5},
+			"type":        {AccountID: catAccount, Limit: 5, Types: []string{"part", "product"}},
+			"category":    {AccountID: catAccount, Limit: 5, Types: []string{"product"}, CategoryIDs: append(categories, "itcg_none")},
+			"other":       {AccountID: catAccount, Limit: 5, AttributeIDs: attributes, SupplierID: &suppliers[0], ProductLineIDs: productLines},
+			"customer":    {AccountID: catAccount, Limit: 5, CustomerIDs: customers, ProductLineIDs: productLines},
+			"search":      {AccountID: catAccount, Limit: 5, Query: &search, StartDate: &from, EndDate: &to},
+			"exact":       {AccountID: catAccount, Limit: 5, Query: &search, IsExactMatch: true},
+			"subassembly": {AccountID: catAccount, Limit: 5, OnlyInitialSubassemblies: true},
+		} {
+			page, apiErr := items.List(ctx, p)
+			checkAPI("ListItems/"+name, apiErr)
+			if page != nil && page.PageInfo.NextCursor != nil {
+				p.Cursor = page.PageInfo.NextCursor
+				next, apiErr := items.List(ctx, p)
+				checkAPI("ListItems/"+name+" next", apiErr)
+				if next != nil && next.PageInfo.PrevCursor != nil {
+					p.Cursor = next.PageInfo.PrevCursor
+					_, apiErr = items.List(ctx, p)
+					checkAPI("ListItems/"+name+" prev", apiErr)
+				}
+			}
+		}
+
+		products := NewProductRepo(q)
+		yes := true
+		for name, p := range map[string]domain.ListProductsFullParams{
+			"plain":    {AccountID: catAccount, Limit: 5},
+			"category": {AccountID: catAccount, Limit: 5, CategoryIDs: categories, IsPortalReady: &yes},
+			"lines":    {AccountID: catAccount, Limit: 5, ProductLineIDs: productLines, CustomerIDs: customers, AttributeIDs: attributes},
+			"search":   {AccountID: catAccount, Limit: 5, Query: &search, StartDate: &from, EndDate: &to},
+		} {
+			page, apiErr := products.List(ctx, p)
+			checkAPI("ListProductsFull/"+name, apiErr)
+			if page != nil && page.PageInfo.NextCursor != nil {
+				p.Cursor = page.PageInfo.NextCursor
+				next, apiErr := products.List(ctx, p)
+				checkAPI("ListProductsFull/"+name+" next", apiErr)
+				if next != nil && next.PageInfo.PrevCursor != nil {
+					p.Cursor = next.PageInfo.PrevCursor
+					_, apiErr = products.List(ctx, p)
+					checkAPI("ListProductsFull/"+name+" prev", apiErr)
+				}
+			}
+		}
+		_, apiErr := products.SearchBySKU(ctx, catAccount, "%a%")
+		checkAPI("SearchProductsBySKU", apiErr)
+		_, apiErr = products.ListByAccount(ctx, catAccount)
+		checkAPI("ListProductsByAccount", apiErr)
+
+		catalog := NewCatalogRepo(q)
+		_, apiErr = catalog.ListProductLines(ctx, catAccount)
+		checkAPI("ListCatalogProductLines", apiErr)
+		_, apiErr = catalog.ListProductLinesForCustomer(ctx, catAccount, customers[0])
+		checkAPI("ListCatalogProductLinesForCustomer", apiErr)
+		for _, line := range productLines {
+			_, apiErr = catalog.ListProducts(ctx, catAccount, line)
+			checkAPI("ListCatalogProducts", apiErr)
+		}
+
+		customerRepo := NewCustomerRepo(q)
+		state := "NC"
+		for name, p := range map[string]domain.ListCustomersParams{
+			"plain":   {AccountID: catAccount, Limit: 5},
+			"filters": {AccountID: catAccount, Limit: 5, Query: &search, CarrierIDs: carriers, PaymentTermIDs: []string{"pt_none"}},
+			"pricing": {AccountID: catAccount, Limit: 5, PricingGroupIDs: groups, State: &state},
+		} {
+			page, apiErr := customerRepo.List(ctx, p)
+			checkAPI("ListCustomers/"+name, apiErr)
+			if page != nil && page.PageInfo.NextCursor != nil {
+				p.Cursor = page.PageInfo.NextCursor
+				next, apiErr := customerRepo.List(ctx, p)
+				checkAPI("ListCustomers/"+name+" next", apiErr)
+				if next != nil && next.PageInfo.PrevCursor != nil {
+					p.Cursor = next.PageInfo.PrevCursor
+					_, apiErr = customerRepo.List(ctx, p)
+					checkAPI("ListCustomers/"+name+" prev", apiErr)
+				}
+			}
+		}
+
+		addressAccount := ids("SELECT account_id FROM account_address GROUP BY account_id ORDER BY COUNT(*) DESC LIMIT 1")[0]
+		dropShip := false
+		page, apiErr := NewAddressRepo(q).List(ctx, domain.ListAddressesParams{AccountID: addressAccount, Limit: 2, Query: &search, DropShip: &dropShip})
+		checkAPI("ListAddresses", apiErr)
+		if page != nil && page.PageInfo.NextCursor != nil {
+			_, apiErr = NewAddressRepo(q).List(ctx, domain.ListAddressesParams{AccountID: addressAccount, Limit: 2, Cursor: page.PageInfo.NextCursor})
+			checkAPI("ListAddresses next", apiErr)
+		}
+	})
+
 	t.Run("pick list", func(t *testing.T) {
 		repo := NewPickRepo(q)
 		open, closed := "open", "closed"

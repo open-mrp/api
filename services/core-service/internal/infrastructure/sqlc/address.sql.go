@@ -479,30 +479,36 @@ SELECT
     g.latitude,
     g.longitude,
     g.timezone
-FROM address a
+FROM (
+    SELECT STRAIGHT_JOIN a.id
+    FROM account_address aa
+    JOIN address a ON a.id = aa.address_id
+    JOIN geolocation g ON g.id = a.geolocation_id
+    WHERE aa.account_id = ?
+    AND (
+        ? IS NULL
+        OR a.name LIKE ?
+        OR g.street_line_1 LIKE ?
+        OR g.street_line_2 LIKE ?
+        OR g.locality LIKE ?
+        OR g.state LIKE ?
+        OR g.postal_code LIKE ?
+        OR g.country LIKE ?
+    )
+    AND (
+        ? IS NULL
+        OR a.is_drop_ship = ?
+    )
+    AND (
+        a.created_at > ?
+        OR (a.created_at = ? AND a.id > ?)
+    )
+    ORDER BY a.created_at ASC, a.id ASC
+    LIMIT ?
+) page
+JOIN address a ON a.id = page.id
 JOIN geolocation g ON a.geolocation_id = g.id
-JOIN account_address aa ON aa.address_id = a.id
-WHERE aa.account_id = ?
-AND (
-    ? IS NULL
-    OR a.name LIKE ?
-    OR g.street_line_1 LIKE ?
-    OR g.street_line_2 LIKE ?
-    OR g.locality LIKE ?
-    OR g.state LIKE ?
-    OR g.postal_code LIKE ?
-    OR g.country LIKE ?
-)
-AND (
-    ? IS NULL
-    OR a.is_drop_ship = ?
-)
-AND (
-    a.created_at > ?
-    OR (a.created_at = ? AND a.id > ?)
-)
 ORDER BY a.created_at ASC, a.id ASC
-LIMIT ?
 `
 
 type ListAddressesBackwardParams struct {
@@ -536,6 +542,9 @@ type ListAddressesBackwardRow struct {
 	Timezone          sql.NullString
 }
 
+// Addresses carry no account, so no key yields one account's in list order: the page is chosen from
+// the account's links (STRAIGHT_JOIN, so neither address nor geolocation, which hold every tenant's
+// rows, is scanned) and its rows joined after.
 func (q *Queries) ListAddressesBackward(ctx context.Context, arg ListAddressesBackwardParams) ([]ListAddressesBackwardRow, error) {
 	rows, err := q.db.QueryContext(ctx, listAddressesBackward,
 		arg.AccountID,
@@ -616,31 +625,37 @@ SELECT
     g.latitude,
     g.longitude,
     g.timezone
-FROM address a
+FROM (
+    SELECT STRAIGHT_JOIN a.id
+    FROM account_address aa
+    JOIN address a ON a.id = aa.address_id
+    JOIN geolocation g ON g.id = a.geolocation_id
+    WHERE aa.account_id = ?
+    AND (
+        ? IS NULL
+        OR a.name LIKE ?
+        OR g.street_line_1 LIKE ?
+        OR g.street_line_2 LIKE ?
+        OR g.locality LIKE ?
+        OR g.state LIKE ?
+        OR g.postal_code LIKE ?
+        OR g.country LIKE ?
+    )
+    AND (
+        ? IS NULL
+        OR a.is_drop_ship = ?
+    )
+    AND (
+        ? IS NULL
+        OR a.created_at < ?
+        OR (a.created_at = ? AND a.id < ?)
+    )
+    ORDER BY a.created_at DESC, a.id DESC
+    LIMIT ?
+) page
+JOIN address a ON a.id = page.id
 JOIN geolocation g ON a.geolocation_id = g.id
-JOIN account_address aa ON aa.address_id = a.id
-WHERE aa.account_id = ?
-AND (
-    ? IS NULL
-    OR a.name LIKE ?
-    OR g.street_line_1 LIKE ?
-    OR g.street_line_2 LIKE ?
-    OR g.locality LIKE ?
-    OR g.state LIKE ?
-    OR g.postal_code LIKE ?
-    OR g.country LIKE ?
-)
-AND (
-    ? IS NULL
-    OR a.is_drop_ship = ?
-)
-AND (
-    ? IS NULL
-    OR a.created_at < ?
-    OR (a.created_at = ? AND a.id < ?)
-)
 ORDER BY a.created_at DESC, a.id DESC
-LIMIT ?
 `
 
 type ListAddressesForwardParams struct {
@@ -674,6 +689,9 @@ type ListAddressesForwardRow struct {
 	Timezone          sql.NullString
 }
 
+// Addresses carry no account, so no key yields one account's in list order: the page is chosen from
+// the account's links (STRAIGHT_JOIN, so neither address nor geolocation, which hold every tenant's
+// rows, is scanned) and its rows joined after.
 func (q *Queries) ListAddressesForward(ctx context.Context, arg ListAddressesForwardParams) ([]ListAddressesForwardRow, error) {
 	rows, err := q.db.QueryContext(ctx, listAddressesForward,
 		arg.AccountID,

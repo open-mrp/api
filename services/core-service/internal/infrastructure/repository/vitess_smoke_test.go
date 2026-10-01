@@ -675,6 +675,9 @@ func TestVitessSmoke(t *testing.T) {
 		}
 		// The line-level sales and open-order analytics take the same resolved buyers; sales forces the invoice key.
 		analytics := NewAnalyticsRepo(q)
+		// OEE's downtime overlap forces both one-sided downtime keys.
+		_, apiErr := analytics.GetOeeDowntimeIntervals(ctx, domain.GetOeeWindowParams{AccountID: account, StartDate: from, EndDate: to})
+		checkAPI("GetOeeDowntimeIntervals", apiErr)
 		for _, p := range []domain.AnalyzeSalesParams{
 			{AccountID: account, StartDate: from, EndDate: to},
 			{AccountID: account, StartDate: from, EndDate: to, CustomerIDs: buyers, CustomerGroupIDs: groups, ProductLineIDs: productLines, SalesRepIDs: []string{"acus_none"}},

@@ -1465,10 +1465,11 @@ SELECT
     r.oee_bucket,
     e.started_at,
     COALESCE(e.ended_at, NOW(3)) AS ended_at
-FROM machine_downtime_event e
+FROM machine_downtime_event e FORCE INDEX (machine_downtime_account_started_idx, machine_downtime_account_ended_started_idx)
 JOIN machine_downtime_reason r ON r.code = e.reason_code
 WHERE e.account_id = sqlc.arg('account_id')
   -- Overlap test rather than containment: an event that started before the window and is still running must still contribute its in-window seconds.
+  -- COALESCE(ended_at, NOW(3)) >= start_date, spelled so each side can be read from a key: the forced keys read either the events started before the window ends or those ending (or open) after it starts, whichever is fewer.
   AND e.started_at <= sqlc.arg('end_date')
-  AND COALESCE(e.ended_at, NOW(3)) >= sqlc.arg('start_date')
+  AND (e.ended_at >= sqlc.arg('start_date') OR (e.ended_at IS NULL AND NOW(3) >= sqlc.arg('start_date')))
 ORDER BY e.started_at;

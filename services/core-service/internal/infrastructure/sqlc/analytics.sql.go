@@ -1522,12 +1522,13 @@ SELECT
     r.oee_bucket,
     e.started_at,
     COALESCE(e.ended_at, NOW(3)) AS ended_at
-FROM machine_downtime_event e
+FROM machine_downtime_event e FORCE INDEX (machine_downtime_account_started_idx, machine_downtime_account_ended_started_idx)
 JOIN machine_downtime_reason r ON r.code = e.reason_code
 WHERE e.account_id = ?
   -- Overlap test rather than containment: an event that started before the window and is still running must still contribute its in-window seconds.
+  -- COALESCE(ended_at, NOW(3)) >= start_date, spelled so each side can be read from a key: the forced keys read either the events started before the window ends or those ending (or open) after it starts, whichever is fewer.
   AND e.started_at <= ?
-  AND COALESCE(e.ended_at, NOW(3)) >= ?
+  AND (e.ended_at >= ? OR (e.ended_at IS NULL AND NOW(3) >= ?))
 ORDER BY e.started_at
 `
 
@@ -1549,7 +1550,12 @@ type GetOeeDowntimeIntervalsRow struct {
 //
 // Nothing is totalled here because a logged span is not the same as lost capacity, and neither clip can be expressed in one SQL sum. An event that crosses a week boundary belongs partly to each week, and an event that runs overnight belongs to the plant's shift window only for the part the plant was open. Both are exact interval arithmetic in Go (see oeeShiftWindow) and need no calendar table.
 func (q *Queries) GetOeeDowntimeIntervals(ctx context.Context, arg GetOeeDowntimeIntervalsParams) ([]GetOeeDowntimeIntervalsRow, error) {
-	rows, err := q.db.QueryContext(ctx, getOeeDowntimeIntervals, arg.AccountID, arg.EndDate, arg.StartDate)
+	rows, err := q.db.QueryContext(ctx, getOeeDowntimeIntervals,
+		arg.AccountID,
+		arg.EndDate,
+		arg.StartDate,
+		arg.StartDate,
+	)
 	if err != nil {
 		return nil, err
 	}

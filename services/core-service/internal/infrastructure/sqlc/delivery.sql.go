@@ -12,6 +12,92 @@ import (
 	"time"
 )
 
+const getDeliveriesByIDs = `-- name: GetDeliveriesByIDs :many
+SELECT
+    d.id,
+    d.number,
+    d.delivery_status_code,
+    d.accepted_at,
+    d.rejected_at,
+    d.created_at,
+    d.updated_at,
+    so.id AS purchase_order_id,
+    so.number AS purchase_order_number,
+    so.sales_order_status_code AS purchase_order_status,
+    (SELECT COUNT(*) FROM delivery_line dl WHERE dl.delivery_id = d.id) AS line_count
+FROM delivery d
+JOIN sales_order so ON d.sales_order_id = so.id
+WHERE d.id IN (/*SLICE:ids*/?)
+AND d.account_id = ?
+`
+
+type GetDeliveriesByIDsParams struct {
+	Ids       []string
+	AccountID string
+}
+
+type GetDeliveriesByIDsRow struct {
+	ID                  string
+	Number              string
+	DeliveryStatusCode  string
+	AcceptedAt          sql.NullTime
+	RejectedAt          sql.NullTime
+	CreatedAt           time.Time
+	UpdatedAt           time.Time
+	PurchaseOrderID     string
+	PurchaseOrderNumber string
+	PurchaseOrderStatus string
+	LineCount           int64
+}
+
+// Hydrates a page of the delivery list, which buildDeliveryListQuery chooses. The line count is a
+// subquery so it is counted for the page's deliveries only.
+func (q *Queries) GetDeliveriesByIDs(ctx context.Context, arg GetDeliveriesByIDsParams) ([]GetDeliveriesByIDsRow, error) {
+	query := getDeliveriesByIDs
+	var queryParams []interface{}
+	if len(arg.Ids) > 0 {
+		for _, v := range arg.Ids {
+			queryParams = append(queryParams, v)
+		}
+		query = strings.Replace(query, "/*SLICE:ids*/?", strings.Repeat(",?", len(arg.Ids))[1:], 1)
+	} else {
+		query = strings.Replace(query, "/*SLICE:ids*/?", "NULL", 1)
+	}
+	queryParams = append(queryParams, arg.AccountID)
+	rows, err := q.db.QueryContext(ctx, query, queryParams...)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []GetDeliveriesByIDsRow
+	for rows.Next() {
+		var i GetDeliveriesByIDsRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.Number,
+			&i.DeliveryStatusCode,
+			&i.AcceptedAt,
+			&i.RejectedAt,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+			&i.PurchaseOrderID,
+			&i.PurchaseOrderNumber,
+			&i.PurchaseOrderStatus,
+			&i.LineCount,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const getDelivery = `-- name: GetDelivery :one
 SELECT
     d.id,
@@ -64,318 +150,6 @@ func (q *Queries) GetDelivery(ctx context.Context, arg GetDeliveryParams) (GetDe
 		&i.PurchaseOrderStatus,
 	)
 	return i, err
-}
-
-const listDeliveriesBackward = `-- name: ListDeliveriesBackward :many
-SELECT
-    d.id,
-    d.number,
-    d.delivery_status_code,
-    d.accepted_at,
-    d.rejected_at,
-    d.created_at,
-    d.updated_at,
-    so.id AS purchase_order_id,
-    so.number AS purchase_order_number,
-    so.sales_order_status_code AS purchase_order_status,
-    COUNT(dl.id) AS line_count
-FROM delivery d
-JOIN sales_order so ON d.sales_order_id = so.id
-LEFT JOIN delivery_line dl ON dl.delivery_id = d.id
-WHERE d.account_id = ?
-AND (
-    ? IS NULL
-    OR d.number LIKE ?
-    OR so.number LIKE ?
-)
-AND (
-    ? IS NULL
-    OR d.delivery_status_code = ?
-)
-AND (
-    ? = false
-    OR EXISTS (
-        SELECT 1 FROM delivery_line dl2
-        JOIN receiving_order_line rol ON dl2.receiving_order_line_id = rol.id
-        JOIN sales_order_line sol ON rol.sales_order_line_id = sol.id
-        WHERE dl2.delivery_id = d.id
-        AND sol.item_id IN (/*SLICE:item_ids*/?)
-    )
-)
-AND (
-    ? = false
-    OR so.seller_account_id IN (/*SLICE:supplier_ids*/?)
-)
-AND (
-    ? IS NULL
-    OR d.created_at >= ?
-)
-AND (
-    ? IS NULL
-    OR d.created_at <= ?
-)
-AND (
-    d.created_at > ?
-    OR (d.created_at = ? AND d.id > ?)
-)
-GROUP BY d.id, d.number, d.delivery_status_code, d.accepted_at, d.rejected_at, d.created_at, d.updated_at, so.id, so.number, so.sales_order_status_code
-ORDER BY d.created_at ASC, d.id ASC
-LIMIT ?
-`
-
-type ListDeliveriesBackwardParams struct {
-	AccountID             string
-	SearchQuery           sql.NullString
-	Status                sql.NullString
-	IncludeItemFilter     interface{}
-	ItemIds               []sql.NullString
-	IncludeSupplierFilter interface{}
-	SupplierIds           []string
-	StartDate             sql.NullTime
-	EndDate               sql.NullTime
-	CursorCreatedAt       time.Time
-	CursorID              string
-	Limit                 int32
-}
-
-type ListDeliveriesBackwardRow struct {
-	ID                  string
-	Number              string
-	DeliveryStatusCode  string
-	AcceptedAt          sql.NullTime
-	RejectedAt          sql.NullTime
-	CreatedAt           time.Time
-	UpdatedAt           time.Time
-	PurchaseOrderID     string
-	PurchaseOrderNumber string
-	PurchaseOrderStatus string
-	LineCount           int64
-}
-
-func (q *Queries) ListDeliveriesBackward(ctx context.Context, arg ListDeliveriesBackwardParams) ([]ListDeliveriesBackwardRow, error) {
-	query := listDeliveriesBackward
-	var queryParams []interface{}
-	queryParams = append(queryParams, arg.AccountID)
-	queryParams = append(queryParams, arg.SearchQuery)
-	queryParams = append(queryParams, arg.SearchQuery)
-	queryParams = append(queryParams, arg.SearchQuery)
-	queryParams = append(queryParams, arg.Status)
-	queryParams = append(queryParams, arg.Status)
-	queryParams = append(queryParams, arg.IncludeItemFilter)
-	if len(arg.ItemIds) > 0 {
-		for _, v := range arg.ItemIds {
-			queryParams = append(queryParams, v)
-		}
-		query = strings.Replace(query, "/*SLICE:item_ids*/?", strings.Repeat(",?", len(arg.ItemIds))[1:], 1)
-	} else {
-		query = strings.Replace(query, "/*SLICE:item_ids*/?", "NULL", 1)
-	}
-	queryParams = append(queryParams, arg.IncludeSupplierFilter)
-	if len(arg.SupplierIds) > 0 {
-		for _, v := range arg.SupplierIds {
-			queryParams = append(queryParams, v)
-		}
-		query = strings.Replace(query, "/*SLICE:supplier_ids*/?", strings.Repeat(",?", len(arg.SupplierIds))[1:], 1)
-	} else {
-		query = strings.Replace(query, "/*SLICE:supplier_ids*/?", "NULL", 1)
-	}
-	queryParams = append(queryParams, arg.StartDate)
-	queryParams = append(queryParams, arg.StartDate)
-	queryParams = append(queryParams, arg.EndDate)
-	queryParams = append(queryParams, arg.EndDate)
-	queryParams = append(queryParams, arg.CursorCreatedAt)
-	queryParams = append(queryParams, arg.CursorCreatedAt)
-	queryParams = append(queryParams, arg.CursorID)
-	queryParams = append(queryParams, arg.Limit)
-	rows, err := q.db.QueryContext(ctx, query, queryParams...)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	var items []ListDeliveriesBackwardRow
-	for rows.Next() {
-		var i ListDeliveriesBackwardRow
-		if err := rows.Scan(
-			&i.ID,
-			&i.Number,
-			&i.DeliveryStatusCode,
-			&i.AcceptedAt,
-			&i.RejectedAt,
-			&i.CreatedAt,
-			&i.UpdatedAt,
-			&i.PurchaseOrderID,
-			&i.PurchaseOrderNumber,
-			&i.PurchaseOrderStatus,
-			&i.LineCount,
-		); err != nil {
-			return nil, err
-		}
-		items = append(items, i)
-	}
-	if err := rows.Close(); err != nil {
-		return nil, err
-	}
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-	return items, nil
-}
-
-const listDeliveriesForward = `-- name: ListDeliveriesForward :many
-SELECT
-    d.id,
-    d.number,
-    d.delivery_status_code,
-    d.accepted_at,
-    d.rejected_at,
-    d.created_at,
-    d.updated_at,
-    so.id AS purchase_order_id,
-    so.number AS purchase_order_number,
-    so.sales_order_status_code AS purchase_order_status,
-    COUNT(dl.id) AS line_count
-FROM delivery d
-JOIN sales_order so ON d.sales_order_id = so.id
-LEFT JOIN delivery_line dl ON dl.delivery_id = d.id
-WHERE d.account_id = ?
-AND (
-    ? IS NULL
-    OR d.number LIKE ?
-    OR so.number LIKE ?
-)
-AND (
-    ? IS NULL
-    OR d.delivery_status_code = ?
-)
-AND (
-    ? = false
-    OR EXISTS (
-        SELECT 1 FROM delivery_line dl2
-        JOIN receiving_order_line rol ON dl2.receiving_order_line_id = rol.id
-        JOIN sales_order_line sol ON rol.sales_order_line_id = sol.id
-        WHERE dl2.delivery_id = d.id
-        AND sol.item_id IN (/*SLICE:item_ids*/?)
-    )
-)
-AND (
-    ? = false
-    OR so.seller_account_id IN (/*SLICE:supplier_ids*/?)
-)
-AND (
-    ? IS NULL
-    OR d.created_at >= ?
-)
-AND (
-    ? IS NULL
-    OR d.created_at <= ?
-)
-AND (
-    ? IS NULL
-    OR d.created_at < ?
-    OR (d.created_at = ? AND d.id < ?)
-)
-GROUP BY d.id, d.number, d.delivery_status_code, d.accepted_at, d.rejected_at, d.created_at, d.updated_at, so.id, so.number, so.sales_order_status_code
-ORDER BY d.created_at DESC, d.id DESC
-LIMIT ?
-`
-
-type ListDeliveriesForwardParams struct {
-	AccountID             string
-	SearchQuery           sql.NullString
-	Status                sql.NullString
-	IncludeItemFilter     interface{}
-	ItemIds               []sql.NullString
-	IncludeSupplierFilter interface{}
-	SupplierIds           []string
-	StartDate             sql.NullTime
-	EndDate               sql.NullTime
-	CursorCreatedAt       sql.NullTime
-	CursorID              sql.NullString
-	Limit                 int32
-}
-
-type ListDeliveriesForwardRow struct {
-	ID                  string
-	Number              string
-	DeliveryStatusCode  string
-	AcceptedAt          sql.NullTime
-	RejectedAt          sql.NullTime
-	CreatedAt           time.Time
-	UpdatedAt           time.Time
-	PurchaseOrderID     string
-	PurchaseOrderNumber string
-	PurchaseOrderStatus string
-	LineCount           int64
-}
-
-func (q *Queries) ListDeliveriesForward(ctx context.Context, arg ListDeliveriesForwardParams) ([]ListDeliveriesForwardRow, error) {
-	query := listDeliveriesForward
-	var queryParams []interface{}
-	queryParams = append(queryParams, arg.AccountID)
-	queryParams = append(queryParams, arg.SearchQuery)
-	queryParams = append(queryParams, arg.SearchQuery)
-	queryParams = append(queryParams, arg.SearchQuery)
-	queryParams = append(queryParams, arg.Status)
-	queryParams = append(queryParams, arg.Status)
-	queryParams = append(queryParams, arg.IncludeItemFilter)
-	if len(arg.ItemIds) > 0 {
-		for _, v := range arg.ItemIds {
-			queryParams = append(queryParams, v)
-		}
-		query = strings.Replace(query, "/*SLICE:item_ids*/?", strings.Repeat(",?", len(arg.ItemIds))[1:], 1)
-	} else {
-		query = strings.Replace(query, "/*SLICE:item_ids*/?", "NULL", 1)
-	}
-	queryParams = append(queryParams, arg.IncludeSupplierFilter)
-	if len(arg.SupplierIds) > 0 {
-		for _, v := range arg.SupplierIds {
-			queryParams = append(queryParams, v)
-		}
-		query = strings.Replace(query, "/*SLICE:supplier_ids*/?", strings.Repeat(",?", len(arg.SupplierIds))[1:], 1)
-	} else {
-		query = strings.Replace(query, "/*SLICE:supplier_ids*/?", "NULL", 1)
-	}
-	queryParams = append(queryParams, arg.StartDate)
-	queryParams = append(queryParams, arg.StartDate)
-	queryParams = append(queryParams, arg.EndDate)
-	queryParams = append(queryParams, arg.EndDate)
-	queryParams = append(queryParams, arg.CursorCreatedAt)
-	queryParams = append(queryParams, arg.CursorCreatedAt)
-	queryParams = append(queryParams, arg.CursorCreatedAt)
-	queryParams = append(queryParams, arg.CursorID)
-	queryParams = append(queryParams, arg.Limit)
-	rows, err := q.db.QueryContext(ctx, query, queryParams...)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	var items []ListDeliveriesForwardRow
-	for rows.Next() {
-		var i ListDeliveriesForwardRow
-		if err := rows.Scan(
-			&i.ID,
-			&i.Number,
-			&i.DeliveryStatusCode,
-			&i.AcceptedAt,
-			&i.RejectedAt,
-			&i.CreatedAt,
-			&i.UpdatedAt,
-			&i.PurchaseOrderID,
-			&i.PurchaseOrderNumber,
-			&i.PurchaseOrderStatus,
-			&i.LineCount,
-		); err != nil {
-			return nil, err
-		}
-		items = append(items, i)
-	}
-	if err := rows.Close(); err != nil {
-		return nil, err
-	}
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-	return items, nil
 }
 
 const listDeliveryLines = `-- name: ListDeliveryLines :many

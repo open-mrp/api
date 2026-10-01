@@ -2374,6 +2374,7 @@ type Shipment struct {
 	UpdatedAt            time.Time
 	MasterTrackingNumber sql.NullString
 	ShipmentStatusCode   string
+	BuyerAccountID       sql.NullString
 }
 
 type ShipmentLine struct {

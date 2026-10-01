@@ -277,7 +277,12 @@ UPDATE sales_order
 SET sales_rep_id = COALESCE(sales_rep_id, 'acus_ubdx4zebgl6p')
 WHERE id = 'or_01k0a8bs2ye3f9p8sj0m4dfmwe';
 
--- pick.buyer_account_id is denormalized from the order (CreatePick copies it in the API).
+-- pick and shipment buyer_account_id are denormalized from the order (CreatePick and CreateShipment
+-- copy it in the API).
 UPDATE pick p JOIN sales_order so ON so.id = p.sales_order_id
 SET p.buyer_account_id = so.buyer_account_id
 WHERE p.buyer_account_id IS NULL;
+
+UPDATE shipment s JOIN sales_order so ON so.id = s.sales_order_id
+SET s.buyer_account_id = so.buyer_account_id
+WHERE s.buyer_account_id IS NULL;

@@ -221,6 +221,81 @@ func TestVitessSmoke(t *testing.T) {
 		}
 	})
 
+	// pageBothWays lists params, then pages forward and back through one-row pages.
+	pageBothWays := func(name string, list func(cursor *string, limit int32) (next, prev *string, apiErr *apierror.APIError)) {
+		next, _, apiErr := list(nil, 50)
+		checkAPI(name, apiErr)
+		next, _, apiErr = list(nil, 1)
+		checkAPI(name+"/first page", apiErr)
+		if apiErr != nil || next == nil {
+			return
+		}
+		_, prev, apiErr := list(next, 1)
+		checkAPI(name+"/next page", apiErr)
+		if apiErr == nil && prev != nil {
+			_, _, apiErr = list(prev, 1)
+			checkAPI(name+"/prev page", apiErr)
+		}
+	}
+
+	// The shipment list builds its SQL in Go: one case per read it chooses (a list-order walk, a
+	// customer set's buyer ranges, an item's or product line's matched shipments) and per count.
+	t.Run("shipment list", func(t *testing.T) {
+		repo := NewShipmentRepo(q)
+		items := append(ids("SELECT DISTINCT sol.item_id FROM shipment_line sl JOIN sales_order_line sol ON sol.id = sl.sales_order_line_id LIMIT 2"), "it_none")
+		reps := append(ids("SELECT DISTINCT default_sales_rep_id FROM account_relation WHERE owner_account_id = ? AND default_sales_rep_id IS NOT NULL", account), "acus_none")
+		status, search := "shipped", "SH"
+		start, end := "2000-01-01", "2100-01-01"
+		for name, params := range map[string]domain.ListShipmentsParams{
+			"unfiltered":                 {AccountID: account},
+			"status":                     {AccountID: account, Status: &status},
+			"one customer":               {AccountID: account, CustomerIDs: buyers[:1]},
+			"customers":                  {AccountID: account, CustomerIDs: append([]string{"ac_none"}, buyers...)},
+			"group and sales rep":        {AccountID: account, CustomerGroupIDs: groups, SalesRepIDs: reps},
+			"items":                      {AccountID: account, ItemIDs: items},
+			"product lines":              {AccountID: account, ProductLineIDs: productLines},
+			"items and product lines":    {AccountID: account, ItemIDs: items, ProductLineIDs: productLines},
+			"search, window and filters": {AccountID: account, Query: &search, Status: &status, CustomerIDs: buyers, StartDate: &start, EndDate: &end},
+		} {
+			pageBothWays("ListShipments/"+name, func(cursor *string, limit int32) (*string, *string, *apierror.APIError) {
+				params.Cursor, params.Limit = cursor, limit
+				result, apiErr := repo.List(ctx, params)
+				if apiErr != nil {
+					return nil, nil, apiErr
+				}
+				return result.PageInfo.NextCursor, result.PageInfo.PrevCursor, nil
+			})
+		}
+	})
+
+	t.Run("delivery list", func(t *testing.T) {
+		repo := NewDeliveryRepo(q)
+		dlvAccount := ids("SELECT account_id FROM delivery LIMIT 1")
+		if len(dlvAccount) == 0 {
+			t.Fatal("seed data has no deliveries")
+		}
+		suppliers := append(ids("SELECT DISTINCT so.seller_account_id FROM delivery d JOIN sales_order so ON so.id = d.sales_order_id"), "ac_none")
+		items := append(ids("SELECT DISTINCT sol.item_id FROM delivery_line dl JOIN receiving_order_line rol ON rol.id = dl.receiving_order_line_id JOIN sales_order_line sol ON sol.id = rol.sales_order_line_id"), "it_none")
+		status, search := "accepted", "DLV"
+		from, to := time.Date(2000, 1, 1, 0, 0, 0, 0, time.UTC), time.Now().UTC().Add(time.Hour)
+		for name, params := range map[string]domain.ListDeliveriesParams{
+			"unfiltered":        {AccountID: dlvAccount[0]},
+			"status":            {AccountID: dlvAccount[0], Status: &status},
+			"suppliers":         {AccountID: dlvAccount[0], SupplierIDs: suppliers},
+			"items":             {AccountID: dlvAccount[0], ItemIDs: items},
+			"search and window": {AccountID: dlvAccount[0], Query: &search, SupplierIDs: suppliers, ItemIDs: items, StartDate: &from, EndDate: &to},
+		} {
+			pageBothWays("ListDeliveries/"+name, func(cursor *string, limit int32) (*string, *string, *apierror.APIError) {
+				params.Cursor, params.Limit = cursor, limit
+				result, apiErr := repo.List(ctx, params)
+				if apiErr != nil {
+					return nil, nil, apiErr
+				}
+				return result.PageInfo.NextCursor, result.PageInfo.PrevCursor, nil
+			})
+		}
+	})
+
 	// --- writes, rolled back ---
 	t.Run("writes", func(t *testing.T) {
 		tx, err := pool.BeginTx(ctx, nil)
@@ -241,6 +316,22 @@ func TestVitessSmoke(t *testing.T) {
 		check("ClearSalesOrderFreightPending", txq.ClearSalesOrderFreightPending(ctx, sqlc.ClearSalesOrderFreightPendingParams{SalesOrderID: orderIDs[0], AccountID: account}))
 
 		check("MergeCustomerPicks", txq.MergeCustomerPicks(ctx, sqlc.MergeCustomerPicksParams{OwnerAccountID: account, TargetAccountID: buyers[0]}))
+		check("MergeCustomerShipmentBuyers", txq.MergeCustomerShipmentBuyers(ctx, sqlc.MergeCustomerShipmentBuyersParams{OwnerAccountID: account, TargetAccountID: buyers[0]}))
+
+		carrier := ids("SELECT id FROM carrier LIMIT 1")
+		address := ids("SELECT shipping_address_id FROM sales_order WHERE id = ?", orderIDs[0])
+		if len(carrier) == 0 || len(address) == 0 {
+			t.Fatal("seed data has no carrier or order address")
+		}
+		check("CreateShipment", txq.CreateShipment(ctx, sqlc.CreateShipmentParams{
+			ID: "sh_vitess_smoke", Number: "SMOKE-SH-1", SalesOrderID: orderIDs[0], ShipmentStatusCode: "packed", AccountID: account,
+			CarrierID:         gosql.NullString{String: carrier[0], Valid: true},
+			ShippingAddressID: gosql.NullString{String: address[0], Valid: true},
+		}))
+		var shipmentBuyer gosql.NullString
+		if err := tx.QueryRowContext(ctx, "SELECT buyer_account_id FROM shipment WHERE id = ?", "sh_vitess_smoke").Scan(&shipmentBuyer); err != nil || !shipmentBuyer.Valid {
+			t.Errorf("CreateShipment did not copy the buyer: %v %v", shipmentBuyer, err)
+		}
 
 		// CreatePick needs an order without a pick (pick.sales_order_id is unique).
 		free := ids("SELECT so.id FROM sales_order so LEFT JOIN pick p ON p.sales_order_id = so.id WHERE so.owner_account_id = ? AND p.id IS NULL LIMIT 1", account)

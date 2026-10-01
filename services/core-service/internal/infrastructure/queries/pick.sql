@@ -499,16 +499,19 @@ WHERE so.id = (
 );
 
 -- name: CreateShipment :exec
+-- buyer_account_id is copied from the order for the shipment list's customer filter.
 INSERT INTO shipment (
     id, number, sales_order_id, carrier_id, carrier_option_id,
-    shipping_address_id, shipment_status_code, account_id,
+    shipping_address_id, shipment_status_code, account_id, buyer_account_id,
     created_at, updated_at
-) VALUES (
+)
+SELECT
     sqlc.arg('id'), sqlc.arg('number'), sqlc.arg('sales_order_id'),
     sqlc.narg('carrier_id'), sqlc.narg('carrier_option_id'),
     sqlc.narg('shipping_address_id'), sqlc.arg('shipment_status_code'),
-    sqlc.arg('account_id'), NOW(3), NOW(3)
-);
+    sqlc.arg('account_id'), so.buyer_account_id, NOW(3), NOW(3)
+FROM sales_order so
+WHERE so.id = sqlc.arg('sales_order_id');
 
 -- name: CreateShipmentLineFromPick :exec
 INSERT INTO shipment_line (

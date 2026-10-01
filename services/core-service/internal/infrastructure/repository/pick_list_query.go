@@ -53,7 +53,12 @@ type pickListQuery struct {
 	AccountID    string
 	SortByShipBy bool
 	Search       pickSearch
-	Status       *string
+	// PhraseIDs, when non-nil, are the picks a phrase search matches, read up front because there are
+	// few (see pickPhraseScanCap). A phrase with too many is collected again in the query.
+	PhraseIDs []string
+	// DriveFromPhrase reads the page from PhraseIDs by primary key and sorts them.
+	DriveFromPhrase bool
+	Status          *string
 	// BuyerIDs, when non-nil, limits the list to these customers: the customer filter intersected
 	// with the customer-group filter's members.
 	BuyerIDs []string
@@ -61,13 +66,20 @@ type pickListQuery struct {
 	// index: always for one customer (the index is in list order), and for a set too large to merge
 	// when it has few picks (see pickBuyerScanCap). Sets of 2..pickBuyerMergeMax are merged instead.
 	DriveFromBuyers bool
-	ProductLineIDs  []string
-	StartDate       gosql.NullTime
-	EndDate         gosql.NullTime
-	Direction       pagination.Direction
-	CursorAt        gosql.NullTime
-	CursorID        gosql.NullString
-	Limit           int32
+	// DriveFromNumberPrefix reads the number prefix's range instead, for a prefix narrower than a
+	// counted customer set: MySQL estimates an IN list of more than a couple of hundred customers from
+	// index statistics, which overcount the customer set, and picks the prefix's range however wide.
+	DriveFromNumberPrefix bool
+	ProductLineIDs        []string
+	// DriveFromProductLines reads the product lines' picks from their lines and sorts them, for product
+	// lines on few picks (see pickProductLineScanCap); walking a sort index for them reads the account.
+	DriveFromProductLines bool
+	StartDate             gosql.NullTime
+	EndDate               gosql.NullTime
+	Direction             pagination.Direction
+	CursorAt              gosql.NullTime
+	CursorID              gosql.NullString
+	Limit                 int32
 }
 
 // openOnly reports the open filter; any status other than "closed" is open.
@@ -78,45 +90,65 @@ func (q pickListQuery) openOnly() bool {
 // indexHint names the indexes the scan may drive from, so MySQL cannot pick one that filesorts the
 // account or walks it for a rare filter value. status=open pins finished_at because open picks are a
 // tiny slice of a mostly-closed table. Whether a customer set drives from the buyer index is decided
-// by counting its picks (DriveFromBuyers), because MySQL cannot estimate it. A number prefix lets
-// MySQL choose from its range estimate. A phrase search drives from its match set and takes no hint.
+// by counting its picks (DriveFromBuyers), because MySQL cannot estimate it. A number prefix, and a
+// creation window under the ship-by sort, are ranges whose keys are offered too, and MySQL chooses
+// from its estimate of how many rows they hold.
 func (q pickListQuery) indexHint() []string {
-	if q.Search.Phrase != "" {
-		return nil
+	if q.DriveFromNumberPrefix {
+		return []string{pickAccountNumberIndex}
 	}
+	if q.DriveFromBuyers {
+		// A counted set was already found narrower than the prefix, so the number key is not offered.
+		return q.withRangeIndexes(q.buyerIndex(), q.buyerCreatedIndex(), len(q.BuyerIDs) == 1)
+	}
+	return q.withRangeIndexes(q.sortIndex(), q.createdIndex(), true)
+}
 
-	sortIndex := pickCreatedIndex
-	switch {
-	case q.SortByShipBy && q.openOnly():
-		sortIndex = pickOpenShipByIndex
-	case q.SortByShipBy:
-		sortIndex = pickShipByIndex
-	case q.openOnly():
-		sortIndex = pickOpenCreatedIndex
+func (q pickListQuery) withRangeIndexes(sortIndex, createdIndex string, offerNumber bool) []string {
+	hint := []string{sortIndex}
+	if q.SortByShipBy && (q.StartDate.Valid || q.EndDate.Valid) {
+		hint = append(hint, createdIndex)
 	}
+	if offerNumber && q.Search.NumberPrefix != "" {
+		hint = append(hint, pickAccountNumberIndex)
+	}
+	return hint
+}
 
-	switch {
-	case q.DriveFromBuyers:
-		return []string{q.buyerIndex()}
-	case q.Search.NumberPrefix != "":
-		return []string{sortIndex, pickAccountNumberIndex}
-	default:
-		return []string{sortIndex}
+// sortIndex serves the sort for the account's picks, pinning status=open when it is set.
+func (q pickListQuery) sortIndex() string {
+	if q.SortByShipBy {
+		if q.openOnly() {
+			return pickOpenShipByIndex
+		}
+		return pickShipByIndex
 	}
+	return q.createdIndex()
+}
+
+func (q pickListQuery) createdIndex() string {
+	if q.openOnly() {
+		return pickOpenCreatedIndex
+	}
+	return pickCreatedIndex
 }
 
 // buyerIndex serves the sort for one customer's picks, pinning status=open when it is set.
 func (q pickListQuery) buyerIndex() string {
-	switch {
-	case q.SortByShipBy && q.openOnly():
-		return pickBuyerOpenShipByIndex
-	case q.SortByShipBy:
+	if q.SortByShipBy {
+		if q.openOnly() {
+			return pickBuyerOpenShipByIndex
+		}
 		return pickBuyerShipByIndex
-	case q.openOnly():
-		return pickBuyerOpenCreatedIndex
-	default:
-		return pickBuyerCreatedIndex
 	}
+	return q.buyerCreatedIndex()
+}
+
+func (q pickListQuery) buyerCreatedIndex() string {
+	if q.openOnly() {
+		return pickBuyerOpenCreatedIndex
+	}
+	return pickBuyerCreatedIndex
 }
 
 // buildPickListQuery returns the query for one page of pick ids (Limit rows, in list order) and its
@@ -129,19 +161,29 @@ func buildPickListQuery(q pickListQuery) (string, []any) {
 		return buildPickListMerge(q)
 	}
 
-	args := make([]any, 0, 16+len(q.BuyerIDs)+len(q.ProductLineIDs))
+	args := make([]any, 0, 16+len(q.PhraseIDs)+len(q.BuyerIDs)+len(q.ProductLineIDs))
 	var b strings.Builder
 	b.WriteString("SELECT STRAIGHT_JOIN p.id FROM ")
-	if q.Search.Phrase != "" {
-		b.WriteString("(" + pickPhraseMatches + ") matched JOIN pick p ON p.id = matched.id")
-		for range 4 {
-			args = append(args, q.AccountID, q.Search.Phrase)
-		}
-	} else {
+	switch {
+	case q.DriveFromPhrase:
+		b.WriteString("pick p FORCE INDEX (PRIMARY)")
+	case q.DriveFromProductLines:
+		b.WriteString("(" + pickProductLineMatches(len(q.ProductLineIDs)) + ") matched JOIN pick p ON p.id = matched.id")
+		args = append(args, stringArgs(q.ProductLineIDs)...)
+	default:
 		b.WriteString("pick p FORCE INDEX (" + strings.Join(q.indexHint(), ", ") + ")")
 	}
 	b.WriteString(" WHERE p.account_id = ?")
 	args = append(args, q.AccountID)
+	switch {
+	case q.PhraseIDs != nil:
+		b.WriteString(" AND p.id IN (" + iclPlaceholders(len(q.PhraseIDs)) + ")")
+		args = append(args, stringArgs(q.PhraseIDs)...)
+	case q.Search.Phrase != "":
+		// Too many to read up front, so the phrase's matches are collected once and probed per row.
+		b.WriteString(" AND p.id IN (SELECT id FROM (" + pickPhraseMatches + ") phrased)")
+		args = q.appendPhraseArgs(args)
+	}
 	if len(q.BuyerIDs) > 0 {
 		b.WriteString(" AND p.buyer_account_id IN (" + iclPlaceholders(len(q.BuyerIDs)) + ")")
 		for _, id := range q.BuyerIDs {
@@ -163,14 +205,25 @@ func buildPickListQuery(q pickListQuery) (string, []any) {
 // read stops at the page size, so the whole list costs at most customers x page size rows.
 const pickBuyerMergeMax = 50
 
+// mergesBuyers reports a set of a few customers with nothing narrower to read from. A phrase search
+// is not merged: each merged read would collect the phrase's matches again.
 func (q pickListQuery) mergesBuyers() bool {
-	return q.Search.Phrase == "" && len(q.BuyerIDs) >= 2 && len(q.BuyerIDs) <= pickBuyerMergeMax
+	return q.Search.Phrase == "" && !q.DriveFromProductLines && !q.DriveFromBuyers && !q.DriveFromNumberPrefix &&
+		len(q.BuyerIDs) >= 2 && len(q.BuyerIDs) <= pickBuyerMergeMax
+}
+
+func (q pickListQuery) appendPhraseArgs(args []any) []any {
+	for range 4 {
+		args = append(args, q.AccountID, q.Search.Phrase)
+	}
+	return args
 }
 
 // buildPickListMerge pages each customer's picks from the buyer index in list order and merges the
 // pages. Every read carries the same filters and cursor, so each returns that customer's next page.
 func buildPickListMerge(q pickListQuery) (string, []any) {
 	col, order := q.sortColumn(), q.sortOrder()
+	hint := strings.Join(q.withRangeIndexes(q.buyerIndex(), q.buyerCreatedIndex(), true), ", ")
 	args := make([]any, 0, len(q.BuyerIDs)*(8+len(q.ProductLineIDs))+1)
 
 	var b strings.Builder
@@ -179,7 +232,7 @@ func buildPickListMerge(q pickListQuery) (string, []any) {
 		if i > 0 {
 			b.WriteString(" UNION ALL ")
 		}
-		b.WriteString("(SELECT p.id, " + col + " AS sort_at FROM pick p FORCE INDEX (" + q.buyerIndex() + ")" +
+		b.WriteString("(SELECT p.id, " + col + " AS sort_at FROM pick p FORCE INDEX (" + hint + ")" +
 			" WHERE p.account_id = ? AND p.buyer_account_id = ?")
 		args = append(args, q.AccountID, buyerID)
 		args = q.writeFilters(&b, args)
@@ -205,7 +258,7 @@ func (q pickListQuery) writeFilters(b *strings.Builder, args []any) []any {
 			b.WriteString(" AND p.finished_at IS NOT NULL")
 		}
 	}
-	if len(q.ProductLineIDs) > 0 {
+	if len(q.ProductLineIDs) > 0 && !q.DriveFromProductLines {
 		b.WriteString(" AND EXISTS (SELECT 1 FROM pick_line pl2" +
 			" JOIN sales_order_line sol2 ON sol2.id = pl2.sales_order_line_id" +
 			" JOIN product prod ON prod.id = sol2.product_id" +
@@ -260,21 +313,76 @@ func (q pickListQuery) cursorComparison() string {
 	return "<"
 }
 
-// pickPhraseMatches is the set of the account's pick ids whose number, PO number, customer name or
-// customer number contains the phrase. Each arm is its own MATCH in a UNION because an OR of MATCH
-// across joined tables cannot use any of the FULLTEXT indexes. Placeholders per arm: account id,
-// then phrase.
-const pickPhraseMatches = `SELECT pk.id FROM pick pk` +
-	` WHERE pk.account_id = ? AND MATCH(pk.number) AGAINST(? IN BOOLEAN MODE)` +
-	` UNION SELECT pk.id FROM sales_order pso JOIN pick pk ON pk.sales_order_id = pso.id` +
-	` WHERE pk.account_id = ? AND MATCH(pso.customer_po_number) AGAINST(? IN BOOLEAN MODE)` +
-	` UNION SELECT pk.id FROM account nba` +
-	` JOIN account_relation nar ON nar.owner_account_id = ? AND nar.counterparty_account_id = nba.id` +
-	` JOIN pick pk ON pk.account_id = nar.owner_account_id AND pk.buyer_account_id = nba.id` +
-	` WHERE MATCH(nba.name) AGAINST(? IN BOOLEAN MODE)` +
-	` UNION SELECT pk.id FROM account_relation rar` +
-	` JOIN pick pk ON pk.account_id = rar.owner_account_id AND pk.buyer_account_id = rar.counterparty_account_id` +
-	` WHERE rar.owner_account_id = ? AND MATCH(rar.external_number) AGAINST(? IN BOOLEAN MODE)`
+// pickPhraseArms each select the account's pick ids whose number, PO number, customer name or
+// customer number contains the phrase. Each arm is its own MATCH because an OR of MATCH across joined
+// tables cannot use any of the FULLTEXT indexes. Placeholders per arm: account id, then phrase.
+var pickPhraseArms = []string{
+	`SELECT pk.id FROM pick pk` +
+		` WHERE pk.account_id = ? AND MATCH(pk.number) AGAINST(? IN BOOLEAN MODE)`,
+	`SELECT pk.id FROM sales_order pso JOIN pick pk ON pk.sales_order_id = pso.id` +
+		` WHERE pk.account_id = ? AND MATCH(pso.customer_po_number) AGAINST(? IN BOOLEAN MODE)`,
+	`SELECT pk.id FROM account nba` +
+		` JOIN account_relation nar ON nar.owner_account_id = ? AND nar.counterparty_account_id = nba.id` +
+		` JOIN pick pk ON pk.account_id = nar.owner_account_id AND pk.buyer_account_id = nba.id` +
+		` WHERE MATCH(nba.name) AGAINST(? IN BOOLEAN MODE)`,
+	`SELECT pk.id FROM account_relation rar` +
+		` JOIN pick pk ON pk.account_id = rar.owner_account_id AND pk.buyer_account_id = rar.counterparty_account_id` +
+		` WHERE rar.owner_account_id = ? AND MATCH(rar.external_number) AGAINST(? IN BOOLEAN MODE)`,
+}
+
+// pickPhraseMatches is the set of picks the phrase matches.
+var pickPhraseMatches = strings.Join(pickPhraseArms, " UNION ")
+
+// pickPhraseScanCap is the most picks a phrase may match and still be read up front to drive the
+// list. A phrase matching more (one in every customer's name matches every pick) is common enough
+// that walking an index with the phrase as a residual fills a page first, where driving from it
+// reads and sorts every match.
+const pickPhraseScanCap = 2000
+
+// buildPickPhraseIDsQuery reads the phrase's matches, stopping one past pickPhraseScanCap to tell a
+// set that fits from one that does not. UNION ALL streams and stops at the limit, where UNION would
+// collect every match to deduplicate first; a pick matching several arms is deduplicated by the caller.
+func buildPickPhraseIDsQuery(q pickListQuery) (string, []any) {
+	args := q.appendPhraseArgs(make([]any, 0, 9))
+	args = append(args, pickPhraseScanCap+1)
+	return "(" + strings.Join(pickPhraseArms, ") UNION ALL (") + ") LIMIT ?", args
+}
+
+// buildPickPrefixCountQuery counts the account's picks whose number matches the LIKE prefix, stopping
+// at limit, from the covering number index.
+func buildPickPrefixCountQuery(accountID, prefix string, limit int) (string, []any) {
+	return "SELECT COUNT(*) FROM (SELECT 1 FROM pick FORCE INDEX (" + pickAccountNumberIndex + ")" +
+		" WHERE account_id = ? AND number LIKE ? LIMIT ?) capped", []any{accountID, prefix, limit}
+}
+
+// pickProductLineLines is the pick lines for a product in any of n product lines, read from the lines'
+// products.
+func pickProductLineLines(n int) string {
+	return "product prod JOIN sales_order_line sol ON sol.product_id = prod.id" +
+		" JOIN pick_line pl ON pl.sales_order_line_id = sol.id" +
+		" WHERE prod.product_line_id IN (" + iclPlaceholders(n) + ")"
+}
+
+// pickProductLineMatches is the ids of picks with a line for a product in any of n product lines.
+func pickProductLineMatches(n int) string {
+	return "SELECT DISTINCT pl.pick_id AS id FROM " + pickProductLineLines(n)
+}
+
+// pickProductLineScanCap is the most pick lines product lines may have and still drive the read. That
+// path reads all their picks and sorts them, so it is only cheap for few; with more, they are on enough
+// picks that walking the sort index with them as a residual fills a page first. A product line on 98 of
+// the largest account's 123k picks walked the other way read them all.
+const pickProductLineScanCap = 2000
+
+// buildPickProductLineCountQuery counts the product lines' pick lines, stopping at
+// pickProductLineScanCap. Lines bound their picks from above, and counting them stops at the cap where
+// collecting distinct picks would read every match first.
+func buildPickProductLineCountQuery(productLineIDs []string) (string, []any) {
+	args := make([]any, 0, len(productLineIDs)+1)
+	args = append(args, stringArgs(productLineIDs)...)
+	args = append(args, pickProductLineScanCap)
+	return "SELECT COUNT(*) FROM (SELECT 1 FROM " + pickProductLineLines(len(productLineIDs)) + " LIMIT ?) capped", args
+}
 
 // pickBuyerScanCap is the most picks a customer set too large to merge may have and still be read
 // from the buyer index. That path reads every one of the set's picks and sorts them, so it is only

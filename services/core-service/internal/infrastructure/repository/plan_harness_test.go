@@ -62,7 +62,9 @@ func planDB(t *testing.T) *sql.DB {
 // explainingDB is a sqlc.DBTX that runs EXPLAIN ANALYZE ahead of every SELECT and keeps each
 // statement with its plan.
 type explainingDB struct {
-	db         *sql.DB
+	db *sql.DB
+	// mu guards statements: a repository may read concurrently (a page's rows beside its roll-ups).
+	mu         sync.Mutex
 	statements []explainedStatement
 }
 
@@ -73,14 +75,26 @@ type explainedStatement struct {
 }
 
 func (e *explainingDB) QueryContext(ctx context.Context, query string, args ...any) (*sql.Rows, error) {
-	if strings.HasPrefix(strings.TrimSpace(query), "SELECT") {
+	if isSelect(query) {
 		plan, err := explainAnalyze(ctx, e.db, query, args...)
 		if err != nil {
 			return nil, err
 		}
+		e.mu.Lock()
 		e.statements = append(e.statements, explainedStatement{query: query, args: args, plan: plan})
+		e.mu.Unlock()
 	}
 	return e.db.QueryContext(ctx, query, args...)
+}
+
+// isSelect reports a read, past the "-- name:" line sqlc starts its statements with.
+func isSelect(query string) bool {
+	q := strings.TrimSpace(query)
+	for strings.HasPrefix(q, "--") {
+		_, rest, _ := strings.Cut(q, "\n")
+		q = strings.TrimSpace(rest)
+	}
+	return strings.HasPrefix(q, "SELECT") || strings.HasPrefix(q, "(SELECT")
 }
 
 func explainAnalyze(ctx context.Context, db *sql.DB, query string, args ...any) (string, error) {
@@ -112,14 +126,17 @@ func scopeIndexes(t *testing.T, db *sql.DB, table, scopeColumn string) []string 
 // bestForcedAccess replays stmt with each index forced on alias and returns the cheapest read, the
 // statement's own plan included, so a test can tell a planner that chose badly from a query no index
 // can serve. from is the statement's FROM item for alias, e.g. "FROM `transaction` t"; any hint
-// already on it is replaced.
+// already on it is replaced. A statement that reaches alias only by joining it to a set of matched ids
+// has no FROM item to force, so its own plan is the best.
 func bestForcedAccess(t *testing.T, db *sql.DB, stmt explainedStatement, from, alias string, indexes []string) (planAccess, string) {
 	t.Helper()
 	hinted := regexp.MustCompile(regexp.QuoteMeta(from) + `(?: FORCE INDEX \([^)]*\))?`)
-	require.True(t, hinted.MatchString(stmt.query), "statement has no %q", from)
 
 	best := tableAccess(stmt.plan, alias)
 	bestIndex := "its own plan"
+	if !hinted.MatchString(stmt.query) {
+		return best, bestIndex
+	}
 	for _, index := range indexes {
 		query := hinted.ReplaceAllLiteralString(stmt.query, from+" FORCE INDEX ("+index+")")
 		plan, err := explainAnalyze(context.Background(), db, query, stmt.args...)
@@ -311,14 +328,24 @@ type listPlanSuite[P any] struct {
 	// from is the FROM item the page is read through ("FROM `transaction` t"), whose hint the replays
 	// replace, and alias is its alias. The statement measured is the last one containing from.
 	from, alias string
-	cases       []planCase[P]
-	limit       func(P) int32
+	// statement (optional) picks the measured statement instead: the last one it accepts. For a list
+	// whose page is chosen by one of several shapes, or whose rows are read back through from afterwards.
+	statement func(query string) bool
+	cases     []planCase[P]
+	limit     func(P) int32
 	// list runs the request against q, whose statements the suite explains.
 	list func(ctx context.Context, q *sqlc.Queries, p P) error
 	// floor (optional) is how many rows a request's unordered filter matches, or 0 when it has none: a
 	// filter no index can serve in list order (a FULLTEXT match, a range on a column the list does not
 	// sort by) cannot stop at a page, so the bar for such a request is reading only its matches.
 	floor func(t *testing.T, db *sql.DB, p P) float64
+	// empty (optional) reports a request the list answers without reading the table, such as a filter
+	// that resolves to no candidates.
+	empty func(P) bool
+	// statsModes (optional; default: planStatsModes) is the statistics the cases run under. Leave out
+	// "production" only for a table production holds so few rows of that its snapshot describes a
+	// different regime than the corpus: the planner rightly scans a table it believes is tiny.
+	statsModes []string
 }
 
 // planRowBudget is the most of the listed table one page may read: the page, plus room for residual
@@ -340,7 +367,11 @@ func (s listPlanSuite[P]) run(t *testing.T) {
 	q := sqlc.New(edb)
 	indexes := scopeIndexes(t, db, s.table, s.scopeColumn)
 
-	for _, mode := range planStatsModes {
+	modes := s.statsModes
+	if modes == nil {
+		modes = planStatsModes
+	}
+	for _, mode := range modes {
 		t.Run("stats="+mode, func(t *testing.T) {
 			usePlanStats(t, db, s.table, mode)
 			t.Cleanup(func() { usePlanStats(t, db, s.table, "analyzed") })
@@ -364,13 +395,21 @@ func (s listPlanSuite[P]) check(t *testing.T, db *sql.DB, edb *explainingDB, q *
 
 	edb.statements = nil
 	require.NoError(t, s.list(context.Background(), q, tc.params))
+	measured := s.statement
+	if measured == nil {
+		measured = func(query string) bool { return strings.Contains(query, s.from) }
+	}
 	var stmt *explainedStatement
 	for i := range edb.statements {
-		if strings.Contains(edb.statements[i].query, s.from) {
+		if measured(edb.statements[i].query) {
 			stmt = &edb.statements[i]
 		}
 	}
 	if stmt == nil {
+		// A suite that names its empty requests holds every other one to reading the table.
+		if s.empty != nil {
+			require.True(t, s.empty(tc.params), "no statement read %q", s.from)
+		}
 		return false
 	}
 

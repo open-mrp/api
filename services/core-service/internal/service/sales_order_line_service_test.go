@@ -2,6 +2,7 @@ package service
 
 import (
 	"context"
+	"encoding/json"
 	"testing"
 
 	"github.com/open-mrp/api/services/auth-service/pkg/types"
@@ -11,8 +12,10 @@ import (
 	repositorymock "github.com/open-mrp/api/services/core-service/internal/domain/mock/repository"
 	"github.com/open-mrp/api/shared/appctx"
 	"github.com/open-mrp/api/shared/constants"
+	"github.com/open-mrp/api/shared/contracts"
 	apierror "github.com/open-mrp/api/shared/errors"
 
+	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
 	"go.uber.org/mock/gomock"
 )
@@ -78,6 +81,13 @@ func (suite *SalesOrderLineSvcTestSuite) SetupTest() {
 
 func (suite *SalesOrderLineSvcTestSuite) TearDownTest() {
 	suite.ctrl.Finish()
+}
+
+// expectUnissuedOrder answers the pre-read a quantity edit makes to decide whether the order has
+// reservations to keep in step: an estimate has none, so the edit takes no ledger lock.
+func (suite *SalesOrderLineSvcTestSuite) expectUnissuedOrder() {
+	suite.orderRepo.EXPECT().Get(gomock.Any(), "ac_test", "or_test").
+		Return(&domain.SalesOrder{ID: "or_test", SalesOrderStatusCode: "estimate"}, nil).Times(1)
 }
 
 func TestSalesOrderLineSvcTestSuite(t *testing.T) {
@@ -695,6 +705,7 @@ func (suite *SalesOrderLineSvcTestSuite) TestUpdateSalesOrderLine_SyncsInvoiceLi
 	)
 
 	suite.expectIdempotencyStarted()
+	suite.expectUnissuedOrder()
 
 	qty := "12"
 	unit := "un_cs"
@@ -745,6 +756,7 @@ func (suite *SalesOrderLineSvcTestSuite) TestUpdateSalesOrderLine_SyncsInvoiceLi
 	)
 
 	suite.expectIdempotencyStarted()
+	suite.expectUnissuedOrder()
 
 	unit := "un_cs"
 	params := domain.UpdateSalesOrderLineParams{
@@ -791,6 +803,7 @@ func (suite *SalesOrderLineSvcTestSuite) TestUpdateSalesOrderLine_ValueOnlyChang
 	)
 
 	suite.expectIdempotencyStarted()
+	suite.expectUnissuedOrder()
 
 	qty := "12"
 	params := domain.UpdateSalesOrderLineParams{
@@ -832,6 +845,7 @@ func (suite *SalesOrderLineSvcTestSuite) TestUpdateSalesOrderLine_FailsWhenInvoi
 	)
 
 	suite.expectIdempotencyStarted()
+	suite.expectUnissuedOrder()
 
 	qty := "12"
 	params := domain.UpdateSalesOrderLineParams{
@@ -937,6 +951,46 @@ func (suite *SalesOrderLineSvcTestSuite) TestDeleteSalesOrderLine_FinishesPickWh
 	// Two lines remain in the pick → finish it if everything left is packed.
 	suite.pickRepo.EXPECT().CountLines(gomock.Any(), pickID).Return(int64(2), nil).Times(1)
 	suite.pickRepo.EXPECT().MarkFinishedIfAllPacked(gomock.Any(), pickID).Return(nil).Times(1)
+
+	apiErr := suite.svc.DeleteSalesOrderLine(ctx, domain.DeleteSalesOrderLineParams{
+		SalesOrderLineID: "orl_test",
+		SalesOrderID:     "or_test",
+	})
+	suite.Nil(apiErr)
+}
+
+// Removing a sale line from an issued order gives back that line's reservation. Left in place it
+// reserves stock for an item the order no longer ships (order 24371 held 1 pr this way).
+func (suite *SalesOrderLineSvcTestSuite) TestDeleteSalesOrderLine_ReleasesRemovedLinesReservation() {
+	ctx := salesOrderLineCtx("ac_test")
+
+	itemID := "it_removed"
+	saleType := string(constants.ProductTypeCodeSale)
+	suite.lineRepo.EXPECT().IsInOrder(gomock.Any(), "orl_test", "or_test", "ac_test").Return(true, nil).Times(1)
+	suite.orderRepo.EXPECT().
+		Get(gomock.Any(), "ac_test", "or_test").
+		Return(&domain.SalesOrder{ID: "or_test", SalesOrderStatusCode: string(constants.SalesOrderStatusCodeIssued)}, nil).
+		Times(1)
+	suite.lineRepo.EXPECT().HasShipmentAgainstOrderLine(gomock.Any(), "orl_test").Return(false, nil).Times(1)
+	suite.orderRepo.EXPECT().HasShippedShipment(gomock.Any(), "or_test").Return(false, nil).Times(1)
+	suite.lineRepo.EXPECT().Get(gomock.Any(), "orl_test").
+		Return(&domain.SalesOrderLine{ID: "orl_test", ItemID: &itemID, ProductTypeCode: &saleType}, nil).Times(1)
+	suite.deletedRecordRepo.EXPECT().Create(gomock.Any(), constants.DeletedRecordResourceTypeSalesOrderLine, "orl_test", gomock.Any()).Return(nil).Times(1)
+	suite.lineRepo.EXPECT().DeleteCascade(gomock.Any(), "orl_test").Return(nil).Times(1)
+
+	suite.expectResequence()
+
+	pickID := "pk_test"
+	suite.orderRepo.EXPECT().GetPickID(gomock.Any(), "or_test").Return(&pickID, nil).Times(1)
+	suite.pickRepo.EXPECT().CountLines(gomock.Any(), pickID).Return(int64(1), nil).Times(1)
+	suite.pickRepo.EXPECT().MarkFinishedIfAllPacked(gomock.Any(), pickID).Return(nil).Times(1)
+
+	// With the line gone nothing ships the item, so all of its reservation is excess.
+	suite.orderRepo.EXPECT().GetExcessReservedItemIDs(gomock.Any(), "ac_test", "or_test").Return([]string{itemID}, nil).Times(1)
+	suite.reservationRepo.EXPECT().
+		ReleaseReservedIssuesForOrderItems(gomock.Any(), gomock.Any(), "ac_test", "or_test", []string{itemID}).
+		Return([]string{itemID}, nil).Times(1)
+	suite.orderRepo.EXPECT().GetUnreservedRemainders(gomock.Any(), "ac_test", "or_test").Return(nil, nil).Times(1)
 
 	apiErr := suite.svc.DeleteSalesOrderLine(ctx, domain.DeleteSalesOrderLineParams{
 		SalesOrderLineID: "orl_test",
@@ -1244,4 +1298,83 @@ func (suite *SalesOrderLineSvcTestSuite) TestReorderSalesOrderLines_RejectsDupli
 
 	suite.NotNil(apiErr)
 	suite.Contains(apiErr.PublicMessage, "Duplicate")
+}
+
+// syncOrderReservations only ever touches the items the edit was about: the order's other items may be
+// over- or under-reserved for reasons this edit holds no lock for.
+func TestSyncOrderReservations(t *testing.T) {
+	type setup struct {
+		repos   *factorymock.MockRepoFactory
+		orders  *repositorymock.MockSalesOrderRepo
+		lines   *repositorymock.MockSalesOrderLineRepo
+		reserve *repositorymock.MockInventoryReservationRepo
+		outbox  *recordingOutboxRepo
+	}
+	newSetup := func(t *testing.T) setup {
+		ctrl := gomock.NewController(t)
+		s := setup{
+			repos:   factorymock.NewMockRepoFactory(ctrl),
+			orders:  repositorymock.NewMockSalesOrderRepo(ctrl),
+			lines:   repositorymock.NewMockSalesOrderLineRepo(ctrl),
+			reserve: repositorymock.NewMockInventoryReservationRepo(ctrl),
+			outbox:  &recordingOutboxRepo{},
+		}
+		s.repos.EXPECT().NewSalesOrderRepo().Return(s.orders).AnyTimes()
+		s.repos.EXPECT().NewSalesOrderLineRepo().Return(s.lines).AnyTimes()
+		s.repos.EXPECT().NewInventoryReservationRepo().Return(s.reserve).AnyTimes()
+		s.repos.EXPECT().NewOutboxRepo().Return(s.outbox).AnyTimes()
+		return s
+	}
+	allocatedItems := func(outbox *recordingOutboxRepo) []string {
+		var items []string
+		for _, msg := range outbox.messages {
+			if msg.MessageType != string(contracts.CoreCmdAllocateOpenIssues) {
+				continue
+			}
+			var evt domain.AllocateOpenIssuesEvent
+			require.NoError(t, json.Unmarshal(msg.Payload.Data, &evt))
+			items = append(items, evt.ItemID)
+		}
+		return items
+	}
+
+	t.Run("reserves a shortfall on the touched item only", func(t *testing.T) {
+		s := newSetup(t)
+		s.orders.EXPECT().GetExcessReservedItemIDs(gomock.Any(), "ac_1", "or_1").Return(nil, nil)
+		s.orders.EXPECT().GetUnreservedRemainders(gomock.Any(), "ac_1", "or_1").Return([]domain.SalesOrderItemRemainder{
+			{ItemID: "it_added", UnitID: "un_ea", RemainingValue: "12"},
+			{ItemID: "it_other", UnitID: "un_ea", RemainingValue: "5"},
+		}, nil)
+		var qtyID string
+		s.lines.EXPECT().CreateQuantity(gomock.Any(), gomock.Any(), "12", "un_ea").
+			DoAndReturn(func(_ context.Context, id, _, _ string) *apierror.APIError { qtyID = id; return nil })
+		s.orders.EXPECT().CreateReservedInventoryIssue(gomock.Any(), gomock.Any(), "ac_1", "it_added", gomock.Any(), "or_1").
+			DoAndReturn(func(_ context.Context, _, _, _, quantityID, _ string) *apierror.APIError {
+				require.Equal(t, qtyID, quantityID)
+				return nil
+			})
+
+		require.Nil(t, syncOrderReservations(context.Background(), s.repos, nil, "ac_1", "or_1", []string{"it_added"}))
+		require.Empty(t, allocatedItems(s.outbox), "nothing was released, so nothing is re-offered")
+	})
+
+	t.Run("releases an excess on the touched item and reserves the right amount again", func(t *testing.T) {
+		s := newSetup(t)
+		s.orders.EXPECT().GetExcessReservedItemIDs(gomock.Any(), "ac_1", "or_1").Return([]string{"it_cut", "it_other"}, nil)
+		s.reserve.EXPECT().ReleaseReservedIssuesForOrderItems(gomock.Any(), gomock.Any(), "ac_1", "or_1", []string{"it_cut"}).
+			Return([]string{"it_cut"}, nil)
+		s.orders.EXPECT().GetUnreservedRemainders(gomock.Any(), "ac_1", "or_1").Return([]domain.SalesOrderItemRemainder{
+			{ItemID: "it_cut", UnitID: "un_pr", RemainingValue: "4"},
+		}, nil)
+		s.lines.EXPECT().CreateQuantity(gomock.Any(), gomock.Any(), "4", "un_pr").Return(nil)
+		s.orders.EXPECT().CreateReservedInventoryIssue(gomock.Any(), gomock.Any(), "ac_1", "it_cut", gomock.Any(), "or_1").Return(nil)
+
+		require.Nil(t, syncOrderReservations(context.Background(), s.repos, nil, "ac_1", "or_1", []string{"it_cut"}))
+		require.Equal(t, []string{"it_cut"}, allocatedItems(s.outbox), "the released item must be re-offered to open demand")
+	})
+
+	t.Run("no items, no reads", func(t *testing.T) {
+		s := newSetup(t)
+		require.Nil(t, syncOrderReservations(context.Background(), s.repos, nil, "ac_1", "or_1", []string{""}))
+	})
 }

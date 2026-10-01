@@ -8962,6 +8962,21 @@ func (mr *MockInventoryReservationRepoMockRecorder) ReleaseReservedIssuesForOrde
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ReleaseReservedIssuesForOrder", reflect.TypeOf((*MockInventoryReservationRepo)(nil).ReleaseReservedIssuesForOrder), ctx, scope, accountID, orderID)
 }
 
+// ReleaseReservedIssuesForOrderItems mocks base method.
+func (m *MockInventoryReservationRepo) ReleaseReservedIssuesForOrderItems(ctx context.Context, scope *ledgerlock.Scope, accountID, orderID string, itemIDs []string) ([]string, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ReleaseReservedIssuesForOrderItems", ctx, scope, accountID, orderID, itemIDs)
+	ret0, _ := ret[0].([]string)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
+}
+
+// ReleaseReservedIssuesForOrderItems indicates an expected call of ReleaseReservedIssuesForOrderItems.
+func (mr *MockInventoryReservationRepoMockRecorder) ReleaseReservedIssuesForOrderItems(ctx, scope, accountID, orderID, itemIDs any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ReleaseReservedIssuesForOrderItems", reflect.TypeOf((*MockInventoryReservationRepo)(nil).ReleaseReservedIssuesForOrderItems), ctx, scope, accountID, orderID, itemIDs)
+}
+
 // MockMaterialDemandRepo is a mock of MaterialDemandRepo interface.
 type MockMaterialDemandRepo struct {
 	ctrl     *gomock.Controller
@@ -14214,6 +14229,21 @@ func (mr *MockSalesOrderRepoMockRecorder) GetCustomerLeadTimeChain(ctx, accountI
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetCustomerLeadTimeChain", reflect.TypeOf((*MockSalesOrderRepo)(nil).GetCustomerLeadTimeChain), ctx, accountID, buyerAccountID)
 }
 
+// GetExcessReservedItemIDs mocks base method.
+func (m *MockSalesOrderRepo) GetExcessReservedItemIDs(ctx context.Context, accountID, salesOrderID string) ([]string, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetExcessReservedItemIDs", ctx, accountID, salesOrderID)
+	ret0, _ := ret[0].([]string)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
+}
+
+// GetExcessReservedItemIDs indicates an expected call of GetExcessReservedItemIDs.
+func (mr *MockSalesOrderRepoMockRecorder) GetExcessReservedItemIDs(ctx, accountID, salesOrderID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetExcessReservedItemIDs", reflect.TypeOf((*MockSalesOrderRepo)(nil).GetExcessReservedItemIDs), ctx, accountID, salesOrderID)
+}
+
 // GetForCustomer mocks base method.
 func (m *MockSalesOrderRepo) GetForCustomer(ctx context.Context, accountID, buyerAccountID, salesOrderID string) (*domain.SalesOrder, *apierror.APIError) {
 	m.ctrl.T.Helper()
@@ -14452,6 +14482,21 @@ func (m *MockSalesOrderRepo) GetShipmentIDsForOrders(ctx context.Context, salesO
 func (mr *MockSalesOrderRepoMockRecorder) GetShipmentIDsForOrders(ctx, salesOrderIDs any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetShipmentIDsForOrders", reflect.TypeOf((*MockSalesOrderRepo)(nil).GetShipmentIDsForOrders), ctx, salesOrderIDs)
+}
+
+// GetUnreservedRemainders mocks base method.
+func (m *MockSalesOrderRepo) GetUnreservedRemainders(ctx context.Context, accountID, salesOrderID string) ([]domain.SalesOrderItemRemainder, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetUnreservedRemainders", ctx, accountID, salesOrderID)
+	ret0, _ := ret[0].([]domain.SalesOrderItemRemainder)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
+}
+
+// GetUnreservedRemainders indicates an expected call of GetUnreservedRemainders.
+func (mr *MockSalesOrderRepoMockRecorder) GetUnreservedRemainders(ctx, accountID, salesOrderID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetUnreservedRemainders", reflect.TypeOf((*MockSalesOrderRepo)(nil).GetUnreservedRemainders), ctx, accountID, salesOrderID)
 }
 
 // HasShippedShipment mocks base method.

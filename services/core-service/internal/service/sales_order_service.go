@@ -1397,10 +1397,31 @@ func (s *salesOrderSvcImpl) ChangeSalesOrderStatus(ctx context.Context, params d
 			return nil, tracing.Trace(span, apierror.NewValidationError("Order must be in issued status to close."))
 		}
 
+		// The items the release will write, resolved on the pool so the transaction below can take their ordering root as its first statement. See ledgerlock, Corollary A.
+		reservedItemIDs, listErr := s.repos.NewInventoryReservationRepo().ListReservedItemIDsForOrders(ctx, params.AccountID, []string{params.SalesOrderID})
+		if listErr != nil {
+			return nil, tracing.Trace(span, listErr)
+		}
+
 		apiErr = s.withTx(ctx, func(txCtx context.Context, txSvc *salesOrderSvcImpl) *apierror.APIError {
 			txRepo := txSvc.repos.NewSalesOrderRepo()
+			txReservationRepo := txSvc.repos.NewInventoryReservationRepo()
+
+			scope, apiErr := ledgerlock.Acquire(txCtx, txReservationRepo, reservedItemIDs)
+			if apiErr != nil {
+				return apiErr
+			}
 
 			if apiErr := txRepo.UpdateStatus(txCtx, params.AccountID, params.SalesOrderID, "fulfilled", order.IssuedAt, &now); apiErr != nil {
+				return apiErr
+			}
+
+			// A closed order ships nothing more, so whatever it still has reserved — the balance of a short-shipped line — goes back to stock. Left behind, it counts as reserved against the item for good and drags available-to-promise negative.
+			releasedItemIDs, apiErr := txReservationRepo.ReleaseReservedIssuesForOrder(txCtx, scope, params.AccountID, params.SalesOrderID)
+			if apiErr != nil {
+				return apiErr
+			}
+			if apiErr := mediator.EnqueueAllocateOpenIssues(txCtx, txSvc.repos, params.AccountID, releasedItemIDs...); apiErr != nil {
 				return apiErr
 			}
 
@@ -1441,12 +1462,51 @@ func (s *salesOrderSvcImpl) ChangeSalesOrderStatus(ctx context.Context, params d
 			return nil, tracing.Trace(span, apierror.NewValidationError("Order must be in fulfilled status to re-open."))
 		}
 
+		// The items the re-reservation may write, resolved on the pool so the transaction below can take their ordering root as its first statement. See ledgerlock, Corollary A.
+		saleLines, listErr := s.repos.NewSalesOrderRepo().GetSaleLinesForIssue(ctx, params.SalesOrderID)
+		if listErr != nil {
+			return nil, tracing.Trace(span, listErr)
+		}
+		lineItemIDs := make([]string, 0, len(saleLines))
+		for _, line := range saleLines {
+			if line.ItemID != nil {
+				lineItemIDs = append(lineItemIDs, *line.ItemID)
+			}
+		}
+
 		apiErr = s.withTx(ctx, func(txCtx context.Context, txSvc *salesOrderSvcImpl) *apierror.APIError {
 			txRepo := txSvc.repos.NewSalesOrderRepo()
+			txLineRepo := txSvc.repos.NewSalesOrderLineRepo()
+
+			if _, apiErr := ledgerlock.Acquire(txCtx, txSvc.repos.NewInventoryReservationRepo(), lineItemIDs); apiErr != nil {
+				return apiErr
+			}
 
 			// Preserve issuedAt, clear completedAt
 			if apiErr := txRepo.UpdateStatus(txCtx, params.AccountID, params.SalesOrderID, "issued", order.IssuedAt, nil); apiErr != nil {
 				return apiErr
+			}
+
+			// Closing released what the order had not shipped, so reopening reserves it again; without it the next shipment finds nothing to draw on and leaves its stock uncounted. Measured against every issue the order holds, so an order closed before close released anything is not reserved twice.
+			remainders, apiErr := txRepo.GetUnreservedRemainders(txCtx, params.AccountID, params.SalesOrderID)
+			if apiErr != nil {
+				return apiErr
+			}
+			for _, remainder := range remainders {
+				qtyID, apiErr := id.GenID(id.QuantityIDPrefix, nil)
+				if apiErr != nil {
+					return apiErr
+				}
+				if apiErr := txLineRepo.CreateQuantity(txCtx, qtyID, remainder.RemainingValue, remainder.UnitID); apiErr != nil {
+					return apiErr
+				}
+				issueID, apiErr := id.GenID(id.InventoryIssueIDPrefix, nil)
+				if apiErr != nil {
+					return apiErr
+				}
+				if apiErr := txRepo.CreateReservedInventoryIssue(txCtx, issueID, params.AccountID, remainder.ItemID, qtyID, params.SalesOrderID); apiErr != nil {
+					return apiErr
+				}
 			}
 
 			// Reopening the order reopens its pick: clear the pick's finished flag and reopen

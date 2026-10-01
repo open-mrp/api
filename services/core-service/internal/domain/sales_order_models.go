@@ -376,6 +376,13 @@ type SalesOrderSaleLineForIssue struct {
 	QuantityUnitID string
 }
 
+// SalesOrderItemRemainder is the part of an item's ordered quantity the order has not yet issued or reserved, in UnitID.
+type SalesOrderItemRemainder struct {
+	ItemID         string
+	UnitID         string
+	RemainingValue string
+}
+
 // CustomerLeadTimeChain is what a buyer's ship-by commitment can be resolved from, every level together.
 //
 // All of them are returned rather than only the winner because the source is stamped onto the order beside the date: an order has to be able to say which rule produced its commitment, not just what the commitment was.

@@ -1534,6 +1534,7 @@ func (suite *SalesOrderSvcTestSuite) TestChangeStatus_Close_MarksPickPacked() {
 	suite.orderRepo.EXPECT().
 		UpdateStatus(gomock.Any(), "ac_test", "or_1", "fulfilled", &issuedAt, gomock.Any()).
 		Return(nil).Times(1)
+	suite.expectReservationRelease("ac_test", "or_1")
 
 	// Closing packs every open pick line, then marks the pick finished.
 	suite.pickRepo.EXPECT().CloseOpenPickLines(gomock.Any(), "pk_1").Return(nil).Times(1)
@@ -1565,10 +1566,121 @@ func (suite *SalesOrderSvcTestSuite) TestChangeStatus_Open_ReopensFulfilled() {
 	suite.orderRepo.EXPECT().
 		UpdateStatus(gomock.Any(), "ac_test", "or_1", "issued", &issuedAt, (*time.Time)(nil)).
 		Return(nil).Times(1)
+	// Everything was shipped, so there is nothing left to reserve again.
+	suite.orderRepo.EXPECT().GetSaleLinesForIssue(gomock.Any(), "or_1").Return(nil, nil).Times(1)
+	suite.orderRepo.EXPECT().GetUnreservedRemainders(gomock.Any(), "ac_test", "or_1").Return(nil, nil).Times(1)
 
 	// Reopening reopens incomplete pick lines, then clears the pick's finished flag.
 	suite.pickRepo.EXPECT().ReopenIncompletePickLines(gomock.Any(), "pk_1").Return(nil).Times(1)
 	suite.pickRepo.EXPECT().ClearFinishedAt(gomock.Any(), "ac_test", "pk_1").Return(nil).Times(1)
+
+	suite.orderRepo.EXPECT().Get(gomock.Any(), "ac_test", "or_1").
+		Return(&domain.SalesOrder{ID: "or_1", SalesOrderStatusCode: "issued"}, nil).Times(1)
+
+	_, apiErr := suite.svc.ChangeSalesOrderStatus(ctx, domain.ChangeSalesOrderStatusParams{
+		SalesOrderID: "or_1",
+		StatusChange: "open",
+	})
+	suite.Nil(apiErr)
+}
+
+func (suite *SalesOrderSvcTestSuite) TestChangeStatus_Close_ReleasesShortShippedReservation() {
+	// A line shipped short leaves its balance reserved. Closing the order ships nothing more, so the
+	// balance has to go back to stock and other orders' open demand be re-offered what it frees.
+	ctx := salesOrderInternalCtx("ac_test")
+
+	issuedAt := time.Now().Add(-time.Hour)
+	suite.orderRepo.EXPECT().Get(gomock.Any(), "ac_test", "or_1").
+		Return(&domain.SalesOrder{ID: "or_1", SalesOrderStatusCode: "issued", IssuedAt: &issuedAt}, nil).Times(1)
+
+	suite.inventoryReservationRepo.EXPECT().
+		ListReservedItemIDsForOrders(gomock.Any(), "ac_test", []string{"or_1"}).
+		Return([]string{"it_short"}, nil).Times(1)
+	suite.orderRepo.EXPECT().
+		UpdateStatus(gomock.Any(), "ac_test", "or_1", "fulfilled", &issuedAt, gomock.Any()).
+		Return(nil).Times(1)
+	suite.inventoryReservationRepo.EXPECT().
+		ReleaseReservedIssuesForOrder(gomock.Any(), gomock.Any(), "ac_test", "or_1").
+		Return([]string{"it_short"}, nil).Times(1)
+
+	suite.orderRepo.EXPECT().Get(gomock.Any(), "ac_test", "or_1").
+		Return(&domain.SalesOrder{ID: "or_1", SalesOrderStatusCode: "fulfilled"}, nil).Times(1)
+
+	_, apiErr := suite.svc.ChangeSalesOrderStatus(ctx, domain.ChangeSalesOrderStatusParams{
+		SalesOrderID: "or_1",
+		StatusChange: "close",
+	})
+	suite.Nil(apiErr)
+
+	var allocated []string
+	for _, msg := range suite.outbox.messages {
+		if msg.MessageType != string(contracts.CoreCmdAllocateOpenIssues) {
+			continue
+		}
+		var evt domain.AllocateOpenIssuesEvent
+		suite.Require().NoError(json.Unmarshal(msg.Payload.Data, &evt))
+		allocated = append(allocated, evt.ItemID)
+	}
+	suite.Equal([]string{"it_short"}, allocated, "the released item must be re-offered to open demand")
+}
+
+func (suite *SalesOrderSvcTestSuite) TestChangeStatus_Close_ReleaseFailureFailsClose() {
+	ctx := salesOrderInternalCtx("ac_test")
+
+	issuedAt := time.Now().Add(-time.Hour)
+	suite.orderRepo.EXPECT().Get(gomock.Any(), "ac_test", "or_1").
+		Return(&domain.SalesOrder{ID: "or_1", SalesOrderStatusCode: "issued", IssuedAt: &issuedAt}, nil).Times(1)
+	suite.inventoryReservationRepo.EXPECT().
+		ListReservedItemIDsForOrders(gomock.Any(), "ac_test", []string{"or_1"}).
+		Return([]string{"it_short"}, nil).Times(1)
+	suite.orderRepo.EXPECT().
+		UpdateStatus(gomock.Any(), "ac_test", "or_1", "fulfilled", &issuedAt, gomock.Any()).
+		Return(nil).Times(1)
+	suite.inventoryReservationRepo.EXPECT().
+		ReleaseReservedIssuesForOrder(gomock.Any(), gomock.Any(), "ac_test", "or_1").
+		Return(nil, apierror.NewInternalError(nil, "boom")).Times(1)
+
+	_, apiErr := suite.svc.ChangeSalesOrderStatus(ctx, domain.ChangeSalesOrderStatusParams{
+		SalesOrderID: "or_1",
+		StatusChange: "close",
+	})
+	suite.NotNil(apiErr)
+	suite.Empty(suite.outbox.messages, "a failed close must not publish its audit event")
+}
+
+func (suite *SalesOrderSvcTestSuite) TestChangeStatus_Open_ReservesUnshippedRemainder() {
+	// Reopening means the rest of the order will still ship, so the balance close released is
+	// reserved again; otherwise the next shipment has no reservation to draw stock against.
+	ctx := salesOrderInternalCtx("ac_test")
+
+	issuedAt := time.Now().Add(-time.Hour)
+	suite.orderRepo.EXPECT().Get(gomock.Any(), "ac_test", "or_1").
+		Return(&domain.SalesOrder{ID: "or_1", SalesOrderStatusCode: "fulfilled", IssuedAt: &issuedAt}, nil).Times(1)
+
+	itemShort, itemDone := "it_short", "it_done"
+	suite.orderRepo.EXPECT().GetSaleLinesForIssue(gomock.Any(), "or_1").
+		Return([]domain.SalesOrderSaleLineForIssue{
+			{ID: "orl_1", ItemID: &itemShort, QuantityValue: "1900", QuantityUnitID: "un_pr"},
+			{ID: "orl_2", ItemID: &itemDone, QuantityValue: "10", QuantityUnitID: "un_pr"},
+		}, nil).Times(1)
+	suite.orderRepo.EXPECT().
+		UpdateStatus(gomock.Any(), "ac_test", "or_1", "issued", &issuedAt, (*time.Time)(nil)).
+		Return(nil).Times(1)
+	// Only the short-shipped item comes back with a remainder.
+	suite.orderRepo.EXPECT().GetUnreservedRemainders(gomock.Any(), "ac_test", "or_1").
+		Return([]domain.SalesOrderItemRemainder{{ItemID: "it_short", UnitID: "un_pr", RemainingValue: "330"}}, nil).Times(1)
+
+	var qtyID string
+	suite.lineRepo.EXPECT().CreateQuantity(gomock.Any(), gomock.Any(), "330", "un_pr").
+		DoAndReturn(func(_ context.Context, id, _, _ string) *apierror.APIError {
+			qtyID = id
+			return nil
+		}).Times(1)
+	suite.orderRepo.EXPECT().CreateReservedInventoryIssue(gomock.Any(), gomock.Any(), "ac_test", "it_short", gomock.Any(), "or_1").
+		DoAndReturn(func(_ context.Context, _, _, _, quantityID, _ string) *apierror.APIError {
+			suite.Equal(qtyID, quantityID, "the reservation must carry the quantity just written")
+			return nil
+		}).Times(1)
 
 	suite.orderRepo.EXPECT().Get(gomock.Any(), "ac_test", "or_1").
 		Return(&domain.SalesOrder{ID: "or_1", SalesOrderStatusCode: "issued"}, nil).Times(1)

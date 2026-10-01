@@ -302,6 +302,16 @@ WHERE ii.order_id = sqlc.arg('order_id')
 AND ii.account_id = sqlc.arg('account_id')
 AND ii.status_code = 'reserved';
 
+-- ListReservedIssuesForOrderItems is ListReservedIssuesForOrder narrowed to some of the order's items,
+-- for a line edit that releases one item's reservation without touching the rest of the order.
+-- name: ListReservedIssuesForOrderItems :many
+SELECT ii.id, ii.item_id, ii.quantity_id
+FROM inventory_issue ii
+WHERE ii.order_id = sqlc.arg('order_id')
+AND ii.account_id = sqlc.arg('account_id')
+AND ii.item_id IN (sqlc.slice('item_ids'))
+AND ii.status_code = 'reserved';
+
 -- ListReservedItemIDsForOrders names the items a release will write, so the caller can take their
 -- ordering root as the first statement of its transaction rather than discovering the set halfway
 -- through it. Read on the pool, before the transaction opens — see ledgerlock, Corollary A.

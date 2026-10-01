@@ -1269,6 +1269,46 @@ func (r *salesOrderRepoImpl) CreateReservedInventoryIssue(ctx context.Context, i
 	return nil
 }
 
+func (r *salesOrderRepoImpl) GetUnreservedRemainders(ctx context.Context, accountID, salesOrderID string) ([]domain.SalesOrderItemRemainder, *apierror.APIError) {
+	ctx, span := salesOrderRepoTracer.Start(ctx, "repository.sales_order.get_unreserved_remainders")
+	defer span.End()
+
+	rows, err := r.queries.GetSalesOrderUnreservedRemainders(ctx, sqlc.GetSalesOrderUnreservedRemaindersParams{
+		SalesOrderID: salesOrderID,
+		OrderID:      gosql.NullString{String: salesOrderID, Valid: true},
+		AccountID:    accountID,
+	})
+	if apiErr := db.MapSQLError(err); apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
+
+	remainders := make([]domain.SalesOrderItemRemainder, 0, len(rows))
+	for _, row := range rows {
+		remainders = append(remainders, domain.SalesOrderItemRemainder{
+			ItemID:         row.ItemID.String,
+			UnitID:         row.UnitID,
+			RemainingValue: row.RemainingValue,
+		})
+	}
+
+	return remainders, nil
+}
+
+func (r *salesOrderRepoImpl) GetExcessReservedItemIDs(ctx context.Context, accountID, salesOrderID string) ([]string, *apierror.APIError) {
+	ctx, span := salesOrderRepoTracer.Start(ctx, "repository.sales_order.get_excess_reserved_item_ids")
+	defer span.End()
+
+	itemIDs, err := r.queries.GetSalesOrderExcessReservedItemIDs(ctx, sqlc.GetSalesOrderExcessReservedItemIDsParams{
+		OrderID:      gosql.NullString{String: salesOrderID, Valid: true},
+		AccountID:    accountID,
+		SalesOrderID: salesOrderID,
+	})
+	if apiErr := db.MapSQLError(err); apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
+	return itemIDs, nil
+}
+
 // Mapping helpers
 
 func mapGetSalesOrderRow(row sqlc.GetSalesOrderRow) *domain.SalesOrder {

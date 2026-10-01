@@ -35,7 +35,9 @@ func planEDICompletedAt(i int) time.Time {
 	return planEDIOrigin.Add(time.Duration(i) * (planEDISpan / planEDIRows))
 }
 
-func planEDIID(i int) string { return fmt.Sprintf("%08x-%04x-4ed1-8000-%012x", i*2654435761%(1<<32), i%65536, i) }
+func planEDIID(i int) string {
+	return fmt.Sprintf("%08x-%04x-4ed1-8000-%012x", i*2654435761%(1<<32), i%65536, i)
+}
 
 var planEDICorpusOnce sync.Once
 

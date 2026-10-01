@@ -29,6 +29,10 @@ ALTER TABLE `machine_downtime_event`
   DROP KEY `machine_downtime_account_ended_started_idx`,
   ADD KEY `machine_downtime_account_ended_started_idx` (`account_id`, `ended_at`, `started_at`, `id`);
 
+ALTER TABLE `email_log`
+  DROP KEY `email_log_account_created_idx`,
+  ADD KEY `email_log_account_created_idx` (`account_id`, `created_at`, `id`);
+
 -- The run lists' order without a filter: the account's runs newest first, read a page at a time
 -- instead of all sorted.
 ALTER TABLE `production_run`
@@ -40,6 +44,10 @@ ALTER TABLE `edi_run`
   ADD KEY `edi_run_account_id_has_succeeded_completed_at_id_idx` (`account_id`, `has_succeeded`, `completed_at`, `id`);
 
 -- +goose Down
+ALTER TABLE `email_log`
+  DROP KEY `email_log_account_created_idx`,
+  ADD KEY `email_log_account_created_idx` (`account_id`, `created_at` DESC, `id` DESC);
+
 ALTER TABLE `edi_run`
   DROP KEY `edi_run_account_id_completed_at_id_idx`,
   DROP KEY `edi_run_account_id_has_succeeded_completed_at_id_idx`,

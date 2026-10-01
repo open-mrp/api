@@ -637,6 +637,19 @@ func TestSalesSummary_ReadsItsScope(t *testing.T) {
 	}.run(t)
 }
 
+// unsignedCursors is b with its page cursors cut to their payload: the signature is keyed per process,
+// and other tests in the package set a different key.
+func unsignedCursors(b *domain.SalesBreakdown) *domain.SalesBreakdown {
+	out := *b
+	for _, c := range []**string{&out.PageInfo.NextCursor, &out.PageInfo.PrevCursor} {
+		if *c != nil {
+			payload, _, _ := strings.Cut(**c, ".")
+			*c = &payload
+		}
+	}
+	return &out
+}
+
 // TestSalesReports_ResultsUnchanged pins what every plan-tested sales report returns on the corpus, so
 // a change made for its plan cannot change its answer: each request's result, read from the rollups
 // and from the lines alone, must hash to the digest recorded before the change.
@@ -661,7 +674,7 @@ func TestSalesReports_ResultsUnchanged(t *testing.T) {
 	for _, c := range salesPlanRequests(salesBreakdownGroups, 0) {
 		b, err := c.params.breakdown(ctx, q)
 		require.NoError(t, err)
-		record("breakdown", c.name, digest(b))
+		record("breakdown", c.name, digest(unsignedCursors(b)))
 	}
 	for _, c := range salesPlanRequests([]constants.SalesBreakdownGroupBy{""}, -300) {
 		s, err := c.params.summary(ctx, q)

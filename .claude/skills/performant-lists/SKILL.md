@@ -65,4 +65,6 @@ High-insert tables (`sales_order`, `transaction`, `request_log`, `audit_event`, 
 
 Add a plan test (`//go:build plans`, `make test-plans`, core-service `repository/`): a `listPlanSuite` (`plan_harness_test.go`) over a seeded production-shaped corpus — one tenant, prod row widths, a **dense** and a **rare/zero** value per filter — runs every filter pair on the first page and deep pages both directions, under **analyzed** and **production** statistics (`testdata/plan_stats/<table>.json`, a snapshot of prod's `mysql.innodb_index_stats`; prod's are sampled badly and are what produce prod's bad plans). It fails a request that reads far more than the best forced index, or when even the best reads far more than a page. `transaction_list_plan_test.go` is the worked example. No skips: a filter no key can serve in order (FULLTEXT, a range on a non-sort column) is held to its own match count (`floor`).
 
+Reports and totals use `aggregatePlanSuite`: an aggregate cannot stop at a page, so each table is held to twice its `floor` — a direct `COUNT` of the rows the request's scope covers (tenant, window, the narrowest single filter), over the source that should answer it (the rollup when it can). Pin results with `checkPlanResults`. `sales_report_plan_test.go` is the worked example.
+
 PlanetScale Insights is the production backstop.

@@ -71,6 +71,8 @@ type explainingDB struct {
 	// mu guards statements: a repository may read concurrently (a page's rows beside its roll-ups).
 	mu         sync.Mutex
 	statements []explainedStatement
+	// explainRows also explains single-row reads, which an aggregate's totals are.
+	explainRows bool
 }
 
 type explainedStatement struct {
@@ -156,7 +158,7 @@ func bestForcedAccess(t *testing.T, db *sql.DB, stmt explainedStatement, from, a
 }
 
 func (e *explainingDB) QueryRowContext(ctx context.Context, query string, args ...any) *sql.Row {
-	if isSelect(query) {
+	if e.explainRows && isSelect(query) {
 		// A failed explain surfaces when the statement itself runs below.
 		if plan, err := explainAnalyze(ctx, e.db, query, args...); err == nil {
 			e.mu.Lock()
@@ -700,7 +702,7 @@ type aggregatePlanSuite[P any] struct {
 //     the request needs (the facts where the rollup answers, the whole history for a window).
 func (s aggregatePlanSuite[P]) run(t *testing.T) {
 	db := planDB(t)
-	edb := &explainingDB{db: db}
+	edb := &explainingDB{db: db, explainRows: true}
 	q := sqlc.New(edb)
 	indexes := map[string][]string{}
 	for _, tb := range s.tables {

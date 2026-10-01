@@ -134,14 +134,16 @@ func (q *Queries) CreateQuantity(ctx context.Context, arg CreateQuantityParams) 
 const createShipment = `-- name: CreateShipment :exec
 INSERT INTO shipment (
     id, number, sales_order_id, carrier_id, carrier_option_id,
-    shipping_address_id, shipment_status_code, account_id,
+    shipping_address_id, shipment_status_code, account_id, buyer_account_id,
     created_at, updated_at
-) VALUES (
+)
+SELECT
     ?, ?, ?,
     ?, ?,
     ?, ?,
-    ?, NOW(3), NOW(3)
-)
+    ?, so.buyer_account_id, NOW(3), NOW(3)
+FROM sales_order so
+WHERE so.id = ?
 `
 
 type CreateShipmentParams struct {
@@ -155,6 +157,7 @@ type CreateShipmentParams struct {
 	AccountID          string
 }
 
+// buyer_account_id is copied from the order for the shipment list's customer filter.
 func (q *Queries) CreateShipment(ctx context.Context, arg CreateShipmentParams) error {
 	_, err := q.db.ExecContext(ctx, createShipment,
 		arg.ID,
@@ -165,6 +168,7 @@ func (q *Queries) CreateShipment(ctx context.Context, arg CreateShipmentParams) 
 		arg.ShippingAddressID,
 		arg.ShipmentStatusCode,
 		arg.AccountID,
+		arg.SalesOrderID,
 	)
 	return err
 }

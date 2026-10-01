@@ -1017,6 +1017,16 @@ WHERE so.owner_account_id = sqlc.arg('owner_account_id')
   AND p.account_id = sqlc.arg('owner_account_id')
   AND (p.buyer_account_id IS NULL OR p.buyer_account_id <> so.buyer_account_id);
 
+-- name: MergeCustomerShipmentBuyers :exec
+-- Runs after MergeCustomerOrders so shipments follow their orders' new buyer, as picks do.
+UPDATE shipment s
+JOIN sales_order so ON so.id = s.sales_order_id
+SET s.buyer_account_id = so.buyer_account_id
+WHERE so.owner_account_id = sqlc.arg('owner_account_id')
+  AND so.buyer_account_id = sqlc.arg('target_account_id')
+  AND s.account_id = sqlc.arg('owner_account_id')
+  AND (s.buyer_account_id IS NULL OR s.buyer_account_id <> so.buyer_account_id);
+
 -- name: MergeCustomerInvoices :exec
 UPDATE invoice i
 JOIN sales_order so ON so.id = i.sales_order_id

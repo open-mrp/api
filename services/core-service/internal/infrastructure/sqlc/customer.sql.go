@@ -3545,6 +3545,27 @@ func (q *Queries) MergeCustomerReceivingOrders(ctx context.Context, arg MergeCus
 	return err
 }
 
+const mergeCustomerShipmentBuyers = `-- name: MergeCustomerShipmentBuyers :exec
+UPDATE shipment s
+JOIN sales_order so ON so.id = s.sales_order_id
+SET s.buyer_account_id = so.buyer_account_id
+WHERE so.owner_account_id = ?
+  AND so.buyer_account_id = ?
+  AND s.account_id = ?
+  AND (s.buyer_account_id IS NULL OR s.buyer_account_id <> so.buyer_account_id)
+`
+
+type MergeCustomerShipmentBuyersParams struct {
+	OwnerAccountID  string
+	TargetAccountID string
+}
+
+// Runs after MergeCustomerOrders so shipments follow their orders' new buyer, as picks do.
+func (q *Queries) MergeCustomerShipmentBuyers(ctx context.Context, arg MergeCustomerShipmentBuyersParams) error {
+	_, err := q.db.ExecContext(ctx, mergeCustomerShipmentBuyers, arg.OwnerAccountID, arg.TargetAccountID, arg.OwnerAccountID)
+	return err
+}
+
 const mergeCustomerShipments = `-- name: MergeCustomerShipments :exec
 UPDATE shipment s
 JOIN sales_order so ON so.id = s.sales_order_id

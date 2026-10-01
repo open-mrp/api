@@ -13,7 +13,9 @@ SELECT
     ak.name AS sent_by_api_key_name,
     el.created_at,
     el.updated_at
-FROM email_log el
+-- FORCE INDEX walks the account's emails in list order. Left free, the planner ranges the account on
+-- email_log_account_id_idx and sorts every email it has, even for the first page.
+FROM email_log el FORCE INDEX (email_log_account_created_idx)
 LEFT JOIN user u ON el.sent_by_id = u.id
 LEFT JOIN api_key ak ON el.sent_by_id = ak.type_id
 WHERE el.account_id = sqlc.arg('account_id')
@@ -49,7 +51,8 @@ SELECT
     ak.name AS sent_by_api_key_name,
     el.created_at,
     el.updated_at
-FROM email_log el
+-- See ListEmailLogsForward.
+FROM email_log el FORCE INDEX (email_log_account_created_idx)
 LEFT JOIN user u ON el.sent_by_id = u.id
 LEFT JOIN api_key ak ON el.sent_by_id = ak.type_id
 WHERE el.account_id = sqlc.arg('account_id')
@@ -63,7 +66,7 @@ AND (
     )
 )
 AND (
-    el.created_at > sqlc.arg('cursor_created_at')
+    el.created_at >sqlc.arg('cursor_created_at')
     OR (el.created_at = sqlc.arg('cursor_created_at') AND el.id > sqlc.arg('cursor_id'))
 )
 ORDER BY el.created_at ASC, el.id ASC

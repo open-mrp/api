@@ -9,7 +9,6 @@ import (
 	"github.com/open-mrp/api/services/core-service/internal/infrastructure/sqlc"
 	"github.com/open-mrp/api/shared/db"
 	apierror "github.com/open-mrp/api/shared/errors"
-	"github.com/open-mrp/api/shared/pagination"
 	"github.com/open-mrp/api/shared/tracing"
 )
 
@@ -164,106 +163,6 @@ func dtSearchParam(query *string) gosql.NullString {
 		return gosql.NullString{}
 	}
 	return gosql.NullString{String: "%" + *query + "%", Valid: true}
-}
-
-func (r *machineDowntimeRepoImpl) List(ctx context.Context, params domain.ListMachineDowntimeEventsParams) (*domain.ListMachineDowntimeEventsResult, *apierror.APIError) {
-	ctx, span := machineDowntimeRepoTracer.Start(ctx, "repository.machine_downtime.list")
-	defer span.End()
-
-	searchQuery := dtSearchParam(params.Query)
-	startDate := db.NullTimePtr(params.StartDate)
-	endDate := db.NullTimePtr(params.EndDate)
-	includeMachineFilter := len(params.MachineIDs) > 0
-	includeDepartmentFilter := len(params.DepartmentIDs) > 0
-	includeReasonFilter := len(params.ReasonCodes) > 0
-
-	var cursorDir *pagination.Direction
-
-	if params.Cursor != nil {
-		cur, err := pagination.DecodeStringCursor(*params.Cursor)
-		if err != nil {
-			return nil, apierror.NewValidationErrorWithParam("Invalid pagination cursor.", "cursor")
-		}
-		cursorDir = &cur.Direction
-
-		if cur.Direction == pagination.DirectionBackward {
-			rows, err := r.queries.ListMachineDowntimeEventsBackward(ctx, sqlc.ListMachineDowntimeEventsBackwardParams{
-				AccountID:               params.AccountID,
-				IncludeMachineFilter:    includeMachineFilter,
-				MachineIds:              params.MachineIDs,
-				IncludeDepartmentFilter: includeDepartmentFilter,
-				DepartmentIds:           dtNullStrings(params.DepartmentIDs),
-				IncludeReasonFilter:     includeReasonFilter,
-				ReasonCodes:             params.ReasonCodes,
-				OpenOnly:                params.OpenOnly,
-				SearchQuery:             searchQuery,
-				StartDate:               startDate,
-				EndDate:                 endDate,
-				CursorStartedAt:         cur.OccurredAt,
-				CursorID:                cur.ID,
-				Limit:                   params.Limit + 1,
-			})
-			if apiErr := db.MapSQLError(err); apiErr != nil {
-				return nil, tracing.Trace(span, apiErr)
-			}
-			events := make([]*domain.MachineDowntimeEvent, len(rows))
-			for i, row := range rows {
-				events[i] = mapDowntimeEvent(downtimeEventFields(row))
-			}
-			result, pageInfo := pagination.BuildPageString(events, params.Limit, cursorDir, downtimeStartedAt, downtimeID)
-			return &domain.ListMachineDowntimeEventsResult{Events: result, PageInfo: pageInfo}, nil
-		}
-
-		rows, err := r.queries.ListMachineDowntimeEventsForward(ctx, sqlc.ListMachineDowntimeEventsForwardParams{
-			AccountID:               params.AccountID,
-			IncludeMachineFilter:    includeMachineFilter,
-			MachineIds:              params.MachineIDs,
-			IncludeDepartmentFilter: includeDepartmentFilter,
-			DepartmentIds:           dtNullStrings(params.DepartmentIDs),
-			IncludeReasonFilter:     includeReasonFilter,
-			ReasonCodes:             params.ReasonCodes,
-			OpenOnly:                params.OpenOnly,
-			SearchQuery:             searchQuery,
-			StartDate:               startDate,
-			EndDate:                 endDate,
-			CursorStartedAt:         gosql.NullTime{Time: cur.OccurredAt, Valid: true},
-			CursorID:                gosql.NullString{String: cur.ID, Valid: true},
-			Limit:                   params.Limit + 1,
-		})
-		if apiErr := db.MapSQLError(err); apiErr != nil {
-			return nil, tracing.Trace(span, apiErr)
-		}
-		events := make([]*domain.MachineDowntimeEvent, len(rows))
-		for i, row := range rows {
-			events[i] = mapDowntimeEvent(downtimeEventFields(row))
-		}
-		result, pageInfo := pagination.BuildPageString(events, params.Limit, cursorDir, downtimeStartedAt, downtimeID)
-		return &domain.ListMachineDowntimeEventsResult{Events: result, PageInfo: pageInfo}, nil
-	}
-
-	rows, err := r.queries.ListMachineDowntimeEventsForward(ctx, sqlc.ListMachineDowntimeEventsForwardParams{
-		AccountID:               params.AccountID,
-		IncludeMachineFilter:    includeMachineFilter,
-		MachineIds:              params.MachineIDs,
-		IncludeDepartmentFilter: includeDepartmentFilter,
-		DepartmentIds:           dtNullStrings(params.DepartmentIDs),
-		IncludeReasonFilter:     includeReasonFilter,
-		ReasonCodes:             params.ReasonCodes,
-		OpenOnly:                params.OpenOnly,
-		SearchQuery:             searchQuery,
-		StartDate:               startDate,
-		EndDate:                 endDate,
-		Limit:                   params.Limit + 1,
-	})
-	if apiErr := db.MapSQLError(err); apiErr != nil {
-		return nil, tracing.Trace(span, apiErr)
-	}
-	events := make([]*domain.MachineDowntimeEvent, len(rows))
-	for i, row := range rows {
-		events[i] = mapDowntimeEvent(downtimeEventFields(row))
-	}
-	result, pageInfo := pagination.BuildPageString(events, params.Limit, cursorDir, downtimeStartedAt, downtimeID)
-	return &domain.ListMachineDowntimeEventsResult{Events: result, PageInfo: pageInfo}, nil
 }
 
 func (r *machineDowntimeRepoImpl) GetByIDs(ctx context.Context, accountID string, ids []string) ([]*domain.MachineDowntimeEvent, *apierror.APIError) {

@@ -231,6 +231,28 @@ type planStats struct {
 // planStatsModes are the statistics every plan test runs under.
 var planStatsModes = []string{"analyzed", "production"}
 
+// planStatsModesFor is planStatsModes, less production for a corpus its snapshots cannot describe: one
+// over ten times the size of the production table a snapshot was taken from. Production's statistics
+// never meet such a table, because InnoDB recomputes them once a tenth of a table's rows change
+// (innodb_stats_auto_recalc, on in production); laid over it, they only tell the planner a large table
+// is tiny, and it scans whole keys a real plan would range.
+func planStatsModesFor(t *testing.T, db *sql.DB, tables []string) []string {
+	t.Helper()
+	for _, table := range tables {
+		raw, err := os.ReadFile(filepath.Join("testdata", "plan_stats", table+".json"))
+		require.NoError(t, err)
+		var stats planStats
+		require.NoError(t, json.Unmarshal(raw, &stats))
+		var rows int64
+		require.NoError(t, db.QueryRow("SELECT COUNT(*) FROM `"+table+"`").Scan(&rows))
+		if rows > 10*stats.Table.NRows {
+			t.Logf("production statistics do not apply: %s holds %d rows, its snapshot describes %d", table, rows, stats.Table.NRows)
+			return planStatsModes[:1]
+		}
+	}
+	return planStatsModes
+}
+
 // usePlanStats loads table's statistics for mode: "analyzed" recomputes them from the rows, and
 // "production" overwrites them with the snapshot. An index the snapshot does not name (one added
 // since) keeps its analyzed numbers.
@@ -346,13 +368,17 @@ type listPlanSuite[P any] struct {
 	// "production" only for a table production holds so few rows of that its snapshot describes a
 	// different regime than the corpus: the planner rightly scans a table it believes is tiny.
 	statsModes []string
+	// related (optional) checks what the request read of other tables, given every statement it ran;
+	// relatedTables have their statistics swapped alongside table's.
+	related       func(t *testing.T, stmts []explainedStatement, p P)
+	relatedTables []string
 }
 
 // planRowBudget is the most of the listed table one page may read: the page, plus room for residual
 // filters that reject some rows the driving index yields.
 func planRowBudget(limit int32) float64 { return float64(10 * (limit + 1)) }
 
-// run checks every case under both statistics modes. Each request is replayed with every scope-led
+// run checks every case under each statistics mode (planStatsModesFor). Each request is replayed with every scope-led
 // index forced, and two things are asserted separately:
 //   - the plan it got reads about what the best of those indexes reads: a miss is the planner (or a
 //     hint) choosing badly, fixed in the query;
@@ -367,15 +393,18 @@ func (s listPlanSuite[P]) run(t *testing.T) {
 	q := sqlc.New(edb)
 	indexes := scopeIndexes(t, db, s.table, s.scopeColumn)
 
+	tables := append([]string{s.table}, s.relatedTables...)
 	modes := s.statsModes
 	if modes == nil {
-		modes = planStatsModes
+		modes = planStatsModesFor(t, db, tables)
 	}
+	measured := 0
 	for _, mode := range modes {
 		t.Run("stats="+mode, func(t *testing.T) {
-			usePlanStats(t, db, s.table, mode)
-			t.Cleanup(func() { usePlanStats(t, db, s.table, "analyzed") })
-			measured := 0
+			for _, table := range tables {
+				usePlanStats(t, db, table, mode)
+				t.Cleanup(func() { usePlanStats(t, db, table, "analyzed") })
+			}
 			for _, tc := range s.cases {
 				t.Run(tc.name, func(t *testing.T) {
 					if s.check(t, db, edb, q, indexes, tc) {
@@ -383,9 +412,11 @@ func (s listPlanSuite[P]) run(t *testing.T) {
 					}
 				})
 			}
-			require.NotZero(t, measured, "no request read %q", s.from)
 		})
 	}
+	// A request may answer without reading the table, but a suite none of whose requests did is
+	// measuring the wrong statement.
+	require.Positive(t, measured, "no request read %q", s.from)
 }
 
 // check runs one case and reports whether it read the table at all: a request the list answers without
@@ -395,6 +426,9 @@ func (s listPlanSuite[P]) check(t *testing.T, db *sql.DB, edb *explainingDB, q *
 
 	edb.statements = nil
 	require.NoError(t, s.list(context.Background(), q, tc.params))
+	if s.related != nil {
+		s.related(t, edb.statements, tc.params)
+	}
 	measured := s.statement
 	if measured == nil {
 		measured = func(query string) bool { return strings.Contains(query, s.from) }
@@ -442,4 +476,76 @@ func (s listPlanSuite[P]) check(t *testing.T, db *sql.DB, edb *explainingDB, q *
 			bestIndex, best.rows, s.table, limit, stmt.plan)
 	}
 	return true
+}
+
+// planAccessLineRe matches every access node in EXPLAIN ANALYZE's tree, capturing its table alias.
+var planAccessLineRe = regexp.MustCompile(`-> .*? on (\S+)(?: using \S+)?.*\(actual time=\S+ rows=\S+ loops=\d+\)`)
+
+// planAliases is every table alias plan reads, internal temporary tables aside.
+func planAliases(plan string) []string {
+	seen := map[string]bool{}
+	var out []string
+	for _, line := range strings.Split(plan, "\n") {
+		if m := planAccessLineRe.FindStringSubmatch(line); m != nil && !seen[m[1]] && !strings.HasPrefix(m[1], "<") {
+			seen[m[1]] = true
+			out = append(out, m[1])
+		}
+	}
+	return out
+}
+
+// lookupPlanSuite is a lookup's plan test: a batch get or fan-out returns everything it is asked for,
+// so the bar is not a page but reading about what each statement returns.
+type lookupPlanSuite struct {
+	// tables have their statistics swapped between modes.
+	tables []string
+	cases  []lookupPlanCase
+	// returned (optional) is how many rows a statement stands for when that is not what it returns,
+	// e.g. the rows an aggregate totals.
+	returned func(t *testing.T, stmt explainedStatement) float64
+}
+
+// lookupPlanCase is one lookup request, run against q.
+type lookupPlanCase struct {
+	name string
+	run  func(ctx context.Context, q *sqlc.Queries) error
+}
+
+// lookupSlack is what a statement may read beyond twice what it returns: a dive that finds nothing
+// still reads a row or two, and a join of small lookups reads each once.
+const lookupSlack = 10
+
+// run checks every statement of every case under each statistics mode: no table it reads may yield
+// more than twice the rows the statement returns, plus lookupSlack.
+func (s lookupPlanSuite) run(t *testing.T) {
+	db := planDB(t)
+	edb := &explainingDB{db: db}
+	q := sqlc.New(edb)
+	for _, mode := range planStatsModesFor(t, db, s.tables) {
+		t.Run("stats="+mode, func(t *testing.T) {
+			for _, table := range s.tables {
+				usePlanStats(t, db, table, mode)
+				t.Cleanup(func() { usePlanStats(t, db, table, "analyzed") })
+			}
+			for _, tc := range s.cases {
+				t.Run(tc.name, func(t *testing.T) {
+					edb.statements = nil
+					require.NoError(t, tc.run(context.Background(), q))
+					require.NotEmpty(t, edb.statements)
+					for _, stmt := range edb.statements {
+						returned := planReturned(stmt.plan)
+						if s.returned != nil {
+							returned = max(returned, s.returned(t, stmt))
+						}
+						for _, alias := range planAliases(stmt.plan) {
+							got := tableAccess(stmt.plan, alias)
+							if got.rows > 2*returned+lookupSlack {
+								t.Errorf("read %.0f rows of %s via %v to return %.0f\n%s\n%s", got.rows, alias, got.indexes, returned, stmt.query, stmt.plan)
+							}
+						}
+					}
+				})
+			}
+		})
+	}
 }

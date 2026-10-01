@@ -128,3 +128,50 @@ func TestProductionRunList_ReadsAboutAPage(t *testing.T) {
 		},
 	}.run(t)
 }
+
+// A machine common enough to walk the list key with an EXISTS probe returns the same pages, both ways,
+// as reading its runs by id.
+func TestProductionRunList_CommonMachineMatchesByID(t *testing.T) {
+	ensureBatchCorpus(t)
+	repo := NewProductionRunRepo(sqlc.New(planDB(t)))
+	pages := func() [][]string {
+		var out [][]string
+		p := domain.ListProductionRunsParams{AccountID: planBatchAccount, Limit: 25, MachineIDs: []string{planBatchMachineID(0)}}
+		for range 3 {
+			res, apiErr := repo.List(context.Background(), p)
+			require.Nil(t, apiErr)
+			var ids []string
+			for _, run := range res.ProductionRuns {
+				ids = append(ids, run.ID)
+			}
+			out = append(out, ids)
+			if res.PageInfo.NextCursor == nil {
+				break
+			}
+			p.Cursor = res.PageInfo.NextCursor
+		}
+		// and back from the last page reached
+		if p.Cursor != nil {
+			res, apiErr := repo.List(context.Background(), p)
+			require.Nil(t, apiErr)
+			if res.PageInfo.PrevCursor != nil {
+				p.Cursor = res.PageInfo.PrevCursor
+				back, apiErr := repo.List(context.Background(), p)
+				require.Nil(t, apiErr)
+				var ids []string
+				for _, run := range back.ProductionRuns {
+					ids = append(ids, run.ID)
+				}
+				out = append(out, ids)
+			}
+		}
+		return out
+	}
+	byID := pages()
+	require.NotEmpty(t, byID[0])
+
+	saved := productionRunCountedRatio
+	productionRunCountedRatio = 0
+	t.Cleanup(func() { productionRunCountedRatio = saved })
+	require.Equal(t, byID, pages())
+}

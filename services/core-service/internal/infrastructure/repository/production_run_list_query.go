@@ -16,6 +16,10 @@ import (
 // productionRunListIndex yields an account's runs in list order.
 const productionRunListIndex = "production_run_account_created_idx"
 
+// productionRunCountedRatio sets how many runs, in pages, make a machine common. A var so a test can
+// reach the common path on a small corpus.
+var productionRunCountedRatio = 40
+
 // productionRunListColumns is the run summary scanProductionRunSummaries reads. A run's batch count is
 // counted for the page's runs only; joining batches before the page is cut counted every run's.
 const productionRunListColumns = `
@@ -59,6 +63,7 @@ func (r *productionRunRepoImpl) List(ctx context.Context, params domain.ListProd
 
 	f := &whereClause{}
 	f.add("pr.account_id = ?", params.AccountID)
+	index := productionRunListIndex
 
 	includeStatusFilter, statusOpen, statusClosed, includeItemFilter, itemIDs, includeMachineFilter, machineIDs := buildProductionRunListFilters(params)
 	if includeStatusFilter {
@@ -103,10 +108,21 @@ WHERE bm.B IN (`+placeholders(len(machineIDs))+`) AND b3.account_id = ? AND b3.p
 		if apiErr := db.MapSQLError(err); apiErr != nil {
 			return nil, tracing.Trace(span, apiErr)
 		}
-		if len(runIDs) == 0 {
+		switch {
+		case len(runIDs) == 0:
 			return empty()
+		case len(runIDs) <= productionRunCountedRatio*int(params.Limit+1):
+			// Few enough to read by id and sort. Walking the list key with them as an IN list instead, the
+			// planner may scan the key from the account's far end rather than range it from the cursor.
+			f.in("pr.id", runIDs)
+			index = "PRIMARY"
+		default:
+			// Common enough that walking the list key in order finds a page quickly; each run walked is
+			// probed through its own batches.
+			f.add(`EXISTS (SELECT 1 FROM batch b4 JOIN _batches_machines bm4 ON bm4.A = b4.id
+			WHERE b4.account_id = pr.account_id AND b4.production_run_id = pr.id
+			AND bm4.B IN (`+placeholders(len(machineIDs))+`))`, stringArgs(machineIDs)...)
 		}
-		f.in("pr.id", runIDs)
 	}
 
 	if startDate := parseDateString(params.StartDate); startDate.Valid {
@@ -127,7 +143,7 @@ WHERE bm.B IN (`+placeholders(len(machineIDs))+`) AND b3.account_id = ? AND b3.p
 	}
 
 	query := "SELECT" + productionRunListColumns +
-		"\nFROM (SELECT pr.id FROM production_run pr FORCE INDEX (" + productionRunListIndex + ")" +
+		"\nFROM (SELECT pr.id FROM production_run pr FORCE INDEX (" + index + ")" +
 		"\nWHERE " + strings.Join(f.where, "\nAND ") +
 		"\nORDER BY " + orderBy + "\nLIMIT ?) page" +
 		"\nJOIN production_run pr ON pr.id = page.id" + productionRunListJoins +

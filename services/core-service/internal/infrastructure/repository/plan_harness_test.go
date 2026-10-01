@@ -447,6 +447,13 @@ func (s listPlanSuite[P]) check(t *testing.T, db *sql.DB, edb *explainingDB, q *
 		return false
 	}
 
+	// A full scan of a scope-led key (no lookup or range on the scope) reads the table from one end. The
+	// planner takes one when offered an unfiltered key beside a filter's, swapping the filter's range for
+	// the unfiltered key's order; how far it then reads depends on where the page lies, so it is failed
+	// on sight rather than only when this corpus makes it expensive.
+	if fullScanRe(s.alias).MatchString(stmt.plan) {
+		t.Errorf("full index scan of %s\n%s\n%s", s.table, stmt.query, stmt.plan)
+	}
 	got := tableAccess(stmt.plan, s.alias)
 	limit := s.limit(tc.params)
 	page := float64(limit + 1)
@@ -548,4 +555,10 @@ func (s lookupPlanSuite) run(t *testing.T) {
 			}
 		})
 	}
+}
+
+// fullScanRe matches a full index or table scan of alias in EXPLAIN ANALYZE's tree: "Index scan on t
+// using k", "Covering index scan on t …", "Table scan on t". Lookups and range scans don't match.
+func fullScanRe(alias string) *regexp.Regexp {
+	return regexp.MustCompile(`-> (?:Covering index scan|Index scan|Table scan) on ` + regexp.QuoteMeta(alias) + `(?: |$)`)
 }

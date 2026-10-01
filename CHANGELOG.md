@@ -1,5 +1,22 @@
 # Changelog
 
+## [2.17.0](https://github.com/open-mrp/api/compare/v2.16.1...v2.17.0) (2026-10-01)
+
+
+### Features
+
+* **purchase-orders:** serve the dashboard's purchase orders from the Go API ([#223](https://github.com/open-mrp/api/issues/223)) ([37fc931](https://github.com/open-mrp/api/commit/37fc931270f6f7004a3d7f88f3e839d5809805eb))
+
+
+### Bug Fixes
+
+* **finance:** include allocations applied at the ends_at bound ([#225](https://github.com/open-mrp/api/issues/225)) ([2fa2e7a](https://github.com/open-mrp/api/commit/2fa2e7ade67b54692057f58034cd48d58fdc5fba))
+
+
+### Performance Improvements
+
+* **sales-facts:** start daily refresher passes at midnight Eastern ([#224](https://github.com/open-mrp/api/issues/224)) ([e772fb2](https://github.com/open-mrp/api/commit/e772fb2152bf3c496cebe91f0cdd4d234d040402))
+
 ## [2.16.1](https://github.com/open-mrp/api/compare/v2.16.0...v2.16.1) (2026-10-01)
 
 

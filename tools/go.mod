@@ -9,7 +9,7 @@ replace github.com/open-mrp/api => ../
 
 // Required by tools/apidocs (OpenAPI spec generator)
 require (
-	github.com/ohler55/ojg v1.28.5
+	github.com/ohler55/ojg v1.28.6
 	github.com/open-mrp/api v1.1.6
 	github.com/stretchr/testify v1.12.1
 	gopkg.in/yaml.v3 v3.0.1

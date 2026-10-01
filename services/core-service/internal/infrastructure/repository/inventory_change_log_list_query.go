@@ -2,7 +2,6 @@ package repository
 
 import (
 	gosql "database/sql"
-	"slices"
 	"strings"
 
 	"github.com/open-mrp/api/services/core-service/internal/domain"
@@ -25,73 +24,12 @@ const iclListJoins = ` JOIN item i ON i.id = icl.item_id` +
 	` LEFT JOIN scanning_station ss ON ss.id = icl.scanning_station_id` +
 	" LEFT JOIN `user` usr ON usr.id = icl.responsible_user_id"
 
-// iclCreatedIndex yields an account's change log in list order.
-const iclCreatedIndex = "inventory_change_log_account_created_idx"
-
-// iclMaxArms is the most values of one filter the list reads as separate arms. Each arm reads at most a
-// page, so this bounds a request to a few pages; a longer list (a SKU search) is one IN.
-const iclMaxArms = 8
-
-// uniqueStrings is v sorted, without repeats.
-func uniqueStrings(v []string) []string {
-	return slices.Compact(slices.Sorted(slices.Values(v)))
-}
-
-// iclListFilter is one IN filter of the list and its key, which yields one value's entries in list order.
-type iclListFilter struct {
-	column, index string
-	values        []string
-}
-
-// iclListPlan is how a list reads its page: the keys it may use, and the filter (if any) it reads as one
-// arm per value.
-type iclListPlan struct {
-	filters []iclListFilter
-	indexes []string
-	split   int
-}
-
-// planICLList picks the keys a list may be read from. Left free, the planner reaches for single-column
-// keys (created_at spans every account), or ranges a multi-valued filter's key and sorts every match.
-//   - A single-valued filter's key yields its entries in list order, so it is offered.
-//   - A filter with a few values is yielded in order by no key. When it is the most selective filter
-//     (filters run from most to least), it is read as one arm per value, each stopping at a page on that
-//     value's key, and the arms merged. Otherwise it is residual to a more selective filter and its key
-//     withheld: an arm whose value the other filter excludes would read a whole range to find nothing.
-//   - A long list (a SKU search) keeps its key: ranging just its entries and sorting them is the best
-//     plan when it is sparse, walking another key when it is dense.
-func planICLList(params domain.ListInventoryChangeLogsParams) iclListPlan {
-	p := iclListPlan{
-		filters: []iclListFilter{
-			{"icl.item_id", "inventory_change_log_account_id_item_id_created_at_id_idx", uniqueStrings(params.ItemIDs)},
-			{"icl.responsible_user_id", "inventory_change_log_acct_resp_user_created_idx", uniqueStrings(params.ChangedByUserIDs)},
-			{"icl.action_type_code", "inventory_change_log_acct_action_type_code_created_idx", uniqueStrings(params.ActionTypeCodes)},
-		},
-		indexes: []string{iclCreatedIndex},
-		split:   -1,
-	}
-	for i, f := range p.filters {
-		if n := len(f.values); n > 1 && n <= iclMaxArms {
-			p.split = i
-		}
-		if len(f.values) > 0 {
-			break
-		}
-	}
-	for i, f := range p.filters {
-		if n := len(f.values); n == 1 || n > iclMaxArms || i == p.split {
-			p.indexes = append(p.indexes, f.index)
-		}
-	}
-	return p
-}
-
 // buildICLListQuery assembles the inventory change-log listing SQL and its bind args. Only the
 // predicates the caller supplied are emitted: an `(? = false OR ...)` guard is not sargable, and left the
 // planner driving from quantity and reading millions of rows for a page.
 //
-// The page is chosen from inventory_change_log alone, on the keys planICLList picks, and joined after
-// (STRAIGHT_JOIN keeps the page first). Forward pages older (DESC), backward pages newer (ASC).
+// The page is chosen from inventory_change_log alone (keysetPage) and joined after; STRAIGHT_JOIN keeps
+// the page first. Forward pages older (DESC), backward pages newer (ASC).
 func buildICLListQuery(
 	params domain.ListInventoryChangeLogsParams,
 	dir pagination.Direction,
@@ -99,76 +37,41 @@ func buildICLListQuery(
 	cursorID gosql.NullString,
 	limit int32,
 ) (string, []any) {
-	plan := planICLList(params)
-	filters, split := plan.filters, plan.split
+	page := keysetPage{
+		table: "inventory_change_log", alias: "icl", sortColumn: "created_at",
+		createdIndex: "inventory_change_log_account_created_idx",
+		filters: []keysetFilter{
+			{column: "icl.item_id", index: "inventory_change_log_account_id_item_id_created_at_id_idx", values: params.ItemIDs},
+			{column: "icl.responsible_user_id", index: "inventory_change_log_acct_resp_user_created_idx", values: params.ChangedByUserIDs},
+			{column: "icl.action_type_code", index: "inventory_change_log_acct_action_type_code_created_idx", values: params.ActionTypeCodes},
+		},
+		where: []string{"icl.account_id = ?"},
+		args:  []any{params.AccountID},
+		desc:  dir != pagination.DirectionBackward,
+		limit: limit,
+	}
+	if params.StartDate != nil {
+		page.where, page.args = append(page.where, "icl.created_at >= ?"), append(page.args, *params.StartDate)
+	}
+	if params.EndDate != nil {
+		page.where, page.args = append(page.where, "icl.created_at <= ?"), append(page.args, *params.EndDate)
+	}
+	if cursorCreatedAt.Valid {
+		if dir == pagination.DirectionBackward {
+			page.where = append(page.where, "(icl.created_at > ? OR (icl.created_at = ? AND icl.id > ?))")
+		} else {
+			page.where = append(page.where, "(icl.created_at < ? OR (icl.created_at = ? AND icl.id < ?))")
+		}
+		page.args = append(page.args, cursorCreatedAt.Time, cursorCreatedAt.Time, cursorID.String)
+	}
 
 	orderBy := " ORDER BY icl.created_at DESC, icl.id DESC"
 	if dir == pagination.DirectionBackward {
 		orderBy = " ORDER BY icl.created_at ASC, icl.id ASC"
 	}
-
-	var args []any
-	// arm writes the page's candidates with filters[split] pinned to value.
-	arm := func(b *strings.Builder, value string) {
-		b.WriteString("SELECT icl.id, icl.created_at FROM inventory_change_log icl FORCE INDEX (")
-		b.WriteString(strings.Join(plan.indexes, ", "))
-		b.WriteString(") WHERE icl.account_id = ?")
-		args = append(args, params.AccountID)
-		for i, f := range filters {
-			switch {
-			case i == split:
-				b.WriteString(" AND " + f.column + " = ?")
-				args = append(args, value)
-			case len(f.values) > 0:
-				b.WriteString(" AND " + f.column + " IN (" + iclPlaceholders(len(f.values)) + ")")
-				for _, v := range f.values {
-					args = append(args, v)
-				}
-			}
-		}
-		if params.StartDate != nil {
-			b.WriteString(" AND icl.created_at >= ?")
-			args = append(args, *params.StartDate)
-		}
-		if params.EndDate != nil {
-			b.WriteString(" AND icl.created_at <= ?")
-			args = append(args, *params.EndDate)
-		}
-		if cursorCreatedAt.Valid {
-			if dir == pagination.DirectionBackward {
-				b.WriteString(" AND (icl.created_at > ? OR (icl.created_at = ? AND icl.id > ?))")
-			} else {
-				b.WriteString(" AND (icl.created_at < ? OR (icl.created_at = ? AND icl.id < ?))")
-			}
-			args = append(args, cursorCreatedAt.Time, cursorCreatedAt.Time, cursorID.String)
-		}
-		b.WriteString(orderBy + " LIMIT ?")
-		args = append(args, limit)
-	}
-
-	var b strings.Builder
-	b.WriteString("SELECT STRAIGHT_JOIN ")
-	b.WriteString(iclListColumns)
-	b.WriteString(" FROM (")
-	if split < 0 {
-		arm(&b, "")
-	} else {
-		for i, v := range filters[split].values {
-			if i > 0 {
-				b.WriteString(" UNION ALL ")
-			}
-			b.WriteString("(")
-			arm(&b, v)
-			b.WriteString(")")
-		}
-		b.WriteString(strings.ReplaceAll(orderBy, "icl.", "") + " LIMIT ?")
-		args = append(args, limit)
-	}
-	b.WriteString(") page JOIN inventory_change_log icl ON icl.id = page.id")
-	b.WriteString(iclListJoins)
-	b.WriteString(orderBy)
-
-	return b.String(), args
+	pageSQL, args := page.sql()
+	return "SELECT STRAIGHT_JOIN " + iclListColumns + " FROM (" + pageSQL + ") page" +
+		" JOIN inventory_change_log icl ON icl.id = page.id" + iclListJoins + orderBy, args
 }
 
 // scanICLListRows reads rows produced by buildICLListQuery into domain objects. The scan order must match iclListColumns exactly.

@@ -224,6 +224,28 @@ type planStats struct {
 // planStatsModes are the statistics every plan test runs under.
 var planStatsModes = []string{"analyzed", "production"}
 
+// planStatsModesFor is planStatsModes, less production for a corpus its snapshots cannot describe: one
+// over ten times the size of the production table a snapshot was taken from. Production's statistics
+// never meet such a table, because InnoDB recomputes them once a tenth of a table's rows change
+// (innodb_stats_auto_recalc, on in production); laid over it, they only tell the planner a large table
+// is tiny, and it scans whole keys a real plan would range.
+func planStatsModesFor(t *testing.T, db *sql.DB, tables []string) []string {
+	t.Helper()
+	for _, table := range tables {
+		raw, err := os.ReadFile(filepath.Join("testdata", "plan_stats", table+".json"))
+		require.NoError(t, err)
+		var stats planStats
+		require.NoError(t, json.Unmarshal(raw, &stats))
+		var rows int64
+		require.NoError(t, db.QueryRow("SELECT COUNT(*) FROM `"+table+"`").Scan(&rows))
+		if rows > 10*stats.Table.NRows {
+			t.Logf("production statistics do not apply: %s holds %d rows, its snapshot describes %d", table, rows, stats.Table.NRows)
+			return planStatsModes[:1]
+		}
+	}
+	return planStatsModes
+}
+
 // usePlanStats loads table's statistics for mode: "analyzed" recomputes them from the rows, and
 // "production" overwrites them with the snapshot. An index the snapshot does not name (one added
 // since) keeps its analyzed numbers.
@@ -339,7 +361,7 @@ type listPlanSuite[P any] struct {
 // filters that reject some rows the driving index yields.
 func planRowBudget(limit int32) float64 { return float64(10 * (limit + 1)) }
 
-// run checks every case under both statistics modes. Each request is replayed with every scope-led
+// run checks every case under each statistics mode (planStatsModesFor). Each request is replayed with every scope-led
 // index forced, and two things are asserted separately:
 //   - the plan it got reads about what the best of those indexes reads: a miss is the planner (or a
 //     hint) choosing badly, fixed in the query;
@@ -354,10 +376,11 @@ func (s listPlanSuite[P]) run(t *testing.T) {
 	q := sqlc.New(edb)
 	indexes := scopeIndexes(t, db, s.table, s.scopeColumn)
 
+	tables := append([]string{s.table}, s.relatedTables...)
 	measured := 0
-	for _, mode := range planStatsModes {
+	for _, mode := range planStatsModesFor(t, db, tables) {
 		t.Run("stats="+mode, func(t *testing.T) {
-			for _, table := range append([]string{s.table}, s.relatedTables...) {
+			for _, table := range tables {
 				usePlanStats(t, db, table, mode)
 				t.Cleanup(func() { usePlanStats(t, db, table, "analyzed") })
 			}
@@ -462,13 +485,13 @@ type lookupPlanCase struct {
 // still reads a row or two, and a join of small lookups reads each once.
 const lookupSlack = 10
 
-// run checks every statement of every case under both statistics modes: no table it reads may yield
+// run checks every statement of every case under each statistics mode: no table it reads may yield
 // more than twice the rows the statement returns, plus lookupSlack.
 func (s lookupPlanSuite) run(t *testing.T) {
 	db := planDB(t)
 	edb := &explainingDB{db: db}
 	q := sqlc.New(edb)
-	for _, mode := range planStatsModes {
+	for _, mode := range planStatsModesFor(t, db, s.tables) {
 		t.Run("stats="+mode, func(t *testing.T) {
 			for _, table := range s.tables {
 				usePlanStats(t, db, table, mode)

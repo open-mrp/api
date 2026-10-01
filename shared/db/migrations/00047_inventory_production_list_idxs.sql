@@ -17,6 +17,18 @@ ALTER TABLE `batch`
   DROP KEY `batch_account_id_scanning_station_id_scanned_at_id_idx`,
   ADD KEY `batch_account_id_scanning_station_id_scanned_at_id_idx` (`account_id`, `scanning_station_id`, `scanned_at`, `id`);
 
+ALTER TABLE `machine_downtime_event`
+  DROP KEY `machine_downtime_account_started_idx`,
+  ADD KEY `machine_downtime_account_started_idx` (`account_id`, `started_at`, `id`),
+  DROP KEY `machine_downtime_account_machine_started_idx`,
+  ADD KEY `machine_downtime_account_machine_started_idx` (`account_id`, `machine_id`, `started_at`, `id`),
+  DROP KEY `machine_downtime_account_dept_started_idx`,
+  ADD KEY `machine_downtime_account_dept_started_idx` (`account_id`, `department_id`, `started_at`, `id`),
+  DROP KEY `machine_downtime_account_reason_started_idx`,
+  ADD KEY `machine_downtime_account_reason_started_idx` (`account_id`, `reason_code`, `started_at`, `id`),
+  DROP KEY `machine_downtime_account_ended_started_idx`,
+  ADD KEY `machine_downtime_account_ended_started_idx` (`account_id`, `ended_at`, `started_at`, `id`);
+
 -- The run list's order: the account's runs newest first, read a page at a time instead of all sorted.
 ALTER TABLE `production_run`
   ADD KEY `production_run_account_created_idx` (`account_id`, `created_at`, `id`);
@@ -24,6 +36,18 @@ ALTER TABLE `production_run`
 -- +goose Down
 ALTER TABLE `production_run`
   DROP KEY `production_run_account_created_idx`;
+
+ALTER TABLE `machine_downtime_event`
+  DROP KEY `machine_downtime_account_started_idx`,
+  ADD KEY `machine_downtime_account_started_idx` (`account_id`, `started_at` DESC, `id` DESC),
+  DROP KEY `machine_downtime_account_machine_started_idx`,
+  ADD KEY `machine_downtime_account_machine_started_idx` (`account_id`, `machine_id`, `started_at` DESC, `id` DESC),
+  DROP KEY `machine_downtime_account_dept_started_idx`,
+  ADD KEY `machine_downtime_account_dept_started_idx` (`account_id`, `department_id`, `started_at` DESC, `id` DESC),
+  DROP KEY `machine_downtime_account_reason_started_idx`,
+  ADD KEY `machine_downtime_account_reason_started_idx` (`account_id`, `reason_code`, `started_at` DESC, `id` DESC),
+  DROP KEY `machine_downtime_account_ended_started_idx`,
+  ADD KEY `machine_downtime_account_ended_started_idx` (`account_id`, `ended_at`, `started_at` DESC, `id` DESC);
 
 ALTER TABLE `batch`
   DROP KEY `batch_account_id_scanning_station_id_scanned_at_id_idx`,

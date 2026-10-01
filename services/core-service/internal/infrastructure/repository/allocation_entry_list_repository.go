@@ -134,7 +134,9 @@ func (r *transactionAllocationRepoImpl) queryAllocationEntries(ctx context.Conte
 	sb.WriteString(`) page
 JOIN transaction_allocation ta ON ta.id = page.id
 JOIN quantity q ON q.id = ta.amount_id
-JOIN unit qu ON qu.id = q.unit_id
+-- LEFT, though every quantity has a unit: an inner join to the small unit table lets the planner
+-- hash it against the page and probe ta once per page row and unit.
+LEFT JOIN unit qu ON qu.id = q.unit_id
 JOIN ` + "`transaction`" + ` t ON t.id = ta.transaction_id
 JOIN invoice inv ON inv.id = ta.invoice_id
 JOIN account cust_acct ON cust_acct.id = t.customer_account_id

@@ -153,31 +153,14 @@ func TestVitessSmoke(t *testing.T) {
 	// --- repository paths that assemble SQL or chain queries ---
 	t.Run("sales order list", func(t *testing.T) {
 		repo := NewSalesOrderRepo(q)
-		day, yes, no := "2000-01-01", true, false
 		for name, params := range map[string]domain.ListSalesOrdersParams{
 			"plain":    {AccountID: account, Limit: 50},
 			"customer": {AccountID: account, Limit: 50, CustomerIDs: buyers},
 			"status":   {AccountID: account, Limit: 50, StatusCodes: []string{"issued", "estimate"}},
 			"buyer":    {AccountID: account, Limit: 50, BuyerAccountID: &buyers[0]},
-			// The optimizer hints, semijoins, and index sets the page query is built with.
-			"lines":   {AccountID: account, Limit: 5, ItemIDs: []string{"it_none"}, ProductLineIDs: productLines},
-			"group":   {AccountID: account, Limit: 5, CustomerGroupIDs: groups, SalesRepIDs: []string{"acus_none"}},
-			"ship-by": {AccountID: account, Limit: 5, ShipByAfter: &day, CustomerIDs: buyers, SalesRepIDs: []string{"acus_none"}},
-			"dates":   {AccountID: account, Limit: 5, StartDate: &day, PastDue: &yes},
-			"due":     {AccountID: account, Limit: 5, EndDate: &day, PastDue: &no},
 		} {
-			page, apiErr := repo.List(ctx, params)
+			_, apiErr := repo.List(ctx, params)
 			checkAPI("ListSalesOrders/"+name, apiErr)
-			if page != nil && page.PageInfo.NextCursor != nil {
-				params.Cursor = page.PageInfo.NextCursor
-				next, apiErr := repo.List(ctx, params)
-				checkAPI("ListSalesOrders next/"+name, apiErr)
-				if next != nil && next.PageInfo.PrevCursor != nil {
-					params.Cursor = next.PageInfo.PrevCursor
-					_, apiErr = repo.List(ctx, params)
-					checkAPI("ListSalesOrders prev/"+name, apiErr)
-				}
-			}
 		}
 		_, apiErr := repo.GetByIDs(ctx, account, &buyers[0], orderIDs)
 		checkAPI("SalesOrder.GetByIDs", apiErr)
@@ -286,48 +269,6 @@ func TestVitessSmoke(t *testing.T) {
 		if page != nil && page.PageInfo.NextCursor != nil {
 			_, apiErr = NewAddressRepo(q).List(ctx, domain.ListAddressesParams{AccountID: addressAccount, Limit: 2, Cursor: page.PageInfo.NextCursor})
 			checkAPI("ListAddresses next", apiErr)
-		}
-	})
-
-	t.Run("invoice and receivable lists", func(t *testing.T) {
-		invoices := NewInvoiceRepo(q)
-		search, paid, unpaid, overpaid := "1", "paid", "unpaid", "overpaid"
-		from, to := time.Date(2000, 1, 1, 0, 0, 0, 0, time.UTC), time.Now().UTC().Add(time.Hour)
-		for name, params := range map[string]domain.ListInvoicesParams{
-			"plain":    {AccountID: account, Limit: 1},
-			"paid":     {AccountID: account, Limit: 5, Status: &paid, StartDate: &from, EndDate: &to},
-			"unpaid":   {AccountID: account, Limit: 5, Status: &unpaid, Query: &search},
-			"overpaid": {AccountID: account, Limit: 5, Status: &overpaid},
-			"orders": {AccountID: account, Limit: 5, CustomerIDs: buyers, CustomerGroupIDs: groups, SalesRepIDs: []string{"acus_none"},
-				ItemIDs: []string{"it_none"}, ProductLineIDs: productLines},
-			"customer": {AccountID: account, Limit: 5, CustomerIDs: buyers},
-		} {
-			page, apiErr := invoices.List(ctx, params)
-			checkAPI("ListInvoices/"+name, apiErr)
-			if page != nil && page.PageInfo.NextCursor != nil {
-				params.Cursor = page.PageInfo.NextCursor
-				next, apiErr := invoices.List(ctx, params)
-				checkAPI("ListInvoices next/"+name, apiErr)
-				if next != nil && next.PageInfo.PrevCursor != nil {
-					params.Cursor = next.PageInfo.PrevCursor
-					_, apiErr = invoices.List(ctx, params)
-					checkAPI("ListInvoices prev/"+name, apiErr)
-				}
-			}
-		}
-		page, apiErr := invoices.ListByCustomer(ctx, domain.ListCustomerInvoicesParams{AccountID: account, CustomerAccountID: buyers[0], Limit: 1})
-		checkAPI("ListCustomerInvoices", apiErr)
-		if page != nil && page.PageInfo.NextCursor != nil {
-			_, apiErr = invoices.ListByCustomer(ctx, domain.ListCustomerInvoicesParams{AccountID: account, CustomerAccountID: buyers[0], Limit: 1, Query: &search, Cursor: page.PageInfo.NextCursor})
-			checkAPI("ListCustomerInvoices next", apiErr)
-		}
-
-		receivables := NewReceivableRepo(q)
-		for _, cutoff := range []*time.Time{nil, &to} {
-			_, apiErr = receivables.List(ctx, domain.ListReceivablesParams{AccountID: account, CutoffDate: cutoff, Query: &search, Limit: 5})
-			checkAPI("ListReceivables", apiErr)
-			_, apiErr = receivables.ListByCustomer(ctx, domain.ListReceivablesByCustomerParams{AccountID: account, CustomerAccountID: buyers[0], CutoffDate: cutoff, Limit: 5})
-			checkAPI("ListReceivablesByCustomer", apiErr)
 		}
 	})
 
@@ -752,18 +693,6 @@ func TestVitessSmoke(t *testing.T) {
 		}
 		_, apiErr = reports.GetLinePage(ctx, domain.ListSalesLinesParams{SalesReportFilter: filter, Limit: 5})
 		checkAPI("GetLinePage filtered", apiErr)
-		// One per page shape: buyer by buyer, and the in-order key set.
-		for name, f := range map[string]domain.SalesReportFilter{
-			"buyers": {AccountID: account, CustomerIDs: buyers},
-			"lines":  {AccountID: account, ProductLineIDs: productLines, SalesRepIDs: []string{"acus_none"}, ItemIDs: []string{"it_none"}},
-		} {
-			linePage, apiErr := reports.GetLinePage(ctx, domain.ListSalesLinesParams{SalesReportFilter: f, Limit: 1})
-			checkAPI("GetLinePage "+name, apiErr)
-			if linePage != nil && linePage.PageInfo.NextCursor != nil {
-				_, apiErr = reports.GetLinePage(ctx, domain.ListSalesLinesParams{SalesReportFilter: f, Limit: 1, Cursor: linePage.PageInfo.NextCursor})
-				checkAPI("GetLinePage next "+name, apiErr)
-			}
-		}
 
 		// The rollups: a full sweep's statements, then every report shape that reads them.
 		cursor := domain.SalesRollupDay{Day: salesFactSweepFloor}

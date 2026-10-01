@@ -246,7 +246,7 @@ type GetInvoiceRow struct {
 	AcceptsInvoiceEmails     int32
 }
 
-// Selects the same projection, in the same order, as the two list queries so one Go mapper serves
+// Selects the same projection, in the same order, as ListInvoicesByIDs so one Go mapper serves
 // read, list and update; the column lists must be kept identical.
 func (q *Queries) GetInvoice(ctx context.Context, arg GetInvoiceParams) (GetInvoiceRow, error) {
 	row := q.db.QueryRowContext(ctx, getInvoice, arg.ID, arg.AccountID)
@@ -737,7 +737,7 @@ func (q *Queries) IsDuplicateInvoiceNumber(ctx context.Context, arg IsDuplicateI
 	return cnt, err
 }
 
-const listCustomerInvoicesBackward = `-- name: ListCustomerInvoicesBackward :many
+const listCustomerInvoicesByIDs = `-- name: ListCustomerInvoicesByIDs :many
 SELECT
     inv.id,
     inv.number,
@@ -776,47 +776,16 @@ JOIN account_relation ar ON ar.owner_account_id = inv.account_id
 JOIN account buyer ON buyer.id = so.buyer_account_id
 LEFT JOIN account_relation par ON par.id = ar.parent_account_relation_id
 LEFT JOIN address addr ON addr.id = so.billing_address_id
-WHERE inv.account_id = ?
-AND inv.is_paid_in_full = false
-AND (
-    (
-        so.buyer_account_id = ?
-        OR EXISTS (
-            SELECT 1 FROM account_relation child_ar
-            WHERE child_ar.owner_account_id = inv.account_id
-            AND child_ar.counterparty_account_id = so.buyer_account_id
-            AND child_ar.account_relation_role_code = 'customer'
-            AND child_ar.parent_account_relation_id = (
-                SELECT par_ar.id FROM account_relation par_ar
-                WHERE par_ar.owner_account_id = inv.account_id
-                AND par_ar.counterparty_account_id = ?
-                AND par_ar.account_relation_role_code = 'customer'
-            )
-        )
-    )
-)
-AND (
-    ? IS NULL
-    OR inv.number LIKE ?
-)
-AND (
-    inv.created_at > ?
-    OR (inv.created_at = ? AND inv.id > ?)
-)
-ORDER BY inv.created_at ASC, inv.id ASC
-LIMIT ?
+WHERE inv.id IN (/*SLICE:invoice_ids*/?)
+AND inv.account_id = ?
 `
 
-type ListCustomerInvoicesBackwardParams struct {
-	AccountID         string
-	CustomerAccountID string
-	SearchQuery       sql.NullString
-	CursorCreatedAt   time.Time
-	CursorID          string
-	Limit             int32
+type ListCustomerInvoicesByIDsParams struct {
+	InvoiceIds []string
+	AccountID  string
 }
 
-type ListCustomerInvoicesBackwardRow struct {
+type ListCustomerInvoicesByIDsRow struct {
 	ID                       string
 	Number                   string
 	IsPaidInFull             bool
@@ -836,27 +805,27 @@ type ListCustomerInvoicesBackwardRow struct {
 	TotalInvoiced            interface{}
 }
 
-// Overpaid invoices still owe a correction, so they stay in the payable set.
-// A parent settles for its children, so their invoices are payable here too.
-func (q *Queries) ListCustomerInvoicesBackward(ctx context.Context, arg ListCustomerInvoicesBackwardParams) ([]ListCustomerInvoicesBackwardRow, error) {
-	rows, err := q.db.QueryContext(ctx, listCustomerInvoicesBackward,
-		arg.AccountID,
-		arg.CustomerAccountID,
-		arg.CustomerAccountID,
-		arg.SearchQuery,
-		arg.SearchQuery,
-		arg.CursorCreatedAt,
-		arg.CursorCreatedAt,
-		arg.CursorID,
-		arg.Limit,
-	)
+// Hydrates a page of a customer's payable invoices chosen by InvoiceRepo.ListByCustomer.
+func (q *Queries) ListCustomerInvoicesByIDs(ctx context.Context, arg ListCustomerInvoicesByIDsParams) ([]ListCustomerInvoicesByIDsRow, error) {
+	query := listCustomerInvoicesByIDs
+	var queryParams []interface{}
+	if len(arg.InvoiceIds) > 0 {
+		for _, v := range arg.InvoiceIds {
+			queryParams = append(queryParams, v)
+		}
+		query = strings.Replace(query, "/*SLICE:invoice_ids*/?", strings.Repeat(",?", len(arg.InvoiceIds))[1:], 1)
+	} else {
+		query = strings.Replace(query, "/*SLICE:invoice_ids*/?", "NULL", 1)
+	}
+	queryParams = append(queryParams, arg.AccountID)
+	rows, err := q.db.QueryContext(ctx, query, queryParams...)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	var items []ListCustomerInvoicesBackwardRow
+	var items []ListCustomerInvoicesByIDsRow
 	for rows.Next() {
-		var i ListCustomerInvoicesBackwardRow
+		var i ListCustomerInvoicesByIDsRow
 		if err := rows.Scan(
 			&i.ID,
 			&i.Number,
@@ -889,161 +858,7 @@ func (q *Queries) ListCustomerInvoicesBackward(ctx context.Context, arg ListCust
 	return items, nil
 }
 
-const listCustomerInvoicesForward = `-- name: ListCustomerInvoicesForward :many
-SELECT
-    inv.id,
-    inv.number,
-    inv.is_paid_in_full,
-    inv.created_at,
-    inv.updated_at,
-    so.customer_po_number,
-    buyer.id AS customer_id,
-    buyer.name AS customer_name,
-    ar.external_number AS customer_number,
-    ar.account_status_code AS customer_status_code,
-    ar.commission_status_code AS customer_commission_policy,
-    ar.parent_account_relation_id,
-    par.counterparty_account_id AS parent_account_id,
-    ar.payment_term_id AS customer_payment_term_id,
-    addr.id AS billing_address_id,
-    addr.name AS billing_address_name,
-    COALESCE((
-        -- Correlated per invoice: a grouped derived table cannot take the account filter and so aggregates every invoice_line in the database to return one page.
-        -- Each line priced as the dashboard's multiplyRate does and rounded to the cent, as its
-        -- calculateTotalInvoiced sums them (see the line-pricing skill).
-        SELECT SUM(ROUND(CASE WHEN q2.unit_id = r2.denominator_unit_id THEN q2.value * r2.value ELSE (q2.value * q2u.ratio_numerator / q2u.ratio_denominator) * (r2.value / (r2u.ratio_numerator / r2u.ratio_denominator)) END, 2))
-        FROM invoice_line il2
-        JOIN quantity q2 ON q2.id = il2.quantity_id
-        JOIN sales_order_line sol2 ON sol2.id = il2.sales_order_line_id
-        JOIN rate r2 ON r2.id = sol2.unit_price_id
-        JOIN unit q2u ON q2u.id = q2.unit_id
-        JOIN unit r2u ON r2u.id = r2.denominator_unit_id
-        WHERE il2.invoice_id = inv.id
-    ), 0) AS total_invoiced
-FROM invoice inv
-JOIN sales_order so ON inv.sales_order_id = so.id
-JOIN account_relation ar ON ar.owner_account_id = inv.account_id
-    AND ar.counterparty_account_id = so.buyer_account_id
-    AND ar.account_relation_role_code = 'customer'
-JOIN account buyer ON buyer.id = so.buyer_account_id
-LEFT JOIN account_relation par ON par.id = ar.parent_account_relation_id
-LEFT JOIN address addr ON addr.id = so.billing_address_id
-WHERE inv.account_id = ?
-AND inv.is_paid_in_full = false
-AND (
-    (
-        so.buyer_account_id = ?
-        OR EXISTS (
-            SELECT 1 FROM account_relation child_ar
-            WHERE child_ar.owner_account_id = inv.account_id
-            AND child_ar.counterparty_account_id = so.buyer_account_id
-            AND child_ar.account_relation_role_code = 'customer'
-            AND child_ar.parent_account_relation_id = (
-                SELECT par_ar.id FROM account_relation par_ar
-                WHERE par_ar.owner_account_id = inv.account_id
-                AND par_ar.counterparty_account_id = ?
-                AND par_ar.account_relation_role_code = 'customer'
-            )
-        )
-    )
-)
-AND (
-    ? IS NULL
-    OR inv.number LIKE ?
-)
-AND (
-    ? IS NULL
-    OR inv.created_at < ?
-    OR (inv.created_at = ? AND inv.id < ?)
-)
-ORDER BY inv.created_at DESC, inv.id DESC
-LIMIT ?
-`
-
-type ListCustomerInvoicesForwardParams struct {
-	AccountID         string
-	CustomerAccountID string
-	SearchQuery       sql.NullString
-	CursorCreatedAt   sql.NullTime
-	CursorID          sql.NullString
-	Limit             int32
-}
-
-type ListCustomerInvoicesForwardRow struct {
-	ID                       string
-	Number                   string
-	IsPaidInFull             bool
-	CreatedAt                time.Time
-	UpdatedAt                time.Time
-	CustomerPoNumber         sql.NullString
-	CustomerID               string
-	CustomerName             string
-	CustomerNumber           string
-	CustomerStatusCode       sql.NullString
-	CustomerCommissionPolicy sql.NullString
-	ParentAccountRelationID  sql.NullString
-	ParentAccountID          sql.NullString
-	CustomerPaymentTermID    sql.NullString
-	BillingAddressID         sql.NullString
-	BillingAddressName       sql.NullString
-	TotalInvoiced            interface{}
-}
-
-// Overpaid invoices still owe a correction, so they stay in the payable set.
-// A parent settles for its children, so their invoices are payable here too.
-func (q *Queries) ListCustomerInvoicesForward(ctx context.Context, arg ListCustomerInvoicesForwardParams) ([]ListCustomerInvoicesForwardRow, error) {
-	rows, err := q.db.QueryContext(ctx, listCustomerInvoicesForward,
-		arg.AccountID,
-		arg.CustomerAccountID,
-		arg.CustomerAccountID,
-		arg.SearchQuery,
-		arg.SearchQuery,
-		arg.CursorCreatedAt,
-		arg.CursorCreatedAt,
-		arg.CursorCreatedAt,
-		arg.CursorID,
-		arg.Limit,
-	)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	var items []ListCustomerInvoicesForwardRow
-	for rows.Next() {
-		var i ListCustomerInvoicesForwardRow
-		if err := rows.Scan(
-			&i.ID,
-			&i.Number,
-			&i.IsPaidInFull,
-			&i.CreatedAt,
-			&i.UpdatedAt,
-			&i.CustomerPoNumber,
-			&i.CustomerID,
-			&i.CustomerName,
-			&i.CustomerNumber,
-			&i.CustomerStatusCode,
-			&i.CustomerCommissionPolicy,
-			&i.ParentAccountRelationID,
-			&i.ParentAccountID,
-			&i.CustomerPaymentTermID,
-			&i.BillingAddressID,
-			&i.BillingAddressName,
-			&i.TotalInvoiced,
-		); err != nil {
-			return nil, err
-		}
-		items = append(items, i)
-	}
-	if err := rows.Close(); err != nil {
-		return nil, err
-	}
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-	return items, nil
-}
-
-const listInvoicesBackward = `-- name: ListInvoicesBackward :many
+const listInvoicesByIDs = `-- name: ListInvoicesByIDs :many
 SELECT
     inv.id,
     inv.number,
@@ -1076,7 +891,6 @@ SELECT
     pt.id AS payment_term_id,
     pt.name AS payment_term_name,
     pt.is_active AS payment_term_is_active,
-    -- Counts and sums through scalar subqueries: joining invoice_line fans out rows and breaks the cursor.
     (SELECT COUNT(*) FROM invoice_line il WHERE il.invoice_id = inv.id) AS line_count,
     COALESCE((
         -- Each line priced as the dashboard's multiplyRate does and rounded to the cent, as its
@@ -1105,92 +919,16 @@ LEFT JOIN shipment sh ON sh.invoice_id = inv.id
 JOIN address addr ON addr.id = inv.billing_address_id
 JOIN geolocation geo ON geo.id = addr.geolocation_id
 LEFT JOIN payment_term pt ON pt.id = so.payment_term_id
-WHERE inv.account_id = ?
-AND (
-    ? IS NULL
-    OR inv.number LIKE ?
-    OR inv.note LIKE ?
-    OR buyer.name LIKE ?
-    -- Reaches the order and relation already joined one-to-one above, so the search widens without fanning rows out.
-    OR so.number LIKE ?
-    OR so.customer_po_number LIKE ?
-    OR ar.external_number LIKE ?
-)
-AND (
-    ? IS NULL
-    OR (? = 'paid' AND inv.is_paid_in_full = true)
-    -- Overpaid invoices stay in the unpaid bucket: a negative balance is not cleanly settled either.
-    OR (? = 'unpaid' AND inv.is_paid_in_full = false)
-    OR (? = 'overpaid' AND inv.is_over_paid = true)
-)
-AND (
-    -- Scopes to the order's lines, not the invoice's: an invoice bills a shipment's subset of them.
-    ? = false
-    OR EXISTS (
-        SELECT 1 FROM sales_order_line sol3
-        WHERE sol3.sales_order_id = so.id
-        AND sol3.item_id IN (/*SLICE:item_ids*/?)
-    )
-)
-AND (
-    ? = false
-    OR so.buyer_account_id IN (/*SLICE:customer_ids*/?)
-)
-AND (
-    ? = false
-    OR EXISTS (
-        SELECT 1 FROM sales_order_line sol4
-        JOIN product p4 ON p4.id = sol4.product_id
-        WHERE sol4.sales_order_id = so.id
-        AND p4.product_line_id IN (/*SLICE:product_line_ids*/?)
-    )
-)
-AND (
-    ? = false
-    OR ar.account_group_id IN (/*SLICE:customer_group_ids*/?)
-)
-AND (
-    ? = false
-    OR so.sales_rep_id IN (/*SLICE:sales_rep_ids*/?)
-)
-AND (
-    ? IS NULL
-    OR inv.created_at >= ?
-)
-AND (
-    ? IS NULL
-    OR inv.created_at <= ?
-)
-AND (
-    inv.created_at > ?
-    OR (inv.created_at = ? AND inv.id > ?)
-)
-ORDER BY inv.created_at ASC, inv.id ASC
-LIMIT ?
+WHERE inv.id IN (/*SLICE:invoice_ids*/?)
+AND inv.account_id = ?
 `
 
-type ListInvoicesBackwardParams struct {
-	AccountID                  string
-	SearchQuery                sql.NullString
-	Status                     interface{}
-	IncludeItemFilter          interface{}
-	ItemIds                    []sql.NullString
-	IncludeCustomerFilter      interface{}
-	CustomerIds                []string
-	IncludeProductLineFilter   interface{}
-	ProductLineIds             []sql.NullString
-	IncludeCustomerGroupFilter interface{}
-	CustomerGroupIds           []sql.NullString
-	IncludeSalesRepFilter      interface{}
-	SalesRepIds                []sql.NullString
-	StartDate                  sql.NullTime
-	EndDate                    sql.NullTime
-	CursorCreatedAt            time.Time
-	CursorID                   string
-	Limit                      int32
+type ListInvoicesByIDsParams struct {
+	InvoiceIds []string
+	AccountID  string
 }
 
-type ListInvoicesBackwardRow struct {
+type ListInvoicesByIDsRow struct {
 	ID                       string
 	Number                   string
 	Note                     sql.NullString
@@ -1227,393 +965,28 @@ type ListInvoicesBackwardRow struct {
 	AcceptsInvoiceEmails     int32
 }
 
-func (q *Queries) ListInvoicesBackward(ctx context.Context, arg ListInvoicesBackwardParams) ([]ListInvoicesBackwardRow, error) {
-	query := listInvoicesBackward
+// Hydrates a page of the invoice list chosen by InvoiceRepo.List. The projection is GetInvoice's, in
+// the same order, so its rows convert to GetInvoiceRow.
+func (q *Queries) ListInvoicesByIDs(ctx context.Context, arg ListInvoicesByIDsParams) ([]ListInvoicesByIDsRow, error) {
+	query := listInvoicesByIDs
 	var queryParams []interface{}
+	if len(arg.InvoiceIds) > 0 {
+		for _, v := range arg.InvoiceIds {
+			queryParams = append(queryParams, v)
+		}
+		query = strings.Replace(query, "/*SLICE:invoice_ids*/?", strings.Repeat(",?", len(arg.InvoiceIds))[1:], 1)
+	} else {
+		query = strings.Replace(query, "/*SLICE:invoice_ids*/?", "NULL", 1)
+	}
 	queryParams = append(queryParams, arg.AccountID)
-	queryParams = append(queryParams, arg.SearchQuery)
-	queryParams = append(queryParams, arg.SearchQuery)
-	queryParams = append(queryParams, arg.SearchQuery)
-	queryParams = append(queryParams, arg.SearchQuery)
-	queryParams = append(queryParams, arg.SearchQuery)
-	queryParams = append(queryParams, arg.SearchQuery)
-	queryParams = append(queryParams, arg.SearchQuery)
-	queryParams = append(queryParams, arg.Status)
-	queryParams = append(queryParams, arg.Status)
-	queryParams = append(queryParams, arg.Status)
-	queryParams = append(queryParams, arg.Status)
-	queryParams = append(queryParams, arg.IncludeItemFilter)
-	if len(arg.ItemIds) > 0 {
-		for _, v := range arg.ItemIds {
-			queryParams = append(queryParams, v)
-		}
-		query = strings.Replace(query, "/*SLICE:item_ids*/?", strings.Repeat(",?", len(arg.ItemIds))[1:], 1)
-	} else {
-		query = strings.Replace(query, "/*SLICE:item_ids*/?", "NULL", 1)
-	}
-	queryParams = append(queryParams, arg.IncludeCustomerFilter)
-	if len(arg.CustomerIds) > 0 {
-		for _, v := range arg.CustomerIds {
-			queryParams = append(queryParams, v)
-		}
-		query = strings.Replace(query, "/*SLICE:customer_ids*/?", strings.Repeat(",?", len(arg.CustomerIds))[1:], 1)
-	} else {
-		query = strings.Replace(query, "/*SLICE:customer_ids*/?", "NULL", 1)
-	}
-	queryParams = append(queryParams, arg.IncludeProductLineFilter)
-	if len(arg.ProductLineIds) > 0 {
-		for _, v := range arg.ProductLineIds {
-			queryParams = append(queryParams, v)
-		}
-		query = strings.Replace(query, "/*SLICE:product_line_ids*/?", strings.Repeat(",?", len(arg.ProductLineIds))[1:], 1)
-	} else {
-		query = strings.Replace(query, "/*SLICE:product_line_ids*/?", "NULL", 1)
-	}
-	queryParams = append(queryParams, arg.IncludeCustomerGroupFilter)
-	if len(arg.CustomerGroupIds) > 0 {
-		for _, v := range arg.CustomerGroupIds {
-			queryParams = append(queryParams, v)
-		}
-		query = strings.Replace(query, "/*SLICE:customer_group_ids*/?", strings.Repeat(",?", len(arg.CustomerGroupIds))[1:], 1)
-	} else {
-		query = strings.Replace(query, "/*SLICE:customer_group_ids*/?", "NULL", 1)
-	}
-	queryParams = append(queryParams, arg.IncludeSalesRepFilter)
-	if len(arg.SalesRepIds) > 0 {
-		for _, v := range arg.SalesRepIds {
-			queryParams = append(queryParams, v)
-		}
-		query = strings.Replace(query, "/*SLICE:sales_rep_ids*/?", strings.Repeat(",?", len(arg.SalesRepIds))[1:], 1)
-	} else {
-		query = strings.Replace(query, "/*SLICE:sales_rep_ids*/?", "NULL", 1)
-	}
-	queryParams = append(queryParams, arg.StartDate)
-	queryParams = append(queryParams, arg.StartDate)
-	queryParams = append(queryParams, arg.EndDate)
-	queryParams = append(queryParams, arg.EndDate)
-	queryParams = append(queryParams, arg.CursorCreatedAt)
-	queryParams = append(queryParams, arg.CursorCreatedAt)
-	queryParams = append(queryParams, arg.CursorID)
-	queryParams = append(queryParams, arg.Limit)
 	rows, err := q.db.QueryContext(ctx, query, queryParams...)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	var items []ListInvoicesBackwardRow
+	var items []ListInvoicesByIDsRow
 	for rows.Next() {
-		var i ListInvoicesBackwardRow
-		if err := rows.Scan(
-			&i.ID,
-			&i.Number,
-			&i.Note,
-			&i.IsPaidInFull,
-			&i.IsOverPaid,
-			&i.IsEdiSent,
-			&i.HasBeenSent,
-			&i.CreatedAt,
-			&i.UpdatedAt,
-			&i.OrderID,
-			&i.OrderNumber,
-			&i.PriorityCode,
-			&i.CustomerID,
-			&i.CustomerName,
-			&i.CustomerNumber,
-			&i.CustomerStatusCode,
-			&i.CustomerCommissionPolicy,
-			&i.CustomerIsEdiEnabled,
-			&i.ShipmentID,
-			&i.ShipmentNumber,
-			&i.BillingAddressID,
-			&i.BillingAddressName,
-			&i.BillingAddressLine1,
-			&i.BillingAddressLine2,
-			&i.BillingAddressCity,
-			&i.BillingAddressState,
-			&i.BillingAddressZip,
-			&i.BillingAddressCountry,
-			&i.PaymentTermID,
-			&i.PaymentTermName,
-			&i.PaymentTermIsActive,
-			&i.LineCount,
-			&i.TotalInvoiced,
-			&i.AcceptsInvoiceEmails,
-		); err != nil {
-			return nil, err
-		}
-		items = append(items, i)
-	}
-	if err := rows.Close(); err != nil {
-		return nil, err
-	}
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-	return items, nil
-}
-
-const listInvoicesForward = `-- name: ListInvoicesForward :many
-SELECT
-    inv.id,
-    inv.number,
-    inv.note,
-    inv.is_paid_in_full,
-    inv.is_over_paid,
-    inv.is_edi_sent,
-    inv.has_been_sent,
-    inv.created_at,
-    inv.updated_at,
-    so.id AS order_id,
-    so.number AS order_number,
-    so.priority_code,
-    buyer.id AS customer_id,
-    buyer.name AS customer_name,
-    ar.external_number AS customer_number,
-    ar.account_status_code AS customer_status_code,
-    ar.commission_status_code AS customer_commission_policy,
-    ar.is_edi_enabled AS customer_is_edi_enabled,
-    sh.id AS shipment_id,
-    sh.number AS shipment_number,
-    addr.id AS billing_address_id,
-    addr.name AS billing_address_name,
-    geo.street_line_1 AS billing_address_line1,
-    geo.street_line_2 AS billing_address_line2,
-    geo.locality AS billing_address_city,
-    geo.state AS billing_address_state,
-    geo.postal_code AS billing_address_zip,
-    geo.country AS billing_address_country,
-    pt.id AS payment_term_id,
-    pt.name AS payment_term_name,
-    pt.is_active AS payment_term_is_active,
-    -- Counts and sums through scalar subqueries: joining invoice_line fans out rows and breaks the cursor.
-    (SELECT COUNT(*) FROM invoice_line il WHERE il.invoice_id = inv.id) AS line_count,
-    COALESCE((
-        -- Each line priced as the dashboard's multiplyRate does and rounded to the cent, as its
-        -- calculateTotalInvoiced sums them (see the line-pricing skill).
-        SELECT SUM(ROUND(CASE WHEN q.unit_id = r.denominator_unit_id THEN q.value * r.value ELSE (q.value * qu.ratio_numerator / qu.ratio_denominator) * (r.value / (ru.ratio_numerator / ru.ratio_denominator)) END, 2))
-        FROM invoice_line il2
-        JOIN quantity q ON q.id = il2.quantity_id
-        JOIN sales_order_line sol ON sol.id = il2.sales_order_line_id
-        JOIN rate r ON r.id = sol.unit_price_id
-        JOIN unit qu ON qu.id = q.unit_id
-        JOIN unit ru ON ru.id = r.denominator_unit_id
-        WHERE il2.invoice_id = inv.id
-    ), 0) AS total_invoiced,
-    CASE WHEN EXISTS (
-        SELECT 1 FROM order_email_contact oec
-        WHERE oec.sales_order_id = so.id
-        AND oec.notification_type_code = 'invoice'
-    ) THEN true ELSE false END AS accepts_invoice_emails
-FROM invoice inv
-JOIN sales_order so ON inv.sales_order_id = so.id
-JOIN account_relation ar ON ar.owner_account_id = inv.account_id
-    AND ar.counterparty_account_id = so.buyer_account_id
-    AND ar.account_relation_role_code = 'customer'
-JOIN account buyer ON buyer.id = so.buyer_account_id
-LEFT JOIN shipment sh ON sh.invoice_id = inv.id
-JOIN address addr ON addr.id = inv.billing_address_id
-JOIN geolocation geo ON geo.id = addr.geolocation_id
-LEFT JOIN payment_term pt ON pt.id = so.payment_term_id
-WHERE inv.account_id = ?
-AND (
-    ? IS NULL
-    OR inv.number LIKE ?
-    OR inv.note LIKE ?
-    OR buyer.name LIKE ?
-    -- Reaches the order and relation already joined one-to-one above, so the search widens without fanning rows out.
-    OR so.number LIKE ?
-    OR so.customer_po_number LIKE ?
-    OR ar.external_number LIKE ?
-)
-AND (
-    ? IS NULL
-    OR (? = 'paid' AND inv.is_paid_in_full = true)
-    -- Overpaid invoices stay in the unpaid bucket: a negative balance is not cleanly settled either.
-    OR (? = 'unpaid' AND inv.is_paid_in_full = false)
-    OR (? = 'overpaid' AND inv.is_over_paid = true)
-)
-AND (
-    -- Scopes to the order's lines, not the invoice's: an invoice bills a shipment's subset of them.
-    ? = false
-    OR EXISTS (
-        SELECT 1 FROM sales_order_line sol3
-        WHERE sol3.sales_order_id = so.id
-        AND sol3.item_id IN (/*SLICE:item_ids*/?)
-    )
-)
-AND (
-    ? = false
-    OR so.buyer_account_id IN (/*SLICE:customer_ids*/?)
-)
-AND (
-    ? = false
-    OR EXISTS (
-        SELECT 1 FROM sales_order_line sol4
-        JOIN product p4 ON p4.id = sol4.product_id
-        WHERE sol4.sales_order_id = so.id
-        AND p4.product_line_id IN (/*SLICE:product_line_ids*/?)
-    )
-)
-AND (
-    ? = false
-    OR ar.account_group_id IN (/*SLICE:customer_group_ids*/?)
-)
-AND (
-    ? = false
-    OR so.sales_rep_id IN (/*SLICE:sales_rep_ids*/?)
-)
-AND (
-    ? IS NULL
-    OR inv.created_at >= ?
-)
-AND (
-    ? IS NULL
-    OR inv.created_at <= ?
-)
-AND (
-    ? IS NULL
-    OR inv.created_at < ?
-    OR (inv.created_at = ? AND inv.id < ?)
-)
-ORDER BY inv.created_at DESC, inv.id DESC
-LIMIT ?
-`
-
-type ListInvoicesForwardParams struct {
-	AccountID                  string
-	SearchQuery                sql.NullString
-	Status                     interface{}
-	IncludeItemFilter          interface{}
-	ItemIds                    []sql.NullString
-	IncludeCustomerFilter      interface{}
-	CustomerIds                []string
-	IncludeProductLineFilter   interface{}
-	ProductLineIds             []sql.NullString
-	IncludeCustomerGroupFilter interface{}
-	CustomerGroupIds           []sql.NullString
-	IncludeSalesRepFilter      interface{}
-	SalesRepIds                []sql.NullString
-	StartDate                  sql.NullTime
-	EndDate                    sql.NullTime
-	CursorCreatedAt            sql.NullTime
-	CursorID                   sql.NullString
-	Limit                      int32
-}
-
-type ListInvoicesForwardRow struct {
-	ID                       string
-	Number                   string
-	Note                     sql.NullString
-	IsPaidInFull             bool
-	IsOverPaid               bool
-	IsEdiSent                bool
-	HasBeenSent              bool
-	CreatedAt                time.Time
-	UpdatedAt                time.Time
-	OrderID                  string
-	OrderNumber              string
-	PriorityCode             string
-	CustomerID               string
-	CustomerName             string
-	CustomerNumber           string
-	CustomerStatusCode       sql.NullString
-	CustomerCommissionPolicy sql.NullString
-	CustomerIsEdiEnabled     bool
-	ShipmentID               sql.NullString
-	ShipmentNumber           sql.NullString
-	BillingAddressID         string
-	BillingAddressName       string
-	BillingAddressLine1      sql.NullString
-	BillingAddressLine2      sql.NullString
-	BillingAddressCity       sql.NullString
-	BillingAddressState      sql.NullString
-	BillingAddressZip        sql.NullString
-	BillingAddressCountry    string
-	PaymentTermID            sql.NullString
-	PaymentTermName          sql.NullString
-	PaymentTermIsActive      sql.NullBool
-	LineCount                int64
-	TotalInvoiced            interface{}
-	AcceptsInvoiceEmails     int32
-}
-
-func (q *Queries) ListInvoicesForward(ctx context.Context, arg ListInvoicesForwardParams) ([]ListInvoicesForwardRow, error) {
-	query := listInvoicesForward
-	var queryParams []interface{}
-	queryParams = append(queryParams, arg.AccountID)
-	queryParams = append(queryParams, arg.SearchQuery)
-	queryParams = append(queryParams, arg.SearchQuery)
-	queryParams = append(queryParams, arg.SearchQuery)
-	queryParams = append(queryParams, arg.SearchQuery)
-	queryParams = append(queryParams, arg.SearchQuery)
-	queryParams = append(queryParams, arg.SearchQuery)
-	queryParams = append(queryParams, arg.SearchQuery)
-	queryParams = append(queryParams, arg.Status)
-	queryParams = append(queryParams, arg.Status)
-	queryParams = append(queryParams, arg.Status)
-	queryParams = append(queryParams, arg.Status)
-	queryParams = append(queryParams, arg.IncludeItemFilter)
-	if len(arg.ItemIds) > 0 {
-		for _, v := range arg.ItemIds {
-			queryParams = append(queryParams, v)
-		}
-		query = strings.Replace(query, "/*SLICE:item_ids*/?", strings.Repeat(",?", len(arg.ItemIds))[1:], 1)
-	} else {
-		query = strings.Replace(query, "/*SLICE:item_ids*/?", "NULL", 1)
-	}
-	queryParams = append(queryParams, arg.IncludeCustomerFilter)
-	if len(arg.CustomerIds) > 0 {
-		for _, v := range arg.CustomerIds {
-			queryParams = append(queryParams, v)
-		}
-		query = strings.Replace(query, "/*SLICE:customer_ids*/?", strings.Repeat(",?", len(arg.CustomerIds))[1:], 1)
-	} else {
-		query = strings.Replace(query, "/*SLICE:customer_ids*/?", "NULL", 1)
-	}
-	queryParams = append(queryParams, arg.IncludeProductLineFilter)
-	if len(arg.ProductLineIds) > 0 {
-		for _, v := range arg.ProductLineIds {
-			queryParams = append(queryParams, v)
-		}
-		query = strings.Replace(query, "/*SLICE:product_line_ids*/?", strings.Repeat(",?", len(arg.ProductLineIds))[1:], 1)
-	} else {
-		query = strings.Replace(query, "/*SLICE:product_line_ids*/?", "NULL", 1)
-	}
-	queryParams = append(queryParams, arg.IncludeCustomerGroupFilter)
-	if len(arg.CustomerGroupIds) > 0 {
-		for _, v := range arg.CustomerGroupIds {
-			queryParams = append(queryParams, v)
-		}
-		query = strings.Replace(query, "/*SLICE:customer_group_ids*/?", strings.Repeat(",?", len(arg.CustomerGroupIds))[1:], 1)
-	} else {
-		query = strings.Replace(query, "/*SLICE:customer_group_ids*/?", "NULL", 1)
-	}
-	queryParams = append(queryParams, arg.IncludeSalesRepFilter)
-	if len(arg.SalesRepIds) > 0 {
-		for _, v := range arg.SalesRepIds {
-			queryParams = append(queryParams, v)
-		}
-		query = strings.Replace(query, "/*SLICE:sales_rep_ids*/?", strings.Repeat(",?", len(arg.SalesRepIds))[1:], 1)
-	} else {
-		query = strings.Replace(query, "/*SLICE:sales_rep_ids*/?", "NULL", 1)
-	}
-	queryParams = append(queryParams, arg.StartDate)
-	queryParams = append(queryParams, arg.StartDate)
-	queryParams = append(queryParams, arg.EndDate)
-	queryParams = append(queryParams, arg.EndDate)
-	queryParams = append(queryParams, arg.CursorCreatedAt)
-	queryParams = append(queryParams, arg.CursorCreatedAt)
-	queryParams = append(queryParams, arg.CursorCreatedAt)
-	queryParams = append(queryParams, arg.CursorID)
-	queryParams = append(queryParams, arg.Limit)
-	rows, err := q.db.QueryContext(ctx, query, queryParams...)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	var items []ListInvoicesForwardRow
-	for rows.Next() {
-		var i ListInvoicesForwardRow
+		var i ListInvoicesByIDsRow
 		if err := rows.Scan(
 			&i.ID,
 			&i.Number,

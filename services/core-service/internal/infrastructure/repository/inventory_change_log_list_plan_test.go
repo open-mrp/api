@@ -246,13 +246,6 @@ func inventoryChangeLogPlanCases() []planCase[domain.ListInventoryChangeLogsPara
 	)
 }
 
-// planCursorAt is a keyset cursor at the given position; an id of "<prefix>~" sorts after every id
-// with that prefix, so the page starts at the instant itself.
-func planCursorAt(at time.Time, id string, dir pagination.Direction) *string {
-	c := pagination.EncodeStringCursor(pagination.StringCursor{OccurredAt: at, ID: id, Direction: dir})
-	return &c
-}
-
 // inventoryChangeLogSearchFloor is how many entries a SKU search matches, or 0 without one. A search
 // resolves to an arbitrary list of items, which no key yields in list order; like a FULLTEXT match, the
 // best a plan can do is read only the entries it matches.

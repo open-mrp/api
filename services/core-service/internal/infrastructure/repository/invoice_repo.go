@@ -83,141 +83,27 @@ func (r *invoiceRepoImpl) List(ctx context.Context, params domain.ListInvoicesPa
 	ctx, span := invoiceRepoTracer.Start(ctx, "repository.invoice.list")
 	defer span.End()
 
-	searchQuery := buildInvoiceSearchParams(params.Query)
-
-	status := gosql.NullString{}
-	if params.Status != nil && *params.Status != "" && *params.Status != "all" {
-		status = gosql.NullString{String: *params.Status, Valid: true}
+	cursor, apiErr := decodeListCursor(params.Cursor)
+	if apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
 	}
-
-	startDate := gosql.NullTime{}
-	if params.StartDate != nil {
-		startDate = gosql.NullTime{Time: *params.StartDate, Valid: true}
-	}
-	endDate := gosql.NullTime{}
-	if params.EndDate != nil {
-		endDate = gosql.NullTime{Time: *params.EndDate, Valid: true}
-	}
-
-	includeItemFilter := len(params.ItemIDs) > 0
-	itemIDs := toNullStringSlice(params.ItemIDs)
-
-	includeCustomerFilter := len(params.CustomerIDs) > 0
-	customerIDs := params.CustomerIDs
-	if len(customerIDs) == 0 {
-		customerIDs = []string{""}
-	}
-
-	includeProductLineFilter := len(params.ProductLineIDs) > 0
-	productLineIDs := toNullStringSlice(params.ProductLineIDs)
-
-	includeCustomerGroupFilter := len(params.CustomerGroupIDs) > 0
-	customerGroupIDs := toNullStringSlice(params.CustomerGroupIDs)
-
-	includeSalesRepFilter := len(params.SalesRepIDs) > 0
-	salesRepIDs := toNullStringSlice(params.SalesRepIDs)
-
-	var cursorDir *pagination.Direction
-
-	if params.Cursor != nil {
-		cur, err := pagination.DecodeStringCursor(*params.Cursor)
-		if err != nil {
-			return nil, apierror.NewValidationErrorWithParam("Invalid pagination cursor.", "cursor")
-		}
-		cursorDir = &cur.Direction
-
-		if cur.Direction == pagination.DirectionBackward {
-			rows, err := r.queries.ListInvoicesBackward(ctx, sqlc.ListInvoicesBackwardParams{
-				AccountID:                  params.AccountID,
-				SearchQuery:                searchQuery,
-				Status:                     status,
-				IncludeItemFilter:          includeItemFilter,
-				ItemIds:                    itemIDs,
-				IncludeCustomerFilter:      includeCustomerFilter,
-				CustomerIds:                customerIDs,
-				IncludeProductLineFilter:   includeProductLineFilter,
-				ProductLineIds:             productLineIDs,
-				IncludeCustomerGroupFilter: includeCustomerGroupFilter,
-				CustomerGroupIds:           customerGroupIDs,
-				IncludeSalesRepFilter:      includeSalesRepFilter,
-				SalesRepIds:                salesRepIDs,
-				StartDate:                  startDate,
-				EndDate:                    endDate,
-				CursorCreatedAt:            cur.OccurredAt,
-				CursorID:                   cur.ID,
-				Limit:                      params.Limit + 1,
-			})
-			if apiErr := db.MapSQLError(err); apiErr != nil {
-				return nil, tracing.Trace(span, apiErr)
-			}
-			invoices := make([]*domain.Invoice, len(rows))
-			for i, row := range rows {
-				invoices[i] = mapInvoiceRow(sqlc.GetInvoiceRow(row))
-			}
-			result, pageInfo := pagination.BuildPageString(invoices, params.Limit, cursorDir, invoiceCreatedAt, invoiceID)
-			return &domain.ListInvoicesResult{Invoices: result, PageInfo: pageInfo}, nil
-		}
-
-		// Forward with cursor
-		rows, err := r.queries.ListInvoicesForward(ctx, sqlc.ListInvoicesForwardParams{
-			AccountID:                  params.AccountID,
-			SearchQuery:                searchQuery,
-			Status:                     status,
-			IncludeItemFilter:          includeItemFilter,
-			ItemIds:                    itemIDs,
-			IncludeCustomerFilter:      includeCustomerFilter,
-			CustomerIds:                customerIDs,
-			IncludeProductLineFilter:   includeProductLineFilter,
-			ProductLineIds:             productLineIDs,
-			IncludeCustomerGroupFilter: includeCustomerGroupFilter,
-			CustomerGroupIds:           customerGroupIDs,
-			IncludeSalesRepFilter:      includeSalesRepFilter,
-			SalesRepIds:                salesRepIDs,
-			StartDate:                  startDate,
-			EndDate:                    endDate,
-			CursorCreatedAt:            gosql.NullTime{Time: cur.OccurredAt, Valid: true},
-			CursorID:                   gosql.NullString{String: cur.ID, Valid: true},
-			Limit:                      params.Limit + 1,
-		})
-		if apiErr := db.MapSQLError(err); apiErr != nil {
-			return nil, tracing.Trace(span, apiErr)
-		}
-		invoices := make([]*domain.Invoice, len(rows))
-		for i, row := range rows {
-			invoices[i] = mapInvoiceRow(invoiceListRow(row))
-		}
-		result, pageInfo := pagination.BuildPageString(invoices, params.Limit, cursorDir, invoiceCreatedAt, invoiceID)
-		return &domain.ListInvoicesResult{Invoices: result, PageInfo: pageInfo}, nil
-	}
-
-	// No cursor — first page
-	rows, err := r.queries.ListInvoicesForward(ctx, sqlc.ListInvoicesForwardParams{
-		AccountID:                  params.AccountID,
-		SearchQuery:                searchQuery,
-		Status:                     status,
-		IncludeItemFilter:          includeItemFilter,
-		ItemIds:                    itemIDs,
-		IncludeCustomerFilter:      includeCustomerFilter,
-		CustomerIds:                customerIDs,
-		IncludeProductLineFilter:   includeProductLineFilter,
-		ProductLineIds:             productLineIDs,
-		IncludeCustomerGroupFilter: includeCustomerGroupFilter,
-		CustomerGroupIds:           customerGroupIDs,
-		IncludeSalesRepFilter:      includeSalesRepFilter,
-		SalesRepIds:                salesRepIDs,
-		StartDate:                  startDate,
-		EndDate:                    endDate,
-		Limit:                      params.Limit + 1,
-	})
+	ids, err := r.listInvoicePage(ctx, params, cursor)
 	if apiErr := db.MapSQLError(err); apiErr != nil {
 		return nil, tracing.Trace(span, apiErr)
 	}
-
-	invoices := make([]*domain.Invoice, len(rows))
-	for i, row := range rows {
-		invoices[i] = mapInvoiceRow(invoiceListRow(row))
+	var invoices []*domain.Invoice
+	if len(ids) > 0 {
+		rows, err := r.queries.ListInvoicesByIDs(ctx, sqlc.ListInvoicesByIDsParams{InvoiceIds: ids, AccountID: params.AccountID})
+		if apiErr := db.MapSQLError(err); apiErr != nil {
+			return nil, tracing.Trace(span, apiErr)
+		}
+		byID := make(map[string]*domain.Invoice, len(rows))
+		for _, row := range rows {
+			byID[row.ID] = mapInvoiceRow(sqlc.GetInvoiceRow(row))
+		}
+		invoices = inPageOrder(ids, byID)
 	}
-	result, pageInfo := pagination.BuildPageString(invoices, params.Limit, cursorDir, invoiceCreatedAt, invoiceID)
+	result, pageInfo := pagination.BuildPageString(invoices, params.Limit, cursorDirection(cursor), invoiceCreatedAt, invoiceID)
 	return &domain.ListInvoicesResult{Invoices: result, PageInfo: pageInfo}, nil
 }
 
@@ -469,83 +355,31 @@ func (r *invoiceRepoImpl) ListByCustomer(ctx context.Context, params domain.List
 	ctx, span := invoiceRepoTracer.Start(ctx, "repository.invoice.list_by_customer")
 	defer span.End()
 
-	searchQuery := buildInvoiceSearchParams(params.Query)
-
-	var cursorDir *pagination.Direction
-
-	if params.Cursor != nil {
-		cur, err := pagination.DecodeStringCursor(*params.Cursor)
-		if err != nil {
-			return nil, apierror.NewValidationErrorWithParam("Invalid pagination cursor.", "cursor")
-		}
-		cursorDir = &cur.Direction
-
-		if cur.Direction == pagination.DirectionBackward {
-			rows, err := r.queries.ListCustomerInvoicesBackward(ctx, sqlc.ListCustomerInvoicesBackwardParams{
-				AccountID:         params.AccountID,
-				CustomerAccountID: params.CustomerAccountID,
-				SearchQuery:       searchQuery,
-				CursorCreatedAt:   cur.OccurredAt,
-				CursorID:          cur.ID,
-				Limit:             params.Limit + 1,
-			})
-			if apiErr := db.MapSQLError(err); apiErr != nil {
-				return nil, tracing.Trace(span, apiErr)
-			}
-			invoices := make([]*domain.InvoiceForPayment, len(rows))
-			for i, row := range rows {
-				invoices[i] = mapBackwardCustomerInvoiceRow(row)
-			}
-			result, pageInfo := pagination.BuildPageString(invoices, params.Limit, cursorDir, customerInvoiceCreatedAt, customerInvoiceID)
-			return &domain.ListCustomerInvoicesResult{Invoices: result, PageInfo: pageInfo}, nil
-		}
-
-		// Forward with cursor
-		rows, err := r.queries.ListCustomerInvoicesForward(ctx, sqlc.ListCustomerInvoicesForwardParams{
-			AccountID:         params.AccountID,
-			CustomerAccountID: params.CustomerAccountID,
-			SearchQuery:       searchQuery,
-			CursorCreatedAt:   gosql.NullTime{Time: cur.OccurredAt, Valid: true},
-			CursorID:          gosql.NullString{String: cur.ID, Valid: true},
-			Limit:             params.Limit + 1,
-		})
-		if apiErr := db.MapSQLError(err); apiErr != nil {
-			return nil, tracing.Trace(span, apiErr)
-		}
-		invoices := make([]*domain.InvoiceForPayment, len(rows))
-		for i, row := range rows {
-			invoices[i] = mapForwardCustomerInvoiceRow(row)
-		}
-		result, pageInfo := pagination.BuildPageString(invoices, params.Limit, cursorDir, customerInvoiceCreatedAt, customerInvoiceID)
-		return &domain.ListCustomerInvoicesResult{Invoices: result, PageInfo: pageInfo}, nil
+	cursor, apiErr := decodeListCursor(params.Cursor)
+	if apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
 	}
-
-	// No cursor — first page
-	rows, err := r.queries.ListCustomerInvoicesForward(ctx, sqlc.ListCustomerInvoicesForwardParams{
-		AccountID:         params.AccountID,
-		CustomerAccountID: params.CustomerAccountID,
-		SearchQuery:       searchQuery,
-		Limit:             params.Limit + 1,
-	})
+	ids, err := r.listCustomerInvoicePage(ctx, params, cursor)
 	if apiErr := db.MapSQLError(err); apiErr != nil {
 		return nil, tracing.Trace(span, apiErr)
 	}
-
-	invoices := make([]*domain.InvoiceForPayment, len(rows))
-	for i, row := range rows {
-		invoices[i] = mapForwardCustomerInvoiceRow(row)
+	var invoices []*domain.InvoiceForPayment
+	if len(ids) > 0 {
+		rows, err := r.queries.ListCustomerInvoicesByIDs(ctx, sqlc.ListCustomerInvoicesByIDsParams{InvoiceIds: ids, AccountID: params.AccountID})
+		if apiErr := db.MapSQLError(err); apiErr != nil {
+			return nil, tracing.Trace(span, apiErr)
+		}
+		byID := make(map[string]*domain.InvoiceForPayment, len(rows))
+		for _, row := range rows {
+			byID[row.ID] = mapCustomerInvoiceRow(row)
+		}
+		invoices = inPageOrder(ids, byID)
 	}
-	result, pageInfo := pagination.BuildPageString(invoices, params.Limit, cursorDir, customerInvoiceCreatedAt, customerInvoiceID)
+	result, pageInfo := pagination.BuildPageString(invoices, params.Limit, cursorDirection(cursor), customerInvoiceCreatedAt, customerInvoiceID)
 	return &domain.ListCustomerInvoicesResult{Invoices: result, PageInfo: pageInfo}, nil
 }
 
 // Mapping helpers
-
-// Converts a list row to the detail row so both share one mapper — legal only while the three
-// invoice queries select the same projection in the same order, and a compile error if they drift.
-func invoiceListRow(row sqlc.ListInvoicesForwardRow) sqlc.GetInvoiceRow {
-	return sqlc.GetInvoiceRow(row)
-}
 
 func mapInvoiceRow(row sqlc.GetInvoiceRow) *domain.Invoice {
 	invoice := &domain.Invoice{
@@ -609,36 +443,7 @@ func mapInvoiceRow(row sqlc.GetInvoiceRow) *domain.Invoice {
 	return invoice
 }
 
-func mapForwardCustomerInvoiceRow(row sqlc.ListCustomerInvoicesForwardRow) *domain.InvoiceForPayment {
-	inv := &domain.InvoiceForPayment{
-		ID:              row.ID,
-		Number:          row.Number,
-		CustomerID:      row.CustomerID,
-		CustomerName:    row.CustomerName,
-		CustomerNumber:  row.CustomerNumber,
-		IsParentAccount: row.ParentAccountRelationID.Valid,
-		InvoiceTotal:    decimalToString(row.TotalInvoiced),
-		IsPaidInFull:    row.IsPaidInFull,
-		CreatedAt:       row.CreatedAt,
-		UpdatedAt:       row.UpdatedAt,
-	}
-	if row.CustomerPoNumber.Valid {
-		inv.CustomerPO = &row.CustomerPoNumber.String
-	}
-	if row.ParentAccountID.Valid {
-		inv.ParentAccountID = &row.ParentAccountID.String
-	}
-	if row.BillingAddressID.Valid {
-		inv.BillingAddressID = &row.BillingAddressID.String
-	}
-	if row.BillingAddressName.Valid {
-		inv.BillingAddressName = &row.BillingAddressName.String
-	}
-	inv.IsPrepaid = row.CustomerPaymentTermID.Valid && row.CustomerPaymentTermID.String == "prepaid"
-	return inv
-}
-
-func mapBackwardCustomerInvoiceRow(row sqlc.ListCustomerInvoicesBackwardRow) *domain.InvoiceForPayment {
+func mapCustomerInvoiceRow(row sqlc.ListCustomerInvoicesByIDsRow) *domain.InvoiceForPayment {
 	inv := &domain.InvoiceForPayment{
 		ID:              row.ID,
 		Number:          row.Number,

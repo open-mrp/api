@@ -28,10 +28,12 @@ import (
 	"strings"
 	"sync"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/require"
 
 	"github.com/open-mrp/api/services/core-service/internal/infrastructure/sqlc"
+	"github.com/open-mrp/api/shared/pagination"
 )
 
 // interpolateParams matches shared/db/db_pool.go, so statements reach MySQL the way production sends them.
@@ -348,10 +350,11 @@ type listPlanSuite[P any] struct {
 	// candidates each statement is replayed under.
 	table, scopeColumn string
 	// from is the FROM item the page is read through ("FROM `transaction` t"), whose hint the replays
-	// replace, and alias is its alias. The statement measured is the last one containing from.
+	// replace, and alias is its alias. Of the statements containing from, the one that reads the most of
+	// the table is measured (a list may choose a page in one and hydrate it in another).
 	from, alias string
-	// statement (optional) picks the measured statement instead: the last one it accepts. For a list
-	// whose page is chosen by one of several shapes, or whose rows are read back through from afterwards.
+	// statement (optional) accepts the statements measured instead of those containing from (the one
+	// reading the most still wins). For a list whose page is chosen by one of several shapes.
 	statement func(query string) bool
 	cases     []planCase[P]
 	limit     func(P) int32
@@ -455,7 +458,8 @@ func (s listPlanSuite[P]) check(t *testing.T, db *sql.DB, edb *explainingDB, q *
 	}
 	var stmt *explainedStatement
 	for i := range edb.statements {
-		if measured(edb.statements[i].query) {
+		if measured(edb.statements[i].query) &&
+			(stmt == nil || tableAccess(edb.statements[i].plan, s.alias).rows > tableAccess(stmt.plan, s.alias).rows) {
 			stmt = &edb.statements[i]
 		}
 	}
@@ -598,4 +602,10 @@ func (s lookupPlanSuite) run(t *testing.T) {
 // using k", "Covering index scan on t …", "Table scan on t". Lookups and range scans don't match.
 func fullScanRe(alias string) *regexp.Regexp {
 	return regexp.MustCompile(`-> (?:Covering index scan|Index scan|Table scan) on ` + regexp.QuoteMeta(alias) + `(?: |$)`)
+}
+
+// planCursorAt is a cursor at at and id, paging in dir.
+func planCursorAt(at time.Time, id string, dir pagination.Direction) *string {
+	c := pagination.EncodeStringCursor(pagination.StringCursor{OccurredAt: at, ID: id, Direction: dir})
+	return &c
 }

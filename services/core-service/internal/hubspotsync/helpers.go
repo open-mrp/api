@@ -83,13 +83,3 @@ func firstNonEmpty(values ...*string) string {
 	}
 	return ""
 }
-
-// firstNonEmptyStr returns the first non-empty string.
-func firstNonEmptyStr(values ...string) string {
-	for _, v := range values {
-		if v != "" {
-			return v
-		}
-	}
-	return ""
-}

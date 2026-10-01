@@ -1,4 +1,4 @@
-// Package hubspotsync orchestrates pushing OpenMRP sales orders to HubSpot as Closed-Won deals, upserting the associated company and contact along the way.
+// Package hubspotsync orchestrates pushing OpenMRP sales orders to HubSpot as Closed-Won deals, upserting the associated company and linking an existing contact along the way.
 //
 // It is the single source of truth for the HubSpot mapping and is designed to be shared by both the incremental order-created consumer (this step) and the account backfill worker (a later step). Each operation is idempotent on replay: deals are keyed on the augno_sales_order_id property, contacts dedupe on email, and companies are matched by domain/name before creation.
 package hubspotsync
@@ -13,7 +13,6 @@ import (
 	"github.com/open-mrp/api/shared/constants"
 	"github.com/open-mrp/api/shared/crypto"
 	apierror "github.com/open-mrp/api/shared/errors"
-	"github.com/open-mrp/api/shared/ptrutil"
 	"github.com/open-mrp/api/shared/tracing"
 )
 
@@ -70,7 +69,7 @@ func (c *Config) validate() error {
 
 // Service syncs OpenMRP sales orders to a connected HubSpot account.
 type Service interface {
-	// SyncOrder upserts the order's company + contact and creates/moves its deal to Closed-Won. It is a no-op (returns nil) when the account has no active HubSpot integration.
+	// SyncOrder upserts the order's company, links its existing contact, and creates/moves its deal to Closed-Won. It is a no-op (returns nil) when the account has no active HubSpot integration.
 	SyncOrder(ctx context.Context, accountID, salesOrderID string) *apierror.APIError
 
 	// RunPreview executes the read-only matching pass for a backfill job: matches customers to HubSpot companies, queues ambiguous ones for review, tallies the dry-run report, and moves the job to review_pending. Writes nothing to HubSpot.
@@ -150,7 +149,7 @@ func (s *service) syncOrderWithClient(ctx context.Context, client domain.Hubspot
 		return apiErr
 	}
 
-	contactID, apiErr := s.syncContact(ctx, client, accountID, order, customer, companyID, true)
+	contactID, apiErr := s.linkOrderContact(ctx, client, accountID, order, customer, companyID, true)
 	if apiErr != nil {
 		return apiErr
 	}
@@ -258,12 +257,33 @@ func (s *service) syncCompany(ctx context.Context, client domain.HubspotClient, 
 	return companyID, nil
 }
 
-// syncContact upserts the order's primary contact (bill-to email, falling back to the customer email) and associates it to the company.
-func (s *service) syncContact(ctx context.Context, client domain.HubspotClient, accountID string, order *domain.SalesOrder, customer *domain.Customer, companyID string, promoteLifecycle bool) (string, *apierror.APIError) {
+// linkOrderContact links the order's primary contact (bill-to email, falling back to the customer email) to the company only when it already exists in HubSpot; order sync never creates contacts because portals curate their contact lists themselves. Returns "" when there is no email or no match.
+func (s *service) linkOrderContact(ctx context.Context, client domain.HubspotClient, accountID string, order *domain.SalesOrder, customer *domain.Customer, companyID string, promoteLifecycle bool) (string, *apierror.APIError) {
 	email := firstNonEmpty(order.BillToEmail, customer.Email)
-	fullName := firstNonEmptyStr(ptrutil.Deref(order.BillToName), customer.Name)
-	phone := firstNonEmpty(order.BillToPhone, customer.Phone)
-	return s.upsertContact(ctx, client, accountID, customer.ID, email, fullName, phone, companyID, promoteLifecycle)
+	if email == "" {
+		return "", nil
+	}
+	contact, apiErr := client.SearchContactByEmail(ctx, email)
+	if apiErr != nil {
+		return "", apiErr
+	}
+	if contact == nil {
+		return "", nil
+	}
+	if promoteLifecycle {
+		if apiErr := client.UpdateContact(ctx, contact.ID, domain.HubspotContact{Lifecycle: lifecycleCustomer}); apiErr != nil {
+			return "", apiErr
+		}
+	}
+	if companyID != "" {
+		if apiErr := client.Associate(ctx, objectTypeContacts, contact.ID, objectTypeCompanies, companyID); apiErr != nil {
+			return "", apiErr
+		}
+	}
+	if apiErr := s.storeMapping(ctx, accountID, openMRPTypeContact, customer.ID, objectTypeContacts, contact.ID); apiErr != nil {
+		return "", apiErr
+	}
+	return contact.ID, nil
 }
 
 // upsertContact upserts a contact by email (HubSpot's native dedupe key), associates it to the company, persists the customer→contact mapping, and optionally promotes its lifecycle. Returns "" when email is empty.

@@ -395,6 +395,21 @@ func (mr *MockHubspotClientMockRecorder) SearchCompaniesByName(ctx, name any) *g
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SearchCompaniesByName", reflect.TypeOf((*MockHubspotClient)(nil).SearchCompaniesByName), ctx, name)
 }
 
+// SearchContactByEmail mocks base method.
+func (m *MockHubspotClient) SearchContactByEmail(ctx context.Context, email string) (*domain.HubspotContact, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "SearchContactByEmail", ctx, email)
+	ret0, _ := ret[0].(*domain.HubspotContact)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
+}
+
+// SearchContactByEmail indicates an expected call of SearchContactByEmail.
+func (mr *MockHubspotClientMockRecorder) SearchContactByEmail(ctx, email any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SearchContactByEmail", reflect.TypeOf((*MockHubspotClient)(nil).SearchContactByEmail), ctx, email)
+}
+
 // SearchDealBySalesOrderID mocks base method.
 func (m *MockHubspotClient) SearchDealBySalesOrderID(ctx context.Context, salesOrderID string) (*domain.HubspotDeal, *apierror.APIError) {
 	m.ctrl.T.Helper()
@@ -422,6 +437,20 @@ func (m *MockHubspotClient) UpdateCompany(ctx context.Context, id string, compan
 func (mr *MockHubspotClientMockRecorder) UpdateCompany(ctx, id, company any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateCompany", reflect.TypeOf((*MockHubspotClient)(nil).UpdateCompany), ctx, id, company)
+}
+
+// UpdateContact mocks base method.
+func (m *MockHubspotClient) UpdateContact(ctx context.Context, id string, contact domain.HubspotContact) *apierror.APIError {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "UpdateContact", ctx, id, contact)
+	ret0, _ := ret[0].(*apierror.APIError)
+	return ret0
+}
+
+// UpdateContact indicates an expected call of UpdateContact.
+func (mr *MockHubspotClientMockRecorder) UpdateContact(ctx, id, contact any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateContact", reflect.TypeOf((*MockHubspotClient)(nil).UpdateContact), ctx, id, contact)
 }
 
 // UpdateDeal mocks base method.

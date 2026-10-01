@@ -27,9 +27,9 @@ func NewShipmentRepo(queries *sqlc.Queries) domain.ShipmentRepo {
 func shipmentCreatedAt(s *domain.Shipment) time.Time { return s.CreatedAt }
 func shipmentID(s *domain.Shipment) string           { return s.ID }
 
-// Converts a list row to the detail row so both share one mapper — legal only while the three
-// shipment queries select the same projection in the same order, and a compile error if they drift.
-func shipmentListRow(row sqlc.ListShipmentsForwardRow) sqlc.GetShipmentRow {
+// Converts a list row to the detail row so both share one mapper — legal only while the two shipment
+// queries select the same projection in the same order, and a compile error if they drift.
+func shipmentListRow(row sqlc.GetShipmentsByIDsRow) sqlc.GetShipmentRow {
 	return sqlc.GetShipmentRow(row)
 }
 
@@ -154,137 +154,171 @@ func (r *shipmentRepoImpl) List(ctx context.Context, params domain.ListShipments
 	ctx, span := shipmentRepoTracer.Start(ctx, "repository.shipment.list")
 	defer span.End()
 
-	searchQuery := db.NullStringLikePtr(params.Query)
-	statusFilter := toNullString(params.Status)
-	startDate := parseDateFilter(params.StartDate)
-	endDate := parseEndDateFilter(params.EndDate)
-
-	itemIDs := toNullStringSlice(params.ItemIDs)
-	if itemIDs == nil {
-		itemIDs = []gosql.NullString{}
+	q := shipmentListQuery{
+		AccountID:      params.AccountID,
+		Status:         nullStringPtr(toNullString(params.Status)),
+		Search:         db.NullStringLikePtr(params.Query),
+		ItemIDs:        params.ItemIDs,
+		ProductLineIDs: params.ProductLineIDs,
+		StartDate:      parseDateFilter(params.StartDate),
+		EndDate:        parseEndDateFilter(params.EndDate),
+		Direction:      pagination.DirectionForward,
+		Limit:          params.Limit + 1,
 	}
-	customerIDs := params.CustomerIDs
-	if customerIDs == nil {
-		customerIDs = []string{}
-	}
-	productLineIDs := toNullStringSlice(params.ProductLineIDs)
-	if productLineIDs == nil {
-		productLineIDs = []gosql.NullString{}
-	}
-	customerGroupIDs := toNullStringSlice(params.CustomerGroupIDs)
-	if customerGroupIDs == nil {
-		customerGroupIDs = []gosql.NullString{}
-	}
-	salesRepIDs := toNullStringSlice(params.SalesRepIDs)
-	if salesRepIDs == nil {
-		salesRepIDs = []gosql.NullString{}
-	}
-
-	includeItemFilter := len(params.ItemIDs) > 0
-	includeCustomerFilter := len(params.CustomerIDs) > 0
-	includeProductLineFilter := len(params.ProductLineIDs) > 0
-	includeCustomerGroupFilter := len(params.CustomerGroupIDs) > 0
-	includeSalesRepFilter := len(params.SalesRepIDs) > 0
 
 	var cursorDir *pagination.Direction
-
 	if params.Cursor != nil {
 		cur, err := pagination.DecodeStringCursor(*params.Cursor)
 		if err != nil {
 			return nil, apierror.NewValidationErrorWithParam("Invalid pagination cursor.", "cursor")
 		}
 		cursorDir = &cur.Direction
-
-		if cur.Direction == pagination.DirectionBackward {
-			rows, err := r.queries.ListShipmentsBackward(ctx, sqlc.ListShipmentsBackwardParams{
-				AccountID:                  params.AccountID,
-				StatusCode:                 statusFilter,
-				SearchQuery:                searchQuery,
-				IncludeItemFilter:          includeItemFilter,
-				ItemIds:                    itemIDs,
-				IncludeCustomerFilter:      includeCustomerFilter,
-				CustomerIds:                customerIDs,
-				IncludeProductLineFilter:   includeProductLineFilter,
-				ProductLineIds:             productLineIDs,
-				IncludeCustomerGroupFilter: includeCustomerGroupFilter,
-				CustomerGroupIds:           customerGroupIDs,
-				IncludeSalesRepFilter:      includeSalesRepFilter,
-				SalesRepIds:                salesRepIDs,
-				StartDate:                  startDate,
-				EndDate:                    endDate,
-				CursorCreatedAt:            cur.OccurredAt,
-				CursorID:                   cur.ID,
-				Limit:                      params.Limit + 1,
-			})
-			if apiErr := db.MapSQLError(err); apiErr != nil {
-				return nil, tracing.Trace(span, apiErr)
-			}
-			shipments := make([]*domain.Shipment, len(rows))
-			for i, row := range rows {
-				shipments[i] = mapShipmentRow(sqlc.GetShipmentRow(row))
-			}
-			result, pageInfo := pagination.BuildPageString(shipments, params.Limit, cursorDir, shipmentCreatedAt, shipmentID)
-			return &domain.ListShipmentsResult{Shipments: result, PageInfo: pageInfo}, nil
-		}
-
-		rows, err := r.queries.ListShipmentsForward(ctx, sqlc.ListShipmentsForwardParams{
-			AccountID:                  params.AccountID,
-			StatusCode:                 statusFilter,
-			SearchQuery:                searchQuery,
-			IncludeItemFilter:          includeItemFilter,
-			ItemIds:                    itemIDs,
-			IncludeCustomerFilter:      includeCustomerFilter,
-			CustomerIds:                customerIDs,
-			IncludeProductLineFilter:   includeProductLineFilter,
-			ProductLineIds:             productLineIDs,
-			IncludeCustomerGroupFilter: includeCustomerGroupFilter,
-			CustomerGroupIds:           customerGroupIDs,
-			IncludeSalesRepFilter:      includeSalesRepFilter,
-			SalesRepIds:                salesRepIDs,
-			StartDate:                  startDate,
-			EndDate:                    endDate,
-			CursorCreatedAt:            gosql.NullTime{Time: cur.OccurredAt, Valid: true},
-			CursorID:                   gosql.NullString{String: cur.ID, Valid: true},
-			Limit:                      params.Limit + 1,
-		})
-		if apiErr := db.MapSQLError(err); apiErr != nil {
-			return nil, tracing.Trace(span, apiErr)
-		}
-		shipments := make([]*domain.Shipment, len(rows))
-		for i, row := range rows {
-			shipments[i] = mapShipmentRow(shipmentListRow(row))
-		}
-		result, pageInfo := pagination.BuildPageString(shipments, params.Limit, cursorDir, shipmentCreatedAt, shipmentID)
-		return &domain.ListShipmentsResult{Shipments: result, PageInfo: pageInfo}, nil
+		q.Direction = cur.Direction
+		q.CursorAt = gosql.NullTime{Time: cur.OccurredAt, Valid: true}
+		q.CursorID = gosql.NullString{String: cur.ID, Valid: true}
 	}
 
-	rows, err := r.queries.ListShipmentsForward(ctx, sqlc.ListShipmentsForwardParams{
-		AccountID:                  params.AccountID,
-		StatusCode:                 statusFilter,
-		SearchQuery:                searchQuery,
-		IncludeItemFilter:          includeItemFilter,
-		ItemIds:                    itemIDs,
-		IncludeCustomerFilter:      includeCustomerFilter,
-		CustomerIds:                customerIDs,
-		IncludeProductLineFilter:   includeProductLineFilter,
-		ProductLineIds:             productLineIDs,
-		IncludeCustomerGroupFilter: includeCustomerGroupFilter,
-		CustomerGroupIds:           customerGroupIDs,
-		IncludeSalesRepFilter:      includeSalesRepFilter,
-		SalesRepIds:                salesRepIDs,
-		StartDate:                  startDate,
-		EndDate:                    endDate,
-		Limit:                      params.Limit + 1,
-	})
-	if apiErr := db.MapSQLError(err); apiErr != nil {
+	buyerIDs, apiErr := r.buyerFilter(ctx, params)
+	if apiErr != nil {
 		return nil, tracing.Trace(span, apiErr)
 	}
-	shipments := make([]*domain.Shipment, len(rows))
-	for i, row := range rows {
-		shipments[i] = mapShipmentRow(shipmentListRow(row))
+	// A non-nil empty buyer set is a filter nothing can match.
+	if buyerIDs != nil && len(buyerIDs) == 0 {
+		return &domain.ListShipmentsResult{Shipments: []*domain.Shipment{}, PageInfo: pagination.PageInfo{}}, nil
+	}
+	q.BuyerIDs = buyerIDs
+	if q.Drive, apiErr = r.chooseDrive(ctx, q); apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
+
+	ids, apiErr := r.listIDs(ctx, q)
+	if apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
+	shipments, apiErr := r.getByIDsInOrder(ctx, params.AccountID, ids)
+	if apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
 	}
 	result, pageInfo := pagination.BuildPageString(shipments, params.Limit, cursorDir, shipmentCreatedAt, shipmentID)
 	return &domain.ListShipmentsResult{Shipments: result, PageInfo: pageInfo}, nil
+}
+
+// buyerFilter resolves the customer, customer-group and sales-rep filters to the customers a shipment
+// may be for. Nil means no filter; an empty, non-nil set means the filters exclude every customer. A
+// group and a sales rep must hold on the same relation, as they did when the list joined it.
+func (r *shipmentRepoImpl) buyerFilter(ctx context.Context, params domain.ListShipmentsParams) ([]string, *apierror.APIError) {
+	if len(params.CustomerGroupIDs) == 0 && len(params.SalesRepIDs) == 0 {
+		if len(params.CustomerIDs) == 0 {
+			return nil, nil
+		}
+		return params.CustomerIDs, nil
+	}
+	query := "SELECT DISTINCT counterparty_account_id FROM account_relation WHERE owner_account_id = ?"
+	args := []any{params.AccountID}
+	if len(params.CustomerGroupIDs) > 0 {
+		query += " AND account_group_id IN (" + placeholders(len(params.CustomerGroupIDs)) + ")"
+		args = append(args, stringArgs(params.CustomerGroupIDs)...)
+	}
+	if len(params.SalesRepIDs) > 0 {
+		query += " AND default_sales_rep_id IN (" + placeholders(len(params.SalesRepIDs)) + ")"
+		args = append(args, stringArgs(params.SalesRepIDs)...)
+	}
+	if len(params.CustomerIDs) > 0 {
+		query += " AND counterparty_account_id IN (" + placeholders(len(params.CustomerIDs)) + ")"
+		args = append(args, stringArgs(params.CustomerIDs)...)
+	}
+	rows, err := r.queries.DB().QueryContext(ctx, query, args...)
+	if apiErr := db.MapSQLError(err); apiErr != nil {
+		return nil, apiErr
+	}
+	defer func() { _ = rows.Close() }()
+	buyers := []string{}
+	for rows.Next() {
+		var id string
+		if err := rows.Scan(&id); err != nil {
+			return nil, db.MapSQLError(err)
+		}
+		buyers = append(buyers, id)
+	}
+	if apiErr := db.MapSQLError(rows.Err()); apiErr != nil {
+		return nil, apiErr
+	}
+	return buyers, nil
+}
+
+// chooseDrive picks the unordered filter with the fewest matches under shipmentMatchCap to drive the
+// read, or walks a list-order key when none has so few. MySQL cannot estimate these sets, so they are
+// counted. One customer is in list order on the buyer key and is never counted.
+func (r *shipmentRepoImpl) chooseDrive(ctx context.Context, q shipmentListQuery) (shipmentDrive, *apierror.APIError) {
+	candidates := map[shipmentDrive][]string{}
+	if len(q.BuyerIDs) > 1 {
+		candidates[shipmentDriveBuyers] = q.BuyerIDs
+	}
+	if len(q.ItemIDs) > 0 {
+		candidates[shipmentDriveItems] = q.ItemIDs
+	}
+	if len(q.ProductLineIDs) > 0 {
+		candidates[shipmentDriveProductLines] = q.ProductLineIDs
+	}
+	drive, fewest := shipmentDriveListOrder, shipmentMatchCap
+	for _, candidate := range []shipmentDrive{shipmentDriveBuyers, shipmentDriveItems, shipmentDriveProductLines} {
+		ids, ok := candidates[candidate]
+		if !ok {
+			continue
+		}
+		query, args := buildShipmentMatchCountQuery(q.AccountID, candidate, ids)
+		var count int
+		if err := r.queries.DB().QueryRowContext(ctx, query, args...).Scan(&count); err != nil {
+			return drive, db.MapSQLError(err)
+		}
+		if count < fewest {
+			drive, fewest = candidate, count
+		}
+	}
+	return drive, nil
+}
+
+func (r *shipmentRepoImpl) listIDs(ctx context.Context, q shipmentListQuery) ([]string, *apierror.APIError) {
+	query, args := buildShipmentListQuery(q)
+	rows, err := r.queries.DB().QueryContext(ctx, query, args...)
+	if apiErr := db.MapSQLError(err); apiErr != nil {
+		return nil, apiErr
+	}
+	defer func() { _ = rows.Close() }()
+	var ids []string
+	for rows.Next() {
+		var id string
+		if err := rows.Scan(&id); err != nil {
+			return nil, db.MapSQLError(err)
+		}
+		ids = append(ids, id)
+	}
+	if apiErr := db.MapSQLError(rows.Err()); apiErr != nil {
+		return nil, apiErr
+	}
+	return ids, nil
+}
+
+// getByIDsInOrder hydrates ids in the order given. A shipment deleted since its id was read is skipped.
+func (r *shipmentRepoImpl) getByIDsInOrder(ctx context.Context, accountID string, ids []string) ([]*domain.Shipment, *apierror.APIError) {
+	if len(ids) == 0 {
+		return []*domain.Shipment{}, nil
+	}
+	rows, err := r.queries.GetShipmentsByIDs(ctx, sqlc.GetShipmentsByIDsParams{Ids: ids, AccountID: accountID})
+	if apiErr := db.MapSQLError(err); apiErr != nil {
+		return nil, apiErr
+	}
+	byID := make(map[string]*domain.Shipment, len(rows))
+	for _, row := range rows {
+		byID[row.ID] = mapShipmentRow(shipmentListRow(row))
+	}
+	ordered := make([]*domain.Shipment, 0, len(ids))
+	for _, id := range ids {
+		if shipment, ok := byID[id]; ok {
+			ordered = append(ordered, shipment)
+		}
+	}
+	return ordered, nil
 }
 
 func (r *shipmentRepoImpl) Get(ctx context.Context, params domain.GetShipmentParams) (*domain.Shipment, *apierror.APIError) {

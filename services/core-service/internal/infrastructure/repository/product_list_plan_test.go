@@ -82,8 +82,8 @@ func productPlanCases() []planCase[domain.ListProductsFullParams] {
 // productPlanFloor is the fewest product items any one key can read a request's products from. Products
 // carry no account, so no key yields one account's products in list order, or pins filters on both
 // item and product: the best a plan can do is drive from its narrowest filter (the item key's
-// category and dates, a product line with its portal readiness, portal readiness alone, an
-// attribute) and check the rest per row. A search examines whatever that reads.
+// category and dates, a product line with its portal readiness, an attribute) and check the rest per
+// row. Portal readiness alone spans every tenant and is checked per item, never driven from. A search examines whatever that reads.
 func productPlanFloor(t *testing.T, sqlDB *sql.DB, p domain.ListProductsFullParams) float64 {
 	t.Helper()
 	count := func(where string, args ...any) float64 {
@@ -114,9 +114,8 @@ func productPlanFloor(t *testing.T, sqlDB *sql.DB, p domain.ListProductsFullPara
 	return floor
 }
 
-// productPlanProductReads is how many products a product key reads for the request's product-column
-// filters (its lines with portal readiness, or readiness alone, across every tenant), or -1 when it
-// has none.
+// productPlanProductReads is how many products the line key reads for the request's lines (with its
+// portal readiness), or -1 when it has none.
 func productPlanProductReads(t *testing.T, sqlDB *sql.DB, p domain.ListProductsFullParams) float64 {
 	t.Helper()
 	var where []string
@@ -128,11 +127,11 @@ func productPlanProductReads(t *testing.T, sqlDB *sql.DB, p domain.ListProductsF
 		}
 		where, args = append(where, "product_line_id IN ("+placeholders(len(lines))+")"), append(args, stringArgs(lines)...)
 	}
-	if p.IsPortalReady != nil {
-		where, args = append(where, "is_portal_ready = ?"), append(args, *p.IsPortalReady)
-	}
 	if len(where) == 0 {
 		return -1
+	}
+	if p.IsPortalReady != nil {
+		where, args = append(where, "is_portal_ready = ?"), append(args, *p.IsPortalReady)
 	}
 	return planCount(t, sqlDB, "SELECT COUNT(*) FROM product WHERE "+strings.Join(where, " AND "), args...)
 }

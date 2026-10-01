@@ -23,8 +23,8 @@ type productListQuery struct {
 	catalogFilter
 	// categories and dates report the item-column filters the item keys pin or range.
 	categories, dates bool
-	// lines and portal report the product-column filters a product key can pin.
-	lines, portal bool
+	// lines reports a product-line filter, which the line key can pin.
+	lines bool
 	// attributes reports an attribute filter, whose matches the page may be read from by item id.
 	attributes bool
 }
@@ -48,7 +48,6 @@ func newProductListQuery(params domain.ListProductsFullParams, lineIDs []string)
 		q.add("i.created_at <= ?", *params.EndDate)
 	}
 	if params.IsPortalReady != nil {
-		q.portal = true
 		q.add("p.is_portal_ready = ?", *params.IsPortalReady)
 	}
 	if q.search.Contains.Valid {
@@ -66,13 +65,11 @@ func newProductListQuery(params domain.ListProductsFullParams, lineIDs []string)
 	return q
 }
 
-// The product keys a list may drive from: a line's products (portal readiness pinned with it), and
-// portal readiness alone. Lines belong to one account; readiness spans every tenant, but its rare
-// value is far narrower than the account's product items.
-const (
-	productLinePortalIndex = "product_line_portal_created_idx"
-	productPortalIndex     = "product_portal_created_idx"
-)
+// productLinePortalIndex is the product key a list may drive from: a line's products, portal readiness
+// pinned beside it. A line belongs to one account; portal readiness alone spans every tenant, so it is
+// checked per product item rather than driven from, where a small tenant's common value would walk
+// every other tenant's products.
+const productLinePortalIndex = "product_line_portal_created_idx"
 
 // itemIndexes are the keys item may be read through. Products carry no account, so none yields an
 // account's products in list order: the type key reads the account's product items, the category key
@@ -83,7 +80,7 @@ func (q *productListQuery) itemIndexes() []string {
 	if q.categories {
 		keys = []string{itemCategoryIndex}
 	}
-	if q.lines || q.portal || q.attributes {
+	if q.lines || q.attributes {
 		keys = append(keys, "PRIMARY")
 	}
 	return keys
@@ -95,9 +92,6 @@ func (q *productListQuery) productIndexes() []string {
 	keys := []string{"product_item_id_key"}
 	if q.lines {
 		keys = append(keys, productLinePortalIndex)
-	}
-	if q.portal {
-		keys = append(keys, productPortalIndex)
 	}
 	return keys
 }

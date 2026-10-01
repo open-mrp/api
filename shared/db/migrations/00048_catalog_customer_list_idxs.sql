@@ -29,16 +29,14 @@ ALTER TABLE `account_relation`
   ADD KEY `account_relation_owner_role_payment_term_created_idx` (`owner_account_id`, `account_relation_role_code`, `payment_term_id`, `created_at`, `counterparty_account_id`),
   ADD KEY `account_relation_owner_role_shipping_term_created_idx` (`owner_account_id`, `account_relation_role_code`, `shipping_term_id`, `created_at`, `counterparty_account_id`);
 
--- The product list drives from a product line (with portal readiness) or from portal readiness when
--- that is narrower than the account's product items; product has no account to scope by.
+-- The product list drives from a product line, with portal readiness pinned beside it; product has no
+-- account to scope by, and a line belongs to one.
 ALTER TABLE `product`
-  ADD KEY `product_line_portal_created_idx` (`product_line_id`, `is_portal_ready`, `created_at`, `id`),
-  ADD KEY `product_portal_created_idx` (`is_portal_ready`, `created_at`, `id`);
+  ADD KEY `product_line_portal_created_idx` (`product_line_id`, `is_portal_ready`, `created_at`, `id`);
 
 -- +goose Down
 ALTER TABLE `product`
-  DROP KEY `product_line_portal_created_idx`,
-  DROP KEY `product_portal_created_idx`;
+  DROP KEY `product_line_portal_created_idx`;
 
 ALTER TABLE `account_relation`
   DROP KEY `account_relation_owner_role_carrier_created_idx`,

@@ -122,8 +122,9 @@ func productPlanFloor(t *testing.T, sqlDB *sql.DB, p domain.ListProductsFullPara
 func TestProductList_ReadsAboutAPage(t *testing.T) {
 	ensureCatalogCorpus(t)
 	listPlanSuite[domain.ListProductsFullParams]{
-		table: "product", joinScoped: true,
-		from: "FROM product p", alias: "p",
+		// The page is read through the account's items (product has no account) and product probed per item.
+		table: "item", scopeColumn: "account_id", joinScoped: true,
+		from: "FROM item i", alias: "i",
 		cases: productPlanCases(),
 		limit: func(p domain.ListProductsFullParams) int32 { return p.Limit },
 		list: func(ctx context.Context, q *sqlc.Queries, p domain.ListProductsFullParams) error {
@@ -133,9 +134,9 @@ func TestProductList_ReadsAboutAPage(t *testing.T) {
 			return nil
 		},
 		floor:       productPlanFloor,
-		statsTables: []string{"item", "_item_attributes"},
+		statsTables: []string{"product", "_item_attributes"},
 		reads: []planRead[domain.ListProductsFullParams]{
-			{alias: "i", fanout: 1}, {alias: "ia", fanout: 1},
+			{alias: "p", fanout: 1}, {alias: "ia", fanout: 1},
 		},
 	}.run(t)
 }

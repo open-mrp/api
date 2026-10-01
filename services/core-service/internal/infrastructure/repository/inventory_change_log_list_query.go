@@ -24,19 +24,19 @@ const iclListJoins = ` JOIN item i ON i.id = icl.item_id` +
 	` LEFT JOIN scanning_station ss ON ss.id = icl.scanning_station_id` +
 	" LEFT JOIN `user` usr ON usr.id = icl.responsible_user_id"
 
-// buildICLListQuery assembles the inventory change-log listing SQL and its bind args. Only the
+// buildICLListPage assembles the inventory change-log listing's page. Only the
 // predicates the caller supplied are emitted: an `(? = false OR ...)` guard is not sargable, and left the
 // planner driving from quantity and reading millions of rows for a page.
 //
 // The page is chosen from inventory_change_log alone (keysetPage) and joined after; STRAIGHT_JOIN keeps
 // the page first. Forward pages older (DESC), backward pages newer (ASC).
-func buildICLListQuery(
+func buildICLListPage(
 	params domain.ListInventoryChangeLogsParams,
 	dir pagination.Direction,
 	cursorCreatedAt gosql.NullTime,
 	cursorID gosql.NullString,
 	limit int32,
-) (string, []any) {
+) keysetPage {
 	page := keysetPage{
 		table: "inventory_change_log", alias: "icl", sortColumn: "created_at",
 		createdIndex: "inventory_change_log_account_created_idx",
@@ -64,7 +64,11 @@ func buildICLListQuery(
 		}
 		page.args = append(page.args, cursorCreatedAt.Time, cursorCreatedAt.Time, cursorID.String)
 	}
+	return page
+}
 
+// buildICLListQuery wraps a page from buildICLListPage, settled, in the listing's joins.
+func buildICLListQuery(page keysetPage, dir pagination.Direction) (string, []any) {
 	orderBy := " ORDER BY icl.created_at DESC, icl.id DESC"
 	if dir == pagination.DirectionBackward {
 		orderBy = " ORDER BY icl.created_at ASC, icl.id ASC"

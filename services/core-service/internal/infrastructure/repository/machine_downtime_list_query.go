@@ -68,6 +68,9 @@ func (r *machineDowntimeRepoImpl) List(ctx context.Context, params domain.ListMa
 	if !page.desc {
 		orderBy = " ORDER BY e.started_at ASC, e.id ASC"
 	}
+	if apiErr := db.MapSQLError(page.settle(ctx, r.queries.DB())); apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
 	pageSQL, args := page.sql()
 	rows, err := r.queries.DB().QueryContext(ctx, "SELECT "+downtimeListColumns+" FROM ("+pageSQL+") page"+
 		" JOIN machine_downtime_event e ON e.id = page.id"+

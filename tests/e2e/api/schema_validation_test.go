@@ -237,9 +237,10 @@ var noGETPatchBodies = map[string]map[string]any{
 	"update-rate":      {"value": "1"},
 	"update-pick-line": {"quantity_value": "1"},
 	// Sales-order line takes a nested `quantity` object (not a flat quantity_value
-	// like pick/receiving lines); use a scalar optional field for the no-op PATCH.
-	"update-sales-order-line":     {"product_description": "Schema validation update"},
-	"update-receiving-order-line": {"quantity_value": "1"},
+	// like pick lines); use a scalar optional field for the no-op PATCH.
+	"update-sales-order-line": {"product_description": "Schema validation update"},
+	// The seeded receiving line's own quantity, 20 lb, so the PATCH changes nothing.
+	"update-receiving-order-line": {"quantity": map[string]any{"value": "20", "unit_id": SeedMaterialUnitID}},
 	// The seed allocation's own amount: a different one would unpay the seeded paid invoice (INV-001) once its flags are recomputed.
 	"update-transaction-allocation": {"amount": "428.50"},
 	// A schedule line has no single-item GET — it is read through the schedule's line

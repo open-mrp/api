@@ -909,6 +909,42 @@ UPDATE delivery_line SET storage_location_id = 'sglc_01seedbuilding0000', lot_id
     WHERE id = 'dvln_01seeddlvln1_0000';
 
 -- ============================================================
+-- RECEIVING ORDER FOR PUT INCLUDE COVERAGE
+-- ============================================================
+-- Receive and void (order and line) are each called once per include they declare, so they get an
+-- order of their own rather than RCV-001, which other tests read. One yarn line, priced so the
+-- totals have something to divide, and one delivery so related.deliveries has a row to reveal.
+
+INSERT IGNORE INTO sales_order (id, number, sales_order_status_code, sales_order_type_code, priority_code, carrier_id, billing_address_id, shipping_address_id, buyer_account_id, seller_account_id, owner_account_id, payment_term_id, shipping_term_id, issued_at, created_at, updated_at) VALUES
+    ('or_01seed_putinc_rcvpo00', 'PO-PUTINC-RCV', 'issued', 'purchase_order', 'normal', 'delivery', 'ad_01k09wnac0e1ar211e0sy0ba4g', 'ad_01k09wnpvrea0awz7vem2j8j7g', 'ac_01k0a5smf9ekb8rqg12555zjqa', 'ac_01seedsupplier_acct0', 'ac_01k0a5smf9ekb8rqg12555zjqa', 'pytm_01seednet3000000', 'prepaid_billed', DATE_SUB(NOW(), INTERVAL 3 DAY), DATE_SUB(NOW(), INTERVAL 3 DAY), NOW());
+
+INSERT IGNORE INTO quantity (id, value, unit_id, created_at, updated_at) VALUES
+    ('qu_01seed_putinc_rcvpoln', 12, 'un_01seedpound00000000', NOW(), NOW()),
+    ('qu_01seed_putinc_rcvln00', 0, 'un_01seedpound00000000', NOW(), NOW()),
+    ('qu_01seed_putinc_rcvdlvl', 2, 'un_01seedpound00000000', NOW(), NOW());
+
+INSERT IGNORE INTO rate (id, value, numerator_unit_id, denominator_unit_id, created_at, updated_at) VALUES
+    ('rt_01seed_putinc_rcvprc0', '5.00', 'dollar', 'un_01seedpound00000000', NOW(), NOW()),
+    ('rt_01seed_putinc_rcvcst0', '4.00', 'dollar', 'un_01seedpound00000000', NOW(), NOW()),
+    ('rt_01seed_putinc_rcvdlc0', '4.00', 'dollar', 'un_01seedpound00000000', NOW(), NOW());
+
+INSERT IGNORE INTO sales_order_line (id, line_item_number, product_sku, product_description, product_id, item_id, sales_order_id, quantity_id, unit_price_id, unit_cost_id, created_at, updated_at) VALUES
+    ('orln_01seed_putinc_rcvln', 1, 'YRN-001', 'Small white yarn, PUT include coverage', NULL, 'it_01seedyrn1item00000', 'or_01seed_putinc_rcvpo00', 'qu_01seed_putinc_rcvpoln', 'rt_01seed_putinc_rcvprc0', 'rt_01seed_putinc_rcvcst0', NOW(), NOW());
+
+INSERT IGNORE INTO receiving_order (id, number, order_id, account_id, created_at, updated_at) VALUES
+    ('rcor_01seed_putinc_rcv0', 'RCV-PUTINC', 'or_01seed_putinc_rcvpo00', 'ac_01k0a5smf9ekb8rqg12555zjqa', DATE_SUB(NOW(), INTERVAL 3 DAY), NOW());
+
+INSERT IGNORE INTO receiving_order_line (id, receiving_order_id, quantity_id, sales_order_line_id, created_at, updated_at) VALUES
+    ('rcln_01seed_putinc_rcvl0', 'rcor_01seed_putinc_rcv0', 'qu_01seed_putinc_rcvln00', 'orln_01seed_putinc_rcvln', NOW(), NOW());
+
+-- Recorded only, never accepted, for the reason the deliveries above give.
+INSERT IGNORE INTO delivery (id, number, sales_order_id, account_id, delivery_status_code, created_at, updated_at) VALUES
+    ('dv_01seed_putinc_rcvdlv0', 'PO-PUTINC-RCV', 'or_01seed_putinc_rcvpo00', 'ac_01k0a5smf9ekb8rqg12555zjqa', 'accepted', NOW(), NOW());
+
+INSERT IGNORE INTO delivery_line (id, delivery_id, receiving_order_line_id, quantity_id, unit_cost_id, storage_location_id, lot_id, created_at, updated_at) VALUES
+    ('dvln_01seed_putinc_rcvdl', 'dv_01seed_putinc_rcvdlv0', 'rcln_01seed_putinc_rcvl0', 'qu_01seed_putinc_rcvdlvl', 'rt_01seed_putinc_rcvdlc0', NULL, NULL, NOW(), NOW());
+
+-- ============================================================
 -- CUSTOMER RICH LINKS (seed-gap fill for `?include=` coverage)
 -- ============================================================
 -- Populates freight preferences service level, credit limit, price-group

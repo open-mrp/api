@@ -42,5 +42,6 @@ func (e *VoidReceivingOrderEndpoint) Materialize() *apiendpoint.APIEndpoint[*Voi
 		ServiceHandler: func(svc any) func(ctx context.Context, req *VoidReceivingOrderRequest) (*apiresource.ReceivingOrder, *apierror.APIError) {
 			return svc.(ReceivingOrderSvc).VoidReceivingOrder
 		},
+		IncludeConfig: receivingOrderIncludes(),
 	})
 }

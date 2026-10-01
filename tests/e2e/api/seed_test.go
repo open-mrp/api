@@ -64,9 +64,12 @@ const (
 	SeedIncludePutChangeProductLineItemID   = "it_01seed_putinc_chprdln_it"
 	SeedIncludePutEstimateSalesOrderID      = "or_01k0a8bs2yfhev5begay245wez"
 	SeedIncludePutEstimatePurchaseOrderID   = "or_01seed_putinc_po_es00"
-	SeedPropertyID                          = "pp_01k0a7ntn1ez6aw8x850femxeh"
-	SeedPropertyName                        = "Color"
-	SeedAttributeID                         = "at_01seedbeige00000000"
+	// A receiving order of its own for the receive and void PUT include scenarios, with one line.
+	SeedIncludePutReceivingOrderID     = "rcor_01seed_putinc_rcv0"
+	SeedIncludePutReceivingOrderLineID = "rcln_01seed_putinc_rcvl0"
+	SeedPropertyID                     = "pp_01k0a7ntn1ez6aw8x850femxeh"
+	SeedPropertyName                   = "Color"
+	SeedAttributeID                    = "at_01seedbeige00000000"
 
 	// Catalog search rank fixtures (shared/db/seed/e2e/0014_e2e_extras.sql; list ?q=621).
 	SeedSearchRankQuery             = "621"

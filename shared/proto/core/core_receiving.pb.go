@@ -250,10 +250,12 @@ func (x *DocumentRefInfo) GetStatus() string {
 //
 // Every figure is an amount — the purchase order's agreed unit price times a quantity — because a receiving order's lines can each count in a different unit, and money is the only common denominator they have. The gateway divides two of these for completion, rather than dividing quantities that may not share a unit.
 type ReceivingOrderTotalsInfo struct {
-	state          protoimpl.MessageState `protogen:"open.v1"`
-	OrderedAmount  string                 `protobuf:"bytes,1,opt,name=ordered_amount,json=orderedAmount,proto3" json:"ordered_amount,omitempty"`
-	StockedAmount  string                 `protobuf:"bytes,3,opt,name=stocked_amount,json=stockedAmount,proto3" json:"stocked_amount,omitempty"`
-	RejectedAmount string                 `protobuf:"bytes,5,opt,name=rejected_amount,json=rejectedAmount,proto3" json:"rejected_amount,omitempty"`
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	OrderedAmount string                 `protobuf:"bytes,1,opt,name=ordered_amount,json=orderedAmount,proto3" json:"ordered_amount,omitempty"`
+	// Every line, stocked or not: what has been checked in, whether or not it has been put away.
+	ReceivedAmount string `protobuf:"bytes,7,opt,name=received_amount,json=receivedAmount,proto3" json:"received_amount,omitempty"`
+	StockedAmount  string `protobuf:"bytes,3,opt,name=stocked_amount,json=stockedAmount,proto3" json:"stocked_amount,omitempty"`
+	RejectedAmount string `protobuf:"bytes,5,opt,name=rejected_amount,json=rejectedAmount,proto3" json:"rejected_amount,omitempty"`
 	unknownFields  protoimpl.UnknownFields
 	sizeCache      protoimpl.SizeCache
 }
@@ -291,6 +293,13 @@ func (*ReceivingOrderTotalsInfo) Descriptor() ([]byte, []int) {
 func (x *ReceivingOrderTotalsInfo) GetOrderedAmount() string {
 	if x != nil {
 		return x.OrderedAmount
+	}
+	return ""
+}
+
+func (x *ReceivingOrderTotalsInfo) GetReceivedAmount() string {
+	if x != nil {
+		return x.ReceivedAmount
 	}
 	return ""
 }
@@ -712,8 +721,8 @@ type StockingLineItemInfo struct {
 	state                protoimpl.MessageState   `protogen:"open.v1"`
 	ReceivingOrderLineId string                   `protobuf:"bytes,1,opt,name=receiving_order_line_id,json=receivingOrderLineId,proto3" json:"receiving_order_line_id,omitempty"`
 	LotNumber            *string                  `protobuf:"bytes,2,opt,name=lot_number,json=lotNumber,proto3,oneof" json:"lot_number,omitempty"`
-	RejectedQuantity     *string                  `protobuf:"bytes,3,opt,name=rejected_quantity,json=rejectedQuantity,proto3,oneof" json:"rejected_quantity,omitempty"`
 	Allocations          []*StorageAllocationInfo `protobuf:"bytes,4,rep,name=allocations,proto3" json:"allocations,omitempty"`
+	RejectedQuantity     *QuantityInput           `protobuf:"bytes,5,opt,name=rejected_quantity,json=rejectedQuantity,proto3,oneof" json:"rejected_quantity,omitempty"`
 	unknownFields        protoimpl.UnknownFields
 	sizeCache            protoimpl.SizeCache
 }
@@ -762,16 +771,16 @@ func (x *StockingLineItemInfo) GetLotNumber() string {
 	return ""
 }
 
-func (x *StockingLineItemInfo) GetRejectedQuantity() string {
-	if x != nil && x.RejectedQuantity != nil {
-		return *x.RejectedQuantity
-	}
-	return ""
-}
-
 func (x *StockingLineItemInfo) GetAllocations() []*StorageAllocationInfo {
 	if x != nil {
 		return x.Allocations
+	}
+	return nil
+}
+
+func (x *StockingLineItemInfo) GetRejectedQuantity() *QuantityInput {
+	if x != nil {
+		return x.RejectedQuantity
 	}
 	return nil
 }
@@ -780,7 +789,7 @@ func (x *StockingLineItemInfo) GetAllocations() []*StorageAllocationInfo {
 type StorageAllocationInfo struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	LocationId    *string                `protobuf:"bytes,1,opt,name=location_id,json=locationId,proto3,oneof" json:"location_id,omitempty"`
-	Quantity      string                 `protobuf:"bytes,2,opt,name=quantity,proto3" json:"quantity,omitempty"`
+	Quantity      *QuantityInput         `protobuf:"bytes,3,opt,name=quantity,proto3" json:"quantity,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -822,11 +831,11 @@ func (x *StorageAllocationInfo) GetLocationId() string {
 	return ""
 }
 
-func (x *StorageAllocationInfo) GetQuantity() string {
+func (x *StorageAllocationInfo) GetQuantity() *QuantityInput {
 	if x != nil {
 		return x.Quantity
 	}
-	return ""
+	return nil
 }
 
 // List receiving orders
@@ -1359,7 +1368,7 @@ type UpdateReceivingOrderLineRequest struct {
 	state            protoimpl.MessageState `protogen:"open.v1"`
 	ReceivingOrderId string                 `protobuf:"bytes,1,opt,name=receiving_order_id,json=receivingOrderId,proto3" json:"receiving_order_id,omitempty"`
 	Id               string                 `protobuf:"bytes,2,opt,name=id,proto3" json:"id,omitempty"`
-	QuantityValue    *string                `protobuf:"bytes,3,opt,name=quantity_value,json=quantityValue,proto3,oneof" json:"quantity_value,omitempty"`
+	Quantity         *QuantityInput         `protobuf:"bytes,4,opt,name=quantity,proto3,oneof" json:"quantity,omitempty"`
 	unknownFields    protoimpl.UnknownFields
 	sizeCache        protoimpl.SizeCache
 }
@@ -1408,11 +1417,11 @@ func (x *UpdateReceivingOrderLineRequest) GetId() string {
 	return ""
 }
 
-func (x *UpdateReceivingOrderLineRequest) GetQuantityValue() string {
-	if x != nil && x.QuantityValue != nil {
-		return *x.QuantityValue
+func (x *UpdateReceivingOrderLineRequest) GetQuantity() *QuantityInput {
+	if x != nil {
+		return x.Quantity
 	}
-	return ""
+	return nil
 }
 
 type UpdateReceivingOrderLineResponse struct {
@@ -1657,7 +1666,7 @@ var File_core_core_receiving_proto protoreflect.FileDescriptor
 
 const file_core_core_receiving_proto_rawDesc = "" +
 	"\n" +
-	"\x19core/core_receiving.proto\x12\x04core\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\x0fcore/core.proto\"\xc5\x06\n" +
+	"\x19core/core_receiving.proto\x12\x04core\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\x0fcore/core.proto\x1a\x19core/core_analytics.proto\"\xc5\x06\n" +
 	"\x19ReceivingOrderSummaryInfo\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x16\n" +
 	"\x06number\x18\x02 \x01(\tR\x06number\x12*\n" +
@@ -1689,9 +1698,10 @@ const file_core_core_receiving_proto_rawDesc = "" +
 	"\x0fDocumentRefInfo\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x16\n" +
 	"\x06number\x18\x02 \x01(\tR\x06number\x12\x16\n" +
-	"\x06status\x18\x03 \x01(\tR\x06status\"\xda\x01\n" +
+	"\x06status\x18\x03 \x01(\tR\x06status\"\x83\x02\n" +
 	"\x18ReceivingOrderTotalsInfo\x12%\n" +
-	"\x0eordered_amount\x18\x01 \x01(\tR\rorderedAmount\x12%\n" +
+	"\x0eordered_amount\x18\x01 \x01(\tR\rorderedAmount\x12'\n" +
+	"\x0freceived_amount\x18\a \x01(\tR\x0ereceivedAmount\x12%\n" +
 	"\x0estocked_amount\x18\x03 \x01(\tR\rstockedAmount\x12'\n" +
 	"\x0frejected_amount\x18\x05 \x01(\tR\x0erejectedAmountJ\x04\b\x02\x10\x03J\x04\b\x04\x10\x05J\x04\b\x06\x10\aR\x10ordered_quantityR\x10stocked_quantityR\x11rejected_quantity\"\xa4\x06\n" +
 	"\x12ReceivingOrderInfo\x12\x0e\n" +
@@ -1756,20 +1766,20 @@ const file_core_core_receiving_proto_rawDesc = "" +
 	"\x17_order_line_item_numberJ\x04\b\x13\x10\x14J\x04\b\x14\x10\x15J\x04\b\x15\x10\x16J\x04\b\x16\x10\x17J\x04\b\x17\x10\x18\"M\n" +
 	"\x10StockingDataInfo\x129\n" +
 	"\n" +
-	"line_items\x18\x01 \x03(\v2\x1a.core.StockingLineItemInfoR\tlineItems\"\x87\x02\n" +
+	"line_items\x18\x01 \x03(\v2\x1a.core.StockingLineItemInfoR\tlineItems\"\xa2\x02\n" +
 	"\x14StockingLineItemInfo\x125\n" +
 	"\x17receiving_order_line_id\x18\x01 \x01(\tR\x14receivingOrderLineId\x12\"\n" +
 	"\n" +
-	"lot_number\x18\x02 \x01(\tH\x00R\tlotNumber\x88\x01\x01\x120\n" +
-	"\x11rejected_quantity\x18\x03 \x01(\tH\x01R\x10rejectedQuantity\x88\x01\x01\x12=\n" +
-	"\vallocations\x18\x04 \x03(\v2\x1b.core.StorageAllocationInfoR\vallocationsB\r\n" +
+	"lot_number\x18\x02 \x01(\tH\x00R\tlotNumber\x88\x01\x01\x12=\n" +
+	"\vallocations\x18\x04 \x03(\v2\x1b.core.StorageAllocationInfoR\vallocations\x12E\n" +
+	"\x11rejected_quantity\x18\x05 \x01(\v2\x13.core.QuantityInputH\x01R\x10rejectedQuantity\x88\x01\x01B\r\n" +
 	"\v_lot_numberB\x14\n" +
-	"\x12_rejected_quantity\"i\n" +
+	"\x12_rejected_quantityJ\x04\b\x03\x10\x04\"\x84\x01\n" +
 	"\x15StorageAllocationInfo\x12$\n" +
 	"\vlocation_id\x18\x01 \x01(\tH\x00R\n" +
-	"locationId\x88\x01\x01\x12\x1a\n" +
-	"\bquantity\x18\x02 \x01(\tR\bquantityB\x0e\n" +
-	"\f_location_id\"\x99\x03\n" +
+	"locationId\x88\x01\x01\x12/\n" +
+	"\bquantity\x18\x03 \x01(\v2\x13.core.QuantityInputR\bquantityB\x0e\n" +
+	"\f_location_idJ\x04\b\x02\x10\x03\"\x99\x03\n" +
 	"\x1aListReceivingOrdersRequest\x12\x1b\n" +
 	"\x06cursor\x18\x01 \x01(\tH\x00R\x06cursor\x88\x01\x01\x12\x14\n" +
 	"\x05limit\x18\x02 \x01(\x05R\x05limit\x12\x19\n" +
@@ -1805,12 +1815,12 @@ const file_core_core_receiving_proto_rawDesc = "" +
 	"\x19VoidReceivingOrderRequest\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\"_\n" +
 	"\x1aVoidReceivingOrderResponse\x12A\n" +
-	"\x0freceiving_order\x18\x01 \x01(\v2\x18.core.ReceivingOrderInfoR\x0ereceivingOrder\"\x9e\x01\n" +
+	"\x0freceiving_order\x18\x01 \x01(\v2\x18.core.ReceivingOrderInfoR\x0ereceivingOrder\"\xb8\x01\n" +
 	"\x1fUpdateReceivingOrderLineRequest\x12,\n" +
 	"\x12receiving_order_id\x18\x01 \x01(\tR\x10receivingOrderId\x12\x0e\n" +
-	"\x02id\x18\x02 \x01(\tR\x02id\x12*\n" +
-	"\x0equantity_value\x18\x03 \x01(\tH\x00R\rquantityValue\x88\x01\x01B\x11\n" +
-	"\x0f_quantity_value\"T\n" +
+	"\x02id\x18\x02 \x01(\tR\x02id\x124\n" +
+	"\bquantity\x18\x04 \x01(\v2\x13.core.QuantityInputH\x00R\bquantity\x88\x01\x01B\v\n" +
+	"\t_quantityJ\x04\b\x03\x10\x04R\x0equantity_value\"T\n" +
 	" UpdateReceivingOrderLineResponse\x120\n" +
 	"\x04line\x18\x01 \x01(\v2\x1c.core.ReceivingOrderLineInfoR\x04line\"]\n" +
 	"\x1dVoidReceivingOrderLineRequest\x12,\n" +
@@ -1872,7 +1882,8 @@ var file_core_core_receiving_proto_goTypes = []any{
 	(*ReceiveReceivingOrderLineRequest)(nil),  // 22: core.ReceiveReceivingOrderLineRequest
 	(*ReceiveReceivingOrderLineResponse)(nil), // 23: core.ReceiveReceivingOrderLineResponse
 	(*timestamppb.Timestamp)(nil),             // 24: google.protobuf.Timestamp
-	(*PageInfo)(nil),                          // 25: core.PageInfo
+	(*QuantityInput)(nil),                     // 25: core.QuantityInput
+	(*PageInfo)(nil),                          // 26: core.PageInfo
 }
 var file_core_core_receiving_proto_depIdxs = []int32{
 	24, // 0: core.ReceivingOrderSummaryInfo.completed_at:type_name -> google.protobuf.Timestamp
@@ -1892,39 +1903,42 @@ var file_core_core_receiving_proto_depIdxs = []int32{
 	24, // 14: core.ReceivingOrderLineInfo.updated_at:type_name -> google.protobuf.Timestamp
 	6,  // 15: core.StockingDataInfo.line_items:type_name -> core.StockingLineItemInfo
 	7,  // 16: core.StockingLineItemInfo.allocations:type_name -> core.StorageAllocationInfo
-	24, // 17: core.ListReceivingOrdersRequest.start_date:type_name -> google.protobuf.Timestamp
-	24, // 18: core.ListReceivingOrdersRequest.end_date:type_name -> google.protobuf.Timestamp
-	0,  // 19: core.ListReceivingOrdersResponse.receiving_orders:type_name -> core.ReceivingOrderSummaryInfo
-	25, // 20: core.ListReceivingOrdersResponse.page_info:type_name -> core.PageInfo
-	3,  // 21: core.GetReceivingOrderResponse.receiving_order:type_name -> core.ReceivingOrderInfo
-	5,  // 22: core.StockReceivingOrderRequest.data:type_name -> core.StockingDataInfo
-	3,  // 23: core.StockReceivingOrderResponse.receiving_order:type_name -> core.ReceivingOrderInfo
-	3,  // 24: core.ReceiveReceivingOrderResponse.receiving_order:type_name -> core.ReceivingOrderInfo
-	3,  // 25: core.VoidReceivingOrderResponse.receiving_order:type_name -> core.ReceivingOrderInfo
-	4,  // 26: core.UpdateReceivingOrderLineResponse.line:type_name -> core.ReceivingOrderLineInfo
-	4,  // 27: core.VoidReceivingOrderLineResponse.line:type_name -> core.ReceivingOrderLineInfo
-	4,  // 28: core.ReceiveReceivingOrderLineResponse.line:type_name -> core.ReceivingOrderLineInfo
-	8,  // 29: core.CoreReceivingService.ListReceivingOrders:input_type -> core.ListReceivingOrdersRequest
-	10, // 30: core.CoreReceivingService.GetReceivingOrder:input_type -> core.GetReceivingOrderRequest
-	12, // 31: core.CoreReceivingService.StockReceivingOrder:input_type -> core.StockReceivingOrderRequest
-	14, // 32: core.CoreReceivingService.ReceiveReceivingOrder:input_type -> core.ReceiveReceivingOrderRequest
-	16, // 33: core.CoreReceivingService.VoidReceivingOrder:input_type -> core.VoidReceivingOrderRequest
-	18, // 34: core.CoreReceivingService.UpdateReceivingOrderLine:input_type -> core.UpdateReceivingOrderLineRequest
-	20, // 35: core.CoreReceivingService.VoidReceivingOrderLine:input_type -> core.VoidReceivingOrderLineRequest
-	22, // 36: core.CoreReceivingService.ReceiveReceivingOrderLine:input_type -> core.ReceiveReceivingOrderLineRequest
-	9,  // 37: core.CoreReceivingService.ListReceivingOrders:output_type -> core.ListReceivingOrdersResponse
-	11, // 38: core.CoreReceivingService.GetReceivingOrder:output_type -> core.GetReceivingOrderResponse
-	13, // 39: core.CoreReceivingService.StockReceivingOrder:output_type -> core.StockReceivingOrderResponse
-	15, // 40: core.CoreReceivingService.ReceiveReceivingOrder:output_type -> core.ReceiveReceivingOrderResponse
-	17, // 41: core.CoreReceivingService.VoidReceivingOrder:output_type -> core.VoidReceivingOrderResponse
-	19, // 42: core.CoreReceivingService.UpdateReceivingOrderLine:output_type -> core.UpdateReceivingOrderLineResponse
-	21, // 43: core.CoreReceivingService.VoidReceivingOrderLine:output_type -> core.VoidReceivingOrderLineResponse
-	23, // 44: core.CoreReceivingService.ReceiveReceivingOrderLine:output_type -> core.ReceiveReceivingOrderLineResponse
-	37, // [37:45] is the sub-list for method output_type
-	29, // [29:37] is the sub-list for method input_type
-	29, // [29:29] is the sub-list for extension type_name
-	29, // [29:29] is the sub-list for extension extendee
-	0,  // [0:29] is the sub-list for field type_name
+	25, // 17: core.StockingLineItemInfo.rejected_quantity:type_name -> core.QuantityInput
+	25, // 18: core.StorageAllocationInfo.quantity:type_name -> core.QuantityInput
+	24, // 19: core.ListReceivingOrdersRequest.start_date:type_name -> google.protobuf.Timestamp
+	24, // 20: core.ListReceivingOrdersRequest.end_date:type_name -> google.protobuf.Timestamp
+	0,  // 21: core.ListReceivingOrdersResponse.receiving_orders:type_name -> core.ReceivingOrderSummaryInfo
+	26, // 22: core.ListReceivingOrdersResponse.page_info:type_name -> core.PageInfo
+	3,  // 23: core.GetReceivingOrderResponse.receiving_order:type_name -> core.ReceivingOrderInfo
+	5,  // 24: core.StockReceivingOrderRequest.data:type_name -> core.StockingDataInfo
+	3,  // 25: core.StockReceivingOrderResponse.receiving_order:type_name -> core.ReceivingOrderInfo
+	3,  // 26: core.ReceiveReceivingOrderResponse.receiving_order:type_name -> core.ReceivingOrderInfo
+	3,  // 27: core.VoidReceivingOrderResponse.receiving_order:type_name -> core.ReceivingOrderInfo
+	25, // 28: core.UpdateReceivingOrderLineRequest.quantity:type_name -> core.QuantityInput
+	4,  // 29: core.UpdateReceivingOrderLineResponse.line:type_name -> core.ReceivingOrderLineInfo
+	4,  // 30: core.VoidReceivingOrderLineResponse.line:type_name -> core.ReceivingOrderLineInfo
+	4,  // 31: core.ReceiveReceivingOrderLineResponse.line:type_name -> core.ReceivingOrderLineInfo
+	8,  // 32: core.CoreReceivingService.ListReceivingOrders:input_type -> core.ListReceivingOrdersRequest
+	10, // 33: core.CoreReceivingService.GetReceivingOrder:input_type -> core.GetReceivingOrderRequest
+	12, // 34: core.CoreReceivingService.StockReceivingOrder:input_type -> core.StockReceivingOrderRequest
+	14, // 35: core.CoreReceivingService.ReceiveReceivingOrder:input_type -> core.ReceiveReceivingOrderRequest
+	16, // 36: core.CoreReceivingService.VoidReceivingOrder:input_type -> core.VoidReceivingOrderRequest
+	18, // 37: core.CoreReceivingService.UpdateReceivingOrderLine:input_type -> core.UpdateReceivingOrderLineRequest
+	20, // 38: core.CoreReceivingService.VoidReceivingOrderLine:input_type -> core.VoidReceivingOrderLineRequest
+	22, // 39: core.CoreReceivingService.ReceiveReceivingOrderLine:input_type -> core.ReceiveReceivingOrderLineRequest
+	9,  // 40: core.CoreReceivingService.ListReceivingOrders:output_type -> core.ListReceivingOrdersResponse
+	11, // 41: core.CoreReceivingService.GetReceivingOrder:output_type -> core.GetReceivingOrderResponse
+	13, // 42: core.CoreReceivingService.StockReceivingOrder:output_type -> core.StockReceivingOrderResponse
+	15, // 43: core.CoreReceivingService.ReceiveReceivingOrder:output_type -> core.ReceiveReceivingOrderResponse
+	17, // 44: core.CoreReceivingService.VoidReceivingOrder:output_type -> core.VoidReceivingOrderResponse
+	19, // 45: core.CoreReceivingService.UpdateReceivingOrderLine:output_type -> core.UpdateReceivingOrderLineResponse
+	21, // 46: core.CoreReceivingService.VoidReceivingOrderLine:output_type -> core.VoidReceivingOrderLineResponse
+	23, // 47: core.CoreReceivingService.ReceiveReceivingOrderLine:output_type -> core.ReceiveReceivingOrderLineResponse
+	40, // [40:48] is the sub-list for method output_type
+	32, // [32:40] is the sub-list for method input_type
+	32, // [32:32] is the sub-list for extension type_name
+	32, // [32:32] is the sub-list for extension extendee
+	0,  // [0:32] is the sub-list for field type_name
 }
 
 func init() { file_core_core_receiving_proto_init() }
@@ -1933,6 +1947,7 @@ func file_core_core_receiving_proto_init() {
 		return
 	}
 	file_core_core_proto_init()
+	file_core_core_analytics_proto_init()
 	file_core_core_receiving_proto_msgTypes[0].OneofWrappers = []any{}
 	file_core_core_receiving_proto_msgTypes[3].OneofWrappers = []any{}
 	file_core_core_receiving_proto_msgTypes[4].OneofWrappers = []any{}

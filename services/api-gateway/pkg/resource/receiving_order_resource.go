@@ -59,6 +59,10 @@ type ReceivingOrderTotals struct {
 	//
 	// This is the baseline the stage completions are measured against.
 	Ordered string `json:"ordered" validate:"required" format:"decimal"`
+	// Value checked in on the order's lines, stocked or not, and how far receiving has progressed.
+	//
+	// This is the progress the dashboard's receiving list shows: a line counts as soon as its quantity is entered, before it is put away.
+	Received ReceivingOrderStageTotal `json:"received"`
 	// Value taken into inventory, and how far stocking has progressed.
 	Stocked ReceivingOrderStageTotal `json:"stocked"`
 	// Value refused on inspection, and how much of the order that accounts for.
@@ -68,6 +72,7 @@ type ReceivingOrderTotals struct {
 var SampleReceivingOrderTotals = &ReceivingOrderTotals{
 	Object:   constants.ObjectTypeReceivingOrderTotals,
 	Ordered:  "12480.00",
+	Received: ReceivingOrderStageTotal{Object: constants.ObjectTypeReceivingOrderStageTotal, Amount: "9360.00", Completion: 0.75},
 	Stocked:  ReceivingOrderStageTotal{Object: constants.ObjectTypeReceivingOrderStageTotal, Amount: "6240.00", Completion: 0.5},
 	Rejected: ReceivingOrderStageTotal{Object: constants.ObjectTypeReceivingOrderStageTotal, Amount: "0.00", Completion: 0},
 }

@@ -20,6 +20,7 @@ import (
 	scheduling "github.com/open-mrp/api/services/core-service/internal/scheduling"
 	constants "github.com/open-mrp/api/shared/constants"
 	apierror "github.com/open-mrp/api/shared/errors"
+	pricing "github.com/open-mrp/api/shared/pricing"
 	decimal "github.com/shopspring/decimal"
 	gomock "go.uber.org/mock/gomock"
 )
@@ -13026,18 +13027,18 @@ func (m *MockDeliveryRepo) EXPECT() *MockDeliveryRepoMockRecorder {
 }
 
 // CountByPurchaseOrder mocks base method.
-func (m *MockDeliveryRepo) CountByPurchaseOrder(ctx context.Context, purchaseOrderID string) (int64, *apierror.APIError) {
+func (m *MockDeliveryRepo) CountByPurchaseOrder(ctx context.Context, accountID, purchaseOrderID string) (int64, *apierror.APIError) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "CountByPurchaseOrder", ctx, purchaseOrderID)
+	ret := m.ctrl.Call(m, "CountByPurchaseOrder", ctx, accountID, purchaseOrderID)
 	ret0, _ := ret[0].(int64)
 	ret1, _ := ret[1].(*apierror.APIError)
 	return ret0, ret1
 }
 
 // CountByPurchaseOrder indicates an expected call of CountByPurchaseOrder.
-func (mr *MockDeliveryRepoMockRecorder) CountByPurchaseOrder(ctx, purchaseOrderID any) *gomock.Call {
+func (mr *MockDeliveryRepoMockRecorder) CountByPurchaseOrder(ctx, accountID, purchaseOrderID any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CountByPurchaseOrder", reflect.TypeOf((*MockDeliveryRepo)(nil).CountByPurchaseOrder), ctx, purchaseOrderID)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CountByPurchaseOrder", reflect.TypeOf((*MockDeliveryRepo)(nil).CountByPurchaseOrder), ctx, accountID, purchaseOrderID)
 }
 
 // CreateDelivery mocks base method.
@@ -15526,50 +15527,6 @@ func (m *MockReceivingOrderRepo) EXPECT() *MockReceivingOrderRepoMockRecorder {
 	return m.recorder
 }
 
-// BulkCreateForRemainingQuantities mocks base method.
-func (m *MockReceivingOrderRepo) BulkCreateForRemainingQuantities(ctx context.Context, receivingOrderID string, orderLineIDs []string, accountID string) *apierror.APIError {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "BulkCreateForRemainingQuantities", ctx, receivingOrderID, orderLineIDs, accountID)
-	ret0, _ := ret[0].(*apierror.APIError)
-	return ret0
-}
-
-// BulkCreateForRemainingQuantities indicates an expected call of BulkCreateForRemainingQuantities.
-func (mr *MockReceivingOrderRepoMockRecorder) BulkCreateForRemainingQuantities(ctx, receivingOrderID, orderLineIDs, accountID any) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "BulkCreateForRemainingQuantities", reflect.TypeOf((*MockReceivingOrderRepo)(nil).BulkCreateForRemainingQuantities), ctx, receivingOrderID, orderLineIDs, accountID)
-}
-
-// BulkReceiveRemainingQuantities mocks base method.
-func (m *MockReceivingOrderRepo) BulkReceiveRemainingQuantities(ctx context.Context, receivingOrderID string, orderLineIDs []string, accountID string) *apierror.APIError {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "BulkReceiveRemainingQuantities", ctx, receivingOrderID, orderLineIDs, accountID)
-	ret0, _ := ret[0].(*apierror.APIError)
-	return ret0
-}
-
-// BulkReceiveRemainingQuantities indicates an expected call of BulkReceiveRemainingQuantities.
-func (mr *MockReceivingOrderRepoMockRecorder) BulkReceiveRemainingQuantities(ctx, receivingOrderID, orderLineIDs, accountID any) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "BulkReceiveRemainingQuantities", reflect.TypeOf((*MockReceivingOrderRepo)(nil).BulkReceiveRemainingQuantities), ctx, receivingOrderID, orderLineIDs, accountID)
-}
-
-// CalculateQuantityYetToBeReceived mocks base method.
-func (m *MockReceivingOrderRepo) CalculateQuantityYetToBeReceived(ctx context.Context, lineID, accountID string) (string, string, *apierror.APIError) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "CalculateQuantityYetToBeReceived", ctx, lineID, accountID)
-	ret0, _ := ret[0].(string)
-	ret1, _ := ret[1].(string)
-	ret2, _ := ret[2].(*apierror.APIError)
-	return ret0, ret1, ret2
-}
-
-// CalculateQuantityYetToBeReceived indicates an expected call of CalculateQuantityYetToBeReceived.
-func (mr *MockReceivingOrderRepoMockRecorder) CalculateQuantityYetToBeReceived(ctx, lineID, accountID any) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CalculateQuantityYetToBeReceived", reflect.TypeOf((*MockReceivingOrderRepo)(nil).CalculateQuantityYetToBeReceived), ctx, lineID, accountID)
-}
-
 // Create mocks base method.
 func (m *MockReceivingOrderRepo) Create(ctx context.Context, id, number, orderID, accountID string) *apierror.APIError {
 	m.ctrl.T.Helper()
@@ -15773,6 +15730,21 @@ func (mr *MockReceivingOrderRepoMockRecorder) GetPurchaseOrderID(ctx, receivingO
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetPurchaseOrderID", reflect.TypeOf((*MockReceivingOrderRepo)(nil).GetPurchaseOrderID), ctx, receivingOrderID, accountID)
 }
 
+// GetUnitRatios mocks base method.
+func (m *MockReceivingOrderRepo) GetUnitRatios(ctx context.Context, unitIDs []string) (map[string]pricing.UnitRatio, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetUnitRatios", ctx, unitIDs)
+	ret0, _ := ret[0].(map[string]pricing.UnitRatio)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
+}
+
+// GetUnitRatios indicates an expected call of GetUnitRatios.
+func (mr *MockReceivingOrderRepoMockRecorder) GetUnitRatios(ctx, unitIDs any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetUnitRatios", reflect.TypeOf((*MockReceivingOrderRepo)(nil).GetUnitRatios), ctx, unitIDs)
+}
+
 // HasUnstockedLineForOrderLine mocks base method.
 func (m *MockReceivingOrderRepo) HasUnstockedLineForOrderLine(ctx context.Context, salesOrderLineID string) (bool, *apierror.APIError) {
 	m.ctrl.T.Helper()
@@ -15862,6 +15834,36 @@ func (mr *MockReceivingOrderRepoMockRecorder) ListLines(ctx, receivingOrderID an
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListLines", reflect.TypeOf((*MockReceivingOrderRepo)(nil).ListLines), ctx, receivingOrderID)
 }
 
+// ListLinesForOrders mocks base method.
+func (m *MockReceivingOrderRepo) ListLinesForOrders(ctx context.Context, receivingOrderIDs []string) (map[string][]*domain.ReceivingOrderLine, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ListLinesForOrders", ctx, receivingOrderIDs)
+	ret0, _ := ret[0].(map[string][]*domain.ReceivingOrderLine)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
+}
+
+// ListLinesForOrders indicates an expected call of ListLinesForOrders.
+func (mr *MockReceivingOrderRepoMockRecorder) ListLinesForOrders(ctx, receivingOrderIDs any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListLinesForOrders", reflect.TypeOf((*MockReceivingOrderRepo)(nil).ListLinesForOrders), ctx, receivingOrderIDs)
+}
+
+// ListReceivingProgress mocks base method.
+func (m *MockReceivingOrderRepo) ListReceivingProgress(ctx context.Context, accountID string, orderLineIDs []string) ([]domain.ReceivingProgressLine, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ListReceivingProgress", ctx, accountID, orderLineIDs)
+	ret0, _ := ret[0].([]domain.ReceivingProgressLine)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
+}
+
+// ListReceivingProgress indicates an expected call of ListReceivingProgress.
+func (mr *MockReceivingOrderRepoMockRecorder) ListReceivingProgress(ctx, accountID, orderLineIDs any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListReceivingProgress", reflect.TypeOf((*MockReceivingOrderRepo)(nil).ListReceivingProgress), ctx, accountID, orderLineIDs)
+}
+
 // LockItemForLedger mocks base method.
 func (m *MockReceivingOrderRepo) LockItemForLedger(ctx context.Context, itemID string) *apierror.APIError {
 	m.ctrl.T.Helper()
@@ -15947,6 +15949,20 @@ func (mr *MockReceivingOrderRepoMockRecorder) MarkPurchaseOrderFulfilled(ctx, pu
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "MarkPurchaseOrderFulfilled", reflect.TypeOf((*MockReceivingOrderRepo)(nil).MarkPurchaseOrderFulfilled), ctx, purchaseOrderID, accountID)
 }
 
+// OpenLine mocks base method.
+func (m *MockReceivingOrderRepo) OpenLine(ctx context.Context, receivingOrderID, orderLineID, unitID string) *apierror.APIError {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "OpenLine", ctx, receivingOrderID, orderLineID, unitID)
+	ret0, _ := ret[0].(*apierror.APIError)
+	return ret0
+}
+
+// OpenLine indicates an expected call of OpenLine.
+func (mr *MockReceivingOrderRepoMockRecorder) OpenLine(ctx, receivingOrderID, orderLineID, unitID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "OpenLine", reflect.TypeOf((*MockReceivingOrderRepo)(nil).OpenLine), ctx, receivingOrderID, orderLineID, unitID)
+}
+
 // StockLines mocks base method.
 func (m *MockReceivingOrderRepo) StockLines(ctx context.Context, lineIDs []string, accountID string) *apierror.APIError {
 	m.ctrl.T.Helper()
@@ -15962,17 +15978,17 @@ func (mr *MockReceivingOrderRepoMockRecorder) StockLines(ctx, lineIDs, accountID
 }
 
 // UpdateLineQuantity mocks base method.
-func (m *MockReceivingOrderRepo) UpdateLineQuantity(ctx context.Context, lineID, quantityValue string) *apierror.APIError {
+func (m *MockReceivingOrderRepo) UpdateLineQuantity(ctx context.Context, lineID, quantityValue, unitID string) *apierror.APIError {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "UpdateLineQuantity", ctx, lineID, quantityValue)
+	ret := m.ctrl.Call(m, "UpdateLineQuantity", ctx, lineID, quantityValue, unitID)
 	ret0, _ := ret[0].(*apierror.APIError)
 	return ret0
 }
 
 // UpdateLineQuantity indicates an expected call of UpdateLineQuantity.
-func (mr *MockReceivingOrderRepoMockRecorder) UpdateLineQuantity(ctx, lineID, quantityValue any) *gomock.Call {
+func (mr *MockReceivingOrderRepoMockRecorder) UpdateLineQuantity(ctx, lineID, quantityValue, unitID any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateLineQuantity", reflect.TypeOf((*MockReceivingOrderRepo)(nil).UpdateLineQuantity), ctx, lineID, quantityValue)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateLineQuantity", reflect.TypeOf((*MockReceivingOrderRepo)(nil).UpdateLineQuantity), ctx, lineID, quantityValue, unitID)
 }
 
 // UpsertLot mocks base method.

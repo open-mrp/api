@@ -67,14 +67,14 @@ func setReceivingLineQuantity(t *testing.T, receivingOrderID, lineID, value stri
 
 	status, body, err := apiClient.Patch(
 		receivingOrdersPath+"/"+receivingOrderID+"/lines/"+lineID,
-		map[string]any{"quantity_value": value},
+		map[string]any{"quantity": pairs(value)},
 		newIdempotencyKey(),
 	)
 	require.NoError(t, err)
 	requireStatus(t, 200, status, body)
 }
 
-// touchPurchaseOrderLine edits the purchase order line, which is what raises a second receiving line
+// touchPurchaseOrderLine edits the purchase order line, which raises a second receiving line
 // for whatever is still outstanding once the first one has been stocked.
 func touchPurchaseOrderLine(t *testing.T, purchaseOrderID string) {
 	t.Helper()
@@ -125,7 +125,7 @@ func TestReceivingOrders_TotalsReachFullCompletionWhenEverythingIsStocked(t *tes
 
 	status, body := stockReceivingOrder(t, receivingOrderID, []map[string]any{{
 		"receiving_order_line_id": lineID,
-		"allocations":             []map[string]any{{"quantity": "4", "location_id": SeedLocationID}},
+		"allocations":             []map[string]any{{"quantity": pairs("4"), "location_id": SeedLocationID}},
 	}})
 	requireStatus(t, 200, status, body)
 
@@ -153,11 +153,12 @@ func TestReceivingOrders_TotalsCountTheOrderedValueOncePerPurchaseOrderLine(t *t
 	setReceivingLineQuantity(t, receivingOrderID, firstLineID, "1")
 	status, body := stockReceivingOrder(t, receivingOrderID, []map[string]any{{
 		"receiving_order_line_id": firstLineID,
-		"allocations":             []map[string]any{{"quantity": "1", "location_id": SeedLocationID}},
+		"allocations":             []map[string]any{{"quantity": pairs("1"), "location_id": SeedLocationID}},
 	}})
 	requireStatus(t, 200, status, body)
 
-	// Editing the purchase order line raises a second receiving line for the outstanding three.
+	// Stocking short opens a second receiving line, at zero, for the outstanding three; editing the
+	// purchase order line afterwards must not raise a third beside it.
 	touchPurchaseOrderLine(t, purchaseOrderID)
 
 	lines := receivingOrderLines(t, receivingOrderID)
@@ -181,9 +182,10 @@ func TestReceivingOrders_TotalsCountTheOrderedValueOncePerPurchaseOrderLine(t *t
 	}
 	require.NotEmpty(t, remainingID, "one of the two lines is still outstanding: %v", lines)
 
+	setReceivingLineQuantity(t, receivingOrderID, remainingID, "3")
 	secondStatus, secondBody := stockReceivingOrder(t, receivingOrderID, []map[string]any{{
 		"receiving_order_line_id": remainingID,
-		"allocations":             []map[string]any{{"quantity": "3", "location_id": SeedLocationID}},
+		"allocations":             []map[string]any{{"quantity": pairs("3"), "location_id": SeedLocationID}},
 	}})
 	requireStatus(t, 200, secondStatus, secondBody)
 
@@ -206,7 +208,7 @@ func TestReceivingOrders_StockedCompletionIsTheStockedShareOfTheOrderedAmount(t 
 	setReceivingLineQuantity(t, receivingOrderID, lineID, "1")
 	status, body := stockReceivingOrder(t, receivingOrderID, []map[string]any{{
 		"receiving_order_line_id": lineID,
-		"allocations":             []map[string]any{{"quantity": "1", "location_id": SeedLocationID}},
+		"allocations":             []map[string]any{{"quantity": pairs("1"), "location_id": SeedLocationID}},
 	}})
 	requireStatus(t, 200, status, body)
 
@@ -217,6 +219,33 @@ func TestReceivingOrders_StockedCompletionIsTheStockedShareOfTheOrderedAmount(t 
 		"one unit at 9.50 is 9.50 put away")
 	assert.InDelta(t, 1.0/e2eLineOrderedUnits, stageCompletion(t, totals, "stocked"), e2eCompletionEpsilon,
 		"9.50 of an order for 38.00 is a quarter complete")
+}
+
+// Received counts every line as soon as its quantity is entered, stocked or not: it is the progress
+// the dashboard's receiving list shows, and it moves before anything is put away.
+func TestReceivingOrders_ReceivedCompletionCountsLinesBeforeTheyAreStocked(t *testing.T) {
+	t.Parallel()
+
+	_, receivingOrderID := issuedPurchaseOrderReceiving(t)
+	assert.InDelta(t, 0, stageCompletion(t, receivingOrderTotals(t, receivingOrderID), "received"), e2eCompletionEpsilon,
+		"a freshly issued order has nothing counted")
+
+	lineID := jsonField(firstLine(t, receivingOrderID), "id")
+	setReceivingLineQuantity(t, receivingOrderID, lineID, "1")
+
+	totals := receivingOrderTotals(t, receivingOrderID)
+	assert.InDelta(t, 0.25, stageCompletion(t, totals, "received"), e2eCompletionEpsilon,
+		"one of four counted is a quarter received")
+	assert.InDelta(t, 0, stageCompletion(t, totals, "stocked"), e2eCompletionEpsilon,
+		"though none of it is put away")
+
+	status, body := stockReceivingOrder(t, receivingOrderID, []map[string]any{{
+		"receiving_order_line_id": lineID,
+		"allocations":             []map[string]any{{"quantity": pairs("1"), "location_id": SeedLocationID}},
+	}})
+	requireStatus(t, 200, status, body)
+	assert.InDelta(t, 0.25, stageCompletion(t, receivingOrderTotals(t, receivingOrderID), "received"), e2eCompletionEpsilon,
+		"stocking it, and opening a zero line for the rest, leaves it a quarter received")
 }
 
 // --- Expandable ---

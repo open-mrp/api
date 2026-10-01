@@ -11,6 +11,7 @@ import (
 	"github.com/open-mrp/api/services/core-service/internal/scheduling"
 	"github.com/open-mrp/api/shared/constants"
 	apierror "github.com/open-mrp/api/shared/errors"
+	"github.com/open-mrp/api/shared/pricing"
 )
 
 type AccountRepo interface {
@@ -1267,7 +1268,7 @@ type DepartmentRepo interface {
 type DeliveryRepo interface {
 	List(ctx context.Context, params ListDeliveriesParams) (*ListDeliveriesResult, *apierror.APIError)
 	Get(ctx context.Context, params GetDeliveryParams) (*Delivery, *apierror.APIError)
-	CountByPurchaseOrder(ctx context.Context, purchaseOrderID string) (int64, *apierror.APIError)
+	CountByPurchaseOrder(ctx context.Context, accountID, purchaseOrderID string) (int64, *apierror.APIError)
 	CreateDelivery(ctx context.Context, id, number, salesOrderID, accountID, statusCode string, acceptedAt, rejectedAt *time.Time) *apierror.APIError
 	CreateDeliveryLine(ctx context.Context, id, deliveryID, receivingOrderLineID, quantityID, unitCostID string, storageLocationID, lotID *string, acceptedAt, rejectedAt *time.Time) *apierror.APIError
 }
@@ -1491,19 +1492,24 @@ type ReceivingOrderRepo interface {
 	List(ctx context.Context, params ListReceivingOrdersParams) (*ListReceivingOrdersResult, *apierror.APIError)
 	Get(ctx context.Context, accountID, receivingOrderID string) (*ReceivingOrder, *apierror.APIError)
 	ListLines(ctx context.Context, receivingOrderID string) ([]*ReceivingOrderLine, *apierror.APIError)
+	// ListLinesForOrders lists the lines of several receiving orders in one query, keyed by receiving order id.
+	ListLinesForOrders(ctx context.Context, receivingOrderIDs []string) (map[string][]*ReceivingOrderLine, *apierror.APIError)
 	FindUnstockedLineIDs(ctx context.Context, receivingOrderID, accountID string, enforceNonZero bool) ([]UnstockedLine, *apierror.APIError)
 	StockLines(ctx context.Context, lineIDs []string, accountID string) *apierror.APIError
 	MarkCompleteIfAllStocked(ctx context.Context, id, accountID string) (bool, *apierror.APIError)
 	MarkIncompleteByID(ctx context.Context, id, accountID string) *apierror.APIError
-	BulkCreateForRemainingQuantities(ctx context.Context, receivingOrderID string, orderLineIDs []string, accountID string) *apierror.APIError
-	BulkReceiveRemainingQuantities(ctx context.Context, receivingOrderID string, orderLineIDs []string, accountID string) *apierror.APIError
+	// ListReceivingProgress lists every receiving line booked against the given purchase order lines, oldest first.
+	ListReceivingProgress(ctx context.Context, accountID string, orderLineIDs []string) ([]ReceivingProgressLine, *apierror.APIError)
+	// OpenLine adds an unstocked line at zero, in the given unit, for the rest of a purchase order line to be received against.
+	OpenLine(ctx context.Context, receivingOrderID, orderLineID, unitID string) *apierror.APIError
+	// GetUnitRatios returns the ratio of each given unit, keyed by unit id.
+	GetUnitRatios(ctx context.Context, unitIDs []string) (map[string]pricing.UnitRatio, *apierror.APIError)
 	VoidAllLines(ctx context.Context, receivingOrderID, accountID string) *apierror.APIError
 	DeleteDuplicateLines(ctx context.Context, receivingOrderID, accountID string) *apierror.APIError
-	UpdateLineQuantity(ctx context.Context, lineID string, quantityValue string) *apierror.APIError
+	UpdateLineQuantity(ctx context.Context, lineID, quantityValue, unitID string) *apierror.APIError
 	VoidLine(ctx context.Context, lineID, accountID string) *apierror.APIError
 	GetLine(ctx context.Context, lineID string) (*ReceivingOrderLine, *apierror.APIError)
 	IsLineInReceivingOrder(ctx context.Context, lineID, receivingOrderID string) (bool, *apierror.APIError)
-	CalculateQuantityYetToBeReceived(ctx context.Context, lineID, accountID string) (string, string, *apierror.APIError)
 	IsInAccount(ctx context.Context, accountID, receivingOrderID string) (bool, *apierror.APIError)
 	GetLineUnitPrices(ctx context.Context, receivingOrderID string) ([]ReceivingOrderLineUnitPrice, *apierror.APIError)
 	GetPurchaseOrderID(ctx context.Context, receivingOrderID, accountID string) (string, *apierror.APIError)

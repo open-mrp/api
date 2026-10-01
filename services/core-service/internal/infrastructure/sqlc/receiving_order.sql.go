@@ -12,34 +12,6 @@ import (
 	"time"
 )
 
-const calculateQuantityYetToBeReceived = `-- name: CalculateQuantityYetToBeReceived :one
-SELECT
-    oq.value AS ordered_value,
-    COALESCE(SUM(CAST(rq.value AS DECIMAL(20,6))), 0) AS received_total,
-    ou.id AS unit_id
-FROM receiving_order_line rol
-JOIN sales_order_line sol ON rol.sales_order_line_id = sol.id
-JOIN quantity oq ON sol.quantity_id = oq.id
-JOIN unit ou ON oq.unit_id = ou.id
-LEFT JOIN receiving_order_line all_rol ON all_rol.sales_order_line_id = sol.id
-LEFT JOIN quantity rq ON all_rol.quantity_id = rq.id
-WHERE rol.id = ?
-GROUP BY oq.value, ou.id
-`
-
-type CalculateQuantityYetToBeReceivedRow struct {
-	OrderedValue  string
-	ReceivedTotal interface{}
-	UnitID        string
-}
-
-func (q *Queries) CalculateQuantityYetToBeReceived(ctx context.Context, lineID string) (CalculateQuantityYetToBeReceivedRow, error) {
-	row := q.db.QueryRowContext(ctx, calculateQuantityYetToBeReceived, lineID)
-	var i CalculateQuantityYetToBeReceivedRow
-	err := row.Scan(&i.OrderedValue, &i.ReceivedTotal, &i.UnitID)
-	return i, err
-}
-
 const checkAllLinesStocked = `-- name: CheckAllLinesStocked :one
 SELECT COUNT(*) AS unstocked_count
 FROM receiving_order_line rol
@@ -65,10 +37,16 @@ const countDeliveriesByPurchaseOrder = `-- name: CountDeliveriesByPurchaseOrder 
 SELECT COUNT(*) AS delivery_count
 FROM delivery
 WHERE sales_order_id = ?
+AND account_id = ?
 `
 
-func (q *Queries) CountDeliveriesByPurchaseOrder(ctx context.Context, purchaseOrderID string) (int64, error) {
-	row := q.db.QueryRowContext(ctx, countDeliveriesByPurchaseOrder, purchaseOrderID)
+type CountDeliveriesByPurchaseOrderParams struct {
+	PurchaseOrderID string
+	AccountID       string
+}
+
+func (q *Queries) CountDeliveriesByPurchaseOrder(ctx context.Context, arg CountDeliveriesByPurchaseOrderParams) (int64, error) {
+	row := q.db.QueryRowContext(ctx, countDeliveriesByPurchaseOrder, arg.PurchaseOrderID, arg.AccountID)
 	var delivery_count int64
 	err := row.Scan(&delivery_count)
 	return delivery_count, err
@@ -353,13 +331,15 @@ SELECT
     so.number AS purchase_order_number,
     so.sales_order_status_code AS purchase_order_status,
     a.id AS supplier_id,
-    a.name AS supplier_name,
+    COALESCE(NULLIF(ar.alias, ''), a.name) AS supplier_name,
     ar.external_number AS supplier_number,
     so.note
 FROM receiving_order ro
 JOIN sales_order so ON ro.order_id = so.id
-LEFT JOIN account_relation ar ON so.seller_account_id = ar.counterparty_account_id AND ar.owner_account_id = ro.account_id
-LEFT JOIN account a ON ar.counterparty_account_id = a.id
+LEFT JOIN account_relation ar ON ar.owner_account_id = ro.account_id
+    AND ar.counterparty_account_id = so.seller_account_id
+    AND ar.account_relation_role_code = 'supplier'
+LEFT JOIN account a ON a.id = so.seller_account_id
 WHERE ro.id = ?
 AND ro.account_id = ?
 `
@@ -379,7 +359,7 @@ type GetReceivingOrderByIDRow struct {
 	PurchaseOrderNumber string
 	PurchaseOrderStatus string
 	SupplierID          sql.NullString
-	SupplierName        sql.NullString
+	SupplierName        string
 	SupplierNumber      sql.NullString
 	Note                sql.NullString
 }
@@ -437,7 +417,14 @@ SELECT
     oq.value AS order_line_quantity_ordered,
     ou.id AS order_line_unit_id,
     ou.abbreviation AS order_line_unit_abbreviation,
-    (SELECT CAST(SUM(rq.value) AS CHAR) FROM delivery_line dl JOIN quantity rq ON dl.quantity_id = rq.id WHERE dl.receiving_order_line_id = rol.id AND dl.rejected_at IS NOT NULL) AS rejected_quantity_value
+    -- A refusal can be recorded in any unit of the item's group, so each is converted into the
+    -- line's own unit before it is added; the response labels the sum with that unit.
+    (SELECT CAST(SUM(CASE WHEN rq.unit_id = q.unit_id THEN rq.value
+            ELSE rq.value * rqu.ratio_numerator * qu.ratio_denominator / (rqu.ratio_denominator * qu.ratio_numerator) END) AS CHAR)
+        FROM delivery_line dl
+        JOIN quantity rq ON dl.quantity_id = rq.id
+        JOIN unit rqu ON rqu.id = rq.unit_id
+        WHERE dl.receiving_order_line_id = rol.id AND dl.rejected_at IS NOT NULL) AS rejected_quantity_value
 FROM receiving_order_line rol
 JOIN quantity q ON rol.quantity_id = q.id
 JOIN unit qu ON q.unit_id = qu.id
@@ -556,6 +543,7 @@ const getReceivingOrderTotals = `-- name: GetReceivingOrderTotals :many
 SELECT
     g.receiving_order_id,
     CAST(COALESCE(SUM(g.ordered_amount), 0) AS CHAR) AS ordered_amount,
+    CAST(COALESCE(SUM(g.received_amount), 0) AS CHAR) AS received_amount,
     CAST(COALESCE(SUM(g.stocked_amount), 0) AS CHAR) AS stocked_amount,
     CAST(COALESCE(SUM(g.rejected_amount), 0) AS CHAR) AS rejected_amount
 FROM (
@@ -566,6 +554,8 @@ FROM (
         -- line-pricing skill); a receipt or a rejection can be counted in a different unit from the
         -- order line.
         MAX(CAST(CASE WHEN oq.unit_id = r.denominator_unit_id THEN oq.value * r.value ELSE (oq.value * oqu.ratio_numerator / oqu.ratio_denominator) * (r.value / (ru.ratio_numerator / ru.ratio_denominator)) END AS DECIMAL(30,10))) AS ordered_amount,
+        -- Received counts every line, stocked or not: what has been checked in at the dock, whether or not it has been put away yet.
+        SUM(CAST(CASE WHEN q.unit_id = r.denominator_unit_id THEN q.value * r.value ELSE (q.value * qu.ratio_numerator / qu.ratio_denominator) * (r.value / (ru.ratio_numerator / ru.ratio_denominator)) END AS DECIMAL(30,10))) AS received_amount,
         SUM(CASE WHEN rol.stocked_at IS NOT NULL THEN CAST(CASE WHEN q.unit_id = r.denominator_unit_id THEN q.value * r.value ELSE (q.value * qu.ratio_numerator / qu.ratio_denominator) * (r.value / (ru.ratio_numerator / ru.ratio_denominator)) END AS DECIMAL(30,10)) END) AS stocked_amount,
         -- Correlated rather than a derived table joined on receiving_order_line_id: a derived table
         -- has nothing to scope it to this page, so it aggregates every rejected delivery line in the
@@ -595,11 +585,12 @@ GROUP BY g.receiving_order_id
 type GetReceivingOrderTotalsRow struct {
 	ReceivingOrderID string
 	OrderedAmount    interface{}
+	ReceivedAmount   interface{}
 	StockedAmount    interface{}
 	RejectedAmount   interface{}
 }
 
-// GetReceivingOrderTotals aggregates a page of receiving orders in one pass: what their lines were ordered for, what has been stocked, and what was refused.
+// GetReceivingOrderTotals aggregates a page of receiving orders in one pass: what their lines were ordered for, what has been received and stocked, and what was refused.
 //
 // Batched over a slice of order ids rather than run per order, because the list endpoint needs this for every row (see docs/patterns/performant-list-endpoint-patterns.md).
 //
@@ -628,6 +619,7 @@ func (q *Queries) GetReceivingOrderTotals(ctx context.Context, receivingOrderIds
 		if err := rows.Scan(
 			&i.ReceivingOrderID,
 			&i.OrderedAmount,
+			&i.ReceivedAmount,
 			&i.StockedAmount,
 			&i.RejectedAmount,
 		); err != nil {
@@ -863,9 +855,10 @@ func (q *Queries) ListDeliveryRefsForOrders(ctx context.Context, orderIds []stri
 	return items, nil
 }
 
-const listReceivingOrderLinesByOrderID = `-- name: ListReceivingOrderLinesByOrderID :many
+const listReceivingOrderLinesByOrderIDs = `-- name: ListReceivingOrderLinesByOrderIDs :many
 SELECT
     rol.id,
+    rol.receiving_order_id,
     rol.stocked_at,
     rol.created_at,
     rol.updated_at,
@@ -883,7 +876,14 @@ SELECT
     oq.value AS order_line_quantity_ordered,
     ou.id AS order_line_unit_id,
     ou.abbreviation AS order_line_unit_abbreviation,
-    (SELECT CAST(SUM(rq.value) AS CHAR) FROM delivery_line dl JOIN quantity rq ON dl.quantity_id = rq.id WHERE dl.receiving_order_line_id = rol.id AND dl.rejected_at IS NOT NULL) AS rejected_quantity_value
+    -- A refusal can be recorded in any unit of the item's group, so each is converted into the
+    -- line's own unit before it is added; the response labels the sum with that unit.
+    (SELECT CAST(SUM(CASE WHEN rq.unit_id = q.unit_id THEN rq.value
+            ELSE rq.value * rqu.ratio_numerator * qu.ratio_denominator / (rqu.ratio_denominator * qu.ratio_numerator) END) AS CHAR)
+        FROM delivery_line dl
+        JOIN quantity rq ON dl.quantity_id = rq.id
+        JOIN unit rqu ON rqu.id = rq.unit_id
+        WHERE dl.receiving_order_line_id = rol.id AND dl.rejected_at IS NOT NULL) AS rejected_quantity_value
 FROM receiving_order_line rol
 JOIN quantity q ON rol.quantity_id = q.id
 JOIN unit qu ON q.unit_id = qu.id
@@ -891,12 +891,13 @@ JOIN sales_order_line sol ON rol.sales_order_line_id = sol.id
 LEFT JOIN item i ON sol.item_id = i.id
 JOIN quantity oq ON sol.quantity_id = oq.id
 JOIN unit ou ON oq.unit_id = ou.id
-WHERE rol.receiving_order_id = ?
+WHERE rol.receiving_order_id IN (/*SLICE:receiving_order_ids*/?)
 ORDER BY rol.created_at ASC, rol.id ASC
 `
 
-type ListReceivingOrderLinesByOrderIDRow struct {
+type ListReceivingOrderLinesByOrderIDsRow struct {
 	ID                        string
+	ReceivingOrderID          string
 	StockedAt                 sql.NullTime
 	CreatedAt                 time.Time
 	UpdatedAt                 time.Time
@@ -917,17 +918,29 @@ type ListReceivingOrderLinesByOrderIDRow struct {
 	RejectedQuantityValue     interface{}
 }
 
-func (q *Queries) ListReceivingOrderLinesByOrderID(ctx context.Context, receivingOrderID string) ([]ListReceivingOrderLinesByOrderIDRow, error) {
-	rows, err := q.db.QueryContext(ctx, listReceivingOrderLinesByOrderID, receivingOrderID)
+// ListReceivingOrderLinesByOrderIDs lists the lines of one or more receiving orders, so a page of orders costs one query rather than one per order.
+func (q *Queries) ListReceivingOrderLinesByOrderIDs(ctx context.Context, receivingOrderIds []string) ([]ListReceivingOrderLinesByOrderIDsRow, error) {
+	query := listReceivingOrderLinesByOrderIDs
+	var queryParams []interface{}
+	if len(receivingOrderIds) > 0 {
+		for _, v := range receivingOrderIds {
+			queryParams = append(queryParams, v)
+		}
+		query = strings.Replace(query, "/*SLICE:receiving_order_ids*/?", strings.Repeat(",?", len(receivingOrderIds))[1:], 1)
+	} else {
+		query = strings.Replace(query, "/*SLICE:receiving_order_ids*/?", "NULL", 1)
+	}
+	rows, err := q.db.QueryContext(ctx, query, queryParams...)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	var items []ListReceivingOrderLinesByOrderIDRow
+	var items []ListReceivingOrderLinesByOrderIDsRow
 	for rows.Next() {
-		var i ListReceivingOrderLinesByOrderIDRow
+		var i ListReceivingOrderLinesByOrderIDsRow
 		if err := rows.Scan(
 			&i.ID,
+			&i.ReceivingOrderID,
 			&i.StockedAt,
 			&i.CreatedAt,
 			&i.UpdatedAt,
@@ -971,19 +984,35 @@ SELECT
     so.number AS purchase_order_number,
     so.sales_order_status_code AS purchase_order_status,
     a.id AS supplier_id,
-    a.name AS supplier_name,
+    COALESCE(NULLIF(ar.alias, ''), a.name) AS supplier_name,
     ar.external_number AS supplier_number,
-    COUNT(rol.id) AS line_count
-FROM receiving_order ro
+    (SELECT COUNT(*) FROM receiving_order_line rol WHERE rol.receiving_order_id = ro.id) AS line_count
+FROM receiving_order ro FORCE INDEX (receiving_order_account_created_idx)
 JOIN sales_order so ON ro.order_id = so.id
-LEFT JOIN account_relation ar ON so.seller_account_id = ar.counterparty_account_id AND ar.owner_account_id = ro.account_id
-LEFT JOIN account a ON ar.counterparty_account_id = a.id
-LEFT JOIN receiving_order_line rol ON rol.receiving_order_id = ro.id
+LEFT JOIN account_relation ar ON ar.owner_account_id = ro.account_id
+    AND ar.counterparty_account_id = so.seller_account_id
+    AND ar.account_relation_role_code = 'supplier'
+LEFT JOIN account a ON a.id = so.seller_account_id
 WHERE ro.account_id = ?
 AND (
     ? IS NULL
     OR ro.number LIKE ?
-    OR so.number LIKE ?
+    OR ro.order_id IN (
+        SELECT sq.id FROM sales_order sq
+        WHERE sq.owner_account_id = ?
+        AND sq.sales_order_type_code = 'purchase_order'
+        AND (
+            sq.number LIKE ?
+            OR sq.customer_po_number LIKE ?
+            OR sq.seller_account_id IN (
+                SELECT sar.counterparty_account_id FROM account_relation sar
+                JOIN account sa ON sa.id = sar.counterparty_account_id
+                WHERE sar.owner_account_id = ?
+                AND sar.account_relation_role_code = 'supplier'
+                AND (sa.name LIKE ? OR sar.alias LIKE ? OR sar.external_number LIKE ?)
+            )
+        )
+    )
 )
 AND (
     ? IS NULL
@@ -1015,7 +1044,6 @@ AND (
     ro.created_at > ?
     OR (ro.created_at = ? AND ro.id > ?)
 )
-GROUP BY ro.id, ro.number, ro.completed_at, ro.created_at, ro.updated_at, so.id, so.number, a.id, a.name, ar.external_number
 ORDER BY ro.created_at ASC, ro.id ASC
 LIMIT ?
 `
@@ -1045,14 +1073,24 @@ type ListReceivingOrdersBackwardRow struct {
 	PurchaseOrderNumber string
 	PurchaseOrderStatus string
 	SupplierID          sql.NullString
-	SupplierName        sql.NullString
+	SupplierName        string
 	SupplierNumber      sql.NullString
 	LineCount           int64
 }
 
+// Search names the matching purchase orders up front, so walking the (account, created_at) key probes
+// a set per row; matching on the joined columns instead joins the order, the supplier and its account
+// for every row before it can reject it. The item and supplier filters stay correlated: a common item
+// or supplier would materialize most of the account's orders, where the walk stops at the page.
 func (q *Queries) ListReceivingOrdersBackward(ctx context.Context, arg ListReceivingOrdersBackwardParams) ([]ListReceivingOrdersBackwardRow, error) {
 	query := listReceivingOrdersBackward
 	var queryParams []interface{}
+	queryParams = append(queryParams, arg.AccountID)
+	queryParams = append(queryParams, arg.SearchQuery)
+	queryParams = append(queryParams, arg.SearchQuery)
+	queryParams = append(queryParams, arg.AccountID)
+	queryParams = append(queryParams, arg.SearchQuery)
+	queryParams = append(queryParams, arg.SearchQuery)
 	queryParams = append(queryParams, arg.AccountID)
 	queryParams = append(queryParams, arg.SearchQuery)
 	queryParams = append(queryParams, arg.SearchQuery)
@@ -1132,19 +1170,35 @@ SELECT
     so.number AS purchase_order_number,
     so.sales_order_status_code AS purchase_order_status,
     a.id AS supplier_id,
-    a.name AS supplier_name,
+    COALESCE(NULLIF(ar.alias, ''), a.name) AS supplier_name,
     ar.external_number AS supplier_number,
-    COUNT(rol.id) AS line_count
-FROM receiving_order ro
+    (SELECT COUNT(*) FROM receiving_order_line rol WHERE rol.receiving_order_id = ro.id) AS line_count
+FROM receiving_order ro FORCE INDEX (receiving_order_account_created_idx)
 JOIN sales_order so ON ro.order_id = so.id
-LEFT JOIN account_relation ar ON so.seller_account_id = ar.counterparty_account_id AND ar.owner_account_id = ro.account_id
-LEFT JOIN account a ON ar.counterparty_account_id = a.id
-LEFT JOIN receiving_order_line rol ON rol.receiving_order_id = ro.id
+LEFT JOIN account_relation ar ON ar.owner_account_id = ro.account_id
+    AND ar.counterparty_account_id = so.seller_account_id
+    AND ar.account_relation_role_code = 'supplier'
+LEFT JOIN account a ON a.id = so.seller_account_id
 WHERE ro.account_id = ?
 AND (
     ? IS NULL
     OR ro.number LIKE ?
-    OR so.number LIKE ?
+    OR ro.order_id IN (
+        SELECT sq.id FROM sales_order sq
+        WHERE sq.owner_account_id = ?
+        AND sq.sales_order_type_code = 'purchase_order'
+        AND (
+            sq.number LIKE ?
+            OR sq.customer_po_number LIKE ?
+            OR sq.seller_account_id IN (
+                SELECT sar.counterparty_account_id FROM account_relation sar
+                JOIN account sa ON sa.id = sar.counterparty_account_id
+                WHERE sar.owner_account_id = ?
+                AND sar.account_relation_role_code = 'supplier'
+                AND (sa.name LIKE ? OR sar.alias LIKE ? OR sar.external_number LIKE ?)
+            )
+        )
+    )
 )
 AND (
     ? IS NULL
@@ -1177,7 +1231,6 @@ AND (
     OR ro.created_at < ?
     OR (ro.created_at = ? AND ro.id < ?)
 )
-GROUP BY ro.id, ro.number, ro.completed_at, ro.created_at, ro.updated_at, so.id, so.number, a.id, a.name, ar.external_number
 ORDER BY ro.created_at DESC, ro.id DESC
 LIMIT ?
 `
@@ -1207,14 +1260,24 @@ type ListReceivingOrdersForwardRow struct {
 	PurchaseOrderNumber string
 	PurchaseOrderStatus string
 	SupplierID          sql.NullString
-	SupplierName        sql.NullString
+	SupplierName        string
 	SupplierNumber      sql.NullString
 	LineCount           int64
 }
 
+// Search names the matching purchase orders up front, so walking the (account, created_at) key probes
+// a set per row; matching on the joined columns instead joins the order, the supplier and its account
+// for every row before it can reject it. The item and supplier filters stay correlated: a common item
+// or supplier would materialize most of the account's orders, where the walk stops at the page.
 func (q *Queries) ListReceivingOrdersForward(ctx context.Context, arg ListReceivingOrdersForwardParams) ([]ListReceivingOrdersForwardRow, error) {
 	query := listReceivingOrdersForward
 	var queryParams []interface{}
+	queryParams = append(queryParams, arg.AccountID)
+	queryParams = append(queryParams, arg.SearchQuery)
+	queryParams = append(queryParams, arg.SearchQuery)
+	queryParams = append(queryParams, arg.AccountID)
+	queryParams = append(queryParams, arg.SearchQuery)
+	queryParams = append(queryParams, arg.SearchQuery)
 	queryParams = append(queryParams, arg.AccountID)
 	queryParams = append(queryParams, arg.SearchQuery)
 	queryParams = append(queryParams, arg.SearchQuery)
@@ -1284,6 +1347,102 @@ func (q *Queries) ListReceivingOrdersForward(ctx context.Context, arg ListReceiv
 	return items, nil
 }
 
+const listReceivingProgressForOrderLines = `-- name: ListReceivingProgressForOrderLines :many
+SELECT
+    rol.id,
+    rol.sales_order_line_id AS order_line_id,
+    rol.stocked_at,
+    rol.created_at,
+    CAST(q.value AS CHAR) AS quantity_value,
+    q.unit_id AS quantity_unit_id,
+    CAST(qu.ratio_numerator AS CHAR) AS quantity_ratio_numerator,
+    CAST(qu.ratio_denominator AS CHAR) AS quantity_ratio_denominator,
+    CAST(oq.value AS CHAR) AS ordered_value,
+    oq.unit_id AS ordered_unit_id,
+    CAST(ou.ratio_numerator AS CHAR) AS ordered_ratio_numerator,
+    CAST(ou.ratio_denominator AS CHAR) AS ordered_ratio_denominator
+FROM receiving_order_line rol
+JOIN receiving_order ro ON ro.id = rol.receiving_order_id
+JOIN quantity q ON q.id = rol.quantity_id
+JOIN unit qu ON qu.id = q.unit_id
+JOIN sales_order_line sol ON sol.id = rol.sales_order_line_id
+JOIN quantity oq ON oq.id = sol.quantity_id
+JOIN unit ou ON ou.id = oq.unit_id
+WHERE rol.sales_order_line_id IN (/*SLICE:order_line_ids*/?)
+AND ro.account_id = ?
+ORDER BY rol.created_at ASC, rol.id ASC
+`
+
+type ListReceivingProgressForOrderLinesParams struct {
+	OrderLineIds []string
+	AccountID    string
+}
+
+type ListReceivingProgressForOrderLinesRow struct {
+	ID                       string
+	OrderLineID              string
+	StockedAt                sql.NullTime
+	CreatedAt                time.Time
+	QuantityValue            interface{}
+	QuantityUnitID           string
+	QuantityRatioNumerator   interface{}
+	QuantityRatioDenominator interface{}
+	OrderedValue             interface{}
+	OrderedUnitID            string
+	OrderedRatioNumerator    interface{}
+	OrderedRatioDenominator  interface{}
+}
+
+// ListReceivingProgressForOrderLines lists every receiving line booked against the given purchase order lines, with what each was ordered for, so the caller can work out how much is still to come.
+//
+// The unit ratios are returned rather than applied: a line can be received in any unit of the item's group, and converting in Go keeps the dashboard's decimal precision (shared/pricing) instead of MySQL's division scale.
+func (q *Queries) ListReceivingProgressForOrderLines(ctx context.Context, arg ListReceivingProgressForOrderLinesParams) ([]ListReceivingProgressForOrderLinesRow, error) {
+	query := listReceivingProgressForOrderLines
+	var queryParams []interface{}
+	if len(arg.OrderLineIds) > 0 {
+		for _, v := range arg.OrderLineIds {
+			queryParams = append(queryParams, v)
+		}
+		query = strings.Replace(query, "/*SLICE:order_line_ids*/?", strings.Repeat(",?", len(arg.OrderLineIds))[1:], 1)
+	} else {
+		query = strings.Replace(query, "/*SLICE:order_line_ids*/?", "NULL", 1)
+	}
+	queryParams = append(queryParams, arg.AccountID)
+	rows, err := q.db.QueryContext(ctx, query, queryParams...)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []ListReceivingProgressForOrderLinesRow
+	for rows.Next() {
+		var i ListReceivingProgressForOrderLinesRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.OrderLineID,
+			&i.StockedAt,
+			&i.CreatedAt,
+			&i.QuantityValue,
+			&i.QuantityUnitID,
+			&i.QuantityRatioNumerator,
+			&i.QuantityRatioDenominator,
+			&i.OrderedValue,
+			&i.OrderedUnitID,
+			&i.OrderedRatioNumerator,
+			&i.OrderedRatioDenominator,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const markPurchaseOrderFulfilled = `-- name: MarkPurchaseOrderFulfilled :exec
 UPDATE sales_order
 SET sales_order_status_code = 'fulfilled',
@@ -1318,7 +1477,7 @@ func (q *Queries) MarkReceivingOrderComplete(ctx context.Context, orderID string
 
 const markReceivingOrderCompleteByID = `-- name: MarkReceivingOrderCompleteByID :exec
 UPDATE receiving_order
-SET completed_at = NOW(3)
+SET completed_at = NOW(3), updated_at = NOW(3)
 WHERE id = ?
 AND account_id = ?
 `
@@ -1347,7 +1506,7 @@ func (q *Queries) MarkReceivingOrderIncomplete(ctx context.Context, orderID stri
 
 const markReceivingOrderIncompleteByID = `-- name: MarkReceivingOrderIncompleteByID :exec
 UPDATE receiving_order
-SET completed_at = NULL
+SET completed_at = NULL, updated_at = NOW(3)
 WHERE id = ?
 AND account_id = ?
 `
@@ -1364,7 +1523,7 @@ func (q *Queries) MarkReceivingOrderIncompleteByID(ctx context.Context, arg Mark
 
 const stockReceivingOrderLines = `-- name: StockReceivingOrderLines :exec
 UPDATE receiving_order_line
-SET stocked_at = NOW(3)
+SET stocked_at = NOW(3), updated_at = NOW(3)
 WHERE id IN (/*SLICE:line_ids*/?)
 `
 
@@ -1386,17 +1545,18 @@ func (q *Queries) StockReceivingOrderLines(ctx context.Context, lineIds []string
 const updateReceivingOrderLineQuantity = `-- name: UpdateReceivingOrderLineQuantity :exec
 UPDATE quantity q
 JOIN receiving_order_line rol ON q.id = rol.quantity_id
-SET q.value = ?
+SET q.value = ?, q.unit_id = ?, q.updated_at = NOW(3), rol.updated_at = NOW(3)
 WHERE rol.id = ?
 `
 
 type UpdateReceivingOrderLineQuantityParams struct {
 	QuantityValue string
+	UnitID        string
 	LineID        string
 }
 
 func (q *Queries) UpdateReceivingOrderLineQuantity(ctx context.Context, arg UpdateReceivingOrderLineQuantityParams) error {
-	_, err := q.db.ExecContext(ctx, updateReceivingOrderLineQuantity, arg.QuantityValue, arg.LineID)
+	_, err := q.db.ExecContext(ctx, updateReceivingOrderLineQuantity, arg.QuantityValue, arg.UnitID, arg.LineID)
 	return err
 }
 
@@ -1426,7 +1586,7 @@ const voidAllReceivingOrderLines = `-- name: VoidAllReceivingOrderLines :exec
 UPDATE receiving_order_line rol
 JOIN quantity q ON rol.quantity_id = q.id
 JOIN receiving_order ro ON rol.receiving_order_id = ro.id
-SET q.value = '0', rol.stocked_at = NULL
+SET q.value = '0', q.updated_at = NOW(3), rol.stocked_at = NULL, rol.updated_at = NOW(3)
 WHERE rol.receiving_order_id = ?
 AND ro.account_id = ?
 AND ro.completed_at IS NULL
@@ -1446,7 +1606,7 @@ const voidReceivingOrderLine = `-- name: VoidReceivingOrderLine :exec
 UPDATE receiving_order_line rol
 JOIN quantity q ON rol.quantity_id = q.id
 JOIN receiving_order ro ON rol.receiving_order_id = ro.id
-SET q.value = '0', rol.stocked_at = NULL
+SET q.value = '0', q.updated_at = NOW(3), rol.stocked_at = NULL, rol.updated_at = NOW(3)
 WHERE rol.id = ?
 AND ro.account_id = ?
 `

@@ -42,6 +42,40 @@ func lineQuantityValue(t *testing.T, line map[string]any) string {
 	return jsonField(quantity, "value")
 }
 
+// pairs is a quantity in the seeded pair unit, the unit the seeded purchase order lines are ordered
+// and received in.
+func pairs(value string) map[string]any {
+	return map[string]any{"value": value, "unit_id": SeedUnitID}
+}
+
+// dozens is a quantity in the seeded dozen, which belongs to the seeded product's unit group
+// alongside the pair: a dozen is twelve each, so six pairs. It is a unit a line may be counted or put
+// away in without being the one it was ordered in.
+func dozens(value string) map[string]any {
+	return map[string]any{"value": value, "unit_id": seedDozenUnitID}
+}
+
+func lineQuantityUnitID(t *testing.T, line map[string]any) string {
+	t.Helper()
+
+	unit := jsonObject(jsonObject(line, "quantity"), "unit")
+	require.NotNil(t, unit, "the line's quantity unit must expand: %v", line)
+	return jsonField(unit, "id")
+}
+
+func patchReceivingOrderLine(t *testing.T, receivingOrderID, lineID string, body map[string]any) (int, []byte) {
+	t.Helper()
+
+	status, respBody, err := apiClient.Patch(
+		receivingOrdersPath+"/"+receivingOrderID+"/lines/"+lineID,
+		body,
+		newIdempotencyKey(),
+	)
+	require.NoError(t, err)
+	require.Less(t, status, 500, "updating a line must not 5xx: %s", string(respBody))
+	return status, respBody
+}
+
 func stockReceivingOrder(t *testing.T, receivingOrderID string, lineItems []map[string]any) (int, []byte) {
 	t.Helper()
 
@@ -89,7 +123,7 @@ func deliveryForReceivingOrder(t *testing.T, receivingOrderID string) map[string
 
 // --- Update line ---
 
-// The endpoint takes the measure alone, as `quantity_value`.
+// The endpoint takes a quantity with its unit, as every other quantity in the API does.
 func TestReceivingOrderLines_UpdateSetsTheReceivedQuantity(t *testing.T) {
 	t.Parallel()
 
@@ -101,7 +135,7 @@ func TestReceivingOrderLines_UpdateSetsTheReceivedQuantity(t *testing.T) {
 
 	status, body, err := apiClient.Patch(
 		receivingOrdersPath+"/"+receivingOrderID+"/lines/"+lineID,
-		map[string]any{"quantity_value": "2"},
+		map[string]any{"quantity": pairs("2")},
 		newIdempotencyKey(),
 	)
 	require.NoError(t, err)
@@ -112,7 +146,7 @@ func TestReceivingOrderLines_UpdateSetsTheReceivedQuantity(t *testing.T) {
 	assertDecimalEqual(t, "2", lineQuantityValue(t, firstLine(t, receivingOrderID)), "and it was persisted")
 }
 
-// The endpoint documents an omitted quantity_value as "returned unchanged", but an empty body is
+// The endpoint documents an omitted quantity as "returned unchanged", but an empty body is
 // refused before it gets that far. The stronger behaviour is the useful one — it is what turns a
 // client sending the wrong field name into an error rather than a silent no-op — so it is pinned
 // here against the doc comment drifting back.
@@ -149,27 +183,91 @@ func TestReceivingOrderLines_UpdateRejectsAnUnknownBodyField(t *testing.T) {
 	assertJSONUnknownFieldRejected(t, "PATCH", path, status, body)
 }
 
-// A nested quantity object is the shape a caller reaches for by habit, and the field the endpoint
-// actually takes is a bare decimal string. Sending the object must fail rather than be ignored:
-// silently dropping it leaves the operator looking at the quantity they thought they had changed.
-func TestReceivingOrderLines_UpdateRejectsANestedQuantityObject(t *testing.T) {
+// The bare `quantity_value` the endpoint took before the unit was carried must now fail rather than
+// be ignored: silently dropping it leaves the operator looking at the quantity they thought they had
+// changed.
+func TestReceivingOrderLines_UpdateRejectsTheRetiredQuantityValue(t *testing.T) {
 	t.Parallel()
 
 	_, receivingOrderID := receivedPurchaseOrderReceiving(t)
 	lineID := jsonField(firstLine(t, receivingOrderID), "id")
 
-	status, body, err := apiClient.Patch(
-		receivingOrdersPath+"/"+receivingOrderID+"/lines/"+lineID,
-		map[string]any{"quantity": map[string]any{"value": "2", "unit_id": SeedUnitID}},
-		newIdempotencyKey(),
-	)
-	require.NoError(t, err)
-	require.Less(t, status, 500, "a wrongly shaped body is a client error: %s", string(body))
-	assert.Equal(t, 400, status,
-		"the endpoint takes quantity_value, and must reject a nested quantity rather than ignore it: %s", string(body))
+	status, body := patchReceivingOrderLine(t, receivingOrderID, lineID, map[string]any{"quantity_value": "2"})
+	assert.Equal(t, 400, status, "quantity_value is no longer a field of this endpoint: %s", string(body))
 
 	assertDecimalEqual(t, "4", lineQuantityValue(t, firstLine(t, receivingOrderID)),
 		"and the line is untouched either way")
+}
+
+// The dashboard's receiving screen lets an operator count a line in any unit of the item's group,
+// so the line takes the unit along with the value.
+func TestReceivingOrderLines_UpdateRecordsTheUnitItWasCountedIn(t *testing.T) {
+	t.Parallel()
+
+	_, receivingOrderID := receivedPurchaseOrderReceiving(t)
+	lineID := jsonField(firstLine(t, receivingOrderID), "id")
+
+	status, body := patchReceivingOrderLine(t, receivingOrderID, lineID, map[string]any{"quantity": dozens("1")})
+	requireStatus(t, 200, status, body)
+
+	got, getBody, err := apiClient.GetListRaw(receivingOrdersPath+"/"+receivingOrderID, url.Values{"include": {"lines", "lines.quantity", "lines.quantity.unit"}})
+	require.NoError(t, err)
+	requireStatus(t, 200, got, getBody)
+	line, ok := jsonListData(parseJSON(getBody), "lines")[0].(map[string]any)
+	require.True(t, ok)
+	assertDecimalEqual(t, "1", lineQuantityValue(t, line))
+	assert.Equal(t, seedDozenUnitID, lineQuantityUnitID(t, line), "the line is now counted in dozens")
+}
+
+func TestReceivingOrderLines_UpdateRejectsAUnitOutsideTheItemsGroup(t *testing.T) {
+	t.Parallel()
+
+	_, receivingOrderID := receivedPurchaseOrderReceiving(t)
+	lineID := jsonField(firstLine(t, receivingOrderID), "id")
+
+	status, body := patchReceivingOrderLine(t, receivingOrderID, lineID, map[string]any{
+		"quantity": map[string]any{"value": "2", "unit_id": SeedMaterialUnitID},
+	})
+	assert.Equal(t, 400, status, "pounds are not a unit socks are counted in: %s", string(body))
+	assertDecimalEqual(t, "4", lineQuantityValue(t, firstLine(t, receivingOrderID)), "and the line is untouched")
+}
+
+func TestReceivingOrderLines_UpdateRejectsANegativeQuantity(t *testing.T) {
+	t.Parallel()
+
+	_, receivingOrderID := receivedPurchaseOrderReceiving(t)
+	lineID := jsonField(firstLine(t, receivingOrderID), "id")
+
+	status, body := patchReceivingOrderLine(t, receivingOrderID, lineID, map[string]any{"quantity": pairs("-1")})
+	assert.Equal(t, 400, status, "a received quantity cannot be negative: %s", string(body))
+}
+
+// A stocked line's quantity is what went into inventory. Editing or voiding it afterwards would
+// leave the receiving order disagreeing with the stock it booked, so both are refused.
+func TestReceivingOrderLines_AStockedLineCannotBeChanged(t *testing.T) {
+	t.Parallel()
+
+	_, receivingOrderID := receivedPurchaseOrderReceiving(t)
+	lineID := jsonField(firstLine(t, receivingOrderID), "id")
+
+	patchStatus, patchBody := patchReceivingOrderLine(t, receivingOrderID, lineID, map[string]any{"quantity": pairs("1")})
+	requireStatus(t, 200, patchStatus, patchBody)
+	stockStatus, stockBody := stockReceivingOrder(t, receivingOrderID, []map[string]any{{
+		"receiving_order_line_id": lineID,
+		"allocations":             []map[string]any{{"quantity": pairs("1"), "location_id": SeedLocationID}},
+	}})
+	requireStatus(t, 200, stockStatus, stockBody)
+
+	status, body := patchReceivingOrderLine(t, receivingOrderID, lineID, map[string]any{"quantity": pairs("3")})
+	assert.Equal(t, 400, status, "a stocked line cannot be edited: %s", string(body))
+
+	voidStatus, voidBody, err := apiClient.Put(receivingOrdersPath+"/"+receivingOrderID+"/lines/"+lineID+"/actions/void", nil)
+	require.NoError(t, err)
+	assert.Equal(t, 400, voidStatus, "a stocked line cannot be voided: %s", string(voidBody))
+
+	receiveStatus, receiveBody, err := apiClient.Put(receivingOrdersPath+"/"+receivingOrderID+"/lines/"+lineID+"/actions/receive", nil)
+	require.NoError(t, err)
+	assert.Equal(t, 400, receiveStatus, "a stocked line cannot be received again: %s", string(receiveBody))
 }
 
 func TestReceivingOrderLines_UpdateOnUnknownLineIs404(t *testing.T) {
@@ -179,7 +277,7 @@ func TestReceivingOrderLines_UpdateOnUnknownLineIs404(t *testing.T) {
 
 	status, body, err := apiClient.Patch(
 		receivingOrdersPath+"/"+receivingOrderID+"/lines/rcln_doesnotexist00",
-		map[string]any{"quantity_value": "1"},
+		map[string]any{"quantity": pairs("1")},
 		newIdempotencyKey(),
 	)
 	require.NoError(t, err)
@@ -197,7 +295,7 @@ func TestReceivingOrders_StockPutsTheQuantityAway(t *testing.T) {
 
 	status, body := stockReceivingOrder(t, receivingOrderID, []map[string]any{{
 		"receiving_order_line_id": lineID,
-		"allocations":             []map[string]any{{"quantity": "4", "location_id": SeedLocationID}},
+		"allocations":             []map[string]any{{"quantity": pairs("4"), "location_id": SeedLocationID}},
 	}})
 	requireStatus(t, 200, status, body)
 
@@ -213,7 +311,7 @@ func TestReceivingOrders_StockCompletesTheOrderWhenEveryLineIsStocked(t *testing
 
 	status, body := stockReceivingOrder(t, receivingOrderID, []map[string]any{{
 		"receiving_order_line_id": lineID,
-		"allocations":             []map[string]any{{"quantity": "4", "location_id": SeedLocationID}},
+		"allocations":             []map[string]any{{"quantity": pairs("4"), "location_id": SeedLocationID}},
 	}})
 	requireStatus(t, 200, status, body)
 
@@ -232,8 +330,8 @@ func TestReceivingOrders_StockSplitsAcrossLocationsIntoSeparateDeliveryLines(t *
 	status, body := stockReceivingOrder(t, receivingOrderID, []map[string]any{{
 		"receiving_order_line_id": lineID,
 		"allocations": []map[string]any{
-			{"quantity": "1", "location_id": SeedLocationID},
-			{"quantity": "3", "location_id": SeedLocationID},
+			{"quantity": pairs("1"), "location_id": SeedLocationID},
+			{"quantity": pairs("3"), "location_id": SeedLocationID},
 		},
 	}})
 	requireStatus(t, 200, status, body)
@@ -252,7 +350,7 @@ func TestReceivingOrders_StockWithoutALocationIsAccepted(t *testing.T) {
 
 	status, body := stockReceivingOrder(t, receivingOrderID, []map[string]any{{
 		"receiving_order_line_id": lineID,
-		"allocations":             []map[string]any{{"quantity": "4"}},
+		"allocations":             []map[string]any{{"quantity": pairs("4")}},
 	}})
 	requireStatus(t, 200, status, body)
 
@@ -275,8 +373,8 @@ func TestReceivingOrders_StockUnderALotRecordsItOnEveryDeliveryLine(t *testing.T
 		"receiving_order_line_id": lineID,
 		"lot_number":              lotNumber,
 		"allocations": []map[string]any{
-			{"quantity": "2", "location_id": SeedLocationID},
-			{"quantity": "2", "location_id": SeedLocationID},
+			{"quantity": pairs("2"), "location_id": SeedLocationID},
+			{"quantity": pairs("2"), "location_id": SeedLocationID},
 		},
 	}})
 	requireStatus(t, 200, status, body)
@@ -304,8 +402,8 @@ func TestReceivingOrders_StockRecordsARejectedQuantityWithoutStockingIt(t *testi
 
 	status, body := stockReceivingOrder(t, receivingOrderID, []map[string]any{{
 		"receiving_order_line_id": lineID,
-		"rejected_quantity":       "1",
-		"allocations":             []map[string]any{{"quantity": "3", "location_id": SeedLocationID}},
+		"rejected_quantity":       pairs("1"),
+		"allocations":             []map[string]any{{"quantity": pairs("3"), "location_id": SeedLocationID}},
 	}})
 	requireStatus(t, 200, status, body)
 
@@ -332,39 +430,95 @@ func TestReceivingOrders_StockRecordsARejectedQuantityWithoutStockingIt(t *testi
 }
 
 // A line stocked short of its ordered quantity leaves a remainder still expected, so the order is
-// not silently closed on a partial delivery.
-func TestReceivingOrders_StockingShortCreatesARemainderLine(t *testing.T) {
+// not silently closed on a partial delivery. The new line opens at zero, as a line does when the
+// order is issued: nothing is stocked against it until someone counts what arrives.
+func TestReceivingOrders_StockingShortOpensARemainderLineAtZero(t *testing.T) {
+	t.Parallel()
+
+	purchaseOrderID, receivingOrderID := receivedPurchaseOrderReceiving(t)
+	lineID := jsonField(firstLine(t, receivingOrderID), "id")
+
+	patchStatus, patchBody := patchReceivingOrderLine(t, receivingOrderID, lineID, map[string]any{"quantity": pairs("1")})
+	requireStatus(t, 200, patchStatus, patchBody)
+
+	status, body := stockReceivingOrder(t, receivingOrderID, []map[string]any{{
+		"receiving_order_line_id": lineID,
+		"allocations":             []map[string]any{{"quantity": pairs("1"), "location_id": SeedLocationID}},
+	}})
+	requireStatus(t, 200, status, body)
+
+	lines := receivingOrderLines(t, receivingOrderID)
+	require.Len(t, lines, 2, "the outstanding 3 is expected on a new line: %v", lines)
+
+	var remainder map[string]any
+	for _, raw := range lines {
+		line, ok := raw.(map[string]any)
+		require.True(t, ok)
+		if line["stocked_at"] == nil {
+			require.Nil(t, remainder, "exactly one line is still expected")
+			remainder = line
+		}
+	}
+	require.NotNil(t, remainder)
+	assertDecimalEqual(t, "0", lineQuantityValue(t, remainder), "the remainder line opens at zero, not at the outstanding 3")
+
+	// Stocking again before anything is counted puts nothing away: the order stays open and the
+	// purchase order unfulfilled. A pre-filled remainder would have been booked here sight unseen.
+	againStatus, againBody := stockReceivingOrder(t, receivingOrderID, []map[string]any{})
+	requireStatus(t, 200, againStatus, againBody)
+	assertNilField(t, parseJSON(againBody), "completed_at")
+
+	poStatus, poBody, err := apiClient.GetListRaw(purchaseOrdersPath+"/"+purchaseOrderID, nil)
+	require.NoError(t, err)
+	requireStatus(t, 200, poStatus, poBody)
+	assert.NotEqual(t, "fulfilled", jsonField(parseJSON(poBody), "status"), "nothing more arrived, so the purchase order is not fulfilled")
+}
+
+// Receiving the remainder finishes it at what is still outstanding: the ordered 4 less the 1 already
+// stocked.
+func TestReceivingOrders_ReceivingTheRemainderRecordsOnlyWhatIsOutstanding(t *testing.T) {
 	t.Parallel()
 
 	_, receivingOrderID := receivedPurchaseOrderReceiving(t)
 	lineID := jsonField(firstLine(t, receivingOrderID), "id")
 
-	patchStatus, patchBody, err := apiClient.Patch(
-		receivingOrdersPath+"/"+receivingOrderID+"/lines/"+lineID,
-		map[string]any{"quantity_value": "1"},
-		newIdempotencyKey(),
-	)
-	require.NoError(t, err)
+	patchStatus, patchBody := patchReceivingOrderLine(t, receivingOrderID, lineID, map[string]any{"quantity": pairs("1")})
 	requireStatus(t, 200, patchStatus, patchBody)
-
-	status, body := stockReceivingOrder(t, receivingOrderID, []map[string]any{{
+	stockStatus, stockBody := stockReceivingOrder(t, receivingOrderID, []map[string]any{{
 		"receiving_order_line_id": lineID,
-		"allocations":             []map[string]any{{"quantity": "1", "location_id": SeedLocationID}},
+		"allocations":             []map[string]any{{"quantity": pairs("1"), "location_id": SeedLocationID}},
 	}})
+	requireStatus(t, 200, stockStatus, stockBody)
+
+	status, body, err := apiClient.Put(receivingOrdersPath+"/"+receivingOrderID+"/actions/receive", nil)
+	require.NoError(t, err)
 	requireStatus(t, 200, status, body)
 
-	lines := receivingOrderLines(t, receivingOrderID)
-	assert.Len(t, lines, 2, "the outstanding 3 becomes a new unstocked line: %v", lines)
-
-	var unstocked int
-	for _, raw := range lines {
+	for _, raw := range receivingOrderLines(t, receivingOrderID) {
 		line, ok := raw.(map[string]any)
 		require.True(t, ok)
 		if line["stocked_at"] == nil {
-			unstocked++
+			assertDecimalEqual(t, "3", lineQuantityValue(t, line), "the remainder takes the outstanding 3")
 		}
 	}
-	assert.Equal(t, 1, unstocked, "exactly one line is still expected")
+}
+
+// Finishing a partly counted line tops it up to the order, rather than setting it to what was still
+// outstanding beside it (Express turned a line counted at 1 of 4 into 3).
+func TestReceivingOrderLines_ReceiveFinishesAPartlyCountedLine(t *testing.T) {
+	t.Parallel()
+
+	_, receivingOrderID := issuedPurchaseOrderReceiving(t)
+	lineID := jsonField(firstLine(t, receivingOrderID), "id")
+
+	patchStatus, patchBody := patchReceivingOrderLine(t, receivingOrderID, lineID, map[string]any{"quantity": pairs("1")})
+	requireStatus(t, 200, patchStatus, patchBody)
+
+	status, body, err := apiClient.Put(receivingOrdersPath+"/"+receivingOrderID+"/lines/"+lineID+"/actions/receive", nil)
+	require.NoError(t, err)
+	requireStatus(t, 200, status, body)
+
+	assertDecimalEqual(t, "4", lineQuantityValue(t, firstLine(t, receivingOrderID)), "the line now holds the whole order")
 }
 
 // Stocking an order with nothing left to put away is a no-op rather than a second delivery.
@@ -376,7 +530,7 @@ func TestReceivingOrders_StockingAnAlreadyStockedOrderRecordsNothingNew(t *testi
 
 	status, body := stockReceivingOrder(t, receivingOrderID, []map[string]any{{
 		"receiving_order_line_id": lineID,
-		"allocations":             []map[string]any{{"quantity": "4", "location_id": SeedLocationID}},
+		"allocations":             []map[string]any{{"quantity": pairs("4"), "location_id": SeedLocationID}},
 	}})
 	requireStatus(t, 200, status, body)
 
@@ -404,7 +558,7 @@ func TestReceivingOrders_StockMarksOmittedLinesStockedWithoutStockingThem(t *tes
 
 // --- Stocking validation ---
 
-func TestReceivingOrders_StockIgnoresAnAllocationForAnotherOrdersLine(t *testing.T) {
+func TestReceivingOrders_StockRefusesAnAllocationForAnotherOrdersLine(t *testing.T) {
 	t.Parallel()
 
 	_, receivingOrderID := receivedPurchaseOrderReceiving(t)
@@ -413,33 +567,31 @@ func TestReceivingOrders_StockIgnoresAnAllocationForAnotherOrdersLine(t *testing
 
 	status, body := stockReceivingOrder(t, receivingOrderID, []map[string]any{{
 		"receiving_order_line_id": foreignLineID,
-		"allocations":             []map[string]any{{"quantity": "1", "location_id": SeedLocationID}},
+		"allocations":             []map[string]any{{"quantity": pairs("1"), "location_id": SeedLocationID}},
 	}})
-	requireStatus(t, 200, status, body)
+	assert.Equal(t, 400, status, "another order's line cannot be stocked through this one: %s", string(body))
 
+	assert.Empty(t, jsonField(firstLine(t, receivingOrderID), "stocked_at"), "and nothing was stocked")
 	assertDecimalEqual(t, "4", lineQuantityValue(t, firstLine(t, otherOrderID)),
 		"the other order's line was not touched through this one")
 }
 
-// A line id the order does not own is ignored rather than refused, and the order's own unstocked
-// lines are still marked stocked. Worth pinning: a client that sends a stale line id gets a 200 and
-// an order it did not mean to close.
-func TestReceivingOrders_StockIgnoresAnUnknownLine(t *testing.T) {
+// A stale line id used to be ignored while the order's own lines were swept as stocked, closing an
+// order the client did not mean to close. It is refused now, and nothing is stocked.
+func TestReceivingOrders_StockRefusesAnUnknownLine(t *testing.T) {
 	t.Parallel()
 
 	_, receivingOrderID := receivedPurchaseOrderReceiving(t)
 
 	status, body := stockReceivingOrder(t, receivingOrderID, []map[string]any{{
 		"receiving_order_line_id": "rcln_doesnotexist00",
-		"allocations":             []map[string]any{{"quantity": "1"}},
+		"allocations":             []map[string]any{{"quantity": pairs("1")}},
 	}})
-	requireStatus(t, 200, status, body)
-
-	assert.NotEmpty(t, jsonField(parseJSON(body), "completed_at"),
-		"the order's own lines were still swept as stocked: %s", string(body))
+	assert.Equal(t, 400, status, "an unknown line is refused: %s", string(body))
+	assert.Empty(t, jsonField(firstLine(t, receivingOrderID), "stocked_at"), "and nothing was stocked")
 }
 
-func TestReceivingOrders_StockTreatsAMalformedQuantityAsNothingToPutAway(t *testing.T) {
+func TestReceivingOrders_StockRefusesAMalformedQuantity(t *testing.T) {
 	t.Parallel()
 
 	_, receivingOrderID := receivedPurchaseOrderReceiving(t)
@@ -449,166 +601,149 @@ func TestReceivingOrders_StockTreatsAMalformedQuantityAsNothingToPutAway(t *test
 		t.Run(fmt.Sprintf("quantity=%q", quantity), func(t *testing.T) {
 			status, body := stockReceivingOrder(t, receivingOrderID, []map[string]any{{
 				"receiving_order_line_id": lineID,
-				"allocations":             []map[string]any{{"quantity": quantity}},
+				"allocations":             []map[string]any{{"quantity": pairs(quantity)}},
 			}})
-			require.Less(t, status, 500, "a malformed quantity must not 5xx: %s", string(body))
-			assert.Equal(t, 200, status,
-				"an unparseable allocation quantity is currently treated as nothing to put away: %s", string(body))
+			assert.Equal(t, 400, status, "an unparseable quantity is refused rather than stocked as zero: %s", string(body))
 		})
 	}
+	assert.Empty(t, jsonField(firstLine(t, receivingOrderID), "stocked_at"), "and nothing was stocked")
 }
 
-func TestReceivingOrders_StockOnUnknownOrderIs404(t *testing.T) {
-	t.Parallel()
-
-	status, body := stockReceivingOrder(t, "rcor_doesnotexist00", nil)
-	assert.Equal(t, 404, status, "an unknown receiving order is a 404: %s", string(body))
-}
-
-// --- List status filter ---
-
-// The API's word for a finished receiving order is `completed`. The dashboard calls the same state
-// "closed", and sending that word instead has to fail loudly rather than being read as a default.
-func TestReceivingOrders_ListRejectsAnUnknownStatus(t *testing.T) {
-	t.Parallel()
-
-	for _, value := range []string{"closed", "bogus_e2e_status"} {
-		t.Run(value, func(t *testing.T) {
-			t.Parallel()
-
-			status, body, err := apiClient.GetListRaw(receivingOrdersPath, url.Values{"status": {value}})
-			require.NoError(t, err)
-			require.Less(t, status, 500, "an unknown status is a client error: %s", string(body))
-			require.Equal(t, 400, status, "status only accepts open, completed and all: %s", string(body))
-			requireErrorResponse(t, body, "parameter_invalid", "invalid_request_error")
-		})
-	}
-}
-
-func TestReceivingOrders_ListAcceptsTheDocumentedStatuses(t *testing.T) {
-	t.Parallel()
-
-	for _, value := range []string{"open", "completed", "all"} {
-		t.Run(value, func(t *testing.T) {
-			t.Parallel()
-
-			status, body, err := apiClient.GetListRaw(receivingOrdersPath, url.Values{"status": {value}, "limit": {"1"}})
-			require.NoError(t, err)
-			require.Less(t, status, 500, "status=%s must not 5xx: %s", value, string(body))
-			assert.Equal(t, 200, status, "status=%s is a documented value: %s", value, string(body))
-		})
-	}
-}
-
-// Completed orders are hidden when status is omitted, so the default page is not "everything".
-func TestReceivingOrders_ListHidesCompletedOrdersByDefault(t *testing.T) {
-	t.Parallel()
-
-	list, status, err := apiClient.GetList(receivingOrdersPath, url.Values{"limit": {"20"}})
-	require.NoError(t, err)
-	require.Equal(t, 200, status)
-
-	for _, raw := range list.Data {
-		assert.Nil(t, parseJSON(raw)["completed_at"],
-			"the default page shows open orders only: %s", string(raw))
-	}
-}
-
-// --- Totals ---
-
-// Stocking progress is reported off totals rather than counted by the caller, so the figure has to
-// move as lines are put away.
-func TestReceivingOrders_TotalsReportStockingCompletion(t *testing.T) {
+func TestReceivingOrders_StockRefusesMoreThanWasReceived(t *testing.T) {
 	t.Parallel()
 
 	_, receivingOrderID := receivedPurchaseOrderReceiving(t)
-
-	status, body, err := apiClient.GetListRaw(receivingOrdersPath+"/"+receivingOrderID, url.Values{"include": {"totals"}})
-	require.NoError(t, err)
-	requireStatus(t, 200, status, body)
-
-	totals := jsonObject(parseJSON(body), "totals")
-	require.NotNil(t, totals, "totals must expand when asked for: %s", string(body))
-	assertObjectField(t, totals, "receiving_order_totals")
-	assert.NotEmpty(t, jsonField(totals, "ordered"), "the ordered value is the baseline")
-
-	stocked := jsonObject(totals, "stocked")
-	require.NotNil(t, stocked, "totals always name the stocked stage: %v", totals)
-	assertDecimalEqual(t, "0", jsonField(stocked, "completion"), "nothing is stocked yet")
-
 	lineID := jsonField(firstLine(t, receivingOrderID), "id")
-	stockStatus, stockBody := stockReceivingOrder(t, receivingOrderID, []map[string]any{{
+
+	status, body := stockReceivingOrder(t, receivingOrderID, []map[string]any{{
 		"receiving_order_line_id": lineID,
-		"allocations":             []map[string]any{{"quantity": "4", "location_id": SeedLocationID}},
+		"rejected_quantity":       pairs("1"),
+		"allocations":             []map[string]any{{"quantity": pairs("4"), "location_id": SeedLocationID}},
 	}})
-	requireStatus(t, 200, stockStatus, stockBody)
-
-	afterStatus, afterBody, err := apiClient.GetListRaw(receivingOrdersPath+"/"+receivingOrderID, url.Values{"include": {"totals"}})
-	require.NoError(t, err)
-	requireStatus(t, 200, afterStatus, afterBody)
-
-	afterStocked := jsonObject(jsonObject(parseJSON(afterBody), "totals"), "stocked")
-	require.NotNil(t, afterStocked)
-	assertDecimalEqual(t, "1", jsonField(afterStocked, "completion"),
-		"a fully stocked order reports completion 1")
+	assert.Equal(t, 400, status, "4 put away and 1 refused is more than the 4 received: %s", string(body))
 }
 
-func TestReceivingOrders_TotalsAreNullWithoutInclude(t *testing.T) {
+func TestReceivingOrders_StockRefusesALineTwice(t *testing.T) {
 	t.Parallel()
 
 	_, receivingOrderID := receivedPurchaseOrderReceiving(t)
+	lineID := jsonField(firstLine(t, receivingOrderID), "id")
 
-	status, body, err := apiClient.GetListRaw(receivingOrdersPath+"/"+receivingOrderID, nil)
-	require.NoError(t, err)
-	requireStatus(t, 200, status, body)
-
-	assertNilField(t, parseJSON(body), "totals")
-}
-
-// The deliveries booked against an order are what its receiving history is made of. They were
-// carried on the retrieve but dropped from the list mapping, so both are checked.
-func TestReceivingOrders_ListRelatedNamesItsDeliveries(t *testing.T) {
-	t.Parallel()
-
-	list, status, err := apiClient.GetList(receivingOrdersPath, url.Values{
-		"include": {"related", "related.deliveries"},
-		"status":  {"all"},
-		"limit":   {"10"},
-	})
-	require.NoError(t, err)
-	requireStatus(t, 200, status, nil)
-	require.NotEmpty(t, list.Data)
-
-	var withDeliveries int
-	for _, raw := range list.Data {
-		related := jsonObject(parseJSON(raw), "related")
-		require.NotNil(t, related, "related must expand on the list: %s", string(raw))
-		if refs := jsonListData(related, "deliveries"); len(refs) > 0 {
-			withDeliveries++
-			ref, ok := refs[0].(map[string]any)
-			require.True(t, ok)
-			assert.NotEmpty(t, jsonField(ref, "id"))
-			assert.NotEmpty(t, jsonField(ref, "number"))
-		}
+	item := map[string]any{
+		"receiving_order_line_id": lineID,
+		"allocations":             []map[string]any{{"quantity": pairs("2"), "location_id": SeedLocationID}},
 	}
-	assert.Positive(t, withDeliveries, "a seeded receiving order has deliveries booked against it")
+	status, body := stockReceivingOrder(t, receivingOrderID, []map[string]any{item, item})
+	assert.Equal(t, 400, status, "a line is stocked once per request: %s", string(body))
 }
 
-// A freshly issued order has nothing booked against it yet, so the list has to be present and
-// empty rather than absent.
-func TestReceivingOrders_RelatedDeliveriesIsEmptyBeforeStocking(t *testing.T) {
+// The stocking dialog offers every unit of the item's group. Here the delivery was counted as a
+// dozen and is put away in pairs: the check against what was received converts first, so 6 pairs
+// is the dozen and 7 is more, and the receipt is recorded in the pairs it was put away in.
+func TestReceivingOrders_StockInAnotherUnitOfTheGroup(t *testing.T) {
 	t.Parallel()
 
-	_, receivingOrderID := receivedPurchaseOrderReceiving(t)
+	countedInDozens := func(t *testing.T) (receivingOrderID, lineID string) {
+		t.Helper()
+		_, receivingOrderID = issuedPurchaseOrderReceiving(t)
+		lineID = jsonField(firstLine(t, receivingOrderID), "id")
+		status, body := patchReceivingOrderLine(t, receivingOrderID, lineID, map[string]any{"quantity": dozens("1")})
+		requireStatus(t, 200, status, body)
+		return receivingOrderID, lineID
+	}
 
-	status, body, err := apiClient.GetListRaw(receivingOrdersPath+"/"+receivingOrderID, url.Values{
-		"include": {"related", "related.deliveries"},
-	})
+	overID, overLineID := countedInDozens(t)
+	overStatus, overBody := stockReceivingOrder(t, overID, []map[string]any{{
+		"receiving_order_line_id": overLineID,
+		"allocations":             []map[string]any{{"quantity": pairs("7"), "location_id": SeedLocationID}},
+	}})
+	assert.Equal(t, 400, overStatus, "7 pairs is more than the dozen received: %s", string(overBody))
+
+	receivingOrderID, lineID := countedInDozens(t)
+	status, body := stockReceivingOrder(t, receivingOrderID, []map[string]any{{
+		"receiving_order_line_id": lineID,
+		"allocations":             []map[string]any{{"quantity": pairs("6"), "location_id": SeedLocationID}},
+	}})
+	requireStatus(t, 200, status, body)
+	assert.NotEmpty(t, jsonField(parseJSON(body), "completed_at"), "a dozen covers the 4 pairs ordered, so the order is complete")
+
+	deliveryLines := jsonListData(deliveryForReceivingOrder(t, receivingOrderID), "lines")
+	require.Len(t, deliveryLines, 1)
+	deliveryLine, ok := deliveryLines[0].(map[string]any)
+	require.True(t, ok)
+	quantity := jsonObject(deliveryLine, "quantity")
+	require.NotNil(t, quantity, "a delivery line carries its quantity: %v", deliveryLine)
+	assertDecimalEqual(t, "6", jsonField(quantity, "value"), "recorded as put away, in pairs")
+}
+
+// --- Action responses ---
+
+// The receiving screen refreshes itself from what an action returns, so every action accepts the
+// retrieve endpoint's includes and fills them.
+func TestReceivingOrders_ActionsReturnTheRequestedIncludes(t *testing.T) {
+	t.Parallel()
+
+	_, receivingOrderID := issuedPurchaseOrderReceiving(t)
+	include := url.Values{"include": {"lines", "lines.order_line", "lines.quantity", "lines.quantity.unit", "supplier", "totals"}}
+
+	status, body, err := apiClient.Put(receivingOrdersPath+"/"+receivingOrderID+"/actions/receive?"+include.Encode(), nil)
 	require.NoError(t, err)
 	requireStatus(t, 200, status, body)
 
-	related := jsonObject(parseJSON(body), "related")
-	require.NotNil(t, related)
-	assert.Empty(t, jsonListData(related, "deliveries"),
-		"nothing has been stocked yet: %s", string(body))
+	order := parseJSON(body)
+	require.NotNil(t, jsonObject(order, "supplier"), "the supplier expands on an action: %s", string(body))
+	require.NotNil(t, jsonObject(order, "totals"), "and so do the totals: %s", string(body))
+	lines := jsonListData(order, "lines")
+	require.Len(t, lines, 1, "and the lines: %s", string(body))
+	line, ok := lines[0].(map[string]any)
+	require.True(t, ok)
+	require.NotNil(t, jsonObject(line, "order_line"), "each line's order line expands: %v", line)
+	assert.Equal(t, SeedUnitID, lineQuantityUnitID(t, line))
+
+	lineID := jsonField(line, "id")
+	lineStatus, lineBody, err := apiClient.Put(
+		receivingOrdersPath+"/"+receivingOrderID+"/lines/"+lineID+"/actions/void?"+url.Values{"include": {"order_line", "quantity.unit"}}.Encode(), nil)
+	require.NoError(t, err)
+	requireStatus(t, 200, lineStatus, lineBody)
+	require.NotNil(t, jsonObject(parseJSON(lineBody), "order_line"), "a line action fills its includes too: %s", string(lineBody))
+}
+
+// --- List search ---
+
+// The dashboard searches receiving orders by supplier as well as by number. A supplier that is also
+// a customer of the account must not appear twice: the relation is joined in its supplier role only.
+func TestReceivingOrders_ListSearchFindsAnOrderBySupplierName(t *testing.T) {
+	t.Parallel()
+
+	_, receivingOrderID := issuedPurchaseOrderReceiving(t)
+
+	status, body, err := apiClient.GetListRaw(receivingOrdersPath+"/"+receivingOrderID, url.Values{"include": {"supplier"}})
+	require.NoError(t, err)
+	requireStatus(t, 200, status, body)
+	supplierName := jsonField(jsonObject(parseJSON(body), "supplier"), "name")
+	require.NotEmpty(t, supplierName)
+
+	seen := map[string]int{}
+	found := false
+	listStatus, listBody, err := apiClient.GetListRaw(receivingOrdersPath, url.Values{"q": {supplierName}, "limit": {"100"}})
+	for range 50 {
+		require.NoError(t, err)
+		requireStatus(t, 200, listStatus, listBody)
+		for _, raw := range jsonArray(parseJSON(listBody), "data") {
+			order, ok := raw.(map[string]any)
+			require.True(t, ok)
+			id := jsonField(order, "id")
+			seen[id]++
+			found = found || id == receivingOrderID
+		}
+		info := receivingOrdersPageInfo(t, listBody)
+		if found || !info.HasNextPage {
+			break
+		}
+		listStatus, listBody, err = apiClient.GetListRawFromPageURL(info.NextPageURL)
+	}
+	assert.True(t, found, "searching for the supplier's name finds its open receiving order")
+	for id, n := range seen {
+		assert.Equal(t, 1, n, "receiving order %s is listed once, not once per relation", id)
+	}
 }

@@ -340,18 +340,27 @@ func (s listPlanSuite[P]) run(t *testing.T) {
 	q := sqlc.New(edb)
 	indexes := scopeIndexes(t, db, s.table, s.scopeColumn)
 
+	measured := 0
 	for _, mode := range planStatsModes {
 		t.Run("stats="+mode, func(t *testing.T) {
 			usePlanStats(t, db, s.table, mode)
 			t.Cleanup(func() { usePlanStats(t, db, s.table, "analyzed") })
 			for _, tc := range s.cases {
-				t.Run(tc.name, func(t *testing.T) { s.check(t, db, edb, q, indexes, tc) })
+				t.Run(tc.name, func(t *testing.T) {
+					if s.check(t, db, edb, q, indexes, tc) {
+						measured++
+					}
+				})
 			}
 		})
 	}
+	// A request may answer without reading the table, but a suite none of whose requests did is
+	// measuring the wrong statement.
+	require.Positive(t, measured, "no request read %q", s.from)
 }
 
-func (s listPlanSuite[P]) check(t *testing.T, db *sql.DB, edb *explainingDB, q *sqlc.Queries, indexes []string, tc planCase[P]) {
+// check reports whether the request read the table at all.
+func (s listPlanSuite[P]) check(t *testing.T, db *sql.DB, edb *explainingDB, q *sqlc.Queries, indexes []string, tc planCase[P]) bool {
 	t.Helper()
 
 	edb.statements = nil
@@ -362,14 +371,16 @@ func (s listPlanSuite[P]) check(t *testing.T, db *sql.DB, edb *explainingDB, q *
 			stmt = &edb.statements[i]
 		}
 	}
-	require.NotNil(t, stmt, "no statement read %q", s.from)
+	if stmt == nil {
+		return false
+	}
 
 	got := tableAccess(stmt.plan, s.alias)
 	limit := s.limit(tc.params)
 	page := float64(limit + 1)
 	budget := planRowBudget(limit)
 	if got.rows <= budget {
-		return
+		return true
 	}
 	// Reading no more than the request's unordered filter matches (and the page's rows again, if they
 	// are joined back by id) is as well as any plan can do; within twice that is the same allowance a
@@ -379,7 +390,7 @@ func (s listPlanSuite[P]) check(t *testing.T, db *sql.DB, edb *explainingDB, q *
 		floor = s.floor(t, db, tc.params)
 	}
 	if floor > 0 && got.rows <= 2*floor+2*page {
-		return
+		return true
 	}
 	best, bestIndex := bestForcedAccess(t, db, *stmt, s.from, s.alias, indexes)
 
@@ -392,4 +403,5 @@ func (s listPlanSuite[P]) check(t *testing.T, db *sql.DB, edb *explainingDB, q *
 		t.Errorf("no index serves this: the best, %s, reads %.0f %s rows to return a page of %d\n%s",
 			bestIndex, best.rows, s.table, limit, stmt.plan)
 	}
+	return true
 }

@@ -1,0 +1,125 @@
+{
+ "source": "augno_core/prod, mysql.innodb_table_stats and mysql.innodb_index_stats, last_update 2026-09-17 19:08:33 UTC",
+ "table": {
+  "n_rows": 37149,
+  "clustered_index_size": 739,
+  "sum_of_other_index_sizes": 1192
+ },
+ "indexes": [
+  {
+   "index": "FTS_DOC_ID_INDEX",
+   "stat": "n_diff_pfx01",
+   "value": 37809
+  },
+  {
+   "index": "FTS_DOC_ID_INDEX",
+   "stat": "n_leaf_pages",
+   "value": 93
+  },
+  {
+   "index": "FTS_DOC_ID_INDEX",
+   "stat": "size",
+   "value": 97
+  },
+  {
+   "index": "PRIMARY",
+   "stat": "n_diff_pfx01",
+   "value": 37149
+  },
+  {
+   "index": "PRIMARY",
+   "stat": "n_leaf_pages",
+   "value": 627
+  },
+  {
+   "index": "PRIMARY",
+   "stat": "size",
+   "value": 739
+  },
+  {
+   "index": "email_log_account_created_idx",
+   "stat": "n_diff_pfx01",
+   "value": 31
+  },
+  {
+   "index": "email_log_account_created_idx",
+   "stat": "n_diff_pfx02",
+   "value": 37460
+  },
+  {
+   "index": "email_log_account_created_idx",
+   "stat": "n_diff_pfx03",
+   "value": 37752
+  },
+  {
+   "index": "email_log_account_created_idx",
+   "stat": "n_leaf_pages",
+   "value": 208
+  },
+  {
+   "index": "email_log_account_created_idx",
+   "stat": "size",
+   "value": 289
+  },
+  {
+   "index": "email_log_account_id_idx",
+   "stat": "n_diff_pfx01",
+   "value": 27
+  },
+  {
+   "index": "email_log_account_id_idx",
+   "stat": "n_diff_pfx02",
+   "value": 39841
+  },
+  {
+   "index": "email_log_account_id_idx",
+   "stat": "n_leaf_pages",
+   "value": 151
+  },
+  {
+   "index": "email_log_account_id_idx",
+   "stat": "size",
+   "value": 225
+  },
+  {
+   "index": "email_log_sent_by_id_idx",
+   "stat": "n_diff_pfx01",
+   "value": 220
+  },
+  {
+   "index": "email_log_sent_by_id_idx",
+   "stat": "n_diff_pfx02",
+   "value": 37908
+  },
+  {
+   "index": "email_log_sent_by_id_idx",
+   "stat": "n_leaf_pages",
+   "value": 183
+  },
+  {
+   "index": "email_log_sent_by_id_idx",
+   "stat": "size",
+   "value": 225
+  },
+  {
+   "index": "email_log_ses_message_id_idx",
+   "stat": "n_diff_pfx01",
+   "value": 36262
+  },
+  {
+   "index": "email_log_ses_message_id_idx",
+   "stat": "n_diff_pfx02",
+   "value": 37037
+  },
+  {
+   "index": "email_log_ses_message_id_idx",
+   "stat": "n_leaf_pages",
+   "value": 287
+  },
+  {
+   "index": "email_log_ses_message_id_idx",
+   "stat": "size",
+   "value": 356
+  }
+ ]
+}

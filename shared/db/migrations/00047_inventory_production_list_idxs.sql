@@ -17,7 +17,14 @@ ALTER TABLE `batch`
   DROP KEY `batch_account_id_scanning_station_id_scanned_at_id_idx`,
   ADD KEY `batch_account_id_scanning_station_id_scanned_at_id_idx` (`account_id`, `scanning_station_id`, `scanned_at`, `id`);
 
+-- The run list's order: the account's runs newest first, read a page at a time instead of all sorted.
+ALTER TABLE `production_run`
+  ADD KEY `production_run_account_created_idx` (`account_id`, `created_at`, `id`);
+
 -- +goose Down
+ALTER TABLE `production_run`
+  DROP KEY `production_run_account_created_idx`;
+
 ALTER TABLE `batch`
   DROP KEY `batch_account_id_scanning_station_id_scanned_at_id_idx`,
   ADD KEY `batch_account_id_scanning_station_id_scanned_at_id_idx` (`account_id`, `scanning_station_id`, `scanned_at` DESC, `id` DESC);

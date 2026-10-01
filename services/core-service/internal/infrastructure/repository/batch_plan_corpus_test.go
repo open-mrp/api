@@ -27,7 +27,7 @@ const (
 	planBatchSpan     = 2 * 365 * 24 * time.Hour
 
 	// planBatchCorpusVersion is bumped whenever the corpus's shape changes, so a stale one is rebuilt.
-	planBatchCorpusVersion = "Plan Test Batches v1"
+	planBatchCorpusVersion = "Plan Test Batches v2"
 
 	// planBatchRareSKU matches only the rare item's SKU; planBatchDenseSKU matches every item's.
 	planBatchRareSKU  = "ZQRARE"
@@ -105,6 +105,17 @@ func planBatchRun(i int) int {
 		return planBatchBigRun
 	}
 	return r
+}
+
+// planBatchRareMachine made only the rare run's batches.
+const planBatchRareMachine = planBatchMachines - 1
+
+// planBatchMachine is the machine run batch i was made on.
+func planBatchMachine(i int) int {
+	if planBatchRun(i) == planBatchRareRun {
+		return planBatchRareMachine
+	}
+	return i % (planBatchMachines - 1)
 }
 
 var planBatchCorpusOnce sync.Once
@@ -207,7 +218,7 @@ func ensureBatchCorpus(t *testing.T) {
 				if r := planBatchRun(i); r >= 0 {
 					run = planBatchRunID(r)
 					mVals = append(mVals, "(?, ?)")
-					mArgs = append(mArgs, planBatchID(i), planBatchMachineID(i%planBatchMachines))
+					mArgs = append(mArgs, planBatchID(i), planBatchMachineID(planBatchMachine(i)))
 					// Each run batch flows into the next batch on another station.
 					if next := i + 1; next < planBatchRows && planBatchRun(next) < 0 && planBatchStation(next) > 0 {
 						fVals = append(fVals, "(?, ?)")

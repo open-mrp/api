@@ -329,6 +329,10 @@ type listPlanSuite[P any] struct {
 	// filter no index can serve in list order (a FULLTEXT match, a range on a column the list does not
 	// sort by) cannot stop at a page, so the bar for such a request is reading only its matches.
 	floor func(t *testing.T, db *sql.DB, p P) float64
+	// related (optional) checks what the request read of other tables, given every statement it ran;
+	// relatedTables have their statistics swapped alongside table's.
+	related       func(t *testing.T, stmts []explainedStatement, p P)
+	relatedTables []string
 }
 
 // planRowBudget is the most of the listed table one page may read: the page, plus room for residual
@@ -353,8 +357,10 @@ func (s listPlanSuite[P]) run(t *testing.T) {
 	measured := 0
 	for _, mode := range planStatsModes {
 		t.Run("stats="+mode, func(t *testing.T) {
-			usePlanStats(t, db, s.table, mode)
-			t.Cleanup(func() { usePlanStats(t, db, s.table, "analyzed") })
+			for _, table := range append([]string{s.table}, s.relatedTables...) {
+				usePlanStats(t, db, table, mode)
+				t.Cleanup(func() { usePlanStats(t, db, table, "analyzed") })
+			}
 			for _, tc := range s.cases {
 				t.Run(tc.name, func(t *testing.T) {
 					if s.check(t, db, edb, q, indexes, tc) {
@@ -375,6 +381,9 @@ func (s listPlanSuite[P]) check(t *testing.T, db *sql.DB, edb *explainingDB, q *
 
 	edb.statements = nil
 	require.NoError(t, s.list(context.Background(), q, tc.params))
+	if s.related != nil {
+		s.related(t, edb.statements, tc.params)
+	}
 	var stmt *explainedStatement
 	for i := range edb.statements {
 		if strings.Contains(edb.statements[i].query, s.from) {

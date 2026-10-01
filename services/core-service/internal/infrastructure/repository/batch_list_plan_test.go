@@ -73,4 +73,3 @@ func TestBatchesByStationList_ReadsAboutAPage(t *testing.T) {
 		floor: batchesByStationSearchFloor,
 	}.run(t)
 }
-

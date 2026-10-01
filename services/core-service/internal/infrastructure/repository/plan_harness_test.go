@@ -73,7 +73,7 @@ type explainedStatement struct {
 }
 
 func (e *explainingDB) QueryContext(ctx context.Context, query string, args ...any) (*sql.Rows, error) {
-	if strings.HasPrefix(strings.TrimSpace(query), "SELECT") {
+	if strings.HasPrefix(stripLeadingComments(query), "SELECT") {
 		plan, err := explainAnalyze(ctx, e.db, query, args...)
 		if err != nil {
 			return nil, err
@@ -81,6 +81,16 @@ func (e *explainingDB) QueryContext(ctx context.Context, query string, args ...a
 		e.statements = append(e.statements, explainedStatement{query: query, args: args, plan: plan})
 	}
 	return e.db.QueryContext(ctx, query, args...)
+}
+
+// stripLeadingComments drops the "-- name: ..." lines sqlc puts ahead of its statements.
+func stripLeadingComments(query string) string {
+	query = strings.TrimSpace(query)
+	for strings.HasPrefix(query, "--") {
+		_, rest, _ := strings.Cut(query, "\n")
+		query = strings.TrimSpace(rest)
+	}
+	return query
 }
 
 func explainAnalyze(ctx context.Context, db *sql.DB, query string, args ...any) (string, error) {
@@ -309,7 +319,8 @@ type listPlanSuite[P any] struct {
 	// candidates each statement is replayed under.
 	table, scopeColumn string
 	// from is the FROM item the page is read through ("FROM `transaction` t"), whose hint the replays
-	// replace, and alias is its alias. The statement measured is the last one containing from.
+	// replace, and alias is its alias. Of the statements containing from, the one that reads the most of
+	// the table is measured (a list may choose a page in one and hydrate it in another).
 	from, alias string
 	cases       []planCase[P]
 	limit       func(P) int32
@@ -340,36 +351,48 @@ func (s listPlanSuite[P]) run(t *testing.T) {
 	q := sqlc.New(edb)
 	indexes := scopeIndexes(t, db, s.table, s.scopeColumn)
 
+	read := 0
 	for _, mode := range planStatsModes {
 		t.Run("stats="+mode, func(t *testing.T) {
 			usePlanStats(t, db, s.table, mode)
 			t.Cleanup(func() { usePlanStats(t, db, s.table, "analyzed") })
 			for _, tc := range s.cases {
-				t.Run(tc.name, func(t *testing.T) { s.check(t, db, edb, q, indexes, tc) })
+				t.Run(tc.name, func(t *testing.T) {
+					if s.check(t, db, edb, q, indexes, tc) {
+						read++
+					}
+				})
 			}
 		})
 	}
+	// A request answered without a query (a filter that resolved to nothing) reads nothing, but a suite
+	// in which none read the table is measuring the wrong statement.
+	require.Positive(t, read, "no request read %q", s.from)
 }
 
-func (s listPlanSuite[P]) check(t *testing.T, db *sql.DB, edb *explainingDB, q *sqlc.Queries, indexes []string, tc planCase[P]) {
+// check measures one request and reports whether it read the table at all.
+func (s listPlanSuite[P]) check(t *testing.T, db *sql.DB, edb *explainingDB, q *sqlc.Queries, indexes []string, tc planCase[P]) bool {
 	t.Helper()
 
 	edb.statements = nil
 	require.NoError(t, s.list(context.Background(), q, tc.params))
 	var stmt *explainedStatement
 	for i := range edb.statements {
-		if strings.Contains(edb.statements[i].query, s.from) {
+		if strings.Contains(edb.statements[i].query, s.from) &&
+			(stmt == nil || tableAccess(edb.statements[i].plan, s.alias).rows > tableAccess(stmt.plan, s.alias).rows) {
 			stmt = &edb.statements[i]
 		}
 	}
-	require.NotNil(t, stmt, "no statement read %q", s.from)
+	if stmt == nil {
+		return false
+	}
 
 	got := tableAccess(stmt.plan, s.alias)
 	limit := s.limit(tc.params)
 	page := float64(limit + 1)
 	budget := planRowBudget(limit)
 	if got.rows <= budget {
-		return
+		return true
 	}
 	// Reading no more than the request's unordered filter matches (and the page's rows again, if they
 	// are joined back by id) is as well as any plan can do; within twice that is the same allowance a
@@ -379,7 +402,7 @@ func (s listPlanSuite[P]) check(t *testing.T, db *sql.DB, edb *explainingDB, q *
 		floor = s.floor(t, db, tc.params)
 	}
 	if floor > 0 && got.rows <= 2*floor+2*page {
-		return
+		return true
 	}
 	best, bestIndex := bestForcedAccess(t, db, *stmt, s.from, s.alias, indexes)
 
@@ -392,4 +415,5 @@ func (s listPlanSuite[P]) check(t *testing.T, db *sql.DB, edb *explainingDB, q *
 		t.Errorf("no index serves this: the best, %s, reads %.0f %s rows to return a page of %d\n%s",
 			bestIndex, best.rows, s.table, limit, stmt.plan)
 	}
+	return true
 }

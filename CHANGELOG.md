@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.17.1](https://github.com/open-mrp/api/compare/v2.17.0...v2.17.1) (2026-10-01)
+
+
+### Bug Fixes
+
+* **inventory:** ensure all reserved inventory is released on an order being closed short ([#228](https://github.com/open-mrp/api/issues/228)) ([77629ac](https://github.com/open-mrp/api/commit/77629ac1275d84d8eb4fc7950ac759de6c2f6772))
+
 ## [2.17.0](https://github.com/open-mrp/api/compare/v2.16.1...v2.17.0) (2026-10-01)
 
 

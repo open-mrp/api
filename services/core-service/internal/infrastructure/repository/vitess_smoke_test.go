@@ -519,4 +519,119 @@ func TestVitessSmoke(t *testing.T) {
 			}
 		}
 	})
+
+	// --- inventory, production and log lists: SQL built in Go (per-value UNION ALL arms, a page chosen
+	// in a derived table and joined after, runs resolved from the batch side) and index hints ---
+	t.Run("inventory, production and log lists", func(t *testing.T) {
+		first := func(query string, args ...any) string {
+			if v := ids(query, args...); len(v) > 0 {
+				return v[0]
+			}
+			return "none"
+		}
+		from, to := time.Date(2000, 1, 1, 0, 0, 0, 0, time.UTC), time.Now().UTC().Add(time.Hour)
+		search := "a"
+
+		iclAccount := first("SELECT account_id FROM inventory_change_log LIMIT 1")
+		item := first("SELECT item_id FROM inventory_change_log WHERE account_id = ? LIMIT 1", iclAccount)
+		user := first("SELECT responsible_user_id FROM inventory_change_log WHERE account_id = ? AND responsible_user_id IS NOT NULL LIMIT 1", iclAccount)
+		logs := NewInventoryChangeLogRepo(q)
+		// One per page shape: the unfiltered key, a filter's key, arms per value, a long list's IN.
+		for _, p := range []domain.ListInventoryChangeLogsParams{
+			{AccountID: iclAccount, Limit: 5, StartDate: &from},
+			{AccountID: iclAccount, Limit: 5, ItemIDs: []string{item}, ActionTypeCodes: []string{"scan", "user_correction"}},
+			{AccountID: iclAccount, Limit: 5, StartDate: &from, EndDate: &to, ActionTypeCodes: []string{"scan", "user_correction", "system_action"}},
+			{AccountID: iclAccount, Limit: 5, ItemIDs: []string{item, "it_none"}, ChangedByUserIDs: []string{user}},
+			{AccountID: iclAccount, Limit: 5, StartDate: &from, Query: &search},
+		} {
+			page, apiErr := logs.List(ctx, p)
+			checkAPI("inventory change logs List", apiErr)
+			if page != nil && page.PageInfo.NextCursor != nil {
+				p.Cursor = page.PageInfo.NextCursor
+				next, apiErr := logs.List(ctx, p)
+				checkAPI("inventory change logs List next", apiErr)
+				if next != nil && next.PageInfo.PrevCursor != nil {
+					p.Cursor = next.PageInfo.PrevCursor
+					_, apiErr = logs.List(ctx, p)
+					checkAPI("inventory change logs List prev", apiErr)
+				}
+			}
+		}
+
+		batchAccount := first("SELECT account_id FROM batch LIMIT 1")
+		station := first("SELECT scanning_station_id FROM batch WHERE account_id = ? AND scanning_station_id IS NOT NULL LIMIT 1", batchAccount)
+		batches := NewBatchRepo(q)
+		for _, p := range []domain.ListBatchesByScanningStationParams{
+			{AccountID: batchAccount, ScanningStationID: station, Limit: 5},
+			{AccountID: batchAccount, ScanningStationID: station, Limit: 5, Query: &search},
+		} {
+			page, apiErr := batches.FindByScanningStation(ctx, p)
+			checkAPI("batches FindByScanningStation", apiErr)
+			if page != nil && page.PageInfo.NextCursor != nil {
+				p.Cursor = page.PageInfo.NextCursor
+				next, apiErr := batches.FindByScanningStation(ctx, p)
+				checkAPI("batches FindByScanningStation next", apiErr)
+				if next != nil && next.PageInfo.PrevCursor != nil {
+					p.Cursor = next.PageInfo.PrevCursor
+					_, apiErr = batches.FindByScanningStation(ctx, p)
+					checkAPI("batches FindByScanningStation prev", apiErr)
+				}
+			}
+		}
+		_, apiErr := NewScanningStationRepo(q).GetByIDs(ctx, batchAccount, []string{station, "sst_none"})
+		checkAPI("scanning stations GetByIDs", apiErr)
+
+		runAccount := first("SELECT account_id FROM production_run LIMIT 1")
+		run := first("SELECT id FROM production_run WHERE account_id = ? LIMIT 1", runAccount)
+		machine := first("SELECT bm.B FROM _batches_machines bm JOIN batch b ON b.id = bm.A WHERE b.account_id = ? LIMIT 1", runAccount)
+		runItem := first("SELECT item_id FROM batch WHERE account_id = ? AND production_run_id IS NOT NULL LIMIT 1", runAccount)
+		open, day := "open", from.Format("2006-01-02")
+		runs := NewProductionRunRepo(q)
+		for _, p := range []domain.ListProductionRunsParams{
+			{AccountID: runAccount, Limit: 5},
+			{AccountID: runAccount, Limit: 5, Status: &open, ItemIDs: []string{runItem}, MachineIDs: []string{machine}, Query: &search, StartDate: &day},
+			{AccountID: runAccount, Limit: 5, Query: &search},
+		} {
+			page, apiErr := runs.List(ctx, p)
+			checkAPI("production runs List", apiErr)
+			if page != nil && page.PageInfo.NextCursor != nil {
+				p.Cursor = page.PageInfo.NextCursor
+				next, apiErr := runs.List(ctx, p)
+				checkAPI("production runs List next", apiErr)
+				if next != nil && next.PageInfo.PrevCursor != nil {
+					p.Cursor = next.PageInfo.PrevCursor
+					_, apiErr = runs.List(ctx, p)
+					checkAPI("production runs List prev", apiErr)
+				}
+			}
+		}
+		_, apiErr = runs.ListBatchesByRun(ctx, domain.ListBatchesByProductionRunParams{AccountID: runAccount, ProductionRunID: run, Limit: 5, SearchQuery: &search})
+		checkAPI("production runs ListBatchesByRun", apiErr)
+
+		dtAccount := first("SELECT account_id FROM machine_downtime_event LIMIT 1")
+		dtMachine := first("SELECT machine_id FROM machine_downtime_event WHERE account_id = ? LIMIT 1", dtAccount)
+		downtime := NewMachineDowntimeRepo(q)
+		for _, p := range []domain.ListMachineDowntimeEventsParams{
+			{AccountID: dtAccount, Limit: 5},
+			{AccountID: dtAccount, Limit: 5, MachineIDs: []string{dtMachine, "mch_none"}, OpenOnly: true, Query: &search, StartDate: &from, EndDate: &to},
+			{AccountID: dtAccount, Limit: 5, ReasonCodes: []string{"breakdown", "changeover"}, DepartmentIDs: []string{"dept_none"}},
+		} {
+			page, apiErr := downtime.List(ctx, p)
+			checkAPI("downtime List", apiErr)
+			if page != nil && page.PageInfo.NextCursor != nil {
+				p.Cursor = page.PageInfo.NextCursor
+				next, apiErr := downtime.List(ctx, p)
+				checkAPI("downtime List next", apiErr)
+				if next != nil && next.PageInfo.PrevCursor != nil {
+					p.Cursor = next.PageInfo.PrevCursor
+					_, apiErr = downtime.List(ctx, p)
+					checkAPI("downtime List prev", apiErr)
+				}
+			}
+		}
+
+		emailAccount := first("SELECT account_id FROM email_log LIMIT 1")
+		_, apiErr = NewEmailLogRepo(q).List(ctx, domain.ListEmailLogsParams{AccountID: emailAccount, Limit: 5, Query: &search})
+		checkAPI("email logs List", apiErr)
+	})
 }

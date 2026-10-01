@@ -219,6 +219,51 @@ func TestInventoryChangeLogs_FiltersByActionType(t *testing.T) {
 	assert.Contains(t, both, SeedInventoryChangeLog2ID)
 }
 
+// Several values of one filter are read as one arm per value and merged, so the merge has to keep
+// list order across values and page through it in both directions.
+func TestInventoryChangeLogs_SeveralValuesPageInListOrder(t *testing.T) {
+	t.Parallel()
+
+	params := url.Values{"action_types": {"system_action", "user_action"}, "starts_at": {"2099-01-01T00:00:00Z"}, "limit": {"1"}}
+	page1, status, err := apiClient.GetList(inventoryChangeLogsPath, params)
+	require.NoError(t, err)
+	require.Equal(t, 200, status)
+	require.Len(t, page1.Data, 1)
+	assert.Equal(t, SeedInventoryChangeLogID, DataItemField(page1.Data[0], "id"), "the newer fixture heads the list")
+	require.True(t, page1.PageInfo.HasNextPage)
+
+	page2, status, err := apiClient.GetListFromPageURL(page1.PageInfo.NextPageURL)
+	require.NoError(t, err)
+	require.Equal(t, 200, status)
+	require.Len(t, page2.Data, 1)
+	assert.Equal(t, SeedInventoryChangeLog2ID, DataItemField(page2.Data[0], "id"), "the older fixture follows it")
+
+	back, status, err := apiClient.GetListFromPageURL(page2.PageInfo.PreviousPageURL)
+	require.NoError(t, err)
+	require.Equal(t, 200, status)
+	require.Len(t, back.Data, 1)
+	assert.Equal(t, SeedInventoryChangeLogID, DataItemField(back.Data[0], "id"), "paging back returns the first page")
+}
+
+// With two filters of several values each, one is read as arms and the other filters each arm.
+func TestInventoryChangeLogs_TwoMultiValuedFiltersIntersect(t *testing.T) {
+	t.Parallel()
+
+	both := inventoryChangeLogIDsFiltered(t, url.Values{
+		"item_ids":     {SeedInventoryChangeLogItemID, SeedInventoryChangeLog2ItemID},
+		"action_types": {"system_action", "user_action"},
+	})
+	assert.Contains(t, both, SeedInventoryChangeLogID)
+	assert.Contains(t, both, SeedInventoryChangeLog2ID)
+
+	onlyFirst := inventoryChangeLogIDsFiltered(t, url.Values{
+		"item_ids":     {SeedInventoryChangeLogItemID, SeedInventoryChangeLog2ItemID},
+		"action_types": {"user_action", "scan"},
+	})
+	assert.Contains(t, onlyFirst, SeedInventoryChangeLogID, "the first fixture is a user_action")
+	assert.NotContains(t, onlyFirst, SeedInventoryChangeLog2ID, "the second is a system_action")
+}
+
 func TestInventoryChangeLogs_ListRejectsAnUnknownActionType(t *testing.T) {
 	t.Parallel()
 

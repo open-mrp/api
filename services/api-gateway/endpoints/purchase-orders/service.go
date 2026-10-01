@@ -51,7 +51,36 @@ var purchaseOrderEpSvcTracer = tracing.GetTracer("api-gateway.endpoints.purchase
 
 // What the backend understands. The nested unit includes are resolved gateway-side from ids the
 // order already returns, so they are deliberately absent here.
-var purchaseOrderIncludes = []string{"supplier", "bill_to_address", "ship_to_address", "freight", "payment_term", "shipping_term", "related", "related.receiving_order", "related.deliveries", "lines", "contacts"}
+var purchaseOrderIncludes = []string{"supplier", "bill_to_address", "ship_to_address", "freight", "payment_term", "shipping_term", "related", "related.receiving_order", "related.deliveries", "lines", "lines.delivery_lines", "contacts"}
+
+// purchaseOrderLineIncludeFields is everything a line offers, as reached from the line itself.
+var purchaseOrderLineIncludeFields = []string{
+	"item", "item.category", "item.category.unit_group", "item.category.unit_group.base_unit",
+	"item.category.unit_group.associated_units", "item.category.unit_group.associated_units.unit",
+	"quantity_ordered", "quantity_ordered.unit",
+	"unit_price", "unit_price.numerator_unit", "unit_price.denominator_unit",
+	"delivery_lines", "delivery_lines.quantity", "delivery_lines.quantity.unit",
+}
+
+// purchaseOrderListIncludeFields is what a list row offers: the list reads the supplier, ship-to,
+// receiving order, contacts and lines alongside the orders, and nothing that needs a read per order.
+var purchaseOrderListIncludeFields = append([]string{
+	"supplier", "ship_to_address", "related", "related.receiving_order", "contacts", "lines",
+}, prefixed("lines.", purchaseOrderLineIncludeFields)...)
+
+// purchaseOrderDetailIncludeFields is what a single order offers, on retrieve and on every write that returns it.
+var purchaseOrderDetailIncludeFields = append([]string{
+	"supplier", "created_by", "bill_to_address", "ship_to_address", "freight", "payment_term", "shipping_term",
+	"related", "related.receiving_order", "related.deliveries", "contacts", "lines",
+}, prefixed("lines.", purchaseOrderLineIncludeFields)...)
+
+func prefixed(prefix string, keys []string) []string {
+	out := make([]string, len(keys))
+	for i, k := range keys {
+		out[i] = prefix + k
+	}
+	return out
+}
 
 // enumStrings narrows typed enum filters to the plain strings the proto layer carries.
 func enumStrings[T ~string](values []T) []string {
@@ -156,7 +185,7 @@ func (m *purchaseOrderSvcImpl) CreatePurchaseOrder(ctx context.Context, req *Cre
 	lines := make([]*pb.CreatePurchaseOrderLineInput, len(req.Lines))
 	for i, l := range req.Lines {
 		lines[i] = &pb.CreatePurchaseOrderLineInput{
-			ProductId:                  l.ProductID,
+			ProductId:                  l.ProductID.Ptr(),
 			ItemId:                     l.ItemID.Ptr(),
 			ProductSku:                 l.ProductSKU,
 			ProductDescription:         l.ProductDescription.Ptr(),
@@ -195,6 +224,9 @@ func (m *purchaseOrderSvcImpl) CreatePurchaseOrder(ctx context.Context, req *Cre
 		ShipToState:           req.ShipToState.Ptr(),
 		ShipToPostalCode:      req.ShipToPostalCode.Ptr(),
 		ShipToCountry:         req.ShipToCountry.Ptr(),
+		Number:                req.Number.Ptr(),
+		BillToAddressId:       req.BillToAddressID.Ptr(),
+		ShipToAddressId:       req.ShipToAddressID.Ptr(),
 		Includes:              resourcekit.FilterIncludes(ctx, purchaseOrderIncludes...),
 	}
 
@@ -216,7 +248,7 @@ func (m *purchaseOrderSvcImpl) CreatePurchaseOrder(ctx context.Context, req *Cre
 }
 
 func (m *purchaseOrderSvcImpl) UpdatePurchaseOrder(ctx context.Context, req *UpdatePurchaseOrderRequest) (*apiresource.PurchaseOrder, *apierror.APIError) {
-	contactAccountUserIDs, _ := req.ContactAccountUserIDs.Value()
+	contactAccountUserIDs, replaceContacts := req.ContactAccountUserIDs.Value()
 	pbReq := &pb.UpdatePurchaseOrderRequest{
 		Id:                    req.PurchaseOrderID,
 		Note:                  req.Note.Ptr(),
@@ -224,10 +256,12 @@ func (m *purchaseOrderSvcImpl) UpdatePurchaseOrder(ctx context.Context, req *Upd
 		PriorityCode:          req.PriorityCode.Ptr().StringPtr(),
 		BillingAddressId:      req.BillingAddressID.Ptr(),
 		ShippingAddressId:     req.ShippingAddressID.Ptr(),
-		PromisedAt:            req.PromisedAt.Ptr(),
 		ContactAccountUserIds: contactAccountUserIDs,
+		ReplaceContacts:       replaceContacts,
 		Includes:              resourcekit.FilterIncludes(ctx, purchaseOrderIncludes...),
 	}
+	pbReq.PromisedAt = req.PromisedAt.ValuePtr()
+	pbReq.ClearPromisedAt = req.PromisedAt.IsClear()
 
 	resp, apiErr := grpcutil.CallRPC(ctx, purchaseOrderEpSvcTracer, "service.purchase_orders.update", domain.ServiceName,
 		func(ctx context.Context, opts ...grpc.CallOption) (*pb.UpdatePurchaseOrderResponse, error) {
@@ -302,7 +336,7 @@ func (m *purchaseOrderSvcImpl) ChangePurchaseOrderStatus(ctx context.Context, re
 func (m *purchaseOrderSvcImpl) CreatePurchaseOrderLine(ctx context.Context, req *CreatePurchaseOrderLineRequest) (*apiresource.PurchaseOrderLine, *apierror.APIError) {
 	pbReq := &pb.CreatePurchaseOrderLineRequest{
 		PurchaseOrderId:            req.PurchaseOrderID,
-		ProductId:                  req.ProductID,
+		ProductId:                  req.ProductID.Ptr(),
 		ItemId:                     req.ItemID.Ptr(),
 		ProductSku:                 req.ProductSKU,
 		ProductDescription:         req.ProductDescription.Ptr(),
@@ -439,6 +473,8 @@ func purchaseOrderSummaryFromProto(info *pb.PurchaseOrderSummaryInfo) apiresourc
 		t := grpcutil.TimestampToTime(info.CompletedAt)
 		s.CompletedAt = &t
 	}
+	s.ScheduledAt = grpcutil.TimestampToTimePtr(info.PromisedAt)
+	s.Note = info.Note
 
 	return s
 }
@@ -489,8 +525,10 @@ func stashPurchaseOrderSummaryMeta(ctx context.Context, info *pb.PurchaseOrderSu
 		return
 	}
 
+	meta := resourcekit.GetLoadMeta(ctx)
+
 	if info.SupplierId != "" {
-		resourcekit.GetLoadMeta(ctx).Set(constants.ObjectTypePurchaseOrder, d.ID, "supplier", &apiresource.Supplier{
+		meta.Set(constants.ObjectTypePurchaseOrder, d.ID, "supplier", &apiresource.Supplier{
 			ID:     info.SupplierId,
 			Object: constants.ObjectTypeSupplier,
 			Name:   info.SupplierName,
@@ -498,15 +536,34 @@ func stashPurchaseOrderSummaryMeta(ctx context.Context, info *pb.PurchaseOrderSu
 		})
 	}
 
-	// Lines are populated on the summary only when the list request includes them.
-	if len(info.Lines) > 0 {
-		lines := make([]apiresource.PurchaseOrderLine, len(info.Lines))
-		for i, l := range info.Lines {
-			lines[i] = purchaseOrderLineDetailFromProto(ctx, l, units)
-		}
-		resourcekit.GetLoadMeta(ctx).Set(constants.ObjectTypePurchaseOrder, d.ID, "lines",
-			apiresource.NewList(lines, apiresource.PageInfo{}))
+	if info.ShippingAddressId != "" {
+		meta.Set(constants.ObjectTypePurchaseOrder, d.ID, "ship_to_address",
+			buildAddressFromProto(
+				info.ShippingAddressId, info.ShipToAddressType,
+				info.ShipToName, info.ShipToStreetLine_1, info.ShipToStreetLine_2,
+				info.ShipToLocality, info.ShipToState, info.ShipToPostalCode, info.ShipToCountry,
+				info.ShipToPhone, info.ShipToEmail,
+				info.ShipToAddressCreatedAt, info.ShipToAddressUpdatedAt,
+			))
 	}
+
+	// The list knows the receiving order but not the deliveries, so `related.deliveries` is not offered on it.
+	if info.ReceivingOrderId != nil && *info.ReceivingOrderId != "" {
+		ro := apiresource.NewRecord(*info.ReceivingOrderId, constants.RecordTypeReceivingOrder)
+		ro.Number = ptrutil.NonEmptyPtr(ptrutil.Deref(info.ReceivingOrderNumber))
+		ro.Status = ptrutil.NonEmptyPtr(ptrutil.Deref(info.ReceivingOrderStatus))
+		meta.Set(constants.ObjectTypePurchaseOrder, d.ID, "related",
+			&apiresource.PurchaseOrderRelated{Object: constants.ObjectTypePurchaseOrderRelated, ReceivingOrder: ro})
+	}
+
+	meta.Set(constants.ObjectTypePurchaseOrder, d.ID, "contacts", emailContactsFromProto(info.Contacts))
+
+	// Lines are read only when the list request includes them, so an order without any gets an empty list.
+	lines := make([]apiresource.PurchaseOrderLine, len(info.Lines))
+	for i, l := range info.Lines {
+		lines[i] = purchaseOrderLineDetailFromProto(ctx, l, units)
+	}
+	meta.Set(constants.ObjectTypePurchaseOrder, d.ID, "lines", apiresource.NewList(lines, apiresource.PageInfo{}))
 }
 
 func stashPurchaseOrderDetailMeta(ctx context.Context, info *pb.PurchaseOrderInfo, d *apiresource.PurchaseOrder, units map[string]*apiresource.Unit) {
@@ -676,18 +733,24 @@ func stashPurchaseOrderDetailMeta(ctx context.Context, info *pb.PurchaseOrderInf
 	}
 	meta.Set(constants.ObjectTypePurchaseOrder, d.ID, "lines", apiresource.NewList(lines, apiresource.PageInfo{}))
 
-	contactItems := make([]apiresource.EmailContact, len(info.Contacts))
-	for i, c := range info.Contacts {
-		contactItems[i] = apiresource.EmailContact{
+	meta.Set(constants.ObjectTypePurchaseOrder, d.ID, "contacts", emailContactsFromProto(info.Contacts))
+}
+
+func emailContactsFromProto(contacts []*pb.EmailContactInfo) *apiresource.List[apiresource.EmailContact] {
+	items := make([]apiresource.EmailContact, len(contacts))
+	for i, c := range contacts {
+		items[i] = apiresource.EmailContact{
 			ID:     c.Id,
 			Object: constants.ObjectTypeEmailContact,
 			AccountUser: &apiresource.AccountUser{
 				ID:     c.AccountUserId,
 				Object: constants.ObjectTypeAccountUser,
 			},
+			Name:  c.Name,
+			Email: c.Email,
 		}
 	}
-	meta.Set(constants.ObjectTypePurchaseOrder, d.ID, "contacts", apiresource.NewList(contactItems, apiresource.PageInfo{}))
+	return apiresource.NewList(items, apiresource.PageInfo{})
 }
 
 func purchaseOrderLineDetailFromProto(ctx context.Context, info *pb.PurchaseOrderLineInfo, units map[string]*apiresource.Unit) apiresource.PurchaseOrderLine {
@@ -740,6 +803,32 @@ func purchaseOrderLineDetailFromProto(ctx context.Context, info *pb.PurchaseOrde
 	}
 	meta.Set(constants.ObjectTypeRate, info.UnitPriceId, "numerator_unit_id", info.UnitPriceNumeratorUnitId)
 	meta.Set(constants.ObjectTypeRate, info.UnitPriceId, "denominator_unit_id", info.UnitPriceDenominatorUnitId)
+
+	// Delivery lines are read only when the caller included them, so an empty list here means none
+	// were booked rather than none were asked for: the resolver only reveals it when included.
+	deliveryLines := make([]apiresource.DeliveryLine, len(info.DeliveryLines))
+	for i, dl := range info.DeliveryLines {
+		var abbreviation, unitType string
+		if u := units[dl.QuantityUnitId]; u != nil {
+			abbreviation, unitType = u.Abbreviation, string(u.Type)
+		}
+		deliveryLines[i] = apiresource.DeliveryLine{
+			ID:     dl.Id,
+			Object: constants.ObjectTypeDeliveryLine,
+			Quantity: &apiresource.Quantity{
+				ID:           dl.QuantityId,
+				Object:       constants.ObjectTypeQuantity,
+				Value:        dl.QuantityValue,
+				DisplayValue: apiresource.FormatDisplayValue(dl.QuantityValue, abbreviation, unitType),
+			},
+			AcceptedAt: grpcutil.TimestampToTimePtr(dl.AcceptedAt),
+			RejectedAt: grpcutil.TimestampToTimePtr(dl.RejectedAt),
+			CreatedAt:  grpcutil.TimestampToTime(dl.CreatedAt),
+			UpdatedAt:  grpcutil.TimestampToTime(dl.UpdatedAt),
+		}
+		meta.Set(constants.ObjectTypeQuantity, dl.QuantityId, "unit_id", dl.QuantityUnitId)
+	}
+	meta.Set(constants.ObjectTypePurchaseOrderLine, l.ID, "delivery_lines", apiresource.NewList(deliveryLines, apiresource.PageInfo{}))
 
 	return l
 }
@@ -798,6 +887,9 @@ func purchaseOrderLineUnitIDs(lines ...*pb.PurchaseOrderLineInfo) []string {
 			continue
 		}
 		ids = append(ids, l.QuantityUnitId)
+		for _, dl := range l.DeliveryLines {
+			ids = append(ids, dl.QuantityUnitId)
+		}
 	}
 	return ids
 }

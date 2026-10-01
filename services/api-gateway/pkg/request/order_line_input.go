@@ -5,7 +5,9 @@ import "github.com/open-mrp/api/shared/field"
 // Details of a single line item ordered from a supplier, used when creating a purchase order and when adding a line to an existing one.
 type OrderLineInput struct {
 	// ID of the product being ordered.
-	ProductID string `json:"product_id" validate:"required"`
+	//
+	// A line for a material restocks an item rather than selling a product, so it may name only `item_id`; one of the two is required.
+	ProductID field.Optional[string] `json:"product_id,omitzero" validate:"omitempty"`
 	// ID of the inventory item this line is linked to.
 	//
 	// Stock received against the line is booked into this item, so lines for goods you hold in inventory should reference one. Supplying an item also records the item's material as sourced from this order's supplier, with `product_sku` as the supplier part number, when that link does not exist yet.

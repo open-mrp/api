@@ -385,7 +385,9 @@ func TestPurchaseOrderLines_UnknownLineIs404(t *testing.T) {
 	requireStatus(t, 404, delStatus, delBody)
 }
 
-func TestPurchaseOrderLines_CreateRejectsAMissingProduct(t *testing.T) {
+// A line names what it orders: a product, or for a material the item it restocks. Naming neither leaves
+// nothing to receive against.
+func TestPurchaseOrderLines_CreateRejectsALineWithNeitherProductNorItem(t *testing.T) {
 	t.Parallel()
 
 	orderID := jsonField(createPurchaseOrder(t, nil), "id")
@@ -396,8 +398,7 @@ func TestPurchaseOrderLines_CreateRejectsAMissingProduct(t *testing.T) {
 	require.NoError(t, err)
 	require.Less(t, status, 500, "must reject rather than 5xx: %s", string(body))
 	requireStatus(t, 400, status, body)
-	// Reported as the Go field name rather than the JSON one, which is what the embedded OrderLineInput produces today.
-	errObj := requireErrorResponse(t, body, "missing_field", "invalid_request_error")
+	errObj := requireErrorResponse(t, body, "validation_failed", "invalid_request_error")
 	assertErrorParam(t, errObj, "product_id")
 }
 

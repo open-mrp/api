@@ -93,11 +93,11 @@ func deliveryForReceivingOrder(t *testing.T, receivingOrderID string) map[string
 func TestReceivingOrderLines_UpdateSetsTheReceivedQuantity(t *testing.T) {
 	t.Parallel()
 
-	_, receivingOrderID := issuedPurchaseOrderReceiving(t)
+	_, receivingOrderID := receivedPurchaseOrderReceiving(t)
 	line := firstLine(t, receivingOrderID)
 	lineID := jsonField(line, "id")
 
-	assertDecimalEqual(t, "4", lineQuantityValue(t, line), "the line starts at the full ordered quantity")
+	assertDecimalEqual(t, "4", lineQuantityValue(t, line), "receiving records the full outstanding quantity on the line")
 
 	status, body, err := apiClient.Patch(
 		receivingOrdersPath+"/"+receivingOrderID+"/lines/"+lineID,
@@ -119,7 +119,7 @@ func TestReceivingOrderLines_UpdateSetsTheReceivedQuantity(t *testing.T) {
 func TestReceivingOrderLines_UpdateWithAnEmptyBodyIsRejected(t *testing.T) {
 	t.Parallel()
 
-	_, receivingOrderID := issuedPurchaseOrderReceiving(t)
+	_, receivingOrderID := receivedPurchaseOrderReceiving(t)
 	lineID := jsonField(firstLine(t, receivingOrderID), "id")
 
 	status, body, err := apiClient.Patch(
@@ -138,7 +138,7 @@ func TestReceivingOrderLines_UpdateWithAnEmptyBodyIsRejected(t *testing.T) {
 func TestReceivingOrderLines_UpdateRejectsAnUnknownBodyField(t *testing.T) {
 	t.Parallel()
 
-	_, receivingOrderID := issuedPurchaseOrderReceiving(t)
+	_, receivingOrderID := receivedPurchaseOrderReceiving(t)
 	lineID := jsonField(firstLine(t, receivingOrderID), "id")
 	path := receivingOrdersPath + "/" + receivingOrderID + "/lines/" + lineID
 
@@ -155,7 +155,7 @@ func TestReceivingOrderLines_UpdateRejectsAnUnknownBodyField(t *testing.T) {
 func TestReceivingOrderLines_UpdateRejectsANestedQuantityObject(t *testing.T) {
 	t.Parallel()
 
-	_, receivingOrderID := issuedPurchaseOrderReceiving(t)
+	_, receivingOrderID := receivedPurchaseOrderReceiving(t)
 	lineID := jsonField(firstLine(t, receivingOrderID), "id")
 
 	status, body, err := apiClient.Patch(
@@ -175,7 +175,7 @@ func TestReceivingOrderLines_UpdateRejectsANestedQuantityObject(t *testing.T) {
 func TestReceivingOrderLines_UpdateOnUnknownLineIs404(t *testing.T) {
 	t.Parallel()
 
-	_, receivingOrderID := issuedPurchaseOrderReceiving(t)
+	_, receivingOrderID := receivedPurchaseOrderReceiving(t)
 
 	status, body, err := apiClient.Patch(
 		receivingOrdersPath+"/"+receivingOrderID+"/lines/rcln_doesnotexist00",
@@ -192,7 +192,7 @@ func TestReceivingOrderLines_UpdateOnUnknownLineIs404(t *testing.T) {
 func TestReceivingOrders_StockPutsTheQuantityAway(t *testing.T) {
 	t.Parallel()
 
-	_, receivingOrderID := issuedPurchaseOrderReceiving(t)
+	_, receivingOrderID := receivedPurchaseOrderReceiving(t)
 	lineID := jsonField(firstLine(t, receivingOrderID), "id")
 
 	status, body := stockReceivingOrder(t, receivingOrderID, []map[string]any{{
@@ -208,7 +208,7 @@ func TestReceivingOrders_StockPutsTheQuantityAway(t *testing.T) {
 func TestReceivingOrders_StockCompletesTheOrderWhenEveryLineIsStocked(t *testing.T) {
 	t.Parallel()
 
-	_, receivingOrderID := issuedPurchaseOrderReceiving(t)
+	_, receivingOrderID := receivedPurchaseOrderReceiving(t)
 	lineID := jsonField(firstLine(t, receivingOrderID), "id")
 
 	status, body := stockReceivingOrder(t, receivingOrderID, []map[string]any{{
@@ -226,7 +226,7 @@ func TestReceivingOrders_StockCompletesTheOrderWhenEveryLineIsStocked(t *testing
 func TestReceivingOrders_StockSplitsAcrossLocationsIntoSeparateDeliveryLines(t *testing.T) {
 	t.Parallel()
 
-	_, receivingOrderID := issuedPurchaseOrderReceiving(t)
+	_, receivingOrderID := receivedPurchaseOrderReceiving(t)
 	lineID := jsonField(firstLine(t, receivingOrderID), "id")
 
 	status, body := stockReceivingOrder(t, receivingOrderID, []map[string]any{{
@@ -247,7 +247,7 @@ func TestReceivingOrders_StockSplitsAcrossLocationsIntoSeparateDeliveryLines(t *
 func TestReceivingOrders_StockWithoutALocationIsAccepted(t *testing.T) {
 	t.Parallel()
 
-	_, receivingOrderID := issuedPurchaseOrderReceiving(t)
+	_, receivingOrderID := receivedPurchaseOrderReceiving(t)
 	lineID := jsonField(firstLine(t, receivingOrderID), "id")
 
 	status, body := stockReceivingOrder(t, receivingOrderID, []map[string]any{{
@@ -267,7 +267,7 @@ func TestReceivingOrders_StockWithoutALocationIsAccepted(t *testing.T) {
 func TestReceivingOrders_StockUnderALotRecordsItOnEveryDeliveryLine(t *testing.T) {
 	t.Parallel()
 
-	_, receivingOrderID := issuedPurchaseOrderReceiving(t)
+	_, receivingOrderID := receivedPurchaseOrderReceiving(t)
 	lineID := jsonField(firstLine(t, receivingOrderID), "id")
 	lotNumber := uniqueName("E2E-LOT")
 
@@ -299,7 +299,7 @@ func TestReceivingOrders_StockUnderALotRecordsItOnEveryDeliveryLine(t *testing.T
 func TestReceivingOrders_StockRecordsARejectedQuantityWithoutStockingIt(t *testing.T) {
 	t.Parallel()
 
-	_, receivingOrderID := issuedPurchaseOrderReceiving(t)
+	_, receivingOrderID := receivedPurchaseOrderReceiving(t)
 	lineID := jsonField(firstLine(t, receivingOrderID), "id")
 
 	status, body := stockReceivingOrder(t, receivingOrderID, []map[string]any{{
@@ -336,7 +336,7 @@ func TestReceivingOrders_StockRecordsARejectedQuantityWithoutStockingIt(t *testi
 func TestReceivingOrders_StockingShortCreatesARemainderLine(t *testing.T) {
 	t.Parallel()
 
-	_, receivingOrderID := issuedPurchaseOrderReceiving(t)
+	_, receivingOrderID := receivedPurchaseOrderReceiving(t)
 	lineID := jsonField(firstLine(t, receivingOrderID), "id")
 
 	patchStatus, patchBody, err := apiClient.Patch(
@@ -371,7 +371,7 @@ func TestReceivingOrders_StockingShortCreatesARemainderLine(t *testing.T) {
 func TestReceivingOrders_StockingAnAlreadyStockedOrderRecordsNothingNew(t *testing.T) {
 	t.Parallel()
 
-	_, receivingOrderID := issuedPurchaseOrderReceiving(t)
+	_, receivingOrderID := receivedPurchaseOrderReceiving(t)
 	lineID := jsonField(firstLine(t, receivingOrderID), "id")
 
 	status, body := stockReceivingOrder(t, receivingOrderID, []map[string]any{{
@@ -393,7 +393,7 @@ func TestReceivingOrders_StockingAnAlreadyStockedOrderRecordsNothingNew(t *testi
 func TestReceivingOrders_StockMarksOmittedLinesStockedWithoutStockingThem(t *testing.T) {
 	t.Parallel()
 
-	_, receivingOrderID := issuedPurchaseOrderReceiving(t)
+	_, receivingOrderID := receivedPurchaseOrderReceiving(t)
 
 	status, body := stockReceivingOrder(t, receivingOrderID, []map[string]any{})
 	requireStatus(t, 200, status, body)
@@ -407,8 +407,8 @@ func TestReceivingOrders_StockMarksOmittedLinesStockedWithoutStockingThem(t *tes
 func TestReceivingOrders_StockIgnoresAnAllocationForAnotherOrdersLine(t *testing.T) {
 	t.Parallel()
 
-	_, receivingOrderID := issuedPurchaseOrderReceiving(t)
-	_, otherOrderID := issuedPurchaseOrderReceiving(t)
+	_, receivingOrderID := receivedPurchaseOrderReceiving(t)
+	_, otherOrderID := receivedPurchaseOrderReceiving(t)
 	foreignLineID := jsonField(firstLine(t, otherOrderID), "id")
 
 	status, body := stockReceivingOrder(t, receivingOrderID, []map[string]any{{
@@ -427,7 +427,7 @@ func TestReceivingOrders_StockIgnoresAnAllocationForAnotherOrdersLine(t *testing
 func TestReceivingOrders_StockIgnoresAnUnknownLine(t *testing.T) {
 	t.Parallel()
 
-	_, receivingOrderID := issuedPurchaseOrderReceiving(t)
+	_, receivingOrderID := receivedPurchaseOrderReceiving(t)
 
 	status, body := stockReceivingOrder(t, receivingOrderID, []map[string]any{{
 		"receiving_order_line_id": "rcln_doesnotexist00",
@@ -442,7 +442,7 @@ func TestReceivingOrders_StockIgnoresAnUnknownLine(t *testing.T) {
 func TestReceivingOrders_StockTreatsAMalformedQuantityAsNothingToPutAway(t *testing.T) {
 	t.Parallel()
 
-	_, receivingOrderID := issuedPurchaseOrderReceiving(t)
+	_, receivingOrderID := receivedPurchaseOrderReceiving(t)
 	lineID := jsonField(firstLine(t, receivingOrderID), "id")
 
 	for _, quantity := range []string{"not-a-number", ""} {
@@ -521,7 +521,7 @@ func TestReceivingOrders_ListHidesCompletedOrdersByDefault(t *testing.T) {
 func TestReceivingOrders_TotalsReportStockingCompletion(t *testing.T) {
 	t.Parallel()
 
-	_, receivingOrderID := issuedPurchaseOrderReceiving(t)
+	_, receivingOrderID := receivedPurchaseOrderReceiving(t)
 
 	status, body, err := apiClient.GetListRaw(receivingOrdersPath+"/"+receivingOrderID, url.Values{"include": {"totals"}})
 	require.NoError(t, err)
@@ -556,7 +556,7 @@ func TestReceivingOrders_TotalsReportStockingCompletion(t *testing.T) {
 func TestReceivingOrders_TotalsAreNullWithoutInclude(t *testing.T) {
 	t.Parallel()
 
-	_, receivingOrderID := issuedPurchaseOrderReceiving(t)
+	_, receivingOrderID := receivedPurchaseOrderReceiving(t)
 
 	status, body, err := apiClient.GetListRaw(receivingOrdersPath+"/"+receivingOrderID, nil)
 	require.NoError(t, err)
@@ -599,7 +599,7 @@ func TestReceivingOrders_ListRelatedNamesItsDeliveries(t *testing.T) {
 func TestReceivingOrders_RelatedDeliveriesIsEmptyBeforeStocking(t *testing.T) {
 	t.Parallel()
 
-	_, receivingOrderID := issuedPurchaseOrderReceiving(t)
+	_, receivingOrderID := receivedPurchaseOrderReceiving(t)
 
 	status, body, err := apiClient.GetListRaw(receivingOrdersPath+"/"+receivingOrderID, url.Values{
 		"include": {"related", "related.deliveries"},

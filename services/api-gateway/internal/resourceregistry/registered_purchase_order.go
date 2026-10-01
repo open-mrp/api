@@ -15,6 +15,13 @@ func init() {
 		Load:       resourceloaders.LoadPurchaseOrders,
 		Subs: []resourcekit.SubField{
 			{Key: "supplier", Populate: populateSupplierOnPO},
+			{
+				Key:         "created_by",
+				Target:      constants.ObjectTypeCreatedBy,
+				Cardinality: resourcekit.CardinalityOnePtr,
+				ExtractIDs:  extractSelfIDForCreatedByOnPO,
+				Populate:    populateCreatedByOnPO,
+			},
 			{Key: "bill_to_address", Populate: populateBillToAddressOnPO},
 			{Key: "ship_to_address", Populate: populateShipToAddressOnPO},
 			{Key: "freight", Populate: populateFreightOnPO},
@@ -61,6 +68,14 @@ func init() {
 				Target:      constants.ObjectTypeRate,
 				Cardinality: resourcekit.CardinalityOnePtr,
 				ExtractRefs: extractUnitPriceRefFromPOLine,
+			},
+			// Carried inline: the order read fetched them with the lines when they were included.
+			{
+				Key:         "delivery_lines",
+				Target:      constants.ObjectTypeDeliveryLine,
+				Cardinality: resourcekit.CardinalityList,
+				Populate:    populateDeliveryLinesOnPOLine,
+				ExtractRefs: extractDeliveryLineRefsFromPOLine,
 			},
 		},
 	})
@@ -223,4 +238,41 @@ func populateContactsOnPO(ctx context.Context, parent any, _ map[string]any) {
 		return
 	}
 	po.Contacts = v.(*apiresource.List[apiresource.EmailContact])
+}
+
+func populateDeliveryLinesOnPOLine(ctx context.Context, parent any, _ map[string]any) {
+	l := parent.(*apiresource.PurchaseOrderLine)
+	v, ok := resourcekit.GetLoadMeta(ctx).Get(constants.ObjectTypePurchaseOrderLine, l.ID, "delivery_lines")
+	if !ok {
+		return
+	}
+	l.DeliveryLines = v.(*apiresource.List[apiresource.DeliveryLine])
+}
+
+func extractDeliveryLineRefsFromPOLine(_ context.Context, parent any) []any {
+	l := parent.(*apiresource.PurchaseOrderLine)
+	if l.DeliveryLines == nil {
+		return nil
+	}
+	refs := make([]any, len(l.DeliveryLines.Data))
+	for i := range l.DeliveryLines.Data {
+		refs[i] = &l.DeliveryLines.Data[i]
+	}
+	return refs
+}
+
+// created_by is keyed by the order's own id; the loader resolves it from the order's create audit event.
+func extractSelfIDForCreatedByOnPO(_ context.Context, parent any) []string {
+	po := parent.(*apiresource.PurchaseOrder)
+	if po.ID == "" {
+		return nil
+	}
+	return []string{po.ID}
+}
+
+func populateCreatedByOnPO(_ context.Context, parent any, loaded map[string]any) {
+	po := parent.(*apiresource.PurchaseOrder)
+	if v, ok := loaded[po.ID]; ok {
+		po.CreatedBy = v.(*apiresource.CreatedBy)
+	}
 }

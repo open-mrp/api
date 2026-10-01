@@ -615,6 +615,7 @@ func init() {
 		ObjectType: constants.ObjectTypePurchaseOrder,
 		Fields: []IncludeFieldDef{
 			{Key: "supplier", ObjectType: constants.ObjectTypeSupplier},
+			{Key: "created_by", ObjectType: constants.ObjectTypeCreatedBy},
 			{Key: "bill_to_address", ObjectType: constants.ObjectTypeAddress},
 			{Key: "ship_to_address", ObjectType: constants.ObjectTypeAddress},
 			{Key: "freight", ObjectType: constants.ObjectTypeFreight},
@@ -633,6 +634,7 @@ func init() {
 			// The quantity and the two rates are always on the line; naming them here is what lets a caller reach through to the units they are counted in.
 			{Key: "quantity_ordered", ObjectType: constants.ObjectTypeQuantity},
 			{Key: "unit_price", ObjectType: constants.ObjectTypeRate},
+			{Key: "delivery_lines", ObjectType: constants.ObjectTypeDeliveryLine},
 		},
 	})
 

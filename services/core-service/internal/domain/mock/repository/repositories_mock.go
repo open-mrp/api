@@ -15067,6 +15067,36 @@ func (mr *MockPurchaseOrderRepoMockRecorder) GetEmailContacts(ctx, salesOrderID 
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetEmailContacts", reflect.TypeOf((*MockPurchaseOrderRepo)(nil).GetEmailContacts), ctx, salesOrderID)
 }
 
+// GetEmailContactsByOrderIDs mocks base method.
+func (m *MockPurchaseOrderRepo) GetEmailContactsByOrderIDs(ctx context.Context, salesOrderIDs []string) (map[string][]*domain.PurchaseOrderEmailContact, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetEmailContactsByOrderIDs", ctx, salesOrderIDs)
+	ret0, _ := ret[0].(map[string][]*domain.PurchaseOrderEmailContact)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
+}
+
+// GetEmailContactsByOrderIDs indicates an expected call of GetEmailContactsByOrderIDs.
+func (mr *MockPurchaseOrderRepoMockRecorder) GetEmailContactsByOrderIDs(ctx, salesOrderIDs any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetEmailContactsByOrderIDs", reflect.TypeOf((*MockPurchaseOrderRepo)(nil).GetEmailContactsByOrderIDs), ctx, salesOrderIDs)
+}
+
+// GetLineDeliveryLines mocks base method.
+func (m *MockPurchaseOrderRepo) GetLineDeliveryLines(ctx context.Context, lineIDs []string) (map[string][]*domain.PurchaseOrderLineDeliveryLine, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetLineDeliveryLines", ctx, lineIDs)
+	ret0, _ := ret[0].(map[string][]*domain.PurchaseOrderLineDeliveryLine)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
+}
+
+// GetLineDeliveryLines indicates an expected call of GetLineDeliveryLines.
+func (mr *MockPurchaseOrderRepoMockRecorder) GetLineDeliveryLines(ctx, lineIDs any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetLineDeliveryLines", reflect.TypeOf((*MockPurchaseOrderRepo)(nil).GetLineDeliveryLines), ctx, lineIDs)
+}
+
 // GetLines mocks base method.
 func (m *MockPurchaseOrderRepo) GetLines(ctx context.Context, salesOrderID string) ([]*domain.PurchaseOrderLine, *apierror.APIError) {
 	m.ctrl.T.Helper()
@@ -15095,6 +15125,21 @@ func (m *MockPurchaseOrderRepo) GetLinesByIDs(ctx context.Context, accountID str
 func (mr *MockPurchaseOrderRepoMockRecorder) GetLinesByIDs(ctx, accountID, ids any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetLinesByIDs", reflect.TypeOf((*MockPurchaseOrderRepo)(nil).GetLinesByIDs), ctx, accountID, ids)
+}
+
+// GetLinesByOrderIDs mocks base method.
+func (m *MockPurchaseOrderRepo) GetLinesByOrderIDs(ctx context.Context, salesOrderIDs []string) (map[string][]*domain.PurchaseOrderLine, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetLinesByOrderIDs", ctx, salesOrderIDs)
+	ret0, _ := ret[0].(map[string][]*domain.PurchaseOrderLine)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
+}
+
+// GetLinesByOrderIDs indicates an expected call of GetLinesByOrderIDs.
+func (mr *MockPurchaseOrderRepoMockRecorder) GetLinesByOrderIDs(ctx, salesOrderIDs any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetLinesByOrderIDs", reflect.TypeOf((*MockPurchaseOrderRepo)(nil).GetLinesByOrderIDs), ctx, salesOrderIDs)
 }
 
 // GetNextOrderNumber mocks base method.
@@ -20134,6 +20179,21 @@ func NewMockPricingRepo(ctrl *gomock.Controller) *MockPricingRepo {
 // EXPECT returns an object that allows the caller to indicate expected use.
 func (m *MockPricingRepo) EXPECT() *MockPricingRepoMockRecorder {
 	return m.recorder
+}
+
+// ItemQuantityUnits mocks base method.
+func (m *MockPricingRepo) ItemQuantityUnits(ctx context.Context, accountID string, itemIDs []string) (map[string]map[string]struct{}, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ItemQuantityUnits", ctx, accountID, itemIDs)
+	ret0, _ := ret[0].(map[string]map[string]struct{})
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
+}
+
+// ItemQuantityUnits indicates an expected call of ItemQuantityUnits.
+func (mr *MockPricingRepoMockRecorder) ItemQuantityUnits(ctx, accountID, itemIDs any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ItemQuantityUnits", reflect.TypeOf((*MockPricingRepo)(nil).ItemQuantityUnits), ctx, accountID, itemIDs)
 }
 
 // LoadPricingBundle mocks base method.

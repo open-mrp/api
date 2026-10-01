@@ -14,6 +14,7 @@ import (
 	"github.com/open-mrp/api/shared/pricing"
 	"github.com/open-mrp/api/shared/ptrutil"
 	"github.com/open-mrp/api/shared/textutil"
+	"github.com/open-mrp/api/shared/timeutil"
 	"github.com/shopspring/decimal"
 )
 
@@ -418,15 +419,14 @@ func portalRegisterLink(ctx context.Context, repos domain.RepoFactory, frontendU
 
 // inDocumentZone reads a record's timestamp in the merchant's zone, taken from its origin address.
 // The dashboard renders these in the viewer's browser, which for the merchant is their own zone;
-// the server runs in UTC, which printed an afternoon invoice as the early evening. Falls back to the
-// server's zone when the origin has no resolved zone.
+// the server runs in UTC, which printed an afternoon invoice as the early evening and a date picked
+// as the end of a day as the next one. The origin's stored zone wins, then the zone its country and
+// state keep, and UTC only when neither is known.
 func inDocumentZone(t time.Time, originAddr *domain.ShippingAddress) time.Time {
-	if originAddr != nil && originAddr.Timezone != nil {
-		if loc, err := time.LoadLocation(*originAddr.Timezone); err == nil {
-			return t.In(loc)
-		}
+	if originAddr == nil {
+		return t.UTC()
 	}
-	return t.Local()
+	return t.In(timeutil.ZoneFor(originAddr.Timezone, originAddr.Country, originAddr.State, ""))
 }
 
 func accountDisplayName(account *domain.Account, fallback string) string {

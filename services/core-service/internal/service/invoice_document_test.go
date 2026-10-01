@@ -19,7 +19,7 @@ import (
 func invoiceFixture() (*domain.Invoice, []*domain.InvoiceLine, *domain.SalesOrder) {
 	// Constructed in the local zone because the renderers format in it, as the dashboard's date-fns
 	// does; a UTC fixture would render a day early west of Greenwich.
-	created := time.Date(2026, 7, 14, 14, 30, 0, 0, time.Local)
+	created := time.Date(2026, 7, 14, 14, 30, 0, 0, time.UTC)
 
 	invoice := &domain.Invoice{
 		Number:         "5821",

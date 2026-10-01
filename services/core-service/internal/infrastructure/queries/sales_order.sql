@@ -1618,6 +1618,7 @@ SELECT
     g.state AS state,
     g.postal_code AS postal_code,
     g.country AS country,
+    g.timezone AS timezone,
     a.phone AS phone,
     a.email AS email
 FROM account acc

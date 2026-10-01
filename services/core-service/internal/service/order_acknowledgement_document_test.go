@@ -17,7 +17,7 @@ import (
 
 func ackFixture() (*domain.SalesOrder, []*domain.SalesOrderLine) {
 	// Constructed in the local zone because the renderers format in it, as date-fns does.
-	created := time.Date(2026, 5, 10, 9, 5, 0, 0, time.Local)
+	created := time.Date(2026, 5, 10, 9, 5, 0, 0, time.UTC)
 
 	order := &domain.SalesOrder{
 		Number:            "9001",

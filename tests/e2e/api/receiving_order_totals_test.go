@@ -106,7 +106,7 @@ func touchPurchaseOrderLine(t *testing.T, purchaseOrderID string) {
 func TestReceivingOrders_TotalsReportTheOrderedValueBeforeAnythingIsStocked(t *testing.T) {
 	t.Parallel()
 
-	_, receivingOrderID := issuedPurchaseOrderReceiving(t)
+	_, receivingOrderID := receivedPurchaseOrderReceiving(t)
 
 	totals := receivingOrderTotals(t, receivingOrderID)
 	assertDecimalEqual(t, e2eOrderedAmount, jsonField(totals, "ordered"),
@@ -120,7 +120,7 @@ func TestReceivingOrders_TotalsReportTheOrderedValueBeforeAnythingIsStocked(t *t
 func TestReceivingOrders_TotalsReachFullCompletionWhenEverythingIsStocked(t *testing.T) {
 	t.Parallel()
 
-	_, receivingOrderID := issuedPurchaseOrderReceiving(t)
+	_, receivingOrderID := receivedPurchaseOrderReceiving(t)
 	lineID := jsonField(firstLine(t, receivingOrderID), "id")
 
 	status, body := stockReceivingOrder(t, receivingOrderID, []map[string]any{{
@@ -146,7 +146,7 @@ func TestReceivingOrders_TotalsReachFullCompletionWhenEverythingIsStocked(t *tes
 func TestReceivingOrders_TotalsCountTheOrderedValueOncePerPurchaseOrderLine(t *testing.T) {
 	t.Parallel()
 
-	purchaseOrderID, receivingOrderID := issuedPurchaseOrderReceiving(t)
+	purchaseOrderID, receivingOrderID := receivedPurchaseOrderReceiving(t)
 
 	// One unit of four turns up, so the line is narrowed and put away.
 	firstLineID := jsonField(firstLine(t, receivingOrderID), "id")
@@ -200,7 +200,7 @@ func TestReceivingOrders_TotalsCountTheOrderedValueOncePerPurchaseOrderLine(t *t
 func TestReceivingOrders_StockedCompletionIsTheStockedShareOfTheOrderedAmount(t *testing.T) {
 	t.Parallel()
 
-	_, receivingOrderID := issuedPurchaseOrderReceiving(t)
+	_, receivingOrderID := receivedPurchaseOrderReceiving(t)
 	lineID := jsonField(firstLine(t, receivingOrderID), "id")
 
 	setReceivingLineQuantity(t, receivingOrderID, lineID, "1")
@@ -224,7 +224,7 @@ func TestReceivingOrders_StockedCompletionIsTheStockedShareOfTheOrderedAmount(t 
 func TestReceivingOrders_TotalsAreAbsentWithoutTheInclude(t *testing.T) {
 	t.Parallel()
 
-	_, receivingOrderID := issuedPurchaseOrderReceiving(t)
+	_, receivingOrderID := receivedPurchaseOrderReceiving(t)
 
 	status, body, err := apiClient.GetListRaw(receivingOrdersPath+"/"+receivingOrderID, nil)
 	require.NoError(t, err)
@@ -245,7 +245,7 @@ func TestReceivingOrders_TotalsAreAbsentWithoutTheInclude(t *testing.T) {
 func TestReceivingOrders_TotalsSurviveBackwardPagination(t *testing.T) {
 	t.Parallel()
 
-	_, receivingOrderID := issuedPurchaseOrderReceiving(t)
+	_, receivingOrderID := receivedPurchaseOrderReceiving(t)
 
 	// One order per page, so the seeded orders (older than this one) always leave a page after it
 	// to walk back from, however many orders the rest of the suite creates.

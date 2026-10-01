@@ -114,3 +114,11 @@ DELETE FROM receiving_order_line WHERE sales_order_line_id = sqlc.arg('sales_ord
 DELETE q FROM quantity q
 JOIN receiving_order_line rol ON rol.quantity_id = q.id
 WHERE rol.sales_order_line_id = sqlc.arg('sales_order_line_id');
+
+-- name: GetPurchaseOrderLineItemUnitGroups :many
+-- The unit group each item's category measures it in, for checking the unit a line's quantity is in.
+SELECT i.id AS item_id, ic.unit_group_id
+FROM item i
+JOIN item_category ic ON ic.id = i.item_category_id
+WHERE i.id IN (sqlc.slice('item_ids'))
+AND i.account_id = sqlc.arg('account_id');

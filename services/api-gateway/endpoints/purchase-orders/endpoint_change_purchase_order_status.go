@@ -18,14 +18,14 @@ type ChangePurchaseOrderStatusRequest struct {
 	PurchaseOrderID string `path:"id" validate:"required"`
 	// The lifecycle transition to apply.
 	//
-	// - `issue`: move an `estimate` order to `issued`. Creates the order's receiving order with a line for each order line.
+	// - `issue`: move an `estimate` order to `issued`. Creates the order's receiving order with a line for each order line, each at a received quantity of zero.
 	// - `unissue`: move an `issued` order back to `estimate`. Deletes the receiving order.
 	// - `close`: move an `issued` order to `fulfilled`. Marks the receiving order complete.
 	// - `open`: move a `fulfilled` order back to `issued`. Re-opens the receiving order.
 	StatusChange constants.SalesOrderStatusChange `json:"status_change" validate:"required"`
 	// Whether to email the purchase order to the order's contacts.
 	//
-	// Only applies to the `issue` action. When `true`, the purchase order submission email is sent to the order's email contacts and `acknowledgment_status` is set to `sent`. An order with no email contacts still moves to `sent` even though no email goes out.
+	// Only applies to the `issue` action. When `true`, the purchase order submission email is sent to the order's email contacts and `acknowledgment_status` is set to `sent`. An order with no email contacts sends nothing and stays `not_sent`.
 	SendEmail bool `json:"send_email"`
 }
 
@@ -61,7 +61,7 @@ func (e *ChangePurchaseOrderStatusEndpoint) Materialize() *apiendpoint.APIEndpoi
 		},
 		IncludeConfig: apiendpoint.IncludesFor(apiendpoint.IncludesParams{
 			ObjectType: constants.ObjectTypePurchaseOrder,
-			Fields:     []string{"supplier", "bill_to_address", "ship_to_address", "freight", "payment_term", "shipping_term", "related", "related.receiving_order", "related.deliveries", "lines", "lines.item", "lines.quantity_ordered", "lines.quantity_ordered.unit", "lines.unit_price", "lines.unit_price.numerator_unit", "lines.unit_price.denominator_unit", "contacts"},
+			Fields:     purchaseOrderDetailIncludeFields,
 		}),
 	})
 }

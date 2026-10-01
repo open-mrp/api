@@ -490,6 +490,7 @@ SELECT
     g.state AS state,
     g.postal_code AS postal_code,
     g.country AS country,
+    g.timezone AS timezone,
     a.phone AS phone,
     a.email AS email
 FROM account acc
@@ -506,6 +507,7 @@ type GetAccountOriginAddressRow struct {
 	State       sql.NullString
 	PostalCode  sql.NullString
 	Country     string
+	Timezone    sql.NullString
 	Phone       sql.NullString
 	Email       sql.NullString
 }
@@ -523,6 +525,7 @@ func (q *Queries) GetAccountOriginAddress(ctx context.Context, accountID string)
 		&i.State,
 		&i.PostalCode,
 		&i.Country,
+		&i.Timezone,
 		&i.Phone,
 		&i.Email,
 	)

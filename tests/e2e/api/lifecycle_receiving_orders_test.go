@@ -50,6 +50,19 @@ func issuedPurchaseOrderReceiving(t *testing.T) (purchaseOrderID, receivingOrder
 	return purchaseOrderID, receivingOrderID
 }
 
+// receivedPurchaseOrderReceiving is issuedPurchaseOrderReceiving followed by Receive: issuing opens
+// each receiving line at zero, and receiving records the outstanding quantity on it, which is what
+// stocking then puts away.
+func receivedPurchaseOrderReceiving(t *testing.T) (purchaseOrderID, receivingOrderID string) {
+	t.Helper()
+
+	purchaseOrderID, receivingOrderID = issuedPurchaseOrderReceiving(t)
+	status, body, err := apiClient.Put(receivingOrdersPath+"/"+receivingOrderID+"/actions/receive", nil)
+	require.NoError(t, err)
+	requireStatus(t, 200, status, body)
+	return purchaseOrderID, receivingOrderID
+}
+
 func receivingOrderLines(t *testing.T, receivingOrderID string) []any {
 	t.Helper()
 	status, body, err := apiClient.GetListRaw(receivingOrdersPath+"/"+receivingOrderID, url.Values{"include": {"lines"}})

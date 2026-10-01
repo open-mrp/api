@@ -110,7 +110,7 @@ func (r *purchaseOrderLineRepoImpl) Create(ctx context.Context, lineID string, p
 		ProductDescription: toNullString(params.ProductDescription),
 		EdiLineItemID:      gosql.NullString{},
 		LineItemNumber:     gosql.NullInt32{Int32: lineItemNumber, Valid: true},
-		ProductID:          gosql.NullString{String: params.ProductID, Valid: params.ProductID != ""},
+		ProductID:          toNullString(params.ProductID),
 		ItemID:             toNullString(params.ItemID),
 		SalesOrderID:       params.SalesOrderID,
 		QuantityID:         quantityID,

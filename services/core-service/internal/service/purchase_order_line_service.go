@@ -106,6 +106,7 @@ func (s *purchaseOrderLineSvcImpl) CreatePurchaseOrderLine(ctx context.Context, 
 	// The same check the create path runs, so a line added afterwards cannot record a quantity in a unit the product is not measured in.
 	if apiErr := validatePurchaseOrderLineUnits(ctx, s.repos, params.AccountID, []domain.CreatePurchaseOrderLineInput{{
 		ProductID:      params.ProductID,
+		ItemID:         params.ItemID,
 		QuantityUnitID: params.QuantityUnitID,
 	}}, "quantity_unit_id"); apiErr != nil {
 		return nil, tracing.Trace(span, apiErr)
@@ -165,7 +166,8 @@ func (s *purchaseOrderLineSvcImpl) CreatePurchaseOrderLine(ctx context.Context, 
 					return apiErr
 				}
 
-				if apiErr := txLineRepo.CreateQuantity(txCtx, qtyID, params.QuantityValue, params.QuantityUnitID); apiErr != nil {
+				// Starts at zero like the lines raised when the order is issued; receiving books onto it.
+				if apiErr := txLineRepo.CreateQuantity(txCtx, qtyID, "0", params.QuantityUnitID); apiErr != nil {
 					return apiErr
 				}
 

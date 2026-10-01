@@ -1448,6 +1448,12 @@ type PurchaseOrderRepo interface {
 	GetEmailContacts(ctx context.Context, salesOrderID string) ([]*PurchaseOrderEmailContact, *apierror.APIError)
 	GetSubmissionRecipients(ctx context.Context, purchaseOrderID string) ([]string, *apierror.APIError)
 	MarkSubmissionSent(ctx context.Context, accountID, purchaseOrderID string) *apierror.APIError
+	// GetLinesByOrderIDs returns the lines of each of the given orders, keyed by order id, in line order.
+	GetLinesByOrderIDs(ctx context.Context, salesOrderIDs []string) (map[string][]*PurchaseOrderLine, *apierror.APIError)
+	// GetEmailContactsByOrderIDs returns the submission contacts of each of the given orders, keyed by order id.
+	GetEmailContactsByOrderIDs(ctx context.Context, salesOrderIDs []string) (map[string][]*PurchaseOrderEmailContact, *apierror.APIError)
+	// GetLineDeliveryLines returns the delivery lines booked against each of the given order lines, keyed by line id, oldest first.
+	GetLineDeliveryLines(ctx context.Context, lineIDs []string) (map[string][]*PurchaseOrderLineDeliveryLine, *apierror.APIError)
 }
 
 type PurchaseOrderLineRepo interface {
@@ -1877,6 +1883,8 @@ type PricingRepo interface {
 	LoadPricingBundle(ctx context.Context, params LoadPricingBundleParams) (*PricingBundle, *apierror.APIError)
 	// ProductQuantityUnits returns, per product, the set of unit IDs its unit group allows a quantity to be expressed in. Products the account does not own are absent, which the caller reports as an unknown product rather than as an unusable unit.
 	ProductQuantityUnits(ctx context.Context, accountID string, productIDs []string) (map[string]map[string]struct{}, *apierror.APIError)
+	// ItemQuantityUnits is ProductQuantityUnits for items, through the unit group of the item's category. Items the account does not own are absent.
+	ItemQuantityUnits(ctx context.Context, accountID string, itemIDs []string) (map[string]map[string]struct{}, *apierror.APIError)
 }
 
 type JobRepo interface {

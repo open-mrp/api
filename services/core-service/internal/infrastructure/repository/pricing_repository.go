@@ -364,3 +364,52 @@ func (r *pricingRepoImpl) ProductQuantityUnits(ctx context.Context, accountID st
 	}
 	return out, nil
 }
+
+func (r *pricingRepoImpl) ItemQuantityUnits(ctx context.Context, accountID string, itemIDs []string) (map[string]map[string]struct{}, *apierror.APIError) {
+	ctx, span := pricingRepoTracer.Start(ctx, "repository.pricing.item_quantity_units")
+	defer span.End()
+
+	if len(itemIDs) == 0 {
+		return map[string]map[string]struct{}{}, nil
+	}
+
+	items, err := r.queries.GetPurchaseOrderLineItemUnitGroups(ctx, sqlc.GetPurchaseOrderLineItemUnitGroupsParams{
+		ItemIds:   itemIDs,
+		AccountID: accountID,
+	})
+	if apiErr := db.MapSQLError(err); apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
+
+	groupIDs := make([]string, 0, len(items))
+	seen := make(map[string]struct{}, len(items))
+	for _, it := range items {
+		if _, ok := seen[it.UnitGroupID]; ok {
+			continue
+		}
+		seen[it.UnitGroupID] = struct{}{}
+		groupIDs = append(groupIDs, it.UnitGroupID)
+	}
+
+	unitsByGroup := make(map[string]map[string]struct{}, len(groupIDs))
+	if len(groupIDs) > 0 {
+		rows, err := r.queries.GetPricingUnitGroupUnits(ctx, groupIDs)
+		if apiErr := db.MapSQLError(err); apiErr != nil {
+			return nil, tracing.Trace(span, apiErr)
+		}
+		for _, row := range rows {
+			inner, ok := unitsByGroup[row.UnitGroupID]
+			if !ok {
+				inner = make(map[string]struct{})
+				unitsByGroup[row.UnitGroupID] = inner
+			}
+			inner[row.UnitID] = struct{}{}
+		}
+	}
+
+	out := make(map[string]map[string]struct{}, len(items))
+	for _, it := range items {
+		out[it.ItemID] = unitsByGroup[it.UnitGroupID]
+	}
+	return out, nil
+}

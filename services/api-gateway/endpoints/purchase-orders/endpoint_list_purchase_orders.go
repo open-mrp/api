@@ -49,17 +49,10 @@ func (e *ListPurchaseOrdersEndpoint) Materialize() *apiendpoint.APIEndpoint[*Lis
 			return svc.(PurchaseOrderSvc).ListPurchaseOrders
 		},
 		ObjectType: constants.ObjectTypePurchaseOrder,
-		// The list summary stashes the supplier inline (cross-account, like the receiving-order supplier); expose it so list rows can request it.
-		// A line is the same object here as on retrieve, so it offers the same reach into it: the
-		// list built the line from the same projection, and a caller that can ask for the item and
-		// the units on one endpoint should not have to retrieve each order to get them on the other.
+		// A line is the same object here as on retrieve, so it offers the same reach into it.
 		IncludeConfig: apiendpoint.IncludesFor(apiendpoint.IncludesParams{
 			ObjectType: constants.ObjectTypePurchaseOrder,
-			Fields: []string{
-				"supplier", "lines", "lines.item",
-				"lines.quantity_ordered", "lines.quantity_ordered.unit",
-				"lines.unit_price", "lines.unit_price.numerator_unit", "lines.unit_price.denominator_unit",
-			},
+			Fields:     purchaseOrderListIncludeFields,
 		}),
 	})
 }

@@ -71,6 +71,28 @@ message PurchaseOrderSummaryInfo {
   optional string priority_id = 18;
   // Lines (populated only when the list request includes "lines").
   repeated PurchaseOrderLineInfo lines = 19;
+  optional google.protobuf.Timestamp promised_at = 20;
+  // Ship-to address
+  string shipping_address_id = 21;
+  optional string ship_to_name = 22;
+  optional string ship_to_street_line_1 = 23;
+  optional string ship_to_street_line_2 = 24;
+  optional string ship_to_locality = 25;
+  optional string ship_to_state = 26;
+  optional string ship_to_postal_code = 27;
+  optional string ship_to_country = 28;
+  optional string ship_to_phone = 29;
+  optional string ship_to_email = 30;
+  optional string ship_to_address_type = 31;
+  optional google.protobuf.Timestamp ship_to_address_created_at = 32;
+  optional google.protobuf.Timestamp ship_to_address_updated_at = 33;
+  // Receiving order reference
+  optional string receiving_order_id = 34;
+  optional string receiving_order_number = 35;
+  optional string receiving_order_status = 36;
+  // Email contacts (populated only when the list request includes "contacts").
+  repeated EmailContactInfo contacts = 37;
+  optional string note = 38;
 }
 
 // PurchaseOrderInfo represents a full purchase order with all detail.
@@ -208,12 +230,28 @@ message PurchaseOrderLineInfo {
   // Timestamps
   google.protobuf.Timestamp created_at = 27;
   google.protobuf.Timestamp updated_at = 28;
+  // Delivery lines booked against the line, oldest first (populated when "lines.delivery_lines" is included).
+  repeated PurchaseOrderLineDeliveryLineInfo delivery_lines = 31;
+}
+
+// PurchaseOrderLineDeliveryLineInfo is a delivery line booked against a purchase order line.
+message PurchaseOrderLineDeliveryLineInfo {
+  string id = 1;
+  string quantity_value = 2;
+  string quantity_unit_id = 3;
+  optional google.protobuf.Timestamp accepted_at = 4;
+  optional google.protobuf.Timestamp rejected_at = 5;
+  google.protobuf.Timestamp created_at = 6;
+  google.protobuf.Timestamp updated_at = 7;
+  string quantity_id = 8;
 }
 
 // EmailContactInfo represents an email contact on a purchase order.
 message EmailContactInfo {
   string id = 1;
   string account_user_id = 2;
+  optional string name = 3;
+  optional string email = 4;
 }
 
 // --- Purchase Order Request/Response messages ---
@@ -292,10 +330,15 @@ message CreatePurchaseOrderRequest {
   // Promised date
   optional string promised_at = 26;
   repeated string includes = 27;
+  // Order number to use instead of the next one in the sequence.
+  optional string number = 28;
+  // Existing supplier addresses to use instead of creating ones from the inline fields.
+  optional string bill_to_address_id = 29;
+  optional string ship_to_address_id = 30;
 }
 
 message CreatePurchaseOrderLineInput {
-  string product_id = 1;
+  optional string product_id = 1;
   optional string item_id = 2;
   string product_sku = 3;
   optional string product_description = 4;
@@ -321,9 +364,13 @@ message UpdatePurchaseOrderRequest {
   optional string billing_address_id = 5;
   optional string shipping_address_id = 6;
   optional string promised_at = 7;
-  // Email contacts (replaces existing)
+  // Email contacts (replaces existing when replace_contacts is set)
   repeated string contact_account_user_ids = 8;
   repeated string includes = 9;
+  // Removes the promised date.
+  bool clear_promised_at = 10;
+  // Marks contact_account_user_ids as the new contact set, so an empty list clears the contacts.
+  bool replace_contacts = 11;
 }
 
 message UpdatePurchaseOrderResponse {
@@ -351,7 +398,7 @@ message ChangePurchaseOrderStatusResponse {
 
 message CreatePurchaseOrderLineRequest {
   string purchase_order_id = 1;
-  string product_id = 2;
+  optional string product_id = 2;
   optional string item_id = 3;
   string product_sku = 4;
   optional string product_description = 5;

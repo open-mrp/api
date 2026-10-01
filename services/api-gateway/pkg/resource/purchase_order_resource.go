@@ -23,12 +23,23 @@ type EmailContact struct {
 	Object constants.ObjectType `json:"object" validate:"required,enum=email_contact"`
 	// Account user whose email address receives order communications.
 	AccountUser *AccountUser `json:"account_user" validate:"required"`
+	// Name of the person behind the account user.
+	//
+	// Carried on the contact because the account user belongs to the supplier, whose users the ordering account cannot read.
+	Name *string `json:"name"`
+	// Email address the purchase order is sent to.
+	Email *string `json:"email"`
 }
+
+var sampleEmailContactName = "Jane Doe"
+var sampleEmailContactEmail = "jane@acmesupplies.com"
 
 var SampleEmailContact = &EmailContact{
 	ID:          SampleEmailContactID,
 	Object:      constants.ObjectTypeEmailContact,
 	AccountUser: SampleAccountUser,
+	Name:        &sampleEmailContactName,
+	Email:       &sampleEmailContactEmail,
 }
 
 func (*EmailContact) SchemaExample() any {
@@ -37,7 +48,7 @@ func (*EmailContact) SchemaExample() any {
 
 // An order placed with a supplier to purchase materials or products.
 //
-// The list endpoint returns this same resource as the retrieve endpoint, except that list rows never carry the note or the scheduled date and can only expand the supplier and the lines.
+// The list endpoint returns this same resource as the retrieve endpoint, except that list rows cannot expand the creator, the bill-to address, freight, terms or deliveries.
 type PurchaseOrder struct {
 	// Purchase order ID.
 	ID string `json:"id" validate:"required"`
@@ -63,6 +74,8 @@ type PurchaseOrder struct {
 	AcknowledgmentStatus constants.AcknowledgmentStatus `json:"acknowledgment_status" validate:"required"`
 	// Supplier the order is placed with.
 	Supplier *Supplier `json:"supplier" expandable:"true"`
+	// Who created this order, and their relation (internal/system).
+	CreatedBy *CreatedBy `json:"created_by" expandable:"true"`
 	// Address the supplier bills this order to.
 	BillToAddress *Address `json:"bill_to_address" expandable:"true"`
 	// Address the supplier ships the ordered goods to.
@@ -130,6 +143,7 @@ var SamplePurchaseOrder = &PurchaseOrder{
 	Priority:             SamplePriorityCode,
 	AcknowledgmentStatus: constants.AcknowledgmentStatusNotSent,
 	Supplier:             SampleSupplier,
+	CreatedBy:            SampleCreatedBy,
 	BillToAddress:        SampleAddress,
 	ShipToAddress:        SampleAddress,
 	Freight:              SampleFreight,

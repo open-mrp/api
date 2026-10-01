@@ -34,6 +34,10 @@ type PurchaseOrderLine struct {
 	QuantityReceived *ComputedQuantity `json:"quantity_received"`
 	// Agreed purchase price per unit for this line.
 	UnitPrice *Rate `json:"unit_price" validate:"required"`
+	// Delivery lines booked against this line, oldest first.
+	//
+	// Each is a receipt of goods for the line: accepted into inventory, refused on inspection, or still awaiting inspection. Only the quantity and the accepted and refused times are carried.
+	DeliveryLines *List[DeliveryLine] `json:"delivery_lines" expandable:"true"`
 	// Created timestamp.
 	CreatedAt time.Time `json:"created_at" validate:"required"`
 	// Updated timestamp.

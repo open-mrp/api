@@ -424,8 +424,10 @@ func (q *Queries) InsertSettlement(ctx context.Context, arg InsertSettlementPara
 }
 
 const insertTransactionAllocation = `-- name: InsertTransactionAllocation :exec
-INSERT INTO transaction_allocation (id, transaction_id, amount_id, invoice_id, settlement_id, note, created_at, updated_at)
-VALUES (?, ?, ?, ?, ?, ?, COALESCE(?, NOW(3)), NOW(3))
+INSERT INTO transaction_allocation (id, transaction_id, amount_id, invoice_id, settlement_id, note, created_at, updated_at, account_id, transaction_type_code)
+VALUES (?, ?, ?, ?, ?, ?, COALESCE(?, NOW(3)), NOW(3),
+    (SELECT t.account_id FROM ` + "`" + `transaction` + "`" + ` t WHERE t.id = ?),
+    (SELECT t.transaction_type_code FROM ` + "`" + `transaction` + "`" + ` t WHERE t.id = ?))
 `
 
 type InsertTransactionAllocationParams struct {
@@ -438,6 +440,8 @@ type InsertTransactionAllocationParams struct {
 	CreatedAt     interface{}
 }
 
+// account_id and transaction_type_code are copied from the transaction, which never changes them, so
+// the allocation entry list can key on them.
 func (q *Queries) InsertTransactionAllocation(ctx context.Context, arg InsertTransactionAllocationParams) error {
 	_, err := q.db.ExecContext(ctx, insertTransactionAllocation,
 		arg.ID,
@@ -447,6 +451,8 @@ func (q *Queries) InsertTransactionAllocation(ctx context.Context, arg InsertTra
 		arg.SettlementID,
 		arg.Note,
 		arg.CreatedAt,
+		arg.TransactionID,
+		arg.TransactionID,
 	)
 	return err
 }

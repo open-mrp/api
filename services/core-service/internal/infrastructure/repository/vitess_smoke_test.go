@@ -292,8 +292,21 @@ func TestVitessSmoke(t *testing.T) {
 		}
 		customers := ids("SELECT customer_account_id FROM transaction WHERE account_id = ? LIMIT 1", acct)
 		if len(customers) > 0 {
-			_, apiErr := txs.ListByCustomer(ctx, domain.ListAccountTransactionsParams{AccountID: acct, CustomerAccountID: customers[0], Limit: 5, Status: &status, Query: &search, WithAllocations: true})
-			checkAPI("transactions ListByCustomer", apiErr)
+			payment := "payment"
+			for _, p := range []domain.ListAccountTransactionsParams{
+				{AccountID: acct, CustomerAccountID: customers[0], Limit: 5, Status: &status, Query: &search, WithAllocations: true},
+				// One per index hint: the customer key alone, and with the status and type keys.
+				{AccountID: acct, CustomerAccountID: customers[0], Limit: 1, WithAllocations: true},
+				{AccountID: acct, CustomerAccountID: customers[0], Limit: 5, Status: &status, Type: &payment, WithAllocations: true},
+			} {
+				page, apiErr := txs.ListByCustomer(ctx, p)
+				checkAPI("transactions ListByCustomer", apiErr)
+				if page != nil && page.PageInfo.NextCursor != nil {
+					p.Cursor = page.PageInfo.NextCursor
+					_, apiErr = txs.ListByCustomer(ctx, p)
+					checkAPI("transactions ListByCustomer next", apiErr)
+				}
+			}
 		}
 		if one := ids("SELECT id FROM transaction WHERE account_id = ? LIMIT 1", acct); len(one) > 0 {
 			_, apiErr := txs.Get(ctx, acct, one[0])
@@ -304,6 +317,9 @@ func TestVitessSmoke(t *testing.T) {
 		for _, p := range []domain.ListSettlementsParams{
 			{AccountID: acct, Limit: 1},
 			{AccountID: acct, Limit: 5, Query: &search, TransactionIDs: []string{"tx_none"}, InvoiceIDs: []string{"iv_none"}, StartDate: &from, EndDate: &to},
+			// Filters resolved to settlements that exist, so the page reads them by id.
+			{AccountID: acct, Limit: 5, TransactionIDs: ids("SELECT transaction_id FROM transaction_allocation WHERE account_id = ? LIMIT 3", acct)},
+			{AccountID: acct, Limit: 5, InvoiceIDs: ids("SELECT invoice_id FROM transaction_allocation WHERE account_id = ? LIMIT 3", acct), StartDate: &from},
 		} {
 			page, apiErr := settlements.List(ctx, p)
 			checkAPI("settlements List", apiErr)
@@ -335,6 +351,40 @@ func TestVitessSmoke(t *testing.T) {
 		if entries != nil && entries.PageInfo.NextCursor != nil {
 			_, apiErr = allocations.ListEntries(ctx, domain.ListAllocationEntriesParams{AccountID: acct, Limit: 1, Query: &search, Cursor: entries.PageInfo.NextCursor})
 			checkAPI("ListEntries next", apiErr)
+		}
+		// One per shape the entry list builds: each list key, a search resolved to transactions and
+		// invoices, and a search past the resolve limit matched row by row.
+		payment := "payment"
+		entryParams := []domain.ListAllocationEntriesParams{
+			{AccountID: acct, Limit: 1},
+			{AccountID: acct, Limit: 1, TransactionType: &payment, StartDate: &from, EndDate: &to},
+		}
+		for _, number := range ids("SELECT t.number FROM transaction_allocation ta JOIN transaction t ON t.id = ta.transaction_id WHERE ta.account_id = ? LIMIT 1", acct) {
+			entryParams = append(entryParams, domain.ListAllocationEntriesParams{AccountID: acct, Limit: 1, Query: &number})
+		}
+		for _, number := range ids("SELECT i.number FROM transaction_allocation ta JOIN invoice i ON i.id = ta.invoice_id WHERE ta.account_id = ? LIMIT 1", acct) {
+			entryParams = append(entryParams, domain.ListAllocationEntriesParams{AccountID: acct, Limit: 1, Query: &number, TransactionType: &payment})
+		}
+		for _, p := range entryParams {
+			page, apiErr := allocations.ListEntries(ctx, p)
+			checkAPI("ListEntries", apiErr)
+			if page != nil && page.PageInfo.NextCursor != nil {
+				p.Cursor = page.PageInfo.NextCursor
+				next, apiErr := allocations.ListEntries(ctx, p)
+				checkAPI("ListEntries next", apiErr)
+				if next != nil && next.PageInfo.PrevCursor != nil {
+					p.Cursor = next.PageInfo.PrevCursor
+					_, apiErr = allocations.ListEntries(ctx, p)
+					checkAPI("ListEntries prev", apiErr)
+				}
+			}
+		}
+		for _, name := range ids("SELECT a.name FROM transaction_allocation ta JOIN transaction t ON t.id = ta.transaction_id JOIN account a ON a.id = t.customer_account_id WHERE ta.account_id = ? LIMIT 1", acct) {
+			limit := allocationSearchResolveLimit
+			allocationSearchResolveLimit = 0
+			_, apiErr = allocations.ListEntries(ctx, domain.ListAllocationEntriesParams{AccountID: acct, Limit: 1, Query: &name})
+			allocationSearchResolveLimit = limit
+			checkAPI("ListEntries row-by-row search", apiErr)
 		}
 
 		tx, err := pool.BeginTx(ctx, nil)

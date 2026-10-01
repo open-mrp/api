@@ -56,3 +56,42 @@ func TestTransactionListIndexes_AreDeclaredInMigrations(t *testing.T) {
 		}
 	}
 }
+
+func TestAccountTransactionIndexHint(t *testing.T) {
+	t.Parallel()
+
+	str := func(s string) *string { return &s }
+	tests := []struct {
+		name   string
+		params domain.ListAccountTransactionsParams
+		want   []string
+	}{
+		{"customer only", domain.ListAccountTransactionsParams{}, []string{transactionCustomerIndex}},
+		{"status and type", domain.ListAccountTransactionsParams{Status: str("unallocated"), Type: str("payment")},
+			[]string{transactionCustomerIndex, transactionStatusIndex, transactionTypeIndex}},
+		{"unknown status", domain.ListAccountTransactionsParams{Status: str("all")}, []string{transactionCustomerIndex}},
+		{"blank search", domain.ListAccountTransactionsParams{Query: str(" ")}, []string{transactionCustomerIndex}},
+		{"search", domain.ListAccountTransactionsParams{Query: str("1001"), Type: str("payment")}, nil},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+			if got := accountTransactionIndexHint(tc.params); !reflect.DeepEqual(got, tc.want) {
+				t.Errorf("accountTransactionIndexHint = %v, want %v", got, tc.want)
+			}
+		})
+	}
+}
+
+func TestFinanceListIndexes_AreDeclaredInMigrations(t *testing.T) {
+	t.Parallel()
+
+	schema := migrationsText(t)
+	for _, index := range []string{
+		allocationCreatedIndex, allocationTypeIndex, allocationTransactionIndex, allocationInvoiceIndex,
+	} {
+		if !strings.Contains(schema, index) {
+			t.Errorf("%s is FORCE INDEX'd by a finance list but no migration creates it", index)
+		}
+	}
+}

@@ -1,0 +1,85 @@
+{
+ "source": "augno_core/prod, mysql.innodb_table_stats and mysql.innodb_index_stats, last_update 2026-08-26 18:15:55 UTC",
+ "table": {
+  "n_rows": 14317,
+  "clustered_index_size": 161,
+  "sum_of_other_index_sizes": 291
+ },
+ "indexes": [
+  {
+   "index": "FTS_DOC_ID_INDEX",
+   "stat": "n_diff_pfx01",
+   "value": 14402
+  },
+  {
+   "index": "FTS_DOC_ID_INDEX",
+   "stat": "n_leaf_pages",
+   "value": 38
+  },
+  {
+   "index": "FTS_DOC_ID_INDEX",
+   "stat": "size",
+   "value": 97
+  },
+  {
+   "index": "PRIMARY",
+   "stat": "n_diff_pfx01",
+   "value": 14317
+  },
+  {
+   "index": "PRIMARY",
+   "stat": "n_leaf_pages",
+   "value": 138
+  },
+  {
+   "index": "PRIMARY",
+   "stat": "size",
+   "value": 161
+  },
+  {
+   "index": "settlement_account_created_idx",
+   "stat": "n_diff_pfx01",
+   "value": 0
+  },
+  {
+   "index": "settlement_account_created_idx",
+   "stat": "n_diff_pfx02",
+   "value": 7792
+  },
+  {
+   "index": "settlement_account_created_idx",
+   "stat": "n_diff_pfx03",
+   "value": 14450
+  },
+  {
+   "index": "settlement_account_created_idx",
+   "stat": "n_leaf_pages",
+   "value": 68
+  },
+  {
+   "index": "settlement_account_created_idx",
+   "stat": "size",
+   "value": 97
+  },
+  {
+   "index": "settlement_responsible_user_id_idx",
+   "stat": "n_diff_pfx01",
+   "value": 1
+  },
+  {
+   "index": "settlement_responsible_user_id_idx",
+   "stat": "n_diff_pfx02",
+   "value": 14662
+  },
+  {
+   "index": "settlement_responsible_user_id_idx",
+   "stat": "n_leaf_pages",
+   "value": 67
+  },
+  {
+   "index": "settlement_responsible_user_id_idx",
+   "stat": "size",
+   "value": 97
+  }
+ ]
+}

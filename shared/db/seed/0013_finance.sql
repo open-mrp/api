@@ -100,3 +100,9 @@ INSERT IGNORE INTO transaction (id, number, customer_account_id, amount_id, tran
 -- counts as an open credit.
 UPDATE transaction SET funds_received_at = created_at
 WHERE id IN ('tx_01seedtransaction00', 'tx_01seedtransaction02', 'tx_01seedtransaction03') AND funds_received_at IS NULL;
+
+-- transaction_allocation.account_id and transaction_type_code are copied from the transaction
+-- (InsertTransactionAllocation does it in the API), so seeded allocations need them derived the same way.
+UPDATE transaction_allocation ta JOIN transaction t ON t.id = ta.transaction_id
+SET ta.account_id = t.account_id, ta.transaction_type_code = t.transaction_type_code
+WHERE ta.account_id IS NULL;

@@ -57,9 +57,9 @@ var transactionListIndexes = []string{
 
 const transactionJoins = `
 JOIN quantity q ON q.id = t.amount_id
-JOIN unit u ON u.id = q.unit_id
--- LEFT, though every type exists: an inner join to a four-row lookup lets the planner drive from it,
--- probing t once per type and sorting the union instead of walking one index in list order.
+-- LEFT, though every quantity has a unit and every type exists: an inner join to a tiny lookup lets
+-- the planner drive from it, probing t once per lookup row instead of walking one index in order.
+LEFT JOIN unit u ON u.id = q.unit_id
 LEFT JOIN transaction_type tt ON tt.code = t.transaction_type_code
 JOIN account ba ON ba.id = t.customer_account_id
 LEFT JOIN account_relation ar ON ar.owner_account_id = t.account_id AND ar.counterparty_account_id = t.customer_account_id AND ar.account_relation_role_code = 'customer'
@@ -418,6 +418,7 @@ func (r *transactionRepoImpl) ListByCustomer(ctx context.Context, params domain.
 	if params.Type != nil {
 		f.add("t.transaction_type_code = ?", *params.Type)
 	}
+	f.indexes = accountTransactionIndexHint(params)
 	orderBy := f.page(cur)
 
 	rows, err := r.queryTransactions(ctx, f, orderBy, params.Limit+1)
@@ -440,6 +441,23 @@ func (r *transactionRepoImpl) ListByCustomer(ctx context.Context, params domain.
 		}
 	}
 	return &domain.ListAccountTransactionsResult{Transactions: result, PageInfo: pageInfo}, nil
+}
+
+// accountTransactionIndexHint is the customer key plus the key of each other filter given; unhinted,
+// the planner sorts every match from the single-column customer key. The created_at key is left out:
+// forced beside another, it is walked from the newest row past a deep page's cursor.
+func accountTransactionIndexHint(params domain.ListAccountTransactionsParams) []string {
+	if db.AllWordsPrefixQuery(params.Query) != "" {
+		return nil
+	}
+	indexes := []string{transactionCustomerIndex}
+	if params.Status != nil && (*params.Status == "allocated" || *params.Status == "unallocated") {
+		indexes = append(indexes, transactionStatusIndex)
+	}
+	if params.Type != nil {
+		indexes = append(indexes, transactionTypeIndex)
+	}
+	return indexes
 }
 
 // customersInGroups is the account's customers in any of groupIDs.

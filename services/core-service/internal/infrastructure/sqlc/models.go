@@ -2558,14 +2558,16 @@ type Transaction struct {
 }
 
 type TransactionAllocation struct {
-	ID            string
-	TransactionID string
-	AmountID      string
-	InvoiceID     string
-	SettlementID  sql.NullString
-	CreatedAt     time.Time
-	UpdatedAt     time.Time
-	Note          sql.NullString
+	ID                  string
+	TransactionID       string
+	AmountID            string
+	InvoiceID           string
+	SettlementID        sql.NullString
+	CreatedAt           time.Time
+	UpdatedAt           time.Time
+	Note                sql.NullString
+	AccountID           sql.NullString
+	TransactionTypeCode sql.NullString
 }
 
 type TransactionMethod struct {

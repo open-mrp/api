@@ -18,7 +18,8 @@ func openCreditID(e *domain.OpenCreditEntry) string                 { return e.I
 
 // ListOpenCredits pages the account's open credits, most recently received first: money received, not
 // marked fully allocated, and with part of it still unapplied. The keyset follows the order, so a page
-// can be read in either direction.
+// can be read in either direction. The open-credits key yields that order; it is forced because the
+// planner otherwise reads the status key and sorts.
 func (r *transactionAllocationRepoImpl) ListOpenCredits(ctx context.Context, params domain.ListOpenCreditsParams) (*domain.ListOpenCreditsResult, *apierror.APIError) {
 	ctx, span := transactionAllocationRepoTracer.Start(ctx, "repository.transaction_allocation.list_open_credits")
 	defer span.End()
@@ -63,10 +64,12 @@ func (r *transactionAllocationRepoImpl) ListOpenCredits(ctx context.Context, par
 	query := `SELECT t.id, t.number, t.note, t.stripe_payment_id, t.created_at, t.funds_received_at, tt.name,
 	CAST(q.value AS CHAR), t.customer_account_id, cust.name, ar.external_number, tm.name, adjt.name, COALESCE(usr.username, ''),
 	CAST(COALESCE((SELECT SUM(q2.value) FROM transaction_allocation ta2 JOIN quantity q2 ON q2.id = ta2.amount_id WHERE ta2.transaction_id = t.id), 0) AS CHAR)
-FROM ` + "`transaction`" + ` t
+FROM ` + "`transaction`" + ` t FORCE INDEX (` + transactionFundsIndex + `)
 JOIN quantity q ON q.id = t.amount_id
 JOIN account cust ON cust.id = t.customer_account_id
-JOIN transaction_type tt ON tt.code = t.transaction_type_code
+-- LEFT, though every type exists: an inner join to a four-row lookup lets the planner drive from it,
+-- probing t once per type and sorting the union instead of walking the open credits in order.
+LEFT JOIN transaction_type tt ON tt.code = t.transaction_type_code
 LEFT JOIN account_relation ar ON ar.counterparty_account_id = t.customer_account_id AND ar.owner_account_id = t.account_id AND ar.account_relation_role_code = 'customer'
 LEFT JOIN transaction_method tm ON tm.code = t.transaction_method_code
 LEFT JOIN adjustment_type adjt ON adjt.code = t.adjustment_type_code

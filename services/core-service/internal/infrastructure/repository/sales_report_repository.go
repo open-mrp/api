@@ -53,6 +53,11 @@ type salesFactQuery struct {
 	// buyers are the buyer accounts the customer filters admit; buyersFiltered is false when neither is set.
 	buyers         []string
 	buyersFiltered bool
+	// withoutBuyers is the clause and the count of its args before the buyer filter was added.
+	withoutBuyers     string
+	withoutBuyersArgs int
+	// entityFiltered is set when a sales rep, product line, or item filter is.
+	entityFiltered bool
 	// empty is set when a filter resolved to no buyers, so nothing can match.
 	empty bool
 }
@@ -104,6 +109,8 @@ func (r *salesReportRepoImpl) newSalesFactQuery(ctx context.Context, f domain.Sa
 	q.addIn("f.sales_rep_id", f.SalesRepIDs)
 	q.addIn("f.product_line_id", f.ProductLineIDs)
 	q.addIn("f.item_id", f.ItemIDs)
+	q.withoutBuyers, q.withoutBuyersArgs = q.where.String(), len(q.args)
+	q.entityFiltered = len(f.SalesRepIDs) > 0 || len(f.ProductLineIDs) > 0 || len(f.ItemIDs) > 0
 
 	buyers, filtered, apiErr := r.resolveBuyers(ctx, f)
 	if apiErr != nil {
@@ -722,6 +729,77 @@ CAST(f.total_cost / NULLIF(f.quantity_base, 0) AS DECIMAL(65,30)),
 CAST((f.total_invoiced - f.total_cost) / NULLIF(f.quantity_base, 0) AS DECIMAL(65,30)),
 geo.state, geo.locality, geo.postal_code, geo.country, od.code`
 
+// salesLineIndexHint is the fact keys a page may be read from, each in list order: each set filter's,
+// and the clustered key only when no filter has a single value. A key pinned to one value stops at a
+// page or reads just its range; walking the account past every line a rare combination rejects reads
+// the account whole.
+func salesLineIndexHint(f domain.SalesReportFilter, buyers []string, buyersFiltered bool) []string {
+	buyerValues := 0
+	if buyersFiltered {
+		buyerValues = len(buyers)
+	}
+	var keys []string
+	pinned := false
+	for _, filter := range []struct {
+		key    string
+		values int
+	}{
+		{"sales_line_fact_buyer_idx", buyerValues},
+		{"sales_line_fact_sales_rep_idx", len(f.SalesRepIDs)},
+		{"sales_line_fact_item_idx", len(f.ItemIDs)},
+		{"sales_line_fact_account_product_line_idx", len(f.ProductLineIDs)},
+	} {
+		if filter.values > 0 {
+			keys = append(keys, filter.key)
+		}
+		pinned = pinned || filter.values == 1
+	}
+	if !pinned {
+		keys = append(keys, "PRIMARY")
+	}
+	return keys
+}
+
+// salesLineBuyerBranches is the most buyers a page is read buyer by buyer for. A customer filter admits
+// the customer's child accounts too, and no key yields several buyers' lines in one order: read
+// together they are a range to sort whole, read apart each stops at a page. With a sales rep, item, or
+// product line filter as well, that filter's key is read instead.
+const salesLineBuyerBranches = 8
+
+// salesLinePageQuery is the statement choosing one page of facts (alias-free columns of sales_line_fact),
+// its args, and the direction it is read in.
+func salesLinePageQuery(q *salesFactQuery, f domain.SalesReportFilter, cursor *pagination.StringCursor, limit int32) (string, []any, string) {
+	seek, seekArgs, order := keysetPredicate(cursor, "f.invoiced_at", "f.invoice_line_id")
+	orderBy := func(alias string) string {
+		return alias + ".invoiced_at " + order + ", " + alias + ".invoice_line_id " + order
+	}
+	if q.buyersFiltered && len(q.buyers) > 1 && len(q.buyers) <= salesLineBuyerBranches && !q.entityFiltered {
+		var args []any
+		branches := make([]string, len(q.buyers))
+		for i, buyer := range q.buyers {
+			where := q.withoutBuyers + " AND f.buyer_account_id = ?"
+			args = append(append(args, q.args[:q.withoutBuyersArgs]...), buyer)
+			if seek != "" {
+				where += " AND " + seek
+				args = append(args, seekArgs...)
+			}
+			branches[i] = "(SELECT f.* FROM sales_line_fact f FORCE INDEX (sales_line_fact_buyer_idx) WHERE " + where +
+				" ORDER BY " + orderBy("f") + " LIMIT ?)"
+			args = append(args, limit)
+		}
+		return "SELECT u.* FROM (" + strings.Join(branches, "\nUNION ALL ") + ") u ORDER BY " + orderBy("u") + " LIMIT ?",
+			append(args, limit), order
+	}
+	if seek != "" {
+		q.add(seek, seekArgs...)
+	}
+	// Intersecting two filters' keys reads both ranges whole; one key with the other filter residual
+	// stops at a page, or reads no more than its own range.
+	return "SELECT /*+ SET_VAR(optimizer_switch = 'index_merge_intersection=off') */ f.* FROM sales_line_fact f FORCE INDEX (" +
+		strings.Join(salesLineIndexHint(f, q.buyers, q.buyersFiltered), ", ") + ") WHERE " +
+		q.where.String() + " ORDER BY " + orderBy("f") + " LIMIT ?", append(q.args, limit), order
+}
+
 func (r *salesReportRepoImpl) GetLinePage(ctx context.Context, params domain.ListSalesLinesParams) (*domain.SalesLinePage, *apierror.APIError) {
 	ctx, span := salesReportRepoTracer.Start(ctx, "repository.sales_report.get_line_page")
 	defer span.End()
@@ -741,16 +819,10 @@ func (r *salesReportRepoImpl) GetLinePage(ctx context.Context, params domain.Lis
 	if q.empty {
 		return &domain.SalesLinePage{}, nil
 	}
-	seek, seekArgs, order := keysetPredicate(cursor, "f.invoiced_at", "f.invoice_line_id")
-	if seek != "" {
-		q.add(seek, seekArgs...)
-	}
+	pageQuery, args, order := salesLinePageQuery(q, params.SalesReportFilter, cursor, params.Limit+1)
 
-	// The page is chosen on the fact table's clustered order first; only its rows are joined out.
-	query := `SELECT ` + salesLineColumns + ` FROM (
-  SELECT f.* FROM sales_line_fact f WHERE ` + q.where.String() + `
-  ORDER BY f.invoiced_at ` + order + `, f.invoice_line_id ` + order + ` LIMIT ?
-) f
+	// The page is chosen from the facts alone; only its rows are joined out.
+	query := `SELECT ` + salesLineColumns + ` FROM (` + pageQuery + `) f
 JOIN invoice i ON i.id = f.invoice_id
 JOIN sales_order so ON so.id = f.sales_order_id
 JOIN product fg ON fg.id = f.product_id
@@ -772,7 +844,6 @@ LEFT JOIN address ship_addr ON ship_addr.id = so.shipping_address_id
 LEFT JOIN geolocation geo ON geo.id = ship_addr.geolocation_id
 LEFT JOIN order_discount od ON od.id = f.order_discount_id
 ORDER BY f.invoiced_at ` + order + `, f.invoice_line_id ` + order
-	args := append(q.args, params.Limit+1)
 
 	rows, err := r.queries.DB().QueryContext(ctx, query, args...)
 	if err != nil {

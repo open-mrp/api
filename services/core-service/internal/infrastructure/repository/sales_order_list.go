@@ -96,9 +96,9 @@ func (r *listSalesOrderRow) dest() []any {
 }
 
 // salesOrderListFilter is the WHERE of a sales order list page, on so (sales_order) and ar (the
-// buyer's relation to the owner).
-// productIDs are the products of params.ProductLineIDs (productsInLines); largeGroup is groupIsLarge.
-func salesOrderListFilter(params domain.ListSalesOrdersParams, productIDs []string, largeGroup bool) *listFilter {
+// buyer's relation to the owner). productIDs are the products of params.ProductLineIDs
+// (productsInLines), and groupBuyers the buyers related to the owner in params.CustomerGroupIDs.
+func salesOrderListFilter(params domain.ListSalesOrdersParams, productIDs, groupBuyers []string) *listFilter {
 	f := &listFilter{}
 	f.add("so.owner_account_id = ?", params.AccountID)
 	f.add("so.seller_account_id = so.owner_account_id")
@@ -114,12 +114,8 @@ func salesOrderListFilter(params domain.ListSalesOrdersParams, productIDs []stri
 	}
 	f.in("so.buyer_account_id", params.CustomerIDs)
 	f.in("ar.account_group_id", params.CustomerGroupIDs)
-	if len(params.CustomerGroupIDs) > 0 && !largeGroup {
-		// The group again, as a set of buyers the planner can read first. A large group is left to the
-		// walk in list order, which meets a page of it sooner than reading it whole.
-		f.add("so.buyer_account_id IN (SELECT gr.counterparty_account_id FROM account_relation gr WHERE gr.owner_account_id = ? AND gr.account_group_id IN ("+
-			placeholders(len(params.CustomerGroupIDs))+"))", append([]any{params.AccountID}, stringArgs(params.CustomerGroupIDs)...)...)
-	}
+	// The group again, as its buyers, so the buyer key can read it.
+	f.in("so.buyer_account_id", groupBuyers)
 	f.in("so.sales_rep_id", params.SalesRepIDs)
 	if d := parseDateString(params.StartDate); d.Valid {
 		f.add("so.created_at >= ?", d.Time)
@@ -146,33 +142,127 @@ func salesOrderListFilter(params domain.ListSalesOrdersParams, productIDs []stri
 	return f
 }
 
+// salesOrderKeyFilter is a filter a key can read: an equality filter on column with a list-order key
+// of its own, or (column "") an order line filter, read from its lines and looked up by primary key.
+type salesOrderKeyFilter struct {
+	index, column string
+	values        []string
+	// resolved is set on a filter whose values were looked up (a group's buyers): however few, the
+	// planner cannot see their count.
+	resolved bool
+	// lineQuery selects the ids of the orders the line filter admits (args lineArgs).
+	lineQuery string
+	lineArgs  []any
+}
+
 // salesOrderListIndexHint is the keys a sales order page may be read from. Left to itself, the planner
 // picks a single-column key and sorts every match, or walks created_at past every row a rare filter
 // rejects.
 //   - A ship-by window filters a column the list does not sort by, so no key can stop at a page: the
 //     ship-by keys read just the window, and a customer or sales rep key is offered for one narrower
-//     than it.
-//   - Otherwise every list-order key is offered, and the planner picks the active filter's.
-//
-// An item or product line is a property of the order's lines: the primary key is offered so a rare
-// one is read from its lines and looked up, rather than probed for on every order.
-func salesOrderListIndexHint(params domain.ListSalesOrdersParams) []string {
-	var keys []string
+//     than it, and the primary key for a line filter's orders to be looked up by.
+//   - Otherwise each single-valued filter's key both narrows and orders, and the planner picks among
+//     them. The created_at key is offered only alone: forced beside another, the planner may swap to
+//     it for the order and walk it from the account's far end, past a deep page's cursor.
+//   - A multi-valued filter (several values, past due's issued orders beside a status list, a group's
+//     buyers) has no key that yields it in list order, the planner cannot tell a rare one from a common
+//     one, and neither can it for an item or product line. Their presence returns every filter as
+//     counted, for salesOrderCountedHint to settle by counting; indexes is then the fallback for when
+//     all are common.
+func salesOrderListIndexHint(params domain.ListSalesOrdersParams, productIDs, groupBuyers []string) (indexes []string, counted []salesOrderKeyFilter) {
+	lineQueries, lineArgs := orderLineSubqueries(params.ItemIDs, productIDs)
 	if parseDateString(params.ShipByAfter).Valid || parseDateString(params.ShipByBefore).Valid {
-		keys = []string{salesOrderShipByIndex, salesOrderStatusShipByIndex}
-		if len(params.CustomerIDs) > 0 || params.BuyerAccountID != nil {
-			keys = append(keys, salesOrderBuyerIndex)
+		indexes = []string{salesOrderShipByIndex, salesOrderStatusShipByIndex}
+		if len(params.CustomerIDs) > 0 || params.BuyerAccountID != nil || len(groupBuyers) > 0 {
+			indexes = append(indexes, salesOrderBuyerIndex)
 		}
 		if len(params.SalesRepIDs) > 0 {
-			keys = append(keys, salesOrderSalesRepIndex)
+			indexes = append(indexes, salesOrderSalesRepIndex)
 		}
-	} else {
-		keys = []string{salesOrderCreatedIndex, salesOrderStatusIndex, salesOrderBuyerIndex, salesOrderSalesRepIndex}
+		if len(lineQueries) > 0 {
+			indexes = append(indexes, "PRIMARY")
+		}
+		return indexes, nil
 	}
-	if len(params.ItemIDs) > 0 || len(params.ProductLineIDs) > 0 {
-		keys = append(keys, "PRIMARY")
+
+	var filters []salesOrderKeyFilter
+	includeStatus, statusCodes, _, _, _, _, _, _, _, _, _, _ := buildSalesOrderListFilters(params)
+	if params.PastDue != nil && *params.PastDue {
+		// Past due admits issued orders only, whatever the status list.
+		includeStatus, statusCodes = true, []string{"issued"}
 	}
-	return keys
+	if includeStatus {
+		filters = append(filters, salesOrderKeyFilter{index: salesOrderStatusIndex, column: "sales_order_status_code", values: statusCodes})
+	}
+	if params.BuyerAccountID != nil {
+		filters = append(filters, salesOrderKeyFilter{index: salesOrderBuyerIndex, column: "buyer_account_id", values: []string{*params.BuyerAccountID}})
+	}
+	for _, kf := range []salesOrderKeyFilter{
+		{index: salesOrderBuyerIndex, column: "buyer_account_id", values: params.CustomerIDs},
+		{index: salesOrderBuyerIndex, column: "buyer_account_id", values: groupBuyers, resolved: true},
+		{index: salesOrderSalesRepIndex, column: "sales_rep_id", values: params.SalesRepIDs},
+	} {
+		if len(kf.values) > 0 {
+			filters = append(filters, kf)
+		}
+	}
+	for i, q := range lineQueries {
+		filters = append(filters, salesOrderKeyFilter{index: "PRIMARY", lineQuery: q, lineArgs: lineArgs[i]})
+	}
+
+	countNeeded := false
+	for _, kf := range filters {
+		switch {
+		case kf.lineQuery != "" || kf.resolved || len(kf.values) > 1:
+			countNeeded = true
+		case !containsString(indexes, kf.index):
+			indexes = append(indexes, kf.index)
+		}
+	}
+	if len(indexes) == 0 {
+		indexes = []string{salesOrderCreatedIndex}
+	}
+	if countNeeded {
+		return indexes, filters
+	}
+	return indexes, nil
+}
+
+// salesOrderCountedRatio sets how many matches, in pages, make a filter common.
+const salesOrderCountedRatio = 40
+
+// salesOrderCountedHint picks the key of the filter matching the fewest orders: a single-valued one's
+// key stops at the page, a multi-valued one's (or a line filter's, through its orders' primary keys) is
+// read whole and sorted, and either reads no more than the filter matches. When every filter matches
+// many orders, they are common enough that fallback finds a page quickly in list order. Each count is
+// capped, reading at most that many index entries.
+func (r *salesOrderRepoImpl) salesOrderCountedHint(ctx context.Context, accountID string, limit int32, filters []salesOrderKeyFilter, fallback []string) ([]string, error) {
+	capped := int64(salesOrderCountedRatio * (limit + 1))
+	best, bestCount := "", capped
+	for _, kf := range filters {
+		var query string
+		var args []any
+		if kf.lineQuery != "" {
+			// Lines, not orders: an order with several matching lines counts more than once, which only
+			// makes a line filter look commoner than it is.
+			query, args = "SELECT COUNT(*) FROM ("+kf.lineQuery+" LIMIT ?) matches", append(append([]any{}, kf.lineArgs...), capped)
+		} else {
+			query = "SELECT COUNT(*) FROM (SELECT 1 FROM sales_order FORCE INDEX (" + kf.index + ") WHERE owner_account_id = ? AND " +
+				kf.column + " IN (" + placeholders(len(kf.values)) + ") LIMIT ?) matches"
+			args = append(append([]any{accountID}, stringArgs(kf.values)...), capped)
+		}
+		var n int64
+		if err := r.queries.DB().QueryRowContext(ctx, query, args...).Scan(&n); err != nil {
+			return nil, err
+		}
+		if n < bestCount {
+			best, bestCount = kf.index, n
+		}
+	}
+	if best == "" {
+		return fallback, nil
+	}
+	return []string{best}, nil
 }
 
 // listPage reads one page of sales orders. The page is chosen from sales_order and the buyer's
@@ -186,14 +276,23 @@ func (r *salesOrderRepoImpl) listPage(ctx context.Context, params domain.ListSal
 			return nil, err
 		}
 	}
-	largeGroup := false
+	var groupBuyers []string
 	if len(params.CustomerGroupIDs) > 0 {
 		var err error
-		if largeGroup, err = groupIsLarge(ctx, r.queries.DB(), params.AccountID, params.CustomerGroupIDs); err != nil {
+		groupBuyers, err = selectStrings(ctx, r.queries.DB(), "SELECT counterparty_account_id FROM account_relation WHERE owner_account_id = ? AND account_group_id IN ("+
+			placeholders(len(params.CustomerGroupIDs))+")", append([]any{params.AccountID}, stringArgs(params.CustomerGroupIDs)...)...)
+		if err != nil || len(groupBuyers) == 0 {
 			return nil, err
 		}
 	}
-	f := salesOrderListFilter(params, productIDs, largeGroup)
+	indexes, counted := salesOrderListIndexHint(params, productIDs, groupBuyers)
+	if len(counted) > 0 {
+		var err error
+		if indexes, err = r.salesOrderCountedHint(ctx, params.AccountID, params.Limit, counted, indexes); err != nil {
+			return nil, err
+		}
+	}
+	f := salesOrderListFilter(params, productIDs, groupBuyers)
 	orderBy := f.keyset(cursor, "so.created_at", "so.id")
 
 	var sb strings.Builder
@@ -202,7 +301,7 @@ func (r *salesOrderRepoImpl) listPage(ctx context.Context, params domain.ListSal
 	// JOIN_SUFFIX keeps the relation and account after the order: driven from the relations, a group
 	// reads every order of its customers to sort them.
 	sb.WriteString("\nFROM (SELECT /*+ JOIN_SUFFIX(ar, ba) */ so.id, ar.id AS relation_id FROM sales_order so FORCE INDEX (")
-	sb.WriteString(strings.Join(salesOrderListIndexHint(params), ", "))
+	sb.WriteString(strings.Join(indexes, ", "))
 	sb.WriteString(")\nJOIN account_relation ar ON ar.owner_account_id = so.owner_account_id AND ar.counterparty_account_id = so.buyer_account_id")
 	sb.WriteString("\nJOIN account ba ON ba.id = so.buyer_account_id")
 	sb.WriteString(f.whereSQL())
@@ -225,4 +324,13 @@ func (r *salesOrderRepoImpl) listPage(ctx context.Context, params domain.ListSal
 		out = append(out, mapListSalesOrderRow(row))
 	}
 	return out, rows.Err()
+}
+
+func containsString(values []string, v string) bool {
+	for _, s := range values {
+		if s == v {
+			return true
+		}
+	}
+	return false
 }

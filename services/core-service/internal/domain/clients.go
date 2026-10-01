@@ -106,6 +106,10 @@ type HubspotClient interface {
 
 	// UpsertContactByEmail creates or updates a contact keyed on email (HubSpot's native dedupe key).
 	UpsertContactByEmail(ctx context.Context, contact HubspotContact) (*HubspotContact, *apierror.APIError)
+	// SearchContactByEmail finds an existing contact by email, or returns (nil, nil).
+	SearchContactByEmail(ctx context.Context, email string) (*HubspotContact, *apierror.APIError)
+	// UpdateContact patches the non-empty fields of contact onto the contact with the given id.
+	UpdateContact(ctx context.Context, id string, contact HubspotContact) *apierror.APIError
 
 	// SearchDealBySalesOrderID finds an existing deal by its augno_sales_order_id property, or returns (nil, nil).
 	SearchDealBySalesOrderID(ctx context.Context, salesOrderID string) (*HubspotDeal, *apierror.APIError)

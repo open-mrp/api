@@ -299,32 +299,20 @@ func (c *clientImpl) UpsertContactByEmail(ctx context.Context, contact domain.Hu
 	ctx, span := hubspotTracer.Start(ctx, "hubspot.upsert_contact_by_email")
 	defer span.End()
 
-	existing, apiErr := c.searchContactByEmail(ctx, contact.Email)
+	existing, apiErr := c.SearchContactByEmail(ctx, contact.Email)
 	if apiErr != nil {
 		return nil, tracing.Trace(span, apiErr)
 	}
 
-	props := map[string]string{}
-	setIfNotEmpty(props, "email", contact.Email)
-	setIfNotEmpty(props, "firstname", contact.FirstName)
-	setIfNotEmpty(props, "lastname", contact.LastName)
-	setIfNotEmpty(props, "phone", contact.Phone)
-	setIfNotEmpty(props, "lifecyclestage", contact.Lifecycle)
-
 	if existing != nil {
-		resp, apiErr := c.doRequest(ctx, http.MethodPatch, "/crm/v3/objects/contacts/"+url.PathEscape(existing.ID), objectInput{Properties: props})
-		if apiErr != nil {
+		if apiErr := c.UpdateContact(ctx, existing.ID, contact); apiErr != nil {
 			return nil, tracing.Trace(span, apiErr)
 		}
-		if resp.StatusCode != http.StatusOK {
-			return nil, tracing.Trace(span, c.parseError(resp))
-		}
-		_ = resp.Body.Close()
 		updated := *existing
 		return &updated, nil
 	}
 
-	resp, apiErr := c.doRequest(ctx, http.MethodPost, "/crm/v3/objects/contacts", objectInput{Properties: props})
+	resp, apiErr := c.doRequest(ctx, http.MethodPost, "/crm/v3/objects/contacts", objectInput{Properties: contactProperties(contact)})
 	if apiErr != nil {
 		return nil, tracing.Trace(span, apiErr)
 	}
@@ -340,7 +328,27 @@ func (c *clientImpl) UpsertContactByEmail(ctx context.Context, contact domain.Hu
 	return &domain.HubspotContact{ID: obj.ID, Email: obj.Properties["email"]}, nil
 }
 
-func (c *clientImpl) searchContactByEmail(ctx context.Context, email string) (*domain.HubspotContact, *apierror.APIError) {
+func (c *clientImpl) UpdateContact(ctx context.Context, id string, contact domain.HubspotContact) *apierror.APIError {
+	ctx, span := hubspotTracer.Start(ctx, "hubspot.update_contact")
+	defer span.End()
+
+	props := contactProperties(contact)
+	if len(props) == 0 {
+		return nil
+	}
+
+	resp, apiErr := c.doRequest(ctx, http.MethodPatch, "/crm/v3/objects/contacts/"+url.PathEscape(id), objectInput{Properties: props})
+	if apiErr != nil {
+		return tracing.Trace(span, apiErr)
+	}
+	if resp.StatusCode != http.StatusOK {
+		return tracing.Trace(span, c.parseError(resp))
+	}
+	_ = resp.Body.Close()
+	return nil
+}
+
+func (c *clientImpl) SearchContactByEmail(ctx context.Context, email string) (*domain.HubspotContact, *apierror.APIError) {
 	reqBody := searchRequest{
 		FilterGroups: []filterGroup{{Filters: []filter{{PropertyName: "email", Operator: "EQ", Value: email}}}},
 		Properties:   []string{"email"},
@@ -465,6 +473,16 @@ func dealProperties(deal domain.HubspotDeal) map[string]string {
 	if !deal.CloseDate.IsZero() {
 		props["closedate"] = deal.CloseDate.UTC().Format(time.RFC3339)
 	}
+	return props
+}
+
+func contactProperties(contact domain.HubspotContact) map[string]string {
+	props := map[string]string{}
+	setIfNotEmpty(props, "email", contact.Email)
+	setIfNotEmpty(props, "firstname", contact.FirstName)
+	setIfNotEmpty(props, "lastname", contact.LastName)
+	setIfNotEmpty(props, "phone", contact.Phone)
+	setIfNotEmpty(props, "lifecyclestage", contact.Lifecycle)
 	return props
 }
 

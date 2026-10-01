@@ -44,6 +44,14 @@ func (s *hubspotClient) UpsertContactByEmail(_ context.Context, contact domain.H
 	return &contact, nil
 }
 
+func (s *hubspotClient) SearchContactByEmail(_ context.Context, _ string) (*domain.HubspotContact, *apierror.APIError) {
+	return nil, nil
+}
+
+func (s *hubspotClient) UpdateContact(_ context.Context, _ string, _ domain.HubspotContact) *apierror.APIError {
+	return nil
+}
+
 func (s *hubspotClient) SearchDealBySalesOrderID(_ context.Context, _ string) (*domain.HubspotDeal, *apierror.APIError) {
 	return nil, nil
 }

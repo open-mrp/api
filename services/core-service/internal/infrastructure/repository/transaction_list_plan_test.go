@@ -15,6 +15,7 @@ import (
 
 	"github.com/open-mrp/api/services/core-service/internal/domain"
 	"github.com/open-mrp/api/services/core-service/internal/infrastructure/sqlc"
+	dbpkg "github.com/open-mrp/api/shared/db"
 	"github.com/open-mrp/api/shared/pagination"
 )
 
@@ -175,55 +176,44 @@ func ensureTransactionCorpus(t *testing.T) {
 	})
 }
 
-// planValue is one setting of one list filter.
-type planValue struct {
-	label string
-	apply func(*domain.ListTransactionsParams)
-}
-
-type planDim struct {
-	name   string
-	values []planValue
-}
-
-func transactionPlanDims() []planDim {
+func transactionPlanDims() []planDim[domain.ListTransactionsParams] {
 	str := func(s string) *string { return &s }
 	at := func(d time.Time) *time.Time { return &d }
 	recent := planTxCreatedAt(planTxRows - 1)
 	old := planTxCreatedAt(planTxRows / 4)
-	return []planDim{
-		{"status", []planValue{
+	return []planDim[domain.ListTransactionsParams]{
+		{"status", []planValue[domain.ListTransactionsParams]{
 			{"allocated", func(p *domain.ListTransactionsParams) { p.Status = str("allocated") }},
 			{"unallocated", func(p *domain.ListTransactionsParams) { p.Status = str("unallocated") }},
 		}},
-		{"type", []planValue{
+		{"type", []planValue[domain.ListTransactionsParams]{
 			{"payment", func(p *domain.ListTransactionsParams) { p.TypeCodes = []string{"payment"} }},
 			{"rebate", func(p *domain.ListTransactionsParams) { p.TypeCodes = []string{"rebate"} }},
 			{"payment+rebate", func(p *domain.ListTransactionsParams) { p.TypeCodes = []string{"payment", "rebate"} }},
 		}},
-		{"method", []planValue{
+		{"method", []planValue[domain.ListTransactionsParams]{
 			{"check", func(p *domain.ListTransactionsParams) { p.MethodCodes = []string{"check"} }},
 			{"gift_card", func(p *domain.ListTransactionsParams) { p.MethodCodes = []string{"gift_card"} }},
 		}},
-		{"adjustment", []planValue{
+		{"adjustment", []planValue[domain.ListTransactionsParams]{
 			{"write_off", func(p *domain.ListTransactionsParams) { p.AdjustmentTypeCodes = []string{"write_off"} }},
 			{"refund(none)", func(p *domain.ListTransactionsParams) { p.AdjustmentTypeCodes = []string{"refund"} }},
 		}},
-		{"customer", []planValue{
+		{"customer", []planValue[domain.ListTransactionsParams]{
 			{"large", func(p *domain.ListTransactionsParams) { p.CustomerIDs = []string{planTxCustomerID(0)} }},
 			{"rare", func(p *domain.ListTransactionsParams) {
 				p.CustomerIDs = []string{planTxCustomerID(planTxCustomers - 1)}
 			}},
 		}},
-		{"group", []planValue{
+		{"group", []planValue[domain.ListTransactionsParams]{
 			{"big", func(p *domain.ListTransactionsParams) { p.CustomerGroupIDs = []string{"ag_plantx_big"} }},
 			{"small", func(p *domain.ListTransactionsParams) { p.CustomerGroupIDs = []string{"ag_plantx_small"} }},
 		}},
-		{"search", []planValue{
+		{"search", []planValue[domain.ListTransactionsParams]{
 			{"one", func(p *domain.ListTransactionsParams) { p.Query = str(planTxRareSearch) }},
 			{"every", func(p *domain.ListTransactionsParams) { p.Query = str(planTxDenseSearch) }},
 		}},
-		{"funds", []planValue{
+		{"funds", []planValue[domain.ListTransactionsParams]{
 			{"last30d", func(p *domain.ListTransactionsParams) { p.StartDate = at(recent.Add(-30 * 24 * time.Hour)) }},
 			{"old30d", func(p *domain.ListTransactionsParams) {
 				p.StartDate, p.EndDate = at(old), at(old.Add(30*24*time.Hour))
@@ -232,58 +222,22 @@ func transactionPlanDims() []planDim {
 	}
 }
 
-// planCase is one list request: a filter combination on one page.
-type planCase struct {
-	name   string
-	params domain.ListTransactionsParams
-}
-
-// transactionPlanCases is every filter value alone and every pair of values across two filters, each
-// on the first page and on a page deep in the account in both directions. Pairs are enough: the
-// guarantee is that some index pins the most selective filter and every other filter is residual.
-func transactionPlanCases() []planCase {
-	dims := transactionPlanDims()
-	var combos [][]planValue
-	combos = append(combos, nil)
-	for i, d := range dims {
-		for _, v := range d.values {
-			combos = append(combos, []planValue{v})
-			for _, d2 := range dims[i+1:] {
-				for _, v2 := range d2.values {
-					combos = append(combos, []planValue{v, v2})
-				}
-			}
-		}
-	}
-
+// transactionPlanCases is every filter pair on the first page and on a page deep in the account in
+// both directions.
+func transactionPlanCases() []planCase[domain.ListTransactionsParams] {
 	mid := planTxCreatedAt(planTxRows / 2)
-	pages := []struct {
-		label  string
-		cursor *string
-	}{
-		{"first", nil},
-		{"deep-next", cursorAt(mid, pagination.DirectionForward)},
-		{"deep-prev", cursorAt(mid, pagination.DirectionBackward)},
+	cursor := func(dir pagination.Direction) func(*domain.ListTransactionsParams) {
+		return func(p *domain.ListTransactionsParams) { p.Cursor = cursorAt(mid, dir) }
 	}
-
-	var cases []planCase
-	for _, combo := range combos {
-		labels := []string{}
-		for _, v := range combo {
-			labels = append(labels, v.label)
-		}
-		if len(labels) == 0 {
-			labels = []string{"unfiltered"}
-		}
-		for _, page := range pages {
-			p := domain.ListTransactionsParams{AccountID: planTxAccount, Limit: 25, Cursor: page.cursor}
-			for _, v := range combo {
-				v.apply(&p)
-			}
-			cases = append(cases, planCase{name: strings.Join(labels, ",") + "/" + page.label, params: p})
-		}
-	}
-	return cases
+	return planCases(
+		domain.ListTransactionsParams{AccountID: planTxAccount, Limit: 25},
+		transactionPlanDims(),
+		[]planValue[domain.ListTransactionsParams]{
+			{"first", func(*domain.ListTransactionsParams) {}},
+			{"deep-next", cursor(pagination.DirectionForward)},
+			{"deep-prev", cursor(pagination.DirectionBackward)},
+		},
+	)
 }
 
 func cursorAt(at time.Time, dir pagination.Direction) *string {
@@ -291,111 +245,49 @@ func cursorAt(at time.Time, dir pagination.Direction) *string {
 	return &c
 }
 
-// transactionPlanGap is a request shape the list is known to serve badly. Each is logged rather than
-// failed, so the suite holds every other shape to the bar today; fixing one means deleting its entry.
-type transactionPlanGap struct {
-	reason  string
-	matches func(domain.ListTransactionsParams) bool
-}
-
-var transactionPlanGaps = []transactionPlanGap{
-	{
-		reason: "a FULLTEXT match yields rows in relevance order, so a search matching most numbers is read whole and sorted",
-		matches: func(p domain.ListTransactionsParams) bool {
-			return p.Query != nil && *p.Query == planTxDenseSearch
-		},
-	},
-	{
-		reason: "TODO: the customer group filters the joined account_relation, so the planner drives from it through " +
-			"transaction_customer_account_id_idx and reads every transaction of the group; resolve the group to " +
-			"customer IDs first, as ListByCustomer does",
-		matches: func(p domain.ListTransactionsParams) bool { return len(p.CustomerGroupIDs) > 0 },
-	},
-	{
-		reason: "TODO: the funds-received range filters a column the list does not sort by, so the planner walks " +
-			"created_at past every transaction outside the window; transaction_open_credits_idx ranges the window " +
-			"and sorting it reads only the window",
-		matches: func(p domain.ListTransactionsParams) bool { return p.StartDate != nil || p.EndDate != nil },
-	},
-	{
-		reason: "TODO: the type, method, adjustment, and customer composites are descending, which InnoDB cannot scan " +
-			"backward, so the previous page sorts the filter's whole range; rebuild them ascending",
-		matches: func(p domain.ListTransactionsParams) bool {
-			cur, _ := decodeTransactionCursor(p.Cursor)
-			return cur != nil && cur.Direction == pagination.DirectionBackward &&
-				(len(p.TypeCodes) > 0 || len(p.MethodCodes) > 0 || len(p.AdjustmentTypeCodes) > 0 || len(p.CustomerIDs) > 0)
-		},
-	},
-}
-
-func transactionPlanGapFor(p domain.ListTransactionsParams) *transactionPlanGap {
-	for i := range transactionPlanGaps {
-		if transactionPlanGaps[i].matches(p) {
-			return &transactionPlanGaps[i]
+// transactionRangeFloor is how many transactions a request's unordered filter matches, or 0 when it
+// has none. A number search (FULLTEXT, answered in relevance order) and a funds-received range (a
+// column the list does not sort by) cannot stop at a page; the best any plan can do is read only the
+// rows the filter matches, so that, not a page, is the bar such a request is held to.
+func transactionRangeFloor(t *testing.T, db *sql.DB, p domain.ListTransactionsParams) float64 {
+	t.Helper()
+	where, args := []string{"account_id = ?"}, []any{p.AccountID}
+	switch {
+	case dbpkg.AllWordsPrefixQuery(p.Query) != "":
+		where, args = append(where, "MATCH(number) AGAINST(? IN BOOLEAN MODE)"), append(args, dbpkg.AllWordsPrefixQuery(p.Query))
+	case p.StartDate != nil || p.EndDate != nil:
+		if p.Status != nil {
+			where, args = append(where, "is_fully_allocated = ?"), append(args, *p.Status == "allocated")
 		}
+		if p.StartDate != nil {
+			where, args = append(where, "funds_received_at >= ?"), append(args, *p.StartDate)
+		}
+		if p.EndDate != nil {
+			where, args = append(where, "funds_received_at <= ?"), append(args, *p.EndDate)
+		}
+	default:
+		return 0
 	}
-	return nil
+	var n float64
+	require.NoError(t, db.QueryRow("SELECT COUNT(*) FROM `transaction` WHERE "+strings.Join(where, " AND "), args...).Scan(&n))
+	return n
 }
 
-// planRowBudget is the most of the transaction table one page may read: the page, plus room for
-// residual filters that reject some rows the driving index yields.
-func planRowBudget(limit int32) float64 { return float64(10 * (limit + 1)) }
-
-// TestTransactionList_ReadsAboutAPage measures every filter combination ListTransactions accepts
-// against the corpus. Each request is replayed with every account index forced, and two things are
-// asserted separately:
-//   - the plan it got reads about what the best of those indexes reads: a miss is the planner (or a
-//     hint) choosing badly, fixed in the query;
-//   - the best index reads about a page: a miss is an index that does not exist, fixed in a migration.
-//
-// A request that returns less than it asked for is exempt from the second: whichever index drives it,
-// finding there is no next row means reading that index's range to its end, which no index avoids.
+// TestTransactionList_ReadsAboutAPage holds every filter combination ListTransactions accepts to
+// reading about a page of transactions (listPlanSuite).
 func TestTransactionList_ReadsAboutAPage(t *testing.T) {
 	ensureTransactionCorpus(t)
-	db := planDB(t)
-	edb := &explainingDB{db: db}
-	repo := &transactionRepoImpl{queries: sqlc.New(edb)}
-	indexes := accountIndexes(t, db, "transaction")
-
-	for _, mode := range planStatsModes {
-		t.Run("stats="+mode, func(t *testing.T) {
-			usePlanStats(t, db, "transaction", mode)
-			t.Cleanup(func() { usePlanStats(t, db, "transaction", "analyzed") })
-			for _, tc := range transactionPlanCases() {
-				t.Run(tc.name, func(t *testing.T) { checkTransactionPlan(t, db, edb, repo, indexes, tc) })
+	listPlanSuite[domain.ListTransactionsParams]{
+		table: "transaction", scopeColumn: "account_id",
+		from: "FROM `transaction` t", alias: "t",
+		cases: transactionPlanCases(),
+		limit: func(p domain.ListTransactionsParams) int32 { return p.Limit },
+		list: func(ctx context.Context, q *sqlc.Queries, p domain.ListTransactionsParams) error {
+			if _, apiErr := NewTransactionRepo(q).List(ctx, p); apiErr != nil {
+				return apiErr
 			}
-		})
-	}
-}
-
-func checkTransactionPlan(t *testing.T, db *sql.DB, edb *explainingDB, repo *transactionRepoImpl, indexes []string, tc planCase) {
-	t.Helper()
-
-	edb.statements = nil
-	_, apiErr := repo.List(context.Background(), tc.params)
-	require.Nil(t, apiErr)
-	require.Len(t, edb.statements, 1)
-	stmt := edb.statements[0]
-
-	got := tableAccess(stmt.plan, "t")
-	page := float64(tc.params.Limit + 1)
-	if got.rows <= planRowBudget(tc.params.Limit) {
-		return
-	}
-	best, bestIndex := bestForcedAccess(t, db, stmt, "FROM `transaction` t", "t", indexes)
-
-	var problem string
-	switch {
-	case got.rows > 2*best.rows+page:
-		problem = fmt.Sprintf("read %.0f transactions via %v; forcing %s reads %.0f", got.rows, got.indexes, bestIndex, best.rows)
-	case best.rows > planRowBudget(tc.params.Limit) && planReturned(stmt.plan) >= page:
-		problem = fmt.Sprintf("no index serves this: the best, %s, reads %.0f transactions to return a page of %d", bestIndex, best.rows, tc.params.Limit)
-	default:
-		return
-	}
-	if gap := transactionPlanGapFor(tc.params); gap != nil {
-		t.Logf("known gap: %s (%s)", problem, gap.reason)
-		return
-	}
-	t.Errorf("%s\n%s", problem, stmt.plan)
+			return nil
+		},
+		floor: transactionRangeFloor,
+	}.run(t)
 }

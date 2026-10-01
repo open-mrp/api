@@ -30,6 +30,8 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
+
+	"github.com/open-mrp/api/services/core-service/internal/infrastructure/sqlc"
 )
 
 // interpolateParams matches shared/db/db_pool.go, so statements reach MySQL the way production sends them.
@@ -87,13 +89,13 @@ func explainAnalyze(ctx context.Context, db *sql.DB, query string, args ...any) 
 	return plan, err
 }
 
-// accountIndexes lists table's B-tree indexes that lead with account_id: the ones a tenant-scoped list
-// can be driven from.
-func accountIndexes(t *testing.T, db *sql.DB, table string) []string {
+// scopeIndexes lists table's B-tree indexes that lead with scopeColumn (account_id, owner_account_id):
+// the ones a tenant-scoped list can be driven from.
+func scopeIndexes(t *testing.T, db *sql.DB, table, scopeColumn string) []string {
 	t.Helper()
 	rows, err := db.Query(`SELECT DISTINCT index_name FROM information_schema.statistics
 		WHERE table_schema = DATABASE() AND table_name = ? AND seq_in_index = 1
-		  AND column_name = 'account_id' AND index_type = 'BTREE'`, table)
+		  AND column_name = ? AND index_type = 'BTREE'`, table, scopeColumn)
 	require.NoError(t, err)
 	defer func() { _ = rows.Close() }()
 	var out []string
@@ -242,4 +244,152 @@ func usePlanStats(t *testing.T, db *sql.DB, table, mode string) {
 	// The server reads persistent statistics when it opens the table.
 	_, err = db.Exec("FLUSH TABLE `" + table + "`")
 	require.NoError(t, err)
+}
+
+// planValue is one setting of one list filter.
+type planValue[P any] struct {
+	label string
+	apply func(*P)
+}
+
+// planDim is one list filter and the values a suite tries for it: a common one and a rare one at least.
+type planDim[P any] struct {
+	name   string
+	values []planValue[P]
+}
+
+// planCase is one list request: a filter combination on one page.
+type planCase[P any] struct {
+	name   string
+	params P
+}
+
+// planCases is every filter value alone and every pair of values across two filters, each on every
+// page. Pairs are enough: the guarantee a list owes is that some index pins its most selective filter
+// and every other filter is residual. A page applies a cursor; give at least the first page and one
+// deep in the tenant in each direction.
+func planCases[P any](base P, dims []planDim[P], pages []planValue[P]) []planCase[P] {
+	var combos [][]planValue[P]
+	combos = append(combos, nil)
+	for i, d := range dims {
+		for _, v := range d.values {
+			combos = append(combos, []planValue[P]{v})
+			for _, d2 := range dims[i+1:] {
+				for _, v2 := range d2.values {
+					combos = append(combos, []planValue[P]{v, v2})
+				}
+			}
+		}
+	}
+	var cases []planCase[P]
+	for _, combo := range combos {
+		labels := []string{}
+		for _, v := range combo {
+			labels = append(labels, v.label)
+		}
+		if len(labels) == 0 {
+			labels = []string{"unfiltered"}
+		}
+		for _, page := range pages {
+			p := base
+			page.apply(&p)
+			for _, v := range combo {
+				v.apply(&p)
+			}
+			cases = append(cases, planCase[P]{name: strings.Join(labels, ",") + "/" + page.label, params: p})
+		}
+	}
+	return cases
+}
+
+// listPlanSuite is one list endpoint's plan test: every case, run against a seeded corpus under both
+// statistics modes, and held to reading about a page of its table.
+type listPlanSuite[P any] struct {
+	// table is the listed table: its statistics are swapped, and its scope-led indexes are the
+	// candidates each statement is replayed under.
+	table, scopeColumn string
+	// from is the FROM item the page is read through ("FROM `transaction` t"), whose hint the replays
+	// replace, and alias is its alias. The statement measured is the last one containing from.
+	from, alias string
+	cases       []planCase[P]
+	limit       func(P) int32
+	// list runs the request against q, whose statements the suite explains.
+	list func(ctx context.Context, q *sqlc.Queries, p P) error
+	// floor (optional) is how many rows a request's unordered filter matches, or 0 when it has none: a
+	// filter no index can serve in list order (a FULLTEXT match, a range on a column the list does not
+	// sort by) cannot stop at a page, so the bar for such a request is reading only its matches.
+	floor func(t *testing.T, db *sql.DB, p P) float64
+}
+
+// planRowBudget is the most of the listed table one page may read: the page, plus room for residual
+// filters that reject some rows the driving index yields.
+func planRowBudget(limit int32) float64 { return float64(10 * (limit + 1)) }
+
+// run checks every case under both statistics modes. Each request is replayed with every scope-led
+// index forced, and two things are asserted separately:
+//   - the plan it got reads about what the best of those indexes reads: a miss is the planner (or a
+//     hint) choosing badly, fixed in the query;
+//   - the best index reads about a page: a miss is an index that does not exist, fixed in a migration.
+//
+// A request that returns less than it asked for is exempt from the second: whichever index drives it,
+// finding there is no next row means reading that index's range to its end, which no index avoids.
+// One with an unordered filter is held to that filter's matches instead (floor).
+func (s listPlanSuite[P]) run(t *testing.T) {
+	db := planDB(t)
+	edb := &explainingDB{db: db}
+	q := sqlc.New(edb)
+	indexes := scopeIndexes(t, db, s.table, s.scopeColumn)
+
+	for _, mode := range planStatsModes {
+		t.Run("stats="+mode, func(t *testing.T) {
+			usePlanStats(t, db, s.table, mode)
+			t.Cleanup(func() { usePlanStats(t, db, s.table, "analyzed") })
+			for _, tc := range s.cases {
+				t.Run(tc.name, func(t *testing.T) { s.check(t, db, edb, q, indexes, tc) })
+			}
+		})
+	}
+}
+
+func (s listPlanSuite[P]) check(t *testing.T, db *sql.DB, edb *explainingDB, q *sqlc.Queries, indexes []string, tc planCase[P]) {
+	t.Helper()
+
+	edb.statements = nil
+	require.NoError(t, s.list(context.Background(), q, tc.params))
+	var stmt *explainedStatement
+	for i := range edb.statements {
+		if strings.Contains(edb.statements[i].query, s.from) {
+			stmt = &edb.statements[i]
+		}
+	}
+	require.NotNil(t, stmt, "no statement read %q", s.from)
+
+	got := tableAccess(stmt.plan, s.alias)
+	limit := s.limit(tc.params)
+	page := float64(limit + 1)
+	budget := planRowBudget(limit)
+	if got.rows <= budget {
+		return
+	}
+	// Reading no more than the request's unordered filter matches (and the page's rows again, if they
+	// are joined back by id) is as well as any plan can do; within twice that is the same allowance a
+	// plan gets against the best forced index, which lets it read another filter's range whole instead.
+	var floor float64
+	if s.floor != nil {
+		floor = s.floor(t, db, tc.params)
+	}
+	if floor > 0 && got.rows <= 2*floor+2*page {
+		return
+	}
+	best, bestIndex := bestForcedAccess(t, db, *stmt, s.from, s.alias, indexes)
+
+	switch {
+	case got.rows > 2*best.rows+page:
+		t.Errorf("read %.0f %s rows via %v; forcing %s reads %.0f\n%s", got.rows, s.table, got.indexes, bestIndex, best.rows, stmt.plan)
+	case floor > 0:
+		t.Errorf("read %.0f %s rows via %v; its unordered filter matches only %.0f\n%s", got.rows, s.table, got.indexes, floor, stmt.plan)
+	case best.rows > budget && planReturned(stmt.plan) >= page:
+		t.Errorf("no index serves this: the best, %s, reads %.0f %s rows to return a page of %d\n%s",
+			bestIndex, best.rows, s.table, limit, stmt.plan)
+	}
 }

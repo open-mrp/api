@@ -1,6 +1,7 @@
 package repository
 
 import (
+	"reflect"
 	"strings"
 	"testing"
 	"time"
@@ -8,7 +9,7 @@ import (
 	"github.com/open-mrp/api/services/core-service/internal/domain"
 )
 
-func TestTransactionListInOrder(t *testing.T) {
+func TestTransactionListIndexHint(t *testing.T) {
 	t.Parallel()
 
 	str := func(s string) *string { return &s }
@@ -16,24 +17,28 @@ func TestTransactionListInOrder(t *testing.T) {
 	tests := []struct {
 		name   string
 		params domain.ListTransactionsParams
-		want   bool
+		want   []string
 	}{
-		{"unfiltered", domain.ListTransactionsParams{}, true},
+		{"unfiltered", domain.ListTransactionsParams{}, transactionListIndexes},
 		{"equality filters", domain.ListTransactionsParams{
-			Status: str("allocated"), TypeCodes: []string{"payment"}, MethodCodes: []string{"check"},
-			AdjustmentTypeCodes: []string{"write_off"}, CustomerIDs: []string{"ac_1"},
-		}, true},
-		{"blank search", domain.ListTransactionsParams{Query: str(" ")}, true},
-		{"search", domain.ListTransactionsParams{Query: str("TX-1")}, false},
-		{"start date", domain.ListTransactionsParams{StartDate: &now}, false},
-		{"end date", domain.ListTransactionsParams{EndDate: &now}, false},
-		{"customer group", domain.ListTransactionsParams{CustomerGroupIDs: []string{"ag_1"}}, false},
+			Status: str("allocated"), TypeCodes: []string{"payment"}, CustomerGroupIDs: []string{"ag_1"},
+		}, transactionListIndexes},
+		{"blank search", domain.ListTransactionsParams{Query: str(" ")}, transactionListIndexes},
+		{"search", domain.ListTransactionsParams{Query: str("1001"), StartDate: &now}, nil},
+		{"funds range", domain.ListTransactionsParams{StartDate: &now}, []string{transactionFundsIndex}},
+		{"funds range with filters", domain.ListTransactionsParams{
+			EndDate: &now, Status: str("unallocated"), MethodCodes: []string{"check"}, CustomerGroupIDs: []string{"ag_1"},
+		}, []string{transactionFundsIndex, transactionCustomerIndex}},
+		{"funds range with a common filter", domain.ListTransactionsParams{
+			StartDate: &now, Status: str("allocated"), TypeCodes: []string{"payment"},
+		}, []string{transactionFundsIndex}},
+		{"funds range, unfiltering status", domain.ListTransactionsParams{StartDate: &now, Status: str("all")}, []string{transactionFundsIndex}},
 	}
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
-			if got := transactionListInOrder(tc.params); got != tc.want {
-				t.Errorf("transactionListInOrder = %v, want %v", got, tc.want)
+			if got := transactionListIndexHint(tc.params); !reflect.DeepEqual(got, tc.want) {
+				t.Errorf("transactionListIndexHint = %v, want %v", got, tc.want)
 			}
 		})
 	}
@@ -45,7 +50,7 @@ func TestTransactionListIndexes_AreDeclaredInMigrations(t *testing.T) {
 	t.Parallel()
 
 	schema := migrationsText(t)
-	for _, index := range transactionListIndexes {
+	for _, index := range append(transactionListIndexes, transactionFundsIndex) {
 		if !strings.Contains(schema, index) {
 			t.Errorf("%s is FORCE INDEX'd by the transaction list but no migration creates it", index)
 		}

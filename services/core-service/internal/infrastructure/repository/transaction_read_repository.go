@@ -36,15 +36,23 @@ const transactionColumns = `
 	(SELECT COUNT(*) FROM transaction_allocation ta WHERE ta.transaction_id = t.id),
 	t.created_at, t.updated_at`
 
-// transactionListIndexes each yield an account's transactions in list order: one per equality filter
-// the list accepts, and one for none.
+// The list's keys. Each per-filter key leads with the account and its filter and ends in list order,
+// so a list on that filter reads a page and stops; transactionCreatedIndex is the one for no filter.
+const (
+	transactionCreatedIndex    = "transaction_account_id_created_at_idx"
+	transactionStatusIndex     = "transaction_account_id_is_fully_allocated_created_at_id_idx"
+	transactionTypeIndex       = "transaction_account_id_transaction_type_code_created_at_id_idx"
+	transactionMethodIndex     = "transaction_account_id_transaction_method_code_created_at_id_idx"
+	transactionAdjustmentIndex = "transaction_account_id_adjustment_type_code_created_at_id_idx"
+	transactionCustomerIndex   = "transaction_account_id_customer_account_id_created_at_id_idx"
+	// transactionFundsIndex ranges an account's transactions by when funds were received.
+	transactionFundsIndex = "transaction_open_credits_idx"
+)
+
+// transactionListIndexes are every key that yields an account's transactions in list order.
 var transactionListIndexes = []string{
-	"transaction_account_id_created_at_idx",
-	"transaction_account_id_is_fully_allocated_created_at_id_idx",
-	"transaction_account_id_transaction_type_code_created_at_id_idx",
-	"transaction_account_id_transaction_method_code_created_at_id_idx",
-	"transaction_account_id_adjustment_type_code_created_at_id_idx",
-	"transaction_account_id_customer_account_id_created_at_id_idx",
+	transactionCreatedIndex, transactionStatusIndex, transactionTypeIndex,
+	transactionMethodIndex, transactionAdjustmentIndex, transactionCustomerIndex,
 }
 
 const transactionJoins = `
@@ -179,7 +187,7 @@ func transactionSummaryOf(t *domain.Transaction) *domain.TransactionSummary {
 type transactionFilter struct {
 	where []string
 	args  []any
-	// indexes, when set, are FORCE INDEX'd on the transaction table.
+	// indexes, when set, are FORCE INDEX'd on the transaction table the page is chosen from.
 	indexes []string
 }
 
@@ -215,12 +223,26 @@ func (f *transactionFilter) status(status *string) {
 	}
 }
 
-// transactionListInOrder reports whether one of transactionListIndexes can drive the list. None can
-// when it searches numbers (a FULLTEXT match), bounds funds_received_at (not the sort column), or
-// filters by customer group (a column of account_relation).
-func transactionListInOrder(params domain.ListTransactionsParams) bool {
-	return db.AllWordsPrefixQuery(params.Query) == "" && params.StartDate == nil && params.EndDate == nil &&
-		len(params.CustomerGroupIDs) == 0
+// transactionListIndexHint is the keys a list may be read from, or none to leave the choice to the
+// planner. Left to itself, the planner reaches for the number key, merges single-column keys, or
+// walks created_at past every row a filter rejects, and reads every match to sort it.
+//   - A number search is answered by its FULLTEXT key, which no hint can name; it reads every match.
+//   - A funds-received range filters a column the list does not sort by, so no key can stop at a
+//     page. The funds key reads just the range (status included, which it leads with). The customer
+//     key is offered too, for a customer narrower than the range; a type, method, or adjustment key
+//     is not, because walking a common one in list order reads past every row outside the range.
+//   - Otherwise every list-order key is offered, and the planner picks the active filter's.
+func transactionListIndexHint(params domain.ListTransactionsParams) []string {
+	if db.AllWordsPrefixQuery(params.Query) != "" {
+		return nil
+	}
+	if params.StartDate == nil && params.EndDate == nil {
+		return transactionListIndexes
+	}
+	if len(params.CustomerIDs) > 0 || len(params.CustomerGroupIDs) > 0 {
+		return []string{transactionFundsIndex, transactionCustomerIndex}
+	}
+	return []string{transactionFundsIndex}
 }
 
 // page applies the keyset for a cursor and returns the ORDER BY. Rows are read newest first; a
@@ -238,14 +260,16 @@ func (f *transactionFilter) page(cursor *pagination.StringCursor) string {
 }
 
 func (r *transactionRepoImpl) queryTransactions(ctx context.Context, f *transactionFilter, orderBy string, limit int32) ([]*domain.Transaction, error) {
+	// The page is chosen from the transaction table alone and joined after: a filter no key serves in
+	// list order reads every match, and joining each one (account_user alone fans out to every user of
+	// the account) before the sort multiplied that by the joins.
 	var sb strings.Builder
 	sb.WriteString("SELECT")
 	sb.WriteString(transactionColumns)
-	sb.WriteString("\nFROM `transaction` t")
+	sb.WriteString("\nFROM (SELECT t.id FROM `transaction` t")
 	if len(f.indexes) > 0 {
 		sb.WriteString(" FORCE INDEX (" + strings.Join(f.indexes, ", ") + ")")
 	}
-	sb.WriteString(transactionJoins)
 	if len(f.where) > 0 {
 		sb.WriteString("\nWHERE ")
 		sb.WriteString(strings.Join(f.where, "\nAND "))
@@ -257,6 +281,11 @@ func (r *transactionRepoImpl) queryTransactions(ctx context.Context, f *transact
 	if limit > 0 {
 		sb.WriteString("\nLIMIT ?")
 		args = append(args, limit)
+	}
+	sb.WriteString(") page\nJOIN `transaction` t ON t.id = page.id")
+	sb.WriteString(transactionJoins)
+	if orderBy != "" {
+		sb.WriteString("\nORDER BY " + orderBy)
 	}
 
 	rows, err := r.queries.DB().QueryContext(ctx, sb.String(), args...)
@@ -305,19 +334,30 @@ func (r *transactionRepoImpl) List(ctx context.Context, params domain.ListTransa
 	f.in("t.transaction_method_code", params.MethodCodes)
 	f.in("t.customer_account_id", params.CustomerIDs)
 	if len(params.CustomerGroupIDs) > 0 {
-		f.add("ar.account_group_id IN ("+placeholders(len(params.CustomerGroupIDs))+")", stringArgs(params.CustomerGroupIDs)...)
+		// Resolved up front so the customer key serves it; filtering on the joined relation left the
+		// planner to drive from account_relation and read every transaction of the group's customers.
+		groupCustomerIDs, err := r.customersInGroups(ctx, params.AccountID, params.CustomerGroupIDs)
+		if apiErr := db.MapSQLError(err); apiErr != nil {
+			return nil, tracing.Trace(span, apiErr)
+		}
+		if len(groupCustomerIDs) == 0 {
+			return &domain.ListTransactionsResult{Transactions: []*domain.TransactionSummary{}, PageInfo: pagination.PageInfo{}}, nil
+		}
+		f.in("t.customer_account_id", groupCustomerIDs)
 	}
-	if params.StartDate != nil {
-		f.add("t.funds_received_at >= ?", *params.StartDate)
+	if params.StartDate != nil || params.EndDate != nil {
+		if params.Status == nil || (*params.Status != "allocated" && *params.Status != "unallocated") {
+			// Both statuses, spelled out so the funds key, which leads with status, can range the dates.
+			f.add("t.is_fully_allocated IN (0, 1)")
+		}
+		if params.StartDate != nil {
+			f.add("t.funds_received_at >= ?", *params.StartDate)
+		}
+		if params.EndDate != nil {
+			f.add("t.funds_received_at <= ?", *params.EndDate)
+		}
 	}
-	if params.EndDate != nil {
-		f.add("t.funds_received_at <= ?", *params.EndDate)
-	}
-	// Left to itself, the planner reaches for the number key or merges single-column indexes, and reads
-	// every match to sort it; held to the in-order set, it stops at the page.
-	if transactionListInOrder(params) {
-		f.indexes = transactionListIndexes
-	}
+	f.indexes = transactionListIndexHint(params)
 	orderBy := f.page(cur)
 
 	rows, err := r.queryTransactions(ctx, f, orderBy, params.Limit+1)
@@ -400,6 +440,31 @@ func (r *transactionRepoImpl) ListByCustomer(ctx context.Context, params domain.
 		}
 	}
 	return &domain.ListAccountTransactionsResult{Transactions: result, PageInfo: pageInfo}, nil
+}
+
+// customersInGroups is the account's customers in any of groupIDs.
+func (r *transactionRepoImpl) customersInGroups(ctx context.Context, accountID string, groupIDs []string) ([]string, error) {
+	args := append([]any{accountID}, stringArgs(groupIDs)...)
+	rows, err := r.queries.DB().QueryContext(ctx, `
+SELECT counterparty_account_id
+FROM account_relation
+WHERE owner_account_id = ?
+AND account_relation_role_code = 'customer'
+AND account_group_id IN (`+placeholders(len(groupIDs))+`)`, args...)
+	if err != nil {
+		return nil, err
+	}
+	defer func() { _ = rows.Close() }()
+
+	var ids []string
+	for rows.Next() {
+		var id string
+		if err := rows.Scan(&id); err != nil {
+			return nil, err
+		}
+		ids = append(ids, id)
+	}
+	return ids, rows.Err()
 }
 
 // customerWithChildren returns the customer and its direct child customer accounts.

@@ -271,6 +271,11 @@ func TestVitessSmoke(t *testing.T) {
 			{AccountID: acct, Limit: 1},
 			{AccountID: acct, Limit: 5, Query: &search, Status: &status, TypeCodes: []string{"payment"}, MethodCodes: []string{"check"},
 				AdjustmentTypeCodes: []string{"x"}, CustomerIDs: buyers, CustomerGroupIDs: groups, StartDate: &from, EndDate: &to},
+			// One per index hint the list sends: every list-order key, the funds key, and the funds and customer keys.
+			{AccountID: acct, Limit: 5, Status: &status, TypeCodes: []string{"payment"}, MethodCodes: []string{"check"}},
+			{AccountID: acct, Limit: 5, StartDate: &from, EndDate: &to},
+			{AccountID: acct, Limit: 5, StartDate: &from, CustomerIDs: buyers},
+			{AccountID: acct, Limit: 5, CustomerGroupIDs: groups},
 		} {
 			page, apiErr := txs.List(ctx, p)
 			checkAPI("transactions List", apiErr)

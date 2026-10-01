@@ -48,10 +48,10 @@ func planICLCreatedAt(i int) time.Time {
 	return planICLOrigin.Add(time.Duration(i) * (planICLSpan / planICLRows))
 }
 
-func planICLID(i int) string       { return fmt.Sprintf("inchlg_%012d", i) }
-func planICLItemID(n int) string   { return fmt.Sprintf("0000%04d-plan-4inv-8000-%012d", n, n) }
-func planICLUserID(u int) string   { return fmt.Sprintf("0000%04d-plan-4usr-8000-%012d", u, u) }
-func planICLStation(s int) string  { return fmt.Sprintf("0000%04d-plan-4sta-8000-%012d", s, s) }
+func planICLID(i int) string      { return fmt.Sprintf("inchlg_%012d", i) }
+func planICLItemID(n int) string  { return fmt.Sprintf("0000%04d-plan-4inv-8000-%012d", n, n) }
+func planICLUserID(u int) string  { return fmt.Sprintf("0000%04d-plan-4usr-8000-%012d", u, u) }
+func planICLStation(s int) string { return fmt.Sprintf("0000%04d-plan-4sta-8000-%012d", s, s) }
 func planICLItemSKU(n int) string {
 	if n == planICLItems-1 {
 		return planICLDenseSKU + "-" + planICLRareSKU

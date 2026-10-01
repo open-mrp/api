@@ -73,7 +73,7 @@ type explainedStatement struct {
 }
 
 func (e *explainingDB) QueryContext(ctx context.Context, query string, args ...any) (*sql.Rows, error) {
-	if strings.HasPrefix(strings.TrimSpace(query), "SELECT") {
+	if isSelect(query) {
 		plan, err := explainAnalyze(ctx, e.db, query, args...)
 		if err != nil {
 			return nil, err
@@ -81,6 +81,16 @@ func (e *explainingDB) QueryContext(ctx context.Context, query string, args ...a
 		e.statements = append(e.statements, explainedStatement{query: query, args: args, plan: plan})
 	}
 	return e.db.QueryContext(ctx, query, args...)
+}
+
+// isSelect reports whether query is a SELECT, past the `-- name:` line sqlc leads its statements with.
+func isSelect(query string) bool {
+	query = strings.TrimSpace(query)
+	for strings.HasPrefix(query, "--") {
+		_, query, _ = strings.Cut(query, "\n")
+		query = strings.TrimSpace(query)
+	}
+	return strings.HasPrefix(query, "SELECT")
 }
 
 func explainAnalyze(ctx context.Context, db *sql.DB, query string, args ...any) (string, error) {
@@ -404,4 +414,76 @@ func (s listPlanSuite[P]) check(t *testing.T, db *sql.DB, edb *explainingDB, q *
 			bestIndex, best.rows, s.table, limit, stmt.plan)
 	}
 	return true
+}
+
+// planAccessLineRe matches every access node in EXPLAIN ANALYZE's tree, capturing its table alias.
+var planAccessLineRe = regexp.MustCompile(`-> .*? on (\S+)(?: using \S+)?.*\(actual time=\S+ rows=\S+ loops=\d+\)`)
+
+// planAliases is every table alias plan reads, internal temporary tables aside.
+func planAliases(plan string) []string {
+	seen := map[string]bool{}
+	var out []string
+	for _, line := range strings.Split(plan, "\n") {
+		if m := planAccessLineRe.FindStringSubmatch(line); m != nil && !seen[m[1]] && !strings.HasPrefix(m[1], "<") {
+			seen[m[1]] = true
+			out = append(out, m[1])
+		}
+	}
+	return out
+}
+
+// lookupPlanSuite is a lookup's plan test: a batch get or fan-out returns everything it is asked for,
+// so the bar is not a page but reading about what each statement returns.
+type lookupPlanSuite struct {
+	// tables have their statistics swapped between modes.
+	tables []string
+	cases  []lookupPlanCase
+	// returned (optional) is how many rows a statement stands for when that is not what it returns,
+	// e.g. the rows an aggregate totals.
+	returned func(t *testing.T, stmt explainedStatement) float64
+}
+
+// lookupPlanCase is one lookup request, run against q.
+type lookupPlanCase struct {
+	name string
+	run  func(ctx context.Context, q *sqlc.Queries) error
+}
+
+// lookupSlack is what a statement may read beyond twice what it returns: a dive that finds nothing
+// still reads a row or two, and a join of small lookups reads each once.
+const lookupSlack = 10
+
+// run checks every statement of every case under both statistics modes: no table it reads may yield
+// more than twice the rows the statement returns, plus lookupSlack.
+func (s lookupPlanSuite) run(t *testing.T) {
+	db := planDB(t)
+	edb := &explainingDB{db: db}
+	q := sqlc.New(edb)
+	for _, mode := range planStatsModes {
+		t.Run("stats="+mode, func(t *testing.T) {
+			for _, table := range s.tables {
+				usePlanStats(t, db, table, mode)
+				t.Cleanup(func() { usePlanStats(t, db, table, "analyzed") })
+			}
+			for _, tc := range s.cases {
+				t.Run(tc.name, func(t *testing.T) {
+					edb.statements = nil
+					require.NoError(t, tc.run(context.Background(), q))
+					require.NotEmpty(t, edb.statements)
+					for _, stmt := range edb.statements {
+						returned := planReturned(stmt.plan)
+						if s.returned != nil {
+							returned = max(returned, s.returned(t, stmt))
+						}
+						for _, alias := range planAliases(stmt.plan) {
+							got := tableAccess(stmt.plan, alias)
+							if got.rows > 2*returned+lookupSlack {
+								t.Errorf("read %.0f rows of %s via %v to return %.0f\n%s\n%s", got.rows, alias, got.indexes, returned, stmt.query, stmt.plan)
+							}
+						}
+					}
+				})
+			}
+		})
+	}
 }

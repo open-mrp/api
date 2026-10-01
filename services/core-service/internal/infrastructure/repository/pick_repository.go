@@ -168,16 +168,8 @@ func (r *pickRepoImpl) List(ctx context.Context, params domain.ListPicksParams) 
 		return nil, tracing.Trace(span, apiErr)
 	}
 	q.BuyerIDs = buyerIDs
-	switch {
-	case q.Search.Phrase != "" || q.mergesBuyers():
-	case len(buyerIDs) == 1:
-		q.DriveFromBuyers = true
-	case len(buyerIDs) > pickBuyerMergeMax:
-		count, apiErr := r.countPicksForBuyers(ctx, params.AccountID, buyerIDs)
-		if apiErr != nil {
-			return nil, tracing.Trace(span, apiErr)
-		}
-		q.DriveFromBuyers = count < pickBuyerScanCap
+	if apiErr := r.chooseDrive(ctx, &q); apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
 	}
 
 	var cursorDir *pagination.Direction
@@ -193,9 +185,9 @@ func (r *pickRepoImpl) List(ctx context.Context, params domain.ListPicksParams) 
 		q.CursorID = gosql.NullString{String: cur.ID, Valid: true}
 	}
 
-	// A non-nil empty buyer set is a filter nothing can match.
+	// A non-nil empty buyer or phrase set is a filter nothing can match.
 	var ids []string
-	if buyerIDs == nil || len(buyerIDs) > 0 {
+	if (buyerIDs == nil || len(buyerIDs) > 0) && (q.PhraseIDs == nil || len(q.PhraseIDs) > 0) {
 		ids, apiErr = r.listIDs(ctx, q)
 		if apiErr != nil {
 			return nil, tracing.Trace(span, apiErr)
@@ -244,6 +236,107 @@ func (r *pickRepoImpl) buyerFilter(ctx context.Context, accountID string, custom
 
 func (r *pickRepoImpl) countPicksForBuyers(ctx context.Context, accountID string, buyerIDs []string) (int, *apierror.APIError) {
 	query, args := buildPickBuyerCountQuery(accountID, buyerIDs)
+	var count int
+	if err := r.queries.DB().QueryRowContext(ctx, query, args...).Scan(&count); err != nil {
+		return 0, db.MapSQLError(err)
+	}
+	return count, nil
+}
+
+// chooseDrive decides what the page is read from: the narrowest of the filters no index serves in
+// list order (a phrase, product lines, a customer set), when it matches few enough picks to read them
+// all, or else a list-order index. MySQL cannot estimate these sets, so they are counted.
+func (r *pickRepoImpl) chooseDrive(ctx context.Context, q *pickListQuery) *apierror.APIError {
+	if buyers := q.BuyerIDs; buyers != nil && len(buyers) == 0 {
+		return nil
+	}
+	if q.Search.Phrase != "" {
+		ids, apiErr := r.phraseMatches(ctx, *q)
+		if apiErr != nil {
+			return apiErr
+		}
+		if ids != nil {
+			q.PhraseIDs, q.DriveFromPhrase = ids, true
+		}
+		if ids != nil && len(ids) == 0 {
+			return nil
+		}
+	}
+	if len(q.ProductLineIDs) > 0 {
+		lines, apiErr := r.countProductLineLines(ctx, q.ProductLineIDs)
+		if apiErr != nil {
+			return apiErr
+		}
+		if lines < pickProductLineScanCap && (!q.DriveFromPhrase || lines < len(q.PhraseIDs)) {
+			q.DriveFromProductLines, q.DriveFromPhrase = true, false
+		}
+	}
+	switch {
+	case q.DriveFromPhrase || q.DriveFromProductLines || q.mergesBuyers():
+	case len(q.BuyerIDs) == 1:
+		q.DriveFromBuyers = true
+	case len(q.BuyerIDs) > 1:
+		count, apiErr := r.countPicksForBuyers(ctx, q.AccountID, q.BuyerIDs)
+		if apiErr != nil {
+			return apiErr
+		}
+		q.DriveFromBuyers = count < pickBuyerScanCap
+		if q.DriveFromBuyers && q.Search.NumberPrefix != "" {
+			prefixed, apiErr := r.countPrefixed(ctx, q.AccountID, q.Search.NumberPrefix, count)
+			if apiErr != nil {
+				return apiErr
+			}
+			q.DriveFromNumberPrefix = prefixed < count
+			q.DriveFromBuyers = !q.DriveFromNumberPrefix
+		}
+	}
+	return nil
+}
+
+// countPrefixed counts the picks whose number starts with prefix, stopping at limit.
+func (r *pickRepoImpl) countPrefixed(ctx context.Context, accountID, prefix string, limit int) (int, *apierror.APIError) {
+	query, args := buildPickPrefixCountQuery(accountID, prefix, limit)
+	var count int
+	if err := r.queries.DB().QueryRowContext(ctx, query, args...).Scan(&count); err != nil {
+		return 0, db.MapSQLError(err)
+	}
+	return count, nil
+}
+
+// phraseMatches is the picks the phrase matches, or nil when it matches more than pickPhraseScanCap
+// (counting a pick once per arm it matches).
+func (r *pickRepoImpl) phraseMatches(ctx context.Context, q pickListQuery) ([]string, *apierror.APIError) {
+	query, args := buildPickPhraseIDsQuery(q)
+	rows, err := r.queries.DB().QueryContext(ctx, query, args...)
+	if apiErr := db.MapSQLError(err); apiErr != nil {
+		return nil, apiErr
+	}
+	defer rows.Close()
+	ids := []string{}
+	seen := map[string]bool{}
+	read := 0
+	for rows.Next() {
+		var id string
+		if err := rows.Scan(&id); err != nil {
+			return nil, db.MapSQLError(err)
+		}
+		read++
+		if !seen[id] {
+			seen[id] = true
+			ids = append(ids, id)
+		}
+	}
+	if apiErr := db.MapSQLError(rows.Err()); apiErr != nil {
+		return nil, apiErr
+	}
+	if read > pickPhraseScanCap {
+		return nil, nil
+	}
+	return ids, nil
+}
+
+func (r *pickRepoImpl) countProductLineLines(ctx context.Context, productLineIDs []string) (int, *apierror.APIError) {
+	query, args := buildPickProductLineCountQuery(productLineIDs)
 	var count int
 	if err := r.queries.DB().QueryRowContext(ctx, query, args...).Scan(&count); err != nil {
 		return 0, db.MapSQLError(err)

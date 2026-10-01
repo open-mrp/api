@@ -37,8 +37,15 @@ func TestBuildPickListQuery_IndexHintFollowsSortAndFilters(t *testing.T) {
 		{"created closed customer pins the buyer", pickListQuery{Status: new("closed"), BuyerIDs: []string{"ac_c"}, DriveFromBuyers: true}, pickBuyerCreatedIndex},
 		// A large set matches often, so reading in sort order fills a page sooner than sorting the set.
 		{"large customer set reads in order", pickListQuery{BuyerIDs: []string{"ac_c"}}, pickCreatedIndex},
-		// How many rows a prefix matches decides between these, so MySQL estimates it.
+		// How many rows a prefix or a creation window holds decides between these, so MySQL estimates it.
 		{"number prefix offers both", pickListQuery{Search: pickSearch{NumberPrefix: "22%"}}, pickCreatedIndex + ", " + pickAccountNumberIndex},
+		{"customer number prefix offers both", pickListQuery{Search: pickSearch{NumberPrefix: "22%"}, BuyerIDs: []string{"ac_c"}, DriveFromBuyers: true}, pickBuyerCreatedIndex + ", " + pickAccountNumberIndex},
+		{"ship-by window offers the created key", pickListQuery{SortByShipBy: true, StartDate: gosql.NullTime{Valid: true}}, pickShipByIndex + ", " + pickCreatedIndex},
+		{"ship-by open customer window", pickListQuery{SortByShipBy: true, Status: new("open"), EndDate: gosql.NullTime{Valid: true}, BuyerIDs: []string{"ac_c"}, DriveFromBuyers: true}, pickBuyerOpenShipByIndex + ", " + pickBuyerOpenCreatedIndex},
+		{"created window reads the created key in order", pickListQuery{StartDate: gosql.NullTime{Valid: true}}, pickCreatedIndex},
+		// A counted set's size is known, so the narrower of it and a prefix is chosen here, not estimated.
+		{"counted customer set reads its ranges", pickListQuery{Search: pickSearch{NumberPrefix: "2%"}, BuyerIDs: []string{"ac_c1", "ac_c2"}, DriveFromBuyers: true}, pickBuyerCreatedIndex},
+		{"prefix narrower than a counted set", pickListQuery{Search: pickSearch{NumberPrefix: "2%"}, BuyerIDs: []string{"ac_c1", "ac_c2"}, DriveFromNumberPrefix: true}, pickAccountNumberIndex},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
@@ -142,15 +149,15 @@ func TestBuildPickListQuery_ArgsBindInPlaceholderOrder(t *testing.T) {
 		StartDate: start, EndDate: end, Limit: 51,
 	}
 
-	t.Run("phrase search", func(t *testing.T) {
+	t.Run("phrase with too many matches to read up front", func(t *testing.T) {
 		t.Parallel()
 		q := base
 		q.Search = pickSearch{Phrase: `"235"`}
 		query, args := buildPickListQuery(q)
 
 		want := []any{
-			"ac_1", `"235"`, "ac_1", `"235"`, "ac_1", `"235"`, "ac_1", `"235"`,
-			"ac_1", "ac_c1", "ac_c2", "pl_1", start.Time, end.Time, int32(51),
+			"ac_1", "ac_1", `"235"`, "ac_1", `"235"`, "ac_1", `"235"`, "ac_1", `"235"`,
+			"ac_c1", "ac_c2", "pl_1", start.Time, end.Time, int32(51),
 		}
 		if !reflect.DeepEqual(args, want) {
 			t.Errorf("args = %v\nwant %v", args, want)
@@ -158,8 +165,45 @@ func TestBuildPickListQuery_ArgsBindInPlaceholderOrder(t *testing.T) {
 		if got := strings.Count(query, "?"); got != len(args) {
 			t.Errorf("%d placeholders but %d args", got, len(args))
 		}
-		if strings.Contains(query, "FORCE INDEX") {
-			t.Errorf("a phrase search drives from its match set, not an index hint:\n%s", query)
+		if !strings.Contains(query, "AND p.id IN (SELECT id FROM (") {
+			t.Errorf("a common phrase is not a residual:\n%s", query)
+		}
+	})
+
+	t.Run("phrase read from its few matches", func(t *testing.T) {
+		t.Parallel()
+		q := base
+		q.Search = pickSearch{Phrase: `"235"`}
+		q.PhraseIDs, q.DriveFromPhrase = []string{"pk_1", "pk_2"}, true
+		query, args := buildPickListQuery(q)
+
+		want := []any{"ac_1", "pk_1", "pk_2", "ac_c1", "ac_c2", "pl_1", start.Time, end.Time, int32(51)}
+		if !reflect.DeepEqual(args, want) {
+			t.Errorf("args = %v\nwant %v", args, want)
+		}
+		if got := strings.Count(query, "?"); got != len(args) {
+			t.Errorf("%d placeholders but %d args", got, len(args))
+		}
+		if !strings.Contains(query, "FROM pick p FORCE INDEX (PRIMARY) WHERE p.account_id = ? AND p.id IN (?, ?)") {
+			t.Errorf("a rare phrase does not drive by primary key:\n%s", query)
+		}
+	})
+
+	t.Run("product lines drive", func(t *testing.T) {
+		t.Parallel()
+		q := base
+		q.DriveFromProductLines = true
+		query, args := buildPickListQuery(q)
+
+		want := []any{"pl_1", "ac_1", "ac_c1", "ac_c2", start.Time, end.Time, int32(51)}
+		if !reflect.DeepEqual(args, want) {
+			t.Errorf("args = %v\nwant %v", args, want)
+		}
+		if got := strings.Count(query, "?"); got != len(args) {
+			t.Errorf("%d placeholders but %d args", got, len(args))
+		}
+		if !strings.Contains(query, ") matched JOIN pick p ON p.id = matched.id WHERE") || strings.Contains(query, "EXISTS") {
+			t.Errorf("product lines do not drive from their matches:\n%s", query)
 		}
 	})
 
@@ -258,6 +302,33 @@ func TestBuildPickBuyerCountQuery_StopsAtTheCap(t *testing.T) {
 	}
 	if got := strings.Count(query, "?"); got != len(args) {
 		t.Errorf("%d placeholders but %d args", got, len(args))
+	}
+}
+
+// Sizing a filter must stop at its cap: the phrase read streams (UNION ALL) and the counts are capped
+// reads, so none of them collects every match first.
+func TestPickFilterSizing_StopsAtTheCap(t *testing.T) {
+	t.Parallel()
+
+	query, args := buildPickPhraseIDsQuery(pickListQuery{AccountID: "ac_1", Search: pickSearch{Phrase: `"235"`}})
+	if strings.Contains(query, " UNION SELECT") || !strings.HasSuffix(query, ") LIMIT ?") {
+		t.Errorf("phrase read does not stream to a limit:\n%s", query)
+	}
+	if args[len(args)-1] != pickPhraseScanCap+1 {
+		t.Errorf("phrase read limit = %v, want %d", args[len(args)-1], pickPhraseScanCap+1)
+	}
+
+	for name, built := range map[string]func() (string, []any){
+		"product lines": func() (string, []any) { return buildPickProductLineCountQuery([]string{"pl_1", "pl_2"}) },
+		"prefix":        func() (string, []any) { return buildPickPrefixCountQuery("ac_1", "2%", 300) },
+	} {
+		query, args := built()
+		if !strings.Contains(query, "LIMIT ?) capped") || strings.Contains(query, "DISTINCT") {
+			t.Errorf("%s: count is not a capped read:\n%s", name, query)
+		}
+		if got := strings.Count(query, "?"); got != len(args) {
+			t.Errorf("%s: %d placeholders but %d args", name, got, len(args))
+		}
 	}
 }
 

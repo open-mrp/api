@@ -36,7 +36,7 @@ const (
 	planAnaSpanDays = 4 * 365
 
 	// planAnaCorpusVersion is bumped whenever the corpus's shape changes, so a stale one is rebuilt.
-	planAnaCorpusVersion = "Plan Analytics Merchant v1"
+	planAnaCorpusVersion = "Plan Analytics Merchant v2"
 
 	planAnaRareBuyer = planAnaBuyers - 1
 	planAnaRareItem  = planAnaItems - 1
@@ -198,6 +198,11 @@ func ensureAnalyticsCorpus(t *testing.T) {
 		exec(`INSERT INTO account (id, name, account_type_code, onboarding_status_code) VALUES `+strings.Join(accVals, ","), accArgs...)
 		exec(`INSERT INTO account_relation (id, owner_account_id, counterparty_account_id, account_relation_role_code, external_number, priority_code, account_group_id, parent_account_relation_id)
 		      VALUES `+strings.Join(relVals, ","), relArgs...)
+		// Reports carry the buyer's created_at; a column default would stamp the seeding time into them.
+		seededAt := time.Date(2022, 9, 1, 0, 0, 0, 0, time.UTC)
+		exec("UPDATE account SET created_at = ?, updated_at = ? WHERE id = 'ac_planana' OR id LIKE 'ac\\_planana\\_%'", seededAt, seededAt)
+		exec("UPDATE account_relation SET created_at = ?, updated_at = ? WHERE owner_account_id = 'ac_planana'", seededAt, seededAt)
+		exec("UPDATE account_group SET created_at = ?, updated_at = ? WHERE owner_account_id = 'ac_planana'", seededAt, seededAt)
 
 		const batch = 500
 		for start := 0; start < planAnaInvoices; start += batch {

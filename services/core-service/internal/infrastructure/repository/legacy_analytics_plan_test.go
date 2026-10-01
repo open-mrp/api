@@ -21,7 +21,7 @@ import (
 
 // The line-level analytics (sales entries, deliveries, open orders) join the corpus's invoices and
 // orders out to their lines, items and categories; this adds what those joins need.
-const planLegacyCorpusVersion = "Plan Legacy Analytics v2"
+const planLegacyCorpusVersion = "Plan Legacy Analytics v3"
 
 var planLegacyOnce sync.Once
 

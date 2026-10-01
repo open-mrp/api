@@ -44,7 +44,8 @@ func ensureDeliveryPerformanceCorpus(t *testing.T) {
 		exec("DELETE FROM pick_line WHERE id LIKE 'pkl\\_planana\\_%'")
 		exec("DELETE FROM pick WHERE account_id = ?", planAnaAccount)
 		exec("DELETE FROM sales_order_line WHERE id LIKE 'sol\\_planana\\_%'")
-		exec("DELETE FROM quantity WHERE id LIKE 'qy\\_planana\\_%'")
+		// Only this corpus's quantities: the line-level corpus keeps its invoice lines' beside them.
+		exec("DELETE FROM quantity WHERE id LIKE 'qy\\_planana\\_s%' OR id LIKE 'qy\\_planana\\_p%'")
 		exec("DELETE FROM product WHERE id LIKE 'pd\\_planana\\_%'")
 		exec("DELETE FROM product_line WHERE id LIKE 'pl\\_planana\\_%'")
 		exec(`INSERT IGNORE INTO unit (id, name, abbreviation, unit_dimension_code, account_id,

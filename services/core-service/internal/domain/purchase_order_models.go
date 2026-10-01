@@ -126,10 +126,35 @@ type PurchaseOrderSummary struct {
 	PriorityID           *string
 	IssuedAt             *time.Time
 	CompletedAt          *time.Time
+	PromisedAt           *time.Time
+	Note                 *string
 	CreatedAt            time.Time
 	UpdatedAt            time.Time
+
+	// Joined ship-to address
+	ShippingAddressID string
+	ShipToName        *string
+	ShipToIsDropShip  *bool
+	ShipToStreetLine1 *string
+	ShipToStreetLine2 *string
+	ShipToLocality    *string
+	ShipToState       *string
+	ShipToPostalCode  *string
+	ShipToCountry     *string
+	ShipToPhone       *string
+	ShipToEmail       *string
+	ShipToCreatedAt   *time.Time
+	ShipToUpdatedAt   *time.Time
+
+	// Joined receiving order
+	ReceivingOrderID     *string
+	ReceivingOrderNumber *string
+	ReceivingOrderStatus *string
+
 	// Lines (populated only when the list request includes "lines").
 	Lines []*PurchaseOrderLine
+	// Contacts (populated only when the list request includes "contacts").
+	Contacts []*PurchaseOrderEmailContact
 }
 
 // PurchaseOrderLine represents a purchase order line domain model.
@@ -180,12 +205,32 @@ type PurchaseOrderLine struct {
 
 	CreatedAt time.Time
 	UpdatedAt time.Time
+
+	// DeliveryLines are the delivery lines booked against this line, oldest first (populated when included).
+	DeliveryLines []*PurchaseOrderLineDeliveryLine
+}
+
+// PurchaseOrderLineDeliveryLine is a delivery line booked against a purchase order line.
+type PurchaseOrderLineDeliveryLine struct {
+	ID                  string
+	PurchaseOrderLineID string
+	QuantityID          string
+	QuantityValue       string
+	QuantityUnitID      string
+	AcceptedAt          *time.Time
+	RejectedAt          *time.Time
+	CreatedAt           time.Time
+	UpdatedAt           time.Time
 }
 
 // PurchaseOrderEmailContact represents an email contact on a purchase order.
 type PurchaseOrderEmailContact struct {
 	ID            string
 	AccountUserID string
+	// The contact's own name and email. The account user belongs to the supplier, so a caller on the
+	// buying account reads them here rather than through the account user.
+	Name  *string
+	Email *string
 }
 
 // ListPurchaseOrdersParams holds the parameters for listing purchase orders.
@@ -217,13 +262,19 @@ type GetPurchaseOrderParams struct {
 
 // CreatePurchaseOrderParams holds the parameters for creating a purchase order.
 type CreatePurchaseOrderParams struct {
-	AccountID             string
-	SupplierAccountID     string
-	Includes              []string
-	Number                string
-	SalesOrderStatusCode  string
-	BillingAddressID      string
-	ShippingAddressID     string
+	AccountID            string
+	SupplierAccountID    string
+	Includes             []string
+	Number               string
+	SalesOrderStatusCode string
+	BillingAddressID     string
+	ShippingAddressID    string
+	// RequestedNumber is the order number the caller chose; nil takes the next number in the sequence.
+	RequestedNumber *string
+	// BillToAddressID and ShipToAddressID name existing supplier addresses to use instead of creating new
+	// ones from the inline address fields.
+	BillToAddressID       *string
+	ShipToAddressID       *string
 	Note                  *string
 	CarrierID             *string
 	ServiceLevelID        *string
@@ -253,7 +304,7 @@ type CreatePurchaseOrderParams struct {
 
 // CreatePurchaseOrderLineInput represents a line to create with a new purchase order.
 type CreatePurchaseOrderLineInput struct {
-	ProductID                  string
+	ProductID                  *string
 	ItemID                     *string
 	ProductSKU                 string
 	ProductDescription         *string
@@ -269,15 +320,19 @@ type CreatePurchaseOrderLineInput struct {
 
 // UpdatePurchaseOrderParams holds the parameters for updating a purchase order.
 type UpdatePurchaseOrderParams struct {
-	PurchaseOrderID       string
-	AccountID             string
-	Includes              []string
-	Note                  *string
-	Number                *string
-	PriorityCode          *string
-	BillingAddressID      *string
-	ShippingAddressID     *string
-	PromisedAt            *string
+	PurchaseOrderID   string
+	AccountID         string
+	Includes          []string
+	Note              *string
+	Number            *string
+	PriorityCode      *string
+	BillingAddressID  *string
+	ShippingAddressID *string
+	PromisedAt        *string
+	// ClearPromisedAt removes the promised date; PromisedAt is ignored when set.
+	ClearPromisedAt bool
+	// ReplaceContacts says ContactAccountUserIDs is the new contact set, so an empty one clears them.
+	ReplaceContacts       bool
 	ContactAccountUserIDs []string
 }
 
@@ -306,7 +361,7 @@ type ChangePurchaseOrderStatusParams struct {
 type CreatePurchaseOrderLineParams struct {
 	SalesOrderID               string
 	AccountID                  string
-	ProductID                  string
+	ProductID                  *string
 	ItemID                     *string
 	ProductSKU                 string
 	ProductDescription         *string

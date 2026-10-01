@@ -798,6 +798,13 @@ INSERT IGNORE INTO user (id, email, name, username, status_code) VALUES
 INSERT IGNORE INTO account_user (id, user_id, account_id, status_code) VALUES
     ('acus_childblktgt', 'us_childblktgt00', 'ac_01seedchild_acct0001', 'active');
 
+-- A user on the seed supplier, so a purchase order can name a submission contact the buying
+-- account does not itself employ (SeedSupplierAccountUserID).
+INSERT IGNORE INTO user (id, email, name, username, status_code) VALUES
+    ('us_seedsupcontact', 'orders@yarnsupply.e2e.openmrp.ai', 'Yarn Supply Orders', 'yarnsupplyorders', 'active');
+INSERT IGNORE INTO account_user (id, user_id, account_id, status_code) VALUES
+    ('acus_seedsupcontact', 'us_seedsupcontact', 'ac_01seedsupplier_acct0', 'active');
+
 -- ============================================================
 -- PURCHASE ORDERS (e2e include coverage)
 -- ============================================================
@@ -1160,7 +1167,7 @@ INSERT IGNORE INTO sales_order_line (id, product_sku, product_description, produ
     ('orln_01seedputinc_pol1_000', 'YRN-PINC', 'Yarn PO for put-include walker', NULL, 'it_01seedyrn1item00000', 'or_01seed_putinc_po_es00', 'qu_01seedputinc_polqty00', 'rt_01seedputinc_pol_pri', 'rt_01seedputinc_pol_cst', NOW(), NOW());
 
 INSERT IGNORE INTO order_email_contact (id, sales_order_id, account_user_id, notification_type_code, created_at, updated_at) VALUES
-    ('oec_01seed_putinc_po_subm', 'or_01seed_putinc_po_es00', 'acus_s83fjhyfmqen', 'purchaseOrderSubmission', NOW(), NOW());
+    ('oec_01seed_putinc_po_subm', 'or_01seed_putinc_po_es00', 'acus_s83fjhyfmqen', 'purchase_order_submission', NOW(), NOW());
 
 -- ============================================================
 -- SECTION: VOLUME-DISCOUNT + PER-PAIR ACCOUNT-PRICE PRICING CASES

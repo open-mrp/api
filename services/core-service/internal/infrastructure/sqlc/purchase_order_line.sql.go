@@ -8,6 +8,7 @@ package sqlc
 import (
 	"context"
 	"database/sql"
+	"strings"
 	"time"
 )
 
@@ -254,6 +255,59 @@ func (q *Queries) GetPurchaseOrderLine(ctx context.Context, arg GetPurchaseOrder
 		&i.UpdatedAt,
 	)
 	return i, err
+}
+
+const getPurchaseOrderLineItemUnitGroups = `-- name: GetPurchaseOrderLineItemUnitGroups :many
+SELECT i.id AS item_id, ic.unit_group_id
+FROM item i
+JOIN item_category ic ON ic.id = i.item_category_id
+WHERE i.id IN (/*SLICE:item_ids*/?)
+AND i.account_id = ?
+`
+
+type GetPurchaseOrderLineItemUnitGroupsParams struct {
+	ItemIds   []string
+	AccountID string
+}
+
+type GetPurchaseOrderLineItemUnitGroupsRow struct {
+	ItemID      string
+	UnitGroupID string
+}
+
+// The unit group each item's category measures it in, for checking the unit a line's quantity is in.
+func (q *Queries) GetPurchaseOrderLineItemUnitGroups(ctx context.Context, arg GetPurchaseOrderLineItemUnitGroupsParams) ([]GetPurchaseOrderLineItemUnitGroupsRow, error) {
+	query := getPurchaseOrderLineItemUnitGroups
+	var queryParams []interface{}
+	if len(arg.ItemIds) > 0 {
+		for _, v := range arg.ItemIds {
+			queryParams = append(queryParams, v)
+		}
+		query = strings.Replace(query, "/*SLICE:item_ids*/?", strings.Repeat(",?", len(arg.ItemIds))[1:], 1)
+	} else {
+		query = strings.Replace(query, "/*SLICE:item_ids*/?", "NULL", 1)
+	}
+	queryParams = append(queryParams, arg.AccountID)
+	rows, err := q.db.QueryContext(ctx, query, queryParams...)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []GetPurchaseOrderLineItemUnitGroupsRow
+	for rows.Next() {
+		var i GetPurchaseOrderLineItemUnitGroupsRow
+		if err := rows.Scan(&i.ItemID, &i.UnitGroupID); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
 }
 
 const isLineInPurchaseOrder = `-- name: IsLineInPurchaseOrder :one

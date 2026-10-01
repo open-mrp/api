@@ -115,6 +115,12 @@ const (
 	SeedWashSmallProductionStepID = "prs_01k0a57f3dfsmtzc8txbq43eth"
 	SeedMaterialID                = "ml_01seedyrn1mat000000"
 	SeedMaterialItemID            = "it_01seedyrn1item00000"
+	// The pound, the unit SeedMaterialItemID's category measures it in.
+	SeedMaterialUnitID = "un_01seedpound00000000"
+	// SeedSupplierAddressID is the seed supplier's saved billing and shipping address.
+	SeedSupplierAddressID = "ad_01seedsupplieraddr00"
+	// SeedSupplierAccountUserID is a user on the seed supplier, for purchase order submission contacts.
+	SeedSupplierAccountUserID = "acus_seedsupcontact"
 	// item_category_id on SeedMaterialItemID (yarn materials in 0007_items.sql), not SeedItemCategoryID (socks).
 	SeedMaterialCategoryID = "itcg_01seedyarn0000000"
 	SeedPartID             = "pt_01seedlknpart000000"

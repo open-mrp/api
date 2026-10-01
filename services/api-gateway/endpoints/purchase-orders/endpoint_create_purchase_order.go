@@ -18,6 +18,18 @@ import (
 type CreatePurchaseOrderRequest struct {
 	// ID of the supplier account to place the order with.
 	SupplierAccountID string `json:"supplier_account_id" validate:"required"`
+	// Order number to use instead of the next one in the account's sequence.
+	//
+	// Must be unique within the account; a number already used by another purchase order is rejected.
+	Number field.Optional[string] `json:"number,omitzero" validate:"omitempty,max=255"`
+	// ID of one of the supplier's saved addresses to bill the order to.
+	//
+	// When set, the inline `bill_to_*` fields are ignored.
+	BillToAddressID field.Optional[string] `json:"bill_to_address_id,omitzero" validate:"omitempty"`
+	// ID of one of the supplier's saved addresses to ship the order to.
+	//
+	// When set, the inline `ship_to_*` fields are ignored.
+	ShipToAddressID field.Optional[string] `json:"ship_to_address_id,omitzero" validate:"omitempty"`
 	// Free-form note to record on the order.
 	Note field.Optional[string] `json:"note,omitzero"`
 	// ID of the carrier for the order's freight.
@@ -73,10 +85,10 @@ type CreatePurchaseOrderRequest struct {
 	//
 	// Contacts receive the purchase order email when the order is issued with `send_email`.
 	ContactAccountUserIDs []string `json:"contact_account_user_ids,omitzero"`
-	// Promised delivery date in `YYYY-MM-DD` format.
+	// Promised delivery date, as a `YYYY-MM-DD` date (midnight UTC) or an RFC 3339 timestamp.
 	//
 	// Returned as `scheduled_at` on the purchase order resource.
-	PromisedAt field.Optional[string] `json:"promised_at,omitzero"`
+	PromisedAt field.Optional[string] `json:"promised_at,omitzero" validate:"omitempty,date_filter"`
 }
 
 // Line item input for creating a purchase order.
@@ -108,7 +120,7 @@ var sampleCreatePurchaseOrderRequest = &CreatePurchaseOrderRequest{
 	Lines: []CreatePurchaseOrderLineInput{
 		{
 			OrderLineInput: apirequest.OrderLineInput{
-				ProductID:  apiresource.SampleProductID,
+				ItemID:     field.Some(apiresource.SampleItemID),
 				ProductSKU: "RAW-100",
 				Quantity:   apirequest.QuantityInput{Value: "500", UnitID: apiresource.SampleUnitID},
 				UnitPrice:  apirequest.RateInput{Value: "12.50", NumeratorUnitID: apiresource.SampleUnitID, DenominatorUnitID: apiresource.SampleUnitID},
@@ -123,7 +135,7 @@ func (*CreatePurchaseOrderRequest) SchemaExample() any {
 
 // Creates a purchase order.
 //
-// The order number is assigned automatically from a per-account sequence and the order starts in `estimate` status; issue it separately to send it to the supplier and open it for receiving. Bill-to and ship-to addresses are created as new address records from the inline address fields, and any provided lines and email contacts are created with the order.
+// The order number is assigned automatically from a per-account sequence unless `number` is given, and the order starts in `estimate` status; issue it separately to send it to the supplier and open it for receiving. Bill-to and ship-to addresses are either one of the supplier's saved addresses, named by id, or created as new address records from the inline address fields. Any provided lines and email contacts are created with the order.
 //
 // A line that references an inventory item also links that item's material to the supplier, if it is not linked already, so the material shows up as sourced from them.
 type CreatePurchaseOrderEndpoint struct{}
@@ -149,7 +161,7 @@ func (e *CreatePurchaseOrderEndpoint) Materialize() *apiendpoint.APIEndpoint[*Cr
 		},
 		IncludeConfig: apiendpoint.IncludesFor(apiendpoint.IncludesParams{
 			ObjectType: constants.ObjectTypePurchaseOrder,
-			Fields:     []string{"supplier", "bill_to_address", "ship_to_address", "freight", "payment_term", "shipping_term", "related", "related.receiving_order", "related.deliveries", "lines", "lines.item", "lines.quantity_ordered", "lines.quantity_ordered.unit", "lines.unit_price", "lines.unit_price.numerator_unit", "lines.unit_price.denominator_unit", "contacts"},
+			Fields:     purchaseOrderDetailIncludeFields,
 		}),
 	})
 }

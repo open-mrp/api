@@ -8,6 +8,7 @@ import (
 	apiexample "github.com/open-mrp/api/services/api-gateway/pkg/example"
 	apiresource "github.com/open-mrp/api/services/api-gateway/pkg/resource"
 	"github.com/open-mrp/api/services/auth-service/pkg/types"
+	"github.com/open-mrp/api/shared/constants"
 	apierror "github.com/open-mrp/api/shared/errors"
 	"github.com/open-mrp/api/shared/field"
 )
@@ -76,5 +77,10 @@ func (e *UpdatePurchaseOrderLineEndpoint) Materialize() *apiendpoint.APIEndpoint
 		ServiceHandler: func(svc any) func(ctx context.Context, req *UpdatePurchaseOrderLineRequest) (*apiresource.PurchaseOrderLine, *apierror.APIError) {
 			return svc.(PurchaseOrderSvc).UpdatePurchaseOrderLine
 		},
+		ObjectType: constants.ObjectTypePurchaseOrderLine,
+		IncludeConfig: apiendpoint.IncludesFor(apiendpoint.IncludesParams{
+			ObjectType: constants.ObjectTypePurchaseOrderLine,
+			Fields:     purchaseOrderLineIncludeFields,
+		}),
 	})
 }

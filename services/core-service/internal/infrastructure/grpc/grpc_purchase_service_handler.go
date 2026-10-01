@@ -53,8 +53,44 @@ func purchaseOrderSummaryToProto(s *domain.PurchaseOrderSummary) *pb.PurchaseOrd
 		info.CompletedAt = timestamppb.New(*s.CompletedAt)
 	}
 
+	if s.PromisedAt != nil {
+		info.PromisedAt = timestamppb.New(*s.PromisedAt)
+	}
+	info.Note = s.Note
+
+	info.ShippingAddressId = s.ShippingAddressID
+	info.ShipToName = s.ShipToName
+	info.ShipToStreetLine_1 = s.ShipToStreetLine1
+	info.ShipToStreetLine_2 = s.ShipToStreetLine2
+	info.ShipToLocality = s.ShipToLocality
+	info.ShipToState = s.ShipToState
+	info.ShipToPostalCode = s.ShipToPostalCode
+	info.ShipToCountry = s.ShipToCountry
+	info.ShipToPhone = s.ShipToPhone
+	info.ShipToEmail = s.ShipToEmail
+	if s.ShipToIsDropShip != nil {
+		addrType := string(constants.AddressTypeStandard)
+		if *s.ShipToIsDropShip {
+			addrType = string(constants.AddressTypeDropShip)
+		}
+		info.ShipToAddressType = &addrType
+	}
+	if s.ShipToCreatedAt != nil {
+		info.ShipToAddressCreatedAt = timestamppb.New(*s.ShipToCreatedAt)
+	}
+	if s.ShipToUpdatedAt != nil {
+		info.ShipToAddressUpdatedAt = timestamppb.New(*s.ShipToUpdatedAt)
+	}
+
+	info.ReceivingOrderId = s.ReceivingOrderID
+	info.ReceivingOrderNumber = s.ReceivingOrderNumber
+	info.ReceivingOrderStatus = s.ReceivingOrderStatus
+
 	for _, l := range s.Lines {
 		info.Lines = append(info.Lines, purchaseOrderLineToProto(l))
+	}
+	for _, c := range s.Contacts {
+		info.Contacts = append(info.Contacts, emailContactToProto(c))
 	}
 
 	return info
@@ -271,6 +307,24 @@ func purchaseOrderLineToProto(l *domain.PurchaseOrderLine) *pb.PurchaseOrderLine
 		UpdatedAt:                            timestamppb.New(l.UpdatedAt),
 	}
 
+	for _, dl := range l.DeliveryLines {
+		d := &pb.PurchaseOrderLineDeliveryLineInfo{
+			Id:             dl.ID,
+			QuantityId:     dl.QuantityID,
+			QuantityValue:  dl.QuantityValue,
+			QuantityUnitId: dl.QuantityUnitID,
+			CreatedAt:      timestamppb.New(dl.CreatedAt),
+			UpdatedAt:      timestamppb.New(dl.UpdatedAt),
+		}
+		if dl.AcceptedAt != nil {
+			d.AcceptedAt = timestamppb.New(*dl.AcceptedAt)
+		}
+		if dl.RejectedAt != nil {
+			d.RejectedAt = timestamppb.New(*dl.RejectedAt)
+		}
+		info.DeliveryLines = append(info.DeliveryLines, d)
+	}
+
 	return info
 }
 
@@ -282,6 +336,8 @@ func emailContactToProto(c *domain.PurchaseOrderEmailContact) *pb.EmailContactIn
 	return &pb.EmailContactInfo{
 		Id:            c.ID,
 		AccountUserId: c.AccountUserID,
+		Name:          c.Name,
+		Email:         c.Email,
 	}
 }
 
@@ -442,6 +498,9 @@ func (h *purchaseGRPCHandler) CreatePurchaseOrder(ctx context.Context, req *pb.C
 		Lines:                 lines,
 		ContactAccountUserIDs: req.ContactAccountUserIds,
 		Includes:              req.Includes,
+		RequestedNumber:       req.Number,
+		BillToAddressID:       req.BillToAddressId,
+		ShipToAddressID:       req.ShipToAddressId,
 	}
 
 	order, apiErr := h.purchaseOrderSvc.CreatePurchaseOrder(ctx, params)
@@ -470,6 +529,8 @@ func (h *purchaseGRPCHandler) UpdatePurchaseOrder(ctx context.Context, req *pb.U
 		BillingAddressID:      req.BillingAddressId,
 		ShippingAddressID:     req.ShippingAddressId,
 		PromisedAt:            req.PromisedAt,
+		ClearPromisedAt:       req.ClearPromisedAt,
+		ReplaceContacts:       req.ReplaceContacts,
 		ContactAccountUserIDs: req.ContactAccountUserIds,
 		Includes:              req.Includes,
 	}

@@ -61,6 +61,7 @@ INSERT INTO sales_order (
     sales_order_status_code, sales_order_type_code,
     payment_term_id,
     buyer_account_id, seller_account_id, owner_account_id,
+    promised_at,
     created_at, updated_at
 ) VALUES (
     ?, ?, ?, false,
@@ -70,6 +71,7 @@ INSERT INTO sales_order (
     ?, 'purchase_order',
     ?,
     ?, ?, ?,
+    ?,
     NOW(3), NOW(3)
 )
 `
@@ -91,6 +93,7 @@ type CreatePurchaseOrderParams struct {
 	BuyerAccountID        string
 	SellerAccountID       string
 	OwnerAccountID        string
+	PromisedAt            sql.NullTime
 }
 
 func (q *Queries) CreatePurchaseOrder(ctx context.Context, arg CreatePurchaseOrderParams) error {
@@ -111,6 +114,7 @@ func (q *Queries) CreatePurchaseOrder(ctx context.Context, arg CreatePurchaseOrd
 		arg.BuyerAccountID,
 		arg.SellerAccountID,
 		arg.OwnerAccountID,
+		arg.PromisedAt,
 	)
 	return err
 }
@@ -150,17 +154,24 @@ func (q *Queries) DeletePurchaseOrderLinesBySalesOrder(ctx context.Context, sale
 }
 
 const getOrderEmailContacts = `-- name: GetOrderEmailContacts :many
-SELECT oec.id, oec.account_user_id
+SELECT oec.id, oec.account_user_id, u.email AS user_email, u.name AS user_name
 FROM order_email_contact oec
+JOIN account_user au ON au.id = oec.account_user_id
+JOIN user u ON u.id = au.user_id
 WHERE oec.sales_order_id = ?
-AND oec.notification_type_code = 'purchaseOrderSubmission'
+AND oec.notification_type_code = 'purchase_order_submission'
+ORDER BY oec.created_at, oec.id
 `
 
 type GetOrderEmailContactsRow struct {
 	ID            string
 	AccountUserID string
+	UserEmail     sql.NullString
+	UserName      sql.NullString
 }
 
+// The contact's person is read through the supplier's account user, which the caller's own account
+// cannot load, so the name and email are carried on the contact.
 func (q *Queries) GetOrderEmailContacts(ctx context.Context, salesOrderID string) ([]GetOrderEmailContactsRow, error) {
 	rows, err := q.db.QueryContext(ctx, getOrderEmailContacts, salesOrderID)
 	if err != nil {
@@ -170,7 +181,69 @@ func (q *Queries) GetOrderEmailContacts(ctx context.Context, salesOrderID string
 	var items []GetOrderEmailContactsRow
 	for rows.Next() {
 		var i GetOrderEmailContactsRow
-		if err := rows.Scan(&i.ID, &i.AccountUserID); err != nil {
+		if err := rows.Scan(
+			&i.ID,
+			&i.AccountUserID,
+			&i.UserEmail,
+			&i.UserName,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const getOrderEmailContactsByOrderIDs = `-- name: GetOrderEmailContactsByOrderIDs :many
+SELECT oec.id, oec.sales_order_id, oec.account_user_id, u.email AS user_email, u.name AS user_name
+FROM order_email_contact oec
+JOIN account_user au ON au.id = oec.account_user_id
+JOIN user u ON u.id = au.user_id
+WHERE oec.sales_order_id IN (/*SLICE:sales_order_ids*/?)
+AND oec.notification_type_code = 'purchase_order_submission'
+ORDER BY oec.sales_order_id, oec.created_at, oec.id
+`
+
+type GetOrderEmailContactsByOrderIDsRow struct {
+	ID            string
+	SalesOrderID  string
+	AccountUserID string
+	UserEmail     sql.NullString
+	UserName      sql.NullString
+}
+
+func (q *Queries) GetOrderEmailContactsByOrderIDs(ctx context.Context, salesOrderIds []string) ([]GetOrderEmailContactsByOrderIDsRow, error) {
+	query := getOrderEmailContactsByOrderIDs
+	var queryParams []interface{}
+	if len(salesOrderIds) > 0 {
+		for _, v := range salesOrderIds {
+			queryParams = append(queryParams, v)
+		}
+		query = strings.Replace(query, "/*SLICE:sales_order_ids*/?", strings.Repeat(",?", len(salesOrderIds))[1:], 1)
+	} else {
+		query = strings.Replace(query, "/*SLICE:sales_order_ids*/?", "NULL", 1)
+	}
+	rows, err := q.db.QueryContext(ctx, query, queryParams...)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []GetOrderEmailContactsByOrderIDsRow
+	for rows.Next() {
+		var i GetOrderEmailContactsByOrderIDsRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.SalesOrderID,
+			&i.AccountUserID,
+			&i.UserEmail,
+			&i.UserName,
+		); err != nil {
 			return nil, err
 		}
 		items = append(items, i)
@@ -277,6 +350,7 @@ SELECT
 FROM sales_order so
 JOIN account_relation ar ON ar.owner_account_id = so.owner_account_id
     AND ar.counterparty_account_id = so.seller_account_id
+    AND ar.account_relation_role_code = 'supplier'
 JOIN account sa ON sa.id = so.seller_account_id
 JOIN sales_order_status sos ON sos.code = so.sales_order_status_code
 JOIN sales_order_type sot ON sot.code = so.sales_order_type_code
@@ -459,8 +533,83 @@ func (q *Queries) GetPurchaseOrder(ctx context.Context, arg GetPurchaseOrderPara
 	return i, err
 }
 
-const getPurchaseOrderLines = `-- name: GetPurchaseOrderLines :many
+const getPurchaseOrderLineDeliveryLines = `-- name: GetPurchaseOrderLineDeliveryLines :many
 SELECT
+    dl.id,
+    rol.sales_order_line_id,
+    q.id AS quantity_id,
+    q.value AS quantity_value,
+    q.unit_id AS quantity_unit_id,
+    dl.accepted_at,
+    dl.rejected_at,
+    dl.created_at,
+    dl.updated_at
+FROM receiving_order_line rol
+JOIN delivery_line dl ON dl.receiving_order_line_id = rol.id
+JOIN quantity q ON q.id = dl.quantity_id
+WHERE rol.sales_order_line_id IN (/*SLICE:sales_order_line_ids*/?)
+ORDER BY rol.sales_order_line_id, dl.created_at, dl.id
+`
+
+type GetPurchaseOrderLineDeliveryLinesRow struct {
+	ID               string
+	SalesOrderLineID string
+	QuantityID       string
+	QuantityValue    string
+	QuantityUnitID   string
+	AcceptedAt       sql.NullTime
+	RejectedAt       sql.NullTime
+	CreatedAt        time.Time
+	UpdatedAt        time.Time
+}
+
+// The delivery lines booked against each purchase order line, through the receiving order lines raised
+// from it, oldest first. Both hops are indexed on the parent id.
+func (q *Queries) GetPurchaseOrderLineDeliveryLines(ctx context.Context, salesOrderLineIds []string) ([]GetPurchaseOrderLineDeliveryLinesRow, error) {
+	query := getPurchaseOrderLineDeliveryLines
+	var queryParams []interface{}
+	if len(salesOrderLineIds) > 0 {
+		for _, v := range salesOrderLineIds {
+			queryParams = append(queryParams, v)
+		}
+		query = strings.Replace(query, "/*SLICE:sales_order_line_ids*/?", strings.Repeat(",?", len(salesOrderLineIds))[1:], 1)
+	} else {
+		query = strings.Replace(query, "/*SLICE:sales_order_line_ids*/?", "NULL", 1)
+	}
+	rows, err := q.db.QueryContext(ctx, query, queryParams...)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []GetPurchaseOrderLineDeliveryLinesRow
+	for rows.Next() {
+		var i GetPurchaseOrderLineDeliveryLinesRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.SalesOrderLineID,
+			&i.QuantityID,
+			&i.QuantityValue,
+			&i.QuantityUnitID,
+			&i.AcceptedAt,
+			&i.RejectedAt,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const getPurchaseOrderLines = `-- name: GetPurchaseOrderLines :many
+SELECT STRAIGHT_JOIN
     sol.id,
     sol.line_item_number,
     sol.product_sku,
@@ -514,7 +663,8 @@ SELECT
     uc_du.abbreviation AS unit_cost_denominator_unit_abbreviation,
     -- Timestamps
     sol.created_at,
-    sol.updated_at
+    sol.updated_at,
+    sol.sales_order_id
 FROM sales_order_line sol
 JOIN quantity q ON q.id = sol.quantity_id
 JOIN unit qu ON qu.id = q.unit_id
@@ -565,8 +715,11 @@ type GetPurchaseOrderLinesRow struct {
 	UnitCostDenominatorUnitAbbreviation  sql.NullString
 	CreatedAt                            time.Time
 	UpdatedAt                            time.Time
+	SalesOrderID                         string
 }
 
+// STRAIGHT_JOIN drives from `sol` through its order (or id) key. Otherwise the optimizer starts from a
+// small unit table and walks every line that uses the unit. Do not remove.
 func (q *Queries) GetPurchaseOrderLines(ctx context.Context, salesOrderID string) ([]GetPurchaseOrderLinesRow, error) {
 	rows, err := q.db.QueryContext(ctx, getPurchaseOrderLines, salesOrderID)
 	if err != nil {
@@ -612,6 +765,7 @@ func (q *Queries) GetPurchaseOrderLines(ctx context.Context, salesOrderID string
 			&i.UnitCostDenominatorUnitAbbreviation,
 			&i.CreatedAt,
 			&i.UpdatedAt,
+			&i.SalesOrderID,
 		); err != nil {
 			return nil, err
 		}
@@ -627,7 +781,7 @@ func (q *Queries) GetPurchaseOrderLines(ctx context.Context, salesOrderID string
 }
 
 const getPurchaseOrderLinesByIDs = `-- name: GetPurchaseOrderLinesByIDs :many
-SELECT
+SELECT STRAIGHT_JOIN
     sol.id,
     sol.line_item_number,
     sol.product_sku,
@@ -681,7 +835,8 @@ SELECT
     uc_du.abbreviation AS unit_cost_denominator_unit_abbreviation,
     -- Timestamps
     sol.created_at,
-    sol.updated_at
+    sol.updated_at,
+    sol.sales_order_id
 FROM sales_order_line sol
 JOIN sales_order so ON so.id = sol.sales_order_id
 JOIN quantity q ON q.id = sol.quantity_id
@@ -740,11 +895,14 @@ type GetPurchaseOrderLinesByIDsRow struct {
 	UnitCostDenominatorUnitAbbreviation  sql.NullString
 	CreatedAt                            time.Time
 	UpdatedAt                            time.Time
+	SalesOrderID                         string
 }
 
 // Fetches purchase order lines by their own ids, for a receiving or delivery line that names the
 // line it was raised from. Scoped through the order it belongs to: a line is only visible to the
 // account that owns its purchase order.
+// STRAIGHT_JOIN drives from `sol` through its order (or id) key. Otherwise the optimizer starts from a
+// small unit table and walks every line that uses the unit. Do not remove.
 func (q *Queries) GetPurchaseOrderLinesByIDs(ctx context.Context, arg GetPurchaseOrderLinesByIDsParams) ([]GetPurchaseOrderLinesByIDsRow, error) {
 	query := getPurchaseOrderLinesByIDs
 	var queryParams []interface{}
@@ -801,6 +959,191 @@ func (q *Queries) GetPurchaseOrderLinesByIDs(ctx context.Context, arg GetPurchas
 			&i.UnitCostDenominatorUnitAbbreviation,
 			&i.CreatedAt,
 			&i.UpdatedAt,
+			&i.SalesOrderID,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const getPurchaseOrderLinesByOrderIDs = `-- name: GetPurchaseOrderLinesByOrderIDs :many
+SELECT STRAIGHT_JOIN
+    sol.id,
+    sol.line_item_number,
+    sol.product_sku,
+    sol.product_description,
+    sol.product_id,
+    sol.item_id,
+    i.sku AS item_sku,
+    sol.edi_line_item_id,
+    -- Quantity ordered
+    q.id AS quantity_id,
+    q.value AS quantity_value,
+    qu.id AS quantity_unit_id,
+    qu.name AS quantity_unit_name,
+    qu.abbreviation AS quantity_unit_abbreviation,
+    qu.unit_dimension_code AS quantity_unit_type,
+    -- Quantity received
+    (SELECT COALESCE(SUM(rolq.value), 0) FROM receiving_order_line rol
+        JOIN quantity rolq ON rolq.id = rol.quantity_id
+        WHERE rol.sales_order_line_id = sol.id) AS quantity_received_value,
+    -- Unit price
+    up.id AS unit_price_id,
+    up.value AS unit_price_value,
+    up_nu.id AS unit_price_numerator_unit_id,
+    up_nu.abbreviation AS unit_price_numerator_unit_abbreviation,
+    up_du.id AS unit_price_denominator_unit_id,
+    up_du.abbreviation AS unit_price_denominator_unit_abbreviation,
+    -- The base ratios of the quantity's unit and of the unit the price is quoted per, which
+    -- shared/pricing converts between the way the dashboard's multiplyRate does. Null where the
+    -- dashboard would price the line differently: units of different dimensions, a unit with an
+    -- offset, or a price in a non-base currency unit.
+    CASE WHEN qu.id = up_du.id AND qu.id <> up_nu.id THEN '1'
+        WHEN qu.unit_dimension_code = up_du.unit_dimension_code AND qu.unit_dimension_code <> up_nu.unit_dimension_code AND qu.offset_numerator = 0 AND up_du.offset_numerator = 0 AND (qu.is_base_unit = 0 OR qu.ratio_numerator = qu.ratio_denominator) AND (up_du.is_base_unit = 0 OR up_du.ratio_numerator = up_du.ratio_denominator) AND (up_nu.is_base_unit = 1 OR (up_nu.ratio_numerator = up_nu.ratio_denominator AND up_nu.offset_numerator = 0))
+        THEN CAST(qu.ratio_numerator AS CHAR) END AS pricing_quantity_ratio_numerator,
+    CASE WHEN qu.id = up_du.id AND qu.id <> up_nu.id THEN '1'
+        WHEN qu.unit_dimension_code = up_du.unit_dimension_code AND qu.unit_dimension_code <> up_nu.unit_dimension_code AND qu.offset_numerator = 0 AND up_du.offset_numerator = 0 AND (qu.is_base_unit = 0 OR qu.ratio_numerator = qu.ratio_denominator) AND (up_du.is_base_unit = 0 OR up_du.ratio_numerator = up_du.ratio_denominator) AND (up_nu.is_base_unit = 1 OR (up_nu.ratio_numerator = up_nu.ratio_denominator AND up_nu.offset_numerator = 0))
+        THEN CAST(qu.ratio_denominator AS CHAR) END AS pricing_quantity_ratio_denominator,
+    CASE WHEN qu.id = up_du.id AND qu.id <> up_nu.id THEN '1'
+        WHEN qu.unit_dimension_code = up_du.unit_dimension_code AND qu.unit_dimension_code <> up_nu.unit_dimension_code AND qu.offset_numerator = 0 AND up_du.offset_numerator = 0 AND (qu.is_base_unit = 0 OR qu.ratio_numerator = qu.ratio_denominator) AND (up_du.is_base_unit = 0 OR up_du.ratio_numerator = up_du.ratio_denominator) AND (up_nu.is_base_unit = 1 OR (up_nu.ratio_numerator = up_nu.ratio_denominator AND up_nu.offset_numerator = 0))
+        THEN CAST(up_du.ratio_numerator AS CHAR) END AS pricing_price_ratio_numerator,
+    CASE WHEN qu.id = up_du.id AND qu.id <> up_nu.id THEN '1'
+        WHEN qu.unit_dimension_code = up_du.unit_dimension_code AND qu.unit_dimension_code <> up_nu.unit_dimension_code AND qu.offset_numerator = 0 AND up_du.offset_numerator = 0 AND (qu.is_base_unit = 0 OR qu.ratio_numerator = qu.ratio_denominator) AND (up_du.is_base_unit = 0 OR up_du.ratio_numerator = up_du.ratio_denominator) AND (up_nu.is_base_unit = 1 OR (up_nu.ratio_numerator = up_nu.ratio_denominator AND up_nu.offset_numerator = 0))
+        THEN CAST(up_du.ratio_denominator AS CHAR) END AS pricing_price_ratio_denominator,
+    up.created_at AS unit_price_created_at,
+    up.updated_at AS unit_price_updated_at,
+    -- Unit cost
+    uc.id AS unit_cost_id,
+    uc.value AS unit_cost_value,
+    uc_nu.id AS unit_cost_numerator_unit_id,
+    uc_nu.abbreviation AS unit_cost_numerator_unit_abbreviation,
+    uc_du.id AS unit_cost_denominator_unit_id,
+    uc_du.abbreviation AS unit_cost_denominator_unit_abbreviation,
+    -- Timestamps
+    sol.created_at,
+    sol.updated_at,
+    sol.sales_order_id
+FROM sales_order_line sol
+JOIN quantity q ON q.id = sol.quantity_id
+JOIN unit qu ON qu.id = q.unit_id
+JOIN rate up ON up.id = sol.unit_price_id
+JOIN unit up_nu ON up_nu.id = up.numerator_unit_id
+JOIN unit up_du ON up_du.id = up.denominator_unit_id
+LEFT JOIN rate uc ON uc.id = sol.unit_cost_id
+LEFT JOIN unit uc_nu ON uc_nu.id = uc.numerator_unit_id
+LEFT JOIN unit uc_du ON uc_du.id = uc.denominator_unit_id
+LEFT JOIN item i ON i.id = sol.item_id
+WHERE sol.sales_order_id IN (/*SLICE:sales_order_ids*/?)
+ORDER BY sol.sales_order_id, sol.line_item_number ASC
+`
+
+type GetPurchaseOrderLinesByOrderIDsRow struct {
+	ID                                   string
+	LineItemNumber                       sql.NullInt32
+	ProductSku                           string
+	ProductDescription                   sql.NullString
+	ProductID                            sql.NullString
+	ItemID                               sql.NullString
+	ItemSku                              sql.NullString
+	EdiLineItemID                        sql.NullString
+	QuantityID                           string
+	QuantityValue                        string
+	QuantityUnitID                       string
+	QuantityUnitName                     string
+	QuantityUnitAbbreviation             string
+	QuantityUnitType                     string
+	QuantityReceivedValue                interface{}
+	UnitPriceID                          string
+	UnitPriceValue                       string
+	UnitPriceNumeratorUnitID             string
+	UnitPriceNumeratorUnitAbbreviation   string
+	UnitPriceDenominatorUnitID           string
+	UnitPriceDenominatorUnitAbbreviation string
+	PricingQuantityRatioNumerator        interface{}
+	PricingQuantityRatioDenominator      interface{}
+	PricingPriceRatioNumerator           interface{}
+	PricingPriceRatioDenominator         interface{}
+	UnitPriceCreatedAt                   time.Time
+	UnitPriceUpdatedAt                   time.Time
+	UnitCostID                           sql.NullString
+	UnitCostValue                        sql.NullString
+	UnitCostNumeratorUnitID              sql.NullString
+	UnitCostNumeratorUnitAbbreviation    sql.NullString
+	UnitCostDenominatorUnitID            sql.NullString
+	UnitCostDenominatorUnitAbbreviation  sql.NullString
+	CreatedAt                            time.Time
+	UpdatedAt                            time.Time
+	SalesOrderID                         string
+}
+
+// The batched form of GetPurchaseOrderLines for a page of orders; the columns must stay identical so the
+// rows convert to GetPurchaseOrderLinesRow.
+// STRAIGHT_JOIN drives from `sol` through its order (or id) key. Otherwise the optimizer starts from a
+// small unit table and walks every line that uses the unit. Do not remove.
+func (q *Queries) GetPurchaseOrderLinesByOrderIDs(ctx context.Context, salesOrderIds []string) ([]GetPurchaseOrderLinesByOrderIDsRow, error) {
+	query := getPurchaseOrderLinesByOrderIDs
+	var queryParams []interface{}
+	if len(salesOrderIds) > 0 {
+		for _, v := range salesOrderIds {
+			queryParams = append(queryParams, v)
+		}
+		query = strings.Replace(query, "/*SLICE:sales_order_ids*/?", strings.Repeat(",?", len(salesOrderIds))[1:], 1)
+	} else {
+		query = strings.Replace(query, "/*SLICE:sales_order_ids*/?", "NULL", 1)
+	}
+	rows, err := q.db.QueryContext(ctx, query, queryParams...)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []GetPurchaseOrderLinesByOrderIDsRow
+	for rows.Next() {
+		var i GetPurchaseOrderLinesByOrderIDsRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.LineItemNumber,
+			&i.ProductSku,
+			&i.ProductDescription,
+			&i.ProductID,
+			&i.ItemID,
+			&i.ItemSku,
+			&i.EdiLineItemID,
+			&i.QuantityID,
+			&i.QuantityValue,
+			&i.QuantityUnitID,
+			&i.QuantityUnitName,
+			&i.QuantityUnitAbbreviation,
+			&i.QuantityUnitType,
+			&i.QuantityReceivedValue,
+			&i.UnitPriceID,
+			&i.UnitPriceValue,
+			&i.UnitPriceNumeratorUnitID,
+			&i.UnitPriceNumeratorUnitAbbreviation,
+			&i.UnitPriceDenominatorUnitID,
+			&i.UnitPriceDenominatorUnitAbbreviation,
+			&i.PricingQuantityRatioNumerator,
+			&i.PricingQuantityRatioDenominator,
+			&i.PricingPriceRatioNumerator,
+			&i.PricingPriceRatioDenominator,
+			&i.UnitPriceCreatedAt,
+			&i.UnitPriceUpdatedAt,
+			&i.UnitCostID,
+			&i.UnitCostValue,
+			&i.UnitCostNumeratorUnitID,
+			&i.UnitCostNumeratorUnitAbbreviation,
+			&i.UnitCostDenominatorUnitID,
+			&i.UnitCostDenominatorUnitAbbreviation,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+			&i.SalesOrderID,
 		); err != nil {
 			return nil, err
 		}
@@ -959,6 +1302,7 @@ SELECT
 FROM sales_order so
 JOIN account_relation ar ON ar.owner_account_id = so.owner_account_id
     AND ar.counterparty_account_id = so.seller_account_id
+    AND ar.account_relation_role_code = 'supplier'
 JOIN account sa ON sa.id = so.seller_account_id
 JOIN sales_order_status sos ON sos.code = so.sales_order_status_code
 JOIN sales_order_type sot ON sot.code = so.sales_order_type_code
@@ -1197,7 +1541,7 @@ func (q *Queries) IsDuplicatePurchaseOrderNumber(ctx context.Context, arg IsDupl
 }
 
 const listPurchaseOrdersBackward = `-- name: ListPurchaseOrdersBackward :many
-SELECT
+SELECT STRAIGHT_JOIN
     so.id,
     so.number,
     so.sales_order_status_code AS status_code,
@@ -1213,16 +1557,42 @@ SELECT
     pr.id AS priority_id,
     so.issued_at,
     so.completed_at,
+    so.promised_at,
+    so.note,
     so.created_at,
     so.updated_at,
-    (SELECT COUNT(*) FROM sales_order_line sol_count WHERE sol_count.sales_order_id = so.id) AS line_count
-FROM sales_order so
+    (SELECT COUNT(*) FROM sales_order_line sol_count WHERE sol_count.sales_order_id = so.id) AS line_count,
+    -- Ship-to address
+    so.shipping_address_id,
+    ship_addr.name AS ship_to_name,
+    ship_addr.is_drop_ship AS ship_to_is_drop_ship,
+    ship_addr.created_at AS ship_to_created_at,
+    ship_addr.updated_at AS ship_to_updated_at,
+    ship_geo.street_line_1 AS ship_to_street_line_1,
+    ship_geo.street_line_2 AS ship_to_street_line_2,
+    ship_geo.locality AS ship_to_locality,
+    ship_geo.state AS ship_to_state,
+    ship_geo.postal_code AS ship_to_postal_code,
+    ship_geo.country AS ship_to_country,
+    ship_addr.phone AS ship_to_phone,
+    ship_addr.email AS ship_to_email,
+    -- Receiving order
+    ro.id AS receiving_order_id,
+    ro.number AS receiving_order_number,
+    CASE WHEN ro.id IS NULL THEN ''
+         WHEN ro.completed_at IS NULL THEN 'open'
+         ELSE 'completed' END AS receiving_order_status
+FROM sales_order so FORCE INDEX (sales_order_owner_type_created_idx, sales_order_owner_type_status_created_idx, sales_order_owner_type_seller_created_idx)
 JOIN account_relation ar ON ar.owner_account_id = so.owner_account_id
     AND ar.counterparty_account_id = so.seller_account_id
+    AND ar.account_relation_role_code = 'supplier'
 JOIN account sa ON sa.id = so.seller_account_id
 JOIN sales_order_status sos ON sos.code = so.sales_order_status_code
 JOIN sales_order_type sot ON sot.code = so.sales_order_type_code
 JOIN priority pr ON pr.code = so.priority_code
+LEFT JOIN address ship_addr ON ship_addr.id = so.shipping_address_id
+LEFT JOIN geolocation ship_geo ON ship_geo.id = ship_addr.geolocation_id
+LEFT JOIN receiving_order ro ON ro.order_id = so.id
 WHERE so.owner_account_id = ?
 AND so.sales_order_type_code = 'purchase_order'
 AND (
@@ -1230,6 +1600,9 @@ AND (
     OR so.number LIKE ?
     OR sa.name LIKE ?
     OR so.customer_po_number LIKE ?
+    OR ar.external_number LIKE ?
+    OR ar.alias LIKE ?
+    OR ar.notes LIKE ?
 )
 AND (
     ? = false
@@ -1295,15 +1668,40 @@ type ListPurchaseOrdersBackwardRow struct {
 	PriorityID           string
 	IssuedAt             sql.NullTime
 	CompletedAt          sql.NullTime
+	PromisedAt           sql.NullTime
+	Note                 sql.NullString
 	CreatedAt            time.Time
 	UpdatedAt            time.Time
 	LineCount            int64
+	ShippingAddressID    string
+	ShipToName           sql.NullString
+	ShipToIsDropShip     sql.NullBool
+	ShipToCreatedAt      sql.NullTime
+	ShipToUpdatedAt      sql.NullTime
+	ShipToStreetLine1    sql.NullString
+	ShipToStreetLine2    sql.NullString
+	ShipToLocality       sql.NullString
+	ShipToState          sql.NullString
+	ShipToPostalCode     sql.NullString
+	ShipToCountry        sql.NullString
+	ShipToPhone          sql.NullString
+	ShipToEmail          sql.NullString
+	ReceivingOrderID     sql.NullString
+	ReceivingOrderNumber sql.NullString
+	ReceivingOrderStatus string
 }
 
+// STRAIGHT_JOIN drives from `so`. Otherwise the optimizer starts from the three-row priority table, reads
+// every purchase order of the account through the single-column type key and sorts them all before LIMIT.
+// FORCE INDEX keeps it to the keys that end in (created_at, id) and so page without a sort: the plain one
+// for no filter and the status and supplier ones for the filters the list exposes. Do not remove.
 func (q *Queries) ListPurchaseOrdersBackward(ctx context.Context, arg ListPurchaseOrdersBackwardParams) ([]ListPurchaseOrdersBackwardRow, error) {
 	query := listPurchaseOrdersBackward
 	var queryParams []interface{}
 	queryParams = append(queryParams, arg.AccountID)
+	queryParams = append(queryParams, arg.SearchQuery)
+	queryParams = append(queryParams, arg.SearchQuery)
+	queryParams = append(queryParams, arg.SearchQuery)
 	queryParams = append(queryParams, arg.SearchQuery)
 	queryParams = append(queryParams, arg.SearchQuery)
 	queryParams = append(queryParams, arg.SearchQuery)
@@ -1367,9 +1765,27 @@ func (q *Queries) ListPurchaseOrdersBackward(ctx context.Context, arg ListPurcha
 			&i.PriorityID,
 			&i.IssuedAt,
 			&i.CompletedAt,
+			&i.PromisedAt,
+			&i.Note,
 			&i.CreatedAt,
 			&i.UpdatedAt,
 			&i.LineCount,
+			&i.ShippingAddressID,
+			&i.ShipToName,
+			&i.ShipToIsDropShip,
+			&i.ShipToCreatedAt,
+			&i.ShipToUpdatedAt,
+			&i.ShipToStreetLine1,
+			&i.ShipToStreetLine2,
+			&i.ShipToLocality,
+			&i.ShipToState,
+			&i.ShipToPostalCode,
+			&i.ShipToCountry,
+			&i.ShipToPhone,
+			&i.ShipToEmail,
+			&i.ReceivingOrderID,
+			&i.ReceivingOrderNumber,
+			&i.ReceivingOrderStatus,
 		); err != nil {
 			return nil, err
 		}
@@ -1385,7 +1801,7 @@ func (q *Queries) ListPurchaseOrdersBackward(ctx context.Context, arg ListPurcha
 }
 
 const listPurchaseOrdersForward = `-- name: ListPurchaseOrdersForward :many
-SELECT
+SELECT STRAIGHT_JOIN
     so.id,
     so.number,
     so.sales_order_status_code AS status_code,
@@ -1401,16 +1817,42 @@ SELECT
     pr.id AS priority_id,
     so.issued_at,
     so.completed_at,
+    so.promised_at,
+    so.note,
     so.created_at,
     so.updated_at,
-    (SELECT COUNT(*) FROM sales_order_line sol_count WHERE sol_count.sales_order_id = so.id) AS line_count
-FROM sales_order so
+    (SELECT COUNT(*) FROM sales_order_line sol_count WHERE sol_count.sales_order_id = so.id) AS line_count,
+    -- Ship-to address
+    so.shipping_address_id,
+    ship_addr.name AS ship_to_name,
+    ship_addr.is_drop_ship AS ship_to_is_drop_ship,
+    ship_addr.created_at AS ship_to_created_at,
+    ship_addr.updated_at AS ship_to_updated_at,
+    ship_geo.street_line_1 AS ship_to_street_line_1,
+    ship_geo.street_line_2 AS ship_to_street_line_2,
+    ship_geo.locality AS ship_to_locality,
+    ship_geo.state AS ship_to_state,
+    ship_geo.postal_code AS ship_to_postal_code,
+    ship_geo.country AS ship_to_country,
+    ship_addr.phone AS ship_to_phone,
+    ship_addr.email AS ship_to_email,
+    -- Receiving order
+    ro.id AS receiving_order_id,
+    ro.number AS receiving_order_number,
+    CASE WHEN ro.id IS NULL THEN ''
+         WHEN ro.completed_at IS NULL THEN 'open'
+         ELSE 'completed' END AS receiving_order_status
+FROM sales_order so FORCE INDEX (sales_order_owner_type_created_idx, sales_order_owner_type_status_created_idx, sales_order_owner_type_seller_created_idx)
 JOIN account_relation ar ON ar.owner_account_id = so.owner_account_id
     AND ar.counterparty_account_id = so.seller_account_id
+    AND ar.account_relation_role_code = 'supplier'
 JOIN account sa ON sa.id = so.seller_account_id
 JOIN sales_order_status sos ON sos.code = so.sales_order_status_code
 JOIN sales_order_type sot ON sot.code = so.sales_order_type_code
 JOIN priority pr ON pr.code = so.priority_code
+LEFT JOIN address ship_addr ON ship_addr.id = so.shipping_address_id
+LEFT JOIN geolocation ship_geo ON ship_geo.id = ship_addr.geolocation_id
+LEFT JOIN receiving_order ro ON ro.order_id = so.id
 WHERE so.owner_account_id = ?
 AND so.sales_order_type_code = 'purchase_order'
 AND (
@@ -1418,6 +1860,9 @@ AND (
     OR so.number LIKE ?
     OR sa.name LIKE ?
     OR so.customer_po_number LIKE ?
+    OR ar.external_number LIKE ?
+    OR ar.alias LIKE ?
+    OR ar.notes LIKE ?
 )
 AND (
     ? = false
@@ -1484,15 +1929,40 @@ type ListPurchaseOrdersForwardRow struct {
 	PriorityID           string
 	IssuedAt             sql.NullTime
 	CompletedAt          sql.NullTime
+	PromisedAt           sql.NullTime
+	Note                 sql.NullString
 	CreatedAt            time.Time
 	UpdatedAt            time.Time
 	LineCount            int64
+	ShippingAddressID    string
+	ShipToName           sql.NullString
+	ShipToIsDropShip     sql.NullBool
+	ShipToCreatedAt      sql.NullTime
+	ShipToUpdatedAt      sql.NullTime
+	ShipToStreetLine1    sql.NullString
+	ShipToStreetLine2    sql.NullString
+	ShipToLocality       sql.NullString
+	ShipToState          sql.NullString
+	ShipToPostalCode     sql.NullString
+	ShipToCountry        sql.NullString
+	ShipToPhone          sql.NullString
+	ShipToEmail          sql.NullString
+	ReceivingOrderID     sql.NullString
+	ReceivingOrderNumber sql.NullString
+	ReceivingOrderStatus string
 }
 
+// STRAIGHT_JOIN drives from `so`. Otherwise the optimizer starts from the three-row priority table, reads
+// every purchase order of the account through the single-column type key and sorts them all before LIMIT.
+// FORCE INDEX keeps it to the keys that end in (created_at, id) and so page without a sort: the plain one
+// for no filter and the status and supplier ones for the filters the list exposes. Do not remove.
 func (q *Queries) ListPurchaseOrdersForward(ctx context.Context, arg ListPurchaseOrdersForwardParams) ([]ListPurchaseOrdersForwardRow, error) {
 	query := listPurchaseOrdersForward
 	var queryParams []interface{}
 	queryParams = append(queryParams, arg.AccountID)
+	queryParams = append(queryParams, arg.SearchQuery)
+	queryParams = append(queryParams, arg.SearchQuery)
+	queryParams = append(queryParams, arg.SearchQuery)
 	queryParams = append(queryParams, arg.SearchQuery)
 	queryParams = append(queryParams, arg.SearchQuery)
 	queryParams = append(queryParams, arg.SearchQuery)
@@ -1557,9 +2027,27 @@ func (q *Queries) ListPurchaseOrdersForward(ctx context.Context, arg ListPurchas
 			&i.PriorityID,
 			&i.IssuedAt,
 			&i.CompletedAt,
+			&i.PromisedAt,
+			&i.Note,
 			&i.CreatedAt,
 			&i.UpdatedAt,
 			&i.LineCount,
+			&i.ShippingAddressID,
+			&i.ShipToName,
+			&i.ShipToIsDropShip,
+			&i.ShipToCreatedAt,
+			&i.ShipToUpdatedAt,
+			&i.ShipToStreetLine1,
+			&i.ShipToStreetLine2,
+			&i.ShipToLocality,
+			&i.ShipToState,
+			&i.ShipToPostalCode,
+			&i.ShipToCountry,
+			&i.ShipToPhone,
+			&i.ShipToEmail,
+			&i.ReceivingOrderID,
+			&i.ReceivingOrderNumber,
+			&i.ReceivingOrderStatus,
 		); err != nil {
 			return nil, err
 		}
@@ -1599,7 +2087,7 @@ UPDATE sales_order SET
     priority_code = COALESCE(?, priority_code),
     billing_address_id = ?,
     shipping_address_id = ?,
-    promised_at = COALESCE(?, promised_at),
+    promised_at = CASE WHEN ? = true THEN NULL ELSE COALESCE(?, promised_at) END,
     updated_at = NOW(3)
 WHERE id = ?
 AND owner_account_id = ?
@@ -1613,6 +2101,7 @@ type UpdatePurchaseOrderParams struct {
 	PriorityCode      sql.NullString
 	BillingAddressID  sql.NullString
 	ShippingAddressID sql.NullString
+	ClearPromisedAt   interface{}
 	PromisedAt        sql.NullTime
 	ID                string
 	AccountID         string
@@ -1625,6 +2114,7 @@ func (q *Queries) UpdatePurchaseOrder(ctx context.Context, arg UpdatePurchaseOrd
 		arg.PriorityCode,
 		arg.BillingAddressID,
 		arg.ShippingAddressID,
+		arg.ClearPromisedAt,
 		arg.PromisedAt,
 		arg.ID,
 		arg.AccountID,

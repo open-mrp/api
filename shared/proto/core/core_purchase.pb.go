@@ -48,7 +48,29 @@ type PurchaseOrderSummaryInfo struct {
 	LineCount            int32                  `protobuf:"varint,17,opt,name=line_count,json=lineCount,proto3" json:"line_count,omitempty"`
 	PriorityId           *string                `protobuf:"bytes,18,opt,name=priority_id,json=priorityId,proto3,oneof" json:"priority_id,omitempty"`
 	// Lines (populated only when the list request includes "lines").
-	Lines         []*PurchaseOrderLineInfo `protobuf:"bytes,19,rep,name=lines,proto3" json:"lines,omitempty"`
+	Lines      []*PurchaseOrderLineInfo `protobuf:"bytes,19,rep,name=lines,proto3" json:"lines,omitempty"`
+	PromisedAt *timestamppb.Timestamp   `protobuf:"bytes,20,opt,name=promised_at,json=promisedAt,proto3,oneof" json:"promised_at,omitempty"`
+	// Ship-to address
+	ShippingAddressId      string                 `protobuf:"bytes,21,opt,name=shipping_address_id,json=shippingAddressId,proto3" json:"shipping_address_id,omitempty"`
+	ShipToName             *string                `protobuf:"bytes,22,opt,name=ship_to_name,json=shipToName,proto3,oneof" json:"ship_to_name,omitempty"`
+	ShipToStreetLine_1     *string                `protobuf:"bytes,23,opt,name=ship_to_street_line_1,json=shipToStreetLine1,proto3,oneof" json:"ship_to_street_line_1,omitempty"`
+	ShipToStreetLine_2     *string                `protobuf:"bytes,24,opt,name=ship_to_street_line_2,json=shipToStreetLine2,proto3,oneof" json:"ship_to_street_line_2,omitempty"`
+	ShipToLocality         *string                `protobuf:"bytes,25,opt,name=ship_to_locality,json=shipToLocality,proto3,oneof" json:"ship_to_locality,omitempty"`
+	ShipToState            *string                `protobuf:"bytes,26,opt,name=ship_to_state,json=shipToState,proto3,oneof" json:"ship_to_state,omitempty"`
+	ShipToPostalCode       *string                `protobuf:"bytes,27,opt,name=ship_to_postal_code,json=shipToPostalCode,proto3,oneof" json:"ship_to_postal_code,omitempty"`
+	ShipToCountry          *string                `protobuf:"bytes,28,opt,name=ship_to_country,json=shipToCountry,proto3,oneof" json:"ship_to_country,omitempty"`
+	ShipToPhone            *string                `protobuf:"bytes,29,opt,name=ship_to_phone,json=shipToPhone,proto3,oneof" json:"ship_to_phone,omitempty"`
+	ShipToEmail            *string                `protobuf:"bytes,30,opt,name=ship_to_email,json=shipToEmail,proto3,oneof" json:"ship_to_email,omitempty"`
+	ShipToAddressType      *string                `protobuf:"bytes,31,opt,name=ship_to_address_type,json=shipToAddressType,proto3,oneof" json:"ship_to_address_type,omitempty"`
+	ShipToAddressCreatedAt *timestamppb.Timestamp `protobuf:"bytes,32,opt,name=ship_to_address_created_at,json=shipToAddressCreatedAt,proto3,oneof" json:"ship_to_address_created_at,omitempty"`
+	ShipToAddressUpdatedAt *timestamppb.Timestamp `protobuf:"bytes,33,opt,name=ship_to_address_updated_at,json=shipToAddressUpdatedAt,proto3,oneof" json:"ship_to_address_updated_at,omitempty"`
+	// Receiving order reference
+	ReceivingOrderId     *string `protobuf:"bytes,34,opt,name=receiving_order_id,json=receivingOrderId,proto3,oneof" json:"receiving_order_id,omitempty"`
+	ReceivingOrderNumber *string `protobuf:"bytes,35,opt,name=receiving_order_number,json=receivingOrderNumber,proto3,oneof" json:"receiving_order_number,omitempty"`
+	ReceivingOrderStatus *string `protobuf:"bytes,36,opt,name=receiving_order_status,json=receivingOrderStatus,proto3,oneof" json:"receiving_order_status,omitempty"`
+	// Email contacts (populated only when the list request includes "contacts").
+	Contacts      []*EmailContactInfo `protobuf:"bytes,37,rep,name=contacts,proto3" json:"contacts,omitempty"`
+	Note          *string             `protobuf:"bytes,38,opt,name=note,proto3,oneof" json:"note,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -214,6 +236,139 @@ func (x *PurchaseOrderSummaryInfo) GetLines() []*PurchaseOrderLineInfo {
 		return x.Lines
 	}
 	return nil
+}
+
+func (x *PurchaseOrderSummaryInfo) GetPromisedAt() *timestamppb.Timestamp {
+	if x != nil {
+		return x.PromisedAt
+	}
+	return nil
+}
+
+func (x *PurchaseOrderSummaryInfo) GetShippingAddressId() string {
+	if x != nil {
+		return x.ShippingAddressId
+	}
+	return ""
+}
+
+func (x *PurchaseOrderSummaryInfo) GetShipToName() string {
+	if x != nil && x.ShipToName != nil {
+		return *x.ShipToName
+	}
+	return ""
+}
+
+func (x *PurchaseOrderSummaryInfo) GetShipToStreetLine_1() string {
+	if x != nil && x.ShipToStreetLine_1 != nil {
+		return *x.ShipToStreetLine_1
+	}
+	return ""
+}
+
+func (x *PurchaseOrderSummaryInfo) GetShipToStreetLine_2() string {
+	if x != nil && x.ShipToStreetLine_2 != nil {
+		return *x.ShipToStreetLine_2
+	}
+	return ""
+}
+
+func (x *PurchaseOrderSummaryInfo) GetShipToLocality() string {
+	if x != nil && x.ShipToLocality != nil {
+		return *x.ShipToLocality
+	}
+	return ""
+}
+
+func (x *PurchaseOrderSummaryInfo) GetShipToState() string {
+	if x != nil && x.ShipToState != nil {
+		return *x.ShipToState
+	}
+	return ""
+}
+
+func (x *PurchaseOrderSummaryInfo) GetShipToPostalCode() string {
+	if x != nil && x.ShipToPostalCode != nil {
+		return *x.ShipToPostalCode
+	}
+	return ""
+}
+
+func (x *PurchaseOrderSummaryInfo) GetShipToCountry() string {
+	if x != nil && x.ShipToCountry != nil {
+		return *x.ShipToCountry
+	}
+	return ""
+}
+
+func (x *PurchaseOrderSummaryInfo) GetShipToPhone() string {
+	if x != nil && x.ShipToPhone != nil {
+		return *x.ShipToPhone
+	}
+	return ""
+}
+
+func (x *PurchaseOrderSummaryInfo) GetShipToEmail() string {
+	if x != nil && x.ShipToEmail != nil {
+		return *x.ShipToEmail
+	}
+	return ""
+}
+
+func (x *PurchaseOrderSummaryInfo) GetShipToAddressType() string {
+	if x != nil && x.ShipToAddressType != nil {
+		return *x.ShipToAddressType
+	}
+	return ""
+}
+
+func (x *PurchaseOrderSummaryInfo) GetShipToAddressCreatedAt() *timestamppb.Timestamp {
+	if x != nil {
+		return x.ShipToAddressCreatedAt
+	}
+	return nil
+}
+
+func (x *PurchaseOrderSummaryInfo) GetShipToAddressUpdatedAt() *timestamppb.Timestamp {
+	if x != nil {
+		return x.ShipToAddressUpdatedAt
+	}
+	return nil
+}
+
+func (x *PurchaseOrderSummaryInfo) GetReceivingOrderId() string {
+	if x != nil && x.ReceivingOrderId != nil {
+		return *x.ReceivingOrderId
+	}
+	return ""
+}
+
+func (x *PurchaseOrderSummaryInfo) GetReceivingOrderNumber() string {
+	if x != nil && x.ReceivingOrderNumber != nil {
+		return *x.ReceivingOrderNumber
+	}
+	return ""
+}
+
+func (x *PurchaseOrderSummaryInfo) GetReceivingOrderStatus() string {
+	if x != nil && x.ReceivingOrderStatus != nil {
+		return *x.ReceivingOrderStatus
+	}
+	return ""
+}
+
+func (x *PurchaseOrderSummaryInfo) GetContacts() []*EmailContactInfo {
+	if x != nil {
+		return x.Contacts
+	}
+	return nil
+}
+
+func (x *PurchaseOrderSummaryInfo) GetNote() string {
+	if x != nil && x.Note != nil {
+		return *x.Note
+	}
+	return ""
 }
 
 // PurchaseOrderInfo represents a full purchase order with all detail.
@@ -908,8 +1063,10 @@ type PurchaseOrderLineInfo struct {
 	UnitPriceCreatedAt *timestamppb.Timestamp `protobuf:"bytes,29,opt,name=unit_price_created_at,json=unitPriceCreatedAt,proto3" json:"unit_price_created_at,omitempty"`
 	UnitPriceUpdatedAt *timestamppb.Timestamp `protobuf:"bytes,30,opt,name=unit_price_updated_at,json=unitPriceUpdatedAt,proto3" json:"unit_price_updated_at,omitempty"`
 	// Timestamps
-	CreatedAt     *timestamppb.Timestamp `protobuf:"bytes,27,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
-	UpdatedAt     *timestamppb.Timestamp `protobuf:"bytes,28,opt,name=updated_at,json=updatedAt,proto3" json:"updated_at,omitempty"`
+	CreatedAt *timestamppb.Timestamp `protobuf:"bytes,27,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
+	UpdatedAt *timestamppb.Timestamp `protobuf:"bytes,28,opt,name=updated_at,json=updatedAt,proto3" json:"updated_at,omitempty"`
+	// Delivery lines booked against the line, oldest first (populated when "lines.delivery_lines" is included).
+	DeliveryLines []*PurchaseOrderLineDeliveryLineInfo `protobuf:"bytes,31,rep,name=delivery_lines,json=deliveryLines,proto3" json:"delivery_lines,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -1154,18 +1311,128 @@ func (x *PurchaseOrderLineInfo) GetUpdatedAt() *timestamppb.Timestamp {
 	return nil
 }
 
+func (x *PurchaseOrderLineInfo) GetDeliveryLines() []*PurchaseOrderLineDeliveryLineInfo {
+	if x != nil {
+		return x.DeliveryLines
+	}
+	return nil
+}
+
+// PurchaseOrderLineDeliveryLineInfo is a delivery line booked against a purchase order line.
+type PurchaseOrderLineDeliveryLineInfo struct {
+	state          protoimpl.MessageState `protogen:"open.v1"`
+	Id             string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	QuantityValue  string                 `protobuf:"bytes,2,opt,name=quantity_value,json=quantityValue,proto3" json:"quantity_value,omitempty"`
+	QuantityUnitId string                 `protobuf:"bytes,3,opt,name=quantity_unit_id,json=quantityUnitId,proto3" json:"quantity_unit_id,omitempty"`
+	AcceptedAt     *timestamppb.Timestamp `protobuf:"bytes,4,opt,name=accepted_at,json=acceptedAt,proto3,oneof" json:"accepted_at,omitempty"`
+	RejectedAt     *timestamppb.Timestamp `protobuf:"bytes,5,opt,name=rejected_at,json=rejectedAt,proto3,oneof" json:"rejected_at,omitempty"`
+	CreatedAt      *timestamppb.Timestamp `protobuf:"bytes,6,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
+	UpdatedAt      *timestamppb.Timestamp `protobuf:"bytes,7,opt,name=updated_at,json=updatedAt,proto3" json:"updated_at,omitempty"`
+	QuantityId     string                 `protobuf:"bytes,8,opt,name=quantity_id,json=quantityId,proto3" json:"quantity_id,omitempty"`
+	unknownFields  protoimpl.UnknownFields
+	sizeCache      protoimpl.SizeCache
+}
+
+func (x *PurchaseOrderLineDeliveryLineInfo) Reset() {
+	*x = PurchaseOrderLineDeliveryLineInfo{}
+	mi := &file_core_core_purchase_proto_msgTypes[3]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *PurchaseOrderLineDeliveryLineInfo) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*PurchaseOrderLineDeliveryLineInfo) ProtoMessage() {}
+
+func (x *PurchaseOrderLineDeliveryLineInfo) ProtoReflect() protoreflect.Message {
+	mi := &file_core_core_purchase_proto_msgTypes[3]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use PurchaseOrderLineDeliveryLineInfo.ProtoReflect.Descriptor instead.
+func (*PurchaseOrderLineDeliveryLineInfo) Descriptor() ([]byte, []int) {
+	return file_core_core_purchase_proto_rawDescGZIP(), []int{3}
+}
+
+func (x *PurchaseOrderLineDeliveryLineInfo) GetId() string {
+	if x != nil {
+		return x.Id
+	}
+	return ""
+}
+
+func (x *PurchaseOrderLineDeliveryLineInfo) GetQuantityValue() string {
+	if x != nil {
+		return x.QuantityValue
+	}
+	return ""
+}
+
+func (x *PurchaseOrderLineDeliveryLineInfo) GetQuantityUnitId() string {
+	if x != nil {
+		return x.QuantityUnitId
+	}
+	return ""
+}
+
+func (x *PurchaseOrderLineDeliveryLineInfo) GetAcceptedAt() *timestamppb.Timestamp {
+	if x != nil {
+		return x.AcceptedAt
+	}
+	return nil
+}
+
+func (x *PurchaseOrderLineDeliveryLineInfo) GetRejectedAt() *timestamppb.Timestamp {
+	if x != nil {
+		return x.RejectedAt
+	}
+	return nil
+}
+
+func (x *PurchaseOrderLineDeliveryLineInfo) GetCreatedAt() *timestamppb.Timestamp {
+	if x != nil {
+		return x.CreatedAt
+	}
+	return nil
+}
+
+func (x *PurchaseOrderLineDeliveryLineInfo) GetUpdatedAt() *timestamppb.Timestamp {
+	if x != nil {
+		return x.UpdatedAt
+	}
+	return nil
+}
+
+func (x *PurchaseOrderLineDeliveryLineInfo) GetQuantityId() string {
+	if x != nil {
+		return x.QuantityId
+	}
+	return ""
+}
+
 // EmailContactInfo represents an email contact on a purchase order.
 type EmailContactInfo struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
 	AccountUserId string                 `protobuf:"bytes,2,opt,name=account_user_id,json=accountUserId,proto3" json:"account_user_id,omitempty"`
+	Name          *string                `protobuf:"bytes,3,opt,name=name,proto3,oneof" json:"name,omitempty"`
+	Email         *string                `protobuf:"bytes,4,opt,name=email,proto3,oneof" json:"email,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
 
 func (x *EmailContactInfo) Reset() {
 	*x = EmailContactInfo{}
-	mi := &file_core_core_purchase_proto_msgTypes[3]
+	mi := &file_core_core_purchase_proto_msgTypes[4]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1177,7 +1444,7 @@ func (x *EmailContactInfo) String() string {
 func (*EmailContactInfo) ProtoMessage() {}
 
 func (x *EmailContactInfo) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_purchase_proto_msgTypes[3]
+	mi := &file_core_core_purchase_proto_msgTypes[4]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1190,7 +1457,7 @@ func (x *EmailContactInfo) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use EmailContactInfo.ProtoReflect.Descriptor instead.
 func (*EmailContactInfo) Descriptor() ([]byte, []int) {
-	return file_core_core_purchase_proto_rawDescGZIP(), []int{3}
+	return file_core_core_purchase_proto_rawDescGZIP(), []int{4}
 }
 
 func (x *EmailContactInfo) GetId() string {
@@ -1203,6 +1470,20 @@ func (x *EmailContactInfo) GetId() string {
 func (x *EmailContactInfo) GetAccountUserId() string {
 	if x != nil {
 		return x.AccountUserId
+	}
+	return ""
+}
+
+func (x *EmailContactInfo) GetName() string {
+	if x != nil && x.Name != nil {
+		return *x.Name
+	}
+	return ""
+}
+
+func (x *EmailContactInfo) GetEmail() string {
+	if x != nil && x.Email != nil {
+		return *x.Email
 	}
 	return ""
 }
@@ -1224,7 +1505,7 @@ type ListPurchaseOrdersRequest struct {
 
 func (x *ListPurchaseOrdersRequest) Reset() {
 	*x = ListPurchaseOrdersRequest{}
-	mi := &file_core_core_purchase_proto_msgTypes[4]
+	mi := &file_core_core_purchase_proto_msgTypes[5]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1236,7 +1517,7 @@ func (x *ListPurchaseOrdersRequest) String() string {
 func (*ListPurchaseOrdersRequest) ProtoMessage() {}
 
 func (x *ListPurchaseOrdersRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_purchase_proto_msgTypes[4]
+	mi := &file_core_core_purchase_proto_msgTypes[5]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1249,7 +1530,7 @@ func (x *ListPurchaseOrdersRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListPurchaseOrdersRequest.ProtoReflect.Descriptor instead.
 func (*ListPurchaseOrdersRequest) Descriptor() ([]byte, []int) {
-	return file_core_core_purchase_proto_rawDescGZIP(), []int{4}
+	return file_core_core_purchase_proto_rawDescGZIP(), []int{5}
 }
 
 func (x *ListPurchaseOrdersRequest) GetCursor() string {
@@ -1325,7 +1606,7 @@ type ListPurchaseOrdersResponse struct {
 
 func (x *ListPurchaseOrdersResponse) Reset() {
 	*x = ListPurchaseOrdersResponse{}
-	mi := &file_core_core_purchase_proto_msgTypes[5]
+	mi := &file_core_core_purchase_proto_msgTypes[6]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1337,7 +1618,7 @@ func (x *ListPurchaseOrdersResponse) String() string {
 func (*ListPurchaseOrdersResponse) ProtoMessage() {}
 
 func (x *ListPurchaseOrdersResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_purchase_proto_msgTypes[5]
+	mi := &file_core_core_purchase_proto_msgTypes[6]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1350,7 +1631,7 @@ func (x *ListPurchaseOrdersResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListPurchaseOrdersResponse.ProtoReflect.Descriptor instead.
 func (*ListPurchaseOrdersResponse) Descriptor() ([]byte, []int) {
-	return file_core_core_purchase_proto_rawDescGZIP(), []int{5}
+	return file_core_core_purchase_proto_rawDescGZIP(), []int{6}
 }
 
 func (x *ListPurchaseOrdersResponse) GetPurchaseOrders() []*PurchaseOrderSummaryInfo {
@@ -1377,7 +1658,7 @@ type GetPurchaseOrderRequest struct {
 
 func (x *GetPurchaseOrderRequest) Reset() {
 	*x = GetPurchaseOrderRequest{}
-	mi := &file_core_core_purchase_proto_msgTypes[6]
+	mi := &file_core_core_purchase_proto_msgTypes[7]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1389,7 +1670,7 @@ func (x *GetPurchaseOrderRequest) String() string {
 func (*GetPurchaseOrderRequest) ProtoMessage() {}
 
 func (x *GetPurchaseOrderRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_purchase_proto_msgTypes[6]
+	mi := &file_core_core_purchase_proto_msgTypes[7]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1402,7 +1683,7 @@ func (x *GetPurchaseOrderRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetPurchaseOrderRequest.ProtoReflect.Descriptor instead.
 func (*GetPurchaseOrderRequest) Descriptor() ([]byte, []int) {
-	return file_core_core_purchase_proto_rawDescGZIP(), []int{6}
+	return file_core_core_purchase_proto_rawDescGZIP(), []int{7}
 }
 
 func (x *GetPurchaseOrderRequest) GetId() string {
@@ -1428,7 +1709,7 @@ type GetPurchaseOrderResponse struct {
 
 func (x *GetPurchaseOrderResponse) Reset() {
 	*x = GetPurchaseOrderResponse{}
-	mi := &file_core_core_purchase_proto_msgTypes[7]
+	mi := &file_core_core_purchase_proto_msgTypes[8]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1440,7 +1721,7 @@ func (x *GetPurchaseOrderResponse) String() string {
 func (*GetPurchaseOrderResponse) ProtoMessage() {}
 
 func (x *GetPurchaseOrderResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_purchase_proto_msgTypes[7]
+	mi := &file_core_core_purchase_proto_msgTypes[8]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1453,7 +1734,7 @@ func (x *GetPurchaseOrderResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetPurchaseOrderResponse.ProtoReflect.Descriptor instead.
 func (*GetPurchaseOrderResponse) Descriptor() ([]byte, []int) {
-	return file_core_core_purchase_proto_rawDescGZIP(), []int{7}
+	return file_core_core_purchase_proto_rawDescGZIP(), []int{8}
 }
 
 func (x *GetPurchaseOrderResponse) GetPurchaseOrder() *PurchaseOrderInfo {
@@ -1473,7 +1754,7 @@ type BatchGetPurchaseOrdersByIDsRequest struct {
 
 func (x *BatchGetPurchaseOrdersByIDsRequest) Reset() {
 	*x = BatchGetPurchaseOrdersByIDsRequest{}
-	mi := &file_core_core_purchase_proto_msgTypes[8]
+	mi := &file_core_core_purchase_proto_msgTypes[9]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1485,7 +1766,7 @@ func (x *BatchGetPurchaseOrdersByIDsRequest) String() string {
 func (*BatchGetPurchaseOrdersByIDsRequest) ProtoMessage() {}
 
 func (x *BatchGetPurchaseOrdersByIDsRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_purchase_proto_msgTypes[8]
+	mi := &file_core_core_purchase_proto_msgTypes[9]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1498,7 +1779,7 @@ func (x *BatchGetPurchaseOrdersByIDsRequest) ProtoReflect() protoreflect.Message
 
 // Deprecated: Use BatchGetPurchaseOrdersByIDsRequest.ProtoReflect.Descriptor instead.
 func (*BatchGetPurchaseOrdersByIDsRequest) Descriptor() ([]byte, []int) {
-	return file_core_core_purchase_proto_rawDescGZIP(), []int{8}
+	return file_core_core_purchase_proto_rawDescGZIP(), []int{9}
 }
 
 func (x *BatchGetPurchaseOrdersByIDsRequest) GetIds() []string {
@@ -1517,7 +1798,7 @@ type BatchGetPurchaseOrdersByIDsResponse struct {
 
 func (x *BatchGetPurchaseOrdersByIDsResponse) Reset() {
 	*x = BatchGetPurchaseOrdersByIDsResponse{}
-	mi := &file_core_core_purchase_proto_msgTypes[9]
+	mi := &file_core_core_purchase_proto_msgTypes[10]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1529,7 +1810,7 @@ func (x *BatchGetPurchaseOrdersByIDsResponse) String() string {
 func (*BatchGetPurchaseOrdersByIDsResponse) ProtoMessage() {}
 
 func (x *BatchGetPurchaseOrdersByIDsResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_purchase_proto_msgTypes[9]
+	mi := &file_core_core_purchase_proto_msgTypes[10]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1542,7 +1823,7 @@ func (x *BatchGetPurchaseOrdersByIDsResponse) ProtoReflect() protoreflect.Messag
 
 // Deprecated: Use BatchGetPurchaseOrdersByIDsResponse.ProtoReflect.Descriptor instead.
 func (*BatchGetPurchaseOrdersByIDsResponse) Descriptor() ([]byte, []int) {
-	return file_core_core_purchase_proto_rawDescGZIP(), []int{9}
+	return file_core_core_purchase_proto_rawDescGZIP(), []int{10}
 }
 
 func (x *BatchGetPurchaseOrdersByIDsResponse) GetPurchaseOrders() []*PurchaseOrderInfo {
@@ -1561,7 +1842,7 @@ type BatchGetPurchaseOrderLinesByIDsRequest struct {
 
 func (x *BatchGetPurchaseOrderLinesByIDsRequest) Reset() {
 	*x = BatchGetPurchaseOrderLinesByIDsRequest{}
-	mi := &file_core_core_purchase_proto_msgTypes[10]
+	mi := &file_core_core_purchase_proto_msgTypes[11]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1573,7 +1854,7 @@ func (x *BatchGetPurchaseOrderLinesByIDsRequest) String() string {
 func (*BatchGetPurchaseOrderLinesByIDsRequest) ProtoMessage() {}
 
 func (x *BatchGetPurchaseOrderLinesByIDsRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_purchase_proto_msgTypes[10]
+	mi := &file_core_core_purchase_proto_msgTypes[11]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1586,7 +1867,7 @@ func (x *BatchGetPurchaseOrderLinesByIDsRequest) ProtoReflect() protoreflect.Mes
 
 // Deprecated: Use BatchGetPurchaseOrderLinesByIDsRequest.ProtoReflect.Descriptor instead.
 func (*BatchGetPurchaseOrderLinesByIDsRequest) Descriptor() ([]byte, []int) {
-	return file_core_core_purchase_proto_rawDescGZIP(), []int{10}
+	return file_core_core_purchase_proto_rawDescGZIP(), []int{11}
 }
 
 func (x *BatchGetPurchaseOrderLinesByIDsRequest) GetIds() []string {
@@ -1605,7 +1886,7 @@ type BatchGetPurchaseOrderLinesByIDsResponse struct {
 
 func (x *BatchGetPurchaseOrderLinesByIDsResponse) Reset() {
 	*x = BatchGetPurchaseOrderLinesByIDsResponse{}
-	mi := &file_core_core_purchase_proto_msgTypes[11]
+	mi := &file_core_core_purchase_proto_msgTypes[12]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1617,7 +1898,7 @@ func (x *BatchGetPurchaseOrderLinesByIDsResponse) String() string {
 func (*BatchGetPurchaseOrderLinesByIDsResponse) ProtoMessage() {}
 
 func (x *BatchGetPurchaseOrderLinesByIDsResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_purchase_proto_msgTypes[11]
+	mi := &file_core_core_purchase_proto_msgTypes[12]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1630,7 +1911,7 @@ func (x *BatchGetPurchaseOrderLinesByIDsResponse) ProtoReflect() protoreflect.Me
 
 // Deprecated: Use BatchGetPurchaseOrderLinesByIDsResponse.ProtoReflect.Descriptor instead.
 func (*BatchGetPurchaseOrderLinesByIDsResponse) Descriptor() ([]byte, []int) {
-	return file_core_core_purchase_proto_rawDescGZIP(), []int{11}
+	return file_core_core_purchase_proto_rawDescGZIP(), []int{12}
 }
 
 func (x *BatchGetPurchaseOrderLinesByIDsResponse) GetLines() []*PurchaseOrderLineInfo {
@@ -1672,15 +1953,20 @@ type CreatePurchaseOrderRequest struct {
 	// Email contacts
 	ContactAccountUserIds []string `protobuf:"bytes,25,rep,name=contact_account_user_ids,json=contactAccountUserIds,proto3" json:"contact_account_user_ids,omitempty"`
 	// Promised date
-	PromisedAt    *string  `protobuf:"bytes,26,opt,name=promised_at,json=promisedAt,proto3,oneof" json:"promised_at,omitempty"`
-	Includes      []string `protobuf:"bytes,27,rep,name=includes,proto3" json:"includes,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	PromisedAt *string  `protobuf:"bytes,26,opt,name=promised_at,json=promisedAt,proto3,oneof" json:"promised_at,omitempty"`
+	Includes   []string `protobuf:"bytes,27,rep,name=includes,proto3" json:"includes,omitempty"`
+	// Order number to use instead of the next one in the sequence.
+	Number *string `protobuf:"bytes,28,opt,name=number,proto3,oneof" json:"number,omitempty"`
+	// Existing supplier addresses to use instead of creating ones from the inline fields.
+	BillToAddressId *string `protobuf:"bytes,29,opt,name=bill_to_address_id,json=billToAddressId,proto3,oneof" json:"bill_to_address_id,omitempty"`
+	ShipToAddressId *string `protobuf:"bytes,30,opt,name=ship_to_address_id,json=shipToAddressId,proto3,oneof" json:"ship_to_address_id,omitempty"`
+	unknownFields   protoimpl.UnknownFields
+	sizeCache       protoimpl.SizeCache
 }
 
 func (x *CreatePurchaseOrderRequest) Reset() {
 	*x = CreatePurchaseOrderRequest{}
-	mi := &file_core_core_purchase_proto_msgTypes[12]
+	mi := &file_core_core_purchase_proto_msgTypes[13]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1692,7 +1978,7 @@ func (x *CreatePurchaseOrderRequest) String() string {
 func (*CreatePurchaseOrderRequest) ProtoMessage() {}
 
 func (x *CreatePurchaseOrderRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_purchase_proto_msgTypes[12]
+	mi := &file_core_core_purchase_proto_msgTypes[13]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1705,7 +1991,7 @@ func (x *CreatePurchaseOrderRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CreatePurchaseOrderRequest.ProtoReflect.Descriptor instead.
 func (*CreatePurchaseOrderRequest) Descriptor() ([]byte, []int) {
-	return file_core_core_purchase_proto_rawDescGZIP(), []int{12}
+	return file_core_core_purchase_proto_rawDescGZIP(), []int{13}
 }
 
 func (x *CreatePurchaseOrderRequest) GetSupplierAccountId() string {
@@ -1897,9 +2183,30 @@ func (x *CreatePurchaseOrderRequest) GetIncludes() []string {
 	return nil
 }
 
+func (x *CreatePurchaseOrderRequest) GetNumber() string {
+	if x != nil && x.Number != nil {
+		return *x.Number
+	}
+	return ""
+}
+
+func (x *CreatePurchaseOrderRequest) GetBillToAddressId() string {
+	if x != nil && x.BillToAddressId != nil {
+		return *x.BillToAddressId
+	}
+	return ""
+}
+
+func (x *CreatePurchaseOrderRequest) GetShipToAddressId() string {
+	if x != nil && x.ShipToAddressId != nil {
+		return *x.ShipToAddressId
+	}
+	return ""
+}
+
 type CreatePurchaseOrderLineInput struct {
 	state                      protoimpl.MessageState `protogen:"open.v1"`
-	ProductId                  string                 `protobuf:"bytes,1,opt,name=product_id,json=productId,proto3" json:"product_id,omitempty"`
+	ProductId                  *string                `protobuf:"bytes,1,opt,name=product_id,json=productId,proto3,oneof" json:"product_id,omitempty"`
 	ItemId                     *string                `protobuf:"bytes,2,opt,name=item_id,json=itemId,proto3,oneof" json:"item_id,omitempty"`
 	ProductSku                 string                 `protobuf:"bytes,3,opt,name=product_sku,json=productSku,proto3" json:"product_sku,omitempty"`
 	ProductDescription         *string                `protobuf:"bytes,4,opt,name=product_description,json=productDescription,proto3,oneof" json:"product_description,omitempty"`
@@ -1917,7 +2224,7 @@ type CreatePurchaseOrderLineInput struct {
 
 func (x *CreatePurchaseOrderLineInput) Reset() {
 	*x = CreatePurchaseOrderLineInput{}
-	mi := &file_core_core_purchase_proto_msgTypes[13]
+	mi := &file_core_core_purchase_proto_msgTypes[14]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1929,7 +2236,7 @@ func (x *CreatePurchaseOrderLineInput) String() string {
 func (*CreatePurchaseOrderLineInput) ProtoMessage() {}
 
 func (x *CreatePurchaseOrderLineInput) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_purchase_proto_msgTypes[13]
+	mi := &file_core_core_purchase_proto_msgTypes[14]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1942,12 +2249,12 @@ func (x *CreatePurchaseOrderLineInput) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CreatePurchaseOrderLineInput.ProtoReflect.Descriptor instead.
 func (*CreatePurchaseOrderLineInput) Descriptor() ([]byte, []int) {
-	return file_core_core_purchase_proto_rawDescGZIP(), []int{13}
+	return file_core_core_purchase_proto_rawDescGZIP(), []int{14}
 }
 
 func (x *CreatePurchaseOrderLineInput) GetProductId() string {
-	if x != nil {
-		return x.ProductId
+	if x != nil && x.ProductId != nil {
+		return *x.ProductId
 	}
 	return ""
 }
@@ -2038,7 +2345,7 @@ type CreatePurchaseOrderResponse struct {
 
 func (x *CreatePurchaseOrderResponse) Reset() {
 	*x = CreatePurchaseOrderResponse{}
-	mi := &file_core_core_purchase_proto_msgTypes[14]
+	mi := &file_core_core_purchase_proto_msgTypes[15]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2050,7 +2357,7 @@ func (x *CreatePurchaseOrderResponse) String() string {
 func (*CreatePurchaseOrderResponse) ProtoMessage() {}
 
 func (x *CreatePurchaseOrderResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_purchase_proto_msgTypes[14]
+	mi := &file_core_core_purchase_proto_msgTypes[15]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2063,7 +2370,7 @@ func (x *CreatePurchaseOrderResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CreatePurchaseOrderResponse.ProtoReflect.Descriptor instead.
 func (*CreatePurchaseOrderResponse) Descriptor() ([]byte, []int) {
-	return file_core_core_purchase_proto_rawDescGZIP(), []int{14}
+	return file_core_core_purchase_proto_rawDescGZIP(), []int{15}
 }
 
 func (x *CreatePurchaseOrderResponse) GetPurchaseOrder() *PurchaseOrderInfo {
@@ -2082,16 +2389,20 @@ type UpdatePurchaseOrderRequest struct {
 	BillingAddressId  *string                `protobuf:"bytes,5,opt,name=billing_address_id,json=billingAddressId,proto3,oneof" json:"billing_address_id,omitempty"`
 	ShippingAddressId *string                `protobuf:"bytes,6,opt,name=shipping_address_id,json=shippingAddressId,proto3,oneof" json:"shipping_address_id,omitempty"`
 	PromisedAt        *string                `protobuf:"bytes,7,opt,name=promised_at,json=promisedAt,proto3,oneof" json:"promised_at,omitempty"`
-	// Email contacts (replaces existing)
+	// Email contacts (replaces existing when replace_contacts is set)
 	ContactAccountUserIds []string `protobuf:"bytes,8,rep,name=contact_account_user_ids,json=contactAccountUserIds,proto3" json:"contact_account_user_ids,omitempty"`
 	Includes              []string `protobuf:"bytes,9,rep,name=includes,proto3" json:"includes,omitempty"`
-	unknownFields         protoimpl.UnknownFields
-	sizeCache             protoimpl.SizeCache
+	// Removes the promised date.
+	ClearPromisedAt bool `protobuf:"varint,10,opt,name=clear_promised_at,json=clearPromisedAt,proto3" json:"clear_promised_at,omitempty"`
+	// Marks contact_account_user_ids as the new contact set, so an empty list clears the contacts.
+	ReplaceContacts bool `protobuf:"varint,11,opt,name=replace_contacts,json=replaceContacts,proto3" json:"replace_contacts,omitempty"`
+	unknownFields   protoimpl.UnknownFields
+	sizeCache       protoimpl.SizeCache
 }
 
 func (x *UpdatePurchaseOrderRequest) Reset() {
 	*x = UpdatePurchaseOrderRequest{}
-	mi := &file_core_core_purchase_proto_msgTypes[15]
+	mi := &file_core_core_purchase_proto_msgTypes[16]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2103,7 +2414,7 @@ func (x *UpdatePurchaseOrderRequest) String() string {
 func (*UpdatePurchaseOrderRequest) ProtoMessage() {}
 
 func (x *UpdatePurchaseOrderRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_purchase_proto_msgTypes[15]
+	mi := &file_core_core_purchase_proto_msgTypes[16]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2116,7 +2427,7 @@ func (x *UpdatePurchaseOrderRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use UpdatePurchaseOrderRequest.ProtoReflect.Descriptor instead.
 func (*UpdatePurchaseOrderRequest) Descriptor() ([]byte, []int) {
-	return file_core_core_purchase_proto_rawDescGZIP(), []int{15}
+	return file_core_core_purchase_proto_rawDescGZIP(), []int{16}
 }
 
 func (x *UpdatePurchaseOrderRequest) GetId() string {
@@ -2182,6 +2493,20 @@ func (x *UpdatePurchaseOrderRequest) GetIncludes() []string {
 	return nil
 }
 
+func (x *UpdatePurchaseOrderRequest) GetClearPromisedAt() bool {
+	if x != nil {
+		return x.ClearPromisedAt
+	}
+	return false
+}
+
+func (x *UpdatePurchaseOrderRequest) GetReplaceContacts() bool {
+	if x != nil {
+		return x.ReplaceContacts
+	}
+	return false
+}
+
 type UpdatePurchaseOrderResponse struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	PurchaseOrder *PurchaseOrderInfo     `protobuf:"bytes,1,opt,name=purchase_order,json=purchaseOrder,proto3" json:"purchase_order,omitempty"`
@@ -2191,7 +2516,7 @@ type UpdatePurchaseOrderResponse struct {
 
 func (x *UpdatePurchaseOrderResponse) Reset() {
 	*x = UpdatePurchaseOrderResponse{}
-	mi := &file_core_core_purchase_proto_msgTypes[16]
+	mi := &file_core_core_purchase_proto_msgTypes[17]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2203,7 +2528,7 @@ func (x *UpdatePurchaseOrderResponse) String() string {
 func (*UpdatePurchaseOrderResponse) ProtoMessage() {}
 
 func (x *UpdatePurchaseOrderResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_purchase_proto_msgTypes[16]
+	mi := &file_core_core_purchase_proto_msgTypes[17]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2216,7 +2541,7 @@ func (x *UpdatePurchaseOrderResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use UpdatePurchaseOrderResponse.ProtoReflect.Descriptor instead.
 func (*UpdatePurchaseOrderResponse) Descriptor() ([]byte, []int) {
-	return file_core_core_purchase_proto_rawDescGZIP(), []int{16}
+	return file_core_core_purchase_proto_rawDescGZIP(), []int{17}
 }
 
 func (x *UpdatePurchaseOrderResponse) GetPurchaseOrder() *PurchaseOrderInfo {
@@ -2235,7 +2560,7 @@ type DeletePurchaseOrderRequest struct {
 
 func (x *DeletePurchaseOrderRequest) Reset() {
 	*x = DeletePurchaseOrderRequest{}
-	mi := &file_core_core_purchase_proto_msgTypes[17]
+	mi := &file_core_core_purchase_proto_msgTypes[18]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2247,7 +2572,7 @@ func (x *DeletePurchaseOrderRequest) String() string {
 func (*DeletePurchaseOrderRequest) ProtoMessage() {}
 
 func (x *DeletePurchaseOrderRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_purchase_proto_msgTypes[17]
+	mi := &file_core_core_purchase_proto_msgTypes[18]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2260,7 +2585,7 @@ func (x *DeletePurchaseOrderRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use DeletePurchaseOrderRequest.ProtoReflect.Descriptor instead.
 func (*DeletePurchaseOrderRequest) Descriptor() ([]byte, []int) {
-	return file_core_core_purchase_proto_rawDescGZIP(), []int{17}
+	return file_core_core_purchase_proto_rawDescGZIP(), []int{18}
 }
 
 func (x *DeletePurchaseOrderRequest) GetId() string {
@@ -2279,7 +2604,7 @@ type BulkDeletePurchaseOrdersRequest struct {
 
 func (x *BulkDeletePurchaseOrdersRequest) Reset() {
 	*x = BulkDeletePurchaseOrdersRequest{}
-	mi := &file_core_core_purchase_proto_msgTypes[18]
+	mi := &file_core_core_purchase_proto_msgTypes[19]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2291,7 +2616,7 @@ func (x *BulkDeletePurchaseOrdersRequest) String() string {
 func (*BulkDeletePurchaseOrdersRequest) ProtoMessage() {}
 
 func (x *BulkDeletePurchaseOrdersRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_purchase_proto_msgTypes[18]
+	mi := &file_core_core_purchase_proto_msgTypes[19]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2304,7 +2629,7 @@ func (x *BulkDeletePurchaseOrdersRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use BulkDeletePurchaseOrdersRequest.ProtoReflect.Descriptor instead.
 func (*BulkDeletePurchaseOrdersRequest) Descriptor() ([]byte, []int) {
-	return file_core_core_purchase_proto_rawDescGZIP(), []int{18}
+	return file_core_core_purchase_proto_rawDescGZIP(), []int{19}
 }
 
 func (x *BulkDeletePurchaseOrdersRequest) GetIds() []string {
@@ -2326,7 +2651,7 @@ type ChangePurchaseOrderStatusRequest struct {
 
 func (x *ChangePurchaseOrderStatusRequest) Reset() {
 	*x = ChangePurchaseOrderStatusRequest{}
-	mi := &file_core_core_purchase_proto_msgTypes[19]
+	mi := &file_core_core_purchase_proto_msgTypes[20]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2338,7 +2663,7 @@ func (x *ChangePurchaseOrderStatusRequest) String() string {
 func (*ChangePurchaseOrderStatusRequest) ProtoMessage() {}
 
 func (x *ChangePurchaseOrderStatusRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_purchase_proto_msgTypes[19]
+	mi := &file_core_core_purchase_proto_msgTypes[20]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2351,7 +2676,7 @@ func (x *ChangePurchaseOrderStatusRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ChangePurchaseOrderStatusRequest.ProtoReflect.Descriptor instead.
 func (*ChangePurchaseOrderStatusRequest) Descriptor() ([]byte, []int) {
-	return file_core_core_purchase_proto_rawDescGZIP(), []int{19}
+	return file_core_core_purchase_proto_rawDescGZIP(), []int{20}
 }
 
 func (x *ChangePurchaseOrderStatusRequest) GetId() string {
@@ -2391,7 +2716,7 @@ type ChangePurchaseOrderStatusResponse struct {
 
 func (x *ChangePurchaseOrderStatusResponse) Reset() {
 	*x = ChangePurchaseOrderStatusResponse{}
-	mi := &file_core_core_purchase_proto_msgTypes[20]
+	mi := &file_core_core_purchase_proto_msgTypes[21]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2403,7 +2728,7 @@ func (x *ChangePurchaseOrderStatusResponse) String() string {
 func (*ChangePurchaseOrderStatusResponse) ProtoMessage() {}
 
 func (x *ChangePurchaseOrderStatusResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_purchase_proto_msgTypes[20]
+	mi := &file_core_core_purchase_proto_msgTypes[21]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2416,7 +2741,7 @@ func (x *ChangePurchaseOrderStatusResponse) ProtoReflect() protoreflect.Message 
 
 // Deprecated: Use ChangePurchaseOrderStatusResponse.ProtoReflect.Descriptor instead.
 func (*ChangePurchaseOrderStatusResponse) Descriptor() ([]byte, []int) {
-	return file_core_core_purchase_proto_rawDescGZIP(), []int{20}
+	return file_core_core_purchase_proto_rawDescGZIP(), []int{21}
 }
 
 func (x *ChangePurchaseOrderStatusResponse) GetPurchaseOrder() *PurchaseOrderInfo {
@@ -2429,7 +2754,7 @@ func (x *ChangePurchaseOrderStatusResponse) GetPurchaseOrder() *PurchaseOrderInf
 type CreatePurchaseOrderLineRequest struct {
 	state                      protoimpl.MessageState `protogen:"open.v1"`
 	PurchaseOrderId            string                 `protobuf:"bytes,1,opt,name=purchase_order_id,json=purchaseOrderId,proto3" json:"purchase_order_id,omitempty"`
-	ProductId                  string                 `protobuf:"bytes,2,opt,name=product_id,json=productId,proto3" json:"product_id,omitempty"`
+	ProductId                  *string                `protobuf:"bytes,2,opt,name=product_id,json=productId,proto3,oneof" json:"product_id,omitempty"`
 	ItemId                     *string                `protobuf:"bytes,3,opt,name=item_id,json=itemId,proto3,oneof" json:"item_id,omitempty"`
 	ProductSku                 string                 `protobuf:"bytes,4,opt,name=product_sku,json=productSku,proto3" json:"product_sku,omitempty"`
 	ProductDescription         *string                `protobuf:"bytes,5,opt,name=product_description,json=productDescription,proto3,oneof" json:"product_description,omitempty"`
@@ -2447,7 +2772,7 @@ type CreatePurchaseOrderLineRequest struct {
 
 func (x *CreatePurchaseOrderLineRequest) Reset() {
 	*x = CreatePurchaseOrderLineRequest{}
-	mi := &file_core_core_purchase_proto_msgTypes[21]
+	mi := &file_core_core_purchase_proto_msgTypes[22]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2459,7 +2784,7 @@ func (x *CreatePurchaseOrderLineRequest) String() string {
 func (*CreatePurchaseOrderLineRequest) ProtoMessage() {}
 
 func (x *CreatePurchaseOrderLineRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_purchase_proto_msgTypes[21]
+	mi := &file_core_core_purchase_proto_msgTypes[22]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2472,7 +2797,7 @@ func (x *CreatePurchaseOrderLineRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CreatePurchaseOrderLineRequest.ProtoReflect.Descriptor instead.
 func (*CreatePurchaseOrderLineRequest) Descriptor() ([]byte, []int) {
-	return file_core_core_purchase_proto_rawDescGZIP(), []int{21}
+	return file_core_core_purchase_proto_rawDescGZIP(), []int{22}
 }
 
 func (x *CreatePurchaseOrderLineRequest) GetPurchaseOrderId() string {
@@ -2483,8 +2808,8 @@ func (x *CreatePurchaseOrderLineRequest) GetPurchaseOrderId() string {
 }
 
 func (x *CreatePurchaseOrderLineRequest) GetProductId() string {
-	if x != nil {
-		return x.ProductId
+	if x != nil && x.ProductId != nil {
+		return *x.ProductId
 	}
 	return ""
 }
@@ -2575,7 +2900,7 @@ type CreatePurchaseOrderLineResponse struct {
 
 func (x *CreatePurchaseOrderLineResponse) Reset() {
 	*x = CreatePurchaseOrderLineResponse{}
-	mi := &file_core_core_purchase_proto_msgTypes[22]
+	mi := &file_core_core_purchase_proto_msgTypes[23]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2587,7 +2912,7 @@ func (x *CreatePurchaseOrderLineResponse) String() string {
 func (*CreatePurchaseOrderLineResponse) ProtoMessage() {}
 
 func (x *CreatePurchaseOrderLineResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_purchase_proto_msgTypes[22]
+	mi := &file_core_core_purchase_proto_msgTypes[23]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2600,7 +2925,7 @@ func (x *CreatePurchaseOrderLineResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CreatePurchaseOrderLineResponse.ProtoReflect.Descriptor instead.
 func (*CreatePurchaseOrderLineResponse) Descriptor() ([]byte, []int) {
-	return file_core_core_purchase_proto_rawDescGZIP(), []int{22}
+	return file_core_core_purchase_proto_rawDescGZIP(), []int{23}
 }
 
 func (x *CreatePurchaseOrderLineResponse) GetPurchaseOrderLine() *PurchaseOrderLineInfo {
@@ -2632,7 +2957,7 @@ type UpdatePurchaseOrderLineRequest struct {
 
 func (x *UpdatePurchaseOrderLineRequest) Reset() {
 	*x = UpdatePurchaseOrderLineRequest{}
-	mi := &file_core_core_purchase_proto_msgTypes[23]
+	mi := &file_core_core_purchase_proto_msgTypes[24]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2644,7 +2969,7 @@ func (x *UpdatePurchaseOrderLineRequest) String() string {
 func (*UpdatePurchaseOrderLineRequest) ProtoMessage() {}
 
 func (x *UpdatePurchaseOrderLineRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_purchase_proto_msgTypes[23]
+	mi := &file_core_core_purchase_proto_msgTypes[24]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2657,7 +2982,7 @@ func (x *UpdatePurchaseOrderLineRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use UpdatePurchaseOrderLineRequest.ProtoReflect.Descriptor instead.
 func (*UpdatePurchaseOrderLineRequest) Descriptor() ([]byte, []int) {
-	return file_core_core_purchase_proto_rawDescGZIP(), []int{23}
+	return file_core_core_purchase_proto_rawDescGZIP(), []int{24}
 }
 
 func (x *UpdatePurchaseOrderLineRequest) GetPurchaseOrderId() string {
@@ -2767,7 +3092,7 @@ type UpdatePurchaseOrderLineResponse struct {
 
 func (x *UpdatePurchaseOrderLineResponse) Reset() {
 	*x = UpdatePurchaseOrderLineResponse{}
-	mi := &file_core_core_purchase_proto_msgTypes[24]
+	mi := &file_core_core_purchase_proto_msgTypes[25]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2779,7 +3104,7 @@ func (x *UpdatePurchaseOrderLineResponse) String() string {
 func (*UpdatePurchaseOrderLineResponse) ProtoMessage() {}
 
 func (x *UpdatePurchaseOrderLineResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_purchase_proto_msgTypes[24]
+	mi := &file_core_core_purchase_proto_msgTypes[25]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2792,7 +3117,7 @@ func (x *UpdatePurchaseOrderLineResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use UpdatePurchaseOrderLineResponse.ProtoReflect.Descriptor instead.
 func (*UpdatePurchaseOrderLineResponse) Descriptor() ([]byte, []int) {
-	return file_core_core_purchase_proto_rawDescGZIP(), []int{24}
+	return file_core_core_purchase_proto_rawDescGZIP(), []int{25}
 }
 
 func (x *UpdatePurchaseOrderLineResponse) GetPurchaseOrderLine() *PurchaseOrderLineInfo {
@@ -2812,7 +3137,7 @@ type DeletePurchaseOrderLineRequest struct {
 
 func (x *DeletePurchaseOrderLineRequest) Reset() {
 	*x = DeletePurchaseOrderLineRequest{}
-	mi := &file_core_core_purchase_proto_msgTypes[25]
+	mi := &file_core_core_purchase_proto_msgTypes[26]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2824,7 +3149,7 @@ func (x *DeletePurchaseOrderLineRequest) String() string {
 func (*DeletePurchaseOrderLineRequest) ProtoMessage() {}
 
 func (x *DeletePurchaseOrderLineRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_purchase_proto_msgTypes[25]
+	mi := &file_core_core_purchase_proto_msgTypes[26]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2837,7 +3162,7 @@ func (x *DeletePurchaseOrderLineRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use DeletePurchaseOrderLineRequest.ProtoReflect.Descriptor instead.
 func (*DeletePurchaseOrderLineRequest) Descriptor() ([]byte, []int) {
-	return file_core_core_purchase_proto_rawDescGZIP(), []int{25}
+	return file_core_core_purchase_proto_rawDescGZIP(), []int{26}
 }
 
 func (x *DeletePurchaseOrderLineRequest) GetPurchaseOrderId() string {
@@ -2858,7 +3183,7 @@ var File_core_core_purchase_proto protoreflect.FileDescriptor
 
 const file_core_core_purchase_proto_rawDesc = "" +
 	"\n" +
-	"\x18core/core_purchase.proto\x12\x04core\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\x1bgoogle/protobuf/empty.proto\x1a\x0fcore/core.proto\x1a\x19core/core_receiving.proto\"\xcc\x06\n" +
+	"\x18core/core_purchase.proto\x12\x04core\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\x1bgoogle/protobuf/empty.proto\x1a\x0fcore/core.proto\x1a\x19core/core_receiving.proto\"\xbd\x11\n" +
 	"\x18PurchaseOrderSummaryInfo\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x16\n" +
 	"\x06number\x18\x02 \x01(\tR\x06number\x12\x1f\n" +
@@ -2886,11 +3211,50 @@ const file_core_core_purchase_proto_rawDesc = "" +
 	"line_count\x18\x11 \x01(\x05R\tlineCount\x12$\n" +
 	"\vpriority_id\x18\x12 \x01(\tH\x02R\n" +
 	"priorityId\x88\x01\x01\x121\n" +
-	"\x05lines\x18\x13 \x03(\v2\x1b.core.PurchaseOrderLineInfoR\x05linesB\f\n" +
+	"\x05lines\x18\x13 \x03(\v2\x1b.core.PurchaseOrderLineInfoR\x05lines\x12@\n" +
+	"\vpromised_at\x18\x14 \x01(\v2\x1a.google.protobuf.TimestampH\x03R\n" +
+	"promisedAt\x88\x01\x01\x12.\n" +
+	"\x13shipping_address_id\x18\x15 \x01(\tR\x11shippingAddressId\x12%\n" +
+	"\fship_to_name\x18\x16 \x01(\tH\x04R\n" +
+	"shipToName\x88\x01\x01\x125\n" +
+	"\x15ship_to_street_line_1\x18\x17 \x01(\tH\x05R\x11shipToStreetLine1\x88\x01\x01\x125\n" +
+	"\x15ship_to_street_line_2\x18\x18 \x01(\tH\x06R\x11shipToStreetLine2\x88\x01\x01\x12-\n" +
+	"\x10ship_to_locality\x18\x19 \x01(\tH\aR\x0eshipToLocality\x88\x01\x01\x12'\n" +
+	"\rship_to_state\x18\x1a \x01(\tH\bR\vshipToState\x88\x01\x01\x122\n" +
+	"\x13ship_to_postal_code\x18\x1b \x01(\tH\tR\x10shipToPostalCode\x88\x01\x01\x12+\n" +
+	"\x0fship_to_country\x18\x1c \x01(\tH\n" +
+	"R\rshipToCountry\x88\x01\x01\x12'\n" +
+	"\rship_to_phone\x18\x1d \x01(\tH\vR\vshipToPhone\x88\x01\x01\x12'\n" +
+	"\rship_to_email\x18\x1e \x01(\tH\fR\vshipToEmail\x88\x01\x01\x124\n" +
+	"\x14ship_to_address_type\x18\x1f \x01(\tH\rR\x11shipToAddressType\x88\x01\x01\x12[\n" +
+	"\x1aship_to_address_created_at\x18  \x01(\v2\x1a.google.protobuf.TimestampH\x0eR\x16shipToAddressCreatedAt\x88\x01\x01\x12[\n" +
+	"\x1aship_to_address_updated_at\x18! \x01(\v2\x1a.google.protobuf.TimestampH\x0fR\x16shipToAddressUpdatedAt\x88\x01\x01\x121\n" +
+	"\x12receiving_order_id\x18\" \x01(\tH\x10R\x10receivingOrderId\x88\x01\x01\x129\n" +
+	"\x16receiving_order_number\x18# \x01(\tH\x11R\x14receivingOrderNumber\x88\x01\x01\x129\n" +
+	"\x16receiving_order_status\x18$ \x01(\tH\x12R\x14receivingOrderStatus\x88\x01\x01\x122\n" +
+	"\bcontacts\x18% \x03(\v2\x16.core.EmailContactInfoR\bcontacts\x12\x17\n" +
+	"\x04note\x18& \x01(\tH\x13R\x04note\x88\x01\x01B\f\n" +
 	"\n" +
 	"_issued_atB\x0f\n" +
 	"\r_completed_atB\x0e\n" +
-	"\f_priority_id\"\xfd)\n" +
+	"\f_priority_idB\x0e\n" +
+	"\f_promised_atB\x0f\n" +
+	"\r_ship_to_nameB\x18\n" +
+	"\x16_ship_to_street_line_1B\x18\n" +
+	"\x16_ship_to_street_line_2B\x13\n" +
+	"\x11_ship_to_localityB\x10\n" +
+	"\x0e_ship_to_stateB\x16\n" +
+	"\x14_ship_to_postal_codeB\x12\n" +
+	"\x10_ship_to_countryB\x10\n" +
+	"\x0e_ship_to_phoneB\x10\n" +
+	"\x0e_ship_to_emailB\x17\n" +
+	"\x15_ship_to_address_typeB\x1d\n" +
+	"\x1b_ship_to_address_created_atB\x1d\n" +
+	"\x1b_ship_to_address_updated_atB\x15\n" +
+	"\x13_receiving_order_idB\x19\n" +
+	"\x17_receiving_order_numberB\x19\n" +
+	"\x17_receiving_order_statusB\a\n" +
+	"\x05_note\"\xfd)\n" +
 	"\x11PurchaseOrderInfo\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x16\n" +
 	"\x06number\x18\x02 \x01(\tR\x06number\x12\x17\n" +
@@ -3037,7 +3401,7 @@ const file_core_core_purchase_proto_rawDesc = "" +
 	"\x1b_ship_to_address_updated_atB\x12\n" +
 	"\x10_receiving_orderB\x19\n" +
 	"\x17_receiving_order_numberB\x19\n" +
-	"\x17_receiving_order_status\"\x8e\x0f\n" +
+	"\x17_receiving_order_status\"\xde\x0f\n" +
 	"\x15PurchaseOrderLineInfo\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12(\n" +
 	"\x10line_item_number\x18\x02 \x01(\x05R\x0elineItemNumber\x12\x1f\n" +
@@ -3076,7 +3440,8 @@ const file_core_core_purchase_proto_rawDesc = "" +
 	"\n" +
 	"created_at\x18\x1b \x01(\v2\x1a.google.protobuf.TimestampR\tcreatedAt\x129\n" +
 	"\n" +
-	"updated_at\x18\x1c \x01(\v2\x1a.google.protobuf.TimestampR\tupdatedAtB\x16\n" +
+	"updated_at\x18\x1c \x01(\v2\x1a.google.protobuf.TimestampR\tupdatedAt\x12N\n" +
+	"\x0edelivery_lines\x18\x1f \x03(\v2'.core.PurchaseOrderLineDeliveryLineInfoR\rdeliveryLinesB\x16\n" +
 	"\x14_product_descriptionB\r\n" +
 	"\v_product_idB\n" +
 	"\n" +
@@ -3088,10 +3453,30 @@ const file_core_core_purchase_proto_rawDesc = "" +
 	"\x1c_unit_cost_numerator_unit_idB(\n" +
 	"&_unit_cost_numerator_unit_abbreviationB \n" +
 	"\x1e_unit_cost_denominator_unit_idB*\n" +
-	"(_unit_cost_denominator_unit_abbreviation\"J\n" +
+	"(_unit_cost_denominator_unit_abbreviation\"\xbf\x03\n" +
+	"!PurchaseOrderLineDeliveryLineInfo\x12\x0e\n" +
+	"\x02id\x18\x01 \x01(\tR\x02id\x12%\n" +
+	"\x0equantity_value\x18\x02 \x01(\tR\rquantityValue\x12(\n" +
+	"\x10quantity_unit_id\x18\x03 \x01(\tR\x0equantityUnitId\x12@\n" +
+	"\vaccepted_at\x18\x04 \x01(\v2\x1a.google.protobuf.TimestampH\x00R\n" +
+	"acceptedAt\x88\x01\x01\x12@\n" +
+	"\vrejected_at\x18\x05 \x01(\v2\x1a.google.protobuf.TimestampH\x01R\n" +
+	"rejectedAt\x88\x01\x01\x129\n" +
+	"\n" +
+	"created_at\x18\x06 \x01(\v2\x1a.google.protobuf.TimestampR\tcreatedAt\x129\n" +
+	"\n" +
+	"updated_at\x18\a \x01(\v2\x1a.google.protobuf.TimestampR\tupdatedAt\x12\x1f\n" +
+	"\vquantity_id\x18\b \x01(\tR\n" +
+	"quantityIdB\x0e\n" +
+	"\f_accepted_atB\x0e\n" +
+	"\f_rejected_at\"\x91\x01\n" +
 	"\x10EmailContactInfo\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12&\n" +
-	"\x0faccount_user_id\x18\x02 \x01(\tR\raccountUserId\"\xdb\x02\n" +
+	"\x0faccount_user_id\x18\x02 \x01(\tR\raccountUserId\x12\x17\n" +
+	"\x04name\x18\x03 \x01(\tH\x00R\x04name\x88\x01\x01\x12\x19\n" +
+	"\x05email\x18\x04 \x01(\tH\x01R\x05email\x88\x01\x01B\a\n" +
+	"\x05_nameB\b\n" +
+	"\x06_email\"\xdb\x02\n" +
 	"\x19ListPurchaseOrdersRequest\x12\x1b\n" +
 	"\x06cursor\x18\x01 \x01(\tH\x00R\x06cursor\x88\x01\x01\x12\x14\n" +
 	"\x05limit\x18\x02 \x01(\x05R\x05limit\x12\x19\n" +
@@ -3122,7 +3507,7 @@ const file_core_core_purchase_proto_rawDesc = "" +
 	"&BatchGetPurchaseOrderLinesByIDsRequest\x12\x10\n" +
 	"\x03ids\x18\x01 \x03(\tR\x03ids\"\\\n" +
 	"'BatchGetPurchaseOrderLinesByIDsResponse\x121\n" +
-	"\x05lines\x18\x01 \x03(\v2\x1b.core.PurchaseOrderLineInfoR\x05lines\"\xc9\r\n" +
+	"\x05lines\x18\x01 \x03(\v2\x1b.core.PurchaseOrderLineInfoR\x05lines\"\x83\x0f\n" +
 	"\x1aCreatePurchaseOrderRequest\x12.\n" +
 	"\x13supplier_account_id\x18\x01 \x01(\tR\x11supplierAccountId\x12\x17\n" +
 	"\x04note\x18\x02 \x01(\tH\x00R\x04note\x88\x01\x01\x12\"\n" +
@@ -3156,7 +3541,10 @@ const file_core_core_purchase_proto_rawDesc = "" +
 	"\x18contact_account_user_ids\x18\x19 \x03(\tR\x15contactAccountUserIds\x12$\n" +
 	"\vpromised_at\x18\x1a \x01(\tH\x15R\n" +
 	"promisedAt\x88\x01\x01\x12\x1a\n" +
-	"\bincludes\x18\x1b \x03(\tR\bincludesB\a\n" +
+	"\bincludes\x18\x1b \x03(\tR\bincludes\x12\x1b\n" +
+	"\x06number\x18\x1c \x01(\tH\x16R\x06number\x88\x01\x01\x120\n" +
+	"\x12bill_to_address_id\x18\x1d \x01(\tH\x17R\x0fbillToAddressId\x88\x01\x01\x120\n" +
+	"\x12ship_to_address_id\x18\x1e \x01(\tH\x18R\x0fshipToAddressId\x88\x01\x01B\a\n" +
 	"\x05_noteB\r\n" +
 	"\v_carrier_idB\x13\n" +
 	"\x11_service_level_idB\x17\n" +
@@ -3178,23 +3566,27 @@ const file_core_core_purchase_proto_rawDesc = "" +
 	"\x0e_ship_to_stateB\x16\n" +
 	"\x14_ship_to_postal_codeB\x12\n" +
 	"\x10_ship_to_countryB\x0e\n" +
-	"\f_promised_at\"\xe2\x05\n" +
-	"\x1cCreatePurchaseOrderLineInput\x12\x1d\n" +
+	"\f_promised_atB\t\n" +
+	"\a_numberB\x15\n" +
+	"\x13_bill_to_address_idB\x15\n" +
+	"\x13_ship_to_address_id\"\xf6\x05\n" +
+	"\x1cCreatePurchaseOrderLineInput\x12\"\n" +
 	"\n" +
-	"product_id\x18\x01 \x01(\tR\tproductId\x12\x1c\n" +
-	"\aitem_id\x18\x02 \x01(\tH\x00R\x06itemId\x88\x01\x01\x12\x1f\n" +
+	"product_id\x18\x01 \x01(\tH\x00R\tproductId\x88\x01\x01\x12\x1c\n" +
+	"\aitem_id\x18\x02 \x01(\tH\x01R\x06itemId\x88\x01\x01\x12\x1f\n" +
 	"\vproduct_sku\x18\x03 \x01(\tR\n" +
 	"productSku\x124\n" +
-	"\x13product_description\x18\x04 \x01(\tH\x01R\x12productDescription\x88\x01\x01\x12%\n" +
+	"\x13product_description\x18\x04 \x01(\tH\x02R\x12productDescription\x88\x01\x01\x12%\n" +
 	"\x0equantity_value\x18\x05 \x01(\tR\rquantityValue\x12(\n" +
 	"\x10quantity_unit_id\x18\x06 \x01(\tR\x0equantityUnitId\x12(\n" +
 	"\x10unit_price_value\x18\a \x01(\tR\x0eunitPriceValue\x12>\n" +
 	"\x1cunit_price_numerator_unit_id\x18\b \x01(\tR\x18unitPriceNumeratorUnitId\x12B\n" +
 	"\x1eunit_price_denominator_unit_id\x18\t \x01(\tR\x1aunitPriceDenominatorUnitId\x12+\n" +
 	"\x0funit_cost_value\x18\n" +
-	" \x01(\tH\x02R\runitCostValue\x88\x01\x01\x12A\n" +
-	"\x1bunit_cost_numerator_unit_id\x18\v \x01(\tH\x03R\x17unitCostNumeratorUnitId\x88\x01\x01\x12E\n" +
-	"\x1dunit_cost_denominator_unit_id\x18\f \x01(\tH\x04R\x19unitCostDenominatorUnitId\x88\x01\x01B\n" +
+	" \x01(\tH\x03R\runitCostValue\x88\x01\x01\x12A\n" +
+	"\x1bunit_cost_numerator_unit_id\x18\v \x01(\tH\x04R\x17unitCostNumeratorUnitId\x88\x01\x01\x12E\n" +
+	"\x1dunit_cost_denominator_unit_id\x18\f \x01(\tH\x05R\x19unitCostDenominatorUnitId\x88\x01\x01B\r\n" +
+	"\v_product_idB\n" +
 	"\n" +
 	"\b_item_idB\x16\n" +
 	"\x14_product_descriptionB\x12\n" +
@@ -3202,7 +3594,7 @@ const file_core_core_purchase_proto_rawDesc = "" +
 	"\x1c_unit_cost_numerator_unit_idB \n" +
 	"\x1e_unit_cost_denominator_unit_id\"]\n" +
 	"\x1bCreatePurchaseOrderResponse\x12>\n" +
-	"\x0epurchase_order\x18\x01 \x01(\v2\x17.core.PurchaseOrderInfoR\rpurchaseOrder\"\xd4\x03\n" +
+	"\x0epurchase_order\x18\x01 \x01(\v2\x17.core.PurchaseOrderInfoR\rpurchaseOrder\"\xab\x04\n" +
 	"\x1aUpdatePurchaseOrderRequest\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x17\n" +
 	"\x04note\x18\x02 \x01(\tH\x00R\x04note\x88\x01\x01\x12\x1b\n" +
@@ -3213,7 +3605,10 @@ const file_core_core_purchase_proto_rawDesc = "" +
 	"\vpromised_at\x18\a \x01(\tH\x05R\n" +
 	"promisedAt\x88\x01\x01\x127\n" +
 	"\x18contact_account_user_ids\x18\b \x03(\tR\x15contactAccountUserIds\x12\x1a\n" +
-	"\bincludes\x18\t \x03(\tR\bincludesB\a\n" +
+	"\bincludes\x18\t \x03(\tR\bincludes\x12*\n" +
+	"\x11clear_promised_at\x18\n" +
+	" \x01(\bR\x0fclearPromisedAt\x12)\n" +
+	"\x10replace_contacts\x18\v \x01(\bR\x0freplaceContactsB\a\n" +
 	"\x05_noteB\t\n" +
 	"\a_numberB\x10\n" +
 	"\x0e_priority_codeB\x15\n" +
@@ -3233,24 +3628,25 @@ const file_core_core_purchase_proto_rawDesc = "" +
 	"send_email\x18\x03 \x01(\bR\tsendEmail\x12\x1a\n" +
 	"\bincludes\x18\x04 \x03(\tR\bincludes\"c\n" +
 	"!ChangePurchaseOrderStatusResponse\x12>\n" +
-	"\x0epurchase_order\x18\x01 \x01(\v2\x17.core.PurchaseOrderInfoR\rpurchaseOrder\"\x90\x06\n" +
+	"\x0epurchase_order\x18\x01 \x01(\v2\x17.core.PurchaseOrderInfoR\rpurchaseOrder\"\xa4\x06\n" +
 	"\x1eCreatePurchaseOrderLineRequest\x12*\n" +
-	"\x11purchase_order_id\x18\x01 \x01(\tR\x0fpurchaseOrderId\x12\x1d\n" +
+	"\x11purchase_order_id\x18\x01 \x01(\tR\x0fpurchaseOrderId\x12\"\n" +
 	"\n" +
-	"product_id\x18\x02 \x01(\tR\tproductId\x12\x1c\n" +
-	"\aitem_id\x18\x03 \x01(\tH\x00R\x06itemId\x88\x01\x01\x12\x1f\n" +
+	"product_id\x18\x02 \x01(\tH\x00R\tproductId\x88\x01\x01\x12\x1c\n" +
+	"\aitem_id\x18\x03 \x01(\tH\x01R\x06itemId\x88\x01\x01\x12\x1f\n" +
 	"\vproduct_sku\x18\x04 \x01(\tR\n" +
 	"productSku\x124\n" +
-	"\x13product_description\x18\x05 \x01(\tH\x01R\x12productDescription\x88\x01\x01\x12%\n" +
+	"\x13product_description\x18\x05 \x01(\tH\x02R\x12productDescription\x88\x01\x01\x12%\n" +
 	"\x0equantity_value\x18\x06 \x01(\tR\rquantityValue\x12(\n" +
 	"\x10quantity_unit_id\x18\a \x01(\tR\x0equantityUnitId\x12(\n" +
 	"\x10unit_price_value\x18\b \x01(\tR\x0eunitPriceValue\x12>\n" +
 	"\x1cunit_price_numerator_unit_id\x18\t \x01(\tR\x18unitPriceNumeratorUnitId\x12B\n" +
 	"\x1eunit_price_denominator_unit_id\x18\n" +
 	" \x01(\tR\x1aunitPriceDenominatorUnitId\x12+\n" +
-	"\x0funit_cost_value\x18\v \x01(\tH\x02R\runitCostValue\x88\x01\x01\x12A\n" +
-	"\x1bunit_cost_numerator_unit_id\x18\f \x01(\tH\x03R\x17unitCostNumeratorUnitId\x88\x01\x01\x12E\n" +
-	"\x1dunit_cost_denominator_unit_id\x18\r \x01(\tH\x04R\x19unitCostDenominatorUnitId\x88\x01\x01B\n" +
+	"\x0funit_cost_value\x18\v \x01(\tH\x03R\runitCostValue\x88\x01\x01\x12A\n" +
+	"\x1bunit_cost_numerator_unit_id\x18\f \x01(\tH\x04R\x17unitCostNumeratorUnitId\x88\x01\x01\x12E\n" +
+	"\x1dunit_cost_denominator_unit_id\x18\r \x01(\tH\x05R\x19unitCostDenominatorUnitId\x88\x01\x01B\r\n" +
+	"\v_product_idB\n" +
 	"\n" +
 	"\b_item_idB\x16\n" +
 	"\x14_product_descriptionB\x12\n" +
@@ -3322,111 +3718,121 @@ func file_core_core_purchase_proto_rawDescGZIP() []byte {
 	return file_core_core_purchase_proto_rawDescData
 }
 
-var file_core_core_purchase_proto_msgTypes = make([]protoimpl.MessageInfo, 26)
+var file_core_core_purchase_proto_msgTypes = make([]protoimpl.MessageInfo, 27)
 var file_core_core_purchase_proto_goTypes = []any{
 	(*PurchaseOrderSummaryInfo)(nil),                // 0: core.PurchaseOrderSummaryInfo
 	(*PurchaseOrderInfo)(nil),                       // 1: core.PurchaseOrderInfo
 	(*PurchaseOrderLineInfo)(nil),                   // 2: core.PurchaseOrderLineInfo
-	(*EmailContactInfo)(nil),                        // 3: core.EmailContactInfo
-	(*ListPurchaseOrdersRequest)(nil),               // 4: core.ListPurchaseOrdersRequest
-	(*ListPurchaseOrdersResponse)(nil),              // 5: core.ListPurchaseOrdersResponse
-	(*GetPurchaseOrderRequest)(nil),                 // 6: core.GetPurchaseOrderRequest
-	(*GetPurchaseOrderResponse)(nil),                // 7: core.GetPurchaseOrderResponse
-	(*BatchGetPurchaseOrdersByIDsRequest)(nil),      // 8: core.BatchGetPurchaseOrdersByIDsRequest
-	(*BatchGetPurchaseOrdersByIDsResponse)(nil),     // 9: core.BatchGetPurchaseOrdersByIDsResponse
-	(*BatchGetPurchaseOrderLinesByIDsRequest)(nil),  // 10: core.BatchGetPurchaseOrderLinesByIDsRequest
-	(*BatchGetPurchaseOrderLinesByIDsResponse)(nil), // 11: core.BatchGetPurchaseOrderLinesByIDsResponse
-	(*CreatePurchaseOrderRequest)(nil),              // 12: core.CreatePurchaseOrderRequest
-	(*CreatePurchaseOrderLineInput)(nil),            // 13: core.CreatePurchaseOrderLineInput
-	(*CreatePurchaseOrderResponse)(nil),             // 14: core.CreatePurchaseOrderResponse
-	(*UpdatePurchaseOrderRequest)(nil),              // 15: core.UpdatePurchaseOrderRequest
-	(*UpdatePurchaseOrderResponse)(nil),             // 16: core.UpdatePurchaseOrderResponse
-	(*DeletePurchaseOrderRequest)(nil),              // 17: core.DeletePurchaseOrderRequest
-	(*BulkDeletePurchaseOrdersRequest)(nil),         // 18: core.BulkDeletePurchaseOrdersRequest
-	(*ChangePurchaseOrderStatusRequest)(nil),        // 19: core.ChangePurchaseOrderStatusRequest
-	(*ChangePurchaseOrderStatusResponse)(nil),       // 20: core.ChangePurchaseOrderStatusResponse
-	(*CreatePurchaseOrderLineRequest)(nil),          // 21: core.CreatePurchaseOrderLineRequest
-	(*CreatePurchaseOrderLineResponse)(nil),         // 22: core.CreatePurchaseOrderLineResponse
-	(*UpdatePurchaseOrderLineRequest)(nil),          // 23: core.UpdatePurchaseOrderLineRequest
-	(*UpdatePurchaseOrderLineResponse)(nil),         // 24: core.UpdatePurchaseOrderLineResponse
-	(*DeletePurchaseOrderLineRequest)(nil),          // 25: core.DeletePurchaseOrderLineRequest
-	(*timestamppb.Timestamp)(nil),                   // 26: google.protobuf.Timestamp
-	(*ReceivingOrderInfo)(nil),                      // 27: core.ReceivingOrderInfo
-	(*DocumentRefInfo)(nil),                         // 28: core.DocumentRefInfo
-	(*PageInfo)(nil),                                // 29: core.PageInfo
-	(*emptypb.Empty)(nil),                           // 30: google.protobuf.Empty
+	(*PurchaseOrderLineDeliveryLineInfo)(nil),       // 3: core.PurchaseOrderLineDeliveryLineInfo
+	(*EmailContactInfo)(nil),                        // 4: core.EmailContactInfo
+	(*ListPurchaseOrdersRequest)(nil),               // 5: core.ListPurchaseOrdersRequest
+	(*ListPurchaseOrdersResponse)(nil),              // 6: core.ListPurchaseOrdersResponse
+	(*GetPurchaseOrderRequest)(nil),                 // 7: core.GetPurchaseOrderRequest
+	(*GetPurchaseOrderResponse)(nil),                // 8: core.GetPurchaseOrderResponse
+	(*BatchGetPurchaseOrdersByIDsRequest)(nil),      // 9: core.BatchGetPurchaseOrdersByIDsRequest
+	(*BatchGetPurchaseOrdersByIDsResponse)(nil),     // 10: core.BatchGetPurchaseOrdersByIDsResponse
+	(*BatchGetPurchaseOrderLinesByIDsRequest)(nil),  // 11: core.BatchGetPurchaseOrderLinesByIDsRequest
+	(*BatchGetPurchaseOrderLinesByIDsResponse)(nil), // 12: core.BatchGetPurchaseOrderLinesByIDsResponse
+	(*CreatePurchaseOrderRequest)(nil),              // 13: core.CreatePurchaseOrderRequest
+	(*CreatePurchaseOrderLineInput)(nil),            // 14: core.CreatePurchaseOrderLineInput
+	(*CreatePurchaseOrderResponse)(nil),             // 15: core.CreatePurchaseOrderResponse
+	(*UpdatePurchaseOrderRequest)(nil),              // 16: core.UpdatePurchaseOrderRequest
+	(*UpdatePurchaseOrderResponse)(nil),             // 17: core.UpdatePurchaseOrderResponse
+	(*DeletePurchaseOrderRequest)(nil),              // 18: core.DeletePurchaseOrderRequest
+	(*BulkDeletePurchaseOrdersRequest)(nil),         // 19: core.BulkDeletePurchaseOrdersRequest
+	(*ChangePurchaseOrderStatusRequest)(nil),        // 20: core.ChangePurchaseOrderStatusRequest
+	(*ChangePurchaseOrderStatusResponse)(nil),       // 21: core.ChangePurchaseOrderStatusResponse
+	(*CreatePurchaseOrderLineRequest)(nil),          // 22: core.CreatePurchaseOrderLineRequest
+	(*CreatePurchaseOrderLineResponse)(nil),         // 23: core.CreatePurchaseOrderLineResponse
+	(*UpdatePurchaseOrderLineRequest)(nil),          // 24: core.UpdatePurchaseOrderLineRequest
+	(*UpdatePurchaseOrderLineResponse)(nil),         // 25: core.UpdatePurchaseOrderLineResponse
+	(*DeletePurchaseOrderLineRequest)(nil),          // 26: core.DeletePurchaseOrderLineRequest
+	(*timestamppb.Timestamp)(nil),                   // 27: google.protobuf.Timestamp
+	(*ReceivingOrderInfo)(nil),                      // 28: core.ReceivingOrderInfo
+	(*DocumentRefInfo)(nil),                         // 29: core.DocumentRefInfo
+	(*PageInfo)(nil),                                // 30: core.PageInfo
+	(*emptypb.Empty)(nil),                           // 31: google.protobuf.Empty
 }
 var file_core_core_purchase_proto_depIdxs = []int32{
-	26, // 0: core.PurchaseOrderSummaryInfo.issued_at:type_name -> google.protobuf.Timestamp
-	26, // 1: core.PurchaseOrderSummaryInfo.completed_at:type_name -> google.protobuf.Timestamp
-	26, // 2: core.PurchaseOrderSummaryInfo.created_at:type_name -> google.protobuf.Timestamp
-	26, // 3: core.PurchaseOrderSummaryInfo.updated_at:type_name -> google.protobuf.Timestamp
+	27, // 0: core.PurchaseOrderSummaryInfo.issued_at:type_name -> google.protobuf.Timestamp
+	27, // 1: core.PurchaseOrderSummaryInfo.completed_at:type_name -> google.protobuf.Timestamp
+	27, // 2: core.PurchaseOrderSummaryInfo.created_at:type_name -> google.protobuf.Timestamp
+	27, // 3: core.PurchaseOrderSummaryInfo.updated_at:type_name -> google.protobuf.Timestamp
 	2,  // 4: core.PurchaseOrderSummaryInfo.lines:type_name -> core.PurchaseOrderLineInfo
-	2,  // 5: core.PurchaseOrderInfo.lines:type_name -> core.PurchaseOrderLineInfo
-	3,  // 6: core.PurchaseOrderInfo.contacts:type_name -> core.EmailContactInfo
-	26, // 7: core.PurchaseOrderInfo.issued_at:type_name -> google.protobuf.Timestamp
-	26, // 8: core.PurchaseOrderInfo.completed_at:type_name -> google.protobuf.Timestamp
-	26, // 9: core.PurchaseOrderInfo.promised_at:type_name -> google.protobuf.Timestamp
-	26, // 10: core.PurchaseOrderInfo.created_at:type_name -> google.protobuf.Timestamp
-	26, // 11: core.PurchaseOrderInfo.updated_at:type_name -> google.protobuf.Timestamp
-	26, // 12: core.PurchaseOrderInfo.service_level_created_at:type_name -> google.protobuf.Timestamp
-	26, // 13: core.PurchaseOrderInfo.service_level_updated_at:type_name -> google.protobuf.Timestamp
-	26, // 14: core.PurchaseOrderInfo.carrier_created_at:type_name -> google.protobuf.Timestamp
-	26, // 15: core.PurchaseOrderInfo.carrier_updated_at:type_name -> google.protobuf.Timestamp
-	26, // 16: core.PurchaseOrderInfo.payment_term_created_at:type_name -> google.protobuf.Timestamp
-	26, // 17: core.PurchaseOrderInfo.payment_term_updated_at:type_name -> google.protobuf.Timestamp
-	26, // 18: core.PurchaseOrderInfo.shipping_term_created_at:type_name -> google.protobuf.Timestamp
-	26, // 19: core.PurchaseOrderInfo.shipping_term_updated_at:type_name -> google.protobuf.Timestamp
-	26, // 20: core.PurchaseOrderInfo.bill_to_address_created_at:type_name -> google.protobuf.Timestamp
-	26, // 21: core.PurchaseOrderInfo.bill_to_address_updated_at:type_name -> google.protobuf.Timestamp
-	26, // 22: core.PurchaseOrderInfo.ship_to_address_created_at:type_name -> google.protobuf.Timestamp
-	26, // 23: core.PurchaseOrderInfo.ship_to_address_updated_at:type_name -> google.protobuf.Timestamp
-	27, // 24: core.PurchaseOrderInfo.receiving_order:type_name -> core.ReceivingOrderInfo
-	28, // 25: core.PurchaseOrderInfo.deliveries:type_name -> core.DocumentRefInfo
-	26, // 26: core.PurchaseOrderLineInfo.unit_price_created_at:type_name -> google.protobuf.Timestamp
-	26, // 27: core.PurchaseOrderLineInfo.unit_price_updated_at:type_name -> google.protobuf.Timestamp
-	26, // 28: core.PurchaseOrderLineInfo.created_at:type_name -> google.protobuf.Timestamp
-	26, // 29: core.PurchaseOrderLineInfo.updated_at:type_name -> google.protobuf.Timestamp
-	0,  // 30: core.ListPurchaseOrdersResponse.purchase_orders:type_name -> core.PurchaseOrderSummaryInfo
-	29, // 31: core.ListPurchaseOrdersResponse.page_info:type_name -> core.PageInfo
-	1,  // 32: core.GetPurchaseOrderResponse.purchase_order:type_name -> core.PurchaseOrderInfo
-	1,  // 33: core.BatchGetPurchaseOrdersByIDsResponse.purchase_orders:type_name -> core.PurchaseOrderInfo
-	2,  // 34: core.BatchGetPurchaseOrderLinesByIDsResponse.lines:type_name -> core.PurchaseOrderLineInfo
-	13, // 35: core.CreatePurchaseOrderRequest.lines:type_name -> core.CreatePurchaseOrderLineInput
-	1,  // 36: core.CreatePurchaseOrderResponse.purchase_order:type_name -> core.PurchaseOrderInfo
-	1,  // 37: core.UpdatePurchaseOrderResponse.purchase_order:type_name -> core.PurchaseOrderInfo
-	1,  // 38: core.ChangePurchaseOrderStatusResponse.purchase_order:type_name -> core.PurchaseOrderInfo
-	2,  // 39: core.CreatePurchaseOrderLineResponse.purchase_order_line:type_name -> core.PurchaseOrderLineInfo
-	2,  // 40: core.UpdatePurchaseOrderLineResponse.purchase_order_line:type_name -> core.PurchaseOrderLineInfo
-	4,  // 41: core.CorePurchaseService.ListPurchaseOrders:input_type -> core.ListPurchaseOrdersRequest
-	6,  // 42: core.CorePurchaseService.GetPurchaseOrder:input_type -> core.GetPurchaseOrderRequest
-	8,  // 43: core.CorePurchaseService.BatchGetPurchaseOrdersByIDs:input_type -> core.BatchGetPurchaseOrdersByIDsRequest
-	10, // 44: core.CorePurchaseService.BatchGetPurchaseOrderLinesByIDs:input_type -> core.BatchGetPurchaseOrderLinesByIDsRequest
-	12, // 45: core.CorePurchaseService.CreatePurchaseOrder:input_type -> core.CreatePurchaseOrderRequest
-	15, // 46: core.CorePurchaseService.UpdatePurchaseOrder:input_type -> core.UpdatePurchaseOrderRequest
-	17, // 47: core.CorePurchaseService.DeletePurchaseOrder:input_type -> core.DeletePurchaseOrderRequest
-	18, // 48: core.CorePurchaseService.BulkDeletePurchaseOrders:input_type -> core.BulkDeletePurchaseOrdersRequest
-	19, // 49: core.CorePurchaseService.ChangePurchaseOrderStatus:input_type -> core.ChangePurchaseOrderStatusRequest
-	21, // 50: core.CorePurchaseService.CreatePurchaseOrderLine:input_type -> core.CreatePurchaseOrderLineRequest
-	23, // 51: core.CorePurchaseService.UpdatePurchaseOrderLine:input_type -> core.UpdatePurchaseOrderLineRequest
-	25, // 52: core.CorePurchaseService.DeletePurchaseOrderLine:input_type -> core.DeletePurchaseOrderLineRequest
-	5,  // 53: core.CorePurchaseService.ListPurchaseOrders:output_type -> core.ListPurchaseOrdersResponse
-	7,  // 54: core.CorePurchaseService.GetPurchaseOrder:output_type -> core.GetPurchaseOrderResponse
-	9,  // 55: core.CorePurchaseService.BatchGetPurchaseOrdersByIDs:output_type -> core.BatchGetPurchaseOrdersByIDsResponse
-	11, // 56: core.CorePurchaseService.BatchGetPurchaseOrderLinesByIDs:output_type -> core.BatchGetPurchaseOrderLinesByIDsResponse
-	14, // 57: core.CorePurchaseService.CreatePurchaseOrder:output_type -> core.CreatePurchaseOrderResponse
-	16, // 58: core.CorePurchaseService.UpdatePurchaseOrder:output_type -> core.UpdatePurchaseOrderResponse
-	30, // 59: core.CorePurchaseService.DeletePurchaseOrder:output_type -> google.protobuf.Empty
-	30, // 60: core.CorePurchaseService.BulkDeletePurchaseOrders:output_type -> google.protobuf.Empty
-	20, // 61: core.CorePurchaseService.ChangePurchaseOrderStatus:output_type -> core.ChangePurchaseOrderStatusResponse
-	22, // 62: core.CorePurchaseService.CreatePurchaseOrderLine:output_type -> core.CreatePurchaseOrderLineResponse
-	24, // 63: core.CorePurchaseService.UpdatePurchaseOrderLine:output_type -> core.UpdatePurchaseOrderLineResponse
-	30, // 64: core.CorePurchaseService.DeletePurchaseOrderLine:output_type -> google.protobuf.Empty
-	53, // [53:65] is the sub-list for method output_type
-	41, // [41:53] is the sub-list for method input_type
-	41, // [41:41] is the sub-list for extension type_name
-	41, // [41:41] is the sub-list for extension extendee
-	0,  // [0:41] is the sub-list for field type_name
+	27, // 5: core.PurchaseOrderSummaryInfo.promised_at:type_name -> google.protobuf.Timestamp
+	27, // 6: core.PurchaseOrderSummaryInfo.ship_to_address_created_at:type_name -> google.protobuf.Timestamp
+	27, // 7: core.PurchaseOrderSummaryInfo.ship_to_address_updated_at:type_name -> google.protobuf.Timestamp
+	4,  // 8: core.PurchaseOrderSummaryInfo.contacts:type_name -> core.EmailContactInfo
+	2,  // 9: core.PurchaseOrderInfo.lines:type_name -> core.PurchaseOrderLineInfo
+	4,  // 10: core.PurchaseOrderInfo.contacts:type_name -> core.EmailContactInfo
+	27, // 11: core.PurchaseOrderInfo.issued_at:type_name -> google.protobuf.Timestamp
+	27, // 12: core.PurchaseOrderInfo.completed_at:type_name -> google.protobuf.Timestamp
+	27, // 13: core.PurchaseOrderInfo.promised_at:type_name -> google.protobuf.Timestamp
+	27, // 14: core.PurchaseOrderInfo.created_at:type_name -> google.protobuf.Timestamp
+	27, // 15: core.PurchaseOrderInfo.updated_at:type_name -> google.protobuf.Timestamp
+	27, // 16: core.PurchaseOrderInfo.service_level_created_at:type_name -> google.protobuf.Timestamp
+	27, // 17: core.PurchaseOrderInfo.service_level_updated_at:type_name -> google.protobuf.Timestamp
+	27, // 18: core.PurchaseOrderInfo.carrier_created_at:type_name -> google.protobuf.Timestamp
+	27, // 19: core.PurchaseOrderInfo.carrier_updated_at:type_name -> google.protobuf.Timestamp
+	27, // 20: core.PurchaseOrderInfo.payment_term_created_at:type_name -> google.protobuf.Timestamp
+	27, // 21: core.PurchaseOrderInfo.payment_term_updated_at:type_name -> google.protobuf.Timestamp
+	27, // 22: core.PurchaseOrderInfo.shipping_term_created_at:type_name -> google.protobuf.Timestamp
+	27, // 23: core.PurchaseOrderInfo.shipping_term_updated_at:type_name -> google.protobuf.Timestamp
+	27, // 24: core.PurchaseOrderInfo.bill_to_address_created_at:type_name -> google.protobuf.Timestamp
+	27, // 25: core.PurchaseOrderInfo.bill_to_address_updated_at:type_name -> google.protobuf.Timestamp
+	27, // 26: core.PurchaseOrderInfo.ship_to_address_created_at:type_name -> google.protobuf.Timestamp
+	27, // 27: core.PurchaseOrderInfo.ship_to_address_updated_at:type_name -> google.protobuf.Timestamp
+	28, // 28: core.PurchaseOrderInfo.receiving_order:type_name -> core.ReceivingOrderInfo
+	29, // 29: core.PurchaseOrderInfo.deliveries:type_name -> core.DocumentRefInfo
+	27, // 30: core.PurchaseOrderLineInfo.unit_price_created_at:type_name -> google.protobuf.Timestamp
+	27, // 31: core.PurchaseOrderLineInfo.unit_price_updated_at:type_name -> google.protobuf.Timestamp
+	27, // 32: core.PurchaseOrderLineInfo.created_at:type_name -> google.protobuf.Timestamp
+	27, // 33: core.PurchaseOrderLineInfo.updated_at:type_name -> google.protobuf.Timestamp
+	3,  // 34: core.PurchaseOrderLineInfo.delivery_lines:type_name -> core.PurchaseOrderLineDeliveryLineInfo
+	27, // 35: core.PurchaseOrderLineDeliveryLineInfo.accepted_at:type_name -> google.protobuf.Timestamp
+	27, // 36: core.PurchaseOrderLineDeliveryLineInfo.rejected_at:type_name -> google.protobuf.Timestamp
+	27, // 37: core.PurchaseOrderLineDeliveryLineInfo.created_at:type_name -> google.protobuf.Timestamp
+	27, // 38: core.PurchaseOrderLineDeliveryLineInfo.updated_at:type_name -> google.protobuf.Timestamp
+	0,  // 39: core.ListPurchaseOrdersResponse.purchase_orders:type_name -> core.PurchaseOrderSummaryInfo
+	30, // 40: core.ListPurchaseOrdersResponse.page_info:type_name -> core.PageInfo
+	1,  // 41: core.GetPurchaseOrderResponse.purchase_order:type_name -> core.PurchaseOrderInfo
+	1,  // 42: core.BatchGetPurchaseOrdersByIDsResponse.purchase_orders:type_name -> core.PurchaseOrderInfo
+	2,  // 43: core.BatchGetPurchaseOrderLinesByIDsResponse.lines:type_name -> core.PurchaseOrderLineInfo
+	14, // 44: core.CreatePurchaseOrderRequest.lines:type_name -> core.CreatePurchaseOrderLineInput
+	1,  // 45: core.CreatePurchaseOrderResponse.purchase_order:type_name -> core.PurchaseOrderInfo
+	1,  // 46: core.UpdatePurchaseOrderResponse.purchase_order:type_name -> core.PurchaseOrderInfo
+	1,  // 47: core.ChangePurchaseOrderStatusResponse.purchase_order:type_name -> core.PurchaseOrderInfo
+	2,  // 48: core.CreatePurchaseOrderLineResponse.purchase_order_line:type_name -> core.PurchaseOrderLineInfo
+	2,  // 49: core.UpdatePurchaseOrderLineResponse.purchase_order_line:type_name -> core.PurchaseOrderLineInfo
+	5,  // 50: core.CorePurchaseService.ListPurchaseOrders:input_type -> core.ListPurchaseOrdersRequest
+	7,  // 51: core.CorePurchaseService.GetPurchaseOrder:input_type -> core.GetPurchaseOrderRequest
+	9,  // 52: core.CorePurchaseService.BatchGetPurchaseOrdersByIDs:input_type -> core.BatchGetPurchaseOrdersByIDsRequest
+	11, // 53: core.CorePurchaseService.BatchGetPurchaseOrderLinesByIDs:input_type -> core.BatchGetPurchaseOrderLinesByIDsRequest
+	13, // 54: core.CorePurchaseService.CreatePurchaseOrder:input_type -> core.CreatePurchaseOrderRequest
+	16, // 55: core.CorePurchaseService.UpdatePurchaseOrder:input_type -> core.UpdatePurchaseOrderRequest
+	18, // 56: core.CorePurchaseService.DeletePurchaseOrder:input_type -> core.DeletePurchaseOrderRequest
+	19, // 57: core.CorePurchaseService.BulkDeletePurchaseOrders:input_type -> core.BulkDeletePurchaseOrdersRequest
+	20, // 58: core.CorePurchaseService.ChangePurchaseOrderStatus:input_type -> core.ChangePurchaseOrderStatusRequest
+	22, // 59: core.CorePurchaseService.CreatePurchaseOrderLine:input_type -> core.CreatePurchaseOrderLineRequest
+	24, // 60: core.CorePurchaseService.UpdatePurchaseOrderLine:input_type -> core.UpdatePurchaseOrderLineRequest
+	26, // 61: core.CorePurchaseService.DeletePurchaseOrderLine:input_type -> core.DeletePurchaseOrderLineRequest
+	6,  // 62: core.CorePurchaseService.ListPurchaseOrders:output_type -> core.ListPurchaseOrdersResponse
+	8,  // 63: core.CorePurchaseService.GetPurchaseOrder:output_type -> core.GetPurchaseOrderResponse
+	10, // 64: core.CorePurchaseService.BatchGetPurchaseOrdersByIDs:output_type -> core.BatchGetPurchaseOrdersByIDsResponse
+	12, // 65: core.CorePurchaseService.BatchGetPurchaseOrderLinesByIDs:output_type -> core.BatchGetPurchaseOrderLinesByIDsResponse
+	15, // 66: core.CorePurchaseService.CreatePurchaseOrder:output_type -> core.CreatePurchaseOrderResponse
+	17, // 67: core.CorePurchaseService.UpdatePurchaseOrder:output_type -> core.UpdatePurchaseOrderResponse
+	31, // 68: core.CorePurchaseService.DeletePurchaseOrder:output_type -> google.protobuf.Empty
+	31, // 69: core.CorePurchaseService.BulkDeletePurchaseOrders:output_type -> google.protobuf.Empty
+	21, // 70: core.CorePurchaseService.ChangePurchaseOrderStatus:output_type -> core.ChangePurchaseOrderStatusResponse
+	23, // 71: core.CorePurchaseService.CreatePurchaseOrderLine:output_type -> core.CreatePurchaseOrderLineResponse
+	25, // 72: core.CorePurchaseService.UpdatePurchaseOrderLine:output_type -> core.UpdatePurchaseOrderLineResponse
+	31, // 73: core.CorePurchaseService.DeletePurchaseOrderLine:output_type -> google.protobuf.Empty
+	62, // [62:74] is the sub-list for method output_type
+	50, // [50:62] is the sub-list for method input_type
+	50, // [50:50] is the sub-list for extension type_name
+	50, // [50:50] is the sub-list for extension extendee
+	0,  // [0:50] is the sub-list for field type_name
 }
 
 func init() { file_core_core_purchase_proto_init() }
@@ -3439,19 +3845,21 @@ func file_core_core_purchase_proto_init() {
 	file_core_core_purchase_proto_msgTypes[0].OneofWrappers = []any{}
 	file_core_core_purchase_proto_msgTypes[1].OneofWrappers = []any{}
 	file_core_core_purchase_proto_msgTypes[2].OneofWrappers = []any{}
+	file_core_core_purchase_proto_msgTypes[3].OneofWrappers = []any{}
 	file_core_core_purchase_proto_msgTypes[4].OneofWrappers = []any{}
-	file_core_core_purchase_proto_msgTypes[12].OneofWrappers = []any{}
+	file_core_core_purchase_proto_msgTypes[5].OneofWrappers = []any{}
 	file_core_core_purchase_proto_msgTypes[13].OneofWrappers = []any{}
-	file_core_core_purchase_proto_msgTypes[15].OneofWrappers = []any{}
-	file_core_core_purchase_proto_msgTypes[21].OneofWrappers = []any{}
-	file_core_core_purchase_proto_msgTypes[23].OneofWrappers = []any{}
+	file_core_core_purchase_proto_msgTypes[14].OneofWrappers = []any{}
+	file_core_core_purchase_proto_msgTypes[16].OneofWrappers = []any{}
+	file_core_core_purchase_proto_msgTypes[22].OneofWrappers = []any{}
+	file_core_core_purchase_proto_msgTypes[24].OneofWrappers = []any{}
 	type x struct{}
 	out := protoimpl.TypeBuilder{
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_core_core_purchase_proto_rawDesc), len(file_core_core_purchase_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   26,
+			NumMessages:   27,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

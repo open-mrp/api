@@ -29,10 +29,10 @@ type UpdatePurchaseOrderRequest struct {
 	BillingAddressID field.Optional[string] `json:"billing_address_id,omitzero" validate:"omitempty"`
 	// ID of an existing address to use as the ship-to address.
 	ShippingAddressID field.Optional[string] `json:"shipping_address_id,omitzero" validate:"omitempty"`
-	// Promised delivery date in `YYYY-MM-DD` format.
+	// Promised delivery date, as a `YYYY-MM-DD` date (midnight UTC) or an RFC 3339 timestamp; `null` clears it.
 	//
 	// Returned as `scheduled_at` on the purchase order resource.
-	PromisedAt field.Optional[string] `json:"promised_at,omitzero"`
+	PromisedAt field.Clearable[string] `json:"promised_at,omitzero" validate:"omitempty,date_filter"`
 	// IDs of account users to set as the order's email contacts.
 	//
 	// Replaces the full set of existing contacts; omit the field to leave contacts unchanged.
@@ -47,7 +47,7 @@ var sampleUpdatePurchaseOrderRequest = &UpdatePurchaseOrderRequest{
 	Note:         field.Some(sampleUpdatePONote),
 	Number:       field.Some(sampleUpdatePONumber),
 	PriorityCode: field.Some(sampleUpdatePOPriorityCode),
-	PromisedAt:   field.Some(sampleUpdatePOPromisedAt),
+	PromisedAt:   field.Set(sampleUpdatePOPromisedAt),
 }
 
 func (*UpdatePurchaseOrderRequest) SchemaExample() any {
@@ -77,7 +77,7 @@ func (e *UpdatePurchaseOrderEndpoint) Materialize() *apiendpoint.APIEndpoint[*Up
 		},
 		IncludeConfig: apiendpoint.IncludesFor(apiendpoint.IncludesParams{
 			ObjectType: constants.ObjectTypePurchaseOrder,
-			Fields:     []string{"supplier", "bill_to_address", "ship_to_address", "freight", "payment_term", "shipping_term", "related", "related.receiving_order", "related.deliveries", "lines", "lines.item", "lines.quantity_ordered", "lines.quantity_ordered.unit", "lines.unit_price", "lines.unit_price.numerator_unit", "lines.unit_price.denominator_unit", "contacts"},
+			Fields:     purchaseOrderDetailIncludeFields,
 		}),
 	})
 }

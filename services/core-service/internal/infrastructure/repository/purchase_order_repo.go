@@ -270,7 +270,6 @@ func (r *purchaseOrderRepoImpl) GetLines(ctx context.Context, salesOrderID strin
 	lines := make([]*domain.PurchaseOrderLine, len(rows))
 	for i, row := range rows {
 		lines[i] = mapPurchaseOrderLinesRow(row)
-		lines[i].SalesOrderID = salesOrderID
 	}
 
 	return lines, nil
@@ -297,6 +296,7 @@ func (r *purchaseOrderRepoImpl) Create(ctx context.Context, poID string, params 
 		BuyerAccountID:        params.AccountID,
 		SellerAccountID:       params.SupplierAccountID,
 		OwnerAccountID:        params.AccountID,
+		PromisedAt:            parsePromisedAt(params.PromisedAt),
 	})
 	if apiErr := db.MapSQLError(err); apiErr != nil {
 		return nil, tracing.Trace(span, apiErr)
@@ -309,21 +309,14 @@ func (r *purchaseOrderRepoImpl) Update(ctx context.Context, params domain.Update
 	ctx, span := purchaseOrderRepoTracer.Start(ctx, "repository.purchase_order.update")
 	defer span.End()
 
-	promisedAt := gosql.NullTime{}
-	if params.PromisedAt != nil {
-		t, parseErr := time.Parse("2006-01-02", *params.PromisedAt)
-		if parseErr == nil {
-			promisedAt = gosql.NullTime{Time: t, Valid: true}
-		}
-	}
-
 	err := r.queries.UpdatePurchaseOrder(ctx, sqlc.UpdatePurchaseOrderParams{
 		Note:              toNullString(params.Note),
 		Number:            toNullString(params.Number),
 		PriorityCode:      toNullString(params.PriorityCode),
 		BillingAddressID:  toNullString(params.BillingAddressID),
 		ShippingAddressID: toNullString(params.ShippingAddressID),
-		PromisedAt:        promisedAt,
+		PromisedAt:        parsePromisedAt(params.PromisedAt),
+		ClearPromisedAt:   params.ClearPromisedAt,
 		ID:                params.PurchaseOrderID,
 		AccountID:         params.AccountID,
 	})
@@ -491,6 +484,8 @@ func (r *purchaseOrderRepoImpl) GetEmailContacts(ctx context.Context, salesOrder
 		contacts[i] = &domain.PurchaseOrderEmailContact{
 			ID:            row.ID,
 			AccountUserID: row.AccountUserID,
+			Name:          nullStringToPtr(row.UserName),
+			Email:         nullStringToPtr(row.UserEmail),
 		}
 	}
 
@@ -685,45 +680,36 @@ func mapForwardPurchaseOrderRow(row sqlc.ListPurchaseOrdersForwardRow) *domain.P
 		IsAcknowledgmentSent: row.IsAcknowledgmentSent,
 		PriorityCode:         constants.PriorityCode(row.PriorityCode),
 		PriorityName:         row.PriorityName,
+		IssuedAt:             nullTimePtr(row.IssuedAt),
+		CompletedAt:          nullTimePtr(row.CompletedAt),
+		PromisedAt:           nullTimePtr(row.PromisedAt),
+		Note:                 nullStringToPtr(row.Note),
 		CreatedAt:            row.CreatedAt,
 		UpdatedAt:            row.UpdatedAt,
+		ShippingAddressID:    row.ShippingAddressID,
+		ShipToName:           nullStringToPtr(row.ShipToName),
+		ShipToIsDropShip:     nullBoolPtr(row.ShipToIsDropShip),
+		ShipToStreetLine1:    nullStringToPtr(row.ShipToStreetLine1),
+		ShipToStreetLine2:    nullStringToPtr(row.ShipToStreetLine2),
+		ShipToLocality:       nullStringToPtr(row.ShipToLocality),
+		ShipToState:          nullStringToPtr(row.ShipToState),
+		ShipToPostalCode:     nullStringToPtr(row.ShipToPostalCode),
+		ShipToCountry:        nullStringToPtr(row.ShipToCountry),
+		ShipToPhone:          nullStringToPtr(row.ShipToPhone),
+		ShipToEmail:          nullStringToPtr(row.ShipToEmail),
+		ShipToCreatedAt:      nullTimePtr(row.ShipToCreatedAt),
+		ShipToUpdatedAt:      nullTimePtr(row.ShipToUpdatedAt),
+		ReceivingOrderID:     nullStringToPtr(row.ReceivingOrderID),
+		ReceivingOrderNumber: nullStringToPtr(row.ReceivingOrderNumber),
+		ReceivingOrderStatus: ptrutil.NonEmptyPtr(row.ReceivingOrderStatus),
 	}
 	s.PriorityID = &row.PriorityID
-	if row.IssuedAt.Valid {
-		s.IssuedAt = &row.IssuedAt.Time
-	}
-	if row.CompletedAt.Valid {
-		s.CompletedAt = &row.CompletedAt.Time
-	}
 	return s
 }
 
+// The backward query selects the same columns as the forward one.
 func mapBackwardPurchaseOrderRow(row sqlc.ListPurchaseOrdersBackwardRow) *domain.PurchaseOrderSummary {
-	s := &domain.PurchaseOrderSummary{
-		ID:                   row.ID,
-		Number:               row.Number,
-		StatusCode:           row.StatusCode,
-		StatusName:           row.StatusName,
-		TypeCode:             row.TypeCode,
-		TypeName:             row.TypeName,
-		SupplierID:           row.SupplierID,
-		SupplierName:         row.SupplierName,
-		SupplierNumber:       row.SupplierNumber,
-		LineCount:            safeconv.Int64ToInt32(row.LineCount),
-		IsAcknowledgmentSent: row.IsAcknowledgmentSent,
-		PriorityCode:         constants.PriorityCode(row.PriorityCode),
-		PriorityName:         row.PriorityName,
-		CreatedAt:            row.CreatedAt,
-		UpdatedAt:            row.UpdatedAt,
-	}
-	s.PriorityID = &row.PriorityID
-	if row.IssuedAt.Valid {
-		s.IssuedAt = &row.IssuedAt.Time
-	}
-	if row.CompletedAt.Valid {
-		s.CompletedAt = &row.CompletedAt.Time
-	}
-	return s
+	return mapForwardPurchaseOrderRow(sqlc.ListPurchaseOrdersForwardRow(row))
 }
 
 func mapPurchaseOrderLinesRow(row sqlc.GetPurchaseOrderLinesRow) *domain.PurchaseOrderLine {
@@ -792,5 +778,97 @@ func mapPurchaseOrderLinesRow(row sqlc.GetPurchaseOrderLinesRow) *domain.Purchas
 		line.UnitCostDenominatorUnitAbbr = &row.UnitCostDenominatorUnitAbbreviation.String
 	}
 
+	line.SalesOrderID = row.SalesOrderID
 	return line
+}
+
+// parsePromisedAt reads a promised date given as an RFC 3339 timestamp or a bare `YYYY-MM-DD` date (UTC
+// midnight). The gateway validates the format, so an unparseable value here is treated as absent.
+func parsePromisedAt(v *string) gosql.NullTime {
+	if v == nil {
+		return gosql.NullTime{}
+	}
+	if t, err := time.Parse(time.RFC3339Nano, *v); err == nil {
+		return gosql.NullTime{Time: t.UTC(), Valid: true}
+	}
+	if t, err := time.Parse(time.DateOnly, *v); err == nil {
+		return gosql.NullTime{Time: t, Valid: true}
+	}
+	return gosql.NullTime{}
+}
+
+func (r *purchaseOrderRepoImpl) GetLinesByOrderIDs(ctx context.Context, salesOrderIDs []string) (map[string][]*domain.PurchaseOrderLine, *apierror.APIError) {
+	ctx, span := purchaseOrderRepoTracer.Start(ctx, "repository.purchase_order.get_lines_by_order_ids")
+	defer span.End()
+
+	if len(salesOrderIDs) == 0 {
+		return nil, nil
+	}
+
+	rows, err := r.queries.GetPurchaseOrderLinesByOrderIDs(ctx, salesOrderIDs)
+	if apiErr := db.MapSQLError(err); apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
+
+	out := make(map[string][]*domain.PurchaseOrderLine, len(salesOrderIDs))
+	for _, row := range rows {
+		line := mapPurchaseOrderLinesRow(sqlc.GetPurchaseOrderLinesRow(row))
+		out[line.SalesOrderID] = append(out[line.SalesOrderID], line)
+	}
+	return out, nil
+}
+
+func (r *purchaseOrderRepoImpl) GetEmailContactsByOrderIDs(ctx context.Context, salesOrderIDs []string) (map[string][]*domain.PurchaseOrderEmailContact, *apierror.APIError) {
+	ctx, span := purchaseOrderRepoTracer.Start(ctx, "repository.purchase_order.get_email_contacts_by_order_ids")
+	defer span.End()
+
+	if len(salesOrderIDs) == 0 {
+		return nil, nil
+	}
+
+	rows, err := r.queries.GetOrderEmailContactsByOrderIDs(ctx, salesOrderIDs)
+	if apiErr := db.MapSQLError(err); apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
+
+	out := make(map[string][]*domain.PurchaseOrderEmailContact, len(salesOrderIDs))
+	for _, row := range rows {
+		out[row.SalesOrderID] = append(out[row.SalesOrderID], &domain.PurchaseOrderEmailContact{
+			ID:            row.ID,
+			AccountUserID: row.AccountUserID,
+			Name:          nullStringToPtr(row.UserName),
+			Email:         nullStringToPtr(row.UserEmail),
+		})
+	}
+	return out, nil
+}
+
+func (r *purchaseOrderRepoImpl) GetLineDeliveryLines(ctx context.Context, lineIDs []string) (map[string][]*domain.PurchaseOrderLineDeliveryLine, *apierror.APIError) {
+	ctx, span := purchaseOrderRepoTracer.Start(ctx, "repository.purchase_order.get_line_delivery_lines")
+	defer span.End()
+
+	if len(lineIDs) == 0 {
+		return nil, nil
+	}
+
+	rows, err := r.queries.GetPurchaseOrderLineDeliveryLines(ctx, lineIDs)
+	if apiErr := db.MapSQLError(err); apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
+
+	out := make(map[string][]*domain.PurchaseOrderLineDeliveryLine, len(lineIDs))
+	for _, row := range rows {
+		out[row.SalesOrderLineID] = append(out[row.SalesOrderLineID], &domain.PurchaseOrderLineDeliveryLine{
+			ID:                  row.ID,
+			PurchaseOrderLineID: row.SalesOrderLineID,
+			QuantityID:          row.QuantityID,
+			QuantityValue:       row.QuantityValue,
+			QuantityUnitID:      row.QuantityUnitID,
+			AcceptedAt:          nullTimePtr(row.AcceptedAt),
+			RejectedAt:          nullTimePtr(row.RejectedAt),
+			CreatedAt:           row.CreatedAt,
+			UpdatedAt:           row.UpdatedAt,
+		})
+	}
+	return out, nil
 }

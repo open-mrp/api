@@ -13,7 +13,6 @@ func (*CreatePurchaseOrderLineRequest) SchemaExample() any {
 	return apiexample.ValidateAndMarshalToMap(&CreatePurchaseOrderLineRequest{
 		PurchaseOrderID: apiresource.SamplePurchaseOrderID,
 		OrderLineInput: apirequest.OrderLineInput{
-			ProductID:          apiresource.SampleProductID,
 			ItemID:             field.Some(itemID),
 			ProductSKU:         apiresource.SampleItemSKU,
 			ProductDescription: field.Some(desc),

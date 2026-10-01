@@ -15,36 +15,54 @@ import (
 
 var createdByLoaderTracer = tracing.GetTracer("api-gateway.resourceloaders.created_by")
 
-// LoadCreatedBySalesOrders resolves the creator of each sales order from its `create` audit event (via platform-service), returning one CreatedBy per order id. Orders with no create event (e.g. system/EDI-created) resolve to a system CreatedBy with no actor, so the field is always present once included.
+// LoadCreatedBySalesOrders resolves the creator of each order from its `create` audit event (via platform-service), returning one CreatedBy per order id. Sales and purchase orders share an id space, so ids with no sales-order create event are looked up again as purchase orders. Orders with no create event of either kind (e.g. system/EDI-created) resolve to a system CreatedBy with no actor, so the field is always present once included.
 func LoadCreatedBySalesOrders(ctx context.Context, orderIDs []string) (map[string]any, *apierror.APIError) {
 	if len(orderIDs) == 0 {
 		return nil, nil
 	}
 
+	out := make(map[string]any, len(orderIDs))
+	remaining := orderIDs
+	for _, resourceType := range []constants.ObjectType{constants.ObjectTypeSalesOrder, constants.ObjectTypePurchaseOrder} {
+		if len(remaining) == 0 {
+			break
+		}
+		creators, apiErr := batchGetResourceCreators(ctx, resourceType, remaining)
+		if apiErr != nil {
+			return nil, apiErr
+		}
+		agentNames := loadCreatorAgentNames(ctx, creators)
+		for _, c := range creators {
+			out[c.ResourceId] = createdByFromAuditActor(c.Actor, agentNames)
+		}
+		var missing []string
+		for _, id := range remaining {
+			if _, ok := out[id]; !ok {
+				missing = append(missing, id)
+			}
+		}
+		remaining = missing
+	}
+
+	// Resources with no create audit event resolve to system (no human actor).
+	for _, id := range remaining {
+		out[id] = apiresource.SystemCreatedBy()
+	}
+	return out, nil
+}
+
+func batchGetResourceCreators(ctx context.Context, resourceType constants.ObjectType, ids []string) ([]*pb.ResourceCreator, *apierror.APIError) {
 	resp, apiErr := grpcutil.CallRPC(ctx, createdByLoaderTracer, "loader.created_by.batch_get", domain.ServiceName,
 		func(ctx context.Context, opts ...grpc.CallOption) (*pb.BatchGetResourceCreatorsResponse, error) {
 			return auditClient.BatchGetResourceCreators(ctx, &pb.BatchGetResourceCreatorsRequest{
-				ResourceType: string(constants.ObjectTypeSalesOrder),
-				ResourceIds:  orderIDs,
+				ResourceType: string(resourceType),
+				ResourceIds:  ids,
 			}, opts...)
 		})
 	if apiErr != nil {
 		return nil, apiErr
 	}
-
-	agentNames := loadCreatorAgentNames(ctx, resp.Creators)
-
-	out := make(map[string]any, len(orderIDs))
-	for _, c := range resp.Creators {
-		out[c.ResourceId] = createdByFromAuditActor(c.Actor, agentNames)
-	}
-	// Resources with no create audit event resolve to system (no human actor).
-	for _, id := range orderIDs {
-		if _, ok := out[id]; !ok {
-			out[id] = apiresource.SystemCreatedBy()
-		}
-	}
-	return out, nil
+	return resp.Creators, nil
 }
 
 // loadCreatorAgentNames resolves display names for agent creators. Audit rows only carry names for users and API keys (agent definitions live in the agent-service, outside the audit store's reach), so agent actors are resolved here. Best-effort: an unresolved agent keeps a nil name rather than failing the include.

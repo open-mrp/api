@@ -46,7 +46,7 @@ type CreateProductionStepRequest struct {
 	// The item and quantity this step produces.
 	Production CreateProductionInput `json:"production" validate:"required"`
 	// Materials consumed by the step.
-	Consumptions []CreateConsumptionInput `json:"consumptions,omitzero"`
+	Consumptions []CreateConsumptionInput `json:"consumptions,omitzero" validate:"dive"`
 }
 
 // A rate, expressed as a value together with the units of its numerator and denominator (for example, `25.00` `$` per `hr`).

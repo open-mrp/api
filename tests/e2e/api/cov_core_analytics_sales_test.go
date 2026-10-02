@@ -374,6 +374,106 @@ func TestSalesAnalytics_InvoicesListTheShippedInvoice(t *testing.T) {
 	assert.Equal(t, shippedSaleRevenue, computedValue(t, inv, "revenue"))
 }
 
+// A filtered invoice page is chosen from the filter's lines, a page per customer merged newest first;
+// paging forward and back across several customers must list each invoice once, in order, both ways.
+func TestSalesAnalytics_InvoicesPageAcrossCustomersForwardAndBack(t *testing.T) {
+	t.Parallel()
+	var customers []string
+	for range 3 {
+		sale := shipSaleToNewCustomer(t)
+		awaitSalesSummary(t, sale.customerID, 1)
+		customers = append(customers, sale.customerID)
+	}
+	body := saleFilter(customers[0])
+	body["customer_ids"] = customers
+
+	type row struct {
+		id         string
+		invoicedAt string
+	}
+	page := func(params url.Values) ([]row, map[string]any) {
+		status, list, raw := putSales(t, salesInvoicesPath, params, body)
+		requireStatus(t, 200, status, raw)
+		var out []row
+		for _, inv := range jsonArray(list, "data") {
+			m := inv.(map[string]any)
+			assert.Contains(t, customers, jsonField(m, "customer_id"))
+			out = append(out, row{jsonField(m, "id"), jsonField(m, "invoiced_at")})
+		}
+		return out, jsonObject(list, "page_info")
+	}
+
+	var forward []row
+	params := url.Values{"limit": {"1"}}
+	var info map[string]any
+	for i := 0; i < 10; i++ {
+		var rows []row
+		rows, info = page(params)
+		forward = append(forward, rows...)
+		if jsonField(info, "has_next_page") != "true" {
+			break
+		}
+		params = url.Values{"limit": {"1"}, "cursor": {cursorFromURL(t, jsonField(info, "next_page_url"))}}
+	}
+	require.Len(t, forward, len(customers), "one invoice per customer")
+	seen := map[string]bool{}
+	for i, r := range forward {
+		assert.False(t, seen[r.id], "invoice %s listed twice", r.id)
+		seen[r.id] = true
+		if i > 0 {
+			assert.LessOrEqual(t, r.invoicedAt, forward[i-1].invoicedAt, "invoices are listed newest first")
+		}
+	}
+
+	var backward []row
+	for i := 0; i < 10 && jsonField(info, "has_prev_page") == "true"; i++ {
+		var rows []row
+		rows, info = page(url.Values{"limit": {"1"}, "cursor": {cursorFromURL(t, jsonField(info, "previous_page_url"))}})
+		backward = append(rows, backward...)
+	}
+	require.Equal(t, forward[:len(forward)-1], backward, "paging back retraces the pages before the last")
+}
+
+// The line-level sales and open-order analytics resolve a customer filter to that customer's buyers:
+// each lists exactly the customer's lines, and a customer group it is not in excludes them.
+func TestSalesAnalytics_LegacyEntriesFilterByCustomer(t *testing.T) {
+	t.Parallel()
+	sale := shipSaleToNewCustomer(t)
+	awaitSalesSummary(t, sale.customerID, 1)
+	openCustomer := setupOrderCustomer(t)
+	issueOrderForCustomer(t, openCustomer, nil)
+
+	entries := func(path string, body map[string]any) []any {
+		t.Helper()
+		status, list, raw := putSales(t, path, nil, body)
+		requireStatus(t, 200, status, raw)
+		return jsonArray(list, "data")
+	}
+	now := time.Now().UTC()
+	window := func(extra map[string]any) map[string]any {
+		body := map[string]any{"starts_at": rfc3339(now.Add(-24 * time.Hour)), "ends_at": rfc3339(now.Add(24 * time.Hour))}
+		for k, v := range extra {
+			body[k] = v
+		}
+		return body
+	}
+
+	lines := entries("/v1/core/analytics/sales", window(map[string]any{"customer_ids": []string{sale.customerID}}))
+	require.NotEmpty(t, lines, "the customer's invoiced lines, its shipping line among them")
+	for _, l := range lines {
+		assert.Equal(t, sale.customerID, jsonField(l.(map[string]any), "customer_id"))
+	}
+	assert.Empty(t, entries("/v1/core/analytics/sales", window(map[string]any{
+		"customer_ids": []string{sale.customerID}, "customer_group_ids": []string{"ag_definitely_not_a_real_group"}})),
+		"a customer filter and a group the customer is not in admit no buyer")
+
+	orders := entries("/v1/core/analytics/orders", map[string]any{"customer_ids": []string{openCustomer}})
+	require.NotEmpty(t, orders, "the customer's open order is listed")
+	for _, o := range orders {
+		assert.Equal(t, openCustomer, jsonField(o.(map[string]any), "customer_id"))
+	}
+}
+
 // --- Lines ---
 
 func TestSalesAnalytics_LinesArePricedInTheBaseUnit(t *testing.T) {

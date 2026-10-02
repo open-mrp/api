@@ -166,138 +166,20 @@ func (r *salesOrderRepoImpl) List(ctx context.Context, params domain.ListSalesOr
 		return r.searchList(ctx, params, buyerAccountID, searchQuery.String)
 	}
 
-	startDate := parseDateString(params.StartDate)
-	endDate := parseDateString(params.EndDate)
-	shipByAfter := parseDateString(params.ShipByAfter)
-	shipByBefore := parseDateString(params.ShipByBefore)
-	pastDue := boolToNullBool(params.PastDue)
-
-	includeStatusFilter, statusCodes,
-		includeItemFilter, itemIDs,
-		includeProductLineFilter, productLineIDs,
-		includeCustomerFilter, customerIDs,
-		includeCustomerGroupFilter, customerGroupIDs,
-		includeSalesRepFilter, salesRepIDs := buildSalesOrderListFilters(params)
-
-	var cursorDir *pagination.Direction
-
+	var cursor *pagination.StringCursor
 	if params.Cursor != nil {
 		cur, err := pagination.DecodeStringCursor(*params.Cursor)
 		if err != nil {
 			return nil, apierror.NewValidationErrorWithParam("Invalid pagination cursor.", "cursor")
 		}
-		cursorDir = &cur.Direction
-
-		if cur.Direction == pagination.DirectionBackward {
-			rows, err := r.queries.ListSalesOrdersBackward(ctx, sqlc.ListSalesOrdersBackwardParams{
-				AccountID:                  params.AccountID,
-				BuyerAccountID:             buyerAccountID,
-				IncludeStatusFilter:        includeStatusFilter,
-				StatusCodes:                statusCodes,
-				IncludeItemFilter:          includeItemFilter,
-				ItemIds:                    itemIDs,
-				IncludeProductLineFilter:   includeProductLineFilter,
-				ProductLineIds:             productLineIDs,
-				IncludeCustomerFilter:      includeCustomerFilter,
-				CustomerIds:                customerIDs,
-				IncludeCustomerGroupFilter: includeCustomerGroupFilter,
-				CustomerGroupIds:           customerGroupIDs,
-				IncludeSalesRepFilter:      includeSalesRepFilter,
-				SalesRepIds:                salesRepIDs,
-				StartDate:                  startDate,
-				EndDate:                    endDate,
-				ShipByAfter:                shipByAfter,
-				ShipByBefore:               shipByBefore,
-				PastDue:                    pastDue,
-				CursorCreatedAt:            cur.OccurredAt,
-				CursorID:                   cur.ID,
-				Limit:                      params.Limit + 1,
-			})
-			if apiErr := db.MapSQLError(err); apiErr != nil {
-				return nil, tracing.Trace(span, apiErr)
-			}
-			orders := make([]*domain.SalesOrder, len(rows))
-			for i, row := range rows {
-				orders[i] = mapBackwardSalesOrderRow(row)
-			}
-			result, pageInfo := pagination.BuildPageString(orders, params.Limit, cursorDir, salesOrderCreatedAt, salesOrderID)
-			if apiErr := r.attachLineCounts(ctx, result); apiErr != nil {
-				return nil, tracing.Trace(span, apiErr)
-			}
-			return &domain.ListSalesOrdersResult{SalesOrders: result, PageInfo: pageInfo}, nil
-		}
-
-		// Forward with cursor
-		rows, err := r.queries.ListSalesOrdersForward(ctx, sqlc.ListSalesOrdersForwardParams{
-			AccountID:                  params.AccountID,
-			BuyerAccountID:             buyerAccountID,
-			IncludeStatusFilter:        includeStatusFilter,
-			StatusCodes:                statusCodes,
-			IncludeItemFilter:          includeItemFilter,
-			ItemIds:                    itemIDs,
-			IncludeProductLineFilter:   includeProductLineFilter,
-			ProductLineIds:             productLineIDs,
-			IncludeCustomerFilter:      includeCustomerFilter,
-			CustomerIds:                customerIDs,
-			IncludeCustomerGroupFilter: includeCustomerGroupFilter,
-			CustomerGroupIds:           customerGroupIDs,
-			IncludeSalesRepFilter:      includeSalesRepFilter,
-			SalesRepIds:                salesRepIDs,
-			StartDate:                  startDate,
-			EndDate:                    endDate,
-			ShipByAfter:                shipByAfter,
-			ShipByBefore:               shipByBefore,
-			PastDue:                    pastDue,
-			CursorCreatedAt:            gosql.NullTime{Time: cur.OccurredAt, Valid: true},
-			CursorID:                   gosql.NullString{String: cur.ID, Valid: true},
-			Limit:                      params.Limit + 1,
-		})
-		if apiErr := db.MapSQLError(err); apiErr != nil {
-			return nil, tracing.Trace(span, apiErr)
-		}
-		orders := make([]*domain.SalesOrder, len(rows))
-		for i, row := range rows {
-			orders[i] = mapForwardSalesOrderRow(row)
-		}
-		result, pageInfo := pagination.BuildPageString(orders, params.Limit, cursorDir, salesOrderCreatedAt, salesOrderID)
-		if apiErr := r.attachLineCounts(ctx, result); apiErr != nil {
-			return nil, tracing.Trace(span, apiErr)
-		}
-		return &domain.ListSalesOrdersResult{SalesOrders: result, PageInfo: pageInfo}, nil
+		cursor = &cur
 	}
 
-	// No cursor — first page
-	rows, err := r.queries.ListSalesOrdersForward(ctx, sqlc.ListSalesOrdersForwardParams{
-		AccountID:                  params.AccountID,
-		BuyerAccountID:             buyerAccountID,
-		IncludeStatusFilter:        includeStatusFilter,
-		StatusCodes:                statusCodes,
-		IncludeItemFilter:          includeItemFilter,
-		ItemIds:                    itemIDs,
-		IncludeProductLineFilter:   includeProductLineFilter,
-		ProductLineIds:             productLineIDs,
-		IncludeCustomerFilter:      includeCustomerFilter,
-		CustomerIds:                customerIDs,
-		IncludeCustomerGroupFilter: includeCustomerGroupFilter,
-		CustomerGroupIds:           customerGroupIDs,
-		IncludeSalesRepFilter:      includeSalesRepFilter,
-		SalesRepIds:                salesRepIDs,
-		StartDate:                  startDate,
-		EndDate:                    endDate,
-		ShipByAfter:                shipByAfter,
-		ShipByBefore:               shipByBefore,
-		PastDue:                    pastDue,
-		Limit:                      params.Limit + 1,
-	})
+	orders, err := r.listPage(ctx, params, cursor)
 	if apiErr := db.MapSQLError(err); apiErr != nil {
 		return nil, tracing.Trace(span, apiErr)
 	}
-
-	orders := make([]*domain.SalesOrder, len(rows))
-	for i, row := range rows {
-		orders[i] = mapForwardSalesOrderRow(row)
-	}
-	result, pageInfo := pagination.BuildPageString(orders, params.Limit, cursorDir, salesOrderCreatedAt, salesOrderID)
+	result, pageInfo := pagination.BuildPageString(orders, params.Limit, cursorDirection(cursor), salesOrderCreatedAt, salesOrderID)
 	if apiErr := r.attachLineCounts(ctx, result); apiErr != nil {
 		return nil, tracing.Trace(span, apiErr)
 	}
@@ -1609,7 +1491,7 @@ func mapGetSalesOrderForCustomerRow(row sqlc.GetSalesOrderForCustomerRow) *domai
 	return so
 }
 
-// listSalesOrderRow carries the shared column set returned by the forward and backward list queries. Both queries now project the same full detail shape as GetSalesOrder (plus line_count), so their rows map through one helper.
+// listSalesOrderRow is one row of salesOrderListColumns, in order (dest).
 type listSalesOrderRow struct {
 	ID                          string
 	Number                      string
@@ -1714,7 +1596,7 @@ type listSalesOrderRow struct {
 	PickID                      gosql.NullString
 }
 
-// mapListSalesOrderRow maps a shared list row into a full domain.SalesOrder, mirroring mapGetSalesOrderRow so list and detail return the same shape.
+// mapListSalesOrderRow maps a list row into a full domain.SalesOrder, mirroring mapGetSalesOrderRow so list and detail return the same shape.
 func mapListSalesOrderRow(row listSalesOrderRow) *domain.SalesOrder {
 	so := &domain.SalesOrder{
 		ID:                   row.ID,
@@ -1857,218 +1739,6 @@ func mapListSalesOrderRow(row listSalesOrderRow) *domain.SalesOrder {
 	so.CustomerCommissionPolicy = nullStringToPtr(row.CustomerCommissionPolicy)
 
 	return so
-}
-
-func mapForwardSalesOrderRow(row sqlc.ListSalesOrdersForwardRow) *domain.SalesOrder {
-	return mapListSalesOrderRow(listSalesOrderRow{
-		ID:                          row.ID,
-		Number:                      row.Number,
-		CustomerPoNumber:            row.CustomerPoNumber,
-		Note:                        row.Note,
-		IsAcknowledgmentSent:        row.IsAcknowledgmentSent,
-		BillingAddressID:            row.BillingAddressID,
-		ShippingAddressID:           row.ShippingAddressID,
-		CarrierID:                   row.CarrierID,
-		CarrierOptionID:             row.CarrierOptionID,
-		CarrierBillingType:          row.CarrierBillingType,
-		CarrierBillingAccount:       row.CarrierBillingAccount,
-		PriorityCode:                row.PriorityCode,
-		SalesRepID:                  row.SalesRepID,
-		ShippingTermID:              row.ShippingTermID,
-		SalesOrderStatusCode:        row.SalesOrderStatusCode,
-		SalesOrderTypeCode:          row.SalesOrderTypeCode,
-		PaymentTermID:               row.PaymentTermID,
-		ProductionRunID:             row.ProductionRunID,
-		OrderDiscountID:             row.OrderDiscountID,
-		BuyerAccountID:              row.BuyerAccountID,
-		SellerAccountID:             row.SellerAccountID,
-		OwnerAccountID:              row.OwnerAccountID,
-		IssuedAt:                    row.IssuedAt,
-		CompletedAt:                 row.CompletedAt,
-		FirstShipAt:                 row.FirstShipAt,
-		ExpiredAt:                   row.ExpiredAt,
-		PromisedAt:                  row.PromisedAt,
-		ShipByDate:                  row.ShipByDate,
-		LeadTimeDays:                row.LeadTimeDays,
-		LeadTimeSourceCode:          row.LeadTimeSourceCode,
-		TransitDays:                 row.TransitDays,
-		TransitSourceCode:           row.TransitSourceCode,
-		LeadTimeOverrideDays:        row.LeadTimeOverrideDays,
-		ShipByOverrideDate:          row.ShipByOverrideDate,
-		ShipByCutoffAt:              row.ShipByCutoffAt,
-		CalendarAdjustmentDays:      row.CalendarAdjustmentDays,
-		CreatedAt:                   row.CreatedAt,
-		UpdatedAt:                   row.UpdatedAt,
-		CustomerName:                row.CustomerName,
-		CustomerNumber:              row.CustomerNumber,
-		CustomerStatusCode:          row.CustomerStatusCode,
-		CustomerCommissionPolicy:    row.CustomerCommissionPolicy,
-		CustomerCreatedAt:           row.CustomerCreatedAt,
-		CustomerUpdatedAt:           row.CustomerUpdatedAt,
-		StatusName:                  row.StatusName,
-		TypeName:                    row.TypeName,
-		PriorityName:                row.PriorityName,
-		PriorityID:                  row.PriorityID,
-		BillToName:                  row.BillToName,
-		BillToIsDropShip:            row.BillToIsDropShip,
-		BillToGeolocationID:         row.BillToGeolocationID,
-		BillToStreetLine1:           row.BillToStreetLine1,
-		BillToStreetLine2:           row.BillToStreetLine2,
-		BillToLocality:              row.BillToLocality,
-		BillToState:                 row.BillToState,
-		BillToPostalCode:            row.BillToPostalCode,
-		BillToCountry:               row.BillToCountry,
-		BillToPhone:                 row.BillToPhone,
-		BillToEmail:                 row.BillToEmail,
-		BillToCreatedAt:             row.BillToCreatedAt,
-		BillToUpdatedAt:             row.BillToUpdatedAt,
-		ShipToName:                  row.ShipToName,
-		ShipToIsDropShip:            row.ShipToIsDropShip,
-		ShipToGeolocationID:         row.ShipToGeolocationID,
-		ShipToStreetLine1:           row.ShipToStreetLine1,
-		ShipToStreetLine2:           row.ShipToStreetLine2,
-		ShipToLocality:              row.ShipToLocality,
-		ShipToState:                 row.ShipToState,
-		ShipToPostalCode:            row.ShipToPostalCode,
-		ShipToCountry:               row.ShipToCountry,
-		ShipToPhone:                 row.ShipToPhone,
-		ShipToEmail:                 row.ShipToEmail,
-		ShipToCreatedAt:             row.ShipToCreatedAt,
-		ShipToUpdatedAt:             row.ShipToUpdatedAt,
-		CarrierName:                 row.CarrierName,
-		CarrierIsPortalEnabled:      row.CarrierIsPortalEnabled,
-		CarrierCreatedAt:            row.CarrierCreatedAt,
-		CarrierUpdatedAt:            row.CarrierUpdatedAt,
-		CarrierOptionName:           row.CarrierOptionName,
-		ServiceLevelIsPortalEnabled: row.ServiceLevelIsPortalEnabled,
-		ServiceLevelToken:           row.ServiceLevelToken,
-		ServiceLevelCreatedAt:       row.ServiceLevelCreatedAt,
-		ServiceLevelUpdatedAt:       row.ServiceLevelUpdatedAt,
-		SalesRepName:                row.SalesRepName,
-		PaymentTermName:             row.PaymentTermName,
-		PaymentTermIsActive:         row.PaymentTermIsActive,
-		PaymentTermCreatedAt:        row.PaymentTermCreatedAt,
-		PaymentTermUpdatedAt:        row.PaymentTermUpdatedAt,
-		ShippingTermName:            row.ShippingTermName,
-		ShippingTermIsFreightExempt: row.ShippingTermIsFreightExempt,
-		ShippingTermIsCarrierRate:   row.ShippingTermIsCarrierRate,
-		ShippingTermCreatedAt:       row.ShippingTermCreatedAt,
-		ShippingTermUpdatedAt:       row.ShippingTermUpdatedAt,
-		OrderDiscountName:           row.OrderDiscountName,
-		OrderDiscountCode:           row.OrderDiscountCode,
-		OrderDiscountPercentage:     row.OrderDiscountPercentage,
-		OrderDiscountAmount:         row.OrderDiscountAmount,
-		OrderDiscountDiscountType:   row.OrderDiscountDiscountType,
-		OrderDiscountCreatedAt:      row.OrderDiscountCreatedAt,
-		OrderDiscountUpdatedAt:      row.OrderDiscountUpdatedAt,
-		PickID:                      row.PickID,
-	})
-}
-
-func mapBackwardSalesOrderRow(row sqlc.ListSalesOrdersBackwardRow) *domain.SalesOrder {
-	return mapListSalesOrderRow(listSalesOrderRow{
-		ID:                          row.ID,
-		Number:                      row.Number,
-		CustomerPoNumber:            row.CustomerPoNumber,
-		Note:                        row.Note,
-		IsAcknowledgmentSent:        row.IsAcknowledgmentSent,
-		BillingAddressID:            row.BillingAddressID,
-		ShippingAddressID:           row.ShippingAddressID,
-		CarrierID:                   row.CarrierID,
-		CarrierOptionID:             row.CarrierOptionID,
-		CarrierBillingType:          row.CarrierBillingType,
-		CarrierBillingAccount:       row.CarrierBillingAccount,
-		PriorityCode:                row.PriorityCode,
-		SalesRepID:                  row.SalesRepID,
-		ShippingTermID:              row.ShippingTermID,
-		SalesOrderStatusCode:        row.SalesOrderStatusCode,
-		SalesOrderTypeCode:          row.SalesOrderTypeCode,
-		PaymentTermID:               row.PaymentTermID,
-		ProductionRunID:             row.ProductionRunID,
-		OrderDiscountID:             row.OrderDiscountID,
-		BuyerAccountID:              row.BuyerAccountID,
-		SellerAccountID:             row.SellerAccountID,
-		OwnerAccountID:              row.OwnerAccountID,
-		IssuedAt:                    row.IssuedAt,
-		CompletedAt:                 row.CompletedAt,
-		FirstShipAt:                 row.FirstShipAt,
-		ExpiredAt:                   row.ExpiredAt,
-		PromisedAt:                  row.PromisedAt,
-		ShipByDate:                  row.ShipByDate,
-		LeadTimeDays:                row.LeadTimeDays,
-		LeadTimeSourceCode:          row.LeadTimeSourceCode,
-		TransitDays:                 row.TransitDays,
-		TransitSourceCode:           row.TransitSourceCode,
-		LeadTimeOverrideDays:        row.LeadTimeOverrideDays,
-		ShipByOverrideDate:          row.ShipByOverrideDate,
-		ShipByCutoffAt:              row.ShipByCutoffAt,
-		CalendarAdjustmentDays:      row.CalendarAdjustmentDays,
-		CreatedAt:                   row.CreatedAt,
-		UpdatedAt:                   row.UpdatedAt,
-		CustomerName:                row.CustomerName,
-		CustomerNumber:              row.CustomerNumber,
-		CustomerStatusCode:          row.CustomerStatusCode,
-		CustomerCommissionPolicy:    row.CustomerCommissionPolicy,
-		CustomerCreatedAt:           row.CustomerCreatedAt,
-		CustomerUpdatedAt:           row.CustomerUpdatedAt,
-		StatusName:                  row.StatusName,
-		TypeName:                    row.TypeName,
-		PriorityName:                row.PriorityName,
-		PriorityID:                  row.PriorityID,
-		BillToName:                  row.BillToName,
-		BillToIsDropShip:            row.BillToIsDropShip,
-		BillToGeolocationID:         row.BillToGeolocationID,
-		BillToStreetLine1:           row.BillToStreetLine1,
-		BillToStreetLine2:           row.BillToStreetLine2,
-		BillToLocality:              row.BillToLocality,
-		BillToState:                 row.BillToState,
-		BillToPostalCode:            row.BillToPostalCode,
-		BillToCountry:               row.BillToCountry,
-		BillToPhone:                 row.BillToPhone,
-		BillToEmail:                 row.BillToEmail,
-		BillToCreatedAt:             row.BillToCreatedAt,
-		BillToUpdatedAt:             row.BillToUpdatedAt,
-		ShipToName:                  row.ShipToName,
-		ShipToIsDropShip:            row.ShipToIsDropShip,
-		ShipToGeolocationID:         row.ShipToGeolocationID,
-		ShipToStreetLine1:           row.ShipToStreetLine1,
-		ShipToStreetLine2:           row.ShipToStreetLine2,
-		ShipToLocality:              row.ShipToLocality,
-		ShipToState:                 row.ShipToState,
-		ShipToPostalCode:            row.ShipToPostalCode,
-		ShipToCountry:               row.ShipToCountry,
-		ShipToPhone:                 row.ShipToPhone,
-		ShipToEmail:                 row.ShipToEmail,
-		ShipToCreatedAt:             row.ShipToCreatedAt,
-		ShipToUpdatedAt:             row.ShipToUpdatedAt,
-		CarrierName:                 row.CarrierName,
-		CarrierIsPortalEnabled:      row.CarrierIsPortalEnabled,
-		CarrierCreatedAt:            row.CarrierCreatedAt,
-		CarrierUpdatedAt:            row.CarrierUpdatedAt,
-		CarrierOptionName:           row.CarrierOptionName,
-		ServiceLevelIsPortalEnabled: row.ServiceLevelIsPortalEnabled,
-		ServiceLevelToken:           row.ServiceLevelToken,
-		ServiceLevelCreatedAt:       row.ServiceLevelCreatedAt,
-		ServiceLevelUpdatedAt:       row.ServiceLevelUpdatedAt,
-		SalesRepName:                row.SalesRepName,
-		PaymentTermName:             row.PaymentTermName,
-		PaymentTermIsActive:         row.PaymentTermIsActive,
-		PaymentTermCreatedAt:        row.PaymentTermCreatedAt,
-		PaymentTermUpdatedAt:        row.PaymentTermUpdatedAt,
-		ShippingTermName:            row.ShippingTermName,
-		ShippingTermIsFreightExempt: row.ShippingTermIsFreightExempt,
-		ShippingTermIsCarrierRate:   row.ShippingTermIsCarrierRate,
-		ShippingTermCreatedAt:       row.ShippingTermCreatedAt,
-		ShippingTermUpdatedAt:       row.ShippingTermUpdatedAt,
-		OrderDiscountName:           row.OrderDiscountName,
-		OrderDiscountCode:           row.OrderDiscountCode,
-		OrderDiscountPercentage:     row.OrderDiscountPercentage,
-		OrderDiscountAmount:         row.OrderDiscountAmount,
-		OrderDiscountDiscountType:   row.OrderDiscountDiscountType,
-		OrderDiscountCreatedAt:      row.OrderDiscountCreatedAt,
-		OrderDiscountUpdatedAt:      row.OrderDiscountUpdatedAt,
-		PickID:                      row.PickID,
-	})
 }
 
 func (r *salesOrderRepoImpl) CheckPaymentStatus(ctx context.Context, salesOrderID string) (bool, *apierror.APIError) {

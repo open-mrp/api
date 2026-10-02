@@ -1,0 +1,150 @@
+{
+ "source": "augno_core/prod, mysql.innodb_table_stats and mysql.innodb_index_stats, last_update 2026-09-30 18:43:42 UTC",
+ "table": {
+  "n_rows": 457569,
+  "clustered_index_size": 12671,
+  "sum_of_other_index_sizes": 23735
+ },
+ "indexes": [
+  {
+   "index": "PRIMARY",
+   "stat": "n_diff_pfx01",
+   "value": 185
+  },
+  {
+   "index": "PRIMARY",
+   "stat": "n_diff_pfx02",
+   "value": 33248
+  },
+  {
+   "index": "PRIMARY",
+   "stat": "n_diff_pfx03",
+   "value": 455557
+  },
+  {
+   "index": "PRIMARY",
+   "stat": "n_leaf_pages",
+   "value": 11666
+  },
+  {
+   "index": "PRIMARY",
+   "stat": "size",
+   "value": 13247
+  },
+  {
+   "index": "sales_line_fact_buyer_idx",
+   "stat": "n_diff_pfx01",
+   "value": 0
+  },
+  {
+   "index": "sales_line_fact_buyer_idx",
+   "stat": "n_diff_pfx02",
+   "value": 3531
+  },
+  {
+   "index": "sales_line_fact_buyer_idx",
+   "stat": "n_diff_pfx03",
+   "value": 107717
+  },
+  {
+   "index": "sales_line_fact_buyer_idx",
+   "stat": "n_diff_pfx04",
+   "value": 487110
+  },
+  {
+   "index": "sales_line_fact_buyer_idx",
+   "stat": "n_leaf_pages",
+   "value": 3813
+  },
+  {
+   "index": "sales_line_fact_buyer_idx",
+   "stat": "size",
+   "value": 4480
+  },
+  {
+   "index": "sales_line_fact_invoice_idx",
+   "stat": "n_diff_pfx01",
+   "value": 131406
+  },
+  {
+   "index": "sales_line_fact_invoice_idx",
+   "stat": "n_diff_pfx02",
+   "value": 117966
+  },
+  {
+   "index": "sales_line_fact_invoice_idx",
+   "stat": "n_diff_pfx03",
+   "value": 109903
+  },
+  {
+   "index": "sales_line_fact_invoice_idx",
+   "stat": "n_diff_pfx04",
+   "value": 541153
+  },
+  {
+   "index": "sales_line_fact_invoice_idx",
+   "stat": "n_leaf_pages",
+   "value": 5973
+  },
+  {
+   "index": "sales_line_fact_invoice_idx",
+   "stat": "size",
+   "value": 6976
+  },
+  {
+   "index": "sales_line_fact_invoice_line_key",
+   "stat": "n_diff_pfx01",
+   "value": 467844
+  },
+  {
+   "index": "sales_line_fact_invoice_line_key",
+   "stat": "n_leaf_pages",
+   "value": 3297
+  },
+  {
+   "index": "sales_line_fact_invoice_line_key",
+   "stat": "size",
+   "value": 3833
+  },
+  {
+   "index": "sales_line_fact_product_line_idx",
+   "stat": "n_diff_pfx01",
+   "value": 0
+  },
+  {
+   "index": "sales_line_fact_product_line_idx",
+   "stat": "n_diff_pfx02",
+   "value": 0
+  },
+  {
+   "index": "sales_line_fact_product_line_idx",
+   "stat": "n_diff_pfx03",
+   "value": 1219
+  },
+  {
+   "index": "sales_line_fact_product_line_idx",
+   "stat": "n_diff_pfx04",
+   "value": 38064
+  },
+  {
+   "index": "sales_line_fact_product_line_idx",
+   "stat": "n_diff_pfx05",
+   "value": 139446
+  },
+  {
+   "index": "sales_line_fact_product_line_idx",
+   "stat": "n_diff_pfx06",
+   "value": 368562
+  },
+  {
+   "index": "sales_line_fact_product_line_idx",
+   "stat": "n_leaf_pages",
+   "value": 7320
+  },
+  {
+   "index": "sales_line_fact_product_line_idx",
+   "stat": "size",
+   "value": 8569
+  }
+ ]
+}

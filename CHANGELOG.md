@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.18.3](https://github.com/open-mrp/api/compare/v2.18.2...v2.18.3) (2026-10-02)
+
+
+### Performance Improvements
+
+* **inventory,production:** serve inventory, production, and log lists from keys, and plan-test them ([#235](https://github.com/open-mrp/api/issues/235)) ([12e0b30](https://github.com/open-mrp/api/commit/12e0b304717b8e559f27fed389900e2872a3d581))
+
 ## [2.18.2](https://github.com/open-mrp/api/compare/v2.18.1...v2.18.2) (2026-10-02)
 
 

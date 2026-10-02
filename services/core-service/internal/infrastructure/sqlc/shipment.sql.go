@@ -326,6 +326,289 @@ func (q *Queries) GetShipment(ctx context.Context, arg GetShipmentParams) (GetSh
 	return i, err
 }
 
+const getShipmentsByIDs = `-- name: GetShipmentsByIDs :many
+SELECT
+    s.id,
+    s.number,
+    s.bill_of_lading,
+    s.note,
+    s.master_tracking_number,
+    s.shipped_at,
+    s.shipment_status_code AS status_code,
+    ss.name AS status_name,
+    s.sales_order_id,
+    so.number AS sales_order_number,
+    so.customer_po_number,
+    COALESCE(so.carrier_billing_type, ar.carrier_billing_type) AS carrier_billing_type,
+    COALESCE(so.carrier_billing_account, ar.carrier_billing_account) AS carrier_billing_account,
+    s.carrier_id,
+    cr.name AS carrier_name,
+    cr.code AS carrier_code,
+    cr.is_portal_enabled AS carrier_is_portal_enabled,
+    cr.created_at AS carrier_created_at,
+    cr.updated_at AS carrier_updated_at,
+    s.carrier_option_id,
+    co.name AS carrier_option_name,
+    co.is_portal_enabled AS service_level_is_portal_enabled,
+    co.service_level_token AS service_level_token,
+    co.created_at AS service_level_created_at,
+    co.updated_at AS service_level_updated_at,
+    s.shipping_address_id,
+    addr.name AS shipping_address_name,
+    addr.phone AS shipping_address_phone,
+    addr.email AS shipping_address_email,
+    addr.is_drop_ship AS shipping_address_is_drop_ship,
+    ship_geo.id AS shipping_address_geolocation_id,
+    ship_geo.street_line_1 AS shipping_address_street_line_1,
+    ship_geo.street_line_2 AS shipping_address_street_line_2,
+    ship_geo.locality AS shipping_address_locality,
+    ship_geo.state AS shipping_address_state,
+    ship_geo.postal_code AS shipping_address_postal_code,
+    ship_geo.country AS shipping_address_country,
+    s.shipped_by_id,
+    shipped_by_user.name AS shipped_by_name,
+    s.invoice_id,
+    inv.number AS invoice_number,
+    ar.counterparty_account_id AS customer_id,
+    ba.name AS customer_name,
+    ar.external_number AS customer_number,
+    ar.account_status_code AS customer_status_code,
+    ar.commission_status_code AS customer_commission_policy,
+    ar.created_at AS customer_created_at,
+    ar.updated_at AS customer_updated_at,
+    p.id AS pick_id,
+    p.number AS pick_number,
+    p.created_at AS pick_created_at,
+    p.updated_at AS pick_updated_at,
+    billing_geo.country AS billing_address_country,
+    billing_geo.postal_code AS billing_address_zip,
+    s.account_id,
+    s.created_at,
+    s.updated_at,
+    so.created_at AS sales_order_created_at,
+    so.updated_at AS sales_order_updated_at,
+    addr.created_at AS shipping_address_created_at,
+    addr.updated_at AS shipping_address_updated_at,
+    shipped_by_au.status_code AS shipped_by_status_code,
+    shipped_by_au.created_at AS shipped_by_created_at,
+    shipped_by_au.updated_at AS shipped_by_updated_at,
+    inv.created_at AS invoice_created_at,
+    inv.updated_at AS invoice_updated_at,
+    so.priority_code,
+    (SELECT COUNT(*) FROM shipping_case sc WHERE sc.shipment_id = s.id) AS case_count,
+    -- Dashboard's isValidToShip: not yet shipped, has at least one case, and every case has a
+    -- freight weight recorded (ShippingCaseUtils.isReadyToShip = freightWeight > 0).
+    (
+        s.shipped_at IS NULL
+        AND EXISTS (SELECT 1 FROM shipping_case rc WHERE rc.shipment_id = s.id)
+        AND NOT EXISTS (
+            SELECT 1 FROM shipping_case rc2
+            JOIN quantity rfw ON rfw.id = rc2.freight_weight_id
+            WHERE rc2.shipment_id = s.id AND rfw.value <= 0
+        )
+    ) AS is_ready_to_ship
+FROM shipment s
+JOIN shipment_status ss ON ss.code = s.shipment_status_code
+JOIN sales_order so ON so.id = s.sales_order_id
+JOIN account_relation ar ON ar.owner_account_id = so.owner_account_id
+    AND ar.counterparty_account_id = so.buyer_account_id
+JOIN account ba ON ba.id = so.buyer_account_id
+JOIN carrier cr ON cr.id = s.carrier_id
+LEFT JOIN carrier_option co ON co.id = s.carrier_option_id
+LEFT JOIN address addr ON addr.id = s.shipping_address_id
+LEFT JOIN geolocation ship_geo ON ship_geo.id = addr.geolocation_id
+LEFT JOIN account_user shipped_by_au ON shipped_by_au.id = s.shipped_by_id
+LEFT JOIN user shipped_by_user ON shipped_by_user.id = shipped_by_au.user_id
+LEFT JOIN invoice inv ON inv.id = s.invoice_id
+LEFT JOIN pick p ON p.sales_order_id = so.id
+LEFT JOIN address billing_addr ON billing_addr.id = so.billing_address_id
+LEFT JOIN geolocation billing_geo ON billing_geo.id = billing_addr.geolocation_id
+WHERE s.id IN (/*SLICE:ids*/?)
+AND s.account_id = ?
+`
+
+type GetShipmentsByIDsParams struct {
+	Ids       []string
+	AccountID string
+}
+
+type GetShipmentsByIDsRow struct {
+	ID                           string
+	Number                       string
+	BillOfLading                 sql.NullString
+	Note                         sql.NullString
+	MasterTrackingNumber         sql.NullString
+	ShippedAt                    sql.NullTime
+	StatusCode                   string
+	StatusName                   string
+	SalesOrderID                 string
+	SalesOrderNumber             string
+	CustomerPoNumber             sql.NullString
+	CarrierBillingType           sql.NullString
+	CarrierBillingAccount        sql.NullString
+	CarrierID                    string
+	CarrierName                  string
+	CarrierCode                  sql.NullString
+	CarrierIsPortalEnabled       bool
+	CarrierCreatedAt             time.Time
+	CarrierUpdatedAt             time.Time
+	CarrierOptionID              sql.NullString
+	CarrierOptionName            sql.NullString
+	ServiceLevelIsPortalEnabled  sql.NullBool
+	ServiceLevelToken            sql.NullString
+	ServiceLevelCreatedAt        sql.NullTime
+	ServiceLevelUpdatedAt        sql.NullTime
+	ShippingAddressID            string
+	ShippingAddressName          sql.NullString
+	ShippingAddressPhone         sql.NullString
+	ShippingAddressEmail         sql.NullString
+	ShippingAddressIsDropShip    sql.NullBool
+	ShippingAddressGeolocationID sql.NullString
+	ShippingAddressStreetLine1   sql.NullString
+	ShippingAddressStreetLine2   sql.NullString
+	ShippingAddressLocality      sql.NullString
+	ShippingAddressState         sql.NullString
+	ShippingAddressPostalCode    sql.NullString
+	ShippingAddressCountry       sql.NullString
+	ShippedByID                  sql.NullString
+	ShippedByName                sql.NullString
+	InvoiceID                    sql.NullString
+	InvoiceNumber                sql.NullString
+	CustomerID                   string
+	CustomerName                 string
+	CustomerNumber               string
+	CustomerStatusCode           sql.NullString
+	CustomerCommissionPolicy     sql.NullString
+	CustomerCreatedAt            time.Time
+	CustomerUpdatedAt            time.Time
+	PickID                       sql.NullString
+	PickNumber                   sql.NullString
+	PickCreatedAt                sql.NullTime
+	PickUpdatedAt                sql.NullTime
+	BillingAddressCountry        sql.NullString
+	BillingAddressZip            sql.NullString
+	AccountID                    string
+	CreatedAt                    time.Time
+	UpdatedAt                    time.Time
+	SalesOrderCreatedAt          time.Time
+	SalesOrderUpdatedAt          time.Time
+	ShippingAddressCreatedAt     sql.NullTime
+	ShippingAddressUpdatedAt     sql.NullTime
+	ShippedByStatusCode          sql.NullString
+	ShippedByCreatedAt           sql.NullTime
+	ShippedByUpdatedAt           sql.NullTime
+	InvoiceCreatedAt             sql.NullTime
+	InvoiceUpdatedAt             sql.NullTime
+	PriorityCode                 string
+	CaseCount                    int64
+	IsReadyToShip                sql.NullBool
+}
+
+// Hydrates a page of the shipment list, which buildShipmentListQuery chooses; same projection as GetShipment.
+func (q *Queries) GetShipmentsByIDs(ctx context.Context, arg GetShipmentsByIDsParams) ([]GetShipmentsByIDsRow, error) {
+	query := getShipmentsByIDs
+	var queryParams []interface{}
+	if len(arg.Ids) > 0 {
+		for _, v := range arg.Ids {
+			queryParams = append(queryParams, v)
+		}
+		query = strings.Replace(query, "/*SLICE:ids*/?", strings.Repeat(",?", len(arg.Ids))[1:], 1)
+	} else {
+		query = strings.Replace(query, "/*SLICE:ids*/?", "NULL", 1)
+	}
+	queryParams = append(queryParams, arg.AccountID)
+	rows, err := q.db.QueryContext(ctx, query, queryParams...)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []GetShipmentsByIDsRow
+	for rows.Next() {
+		var i GetShipmentsByIDsRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.Number,
+			&i.BillOfLading,
+			&i.Note,
+			&i.MasterTrackingNumber,
+			&i.ShippedAt,
+			&i.StatusCode,
+			&i.StatusName,
+			&i.SalesOrderID,
+			&i.SalesOrderNumber,
+			&i.CustomerPoNumber,
+			&i.CarrierBillingType,
+			&i.CarrierBillingAccount,
+			&i.CarrierID,
+			&i.CarrierName,
+			&i.CarrierCode,
+			&i.CarrierIsPortalEnabled,
+			&i.CarrierCreatedAt,
+			&i.CarrierUpdatedAt,
+			&i.CarrierOptionID,
+			&i.CarrierOptionName,
+			&i.ServiceLevelIsPortalEnabled,
+			&i.ServiceLevelToken,
+			&i.ServiceLevelCreatedAt,
+			&i.ServiceLevelUpdatedAt,
+			&i.ShippingAddressID,
+			&i.ShippingAddressName,
+			&i.ShippingAddressPhone,
+			&i.ShippingAddressEmail,
+			&i.ShippingAddressIsDropShip,
+			&i.ShippingAddressGeolocationID,
+			&i.ShippingAddressStreetLine1,
+			&i.ShippingAddressStreetLine2,
+			&i.ShippingAddressLocality,
+			&i.ShippingAddressState,
+			&i.ShippingAddressPostalCode,
+			&i.ShippingAddressCountry,
+			&i.ShippedByID,
+			&i.ShippedByName,
+			&i.InvoiceID,
+			&i.InvoiceNumber,
+			&i.CustomerID,
+			&i.CustomerName,
+			&i.CustomerNumber,
+			&i.CustomerStatusCode,
+			&i.CustomerCommissionPolicy,
+			&i.CustomerCreatedAt,
+			&i.CustomerUpdatedAt,
+			&i.PickID,
+			&i.PickNumber,
+			&i.PickCreatedAt,
+			&i.PickUpdatedAt,
+			&i.BillingAddressCountry,
+			&i.BillingAddressZip,
+			&i.AccountID,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+			&i.SalesOrderCreatedAt,
+			&i.SalesOrderUpdatedAt,
+			&i.ShippingAddressCreatedAt,
+			&i.ShippingAddressUpdatedAt,
+			&i.ShippedByStatusCode,
+			&i.ShippedByCreatedAt,
+			&i.ShippedByUpdatedAt,
+			&i.InvoiceCreatedAt,
+			&i.InvoiceUpdatedAt,
+			&i.PriorityCode,
+			&i.CaseCount,
+			&i.IsReadyToShip,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const linkShipmentInvoice = `-- name: LinkShipmentInvoice :exec
 UPDATE shipment SET
     invoice_id = ?,
@@ -343,830 +626,6 @@ type LinkShipmentInvoiceParams struct {
 func (q *Queries) LinkShipmentInvoice(ctx context.Context, arg LinkShipmentInvoiceParams) error {
 	_, err := q.db.ExecContext(ctx, linkShipmentInvoice, arg.InvoiceID, arg.ID, arg.AccountID)
 	return err
-}
-
-const listShipmentsBackward = `-- name: ListShipmentsBackward :many
-SELECT
-    s.id,
-    s.number,
-    s.bill_of_lading,
-    s.note,
-    s.master_tracking_number,
-    s.shipped_at,
-    s.shipment_status_code AS status_code,
-    ss.name AS status_name,
-    s.sales_order_id,
-    so.number AS sales_order_number,
-    so.customer_po_number,
-    COALESCE(so.carrier_billing_type, ar.carrier_billing_type) AS carrier_billing_type,
-    COALESCE(so.carrier_billing_account, ar.carrier_billing_account) AS carrier_billing_account,
-    s.carrier_id,
-    cr.name AS carrier_name,
-    cr.code AS carrier_code,
-    cr.is_portal_enabled AS carrier_is_portal_enabled,
-    cr.created_at AS carrier_created_at,
-    cr.updated_at AS carrier_updated_at,
-    s.carrier_option_id,
-    co.name AS carrier_option_name,
-    co.is_portal_enabled AS service_level_is_portal_enabled,
-    co.service_level_token AS service_level_token,
-    co.created_at AS service_level_created_at,
-    co.updated_at AS service_level_updated_at,
-    s.shipping_address_id,
-    addr.name AS shipping_address_name,
-    addr.phone AS shipping_address_phone,
-    addr.email AS shipping_address_email,
-    addr.is_drop_ship AS shipping_address_is_drop_ship,
-    ship_geo.id AS shipping_address_geolocation_id,
-    ship_geo.street_line_1 AS shipping_address_street_line_1,
-    ship_geo.street_line_2 AS shipping_address_street_line_2,
-    ship_geo.locality AS shipping_address_locality,
-    ship_geo.state AS shipping_address_state,
-    ship_geo.postal_code AS shipping_address_postal_code,
-    ship_geo.country AS shipping_address_country,
-    s.shipped_by_id,
-    shipped_by_user.name AS shipped_by_name,
-    s.invoice_id,
-    inv.number AS invoice_number,
-    ar.counterparty_account_id AS customer_id,
-    ba.name AS customer_name,
-    ar.external_number AS customer_number,
-    ar.account_status_code AS customer_status_code,
-    ar.commission_status_code AS customer_commission_policy,
-    ar.created_at AS customer_created_at,
-    ar.updated_at AS customer_updated_at,
-    p.id AS pick_id,
-    p.number AS pick_number,
-    p.created_at AS pick_created_at,
-    p.updated_at AS pick_updated_at,
-    billing_geo.country AS billing_address_country,
-    billing_geo.postal_code AS billing_address_zip,
-    s.account_id,
-    s.created_at,
-    s.updated_at,
-    so.created_at AS sales_order_created_at,
-    so.updated_at AS sales_order_updated_at,
-    addr.created_at AS shipping_address_created_at,
-    addr.updated_at AS shipping_address_updated_at,
-    shipped_by_au.status_code AS shipped_by_status_code,
-    shipped_by_au.created_at AS shipped_by_created_at,
-    shipped_by_au.updated_at AS shipped_by_updated_at,
-    inv.created_at AS invoice_created_at,
-    inv.updated_at AS invoice_updated_at,
-    so.priority_code,
-    (SELECT COUNT(*) FROM shipping_case sc WHERE sc.shipment_id = s.id) AS case_count,
-    -- Dashboard's isValidToShip: not yet shipped, has at least one case, and every case has a
-    -- freight weight recorded (ShippingCaseUtils.isReadyToShip = freightWeight > 0).
-    (
-        s.shipped_at IS NULL
-        AND EXISTS (SELECT 1 FROM shipping_case rc WHERE rc.shipment_id = s.id)
-        AND NOT EXISTS (
-            SELECT 1 FROM shipping_case rc2
-            JOIN quantity rfw ON rfw.id = rc2.freight_weight_id
-            WHERE rc2.shipment_id = s.id AND rfw.value <= 0
-        )
-    ) AS is_ready_to_ship
-FROM shipment s
-JOIN shipment_status ss ON ss.code = s.shipment_status_code
-JOIN sales_order so ON so.id = s.sales_order_id
-JOIN account_relation ar ON ar.owner_account_id = so.owner_account_id
-    AND ar.counterparty_account_id = so.buyer_account_id
-JOIN account ba ON ba.id = so.buyer_account_id
-JOIN carrier cr ON cr.id = s.carrier_id
-LEFT JOIN carrier_option co ON co.id = s.carrier_option_id
-LEFT JOIN address addr ON addr.id = s.shipping_address_id
-LEFT JOIN geolocation ship_geo ON ship_geo.id = addr.geolocation_id
-LEFT JOIN account_user shipped_by_au ON shipped_by_au.id = s.shipped_by_id
-LEFT JOIN user shipped_by_user ON shipped_by_user.id = shipped_by_au.user_id
-LEFT JOIN invoice inv ON inv.id = s.invoice_id
-LEFT JOIN pick p ON p.sales_order_id = so.id
-LEFT JOIN address billing_addr ON billing_addr.id = so.billing_address_id
-LEFT JOIN geolocation billing_geo ON billing_geo.id = billing_addr.geolocation_id
-WHERE s.account_id = ?
-AND (
-    ? IS NULL
-    OR s.shipment_status_code = ?
-)
-AND (
-    ? IS NULL
-    OR s.number LIKE ?
-    OR s.note LIKE ?
-    OR s.bill_of_lading LIKE ?
-    OR s.master_tracking_number LIKE ?
-    OR so.number LIKE ?
-    OR ba.name LIKE ?
-    OR so.customer_po_number LIKE ?
-)
-AND (
-    ? = false
-    OR EXISTS (
-        SELECT 1 FROM shipment_line sl
-        JOIN sales_order_line sol ON sol.id = sl.sales_order_line_id
-        WHERE sl.shipment_id = s.id
-        AND sol.item_id IN (/*SLICE:item_ids*/?)
-    )
-)
-AND (
-    ? = false
-    OR so.buyer_account_id IN (/*SLICE:customer_ids*/?)
-)
-AND (
-    ? = false
-    OR EXISTS (
-        SELECT 1 FROM shipment_line sl2
-        JOIN sales_order_line sol2 ON sol2.id = sl2.sales_order_line_id
-        JOIN product p ON p.id = sol2.product_id
-        WHERE sl2.shipment_id = s.id
-        AND p.product_line_id IN (/*SLICE:product_line_ids*/?)
-    )
-)
-AND (
-    ? = false
-    OR ar.account_group_id IN (/*SLICE:customer_group_ids*/?)
-)
-AND (
-    ? = false
-    OR ar.default_sales_rep_id IN (/*SLICE:sales_rep_ids*/?)
-)
-AND (
-    ? IS NULL
-    OR s.created_at >= ?
-)
-AND (
-    ? IS NULL
-    OR s.created_at <= ?
-)
-AND (
-    s.created_at > ?
-    OR (s.created_at = ? AND s.id > ?)
-)
-ORDER BY s.created_at ASC, s.id ASC
-LIMIT ?
-`
-
-type ListShipmentsBackwardParams struct {
-	AccountID                  string
-	StatusCode                 sql.NullString
-	SearchQuery                sql.NullString
-	IncludeItemFilter          interface{}
-	ItemIds                    []sql.NullString
-	IncludeCustomerFilter      interface{}
-	CustomerIds                []string
-	IncludeProductLineFilter   interface{}
-	ProductLineIds             []sql.NullString
-	IncludeCustomerGroupFilter interface{}
-	CustomerGroupIds           []sql.NullString
-	IncludeSalesRepFilter      interface{}
-	SalesRepIds                []sql.NullString
-	StartDate                  sql.NullTime
-	EndDate                    sql.NullTime
-	CursorCreatedAt            time.Time
-	CursorID                   string
-	Limit                      int32
-}
-
-type ListShipmentsBackwardRow struct {
-	ID                           string
-	Number                       string
-	BillOfLading                 sql.NullString
-	Note                         sql.NullString
-	MasterTrackingNumber         sql.NullString
-	ShippedAt                    sql.NullTime
-	StatusCode                   string
-	StatusName                   string
-	SalesOrderID                 string
-	SalesOrderNumber             string
-	CustomerPoNumber             sql.NullString
-	CarrierBillingType           sql.NullString
-	CarrierBillingAccount        sql.NullString
-	CarrierID                    string
-	CarrierName                  string
-	CarrierCode                  sql.NullString
-	CarrierIsPortalEnabled       bool
-	CarrierCreatedAt             time.Time
-	CarrierUpdatedAt             time.Time
-	CarrierOptionID              sql.NullString
-	CarrierOptionName            sql.NullString
-	ServiceLevelIsPortalEnabled  sql.NullBool
-	ServiceLevelToken            sql.NullString
-	ServiceLevelCreatedAt        sql.NullTime
-	ServiceLevelUpdatedAt        sql.NullTime
-	ShippingAddressID            string
-	ShippingAddressName          sql.NullString
-	ShippingAddressPhone         sql.NullString
-	ShippingAddressEmail         sql.NullString
-	ShippingAddressIsDropShip    sql.NullBool
-	ShippingAddressGeolocationID sql.NullString
-	ShippingAddressStreetLine1   sql.NullString
-	ShippingAddressStreetLine2   sql.NullString
-	ShippingAddressLocality      sql.NullString
-	ShippingAddressState         sql.NullString
-	ShippingAddressPostalCode    sql.NullString
-	ShippingAddressCountry       sql.NullString
-	ShippedByID                  sql.NullString
-	ShippedByName                sql.NullString
-	InvoiceID                    sql.NullString
-	InvoiceNumber                sql.NullString
-	CustomerID                   string
-	CustomerName                 string
-	CustomerNumber               string
-	CustomerStatusCode           sql.NullString
-	CustomerCommissionPolicy     sql.NullString
-	CustomerCreatedAt            time.Time
-	CustomerUpdatedAt            time.Time
-	PickID                       sql.NullString
-	PickNumber                   sql.NullString
-	PickCreatedAt                sql.NullTime
-	PickUpdatedAt                sql.NullTime
-	BillingAddressCountry        sql.NullString
-	BillingAddressZip            sql.NullString
-	AccountID                    string
-	CreatedAt                    time.Time
-	UpdatedAt                    time.Time
-	SalesOrderCreatedAt          time.Time
-	SalesOrderUpdatedAt          time.Time
-	ShippingAddressCreatedAt     sql.NullTime
-	ShippingAddressUpdatedAt     sql.NullTime
-	ShippedByStatusCode          sql.NullString
-	ShippedByCreatedAt           sql.NullTime
-	ShippedByUpdatedAt           sql.NullTime
-	InvoiceCreatedAt             sql.NullTime
-	InvoiceUpdatedAt             sql.NullTime
-	PriorityCode                 string
-	CaseCount                    int64
-	IsReadyToShip                sql.NullBool
-}
-
-func (q *Queries) ListShipmentsBackward(ctx context.Context, arg ListShipmentsBackwardParams) ([]ListShipmentsBackwardRow, error) {
-	query := listShipmentsBackward
-	var queryParams []interface{}
-	queryParams = append(queryParams, arg.AccountID)
-	queryParams = append(queryParams, arg.StatusCode)
-	queryParams = append(queryParams, arg.StatusCode)
-	queryParams = append(queryParams, arg.SearchQuery)
-	queryParams = append(queryParams, arg.SearchQuery)
-	queryParams = append(queryParams, arg.SearchQuery)
-	queryParams = append(queryParams, arg.SearchQuery)
-	queryParams = append(queryParams, arg.SearchQuery)
-	queryParams = append(queryParams, arg.SearchQuery)
-	queryParams = append(queryParams, arg.SearchQuery)
-	queryParams = append(queryParams, arg.SearchQuery)
-	queryParams = append(queryParams, arg.IncludeItemFilter)
-	if len(arg.ItemIds) > 0 {
-		for _, v := range arg.ItemIds {
-			queryParams = append(queryParams, v)
-		}
-		query = strings.Replace(query, "/*SLICE:item_ids*/?", strings.Repeat(",?", len(arg.ItemIds))[1:], 1)
-	} else {
-		query = strings.Replace(query, "/*SLICE:item_ids*/?", "NULL", 1)
-	}
-	queryParams = append(queryParams, arg.IncludeCustomerFilter)
-	if len(arg.CustomerIds) > 0 {
-		for _, v := range arg.CustomerIds {
-			queryParams = append(queryParams, v)
-		}
-		query = strings.Replace(query, "/*SLICE:customer_ids*/?", strings.Repeat(",?", len(arg.CustomerIds))[1:], 1)
-	} else {
-		query = strings.Replace(query, "/*SLICE:customer_ids*/?", "NULL", 1)
-	}
-	queryParams = append(queryParams, arg.IncludeProductLineFilter)
-	if len(arg.ProductLineIds) > 0 {
-		for _, v := range arg.ProductLineIds {
-			queryParams = append(queryParams, v)
-		}
-		query = strings.Replace(query, "/*SLICE:product_line_ids*/?", strings.Repeat(",?", len(arg.ProductLineIds))[1:], 1)
-	} else {
-		query = strings.Replace(query, "/*SLICE:product_line_ids*/?", "NULL", 1)
-	}
-	queryParams = append(queryParams, arg.IncludeCustomerGroupFilter)
-	if len(arg.CustomerGroupIds) > 0 {
-		for _, v := range arg.CustomerGroupIds {
-			queryParams = append(queryParams, v)
-		}
-		query = strings.Replace(query, "/*SLICE:customer_group_ids*/?", strings.Repeat(",?", len(arg.CustomerGroupIds))[1:], 1)
-	} else {
-		query = strings.Replace(query, "/*SLICE:customer_group_ids*/?", "NULL", 1)
-	}
-	queryParams = append(queryParams, arg.IncludeSalesRepFilter)
-	if len(arg.SalesRepIds) > 0 {
-		for _, v := range arg.SalesRepIds {
-			queryParams = append(queryParams, v)
-		}
-		query = strings.Replace(query, "/*SLICE:sales_rep_ids*/?", strings.Repeat(",?", len(arg.SalesRepIds))[1:], 1)
-	} else {
-		query = strings.Replace(query, "/*SLICE:sales_rep_ids*/?", "NULL", 1)
-	}
-	queryParams = append(queryParams, arg.StartDate)
-	queryParams = append(queryParams, arg.StartDate)
-	queryParams = append(queryParams, arg.EndDate)
-	queryParams = append(queryParams, arg.EndDate)
-	queryParams = append(queryParams, arg.CursorCreatedAt)
-	queryParams = append(queryParams, arg.CursorCreatedAt)
-	queryParams = append(queryParams, arg.CursorID)
-	queryParams = append(queryParams, arg.Limit)
-	rows, err := q.db.QueryContext(ctx, query, queryParams...)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	var items []ListShipmentsBackwardRow
-	for rows.Next() {
-		var i ListShipmentsBackwardRow
-		if err := rows.Scan(
-			&i.ID,
-			&i.Number,
-			&i.BillOfLading,
-			&i.Note,
-			&i.MasterTrackingNumber,
-			&i.ShippedAt,
-			&i.StatusCode,
-			&i.StatusName,
-			&i.SalesOrderID,
-			&i.SalesOrderNumber,
-			&i.CustomerPoNumber,
-			&i.CarrierBillingType,
-			&i.CarrierBillingAccount,
-			&i.CarrierID,
-			&i.CarrierName,
-			&i.CarrierCode,
-			&i.CarrierIsPortalEnabled,
-			&i.CarrierCreatedAt,
-			&i.CarrierUpdatedAt,
-			&i.CarrierOptionID,
-			&i.CarrierOptionName,
-			&i.ServiceLevelIsPortalEnabled,
-			&i.ServiceLevelToken,
-			&i.ServiceLevelCreatedAt,
-			&i.ServiceLevelUpdatedAt,
-			&i.ShippingAddressID,
-			&i.ShippingAddressName,
-			&i.ShippingAddressPhone,
-			&i.ShippingAddressEmail,
-			&i.ShippingAddressIsDropShip,
-			&i.ShippingAddressGeolocationID,
-			&i.ShippingAddressStreetLine1,
-			&i.ShippingAddressStreetLine2,
-			&i.ShippingAddressLocality,
-			&i.ShippingAddressState,
-			&i.ShippingAddressPostalCode,
-			&i.ShippingAddressCountry,
-			&i.ShippedByID,
-			&i.ShippedByName,
-			&i.InvoiceID,
-			&i.InvoiceNumber,
-			&i.CustomerID,
-			&i.CustomerName,
-			&i.CustomerNumber,
-			&i.CustomerStatusCode,
-			&i.CustomerCommissionPolicy,
-			&i.CustomerCreatedAt,
-			&i.CustomerUpdatedAt,
-			&i.PickID,
-			&i.PickNumber,
-			&i.PickCreatedAt,
-			&i.PickUpdatedAt,
-			&i.BillingAddressCountry,
-			&i.BillingAddressZip,
-			&i.AccountID,
-			&i.CreatedAt,
-			&i.UpdatedAt,
-			&i.SalesOrderCreatedAt,
-			&i.SalesOrderUpdatedAt,
-			&i.ShippingAddressCreatedAt,
-			&i.ShippingAddressUpdatedAt,
-			&i.ShippedByStatusCode,
-			&i.ShippedByCreatedAt,
-			&i.ShippedByUpdatedAt,
-			&i.InvoiceCreatedAt,
-			&i.InvoiceUpdatedAt,
-			&i.PriorityCode,
-			&i.CaseCount,
-			&i.IsReadyToShip,
-		); err != nil {
-			return nil, err
-		}
-		items = append(items, i)
-	}
-	if err := rows.Close(); err != nil {
-		return nil, err
-	}
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-	return items, nil
-}
-
-const listShipmentsForward = `-- name: ListShipmentsForward :many
-SELECT
-    s.id,
-    s.number,
-    s.bill_of_lading,
-    s.note,
-    s.master_tracking_number,
-    s.shipped_at,
-    s.shipment_status_code AS status_code,
-    ss.name AS status_name,
-    s.sales_order_id,
-    so.number AS sales_order_number,
-    so.customer_po_number,
-    COALESCE(so.carrier_billing_type, ar.carrier_billing_type) AS carrier_billing_type,
-    COALESCE(so.carrier_billing_account, ar.carrier_billing_account) AS carrier_billing_account,
-    s.carrier_id,
-    cr.name AS carrier_name,
-    cr.code AS carrier_code,
-    cr.is_portal_enabled AS carrier_is_portal_enabled,
-    cr.created_at AS carrier_created_at,
-    cr.updated_at AS carrier_updated_at,
-    s.carrier_option_id,
-    co.name AS carrier_option_name,
-    co.is_portal_enabled AS service_level_is_portal_enabled,
-    co.service_level_token AS service_level_token,
-    co.created_at AS service_level_created_at,
-    co.updated_at AS service_level_updated_at,
-    s.shipping_address_id,
-    addr.name AS shipping_address_name,
-    addr.phone AS shipping_address_phone,
-    addr.email AS shipping_address_email,
-    addr.is_drop_ship AS shipping_address_is_drop_ship,
-    ship_geo.id AS shipping_address_geolocation_id,
-    ship_geo.street_line_1 AS shipping_address_street_line_1,
-    ship_geo.street_line_2 AS shipping_address_street_line_2,
-    ship_geo.locality AS shipping_address_locality,
-    ship_geo.state AS shipping_address_state,
-    ship_geo.postal_code AS shipping_address_postal_code,
-    ship_geo.country AS shipping_address_country,
-    s.shipped_by_id,
-    shipped_by_user.name AS shipped_by_name,
-    s.invoice_id,
-    inv.number AS invoice_number,
-    ar.counterparty_account_id AS customer_id,
-    ba.name AS customer_name,
-    ar.external_number AS customer_number,
-    ar.account_status_code AS customer_status_code,
-    ar.commission_status_code AS customer_commission_policy,
-    ar.created_at AS customer_created_at,
-    ar.updated_at AS customer_updated_at,
-    p.id AS pick_id,
-    p.number AS pick_number,
-    p.created_at AS pick_created_at,
-    p.updated_at AS pick_updated_at,
-    billing_geo.country AS billing_address_country,
-    billing_geo.postal_code AS billing_address_zip,
-    s.account_id,
-    s.created_at,
-    s.updated_at,
-    so.created_at AS sales_order_created_at,
-    so.updated_at AS sales_order_updated_at,
-    addr.created_at AS shipping_address_created_at,
-    addr.updated_at AS shipping_address_updated_at,
-    shipped_by_au.status_code AS shipped_by_status_code,
-    shipped_by_au.created_at AS shipped_by_created_at,
-    shipped_by_au.updated_at AS shipped_by_updated_at,
-    inv.created_at AS invoice_created_at,
-    inv.updated_at AS invoice_updated_at,
-    so.priority_code,
-    (SELECT COUNT(*) FROM shipping_case sc WHERE sc.shipment_id = s.id) AS case_count,
-    -- Dashboard's isValidToShip: not yet shipped, has at least one case, and every case has a
-    -- freight weight recorded (ShippingCaseUtils.isReadyToShip = freightWeight > 0).
-    (
-        s.shipped_at IS NULL
-        AND EXISTS (SELECT 1 FROM shipping_case rc WHERE rc.shipment_id = s.id)
-        AND NOT EXISTS (
-            SELECT 1 FROM shipping_case rc2
-            JOIN quantity rfw ON rfw.id = rc2.freight_weight_id
-            WHERE rc2.shipment_id = s.id AND rfw.value <= 0
-        )
-    ) AS is_ready_to_ship
-FROM shipment s
-JOIN shipment_status ss ON ss.code = s.shipment_status_code
-JOIN sales_order so ON so.id = s.sales_order_id
-JOIN account_relation ar ON ar.owner_account_id = so.owner_account_id
-    AND ar.counterparty_account_id = so.buyer_account_id
-JOIN account ba ON ba.id = so.buyer_account_id
-JOIN carrier cr ON cr.id = s.carrier_id
-LEFT JOIN carrier_option co ON co.id = s.carrier_option_id
-LEFT JOIN address addr ON addr.id = s.shipping_address_id
-LEFT JOIN geolocation ship_geo ON ship_geo.id = addr.geolocation_id
-LEFT JOIN account_user shipped_by_au ON shipped_by_au.id = s.shipped_by_id
-LEFT JOIN user shipped_by_user ON shipped_by_user.id = shipped_by_au.user_id
-LEFT JOIN invoice inv ON inv.id = s.invoice_id
-LEFT JOIN pick p ON p.sales_order_id = so.id
-LEFT JOIN address billing_addr ON billing_addr.id = so.billing_address_id
-LEFT JOIN geolocation billing_geo ON billing_geo.id = billing_addr.geolocation_id
-WHERE s.account_id = ?
-AND (
-    ? IS NULL
-    OR s.shipment_status_code = ?
-)
-AND (
-    ? IS NULL
-    OR s.number LIKE ?
-    OR s.note LIKE ?
-    OR s.bill_of_lading LIKE ?
-    OR s.master_tracking_number LIKE ?
-    OR so.number LIKE ?
-    OR ba.name LIKE ?
-    OR so.customer_po_number LIKE ?
-)
-AND (
-    ? = false
-    OR EXISTS (
-        SELECT 1 FROM shipment_line sl
-        JOIN sales_order_line sol ON sol.id = sl.sales_order_line_id
-        WHERE sl.shipment_id = s.id
-        AND sol.item_id IN (/*SLICE:item_ids*/?)
-    )
-)
-AND (
-    ? = false
-    OR so.buyer_account_id IN (/*SLICE:customer_ids*/?)
-)
-AND (
-    ? = false
-    OR EXISTS (
-        SELECT 1 FROM shipment_line sl2
-        JOIN sales_order_line sol2 ON sol2.id = sl2.sales_order_line_id
-        JOIN product p ON p.id = sol2.product_id
-        WHERE sl2.shipment_id = s.id
-        AND p.product_line_id IN (/*SLICE:product_line_ids*/?)
-    )
-)
-AND (
-    ? = false
-    OR ar.account_group_id IN (/*SLICE:customer_group_ids*/?)
-)
-AND (
-    ? = false
-    OR ar.default_sales_rep_id IN (/*SLICE:sales_rep_ids*/?)
-)
-AND (
-    ? IS NULL
-    OR s.created_at >= ?
-)
-AND (
-    ? IS NULL
-    OR s.created_at <= ?
-)
-AND (
-    ? IS NULL
-    OR s.created_at < ?
-    OR (s.created_at = ? AND s.id < ?)
-)
-ORDER BY s.created_at DESC, s.id DESC
-LIMIT ?
-`
-
-type ListShipmentsForwardParams struct {
-	AccountID                  string
-	StatusCode                 sql.NullString
-	SearchQuery                sql.NullString
-	IncludeItemFilter          interface{}
-	ItemIds                    []sql.NullString
-	IncludeCustomerFilter      interface{}
-	CustomerIds                []string
-	IncludeProductLineFilter   interface{}
-	ProductLineIds             []sql.NullString
-	IncludeCustomerGroupFilter interface{}
-	CustomerGroupIds           []sql.NullString
-	IncludeSalesRepFilter      interface{}
-	SalesRepIds                []sql.NullString
-	StartDate                  sql.NullTime
-	EndDate                    sql.NullTime
-	CursorCreatedAt            sql.NullTime
-	CursorID                   sql.NullString
-	Limit                      int32
-}
-
-type ListShipmentsForwardRow struct {
-	ID                           string
-	Number                       string
-	BillOfLading                 sql.NullString
-	Note                         sql.NullString
-	MasterTrackingNumber         sql.NullString
-	ShippedAt                    sql.NullTime
-	StatusCode                   string
-	StatusName                   string
-	SalesOrderID                 string
-	SalesOrderNumber             string
-	CustomerPoNumber             sql.NullString
-	CarrierBillingType           sql.NullString
-	CarrierBillingAccount        sql.NullString
-	CarrierID                    string
-	CarrierName                  string
-	CarrierCode                  sql.NullString
-	CarrierIsPortalEnabled       bool
-	CarrierCreatedAt             time.Time
-	CarrierUpdatedAt             time.Time
-	CarrierOptionID              sql.NullString
-	CarrierOptionName            sql.NullString
-	ServiceLevelIsPortalEnabled  sql.NullBool
-	ServiceLevelToken            sql.NullString
-	ServiceLevelCreatedAt        sql.NullTime
-	ServiceLevelUpdatedAt        sql.NullTime
-	ShippingAddressID            string
-	ShippingAddressName          sql.NullString
-	ShippingAddressPhone         sql.NullString
-	ShippingAddressEmail         sql.NullString
-	ShippingAddressIsDropShip    sql.NullBool
-	ShippingAddressGeolocationID sql.NullString
-	ShippingAddressStreetLine1   sql.NullString
-	ShippingAddressStreetLine2   sql.NullString
-	ShippingAddressLocality      sql.NullString
-	ShippingAddressState         sql.NullString
-	ShippingAddressPostalCode    sql.NullString
-	ShippingAddressCountry       sql.NullString
-	ShippedByID                  sql.NullString
-	ShippedByName                sql.NullString
-	InvoiceID                    sql.NullString
-	InvoiceNumber                sql.NullString
-	CustomerID                   string
-	CustomerName                 string
-	CustomerNumber               string
-	CustomerStatusCode           sql.NullString
-	CustomerCommissionPolicy     sql.NullString
-	CustomerCreatedAt            time.Time
-	CustomerUpdatedAt            time.Time
-	PickID                       sql.NullString
-	PickNumber                   sql.NullString
-	PickCreatedAt                sql.NullTime
-	PickUpdatedAt                sql.NullTime
-	BillingAddressCountry        sql.NullString
-	BillingAddressZip            sql.NullString
-	AccountID                    string
-	CreatedAt                    time.Time
-	UpdatedAt                    time.Time
-	SalesOrderCreatedAt          time.Time
-	SalesOrderUpdatedAt          time.Time
-	ShippingAddressCreatedAt     sql.NullTime
-	ShippingAddressUpdatedAt     sql.NullTime
-	ShippedByStatusCode          sql.NullString
-	ShippedByCreatedAt           sql.NullTime
-	ShippedByUpdatedAt           sql.NullTime
-	InvoiceCreatedAt             sql.NullTime
-	InvoiceUpdatedAt             sql.NullTime
-	PriorityCode                 string
-	CaseCount                    int64
-	IsReadyToShip                sql.NullBool
-}
-
-func (q *Queries) ListShipmentsForward(ctx context.Context, arg ListShipmentsForwardParams) ([]ListShipmentsForwardRow, error) {
-	query := listShipmentsForward
-	var queryParams []interface{}
-	queryParams = append(queryParams, arg.AccountID)
-	queryParams = append(queryParams, arg.StatusCode)
-	queryParams = append(queryParams, arg.StatusCode)
-	queryParams = append(queryParams, arg.SearchQuery)
-	queryParams = append(queryParams, arg.SearchQuery)
-	queryParams = append(queryParams, arg.SearchQuery)
-	queryParams = append(queryParams, arg.SearchQuery)
-	queryParams = append(queryParams, arg.SearchQuery)
-	queryParams = append(queryParams, arg.SearchQuery)
-	queryParams = append(queryParams, arg.SearchQuery)
-	queryParams = append(queryParams, arg.SearchQuery)
-	queryParams = append(queryParams, arg.IncludeItemFilter)
-	if len(arg.ItemIds) > 0 {
-		for _, v := range arg.ItemIds {
-			queryParams = append(queryParams, v)
-		}
-		query = strings.Replace(query, "/*SLICE:item_ids*/?", strings.Repeat(",?", len(arg.ItemIds))[1:], 1)
-	} else {
-		query = strings.Replace(query, "/*SLICE:item_ids*/?", "NULL", 1)
-	}
-	queryParams = append(queryParams, arg.IncludeCustomerFilter)
-	if len(arg.CustomerIds) > 0 {
-		for _, v := range arg.CustomerIds {
-			queryParams = append(queryParams, v)
-		}
-		query = strings.Replace(query, "/*SLICE:customer_ids*/?", strings.Repeat(",?", len(arg.CustomerIds))[1:], 1)
-	} else {
-		query = strings.Replace(query, "/*SLICE:customer_ids*/?", "NULL", 1)
-	}
-	queryParams = append(queryParams, arg.IncludeProductLineFilter)
-	if len(arg.ProductLineIds) > 0 {
-		for _, v := range arg.ProductLineIds {
-			queryParams = append(queryParams, v)
-		}
-		query = strings.Replace(query, "/*SLICE:product_line_ids*/?", strings.Repeat(",?", len(arg.ProductLineIds))[1:], 1)
-	} else {
-		query = strings.Replace(query, "/*SLICE:product_line_ids*/?", "NULL", 1)
-	}
-	queryParams = append(queryParams, arg.IncludeCustomerGroupFilter)
-	if len(arg.CustomerGroupIds) > 0 {
-		for _, v := range arg.CustomerGroupIds {
-			queryParams = append(queryParams, v)
-		}
-		query = strings.Replace(query, "/*SLICE:customer_group_ids*/?", strings.Repeat(",?", len(arg.CustomerGroupIds))[1:], 1)
-	} else {
-		query = strings.Replace(query, "/*SLICE:customer_group_ids*/?", "NULL", 1)
-	}
-	queryParams = append(queryParams, arg.IncludeSalesRepFilter)
-	if len(arg.SalesRepIds) > 0 {
-		for _, v := range arg.SalesRepIds {
-			queryParams = append(queryParams, v)
-		}
-		query = strings.Replace(query, "/*SLICE:sales_rep_ids*/?", strings.Repeat(",?", len(arg.SalesRepIds))[1:], 1)
-	} else {
-		query = strings.Replace(query, "/*SLICE:sales_rep_ids*/?", "NULL", 1)
-	}
-	queryParams = append(queryParams, arg.StartDate)
-	queryParams = append(queryParams, arg.StartDate)
-	queryParams = append(queryParams, arg.EndDate)
-	queryParams = append(queryParams, arg.EndDate)
-	queryParams = append(queryParams, arg.CursorCreatedAt)
-	queryParams = append(queryParams, arg.CursorCreatedAt)
-	queryParams = append(queryParams, arg.CursorCreatedAt)
-	queryParams = append(queryParams, arg.CursorID)
-	queryParams = append(queryParams, arg.Limit)
-	rows, err := q.db.QueryContext(ctx, query, queryParams...)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	var items []ListShipmentsForwardRow
-	for rows.Next() {
-		var i ListShipmentsForwardRow
-		if err := rows.Scan(
-			&i.ID,
-			&i.Number,
-			&i.BillOfLading,
-			&i.Note,
-			&i.MasterTrackingNumber,
-			&i.ShippedAt,
-			&i.StatusCode,
-			&i.StatusName,
-			&i.SalesOrderID,
-			&i.SalesOrderNumber,
-			&i.CustomerPoNumber,
-			&i.CarrierBillingType,
-			&i.CarrierBillingAccount,
-			&i.CarrierID,
-			&i.CarrierName,
-			&i.CarrierCode,
-			&i.CarrierIsPortalEnabled,
-			&i.CarrierCreatedAt,
-			&i.CarrierUpdatedAt,
-			&i.CarrierOptionID,
-			&i.CarrierOptionName,
-			&i.ServiceLevelIsPortalEnabled,
-			&i.ServiceLevelToken,
-			&i.ServiceLevelCreatedAt,
-			&i.ServiceLevelUpdatedAt,
-			&i.ShippingAddressID,
-			&i.ShippingAddressName,
-			&i.ShippingAddressPhone,
-			&i.ShippingAddressEmail,
-			&i.ShippingAddressIsDropShip,
-			&i.ShippingAddressGeolocationID,
-			&i.ShippingAddressStreetLine1,
-			&i.ShippingAddressStreetLine2,
-			&i.ShippingAddressLocality,
-			&i.ShippingAddressState,
-			&i.ShippingAddressPostalCode,
-			&i.ShippingAddressCountry,
-			&i.ShippedByID,
-			&i.ShippedByName,
-			&i.InvoiceID,
-			&i.InvoiceNumber,
-			&i.CustomerID,
-			&i.CustomerName,
-			&i.CustomerNumber,
-			&i.CustomerStatusCode,
-			&i.CustomerCommissionPolicy,
-			&i.CustomerCreatedAt,
-			&i.CustomerUpdatedAt,
-			&i.PickID,
-			&i.PickNumber,
-			&i.PickCreatedAt,
-			&i.PickUpdatedAt,
-			&i.BillingAddressCountry,
-			&i.BillingAddressZip,
-			&i.AccountID,
-			&i.CreatedAt,
-			&i.UpdatedAt,
-			&i.SalesOrderCreatedAt,
-			&i.SalesOrderUpdatedAt,
-			&i.ShippingAddressCreatedAt,
-			&i.ShippingAddressUpdatedAt,
-			&i.ShippedByStatusCode,
-			&i.ShippedByCreatedAt,
-			&i.ShippedByUpdatedAt,
-			&i.InvoiceCreatedAt,
-			&i.InvoiceUpdatedAt,
-			&i.PriorityCode,
-			&i.CaseCount,
-			&i.IsReadyToShip,
-		); err != nil {
-			return nil, err
-		}
-		items = append(items, i)
-	}
-	if err := rows.Close(); err != nil {
-		return nil, err
-	}
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-	return items, nil
 }
 
 const markShipmentShipped = `-- name: MarkShipmentShipped :exec

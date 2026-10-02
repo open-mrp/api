@@ -153,19 +153,182 @@ func TestVitessSmoke(t *testing.T) {
 	// --- repository paths that assemble SQL or chain queries ---
 	t.Run("sales order list", func(t *testing.T) {
 		repo := NewSalesOrderRepo(q)
+		day, yes, no := "2000-01-01", true, false
 		for name, params := range map[string]domain.ListSalesOrdersParams{
 			"plain":    {AccountID: account, Limit: 50},
 			"customer": {AccountID: account, Limit: 50, CustomerIDs: buyers},
 			"status":   {AccountID: account, Limit: 50, StatusCodes: []string{"issued", "estimate"}},
 			"buyer":    {AccountID: account, Limit: 50, BuyerAccountID: &buyers[0]},
+			// The optimizer hints, semijoins, and index sets the page query is built with.
+			"lines":   {AccountID: account, Limit: 5, ItemIDs: []string{"it_none"}, ProductLineIDs: productLines},
+			"group":   {AccountID: account, Limit: 5, CustomerGroupIDs: groups, SalesRepIDs: []string{"acus_none"}},
+			"ship-by": {AccountID: account, Limit: 5, ShipByAfter: &day, CustomerIDs: buyers, SalesRepIDs: []string{"acus_none"}},
+			"dates":   {AccountID: account, Limit: 5, StartDate: &day, PastDue: &yes},
+			"due":     {AccountID: account, Limit: 5, EndDate: &day, PastDue: &no},
 		} {
-			_, apiErr := repo.List(ctx, params)
+			page, apiErr := repo.List(ctx, params)
 			checkAPI("ListSalesOrders/"+name, apiErr)
+			if page != nil && page.PageInfo.NextCursor != nil {
+				params.Cursor = page.PageInfo.NextCursor
+				next, apiErr := repo.List(ctx, params)
+				checkAPI("ListSalesOrders next/"+name, apiErr)
+				if next != nil && next.PageInfo.PrevCursor != nil {
+					params.Cursor = next.PageInfo.PrevCursor
+					_, apiErr = repo.List(ctx, params)
+					checkAPI("ListSalesOrders prev/"+name, apiErr)
+				}
+			}
 		}
 		_, apiErr := repo.GetByIDs(ctx, account, &buyers[0], orderIDs)
 		checkAPI("SalesOrder.GetByIDs", apiErr)
 		_, apiErr = repo.GetLinesForOrders(ctx, orderIDs)
 		checkAPI("SalesOrder.GetLinesForOrders", apiErr)
+	})
+
+	// --- catalog and customer lists: page chosen in a derived table, keys forced, filters resolved first ---
+	t.Run("catalog and customer lists", func(t *testing.T) {
+		catAccount := ids("SELECT i.account_id FROM item i JOIN product p ON p.item_id = i.id GROUP BY i.account_id ORDER BY COUNT(*) DESC LIMIT 1")[0]
+		categories := ids("SELECT id FROM item_category WHERE account_id = ? LIMIT 2", catAccount)
+		attributes := append(ids("SELECT id FROM attribute WHERE account_id = ? LIMIT 2", catAccount), "attr_none")
+		suppliers := append(ids("SELECT supplier_account_id FROM supplier_material WHERE owner_account_id = ? LIMIT 1", catAccount), "ac_none")
+		customers := append(ids("SELECT counterparty_account_id FROM account_relation WHERE owner_account_id = ? AND account_relation_role_code = 'customer' LIMIT 2", catAccount), "ac_none")
+		search := "a"
+		from, to := time.Date(2000, 1, 1, 0, 0, 0, 0, time.UTC), time.Now().UTC().Add(time.Hour)
+
+		items := NewItemRepo(q)
+		// One per index hint and filter shape: the created, type, and category keys, the primary key for
+		// a filter on another table, a search's tier ordering, and the subassembly probe.
+		for name, p := range map[string]domain.ListItemsParams{
+			"plain":       {AccountID: catAccount, Limit: 5},
+			"type":        {AccountID: catAccount, Limit: 5, Types: []string{"part", "product"}},
+			"category":    {AccountID: catAccount, Limit: 5, Types: []string{"product"}, CategoryIDs: append(categories, "itcg_none")},
+			"other":       {AccountID: catAccount, Limit: 5, AttributeIDs: attributes, SupplierID: &suppliers[0], ProductLineIDs: productLines},
+			"customer":    {AccountID: catAccount, Limit: 5, CustomerIDs: customers, ProductLineIDs: productLines},
+			"search":      {AccountID: catAccount, Limit: 5, Query: &search, StartDate: &from, EndDate: &to},
+			"exact":       {AccountID: catAccount, Limit: 5, Query: &search, IsExactMatch: true},
+			"subassembly": {AccountID: catAccount, Limit: 5, OnlyInitialSubassemblies: true},
+		} {
+			page, apiErr := items.List(ctx, p)
+			checkAPI("ListItems/"+name, apiErr)
+			if page != nil && page.PageInfo.NextCursor != nil {
+				p.Cursor = page.PageInfo.NextCursor
+				next, apiErr := items.List(ctx, p)
+				checkAPI("ListItems/"+name+" next", apiErr)
+				if next != nil && next.PageInfo.PrevCursor != nil {
+					p.Cursor = next.PageInfo.PrevCursor
+					_, apiErr = items.List(ctx, p)
+					checkAPI("ListItems/"+name+" prev", apiErr)
+				}
+			}
+		}
+
+		products := NewProductRepo(q)
+		yes := true
+		for name, p := range map[string]domain.ListProductsFullParams{
+			"plain":    {AccountID: catAccount, Limit: 5},
+			"category": {AccountID: catAccount, Limit: 5, CategoryIDs: categories, IsPortalReady: &yes},
+			"lines":    {AccountID: catAccount, Limit: 5, ProductLineIDs: productLines, CustomerIDs: customers, AttributeIDs: attributes},
+			"search":   {AccountID: catAccount, Limit: 5, Query: &search, StartDate: &from, EndDate: &to},
+		} {
+			page, apiErr := products.List(ctx, p)
+			checkAPI("ListProductsFull/"+name, apiErr)
+			if page != nil && page.PageInfo.NextCursor != nil {
+				p.Cursor = page.PageInfo.NextCursor
+				next, apiErr := products.List(ctx, p)
+				checkAPI("ListProductsFull/"+name+" next", apiErr)
+				if next != nil && next.PageInfo.PrevCursor != nil {
+					p.Cursor = next.PageInfo.PrevCursor
+					_, apiErr = products.List(ctx, p)
+					checkAPI("ListProductsFull/"+name+" prev", apiErr)
+				}
+			}
+		}
+		_, apiErr := products.SearchBySKU(ctx, catAccount, "%a%")
+		checkAPI("SearchProductsBySKU", apiErr)
+		_, apiErr = products.ListByAccount(ctx, catAccount)
+		checkAPI("ListProductsByAccount", apiErr)
+
+		catalog := NewCatalogRepo(q)
+		_, apiErr = catalog.ListProductLines(ctx, catAccount)
+		checkAPI("ListCatalogProductLines", apiErr)
+		_, apiErr = catalog.ListProductLinesForCustomer(ctx, catAccount, customers[0])
+		checkAPI("ListCatalogProductLinesForCustomer", apiErr)
+		for _, line := range productLines {
+			_, apiErr = catalog.ListProducts(ctx, catAccount, line)
+			checkAPI("ListCatalogProducts", apiErr)
+		}
+
+		customerRepo := NewCustomerRepo(q)
+		state := "NC"
+		for name, p := range map[string]domain.ListCustomersParams{
+			"plain":   {AccountID: catAccount, Limit: 5},
+			"filters": {AccountID: catAccount, Limit: 5, Query: &search, CarrierIDs: carriers, PaymentTermIDs: []string{"pt_none"}},
+			"pricing": {AccountID: catAccount, Limit: 5, PricingGroupIDs: groups, State: &state},
+		} {
+			page, apiErr := customerRepo.List(ctx, p)
+			checkAPI("ListCustomers/"+name, apiErr)
+			if page != nil && page.PageInfo.NextCursor != nil {
+				p.Cursor = page.PageInfo.NextCursor
+				next, apiErr := customerRepo.List(ctx, p)
+				checkAPI("ListCustomers/"+name+" next", apiErr)
+				if next != nil && next.PageInfo.PrevCursor != nil {
+					p.Cursor = next.PageInfo.PrevCursor
+					_, apiErr = customerRepo.List(ctx, p)
+					checkAPI("ListCustomers/"+name+" prev", apiErr)
+				}
+			}
+		}
+
+		addressAccount := ids("SELECT account_id FROM account_address GROUP BY account_id ORDER BY COUNT(*) DESC LIMIT 1")[0]
+		dropShip := false
+		page, apiErr := NewAddressRepo(q).List(ctx, domain.ListAddressesParams{AccountID: addressAccount, Limit: 2, Query: &search, DropShip: &dropShip})
+		checkAPI("ListAddresses", apiErr)
+		if page != nil && page.PageInfo.NextCursor != nil {
+			_, apiErr = NewAddressRepo(q).List(ctx, domain.ListAddressesParams{AccountID: addressAccount, Limit: 2, Cursor: page.PageInfo.NextCursor})
+			checkAPI("ListAddresses next", apiErr)
+		}
+	})
+
+	t.Run("invoice and receivable lists", func(t *testing.T) {
+		invoices := NewInvoiceRepo(q)
+		search, paid, unpaid, overpaid := "1", "paid", "unpaid", "overpaid"
+		from, to := time.Date(2000, 1, 1, 0, 0, 0, 0, time.UTC), time.Now().UTC().Add(time.Hour)
+		for name, params := range map[string]domain.ListInvoicesParams{
+			"plain":    {AccountID: account, Limit: 1},
+			"paid":     {AccountID: account, Limit: 5, Status: &paid, StartDate: &from, EndDate: &to},
+			"unpaid":   {AccountID: account, Limit: 5, Status: &unpaid, Query: &search},
+			"overpaid": {AccountID: account, Limit: 5, Status: &overpaid},
+			"orders": {AccountID: account, Limit: 5, CustomerIDs: buyers, CustomerGroupIDs: groups, SalesRepIDs: []string{"acus_none"},
+				ItemIDs: []string{"it_none"}, ProductLineIDs: productLines},
+			"customer": {AccountID: account, Limit: 5, CustomerIDs: buyers},
+		} {
+			page, apiErr := invoices.List(ctx, params)
+			checkAPI("ListInvoices/"+name, apiErr)
+			if page != nil && page.PageInfo.NextCursor != nil {
+				params.Cursor = page.PageInfo.NextCursor
+				next, apiErr := invoices.List(ctx, params)
+				checkAPI("ListInvoices next/"+name, apiErr)
+				if next != nil && next.PageInfo.PrevCursor != nil {
+					params.Cursor = next.PageInfo.PrevCursor
+					_, apiErr = invoices.List(ctx, params)
+					checkAPI("ListInvoices prev/"+name, apiErr)
+				}
+			}
+		}
+		page, apiErr := invoices.ListByCustomer(ctx, domain.ListCustomerInvoicesParams{AccountID: account, CustomerAccountID: buyers[0], Limit: 1})
+		checkAPI("ListCustomerInvoices", apiErr)
+		if page != nil && page.PageInfo.NextCursor != nil {
+			_, apiErr = invoices.ListByCustomer(ctx, domain.ListCustomerInvoicesParams{AccountID: account, CustomerAccountID: buyers[0], Limit: 1, Query: &search, Cursor: page.PageInfo.NextCursor})
+			checkAPI("ListCustomerInvoices next", apiErr)
+		}
+
+		receivables := NewReceivableRepo(q)
+		for _, cutoff := range []*time.Time{nil, &to} {
+			_, apiErr = receivables.List(ctx, domain.ListReceivablesParams{AccountID: account, CutoffDate: cutoff, Query: &search, Limit: 5})
+			checkAPI("ListReceivables", apiErr)
+			_, apiErr = receivables.ListByCustomer(ctx, domain.ListReceivablesByCustomerParams{AccountID: account, CustomerAccountID: buyers[0], CutoffDate: cutoff, Limit: 5})
+			checkAPI("ListReceivablesByCustomer", apiErr)
+		}
 	})
 
 	t.Run("pick list", func(t *testing.T) {
@@ -221,6 +384,82 @@ func TestVitessSmoke(t *testing.T) {
 		}
 	})
 
+	// pageBothWays lists params, then pages forward and back through one-row pages.
+	pageBothWays := func(name string, list func(cursor *string, limit int32) (next, prev *string, apiErr *apierror.APIError)) {
+		next, _, apiErr := list(nil, 50)
+		checkAPI(name, apiErr)
+		next, _, apiErr = list(nil, 1)
+		checkAPI(name+"/first page", apiErr)
+		if apiErr != nil || next == nil {
+			return
+		}
+		_, prev, apiErr := list(next, 1)
+		checkAPI(name+"/next page", apiErr)
+		if apiErr == nil && prev != nil {
+			_, _, apiErr = list(prev, 1)
+			checkAPI(name+"/prev page", apiErr)
+		}
+	}
+
+	// The shipment list builds its SQL in Go: one case per read it chooses (a list-order walk, a
+	// customer set's buyer ranges, an item's or product line's matched shipments) and per count.
+	t.Run("shipment list", func(t *testing.T) {
+		repo := NewShipmentRepo(q)
+		items := append(ids("SELECT DISTINCT sol.item_id FROM shipment_line sl JOIN sales_order_line sol ON sol.id = sl.sales_order_line_id LIMIT 2"), "it_none")
+		reps := append(ids("SELECT DISTINCT default_sales_rep_id FROM account_relation WHERE owner_account_id = ? AND default_sales_rep_id IS NOT NULL", account), "acus_none")
+		status, search := "shipped", "SH"
+		start, end := "2000-01-01", "2100-01-01"
+		for name, params := range map[string]domain.ListShipmentsParams{
+			"unfiltered":                 {AccountID: account},
+			"status":                     {AccountID: account, Status: &status},
+			"one customer":               {AccountID: account, CustomerIDs: buyers[:1]},
+			"customers":                  {AccountID: account, CustomerIDs: append([]string{"ac_none"}, buyers...)},
+			"group and sales rep":        {AccountID: account, CustomerGroupIDs: groups, SalesRepIDs: reps},
+			"items":                      {AccountID: account, ItemIDs: items},
+			"product lines":              {AccountID: account, ProductLineIDs: productLines},
+			"items and product lines":    {AccountID: account, ItemIDs: items, ProductLineIDs: productLines},
+			"search, window and filters": {AccountID: account, Query: &search, Status: &status, CustomerIDs: buyers, StartDate: &start, EndDate: &end},
+		} {
+			pageBothWays("ListShipments/"+name, func(cursor *string, limit int32) (*string, *string, *apierror.APIError) {
+				params.Cursor, params.Limit = cursor, limit
+				result, apiErr := repo.List(ctx, params)
+				if apiErr != nil {
+					return nil, nil, apiErr
+				}
+				return result.PageInfo.NextCursor, result.PageInfo.PrevCursor, nil
+			})
+		}
+	})
+
+	t.Run("delivery list", func(t *testing.T) {
+		repo := NewDeliveryRepo(q)
+		// The shapes plan through vtgate whether or not the seed holds deliveries.
+		dlvAccount := ids("SELECT account_id FROM delivery LIMIT 1")
+		if len(dlvAccount) == 0 {
+			dlvAccount = []string{account}
+		}
+		suppliers := append(ids("SELECT DISTINCT so.seller_account_id FROM delivery d JOIN sales_order so ON so.id = d.sales_order_id"), "ac_none")
+		items := append(ids("SELECT DISTINCT sol.item_id FROM delivery_line dl JOIN receiving_order_line rol ON rol.id = dl.receiving_order_line_id JOIN sales_order_line sol ON sol.id = rol.sales_order_line_id"), "it_none")
+		status, search := "accepted", "DLV"
+		from, to := time.Date(2000, 1, 1, 0, 0, 0, 0, time.UTC), time.Now().UTC().Add(time.Hour)
+		for name, params := range map[string]domain.ListDeliveriesParams{
+			"unfiltered":        {AccountID: dlvAccount[0]},
+			"status":            {AccountID: dlvAccount[0], Status: &status},
+			"suppliers":         {AccountID: dlvAccount[0], SupplierIDs: suppliers},
+			"items":             {AccountID: dlvAccount[0], ItemIDs: items},
+			"search and window": {AccountID: dlvAccount[0], Query: &search, SupplierIDs: suppliers, ItemIDs: items, StartDate: &from, EndDate: &to},
+		} {
+			pageBothWays("ListDeliveries/"+name, func(cursor *string, limit int32) (*string, *string, *apierror.APIError) {
+				params.Cursor, params.Limit = cursor, limit
+				result, apiErr := repo.List(ctx, params)
+				if apiErr != nil {
+					return nil, nil, apiErr
+				}
+				return result.PageInfo.NextCursor, result.PageInfo.PrevCursor, nil
+			})
+		}
+	})
+
 	// --- writes, rolled back ---
 	t.Run("writes", func(t *testing.T) {
 		tx, err := pool.BeginTx(ctx, nil)
@@ -241,6 +480,22 @@ func TestVitessSmoke(t *testing.T) {
 		check("ClearSalesOrderFreightPending", txq.ClearSalesOrderFreightPending(ctx, sqlc.ClearSalesOrderFreightPendingParams{SalesOrderID: orderIDs[0], AccountID: account}))
 
 		check("MergeCustomerPicks", txq.MergeCustomerPicks(ctx, sqlc.MergeCustomerPicksParams{OwnerAccountID: account, TargetAccountID: buyers[0]}))
+		check("MergeCustomerShipmentBuyers", txq.MergeCustomerShipmentBuyers(ctx, sqlc.MergeCustomerShipmentBuyersParams{OwnerAccountID: account, TargetAccountID: buyers[0]}))
+
+		carrier := ids("SELECT id FROM carrier LIMIT 1")
+		address := ids("SELECT shipping_address_id FROM sales_order WHERE id = ?", orderIDs[0])
+		if len(carrier) == 0 || len(address) == 0 {
+			t.Fatal("seed data has no carrier or order address")
+		}
+		check("CreateShipment", txq.CreateShipment(ctx, sqlc.CreateShipmentParams{
+			ID: "sh_vitess_smoke", Number: "SMOKE-SH-1", SalesOrderID: orderIDs[0], ShipmentStatusCode: "packed", AccountID: account,
+			CarrierID:         gosql.NullString{String: carrier[0], Valid: true},
+			ShippingAddressID: gosql.NullString{String: address[0], Valid: true},
+		}))
+		var shipmentBuyer gosql.NullString
+		if err := tx.QueryRowContext(ctx, "SELECT buyer_account_id FROM shipment WHERE id = ?", "sh_vitess_smoke").Scan(&shipmentBuyer); err != nil || !shipmentBuyer.Valid {
+			t.Errorf("CreateShipment did not copy the buyer: %v %v", shipmentBuyer, err)
+		}
 
 		// CreatePick needs an order without a pick (pick.sales_order_id is unique).
 		free := ids("SELECT so.id FROM sales_order so LEFT JOIN pick p ON p.sales_order_id = so.id WHERE so.owner_account_id = ? AND p.id IS NULL LIMIT 1", account)
@@ -271,6 +526,11 @@ func TestVitessSmoke(t *testing.T) {
 			{AccountID: acct, Limit: 1},
 			{AccountID: acct, Limit: 5, Query: &search, Status: &status, TypeCodes: []string{"payment"}, MethodCodes: []string{"check"},
 				AdjustmentTypeCodes: []string{"x"}, CustomerIDs: buyers, CustomerGroupIDs: groups, StartDate: &from, EndDate: &to},
+			// One per index hint the list sends: every list-order key, the funds key, and the funds and customer keys.
+			{AccountID: acct, Limit: 5, Status: &status, TypeCodes: []string{"payment"}, MethodCodes: []string{"check"}},
+			{AccountID: acct, Limit: 5, StartDate: &from, EndDate: &to},
+			{AccountID: acct, Limit: 5, StartDate: &from, CustomerIDs: buyers},
+			{AccountID: acct, Limit: 5, CustomerGroupIDs: groups},
 		} {
 			page, apiErr := txs.List(ctx, p)
 			checkAPI("transactions List", apiErr)
@@ -287,8 +547,21 @@ func TestVitessSmoke(t *testing.T) {
 		}
 		customers := ids("SELECT customer_account_id FROM transaction WHERE account_id = ? LIMIT 1", acct)
 		if len(customers) > 0 {
-			_, apiErr := txs.ListByCustomer(ctx, domain.ListAccountTransactionsParams{AccountID: acct, CustomerAccountID: customers[0], Limit: 5, Status: &status, Query: &search, WithAllocations: true})
-			checkAPI("transactions ListByCustomer", apiErr)
+			payment := "payment"
+			for _, p := range []domain.ListAccountTransactionsParams{
+				{AccountID: acct, CustomerAccountID: customers[0], Limit: 5, Status: &status, Query: &search, WithAllocations: true},
+				// One per index hint: the customer key alone, and with the status and type keys.
+				{AccountID: acct, CustomerAccountID: customers[0], Limit: 1, WithAllocations: true},
+				{AccountID: acct, CustomerAccountID: customers[0], Limit: 5, Status: &status, Type: &payment, WithAllocations: true},
+			} {
+				page, apiErr := txs.ListByCustomer(ctx, p)
+				checkAPI("transactions ListByCustomer", apiErr)
+				if page != nil && page.PageInfo.NextCursor != nil {
+					p.Cursor = page.PageInfo.NextCursor
+					_, apiErr = txs.ListByCustomer(ctx, p)
+					checkAPI("transactions ListByCustomer next", apiErr)
+				}
+			}
 		}
 		if one := ids("SELECT id FROM transaction WHERE account_id = ? LIMIT 1", acct); len(one) > 0 {
 			_, apiErr := txs.Get(ctx, acct, one[0])
@@ -299,6 +572,9 @@ func TestVitessSmoke(t *testing.T) {
 		for _, p := range []domain.ListSettlementsParams{
 			{AccountID: acct, Limit: 1},
 			{AccountID: acct, Limit: 5, Query: &search, TransactionIDs: []string{"tx_none"}, InvoiceIDs: []string{"iv_none"}, StartDate: &from, EndDate: &to},
+			// Filters resolved to settlements that exist, so the page reads them by id.
+			{AccountID: acct, Limit: 5, TransactionIDs: ids("SELECT transaction_id FROM transaction_allocation WHERE account_id = ? LIMIT 3", acct)},
+			{AccountID: acct, Limit: 5, InvoiceIDs: ids("SELECT invoice_id FROM transaction_allocation WHERE account_id = ? LIMIT 3", acct), StartDate: &from},
 		} {
 			page, apiErr := settlements.List(ctx, p)
 			checkAPI("settlements List", apiErr)
@@ -331,6 +607,40 @@ func TestVitessSmoke(t *testing.T) {
 			_, apiErr = allocations.ListEntries(ctx, domain.ListAllocationEntriesParams{AccountID: acct, Limit: 1, Query: &search, Cursor: entries.PageInfo.NextCursor})
 			checkAPI("ListEntries next", apiErr)
 		}
+		// One per shape the entry list builds: each list key, a search resolved to transactions and
+		// invoices, and a search past the resolve limit matched row by row.
+		payment := "payment"
+		entryParams := []domain.ListAllocationEntriesParams{
+			{AccountID: acct, Limit: 1},
+			{AccountID: acct, Limit: 1, TransactionType: &payment, StartDate: &from, EndDate: &to},
+		}
+		for _, number := range ids("SELECT t.number FROM transaction_allocation ta JOIN transaction t ON t.id = ta.transaction_id WHERE ta.account_id = ? LIMIT 1", acct) {
+			entryParams = append(entryParams, domain.ListAllocationEntriesParams{AccountID: acct, Limit: 1, Query: &number})
+		}
+		for _, number := range ids("SELECT i.number FROM transaction_allocation ta JOIN invoice i ON i.id = ta.invoice_id WHERE ta.account_id = ? LIMIT 1", acct) {
+			entryParams = append(entryParams, domain.ListAllocationEntriesParams{AccountID: acct, Limit: 1, Query: &number, TransactionType: &payment})
+		}
+		for _, p := range entryParams {
+			page, apiErr := allocations.ListEntries(ctx, p)
+			checkAPI("ListEntries", apiErr)
+			if page != nil && page.PageInfo.NextCursor != nil {
+				p.Cursor = page.PageInfo.NextCursor
+				next, apiErr := allocations.ListEntries(ctx, p)
+				checkAPI("ListEntries next", apiErr)
+				if next != nil && next.PageInfo.PrevCursor != nil {
+					p.Cursor = next.PageInfo.PrevCursor
+					_, apiErr = allocations.ListEntries(ctx, p)
+					checkAPI("ListEntries prev", apiErr)
+				}
+			}
+		}
+		for _, name := range ids("SELECT a.name FROM transaction_allocation ta JOIN transaction t ON t.id = ta.transaction_id JOIN account a ON a.id = t.customer_account_id WHERE ta.account_id = ? LIMIT 1", acct) {
+			limit := allocationSearchResolveLimit
+			allocationSearchResolveLimit = 0
+			_, apiErr = allocations.ListEntries(ctx, domain.ListAllocationEntriesParams{AccountID: acct, Limit: 1, Query: &name})
+			allocationSearchResolveLimit = limit
+			checkAPI("ListEntries row-by-row search", apiErr)
+		}
 
 		tx, err := pool.BeginTx(ctx, nil)
 		if err != nil {
@@ -348,6 +658,37 @@ func TestVitessSmoke(t *testing.T) {
 		// Rolled back with the transaction above.
 		checkAPI("MarkTransactionsCreatedBySettlement", locked.MarkTransactionsCreatedBySettlement(ctx, acct, "sl_smoke", txIDs))
 		checkAPI("DeleteSettlementOwnedTransactions", locked.DeleteSettlementOwnedTransactions(ctx, acct, "sl_smoke"))
+	})
+
+	// Delivery performance forces the order's ship-by keys and takes customers resolved to buyers.
+	t.Run("delivery performance", func(t *testing.T) {
+		schedule := NewProductionScheduleInputRepo(q)
+		from, to := time.Date(2000, 1, 1, 0, 0, 0, 0, time.UTC), time.Now().UTC().AddDate(1, 0, 0)
+		for _, f := range []domain.DeliveryFilters{
+			{},
+			{CustomerIDs: buyers, CustomerGroupIDs: groups, ProductLineIDs: productLines, SalesRepIDs: []string{"acus_none"}},
+			{CustomerIDs: buyers},
+		} {
+			_, apiErr := schedule.ListDeliveryOutcomes(ctx, account, from, to, f)
+			checkAPI("ListDeliveryOutcomes", apiErr)
+			_, apiErr = schedule.CountUncommittedOrders(ctx, account, from, to, f)
+			checkAPI("CountUncommittedOrders", apiErr)
+		}
+		// The line-level sales and open-order analytics take the same resolved buyers; sales forces the invoice key.
+		analytics := NewAnalyticsRepo(q)
+		// OEE's downtime overlap forces both one-sided downtime keys.
+		_, apiErr := analytics.GetOeeDowntimeIntervals(ctx, domain.GetOeeWindowParams{AccountID: account, StartDate: from, EndDate: to})
+		checkAPI("GetOeeDowntimeIntervals", apiErr)
+		for _, p := range []domain.AnalyzeSalesParams{
+			{AccountID: account, StartDate: from, EndDate: to},
+			{AccountID: account, StartDate: from, EndDate: to, CustomerIDs: buyers, CustomerGroupIDs: groups, ProductLineIDs: productLines, SalesRepIDs: []string{"acus_none"}},
+		} {
+			_, apiErr := analytics.GetSalesEntries(ctx, p)
+			checkAPI("GetSalesEntries", apiErr)
+			_, apiErr = analytics.GetOrderEntries(ctx, domain.AnalyzeOrdersParams{AccountID: account, CustomerIDs: p.CustomerIDs, CustomerGroupIDs: p.CustomerGroupIDs,
+				ProductLineIDs: p.ProductLineIDs, SalesRepIDs: p.SalesRepIDs})
+			checkAPI("GetOrderEntries", apiErr)
+		}
 	})
 
 	t.Run("sales facts and reports", func(t *testing.T) {
@@ -435,6 +776,20 @@ func TestVitessSmoke(t *testing.T) {
 		}
 		_, apiErr = reports.GetInvoicePage(ctx, domain.AnalyzeSalesInvoicesParams{SalesReportFilter: filter, Limit: 5})
 		checkAPI("GetInvoicePage filtered", apiErr)
+		// A filtered page walks one filter's key per value (UNION of ordered LIMITs), after counting each
+		// filter's lines to pick which; both directions seek on (invoiced_at, invoice_id).
+		byCustomer := unfiltered
+		byCustomer.CustomerIDs, byCustomer.ProductLineIDs = buyers, productLines
+		custPage, apiErr := reports.GetInvoicePage(ctx, domain.AnalyzeSalesInvoicesParams{SalesReportFilter: byCustomer, Limit: 1})
+		checkAPI("GetInvoicePage by customer", apiErr)
+		if custPage != nil && custPage.PageInfo.NextCursor != nil {
+			next, apiErr := reports.GetInvoicePage(ctx, domain.AnalyzeSalesInvoicesParams{SalesReportFilter: byCustomer, Limit: 1, Cursor: custPage.PageInfo.NextCursor})
+			checkAPI("GetInvoicePage by customer next", apiErr)
+			if next != nil && next.PageInfo.PrevCursor != nil {
+				_, apiErr = reports.GetInvoicePage(ctx, domain.AnalyzeSalesInvoicesParams{SalesReportFilter: byCustomer, Limit: 1, Cursor: next.PageInfo.PrevCursor})
+				checkAPI("GetInvoicePage by customer prev", apiErr)
+			}
+		}
 		linePage, apiErr := reports.GetLinePage(ctx, domain.ListSalesLinesParams{SalesReportFilter: unfiltered, HasWindow: true, Limit: 2})
 		checkAPI("GetLinePage", apiErr)
 		if linePage != nil && linePage.PageInfo.NextCursor != nil {
@@ -443,6 +798,18 @@ func TestVitessSmoke(t *testing.T) {
 		}
 		_, apiErr = reports.GetLinePage(ctx, domain.ListSalesLinesParams{SalesReportFilter: filter, Limit: 5})
 		checkAPI("GetLinePage filtered", apiErr)
+		// One per page shape: buyer by buyer, and the in-order key set.
+		for name, f := range map[string]domain.SalesReportFilter{
+			"buyers": {AccountID: account, CustomerIDs: buyers},
+			"lines":  {AccountID: account, ProductLineIDs: productLines, SalesRepIDs: []string{"acus_none"}, ItemIDs: []string{"it_none"}},
+		} {
+			linePage, apiErr := reports.GetLinePage(ctx, domain.ListSalesLinesParams{SalesReportFilter: f, Limit: 1})
+			checkAPI("GetLinePage "+name, apiErr)
+			if linePage != nil && linePage.PageInfo.NextCursor != nil {
+				_, apiErr = reports.GetLinePage(ctx, domain.ListSalesLinesParams{SalesReportFilter: f, Limit: 1, Cursor: linePage.PageInfo.NextCursor})
+				checkAPI("GetLinePage next "+name, apiErr)
+			}
+		}
 
 		// The rollups: a full sweep's statements, then every report shape that reads them.
 		cursor := domain.SalesRollupDay{Day: salesFactSweepFloor}
@@ -467,7 +834,10 @@ func TestVitessSmoke(t *testing.T) {
 		// Several product lines: summed per-line rows plus an exact invoice count from the facts.
 		twoLines := ragged
 		twoLines.ProductLineIDs = productLines[:2]
-		for _, f := range []domain.SalesReportFilter{ragged, oneLine, twoLines} {
+		// A customer filter: the customer breakdown forces the rollup's group key, the rest the lines' buyer key.
+		customers := ragged
+		customers.CustomerIDs = buyers
+		for _, f := range []domain.SalesReportFilter{ragged, oneLine, twoLines, customers} {
 			_, apiErr = reports.GetSummary(ctx, domain.AnalyzeSalesSummaryParams{SalesReportFilter: f, TZOffsetMinutes: -300}, true)
 			checkAPI("GetSummary from rollups", apiErr)
 			for _, groupBy := range constants.SalesBreakdownGroupBy("").EnumValues() {
@@ -513,5 +883,120 @@ func TestVitessSmoke(t *testing.T) {
 				}
 			}
 		}
+	})
+
+	// --- inventory, production and log lists: SQL built in Go (per-value UNION ALL arms, a page chosen
+	// in a derived table and joined after, runs resolved from the batch side) and index hints ---
+	t.Run("inventory, production and log lists", func(t *testing.T) {
+		first := func(query string, args ...any) string {
+			if v := ids(query, args...); len(v) > 0 {
+				return v[0]
+			}
+			return "none"
+		}
+		from, to := time.Date(2000, 1, 1, 0, 0, 0, 0, time.UTC), time.Now().UTC().Add(time.Hour)
+		search := "a"
+
+		iclAccount := first("SELECT account_id FROM inventory_change_log LIMIT 1")
+		item := first("SELECT item_id FROM inventory_change_log WHERE account_id = ? LIMIT 1", iclAccount)
+		user := first("SELECT responsible_user_id FROM inventory_change_log WHERE account_id = ? AND responsible_user_id IS NOT NULL LIMIT 1", iclAccount)
+		logs := NewInventoryChangeLogRepo(q)
+		// One per page shape: the unfiltered key, a filter's key, arms per value, a long list's IN.
+		for _, p := range []domain.ListInventoryChangeLogsParams{
+			{AccountID: iclAccount, Limit: 5, StartDate: &from},
+			{AccountID: iclAccount, Limit: 5, ItemIDs: []string{item}, ActionTypeCodes: []string{"scan", "user_correction"}},
+			{AccountID: iclAccount, Limit: 5, StartDate: &from, EndDate: &to, ActionTypeCodes: []string{"scan", "user_correction", "system_action"}},
+			{AccountID: iclAccount, Limit: 5, ItemIDs: []string{item, "it_none"}, ChangedByUserIDs: []string{user}},
+			{AccountID: iclAccount, Limit: 5, StartDate: &from, Query: &search},
+		} {
+			page, apiErr := logs.List(ctx, p)
+			checkAPI("inventory change logs List", apiErr)
+			if page != nil && page.PageInfo.NextCursor != nil {
+				p.Cursor = page.PageInfo.NextCursor
+				next, apiErr := logs.List(ctx, p)
+				checkAPI("inventory change logs List next", apiErr)
+				if next != nil && next.PageInfo.PrevCursor != nil {
+					p.Cursor = next.PageInfo.PrevCursor
+					_, apiErr = logs.List(ctx, p)
+					checkAPI("inventory change logs List prev", apiErr)
+				}
+			}
+		}
+
+		batchAccount := first("SELECT account_id FROM batch LIMIT 1")
+		station := first("SELECT scanning_station_id FROM batch WHERE account_id = ? AND scanning_station_id IS NOT NULL LIMIT 1", batchAccount)
+		batches := NewBatchRepo(q)
+		for _, p := range []domain.ListBatchesByScanningStationParams{
+			{AccountID: batchAccount, ScanningStationID: station, Limit: 5},
+			{AccountID: batchAccount, ScanningStationID: station, Limit: 5, Query: &search},
+		} {
+			page, apiErr := batches.FindByScanningStation(ctx, p)
+			checkAPI("batches FindByScanningStation", apiErr)
+			if page != nil && page.PageInfo.NextCursor != nil {
+				p.Cursor = page.PageInfo.NextCursor
+				next, apiErr := batches.FindByScanningStation(ctx, p)
+				checkAPI("batches FindByScanningStation next", apiErr)
+				if next != nil && next.PageInfo.PrevCursor != nil {
+					p.Cursor = next.PageInfo.PrevCursor
+					_, apiErr = batches.FindByScanningStation(ctx, p)
+					checkAPI("batches FindByScanningStation prev", apiErr)
+				}
+			}
+		}
+		_, apiErr := NewScanningStationRepo(q).GetByIDs(ctx, batchAccount, []string{station, "sst_none"})
+		checkAPI("scanning stations GetByIDs", apiErr)
+
+		runAccount := first("SELECT account_id FROM production_run LIMIT 1")
+		run := first("SELECT id FROM production_run WHERE account_id = ? LIMIT 1", runAccount)
+		machine := first("SELECT bm.B FROM _batches_machines bm JOIN batch b ON b.id = bm.A WHERE b.account_id = ? LIMIT 1", runAccount)
+		runItem := first("SELECT item_id FROM batch WHERE account_id = ? AND production_run_id IS NOT NULL LIMIT 1", runAccount)
+		open, day := "open", from.Format("2006-01-02")
+		runs := NewProductionRunRepo(q)
+		for _, p := range []domain.ListProductionRunsParams{
+			{AccountID: runAccount, Limit: 5},
+			{AccountID: runAccount, Limit: 5, Status: &open, ItemIDs: []string{runItem}, MachineIDs: []string{machine}, Query: &search, StartDate: &day},
+			{AccountID: runAccount, Limit: 5, Query: &search},
+		} {
+			page, apiErr := runs.List(ctx, p)
+			checkAPI("production runs List", apiErr)
+			if page != nil && page.PageInfo.NextCursor != nil {
+				p.Cursor = page.PageInfo.NextCursor
+				next, apiErr := runs.List(ctx, p)
+				checkAPI("production runs List next", apiErr)
+				if next != nil && next.PageInfo.PrevCursor != nil {
+					p.Cursor = next.PageInfo.PrevCursor
+					_, apiErr = runs.List(ctx, p)
+					checkAPI("production runs List prev", apiErr)
+				}
+			}
+		}
+		_, apiErr = runs.ListBatchesByRun(ctx, domain.ListBatchesByProductionRunParams{AccountID: runAccount, ProductionRunID: run, Limit: 5, SearchQuery: &search})
+		checkAPI("production runs ListBatchesByRun", apiErr)
+
+		dtAccount := first("SELECT account_id FROM machine_downtime_event LIMIT 1")
+		dtMachine := first("SELECT machine_id FROM machine_downtime_event WHERE account_id = ? LIMIT 1", dtAccount)
+		downtime := NewMachineDowntimeRepo(q)
+		for _, p := range []domain.ListMachineDowntimeEventsParams{
+			{AccountID: dtAccount, Limit: 5},
+			{AccountID: dtAccount, Limit: 5, MachineIDs: []string{dtMachine, "mch_none"}, OpenOnly: true, Query: &search, StartDate: &from, EndDate: &to},
+			{AccountID: dtAccount, Limit: 5, ReasonCodes: []string{"breakdown", "changeover"}, DepartmentIDs: []string{"dept_none"}},
+		} {
+			page, apiErr := downtime.List(ctx, p)
+			checkAPI("downtime List", apiErr)
+			if page != nil && page.PageInfo.NextCursor != nil {
+				p.Cursor = page.PageInfo.NextCursor
+				next, apiErr := downtime.List(ctx, p)
+				checkAPI("downtime List next", apiErr)
+				if next != nil && next.PageInfo.PrevCursor != nil {
+					p.Cursor = next.PageInfo.PrevCursor
+					_, apiErr = downtime.List(ctx, p)
+					checkAPI("downtime List prev", apiErr)
+				}
+			}
+		}
+
+		emailAccount := first("SELECT account_id FROM email_log LIMIT 1")
+		_, apiErr = NewEmailLogRepo(q).List(ctx, domain.ListEmailLogsParams{AccountID: emailAccount, Limit: 5, Query: &search})
+		checkAPI("email logs List", apiErr)
 	})
 }

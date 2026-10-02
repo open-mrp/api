@@ -1,0 +1,230 @@
+{
+ "source": "augno_core/prod, mysql.innodb_table_stats and mysql.innodb_index_stats, read 2026-10-01",
+ "table": {
+  "n_rows": 6911,
+  "clustered_index_size": 160,
+  "sum_of_other_index_sizes": 827
+ },
+ "indexes": [
+  {
+   "index": "FTS_DOC_ID_INDEX",
+   "stat": "n_diff_pfx01",
+   "value": 6464
+  },
+  {
+   "index": "FTS_DOC_ID_INDEX",
+   "stat": "n_leaf_pages",
+   "value": 26
+  },
+  {
+   "index": "FTS_DOC_ID_INDEX",
+   "stat": "size",
+   "value": 27
+  },
+  {
+   "index": "PRIMARY",
+   "stat": "n_diff_pfx01",
+   "value": 6911
+  },
+  {
+   "index": "PRIMARY",
+   "stat": "n_leaf_pages",
+   "value": 137
+  },
+  {
+   "index": "PRIMARY",
+   "stat": "size",
+   "value": 160
+  },
+  {
+   "index": "item_account_category_created_idx",
+   "stat": "n_diff_pfx01",
+   "value": 16
+  },
+  {
+   "index": "item_account_category_created_idx",
+   "stat": "n_diff_pfx02",
+   "value": 87
+  },
+  {
+   "index": "item_account_category_created_idx",
+   "stat": "n_diff_pfx03",
+   "value": 4354
+  },
+  {
+   "index": "item_account_category_created_idx",
+   "stat": "n_diff_pfx04",
+   "value": 6630
+  },
+  {
+   "index": "item_account_category_created_idx",
+   "stat": "n_leaf_pages",
+   "value": 73
+  },
+  {
+   "index": "item_account_category_created_idx",
+   "stat": "size",
+   "value": 97
+  },
+  {
+   "index": "item_account_created_idx",
+   "stat": "n_diff_pfx01",
+   "value": 16
+  },
+  {
+   "index": "item_account_created_idx",
+   "stat": "n_diff_pfx02",
+   "value": 4299
+  },
+  {
+   "index": "item_account_created_idx",
+   "stat": "n_diff_pfx03",
+   "value": 6630
+  },
+  {
+   "index": "item_account_created_idx",
+   "stat": "n_leaf_pages",
+   "value": 41
+  },
+  {
+   "index": "item_account_created_idx",
+   "stat": "size",
+   "value": 97
+  },
+  {
+   "index": "item_account_id_sku_key",
+   "stat": "n_diff_pfx01",
+   "value": 15
+  },
+  {
+   "index": "item_account_id_sku_key",
+   "stat": "n_diff_pfx02",
+   "value": 6067
+  },
+  {
+   "index": "item_account_id_sku_key",
+   "stat": "n_leaf_pages",
+   "value": 48
+  },
+  {
+   "index": "item_account_id_sku_key",
+   "stat": "size",
+   "value": 96
+  },
+  {
+   "index": "item_account_type_created_idx",
+   "stat": "n_diff_pfx01",
+   "value": 16
+  },
+  {
+   "index": "item_account_type_created_idx",
+   "stat": "n_diff_pfx02",
+   "value": 28
+  },
+  {
+   "index": "item_account_type_created_idx",
+   "stat": "n_diff_pfx03",
+   "value": 4309
+  },
+  {
+   "index": "item_account_type_created_idx",
+   "stat": "n_diff_pfx04",
+   "value": 6630
+  },
+  {
+   "index": "item_account_type_created_idx",
+   "stat": "n_leaf_pages",
+   "value": 45
+  },
+  {
+   "index": "item_account_type_created_idx",
+   "stat": "size",
+   "value": 97
+  },
+  {
+   "index": "item_burn_rate_id_key",
+   "stat": "n_diff_pfx01",
+   "value": 6648
+  },
+  {
+   "index": "item_burn_rate_id_key",
+   "stat": "n_leaf_pages",
+   "value": 42
+  },
+  {
+   "index": "item_burn_rate_id_key",
+   "stat": "size",
+   "value": 97
+  },
+  {
+   "index": "item_item_category_id_idx",
+   "stat": "n_diff_pfx01",
+   "value": 87
+  },
+  {
+   "index": "item_item_category_id_idx",
+   "stat": "n_diff_pfx02",
+   "value": 6630
+  },
+  {
+   "index": "item_item_category_id_idx",
+   "stat": "n_leaf_pages",
+   "value": 39
+  },
+  {
+   "index": "item_item_category_id_idx",
+   "stat": "size",
+   "value": 97
+  },
+  {
+   "index": "item_item_type_code_idx",
+   "stat": "n_diff_pfx01",
+   "value": 3
+  },
+  {
+   "index": "item_item_type_code_idx",
+   "stat": "n_diff_pfx02",
+   "value": 6630
+  },
+  {
+   "index": "item_item_type_code_idx",
+   "stat": "n_leaf_pages",
+   "value": 24
+  },
+  {
+   "index": "item_item_type_code_idx",
+   "stat": "size",
+   "value": 25
+  },
+  {
+   "index": "item_unit_cost_id_key",
+   "stat": "n_diff_pfx01",
+   "value": 6717
+  },
+  {
+   "index": "item_unit_cost_id_key",
+   "stat": "n_leaf_pages",
+   "value": 39
+  },
+  {
+   "index": "item_unit_cost_id_key",
+   "stat": "size",
+   "value": 97
+  },
+  {
+   "index": "item_unit_value_id_key",
+   "stat": "n_diff_pfx01",
+   "value": 6454
+  },
+  {
+   "index": "item_unit_value_id_key",
+   "stat": "n_leaf_pages",
+   "value": 39
+  },
+  {
+   "index": "item_unit_value_id_key",
+   "stat": "size",
+   "value": 97
+  }
+ ]
+}

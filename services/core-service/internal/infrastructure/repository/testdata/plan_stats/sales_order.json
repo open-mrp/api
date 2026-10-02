@@ -1,0 +1,770 @@
+{
+ "source": "augno_core/prod, mysql.innodb_table_stats and mysql.innodb_index_stats, last_update 2026-10-01 15:48:04 UTC",
+ "table": {
+  "n_rows": 120377,
+  "clustered_index_size": 3500,
+  "sum_of_other_index_sizes": 27511
+ },
+ "indexes": [
+  {
+   "index": "FTS_DOC_ID_INDEX",
+   "stat": "n_diff_pfx01",
+   "value": 121280
+  },
+  {
+   "index": "FTS_DOC_ID_INDEX",
+   "stat": "n_leaf_pages",
+   "value": 379
+  },
+  {
+   "index": "FTS_DOC_ID_INDEX",
+   "stat": "size",
+   "value": 419
+  },
+  {
+   "index": "PRIMARY",
+   "stat": "n_diff_pfx01",
+   "value": 120960
+  },
+  {
+   "index": "PRIMARY",
+   "stat": "n_leaf_pages",
+   "value": 3179
+  },
+  {
+   "index": "PRIMARY",
+   "stat": "size",
+   "value": 3692
+  },
+  {
+   "index": "idx_sales_order_on_number",
+   "stat": "n_diff_pfx01",
+   "value": 129402
+  },
+  {
+   "index": "idx_sales_order_on_number",
+   "stat": "n_diff_pfx02",
+   "value": 130286
+  },
+  {
+   "index": "idx_sales_order_on_number",
+   "stat": "n_leaf_pages",
+   "value": 553
+  },
+  {
+   "index": "idx_sales_order_on_number",
+   "stat": "size",
+   "value": 676
+  },
+  {
+   "index": "sales_order_billing_address_id_idx",
+   "stat": "n_diff_pfx01",
+   "value": 3257
+  },
+  {
+   "index": "sales_order_billing_address_id_idx",
+   "stat": "n_diff_pfx02",
+   "value": 144603
+  },
+  {
+   "index": "sales_order_billing_address_id_idx",
+   "stat": "n_leaf_pages",
+   "value": 793
+  },
+  {
+   "index": "sales_order_billing_address_id_idx",
+   "stat": "size",
+   "value": 934
+  },
+  {
+   "index": "sales_order_buyer_account_id_idx",
+   "stat": "n_diff_pfx01",
+   "value": 1668
+  },
+  {
+   "index": "sales_order_buyer_account_id_idx",
+   "stat": "n_diff_pfx02",
+   "value": 119104
+  },
+  {
+   "index": "sales_order_buyer_account_id_idx",
+   "stat": "n_leaf_pages",
+   "value": 813
+  },
+  {
+   "index": "sales_order_buyer_account_id_idx",
+   "stat": "size",
+   "value": 934
+  },
+  {
+   "index": "sales_order_carrier_id_idx",
+   "stat": "n_diff_pfx01",
+   "value": 4
+  },
+  {
+   "index": "sales_order_carrier_id_idx",
+   "stat": "n_diff_pfx02",
+   "value": 117044
+  },
+  {
+   "index": "sales_order_carrier_id_idx",
+   "stat": "n_leaf_pages",
+   "value": 464
+  },
+  {
+   "index": "sales_order_carrier_id_idx",
+   "stat": "size",
+   "value": 548
+  },
+  {
+   "index": "sales_order_carrier_option_id_idx",
+   "stat": "n_diff_pfx01",
+   "value": 11
+  },
+  {
+   "index": "sales_order_carrier_option_id_idx",
+   "stat": "n_diff_pfx02",
+   "value": 115558
+  },
+  {
+   "index": "sales_order_carrier_option_id_idx",
+   "stat": "n_leaf_pages",
+   "value": 479
+  },
+  {
+   "index": "sales_order_carrier_option_id_idx",
+   "stat": "size",
+   "value": 613
+  },
+  {
+   "index": "sales_order_completed_at_idx",
+   "stat": "n_diff_pfx01",
+   "value": 26400
+  },
+  {
+   "index": "sales_order_completed_at_idx",
+   "stat": "n_diff_pfx02",
+   "value": 116134
+  },
+  {
+   "index": "sales_order_completed_at_idx",
+   "stat": "n_leaf_pages",
+   "value": 546
+  },
+  {
+   "index": "sales_order_completed_at_idx",
+   "stat": "size",
+   "value": 675
+  },
+  {
+   "index": "sales_order_issued_at_idx",
+   "stat": "n_diff_pfx01",
+   "value": 25556
+  },
+  {
+   "index": "sales_order_issued_at_idx",
+   "stat": "n_diff_pfx02",
+   "value": 116402
+  },
+  {
+   "index": "sales_order_issued_at_idx",
+   "stat": "n_leaf_pages",
+   "value": 572
+  },
+  {
+   "index": "sales_order_issued_at_idx",
+   "stat": "size",
+   "value": 675
+  },
+  {
+   "index": "sales_order_order_discount_id_idx",
+   "stat": "n_diff_pfx01",
+   "value": 2
+  },
+  {
+   "index": "sales_order_order_discount_id_idx",
+   "stat": "n_diff_pfx02",
+   "value": 130577
+  },
+  {
+   "index": "sales_order_order_discount_id_idx",
+   "stat": "n_leaf_pages",
+   "value": 334
+  },
+  {
+   "index": "sales_order_order_discount_id_idx",
+   "stat": "size",
+   "value": 353
+  },
+  {
+   "index": "sales_order_owner_account_id_sales_order_type_code_number_key",
+   "stat": "n_diff_pfx01",
+   "value": 7
+  },
+  {
+   "index": "sales_order_owner_account_id_sales_order_type_code_number_key",
+   "stat": "n_diff_pfx02",
+   "value": 12
+  },
+  {
+   "index": "sales_order_owner_account_id_sales_order_type_code_number_key",
+   "stat": "n_diff_pfx03",
+   "value": 121355
+  },
+  {
+   "index": "sales_order_owner_account_id_sales_order_type_code_number_key",
+   "stat": "n_leaf_pages",
+   "value": 1028
+  },
+  {
+   "index": "sales_order_owner_account_id_sales_order_type_code_number_key",
+   "stat": "size",
+   "value": 1194
+  },
+  {
+   "index": "sales_order_owner_account_id_seller_account_id_sales_order_t_idx",
+   "stat": "n_diff_pfx01",
+   "value": 7
+  },
+  {
+   "index": "sales_order_owner_account_id_seller_account_id_sales_order_t_idx",
+   "stat": "n_diff_pfx02",
+   "value": 29
+  },
+  {
+   "index": "sales_order_owner_account_id_seller_account_id_sales_order_t_idx",
+   "stat": "n_diff_pfx03",
+   "value": 29
+  },
+  {
+   "index": "sales_order_owner_account_id_seller_account_id_sales_order_t_idx",
+   "stat": "n_diff_pfx04",
+   "value": 122406
+  },
+  {
+   "index": "sales_order_owner_account_id_seller_account_id_sales_order_t_idx",
+   "stat": "n_leaf_pages",
+   "value": 887
+  },
+  {
+   "index": "sales_order_owner_account_id_seller_account_id_sales_order_t_idx",
+   "stat": "size",
+   "value": 1064
+  },
+  {
+   "index": "sales_order_owner_buyer_created_idx",
+   "stat": "n_diff_pfx01",
+   "value": 7
+  },
+  {
+   "index": "sales_order_owner_buyer_created_idx",
+   "stat": "n_diff_pfx02",
+   "value": 2679
+  },
+  {
+   "index": "sales_order_owner_buyer_created_idx",
+   "stat": "n_diff_pfx03",
+   "value": 81675
+  },
+  {
+   "index": "sales_order_owner_buyer_created_idx",
+   "stat": "n_diff_pfx04",
+   "value": 125428
+  },
+  {
+   "index": "sales_order_owner_buyer_created_idx",
+   "stat": "n_leaf_pages",
+   "value": 1202
+  },
+  {
+   "index": "sales_order_owner_buyer_created_idx",
+   "stat": "size",
+   "value": 1391
+  },
+  {
+   "index": "sales_order_owner_created_idx",
+   "stat": "n_diff_pfx01",
+   "value": 7
+  },
+  {
+   "index": "sales_order_owner_created_idx",
+   "stat": "n_diff_pfx02",
+   "value": 17350
+  },
+  {
+   "index": "sales_order_owner_created_idx",
+   "stat": "n_diff_pfx03",
+   "value": 131481
+  },
+  {
+   "index": "sales_order_owner_created_idx",
+   "stat": "n_leaf_pages",
+   "value": 965
+  },
+  {
+   "index": "sales_order_owner_created_idx",
+   "stat": "size",
+   "value": 1129
+  },
+  {
+   "index": "sales_order_owner_customer_po_number_idx",
+   "stat": "n_diff_pfx01",
+   "value": 7
+  },
+  {
+   "index": "sales_order_owner_customer_po_number_idx",
+   "stat": "n_diff_pfx02",
+   "value": 23480
+  },
+  {
+   "index": "sales_order_owner_customer_po_number_idx",
+   "stat": "n_diff_pfx03",
+   "value": 114704
+  },
+  {
+   "index": "sales_order_owner_customer_po_number_idx",
+   "stat": "n_leaf_pages",
+   "value": 628
+  },
+  {
+   "index": "sales_order_owner_customer_po_number_idx",
+   "stat": "size",
+   "value": 742
+  },
+  {
+   "index": "sales_order_owner_sales_rep_created_idx",
+   "stat": "n_diff_pfx01",
+   "value": 7
+  },
+  {
+   "index": "sales_order_owner_sales_rep_created_idx",
+   "stat": "n_diff_pfx02",
+   "value": 21
+  },
+  {
+   "index": "sales_order_owner_sales_rep_created_idx",
+   "stat": "n_diff_pfx03",
+   "value": 30991
+  },
+  {
+   "index": "sales_order_owner_sales_rep_created_idx",
+   "stat": "n_diff_pfx04",
+   "value": 122554
+  },
+  {
+   "index": "sales_order_owner_sales_rep_created_idx",
+   "stat": "n_leaf_pages",
+   "value": 998
+  },
+  {
+   "index": "sales_order_owner_sales_rep_created_idx",
+   "stat": "size",
+   "value": 1193
+  },
+  {
+   "index": "sales_order_owner_status_created_idx",
+   "stat": "n_diff_pfx01",
+   "value": 7
+  },
+  {
+   "index": "sales_order_owner_status_created_idx",
+   "stat": "n_diff_pfx02",
+   "value": 23
+  },
+  {
+   "index": "sales_order_owner_status_created_idx",
+   "stat": "n_diff_pfx03",
+   "value": 17237
+  },
+  {
+   "index": "sales_order_owner_status_created_idx",
+   "stat": "n_diff_pfx04",
+   "value": 132598
+  },
+  {
+   "index": "sales_order_owner_status_created_idx",
+   "stat": "n_leaf_pages",
+   "value": 1090
+  },
+  {
+   "index": "sales_order_owner_status_created_idx",
+   "stat": "size",
+   "value": 1257
+  },
+  {
+   "index": "sales_order_owner_status_ship_by_idx",
+   "stat": "n_diff_pfx01",
+   "value": 7
+  },
+  {
+   "index": "sales_order_owner_status_ship_by_idx",
+   "stat": "n_diff_pfx02",
+   "value": 23
+  },
+  {
+   "index": "sales_order_owner_status_ship_by_idx",
+   "stat": "n_diff_pfx03",
+   "value": 4672
+  },
+  {
+   "index": "sales_order_owner_status_ship_by_idx",
+   "stat": "n_diff_pfx04",
+   "value": 116183
+  },
+  {
+   "index": "sales_order_owner_status_ship_by_idx",
+   "stat": "n_leaf_pages",
+   "value": 1025
+  },
+  {
+   "index": "sales_order_owner_status_ship_by_idx",
+   "stat": "size",
+   "value": 1193
+  },
+  {
+   "index": "sales_order_owner_type_created_idx",
+   "stat": "n_diff_pfx01",
+   "value": 7
+  },
+  {
+   "index": "sales_order_owner_type_created_idx",
+   "stat": "n_diff_pfx02",
+   "value": 12
+  },
+  {
+   "index": "sales_order_owner_type_created_idx",
+   "stat": "n_diff_pfx03",
+   "value": 20829
+  },
+  {
+   "index": "sales_order_owner_type_created_idx",
+   "stat": "n_diff_pfx04",
+   "value": 115544
+  },
+  {
+   "index": "sales_order_owner_type_created_idx",
+   "stat": "n_leaf_pages",
+   "value": 1111
+  },
+  {
+   "index": "sales_order_owner_type_created_idx",
+   "stat": "size",
+   "value": 1322
+  },
+  {
+   "index": "sales_order_owner_type_issued_idx",
+   "stat": "n_diff_pfx01",
+   "value": 7
+  },
+  {
+   "index": "sales_order_owner_type_issued_idx",
+   "stat": "n_diff_pfx02",
+   "value": 12
+  },
+  {
+   "index": "sales_order_owner_type_issued_idx",
+   "stat": "n_diff_pfx03",
+   "value": 19338
+  },
+  {
+   "index": "sales_order_owner_type_issued_idx",
+   "stat": "n_diff_pfx04",
+   "value": 123541
+  },
+  {
+   "index": "sales_order_owner_type_issued_idx",
+   "stat": "n_leaf_pages",
+   "value": 1116
+  },
+  {
+   "index": "sales_order_owner_type_issued_idx",
+   "stat": "size",
+   "value": 1322
+  },
+  {
+   "index": "sales_order_owner_type_seller_buyer_idx",
+   "stat": "n_diff_pfx01",
+   "value": 7
+  },
+  {
+   "index": "sales_order_owner_type_seller_buyer_idx",
+   "stat": "n_diff_pfx02",
+   "value": 12
+  },
+  {
+   "index": "sales_order_owner_type_seller_buyer_idx",
+   "stat": "n_diff_pfx03",
+   "value": 32
+  },
+  {
+   "index": "sales_order_owner_type_seller_buyer_idx",
+   "stat": "n_diff_pfx04",
+   "value": 2062
+  },
+  {
+   "index": "sales_order_owner_type_seller_buyer_idx",
+   "stat": "n_diff_pfx05",
+   "value": 131939
+  },
+  {
+   "index": "sales_order_owner_type_seller_buyer_idx",
+   "stat": "n_leaf_pages",
+   "value": 1490
+  },
+  {
+   "index": "sales_order_owner_type_seller_buyer_idx",
+   "stat": "size",
+   "value": 1779
+  },
+  {
+   "index": "sales_order_owner_type_seller_created_idx",
+   "stat": "n_diff_pfx01",
+   "value": 7
+  },
+  {
+   "index": "sales_order_owner_type_seller_created_idx",
+   "stat": "n_diff_pfx02",
+   "value": 12
+  },
+  {
+   "index": "sales_order_owner_type_seller_created_idx",
+   "stat": "n_diff_pfx03",
+   "value": 31
+  },
+  {
+   "index": "sales_order_owner_type_seller_created_idx",
+   "stat": "n_diff_pfx04",
+   "value": 21718
+  },
+  {
+   "index": "sales_order_owner_type_seller_created_idx",
+   "stat": "n_diff_pfx05",
+   "value": 142443
+  },
+  {
+   "index": "sales_order_owner_type_seller_created_idx",
+   "stat": "n_leaf_pages",
+   "value": 1428
+  },
+  {
+   "index": "sales_order_owner_type_seller_created_idx",
+   "stat": "size",
+   "value": 1650
+  },
+  {
+   "index": "sales_order_owner_type_status_created_idx",
+   "stat": "n_diff_pfx01",
+   "value": 7
+  },
+  {
+   "index": "sales_order_owner_type_status_created_idx",
+   "stat": "n_diff_pfx02",
+   "value": 11
+  },
+  {
+   "index": "sales_order_owner_type_status_created_idx",
+   "stat": "n_diff_pfx03",
+   "value": 33
+  },
+  {
+   "index": "sales_order_owner_type_status_created_idx",
+   "stat": "n_diff_pfx04",
+   "value": 23523
+  },
+  {
+   "index": "sales_order_owner_type_status_created_idx",
+   "stat": "n_diff_pfx05",
+   "value": 139680
+  },
+  {
+   "index": "sales_order_owner_type_status_created_idx",
+   "stat": "n_leaf_pages",
+   "value": 1200
+  },
+  {
+   "index": "sales_order_owner_type_status_created_idx",
+   "stat": "size",
+   "value": 1387
+  },
+  {
+   "index": "sales_order_payment_term_id_idx",
+   "stat": "n_diff_pfx01",
+   "value": 18
+  },
+  {
+   "index": "sales_order_payment_term_id_idx",
+   "stat": "n_diff_pfx02",
+   "value": 129685
+  },
+  {
+   "index": "sales_order_payment_term_id_idx",
+   "stat": "n_leaf_pages",
+   "value": 394
+  },
+  {
+   "index": "sales_order_payment_term_id_idx",
+   "stat": "size",
+   "value": 483
+  },
+  {
+   "index": "sales_order_priority_code_idx",
+   "stat": "n_diff_pfx01",
+   "value": 1
+  },
+  {
+   "index": "sales_order_priority_code_idx",
+   "stat": "n_diff_pfx02",
+   "value": 125602
+  },
+  {
+   "index": "sales_order_priority_code_idx",
+   "stat": "n_leaf_pages",
+   "value": 376
+  },
+  {
+   "index": "sales_order_priority_code_idx",
+   "stat": "size",
+   "value": 419
+  },
+  {
+   "index": "sales_order_production_run_id_idx",
+   "stat": "n_diff_pfx01",
+   "value": 0
+  },
+  {
+   "index": "sales_order_production_run_id_idx",
+   "stat": "n_diff_pfx02",
+   "value": 127056
+  },
+  {
+   "index": "sales_order_production_run_id_idx",
+   "stat": "n_leaf_pages",
+   "value": 332
+  },
+  {
+   "index": "sales_order_production_run_id_idx",
+   "stat": "size",
+   "value": 417
+  },
+  {
+   "index": "sales_order_sales_order_status_code_idx",
+   "stat": "n_diff_pfx01",
+   "value": 2
+  },
+  {
+   "index": "sales_order_sales_order_status_code_idx",
+   "stat": "n_diff_pfx02",
+   "value": 127638
+  },
+  {
+   "index": "sales_order_sales_order_status_code_idx",
+   "stat": "n_leaf_pages",
+   "value": 401
+  },
+  {
+   "index": "sales_order_sales_order_status_code_idx",
+   "stat": "size",
+   "value": 483
+  },
+  {
+   "index": "sales_order_sales_order_type_code_idx",
+   "stat": "n_diff_pfx01",
+   "value": 1
+  },
+  {
+   "index": "sales_order_sales_order_type_code_idx",
+   "stat": "n_diff_pfx02",
+   "value": 119449
+  },
+  {
+   "index": "sales_order_sales_order_type_code_idx",
+   "stat": "n_leaf_pages",
+   "value": 417
+  },
+  {
+   "index": "sales_order_sales_order_type_code_idx",
+   "stat": "size",
+   "value": 483
+  },
+  {
+   "index": "sales_order_sales_rep_id_idx",
+   "stat": "n_diff_pfx01",
+   "value": 13
+  },
+  {
+   "index": "sales_order_sales_rep_id_idx",
+   "stat": "n_diff_pfx02",
+   "value": 133896
+  },
+  {
+   "index": "sales_order_sales_rep_id_idx",
+   "stat": "n_leaf_pages",
+   "value": 368
+  },
+  {
+   "index": "sales_order_sales_rep_id_idx",
+   "stat": "size",
+   "value": 483
+  },
+  {
+   "index": "sales_order_seller_account_id_idx",
+   "stat": "n_diff_pfx01",
+   "value": 29
+  },
+  {
+   "index": "sales_order_seller_account_id_idx",
+   "stat": "n_diff_pfx02",
+   "value": 126331
+  },
+  {
+   "index": "sales_order_seller_account_id_idx",
+   "stat": "n_leaf_pages",
+   "value": 558
+  },
+  {
+   "index": "sales_order_seller_account_id_idx",
+   "stat": "size",
+   "value": 678
+  },
+  {
+   "index": "sales_order_shipping_address_id_idx",
+   "stat": "n_diff_pfx01",
+   "value": 8050
+  },
+  {
+   "index": "sales_order_shipping_address_id_idx",
+   "stat": "n_diff_pfx02",
+   "value": 124053
+  },
+  {
+   "index": "sales_order_shipping_address_id_idx",
+   "stat": "n_leaf_pages",
+   "value": 873
+  },
+  {
+   "index": "sales_order_shipping_address_id_idx",
+   "stat": "size",
+   "value": 1064
+  },
+  {
+   "index": "sales_order_shipping_term_id_idx",
+   "stat": "n_diff_pfx01",
+   "value": 12
+  },
+  {
+   "index": "sales_order_shipping_term_id_idx",
+   "stat": "n_diff_pfx02",
+   "value": 123965
+  },
+  {
+   "index": "sales_order_shipping_term_id_idx",
+   "stat": "n_leaf_pages",
+   "value": 467
+  },
+  {
+   "index": "sales_order_shipping_term_id_idx",
+   "stat": "size",
+   "value": 548
+  }
+ ]
+}

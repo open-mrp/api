@@ -38,8 +38,12 @@ AND account_id = sqlc.arg('account_id');
 DELETE FROM settlement WHERE id = sqlc.arg('id') AND account_id = sqlc.arg('account_id');
 
 -- name: InsertTransactionAllocation :exec
-INSERT INTO transaction_allocation (id, transaction_id, amount_id, invoice_id, settlement_id, note, created_at, updated_at)
-VALUES (sqlc.arg('id'), sqlc.arg('transaction_id'), sqlc.arg('amount_id'), sqlc.arg('invoice_id'), sqlc.arg('settlement_id'), sqlc.narg('note'), COALESCE(sqlc.narg('created_at'), NOW(3)), NOW(3));
+-- account_id and transaction_type_code are copied from the transaction, which never changes them, so
+-- the allocation entry list can key on them.
+INSERT INTO transaction_allocation (id, transaction_id, amount_id, invoice_id, settlement_id, note, created_at, updated_at, account_id, transaction_type_code)
+VALUES (sqlc.arg('id'), sqlc.arg('transaction_id'), sqlc.arg('amount_id'), sqlc.arg('invoice_id'), sqlc.arg('settlement_id'), sqlc.narg('note'), COALESCE(sqlc.narg('created_at'), NOW(3)), NOW(3),
+    (SELECT t.account_id FROM `transaction` t WHERE t.id = sqlc.arg('transaction_id')),
+    (SELECT t.transaction_type_code FROM `transaction` t WHERE t.id = sqlc.arg('transaction_id')));
 
 -- name: InsertAllocationQuantity :exec
 INSERT INTO quantity (id, value, unit_id, created_at, updated_at)

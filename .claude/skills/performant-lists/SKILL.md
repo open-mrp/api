@@ -39,6 +39,14 @@ Prisma: always set `map:` (`sales_order_owner_status_created_idx`). Other active
 
 If the optimizer still picks a single-column filter index + filesort, `FORCE INDEX` the **entire** sort-free set. Do not list single-column filter indexes. `IGNORE INDEX` of the bad one is not enough; `STRAIGHT_JOIN` does not fix index choice.
 
+Composites are **ascending** (`(scope, filter, time, id)`): InnoDB scans an ascending key both ways, a descending one only forward, so on a `DESC` key the previous page (read oldest first) sorts the whole range.
+
+`FORCE INDEX` picks the key, not the join order. An **inner** join to a tiny lookup table (types, statuses) lets the planner drive from the lookup and probe the base table once per row of it, then sort; `LEFT JOIN` lookups the row always has.
+
+Choose the page from the base table alone and join after (`FROM (SELECT t.id FROM t … ORDER BY … LIMIT ?) page JOIN t …`): a filter no key serves in order then reads only its matches, not its matches times every join's fan-out.
+
+Resolve a filter on a joined table to base-table IDs first (`customer_group_ids` → customer IDs) so a base-table key serves it.
+
 ## Which filters earn an index
 
 | Kind | Index? |
@@ -55,4 +63,8 @@ High-insert tables (`sales_order`, `transaction`, `request_log`, `audit_event`, 
 
 ## Before merging
 
-`EXPLAIN ANALYZE` on a production-scale tenant for a **dense** value and a **zero/rare** value. Healthy: no filesort/temporary/`type: ALL`, chosen key is the composite, rows ≈ page size. PlanetScale Insights is the production backstop.
+Add a plan test (`//go:build plans`, `make test-plans`, core-service `repository/`): a `listPlanSuite` (`plan_harness_test.go`) over a seeded production-shaped corpus — one tenant, prod row widths, a **dense** and a **rare/zero** value per filter — runs every filter pair on the first page and deep pages both directions, under **analyzed** and **production** statistics (`testdata/plan_stats/<table>.json`, a snapshot of prod's `mysql.innodb_index_stats`; prod's are sampled badly and are what produce prod's bad plans). It fails a request that reads far more than the best forced index, or when even the best reads far more than a page. `transaction_list_plan_test.go` is the worked example. No skips: a filter no key can serve in order (FULLTEXT, a range on a non-sort column) is held to its own match count (`floor`).
+
+Reports and totals use `aggregatePlanSuite`: an aggregate cannot stop at a page, so each table is held to twice its `floor` — a direct `COUNT` of the rows the request's scope covers (tenant, window, the narrowest single filter), over the source that should answer it (the rollup when it can). Pin results with `checkPlanResults`. `sales_report_plan_test.go` is the worked example.
+
+PlanetScale Insights is the production backstop.

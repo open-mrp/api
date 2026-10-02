@@ -35,17 +35,15 @@ func (r *settlementRepoImpl) List(ctx context.Context, params domain.ListSettlem
 		f.add("MATCH(s.number) AGAINST(? IN BOOLEAN MODE)", term)
 	}
 	if len(params.TransactionIDs) > 0 || len(params.InvoiceIDs) > 0 {
-		clause := "EXISTS (SELECT 1 FROM transaction_allocation fa WHERE fa.settlement_id = s.id"
-		var args []any
-		if len(params.TransactionIDs) > 0 {
-			clause += " AND fa.transaction_id IN (" + placeholders(len(params.TransactionIDs)) + ")"
-			args = append(args, stringArgs(params.TransactionIDs)...)
+		// Resolved up front so the page reads only the settlements named, not every one probed for a match.
+		ids, err := r.settlementsAllocating(ctx, params.TransactionIDs, params.InvoiceIDs)
+		if apiErr := db.MapSQLError(err); apiErr != nil {
+			return nil, tracing.Trace(span, apiErr)
 		}
-		if len(params.InvoiceIDs) > 0 {
-			clause += " AND fa.invoice_id IN (" + placeholders(len(params.InvoiceIDs)) + ")"
-			args = append(args, stringArgs(params.InvoiceIDs)...)
+		if len(ids) == 0 {
+			return &domain.ListSettlementsResult{Settlements: []*domain.SettlementSummary{}, PageInfo: pagination.PageInfo{}}, nil
 		}
-		f.add(clause+")", args...)
+		f.in("s.id", ids)
 	}
 	if params.StartDate != nil {
 		f.add("s.created_at >= ?", *params.StartDate)
@@ -87,6 +85,30 @@ func (r *settlementRepoImpl) List(ctx context.Context, params domain.ListSettlem
 		return nil, tracing.Trace(span, apiErr)
 	}
 	return &domain.ListSettlementsResult{Settlements: result, PageInfo: pageInfo}, nil
+}
+
+// settlementsAllocating is the settlements holding an allocation of one of transactionIDs to one of
+// invoiceIDs; an empty list leaves that side unconstrained.
+func (r *settlementRepoImpl) settlementsAllocating(ctx context.Context, transactionIDs, invoiceIDs []string) ([]string, error) {
+	f := &transactionFilter{}
+	f.add("settlement_id IS NOT NULL")
+	f.in("transaction_id", transactionIDs)
+	f.in("invoice_id", invoiceIDs)
+	rows, err := r.queries.DB().QueryContext(ctx,
+		"SELECT DISTINCT settlement_id FROM transaction_allocation WHERE "+strings.Join(f.where, " AND "), f.args...)
+	if err != nil {
+		return nil, err
+	}
+	defer func() { _ = rows.Close() }()
+	var ids []string
+	for rows.Next() {
+		var id string
+		if err := rows.Scan(&id); err != nil {
+			return nil, err
+		}
+		ids = append(ids, id)
+	}
+	return ids, rows.Err()
 }
 
 // summarize fills in each settlement's allocation count, totals by transaction type, invoice numbers

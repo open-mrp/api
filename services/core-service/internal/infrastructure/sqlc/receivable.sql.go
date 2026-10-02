@@ -77,70 +77,58 @@ func (q *Queries) GetOpenCreditsByCustomer(ctx context.Context, arg GetOpenCredi
 
 const listReceivablesBackward = `-- name: ListReceivablesBackward :many
 SELECT
-    rec.id,
-    rec.invoice_number,
-    rec.is_paid_in_full,
-    rec.created_at,
-    rec.po_number,
-    rec.customer_id,
-    rec.customer_name,
-    rec.customer_number,
-    rec.remaining_balance
-FROM (
-    SELECT
-        inv.id,
-        inv.number AS invoice_number,
-        inv.is_paid_in_full,
-        inv.created_at,
-        so.customer_po_number AS po_number,
-        buyer.id AS customer_id,
-        buyer.name AS customer_name,
-        ar.external_number AS customer_number,
-        ROUND(
-            COALESCE((
-                -- Each line priced as the dashboard's multiplyRate does, summed unrounded: the balance is
-                -- rounded once, as the dashboard's receivables report does (see the line-pricing skill).
-                SELECT SUM(CASE WHEN q.unit_id = rt.denominator_unit_id THEN q.value * rt.value ELSE (q.value * qu.ratio_numerator / qu.ratio_denominator) * (rt.value / (rtu.ratio_numerator / rtu.ratio_denominator)) END)
-                FROM invoice_line il
-                JOIN quantity q ON q.id = il.quantity_id
-                JOIN sales_order_line sol ON sol.id = il.sales_order_line_id
-                JOIN rate rt ON rt.id = sol.unit_price_id
-                JOIN unit qu ON qu.id = q.unit_id
-                JOIN unit rtu ON rtu.id = rt.denominator_unit_id
-                WHERE il.invoice_id = inv.id
-            ), 0)
-            -
-            COALESCE((
-                SELECT SUM(aq.value)
-                FROM transaction_allocation ta
-                JOIN quantity aq ON aq.id = ta.amount_id
-                JOIN ` + "`" + `transaction` + "`" + ` txn ON txn.id = ta.transaction_id
-                WHERE ta.invoice_id = inv.id
-                AND txn.funds_received_at IS NOT NULL
-                AND txn.funds_received_at < COALESCE(?, CAST('9999-12-31 23:59:59' AS DATETIME(6)))
-            ), 0),
-        2) AS remaining_balance
-    FROM invoice inv
-    JOIN sales_order so ON inv.sales_order_id = so.id
-    JOIN account_relation ar ON ar.owner_account_id = inv.account_id
-        AND ar.counterparty_account_id = so.buyer_account_id
-        AND ar.account_relation_role_code = 'customer'
-    JOIN account buyer ON buyer.id = so.buyer_account_id
-    WHERE inv.account_id = ?
-    AND inv.is_paid_in_full = false
-    AND (? IS NULL OR inv.created_at < ?)
-    AND (
-        ? IS NULL
-        OR inv.number LIKE ?
-        OR buyer.name LIKE ?
-    )
-    AND (
-        inv.created_at > ?
-        OR (inv.created_at = ? AND inv.id > ?)
-    )
-) rec
-WHERE ? = false OR rec.remaining_balance > 0
-ORDER BY rec.created_at ASC, rec.id ASC
+    inv.id,
+    inv.number AS invoice_number,
+    inv.is_paid_in_full,
+    inv.created_at,
+    so.customer_po_number AS po_number,
+    buyer.id AS customer_id,
+    buyer.name AS customer_name,
+    ar.external_number AS customer_number,
+    ROUND(
+        COALESCE((
+            -- Each line priced as the dashboard's multiplyRate does, summed unrounded: the balance is
+            -- rounded once, as the dashboard's receivables report does (see the line-pricing skill).
+            SELECT SUM(CASE WHEN q.unit_id = rt.denominator_unit_id THEN q.value * rt.value ELSE (q.value * qu.ratio_numerator / qu.ratio_denominator) * (rt.value / (rtu.ratio_numerator / rtu.ratio_denominator)) END)
+            FROM invoice_line il
+            JOIN quantity q ON q.id = il.quantity_id
+            JOIN sales_order_line sol ON sol.id = il.sales_order_line_id
+            JOIN rate rt ON rt.id = sol.unit_price_id
+            JOIN unit qu ON qu.id = q.unit_id
+            JOIN unit rtu ON rtu.id = rt.denominator_unit_id
+            WHERE il.invoice_id = inv.id
+        ), 0)
+        -
+        COALESCE((
+            SELECT SUM(aq.value)
+            FROM transaction_allocation ta
+            JOIN quantity aq ON aq.id = ta.amount_id
+            JOIN ` + "`" + `transaction` + "`" + ` txn ON txn.id = ta.transaction_id
+            WHERE ta.invoice_id = inv.id
+            AND txn.funds_received_at IS NOT NULL
+            AND txn.funds_received_at < COALESCE(?, CAST('9999-12-31 23:59:59' AS DATETIME(6)))
+        ), 0),
+    2) AS remaining_balance
+FROM invoice inv FORCE INDEX (invoice_account_unpaid_created_idx)
+JOIN sales_order so ON inv.sales_order_id = so.id
+JOIN account_relation ar ON ar.owner_account_id = inv.account_id
+    AND ar.counterparty_account_id = so.buyer_account_id
+    AND ar.account_relation_role_code = 'customer'
+JOIN account buyer ON buyer.id = so.buyer_account_id
+WHERE inv.account_id = ?
+AND inv.is_paid_in_full = false
+AND (? IS NULL OR inv.created_at < ?)
+AND (
+    ? IS NULL
+    OR inv.number LIKE ?
+    OR buyer.name LIKE ?
+)
+AND (
+    inv.created_at > ?
+    OR (inv.created_at = ? AND inv.id > ?)
+)
+HAVING ? = false OR remaining_balance > 0
+ORDER BY inv.created_at ASC, inv.id ASC
 LIMIT ?
 `
 
@@ -167,6 +155,8 @@ type ListReceivablesBackwardRow struct {
 	RemainingBalance float64
 }
 
+// Filtered as rows stream in list order, so a page stops once it has its rows; the balance is computed
+// only for the invoices read.
 func (q *Queries) ListReceivablesBackward(ctx context.Context, arg ListReceivablesBackwardParams) ([]ListReceivablesBackwardRow, error) {
 	rows, err := q.db.QueryContext(ctx, listReceivablesBackward,
 		arg.AllocationCutoffDate,
@@ -215,71 +205,59 @@ func (q *Queries) ListReceivablesBackward(ctx context.Context, arg ListReceivabl
 
 const listReceivablesByCustomerBackward = `-- name: ListReceivablesByCustomerBackward :many
 SELECT
-    rec.id,
-    rec.invoice_number,
-    rec.is_paid_in_full,
-    rec.created_at,
-    rec.po_number,
-    rec.customer_id,
-    rec.customer_name,
-    rec.customer_number,
-    rec.remaining_balance
-FROM (
-    SELECT
-        inv.id,
-        inv.number AS invoice_number,
-        inv.is_paid_in_full,
-        inv.created_at,
-        so.customer_po_number AS po_number,
-        buyer.id AS customer_id,
-        buyer.name AS customer_name,
-        ar.external_number AS customer_number,
-        ROUND(
-            COALESCE((
-                -- Each line priced as the dashboard's multiplyRate does, summed unrounded: the balance is
-                -- rounded once, as the dashboard's receivables report does (see the line-pricing skill).
-                SELECT SUM(CASE WHEN q.unit_id = rt.denominator_unit_id THEN q.value * rt.value ELSE (q.value * qu.ratio_numerator / qu.ratio_denominator) * (rt.value / (rtu.ratio_numerator / rtu.ratio_denominator)) END)
-                FROM invoice_line il
-                JOIN quantity q ON q.id = il.quantity_id
-                JOIN sales_order_line sol ON sol.id = il.sales_order_line_id
-                JOIN rate rt ON rt.id = sol.unit_price_id
-                JOIN unit qu ON qu.id = q.unit_id
-                JOIN unit rtu ON rtu.id = rt.denominator_unit_id
-                WHERE il.invoice_id = inv.id
-            ), 0)
-            -
-            COALESCE((
-                SELECT SUM(aq.value)
-                FROM transaction_allocation ta
-                JOIN quantity aq ON aq.id = ta.amount_id
-                JOIN ` + "`" + `transaction` + "`" + ` txn ON txn.id = ta.transaction_id
-                WHERE ta.invoice_id = inv.id
-                AND txn.funds_received_at IS NOT NULL
-                AND txn.funds_received_at < COALESCE(?, CAST('9999-12-31 23:59:59' AS DATETIME(6)))
-            ), 0),
-        2) AS remaining_balance
-    FROM invoice inv
-    JOIN sales_order so ON inv.sales_order_id = so.id
-    JOIN account_relation ar ON ar.owner_account_id = inv.account_id
-        AND ar.counterparty_account_id = so.buyer_account_id
-        AND ar.account_relation_role_code = 'customer'
-    JOIN account buyer ON buyer.id = so.buyer_account_id
-    WHERE inv.account_id = ?
-    AND so.buyer_account_id = ?
-    AND inv.is_paid_in_full = false
-    AND (? IS NULL OR inv.created_at < ?)
-    AND (
-        ? IS NULL
-        OR inv.number LIKE ?
-        OR buyer.name LIKE ?
-    )
-    AND (
-        inv.created_at > ?
-        OR (inv.created_at = ? AND inv.id > ?)
-    )
-) rec
-WHERE ? = false OR rec.remaining_balance > 0
-ORDER BY rec.created_at ASC, rec.id ASC
+    inv.id,
+    inv.number AS invoice_number,
+    inv.is_paid_in_full,
+    inv.created_at,
+    so.customer_po_number AS po_number,
+    buyer.id AS customer_id,
+    buyer.name AS customer_name,
+    ar.external_number AS customer_number,
+    ROUND(
+        COALESCE((
+            -- Each line priced as the dashboard's multiplyRate does, summed unrounded: the balance is
+            -- rounded once, as the dashboard's receivables report does (see the line-pricing skill).
+            SELECT SUM(CASE WHEN q.unit_id = rt.denominator_unit_id THEN q.value * rt.value ELSE (q.value * qu.ratio_numerator / qu.ratio_denominator) * (rt.value / (rtu.ratio_numerator / rtu.ratio_denominator)) END)
+            FROM invoice_line il
+            JOIN quantity q ON q.id = il.quantity_id
+            JOIN sales_order_line sol ON sol.id = il.sales_order_line_id
+            JOIN rate rt ON rt.id = sol.unit_price_id
+            JOIN unit qu ON qu.id = q.unit_id
+            JOIN unit rtu ON rtu.id = rt.denominator_unit_id
+            WHERE il.invoice_id = inv.id
+        ), 0)
+        -
+        COALESCE((
+            SELECT SUM(aq.value)
+            FROM transaction_allocation ta
+            JOIN quantity aq ON aq.id = ta.amount_id
+            JOIN ` + "`" + `transaction` + "`" + ` txn ON txn.id = ta.transaction_id
+            WHERE ta.invoice_id = inv.id
+            AND txn.funds_received_at IS NOT NULL
+            AND txn.funds_received_at < COALESCE(?, CAST('9999-12-31 23:59:59' AS DATETIME(6)))
+        ), 0),
+    2) AS remaining_balance
+FROM invoice inv FORCE INDEX (invoice_account_sales_order_idx)
+JOIN sales_order so ON inv.sales_order_id = so.id
+JOIN account_relation ar ON ar.owner_account_id = inv.account_id
+    AND ar.counterparty_account_id = so.buyer_account_id
+    AND ar.account_relation_role_code = 'customer'
+JOIN account buyer ON buyer.id = so.buyer_account_id
+WHERE inv.account_id = ?
+AND so.buyer_account_id = ?
+AND inv.is_paid_in_full = false
+AND (? IS NULL OR inv.created_at < ?)
+AND (
+    ? IS NULL
+    OR inv.number LIKE ?
+    OR buyer.name LIKE ?
+)
+AND (
+    inv.created_at > ?
+    OR (inv.created_at = ? AND inv.id > ?)
+)
+HAVING ? = false OR remaining_balance > 0
+ORDER BY inv.created_at ASC, inv.id ASC
 LIMIT ?
 `
 
@@ -307,6 +285,8 @@ type ListReceivablesByCustomerBackwardRow struct {
 	RemainingBalance float64
 }
 
+// Filtered as rows stream in list order, so a page stops once it has its rows; the balance is computed
+// only for the invoices read.
 func (q *Queries) ListReceivablesByCustomerBackward(ctx context.Context, arg ListReceivablesByCustomerBackwardParams) ([]ListReceivablesByCustomerBackwardRow, error) {
 	rows, err := q.db.QueryContext(ctx, listReceivablesByCustomerBackward,
 		arg.AllocationCutoffDate,
@@ -356,72 +336,60 @@ func (q *Queries) ListReceivablesByCustomerBackward(ctx context.Context, arg Lis
 
 const listReceivablesByCustomerForward = `-- name: ListReceivablesByCustomerForward :many
 SELECT
-    rec.id,
-    rec.invoice_number,
-    rec.is_paid_in_full,
-    rec.created_at,
-    rec.po_number,
-    rec.customer_id,
-    rec.customer_name,
-    rec.customer_number,
-    rec.remaining_balance
-FROM (
-    SELECT
-        inv.id,
-        inv.number AS invoice_number,
-        inv.is_paid_in_full,
-        inv.created_at,
-        so.customer_po_number AS po_number,
-        buyer.id AS customer_id,
-        buyer.name AS customer_name,
-        ar.external_number AS customer_number,
-        ROUND(
-            COALESCE((
-                -- Each line priced as the dashboard's multiplyRate does, summed unrounded: the balance is
-                -- rounded once, as the dashboard's receivables report does (see the line-pricing skill).
-                SELECT SUM(CASE WHEN q.unit_id = rt.denominator_unit_id THEN q.value * rt.value ELSE (q.value * qu.ratio_numerator / qu.ratio_denominator) * (rt.value / (rtu.ratio_numerator / rtu.ratio_denominator)) END)
-                FROM invoice_line il
-                JOIN quantity q ON q.id = il.quantity_id
-                JOIN sales_order_line sol ON sol.id = il.sales_order_line_id
-                JOIN rate rt ON rt.id = sol.unit_price_id
-                JOIN unit qu ON qu.id = q.unit_id
-                JOIN unit rtu ON rtu.id = rt.denominator_unit_id
-                WHERE il.invoice_id = inv.id
-            ), 0)
-            -
-            COALESCE((
-                SELECT SUM(aq.value)
-                FROM transaction_allocation ta
-                JOIN quantity aq ON aq.id = ta.amount_id
-                JOIN ` + "`" + `transaction` + "`" + ` txn ON txn.id = ta.transaction_id
-                WHERE ta.invoice_id = inv.id
-                AND txn.funds_received_at IS NOT NULL
-                AND txn.funds_received_at < COALESCE(?, CAST('9999-12-31 23:59:59' AS DATETIME(6)))
-            ), 0),
-        2) AS remaining_balance
-    FROM invoice inv
-    JOIN sales_order so ON inv.sales_order_id = so.id
-    JOIN account_relation ar ON ar.owner_account_id = inv.account_id
-        AND ar.counterparty_account_id = so.buyer_account_id
-        AND ar.account_relation_role_code = 'customer'
-    JOIN account buyer ON buyer.id = so.buyer_account_id
-    WHERE inv.account_id = ?
-    AND so.buyer_account_id = ?
-    AND inv.is_paid_in_full = false
-    AND (? IS NULL OR inv.created_at < ?)
-    AND (
-        ? IS NULL
-        OR inv.number LIKE ?
-        OR buyer.name LIKE ?
-    )
-    AND (
-        ? IS NULL
-        OR inv.created_at < ?
-        OR (inv.created_at = ? AND inv.id < ?)
-    )
-) rec
-WHERE ? = false OR rec.remaining_balance > 0
-ORDER BY rec.created_at DESC, rec.id DESC
+    inv.id,
+    inv.number AS invoice_number,
+    inv.is_paid_in_full,
+    inv.created_at,
+    so.customer_po_number AS po_number,
+    buyer.id AS customer_id,
+    buyer.name AS customer_name,
+    ar.external_number AS customer_number,
+    ROUND(
+        COALESCE((
+            -- Each line priced as the dashboard's multiplyRate does, summed unrounded: the balance is
+            -- rounded once, as the dashboard's receivables report does (see the line-pricing skill).
+            SELECT SUM(CASE WHEN q.unit_id = rt.denominator_unit_id THEN q.value * rt.value ELSE (q.value * qu.ratio_numerator / qu.ratio_denominator) * (rt.value / (rtu.ratio_numerator / rtu.ratio_denominator)) END)
+            FROM invoice_line il
+            JOIN quantity q ON q.id = il.quantity_id
+            JOIN sales_order_line sol ON sol.id = il.sales_order_line_id
+            JOIN rate rt ON rt.id = sol.unit_price_id
+            JOIN unit qu ON qu.id = q.unit_id
+            JOIN unit rtu ON rtu.id = rt.denominator_unit_id
+            WHERE il.invoice_id = inv.id
+        ), 0)
+        -
+        COALESCE((
+            SELECT SUM(aq.value)
+            FROM transaction_allocation ta
+            JOIN quantity aq ON aq.id = ta.amount_id
+            JOIN ` + "`" + `transaction` + "`" + ` txn ON txn.id = ta.transaction_id
+            WHERE ta.invoice_id = inv.id
+            AND txn.funds_received_at IS NOT NULL
+            AND txn.funds_received_at < COALESCE(?, CAST('9999-12-31 23:59:59' AS DATETIME(6)))
+        ), 0),
+    2) AS remaining_balance
+FROM invoice inv FORCE INDEX (invoice_account_sales_order_idx)
+JOIN sales_order so ON inv.sales_order_id = so.id
+JOIN account_relation ar ON ar.owner_account_id = inv.account_id
+    AND ar.counterparty_account_id = so.buyer_account_id
+    AND ar.account_relation_role_code = 'customer'
+JOIN account buyer ON buyer.id = so.buyer_account_id
+WHERE inv.account_id = ?
+AND so.buyer_account_id = ?
+AND inv.is_paid_in_full = false
+AND (? IS NULL OR inv.created_at < ?)
+AND (
+    ? IS NULL
+    OR inv.number LIKE ?
+    OR buyer.name LIKE ?
+)
+AND (
+    ? IS NULL
+    OR inv.created_at < ?
+    OR (inv.created_at = ? AND inv.id < ?)
+)
+HAVING ? = false OR remaining_balance > 0
+ORDER BY inv.created_at DESC, inv.id DESC
 LIMIT ?
 `
 
@@ -449,6 +417,10 @@ type ListReceivablesByCustomerForwardRow struct {
 	RemainingBalance float64
 }
 
+// Read through the customer's orders: walking the account's unpaid invoices in order reads every
+// other customer's too, and invoice_sales_order_id_idx reads the customer's paid ones.
+// Filtered as rows stream in list order, so a page stops once it has its rows; the balance is computed
+// only for the invoices read.
 func (q *Queries) ListReceivablesByCustomerForward(ctx context.Context, arg ListReceivablesByCustomerForwardParams) ([]ListReceivablesByCustomerForwardRow, error) {
 	rows, err := q.db.QueryContext(ctx, listReceivablesByCustomerForward,
 		arg.AllocationCutoffDate,
@@ -499,71 +471,59 @@ func (q *Queries) ListReceivablesByCustomerForward(ctx context.Context, arg List
 
 const listReceivablesForward = `-- name: ListReceivablesForward :many
 SELECT
-    rec.id,
-    rec.invoice_number,
-    rec.is_paid_in_full,
-    rec.created_at,
-    rec.po_number,
-    rec.customer_id,
-    rec.customer_name,
-    rec.customer_number,
-    rec.remaining_balance
-FROM (
-    SELECT
-        inv.id,
-        inv.number AS invoice_number,
-        inv.is_paid_in_full,
-        inv.created_at,
-        so.customer_po_number AS po_number,
-        buyer.id AS customer_id,
-        buyer.name AS customer_name,
-        ar.external_number AS customer_number,
-        ROUND(
-            COALESCE((
-                -- Each line priced as the dashboard's multiplyRate does, summed unrounded: the balance is
-                -- rounded once, as the dashboard's receivables report does (see the line-pricing skill).
-                SELECT SUM(CASE WHEN q.unit_id = rt.denominator_unit_id THEN q.value * rt.value ELSE (q.value * qu.ratio_numerator / qu.ratio_denominator) * (rt.value / (rtu.ratio_numerator / rtu.ratio_denominator)) END)
-                FROM invoice_line il
-                JOIN quantity q ON q.id = il.quantity_id
-                JOIN sales_order_line sol ON sol.id = il.sales_order_line_id
-                JOIN rate rt ON rt.id = sol.unit_price_id
-                JOIN unit qu ON qu.id = q.unit_id
-                JOIN unit rtu ON rtu.id = rt.denominator_unit_id
-                WHERE il.invoice_id = inv.id
-            ), 0)
-            -
-            COALESCE((
-                SELECT SUM(aq.value)
-                FROM transaction_allocation ta
-                JOIN quantity aq ON aq.id = ta.amount_id
-                JOIN ` + "`" + `transaction` + "`" + ` txn ON txn.id = ta.transaction_id
-                WHERE ta.invoice_id = inv.id
-                AND txn.funds_received_at IS NOT NULL
-                AND txn.funds_received_at < COALESCE(?, CAST('9999-12-31 23:59:59' AS DATETIME(6)))
-            ), 0),
-        2) AS remaining_balance
-    FROM invoice inv
-    JOIN sales_order so ON inv.sales_order_id = so.id
-    JOIN account_relation ar ON ar.owner_account_id = inv.account_id
-        AND ar.counterparty_account_id = so.buyer_account_id
-        AND ar.account_relation_role_code = 'customer'
-    JOIN account buyer ON buyer.id = so.buyer_account_id
-    WHERE inv.account_id = ?
-    AND inv.is_paid_in_full = false
-    AND (? IS NULL OR inv.created_at < ?)
-    AND (
-        ? IS NULL
-        OR inv.number LIKE ?
-        OR buyer.name LIKE ?
-    )
-    AND (
-        ? IS NULL
-        OR inv.created_at < ?
-        OR (inv.created_at = ? AND inv.id < ?)
-    )
-) rec
-WHERE ? = false OR rec.remaining_balance > 0
-ORDER BY rec.created_at DESC, rec.id DESC
+    inv.id,
+    inv.number AS invoice_number,
+    inv.is_paid_in_full,
+    inv.created_at,
+    so.customer_po_number AS po_number,
+    buyer.id AS customer_id,
+    buyer.name AS customer_name,
+    ar.external_number AS customer_number,
+    ROUND(
+        COALESCE((
+            -- Each line priced as the dashboard's multiplyRate does, summed unrounded: the balance is
+            -- rounded once, as the dashboard's receivables report does (see the line-pricing skill).
+            SELECT SUM(CASE WHEN q.unit_id = rt.denominator_unit_id THEN q.value * rt.value ELSE (q.value * qu.ratio_numerator / qu.ratio_denominator) * (rt.value / (rtu.ratio_numerator / rtu.ratio_denominator)) END)
+            FROM invoice_line il
+            JOIN quantity q ON q.id = il.quantity_id
+            JOIN sales_order_line sol ON sol.id = il.sales_order_line_id
+            JOIN rate rt ON rt.id = sol.unit_price_id
+            JOIN unit qu ON qu.id = q.unit_id
+            JOIN unit rtu ON rtu.id = rt.denominator_unit_id
+            WHERE il.invoice_id = inv.id
+        ), 0)
+        -
+        COALESCE((
+            SELECT SUM(aq.value)
+            FROM transaction_allocation ta
+            JOIN quantity aq ON aq.id = ta.amount_id
+            JOIN ` + "`" + `transaction` + "`" + ` txn ON txn.id = ta.transaction_id
+            WHERE ta.invoice_id = inv.id
+            AND txn.funds_received_at IS NOT NULL
+            AND txn.funds_received_at < COALESCE(?, CAST('9999-12-31 23:59:59' AS DATETIME(6)))
+        ), 0),
+    2) AS remaining_balance
+FROM invoice inv FORCE INDEX (invoice_account_unpaid_created_idx)
+JOIN sales_order so ON inv.sales_order_id = so.id
+JOIN account_relation ar ON ar.owner_account_id = inv.account_id
+    AND ar.counterparty_account_id = so.buyer_account_id
+    AND ar.account_relation_role_code = 'customer'
+JOIN account buyer ON buyer.id = so.buyer_account_id
+WHERE inv.account_id = ?
+AND inv.is_paid_in_full = false
+AND (? IS NULL OR inv.created_at < ?)
+AND (
+    ? IS NULL
+    OR inv.number LIKE ?
+    OR buyer.name LIKE ?
+)
+AND (
+    ? IS NULL
+    OR inv.created_at < ?
+    OR (inv.created_at = ? AND inv.id < ?)
+)
+HAVING ? = false OR remaining_balance > 0
+ORDER BY inv.created_at DESC, inv.id DESC
 LIMIT ?
 `
 
@@ -592,6 +552,8 @@ type ListReceivablesForwardRow struct {
 
 // Nets only allocations whose transaction has a funds-received date before the cutoff, then drops
 // anything already settled by then; without a cutoff every unpaid invoice is reported as-is.
+// Filtered as rows stream in list order, so a page stops once it has its rows; the balance is computed
+// only for the invoices read.
 func (q *Queries) ListReceivablesForward(ctx context.Context, arg ListReceivablesForwardParams) ([]ListReceivablesForwardRow, error) {
 	rows, err := q.db.QueryContext(ctx, listReceivablesForward,
 		arg.AllocationCutoffDate,

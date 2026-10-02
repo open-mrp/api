@@ -36,22 +36,30 @@ const transactionColumns = `
 	(SELECT COUNT(*) FROM transaction_allocation ta WHERE ta.transaction_id = t.id),
 	t.created_at, t.updated_at`
 
-// transactionListIndexes each yield an account's transactions in list order: one per equality filter
-// the list accepts, and one for none.
+// The list's keys. Each per-filter key leads with the account and its filter and ends in list order,
+// so a list on that filter reads a page and stops; transactionCreatedIndex is the one for no filter.
+const (
+	transactionCreatedIndex    = "transaction_account_id_created_at_idx"
+	transactionStatusIndex     = "transaction_account_id_is_fully_allocated_created_at_id_idx"
+	transactionTypeIndex       = "transaction_account_id_transaction_type_code_created_at_id_idx"
+	transactionMethodIndex     = "transaction_account_id_transaction_method_code_created_at_id_idx"
+	transactionAdjustmentIndex = "transaction_account_id_adjustment_type_code_created_at_id_idx"
+	transactionCustomerIndex   = "transaction_account_id_customer_account_id_created_at_id_idx"
+	// transactionFundsIndex ranges an account's transactions by when funds were received.
+	transactionFundsIndex = "transaction_open_credits_idx"
+)
+
+// transactionListIndexes are every key that yields an account's transactions in list order.
 var transactionListIndexes = []string{
-	"transaction_account_id_created_at_idx",
-	"transaction_account_id_is_fully_allocated_created_at_id_idx",
-	"transaction_account_id_transaction_type_code_created_at_id_idx",
-	"transaction_account_id_transaction_method_code_created_at_id_idx",
-	"transaction_account_id_adjustment_type_code_created_at_id_idx",
-	"transaction_account_id_customer_account_id_created_at_id_idx",
+	transactionCreatedIndex, transactionStatusIndex, transactionTypeIndex,
+	transactionMethodIndex, transactionAdjustmentIndex, transactionCustomerIndex,
 }
 
 const transactionJoins = `
 JOIN quantity q ON q.id = t.amount_id
-JOIN unit u ON u.id = q.unit_id
--- LEFT, though every type exists: an inner join to a four-row lookup lets the planner drive from it,
--- probing t once per type and sorting the union instead of walking one index in list order.
+-- LEFT, though every quantity has a unit and every type exists: an inner join to a tiny lookup lets
+-- the planner drive from it, probing t once per lookup row instead of walking one index in order.
+LEFT JOIN unit u ON u.id = q.unit_id
 LEFT JOIN transaction_type tt ON tt.code = t.transaction_type_code
 JOIN account ba ON ba.id = t.customer_account_id
 LEFT JOIN account_relation ar ON ar.owner_account_id = t.account_id AND ar.counterparty_account_id = t.customer_account_id AND ar.account_relation_role_code = 'customer'
@@ -179,7 +187,7 @@ func transactionSummaryOf(t *domain.Transaction) *domain.TransactionSummary {
 type transactionFilter struct {
 	where []string
 	args  []any
-	// indexes, when set, are FORCE INDEX'd on the transaction table.
+	// indexes, when set, are FORCE INDEX'd on the transaction table the page is chosen from.
 	indexes []string
 }
 
@@ -215,12 +223,98 @@ func (f *transactionFilter) status(status *string) {
 	}
 }
 
-// transactionListInOrder reports whether one of transactionListIndexes can drive the list. None can
-// when it searches numbers (a FULLTEXT match), bounds funds_received_at (not the sort column), or
-// filters by customer group (a column of account_relation).
-func transactionListInOrder(params domain.ListTransactionsParams) bool {
-	return db.AllWordsPrefixQuery(params.Query) == "" && params.StartDate == nil && params.EndDate == nil &&
-		len(params.CustomerGroupIDs) == 0
+// transactionKeyFilter is an equality filter with a list-order key of its own.
+type transactionKeyFilter struct {
+	index, column string
+	values        []string
+}
+
+// transactionListIndexHint is the keys a list may be read from, or none to leave the choice to the
+// planner. Left to itself, the planner reaches for the number key, merges single-column keys, or
+// walks created_at past every row a filter rejects, and sorts every match.
+//   - A number search is answered by its FULLTEXT key, which no hint can name; it reads every match.
+//   - A funds-received range filters a column the list does not sort by, so no key can stop at a
+//     page. The funds key reads just the range (status included, which it leads with). The customer
+//     key is offered too, for a customer narrower than the range; a type, method, or adjustment key
+//     is not, because walking a common one in list order reads past every row outside the range.
+//   - Otherwise each single-valued filter's key both narrows and orders, and the planner picks among
+//     them. The created_at key is offered only alone: forced beside another, the planner may swap to
+//     it for the order and walk it from the account's newest row, past a deep page's cursor.
+//   - A multi-valued filter has no key that yields its values in list order, and the planner cannot
+//     tell a rare one from a common one. Its presence returns every filter as counted, for
+//     transactionCountedHint to settle by counting; indexes is then the fallback for when all are common.
+func transactionListIndexHint(params domain.ListTransactionsParams, customerIDs []string) (indexes []string, counted []transactionKeyFilter) {
+	if db.AllWordsPrefixQuery(params.Query) != "" {
+		return nil, nil
+	}
+	if params.StartDate != nil || params.EndDate != nil {
+		if len(customerIDs) > 0 {
+			return []string{transactionFundsIndex, transactionCustomerIndex}, nil
+		}
+		return []string{transactionFundsIndex}, nil
+	}
+	var filters []transactionKeyFilter
+	if params.Status != nil && (*params.Status == "allocated" || *params.Status == "unallocated") {
+		allocated := "0"
+		if *params.Status == "allocated" {
+			allocated = "1"
+		}
+		filters = append(filters, transactionKeyFilter{transactionStatusIndex, "is_fully_allocated", []string{allocated}})
+	}
+	for _, f := range []transactionKeyFilter{
+		{transactionTypeIndex, "transaction_type_code", params.TypeCodes},
+		{transactionMethodIndex, "transaction_method_code", params.MethodCodes},
+		{transactionAdjustmentIndex, "adjustment_type_code", params.AdjustmentTypeCodes},
+		{transactionCustomerIndex, "customer_account_id", customerIDs},
+	} {
+		if len(f.values) > 0 {
+			filters = append(filters, f)
+		}
+	}
+	multiValued := false
+	for _, f := range filters {
+		if len(f.values) == 1 {
+			indexes = append(indexes, f.index)
+		} else {
+			multiValued = true
+		}
+	}
+	if len(indexes) == 0 {
+		indexes = []string{transactionCreatedIndex}
+	}
+	if multiValued {
+		return indexes, filters
+	}
+	return indexes, nil
+}
+
+// transactionCountedRatio sets how many matches, in pages, make a filter common.
+const transactionCountedRatio = 40
+
+// transactionCountedHint picks the key of the filter matching the fewest rows: a single-valued one's
+// key stops at the page, a multi-valued one's is read whole and sorted, and either reads no more than
+// the filter matches. When every filter matches many rows, they are common enough that fallback (the
+// single-valued keys, or created_at) finds a page quickly in list order. Each count is capped, reading
+// at most that many index entries.
+func (r *transactionRepoImpl) transactionCountedHint(ctx context.Context, accountID string, limit int32, filters []transactionKeyFilter, fallback []string) ([]string, error) {
+	capped := int64(transactionCountedRatio * (limit + 1))
+	best, bestCount := "", capped
+	for _, f := range filters {
+		args := append(append([]any{accountID}, stringArgs(f.values)...), capped)
+		var n int64
+		err := r.queries.DB().QueryRowContext(ctx, "SELECT COUNT(*) FROM (SELECT 1 FROM `transaction` FORCE INDEX ("+f.index+
+			") WHERE account_id = ? AND "+f.column+" IN ("+placeholders(len(f.values))+") LIMIT ?) matches", args...).Scan(&n)
+		if err != nil {
+			return nil, err
+		}
+		if n < bestCount {
+			best, bestCount = f.index, n
+		}
+	}
+	if best == "" {
+		return fallback, nil
+	}
+	return []string{best}, nil
 }
 
 // page applies the keyset for a cursor and returns the ORDER BY. Rows are read newest first; a
@@ -238,14 +332,16 @@ func (f *transactionFilter) page(cursor *pagination.StringCursor) string {
 }
 
 func (r *transactionRepoImpl) queryTransactions(ctx context.Context, f *transactionFilter, orderBy string, limit int32) ([]*domain.Transaction, error) {
+	// The page is chosen from the transaction table alone and joined after: a filter no key serves in
+	// list order reads every match, and joining each one (account_user alone fans out to every user of
+	// the account) before the sort multiplied that by the joins.
 	var sb strings.Builder
 	sb.WriteString("SELECT")
 	sb.WriteString(transactionColumns)
-	sb.WriteString("\nFROM `transaction` t")
+	sb.WriteString("\nFROM (SELECT t.id FROM `transaction` t")
 	if len(f.indexes) > 0 {
 		sb.WriteString(" FORCE INDEX (" + strings.Join(f.indexes, ", ") + ")")
 	}
-	sb.WriteString(transactionJoins)
 	if len(f.where) > 0 {
 		sb.WriteString("\nWHERE ")
 		sb.WriteString(strings.Join(f.where, "\nAND "))
@@ -257,6 +353,11 @@ func (r *transactionRepoImpl) queryTransactions(ctx context.Context, f *transact
 	if limit > 0 {
 		sb.WriteString("\nLIMIT ?")
 		args = append(args, limit)
+	}
+	sb.WriteString(") page\nJOIN `transaction` t ON t.id = page.id")
+	sb.WriteString(transactionJoins)
+	if orderBy != "" {
+		sb.WriteString("\nORDER BY " + orderBy)
 	}
 
 	rows, err := r.queries.DB().QueryContext(ctx, sb.String(), args...)
@@ -303,21 +404,43 @@ func (r *transactionRepoImpl) List(ctx context.Context, params domain.ListTransa
 	f.in("t.transaction_type_code", params.TypeCodes)
 	f.in("t.adjustment_type_code", params.AdjustmentTypeCodes)
 	f.in("t.transaction_method_code", params.MethodCodes)
-	f.in("t.customer_account_id", params.CustomerIDs)
+	customerIDs := params.CustomerIDs
 	if len(params.CustomerGroupIDs) > 0 {
-		f.add("ar.account_group_id IN ("+placeholders(len(params.CustomerGroupIDs))+")", stringArgs(params.CustomerGroupIDs)...)
+		// Resolved up front so the customer key serves it; filtering on the joined relation left the
+		// planner to drive from account_relation and read every transaction of the group's customers.
+		groupCustomerIDs, err := r.customersInGroups(ctx, params.AccountID, params.CustomerGroupIDs)
+		if apiErr := db.MapSQLError(err); apiErr != nil {
+			return nil, tracing.Trace(span, apiErr)
+		}
+		if len(customerIDs) > 0 {
+			groupCustomerIDs = intersectStrings(customerIDs, groupCustomerIDs)
+		}
+		if len(groupCustomerIDs) == 0 {
+			return &domain.ListTransactionsResult{Transactions: []*domain.TransactionSummary{}, PageInfo: pagination.PageInfo{}}, nil
+		}
+		customerIDs = groupCustomerIDs
 	}
-	if params.StartDate != nil {
-		f.add("t.funds_received_at >= ?", *params.StartDate)
+	f.in("t.customer_account_id", customerIDs)
+	if params.StartDate != nil || params.EndDate != nil {
+		if params.Status == nil || (*params.Status != "allocated" && *params.Status != "unallocated") {
+			// Both statuses, spelled out so the funds key, which leads with status, can range the dates.
+			f.add("t.is_fully_allocated IN (0, 1)")
+		}
+		if params.StartDate != nil {
+			f.add("t.funds_received_at >= ?", *params.StartDate)
+		}
+		if params.EndDate != nil {
+			f.add("t.funds_received_at <= ?", *params.EndDate)
+		}
 	}
-	if params.EndDate != nil {
-		f.add("t.funds_received_at <= ?", *params.EndDate)
+	indexes, counted := transactionListIndexHint(params, customerIDs)
+	if len(counted) > 0 {
+		var err error
+		if indexes, err = r.transactionCountedHint(ctx, params.AccountID, params.Limit, counted, indexes); err != nil {
+			return nil, tracing.Trace(span, db.MapSQLError(err))
+		}
 	}
-	// Left to itself, the planner reaches for the number key or merges single-column indexes, and reads
-	// every match to sort it; held to the in-order set, it stops at the page.
-	if transactionListInOrder(params) {
-		f.indexes = transactionListIndexes
-	}
+	f.indexes = indexes
 	orderBy := f.page(cur)
 
 	rows, err := r.queryTransactions(ctx, f, orderBy, params.Limit+1)
@@ -378,6 +501,7 @@ func (r *transactionRepoImpl) ListByCustomer(ctx context.Context, params domain.
 	if params.Type != nil {
 		f.add("t.transaction_type_code = ?", *params.Type)
 	}
+	f.indexes = accountTransactionIndexHint(params)
 	orderBy := f.page(cur)
 
 	rows, err := r.queryTransactions(ctx, f, orderBy, params.Limit+1)
@@ -400,6 +524,48 @@ func (r *transactionRepoImpl) ListByCustomer(ctx context.Context, params domain.
 		}
 	}
 	return &domain.ListAccountTransactionsResult{Transactions: result, PageInfo: pageInfo}, nil
+}
+
+// accountTransactionIndexHint is the customer key plus the key of each other filter given; unhinted,
+// the planner sorts every match from the single-column customer key. The created_at key is left out:
+// forced beside another, it is walked from the newest row past a deep page's cursor.
+func accountTransactionIndexHint(params domain.ListAccountTransactionsParams) []string {
+	if db.AllWordsPrefixQuery(params.Query) != "" {
+		return nil
+	}
+	indexes := []string{transactionCustomerIndex}
+	if params.Status != nil && (*params.Status == "allocated" || *params.Status == "unallocated") {
+		indexes = append(indexes, transactionStatusIndex)
+	}
+	if params.Type != nil {
+		indexes = append(indexes, transactionTypeIndex)
+	}
+	return indexes
+}
+
+// customersInGroups is the account's customers in any of groupIDs.
+func (r *transactionRepoImpl) customersInGroups(ctx context.Context, accountID string, groupIDs []string) ([]string, error) {
+	args := append([]any{accountID}, stringArgs(groupIDs)...)
+	rows, err := r.queries.DB().QueryContext(ctx, `
+SELECT counterparty_account_id
+FROM account_relation
+WHERE owner_account_id = ?
+AND account_relation_role_code = 'customer'
+AND account_group_id IN (`+placeholders(len(groupIDs))+`)`, args...)
+	if err != nil {
+		return nil, err
+	}
+	defer func() { _ = rows.Close() }()
+
+	var ids []string
+	for rows.Next() {
+		var id string
+		if err := rows.Scan(&id); err != nil {
+			return nil, err
+		}
+		ids = append(ids, id)
+	}
+	return ids, rows.Err()
 }
 
 // customerWithChildren returns the customer and its direct child customer accounts.

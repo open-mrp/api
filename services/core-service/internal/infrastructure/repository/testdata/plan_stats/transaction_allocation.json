@@ -1,0 +1,125 @@
+{
+ "source": "augno_core/prod, mysql.innodb_table_stats and mysql.innodb_index_stats, last_update 2026-08-26 18:16:05 UTC",
+ "table": {
+  "n_rows": 35147,
+  "clustered_index_size": 483,
+  "sum_of_other_index_sizes": 1323
+ },
+ "indexes": [
+  {
+   "index": "PRIMARY",
+   "stat": "n_diff_pfx01",
+   "value": 35147
+  },
+  {
+   "index": "PRIMARY",
+   "stat": "n_leaf_pages",
+   "value": 441
+  },
+  {
+   "index": "PRIMARY",
+   "stat": "size",
+   "value": 483
+  },
+  {
+   "index": "transaction_allocation_amount_id_key",
+   "stat": "n_diff_pfx01",
+   "value": 33142
+  },
+  {
+   "index": "transaction_allocation_amount_id_key",
+   "stat": "n_leaf_pages",
+   "value": 215
+  },
+  {
+   "index": "transaction_allocation_amount_id_key",
+   "stat": "size",
+   "value": 291
+  },
+  {
+   "index": "transaction_allocation_created_at_idx",
+   "stat": "n_diff_pfx01",
+   "value": 6955
+  },
+  {
+   "index": "transaction_allocation_created_at_idx",
+   "stat": "n_diff_pfx02",
+   "value": 35061
+  },
+  {
+   "index": "transaction_allocation_created_at_idx",
+   "stat": "n_leaf_pages",
+   "value": 168
+  },
+  {
+   "index": "transaction_allocation_created_at_idx",
+   "stat": "size",
+   "value": 225
+  },
+  {
+   "index": "transaction_allocation_invoice_id_idx",
+   "stat": "n_diff_pfx01",
+   "value": 22262
+  },
+  {
+   "index": "transaction_allocation_invoice_id_idx",
+   "stat": "n_diff_pfx02",
+   "value": 39004
+  },
+  {
+   "index": "transaction_allocation_invoice_id_idx",
+   "stat": "n_leaf_pages",
+   "value": 239
+  },
+  {
+   "index": "transaction_allocation_invoice_id_idx",
+   "stat": "size",
+   "value": 291
+  },
+  {
+   "index": "transaction_allocation_settlement_id_idx",
+   "stat": "n_diff_pfx01",
+   "value": 14821
+  },
+  {
+   "index": "transaction_allocation_settlement_id_idx",
+   "stat": "n_diff_pfx02",
+   "value": 37529
+  },
+  {
+   "index": "transaction_allocation_settlement_id_idx",
+   "stat": "n_leaf_pages",
+   "value": 194
+  },
+  {
+   "index": "transaction_allocation_settlement_id_idx",
+   "stat": "size",
+   "value": 225
+  },
+  {
+   "index": "transaction_allocation_transaction_id_created_at_id_idx",
+   "stat": "n_diff_pfx01",
+   "value": 28851
+  },
+  {
+   "index": "transaction_allocation_transaction_id_created_at_id_idx",
+   "stat": "n_diff_pfx02",
+   "value": 25794
+  },
+  {
+   "index": "transaction_allocation_transaction_id_created_at_id_idx",
+   "stat": "n_diff_pfx03",
+   "value": 36686
+  },
+  {
+   "index": "transaction_allocation_transaction_id_created_at_id_idx",
+   "stat": "n_leaf_pages",
+   "value": 236
+  },
+  {
+   "index": "transaction_allocation_transaction_id_created_at_id_idx",
+   "stat": "size",
+   "value": 291
+  }
+ ]
+}

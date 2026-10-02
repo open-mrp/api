@@ -50,6 +50,7 @@ func (r *shipmentLineRepoImpl) List(ctx context.Context, params domain.ListShipm
 		if cur.Direction == pagination.DirectionBackward {
 			rows, err := r.queries.ListShipmentLinesBackward(ctx, sqlc.ListShipmentLinesBackwardParams{
 				ShipmentID:      params.ShipmentID,
+				Search:          optionalShipmentLineSearch(params.Query),
 				CursorCreatedAt: cur.OccurredAt,
 				CursorID:        cur.ID,
 				Limit:           params.Limit + 1,

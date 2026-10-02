@@ -1,0 +1,300 @@
+{
+ "source": "augno_core/prod, mysql.innodb_table_stats and mysql.innodb_index_stats, last_update 2026-09-28 16:19:46 UTC",
+ "table": {
+  "n_rows": 124726,
+  "clustered_index_size": 2665,
+  "sum_of_other_index_sizes": 10996
+ },
+ "indexes": [
+  {
+   "index": "FTS_DOC_ID_INDEX",
+   "stat": "n_diff_pfx01",
+   "value": 126945
+  },
+  {
+   "index": "FTS_DOC_ID_INDEX",
+   "stat": "n_leaf_pages",
+   "value": 383
+  },
+  {
+   "index": "FTS_DOC_ID_INDEX",
+   "stat": "size",
+   "value": 419
+  },
+  {
+   "index": "PRIMARY",
+   "stat": "n_diff_pfx01",
+   "value": 123388
+  },
+  {
+   "index": "PRIMARY",
+   "stat": "n_leaf_pages",
+   "value": 2357
+  },
+  {
+   "index": "PRIMARY",
+   "stat": "size",
+   "value": 2537
+  },
+  {
+   "index": "shipment_account_created_idx",
+   "stat": "n_diff_pfx01",
+   "value": 7
+  },
+  {
+   "index": "shipment_account_created_idx",
+   "stat": "n_diff_pfx02",
+   "value": 25704
+  },
+  {
+   "index": "shipment_account_created_idx",
+   "stat": "n_diff_pfx03",
+   "value": 131717
+  },
+  {
+   "index": "shipment_account_created_idx",
+   "stat": "n_leaf_pages",
+   "value": 950
+  },
+  {
+   "index": "shipment_account_created_idx",
+   "stat": "size",
+   "value": 1129
+  },
+  {
+   "index": "shipment_account_id_number_idx",
+   "stat": "n_diff_pfx01",
+   "value": 7
+  },
+  {
+   "index": "shipment_account_id_number_idx",
+   "stat": "n_diff_pfx02",
+   "value": 118560
+  },
+  {
+   "index": "shipment_account_id_number_idx",
+   "stat": "n_diff_pfx03",
+   "value": 116463
+  },
+  {
+   "index": "shipment_account_id_number_idx",
+   "stat": "n_leaf_pages",
+   "value": 975
+  },
+  {
+   "index": "shipment_account_id_number_idx",
+   "stat": "size",
+   "value": 1129
+  },
+  {
+   "index": "shipment_account_id_shipment_status_code_created_at_id_idx",
+   "stat": "n_diff_pfx01",
+   "value": 7
+  },
+  {
+   "index": "shipment_account_id_shipment_status_code_created_at_id_idx",
+   "stat": "n_diff_pfx02",
+   "value": 15
+  },
+  {
+   "index": "shipment_account_id_shipment_status_code_created_at_id_idx",
+   "stat": "n_diff_pfx03",
+   "value": 28334
+  },
+  {
+   "index": "shipment_account_id_shipment_status_code_created_at_id_idx",
+   "stat": "n_diff_pfx04",
+   "value": 120094
+  },
+  {
+   "index": "shipment_account_id_shipment_status_code_created_at_id_idx",
+   "stat": "n_leaf_pages",
+   "value": 1053
+  },
+  {
+   "index": "shipment_account_id_shipment_status_code_created_at_id_idx",
+   "stat": "size",
+   "value": 1257
+  },
+  {
+   "index": "shipment_carrier_id_idx",
+   "stat": "n_diff_pfx01",
+   "value": 5
+  },
+  {
+   "index": "shipment_carrier_id_idx",
+   "stat": "n_diff_pfx02",
+   "value": 124516
+  },
+  {
+   "index": "shipment_carrier_id_idx",
+   "stat": "n_leaf_pages",
+   "value": 461
+  },
+  {
+   "index": "shipment_carrier_id_idx",
+   "stat": "size",
+   "value": 549
+  },
+  {
+   "index": "shipment_carrier_option_id_idx",
+   "stat": "n_diff_pfx01",
+   "value": 11
+  },
+  {
+   "index": "shipment_carrier_option_id_idx",
+   "stat": "n_diff_pfx02",
+   "value": 127002
+  },
+  {
+   "index": "shipment_carrier_option_id_idx",
+   "stat": "n_leaf_pages",
+   "value": 488
+  },
+  {
+   "index": "shipment_carrier_option_id_idx",
+   "stat": "size",
+   "value": 613
+  },
+  {
+   "index": "shipment_created_at_idx",
+   "stat": "n_diff_pfx01",
+   "value": 26173
+  },
+  {
+   "index": "shipment_created_at_idx",
+   "stat": "n_diff_pfx02",
+   "value": 122377
+  },
+  {
+   "index": "shipment_created_at_idx",
+   "stat": "n_leaf_pages",
+   "value": 551
+  },
+  {
+   "index": "shipment_created_at_idx",
+   "stat": "size",
+   "value": 675
+  },
+  {
+   "index": "shipment_invoice_id_key",
+   "stat": "n_diff_pfx01",
+   "value": 121878
+  },
+  {
+   "index": "shipment_invoice_id_key",
+   "stat": "n_leaf_pages",
+   "value": 915
+  },
+  {
+   "index": "shipment_invoice_id_key",
+   "stat": "size",
+   "value": 1065
+  },
+  {
+   "index": "shipment_sales_order_id_idx",
+   "stat": "n_diff_pfx01",
+   "value": 117172
+  },
+  {
+   "index": "shipment_sales_order_id_idx",
+   "stat": "n_diff_pfx02",
+   "value": 125145
+  },
+  {
+   "index": "shipment_sales_order_id_idx",
+   "stat": "n_leaf_pages",
+   "value": 927
+  },
+  {
+   "index": "shipment_sales_order_id_idx",
+   "stat": "size",
+   "value": 1129
+  },
+  {
+   "index": "shipment_sales_order_shipped_idx",
+   "stat": "n_diff_pfx01",
+   "value": 126957
+  },
+  {
+   "index": "shipment_sales_order_shipped_idx",
+   "stat": "n_diff_pfx02",
+   "value": 134753
+  },
+  {
+   "index": "shipment_sales_order_shipped_idx",
+   "stat": "n_diff_pfx03",
+   "value": 131836
+  },
+  {
+   "index": "shipment_sales_order_shipped_idx",
+   "stat": "n_leaf_pages",
+   "value": 1006
+  },
+  {
+   "index": "shipment_sales_order_shipped_idx",
+   "stat": "size",
+   "value": 1193
+  },
+  {
+   "index": "shipment_shipment_status_code_idx",
+   "stat": "n_diff_pfx01",
+   "value": 1
+  },
+  {
+   "index": "shipment_shipment_status_code_idx",
+   "stat": "n_diff_pfx02",
+   "value": 126136
+  },
+  {
+   "index": "shipment_shipment_status_code_idx",
+   "stat": "n_leaf_pages",
+   "value": 391
+  },
+  {
+   "index": "shipment_shipment_status_code_idx",
+   "stat": "size",
+   "value": 419
+  },
+  {
+   "index": "shipment_shipped_by_id_idx",
+   "stat": "n_diff_pfx01",
+   "value": 6
+  },
+  {
+   "index": "shipment_shipped_by_id_idx",
+   "stat": "n_diff_pfx02",
+   "value": 129140
+  },
+  {
+   "index": "shipment_shipped_by_id_idx",
+   "stat": "n_leaf_pages",
+   "value": 400
+  },
+  {
+   "index": "shipment_shipped_by_id_idx",
+   "stat": "size",
+   "value": 483
+  },
+  {
+   "index": "shipment_shipping_address_id_idx",
+   "stat": "n_diff_pfx01",
+   "value": 8861
+  },
+  {
+   "index": "shipment_shipping_address_id_idx",
+   "stat": "n_diff_pfx02",
+   "value": 131443
+  },
+  {
+   "index": "shipment_shipping_address_id_idx",
+   "stat": "n_leaf_pages",
+   "value": 876
+  },
+  {
+   "index": "shipment_shipping_address_id_idx",
+   "stat": "size",
+   "value": 1064
+  }
+ ]
+}

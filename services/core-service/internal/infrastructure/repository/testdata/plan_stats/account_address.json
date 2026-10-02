@@ -1,0 +1,65 @@
+{
+ "source": "augno_core/prod, mysql.innodb_table_stats and mysql.innodb_index_stats, read 2026-10-01",
+ "table": {
+  "n_rows": 15680,
+  "clustered_index_size": 289,
+  "sum_of_other_index_sizes": 388
+ },
+ "indexes": [
+  {
+   "index": "PRIMARY",
+   "stat": "n_diff_pfx01",
+   "value": 15680
+  },
+  {
+   "index": "PRIMARY",
+   "stat": "n_leaf_pages",
+   "value": 224
+  },
+  {
+   "index": "PRIMARY",
+   "stat": "size",
+   "value": 289
+  },
+  {
+   "index": "account_address_account_id_address_id_key",
+   "stat": "n_diff_pfx01",
+   "value": 3377
+  },
+  {
+   "index": "account_address_account_id_address_id_key",
+   "stat": "n_diff_pfx02",
+   "value": 14918
+  },
+  {
+   "index": "account_address_account_id_address_id_key",
+   "stat": "n_leaf_pages",
+   "value": 175
+  },
+  {
+   "index": "account_address_account_id_address_id_key",
+   "stat": "size",
+   "value": 227
+  },
+  {
+   "index": "account_address_address_id_idx",
+   "stat": "n_diff_pfx01",
+   "value": 16394
+  },
+  {
+   "index": "account_address_address_id_idx",
+   "stat": "n_diff_pfx02",
+   "value": 16476
+  },
+  {
+   "index": "account_address_address_id_idx",
+   "stat": "n_leaf_pages",
+   "value": 136
+  },
+  {
+   "index": "account_address_address_id_idx",
+   "stat": "size",
+   "value": 161
+  }
+ ]
+}

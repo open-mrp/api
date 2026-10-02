@@ -270,9 +270,9 @@ test-ledger: ## Run inventory ledger concurrency tests against the local MySQL (
 	@time go test -tags ledger -v -count=1 -timeout 300s -p 1 -parallel 1 \
 		./services/core-service/internal/infrastructure/repository
 
-test-plans: ## Measure list-query plans against a production-shaped corpus in the local MySQL (requires local-db)
+test-plans: ## Measure list and report query plans against production-shaped corpora in the local MySQL (requires local-db)
 	@echo "Running list plan tests..."
-	@time go test -tags plans -count=1 -timeout 600s -p 1 -run 'ReadsAboutAPage' \
+	@time go test -tags plans -count=1 -timeout 7200s -p 1 \
 		./services/core-service/internal/infrastructure/repository
 
 test-verbose: ## Run tests with verbose output

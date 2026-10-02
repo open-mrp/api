@@ -58,131 +58,118 @@ func (r *deliveryRepoImpl) List(ctx context.Context, params domain.ListDeliverie
 	ctx, span := deliveryRepoTracer.Start(ctx, "repository.delivery.list")
 	defer span.End()
 
-	searchQuery := buildDeliverySearchParams(params.Query)
-
-	status := gosql.NullString{}
+	q := deliveryListQuery{
+		AccountID:   params.AccountID,
+		Search:      buildDeliverySearchParams(params.Query),
+		SupplierIDs: params.SupplierIDs,
+		ItemIDs:     params.ItemIDs,
+		StartDate:   params.StartDate,
+		EndDate:     params.EndDate,
+		Direction:   pagination.DirectionForward,
+		Limit:       params.Limit + 1,
+	}
 	if params.Status != nil && *params.Status != "" && *params.Status != "all" {
-		status = gosql.NullString{String: *params.Status, Valid: true}
-	}
-
-	startDate := gosql.NullTime{}
-	if params.StartDate != nil {
-		startDate = gosql.NullTime{Time: *params.StartDate, Valid: true}
-	}
-
-	endDate := gosql.NullTime{}
-	if params.EndDate != nil {
-		endDate = gosql.NullTime{Time: *params.EndDate, Valid: true}
-	}
-
-	includeItemFilter := len(params.ItemIDs) > 0
-	itemIDs := make([]gosql.NullString, len(params.ItemIDs))
-	for i, id := range params.ItemIDs {
-		itemIDs[i] = gosql.NullString{String: id, Valid: true}
-	}
-	if len(itemIDs) == 0 {
-		itemIDs = []gosql.NullString{{}}
-	}
-
-	includeSupplierFilter := len(params.SupplierIDs) > 0
-	supplierIDs := params.SupplierIDs
-	if len(supplierIDs) == 0 {
-		supplierIDs = []string{""}
+		q.Status = params.Status
 	}
 
 	var cursorDir *pagination.Direction
-
 	if params.Cursor != nil {
 		cur, err := pagination.DecodeStringCursor(*params.Cursor)
 		if err != nil {
 			return nil, apierror.NewValidationErrorWithParam("Invalid pagination cursor.", "cursor")
 		}
 		cursorDir = &cur.Direction
-
-		if cur.Direction == pagination.DirectionBackward {
-			rows, err := r.queries.ListDeliveriesBackward(ctx, sqlc.ListDeliveriesBackwardParams{
-				AccountID:             params.AccountID,
-				SearchQuery:           searchQuery,
-				Status:                status,
-				IncludeItemFilter:     includeItemFilter,
-				ItemIds:               itemIDs,
-				IncludeSupplierFilter: includeSupplierFilter,
-				SupplierIds:           supplierIDs,
-				StartDate:             startDate,
-				EndDate:               endDate,
-				CursorCreatedAt:       cur.OccurredAt,
-				CursorID:              cur.ID,
-				Limit:                 params.Limit + 1,
-			})
-			if apiErr := db.MapSQLError(err); apiErr != nil {
-				return nil, tracing.Trace(span, apiErr)
-			}
-			deliveries := make([]*domain.DeliverySummary, len(rows))
-			for i, row := range rows {
-				deliveries[i] = mapBackwardDeliveryRow(row)
-			}
-			result, pageInfo := pagination.BuildPageString(deliveries, params.Limit, cursorDir, deliveryCreatedAt, deliveryID)
-			if apiErr := r.attachReceivingOrderRefs(ctx, result); apiErr != nil {
-				return nil, tracing.Trace(span, apiErr)
-			}
-			return &domain.ListDeliveriesResult{Deliveries: result, PageInfo: pageInfo}, nil
-		}
-
-		// Forward with cursor
-		rows, err := r.queries.ListDeliveriesForward(ctx, sqlc.ListDeliveriesForwardParams{
-			AccountID:             params.AccountID,
-			SearchQuery:           searchQuery,
-			Status:                status,
-			IncludeItemFilter:     includeItemFilter,
-			ItemIds:               itemIDs,
-			IncludeSupplierFilter: includeSupplierFilter,
-			SupplierIds:           supplierIDs,
-			StartDate:             startDate,
-			EndDate:               endDate,
-			CursorCreatedAt:       gosql.NullTime{Time: cur.OccurredAt, Valid: true},
-			CursorID:              gosql.NullString{String: cur.ID, Valid: true},
-			Limit:                 params.Limit + 1,
-		})
-		if apiErr := db.MapSQLError(err); apiErr != nil {
-			return nil, tracing.Trace(span, apiErr)
-		}
-		deliveries := make([]*domain.DeliverySummary, len(rows))
-		for i, row := range rows {
-			deliveries[i] = mapForwardDeliveryRow(row)
-		}
-		result, pageInfo := pagination.BuildPageString(deliveries, params.Limit, cursorDir, deliveryCreatedAt, deliveryID)
-		if apiErr := r.attachReceivingOrderRefs(ctx, result); apiErr != nil {
-			return nil, tracing.Trace(span, apiErr)
-		}
-		return &domain.ListDeliveriesResult{Deliveries: result, PageInfo: pageInfo}, nil
+		q.Direction = cur.Direction
+		q.CursorAt = gosql.NullTime{Time: cur.OccurredAt, Valid: true}
+		q.CursorID = gosql.NullString{String: cur.ID, Valid: true}
 	}
 
-	// No cursor — first page
-	rows, err := r.queries.ListDeliveriesForward(ctx, sqlc.ListDeliveriesForwardParams{
-		AccountID:             params.AccountID,
-		SearchQuery:           searchQuery,
-		Status:                status,
-		IncludeItemFilter:     includeItemFilter,
-		ItemIds:               itemIDs,
-		IncludeSupplierFilter: includeSupplierFilter,
-		SupplierIds:           supplierIDs,
-		StartDate:             startDate,
-		EndDate:               endDate,
-		Limit:                 params.Limit + 1,
-	})
-	if apiErr := db.MapSQLError(err); apiErr != nil {
+	drive, apiErr := r.chooseDrive(ctx, q)
+	if apiErr != nil {
 		return nil, tracing.Trace(span, apiErr)
 	}
+	q.Drive = drive
 
-	deliveries := make([]*domain.DeliverySummary, len(rows))
-	for i, row := range rows {
-		deliveries[i] = mapForwardDeliveryRow(row)
+	ids, apiErr := r.listIDs(ctx, q)
+	if apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
+	deliveries, apiErr := r.getByIDsInOrder(ctx, params.AccountID, ids)
+	if apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
 	}
 	result, pageInfo := pagination.BuildPageString(deliveries, params.Limit, cursorDir, deliveryCreatedAt, deliveryID)
 	if apiErr := r.attachReceivingOrderRefs(ctx, result); apiErr != nil {
 		return nil, tracing.Trace(span, apiErr)
 	}
 	return &domain.ListDeliveriesResult{Deliveries: result, PageInfo: pageInfo}, nil
+}
+
+// chooseDrive picks the unordered filter with the fewest matches under deliveryMatchCap to drive the
+// read, or walks a list-order key when none has so few. MySQL cannot estimate these sets, so they are
+// counted.
+func (r *deliveryRepoImpl) chooseDrive(ctx context.Context, q deliveryListQuery) (deliveryDrive, *apierror.APIError) {
+	drive, fewest := deliveryDriveListOrder, deliveryMatchCap
+	for _, candidate := range []struct {
+		drive deliveryDrive
+		ids   []string
+	}{{deliveryDriveSuppliers, q.SupplierIDs}, {deliveryDriveItems, q.ItemIDs}} {
+		if len(candidate.ids) == 0 {
+			continue
+		}
+		query, args := buildDeliveryMatchCountQuery(candidate.drive, candidate.ids)
+		var count int
+		if err := r.queries.DB().QueryRowContext(ctx, query, args...).Scan(&count); err != nil {
+			return drive, db.MapSQLError(err)
+		}
+		if count < fewest {
+			drive, fewest = candidate.drive, count
+		}
+	}
+	return drive, nil
+}
+
+func (r *deliveryRepoImpl) listIDs(ctx context.Context, q deliveryListQuery) ([]string, *apierror.APIError) {
+	query, args := buildDeliveryListQuery(q)
+	rows, err := r.queries.DB().QueryContext(ctx, query, args...)
+	if apiErr := db.MapSQLError(err); apiErr != nil {
+		return nil, apiErr
+	}
+	defer func() { _ = rows.Close() }()
+	var ids []string
+	for rows.Next() {
+		var id string
+		if err := rows.Scan(&id); err != nil {
+			return nil, db.MapSQLError(err)
+		}
+		ids = append(ids, id)
+	}
+	if apiErr := db.MapSQLError(rows.Err()); apiErr != nil {
+		return nil, apiErr
+	}
+	return ids, nil
+}
+
+// getByIDsInOrder hydrates ids in the order given. A delivery deleted since its id was read is skipped.
+func (r *deliveryRepoImpl) getByIDsInOrder(ctx context.Context, accountID string, ids []string) ([]*domain.DeliverySummary, *apierror.APIError) {
+	if len(ids) == 0 {
+		return []*domain.DeliverySummary{}, nil
+	}
+	rows, err := r.queries.GetDeliveriesByIDs(ctx, sqlc.GetDeliveriesByIDsParams{Ids: ids, AccountID: accountID})
+	if apiErr := db.MapSQLError(err); apiErr != nil {
+		return nil, apiErr
+	}
+	byID := make(map[string]*domain.DeliverySummary, len(rows))
+	for _, row := range rows {
+		byID[row.ID] = mapDeliveryListRow(row)
+	}
+	ordered := make([]*domain.DeliverySummary, 0, len(ids))
+	for _, id := range ids {
+		if delivery, ok := byID[id]; ok {
+			ordered = append(ordered, delivery)
+		}
+	}
+	return ordered, nil
 }
 
 func (r *deliveryRepoImpl) Get(ctx context.Context, params domain.GetDeliveryParams) (*domain.Delivery, *apierror.APIError) {
@@ -323,31 +310,7 @@ func (r *deliveryRepoImpl) CreateDeliveryLine(ctx context.Context, id, deliveryI
 	return nil
 }
 
-func mapForwardDeliveryRow(row sqlc.ListDeliveriesForwardRow) *domain.DeliverySummary {
-	var acceptedAt *time.Time
-	if row.AcceptedAt.Valid {
-		acceptedAt = &row.AcceptedAt.Time
-	}
-	var rejectedAt *time.Time
-	if row.RejectedAt.Valid {
-		rejectedAt = &row.RejectedAt.Time
-	}
-	return &domain.DeliverySummary{
-		ID:                  row.ID,
-		Number:              row.Number,
-		PurchaseOrderID:     row.PurchaseOrderID,
-		PurchaseOrderNumber: row.PurchaseOrderNumber,
-		PurchaseOrderStatus: row.PurchaseOrderStatus,
-		Status:              row.DeliveryStatusCode,
-		LineCount:           safeconv.Int64ToInt32(row.LineCount),
-		AcceptedAt:          acceptedAt,
-		RejectedAt:          rejectedAt,
-		CreatedAt:           row.CreatedAt,
-		UpdatedAt:           row.UpdatedAt,
-	}
-}
-
-func mapBackwardDeliveryRow(row sqlc.ListDeliveriesBackwardRow) *domain.DeliverySummary {
+func mapDeliveryListRow(row sqlc.GetDeliveriesByIDsRow) *domain.DeliverySummary {
 	var acceptedAt *time.Time
 	if row.AcceptedAt.Valid {
 		acceptedAt = &row.AcceptedAt.Time

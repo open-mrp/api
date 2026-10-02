@@ -3239,6 +3239,11 @@ INSERT INTO `shipment` (`id`, `number`, `sales_order_id`, `carrier_id`, `carrier
   -- SHP-003: ORD-005, shipped
   (@shp3, 'SHP-003', @so6, 'delivery', NULL, @caddr6, 'shipped', '@account_id', @inv2,  NOW() - INTERVAL 2 DAY,     'FEDEX-MTN-002');
 
+-- The shipment list's customer filter reads the shipment's copy of its order's buyer.
+UPDATE `shipment` s JOIN `sales_order` so ON so.id = s.sales_order_id
+SET s.buyer_account_id = so.buyer_account_id
+WHERE s.id IN (@shp1, @shp2, @shp3);
+
 INSERT INTO `shipment_line` (`id`, `shipment_id`, `sales_order_line_id`, `quantity_id`) VALUES
   -- SHP-001 lines (ORD-003 product lines)
   (@shpl1, @shp1, @sol10, @qty243),

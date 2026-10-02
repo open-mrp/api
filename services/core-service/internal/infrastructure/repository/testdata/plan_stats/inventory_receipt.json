@@ -1,0 +1,240 @@
+{
+ "source": "augno_core/prod, mysql.innodb_table_stats and mysql.innodb_index_stats, last_update 2026-10-01 03:07:14 UTC",
+ "table": {
+  "n_rows": 46621,
+  "clustered_index_size": 1188,
+  "sum_of_other_index_sizes": 2532
+ },
+ "indexes": [
+  {
+   "index": "PRIMARY",
+   "stat": "n_diff_pfx01",
+   "value": 46621
+  },
+  {
+   "index": "PRIMARY",
+   "stat": "n_leaf_pages",
+   "value": 993
+  },
+  {
+   "index": "PRIMARY",
+   "stat": "size",
+   "value": 1188
+  },
+  {
+   "index": "inventory_receipt_batch_id_idx",
+   "stat": "n_diff_pfx01",
+   "value": 29688
+  },
+  {
+   "index": "inventory_receipt_batch_id_idx",
+   "stat": "n_diff_pfx02",
+   "value": 43554
+  },
+  {
+   "index": "inventory_receipt_batch_id_idx",
+   "stat": "n_leaf_pages",
+   "value": 183
+  },
+  {
+   "index": "inventory_receipt_batch_id_idx",
+   "stat": "size",
+   "value": 225
+  },
+  {
+   "index": "inventory_receipt_holder_account_id_idx",
+   "stat": "n_diff_pfx01",
+   "value": 4
+  },
+  {
+   "index": "inventory_receipt_holder_account_id_idx",
+   "stat": "n_diff_pfx02",
+   "value": 42481
+  },
+  {
+   "index": "inventory_receipt_holder_account_id_idx",
+   "stat": "n_leaf_pages",
+   "value": 251
+  },
+  {
+   "index": "inventory_receipt_holder_account_id_idx",
+   "stat": "size",
+   "value": 289
+  },
+  {
+   "index": "inventory_receipt_item_id_status_code_idx",
+   "stat": "n_diff_pfx01",
+   "value": 5240
+  },
+  {
+   "index": "inventory_receipt_item_id_status_code_idx",
+   "stat": "n_diff_pfx02",
+   "value": 8520
+  },
+  {
+   "index": "inventory_receipt_item_id_status_code_idx",
+   "stat": "n_diff_pfx03",
+   "value": 46512
+  },
+  {
+   "index": "inventory_receipt_item_id_status_code_idx",
+   "stat": "n_leaf_pages",
+   "value": 321
+  },
+  {
+   "index": "inventory_receipt_item_id_status_code_idx",
+   "stat": "size",
+   "value": 415
+  },
+  {
+   "index": "inventory_receipt_lot_id_idx",
+   "stat": "n_diff_pfx01",
+   "value": 4
+  },
+  {
+   "index": "inventory_receipt_lot_id_idx",
+   "stat": "n_diff_pfx02",
+   "value": 43075
+  },
+  {
+   "index": "inventory_receipt_lot_id_idx",
+   "stat": "n_leaf_pages",
+   "value": 130
+  },
+  {
+   "index": "inventory_receipt_lot_id_idx",
+   "stat": "size",
+   "value": 161
+  },
+  {
+   "index": "inventory_receipt_order_id_idx",
+   "stat": "n_diff_pfx01",
+   "value": 46
+  },
+  {
+   "index": "inventory_receipt_order_id_idx",
+   "stat": "n_diff_pfx02",
+   "value": 43772
+  },
+  {
+   "index": "inventory_receipt_order_id_idx",
+   "stat": "n_leaf_pages",
+   "value": 126
+  },
+  {
+   "index": "inventory_receipt_order_id_idx",
+   "stat": "size",
+   "value": 161
+  },
+  {
+   "index": "inventory_receipt_owner_account_id_idx",
+   "stat": "n_diff_pfx01",
+   "value": 4
+  },
+  {
+   "index": "inventory_receipt_owner_account_id_idx",
+   "stat": "n_diff_pfx02",
+   "value": 44150
+  },
+  {
+   "index": "inventory_receipt_owner_account_id_idx",
+   "stat": "n_leaf_pages",
+   "value": 252
+  },
+  {
+   "index": "inventory_receipt_owner_account_id_idx",
+   "stat": "size",
+   "value": 289
+  },
+  {
+   "index": "inventory_receipt_quantity_id_key",
+   "stat": "n_diff_pfx01",
+   "value": 45524
+  },
+  {
+   "index": "inventory_receipt_quantity_id_key",
+   "stat": "n_leaf_pages",
+   "value": 188
+  },
+  {
+   "index": "inventory_receipt_quantity_id_key",
+   "stat": "size",
+   "value": 225
+  },
+  {
+   "index": "inventory_receipt_received_at_idx",
+   "stat": "n_diff_pfx01",
+   "value": 38393
+  },
+  {
+   "index": "inventory_receipt_received_at_idx",
+   "stat": "n_diff_pfx02",
+   "value": 47420
+  },
+  {
+   "index": "inventory_receipt_received_at_idx",
+   "stat": "n_leaf_pages",
+   "value": 117
+  },
+  {
+   "index": "inventory_receipt_received_at_idx",
+   "stat": "size",
+   "value": 161
+  },
+  {
+   "index": "inventory_receipt_status_code_idx",
+   "stat": "n_diff_pfx01",
+   "value": 1
+  },
+  {
+   "index": "inventory_receipt_status_code_idx",
+   "stat": "n_diff_pfx02",
+   "value": 47623
+  },
+  {
+   "index": "inventory_receipt_status_code_idx",
+   "stat": "n_leaf_pages",
+   "value": 178
+  },
+  {
+   "index": "inventory_receipt_status_code_idx",
+   "stat": "size",
+   "value": 220
+  },
+  {
+   "index": "inventory_receipt_storage_location_id_idx",
+   "stat": "n_diff_pfx01",
+   "value": 8
+  },
+  {
+   "index": "inventory_receipt_storage_location_id_idx",
+   "stat": "n_diff_pfx02",
+   "value": 44112
+  },
+  {
+   "index": "inventory_receipt_storage_location_id_idx",
+   "stat": "n_leaf_pages",
+   "value": 126
+  },
+  {
+   "index": "inventory_receipt_storage_location_id_idx",
+   "stat": "size",
+   "value": 161
+  },
+  {
+   "index": "inventory_receipt_unit_cost_id_key",
+   "stat": "n_diff_pfx01",
+   "value": 48393
+  },
+  {
+   "index": "inventory_receipt_unit_cost_id_key",
+   "stat": "n_leaf_pages",
+   "value": 189
+  },
+  {
+   "index": "inventory_receipt_unit_cost_id_key",
+   "stat": "size",
+   "value": 225
+  }
+ ]
+}

@@ -90,6 +90,22 @@ func rollupScopeFor(f domain.SalesReportFilter, q *salesFactQuery, dimension str
 	return s, true
 }
 
+// from is the FROM item for s's rows. Left alone, a filtered scope reads the dimension's every bucket
+// rather than look up its groups or sales rep; forcing their keys stops that.
+func (s rollupScope) from() string {
+	var keys []string
+	if s.dimensionIDs != nil {
+		keys = append(keys, "sales_fact_rollup_dimension_id_idx")
+	}
+	if len(s.salesRepIDs) > 0 {
+		keys = append(keys, "sales_fact_rollup_sales_rep_idx")
+	}
+	if len(keys) == 0 {
+		return "FROM sales_fact_rollup r"
+	}
+	return "FROM sales_fact_rollup r FORCE INDEX (" + strings.Join(keys, ", ") + ")"
+}
+
 // rollupRange is a run of whole buckets of one grain, bucket_start in [from, to).
 type rollupRange struct {
 	grain    string
@@ -245,7 +261,7 @@ func rollupPeriodRows(q *salesFactQuery, s rollupScope, plan windowPlan, start, 
 	}
 	if clause, a, ok := rollupPredicate(q.accountID, s, plan.rollups); ok {
 		parts = append(parts, fmt.Sprintf(`SELECT %s AS k, '%s' AS per, r.total_invoiced AS inv, r.total_cost AS cost, r.quantity_base AS qty, %s AS ic, r.line_count AS lc
-FROM sales_fact_rollup r WHERE %s`, bucketKey, per, bucketIC, clause))
+%s WHERE %s`, bucketKey, per, bucketIC, s.from(), clause))
 		args = append(args, a...)
 	}
 	group := ""
@@ -254,13 +270,13 @@ FROM sales_fact_rollup r WHERE %s`, bucketKey, per, bucketIC, clause))
 	}
 	if clause, a, ok := rawPredicate(q, plan.raws); ok {
 		parts = append(parts, fmt.Sprintf(`SELECT %s AS k, '%s' AS per, SUM(f.total_invoiced) AS inv, SUM(f.total_cost) AS cost, SUM(f.quantity_base) AS qty, %s AS ic, COUNT(*) AS lc
-FROM sales_line_fact f WHERE %s%s`, keyCol, per, rawIC, clause, group))
+%s WHERE %s%s`, keyCol, per, rawIC, q.from(), clause, group))
 		args = append(args, a...)
 	}
 	if len(s.lineKeys) > 0 && len(parts) > 0 {
 		clause, a := invoiceCountPredicate(q, start, end)
 		parts = append(parts, fmt.Sprintf(`SELECT %s AS k, '%s' AS per, 0 AS inv, 0 AS cost, 0 AS qty, COUNT(DISTINCT f.invoice_id) AS ic, 0 AS lc
-FROM sales_line_fact f WHERE %s%s`, keyCol, per, clause, group))
+%s WHERE %s%s`, keyCol, per, q.from(), clause, group))
 		args = append(args, a...)
 	}
 	return strings.Join(parts, "\nUNION ALL\n"), args
@@ -337,12 +353,12 @@ func rollupPeriodDaily(q *salesFactQuery, s rollupScope, start, end time.Time, t
 	}
 	if clause, a, ok := rollupPredicate(q.accountID, s, plan.rollups); ok {
 		parts = append(parts, `SELECT `+day("r.bucket_start")+` AS day, r.total_invoiced AS inv, r.total_cost AS cost, r.quantity_base AS qty, `+bucketIC+` AS ic, r.line_count AS lc
-FROM sales_fact_rollup r WHERE `+clause)
+`+s.from()+` WHERE `+clause)
 		args = append(append(args, tz), a...)
 	}
 	if clause, a, ok := rawPredicate(q, plan.raws); ok {
 		parts = append(parts, `SELECT `+day("f.invoiced_at")+` AS day, SUM(f.total_invoiced) AS inv, SUM(f.total_cost) AS cost, SUM(f.quantity_base) AS qty, `+rawIC+` AS ic, COUNT(*) AS lc
-FROM sales_line_fact f WHERE `+clause+` GROUP BY day`)
+`+q.from()+` WHERE `+clause+` GROUP BY day`)
 		args = append(append(args, tz), a...)
 	}
 	if len(parts) == 0 {
@@ -352,7 +368,7 @@ FROM sales_line_fact f WHERE `+clause+` GROUP BY day`)
 		// An invoice falls on one local day, so its day's distinct count holds it exactly once.
 		clause, a := invoiceCountPredicate(q, start, end)
 		parts = append(parts, `SELECT `+day("f.invoiced_at")+` AS day, 0 AS inv, 0 AS cost, 0 AS qty, COUNT(DISTINCT f.invoice_id) AS ic, 0 AS lc
-FROM sales_line_fact f WHERE `+clause+` GROUP BY day`)
+`+q.from()+` WHERE `+clause+` GROUP BY day`)
 		args = append(append(args, tz), a...)
 	}
 	return fmt.Sprintf(`SELECT u.day,

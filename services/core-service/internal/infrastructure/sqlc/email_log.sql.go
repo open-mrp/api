@@ -120,7 +120,7 @@ SELECT
     ak.name AS sent_by_api_key_name,
     el.created_at,
     el.updated_at
-FROM email_log el
+FROM email_log el FORCE INDEX (email_log_account_created_idx)
 LEFT JOIN user u ON el.sent_by_id = u.id
 LEFT JOIN api_key ak ON el.sent_by_id = ak.type_id
 WHERE el.account_id = ?
@@ -134,7 +134,7 @@ AND (
     )
 )
 AND (
-    el.created_at > ?
+    el.created_at >?
     OR (el.created_at = ? AND el.id > ?)
 )
 ORDER BY el.created_at ASC, el.id ASC
@@ -165,6 +165,7 @@ type ListEmailLogsBackwardRow struct {
 	UpdatedAt        time.Time
 }
 
+// See ListEmailLogsForward.
 func (q *Queries) ListEmailLogsBackward(ctx context.Context, arg ListEmailLogsBackwardParams) ([]ListEmailLogsBackwardRow, error) {
 	rows, err := q.db.QueryContext(ctx, listEmailLogsBackward,
 		arg.AccountID,
@@ -226,7 +227,7 @@ SELECT
     ak.name AS sent_by_api_key_name,
     el.created_at,
     el.updated_at
-FROM email_log el
+FROM email_log el FORCE INDEX (email_log_account_created_idx)
 LEFT JOIN user u ON el.sent_by_id = u.id
 LEFT JOIN api_key ak ON el.sent_by_id = ak.type_id
 WHERE el.account_id = ?
@@ -272,6 +273,8 @@ type ListEmailLogsForwardRow struct {
 	UpdatedAt        time.Time
 }
 
+// FORCE INDEX walks the account's emails in list order. Left free, the planner ranges the account on
+// email_log_account_id_idx and sorts every email it has, even for the first page.
 func (q *Queries) ListEmailLogsForward(ctx context.Context, arg ListEmailLogsForwardParams) ([]ListEmailLogsForwardRow, error) {
 	rows, err := q.db.QueryContext(ctx, listEmailLogsForward,
 		arg.AccountID,

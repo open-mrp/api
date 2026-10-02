@@ -1,0 +1,100 @@
+{
+ "source": "augno_core/prod, mysql.innodb_table_stats and mysql.innodb_index_stats, last_update 2026-06-08 23:42:18 UTC",
+ "table": {
+  "n_rows": 425235,
+  "clustered_index_size": 6397,
+  "sum_of_other_index_sizes": 13720
+ },
+ "indexes": [
+  {
+   "index": "PRIMARY",
+   "stat": "n_diff_pfx01",
+   "value": 425235
+  },
+  {
+   "index": "PRIMARY",
+   "stat": "n_leaf_pages",
+   "value": 5555
+  },
+  {
+   "index": "PRIMARY",
+   "stat": "size",
+   "value": 6397
+  },
+  {
+   "index": "shipment_line_created_at_idx",
+   "stat": "n_diff_pfx01",
+   "value": 52138
+  },
+  {
+   "index": "shipment_line_created_at_idx",
+   "stat": "n_diff_pfx02",
+   "value": 449929
+  },
+  {
+   "index": "shipment_line_created_at_idx",
+   "stat": "n_leaf_pages",
+   "value": 2172
+  },
+  {
+   "index": "shipment_line_created_at_idx",
+   "stat": "size",
+   "value": 2539
+  },
+  {
+   "index": "shipment_line_quantity_id_key",
+   "stat": "n_diff_pfx01",
+   "value": 463648
+  },
+  {
+   "index": "shipment_line_quantity_id_key",
+   "stat": "n_leaf_pages",
+   "value": 3231
+  },
+  {
+   "index": "shipment_line_quantity_id_key",
+   "stat": "size",
+   "value": 3771
+  },
+  {
+   "index": "shipment_line_sales_order_line_id_idx",
+   "stat": "n_diff_pfx01",
+   "value": 481520
+  },
+  {
+   "index": "shipment_line_sales_order_line_id_idx",
+   "stat": "n_diff_pfx02",
+   "value": 505260
+  },
+  {
+   "index": "shipment_line_sales_order_line_id_idx",
+   "stat": "n_leaf_pages",
+   "value": 3208
+  },
+  {
+   "index": "shipment_line_sales_order_line_id_idx",
+   "stat": "size",
+   "value": 3704
+  },
+  {
+   "index": "shipment_line_shipment_id_idx",
+   "stat": "n_diff_pfx01",
+   "value": 126842
+  },
+  {
+   "index": "shipment_line_shipment_id_idx",
+   "stat": "n_diff_pfx02",
+   "value": 484393
+  },
+  {
+   "index": "shipment_line_shipment_id_idx",
+   "stat": "n_leaf_pages",
+   "value": 3191
+  },
+  {
+   "index": "shipment_line_shipment_id_idx",
+   "stat": "size",
+   "value": 3706
+  }
+ ]
+}

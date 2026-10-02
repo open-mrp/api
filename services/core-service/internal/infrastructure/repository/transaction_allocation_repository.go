@@ -2,16 +2,13 @@ package repository
 
 import (
 	"context"
-	gosql "database/sql"
 	"math/big"
-	"strings"
 	"time"
 
 	"github.com/open-mrp/api/services/core-service/internal/domain"
 	"github.com/open-mrp/api/services/core-service/internal/infrastructure/sqlc"
 	"github.com/open-mrp/api/shared/db"
 	apierror "github.com/open-mrp/api/shared/errors"
-	"github.com/open-mrp/api/shared/pagination"
 	"github.com/open-mrp/api/shared/tracing"
 )
 
@@ -23,181 +20,6 @@ type transactionAllocationRepoImpl struct {
 
 func NewTransactionAllocationRepo(queries *sqlc.Queries) domain.TransactionAllocationRepo {
 	return &transactionAllocationRepoImpl{queries: queries}
-}
-
-func allocationEntryCreatedAt(d *domain.AllocationEntry) time.Time { return d.CreatedAt }
-func allocationEntryID(d *domain.AllocationEntry) string           { return d.ID }
-
-func buildAllocationSearchQuery(query *string) gosql.NullString {
-	if query == nil {
-		return gosql.NullString{}
-	}
-	q := strings.TrimSpace(*query)
-	if q == "" {
-		return gosql.NullString{}
-	}
-	return gosql.NullString{String: q, Valid: true}
-}
-
-// searchLike is the query for a contains match on the customer name, with LIKE wildcards escaped.
-func searchLike(q gosql.NullString) any {
-	if !q.Valid {
-		return nil
-	}
-	return db.EscapeLike(q.String)
-}
-
-func (r *transactionAllocationRepoImpl) ListEntries(ctx context.Context, params domain.ListAllocationEntriesParams) (*domain.ListAllocationEntriesResult, *apierror.APIError) {
-	ctx, span := transactionAllocationRepoTracer.Start(ctx, "repository.transaction_allocation.list_entries")
-	defer span.End()
-
-	searchQuery := buildAllocationSearchQuery(params.Query)
-
-	startDate := gosql.NullTime{}
-	if params.StartDate != nil {
-		startDate = gosql.NullTime{Time: *params.StartDate, Valid: true}
-	}
-	endDate := gosql.NullTime{}
-	if params.EndDate != nil {
-		endDate = gosql.NullTime{Time: *params.EndDate, Valid: true}
-	}
-
-	transactionType := gosql.NullString{}
-	if params.TransactionType != nil {
-		transactionType = gosql.NullString{String: *params.TransactionType, Valid: true}
-	}
-
-	var cursorDir *pagination.Direction
-
-	if params.Cursor != nil {
-		cur, err := pagination.DecodeStringCursor(*params.Cursor)
-		if err != nil {
-			return nil, apierror.NewValidationErrorWithParam("Invalid pagination cursor.", "cursor")
-		}
-		cursorDir = &cur.Direction
-
-		if cur.Direction == pagination.DirectionBackward {
-			rows, err := r.queries.ListAllocationEntriesBackward(ctx, sqlc.ListAllocationEntriesBackwardParams{
-				AccountID:       params.AccountID,
-				SearchQuery:     searchQuery,
-				SearchLike:      searchLike(searchQuery),
-				TransactionType: transactionType,
-				StartDate:       startDate,
-				EndDate:         endDate,
-				CursorCreatedAt: gosql.NullTime{Time: cur.OccurredAt, Valid: true},
-				CursorID:        gosql.NullString{String: cur.ID, Valid: true},
-				Limit:           params.Limit + 1,
-			})
-			if apiErr := db.MapSQLError(err); apiErr != nil {
-				return nil, tracing.Trace(span, apiErr)
-			}
-			entries := make([]*domain.AllocationEntry, len(rows))
-			for i, row := range rows {
-				entries[i] = mapBackwardAllocationEntryRow(row)
-			}
-			result, pageInfo := pagination.BuildPageString(entries, params.Limit, cursorDir, allocationEntryCreatedAt, allocationEntryID)
-			return &domain.ListAllocationEntriesResult{Entries: result, PageInfo: pageInfo}, nil
-		}
-
-		rows, err := r.queries.ListAllocationEntriesForward(ctx, sqlc.ListAllocationEntriesForwardParams{
-			AccountID:       params.AccountID,
-			SearchQuery:     searchQuery,
-			SearchLike:      searchLike(searchQuery),
-			TransactionType: transactionType,
-			StartDate:       startDate,
-			EndDate:         endDate,
-			CursorCreatedAt: gosql.NullTime{Time: cur.OccurredAt, Valid: true},
-			CursorID:        gosql.NullString{String: cur.ID, Valid: true},
-			Limit:           params.Limit + 1,
-		})
-		if apiErr := db.MapSQLError(err); apiErr != nil {
-			return nil, tracing.Trace(span, apiErr)
-		}
-		entries := make([]*domain.AllocationEntry, len(rows))
-		for i, row := range rows {
-			entries[i] = mapForwardAllocationEntryRow(row)
-		}
-		result, pageInfo := pagination.BuildPageString(entries, params.Limit, cursorDir, allocationEntryCreatedAt, allocationEntryID)
-		return &domain.ListAllocationEntriesResult{Entries: result, PageInfo: pageInfo}, nil
-	}
-
-	// No cursor - forward from beginning
-	rows, err := r.queries.ListAllocationEntriesForward(ctx, sqlc.ListAllocationEntriesForwardParams{
-		AccountID:       params.AccountID,
-		SearchQuery:     searchQuery,
-		SearchLike:      searchLike(searchQuery),
-		TransactionType: transactionType,
-		StartDate:       startDate,
-		EndDate:         endDate,
-		CursorCreatedAt: gosql.NullTime{},
-		CursorID:        gosql.NullString{},
-		Limit:           params.Limit + 1,
-	})
-	if apiErr := db.MapSQLError(err); apiErr != nil {
-		return nil, tracing.Trace(span, apiErr)
-	}
-	entries := make([]*domain.AllocationEntry, len(rows))
-	for i, row := range rows {
-		entries[i] = mapForwardAllocationEntryRow(row)
-	}
-	result, pageInfo := pagination.BuildPageString(entries, params.Limit, cursorDir, allocationEntryCreatedAt, allocationEntryID)
-	return &domain.ListAllocationEntriesResult{Entries: result, PageInfo: pageInfo}, nil
-}
-
-func mapForwardAllocationEntryRow(row sqlc.ListAllocationEntriesForwardRow) *domain.AllocationEntry {
-	entry := &domain.AllocationEntry{
-		ID:              row.ID,
-		AmountValue:     decimalToString(row.AmountValue),
-		AmountUnitAbbr:  row.AmountUnitAbbreviation,
-		CustomerID:      row.CustomerID,
-		CustomerName:    row.CustomerName,
-		TransactionID:   row.TransactionID,
-		TransactionType: row.TransactionType,
-		InvoiceID:       row.InvoiceID,
-		InvoiceNumber:   row.InvoiceNumber,
-		CreatedAt:       row.CreatedAt,
-	}
-	if row.CustomerNumber.Valid {
-		entry.CustomerNumber = &row.CustomerNumber.String
-	}
-	if row.Note.Valid {
-		entry.Note = &row.Note.String
-	}
-	if row.TransactionMethod.Valid {
-		entry.TransactionMethod = &row.TransactionMethod.String
-	}
-	if row.AdjustmentType.Valid {
-		entry.AdjustmentType = &row.AdjustmentType.String
-	}
-	return entry
-}
-
-func mapBackwardAllocationEntryRow(row sqlc.ListAllocationEntriesBackwardRow) *domain.AllocationEntry {
-	entry := &domain.AllocationEntry{
-		ID:              row.ID,
-		AmountValue:     decimalToString(row.AmountValue),
-		AmountUnitAbbr:  row.AmountUnitAbbreviation,
-		CustomerID:      row.CustomerID,
-		CustomerName:    row.CustomerName,
-		TransactionID:   row.TransactionID,
-		TransactionType: row.TransactionType,
-		InvoiceID:       row.InvoiceID,
-		InvoiceNumber:   row.InvoiceNumber,
-		CreatedAt:       row.CreatedAt,
-	}
-	if row.CustomerNumber.Valid {
-		entry.CustomerNumber = &row.CustomerNumber.String
-	}
-	if row.Note.Valid {
-		entry.Note = &row.Note.String
-	}
-	if row.TransactionMethod.Valid {
-		entry.TransactionMethod = &row.TransactionMethod.String
-	}
-	if row.AdjustmentType.Valid {
-		entry.AdjustmentType = &row.AdjustmentType.String
-	}
-	return entry
 }
 
 func (r *transactionAllocationRepoImpl) GetByID(ctx context.Context, accountID, allocationID string) (*domain.TransactionAllocation, *apierror.APIError) {

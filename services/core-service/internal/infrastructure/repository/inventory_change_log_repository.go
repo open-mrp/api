@@ -197,11 +197,7 @@ func (r *inventoryChangeLogRepoImpl) List(ctx context.Context, params domain.Lis
 		params.ItemIDs = skuItemIDs
 	}
 
-	page := buildICLListPage(params, dir, cursorCreatedAt, cursorID, params.Limit+1)
-	if apiErr := db.MapSQLError(page.settle(ctx, r.queries.DB())); apiErr != nil {
-		return nil, tracing.Trace(span, apiErr)
-	}
-	query, args := buildICLListQuery(page, dir)
+	query, args := buildICLListQuery(params, dir, cursorCreatedAt, cursorID, params.Limit+1)
 
 	rows, err := r.queries.DB().QueryContext(ctx, query, args...)
 	if apiErr := db.MapSQLError(err); apiErr != nil {

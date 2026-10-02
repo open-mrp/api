@@ -1,3 +1,451 @@
+-- name: ListSalesOrdersForward :many
+-- STRAIGHT_JOIN forces `so` as the driving table. Without it the optimizer drives
+-- from the tiny sales_order_type join and materializes every order for the account
+-- before sorting (filesort) — ~7s for large accounts. With `so` first it uses
+-- sales_order_owner_created_idx (owner_account_id, created_at DESC, id DESC) to read
+-- only the LIMIT rows in order. Do not remove.
+SELECT STRAIGHT_JOIN
+    so.id,
+    so.number,
+    so.customer_po_number,
+    so.note,
+    so.is_acknowledgment_sent,
+    so.billing_address_id,
+    so.shipping_address_id,
+    so.carrier_id,
+    so.carrier_option_id,
+    so.carrier_billing_type,
+    so.carrier_billing_account,
+    so.priority_code,
+    so.sales_rep_id,
+    so.shipping_term_id,
+    so.sales_order_status_code,
+    so.sales_order_type_code,
+    so.payment_term_id,
+    so.production_run_id,
+    so.order_discount_id,
+    so.buyer_account_id,
+    so.seller_account_id,
+    so.owner_account_id,
+    so.issued_at,
+    so.completed_at,
+    so.first_ship_at,
+    so.expired_at,
+    so.promised_at,
+    so.ship_by_date,
+    so.lead_time_days,
+    so.lead_time_source_code,
+    so.transit_days,
+    so.transit_source_code,
+    so.lead_time_override_days,
+    so.ship_by_override_date,
+    so.ship_by_cutoff_at,
+    so.calendar_adjustment_days,
+    so.created_at,
+    so.updated_at,
+    -- Customer
+    ba.name AS customer_name,
+    ar.external_number AS customer_number,
+    ar.account_status_code AS customer_status_code,
+    ar.commission_status_code AS customer_commission_policy,
+    ar.created_at AS customer_created_at,
+    ar.updated_at AS customer_updated_at,
+    -- Status
+    sos.name AS status_name,
+    -- Type
+    sot.name AS type_name,
+    -- Priority
+    pr.name AS priority_name,
+    pr.id AS priority_id,
+    -- Bill-to address
+    bill_addr.name AS bill_to_name,
+    bill_addr.is_drop_ship AS bill_to_is_drop_ship,
+    bill_geo.id AS bill_to_geolocation_id,
+    bill_geo.street_line_1 AS bill_to_street_line_1,
+    bill_geo.street_line_2 AS bill_to_street_line_2,
+    bill_geo.locality AS bill_to_locality,
+    bill_geo.state AS bill_to_state,
+    bill_geo.postal_code AS bill_to_postal_code,
+    bill_geo.country AS bill_to_country,
+    bill_addr.phone AS bill_to_phone,
+    bill_addr.email AS bill_to_email,
+    bill_addr.created_at AS bill_to_created_at,
+    bill_addr.updated_at AS bill_to_updated_at,
+    -- Ship-to address
+    ship_addr.name AS ship_to_name,
+    ship_addr.is_drop_ship AS ship_to_is_drop_ship,
+    ship_geo.id AS ship_to_geolocation_id,
+    ship_geo.street_line_1 AS ship_to_street_line_1,
+    ship_geo.street_line_2 AS ship_to_street_line_2,
+    ship_geo.locality AS ship_to_locality,
+    ship_geo.state AS ship_to_state,
+    ship_geo.postal_code AS ship_to_postal_code,
+    ship_geo.country AS ship_to_country,
+    ship_addr.phone AS ship_to_phone,
+    ship_addr.email AS ship_to_email,
+    ship_addr.created_at AS ship_to_created_at,
+    ship_addr.updated_at AS ship_to_updated_at,
+    -- Carrier
+    cr.name AS carrier_name,
+    cr.is_portal_enabled AS carrier_is_portal_enabled,
+    cr.created_at AS carrier_created_at,
+    cr.updated_at AS carrier_updated_at,
+    co.name AS carrier_option_name,
+    co.is_portal_enabled AS service_level_is_portal_enabled,
+    co.service_level_token AS service_level_token,
+    co.created_at AS service_level_created_at,
+    co.updated_at AS service_level_updated_at,
+    -- Sales rep
+    sr_user.name AS sales_rep_name,
+    -- Payment term
+    pt.name AS payment_term_name,
+    pt.is_active AS payment_term_is_active,
+    pt.created_at AS payment_term_created_at,
+    pt.updated_at AS payment_term_updated_at,
+    -- Shipping term
+    st.name AS shipping_term_name,
+    st.is_freight_exempt AS shipping_term_is_freight_exempt,
+    st.is_carrier_rate AS shipping_term_is_carrier_rate,
+    st.created_at AS shipping_term_created_at,
+    st.updated_at AS shipping_term_updated_at,
+    -- Order discount
+    od.name AS order_discount_name,
+    od.code AS order_discount_code,
+    od.percentage AS order_discount_percentage,
+    od.value AS order_discount_amount,
+    od.discount_type_code AS order_discount_discount_type,
+    od.created_at AS order_discount_created_at,
+    od.updated_at AS order_discount_updated_at,
+    -- Pick
+    pk.id AS pick_id
+-- FORCE INDEX restricts the optimizer to the indexes that satisfy the ORDER BY (created_at, id)
+-- without a filesort: owner_created with no filter, owner_status_created with a status filter,
+-- owner_buyer_created with a customer filter. Excluding the single-column indexes is the point:
+-- with a status filter the optimizer otherwise picks sales_order_status_code and filesorts every
+-- match (~5s for large accounts even with LIMIT 10). Without owner_buyer_created, a customer
+-- filter walks the account's whole created_at index (1.3s on a large account). Do not remove.
+FROM sales_order so FORCE INDEX (sales_order_owner_created_idx, sales_order_owner_status_created_idx, sales_order_owner_buyer_created_idx)
+JOIN account_relation ar ON ar.owner_account_id = so.owner_account_id
+    AND ar.counterparty_account_id = so.buyer_account_id
+JOIN account ba ON ba.id = so.buyer_account_id
+JOIN sales_order_status sos ON sos.code = so.sales_order_status_code
+JOIN sales_order_type sot ON sot.code = so.sales_order_type_code
+JOIN priority pr ON pr.code = so.priority_code
+LEFT JOIN address bill_addr ON bill_addr.id = so.billing_address_id
+LEFT JOIN geolocation bill_geo ON bill_geo.id = bill_addr.geolocation_id
+LEFT JOIN address ship_addr ON ship_addr.id = so.shipping_address_id
+LEFT JOIN geolocation ship_geo ON ship_geo.id = ship_addr.geolocation_id
+LEFT JOIN carrier cr ON cr.id = so.carrier_id
+LEFT JOIN carrier_option co ON co.id = so.carrier_option_id
+LEFT JOIN account_user sr_au ON sr_au.id = so.sales_rep_id
+LEFT JOIN user sr_user ON sr_user.id = sr_au.user_id
+LEFT JOIN payment_term pt ON pt.id = so.payment_term_id
+LEFT JOIN shipping_term st ON st.id = so.shipping_term_id
+LEFT JOIN order_discount od ON od.id = so.order_discount_id
+LEFT JOIN pick pk ON pk.sales_order_id = so.id
+WHERE so.owner_account_id = sqlc.arg('account_id')
+AND so.seller_account_id = so.owner_account_id
+AND (
+    sqlc.narg('buyer_account_id') IS NULL
+    OR so.buyer_account_id = sqlc.narg('buyer_account_id')
+)
+AND (
+    sqlc.arg('include_status_filter') = false
+    OR so.sales_order_status_code IN (sqlc.slice('status_codes'))
+)
+AND (
+    sqlc.arg('include_item_filter') = false
+    OR EXISTS (
+        SELECT 1 FROM sales_order_line sol2
+        WHERE sol2.sales_order_id = so.id
+        AND sol2.item_id IN (sqlc.slice('item_ids'))
+    )
+)
+AND (
+    sqlc.arg('include_product_line_filter') = false
+    OR EXISTS (
+        SELECT 1 FROM sales_order_line sol3
+        JOIN product p ON p.id = sol3.product_id
+        WHERE sol3.sales_order_id = so.id
+        AND p.product_line_id IN (sqlc.slice('product_line_ids'))
+    )
+)
+AND (
+    sqlc.arg('include_customer_filter') = false
+    OR so.buyer_account_id IN (sqlc.slice('customer_ids'))
+)
+AND (
+    sqlc.arg('include_customer_group_filter') = false
+    OR ar.account_group_id IN (sqlc.slice('customer_group_ids'))
+)
+AND (
+    sqlc.arg('include_sales_rep_filter') = false
+    OR so.sales_rep_id IN (sqlc.slice('sales_rep_ids'))
+)
+AND (
+    sqlc.narg('start_date') IS NULL
+    OR so.created_at >= sqlc.narg('start_date')
+)
+AND (
+    sqlc.narg('end_date') IS NULL
+    OR so.created_at <= sqlc.narg('end_date')
+)
+AND (
+    sqlc.narg('ship_by_after') IS NULL
+    OR so.ship_by_date >= sqlc.narg('ship_by_after')
+)
+AND (
+    sqlc.narg('ship_by_before') IS NULL
+    OR so.ship_by_date <= sqlc.narg('ship_by_before')
+)
+-- Past due is a fact about work still owed, so it is scoped to issued orders. A fulfilled order that shipped late is a delivery-performance question, not a backlog one, and leaving it here would make the queue never empty.
+AND (
+    sqlc.narg('past_due') IS NULL
+    OR (
+        sqlc.narg('past_due') = TRUE
+        AND so.ship_by_date IS NOT NULL
+        AND so.ship_by_date < CURDATE()
+        AND so.sales_order_status_code = 'issued'
+    )
+    OR (
+        sqlc.narg('past_due') = FALSE
+        AND NOT (
+            so.ship_by_date IS NOT NULL
+            AND so.ship_by_date < CURDATE()
+            AND so.sales_order_status_code = 'issued'
+        )
+    )
+)
+AND (
+    sqlc.narg('cursor_created_at') IS NULL
+    OR so.created_at < sqlc.narg('cursor_created_at')
+    OR (so.created_at = sqlc.narg('cursor_created_at') AND so.id < sqlc.narg('cursor_id'))
+)
+ORDER BY so.created_at DESC, so.id DESC
+LIMIT ?;
+
+-- name: ListSalesOrdersBackward :many
+-- STRAIGHT_JOIN forces `so` as the driving table; see ListSalesOrdersForward for why.
+-- Do not remove.
+SELECT STRAIGHT_JOIN
+    so.id,
+    so.number,
+    so.customer_po_number,
+    so.note,
+    so.is_acknowledgment_sent,
+    so.billing_address_id,
+    so.shipping_address_id,
+    so.carrier_id,
+    so.carrier_option_id,
+    so.carrier_billing_type,
+    so.carrier_billing_account,
+    so.priority_code,
+    so.sales_rep_id,
+    so.shipping_term_id,
+    so.sales_order_status_code,
+    so.sales_order_type_code,
+    so.payment_term_id,
+    so.production_run_id,
+    so.order_discount_id,
+    so.buyer_account_id,
+    so.seller_account_id,
+    so.owner_account_id,
+    so.issued_at,
+    so.completed_at,
+    so.first_ship_at,
+    so.expired_at,
+    so.promised_at,
+    so.ship_by_date,
+    so.lead_time_days,
+    so.lead_time_source_code,
+    so.transit_days,
+    so.transit_source_code,
+    so.lead_time_override_days,
+    so.ship_by_override_date,
+    so.ship_by_cutoff_at,
+    so.calendar_adjustment_days,
+    so.created_at,
+    so.updated_at,
+    -- Customer
+    ba.name AS customer_name,
+    ar.external_number AS customer_number,
+    ar.account_status_code AS customer_status_code,
+    ar.commission_status_code AS customer_commission_policy,
+    ar.created_at AS customer_created_at,
+    ar.updated_at AS customer_updated_at,
+    -- Status
+    sos.name AS status_name,
+    -- Type
+    sot.name AS type_name,
+    -- Priority
+    pr.name AS priority_name,
+    pr.id AS priority_id,
+    -- Bill-to address
+    bill_addr.name AS bill_to_name,
+    bill_addr.is_drop_ship AS bill_to_is_drop_ship,
+    bill_geo.id AS bill_to_geolocation_id,
+    bill_geo.street_line_1 AS bill_to_street_line_1,
+    bill_geo.street_line_2 AS bill_to_street_line_2,
+    bill_geo.locality AS bill_to_locality,
+    bill_geo.state AS bill_to_state,
+    bill_geo.postal_code AS bill_to_postal_code,
+    bill_geo.country AS bill_to_country,
+    bill_addr.phone AS bill_to_phone,
+    bill_addr.email AS bill_to_email,
+    bill_addr.created_at AS bill_to_created_at,
+    bill_addr.updated_at AS bill_to_updated_at,
+    -- Ship-to address
+    ship_addr.name AS ship_to_name,
+    ship_addr.is_drop_ship AS ship_to_is_drop_ship,
+    ship_geo.id AS ship_to_geolocation_id,
+    ship_geo.street_line_1 AS ship_to_street_line_1,
+    ship_geo.street_line_2 AS ship_to_street_line_2,
+    ship_geo.locality AS ship_to_locality,
+    ship_geo.state AS ship_to_state,
+    ship_geo.postal_code AS ship_to_postal_code,
+    ship_geo.country AS ship_to_country,
+    ship_addr.phone AS ship_to_phone,
+    ship_addr.email AS ship_to_email,
+    ship_addr.created_at AS ship_to_created_at,
+    ship_addr.updated_at AS ship_to_updated_at,
+    -- Carrier
+    cr.name AS carrier_name,
+    cr.is_portal_enabled AS carrier_is_portal_enabled,
+    cr.created_at AS carrier_created_at,
+    cr.updated_at AS carrier_updated_at,
+    co.name AS carrier_option_name,
+    co.is_portal_enabled AS service_level_is_portal_enabled,
+    co.service_level_token AS service_level_token,
+    co.created_at AS service_level_created_at,
+    co.updated_at AS service_level_updated_at,
+    -- Sales rep
+    sr_user.name AS sales_rep_name,
+    -- Payment term
+    pt.name AS payment_term_name,
+    pt.is_active AS payment_term_is_active,
+    pt.created_at AS payment_term_created_at,
+    pt.updated_at AS payment_term_updated_at,
+    -- Shipping term
+    st.name AS shipping_term_name,
+    st.is_freight_exempt AS shipping_term_is_freight_exempt,
+    st.is_carrier_rate AS shipping_term_is_carrier_rate,
+    st.created_at AS shipping_term_created_at,
+    st.updated_at AS shipping_term_updated_at,
+    -- Order discount
+    od.name AS order_discount_name,
+    od.code AS order_discount_code,
+    od.percentage AS order_discount_percentage,
+    od.value AS order_discount_amount,
+    od.discount_type_code AS order_discount_discount_type,
+    od.created_at AS order_discount_created_at,
+    od.updated_at AS order_discount_updated_at,
+    -- Pick
+    pk.id AS pick_id
+-- FORCE INDEX restricts the optimizer to the indexes that satisfy the ORDER BY (created_at, id)
+-- without a filesort: owner_created with no filter, owner_status_created with a status filter,
+-- owner_buyer_created with a customer filter. Excluding the single-column indexes is the point:
+-- with a status filter the optimizer otherwise picks sales_order_status_code and filesorts every
+-- match (~5s for large accounts even with LIMIT 10). Without owner_buyer_created, a customer
+-- filter walks the account's whole created_at index (1.3s on a large account). Do not remove.
+FROM sales_order so FORCE INDEX (sales_order_owner_created_idx, sales_order_owner_status_created_idx, sales_order_owner_buyer_created_idx)
+JOIN account_relation ar ON ar.owner_account_id = so.owner_account_id
+    AND ar.counterparty_account_id = so.buyer_account_id
+JOIN account ba ON ba.id = so.buyer_account_id
+JOIN sales_order_status sos ON sos.code = so.sales_order_status_code
+JOIN sales_order_type sot ON sot.code = so.sales_order_type_code
+JOIN priority pr ON pr.code = so.priority_code
+LEFT JOIN address bill_addr ON bill_addr.id = so.billing_address_id
+LEFT JOIN geolocation bill_geo ON bill_geo.id = bill_addr.geolocation_id
+LEFT JOIN address ship_addr ON ship_addr.id = so.shipping_address_id
+LEFT JOIN geolocation ship_geo ON ship_geo.id = ship_addr.geolocation_id
+LEFT JOIN carrier cr ON cr.id = so.carrier_id
+LEFT JOIN carrier_option co ON co.id = so.carrier_option_id
+LEFT JOIN account_user sr_au ON sr_au.id = so.sales_rep_id
+LEFT JOIN user sr_user ON sr_user.id = sr_au.user_id
+LEFT JOIN payment_term pt ON pt.id = so.payment_term_id
+LEFT JOIN shipping_term st ON st.id = so.shipping_term_id
+LEFT JOIN order_discount od ON od.id = so.order_discount_id
+LEFT JOIN pick pk ON pk.sales_order_id = so.id
+WHERE so.owner_account_id = sqlc.arg('account_id')
+AND so.seller_account_id = so.owner_account_id
+AND (
+    sqlc.narg('buyer_account_id') IS NULL
+    OR so.buyer_account_id = sqlc.narg('buyer_account_id')
+)
+AND (
+    sqlc.arg('include_status_filter') = false
+    OR so.sales_order_status_code IN (sqlc.slice('status_codes'))
+)
+AND (
+    sqlc.arg('include_item_filter') = false
+    OR EXISTS (
+        SELECT 1 FROM sales_order_line sol2
+        WHERE sol2.sales_order_id = so.id
+        AND sol2.item_id IN (sqlc.slice('item_ids'))
+    )
+)
+AND (
+    sqlc.arg('include_product_line_filter') = false
+    OR EXISTS (
+        SELECT 1 FROM sales_order_line sol3
+        JOIN product p ON p.id = sol3.product_id
+        WHERE sol3.sales_order_id = so.id
+        AND p.product_line_id IN (sqlc.slice('product_line_ids'))
+    )
+)
+AND (
+    sqlc.arg('include_customer_filter') = false
+    OR so.buyer_account_id IN (sqlc.slice('customer_ids'))
+)
+AND (
+    sqlc.arg('include_customer_group_filter') = false
+    OR ar.account_group_id IN (sqlc.slice('customer_group_ids'))
+)
+AND (
+    sqlc.arg('include_sales_rep_filter') = false
+    OR so.sales_rep_id IN (sqlc.slice('sales_rep_ids'))
+)
+AND (
+    sqlc.narg('start_date') IS NULL
+    OR so.created_at >= sqlc.narg('start_date')
+)
+AND (
+    sqlc.narg('end_date') IS NULL
+    OR so.created_at <= sqlc.narg('end_date')
+)
+AND (
+    sqlc.narg('ship_by_after') IS NULL
+    OR so.ship_by_date >= sqlc.narg('ship_by_after')
+)
+AND (
+    sqlc.narg('ship_by_before') IS NULL
+    OR so.ship_by_date <= sqlc.narg('ship_by_before')
+)
+-- Past due is a fact about work still owed, so it is scoped to issued orders. A fulfilled order that shipped late is a delivery-performance question, not a backlog one, and leaving it here would make the queue never empty.
+AND (
+    sqlc.narg('past_due') IS NULL
+    OR (
+        sqlc.narg('past_due') = TRUE
+        AND so.ship_by_date IS NOT NULL
+        AND so.ship_by_date < CURDATE()
+        AND so.sales_order_status_code = 'issued'
+    )
+    OR (
+        sqlc.narg('past_due') = FALSE
+        AND NOT (
+            so.ship_by_date IS NOT NULL
+            AND so.ship_by_date < CURDATE()
+            AND so.sales_order_status_code = 'issued'
+        )
+    )
+)
+AND (
+    so.created_at > sqlc.arg('cursor_created_at')
+    OR (so.created_at = sqlc.arg('cursor_created_at') AND so.id > sqlc.arg('cursor_id'))
+)
+ORDER BY so.created_at ASC, so.id ASC
+LIMIT ?;
+
 -- name: GetSalesOrder :one
 SELECT
     so.id,

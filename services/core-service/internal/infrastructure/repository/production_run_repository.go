@@ -173,12 +173,180 @@ func (r *productionRunRepoImpl) attachExportBatches(ctx context.Context, account
 	return nil
 }
 
+func (r *productionRunRepoImpl) List(ctx context.Context, params domain.ListProductionRunsParams) (*domain.ListProductionRunsResult, *apierror.APIError) {
+	ctx, span := productionRunRepoTracer.Start(ctx, "repository.production_run.list")
+	defer span.End()
+
+	searchQuery, batchIDQuery := buildProductionRunSearchParams(params.Query)
+	startDate := parseDateString(params.StartDate)
+	endDate := parseDateString(params.EndDate)
+
+	includeStatusFilter, statusOpen, statusClosed,
+		includeItemFilter, itemIDs,
+		includeMachineFilter, machineIDs := buildProductionRunListFilters(params)
+
+	var cursorDir *pagination.Direction
+
+	if params.Cursor != nil {
+		cur, err := pagination.DecodeStringCursor(*params.Cursor)
+		if err != nil {
+			return nil, apierror.NewValidationErrorWithParam("Invalid pagination cursor.", "cursor")
+		}
+		cursorDir = &cur.Direction
+
+		if cur.Direction == pagination.DirectionBackward {
+			rows, err := r.queries.ListProductionRunsBackward(ctx, sqlc.ListProductionRunsBackwardParams{
+				AccountID:            params.AccountID,
+				SearchQuery:          searchQuery,
+				BatchIDQuery:         batchIDQuery,
+				IncludeStatusFilter:  includeStatusFilter,
+				StatusOpen:           statusOpen,
+				StatusClosed:         statusClosed,
+				IncludeItemFilter:    includeItemFilter,
+				ItemIds:              itemIDs,
+				IncludeMachineFilter: includeMachineFilter,
+				MachineIds:           machineIDs,
+				StartDate:            startDate,
+				EndDate:              endDate,
+				CursorCreatedAt:      gosql.NullTime{Time: cur.OccurredAt, Valid: true},
+				CursorID:             gosql.NullString{String: cur.ID, Valid: true},
+				Limit:                params.Limit + 1,
+			})
+			if apiErr := db.MapSQLError(err); apiErr != nil {
+				return nil, tracing.Trace(span, apiErr)
+			}
+			runs := make([]*domain.ProductionRunSummary, len(rows))
+			for i, row := range rows {
+				runs[i] = mapBackwardProductionRunRow(row)
+			}
+			result, pageInfo := pagination.BuildPageString(runs, params.Limit, cursorDir, productionRunSummaryCreatedAt, productionRunSummaryID)
+			return r.listResultWithSummaries(ctx, span, params.AccountID, result, pageInfo)
+		}
+
+		// Forward with cursor
+		rows, err := r.queries.ListProductionRunsForward(ctx, sqlc.ListProductionRunsForwardParams{
+			AccountID:            params.AccountID,
+			SearchQuery:          searchQuery,
+			BatchIDQuery:         batchIDQuery,
+			IncludeStatusFilter:  includeStatusFilter,
+			StatusOpen:           statusOpen,
+			StatusClosed:         statusClosed,
+			IncludeItemFilter:    includeItemFilter,
+			ItemIds:              itemIDs,
+			IncludeMachineFilter: includeMachineFilter,
+			MachineIds:           machineIDs,
+			StartDate:            startDate,
+			EndDate:              endDate,
+			CursorCreatedAt:      gosql.NullTime{Time: cur.OccurredAt, Valid: true},
+			CursorID:             gosql.NullString{String: cur.ID, Valid: true},
+			Limit:                params.Limit + 1,
+		})
+		if apiErr := db.MapSQLError(err); apiErr != nil {
+			return nil, tracing.Trace(span, apiErr)
+		}
+		runs := make([]*domain.ProductionRunSummary, len(rows))
+		for i, row := range rows {
+			runs[i] = mapForwardProductionRunRow(row)
+		}
+		result, pageInfo := pagination.BuildPageString(runs, params.Limit, cursorDir, productionRunSummaryCreatedAt, productionRunSummaryID)
+		return r.listResultWithSummaries(ctx, span, params.AccountID, result, pageInfo)
+	}
+
+	// No cursor — first page
+	rows, err := r.queries.ListProductionRunsForward(ctx, sqlc.ListProductionRunsForwardParams{
+		AccountID:            params.AccountID,
+		SearchQuery:          searchQuery,
+		BatchIDQuery:         batchIDQuery,
+		IncludeStatusFilter:  includeStatusFilter,
+		StatusOpen:           statusOpen,
+		StatusClosed:         statusClosed,
+		IncludeItemFilter:    includeItemFilter,
+		ItemIds:              itemIDs,
+		IncludeMachineFilter: includeMachineFilter,
+		MachineIds:           machineIDs,
+		StartDate:            startDate,
+		EndDate:              endDate,
+		CursorCreatedAt:      gosql.NullTime{},
+		CursorID:             gosql.NullString{},
+		Limit:                params.Limit + 1,
+	})
+	if apiErr := db.MapSQLError(err); apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
+	runs := make([]*domain.ProductionRunSummary, len(rows))
+	for i, row := range rows {
+		runs[i] = mapForwardProductionRunRow(row)
+	}
+	result, pageInfo := pagination.BuildPageString(runs, params.Limit, cursorDir, productionRunSummaryCreatedAt, productionRunSummaryID)
+	return r.listResultWithSummaries(ctx, span, params.AccountID, result, pageInfo)
+}
+
 // resolvedResponsibleUserID prefers the account_user id resolved by the query; legacy rows store a user id in responsible_user_id and may have no account_user match, in which case the raw value is kept.
 func resolvedResponsibleUserID(accountUserID gosql.NullString, raw string) string {
 	if accountUserID.Valid {
 		return accountUserID.String
 	}
 	return raw
+}
+
+func mapForwardProductionRunRow(row sqlc.ListProductionRunsForwardRow) *domain.ProductionRunSummary {
+	s := &domain.ProductionRunSummary{
+		ID:                row.ID,
+		Number:            row.Number,
+		ResponsibleUserID: resolvedResponsibleUserID(row.ResponsibleAccountUserID, row.ResponsibleUserID),
+		BatchCount:        safeconv.Int64ToInt32(row.BatchCount),
+		CreatedAt:         row.CreatedAt,
+		UpdatedAt:         row.UpdatedAt,
+	}
+	if row.ResponsibleUserName != "" {
+		s.ResponsibleUserName = &row.ResponsibleUserName
+	}
+	if row.ResponsibleUserStatusCode.Valid {
+		s.ResponsibleUserStatusCode = &row.ResponsibleUserStatusCode.String
+	}
+	if row.ResponsibleUserCreatedAt.Valid {
+		s.ResponsibleUserCreatedAt = &row.ResponsibleUserCreatedAt.Time
+	}
+	if row.ResponsibleUserUpdatedAt.Valid {
+		s.ResponsibleUserUpdatedAt = &row.ResponsibleUserUpdatedAt.Time
+	}
+	if row.StartedAt.Valid {
+		s.StartedAt = &row.StartedAt.Time
+	}
+	if row.CompletedAt.Valid {
+		s.CompletedAt = &row.CompletedAt.Time
+	}
+	return s
+}
+
+func mapBackwardProductionRunRow(row sqlc.ListProductionRunsBackwardRow) *domain.ProductionRunSummary {
+	s := &domain.ProductionRunSummary{
+		ID:                row.ID,
+		Number:            row.Number,
+		ResponsibleUserID: resolvedResponsibleUserID(row.ResponsibleAccountUserID, row.ResponsibleUserID),
+		BatchCount:        safeconv.Int64ToInt32(row.BatchCount),
+		CreatedAt:         row.CreatedAt,
+		UpdatedAt:         row.UpdatedAt,
+	}
+	if row.ResponsibleUserName != "" {
+		s.ResponsibleUserName = &row.ResponsibleUserName
+	}
+	if row.ResponsibleUserStatusCode.Valid {
+		s.ResponsibleUserStatusCode = &row.ResponsibleUserStatusCode.String
+	}
+	if row.ResponsibleUserCreatedAt.Valid {
+		s.ResponsibleUserCreatedAt = &row.ResponsibleUserCreatedAt.Time
+	}
+	if row.ResponsibleUserUpdatedAt.Valid {
+		s.ResponsibleUserUpdatedAt = &row.ResponsibleUserUpdatedAt.Time
+	}
+	if row.StartedAt.Valid {
+		s.StartedAt = &row.StartedAt.Time
+	}
+	if row.CompletedAt.Valid {
+		s.CompletedAt = &row.CompletedAt.Time
+	}
+	return s
 }
 
 func (r *productionRunRepoImpl) Get(ctx context.Context, params domain.GetProductionRunParams) (*domain.ProductionRun, *apierror.APIError) {

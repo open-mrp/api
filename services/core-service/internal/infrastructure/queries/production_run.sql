@@ -1,3 +1,149 @@
+-- name: ListProductionRunsForward :many
+SELECT
+    pr.id,
+    pr.number,
+    pr.responsible_user_id,
+    au.id AS responsible_account_user_id,
+    COALESCE(u.name, au.id, '') AS responsible_user_name,
+    au.status_code AS responsible_user_status_code,
+    au.created_at AS responsible_user_created_at,
+    au.updated_at AS responsible_user_updated_at,
+    pr.started_at,
+    pr.completed_at,
+    pr.created_at,
+    pr.updated_at,
+    COUNT(DISTINCT b.id) AS batch_count
+FROM production_run pr
+-- responsible_user_id may store either an account_user id or a legacy user
+-- id; match both, scoped to the run's account.
+LEFT JOIN account_user au ON au.account_id = pr.account_id AND (au.id = pr.responsible_user_id OR au.user_id = pr.responsible_user_id)
+LEFT JOIN user u ON u.id = au.user_id
+LEFT JOIN batch b ON b.production_run_id = pr.id AND b.account_id = pr.account_id
+WHERE pr.account_id = sqlc.arg('account_id')
+AND (
+    sqlc.narg('search_query') IS NULL
+    OR pr.number LIKE sqlc.narg('search_query')
+    OR EXISTS (
+        SELECT 1 FROM batch bq
+        WHERE bq.production_run_id = pr.id
+        AND bq.account_id = pr.account_id
+        AND bq.id LIKE sqlc.narg('batch_id_query')
+    )
+)
+AND (
+    sqlc.arg('include_status_filter') = false
+    OR (sqlc.arg('status_open') = true AND pr.completed_at IS NULL)
+    OR (sqlc.arg('status_closed') = true AND pr.completed_at IS NOT NULL)
+)
+AND (
+    sqlc.arg('include_item_filter') = false
+    OR EXISTS (
+        SELECT 1 FROM batch b2
+        WHERE b2.production_run_id = pr.id
+        AND b2.account_id = pr.account_id
+        AND b2.item_id IN (sqlc.slice('item_ids'))
+    )
+)
+AND (
+    sqlc.arg('include_machine_filter') = false
+    OR EXISTS (
+        SELECT 1 FROM batch b3
+        JOIN _batches_machines bm ON bm.A = b3.id
+        WHERE b3.production_run_id = pr.id
+        AND b3.account_id = pr.account_id
+        AND bm.B IN (sqlc.slice('machine_ids'))
+    )
+)
+AND (
+    sqlc.narg('start_date') IS NULL
+    OR pr.created_at >= sqlc.narg('start_date')
+)
+AND (
+    sqlc.narg('end_date') IS NULL
+    OR pr.created_at <= sqlc.narg('end_date')
+)
+AND (
+    sqlc.narg('cursor_created_at') IS NULL
+    OR pr.created_at < sqlc.narg('cursor_created_at')
+    OR (pr.created_at = sqlc.narg('cursor_created_at') AND pr.id < sqlc.narg('cursor_id'))
+)
+GROUP BY pr.id, au.id
+ORDER BY pr.created_at DESC, pr.id DESC
+LIMIT ?;
+
+-- name: ListProductionRunsBackward :many
+SELECT
+    pr.id,
+    pr.number,
+    pr.responsible_user_id,
+    au.id AS responsible_account_user_id,
+    COALESCE(u.name, au.id, '') AS responsible_user_name,
+    au.status_code AS responsible_user_status_code,
+    au.created_at AS responsible_user_created_at,
+    au.updated_at AS responsible_user_updated_at,
+    pr.started_at,
+    pr.completed_at,
+    pr.created_at,
+    pr.updated_at,
+    COUNT(DISTINCT b.id) AS batch_count
+FROM production_run pr
+-- responsible_user_id may store either an account_user id or a legacy user
+-- id; match both, scoped to the run's account.
+LEFT JOIN account_user au ON au.account_id = pr.account_id AND (au.id = pr.responsible_user_id OR au.user_id = pr.responsible_user_id)
+LEFT JOIN user u ON u.id = au.user_id
+LEFT JOIN batch b ON b.production_run_id = pr.id AND b.account_id = pr.account_id
+WHERE pr.account_id = sqlc.arg('account_id')
+AND (
+    sqlc.narg('search_query') IS NULL
+    OR pr.number LIKE sqlc.narg('search_query')
+    OR EXISTS (
+        SELECT 1 FROM batch bq
+        WHERE bq.production_run_id = pr.id
+        AND bq.account_id = pr.account_id
+        AND bq.id LIKE sqlc.narg('batch_id_query')
+    )
+)
+AND (
+    sqlc.arg('include_status_filter') = false
+    OR (sqlc.arg('status_open') = true AND pr.completed_at IS NULL)
+    OR (sqlc.arg('status_closed') = true AND pr.completed_at IS NOT NULL)
+)
+AND (
+    sqlc.arg('include_item_filter') = false
+    OR EXISTS (
+        SELECT 1 FROM batch b2
+        WHERE b2.production_run_id = pr.id
+        AND b2.account_id = pr.account_id
+        AND b2.item_id IN (sqlc.slice('item_ids'))
+    )
+)
+AND (
+    sqlc.arg('include_machine_filter') = false
+    OR EXISTS (
+        SELECT 1 FROM batch b3
+        JOIN _batches_machines bm ON bm.A = b3.id
+        WHERE b3.production_run_id = pr.id
+        AND b3.account_id = pr.account_id
+        AND bm.B IN (sqlc.slice('machine_ids'))
+    )
+)
+AND (
+    sqlc.narg('start_date') IS NULL
+    OR pr.created_at >= sqlc.narg('start_date')
+)
+AND (
+    sqlc.narg('end_date') IS NULL
+    OR pr.created_at <= sqlc.narg('end_date')
+)
+AND (
+    sqlc.narg('cursor_created_at') IS NULL
+    OR pr.created_at > sqlc.narg('cursor_created_at')
+    OR (pr.created_at = sqlc.narg('cursor_created_at') AND pr.id > sqlc.narg('cursor_id'))
+)
+GROUP BY pr.id, au.id
+ORDER BY pr.created_at ASC, pr.id ASC
+LIMIT ?;
+
 -- name: GetProductionRun :one
 SELECT
     pr.id,
@@ -113,9 +259,6 @@ WHERE id = sqlc.arg('id') AND account_id = sqlc.arg('account_id');
 
 -- name: ListBatchesByIDs :many
 -- The bulk form of GetBatch; same columns, so rows convert to GetBatchRow.
--- A search hydrates a run's whole flow, thousands of ids, and past a few hundred the planner scans the
--- table instead; FORCE INDEX keeps each id a primary-key lookup. The flow walk's other by-id reads
--- below are pinned to their keys for the same reason.
 SELECT
     b.id,
     b.account_id,
@@ -150,7 +293,7 @@ SELECT
     ps.name AS production_step_name,
     pr.id AS production_run_id_2,
     pr.number AS production_run_number
-FROM batch b FORCE INDEX (PRIMARY)
+FROM batch b
 JOIN item i ON b.item_id = i.id
 JOIN quantity q ON b.quantity_id = q.id
 JOIN unit qu ON q.unit_id = qu.id
@@ -171,20 +314,20 @@ SELECT
     m.id,
     m.name,
     m.serial_number
-FROM _batches_machines bm FORCE INDEX (_batches_machines_AB_unique)
+FROM _batches_machines bm
 JOIN machine m ON bm.B = m.id
 WHERE bm.A IN (sqlc.slice('batch_ids'));
 
 -- name: ListLotsForBatches :many
 -- The lot numbers each batch consumed, directly or through allocated receipts.
 SELECT DISTINCT ii.batch_id, l.lot_number, 'material' AS lot_type
-FROM inventory_issue ii FORCE INDEX (inventory_issue_batch_id_idx)
+FROM inventory_issue ii
 JOIN lot l ON ii.lot_id = l.id
 WHERE ii.batch_id IN (sqlc.slice('issued_batch_ids'))
 AND l.lot_number IS NOT NULL
 UNION
 SELECT DISTINCT ii.batch_id, l.lot_number, 'material' AS lot_type
-FROM inventory_issue ii FORCE INDEX (inventory_issue_batch_id_idx)
+FROM inventory_issue ii
 JOIN inventory_allocation ia ON ia.inventory_issue_id = ii.id
 JOIN inventory_receipt ir ON ia.inventory_receipt_id = ir.id
 JOIN lot l ON ir.lot_id = l.id
@@ -194,11 +337,11 @@ AND l.lot_number IS NOT NULL;
 -- name: ListBatchFlowEdgesForBatches :many
 -- Every _batch_flow edge touching the given batches. A is downstream, B upstream.
 SELECT bf.A AS downstream_id, bf.B AS upstream_id
-FROM _batch_flow bf FORCE INDEX (_batch_flow_AB_unique)
+FROM _batch_flow bf
 WHERE bf.A IN (sqlc.slice('downstream_ids'))
 UNION
 SELECT bf2.A AS downstream_id, bf2.B AS upstream_id
-FROM _batch_flow bf2 FORCE INDEX (_batch_flow_B_index)
+FROM _batch_flow bf2
 WHERE bf2.B IN (sqlc.slice('upstream_ids'));
 
 -- name: ListProductionRunBatchSummaries :many
@@ -230,7 +373,7 @@ AND b.account_id = sqlc.arg('account_id');
 -- name: ListBatchTraversalByIDs :many
 -- Closed state and age of the given batches. A batch outside the account is simply absent.
 SELECT b.id, b.closed_at, b.created_at
-FROM batch b FORCE INDEX (PRIMARY)
+FROM batch b
 WHERE b.id IN (sqlc.slice('ids'))
 AND b.account_id = sqlc.arg('account_id');
 

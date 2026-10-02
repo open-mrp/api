@@ -328,11 +328,11 @@ func (q *Queries) IsProductionRunCompleted(ctx context.Context, arg IsProduction
 
 const listBatchFlowEdgesForBatches = `-- name: ListBatchFlowEdgesForBatches :many
 SELECT bf.A AS downstream_id, bf.B AS upstream_id
-FROM _batch_flow bf FORCE INDEX (_batch_flow_AB_unique)
+FROM _batch_flow bf
 WHERE bf.A IN (/*SLICE:downstream_ids*/?)
 UNION
 SELECT bf2.A AS downstream_id, bf2.B AS upstream_id
-FROM _batch_flow bf2 FORCE INDEX (_batch_flow_B_index)
+FROM _batch_flow bf2
 WHERE bf2.B IN (/*SLICE:upstream_ids*/?)
 `
 
@@ -390,7 +390,7 @@ func (q *Queries) ListBatchFlowEdgesForBatches(ctx context.Context, arg ListBatc
 
 const listBatchTraversalByIDs = `-- name: ListBatchTraversalByIDs :many
 SELECT b.id, b.closed_at, b.created_at
-FROM batch b FORCE INDEX (PRIMARY)
+FROM batch b
 WHERE b.id IN (/*SLICE:ids*/?)
 AND b.account_id = ?
 `
@@ -476,7 +476,7 @@ SELECT
     ps.name AS production_step_name,
     pr.id AS production_run_id_2,
     pr.number AS production_run_number
-FROM batch b FORCE INDEX (PRIMARY)
+FROM batch b
 JOIN item i ON b.item_id = i.id
 JOIN quantity q ON b.quantity_id = q.id
 JOIN unit qu ON q.unit_id = qu.id
@@ -534,9 +534,6 @@ type ListBatchesByIDsRow struct {
 }
 
 // The bulk form of GetBatch; same columns, so rows convert to GetBatchRow.
-// A search hydrates a run's whole flow, thousands of ids, and past a few hundred the planner scans the
-// table instead; FORCE INDEX keeps each id a primary-key lookup. The flow walk's other by-id reads
-// below are pinned to their keys for the same reason.
 func (q *Queries) ListBatchesByIDs(ctx context.Context, arg ListBatchesByIDsParams) ([]ListBatchesByIDsRow, error) {
 	query := listBatchesByIDs
 	var queryParams []interface{}
@@ -607,13 +604,13 @@ func (q *Queries) ListBatchesByIDs(ctx context.Context, arg ListBatchesByIDsPara
 
 const listLotsForBatches = `-- name: ListLotsForBatches :many
 SELECT DISTINCT ii.batch_id, l.lot_number, 'material' AS lot_type
-FROM inventory_issue ii FORCE INDEX (inventory_issue_batch_id_idx)
+FROM inventory_issue ii
 JOIN lot l ON ii.lot_id = l.id
 WHERE ii.batch_id IN (/*SLICE:issued_batch_ids*/?)
 AND l.lot_number IS NOT NULL
 UNION
 SELECT DISTINCT ii.batch_id, l.lot_number, 'material' AS lot_type
-FROM inventory_issue ii FORCE INDEX (inventory_issue_batch_id_idx)
+FROM inventory_issue ii
 JOIN inventory_allocation ia ON ia.inventory_issue_id = ii.id
 JOIN inventory_receipt ir ON ia.inventory_receipt_id = ir.id
 JOIN lot l ON ir.lot_id = l.id
@@ -680,7 +677,7 @@ SELECT
     m.id,
     m.name,
     m.serial_number
-FROM _batches_machines bm FORCE INDEX (_batches_machines_AB_unique)
+FROM _batches_machines bm
 JOIN machine m ON bm.B = m.id
 WHERE bm.A IN (/*SLICE:batch_ids*/?)
 `
@@ -792,6 +789,368 @@ func (q *Queries) ListProductionRunBatchSummaries(ctx context.Context, arg ListP
 			&i.UnitID,
 			&i.UnitAbbreviation,
 			&i.QuantityValue,
+			&i.BatchCount,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listProductionRunsBackward = `-- name: ListProductionRunsBackward :many
+SELECT
+    pr.id,
+    pr.number,
+    pr.responsible_user_id,
+    au.id AS responsible_account_user_id,
+    COALESCE(u.name, au.id, '') AS responsible_user_name,
+    au.status_code AS responsible_user_status_code,
+    au.created_at AS responsible_user_created_at,
+    au.updated_at AS responsible_user_updated_at,
+    pr.started_at,
+    pr.completed_at,
+    pr.created_at,
+    pr.updated_at,
+    COUNT(DISTINCT b.id) AS batch_count
+FROM production_run pr
+LEFT JOIN account_user au ON au.account_id = pr.account_id AND (au.id = pr.responsible_user_id OR au.user_id = pr.responsible_user_id)
+LEFT JOIN user u ON u.id = au.user_id
+LEFT JOIN batch b ON b.production_run_id = pr.id AND b.account_id = pr.account_id
+WHERE pr.account_id = ?
+AND (
+    ? IS NULL
+    OR pr.number LIKE ?
+    OR EXISTS (
+        SELECT 1 FROM batch bq
+        WHERE bq.production_run_id = pr.id
+        AND bq.account_id = pr.account_id
+        AND bq.id LIKE ?
+    )
+)
+AND (
+    ? = false
+    OR (? = true AND pr.completed_at IS NULL)
+    OR (? = true AND pr.completed_at IS NOT NULL)
+)
+AND (
+    ? = false
+    OR EXISTS (
+        SELECT 1 FROM batch b2
+        WHERE b2.production_run_id = pr.id
+        AND b2.account_id = pr.account_id
+        AND b2.item_id IN (/*SLICE:item_ids*/?)
+    )
+)
+AND (
+    ? = false
+    OR EXISTS (
+        SELECT 1 FROM batch b3
+        JOIN _batches_machines bm ON bm.A = b3.id
+        WHERE b3.production_run_id = pr.id
+        AND b3.account_id = pr.account_id
+        AND bm.B IN (/*SLICE:machine_ids*/?)
+    )
+)
+AND (
+    ? IS NULL
+    OR pr.created_at >= ?
+)
+AND (
+    ? IS NULL
+    OR pr.created_at <= ?
+)
+AND (
+    ? IS NULL
+    OR pr.created_at > ?
+    OR (pr.created_at = ? AND pr.id > ?)
+)
+GROUP BY pr.id, au.id
+ORDER BY pr.created_at ASC, pr.id ASC
+LIMIT ?
+`
+
+type ListProductionRunsBackwardParams struct {
+	AccountID            string
+	SearchQuery          sql.NullString
+	BatchIDQuery         sql.NullString
+	IncludeStatusFilter  interface{}
+	StatusOpen           interface{}
+	StatusClosed         interface{}
+	IncludeItemFilter    interface{}
+	ItemIds              []string
+	IncludeMachineFilter interface{}
+	MachineIds           []string
+	StartDate            sql.NullTime
+	EndDate              sql.NullTime
+	CursorCreatedAt      sql.NullTime
+	CursorID             sql.NullString
+	Limit                int32
+}
+
+type ListProductionRunsBackwardRow struct {
+	ID                        string
+	Number                    string
+	ResponsibleUserID         string
+	ResponsibleAccountUserID  sql.NullString
+	ResponsibleUserName       string
+	ResponsibleUserStatusCode sql.NullString
+	ResponsibleUserCreatedAt  sql.NullTime
+	ResponsibleUserUpdatedAt  sql.NullTime
+	StartedAt                 sql.NullTime
+	CompletedAt               sql.NullTime
+	CreatedAt                 time.Time
+	UpdatedAt                 time.Time
+	BatchCount                int64
+}
+
+// responsible_user_id may store either an account_user id or a legacy user
+// id; match both, scoped to the run's account.
+func (q *Queries) ListProductionRunsBackward(ctx context.Context, arg ListProductionRunsBackwardParams) ([]ListProductionRunsBackwardRow, error) {
+	query := listProductionRunsBackward
+	var queryParams []interface{}
+	queryParams = append(queryParams, arg.AccountID)
+	queryParams = append(queryParams, arg.SearchQuery)
+	queryParams = append(queryParams, arg.SearchQuery)
+	queryParams = append(queryParams, arg.BatchIDQuery)
+	queryParams = append(queryParams, arg.IncludeStatusFilter)
+	queryParams = append(queryParams, arg.StatusOpen)
+	queryParams = append(queryParams, arg.StatusClosed)
+	queryParams = append(queryParams, arg.IncludeItemFilter)
+	if len(arg.ItemIds) > 0 {
+		for _, v := range arg.ItemIds {
+			queryParams = append(queryParams, v)
+		}
+		query = strings.Replace(query, "/*SLICE:item_ids*/?", strings.Repeat(",?", len(arg.ItemIds))[1:], 1)
+	} else {
+		query = strings.Replace(query, "/*SLICE:item_ids*/?", "NULL", 1)
+	}
+	queryParams = append(queryParams, arg.IncludeMachineFilter)
+	if len(arg.MachineIds) > 0 {
+		for _, v := range arg.MachineIds {
+			queryParams = append(queryParams, v)
+		}
+		query = strings.Replace(query, "/*SLICE:machine_ids*/?", strings.Repeat(",?", len(arg.MachineIds))[1:], 1)
+	} else {
+		query = strings.Replace(query, "/*SLICE:machine_ids*/?", "NULL", 1)
+	}
+	queryParams = append(queryParams, arg.StartDate)
+	queryParams = append(queryParams, arg.StartDate)
+	queryParams = append(queryParams, arg.EndDate)
+	queryParams = append(queryParams, arg.EndDate)
+	queryParams = append(queryParams, arg.CursorCreatedAt)
+	queryParams = append(queryParams, arg.CursorCreatedAt)
+	queryParams = append(queryParams, arg.CursorCreatedAt)
+	queryParams = append(queryParams, arg.CursorID)
+	queryParams = append(queryParams, arg.Limit)
+	rows, err := q.db.QueryContext(ctx, query, queryParams...)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []ListProductionRunsBackwardRow
+	for rows.Next() {
+		var i ListProductionRunsBackwardRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.Number,
+			&i.ResponsibleUserID,
+			&i.ResponsibleAccountUserID,
+			&i.ResponsibleUserName,
+			&i.ResponsibleUserStatusCode,
+			&i.ResponsibleUserCreatedAt,
+			&i.ResponsibleUserUpdatedAt,
+			&i.StartedAt,
+			&i.CompletedAt,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+			&i.BatchCount,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listProductionRunsForward = `-- name: ListProductionRunsForward :many
+SELECT
+    pr.id,
+    pr.number,
+    pr.responsible_user_id,
+    au.id AS responsible_account_user_id,
+    COALESCE(u.name, au.id, '') AS responsible_user_name,
+    au.status_code AS responsible_user_status_code,
+    au.created_at AS responsible_user_created_at,
+    au.updated_at AS responsible_user_updated_at,
+    pr.started_at,
+    pr.completed_at,
+    pr.created_at,
+    pr.updated_at,
+    COUNT(DISTINCT b.id) AS batch_count
+FROM production_run pr
+LEFT JOIN account_user au ON au.account_id = pr.account_id AND (au.id = pr.responsible_user_id OR au.user_id = pr.responsible_user_id)
+LEFT JOIN user u ON u.id = au.user_id
+LEFT JOIN batch b ON b.production_run_id = pr.id AND b.account_id = pr.account_id
+WHERE pr.account_id = ?
+AND (
+    ? IS NULL
+    OR pr.number LIKE ?
+    OR EXISTS (
+        SELECT 1 FROM batch bq
+        WHERE bq.production_run_id = pr.id
+        AND bq.account_id = pr.account_id
+        AND bq.id LIKE ?
+    )
+)
+AND (
+    ? = false
+    OR (? = true AND pr.completed_at IS NULL)
+    OR (? = true AND pr.completed_at IS NOT NULL)
+)
+AND (
+    ? = false
+    OR EXISTS (
+        SELECT 1 FROM batch b2
+        WHERE b2.production_run_id = pr.id
+        AND b2.account_id = pr.account_id
+        AND b2.item_id IN (/*SLICE:item_ids*/?)
+    )
+)
+AND (
+    ? = false
+    OR EXISTS (
+        SELECT 1 FROM batch b3
+        JOIN _batches_machines bm ON bm.A = b3.id
+        WHERE b3.production_run_id = pr.id
+        AND b3.account_id = pr.account_id
+        AND bm.B IN (/*SLICE:machine_ids*/?)
+    )
+)
+AND (
+    ? IS NULL
+    OR pr.created_at >= ?
+)
+AND (
+    ? IS NULL
+    OR pr.created_at <= ?
+)
+AND (
+    ? IS NULL
+    OR pr.created_at < ?
+    OR (pr.created_at = ? AND pr.id < ?)
+)
+GROUP BY pr.id, au.id
+ORDER BY pr.created_at DESC, pr.id DESC
+LIMIT ?
+`
+
+type ListProductionRunsForwardParams struct {
+	AccountID            string
+	SearchQuery          sql.NullString
+	BatchIDQuery         sql.NullString
+	IncludeStatusFilter  interface{}
+	StatusOpen           interface{}
+	StatusClosed         interface{}
+	IncludeItemFilter    interface{}
+	ItemIds              []string
+	IncludeMachineFilter interface{}
+	MachineIds           []string
+	StartDate            sql.NullTime
+	EndDate              sql.NullTime
+	CursorCreatedAt      sql.NullTime
+	CursorID             sql.NullString
+	Limit                int32
+}
+
+type ListProductionRunsForwardRow struct {
+	ID                        string
+	Number                    string
+	ResponsibleUserID         string
+	ResponsibleAccountUserID  sql.NullString
+	ResponsibleUserName       string
+	ResponsibleUserStatusCode sql.NullString
+	ResponsibleUserCreatedAt  sql.NullTime
+	ResponsibleUserUpdatedAt  sql.NullTime
+	StartedAt                 sql.NullTime
+	CompletedAt               sql.NullTime
+	CreatedAt                 time.Time
+	UpdatedAt                 time.Time
+	BatchCount                int64
+}
+
+// responsible_user_id may store either an account_user id or a legacy user
+// id; match both, scoped to the run's account.
+func (q *Queries) ListProductionRunsForward(ctx context.Context, arg ListProductionRunsForwardParams) ([]ListProductionRunsForwardRow, error) {
+	query := listProductionRunsForward
+	var queryParams []interface{}
+	queryParams = append(queryParams, arg.AccountID)
+	queryParams = append(queryParams, arg.SearchQuery)
+	queryParams = append(queryParams, arg.SearchQuery)
+	queryParams = append(queryParams, arg.BatchIDQuery)
+	queryParams = append(queryParams, arg.IncludeStatusFilter)
+	queryParams = append(queryParams, arg.StatusOpen)
+	queryParams = append(queryParams, arg.StatusClosed)
+	queryParams = append(queryParams, arg.IncludeItemFilter)
+	if len(arg.ItemIds) > 0 {
+		for _, v := range arg.ItemIds {
+			queryParams = append(queryParams, v)
+		}
+		query = strings.Replace(query, "/*SLICE:item_ids*/?", strings.Repeat(",?", len(arg.ItemIds))[1:], 1)
+	} else {
+		query = strings.Replace(query, "/*SLICE:item_ids*/?", "NULL", 1)
+	}
+	queryParams = append(queryParams, arg.IncludeMachineFilter)
+	if len(arg.MachineIds) > 0 {
+		for _, v := range arg.MachineIds {
+			queryParams = append(queryParams, v)
+		}
+		query = strings.Replace(query, "/*SLICE:machine_ids*/?", strings.Repeat(",?", len(arg.MachineIds))[1:], 1)
+	} else {
+		query = strings.Replace(query, "/*SLICE:machine_ids*/?", "NULL", 1)
+	}
+	queryParams = append(queryParams, arg.StartDate)
+	queryParams = append(queryParams, arg.StartDate)
+	queryParams = append(queryParams, arg.EndDate)
+	queryParams = append(queryParams, arg.EndDate)
+	queryParams = append(queryParams, arg.CursorCreatedAt)
+	queryParams = append(queryParams, arg.CursorCreatedAt)
+	queryParams = append(queryParams, arg.CursorCreatedAt)
+	queryParams = append(queryParams, arg.CursorID)
+	queryParams = append(queryParams, arg.Limit)
+	rows, err := q.db.QueryContext(ctx, query, queryParams...)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []ListProductionRunsForwardRow
+	for rows.Next() {
+		var i ListProductionRunsForwardRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.Number,
+			&i.ResponsibleUserID,
+			&i.ResponsibleAccountUserID,
+			&i.ResponsibleUserName,
+			&i.ResponsibleUserStatusCode,
+			&i.ResponsibleUserCreatedAt,
+			&i.ResponsibleUserUpdatedAt,
+			&i.StartedAt,
+			&i.CompletedAt,
+			&i.CreatedAt,
+			&i.UpdatedAt,
 			&i.BatchCount,
 		); err != nil {
 			return nil, err

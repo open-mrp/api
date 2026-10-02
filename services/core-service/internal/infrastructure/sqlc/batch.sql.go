@@ -995,7 +995,7 @@ SELECT
     ps.name AS production_step_name,
     pr.id AS production_run_id_2,
     pr.number AS production_run_number
-FROM batch b
+FROM batch b FORCE INDEX (batch_account_id_scanning_station_id_scanned_at_id_idx, batch_item_id_idx)
 JOIN item i ON b.item_id = i.id
 JOIN quantity q ON b.quantity_id = q.id
 JOIN unit qu ON q.unit_id = qu.id
@@ -1010,8 +1010,8 @@ WHERE b.account_id = ?
 AND b.scanning_station_id = ?
 AND b.scanned_at IS NOT NULL
 AND (
-    ? IS NULL
-    OR i.sku LIKE ?
+    ? = false
+    OR b.item_id IN (/*SLICE:item_ids*/?)
 )
 AND (
     b.scanned_at > ?
@@ -1024,7 +1024,8 @@ LIMIT ?
 type ListBatchesByScanningStationBackwardParams struct {
 	AccountID         string
 	ScanningStationID sql.NullString
-	SearchQuery       sql.NullString
+	IncludeItemFilter interface{}
+	ItemIds           []string
 	CursorScannedAt   sql.NullTime
 	CursorID          string
 	Limit             int32
@@ -1064,17 +1065,26 @@ type ListBatchesByScanningStationBackwardRow struct {
 	ProductionRunNumber      sql.NullString
 }
 
+// See ListBatchesByScanningStationForward.
 func (q *Queries) ListBatchesByScanningStationBackward(ctx context.Context, arg ListBatchesByScanningStationBackwardParams) ([]ListBatchesByScanningStationBackwardRow, error) {
-	rows, err := q.db.QueryContext(ctx, listBatchesByScanningStationBackward,
-		arg.AccountID,
-		arg.ScanningStationID,
-		arg.SearchQuery,
-		arg.SearchQuery,
-		arg.CursorScannedAt,
-		arg.CursorScannedAt,
-		arg.CursorID,
-		arg.Limit,
-	)
+	query := listBatchesByScanningStationBackward
+	var queryParams []interface{}
+	queryParams = append(queryParams, arg.AccountID)
+	queryParams = append(queryParams, arg.ScanningStationID)
+	queryParams = append(queryParams, arg.IncludeItemFilter)
+	if len(arg.ItemIds) > 0 {
+		for _, v := range arg.ItemIds {
+			queryParams = append(queryParams, v)
+		}
+		query = strings.Replace(query, "/*SLICE:item_ids*/?", strings.Repeat(",?", len(arg.ItemIds))[1:], 1)
+	} else {
+		query = strings.Replace(query, "/*SLICE:item_ids*/?", "NULL", 1)
+	}
+	queryParams = append(queryParams, arg.CursorScannedAt)
+	queryParams = append(queryParams, arg.CursorScannedAt)
+	queryParams = append(queryParams, arg.CursorID)
+	queryParams = append(queryParams, arg.Limit)
+	rows, err := q.db.QueryContext(ctx, query, queryParams...)
 	if err != nil {
 		return nil, err
 	}
@@ -1161,7 +1171,7 @@ SELECT
     ps.name AS production_step_name,
     pr.id AS production_run_id_2,
     pr.number AS production_run_number
-FROM batch b
+FROM batch b FORCE INDEX (batch_account_id_scanning_station_id_scanned_at_id_idx, batch_item_id_idx)
 JOIN item i ON b.item_id = i.id
 JOIN quantity q ON b.quantity_id = q.id
 JOIN unit qu ON q.unit_id = qu.id
@@ -1176,8 +1186,8 @@ WHERE b.account_id = ?
 AND b.scanning_station_id = ?
 AND b.scanned_at IS NOT NULL
 AND (
-    ? IS NULL
-    OR i.sku LIKE ?
+    ? = false
+    OR b.item_id IN (/*SLICE:item_ids*/?)
 )
 AND (
     ? IS NULL
@@ -1191,7 +1201,8 @@ LIMIT ?
 type ListBatchesByScanningStationForwardParams struct {
 	AccountID         string
 	ScanningStationID sql.NullString
-	SearchQuery       sql.NullString
+	IncludeItemFilter interface{}
+	ItemIds           []string
 	CursorScannedAt   sql.NullTime
 	CursorID          sql.NullString
 	Limit             int32
@@ -1231,18 +1242,28 @@ type ListBatchesByScanningStationForwardRow struct {
 	ProductionRunNumber      sql.NullString
 }
 
+// A SKU search arrives resolved to the account's matching items (item_ids). The station key walks the
+// station in list order; the item key reads just a sparse search's batches.
 func (q *Queries) ListBatchesByScanningStationForward(ctx context.Context, arg ListBatchesByScanningStationForwardParams) ([]ListBatchesByScanningStationForwardRow, error) {
-	rows, err := q.db.QueryContext(ctx, listBatchesByScanningStationForward,
-		arg.AccountID,
-		arg.ScanningStationID,
-		arg.SearchQuery,
-		arg.SearchQuery,
-		arg.CursorScannedAt,
-		arg.CursorScannedAt,
-		arg.CursorScannedAt,
-		arg.CursorID,
-		arg.Limit,
-	)
+	query := listBatchesByScanningStationForward
+	var queryParams []interface{}
+	queryParams = append(queryParams, arg.AccountID)
+	queryParams = append(queryParams, arg.ScanningStationID)
+	queryParams = append(queryParams, arg.IncludeItemFilter)
+	if len(arg.ItemIds) > 0 {
+		for _, v := range arg.ItemIds {
+			queryParams = append(queryParams, v)
+		}
+		query = strings.Replace(query, "/*SLICE:item_ids*/?", strings.Repeat(",?", len(arg.ItemIds))[1:], 1)
+	} else {
+		query = strings.Replace(query, "/*SLICE:item_ids*/?", "NULL", 1)
+	}
+	queryParams = append(queryParams, arg.CursorScannedAt)
+	queryParams = append(queryParams, arg.CursorScannedAt)
+	queryParams = append(queryParams, arg.CursorScannedAt)
+	queryParams = append(queryParams, arg.CursorID)
+	queryParams = append(queryParams, arg.Limit)
+	rows, err := q.db.QueryContext(ctx, query, queryParams...)
 	if err != nil {
 		return nil, err
 	}

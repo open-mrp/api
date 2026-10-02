@@ -17,88 +17,65 @@ const iclListColumns = `icl.id, icl.action_type_code, icl.account_id, icl.create
 	`icl.scanning_station_id, ss.name, ss.scanning_station_type_code, ss.created_at, ss.updated_at, ` +
 	`icl.responsible_user_id, usr.name, usr.created_at, usr.updated_at`
 
-// iclListFrom is the join graph shared by every filter combination. Each joined table is reached by primary key, so the joins are nested-loop lookups over whatever rows the driving index on inventory_change_log yields.
-const iclListFrom = ` FROM inventory_change_log icl` +
-	` JOIN item i ON i.id = icl.item_id` +
+// iclListJoins reach every joined table by primary key from the page's change-log rows.
+const iclListJoins = ` JOIN item i ON i.id = icl.item_id` +
 	` JOIN quantity q ON q.id = icl.quantity_id` +
 	` JOIN unit u ON u.id = q.unit_id` +
 	` LEFT JOIN scanning_station ss ON ss.id = icl.scanning_station_id` +
 	" LEFT JOIN `user` usr ON usr.id = icl.responsible_user_id"
 
-// buildICLListQuery assembles the inventory change-log listing SQL and its bind args. Predicates are omitted entirely when the caller did not supply a value, rather than being wrapped in an `OR <sentinel> = false` guard.
+// buildICLListPage assembles the inventory change-log listing's page. Only the
+// predicates the caller supplied are emitted: an `(? = false OR ...)` guard is not sargable, and left the
+// planner driving from quantity and reading millions of rows for a page.
 //
-// The guard form is why this listing reached a 51s p50 in production. `(? = false OR icl.item_id IN (...))` is not sargable: the optimizer could not tell that account_id and created_at narrowed anything, abandoned the (account_id, created_at, id) composite, and drove the join from quantity via inventory_change_log_quantity_id_key instead — 7,034,759 rows read to return 11. Emitting only the predicates that actually narrow the set lets each filter combination land on the composite built for it (account_created, account_id_item_id_created_at_id, acct_action_type_code_created, acct_resp_user_created).
-//
-// STRAIGHT_JOIN is required on top of that. With sargable predicates but a free join order, MySQL still starts at the smallest table (unit, 113 rows), fans out through quantity, reaches inventory_change_log by quantity_id, and pays "Using temporary; Using filesort" — the ORDER BY then has to sort the account's whole history before LIMIT can apply. Forcing inventory_change_log to drive lets its composite supply the sort order directly, so the scan stops at LIMIT and every other table is a primary-key eq_ref lookup. STRAIGHT_JOIN pins only the join order, not the index, so each filter combination still picks its own best composite.
-//
-// Direction semantics match the sqlc queries this replaced: forward pages older (DESC), backward pages newer (ASC). The cursor predicate is emitted only when a cursor was supplied, so the first page is a clean range scan.
-func buildICLListQuery(
+// The page is chosen from inventory_change_log alone (keysetPage) and joined after; STRAIGHT_JOIN keeps
+// the page first. Forward pages older (DESC), backward pages newer (ASC).
+func buildICLListPage(
 	params domain.ListInventoryChangeLogsParams,
 	dir pagination.Direction,
 	cursorCreatedAt gosql.NullTime,
 	cursorID gosql.NullString,
 	limit int32,
-) (string, []any) {
-	args := make([]any, 0, 8+len(params.ItemIDs)+len(params.ActionTypeCodes)+len(params.ChangedByUserIDs))
-
-	var b strings.Builder
-	b.WriteString("SELECT STRAIGHT_JOIN ")
-	b.WriteString(iclListColumns)
-	b.WriteString(iclListFrom)
-	b.WriteString(" WHERE icl.account_id = ?")
-	args = append(args, params.AccountID)
-
-	if len(params.ItemIDs) > 0 {
-		b.WriteString(" AND icl.item_id IN (")
-		b.WriteString(iclPlaceholders(len(params.ItemIDs)))
-		b.WriteString(")")
-		for _, id := range params.ItemIDs {
-			args = append(args, id)
-		}
-	}
-	if len(params.ActionTypeCodes) > 0 {
-		b.WriteString(" AND icl.action_type_code IN (")
-		b.WriteString(iclPlaceholders(len(params.ActionTypeCodes)))
-		b.WriteString(")")
-		for _, code := range params.ActionTypeCodes {
-			args = append(args, code)
-		}
-	}
-	if len(params.ChangedByUserIDs) > 0 {
-		b.WriteString(" AND icl.responsible_user_id IN (")
-		b.WriteString(iclPlaceholders(len(params.ChangedByUserIDs)))
-		b.WriteString(")")
-		for _, id := range params.ChangedByUserIDs {
-			args = append(args, id)
-		}
+) keysetPage {
+	page := keysetPage{
+		table: "inventory_change_log", alias: "icl", sortColumn: "created_at",
+		createdIndex: "inventory_change_log_account_created_idx",
+		filters: []keysetFilter{
+			{column: "icl.item_id", index: "inventory_change_log_account_id_item_id_created_at_id_idx", values: params.ItemIDs},
+			{column: "icl.responsible_user_id", index: "inventory_change_log_acct_resp_user_created_idx", values: params.ChangedByUserIDs},
+			{column: "icl.action_type_code", index: "inventory_change_log_acct_action_type_code_created_idx", values: params.ActionTypeCodes},
+		},
+		where: []string{"icl.account_id = ?"},
+		args:  []any{params.AccountID},
+		desc:  dir != pagination.DirectionBackward,
+		limit: limit,
 	}
 	if params.StartDate != nil {
-		b.WriteString(" AND icl.created_at >= ?")
-		args = append(args, *params.StartDate)
+		page.where, page.args = append(page.where, "icl.created_at >= ?"), append(page.args, *params.StartDate)
 	}
 	if params.EndDate != nil {
-		b.WriteString(" AND icl.created_at <= ?")
-		args = append(args, *params.EndDate)
+		page.where, page.args = append(page.where, "icl.created_at <= ?"), append(page.args, *params.EndDate)
 	}
-
 	if cursorCreatedAt.Valid {
 		if dir == pagination.DirectionBackward {
-			b.WriteString(" AND (icl.created_at > ? OR (icl.created_at = ? AND icl.id > ?))")
+			page.where = append(page.where, "(icl.created_at > ? OR (icl.created_at = ? AND icl.id > ?))")
 		} else {
-			b.WriteString(" AND (icl.created_at < ? OR (icl.created_at = ? AND icl.id < ?))")
+			page.where = append(page.where, "(icl.created_at < ? OR (icl.created_at = ? AND icl.id < ?))")
 		}
-		args = append(args, cursorCreatedAt.Time, cursorCreatedAt.Time, cursorID.String)
+		page.args = append(page.args, cursorCreatedAt.Time, cursorCreatedAt.Time, cursorID.String)
 	}
+	return page
+}
 
+// buildICLListQuery wraps a page from buildICLListPage, settled, in the listing's joins.
+func buildICLListQuery(page keysetPage, dir pagination.Direction) (string, []any) {
+	orderBy := " ORDER BY icl.created_at DESC, icl.id DESC"
 	if dir == pagination.DirectionBackward {
-		b.WriteString(" ORDER BY icl.created_at ASC, icl.id ASC")
-	} else {
-		b.WriteString(" ORDER BY icl.created_at DESC, icl.id DESC")
+		orderBy = " ORDER BY icl.created_at ASC, icl.id ASC"
 	}
-	b.WriteString(" LIMIT ?")
-	args = append(args, limit)
-
-	return b.String(), args
+	pageSQL, args := page.sql()
+	return "SELECT STRAIGHT_JOIN " + iclListColumns + " FROM (" + pageSQL + ") page" +
+		" JOIN inventory_change_log icl ON icl.id = page.id" + iclListJoins + orderBy, args
 }
 
 // scanICLListRows reads rows produced by buildICLListQuery into domain objects. The scan order must match iclListColumns exactly.

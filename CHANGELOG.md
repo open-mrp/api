@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.18.2](https://github.com/open-mrp/api/compare/v2.18.1...v2.18.2) (2026-10-02)
+
+
+### Bug Fixes
+
+* **migrations:** batch the shipment buyer backfill so Vitess doesn't kill it ([#238](https://github.com/open-mrp/api/issues/238)) ([b546d9f](https://github.com/open-mrp/api/commit/b546d9f4373812053beefa919017e22494040c5e))
+
 ## [2.18.1](https://github.com/open-mrp/api/compare/v2.18.0...v2.18.1) (2026-10-02)
 
 

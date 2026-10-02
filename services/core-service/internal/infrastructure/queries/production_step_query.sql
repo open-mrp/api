@@ -635,6 +635,8 @@ SELECT
     pq.id AS produced_quantity_id, pq.value AS produced_quantity_value,
     pu.id AS produced_unit_id, pu.abbreviation AS produced_unit_abbreviation,
     pu.unit_dimension_code AS produced_unit_type,
+    pu.ratio_numerator AS produced_unit_ratio_numerator,
+    pu.ratio_denominator AS produced_unit_ratio_denominator,
     lr.id AS labor_rate_id, lr.value AS labor_rate_value,
     lrnu.id AS labor_rate_num_unit_id, lrdu.id AS labor_rate_den_unit_id,
     lt.id AS labor_time_id, lt.value AS labor_time_value,
@@ -643,6 +645,9 @@ SELECT
     ohrnu.id AS overhead_rate_num_unit_id, ohrdu.id AS overhead_rate_den_unit_id,
     -- Base-unit ratios for the labor terms. Labor time is a duration and the rates are priced per duration, and the two are routinely entered in different ones — seconds a piece against dollars an hour — so the cost calculation needs both sides' ratios to bring them onto a common footing.
     CAST(COALESCE(ltnu.ratio_numerator / ltnu.ratio_denominator, 1) AS DECIMAL(65,30)) AS labor_time_num_ratio,
+    -- Labor time is per some count of output — a piece, or a case of fifty — which need not be the unit the step produces in.
+    CAST(COALESCE(ltdu.ratio_numerator / ltdu.ratio_denominator, 1) AS DECIMAL(65,30)) AS labor_time_den_ratio,
+    ltdu.unit_dimension_code AS labor_time_den_unit_type,
     CAST(COALESCE(lrdu.ratio_numerator / lrdu.ratio_denominator, 1) AS DECIMAL(65,30)) AS labor_rate_den_ratio,
     CAST(COALESCE(ohrdu.ratio_numerator / ohrdu.ratio_denominator, 1) AS DECIMAL(65,30)) AS overhead_rate_den_ratio
 FROM production_step ps

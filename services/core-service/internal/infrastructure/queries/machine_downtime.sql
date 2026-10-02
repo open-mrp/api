@@ -160,6 +160,135 @@ DELETE FROM machine_downtime_event
 WHERE account_id = sqlc.arg('account_id')
 AND id = sqlc.arg('id');
 
+-- name: ListMachineDowntimeEventsForward :many
+SELECT
+    e.id,
+    e.account_id,
+    e.machine_id,
+    e.department_id,
+    e.production_step_id,
+    e.reason_code,
+    r.name AS reason_name,
+    r.oee_bucket AS reason_oee_bucket,
+    r.is_planned AS reason_is_planned,
+    e.started_at,
+    e.ended_at,
+    e.duration_seconds,
+    e.shift_date,
+    e.shift_code,
+    e.item_id,
+    e.production_run_id,
+    e.batch_id,
+    e.schedule_line_id,
+    e.note,
+    e.reported_by_id,
+    e.source_code,
+    e.created_at,
+    e.updated_at
+FROM machine_downtime_event e
+LEFT JOIN machine_downtime_reason r ON r.code = e.reason_code
+WHERE e.account_id = sqlc.arg('account_id')
+AND (
+    sqlc.arg('include_machine_filter') = false
+    OR e.machine_id IN (sqlc.slice('machine_ids'))
+)
+AND (
+    sqlc.arg('include_department_filter') = false
+    OR e.department_id IN (sqlc.slice('department_ids'))
+)
+AND (
+    sqlc.arg('include_reason_filter') = false
+    OR e.reason_code IN (sqlc.slice('reason_codes'))
+)
+AND (
+    sqlc.arg('open_only') = false
+    OR e.ended_at IS NULL
+)
+-- Free-text search runs against the note, the only prose a downtime event carries. Substring rather than prefix: notes are sentences, so a prefix match would be useless. It is a residual filter on an already account- and window-narrowed set.
+AND (
+    sqlc.narg('search_query') IS NULL
+    OR e.note LIKE sqlc.narg('search_query')
+)
+AND (
+    sqlc.narg('start_date') IS NULL
+    OR e.started_at >= sqlc.narg('start_date')
+)
+AND (
+    sqlc.narg('end_date') IS NULL
+    OR e.started_at <= sqlc.narg('end_date')
+)
+AND (
+    sqlc.narg('cursor_started_at') IS NULL
+    OR e.started_at < sqlc.narg('cursor_started_at')
+    OR (e.started_at = sqlc.narg('cursor_started_at') AND e.id < sqlc.narg('cursor_id'))
+)
+ORDER BY e.started_at DESC, e.id DESC
+LIMIT ?;
+
+-- name: ListMachineDowntimeEventsBackward :many
+SELECT
+    e.id,
+    e.account_id,
+    e.machine_id,
+    e.department_id,
+    e.production_step_id,
+    e.reason_code,
+    r.name AS reason_name,
+    r.oee_bucket AS reason_oee_bucket,
+    r.is_planned AS reason_is_planned,
+    e.started_at,
+    e.ended_at,
+    e.duration_seconds,
+    e.shift_date,
+    e.shift_code,
+    e.item_id,
+    e.production_run_id,
+    e.batch_id,
+    e.schedule_line_id,
+    e.note,
+    e.reported_by_id,
+    e.source_code,
+    e.created_at,
+    e.updated_at
+FROM machine_downtime_event e
+LEFT JOIN machine_downtime_reason r ON r.code = e.reason_code
+WHERE e.account_id = sqlc.arg('account_id')
+AND (
+    sqlc.arg('include_machine_filter') = false
+    OR e.machine_id IN (sqlc.slice('machine_ids'))
+)
+AND (
+    sqlc.arg('include_department_filter') = false
+    OR e.department_id IN (sqlc.slice('department_ids'))
+)
+AND (
+    sqlc.arg('include_reason_filter') = false
+    OR e.reason_code IN (sqlc.slice('reason_codes'))
+)
+AND (
+    sqlc.arg('open_only') = false
+    OR e.ended_at IS NULL
+)
+-- Free-text search runs against the note, the only prose a downtime event carries. Substring rather than prefix: notes are sentences, so a prefix match would be useless. It is a residual filter on an already account- and window-narrowed set.
+AND (
+    sqlc.narg('search_query') IS NULL
+    OR e.note LIKE sqlc.narg('search_query')
+)
+AND (
+    sqlc.narg('start_date') IS NULL
+    OR e.started_at >= sqlc.narg('start_date')
+)
+AND (
+    sqlc.narg('end_date') IS NULL
+    OR e.started_at <= sqlc.narg('end_date')
+)
+AND (
+    e.started_at > sqlc.arg('cursor_started_at')
+    OR (e.started_at = sqlc.arg('cursor_started_at') AND e.id > sqlc.arg('cursor_id'))
+)
+ORDER BY e.started_at ASC, e.id ASC
+LIMIT ?;
+
 -- name: GetMachineDowntimeEventsByIDs :many
 SELECT
     e.id,

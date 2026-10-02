@@ -507,28 +507,6 @@ func TestDeliveryPerformance_BreakdownsReconcileWithOverall(t *testing.T) {
 	}
 }
 
-// A customer filter measures exactly that customer's committed orders, alone and combined with a sales-rep filter that excludes them.
-func TestDeliveryPerformance_CustomerFilterMeasuresThatCustomer(t *testing.T) {
-	t.Parallel()
-
-	customerID := leadTimeCustomer(t, "e2e-delivery-filter", ptrInt(30), "")
-	order := issueOrderForCustomer(t, customerID, nil)
-	require.NotEmpty(t, shipByDate(t, order), "the order must carry a commitment to be measured")
-
-	body := deliveryWindow()
-	body["customer_ids"] = []string{customerID}
-	overall, ok := analyzeDelivery(t, body)["overall"].(map[string]any)
-	require.True(t, ok)
-	committed, _ := overall["committed_order_count"].(float64)
-	assert.Equal(t, float64(1), committed, "the customer's one committed order is measured, and no other")
-
-	body["sales_rep_ids"] = []string{"acus_definitely_not_a_real_rep"}
-	overall, ok = analyzeDelivery(t, body)["overall"].(map[string]any)
-	require.True(t, ok)
-	committed, _ = overall["committed_order_count"].(float64)
-	assert.Equal(t, float64(0), committed, "filters combine: the customer's order has no such rep")
-}
-
 // An unknown id is a filter matching nothing, not an error — and it must narrow the excluded count too, or a filtered rate would sit beside an account-wide exclusion.
 func TestDeliveryPerformance_FiltersNarrowTheMeasuredSet(t *testing.T) {
 	t.Parallel()

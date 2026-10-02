@@ -137,8 +137,6 @@ WHERE so.owner_account_id = sqlc.arg('owner_account_id')
   AND (sqlc.arg('include_customer_group_filter') = false OR ar.account_group_id IN (sqlc.slice('customer_group_ids')))
 GROUP BY order_year ORDER BY order_year ASC;
 
--- GetSalesEntries reads the window's invoices first: left to choose, a customer-group or product-line filter made the optimizer start from that filter's every order or line ever invoiced.
--- The customer and customer-group filters arrive resolved to the buyers they admit (resolveCustomerBuyers).
 -- name: GetSalesEntries :many
 SELECT
     il.id AS id,
@@ -344,7 +342,7 @@ SELECT
     geo.country AS ship_to_country,
     od.code AS order_discount_code
 FROM invoice_line il
-JOIN invoice inv FORCE INDEX (invoice_account_created_idx) ON inv.id = il.invoice_id
+JOIN invoice inv ON inv.id = il.invoice_id
 JOIN sales_order_line sol ON sol.id = il.sales_order_line_id
 JOIN sales_order so ON so.id = inv.sales_order_id
 JOIN product fg ON fg.id = sol.product_id
@@ -378,10 +376,26 @@ WHERE inv.account_id = sqlc.arg('owner_account_id')
   AND inv.created_at <= sqlc.arg('end_date')
   AND (sqlc.arg('include_sales_rep_filter') = false OR so.sales_rep_id IN (sqlc.slice('sales_rep_ids')))
   AND (sqlc.arg('include_product_line_filter') = false OR fg.product_line_id IN (sqlc.slice('product_line_ids')))
-  AND (sqlc.arg('include_buyer_filter') = false OR so.buyer_account_id IN (sqlc.slice('buyer_ids')))
+  AND (sqlc.arg('include_customer_group_filter') = false OR ar.account_group_id IN (sqlc.slice('customer_group_ids')))
+  AND (sqlc.arg('include_customer_filter') = false OR (
+      so.buyer_account_id IN (sqlc.slice('customer_ids'))
+      OR EXISTS (
+          SELECT 1
+          FROM account_relation ar_child
+          WHERE ar_child.owner_account_id = so.owner_account_id
+            AND ar_child.account_relation_role_code = 'customer'
+            AND ar_child.counterparty_account_id = so.buyer_account_id
+            AND ar_child.parent_account_relation_id IN (
+                SELECT ar_parent.id
+                FROM account_relation ar_parent
+                WHERE ar_parent.owner_account_id = so.owner_account_id
+                  AND ar_parent.account_relation_role_code = 'customer'
+                  AND ar_parent.counterparty_account_id IN (sqlc.slice('customer_ids'))
+            )
+      )
+  ))
 ORDER BY inv.created_at ASC;
 
--- The customer and customer-group filters arrive resolved to the buyers they admit (resolveCustomerBuyers).
 -- name: GetOrderEntries :many
 SELECT
     sol.id AS id,
@@ -531,8 +545,7 @@ SELECT
         )
         AS DECIMAL(65,30)
     ) AS total_profit,
-    -- Nothing invoiced yet leaves the per-unit price, cost, and profit undefined (x / 0): 0, as the row mapper reads a NULL.
-    COALESCE(CAST(
+    CAST(
         (
             COALESCE(inv.qty_inv_norm, 0)
             *
@@ -553,8 +566,8 @@ SELECT
             0
         )
         AS DECIMAL(65,30)
-    ), 0) AS unit_price,
-    COALESCE(CAST(
+    ) AS unit_price,
+    CAST(
         (
             COALESCE(inv.qty_inv_norm, 0)
             *
@@ -575,8 +588,8 @@ SELECT
             0
         )
         AS DECIMAL(65,30)
-    ), 0) AS unit_cost,
-    COALESCE(CAST(
+    ) AS unit_cost,
+    CAST(
         (
             (
                 COALESCE(inv.qty_inv_norm, 0)
@@ -611,7 +624,7 @@ SELECT
             0
         )
         AS DECIMAL(65,30)
-    ), 0) AS unit_profit,
+    ) AS unit_profit,
     shipping_geolocation.state AS ship_to_state,
     shipping_geolocation.locality AS ship_to_city,
     shipping_geolocation.postal_code AS ship_to_zipcode,
@@ -670,7 +683,24 @@ WHERE so.owner_account_id = sqlc.arg('owner_account_id')
   AND so.sales_order_status_code = 'issued'
   AND fg.product_type_code = 'sale'
   AND (sqlc.arg('include_sales_rep_filter') = false OR so.sales_rep_id IN (sqlc.slice('sales_rep_ids')))
-  AND (sqlc.arg('include_buyer_filter') = false OR so.buyer_account_id IN (sqlc.slice('buyer_ids')))
+  AND (sqlc.arg('include_customer_filter') = false OR (
+      so.buyer_account_id IN (sqlc.slice('customer_ids'))
+      OR EXISTS (
+          SELECT 1
+          FROM account_relation ar_child
+          WHERE ar_child.owner_account_id = so.owner_account_id
+            AND ar_child.account_relation_role_code = 'customer'
+            AND ar_child.counterparty_account_id = so.buyer_account_id
+            AND ar_child.parent_account_relation_id IN (
+                SELECT ar_parent.id
+                FROM account_relation ar_parent
+                WHERE ar_parent.owner_account_id = so.owner_account_id
+                  AND ar_parent.account_relation_role_code = 'customer'
+                  AND ar_parent.counterparty_account_id IN (sqlc.slice('customer_ids'))
+            )
+      )
+  ))
+  AND (sqlc.arg('include_customer_group_filter') = false OR ar.account_group_id IN (sqlc.slice('customer_group_ids')))
   AND (sqlc.arg('include_product_line_filter') = false OR fg.product_line_id IN (sqlc.slice('product_line_ids')))
 ORDER BY so.issued_at ASC;
 
@@ -1466,11 +1496,10 @@ SELECT
     r.oee_bucket,
     e.started_at,
     COALESCE(e.ended_at, NOW(3)) AS ended_at
-FROM machine_downtime_event e FORCE INDEX (machine_downtime_account_started_idx, machine_downtime_account_ended_started_idx)
+FROM machine_downtime_event e
 JOIN machine_downtime_reason r ON r.code = e.reason_code
 WHERE e.account_id = sqlc.arg('account_id')
   -- Overlap test rather than containment: an event that started before the window and is still running must still contribute its in-window seconds.
-  -- COALESCE(ended_at, NOW(3)) >= start_date, spelled so each side can be read from a key: the forced keys read either the events started before the window ends or those ending (or open) after it starts, whichever is fewer.
   AND e.started_at <= sqlc.arg('end_date')
-  AND (e.ended_at >= sqlc.arg('start_date') OR (e.ended_at IS NULL AND NOW(3) >= sqlc.arg('start_date')))
+  AND COALESCE(e.ended_at, NOW(3)) >= sqlc.arg('start_date')
 ORDER BY e.started_at;

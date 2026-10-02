@@ -40,24 +40,27 @@ func (r *analyticsRepoImpl) GetSalesEntries(ctx context.Context, params domain.A
 	if productLineIDs == nil {
 		productLineIDs = []sql.NullString{}
 	}
-	buyers, filtered, apiErr := resolveCustomerBuyers(ctx, r.queries.DB(), params.AccountID, params.CustomerIDs, params.CustomerGroupIDs)
-	if apiErr != nil {
-		return nil, tracing.Trace(span, apiErr)
+	customerGroupIDs := toNullStringSlice(params.CustomerGroupIDs)
+	if customerGroupIDs == nil {
+		customerGroupIDs = []sql.NullString{}
 	}
-	if filtered && len(buyers) == 0 {
-		return []domain.SalesEntry{}, nil
+	customerIDs := params.CustomerIDs
+	if customerIDs == nil {
+		customerIDs = []string{}
 	}
 
 	rows, err := r.queries.GetSalesEntries(ctx, sqlc.GetSalesEntriesParams{
-		OwnerAccountID:           params.AccountID,
-		StartDate:                params.StartDate,
-		EndDate:                  params.EndDate,
-		IncludeSalesRepFilter:    len(params.SalesRepIDs) > 0,
-		SalesRepIds:              salesRepIDs,
-		IncludeProductLineFilter: len(params.ProductLineIDs) > 0,
-		ProductLineIds:           productLineIDs,
-		IncludeBuyerFilter:       filtered,
-		BuyerIds:                 buyers,
+		OwnerAccountID:             params.AccountID,
+		StartDate:                  params.StartDate,
+		EndDate:                    params.EndDate,
+		IncludeSalesRepFilter:      len(params.SalesRepIDs) > 0,
+		SalesRepIds:                salesRepIDs,
+		IncludeProductLineFilter:   len(params.ProductLineIDs) > 0,
+		ProductLineIds:             productLineIDs,
+		IncludeCustomerGroupFilter: len(params.CustomerGroupIDs) > 0,
+		CustomerGroupIds:           customerGroupIDs,
+		IncludeCustomerFilter:      len(params.CustomerIDs) > 0,
+		CustomerIds:                customerIDs,
 	})
 	if apiErr := db.MapSQLError(err); apiErr != nil {
 		return nil, tracing.Trace(span, apiErr)
@@ -667,26 +670,29 @@ func (r *analyticsRepoImpl) GetOrderEntries(ctx context.Context, params domain.A
 	if salesRepIDs == nil {
 		salesRepIDs = []sql.NullString{}
 	}
+	customerGroupIDs := toNullStringSlice(params.CustomerGroupIDs)
+	if customerGroupIDs == nil {
+		customerGroupIDs = []sql.NullString{}
+	}
 	productLineIDs := toNullStringSlice(params.ProductLineIDs)
 	if productLineIDs == nil {
 		productLineIDs = []sql.NullString{}
 	}
-	buyers, filtered, apiErr := resolveCustomerBuyers(ctx, r.queries.DB(), params.AccountID, params.CustomerIDs, params.CustomerGroupIDs)
-	if apiErr != nil {
-		return nil, tracing.Trace(span, apiErr)
-	}
-	if filtered && len(buyers) == 0 {
-		return []domain.OrderEntry{}, nil
+	customerIDs := params.CustomerIDs
+	if customerIDs == nil {
+		customerIDs = []string{}
 	}
 
 	rows, err := r.queries.GetOrderEntries(ctx, sqlc.GetOrderEntriesParams{
-		OwnerAccountID:           params.AccountID,
-		IncludeSalesRepFilter:    len(params.SalesRepIDs) > 0,
-		SalesRepIds:              salesRepIDs,
-		IncludeBuyerFilter:       filtered,
-		BuyerIds:                 buyers,
-		IncludeProductLineFilter: len(params.ProductLineIDs) > 0,
-		ProductLineIds:           productLineIDs,
+		OwnerAccountID:             params.AccountID,
+		IncludeSalesRepFilter:      len(params.SalesRepIDs) > 0,
+		SalesRepIds:                salesRepIDs,
+		IncludeCustomerFilter:      len(params.CustomerIDs) > 0,
+		CustomerIds:                customerIDs,
+		IncludeCustomerGroupFilter: len(params.CustomerGroupIDs) > 0,
+		CustomerGroupIds:           customerGroupIDs,
+		IncludeProductLineFilter:   len(params.ProductLineIDs) > 0,
+		ProductLineIds:             productLineIDs,
 	})
 	if apiErr := db.MapSQLError(err); apiErr != nil {
 		return nil, tracing.Trace(span, apiErr)

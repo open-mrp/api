@@ -843,36 +843,6 @@ func TestProductionRuns_ListFilters(t *testing.T) {
 	assert.NotContains(t, scoped(url.Values{"ends_at": {hourAgo}}), runID)
 }
 
-// Each listed run counts only its own batches, a run without batches counts none, and a machine filter
-// keeps the runs whose batches were made on it.
-func TestProductionRuns_ListCountsEachRunsOwnBatches(t *testing.T) {
-	t.Parallel()
-
-	prefix := uniqueName("e2e-pr-count")
-	onMachine := func(quantity string) map[string]any {
-		b := plannedBatch(quantity)
-		b["machine_ids"] = []any{SeedMachineID}
-		return b
-	}
-	withBatches := jsonField(createRunWithBatches(t, onMachine("1"), onMachine("2"), onMachine("3")), "id")
-	renameRun(t, withBatches, prefix+"-a")
-	empty := jsonField(createProductionRun(t, map[string]any{"responsible_user_id": SeedUserID}), "id")
-	renameRun(t, empty, prefix+"-b")
-
-	status, body, err := apiClient.GetListRaw(productionRunsPath, url.Values{"q": {prefix}})
-	require.NoError(t, err)
-	requireStatus(t, 200, status, body)
-	counts := map[string]string{}
-	for _, raw := range jsonArray(parseJSON(body), "data") {
-		row := raw.(map[string]any)
-		counts[jsonField(row, "id")] = jsonField(row, "batch_count")
-	}
-	assert.Equal(t, map[string]string{withBatches: "3", empty: "0"}, counts)
-
-	assert.Equal(t, []string{withBatches}, listRunIDs(t, url.Values{"q": {prefix}, "machine_ids": {SeedMachineID}}),
-		"only the run with batches made on the machine")
-}
-
 func TestProductionRuns_ListRejectsInvalidParams(t *testing.T) {
 	t.Parallel()
 

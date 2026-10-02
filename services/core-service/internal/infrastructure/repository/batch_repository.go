@@ -475,27 +475,44 @@ func (r *batchRepoImpl) FindByScanningStation(ctx context.Context, params domain
 	ctx, span := batchRepoTracer.Start(ctx, "repository.batch.find_by_scanning_station")
 	defer span.End()
 
-	searchQuery := gosql.NullString{}
-	if params.Query != nil && *params.Query != "" {
-		searchQuery = gosql.NullString{String: "%" + db.EscapeLike(*params.Query) + "%", Valid: true}
-	}
-
 	scanningStationID := db.NullString(params.ScanningStationID)
 
+	var cur *pagination.StringCursor
 	var cursorDir *pagination.Direction
-
 	if params.Cursor != nil {
-		cur, err := pagination.DecodeStringCursor(*params.Cursor)
+		decoded, err := pagination.DecodeStringCursor(*params.Cursor)
 		if err != nil {
 			return nil, apierror.NewValidationErrorWithParam("Invalid pagination cursor.", "cursor")
 		}
-		cursorDir = &cur.Direction
+		cur, cursorDir = &decoded, &decoded.Direction
+	}
 
+	// A SKU search is resolved to the account's matching items up front, so the batch keys can serve it
+	// instead of the list joining every batch of the station to its item to test the SKU.
+	var itemIDs []string
+	if params.Query != nil && *params.Query != "" {
+		var err error
+		itemIDs, err = r.queries.SearchItemIDsBySKULike(ctx, sqlc.SearchItemIDsBySKULikeParams{
+			AccountID: params.AccountID,
+			LikeQuery: gosql.NullString{String: "%" + db.EscapeLike(*params.Query) + "%", Valid: true},
+		})
+		if apiErr := db.MapSQLError(err); apiErr != nil {
+			return nil, tracing.Trace(span, apiErr)
+		}
+		if len(itemIDs) == 0 {
+			result, pageInfo := pagination.BuildPageString([]*domain.Batch{}, params.Limit, cursorDir, batchScannedAt, batchID)
+			return &domain.ListBatchesByScanningStationResult{Batches: result, PageInfo: pageInfo}, nil
+		}
+	}
+	includeItemFilter := len(itemIDs) > 0
+
+	if cur != nil {
 		if cur.Direction == pagination.DirectionBackward {
 			rows, err := r.queries.ListBatchesByScanningStationBackward(ctx, sqlc.ListBatchesByScanningStationBackwardParams{
 				AccountID:         params.AccountID,
 				ScanningStationID: scanningStationID,
-				SearchQuery:       searchQuery,
+				IncludeItemFilter: includeItemFilter,
+				ItemIds:           itemIDs,
 				CursorScannedAt:   gosql.NullTime{Time: cur.OccurredAt, Valid: true},
 				CursorID:          cur.ID,
 				Limit:             params.Limit + 1,
@@ -515,7 +532,8 @@ func (r *batchRepoImpl) FindByScanningStation(ctx context.Context, params domain
 		rows, err := r.queries.ListBatchesByScanningStationForward(ctx, sqlc.ListBatchesByScanningStationForwardParams{
 			AccountID:         params.AccountID,
 			ScanningStationID: scanningStationID,
-			SearchQuery:       searchQuery,
+			IncludeItemFilter: includeItemFilter,
+			ItemIds:           itemIDs,
 			CursorScannedAt:   gosql.NullTime{Time: cur.OccurredAt, Valid: true},
 			CursorID:          gosql.NullString{String: cur.ID, Valid: true},
 			Limit:             params.Limit + 1,
@@ -535,7 +553,8 @@ func (r *batchRepoImpl) FindByScanningStation(ctx context.Context, params domain
 	rows, err := r.queries.ListBatchesByScanningStationForward(ctx, sqlc.ListBatchesByScanningStationForwardParams{
 		AccountID:         params.AccountID,
 		ScanningStationID: scanningStationID,
-		SearchQuery:       searchQuery,
+		IncludeItemFilter: includeItemFilter,
+		ItemIds:           itemIDs,
 		Limit:             params.Limit + 1,
 	})
 	if apiErr := db.MapSQLError(err); apiErr != nil {

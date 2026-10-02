@@ -198,7 +198,9 @@ SELECT
     ps.name AS production_step_name,
     pr.id AS production_run_id_2,
     pr.number AS production_run_number
-FROM batch b
+-- A SKU search arrives resolved to the account's matching items (item_ids). The station key walks the
+-- station in list order; the item key reads just a sparse search's batches.
+FROM batch b FORCE INDEX (batch_account_id_scanning_station_id_scanned_at_id_idx, batch_item_id_idx)
 JOIN item i ON b.item_id = i.id
 JOIN quantity q ON b.quantity_id = q.id
 JOIN unit qu ON q.unit_id = qu.id
@@ -213,8 +215,8 @@ WHERE b.account_id = sqlc.arg('account_id')
 AND b.scanning_station_id = sqlc.arg('scanning_station_id')
 AND b.scanned_at IS NOT NULL
 AND (
-    sqlc.narg('search_query') IS NULL
-    OR i.sku LIKE sqlc.narg('search_query')
+    sqlc.arg('include_item_filter') = false
+    OR b.item_id IN (sqlc.slice('item_ids'))
 )
 AND (
     sqlc.narg('cursor_scanned_at') IS NULL
@@ -257,7 +259,8 @@ SELECT
     ps.name AS production_step_name,
     pr.id AS production_run_id_2,
     pr.number AS production_run_number
-FROM batch b
+-- See ListBatchesByScanningStationForward.
+FROM batch b FORCE INDEX (batch_account_id_scanning_station_id_scanned_at_id_idx, batch_item_id_idx)
 JOIN item i ON b.item_id = i.id
 JOIN quantity q ON b.quantity_id = q.id
 JOIN unit qu ON q.unit_id = qu.id
@@ -272,8 +275,8 @@ WHERE b.account_id = sqlc.arg('account_id')
 AND b.scanning_station_id = sqlc.arg('scanning_station_id')
 AND b.scanned_at IS NOT NULL
 AND (
-    sqlc.narg('search_query') IS NULL
-    OR i.sku LIKE sqlc.narg('search_query')
+    sqlc.arg('include_item_filter') = false
+    OR b.item_id IN (sqlc.slice('item_ids'))
 )
 AND (
     b.scanned_at > sqlc.arg('cursor_scanned_at')

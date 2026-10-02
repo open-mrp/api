@@ -694,6 +694,35 @@ func TestMachineDowntimeEvents_ListAndFilters(t *testing.T) {
 		assert.Empty(t, downtimeIDs(t, body), "a machine with no downtime must return nothing")
 	})
 
+	// Several values of one filter are an OR, read as one arm per value and merged; the merge must
+	// keep list order across arms and page through it in both directions.
+	t.Run("several reasons union and page in order", func(t *testing.T) {
+		params := url.Values{
+			"machine_ids": {machineID, "mc_00000000000000000000000000"},
+			"reasons":     {"changeover", "material_shortage"},
+			"limit":       {"1"},
+		}
+		page1, status, err := apiClient.GetList(machineDowntimeEventsPath, params)
+		require.NoError(t, err)
+		require.Equal(t, 200, status)
+		require.Len(t, page1.Data, 1)
+		assert.Equal(t, openID, DataItemField(page1.Data[0], "id"), "the newer stoppage heads the list")
+		require.True(t, page1.PageInfo.HasNextPage)
+
+		page2, status, err := apiClient.GetListFromPageURL(page1.PageInfo.NextPageURL)
+		require.NoError(t, err)
+		require.Equal(t, 200, status)
+		require.Len(t, page2.Data, 1)
+		assert.Equal(t, closedID, DataItemField(page2.Data[0], "id"), "the older stoppage follows")
+		assert.False(t, page2.PageInfo.HasNextPage, "the machine has no other stoppage")
+
+		back, status, err := apiClient.GetListFromPageURL(page2.PageInfo.PreviousPageURL)
+		require.NoError(t, err)
+		require.Equal(t, 200, status)
+		require.Len(t, back.Data, 1)
+		assert.Equal(t, openID, DataItemField(back.Data[0], "id"), "paging back returns the first page")
+	})
+
 	t.Run("date window excludes events outside it", func(t *testing.T) {
 		// A window entirely in the future contains neither event.
 		status, body, err := apiClient.GetListRaw(machineDowntimeEventsPath, url.Values{

@@ -34,6 +34,14 @@ Read the skill **before** you write, not after review. Reading the section you n
 
 **Self-check before reporting work as done:** name the skills that govern the files you changed, re-read the relevant sections, and confirm each rule actually holds in your diff. "I didn't know that skill existed" is not an acceptable outcome — the table above is the index, and `docs/patterns/important-patterns.md` is the short list of rules that apply everywhere.
 
+## This Repository Is Public — No Customer Data (non-negotiable)
+
+Everything committed here is world-readable: code, comments, tests, fixtures, migrations, file names, commit messages, and PR text. **Never name a customer or include anything that identifies one** — company or person names, account/user/record IDs, SKUs, product or production-step names, email addresses, IPs, street addresses, or values copied from a production record.
+
+- Describe a production incident by its shape ("an item stocked by the carton of eight"), not by whose data it was.
+- Test fixtures use invented IDs and names (`ac_cost`, `itm_boxed`). Numbers reproduced from production are fine only when they identify nothing on their own.
+- A fix aimed at one tenant's rows does not belong in a migration. Put the detection logic in a command that finds the rows at run time from flags (`--account`), and supply the identifiers only when running it.
+
 ## Breaking Changes Require a New API Version (non-negotiable)
 
 **Any breaking change to the public API requires a new API version plus a version transformer that preserves the old shape.** A client pinned to a supported `OpenMRP-Version` must keep receiving byte-compatible request and response shapes for as long as that version is supported. Shipping a shape change without a transformer silently breaks every pinned consumer — that is never an acceptable trade for a smaller diff, and it is not something to "follow up on later."

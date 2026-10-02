@@ -221,9 +221,11 @@ func (r *productionFlowRepoImpl) GetFlowStep(ctx context.Context, accountID, ste
 			Quantity: domain.BatchQuantity{
 				ID: row.ProducedQuantityID,
 				Unit: domain.LightUnit{
-					ID:           row.ProducedUnitID,
-					Abbreviation: row.ProducedUnitAbbreviation,
-					Type:         row.ProducedUnitType,
+					ID:               row.ProducedUnitID,
+					Abbreviation:     row.ProducedUnitAbbreviation,
+					Type:             row.ProducedUnitType,
+					RatioNumerator:   row.ProducedUnitRatioNumerator,
+					RatioDenominator: row.ProducedUnitRatioDenominator,
 				},
 			},
 		},
@@ -266,11 +268,13 @@ func (r *productionFlowRepoImpl) GetFlowStep(ctx context.Context, accountID, ste
 
 	if row.LaborTimeID.Valid {
 		step.LaborTime = &domain.FlowRate{
-			ID:                row.LaborTimeID.String,
-			Value:             row.LaborTimeValue.String,
-			NumeratorUnitID:   row.LaborTimeNumUnitID.String,
-			DenominatorUnitID: row.LaborTimeDenUnitID.String,
-			NumeratorRatio:    row.LaborTimeNumRatio,
+			ID:                  row.LaborTimeID.String,
+			Value:               row.LaborTimeValue.String,
+			NumeratorUnitID:     row.LaborTimeNumUnitID.String,
+			DenominatorUnitID:   row.LaborTimeDenUnitID.String,
+			NumeratorRatio:      row.LaborTimeNumRatio,
+			DenominatorRatio:    row.LaborTimeDenRatio,
+			DenominatorUnitType: row.LaborTimeDenUnitType.String,
 		}
 	}
 

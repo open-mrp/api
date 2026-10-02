@@ -503,6 +503,28 @@ func stepUnitsPerStockingUnit(ctx context.Context, conv domain.UnitConversionRep
 	return conv.ConvertValue(ctx, decimal.NewFromInt(1), stockingUnitID, stepUnitID)
 }
 
+// laborTimeUnitsPerProducedUnit is the fraction of labor time's quantity unit that one produced unit
+// makes up: 1/50 for seconds a case of fifty on a step producing eaches. A labor time quantified in
+// another dimension has no conversion, so it is read as per produced unit.
+func laborTimeUnitsPerProducedUnit(step *domain.ProductionFlowStep) decimal.Decimal {
+	produced := step.Production.Quantity.Unit
+	laborType := step.LaborTime.DenominatorUnitType
+	if laborType != "" && produced.Type != "" && laborType != produced.Type {
+		return decimal.NewFromInt(1)
+	}
+	return unitRatio(produced.RatioNumerator, produced.RatioDenominator).Div(baseUnitRatio(step.LaborTime.DenominatorRatio))
+}
+
+// unitRatio is a unit's base ratio from its two halves, defaulting to 1 like baseUnitRatio.
+func unitRatio(numerator, denominator string) decimal.Decimal {
+	num, numErr := decimal.NewFromString(numerator)
+	den, denErr := decimal.NewFromString(denominator)
+	if numErr != nil || denErr != nil || num.IsZero() || den.IsZero() {
+		return decimal.NewFromInt(1)
+	}
+	return num.Div(den)
+}
+
 // baseUnitRatio reads a unit's base ratio, defaulting to 1 so a rate with no unit recorded prices the
 // same as it always did rather than collapsing the term to zero.
 func baseUnitRatio(ratio string) decimal.Decimal {
@@ -540,14 +562,15 @@ func calculateStepCost(step *domain.ProductionFlowStep, consumptions []domain.Co
 	levelingFactor, _ := decimal.NewFromString(step.LevelingFactor)
 	allowances, _ := decimal.NewFromString(step.Allowances)
 
-	// Labor time, carried into the base time unit. A duration and the rate pricing it are each entered
-	// in whatever unit suited whoever entered them — seconds a piece against dollars an hour — so both
-	// go to base units before they meet, exactly as the material term does. Multiplying them raw prices
-	// an hour's labor for every second of it.
+	// Labor time per produced unit, in base time units. Both halves are entered in whatever suited the
+	// person entering them — seconds a case of fifty against dollars an hour — so each goes to base units
+	// before it meets the rate or the batch, exactly as the material term does.
 	var laborTimeMeasure decimal.Decimal
 	if step.LaborTime != nil {
 		laborTimeMeasure, _ = decimal.NewFromString(step.LaborTime.Value)
-		laborTimeMeasure = laborTimeMeasure.Mul(baseUnitRatio(step.LaborTime.NumeratorRatio))
+		laborTimeMeasure = laborTimeMeasure.
+			Mul(baseUnitRatio(step.LaborTime.NumeratorRatio)).
+			Mul(laborTimeUnitsPerProducedUnit(step))
 	}
 
 	// Labor rate, per base time unit.

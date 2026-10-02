@@ -403,32 +403,24 @@ func (q *Queries) GetInventoryReceiptEntries(ctx context.Context, arg GetInvento
 }
 
 const getManufacturingBatchBatchMetrics = `-- name: GetManufacturingBatchBatchMetrics :one
-WITH active_steps AS (
-    SELECT pr.production_step_id, SUM(CAST(qp.value AS DECIMAL(65,30))) AS prod_total
-    FROM production pr
-    JOIN quantity qp ON qp.id = pr.quantity_id
-    WHERE pr.production_step_id IN (
-        SELECT DISTINCT b2.production_step_id FROM batch b2
-        WHERE b2.account_id = ?
-          AND b2.scanned_at >= ?
-          AND b2.scanned_at <= ?
-    )
-    GROUP BY pr.production_step_id
-)
 SELECT
     CAST(COALESCE(SUM(CAST(qf.value AS DECIMAL(65,30))), 0) AS DECIMAL(65,30)) AS total_quantity,
     CAST(COALESCE(SUM(CAST(COALESCE(qw.value, 0) AS DECIMAL(65,30))), 0) AS DECIMAL(65,30)) AS total_waste,
     CAST(COALESCE(SUM(CAST(COALESCE(qs.value, 0) AS DECIMAL(65,30))), 0) AS DECIMAL(65,30)) AS total_seconds,
-    CAST(COALESCE(SUM(CASE WHEN COALESCE(pt.prod_total, 0) > 0 THEN COALESCE(CAST(qf.value AS DECIMAL(65,30)), 0) * (CAST(lt.value AS DECIMAL(65,30)) / pt.prod_total) ELSE 0 END), 0) AS DECIMAL(65,30)) AS labor_quantity,
-    CAST(COALESCE(SUM(CASE WHEN COALESCE(pt.prod_total, 0) > 0 THEN COALESCE(CAST(COALESCE(qw.value, 0) AS DECIMAL(65,30)), 0) * (CAST(lt.value AS DECIMAL(65,30)) / pt.prod_total) ELSE 0 END), 0) AS DECIMAL(65,30)) AS labor_waste,
-    CAST(COALESCE(SUM(CASE WHEN COALESCE(pt.prod_total, 0) > 0 THEN COALESCE(CAST(COALESCE(qs.value, 0) AS DECIMAL(65,30)), 0) * (CAST(lt.value AS DECIMAL(65,30)) / pt.prod_total) ELSE 0 END), 0) AS DECIMAL(65,30)) AS labor_seconds
+    CAST(COALESCE(SUM(COALESCE(CAST(qf.value AS DECIMAL(65,30)), 0) * CAST(lt.value AS DECIMAL(65,30)) * (ltn.ratio_numerator / ltn.ratio_denominator) * CASE WHEN ltd.unit_dimension_code = qfu.unit_dimension_code THEN (qfu.ratio_numerator / qfu.ratio_denominator) / (ltd.ratio_numerator / ltd.ratio_denominator) ELSE 1 END), 0) AS DECIMAL(65,30)) AS labor_quantity,
+    CAST(COALESCE(SUM(COALESCE(CAST(qw.value AS DECIMAL(65,30)), 0) * CAST(lt.value AS DECIMAL(65,30)) * (ltn.ratio_numerator / ltn.ratio_denominator) * CASE WHEN ltd.unit_dimension_code = qwu.unit_dimension_code THEN (qwu.ratio_numerator / qwu.ratio_denominator) / (ltd.ratio_numerator / ltd.ratio_denominator) ELSE 1 END), 0) AS DECIMAL(65,30)) AS labor_waste,
+    CAST(COALESCE(SUM(COALESCE(CAST(qs.value AS DECIMAL(65,30)), 0) * CAST(lt.value AS DECIMAL(65,30)) * (ltn.ratio_numerator / ltn.ratio_denominator) * CASE WHEN ltd.unit_dimension_code = qsu.unit_dimension_code THEN (qsu.ratio_numerator / qsu.ratio_denominator) / (ltd.ratio_numerator / ltd.ratio_denominator) ELSE 1 END), 0) AS DECIMAL(65,30)) AS labor_seconds
 FROM batch b
 LEFT JOIN quantity qf ON qf.id = b.quantity_id
+LEFT JOIN unit qfu ON qfu.id = qf.unit_id
 LEFT JOIN quantity qw ON qw.id = b.waste_quantity_id
+LEFT JOIN unit qwu ON qwu.id = qw.unit_id
 LEFT JOIN quantity qs ON qs.id = b.seconds_quantity_id
+LEFT JOIN unit qsu ON qsu.id = qs.unit_id
 LEFT JOIN production_step ps ON ps.id = b.production_step_id
 LEFT JOIN rate lt ON lt.id = ps.labor_time_id
-LEFT JOIN active_steps pt ON pt.production_step_id = b.production_step_id
+LEFT JOIN unit ltn ON ltn.id = lt.numerator_unit_id
+LEFT JOIN unit ltd ON ltd.id = lt.denominator_unit_id
 WHERE b.account_id = ?
   AND b.scanned_at >= ?
   AND b.scanned_at <= ?
@@ -450,15 +442,11 @@ type GetManufacturingBatchBatchMetricsRow struct {
 }
 
 // Combined batch-table query for production, quality, and labor efficiency. Uses scanned_at for date filtering to match legacy dashboard behavior.
+// Labor efficiency weighs each batch's good, waste and seconds counts by the standard labor they stand for:
+// the step's labor time in hours per base unit, times the count in base units. A labor time quantified in
+// another dimension than the count has no conversion, so it is read as per the count's own unit.
 func (q *Queries) GetManufacturingBatchBatchMetrics(ctx context.Context, arg GetManufacturingBatchBatchMetricsParams) (GetManufacturingBatchBatchMetricsRow, error) {
-	row := q.db.QueryRowContext(ctx, getManufacturingBatchBatchMetrics,
-		arg.OwnerAccountID,
-		arg.StartDate,
-		arg.EndDate,
-		arg.OwnerAccountID,
-		arg.StartDate,
-		arg.EndDate,
-	)
+	row := q.db.QueryRowContext(ctx, getManufacturingBatchBatchMetrics, arg.OwnerAccountID, arg.StartDate, arg.EndDate)
 	var i GetManufacturingBatchBatchMetricsRow
 	err := row.Scan(
 		&i.TotalQuantity,
@@ -627,27 +615,20 @@ func (q *Queries) GetManufacturingCostsPerUnit(ctx context.Context, arg GetManuf
 
 const getManufacturingLaborEfficiency = `-- name: GetManufacturingLaborEfficiency :one
 SELECT
-    CAST(COALESCE(SUM(CASE WHEN COALESCE(pt.prod_total, 0) > 0 THEN COALESCE(qf.value, 0) * (lt.value / pt.prod_total) ELSE 0 END), 0) AS DECIMAL(65,30)) AS labor_quantity,
-    CAST(COALESCE(SUM(CASE WHEN COALESCE(pt.prod_total, 0) > 0 THEN COALESCE(qw.value, 0) * (lt.value / pt.prod_total) ELSE 0 END), 0) AS DECIMAL(65,30)) AS labor_waste,
-    CAST(COALESCE(SUM(CASE WHEN COALESCE(pt.prod_total, 0) > 0 THEN COALESCE(qs.value, 0) * (lt.value / pt.prod_total) ELSE 0 END), 0) AS DECIMAL(65,30)) AS labor_seconds
+    CAST(COALESCE(SUM(COALESCE(CAST(qf.value AS DECIMAL(65,30)), 0) * CAST(lt.value AS DECIMAL(65,30)) * (ltn.ratio_numerator / ltn.ratio_denominator) * CASE WHEN ltd.unit_dimension_code = qfu.unit_dimension_code THEN (qfu.ratio_numerator / qfu.ratio_denominator) / (ltd.ratio_numerator / ltd.ratio_denominator) ELSE 1 END), 0) AS DECIMAL(65,30)) AS labor_quantity,
+    CAST(COALESCE(SUM(COALESCE(CAST(qw.value AS DECIMAL(65,30)), 0) * CAST(lt.value AS DECIMAL(65,30)) * (ltn.ratio_numerator / ltn.ratio_denominator) * CASE WHEN ltd.unit_dimension_code = qwu.unit_dimension_code THEN (qwu.ratio_numerator / qwu.ratio_denominator) / (ltd.ratio_numerator / ltd.ratio_denominator) ELSE 1 END), 0) AS DECIMAL(65,30)) AS labor_waste,
+    CAST(COALESCE(SUM(COALESCE(CAST(qs.value AS DECIMAL(65,30)), 0) * CAST(lt.value AS DECIMAL(65,30)) * (ltn.ratio_numerator / ltn.ratio_denominator) * CASE WHEN ltd.unit_dimension_code = qsu.unit_dimension_code THEN (qsu.ratio_numerator / qsu.ratio_denominator) / (ltd.ratio_numerator / ltd.ratio_denominator) ELSE 1 END), 0) AS DECIMAL(65,30)) AS labor_seconds
 FROM batch b
 LEFT JOIN quantity qf ON qf.id = b.quantity_id
+LEFT JOIN unit qfu ON qfu.id = qf.unit_id
 LEFT JOIN quantity qw ON qw.id = b.waste_quantity_id
+LEFT JOIN unit qwu ON qwu.id = qw.unit_id
 LEFT JOIN quantity qs ON qs.id = b.seconds_quantity_id
+LEFT JOIN unit qsu ON qsu.id = qs.unit_id
 LEFT JOIN production_step ps ON ps.id = b.production_step_id
 LEFT JOIN rate lt ON lt.id = ps.labor_time_id
-LEFT JOIN (
-    SELECT pr.production_step_id, SUM(qp.value) AS prod_total
-    FROM production pr
-    JOIN quantity qp ON qp.id = pr.quantity_id
-    WHERE pr.production_step_id IN (
-        SELECT DISTINCT b2.production_step_id FROM batch b2
-        WHERE b2.account_id = ?
-          AND b2.scanned_at >= ?
-          AND b2.scanned_at <= ?
-    )
-    GROUP BY pr.production_step_id
-) pt ON pt.production_step_id = b.production_step_id
+LEFT JOIN unit ltn ON ltn.id = lt.numerator_unit_id
+LEFT JOIN unit ltd ON ltd.id = lt.denominator_unit_id
 WHERE b.account_id = ?
   AND b.scanned_at >= ?
   AND b.scanned_at <= ?
@@ -665,15 +646,11 @@ type GetManufacturingLaborEfficiencyRow struct {
 	LaborSeconds  string
 }
 
+// Labor efficiency weighs each batch's good, waste and seconds counts by the standard labor they stand for:
+// the step's labor time in hours per base unit, times the count in base units. A labor time quantified in
+// another dimension than the count has no conversion, so it is read as per the count's own unit.
 func (q *Queries) GetManufacturingLaborEfficiency(ctx context.Context, arg GetManufacturingLaborEfficiencyParams) (GetManufacturingLaborEfficiencyRow, error) {
-	row := q.db.QueryRowContext(ctx, getManufacturingLaborEfficiency,
-		arg.OwnerAccountID,
-		arg.StartDate,
-		arg.EndDate,
-		arg.OwnerAccountID,
-		arg.StartDate,
-		arg.EndDate,
-	)
+	row := q.db.QueryRowContext(ctx, getManufacturingLaborEfficiency, arg.OwnerAccountID, arg.StartDate, arg.EndDate)
 	var i GetManufacturingLaborEfficiencyRow
 	err := row.Scan(&i.LaborQuantity, &i.LaborWaste, &i.LaborSeconds)
 	return i, err

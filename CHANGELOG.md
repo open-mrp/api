@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.18.4](https://github.com/open-mrp/api/compare/v2.18.3...v2.18.4) (2026-10-02)
+
+
+### Performance Improvements
+
+* **sales,analytics:** serve sales lists and analytics from keys, and plan-test them ([#236](https://github.com/open-mrp/api/issues/236)) ([64c9fca](https://github.com/open-mrp/api/commit/64c9fca0e40f51c85dad27e5d53628410fa47483))
+
 ## [2.18.3](https://github.com/open-mrp/api/compare/v2.18.2...v2.18.3) (2026-10-02)
 
 

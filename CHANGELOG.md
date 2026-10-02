@@ -1,5 +1,17 @@
 # Changelog
 
+## [2.18.1](https://github.com/open-mrp/api/compare/v2.18.0...v2.18.1) (2026-10-02)
+
+
+### Bug Fixes
+
+* **release:** recut the release's deploy request on every push while a release PR is open ([#237](https://github.com/open-mrp/api/issues/237)) ([fa6c5b3](https://github.com/open-mrp/api/commit/fa6c5b3e17a67800c8ca96bad93195eb2755e160))
+
+
+### Performance Improvements
+
+* serve every list and analytics query from an index, and plan-test them ([#232](https://github.com/open-mrp/api/issues/232)) ([bd92a36](https://github.com/open-mrp/api/commit/bd92a3617f438521e1b9f9d23cf0a8a9b3d3c1e2))
+
 ## [2.18.0](https://github.com/open-mrp/api/compare/v2.17.1...v2.18.0) (2026-10-01)
 
 

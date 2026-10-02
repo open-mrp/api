@@ -105,6 +105,8 @@ jobs:
           VALIDATED_TAG_NAME: ${{ steps.validate.outputs.tag_name }}
           VALIDATED_TAG_REF: ${{ steps.validate.outputs.tag_ref }}
           RELEASE_PR: ${{ steps.release.outputs.pr }}
+          RELEASE_CREATED: ${{ steps.release.outputs.release_created }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
             echo "release_created=true" >> "$GITHUB_OUTPUT"
@@ -119,6 +121,16 @@ jobs:
           if [ -n "${RELEASE_PR:-}" ] && [ "${RELEASE_PR}" != "null" ]; then
             echo "pr_number=$(echo "$RELEASE_PR" | jq -r '.number // empty')" >> "$GITHUB_OUTPUT"
             echo "pr_head_ref=$(echo "$RELEASE_PR" | jq -r '.headBranchName // empty')" >> "$GITHUB_OUTPUT"
+          elif [ "${{ github.event_name }}" = "push" ] && [ "${RELEASE_CREATED:-}" != "true" ]; then
+            # release-please reports the release PR only when it rewrites it, and it leaves it alone for
+            # commits it does not release (chore, test, docs). Such a commit can still change migrations,
+            # so the open release PR is looked up here and its deploy request recut on every push.
+            open_pr="$(gh pr list --repo "${{ github.repository }}" --state open --label "autorelease: pending" \
+              --json number,headRefName --jq 'first // empty')"
+            if [ -n "$open_pr" ]; then
+              echo "pr_number=$(echo "$open_pr" | jq -r '.number')" >> "$GITHUB_OUTPUT"
+              echo "pr_head_ref=$(echo "$open_pr" | jq -r '.headRefName')" >> "$GITHUB_OUTPUT"
+            fi
           fi
 
   prepare-migrations:

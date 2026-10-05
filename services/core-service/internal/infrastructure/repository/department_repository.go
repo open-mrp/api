@@ -9,6 +9,7 @@ import (
 	"github.com/open-mrp/api/services/core-service/internal/infrastructure/sqlc"
 	"github.com/open-mrp/api/shared/db"
 	apierror "github.com/open-mrp/api/shared/errors"
+	"github.com/open-mrp/api/shared/field"
 	"github.com/open-mrp/api/shared/pagination"
 	"github.com/open-mrp/api/shared/tracing"
 )
@@ -470,7 +471,7 @@ func (r *departmentRepoImpl) Update(ctx context.Context, params domain.UpdateDep
 		ID:          params.DepartmentID,
 		AccountID:   params.AccountID,
 		Name:        deptToNullString(params.Name),
-		Notes:       stringToNullString(params.Notes),
+		Notes:       field.StringToNullString(params.Notes),
 		LocationID:  deptToNullString(params.LocationID),
 		LaborRateID: deptToNullString(params.LaborRateID),
 	})

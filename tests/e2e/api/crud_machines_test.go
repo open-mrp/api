@@ -223,6 +223,36 @@ func TestMachines_GetByID_IncludeDepartment(t *testing.T) {
 	assert.NotEmpty(t, jsonField(dept, "name"))
 }
 
+func TestMachines_List_DepartmentNullWithoutInclude(t *testing.T) {
+	t.Parallel()
+	list, _, err := apiClient.GetList(machinesPath, url.Values{"q": {"Knitting"}})
+	require.NoError(t, err)
+	require.GreaterOrEqual(t, len(list.Data), 1)
+
+	for _, item := range list.Data {
+		m := parseJSON(item)
+		require.NotNil(t, m)
+		assertNilField(t, m, "department")
+	}
+}
+
+func TestMachines_List_IncludeDepartment(t *testing.T) {
+	t.Parallel()
+	list, _, err := apiClient.GetList(machinesPath, url.Values{"q": {"Knitting"}, "include": {"department"}})
+	require.NoError(t, err)
+	require.GreaterOrEqual(t, len(list.Data), 1)
+
+	for _, item := range list.Data {
+		m := parseJSON(item)
+		require.NotNil(t, m)
+		dept := jsonObject(m, "department")
+		require.NotNil(t, dept, "department should be populated with ?include=department")
+		assert.Equal(t, "department", jsonField(dept, "object"))
+		assert.NotEmpty(t, jsonField(dept, "id"))
+		assert.NotEmpty(t, jsonField(dept, "name"))
+	}
+}
+
 func TestMachines_GetByID_NotFound(t *testing.T) {
 	t.Parallel()
 	getStatus, _, err := apiClient.GetListRaw(machinesPath+"/mc_nonexistent000000000", nil)
@@ -388,4 +418,37 @@ func TestMachines_CreateDuplicateSerialNumber(t *testing.T) {
 	assert.Equal(t, 409, status2, "Duplicate serial number should return 409: %s", string(body2))
 
 	apiClient.Delete(machinesPath + "/" + id)
+}
+
+func TestMachines_UpdateNotes_OmittedKeepsAndNullClears(t *testing.T) {
+	t.Parallel()
+	status, body, err := apiClient.Post(machinesPath, map[string]any{
+		"name":          uniqueName("e2e-mc-notes"),
+		"serial_number": uniqueName("SN-NOTES"),
+		"notes":         "Keep me",
+		"department_id": SeedDepartmentID,
+	}, newIdempotencyKey())
+	require.NoError(t, err)
+	requireStatus(t, 201, status, body)
+	id := jsonField(parseJSON(body), "id")
+	require.NotEmpty(t, id)
+	defer apiClient.Delete(machinesPath + "/" + id)
+
+	renamed := uniqueName("e2e-mc-notes-r")
+	status, body, err = apiClient.Patch(machinesPath+"/"+id, map[string]any{"name": renamed}, newIdempotencyKey())
+	require.NoError(t, err)
+	requireStatus(t, 200, status, body)
+	got := parseJSON(body)
+	assert.Equal(t, renamed, jsonField(got, "name"))
+	assert.Equal(t, "Keep me", jsonField(got, "notes"), "omitting notes must leave them unchanged")
+
+	status, body, err = apiClient.Patch(machinesPath+"/"+id, map[string]any{"notes": nil}, newIdempotencyKey())
+	require.NoError(t, err)
+	requireStatus(t, 200, status, body)
+	assertNilField(t, parseJSON(body), "notes")
+
+	getStatus, getBody, err := apiClient.GetListRaw(machinesPath+"/"+id, nil)
+	require.NoError(t, err)
+	requireStatus(t, 200, getStatus, getBody)
+	assertNilField(t, parseJSON(getBody), "notes")
 }

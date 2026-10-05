@@ -11,6 +11,7 @@ import (
 	apirequest "github.com/open-mrp/api/services/api-gateway/pkg/request"
 	apiresource "github.com/open-mrp/api/services/api-gateway/pkg/resource"
 	apierror "github.com/open-mrp/api/shared/errors"
+	"github.com/open-mrp/api/shared/field"
 	pb "github.com/open-mrp/api/shared/proto/core"
 	"github.com/open-mrp/api/shared/tracing"
 	"google.golang.org/grpc"
@@ -149,7 +150,7 @@ func (m *departmentSvcImpl) UpdateDepartment(ctx context.Context, req *UpdateDep
 	pbReq := &pb.UpdateDepartmentRequest{
 		Id:                 req.DepartmentID,
 		Name:               req.Name.Ptr(),
-		Notes:              req.Notes.Ptr(),
+		Notes:              field.StringClearableToProto(req.Notes),
 		LocationId:         req.LocationID.Ptr(),
 		ScanningStationIds: req.ScanningStationIDs,
 		MachineIds:         req.MachineIDs,

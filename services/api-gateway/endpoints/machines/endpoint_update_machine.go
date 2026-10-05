@@ -26,7 +26,9 @@ type UpdateMachineRequest struct {
 	// Maximum 255 characters.
 	SerialNumber field.Optional[string] `json:"serial_number,omitzero" validate:"omitempty,max=255"`
 	// Free-form notes about the machine.
-	Notes field.Optional[string] `json:"notes,omitzero"`
+	//
+	// Send `null` to clear.
+	Notes field.Clearable[string] `json:"notes,omitzero"`
 }
 
 var sampleUpdateMachineName = "Updated CNC Router"

@@ -738,7 +738,7 @@ UPDATE machine m
 SET
     m.name = COALESCE(?, m.name),
     m.serial_number = COALESCE(?, m.serial_number),
-    m.notes = COALESCE(?, m.notes),
+    m.notes = ?,
     m.updated_at = NOW(3)
 WHERE m.id = ?
 AND m.account_id = ?

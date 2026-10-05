@@ -13,6 +13,7 @@ import (
 	"github.com/open-mrp/api/shared/db"
 	apierror "github.com/open-mrp/api/shared/errors"
 	"github.com/open-mrp/api/shared/excel"
+	"github.com/open-mrp/api/shared/field"
 	"github.com/open-mrp/api/shared/id"
 	"github.com/open-mrp/api/shared/messaging"
 )
@@ -218,12 +219,17 @@ func upsertMachineInTx(txCtx context.Context, txRepos domain.RepoFactory, accoun
 
 	name := row.Name
 	serial := row.SerialNumber
+	// The SQL assigns notes directly, so an omitted note has to carry the old value forward.
+	notes := field.Unset[string]().BackfillUnsetPtr(old.Notes)
+	if row.Notes != nil {
+		notes = field.Set(*row.Notes)
+	}
 	updated, apiErr := txRepo.Update(ctx, domain.UpdateMachineParams{
 		AccountID:    accountID,
 		MachineID:    old.ID,
 		Name:         &name,
 		SerialNumber: &serial,
-		Notes:        row.Notes,
+		Notes:        notes,
 	})
 	if apiErr != nil {
 		return "", apiErr

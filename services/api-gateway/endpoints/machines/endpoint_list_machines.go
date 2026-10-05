@@ -35,6 +35,10 @@ func (e *ListMachinesEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListMachi
 		RequiredPermissions: []types.Permission{
 			{Domain: types.PermissionDomainMachines, Action: types.ActionRead},
 		},
+		IncludeConfig: apiendpoint.IncludesFor(apiendpoint.IncludesParams{
+			ObjectType: constants.ObjectTypeMachine,
+			Fields:     []string{"department"},
+		}),
 		ServiceHandler: func(svc any) func(ctx context.Context, req *ListMachinesRequest) (*apiresource.List[apiresource.Machine], *apierror.APIError) {
 			return svc.(MachineSvc).ListMachines
 		},

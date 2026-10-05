@@ -22,7 +22,9 @@ type UpdateDepartmentRequest struct {
 	// Must be unique within your account; maximum 255 characters.
 	Name field.Optional[string] `json:"name,omitzero" validate:"omitempty,max=255"`
 	// Free-form notes about the department.
-	Notes field.Optional[string] `json:"notes,omitzero"`
+	//
+	// Send `null` to clear.
+	Notes field.Clearable[string] `json:"notes,omitzero"`
 	// ID of the location where this department operates.
 	LocationID field.Optional[string] `json:"location_id,omitzero" validate:"omitempty"`
 	// IDs of scanning stations to assign to this department.

@@ -3,6 +3,7 @@ package domain
 import (
 	"time"
 
+	"github.com/open-mrp/api/shared/field"
 	"github.com/open-mrp/api/shared/pagination"
 )
 
@@ -58,7 +59,7 @@ type UpdateMachineParams struct {
 	MachineID    string
 	Name         *string
 	SerialNumber *string
-	Notes        *string
+	Notes        field.Clearable[string]
 }
 
 type DeleteMachineParams struct {

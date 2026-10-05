@@ -11,6 +11,7 @@ import (
 	"github.com/open-mrp/api/shared/constants"
 	apierror "github.com/open-mrp/api/shared/errors"
 	pb "github.com/open-mrp/api/shared/proto/core"
+	"github.com/open-mrp/api/shared/safeconv"
 	"github.com/open-mrp/api/shared/tracing"
 	"google.golang.org/grpc"
 	"google.golang.org/protobuf/types/known/timestamppb"
@@ -116,6 +117,7 @@ func deliverySummaryFromProto(d *pb.DeliverySummaryInfo) apiresource.Delivery {
 		Object:     constants.ObjectTypeDelivery,
 		Number:     d.Number,
 		Status:     constants.DeliveryStatus(d.Status),
+		LineCount:  d.LineCount,
 		AcceptedAt: grpcutil.TimestampToTimePtr(d.AcceptedAt),
 		RejectedAt: grpcutil.TimestampToTimePtr(d.RejectedAt),
 		CreatedAt:  grpcutil.TimestampToTime(d.CreatedAt),
@@ -151,6 +153,7 @@ func deliveryFromProto(d *pb.DeliveryInfo) apiresource.Delivery {
 		Object:     constants.ObjectTypeDelivery,
 		Number:     d.Number,
 		Status:     constants.DeliveryStatus(d.Status),
+		LineCount:  safeconv.IntToInt32(len(d.Lines)),
 		AcceptedAt: grpcutil.TimestampToTimePtr(d.AcceptedAt),
 		RejectedAt: grpcutil.TimestampToTimePtr(d.RejectedAt),
 		CreatedAt:  grpcutil.TimestampToTime(d.CreatedAt),

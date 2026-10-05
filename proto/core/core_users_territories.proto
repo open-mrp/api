@@ -267,7 +267,7 @@ message CreateDepartmentResponse {
 message UpdateDepartmentRequest {
   string id = 1;
   optional string name = 2;
-  optional string notes = 3;
+  optional StringPatch notes = 3;
   optional string location_id = 4;
   repeated string scanning_station_ids = 5;
   repeated string machine_ids = 6;

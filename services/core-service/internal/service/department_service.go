@@ -304,10 +304,8 @@ func (s *departmentSvcImpl) UpdateDepartment(ctx context.Context, params domain.
 				}
 			}
 
-			// Backfill unchanged nullable fields with existing values. Since the SQL uses direct assignment (no COALESCE) for notes, we must provide the existing value when the field was not sent.
-			if params.Notes == nil {
-				params.Notes = old.Notes
-			}
+			// The SQL assigns notes directly, so an omitted note has to carry the old value forward.
+			params.Notes = params.Notes.BackfillUnsetPtr(old.Notes)
 
 			if params.LaborRate != nil {
 				if apiErr := ValidateCostRateUnits(txCtx, txSvc.repos.NewUnitRepo(), params.LaborRate.NumeratorUnitID, params.LaborRate.DenominatorUnitID, "labor_rate"); apiErr != nil {

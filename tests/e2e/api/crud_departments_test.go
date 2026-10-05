@@ -66,3 +66,34 @@ func TestDepartments_IncludeMachines(t *testing.T) {
 	require.NotNil(t, ms, "machines should be present with ?include=machines")
 	assert.Equal(t, "list", jsonField(ms, "object"))
 }
+
+func TestDepartments_UpdateNotes_OmittedKeepsAndNullClears(t *testing.T) {
+	t.Parallel()
+	status, body, err := apiClient.Post(departmentsPath, map[string]any{
+		"name":  uniqueName("e2e-dp-notes"),
+		"notes": "Keep me",
+	}, newIdempotencyKey())
+	require.NoError(t, err)
+	requireStatus(t, 201, status, body)
+	id := jsonField(parseJSON(body), "id")
+	require.NotEmpty(t, id)
+	defer apiClient.Delete(departmentsPath + "/" + id)
+
+	renamed := uniqueName("e2e-dp-notes-r")
+	status, body, err = apiClient.Patch(departmentsPath+"/"+id, map[string]any{"name": renamed}, newIdempotencyKey())
+	require.NoError(t, err)
+	requireStatus(t, 200, status, body)
+	got := parseJSON(body)
+	assert.Equal(t, renamed, jsonField(got, "name"))
+	assert.Equal(t, "Keep me", jsonField(got, "notes"), "omitting notes must leave them unchanged")
+
+	status, body, err = apiClient.Patch(departmentsPath+"/"+id, map[string]any{"notes": nil}, newIdempotencyKey())
+	require.NoError(t, err)
+	requireStatus(t, 200, status, body)
+	assertNilField(t, parseJSON(body), "notes")
+
+	getStatus, getBody, err := apiClient.GetListRaw(departmentsPath+"/"+id, nil)
+	require.NoError(t, err)
+	requireStatus(t, 200, getStatus, getBody)
+	assertNilField(t, parseJSON(getBody), "notes")
+}

@@ -106,7 +106,7 @@ UPDATE machine m
 SET
     m.name = COALESCE(sqlc.narg('name'), m.name),
     m.serial_number = COALESCE(sqlc.narg('serial_number'), m.serial_number),
-    m.notes = COALESCE(sqlc.narg('notes'), m.notes),
+    m.notes = sqlc.narg('notes'),
     m.updated_at = NOW(3)
 WHERE m.id = sqlc.arg('id')
 AND m.account_id = sqlc.arg('account_id');

@@ -5,6 +5,7 @@ import (
 
 	"github.com/open-mrp/api/services/core-service/internal/domain"
 	"github.com/open-mrp/api/shared/contracts"
+	"github.com/open-mrp/api/shared/field"
 	pb "github.com/open-mrp/api/shared/proto/core"
 
 	"google.golang.org/protobuf/types/known/emptypb"
@@ -165,7 +166,7 @@ func (h *fulfillmentGRPCHandler) UpdateMachine(ctx context.Context, req *pb.Upda
 		MachineID:    req.Id,
 		Name:         req.Name,
 		SerialNumber: req.SerialNumber,
-		Notes:        req.Notes,
+		Notes:        field.StringClearableFromProto(req.Notes),
 	}
 
 	machine, apiErr := h.machineSvc.UpdateMachine(ctx, params)

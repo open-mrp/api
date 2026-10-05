@@ -573,7 +573,7 @@ type UpdateMachineRequest struct {
 	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
 	Name          *string                `protobuf:"bytes,2,opt,name=name,proto3,oneof" json:"name,omitempty"`
 	SerialNumber  *string                `protobuf:"bytes,3,opt,name=serial_number,json=serialNumber,proto3,oneof" json:"serial_number,omitempty"`
-	Notes         *string                `protobuf:"bytes,4,opt,name=notes,proto3,oneof" json:"notes,omitempty"`
+	Notes         *StringPatch           `protobuf:"bytes,4,opt,name=notes,proto3,oneof" json:"notes,omitempty"`
 	Includes      []string               `protobuf:"bytes,5,rep,name=includes,proto3" json:"includes,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
@@ -630,11 +630,11 @@ func (x *UpdateMachineRequest) GetSerialNumber() string {
 	return ""
 }
 
-func (x *UpdateMachineRequest) GetNotes() string {
-	if x != nil && x.Notes != nil {
-		return *x.Notes
+func (x *UpdateMachineRequest) GetNotes() *StringPatch {
+	if x != nil {
+		return x.Notes
 	}
-	return ""
+	return nil
 }
 
 func (x *UpdateMachineRequest) GetIncludes() []string {
@@ -1462,7 +1462,7 @@ var File_core_core_fulfillment_proto protoreflect.FileDescriptor
 
 const file_core_core_fulfillment_proto_rawDesc = "" +
 	"\n" +
-	"\x1bcore/core_fulfillment.proto\x12\x04core\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\x1bgoogle/protobuf/empty.proto\x1a\x0fcore/core.proto\x1a!core/core_fuzzy_identifiers.proto\x1a\x15core/core_async.proto\"\xcd\x04\n" +
+	"\x1bcore/core_fulfillment.proto\x12\x04core\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\x1bgoogle/protobuf/empty.proto\x1a\x0fcore/core.proto\x1a!core/core_fuzzy_identifiers.proto\x1a\x15core/core_async.proto\x1a\x15core/core_patch.proto\"\xcd\x04\n" +
 	"\vMachineInfo\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x12\n" +
 	"\x04name\x18\x02 \x01(\tR\x04name\x12#\n" +
@@ -1510,12 +1510,12 @@ const file_core_core_fulfillment_proto_rawDesc = "" +
 	"\bincludes\x18\x05 \x03(\tR\bincludesB\b\n" +
 	"\x06_notes\"D\n" +
 	"\x15CreateMachineResponse\x12+\n" +
-	"\amachine\x18\x01 \x01(\v2\x11.core.MachineInfoR\amachine\"\xc5\x01\n" +
+	"\amachine\x18\x01 \x01(\v2\x11.core.MachineInfoR\amachine\"\xd8\x01\n" +
 	"\x14UpdateMachineRequest\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x17\n" +
 	"\x04name\x18\x02 \x01(\tH\x00R\x04name\x88\x01\x01\x12(\n" +
-	"\rserial_number\x18\x03 \x01(\tH\x01R\fserialNumber\x88\x01\x01\x12\x19\n" +
-	"\x05notes\x18\x04 \x01(\tH\x02R\x05notes\x88\x01\x01\x12\x1a\n" +
+	"\rserial_number\x18\x03 \x01(\tH\x01R\fserialNumber\x88\x01\x01\x12,\n" +
+	"\x05notes\x18\x04 \x01(\v2\x11.core.StringPatchH\x02R\x05notes\x88\x01\x01\x12\x1a\n" +
 	"\bincludes\x18\x05 \x03(\tR\bincludesB\a\n" +
 	"\x05_nameB\x10\n" +
 	"\x0e_serial_numberB\b\n" +
@@ -1653,8 +1653,9 @@ var file_core_core_fulfillment_proto_goTypes = []any{
 	(*timestamppb.Timestamp)(nil),         // 22: google.protobuf.Timestamp
 	(*PageInfo)(nil),                      // 23: core.PageInfo
 	(*JobInfo)(nil),                       // 24: core.JobInfo
-	(*ObjectIdentifier)(nil),              // 25: core.ObjectIdentifier
-	(*emptypb.Empty)(nil),                 // 26: google.protobuf.Empty
+	(*StringPatch)(nil),                   // 25: core.StringPatch
+	(*ObjectIdentifier)(nil),              // 26: core.ObjectIdentifier
+	(*emptypb.Empty)(nil),                 // 27: google.protobuf.Empty
 }
 var file_core_core_fulfillment_proto_depIdxs = []int32{
 	22, // 0: core.MachineInfo.created_at:type_name -> google.protobuf.Timestamp
@@ -1666,42 +1667,43 @@ var file_core_core_fulfillment_proto_depIdxs = []int32{
 	24, // 6: core.ExportMachinesResponse.job:type_name -> core.JobInfo
 	0,  // 7: core.GetMachineResponse.machine:type_name -> core.MachineInfo
 	0,  // 8: core.CreateMachineResponse.machine:type_name -> core.MachineInfo
-	0,  // 9: core.UpdateMachineResponse.machine:type_name -> core.MachineInfo
-	25, // 10: core.UpsertMachineInput.department:type_name -> core.ObjectIdentifier
-	12, // 11: core.BulkUpsertMachinesRequest.machines:type_name -> core.UpsertMachineInput
-	24, // 12: core.BulkUpsertMachinesResponse.job:type_name -> core.JobInfo
-	0,  // 13: core.BatchGetMachinesByIDsResponse.machines:type_name -> core.MachineInfo
-	22, // 14: core.ListMachineStatusRequest.as_of:type_name -> google.protobuf.Timestamp
-	22, // 15: core.MachineCampaignInfo.week_start_date:type_name -> google.protobuf.Timestamp
-	22, // 16: core.MachineDowntimeSummaryInfo.started_at:type_name -> google.protobuf.Timestamp
-	19, // 17: core.MachineStatusInfo.downtime:type_name -> core.MachineDowntimeSummaryInfo
-	18, // 18: core.MachineStatusInfo.current:type_name -> core.MachineCampaignInfo
-	18, // 19: core.MachineStatusInfo.next:type_name -> core.MachineCampaignInfo
-	22, // 20: core.ListMachineStatusResponse.week_start_date:type_name -> google.protobuf.Timestamp
-	20, // 21: core.ListMachineStatusResponse.machines:type_name -> core.MachineStatusInfo
-	1,  // 22: core.CoreFulfillmentService.ListMachines:input_type -> core.ListMachinesRequest
-	3,  // 23: core.CoreFulfillmentService.ExportMachines:input_type -> core.ExportMachinesRequest
-	5,  // 24: core.CoreFulfillmentService.GetMachine:input_type -> core.GetMachineRequest
-	17, // 25: core.CoreFulfillmentService.ListMachineStatus:input_type -> core.ListMachineStatusRequest
-	7,  // 26: core.CoreFulfillmentService.CreateMachine:input_type -> core.CreateMachineRequest
-	9,  // 27: core.CoreFulfillmentService.UpdateMachine:input_type -> core.UpdateMachineRequest
-	13, // 28: core.CoreFulfillmentService.BulkUpsertMachines:input_type -> core.BulkUpsertMachinesRequest
-	11, // 29: core.CoreFulfillmentService.DeleteMachine:input_type -> core.DeleteMachineRequest
-	15, // 30: core.CoreFulfillmentService.BatchGetMachinesByIDs:input_type -> core.BatchGetMachinesByIDsRequest
-	2,  // 31: core.CoreFulfillmentService.ListMachines:output_type -> core.ListMachinesResponse
-	4,  // 32: core.CoreFulfillmentService.ExportMachines:output_type -> core.ExportMachinesResponse
-	6,  // 33: core.CoreFulfillmentService.GetMachine:output_type -> core.GetMachineResponse
-	21, // 34: core.CoreFulfillmentService.ListMachineStatus:output_type -> core.ListMachineStatusResponse
-	8,  // 35: core.CoreFulfillmentService.CreateMachine:output_type -> core.CreateMachineResponse
-	10, // 36: core.CoreFulfillmentService.UpdateMachine:output_type -> core.UpdateMachineResponse
-	14, // 37: core.CoreFulfillmentService.BulkUpsertMachines:output_type -> core.BulkUpsertMachinesResponse
-	26, // 38: core.CoreFulfillmentService.DeleteMachine:output_type -> google.protobuf.Empty
-	16, // 39: core.CoreFulfillmentService.BatchGetMachinesByIDs:output_type -> core.BatchGetMachinesByIDsResponse
-	31, // [31:40] is the sub-list for method output_type
-	22, // [22:31] is the sub-list for method input_type
-	22, // [22:22] is the sub-list for extension type_name
-	22, // [22:22] is the sub-list for extension extendee
-	0,  // [0:22] is the sub-list for field type_name
+	25, // 9: core.UpdateMachineRequest.notes:type_name -> core.StringPatch
+	0,  // 10: core.UpdateMachineResponse.machine:type_name -> core.MachineInfo
+	26, // 11: core.UpsertMachineInput.department:type_name -> core.ObjectIdentifier
+	12, // 12: core.BulkUpsertMachinesRequest.machines:type_name -> core.UpsertMachineInput
+	24, // 13: core.BulkUpsertMachinesResponse.job:type_name -> core.JobInfo
+	0,  // 14: core.BatchGetMachinesByIDsResponse.machines:type_name -> core.MachineInfo
+	22, // 15: core.ListMachineStatusRequest.as_of:type_name -> google.protobuf.Timestamp
+	22, // 16: core.MachineCampaignInfo.week_start_date:type_name -> google.protobuf.Timestamp
+	22, // 17: core.MachineDowntimeSummaryInfo.started_at:type_name -> google.protobuf.Timestamp
+	19, // 18: core.MachineStatusInfo.downtime:type_name -> core.MachineDowntimeSummaryInfo
+	18, // 19: core.MachineStatusInfo.current:type_name -> core.MachineCampaignInfo
+	18, // 20: core.MachineStatusInfo.next:type_name -> core.MachineCampaignInfo
+	22, // 21: core.ListMachineStatusResponse.week_start_date:type_name -> google.protobuf.Timestamp
+	20, // 22: core.ListMachineStatusResponse.machines:type_name -> core.MachineStatusInfo
+	1,  // 23: core.CoreFulfillmentService.ListMachines:input_type -> core.ListMachinesRequest
+	3,  // 24: core.CoreFulfillmentService.ExportMachines:input_type -> core.ExportMachinesRequest
+	5,  // 25: core.CoreFulfillmentService.GetMachine:input_type -> core.GetMachineRequest
+	17, // 26: core.CoreFulfillmentService.ListMachineStatus:input_type -> core.ListMachineStatusRequest
+	7,  // 27: core.CoreFulfillmentService.CreateMachine:input_type -> core.CreateMachineRequest
+	9,  // 28: core.CoreFulfillmentService.UpdateMachine:input_type -> core.UpdateMachineRequest
+	13, // 29: core.CoreFulfillmentService.BulkUpsertMachines:input_type -> core.BulkUpsertMachinesRequest
+	11, // 30: core.CoreFulfillmentService.DeleteMachine:input_type -> core.DeleteMachineRequest
+	15, // 31: core.CoreFulfillmentService.BatchGetMachinesByIDs:input_type -> core.BatchGetMachinesByIDsRequest
+	2,  // 32: core.CoreFulfillmentService.ListMachines:output_type -> core.ListMachinesResponse
+	4,  // 33: core.CoreFulfillmentService.ExportMachines:output_type -> core.ExportMachinesResponse
+	6,  // 34: core.CoreFulfillmentService.GetMachine:output_type -> core.GetMachineResponse
+	21, // 35: core.CoreFulfillmentService.ListMachineStatus:output_type -> core.ListMachineStatusResponse
+	8,  // 36: core.CoreFulfillmentService.CreateMachine:output_type -> core.CreateMachineResponse
+	10, // 37: core.CoreFulfillmentService.UpdateMachine:output_type -> core.UpdateMachineResponse
+	14, // 38: core.CoreFulfillmentService.BulkUpsertMachines:output_type -> core.BulkUpsertMachinesResponse
+	27, // 39: core.CoreFulfillmentService.DeleteMachine:output_type -> google.protobuf.Empty
+	16, // 40: core.CoreFulfillmentService.BatchGetMachinesByIDs:output_type -> core.BatchGetMachinesByIDsResponse
+	32, // [32:41] is the sub-list for method output_type
+	23, // [23:32] is the sub-list for method input_type
+	23, // [23:23] is the sub-list for extension type_name
+	23, // [23:23] is the sub-list for extension extendee
+	0,  // [0:23] is the sub-list for field type_name
 }
 
 func init() { file_core_core_fulfillment_proto_init() }
@@ -1712,6 +1714,7 @@ func file_core_core_fulfillment_proto_init() {
 	file_core_core_proto_init()
 	file_core_core_fuzzy_identifiers_proto_init()
 	file_core_core_async_proto_init()
+	file_core_core_patch_proto_init()
 	file_core_core_fulfillment_proto_msgTypes[0].OneofWrappers = []any{}
 	file_core_core_fulfillment_proto_msgTypes[1].OneofWrappers = []any{}
 	file_core_core_fulfillment_proto_msgTypes[3].OneofWrappers = []any{}

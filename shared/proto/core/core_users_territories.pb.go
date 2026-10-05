@@ -2893,7 +2893,7 @@ type UpdateDepartmentRequest struct {
 	state              protoimpl.MessageState `protogen:"open.v1"`
 	Id                 string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
 	Name               *string                `protobuf:"bytes,2,opt,name=name,proto3,oneof" json:"name,omitempty"`
-	Notes              *string                `protobuf:"bytes,3,opt,name=notes,proto3,oneof" json:"notes,omitempty"`
+	Notes              *StringPatch           `protobuf:"bytes,3,opt,name=notes,proto3,oneof" json:"notes,omitempty"`
 	LocationId         *string                `protobuf:"bytes,4,opt,name=location_id,json=locationId,proto3,oneof" json:"location_id,omitempty"`
 	ScanningStationIds []string               `protobuf:"bytes,5,rep,name=scanning_station_ids,json=scanningStationIds,proto3" json:"scanning_station_ids,omitempty"`
 	MachineIds         []string               `protobuf:"bytes,6,rep,name=machine_ids,json=machineIds,proto3" json:"machine_ids,omitempty"`
@@ -2947,11 +2947,11 @@ func (x *UpdateDepartmentRequest) GetName() string {
 	return ""
 }
 
-func (x *UpdateDepartmentRequest) GetNotes() string {
-	if x != nil && x.Notes != nil {
-		return *x.Notes
+func (x *UpdateDepartmentRequest) GetNotes() *StringPatch {
+	if x != nil {
+		return x.Notes
 	}
-	return ""
+	return nil
 }
 
 func (x *UpdateDepartmentRequest) GetLocationId() string {
@@ -5501,11 +5501,11 @@ const file_core_core_users_territories_proto_rawDesc = "" +
 	"\x18CreateDepartmentResponse\x124\n" +
 	"\n" +
 	"department\x18\x01 \x01(\v2\x14.core.DepartmentInfoR\n" +
-	"department\"\xc7\x02\n" +
+	"department\"\xda\x02\n" +
 	"\x17UpdateDepartmentRequest\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x17\n" +
-	"\x04name\x18\x02 \x01(\tH\x00R\x04name\x88\x01\x01\x12\x19\n" +
-	"\x05notes\x18\x03 \x01(\tH\x01R\x05notes\x88\x01\x01\x12$\n" +
+	"\x04name\x18\x02 \x01(\tH\x00R\x04name\x88\x01\x01\x12,\n" +
+	"\x05notes\x18\x03 \x01(\v2\x11.core.StringPatchH\x01R\x05notes\x88\x01\x01\x12$\n" +
 	"\vlocation_id\x18\x04 \x01(\tH\x02R\n" +
 	"locationId\x88\x01\x01\x120\n" +
 	"\x14scanning_station_ids\x18\x05 \x03(\tR\x12scanningStationIds\x12\x1f\n" +
@@ -5864,8 +5864,8 @@ var file_core_core_users_territories_proto_goTypes = []any{
 	(*LightScanningStationInfo)(nil),            // 77: core.LightScanningStationInfo
 	(*LightMachineInfo)(nil),                    // 78: core.LightMachineInfo
 	(*JobInfo)(nil),                             // 79: core.JobInfo
-	(*ObjectIdentifier)(nil),                    // 80: core.ObjectIdentifier
-	(*StringPatch)(nil),                         // 81: core.StringPatch
+	(*StringPatch)(nil),                         // 80: core.StringPatch
+	(*ObjectIdentifier)(nil),                    // 81: core.ObjectIdentifier
 	(*InvoiceForPaymentInfo)(nil),               // 82: core.InvoiceForPaymentInfo
 	(*InvoiceLineInfo)(nil),                     // 83: core.InvoiceLineInfo
 	(*InvoiceAllocationInfo)(nil),               // 84: core.InvoiceAllocationInfo
@@ -5912,54 +5912,55 @@ var file_core_core_users_territories_proto_depIdxs = []int32{
 	36, // 38: core.GetDepartmentResponse.department:type_name -> core.DepartmentInfo
 	35, // 39: core.CreateDepartmentRequest.labor_rate:type_name -> core.DepartmentRateInput
 	36, // 40: core.CreateDepartmentResponse.department:type_name -> core.DepartmentInfo
-	35, // 41: core.UpdateDepartmentRequest.labor_rate:type_name -> core.DepartmentRateInput
-	36, // 42: core.UpdateDepartmentResponse.department:type_name -> core.DepartmentInfo
-	80, // 43: core.UpsertDepartmentInput.location:type_name -> core.ObjectIdentifier
-	48, // 44: core.BulkUpsertDepartmentsRequest.departments:type_name -> core.UpsertDepartmentInput
-	79, // 45: core.BulkUpsertDepartmentsResponse.job:type_name -> core.JobInfo
-	36, // 46: core.BatchGetDepartmentsByIDsResponse.departments:type_name -> core.DepartmentInfo
-	53, // 47: core.EmailLogInfo.sent_by:type_name -> core.EmailLogActor
-	75, // 48: core.EmailLogInfo.created_at:type_name -> google.protobuf.Timestamp
-	75, // 49: core.EmailLogInfo.updated_at:type_name -> google.protobuf.Timestamp
-	54, // 50: core.ListEmailLogsResponse.email_logs:type_name -> core.EmailLogInfo
-	76, // 51: core.ListEmailLogsResponse.page_info:type_name -> core.PageInfo
-	54, // 52: core.GetEmailLogResponse.email_log:type_name -> core.EmailLogInfo
-	75, // 53: core.InventoryChangeLogInfo.created_at:type_name -> google.protobuf.Timestamp
-	75, // 54: core.InventoryChangeLogInfo.updated_at:type_name -> google.protobuf.Timestamp
-	75, // 55: core.InventoryChangeLogInfo.item_created_at:type_name -> google.protobuf.Timestamp
-	75, // 56: core.InventoryChangeLogInfo.item_updated_at:type_name -> google.protobuf.Timestamp
-	75, // 57: core.InventoryChangeLogInfo.quantity_unit_created_at:type_name -> google.protobuf.Timestamp
-	75, // 58: core.InventoryChangeLogInfo.quantity_unit_updated_at:type_name -> google.protobuf.Timestamp
-	75, // 59: core.InventoryChangeLogInfo.scanning_station_created_at:type_name -> google.protobuf.Timestamp
-	75, // 60: core.InventoryChangeLogInfo.scanning_station_updated_at:type_name -> google.protobuf.Timestamp
-	75, // 61: core.InventoryChangeLogInfo.responsible_user_created_at:type_name -> google.protobuf.Timestamp
-	75, // 62: core.InventoryChangeLogInfo.responsible_user_updated_at:type_name -> google.protobuf.Timestamp
-	75, // 63: core.ListInventoryChangeLogsRequest.start_date:type_name -> google.protobuf.Timestamp
-	75, // 64: core.ListInventoryChangeLogsRequest.end_date:type_name -> google.protobuf.Timestamp
-	59, // 65: core.ListInventoryChangeLogsResponse.inventory_change_logs:type_name -> core.InventoryChangeLogInfo
-	76, // 66: core.ListInventoryChangeLogsResponse.page_info:type_name -> core.PageInfo
-	59, // 67: core.GetInventoryChangeLogResponse.inventory_change_log:type_name -> core.InventoryChangeLogInfo
-	75, // 68: core.ExportInventoryChangeLogsRequest.start_date:type_name -> google.protobuf.Timestamp
-	75, // 69: core.ExportInventoryChangeLogsRequest.end_date:type_name -> google.protobuf.Timestamp
-	59, // 70: core.ExportInventoryChangeLogsResponse.inventory_change_logs:type_name -> core.InventoryChangeLogInfo
-	75, // 71: core.ListInvoicesRequest.start_date:type_name -> google.protobuf.Timestamp
-	75, // 72: core.ListInvoicesRequest.end_date:type_name -> google.protobuf.Timestamp
-	74, // 73: core.ListInvoicesResponse.invoices:type_name -> core.InvoiceInfo
-	76, // 74: core.ListInvoicesResponse.page_info:type_name -> core.PageInfo
-	74, // 75: core.GetInvoiceResponse.invoice:type_name -> core.InvoiceInfo
-	81, // 76: core.UpdateInvoiceRequest.note:type_name -> core.StringPatch
-	74, // 77: core.UpdateInvoiceResponse.invoice:type_name -> core.InvoiceInfo
-	82, // 78: core.ListCustomerInvoicesResponse.invoices:type_name -> core.InvoiceForPaymentInfo
-	76, // 79: core.ListCustomerInvoicesResponse.page_info:type_name -> core.PageInfo
-	83, // 80: core.InvoiceInfo.lines:type_name -> core.InvoiceLineInfo
-	84, // 81: core.InvoiceInfo.allocations:type_name -> core.InvoiceAllocationInfo
-	75, // 82: core.InvoiceInfo.created_at:type_name -> google.protobuf.Timestamp
-	75, // 83: core.InvoiceInfo.updated_at:type_name -> google.protobuf.Timestamp
-	84, // [84:84] is the sub-list for method output_type
-	84, // [84:84] is the sub-list for method input_type
-	84, // [84:84] is the sub-list for extension type_name
-	84, // [84:84] is the sub-list for extension extendee
-	0,  // [0:84] is the sub-list for field type_name
+	80, // 41: core.UpdateDepartmentRequest.notes:type_name -> core.StringPatch
+	35, // 42: core.UpdateDepartmentRequest.labor_rate:type_name -> core.DepartmentRateInput
+	36, // 43: core.UpdateDepartmentResponse.department:type_name -> core.DepartmentInfo
+	81, // 44: core.UpsertDepartmentInput.location:type_name -> core.ObjectIdentifier
+	48, // 45: core.BulkUpsertDepartmentsRequest.departments:type_name -> core.UpsertDepartmentInput
+	79, // 46: core.BulkUpsertDepartmentsResponse.job:type_name -> core.JobInfo
+	36, // 47: core.BatchGetDepartmentsByIDsResponse.departments:type_name -> core.DepartmentInfo
+	53, // 48: core.EmailLogInfo.sent_by:type_name -> core.EmailLogActor
+	75, // 49: core.EmailLogInfo.created_at:type_name -> google.protobuf.Timestamp
+	75, // 50: core.EmailLogInfo.updated_at:type_name -> google.protobuf.Timestamp
+	54, // 51: core.ListEmailLogsResponse.email_logs:type_name -> core.EmailLogInfo
+	76, // 52: core.ListEmailLogsResponse.page_info:type_name -> core.PageInfo
+	54, // 53: core.GetEmailLogResponse.email_log:type_name -> core.EmailLogInfo
+	75, // 54: core.InventoryChangeLogInfo.created_at:type_name -> google.protobuf.Timestamp
+	75, // 55: core.InventoryChangeLogInfo.updated_at:type_name -> google.protobuf.Timestamp
+	75, // 56: core.InventoryChangeLogInfo.item_created_at:type_name -> google.protobuf.Timestamp
+	75, // 57: core.InventoryChangeLogInfo.item_updated_at:type_name -> google.protobuf.Timestamp
+	75, // 58: core.InventoryChangeLogInfo.quantity_unit_created_at:type_name -> google.protobuf.Timestamp
+	75, // 59: core.InventoryChangeLogInfo.quantity_unit_updated_at:type_name -> google.protobuf.Timestamp
+	75, // 60: core.InventoryChangeLogInfo.scanning_station_created_at:type_name -> google.protobuf.Timestamp
+	75, // 61: core.InventoryChangeLogInfo.scanning_station_updated_at:type_name -> google.protobuf.Timestamp
+	75, // 62: core.InventoryChangeLogInfo.responsible_user_created_at:type_name -> google.protobuf.Timestamp
+	75, // 63: core.InventoryChangeLogInfo.responsible_user_updated_at:type_name -> google.protobuf.Timestamp
+	75, // 64: core.ListInventoryChangeLogsRequest.start_date:type_name -> google.protobuf.Timestamp
+	75, // 65: core.ListInventoryChangeLogsRequest.end_date:type_name -> google.protobuf.Timestamp
+	59, // 66: core.ListInventoryChangeLogsResponse.inventory_change_logs:type_name -> core.InventoryChangeLogInfo
+	76, // 67: core.ListInventoryChangeLogsResponse.page_info:type_name -> core.PageInfo
+	59, // 68: core.GetInventoryChangeLogResponse.inventory_change_log:type_name -> core.InventoryChangeLogInfo
+	75, // 69: core.ExportInventoryChangeLogsRequest.start_date:type_name -> google.protobuf.Timestamp
+	75, // 70: core.ExportInventoryChangeLogsRequest.end_date:type_name -> google.protobuf.Timestamp
+	59, // 71: core.ExportInventoryChangeLogsResponse.inventory_change_logs:type_name -> core.InventoryChangeLogInfo
+	75, // 72: core.ListInvoicesRequest.start_date:type_name -> google.protobuf.Timestamp
+	75, // 73: core.ListInvoicesRequest.end_date:type_name -> google.protobuf.Timestamp
+	74, // 74: core.ListInvoicesResponse.invoices:type_name -> core.InvoiceInfo
+	76, // 75: core.ListInvoicesResponse.page_info:type_name -> core.PageInfo
+	74, // 76: core.GetInvoiceResponse.invoice:type_name -> core.InvoiceInfo
+	80, // 77: core.UpdateInvoiceRequest.note:type_name -> core.StringPatch
+	74, // 78: core.UpdateInvoiceResponse.invoice:type_name -> core.InvoiceInfo
+	82, // 79: core.ListCustomerInvoicesResponse.invoices:type_name -> core.InvoiceForPaymentInfo
+	76, // 80: core.ListCustomerInvoicesResponse.page_info:type_name -> core.PageInfo
+	83, // 81: core.InvoiceInfo.lines:type_name -> core.InvoiceLineInfo
+	84, // 82: core.InvoiceInfo.allocations:type_name -> core.InvoiceAllocationInfo
+	75, // 83: core.InvoiceInfo.created_at:type_name -> google.protobuf.Timestamp
+	75, // 84: core.InvoiceInfo.updated_at:type_name -> google.protobuf.Timestamp
+	85, // [85:85] is the sub-list for method output_type
+	85, // [85:85] is the sub-list for method input_type
+	85, // [85:85] is the sub-list for extension type_name
+	85, // [85:85] is the sub-list for extension extendee
+	0,  // [0:85] is the sub-list for field type_name
 }
 
 func init() { file_core_core_users_territories_proto_init() }

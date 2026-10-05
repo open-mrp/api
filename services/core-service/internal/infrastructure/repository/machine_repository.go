@@ -9,6 +9,7 @@ import (
 	"github.com/open-mrp/api/services/core-service/internal/infrastructure/sqlc"
 	"github.com/open-mrp/api/shared/db"
 	apierror "github.com/open-mrp/api/shared/errors"
+	"github.com/open-mrp/api/shared/field"
 	"github.com/open-mrp/api/shared/pagination"
 	"github.com/open-mrp/api/shared/tracing"
 )
@@ -330,7 +331,7 @@ func (r *machineRepoImpl) Update(ctx context.Context, params domain.UpdateMachin
 		AccountID:    params.AccountID,
 		Name:         machToNullString(params.Name),
 		SerialNumber: machToNullString(params.SerialNumber),
-		Notes:        machToNullString(params.Notes),
+		Notes:        field.StringToNullString(params.Notes),
 	})
 	if apiErr := db.MapSQLError(err); apiErr != nil {
 		return nil, tracing.Trace(span, apiErr)

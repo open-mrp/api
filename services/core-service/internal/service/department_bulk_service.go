@@ -13,6 +13,7 @@ import (
 	"github.com/open-mrp/api/shared/db"
 	apierror "github.com/open-mrp/api/shared/errors"
 	"github.com/open-mrp/api/shared/excel"
+	"github.com/open-mrp/api/shared/field"
 	"github.com/open-mrp/api/shared/id"
 	"github.com/open-mrp/api/shared/messaging"
 )
@@ -161,9 +162,9 @@ func upsertDepartmentInTx(txCtx context.Context, txRepos domain.RepoFactory, acc
 
 	name := row.Name
 	// The SQL assigns notes directly, so an omitted note has to carry the old value forward.
-	notes := row.Notes
-	if notes == nil {
-		notes = old.Notes
+	notes := field.Unset[string]().BackfillUnsetPtr(old.Notes)
+	if row.Notes != nil {
+		notes = field.Set(*row.Notes)
 	}
 	updated, apiErr := txRepo.Update(ctx, domain.UpdateDepartmentParams{
 		AccountID:    accountID,

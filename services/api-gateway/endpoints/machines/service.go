@@ -11,6 +11,7 @@ import (
 	apirequest "github.com/open-mrp/api/services/api-gateway/pkg/request"
 	apiresource "github.com/open-mrp/api/services/api-gateway/pkg/resource"
 	apierror "github.com/open-mrp/api/shared/errors"
+	"github.com/open-mrp/api/shared/field"
 	pb "github.com/open-mrp/api/shared/proto/core"
 	"github.com/open-mrp/api/shared/tracing"
 	"google.golang.org/grpc"
@@ -166,7 +167,7 @@ func (m *machineSvcImpl) UpdateMachine(ctx context.Context, req *UpdateMachineRe
 		Id:           req.MachineID,
 		Name:         req.Name.Ptr(),
 		SerialNumber: req.SerialNumber.Ptr(),
-		Notes:        req.Notes.Ptr(),
+		Notes:        field.StringClearableToProto(req.Notes),
 	}
 
 	resp, apiErr := grpcutil.CallRPC(ctx, machineSvcTracer, "service.machines.update", domain.ServiceName,

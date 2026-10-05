@@ -315,6 +315,9 @@ func (s *machineSvcImpl) UpdateMachine(ctx context.Context, params domain.Update
 				}
 			}
 
+			// The SQL assigns notes directly, so an omitted note has to carry the old value forward.
+			params.Notes = params.Notes.BackfillUnsetPtr(old.Notes)
+
 			updated, apiErr := txRepo.Update(txCtx, params)
 			if apiErr != nil {
 				return apiErr

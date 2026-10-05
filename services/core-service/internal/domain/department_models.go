@@ -3,6 +3,7 @@ package domain
 import (
 	"time"
 
+	"github.com/open-mrp/api/shared/field"
 	"github.com/open-mrp/api/shared/pagination"
 )
 
@@ -82,7 +83,7 @@ type UpdateDepartmentParams struct {
 	AccountID    string
 	DepartmentID string
 	Name         *string
-	Notes        *string
+	Notes        field.Clearable[string]
 	LocationID   *string
 	// LaborRate creates the department's rate when it has none, or rewrites the existing rate row in place.
 	LaborRate *CreateRateParams

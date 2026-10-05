@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.18.5](https://github.com/open-mrp/api/compare/v2.18.4...v2.18.5) (2026-10-05)
+
+
+### Bug Fixes
+
+* cost labor time in its own units, and weigh labor efficiency in standard hours ([#242](https://github.com/open-mrp/api/issues/242)) ([21f4bbb](https://github.com/open-mrp/api/commit/21f4bbb72016d1d0df4baf634a73f5600410ff0d))
+
 ## [2.18.4](https://github.com/open-mrp/api/compare/v2.18.3...v2.18.4) (2026-10-02)
 
 

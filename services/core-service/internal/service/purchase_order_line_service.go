@@ -282,10 +282,12 @@ func (s *purchaseOrderLineSvcImpl) UpdatePurchaseOrderLine(ctx context.Context, 
 			}
 
 			// Backfill unchanged nullable fields with existing values. Since the SQL uses direct assignment (no COALESCE) for these fields, we must provide the existing value when the field was not sent.
+			// A new product brings its own item, which the update resolves; the old item only carries over while the product stays.
+			productChanged := params.ProductID != nil
 			if params.ProductID == nil {
 				params.ProductID = old.ProductID
 			}
-			if params.ItemID == nil {
+			if params.ItemID == nil && !productChanged {
 				params.ItemID = old.ItemID
 			}
 

@@ -204,19 +204,29 @@ func TestDeliveries_ListStatusRejectedNarrowsThePage(t *testing.T) {
 	}
 }
 
+// A delivery where everything was refused is hidden by default and shown under `all`, beside the accepted
+// ones. Membership rather than counts: parallel tests stock and unissue orders between two list calls.
 func TestDeliveries_ListStatusAllIsAtLeastAsBroadAsTheDefault(t *testing.T) {
 	t.Parallel()
 
-	accepted, status, err := apiClient.GetList(deliveriesPath, url.Values{"status": {"accepted"}, "limit": {"50"}})
-	require.NoError(t, err)
-	require.Equal(t, 200, status)
+	_, receivingOrderID := receivedPurchaseOrderReceiving(t)
+	lineID := jsonField(firstLine(t, receivingOrderID), "id")
+	status, body := stockReceivingOrder(t, receivingOrderID, []map[string]any{{
+		"receiving_order_line_id": lineID,
+		"rejected_quantity":       pairs("4"),
+		"allocations":             []map[string]any{},
+	}})
+	requireStatus(t, 200, status, body)
 
-	all, status, err := apiClient.GetList(deliveriesPath, url.Values{"status": {"all"}, "limit": {"50"}})
-	require.NoError(t, err)
-	require.Equal(t, 200, status)
+	rejected := deliveryForReceivingOrder(t, receivingOrderID)
+	rejectedID := jsonField(rejected, "id")
+	require.Equal(t, "rejected", jsonField(rejected, "status"), "nothing was accepted: %v", rejected)
 
-	assert.GreaterOrEqual(t, len(all.Data), len(accepted.Data),
-		"`all` cannot return fewer deliveries than `accepted`")
+	assertListContainsID(t, deliveriesPath, url.Values{"status": {"all"}}, rejectedID)
+	assertListContainsID(t, deliveriesPath, url.Values{"status": {"all"}}, SeedDeliveryID)
+	assertListContainsID(t, deliveriesPath, url.Values{"status": {"accepted"}}, SeedDeliveryID)
+	assert.Nil(t, listFindByField(t, deliveriesPath, url.Values{"status": {"accepted"}}, "id", rejectedID),
+		"a delivery where nothing was accepted is hidden by default")
 }
 
 func TestDeliveries_ListRejectsAnUnknownStatus(t *testing.T) {

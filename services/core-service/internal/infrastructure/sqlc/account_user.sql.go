@@ -281,17 +281,6 @@ func (q *Queries) FindAccountUserWithRoleByAccountIDAndUserID(ctx context.Contex
 	return i, err
 }
 
-const findFirstAccountIDByUserID = `-- name: FindFirstAccountIDByUserID :one
-SELECT account_id FROM account_user WHERE user_id = ? LIMIT 1
-`
-
-func (q *Queries) FindFirstAccountIDByUserID(ctx context.Context, userID string) (string, error) {
-	row := q.db.QueryRowContext(ctx, findFirstAccountIDByUserID, userID)
-	var account_id string
-	err := row.Scan(&account_id)
-	return account_id, err
-}
-
 const findLastUsedAccountID = `-- name: FindLastUsedAccountID :one
 SELECT account_user.account_id
 FROM account_user 

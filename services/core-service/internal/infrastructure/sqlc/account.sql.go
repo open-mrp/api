@@ -12,6 +12,25 @@ import (
 	"time"
 )
 
+const accountHasAddress = `-- name: AccountHasAddress :one
+SELECT EXISTS (
+    SELECT 1 FROM account_address
+    WHERE account_id = ? AND address_id = ?
+) AS linked
+`
+
+type AccountHasAddressParams struct {
+	AccountID string
+	AddressID string
+}
+
+func (q *Queries) AccountHasAddress(ctx context.Context, arg AccountHasAddressParams) (bool, error) {
+	row := q.db.QueryRowContext(ctx, accountHasAddress, arg.AccountID, arg.AddressID)
+	var linked bool
+	err := row.Scan(&linked)
+	return linked, err
+}
+
 const clearAccountPricingPlanSubscription = `-- name: ClearAccountPricingPlanSubscription :exec
 UPDATE account_billing SET
     stripe_pricing_plan_subscription_id = NULL,
@@ -763,6 +782,25 @@ func (q *Queries) ListAccountPlanLimits(ctx context.Context, accountPlanID strin
 		return nil, err
 	}
 	return items, nil
+}
+
+const setAccountDefaultAddresses = `-- name: SetAccountDefaultAddresses :exec
+UPDATE account SET
+    default_billing_address_id = COALESCE(?, default_billing_address_id),
+    default_shipping_address_id = COALESCE(?, default_shipping_address_id),
+    updated_at = NOW(3)
+WHERE id = ?
+`
+
+type SetAccountDefaultAddressesParams struct {
+	BillingAddressID  sql.NullString
+	ShippingAddressID sql.NullString
+	AccountID         string
+}
+
+func (q *Queries) SetAccountDefaultAddresses(ctx context.Context, arg SetAccountDefaultAddressesParams) error {
+	_, err := q.db.ExecContext(ctx, setAccountDefaultAddresses, arg.BillingAddressID, arg.ShippingAddressID, arg.AccountID)
+	return err
 }
 
 const updateAccountBranding = `-- name: UpdateAccountBranding :execresult

@@ -520,9 +520,6 @@ UPDATE refresh_token
 SET revoked_at = NOW(3)
 WHERE user_id = ? AND revoked_at IS NULL;
 
--- name: FindFirstAccountIDByUserID :one
-SELECT account_id FROM account_user WHERE user_id = ? LIMIT 1;
-
 -- name: FindTenancyAccountsByUserID :many
 SELECT
     a.id AS account_id,

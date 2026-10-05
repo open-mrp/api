@@ -934,8 +934,11 @@ type UpdateAccountRequest struct {
 	InstagramHandle *string                `protobuf:"bytes,8,opt,name=instagram_handle,json=instagramHandle,proto3,oneof" json:"instagram_handle,omitempty"`
 	LinkedinHandle  *string                `protobuf:"bytes,9,opt,name=linkedin_handle,json=linkedinHandle,proto3,oneof" json:"linkedin_handle,omitempty"`
 	TwitterHandle   *string                `protobuf:"bytes,10,opt,name=twitter_handle,json=twitterHandle,proto3,oneof" json:"twitter_handle,omitempty"`
-	unknownFields   protoimpl.UnknownFields
-	sizeCache       protoimpl.SizeCache
+	// Must be one of the account's own addresses.
+	DefaultBillingAddressId  *string `protobuf:"bytes,11,opt,name=default_billing_address_id,json=defaultBillingAddressId,proto3,oneof" json:"default_billing_address_id,omitempty"`
+	DefaultShippingAddressId *string `protobuf:"bytes,12,opt,name=default_shipping_address_id,json=defaultShippingAddressId,proto3,oneof" json:"default_shipping_address_id,omitempty"`
+	unknownFields            protoimpl.UnknownFields
+	sizeCache                protoimpl.SizeCache
 }
 
 func (x *UpdateAccountRequest) Reset() {
@@ -1034,6 +1037,20 @@ func (x *UpdateAccountRequest) GetLinkedinHandle() string {
 func (x *UpdateAccountRequest) GetTwitterHandle() string {
 	if x != nil && x.TwitterHandle != nil {
 		return *x.TwitterHandle
+	}
+	return ""
+}
+
+func (x *UpdateAccountRequest) GetDefaultBillingAddressId() string {
+	if x != nil && x.DefaultBillingAddressId != nil {
+		return *x.DefaultBillingAddressId
+	}
+	return ""
+}
+
+func (x *UpdateAccountRequest) GetDefaultShippingAddressId() string {
+	if x != nil && x.DefaultShippingAddressId != nil {
+		return *x.DefaultShippingAddressId
 	}
 	return ""
 }
@@ -6533,7 +6550,7 @@ const file_core_core_accounts_carriers_proto_rawDesc = "" +
 	"\x17GetAccountBySlugRequest\x12\x12\n" +
 	"\x04slug\x18\x01 \x01(\tR\x04slug\"M\n" +
 	"\x18GetAccountBySlugResponse\x121\n" +
-	"\aaccount\x18\x01 \x01(\v2\x17.core.PublicAccountInfoR\aaccount\"\x9d\x04\n" +
+	"\aaccount\x18\x01 \x01(\v2\x17.core.PublicAccountInfoR\aaccount\"\xe2\x05\n" +
 	"\x14UpdateAccountRequest\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x17\n" +
 	"\x04name\x18\x02 \x01(\tH\x00R\x04name\x88\x01\x01\x12(\n" +
@@ -6546,7 +6563,10 @@ const file_core_core_accounts_carriers_proto_rawDesc = "" +
 	"\x10instagram_handle\x18\b \x01(\tH\x06R\x0finstagramHandle\x88\x01\x01\x12,\n" +
 	"\x0flinkedin_handle\x18\t \x01(\tH\aR\x0elinkedinHandle\x88\x01\x01\x12*\n" +
 	"\x0etwitter_handle\x18\n" +
-	" \x01(\tH\bR\rtwitterHandle\x88\x01\x01B\a\n" +
+	" \x01(\tH\bR\rtwitterHandle\x88\x01\x01\x12@\n" +
+	"\x1adefault_billing_address_id\x18\v \x01(\tH\tR\x17defaultBillingAddressId\x88\x01\x01\x12B\n" +
+	"\x1bdefault_shipping_address_id\x18\f \x01(\tH\n" +
+	"R\x18defaultShippingAddressId\x88\x01\x01B\a\n" +
 	"\x05_nameB\x10\n" +
 	"\x0e_support_emailB\x0f\n" +
 	"\r_phone_numberB\a\n" +
@@ -6555,7 +6575,9 @@ const file_core_core_accounts_carriers_proto_rawDesc = "" +
 	"\x10_facebook_handleB\x13\n" +
 	"\x11_instagram_handleB\x12\n" +
 	"\x10_linkedin_handleB\x11\n" +
-	"\x0f_twitter_handle\"D\n" +
+	"\x0f_twitter_handleB\x1d\n" +
+	"\x1b_default_billing_address_idB\x1e\n" +
+	"\x1c_default_shipping_address_id\"D\n" +
 	"\x15UpdateAccountResponse\x12+\n" +
 	"\aaccount\x18\x01 \x01(\v2\x11.core.AccountInfoR\aaccount\"b\n" +
 	"\x19UploadAccountPhotoRequest\x12\x0e\n" +

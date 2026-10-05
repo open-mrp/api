@@ -5,6 +5,7 @@ package api_test
 import (
 	"encoding/base64"
 	"net/http"
+	"net/url"
 	"strings"
 	"testing"
 
@@ -103,7 +104,25 @@ func TestUserPhoto_UploadThenRead(t *testing.T) {
 	require.NoError(t, err)
 	require.Less(t, status, 500, "read must not 5xx: %s", string(body))
 	requireStatus(t, 200, status, body)
-	assert.NotEmpty(t, jsonField(parseJSON(body), "url"), "an uploaded photo must yield a URL: %s", string(body))
+	photoURL := jsonField(parseJSON(body), "url")
+	assert.NotEmpty(t, photoURL, "an uploaded photo must yield a URL: %s", string(body))
+
+	// /me signs the photo it shows the user. It must be the object the upload wrote: the two used to
+	// key it by different accounts, so a user in two accounts uploaded where /me never looked.
+	status, body, err = loginAsSeedUser(t).GetListRaw("/v1/identity/me", nil)
+	require.NoError(t, err)
+	requireStatus(t, 200, status, body)
+	meURL := jsonField(parseJSON(body), "image_url")
+	require.NotEmpty(t, meURL, "/me signs the uploaded photo: %s", string(body))
+	assert.Equal(t, signedObjectPath(t, photoURL), signedObjectPath(t, meURL), "the photo endpoint and /me sign the same object")
+}
+
+// signedObjectPath is a presigned URL without its signature: the object it points at.
+func signedObjectPath(t *testing.T, signed string) string {
+	t.Helper()
+	u, err := url.Parse(signed)
+	require.NoError(t, err)
+	return u.Host + u.Path
 }
 
 // A user outside the caller's account is not theirs to read or replace, whatever their own

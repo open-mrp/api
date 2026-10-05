@@ -98,6 +98,9 @@ message UpdateAccountRequest {
   optional string instagram_handle = 8;
   optional string linkedin_handle = 9;
   optional string twitter_handle = 10;
+  // Must be one of the account's own addresses.
+  optional string default_billing_address_id = 11;
+  optional string default_shipping_address_id = 12;
 }
 message UpdateAccountResponse {
   AccountInfo account = 1;

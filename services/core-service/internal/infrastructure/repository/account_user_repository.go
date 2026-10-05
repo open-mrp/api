@@ -580,18 +580,6 @@ func (r *accountUserRepoImpl) RevokeRefreshTokensByUserID(ctx context.Context, u
 	return nil
 }
 
-func (r *accountUserRepoImpl) FindFirstAccountIDByUserID(ctx context.Context, userID string) (string, *apierror.APIError) {
-	ctx, span := accountUserRepoTracer.Start(ctx, "repository.account_user.find_first_account_id_by_user_id")
-	defer span.End()
-
-	accountID, err := r.queries.FindFirstAccountIDByUserID(ctx, userID)
-	if apiErr := db.MapSQLError(err); apiErr != nil {
-		return "", tracing.Trace(span, apiErr)
-	}
-
-	return accountID, nil
-}
-
 func (r *accountUserRepoImpl) stitchAccountUsers(ctx context.Context, items []*domain.AccountUserDetail, incs []string) *apierror.APIError {
 	if len(items) == 0 {
 		return nil

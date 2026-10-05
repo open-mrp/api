@@ -2465,6 +2465,9 @@ func (h *gRPCHandler) UpdateAccount(ctx context.Context, req *pb.UpdateAccountRe
 		InstagramHandle: req.InstagramHandle,
 		LinkedInHandle:  req.LinkedinHandle,
 		TwitterHandle:   req.TwitterHandle,
+
+		DefaultBillingAddressID:  req.DefaultBillingAddressId,
+		DefaultShippingAddressID: req.DefaultShippingAddressId,
 	}
 
 	account, apiErr := h.accountSvc.UpdateAccount(ctx, params)

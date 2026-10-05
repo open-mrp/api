@@ -305,3 +305,16 @@ UPDATE account_branding SET favicon_url = sqlc.arg('favicon_url'), updated_at = 
 
 -- name: GetAccountBrandingFaviconKey :one
 SELECT favicon_url FROM account_branding WHERE owner_account_id = sqlc.arg('account_id');
+
+-- name: SetAccountDefaultAddresses :exec
+UPDATE account SET
+    default_billing_address_id = COALESCE(sqlc.narg('billing_address_id'), default_billing_address_id),
+    default_shipping_address_id = COALESCE(sqlc.narg('shipping_address_id'), default_shipping_address_id),
+    updated_at = NOW(3)
+WHERE id = sqlc.arg('account_id');
+
+-- name: AccountHasAddress :one
+SELECT EXISTS (
+    SELECT 1 FROM account_address
+    WHERE account_id = sqlc.arg('account_id') AND address_id = sqlc.arg('address_id')
+) AS linked;

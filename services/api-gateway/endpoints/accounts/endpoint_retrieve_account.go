@@ -38,7 +38,7 @@ func (e *RetrieveAccountEndpoint) Materialize() *apiendpoint.APIEndpoint[*Retrie
 		},
 		IncludeConfig: apiendpoint.IncludesFor(apiendpoint.IncludesParams{
 			ObjectType: constants.ObjectTypeAccount,
-			Fields:     []string{"branding", "portal"},
+			Fields:     []string{"branding", "portal", "default_billing_address", "default_shipping_address"},
 		}),
 	})
 }

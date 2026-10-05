@@ -392,6 +392,21 @@ func (mr *MockAccountRepoMockRecorder) HasActiveBillingPlan(ctx, accountID any) 
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "HasActiveBillingPlan", reflect.TypeOf((*MockAccountRepo)(nil).HasActiveBillingPlan), ctx, accountID)
 }
 
+// HasAddress mocks base method.
+func (m *MockAccountRepo) HasAddress(ctx context.Context, accountID, addressID string) (bool, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "HasAddress", ctx, accountID, addressID)
+	ret0, _ := ret[0].(bool)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
+}
+
+// HasAddress indicates an expected call of HasAddress.
+func (mr *MockAccountRepoMockRecorder) HasAddress(ctx, accountID, addressID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "HasAddress", reflect.TypeOf((*MockAccountRepo)(nil).HasAddress), ctx, accountID, addressID)
+}
+
 // ListPlanFeatures mocks base method.
 func (m *MockAccountRepo) ListPlanFeatures(ctx context.Context, accountPlanID string) (map[string]bool, *apierror.APIError) {
 	m.ctrl.T.Helper()
@@ -420,6 +435,20 @@ func (m *MockAccountRepo) ListPlanLimits(ctx context.Context, accountPlanID stri
 func (mr *MockAccountRepoMockRecorder) ListPlanLimits(ctx, accountPlanID any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListPlanLimits", reflect.TypeOf((*MockAccountRepo)(nil).ListPlanLimits), ctx, accountPlanID)
+}
+
+// SetDefaultAddresses mocks base method.
+func (m *MockAccountRepo) SetDefaultAddresses(ctx context.Context, accountID string, billingAddressID, shippingAddressID *string) *apierror.APIError {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "SetDefaultAddresses", ctx, accountID, billingAddressID, shippingAddressID)
+	ret0, _ := ret[0].(*apierror.APIError)
+	return ret0
+}
+
+// SetDefaultAddresses indicates an expected call of SetDefaultAddresses.
+func (mr *MockAccountRepoMockRecorder) SetDefaultAddresses(ctx, accountID, billingAddressID, shippingAddressID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SetDefaultAddresses", reflect.TypeOf((*MockAccountRepo)(nil).SetDefaultAddresses), ctx, accountID, billingAddressID, shippingAddressID)
 }
 
 // UpdateAgentSpendingCap mocks base method.
@@ -645,21 +674,6 @@ func (m *MockAccountUserRepo) FindByAccountAndUserID(ctx context.Context, userID
 func (mr *MockAccountUserRepoMockRecorder) FindByAccountAndUserID(ctx, userID, accountID any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "FindByAccountAndUserID", reflect.TypeOf((*MockAccountUserRepo)(nil).FindByAccountAndUserID), ctx, userID, accountID)
-}
-
-// FindFirstAccountIDByUserID mocks base method.
-func (m *MockAccountUserRepo) FindFirstAccountIDByUserID(ctx context.Context, userID string) (string, *apierror.APIError) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "FindFirstAccountIDByUserID", ctx, userID)
-	ret0, _ := ret[0].(string)
-	ret1, _ := ret[1].(*apierror.APIError)
-	return ret0, ret1
-}
-
-// FindFirstAccountIDByUserID indicates an expected call of FindFirstAccountIDByUserID.
-func (mr *MockAccountUserRepoMockRecorder) FindFirstAccountIDByUserID(ctx, userID any) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "FindFirstAccountIDByUserID", reflect.TypeOf((*MockAccountUserRepo)(nil).FindFirstAccountIDByUserID), ctx, userID)
 }
 
 // FindLastUsedAccountID mocks base method.

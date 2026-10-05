@@ -478,6 +478,32 @@ func (r *accountRepoImpl) UpdateBranding(ctx context.Context, accountID string, 
 	return nil
 }
 
+func (r *accountRepoImpl) SetDefaultAddresses(ctx context.Context, accountID string, billingAddressID, shippingAddressID *string) *apierror.APIError {
+	ctx, span := accountRepoTracer.Start(ctx, "repository.account.set_default_addresses")
+	defer span.End()
+
+	err := r.queries.SetAccountDefaultAddresses(ctx, sqlc.SetAccountDefaultAddressesParams{
+		BillingAddressID:  ptrToNullString(billingAddressID),
+		ShippingAddressID: ptrToNullString(shippingAddressID),
+		AccountID:         accountID,
+	})
+	if apiErr := db.MapSQLError(err); apiErr != nil {
+		return tracing.Trace(span, apiErr)
+	}
+	return nil
+}
+
+func (r *accountRepoImpl) HasAddress(ctx context.Context, accountID, addressID string) (bool, *apierror.APIError) {
+	ctx, span := accountRepoTracer.Start(ctx, "repository.account.has_address")
+	defer span.End()
+
+	linked, err := r.queries.AccountHasAddress(ctx, sqlc.AccountHasAddressParams{AccountID: accountID, AddressID: addressID})
+	if apiErr := db.MapSQLError(err); apiErr != nil {
+		return false, tracing.Trace(span, apiErr)
+	}
+	return linked, nil
+}
+
 func (r *accountRepoImpl) UpdatePortalSlug(ctx context.Context, accountID, slug string) *apierror.APIError {
 	ctx, span := accountRepoTracer.Start(ctx, "repository.account.update_portal_slug")
 	defer span.End()

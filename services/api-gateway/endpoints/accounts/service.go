@@ -6,6 +6,7 @@ import (
 
 	"github.com/open-mrp/api/services/api-gateway/internal/domain"
 	grpcutil "github.com/open-mrp/api/services/api-gateway/internal/grpc"
+	"github.com/open-mrp/api/services/api-gateway/internal/resourceloaders"
 	apiresource "github.com/open-mrp/api/services/api-gateway/pkg/resource"
 	"github.com/open-mrp/api/services/api-gateway/pkg/resourcekit"
 	"github.com/open-mrp/api/shared/constants"
@@ -176,6 +177,9 @@ func (m *accountSvcImpl) UpdateAccount(ctx context.Context, req *UpdateAccountRe
 		InstagramHandle: req.InstagramHandle.Ptr(),
 		LinkedinHandle:  req.LinkedInHandle.Ptr(),
 		TwitterHandle:   req.TwitterHandle.Ptr(),
+
+		DefaultBillingAddressId:  req.DefaultBillingAddressID.Ptr(),
+		DefaultShippingAddressId: req.DefaultShippingAddressID.Ptr(),
 	}
 
 	resp, apiErr := grpcutil.CallRPC(ctx, accountSvcTracer, "service.accounts.update", domain.ServiceName,
@@ -292,6 +296,7 @@ func stashAccountMeta(meta *resourcekit.LoadMeta, a *pb.AccountInfo) {
 	if a == nil {
 		return
 	}
+	resourceloaders.StashAccountAddressIDs(meta, a)
 
 	if a.Branding != nil {
 		meta.Set(constants.ObjectTypeAccount, a.Id, "branding", &apiresource.AccountBranding{

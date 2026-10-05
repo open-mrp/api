@@ -37,6 +37,10 @@ type UpdateAccountRequest struct {
 	LinkedInHandle field.Optional[string] `json:"linkedin_handle,omitzero" validate:"omitempty,max=255"`
 	// Twitter handle.
 	TwitterHandle field.Optional[string] `json:"twitter_handle,omitzero" validate:"omitempty,max=255"`
+	// Default billing address for the account's orders. Must be one of the account's own addresses.
+	DefaultBillingAddressID field.Optional[string] `json:"default_billing_address_id,omitzero" validate:"omitempty"`
+	// Default shipping address for the account's orders. Must be one of the account's own addresses.
+	DefaultShippingAddressID field.Optional[string] `json:"default_shipping_address_id,omitzero" validate:"omitempty"`
 }
 
 var sampleUpdateAccountRequest = &UpdateAccountRequest{
@@ -68,7 +72,7 @@ func (e *UpdateAccountEndpoint) Materialize() *apiendpoint.APIEndpoint[*UpdateAc
 		},
 		IncludeConfig: apiendpoint.IncludesFor(apiendpoint.IncludesParams{
 			ObjectType: constants.ObjectTypeAccount,
-			Fields:     []string{"branding", "portal"},
+			Fields:     []string{"branding", "portal", "default_billing_address", "default_shipping_address"},
 		}),
 	})
 }

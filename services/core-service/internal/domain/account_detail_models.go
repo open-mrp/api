@@ -74,6 +74,9 @@ type UpdateAccountParams struct {
 	InstagramHandle *string
 	LinkedInHandle  *string
 	TwitterHandle   *string
+	// DefaultBillingAddressID and DefaultShippingAddressID must name addresses linked to the account.
+	DefaultBillingAddressID  *string
+	DefaultShippingAddressID *string
 }
 
 // HasBrandingUpdates returns true if any branding fields are set.

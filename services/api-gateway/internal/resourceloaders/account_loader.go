@@ -6,6 +6,7 @@ import (
 	"github.com/open-mrp/api/services/api-gateway/internal/domain"
 	grpcutil "github.com/open-mrp/api/services/api-gateway/internal/grpc"
 	apiresource "github.com/open-mrp/api/services/api-gateway/pkg/resource"
+	"github.com/open-mrp/api/services/api-gateway/pkg/resourcekit"
 	"github.com/open-mrp/api/shared/constants"
 	apierror "github.com/open-mrp/api/shared/errors"
 	pb "github.com/open-mrp/api/shared/proto/core"
@@ -27,11 +28,24 @@ func LoadAccounts(ctx context.Context, ids []string) (map[string]any, *apierror.
 	if apiErr != nil {
 		return nil, apiErr
 	}
+	meta := resourcekit.GetLoadMeta(ctx)
 	out := make(map[string]any, len(resp.Accounts))
 	for _, a := range resp.Accounts {
 		out[a.Id] = accountFromProto(a)
+		StashAccountAddressIDs(meta, a)
 	}
 	return out, nil
+}
+
+// StashAccountAddressIDs records an account's default address IDs so its default_billing_address and
+// default_shipping_address includes load the real addresses. Never fabricate.
+func StashAccountAddressIDs(meta *resourcekit.LoadMeta, a *pb.AccountInfo) {
+	if a.DefaultBillingAddressId != nil && *a.DefaultBillingAddressId != "" {
+		meta.Set(constants.ObjectTypeAccount, a.Id, "default_billing_address_id", *a.DefaultBillingAddressId)
+	}
+	if a.DefaultShippingAddressId != nil && *a.DefaultShippingAddressId != "" {
+		meta.Set(constants.ObjectTypeAccount, a.Id, "default_shipping_address_id", *a.DefaultShippingAddressId)
+	}
 }
 
 func LoadPublicAccounts(_ context.Context, _ []string) (map[string]any, *apierror.APIError) {

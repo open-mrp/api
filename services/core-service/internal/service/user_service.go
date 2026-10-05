@@ -284,13 +284,7 @@ func (s *userSvcImpl) UploadUserPhoto(ctx context.Context, userID string, file [
 		return tracing.Trace(span, apiErr)
 	}
 
-	// The photo belongs to the user, not to the account that happened to upload it, so the key
-	// is derived the same way on both sides. Deriving it from the calling account instead meant
-	// a user who belongs to two accounts could upload a photo the read path never looked for.
-	key, apiErr := s.userPhotoKey(ctx, userID)
-	if apiErr != nil {
-		return tracing.Trace(span, apiErr)
-	}
+	key := userPhotoKey(identity, userID)
 
 	if apiErr := s.s3Client.Upload(ctx, s.userPhotosBucket, key, bytes.NewReader(file), contentType); apiErr != nil {
 		return tracing.Trace(span, apiErr)
@@ -305,20 +299,13 @@ func (s *userSvcImpl) UploadUserPhoto(ctx context.Context, userID string, file [
 	return nil
 }
 
-// userPhotoKey is where a user's photo lives, derived identically by the upload and the read.
-// A user may belong to several accounts but has only one photo, so the account in the key is
-// incidental — it just has to be the same one every time, or an upload lands somewhere the
-// read never looks. Returns an empty key for a user who belongs to no account.
-func (s *userSvcImpl) userPhotoKey(ctx context.Context, userID string) (string, *apierror.APIError) {
-	accountID, apiErr := s.repos.NewAccountUserRepo().FindFirstAccountIDByUserID(ctx, userID)
-	if apiErr != nil {
-		return "", apiErr
-	}
-	if accountID == "" {
-		return "", nil
-	}
-
-	return accountID + "/" + userID + ".png", nil
+// userPhotoKey is where a user's photo lives: {account}/{user}.png under the account the request
+// targets. It is the key /me and the team list sign (tenancy and account-user services) and the one
+// the dashboard API wrote, so a photo is per account, as it always was. Keying the upload and this read
+// by the user's first account instead meant a user in two accounts uploaded where those reads never
+// looked.
+func userPhotoKey(identity *types.Identity, userID string) string {
+	return identity.Target.AccountID + "/" + userID + ".png"
 }
 
 func (s *userSvcImpl) GetUserPhotoURL(ctx context.Context, userID string) (*string, *apierror.APIError) {
@@ -349,13 +336,10 @@ func (s *userSvcImpl) GetUserPhotoURL(ctx context.Context, userID string) (*stri
 		}
 	}
 
-	key, apiErr := s.userPhotoKey(ctx, userID)
-	if apiErr != nil {
-		return nil, tracing.Trace(span, apiErr)
-	}
-	if key == "" {
+	if !identity.IsTargetAccountSet() {
 		return nil, nil
 	}
+	key := userPhotoKey(identity, userID)
 
 	exists, _ := s.s3Client.FileExists(ctx, s.userPhotosBucket, key)
 	if !exists {

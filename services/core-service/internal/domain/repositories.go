@@ -43,6 +43,10 @@ type AccountRepo interface {
 	UpdateName(ctx context.Context, accountID, name string) *apierror.APIError
 	UpdateBranding(ctx context.Context, accountID string, params UpdateAccountParams) *apierror.APIError
 	UpdatePortalSlug(ctx context.Context, accountID, slug string) *apierror.APIError
+	// SetDefaultAddresses points the account's default billing and/or shipping address at addresses it holds; nil leaves one as it is.
+	SetDefaultAddresses(ctx context.Context, accountID string, billingAddressID, shippingAddressID *string) *apierror.APIError
+	// HasAddress reports whether the address is linked to the account.
+	HasAddress(ctx context.Context, accountID, addressID string) (bool, *apierror.APIError)
 	ExistsPortalSlug(ctx context.Context, slug, excludeAccountID string) (bool, *apierror.APIError)
 	UpdateBrandingLogoURL(ctx context.Context, accountID, logoURL string) *apierror.APIError
 	GetBrandingLogoKey(ctx context.Context, accountID string) (*string, *apierror.APIError)
@@ -75,7 +79,6 @@ type AccountUserRepo interface {
 	UpdateStatus(ctx context.Context, accountUserID string, status constants.AccountUserStatus) *apierror.APIError
 	CountByRoleID(ctx context.Context, accountID, roleID string) (int64, *apierror.APIError)
 	RevokeRefreshTokensByUserID(ctx context.Context, userID string) *apierror.APIError
-	FindFirstAccountIDByUserID(ctx context.Context, userID string) (string, *apierror.APIError)
 	FindTenancyAccountsByUserID(ctx context.Context, userID string) ([]TenancyAccount, *apierror.APIError)
 	MarkUsedByAccountAndUser(ctx context.Context, accountID, userID string) *apierror.APIError
 	GetByIDs(ctx context.Context, accountID string, ids []string) ([]*AccountUserDetail, *apierror.APIError)

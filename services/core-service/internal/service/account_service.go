@@ -1047,6 +1047,30 @@ func (s *accountSvcImpl) UpdateAccount(ctx context.Context, params domain.Update
 				}
 			}
 
+			if params.DefaultBillingAddressID != nil || params.DefaultShippingAddressID != nil {
+				for _, f := range []struct {
+					id    *string
+					param string
+				}{
+					{params.DefaultBillingAddressID, "default_billing_address_id"},
+					{params.DefaultShippingAddressID, "default_shipping_address_id"},
+				} {
+					if f.id == nil {
+						continue
+					}
+					linked, apiErr := txRepo.HasAddress(txCtx, params.AccountID, *f.id)
+					if apiErr != nil {
+						return apiErr
+					}
+					if !linked {
+						return apierror.NewValidationErrorWithParam("The address is not one of the account's addresses.", f.param)
+					}
+				}
+				if apiErr := txRepo.SetDefaultAddresses(txCtx, params.AccountID, params.DefaultBillingAddressID, params.DefaultShippingAddressID); apiErr != nil {
+					return apiErr
+				}
+			}
+
 			if params.Slug != nil {
 				exists, apiErr := txRepo.ExistsPortalSlug(txCtx, *params.Slug, params.AccountID)
 				if apiErr != nil {

@@ -140,3 +140,27 @@ func TestRejectEmptyPatchBody_MalformedJSON(t *testing.T) {
 	err := RejectEmptyPatchBody([]byte(`{"name": `), &patchReqBasic{})
 	assert.Nil(t, err, "a body that does not parse should be a no-op")
 }
+
+func TestRejectKeylessPatchBody(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name    string
+		body    string
+		wantErr bool
+	}{
+		{"no keys", `{}`, true},
+		{"no keys with whitespace", ` { } `, true},
+		{"a key the latest version no longer has", `{"has_payment_term_ids": false}`, false},
+		{"a known key", `{"name": "x"}`, false},
+		{"not an object", `[1]`, false},
+		{"empty body", ``, false},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			if got := RejectKeylessPatchBody([]byte(tt.body)) != nil; got != tt.wantErr {
+				t.Errorf("RejectKeylessPatchBody(%s) error = %v, want %v", tt.body, got, tt.wantErr)
+			}
+		})
+	}
+}

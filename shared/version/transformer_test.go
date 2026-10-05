@@ -842,3 +842,60 @@ func TestTransformerRegistry_TransformQueryChainsOldestToNewest(t *testing.T) {
 		t.Errorf("no upgrade should run for the latest version or another object type, ran %v", order)
 	}
 }
+
+// bodyUpgraderTransformer records the endpoint each request body upgrade was given.
+type bodyUpgraderTransformer struct {
+	mockTransformer
+	seenMethod, seenRoute string
+}
+
+func (t *bodyUpgraderTransformer) TransformRequestBody(_ constants.ObjectType, method, route string, data map[string]any) map[string]any {
+	t.seenMethod, t.seenRoute = method, route
+	data["upgraded_for"] = method + " " + route
+	return data
+}
+
+func TestTransformerRegistry_TransformEndpointRequest(t *testing.T) {
+	t.Parallel()
+	registry := NewTransformerRegistry()
+
+	older := APIVersion{Version: "1.0.test-preview.1", Minor: 1, Codename: "test", Preview: 1, IsPreview: true}
+	newer := APIVersion{Version: "1.0.test-preview.2", Minor: 1, Codename: "test", Preview: 2, IsPreview: true}
+
+	upgrader := &bodyUpgraderTransformer{mockTransformer: mockTransformer{
+		from:        newer,
+		to:          older,
+		objectTypes: []constants.ObjectType{constants.ObjectTypeUser},
+		transformRequestFunc: func(_ constants.ObjectType, data map[string]any) map[string]any {
+			data["plain_upgrade_ran"] = true
+			return data
+		},
+	}}
+	registry.Register(upgrader)
+	registry.Register(&mockTransformer{
+		from:        newer,
+		to:          older,
+		objectTypes: []constants.ObjectType{constants.ObjectTypeUser},
+		transformRequestFunc: func(_ constants.ObjectType, data map[string]any) map[string]any {
+			data["other_transformer_ran"] = true
+			return data
+		},
+	})
+
+	result := registry.TransformEndpointRequest(older, newer, constants.ObjectTypeUser, "PATCH", "/v1/users/{id}", map[string]any{})
+
+	if upgrader.seenMethod != "PATCH" || upgrader.seenRoute != "/v1/users/{id}" {
+		t.Errorf("BodyUpgrader got %q %q, want the endpoint's method and route", upgrader.seenMethod, upgrader.seenRoute)
+	}
+	if _, ran := result["plain_upgrade_ran"]; ran {
+		t.Error("a BodyUpgrader's TransformRequest must not also run")
+	}
+	if result["other_transformer_ran"] != true {
+		t.Error("a transformer without BodyUpgrader still runs its TransformRequest")
+	}
+
+	unchanged := registry.TransformEndpointRequest(newer, newer, constants.ObjectTypeUser, "PATCH", "/v1/users/{id}", map[string]any{})
+	if len(unchanged) != 0 {
+		t.Errorf("a request already at the target version is left alone, got %v", unchanged)
+	}
+}

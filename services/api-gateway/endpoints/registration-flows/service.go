@@ -113,15 +113,18 @@ func (m *registrationFlowSvcImpl) CreateRegistrationFlow(ctx context.Context, re
 }
 
 func (m *registrationFlowSvcImpl) UpdateRegistrationFlow(ctx context.Context, req *UpdateRegistrationFlowRequest) (*apiresource.RegistrationFlow, *apierror.APIError) {
+	customerGroupIDs, hasCustomerGroupIDs := req.CustomerGroupIDs.Value()
+	paymentTermIDs, hasPaymentTermIDs := req.PaymentTermIDs.Value()
+	shippingTermIDs, hasShippingTermIDs := req.ShippingTermIDs.Value()
 	pbReq := &pb.UpdateRegistrationFlowRequest{
 		Id:                  req.RegistrationFlowID,
 		Name:                req.Name.Ptr(),
-		CustomerGroupIds:    req.CustomerGroupIDs,
-		PaymentTermIds:      req.PaymentTermIDs,
-		ShippingTermIds:     req.ShippingTermIDs,
-		HasCustomerGroupIds: req.HasCustomerGroupIDs,
-		HasPaymentTermIds:   req.HasPaymentTermIDs,
-		HasShippingTermIds:  req.HasShippingTermIDs,
+		CustomerGroupIds:    customerGroupIDs,
+		PaymentTermIds:      paymentTermIDs,
+		ShippingTermIds:     shippingTermIDs,
+		HasCustomerGroupIds: hasCustomerGroupIDs,
+		HasPaymentTermIds:   hasPaymentTermIDs,
+		HasShippingTermIds:  hasShippingTermIDs,
 	}
 
 	resp, apiErr := grpcutil.CallRPC(ctx, registrationFlowSvcTracer, "service.registration_flows.update", domain.ServiceName,

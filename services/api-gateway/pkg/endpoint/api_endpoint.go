@@ -336,13 +336,15 @@ func (e *APIEndpoint[TReq, TResp]) Execute(w http.ResponseWriter, r *http.Reques
 		r.Body = io.NopCloser(bytes.NewReader(bodyBytes))
 	}
 
+	// The body the request is decoded from: an older version's body after it has been upgraded to the latest shape.
+	var bytesForNull []byte
 	if e.Extras.SkipRequestBodyParsing {
 		if err := httptransport.BindRawBody(r, any(req)); err != nil {
 			recordAndRespondAPIError(ctx, w, span, "raw_body_binding", coercePlainExecuteError(err))
 			return
 		}
 	} else if httptransport.ShouldDecodeBody(r) {
-		bytesForNull := jsonBodyBytes
+		bytesForNull = jsonBodyBytes
 
 		// Transform request body if versioned and ObjectType is set
 		if e.ObjectType != "" {
@@ -385,8 +387,15 @@ func (e *APIEndpoint[TReq, TResp]) Execute(w http.ResponseWriter, r *http.Reques
 		}
 	}
 
-	if r.Method == http.MethodPatch && len(jsonBodyBytes) > 0 {
-		if apiErr := validate.RejectEmptyPatchBody(jsonBodyBytes, any(req)); apiErr != nil {
+	// An upgrade can drop the only keys an older version sent (fields that version ignored), so an upgraded update is empty only if the client sent no keys at all.
+	if r.Method == http.MethodPatch && len(bytesForNull) > 0 {
+		var apiErr *apierror.APIError
+		if bytes.Equal(bytesForNull, jsonBodyBytes) {
+			apiErr = validate.RejectEmptyPatchBody(bytesForNull, any(req))
+		} else {
+			apiErr = validate.RejectKeylessPatchBody(jsonBodyBytes)
+		}
+		if apiErr != nil {
 			recordAndRespondAPIError(ctx, w, span, "empty_patch_validation", apiErr)
 			return
 		}
@@ -516,7 +525,7 @@ func (e *APIEndpoint[TReq, TResp]) transformRequestBody(r *http.Request, from, t
 	}
 
 	// Apply request transformers (upgrade from older version to newer)
-	transformed := version.TransformRequest(from, to, e.ObjectType, data)
+	transformed := version.TransformEndpointRequest(from, to, e.ObjectType, e.Method, e.Route, data)
 
 	// Re-encode to JSON
 	transformedBody, err := json.Marshal(transformed)

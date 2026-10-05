@@ -19,34 +19,23 @@ type UpdateRegistrationFlowRequest struct {
 	RegistrationFlowID string `path:"id" validate:"required"`
 	// Display name of the registration flow.
 	Name field.Optional[string] `json:"name,omitzero" validate:"omitempty,max=255"`
-	// IDs of the customer groups to set as this flow's options.
+	// IDs of the customer groups to offer as this flow's options.
 	//
-	// Ignored unless `has_customer_group_ids` is `true`.
-	CustomerGroupIDs []string `json:"customer_group_ids,omitzero"`
-	// IDs of the payment terms to set as this flow's options.
+	// Replaces the flow's customer group options; an empty list removes them all. Omit to leave them unchanged.
+	CustomerGroupIDs field.Optional[[]string] `json:"customer_group_ids,omitzero"`
+	// IDs of the payment terms to offer as this flow's options.
 	//
-	// Ignored unless `has_payment_term_ids` is `true`.
-	PaymentTermIDs []string `json:"payment_term_ids,omitzero"`
-	// IDs of the shipping terms to set as this flow's options.
+	// Replaces the flow's payment term options; an empty list removes them all. Omit to leave them unchanged.
+	PaymentTermIDs field.Optional[[]string] `json:"payment_term_ids,omitzero"`
+	// IDs of the shipping terms to offer as this flow's options.
 	//
-	// Ignored unless `has_shipping_term_ids` is `true`.
-	ShippingTermIDs []string `json:"shipping_term_ids,omitzero"`
-	// Whether to replace the flow's customer group options with `customer_group_ids`.
-	//
-	// When `true`, existing options are cleared and replaced (an empty list removes all options). When `false` or omitted, customer group options are left unchanged.
-	HasCustomerGroupIDs bool `json:"has_customer_group_ids,omitzero"`
-	// Whether to replace the flow's payment term options with `payment_term_ids`.
-	//
-	// When `true`, existing options are cleared and replaced (an empty list removes all options). When `false` or omitted, payment term options are left unchanged.
-	HasPaymentTermIDs bool `json:"has_payment_term_ids,omitzero"`
-	// Whether to replace the flow's shipping term options with `shipping_term_ids`.
-	//
-	// When `true`, existing options are cleared and replaced (an empty list removes all options). When `false` or omitted, shipping term options are left unchanged.
-	HasShippingTermIDs bool `json:"has_shipping_term_ids,omitzero"`
+	// Replaces the flow's shipping term options; an empty list removes them all. Omit to leave them unchanged.
+	ShippingTermIDs field.Optional[[]string] `json:"shipping_term_ids,omitzero"`
 }
 
 var sampleUpdateRegistrationFlowRequest = &UpdateRegistrationFlowRequest{
-	Name: field.Some("Wholesale Registration Updated"),
+	Name:           field.Some("Wholesale Registration Updated"),
+	PaymentTermIDs: field.Some([]string{apiresource.SamplePaymentTermID}),
 }
 
 func (*UpdateRegistrationFlowRequest) SchemaExample() any {

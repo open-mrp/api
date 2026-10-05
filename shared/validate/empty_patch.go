@@ -43,6 +43,21 @@ func RejectEmptyPatchBody(body []byte, v any) *apierror.APIError {
 	return apierror.NewValidationError("Request body must contain at least one field to update.")
 }
 
+// RejectKeylessPatchBody returns the same error as RejectEmptyPatchBody when a JSON object body has no keys at all. It judges a body sent at an older API version, whose field names the latest request struct may no longer have.
+func RejectKeylessPatchBody(body []byte) *apierror.APIError {
+	body = bytes.TrimSpace(body)
+	if len(body) == 0 || body[0] != '{' {
+		return nil
+	}
+
+	var raw map[string]json.RawMessage
+	if err := json.Unmarshal(body, &raw); err != nil || len(raw) > 0 {
+		return nil
+	}
+
+	return apierror.NewValidationError("Request body must contain at least one field to update.")
+}
+
 // collectBodyFieldNames returns the set of JSON field names that are bound from the request body (i.e. have a json tag but no path, query, or header tag).
 func collectBodyFieldNames(rt reflect.Type) map[string]bool {
 	names := make(map[string]bool)

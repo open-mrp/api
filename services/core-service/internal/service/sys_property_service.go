@@ -185,7 +185,8 @@ func (s *sysPropertySvcImpl) UpdateSysProperty(ctx context.Context, params domai
 				return apiErr
 			}
 
-			var value int32
+			// An omitted value leaves the counter where it is; zeroing it would reissue every number.
+			value := old.Value
 			if params.Value != nil {
 				value = *params.Value
 			}

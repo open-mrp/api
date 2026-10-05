@@ -2,10 +2,12 @@ package event
 
 import (
 	"context"
+	"errors"
 
 	"github.com/open-mrp/api/shared/messaging"
 	"github.com/open-mrp/api/shared/tracing"
 
+	amqp "github.com/rabbitmq/amqp091-go"
 	"go.opentelemetry.io/otel/trace"
 )
 
@@ -31,5 +33,13 @@ func NewBatchCreatedConsumer(
 
 func (c *BatchCreatedConsumer) Listen(ctx context.Context) error {
 	return c.rabbitmq.ConsumeMessages(ctx, messaging.BillingCmdReportBatchCreatedQueue,
-		c.inboxConsumer.Wrap("billing.report_batch_created", c.batchHandler.Handle))
+		c.inboxConsumer.Wrap("billing.report_batch_created", c.handleMessage))
+}
+
+func (c *BatchCreatedConsumer) handleMessage(ctx context.Context, msg amqp.Delivery) error {
+	err := c.batchHandler.Handle(ctx, msg)
+	if errors.Is(err, errBatchMeterRejected) {
+		return c.inboxConsumer.Ignore(ctx, err.Error())
+	}
+	return err
 }

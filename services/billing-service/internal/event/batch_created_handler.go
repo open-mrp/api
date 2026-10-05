@@ -3,6 +3,7 @@ package event
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"log"
 
@@ -18,6 +19,10 @@ import (
 
 // Names the Stripe meter that bills batch volume; it must match the meter configured in the Stripe dashboard.
 const batchCreatedMeterEventName = "openmrp_batches"
+
+// errBatchMeterRejected marks a meter event Stripe refused for good. Batch metering has always been best
+// effort, so the consumer records the refusal instead of retrying it into the dead-letter queue.
+var errBatchMeterRejected = errors.New("batch meter event rejected")
 
 // Declares the account usage lookups the batch-created handler needs.
 type BatchCreatedAccountUsageRepo interface {
@@ -89,6 +94,12 @@ func (h *BatchCreatedHandler) Handle(ctx context.Context, msg amqp.Delivery) err
 	span.SetAttributes(attribute.String("billing.stripe_customer_id", *stripeCustomerID))
 
 	if err := h.stripeClient.ReportMeterEvent(ctx, batchCreatedMeterEventName, *stripeCustomerID, 1, msg.MessageId); err != nil {
+		var permanent interface{ Permanent() bool }
+		if errors.As(err, &permanent) && permanent.Permanent() {
+			log.Printf("[batch_created] Stripe rejected the meter event for batch %s (account %s): %v", data.BatchID, data.AccountID, err)
+			span.RecordError(err)
+			return fmt.Errorf("%w: %v", errBatchMeterRejected, err)
+		}
 		return fmt.Errorf("failed to report meter event: %w", err)
 	}
 

@@ -4,13 +4,13 @@ description: >-
   API resource and request-field conventions: Object field, no omitempty on responses,
   sub-objects not bare IDs, List[T] for arrays, expandable includes (null unless requested,
   never fabricate), Sample* fixtures, and request presence types (field.Optional vs
-  *field.Clearable, omitzero). Use when adding or changing an endpoint, resource struct,
+  field.Clearable, omitzero). Use when adding or changing an endpoint, resource struct,
   request body, include key, presenter, or OpenAPI sample.
 ---
 
 # API resources and request fields
 
-Human specs: `docs/patterns/api-resource-conventions.md`, `docs/patterns/nullable-field-patterns.md`. After any request-struct change, `make openapi` and commit the spec.
+Human specs: `docs/patterns/api-resource-conventions.md`, `docs/patterns/nullable-field-patterns.md`. After any request-struct change, run `make openapi` (the spec is generated, not committed).
 
 ## Response resources
 
@@ -38,7 +38,7 @@ The type encodes presence. A bare `*T` cannot tell absent from `null`. **Never u
 | Context | Required / always present | Optional, not clearable | Clearable (accepts `null`) |
 |---|---|---|---|
 | Create / action | `T` + `validate:"required"`, no omit tag | `field.Optional[T]` + `,omitzero` | — |
-| Update / PATCH | `T` (path params) | `field.Optional[T]` + `,omitzero` | `*field.Clearable[T]` + `,omitzero` |
+| Update / PATCH | `T` (path params) | `field.Optional[T]` + `,omitzero` | `field.Clearable[T]` + `,omitzero` |
 | Response | `T` + `validate:"required"` | `*T` (nullable, **no** omit tag) | `*T` (nullable, **no** omit tag) |
 
 - Every **request** field uses `,omitzero` (never `,omitempty`). `validate:"omitempty,..."` is a separate validator keyword and stays.
@@ -52,6 +52,6 @@ Net accept/reject:
 |---|---|---|---|---|
 | `T` + required | 400 | 400 | depends | set |
 | `field.Optional[T]` | unset | **400 cannot be null** | **400 must not be blank** | set |
-| `*field.Clearable[T]` | unset | **clear** | set `""` | set |
+| `field.Clearable[T]` | unset | **clear** | set `""` | set |
 
-Service-layer: `Value() (T, bool)`, `Ptr() *T`; Clearable via `field.Coalesce` / `*ClearablePtrToProto`. Samples: `field.Some(v)` / `field.Set(v)`, never `&field.Optional[T]{}`.
+Service-layer: `Value() (T, bool)`, `Ptr() *T`; Clearable via `field.*ClearableToProto` and, in core-service, `field.*ClearableFromProto` + `BackfillUnsetPtr`. Samples: `field.Some(v)` / `field.Set(v)`, never `&field.Optional[T]{}`.

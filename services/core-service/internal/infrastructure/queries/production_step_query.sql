@@ -174,14 +174,11 @@ LEFT JOIN rate ohr ON ps.overhead_rate_id = ohr.id
 LEFT JOIN unit ohrnu ON ohr.numerator_unit_id = ohrnu.id
 LEFT JOIN unit ohrdu ON ohr.denominator_unit_id = ohrdu.id
 WHERE ps.account_id = sqlc.arg('account_id')
+-- Every word begins a word of the name; see db.AllWordsPattern. Not MATCH: the FULLTEXT index holds no
+-- word under three characters, and an account's steps are few enough to read.
 AND (
     sqlc.narg('search_query') IS NULL
-    OR MATCH(ps.name) AGAINST(sqlc.narg('search_query') IN BOOLEAN MODE)
-)
--- Search words too short for the FULLTEXT index; see db.AllWordsSearch.
-AND (
-    sqlc.narg('short_words_pattern') IS NULL
-    OR REGEXP_LIKE(ps.name, sqlc.narg('short_words_pattern'), 'i')
+    OR REGEXP_LIKE(ps.name, sqlc.narg('search_query'), 'i')
 )
 AND (
     sqlc.arg('include_item_filter') = false
@@ -279,14 +276,11 @@ LEFT JOIN rate ohr ON ps.overhead_rate_id = ohr.id
 LEFT JOIN unit ohrnu ON ohr.numerator_unit_id = ohrnu.id
 LEFT JOIN unit ohrdu ON ohr.denominator_unit_id = ohrdu.id
 WHERE ps.account_id = sqlc.arg('account_id')
+-- Every word begins a word of the name; see db.AllWordsPattern. Not MATCH: the FULLTEXT index holds no
+-- word under three characters, and an account's steps are few enough to read.
 AND (
     sqlc.narg('search_query') IS NULL
-    OR MATCH(ps.name) AGAINST(sqlc.narg('search_query') IN BOOLEAN MODE)
-)
--- Search words too short for the FULLTEXT index; see db.AllWordsSearch.
-AND (
-    sqlc.narg('short_words_pattern') IS NULL
-    OR REGEXP_LIKE(ps.name, sqlc.narg('short_words_pattern'), 'i')
+    OR REGEXP_LIKE(ps.name, sqlc.narg('search_query'), 'i')
 )
 AND (
     sqlc.arg('include_item_filter') = false

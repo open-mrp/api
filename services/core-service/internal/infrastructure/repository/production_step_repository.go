@@ -208,8 +208,8 @@ func mapGetFullRow(row sqlc.GetProductionStepFullRow) *domain.ProductionStep {
 	return step
 }
 
-func (r *productionStepRepoImpl) buildListParams(params domain.ListProductionStepsParams) (searchQuery, shortWords sql.NullString, includeItemFilter, includeMachineFilter, includeScanningStationFilter, includeInputStepFilter, includeOutputStepFilter bool, itemIDs, machineIDs []string, scanningStationIDs []sql.NullString, inputStepIDs, outputStepIDs []string, startDate, endDate sql.NullTime) {
-	searchQuery, shortWords = db.AllWordsSearch(params.Query)
+func (r *productionStepRepoImpl) buildListParams(params domain.ListProductionStepsParams) (searchQuery sql.NullString, includeItemFilter, includeMachineFilter, includeScanningStationFilter, includeInputStepFilter, includeOutputStepFilter bool, itemIDs, machineIDs []string, scanningStationIDs []sql.NullString, inputStepIDs, outputStepIDs []string, startDate, endDate sql.NullTime) {
+	searchQuery = db.AllWordsPattern(params.Query)
 
 	includeItemFilter = len(params.ItemIDs) > 0
 	itemIDs = params.ItemIDs
@@ -328,7 +328,7 @@ func (r *productionStepRepoImpl) List(ctx context.Context, params domain.ListPro
 	ctx, span := productionStepRepoTracer.Start(ctx, "repository.production_step.list")
 	defer span.End()
 
-	searchQuery, shortWords, includeItemFilter, includeMachineFilter, includeScanningStationFilter, includeInputStepFilter, includeOutputStepFilter, itemIDs, machineIDs, scanningStationIDs, inputStepIDs, outputStepIDs, startDate, endDate := r.buildListParams(params)
+	searchQuery, includeItemFilter, includeMachineFilter, includeScanningStationFilter, includeInputStepFilter, includeOutputStepFilter, itemIDs, machineIDs, scanningStationIDs, inputStepIDs, outputStepIDs, startDate, endDate := r.buildListParams(params)
 
 	var cursorDir *pagination.Direction
 
@@ -343,7 +343,6 @@ func (r *productionStepRepoImpl) List(ctx context.Context, params domain.ListPro
 			rows, err := r.queries.ListProductionStepsBackward(ctx, sqlc.ListProductionStepsBackwardParams{
 				AccountID:                    params.AccountID,
 				SearchQuery:                  searchQuery,
-				ShortWordsPattern:            shortWords,
 				IncludeItemFilter:            includeItemFilter,
 				ItemIds:                      itemIDs,
 				IncludeMachineFilter:         includeMachineFilter,
@@ -377,7 +376,6 @@ func (r *productionStepRepoImpl) List(ctx context.Context, params domain.ListPro
 		rows, err := r.queries.ListProductionStepsForward(ctx, sqlc.ListProductionStepsForwardParams{
 			AccountID:                    params.AccountID,
 			SearchQuery:                  searchQuery,
-			ShortWordsPattern:            shortWords,
 			IncludeItemFilter:            includeItemFilter,
 			ItemIds:                      itemIDs,
 			IncludeMachineFilter:         includeMachineFilter,
@@ -412,7 +410,6 @@ func (r *productionStepRepoImpl) List(ctx context.Context, params domain.ListPro
 	rows, err := r.queries.ListProductionStepsForward(ctx, sqlc.ListProductionStepsForwardParams{
 		AccountID:                    params.AccountID,
 		SearchQuery:                  searchQuery,
-		ShortWordsPattern:            shortWords,
 		IncludeItemFilter:            includeItemFilter,
 		ItemIds:                      itemIDs,
 		IncludeMachineFilter:         includeMachineFilter,

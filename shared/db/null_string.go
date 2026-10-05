@@ -44,30 +44,27 @@ func EscapeLike(s string) string {
 	return s
 }
 
-// AllWordsSearch splits search input into what a FULLTEXT index can match and what it cannot, so that
-// every word must begin a word of the text, in any order. Words of at least innoDBMinTokenSize
-// characters go into a BOOLEAN MODE query (see AllWordsPrefixQuery); shorter words are not in the index,
-// so they go into a pattern for REGEXP_LIKE(col, pattern, 'i') with one word-start lookahead per word,
-// "QA 2" becoming `^(?=.*\bQA)(?=.*\b2)`. Either part is NULL when it has no words.
-func AllWordsSearch(query *string) (fulltext, shortWords sql.NullString) {
+// AllWordsPattern turns search input into a pattern for REGEXP_LIKE(col, pattern, 'i') that requires
+// every word to begin a word of the text, in any order: "QA init" becomes `^(?=.*\bQA)(?=.*\binit)`.
+// It is the same match as AllWordsPrefixQuery without the FULLTEXT index, which holds no word under
+// three characters, so a search with one ("QA", "P2") still matches. It scans the scope's rows, so use
+// it only where the scope is small. NULL when the input has no words.
+func AllWordsPattern(query *string) sql.NullString {
 	if query == nil {
-		return
+		return sql.NullString{}
 	}
-	var long, short []string
-	for _, w := range searchWords(*query) {
-		if len(w) < innoDBMinTokenSize {
-			short = append(short, `(?=.*\b`+w+`)`)
-		} else {
-			long = append(long, "+"+w+"*")
-		}
+	words := searchWords(*query)
+	if len(words) == 0 {
+		return sql.NullString{}
 	}
-	if len(long) > 0 {
-		fulltext = sql.NullString{String: strings.Join(long, " "), Valid: true}
+	var b strings.Builder
+	b.WriteString("^")
+	for _, w := range words {
+		b.WriteString(`(?=.*\b`)
+		b.WriteString(w)
+		b.WriteString(")")
 	}
-	if len(short) > 0 {
-		shortWords = sql.NullString{String: "^" + strings.Join(short, ""), Valid: true}
-	}
-	return
+	return sql.NullString{String: b.String(), Valid: true}
 }
 
 // searchWords splits search input on anything that is not an ASCII letter or digit, which also leaves

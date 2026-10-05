@@ -151,25 +151,21 @@ func TestAllWordsPrefixQuery(t *testing.T) {
 	}
 }
 
-func TestAllWordsSearch(t *testing.T) {
-	for in, want := range map[string][2]string{
-		"":                  {"", ""},
-		"  - ":              {"", ""},
-		"knit large":        {"+knit* +large*", ""},
-		"QA Init P1":        {"+Init*", `^(?=.*\bQA)(?=.*\bP1)`},
-		"TX-0012":           {"+0012*", `^(?=.*\bTX)`},
-		"a b":               {"", `^(?=.*\ba)(?=.*\bb)`},
-		"sew (pair) 2% off": {"+sew* +pair* +off*", `^(?=.*\b2)`},
+func TestAllWordsPattern(t *testing.T) {
+	for in, want := range map[string]string{
+		"":                  "",
+		"  - ":              "",
+		"knit large":        `^(?=.*\bknit)(?=.*\blarge)`,
+		"QA Init P1":        `^(?=.*\bQA)(?=.*\bInit)(?=.*\bP1)`,
+		"TX-0012":           `^(?=.*\bTX)(?=.*\b0012)`,
+		"sew (pair) 2% off": `^(?=.*\bsew)(?=.*\bpair)(?=.*\b2)(?=.*\boff)`,
 	} {
-		fulltext, short := AllWordsSearch(&in)
-		if fulltext.String != want[0] || fulltext.Valid != (want[0] != "") {
-			t.Errorf("AllWordsSearch(%q) fulltext = %+v, want %q", in, fulltext, want[0])
-		}
-		if short.String != want[1] || short.Valid != (want[1] != "") {
-			t.Errorf("AllWordsSearch(%q) short words = %+v, want %q", in, short, want[1])
+		got := AllWordsPattern(&in)
+		if got.String != want || got.Valid != (want != "") {
+			t.Errorf("AllWordsPattern(%q) = %+v, want %q", in, got, want)
 		}
 	}
-	if f, s := AllWordsSearch(nil); f.Valid || s.Valid {
-		t.Errorf("AllWordsSearch(nil) = %+v, %+v, want both NULL", f, s)
+	if got := AllWordsPattern(nil); got.Valid {
+		t.Errorf("AllWordsPattern(nil) = %+v, want NULL", got)
 	}
 }

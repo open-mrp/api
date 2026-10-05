@@ -10,6 +10,11 @@
 # Required env:
 #   DATABASE_URL       set by pscale connect
 #   MIGRATE_SENTINEL   file to touch on success, proving to the caller that this actually finished
+# Optional env:
+#   SCHEMA_BEFORE      file to dump the branch's schema into before any migration runs (= prod's schema)
+#   SCHEMA_AFTER       file to dump the branch's schema into once every migration has run
+#                      Both are read by `schemasplit plan` to split a release over the deploy request
+#                      table limit; see planetscale-release-branch.sh.
 
 set -euo pipefail
 
@@ -24,6 +29,12 @@ fi
 
 export PS_BRANCH_DB_URL="$DATABASE_URL"
 
+# The branch was cut from prod moments ago, so this is prod's schema — taken before goose writes its
+# bookkeeping, so the before/after diff is exactly what the deploy request would carry.
+if [ -n "${SCHEMA_BEFORE:-}" ]; then
+    schemasplit dump -out "$SCHEMA_BEFORE"
+fi
+
 # A branch freshly cut from prod carries prod's schema with no goose bookkeeping. Without this the
 # baseline would read as pending, and applying it drops every table.
 ./scripts/migrate.sh baseline --target branch
@@ -35,6 +46,10 @@ export PS_BRANCH_DB_URL="$DATABASE_URL"
 
 ./scripts/migrate.sh up --target branch
 ./scripts/migrate.sh status --target branch
+
+if [ -n "${SCHEMA_AFTER:-}" ]; then
+    schemasplit dump -out "$SCHEMA_AFTER"
+fi
 
 if [ -n "${MIGRATE_SENTINEL:-}" ]; then
     touch "$MIGRATE_SENTINEL"

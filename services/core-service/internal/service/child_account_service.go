@@ -73,6 +73,23 @@ func (s *childAccountSvcImpl) withTx(ctx context.Context, fn func(context.Contex
 }
 
 // BatchGetChildAccountsByIDs returns child account relations matching the input relation IDs that the caller's account is authorized to read. Used by the api-gateway resourcekit include resolver.
+// checkSellerStaff admits the seller's own staff: an internal user or key of the actor account. The
+// parent is the target account, which is the seller's own account or, as on the customer pages, one of
+// its customers, so the target may be another account; the relation lookups below confine the parent
+// and child to the seller's customers.
+func checkSellerStaff(identity *types.Identity) *apierror.APIError {
+	if apiErr := identity.CheckIsTargetAccountSet(); apiErr != nil {
+		return apiErr
+	}
+	if apiErr := identity.CheckIsAuthenticated(); apiErr != nil {
+		return apiErr
+	}
+	if !identity.IsActorSet() || identity.ActorAccountID() == nil || identity.Actor.RelationType != types.IdentityRelationTypeInternal {
+		return apierror.NewAuthorizationError("You must be an internal user for this account to access this resource.")
+	}
+	return nil
+}
+
 func (s *childAccountSvcImpl) BatchGetChildAccountsByIDs(ctx context.Context, relationIDs []string) ([]*domain.ChildAccount, *apierror.APIError) {
 	ctx, span := childAccountSvcTracer.Start(ctx, "service.child_account.batch_get_by_ids")
 	defer span.End()
@@ -81,7 +98,7 @@ func (s *childAccountSvcImpl) BatchGetChildAccountsByIDs(ctx context.Context, re
 	if !ok || identity == nil {
 		return nil, tracing.Trace(span, apierror.NewInvariantViolationError("Identity not found in context."))
 	}
-	if apiErr := identity.CheckIsInternalActor(); apiErr != nil {
+	if apiErr := checkSellerStaff(identity); apiErr != nil {
 		return nil, tracing.Trace(span, apiErr)
 	}
 	if apiErr := identity.CheckHasPermission(types.PermissionDomainCustomers, types.ActionRead); apiErr != nil {
@@ -93,7 +110,8 @@ func (s *childAccountSvcImpl) BatchGetChildAccountsByIDs(ctx context.Context, re
 	if len(relationIDs) == 0 {
 		return nil, nil
 	}
-	return s.repos.NewAccountRelationRepo().GetChildAccountsByRelationIDs(ctx, identity.Target.AccountID, relationIDs)
+	// The relations are the seller's customer records, whichever parent the request targets.
+	return s.repos.NewAccountRelationRepo().GetChildAccountsByRelationIDs(ctx, *identity.ActorAccountID(), relationIDs)
 }
 
 // ListChildAccounts returns a paginated list of child accounts for the target account (parent).
@@ -106,11 +124,16 @@ func (s *childAccountSvcImpl) ListChildAccounts(ctx context.Context, cursor *str
 		return nil, tracing.Trace(span, apierror.NewInvariantViolationError("Identity not found in context."))
 	}
 
-	if apiErr := identity.CheckIsInternalActor(); apiErr != nil {
+	if apiErr := checkSellerStaff(identity); apiErr != nil {
 		return nil, tracing.Trace(span, apiErr)
 	}
 	if apiErr := identity.CheckHasPermission(types.PermissionDomainCustomers, types.ActionRead); apiErr != nil {
 		return nil, tracing.Trace(span, apiErr)
+	}
+	if identity.IsExternalTarget() {
+		if apiErr := s.mediators().ReadAccess.CheckReadAccess(ctx, *identity.ActorAccountID(), identity.Target.AccountID); apiErr != nil {
+			return nil, tracing.Trace(span, apiErr)
+		}
 	}
 
 	return s.repos.NewAccountRelationRepo().ListChildAccounts(ctx, domain.ListChildAccountsParams{
@@ -132,7 +155,7 @@ func (s *childAccountSvcImpl) AddChildAccount(ctx context.Context, childAccountI
 		return nil, tracing.Trace(span, apierror.NewInvariantViolationError("Identity not found in context."))
 	}
 
-	if apiErr := identity.CheckIsInternalActor(); apiErr != nil {
+	if apiErr := checkSellerStaff(identity); apiErr != nil {
 		return nil, tracing.Trace(span, apiErr)
 	}
 	if apiErr := identity.CheckHasPermission(types.PermissionDomainCustomers, types.ActionUpdate); apiErr != nil {
@@ -215,7 +238,7 @@ func (s *childAccountSvcImpl) RemoveChildAccount(ctx context.Context, childAccou
 		return tracing.Trace(span, apierror.NewInvariantViolationError("Identity not found in context."))
 	}
 
-	if apiErr := identity.CheckIsInternalActor(); apiErr != nil {
+	if apiErr := checkSellerStaff(identity); apiErr != nil {
 		return tracing.Trace(span, apiErr)
 	}
 	if apiErr := identity.CheckHasPermission(types.PermissionDomainCustomers, types.ActionUpdate); apiErr != nil {

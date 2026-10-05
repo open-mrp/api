@@ -1,11 +1,46 @@
 package service
 
 import (
+	"net/http"
 	"testing"
 
+	apierror "github.com/open-mrp/api/shared/errors"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
+
+func TestClassifyAddressValidationError_UnsupportedRegion(t *testing.T) {
+	t.Parallel()
+
+	body := []byte(`{"error":{"code":400,"message":"Unsupported region code: \"BT\".","status":"INVALID_ARGUMENT"}}`)
+	apiErr := classifyAddressValidationError(http.StatusBadRequest, body, "BT")
+
+	require.NotNil(t, apiErr)
+	assert.Equal(t, http.StatusBadRequest, apierror.GetHTTPStatusCode(apiErr.Code))
+	assert.Equal(t, "country", apiErr.Param)
+	assert.Contains(t, apiErr.PublicMessage, "BT")
+}
+
+func TestClassifyAddressValidationError_OtherBadRequest(t *testing.T) {
+	t.Parallel()
+
+	body := []byte(`{"error":{"code":400,"message":"Invalid value at 'address.postal_code'.","status":"INVALID_ARGUMENT"}}`)
+	apiErr := classifyAddressValidationError(http.StatusBadRequest, body, "US")
+
+	require.NotNil(t, apiErr)
+	assert.Equal(t, http.StatusBadRequest, apierror.GetHTTPStatusCode(apiErr.Code))
+	assert.Empty(t, apiErr.Param)
+}
+
+func TestClassifyAddressValidationError_UpstreamFailure(t *testing.T) {
+	t.Parallel()
+
+	body := []byte(`{"error":{"code":503,"message":"The service is currently unavailable.","status":"UNAVAILABLE"}}`)
+	apiErr := classifyAddressValidationError(http.StatusServiceUnavailable, body, "US")
+
+	require.NotNil(t, apiErr)
+	assert.Equal(t, http.StatusInternalServerError, apierror.GetHTTPStatusCode(apiErr.Code))
+}
 
 func TestNormalizePlaceResourceName(t *testing.T) {
 	t.Parallel()

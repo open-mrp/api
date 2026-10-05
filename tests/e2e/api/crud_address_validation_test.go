@@ -151,6 +151,22 @@ func TestAddressValidation_CountryNameNormalization(t *testing.T) {
 	assert.Equal(t, "US", jsonField(components, "country_code"))
 }
 
+func TestAddressValidation_UnsupportedRegion(t *testing.T) {
+	t.Parallel()
+	status, body, err := apiClient.Put(addressValidatePath, map[string]any{
+		"address_line_1": "Thimphu Plaza",
+		"city":           "Thimphu",
+		"state":          "Thimphu",
+		"postal_code":    "11001",
+		"country":        "BT",
+	})
+	require.NoError(t, err)
+	requireStatus(t, 400, status, body)
+
+	errObj := requireErrorResponse(t, body, "validation_failed", "invalid_request_error")
+	assertErrorParam(t, errObj, "country")
+}
+
 // ---------------------------------------------------------------------------
 // Autocomplete Address (GET /v1/core/addresses/autocomplete)
 // ---------------------------------------------------------------------------

@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.19.1](https://github.com/open-mrp/api/compare/v2.19.0...v2.19.1) (2026-10-05)
+
+
+### Bug Fixes
+
+* return 400 not 500 when address validation region is unsupported ([#247](https://github.com/open-mrp/api/issues/247)) ([713faff](https://github.com/open-mrp/api/commit/713faff090a87f9e47e7e70ff81baf4404fe9ee8))
+
 ## [2.19.0](https://github.com/open-mrp/api/compare/v2.18.5...v2.19.0) (2026-10-05)
 
 

@@ -41,4 +41,6 @@ type FlowRate struct {
 	// seconds a piece against dollars an hour — they can only be multiplied on a common footing.
 	NumeratorRatio   string
 	DenominatorRatio string
+	// DenominatorUnitType is the denominator unit's dimension code; set on labor time only.
+	DenominatorUnitType string
 }

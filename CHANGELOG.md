@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.19.0](https://github.com/open-mrp/api/compare/v2.18.5...v2.19.0) (2026-10-05)
+
+
+### Features
+
+* **release:** split schema deploys over PlanetScale's 10-table limit and wait on in-flight deploys ([#245](https://github.com/open-mrp/api/issues/245)) ([5ec07fb](https://github.com/open-mrp/api/commit/5ec07fbc2e0092660dba6b593e6d5add73d927cd))
+
 ## [2.18.5](https://github.com/open-mrp/api/compare/v2.18.4...v2.18.5) (2026-10-05)
 
 

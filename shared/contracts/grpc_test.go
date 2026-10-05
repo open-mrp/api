@@ -738,6 +738,9 @@ func TestRoundTrip_AllAPIErrorCodes(t *testing.T) {
 		{name: "MethodNotAllowed", code: apierror.ErrorCodeMethodNotAllowed, create: func() *apierror.APIError {
 			return apierror.NewMethodNotAllowedError("Method not allowed")
 		}},
+		{name: "RequestTooLarge", code: apierror.ErrorCodeRequestTooLarge, create: func() *apierror.APIError {
+			return apierror.NewRequestTooLargeError("Request too large")
+		}},
 		{name: "ResourceNotFound", code: apierror.ErrorCodeResourceNotFound, create: func() *apierror.APIError {
 			return apierror.NewResourceNotFoundError("Resource not found")
 		}},

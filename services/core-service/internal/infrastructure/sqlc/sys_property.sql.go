@@ -12,138 +12,6 @@ import (
 	"time"
 )
 
-const checkDuplicateCustomerNumber = `-- name: CheckDuplicateCustomerNumber :one
-SELECT COUNT(*) FROM account_relation
-WHERE external_number = ?
-AND owner_account_id = ?
-AND account_relation_role_code = 'customer'
-`
-
-type CheckDuplicateCustomerNumberParams struct {
-	Value     string
-	AccountID string
-}
-
-func (q *Queries) CheckDuplicateCustomerNumber(ctx context.Context, arg CheckDuplicateCustomerNumberParams) (int64, error) {
-	row := q.db.QueryRowContext(ctx, checkDuplicateCustomerNumber, arg.Value, arg.AccountID)
-	var count int64
-	err := row.Scan(&count)
-	return count, err
-}
-
-const checkDuplicateProductionRunNumber = `-- name: CheckDuplicateProductionRunNumber :one
-SELECT COUNT(*) FROM production_run
-WHERE number = ?
-AND account_id = ?
-`
-
-type CheckDuplicateProductionRunNumberParams struct {
-	Value     string
-	AccountID string
-}
-
-func (q *Queries) CheckDuplicateProductionRunNumber(ctx context.Context, arg CheckDuplicateProductionRunNumberParams) (int64, error) {
-	row := q.db.QueryRowContext(ctx, checkDuplicateProductionRunNumber, arg.Value, arg.AccountID)
-	var count int64
-	err := row.Scan(&count)
-	return count, err
-}
-
-const checkDuplicatePurchaseOrderNumber = `-- name: CheckDuplicatePurchaseOrderNumber :one
-SELECT COUNT(*) FROM sales_order
-WHERE number = ?
-AND owner_account_id = ?
-AND buyer_account_id = ?
-AND sales_order_type_code = 'purchase_order'
-`
-
-type CheckDuplicatePurchaseOrderNumberParams struct {
-	Value     string
-	AccountID string
-}
-
-func (q *Queries) CheckDuplicatePurchaseOrderNumber(ctx context.Context, arg CheckDuplicatePurchaseOrderNumberParams) (int64, error) {
-	row := q.db.QueryRowContext(ctx, checkDuplicatePurchaseOrderNumber, arg.Value, arg.AccountID, arg.AccountID)
-	var count int64
-	err := row.Scan(&count)
-	return count, err
-}
-
-const checkDuplicateSalesOrderNumber = `-- name: CheckDuplicateSalesOrderNumber :one
-SELECT COUNT(*) FROM sales_order
-WHERE number = ?
-AND owner_account_id = ?
-AND seller_account_id = ?
-AND sales_order_type_code = 'sales_order'
-`
-
-type CheckDuplicateSalesOrderNumberParams struct {
-	Value     string
-	AccountID string
-}
-
-func (q *Queries) CheckDuplicateSalesOrderNumber(ctx context.Context, arg CheckDuplicateSalesOrderNumberParams) (int64, error) {
-	row := q.db.QueryRowContext(ctx, checkDuplicateSalesOrderNumber, arg.Value, arg.AccountID, arg.AccountID)
-	var count int64
-	err := row.Scan(&count)
-	return count, err
-}
-
-const checkDuplicateSettlementNumber = `-- name: CheckDuplicateSettlementNumber :one
-SELECT COUNT(*) FROM settlement
-WHERE number = ?
-AND account_id = ?
-`
-
-type CheckDuplicateSettlementNumberParams struct {
-	Value     string
-	AccountID string
-}
-
-func (q *Queries) CheckDuplicateSettlementNumber(ctx context.Context, arg CheckDuplicateSettlementNumberParams) (int64, error) {
-	row := q.db.QueryRowContext(ctx, checkDuplicateSettlementNumber, arg.Value, arg.AccountID)
-	var count int64
-	err := row.Scan(&count)
-	return count, err
-}
-
-const checkDuplicateSupplierNumber = `-- name: CheckDuplicateSupplierNumber :one
-SELECT COUNT(*) FROM account_relation
-WHERE external_number = ?
-AND owner_account_id = ?
-AND account_relation_role_code = 'supplier'
-`
-
-type CheckDuplicateSupplierNumberParams struct {
-	Value     string
-	AccountID string
-}
-
-func (q *Queries) CheckDuplicateSupplierNumber(ctx context.Context, arg CheckDuplicateSupplierNumberParams) (int64, error) {
-	row := q.db.QueryRowContext(ctx, checkDuplicateSupplierNumber, arg.Value, arg.AccountID)
-	var count int64
-	err := row.Scan(&count)
-	return count, err
-}
-
-const checkDuplicateTransactionNumber = `-- name: CheckDuplicateTransactionNumber :one
-SELECT COUNT(*) FROM transaction
-WHERE number = ?
-AND account_id = ?
-`
-
-type CheckDuplicateTransactionNumberParams struct {
-	Value     string
-	AccountID string
-}
-
-func (q *Queries) CheckDuplicateTransactionNumber(ctx context.Context, arg CheckDuplicateTransactionNumberParams) (int64, error) {
-	row := q.db.QueryRowContext(ctx, checkDuplicateTransactionNumber, arg.Value, arg.AccountID)
-	var count int64
-	err := row.Scan(&count)
-	return count, err
-}
-
 const getSysPropertiesByIDs = `-- name: GetSysPropertiesByIDs :many
 SELECT
     sp.id,
@@ -158,6 +26,7 @@ FROM sys_property sp
 JOIN sys_property_type spt ON sp.sys_property_type_code = spt.code
 WHERE sp.id IN (/*SLICE:ids*/?)
 AND sp.account_id = ?
+AND sp.sys_property_type_code <> 'production_schedule_version'
 `
 
 type GetSysPropertiesByIDsParams struct {
@@ -235,6 +104,7 @@ FROM sys_property sp
 JOIN sys_property_type spt ON sp.sys_property_type_code = spt.code
 WHERE sp.id = ?
 AND sp.account_id = ?
+AND sp.sys_property_type_code <> 'production_schedule_version'
 `
 
 type GetSysPropertyParams struct {
@@ -382,6 +252,7 @@ SELECT
 FROM sys_property sp
 JOIN sys_property_type spt ON sp.sys_property_type_code = spt.code
 WHERE sp.account_id = ?
+AND sp.sys_property_type_code <> 'production_schedule_version'
 AND (
     ? IS NULL
     OR spt.name LIKE ?
@@ -454,6 +325,7 @@ func (q *Queries) ListSysPropertiesBackward(ctx context.Context, arg ListSysProp
 }
 
 const listSysPropertiesForward = `-- name: ListSysPropertiesForward :many
+
 SELECT
     sp.id,
     sp.sys_property_type_code AS type_code,
@@ -466,6 +338,7 @@ SELECT
 FROM sys_property sp
 JOIN sys_property_type spt ON sp.sys_property_type_code = spt.code
 WHERE sp.account_id = ?
+AND sp.sys_property_type_code <> 'production_schedule_version'
 AND (
     ? IS NULL
     OR spt.name LIKE ?
@@ -498,6 +371,9 @@ type ListSysPropertiesForwardRow struct {
 	TypeName  string
 }
 
+// The production_schedule_version counter is excluded from every read the settings endpoints serve:
+// schedule generation allocates versions from it under a unique key, so it is not a number series a
+// user may see or move — moving it below the latest version would make the next generation collide.
 func (q *Queries) ListSysPropertiesForward(ctx context.Context, arg ListSysPropertiesForwardParams) ([]ListSysPropertiesForwardRow, error) {
 	rows, err := q.db.QueryContext(ctx, listSysPropertiesForward,
 		arg.AccountID,
@@ -529,6 +405,332 @@ func (q *Queries) ListSysPropertiesForward(ctx context.Context, arg ListSysPrope
 			return nil, err
 		}
 		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listTakenCustomerNumbers = `-- name: ListTakenCustomerNumbers :many
+SELECT external_number FROM account_relation
+WHERE owner_account_id = ?
+AND account_relation_role_code = 'customer'
+AND external_number IN (/*SLICE:numbers*/?)
+`
+
+type ListTakenCustomerNumbersParams struct {
+	AccountID string
+	Numbers   []string
+}
+
+func (q *Queries) ListTakenCustomerNumbers(ctx context.Context, arg ListTakenCustomerNumbersParams) ([]string, error) {
+	query := listTakenCustomerNumbers
+	var queryParams []interface{}
+	queryParams = append(queryParams, arg.AccountID)
+	if len(arg.Numbers) > 0 {
+		for _, v := range arg.Numbers {
+			queryParams = append(queryParams, v)
+		}
+		query = strings.Replace(query, "/*SLICE:numbers*/?", strings.Repeat(",?", len(arg.Numbers))[1:], 1)
+	} else {
+		query = strings.Replace(query, "/*SLICE:numbers*/?", "NULL", 1)
+	}
+	rows, err := q.db.QueryContext(ctx, query, queryParams...)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []string
+	for rows.Next() {
+		var external_number string
+		if err := rows.Scan(&external_number); err != nil {
+			return nil, err
+		}
+		items = append(items, external_number)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listTakenProductionRunNumbers = `-- name: ListTakenProductionRunNumbers :many
+SELECT number FROM production_run
+WHERE account_id = ?
+AND number IN (/*SLICE:numbers*/?)
+`
+
+type ListTakenProductionRunNumbersParams struct {
+	AccountID string
+	Numbers   []string
+}
+
+func (q *Queries) ListTakenProductionRunNumbers(ctx context.Context, arg ListTakenProductionRunNumbersParams) ([]string, error) {
+	query := listTakenProductionRunNumbers
+	var queryParams []interface{}
+	queryParams = append(queryParams, arg.AccountID)
+	if len(arg.Numbers) > 0 {
+		for _, v := range arg.Numbers {
+			queryParams = append(queryParams, v)
+		}
+		query = strings.Replace(query, "/*SLICE:numbers*/?", strings.Repeat(",?", len(arg.Numbers))[1:], 1)
+	} else {
+		query = strings.Replace(query, "/*SLICE:numbers*/?", "NULL", 1)
+	}
+	rows, err := q.db.QueryContext(ctx, query, queryParams...)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []string
+	for rows.Next() {
+		var number string
+		if err := rows.Scan(&number); err != nil {
+			return nil, err
+		}
+		items = append(items, number)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listTakenPurchaseOrderNumbers = `-- name: ListTakenPurchaseOrderNumbers :many
+SELECT number FROM sales_order
+WHERE owner_account_id = ?
+AND buyer_account_id = ?
+AND sales_order_type_code = 'purchase_order'
+AND number IN (/*SLICE:numbers*/?)
+`
+
+type ListTakenPurchaseOrderNumbersParams struct {
+	AccountID string
+	Numbers   []string
+}
+
+func (q *Queries) ListTakenPurchaseOrderNumbers(ctx context.Context, arg ListTakenPurchaseOrderNumbersParams) ([]string, error) {
+	query := listTakenPurchaseOrderNumbers
+	var queryParams []interface{}
+	queryParams = append(queryParams, arg.AccountID)
+	queryParams = append(queryParams, arg.AccountID)
+	if len(arg.Numbers) > 0 {
+		for _, v := range arg.Numbers {
+			queryParams = append(queryParams, v)
+		}
+		query = strings.Replace(query, "/*SLICE:numbers*/?", strings.Repeat(",?", len(arg.Numbers))[1:], 1)
+	} else {
+		query = strings.Replace(query, "/*SLICE:numbers*/?", "NULL", 1)
+	}
+	rows, err := q.db.QueryContext(ctx, query, queryParams...)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []string
+	for rows.Next() {
+		var number string
+		if err := rows.Scan(&number); err != nil {
+			return nil, err
+		}
+		items = append(items, number)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listTakenSalesOrderNumbers = `-- name: ListTakenSalesOrderNumbers :many
+SELECT number FROM sales_order
+WHERE owner_account_id = ?
+AND seller_account_id = ?
+AND sales_order_type_code = 'sales_order'
+AND number IN (/*SLICE:numbers*/?)
+`
+
+type ListTakenSalesOrderNumbersParams struct {
+	AccountID string
+	Numbers   []string
+}
+
+func (q *Queries) ListTakenSalesOrderNumbers(ctx context.Context, arg ListTakenSalesOrderNumbersParams) ([]string, error) {
+	query := listTakenSalesOrderNumbers
+	var queryParams []interface{}
+	queryParams = append(queryParams, arg.AccountID)
+	queryParams = append(queryParams, arg.AccountID)
+	if len(arg.Numbers) > 0 {
+		for _, v := range arg.Numbers {
+			queryParams = append(queryParams, v)
+		}
+		query = strings.Replace(query, "/*SLICE:numbers*/?", strings.Repeat(",?", len(arg.Numbers))[1:], 1)
+	} else {
+		query = strings.Replace(query, "/*SLICE:numbers*/?", "NULL", 1)
+	}
+	rows, err := q.db.QueryContext(ctx, query, queryParams...)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []string
+	for rows.Next() {
+		var number string
+		if err := rows.Scan(&number); err != nil {
+			return nil, err
+		}
+		items = append(items, number)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listTakenSettlementNumbers = `-- name: ListTakenSettlementNumbers :many
+SELECT number FROM settlement
+WHERE account_id = ?
+AND number IN (/*SLICE:numbers*/?)
+`
+
+type ListTakenSettlementNumbersParams struct {
+	AccountID string
+	Numbers   []string
+}
+
+func (q *Queries) ListTakenSettlementNumbers(ctx context.Context, arg ListTakenSettlementNumbersParams) ([]string, error) {
+	query := listTakenSettlementNumbers
+	var queryParams []interface{}
+	queryParams = append(queryParams, arg.AccountID)
+	if len(arg.Numbers) > 0 {
+		for _, v := range arg.Numbers {
+			queryParams = append(queryParams, v)
+		}
+		query = strings.Replace(query, "/*SLICE:numbers*/?", strings.Repeat(",?", len(arg.Numbers))[1:], 1)
+	} else {
+		query = strings.Replace(query, "/*SLICE:numbers*/?", "NULL", 1)
+	}
+	rows, err := q.db.QueryContext(ctx, query, queryParams...)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []string
+	for rows.Next() {
+		var number string
+		if err := rows.Scan(&number); err != nil {
+			return nil, err
+		}
+		items = append(items, number)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listTakenSupplierNumbers = `-- name: ListTakenSupplierNumbers :many
+SELECT external_number FROM account_relation
+WHERE owner_account_id = ?
+AND account_relation_role_code = 'supplier'
+AND external_number IN (/*SLICE:numbers*/?)
+`
+
+type ListTakenSupplierNumbersParams struct {
+	AccountID string
+	Numbers   []string
+}
+
+func (q *Queries) ListTakenSupplierNumbers(ctx context.Context, arg ListTakenSupplierNumbersParams) ([]string, error) {
+	query := listTakenSupplierNumbers
+	var queryParams []interface{}
+	queryParams = append(queryParams, arg.AccountID)
+	if len(arg.Numbers) > 0 {
+		for _, v := range arg.Numbers {
+			queryParams = append(queryParams, v)
+		}
+		query = strings.Replace(query, "/*SLICE:numbers*/?", strings.Repeat(",?", len(arg.Numbers))[1:], 1)
+	} else {
+		query = strings.Replace(query, "/*SLICE:numbers*/?", "NULL", 1)
+	}
+	rows, err := q.db.QueryContext(ctx, query, queryParams...)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []string
+	for rows.Next() {
+		var external_number string
+		if err := rows.Scan(&external_number); err != nil {
+			return nil, err
+		}
+		items = append(items, external_number)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listTakenTransactionNumbers = `-- name: ListTakenTransactionNumbers :many
+
+SELECT number FROM transaction
+WHERE account_id = ?
+AND number IN (/*SLICE:numbers*/?)
+`
+
+type ListTakenTransactionNumbersParams struct {
+	AccountID string
+	Numbers   []string
+}
+
+// The ListTaken*Numbers queries return which of the given candidate numbers a record in the series
+// already carries, so the next free number is found a batch of candidates per query.
+func (q *Queries) ListTakenTransactionNumbers(ctx context.Context, arg ListTakenTransactionNumbersParams) ([]string, error) {
+	query := listTakenTransactionNumbers
+	var queryParams []interface{}
+	queryParams = append(queryParams, arg.AccountID)
+	if len(arg.Numbers) > 0 {
+		for _, v := range arg.Numbers {
+			queryParams = append(queryParams, v)
+		}
+		query = strings.Replace(query, "/*SLICE:numbers*/?", strings.Repeat(",?", len(arg.Numbers))[1:], 1)
+	} else {
+		query = strings.Replace(query, "/*SLICE:numbers*/?", "NULL", 1)
+	}
+	rows, err := q.db.QueryContext(ctx, query, queryParams...)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []string
+	for rows.Next() {
+		var number string
+		if err := rows.Scan(&number); err != nil {
+			return nil, err
+		}
+		items = append(items, number)
 	}
 	if err := rows.Close(); err != nil {
 		return nil, err

@@ -22,6 +22,8 @@ type RetrieveUserRequest struct {
 // Retrieves a user's global profile.
 //
 // The profile is shared across every account the user belongs to; account-specific details such as their status, role, and department live on the account user record instead.
+//
+// Users may always retrieve their own profile. Retrieving another user requires permission to read team users, and only users who belong to the account you are acting in are found.
 type RetrieveUserEndpoint struct{}
 
 func (e *RetrieveUserEndpoint) Materialize() *apiendpoint.APIEndpoint[*RetrieveUserRequest, *apiresource.User] {
@@ -37,6 +39,7 @@ func (e *RetrieveUserEndpoint) Materialize() *apiendpoint.APIEndpoint[*RetrieveU
 		RequiredPermissions: []types.Permission{
 			{Domain: types.PermissionDomainTeamUsers, Action: types.ActionRead},
 		},
+		SelfPathParam: "id",
 		ServiceHandler: func(svc any) func(ctx context.Context, req *RetrieveUserRequest) (*apiresource.User, *apierror.APIError) {
 			return svc.(UserSvc).GetUser
 		},

@@ -41,16 +41,19 @@ type AccountRepo interface {
 	GetByIDs(ctx context.Context, ids []string) ([]*Account, *apierror.APIError)
 	GetBySlug(ctx context.Context, slug string) (*PublicAccountBySlug, *apierror.APIError)
 	UpdateName(ctx context.Context, accountID, name string) *apierror.APIError
-	// UpdateBranding writes the account's branding fields as given; a nil field is stored as NULL.
+	// UpdateBranding writes the account's branding fields as given; a nil field is stored as NULL. An account without a branding row gets one.
 	UpdateBranding(ctx context.Context, accountID string, branding AccountBranding) *apierror.APIError
+	// UpdatePortalSlug sets the account's portal slug, creating the portal when the account has none.
 	UpdatePortalSlug(ctx context.Context, accountID, slug string) *apierror.APIError
 	// SetDefaultAddresses points the account's default billing and/or shipping address at addresses it holds; nil leaves one as it is.
 	SetDefaultAddresses(ctx context.Context, accountID string, billingAddressID, shippingAddressID *string) *apierror.APIError
 	// HasAddress reports whether the address is linked to the account.
 	HasAddress(ctx context.Context, accountID, addressID string) (bool, *apierror.APIError)
 	ExistsPortalSlug(ctx context.Context, slug, excludeAccountID string) (bool, *apierror.APIError)
+	// UpdateBrandingLogoURL points the account's branding at an uploaded logo, creating the branding row when the account has none.
 	UpdateBrandingLogoURL(ctx context.Context, accountID, logoURL string) *apierror.APIError
 	GetBrandingLogoKey(ctx context.Context, accountID string) (*string, *apierror.APIError)
+	// UpdateBrandingFaviconURL points the account's branding at an uploaded favicon, creating the branding row when the account has none.
 	UpdateBrandingFaviconURL(ctx context.Context, accountID, faviconURL string) *apierror.APIError
 	GetBrandingFaviconKey(ctx context.Context, accountID string) (*string, *apierror.APIError)
 	ListPlanLimits(ctx context.Context, accountPlanID string) (map[string]*int32, *apierror.APIError)
@@ -898,6 +901,8 @@ type CustomerRepo interface {
 	InsertAccountAddress(ctx context.Context, id, accountID, addressID string) *apierror.APIError
 	DeleteAccountAddresses(ctx context.Context, accountID string) *apierror.APIError
 	GetAccountUsers(ctx context.Context, accountID string) ([]AccountUserRef, *apierror.APIError)
+	// ListContacts returns the people who sign in to each of the given customer accounts.
+	ListContacts(ctx context.Context, customerAccountIDs []string) ([]CustomerContact, *apierror.APIError)
 	MoveAccountUsers(ctx context.Context, targetAccountID string, ids []string) *apierror.APIError
 	DeleteAccountUsers(ctx context.Context, accountID string) *apierror.APIError
 	GetStripeCustomerID(ctx context.Context, ownerAccountID, customerAccountID string) (stripeCustomerID *string, stripeEmail *string, err *apierror.APIError)
@@ -1877,8 +1882,8 @@ type SysPropertyRepo interface {
 	GetByTypeCode(ctx context.Context, accountID string, typeCode constants.SysPropertyTypeCode) (*SysProperty, *apierror.APIError)
 	Create(ctx context.Context, id, accountID string, typeCode constants.SysPropertyTypeCode, value int32) (*SysProperty, *apierror.APIError)
 	UpdateValue(ctx context.Context, accountID, id string, value int32) (*SysProperty, *apierror.APIError)
-	IncrementValue(ctx context.Context, accountID, id string) (*SysProperty, *apierror.APIError)
-	IsDuplicate(ctx context.Context, accountID string, typeCode constants.SysPropertyTypeCode, value string) (bool, *apierror.APIError)
+	// TakenNumbers returns the numbers among candidates that a record in typeCode's series already carries.
+	TakenNumbers(ctx context.Context, accountID string, typeCode constants.SysPropertyTypeCode, candidates []string) ([]string, *apierror.APIError)
 }
 
 type TerritoryRepo interface {

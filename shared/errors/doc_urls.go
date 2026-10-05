@@ -17,6 +17,7 @@ const (
 	docURLMissingField     = docsBaseURL + "/api/errors#missing_field"
 	docURLInvalidFormat    = docsBaseURL + "/api/errors#invalid_format"
 	docURLMethodNotAllowed = docsBaseURL + "/api/errors#method_not_allowed"
+	docURLRequestTooLarge  = docsBaseURL + "/api/errors#request_too_large"
 
 	// Resources
 	docURLResourceNotFound = docsBaseURL + "/api/errors#resource_not_found"

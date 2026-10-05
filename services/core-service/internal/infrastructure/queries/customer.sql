@@ -482,6 +482,17 @@ SELECT
 FROM account_relation_notification_preference arnp
 WHERE arnp.account_relation_id IN (sqlc.slice('relation_ids'));
 
+-- name: ListCustomerContacts :many
+-- The people who sign in to each customer account, oldest member first. FORCE INDEX: past the index-dive limit the planner sizes an IN list from production's thinly sampled statistics and can scan every member.
+SELECT
+    au.account_id,
+    u.name,
+    u.email
+FROM account_user au FORCE INDEX (account_user_account_id_status_code_created_at_id_idx)
+INNER JOIN `user` u ON u.id = au.user_id
+WHERE au.account_id IN (sqlc.slice('account_ids'))
+ORDER BY au.account_id, au.created_at, au.id;
+
 -- name: CountCustomers :one
 SELECT COUNT(*) AS total
 FROM account_relation ar

@@ -136,7 +136,8 @@ This is the rule that looks arbitrary until you know it:
 The gateway request pipeline (in `services/api-gateway/pkg/endpoint/api_endpoint.go`, `Execute`) runs, in order:
 
 1. **`DecodeJSONInto`** → `encoding/json` unmarshal. Each wrapper's custom `UnmarshalJSON` fires here.
-   - `field.Optional[T].UnmarshalJSON(null)` returns `field.ErrExplicitNull`; `Execute` catches it and `field.ExplicitNullField` turns it into a field-named `400 "Field 'x' cannot be null."`.
+   - `field.Optional[T].UnmarshalJSON(null)` returns `field.ErrExplicitNull`; `DecodeJSONInto` names the field from the body with `field.BadValuePath` and returns a field-named `400 "Field 'x' cannot be null."` (`Execute` falls back to `field.ExplicitNullField`).
+   - A value of the wrong type, or a malformed timestamp, inside a wrapper is a `400 invalid_format` whose `param` is the value's JSON path (`quantity.value`, `lines[1].quantity`). The wrapper decodes its value with its own `json.Unmarshal`, so the decoder's error carries no field; `field.BadValuePath` re-reads the body to find it.
    - `field.Clearable[T].UnmarshalJSON(null)` records the **clear** state (no error).
 2. **`field.ApplyPtrClearableNulls`** — `encoding/json` leaves a `*field.Clearable[T]` nil when the key is an explicit `null`, so this pass walks the raw body and restores the clear sentinel.
 3. **`validate.ApplySlicePresenceFlags`** — legacy `Has*` companions for a few slice fields.

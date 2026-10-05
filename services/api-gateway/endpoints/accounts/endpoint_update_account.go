@@ -26,10 +26,10 @@ type UpdateAccountRequest struct {
 	PhoneNumber field.Clearable[string] `json:"phone_number,omitzero" validate:"omitempty,max=255"`
 	// URL slug for the account's customer portal.
 	//
-	// The slug is unique across all accounts; updating to one that is already taken returns a conflict error. Changing it changes the portal address customers use, so existing portal links stop resolving.
-	Slug field.Optional[string] `json:"slug,omitzero" validate:"omitempty,min=3,max=255"`
-	// The account's public website.
-	WebsiteURL field.Clearable[string] `json:"website_url,omitzero" validate:"omitempty,url,max=2083"`
+	// Letters and digits, in runs joined by single hyphens (`acme-inc`); letters are saved lowercase. The slug is unique across all accounts, ignoring case; updating to one that is already taken returns a conflict error. Changing it changes the portal address customers use, so existing portal links stop resolving. An account without a portal gets one at this slug.
+	Slug field.Optional[string] `json:"slug,omitzero" validate:"omitempty,min=3,max=255,slug"`
+	// The account's public website, as an `http` or `https` URL.
+	WebsiteURL field.Clearable[string] `json:"website_url,omitzero" validate:"omitempty,http_url,max=2083"`
 	// Facebook handle.
 	FacebookHandle field.Clearable[string] `json:"facebook_handle,omitzero" validate:"omitempty,max=255"`
 	// Instagram handle.

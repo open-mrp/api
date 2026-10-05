@@ -7,13 +7,16 @@ import (
 )
 
 // Account represents the full account with branding and portal sub-resources.
+//
+// Branding and Portal carry no audit tag of their own: a tagged struct field is recorded as one change
+// holding the whole struct, so the account update diffs their tagged fields one by one instead.
 type Account struct {
 	ID                       string
-	Name                     string           `audit:"name"`
-	DefaultBillingAddressID  *string          `audit:"default_billing_address_id"`
-	DefaultShippingAddressID *string          `audit:"default_shipping_address_id"`
-	Branding                 *AccountBranding `audit:"branding"`
-	Portal                   *AccountPortal   `audit:"portal"`
+	Name                     string  `audit:"name"`
+	DefaultBillingAddressID  *string `audit:"default_billing_address_id"`
+	DefaultShippingAddressID *string `audit:"default_shipping_address_id"`
+	Branding                 *AccountBranding
+	Portal                   *AccountPortal
 	CreatedAt                time.Time
 	UpdatedAt                time.Time
 }

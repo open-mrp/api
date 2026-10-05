@@ -9703,6 +9703,21 @@ func (mr *MockCustomerRepoMockRecorder) List(ctx, params any) *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "List", reflect.TypeOf((*MockCustomerRepo)(nil).List), ctx, params)
 }
 
+// ListContacts mocks base method.
+func (m *MockCustomerRepo) ListContacts(ctx context.Context, customerAccountIDs []string) ([]domain.CustomerContact, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ListContacts", ctx, customerAccountIDs)
+	ret0, _ := ret[0].([]domain.CustomerContact)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
+}
+
+// ListContacts indicates an expected call of ListContacts.
+func (mr *MockCustomerRepoMockRecorder) ListContacts(ctx, customerAccountIDs any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListContacts", reflect.TypeOf((*MockCustomerRepo)(nil).ListContacts), ctx, customerAccountIDs)
+}
+
 // MergeAccountPrices mocks base method.
 func (m *MockCustomerRepo) MergeAccountPrices(ctx context.Context, ownerAccountID, targetAccountID string, sourceAccountIDs []string) *apierror.APIError {
 	m.ctrl.T.Helper()
@@ -20028,36 +20043,6 @@ func (mr *MockSysPropertyRepoMockRecorder) GetByTypeCode(ctx, accountID, typeCod
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetByTypeCode", reflect.TypeOf((*MockSysPropertyRepo)(nil).GetByTypeCode), ctx, accountID, typeCode)
 }
 
-// IncrementValue mocks base method.
-func (m *MockSysPropertyRepo) IncrementValue(ctx context.Context, accountID, id string) (*domain.SysProperty, *apierror.APIError) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "IncrementValue", ctx, accountID, id)
-	ret0, _ := ret[0].(*domain.SysProperty)
-	ret1, _ := ret[1].(*apierror.APIError)
-	return ret0, ret1
-}
-
-// IncrementValue indicates an expected call of IncrementValue.
-func (mr *MockSysPropertyRepoMockRecorder) IncrementValue(ctx, accountID, id any) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "IncrementValue", reflect.TypeOf((*MockSysPropertyRepo)(nil).IncrementValue), ctx, accountID, id)
-}
-
-// IsDuplicate mocks base method.
-func (m *MockSysPropertyRepo) IsDuplicate(ctx context.Context, accountID string, typeCode constants.SysPropertyTypeCode, value string) (bool, *apierror.APIError) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "IsDuplicate", ctx, accountID, typeCode, value)
-	ret0, _ := ret[0].(bool)
-	ret1, _ := ret[1].(*apierror.APIError)
-	return ret0, ret1
-}
-
-// IsDuplicate indicates an expected call of IsDuplicate.
-func (mr *MockSysPropertyRepoMockRecorder) IsDuplicate(ctx, accountID, typeCode, value any) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "IsDuplicate", reflect.TypeOf((*MockSysPropertyRepo)(nil).IsDuplicate), ctx, accountID, typeCode, value)
-}
-
 // List mocks base method.
 func (m *MockSysPropertyRepo) List(ctx context.Context, params domain.ListSysPropertiesParams) (*domain.ListSysPropertiesResult, *apierror.APIError) {
 	m.ctrl.T.Helper()
@@ -20071,6 +20056,21 @@ func (m *MockSysPropertyRepo) List(ctx context.Context, params domain.ListSysPro
 func (mr *MockSysPropertyRepoMockRecorder) List(ctx, params any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "List", reflect.TypeOf((*MockSysPropertyRepo)(nil).List), ctx, params)
+}
+
+// TakenNumbers mocks base method.
+func (m *MockSysPropertyRepo) TakenNumbers(ctx context.Context, accountID string, typeCode constants.SysPropertyTypeCode, candidates []string) ([]string, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "TakenNumbers", ctx, accountID, typeCode, candidates)
+	ret0, _ := ret[0].([]string)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
+}
+
+// TakenNumbers indicates an expected call of TakenNumbers.
+func (mr *MockSysPropertyRepoMockRecorder) TakenNumbers(ctx, accountID, typeCode, candidates any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "TakenNumbers", reflect.TypeOf((*MockSysPropertyRepo)(nil).TakenNumbers), ctx, accountID, typeCode, candidates)
 }
 
 // UpdateValue mocks base method.

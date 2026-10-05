@@ -153,3 +153,34 @@ func TestAuthorize_InternalActorWithoutPermission_Rejected(t *testing.T) {
 		t.Error("an internal actor holding none of the declared permissions should be rejected")
 	}
 }
+
+// A user may act on their own record without the permission the endpoint asks of anyone acting on
+// someone else's, when the endpoint names the path parameter that identifies them.
+func TestActsOnSelf(t *testing.T) {
+	update := types.AnyOfPermissions{{Domain: types.PermissionDomainTeamUsers, Action: types.ActionUpdate}}
+	request := func(ctx context.Context, pathID string) *http.Request {
+		r, _ := http.NewRequestWithContext(appctx.WithPathParams(ctx, map[string]string{"id": pathID}), http.MethodPatch, "/v1/identity/users/"+pathID, nil)
+		return r
+	}
+	withoutPerms := ctxWithPerms(map[string]bool{}, "")
+
+	self := &APIEndpoint[any, any]{RequiredPermissions: update, SelfPathParam: "id"}
+	if !self.actsOnSelf(request(withoutPerms, "user_1")) {
+		t.Error("the caller's own ID in the path should count as acting on themselves")
+	}
+	if self.actsOnSelf(request(withoutPerms, "user_2")) {
+		t.Error("another user's ID in the path must not count as acting on themselves")
+	}
+	if ep(update, "").actsOnSelf(request(withoutPerms, "user_1")) {
+		t.Error("an endpoint that names no self parameter must not exempt anyone")
+	}
+
+	apiKey := ctxWithRelationActor(types.IdentityRelationTypeInternal)
+	if self.actsOnSelf(request(apiKey, "apky_1")) {
+		t.Error("only a signed-in user acts on themselves; an API key's ID in the path must not count")
+	}
+	unauthenticated := appctx.WithIdentity(context.Background(), types.GetUnauthenticatedIdentity(nil))
+	if self.actsOnSelf(request(unauthenticated, "")) {
+		t.Error("an unauthenticated caller must not count as acting on themselves")
+	}
+}

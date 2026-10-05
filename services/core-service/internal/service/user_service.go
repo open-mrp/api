@@ -15,6 +15,7 @@ import (
 	"github.com/open-mrp/api/shared/constants"
 	apierror "github.com/open-mrp/api/shared/errors"
 	"github.com/open-mrp/api/shared/idempotency"
+	"github.com/open-mrp/api/shared/imageupload"
 	"github.com/open-mrp/api/shared/tracing"
 )
 
@@ -125,9 +126,30 @@ func (s *userSvcImpl) GetUser(ctx context.Context, identifier string) (*domain.U
 		return nil, tracing.Trace(span, apiErr)
 	}
 
+	if apiErr := s.checkUserInTargetAccount(ctx, identity, user.ID); apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
+
 	normalizeUserImageURL(user)
 
 	return user, nil
+}
+
+// checkUserInTargetAccount refuses a user who is neither the caller nor a member of the account the
+// caller acts in. The team permission says the caller may manage users in their own account, not
+// that the user named is one of them; a user outside it is reported as not found, so the answer does
+// not reveal that an ID or email belongs to someone elsewhere.
+func (s *userSvcImpl) checkUserInTargetAccount(ctx context.Context, identity *types.Identity, userID string) *apierror.APIError {
+	if identity.Actor != nil && identity.Actor.ID == userID {
+		return nil
+	}
+	if _, apiErr := s.repos.NewAccountUserRepo().FindByAccountAndUserID(ctx, userID, identity.Target.AccountID); apiErr != nil {
+		if apierror.IsNotFound(apiErr) {
+			return apierror.NewResourceNotFoundError("User not found.")
+		}
+		return apiErr
+	}
+	return nil
 }
 
 func (s *userSvcImpl) BatchGetUsersByIDs(ctx context.Context, ids []string) ([]*domain.UserRecord, *apierror.APIError) {
@@ -204,6 +226,10 @@ func (s *userSvcImpl) UpdateUser(ctx context.Context, userID string, params doma
 		}
 	}
 
+	if apiErr := s.checkUserInTargetAccount(ctx, identity, userID); apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
+
 	meds := s.mediators()
 
 	idempotencyKey, apiErr := meds.Idempotency.UpsertIdempotencyKey(ctx, identity)
@@ -265,7 +291,7 @@ func (s *userSvcImpl) UpdateUser(ctx context.Context, userID string, params doma
 	}
 }
 
-func (s *userSvcImpl) UploadUserPhoto(ctx context.Context, userID string, file []byte, contentType string) *apierror.APIError {
+func (s *userSvcImpl) UploadUserPhoto(ctx context.Context, userID string, file []byte) *apierror.APIError {
 	ctx, span := userSvcTracer.Start(ctx, "service.user.upload_photo")
 	defer span.End()
 
@@ -288,12 +314,12 @@ func (s *userSvcImpl) UploadUserPhoto(ctx context.Context, userID string, file [
 		return tracing.Trace(span, apierror.NewAuthenticationError("The OpenMRP-Account-ID header is required."))
 	}
 
-	accountUserRepo := s.repos.NewAccountUserRepo()
+	if apiErr := s.checkUserInTargetAccount(ctx, identity, userID); apiErr != nil {
+		return tracing.Trace(span, apiErr)
+	}
 
-	// The permission above only says the caller may manage users in their own account; it says
-	// nothing about whether this user is one of them. Without this, any account could repoint
-	// any user's photo at an image of its choosing.
-	if _, apiErr := accountUserRepo.FindByAccountAndUserID(ctx, userID, identity.Target.AccountID); apiErr != nil {
+	contentType, apiErr := imageupload.Photo(file)
+	if apiErr != nil {
 		return tracing.Trace(span, apiErr)
 	}
 
@@ -340,13 +366,10 @@ func (s *userSvcImpl) GetUserPhotoURL(ctx context.Context, userID string) (*stri
 		}
 	}
 
-	// Same membership check as the upload path: a photo URL is a link to a person's face, and
-	// resolving one for a user in another tenancy is not a read this caller is entitled to.
-	accountUserRepo := s.repos.NewAccountUserRepo()
-	if identity.Actor == nil || identity.Actor.ID != userID {
-		if _, apiErr := accountUserRepo.FindByAccountAndUserID(ctx, userID, identity.Target.AccountID); apiErr != nil {
-			return nil, tracing.Trace(span, apiErr)
-		}
+	// A photo URL is a link to a person's face, and resolving one for a user in another tenancy is
+	// not a read this caller is entitled to.
+	if apiErr := s.checkUserInTargetAccount(ctx, identity, userID); apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
 	}
 
 	if !identity.IsTargetAccountSet() {

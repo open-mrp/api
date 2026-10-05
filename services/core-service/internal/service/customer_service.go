@@ -25,6 +25,7 @@ var customerSvcTracer = tracing.GetTracer("core-service.service.customer")
 type customerSvcImpl struct {
 	repos           domain.RepoFactory
 	mediatorFactory domain.MediatorFactory
+	jobSvcFactory   domain.JobSvcFactory
 	txManager       TransactionManager
 }
 
@@ -34,6 +35,9 @@ type CustomerSvcConfig struct {
 
 	// MediatorFactory (required) builds the mediators used by this service.
 	MediatorFactory domain.MediatorFactory
+
+	// JobSvcFactory (required) builds the job service an export records on.
+	JobSvcFactory domain.JobSvcFactory
 
 	// TxManager (required) wraps multi-step operations in database transactions.
 	TxManager TransactionManager
@@ -45,6 +49,9 @@ func (c *CustomerSvcConfig) validate() error {
 	}
 	if c.MediatorFactory == nil {
 		return fmt.Errorf("customer service: MediatorFactory is required")
+	}
+	if c.JobSvcFactory == nil {
+		return fmt.Errorf("customer service: JobSvcFactory is required")
 	}
 	if c.TxManager == nil {
 		return fmt.Errorf("customer service: TxManager is required")
@@ -60,6 +67,7 @@ func NewCustomerSvc(config *CustomerSvcConfig) domain.CustomerSvc {
 	return &customerSvcImpl{
 		repos:           config.Repos,
 		mediatorFactory: config.MediatorFactory,
+		jobSvcFactory:   config.JobSvcFactory,
 		txManager:       config.TxManager,
 	}
 }
@@ -77,6 +85,7 @@ func (s *customerSvcImpl) withTx(ctx context.Context, fn func(context.Context, *
 		txSvc := &customerSvcImpl{
 			repos:           f,
 			mediatorFactory: s.mediatorFactory,
+			jobSvcFactory:   s.jobSvcFactory,
 			txManager:       s.txManager,
 		}
 		return fn(txCtx, txSvc)

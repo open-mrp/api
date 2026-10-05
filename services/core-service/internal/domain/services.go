@@ -11,11 +11,13 @@ import (
 )
 
 type UserSvc interface {
+	// GetUser returns a user by ID, email, or username: the caller themselves, or a user who belongs to the target account.
 	GetUser(ctx context.Context, userID string) (*UserRecord, *apierror.APIError)
 	// BatchGetUsersByIDs returns users matching the given IDs that are affiliated with the target account.
 	BatchGetUsersByIDs(ctx context.Context, ids []string) ([]*UserRecord, *apierror.APIError)
 	UpdateUser(ctx context.Context, userID string, params UpdateUserParams) (*UserRecord, *apierror.APIError)
-	UploadUserPhoto(ctx context.Context, userID string, file []byte, contentType string) *apierror.APIError
+	// UploadUserPhoto stores the user's photo under the image type read from its bytes.
+	UploadUserPhoto(ctx context.Context, userID string, file []byte) *apierror.APIError
 	GetUserPhotoURL(ctx context.Context, userID string) (*string, *apierror.APIError)
 }
 
@@ -629,14 +631,14 @@ type AccountSvc interface {
 	// UpdateAccount partially updates an account's name, branding, and/or portal slug.
 	UpdateAccount(ctx context.Context, params UpdateAccountParams) (*Account, *apierror.APIError)
 
-	// UploadAccountPhoto uploads an account logo to S3 and updates the branding record.
-	UploadAccountPhoto(ctx context.Context, accountID string, file []byte, contentType string) *apierror.APIError
+	// UploadAccountPhoto uploads an account logo to S3, under the image type read from its bytes, and points the branding at it.
+	UploadAccountPhoto(ctx context.Context, accountID string, file []byte) *apierror.APIError
 
 	// GetAccountLogoURL returns a presigned S3 URL for the account's logo, or nil if none.
 	GetAccountLogoURL(ctx context.Context, accountID string) (*string, *apierror.APIError)
 
-	// UploadAccountFavicon uploads a customer-portal favicon to S3 and updates the branding record.
-	UploadAccountFavicon(ctx context.Context, accountID string, file []byte, contentType string) *apierror.APIError
+	// UploadAccountFavicon uploads a customer-portal favicon to S3, under the image type read from its bytes, and points the branding at it.
+	UploadAccountFavicon(ctx context.Context, accountID string, file []byte) *apierror.APIError
 
 	// GetAccountFaviconURL returns a presigned S3 URL for the account's customer-portal favicon, or nil if none.
 	GetAccountFaviconURL(ctx context.Context, accountID string) (*string, *apierror.APIError)
@@ -859,6 +861,11 @@ type CustomerSvc interface {
 
 	// MergeCustomers merges source customers into a target customer.
 	MergeCustomers(ctx context.Context, params MergeCustomersParams) (*Customer, *apierror.APIError)
+
+	// ExportCustomers accepts an export of the customers the list's filters select; the export does its own paging.
+	ExportCustomers(ctx context.Context, filters ListCustomersParams) (*Job, *apierror.APIError)
+	// BuildExportCustomers renders the file an accepted export recorded.
+	BuildExportCustomers(ctx context.Context, accountID string, filters json.RawMessage) (*Export, *apierror.APIError)
 }
 
 type AnalyticsSvc interface {

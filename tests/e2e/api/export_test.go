@@ -15,11 +15,17 @@ import (
 // reach — test mode's object store discards the bytes core-service's tests parse.
 func completedExportJob(t *testing.T, path string, filters map[string]any) map[string]any {
 	t.Helper()
+	return completedExportJobAs(t, apiClient, path, filters)
+}
+
+// completedExportJobAs is completedExportJob for a caller other than the seed account's admin.
+func completedExportJobAs(t *testing.T, client *Client, path string, filters map[string]any) map[string]any {
+	t.Helper()
 	if filters == nil {
 		filters = map[string]any{}
 	}
 
-	status, body, err := apiClient.Post(path, filters, newIdempotencyKey())
+	status, body, err := client.Post(path, filters, newIdempotencyKey())
 	require.NoError(t, err)
 	requireStatus(t, http.StatusAccepted, status, body)
 
@@ -29,9 +35,15 @@ func completedExportJob(t *testing.T, path string, filters map[string]any) map[s
 	jobID := jsonField(accepted, "id")
 	require.NotEmpty(t, jobID, "202 must name the job to poll")
 
+	return awaitExportJob(t, client, jobID)
+}
+
+// polls an accepted export's job until it settles, failing the test unless it completes
+func awaitExportJob(t *testing.T, client *Client, jobID string) map[string]any {
+	t.Helper()
 	var job map[string]any
 	eventually(t, e2eAsyncWaitTimeout, e2eAsyncPollInterval, func() error {
-		resp, err := apiClient.GetFull(jobsPath+"/"+jobID, nil)
+		resp, err := client.GetFull(jobsPath+"/"+jobID, nil)
 		if err != nil {
 			return err
 		}

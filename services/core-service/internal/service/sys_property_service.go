@@ -3,6 +3,7 @@ package service
 import (
 	"context"
 	"fmt"
+	"math"
 	"strconv"
 	"strings"
 
@@ -253,19 +254,22 @@ func (s *sysPropertySvcImpl) GetLatestSysPropertyValue(ctx context.Context, type
 
 	sysProp, apiErr := repo.GetByTypeCode(ctx, accountID, typeCode)
 	if apiErr != nil {
-		// If not found, create with initial value 1
-		if apierror.IsNotFound(apiErr) {
-			newID, genErr := id.GenID(id.SysPropertyIDPrefix, nil)
-			if genErr != nil {
-				return "", tracing.Trace(span, genErr)
-			}
-			created, createErr := repo.Create(ctx, newID, accountID, typeCode, 1)
-			if createErr != nil {
-				return "", tracing.Trace(span, createErr)
-			}
-			return strconv.Itoa(int(created.Value)), nil
+		if !apierror.IsNotFound(apiErr) {
+			return "", tracing.Trace(span, apiErr)
 		}
-		return "", tracing.Trace(span, apiErr)
+		first, apiErr := nextFreeNumber(ctx, repo, accountID, typeCode, 1)
+		if apiErr != nil {
+			return "", tracing.Trace(span, apiErr)
+		}
+		newID, genErr := id.GenID(id.SysPropertyIDPrefix, nil)
+		if genErr != nil {
+			return "", tracing.Trace(span, genErr)
+		}
+		created, createErr := repo.Create(ctx, newID, accountID, typeCode, first)
+		if createErr != nil {
+			return "", tracing.Trace(span, createErr)
+		}
+		return strconv.Itoa(int(created.Value)), nil
 	}
 
 	// SSCC count: always return current value without duplicate check (matches dashboard behavior)
@@ -273,21 +277,56 @@ func (s *sysPropertySvcImpl) GetLatestSysPropertyValue(ctx context.Context, type
 		return strconv.Itoa(int(sysProp.Value)), nil
 	}
 
-	// Check if current value is a duplicate
-	isDuplicate, apiErr := repo.IsDuplicate(ctx, accountID, typeCode, strconv.Itoa(int(sysProp.Value)))
+	next, apiErr := nextFreeNumber(ctx, repo, accountID, typeCode, sysProp.Value)
 	if apiErr != nil {
 		return "", tracing.Trace(span, apiErr)
 	}
-
-	if isDuplicate {
-		incremented, apiErr := repo.IncrementValue(ctx, accountID, sysProp.ID)
-		if apiErr != nil {
-			return "", tracing.Trace(span, apiErr)
-		}
-		return strconv.Itoa(int(incremented.Value)), nil
+	if next == sysProp.Value {
+		return strconv.Itoa(int(next)), nil
 	}
 
-	return strconv.Itoa(int(sysProp.Value)), nil
+	// The counter rests on the number handed out without taking it, so reading again returns it again.
+	moved, apiErr := repo.UpdateValue(ctx, accountID, sysProp.ID, next)
+	if apiErr != nil {
+		return "", tracing.Trace(span, apiErr)
+	}
+	return strconv.Itoa(int(moved.Value)), nil
+}
+
+// The search for a free number reads candidates in batches, one query each, growing so the usual
+// short run of taken numbers costs one small query and a long one only a handful.
+const (
+	freeNumberFirstBatch  = 16
+	freeNumberMaxBatch    = 1024
+	freeNumberSearchLimit = 10_000
+)
+
+// nextFreeNumber returns the first number at or after from that no record in typeCode's series carries.
+func nextFreeNumber(ctx context.Context, repo domain.SysPropertyRepo, accountID string, typeCode constants.SysPropertyTypeCode, from int32) (int32, *apierror.APIError) {
+	start, end := int64(from), min(int64(from)+freeNumberSearchLimit, math.MaxInt32+1)
+	for batch := int64(freeNumberFirstBatch); start < end; batch = min(batch*4, freeNumberMaxBatch) {
+		candidates := make([]string, min(batch, end-start))
+		for i := range candidates {
+			candidates[i] = strconv.FormatInt(start+int64(i), 10)
+		}
+		taken, apiErr := repo.TakenNumbers(ctx, accountID, typeCode, candidates)
+		if apiErr != nil {
+			return 0, apiErr
+		}
+		inUse := make(map[string]bool, len(taken))
+		for _, n := range taken {
+			inUse[n] = true
+		}
+		for i, c := range candidates {
+			if !inUse[c] {
+				return int32(start + int64(i)), nil // #nosec G115 -- below end, which is at most MaxInt32+1
+			}
+		}
+		start += int64(len(candidates))
+	}
+	return 0, apierror.NewResourceConflictError(fmt.Sprintf(
+		"Every number from %d to %d is already in use. Move the counter past the numbers already issued.", from, start-1,
+	))
 }
 
 func (s *sysPropertySvcImpl) GetSysPropertyValue(ctx context.Context, code string) (*domain.SysPropertyValue, *apierror.APIError) {

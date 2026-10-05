@@ -32,7 +32,9 @@ import (
 
 type APIEndpointExtras struct {
 	SkipRequestBodyParsing bool `json:"skip_request_body_parsing" yaml:"skip_request_body_parsing"`
-	SkipRequestLogging     bool `json:"skip_request_logging" yaml:"skip_request_logging"`
+	// MaxRawBodyBytes (optional; default: httptransport.DefaultMaxRawBodyBytes) caps the raw body an endpoint with SkipRequestBodyParsing accepts. A larger body is refused with a 413.
+	MaxRawBodyBytes    int64 `json:"max_raw_body_bytes" yaml:"max_raw_body_bytes"`
+	SkipRequestLogging bool  `json:"skip_request_logging" yaml:"skip_request_logging"`
 	// HideFromRequestLog persists the request log but omits it from the default request-log listing. Use for high-frequency polling endpoints that would otherwise flood the log (e.g. notification unread-count). Unlike SkipRequestLogging the row is still saved.
 	HideFromRequestLog bool `json:"hide_from_request_log" yaml:"hide_from_request_log"`
 }
@@ -63,6 +65,8 @@ type APIEndpoint[TReq, TResp any] struct {
 	ReadOnly bool `json:"-" yaml:"-"`
 	// RequiredPermissions declares the any-of permission set this endpoint requires, using typed domain/action constants (e.g. {types.PermissionDomainCustomers, types.ActionRead}) so typos are caught by the compiler. The gateway gate rejects callers who hold none of the listed permissions; holding one is enough to reach the handler. Agent tools and OpenAPI docs surface the same declaration.
 	RequiredPermissions types.AnyOfPermissions `json:"-" yaml:"-"`
+	// SelfPathParam (optional) names the path parameter that holds a user ID, on endpoints where a user may always act on their own record. A signed-in user whose ID it is passes the RequiredPermissions and RequiredRoleType gate without holding them; the downstream service still decides.
+	SelfPathParam string `json:"-" yaml:"-"`
 	// RequiredRoleType, when set, declares that the endpoint requires the caller to have a specific role type (e.g. constants.RoleTypeAdmin) rather than (or in addition to) a permission. The zero value means no role-type requirement.
 	RequiredRoleType constants.RoleType                        `json:"-" yaml:"-"`
 	ServiceHandler   func(svc any) ServiceHandler[TReq, TResp] `json:"-" yaml:"-"`
@@ -210,6 +214,18 @@ func (e *APIEndpoint[TReq, TResp]) authorize(ctx context.Context) *apierror.APIE
 	return identity.CheckHasAnyPermission(e.RequiredPermissions...)
 }
 
+// actsOnSelf reports whether the caller is the signed-in user named by the endpoint's SelfPathParam.
+func (e *APIEndpoint[TReq, TResp]) actsOnSelf(r *http.Request) bool {
+	if e.SelfPathParam == "" {
+		return false
+	}
+	identity, ok := appctx.GetIdentityFromContext(r.Context())
+	if !ok || identity == nil || !identity.HasUserActor() {
+		return false
+	}
+	return identity.Actor.ID == httptransport.PathExtractor(r)(e.SelfPathParam)
+}
+
 func (e *APIEndpoint[TReq, TResp]) Execute(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 	e.ensureSensitivePaths()
@@ -229,7 +245,7 @@ func (e *APIEndpoint[TReq, TResp]) Execute(w http.ResponseWriter, r *http.Reques
 	// declared permissions or lack its required role. This is a coarse "OR" gate
 	// (it never rejects anyone who could be authorized); the precise, possibly
 	// relation-dependent check still runs in the downstream service.
-	if apiErr := e.authorize(ctx); apiErr != nil {
+	if apiErr := e.authorize(ctx); apiErr != nil && !e.actsOnSelf(r) {
 		span := trace.SpanFromContext(ctx)
 		recordAndRespondAPIError(ctx, w, span, "authorization", apiErr)
 		return
@@ -337,7 +353,7 @@ func (e *APIEndpoint[TReq, TResp]) Execute(w http.ResponseWriter, r *http.Reques
 	}
 
 	if e.Extras.SkipRequestBodyParsing {
-		if err := httptransport.BindRawBody(r, any(req)); err != nil {
+		if err := httptransport.BindRawBody(r, any(req), e.Extras.MaxRawBodyBytes); err != nil {
 			recordAndRespondAPIError(ctx, w, span, "raw_body_binding", coercePlainExecuteError(err))
 			return
 		}

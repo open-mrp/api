@@ -445,6 +445,7 @@ func Run(
 	customerSvc := service.NewCustomerSvc(&service.CustomerSvcConfig{
 		Repos:           repoFactory,
 		MediatorFactory: mediatorFactory,
+		JobSvcFactory:   jobSvcFactory,
 		TxManager:       txManager,
 	})
 
@@ -855,6 +856,7 @@ func Run(
 		"hubspot_company_reviews": hubspotSyncSvc.BuildExportHubspotCompanyReviews,
 		"price_list":              accountPriceSvc.BuildExportPriceList,
 		"sales_data":              analyticsSvc.BuildExportSalesLines,
+		"customers":               customerSvc.BuildExportCustomers,
 	}
 
 	exportRunner := service.NewExportRunner(&service.ExportRunnerConfig{

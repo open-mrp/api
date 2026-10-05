@@ -104,7 +104,8 @@ func (s *utilsSvcImpl) withTx(ctx context.Context, fn func(context.Context, *uti
 }
 
 // CheckDuplicate checks whether a record number already exists.
-// Allows both internal and customer actors (CheckIsAssignedActor).
+// Customer and supplier actors are refused by CheckReadAccess, which grants only the owner→counterparty
+// direction: nothing scopes the check to the counterparty, so an answer would expose the owner's numbers.
 // For internal actors, verifies appropriate read permissions per type.
 // PUT endpoint — idempotent by design, no idempotency keys needed.
 func (s *utilsSvcImpl) CheckDuplicate(ctx context.Context, params domain.CheckDuplicateParams) (*domain.CheckDuplicateResult, *apierror.APIError) {
@@ -158,6 +159,9 @@ func (s *utilsSvcImpl) CheckDuplicate(ctx context.Context, params domain.CheckDu
 
 	accountID := identity.Target.AccountID
 	recordNumber := strings.TrimSpace(params.RecordNumber)
+	if recordNumber == "" {
+		return nil, tracing.Trace(span, apierror.NewInvalidFormatError("Field 'record_number' must not be blank.", "record_number"))
+	}
 
 	var isDuplicate bool
 	var message *string

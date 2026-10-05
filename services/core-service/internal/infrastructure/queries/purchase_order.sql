@@ -11,7 +11,7 @@ SELECT STRAIGHT_JOIN
     so.sales_order_type_code AS type_code,
     sot.name AS type_name,
     so.seller_account_id AS supplier_id,
-    sa.name AS supplier_name,
+    COALESCE(NULLIF(ar.alias, ''), sa.name) AS supplier_name,
     ar.external_number AS supplier_number,
     so.is_acknowledgment_sent,
     so.priority_code,
@@ -111,7 +111,7 @@ SELECT STRAIGHT_JOIN
     so.sales_order_type_code AS type_code,
     sot.name AS type_name,
     so.seller_account_id AS supplier_id,
-    sa.name AS supplier_name,
+    COALESCE(NULLIF(ar.alias, ''), sa.name) AS supplier_name,
     ar.external_number AS supplier_number,
     so.is_acknowledgment_sent,
     so.priority_code,
@@ -223,7 +223,7 @@ SELECT
     so.created_at,
     so.updated_at,
     -- Supplier
-    sa.name AS supplier_name,
+    COALESCE(NULLIF(ar.alias, ''), sa.name) AS supplier_name,
     ar.external_number AS supplier_number,
     -- Status
     sos.name AS status_name,
@@ -336,7 +336,7 @@ SELECT
     so.created_at,
     so.updated_at,
     -- Supplier
-    sa.name AS supplier_name,
+    COALESCE(NULLIF(ar.alias, ''), sa.name) AS supplier_name,
     ar.external_number AS supplier_number,
     -- Status
     sos.name AS status_name,

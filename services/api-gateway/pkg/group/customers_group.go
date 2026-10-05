@@ -51,6 +51,7 @@ func (*CustomersEndpointGroup) Materialize(config *CustomersEndpointGroupConfig)
 	updateNotificationRecipientsEndpoint := apiendpoint.From(&customerep.UpdateNotificationRecipientsEndpoint{}).WithService(inner, customerSvc)
 	mergeEndpoint := apiendpoint.From(&customerep.MergeCustomersEndpoint{}).WithService(inner, customerSvc)
 	updateEndpoint := apiendpoint.From(&customerep.UpdateCustomerEndpoint{}).WithService(inner, customerSvc)
+	exportEndpoint := apiendpoint.From(&customerep.ExportCustomersEndpoint{}).WithService(inner, customerSvc)
 
 	inner.Endpoints = []apiendpoint.APIEndpointer{
 		listEndpoint,
@@ -64,6 +65,7 @@ func (*CustomersEndpointGroup) Materialize(config *CustomersEndpointGroupConfig)
 		listNotificationRecipientsEndpoint,
 		updateNotificationRecipientsEndpoint,
 		mergeEndpoint,
+		exportEndpoint,
 	}
 
 	return &CustomersEndpointGroup{inner}

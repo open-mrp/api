@@ -23,7 +23,12 @@ type accessFixture struct {
 func newAccessFixture(t *testing.T) accessFixture {
 	t.Helper()
 	line := func(prefix string) string {
-		return jsonField(createAndCleanup(t, productLinesPath, map[string]any{"name": uniqueName(prefix)}), "id")
+		return jsonField(createAndCleanup(t, productLinesPath, map[string]any{
+			"name":              uniqueName(prefix),
+			"unit_group_id":     SeedUnitGroupID,
+			"commission_policy": "commission_applied",
+			"freight_policy":    "billed_freight",
+		}), "id")
 	}
 	return accessFixture{
 		customerID: customerInGroup(t, SeedCustomerGroupID),
@@ -31,6 +36,15 @@ func newAccessFixture(t *testing.T) accessFixture {
 		lineA:      line("e2e-pla-a"),
 		lineB:      line("e2e-pla-b"),
 	}
+}
+
+// grantAccess creates an access record. The record is keyed by its customer or group, so it carries
+// no id of its own; callers revoke it themselves.
+func grantAccess(t *testing.T, path string, body map[string]any) {
+	t.Helper()
+	status, resp, err := apiClient.Post(path, body, newIdempotencyKey())
+	require.NoError(t, err)
+	requireStatus(t, 201, status, resp)
 }
 
 // grantedLines is the sorted product line IDs an access record grants.
@@ -167,7 +181,7 @@ func TestCustomerProductLineAccess_ASecondGrantConflicts(t *testing.T) {
 	t.Parallel()
 	f := newAccessFixture(t)
 	path := customerAccessPath + "/" + f.customerID
-	createAndCleanup(t, customerAccessPath, map[string]any{"customer_id": f.customerID, "product_line_ids": []string{f.lineA}})
+	grantAccess(t, customerAccessPath, map[string]any{"customer_id": f.customerID, "product_line_ids": []string{f.lineA}})
 	t.Cleanup(func() { _, _, _ = apiClient.Delete(path) })
 
 	status, body, err := apiClient.Post(customerAccessPath, map[string]any{
@@ -199,7 +213,7 @@ func TestCustomerProductLineAccess_AGrantOfNoProductLinesIsRefused(t *testing.T)
 	status, _ = readAccess(t, path)
 	assert.Equal(t, 404, status, "the refused grant created nothing")
 
-	createAndCleanup(t, customerAccessPath, map[string]any{"customer_id": f.customerID, "product_line_ids": []string{f.lineA, f.lineB}})
+	grantAccess(t, customerAccessPath, map[string]any{"customer_id": f.customerID, "product_line_ids": []string{f.lineA, f.lineB}})
 	t.Cleanup(func() { _, _, _ = apiClient.Delete(path) })
 
 	status, body, err = apiClient.Patch(path, map[string]any{"product_line_ids": []string{}}, newIdempotencyKey())
@@ -231,7 +245,7 @@ func TestCustomerProductLineAccess_AnUnknownProductLineIsRefused(t *testing.T) {
 	status, _ = readAccess(t, path)
 	assert.Equal(t, 404, status, "a refused grant creates nothing, not even its known lines")
 
-	createAndCleanup(t, customerAccessPath, map[string]any{"customer_id": f.customerID, "product_line_ids": []string{f.lineA}})
+	grantAccess(t, customerAccessPath, map[string]any{"customer_id": f.customerID, "product_line_ids": []string{f.lineA}})
 	t.Cleanup(func() { _, _, _ = apiClient.Delete(path) })
 
 	status, body, err = apiClient.Patch(path, map[string]any{"product_line_ids": []string{f.lineB, "pdln_doesnotexist00"}}, newIdempotencyKey())
@@ -253,7 +267,7 @@ func TestCustomerProductLineAccess_IsTheAccountsOwn(t *testing.T) {
 	t.Parallel()
 	f := newAccessFixture(t)
 	path := customerAccessPath + "/" + f.customerID
-	createAndCleanup(t, customerAccessPath, map[string]any{"customer_id": f.customerID, "product_line_ids": []string{f.lineA}})
+	grantAccess(t, customerAccessPath, map[string]any{"customer_id": f.customerID, "product_line_ids": []string{f.lineA}})
 	t.Cleanup(func() { _, _, _ = apiClient.Delete(path) })
 	other := getTenantBClient()
 
@@ -283,7 +297,7 @@ func TestCustomerProductLineAccess_PagesWalkEveryRecordOnce(t *testing.T) {
 	var ids []string
 	for range 3 {
 		f := newAccessFixture(t)
-		createAndCleanup(t, customerAccessPath, map[string]any{"customer_id": f.customerID, "product_line_ids": []string{f.lineA}})
+		grantAccess(t, customerAccessPath, map[string]any{"customer_id": f.customerID, "product_line_ids": []string{f.lineA}})
 		t.Cleanup(func() { _, _, _ = apiClient.Delete(customerAccessPath + "/" + f.customerID) })
 		ids = append(ids, f.customerID)
 	}
@@ -337,7 +351,7 @@ func TestAccountGroupProductLineAccess_ASecondGrantConflicts(t *testing.T) {
 	t.Parallel()
 	f := newAccessFixture(t)
 	path := accountGroupAccessPath + "/" + f.groupID
-	createAndCleanup(t, accountGroupAccessPath, map[string]any{"account_group_id": f.groupID, "product_line_ids": []string{f.lineA}})
+	grantAccess(t, accountGroupAccessPath, map[string]any{"account_group_id": f.groupID, "product_line_ids": []string{f.lineA}})
 	t.Cleanup(func() { _, _, _ = apiClient.Delete(path) })
 
 	status, body, err := apiClient.Post(accountGroupAccessPath, map[string]any{
@@ -366,7 +380,7 @@ func TestAccountGroupProductLineAccess_AGrantOfNoProductLinesIsRefused(t *testin
 	assert.Equal(t, 400, status, "an empty grant is refused: %s", body)
 	assert.Equal(t, "product_line_ids", errorParam(body))
 
-	createAndCleanup(t, accountGroupAccessPath, map[string]any{"account_group_id": f.groupID, "product_line_ids": []string{f.lineA, f.lineB}})
+	grantAccess(t, accountGroupAccessPath, map[string]any{"account_group_id": f.groupID, "product_line_ids": []string{f.lineA, f.lineB}})
 	t.Cleanup(func() { _, _, _ = apiClient.Delete(path) })
 
 	status, body, err = apiClient.Patch(path, map[string]any{"product_line_ids": []string{}}, newIdempotencyKey())
@@ -410,7 +424,7 @@ func TestAccountGroupProductLineAccess_IsTheAccountsOwn(t *testing.T) {
 	t.Parallel()
 	f := newAccessFixture(t)
 	path := accountGroupAccessPath + "/" + f.groupID
-	createAndCleanup(t, accountGroupAccessPath, map[string]any{"account_group_id": f.groupID, "product_line_ids": []string{f.lineA}})
+	grantAccess(t, accountGroupAccessPath, map[string]any{"account_group_id": f.groupID, "product_line_ids": []string{f.lineA}})
 	t.Cleanup(func() { _, _, _ = apiClient.Delete(path) })
 	other := getTenantBClient()
 

@@ -752,6 +752,29 @@ message MergeCustomersRequest {
 message MergeCustomersResponse {
   CustomerProto customer = 1;
 }
+// ListCustomersRequest's filters, without its paging or includes.
+message ExportCustomersRequest {
+  optional string query = 1;
+  repeated string customer_group_ids = 2;
+  repeated string pricing_group_ids = 3;
+  repeated string sales_rep_ids = 4;
+  repeated string status_codes = 5;
+  repeated string shipping_term_ids = 6;
+  repeated string payment_term_ids = 7;
+  repeated string commission_status_codes = 8;
+  repeated string freight_status_codes = 9;
+  repeated string carrier_ids = 10;
+  repeated string service_level_ids = 11;
+  optional bool is_parent_account = 12;
+  optional string city = 13;
+  optional string state = 14;
+  optional string postal_code = 15;
+  optional google.protobuf.Timestamp start_date = 16;
+  optional google.protobuf.Timestamp end_date = 17;
+}
+message ExportCustomersResponse {
+  JobInfo job = 1;
+}
 message AnalyzeCustomerPricingRequest {
   repeated string customer_ids = 1;
   repeated string customer_group_ids = 2;

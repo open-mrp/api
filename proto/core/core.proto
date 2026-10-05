@@ -605,6 +605,8 @@ service CoreService {
   rpc UpdateCustomer(UpdateCustomerRequest) returns (UpdateCustomerResponse);
   // Merges source customers into a target customer.
   rpc MergeCustomers(MergeCustomersRequest) returns (MergeCustomersResponse);
+  // Accepts an export of the customers the list's filters select; the file is built by the export worker.
+  rpc ExportCustomers(ExportCustomersRequest) returns (ExportCustomersResponse);
 
   // --- Analytics RPCs ---
 

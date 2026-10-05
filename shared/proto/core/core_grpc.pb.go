@@ -254,6 +254,7 @@ const (
 	CoreService_UpdateCustomerNotificationRecipients_FullMethodName       = "/core.CoreService/UpdateCustomerNotificationRecipients"
 	CoreService_UpdateCustomer_FullMethodName                             = "/core.CoreService/UpdateCustomer"
 	CoreService_MergeCustomers_FullMethodName                             = "/core.CoreService/MergeCustomers"
+	CoreService_ExportCustomers_FullMethodName                            = "/core.CoreService/ExportCustomers"
 	CoreService_AnalyzeSales_FullMethodName                               = "/core.CoreService/AnalyzeSales"
 	CoreService_AnalyzeSalesSummary_FullMethodName                        = "/core.CoreService/AnalyzeSalesSummary"
 	CoreService_AnalyzeSalesBreakdown_FullMethodName                      = "/core.CoreService/AnalyzeSalesBreakdown"
@@ -869,6 +870,8 @@ type CoreServiceClient interface {
 	UpdateCustomer(ctx context.Context, in *UpdateCustomerRequest, opts ...grpc.CallOption) (*UpdateCustomerResponse, error)
 	// Merges source customers into a target customer.
 	MergeCustomers(ctx context.Context, in *MergeCustomersRequest, opts ...grpc.CallOption) (*MergeCustomersResponse, error)
+	// Accepts an export of the customers the list's filters select; the file is built by the export worker.
+	ExportCustomers(ctx context.Context, in *ExportCustomersRequest, opts ...grpc.CallOption) (*ExportCustomersResponse, error)
 	AnalyzeSales(ctx context.Context, in *AnalyzeSalesRequest, opts ...grpc.CallOption) (*AnalyzeSalesResponse, error)
 	// Sales reports read sales_line_fact, invoice lines pre-priced for analytics.
 	AnalyzeSalesSummary(ctx context.Context, in *AnalyzeSalesSummaryRequest, opts ...grpc.CallOption) (*AnalyzeSalesSummaryResponse, error)
@@ -3383,6 +3386,16 @@ func (c *coreServiceClient) MergeCustomers(ctx context.Context, in *MergeCustome
 	return out, nil
 }
 
+func (c *coreServiceClient) ExportCustomers(ctx context.Context, in *ExportCustomersRequest, opts ...grpc.CallOption) (*ExportCustomersResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ExportCustomersResponse)
+	err := c.cc.Invoke(ctx, CoreService_ExportCustomers_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 func (c *coreServiceClient) AnalyzeSales(ctx context.Context, in *AnalyzeSalesRequest, opts ...grpc.CallOption) (*AnalyzeSalesResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(AnalyzeSalesResponse)
@@ -5634,6 +5647,8 @@ type CoreServiceServer interface {
 	UpdateCustomer(context.Context, *UpdateCustomerRequest) (*UpdateCustomerResponse, error)
 	// Merges source customers into a target customer.
 	MergeCustomers(context.Context, *MergeCustomersRequest) (*MergeCustomersResponse, error)
+	// Accepts an export of the customers the list's filters select; the file is built by the export worker.
+	ExportCustomers(context.Context, *ExportCustomersRequest) (*ExportCustomersResponse, error)
 	AnalyzeSales(context.Context, *AnalyzeSalesRequest) (*AnalyzeSalesResponse, error)
 	// Sales reports read sales_line_fact, invoice lines pre-priced for analytics.
 	AnalyzeSalesSummary(context.Context, *AnalyzeSalesSummaryRequest) (*AnalyzeSalesSummaryResponse, error)
@@ -6558,6 +6573,9 @@ func (UnimplementedCoreServiceServer) UpdateCustomer(context.Context, *UpdateCus
 }
 func (UnimplementedCoreServiceServer) MergeCustomers(context.Context, *MergeCustomersRequest) (*MergeCustomersResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method MergeCustomers not implemented")
+}
+func (UnimplementedCoreServiceServer) ExportCustomers(context.Context, *ExportCustomersRequest) (*ExportCustomersResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method ExportCustomers not implemented")
 }
 func (UnimplementedCoreServiceServer) AnalyzeSales(context.Context, *AnalyzeSalesRequest) (*AnalyzeSalesResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method AnalyzeSales not implemented")
@@ -11212,6 +11230,24 @@ func _CoreService_MergeCustomers_Handler(srv interface{}, ctx context.Context, d
 	return interceptor(ctx, in, info, handler)
 }
 
+func _CoreService_ExportCustomers_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ExportCustomersRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(CoreServiceServer).ExportCustomers(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: CoreService_ExportCustomers_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(CoreServiceServer).ExportCustomers(ctx, req.(*ExportCustomersRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 func _CoreService_AnalyzeSales_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(AnalyzeSalesRequest)
 	if err := dec(in); err != nil {
@@ -15402,6 +15438,10 @@ var CoreService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "MergeCustomers",
 			Handler:    _CoreService_MergeCustomers_Handler,
+		},
+		{
+			MethodName: "ExportCustomers",
+			Handler:    _CoreService_ExportCustomers_Handler,
 		},
 		{
 			MethodName: "AnalyzeSales",

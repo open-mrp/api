@@ -200,9 +200,8 @@ func (m *accountSvcImpl) UpdateAccount(ctx context.Context, req *UpdateAccountRe
 
 func (m *accountSvcImpl) UploadAccountPhoto(ctx context.Context, req *UploadAccountPhotoRequest) (*apiresource.AccountPhotoUploadResult, *apierror.APIError) {
 	pbReq := &pb.UploadAccountPhotoRequest{
-		Id:          req.AccountID,
-		File:        req.RawBody,
-		ContentType: req.ContentType,
+		Id:   req.AccountID,
+		File: req.RawBody,
 	}
 
 	resp, apiErr := grpcutil.CallRPC(ctx, accountSvcTracer, "service.accounts.upload_photo", domain.ServiceName,
@@ -242,9 +241,8 @@ func (m *accountSvcImpl) GetAccountLogoURL(ctx context.Context, req *GetAccountL
 
 func (m *accountSvcImpl) UploadAccountFavicon(ctx context.Context, req *UploadAccountFaviconRequest) (*apiresource.EmptyResource, *apierror.APIError) {
 	pbReq := &pb.UploadAccountFaviconRequest{
-		Id:          req.AccountID,
-		File:        req.RawBody,
-		ContentType: req.ContentType,
+		Id:   req.AccountID,
+		File: req.RawBody,
 	}
 
 	_, apiErr := grpcutil.CallRPC(ctx, accountSvcTracer, "service.accounts.upload_favicon", domain.ServiceName,

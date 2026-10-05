@@ -641,8 +641,10 @@ resources:
             methods:
               bulk_delete: post /v1/sales/customers/actions/bulk-delete
               merge: post /v1/sales/customers/{id}/actions/merge
+              export: post /v1/sales/customers/actions/export
             models:
               bulk_delete_customers_request: '#/components/schemas/BulkDeleteCustomersRequest'
+              export_customers_request: '#/components/schemas/ExportCustomersRequest'
               merge_customers_request: '#/components/schemas/MergeCustomersRequest'
           notification_recipients:
             methods:

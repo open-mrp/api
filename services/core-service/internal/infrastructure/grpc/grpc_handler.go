@@ -2501,7 +2501,7 @@ func (h *gRPCHandler) UploadAccountPhoto(ctx context.Context, req *pb.UploadAcco
 		return nil, contracts.NewMissingGRPCRequestDataError()
 	}
 
-	apiErr := h.accountSvc.UploadAccountPhoto(ctx, req.Id, req.File, req.ContentType)
+	apiErr := h.accountSvc.UploadAccountPhoto(ctx, req.Id, req.File)
 	if apiErr != nil {
 		return nil, contracts.ConvertAPIErrorToGRPC(apiErr)
 	}
@@ -2531,7 +2531,7 @@ func (h *gRPCHandler) UploadAccountFavicon(ctx context.Context, req *pb.UploadAc
 		return nil, contracts.NewMissingGRPCRequestDataError()
 	}
 
-	apiErr := h.accountSvc.UploadAccountFavicon(ctx, req.Id, req.File, req.ContentType)
+	apiErr := h.accountSvc.UploadAccountFavicon(ctx, req.Id, req.File)
 	if apiErr != nil {
 		return nil, contracts.ConvertAPIErrorToGRPC(apiErr)
 	}

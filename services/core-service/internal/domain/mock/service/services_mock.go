@@ -107,17 +107,17 @@ func (mr *MockUserSvcMockRecorder) UpdateUser(ctx, userID, params any) *gomock.C
 }
 
 // UploadUserPhoto mocks base method.
-func (m *MockUserSvc) UploadUserPhoto(ctx context.Context, userID string, file []byte, contentType string) *apierror.APIError {
+func (m *MockUserSvc) UploadUserPhoto(ctx context.Context, userID string, file []byte) *apierror.APIError {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "UploadUserPhoto", ctx, userID, file, contentType)
+	ret := m.ctrl.Call(m, "UploadUserPhoto", ctx, userID, file)
 	ret0, _ := ret[0].(*apierror.APIError)
 	return ret0
 }
 
 // UploadUserPhoto indicates an expected call of UploadUserPhoto.
-func (mr *MockUserSvcMockRecorder) UploadUserPhoto(ctx, userID, file, contentType any) *gomock.Call {
+func (mr *MockUserSvcMockRecorder) UploadUserPhoto(ctx, userID, file any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UploadUserPhoto", reflect.TypeOf((*MockUserSvc)(nil).UploadUserPhoto), ctx, userID, file, contentType)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UploadUserPhoto", reflect.TypeOf((*MockUserSvc)(nil).UploadUserPhoto), ctx, userID, file)
 }
 
 // MockSandboxSvc is a mock of SandboxSvc interface.
@@ -3525,31 +3525,31 @@ func (mr *MockAccountSvcMockRecorder) UpdateAgentSpendingCap(ctx, capCents any) 
 }
 
 // UploadAccountFavicon mocks base method.
-func (m *MockAccountSvc) UploadAccountFavicon(ctx context.Context, accountID string, file []byte, contentType string) *apierror.APIError {
+func (m *MockAccountSvc) UploadAccountFavicon(ctx context.Context, accountID string, file []byte) *apierror.APIError {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "UploadAccountFavicon", ctx, accountID, file, contentType)
+	ret := m.ctrl.Call(m, "UploadAccountFavicon", ctx, accountID, file)
 	ret0, _ := ret[0].(*apierror.APIError)
 	return ret0
 }
 
 // UploadAccountFavicon indicates an expected call of UploadAccountFavicon.
-func (mr *MockAccountSvcMockRecorder) UploadAccountFavicon(ctx, accountID, file, contentType any) *gomock.Call {
+func (mr *MockAccountSvcMockRecorder) UploadAccountFavicon(ctx, accountID, file any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UploadAccountFavicon", reflect.TypeOf((*MockAccountSvc)(nil).UploadAccountFavicon), ctx, accountID, file, contentType)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UploadAccountFavicon", reflect.TypeOf((*MockAccountSvc)(nil).UploadAccountFavicon), ctx, accountID, file)
 }
 
 // UploadAccountPhoto mocks base method.
-func (m *MockAccountSvc) UploadAccountPhoto(ctx context.Context, accountID string, file []byte, contentType string) *apierror.APIError {
+func (m *MockAccountSvc) UploadAccountPhoto(ctx context.Context, accountID string, file []byte) *apierror.APIError {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "UploadAccountPhoto", ctx, accountID, file, contentType)
+	ret := m.ctrl.Call(m, "UploadAccountPhoto", ctx, accountID, file)
 	ret0, _ := ret[0].(*apierror.APIError)
 	return ret0
 }
 
 // UploadAccountPhoto indicates an expected call of UploadAccountPhoto.
-func (mr *MockAccountSvcMockRecorder) UploadAccountPhoto(ctx, accountID, file, contentType any) *gomock.Call {
+func (mr *MockAccountSvcMockRecorder) UploadAccountPhoto(ctx, accountID, file any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UploadAccountPhoto", reflect.TypeOf((*MockAccountSvc)(nil).UploadAccountPhoto), ctx, accountID, file, contentType)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UploadAccountPhoto", reflect.TypeOf((*MockAccountSvc)(nil).UploadAccountPhoto), ctx, accountID, file)
 }
 
 // MockBatchSvc is a mock of BatchSvc interface.
@@ -4430,6 +4430,21 @@ func (mr *MockCustomerSvcMockRecorder) BatchGetCustomers(ctx, customerAccountIDs
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "BatchGetCustomers", reflect.TypeOf((*MockCustomerSvc)(nil).BatchGetCustomers), ctx, customerAccountIDs)
 }
 
+// BuildExportCustomers mocks base method.
+func (m *MockCustomerSvc) BuildExportCustomers(ctx context.Context, accountID string, filters json.RawMessage) (*domain.Export, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "BuildExportCustomers", ctx, accountID, filters)
+	ret0, _ := ret[0].(*domain.Export)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
+}
+
+// BuildExportCustomers indicates an expected call of BuildExportCustomers.
+func (mr *MockCustomerSvcMockRecorder) BuildExportCustomers(ctx, accountID, filters any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "BuildExportCustomers", reflect.TypeOf((*MockCustomerSvc)(nil).BuildExportCustomers), ctx, accountID, filters)
+}
+
 // BulkDeleteCustomers mocks base method.
 func (m *MockCustomerSvc) BulkDeleteCustomers(ctx context.Context, params domain.BulkDeleteCustomersParams) *apierror.APIError {
 	m.ctrl.T.Helper()
@@ -4471,6 +4486,21 @@ func (m *MockCustomerSvc) DeleteCustomer(ctx context.Context, params domain.Dele
 func (mr *MockCustomerSvcMockRecorder) DeleteCustomer(ctx, params any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteCustomer", reflect.TypeOf((*MockCustomerSvc)(nil).DeleteCustomer), ctx, params)
+}
+
+// ExportCustomers mocks base method.
+func (m *MockCustomerSvc) ExportCustomers(ctx context.Context, filters domain.ListCustomersParams) (*domain.Job, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ExportCustomers", ctx, filters)
+	ret0, _ := ret[0].(*domain.Job)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
+}
+
+// ExportCustomers indicates an expected call of ExportCustomers.
+func (mr *MockCustomerSvcMockRecorder) ExportCustomers(ctx, filters any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ExportCustomers", reflect.TypeOf((*MockCustomerSvc)(nil).ExportCustomers), ctx, filters)
 }
 
 // GetCustomer mocks base method.

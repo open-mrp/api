@@ -44,27 +44,32 @@ func EscapeLike(s string) string {
 	return s
 }
 
-// AllWordsPattern turns search input into a pattern for REGEXP_LIKE(col, pattern, 'i') that requires
-// every word to begin a word of the text, in any order: "QA init" becomes `^(?=.*\bQA)(?=.*\binit)`.
-// It is the same match as AllWordsPrefixQuery without the FULLTEXT index, which holds no word under
-// three characters, so a search with one ("QA", "P2") still matches. It scans the scope's rows, so use
-// it only where the scope is small. NULL when the input has no words.
-func AllWordsPattern(query *string) sql.NullString {
+// AllWordsSearch splits search input so that every word must begin a word of the text, in any order.
+// Words of at least innoDBMinTokenSize characters go into a BOOLEAN MODE query for the FULLTEXT index
+// (see AllWordsPrefixQuery). The index holds no shorter word, so those go into a pattern for
+// REGEXP_LIKE(col, pattern, 'i') with a word-start lookahead each: "QA init P1" becomes "+init*" and
+// `^(?=.*\bQA)(?=.*\bP1)`. Emit each part only when it is valid, the pattern after the MATCH so it
+// reads only the index's matches.
+func AllWordsSearch(query *string) (fulltext, shortWords sql.NullString) {
 	if query == nil {
-		return sql.NullString{}
+		return
 	}
-	words := searchWords(*query)
-	if len(words) == 0 {
-		return sql.NullString{}
+	var long []string
+	var short strings.Builder
+	for _, w := range searchWords(*query) {
+		if len(w) < innoDBMinTokenSize {
+			short.WriteString(`(?=.*\b` + w + `)`)
+		} else {
+			long = append(long, "+"+w+"*")
+		}
 	}
-	var b strings.Builder
-	b.WriteString("^")
-	for _, w := range words {
-		b.WriteString(`(?=.*\b`)
-		b.WriteString(w)
-		b.WriteString(")")
+	if len(long) > 0 {
+		fulltext = sql.NullString{String: strings.Join(long, " "), Valid: true}
 	}
-	return sql.NullString{String: b.String(), Valid: true}
+	if short.Len() > 0 {
+		shortWords = sql.NullString{String: "^" + short.String(), Valid: true}
+	}
+	return
 }
 
 // searchWords splits search input on anything that is not an ASCII letter or digit, which also leaves

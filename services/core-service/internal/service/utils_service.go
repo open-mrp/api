@@ -459,6 +459,16 @@ func (s *utilsSvcImpl) SubmitFeedback(ctx context.Context, params domain.SubmitF
 		"page_url", params.PageURL,
 	)
 
+	// The reply goes to the actor's address. An actor that is not a user (an API key) has none.
+	userEmail := ""
+	actorUser, apiErr := s.repos.NewUserRepo().FindByID(ctx, identity.Actor.ID)
+	if apiErr != nil && !apierror.IsNotFound(apiErr) {
+		return tracing.Trace(span, apiErr)
+	}
+	if actorUser != nil {
+		userEmail = ptrutil.Deref(actorUser.Email)
+	}
+
 	accountID := identity.Target.AccountID
 	emailData := messaging.EmailSendData{
 		To:         []string{internalAlertRecipient},
@@ -467,9 +477,7 @@ func (s *utilsSvcImpl) SubmitFeedback(ctx context.Context, params domain.SubmitF
 		Params: map[string]any{
 			"UserName":  ptrutil.Deref(identity.Actor.Name),
 			"ActorType": string(identity.Actor.RelationType),
-			// The actor's address is not on the identity, so the feedback names the account and
-			// actor id and leaves the reply route to a lookup on receipt.
-			"UserEmail": "",
+			"UserEmail": userEmail,
 			"ActorID":   identity.Actor.ID,
 			"AccountID": accountID,
 			"PageURL":   ptrutil.Deref(params.PageURL),

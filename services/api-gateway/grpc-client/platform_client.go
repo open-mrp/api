@@ -13,7 +13,9 @@ type PlatformServiceClient struct {
 	Client        pb.IdempotencyServiceClient
 	LoggingClient pb.LoggingServiceClient
 	AuditClient   pb.AuditServiceClient
-	grpcConn      *contracts.GRPCClientConn
+	// AccountFollowupClient serves the review page for drafted account follow-ups.
+	AccountFollowupClient pb.AccountFollowupServiceClient
+	grpcConn              *contracts.GRPCClientConn
 }
 
 func NewPlatformServiceClientWithURL(url string) (*PlatformServiceClient, error) {
@@ -23,10 +25,11 @@ func NewPlatformServiceClientWithURL(url string) (*PlatformServiceClient, error)
 	}
 
 	return &PlatformServiceClient{
-		Client:        pb.NewIdempotencyServiceClient(grpcConn.Conn()),
-		LoggingClient: pb.NewLoggingServiceClient(grpcConn.Conn()),
-		AuditClient:   pb.NewAuditServiceClient(grpcConn.Conn()),
-		grpcConn:      grpcConn,
+		Client:                pb.NewIdempotencyServiceClient(grpcConn.Conn()),
+		LoggingClient:         pb.NewLoggingServiceClient(grpcConn.Conn()),
+		AuditClient:           pb.NewAuditServiceClient(grpcConn.Conn()),
+		AccountFollowupClient: pb.NewAccountFollowupServiceClient(grpcConn.Conn()),
+		grpcConn:              grpcConn,
 	}, nil
 }
 

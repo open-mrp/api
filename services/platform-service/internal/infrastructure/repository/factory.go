@@ -26,3 +26,7 @@ func (f *repoFactoryImpl) NewAuditEventRepo() domain.AuditEventRepo {
 func (f *repoFactoryImpl) NewOutboxRepo() messaging.OutboxRepo {
 	return NewOutboxRepo(f.db)
 }
+
+func (f *repoFactoryImpl) NewAccountFollowupRepo() domain.AccountFollowupRepo {
+	return NewAccountFollowupRepo(f.db)
+}

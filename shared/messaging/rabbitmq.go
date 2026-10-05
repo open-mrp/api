@@ -843,6 +843,24 @@ func (r *rabbitMQ) setupExchangesAndQueues() error {
 		return err
 	}
 
+	// Account follow-up scheduling command queue (handled by platform-service)
+	if err := r.declareAndBindQueue(
+		PlatformCmdScheduleAccountFollowupQueue,
+		[]string{string(contracts.PlatformCmdScheduleAccountFollowup)},
+		ApplicationExchange,
+	); err != nil {
+		return err
+	}
+
+	// Account follow-up drafting command queue (handled by platform-service)
+	if err := r.declareAndBindQueue(
+		PlatformCmdDraftAccountFollowupQueue,
+		[]string{string(contracts.PlatformCmdDraftAccountFollowup)},
+		ApplicationExchange,
+	); err != nil {
+		return err
+	}
+
 	// Core purge account data command queue (handled by core-service)
 	if err := r.declareAndBindQueue(
 		CoreCmdPurgeAccountDataQueue,

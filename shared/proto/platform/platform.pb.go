@@ -2787,6 +2787,320 @@ func (x *AuditFieldChange) GetNewValueJson() string {
 	return ""
 }
 
+type GetAccountFollowupReviewRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Token         string                 `protobuf:"bytes,1,opt,name=token,proto3" json:"token,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *GetAccountFollowupReviewRequest) Reset() {
+	*x = GetAccountFollowupReviewRequest{}
+	mi := &file_platform_platform_proto_msgTypes[34]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GetAccountFollowupReviewRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetAccountFollowupReviewRequest) ProtoMessage() {}
+
+func (x *GetAccountFollowupReviewRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_platform_platform_proto_msgTypes[34]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GetAccountFollowupReviewRequest.ProtoReflect.Descriptor instead.
+func (*GetAccountFollowupReviewRequest) Descriptor() ([]byte, []int) {
+	return file_platform_platform_proto_rawDescGZIP(), []int{34}
+}
+
+func (x *GetAccountFollowupReviewRequest) GetToken() string {
+	if x != nil {
+		return x.Token
+	}
+	return ""
+}
+
+type ApproveAccountFollowupRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Token         string                 `protobuf:"bytes,1,opt,name=token,proto3" json:"token,omitempty"`
+	Subject       string                 `protobuf:"bytes,2,opt,name=subject,proto3" json:"subject,omitempty"`
+	Body          string                 `protobuf:"bytes,3,opt,name=body,proto3" json:"body,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ApproveAccountFollowupRequest) Reset() {
+	*x = ApproveAccountFollowupRequest{}
+	mi := &file_platform_platform_proto_msgTypes[35]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ApproveAccountFollowupRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ApproveAccountFollowupRequest) ProtoMessage() {}
+
+func (x *ApproveAccountFollowupRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_platform_platform_proto_msgTypes[35]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ApproveAccountFollowupRequest.ProtoReflect.Descriptor instead.
+func (*ApproveAccountFollowupRequest) Descriptor() ([]byte, []int) {
+	return file_platform_platform_proto_rawDescGZIP(), []int{35}
+}
+
+func (x *ApproveAccountFollowupRequest) GetToken() string {
+	if x != nil {
+		return x.Token
+	}
+	return ""
+}
+
+func (x *ApproveAccountFollowupRequest) GetSubject() string {
+	if x != nil {
+		return x.Subject
+	}
+	return ""
+}
+
+func (x *ApproveAccountFollowupRequest) GetBody() string {
+	if x != nil {
+		return x.Body
+	}
+	return ""
+}
+
+type SkipAccountFollowupRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Token         string                 `protobuf:"bytes,1,opt,name=token,proto3" json:"token,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *SkipAccountFollowupRequest) Reset() {
+	*x = SkipAccountFollowupRequest{}
+	mi := &file_platform_platform_proto_msgTypes[36]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *SkipAccountFollowupRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*SkipAccountFollowupRequest) ProtoMessage() {}
+
+func (x *SkipAccountFollowupRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_platform_platform_proto_msgTypes[36]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use SkipAccountFollowupRequest.ProtoReflect.Descriptor instead.
+func (*SkipAccountFollowupRequest) Descriptor() ([]byte, []int) {
+	return file_platform_platform_proto_rawDescGZIP(), []int{36}
+}
+
+func (x *SkipAccountFollowupRequest) GetToken() string {
+	if x != nil {
+		return x.Token
+	}
+	return ""
+}
+
+type AccountFollowupReview struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	Id    string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	// pending_review, sent, or skipped.
+	Status          string                 `protobuf:"bytes,2,opt,name=status,proto3" json:"status,omitempty"`
+	RegistrantName  string                 `protobuf:"bytes,3,opt,name=registrant_name,json=registrantName,proto3" json:"registrant_name,omitempty"`
+	RegistrantEmail string                 `protobuf:"bytes,4,opt,name=registrant_email,json=registrantEmail,proto3" json:"registrant_email,omitempty"`
+	AccountName     string                 `protobuf:"bytes,5,opt,name=account_name,json=accountName,proto3" json:"account_name,omitempty"`
+	AccountId       string                 `protobuf:"bytes,6,opt,name=account_id,json=accountId,proto3" json:"account_id,omitempty"`
+	RegisteredAt    *timestamppb.Timestamp `protobuf:"bytes,7,opt,name=registered_at,json=registeredAt,proto3" json:"registered_at,omitempty"`
+	Engagement      string                 `protobuf:"bytes,8,opt,name=engagement,proto3" json:"engagement,omitempty"`
+	InternalSummary string                 `protobuf:"bytes,9,opt,name=internal_summary,json=internalSummary,proto3" json:"internal_summary,omitempty"`
+	Timeline        []string               `protobuf:"bytes,10,rep,name=timeline,proto3" json:"timeline,omitempty"`
+	DraftSubject    string                 `protobuf:"bytes,11,opt,name=draft_subject,json=draftSubject,proto3" json:"draft_subject,omitempty"`
+	DraftBody       string                 `protobuf:"bytes,12,opt,name=draft_body,json=draftBody,proto3" json:"draft_body,omitempty"`
+	// Set once sent.
+	FinalSubject    string                 `protobuf:"bytes,13,opt,name=final_subject,json=finalSubject,proto3" json:"final_subject,omitempty"`
+	FinalBody       string                 `protobuf:"bytes,14,opt,name=final_body,json=finalBody,proto3" json:"final_body,omitempty"`
+	ReviewExpiresAt *timestamppb.Timestamp `protobuf:"bytes,15,opt,name=review_expires_at,json=reviewExpiresAt,proto3" json:"review_expires_at,omitempty"`
+	ReviewedAt      *timestamppb.Timestamp `protobuf:"bytes,16,opt,name=reviewed_at,json=reviewedAt,proto3" json:"reviewed_at,omitempty"`
+	unknownFields   protoimpl.UnknownFields
+	sizeCache       protoimpl.SizeCache
+}
+
+func (x *AccountFollowupReview) Reset() {
+	*x = AccountFollowupReview{}
+	mi := &file_platform_platform_proto_msgTypes[37]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *AccountFollowupReview) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*AccountFollowupReview) ProtoMessage() {}
+
+func (x *AccountFollowupReview) ProtoReflect() protoreflect.Message {
+	mi := &file_platform_platform_proto_msgTypes[37]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use AccountFollowupReview.ProtoReflect.Descriptor instead.
+func (*AccountFollowupReview) Descriptor() ([]byte, []int) {
+	return file_platform_platform_proto_rawDescGZIP(), []int{37}
+}
+
+func (x *AccountFollowupReview) GetId() string {
+	if x != nil {
+		return x.Id
+	}
+	return ""
+}
+
+func (x *AccountFollowupReview) GetStatus() string {
+	if x != nil {
+		return x.Status
+	}
+	return ""
+}
+
+func (x *AccountFollowupReview) GetRegistrantName() string {
+	if x != nil {
+		return x.RegistrantName
+	}
+	return ""
+}
+
+func (x *AccountFollowupReview) GetRegistrantEmail() string {
+	if x != nil {
+		return x.RegistrantEmail
+	}
+	return ""
+}
+
+func (x *AccountFollowupReview) GetAccountName() string {
+	if x != nil {
+		return x.AccountName
+	}
+	return ""
+}
+
+func (x *AccountFollowupReview) GetAccountId() string {
+	if x != nil {
+		return x.AccountId
+	}
+	return ""
+}
+
+func (x *AccountFollowupReview) GetRegisteredAt() *timestamppb.Timestamp {
+	if x != nil {
+		return x.RegisteredAt
+	}
+	return nil
+}
+
+func (x *AccountFollowupReview) GetEngagement() string {
+	if x != nil {
+		return x.Engagement
+	}
+	return ""
+}
+
+func (x *AccountFollowupReview) GetInternalSummary() string {
+	if x != nil {
+		return x.InternalSummary
+	}
+	return ""
+}
+
+func (x *AccountFollowupReview) GetTimeline() []string {
+	if x != nil {
+		return x.Timeline
+	}
+	return nil
+}
+
+func (x *AccountFollowupReview) GetDraftSubject() string {
+	if x != nil {
+		return x.DraftSubject
+	}
+	return ""
+}
+
+func (x *AccountFollowupReview) GetDraftBody() string {
+	if x != nil {
+		return x.DraftBody
+	}
+	return ""
+}
+
+func (x *AccountFollowupReview) GetFinalSubject() string {
+	if x != nil {
+		return x.FinalSubject
+	}
+	return ""
+}
+
+func (x *AccountFollowupReview) GetFinalBody() string {
+	if x != nil {
+		return x.FinalBody
+	}
+	return ""
+}
+
+func (x *AccountFollowupReview) GetReviewExpiresAt() *timestamppb.Timestamp {
+	if x != nil {
+		return x.ReviewExpiresAt
+	}
+	return nil
+}
+
+func (x *AccountFollowupReview) GetReviewedAt() *timestamppb.Timestamp {
+	if x != nil {
+		return x.ReviewedAt
+	}
+	return nil
+}
+
 var File_platform_platform_proto protoreflect.FileDescriptor
 
 const file_platform_platform_proto_rawDesc = "" +
@@ -3147,7 +3461,39 @@ const file_platform_platform_proto_rawDesc = "" +
 	"\x0eold_value_json\x18\x02 \x01(\tH\x00R\foldValueJson\x88\x01\x01\x12)\n" +
 	"\x0enew_value_json\x18\x03 \x01(\tH\x01R\fnewValueJson\x88\x01\x01B\x11\n" +
 	"\x0f_old_value_jsonB\x11\n" +
-	"\x0f_new_value_json*\xb2\x01\n" +
+	"\x0f_new_value_json\"7\n" +
+	"\x1fGetAccountFollowupReviewRequest\x12\x14\n" +
+	"\x05token\x18\x01 \x01(\tR\x05token\"c\n" +
+	"\x1dApproveAccountFollowupRequest\x12\x14\n" +
+	"\x05token\x18\x01 \x01(\tR\x05token\x12\x18\n" +
+	"\asubject\x18\x02 \x01(\tR\asubject\x12\x12\n" +
+	"\x04body\x18\x03 \x01(\tR\x04body\"2\n" +
+	"\x1aSkipAccountFollowupRequest\x12\x14\n" +
+	"\x05token\x18\x01 \x01(\tR\x05token\"\x8a\x05\n" +
+	"\x15AccountFollowupReview\x12\x0e\n" +
+	"\x02id\x18\x01 \x01(\tR\x02id\x12\x16\n" +
+	"\x06status\x18\x02 \x01(\tR\x06status\x12'\n" +
+	"\x0fregistrant_name\x18\x03 \x01(\tR\x0eregistrantName\x12)\n" +
+	"\x10registrant_email\x18\x04 \x01(\tR\x0fregistrantEmail\x12!\n" +
+	"\faccount_name\x18\x05 \x01(\tR\vaccountName\x12\x1d\n" +
+	"\n" +
+	"account_id\x18\x06 \x01(\tR\taccountId\x12?\n" +
+	"\rregistered_at\x18\a \x01(\v2\x1a.google.protobuf.TimestampR\fregisteredAt\x12\x1e\n" +
+	"\n" +
+	"engagement\x18\b \x01(\tR\n" +
+	"engagement\x12)\n" +
+	"\x10internal_summary\x18\t \x01(\tR\x0finternalSummary\x12\x1a\n" +
+	"\btimeline\x18\n" +
+	" \x03(\tR\btimeline\x12#\n" +
+	"\rdraft_subject\x18\v \x01(\tR\fdraftSubject\x12\x1d\n" +
+	"\n" +
+	"draft_body\x18\f \x01(\tR\tdraftBody\x12#\n" +
+	"\rfinal_subject\x18\r \x01(\tR\ffinalSubject\x12\x1d\n" +
+	"\n" +
+	"final_body\x18\x0e \x01(\tR\tfinalBody\x12F\n" +
+	"\x11review_expires_at\x18\x0f \x01(\v2\x1a.google.protobuf.TimestampR\x0freviewExpiresAt\x12;\n" +
+	"\vreviewed_at\x18\x10 \x01(\v2\x1a.google.protobuf.TimestampR\n" +
+	"reviewedAt*\xb2\x01\n" +
 	"\x1bProcessIdempotencyKeyResult\x12\x1e\n" +
 	"\x1aPROCESS_RESULT_UNSPECIFIED\x10\x00\x12\x16\n" +
 	"\x12PROCESS_RESULT_NEW\x10\x01\x12\x19\n" +
@@ -3169,7 +3515,11 @@ const file_platform_platform_proto_rawDesc = "" +
 	"\x0fListAuditEvents\x12 .platform.ListAuditEventsRequest\x1a!.platform.ListAuditEventsResponse\x12P\n" +
 	"\rGetAuditEvent\x12\x1e.platform.GetAuditEventRequest\x1a\x1f.platform.GetAuditEventResponse\x12z\n" +
 	"\x1bListAuditEventResourceTypes\x12,.platform.ListAuditEventResourceTypesRequest\x1a-.platform.ListAuditEventResourceTypesResponse\x12q\n" +
-	"\x18BatchGetResourceCreators\x12).platform.BatchGetResourceCreatorsRequest\x1a*.platform.BatchGetResourceCreatorsResponseB Z\x1eshared/proto/platform;platformb\x06proto3"
+	"\x18BatchGetResourceCreators\x12).platform.BatchGetResourceCreatorsRequest\x1a*.platform.BatchGetResourceCreatorsResponse2\xc2\x02\n" +
+	"\x16AccountFollowupService\x12f\n" +
+	"\x18GetAccountFollowupReview\x12).platform.GetAccountFollowupReviewRequest\x1a\x1f.platform.AccountFollowupReview\x12b\n" +
+	"\x16ApproveAccountFollowup\x12'.platform.ApproveAccountFollowupRequest\x1a\x1f.platform.AccountFollowupReview\x12\\\n" +
+	"\x13SkipAccountFollowup\x12$.platform.SkipAccountFollowupRequest\x1a\x1f.platform.AccountFollowupReviewB Z\x1eshared/proto/platform;platformb\x06proto3"
 
 var (
 	file_platform_platform_proto_rawDescOnce sync.Once
@@ -3184,7 +3534,7 @@ func file_platform_platform_proto_rawDescGZIP() []byte {
 }
 
 var file_platform_platform_proto_enumTypes = make([]protoimpl.EnumInfo, 1)
-var file_platform_platform_proto_msgTypes = make([]protoimpl.MessageInfo, 34)
+var file_platform_platform_proto_msgTypes = make([]protoimpl.MessageInfo, 38)
 var file_platform_platform_proto_goTypes = []any{
 	(ProcessIdempotencyKeyResult)(0),            // 0: platform.ProcessIdempotencyKeyResult
 	(*ProcessIdempotencyKeyRequest)(nil),        // 1: platform.ProcessIdempotencyKeyRequest
@@ -3221,68 +3571,81 @@ var file_platform_platform_proto_goTypes = []any{
 	(*ResourceCreator)(nil),                     // 32: platform.ResourceCreator
 	(*BatchGetResourceCreatorsResponse)(nil),    // 33: platform.BatchGetResourceCreatorsResponse
 	(*AuditFieldChange)(nil),                    // 34: platform.AuditFieldChange
-	(*timestamppb.Timestamp)(nil),               // 35: google.protobuf.Timestamp
+	(*GetAccountFollowupReviewRequest)(nil),     // 35: platform.GetAccountFollowupReviewRequest
+	(*ApproveAccountFollowupRequest)(nil),       // 36: platform.ApproveAccountFollowupRequest
+	(*SkipAccountFollowupRequest)(nil),          // 37: platform.SkipAccountFollowupRequest
+	(*AccountFollowupReview)(nil),               // 38: platform.AccountFollowupReview
+	(*timestamppb.Timestamp)(nil),               // 39: google.protobuf.Timestamp
 }
 var file_platform_platform_proto_depIdxs = []int32{
 	0,  // 0: platform.ProcessIdempotencyKeyResponse.result:type_name -> platform.ProcessIdempotencyKeyResult
-	35, // 1: platform.RequestLog.occurred_at:type_name -> google.protobuf.Timestamp
-	35, // 2: platform.RequestLog.created_at:type_name -> google.protobuf.Timestamp
+	39, // 1: platform.RequestLog.occurred_at:type_name -> google.protobuf.Timestamp
+	39, // 2: platform.RequestLog.created_at:type_name -> google.protobuf.Timestamp
 	11, // 3: platform.CreateRequestLogRequest.request_log:type_name -> platform.RequestLog
-	35, // 4: platform.ListRequestLogsRequest.start_date:type_name -> google.protobuf.Timestamp
-	35, // 5: platform.ListRequestLogsRequest.end_date:type_name -> google.protobuf.Timestamp
+	39, // 4: platform.ListRequestLogsRequest.start_date:type_name -> google.protobuf.Timestamp
+	39, // 5: platform.ListRequestLogsRequest.end_date:type_name -> google.protobuf.Timestamp
 	19, // 6: platform.ListRequestLogsResponse.request_logs:type_name -> platform.RequestLogInfo
 	14, // 7: platform.ListRequestLogsResponse.page_info:type_name -> platform.PageInfo
 	19, // 8: platform.GetRequestLogResponse.request_log:type_name -> platform.RequestLogInfo
-	35, // 9: platform.RequestLogInfo.occurred_at:type_name -> google.protobuf.Timestamp
-	35, // 10: platform.RequestLogInfo.created_at:type_name -> google.protobuf.Timestamp
+	39, // 9: platform.RequestLogInfo.occurred_at:type_name -> google.protobuf.Timestamp
+	39, // 10: platform.RequestLogInfo.created_at:type_name -> google.protobuf.Timestamp
 	20, // 11: platform.RequestLogInfo.actor:type_name -> platform.RequestLogActor
-	35, // 12: platform.RequestLogInfo.account_created_at:type_name -> google.protobuf.Timestamp
-	35, // 13: platform.RequestLogInfo.account_updated_at:type_name -> google.protobuf.Timestamp
+	39, // 12: platform.RequestLogInfo.account_created_at:type_name -> google.protobuf.Timestamp
+	39, // 13: platform.RequestLogInfo.account_updated_at:type_name -> google.protobuf.Timestamp
 	29, // 14: platform.CreateAuditEventRequest.audit_event:type_name -> platform.AuditEventInfo
-	35, // 15: platform.ListAuditEventsRequest.start_date:type_name -> google.protobuf.Timestamp
-	35, // 16: platform.ListAuditEventsRequest.end_date:type_name -> google.protobuf.Timestamp
+	39, // 15: platform.ListAuditEventsRequest.start_date:type_name -> google.protobuf.Timestamp
+	39, // 16: platform.ListAuditEventsRequest.end_date:type_name -> google.protobuf.Timestamp
 	29, // 17: platform.ListAuditEventsResponse.audit_events:type_name -> platform.AuditEventInfo
 	14, // 18: platform.ListAuditEventsResponse.page_info:type_name -> platform.PageInfo
 	29, // 19: platform.GetAuditEventResponse.audit_event:type_name -> platform.AuditEventInfo
 	30, // 20: platform.AuditEventInfo.actor:type_name -> platform.AuditActor
 	34, // 21: platform.AuditEventInfo.changes:type_name -> platform.AuditFieldChange
-	35, // 22: platform.AuditEventInfo.occurred_at:type_name -> google.protobuf.Timestamp
-	35, // 23: platform.AuditEventInfo.created_at:type_name -> google.protobuf.Timestamp
-	35, // 24: platform.AuditEventInfo.account_created_at:type_name -> google.protobuf.Timestamp
-	35, // 25: platform.AuditEventInfo.account_updated_at:type_name -> google.protobuf.Timestamp
+	39, // 22: platform.AuditEventInfo.occurred_at:type_name -> google.protobuf.Timestamp
+	39, // 23: platform.AuditEventInfo.created_at:type_name -> google.protobuf.Timestamp
+	39, // 24: platform.AuditEventInfo.account_created_at:type_name -> google.protobuf.Timestamp
+	39, // 25: platform.AuditEventInfo.account_updated_at:type_name -> google.protobuf.Timestamp
 	30, // 26: platform.ResourceCreator.actor:type_name -> platform.AuditActor
 	32, // 27: platform.BatchGetResourceCreatorsResponse.creators:type_name -> platform.ResourceCreator
-	1,  // 28: platform.IdempotencyService.ProcessIdempotencyKey:input_type -> platform.ProcessIdempotencyKeyRequest
-	3,  // 29: platform.IdempotencyService.SetIdempotencyKeyResponse:input_type -> platform.SetIdempotencyKeyResponseRequest
-	5,  // 30: platform.IdempotencyService.ReleaseIdempotencyKey:input_type -> platform.ReleaseIdempotencyKeyRequest
-	7,  // 31: platform.IdempotencyService.AdvanceRecoveryPoint:input_type -> platform.AdvanceRecoveryPointRequest
-	9,  // 32: platform.IdempotencyService.GetRecoveryPoint:input_type -> platform.GetRecoveryPointRequest
-	12, // 33: platform.LoggingService.CreateRequestLog:input_type -> platform.CreateRequestLogRequest
-	15, // 34: platform.LoggingService.ListRequestLogs:input_type -> platform.ListRequestLogsRequest
-	17, // 35: platform.LoggingService.GetRequestLog:input_type -> platform.GetRequestLogRequest
-	21, // 36: platform.AuditService.CreateAuditEvent:input_type -> platform.CreateAuditEventRequest
-	23, // 37: platform.AuditService.ListAuditEvents:input_type -> platform.ListAuditEventsRequest
-	25, // 38: platform.AuditService.GetAuditEvent:input_type -> platform.GetAuditEventRequest
-	27, // 39: platform.AuditService.ListAuditEventResourceTypes:input_type -> platform.ListAuditEventResourceTypesRequest
-	31, // 40: platform.AuditService.BatchGetResourceCreators:input_type -> platform.BatchGetResourceCreatorsRequest
-	2,  // 41: platform.IdempotencyService.ProcessIdempotencyKey:output_type -> platform.ProcessIdempotencyKeyResponse
-	4,  // 42: platform.IdempotencyService.SetIdempotencyKeyResponse:output_type -> platform.SetIdempotencyKeyResponseResponse
-	6,  // 43: platform.IdempotencyService.ReleaseIdempotencyKey:output_type -> platform.ReleaseIdempotencyKeyResponse
-	8,  // 44: platform.IdempotencyService.AdvanceRecoveryPoint:output_type -> platform.AdvanceRecoveryPointResponse
-	10, // 45: platform.IdempotencyService.GetRecoveryPoint:output_type -> platform.GetRecoveryPointResponse
-	13, // 46: platform.LoggingService.CreateRequestLog:output_type -> platform.CreateRequestLogResponse
-	16, // 47: platform.LoggingService.ListRequestLogs:output_type -> platform.ListRequestLogsResponse
-	18, // 48: platform.LoggingService.GetRequestLog:output_type -> platform.GetRequestLogResponse
-	22, // 49: platform.AuditService.CreateAuditEvent:output_type -> platform.CreateAuditEventResponse
-	24, // 50: platform.AuditService.ListAuditEvents:output_type -> platform.ListAuditEventsResponse
-	26, // 51: platform.AuditService.GetAuditEvent:output_type -> platform.GetAuditEventResponse
-	28, // 52: platform.AuditService.ListAuditEventResourceTypes:output_type -> platform.ListAuditEventResourceTypesResponse
-	33, // 53: platform.AuditService.BatchGetResourceCreators:output_type -> platform.BatchGetResourceCreatorsResponse
-	41, // [41:54] is the sub-list for method output_type
-	28, // [28:41] is the sub-list for method input_type
-	28, // [28:28] is the sub-list for extension type_name
-	28, // [28:28] is the sub-list for extension extendee
-	0,  // [0:28] is the sub-list for field type_name
+	39, // 28: platform.AccountFollowupReview.registered_at:type_name -> google.protobuf.Timestamp
+	39, // 29: platform.AccountFollowupReview.review_expires_at:type_name -> google.protobuf.Timestamp
+	39, // 30: platform.AccountFollowupReview.reviewed_at:type_name -> google.protobuf.Timestamp
+	1,  // 31: platform.IdempotencyService.ProcessIdempotencyKey:input_type -> platform.ProcessIdempotencyKeyRequest
+	3,  // 32: platform.IdempotencyService.SetIdempotencyKeyResponse:input_type -> platform.SetIdempotencyKeyResponseRequest
+	5,  // 33: platform.IdempotencyService.ReleaseIdempotencyKey:input_type -> platform.ReleaseIdempotencyKeyRequest
+	7,  // 34: platform.IdempotencyService.AdvanceRecoveryPoint:input_type -> platform.AdvanceRecoveryPointRequest
+	9,  // 35: platform.IdempotencyService.GetRecoveryPoint:input_type -> platform.GetRecoveryPointRequest
+	12, // 36: platform.LoggingService.CreateRequestLog:input_type -> platform.CreateRequestLogRequest
+	15, // 37: platform.LoggingService.ListRequestLogs:input_type -> platform.ListRequestLogsRequest
+	17, // 38: platform.LoggingService.GetRequestLog:input_type -> platform.GetRequestLogRequest
+	21, // 39: platform.AuditService.CreateAuditEvent:input_type -> platform.CreateAuditEventRequest
+	23, // 40: platform.AuditService.ListAuditEvents:input_type -> platform.ListAuditEventsRequest
+	25, // 41: platform.AuditService.GetAuditEvent:input_type -> platform.GetAuditEventRequest
+	27, // 42: platform.AuditService.ListAuditEventResourceTypes:input_type -> platform.ListAuditEventResourceTypesRequest
+	31, // 43: platform.AuditService.BatchGetResourceCreators:input_type -> platform.BatchGetResourceCreatorsRequest
+	35, // 44: platform.AccountFollowupService.GetAccountFollowupReview:input_type -> platform.GetAccountFollowupReviewRequest
+	36, // 45: platform.AccountFollowupService.ApproveAccountFollowup:input_type -> platform.ApproveAccountFollowupRequest
+	37, // 46: platform.AccountFollowupService.SkipAccountFollowup:input_type -> platform.SkipAccountFollowupRequest
+	2,  // 47: platform.IdempotencyService.ProcessIdempotencyKey:output_type -> platform.ProcessIdempotencyKeyResponse
+	4,  // 48: platform.IdempotencyService.SetIdempotencyKeyResponse:output_type -> platform.SetIdempotencyKeyResponseResponse
+	6,  // 49: platform.IdempotencyService.ReleaseIdempotencyKey:output_type -> platform.ReleaseIdempotencyKeyResponse
+	8,  // 50: platform.IdempotencyService.AdvanceRecoveryPoint:output_type -> platform.AdvanceRecoveryPointResponse
+	10, // 51: platform.IdempotencyService.GetRecoveryPoint:output_type -> platform.GetRecoveryPointResponse
+	13, // 52: platform.LoggingService.CreateRequestLog:output_type -> platform.CreateRequestLogResponse
+	16, // 53: platform.LoggingService.ListRequestLogs:output_type -> platform.ListRequestLogsResponse
+	18, // 54: platform.LoggingService.GetRequestLog:output_type -> platform.GetRequestLogResponse
+	22, // 55: platform.AuditService.CreateAuditEvent:output_type -> platform.CreateAuditEventResponse
+	24, // 56: platform.AuditService.ListAuditEvents:output_type -> platform.ListAuditEventsResponse
+	26, // 57: platform.AuditService.GetAuditEvent:output_type -> platform.GetAuditEventResponse
+	28, // 58: platform.AuditService.ListAuditEventResourceTypes:output_type -> platform.ListAuditEventResourceTypesResponse
+	33, // 59: platform.AuditService.BatchGetResourceCreators:output_type -> platform.BatchGetResourceCreatorsResponse
+	38, // 60: platform.AccountFollowupService.GetAccountFollowupReview:output_type -> platform.AccountFollowupReview
+	38, // 61: platform.AccountFollowupService.ApproveAccountFollowup:output_type -> platform.AccountFollowupReview
+	38, // 62: platform.AccountFollowupService.SkipAccountFollowup:output_type -> platform.AccountFollowupReview
+	47, // [47:63] is the sub-list for method output_type
+	31, // [31:47] is the sub-list for method input_type
+	31, // [31:31] is the sub-list for extension type_name
+	31, // [31:31] is the sub-list for extension extendee
+	0,  // [0:31] is the sub-list for field type_name
 }
 
 func init() { file_platform_platform_proto_init() }
@@ -3310,9 +3673,9 @@ func file_platform_platform_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_platform_platform_proto_rawDesc), len(file_platform_platform_proto_rawDesc)),
 			NumEnums:      1,
-			NumMessages:   34,
+			NumMessages:   38,
 			NumExtensions: 0,
-			NumServices:   3,
+			NumServices:   4,
 		},
 		GoTypes:           file_platform_platform_proto_goTypes,
 		DependencyIndexes: file_platform_platform_proto_depIdxs,

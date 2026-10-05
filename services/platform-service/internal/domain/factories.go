@@ -7,4 +7,5 @@ type RepoFactory interface {
 	NewRequestLogRepo() RequestLogRepo
 	NewAuditEventRepo() AuditEventRepo
 	NewOutboxRepo() messaging.OutboxRepo
+	NewAccountFollowupRepo() AccountFollowupRepo
 }

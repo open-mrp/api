@@ -4,6 +4,7 @@ import (
 	"context"
 
 	apierror "github.com/open-mrp/api/shared/errors"
+	"github.com/open-mrp/api/shared/messaging"
 )
 
 type LoggingSvc interface {
@@ -32,4 +33,23 @@ type AuditEventSvc interface {
 
 	// BatchGetResourceCreators returns the creating actor for a batch of resources, derived from each resource's `create` audit event, scoped to the caller's target account. Requires only an assigned actor (not the audit read permission) so it can back a `created_by` include.
 	BatchGetResourceCreators(ctx context.Context, resourceType string, resourceIDs []string) ([]ResourceCreator, *apierror.APIError)
+}
+
+// AccountFollowupDrafter writes the personal part of a follow-up from a registrant's activity.
+type AccountFollowupDrafter interface {
+	Draft(ctx context.Context, input AccountFollowupDrafterInput) (*AccountFollowupDrafterOutput, error)
+}
+
+// AccountFollowupSvc schedules, and drafts for review, the follow-up each self-serve registrant receives.
+type AccountFollowupSvc interface {
+	Schedule(ctx context.Context, data messaging.AccountFollowupScheduleData) *apierror.APIError
+	// EnqueueDue enqueues a draft command for each follow-up that is due.
+	EnqueueDue(ctx context.Context) *apierror.APIError
+	Draft(ctx context.Context, followupID string) *apierror.APIError
+	// GetReview returns the follow-up a review token was issued for. It never changes it.
+	GetReview(ctx context.Context, token string) (*AccountFollowupReview, *apierror.APIError)
+	// Approve sends the follow-up with the reviewer's subject and body. Approving one already reviewed returns it unchanged.
+	Approve(ctx context.Context, token, subject, body string) (*AccountFollowupReview, *apierror.APIError)
+	// Skip declines to send the follow-up. Skipping one already reviewed returns it unchanged.
+	Skip(ctx context.Context, token string) (*AccountFollowupReview, *apierror.APIError)
 }

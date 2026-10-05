@@ -12,6 +12,7 @@ import (
 	"time"
 
 	grpcclient "github.com/open-mrp/api/services/api-gateway/grpc-client"
+	"github.com/open-mrp/api/services/api-gateway/internal/accountfollowup"
 	"github.com/open-mrp/api/services/api-gateway/internal/domain"
 	httptransport "github.com/open-mrp/api/services/api-gateway/internal/http"
 	"github.com/open-mrp/api/services/api-gateway/internal/infrastructure/publisher"
@@ -237,6 +238,7 @@ func Run(
 	mux := http.NewServeMux()
 	mux.HandleFunc("/v1/ws", ws.NewHandler(wsHub, authClient, notificationClient, []byte(cfg.WSTicketSecret)))
 	mux.HandleFunc("/v1/ws/ticket", ws.NewTicketHandler(authClient, []byte(cfg.WSTicketSecret)))
+	mux.Handle(accountfollowup.Path, accountfollowup.NewReviewHandler(platformClient.AccountFollowupClient))
 	mux.Handle("/v1/webhooks/", webhookRouter)
 	mux.Handle("/v1/auth/", authRouter)
 	mux.Handle("/", mainRouter)

@@ -190,7 +190,19 @@ jobs:
 
           echo "/usr/local/bin/ci-tools" >> "$GITHUB_PATH"
 
-      - name: Cut branch, apply migrations, open deploy request
+      # schemasplit splits a release that changes more tables than one deploy request allows.
+      - name: Set up Go
+        uses: actions/setup-go@v7
+        with:
+          go-version-file: tools/go.mod
+          cache-dependency-path: tools/go.sum
+
+      - name: Build schemasplit
+        run: |
+          set -euo pipefail
+          cd tools && go build -o /usr/local/bin/ci-tools/schemasplit ./schemasplit
+
+      - name: Cut branch, apply migrations, open deploy request(s)
         id: planetscale
         env:
           RELEASE_VERSION: ${{ steps.version.outputs.version }}
@@ -222,6 +234,8 @@ jobs:
           PR: ${{ needs.release-please.outputs.pr_number }}
           DR_URL: ${{ steps.planetscale.outputs.deploy_request_url }}
           DR_NUMBER: ${{ steps.planetscale.outputs.deploy_request }}
+          DR_COUNT: ${{ steps.planetscale.outputs.deploy_request_count }}
+          DR_LIST: ${{ steps.planetscale.outputs.deploy_requests_md }}
           BRANCH: ${{ steps.planetscale.outputs.branch }}
           HAS_DR: ${{ steps.planetscale.outputs.has_migrations }}
         run: |
@@ -230,7 +244,11 @@ jobs:
             echo "### Database changes in this release"
             echo
             cat /tmp/migration-manifest.md
-            if [ "${HAS_DR:-false}" = "true" ]; then
+            if [ "${HAS_DR:-false}" = "true" ] && [ "${DR_COUNT:-1}" -gt 1 ]; then
+              echo "This release changes more tables than one deploy request allows, so the schema is split into ${DR_COUNT} deploy requests. They deploy in this order — review each diff there:"
+              echo
+              echo "${DR_LIST}"
+            elif [ "${HAS_DR:-false}" = "true" ]; then
               echo "Schema deploy request: [#${DR_NUMBER}](${DR_URL}) on PlanetScale branch \`${BRANCH}\` — review the diff there."
               echo
             fi
@@ -428,7 +446,7 @@ jobs:
       # never meets a column that does not exist, then backfills so it never meets an empty one. Each
       # step failing fails the job, and `deploy` requires this job to succeed.
 
-      # 1. MySQL schema — deploys the request the release PR opened and reviewed.
+      # 1. MySQL schema — deploys the request(s) the release PR opened and reviewed, one at a time.
       - name: Deploy the core schema to prod (MySQL)
         if: steps.changes.outputs.core_schema == 'true'
         run: ./scripts/planetscale-deploy-release.sh

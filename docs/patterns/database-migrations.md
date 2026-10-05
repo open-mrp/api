@@ -45,7 +45,7 @@ sqlc reads the whole migrations directory, so a new file reaches every service's
 
 Automated off the release PR. You never cut branches or open deploy requests by hand.
 
-While the release PR is open, `prepare-migrations` applies the pending core schema migrations to a fresh PlanetScale branch, opens a deploy request, and comments the full plan on the PR. **Review that deploy request's diff before merging** — merging is what deploys it.
+While the release PR is open, `prepare-migrations` applies the pending core schema migrations to a fresh PlanetScale branch, opens a deploy request, and comments the full plan on the PR. **Review that deploy request's diff before merging** — merging is what deploys it. A deploy request may change at most 10 tables; a release over that is split automatically (`tools/schemasplit`) into several deploy requests of at most 10 tables each, listed in order in the PR comment and deployed one after another on merge.
 
 Merging runs `deploy-migrations`, which applies everything in order: core schema, agent schema, core backfills, agent backfills. The EKS rollout requires it to succeed, so a failed migration stops the release before any image ships.
 

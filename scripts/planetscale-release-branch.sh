@@ -19,12 +19,22 @@
 #   PS_DATABASE       default augno_core
 #   PS_PROD_BRANCH    default prod
 #   BASE_REF          git ref the release is cut from, for change detection (default HEAD)
+#   PS_MAX_TABLES_PER_DEPLOY_REQUEST
+#                     most tables one deploy request may change (default 10, PlanetScale's limit)
+#
+# A release that changes more tables than one deploy request allows is split: the migrations are still
+# applied once to the release branch, then `schemasplit` diffs that branch against prod and packs the
+# per-table DDL into parts of at most PS_MAX_TABLES_PER_DEPLOY_REQUEST tables. Each part gets its own
+# branch cut from prod (<branch>-p1, -p2, ...) and its own deploy request, and the deploy step deploys
+# them one after another. A release within the limit opens one deploy request from <branch>, as always.
 #
 # Outputs (written to $GITHUB_OUTPUT when set):
 #   has_migrations    true|false
 #   branch            the PlanetScale branch name
-#   deploy_request    deploy request number, when one was created
+#   deploy_request    deploy request number (the first part's, when split)
 #   deploy_request_url
+#   deploy_request_count
+#   deploy_requests_md  markdown list of every deploy request, one per line
 
 set -euo pipefail
 
@@ -44,6 +54,7 @@ cd "$REPO_ROOT"
 PS_ORG="${PS_ORG:-augno-inc}"
 PS_DATABASE="${PS_DATABASE:-augno_core}"
 PS_PROD_BRANCH="${PS_PROD_BRANCH:-prod}"
+PS_MAX_TABLES_PER_DEPLOY_REQUEST="${PS_MAX_TABLES_PER_DEPLOY_REQUEST:-10}"
 BASE_REF="${BASE_REF:-HEAD}"
 MIGRATIONS_DIR="shared/db/migrations"
 
@@ -57,6 +68,13 @@ done
 emit() {
     if [ -n "${GITHUB_OUTPUT:-}" ]; then
         echo "$1=$2" >> "$GITHUB_OUTPUT"
+    fi
+}
+
+emit_multiline() {
+    if [ -n "${GITHUB_OUTPUT:-}" ]; then
+        local delimiter="EOF_${RANDOM}${RANDOM}"
+        { echo "$1<<$delimiter"; echo "$2"; echo "$delimiter"; } >> "$GITHUB_OUTPUT"
     fi
 }
 
@@ -123,11 +141,19 @@ if [ -n "$SHIPPED_MIGRATION_VERSIONS" ]; then
     info "Already deployed in $PREVIOUS_TAG, recorded as applied on the branch:$SHIPPED_MIGRATION_VERSIONS"
 fi
 
-# --- Recreate the branch ---
+# --- PlanetScale ---
 
 pscale_cmd() {
     pscale "$@" --org "$PS_ORG"
 }
+
+# The deploy request JSON for a branch name, or nothing when it has none. `show` resolves a branch name
+# to its most recent deploy request, even after --auto-delete-branch has removed the branch.
+dr_json() {
+    pscale_cmd deploy-request show "$PS_DATABASE" "$1" --format json 2>/dev/null || true
+}
+
+FIRST_PART_BRANCH="$(planetscale_release_part_branch "$BRANCH" 1)"
 
 # --- Already deployed? ---
 
@@ -136,88 +162,183 @@ pscale_cmd() {
 # only records migrations from the *previous* release, so a current-release migration already live in prod
 # gets replayed (deploy request #209: 00018 re-added an index prod already had, errno 1061). The deploy
 # step (planetscale-deploy-release.sh) already treats a completed deploy request as "nothing to do"; the
-# prepare step has to be just as idempotent. `deploy-request show` resolves the branch name to its most
-# recent deploy request even after --auto-delete-branch has removed the branch.
-DEPLOYED_STATE="$(pscale_cmd deploy-request show "$PS_DATABASE" "$BRANCH" --format json 2>/dev/null \
-    | jq -r '.deployment_state // .deployment.state // empty' || true)"
+# prepare step has to be just as idempotent. A split release is checked by its first part.
+for head in "$BRANCH" "$FIRST_PART_BRANCH"; do
+    DEPLOYED_STATE="$(dr_json "$head" | jq -r '.deployment_state // .deployment.state // empty' 2>/dev/null || true)"
 
-case "$DEPLOYED_STATE" in
-    # complete / complete_pending_revert both mean the schema is live in prod (the latter is just inside
-    # the 30-minute revert window). A reverted deploy is deliberately not matched: prod no longer carries
-    # the schema, so a fresh branch and deploy request still need to be cut.
-    complete|complete_pending_revert)
-        info "Release $RELEASE_VERSION schema is already live in prod (deploy request state '$DEPLOYED_STATE'). Nothing to prepare."
-        exit 0
-        ;;
-esac
+    case "$DEPLOYED_STATE" in
+        # complete / complete_pending_revert both mean the schema is live in prod (the latter is just inside
+        # the 30-minute revert window). A reverted deploy is deliberately not matched: prod no longer carries
+        # the schema, so a fresh branch and deploy request still need to be cut.
+        complete|complete_pending_revert)
+            info "Release $RELEASE_VERSION schema is already live in prod ($head, deploy request state '$DEPLOYED_STATE'). Nothing to prepare."
+            exit 0
+            ;;
+    esac
+done
 
-# --- Recreate the branch ---
+# --- Clear out earlier runs ---
 
-# The branch is recreated rather than reused. A release PR is rebuilt every time a commit lands on
-# main, and a branch left over from an earlier run may have had a since-edited migration applied to
-# it. Cutting fresh from prod means the deploy request diff always describes exactly the migrations
-# in this release.
-if pscale_cmd branch show "$PS_DATABASE" "$BRANCH" >/dev/null 2>&1; then
-    info "Branch $BRANCH already exists; closing any open deploy request and recreating it."
+# Branches are recreated rather than reused. A release PR is rebuilt every time a commit lands on main,
+# and a branch left over from an earlier run may have had a since-edited migration applied to it. Cutting
+# fresh from prod means each deploy request diff describes exactly the migrations in this release. An
+# earlier run may also have split differently, so every part branch it left goes too; closing their
+# deploy requests is what tells the deploy step they were superseded.
+retire_branch() {
+    local name="$1" open
 
-    EXISTING="$(pscale_cmd deploy-request show "$PS_DATABASE" "$BRANCH" --format json 2>/dev/null \
-        | jq -r 'select(.state == "open" or .state == "pending") | .number // empty' || true)"
-
-    if [ -n "$EXISTING" ]; then
-        info "Closing superseded deploy request #$EXISTING"
-        pscale_cmd deploy-request close "$PS_DATABASE" "$EXISTING" >/dev/null || true
+    open="$(dr_json "$name" | jq -r 'select(.state == "open" or .state == "pending") | .number // empty' 2>/dev/null || true)"
+    if [ -n "$open" ]; then
+        info "Closing superseded deploy request #$open ($name)"
+        pscale_cmd deploy-request close "$PS_DATABASE" "$open" >/dev/null || true
     fi
 
-    pscale_cmd branch delete "$PS_DATABASE" "$BRANCH" --force
+    if pscale_cmd branch show "$PS_DATABASE" "$name" >/dev/null 2>&1; then
+        info "Deleting branch $name left by an earlier run"
+        pscale_cmd branch delete "$PS_DATABASE" "$name" --force
+    fi
+}
+
+retire_branch "$BRANCH"
+
+part=1
+while [ "$part" -le 50 ]; do
+    name="$(planetscale_release_part_branch "$BRANCH" "$part")"
+    if [ -z "$(dr_json "$name")" ] && ! pscale_cmd branch show "$PS_DATABASE" "$name" >/dev/null 2>&1; then
+        break
+    fi
+    retire_branch "$name"
+    part=$((part + 1))
+done
+
+# --- Apply migrations ---
+
+# schemasplit plans the split. CI builds it before this runs; locally it is built on demand. Without it
+# the release still gets its single deploy request, which is all a release within the limit needs.
+ensure_schemasplit() {
+    if command -v schemasplit >/dev/null 2>&1; then
+        return 0
+    fi
+    if ! command -v go >/dev/null 2>&1; then
+        return 1
+    fi
+    local bin_dir
+    bin_dir="$(mktemp -d)"
+    (cd "$REPO_ROOT/tools" && go build -o "$bin_dir/schemasplit" ./schemasplit) || return 1
+    export PATH="$bin_dir:$PATH"
+}
+
+WORK_DIR="$(mktemp -d)"
+CAN_SPLIT=false
+if ensure_schemasplit; then
+    CAN_SPLIT=true
+    export SCHEMA_BEFORE="$WORK_DIR/before.sql"
+    export SCHEMA_AFTER="$WORK_DIR/after.sql"
+else
+    warn "schemasplit is unavailable; a release over $PS_MAX_TABLES_PER_DEPLOY_REQUEST tables will not be split."
 fi
 
 info "Creating branch $BRANCH from $PS_PROD_BRANCH..."
 pscale_cmd branch create "$PS_DATABASE" "$BRANCH" --from "$PS_PROD_BRANCH" --wait
 
-# --- Apply migrations ---
-
 # `pscale connect` opens a local proxy and runs the command with DATABASE_URL pointed at it, so no
 # branch password is ever created, stored, or left behind for cleanup.
+#
+# pscale owns the exit status of --execute, and a swallowed non-zero there would look like a clean run
+# with an empty schema diff. The sentinel is the independent proof that the command actually finished.
+run_on_branch() {
+    local branch="$1" script="$2" sentinel
+
+    sentinel="$(mktemp)"
+    rm -f "$sentinel"
+    export MIGRATE_SENTINEL="$sentinel"
+
+    pscale_cmd connect "$PS_DATABASE" "$branch" \
+        --execute-protocol mysql \
+        --execute "$script"
+
+    if [ ! -f "$sentinel" ]; then
+        error "$(basename "$script") did not complete successfully on $branch."
+        exit 1
+    fi
+    rm -f "$sentinel"
+}
+
 info "Applying migrations to $BRANCH..."
+run_on_branch "$BRANCH" "$SCRIPT_DIR/planetscale-apply-migrations.sh"
 
-SENTINEL="$(mktemp)"
-rm -f "$SENTINEL"
-export MIGRATE_SENTINEL="$SENTINEL"
+# --- Split over the table limit ---
 
-pscale_cmd connect "$PS_DATABASE" "$BRANCH" \
-    --execute-protocol mysql \
-    --execute "$SCRIPT_DIR/planetscale-apply-migrations.sh"
-
-# pscale owns the exit status of --execute, and a swallowed non-zero there would look like a clean
-# run with an empty schema diff. The sentinel is the independent proof that goose actually finished.
-if [ ! -f "$SENTINEL" ]; then
-    error "Migrations did not complete successfully on $BRANCH."
-    exit 1
-fi
-rm -f "$SENTINEL"
-
-# --- Open the deploy request ---
-
-info "Creating deploy request into $PS_PROD_BRANCH..."
-
-DR_JSON="$(pscale_cmd deploy-request create "$PS_DATABASE" "$BRANCH" \
-    --into "$PS_PROD_BRANCH" \
-    --enable-auto-apply \
-    --auto-delete-branch \
-    --notes "Automated: schema for release $RELEASE_VERSION. Deployed when the release PR merges." \
-    --format json)"
-
-DR_NUMBER="$(echo "$DR_JSON" | jq -r '.number')"
-
-if [ -z "$DR_NUMBER" ] || [ "$DR_NUMBER" = "null" ]; then
-    error "Could not read the deploy request number from pscale:"
-    echo "$DR_JSON" >&2
-    exit 1
+PART_COUNT=1
+if [ "$CAN_SPLIT" = true ]; then
+    info "Planning deploy requests of at most $PS_MAX_TABLES_PER_DEPLOY_REQUEST tables..."
+    if schemasplit plan -from "$SCHEMA_BEFORE" -to "$SCHEMA_AFTER" \
+        -max-tables "$PS_MAX_TABLES_PER_DEPLOY_REQUEST" -out "$WORK_DIR/plan"; then
+        PART_COUNT="$(jq '.parts | length' "$WORK_DIR/plan/plan.json")"
+    else
+        warn "Could not plan a split; opening a single deploy request. PlanetScale will refuse to deploy it if it is over the limit."
+    fi
 fi
 
-DR_URL="https://app.planetscale.com/$PS_ORG/$PS_DATABASE/deploy-requests/$DR_NUMBER"
+# --- Open the deploy request(s) ---
 
-emit deploy_request "$DR_NUMBER"
-emit deploy_request_url "$DR_URL"
+DR_NUMBERS=()
+DR_LIST=""
 
-info "Deploy request #$DR_NUMBER is ready for review: $DR_URL"
+open_deploy_request() {
+    local branch="$1" notes="$2" label="$3" json number url
+
+    json="$(pscale_cmd deploy-request create "$PS_DATABASE" "$branch" \
+        --into "$PS_PROD_BRANCH" \
+        --enable-auto-apply \
+        --auto-delete-branch \
+        --notes "$notes" \
+        --format json)"
+
+    number="$(echo "$json" | jq -r '.number')"
+    if [ -z "$number" ] || [ "$number" = "null" ]; then
+        error "Could not read the deploy request number from pscale:"
+        echo "$json" >&2
+        exit 1
+    fi
+
+    url="https://app.planetscale.com/$PS_ORG/$PS_DATABASE/deploy-requests/$number"
+    DR_NUMBERS+=("$number")
+    DR_LIST="${DR_LIST}- [#${number}](${url}) on \`${branch}\`${label}"$'\n'
+    info "Deploy request #$number is ready for review: $url"
+}
+
+if [ "$PART_COUNT" -le 1 ]; then
+    info "Creating deploy request into $PS_PROD_BRANCH..."
+    open_deploy_request "$BRANCH" \
+        "Automated: schema for release $RELEASE_VERSION. Deployed when the release PR merges." ""
+else
+    info "Release changes more than $PS_MAX_TABLES_PER_DEPLOY_REQUEST tables; opening $PART_COUNT deploy requests."
+
+    PLAN_ID="${GITHUB_RUN_ID:-local}-${GITHUB_RUN_ATTEMPT:-1}-$(date +%s)"
+    export SCHEMA_PART_FILE
+
+    for part in $(seq 1 "$PART_COUNT"); do
+        part_branch="$(planetscale_release_part_branch "$BRANCH" "$part")"
+        tables="$(jq -r ".parts[$((part - 1))].tables | join(\", \")" "$WORK_DIR/plan/plan.json")"
+
+        info "Part $part/$PART_COUNT on $part_branch: $tables"
+        pscale_cmd branch create "$PS_DATABASE" "$part_branch" --from "$PS_PROD_BRANCH" --wait
+
+        SCHEMA_PART_FILE="$WORK_DIR/plan/part-$part.sql"
+        run_on_branch "$part_branch" "$SCRIPT_DIR/planetscale-apply-schema-part.sh"
+
+        open_deploy_request "$part_branch" \
+            "Automated: schema for release $RELEASE_VERSION, part $part of $PART_COUNT ($tables). Deployed in order when the release PR merges. $(planetscale_plan_marker "$PLAN_ID" "$part" "$PART_COUNT")" \
+            " — part $part of $PART_COUNT: $tables"
+    done
+
+    # The parts carry everything; the full branch only existed to compute them.
+    pscale_cmd branch delete "$PS_DATABASE" "$BRANCH" --force
+fi
+
+FIRST_NUMBER="${DR_NUMBERS[0]}"
+emit deploy_request "$FIRST_NUMBER"
+emit deploy_request_url "https://app.planetscale.com/$PS_ORG/$PS_DATABASE/deploy-requests/$FIRST_NUMBER"
+emit deploy_request_count "${#DR_NUMBERS[@]}"
+emit_multiline deploy_requests_md "$DR_LIST"

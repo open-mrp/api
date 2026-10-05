@@ -223,6 +223,11 @@ jobs:
       - name: Run Vitess parse check
         run: make vtparse
 
+      # The release pipeline splits schema changes over PlanetScale's 10-table deploy request limit with
+      # this, using the same Vitess schemadiff; a wrong split ships the wrong schema.
+      - name: Test schemasplit
+        run: cd tools && go test ./schemasplit
+
   test:
     name: Test
     needs: [changes]

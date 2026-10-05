@@ -6,13 +6,16 @@ import (
 	"embed"
 	"fmt"
 	"html/template"
+	"io"
+	"strings"
+	texttemplate "text/template"
 
 	"github.com/open-mrp/api/shared/constants"
 	apierror "github.com/open-mrp/api/shared/errors"
 	"github.com/open-mrp/api/shared/tracing"
 )
 
-//go:embed templates/*.html templates/partials/*.html
+//go:embed templates/*.html templates/*.txt templates/partials/*.html
 var templatesFS embed.FS
 
 var templateRendererTracer = tracing.GetTracer("notification-service.email.template_renderer")
@@ -21,8 +24,13 @@ type TemplateRenderer interface {
 	RenderTemplate(ctx context.Context, templateID constants.EmailTemplate, params map[string]any) (string, *apierror.APIError)
 }
 
+// executor is satisfied by both html/template and text/template, so plain-text templates render without HTML escaping.
+type executor interface {
+	Execute(w io.Writer, data any) error
+}
+
 type templateRendererImpl struct {
-	templates map[constants.EmailTemplate]*template.Template
+	templates map[constants.EmailTemplate]executor
 }
 
 func NewTemplateRenderer() (TemplateRenderer, *apierror.APIError) {
@@ -30,7 +38,7 @@ func NewTemplateRenderer() (TemplateRenderer, *apierror.APIError) {
 	_, span := templateRendererTracer.Start(ctx, "email.template_renderer.new")
 	defer span.End()
 
-	templates := make(map[constants.EmailTemplate]*template.Template)
+	templates := make(map[constants.EmailTemplate]executor)
 
 	templateFiles := map[constants.EmailTemplate]string{
 		constants.EmailTemplateWelcome:                    "templates/welcome.html",
@@ -54,10 +62,21 @@ func NewTemplateRenderer() (TemplateRenderer, *apierror.APIError) {
 		constants.EmailTemplateMessageFailureAlert:        "templates/message_failure_alert.html",
 		constants.EmailTemplateDemoRequest:                "templates/demo_request.html",
 		constants.EmailTemplateDashboardFeedback:          "templates/dashboard_feedback.html",
+		constants.EmailTemplateAccountFollowup:            "templates/account_followup.txt",
+		constants.EmailTemplateAccountFollowupReview:      "templates/account_followup_review.html",
+		constants.EmailTemplateAccountFollowupContext:     "templates/account_followup_context.html",
 	}
 
 	// The partials carry the shared merchant letterhead and footer, so every merchant-facing email renders the same branding. They hold only {{define}} blocks, and ParseFS names the result after the first file, so the per-template Execute still resolves to the template itself.
 	for templateID, filename := range templateFiles {
+		if strings.HasSuffix(filename, ".txt") {
+			tmpl, err := texttemplate.ParseFS(templatesFS, filename)
+			if err != nil {
+				return nil, tracing.Trace(span, apierror.NewInternalError(err, fmt.Sprintf("Failed to parse template %s", filename)))
+			}
+			templates[templateID] = tmpl
+			continue
+		}
 		tmpl, err := template.ParseFS(templatesFS, filename, "templates/partials/*.html")
 		if err != nil {
 			return nil, tracing.Trace(span, apierror.NewInternalError(err, fmt.Sprintf("Failed to parse template %s", filename)))

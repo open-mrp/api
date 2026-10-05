@@ -172,6 +172,22 @@ type EmailSendData struct {
 	AttachmentFilename *string `json:"attachment_filename,omitempty"`
 	// AttachmentContentType is the MIME content type for the attachment.
 	AttachmentContentType *string `json:"attachment_content_type,omitempty"`
+	// From sends the email as this platform address (e.g. "Dane <dane@openmrp.ai>") instead of the default noreply@ sender. Only addresses on a platform domain are honored; anything else falls back to the default so a payload can never send as a tenant's domain.
+	From *string `json:"from,omitempty"`
+	// Bcc receives a copy without appearing in the headers.
+	Bcc []string `json:"bcc,omitempty"`
+	// ThreadNote, when set, is sent after the email succeeds as a reply to it, so the note sits in the same thread as the sent message in its recipients' inboxes.
+	ThreadNote *EmailThreadNote `json:"thread_note,omitempty"`
+}
+
+// EmailThreadNote is an internal email threaded under the email it accompanies.
+type EmailThreadNote struct {
+	// To is the list of note recipients. They should also receive the parent email (To or Bcc), or there is no thread to land in.
+	To []string `json:"to"`
+	// TemplateID identifies which template renders the note.
+	TemplateID constants.EmailTemplate `json:"template_id"`
+	// Params are the note template's parameters.
+	Params map[string]any `json:"params,omitempty"`
 }
 
 // EmailLogData is the payload for NotificationEventEmailLogQueue messages. It carries the metadata needed to create an email audit record after the notification-service has successfully dispatched an email through SES.

@@ -5,6 +5,7 @@ import (
 	"encoding/base64"
 	"errors"
 	"fmt"
+	"mime"
 	"strings"
 
 	"github.com/open-mrp/api/services/notification-service/internal/domain"
@@ -36,12 +37,14 @@ func NewSESEmailSender(ctx context.Context, platformMode constants.PlatformMode,
 	return &sesEmailSenderImpl{
 		client:       ses.NewFromConfig(cfg),
 		platformMode: platformMode,
+		region:       region,
 	}, nil
 }
 
 type sesEmailSenderImpl struct {
 	client       *ses.Client
 	platformMode constants.PlatformMode
+	region       string
 }
 
 func (s *sesEmailSenderImpl) Send(ctx context.Context, data domain.EmailData) (*string, *apierror.APIError) {
@@ -61,9 +64,19 @@ func (s *sesEmailSenderImpl) Send(ctx context.Context, data domain.EmailData) (*
 
 	recipients := data.To
 	cc := data.Cc
+	bcc := data.Bcc
 	if s.platformMode == constants.PlatformModeDevelopment {
 		recipients = []string{EmailTestingRecipient}
 		cc = nil
+		bcc = nil
+	}
+
+	inReplyTo, references := data.InReplyTo, data.References
+	if data.InReplyToSESMessageID != nil && *data.InReplyToSESMessageID != "" {
+		ids := sesMessageIDHeaders(*data.InReplyToSESMessageID, s.region)
+		inReplyTo = &ids[0]
+		joined := strings.Join(ids, " ")
+		references = &joined
 	}
 
 	// The bridge sends as the inbox address (a DKIM-verified customer domain); everything else sends as the default noreply@ sender.
@@ -82,8 +95,8 @@ func (s *sesEmailSenderImpl) Send(ctx context.Context, data domain.EmailData) (*
 		SenderEmail: sender,
 		IsHtml:      !data.PlainText,
 		ReplyTo:     data.SendAs,
-		InReplyTo:   data.InReplyTo,
-		References:  data.References,
+		InReplyTo:   inReplyTo,
+		References:  references,
 		MessageID:   data.MessageID,
 	})
 
@@ -94,7 +107,7 @@ func (s *sesEmailSenderImpl) Send(ctx context.Context, data domain.EmailData) (*
 		return nil, apiErr
 	}
 
-	destinations := append(append([]string{}, recipients...), cc...)
+	destinations := append(append(append([]string{}, recipients...), cc...), bcc...)
 	input := &ses.SendRawEmailInput{
 		RawMessage: &sestypes.RawMessage{
 			Data: rawMessage,
@@ -127,6 +140,15 @@ func classifySESSendError(err error, sender string) *apierror.APIError {
 		return apierror.NewInternalError(err, fmt.Sprintf("Email could not be sent (SES %s): %s.", code, msg))
 	}
 	return apierror.NewInternalError(err, "Failed to send email.")
+}
+
+// sesMessageIDHeaders returns the Message-ID values SES may have stamped on the message it accepted as sesMessageID: SES discards any Message-ID we set and uses its own, on email.amazonses.com in us-east-1 and on the region's own subdomain elsewhere. Both forms are returned (the region-correct one first) because a References entry that matches nothing is ignored, while a single wrong guess would leave the reply unthreaded.
+func sesMessageIDHeaders(sesMessageID, region string) []string {
+	primary := sesMessageID + "@email.amazonses.com"
+	if region != "" && region != "us-east-1" {
+		return []string{sesMessageID + "@" + region + ".amazonses.com", primary}
+	}
+	return []string{primary}
 }
 
 // bracketReferences angle-brackets each whitespace-separated message-id in a References value (the ledger stores them bare), producing a valid rfc822 References header.
@@ -202,7 +224,8 @@ func generateRawEmail(input rawEmailInput) ([]byte, error) {
 		headers = append(headers, fmt.Sprintf("References: %s", bracketReferences(*input.References)))
 	}
 
-	headers = append(headers, fmt.Sprintf("Subject: %s", input.Subject))
+	// Encoded so a non-ASCII subject arrives intact; ASCII passes through unchanged.
+	headers = append(headers, fmt.Sprintf("Subject: %s", mime.QEncoding.Encode("utf-8", input.Subject)))
 	headers = append(headers, "MIME-Version: 1.0")
 	headers = append(headers, "Content-Type: multipart/mixed; boundary=\"NextPart\"")
 

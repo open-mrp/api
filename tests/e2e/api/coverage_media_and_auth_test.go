@@ -404,3 +404,46 @@ func TestRegistrationSessions_ResendVerificationEmail(t *testing.T) {
 	require.Less(t, status, 500, "resend must not 5xx: %s", string(body))
 	assert.Equal(t, 202, status, "the resend must be accepted: %s", string(body))
 }
+
+// An avatar an identity provider supplied at sign-up is an image hosted elsewhere, and is shown as it
+// is. Signing it as though it were an uploaded photo pointed the browser at an object that was never
+// stored, and the avatar went blank.
+func TestUserPhoto_AnExternalAvatarIsShownAsIs(t *testing.T) {
+	t.Parallel()
+	email := covAuthUsersUniqueEmail("e2e-external-avatar")
+	avatar := "https://lh3.googleusercontent.com/a/e2e-external-avatar=s96-c"
+
+	status, body, err := apiClient.Post(covAuthUsersRegisterPath, map[string]any{
+		"email":    email,
+		"password": covAuthUsersPassword,
+		"name":     "E2E External Avatar",
+	}, newIdempotencyKey())
+	require.NoError(t, err)
+	requireStatus(t, 200, status, body)
+	userID := jsonField(parseJSON(body), "id")
+
+	status, body, err = apiClient.Post(accountUsersPath, map[string]any{
+		"name":    "E2E External Avatar",
+		"email":   email,
+		"role_id": SeedAdminRoleID,
+	}, newIdempotencyKey())
+	require.NoError(t, err)
+	requireStatus(t, 201, status, body)
+	accountUserID := jsonField(parseJSON(body), "id")
+	t.Cleanup(func() { removeAccountUser(accountUserID) })
+
+	_, err = authDB(t).Exec("UPDATE user SET image_url = ? WHERE id = ?", avatar, userID)
+	require.NoError(t, err)
+
+	status, body, err = loginAsUser(t, email, covAuthUsersPassword, SeedAccountID).GetListRaw("/v1/identity/me", nil)
+	require.NoError(t, err)
+	requireStatus(t, 200, status, body)
+	assert.Equal(t, avatar, jsonField(parseJSON(body), "image_url"), "/me")
+
+	status, body, err = apiClient.GetListRaw(accountUsersPath+"/"+accountUserID, url.Values{"include[]": {"user"}})
+	require.NoError(t, err)
+	requireStatus(t, 200, status, body)
+	user, ok := parseJSON(body)["user"].(map[string]any)
+	require.True(t, ok, "the user is included: %s", body)
+	assert.Equal(t, avatar, user["image_url"], "the team member")
+}

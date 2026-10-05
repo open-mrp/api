@@ -161,6 +161,19 @@ func (s *userSvcImpl) BatchGetUsersByIDs(ctx context.Context, ids []string) ([]*
 	return users, nil
 }
 
+// externalUserPhoto returns imageURL when it is an image hosted elsewhere, such as the avatar an
+// identity provider supplied at sign-up, which a browser loads as is. A photo uploaded here is
+// stored as a path or as a URL into the photos bucket, and only a presigned URL serves it.
+func externalUserPhoto(imageURL *string) (string, bool) {
+	if imageURL == nil || strings.Contains(*imageURL, "augno-user-photos") {
+		return "", false
+	}
+	if strings.HasPrefix(*imageURL, "https://") || strings.HasPrefix(*imageURL, "http://") {
+		return *imageURL, true
+	}
+	return "", false
+}
+
 // normalizeUserImageURL converts legacy S3 signed URLs to the endpoint path format.
 func normalizeUserImageURL(user *domain.UserRecord) {
 	if user == nil || user.ImageURL == nil {

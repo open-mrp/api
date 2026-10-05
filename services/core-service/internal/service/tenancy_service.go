@@ -227,7 +227,9 @@ func (s *tenancySvcImpl) GetCurrentUser(ctx context.Context, userID string, targ
 		return nil, tracing.Trace(span, apiErr)
 	}
 
-	if user.ImageURL != nil {
+	if external, ok := externalUserPhoto(user.ImageURL); ok {
+		user.ImageURL = &external
+	} else if user.ImageURL != nil {
 		// A non-null user.image_url is only an avatar-existence signal (a sentinel path or a normalized legacy URL — see normalizeUserImageURL), never a browser-servable URL. The only servable form is a freshly presigned URL for the account-scoped key {account}/{user}.png, which we presign directly rather than doing an S3 HeadObject — presigning is a local SigV4 operation with no network I/O, keeping /me off the S3 critical path. /me is account-agnostic on bootstrap (called before an account is selected, so no OpenMRP-Account header → no targetAccountID), so when there is no target account, or signing fails, we return a nil image_url instead of the unservable stored value. Clients fall back to initials and pick up the real avatar when they refetch /me with an account selected.
 		var presigned *string
 		if targetAccountID != nil {

@@ -127,10 +127,13 @@ func (s *accountUserSvcImpl) withTx(ctx context.Context, fn func(context.Context
 
 // resolveImageURL returns a presigned GET URL for the user's avatar, or nil if the user has no avatar or the URL cannot be signed. The user-photos bucket is private and SSE-S3-encrypted, so clients cannot fetch directly without a short-lived signed URL.
 //
-// hasImage is derived from the persisted user.image_url column (already loaded on the account-user record): it is set when, and only when, a photo is uploaded (see userSvcImpl.UploadUserPhoto), so it is an authoritative existence signal. We rely on it instead of an S3 HeadObject so that listing N users costs zero S3 round trips — the previous per-user HeadObject was an N+1 that, combined with a stalled credential chain, could exhaust the request deadline. Presigning is a purely local SigV4 operation (no network I/O), so this is effectively free per call. Returning nil on any signing error ensures a missing avatar never breaks the account-user response.
-func (s *accountUserSvcImpl) resolveImageURL(ctx context.Context, accountID, userID string, hasImage bool) *string {
-	if !hasImage {
+// imageURL is the persisted user.image_url column (already loaded on the account-user record): it is set when, and only when, a photo is uploaded (see userSvcImpl.UploadUserPhoto), so it is an authoritative existence signal. We rely on it instead of an S3 HeadObject so that listing N users costs zero S3 round trips — the previous per-user HeadObject was an N+1 that, combined with a stalled credential chain, could exhaust the request deadline. Presigning is a purely local SigV4 operation (no network I/O), so this is effectively free per call. Returning nil on any signing error ensures a missing avatar never breaks the account-user response.
+func (s *accountUserSvcImpl) resolveImageURL(ctx context.Context, accountID, userID string, imageURL *string) *string {
+	if imageURL == nil {
 		return nil
+	}
+	if external, ok := externalUserPhoto(imageURL); ok {
+		return &external
 	}
 	key := accountID + "/" + userID + ".png"
 	url, err := s.s3Client.GetPresignedURL(ctx, s.userPhotosBucket, key, time.Hour)
@@ -175,7 +178,7 @@ func (s *accountUserSvcImpl) ListAccountUsers(ctx context.Context, params domain
 		return nil, tracing.Trace(span, apiErr)
 	}
 	for _, item := range result.Items {
-		item.ImageURL = s.resolveImageURL(ctx, params.AccountID, item.UserID, item.ImageURL != nil)
+		item.ImageURL = s.resolveImageURL(ctx, params.AccountID, item.UserID, item.ImageURL)
 	}
 	return result, nil
 }
@@ -212,7 +215,7 @@ func (s *accountUserSvcImpl) GetAccountUser(ctx context.Context, accountUserID s
 	if apiErr != nil {
 		return nil, tracing.Trace(span, apiErr)
 	}
-	detail.ImageURL = s.resolveImageURL(ctx, identity.Target.AccountID, detail.UserID, detail.ImageURL != nil)
+	detail.ImageURL = s.resolveImageURL(ctx, identity.Target.AccountID, detail.UserID, detail.ImageURL)
 	return detail, nil
 }
 
@@ -290,7 +293,7 @@ func (s *accountUserSvcImpl) CreateAccountUser(ctx context.Context, params domai
 			return nil, tracing.Trace(span, apierror.NewInternalError(err, "Issue unmarshalling cached response."))
 		}
 		if cached.Data != nil {
-			cached.Data.ImageURL = s.resolveImageURL(ctx, params.AccountID, cached.Data.UserID, cached.Data.ImageURL != nil)
+			cached.Data.ImageURL = s.resolveImageURL(ctx, params.AccountID, cached.Data.UserID, cached.Data.ImageURL)
 		}
 		return cached.Data, cached.Error
 
@@ -561,7 +564,7 @@ func (s *accountUserSvcImpl) CreateAccountUser(ctx context.Context, params domai
 		}
 
 		if result != nil {
-			result.ImageURL = s.resolveImageURL(ctx, params.AccountID, result.UserID, result.ImageURL != nil)
+			result.ImageURL = s.resolveImageURL(ctx, params.AccountID, result.UserID, result.ImageURL)
 		}
 		return result, nil
 
@@ -621,7 +624,7 @@ func (s *accountUserSvcImpl) UpdateAccountUser(ctx context.Context, params domai
 			return nil, tracing.Trace(span, apierror.NewInternalError(err, "Issue unmarshalling cached response."))
 		}
 		if cached.Data != nil {
-			cached.Data.ImageURL = s.resolveImageURL(ctx, params.AccountID, cached.Data.UserID, cached.Data.ImageURL != nil)
+			cached.Data.ImageURL = s.resolveImageURL(ctx, params.AccountID, cached.Data.UserID, cached.Data.ImageURL)
 		}
 		return cached.Data, cached.Error
 
@@ -772,7 +775,7 @@ func (s *accountUserSvcImpl) UpdateAccountUser(ctx context.Context, params domai
 		}
 
 		if result != nil {
-			result.ImageURL = s.resolveImageURL(ctx, params.AccountID, result.UserID, result.ImageURL != nil)
+			result.ImageURL = s.resolveImageURL(ctx, params.AccountID, result.UserID, result.ImageURL)
 		}
 		return result, nil
 
@@ -1099,7 +1102,7 @@ func (s *accountUserSvcImpl) BatchGetAccountUsersByIDs(ctx context.Context, ids 
 		return nil, tracing.Trace(span, apiErr)
 	}
 	for _, item := range users {
-		item.ImageURL = s.resolveImageURL(ctx, identity.Target.AccountID, item.UserID, item.ImageURL != nil)
+		item.ImageURL = s.resolveImageURL(ctx, identity.Target.AccountID, item.UserID, item.ImageURL)
 	}
 	return users, nil
 }

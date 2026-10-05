@@ -14,6 +14,8 @@ import (
 // Request to retrieve a territory.
 type RetrieveTerritoryRequest struct {
 	// ID of your account, which owns the territory.
+	//
+	// A path naming any other account returns a not-found error.
 	AccountID string `path:"account_id" validate:"required"`
 	// ID of the territory to retrieve.
 	TerritoryID string `path:"id" validate:"required"`

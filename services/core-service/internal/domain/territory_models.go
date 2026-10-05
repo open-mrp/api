@@ -29,15 +29,18 @@ type TerritoryProductLine struct {
 
 // Territory represents a sales rep territory assignment.
 type Territory struct {
-	ID           string
-	State        string `audit:"state"`
-	StartZipcode *int32 `audit:"start_zipcode"`
-	EndZipcode   *int32 `audit:"end_zipcode"`
-	SalesRepID   string
-	SalesRep     *TerritorySalesRep    `audit:"sales_rep"`
-	ProductLine  *TerritoryProductLine `audit:"product_line"`
-	CreatedAt    time.Time
-	UpdatedAt    time.Time
+	ID            string
+	State         string  `audit:"state"`
+	StartZipcode  *int32  `audit:"start_zipcode"`
+	EndZipcode    *int32  `audit:"end_zipcode"`
+	SalesRepID    string  `audit:"sales_rep_id"`
+	ProductLineID *string `audit:"product_line_id"`
+	// SalesRep and ProductLine are the expanded references, set only when included; the audit trail
+	// records the IDs above.
+	SalesRep    *TerritorySalesRep
+	ProductLine *TerritoryProductLine
+	CreatedAt   time.Time
+	UpdatedAt   time.Time
 }
 
 // ListTerritoriesParams contains the parameters for listing territories.

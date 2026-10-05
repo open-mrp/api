@@ -13,6 +13,8 @@ import (
 // Request to delete a territory.
 type DeleteTerritoryRequest struct {
 	// ID of your account, which owns the territory.
+	//
+	// A path naming any other account returns a not-found error.
 	AccountID string `path:"account_id" validate:"required"`
 	// ID of the territory to delete.
 	TerritoryID string `path:"id" validate:"required"`

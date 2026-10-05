@@ -189,8 +189,6 @@ services/core-service/internal/infrastructure/sqlc/supplier_material.sql.go:list
 services/core-service/internal/infrastructure/sqlc/supplier_material.sql.go:listSupplierMaterialsForward 2
 services/core-service/internal/infrastructure/sqlc/sys_property.sql.go:listSysPropertiesBackward 1
 services/core-service/internal/infrastructure/sqlc/sys_property.sql.go:listSysPropertiesForward 2
-services/core-service/internal/infrastructure/sqlc/territory.sql.go:listTerritoriesBackward 2
-services/core-service/internal/infrastructure/sqlc/territory.sql.go:listTerritoriesForward 3
 services/core-service/internal/infrastructure/sqlc/transaction.sql.go:countAccountTransactions 3
 services/core-service/internal/infrastructure/sqlc/transaction.sql.go:countTransactions 9
 services/core-service/internal/infrastructure/sqlc/transaction.sql.go:existsTransactionByNumber 1

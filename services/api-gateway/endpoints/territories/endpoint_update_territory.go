@@ -16,6 +16,8 @@ import (
 // Request to partially update a territory.
 type UpdateTerritoryRequest struct {
 	// ID of your account, which owns the territory.
+	//
+	// A path naming any other account returns a not-found error.
 	AccountID string `path:"account_id" validate:"required"`
 	// ID of the territory to update.
 	TerritoryID string `path:"id" validate:"required"`
@@ -26,22 +28,26 @@ type UpdateTerritoryRequest struct {
 	// Setting a start ZIP code turns a state-wide territory into a ZIP code territory, which is then matched on ZIP code alone.
 	StartZipcode field.Optional[int32] `json:"start_zipcode,omitzero"`
 	// Inclusive end of the ZIP code range this territory covers (`501`-`99999`).
+	//
+	// Must not be less than the territory's start ZIP code after the update. Dropped when the territory has no start ZIP code after the update, as an end ZIP code alone matches nothing.
 	EndZipcode field.Optional[int32] `json:"end_zipcode,omitzero"`
 	// ID of the account user to credit as the sales rep on orders matching this territory.
 	//
-	// A territory always has a sales rep, so this one can be replaced but not removed.
+	// Must be an account user of your account that has not been removed from it; a user ID is not accepted. A territory always has a sales rep, so this one can be replaced but not removed.
 	SalesRepID field.Optional[string] `json:"sales_rep_id,omitzero" validate:"omitempty"`
-	// ID of the product line this territory is associated with.
+	// ID of the product line this territory is associated with, which must be one of your account's product lines.
 	ProductLineID field.Optional[string] `json:"product_line_id,omitzero" validate:"omitempty"`
 	// Set to `true` to remove the product line the territory is associated with.
+	//
+	// `true` cannot be combined with `product_line_id`.
 	ClearProductLine field.Optional[bool] `json:"clear_product_line,omitzero"`
 	// Set to `true` to remove the start ZIP code.
 	//
-	// Clearing the start ZIP code also clears the end ZIP code, so the territory covers the entire state.
+	// Clearing the start ZIP code also clears the end ZIP code, so the territory covers the entire state. `true` cannot be combined with `start_zipcode`.
 	ClearStartZipcode field.Optional[bool] `json:"clear_start_zipcode,omitzero"`
 	// Set to `true` to remove the end ZIP code.
 	//
-	// The territory then matches the start ZIP code alone rather than a range.
+	// The territory then matches the start ZIP code alone rather than a range. `true` cannot be combined with `end_zipcode`.
 	ClearEndZipcode field.Optional[bool] `json:"clear_end_zipcode,omitzero"`
 }
 

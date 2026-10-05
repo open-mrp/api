@@ -16,6 +16,8 @@ import (
 // Request to create a territory.
 type CreateTerritoryRequest struct {
 	// ID of your account, which owns the territory.
+	//
+	// A path naming any other account returns a not-found error.
 	AccountID string `path:"account_id" validate:"required"`
 	// State this territory covers (e.g. `NY`).
 	//
@@ -27,11 +29,13 @@ type CreateTerritoryRequest struct {
 	StartZipcode field.Optional[int32] `json:"start_zipcode,omitzero"`
 	// Inclusive end of the ZIP code range this territory covers (`501`-`99999`).
 	//
-	// Dropped when no start ZIP code is supplied. Supplying a start without an end creates a territory that matches that single ZIP code.
+	// Dropped when no start ZIP code is supplied. Supplying a start without an end creates a territory that matches that single ZIP code. Must not be less than `start_zipcode`.
 	EndZipcode field.Optional[int32] `json:"end_zipcode,omitzero"`
 	// ID of the account user to credit as the sales rep on orders matching this territory.
+	//
+	// Must be an account user of your account that has not been removed from it; a user ID is not accepted.
 	SalesRepID string `json:"sales_rep_id" validate:"required"`
-	// ID of the product line this territory is associated with.
+	// ID of the product line this territory is associated with, which must be one of your account's product lines.
 	//
 	// Sales rep auto-assignment matches on ZIP code and state only, so this records what the territory covers rather than narrowing which orders it matches.
 	ProductLineID field.Optional[string] `json:"product_line_id,omitzero" validate:"omitempty"`

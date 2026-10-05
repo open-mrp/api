@@ -1,102 +1,3 @@
--- name: ListTerritoriesForward :many
-SELECT
-    t.id,
-    t.state,
-    t.start_zipcode,
-    t.end_zipcode,
-    t.sales_rep_id,
-    t.product_line_id,
-    t.created_at,
-    t.updated_at,
-    u.name AS sales_rep_name,
-    u.email AS sales_rep_email,
-    au.status_code AS sales_rep_status,
-    au.created_at AS sales_rep_created_at,
-    au.updated_at AS sales_rep_updated_at,
-    pl.name AS product_line_name,
-    pl.is_commission_exempt AS product_line_is_commission_exempt,
-    pl.is_freight_exempt AS product_line_is_freight_exempt,
-    pl.created_at AS product_line_created_at,
-    pl.updated_at AS product_line_updated_at
-FROM territory t
-JOIN account_user au ON au.id = t.sales_rep_id
-JOIN user u ON u.id = au.user_id
-LEFT JOIN product_line pl ON pl.id = t.product_line_id
-WHERE t.account_id = sqlc.arg('account_id')
-AND (
-    sqlc.narg('search_query') IS NULL
-    OR t.state LIKE sqlc.narg('search_query')
-    OR u.name LIKE sqlc.narg('search_query')
-    OR u.email LIKE sqlc.narg('search_query')
-    OR pl.name LIKE sqlc.narg('search_query')
-)
-AND (
-    sqlc.narg('zipcode_query') IS NULL
-    OR (
-        (t.start_zipcode IS NULL OR t.start_zipcode <= CAST(sqlc.narg('zipcode_query') AS SIGNED))
-        AND (
-            (t.end_zipcode IS NULL AND t.start_zipcode = CAST(sqlc.narg('zipcode_query') AS SIGNED))
-            OR t.end_zipcode >= CAST(sqlc.narg('zipcode_query') AS SIGNED)
-        )
-    )
-)
-AND (
-    sqlc.narg('cursor_created_at') IS NULL
-    OR t.created_at < sqlc.narg('cursor_created_at')
-    OR (t.created_at = sqlc.narg('cursor_created_at') AND t.id < sqlc.narg('cursor_id'))
-)
-ORDER BY t.created_at DESC, t.id DESC
-LIMIT ?;
-
--- name: ListTerritoriesBackward :many
-SELECT
-    t.id,
-    t.state,
-    t.start_zipcode,
-    t.end_zipcode,
-    t.sales_rep_id,
-    t.product_line_id,
-    t.created_at,
-    t.updated_at,
-    u.name AS sales_rep_name,
-    u.email AS sales_rep_email,
-    au.status_code AS sales_rep_status,
-    au.created_at AS sales_rep_created_at,
-    au.updated_at AS sales_rep_updated_at,
-    pl.name AS product_line_name,
-    pl.is_commission_exempt AS product_line_is_commission_exempt,
-    pl.is_freight_exempt AS product_line_is_freight_exempt,
-    pl.created_at AS product_line_created_at,
-    pl.updated_at AS product_line_updated_at
-FROM territory t
-JOIN account_user au ON au.id = t.sales_rep_id
-JOIN user u ON u.id = au.user_id
-LEFT JOIN product_line pl ON pl.id = t.product_line_id
-WHERE t.account_id = sqlc.arg('account_id')
-AND (
-    sqlc.narg('search_query') IS NULL
-    OR t.state LIKE sqlc.narg('search_query')
-    OR u.name LIKE sqlc.narg('search_query')
-    OR u.email LIKE sqlc.narg('search_query')
-    OR pl.name LIKE sqlc.narg('search_query')
-)
-AND (
-    sqlc.narg('zipcode_query') IS NULL
-    OR (
-        (t.start_zipcode IS NULL OR t.start_zipcode <= CAST(sqlc.narg('zipcode_query') AS SIGNED))
-        AND (
-            (t.end_zipcode IS NULL AND t.start_zipcode = CAST(sqlc.narg('zipcode_query') AS SIGNED))
-            OR t.end_zipcode >= CAST(sqlc.narg('zipcode_query') AS SIGNED)
-        )
-    )
-)
-AND (
-    t.created_at > sqlc.arg('cursor_created_at')
-    OR (t.created_at = sqlc.arg('cursor_created_at') AND t.id > sqlc.arg('cursor_id'))
-)
-ORDER BY t.created_at ASC, t.id ASC
-LIMIT ?;
-
 -- name: GetTerritory :one
 SELECT
     t.id,
@@ -120,7 +21,7 @@ SELECT
 FROM territory t
 JOIN account_user au ON au.id = t.sales_rep_id
 JOIN user u ON u.id = au.user_id
-LEFT JOIN product_line pl ON pl.id = t.product_line_id
+LEFT JOIN product_line pl ON pl.id = t.product_line_id AND (pl.account_id = t.account_id OR pl.account_id IS NULL)
 WHERE t.id = sqlc.arg('id')
 AND t.account_id = sqlc.arg('account_id');
 
@@ -205,7 +106,7 @@ SELECT
 FROM territory t
 JOIN account_user au ON au.id = t.sales_rep_id
 JOIN user u ON u.id = au.user_id
-LEFT JOIN product_line pl ON pl.id = t.product_line_id
+LEFT JOIN product_line pl ON pl.id = t.product_line_id AND (pl.account_id = t.account_id OR pl.account_id IS NULL)
 WHERE t.id IN (sqlc.slice('ids'))
 AND t.account_id = sqlc.arg('account_id');
 

@@ -78,6 +78,9 @@ func (s *territorySvcImpl) withTx(ctx context.Context, fn func(context.Context, 
 	})
 }
 
+// territoryAuditIncludes are what every write reads its territory with, so the audit diff sees the rep and product line.
+var territoryAuditIncludes = []string{"sales_rep", "product_line"}
+
 func (s *territorySvcImpl) BatchGetTerritoriesByIDs(ctx context.Context, ids []string) ([]*domain.Territory, *apierror.APIError) {
 	ctx, span := territorySvcTracer.Start(ctx, "service.territory.batch_get_by_ids")
 	defer span.End()
@@ -117,7 +120,9 @@ func (s *territorySvcImpl) ListTerritories(ctx context.Context, params domain.Li
 		return nil, tracing.Trace(span, apiErr)
 	}
 
-	params.AccountID = identity.Target.AccountID
+	if apiErr := checkTerritoryAccount(identity, params.AccountID); apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
 
 	return s.repos.NewTerritoryRepo().List(ctx, params)
 }
@@ -138,7 +143,9 @@ func (s *territorySvcImpl) GetTerritory(ctx context.Context, params domain.GetTe
 		return nil, tracing.Trace(span, apiErr)
 	}
 
-	params.AccountID = identity.Target.AccountID
+	if apiErr := checkTerritoryAccount(identity, params.AccountID); apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
 
 	return s.repos.NewTerritoryRepo().Get(ctx, params)
 }
@@ -159,19 +166,21 @@ func (s *territorySvcImpl) CreateTerritory(ctx context.Context, params domain.Cr
 		return nil, tracing.Trace(span, apiErr)
 	}
 
-	params.AccountID = identity.Target.AccountID
+	if apiErr := checkTerritoryAccount(identity, params.AccountID); apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
 
-	// Validate zipcode range
-	if params.StartZipcode != nil {
-		if *params.StartZipcode < 501 || *params.StartZipcode > 99999 {
-			return nil, tracing.Trace(span, apierror.NewValidationErrorWithParam("Start zipcode must be between 501 and 99999.", "start_zipcode"))
-		}
+	if apiErr := validateTerritoryZipcodes(params.StartZipcode, params.EndZipcode); apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
 	}
-	if params.EndZipcode != nil {
-		if *params.EndZipcode < 501 || *params.EndZipcode > 99999 {
-			return nil, tracing.Trace(span, apierror.NewValidationErrorWithParam("End zipcode must be between 501 and 99999.", "end_zipcode"))
-		}
+	// An end ZIP code with no start matches nothing, so it is dropped.
+	if params.StartZipcode == nil {
+		params.EndZipcode = nil
 	}
+	if params.EndZipcode != nil && *params.EndZipcode < *params.StartZipcode {
+		return nil, tracing.Trace(span, apierror.NewValidationErrorWithParam("End zipcode must not be before the start zipcode.", "end_zipcode"))
+	}
+	params.Includes = territoryAuditIncludes
 
 	territoryID, apiErr := id.GenID(id.TerritoryIDPrefix, nil)
 	if apiErr != nil {
@@ -196,9 +205,11 @@ func (s *territorySvcImpl) CreateTerritory(ctx context.Context, params domain.Cr
 	case domain.RecoveryPointStarted:
 		var result *domain.Territory
 		apiErr = s.withTx(ctx, func(txCtx context.Context, txSvc *territorySvcImpl) *apierror.APIError {
-			txRepo := txSvc.repos.NewTerritoryRepo()
+			if apiErr := txSvc.validateTerritoryReferences(txCtx, params.AccountID, &params.SalesRepID, params.ProductLineID); apiErr != nil {
+				return apiErr
+			}
 
-			created, apiErr := txRepo.Create(txCtx, territoryID, params)
+			created, apiErr := txSvc.repos.NewTerritoryRepo().Create(txCtx, territoryID, params)
 			if apiErr != nil {
 				return apiErr
 			}
@@ -246,19 +257,17 @@ func (s *territorySvcImpl) UpdateTerritory(ctx context.Context, params domain.Up
 		return nil, tracing.Trace(span, apiErr)
 	}
 
-	params.AccountID = identity.Target.AccountID
+	if apiErr := checkTerritoryAccount(identity, params.AccountID); apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
 
-	// Validate zipcode range
-	if params.StartZipcode != nil {
-		if *params.StartZipcode < 501 || *params.StartZipcode > 99999 {
-			return nil, tracing.Trace(span, apierror.NewValidationErrorWithParam("Start zipcode must be between 501 and 99999.", "start_zipcode"))
-		}
+	if apiErr := validateTerritoryZipcodes(params.StartZipcode, params.EndZipcode); apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
 	}
-	if params.EndZipcode != nil {
-		if *params.EndZipcode < 501 || *params.EndZipcode > 99999 {
-			return nil, tracing.Trace(span, apierror.NewValidationErrorWithParam("End zipcode must be between 501 and 99999.", "end_zipcode"))
-		}
+	if apiErr := checkTerritoryClears(params); apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
 	}
+	params.Includes = territoryAuditIncludes
 
 	meds := s.mediators()
 
@@ -283,8 +292,26 @@ func (s *territorySvcImpl) UpdateTerritory(ctx context.Context, params domain.Up
 			old, apiErr := txRepo.Get(txCtx, domain.GetTerritoryParams{
 				AccountID:   params.AccountID,
 				TerritoryID: params.TerritoryID,
+				Includes:    territoryAuditIncludes,
 			})
 			if apiErr != nil {
+				return apiErr
+			}
+
+			// Only a reference the update changes is checked, so a territory whose rep has since been removed can still be edited.
+			salesRepID := params.SalesRepID
+			if salesRepID != nil && *salesRepID == old.SalesRepID {
+				salesRepID = nil
+			}
+			productLineID := params.ProductLineID
+			if productLineID != nil && old.ProductLine != nil && *productLineID == old.ProductLine.ID {
+				productLineID = nil
+			}
+			if apiErr := txSvc.validateTerritoryReferences(txCtx, params.AccountID, salesRepID, productLineID); apiErr != nil {
+				return apiErr
+			}
+
+			if apiErr := resolveUpdatedZipcodes(old, &params); apiErr != nil {
 				return apiErr
 			}
 
@@ -341,9 +368,15 @@ func (s *territorySvcImpl) DeleteTerritory(ctx context.Context, params domain.De
 		return tracing.Trace(span, apiErr)
 	}
 
-	params.AccountID = identity.Target.AccountID
+	if apiErr := checkTerritoryAccount(identity, params.AccountID); apiErr != nil {
+		return tracing.Trace(span, apiErr)
+	}
 
-	territory, apiErr := s.repos.NewTerritoryRepo().Get(ctx, domain.GetTerritoryParams{AccountID: params.AccountID, TerritoryID: params.TerritoryID})
+	territory, apiErr := s.repos.NewTerritoryRepo().Get(ctx, domain.GetTerritoryParams{
+		AccountID:   params.AccountID,
+		TerritoryID: params.TerritoryID,
+		Includes:    territoryAuditIncludes,
+	})
 	if apiErr != nil {
 		if apierror.IsNotFound(apiErr) {
 			wasDeleted, deletedCheckErr := s.repos.NewDeletedRecordRepo().Exists(ctx, constants.DeletedRecordResourceTypeTerritory, params.TerritoryID)
@@ -386,4 +419,90 @@ func (s *territorySvcImpl) DeleteTerritory(ctx context.Context, params domain.De
 	}
 
 	return nil
+}
+
+// checkTerritoryAccount refuses a path naming an account other than the one acted for as not found, like another tenant's territory.
+func checkTerritoryAccount(identity *types.Identity, accountID string) *apierror.APIError {
+	if accountID != identity.Target.AccountID {
+		return apierror.NewResourceNotFoundError("Resource not found.")
+	}
+	return nil
+}
+
+// validateTerritoryReferences refuses a sales rep or product line the account does not have, or a rep it has removed; the territory table has no foreign keys.
+func (s *territorySvcImpl) validateTerritoryReferences(ctx context.Context, accountID string, salesRepID, productLineID *string) *apierror.APIError {
+	if salesRepID != nil {
+		rep, apiErr := s.repos.NewAccountUserRepo().GetDetailByAccountAndID(ctx, accountID, *salesRepID, nil)
+		if apiErr != nil {
+			return territoryReferenceError(apiErr, "Sales rep not found.", "sales_rep_id")
+		}
+		if rep.StatusCode == constants.AccountUserStatusRemoved {
+			return apierror.NewValidationErrorWithParam("Sales rep has been removed from the account.", "sales_rep_id")
+		}
+	}
+	if productLineID != nil {
+		if _, apiErr := s.repos.NewProductLineRepo().Get(ctx, domain.GetProductLineParams{AccountID: accountID, ProductLineID: *productLineID}); apiErr != nil {
+			return territoryReferenceError(apiErr, "Product line not found.", "product_line_id")
+		}
+	}
+	return nil
+}
+
+func territoryReferenceError(apiErr *apierror.APIError, notFoundMsg, param string) *apierror.APIError {
+	if apierror.IsNotFound(apiErr) {
+		return apierror.NewValidationErrorWithParam(notFoundMsg, param)
+	}
+	return apiErr
+}
+
+func validateTerritoryZipcodes(start, end *int32) *apierror.APIError {
+	if start != nil && (*start < 501 || *start > 99999) {
+		return apierror.NewValidationErrorWithParam("Start zipcode must be between 501 and 99999.", "start_zipcode")
+	}
+	if end != nil && (*end < 501 || *end > 99999) {
+		return apierror.NewValidationErrorWithParam("End zipcode must be between 501 and 99999.", "end_zipcode")
+	}
+	return nil
+}
+
+// checkTerritoryClears refuses an update that both clears a field and sets it, rather than let either silently win.
+func checkTerritoryClears(params domain.UpdateTerritoryParams) *apierror.APIError {
+	switch {
+	case params.ClearStartZipcode && params.StartZipcode != nil:
+		return apierror.NewValidationErrorWithParam("Send either start_zipcode or clear_start_zipcode, not both.", "clear_start_zipcode")
+	case params.ClearEndZipcode && params.EndZipcode != nil:
+		return apierror.NewValidationErrorWithParam("Send either end_zipcode or clear_end_zipcode, not both.", "clear_end_zipcode")
+	case params.ClearProductLine && params.ProductLineID != nil:
+		return apierror.NewValidationErrorWithParam("Send either product_line_id or clear_product_line, not both.", "clear_product_line")
+	}
+	return nil
+}
+
+// resolveUpdatedZipcodes checks the range an update leaves, dropping an end ZIP code left without a start as create does. A reversed range names the end if the update sent one.
+func resolveUpdatedZipcodes(old *domain.Territory, params *domain.UpdateTerritoryParams) *apierror.APIError {
+	start := old.StartZipcode
+	if params.ClearStartZipcode {
+		start = nil
+	} else if params.StartZipcode != nil {
+		start = params.StartZipcode
+	}
+	if start == nil {
+		params.EndZipcode = nil
+		params.ClearEndZipcode = true
+		return nil
+	}
+
+	end := old.EndZipcode
+	if params.ClearEndZipcode {
+		end = nil
+	} else if params.EndZipcode != nil {
+		end = params.EndZipcode
+	}
+	if end == nil || *end >= *start {
+		return nil
+	}
+	if params.EndZipcode != nil {
+		return apierror.NewValidationErrorWithParam("End zipcode must not be before the start zipcode.", "end_zipcode")
+	}
+	return apierror.NewValidationErrorWithParam("Start zipcode must not be after the end zipcode.", "start_zipcode")
 }

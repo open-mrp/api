@@ -937,8 +937,11 @@ type UpdateAccountRequest struct {
 	// Must be one of the account's own addresses.
 	DefaultBillingAddressId  *string `protobuf:"bytes,11,opt,name=default_billing_address_id,json=defaultBillingAddressId,proto3,oneof" json:"default_billing_address_id,omitempty"`
 	DefaultShippingAddressId *string `protobuf:"bytes,12,opt,name=default_shipping_address_id,json=defaultShippingAddressId,proto3,oneof" json:"default_shipping_address_id,omitempty"`
-	unknownFields            protoimpl.UnknownFields
-	sizeCache                protoimpl.SizeCache
+	// Branding fields to remove, by name (support_email, phone_number, website_url, facebook_handle,
+	// instagram_handle, linkedin_handle, twitter_handle). A field named here and given a value is removed.
+	ClearedBrandingFields []string `protobuf:"bytes,13,rep,name=cleared_branding_fields,json=clearedBrandingFields,proto3" json:"cleared_branding_fields,omitempty"`
+	unknownFields         protoimpl.UnknownFields
+	sizeCache             protoimpl.SizeCache
 }
 
 func (x *UpdateAccountRequest) Reset() {
@@ -1053,6 +1056,13 @@ func (x *UpdateAccountRequest) GetDefaultShippingAddressId() string {
 		return *x.DefaultShippingAddressId
 	}
 	return ""
+}
+
+func (x *UpdateAccountRequest) GetClearedBrandingFields() []string {
+	if x != nil {
+		return x.ClearedBrandingFields
+	}
+	return nil
 }
 
 type UpdateAccountResponse struct {
@@ -6550,7 +6560,7 @@ const file_core_core_accounts_carriers_proto_rawDesc = "" +
 	"\x17GetAccountBySlugRequest\x12\x12\n" +
 	"\x04slug\x18\x01 \x01(\tR\x04slug\"M\n" +
 	"\x18GetAccountBySlugResponse\x121\n" +
-	"\aaccount\x18\x01 \x01(\v2\x17.core.PublicAccountInfoR\aaccount\"\xe2\x05\n" +
+	"\aaccount\x18\x01 \x01(\v2\x17.core.PublicAccountInfoR\aaccount\"\x9a\x06\n" +
 	"\x14UpdateAccountRequest\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x17\n" +
 	"\x04name\x18\x02 \x01(\tH\x00R\x04name\x88\x01\x01\x12(\n" +
@@ -6566,7 +6576,8 @@ const file_core_core_accounts_carriers_proto_rawDesc = "" +
 	" \x01(\tH\bR\rtwitterHandle\x88\x01\x01\x12@\n" +
 	"\x1adefault_billing_address_id\x18\v \x01(\tH\tR\x17defaultBillingAddressId\x88\x01\x01\x12B\n" +
 	"\x1bdefault_shipping_address_id\x18\f \x01(\tH\n" +
-	"R\x18defaultShippingAddressId\x88\x01\x01B\a\n" +
+	"R\x18defaultShippingAddressId\x88\x01\x01\x126\n" +
+	"\x17cleared_branding_fields\x18\r \x03(\tR\x15clearedBrandingFieldsB\a\n" +
 	"\x05_nameB\x10\n" +
 	"\x0e_support_emailB\x0f\n" +
 	"\r_phone_numberB\a\n" +

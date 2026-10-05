@@ -466,17 +466,17 @@ func (mr *MockAccountRepoMockRecorder) UpdateAgentSpendingCap(ctx, accountID, ca
 }
 
 // UpdateBranding mocks base method.
-func (m *MockAccountRepo) UpdateBranding(ctx context.Context, accountID string, params domain.UpdateAccountParams) *apierror.APIError {
+func (m *MockAccountRepo) UpdateBranding(ctx context.Context, accountID string, branding domain.AccountBranding) *apierror.APIError {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "UpdateBranding", ctx, accountID, params)
+	ret := m.ctrl.Call(m, "UpdateBranding", ctx, accountID, branding)
 	ret0, _ := ret[0].(*apierror.APIError)
 	return ret0
 }
 
 // UpdateBranding indicates an expected call of UpdateBranding.
-func (mr *MockAccountRepoMockRecorder) UpdateBranding(ctx, accountID, params any) *gomock.Call {
+func (mr *MockAccountRepoMockRecorder) UpdateBranding(ctx, accountID, branding any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateBranding", reflect.TypeOf((*MockAccountRepo)(nil).UpdateBranding), ctx, accountID, params)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateBranding", reflect.TypeOf((*MockAccountRepo)(nil).UpdateBranding), ctx, accountID, branding)
 }
 
 // UpdateBrandingFaviconURL mocks base method.

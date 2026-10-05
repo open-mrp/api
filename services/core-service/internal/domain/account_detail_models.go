@@ -1,6 +1,10 @@
 package domain
 
-import "time"
+import (
+	"time"
+
+	"github.com/open-mrp/api/shared/field"
+)
 
 // Account represents the full account with branding and portal sub-resources.
 type Account struct {
@@ -62,26 +66,40 @@ type PortalProfile struct {
 	Address      *Address
 }
 
-// UpdateAccountParams holds the optional fields for updating an account.
+// UpdateAccountParams holds the optional fields for updating an account. A cleared branding field is
+// removed.
 type UpdateAccountParams struct {
 	AccountID       string
 	Name            *string
-	SupportEmail    *string
-	PhoneNumber     *string
+	SupportEmail    field.Clearable[string]
+	PhoneNumber     field.Clearable[string]
 	Slug            *string
-	WebsiteURL      *string
-	FacebookHandle  *string
-	InstagramHandle *string
-	LinkedInHandle  *string
-	TwitterHandle   *string
+	WebsiteURL      field.Clearable[string]
+	FacebookHandle  field.Clearable[string]
+	InstagramHandle field.Clearable[string]
+	LinkedInHandle  field.Clearable[string]
+	TwitterHandle   field.Clearable[string]
 	// DefaultBillingAddressID and DefaultShippingAddressID must name addresses linked to the account.
 	DefaultBillingAddressID  *string
 	DefaultShippingAddressID *string
 }
 
-// HasBrandingUpdates returns true if any branding fields are set.
+// HasBrandingUpdates returns true if any branding field is set or cleared.
 func (p *UpdateAccountParams) HasBrandingUpdates() bool {
-	return p.SupportEmail != nil || p.PhoneNumber != nil || p.WebsiteURL != nil ||
-		p.FacebookHandle != nil || p.InstagramHandle != nil ||
-		p.LinkedInHandle != nil || p.TwitterHandle != nil
+	return p.SupportEmail.WasProvided() || p.PhoneNumber.WasProvided() || p.WebsiteURL.WasProvided() ||
+		p.FacebookHandle.WasProvided() || p.InstagramHandle.WasProvided() ||
+		p.LinkedInHandle.WasProvided() || p.TwitterHandle.WasProvided()
+}
+
+// BrandingAfter is the account's branding with this update's fields applied to before.
+func (p *UpdateAccountParams) BrandingAfter(before AccountBranding) AccountBranding {
+	after := before
+	after.SupportEmail = p.SupportEmail.StringPtrAfterBackfill(before.SupportEmail)
+	after.PhoneNumber = p.PhoneNumber.StringPtrAfterBackfill(before.PhoneNumber)
+	after.WebsiteURL = p.WebsiteURL.StringPtrAfterBackfill(before.WebsiteURL)
+	after.FacebookHandle = p.FacebookHandle.StringPtrAfterBackfill(before.FacebookHandle)
+	after.InstagramHandle = p.InstagramHandle.StringPtrAfterBackfill(before.InstagramHandle)
+	after.LinkedInHandle = p.LinkedInHandle.StringPtrAfterBackfill(before.LinkedInHandle)
+	after.TwitterHandle = p.TwitterHandle.StringPtrAfterBackfill(before.TwitterHandle)
+	return after
 }

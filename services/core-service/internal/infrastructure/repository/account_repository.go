@@ -457,18 +457,18 @@ func (r *accountRepoImpl) UpdateName(ctx context.Context, accountID, name string
 	return nil
 }
 
-func (r *accountRepoImpl) UpdateBranding(ctx context.Context, accountID string, params domain.UpdateAccountParams) *apierror.APIError {
+func (r *accountRepoImpl) UpdateBranding(ctx context.Context, accountID string, branding domain.AccountBranding) *apierror.APIError {
 	ctx, span := accountRepoTracer.Start(ctx, "repository.account.update_branding")
 	defer span.End()
 
 	_, err := r.queries.UpdateAccountBranding(ctx, sqlc.UpdateAccountBrandingParams{
-		SupportEmail:    db.NullStringPtr(params.SupportEmail),
-		PhoneNumber:     db.NullStringPtr(params.PhoneNumber),
-		FacebookHandle:  db.NullStringPtr(params.FacebookHandle),
-		InstagramHandle: db.NullStringPtr(params.InstagramHandle),
-		LinkedinHandle:  db.NullStringPtr(params.LinkedInHandle),
-		TwitterHandle:   db.NullStringPtr(params.TwitterHandle),
-		WebsiteUrl:      db.NullStringPtr(params.WebsiteURL),
+		SupportEmail:    db.NullStringPtr(branding.SupportEmail),
+		PhoneNumber:     db.NullStringPtr(branding.PhoneNumber),
+		FacebookHandle:  db.NullStringPtr(branding.FacebookHandle),
+		InstagramHandle: db.NullStringPtr(branding.InstagramHandle),
+		LinkedinHandle:  db.NullStringPtr(branding.LinkedInHandle),
+		TwitterHandle:   db.NullStringPtr(branding.TwitterHandle),
+		WebsiteUrl:      db.NullStringPtr(branding.WebsiteURL),
 		AccountID:       accountID,
 	})
 	if apiErr := db.MapSQLError(err); apiErr != nil {

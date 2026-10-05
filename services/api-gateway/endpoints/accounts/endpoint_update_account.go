@@ -19,24 +19,25 @@ type UpdateAccountRequest struct {
 	AccountID string `path:"id" validate:"required"`
 	// The account's display name.
 	Name field.Optional[string] `json:"name,omitzero" validate:"omitempty,max=255"`
-	// The email address customers are directed to for support.
-	SupportEmail field.Optional[string] `json:"support_email,omitzero" validate:"omitempty,custom_email,max=255"`
+	// The email address customers are directed to for support. Pass null to remove it, as for the other
+	// branding fields.
+	SupportEmail field.Clearable[string] `json:"support_email,omitzero" validate:"omitempty,custom_email,max=255"`
 	// The account's public contact phone number.
-	PhoneNumber field.Optional[string] `json:"phone_number,omitzero" validate:"omitempty,max=255"`
+	PhoneNumber field.Clearable[string] `json:"phone_number,omitzero" validate:"omitempty,max=255"`
 	// URL slug for the account's customer portal.
 	//
 	// The slug is unique across all accounts; updating to one that is already taken returns a conflict error. Changing it changes the portal address customers use, so existing portal links stop resolving.
 	Slug field.Optional[string] `json:"slug,omitzero" validate:"omitempty,min=3,max=255"`
 	// The account's public website.
-	WebsiteURL field.Optional[string] `json:"website_url,omitzero" validate:"omitempty,url,max=2083"`
+	WebsiteURL field.Clearable[string] `json:"website_url,omitzero" validate:"omitempty,url,max=2083"`
 	// Facebook handle.
-	FacebookHandle field.Optional[string] `json:"facebook_handle,omitzero" validate:"omitempty,max=255"`
+	FacebookHandle field.Clearable[string] `json:"facebook_handle,omitzero" validate:"omitempty,max=255"`
 	// Instagram handle.
-	InstagramHandle field.Optional[string] `json:"instagram_handle,omitzero" validate:"omitempty,max=255"`
+	InstagramHandle field.Clearable[string] `json:"instagram_handle,omitzero" validate:"omitempty,max=255"`
 	// LinkedIn handle.
-	LinkedInHandle field.Optional[string] `json:"linkedin_handle,omitzero" validate:"omitempty,max=255"`
+	LinkedInHandle field.Clearable[string] `json:"linkedin_handle,omitzero" validate:"omitempty,max=255"`
 	// Twitter handle.
-	TwitterHandle field.Optional[string] `json:"twitter_handle,omitzero" validate:"omitempty,max=255"`
+	TwitterHandle field.Clearable[string] `json:"twitter_handle,omitzero" validate:"omitempty,max=255"`
 	// Default billing address for the account's orders. Must be one of the account's own addresses.
 	DefaultBillingAddressID field.Optional[string] `json:"default_billing_address_id,omitzero" validate:"omitempty"`
 	// Default shipping address for the account's orders. Must be one of the account's own addresses.

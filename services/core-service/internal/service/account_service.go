@@ -1042,7 +1042,11 @@ func (s *accountSvcImpl) UpdateAccount(ctx context.Context, params domain.Update
 			}
 
 			if params.HasBrandingUpdates() {
-				if apiErr := txRepo.UpdateBranding(txCtx, params.AccountID, params); apiErr != nil {
+				var before domain.AccountBranding
+				if old.Branding != nil {
+					before = *old.Branding
+				}
+				if apiErr := txRepo.UpdateBranding(txCtx, params.AccountID, params.BrandingAfter(before)); apiErr != nil {
 					return apiErr
 				}
 			}

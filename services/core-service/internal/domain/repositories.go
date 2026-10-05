@@ -41,7 +41,8 @@ type AccountRepo interface {
 	GetByIDs(ctx context.Context, ids []string) ([]*Account, *apierror.APIError)
 	GetBySlug(ctx context.Context, slug string) (*PublicAccountBySlug, *apierror.APIError)
 	UpdateName(ctx context.Context, accountID, name string) *apierror.APIError
-	UpdateBranding(ctx context.Context, accountID string, params UpdateAccountParams) *apierror.APIError
+	// UpdateBranding writes the account's branding fields as given; a nil field is stored as NULL.
+	UpdateBranding(ctx context.Context, accountID string, branding AccountBranding) *apierror.APIError
 	UpdatePortalSlug(ctx context.Context, accountID, slug string) *apierror.APIError
 	// SetDefaultAddresses points the account's default billing and/or shipping address at addresses it holds; nil leaves one as it is.
 	SetDefaultAddresses(ctx context.Context, accountID string, billingAddressID, shippingAddressID *string) *apierror.APIError

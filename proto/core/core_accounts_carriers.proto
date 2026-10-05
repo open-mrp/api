@@ -101,6 +101,9 @@ message UpdateAccountRequest {
   // Must be one of the account's own addresses.
   optional string default_billing_address_id = 11;
   optional string default_shipping_address_id = 12;
+  // Branding fields to remove, by name (support_email, phone_number, website_url, facebook_handle,
+  // instagram_handle, linkedin_handle, twitter_handle). A field named here and given a value is removed.
+  repeated string cleared_branding_fields = 13;
 }
 message UpdateAccountResponse {
   AccountInfo account = 1;

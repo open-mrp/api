@@ -272,15 +272,17 @@ WHERE ap.slug = sqlc.arg('slug');
 -- name: UpdateAccountName :execresult
 UPDATE account SET name = sqlc.arg('name'), updated_at = NOW(3) WHERE id = sqlc.arg('account_id');
 
+-- The branding as it stands after an update: the service applies the update to what was there, so a
+-- cleared field is written as NULL.
 -- name: UpdateAccountBranding :execresult
 UPDATE account_branding SET
-    support_email = COALESCE(sqlc.narg('support_email'), support_email),
-    phone_number = COALESCE(sqlc.narg('phone_number'), phone_number),
-    facebook_handle = COALESCE(sqlc.narg('facebook_handle'), facebook_handle),
-    instagram_handle = COALESCE(sqlc.narg('instagram_handle'), instagram_handle),
-    linkedin_handle = COALESCE(sqlc.narg('linkedin_handle'), linkedin_handle),
-    twitter_handle = COALESCE(sqlc.narg('twitter_handle'), twitter_handle),
-    website_url = COALESCE(sqlc.narg('website_url'), website_url),
+    support_email = sqlc.narg('support_email'),
+    phone_number = sqlc.narg('phone_number'),
+    facebook_handle = sqlc.narg('facebook_handle'),
+    instagram_handle = sqlc.narg('instagram_handle'),
+    linkedin_handle = sqlc.narg('linkedin_handle'),
+    twitter_handle = sqlc.narg('twitter_handle'),
+    website_url = sqlc.narg('website_url'),
     updated_at = NOW(3)
 WHERE owner_account_id = sqlc.arg('account_id');
 

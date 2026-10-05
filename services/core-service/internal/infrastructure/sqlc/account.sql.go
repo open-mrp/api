@@ -805,13 +805,13 @@ func (q *Queries) SetAccountDefaultAddresses(ctx context.Context, arg SetAccount
 
 const updateAccountBranding = `-- name: UpdateAccountBranding :execresult
 UPDATE account_branding SET
-    support_email = COALESCE(?, support_email),
-    phone_number = COALESCE(?, phone_number),
-    facebook_handle = COALESCE(?, facebook_handle),
-    instagram_handle = COALESCE(?, instagram_handle),
-    linkedin_handle = COALESCE(?, linkedin_handle),
-    twitter_handle = COALESCE(?, twitter_handle),
-    website_url = COALESCE(?, website_url),
+    support_email = ?,
+    phone_number = ?,
+    facebook_handle = ?,
+    instagram_handle = ?,
+    linkedin_handle = ?,
+    twitter_handle = ?,
+    website_url = ?,
     updated_at = NOW(3)
 WHERE owner_account_id = ?
 `
@@ -827,6 +827,8 @@ type UpdateAccountBrandingParams struct {
 	AccountID       string
 }
 
+// The branding as it stands after an update: the service applies the update to what was there, so a
+// cleared field is written as NULL.
 func (q *Queries) UpdateAccountBranding(ctx context.Context, arg UpdateAccountBrandingParams) (sql.Result, error) {
 	return q.db.ExecContext(ctx, updateAccountBranding,
 		arg.SupportEmail,

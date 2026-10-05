@@ -2454,17 +2454,21 @@ func (h *gRPCHandler) UpdateAccount(ctx context.Context, req *pb.UpdateAccountRe
 	ctx, finalizeIdempotency := contracts.WithIdempotencyTracking(ctx)
 	defer finalizeIdempotency()
 
+	cleared := make(map[string]bool, len(req.ClearedBrandingFields))
+	for _, name := range req.ClearedBrandingFields {
+		cleared[name] = true
+	}
 	params := domain.UpdateAccountParams{
 		AccountID:       req.Id,
 		Name:            req.Name,
-		SupportEmail:    req.SupportEmail,
-		PhoneNumber:     req.PhoneNumber,
+		SupportEmail:    brandingPatch(req.SupportEmail, cleared, "support_email"),
+		PhoneNumber:     brandingPatch(req.PhoneNumber, cleared, "phone_number"),
 		Slug:            req.Slug,
-		WebsiteURL:      req.WebsiteUrl,
-		FacebookHandle:  req.FacebookHandle,
-		InstagramHandle: req.InstagramHandle,
-		LinkedInHandle:  req.LinkedinHandle,
-		TwitterHandle:   req.TwitterHandle,
+		WebsiteURL:      brandingPatch(req.WebsiteUrl, cleared, "website_url"),
+		FacebookHandle:  brandingPatch(req.FacebookHandle, cleared, "facebook_handle"),
+		InstagramHandle: brandingPatch(req.InstagramHandle, cleared, "instagram_handle"),
+		LinkedInHandle:  brandingPatch(req.LinkedinHandle, cleared, "linkedin_handle"),
+		TwitterHandle:   brandingPatch(req.TwitterHandle, cleared, "twitter_handle"),
 
 		DefaultBillingAddressID:  req.DefaultBillingAddressId,
 		DefaultShippingAddressID: req.DefaultShippingAddressId,
@@ -2478,6 +2482,18 @@ func (h *gRPCHandler) UpdateAccount(ctx context.Context, req *pb.UpdateAccountRe
 	return &pb.UpdateAccountResponse{
 		Account: accountToProto(account),
 	}, nil
+}
+
+// brandingPatch is a branding field of an account update: removed when named in cleared, set when
+// given, otherwise left alone.
+func brandingPatch(value *string, cleared map[string]bool, name string) field.Clearable[string] {
+	if cleared[name] {
+		return field.Clear[string]()
+	}
+	if value != nil {
+		return field.Set(*value)
+	}
+	return field.Unset[string]()
 }
 
 func (h *gRPCHandler) UploadAccountPhoto(ctx context.Context, req *pb.UploadAccountPhotoRequest) (*pb.UploadAccountPhotoResponse, error) {

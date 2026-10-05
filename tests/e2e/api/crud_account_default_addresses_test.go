@@ -46,3 +46,39 @@ func TestAccounts_SetDefaultBillingAddress(t *testing.T) {
 	assertErrorParam(t, requireErrorResponse(t, body, "validation_failed", "invalid_request_error"), "default_billing_address_id")
 	assert.Equal(t, addressID, accountDefaultBillingAddressID(t), "a refused address leaves the default alone")
 }
+
+// A branding field set to null is removed; one left out is kept. Not parallel: it edits the seeded
+// account's branding, which it puts back.
+func TestAccounts_BrandingFieldsClearWithNull(t *testing.T) {
+	path := accountsPath + "/" + SeedAccountID
+	read := func() map[string]any {
+		t.Helper()
+		status, body, err := apiClient.GetListRaw(path, url.Values{"include": {"branding"}})
+		require.NoError(t, err)
+		requireStatus(t, 200, status, body)
+		return jsonObject(parseJSON(body), "branding")
+	}
+	original := read()
+	t.Cleanup(func() {
+		restore := map[string]any{}
+		for _, f := range []string{"phone_number", "website_url", "instagram_handle"} {
+			restore[f] = original[f]
+		}
+		apiClient.Patch(path, restore, newIdempotencyKey())
+	})
+
+	status, body, err := apiClient.Patch(path, map[string]any{
+		"phone_number": "555-0100", "website_url": "https://example.com", "instagram_handle": "e2e",
+	}, newIdempotencyKey())
+	require.NoError(t, err)
+	requireStatus(t, 200, status, body)
+
+	status, body, err = apiClient.Patch(path, map[string]any{"phone_number": nil, "website_url": nil}, newIdempotencyKey())
+	require.NoError(t, err)
+	requireStatus(t, 200, status, body)
+
+	branding := read()
+	assert.Nil(t, branding["phone_number"], "null removes the phone number")
+	assert.Nil(t, branding["website_url"], "null removes the website")
+	assert.Equal(t, "e2e", jsonField(branding, "instagram_handle"), "a field left out is kept")
+}

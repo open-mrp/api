@@ -1483,6 +1483,10 @@ AND (
     OR MATCH(ps.name) AGAINST(? IN BOOLEAN MODE)
 )
 AND (
+    ? IS NULL
+    OR REGEXP_LIKE(ps.name, ?, 'i')
+)
+AND (
     ? = false
     OR p.item_id IN (/*SLICE:item_ids*/?)
     OR EXISTS (
@@ -1532,6 +1536,7 @@ LIMIT ?
 type ListProductionStepsBackwardParams struct {
 	AccountID                    string
 	SearchQuery                  sql.NullString
+	ShortWordsPattern            sql.NullString
 	IncludeItemFilter            interface{}
 	ItemIds                      []string
 	IncludeMachineFilter         interface{}
@@ -1598,12 +1603,15 @@ type ListProductionStepsBackwardRow struct {
 	OverheadRateDenUnitType  sql.NullString
 }
 
+// Search words too short for the FULLTEXT index; see db.AllWordsSearch.
 func (q *Queries) ListProductionStepsBackward(ctx context.Context, arg ListProductionStepsBackwardParams) ([]ListProductionStepsBackwardRow, error) {
 	query := listProductionStepsBackward
 	var queryParams []interface{}
 	queryParams = append(queryParams, arg.AccountID)
 	queryParams = append(queryParams, arg.SearchQuery)
 	queryParams = append(queryParams, arg.SearchQuery)
+	queryParams = append(queryParams, arg.ShortWordsPattern)
+	queryParams = append(queryParams, arg.ShortWordsPattern)
 	queryParams = append(queryParams, arg.IncludeItemFilter)
 	if len(arg.ItemIds) > 0 {
 		for _, v := range arg.ItemIds {
@@ -1788,6 +1796,10 @@ AND (
     OR MATCH(ps.name) AGAINST(? IN BOOLEAN MODE)
 )
 AND (
+    ? IS NULL
+    OR REGEXP_LIKE(ps.name, ?, 'i')
+)
+AND (
     ? = false
     OR p.item_id IN (/*SLICE:item_ids*/?)
     OR EXISTS (
@@ -1838,6 +1850,7 @@ LIMIT ?
 type ListProductionStepsForwardParams struct {
 	AccountID                    string
 	SearchQuery                  sql.NullString
+	ShortWordsPattern            sql.NullString
 	IncludeItemFilter            interface{}
 	ItemIds                      []string
 	IncludeMachineFilter         interface{}
@@ -1904,12 +1917,15 @@ type ListProductionStepsForwardRow struct {
 	OverheadRateDenUnitType  sql.NullString
 }
 
+// Search words too short for the FULLTEXT index; see db.AllWordsSearch.
 func (q *Queries) ListProductionStepsForward(ctx context.Context, arg ListProductionStepsForwardParams) ([]ListProductionStepsForwardRow, error) {
 	query := listProductionStepsForward
 	var queryParams []interface{}
 	queryParams = append(queryParams, arg.AccountID)
 	queryParams = append(queryParams, arg.SearchQuery)
 	queryParams = append(queryParams, arg.SearchQuery)
+	queryParams = append(queryParams, arg.ShortWordsPattern)
+	queryParams = append(queryParams, arg.ShortWordsPattern)
 	queryParams = append(queryParams, arg.IncludeItemFilter)
 	if len(arg.ItemIds) > 0 {
 		for _, v := range arg.ItemIds {

@@ -80,8 +80,21 @@ func (s *AddressValidationSvc) GetPlaceDetails(_ context.Context, placeID string
 	return nil, apierror.NewResourceNotFoundError("Place not found.")
 }
 
+// stubCoveredRegions stands in for the countries Google Address Validation covers. Google rejects any
+// other region code, which the real service reports as unsupported.
+var stubCoveredRegions = map[string]bool{
+	"AR": true, "AT": true, "AU": true, "BE": true, "BR": true, "CA": true, "CH": true, "CL": true,
+	"CO": true, "CZ": true, "DE": true, "DK": true, "EE": true, "ES": true, "FI": true, "FR": true,
+	"GB": true, "HR": true, "HU": true, "IE": true, "IT": true, "LT": true, "LU": true, "LV": true,
+	"MX": true, "MY": true, "NL": true, "NO": true, "NZ": true, "PL": true, "PR": true, "PT": true,
+	"SE": true, "SG": true, "SI": true, "SK": true, "US": true,
+}
+
 func (s *AddressValidationSvc) ValidateAddress(_ context.Context, addressLine1 string, addressLine2 *string, city, state, postalCode, country string) (*domain.ValidatedAddress, *apierror.APIError) {
 	regionCode := stubRegionCode(country)
+	if !stubCoveredRegions[regionCode] {
+		return nil, domain.UnsupportedAddressRegionError(country)
+	}
 
 	// Detect clearly fake addresses by checking for nonsensical state codes or obviously invalid street numbers.
 	isFake := state == "ZZ" || strings.Contains(strings.ToLower(city), "faketown") ||

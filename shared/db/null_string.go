@@ -44,6 +44,40 @@ func EscapeLike(s string) string {
 	return s
 }
 
+// AllWordsSearch splits search input into what a FULLTEXT index can match and what it cannot, so that
+// every word must begin a word of the text, in any order. Words of at least innoDBMinTokenSize
+// characters go into a BOOLEAN MODE query (see AllWordsPrefixQuery); shorter words are not in the index,
+// so they go into a pattern for REGEXP_LIKE(col, pattern, 'i') with one word-start lookahead per word,
+// "QA 2" becoming `^(?=.*\bQA)(?=.*\b2)`. Either part is NULL when it has no words.
+func AllWordsSearch(query *string) (fulltext, shortWords sql.NullString) {
+	if query == nil {
+		return
+	}
+	var long, short []string
+	for _, w := range searchWords(*query) {
+		if len(w) < innoDBMinTokenSize {
+			short = append(short, `(?=.*\b`+w+`)`)
+		} else {
+			long = append(long, "+"+w+"*")
+		}
+	}
+	if len(long) > 0 {
+		fulltext = sql.NullString{String: strings.Join(long, " "), Valid: true}
+	}
+	if len(short) > 0 {
+		shortWords = sql.NullString{String: "^" + strings.Join(short, ""), Valid: true}
+	}
+	return
+}
+
+// searchWords splits search input on anything that is not an ASCII letter or digit, which also leaves
+// nothing a FULLTEXT or regular expression would read as an operator.
+func searchWords(query string) []string {
+	return strings.FieldsFunc(query, func(r rune) bool {
+		return (r < 'a' || r > 'z') && (r < 'A' || r > 'Z') && (r < '0' || r > '9')
+	})
+}
+
 // AllWordsPrefixQuery turns search input into a BOOLEAN MODE query that requires every word to
 // begin a word of the indexed text, as the dashboard's PrismaUtils.sanitizeQuery did: the input is
 // split on anything that is not an ASCII letter or digit, so "TX-0012 acme" becomes "+TX* +0012* +acme*".
@@ -52,9 +86,7 @@ func AllWordsPrefixQuery(query *string) string {
 	if query == nil {
 		return ""
 	}
-	words := strings.FieldsFunc(*query, func(r rune) bool {
-		return (r < 'a' || r > 'z') && (r < 'A' || r > 'Z') && (r < '0' || r > '9')
-	})
+	words := searchWords(*query)
 	for i, w := range words {
 		words[i] = "+" + w + "*"
 	}

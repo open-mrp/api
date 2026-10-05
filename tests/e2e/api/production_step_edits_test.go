@@ -355,13 +355,14 @@ func TestProductionSteps_DeleteUnlinksBatches(t *testing.T) {
 	assert.Nil(t, stepID, "the batch no longer points at the deleted step")
 }
 
-// The list search matches every word, in any order, as the dashboard's search did. Words under the
-// fulltext index's three-character minimum match nothing there too.
+// The list search matches every word by its start, in any order, as the dashboard's search did. Words
+// under the FULLTEXT index's three-character minimum, which the dashboard silently matched to nothing,
+// are matched too.
 func TestProductionSteps_SearchMatchesEveryWord(t *testing.T) {
 	t.Parallel()
 	s := createEditableStep(t)
 	token := uniqueName("zqx")
-	status, body, err := apiClient.Patch(productionStepsPath+"/"+s.id, map[string]any{"name": "Sew " + token + " hem"}, newIdempotencyKey())
+	status, body, err := apiClient.Patch(productionStepsPath+"/"+s.id, map[string]any{"name": "Sew " + token + " hem P2"}, newIdempotencyKey())
 	require.NoError(t, err)
 	requireStatus(t, 200, status, body)
 
@@ -380,6 +381,10 @@ func TestProductionSteps_SearchMatchesEveryWord(t *testing.T) {
 	assert.Contains(t, search("hem "+token), s.id, "words in another order")
 	assert.Contains(t, search(token[:len(token)-2]), s.id, "a word prefix")
 	assert.NotContains(t, search(token+" zipper"), s.id, "every word must match")
+	assert.Contains(t, search("p2 "+token), s.id, "a word under three characters")
+	assert.Contains(t, search(token+" P"), s.id, "a one-character word prefix")
+	assert.NotContains(t, search(token+" P3"), s.id, "a short word must match too")
+	assert.NotContains(t, search(token+" em"), s.id, "a short word matches the start of a word, not its middle")
 }
 
 func TestConsumptions_InstructionsClearWithNull(t *testing.T) {

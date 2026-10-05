@@ -150,3 +150,26 @@ func TestAllWordsPrefixQuery(t *testing.T) {
 		t.Errorf("AllWordsPrefixQuery(nil) = %q", got)
 	}
 }
+
+func TestAllWordsSearch(t *testing.T) {
+	for in, want := range map[string][2]string{
+		"":                  {"", ""},
+		"  - ":              {"", ""},
+		"knit large":        {"+knit* +large*", ""},
+		"QA Init P1":        {"+Init*", `^(?=.*\bQA)(?=.*\bP1)`},
+		"TX-0012":           {"+0012*", `^(?=.*\bTX)`},
+		"a b":               {"", `^(?=.*\ba)(?=.*\bb)`},
+		"sew (pair) 2% off": {"+sew* +pair* +off*", `^(?=.*\b2)`},
+	} {
+		fulltext, short := AllWordsSearch(&in)
+		if fulltext.String != want[0] || fulltext.Valid != (want[0] != "") {
+			t.Errorf("AllWordsSearch(%q) fulltext = %+v, want %q", in, fulltext, want[0])
+		}
+		if short.String != want[1] || short.Valid != (want[1] != "") {
+			t.Errorf("AllWordsSearch(%q) short words = %+v, want %q", in, short, want[1])
+		}
+	}
+	if f, s := AllWordsSearch(nil); f.Valid || s.Valid {
+		t.Errorf("AllWordsSearch(nil) = %+v, %+v, want both NULL", f, s)
+	}
+}

@@ -178,6 +178,11 @@ AND (
     sqlc.narg('search_query') IS NULL
     OR MATCH(ps.name) AGAINST(sqlc.narg('search_query') IN BOOLEAN MODE)
 )
+-- Search words too short for the FULLTEXT index; see db.AllWordsSearch.
+AND (
+    sqlc.narg('short_words_pattern') IS NULL
+    OR REGEXP_LIKE(ps.name, sqlc.narg('short_words_pattern'), 'i')
+)
 AND (
     sqlc.arg('include_item_filter') = false
     OR p.item_id IN (sqlc.slice('item_ids'))
@@ -277,6 +282,11 @@ WHERE ps.account_id = sqlc.arg('account_id')
 AND (
     sqlc.narg('search_query') IS NULL
     OR MATCH(ps.name) AGAINST(sqlc.narg('search_query') IN BOOLEAN MODE)
+)
+-- Search words too short for the FULLTEXT index; see db.AllWordsSearch.
+AND (
+    sqlc.narg('short_words_pattern') IS NULL
+    OR REGEXP_LIKE(ps.name, sqlc.narg('short_words_pattern'), 'i')
 )
 AND (
     sqlc.arg('include_item_filter') = false

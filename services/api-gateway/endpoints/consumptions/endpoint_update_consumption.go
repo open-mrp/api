@@ -40,7 +40,9 @@ type UpdateConsumptionRequest struct {
 	// Send it together with `waste_quantity_value`, even when the unit is not changing.
 	WasteQuantityUnitID field.Optional[string] `json:"waste_quantity_unit_id,omitzero" validate:"omitempty"`
 	// Instructions for how this material is consumed.
-	Instructions field.Optional[string] `json:"instructions,omitzero"`
+	//
+	// Send `null` to remove them.
+	Instructions field.Clearable[string] `json:"instructions,omitzero"`
 }
 
 var sampleUpdateConsumptionRequest = &UpdateConsumptionRequest{
@@ -75,7 +77,7 @@ func (e *UpdateConsumptionEndpoint) Materialize() *apiendpoint.APIEndpoint[*Upda
 		},
 		IncludeConfig: apiendpoint.IncludesFor(apiendpoint.IncludesParams{
 			ObjectType: constants.ObjectTypeConsumption,
-			Fields:     []string{"consumed_item"},
+			Fields:     consumptionEndpointIncludes,
 		}),
 	})
 }

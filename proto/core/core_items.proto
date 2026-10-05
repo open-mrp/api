@@ -285,6 +285,7 @@ message LightMachineInfo {
   string serial_number = 3;
   google.protobuf.Timestamp created_at = 4;
   google.protobuf.Timestamp updated_at = 5;
+  optional string department_id = 6;
 }
 message BatchFlowNodeInfo {
   BatchInfo batch = 1;

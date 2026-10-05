@@ -3003,6 +3003,7 @@ type LightMachineInfo struct {
 	SerialNumber  string                 `protobuf:"bytes,3,opt,name=serial_number,json=serialNumber,proto3" json:"serial_number,omitempty"`
 	CreatedAt     *timestamppb.Timestamp `protobuf:"bytes,4,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
 	UpdatedAt     *timestamppb.Timestamp `protobuf:"bytes,5,opt,name=updated_at,json=updatedAt,proto3" json:"updated_at,omitempty"`
+	DepartmentId  *string                `protobuf:"bytes,6,opt,name=department_id,json=departmentId,proto3,oneof" json:"department_id,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -3070,6 +3071,13 @@ func (x *LightMachineInfo) GetUpdatedAt() *timestamppb.Timestamp {
 		return x.UpdatedAt
 	}
 	return nil
+}
+
+func (x *LightMachineInfo) GetDepartmentId() string {
+	if x != nil && x.DepartmentId != nil {
+		return *x.DepartmentId
+	}
+	return ""
 }
 
 type BatchFlowNodeInfo struct {
@@ -6254,7 +6262,7 @@ const file_core_core_items_proto_rawDesc = "" +
 	"\fBatchLotInfo\x12\x1d\n" +
 	"\n" +
 	"lot_number\x18\x01 \x01(\tR\tlotNumber\x12\x12\n" +
-	"\x04type\x18\x02 \x01(\tR\x04type\"\xd1\x01\n" +
+	"\x04type\x18\x02 \x01(\tR\x04type\"\x8d\x02\n" +
 	"\x10LightMachineInfo\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x12\n" +
 	"\x04name\x18\x02 \x01(\tR\x04name\x12#\n" +
@@ -6262,7 +6270,9 @@ const file_core_core_items_proto_rawDesc = "" +
 	"\n" +
 	"created_at\x18\x04 \x01(\v2\x1a.google.protobuf.TimestampR\tcreatedAt\x129\n" +
 	"\n" +
-	"updated_at\x18\x05 \x01(\v2\x1a.google.protobuf.TimestampR\tupdatedAt\"\x8c\x01\n" +
+	"updated_at\x18\x05 \x01(\v2\x1a.google.protobuf.TimestampR\tupdatedAt\x12(\n" +
+	"\rdepartment_id\x18\x06 \x01(\tH\x00R\fdepartmentId\x88\x01\x01B\x10\n" +
+	"\x0e_department_id\"\x8c\x01\n" +
 	"\x11BatchFlowNodeInfo\x12%\n" +
 	"\x05batch\x18\x01 \x01(\v2\x0f.core.BatchInfoR\x05batch\x12&\n" +
 	"\x0finput_batch_ids\x18\x02 \x03(\tR\rinputBatchIds\x12(\n" +
@@ -6709,6 +6719,7 @@ func file_core_core_items_proto_init() {
 	file_core_core_items_proto_msgTypes[34].OneofWrappers = []any{}
 	file_core_core_items_proto_msgTypes[42].OneofWrappers = []any{}
 	file_core_core_items_proto_msgTypes[43].OneofWrappers = []any{}
+	file_core_core_items_proto_msgTypes[45].OneofWrappers = []any{}
 	file_core_core_items_proto_msgTypes[48].OneofWrappers = []any{}
 	file_core_core_items_proto_msgTypes[54].OneofWrappers = []any{}
 	file_core_core_items_proto_msgTypes[68].OneofWrappers = []any{}

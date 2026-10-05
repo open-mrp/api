@@ -9,6 +9,7 @@ import (
 
 	"github.com/open-mrp/api/services/auth-service/pkg/types"
 	"github.com/open-mrp/api/services/core-service/internal/domain"
+	"github.com/open-mrp/api/services/core-service/internal/event"
 	"github.com/open-mrp/api/shared/appctx"
 	"github.com/open-mrp/api/shared/audit"
 	"github.com/open-mrp/api/shared/constants"
@@ -670,6 +671,9 @@ func writeBulkUpsertProductionSteps(txCtx context.Context, txRepos domain.RepoFa
 				if apiErr != nil {
 					return apiErr
 				}
+				if apiErr := publishImportedStepCostBasis(txCtx, txRepos, accountID, nil, created); apiErr != nil {
+					return apiErr
+				}
 				if apiErr := audit.NewPublisher().Publish(txCtx, txRepos.NewOutboxRepo(), audit.EventData{
 					ServiceName:  domain.ServiceName,
 					Action:       constants.AuditActionCreate,
@@ -741,6 +745,9 @@ func writeBulkUpsertProductionSteps(txCtx context.Context, txRepos domain.RepoFa
 
 			updated, apiErr := txRepo.Get(txCtx, accountID, old.ID)
 			if apiErr != nil {
+				return apiErr
+			}
+			if apiErr := publishImportedStepCostBasis(txCtx, txRepos, accountID, oldFull, updated); apiErr != nil {
 				return apiErr
 			}
 			if apiErr := audit.NewPublisher().Publish(txCtx, txRepos.NewOutboxRepo(), audit.EventData{
@@ -966,6 +973,9 @@ func (s *productionStepSvcImpl) bulkUpdateExistingStep(
 		if apiErr != nil {
 			return apiErr
 		}
+		if apiErr := publishImportedStepCostBasis(txCtx, txSvc.repos, accountID, old, updated); apiErr != nil {
+			return apiErr
+		}
 
 		changes := audit.ComputeChanges(old, updated)
 		if apiErr := audit.NewPublisher().Publish(txCtx, txSvc.repos.NewOutboxRepo(), audit.EventData{
@@ -1126,6 +1136,9 @@ func (s *productionStepSvcImpl) bulkCreateNewStep(
 		if apiErr != nil {
 			return apiErr
 		}
+		if apiErr := publishImportedStepCostBasis(txCtx, txSvc.repos, accountID, nil, created); apiErr != nil {
+			return apiErr
+		}
 
 		changes := audit.ComputeChanges(nil, created)
 		if apiErr := audit.NewPublisher().Publish(txCtx, txSvc.repos.NewOutboxRepo(), audit.EventData{
@@ -1156,4 +1169,21 @@ func (s *productionStepSvcImpl) bulkCreateNewStep(
 		ProductionStepID: &stepID,
 		Action:           "created",
 	}
+}
+
+// publishImportedStepCostBasis restates the items an imported step produces, before and after: a row
+// can replace what the step makes as well as what it takes.
+func publishImportedStepCostBasis(ctx context.Context, repos domain.RepoFactory, accountID string, before, after *domain.ProductionStep) *apierror.APIError {
+	var itemIDs []string
+	for _, step := range []*domain.ProductionStep{before, after} {
+		if step != nil && step.Production != nil {
+			itemIDs = append(itemIDs, step.Production.ItemID)
+		}
+	}
+	for _, itemID := range distinctNonEmpty(itemIDs...) {
+		if apiErr := event.PublishItemCostBasisChanged(ctx, repos, accountID, itemID, event.CostBasisProductionStepsImported); apiErr != nil {
+			return apiErr
+		}
+	}
+	return nil
 }

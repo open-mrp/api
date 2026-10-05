@@ -11123,6 +11123,20 @@ func (mr *MockMachineRepoMockRecorder) List(ctx, params any) *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "List", reflect.TypeOf((*MockMachineRepo)(nil).List), ctx, params)
 }
 
+// SetProductionStep mocks base method.
+func (m *MockMachineRepo) SetProductionStep(ctx context.Context, accountID string, ids []string, productionStepID *string) *apierror.APIError {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "SetProductionStep", ctx, accountID, ids, productionStepID)
+	ret0, _ := ret[0].(*apierror.APIError)
+	return ret0
+}
+
+// SetProductionStep indicates an expected call of SetProductionStep.
+func (mr *MockMachineRepoMockRecorder) SetProductionStep(ctx, accountID, ids, productionStepID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SetProductionStep", reflect.TypeOf((*MockMachineRepo)(nil).SetProductionStep), ctx, accountID, ids, productionStepID)
+}
+
 // Update mocks base method.
 func (m *MockMachineRepo) Update(ctx context.Context, params domain.UpdateMachineParams) (*domain.Machine, *apierror.APIError) {
 	m.ctrl.T.Helper()

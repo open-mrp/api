@@ -1023,6 +1023,8 @@ type MachineRepo interface {
 	Export(ctx context.Context, params ExportMachinesParams) ([]*Machine, *apierror.APIError)
 	Get(ctx context.Context, params GetMachineParams) (*Machine, *apierror.APIError)
 	GetByIDs(ctx context.Context, accountID string, ids []string) ([]*Machine, *apierror.APIError)
+	// SetProductionStep assigns the machines to a production step, or unassigns them when productionStepID is nil.
+	SetProductionStep(ctx context.Context, accountID string, ids []string, productionStepID *string) *apierror.APIError
 	Create(ctx context.Context, id string, params CreateMachineParams) (*Machine, *apierror.APIError)
 	Update(ctx context.Context, params UpdateMachineParams) (*Machine, *apierror.APIError)
 	Delete(ctx context.Context, params DeleteMachineParams) *apierror.APIError

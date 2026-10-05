@@ -14,6 +14,7 @@ import (
 	"github.com/open-mrp/api/services/api-gateway/pkg/resourcekit"
 	"github.com/open-mrp/api/shared/constants"
 	apierror "github.com/open-mrp/api/shared/errors"
+	"github.com/open-mrp/api/shared/field"
 	pb "github.com/open-mrp/api/shared/proto/core"
 	"github.com/open-mrp/api/shared/tracing"
 	"google.golang.org/grpc"
@@ -195,6 +196,10 @@ func (m *productionStepSvcImpl) UpdateProductionStep(ctx context.Context, req *U
 		LevelingFactor:    req.LevelingFactor.Ptr(),
 		Allowances:        req.Allowances.Ptr(),
 		ScanningStationId: req.ScanningStationID.Ptr(),
+		Notes:             field.StringClearableToProto(req.Notes),
+	}
+	if machineIDs, ok := req.MachineIDs.Value(); ok {
+		pbReq.MachineIds = &pb.StringListPatch{Value: machineIDs}
 	}
 
 	resp, apiErr := grpcutil.CallRPC(ctx, productionStepSvcTracer, "service.production_steps.update", domain.ServiceName,
@@ -473,7 +478,11 @@ func productionOutputFromProto(p *pb.ProductionInfo) *apiresource.ProductionOutp
 }
 
 func stashProductionOutputMeta(meta *resourcekit.LoadMeta, p *pb.ProductionInfo) {
-	if p == nil || p.ItemId == "" {
+	if p == nil {
+		return
+	}
+	stashStepQuantityUnit(meta, p.Quantity)
+	if p.ItemId == "" {
 		return
 	}
 	// Only the id is stashed: the production query knows the item's SKU and description but not its
@@ -485,6 +494,12 @@ func stashProductionOutputMeta(meta *resourcekit.LoadMeta, p *pb.ProductionInfo)
 func stashProductionStepMeta(meta *resourcekit.LoadMeta, s *pb.ProductionStepInfo) {
 	if s == nil {
 		return
+	}
+
+	// The rates arrive with only their units' ids, which are stashed so `labor_rate.numerator_unit`
+	// and the like resolve through the unit loader.
+	for _, r := range []*pb.ProductionStepRateInfo{s.LaborRate, s.LaborTime, s.OverheadRate} {
+		stashStepRateUnits(meta, r)
 	}
 
 	stepTS := grpcutil.TimestampToTime(s.CreatedAt)
@@ -515,6 +530,9 @@ func stashProductionStepMeta(meta *resourcekit.LoadMeta, s *pb.ProductionStepInf
 		mUpdated := stepTS
 		if m.UpdatedAt != nil {
 			mUpdated = grpcutil.TimestampToTime(m.UpdatedAt)
+		}
+		if m.DepartmentId != nil && *m.DepartmentId != "" {
+			meta.Set(constants.ObjectTypeMachine, m.Id, "department_id", *m.DepartmentId)
 		}
 		machines[i] = apiresource.Machine{
 			ID:           m.Id,
@@ -562,6 +580,8 @@ func stepConsumptionFromProto(meta *resourcekit.LoadMeta, c *pb.ConsumptionInfo)
 	if c.ItemId != "" {
 		meta.Set(constants.ObjectTypeConsumption, c.Id, "consumed_item_id", c.ItemId)
 	}
+	stashStepQuantityUnit(meta, c.Quantity)
+	stashStepQuantityUnit(meta, c.WasteQuantity)
 
 	return apiresource.Consumption{
 		ID:            c.Id,
@@ -604,4 +624,21 @@ func lightProductionStepToResource(st *pb.LightProductionStepInfo, fallback time
 		CreatedAt:      ca,
 		UpdatedAt:      ua,
 	}
+}
+
+// stashStepRateUnits records the ids of a rate's units so they resolve on `?include=`.
+func stashStepRateUnits(meta *resourcekit.LoadMeta, r *pb.ProductionStepRateInfo) {
+	if r == nil || r.Id == "" {
+		return
+	}
+	meta.Set(constants.ObjectTypeRate, r.Id, "numerator_unit_id", r.NumeratorUnitId)
+	meta.Set(constants.ObjectTypeRate, r.Id, "denominator_unit_id", r.DenominatorUnitId)
+}
+
+// stashStepQuantityUnit records the id of a quantity's unit so it resolves on `?include=`.
+func stashStepQuantityUnit(meta *resourcekit.LoadMeta, q *pb.QuantityInfo) {
+	if q == nil || q.Id == "" {
+		return
+	}
+	meta.Set(constants.ObjectTypeQuantity, q.Id, "unit_id", q.UnitId)
 }

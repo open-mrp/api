@@ -390,7 +390,7 @@ JOIN production_step ps ON ps.id = pcps.A
 WHERE pcps.B = sqlc.arg('step_id');
 
 -- name: GetProductionStepMachines :many
-SELECT m.id, m.name FROM machine m
+SELECT m.id, m.name, m.serial_number, m.department_id FROM machine m
 WHERE m.production_step_id = sqlc.arg('production_step_id');
 
 -- name: InsertProductionStep :exec
@@ -457,6 +457,10 @@ UPDATE production_step SET
         WHEN sqlc.arg('update_scanning_station') = true THEN sqlc.narg('scanning_station_id')
         ELSE scanning_station_id
     END,
+    notes = CASE
+        WHEN sqlc.arg('update_notes') = true THEN sqlc.narg('notes')
+        ELSE notes
+    END,
     updated_at = NOW(3)
 WHERE id = sqlc.arg('id')
 AND account_id = sqlc.arg('account_id');
@@ -493,6 +497,13 @@ DELETE FROM consumption WHERE production_step_id = sqlc.arg('step_id');
 -- name: ClearProductionStepFromMachines :exec
 UPDATE machine SET production_step_id = NULL, updated_at = NOW(3)
 WHERE production_step_id = sqlc.arg('step_id');
+
+-- name: ClearProductionStepFromBatches :exec
+-- A deleted step's batches keep their history but no longer name it, as the dashboard's delete left
+-- them; a dangling id would send a later undo looking for a step that is gone. Served by
+-- batch_production_step_id_idx.
+UPDATE batch SET production_step_id = NULL, updated_at = NOW(3)
+WHERE production_step_id = sqlc.arg('production_step_id');
 
 -- name: ExistsProductionStepByName :one
 SELECT COUNT(*) FROM production_step

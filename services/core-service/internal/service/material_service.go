@@ -8,6 +8,7 @@ import (
 
 	"github.com/open-mrp/api/services/auth-service/pkg/types"
 	"github.com/open-mrp/api/services/core-service/internal/domain"
+	"github.com/open-mrp/api/services/core-service/internal/event"
 	"github.com/open-mrp/api/shared/appctx"
 	"github.com/open-mrp/api/shared/audit"
 	"github.com/open-mrp/api/shared/constants"
@@ -538,6 +539,10 @@ func (s *materialSvcImpl) updateMaterialInTx(txCtx context.Context, params domai
 			return nil, apiErr
 		}
 		if apiErr := txItemRepo.ClearItemDirtyFlag(txCtx, params.AccountID, existing.ItemID); apiErr != nil {
+			return nil, apiErr
+		}
+		// Everything built from this material is now costed from a price that has moved.
+		if apiErr := event.PublishItemCostBasisChanged(txCtx, s.repos, params.AccountID, existing.ItemID, event.CostBasisUnitCostUpdated); apiErr != nil {
 			return nil, apiErr
 		}
 	}

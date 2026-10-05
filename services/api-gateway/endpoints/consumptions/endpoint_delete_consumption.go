@@ -42,7 +42,7 @@ func (e *DeleteConsumptionEndpoint) Materialize() *apiendpoint.APIEndpoint[*Dele
 		},
 		IncludeConfig: apiendpoint.IncludesFor(apiendpoint.IncludesParams{
 			ObjectType: constants.ObjectTypeConsumption,
-			Fields:     []string{"consumed_item"},
+			Fields:     consumptionEndpointIncludes,
 		}),
 	})
 }

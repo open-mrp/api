@@ -209,8 +209,8 @@ func mapGetFullRow(row sqlc.GetProductionStepFullRow) *domain.ProductionStep {
 }
 
 func (r *productionStepRepoImpl) buildListParams(params domain.ListProductionStepsParams) (searchQuery sql.NullString, includeItemFilter, includeMachineFilter, includeScanningStationFilter, includeInputStepFilter, includeOutputStepFilter bool, itemIDs, machineIDs []string, scanningStationIDs []sql.NullString, inputStepIDs, outputStepIDs []string, startDate, endDate sql.NullTime) {
-	if params.Query != nil && *params.Query != "" {
-		searchQuery = sql.NullString{String: *params.Query + "*", Valid: true}
+	if term := db.AllWordsPrefixQuery(params.Query); term != "" {
+		searchQuery = sql.NullString{String: term, Valid: true}
 	}
 
 	includeItemFilter = len(params.ItemIDs) > 0
@@ -498,6 +498,8 @@ func (r *productionStepRepoImpl) Update(ctx context.Context, params domain.Updat
 		Allowances:            ptrToNullString(params.Allowances),
 		UpdateScanningStation: params.ScanningStationID != nil,
 		ScanningStationID:     ptrToNullString(params.ScanningStationID),
+		UpdateNotes:           params.Notes.WasProvided(),
+		Notes:                 ptrToNullString(params.Notes.ValuePtr()),
 	})
 	if apiErr := db.MapSQLError(err); apiErr != nil {
 		return tracing.Trace(span, apiErr)
@@ -588,6 +590,7 @@ func (r *productionStepRepoImpl) DeleteOwnedRows(ctx context.Context, id string)
 		func() error { return r.queries.DeleteProductionStepProductions(ctx, stepID) },
 		func() error { return r.queries.DeleteProductionStepConsumptions(ctx, stepID) },
 		func() error { return r.queries.ClearProductionStepFromMachines(ctx, stepID) },
+		func() error { return r.queries.ClearProductionStepFromBatches(ctx, stepID) },
 	}
 	for _, step := range steps {
 		if apiErr := db.MapSQLError(step()); apiErr != nil {
@@ -641,7 +644,8 @@ func (r *productionStepRepoImpl) GetMachines(ctx context.Context, id string) ([]
 
 	machines := make([]domain.LightMachine, len(rows))
 	for i, row := range rows {
-		machines[i] = domain.LightMachine{ID: row.ID, Name: row.Name}
+		departmentID := row.DepartmentID
+		machines[i] = domain.LightMachine{ID: row.ID, Name: row.Name, SerialNumber: row.SerialNumber, DepartmentID: &departmentID}
 	}
 	return machines, nil
 }

@@ -6,6 +6,7 @@ import (
 
 	"github.com/open-mrp/api/services/auth-service/pkg/types"
 	"github.com/open-mrp/api/services/core-service/internal/domain"
+	"github.com/open-mrp/api/services/core-service/internal/event"
 	"github.com/open-mrp/api/shared/appctx"
 	"github.com/open-mrp/api/shared/audit"
 	"github.com/open-mrp/api/shared/constants"
@@ -262,6 +263,11 @@ func (s *productionStepSvcImpl) CreateProductionStep(ctx context.Context, params
 			}
 			result = fetched
 
+			// The produced item is now costed from this step.
+			if apiErr := event.PublishItemCostBasisChanged(txCtx, txSvc.repos, params.AccountID, params.Production.ItemID, event.CostBasisProductionStepCreated); apiErr != nil {
+				return apiErr
+			}
+
 			changes := audit.ComputeChanges(nil, result)
 			if apiErr := audit.NewPublisher().Publish(txCtx, txSvc.repos.NewOutboxRepo(), audit.EventData{
 				ServiceName:  domain.ServiceName,
@@ -361,11 +367,24 @@ func (s *productionStepSvcImpl) UpdateProductionStep(ctx context.Context, params
 				return apiErr
 			}
 
+			if params.MachineIDs != nil {
+				if apiErr := txSvc.setStepMachines(txCtx, params.AccountID, old, *params.MachineIDs); apiErr != nil {
+					return apiErr
+				}
+			}
+
 			fetched, apiErr := txRepo.Get(txCtx, params.AccountID, params.ProductionStepID)
 			if apiErr != nil {
 				return apiErr
 			}
 			result = fetched
+
+			// Leveling factor and allowances scale the step's labor, so any edit restates what it makes.
+			if result.Production != nil {
+				if apiErr := event.PublishItemCostBasisChanged(txCtx, txSvc.repos, params.AccountID, result.Production.ItemID, event.CostBasisProductionStepUpdated); apiErr != nil {
+					return apiErr
+				}
+			}
 
 			changes := audit.ComputeChanges(old, result)
 			if apiErr := audit.NewPublisher().Publish(txCtx, txSvc.repos.NewOutboxRepo(), audit.EventData{
@@ -390,6 +409,85 @@ func (s *productionStepSvcImpl) UpdateProductionStep(ctx context.Context, params
 	default:
 		return nil, tracing.Trace(span, apierror.NewInvariantViolationError("Unexpected recovery point: "+idempotencyKey.RecoveryPoint))
 	}
+}
+
+// setStepMachines makes machineIDs the step's machines. A machine holds one step, so one assigned elsewhere moves here.
+func (s *productionStepSvcImpl) setStepMachines(ctx context.Context, accountID string, step *domain.ProductionStep, machineIDs []string) *apierror.APIError {
+	wanted := make(map[string]bool, len(machineIDs))
+	ids := make([]string, 0, len(machineIDs))
+	for _, id := range machineIDs {
+		if id == "" {
+			return apierror.NewValidationErrorWithParam("Machine IDs cannot be blank.", "machine_ids")
+		}
+		if !wanted[id] {
+			wanted[id] = true
+			ids = append(ids, id)
+		}
+	}
+
+	machineRepo := s.repos.NewMachineRepo()
+
+	// previousStep holds where each machine is assigned now, so moves can be audited.
+	previousStep := make(map[string]*string, len(ids)+len(step.Machines))
+	if len(ids) > 0 {
+		machines, apiErr := machineRepo.GetByIDs(ctx, accountID, ids)
+		if apiErr != nil {
+			return apiErr
+		}
+		if len(machines) != len(ids) {
+			return apierror.NewResourceNotFoundError("Machine not found.")
+		}
+		for _, m := range machines {
+			previousStep[m.ID] = m.ProductionStepID
+		}
+	}
+
+	var detach []string
+	for _, m := range step.Machines {
+		if !wanted[m.ID] {
+			detach = append(detach, m.ID)
+			previousStep[m.ID] = &step.ID
+		}
+	}
+	var attach []string
+	for _, id := range ids {
+		if prev := previousStep[id]; prev == nil || *prev != step.ID {
+			attach = append(attach, id)
+		}
+	}
+
+	if apiErr := machineRepo.SetProductionStep(ctx, accountID, detach, nil); apiErr != nil {
+		return apiErr
+	}
+	if apiErr := machineRepo.SetProductionStep(ctx, accountID, attach, &step.ID); apiErr != nil {
+		return apiErr
+	}
+
+	publisher := audit.NewPublisher()
+	outbox := s.repos.NewOutboxRepo()
+	audited := func(machineIDs []string, next *string) *apierror.APIError {
+		for _, id := range machineIDs {
+			changes := audit.ComputeChanges(
+				&domain.Machine{ProductionStepID: previousStep[id]},
+				&domain.Machine{ProductionStepID: next},
+				"ProductionStepID",
+			)
+			if apiErr := publisher.Publish(ctx, outbox, audit.EventData{
+				ServiceName:  domain.ServiceName,
+				Action:       constants.AuditActionUpdate,
+				ResourceType: constants.ObjectTypeMachine,
+				ResourceID:   id,
+				Changes:      changes,
+			}); apiErr != nil {
+				return apiErr
+			}
+		}
+		return nil
+	}
+	if apiErr := audited(detach, nil); apiErr != nil {
+		return apiErr
+	}
+	return audited(attach, &step.ID)
 }
 
 func (s *productionStepSvcImpl) DeleteProductionStep(ctx context.Context, stepID string) *apierror.APIError {
@@ -443,6 +541,13 @@ func (s *productionStepSvcImpl) DeleteProductionStep(ctx context.Context, stepID
 
 		if apiErr := repo.Delete(txCtx, accountID, stepID); apiErr != nil {
 			return apiErr
+		}
+
+		// Whatever the item is costed from now, it is no longer this step.
+		if step.Production != nil {
+			if apiErr := event.PublishItemCostBasisChanged(txCtx, txSvc.repos, accountID, step.Production.ItemID, event.CostBasisProductionStepDeleted); apiErr != nil {
+				return apiErr
+			}
 		}
 
 		changes := audit.ComputeChanges(step, (*domain.ProductionStep)(nil))

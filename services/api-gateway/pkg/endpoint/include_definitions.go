@@ -878,6 +878,8 @@ func init() {
 		ObjectType: constants.ObjectTypeProduction,
 		Fields: []IncludeFieldDef{
 			{Key: "produced_item", ObjectType: constants.ObjectTypeItem},
+			// The quantity is always on the production; naming it lets a caller reach its unit.
+			{Key: "quantity", ObjectType: constants.ObjectTypeQuantity},
 		},
 	})
 
@@ -891,6 +893,11 @@ func init() {
 			{Key: "department", ObjectType: constants.ObjectTypeDepartment},
 			{Key: "in_steps", ObjectType: constants.ObjectTypeProductionStep},
 			{Key: "out_steps", ObjectType: constants.ObjectTypeProductionStep},
+			// The rates are always on the step; naming them here is what lets a caller reach through
+			// to the units they are counted in.
+			{Key: "labor_rate", ObjectType: constants.ObjectTypeRate},
+			{Key: "labor_time", ObjectType: constants.ObjectTypeRate},
+			{Key: "overhead_rate", ObjectType: constants.ObjectTypeRate},
 		},
 	})
 

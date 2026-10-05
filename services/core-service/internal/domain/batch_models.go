@@ -57,6 +57,8 @@ type LightMachine struct {
 	ID           string
 	Name         string
 	SerialNumber string
+	// DepartmentID is filled where the machine is read for a production step.
+	DepartmentID *string
 }
 
 // BatchQuantity represents a quantity with a unit.

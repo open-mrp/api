@@ -5,6 +5,7 @@ import (
 	"fmt"
 
 	"github.com/open-mrp/api/services/core-service/internal/domain"
+	"github.com/open-mrp/api/services/core-service/internal/event"
 	"github.com/open-mrp/api/shared/appctx"
 	"github.com/open-mrp/api/shared/audit"
 	"github.com/open-mrp/api/shared/constants"
@@ -258,6 +259,20 @@ func (s *measureSvcImpl) UpdateRate(ctx context.Context, params domain.UpdateRat
 				return apiErr
 			}
 			result = updated
+
+			// An item's unit cost and a step's labor and overhead rates are inputs to what items cost.
+			if params.ObjectID != nil && params.ObjectType != nil {
+				switch *params.ObjectType {
+				case constants.ObjectTypeItem:
+					if apiErr := event.PublishItemCostBasisChanged(txCtx, txSvc.repos, accountID, *params.ObjectID, event.CostBasisRateUpdated); apiErr != nil {
+						return apiErr
+					}
+				case constants.ObjectTypeProductionStep:
+					if apiErr := publishStepCostBasisChanged(txCtx, txSvc.repos, accountID, *params.ObjectID, event.CostBasisRateUpdated); apiErr != nil {
+						return apiErr
+					}
+				}
+			}
 
 			changes := audit.ComputeChanges(old, updated)
 

@@ -5,6 +5,7 @@ import (
 
 	"github.com/open-mrp/api/services/core-service/internal/domain"
 	"github.com/open-mrp/api/shared/contracts"
+	"github.com/open-mrp/api/shared/field"
 	pb "github.com/open-mrp/api/shared/proto/core"
 
 	"google.golang.org/grpc"
@@ -97,7 +98,7 @@ func productionStepToProto(s *domain.ProductionStep) *pb.ProductionStepInfo {
 	// Machines
 	machines := make([]*pb.LightMachineInfo, len(s.Machines))
 	for i, m := range s.Machines {
-		machines[i] = &pb.LightMachineInfo{Id: m.ID, Name: m.Name}
+		machines[i] = &pb.LightMachineInfo{Id: m.ID, Name: m.Name, SerialNumber: m.SerialNumber, DepartmentId: m.DepartmentID}
 	}
 	info.Machines = machines
 
@@ -265,13 +266,23 @@ func (h *productionStepGRPCHandler) UpdateProductionStep(ctx context.Context, re
 	ctx, finalizeIdempotency := contracts.WithIdempotencyTracking(ctx)
 	defer finalizeIdempotency()
 
-	step, apiErr := h.productionStepSvc.UpdateProductionStep(ctx, domain.UpdateProductionStepParams{
+	params := domain.UpdateProductionStepParams{
 		ProductionStepID:  req.Id,
 		Name:              req.Name,
 		LevelingFactor:    req.LevelingFactor,
 		Allowances:        req.Allowances,
 		ScanningStationID: req.ScanningStationId,
-	})
+		Notes:             field.StringClearableFromProto(req.Notes),
+	}
+	if req.MachineIds != nil {
+		machineIDs := []string{}
+		if !req.MachineIds.Clear {
+			machineIDs = append(machineIDs, req.MachineIds.Value...)
+		}
+		params.MachineIDs = &machineIDs
+	}
+
+	step, apiErr := h.productionStepSvc.UpdateProductionStep(ctx, params)
 	if apiErr != nil {
 		return nil, contracts.ConvertAPIErrorToGRPC(apiErr)
 	}

@@ -150,5 +150,9 @@ func (e *CreateProductionStepEndpoint) Materialize() *apiendpoint.APIEndpoint[*C
 		LocationFunc: func(resp *apiresource.ProductionStep) string {
 			return "/v1/operations/production-steps/" + resp.ID
 		},
+		IncludeConfig: apiendpoint.IncludesFor(apiendpoint.IncludesParams{
+			ObjectType: constants.ObjectTypeProductionStep,
+			Fields:     productionStepIncludes,
+		}),
 	})
 }

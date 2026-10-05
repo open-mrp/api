@@ -3,6 +3,7 @@ package domain
 import (
 	"time"
 
+	"github.com/open-mrp/api/shared/field"
 	"github.com/open-mrp/api/shared/pagination"
 )
 
@@ -245,4 +246,7 @@ type UpdateProductionStepParams struct {
 	LevelingFactor    *string
 	Allowances        *string
 	ScanningStationID *string
+	Notes             field.Clearable[string]
+	// MachineIDs, when non-nil, is the full set of machines assigned to the step afterwards.
+	MachineIDs *[]string
 }

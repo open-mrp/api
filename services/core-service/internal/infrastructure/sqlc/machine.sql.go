@@ -733,6 +733,35 @@ func (q *Queries) ListMachinesForward(ctx context.Context, arg ListMachinesForwa
 	return items, nil
 }
 
+const setMachinesProductionStep = `-- name: SetMachinesProductionStep :exec
+UPDATE machine SET production_step_id = ?, updated_at = NOW(3)
+WHERE id IN (/*SLICE:ids*/?)
+AND account_id = ?
+`
+
+type SetMachinesProductionStepParams struct {
+	ProductionStepID sql.NullString
+	Ids              []string
+	AccountID        string
+}
+
+func (q *Queries) SetMachinesProductionStep(ctx context.Context, arg SetMachinesProductionStepParams) error {
+	query := setMachinesProductionStep
+	var queryParams []interface{}
+	queryParams = append(queryParams, arg.ProductionStepID)
+	if len(arg.Ids) > 0 {
+		for _, v := range arg.Ids {
+			queryParams = append(queryParams, v)
+		}
+		query = strings.Replace(query, "/*SLICE:ids*/?", strings.Repeat(",?", len(arg.Ids))[1:], 1)
+	} else {
+		query = strings.Replace(query, "/*SLICE:ids*/?", "NULL", 1)
+	}
+	queryParams = append(queryParams, arg.AccountID)
+	_, err := q.db.ExecContext(ctx, query, queryParams...)
+	return err
+}
+
 const updateMachine = `-- name: UpdateMachine :execresult
 UPDATE machine m
 SET

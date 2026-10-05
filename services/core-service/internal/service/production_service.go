@@ -6,6 +6,7 @@ import (
 
 	"github.com/open-mrp/api/services/auth-service/pkg/types"
 	"github.com/open-mrp/api/services/core-service/internal/domain"
+	"github.com/open-mrp/api/services/core-service/internal/event"
 	"github.com/open-mrp/api/shared/appctx"
 	"github.com/open-mrp/api/shared/audit"
 	"github.com/open-mrp/api/shared/constants"
@@ -172,6 +173,15 @@ func (s *productionSvcImpl) UpdateProduction(ctx context.Context, params domain.
 			}
 			result = fetched
 
+			// The produced quantity is the denominator of everything the step costs, and the item itself
+			// can change here, leaving the one it used to produce costed from a step that no longer feeds
+			// it. Both items are named so costing walks downstream of each.
+			for _, itemID := range distinctNonEmpty(old.ItemID, result.ItemID) {
+				if apiErr := event.PublishItemCostBasisChanged(txCtx, txSvc.repos, params.AccountID, itemID, event.CostBasisProductionUpdated); apiErr != nil {
+					return apiErr
+				}
+			}
+
 			changes := audit.ComputeChanges(old, result)
 
 			if apiErr := audit.NewPublisher().Publish(txCtx, txSvc.repos.NewOutboxRepo(), audit.EventData{
@@ -203,4 +213,18 @@ func (s *productionSvcImpl) UpdateProduction(ctx context.Context, params domain.
 	default:
 		return nil, tracing.Trace(span, apierror.NewInvariantViolationError("Unexpected recovery point: "+idempotencyKey.RecoveryPoint))
 	}
+}
+
+// distinctNonEmpty is the given ids once each, in order, without blanks.
+func distinctNonEmpty(ids ...string) []string {
+	seen := make(map[string]bool, len(ids))
+	var out []string
+	for _, id := range ids {
+		if id == "" || seen[id] {
+			continue
+		}
+		seen[id] = true
+		out = append(out, id)
+	}
+	return out
 }

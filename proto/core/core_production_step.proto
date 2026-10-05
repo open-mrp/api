@@ -7,6 +7,7 @@ import "google/protobuf/timestamp.proto";
 import "core/core.proto";
 import "core/core_fuzzy_identifiers.proto";
 import "core/core_async.proto";
+import "core/core_patch.proto";
 
 option go_package = "shared/proto/core;core";
 
@@ -169,6 +170,10 @@ message UpdateProductionStepRequest {
   optional string leveling_factor = 3;
   optional string allowances = 4;
   optional string scanning_station_id = 5;
+  // Clear removes the notes.
+  optional StringPatch notes = 6;
+  // Replaces the machines assigned to the step; machines assigned elsewhere move here. Clear (or an empty list) unassigns all.
+  optional StringListPatch machine_ids = 7;
 }
 
 message UpdateProductionStepResponse {

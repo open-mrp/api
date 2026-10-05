@@ -12,6 +12,19 @@ import (
 	"time"
 )
 
+const clearProductionStepFromBatches = `-- name: ClearProductionStepFromBatches :exec
+UPDATE batch SET production_step_id = NULL, updated_at = NOW(3)
+WHERE production_step_id = ?
+`
+
+// A deleted step's batches keep their history but no longer name it, as the dashboard's delete left
+// them; a dangling id would send a later undo looking for a step that is gone. Served by
+// batch_production_step_id_idx.
+func (q *Queries) ClearProductionStepFromBatches(ctx context.Context, productionStepID sql.NullString) error {
+	_, err := q.db.ExecContext(ctx, clearProductionStepFromBatches, productionStepID)
+	return err
+}
+
 const clearProductionStepFromMachines = `-- name: ClearProductionStepFromMachines :exec
 UPDATE machine SET production_step_id = NULL, updated_at = NOW(3)
 WHERE production_step_id = ?
@@ -1100,13 +1113,15 @@ func (q *Queries) GetProductionStepInputSteps(ctx context.Context, stepID string
 }
 
 const getProductionStepMachines = `-- name: GetProductionStepMachines :many
-SELECT m.id, m.name FROM machine m
+SELECT m.id, m.name, m.serial_number, m.department_id FROM machine m
 WHERE m.production_step_id = ?
 `
 
 type GetProductionStepMachinesRow struct {
-	ID   string
-	Name string
+	ID           string
+	Name         string
+	SerialNumber string
+	DepartmentID string
 }
 
 func (q *Queries) GetProductionStepMachines(ctx context.Context, productionStepID sql.NullString) ([]GetProductionStepMachinesRow, error) {
@@ -1118,7 +1133,12 @@ func (q *Queries) GetProductionStepMachines(ctx context.Context, productionStepI
 	var items []GetProductionStepMachinesRow
 	for rows.Next() {
 		var i GetProductionStepMachinesRow
-		if err := rows.Scan(&i.ID, &i.Name); err != nil {
+		if err := rows.Scan(
+			&i.ID,
+			&i.Name,
+			&i.SerialNumber,
+			&i.DepartmentID,
+		); err != nil {
 			return nil, err
 		}
 		items = append(items, i)
@@ -2030,6 +2050,10 @@ UPDATE production_step SET
         WHEN ? = true THEN ?
         ELSE scanning_station_id
     END,
+    notes = CASE
+        WHEN ? = true THEN ?
+        ELSE notes
+    END,
     updated_at = NOW(3)
 WHERE id = ?
 AND account_id = ?
@@ -2041,6 +2065,8 @@ type UpdateProductionStepFieldsParams struct {
 	Allowances            sql.NullString
 	UpdateScanningStation interface{}
 	ScanningStationID     sql.NullString
+	UpdateNotes           interface{}
+	Notes                 sql.NullString
 	ID                    string
 	AccountID             string
 }
@@ -2052,6 +2078,8 @@ func (q *Queries) UpdateProductionStepFields(ctx context.Context, arg UpdateProd
 		arg.Allowances,
 		arg.UpdateScanningStation,
 		arg.ScanningStationID,
+		arg.UpdateNotes,
+		arg.Notes,
 		arg.ID,
 		arg.AccountID,
 	)

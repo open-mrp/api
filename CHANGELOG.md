@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.20.0](https://github.com/open-mrp/api/compare/v2.19.1...v2.20.0) (2026-10-05)
+
+
+### Features
+
+* include department on machine list and allow clearing machine/department notes ([#249](https://github.com/open-mrp/api/issues/249)) ([646bfa4](https://github.com/open-mrp/api/commit/646bfa43dc27ceee60f6581e941f8adfd8f96c19))
+
 ## [2.19.1](https://github.com/open-mrp/api/compare/v2.19.0...v2.19.1) (2026-10-05)
 
 

@@ -115,3 +115,14 @@ JOIN unit bu ON ug.base_unit_id = bu.id
 WHERE i.id IN (sqlc.slice('item_ids'))
   AND i.account_id = sqlc.arg('owner_account_id')
   AND i.deleted_at IS NULL;
+
+-- ListAvailableReceiptUnitIDsForItem is the units the item's available stock was received in. The
+-- scanning consumption dialog shows available-to-promise in that unit when there is only one, and in
+-- the unit type's base unit otherwise, which is how the dashboard has always shown it.
+-- name: ListAvailableReceiptUnitIDsForItem :many
+SELECT DISTINCT q.unit_id
+FROM inventory_receipt ir
+JOIN quantity q ON q.id = ir.quantity_id
+WHERE ir.item_id = sqlc.arg('item_id')
+AND (ir.owner_account_id = sqlc.arg('owner_account_id') OR ir.holder_account_id = sqlc.arg('owner_account_id'))
+AND ir.status_code = 'available';

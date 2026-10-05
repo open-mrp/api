@@ -61,26 +61,7 @@ func BatchPresenter(meta *resourcekit.LoadMeta, b *pb.BatchInfo) apiresource.Bat
 		}
 	}
 
-	machines := make([]apiresource.Entity, 0, len(b.Machines))
-	for _, m := range b.Machines {
-		if ref := batchRef(m.Id, constants.ObjectTypeMachine, m.Name); ref != nil {
-			if m.SerialNumber != "" {
-				ref.Handle = &m.SerialNumber
-			}
-			machines = append(machines, *ref)
-		}
-	}
-
 	department := batchRef(ptrutil.Deref(b.DepartmentId), constants.ObjectTypeDepartment, ptrutil.Deref(b.DepartmentName))
-
-	lots := make([]apiresource.BatchLot, len(b.Lots))
-	for i, l := range b.Lots {
-		lots[i] = apiresource.BatchLot{
-			Object:    constants.ObjectTypeBatchLot,
-			LotNumber: l.LotNumber,
-			Type:      constants.BatchLotType(l.Type),
-		}
-	}
 
 	return apiresource.Batch{
 		ID:              b.Id,
@@ -93,8 +74,8 @@ func BatchPresenter(meta *resourcekit.LoadMeta, b *pb.BatchInfo) apiresource.Bat
 		Department:      department,
 		ProductionStep:  productionStep,
 		ProductionRun:   productionRun,
-		Machines:        apiresource.NewList(machines, apiresource.PageInfo{}),
-		Lots:            apiresource.NewList(lots, apiresource.PageInfo{}),
+		Machines:        batchMachineList(b.Machines),
+		Lots:            batchLotList(b.Lots),
 		InputBatches:    batchReferenceList(b.InputBatchIds),
 		OutputBatches:   batchReferenceList(b.OutputBatchIds),
 		ClosedAt:        grpcutil.TimestampToTimePtr(b.ClosedAt),
@@ -105,7 +86,7 @@ func BatchPresenter(meta *resourcekit.LoadMeta, b *pb.BatchInfo) apiresource.Bat
 }
 
 // BaseBatchPresenter converts a proto BaseBatchInfo to an apiresource.Batch.
-// BaseBatchInfo is used for mutation responses and does not include machines.
+// BaseBatchInfo is used for mutation responses; it carries no flow edges.
 func BaseBatchPresenter(meta *resourcekit.LoadMeta, b *pb.BaseBatchInfo) apiresource.Batch {
 	if b == nil {
 		return apiresource.Batch{}
@@ -139,7 +120,8 @@ func BaseBatchPresenter(meta *resourcekit.LoadMeta, b *pb.BaseBatchInfo) apireso
 		Department:      department,
 		ProductionStep:  productionStep,
 		ProductionRun:   productionRun,
-		Machines:        apiresource.NewList([]apiresource.Entity{}, apiresource.PageInfo{}),
+		Machines:        batchMachineList(b.Machines),
+		Lots:            batchLotList(b.Lots),
 		ClosedAt:        grpcutil.TimestampToTimePtr(b.ClosedAt),
 		ScannedAt:       grpcutil.TimestampToTimePtr(b.ScannedAt),
 		CreatedAt:       grpcutil.TimestampToTime(b.CreatedAt),
@@ -159,6 +141,33 @@ func BatchFlowNodePresenter(meta *resourcekit.LoadMeta, n *pb.BatchFlowNodeInfo)
 		InputBatches:  batchReferenceList(n.InputBatchIds),
 		OutputBatches: batchReferenceList(n.OutputBatchIds),
 	}
+}
+
+// batchMachineList is the machines a batch ran on, each named with its serial number as the handle.
+func batchMachineList(pbMachines []*pb.LightMachineInfo) *apiresource.List[apiresource.Entity] {
+	machines := make([]apiresource.Entity, 0, len(pbMachines))
+	for _, m := range pbMachines {
+		if ref := batchRef(m.Id, constants.ObjectTypeMachine, m.Name); ref != nil {
+			if m.SerialNumber != "" {
+				ref.Handle = &m.SerialNumber
+			}
+			machines = append(machines, *ref)
+		}
+	}
+	return apiresource.NewList(machines, apiresource.PageInfo{})
+}
+
+// batchLotList is the lots a batch carries.
+func batchLotList(pbLots []*pb.BatchLotInfo) *apiresource.List[apiresource.BatchLot] {
+	lots := make([]apiresource.BatchLot, len(pbLots))
+	for i, l := range pbLots {
+		lots[i] = apiresource.BatchLot{
+			Object:    constants.ObjectTypeBatchLot,
+			LotNumber: l.LotNumber,
+			Type:      constants.BatchLotType(l.Type),
+		}
+	}
+	return apiresource.NewList(lots, apiresource.PageInfo{})
 }
 
 // batchReferenceList converts a slice of batch IDs to an embedded list of

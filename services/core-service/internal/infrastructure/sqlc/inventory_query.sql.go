@@ -211,3 +211,43 @@ func (q *Queries) FetchOnHandInventoryBulk(ctx context.Context, arg FetchOnHandI
 	}
 	return items, nil
 }
+
+const listAvailableReceiptUnitIDsForItem = `-- name: ListAvailableReceiptUnitIDsForItem :many
+SELECT DISTINCT q.unit_id
+FROM inventory_receipt ir
+JOIN quantity q ON q.id = ir.quantity_id
+WHERE ir.item_id = ?
+AND (ir.owner_account_id = ? OR ir.holder_account_id = ?)
+AND ir.status_code = 'available'
+`
+
+type ListAvailableReceiptUnitIDsForItemParams struct {
+	ItemID         string
+	OwnerAccountID string
+}
+
+// ListAvailableReceiptUnitIDsForItem is the units the item's available stock was received in. The
+// scanning consumption dialog shows available-to-promise in that unit when there is only one, and in
+// the unit type's base unit otherwise, which is how the dashboard has always shown it.
+func (q *Queries) ListAvailableReceiptUnitIDsForItem(ctx context.Context, arg ListAvailableReceiptUnitIDsForItemParams) ([]string, error) {
+	rows, err := q.db.QueryContext(ctx, listAvailableReceiptUnitIDsForItem, arg.ItemID, arg.OwnerAccountID, arg.OwnerAccountID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []string
+	for rows.Next() {
+		var unit_id string
+		if err := rows.Scan(&unit_id); err != nil {
+			return nil, err
+		}
+		items = append(items, unit_id)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}

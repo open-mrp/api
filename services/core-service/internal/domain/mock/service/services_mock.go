@@ -3711,18 +3711,18 @@ func (mr *MockBatchSvcMockRecorder) GetScanningStationConsumption(ctx, params an
 }
 
 // InitializeBatch mocks base method.
-func (m *MockBatchSvc) InitializeBatch(ctx context.Context, batchID, scanningStationID string) (*domain.BaseBatch, *apierror.APIError) {
+func (m *MockBatchSvc) InitializeBatch(ctx context.Context, params domain.InitializeBatchParams) (*domain.BaseBatch, *apierror.APIError) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "InitializeBatch", ctx, batchID, scanningStationID)
+	ret := m.ctrl.Call(m, "InitializeBatch", ctx, params)
 	ret0, _ := ret[0].(*domain.BaseBatch)
 	ret1, _ := ret[1].(*apierror.APIError)
 	return ret0, ret1
 }
 
 // InitializeBatch indicates an expected call of InitializeBatch.
-func (mr *MockBatchSvcMockRecorder) InitializeBatch(ctx, batchID, scanningStationID any) *gomock.Call {
+func (mr *MockBatchSvcMockRecorder) InitializeBatch(ctx, params any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "InitializeBatch", reflect.TypeOf((*MockBatchSvc)(nil).InitializeBatch), ctx, batchID, scanningStationID)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "InitializeBatch", reflect.TypeOf((*MockBatchSvc)(nil).InitializeBatch), ctx, params)
 }
 
 // ListBatchesByScanningStation mocks base method.

@@ -107,10 +107,13 @@ type BaseBatch struct {
 	ProductionStep  *LightProductionStep  `audit:"production_step"`
 	ProductionRun   *LightProductionRun   `audit:"production_run"`
 	ProductionRunID *string
-	ClosedAt        *time.Time `audit:"closed_at"`
-	ScannedAt       *time.Time `audit:"scanned_at"`
-	CreatedAt       time.Time
-	UpdatedAt       time.Time
+	// Machines and Lots are filled when the batch is read in full, as it is for a scan's response.
+	Machines  []LightMachine
+	Lots      []BatchLot
+	ClosedAt  *time.Time `audit:"closed_at"`
+	ScannedAt *time.Time `audit:"scanned_at"`
+	CreatedAt time.Time
+	UpdatedAt time.Time
 }
 
 // BatchFlowNode is a batch with its input and output batch IDs for flow graph rendering.
@@ -192,6 +195,19 @@ type GetConsumptionParams struct {
 	BatchIDs          []string
 	ProductionStepID  *string
 	SplitQuantity     *BatchQuantity
+	// TypeOverride is the station type the operator is scanning as, when it is not the station's own.
+	TypeOverride *string
+}
+
+type InitializeBatchParams struct {
+	BatchID           string
+	ScanningStationID string
+	// TypeOverride is the station type the operator is scanning as, when it is not the station's own.
+	TypeOverride *string
+	// ProductionStepID is the step to initialize into, when the operator picked one of several.
+	ProductionStepID *string
+	// ConsumeMaterials false records the scan without consuming the step's materials. Nil means true.
+	ConsumeMaterials *bool
 }
 
 // InventorySnapshot represents a point-in-time inventory measure for an item.

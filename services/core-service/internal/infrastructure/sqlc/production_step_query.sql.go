@@ -393,23 +393,55 @@ func (q *Queries) FindProducedItemIDByStep(ctx context.Context, productionStepID
 }
 
 const findProducedUnitByStep = `-- name: FindProducedUnitByStep :one
-SELECT u.id, u.abbreviation, u.unit_dimension_code AS type
-FROM production p
-JOIN quantity q ON p.quantity_id = q.id
-JOIN unit u ON q.unit_id = u.id
-WHERE p.production_step_id = ?
+SELECT u.id, u.name, u.abbreviation, u.unit_dimension_code AS type,
+    u.ratio_numerator, u.ratio_denominator, u.offset_numerator, u.offset_denominator,
+    u.is_base_unit, u.account_id
+FROM production_step ps
+JOIN production p ON p.production_step_id = ps.id
+JOIN item i ON i.id = p.item_id
+JOIN item_category ic ON ic.id = i.item_category_id
+JOIN unit_group ug ON ug.id = ic.unit_group_id
+JOIN unit u ON u.id = ug.base_unit_id
+WHERE ps.id = ?
+AND ps.account_id = ?
+LIMIT 1
 `
 
-type FindProducedUnitByStepRow struct {
-	ID           string
-	Abbreviation string
-	Type         string
+type FindProducedUnitByStepParams struct {
+	ProductionStepID string
+	AccountID        string
 }
 
-func (q *Queries) FindProducedUnitByStep(ctx context.Context, productionStepID sql.NullString) (FindProducedUnitByStepRow, error) {
-	row := q.db.QueryRowContext(ctx, findProducedUnitByStep, productionStepID)
+type FindProducedUnitByStepRow struct {
+	ID                string
+	Name              string
+	Abbreviation      string
+	Type              string
+	RatioNumerator    string
+	RatioDenominator  string
+	OffsetNumerator   string
+	OffsetDenominator string
+	IsBaseUnit        bool
+	AccountID         sql.NullString
+}
+
+// The unit a step's output is counted in on the scanning floor: the base unit of the produced item's
+// unit group, not the unit the production happens to be written in.
+func (q *Queries) FindProducedUnitByStep(ctx context.Context, arg FindProducedUnitByStepParams) (FindProducedUnitByStepRow, error) {
+	row := q.db.QueryRowContext(ctx, findProducedUnitByStep, arg.ProductionStepID, arg.AccountID)
 	var i FindProducedUnitByStepRow
-	err := row.Scan(&i.ID, &i.Abbreviation, &i.Type)
+	err := row.Scan(
+		&i.ID,
+		&i.Name,
+		&i.Abbreviation,
+		&i.Type,
+		&i.RatioNumerator,
+		&i.RatioDenominator,
+		&i.OffsetNumerator,
+		&i.OffsetDenominator,
+		&i.IsBaseUnit,
+		&i.AccountID,
+	)
 	return i, err
 }
 
@@ -530,6 +562,7 @@ JOIN unit pu ON pq.unit_id = pu.id
 WHERE ps.scanning_station_id = ?
 AND ps.account_id = ?
 AND p.item_id = ?
+AND NOT EXISTS (SELECT 1 FROM _parent_child_production_steps pcps WHERE pcps.A = ps.id)
 LIMIT 1
 `
 
@@ -577,6 +610,7 @@ JOIN production p ON p.production_step_id = ps.id
 WHERE ps.scanning_station_id = ?
 AND ps.account_id = ?
 AND p.item_id = ?
+AND NOT EXISTS (SELECT 1 FROM _parent_child_production_steps pcps WHERE pcps.A = ps.id)
 LIMIT 1
 `
 
@@ -586,6 +620,8 @@ type FindStepIDByScanningStationAndItemParams struct {
 	ItemID            string
 }
 
+// The step a batch is initialized into: one at this station that makes the batch's item and has no
+// upstream step (A = downstream), since initializing is where a batch enters the flow.
 func (q *Queries) FindStepIDByScanningStationAndItem(ctx context.Context, arg FindStepIDByScanningStationAndItemParams) (string, error) {
 	row := q.db.QueryRowContext(ctx, findStepIDByScanningStationAndItem, arg.ScanningStationID, arg.AccountID, arg.ItemID)
 	var id string

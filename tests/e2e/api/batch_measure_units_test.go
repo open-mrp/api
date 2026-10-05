@@ -48,30 +48,27 @@ func assertIncludeAccepted(t *testing.T, status int, body []byte, include, where
 func TestBatches_RemainingQuantityUnitResolves(t *testing.T) {
 	t.Parallel()
 
+	// A batch waiting at a split step, so the endpoint answers with a measure.
+	c := newScanChain(t)
+	planned := planScanBatch(t, c.a.id, "10", unitEach)
+	initializeScan(t, planned, c.initStation, nil)
+	moveScan(t, c.moveStation, c.moveStep, planned)
+
 	body := map[string]any{
-		"batch_ids":          []string{SeedBatchID},
-		"production_step_id": SeedProductionStepID,
+		"batch_ids":          []string{planned},
+		"production_step_id": c.splitStep,
 	}
 
 	status, plain, err := apiClient.Post(batchesPath+"/remaining-quantities", body, newIdempotencyKey())
 	require.NoError(t, err)
-	require.Less(t, status, 500, "remaining quantities must not 5xx: %s", string(plain))
+	requireStatus(t, 200, status, plain)
 
 	withStatus, withUnit, err := apiClient.Post(
 		batchesPath+"/remaining-quantities?include=unit", body, newIdempotencyKey())
 	require.NoError(t, err)
-	require.Less(t, withStatus, 500, "remaining quantities must not 5xx with an include: %s", string(withUnit))
-
 	assertIncludeAccepted(t, withStatus, withUnit, "unit", "remaining-quantities")
-	assert.Equal(t, status, withStatus,
-		"the include changes what is expanded, never whether the request is answered: %s", string(withUnit))
+	requireStatus(t, 200, withStatus, withUnit)
 
-	// The seeded batch is not a valid split target at the seeded step, so the endpoint answers before
-	// it builds a measure. The include being understood rather than rejected is the whole contract
-	// here; a measure that does come back is checked too.
-	if status != 200 {
-		return
-	}
 	assertMeasureUnitResolvable(t, parseJSON(plain), parseJSON(withUnit), "remaining quantity")
 }
 

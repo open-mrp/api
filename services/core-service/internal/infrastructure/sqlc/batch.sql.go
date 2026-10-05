@@ -41,6 +41,26 @@ func (q *Queries) CountBatchesByScanningStation(ctx context.Context, arg CountBa
 	return count, err
 }
 
+const countBatchesScannedSince = `-- name: CountBatchesScannedSince :one
+SELECT COUNT(*) FROM batch
+WHERE account_id = ?
+AND scanned_at >= ?
+`
+
+type CountBatchesScannedSinceParams struct {
+	AccountID string
+	Since     sql.NullTime
+}
+
+// The batches an account has scanned in the current billing period, which is what a plan's batch cap
+// counts. Served by batch_account_id_scanned_at_idx.
+func (q *Queries) CountBatchesScannedSince(ctx context.Context, arg CountBatchesScannedSinceParams) (int64, error) {
+	row := q.db.QueryRowContext(ctx, countBatchesScannedSince, arg.AccountID, arg.Since)
+	var count int64
+	err := row.Scan(&count)
+	return count, err
+}
+
 const deleteBatch = `-- name: DeleteBatch :exec
 DELETE FROM batch WHERE id = ? AND account_id = ?
 `

@@ -146,3 +146,17 @@ func (r *inventoryQueryRepoImpl) FetchPhysicalInventoryBaseForItems(ctx context.
 	}
 	return out, nil
 }
+
+func (r *inventoryQueryRepoImpl) ListAvailableReceiptUnitIDs(ctx context.Context, itemID, ownerAccountID string) ([]string, *apierror.APIError) {
+	ctx, span := inventoryQueryRepoTracer.Start(ctx, "repository.inventory_query.list_available_receipt_unit_ids")
+	defer span.End()
+
+	unitIDs, err := r.queries.ListAvailableReceiptUnitIDsForItem(ctx, sqlc.ListAvailableReceiptUnitIDsForItemParams{
+		ItemID:         itemID,
+		OwnerAccountID: ownerAccountID,
+	})
+	if apiErr := db.MapSQLError(err); apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
+	return unitIDs, nil
+}

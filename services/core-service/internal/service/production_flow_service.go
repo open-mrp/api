@@ -140,7 +140,8 @@ func (s *productionFlowSvcImpl) GetProductionFlow(ctx context.Context, itemID st
 		childMap[edge.ParentStepID] = append(childMap[edge.ParentStepID], edge.ChildStepID)
 	}
 
-	// BFS backward from initial steps through parent edges.
+	// BFS backward from initial steps through parent edges. The flow is how the item is made: what
+	// feeds its producer, transitively. Steps downstream of those belong to other items' flows.
 	relevantStepIDs := make(map[string]bool)
 	queue := make([]string, 0, len(initialStepIDs))
 	queue = append(queue, initialStepIDs...)
@@ -157,22 +158,6 @@ func (s *productionFlowSvcImpl) GetProductionFlow(ctx context.Context, itemID st
 		for _, parentID := range parentMap[stepID] {
 			if !relevantStepIDs[parentID] {
 				queue = append(queue, parentID)
-			}
-		}
-	}
-
-	// Include downstream steps so out_step_ids are not filtered to empty when the flow extends past the item's immediate producer(s).
-	fwdQueue := make([]string, 0, len(relevantStepIDs))
-	for id := range relevantStepIDs {
-		fwdQueue = append(fwdQueue, id)
-	}
-	for len(fwdQueue) > 0 {
-		stepID := fwdQueue[0]
-		fwdQueue = fwdQueue[1:]
-		for _, childID := range childMap[stepID] {
-			if !relevantStepIDs[childID] {
-				relevantStepIDs[childID] = true
-				fwdQueue = append(fwdQueue, childID)
 			}
 		}
 	}

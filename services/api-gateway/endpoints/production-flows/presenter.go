@@ -100,7 +100,28 @@ func flowConsumptionPresenter(ctx context.Context, c *pb.ProductionFlowConsumpti
 	}
 }
 
-func productionFlowStepFromProto(ctx context.Context, s *pb.ProductionFlowStepInfo) apiresource.ProductionFlowStep {
+// linkedStepFromProto presents a flow step as the production step another flow step links to.
+func linkedStepFromProto(s *pb.ProductionFlowStepInfo) apiresource.ProductionStep {
+	var notes *string
+	if s.Notes != nil && *s.Notes != "" {
+		notes = s.Notes
+	}
+	return apiresource.ProductionStep{
+		ID:             s.Id,
+		Object:         constants.ObjectTypeProductionStep,
+		Name:           s.Name,
+		Notes:          notes,
+		LevelingFactor: s.LevelingFactor,
+		Allowances:     s.Allowances,
+		LaborRate:      flowRatePresenter(s.LaborRate),
+		LaborTime:      flowRatePresenter(s.LaborTime),
+		OverheadRate:   flowRatePresenter(s.OverheadRate),
+		CreatedAt:      grpcutil.TimestampToTime(s.CreatedAt),
+		UpdatedAt:      grpcutil.TimestampToTime(s.UpdatedAt),
+	}
+}
+
+func productionFlowStepFromProto(ctx context.Context, s *pb.ProductionFlowStepInfo, flowSteps map[string]*pb.ProductionFlowStepInfo) apiresource.ProductionFlowStep {
 	if s == nil {
 		return apiresource.ProductionFlowStep{}
 	}
@@ -118,49 +139,21 @@ func productionFlowStepFromProto(ctx context.Context, s *pb.ProductionFlowStepIn
 	meta.Set(constants.ObjectTypeProductionStep, s.Id, "consumptions",
 		apiresource.NewList(consumptionItems, apiresource.PageInfo{}))
 
-	inStepItems := make([]apiresource.ProductionStep, 0, len(s.InStepIds))
-	for _, stepID := range s.InStepIds {
-		inStepItems = append(inStepItems, apiresource.ProductionStep{
-			ID:             stepID,
-			Object:         constants.ObjectTypeProductionStep,
-			Name:           "Production Step",
-			LevelingFactor: "0",
-			Allowances:     "0",
-			CreatedAt:      stubTS,
-			UpdatedAt:      stubTS,
-		})
+	// A flow's in and out steps are restricted to steps in the flow, so each is one of its own steps.
+	linked := func(ids []string) *apiresource.List[apiresource.ProductionStep] {
+		items := make([]apiresource.ProductionStep, 0, len(ids))
+		for _, id := range ids {
+			if step, ok := flowSteps[id]; ok {
+				items = append(items, linkedStepFromProto(step))
+			}
+		}
+		return apiresource.NewList(items, apiresource.PageInfo{})
 	}
-	meta.Set(constants.ObjectTypeProductionStep, s.Id, "in_steps",
-		apiresource.NewList(inStepItems, apiresource.PageInfo{}))
+	meta.Set(constants.ObjectTypeProductionStep, s.Id, "in_steps", linked(s.InStepIds))
+	meta.Set(constants.ObjectTypeProductionStep, s.Id, "out_steps", linked(s.OutStepIds))
 
-	outStepItems := make([]apiresource.ProductionStep, 0, len(s.OutStepIds))
-	for _, stepID := range s.OutStepIds {
-		outStepItems = append(outStepItems, apiresource.ProductionStep{
-			ID:             stepID,
-			Object:         constants.ObjectTypeProductionStep,
-			Name:           "Production Step",
-			LevelingFactor: "0",
-			Allowances:     "0",
-			CreatedAt:      stubTS,
-			UpdatedAt:      stubTS,
-		})
-	}
-	meta.Set(constants.ObjectTypeProductionStep, s.Id, "out_steps",
-		apiresource.NewList(outStepItems, apiresource.PageInfo{}))
-
-	machineItems := make([]apiresource.Machine, 0, len(s.MachineIds))
-	for _, id := range s.MachineIds {
-		machineItems = append(machineItems, apiresource.Machine{
-			ID:           id,
-			Object:       constants.ObjectTypeMachine,
-			Name:         "Machine",
-			SerialNumber: "—",
-			CreatedAt:    stubTS,
-			UpdatedAt:    stubTS,
-		})
-	}
-	meta.Set(constants.ObjectTypeProductionStep, s.Id, "machines",
-		apiresource.NewList(machineItems, apiresource.PageInfo{}))
+	// machines is expandable: stash the ids; LoadMachines fetches the real machines. Never fabricate.
+	meta.Set(constants.ObjectTypeProductionStep, s.Id, "machine_ids", s.MachineIds)
 
 	if s.DepartmentId != nil && *s.DepartmentId != "" {
 		meta.Set(constants.ObjectTypeProductionStep, s.Id, "department_id", *s.DepartmentId)
@@ -191,9 +184,13 @@ func productionFlowStepFromProto(ctx context.Context, s *pb.ProductionFlowStepIn
 }
 
 func ProductionFlowPresenter(ctx context.Context, steps []*pb.ProductionFlowStepInfo) *apiresource.ProductionFlow {
+	byID := make(map[string]*pb.ProductionFlowStepInfo, len(steps))
+	for _, s := range steps {
+		byID[s.Id] = s
+	}
 	flowSteps := make([]apiresource.ProductionFlowStep, 0, len(steps))
 	for _, s := range steps {
-		flowSteps = append(flowSteps, productionFlowStepFromProto(ctx, s))
+		flowSteps = append(flowSteps, productionFlowStepFromProto(ctx, s, byID))
 	}
 
 	enrichFlowUnits(ctx, flowSteps)

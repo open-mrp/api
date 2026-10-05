@@ -402,3 +402,92 @@ func TestConsumptions_InstructionsClearWithNull(t *testing.T) {
 	requireStatus(t, 200, status, body)
 	assert.Nil(t, parseJSON(body)["instructions"], "null clears the instructions")
 }
+
+func createPartItem(t *testing.T, prefix string) string {
+	t.Helper()
+	status, body, err := apiClient.Post(partsPath+"?include=item", validPartBody(uniqueName(prefix)), newIdempotencyKey())
+	require.NoError(t, err)
+	requireStatus(t, 201, status, body)
+	part := parseJSON(body)
+	t.Cleanup(func() { apiClient.Delete(partsPath + "/" + jsonField(part, "id")) })
+	return jsonField(jsonObject(part, "item"), "id")
+}
+
+// createLinkedStep makes a step producing one each of produced from one each of consumed. Creating it
+// links it to the steps around it by item, as the dashboard did.
+func createLinkedStep(t *testing.T, name, produced, consumed string) string {
+	t.Helper()
+	rate := func(value, num, den string) map[string]any {
+		return map[string]any{"value": value, "numerator_unit_id": num, "denominator_unit_id": den}
+	}
+	status, body, err := apiClient.Post(productionStepsPath, map[string]any{
+		"name":            uniqueName(name),
+		"leveling_factor": "0",
+		"allowances":      "0",
+		"labor_time":      rate("30", unitSecond, unitEach),
+		"labor_rate":      rate("25", unitDollar, unitHour),
+		"overhead_rate":   rate("20", unitDollar, unitHour),
+		"production":      map[string]any{"item_id": produced, "quantity_value": "1", "quantity_unit_id": unitEach},
+		"consumptions": []map[string]any{{"item_id": consumed, "quantity_value": "1", "quantity_unit_id": unitEach,
+			"waste_quantity_value": "0", "waste_quantity_unit_id": unitEach}},
+	}, newIdempotencyKey())
+	require.NoError(t, err)
+	requireStatus(t, 201, status, body)
+	id := jsonField(parseJSON(body), "id")
+	t.Cleanup(func() { cleanupStepIDs(id) })
+	return id
+}
+
+// An item's flow is how it is made: its producing step and everything feeding it. A sibling product
+// built from the same part is another item's flow. In and out steps are the flow's own steps, real
+// names and all, and machines are the real machines.
+func TestProductionFlows_AreUpstreamOfTheItem(t *testing.T) {
+	t.Parallel()
+	material := createLaborCostFixture(t).materialItemID
+	part, product, sibling := createPartItem(t, "e2e-flow-part"), createPartItem(t, "e2e-flow-product"), createPartItem(t, "e2e-flow-sibling")
+
+	partStep := createLinkedStep(t, "e2e-flow-make-part", part, material)
+	productStep := createLinkedStep(t, "e2e-flow-make-product", product, part)
+	siblingStep := createLinkedStep(t, "e2e-flow-make-sibling", sibling, part)
+	machine := createMachineForStep(t)
+	status, body, err := apiClient.Patch(productionStepsPath+"/"+partStep, map[string]any{"machine_ids": []string{machine}}, newIdempotencyKey())
+	require.NoError(t, err)
+	requireStatus(t, 200, status, body)
+
+	status, body, err = apiClient.GetListRaw("/v1/operations/production-flows/by-item/"+product, url.Values{"include": {
+		"steps", "steps.in_steps", "steps.out_steps", "steps.machines", "steps.production",
+	}})
+	require.NoError(t, err)
+	requireStatus(t, 200, status, body)
+
+	steps := map[string]map[string]any{}
+	var order []string
+	for _, raw := range jsonArray(jsonObject(parseJSON(body), "steps"), "data") {
+		step := raw.(map[string]any)
+		steps[jsonField(step, "id")] = step
+		order = append(order, jsonField(step, "id"))
+	}
+	require.ElementsMatch(t, []string{productStep, partStep}, order, "the sibling's step is not part of the product's flow")
+	assert.Equal(t, productStep, order[0], "the item's producer comes first")
+	assert.NotContains(t, steps, siblingStep)
+
+	linked := func(step map[string]any, key string) map[string]string {
+		names := map[string]string{}
+		for _, raw := range jsonArray(jsonObject(step, key), "data") {
+			s := raw.(map[string]any)
+			names[jsonField(s, "id")] = jsonField(s, "name")
+		}
+		return names
+	}
+	assert.Equal(t, map[string]string{partStep: jsonField(steps[partStep], "name")}, linked(steps[productStep], "in_steps"))
+	assert.Empty(t, linked(steps[productStep], "out_steps"), "the producer feeds nothing in this flow")
+	assert.Equal(t, map[string]string{productStep: jsonField(steps[productStep], "name")}, linked(steps[partStep], "out_steps"),
+		"out steps are restricted to the flow, so the sibling's step is not listed")
+
+	machines := jsonArray(jsonObject(steps[partStep], "machines"), "data")
+	require.Len(t, machines, 1)
+	m := machines[0].(map[string]any)
+	assert.Equal(t, machine, jsonField(m, "id"))
+	assert.NotEqual(t, "Machine", jsonField(m, "name"), "the machine is the real one, not a placeholder")
+	assert.NotEqual(t, "—", jsonField(m, "serial_number"))
+}

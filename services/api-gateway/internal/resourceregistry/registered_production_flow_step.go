@@ -24,7 +24,7 @@ func init() {
 		Subs: []resourcekit.SubField{
 			{Key: "production", Target: productionFlowProductionType, Populate: populateProductionOnFlowStep, ExtractRefs: extractProductionRefsFromFlowStep},
 			{Key: "consumptions", Target: productionFlowConsumptionType, Populate: populateConsumptionsOnFlowStep, ExtractRefs: extractConsumptionRefsFromFlowStep},
-			{Key: "machines", Populate: populateMachinesOnFlowStep},
+			{Key: "machines", Target: constants.ObjectTypeMachine, ExtractIDs: extractMachineIDsFromFlowStep, Populate: populateMachinesOnFlowStep},
 			{Key: "scanning_station", Target: constants.ObjectTypeScanningStation, ExtractIDs: extractScanningStationIDFromFlowStep, Populate: populateScanningStationOnFlowStep},
 			{Key: "department", Target: constants.ObjectTypeDepartment, ExtractIDs: extractDepartmentIDFromFlowStep, Populate: populateDepartmentOnFlowStep},
 			{Key: "in_steps", Populate: populateInStepsOnFlowStep},
@@ -91,14 +91,28 @@ func populateConsumptionsOnFlowStep(ctx context.Context, parent any, _ map[strin
 	ps.Consumptions = v.(*apiresource.List[apiresource.ProductionFlowConsumption])
 }
 
-func populateMachinesOnFlowStep(ctx context.Context, parent any, _ map[string]any) {
-	ps := parent.(*apiresource.ProductionFlowStep)
-	v, ok := resourcekit.GetLoadMeta(ctx).
-		Get(constants.ObjectTypeProductionStep, ps.ID, "machines")
+func flowStepMachineIDs(ctx context.Context, stepID string) []string {
+	v, ok := resourcekit.GetLoadMeta(ctx).Get(constants.ObjectTypeProductionStep, stepID, "machine_ids")
 	if !ok {
-		return
+		return nil
 	}
-	ps.Machines = v.(*apiresource.List[apiresource.Machine])
+	ids, _ := v.([]string)
+	return ids
+}
+
+func extractMachineIDsFromFlowStep(ctx context.Context, parent any) []string {
+	return flowStepMachineIDs(ctx, parent.(*apiresource.ProductionFlowStep).ID)
+}
+
+func populateMachinesOnFlowStep(ctx context.Context, parent any, loaded map[string]any) {
+	ps := parent.(*apiresource.ProductionFlowStep)
+	machines := make([]apiresource.Machine, 0)
+	for _, id := range flowStepMachineIDs(ctx, ps.ID) {
+		if m, ok := loaded[id].(*apiresource.Machine); ok {
+			machines = append(machines, *m)
+		}
+	}
+	ps.Machines = apiresource.NewList(machines, apiresource.PageInfo{})
 }
 
 func extractScanningStationIDFromFlowStep(ctx context.Context, parent any) []string {

@@ -217,7 +217,7 @@ func (s *addressValidationSvcImpl) ValidateAddress(ctx context.Context, addressL
 
 	if resp.StatusCode != http.StatusOK {
 		respBody, _ := io.ReadAll(resp.Body)
-		return nil, tracing.Trace(span, apierror.NewInternalError(fmt.Errorf("google address validation returned status %d: %s", resp.StatusCode, string(respBody)), "Address validation service error."))
+		return nil, tracing.Trace(span, classifyAddressValidationError(resp.StatusCode, respBody, country))
 	}
 
 	var data struct {

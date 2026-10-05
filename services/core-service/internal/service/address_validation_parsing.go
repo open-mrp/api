@@ -1,10 +1,33 @@
 package service
 
 import (
+	"encoding/json"
+	"fmt"
+	"net/http"
 	"strings"
 
 	"github.com/open-mrp/api/services/core-service/internal/domain"
+	apierror "github.com/open-mrp/api/shared/errors"
 )
+
+// classifyAddressValidationError maps a non-200 response from Google Address Validation into an APIError. A 400 from Google means the request we built from caller input was rejected — most often an unsupported region code for a country Google cannot validate — which is the caller's problem, not ours, so it must surface as a 400 against the offending field rather than a transient 500 that clients retry forever. Any other status is a genuine upstream failure and stays an internal error.
+func classifyAddressValidationError(statusCode int, respBody []byte, country string) *apierror.APIError {
+	if statusCode == http.StatusBadRequest {
+		var parsed struct {
+			Error struct {
+				Message string `json:"message"`
+			} `json:"error"`
+		}
+		_ = json.Unmarshal(respBody, &parsed)
+
+		if strings.Contains(strings.ToLower(parsed.Error.Message), "region code") {
+			return apierror.NewValidationErrorWithParam(fmt.Sprintf("Address validation is not supported for country %q.", country), "country")
+		}
+		return apierror.NewValidationError("The address could not be validated. Check the address fields and try again.")
+	}
+
+	return apierror.NewInternalError(fmt.Errorf("google address validation returned status %d: %s", statusCode, string(respBody)), "Address validation service error.")
+}
 
 type addressComponent struct {
 	LongText  string   `json:"longText"`

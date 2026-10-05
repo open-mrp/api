@@ -21,7 +21,7 @@ type UpdateCustomerProductLineAccessRequest struct {
 	//
 	// Replaces the customer's existing direct grants, and each ID must be a product line your account owns.
 	//
-	// The list has to name at least one product line: omitting the field or sending an empty list leaves the customer with no record at all, which the request rejects as not found without changing anything. Use Delete Customer Product Line Access to revoke direct access entirely.
+	// The list must name at least one product line; an empty list is rejected without changing anything. Use Delete Customer Product Line Access to revoke direct access entirely.
 	ProductLineIDs field.Optional[[]string] `json:"product_line_ids,omitzero"`
 }
 

@@ -21,7 +21,7 @@ type UpdateAccountGroupProductLineAccessRequest struct {
 	//
 	// The provided list replaces the account group's existing set of product lines, and each ID must be a product line your account owns.
 	//
-	// Sending an empty list, or omitting the field, revokes every product line from the group. The record then has nothing left to update, so granting access again goes through Create Account Group Product Line Access.
+	// The list must name at least one product line; an empty list is rejected without changing anything. Use Delete Account Group Product Line Access to revoke the group's access entirely.
 	ProductLineIDs field.Optional[[]string] `json:"product_line_ids,omitzero"`
 }
 

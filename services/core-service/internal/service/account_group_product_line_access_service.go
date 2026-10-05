@@ -170,6 +170,9 @@ func (s *accountGroupProductLineAccessSvcImpl) CreateAccountGroupProductLineAcce
 	}
 
 	params.AccountID = identity.Target.AccountID
+	if len(params.ProductLineIDs) == 0 {
+		return nil, tracing.Trace(span, errNoProductLinesGranted())
+	}
 
 	meds := s.mediators()
 
@@ -248,6 +251,9 @@ func (s *accountGroupProductLineAccessSvcImpl) UpdateAccountGroupProductLineAcce
 	}
 
 	params.AccountID = identity.Target.AccountID
+	if len(params.ProductLineIDs) == 0 {
+		return nil, tracing.Trace(span, errNoProductLinesGranted())
+	}
 
 	meds := s.mediators()
 

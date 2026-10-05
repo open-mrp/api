@@ -173,6 +173,12 @@ func (r *accountGroupProductLineAccessRepoImpl) Get(ctx context.Context, account
 		return nil, tracing.Trace(span, apiErr)
 	}
 
+	// A group's access record is its product lines; with none, there is no record, as Update and
+	// Delete already hold.
+	if len(plRows) == 0 {
+		return nil, tracing.Trace(span, apierror.NewResourceNotFoundError("No product line access found for this account group."))
+	}
+
 	productLines := make([]domain.ProductLineInfo, len(plRows))
 	for i, row := range plRows {
 		productLines[i] = domain.ProductLineInfo{

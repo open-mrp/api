@@ -927,10 +927,7 @@ func TestTerritories_AnotherTenantCannotReadChangeOrDeleteThem(t *testing.T) {
 		"the territory must be untouched")
 }
 
-// KNOWN BUG (low severity): once a territory is deleted, another tenant deleting the same id gets 410
-// "already been deleted" instead of 404, confirming the id existed. DeleteTerritory falls back to
-// DeletedRecordRepo.Exists(resourceType, id) (services/core-service/internal/service/territory_service.go
-// DeleteTerritory), and deleted_record has no account column, so the check spans every tenant.
+// Only the owner is told a territory is already deleted (410); to any other tenant the id never existed.
 func TestTerritories_AnotherTenantCannotTellADeletedTerritoryExisted(t *testing.T) {
 	t.Parallel()
 	territoryID := jsonField(createTerritory(t, map[string]any{"state": uniqueName("e2e-terr-iso"), "sales_rep_id": SeedAccountUserID}), "id")
@@ -942,6 +939,11 @@ func TestTerritories_AnotherTenantCannotTellADeletedTerritoryExisted(t *testing.
 	status, body, err = getTenantBClient().Delete(territoriesPathFor(SeedTenantBAccountID) + "/" + territoryID)
 	require.NoError(t, err)
 	requireStatus(t, 404, status, body)
+
+	status, body, err = apiClient.Delete(territoryPath(territoryID))
+	require.NoError(t, err)
+	requireStatus(t, 410, status, body)
+	requireErrorResponse(t, body, "resource_gone", "invalid_request_error")
 }
 
 // The {account_id} path parameter names the account that owns the territory, so a path naming any other account

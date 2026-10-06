@@ -24,6 +24,7 @@ type territorySvcSetup struct {
 	territories  *repositorymock.MockTerritoryRepo
 	accountUsers *repositorymock.MockAccountUserRepo
 	productLines *repositorymock.MockProductLineRepo
+	deleted      *repositorymock.MockDeletedRecordRepo
 	idempotency  *mediatormock.MockIdempotencyMed
 	outbox       *recordingOutboxRepo
 }
@@ -34,6 +35,7 @@ func newTerritorySvcSetup(t *testing.T) *territorySvcSetup {
 		territories:  repositorymock.NewMockTerritoryRepo(ctrl),
 		accountUsers: repositorymock.NewMockAccountUserRepo(ctrl),
 		productLines: repositorymock.NewMockProductLineRepo(ctrl),
+		deleted:      repositorymock.NewMockDeletedRecordRepo(ctrl),
 		idempotency:  mediatormock.NewMockIdempotencyMed(ctrl),
 		outbox:       &recordingOutboxRepo{},
 	}
@@ -41,6 +43,7 @@ func newTerritorySvcSetup(t *testing.T) *territorySvcSetup {
 	repos.EXPECT().NewTerritoryRepo().Return(s.territories).AnyTimes()
 	repos.EXPECT().NewAccountUserRepo().Return(s.accountUsers).AnyTimes()
 	repos.EXPECT().NewProductLineRepo().Return(s.productLines).AnyTimes()
+	repos.EXPECT().NewDeletedRecordRepo().Return(s.deleted).AnyTimes()
 	repos.EXPECT().NewOutboxRepo().Return(s.outbox).AnyTimes()
 	mediators := factorymock.NewMockMediatorFactory(ctrl)
 	mediators.EXPECT().Build(gomock.Any()).Return(domain.Mediators{Idempotency: s.idempotency}).AnyTimes()
@@ -352,6 +355,56 @@ func TestResolveUpdatedZipcodes(t *testing.T) {
 			require.Nil(t, apiErr)
 			assert.Equal(t, tc.wantEnd, params.EndZipcode)
 			assert.Equal(t, tc.wantClear, params.ClearEndZipcode)
+		})
+	}
+}
+
+func TestTerritorySvc_DeleteSnapshotsTheOwningAccount(t *testing.T) {
+	t.Parallel()
+	s := newTerritorySvcSetup(t)
+	stored := storedTerritory("acu_1", nil, nil, nil)
+	s.territories.EXPECT().Get(gomock.Any(), gomock.Any()).Return(stored, nil)
+	s.territories.EXPECT().Delete(gomock.Any(), gomock.Any()).Return(nil)
+	s.deleted.EXPECT().Create(gomock.Any(), constants.DeletedRecordResourceTypeTerritory, "tr_1", gomock.Any()).
+		DoAndReturn(func(_ context.Context, _ constants.DeletedRecordResourceType, _ string, data any) *apierror.APIError {
+			raw, err := json.Marshal(data)
+			require.NoError(t, err)
+			var snapshot struct {
+				AccountID string `json:"account_id"`
+				ID        string
+			}
+			require.NoError(t, json.Unmarshal(raw, &snapshot))
+			assert.Equal(t, "ac_1", snapshot.AccountID)
+			assert.Equal(t, "tr_1", snapshot.ID)
+			return nil
+		})
+
+	require.Nil(t, s.svc.DeleteTerritory(territoryInternalCtx("ac_1"), domain.DeleteTerritoryParams{AccountID: "ac_1", TerritoryID: "tr_1"}))
+}
+
+func TestTerritorySvc_DeleteOfAnAlreadyDeletedTerritoryIsGoneOnlyToItsOwner(t *testing.T) {
+	t.Parallel()
+	notFound := apierror.NewResourceNotFoundError("Resource not found.")
+
+	for _, tc := range []struct {
+		name         string
+		deletedHere  bool
+		wantGone     bool
+		wantNotFound bool
+	}{
+		{name: "deleted from this account", deletedHere: true, wantGone: true},
+		{name: "never in this account", deletedHere: false, wantNotFound: true},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+			s := newTerritorySvcSetup(t)
+			s.territories.EXPECT().Get(gomock.Any(), gomock.Any()).Return(nil, notFound)
+			s.deleted.EXPECT().ExistsInAccount(gomock.Any(), constants.DeletedRecordResourceTypeTerritory, "tr_1", "ac_1").Return(tc.deletedHere, nil)
+
+			apiErr := s.svc.DeleteTerritory(territoryInternalCtx("ac_1"), domain.DeleteTerritoryParams{AccountID: "ac_1", TerritoryID: "tr_1"})
+			require.NotNil(t, apiErr)
+			assert.Equal(t, tc.wantGone, apiErr.Code == apierror.ErrorCodeResourceGone, "code %s", apiErr.Code)
+			assert.Equal(t, tc.wantNotFound, apierror.IsNotFound(apiErr), "code %s", apiErr.Code)
 		})
 	}
 }

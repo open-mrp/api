@@ -3747,6 +3747,21 @@ func (mr *MockDeletedRecordRepoMockRecorder) Exists(ctx, resourceType, resourceI
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Exists", reflect.TypeOf((*MockDeletedRecordRepo)(nil).Exists), ctx, resourceType, resourceID)
 }
 
+// ExistsInAccount mocks base method.
+func (m *MockDeletedRecordRepo) ExistsInAccount(ctx context.Context, resourceType constants.DeletedRecordResourceType, resourceID, accountID string) (bool, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ExistsInAccount", ctx, resourceType, resourceID, accountID)
+	ret0, _ := ret[0].(bool)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
+}
+
+// ExistsInAccount indicates an expected call of ExistsInAccount.
+func (mr *MockDeletedRecordRepoMockRecorder) ExistsInAccount(ctx, resourceType, resourceID, accountID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ExistsInAccount", reflect.TypeOf((*MockDeletedRecordRepo)(nil).ExistsInAccount), ctx, resourceType, resourceID, accountID)
+}
+
 // MockAccountGroupProductLineAccessRepo is a mock of AccountGroupProductLineAccessRepo interface.
 type MockAccountGroupProductLineAccessRepo struct {
 	ctrl     *gomock.Controller

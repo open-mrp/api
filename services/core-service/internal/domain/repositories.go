@@ -348,6 +348,8 @@ type AccountGroupRepo interface {
 type DeletedRecordRepo interface {
 	Create(ctx context.Context, resourceType constants.DeletedRecordResourceType, resourceID string, data any) *apierror.APIError
 	Exists(ctx context.Context, resourceType constants.DeletedRecordResourceType, resourceID string) (bool, *apierror.APIError)
+	// ExistsInAccount matches only a record whose snapshot names its owner as account_id, so another tenant cannot learn the id existed.
+	ExistsInAccount(ctx context.Context, resourceType constants.DeletedRecordResourceType, resourceID, accountID string) (bool, *apierror.APIError)
 }
 
 type AccountGroupProductLineAccessRepo interface {

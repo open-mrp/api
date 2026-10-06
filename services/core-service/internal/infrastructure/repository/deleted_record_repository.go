@@ -56,3 +56,19 @@ func (r *deletedRecordRepoImpl) Exists(ctx context.Context, resourceType constan
 
 	return count > 0, nil
 }
+
+func (r *deletedRecordRepoImpl) ExistsInAccount(ctx context.Context, resourceType constants.DeletedRecordResourceType, resourceID, accountID string) (bool, *apierror.APIError) {
+	ctx, span := deletedRecordRepoTracer.Start(ctx, "repository.deleted_record.exists_in_account")
+	defer span.End()
+
+	count, err := r.queries.CountDeletedRecordsInAccount(ctx, sqlc.CountDeletedRecordsInAccountParams{
+		ResourceType: string(resourceType),
+		ResourceID:   resourceID,
+		AccountID:    accountID,
+	})
+	if apiErr := db.MapSQLError(err); apiErr != nil {
+		return false, tracing.Trace(span, apiErr)
+	}
+
+	return count > 0, nil
+}

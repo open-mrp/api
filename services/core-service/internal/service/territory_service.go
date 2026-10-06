@@ -379,7 +379,7 @@ func (s *territorySvcImpl) DeleteTerritory(ctx context.Context, params domain.De
 	})
 	if apiErr != nil {
 		if apierror.IsNotFound(apiErr) {
-			wasDeleted, deletedCheckErr := s.repos.NewDeletedRecordRepo().Exists(ctx, constants.DeletedRecordResourceTypeTerritory, params.TerritoryID)
+			wasDeleted, deletedCheckErr := s.repos.NewDeletedRecordRepo().ExistsInAccount(ctx, constants.DeletedRecordResourceTypeTerritory, params.TerritoryID, params.AccountID)
 			if deletedCheckErr != nil {
 				return tracing.Trace(span, deletedCheckErr)
 			}
@@ -391,7 +391,8 @@ func (s *territorySvcImpl) DeleteTerritory(ctx context.Context, params domain.De
 	}
 
 	apiErr = s.withTx(ctx, func(txCtx context.Context, txSvc *territorySvcImpl) *apierror.APIError {
-		if apiErr := txSvc.repos.NewDeletedRecordRepo().Create(txCtx, constants.DeletedRecordResourceTypeTerritory, territory.ID, territory); apiErr != nil {
+		snapshot := domain.DeletedTerritory{AccountID: params.AccountID, Territory: territory}
+		if apiErr := txSvc.repos.NewDeletedRecordRepo().Create(txCtx, constants.DeletedRecordResourceTypeTerritory, territory.ID, snapshot); apiErr != nil {
 			return apiErr
 		}
 

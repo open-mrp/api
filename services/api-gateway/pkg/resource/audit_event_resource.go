@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"time"
 
+	"github.com/open-mrp/api/services/api-gateway/pkg/costguard"
 	apiexample "github.com/open-mrp/api/services/api-gateway/pkg/example"
 	"github.com/open-mrp/api/shared/constants"
 	"github.com/open-mrp/api/shared/timeutil"
@@ -36,7 +37,16 @@ type AuditFieldChange struct {
 	// New value as a JSON fragment.
 	//
 	// `null` on `delete` events, where the field has no remaining value.
+	//
+	// Both values are `null` on a change to a cost field, such as a unit cost or labor rate, unless the caller holds `costs:read`.
 	NewValue json.RawMessage `json:"new_value"`
+}
+
+// RedactCosts clears the values of a change to a cost field.
+func (c *AuditFieldChange) RedactCosts() {
+	if costguard.IsCostName(c.Field) {
+		c.OldValue, c.NewValue = nil, nil
+	}
 }
 
 // An immutable record of a single change to a resource, capturing who made the change, what changed, and when.

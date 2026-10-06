@@ -33,7 +33,7 @@ type UpdateMaterialRequest struct {
 	// New cost per unit.
 	//
 	// Follows the same unit rule as on create: `numerator_unit_id` must reference a currency unit and `denominator_unit_id` must reference a non-currency unit.
-	UnitCost field.Optional[apirequest.RateInput] `json:"unit_cost,omitzero"`
+	UnitCost field.Optional[apirequest.RateInput] `json:"unit_cost,omitzero" sensitive:"cost"`
 }
 
 var sampleUpdateMaterialDescription = "Cold-rolled 304 stainless steel sheet, 2.0mm"

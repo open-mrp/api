@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"slices"
 	"time"
 
 	"github.com/open-mrp/api/services/auth-service/pkg/types"
@@ -100,6 +101,9 @@ type exportSpec[TRow, TFilters any] struct {
 	// Expand turns one row into several, for a resource that lists a parent's
 	// children one per sheet row (see excel.Group). Takes precedence over Project.
 	Expand func(row TRow) []excel.Row
+
+	// CostColumns names, by key, the columns carrying the seller's cost data. They are left out of the file when the requester may not see costs.
+	CostColumns []string
 }
 
 // names the object an export job's file is stored under. Derived rather than recorded:
@@ -271,6 +275,9 @@ func buildExport[TRow, TFilters any](
 	if spec.ColumnsFor != nil {
 		columns = spec.ColumnsFor(rows)
 	}
+	if len(spec.CostColumns) > 0 && !requesterCanReadCosts(ctx) {
+		columns = slices.DeleteFunc(slices.Clone(columns), func(c excel.ColumnSpec) bool { return slices.Contains(spec.CostColumns, c.Key) })
+	}
 
 	sheetName := spec.SheetName
 	if sheetName == "" {
@@ -294,6 +301,12 @@ func buildExport[TRow, TFilters any](
 		// Resource rows, not sheet rows: a grouped export writes one row per child.
 		RowCount: int32(len(rows)), // #nosec G115 - a sheet cannot hold more rows than an int32
 	}, nil
+}
+
+// reports whether the identity the export was requested under, which its job event carries, may see cost data
+func requesterCanReadCosts(ctx context.Context) bool {
+	identity, ok := appctx.GetIdentityFromContext(ctx)
+	return ok && identity.CanReadCosts()
 }
 
 // settles on the read-permission check this resource authorizes against

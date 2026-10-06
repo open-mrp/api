@@ -51,7 +51,7 @@ type CreateMaterialRequest struct {
 	// Initial cost per unit.
 	//
 	// Follows the same unit rule as `unit_price`: currency numerator, non-currency denominator. When omitted, the cost is initialized to a zero rate in the category's base unit.
-	UnitCost field.Optional[apirequest.RateInput] `json:"unit_cost,omitzero"`
+	UnitCost field.Optional[apirequest.RateInput] `json:"unit_cost,omitzero" sensitive:"cost"`
 	// IDs of existing attributes to link to the material at creation time.
 	//
 	// Each attribute's property must be one the material's category carries; an attribute from any other property fails the whole request.

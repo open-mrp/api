@@ -33,7 +33,7 @@ type UpdateSalesOrderLineRequest struct {
 	// Internal cost per unit, used to derive line profitability.
 	//
 	// Rounded to the nearest cent.
-	UnitCost field.Optional[apirequest.RateInput] `json:"unit_cost,omitzero" validate:"omitempty"`
+	UnitCost field.Optional[apirequest.RateInput] `json:"unit_cost,omitzero" validate:"omitempty" sensitive:"cost"`
 }
 
 var sampleUpdateSalesOrderLineRequest = &UpdateSalesOrderLineRequest{

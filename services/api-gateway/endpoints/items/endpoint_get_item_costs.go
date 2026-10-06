@@ -32,7 +32,7 @@ func (e *GetItemCostsEndpoint) Materialize() *apiendpoint.APIEndpoint[*GetItemCo
 		SuccessStatusCode:   http.StatusOK,
 		Public:              false,
 		Preview:             true,
-		RequiredPermissions: []types.Permission{{Domain: types.PermissionDomainItems, Action: types.ActionRead}},
+		RequiredPermissions: []types.Permission{{Domain: types.PermissionDomainCosts, Action: types.ActionRead}},
 		ServiceHandler: func(svc any) func(ctx context.Context, req *GetItemCostsRequest) (*apiresource.ItemCosts, *apierror.APIError) {
 			return svc.(ItemSvc).GetItemCosts
 		},

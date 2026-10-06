@@ -27,11 +27,15 @@ type ProductionStep struct {
 	// Effective labor time per unit is `labor_time × (1 + leveling_factor) × (1 + allowances)`.
 	Allowances string `json:"allowances" validate:"required" format:"decimal"`
 	// Cost of labor for this step, expressed as a rate of currency per unit of time (e.g. `$` per `hr`).
-	LaborRate *Rate `json:"labor_rate"`
+	//
+	// Null unless the caller holds `costs:read`; customer and supplier portal users never see it.
+	LaborRate *Rate `json:"labor_rate" sensitive:"cost"`
 	// Labor duration for this step, expressed as a rate (e.g. time per unit of output).
 	LaborTime *Rate `json:"labor_time"`
 	// Overhead cost for this step, expressed as a rate of currency per unit of time (e.g. `$` per `hr`).
-	OverheadRate *Rate `json:"overhead_rate"`
+	//
+	// Null unless the caller holds `costs:read`; customer and supplier portal users never see it.
+	OverheadRate *Rate `json:"overhead_rate" sensitive:"cost"`
 	// The item and quantity this step produces.
 	Production *ProductionOutput `json:"production" expandable:"true"`
 	// Materials this step consumes as inputs, with their quantities and expected waste.

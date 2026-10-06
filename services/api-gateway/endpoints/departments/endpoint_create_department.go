@@ -34,7 +34,7 @@ type CreateDepartmentRequest struct {
 	// Hourly labor rate for work done in this department, such as a changeover technician.
 	//
 	// Production scheduling costs changeovers with the constraint department's rate when one is set, falling back to the account-wide changeover labor rate setting. The numerator unit must be a currency and the denominator must not be.
-	LaborRate *DepartmentRateInput `json:"labor_rate,omitzero"`
+	LaborRate *DepartmentRateInput `json:"labor_rate,omitzero" sensitive:"cost"`
 }
 
 // A rate, expressed as a value together with the units of its numerator and denominator (for example, `25.00` `$` per `hr`).

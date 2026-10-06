@@ -30,8 +30,8 @@ func (s *analyticsSvcImpl) AnalyzeCustomerPricing(ctx context.Context, params do
 	if apiErr := identity.CheckIsInternalActor(); apiErr != nil {
 		return nil, tracing.Trace(span, apiErr)
 	}
-	// This sweep reads every contracted price from the repositories; nothing downstream re-checks discounts:read.
-	if apiErr := identity.CheckHasPermission(types.PermissionDomainDiscounts, types.ActionRead); apiErr != nil {
+	// Half of this audit is gross margin, so it is a cost report; the sweep reads prices and costs straight from the repositories, so nothing downstream re-checks either.
+	if apiErr := identity.CheckHasPermission(types.PermissionDomainCosts, types.ActionRead); apiErr != nil {
 		return nil, tracing.Trace(span, apiErr)
 	}
 	accountID := identity.Target.AccountID

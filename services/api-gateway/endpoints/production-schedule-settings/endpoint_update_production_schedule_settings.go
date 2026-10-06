@@ -59,7 +59,7 @@ type UpdateProductionScheduleSettingsRequest struct {
 	// Hourly labor rate charged to a changeover.
 	//
 	// This should be a dedicated technician rate rather than an allocated production rate, because one person works a single machine through a changeover. The constraint department's own labor rate takes precedence when it has one, leaving this as the fallback.
-	ChangeoverLaborRate float64 `json:"changeover_labor_rate" validate:"gte=0"`
+	ChangeoverLaborRate float64 `json:"changeover_labor_rate" validate:"gte=0" sensitive:"cost"`
 	// Annual cost of holding stock, as a share of item value.
 	//
 	// Weighed against the cost of a changeover when campaigns are sized: a higher rate favors shorter, more frequent runs.

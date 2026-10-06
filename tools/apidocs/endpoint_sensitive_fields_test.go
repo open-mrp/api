@@ -13,7 +13,7 @@ import (
 
 // TestEndpointSensitiveFieldsAreRedactable walks the request and response type of every registered endpoint and fails when a sensitive:"true" field does not resolve to a path redact.SensitiveFields reports.
 //
-// The redactor is what keeps secrets out of the request log, and it fails silently: a sensitive field placed somewhere its path scheme cannot express (a map value, a wrapper type that stores its value unexported, an untyped payload) produces no path, no error, and a logged plaintext body.
+// The redactor is what keeps secrets out of the request log, and it fails silently: a sensitive field placed somewhere its path scheme cannot express (a wrapper type that stores its value unexported, an untyped payload) produces no path, no error, and a logged plaintext body.
 func TestEndpointSensitiveFieldsAreRedactable(t *testing.T) {
 	t.Parallel()
 	groups := buildAllGroups()
@@ -95,8 +95,8 @@ func walkSensitiveSites(typ reflect.Type, prefix, reason string, visited map[ref
 		field := fmt.Sprintf("%s.%s", typ, sf.Name)
 
 		if tag, ok := sf.Tag.Lookup("sensitive"); ok {
-			if tag != "true" {
-				*out = append(*out, sensitiveSite{path: path, field: field, reason: fmt.Sprintf("its sensitive tag reads %q rather than \"true\"", tag)})
+			if !redact.IsSensitiveTag(tag) {
+				*out = append(*out, sensitiveSite{path: path, field: field, reason: fmt.Sprintf("its sensitive tag reads %q rather than \"true\" or \"cost\"", tag)})
 				continue
 			}
 			*out = append(*out, sensitiveSite{path: path, field: field, reason: reason})
@@ -114,7 +114,7 @@ func walkSensitiveSites(typ reflect.Type, prefix, reason string, visited map[ref
 		case reflect.Slice, reflect.Array:
 			walkSensitiveSites(ft.Elem(), path, reason, visited, out, depth+1)
 		case reflect.Map:
-			walkSensitiveSites(ft.Elem(), path, "it sits under a map key, which no dotted path can name", visited, out, depth+1)
+			walkSensitiveSites(ft.Elem(), joinPath(path, redact.MapKey), reason, visited, out, depth+1)
 		}
 	}
 }
@@ -196,7 +196,7 @@ func TestSensitiveSites_detectsUnreachablePlacements(t *testing.T) {
 		wantPath   string
 		wantReason bool
 	}{
-		{"map value", reflect.TypeFor[inMap](), "creds.secret", true},
+		{"map value", reflect.TypeFor[inMap](), "creds.*.secret", false},
 		{"inside an optional wrapper", reflect.TypeFor[inOptional](), "config.secret", true},
 		{"misspelled tag value", reflect.TypeFor[typoTag](), "secret", true},
 		{"slice of structs", reflect.TypeFor[reachable](), "items.secret", false},

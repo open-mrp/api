@@ -44,15 +44,25 @@ func TestIncludes_ItemCategoryAndAttributesShownToAnItemsReader(t *testing.T) {
 		requireErrorResponse(t, body, "insufficient_permissions", "invalid_request_error")
 	}
 
+	// Unit cost is the one field the role does not share with the admin: it needs costs:read.
+	withoutCost := func(item map[string]any) map[string]any {
+		item["unit_cost"] = nil
+		return item
+	}
+
 	listParams := url.Values{"q": {sku}, "include": dashboardItemIncludes}
 	gotList := parseJSON(mustGetAs(t, reader, itemsPath, listParams))
-	assert.Equal(t, parseJSON(mustGetAs(t, apiClient, itemsPath, listParams)), gotList, "the role lists the item exactly as an admin does")
+	wantList := parseJSON(mustGetAs(t, apiClient, itemsPath, listParams))
+	for _, row := range jsonArray(wantList, "data") {
+		withoutCost(row.(map[string]any))
+	}
+	assert.Equal(t, wantList, gotList, "the role lists the item as an admin does, less its cost")
 	rows := jsonArray(gotList, "data")
 	require.Len(t, rows, 1)
 
 	retrieveParams := url.Values{"include": dashboardItemIncludes}
 	got := parseJSON(mustGetAs(t, reader, itemsPath+"/"+itemID, retrieveParams))
-	assert.Equal(t, parseJSON(mustGetAs(t, apiClient, itemsPath+"/"+itemID, retrieveParams)), got, "the role retrieves the item exactly as an admin does")
+	assert.Equal(t, withoutCost(parseJSON(mustGetAs(t, apiClient, itemsPath+"/"+itemID, retrieveParams))), got, "the role retrieves the item as an admin does, less its cost")
 	assert.Equal(t, rows[0], any(got), "the list row and the retrieved item agree")
 
 	category := jsonObject(got, "category")

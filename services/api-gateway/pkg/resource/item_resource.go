@@ -38,7 +38,9 @@ type Item struct {
 	// Cost per unit, expressed as a rate (e.g. `$10.00 / kg`).
 	//
 	// For items a production flow produces, this is restated from the flow shortly after anything the item is built from changes, so it can change without the item having been edited.
-	UnitCost *Rate `json:"unit_cost" expandable:"true"`
+	//
+	// Null unless the caller holds `costs:read`; customer and supplier portal users never see it.
+	UnitCost *Rate `json:"unit_cost" expandable:"true" sensitive:"cost"`
 	// Rate at which this item is consumed in production, expressed as a quantity over time (e.g. `100 kg / hr`).
 	BurnRate *Rate `json:"burn_rate" expandable:"true"`
 	// Attributes assigned to this item.

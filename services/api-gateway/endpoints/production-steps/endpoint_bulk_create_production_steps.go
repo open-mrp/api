@@ -43,7 +43,7 @@ type BulkCreateProductionStepInput struct {
 	// Items produced by the step, matched by SKU.
 	Productions []BulkCreateProductionOutputInput `json:"productions" validate:"required,min=1"`
 	// Labor rate in dollars per hour.
-	LaborRate float64 `json:"labor_rate" validate:"required,gt=0"`
+	LaborRate float64 `json:"labor_rate" validate:"required,gt=0" sensitive:"cost"`
 	// Labor time required per unit of output.
 	//
 	// Recorded as `labor_time_unit` per one base unit of the first item in `productions`.
@@ -53,7 +53,7 @@ type BulkCreateProductionStepInput struct {
 	// One of `hr`, `min`, `minute`, `sec`, `second`, or `day`; a row naming anything else is skipped. Labor time is read as hours when this is omitted.
 	LaborTimeUnit field.Optional[string] `json:"labor_time_unit,omitzero"`
 	// Overhead rate in dollars per hour.
-	OverheadRate float64 `json:"overhead_rate" validate:"required,gt=0"`
+	OverheadRate float64 `json:"overhead_rate" validate:"required,gt=0" sensitive:"cost"`
 	// Allowance correction factor applied to labor time in cost calculations.
 	//
 	// When omitted, no allowance adjustment is applied.

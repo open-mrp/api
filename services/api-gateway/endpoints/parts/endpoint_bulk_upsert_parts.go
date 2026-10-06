@@ -39,7 +39,7 @@ type UpsertPartInput struct {
 	// defaults to a zero rate in the category's base unit and is left unchanged on update.
 	UnitPrice field.Optional[apirequest.RateInput] `json:"unit_price,omitzero"`
 	// Cost per unit. Same unit rule and omission behavior as `unit_price`.
-	UnitCost field.Optional[apirequest.RateInput] `json:"unit_cost,omitzero"`
+	UnitCost field.Optional[apirequest.RateInput] `json:"unit_cost,omitzero" sensitive:"cost"`
 	// Properties to attach to the part, matched/created by name + value. Additive —
 	// existing attributes are not removed.
 	Properties []UpsertPartProperty `json:"properties" default:"[]" validate:"dive"`

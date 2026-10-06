@@ -15,6 +15,7 @@ import (
 
 	"github.com/open-mrp/api/services/api-gateway/internal/header"
 	httptransport "github.com/open-mrp/api/services/api-gateway/internal/http"
+	"github.com/open-mrp/api/services/api-gateway/pkg/costguard"
 	"github.com/open-mrp/api/services/api-gateway/pkg/resourcekit"
 	"github.com/open-mrp/api/services/auth-service/pkg/types"
 	"github.com/open-mrp/api/shared/appctx"
@@ -517,8 +518,10 @@ func (e *APIEndpoint[TReq, TResp]) Execute(w http.ResponseWriter, r *http.Reques
 		}
 	}
 
+	// After includes, so a cost field an include brought in is covered too.
+	respPayload := costguard.Redact(ctx, any(resp))
+
 	// Downgrade the response shape when the caller is on an older API version.
-	respPayload := any(resp)
 	if e.ObjectType != "" {
 		if requestVersion, ok := appctx.GetAPIVersionFromContext(ctx); ok && !requestVersion.Equal(version.Latest) {
 			if transformed, ok := transformResponsePayload(respPayload, version.Latest, requestVersion, e.ObjectType); ok {

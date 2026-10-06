@@ -216,6 +216,7 @@ func (s *materialSvcImpl) exportSpec() exportSpec[*domain.Material, domain.Expor
 		Name:            "Materials",
 		Slug:            "materials",
 		ResourceType:    constants.ObjectTypeMaterial,
+		CostColumns:     itemCostColumns,
 
 		ColumnsFor: func(materials []*domain.Material) []excel.ColumnSpec {
 			base := itemBaseColumns(

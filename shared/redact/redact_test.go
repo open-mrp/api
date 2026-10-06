@@ -315,3 +315,28 @@ func TestRedactJSON_emptyPaths(t *testing.T) {
 		t.Fatalf("got %s", out)
 	}
 }
+
+type costLine struct {
+	ID       string  `json:"id"`
+	UnitCost *string `json:"unit_cost" sensitive:"cost"`
+}
+
+type keyedLines struct {
+	BySKU map[string]*costLine `json:"by_sku"`
+}
+
+func TestSensitiveFields_costTagAndMapValues(t *testing.T) {
+	m := redact.SensitiveFields(reflect.TypeFor[keyedLines]())
+	if len(m) != 1 || !m["by_sku.*.unit_cost"] {
+		t.Fatalf("got %#v want by_sku.*.unit_cost", m)
+	}
+}
+
+func TestRedactJSON_mapValues(t *testing.T) {
+	in := []byte(`{"by_sku":{"A-1":{"id":"1","unit_cost":"4.10"},"B-2":{"id":"2","unit_cost":null}},"unit_cost":"kept"}`)
+	out := redact.RedactJSON(in, redact.SensitiveFields(reflect.TypeFor[keyedLines]()))
+	want := `{"by_sku":{"A-1":{"id":"1","unit_cost":"****"},"B-2":{"id":"2","unit_cost":"****"}},"unit_cost":"kept"}`
+	if string(out) != want {
+		t.Fatalf("got %s want %s", out, want)
+	}
+}

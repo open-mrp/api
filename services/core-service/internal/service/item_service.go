@@ -268,7 +268,7 @@ func (s *itemSvcImpl) GetItemCosts(ctx context.Context, itemID string) (*domain.
 	if apiErr := identity.CheckIsInternalActor(); apiErr != nil {
 		return nil, tracing.Trace(span, apiErr)
 	}
-	if apiErr := identity.CheckHasPermission(types.PermissionDomainItems, types.ActionRead); apiErr != nil {
+	if apiErr := identity.CheckHasPermission(types.PermissionDomainCosts, types.ActionRead); apiErr != nil {
 		return nil, tracing.Trace(span, apiErr)
 	}
 
@@ -2247,6 +2247,9 @@ func itemBaseColumns(extra ...excel.ColumnSpec) []excel.ColumnSpec {
 		excel.ColumnSpec{Header: "Unit Cost", Key: "unit_cost", Width: 14},
 	)
 }
+
+// the item sheet columns a requester without costs:read does not get
+var itemCostColumns = []string{"unit_cost"}
 
 // fills the fixed item cells shared by the product, part and material sheets
 func addItemBaseCells(row excel.Row, rowID string, item *domain.Item) {

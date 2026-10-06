@@ -206,10 +206,20 @@ func (s *analyticsSvcImpl) AnalyzeManufacturing(ctx context.Context, params doma
 	if apiErr := identity.CheckHasPermission(types.PermissionDomainInvoices, types.ActionRead); apiErr != nil {
 		return 0, tracing.Trace(span, apiErr)
 	}
+	if isCostManufacturingMetric(params.Type) {
+		if apiErr := identity.CheckHasPermission(types.PermissionDomainCosts, types.ActionRead); apiErr != nil {
+			return 0, tracing.Trace(span, apiErr)
+		}
+	}
 
 	params.AccountID = identity.Target.AccountID
 
 	return s.reports().NewAnalyticsRepo().GetManufacturingMetric(ctx, params)
+}
+
+// isCostManufacturingMetric reports whether the metric is the seller's cost or margin, which only callers holding costs:read may see.
+func isCostManufacturingMetric(metric string) bool {
+	return metric == "costsPerUnit" || metric == "margin"
 }
 
 func (s *analyticsSvcImpl) AnalyzeManufacturingBatch(ctx context.Context, params domain.AnalyzeManufacturingBatchParams) (*domain.ManufacturingBatchResult, *apierror.APIError) {

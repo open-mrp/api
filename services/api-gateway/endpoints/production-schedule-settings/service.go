@@ -68,7 +68,7 @@ func settingsFromProto(info *pb.ProductionScheduleSettingsInfo) apiresource.Prod
 		ChangeoverAvgMinutes:           info.ChangeoverAvgMinutes,
 		ChangeoverMinMinutes:           info.ChangeoverMinMinutes,
 		ChangeoverMaxMinutes:           info.ChangeoverMaxMinutes,
-		ChangeoverLaborRate:            info.ChangeoverLaborRate,
+		ChangeoverLaborRate:            new(info.ChangeoverLaborRate),
 		HoldingRatePct:                 info.HoldingRatePct,
 		ServiceLevelZ:                  info.ServiceLevelZ,
 		FinishLeadTimeWeeks:            info.FinishLeadTimeWeeks,
@@ -334,7 +334,7 @@ func recommendationFromProto(r *pb.FulfillmentRecommendationInfo) apiresource.Fu
 		TopCustomerSharePct:        r.TopCustomerSharePct,
 		TopCustomerName:            r.TopCustomerName,
 		DemandWeightedLeadTimeDays: r.DemandWeightedLeadTimeDays,
-		AnnualCOGS:                 r.AnnualCogs,
+		AnnualCOGS:                 new(r.AnnualCogs),
 		MonthsSinceLastSale:        r.MonthsSinceLastSale,
 		MixedStreamSharePct:        r.MixedStreamSharePct,
 	}

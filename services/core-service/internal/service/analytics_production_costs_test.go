@@ -275,7 +275,7 @@ func TestAssembleProductionCostReport_NeedsTheCurrencyAndTimeBaseUnits(t *testin
 	require.NotNil(t, apiErr)
 }
 
-// The report is batches:read for internal users, validates its window, attaches the units its figures
+// The report is costs:read for internal users, validates its window, attaches the units its figures
 // are counted in, and is computed once per window and filters.
 func TestAnalyzeProductionCosts_ChecksAccessValidatesAndCaches(t *testing.T) {
 	t.Parallel()
@@ -311,7 +311,7 @@ func TestAnalyzeProductionCosts_ChecksAccessValidatesAndCaches(t *testing.T) {
 	units.EXPECT().GetByIDs(gomock.Any(), "ac_1", gomock.InAnyOrder([]string{"dollar", "hour", "each"})).
 		Return([]*domain.Unit{{ID: "dollar"}, {ID: "hour"}, {ID: "each"}}, nil).Times(1)
 
-	reader := salesCtx("ac_1", string(constants.RoleTypeCustom), map[string]bool{"batches:read": true})
+	reader := salesCtx("ac_1", string(constants.RoleTypeCustom), map[string]bool{"costs:read": true})
 	report, apiErr := svc.AnalyzeProductionCosts(reader, params)
 	require.Nil(t, apiErr)
 	require.Len(t, seen, 1)
@@ -324,9 +324,9 @@ func TestAnalyzeProductionCosts_ChecksAccessValidatesAndCaches(t *testing.T) {
 	_, apiErr = svc.AnalyzeProductionCosts(reader, params)
 	require.Nil(t, apiErr, "the same window and filters are served from the cache")
 
-	_, apiErr = svc.AnalyzeProductionCosts(salesCtx("ac_1", string(constants.RoleTypeCustom), map[string]bool{"items:read": true}), params)
+	_, apiErr = svc.AnalyzeProductionCosts(salesCtx("ac_1", string(constants.RoleTypeCustom), map[string]bool{"batches:read": true}), params)
 	require.NotNil(t, apiErr)
-	require.Equal(t, 403, apierror.GetHTTPStatusCode(apiErr.Code))
+	require.Equal(t, 403, apierror.GetHTTPStatusCode(apiErr.Code), "batches:read alone does not show what production cost")
 
 	backwards := params
 	backwards.StartDate, backwards.EndDate = params.EndDate, params.StartDate

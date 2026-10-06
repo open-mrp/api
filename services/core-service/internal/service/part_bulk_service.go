@@ -208,6 +208,7 @@ func (s *partSvcImpl) exportSpec() exportSpec[*domain.Part, domain.ExportPartsPa
 		Name:            "Parts",
 		Slug:            "parts",
 		ResourceType:    constants.ObjectTypePart,
+		CostColumns:     itemCostColumns,
 
 		ColumnsFor: func(parts []*domain.Part) []excel.ColumnSpec {
 			return append(itemBaseColumns(), itemPropertyColumns(partItems(parts))...)

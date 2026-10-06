@@ -47,7 +47,7 @@ type UpsertMaterialInput struct {
 	// omitted on update.
 	UnitPrice field.Optional[apirequest.RateInput] `json:"unit_price,omitzero"`
 	// Cost per unit. Same currency-vs-non-currency rule as `unit_price`.
-	UnitCost field.Optional[apirequest.RateInput] `json:"unit_cost,omitzero"`
+	UnitCost field.Optional[apirequest.RateInput] `json:"unit_cost,omitzero" sensitive:"cost"`
 	// Properties to attach to the material, matched/created by name + value. Additive —
 	// existing attributes are not removed.
 	Properties []UpsertMaterialProperty `json:"properties" default:"[]" validate:"dive"`

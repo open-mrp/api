@@ -739,8 +739,9 @@ func (r *receivingOrderRepoImpl) GetLineUnitPrices(ctx context.Context, receivin
 
 	result := make([]domain.ReceivingOrderLineUnitPrice, len(rows))
 	for i, row := range rows {
-		itemID := ""
-		if row.ItemID.Valid {
+		// A line that orders a product names no item of its own: what it restocks is the product's.
+		itemID := row.ProductItemID.String
+		if row.ItemID.Valid && row.ItemID.String != "" {
 			itemID = row.ItemID.String
 		}
 		result[i] = domain.ReceivingOrderLineUnitPrice{

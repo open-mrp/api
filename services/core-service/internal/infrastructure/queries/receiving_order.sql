@@ -431,12 +431,14 @@ GROUP BY sol.id, oq.value, ou.id;
 SELECT
     rol.id AS receiving_order_line_id,
     sol.item_id,
+    p.item_id AS product_item_id,
     r.value AS unit_price_value,
     r.numerator_unit_id AS unit_price_numerator_unit_id,
     r.denominator_unit_id AS unit_price_denominator_unit_id,
     qu.id AS quantity_unit_id
 FROM receiving_order_line rol
 JOIN sales_order_line sol ON rol.sales_order_line_id = sol.id
+LEFT JOIN product p ON p.id = sol.product_id
 JOIN rate r ON sol.unit_price_id = r.id
 JOIN quantity q ON rol.quantity_id = q.id
 JOIN unit qu ON q.unit_id = qu.id

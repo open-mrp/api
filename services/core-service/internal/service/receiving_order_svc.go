@@ -820,10 +820,15 @@ func (s *receivingOrderSvcImpl) stockedItemIDs(ctx context.Context, params domai
 
 	itemIDs := make([]string, 0, len(params.Data.LineItems))
 	for _, lineItem := range params.Data.LineItems {
-		if len(lineItem.Allocations) == 0 {
+		up, ok := unitPriceMap[lineItem.ReceivingOrderLineID]
+		if !ok {
 			continue
 		}
-		if up, ok := unitPriceMap[lineItem.ReceivingOrderLineID]; ok {
+		// Its receipts, change log and lot would name no item, and so belong to no item's stock.
+		if up.ItemID == "" {
+			return nil, apierror.NewInvariantViolationError("The receiving order line names neither an item nor a product's item to stock.")
+		}
+		if len(lineItem.Allocations) > 0 {
 			itemIDs = append(itemIDs, up.ItemID)
 		}
 	}

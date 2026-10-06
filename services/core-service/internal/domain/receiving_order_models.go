@@ -180,7 +180,8 @@ type UnstockedLine struct {
 
 // ReceivingOrderLineUnitPrice holds unit price information for a receiving order line.
 type ReceivingOrderLineUnitPrice struct {
-	ReceivingOrderLineID       string
+	ReceivingOrderLineID string
+	// ItemID is the item the line restocks: the one it names, or else its product's. Empty when it has neither.
 	ItemID                     string
 	UnitPriceValue             string
 	UnitPriceNumeratorUnitID   string

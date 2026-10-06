@@ -361,6 +361,67 @@ func TestReceivingOrders_StockWithoutALocationIsAccepted(t *testing.T) {
 	assertNilField(t, line, "location")
 }
 
+// A line orders a product, or names the item it restocks. Either way the stock lands on an item: the
+// product's, or the one named. Each case orders a fresh one, so its on-hand and change log hold only
+// this stocking.
+func TestReceivingOrders_StockingRestocksTheLinesItem(t *testing.T) {
+	t.Parallel()
+
+	for name, tc := range map[string]struct {
+		line   func(t *testing.T) (line map[string]any, itemID string)
+		onHand string
+	}{
+		"product": {
+			line: func(t *testing.T) (map[string]any, string) {
+				productID, itemID := newProductItemIDs(t, "e2e-ro-stock-product")
+				line := purchaseOrderLineBody("E2E-RO-STOCK-PRODUCT")
+				line["product_id"] = productID
+				return line, itemID
+			},
+			onHand: "4",
+		},
+		"item": {
+			line: func(t *testing.T) (map[string]any, string) {
+				_, itemID := newReconcilableItem(t)
+				line := materialLineBody("E2E-RO-STOCK-ITEM")
+				line["item_id"] = itemID
+				return line, itemID
+			},
+			onHand: "40",
+		},
+	} {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+
+			line, itemID := tc.line(t)
+			quantity, ok := line["quantity"].(map[string]any)
+			require.True(t, ok)
+			_, receivingOrderID := receivedPurchaseOrderReceivingOf(t, func(b map[string]any) {
+				b["lines"] = []map[string]any{line}
+			})
+
+			status, body := stockReceivingOrder(t, receivingOrderID, []map[string]any{{
+				"receiving_order_line_id": jsonField(firstLine(t, receivingOrderID), "id"),
+				"allocations":             []map[string]any{{"quantity": quantity, "location_id": SeedLocationID}},
+			}})
+			requireStatus(t, 200, status, body)
+
+			// Creating the item logged its opening level as a user action; stocking is the system's.
+			logs, status, err := apiClient.GetList(inventoryChangeLogsPath, url.Values{
+				"item_ids": {itemID}, "action_types": {"system_action"}, "include": {"item"},
+			})
+			require.NoError(t, err)
+			require.Equal(t, 200, status)
+			require.Len(t, logs.Data, 1, "stocking logs one change, on the line's item")
+			log := parseJSON(logs.Data[0])
+			assert.Equal(t, itemID, jsonField(jsonObject(log, "item"), "id"))
+			assertDecimalEqual(t, fmt.Sprint(quantity["value"]), jsonField(jsonObject(log, "quantity"), "value"))
+
+			assertDecimalEqual(t, tc.onHand, readInventory(t, itemID).onHand.String(), "the put-away stock is on hand")
+		})
+	}
+}
+
 // A lot number creates the lot on first use and applies to every allocation on the line.
 func TestReceivingOrders_StockUnderALotRecordsItOnEveryDeliveryLine(t *testing.T) {
 	t.Parallel()

@@ -64,11 +64,13 @@ func buildDeliveryListQuery(q deliveryListQuery) (string, []any) {
 	b.WriteString("SELECT STRAIGHT_JOIN d.id FROM ")
 	switch q.Drive {
 	case deliveryDriveSuppliers:
-		b.WriteString("(" + deliveriesFromSuppliers(len(q.SupplierIDs)) + ") matched JOIN delivery d ON d.id = matched.id")
-		args = append(args, stringArgs(q.SupplierIDs)...)
+		matched, matchedArgs := deliveriesFromSuppliers(q.SupplierIDs)
+		b.WriteString("(" + matched + ") matched JOIN delivery d ON d.id = matched.id")
+		args = append(args, matchedArgs...)
 	case deliveryDriveItems:
-		b.WriteString("(" + deliveriesWithItems(len(q.ItemIDs)) + ") matched JOIN delivery d ON d.id = matched.id")
-		args = append(args, stringArgs(q.ItemIDs)...)
+		matched, matchedArgs := deliveriesWithItems(q.ItemIDs)
+		b.WriteString("(" + matched + ") matched JOIN delivery d ON d.id = matched.id")
+		args = append(args, matchedArgs...)
 	default:
 		b.WriteString("delivery d FORCE INDEX (" + strings.Join(q.indexHint(), ", ") + ")")
 	}
@@ -94,7 +96,8 @@ func buildDeliveryListQuery(q deliveryListQuery) (string, []any) {
 		b.WriteString(" AND EXISTS (SELECT 1 FROM delivery_line dl2" +
 			" JOIN receiving_order_line rol2 ON rol2.id = dl2.receiving_order_line_id" +
 			" JOIN sales_order_line sol2 ON sol2.id = rol2.sales_order_line_id" +
-			" WHERE dl2.delivery_id = d.id AND sol2.item_id IN (" + placeholders(len(q.ItemIDs)) + "))")
+			" LEFT JOIN product p2 ON p2.id = sol2.product_id" +
+			" WHERE dl2.delivery_id = d.id AND COALESCE(NULLIF(sol2.item_id, ''), p2.item_id) IN (" + placeholders(len(q.ItemIDs)) + "))")
 		args = append(args, stringArgs(q.ItemIDs)...)
 	}
 	if len(q.SupplierIDs) > 0 && q.Drive != deliveryDriveSuppliers {
@@ -122,35 +125,47 @@ func buildDeliveryListQuery(q deliveryListQuery) (string, []any) {
 	return b.String(), args
 }
 
-// deliverySupplierRows and deliveryItemRows are the rows a supplier or item filter matches: the
-// suppliers' orders' deliveries, or the items' delivery lines.
-func deliverySupplierRows(n int) string {
+// deliverySupplierRows and deliveryItemRows are the rows a supplier or item filter matches, with their
+// bind args: the suppliers' orders' deliveries, or the delivery lines that received the items.
+func deliverySupplierRows(ids []string) (string, []any) {
 	return "sales_order so2 JOIN delivery d2 ON d2.sales_order_id = so2.id" +
-		" WHERE so2.seller_account_id IN (" + placeholders(n) + ")"
+		" WHERE so2.seller_account_id IN (" + placeholders(len(ids)) + ")", stringArgs(ids)
 }
 
-func deliveryItemRows(n int) string {
-	return "sales_order_line sol3 JOIN receiving_order_line rol3 ON rol3.sales_order_line_id = sol3.id" +
-		" JOIN delivery_line dl3 ON dl3.receiving_order_line_id = rol3.id" +
-		" WHERE sol3.item_id IN (" + placeholders(n) + ")"
+// An order line that orders a product names no item of its own and receives the product's. The
+// product's order lines are read from their key alone up to the receiving join, so a product sold on
+// thousands of orders costs index probes, not row reads.
+func deliveryItemRows(ids []string) (string, []any) {
+	in := placeholders(len(ids))
+	received := "SELECT rol3.id FROM sales_order_line sol3" +
+		" JOIN receiving_order_line rol3 ON rol3.sales_order_line_id = sol3.id" +
+		" WHERE sol3.item_id IN (" + in + ")" +
+		" UNION ALL SELECT STRAIGHT_JOIN rol4.id FROM product p4" +
+		" JOIN sales_order_line sol4 ON sol4.product_id = p4.id" +
+		" JOIN receiving_order_line rol4 ON rol4.sales_order_line_id = sol4.id" +
+		" JOIN sales_order_line own4 ON own4.id = rol4.sales_order_line_id" +
+		" WHERE p4.item_id IN (" + in + ") AND COALESCE(own4.item_id, '') = ''"
+	return "(" + received + ") received JOIN delivery_line dl3 ON dl3.receiving_order_line_id = received.id",
+		append(stringArgs(ids), stringArgs(ids)...)
 }
 
-func deliveriesFromSuppliers(n int) string {
-	return "SELECT d2.id FROM " + deliverySupplierRows(n)
+func deliveriesFromSuppliers(ids []string) (string, []any) {
+	rows, args := deliverySupplierRows(ids)
+	return "SELECT d2.id FROM " + rows, args
 }
 
-func deliveriesWithItems(n int) string {
-	return "SELECT DISTINCT dl3.delivery_id AS id FROM " + deliveryItemRows(n)
+func deliveriesWithItems(ids []string) (string, []any) {
+	rows, args := deliveryItemRows(ids)
+	return "SELECT DISTINCT dl3.delivery_id AS id FROM " + rows, args
 }
 
 // buildDeliveryMatchCountQuery counts the rows one unordered filter matches, stopping at
 // deliveryMatchCap. An item's delivery lines bound its deliveries from above, and counting them stops
 // at the cap where collecting distinct deliveries would read every match first.
 func buildDeliveryMatchCountQuery(drive deliveryDrive, ids []string) (string, []any) {
-	rows := deliverySupplierRows(len(ids))
+	rows, args := deliverySupplierRows(ids)
 	if drive == deliveryDriveItems {
-		rows = deliveryItemRows(len(ids))
+		rows, args = deliveryItemRows(ids)
 	}
-	args := append(stringArgs(ids), deliveryMatchCap)
-	return "SELECT COUNT(*) FROM (SELECT 1 FROM " + rows + " LIMIT ?) capped", args
+	return "SELECT COUNT(*) FROM (SELECT 1 FROM " + rows + " LIMIT ?) capped", append(args, deliveryMatchCap)
 }

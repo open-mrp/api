@@ -32,7 +32,15 @@ const (
 	planDlvDenseItem    = "it_planful_d000"
 	planDlvRareItem     = "it_planful_d001"
 	planDlvZeroItem     = "it_planful_d002"
+
+	// planDlvSoldItem is the fulfillment corpus's densest product's item. Two purchase orders buy it by
+	// that product, naming no item, and thousands of sales orders sell it: nearly all of the product's
+	// order lines are sales, which the item filter must not read row by row.
+	planDlvSoldProduct = "pd_planful_0000"
+	planDlvSoldItem    = "it_planful_0000"
 )
+
+var planDlvSoldItemOrders = []int{900, 2400}
 
 func planDlvSupplierID(s int) string { return fmt.Sprintf("%s_s%03d", planFulAccount, s) }
 
@@ -79,12 +87,39 @@ func ensureDeliveryCorpus(t *testing.T) {
 		var have, orders int
 		require.NoError(t, db.QueryRow("SELECT COUNT(*) FROM delivery WHERE account_id = ?", planFulAccount).Scan(&have))
 		require.NoError(t, db.QueryRow("SELECT COUNT(*) FROM sales_order WHERE id LIKE 'po\\_planful\\_%'").Scan(&orders))
-		if have >= planDlvDeliveries && orders >= planDlvOrders {
-			return
+		if have < planDlvDeliveries || orders < planDlvOrders {
+			t.Logf("seeding the delivery plan corpus (%d deliveries); it is kept for later runs", planDlvDeliveries)
+			seedDeliveryCorpus(t, db)
 		}
-		t.Logf("seeding the delivery plan corpus (%d deliveries); it is kept for later runs", planDlvDeliveries)
-		seedDeliveryCorpus(t, db)
+		seedDeliveryProductLines(t, db)
 	})
+}
+
+// seedDeliveryProductLines adds the purchase order lines that order planDlvSoldProduct, with a receiving
+// line each and a line on each of their orders' deliveries. It only inserts what is missing, so a corpus
+// seeded before these lines existed gains them.
+func seedDeliveryProductLines(t *testing.T, db *sql.DB) {
+	exec := func(query string, args ...any) {
+		_, err := db.Exec(query, args...)
+		require.NoError(t, err)
+	}
+	for _, po := range planDlvSoldItemOrders {
+		k := 90_000 + po
+		at := planDlvCreatedAt(2 * po)
+		exec(`INSERT IGNORE INTO sales_order_line (id, product_sku, sales_order_id, quantity_id, unit_price_id, product_id,
+		      line_item_number, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+			planFulID("pol", k), "SKU-0000", planFulID("po", po), planFulID("qy_pol", k), planFulID("qy_pop", k),
+			planDlvSoldProduct, 3, at, at)
+		exec(`INSERT IGNORE INTO receiving_order_line (id, receiving_order_id, quantity_id, sales_order_line_id, created_at,
+		      updated_at) VALUES (?, ?, ?, ?, ?, ?)`,
+			planFulID("rol", k), planFulID("ro", po), planFulID("qy_rol", k), planFulID("pol", k), at, at)
+		for _, d := range []int{2 * po, 2*po + 1} {
+			exec(`INSERT IGNORE INTO delivery_line (id, delivery_id, receiving_order_line_id, quantity_id, unit_cost_id,
+			      created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?)`,
+				planFulID("dll", 900_000+d), planFulID("dlv", d), planFulID("rol", k), planFulID("qy_dll", 900_000+d),
+				planFulID("qy_dlc", 900_000+d), planDlvCreatedAt(d), planDlvCreatedAt(d))
+		}
+	}
 }
 
 func seedDeliveryCorpus(t *testing.T, db *sql.DB) {
@@ -197,6 +232,7 @@ func deliveryPlanDims() []planDim[domain.ListDeliveriesParams] {
 			{"dense", func(p *domain.ListDeliveriesParams) { p.ItemIDs = []string{planDlvDenseItem} }},
 			{"rare", func(p *domain.ListDeliveriesParams) { p.ItemIDs = []string{planDlvRareItem} }},
 			{"zero", func(p *domain.ListDeliveriesParams) { p.ItemIDs = []string{planDlvZeroItem} }},
+			{"sold", func(p *domain.ListDeliveriesParams) { p.ItemIDs = []string{planDlvSoldItem} }},
 		}},
 		{"created", []planValue[domain.ListDeliveriesParams]{
 			{"last30d", func(p *domain.ListDeliveriesParams) { p.StartDate = at(recent.Add(-30 * 24 * time.Hour)) }},
@@ -230,17 +266,17 @@ func deliveryPlanCases() []planCase[domain.ListDeliveriesParams] {
 func deliveryUnorderedFloor(t *testing.T, db *sql.DB, p domain.ListDeliveriesParams) float64 {
 	t.Helper()
 	var floors []float64
-	count := func(where string, args ...any) {
+	count := func(matched string, args []any) {
 		var n float64
-		require.NoError(t, db.QueryRow("SELECT COUNT(*) FROM delivery d WHERE d.account_id = ? AND "+where,
+		require.NoError(t, db.QueryRow("SELECT COUNT(*) FROM delivery d WHERE d.account_id = ? AND d.id IN ("+matched+")",
 			append([]any{p.AccountID}, args...)...).Scan(&n))
 		floors = append(floors, n)
 	}
 	if len(p.SupplierIDs) > 0 {
-		count("d.id IN ("+deliveriesFromSuppliers(len(p.SupplierIDs))+")", stringArgs(p.SupplierIDs)...)
+		count(deliveriesFromSuppliers(p.SupplierIDs))
 	}
 	if len(p.ItemIDs) > 0 {
-		count("d.id IN ("+deliveriesWithItems(len(p.ItemIDs))+")", stringArgs(p.ItemIDs)...)
+		count(deliveriesWithItems(p.ItemIDs))
 	}
 	if len(floors) == 0 {
 		return 0
@@ -272,5 +308,21 @@ func TestDeliveryList_ReadsAboutAPage(t *testing.T) {
 			return nil
 		},
 		floor: deliveryUnorderedFloor,
+		// An item filter that drives reads each order line of the item, and of its products, once and from
+		// their keys: an item sold on thousands of orders is read through, never scanned for.
+		reads: []planRead[domain.ListDeliveriesParams]{
+			{alias: "sol3", matches: planDlvItemOrderLines("sales_order_line sol WHERE sol.item_id")},
+			{alias: "sol4", matches: planDlvItemOrderLines("product p JOIN sales_order_line sol ON sol.product_id = p.id WHERE p.item_id")},
+		},
 	}.run(t)
+}
+
+// planDlvItemOrderLines counts the order lines the request's item filter reaches through from.
+func planDlvItemOrderLines(from string) func(*testing.T, *sql.DB, domain.ListDeliveriesParams) float64 {
+	return func(t *testing.T, db *sql.DB, p domain.ListDeliveriesParams) float64 {
+		var n float64
+		require.NoError(t, db.QueryRow("SELECT COUNT(*) FROM "+from+" IN ("+placeholders(len(p.ItemIDs))+")",
+			stringArgs(p.ItemIDs)...).Scan(&n))
+		return n
+	}
 }

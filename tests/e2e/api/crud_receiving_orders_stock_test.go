@@ -422,6 +422,64 @@ func TestReceivingOrders_StockingRestocksTheLinesItem(t *testing.T) {
 	}
 }
 
+// A line that orders a product names no item of its own. Its receiving line and the delivery line it
+// is stocked onto show the product's item, and each list's item filter finds them by it. The product
+// is a fresh one, so the filtered lists hold only this order's documents.
+func TestReceivingOrders_AProductOrderedLineShowsAndFiltersByTheProductsItem(t *testing.T) {
+	t.Parallel()
+
+	productID, itemID := newProductItemIDs(t, "e2e-ro-product-item")
+	_, otherItemID := newProductItemIDs(t, "e2e-ro-product-other")
+	line := purchaseOrderLineBody("E2E-RO-PRODUCT-ITEM")
+	line["product_id"] = productID
+	quantity, ok := line["quantity"].(map[string]any)
+	require.True(t, ok)
+	_, receivingOrderID := receivedPurchaseOrderReceivingOf(t, func(b map[string]any) {
+		b["lines"] = []map[string]any{line}
+	})
+	itemOf := func(row any) string {
+		t.Helper()
+		m, ok := row.(map[string]any)
+		require.True(t, ok)
+		item := jsonObject(m, "item")
+		require.NotNil(t, item, "the line's item must expand: %v", m)
+		return jsonField(item, "id")
+	}
+
+	status, body, err := apiClient.GetListRaw(receivingOrdersPath+"/"+receivingOrderID, url.Values{"include": {"lines", "lines.item"}})
+	require.NoError(t, err)
+	requireStatus(t, 200, status, body)
+	lines := jsonListData(parseJSON(body), "lines")
+	require.Len(t, lines, 1)
+	assert.Equal(t, itemID, itemOf(lines[0]), "the receiving order's line receives the product's item")
+
+	lineID := jsonField(lines[0].(map[string]any), "id")
+	status, body, err = apiClient.Patch(receivingOrdersPath+"/"+receivingOrderID+"/lines/"+lineID+"?include=item",
+		map[string]any{"quantity": quantity}, newIdempotencyKey())
+	require.NoError(t, err)
+	requireStatus(t, 200, status, body)
+	assert.Equal(t, itemID, itemOf(parseJSON(body)), "and so does the line read on its own")
+
+	assert.Equal(t, []string{receivingOrderID}, listIDs(t, receivingOrdersPath, url.Values{"item_ids": {itemID}}),
+		"the receiving order list's item filter finds the order by the product's item")
+	assert.Empty(t, listIDs(t, receivingOrdersPath, url.Values{"item_ids": {otherItemID}}))
+
+	status, body = stockReceivingOrder(t, receivingOrderID, []map[string]any{{
+		"receiving_order_line_id": lineID,
+		"allocations":             []map[string]any{{"quantity": quantity, "location_id": SeedLocationID}},
+	}})
+	requireStatus(t, 200, status, body)
+
+	delivery := deliveryForReceivingOrder(t, receivingOrderID)
+	deliveryLines := jsonListData(delivery, "lines")
+	require.Len(t, deliveryLines, 1)
+	assert.Equal(t, itemID, itemOf(deliveryLines[0]), "the delivery line received the product's item")
+
+	assert.Equal(t, []string{jsonField(delivery, "id")}, listIDs(t, deliveriesPath, url.Values{"item_ids": {itemID}}),
+		"the delivery list's item filter finds the delivery by the product's item")
+	assert.Empty(t, listIDs(t, deliveriesPath, url.Values{"item_ids": {otherItemID}}))
+}
+
 // A lot number creates the lot on first use and applies to every allocation on the line.
 func TestReceivingOrders_StockUnderALotRecordsItOnEveryDeliveryLine(t *testing.T) {
 	t.Parallel()

@@ -35,7 +35,7 @@ func TestBuildDeliveryListQuery_ArgsBindInPlaceholderOrder(t *testing.T) {
 			"FROM delivery d FORCE INDEX (" + deliveryStatusIndex + ")"},
 		{"suppliers", deliveryDriveSuppliers, concat([]any{"ac_s1", "ac_1", "%x%", "%x%", "accepted", "it_1"}, tail),
 			") matched JOIN delivery d ON d.id = matched.id"},
-		{"items", deliveryDriveItems, concat([]any{"it_1", "ac_1", "%x%", "%x%", "accepted", "ac_s1"}, tail),
+		{"items", deliveryDriveItems, concat([]any{"it_1", "it_1", "ac_1", "%x%", "%x%", "accepted", "ac_s1"}, tail),
 			") matched JOIN delivery d ON d.id = matched.id"},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
@@ -61,13 +61,20 @@ func TestBuildDeliveryListQuery_ArgsBindInPlaceholderOrder(t *testing.T) {
 func TestBuildDeliveryMatchCountQuery_StopsAtTheCap(t *testing.T) {
 	t.Parallel()
 
-	for _, drive := range []deliveryDrive{deliveryDriveSuppliers, deliveryDriveItems} {
+	for drive, want := range map[deliveryDrive][]any{
+		deliveryDriveSuppliers: {"a", "b", deliveryMatchCap},
+		// The items name the order lines that list them, then the products the rest order.
+		deliveryDriveItems: {"a", "b", "a", "b", deliveryMatchCap},
+	} {
 		query, args := buildDeliveryMatchCountQuery(drive, []string{"a", "b"})
 		if !strings.Contains(query, "LIMIT ?) capped") || strings.Contains(query, "DISTINCT") {
 			t.Errorf("count is not a capped read:\n%s", query)
 		}
-		if !reflect.DeepEqual(args, []any{"a", "b", deliveryMatchCap}) {
-			t.Errorf("args = %v", args)
+		if !reflect.DeepEqual(args, want) {
+			t.Errorf("args = %v, want %v", args, want)
+		}
+		if got := strings.Count(query, "?"); got != len(args) {
+			t.Errorf("%d placeholders but %d args", got, len(args))
 		}
 	}
 }

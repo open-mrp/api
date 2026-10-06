@@ -195,6 +195,16 @@ func (r *receivingOrderRepoImpl) List(ctx context.Context, params domain.ListRec
 	if len(itemIDs) == 0 {
 		itemIDs = []gosql.NullString{{}}
 	}
+	var productIDs []gosql.NullString
+	if includeItemFilter {
+		ids, err := r.queries.ListProductIDsForItems(ctx, params.ItemIDs)
+		if apiErr := db.MapSQLError(err); apiErr != nil {
+			return nil, tracing.Trace(span, apiErr)
+		}
+		for _, id := range ids {
+			productIDs = append(productIDs, gosql.NullString{String: id, Valid: true})
+		}
+	}
 
 	includeSupplierFilter := len(params.SupplierIDs) > 0
 	supplierIDs := params.SupplierIDs
@@ -218,6 +228,7 @@ func (r *receivingOrderRepoImpl) List(ctx context.Context, params domain.ListRec
 				Status:                status,
 				IncludeItemFilter:     includeItemFilter,
 				ItemIds:               itemIDs,
+				ProductIds:            productIDs,
 				IncludeSupplierFilter: includeSupplierFilter,
 				SupplierIds:           supplierIDs,
 				StartDate:             startDate,
@@ -247,6 +258,7 @@ func (r *receivingOrderRepoImpl) List(ctx context.Context, params domain.ListRec
 			Status:                status,
 			IncludeItemFilter:     includeItemFilter,
 			ItemIds:               itemIDs,
+			ProductIds:            productIDs,
 			IncludeSupplierFilter: includeSupplierFilter,
 			SupplierIds:           supplierIDs,
 			StartDate:             startDate,
@@ -276,6 +288,7 @@ func (r *receivingOrderRepoImpl) List(ctx context.Context, params domain.ListRec
 		Status:                status,
 		IncludeItemFilter:     includeItemFilter,
 		ItemIds:               itemIDs,
+		ProductIds:            productIDs,
 		IncludeSupplierFilter: includeSupplierFilter,
 		SupplierIds:           supplierIDs,
 		StartDate:             startDate,
@@ -1057,6 +1070,9 @@ func mapReceivingOrderLineRow(row sqlc.ListReceivingOrderLinesByOrderIDsRow) *do
 	if row.OrderLineItemID.Valid {
 		line.OrderLineItemID = &row.OrderLineItemID.String
 	}
+	if row.OrderLineProductItemID.Valid {
+		line.OrderLineProductItemID = &row.OrderLineProductItemID.String
+	}
 	if row.OrderLineItemSku.Valid {
 		line.OrderLineItemSKU = &row.OrderLineItemSku.String
 	}
@@ -1106,6 +1122,9 @@ func mapGetReceivingOrderLineRow(row sqlc.GetReceivingOrderLineRow) *domain.Rece
 	}
 	if row.OrderLineItemID.Valid {
 		line.OrderLineItemID = &row.OrderLineItemID.String
+	}
+	if row.OrderLineProductItemID.Valid {
+		line.OrderLineProductItemID = &row.OrderLineProductItemID.String
 	}
 	if row.OrderLineItemSku.Valid {
 		line.OrderLineItemSKU = &row.OrderLineItemSku.String

@@ -90,7 +90,12 @@ AND (
         SELECT 1 FROM receiving_order_line rol2
         JOIN sales_order_line sol ON rol2.sales_order_line_id = sol.id
         WHERE rol2.receiving_order_id = ro.id
-        AND sol.item_id IN (sqlc.slice('item_ids'))
+        AND (
+            sol.item_id IN (sqlc.slice('item_ids'))
+            -- A line that orders a product names no item of its own and receives the product's. The
+            -- products are named up front so either branch can drive the read from its key.
+            OR (sol.product_id IN (sqlc.slice('product_ids')) AND COALESCE(sol.item_id, '') = '')
+        )
     )
 )
 AND (
@@ -169,7 +174,12 @@ AND (
         SELECT 1 FROM receiving_order_line rol2
         JOIN sales_order_line sol ON rol2.sales_order_line_id = sol.id
         WHERE rol2.receiving_order_id = ro.id
-        AND sol.item_id IN (sqlc.slice('item_ids'))
+        AND (
+            sol.item_id IN (sqlc.slice('item_ids'))
+            -- A line that orders a product names no item of its own and receives the product's. The
+            -- products are named up front so either branch can drive the read from its key.
+            OR (sol.product_id IN (sqlc.slice('product_ids')) AND COALESCE(sol.item_id, '') = '')
+        )
     )
 )
 AND (
@@ -190,6 +200,10 @@ AND (
 )
 ORDER BY ro.created_at ASC, ro.id ASC
 LIMIT ?;
+
+-- ListProductIDsForItems names the products made from the given items.
+-- name: ListProductIDsForItems :many
+SELECT p.id FROM product p WHERE p.item_id IN (sqlc.slice('item_ids'));
 
 -- name: GetReceivingOrderByID :one
 SELECT
@@ -228,6 +242,7 @@ SELECT
     qu.abbreviation AS quantity_unit_abbreviation,
     sol.id AS order_line_id,
     sol.item_id AS order_line_item_id,
+    p.item_id AS order_line_product_item_id,
     sol.product_id AS order_line_product_id,
     sol.line_item_number AS order_line_item_number,
     i.sku AS order_line_item_sku,
@@ -248,7 +263,8 @@ FROM receiving_order_line rol
 JOIN quantity q ON rol.quantity_id = q.id
 JOIN unit qu ON q.unit_id = qu.id
 JOIN sales_order_line sol ON rol.sales_order_line_id = sol.id
-LEFT JOIN item i ON sol.item_id = i.id
+LEFT JOIN product p ON p.id = sol.product_id
+LEFT JOIN item i ON i.id = COALESCE(NULLIF(sol.item_id, ''), p.item_id)
 JOIN quantity oq ON sol.quantity_id = oq.id
 JOIN unit ou ON oq.unit_id = ou.id
 WHERE rol.receiving_order_id IN (sqlc.slice('receiving_order_ids'))
@@ -346,6 +362,7 @@ SELECT
     qu.abbreviation AS quantity_unit_abbreviation,
     sol.id AS order_line_id,
     sol.item_id AS order_line_item_id,
+    p.item_id AS order_line_product_item_id,
     sol.product_id AS order_line_product_id,
     sol.line_item_number AS order_line_item_number,
     i.sku AS order_line_item_sku,
@@ -366,7 +383,8 @@ FROM receiving_order_line rol
 JOIN quantity q ON rol.quantity_id = q.id
 JOIN unit qu ON q.unit_id = qu.id
 JOIN sales_order_line sol ON rol.sales_order_line_id = sol.id
-LEFT JOIN item i ON sol.item_id = i.id
+LEFT JOIN product p ON p.id = sol.product_id
+LEFT JOIN item i ON i.id = COALESCE(NULLIF(sol.item_id, ''), p.item_id)
 JOIN quantity oq ON sol.quantity_id = oq.id
 JOIN unit ou ON oq.unit_id = ou.id
 WHERE rol.id = sqlc.arg('line_id');

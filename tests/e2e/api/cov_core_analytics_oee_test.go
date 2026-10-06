@@ -38,10 +38,7 @@ func findOeeDepartment(resp map[string]any, departmentID string) map[string]any 
 	return nil
 }
 
-// oeeSeededWindow is a window of the given length that holds the seeded department's seeded production.
-//
-// A department reports OEE only for a window holding some of its production. A window ending now holds some only
-// while another test happens to have scanned there recently, so these tests measure a fixed window around the seed.
+// oeeSeededWindow holds the seeded production; a window ending now holds some only while another test has just scanned.
 func oeeSeededWindow(t *testing.T, length time.Duration) (time.Time, time.Time) {
 	t.Helper()
 	var scannedAt time.Time
@@ -55,8 +52,7 @@ func oeeWindow(t *testing.T) (time.Time, time.Time) {
 	return oeeSeededWindow(t, 24*time.Hour)
 }
 
-// awaitOeeDepartment re-reads the report until the seeded department passes check. A report is cached, and the
-// downtime a test logs reaches it through its audit event, shortly after the write.
+// awaitOeeDepartment re-reads until check passes: the report is cached, and logged downtime reaches it via an audit event.
 func awaitOeeDepartment(t *testing.T, body map[string]any, check func(dept map[string]any) error) map[string]any {
 	t.Helper()
 	var dept map[string]any

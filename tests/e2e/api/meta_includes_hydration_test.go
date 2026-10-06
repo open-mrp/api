@@ -111,8 +111,7 @@ func TestIncludes_HydratedToOneMatchesCanonical(t *testing.T) {
 					}
 					stillIncluded := func(id string) bool { return includedLeaf(id) != nil }
 
-					// Parallel tests create and delete short-lived rows, so a whole page of leaves can vanish between
-					// reads; read the page again before concluding nothing could be cross-checked.
+					// A page of short-lived rows can vanish between reads, so read it again before giving up.
 					for round := 0; round < 3; round++ {
 						for _, leaf := range leaves {
 							rt, ok := retrieveByType[jsonField(leaf, "object")]

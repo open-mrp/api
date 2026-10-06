@@ -32,8 +32,7 @@ func LoadItems(ctx context.Context, ids []string) (map[string]any, *apierror.API
 	meta := resourcekit.GetLoadMeta(ctx)
 	out := make(map[string]any, len(resp.Items))
 
-	// Attributes are the only part of an item that names properties, and reading properties takes their own
-	// permission, so they are read only for a caller that asked to see attributes.
+	// Properties take their own permission to read, so only a caller that asked for attributes needs them.
 	propertyIDs := map[string]struct{}{}
 	if itemAttributesRequested(ctx) {
 		for _, item := range resp.Items {

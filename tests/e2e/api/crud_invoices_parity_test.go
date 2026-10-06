@@ -99,8 +99,7 @@ func TestInvoices_UnpaidStatusKeysOffPaidInFullOnly(t *testing.T) {
 	assert.NotContains(t, ids, SeedInvoiceID)
 }
 
-// Item and product-line filters reach an invoice through its order's lines. The invoice is the test's own, and the
-// list is narrowed to its customer, so the answer is exact however many invoices other tests have raised.
+// Item and product-line filters reach an invoice through its order's lines; the test's own customer makes the answer exact.
 func TestInvoices_LineFiltersScopeToOrderLines(t *testing.T) {
 	t.Parallel()
 	inv := invoiceNewCustomer(t) // an order of the seed product, whose item is SeedItemID on SeedProductLineID

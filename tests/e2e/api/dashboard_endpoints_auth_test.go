@@ -21,10 +21,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-// dashboardOperationIDs are the operations the dashboard calls for the domains it moved from Express to Go:
-// analytics, items and inventory, invoices and receivables, shipments and shipping cases, picks, receiving
-// orders, customers, suppliers, contacts, addresses, child accounts, product-line access, territories, users and
-// account settings.
+// dashboardOperationIDs are the operations the dashboard calls in the domains it moved from Express to Go.
 var dashboardOperationIDs = []string{
 	"activate-account-user", "add-child-account", "add-item-attribute", "admin-update-shipment-tracking",
 	"admin-update-shipping-case-tracking", "analyze-customer-pricing", "analyze-delivery-performance",
@@ -120,9 +117,7 @@ func documentedPermissions(description string) []string {
 	return nil
 }
 
-// dashboardUnknownPath fills every path parameter with an id of the right shape that names nothing, so a request
-// reaches the handler without touching a real record. The seeded account and user stand in where the route names the
-// caller's own account or a user, since those routes refuse anyone else's before looking further.
+// dashboardUnknownPath names nothing that exists, bar the caller's own account or user where a route refuses others.
 func dashboardUnknownPath(op dashboardOperation) string {
 	path := op.path
 	for _, param := range pathParamNames(path) {
@@ -151,8 +146,7 @@ func pathParamNames(path string) []string {
 	return names
 }
 
-// unknownIDLike keeps the seeded id's prefix and replaces the rest with a string unique to the operation, so
-// operations that lock a record by id do not contend with each other over the same unknown one.
+// unknownIDLike keeps the seed id's prefix; the rest is unique per operation, so record locks never contend.
 func unknownIDLike(op dashboardOperation, param string) string {
 	seed := ""
 	if param == "id" {
@@ -179,8 +173,7 @@ func unknownIDLike(op dashboardOperation, param string) string {
 	return prefix + "_" + suffix[:len(rest)]
 }
 
-// dashboardRequestBody is what each check sends: an empty body is refused before anything is written, and a report
-// gets the window it needs to run.
+// dashboardRequestBody is refused before anything is written, except a report's, which gets a window to run.
 func dashboardRequestBody(op dashboardOperation) map[string]any {
 	if strings.HasPrefix(op.path, "/v1/core/analytics/") && op.method == http.MethodPut {
 		end := time.Date(2026, 1, 31, 0, 0, 0, 0, time.UTC)
@@ -264,9 +257,7 @@ var dashboardAdminOnlyOperations = map[string]string{
 	"admin-update-shipping-case-tracking": "re-routing a case that already went out overrides the ordinary update",
 }
 
-// Every operation that documents its permissions refuses a role holding none of them, and treats a role holding one
-// exactly as it treats the admin. The refused role holds a sibling permission where one exists (read for an update),
-// so a gate that checks only the domain shows up.
+// A role holding a sibling permission outside the documented set is refused; one holding a documented one is treated like the admin.
 func TestDashboardEndpoints_EnforceDocumentedPermissions(t *testing.T) {
 	t.Parallel()
 	ops := loadDashboardOperations(t)
@@ -308,9 +299,7 @@ func TestDashboardEndpoints_EnforceDocumentedPermissions(t *testing.T) {
 			adminStatus, adminBody := dashboardCall(t, apiClient, p.op)
 			require.Less(t, adminStatus, 500, string(adminBody))
 
-			// The request names nothing that exists, so whatever the admin gets — a 404, a 400 for the empty body, a
-			// list — is what a role holding the permission must get too. For an any-of set, the caller's own account
-			// needs at least one of them; the others may apply only when targeting a counterparty.
+			// Of an any-of set, one must suffice for the caller's own account; the rest may apply only to counterparties.
 			got := map[string]int{}
 			for _, perm := range sortedKeys(p.holders) {
 				status, body := dashboardCall(t, p.holders[perm], p.op)
@@ -332,8 +321,7 @@ func TestDashboardEndpoints_EnforceDocumentedPermissions(t *testing.T) {
 	}
 }
 
-// dashboardRefusedPermission is a permission outside the any-of set: the same domain's read (or update, for a read
-// endpoint) when that is not in the set, else one from an unrelated domain.
+// dashboardRefusedPermission prefers a sibling of the set's domain, so a gate that checks only the domain shows up.
 func dashboardRefusedPermission(allowed []string) string {
 	in := map[string]bool{}
 	for _, p := range allowed {

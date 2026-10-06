@@ -36,8 +36,7 @@ func TestListItems_SearchBySKU(t *testing.T) {
 	assert.True(t, found, "Seeded item with SKU %q not found in search results", SeedItemSKU)
 }
 
-// The search reaches an item's description. The word is unique to this test's own item and absent from its SKU,
-// so only the description can have matched, however many items other tests create.
+// The search reaches a description: the word is in this test's own item's description and nowhere else.
 func TestListItems_SearchByDescription(t *testing.T) {
 	t.Parallel()
 	word := searchToken("e2edesc")

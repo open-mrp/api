@@ -65,8 +65,7 @@ func TestSalesOrders_PaymentStatus_Detail(t *testing.T) {
 
 // TestSalesOrders_PaymentStatus_List pins that the list endpoint reports the
 // same derived payment_status as detail — the list is where the bug surfaced.
-// Other tests keep adding orders for the seed customer, so each seed order is
-// paged to rather than assumed to be on the first page.
+// Other tests keep adding orders for the seed customer, so each one is paged to.
 func TestSalesOrders_PaymentStatus_List(t *testing.T) {
 	t.Parallel()
 

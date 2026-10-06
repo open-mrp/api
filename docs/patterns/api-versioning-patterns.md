@@ -155,7 +155,7 @@ Using preview.2 as the template — every step below has a concrete counterpart 
 5. **Update e2e to the new contract**: bump `defaultAPIVersion` in `tests/e2e/api/client_test.go`; rewrite shape assertions for the new version.
 6. **Add version-compat e2e tests** (`tests/e2e/api/version_compat_<resource>_test.go`): pin a client to the previous version via `apiClient.WithAPIVersion(...)` and assert the *old* shape end-to-end — list, get, create, patch — plus one test asserting the latest version is unaffected by the transformer. These tests are the executable definition of "no breaking changes"; they stay green until the old version is removed.
 7. **Regenerate artifacts**: `make openapi` (the spec documents `Latest` only — old versions are documented by their transformers and compat tests, not by parallel specs), bump the `api-version` seed in `tools/apidocs/httpie_seed_data.go`, regenerate SDKs as needed.
-8. **Communicate**: changelog entry describing the new shape, the migration path for clients, and the deprecation expectation for the previous version.
+8. **Communicate**: an entry under the version in `docs/api-changelog.md` describing the new shape, what older versions receive instead, the migration path for clients, and the deprecation expectation for the previous version. A fix that applies to every version is recorded there too.
 
 ---
 

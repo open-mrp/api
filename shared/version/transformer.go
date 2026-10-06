@@ -34,6 +34,11 @@ type QueryUpgrader interface {
 	TransformQuery(objectType constants.ObjectType, route string, query url.Values) url.Values
 }
 
+// BodyUpgrader is an optional interface a Transformer implements, in place of TransformRequest, when one object type is written through endpoints whose bodies changed differently — a create and an update sharing field names, say. It upgrades a body sent at ToVersion to the FromVersion shape, given the endpoint's method and route template.
+type BodyUpgrader interface {
+	TransformRequestBody(objectType constants.ObjectType, method, route string, data map[string]any) map[string]any
+}
+
 // TransformerRegistry manages a collection of version transformers.
 type TransformerRegistry struct {
 	transformers []Transformer
@@ -95,6 +100,27 @@ func (r *TransformerRegistry) TransformRequest(from, to APIVersion, objectType c
 		}
 	}
 
+	return result
+}
+
+// TransformEndpointRequest is TransformRequest for a known endpoint: a transformer that implements BodyUpgrader is given the endpoint's method and route, and the rest run their TransformRequest.
+func (r *TransformerRegistry) TransformEndpointRequest(from, to APIVersion, objectType constants.ObjectType, method, route string, data map[string]any) map[string]any {
+	if from.Equal(to) || from.After(to) {
+		return data
+	}
+
+	result := data
+	for i := len(r.transformers) - 1; i >= 0; i-- {
+		t := r.transformers[i]
+		if t.ToVersion().Before(from) || t.FromVersion().After(to) || !r.handlesObjectType(t, objectType) {
+			continue
+		}
+		if upgrader, ok := t.(BodyUpgrader); ok {
+			result = upgrader.TransformRequestBody(objectType, method, route, result)
+			continue
+		}
+		result = t.TransformRequest(objectType, result)
+	}
 	return result
 }
 
@@ -165,6 +191,11 @@ func TransformQuery(from, to APIVersion, objectType constants.ObjectType, route 
 // TransformRequest applies request transformers from the default registry.
 func TransformRequest(from, to APIVersion, objectType constants.ObjectType, data map[string]any) map[string]any {
 	return DefaultRegistry.TransformRequest(from, to, objectType, data)
+}
+
+// TransformEndpointRequest applies request upgrades for a known endpoint from the default registry.
+func TransformEndpointRequest(from, to APIVersion, objectType constants.ObjectType, method, route string, data map[string]any) map[string]any {
+	return DefaultRegistry.TransformEndpointRequest(from, to, objectType, method, route, data)
 }
 
 // ForcedIncludes collects forced include keys from the default registry.

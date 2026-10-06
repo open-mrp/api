@@ -362,7 +362,7 @@ func (s *customerProductLineAccessSvcImpl) DeleteCustomerProductLineAccess(ctx c
 	existing, apiErr := s.repos.NewCustomerProductLineAccessRepo().Get(ctx, accountID, customerID)
 	if apiErr != nil {
 		if apierror.IsNotFound(apiErr) {
-			wasDeleted, deletedCheckErr := s.repos.NewDeletedRecordRepo().Exists(ctx, constants.DeletedRecordResourceTypeCustomerProductLineAccess, customerID)
+			wasDeleted, deletedCheckErr := s.repos.NewDeletedRecordRepo().ExistsInAccount(ctx, constants.DeletedRecordResourceTypeCustomerProductLineAccess, customerID, accountID)
 			if deletedCheckErr != nil {
 				return tracing.Trace(span, deletedCheckErr)
 			}
@@ -377,7 +377,7 @@ func (s *customerProductLineAccessSvcImpl) DeleteCustomerProductLineAccess(ctx c
 	}
 
 	apiErr = s.withTx(ctx, func(txCtx context.Context, txSvc *customerProductLineAccessSvcImpl) *apierror.APIError {
-		if apiErr := txSvc.repos.NewDeletedRecordRepo().Create(txCtx, constants.DeletedRecordResourceTypeCustomerProductLineAccess, existing.CustomerID, existing); apiErr != nil {
+		if apiErr := txSvc.repos.NewDeletedRecordRepo().CreateInAccount(txCtx, constants.DeletedRecordResourceTypeCustomerProductLineAccess, existing.CustomerID, accountID, existing); apiErr != nil {
 			return apiErr
 		}
 

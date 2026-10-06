@@ -337,7 +337,7 @@ func (s *paymentTermSvcImpl) DeletePaymentTerm(ctx context.Context, paymentTermI
 	paymentTerm, apiErr := s.repos.NewPaymentTermRepo().Get(ctx, domain.GetPaymentTermParams{AccountID: accountID, PaymentTermID: paymentTermID})
 	if apiErr != nil {
 		if apierror.IsNotFound(apiErr) {
-			wasDeleted, deletedCheckErr := s.repos.NewDeletedRecordRepo().Exists(ctx, constants.DeletedRecordResourceTypePaymentTerm, paymentTermID)
+			wasDeleted, deletedCheckErr := s.repos.NewDeletedRecordRepo().ExistsInAccount(ctx, constants.DeletedRecordResourceTypePaymentTerm, paymentTermID, accountID)
 			if deletedCheckErr != nil {
 				return tracing.Trace(span, deletedCheckErr)
 			}
@@ -352,7 +352,7 @@ func (s *paymentTermSvcImpl) DeletePaymentTerm(ctx context.Context, paymentTermI
 	}
 
 	apiErr = s.withTx(ctx, func(txCtx context.Context, txSvc *paymentTermSvcImpl) *apierror.APIError {
-		if apiErr := txSvc.repos.NewDeletedRecordRepo().Create(txCtx, constants.DeletedRecordResourceTypePaymentTerm, paymentTerm.ID, paymentTerm); apiErr != nil {
+		if apiErr := txSvc.repos.NewDeletedRecordRepo().CreateInAccount(txCtx, constants.DeletedRecordResourceTypePaymentTerm, paymentTerm.ID, accountID, paymentTerm); apiErr != nil {
 			return apiErr
 		}
 

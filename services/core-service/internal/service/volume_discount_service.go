@@ -413,7 +413,7 @@ func (s *volumeDiscountSvcImpl) DeleteVolumeDiscount(ctx context.Context, volume
 	})
 	if apiErr != nil {
 		if apierror.IsNotFound(apiErr) {
-			wasDeleted, deletedCheckErr := s.repos.NewDeletedRecordRepo().Exists(ctx, constants.DeletedRecordResourceTypeVolumeDiscount, volumeDiscountID)
+			wasDeleted, deletedCheckErr := s.repos.NewDeletedRecordRepo().ExistsInAccount(ctx, constants.DeletedRecordResourceTypeVolumeDiscount, volumeDiscountID, accountID)
 			if deletedCheckErr != nil {
 				return tracing.Trace(span, deletedCheckErr)
 			}
@@ -425,7 +425,7 @@ func (s *volumeDiscountSvcImpl) DeleteVolumeDiscount(ctx context.Context, volume
 	}
 
 	apiErr = s.withTx(ctx, func(txCtx context.Context, txSvc *volumeDiscountSvcImpl) *apierror.APIError {
-		if apiErr := txSvc.repos.NewDeletedRecordRepo().Create(txCtx, constants.DeletedRecordResourceTypeVolumeDiscount, volumeDiscount.ID, volumeDiscount); apiErr != nil {
+		if apiErr := txSvc.repos.NewDeletedRecordRepo().CreateInAccount(txCtx, constants.DeletedRecordResourceTypeVolumeDiscount, volumeDiscount.ID, accountID, volumeDiscount); apiErr != nil {
 			return apiErr
 		}
 

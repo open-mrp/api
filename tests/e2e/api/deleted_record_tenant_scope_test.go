@@ -180,3 +180,77 @@ func TestDeletedRecordScope_Catalog(t *testing.T) {
 		},
 	})
 }
+
+func TestDeletedRecordScope_Sales(t *testing.T) {
+	t.Parallel()
+	runDeletedScopeCases(t, []deletedScopeCase{
+		{
+			name: "sales order",
+			setup: func(t *testing.T) deletedScopeTarget {
+				return deletedScopeTarget{path: salesOrdersPath + "/" + createLifecycleOrder(t)}
+			},
+			patch: map[string]any{"note": "x"},
+		},
+		{
+			name: "account price",
+			setup: func(t *testing.T) deletedScopeTarget {
+				lockPricingWrite(t)
+				return deletedScopeTarget{path: accountPricesPath + "/" + jsonField(createAccountPrice(t, SeedCustomerAccountID, "32.00"), "id")}
+			},
+			patch: map[string]any{"name": uniqueName("e2e-dscope-ap")},
+		},
+		{
+			name: "volume discount",
+			setup: func(t *testing.T) deletedScopeTarget {
+				return deletedScopeTarget{path: volumeDiscountsPath + "/" + jsonField(createVolumeDiscount(t, map[string]any{}), "id")}
+			},
+			patch: map[string]any{"name": uniqueName("e2e-dscope-vd")},
+		},
+		{
+			name: "order discount",
+			setup: func(t *testing.T) deletedScopeTarget {
+				return deletedScopeTarget{path: orderDiscountsPath + "/" + jsonField(createOrderDiscount(t, map[string]any{}), "id")}
+			},
+			patch: map[string]any{"name": uniqueName("e2e-dscope-od")},
+		},
+		{
+			name: "account group",
+			setup: func(t *testing.T) deletedScopeTarget {
+				return deletedScopeTarget{path: accountGroupsPath + "/" + newAccountGroup(t)}
+			},
+			patch: map[string]any{"name": uniqueName("e2e-dscope-grp")},
+		},
+		{
+			name: "account group product line access",
+			setup: func(t *testing.T) deletedScopeTarget {
+				groupID := newAccountGroup(t)
+				grantAccess(t, accountGroupAccessPath, map[string]any{"account_group_id": groupID, "product_line_ids": []string{SeedProductLineID}})
+				return deletedScopeTarget{path: accountGroupAccessPath + "/" + groupID}
+			},
+			patch: map[string]any{"product_line_ids": []string{SeedProductLineID}},
+		},
+		{
+			name: "customer product line access",
+			setup: func(t *testing.T) deletedScopeTarget {
+				customerID := customerInGroup(t, SeedCustomerGroupID)
+				grantAccess(t, customerAccessPath, map[string]any{"customer_id": customerID, "product_line_ids": []string{SeedProductLineID}})
+				return deletedScopeTarget{path: customerAccessPath + "/" + customerID}
+			},
+			patch: map[string]any{"product_line_ids": []string{SeedProductLineID}},
+		},
+		{
+			name: "registration flow",
+			setup: func(t *testing.T) deletedScopeTarget {
+				return deletedScopeTarget{path: registrationFlowsPath + "/" + createRegistrationFlow(t, apiClient)}
+			},
+			patch: map[string]any{"name": uniqueName("e2e-dscope-flow")},
+		},
+		{
+			name: "payment term",
+			setup: func(t *testing.T) deletedScopeTarget {
+				return createdPath(t, paymentTermsPath, map[string]any{"name": uniqueName("e2e-dscope-pt")})
+			},
+			patch: map[string]any{"name": uniqueName("e2e-dscope-pt")},
+		},
+	})
+}

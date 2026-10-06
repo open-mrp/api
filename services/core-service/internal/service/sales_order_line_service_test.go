@@ -907,7 +907,7 @@ func (suite *SalesOrderLineSvcTestSuite) TestDeleteSalesOrderLine_Success() {
 		Times(1)
 
 	suite.deletedRecordRepo.EXPECT().
-		Create(gomock.Any(), constants.DeletedRecordResourceTypeSalesOrderLine, "orl_test", gomock.Any()).
+		CreateInAccount(gomock.Any(), constants.DeletedRecordResourceTypeSalesOrderLine, "orl_test", "ac_test", gomock.Any()).
 		Return(nil).
 		Times(1)
 
@@ -941,7 +941,7 @@ func (suite *SalesOrderLineSvcTestSuite) TestDeleteSalesOrderLine_FinishesPickWh
 	suite.lineRepo.EXPECT().HasShipmentAgainstOrderLine(gomock.Any(), "orl_test").Return(false, nil).Times(1)
 	suite.orderRepo.EXPECT().HasShippedShipment(gomock.Any(), "or_test").Return(false, nil).Times(1)
 	suite.lineRepo.EXPECT().Get(gomock.Any(), "orl_test").Return(&domain.SalesOrderLine{ID: "orl_test"}, nil).Times(1)
-	suite.deletedRecordRepo.EXPECT().Create(gomock.Any(), constants.DeletedRecordResourceTypeSalesOrderLine, "orl_test", gomock.Any()).Return(nil).Times(1)
+	suite.deletedRecordRepo.EXPECT().CreateInAccount(gomock.Any(), constants.DeletedRecordResourceTypeSalesOrderLine, "orl_test", "ac_test", gomock.Any()).Return(nil).Times(1)
 	suite.lineRepo.EXPECT().DeleteCascade(gomock.Any(), "orl_test").Return(nil).Times(1)
 
 	suite.expectResequence()
@@ -975,7 +975,7 @@ func (suite *SalesOrderLineSvcTestSuite) TestDeleteSalesOrderLine_ReleasesRemove
 	suite.orderRepo.EXPECT().HasShippedShipment(gomock.Any(), "or_test").Return(false, nil).Times(1)
 	suite.lineRepo.EXPECT().Get(gomock.Any(), "orl_test").
 		Return(&domain.SalesOrderLine{ID: "orl_test", ItemID: &itemID, ProductTypeCode: &saleType}, nil).Times(1)
-	suite.deletedRecordRepo.EXPECT().Create(gomock.Any(), constants.DeletedRecordResourceTypeSalesOrderLine, "orl_test", gomock.Any()).Return(nil).Times(1)
+	suite.deletedRecordRepo.EXPECT().CreateInAccount(gomock.Any(), constants.DeletedRecordResourceTypeSalesOrderLine, "orl_test", "ac_test", gomock.Any()).Return(nil).Times(1)
 	suite.lineRepo.EXPECT().DeleteCascade(gomock.Any(), "orl_test").Return(nil).Times(1)
 
 	suite.expectResequence()
@@ -1012,7 +1012,7 @@ func (suite *SalesOrderLineSvcTestSuite) TestDeleteSalesOrderLine_UnissuesWhenPi
 	suite.lineRepo.EXPECT().HasShipmentAgainstOrderLine(gomock.Any(), "orl_test").Return(false, nil).Times(1)
 	suite.orderRepo.EXPECT().HasShippedShipment(gomock.Any(), "or_test").Return(false, nil).Times(1)
 	suite.lineRepo.EXPECT().Get(gomock.Any(), "orl_test").Return(&domain.SalesOrderLine{ID: "orl_test"}, nil).Times(1)
-	suite.deletedRecordRepo.EXPECT().Create(gomock.Any(), constants.DeletedRecordResourceTypeSalesOrderLine, "orl_test", gomock.Any()).Return(nil).Times(1)
+	suite.deletedRecordRepo.EXPECT().CreateInAccount(gomock.Any(), constants.DeletedRecordResourceTypeSalesOrderLine, "orl_test", "ac_test", gomock.Any()).Return(nil).Times(1)
 	suite.lineRepo.EXPECT().DeleteCascade(gomock.Any(), "orl_test").Return(nil).Times(1)
 
 	suite.expectResequence()
@@ -1183,7 +1183,7 @@ func (suite *SalesOrderLineSvcTestSuite) TestDeleteSalesOrderLine_AlreadyDeleted
 
 	// Tombstone present → service surfaces the "already deleted" semantic error.
 	suite.deletedRecordRepo.EXPECT().
-		Exists(gomock.Any(), constants.DeletedRecordResourceTypeSalesOrderLine, "orl_test").
+		ExistsInAccount(gomock.Any(), constants.DeletedRecordResourceTypeSalesOrderLine, "orl_test", "ac_test").
 		Return(true, nil).
 		Times(1)
 

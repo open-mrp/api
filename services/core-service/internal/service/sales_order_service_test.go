@@ -1328,7 +1328,7 @@ func (suite *SalesOrderSvcTestSuite) TestDeleteSalesOrder_Success() {
 	suite.orderRepo.EXPECT().Get(gomock.Any(), "ac_test", "or_1").
 		Return(&domain.SalesOrder{ID: "or_1"}, nil).Times(1)
 	suite.deletedRecordRepo.EXPECT().
-		Create(gomock.Any(), constants.DeletedRecordResourceTypeSalesOrder, "or_1", gomock.Any()).
+		CreateInAccount(gomock.Any(), constants.DeletedRecordResourceTypeSalesOrder, "or_1", "ac_test", gomock.Any()).
 		Return(nil).Times(1)
 	suite.expectReservationRelease("ac_test", "or_1")
 	suite.orderRepo.EXPECT().DeleteCascade(gomock.Any(), "ac_test", "or_1").Return(nil).Times(1)
@@ -1355,7 +1355,7 @@ func (suite *SalesOrderSvcTestSuite) TestDeleteSalesOrder_AlreadyDeletedReturnsS
 	suite.orderRepo.EXPECT().Get(gomock.Any(), "ac_test", "or_1").
 		Return(nil, apierror.NewResourceNotFoundError("Sales order not found.")).Times(1)
 	suite.deletedRecordRepo.EXPECT().
-		Exists(gomock.Any(), constants.DeletedRecordResourceTypeSalesOrder, "or_1").
+		ExistsInAccount(gomock.Any(), constants.DeletedRecordResourceTypeSalesOrder, "or_1", "ac_test").
 		Return(true, nil).Times(1)
 
 	apiErr := suite.svc.DeleteSalesOrder(ctx, domain.DeleteSalesOrderParams{SalesOrderID: "or_1"})
@@ -1376,7 +1376,7 @@ func (suite *SalesOrderSvcTestSuite) TestBulkDeleteSalesOrders_RejectsIfAnyFulfi
 	suite.orderRepo.EXPECT().Get(gomock.Any(), "ac_test", "or_ok").
 		Return(&domain.SalesOrder{ID: "or_ok"}, nil).Times(1)
 	suite.deletedRecordRepo.EXPECT().
-		Create(gomock.Any(), constants.DeletedRecordResourceTypeSalesOrder, "or_ok", gomock.Any()).
+		CreateInAccount(gomock.Any(), constants.DeletedRecordResourceTypeSalesOrder, "or_ok", "ac_test", gomock.Any()).
 		Return(nil).Times(1)
 	suite.inventoryReservationRepo.EXPECT().
 		ListReservedItemIDsForOrders(gomock.Any(), "ac_test", []string{"or_ok", "or_fulfilled"}).

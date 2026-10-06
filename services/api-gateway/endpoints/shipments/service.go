@@ -308,61 +308,21 @@ func (m *shipmentSvcImpl) RateShop(ctx context.Context, req *RateShopRequest) (*
 		return nil, apiErr
 	}
 
-	// The core RateShop RPC only echoes back carrier/service-level ids and names, so batch-hydrate the full resources here — otherwise fields like service_level_token and customer_portal_visibility come back empty.
-	carriers, serviceLevels, apiErr := m.loadRateShopResources(ctx, resp)
-	if apiErr != nil {
-		return nil, apiErr
-	}
-
+	carriers, serviceLevels := rateShopResources(resp)
 	return rateShopFromProto(resp, carriers, serviceLevels), nil
 }
 
-// loadRateShopResources batch-loads the full Carrier and ServiceLevel resources referenced by a rate-shop response, keyed by id, via the shared resource loaders.
-func (m *shipmentSvcImpl) loadRateShopResources(ctx context.Context, resp *pb.RateShopResponse) (map[string]*apiresource.Carrier, map[string]*apiresource.ServiceLevel, *apierror.APIError) {
-	if resp == nil || len(resp.Options) == 0 {
-		return nil, nil, nil
+// rateShopResources maps the carriers and service levels core read with the quote, keyed by id. They are part of it, so they are not loaded again under carriers:read.
+func rateShopResources(resp *pb.RateShopResponse) (map[string]*apiresource.Carrier, map[string]*apiresource.ServiceLevel) {
+	carriers := make(map[string]*apiresource.Carrier, len(resp.GetCarriers()))
+	for _, c := range resp.GetCarriers() {
+		carriers[c.Id] = resourceloaders.CarrierFromProto(c)
 	}
-
-	carrierIDs := uniqueStrings(resp.Options, func(o *pb.RateShopOptionInfo) string { return o.CarrierId })
-	serviceLevelIDs := uniqueStrings(resp.Options, func(o *pb.RateShopOptionInfo) string { return o.ServiceLevelId })
-
-	carrierMap, apiErr := resourceloaders.LoadCarriers(ctx, carrierIDs)
-	if apiErr != nil {
-		return nil, nil, apiErr
+	serviceLevels := make(map[string]*apiresource.ServiceLevel, len(resp.GetServiceLevels()))
+	for _, sl := range resp.GetServiceLevels() {
+		serviceLevels[sl.Id] = resourceloaders.ServiceLevelFromProto(sl)
 	}
-	serviceLevelMap, apiErr := resourceloaders.LoadServiceLevels(ctx, serviceLevelIDs)
-	if apiErr != nil {
-		return nil, nil, apiErr
-	}
-
-	carriers := make(map[string]*apiresource.Carrier, len(carrierMap))
-	for id, v := range carrierMap {
-		if c, ok := v.(*apiresource.Carrier); ok {
-			carriers[id] = c
-		}
-	}
-	serviceLevels := make(map[string]*apiresource.ServiceLevel, len(serviceLevelMap))
-	for id, v := range serviceLevelMap {
-		if sl, ok := v.(*apiresource.ServiceLevel); ok {
-			serviceLevels[id] = sl
-		}
-	}
-	return carriers, serviceLevels, nil
-}
-
-// uniqueStrings collects the distinct non-empty keys returned by keyOf across options, preserving first-seen order.
-func uniqueStrings(options []*pb.RateShopOptionInfo, keyOf func(*pb.RateShopOptionInfo) string) []string {
-	seen := make(map[string]bool, len(options))
-	out := make([]string, 0, len(options))
-	for _, o := range options {
-		k := keyOf(o)
-		if k == "" || seen[k] {
-			continue
-		}
-		seen[k] = true
-		out = append(out, k)
-	}
-	return out
+	return carriers, serviceLevels
 }
 
 func (m *shipmentSvcImpl) ListShipmentLines(ctx context.Context, req *ListShipmentLinesRequest) (*apiresource.List[apiresource.ShipmentLine], *apierror.APIError) {

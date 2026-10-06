@@ -519,8 +519,8 @@ type ItemSvc interface {
 	// ListItems returns a paginated list of items for the caller's account. Supports filtering by type, category, attribute, supplier, date range, and full-text search.
 	ListItems(ctx context.Context, params ListItemsParams) (*ListItemsResult, *apierror.APIError)
 
-	// GetItem returns a single item by ID within the caller's account.
-	GetItem(ctx context.Context, itemID string, includes []string) (*Item, *apierror.APIError)
+	// GetItem returns a single item by ID within the caller's account, with the records embeds asks for.
+	GetItem(ctx context.Context, itemID string, includes []string, embeds ItemEmbeds) (*Item, *ItemEmbedded, *apierror.APIError)
 
 	// GetItemInventory returns inventory quantities (on-hand, reserved, ATP, short) for an item.
 	GetItemInventory(ctx context.Context, itemID string) (*ItemInventory, *apierror.APIError)
@@ -561,8 +561,8 @@ type ItemSvc interface {
 	// BulkReconcileItems reconciles inventory for multiple items by SKU.
 	BulkReconcileItems(ctx context.Context, params BulkReconcileItemsParams) (*BulkReconcileItemsResult, *apierror.APIError)
 
-	// BatchGetItemsByIDs returns items by ID for the api-gateway include resolver. Always populates rates and attributes.
-	BatchGetItemsByIDs(ctx context.Context, ids []string) ([]*Item, *apierror.APIError)
+	// BatchGetItemsByIDs returns items by ID for the api-gateway include resolver. Always populates rates and attributes; embeds adds the records the items embed.
+	BatchGetItemsByIDs(ctx context.Context, ids []string, embeds ItemEmbeds) ([]*Item, *ItemEmbedded, *apierror.APIError)
 
 	// ListInventories returns all items with their on-hand inventory quantities.
 	ListInventories(ctx context.Context, params ListInventoriesParams) (*ListInventoriesResult, *apierror.APIError)

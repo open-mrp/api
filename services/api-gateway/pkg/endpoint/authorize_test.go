@@ -184,3 +184,25 @@ func TestActsOnSelf(t *testing.T) {
 		t.Error("an unauthenticated caller must not count as acting on themselves")
 	}
 }
+
+func TestAuthorize_RequiresAllPermissions(t *testing.T) {
+	both := &APIEndpoint[any, any]{
+		RequiredPermissions: types.AnyOfPermissions{
+			{Domain: types.PermissionDomainCustomers, Action: types.ActionUpdate},
+			{Domain: types.PermissionDomainCustomers, Action: types.ActionDelete},
+		},
+		RequiresAllPermissions: true,
+	}
+
+	for _, perms := range []map[string]bool{{"customers:update": true}, {"customers:delete": true}} {
+		if err := both.authorize(ctxWithPerms(perms, "")); err == nil || err.Code != apierror.ErrorCodeInsufficientPerms {
+			t.Errorf("caller with only %v should be refused, got %v", perms, err)
+		}
+	}
+	if err := both.authorize(ctxWithPerms(map[string]bool{"customers:update": true, "customers:delete": true}, "")); err != nil {
+		t.Errorf("caller with both should pass, got %v", err)
+	}
+	if err := both.authorize(ctxWithPerms(map[string]bool{}, string(constants.RoleTypeAdmin))); err != nil {
+		t.Errorf("admin should bypass the permission gate, got %v", err)
+	}
+}

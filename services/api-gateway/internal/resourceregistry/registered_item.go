@@ -15,10 +15,11 @@ func init() {
 		Load:       resourceloaders.LoadItems,
 		Subs: []resourcekit.SubField{
 			{
+				// Read with the item, so no loader and no item_categories:read; the ref lets nested includes resolve.
 				Key:         "category",
 				Target:      constants.ObjectTypeItemCategory,
 				Cardinality: resourcekit.CardinalityOnePtr,
-				ExtractIDs:  extractCategoryIDFromItem,
+				ExtractRefs: extractCategoryRefFromItem,
 				Populate:    populateCategoryOnItem,
 			},
 			{Key: "unit_value", Populate: populateUnitValueOnItem},
@@ -29,24 +30,17 @@ func init() {
 	})
 }
 
-func extractCategoryIDFromItem(ctx context.Context, parent any) []string {
+func extractCategoryRefFromItem(_ context.Context, parent any) []any {
 	item := parent.(*apiresource.Item)
-	id, _ := resourcekit.GetLoadMeta(ctx).
-		GetString(constants.ObjectTypeItem, item.ID, "item_category_id")
-	if id == "" {
+	if item.Category == nil {
 		return nil
 	}
-	return []string{id}
+	return []any{item.Category}
 }
 
-func populateCategoryOnItem(ctx context.Context, parent any, loaded map[string]any) {
+func populateCategoryOnItem(ctx context.Context, parent any, _ map[string]any) {
 	item := parent.(*apiresource.Item)
-	id, _ := resourcekit.GetLoadMeta(ctx).
-		GetString(constants.ObjectTypeItem, item.ID, "item_category_id")
-	if id == "" {
-		return
-	}
-	if v, ok := loaded[id]; ok {
+	if v, ok := resourcekit.GetLoadMeta(ctx).Get(constants.ObjectTypeItem, item.ID, "category"); ok && v != nil {
 		item.Category = v.(*apiresource.ItemCategory)
 	}
 }

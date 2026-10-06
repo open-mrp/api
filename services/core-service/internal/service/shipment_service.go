@@ -1600,8 +1600,40 @@ func (s *shipmentSvcImpl) RateShop(ctx context.Context, params domain.RateShopPa
 	if hasFlatRate {
 		result.FlatRate = flatRateValue
 	}
+	result.Carriers, result.ServiceLevels = rateShopReferences(carriers, allOptions)
 
 	return result, nil
+}
+
+// rateShopReferences returns the carriers and service levels the options name. They are part of the quote, so whoever may rate shop sees them without carriers:read.
+func rateShopReferences(carriers []*domain.Carrier, options []*domain.RateShopOption) ([]*domain.Carrier, []*domain.ServiceLevel) {
+	carrierByID := make(map[string]*domain.Carrier, len(carriers))
+	levelByID := map[string]*domain.ServiceLevel{}
+	for _, c := range carriers {
+		carrierByID[c.ID] = c
+		for _, sl := range c.ServiceLevels {
+			levelByID[sl.ID] = sl
+		}
+	}
+
+	var outCarriers []*domain.Carrier
+	var outLevels []*domain.ServiceLevel
+	seenCarrier := map[string]bool{}
+	seenLevel := map[string]bool{}
+	for _, o := range options {
+		if c, ok := carrierByID[o.CarrierID]; ok && !seenCarrier[c.ID] {
+			seenCarrier[c.ID] = true
+			// The options already name the service levels; the carrier's own list would repeat them.
+			record := *c
+			record.ServiceLevels = nil
+			outCarriers = append(outCarriers, &record)
+		}
+		if sl, ok := levelByID[o.ServiceLevelID]; ok && !seenLevel[sl.ID] {
+			seenLevel[sl.ID] = true
+			outLevels = append(outLevels, sl)
+		}
+	}
+	return outCarriers, outLevels
 }
 
 // checkShipmentReadPermission checks the appropriate read permission based on the identity context. Internal actors need shipments:read for their own account, or customers:read / suppliers:read for external accounts.

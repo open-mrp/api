@@ -268,9 +268,16 @@ message BatchGetItemCategoriesByIDsResponse {
 }
 message BatchGetItemsByIDsRequest {
   repeated string ids = 1;
+  // Also return the items' categories and attribute properties, read under the items' own access.
+  bool with_categories = 2;
+  bool with_attribute_properties = 3;
 }
 message BatchGetItemsByIDsResponse {
   repeated ItemInfo items = 1;
+  // The items' categories, hydrated as BatchGetItemCategoriesByIDs returns them; set only when asked for.
+  repeated ItemCategoryInfo categories = 2;
+  // The properties the items' attributes name; set only when asked for.
+  repeated PropertyInfo attribute_properties = 3;
 }
 message CarrierInfo {
   string id = 1;
@@ -559,9 +566,14 @@ message ListItemsResponse {
 message GetItemRequest {
   string id = 1;
   repeated string includes = 2;
+  // As on BatchGetItemsByIDsRequest.
+  bool with_categories = 3;
+  bool with_attribute_properties = 4;
 }
 message GetItemResponse {
   ItemInfo item = 1;
+  repeated ItemCategoryInfo categories = 2;
+  repeated PropertyInfo attribute_properties = 3;
 }
 message GetItemLotDefaultRequest {
   string item_id = 1;

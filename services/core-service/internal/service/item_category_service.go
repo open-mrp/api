@@ -212,11 +212,18 @@ func (s *itemCategorySvcImpl) BatchGetItemCategoriesByIDs(ctx context.Context, i
 		return nil, nil
 	}
 
-	repo := s.repos.NewItemCategoryRepo()
-
-	categories, apiErr := repo.GetByIDs(ctx, identity.Target.AccountID, ids)
+	categories, apiErr := readItemCategories(ctx, s.repos.NewItemCategoryRepo(), identity.Target.AccountID, ids)
 	if apiErr != nil {
 		return nil, tracing.Trace(span, apiErr)
+	}
+	return categories, nil
+}
+
+// readItemCategories reads categories whole: their properties, and their unit group with its base unit and units.
+func readItemCategories(ctx context.Context, repo domain.ItemCategoryRepo, accountID string, ids []string) ([]*domain.ItemCategoryFull, *apierror.APIError) {
+	categories, apiErr := repo.GetByIDs(ctx, accountID, ids)
+	if apiErr != nil {
+		return nil, apiErr
 	}
 
 	allIncludes := []string{"unit_group", "unit_group.base_unit", "unit_group.associated_units", "unit_group.associated_units.unit"}
@@ -229,11 +236,11 @@ func (s *itemCategorySvcImpl) BatchGetItemCategoriesByIDs(ctx context.Context, i
 	}
 	properties, apiErr := repo.GetPropertiesForCategories(ctx, categoryIDs)
 	if apiErr != nil {
-		return nil, tracing.Trace(span, apiErr)
+		return nil, apiErr
 	}
 	unitGroups, apiErr := repo.GetUnitGroups(ctx, unitGroupIDs, allIncludes)
 	if apiErr != nil {
-		return nil, tracing.Trace(span, apiErr)
+		return nil, apiErr
 	}
 	for _, cat := range categories {
 		cat.Properties = properties[cat.ID]

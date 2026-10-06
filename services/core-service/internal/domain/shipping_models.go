@@ -106,6 +106,10 @@ type RateShopResult struct {
 	Options       []*RateShopOption
 	ExemptionType *string
 	FlatRate      *float64
+
+	// The carriers and service levels the options name.
+	Carriers      []*Carrier
+	ServiceLevels []*ServiceLevel
 }
 
 // RateShopOption represents a single carrier option with its rate.

@@ -73,8 +73,10 @@ var dashboardValidBodies = map[string]map[string]any{
 
 type dashboardOperation struct {
 	method, path, operationID string
-	// permissions is the documented any-of set; empty when the operation documents none.
+	// permissions is the documented set; empty when the operation documents none.
 	permissions []string
+	// allOf is set when the caller must hold every permission rather than any one of them.
+	allOf bool
 }
 
 var dashboardPermissionPattern = regexp.MustCompile("`([a-z_]+:[a-z]+)`")
@@ -95,8 +97,9 @@ func loadDashboardOperations(t *testing.T) []dashboardOperation {
 	byID := map[string]dashboardOperation{}
 	for path, methods := range spec.Paths {
 		for method, op := range methods {
+			perms, allOf := documentedPermissions(op.Description)
 			op := dashboardOperation{method: strings.ToUpper(method), path: path, operationID: op.OperationID,
-				permissions: documentedPermissions(op.Description)}
+				permissions: perms, allOf: allOf}
 			byID[op.operationID] = op
 		}
 	}
@@ -109,17 +112,17 @@ func loadDashboardOperations(t *testing.T) []dashboardOperation {
 	return ops
 }
 
-func documentedPermissions(description string) []string {
+// documentedPermissions reads the permission sentence: a comma list is any-of, one joined with "and" is all-of.
+func documentedPermissions(description string) (perms []string, allOf bool) {
 	for _, line := range strings.Split(description, "\n") {
 		if strings.HasPrefix(line, "This endpoint requires the permission") {
-			var out []string
 			for _, m := range dashboardPermissionPattern.FindAllStringSubmatch(line, -1) {
-				out = append(out, m[1])
+				perms = append(perms, m[1])
 			}
-			return out
+			return perms, strings.Contains(line, "` and `")
 		}
 	}
-	return nil
+	return nil, false
 }
 
 // dashboardUnknownPath names nothing that exists, bar the caller's own account or user where a route refuses others.
@@ -283,6 +286,8 @@ func TestDashboardEndpoints_EnforceDocumentedPermissions(t *testing.T) {
 		op      dashboardOperation
 		refused *Client
 		holders map[string]*Client
+		// all holds every documented permission, for an all-of set.
+		all *Client
 	}
 	var plans []plan
 	for _, op := range ops {
@@ -292,6 +297,9 @@ func TestDashboardEndpoints_EnforceDocumentedPermissions(t *testing.T) {
 		p := plan{op: op, refused: roleClient(dashboardRefusedPermission(op.permissions)), holders: map[string]*Client{}}
 		for _, perm := range op.permissions {
 			p.holders[perm] = roleClient(perm)
+		}
+		if op.allOf {
+			p.all = customRoleClient(t, op.permissions...)
 		}
 		plans = append(plans, p)
 	}
@@ -306,6 +314,17 @@ func TestDashboardEndpoints_EnforceDocumentedPermissions(t *testing.T) {
 
 			adminStatus, adminBody := dashboardCall(t, apiClient, p.op)
 			require.Less(t, adminStatus, 500, string(adminBody))
+
+			if p.op.allOf {
+				for _, perm := range sortedKeys(p.holders) {
+					status, body := dashboardCall(t, p.holders[perm], p.op)
+					requireStatus(t, http.StatusForbidden, status, body)
+					requireErrorResponse(t, body, "insufficient_permissions", "invalid_request_error")
+				}
+				status, body := dashboardCall(t, p.all, p.op)
+				assert.Equal(t, adminStatus, status, "a role holding all of %v is treated unlike the admin (%d): %s", p.op.permissions, adminStatus, string(body))
+				return
+			}
 
 			// Of an any-of set, one must suffice for the caller's own account; the rest may apply only to counterparties.
 			got := map[string]int{}

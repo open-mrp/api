@@ -31,7 +31,7 @@ func LoadServiceLevels(ctx context.Context, ids []string) (map[string]any, *apie
 	meta := resourcekit.GetLoadMeta(ctx)
 	out := make(map[string]any, len(resp.ServiceLevels))
 	for _, sl := range resp.ServiceLevels {
-		out[sl.Id] = serviceLevelFromProto(sl)
+		out[sl.Id] = ServiceLevelFromProto(sl)
 		var accountID string
 		if sl.AccountId != nil {
 			accountID = *sl.AccountId
@@ -41,7 +41,8 @@ func LoadServiceLevels(ctx context.Context, ids []string) (map[string]any, *apie
 	return out, nil
 }
 
-func serviceLevelFromProto(sl *pb.ServiceLevelInfo) *apiresource.ServiceLevel {
+// ServiceLevelFromProto maps a proto ServiceLevelInfo to an apiresource.ServiceLevel; its owner stays nil until included.
+func ServiceLevelFromProto(sl *pb.ServiceLevelInfo) *apiresource.ServiceLevel {
 	visibility := constants.CustomerPortalVisibilityHidden
 	if sl.IsPortalEnabled {
 		visibility = constants.CustomerPortalVisibilityVisible

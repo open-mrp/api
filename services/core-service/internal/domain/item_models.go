@@ -83,6 +83,18 @@ type ItemCategory struct {
 	UnitGroupAssociatedUnits []*UnitGroupUnit
 }
 
+// ItemEmbeds asks an item read to also return records the items embed, read under the item's access.
+type ItemEmbeds struct {
+	Categories          bool
+	AttributeProperties bool
+}
+
+// ItemEmbedded is what ItemEmbeds asked for, one record per id across the items read.
+type ItemEmbedded struct {
+	Categories          []*ItemCategoryFull
+	AttributeProperties []*Property
+}
+
 // ItemAttribute represents an attribute on an item (joined via _item_attributes).
 type ItemAttribute struct {
 	ID         string

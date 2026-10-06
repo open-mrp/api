@@ -3,8 +3,10 @@
 package api_test
 
 import (
+	"database/sql"
 	"encoding/json"
 	"fmt"
+	"math"
 	"net/url"
 	"testing"
 	"time"
@@ -173,21 +175,13 @@ func settleScanAtCleanup(t *testing.T, action, id string) {
 }
 
 // waitForMessagesSettled waits until every message under routingKey that names batchID has been
-// handled by handler.
+// handled by handler. A check that starts before the deadline always finishes and decides, so a slow
+// check cannot fail the wait on a count it took before the message was handled.
 func waitForMessagesSettled(t *testing.T, routingKey, handler, batchID string) {
 	t.Helper()
-	deadline := time.Now().Add(60 * time.Second)
+	deadline := time.Now().Add(90 * time.Second)
 	for {
-		var pending int
-		err := authDB(t).QueryRow(`
-			SELECT COUNT(*)
-			FROM message_outbox o
-			LEFT JOIN message_inbox i ON i.message_id = o.message_id AND i.handler = ?
-			WHERE o.routing_key = ?
-			AND CAST(FROM_BASE64(JSON_UNQUOTE(JSON_EXTRACT(o.payload, '$.data'))) AS CHAR) LIKE ?
-			AND (i.status IS NULL OR i.status = 'received')`,
-			handler, routingKey, "%"+batchID+"%").Scan(&pending)
-		require.NoError(t, err)
+		pending := unhandledBatchMessages(t, routingKey, handler, batchID)
 		if pending == 0 {
 			return
 		}
@@ -197,6 +191,39 @@ func waitForMessagesSettled(t *testing.T, routingKey, handler, batchID string) {
 		}
 		time.Sleep(250 * time.Millisecond)
 	}
+}
+
+// unhandledBatchMessages counts the messages under routingKey naming batchID that handler has not handled.
+//
+// The batch id is only inside each message's payload, so every candidate is decoded. A full run writes
+// well over a hundred thousand outbox rows, and decoding all of them took longer than the wait, so the
+// candidates are the messages published in the last ten minutes and the ones not yet published, each
+// found through a status index. A scan's messages are written while its test runs, well inside that.
+func unhandledBatchMessages(t *testing.T, routingKey, handler, batchID string) int {
+	t.Helper()
+	var floor sql.NullInt64
+	require.NoError(t, authDB(t).QueryRow(`
+		SELECT MIN(id) FROM message_outbox
+		WHERE status = 'published' AND published_at >= NOW(3) - INTERVAL 10 MINUTE`).Scan(&floor))
+	if !floor.Valid {
+		floor.Int64 = math.MaxInt64
+	}
+
+	var pending int
+	require.NoError(t, authDB(t).QueryRow(`
+		SELECT COUNT(*)
+		FROM (
+			SELECT message_id, payload FROM message_outbox
+			WHERE status = 'published' AND id >= ? AND routing_key = ?
+			UNION ALL
+			SELECT message_id, payload FROM message_outbox
+			WHERE status IN ('pending', 'failed') AND routing_key = ?
+		) o
+		LEFT JOIN message_inbox i ON i.message_id = o.message_id AND i.handler = ?
+		WHERE CAST(FROM_BASE64(JSON_UNQUOTE(JSON_EXTRACT(o.payload, '$.data'))) AS CHAR) LIKE ?
+		AND (i.status IS NULL OR i.status = 'received')`,
+		floor.Int64, routingKey, routingKey, handler, "%"+batchID+"%").Scan(&pending))
+	return pending
 }
 
 func initializeScan(t *testing.T, batchID, stationID string, extra map[string]any) map[string]any {

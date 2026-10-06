@@ -353,7 +353,7 @@ func (s *supplierMaterialSvcImpl) DeleteSupplierMaterial(ctx context.Context, pa
 
 	var result *domain.SupplierMaterial
 	apiErr = s.withTx(ctx, func(txCtx context.Context, txSvc *supplierMaterialSvcImpl) *apierror.APIError {
-		if apiErr := txSvc.repos.NewDeletedRecordRepo().Create(txCtx, constants.DeletedRecordResourceTypeSupplierMaterial, entity.ID, entity); apiErr != nil {
+		if apiErr := txSvc.repos.NewDeletedRecordRepo().CreateInAccount(txCtx, constants.DeletedRecordResourceTypeSupplierMaterial, entity.ID, params.OwnerAccountID, entity); apiErr != nil {
 			return apiErr
 		}
 

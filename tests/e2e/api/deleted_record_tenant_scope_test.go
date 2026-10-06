@@ -254,3 +254,16 @@ func TestDeletedRecordScope_Sales(t *testing.T) {
 		},
 	})
 }
+
+func TestDeletedRecordScope_Purchasing(t *testing.T) {
+	t.Parallel()
+	runDeletedScopeCases(t, []deletedScopeCase{
+		{
+			name: "purchase order",
+			setup: func(t *testing.T) deletedScopeTarget {
+				return deletedScopeTarget{path: purchaseOrdersPath + "/" + jsonField(createPurchaseOrder(t, nil), "id")}
+			},
+			patch: map[string]any{"note": "x"},
+		},
+	})
+}

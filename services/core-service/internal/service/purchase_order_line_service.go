@@ -398,7 +398,7 @@ func (s *purchaseOrderLineSvcImpl) DeletePurchaseOrderLine(ctx context.Context, 
 	line, apiErr := lineRepo.Get(ctx, params.PurchaseOrderLineID, params.SalesOrderID)
 	if apiErr != nil {
 		if apierror.IsNotFound(apiErr) {
-			wasDeleted, deletedCheckErr := s.repos.NewDeletedRecordRepo().Exists(ctx, constants.DeletedRecordResourceTypePurchaseOrderLine, params.PurchaseOrderLineID)
+			wasDeleted, deletedCheckErr := s.repos.NewDeletedRecordRepo().ExistsInAccount(ctx, constants.DeletedRecordResourceTypePurchaseOrderLine, params.PurchaseOrderLineID, params.AccountID)
 			if deletedCheckErr != nil {
 				return tracing.Trace(span, deletedCheckErr)
 			}
@@ -418,7 +418,7 @@ func (s *purchaseOrderLineSvcImpl) DeletePurchaseOrderLine(ctx context.Context, 
 			return apiErr
 		}
 
-		if apiErr := txSvc.repos.NewDeletedRecordRepo().Create(txCtx, constants.DeletedRecordResourceTypePurchaseOrderLine, line.ID, line); apiErr != nil {
+		if apiErr := txSvc.repos.NewDeletedRecordRepo().CreateInAccount(txCtx, constants.DeletedRecordResourceTypePurchaseOrderLine, line.ID, params.AccountID, line); apiErr != nil {
 			return apiErr
 		}
 

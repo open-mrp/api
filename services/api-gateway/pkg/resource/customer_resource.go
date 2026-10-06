@@ -144,8 +144,8 @@ type CustomerDefaults struct {
 	// - `make_to_stock`: their order history feeds the production-schedule forecast, so stock is built ahead of their demand.
 	// - `make_to_order`: their history is left out of the forecast; their orders are produced only once placed, and fit into the schedule on their own ship-by dates.
 	//
-	// With none set here the customer inherits its account group's policy, then falls back to make-to-stock.
-	FulfillmentPolicy *constants.FulfillmentPolicy `json:"fulfillment_policy"`
+	// With none set here the customer inherits its account group's policy, then falls back to make-to-stock. Always null to customer and supplier portal users, like the rest of your production planning.
+	FulfillmentPolicy *constants.FulfillmentPolicy `json:"fulfillment_policy" sensitive:"internal"`
 }
 
 // The ship-by lead time a new order for this customer would be committed to.

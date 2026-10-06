@@ -51,7 +51,7 @@ func productionRunReferenceFromProto(info *pb.ProductionRunInfo) *apiresource.Pr
 		ID:             info.Id,
 		Object:         constants.ObjectTypeProductionRun,
 		Number:         info.Number,
-		BatchCount:     info.BatchCount,
+		BatchCount:     &info.BatchCount,
 		BatchSummaries: grpcutil.ProductionRunBatchSummariesFromProto(info.BatchSummaries),
 		StartedAt:      grpcutil.TimestampToTimePtr(info.StartedAt),
 		CompletedAt:    grpcutil.TimestampToTimePtr(info.CompletedAt),

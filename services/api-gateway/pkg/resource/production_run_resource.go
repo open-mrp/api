@@ -19,11 +19,17 @@ type ProductionRun struct {
 	// Assigned automatically at creation as the next sequential number for the account; can be changed via update.
 	Number string `json:"number" validate:"required"`
 	// Account user accountable for executing the run.
-	ResponsibleUser *AccountUser `json:"responsible_user" expandable:"true"`
+	//
+	// Null to customer and supplier portal users, like the run's batches.
+	ResponsibleUser *AccountUser `json:"responsible_user" expandable:"true" sensitive:"internal"`
 	// Number of batches currently recorded against this run.
-	BatchCount int32 `json:"batch_count" validate:"required"`
+	//
+	// Null to customer and supplier portal users: a run can hold other customers' work.
+	BatchCount *int32 `json:"batch_count" validate:"required" sensitive:"internal"`
 	// The run's batches totalled per item and unit, ordered by SKU.
-	BatchSummaries *List[ProductionRunBatchSummary] `json:"batch_summaries" validate:"required"`
+	//
+	// Null to customer and supplier portal users: a run can hold other customers' work.
+	BatchSummaries *List[ProductionRunBatchSummary] `json:"batch_summaries" validate:"required" sensitive:"internal"`
 	// Time the run started production.
 	//
 	// Set automatically the first time a batch in the run is scanned at a station.
@@ -69,7 +75,7 @@ var SampleProductionRun = &ProductionRun{
 	Object:          constants.ObjectTypeProductionRun,
 	Number:          "1",
 	ResponsibleUser: SampleAccountUser,
-	BatchCount:      3,
+	BatchCount:      new(int32(3)),
 	BatchSummaries:  NewList([]ProductionRunBatchSummary{*SampleProductionRunBatchSummary}, PageInfo{}),
 	StartedAt:       timeutil.TimestampToTimePtr(sampleUpdatedAtTimestamp),
 	CreatedAt:       timeutil.TimestampToTime(sampleCreatedAtTimestamp),

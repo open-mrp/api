@@ -293,3 +293,113 @@ func TestIsCostName(t *testing.T) {
 		assert.False(t, IsCostName(name), name)
 	}
 }
+
+type batchSummary struct {
+	SKU      string `json:"sku"`
+	Quantity string `json:"quantity"`
+}
+
+type run struct {
+	ID          string              `json:"id"`
+	Number      string              `json:"number"`
+	BatchCount  *int32              `json:"batch_count" sensitive:"internal"`
+	Summaries   *list[batchSummary] `json:"summaries" sensitive:"internal"`
+	Responsible *item               `json:"responsible" sensitive:"internal"`
+	Lines       *list[line]         `json:"lines"`
+}
+
+type releasedWeek struct {
+	Run *run `json:"run"`
+}
+
+func sampleRun() *run {
+	return &run{
+		ID:          "prru_1",
+		Number:      "7",
+		BatchCount:  ptr(int32(3)),
+		Summaries:   &list[batchSummary]{Data: []batchSummary{{SKU: "other-buyers-sku", Quantity: "300"}}},
+		Responsible: &item{ID: "itm_r", UnitCost: &rate{Value: "8"}},
+		Lines:       &list[line]{Data: []line{{ID: "sol_1", UnitCost: &rate{Value: "3"}}}},
+	}
+}
+
+func agentIdentity(perms ...string) *types.Identity {
+	identity := internalIdentity(constants.RoleTypeAgent, perms...)
+	identity.Type = types.IdentityActorTypeAgent
+	return identity
+}
+
+func TestRedact_InternalFieldsReachOnlyTheSellersOwnActors(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name         string
+		identity     *types.Identity
+		internal     bool
+		costsVisible bool
+	}{
+		{"internal without costs:read", internalIdentity(constants.RoleTypeCustom, "production_runs:read"), true, false},
+		{"internal with costs:read", internalIdentity(constants.RoleTypeCustom, "costs:read"), true, true},
+		{"admin", internalIdentity(constants.RoleTypeAdmin), true, true},
+		{"agent whose role grants costs:read", agentIdentity("costs:read", "production_runs:read"), true, false},
+		{"customer portal actor", relationIdentity(types.IdentityRelationTypeCustomer), false, false},
+		{"supplier portal actor whose own role grants costs:read", relationIdentity(types.IdentityRelationTypeSupplier, "costs:read"), false, false},
+		{"unauthenticated", types.GetUnauthenticatedIdentity(ptr("ac_seller")), false, false},
+		{"no identity", nil, false, false},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			ctx := context.Background()
+			if tt.identity != nil {
+				ctx = ctxWith(tt.identity)
+			}
+			got := Redact(ctx, &releasedWeek{Run: sampleRun()}).(*releasedWeek).Run
+
+			assert.Equal(t, "prru_1", got.ID)
+			assert.Equal(t, "7", got.Number, "the run's number is never withheld")
+			if tt.internal {
+				require.NotNil(t, got.BatchCount)
+				assert.Equal(t, int32(3), *got.BatchCount)
+				require.NotNil(t, got.Summaries)
+				assert.Equal(t, "other-buyers-sku", got.Summaries.Data[0].SKU)
+				require.NotNil(t, got.Responsible)
+				assert.Equal(t, tt.costsVisible, got.Responsible.UnitCost != nil, "cost below an internal field still follows costs:read")
+			} else {
+				assert.Nil(t, got.BatchCount)
+				assert.Nil(t, got.Summaries)
+				assert.Nil(t, got.Responsible)
+			}
+			assert.Equal(t, tt.costsVisible, got.Lines.Data[0].UnitCost != nil)
+		})
+	}
+}
+
+func TestRedact_InternalFieldsSerializeNull(t *testing.T) {
+	t.Parallel()
+
+	body, err := json.Marshal(Redact(ctxWith(relationIdentity(types.IdentityRelationTypeCustomer)), sampleRun()))
+	require.NoError(t, err)
+	assert.JSONEq(t, `{"id":"prru_1","number":"7","batch_count":null,"summaries":null,"responsible":null,
+		"lines":{"data":[{"id":"sol_1","product":null,"unit_cost":null}]}}`, string(body))
+}
+
+func TestStrip_LeavesInternalFields(t *testing.T) {
+	t.Parallel()
+
+	got := Strip(sampleRun()).(*run)
+	assert.NotNil(t, got.BatchCount)
+	assert.NotNil(t, got.Summaries)
+	require.NotNil(t, got.Responsible)
+	assert.Nil(t, got.Responsible.UnitCost)
+}
+
+func TestHasInternalFields(t *testing.T) {
+	t.Parallel()
+
+	assert.True(t, HasInternalFields(reflect.TypeFor[*releasedWeek]()))
+	assert.True(t, HasInternalFields(reflect.TypeFor[[]run]()))
+	assert.True(t, HasInternalFields(reflect.TypeFor[*account]()), "an any field may hold internal data")
+	assert.False(t, HasInternalFields(reflect.TypeFor[*order]()), "cost fields are not internal ones")
+	assert.True(t, HasCostFields(reflect.TypeFor[*run]()), "a run still leads to cost fields")
+}

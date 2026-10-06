@@ -168,3 +168,64 @@ func TestExecute_refusesAgentsACostOnlyEndpoint(t *testing.T) {
 		})
 	}
 }
+
+type stubRunResponse struct {
+	ID         string          `json:"id"`
+	Number     string          `json:"number"`
+	BatchCount *int32          `json:"batch_count" sensitive:"internal"`
+	Owner      *stubCostLine   `json:"owner" sensitive:"internal"`
+	Lines      []*stubCostLine `json:"lines"`
+}
+
+// Data only the seller's own people may see is cleared for portal actors in the same pass as cost, after includes resolve.
+func TestExecute_clearsInternalFieldsForPortalActors(t *testing.T) {
+	t.Parallel()
+
+	ep := &APIEndpoint[*stubRequest, *stubRunResponse]{
+		Method:            http.MethodGet,
+		Route:             "/v1/runs",
+		SuccessStatusCode: http.StatusOK,
+		ServiceHandler: func(svc any) func(context.Context, *stubRequest) (*stubRunResponse, *apierror.APIError) {
+			return func(context.Context, *stubRequest) (*stubRunResponse, *apierror.APIError) {
+				count := int32(3)
+				return &stubRunResponse{
+					ID: "prru_1", Number: "7", BatchCount: &count,
+					Owner: &stubCostLine{ID: "ln_o", UnitCost: &stubCostRate{Value: "9"}},
+					Lines: []*stubCostLine{{ID: "ln_1", UnitCost: &stubCostRate{Value: "2"}}},
+				}, nil
+			}
+		},
+	}
+	bindHandler(ep)
+
+	const all = `{"id":"prru_1","number":"7","batch_count":3,"owner":{"id":"ln_o","unit_cost":{"value":"9"}},"lines":[{"id":"ln_1","unit_cost":{"value":"2"}}]}`
+	const noCost = `{"id":"prru_1","number":"7","batch_count":3,"owner":{"id":"ln_o","unit_cost":null},"lines":[{"id":"ln_1","unit_cost":null}]}`
+	const portal = `{"id":"prru_1","number":"7","batch_count":null,"owner":null,"lines":[{"id":"ln_1","unit_cost":null}]}`
+	tests := []struct {
+		name     string
+		identity *types.Identity
+		want     string
+	}{
+		{"admin", costIdentity(types.IdentityRelationTypeInternal, constants.RoleTypeAdmin), all},
+		{"internal without costs:read", costIdentity(types.IdentityRelationTypeInternal, constants.RoleTypeCustom, "production_runs:read"), noCost},
+		{"agent whose role grants costs:read", agentCostIdentity("costs:read", "production_runs:read"), noCost},
+		{"customer portal actor", costIdentity(types.IdentityRelationTypeCustomer, ""), portal},
+		{"supplier portal actor carrying costs:read", costIdentity(types.IdentityRelationTypeSupplier, "", "costs:read"), portal},
+		{"no identity", nil, portal},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			r := httptest.NewRequest(http.MethodGet, "/v1/runs", nil)
+			if tt.identity != nil {
+				r = r.WithContext(appctx.WithIdentity(r.Context(), tt.identity))
+			}
+			w := httptest.NewRecorder()
+
+			ep.Execute(w, r)
+
+			require.Equal(t, http.StatusOK, w.Code, w.Body.String())
+			assert.JSONEq(t, tt.want, w.Body.String())
+		})
+	}
+}

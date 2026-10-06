@@ -42,7 +42,9 @@ type Item struct {
 	// Null unless the caller holds `costs:read`; customer and supplier portal users never see it.
 	UnitCost *Rate `json:"unit_cost" expandable:"true" sensitive:"cost"`
 	// Rate at which this item is consumed in production, expressed as a quantity over time (e.g. `100 kg / hr`).
-	BurnRate *Rate `json:"burn_rate" expandable:"true"`
+	//
+	// Null to customer and supplier portal users: it is drawn from every customer's demand.
+	BurnRate *Rate `json:"burn_rate" expandable:"true" sensitive:"internal"`
 	// Attributes assigned to this item.
 	Attributes *List[Attribute] `json:"attributes" expandable:"true"`
 	// Creation timestamp.

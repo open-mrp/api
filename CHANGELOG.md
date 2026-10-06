@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.21.1](https://github.com/open-mrp/api/compare/v2.21.0...v2.21.1) (2026-10-06)
+
+
+### Bug Fixes
+
+* **search:** find every match in SKU, pick and machine search ([#265](https://github.com/open-mrp/api/issues/265)) ([e2e1fc7](https://github.com/open-mrp/api/commit/e2e1fc73a18caaf97c6c2a808e0492fcf1c921db))
+
 ## [2.21.0](https://github.com/open-mrp/api/compare/v2.20.4...v2.21.0) (2026-10-06)
 
 

@@ -18,6 +18,8 @@ type RetrieveSalesOrderRequest struct {
 }
 
 // Returns a sales order by ID.
+//
+// A customer or supplier portal retrieves only an order its own account placed; any other order is reported as not found.
 type RetrieveSalesOrderEndpoint struct{}
 
 func (e *RetrieveSalesOrderEndpoint) Materialize() *apiendpoint.APIEndpoint[*RetrieveSalesOrderRequest, *apiresource.SalesOrder] {

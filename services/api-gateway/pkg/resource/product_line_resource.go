@@ -29,12 +29,16 @@ type ProductLine struct {
 	// Free-form description of the product line.
 	Description *string `json:"description"`
 	// Free-form notes about the product line.
-	Notes *string `json:"notes"`
+	//
+	// Null to customer and supplier portal users: they are your own team's notes.
+	Notes *string `json:"notes" sensitive:"internal"`
 	// Default commission policy for products in this product line.
 	//
 	// - `commission_exempt`: no commission applies to these products.
 	// - `commission_applied`: commission applies to these products, unless overridden elsewhere.
-	CommissionPolicy constants.CommissionPolicy `json:"commission_policy" validate:"required"`
+	//
+	// Null to customer and supplier portal users, like the rest of your commission settings.
+	CommissionPolicy *constants.CommissionPolicy `json:"commission_policy" validate:"required" sensitive:"internal"`
 	// Default freight policy for products in this product line.
 	//
 	// - `free_freight`: these products do not incur a freight charge.
@@ -75,7 +79,7 @@ var SampleProductLine = &ProductLine{
 	Name:             SampleProductLineName,
 	Description:      &sampleProductLineDescription,
 	Notes:            &sampleProductLineNotes,
-	CommissionPolicy: constants.CommissionPolicyExempt,
+	CommissionPolicy: new(constants.CommissionPolicyExempt),
 	FreightPolicy:    constants.FreightPolicyBilled,
 	Owner:            SampleOwnerSystem,
 	UnitGroup:        SampleUnitGroup,

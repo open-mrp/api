@@ -268,7 +268,7 @@ func stashAccountPriceMeta(meta *resourcekit.LoadMeta, ap *pb.AccountPriceInfo) 
 			ID:               pl.Id,
 			Object:           constants.ObjectTypeProductLine,
 			Name:             pl.Name,
-			CommissionPolicy: constants.CommissionPolicy(pl.CommissionPolicy),
+			CommissionPolicy: new(constants.CommissionPolicy(pl.CommissionPolicy)),
 			FreightPolicy:    constants.FreightPolicy(pl.FreightPolicy),
 			CreatedAt:        grpcutil.TimestampToTime(pl.CreatedAt),
 			UpdatedAt:        grpcutil.TimestampToTime(pl.UpdatedAt),

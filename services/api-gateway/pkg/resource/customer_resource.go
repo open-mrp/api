@@ -48,9 +48,13 @@ type Customer struct {
 	// - `commission_applied`: sales commission is calculated on this customer's orders.
 	//
 	// The customer counts as exempt if this field, its `type` group, or any of its `price_groups` is `commission_exempt`. Exempt customers never have a sales rep assigned automatically when an order is created without one.
-	CommissionPolicy constants.CommissionPolicy `json:"commission_policy" validate:"required"`
+	//
+	// Null to customer and supplier portal users, like the rest of your commission settings.
+	CommissionPolicy *constants.CommissionPolicy `json:"commission_policy" validate:"required" sensitive:"internal"`
 	// Free-form note about the customer.
-	Note *string `json:"note"`
+	//
+	// Null to customer and supplier portal users: it is your own team's note.
+	Note *string `json:"note" sensitive:"internal"`
 	// Maximum credit extended to this customer.
 	//
 	// Used to flag orders once the customer's outstanding balance approaches or passes the limit; orders that exceed it are not rejected.
@@ -216,7 +220,7 @@ var SampleCustomer = &Customer{
 	Status:           constants.AccountStatusCodeNormal,
 	EDIStatus:        constants.EDIStatusDisabled,
 	RelationshipType: constants.CustomerRelationshipTypeStandalone,
-	CommissionPolicy: constants.CommissionPolicyApplied,
+	CommissionPolicy: new(constants.CommissionPolicyApplied),
 	Note:             &sampleCustomerNote,
 	CreditLimit:      SampleQuantity,
 	ContactInfo: &CustomerContactInfo{

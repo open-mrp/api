@@ -565,7 +565,7 @@ func customerFromProto(c *pb.CustomerProto) apiresource.Customer {
 		Status:           constants.AccountStatusCode(c.Status),
 		EDIStatus:        ediStatusFromBool(c.IsEdiEnabled),
 		RelationshipType: customerRelationshipType(c.IsParentAccount, c.ParentAccount != nil),
-		CommissionPolicy: constants.CommissionPolicy(c.CommissionPolicy),
+		CommissionPolicy: new(constants.CommissionPolicy(c.CommissionPolicy)),
 		Note:             c.Note,
 		CreatedAt:        grpcutil.TimestampToTime(c.CreatedAt),
 		UpdatedAt:        grpcutil.TimestampToTime(c.UpdatedAt),
@@ -832,7 +832,7 @@ func buildAccountGroupFromProto(g *pb.CustomerAccountGroupProto) *apiresource.Ac
 		ID:               g.Id,
 		Object:           constants.ObjectTypeAccountGroup,
 		Name:             g.Name,
-		CommissionPolicy: constants.CommissionPolicy(g.CommissionPolicy),
+		CommissionPolicy: new(constants.CommissionPolicy(g.CommissionPolicy)),
 		FreightPolicy:    constants.FreightPolicy(g.FreightPolicy),
 		Type:             constants.AccountGroupType(g.Type),
 	}
@@ -850,7 +850,7 @@ func buildAccountGroupValueFromProto(g *pb.CustomerAccountGroupProto) apiresourc
 		ID:               g.Id,
 		Object:           constants.ObjectTypeAccountGroup,
 		Name:             g.Name,
-		CommissionPolicy: constants.CommissionPolicy(g.CommissionPolicy),
+		CommissionPolicy: new(constants.CommissionPolicy(g.CommissionPolicy)),
 		FreightPolicy:    constants.FreightPolicy(g.FreightPolicy),
 		Type:             constants.AccountGroupType(g.Type),
 	}

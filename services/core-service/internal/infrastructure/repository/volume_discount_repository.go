@@ -490,6 +490,21 @@ func (r *volumeDiscountRepoImpl) Get(ctx context.Context, params domain.GetVolum
 	return d, nil
 }
 
+func (r *volumeDiscountRepoImpl) AppliesToCustomer(ctx context.Context, accountID, customerAccountID, volumeDiscountID string) (bool, *apierror.APIError) {
+	ctx, span := volumeDiscountRepoTracer.Start(ctx, "repository.volume_discount.applies_to_customer")
+	defer span.End()
+
+	applies, err := r.queries.VolumeDiscountAppliesToCustomer(ctx, sqlc.VolumeDiscountAppliesToCustomerParams{
+		ID:                volumeDiscountID,
+		AccountID:         accountID,
+		CustomerAccountID: customerAccountID,
+	})
+	if apiErr := db.MapSQLError(err); apiErr != nil {
+		return false, tracing.Trace(span, apiErr)
+	}
+	return applies, nil
+}
+
 func (r *volumeDiscountRepoImpl) Create(ctx context.Context, id string, params domain.CreateVolumeDiscountParams) (*domain.VolumeDiscount, *apierror.APIError) {
 	ctx, span := volumeDiscountRepoTracer.Start(ctx, "repository.volume_discount.create")
 	defer span.End()

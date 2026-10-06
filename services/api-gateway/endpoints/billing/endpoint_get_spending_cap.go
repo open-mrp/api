@@ -14,6 +14,8 @@ import (
 // Returns the monthly cap on agent spending for the account.
 //
 // The cap limits estimated agent LLM spend within a billing month; Get Account Usage reports how much of it has been spent so far.
+//
+// Customer and supplier portal users are refused with `403`.
 type GetSpendingCapEndpoint struct{}
 
 func (e *GetSpendingCapEndpoint) Materialize() *apiendpoint.APIEndpoint[*apiresource.EmptyResource, *apiresource.SpendingCapResponse] {

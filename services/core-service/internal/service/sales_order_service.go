@@ -159,10 +159,8 @@ func (s *salesOrderSvcImpl) ListSalesOrders(ctx context.Context, params domain.L
 
 	params.AccountID = identity.Target.AccountID
 
-	// Customer actors can only see their own orders
-	if identity.IsCustomerUser() {
-		actorAccountID := identity.ActorAccountID()
-		params.BuyerAccountID = actorAccountID
+	if buyerAccountID := identity.PortalAccountID(); buyerAccountID != nil {
+		params.BuyerAccountID = buyerAccountID
 	}
 
 	repo := s.repos.NewSalesOrderRepo()
@@ -212,9 +210,8 @@ func (s *salesOrderSvcImpl) GetSalesOrder(ctx context.Context, params domain.Get
 	var order *domain.SalesOrder
 	var apiErr *apierror.APIError
 
-	if identity.IsCustomerUser() {
-		actorAccountID := *identity.ActorAccountID()
-		order, apiErr = repo.GetForCustomer(ctx, params.AccountID, actorAccountID, params.SalesOrderID)
+	if buyerAccountID := identity.PortalAccountID(); buyerAccountID != nil {
+		order, apiErr = repo.GetForCustomer(ctx, params.AccountID, *buyerAccountID, params.SalesOrderID)
 	} else {
 		order, apiErr = repo.Get(ctx, params.AccountID, params.SalesOrderID)
 	}
@@ -255,10 +252,10 @@ func (s *salesOrderSvcImpl) BatchGetSalesOrders(ctx context.Context, salesOrderI
 		}
 	}
 
-	// Customer users see only their own orders, unless a request they were allowed to make includes another.
+	// A portal sees only the orders it bought, unless a request it was allowed to make includes another.
 	var buyerAccountID *string
-	if identity.IsCustomerUser() && !identity.IsIncludeRead() {
-		buyerAccountID = identity.ActorAccountID()
+	if !identity.IsIncludeRead() {
+		buyerAccountID = identity.PortalAccountID()
 	}
 
 	accountID := identity.Target.AccountID

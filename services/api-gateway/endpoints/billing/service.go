@@ -209,6 +209,9 @@ func (m *billingSvcImpl) GetSpendingCap(ctx context.Context, _ *apiresource.Empt
 	if apiErr := identity.CheckIsAuthenticated(); apiErr != nil {
 		return nil, apiErr
 	}
+	if identity.IsRelationActor() {
+		return nil, apierror.NewAuthorizationError("Customer and supplier portals cannot read the account's agent spending cap.")
+	}
 	if !identity.IsTargetAccountSet() {
 		return nil, apierror.NewAuthenticationError("Missing account context")
 	}

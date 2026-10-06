@@ -45,7 +45,7 @@ func ConversationFromProto(c *pb.ConversationInfo) apiresource.Conversation {
 		Audience:      constants.ConversationAudience(c.Audience),
 		Title:         c.Title,
 		Status:        ConversationStatusFromProto(c.Status, c.Hidden),
-		LegalHold:     constants.LegalHoldStatusFromHeld(c.LegalHold),
+		LegalHold:     new(constants.LegalHoldStatusFromHeld(c.LegalHold)),
 		Unread:        c.Unread,
 		LastMessageAt: TsToPtr(c.LastMessageAt),
 		CreatedAt:     TsToTime(c.CreatedAt),

@@ -138,7 +138,7 @@ func TestLoadCustomerProductLineAccess_EmbedsTheRealRecords(t *testing.T) {
 		t.Fatalf("product lines = %+v, want both granted lines", access.ProductLines)
 	}
 	first := access.ProductLines.Data[0]
-	if first.ID != "pl_b" || first.CommissionPolicy != constants.CommissionPolicy("commission_applied") || !first.CreatedAt.Equal(accessTestCreatedAt) {
+	if first.ID != "pl_b" || first.CommissionPolicy == nil || *first.CommissionPolicy != constants.CommissionPolicyApplied || !first.CreatedAt.Equal(accessTestCreatedAt) {
 		t.Fatalf("first line = %+v, want the real pl_b in grant order", first)
 	}
 }

@@ -277,7 +277,7 @@ func stashVolumeDiscountMeta(ctx context.Context, meta *resourcekit.LoadMeta, d 
 			UpdatedAt: grpcutil.TimestampToTime(cg.UpdatedAt),
 		}
 		if cg.CommissionPolicy != nil {
-			customerGroups[i].CommissionPolicy = constants.CommissionPolicy(*cg.CommissionPolicy)
+			customerGroups[i].CommissionPolicy = new(constants.CommissionPolicy(*cg.CommissionPolicy))
 		}
 		if cg.FreightPolicy != nil {
 			customerGroups[i].FreightPolicy = constants.FreightPolicy(*cg.FreightPolicy)
@@ -299,7 +299,7 @@ func stashVolumeDiscountMeta(ctx context.Context, meta *resourcekit.LoadMeta, d 
 			UpdatedAt: grpcutil.TimestampToTime(pl.UpdatedAt),
 		}
 		if pl.CommissionPolicy != nil {
-			productLines[i].CommissionPolicy = constants.CommissionPolicy(*pl.CommissionPolicy)
+			productLines[i].CommissionPolicy = new(constants.CommissionPolicy(*pl.CommissionPolicy))
 		}
 		if pl.FreightPolicy != nil {
 			productLines[i].FreightPolicy = constants.FreightPolicy(*pl.FreightPolicy)

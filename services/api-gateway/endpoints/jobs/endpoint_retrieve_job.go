@@ -19,6 +19,8 @@ type RetrieveJobRequest struct {
 
 // Returns a job by ID — poll the job named in a `202 Accepted` response's `Location` to observe its outcome.
 // A completed export carries the link to its file on `export.url`.
+//
+// A customer or supplier portal reads only the jobs it started itself; any other job is reported as not found.
 type RetrieveJobEndpoint struct{}
 
 func (e *RetrieveJobEndpoint) Materialize() *apiendpoint.APIEndpoint[*RetrieveJobRequest, *apiresource.Job] {

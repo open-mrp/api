@@ -1498,3 +1498,57 @@ func (q *Queries) UpdateVolumeDiscountTier(ctx context.Context, arg UpdateVolume
 		arg.QuantityDiscountID,
 	)
 }
+
+const volumeDiscountAppliesToCustomer = `-- name: VolumeDiscountAppliesToCustomer :one
+SELECT EXISTS(
+    SELECT 1
+    FROM quantity_discount qd
+    WHERE qd.id = ?
+    AND qd.account_id = ?
+    AND (
+        NOT EXISTS (SELECT 1 FROM account_group_quantity_discount agqd2 WHERE agqd2.quantity_discount_id = qd.id)
+        OR EXISTS (
+            SELECT 1
+            FROM account_group_quantity_discount agqd
+            JOIN account_group ag ON ag.id = agqd.account_group_id
+            WHERE agqd.quantity_discount_id = qd.id
+            AND (
+                EXISTS (
+                    SELECT 1 FROM account_relation_price_group arpg
+                    JOIN account_relation ar ON ar.id = arpg.account_relation_id
+                    WHERE arpg.account_group_id = ag.id
+                    AND ar.counterparty_account_id = ?
+                    AND ar.owner_account_id = ?
+                )
+                OR EXISTS (
+                    SELECT 1 FROM account_relation ar
+                    WHERE ar.account_group_id = ag.id
+                    AND ar.counterparty_account_id = ?
+                    AND ar.owner_account_id = ?
+                )
+            )
+        )
+    )
+) AS applies
+`
+
+type VolumeDiscountAppliesToCustomerParams struct {
+	ID                string
+	AccountID         string
+	CustomerAccountID string
+}
+
+// Whether the discount is one a customer's own listing carries: offered to every customer, or to a group the customer belongs to.
+func (q *Queries) VolumeDiscountAppliesToCustomer(ctx context.Context, arg VolumeDiscountAppliesToCustomerParams) (bool, error) {
+	row := q.db.QueryRowContext(ctx, volumeDiscountAppliesToCustomer,
+		arg.ID,
+		arg.AccountID,
+		arg.CustomerAccountID,
+		arg.AccountID,
+		arg.CustomerAccountID,
+		arg.AccountID,
+	)
+	var applies bool
+	err := row.Scan(&applies)
+	return applies, err
+}

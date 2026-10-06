@@ -22,7 +22,9 @@ type Item struct {
 	// Item description.
 	Description *string `json:"description"`
 	// Free-form notes about the item.
-	Notes *string `json:"notes"`
+	//
+	// Null to customer and supplier portal users: they are your own team's notes.
+	Notes *string `json:"notes" sensitive:"internal"`
 	// What kind of item this is.
 	//
 	// - `product`: a finished product.
@@ -199,7 +201,9 @@ type ExportItem struct {
 	// Item description.
 	Description *string `json:"description"`
 	// Free-form notes about the item.
-	Notes *string `json:"notes"`
+	//
+	// Null to customer and supplier portal users: they are your own team's notes.
+	Notes *string `json:"notes" sensitive:"internal"`
 	// What kind of item this is.
 	//
 	// - `product`: a finished product.

@@ -99,7 +99,7 @@ func customerReferenceFromProto(c *pb.CustomerProto) *apiresource.Customer {
 		Status:           constants.AccountStatusCode(c.Status),
 		EDIStatus:        edi,
 		RelationshipType: relationship,
-		CommissionPolicy: constants.CommissionPolicy(c.CommissionPolicy),
+		CommissionPolicy: new(constants.CommissionPolicy(c.CommissionPolicy)),
 		Note:             c.Note,
 		CreatedAt:        grpcutil.TimestampToTime(c.CreatedAt),
 		UpdatedAt:        grpcutil.TimestampToTime(c.UpdatedAt),

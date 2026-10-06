@@ -18,6 +18,14 @@ Clients pinned to 1.0.forge-preview.5 or earlier keep the previous behavior.
   - Older versions: these fields stay numbers, and read `0` where the caller cannot read costs. A caller who holds `costs:read` gets the same figures in every version.
   - Migration: read `null` as "withheld", not as zero, and grant `costs:read` to the roles that plan with these figures.
   - In every version, the fields that were already nullable are `null` for such callers too: `labor_rate` on departments, `labor_rate` and `overhead_rate` on production steps and production flow steps, and the `unit_cost` include on items, sales order lines and delivery lines. Saving production schedule settings without `costs:read` keeps the stored `changeover_labor_rate` rather than replacing it with the value sent.
+- **Internal notes, commission settings, user activity and legal holds are withheld from portals.** Customer and supplier portal users read these fields as `null` wherever the resource appears, including through includes; the seller's own users, API keys and agents read them as before:
+  - `note` and `commission_policy` on customers.
+  - `notes` on items, product lines and item categories, and `commission_policy` on product lines and account groups.
+  - `is_commission_eligible` and `last_used_at` on account users.
+  - `legal_hold` on conversations.
+  - `commission_policy`, `is_commission_eligible` and `legal_hold` were always set and are now nullable. They are also `null` on a customer, account group, product line or account user embedded as a reference that does not load them.
+  - Older versions: `commission_policy` and `legal_hold` read `""`, and `is_commission_eligible` reads `false`, wherever they are `null` here. The notes and `last_used_at` were already nullable and read `null` in every version.
+  - Migration: read `null` on these fields as "withheld", not as a value.
 
 ### Fixes
 

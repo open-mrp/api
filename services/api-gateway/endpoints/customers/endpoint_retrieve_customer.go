@@ -18,6 +18,8 @@ type RetrieveCustomerRequest struct {
 }
 
 // Returns a customer by ID.
+//
+// A customer or supplier portal retrieves only its own account; any other customer is reported as not found.
 type RetrieveCustomerEndpoint struct{}
 
 func (e *RetrieveCustomerEndpoint) Materialize() *apiendpoint.APIEndpoint[*RetrieveCustomerRequest, *apiresource.Customer] {

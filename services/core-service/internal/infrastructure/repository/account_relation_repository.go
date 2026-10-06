@@ -254,6 +254,31 @@ func (r *accountRelationRepoImpl) ListNotificationRecipients(ctx context.Context
 	return refs, nil
 }
 
+func (r *accountRelationRepoImpl) ListNotificationTypesForRecipients(ctx context.Context, ownerAccountID, counterpartyAccountID string, recipientAccountUserIDs []string) (map[string][]string, *apierror.APIError) {
+	ctx, span := accountRelationRepoTracer.Start(ctx, "repository.account_relation.list_notification_types_for_recipients")
+	defer span.End()
+
+	if len(recipientAccountUserIDs) == 0 {
+		return map[string][]string{}, nil
+	}
+
+	rows, err := r.queries.ListNotificationTypesForRecipients(ctx, sqlc.ListNotificationTypesForRecipientsParams{
+		OwnerAccountID:          ownerAccountID,
+		CounterpartyAccountID:   counterpartyAccountID,
+		RecipientAccountUserIds: recipientAccountUserIDs,
+	})
+	if apiErr := db.MapSQLError(err); apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
+
+	types := make(map[string][]string, len(recipientAccountUserIDs))
+	for _, row := range rows {
+		types[row.RecipientAccountUserID] = append(types[row.RecipientAccountUserID], row.NotificationTypeCode)
+	}
+
+	return types, nil
+}
+
 func (r *accountRelationRepoImpl) DeleteNotificationPreferencesByTypes(ctx context.Context, accountRelationID string, notificationTypeCodes []string) *apierror.APIError {
 	ctx, span := accountRelationRepoTracer.Start(ctx, "repository.account_relation.delete_notification_preferences_by_types")
 	defer span.End()

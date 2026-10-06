@@ -98,6 +98,16 @@ FROM account_relation_notification_preference
 WHERE account_relation_id = ?
 ORDER BY recipient_account_user_id, notification_type_code;
 
+-- name: ListNotificationTypesForRecipients :many
+-- The notification types the owner sends each of the given counterparty account users.
+SELECT arnp.recipient_account_user_id, arnp.notification_type_code
+FROM account_relation ar
+INNER JOIN account_relation_notification_preference arnp ON arnp.account_relation_id = ar.id
+WHERE ar.owner_account_id = sqlc.arg('owner_account_id')
+  AND ar.counterparty_account_id = sqlc.arg('counterparty_account_id')
+  AND arnp.recipient_account_user_id IN (sqlc.slice('recipient_account_user_ids'))
+ORDER BY arnp.recipient_account_user_id, arnp.notification_type_code;
+
 -- name: DeleteNotificationPreferencesByRelationAndTypes :exec
 DELETE FROM account_relation_notification_preference
 WHERE account_relation_id = ?

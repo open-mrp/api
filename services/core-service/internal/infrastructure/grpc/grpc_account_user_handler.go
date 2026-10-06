@@ -196,6 +196,9 @@ func accountUserDetailToProto(d *domain.AccountUserDetail) *pb.AccountUserDetail
 	if d.DepartmentUpdatedAt != nil {
 		proto.DepartmentUpdatedAt = timestamppb.New(*d.DepartmentUpdatedAt)
 	}
+	if d.NotificationTypes != nil {
+		proto.NotificationTypes = &pb.AccountUserNotificationTypes{Codes: d.NotificationTypes}
+	}
 
 	return proto
 }

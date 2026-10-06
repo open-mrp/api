@@ -161,14 +161,18 @@ func (s *userSvcImpl) BatchGetUsersByIDs(ctx context.Context, ids []string) ([]*
 		return nil, tracing.Trace(span, apierror.NewInvariantViolationError("Identity not found in context."))
 	}
 
-	if apiErr := identity.CheckIsInternalActor(); apiErr != nil {
+	// The users returned are members of the target account, so reading them is reading that account's users: a merchant
+	// reaching a customer's or supplier's contacts needs that domain's read permission, not the one for its own team.
+	if apiErr := checkSellerStaff(identity); apiErr != nil {
 		return nil, tracing.Trace(span, apiErr)
 	}
-	if apiErr := identity.CheckHasPermission(types.PermissionDomainTeamUsers, types.ActionRead); apiErr != nil {
+	if apiErr := checkAccountUserReadPermission(identity); apiErr != nil {
 		return nil, tracing.Trace(span, apiErr)
 	}
-	if !identity.IsTargetAccountSet() {
-		return nil, tracing.Trace(span, apierror.NewAuthenticationError("The OpenMRP-Account-ID header is required."))
+	if identity.IsExternalTarget() {
+		if apiErr := s.mediators().ReadAccess.CheckReadAccess(ctx, *identity.ActorAccountID(), identity.Target.AccountID); apiErr != nil {
+			return nil, tracing.Trace(span, apiErr)
+		}
 	}
 
 	users, apiErr := s.repos.NewUserRepo().GetByIDs(ctx, identity.Target.AccountID, ids)

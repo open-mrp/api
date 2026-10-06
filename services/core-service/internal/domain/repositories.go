@@ -125,6 +125,8 @@ type AccountRelationRepo interface {
 	CreateNotificationPreference(ctx context.Context, id, accountRelationID, recipientAccountUserID string, notificationTypeCode string) *apierror.APIError
 	ListNotificationPreferences(ctx context.Context, accountRelationID, recipientAccountUserID string) ([]NotificationPreference, *apierror.APIError)
 	ListNotificationRecipients(ctx context.Context, accountRelationID string) ([]NotificationRecipientRef, *apierror.APIError)
+	// ListNotificationTypesForRecipients returns, keyed by account user ID, the notification types the owner sends each of the given counterparty account users. Users with none are absent from the map.
+	ListNotificationTypesForRecipients(ctx context.Context, ownerAccountID, counterpartyAccountID string, recipientAccountUserIDs []string) (map[string][]string, *apierror.APIError)
 	DeleteNotificationPreference(ctx context.Context, accountRelationID, recipientAccountUserID, notificationTypeCode string) *apierror.APIError
 	DeleteNotificationPreferencesByTypes(ctx context.Context, accountRelationID string, notificationTypeCodes []string) *apierror.APIError
 	ListChildAccounts(ctx context.Context, params ListChildAccountsParams) (*ListChildAccountsResult, *apierror.APIError)

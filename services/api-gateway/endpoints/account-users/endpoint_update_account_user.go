@@ -41,7 +41,7 @@ type UpdateAccountUserRequest struct {
 	IsCommissionEligible field.Optional[bool] `json:"is_commission_eligible,omitzero"`
 	// Notification preference toggles to apply.
 	//
-	// Only allowed when updating a user in another account you manage (cross-account); rejected otherwise. Notification types omitted from the list are left unchanged.
+	// Only allowed when updating a user in a customer or supplier account you manage; rejected otherwise. Notification types omitted from the list are left unchanged, and the result is returned in `notification_types`.
 	Preferences []NotificationPreferenceItem `json:"preferences,omitzero"`
 }
 

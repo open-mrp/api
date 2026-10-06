@@ -91,6 +91,13 @@ message AccountUserDetail {
   optional google.protobuf.Timestamp department_updated_at = 18;
   // Independent of the sales_rep role type, which still scopes analytics and hides cost.
   bool is_commission_eligible = 19;
+  // Notification types the acting account sends this user when it manages the user's account as a customer or supplier. Unset for the acting account's own users. GetAccountUser and BatchGetAccountUsersByIDs fill it; ListAccountUsers does not, since the gateway hydrates list pages through the batch read.
+  AccountUserNotificationTypes notification_types = 20;
+}
+
+// Wraps the codes so an unset field (not applicable) is distinguishable from an empty list (none enabled).
+message AccountUserNotificationTypes {
+  repeated string codes = 1;
 }
 
 // A default order-notification recipient input: the account user id and the notification types to configure for them.

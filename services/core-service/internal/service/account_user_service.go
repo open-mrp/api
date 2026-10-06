@@ -3,6 +3,7 @@ package service
 import (
 	"context"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/open-mrp/api/services/auth-service/pkg/types"
@@ -32,6 +33,7 @@ type accountUserSvcImpl struct {
 	s3Client              s3client.ObjectStore
 	userPhotosBucket      string
 	branding              BrandingAssets
+	frontendURL           string
 }
 
 type AccountUserSvcConfig struct {
@@ -58,6 +60,9 @@ type AccountUserSvcConfig struct {
 
 	// Branding (optional) resolves the merchant logo for the branded portal welcome email. Omitted, the email renders unbranded.
 	Branding BrandingAssets
+
+	// FrontendURL (optional; default: "") is the dashboard base URL behind the welcome email's sign-in link. Empty, the link is left out unless the merchant's portal has a verified custom domain.
+	FrontendURL string
 
 	// PlatformMode (required) gates test-only relaxations; in test mode UserPhotosBucket is not required.
 	PlatformMode constants.PlatformMode
@@ -102,6 +107,7 @@ func NewAccountUserSvc(config *AccountUserSvcConfig) domain.AccountUserSvc {
 		s3Client:              config.S3Client,
 		userPhotosBucket:      config.UserPhotosBucket,
 		branding:              config.Branding,
+		frontendURL:           config.FrontendURL,
 	}
 }
 
@@ -120,6 +126,7 @@ func (s *accountUserSvcImpl) withTx(ctx context.Context, fn func(context.Context
 			s3Client:              s.s3Client,
 			branding:              s.branding,
 			userPhotosBucket:      s.userPhotosBucket,
+			frontendURL:           s.frontendURL,
 		}
 		return fn(txCtx, txSvc)
 	})
@@ -215,6 +222,9 @@ func (s *accountUserSvcImpl) GetAccountUser(ctx context.Context, accountUserID s
 	if apiErr != nil {
 		return nil, tracing.Trace(span, apiErr)
 	}
+	if apiErr := s.attachNotificationTypes(ctx, identity, detail); apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
 	detail.ImageURL = s.resolveImageURL(ctx, identity.Target.AccountID, detail.UserID, detail.ImageURL)
 	return detail, nil
 }
@@ -232,7 +242,7 @@ func (s *accountUserSvcImpl) CreateAccountUser(ctx context.Context, params domai
 	if apiErr := identity.CheckIsAssignedActor(); apiErr != nil {
 		return nil, tracing.Trace(span, apiErr)
 	}
-	if apiErr := checkAccountUserWritePermission(identity, types.ActionCreate); apiErr != nil {
+	if apiErr := checkAccountUserCreatePermission(identity); apiErr != nil {
 		return nil, tracing.Trace(span, apiErr)
 	}
 
@@ -448,42 +458,18 @@ func (s *accountUserSvcImpl) CreateAccountUser(ctx context.Context, params domai
 				}
 			}
 
-			// Auto-disable external target users when the target account has an active billing plan.
-			if identity.IsExternalTarget() {
-				hasPlan, apiErr := txSvc.repos.NewAccountRepo().HasActiveBillingPlan(txCtx, params.AccountID)
-				if apiErr != nil {
-					return apiErr
-				}
-				if hasPlan {
-					if apiErr := txAccountUserRepo.UpdateStatus(txCtx, accountUserID, constants.AccountUserStatusDisabled); apiErr != nil {
-						return apiErr
-					}
-				}
-			}
-
-			// Create notification preferences for external target users.
+			// Notification preferences belong to the acting account's relation to the target, so they only apply when adding a user to another account. A restored user keeps the preferences they had before removal, so the toggles are applied over those rather than inserted beside them.
 			if identity.IsExternalTarget() && len(params.NotificationPreferences) > 0 {
-				for _, pref := range params.NotificationPreferences {
-					if !constants.AccountRelationNotificationType(pref.NotificationTypeCode).IsValid() {
-						return apierror.NewValidationError(fmt.Sprintf("Invalid notification type code: %s", pref.NotificationTypeCode))
-					}
+				if apiErr := validateNotificationPreferences(params.NotificationPreferences); apiErr != nil {
+					return apiErr
 				}
 				txRelationRepo := txSvc.repos.NewAccountRelationRepo()
 				relationID, apiErr := txRelationRepo.FindRelationByOwnerAndCounterparty(txCtx, *identity.ActorAccountID(), params.AccountID)
 				if apiErr != nil {
 					return apiErr
 				}
-				for _, pref := range params.NotificationPreferences {
-					if !pref.Enabled {
-						continue
-					}
-					prefID, apiErr := id.GenID(id.AccountRelationNotificationPreferenceIDPrefix, nil)
-					if apiErr != nil {
-						return apiErr
-					}
-					if apiErr := txRelationRepo.CreateNotificationPreference(txCtx, prefID, relationID, accountUserID, pref.NotificationTypeCode); apiErr != nil {
-						return apiErr
-					}
+				if apiErr := applyNotificationPreferences(txCtx, txRelationRepo, relationID, accountUserID, params.NotificationPreferences); apiErr != nil {
+					return apiErr
 				}
 			}
 
@@ -500,6 +486,9 @@ func (s *accountUserSvcImpl) CreateAccountUser(ctx context.Context, params domai
 				}
 
 				subject := "Welcome to OpenMRP"
+				if loginLink := welcomeLoginLink(txSvc.frontendURL, "", nil); loginLink != "" {
+					emailParams["LoginLink"] = loginLink
+				}
 
 				if identity.IsExternalTarget() {
 					actorAccountID := *identity.ActorAccountID()
@@ -514,13 +503,13 @@ func (s *accountUserSvcImpl) CreateAccountUser(ctx context.Context, params domai
 					if logoURL := txSvc.branding.LogoURL(txCtx, ptrutil.Deref(logoRef)); logoURL != "" {
 						emailParams["LogoURL"] = logoURL
 					}
-					// A verified custom portal domain serves the portal without the slug path prefix, so the login link targets the custom domain directly and drops the slug segment. Best-effort: fall back to the slug-prefixed dashboard link on any lookup failure.
-					portalDomain, _ := txSvc.repos.NewPortalDomainRepo().GetByAccountID(txCtx, actorAccountID)
-					switch {
-					case portalDomain != nil && portalDomain.Status == constants.PortalDomainStatusVerified:
-						emailParams["LoginLink"] = "https://" + portalDomain.Domain + "/login"
-					case slug != nil:
-						emailParams["LoginLink"] = "https://www.openmrp.ai/" + *slug + "/login"
+					// The user signs in to the merchant's portal. Best-effort: a failed domain lookup falls back to the slug-prefixed link.
+					verifiedDomain := ""
+					if portalDomain, _ := txSvc.repos.NewPortalDomainRepo().GetByAccountID(txCtx, actorAccountID); portalDomain != nil && portalDomain.Status == constants.PortalDomainStatusVerified {
+						verifiedDomain = portalDomain.Domain
+					}
+					if loginLink := welcomeLoginLink(txSvc.frontendURL, verifiedDomain, slug); loginLink != "" {
+						emailParams["LoginLink"] = loginLink
 					}
 					subject = "Welcome to the " + accountName + " platform"
 				}
@@ -541,6 +530,9 @@ func (s *accountUserSvcImpl) CreateAccountUser(ctx context.Context, params domai
 			// Fetch the created detail for response.
 			detail, apiErr := txAccountUserRepo.GetDetailByAccountAndID(txCtx, params.AccountID, accountUserID, nil)
 			if apiErr != nil {
+				return apiErr
+			}
+			if apiErr := txSvc.attachNotificationTypes(txCtx, identity, detail); apiErr != nil {
 				return apiErr
 			}
 			result = detail
@@ -583,11 +575,20 @@ func (s *accountUserSvcImpl) UpdateAccountUser(ctx context.Context, params domai
 		return nil, tracing.Trace(span, apierror.NewInvariantViolationError("Identity not found in context."))
 	}
 
-	if apiErr := identity.CheckIsInternalActor(); apiErr != nil {
+	if apiErr := checkSellerStaff(identity); apiErr != nil {
 		return nil, tracing.Trace(span, apiErr)
 	}
 
 	params.AccountID = identity.Target.AccountID
+
+	if identity.IsExternalTarget() {
+		if apiErr := checkAccountUserUpdatePermission(identity); apiErr != nil {
+			return nil, tracing.Trace(span, apiErr)
+		}
+		if apiErr := s.mediators().EditAccess.CheckEditAccess(ctx, *identity.ActorAccountID(), params.AccountID); apiErr != nil {
+			return nil, tracing.Trace(span, apiErr)
+		}
+	}
 
 	// Resolve the account user to check self-edit and get the user ID (no includes needed for validation).
 	accountUserDetail, apiErr := s.repos.NewAccountUserRepo().GetDetailByAccountAndID(ctx, params.AccountID, params.AccountUserID, nil)
@@ -595,17 +596,9 @@ func (s *accountUserSvcImpl) UpdateAccountUser(ctx context.Context, params domai
 		return nil, tracing.Trace(span, apiErr)
 	}
 
-	// Allow self-edit or require customers:update permission.
-	isSelfEdit := identity.Actor != nil && identity.Actor.ID == accountUserDetail.UserID
-	if !isSelfEdit {
-		if apiErr := identity.CheckHasPermission(types.PermissionDomainCustomers, types.ActionUpdate); apiErr != nil {
-			return nil, tracing.Trace(span, apiErr)
-		}
-	}
-
-	if identity.IsExternalTarget() {
-		medsCheck := s.mediators()
-		if apiErr := medsCheck.EditAccess.CheckEditAccess(ctx, *identity.ActorAccountID(), params.AccountID); apiErr != nil {
+	// Users may edit their own membership in their own account without the team permission.
+	if !identity.IsExternalTarget() && identity.Actor.ID != accountUserDetail.UserID {
+		if apiErr := checkAccountUserUpdatePermission(identity); apiErr != nil {
 			return nil, tracing.Trace(span, apiErr)
 		}
 	}
@@ -634,10 +627,8 @@ func (s *accountUserSvcImpl) UpdateAccountUser(ctx context.Context, params domai
 			if !identity.IsExternalTarget() {
 				return nil, tracing.Trace(span, apierror.NewValidationError("Notification preferences can only be updated for external (cross-account) users."))
 			}
-			for _, pref := range params.NotificationPreferences {
-				if !constants.AccountRelationNotificationType(pref.NotificationTypeCode).IsValid() {
-					return nil, tracing.Trace(span, apierror.NewValidationError(fmt.Sprintf("Invalid notification type code: %s", pref.NotificationTypeCode)))
-				}
+			if apiErr := validateNotificationPreferences(params.NotificationPreferences); apiErr != nil {
+				return nil, tracing.Trace(span, apiErr)
 			}
 		}
 
@@ -649,6 +640,9 @@ func (s *accountUserSvcImpl) UpdateAccountUser(ctx context.Context, params domai
 			// Fetch old state for audit diff.
 			old, apiErr := txAccountUserRepo.GetDetailByAccountAndID(txCtx, params.AccountID, params.AccountUserID, nil)
 			if apiErr != nil {
+				return apiErr
+			}
+			if apiErr := txSvc.attachNotificationTypes(txCtx, identity, old); apiErr != nil {
 				return apiErr
 			}
 			userID := old.UserID
@@ -725,33 +719,16 @@ func (s *accountUserSvcImpl) UpdateAccountUser(ctx context.Context, params domai
 				if apiErr != nil {
 					return apiErr
 				}
-				existingPrefs, apiErr := txRelationRepo.ListNotificationPreferences(txCtx, relationID, params.AccountUserID)
-				if apiErr != nil {
+				if apiErr := applyNotificationPreferences(txCtx, txRelationRepo, relationID, params.AccountUserID, params.NotificationPreferences); apiErr != nil {
 					return apiErr
-				}
-				existingSet := make(map[string]bool, len(existingPrefs))
-				for _, p := range existingPrefs {
-					existingSet[p.NotificationTypeCode] = true
-				}
-				for _, pref := range params.NotificationPreferences {
-					if pref.Enabled && !existingSet[pref.NotificationTypeCode] {
-						prefID, apiErr := id.GenID(id.AccountRelationNotificationPreferenceIDPrefix, nil)
-						if apiErr != nil {
-							return apiErr
-						}
-						if apiErr := txRelationRepo.CreateNotificationPreference(txCtx, prefID, relationID, params.AccountUserID, pref.NotificationTypeCode); apiErr != nil {
-							return apiErr
-						}
-					} else if !pref.Enabled && existingSet[pref.NotificationTypeCode] {
-						if apiErr := txRelationRepo.DeleteNotificationPreference(txCtx, relationID, params.AccountUserID, pref.NotificationTypeCode); apiErr != nil {
-							return apiErr
-						}
-					}
 				}
 			}
 
 			detail, apiErr := txAccountUserRepo.GetDetailByAccountAndID(txCtx, params.AccountID, params.AccountUserID, includes)
 			if apiErr != nil {
+				return apiErr
+			}
+			if apiErr := txSvc.attachNotificationTypes(txCtx, identity, detail); apiErr != nil {
 				return apiErr
 			}
 			result = detail
@@ -798,16 +775,16 @@ func (s *accountUserSvcImpl) UpdateAccountUserStatus(ctx context.Context, accoun
 		return tracing.Trace(span, apierror.NewInvariantViolationError("Identity not found in context."))
 	}
 
-	if apiErr := identity.CheckIsInternalActor(); apiErr != nil {
+	if apiErr := checkSellerStaff(identity); apiErr != nil {
 		return tracing.Trace(span, apiErr)
 	}
 
 	// Removal uses the delete permission; other transitions use update.
-	requiredAction := types.ActionUpdate
+	checkPermission := checkAccountUserUpdatePermission
 	if targetStatus == constants.AccountUserStatusRemoved {
-		requiredAction = types.ActionDelete
+		checkPermission = checkAccountUserDeletePermission
 	}
-	if apiErr := checkAccountUserWritePermission(identity, requiredAction); apiErr != nil {
+	if apiErr := checkPermission(identity); apiErr != nil {
 		return tracing.Trace(span, apiErr)
 	}
 
@@ -824,9 +801,9 @@ func (s *accountUserSvcImpl) UpdateAccountUserStatus(ctx context.Context, accoun
 		}
 	}
 
-	// Caller must not be disabled when performing status transitions.
+	// Caller must not be disabled when performing status transitions. The caller's membership is in the account they act from, which for a customer or supplier is not the account being changed.
 	if identity.IsUser() {
-		callerDetail, apiErr := s.repos.NewAccountUserRepo().GetDetail(ctx, accountID, identity.Actor.ID, nil)
+		callerDetail, apiErr := s.repos.NewAccountUserRepo().GetDetail(ctx, *identity.ActorAccountID(), identity.Actor.ID, nil)
 		if apiErr != nil {
 			return tracing.Trace(span, apiErr)
 		}
@@ -869,9 +846,11 @@ func (s *accountUserSvcImpl) UpdateAccountUserStatus(ctx context.Context, accoun
 			return tracing.Trace(span, apierror.NewValidationError("Admin users cannot be locked."))
 		}
 	case constants.AccountUserStatusActive:
-		// Reactivating (from disabled or removed) consumes a seat.
-		if apiErr := s.checkSeatLimit(ctx, accountID); apiErr != nil {
-			return apiErr
+		// Reactivating (from disabled or removed) consumes a seat. Seats are the acting account's plan, so a customer or supplier account's users do not count against it.
+		if !identity.IsExternalTarget() {
+			if apiErr := s.checkSeatLimit(ctx, accountID); apiErr != nil {
+				return apiErr
+			}
 		}
 	case constants.AccountUserStatusRemoved:
 		// Nothing extra: any non-removed user may be removed.
@@ -1101,6 +1080,9 @@ func (s *accountUserSvcImpl) BatchGetAccountUsersByIDs(ctx context.Context, ids 
 	if apiErr != nil {
 		return nil, tracing.Trace(span, apiErr)
 	}
+	if apiErr := s.attachNotificationTypes(ctx, identity, users...); apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
 	for _, item := range users {
 		item.ImageURL = s.resolveImageURL(ctx, identity.Target.AccountID, item.UserID, item.ImageURL)
 	}
@@ -1141,8 +1123,22 @@ func checkAccountUserReadPermission(identity *types.Identity) *apierror.APIError
 	return identity.CheckHasPermission(types.PermissionDomainTeamUsers, types.ActionRead)
 }
 
-// checkAccountUserWritePermission checks the appropriate write permission based on the target context. Internal actors targeting a customer account need customers:update; supplier account needs suppliers:update; own account needs team:{action}.
-func checkAccountUserWritePermission(identity *types.Identity, action types.Action) *apierror.APIError {
+// checkAccountUserCreatePermission checks the permission to add a user: customers:create for a customer account, suppliers:create for a supplier account, team:create for the actor's own account.
+func checkAccountUserCreatePermission(identity *types.Identity) *apierror.APIError {
+	if !identity.IsInternalActor() {
+		return nil
+	}
+	if identity.IsTargetCustomerAccount() {
+		return identity.CheckHasPermission(types.PermissionDomainCustomers, types.ActionCreate)
+	}
+	if identity.IsTargetSupplierAccount() {
+		return identity.CheckHasPermission(types.PermissionDomainSuppliers, types.ActionCreate)
+	}
+	return identity.CheckHasPermission(types.PermissionDomainTeamUsers, types.ActionCreate)
+}
+
+// checkAccountUserUpdatePermission checks the permission to change a user or their status: customers:update for a customer account, suppliers:update for a supplier account, team:update for the actor's own account.
+func checkAccountUserUpdatePermission(identity *types.Identity) *apierror.APIError {
 	if !identity.IsInternalActor() {
 		return nil
 	}
@@ -1152,5 +1148,99 @@ func checkAccountUserWritePermission(identity *types.Identity, action types.Acti
 	if identity.IsTargetSupplierAccount() {
 		return identity.CheckHasPermission(types.PermissionDomainSuppliers, types.ActionUpdate)
 	}
-	return identity.CheckHasPermission(types.PermissionDomainTeamUsers, action)
+	return identity.CheckHasPermission(types.PermissionDomainTeamUsers, types.ActionUpdate)
+}
+
+// checkAccountUserDeletePermission checks the permission to remove a user: customers:delete for a customer account, suppliers:delete for a supplier account, team:delete for the actor's own account.
+func checkAccountUserDeletePermission(identity *types.Identity) *apierror.APIError {
+	if !identity.IsInternalActor() {
+		return nil
+	}
+	if identity.IsTargetCustomerAccount() {
+		return identity.CheckHasPermission(types.PermissionDomainCustomers, types.ActionDelete)
+	}
+	if identity.IsTargetSupplierAccount() {
+		return identity.CheckHasPermission(types.PermissionDomainSuppliers, types.ActionDelete)
+	}
+	return identity.CheckHasPermission(types.PermissionDomainTeamUsers, types.ActionDelete)
+}
+
+// attachNotificationTypes sets the notification types the acting account sends each user when the users belong to a customer or supplier account it manages. Users of the acting account's own account keep nil, since the preferences live on a relation they do not have.
+func (s *accountUserSvcImpl) attachNotificationTypes(ctx context.Context, identity *types.Identity, details ...*domain.AccountUserDetail) *apierror.APIError {
+	if !identity.IsInternalActor() || !identity.IsExternalTarget() || len(details) == 0 {
+		return nil
+	}
+	ids := make([]string, 0, len(details))
+	for _, d := range details {
+		ids = append(ids, d.ID)
+	}
+	byUser, apiErr := s.repos.NewAccountRelationRepo().ListNotificationTypesForRecipients(ctx, *identity.ActorAccountID(), identity.Target.AccountID, ids)
+	if apiErr != nil {
+		return apiErr
+	}
+	for _, d := range details {
+		d.NotificationTypes = byUser[d.ID]
+		if d.NotificationTypes == nil {
+			d.NotificationTypes = []string{}
+		}
+	}
+	return nil
+}
+
+func validateNotificationPreferences(prefs []domain.NotificationPreferenceItem) *apierror.APIError {
+	for _, pref := range prefs {
+		if !constants.AccountRelationNotificationType(pref.NotificationTypeCode).IsValid() {
+			return apierror.NewValidationError(fmt.Sprintf("Invalid notification type code: %s", pref.NotificationTypeCode))
+		}
+	}
+	return nil
+}
+
+// applyNotificationPreferences turns each listed notification type on or off for an account user on a relation, leaving types not listed as they are.
+func applyNotificationPreferences(ctx context.Context, relationRepo domain.AccountRelationRepo, relationID, accountUserID string, prefs []domain.NotificationPreferenceItem) *apierror.APIError {
+	existing, apiErr := relationRepo.ListNotificationPreferences(ctx, relationID, accountUserID)
+	if apiErr != nil {
+		return apiErr
+	}
+	enabled := make(map[string]bool, len(existing))
+	for _, p := range existing {
+		enabled[p.NotificationTypeCode] = true
+	}
+	for _, pref := range prefs {
+		code := pref.NotificationTypeCode
+		switch {
+		case pref.Enabled && !enabled[code]:
+			prefID, apiErr := id.GenID(id.AccountRelationNotificationPreferenceIDPrefix, nil)
+			if apiErr != nil {
+				return apiErr
+			}
+			if apiErr := relationRepo.CreateNotificationPreference(ctx, prefID, relationID, accountUserID, code); apiErr != nil {
+				return apiErr
+			}
+		case !pref.Enabled && enabled[code]:
+			if apiErr := relationRepo.DeleteNotificationPreference(ctx, relationID, accountUserID, code); apiErr != nil {
+				return apiErr
+			}
+		}
+		enabled[code] = pref.Enabled
+	}
+	return nil
+}
+
+// loginPath mirrors the frontend's FrontendPaths.login.
+const loginPath = "/auth/login"
+
+// welcomeLoginLink returns where a newly added user signs in, or "" when there is no URL to give. The acting account's own users sign in to the dashboard (no portal domain or slug); a customer's users sign in to the merchant's portal, which a verified custom domain serves without the slug prefix.
+func welcomeLoginLink(frontendURL, verifiedPortalDomain string, portalSlug *string) string {
+	if verifiedPortalDomain != "" {
+		return "https://" + verifiedPortalDomain + loginPath
+	}
+	frontendURL = strings.TrimRight(frontendURL, "/")
+	if frontendURL == "" {
+		return ""
+	}
+	if portalSlug != nil && strings.TrimSpace(*portalSlug) != "" {
+		return frontendURL + "/" + strings.TrimSpace(*portalSlug) + loginPath
+	}
+	return frontendURL + loginPath
 }

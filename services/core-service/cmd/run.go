@@ -251,6 +251,7 @@ func Run(
 		S3Client:              s3Store,
 		UserPhotosBucket:      cfg.UserPhotosBucket,
 		Branding:              brandingAssets,
+		FrontendURL:           cfg.FrontendURL,
 		PlatformMode:          cfg.PlatformMode,
 	})
 	accountPriceSvc := service.NewAccountPriceSvc(&service.AccountPriceSvcConfig{

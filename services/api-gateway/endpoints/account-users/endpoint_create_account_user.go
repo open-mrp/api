@@ -43,7 +43,7 @@ type CreateAccountUserRequest struct {
 	IsCommissionEligible field.Optional[bool] `json:"is_commission_eligible,omitzero"`
 	// Notification preference toggles for the new user.
 	//
-	// Only applies when creating a user in another account you manage (cross-account); ignored when creating a user in your own account.
+	// Only applies when adding a user to a customer or supplier account you manage; ignored when adding a user to your own account. The enabled types are returned in the user's `notification_types`. When the user is one you previously removed, the toggles apply over the preferences they had before removal, and types you leave out keep their previous state.
 	Preferences []NotificationPreferenceItem `json:"preferences,omitzero"`
 }
 
@@ -71,9 +71,9 @@ func (*CreateAccountUserRequest) SchemaExample() any {
 
 // Adds a user to the account you are acting in.
 //
-// If no user with the given email or username exists, a new user is created; a user created with an email address is sent a welcome email containing a generated password, unless they are being added to a supplier account, since suppliers have no portal to sign in to. If a matching user already exists, that user is added to the account instead, and a user you previously removed is restored rather than duplicated. Adding a user to your own account consumes a seat and is rejected once your plan's seat limit is reached.
+// If no user with the given email or username exists, a new user is created; a user created with an email address is sent a welcome email containing a generated password and a link to sign in, unless they are being added to a supplier account, since suppliers have no portal to sign in to. A user added to a customer account signs in through your customer portal, on its verified custom domain when you have one. If a matching user already exists, that user is added to the account instead, and a user you previously removed is restored rather than duplicated. Adding a user to your own account consumes a seat and is rejected once your plan's seat limit is reached.
 //
-// When you add a user to a customer or supplier account that has its own OpenMRP subscription, the membership is created disabled and has to be activated before that user can sign in.
+// You can add users to a customer or supplier account only while you manage it alone: an account that runs its own OpenMRP subscription, or that another account also has as a customer or supplier, manages its own users, and the request is refused.
 type CreateAccountUserEndpoint struct{}
 
 func (e *CreateAccountUserEndpoint) Materialize() *apiendpoint.APIEndpoint[*CreateAccountUserRequest, *apiresource.AccountUser] {
@@ -85,7 +85,7 @@ func (e *CreateAccountUserEndpoint) Materialize() *apiendpoint.APIEndpoint[*Crea
 		SuccessStatusCode:   http.StatusCreated,
 		Public:              true,
 		AgentTool:           true,
-		RequiredPermissions: []types.Permission{{Domain: types.PermissionDomainTeamUsers, Action: types.ActionCreate}, {Domain: types.PermissionDomainCustomers, Action: types.ActionUpdate}, {Domain: types.PermissionDomainSuppliers, Action: types.ActionUpdate}},
+		RequiredPermissions: []types.Permission{{Domain: types.PermissionDomainTeamUsers, Action: types.ActionCreate}, {Domain: types.PermissionDomainCustomers, Action: types.ActionCreate}, {Domain: types.PermissionDomainSuppliers, Action: types.ActionCreate}},
 		Preview:             true,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *CreateAccountUserRequest) (*apiresource.AccountUser, *apierror.APIError) {
 			return svc.(AccountUserSvc).CreateAccountUser

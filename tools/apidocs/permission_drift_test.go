@@ -61,7 +61,7 @@ func parseServiceChecks(t *testing.T, root string, domains, actions map[string]s
 	// are matched and verified rather than appearing as unaccounted.
 	permRe := regexp.MustCompile(`CheckHasPermission\(\s*(?:[A-Za-z0-9_]+\.)?PermissionDomain([A-Za-z]+),\s*(?:[A-Za-z0-9_]+\.)?Action([A-Za-z]+)`)
 	// A call to a relation-permission helper, e.g. checkMaterialReadPermission(...),
-	// s.checkSalesOrderReadPermission(...), checkAccountUserWritePermission(...).
+	// s.checkSalesOrderReadPermission(...), checkAccountUserCreatePermission(...).
 	helperCallRe := regexp.MustCompile(`(?:^|[^A-Za-z0-9_])(check[A-Za-z0-9_]*Permission)\(`)
 	for _, dir := range dirs {
 		_ = filepath.WalkDir(filepath.Join(root, dir), func(path string, d os.DirEntry, err error) error {
@@ -279,9 +279,9 @@ var unverifiableEndpoints = map[string]string{
 
 	"search": "gateway per-type dynamic gate: Search loops its providers calling identity.CheckHasPermission(domain, read) per resource type and only includes types the caller can read; endpoint declares the {sales_orders,purchase_orders,invoices,customers,items,shipments,messaging,agents}:read OR-set; no downstream name-matched handler to verify against",
 
-	"activate_account_user": "gateway private-helper indirection: ActivateAccountUser -> transitionAccountUserStatus -> coreClient.UpdateAccountUserStatus -> checkAccountUserWritePermission; endpoint declares the {team,customers,suppliers} OR-set",
-	"disable_account_user":  "gateway private-helper indirection: DisableAccountUser -> transitionAccountUserStatus -> coreClient.UpdateAccountUserStatus -> checkAccountUserWritePermission; endpoint declares the {team,customers,suppliers} OR-set",
-	"remove_account_user":   "gateway private-helper indirection: RemoveAccountUser -> transitionAccountUserStatus -> coreClient.UpdateAccountUserStatus -> checkAccountUserWritePermission; endpoint declares the {team,customers,suppliers} OR-set",
+	"activate_account_user": "gateway private-helper indirection: ActivateAccountUser -> transitionAccountUserStatus -> coreClient.UpdateAccountUserStatus -> checkAccountUserUpdatePermission; endpoint declares the {team,customers,suppliers}:update OR-set",
+	"disable_account_user":  "gateway private-helper indirection: DisableAccountUser -> transitionAccountUserStatus -> coreClient.UpdateAccountUserStatus -> checkAccountUserUpdatePermission; endpoint declares the {team,customers,suppliers}:update OR-set",
+	"remove_account_user":   "gateway private-helper indirection: RemoveAccountUser -> transitionAccountUserStatus -> coreClient.UpdateAccountUserStatus -> checkAccountUserDeletePermission; endpoint declares the {team,customers,suppliers}:delete OR-set",
 
 	"create_conversation":          "gateway-gated participant auth: CreateConversation uses caller() + membership; gateway declares messaging:create",
 	"list_conversations":           "gateway-gated participant auth: ListConversations uses caller(); gateway declares messaging:read",

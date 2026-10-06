@@ -34,7 +34,7 @@ type ListAccountUsersRequest struct {
 
 // Returns a paginated list of the users who belong to the account you are acting in.
 //
-// When the account you are acting in is a customer or supplier account you manage, this lists that account's users rather than your own team.
+// When the account you are acting in is a customer or supplier account you manage, this lists that account's users rather than your own team, each with the `notification_types` you send them.
 type ListAccountUsersEndpoint struct{}
 
 func (e *ListAccountUsersEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListAccountUsersRequest, *apiresource.List[apiresource.AccountUser]] {

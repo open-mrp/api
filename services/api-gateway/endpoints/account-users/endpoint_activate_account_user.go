@@ -18,7 +18,7 @@ type ActivateAccountUserRequest struct {
 
 // Activates a disabled or removed account user, restoring their access to the account you are acting in.
 //
-// Reactivation consumes a seat, so the request fails if the account is at its seat limit. Activating an already-active user is a no-op.
+// Reactivating a user in your own account consumes a seat, so the request fails if your plan is at its seat limit; users of a customer or supplier account you manage take no seat. Activating an already-active user is a no-op.
 type ActivateAccountUserEndpoint struct{}
 
 func (e *ActivateAccountUserEndpoint) Materialize() *apiendpoint.APIEndpoint[*ActivateAccountUserRequest, *apiresource.EmptyResource] {

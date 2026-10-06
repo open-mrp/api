@@ -1512,6 +1512,21 @@ func (mr *MockAccountRelationRepoMockRecorder) ListNotificationRecipients(ctx, a
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListNotificationRecipients", reflect.TypeOf((*MockAccountRelationRepo)(nil).ListNotificationRecipients), ctx, accountRelationID)
 }
 
+// ListNotificationTypesForRecipients mocks base method.
+func (m *MockAccountRelationRepo) ListNotificationTypesForRecipients(ctx context.Context, ownerAccountID, counterpartyAccountID string, recipientAccountUserIDs []string) (map[string][]string, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ListNotificationTypesForRecipients", ctx, ownerAccountID, counterpartyAccountID, recipientAccountUserIDs)
+	ret0, _ := ret[0].(map[string][]string)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
+}
+
+// ListNotificationTypesForRecipients indicates an expected call of ListNotificationTypesForRecipients.
+func (mr *MockAccountRelationRepoMockRecorder) ListNotificationTypesForRecipients(ctx, ownerAccountID, counterpartyAccountID, recipientAccountUserIDs any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListNotificationTypesForRecipients", reflect.TypeOf((*MockAccountRelationRepo)(nil).ListNotificationTypesForRecipients), ctx, ownerAccountID, counterpartyAccountID, recipientAccountUserIDs)
+}
+
 // RelatedCounterpartyIDs mocks base method.
 func (m *MockAccountRelationRepo) RelatedCounterpartyIDs(ctx context.Context, ownerAccountID string, counterpartyAccountIDs []string) (map[string]bool, *apierror.APIError) {
 	m.ctrl.T.Helper()

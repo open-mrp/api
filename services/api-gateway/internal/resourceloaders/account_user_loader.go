@@ -84,8 +84,21 @@ func accountUserFromProto(au *pb.AccountUserDetail) *apiresource.AccountUser {
 		Object:               constants.ObjectTypeAccountUser,
 		Status:               constants.AccountUserStatus(au.StatusCode),
 		IsCommissionEligible: au.IsCommissionEligible,
+		NotificationTypes:    notificationTypesFromProto(au.NotificationTypes),
 		LastUsedAt:           grpcutil.TimestampToTimePtr(au.LastUsedAt),
 		CreatedAt:            grpcutil.TimestampToTime(au.CreatedAt),
 		UpdatedAt:            grpcutil.TimestampToTime(au.UpdatedAt),
 	}
+}
+
+// notificationTypesFromProto keeps an unset field nil (serialized as null) and an empty one an empty list.
+func notificationTypesFromProto(in *pb.AccountUserNotificationTypes) *[]constants.AccountRelationNotificationType {
+	if in == nil {
+		return nil
+	}
+	out := make([]constants.AccountRelationNotificationType, len(in.Codes))
+	for i, code := range in.Codes {
+		out[i] = constants.AccountRelationNotificationType(code)
+	}
+	return &out
 }

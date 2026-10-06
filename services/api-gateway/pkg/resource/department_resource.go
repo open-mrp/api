@@ -36,7 +36,9 @@ type Department struct {
 	// Hourly labor rate for work done in this department, such as a changeover technician.
 	//
 	// Production scheduling costs changeovers with the constraint department's rate when one is set, falling back to the account-wide changeover labor rate setting.
-	LaborRate *Rate `json:"labor_rate"`
+	//
+	// Null unless the caller holds `costs:read`; customer and supplier portal users never see it.
+	LaborRate *Rate `json:"labor_rate" sensitive:"cost"`
 	// Creation timestamp.
 	CreatedAt time.Time `json:"created_at" validate:"required"`
 	// Last update timestamp.

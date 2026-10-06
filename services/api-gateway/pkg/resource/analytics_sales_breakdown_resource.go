@@ -34,7 +34,9 @@ type SalesTotals struct {
 	// Cost of goods for what was invoiced, from each line's order cost; a line with no recorded cost counts as zero.
 	//
 	// Null when the caller may not see cost (sales reps).
-	Cost *ComputedQuantity `json:"cost"`
+	//
+	// Null unless the caller holds `costs:read`; customer and supplier portal users never see it.
+	Cost *ComputedQuantity `json:"cost" sensitive:"cost"`
 	// Quantity invoiced, normalized to each item category's base unit so unlike units can be added.
 	QuantityInvoiced *ComputedQuantity `json:"quantity_invoiced" validate:"required"`
 	// Number of distinct invoices behind these totals.

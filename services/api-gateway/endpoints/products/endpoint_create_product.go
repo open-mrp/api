@@ -55,7 +55,7 @@ type CreateProductRequest struct {
 	// Initial cost per unit.
 	//
 	// The same unit rule as `unit_price` applies: the numerator unit must be a currency unit and the denominator unit must not be. When omitted, the cost is initialized to a zero rate in the category's base unit.
-	UnitCost field.Optional[apirequest.RateInput] `json:"unit_cost,omitzero"`
+	UnitCost field.Optional[apirequest.RateInput] `json:"unit_cost,omitzero" sensitive:"cost"`
 	// Attribute IDs to link to the product's item at creation time.
 	//
 	// Every ID must already exist in your account, and each attribute's property must be one the item's category carries; an ID that fails either check fails the whole request rather than being skipped.

@@ -72,14 +72,14 @@ type UpsertProductionStepInput struct {
 	// Cost of labor for this step, expressed as a rate of currency per unit of time
 	// (e.g. `$` per `hr`). The numerator unit must be a currency and the denominator
 	// must not be. On update a fresh rate is written.
-	LaborRate UpsertRateInput `json:"labor_rate" validate:"required"`
+	LaborRate UpsertRateInput `json:"labor_rate" validate:"required" sensitive:"cost"`
 	// Labor duration for this step, expressed as a rate (e.g. time per unit of
 	// output). On update a fresh rate is written.
 	LaborTime UpsertRateInput `json:"labor_time" validate:"required"`
 	// Overhead cost for this step, expressed as a rate of currency per unit of time
 	// (e.g. `$` per `hr`). The numerator unit must be a currency and the denominator
 	// must not be. On update a fresh rate is written.
-	OverheadRate UpsertRateInput `json:"overhead_rate" validate:"required"`
+	OverheadRate UpsertRateInput `json:"overhead_rate" validate:"required" sensitive:"cost"`
 	// The item and quantity this step produces. Replaced on update.
 	Production UpsertStepProductionInput `json:"production" validate:"required"`
 	// Materials consumed by the step. Replaced wholesale on update. Flow DAG edges

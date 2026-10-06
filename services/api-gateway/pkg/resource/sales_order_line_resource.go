@@ -40,7 +40,9 @@ type SalesOrderLine struct {
 	// Internal cost per unit.
 	//
 	// Reflects what the business pays for the item, not what the customer is charged, and is used to derive line profitability.
-	UnitCost *Rate `json:"unit_cost" expandable:"true"`
+	//
+	// Null unless the caller holds `costs:read`; customer and supplier portal users never see it.
+	UnitCost *Rate `json:"unit_cost" expandable:"true" sensitive:"cost"`
 	// Derived monetary totals for this line.
 	Totals *SalesOrderTotals `json:"totals" expandable:"true"`
 	// Creation timestamp.

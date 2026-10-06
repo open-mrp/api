@@ -14,6 +14,7 @@ import (
 	"github.com/open-mrp/api/shared/constants"
 	"github.com/open-mrp/api/shared/contracts"
 	apierror "github.com/open-mrp/api/shared/errors"
+	"github.com/open-mrp/api/shared/field"
 	"github.com/open-mrp/api/shared/id"
 	"github.com/open-mrp/api/shared/idempotency"
 	"github.com/open-mrp/api/shared/messaging"
@@ -533,6 +534,12 @@ func (s *customerSvcImpl) UpdateCustomer(ctx context.Context, params domain.Upda
 				return apiErr
 			}
 
+			// A new default address must be one of the customer's own: linking any other id would attach
+			// another account's address to this customer, readable through its includes.
+			if apiErr := checkCustomerDefaultAddresses(txCtx, txCustomerRepo, params, old); apiErr != nil {
+				return apiErr
+			}
+
 			// Update the account_relation record.
 			if apiErr := txCustomerRepo.Update(txCtx, relationID, params); apiErr != nil {
 				return apiErr
@@ -547,13 +554,6 @@ func (s *customerSvcImpl) UpdateCustomer(ctx context.Context, params domain.Upda
 			if params.ShipToAddressID.IsSet() {
 				addrID, _ := params.ShipToAddressID.Value()
 				if apiErr := ensureAccountAddressLink(txCtx, txCustomerRepo, params.CustomerAccountID, addrID); apiErr != nil {
-					return apiErr
-				}
-			}
-
-			// Update account name if provided.
-			if params.Name != nil {
-				if apiErr := txCustomerRepo.UpdateName(txCtx, params.CustomerAccountID, *params.Name); apiErr != nil {
 					return apiErr
 				}
 			}
@@ -1361,6 +1361,36 @@ func checkCustomerReadPermission(identity *types.Identity) *apierror.APIError {
 }
 
 // ensureAccountAddressLink creates an account_address record linking the given address to the account, if one does not already exist.
+// checkCustomerDefaultAddresses refuses a default billing or shipping address that changes to one the
+// customer's account does not hold. An unchanged default is left alone.
+func checkCustomerDefaultAddresses(ctx context.Context, repo domain.CustomerRepo, params domain.UpdateCustomerParams, old *domain.Customer) *apierror.APIError {
+	var held []string
+	for _, ref := range []struct {
+		value field.Clearable[string]
+		was   *string
+		param string
+	}{
+		{params.BillToAddressID, old.BillToAddressID, "bill_to_address_id"},
+		{params.ShipToAddressID, old.ShipToAddressID, "ship_to_address_id"},
+	} {
+		addressID, ok := ref.value.Value()
+		if !ok || (ref.was != nil && *ref.was == addressID) {
+			continue
+		}
+		if held == nil {
+			ids, apiErr := repo.GetAccountAddressIDs(ctx, params.CustomerAccountID)
+			if apiErr != nil {
+				return apiErr
+			}
+			held = append(ids, "")
+		}
+		if !slices.Contains(held, addressID) {
+			return apierror.NewResourceNotFoundError("No address of this customer has the provided ID.").WithParam(ref.param)
+		}
+	}
+	return nil
+}
+
 func ensureAccountAddressLink(ctx context.Context, repo domain.CustomerRepo, accountID, addressID string) *apierror.APIError {
 	existingIDs, apiErr := repo.GetAccountAddressIDs(ctx, accountID)
 	if apiErr != nil {

@@ -269,6 +269,29 @@ func TestCosts_ScheduleSettingsChangeoverLaborRateNeedsCostsRead(t *testing.T) {
 	assert.Equal(t, admin["changeover_labor_rate"], with["changeover_labor_rate"])
 }
 
+// A planner without costs:read is shown the changeover labor rate as null, so the settings it saves back carry no rate. The stored rate is kept rather than replaced by what that save sent; a planner with costs:read still sets it.
+func TestCosts_ScheduleSettingsSaveKeepsTheRateACallerCannotRead(t *testing.T) {
+	original := claimScheduleSettings(t)
+	require.NotNil(t, original["changeover_labor_rate"], "the admin reads the changeover labor rate")
+	rate := jsonField(original, "changeover_labor_rate")
+
+	planner := customRoleClient(t, "production_schedules:read", "production_schedules:update")
+	body := settingsWriteBody(original)
+	body["changeover_labor_rate"] = 0
+	status, raw, err := planner.Put(scheduleSettingsPath, body)
+	require.NoError(t, err)
+	requireStatus(t, http.StatusOK, status, raw)
+	assertNilField(t, parseJSON(raw), "changeover_labor_rate")
+	assert.Equal(t, rate, jsonField(readScheduleSettings(t), "changeover_labor_rate"), "the rate the planner could not read is kept")
+
+	changed := settingsWriteBody(original)
+	changed["changeover_labor_rate"] = 41.5
+	status, raw, err = customRoleClient(t, "production_schedules:read", "production_schedules:update", costsRead).Put(scheduleSettingsPath, changed)
+	require.NoError(t, err)
+	requireStatus(t, http.StatusOK, status, raw)
+	assert.Equal(t, "41.5", jsonField(readScheduleSettings(t), "changeover_labor_rate"), "a planner who reads costs sets the rate")
+}
+
 // Sales figures carry their cost and profit; a reader without costs:read gets the sales with those left null.
 func TestCosts_SalesReportsHideCostWithoutCostsRead(t *testing.T) {
 	t.Parallel()

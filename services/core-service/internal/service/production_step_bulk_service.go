@@ -455,6 +455,7 @@ func (s *productionStepSvcImpl) exportSpec() exportSpec[*domain.ProductionStepEx
 		Slug:             "production_steps",
 		ResourceType:     constants.ObjectTypeProductionStep,
 		Columns:          productionStepColumns,
+		CostColumns:      []string{"labor_rate", "overhead_rate"},
 
 		Fetch: func(ctx context.Context, repos domain.RepoFactory, accountID string, filters domain.ExportProductionStepsParams) ([]*domain.ProductionStepExport, *apierror.APIError) {
 			filters.AccountID = accountID

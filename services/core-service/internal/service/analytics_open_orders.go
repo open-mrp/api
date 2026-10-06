@@ -27,7 +27,7 @@ func (s *analyticsSvcImpl) orderReportAccessFor(ctx context.Context, permissionD
 		return nil, apiErr
 	}
 
-	access := &salesReportAccess{accountID: identity.Target.AccountID, includeCost: !identity.IsSalesRep()}
+	access := &salesReportAccess{accountID: identity.Target.AccountID, includeCost: !identity.IsSalesRep() && identity.CanReadCosts()}
 	if identity.IsSalesRep() && identity.Actor != nil && identity.Actor.ID != "" {
 		accountUser, apiErr := s.repos.NewAccountUserRepo().FindByAccountAndUserID(ctx, identity.Actor.ID, access.accountID)
 		if apiErr != nil {

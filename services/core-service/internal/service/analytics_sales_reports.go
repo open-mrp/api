@@ -16,7 +16,7 @@ type salesReportAccess struct {
 	accountID string
 	// ownRepID is set for a sales rep, whose reports are forced to their own sales.
 	ownRepID *string
-	// includeCost is false for sales reps, who never see cost.
+	// includeCost is false for sales reps, who never see cost, and for anyone without costs:read.
 	includeCost bool
 }
 

@@ -242,6 +242,7 @@ func (s *productSvcImpl) exportSpec() exportSpec[*domain.ProductFull, domain.Exp
 		Name:            "Products",
 		Slug:            "products",
 		ResourceType:    constants.ObjectTypeProduct,
+		CostColumns:     itemCostColumns,
 
 		ColumnsFor: func(products []*domain.ProductFull) []excel.ColumnSpec {
 			base := itemBaseColumns(

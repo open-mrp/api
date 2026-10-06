@@ -33,7 +33,7 @@ type UpdateRateRequest struct {
 	ObjectID field.Optional[string] `json:"object_id,omitzero" validate:"omitempty"`
 	// Type of the resource that owns this rate.
 	//
-	// Determines the permission required for the update.
+	// Used together with `object_id` to verify the owning resource exists.
 	ObjectType field.Optional[constants.MeasureOwnerType] `json:"object_type,omitzero" validate:"omitempty"`
 }
 
@@ -51,6 +51,8 @@ func (*UpdateRateRequest) SchemaExample() any {
 // Updates the value or units of a rate in place.
 //
 // A rate belongs to the resource that reports it — an item's unit price or cost, a department's labor rate, and so on — so this changes that resource's stored rate directly.
+//
+// Updating takes the update permission of the resource the rate belongs to: `items:update` for an item's, `production_steps:update` for a production step's, and `departments:update` for a department's. A rate that belongs to none of these in the account you are acting in is reported as not found.
 type UpdateRateEndpoint struct{}
 
 func (e *UpdateRateEndpoint) Materialize() *apiendpoint.APIEndpoint[*UpdateRateRequest, *apiresource.Rate] {
@@ -65,6 +67,7 @@ func (e *UpdateRateEndpoint) Materialize() *apiendpoint.APIEndpoint[*UpdateRateR
 		RequiredPermissions: []types.Permission{
 			{Domain: types.PermissionDomainItems, Action: types.ActionUpdate},
 			{Domain: types.PermissionDomainProductionSteps, Action: types.ActionUpdate},
+			{Domain: types.PermissionDomainDepartments, Action: types.ActionUpdate},
 		},
 		ObjectType: constants.ObjectTypeRate,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *UpdateRateRequest) (*apiresource.Rate, *apierror.APIError) {

@@ -2,9 +2,11 @@ package repository
 
 import (
 	"context"
+	"database/sql"
 
 	"github.com/open-mrp/api/services/core-service/internal/domain"
 	"github.com/open-mrp/api/services/core-service/internal/infrastructure/sqlc"
+	"github.com/open-mrp/api/shared/constants"
 	"github.com/open-mrp/api/shared/db"
 	apierror "github.com/open-mrp/api/shared/errors"
 	"github.com/open-mrp/api/shared/tracing"
@@ -72,4 +74,20 @@ func (r *rateRepoImpl) Update(ctx context.Context, params domain.UpdateRateParam
 	}
 
 	return r.Get(ctx, params.RateID)
+}
+
+func (r *rateRepoImpl) OwnerTypes(ctx context.Context, accountID, id string) ([]constants.ObjectType, *apierror.APIError) {
+	ctx, span := rateRepoTracer.Start(ctx, "repository.rate.owner_types")
+	defer span.End()
+	span.SetAttributes(attribute.String("rate.id", id))
+
+	rows, err := r.queries.ListRateOwnerTypes(ctx, sqlc.ListRateOwnerTypesParams{
+		ID:                    id,
+		AccountID:             accountID,
+		DepartmentLaborRateID: sql.NullString{String: id, Valid: true},
+	})
+	if apiErr := db.MapSQLError(err); apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
+	return measureOwnerTypes(rows), nil
 }

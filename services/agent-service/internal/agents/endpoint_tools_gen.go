@@ -12,7 +12,7 @@ var EndpointTools = []EndpointToolDescriptor{
 		RouteTemplate:       "/v1/identity/account-users/{id}/actions/activate",
 		InputSchema:         "{\"properties\":{\"id\":{\"description\":\"ID of the account user to activate.\",\"type\":\"string\"}},\"required\":[\"id\"],\"type\":\"object\"}",
 		Group:               "Account Users",
-		RequiredPermissions: []string{"team:update", "customers:update", "suppliers:update"},
+		RequiredPermissions: []string{"team:update"},
 		Params: []EndpointToolParam{
 			{Name: "id", In: EndpointToolParamPath},
 		},
@@ -356,7 +356,7 @@ var EndpointTools = []EndpointToolDescriptor{
 		RouteTemplate:       "/v1/identity/account-users",
 		InputSchema:         "{\"properties\":{\"department_id\":{\"description\":\"ID of the department to assign to the user.\\n\\nThe department must already exist in the account you are acting in.\",\"type\":\"string\"},\"email\":{\"description\":\"User email address.\\n\\nEither `email` or `username` must be provided. If a user with this email already exists, that user is added to the account instead of a new user being created, and the request fails with a conflict if they are already an active member of it.\",\"type\":\"string\"},\"include\":{\"description\":\"Sub-objects to expand in the response. These nested objects are returned as null by default; pass the field keys you need (e.g. \\\"parent_account\\\") to get their full objects inline. Expand to get authoritative data rather than inferring relationships from names.\",\"items\":{\"enum\":[\"user\",\"role\",\"department\"],\"type\":\"string\"},\"type\":\"array\"},\"is_commission_eligible\":{\"description\":\"Whether the user can be assigned as a sales representative on orders, territories, and targets.\\n\\nDefaults to false. Forced true for the `sales_rep` role type and rejected for scanner and agent roles.\",\"type\":\"boolean\"},\"name\":{\"description\":\"User display name.\",\"type\":\"string\"},\"password\":{\"description\":\"Password for scanning station users.\\n\\nRequired when creating a scanning station user (username without email) and rejected for all other users, who instead receive a generated password in their welcome email. Must be 8–72 characters and include an uppercase letter, a lowercase letter, a number, and a special character.\",\"type\":\"string\"},\"preferences\":{\"description\":\"Notification preference toggles for the new user.\\n\\nOnly applies when adding a user to a customer or supplier account you manage; ignored when adding a user to your own account. The enabled types are returned in the user's `notification_types`. When the user is one you previously removed, the toggles apply over the preferences they had before removal, and types you leave out keep their previous state.\",\"items\":{\"description\":\"NotificationPreferenceItem toggles a single account-relation notification type.\",\"properties\":{\"enabled\":{\"description\":\"Whether this notification type is enabled for the account user.\",\"type\":\"boolean\"},\"notification_type\":{\"description\":\"Notification type.\",\"enum\":[\"invoice\",\"order_acknowledgement\",\"purchase_order_submission\"],\"type\":\"string\"}},\"required\":[\"notification_type\",\"enabled\"],\"type\":\"object\"},\"type\":\"array\"},\"role_id\":{\"description\":\"ID of the role to assign to the user.\\n\\nThe role you supply can be overridden: users added to a customer account always receive the shared customer role so their portal capabilities stay permission-driven, and scanning station users in any other account receive the scanner role. Supplying a role whose type is `sales_rep` normalizes to the account's canonical sales-rep role.\",\"type\":\"string\"},\"username\":{\"description\":\"Unique username.\\n\\n3–255 characters; letters, numbers, underscores, and hyphens. Either `email` or `username` must be provided. Providing a username without an email creates a scanning station user.\",\"type\":\"string\"}},\"type\":\"object\"}",
 		Group:               "Account Users",
-		RequiredPermissions: []string{"team:create", "customers:create", "suppliers:create"},
+		RequiredPermissions: []string{"team:create"},
 		Params: []EndpointToolParam{
 			{Name: "department_id", In: EndpointToolParamBody},
 			{Name: "email", In: EndpointToolParamBody},
@@ -377,7 +377,7 @@ var EndpointTools = []EndpointToolDescriptor{
 		RouteTemplate:       "/v1/sales/addresses",
 		InputSchema:         "{\"properties\":{\"country\":{\"description\":\"Two-letter ISO 3166-1 country code, such as `US`.\",\"type\":\"string\"},\"email\":{\"description\":\"Email address associated with the address.\",\"type\":\"string\"},\"locality\":{\"description\":\"City or locality.\",\"type\":\"string\"},\"name\":{\"description\":\"Display name of the address.\",\"type\":\"string\"},\"phone\":{\"description\":\"Phone number associated with the address.\",\"type\":\"string\"},\"postal_code\":{\"description\":\"Postal or ZIP code.\",\"type\":\"string\"},\"receive_calendar_id\":{\"description\":\"The operating calendar naming the days this dock accepts freight, overriding the customer's own.\",\"type\":\"string\"},\"state\":{\"description\":\"State or administrative area.\",\"type\":\"string\"},\"street_line_1\":{\"description\":\"First line of the street address.\",\"type\":\"string\"},\"street_line_2\":{\"description\":\"Second line of the street address.\",\"type\":\"string\"},\"type\":{\"default\":\"standard\",\"description\":\"How the address is used.\\n\\n- `standard`: a normal shipping or billing address.\\n- `drop_ship`: an address an order is shipped to directly, typically a third party or end customer rather than the account itself.\",\"enum\":[\"standard\",\"drop_ship\"],\"type\":\"string\"}},\"required\":[\"name\",\"country\"],\"type\":\"object\"}",
 		Group:               "Addresses",
-		RequiredPermissions: []string{"addresses:create", "customers:update", "suppliers:update"},
+		RequiredPermissions: []string{"addresses:create"},
 		Params: []EndpointToolParam{
 			{Name: "country", In: EndpointToolParamBody},
 			{Name: "email", In: EndpointToolParamBody},
@@ -643,7 +643,7 @@ var EndpointTools = []EndpointToolDescriptor{
 		RouteTemplate:       "/v1/catalog/materials",
 		InputSchema:         "{\"properties\":{\"attribute_ids\":{\"description\":\"IDs of existing attributes to link to the material at creation time.\\n\\nEach attribute's property must be one the material's category carries; an attribute from any other property fails the whole request.\",\"items\":{\"type\":\"string\"},\"type\":\"array\"},\"category_id\":{\"description\":\"ID of the item category to place the material in.\\n\\nThe category's unit group determines the base unit used for the material's rates (`unit_value`, `unit_cost`, `burn_rate`).\",\"type\":\"string\"},\"description\":{\"description\":\"Free-form description of the material.\",\"type\":\"string\"},\"include\":{\"description\":\"Sub-objects to expand in the response. These nested objects are returned as null by default; pass the field keys you need (e.g. \\\"parent_account\\\") to get their full objects inline. Expand to get authoritative data rather than inferring relationships from names.\",\"items\":{\"enum\":[\"item\",\"item.category\",\"item.category.properties\",\"item.category.unit_group\",\"item.unit_value\",\"item.unit_cost\",\"item.burn_rate\",\"item.attributes\"],\"type\":\"string\"},\"type\":\"array\"},\"lead_time\":{\"description\":\"Expected time between placing an order for this material and receiving it, expressed as a quantity in a time unit (e.g. days).\\n\\nWhen omitted, the material is created without a lead time.\",\"properties\":{\"unit_id\":{\"description\":\"ID of the unit the value is expressed in.\",\"type\":\"string\"},\"value\":{\"description\":\"Decimal value of the quantity.\",\"format\":\"decimal\",\"type\":\"string\"}},\"required\":[\"value\",\"unit_id\"],\"type\":\"object\"},\"notes\":{\"description\":\"Free-form notes about the material.\",\"type\":\"string\"},\"order_point\":{\"description\":\"Reorder threshold: when on-hand stock falls to this quantity, the material should be reordered.\\n\\nWhen omitted, the material is created without a reorder threshold.\",\"properties\":{\"unit_id\":{\"description\":\"ID of the unit the value is expressed in.\",\"type\":\"string\"},\"value\":{\"description\":\"Decimal value of the quantity.\",\"format\":\"decimal\",\"type\":\"string\"}},\"required\":[\"value\",\"unit_id\"],\"type\":\"object\"},\"sku\":{\"description\":\"Stock keeping unit code for the material.\\n\\nMust be unique within the account; creating a material with a SKU already used by another item fails with a conflict error.\",\"type\":\"string\"},\"unit_cost\":{\"description\":\"Initial cost per unit.\\n\\nFollows the same unit rule as `unit_price`: currency numerator, non-currency denominator. When omitted, the cost is initialized to a zero rate in the category's base unit.\",\"properties\":{\"denominator_unit_id\":{\"description\":\"ID of the unit for the rate's denominator (the per-unit basis).\",\"type\":\"string\"},\"numerator_unit_id\":{\"description\":\"ID of the unit for the rate's numerator (e.g. the currency of a price).\",\"type\":\"string\"},\"value\":{\"description\":\"Decimal value of the rate, expressed as the amount of the numerator unit per one denominator unit.\",\"format\":\"decimal\",\"type\":\"string\"}},\"required\":[\"value\",\"numerator_unit_id\",\"denominator_unit_id\"],\"type\":\"object\"},\"unit_price\":{\"description\":\"Initial selling price per unit.\\n\\n`numerator_unit_id` must reference a currency unit and `denominator_unit_id` must reference a non-currency unit (e.g. `$5` per `ea`). When omitted, the price is initialized to a zero rate in the category's base unit. It becomes the `unit_value` rate on the material's item; the material update endpoint cannot change it afterwards.\",\"properties\":{\"denominator_unit_id\":{\"description\":\"ID of the unit for the rate's denominator (the per-unit basis).\",\"type\":\"string\"},\"numerator_unit_id\":{\"description\":\"ID of the unit for the rate's numerator (e.g. the currency of a price).\",\"type\":\"string\"},\"value\":{\"description\":\"Decimal value of the rate, expressed as the amount of the numerator unit per one denominator unit.\",\"format\":\"decimal\",\"type\":\"string\"}},\"required\":[\"value\",\"numerator_unit_id\",\"denominator_unit_id\"],\"type\":\"object\"}},\"required\":[\"sku\",\"category_id\"],\"type\":\"object\"}",
 		Group:               "Materials",
-		RequiredPermissions: []string{"materials:create", "customers:update", "suppliers:update"},
+		RequiredPermissions: []string{"materials:create"},
 		Params: []EndpointToolParam{
 			{Name: "attribute_ids", In: EndpointToolParamBody},
 			{Name: "category_id", In: EndpointToolParamBody},
@@ -716,7 +716,7 @@ var EndpointTools = []EndpointToolDescriptor{
 		RouteTemplate:       "/v1/catalog/parts",
 		InputSchema:         "{\"properties\":{\"attribute_ids\":{\"description\":\"IDs of existing attributes to link to the part at creation time.\\n\\nEach attribute's property must be one the part's category carries; an attribute from any other property fails the whole request.\",\"items\":{\"type\":\"string\"},\"type\":\"array\"},\"category_id\":{\"description\":\"ID of the item category to place the part in.\\n\\nThe category's unit group determines the base unit used for the part's rates (`unit_value`, `unit_cost`, `burn_rate`).\",\"type\":\"string\"},\"description\":{\"description\":\"Free-form description of the part.\",\"type\":\"string\"},\"include\":{\"description\":\"Sub-objects to expand in the response. These nested objects are returned as null by default; pass the field keys you need (e.g. \\\"parent_account\\\") to get their full objects inline. Expand to get authoritative data rather than inferring relationships from names.\",\"items\":{\"enum\":[\"item\",\"item.category\",\"item.unit_value\",\"item.unit_cost\",\"item.burn_rate\",\"item.attributes\"],\"type\":\"string\"},\"type\":\"array\"},\"notes\":{\"description\":\"Free-form notes about the part.\",\"type\":\"string\"},\"sku\":{\"description\":\"Stock keeping unit code for the part.\\n\\nMust be unique within the account; creating a part with a SKU already used by another item fails with a conflict error.\",\"type\":\"string\"},\"unit_cost\":{\"description\":\"Initial cost per unit.\\n\\nFollows the same unit rule as `unit_price`: currency numerator, non-currency denominator. When omitted, the cost is initialized to a zero rate in the category's base unit.\",\"properties\":{\"denominator_unit_id\":{\"description\":\"ID of the unit for the rate's denominator (the per-unit basis).\",\"type\":\"string\"},\"numerator_unit_id\":{\"description\":\"ID of the unit for the rate's numerator (e.g. the currency of a price).\",\"type\":\"string\"},\"value\":{\"description\":\"Decimal value of the rate, expressed as the amount of the numerator unit per one denominator unit.\",\"format\":\"decimal\",\"type\":\"string\"}},\"required\":[\"value\",\"numerator_unit_id\",\"denominator_unit_id\"],\"type\":\"object\"},\"unit_price\":{\"description\":\"Initial selling price per unit.\\n\\n`numerator_unit_id` must reference a currency unit and `denominator_unit_id` must reference a non-currency unit (e.g. `$5` per `ea`). When omitted, the price is initialized to a zero rate in the category's base unit.\",\"properties\":{\"denominator_unit_id\":{\"description\":\"ID of the unit for the rate's denominator (the per-unit basis).\",\"type\":\"string\"},\"numerator_unit_id\":{\"description\":\"ID of the unit for the rate's numerator (e.g. the currency of a price).\",\"type\":\"string\"},\"value\":{\"description\":\"Decimal value of the rate, expressed as the amount of the numerator unit per one denominator unit.\",\"format\":\"decimal\",\"type\":\"string\"}},\"required\":[\"value\",\"numerator_unit_id\",\"denominator_unit_id\"],\"type\":\"object\"}},\"required\":[\"sku\",\"category_id\"],\"type\":\"object\"}",
 		Group:               "Parts",
-		RequiredPermissions: []string{"parts:create", "customers:update", "suppliers:update"},
+		RequiredPermissions: []string{"parts:create"},
 		Params: []EndpointToolParam{
 			{Name: "attribute_ids", In: EndpointToolParamBody},
 			{Name: "category_id", In: EndpointToolParamBody},
@@ -889,7 +889,7 @@ var EndpointTools = []EndpointToolDescriptor{
 		RouteTemplate:       "/v1/sales/sales-orders/{id}/lines",
 		InputSchema:         "{\"properties\":{\"id\":{\"description\":\"Sales order ID.\",\"type\":\"string\"},\"include\":{\"description\":\"Sub-objects to expand in the response. These nested objects are returned as null by default; pass the field keys you need (e.g. \\\"parent_account\\\") to get their full objects inline. Expand to get authoritative data rather than inferring relationships from names.\",\"items\":{\"enum\":[\"product\",\"quantity_ordered\",\"unit_price\",\"unit_cost\",\"totals\"],\"type\":\"string\"},\"type\":\"array\"},\"product_description\":{\"description\":\"The product description recorded on the line.\",\"type\":\"string\"},\"product_id\":{\"description\":\"ID of the product being ordered.\",\"type\":\"string\"},\"product_sku\":{\"description\":\"The product SKU recorded on the line.\",\"type\":\"string\"},\"quantity\":{\"description\":\"Quantity ordered.\\n\\nThe unit must belong to the product's unit group.\",\"properties\":{\"unit_id\":{\"description\":\"ID of the unit of measure for the value.\",\"type\":\"string\"},\"value\":{\"description\":\"Decimal value, as a string to preserve precision.\",\"format\":\"decimal\",\"type\":\"string\"}},\"required\":[\"value\",\"unit_id\"],\"type\":\"object\"},\"unit_price\":{\"description\":\"Unit price override.\\n\\nWhen omitted, the line is priced server-side from the product's pricing rules (customer price, unit-conversion and volume discounts, account-price overrides) — the same pricing applied when the order is created. An explicit value is honored only for internal users. The unit cost is always resolved from the product and never taken from the request.\",\"properties\":{\"denominator_unit_id\":{\"description\":\"ID of the unit for the rate's denominator (the per-unit basis).\",\"type\":\"string\"},\"numerator_unit_id\":{\"description\":\"ID of the unit for the rate's numerator (e.g. the currency of a price).\",\"type\":\"string\"},\"value\":{\"description\":\"Decimal value of the rate, expressed as the amount of the numerator unit per one denominator unit.\",\"format\":\"decimal\",\"type\":\"string\"}},\"required\":[\"value\",\"numerator_unit_id\",\"denominator_unit_id\"],\"type\":\"object\"}},\"required\":[\"product_id\",\"product_sku\",\"quantity\",\"id\"],\"type\":\"object\"}",
 		Group:               "Sales Orders",
-		RequiredPermissions: []string{"customers:update", "suppliers:update", "sales_orders:update"},
+		RequiredPermissions: []string{"sales_orders:update"},
 		Params: []EndpointToolParam{
 			{Name: "id", In: EndpointToolParamPath},
 			{Name: "include", In: EndpointToolParamQuery, Array: true},
@@ -1112,7 +1112,7 @@ var EndpointTools = []EndpointToolDescriptor{
 		RouteTemplate:       "/v1/sales/addresses/{id}",
 		InputSchema:         "{\"properties\":{\"id\":{\"description\":\"Address ID.\",\"type\":\"string\"}},\"required\":[\"id\"],\"type\":\"object\"}",
 		Group:               "Addresses",
-		RequiredPermissions: []string{"addresses:delete", "customers:update", "suppliers:update"},
+		RequiredPermissions: []string{"addresses:delete"},
 		Params: []EndpointToolParam{
 			{Name: "id", In: EndpointToolParamPath},
 		},
@@ -1253,7 +1253,7 @@ var EndpointTools = []EndpointToolDescriptor{
 		RouteTemplate:       "/v1/catalog/materials/{id}",
 		InputSchema:         "{\"properties\":{\"id\":{\"description\":\"ID of the material to delete.\",\"type\":\"string\"}},\"required\":[\"id\"],\"type\":\"object\"}",
 		Group:               "Materials",
-		RequiredPermissions: []string{"materials:delete", "customers:update", "suppliers:update"},
+		RequiredPermissions: []string{"materials:delete"},
 		Params: []EndpointToolParam{
 			{Name: "id", In: EndpointToolParamPath},
 		},
@@ -1306,7 +1306,7 @@ var EndpointTools = []EndpointToolDescriptor{
 		RouteTemplate:       "/v1/catalog/parts/{id}",
 		InputSchema:         "{\"properties\":{\"id\":{\"description\":\"ID of the part to delete.\",\"type\":\"string\"}},\"required\":[\"id\"],\"type\":\"object\"}",
 		Group:               "Parts",
-		RequiredPermissions: []string{"parts:delete", "customers:update", "suppliers:update"},
+		RequiredPermissions: []string{"parts:delete"},
 		Params: []EndpointToolParam{
 			{Name: "id", In: EndpointToolParamPath},
 		},
@@ -1427,7 +1427,7 @@ var EndpointTools = []EndpointToolDescriptor{
 		RouteTemplate:       "/v1/sales/sales-orders/{id}/lines/{line_id}",
 		InputSchema:         "{\"properties\":{\"id\":{\"description\":\"Sales order ID.\",\"type\":\"string\"},\"line_id\":{\"description\":\"Sales order line ID.\",\"type\":\"string\"}},\"required\":[\"id\",\"line_id\"],\"type\":\"object\"}",
 		Group:               "Sales Orders",
-		RequiredPermissions: []string{"customers:update", "suppliers:update", "sales_orders:update"},
+		RequiredPermissions: []string{"sales_orders:update"},
 		Params: []EndpointToolParam{
 			{Name: "id", In: EndpointToolParamPath},
 			{Name: "line_id", In: EndpointToolParamPath},
@@ -1547,7 +1547,7 @@ var EndpointTools = []EndpointToolDescriptor{
 		RouteTemplate:       "/v1/identity/account-users/{id}/actions/disable",
 		InputSchema:         "{\"properties\":{\"id\":{\"description\":\"ID of the account user to disable.\",\"type\":\"string\"}},\"required\":[\"id\"],\"type\":\"object\"}",
 		Group:               "Account Users",
-		RequiredPermissions: []string{"team:update", "customers:update", "suppliers:update"},
+		RequiredPermissions: []string{"team:update"},
 		Params: []EndpointToolParam{
 			{Name: "id", In: EndpointToolParamPath},
 		},
@@ -1784,7 +1784,7 @@ var EndpointTools = []EndpointToolDescriptor{
 		RouteTemplate:       "/v1/sales/account-prices",
 		InputSchema:         "{\"properties\":{\"cursor\":{\"description\":\"Opaque cursor token identifying where the page of results starts.\\n\\nUse the `cursor` value embedded in a previous response's `next_page_url` or `previous_page_url` to fetch the adjacent page. Omit to start from the first page.\",\"type\":\"string\"},\"include\":{\"description\":\"Sub-objects to expand in the response. These nested objects are returned as null by default; pass the field keys you need (e.g. \\\"parent_account\\\") to get their full objects inline. Expand to get authoritative data rather than inferring relationships from names.\",\"items\":{\"enum\":[\"recipient_account\",\"product_line\",\"categories\",\"attributes\"],\"type\":\"string\"},\"type\":\"array\"},\"limit\":{\"description\":\"Maximum number of results to return in a single page.\",\"type\":\"integer\"},\"q\":{\"description\":\"Free-text search term used to filter results.\\n\\nWhich fields are matched against the term varies by endpoint.\",\"type\":\"string\"},\"recipient_account_id\":{\"description\":\"Filters results to prices whose recipient is this customer account.\\n\\nA child account also matches the prices recorded against its parent, since those price its orders too.\",\"type\":\"string\"}},\"type\":\"object\"}",
 		Group:               "Account Prices",
-		RequiredPermissions: []string{"discounts:read", "customers:read", "suppliers:read"},
+		RequiredPermissions: []string{"discounts:read"},
 		Params: []EndpointToolParam{
 			{Name: "cursor", In: EndpointToolParamQuery},
 			{Name: "include", In: EndpointToolParamQuery, Array: true},
@@ -1816,7 +1816,7 @@ var EndpointTools = []EndpointToolDescriptor{
 		RouteTemplate:       "/v1/identity/account-users",
 		InputSchema:         "{\"properties\":{\"cursor\":{\"description\":\"Opaque cursor token identifying where the page of results starts.\\n\\nUse the `cursor` value embedded in a previous response's `next_page_url` or `previous_page_url` to fetch the adjacent page. Omit to start from the first page.\",\"type\":\"string\"},\"include\":{\"description\":\"Sub-objects to expand in the response. These nested objects are returned as null by default; pass the field keys you need (e.g. \\\"parent_account\\\") to get their full objects inline. Expand to get authoritative data rather than inferring relationships from names.\",\"items\":{\"enum\":[\"user\",\"role\",\"department\"],\"type\":\"string\"},\"type\":\"array\"},\"is_commission_eligible\":{\"description\":\"Filter by commission eligibility.\\n\\nExact match on the column. Pass `true` to list users who can be assigned as sales representatives, including dedicated `sales_rep` users.\",\"type\":\"boolean\"},\"limit\":{\"description\":\"Maximum number of results to return in a single page.\",\"type\":\"integer\"},\"q\":{\"description\":\"Free-text search term used to filter results.\\n\\nWhich fields are matched against the term varies by endpoint.\",\"type\":\"string\"},\"removed_scope\":{\"description\":\"Controls whether removed (soft-deleted) account users appear in the list.\\n\\nRemoved users are left out unless you pass `included`, so a user removed with the remove action disappears from the default listing.\",\"enum\":[\"excluded\",\"included\"],\"type\":\"string\"},\"role_type\":{\"description\":\"Filter by role type.\\n\\n- `admin`: account administrators.\\n- `user`: users with a custom role.\\n- `scanner`: scanning station users.\\n- `sales_rep`: sales representatives.\\n- `agent`: automated agents.\",\"enum\":[\"admin\",\"user\",\"scanner\",\"sales_rep\",\"agent\"],\"type\":\"string\"}},\"type\":\"object\"}",
 		Group:               "Account Users",
-		RequiredPermissions: []string{"team:read", "customers:read", "suppliers:read"},
+		RequiredPermissions: []string{"team:read"},
 		Params: []EndpointToolParam{
 			{Name: "cursor", In: EndpointToolParamQuery},
 			{Name: "include", In: EndpointToolParamQuery, Array: true},
@@ -1848,7 +1848,7 @@ var EndpointTools = []EndpointToolDescriptor{
 		RouteTemplate:       "/v1/sales/addresses",
 		InputSchema:         "{\"properties\":{\"cursor\":{\"description\":\"Opaque cursor token identifying where the page of results starts.\\n\\nUse the `cursor` value embedded in a previous response's `next_page_url` or `previous_page_url` to fetch the adjacent page. Omit to start from the first page.\",\"type\":\"string\"},\"limit\":{\"description\":\"Maximum number of results to return in a single page.\",\"type\":\"integer\"},\"q\":{\"description\":\"Free-text search term used to filter results.\\n\\nWhich fields are matched against the term varies by endpoint.\",\"type\":\"string\"},\"type\":{\"description\":\"Filters results to addresses of the given type.\",\"enum\":[\"standard\",\"drop_ship\"],\"type\":\"string\"}},\"type\":\"object\"}",
 		Group:               "Addresses",
-		RequiredPermissions: []string{"addresses:read", "customers:read", "suppliers:read"},
+		RequiredPermissions: []string{"addresses:read"},
 		Params: []EndpointToolParam{
 			{Name: "cursor", In: EndpointToolParamQuery},
 			{Name: "limit", In: EndpointToolParamQuery},
@@ -1982,7 +1982,7 @@ var EndpointTools = []EndpointToolDescriptor{
 		RouteTemplate:       "/v1/operations/carriers",
 		InputSchema:         "{\"properties\":{\"cursor\":{\"description\":\"Opaque cursor token identifying where the page of results starts.\\n\\nUse the `cursor` value embedded in a previous response's `next_page_url` or `previous_page_url` to fetch the adjacent page. Omit to start from the first page.\",\"type\":\"string\"},\"include\":{\"description\":\"Sub-objects to expand in the response. These nested objects are returned as null by default; pass the field keys you need (e.g. \\\"parent_account\\\") to get their full objects inline. Expand to get authoritative data rather than inferring relationships from names.\",\"items\":{\"enum\":[\"owner\",\"owner.account\",\"service_levels\"],\"type\":\"string\"},\"type\":\"array\"},\"limit\":{\"description\":\"Maximum number of results to return in a single page.\",\"type\":\"integer\"},\"q\":{\"description\":\"Free-text search term used to filter results.\\n\\nWhich fields are matched against the term varies by endpoint.\",\"type\":\"string\"}},\"type\":\"object\"}",
 		Group:               "Carriers",
-		RequiredPermissions: []string{"carriers:read", "customers:read", "suppliers:read"},
+		RequiredPermissions: []string{"carriers:read"},
 		Params: []EndpointToolParam{
 			{Name: "cursor", In: EndpointToolParamQuery},
 			{Name: "include", In: EndpointToolParamQuery, Array: true},
@@ -2322,7 +2322,7 @@ var EndpointTools = []EndpointToolDescriptor{
 		RouteTemplate:       "/v1/catalog/materials",
 		InputSchema:         "{\"properties\":{\"attribute_ids\":{\"description\":\"Filter to materials carrying any of these attributes.\",\"items\":{\"type\":\"string\"},\"type\":\"array\"},\"category_ids\":{\"description\":\"Filter to materials in any of these categories.\",\"items\":{\"type\":\"string\"},\"type\":\"array\"},\"cursor\":{\"description\":\"Opaque cursor token identifying where the page of results starts.\\n\\nUse the `cursor` value embedded in a previous response's `next_page_url` or `previous_page_url` to fetch the adjacent page. Omit to start from the first page.\",\"type\":\"string\"},\"ends_at\":{\"description\":\"Filter to materials created on or before this date.\",\"format\":\"date-time\",\"type\":\"string\"},\"include\":{\"description\":\"Sub-objects to expand in the response. These nested objects are returned as null by default; pass the field keys you need (e.g. \\\"parent_account\\\") to get their full objects inline. Expand to get authoritative data rather than inferring relationships from names.\",\"items\":{\"enum\":[\"item\",\"item.category\",\"item.category.properties\",\"item.category.unit_group\",\"item.unit_value\",\"item.unit_cost\",\"item.burn_rate\",\"item.attributes\"],\"type\":\"string\"},\"type\":\"array\"},\"limit\":{\"description\":\"Maximum number of results to return in a single page.\",\"type\":\"integer\"},\"q\":{\"description\":\"Free-text search term used to filter results.\\n\\nWhich fields are matched against the term varies by endpoint.\",\"type\":\"string\"},\"starts_at\":{\"description\":\"Filter to materials created on or after this date.\",\"format\":\"date-time\",\"type\":\"string\"}},\"type\":\"object\"}",
 		Group:               "Materials",
-		RequiredPermissions: []string{"materials:read", "customers:read", "suppliers:read"},
+		RequiredPermissions: []string{"materials:read"},
 		Params: []EndpointToolParam{
 			{Name: "attribute_ids", In: EndpointToolParamQuery, Array: true},
 			{Name: "category_ids", In: EndpointToolParamQuery, Array: true},
@@ -2427,7 +2427,7 @@ var EndpointTools = []EndpointToolDescriptor{
 		RouteTemplate:       "/v1/sales/order-discounts",
 		InputSchema:         "{\"properties\":{\"cursor\":{\"description\":\"Opaque cursor token identifying where the page of results starts.\\n\\nUse the `cursor` value embedded in a previous response's `next_page_url` or `previous_page_url` to fetch the adjacent page. Omit to start from the first page.\",\"type\":\"string\"},\"limit\":{\"description\":\"Maximum number of results to return in a single page.\",\"type\":\"integer\"},\"q\":{\"description\":\"Free-text search term used to filter results.\\n\\nWhich fields are matched against the term varies by endpoint.\",\"type\":\"string\"}},\"type\":\"object\"}",
 		Group:               "Order Discounts",
-		RequiredPermissions: []string{"discounts:read", "customers:read", "suppliers:read"},
+		RequiredPermissions: []string{"discounts:read"},
 		Params: []EndpointToolParam{
 			{Name: "cursor", In: EndpointToolParamQuery},
 			{Name: "limit", In: EndpointToolParamQuery},
@@ -2442,7 +2442,7 @@ var EndpointTools = []EndpointToolDescriptor{
 		RouteTemplate:       "/v1/catalog/parts",
 		InputSchema:         "{\"properties\":{\"attribute_ids\":{\"description\":\"Only return parts carrying at least one of these attributes.\",\"items\":{\"type\":\"string\"},\"type\":\"array\"},\"category_ids\":{\"description\":\"Only return parts belonging to any of these item categories.\",\"items\":{\"type\":\"string\"},\"type\":\"array\"},\"cursor\":{\"description\":\"Opaque cursor token identifying where the page of results starts.\\n\\nUse the `cursor` value embedded in a previous response's `next_page_url` or `previous_page_url` to fetch the adjacent page. Omit to start from the first page.\",\"type\":\"string\"},\"ends_at\":{\"description\":\"Only return parts created at or before this time.\",\"format\":\"date-time\",\"type\":\"string\"},\"include\":{\"description\":\"Sub-objects to expand in the response. These nested objects are returned as null by default; pass the field keys you need (e.g. \\\"parent_account\\\") to get their full objects inline. Expand to get authoritative data rather than inferring relationships from names.\",\"items\":{\"enum\":[\"item\",\"item.category\",\"item.category.properties\",\"item.category.unit_group\",\"item.unit_value\",\"item.unit_cost\",\"item.burn_rate\",\"item.attributes\"],\"type\":\"string\"},\"type\":\"array\"},\"limit\":{\"description\":\"Maximum number of results to return in a single page.\",\"type\":\"integer\"},\"q\":{\"description\":\"Free-text search term used to filter results.\\n\\nWhich fields are matched against the term varies by endpoint.\",\"type\":\"string\"},\"starts_at\":{\"description\":\"Only return parts created at or after this time.\",\"format\":\"date-time\",\"type\":\"string\"}},\"type\":\"object\"}",
 		Group:               "Parts",
-		RequiredPermissions: []string{"parts:read", "customers:read", "suppliers:read"},
+		RequiredPermissions: []string{"parts:read"},
 		Params: []EndpointToolParam{
 			{Name: "attribute_ids", In: EndpointToolParamQuery, Array: true},
 			{Name: "category_ids", In: EndpointToolParamQuery, Array: true},
@@ -2494,7 +2494,7 @@ var EndpointTools = []EndpointToolDescriptor{
 		RouteTemplate:       "/v1/operations/picks",
 		InputSchema:         "{\"properties\":{\"cursor\":{\"description\":\"Opaque cursor token identifying where the page of results starts.\\n\\nUse the `cursor` value embedded in a previous response's `next_page_url` or `previous_page_url` to fetch the adjacent page. Omit to start from the first page.\",\"type\":\"string\"},\"customer_group_ids\":{\"description\":\"Restricts results to picks whose customer belongs to any of these account groups, matching the `type` on the customer.\",\"items\":{\"type\":\"string\"},\"type\":\"array\"},\"customer_ids\":{\"description\":\"Restricts results to picks raised for any of these customers.\",\"items\":{\"type\":\"string\"},\"type\":\"array\"},\"ends_at\":{\"description\":\"Latest pick creation date to include, in `YYYY-MM-DD` format. Inclusive of the date itself.\",\"type\":\"string\"},\"include\":{\"description\":\"Sub-objects to expand in the response. These nested objects are returned as null by default; pass the field keys you need (e.g. \\\"parent_account\\\") to get their full objects inline. Expand to get authoritative data rather than inferring relationships from names.\",\"items\":{\"enum\":[\"customer\",\"created_by\",\"freight\",\"related.sales_order\",\"related.shipments\",\"lines\",\"lines.item\",\"lines.sales_order_line\",\"lines.sales_order_line.product\",\"lines.quantity\",\"lines.quantity.unit\",\"lines.ordered_quantity\",\"lines.ordered_quantity.unit\"],\"type\":\"string\"},\"type\":\"array\"},\"limit\":{\"description\":\"Maximum number of results to return in a single page.\",\"type\":\"integer\"},\"product_line_ids\":{\"description\":\"Restricts results to picks with at least one line whose product belongs to any of these product lines.\",\"items\":{\"type\":\"string\"},\"type\":\"array\"},\"q\":{\"description\":\"Free-text search term used to filter results.\\n\\nWhich fields are matched against the term varies by endpoint.\",\"type\":\"string\"},\"sort\":{\"description\":\"Orders the results: `ship_by_date` puts the soonest delivery commitment first, with picks whose order has no ship-by date last; `created_at` puts the newest pick first.\",\"enum\":[\"ship_by_date\",\"created_at\"],\"type\":\"string\"},\"starts_at\":{\"description\":\"Earliest pick creation date to include, in `YYYY-MM-DD` format.\",\"type\":\"string\"},\"status\":{\"description\":\"Restricts results to picks in this state.\\n\\n- `open`: picks that have not been finished.\\n- `closed`: picks that have been finished.\",\"enum\":[\"open\",\"closed\"],\"type\":\"string\"}},\"type\":\"object\"}",
 		Group:               "Picks",
-		RequiredPermissions: []string{"picks:read", "customers:read", "suppliers:read"},
+		RequiredPermissions: []string{"picks:read"},
 		Params: []EndpointToolParam{
 			{Name: "cursor", In: EndpointToolParamQuery},
 			{Name: "customer_group_ids", In: EndpointToolParamQuery, Array: true},
@@ -2543,7 +2543,7 @@ var EndpointTools = []EndpointToolDescriptor{
 		RouteTemplate:       "/v1/catalog/product-lines",
 		InputSchema:         "{\"properties\":{\"cursor\":{\"description\":\"Opaque cursor token identifying where the page of results starts.\\n\\nUse the `cursor` value embedded in a previous response's `next_page_url` or `previous_page_url` to fetch the adjacent page. Omit to start from the first page.\",\"type\":\"string\"},\"include\":{\"description\":\"Sub-objects to expand in the response. These nested objects are returned as null by default; pass the field keys you need (e.g. \\\"parent_account\\\") to get their full objects inline. Expand to get authoritative data rather than inferring relationships from names.\",\"items\":{\"enum\":[\"owner\",\"owner.account\",\"unit_group\",\"default_lot\",\"default_lot.unit\"],\"type\":\"string\"},\"type\":\"array\"},\"limit\":{\"description\":\"Maximum number of results to return in a single page.\",\"type\":\"integer\"},\"q\":{\"description\":\"Free-text search term used to filter results.\\n\\nWhich fields are matched against the term varies by endpoint.\",\"type\":\"string\"}},\"type\":\"object\"}",
 		Group:               "Product Lines",
-		RequiredPermissions: []string{"product_lines:read", "customers:read", "suppliers:read"},
+		RequiredPermissions: []string{"product_lines:read"},
 		Params: []EndpointToolParam{
 			{Name: "cursor", In: EndpointToolParamQuery},
 			{Name: "include", In: EndpointToolParamQuery, Array: true},
@@ -2683,7 +2683,7 @@ var EndpointTools = []EndpointToolDescriptor{
 		RouteTemplate:       "/v1/catalog/products",
 		InputSchema:         "{\"properties\":{\"attribute_ids\":{\"description\":\"Filter to products whose item carries at least one of these attributes.\",\"items\":{\"type\":\"string\"},\"type\":\"array\"},\"category_ids\":{\"description\":\"Filter by the item category the product's item belongs to.\",\"items\":{\"type\":\"string\"},\"type\":\"array\"},\"cursor\":{\"description\":\"Opaque cursor token identifying where the page of results starts.\\n\\nUse the `cursor` value embedded in a previous response's `next_page_url` or `previous_page_url` to fetch the adjacent page. Omit to start from the first page.\",\"type\":\"string\"},\"customer_ids\":{\"description\":\"Restrict results to products these customer accounts are entitled to buy.\\n\\nA product matches when its product line has been granted to the customer directly, through the customer's account group, or through the account group used for the customer's pricing. Combined with `product_line_ids` this widens the results rather than narrowing them: products matching either filter are returned.\",\"items\":{\"type\":\"string\"},\"type\":\"array\"},\"ends_at\":{\"description\":\"End of creation date range.\",\"format\":\"date-time\",\"type\":\"string\"},\"include\":{\"description\":\"Sub-objects to expand in the response. These nested objects are returned as null by default; pass the field keys you need (e.g. \\\"parent_account\\\") to get their full objects inline. Expand to get authoritative data rather than inferring relationships from names.\",\"items\":{\"enum\":[\"product_line\",\"product_line.unit_group\",\"product_line.unit_group.base_unit\",\"product_line.unit_group.associated_units\",\"product_line.unit_group.associated_units.unit\",\"item\",\"item.category\",\"item.category.properties\",\"item.category.unit_group\",\"item.category.unit_group.base_unit\",\"item.category.unit_group.associated_units\",\"item.category.unit_group.associated_units.unit\",\"item.unit_value\",\"item.unit_cost\",\"item.burn_rate\",\"item.attributes\"],\"type\":\"string\"},\"type\":\"array\"},\"limit\":{\"description\":\"Maximum number of results to return in a single page.\",\"type\":\"integer\"},\"portal_visibility\":{\"description\":\"Filter by customer portal visibility.\",\"enum\":[\"visible\",\"hidden\"],\"type\":\"string\"},\"product_line_ids\":{\"description\":\"Filter by product line IDs.\\n\\nCombined with `customer_ids`, products matching either filter are returned.\",\"items\":{\"type\":\"string\"},\"type\":\"array\"},\"q\":{\"description\":\"Free-text search term used to filter results.\\n\\nWhich fields are matched against the term varies by endpoint.\",\"type\":\"string\"},\"starts_at\":{\"description\":\"Start of creation date range.\",\"format\":\"date-time\",\"type\":\"string\"}},\"type\":\"object\"}",
 		Group:               "Products",
-		RequiredPermissions: []string{"items:read", "customers:read", "suppliers:read"},
+		RequiredPermissions: []string{"items:read"},
 		Params: []EndpointToolParam{
 			{Name: "attribute_ids", In: EndpointToolParamQuery, Array: true},
 			{Name: "category_ids", In: EndpointToolParamQuery, Array: true},
@@ -2785,7 +2785,7 @@ var EndpointTools = []EndpointToolDescriptor{
 		RouteTemplate:       "/v1/sales/sales-orders",
 		InputSchema:         "{\"properties\":{\"cursor\":{\"description\":\"Opaque cursor token identifying where the page of results starts.\\n\\nUse the `cursor` value embedded in a previous response's `next_page_url` or `previous_page_url` to fetch the adjacent page. Omit to start from the first page.\",\"type\":\"string\"},\"customer_group_ids\":{\"description\":\"Restricts results to orders placed by customers belonging to any of these account groups.\",\"items\":{\"type\":\"string\"},\"type\":\"array\"},\"customer_ids\":{\"description\":\"Restricts results to orders placed by any of these customers.\",\"items\":{\"type\":\"string\"},\"type\":\"array\"},\"ends_at\":{\"description\":\"Only include orders created at or before the start of this date (`YYYY-MM-DD`, UTC), so orders created later on the end date itself are excluded; pass the following day to include them. A full timestamp (RFC 3339) is also accepted and used as given.\",\"type\":\"string\"},\"include\":{\"description\":\"Sub-objects to expand in the response. These nested objects are returned as null by default; pass the field keys you need (e.g. \\\"parent_account\\\") to get their full objects inline. Expand to get authoritative data rather than inferring relationships from names.\",\"items\":{\"enum\":[\"customer\",\"sales_rep\",\"created_by\",\"bill_to_address\",\"ship_to_address\",\"freight\",\"payment_term\",\"shipping_term\",\"order_discount\",\"totals\",\"contacts\",\"related.pick\",\"related.production_run\",\"related.shipments\",\"related.invoices\",\"lines\",\"lines.product\",\"lines.product.item\",\"lines.product.item.category\",\"lines.product.item.category.properties\",\"lines.product.item.category.unit_group\",\"lines.product.item.category.unit_group.base_unit\",\"lines.product.item.category.unit_group.associated_units\",\"lines.product.item.category.unit_group.associated_units.unit\",\"lines.product.product_line\",\"lines.quantity_ordered\",\"lines.quantity_ordered.unit\",\"lines.unit_price\",\"lines.unit_price.numerator_unit\",\"lines.unit_price.denominator_unit\",\"lines.unit_cost\",\"lines.unit_cost.numerator_unit\",\"lines.unit_cost.denominator_unit\",\"lines.totals\"],\"type\":\"string\"},\"type\":\"array\"},\"item_ids\":{\"description\":\"Restricts results to orders that have at least one line for any of these inventory items.\",\"items\":{\"type\":\"string\"},\"type\":\"array\"},\"limit\":{\"description\":\"Maximum number of results to return in a single page.\",\"type\":\"integer\"},\"past_due\":{\"description\":\"Restricts results to orders that are, or are not, past their ship-by date.\\n\\nAn order is past due when it is still `issued` and its ship-by date has passed. A fulfilled order that shipped late is not past due — it is delivered, and how late it was is a delivery-performance question rather than a backlog one.\",\"type\":\"boolean\"},\"product_line_ids\":{\"description\":\"Restricts results to orders that have at least one line whose product belongs to any of these product lines.\",\"items\":{\"type\":\"string\"},\"type\":\"array\"},\"q\":{\"description\":\"Free-text search term used to filter results.\\n\\nWhich fields are matched against the term varies by endpoint.\",\"type\":\"string\"},\"sales_rep_ids\":{\"description\":\"Restricts results to orders credited to any of these sales reps.\\n\\nThese are account user IDs, matching the `sales_rep` on the order.\",\"items\":{\"type\":\"string\"},\"type\":\"array\"},\"ship_by_after\":{\"description\":\"Earliest ship-by date to include, in `YYYY-MM-DD` format. Inclusive of the date itself.\",\"type\":\"string\"},\"ship_by_before\":{\"description\":\"Latest ship-by date to include, in `YYYY-MM-DD` format. Inclusive of the date itself.\",\"type\":\"string\"},\"starts_at\":{\"description\":\"Only include orders created on or after this date (`YYYY-MM-DD`, UTC). A full timestamp (RFC 3339) is also accepted, to bound the range at a local midnight.\",\"type\":\"string\"},\"status_codes\":{\"description\":\"Restricts results to orders in any of these lifecycle statuses.\",\"items\":{\"enum\":[\"estimate\",\"issued\",\"fulfilled\"],\"type\":\"string\"},\"type\":\"array\"}},\"type\":\"object\"}",
 		Group:               "Sales Orders",
-		RequiredPermissions: []string{"sales_orders:read", "customers:read", "suppliers:read"},
+		RequiredPermissions: []string{"sales_orders:read"},
 		Params: []EndpointToolParam{
 			{Name: "cursor", In: EndpointToolParamQuery},
 			{Name: "customer_group_ids", In: EndpointToolParamQuery, Array: true},
@@ -2883,7 +2883,7 @@ var EndpointTools = []EndpointToolDescriptor{
 		RouteTemplate:       "/v1/operations/carriers/{carrier_id}/service-levels",
 		InputSchema:         "{\"properties\":{\"carrier_id\":{\"description\":\"The carrier whose service levels are listed.\",\"type\":\"string\"},\"cursor\":{\"description\":\"Opaque cursor token identifying where the page of results starts.\\n\\nUse the `cursor` value embedded in a previous response's `next_page_url` or `previous_page_url` to fetch the adjacent page. Omit to start from the first page.\",\"type\":\"string\"},\"include\":{\"description\":\"Sub-objects to expand in the response. These nested objects are returned as null by default; pass the field keys you need (e.g. \\\"parent_account\\\") to get their full objects inline. Expand to get authoritative data rather than inferring relationships from names.\",\"items\":{\"enum\":[\"owner\",\"owner.account\"],\"type\":\"string\"},\"type\":\"array\"},\"limit\":{\"description\":\"Maximum number of results to return in a single page.\",\"type\":\"integer\"},\"q\":{\"description\":\"Free-text search term used to filter results.\\n\\nWhich fields are matched against the term varies by endpoint.\",\"type\":\"string\"}},\"required\":[\"carrier_id\"],\"type\":\"object\"}",
 		Group:               "Carriers",
-		RequiredPermissions: []string{"carriers:read", "customers:read", "suppliers:read"},
+		RequiredPermissions: []string{"carriers:read"},
 		Params: []EndpointToolParam{
 			{Name: "carrier_id", In: EndpointToolParamPath},
 			{Name: "cursor", In: EndpointToolParamQuery},
@@ -3024,7 +3024,7 @@ var EndpointTools = []EndpointToolDescriptor{
 		RouteTemplate:       "/v1/sales/volume-discounts",
 		InputSchema:         "{\"properties\":{\"cursor\":{\"description\":\"Opaque cursor token identifying where the page of results starts.\\n\\nUse the `cursor` value embedded in a previous response's `next_page_url` or `previous_page_url` to fetch the adjacent page. Omit to start from the first page.\",\"type\":\"string\"},\"include\":{\"description\":\"Sub-objects to expand in the response. These nested objects are returned as null by default; pass the field keys you need (e.g. \\\"parent_account\\\") to get their full objects inline. Expand to get authoritative data rather than inferring relationships from names.\",\"items\":{\"enum\":[\"customer_groups\",\"product_lines\",\"categories\",\"categories.properties\",\"attributes\",\"acceptable_units\"],\"type\":\"string\"},\"type\":\"array\"},\"limit\":{\"description\":\"Maximum number of results to return in a single page.\",\"type\":\"integer\"},\"q\":{\"description\":\"Free-text search term used to filter results.\\n\\nWhich fields are matched against the term varies by endpoint.\",\"type\":\"string\"}},\"type\":\"object\"}",
 		Group:               "Volume Discounts",
-		RequiredPermissions: []string{"discounts:read", "customers:read", "suppliers:read"},
+		RequiredPermissions: []string{"discounts:read"},
 		Params: []EndpointToolParam{
 			{Name: "cursor", In: EndpointToolParamQuery},
 			{Name: "include", In: EndpointToolParamQuery, Array: true},
@@ -3324,7 +3324,7 @@ var EndpointTools = []EndpointToolDescriptor{
 		RouteTemplate:       "/v1/identity/account-users/{id}/actions/remove",
 		InputSchema:         "{\"properties\":{\"id\":{\"description\":\"ID of the account user to remove.\",\"type\":\"string\"}},\"required\":[\"id\"],\"type\":\"object\"}",
 		Group:               "Account Users",
-		RequiredPermissions: []string{"team:delete", "customers:delete", "suppliers:delete"},
+		RequiredPermissions: []string{"team:delete"},
 		Params: []EndpointToolParam{
 			{Name: "id", In: EndpointToolParamPath},
 		},
@@ -3379,7 +3379,7 @@ var EndpointTools = []EndpointToolDescriptor{
 		RouteTemplate:       "/v1/sales/sales-orders/{id}/lines/actions/reorder",
 		InputSchema:         "{\"properties\":{\"id\":{\"description\":\"Sales order ID.\",\"type\":\"string\"},\"line_ids\":{\"description\":\"The order's product-line IDs in the desired display order.\\n\\nEvery product line on the order must be listed exactly once. The automatically generated discount and freight lines are kept at the bottom of the list and must not be included.\",\"items\":{\"type\":\"string\"},\"type\":\"array\"}},\"required\":[\"line_ids\",\"id\"],\"type\":\"object\"}",
 		Group:               "Sales Orders",
-		RequiredPermissions: []string{"customers:update", "suppliers:update", "sales_orders:update"},
+		RequiredPermissions: []string{"sales_orders:update"},
 		Params: []EndpointToolParam{
 			{Name: "id", In: EndpointToolParamPath},
 			{Name: "line_ids", In: EndpointToolParamBody},
@@ -3406,7 +3406,7 @@ var EndpointTools = []EndpointToolDescriptor{
 		RouteTemplate:       "/v1/sales/account-prices/{id}",
 		InputSchema:         "{\"properties\":{\"id\":{\"description\":\"Account price ID.\",\"type\":\"string\"},\"include\":{\"description\":\"Sub-objects to expand in the response. These nested objects are returned as null by default; pass the field keys you need (e.g. \\\"parent_account\\\") to get their full objects inline. Expand to get authoritative data rather than inferring relationships from names.\",\"items\":{\"enum\":[\"recipient_account\",\"product_line\",\"categories\",\"attributes\"],\"type\":\"string\"},\"type\":\"array\"}},\"required\":[\"id\"],\"type\":\"object\"}",
 		Group:               "Account Prices",
-		RequiredPermissions: []string{"discounts:read", "customers:read", "suppliers:read"},
+		RequiredPermissions: []string{"discounts:read"},
 		Params: []EndpointToolParam{
 			{Name: "id", In: EndpointToolParamPath},
 			{Name: "include", In: EndpointToolParamQuery, Array: true},
@@ -3433,7 +3433,7 @@ var EndpointTools = []EndpointToolDescriptor{
 		RouteTemplate:       "/v1/identity/account-users/{id}",
 		InputSchema:         "{\"properties\":{\"id\":{\"description\":\"ID of the account user to retrieve.\",\"type\":\"string\"},\"include\":{\"description\":\"Sub-objects to expand in the response. These nested objects are returned as null by default; pass the field keys you need (e.g. \\\"parent_account\\\") to get their full objects inline. Expand to get authoritative data rather than inferring relationships from names.\",\"items\":{\"enum\":[\"user\",\"role\",\"department\"],\"type\":\"string\"},\"type\":\"array\"}},\"required\":[\"id\"],\"type\":\"object\"}",
 		Group:               "Account Users",
-		RequiredPermissions: []string{"team:read", "customers:read", "suppliers:read"},
+		RequiredPermissions: []string{"team:read"},
 		Params: []EndpointToolParam{
 			{Name: "id", In: EndpointToolParamPath},
 			{Name: "include", In: EndpointToolParamQuery, Array: true},
@@ -3447,7 +3447,7 @@ var EndpointTools = []EndpointToolDescriptor{
 		RouteTemplate:       "/v1/sales/addresses/{id}",
 		InputSchema:         "{\"properties\":{\"id\":{\"description\":\"Address ID.\",\"type\":\"string\"}},\"required\":[\"id\"],\"type\":\"object\"}",
 		Group:               "Addresses",
-		RequiredPermissions: []string{"addresses:read", "customers:read", "suppliers:read"},
+		RequiredPermissions: []string{"addresses:read"},
 		Params: []EndpointToolParam{
 			{Name: "id", In: EndpointToolParamPath},
 		},
@@ -3529,7 +3529,7 @@ var EndpointTools = []EndpointToolDescriptor{
 		RouteTemplate:       "/v1/operations/carriers/{id}",
 		InputSchema:         "{\"properties\":{\"id\":{\"description\":\"Carrier ID.\",\"type\":\"string\"},\"include\":{\"description\":\"Sub-objects to expand in the response. These nested objects are returned as null by default; pass the field keys you need (e.g. \\\"parent_account\\\") to get their full objects inline. Expand to get authoritative data rather than inferring relationships from names.\",\"items\":{\"enum\":[\"owner\",\"owner.account\",\"service_levels\"],\"type\":\"string\"},\"type\":\"array\"}},\"required\":[\"id\"],\"type\":\"object\"}",
 		Group:               "Carriers",
-		RequiredPermissions: []string{"carriers:read", "customers:read", "suppliers:read"},
+		RequiredPermissions: []string{"carriers:read"},
 		Params: []EndpointToolParam{
 			{Name: "id", In: EndpointToolParamPath},
 			{Name: "include", In: EndpointToolParamQuery, Array: true},
@@ -3567,7 +3567,7 @@ var EndpointTools = []EndpointToolDescriptor{
 		RouteTemplate:       "/v1/sales/customers/{id}",
 		InputSchema:         "{\"properties\":{\"id\":{\"description\":\"Customer ID.\",\"type\":\"string\"},\"include\":{\"description\":\"Sub-objects to expand in the response. These nested objects are returned as null by default; pass the field keys you need (e.g. \\\"parent_account\\\") to get their full objects inline. Expand to get authoritative data rather than inferring relationships from names.\",\"items\":{\"enum\":[\"bill_to_address\",\"ship_to_address\",\"type\",\"parent_account\",\"freight_preferences.carrier\",\"freight_preferences.carrier.service_levels\",\"freight_preferences.service_level\",\"defaults.payment_term\",\"defaults.shipping_term\",\"defaults.sales_rep\",\"defaults.sales_rep.user\",\"defaults.priority\",\"contact_info\",\"freight_preferences\",\"defaults\",\"notification_preferences\",\"price_groups\",\"child_accounts\",\"credit_limit\",\"credit_limit.unit\"],\"type\":\"string\"},\"type\":\"array\"}},\"required\":[\"id\"],\"type\":\"object\"}",
 		Group:               "Customers",
-		RequiredPermissions: []string{"customers:read", "suppliers:read"},
+		RequiredPermissions: []string{"customers:read"},
 		Params: []EndpointToolParam{
 			{Name: "id", In: EndpointToolParamPath},
 			{Name: "include", In: EndpointToolParamQuery, Array: true},
@@ -3707,7 +3707,7 @@ var EndpointTools = []EndpointToolDescriptor{
 		RouteTemplate:       "/v1/core/jobs/{id}",
 		InputSchema:         "{\"properties\":{\"id\":{\"description\":\"Job ID.\",\"type\":\"string\"},\"include\":{\"description\":\"Sub-objects to expand in the response. These nested objects are returned as null by default; pass the field keys you need (e.g. \\\"parent_account\\\") to get their full objects inline. Expand to get authoritative data rather than inferring relationships from names.\",\"items\":{\"enum\":[\"created_by\",\"created_by.role\"],\"type\":\"string\"},\"type\":\"array\"}},\"required\":[\"id\"],\"type\":\"object\"}",
 		Group:               "Jobs",
-		RequiredPermissions: []string{"jobs:read", "customers:read", "suppliers:read"},
+		RequiredPermissions: []string{"jobs:read"},
 		Params: []EndpointToolParam{
 			{Name: "id", In: EndpointToolParamPath},
 			{Name: "include", In: EndpointToolParamQuery, Array: true},
@@ -3776,7 +3776,7 @@ var EndpointTools = []EndpointToolDescriptor{
 		RouteTemplate:       "/v1/catalog/materials/{id}",
 		InputSchema:         "{\"properties\":{\"id\":{\"description\":\"ID of the material to retrieve.\",\"type\":\"string\"},\"include\":{\"description\":\"Sub-objects to expand in the response. These nested objects are returned as null by default; pass the field keys you need (e.g. \\\"parent_account\\\") to get their full objects inline. Expand to get authoritative data rather than inferring relationships from names.\",\"items\":{\"enum\":[\"item\",\"item.category\",\"item.category.properties\",\"item.category.unit_group\",\"item.unit_value\",\"item.unit_cost\",\"item.burn_rate\",\"item.attributes\"],\"type\":\"string\"},\"type\":\"array\"}},\"required\":[\"id\"],\"type\":\"object\"}",
 		Group:               "Materials",
-		RequiredPermissions: []string{"materials:read", "customers:read", "suppliers:read"},
+		RequiredPermissions: []string{"materials:read"},
 		Params: []EndpointToolParam{
 			{Name: "id", In: EndpointToolParamPath},
 			{Name: "include", In: EndpointToolParamQuery, Array: true},
@@ -3831,7 +3831,7 @@ var EndpointTools = []EndpointToolDescriptor{
 		RouteTemplate:       "/v1/catalog/parts/{id}",
 		InputSchema:         "{\"properties\":{\"id\":{\"description\":\"ID of the part to retrieve.\",\"type\":\"string\"},\"include\":{\"description\":\"Sub-objects to expand in the response. These nested objects are returned as null by default; pass the field keys you need (e.g. \\\"parent_account\\\") to get their full objects inline. Expand to get authoritative data rather than inferring relationships from names.\",\"items\":{\"enum\":[\"item\",\"item.category\",\"item.category.properties\",\"item.category.unit_group\",\"item.unit_value\",\"item.unit_cost\",\"item.burn_rate\",\"item.attributes\"],\"type\":\"string\"},\"type\":\"array\"}},\"required\":[\"id\"],\"type\":\"object\"}",
 		Group:               "Parts",
-		RequiredPermissions: []string{"parts:read", "customers:read", "suppliers:read"},
+		RequiredPermissions: []string{"parts:read"},
 		Params: []EndpointToolParam{
 			{Name: "id", In: EndpointToolParamPath},
 			{Name: "include", In: EndpointToolParamQuery, Array: true},
@@ -3900,7 +3900,7 @@ var EndpointTools = []EndpointToolDescriptor{
 		RouteTemplate:       "/v1/catalog/products/{id}",
 		InputSchema:         "{\"properties\":{\"id\":{\"description\":\"Product ID.\",\"type\":\"string\"},\"include\":{\"description\":\"Sub-objects to expand in the response. These nested objects are returned as null by default; pass the field keys you need (e.g. \\\"parent_account\\\") to get their full objects inline. Expand to get authoritative data rather than inferring relationships from names.\",\"items\":{\"enum\":[\"product_line\",\"product_line.unit_group\",\"product_line.unit_group.base_unit\",\"product_line.unit_group.associated_units\",\"product_line.unit_group.associated_units.unit\",\"item\",\"item.category\",\"item.category.properties\",\"item.category.unit_group\",\"item.category.unit_group.base_unit\",\"item.category.unit_group.associated_units\",\"item.category.unit_group.associated_units.unit\",\"item.unit_value\",\"item.unit_cost\",\"item.burn_rate\",\"item.attributes\"],\"type\":\"string\"},\"type\":\"array\"}},\"required\":[\"id\"],\"type\":\"object\"}",
 		Group:               "Products",
-		RequiredPermissions: []string{"items:read", "customers:read", "suppliers:read"},
+		RequiredPermissions: []string{"items:read"},
 		Params: []EndpointToolParam{
 			{Name: "id", In: EndpointToolParamPath},
 			{Name: "include", In: EndpointToolParamQuery, Array: true},
@@ -3914,7 +3914,7 @@ var EndpointTools = []EndpointToolDescriptor{
 		RouteTemplate:       "/v1/catalog/product-lines/{id}",
 		InputSchema:         "{\"properties\":{\"id\":{\"description\":\"Product line ID.\",\"type\":\"string\"},\"include\":{\"description\":\"Sub-objects to expand in the response. These nested objects are returned as null by default; pass the field keys you need (e.g. \\\"parent_account\\\") to get their full objects inline. Expand to get authoritative data rather than inferring relationships from names.\",\"items\":{\"enum\":[\"owner\",\"owner.account\",\"unit_group\",\"default_lot\",\"default_lot.unit\"],\"type\":\"string\"},\"type\":\"array\"}},\"required\":[\"id\"],\"type\":\"object\"}",
 		Group:               "Product Lines",
-		RequiredPermissions: []string{"product_lines:read", "customers:read", "suppliers:read"},
+		RequiredPermissions: []string{"product_lines:read"},
 		Params: []EndpointToolParam{
 			{Name: "id", In: EndpointToolParamPath},
 			{Name: "include", In: EndpointToolParamQuery, Array: true},
@@ -4006,7 +4006,7 @@ var EndpointTools = []EndpointToolDescriptor{
 		RouteTemplate:       "/v1/sales/sales-orders/{id}",
 		InputSchema:         "{\"properties\":{\"id\":{\"description\":\"Sales order ID.\",\"type\":\"string\"},\"include\":{\"description\":\"Sub-objects to expand in the response. These nested objects are returned as null by default; pass the field keys you need (e.g. \\\"parent_account\\\") to get their full objects inline. Expand to get authoritative data rather than inferring relationships from names.\",\"items\":{\"enum\":[\"customer\",\"sales_rep\",\"created_by\",\"bill_to_address\",\"ship_to_address\",\"freight\",\"payment_term\",\"shipping_term\",\"order_discount\",\"totals\",\"contacts\",\"related.pick\",\"related.production_run\",\"related.shipments\",\"related.invoices\",\"lines\",\"lines.product\",\"lines.product.item\",\"lines.product.item.category\",\"lines.product.item.category.properties\",\"lines.product.item.category.unit_group\",\"lines.product.item.category.unit_group.base_unit\",\"lines.product.item.category.unit_group.associated_units\",\"lines.product.item.category.unit_group.associated_units.unit\",\"lines.product.product_line\",\"lines.quantity_ordered\",\"lines.quantity_ordered.unit\",\"lines.unit_price\",\"lines.unit_price.numerator_unit\",\"lines.unit_price.denominator_unit\",\"lines.unit_cost\",\"lines.unit_cost.numerator_unit\",\"lines.unit_cost.denominator_unit\",\"lines.totals\"],\"type\":\"string\"},\"type\":\"array\"}},\"required\":[\"id\"],\"type\":\"object\"}",
 		Group:               "Sales Orders",
-		RequiredPermissions: []string{"customers:read", "suppliers:read", "sales_orders:read"},
+		RequiredPermissions: []string{"sales_orders:read"},
 		Params: []EndpointToolParam{
 			{Name: "id", In: EndpointToolParamPath},
 			{Name: "include", In: EndpointToolParamQuery, Array: true},
@@ -4048,7 +4048,7 @@ var EndpointTools = []EndpointToolDescriptor{
 		RouteTemplate:       "/v1/operations/carriers/{carrier_id}/service-levels/{id}",
 		InputSchema:         "{\"properties\":{\"carrier_id\":{\"description\":\"The carrier that owns this service level.\",\"type\":\"string\"},\"id\":{\"description\":\"Service level ID.\",\"type\":\"string\"},\"include\":{\"description\":\"Sub-objects to expand in the response. These nested objects are returned as null by default; pass the field keys you need (e.g. \\\"parent_account\\\") to get their full objects inline. Expand to get authoritative data rather than inferring relationships from names.\",\"items\":{\"enum\":[\"owner\",\"owner.account\"],\"type\":\"string\"},\"type\":\"array\"}},\"required\":[\"carrier_id\",\"id\"],\"type\":\"object\"}",
 		Group:               "Carriers",
-		RequiredPermissions: []string{"carriers:read", "customers:read", "suppliers:read"},
+		RequiredPermissions: []string{"carriers:read"},
 		Params: []EndpointToolParam{
 			{Name: "carrier_id", In: EndpointToolParamPath},
 			{Name: "id", In: EndpointToolParamPath},
@@ -4120,7 +4120,7 @@ var EndpointTools = []EndpointToolDescriptor{
 		RouteTemplate:       "/v1/sales/volume-discounts/{id}",
 		InputSchema:         "{\"properties\":{\"id\":{\"description\":\"Volume discount ID.\",\"type\":\"string\"},\"include\":{\"description\":\"Sub-objects to expand in the response. These nested objects are returned as null by default; pass the field keys you need (e.g. \\\"parent_account\\\") to get their full objects inline. Expand to get authoritative data rather than inferring relationships from names.\",\"items\":{\"enum\":[\"customer_groups\",\"product_lines\",\"categories\",\"categories.properties\",\"attributes\",\"acceptable_units\"],\"type\":\"string\"},\"type\":\"array\"}},\"required\":[\"id\"],\"type\":\"object\"}",
 		Group:               "Volume Discounts",
-		RequiredPermissions: []string{"discounts:read", "customers:read", "suppliers:read"},
+		RequiredPermissions: []string{"discounts:read"},
 		Params: []EndpointToolParam{
 			{Name: "id", In: EndpointToolParamPath},
 			{Name: "include", In: EndpointToolParamQuery, Array: true},
@@ -4321,7 +4321,7 @@ var EndpointTools = []EndpointToolDescriptor{
 		RouteTemplate:       "/v1/identity/account-users/{id}",
 		InputSchema:         "{\"properties\":{\"department_id\":{\"description\":\"ID of the department to assign to the user.\\n\\nSet to `null` to clear the department. The department must already exist in the account.\",\"type\":[\"string\",\"null\"]},\"email\":{\"description\":\"User email address.\\n\\nMust not already be in use by another user.\",\"type\":\"string\"},\"id\":{\"description\":\"ID of the account user to update.\",\"type\":\"string\"},\"include\":{\"description\":\"Sub-objects to expand in the response. These nested objects are returned as null by default; pass the field keys you need (e.g. \\\"parent_account\\\") to get their full objects inline. Expand to get authoritative data rather than inferring relationships from names.\",\"items\":{\"enum\":[\"user\",\"role\",\"department\"],\"type\":\"string\"},\"type\":\"array\"},\"is_commission_eligible\":{\"description\":\"Whether the user can be assigned as a sales representative on orders, territories, and targets.\\n\\nForced true for the `sales_rep` role type and rejected for scanner and agent roles. Cannot be turned off while the user stays on a `sales_rep` role.\",\"type\":\"boolean\"},\"name\":{\"description\":\"User display name.\",\"type\":\"string\"},\"preferences\":{\"description\":\"Notification preference toggles to apply.\\n\\nOnly allowed when updating a user in a customer or supplier account you manage; rejected otherwise. Notification types omitted from the list are left unchanged, and the result is returned in `notification_types`.\",\"items\":{\"description\":\"NotificationPreferenceItem toggles a single account-relation notification type.\",\"properties\":{\"enabled\":{\"description\":\"Whether this notification type is enabled for the account user.\",\"type\":\"boolean\"},\"notification_type\":{\"description\":\"Notification type.\",\"enum\":[\"invoice\",\"order_acknowledgement\",\"purchase_order_submission\"],\"type\":\"string\"}},\"required\":[\"notification_type\",\"enabled\"],\"type\":\"object\"},\"type\":\"array\"},\"role_id\":{\"description\":\"ID of the role to assign to the user.\\n\\nSet to `null` to clear the role.\",\"type\":[\"string\",\"null\"]},\"username\":{\"description\":\"Unique username.\\n\\n3–255 characters; letters, numbers, underscores, and hyphens. Must not already be in use by another user.\",\"type\":\"string\"}},\"required\":[\"id\"],\"type\":\"object\"}",
 		Group:               "Account Users",
-		RequiredPermissions: []string{"team:update", "customers:update", "suppliers:update"},
+		RequiredPermissions: []string{"team:update"},
 		Params: []EndpointToolParam{
 			{Name: "department_id", In: EndpointToolParamBody},
 			{Name: "email", In: EndpointToolParamBody},
@@ -4342,7 +4342,7 @@ var EndpointTools = []EndpointToolDescriptor{
 		RouteTemplate:       "/v1/sales/addresses/{id}",
 		InputSchema:         "{\"properties\":{\"country\":{\"description\":\"Two-letter country code.\",\"type\":\"string\"},\"email\":{\"description\":\"Email address associated with the address.\\n\\nSend `null` to clear.\",\"type\":[\"string\",\"null\"]},\"id\":{\"description\":\"Address ID.\",\"type\":\"string\"},\"locality\":{\"description\":\"City or locality.\",\"type\":\"string\"},\"name\":{\"description\":\"Display name of the address.\",\"type\":\"string\"},\"phone\":{\"description\":\"Phone number associated with the address.\\n\\nSend `null` to clear.\",\"type\":[\"string\",\"null\"]},\"postal_code\":{\"description\":\"Postal or ZIP code.\",\"type\":\"string\"},\"receive_calendar_id\":{\"description\":\"The operating calendar naming the days this dock accepts freight, overriding the customer's own. Clearing it returns this address to the customer's own calendar.\",\"type\":[\"string\",\"null\"]},\"state\":{\"description\":\"State or administrative area.\",\"type\":\"string\"},\"street_line_1\":{\"description\":\"First line of the street address.\",\"type\":\"string\"},\"street_line_2\":{\"description\":\"Second line of the street address.\\n\\nSend `null` to clear.\",\"type\":[\"string\",\"null\"]},\"type\":{\"description\":\"How the address is used.\\n\\n- `standard`: a normal shipping or billing address.\\n- `drop_ship`: an address an order is shipped to directly, typically a third party or end customer rather than the account itself.\",\"enum\":[\"standard\",\"drop_ship\"],\"type\":\"string\"}},\"required\":[\"id\"],\"type\":\"object\"}",
 		Group:               "Addresses",
-		RequiredPermissions: []string{"addresses:update", "customers:update", "suppliers:update"},
+		RequiredPermissions: []string{"addresses:update"},
 		Params: []EndpointToolParam{
 			{Name: "country", In: EndpointToolParamBody},
 			{Name: "email", In: EndpointToolParamBody},
@@ -4594,7 +4594,7 @@ var EndpointTools = []EndpointToolDescriptor{
 		RouteTemplate:       "/v1/catalog/materials/{id}",
 		InputSchema:         "{\"properties\":{\"description\":{\"description\":\"New description for the material.\",\"type\":\"string\"},\"id\":{\"description\":\"ID of the material to update.\",\"type\":\"string\"},\"include\":{\"description\":\"Sub-objects to expand in the response. These nested objects are returned as null by default; pass the field keys you need (e.g. \\\"parent_account\\\") to get their full objects inline. Expand to get authoritative data rather than inferring relationships from names.\",\"items\":{\"enum\":[\"item\",\"item.category\",\"item.category.properties\",\"item.category.unit_group\",\"item.unit_value\",\"item.unit_cost\",\"item.burn_rate\",\"item.attributes\"],\"type\":\"string\"},\"type\":\"array\"},\"lead_time\":{\"description\":\"New expected time between placing an order for this material and receiving it.\",\"properties\":{\"unit_id\":{\"description\":\"ID of the unit the value is expressed in.\",\"type\":\"string\"},\"value\":{\"description\":\"Decimal value of the quantity.\",\"format\":\"decimal\",\"type\":\"string\"}},\"required\":[\"value\",\"unit_id\"],\"type\":\"object\"},\"notes\":{\"description\":\"New notes for the material.\",\"type\":\"string\"},\"order_point\":{\"description\":\"New reorder threshold: when on-hand stock falls to this quantity, the material should be reordered.\",\"properties\":{\"unit_id\":{\"description\":\"ID of the unit the value is expressed in.\",\"type\":\"string\"},\"value\":{\"description\":\"Decimal value of the quantity.\",\"format\":\"decimal\",\"type\":\"string\"}},\"required\":[\"value\",\"unit_id\"],\"type\":\"object\"},\"sku\":{\"description\":\"New stock keeping unit code for the material.\\n\\nMust remain unique within the account; a conflict error is returned if another item already uses it.\",\"type\":\"string\"},\"unit_cost\":{\"description\":\"New cost per unit.\\n\\nFollows the same unit rule as on create: `numerator_unit_id` must reference a currency unit and `denominator_unit_id` must reference a non-currency unit.\",\"properties\":{\"denominator_unit_id\":{\"description\":\"ID of the unit for the rate's denominator (the per-unit basis).\",\"type\":\"string\"},\"numerator_unit_id\":{\"description\":\"ID of the unit for the rate's numerator (e.g. the currency of a price).\",\"type\":\"string\"},\"value\":{\"description\":\"Decimal value of the rate, expressed as the amount of the numerator unit per one denominator unit.\",\"format\":\"decimal\",\"type\":\"string\"}},\"required\":[\"value\",\"numerator_unit_id\",\"denominator_unit_id\"],\"type\":\"object\"}},\"required\":[\"id\"],\"type\":\"object\"}",
 		Group:               "Materials",
-		RequiredPermissions: []string{"materials:update", "customers:update", "suppliers:update"},
+		RequiredPermissions: []string{"materials:update"},
 		Params: []EndpointToolParam{
 			{Name: "description", In: EndpointToolParamBody},
 			{Name: "id", In: EndpointToolParamPath},
@@ -4650,7 +4650,7 @@ var EndpointTools = []EndpointToolDescriptor{
 		RouteTemplate:       "/v1/catalog/parts/{id}",
 		InputSchema:         "{\"properties\":{\"description\":{\"description\":\"New free-form description of the part.\",\"type\":[\"string\",\"null\"]},\"id\":{\"description\":\"ID of the part to update.\",\"type\":\"string\"},\"include\":{\"description\":\"Sub-objects to expand in the response. These nested objects are returned as null by default; pass the field keys you need (e.g. \\\"parent_account\\\") to get their full objects inline. Expand to get authoritative data rather than inferring relationships from names.\",\"items\":{\"enum\":[\"item\",\"item.category\",\"item.unit_value\",\"item.unit_cost\",\"item.burn_rate\",\"item.attributes\"],\"type\":\"string\"},\"type\":\"array\"},\"notes\":{\"description\":\"New free-form notes about the part.\",\"type\":[\"string\",\"null\"]},\"sku\":{\"description\":\"New stock keeping unit code for the part.\\n\\nMust remain unique within the account; a conflict error is returned if another item already uses it.\",\"type\":\"string\"}},\"required\":[\"id\"],\"type\":\"object\"}",
 		Group:               "Parts",
-		RequiredPermissions: []string{"parts:update", "customers:update", "suppliers:update"},
+		RequiredPermissions: []string{"parts:update"},
 		Params: []EndpointToolParam{
 			{Name: "description", In: EndpointToolParamBody},
 			{Name: "id", In: EndpointToolParamPath},
@@ -4886,7 +4886,7 @@ var EndpointTools = []EndpointToolDescriptor{
 		RouteTemplate:       "/v1/sales/sales-orders/{id}/lines/{line_id}",
 		InputSchema:         "{\"properties\":{\"id\":{\"description\":\"Sales order ID.\",\"type\":\"string\"},\"include\":{\"description\":\"Sub-objects to expand in the response. These nested objects are returned as null by default; pass the field keys you need (e.g. \\\"parent_account\\\") to get their full objects inline. Expand to get authoritative data rather than inferring relationships from names.\",\"items\":{\"enum\":[\"product\",\"quantity_ordered\",\"unit_price\",\"unit_cost\",\"totals\"],\"type\":\"string\"},\"type\":\"array\"},\"line_id\":{\"description\":\"Sales order line ID.\",\"type\":\"string\"},\"product_description\":{\"description\":\"Description recorded on the line.\",\"type\":[\"string\",\"null\"]},\"product_sku\":{\"description\":\"SKU recorded on the line.\",\"type\":\"string\"},\"quantity\":{\"description\":\"New quantity ordered on the line.\",\"properties\":{\"unit_id\":{\"description\":\"ID of the unit of measure for the value.\",\"type\":\"string\"},\"value\":{\"description\":\"Decimal value, as a string to preserve precision.\",\"format\":\"decimal\",\"type\":\"string\"}},\"required\":[\"value\",\"unit_id\"],\"type\":\"object\"},\"unit_cost\":{\"description\":\"Internal cost per unit, used to derive line profitability.\\n\\nRounded to the nearest cent.\",\"properties\":{\"denominator_unit_id\":{\"description\":\"ID of the unit for the rate's denominator (the per-unit basis).\",\"type\":\"string\"},\"numerator_unit_id\":{\"description\":\"ID of the unit for the rate's numerator (e.g. the currency of a price).\",\"type\":\"string\"},\"value\":{\"description\":\"Decimal value of the rate, expressed as the amount of the numerator unit per one denominator unit.\",\"format\":\"decimal\",\"type\":\"string\"}},\"required\":[\"value\",\"numerator_unit_id\",\"denominator_unit_id\"],\"type\":\"object\"},\"unit_price\":{\"description\":\"Price charged per unit.\\n\\nRounded to the nearest cent.\",\"properties\":{\"denominator_unit_id\":{\"description\":\"ID of the unit for the rate's denominator (the per-unit basis).\",\"type\":\"string\"},\"numerator_unit_id\":{\"description\":\"ID of the unit for the rate's numerator (e.g. the currency of a price).\",\"type\":\"string\"},\"value\":{\"description\":\"Decimal value of the rate, expressed as the amount of the numerator unit per one denominator unit.\",\"format\":\"decimal\",\"type\":\"string\"}},\"required\":[\"value\",\"numerator_unit_id\",\"denominator_unit_id\"],\"type\":\"object\"}},\"required\":[\"id\",\"line_id\"],\"type\":\"object\"}",
 		Group:               "Sales Orders",
-		RequiredPermissions: []string{"customers:update", "suppliers:update", "sales_orders:update"},
+		RequiredPermissions: []string{"sales_orders:update"},
 		Params: []EndpointToolParam{
 			{Name: "id", In: EndpointToolParamPath},
 			{Name: "include", In: EndpointToolParamQuery, Array: true},

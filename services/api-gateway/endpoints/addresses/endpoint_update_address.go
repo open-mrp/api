@@ -86,16 +86,17 @@ type UpdateAddressEndpoint struct{}
 
 func (e *UpdateAddressEndpoint) Materialize() *apiendpoint.APIEndpoint[*UpdateAddressRequest, *apiresource.Address] {
 	return (&apiendpoint.APIEndpoint[*UpdateAddressRequest, *apiresource.Address]{
-		Title:               "Update Address",
-		Method:              http.MethodPatch,
-		Route:               "/v1/sales/addresses/{id}",
-		ContentType:         "application/json",
-		SuccessStatusCode:   http.StatusOK,
-		Public:              true,
-		AgentTool:           true,
-		RequiredPermissions: []types.Permission{{Domain: types.PermissionDomainAddresses, Action: types.ActionUpdate}, {Domain: types.PermissionDomainCustomers, Action: types.ActionUpdate}, {Domain: types.PermissionDomainSuppliers, Action: types.ActionUpdate}},
-		Preview:             true,
-		ObjectType:          constants.ObjectTypeAddress,
+		Title:                   "Update Address",
+		Method:                  http.MethodPatch,
+		Route:                   "/v1/sales/addresses/{id}",
+		ContentType:             "application/json",
+		SuccessStatusCode:       http.StatusOK,
+		Public:                  true,
+		AgentTool:               true,
+		RequiredPermissions:     []types.Permission{{Domain: types.PermissionDomainAddresses, Action: types.ActionUpdate}},
+		CounterpartyPermissions: apiendpoint.Counterparties(types.ActionUpdate),
+		Preview:                 true,
+		ObjectType:              constants.ObjectTypeAddress,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *UpdateAddressRequest) (*apiresource.Address, *apierror.APIError) {
 			return svc.(AddressSvc).UpdateAddress
 		},

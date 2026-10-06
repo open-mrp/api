@@ -78,15 +78,16 @@ type CreateAccountUserEndpoint struct{}
 
 func (e *CreateAccountUserEndpoint) Materialize() *apiendpoint.APIEndpoint[*CreateAccountUserRequest, *apiresource.AccountUser] {
 	return (&apiendpoint.APIEndpoint[*CreateAccountUserRequest, *apiresource.AccountUser]{
-		Title:               "Create Account User",
-		Method:              http.MethodPost,
-		ContentType:         "application/json",
-		Route:               "/v1/identity/account-users",
-		SuccessStatusCode:   http.StatusCreated,
-		Public:              true,
-		AgentTool:           true,
-		RequiredPermissions: []types.Permission{{Domain: types.PermissionDomainTeamUsers, Action: types.ActionCreate}, {Domain: types.PermissionDomainCustomers, Action: types.ActionCreate}, {Domain: types.PermissionDomainSuppliers, Action: types.ActionCreate}},
-		Preview:             true,
+		Title:                   "Create Account User",
+		Method:                  http.MethodPost,
+		ContentType:             "application/json",
+		Route:                   "/v1/identity/account-users",
+		SuccessStatusCode:       http.StatusCreated,
+		Public:                  true,
+		AgentTool:               true,
+		RequiredPermissions:     []types.Permission{{Domain: types.PermissionDomainTeamUsers, Action: types.ActionCreate}},
+		CounterpartyPermissions: apiendpoint.Counterparties(types.ActionCreate),
+		Preview:                 true,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *CreateAccountUserRequest) (*apiresource.AccountUser, *apierror.APIError) {
 			return svc.(AccountUserSvc).CreateAccountUser
 		},

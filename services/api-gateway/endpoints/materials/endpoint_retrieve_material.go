@@ -22,16 +22,17 @@ type RetrieveMaterialEndpoint struct{}
 
 func (e *RetrieveMaterialEndpoint) Materialize() *apiendpoint.APIEndpoint[*RetrieveMaterialRequest, *apiresource.Material] {
 	return (&apiendpoint.APIEndpoint[*RetrieveMaterialRequest, *apiresource.Material]{
-		Title:               "Retrieve Material",
-		Method:              http.MethodGet,
-		ContentType:         "application/json",
-		Route:               "/v1/catalog/materials/{id}",
-		SuccessStatusCode:   http.StatusOK,
-		Public:              true,
-		AgentTool:           true,
-		RequiredPermissions: []types.Permission{{Domain: types.PermissionDomainMaterials, Action: types.ActionRead}, {Domain: types.PermissionDomainCustomers, Action: types.ActionRead}, {Domain: types.PermissionDomainSuppliers, Action: types.ActionRead}},
-		Preview:             true,
-		ObjectType:          constants.ObjectTypeMaterial,
+		Title:                   "Retrieve Material",
+		Method:                  http.MethodGet,
+		ContentType:             "application/json",
+		Route:                   "/v1/catalog/materials/{id}",
+		SuccessStatusCode:       http.StatusOK,
+		Public:                  true,
+		AgentTool:               true,
+		RequiredPermissions:     []types.Permission{{Domain: types.PermissionDomainMaterials, Action: types.ActionRead}},
+		CounterpartyPermissions: apiendpoint.Counterparties(types.ActionRead),
+		Preview:                 true,
+		ObjectType:              constants.ObjectTypeMaterial,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *RetrieveMaterialRequest) (*apiresource.Material, *apierror.APIError) {
 			return svc.(MaterialSvc).GetMaterial
 		},

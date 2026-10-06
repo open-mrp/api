@@ -28,17 +28,15 @@ type CreatePurchaseOrderLineEndpoint struct{}
 
 func (e *CreatePurchaseOrderLineEndpoint) Materialize() *apiendpoint.APIEndpoint[*CreatePurchaseOrderLineRequest, *apiresource.PurchaseOrderLine] {
 	return (&apiendpoint.APIEndpoint[*CreatePurchaseOrderLineRequest, *apiresource.PurchaseOrderLine]{
-		Title:             "Create Purchase Order Line",
-		Method:            http.MethodPost,
-		ContentType:       "application/json",
-		Route:             "/v1/operations/purchase-orders/{id}/lines",
-		SuccessStatusCode: http.StatusCreated,
-		Public:            false,
-		Preview:           true,
-		RequiredPermissions: []types.Permission{
-			{Domain: types.PermissionDomainPurchaseOrders, Action: types.ActionUpdate},
-			{Domain: types.PermissionDomainSuppliers, Action: types.ActionUpdate},
-		},
+		Title:                   "Create Purchase Order Line",
+		Method:                  http.MethodPost,
+		ContentType:             "application/json",
+		Route:                   "/v1/operations/purchase-orders/{id}/lines",
+		SuccessStatusCode:       http.StatusCreated,
+		Public:                  false,
+		Preview:                 true,
+		RequiredPermissions:     []types.Permission{{Domain: types.PermissionDomainPurchaseOrders, Action: types.ActionUpdate}},
+		CounterpartyPermissions: apiendpoint.CounterpartyPermissions{Supplier: types.Permission{Domain: types.PermissionDomainSuppliers, Action: types.ActionUpdate}},
 		ServiceHandler: func(svc any) func(ctx context.Context, req *CreatePurchaseOrderLineRequest) (*apiresource.PurchaseOrderLine, *apierror.APIError) {
 			return svc.(PurchaseOrderSvc).CreatePurchaseOrderLine
 		},

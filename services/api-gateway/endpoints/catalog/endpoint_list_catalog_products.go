@@ -27,19 +27,16 @@ type ListCatalogProductsEndpoint struct{}
 
 func (e *ListCatalogProductsEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListCatalogProductsRequest, *apiresource.List[apiresource.CatalogCategory]] {
 	return (&apiendpoint.APIEndpoint[*ListCatalogProductsRequest, *apiresource.List[apiresource.CatalogCategory]]{
-		Title:             "List Catalog Products",
-		Method:            http.MethodGet,
-		Route:             "/v1/catalog/catalog/product-lines/{id}/products",
-		ContentType:       "application/json",
-		SuccessStatusCode: http.StatusOK,
-		Public:            false,
-		Preview:           true,
-		RequiredPermissions: []types.Permission{
-			{Domain: types.PermissionDomainProducts, Action: types.ActionRead},
-			{Domain: types.PermissionDomainCustomers, Action: types.ActionRead},
-			{Domain: types.PermissionDomainSuppliers, Action: types.ActionRead},
-		},
-		ObjectType: constants.ObjectTypeCatalogCategory,
+		Title:                   "List Catalog Products",
+		Method:                  http.MethodGet,
+		Route:                   "/v1/catalog/catalog/product-lines/{id}/products",
+		ContentType:             "application/json",
+		SuccessStatusCode:       http.StatusOK,
+		Public:                  false,
+		Preview:                 true,
+		RequiredPermissions:     []types.Permission{{Domain: types.PermissionDomainProducts, Action: types.ActionRead}},
+		CounterpartyPermissions: apiendpoint.Counterparties(types.ActionRead),
+		ObjectType:              constants.ObjectTypeCatalogCategory,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *ListCatalogProductsRequest) (*apiresource.List[apiresource.CatalogCategory], *apierror.APIError) {
 			return svc.(CatalogSvc).ListCatalogProducts
 		},

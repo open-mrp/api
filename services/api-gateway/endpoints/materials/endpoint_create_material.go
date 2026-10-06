@@ -83,16 +83,17 @@ type CreateMaterialEndpoint struct{}
 
 func (e *CreateMaterialEndpoint) Materialize() *apiendpoint.APIEndpoint[*CreateMaterialRequest, *apiresource.Material] {
 	return (&apiendpoint.APIEndpoint[*CreateMaterialRequest, *apiresource.Material]{
-		Title:               "Create Material",
-		Method:              http.MethodPost,
-		ContentType:         "application/json",
-		Route:               "/v1/catalog/materials",
-		SuccessStatusCode:   http.StatusCreated,
-		Public:              true,
-		AgentTool:           true,
-		RequiredPermissions: []types.Permission{{Domain: types.PermissionDomainMaterials, Action: types.ActionCreate}, {Domain: types.PermissionDomainCustomers, Action: types.ActionUpdate}, {Domain: types.PermissionDomainSuppliers, Action: types.ActionUpdate}},
-		Preview:             true,
-		ObjectType:          constants.ObjectTypeMaterial,
+		Title:                   "Create Material",
+		Method:                  http.MethodPost,
+		ContentType:             "application/json",
+		Route:                   "/v1/catalog/materials",
+		SuccessStatusCode:       http.StatusCreated,
+		Public:                  true,
+		AgentTool:               true,
+		RequiredPermissions:     []types.Permission{{Domain: types.PermissionDomainMaterials, Action: types.ActionCreate}},
+		CounterpartyPermissions: apiendpoint.Counterparties(types.ActionUpdate),
+		Preview:                 true,
+		ObjectType:              constants.ObjectTypeMaterial,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *CreateMaterialRequest) (*apiresource.Material, *apierror.APIError) {
 			return svc.(MaterialSvc).CreateMaterial
 		},

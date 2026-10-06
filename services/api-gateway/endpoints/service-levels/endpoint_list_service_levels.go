@@ -32,14 +32,11 @@ func (e *ListServiceLevelsEndpoint) Materialize() *apiendpoint.APIEndpoint[*List
 		SuccessStatusCode: http.StatusOK,
 		Public:            true,
 		AgentTool:         true,
-		// Service-level reads reuse the carrier relation helper (checkCarrierReadPermission), which requires carriers:read on the own account but customers:read / suppliers:read when an internal actor reads a customer's or supplier's data. Declare the full OR-set so the gateway gate doesn't false-reject those relation-scoped reads.
-		RequiredPermissions: []types.Permission{
-			{Domain: types.PermissionDomainCarriers, Action: types.ActionRead},
-			{Domain: types.PermissionDomainCustomers, Action: types.ActionRead},
-			{Domain: types.PermissionDomainSuppliers, Action: types.ActionRead},
-		},
-		Preview:    true,
-		ObjectType: constants.ObjectTypeServiceLevel,
+		// Service-level reads reuse the carrier relation helper (checkCarrierReadPermission).
+		RequiredPermissions:     []types.Permission{{Domain: types.PermissionDomainCarriers, Action: types.ActionRead}},
+		CounterpartyPermissions: apiendpoint.Counterparties(types.ActionRead),
+		Preview:                 true,
+		ObjectType:              constants.ObjectTypeServiceLevel,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *ListServiceLevelsRequest) (*apiresource.List[apiresource.ServiceLevel], *apierror.APIError) {
 			return svc.(ServiceLevelSvc).ListServiceLevels
 		},

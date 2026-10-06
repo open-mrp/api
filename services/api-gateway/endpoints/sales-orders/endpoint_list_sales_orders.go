@@ -49,16 +49,17 @@ type ListSalesOrdersEndpoint struct{}
 
 func (e *ListSalesOrdersEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListSalesOrdersRequest, *apiresource.List[apiresource.SalesOrder]] {
 	return (&apiendpoint.APIEndpoint[*ListSalesOrdersRequest, *apiresource.List[apiresource.SalesOrder]]{
-		Title:               "List Sales Orders",
-		Method:              http.MethodGet,
-		ContentType:         "application/json",
-		Route:               "/v1/sales/sales-orders",
-		SuccessStatusCode:   http.StatusOK,
-		Public:              true,
-		Preview:             true,
-		AgentTool:           true,
-		RequiredPermissions: []types.Permission{{Domain: types.PermissionDomainSalesOrders, Action: types.ActionRead}, {Domain: types.PermissionDomainCustomers, Action: types.ActionRead}, {Domain: types.PermissionDomainSuppliers, Action: types.ActionRead}},
-		ObjectType:          constants.ObjectTypeSalesOrder,
+		Title:                   "List Sales Orders",
+		Method:                  http.MethodGet,
+		ContentType:             "application/json",
+		Route:                   "/v1/sales/sales-orders",
+		SuccessStatusCode:       http.StatusOK,
+		Public:                  true,
+		Preview:                 true,
+		AgentTool:               true,
+		RequiredPermissions:     []types.Permission{{Domain: types.PermissionDomainSalesOrders, Action: types.ActionRead}},
+		CounterpartyPermissions: apiendpoint.Counterparties(types.ActionRead),
+		ObjectType:              constants.ObjectTypeSalesOrder,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *ListSalesOrdersRequest) (*apiresource.List[apiresource.SalesOrder], *apierror.APIError) {
 			return svc.(SalesOrderSvc).ListSalesOrders
 		},

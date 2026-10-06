@@ -5,6 +5,7 @@ import (
 
 	"github.com/open-mrp/api/services/core-service/internal/domain"
 	"github.com/open-mrp/api/services/core-service/internal/infrastructure/sqlc"
+	"github.com/open-mrp/api/shared/constants"
 	"github.com/open-mrp/api/shared/db"
 	apierror "github.com/open-mrp/api/shared/errors"
 	"github.com/open-mrp/api/shared/tracing"
@@ -63,4 +64,23 @@ func (r *quantityRepoImpl) Update(ctx context.Context, params domain.UpdateQuant
 	}
 
 	return r.Get(ctx, params.QuantityID)
+}
+
+func (r *quantityRepoImpl) OwnerTypes(ctx context.Context, accountID, id string) ([]constants.ObjectType, *apierror.APIError) {
+	ctx, span := quantityRepoTracer.Start(ctx, "repository.quantity.owner_types")
+	defer span.End()
+
+	rows, err := r.queries.ListQuantityOwnerTypes(ctx, sqlc.ListQuantityOwnerTypesParams{ID: id, AccountID: accountID})
+	if apiErr := db.MapSQLError(err); apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
+	return measureOwnerTypes(rows), nil
+}
+
+func measureOwnerTypes(rows []string) []constants.ObjectType {
+	owners := make([]constants.ObjectType, 0, len(rows))
+	for _, row := range rows {
+		owners = append(owners, constants.ObjectType(row))
+	}
+	return owners
 }

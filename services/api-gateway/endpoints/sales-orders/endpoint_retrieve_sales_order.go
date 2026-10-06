@@ -22,20 +22,17 @@ type RetrieveSalesOrderEndpoint struct{}
 
 func (e *RetrieveSalesOrderEndpoint) Materialize() *apiendpoint.APIEndpoint[*RetrieveSalesOrderRequest, *apiresource.SalesOrder] {
 	return (&apiendpoint.APIEndpoint[*RetrieveSalesOrderRequest, *apiresource.SalesOrder]{
-		Title:             "Retrieve Sales Order",
-		Method:            http.MethodGet,
-		ContentType:       "application/json",
-		Route:             "/v1/sales/sales-orders/{id}",
-		SuccessStatusCode: http.StatusOK,
-		Public:            true,
-		AgentTool:         true,
-		Preview:           true,
-		ObjectType:        constants.ObjectTypeSalesOrder,
-		RequiredPermissions: []types.Permission{
-			{Domain: types.PermissionDomainCustomers, Action: types.ActionRead},
-			{Domain: types.PermissionDomainSuppliers, Action: types.ActionRead},
-			{Domain: types.PermissionDomainSalesOrders, Action: types.ActionRead},
-		},
+		Title:                   "Retrieve Sales Order",
+		Method:                  http.MethodGet,
+		ContentType:             "application/json",
+		Route:                   "/v1/sales/sales-orders/{id}",
+		SuccessStatusCode:       http.StatusOK,
+		Public:                  true,
+		AgentTool:               true,
+		Preview:                 true,
+		ObjectType:              constants.ObjectTypeSalesOrder,
+		RequiredPermissions:     []types.Permission{{Domain: types.PermissionDomainSalesOrders, Action: types.ActionRead}},
+		CounterpartyPermissions: apiendpoint.Counterparties(types.ActionRead),
 		ServiceHandler: func(svc any) func(ctx context.Context, req *RetrieveSalesOrderRequest) (*apiresource.SalesOrder, *apierror.APIError) {
 			return svc.(SalesOrderSvc).GetSalesOrder
 		},

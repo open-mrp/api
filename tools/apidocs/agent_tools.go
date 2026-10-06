@@ -142,14 +142,21 @@ func explicitPermissions(spec reflect.Value) []string {
 	}
 	out := make([]string, 0, f.Len())
 	for i := 0; i < f.Len(); i++ {
-		el := f.Index(i)
-		dom := strings.TrimSpace(el.FieldByName("Domain").String())
-		act := strings.TrimSpace(el.FieldByName("Action").String())
-		if dom != "" && act != "" {
-			out = append(out, dom+":"+act)
+		if p := permissionCode(f.Index(i)); p != "" {
+			out = append(out, p)
 		}
 	}
 	return out
+}
+
+// permissionCode renders a typed {Domain, Action} as "<domain>:<action>", or "" when either is unset.
+func permissionCode(p reflect.Value) string {
+	dom := strings.TrimSpace(p.FieldByName("Domain").String())
+	act := strings.TrimSpace(p.FieldByName("Action").String())
+	if dom == "" || act == "" {
+		return ""
+	}
+	return dom + ":" + act
 }
 
 // requiredRoleType reads the endpoint's declared RequiredRoleType (e.g. "admin"), empty when none.

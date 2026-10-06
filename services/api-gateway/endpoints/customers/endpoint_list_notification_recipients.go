@@ -24,14 +24,15 @@ type ListNotificationRecipientsEndpoint struct{}
 
 func (e *ListNotificationRecipientsEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListNotificationRecipientsRequest, *apiresource.List[apiresource.OrderNotificationRecipient]] {
 	return (&apiendpoint.APIEndpoint[*ListNotificationRecipientsRequest, *apiresource.List[apiresource.OrderNotificationRecipient]]{
-		Title:               "List Customer Notification Recipients",
-		Method:              http.MethodGet,
-		ContentType:         "application/json",
-		Route:               "/v1/sales/customers/{id}/notification-recipients",
-		SuccessStatusCode:   http.StatusOK,
-		Public:              false,
-		Preview:             true,
-		RequiredPermissions: []types.Permission{{Domain: types.PermissionDomainCustomers, Action: types.ActionRead}, {Domain: types.PermissionDomainSuppliers, Action: types.ActionRead}},
+		Title:                   "List Customer Notification Recipients",
+		Method:                  http.MethodGet,
+		ContentType:             "application/json",
+		Route:                   "/v1/sales/customers/{id}/notification-recipients",
+		SuccessStatusCode:       http.StatusOK,
+		Public:                  false,
+		Preview:                 true,
+		RequiredPermissions:     []types.Permission{{Domain: types.PermissionDomainCustomers, Action: types.ActionRead}},
+		CounterpartyPermissions: apiendpoint.Counterparties(types.ActionRead),
 		ServiceHandler: func(svc any) func(ctx context.Context, req *ListNotificationRecipientsRequest) (*apiresource.List[apiresource.OrderNotificationRecipient], *apierror.APIError) {
 			return svc.(CustomerSvc).ListNotificationRecipients
 		},

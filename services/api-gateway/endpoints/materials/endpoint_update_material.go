@@ -58,16 +58,17 @@ type UpdateMaterialEndpoint struct{}
 
 func (e *UpdateMaterialEndpoint) Materialize() *apiendpoint.APIEndpoint[*UpdateMaterialRequest, *apiresource.Material] {
 	return (&apiendpoint.APIEndpoint[*UpdateMaterialRequest, *apiresource.Material]{
-		Title:               "Update Material",
-		Method:              http.MethodPatch,
-		ContentType:         "application/json",
-		Route:               "/v1/catalog/materials/{id}",
-		SuccessStatusCode:   http.StatusOK,
-		Public:              true,
-		AgentTool:           true,
-		RequiredPermissions: []types.Permission{{Domain: types.PermissionDomainMaterials, Action: types.ActionUpdate}, {Domain: types.PermissionDomainCustomers, Action: types.ActionUpdate}, {Domain: types.PermissionDomainSuppliers, Action: types.ActionUpdate}},
-		Preview:             true,
-		ObjectType:          constants.ObjectTypeMaterial,
+		Title:                   "Update Material",
+		Method:                  http.MethodPatch,
+		ContentType:             "application/json",
+		Route:                   "/v1/catalog/materials/{id}",
+		SuccessStatusCode:       http.StatusOK,
+		Public:                  true,
+		AgentTool:               true,
+		RequiredPermissions:     []types.Permission{{Domain: types.PermissionDomainMaterials, Action: types.ActionUpdate}},
+		CounterpartyPermissions: apiendpoint.Counterparties(types.ActionUpdate),
+		Preview:                 true,
+		ObjectType:              constants.ObjectTypeMaterial,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *UpdateMaterialRequest) (*apiresource.Material, *apierror.APIError) {
 			return svc.(MaterialSvc).UpdateMaterial
 		},

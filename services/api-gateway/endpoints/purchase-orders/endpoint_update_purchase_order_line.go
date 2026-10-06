@@ -63,17 +63,15 @@ type UpdatePurchaseOrderLineEndpoint struct{}
 
 func (e *UpdatePurchaseOrderLineEndpoint) Materialize() *apiendpoint.APIEndpoint[*UpdatePurchaseOrderLineRequest, *apiresource.PurchaseOrderLine] {
 	return (&apiendpoint.APIEndpoint[*UpdatePurchaseOrderLineRequest, *apiresource.PurchaseOrderLine]{
-		Title:             "Update Purchase Order Line",
-		Method:            http.MethodPatch,
-		ContentType:       "application/json",
-		Route:             "/v1/operations/purchase-orders/{id}/lines/{line_id}",
-		SuccessStatusCode: http.StatusOK,
-		Public:            false,
-		Preview:           true,
-		RequiredPermissions: []types.Permission{
-			{Domain: types.PermissionDomainPurchaseOrders, Action: types.ActionUpdate},
-			{Domain: types.PermissionDomainSuppliers, Action: types.ActionUpdate},
-		},
+		Title:                   "Update Purchase Order Line",
+		Method:                  http.MethodPatch,
+		ContentType:             "application/json",
+		Route:                   "/v1/operations/purchase-orders/{id}/lines/{line_id}",
+		SuccessStatusCode:       http.StatusOK,
+		Public:                  false,
+		Preview:                 true,
+		RequiredPermissions:     []types.Permission{{Domain: types.PermissionDomainPurchaseOrders, Action: types.ActionUpdate}},
+		CounterpartyPermissions: apiendpoint.CounterpartyPermissions{Supplier: types.Permission{Domain: types.PermissionDomainSuppliers, Action: types.ActionUpdate}},
 		ServiceHandler: func(svc any) func(ctx context.Context, req *UpdatePurchaseOrderLineRequest) (*apiresource.PurchaseOrderLine, *apierror.APIError) {
 			return svc.(PurchaseOrderSvc).UpdatePurchaseOrderLine
 		},

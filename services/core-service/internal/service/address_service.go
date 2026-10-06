@@ -600,7 +600,7 @@ func resolveAddressAccountScope(identity *types.Identity) (string, *apierror.API
 	return *actorAccountID, nil
 }
 
-// checkAddressReadPermission checks the appropriate read permission based on the identity context. For a cross-account target the check is precise (customers:read / suppliers:read). For the actor's own account it accepts any of the read permissions the read endpoints declare, so the downstream check never rejects a caller the coarse gateway gate admitted.
+// checkAddressReadPermission checks the appropriate read permission based on the identity context: addresses:read in the actor's own account, customers:read in a customer's account and suppliers:read in a supplier's.
 func checkAddressReadPermission(identity *types.Identity) *apierror.APIError {
 	if !identity.IsInternalActor() {
 		return nil
@@ -616,16 +616,10 @@ func checkAddressReadPermission(identity *types.Identity) *apierror.APIError {
 	if identity.IsTargetSupplierAccount() {
 		return identity.CheckHasPermission(types.PermissionDomainSuppliers, types.ActionRead)
 	}
-	// Own-account: accept any read permission the read endpoints declare, so the
-	// downstream check never rejects a caller the coarse gateway gate admitted.
-	return identity.CheckHasAnyPermission(
-		types.Permission{Domain: types.PermissionDomainAddresses, Action: types.ActionRead},
-		types.Permission{Domain: types.PermissionDomainCustomers, Action: types.ActionRead},
-		types.Permission{Domain: types.PermissionDomainSuppliers, Action: types.ActionRead},
-	)
+	return identity.CheckHasPermission(types.PermissionDomainAddresses, types.ActionRead)
 }
 
-// checkAddressWritePermission checks the appropriate write permission based on the identity context. For a cross-account target the check is precise (customers:update / suppliers:update). For the actor's own account it accepts any of the write permissions the write endpoints declare, so the downstream check never rejects a caller the coarse gateway gate admitted.
+// checkAddressWritePermission checks the appropriate write permission based on the identity context: addresses:{action} in the actor's own account, customers:update in a customer's account and suppliers:update in a supplier's.
 func checkAddressWritePermission(identity *types.Identity, action types.Action) *apierror.APIError {
 	if !identity.IsInternalActor() {
 		return nil
@@ -640,15 +634,7 @@ func checkAddressWritePermission(identity *types.Identity, action types.Action) 
 	if identity.IsTargetSupplierAccount() {
 		return identity.CheckHasPermission(types.PermissionDomainSuppliers, types.ActionUpdate)
 	}
-	// Own-account: accept any write permission the write endpoints declare, so the
-	// downstream check never rejects a caller the coarse gateway gate admitted. This
-	// mirrors the legacy Dashboard, which gated own-account address writes on
-	// customers:update rather than a dedicated addresses domain.
-	return identity.CheckHasAnyPermission(
-		types.Permission{Domain: types.PermissionDomainAddresses, Action: action},
-		types.Permission{Domain: types.PermissionDomainCustomers, Action: types.ActionUpdate},
-		types.Permission{Domain: types.PermissionDomainSuppliers, Action: types.ActionUpdate},
-	)
+	return identity.CheckHasPermission(types.PermissionDomainAddresses, action)
 }
 
 func coalesceStringPtr(update *string, existing *string) *string {

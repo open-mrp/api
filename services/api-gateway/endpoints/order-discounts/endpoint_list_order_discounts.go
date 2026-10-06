@@ -24,20 +24,17 @@ type ListOrderDiscountsEndpoint struct{}
 
 func (e *ListOrderDiscountsEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListOrderDiscountsRequest, *apiresource.List[apiresource.OrderDiscount]] {
 	return (&apiendpoint.APIEndpoint[*ListOrderDiscountsRequest, *apiresource.List[apiresource.OrderDiscount]]{
-		Title:             "List Order Discounts",
-		Method:            http.MethodGet,
-		ContentType:       "application/json",
-		Route:             "/v1/sales/order-discounts",
-		SuccessStatusCode: http.StatusOK,
-		Public:            true,
-		AgentTool:         true,
-		Preview:           true,
-		ObjectType:        constants.ObjectTypeOrderDiscount,
-		RequiredPermissions: []types.Permission{
-			{Domain: types.PermissionDomainDiscounts, Action: types.ActionRead},
-			{Domain: types.PermissionDomainCustomers, Action: types.ActionRead},
-			{Domain: types.PermissionDomainSuppliers, Action: types.ActionRead},
-		},
+		Title:                   "List Order Discounts",
+		Method:                  http.MethodGet,
+		ContentType:             "application/json",
+		Route:                   "/v1/sales/order-discounts",
+		SuccessStatusCode:       http.StatusOK,
+		Public:                  true,
+		AgentTool:               true,
+		Preview:                 true,
+		ObjectType:              constants.ObjectTypeOrderDiscount,
+		RequiredPermissions:     []types.Permission{{Domain: types.PermissionDomainDiscounts, Action: types.ActionRead}},
+		CounterpartyPermissions: apiendpoint.Counterparties(types.ActionRead),
 		ServiceHandler: func(svc any) func(ctx context.Context, req *ListOrderDiscountsRequest) (*apiresource.List[apiresource.OrderDiscount], *apierror.APIError) {
 			return svc.(OrderDiscountSvc).ListOrderDiscounts
 		},

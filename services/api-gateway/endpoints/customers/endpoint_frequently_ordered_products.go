@@ -23,14 +23,15 @@ type GetFrequentlyOrderedProductsEndpoint struct{}
 
 func (e *GetFrequentlyOrderedProductsEndpoint) Materialize() *apiendpoint.APIEndpoint[*GetFrequentlyOrderedProductsRequest, *apiresource.List[apiresource.FrequentlyOrderedProduct]] {
 	return (&apiendpoint.APIEndpoint[*GetFrequentlyOrderedProductsRequest, *apiresource.List[apiresource.FrequentlyOrderedProduct]]{
-		Title:               "Get Frequently Ordered Products",
-		Method:              http.MethodGet,
-		ContentType:         "application/json",
-		Route:               "/v1/sales/customers/{id}/frequently-ordered-products",
-		SuccessStatusCode:   http.StatusOK,
-		Public:              false,
-		Preview:             true,
-		RequiredPermissions: []types.Permission{{Domain: types.PermissionDomainCustomers, Action: types.ActionRead}, {Domain: types.PermissionDomainSuppliers, Action: types.ActionRead}, {Domain: types.PermissionDomainItems, Action: types.ActionRead}},
+		Title:                   "Get Frequently Ordered Products",
+		Method:                  http.MethodGet,
+		ContentType:             "application/json",
+		Route:                   "/v1/sales/customers/{id}/frequently-ordered-products",
+		SuccessStatusCode:       http.StatusOK,
+		Public:                  false,
+		Preview:                 true,
+		RequiredPermissions:     []types.Permission{{Domain: types.PermissionDomainItems, Action: types.ActionRead}},
+		CounterpartyPermissions: apiendpoint.Counterparties(types.ActionRead),
 		ServiceHandler: func(svc any) func(ctx context.Context, req *GetFrequentlyOrderedProductsRequest) (*apiresource.List[apiresource.FrequentlyOrderedProduct], *apierror.APIError) {
 			return svc.(CustomerSvc).GetFrequentlyOrderedProducts
 		},

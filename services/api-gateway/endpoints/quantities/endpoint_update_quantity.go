@@ -30,7 +30,7 @@ type UpdateQuantityRequest struct {
 	ObjectID field.Optional[string] `json:"object_id,omitzero" validate:"omitempty"`
 	// Type of the resource that owns this quantity.
 	//
-	// Determines the permission required for the update.
+	// Used together with `object_id` to verify the owning resource exists.
 	ObjectType field.Optional[constants.MeasureOwnerType] `json:"object_type,omitzero" validate:"omitempty"`
 }
 
@@ -48,6 +48,8 @@ func (*UpdateQuantityRequest) SchemaExample() any {
 // Updates the value or unit of a quantity in place.
 //
 // A quantity belongs to the resource that reports it — a material's order point, the amount a production step consumes, and so on — so this changes that resource's stored measure directly.
+//
+// Updating takes the update permission of the resource the quantity belongs to: `items:update` for a material's order point or lead time, and `production_steps:update` for a production step's production or consumption. A quantity that belongs to none of these in the account you are acting in is reported as not found.
 type UpdateQuantityEndpoint struct{}
 
 func (e *UpdateQuantityEndpoint) Materialize() *apiendpoint.APIEndpoint[*UpdateQuantityRequest, *apiresource.Quantity] {

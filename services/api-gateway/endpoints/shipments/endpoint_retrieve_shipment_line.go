@@ -23,14 +23,15 @@ type RetrieveShipmentLineEndpoint struct{}
 
 func (e *RetrieveShipmentLineEndpoint) Materialize() *apiendpoint.APIEndpoint[*RetrieveShipmentLineRequest, *apiresource.ShipmentLine] {
 	return (&apiendpoint.APIEndpoint[*RetrieveShipmentLineRequest, *apiresource.ShipmentLine]{
-		Title:               "Retrieve Shipment Line",
-		Method:              http.MethodGet,
-		ContentType:         "application/json",
-		Route:               "/v1/operations/shipments/{shipment_id}/lines/{id}",
-		SuccessStatusCode:   http.StatusOK,
-		Public:              false,
-		Preview:             true,
-		RequiredPermissions: []types.Permission{{Domain: types.PermissionDomainShipments, Action: types.ActionRead}, {Domain: types.PermissionDomainCustomers, Action: types.ActionRead}, {Domain: types.PermissionDomainSuppliers, Action: types.ActionRead}},
+		Title:                   "Retrieve Shipment Line",
+		Method:                  http.MethodGet,
+		ContentType:             "application/json",
+		Route:                   "/v1/operations/shipments/{shipment_id}/lines/{id}",
+		SuccessStatusCode:       http.StatusOK,
+		Public:                  false,
+		Preview:                 true,
+		RequiredPermissions:     []types.Permission{{Domain: types.PermissionDomainShipments, Action: types.ActionRead}},
+		CounterpartyPermissions: apiendpoint.Counterparties(types.ActionRead),
 		ServiceHandler: func(svc any) func(ctx context.Context, req *RetrieveShipmentLineRequest) (*apiresource.ShipmentLine, *apierror.APIError) {
 			return svc.(ShipmentSvc).GetShipmentLine
 		},

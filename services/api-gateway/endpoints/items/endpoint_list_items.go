@@ -18,7 +18,7 @@ import (
 type ListItemsRequest struct {
 	apiresource.PaginationRequest
 	// Filter to items of these types (`product`, `material`, `part`).
-	Types []string `query:"types"`
+	Types []constants.ItemTypeCode `query:"types"`
 	// Filter to items in any of these categories.
 	CategoryIDs []string `query:"category_ids"`
 	// Filter to items carrying any of these attributes.

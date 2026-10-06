@@ -71,7 +71,7 @@ func (m *itemSvcImpl) ListItems(ctx context.Context, req *ListItemsRequest) (*ap
 		Cursor:                   req.Cursor,
 		Limit:                    req.Limit,
 		Query:                    req.Query,
-		Types:                    req.Types,
+		Types:                    itemTypeStrings(req.Types),
 		CategoryIds:              req.CategoryIDs,
 		AttributeIds:             req.AttributeIDs,
 		SupplierId:               req.SupplierID,
@@ -407,4 +407,12 @@ func loadItemByID(ctx context.Context, id string) (*apiresource.Item, *apierror.
 		return nil, apierror.NewResourceNotFoundError("Item not found.")
 	}
 	return v.(*apiresource.Item), nil
+}
+
+func itemTypeStrings(types []constants.ItemTypeCode) []string {
+	out := make([]string, len(types))
+	for i, t := range types {
+		out[i] = string(t)
+	}
+	return out
 }

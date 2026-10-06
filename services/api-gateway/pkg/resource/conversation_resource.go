@@ -57,7 +57,9 @@ type Conversation struct {
 	// Whether the conversation is under legal hold.
 	//
 	// While held, the conversation is exempt from automatic retention purging and from redaction until the hold is released.
-	LegalHold constants.LegalHoldStatus `json:"legal_hold" validate:"required"`
+	//
+	// Null to customer and supplier portal users: a hold is your own legal matter.
+	LegalHold *constants.LegalHoldStatus `json:"legal_hold" validate:"required" sensitive:"internal"`
 	// The owner of the case: either a `user` actor (an individual team member) or a `group` actor (a team).
 	Assignee *Actor `json:"assignee" expandable:"true"`
 	// The participants of the conversation.
@@ -167,7 +169,7 @@ var SampleConversation = &Conversation{
 	Type:          constants.ConversationTypeDM,
 	Audience:      constants.ConversationAudienceInternal,
 	Status:        constants.ConversationStatusActive,
-	LegalHold:     constants.LegalHoldStatusReleased,
+	LegalHold:     new(constants.LegalHoldStatusReleased),
 	Participants:  NewList([]ConversationParticipant{*SampleConversationParticipant}, PageInfo{}),
 	Unread:        2,
 	LastMessageAt: timeutil.TimestampToTimePtr(sampleUpdatedAtTimestamp),

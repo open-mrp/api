@@ -40,7 +40,7 @@ func accountGroupFromProto(ag *pb.AccountGroupInfo) *apiresource.AccountGroup {
 		Object:              constants.ObjectTypeAccountGroup,
 		Name:                ag.Name,
 		Description:         ag.Description,
-		CommissionPolicy:    constants.CommissionPolicy(ag.CommissionPolicy),
+		CommissionPolicy:    new(constants.CommissionPolicy(ag.CommissionPolicy)),
 		FreightPolicy:       constants.FreightPolicy(ag.FreightPolicy),
 		Type:                constants.AccountGroupType(ag.Type),
 		DefaultLeadTimeDays: ag.DefaultLeadTimeDays,

@@ -36,7 +36,9 @@ type AccountGroup struct {
 	//
 	// - `commission_applied`: sales commission is calculated on orders from accounts in this group.
 	// - `commission_exempt`: orders from accounts in this group are exempt from commission.
-	CommissionPolicy constants.CommissionPolicy `json:"commission_policy" validate:"required"`
+	//
+	// Null to customer and supplier portal users, like the rest of your commission settings.
+	CommissionPolicy *constants.CommissionPolicy `json:"commission_policy" validate:"required" sensitive:"internal"`
 	// How freight charges apply to orders from accounts in this group.
 	//
 	// - `free_freight`: customers within this group will not have to pay for freight.
@@ -56,7 +58,7 @@ var SampleAccountGroup = &AccountGroup{
 	Type:             constants.AccountGroupTypeTypeGroup,
 	Name:             SampleAccountGroupName,
 	Description:      nil,
-	CommissionPolicy: constants.CommissionPolicyApplied,
+	CommissionPolicy: new(constants.CommissionPolicyApplied),
 	FreightPolicy:    constants.FreightPolicyBilled,
 	CreatedAt:        timeutil.TimestampToTime(sampleCreatedAtTimestamp),
 	UpdatedAt:        timeutil.TimestampToTime(sampleUpdatedAtTimestamp),

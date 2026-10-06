@@ -21,7 +21,7 @@ func ProductLinePresenter(pl *pb.ProductLineInfo, ownerAccount *apiresource.Acco
 		Name:             pl.Name,
 		Description:      pl.Description,
 		Notes:            pl.Notes,
-		CommissionPolicy: constants.CommissionPolicy(pl.CommissionPolicy),
+		CommissionPolicy: new(constants.CommissionPolicy(pl.CommissionPolicy)),
 		FreightPolicy:    constants.FreightPolicy(pl.FreightPolicy),
 		Owner:            apiresource.NewOwnerWithAccount(pl.AccountId, ownerAccount),
 		CreatedAt:        grpcutil.TimestampToTime(pl.CreatedAt),

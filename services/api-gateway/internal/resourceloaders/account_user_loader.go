@@ -88,7 +88,7 @@ func accountUserFromProto(au *pb.AccountUserDetail) *apiresource.AccountUser {
 		ID:                   au.Id,
 		Object:               constants.ObjectTypeAccountUser,
 		Status:               constants.AccountUserStatus(au.StatusCode),
-		IsCommissionEligible: au.IsCommissionEligible,
+		IsCommissionEligible: new(au.IsCommissionEligible),
 		NotificationTypes:    notificationTypesFromProto(au.NotificationTypes),
 		LastUsedAt:           grpcutil.TimestampToTimePtr(au.LastUsedAt),
 		CreatedAt:            grpcutil.TimestampToTime(au.CreatedAt),

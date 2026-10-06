@@ -163,16 +163,16 @@ func (s *userSvcImpl) BatchGetUsersByIDs(ctx context.Context, ids []string) ([]*
 
 	// The users returned are members of the target account, so reading them is reading that account's users: a merchant
 	// reaching a customer's or supplier's contacts needs that domain's read permission, not the one for its own team.
-	if apiErr := checkSellerStaff(identity); apiErr != nil {
-		return nil, tracing.Trace(span, apiErr)
+	if !identity.IsIncludeRead() {
+		if apiErr := checkSellerStaff(identity); apiErr != nil {
+			return nil, tracing.Trace(span, apiErr)
+		}
 	}
 	if apiErr := checkAccountUserReadPermission(identity); apiErr != nil {
 		return nil, tracing.Trace(span, apiErr)
 	}
-	if identity.IsExternalTarget() {
-		if apiErr := s.mediators().ReadAccess.CheckReadAccess(ctx, *identity.ActorAccountID(), identity.Target.AccountID); apiErr != nil {
-			return nil, tracing.Trace(span, apiErr)
-		}
+	if apiErr := checkExternalReadAccess(ctx, s.mediators().ReadAccess, identity); apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
 	}
 
 	users, apiErr := s.repos.NewUserRepo().GetByIDs(ctx, identity.Target.AccountID, ids)

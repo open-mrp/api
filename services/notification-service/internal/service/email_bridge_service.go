@@ -43,6 +43,14 @@ func (s *emailBridgeSvcImpl) accountID(ctx context.Context) (string, *apierror.A
 	return identity.Target.AccountID, nil
 }
 
+// readAccountID is accountID for a read, which also admits an actor loading what an authorized request includes.
+func (s *emailBridgeSvcImpl) readAccountID(ctx context.Context) (string, *apierror.APIError) {
+	if identity, ok := appctx.GetIdentityFromContext(ctx); ok && identity.IsIncludeRead() {
+		return identity.Target.AccountID, nil
+	}
+	return s.accountID(ctx)
+}
+
 // ensureMailFromDomain points the identity's envelope Return-Path at a subdomain the customer controls and records which subdomain was chosen. DKIM alone leaves the Return-Path on amazonses.com, and mail clients annotate a sender whose Return-Path domain does not match its From domain — so without this a merchant's mail arrives as "orders@theirdomain.com via amazonses.com" however well it is signed.
 //
 // A no-op once one is configured. The SES call is best-effort: SES falls back to the default Return-Path until the customer publishes the records, so a failure here costs the annotation rather than the domain. Both CreateDomain and VerifyDomain route through here, so a domain that missed it — registered before this existed, or failed at creation — is repaired by verifying again. Failing to persist the result is NOT swallowed: that would leave SES and the database disagreeing about which subdomain the customer has to publish.
@@ -139,7 +147,7 @@ func (s *emailBridgeSvcImpl) ListDomains(ctx context.Context) ([]*domain.EmailDo
 func (s *emailBridgeSvcImpl) GetDomain(ctx context.Context, domainID string) (*domain.EmailDomain, *apierror.APIError) {
 	ctx, span := emailBridgeSvcTracer.Start(ctx, "service.email_bridge.get_domain")
 	defer span.End()
-	accountID, apiErr := s.accountID(ctx)
+	accountID, apiErr := s.readAccountID(ctx)
 	if apiErr != nil {
 		return nil, tracing.Trace(span, apiErr)
 	}

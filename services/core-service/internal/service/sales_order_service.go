@@ -255,9 +255,9 @@ func (s *salesOrderSvcImpl) BatchGetSalesOrders(ctx context.Context, salesOrderI
 		}
 	}
 
-	// Customer users see only their own orders.
+	// Customer users see only their own orders, unless a request they were allowed to make includes another.
 	var buyerAccountID *string
-	if identity.IsCustomerUser() {
+	if identity.IsCustomerUser() && !identity.IsIncludeRead() {
 		buyerAccountID = identity.ActorAccountID()
 	}
 

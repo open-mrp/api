@@ -180,7 +180,7 @@ func (s *customerSvcImpl) BatchGetCustomers(ctx context.Context, customerAccount
 	}
 
 	ids := customerAccountIDs
-	if identity.IsCustomerUser() {
+	if identity.IsCustomerUser() && !identity.IsIncludeRead() {
 		ids = nil
 		if slices.Contains(customerAccountIDs, *identity.ActorAccountID()) {
 			ids = []string{*identity.ActorAccountID()}

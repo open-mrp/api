@@ -1070,11 +1070,8 @@ func (s *accountUserSvcImpl) BatchGetAccountUsersByIDs(ctx context.Context, ids 
 		return nil, tracing.Trace(span, apiErr)
 	}
 
-	if identity.IsExternalTarget() {
-		meds := s.mediators()
-		if apiErr := meds.ReadAccess.CheckReadAccess(ctx, *identity.ActorAccountID(), identity.Target.AccountID); apiErr != nil {
-			return nil, tracing.Trace(span, apiErr)
-		}
+	if apiErr := checkExternalReadAccess(ctx, s.mediators().ReadAccess, identity); apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
 	}
 
 	users, apiErr := s.repos.NewAccountUserRepo().GetByIDs(ctx, identity.Target.AccountID, ids)

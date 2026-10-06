@@ -339,9 +339,13 @@ func (s *invoiceSvcImpl) ListCustomerInvoices(ctx context.Context, params domain
 	return result, nil
 }
 
-// checkInvoiceAccess admits only the seller's own users: an invoice is its ledger, not its customers' or suppliers'.
+// checkInvoiceAccess admits only the seller's own users, an invoice being its ledger, and for a read anyone loading an invoice that a request they were allowed to make includes.
 func checkInvoiceAccess(identity *types.Identity, action types.Action) *apierror.APIError {
-	if apiErr := identity.CheckIsInternalActor(); apiErr != nil {
+	checkActor := identity.CheckIsInternalActor
+	if action == types.ActionRead {
+		checkActor = identity.CheckIsInternalActorForRead
+	}
+	if apiErr := checkActor(); apiErr != nil {
 		return apiErr
 	}
 	return identity.CheckHasPermission(types.PermissionDomainInvoices, action)

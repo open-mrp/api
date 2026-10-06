@@ -251,8 +251,8 @@ func (s *shipmentSvcImpl) GetShipment(ctx context.Context, params domain.GetShip
 		return nil, tracing.Trace(span, apiErr)
 	}
 
-	// Buyer scope: customer actors may only retrieve shipments for orders they bought.
-	if identity.IsCustomerUser() {
+	// Buyer scope: customer actors may only retrieve shipments for orders they bought, unless a request they were allowed to make includes another.
+	if identity.IsCustomerUser() && !identity.IsIncludeRead() {
 		actorAccountID := identity.ActorAccountID()
 		if actorAccountID == nil || shipment.CustomerID != *actorAccountID {
 			return nil, tracing.Trace(span, apierror.NewResourceNotFoundError("Shipment not found."))

@@ -105,7 +105,7 @@ func (s *transactionSvcImpl) GetTransaction(ctx context.Context, params domain.G
 		return nil, tracing.Trace(span, apierror.NewInvariantViolationError("Identity not found in context."))
 	}
 
-	if apiErr := identity.CheckIsInternalActor(); apiErr != nil {
+	if apiErr := identity.CheckIsInternalActorForRead(); apiErr != nil {
 		return nil, tracing.Trace(span, apiErr)
 	}
 	if apiErr := identity.CheckHasPermission(types.PermissionDomainTransactions, types.ActionRead); apiErr != nil {

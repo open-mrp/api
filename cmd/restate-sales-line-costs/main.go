@@ -194,7 +194,9 @@ func restate(ctx context.Context, pool *sql.DB, opts options, stdout io.Writer) 
 	if err != nil {
 		return err
 	}
-	printLines(stdout, lines)
+	if err := printLines(stdout, lines); err != nil {
+		return err
+	}
 
 	if len(lines) == 0 || !opts.apply {
 		if len(lines) > 0 {
@@ -273,10 +275,10 @@ func listStaleLines(ctx context.Context, tx *sql.Tx, opts options) ([]staleLine,
 	return lines, nil
 }
 
-func printLines(stdout io.Writer, lines []staleLine) {
+func printLines(stdout io.Writer, lines []staleLine) error {
 	if len(lines) == 0 {
 		fmt.Fprintln(stdout, "No sales order lines carry the stale cost.")
-		return
+		return nil
 	}
 	w := tabwriter.NewWriter(stdout, 0, 0, 2, ' ', 0)
 	fmt.Fprintln(w, "ORDER\tLINE\tITEM\tCREATED\tCOST NOW\tPER\tRESTATED TO\tPER")
@@ -284,6 +286,9 @@ func printLines(stdout io.Writer, lines []staleLine) {
 		fmt.Fprintf(w, "%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\n",
 			l.OrderNumber, l.LineID, l.ItemID, l.CreatedOn, l.Cost, l.CostUnit, l.ItemCost, l.ItemUnit)
 	}
-	w.Flush()
+	if err := w.Flush(); err != nil {
+		return fmt.Errorf("print stale lines: %w", err)
+	}
 	fmt.Fprintf(stdout, "%d lines.\n", len(lines))
+	return nil
 }

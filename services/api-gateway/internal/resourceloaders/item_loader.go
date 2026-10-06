@@ -17,6 +17,9 @@ import (
 
 var itemLoaderTracer = tracing.GetTracer("api-gateway.resourceloaders.item")
 
+// ItemRecordIncludes are the stitches BatchGetItemsByIDs always applies; core GetItem needs them named to return the same record.
+var ItemRecordIncludes = []string{"unit_value", "unit_cost", "burn_rate", "attributes"}
+
 func LoadItems(ctx context.Context, ids []string) (map[string]any, *apierror.APIError) {
 	if len(ids) == 0 {
 		return nil, nil
@@ -28,14 +31,18 @@ func LoadItems(ctx context.Context, ids []string) (map[string]any, *apierror.API
 	if apiErr != nil {
 		return nil, apiErr
 	}
+	return ItemsFromProto(ctx, resp.Items)
+}
 
+// ItemsFromProto builds items keyed by id and stashes what their expandable fields resolve from.
+func ItemsFromProto(ctx context.Context, items []*pb.ItemInfo) (map[string]any, *apierror.APIError) {
 	meta := resourcekit.GetLoadMeta(ctx)
-	out := make(map[string]any, len(resp.Items))
+	out := make(map[string]any, len(items))
 
 	// Properties take their own permission to read, so only a caller that asked for attributes needs them.
 	propertyIDs := map[string]struct{}{}
 	if itemAttributesRequested(ctx) {
-		for _, item := range resp.Items {
+		for _, item := range items {
 			for _, a := range item.Attributes {
 				if a != nil && a.PropertyId != "" {
 					propertyIDs[a.PropertyId] = struct{}{}
@@ -61,7 +68,7 @@ func LoadItems(ctx context.Context, ids []string) (map[string]any, *apierror.API
 		}
 	}
 
-	for _, item := range resp.Items {
+	for _, item := range items {
 		out[item.Id] = itemFromProto(item)
 
 		if item.Category != nil {

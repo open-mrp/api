@@ -171,11 +171,18 @@ func (s *itemSvcImpl) GetItem(ctx context.Context, itemID string, includes []str
 		return nil, tracing.Trace(span, apiErr)
 	}
 
-	return s.repos.NewItemRepo().Get(ctx, domain.GetItemParams{
+	item, apiErr := s.repos.NewItemRepo().Get(ctx, domain.GetItemParams{
 		AccountID: identity.Target.AccountID,
 		ItemID:    itemID,
 		Includes:  includes,
 	})
+	if apierror.IsNotFound(apiErr) {
+		return nil, tracing.Trace(span, apierror.NewResourceNotFoundError("Item not found."))
+	}
+	if apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
+	return item, nil
 }
 
 // GetItemInventory returns inventory quantities for an item.

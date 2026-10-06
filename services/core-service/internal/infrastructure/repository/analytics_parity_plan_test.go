@@ -175,9 +175,11 @@ func TestOpenOrderList_ReadsAPage(t *testing.T) {
 	}.run(t)
 }
 
-// TestOpenOrderLines_ReadsTheOrder holds one order's lines to that order's lines and their invoice lines.
+// TestOpenOrderLines_ReadsTheOrder holds one order's lines to that order's lines and their invoice lines, and the
+// base-unit lookup to the platform's units.
 func TestOpenOrderLines_ReadsTheOrder(t *testing.T) {
 	ensureLegacyAnalyticsCorpus(t)
+	db := planDB(t)
 	lookupPlanSuite{
 		tables: []string{"sales_order", "sales_order_line", "invoice_line"},
 		cases: []lookupPlanCase{
@@ -198,6 +200,17 @@ func TestOpenOrderLines_ReadsTheOrder(t *testing.T) {
 				}
 				return nil
 			}},
+		},
+		// No key pins a base unit, so the lookup reads every platform unit, and the plan database's count
+		// grows with each corpus that adds one. It is held to that set, ranged from the account key.
+		returned: func(t *testing.T, stmt explainedStatement) float64 {
+			if !strings.Contains(stmt.query, "FROM unit WHERE account_id IS NULL") {
+				return 0
+			}
+			require.False(t, hasFullScan(stmt.plan, "unit"), "the base units must be read from the account key\n%s", stmt.plan)
+			var n float64
+			require.NoError(t, db.QueryRow("SELECT COUNT(*) FROM unit WHERE account_id IS NULL").Scan(&n))
+			return n
 		},
 	}.run(t)
 }

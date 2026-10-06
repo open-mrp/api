@@ -33,7 +33,9 @@ import (
 type APIEndpointExtras struct {
 	SkipRequestBodyParsing bool `json:"skip_request_body_parsing" yaml:"skip_request_body_parsing"`
 	// MaxRawBodyBytes (optional; default: httptransport.DefaultMaxRawBodyBytes) caps the raw body an endpoint with SkipRequestBodyParsing accepts. A larger body is refused with a 413.
-	MaxRawBodyBytes    int64 `json:"max_raw_body_bytes" yaml:"max_raw_body_bytes"`
+	MaxRawBodyBytes int64 `json:"max_raw_body_bytes" yaml:"max_raw_body_bytes"`
+	// MaxJSONBodyBytes (optional; default: httptransport.DefaultMaxJSONBodyBytes) caps the JSON body the endpoint accepts, up to httptransport.MaxJSONBodyBytes. A larger body is refused with a 413.
+	MaxJSONBodyBytes   int64 `json:"max_json_body_bytes" yaml:"max_json_body_bytes"`
 	SkipRequestLogging bool  `json:"skip_request_logging" yaml:"skip_request_logging"`
 	// HideFromRequestLog persists the request log but omits it from the default request-log listing. Use for high-frequency polling endpoints that would otherwise flood the log (e.g. notification unread-count). Unlike SkipRequestLogging the row is still saved.
 	HideFromRequestLog bool `json:"hide_from_request_log" yaml:"hide_from_request_log"`
@@ -157,6 +159,9 @@ func From[TReq, TResp any, T interface {
 }](source T) *APIEndpoint[TReq, TResp] {
 	ep := source.Materialize()
 	field.AssertValuePatchFields(reflect.TypeFor[TReq]())
+	if ep.Extras.MaxJSONBodyBytes > httptransport.MaxJSONBodyBytes {
+		panic(fmt.Sprintf("%s %s: MaxJSONBodyBytes %d is over the gateway's %d ceiling", ep.Method, ep.Route, ep.Extras.MaxJSONBodyBytes, httptransport.MaxJSONBodyBytes))
+	}
 	t := reflect.TypeOf(source)
 	if t.Kind() == reflect.Pointer {
 		t = t.Elem()
@@ -325,11 +330,19 @@ func (e *APIEndpoint[TReq, TResp]) Execute(w http.ResponseWriter, r *http.Reques
 	// Buffer JSON bodies once for decode, null validation, and optional request logging.
 	var jsonBodyBytes []byte
 	if !e.Extras.SkipRequestBodyParsing && httptransport.ShouldDecodeBody(r) {
-		const maxJSONBodyBytes = 1 << 20 // 1 MiB
-		bodyBytes, err := io.ReadAll(io.LimitReader(r.Body, maxJSONBodyBytes))
+		maxBodyBytes := e.Extras.MaxJSONBodyBytes
+		if maxBodyBytes <= 0 {
+			maxBodyBytes = httptransport.DefaultMaxJSONBodyBytes
+		}
+		// One byte past the cap tells an oversized body from one exactly at it.
+		bodyBytes, err := io.ReadAll(io.LimitReader(r.Body, maxBodyBytes+1))
 		_ = r.Body.Close()
 		if err != nil {
 			recordAndRespondAPIError(ctx, w, span, "body_read", apierror.NewValidationError(fmt.Sprintf("Failed to read request body: %v", err)))
+			return
+		}
+		if int64(len(bodyBytes)) > maxBodyBytes {
+			recordAndRespondAPIError(ctx, w, span, "body_too_large", httptransport.NewBodyTooLargeError(maxBodyBytes))
 			return
 		}
 		jsonBodyBytes = bodyBytes

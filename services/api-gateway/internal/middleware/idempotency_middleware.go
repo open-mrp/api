@@ -5,7 +5,6 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
-	"fmt"
 	"io"
 	"maps"
 	"net/http"
@@ -38,8 +37,8 @@ const cookieTTLSeconds = 300 // 5 minutes
 
 var idempotencyMiddlewareTracer = tracing.GetTracer("api-gateway.idempotency_middleware")
 
-// maxIdempotencyRequestBodySize bounds the request body buffered by the idempotency middleware so an unauthenticated client cannot exhaust gateway memory by sending a very large body with an Idempotency-Key header. The limit matches the per-endpoint JSON body cap in apiendpoint, so any request that would have been accepted downstream is still accepted here.
-const maxIdempotencyRequestBodySize = 1 << 20 // 1 MiB
+// maxIdempotencyRequestBodySize bounds the body buffered here so a client cannot exhaust gateway memory with one large request. It is the largest JSON body any endpoint accepts, so nothing an endpoint would take is refused here; the endpoint applies its own, usually smaller, cap.
+const maxIdempotencyRequestBodySize = httptransport.MaxJSONBodyBytes
 
 // idempotencyStoreTimeout bounds the synchronous gRPC call that persists the response body and releases the idempotency lock. It must be long enough to survive parallel-request load because a timeout here abandons the SetResponse in flight, leaving the row locked until lock_expires_at (5 minutes by default). Duplicate requests in that window observe the key as still "in progress" and the client has no retryable signal.
 const idempotencyStoreTimeout = 30 * time.Second
@@ -359,9 +358,7 @@ func readAndRestoreBody(w http.ResponseWriter, r *http.Request) ([]byte, *http.R
 
 	if err != nil {
 		if _, ok := errors.AsType[*http.MaxBytesError](err); ok {
-			return nil, r, apierror.NewValidationError(
-				fmt.Sprintf("Request body exceeds the maximum allowed size of %d bytes.", maxIdempotencyRequestBodySize),
-			)
+			return nil, r, httptransport.NewBodyTooLargeError(maxIdempotencyRequestBodySize)
 		}
 		r.Body = io.NopCloser(bytes.NewReader(nil))
 		return nil, r, nil

@@ -435,9 +435,22 @@ func BindFromPath(r *http.Request, dst any) error {
 // DefaultMaxRawBodyBytes caps a raw body when the endpoint sets no limit of its own.
 const DefaultMaxRawBodyBytes = 1 << 20
 
+const (
+	// DefaultMaxJSONBodyBytes caps a JSON body when the endpoint sets no limit of its own.
+	DefaultMaxJSONBodyBytes = 1 << 20
+	// MaxJSONBodyBytes is the largest JSON body any endpoint may accept: the bulk imports' cap, and how
+	// much the idempotency middleware buffers before the endpoint's own cap is applied.
+	MaxJSONBodyBytes = 8 << 20
+)
+
+// NewBodyTooLargeError is the 413 for a request body over maxBytes. A body is refused rather than cut
+// short: a truncated one would be stored, verified or parsed as though it were whole.
+func NewBodyTooLargeError(maxBytes int64) *apierror.APIError {
+	return apierror.NewRequestTooLargeError(fmt.Sprintf("The request body is larger than the %s limit.", formatByteSize(maxBytes)))
+}
+
 // BindRawBody reads the request body into dst's `rawbody` []byte field. A body over maxBytes
-// (DefaultMaxRawBodyBytes when maxBytes is not positive) is refused with a 413 rather than cut short:
-// a truncated image would be stored, or a truncated payload verified, as though it were whole.
+// (DefaultMaxRawBodyBytes when maxBytes is not positive) is refused with a 413.
 func BindRawBody(r *http.Request, dst any, maxBytes int64) error {
 	if maxBytes <= 0 {
 		maxBytes = DefaultMaxRawBodyBytes
@@ -483,7 +496,7 @@ func BindRawBody(r *http.Request, dst any, maxBytes int64) error {
 				return fmt.Errorf("failed to read request body: %w", err)
 			}
 			if int64(len(bodyData)) > maxBytes {
-				return apierror.NewRequestTooLargeError(fmt.Sprintf("The request body is larger than the %s limit.", formatByteSize(maxBytes)))
+				return NewBodyTooLargeError(maxBytes)
 			}
 			bodyRead = true
 		}

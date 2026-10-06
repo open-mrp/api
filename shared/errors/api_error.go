@@ -58,7 +58,7 @@ const (
 	ErrorCodeInvalidFormat ErrorCode = "invalid_format"
 	// ErrorCodeMethodNotAllowed indicates the HTTP method is not supported for this endpoint.
 	ErrorCodeMethodNotAllowed ErrorCode = "method_not_allowed"
-	// ErrorCodeRequestTooLarge indicates the request body is larger than the endpoint accepts (413).
+	// ErrorCodeRequestTooLarge indicates the request body is larger than the endpoint accepts (413): 1 MB of JSON by default, 8 MB on the bulk imports.
 	ErrorCodeRequestTooLarge ErrorCode = "request_too_large"
 
 	// --- Resource errors (404/409/410) ---

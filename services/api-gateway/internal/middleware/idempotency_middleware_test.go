@@ -8,6 +8,7 @@ import (
 	"strings"
 	"testing"
 
+	apierror "github.com/open-mrp/api/shared/errors"
 	"github.com/open-mrp/api/shared/idempotency"
 )
 
@@ -125,8 +126,8 @@ func TestReadAndRestoreBody_RejectsOversizedBody(t *testing.T) {
 	if got != nil {
 		t.Errorf("expected nil body bytes when over the limit, got %d bytes", len(got))
 	}
-	if !strings.Contains(apiErr.PublicMessage, "exceeds the maximum allowed size") {
-		t.Errorf("unexpected public message: %q", apiErr.PublicMessage)
+	if apiErr.Code != apierror.ErrorCodeRequestTooLarge {
+		t.Errorf("an oversized body is a 413 request_too_large, got %q: %q", apiErr.Code, apiErr.PublicMessage)
 	}
 }
 

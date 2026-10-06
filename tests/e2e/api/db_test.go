@@ -119,7 +119,9 @@ func resetAgentRun(t *testing.T, runID, status string) {
 
 // trimPublishedOutbox deletes outbox messages earlier runs already delivered. Services purge them only
 // after a week, and every API call adds one, so a stack reused for several runs carries hundreds of
-// thousands of dead rows that slow the outbox poller and fill Docker's disk. Undelivered rows stay.
+// thousands of dead rows that slow the outbox poller and fill Docker's disk. Undelivered rows stay, and
+// so do rows published in the last half hour: tests read the outbox for the events they caused, and a
+// run started beside another one would otherwise delete them from under it.
 func trimPublishedOutbox() error {
 	conn, err := sql.Open("mysql", envOr("E2E_DB_URL", defaultE2EDBURL))
 	if err != nil {
@@ -128,7 +130,7 @@ func trimPublishedOutbox() error {
 	defer conn.Close()
 
 	for {
-		result, err := conn.Exec("DELETE FROM message_outbox WHERE status = 'published' LIMIT 5000")
+		result, err := conn.Exec("DELETE FROM message_outbox WHERE status = 'published' AND published_at < NOW(3) - INTERVAL 30 MINUTE LIMIT 5000")
 		if err != nil {
 			return err
 		}

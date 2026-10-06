@@ -262,6 +262,12 @@ func (s *customerSvcImpl) CreateCustomer(ctx context.Context, params domain.Crea
 		apiErr = s.withTx(ctx, func(txCtx context.Context, txSvc *customerSvcImpl) *apierror.APIError {
 			txCustomerRepo := txSvc.repos.NewCustomerRepo()
 
+			// Every create takes a number, typed in or allocated, so it queues behind the owner's other
+			// number writers before anything else is read.
+			if apiErr := txCustomerRepo.LockNumbers(txCtx, params.OwnerAccountID); apiErr != nil {
+				return apiErr
+			}
+
 			if apiErr := checkCustomerRefs(txCtx, txSvc.repos, params.OwnerAccountID, newCustomerRefs(params)); apiErr != nil {
 				return apiErr
 			}
@@ -281,7 +287,8 @@ func (s *customerSvcImpl) CreateCustomer(ctx context.Context, params domain.Crea
 				}
 			} else {
 				// Auto-generate the next customer number, reserved in one locked statement so
-				// two customers created at the same moment cannot be given the same one.
+				// two customers created at the same moment cannot be given the same one, and past
+				// any number someone typed in.
 				sysPropertyID, apiErr := id.GenID(id.SysPropertyIDPrefix, nil)
 				if apiErr != nil {
 					return apiErr
@@ -441,6 +448,13 @@ func (s *customerSvcImpl) UpdateCustomer(ctx context.Context, params domain.Upda
 		var result *domain.Customer
 		apiErr = s.withTx(ctx, func(txCtx context.Context, txSvc *customerSvcImpl) *apierror.APIError {
 			txCustomerRepo := txSvc.repos.NewCustomerRepo()
+
+			// Before the first read, or the number check below reads a snapshot older than the lock.
+			if params.Number != nil && *params.Number != "" {
+				if apiErr := txCustomerRepo.LockNumbers(txCtx, params.OwnerAccountID); apiErr != nil {
+					return apiErr
+				}
+			}
 
 			old, apiErr := txCustomerRepo.Get(txCtx, params.OwnerAccountID, params.CustomerAccountID, []string{"price_groups", "notification_preferences", "bill_to_address", "ship_to_address"})
 			if apiErr != nil {

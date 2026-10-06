@@ -1232,20 +1232,22 @@ func (r *customerRepoImpl) AllocateNextCustomerNumber(ctx context.Context, sysPr
 	ctx, span := customerRepoTracer.Start(ctx, "repository.customer.allocate_next_number")
 	defer span.End()
 
-	res, err := r.queries.AllocateNextCustomerNumber(ctx, sqlc.AllocateNextCustomerNumberParams{
-		ID:        sysPropertyID,
-		AccountID: accountID,
-	})
-	if apiErr := db.MapSQLError(err); apiErr != nil {
+	number, apiErr := customerNumbers(r.queries, accountID).next(ctx, sysPropertyID)
+	if apiErr != nil {
 		return 0, tracing.Trace(span, apiErr)
 	}
-
-	number, err := res.LastInsertId()
-	if err != nil {
-		return 0, tracing.Trace(span, apierror.NewInternalError(err, "Failed to read the reserved customer number."))
-	}
-
 	return number, nil
+}
+
+func (r *customerRepoImpl) LockNumbers(ctx context.Context, ownerAccountID string) *apierror.APIError {
+	ctx, span := customerRepoTracer.Start(ctx, "repository.customer.lock_numbers")
+	defer span.End()
+
+	_, err := r.queries.LockCustomerNumbers(ctx, ownerAccountID)
+	if apiErr := db.MapSQLError(err); apiErr != nil {
+		return tracing.Trace(span, apiErr)
+	}
+	return nil
 }
 
 func (r *customerRepoImpl) InsertPriceGroup(ctx context.Context, id, relationID, groupID string) *apierror.APIError {

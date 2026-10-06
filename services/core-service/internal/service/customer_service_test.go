@@ -152,3 +152,45 @@ func TestBulkDeleteCustomers_RecordsEachSnapshotUnderTheOwner(t *testing.T) {
 
 	require.Nil(t, s.svc.BulkDeleteCustomers(customerInternalCtx("ac_seller"), domain.BulkDeleteCustomersParams{CustomerIDs: []string{"ac_a", "ac_b"}}))
 }
+
+// No unique index guards customer numbers: an edit that sets one queues on the owner's row before its
+// first read, or two edits made at once both find the number free.
+func TestUpdateCustomer_LocksTheOwnersNumbersBeforeItsFirstRead(t *testing.T) {
+	s := newCustomerSvcSetup(t)
+	s.expectWrite()
+	number := "C-2"
+	gomock.InOrder(
+		s.customers.EXPECT().LockNumbers(gomock.Any(), "ac_seller").Return(nil),
+		s.customers.EXPECT().Get(gomock.Any(), "ac_seller", "ac_buyer", gomock.Any()).Return(&domain.Customer{ID: "ac_buyer", Number: "C-1"}, nil),
+		s.customers.EXPECT().ExistsByNumber(gomock.Any(), "ac_seller", number, gomock.Any()).Return(true, nil),
+	)
+
+	_, apiErr := s.svc.UpdateCustomer(customerInternalCtx("ac_seller"), domain.UpdateCustomerParams{
+		CustomerAccountID: "ac_buyer",
+		Number:            &number,
+	})
+
+	require.NotNil(t, apiErr)
+	assert.Equal(t, "number", apiErr.Param)
+}
+
+// Every create takes a number, typed in or allocated, so every create queues on the owner's row first.
+func TestCreateCustomer_ChecksATypedNumberOnlyUnderTheOwnersLock(t *testing.T) {
+	s := newCustomerSvcSetup(t)
+	s.expectWrite()
+	number := "C-1"
+	gomock.InOrder(
+		s.customers.EXPECT().LockNumbers(gomock.Any(), "ac_seller").Return(nil),
+		s.customers.EXPECT().ExistsByNumber(gomock.Any(), "ac_seller", number, nil).Return(true, nil),
+	)
+
+	_, apiErr := s.svc.CreateCustomer(customerInternalCtx("ac_seller"), domain.CreateCustomerParams{
+		Name:          "Buyer Co",
+		Number:        &number,
+		BillToAddress: &domain.CreateAddressParams{},
+		ShipToAddress: &domain.CreateAddressParams{},
+	})
+
+	require.NotNil(t, apiErr)
+	assert.Equal(t, "number", apiErr.Param)
+}

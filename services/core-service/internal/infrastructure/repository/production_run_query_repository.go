@@ -3,7 +3,7 @@ package repository
 import (
 	"context"
 	"database/sql"
-	"fmt"
+	"strconv"
 
 	"github.com/open-mrp/api/services/core-service/internal/domain"
 	"github.com/open-mrp/api/services/core-service/internal/infrastructure/sqlc"
@@ -101,37 +101,15 @@ func (r *productionRunQueryRepoImpl) GetNextNumber(ctx context.Context, accountI
 	ctx, span := productionRunQueryRepoTracer.Start(ctx, "repository.production_run_query.get_next_number")
 	defer span.End()
 
-	// Shares the atomic counter with the other production-run repository. Two allocators
-	// on the same series would each race the other, so both go through the same upsert.
-	seedID, apiErr := id.GenID(id.SysPropertyIDPrefix, nil)
+	// Shares the counter with the other production-run repository: two allocators on one series would
+	// race each other, so both go through numberCounter.
+	sysPropertyID, apiErr := id.GenID(id.SysPropertyIDPrefix, nil)
 	if apiErr != nil {
 		return "", tracing.Trace(span, apiErr)
 	}
-	if err := r.queries.SeedProductionRunNumberCounter(ctx, sqlc.SeedProductionRunNumberCounterParams{
-		ID:        seedID,
-		AccountID: accountID,
-	}); err != nil {
-		if apiErr := db.MapSQLError(err); apiErr != nil {
-			return "", tracing.Trace(span, apiErr)
-		}
-	}
-
-	allocID, apiErr := id.GenID(id.SysPropertyIDPrefix, nil)
+	number, apiErr := productionRunNumbers(r.queries, accountID).next(ctx, sysPropertyID)
 	if apiErr != nil {
 		return "", tracing.Trace(span, apiErr)
 	}
-	result, err := r.queries.AllocateNextProductionRunNumber(ctx, sqlc.AllocateNextProductionRunNumberParams{
-		ID:        allocID,
-		AccountID: accountID,
-	})
-	if apiErr := db.MapSQLError(err); apiErr != nil {
-		return "", tracing.Trace(span, apiErr)
-	}
-
-	nextNum, err := result.LastInsertId()
-	if err != nil {
-		return "", tracing.Trace(span, apierror.NewInternalError(err, "Could not read the allocated production run number."))
-	}
-
-	return fmt.Sprintf("%d", nextNum), nil
+	return strconv.FormatInt(number, 10), nil
 }

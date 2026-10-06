@@ -526,6 +526,12 @@ func (s *registrationFlowSvcImpl) registerNewCustomer(
 	apiErr = s.withTx(ctx, func(txCtx context.Context, txSvc *registrationFlowSvcImpl) *apierror.APIError {
 		txRepo := txSvc.repos.NewCustomerRegistrationRepo()
 
+		// Queue behind the seller's other customer number writers, so a number someone is typing in
+		// right now is not handed out here as well.
+		if apiErr := txSvc.repos.NewCustomerRepo().LockNumbers(txCtx, ownerAccountID); apiErr != nil {
+			return apiErr
+		}
+
 		// Reserve the number inside the transaction. Two people completing registration at
 		// the same moment used to read the same counter and both be given that number.
 		nextNum, apiErr := txRepo.AllocateNextCustomerNumber(txCtx, sysPropertyID, ownerAccountID)

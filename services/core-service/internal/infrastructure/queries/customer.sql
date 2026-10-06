@@ -916,6 +916,32 @@ AND external_number = sqlc.arg('external_number')
 AND account_relation_role_code = 'customer'
 AND (sqlc.narg('exclude_counterparty_id') IS NULL OR counterparty_account_id != sqlc.narg('exclude_counterparty_id'));
 
+-- name: LockCustomerNumbers :one
+-- No unique index guards customer numbers, so their writers queue on the owner's account row, as
+-- supplier numbers do. Take it before the transaction's first read so the number check sees every
+-- earlier holder's commit.
+SELECT id FROM account
+WHERE id = sqlc.arg('owner_account_id')
+FOR UPDATE;
+
+-- HighestNumericCustomerNumber is the highest all-digit customer number the owner uses that the counter
+-- (an INT) could also hand out. It is read only when the counter is created or turns out to be behind a
+-- number someone typed in.
+-- name: HighestNumericCustomerNumber :one
+SELECT CAST(COALESCE(MAX(CAST(external_number AS UNSIGNED)), 0) AS SIGNED) AS highest
+FROM account_relation
+WHERE owner_account_id = sqlc.arg('owner_account_id')
+AND account_relation_role_code = 'customer'
+AND external_number REGEXP '^[0-9]{1,10}$'
+AND CAST(external_number AS UNSIGNED) < 2147483647;
+
+-- RaiseCustomerNumberCounter moves the counter up to value, creating it there if the owner has none.
+-- It never moves it down.
+-- name: RaiseCustomerNumberCounter :exec
+INSERT INTO sys_property (id, account_id, sys_property_type_code, value, created_at, updated_at)
+VALUES (sqlc.arg('id'), sqlc.arg('account_id'), 'customer_number', sqlc.arg('value'), NOW(3), NOW(3))
+ON DUPLICATE KEY UPDATE value = GREATEST(value, sqlc.arg('value')), updated_at = NOW(3);
+
 -- name: InsertCustomerAccount :exec
 INSERT INTO account (id, name, account_type_code, onboarding_status_code,
     default_billing_address_id, default_shipping_address_id, created_at, updated_at)

@@ -66,18 +66,6 @@ func (q *Queries) CreateProductionRun(ctx context.Context, arg CreateProductionR
 	return err
 }
 
-const getNextProductionRunNumber = `-- name: GetNextProductionRunNumber :one
-SELECT COALESCE(MAX(CAST(number AS UNSIGNED)), 0) + 1 AS next_number
-FROM production_run WHERE account_id = ?
-`
-
-func (q *Queries) GetNextProductionRunNumber(ctx context.Context, accountID string) (int32, error) {
-	row := q.db.QueryRowContext(ctx, getNextProductionRunNumber, accountID)
-	var next_number int32
-	err := row.Scan(&next_number)
-	return next_number, err
-}
-
 const startProductionRun = `-- name: StartProductionRun :exec
 UPDATE production_run SET started_at = NOW(3), updated_at = NOW(3)
 WHERE id = ? AND account_id = ? AND started_at IS NULL

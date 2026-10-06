@@ -3,8 +3,8 @@ package repository
 import (
 	"context"
 	gosql "database/sql"
-	"fmt"
 	"sort"
+	"strconv"
 	"strings"
 	"time"
 
@@ -329,40 +329,20 @@ func (r *productionRunRepoImpl) GetNextNumbers(ctx context.Context, accountID st
 		return nil, nil
 	}
 
-	// Atomic rather than MAX(number)+1: two runs created at once — which releasing two
-	// weeks back to back does — read the same maximum and collide on the unique number.
-	seedID, apiErr := id.GenID(id.SysPropertyIDPrefix, nil)
+	// Atomic rather than MAX(number)+1: two runs created at once — which releasing two weeks back to back
+	// does — read the same maximum and collide on the unique number.
+	sysPropertyID, apiErr := id.GenID(id.SysPropertyIDPrefix, nil)
 	if apiErr != nil {
 		return nil, tracing.Trace(span, apiErr)
 	}
-	if err := r.queries.SeedProductionRunNumberCounter(ctx, sqlc.SeedProductionRunNumberCounterParams{
-		ID:        seedID,
-		AccountID: accountID,
-	}); err != nil {
-		if apiErr := db.MapSQLError(err); apiErr != nil {
-			return nil, tracing.Trace(span, apiErr)
-		}
-	}
-
+	counter := productionRunNumbers(r.queries, accountID)
 	numbers := make([]string, 0, count)
 	for range count {
-		allocID, apiErr := id.GenID(id.SysPropertyIDPrefix, nil)
+		number, apiErr := counter.next(ctx, sysPropertyID)
 		if apiErr != nil {
 			return nil, tracing.Trace(span, apiErr)
 		}
-		result, err := r.queries.AllocateNextProductionRunNumber(ctx, sqlc.AllocateNextProductionRunNumberParams{
-			ID:        allocID,
-			AccountID: accountID,
-		})
-		if apiErr := db.MapSQLError(err); apiErr != nil {
-			return nil, tracing.Trace(span, apiErr)
-		}
-
-		nextNum, err := result.LastInsertId()
-		if err != nil {
-			return nil, tracing.Trace(span, apierror.NewInternalError(err, "Could not read the allocated production run number."))
-		}
-		numbers = append(numbers, fmt.Sprintf("%d", nextNum))
+		numbers = append(numbers, strconv.FormatInt(number, 10))
 	}
 	return numbers, nil
 }

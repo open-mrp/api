@@ -893,6 +893,9 @@ type CustomerRepo interface {
 	ExistsByNumber(ctx context.Context, ownerAccountID, number string, excludeID *string) (bool, *apierror.APIError)
 	// AllocateNextCustomerNumber reserves the account's next customer number in one locked statement, so two registrations landing together cannot be handed the same one.
 	AllocateNextCustomerNumber(ctx context.Context, sysPropertyID, accountID string) (int64, *apierror.APIError)
+	// LockNumbers holds the owner's account row until the transaction ends so customer number writers
+	// queue. Call it before the transaction's first read, or the number checks after it read an older snapshot.
+	LockNumbers(ctx context.Context, ownerAccountID string) *apierror.APIError
 	InsertPriceGroup(ctx context.Context, id, relationID, groupID string) *apierror.APIError
 	DeletePriceGroups(ctx context.Context, relationID string) *apierror.APIError
 	GetFrequentlyOrderedProducts(ctx context.Context, ownerAccountID, customerAccountID string) ([]*FrequentlyOrderedProduct, *apierror.APIError)

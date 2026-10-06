@@ -199,22 +199,6 @@ func (q *Queries) FindSalesOrderIDsByProductionRunID(ctx context.Context, arg Fi
 	return items, nil
 }
 
-const getNextProductionRunNumberFull = `-- name: GetNextProductionRunNumberFull :one
-SELECT COALESCE(MAX(CAST(number AS UNSIGNED)), 0) + 1 AS next_number
-FROM production_run WHERE account_id = ?
-FOR UPDATE
-`
-
-// FOR UPDATE serializes concurrent allocators per account: without it two
-// transactions can read the same MAX and collide on the (account_id, number)
-// unique key.
-func (q *Queries) GetNextProductionRunNumberFull(ctx context.Context, accountID string) (int32, error) {
-	row := q.db.QueryRowContext(ctx, getNextProductionRunNumberFull, accountID)
-	var next_number int32
-	err := row.Scan(&next_number)
-	return next_number, err
-}
-
 const getProductionRun = `-- name: GetProductionRun :one
 SELECT
     pr.id,
@@ -284,6 +268,28 @@ func (q *Queries) GetProductionRun(ctx context.Context, arg GetProductionRunPara
 		&i.BatchCount,
 	)
 	return i, err
+}
+
+const highestNumericProductionRunNumber = `-- name: HighestNumericProductionRunNumber :one
+SELECT CAST(COALESCE(MAX(CAST(number AS UNSIGNED)), 0) AS SIGNED) AS highest
+FROM production_run
+WHERE account_id = ?
+AND number REGEXP '^[0-9]{1,10}$'
+AND CAST(number AS UNSIGNED) < 2147483647
+`
+
+// HighestNumericProductionRunNumber is the highest all-digit run number the account uses that the
+// counter (an INT) could also hand out. It is read when the counter is created or turns out to be behind
+// a run renamed or imported ahead of it, never on the usual allocation. A plain read: it locks nothing,
+// where seeding the counter with INSERT ... SELECT MAX share-locked every run of the account on every
+// allocation and deadlocked run creation against scans starting runs.
+//
+// Runs imported with a prefixed number ('PR-FC-001') are not part of the series.
+func (q *Queries) HighestNumericProductionRunNumber(ctx context.Context, accountID string) (int64, error) {
+	row := q.db.QueryRowContext(ctx, highestNumericProductionRunNumber, accountID)
+	var highest int64
+	err := row.Scan(&highest)
+	return highest, err
 }
 
 const insertProductionRun = `-- name: InsertProductionRun :exec
@@ -849,6 +855,30 @@ func (q *Queries) ListRunBatchTraversal(ctx context.Context, arg ListRunBatchTra
 	return items, nil
 }
 
+const raiseProductionRunNumberCounter = `-- name: RaiseProductionRunNumberCounter :exec
+INSERT INTO sys_property (id, account_id, sys_property_type_code, value, created_at, updated_at)
+VALUES (?, ?, 'production_run_number', ?, NOW(3), NOW(3))
+ON DUPLICATE KEY UPDATE value = GREATEST(value, ?), updated_at = NOW(3)
+`
+
+type RaiseProductionRunNumberCounterParams struct {
+	ID        string
+	AccountID string
+	Value     int32
+}
+
+// RaiseProductionRunNumberCounter moves the counter up to value, creating it there if the account has
+// none. It never moves it down.
+func (q *Queries) RaiseProductionRunNumberCounter(ctx context.Context, arg RaiseProductionRunNumberCounterParams) error {
+	_, err := q.db.ExecContext(ctx, raiseProductionRunNumberCounter,
+		arg.ID,
+		arg.AccountID,
+		arg.Value,
+		arg.Value,
+	)
+	return err
+}
+
 const runHasScannedBatches = `-- name: RunHasScannedBatches :one
 SELECT EXISTS (
     SELECT 1 FROM batch b
@@ -869,32 +899,6 @@ func (q *Queries) RunHasScannedBatches(ctx context.Context, arg RunHasScannedBat
 	var has_scanned bool
 	err := row.Scan(&has_scanned)
 	return has_scanned, err
-}
-
-const seedProductionRunNumberCounter = `-- name: SeedProductionRunNumberCounter :exec
-INSERT INTO sys_property (id, account_id, sys_property_type_code, value, created_at, updated_at)
-SELECT ?, ?, 'production_run_number',
-       COALESCE(MAX(CAST(pr.number AS UNSIGNED)), 0), NOW(3), NOW(3)
-FROM production_run pr
-WHERE pr.account_id = ?
-AND pr.number REGEXP '^[0-9]+$'
-ON DUPLICATE KEY UPDATE id = id
-`
-
-type SeedProductionRunNumberCounterParams struct {
-	ID        string
-	AccountID string
-}
-
-// SeedProductionRunNumberCounter primes the counter from existing rows the first time an
-// account allocates, so a database that already has runs does not restart numbering at 1.
-//
-// Only all-digit numbers count toward the series. Runs imported with a prefixed number
-// ('PR-FC-001') are not part of it, and casting them would fail the whole statement under
-// strict mode rather than being ignored the way a bare SELECT's warning is.
-func (q *Queries) SeedProductionRunNumberCounter(ctx context.Context, arg SeedProductionRunNumberCounterParams) error {
-	_, err := q.db.ExecContext(ctx, seedProductionRunNumberCounter, arg.ID, arg.AccountID, arg.AccountID)
-	return err
 }
 
 const setBatchProductionRunID = `-- name: SetBatchProductionRunID :exec

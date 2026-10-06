@@ -9853,6 +9853,20 @@ func (mr *MockCustomerRepoMockRecorder) ListContacts(ctx, customerAccountIDs any
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListContacts", reflect.TypeOf((*MockCustomerRepo)(nil).ListContacts), ctx, customerAccountIDs)
 }
 
+// LockNumbers mocks base method.
+func (m *MockCustomerRepo) LockNumbers(ctx context.Context, ownerAccountID string) *apierror.APIError {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "LockNumbers", ctx, ownerAccountID)
+	ret0, _ := ret[0].(*apierror.APIError)
+	return ret0
+}
+
+// LockNumbers indicates an expected call of LockNumbers.
+func (mr *MockCustomerRepoMockRecorder) LockNumbers(ctx, ownerAccountID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "LockNumbers", reflect.TypeOf((*MockCustomerRepo)(nil).LockNumbers), ctx, ownerAccountID)
+}
+
 // MergeAccountPrices mocks base method.
 func (m *MockCustomerRepo) MergeAccountPrices(ctx context.Context, ownerAccountID, targetAccountID string, sourceAccountIDs []string) *apierror.APIError {
 	m.ctrl.T.Helper()

@@ -14,30 +14,34 @@ import (
 	mediatormock "github.com/open-mrp/api/services/core-service/internal/domain/mock/mediator"
 	repositorymock "github.com/open-mrp/api/services/core-service/internal/domain/mock/repository"
 	"github.com/open-mrp/api/shared/appctx"
+	"github.com/open-mrp/api/shared/constants"
 	apierror "github.com/open-mrp/api/shared/errors"
 )
 
 type registrationSvcSetup struct {
-	svc          domain.RegistrationFlowSvc
-	accounts     *repositorymock.MockAccountRepo
-	groups       *repositorymock.MockAccountGroupRepo
-	paymentTerms *repositorymock.MockPaymentTermRepo
-	idempotency  *mediatormock.MockIdempotencyMed
+	svc           domain.RegistrationFlowSvc
+	accounts      *repositorymock.MockAccountRepo
+	groups        *repositorymock.MockAccountGroupRepo
+	paymentTerms  *repositorymock.MockPaymentTermRepo
+	shippingTerms *repositorymock.MockShippingTermRepo
+	idempotency   *mediatormock.MockIdempotencyMed
 }
 
 // newRegistrationSvcSetup wires no customer registration repo, so a test fails if a refused registration reaches a write.
 func newRegistrationSvcSetup(t *testing.T) *registrationSvcSetup {
 	ctrl := gomock.NewController(t)
 	s := &registrationSvcSetup{
-		accounts:     repositorymock.NewMockAccountRepo(ctrl),
-		groups:       repositorymock.NewMockAccountGroupRepo(ctrl),
-		paymentTerms: repositorymock.NewMockPaymentTermRepo(ctrl),
-		idempotency:  mediatormock.NewMockIdempotencyMed(ctrl),
+		accounts:      repositorymock.NewMockAccountRepo(ctrl),
+		groups:        repositorymock.NewMockAccountGroupRepo(ctrl),
+		paymentTerms:  repositorymock.NewMockPaymentTermRepo(ctrl),
+		shippingTerms: repositorymock.NewMockShippingTermRepo(ctrl),
+		idempotency:   mediatormock.NewMockIdempotencyMed(ctrl),
 	}
 	repos := factorymock.NewMockRepoFactory(ctrl)
 	repos.EXPECT().NewAccountRepo().Return(s.accounts).AnyTimes()
 	repos.EXPECT().NewAccountGroupRepo().Return(s.groups).AnyTimes()
 	repos.EXPECT().NewPaymentTermRepo().Return(s.paymentTerms).AnyTimes()
+	repos.EXPECT().NewShippingTermRepo().Return(s.shippingTerms).AnyTimes()
 	mediators := factorymock.NewMockMediatorFactory(ctrl)
 	mediators.EXPECT().Build(gomock.Any()).Return(domain.Mediators{Idempotency: s.idempotency}).AnyTimes()
 
@@ -94,4 +98,49 @@ func TestRegisterCustomer_ANewCustomersTermsMustBeTheSellers(t *testing.T) {
 	require.NotNil(t, apiErr)
 	assert.Equal(t, apierror.ErrorCodeResourceNotFound, apiErr.Code)
 	assert.Equal(t, "payment_term_id", apiErr.Param)
+}
+
+func registrationFlowAdminCtx(accountID string) context.Context {
+	return appctx.WithIdentity(context.Background(), &types.Identity{
+		Type:   types.IdentityActorTypeUser,
+		Target: &types.IdentityTarget{AccountID: accountID},
+		Actor: &types.IdentityActor{
+			RelationType: types.IdentityRelationTypeInternal,
+			ID:           "usr_admin",
+			AccountID:    &accountID,
+			RoleType:     new(string(constants.RoleTypeAdmin)),
+		},
+	})
+}
+
+// A flow's terms are offered to registrants of this account, so another account's term is refused before anything is written.
+func TestCreateRegistrationFlow_OffersOnlyTheAccountsTerms(t *testing.T) {
+	s := newRegistrationSvcSetup(t)
+	s.paymentTerms.EXPECT().GetByIDs(gomock.Any(), "ac_seller", []string{"pytm_own"}).Return([]*domain.PaymentTerm{{ID: "pytm_own"}}, nil)
+	s.shippingTerms.EXPECT().GetByIDs(gomock.Any(), "ac_seller", []string{"prepaid", "shtm_other"}).Return([]*domain.ShippingTerm{{ID: "prepaid"}}, nil)
+
+	_, apiErr := s.svc.CreateRegistrationFlow(registrationFlowAdminCtx("ac_seller"), domain.CreateRegistrationFlowParams{
+		Name:            "Wholesale",
+		PaymentTermIDs:  []string{"pytm_own"},
+		ShippingTermIDs: []string{"prepaid", "shtm_other"},
+	})
+
+	require.NotNil(t, apiErr)
+	assert.Equal(t, apierror.ErrorCodeResourceNotFound, apiErr.Code)
+	assert.Equal(t, "shipping_term_ids", apiErr.Param)
+}
+
+func TestUpdateRegistrationFlow_OffersOnlyTheAccountsTerms(t *testing.T) {
+	s := newRegistrationSvcSetup(t)
+	s.paymentTerms.EXPECT().GetByIDs(gomock.Any(), "ac_seller", []string{"pytm_other"}).Return(nil, nil)
+
+	_, apiErr := s.svc.UpdateRegistrationFlow(registrationFlowAdminCtx("ac_seller"), domain.UpdateRegistrationFlowParams{
+		RegistrationFlowID: "rgfw_1",
+		PaymentTermIDs:     []string{"pytm_other"},
+		HasPaymentTermIDs:  true,
+	})
+
+	require.NotNil(t, apiErr)
+	assert.Equal(t, apierror.ErrorCodeResourceNotFound, apiErr.Code)
+	assert.Equal(t, "payment_term_ids", apiErr.Param)
 }

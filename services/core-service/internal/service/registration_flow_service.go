@@ -146,6 +146,10 @@ func (s *registrationFlowSvcImpl) CreateRegistrationFlow(ctx context.Context, pa
 
 	params.AccountID = identity.Target.AccountID
 
+	if apiErr := checkCustomerRefs(ctx, s.repos, params.AccountID, registrationFlowTermRefs(params.PaymentTermIDs, params.ShippingTermIDs)); apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
+
 	meds := s.mediators()
 
 	idempotencyKey, apiErr := meds.Idempotency.UpsertIdempotencyKey(ctx, identity)
@@ -215,6 +219,10 @@ func (s *registrationFlowSvcImpl) UpdateRegistrationFlow(ctx context.Context, pa
 	}
 
 	params.AccountID = identity.Target.AccountID
+
+	if apiErr := checkCustomerRefs(ctx, s.repos, params.AccountID, registrationFlowTermRefs(params.PaymentTermIDs, params.ShippingTermIDs)); apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
 
 	meds := s.mediators()
 
@@ -470,6 +478,18 @@ func (s *registrationFlowSvcImpl) registerExistingCustomer(
 	}
 
 	return nil
+}
+
+// registrationFlowTermRefs lists the terms a flow would offer its registrants, who then choose one for their customer record.
+func registrationFlowTermRefs(paymentTermIDs, shippingTermIDs []string) customerRefs {
+	var refs customerRefs
+	for _, termID := range paymentTermIDs {
+		refs.add(customerRefPaymentTerm, &termID, nil, "payment_term_ids")
+	}
+	for _, termID := range shippingTermIDs {
+		refs.add(customerRefShippingTerm, &termID, nil, "shipping_term_ids")
+	}
+	return refs
 }
 
 func (s *registrationFlowSvcImpl) registerNewCustomer(

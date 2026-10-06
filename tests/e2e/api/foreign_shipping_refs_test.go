@@ -273,3 +273,54 @@ func TestForeignShippingRefs_PurchaseOrderCreateTakesSystemAndOwnRefs(t *testing
 		})
 	}
 }
+
+// --- Registration flows ---
+
+func TestForeignShippingRefs_RegistrationFlowRefusesForeignTerms(t *testing.T) {
+	t.Parallel()
+	foreign := createTenantBShippingRefs(t)
+
+	for _, tc := range []struct{ field, allowed, id string }{
+		{"shipping_term_ids", SeedShippingTermID, foreign.shippingTermID},
+		{"payment_term_ids", SeedPaymentTermID, foreign.paymentTermID},
+	} {
+		t.Run(tc.field+" on create", func(t *testing.T) {
+			t.Parallel()
+			status, body, err := apiClient.Post(registrationFlowsPath, map[string]any{
+				"name":   uniqueName("e2e-flow-foreign"),
+				tc.field: []string{tc.allowed, tc.id},
+			}, newIdempotencyKey())
+			require.NoError(t, err)
+			if status == 201 {
+				id := jsonField(parseJSON(body), "id")
+				t.Cleanup(func() { _, _, _ = apiClient.Delete(registrationFlowsPath + "/" + id) })
+			}
+			assertRefNotFound(t, status, body, tc.field)
+		})
+
+		t.Run(tc.field+" on update", func(t *testing.T) {
+			t.Parallel()
+			id := createRegistrationFlow(t, apiClient)
+
+			status, _, body := patchRegistrationFlow(t, apiClient, id, map[string]any{tc.field: []string{tc.id}})
+			assertRefNotFound(t, status, body, tc.field)
+
+			flow := parseJSON(mustGet(t, registrationFlowsPath+"/"+id))
+			assert.Equal(t, []string{SeedPaymentTermID}, optionIDs(t, flow, "payment_term_options"), "the flow keeps its payment terms")
+			assert.Empty(t, optionIDs(t, flow, "shipping_term_options"), "the flow keeps its shipping terms")
+		})
+	}
+}
+
+func TestForeignShippingRefs_RegistrationFlowTakesSystemAndOwnTerms(t *testing.T) {
+	t.Parallel()
+	id := createRegistrationFlow(t, apiClient)
+
+	status, flow, body := patchRegistrationFlow(t, apiClient, id, map[string]any{
+		"shipping_term_ids": []string{SeedShippingTermID, SeedCustomShippingTermID},
+		"payment_term_ids":  []string{SeedDefaultPaymentTermID, SeedPaymentTermID},
+	})
+	requireStatus(t, 200, status, body)
+	assert.ElementsMatch(t, []string{SeedShippingTermID, SeedCustomShippingTermID}, optionIDs(t, flow, "shipping_term_options"))
+	assert.ElementsMatch(t, []string{SeedDefaultPaymentTermID, SeedPaymentTermID}, optionIDs(t, flow, "payment_term_options"))
+}

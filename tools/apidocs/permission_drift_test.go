@@ -148,11 +148,12 @@ type endpointDecl struct {
 	roleAdmin bool
 }
 
-// parseEndpointDecls scans the api-gateway endpoints for AgentTool endpoints and returns each one's folder, handler method, declared permissions, and role-type.
+// parseEndpointDecls scans the api-gateway endpoints for AgentTool endpoints and returns each one's folder, handler method, declared permissions (counterparty ones included), and role-type.
 func parseEndpointDecls(t *testing.T, root string, domains, actions map[string]string) []endpointDecl {
 	t.Helper()
 	handlerRe := regexp.MustCompile(`svc\.\([A-Za-z]+\)\.([A-Za-z0-9_]+)`)
 	permRe := regexp.MustCompile(`\{(?:Domain: )?types\.PermissionDomain([A-Za-z]+), (?:Action: )?types\.Action([A-Za-z]+)\}`)
+	counterpartiesRe := regexp.MustCompile(`apiendpoint\.Counterparties\(types\.Action([A-Za-z]+)\)`)
 	var out []endpointDecl
 	_ = filepath.WalkDir(filepath.Join(root, "services/api-gateway/endpoints"), func(path string, d os.DirEntry, err error) error {
 		if err != nil || d.IsDir() || !strings.HasSuffix(path, ".go") || strings.HasSuffix(path, "_test.go") {
@@ -177,6 +178,12 @@ func parseEndpointDecls(t *testing.T, root string, domains, actions map[string]s
 				if act, ok := actions[m[2]]; ok {
 					e.perms[dom+":"+act] = true
 				}
+			}
+		}
+		for _, m := range counterpartiesRe.FindAllStringSubmatch(src, -1) {
+			if act, ok := actions[m[1]]; ok {
+				e.perms[domains["Customers"]+":"+act] = true
+				e.perms[domains["Suppliers"]+":"+act] = true
 			}
 		}
 		out = append(out, e)

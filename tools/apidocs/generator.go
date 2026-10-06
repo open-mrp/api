@@ -9,6 +9,7 @@ import (
 	"path/filepath"
 	"reflect"
 	"runtime/debug"
+	"slices"
 	"strings"
 
 	apiendpoint "github.com/open-mrp/api/services/api-gateway/pkg/endpoint"
@@ -33,7 +34,20 @@ func endpointSpecField(e apiendpoint.APIEndpointer) reflect.Value {
 }
 
 // authRequirementParagraph renders the endpoint's declared role-type and permission requirements as a human-readable sentence (or two) for appending to the OpenAPI operation description. Returns "" when the endpoint declares neither. Reuses requiredRoleType and explicitPermissions (agent_tools.go).
+//
+// What acting in a customer's or supplier's account requires is its own paragraph ahead of the requirement sentence, because the docs site reads the permissions from a requirement sentence that ends the description.
 func authRequirementParagraph(spec reflect.Value) string {
+	requirement := ownAuthRequirement(spec)
+	if requirement == "" {
+		return ""
+	}
+	if counterparty := counterpartyRequirement(spec); counterparty != "" {
+		return counterparty + "\n\n" + requirement
+	}
+	return requirement
+}
+
+func ownAuthRequirement(spec reflect.Value) string {
 	var sentences []string
 	if role := requiredRoleType(spec); role != "" {
 		sentences = append(sentences, fmt.Sprintf("This endpoint requires the `%s` role type.", role))
@@ -60,6 +74,32 @@ func authRequirementParagraph(spec reflect.Value) string {
 func requiresAllPermissions(spec reflect.Value) bool {
 	f := spec.FieldByName("RequiresAllPermissions")
 	return f.IsValid() && f.Kind() == reflect.Bool && f.Bool()
+}
+
+// counterpartyRequirement states what the endpoint's CounterpartyPermissions ask for in a customer's or supplier's account, leaving out an account kind whose permission is the endpoint's own.
+func counterpartyRequirement(spec reflect.Value) string {
+	f := spec.FieldByName("CounterpartyPermissions")
+	if !f.IsValid() || f.Kind() != reflect.Struct {
+		return ""
+	}
+	own := explicitPermissions(spec)
+	var clauses []string
+	for _, kind := range []struct{ field, account string }{{"Customer", "a customer's"}, {"Supplier", "a supplier's"}} {
+		p := permissionCode(f.FieldByName(kind.field))
+		if p == "" || slices.Contains(own, p) {
+			continue
+		}
+		clauses = append(clauses, fmt.Sprintf("acting in %s account requires `%s`", kind.account, p))
+	}
+	if len(clauses) == 0 {
+		return ""
+	}
+	sentence := strings.Join(clauses, ", and ")
+	if len(clauses) > 1 {
+		sentence += ","
+	}
+	sentence += " instead of the permission this endpoint requires in your own account."
+	return strings.ToUpper(sentence[:1]) + sentence[1:]
 }
 
 func endpointRequestHasJSONFields(reqType reflect.Type) bool {

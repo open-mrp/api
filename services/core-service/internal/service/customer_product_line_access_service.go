@@ -189,6 +189,7 @@ func (s *customerProductLineAccessSvcImpl) CreateCustomerProductLineAccess(ctx c
 	}
 
 	params.AccountID = identity.Target.AccountID
+	params.ProductLineIDs = dedupeStrings(params.ProductLineIDs)
 	if len(params.ProductLineIDs) == 0 {
 		return nil, tracing.Trace(span, errNoProductLinesGranted())
 	}
@@ -274,6 +275,7 @@ func (s *customerProductLineAccessSvcImpl) UpdateCustomerProductLineAccess(ctx c
 	}
 
 	params.AccountID = identity.Target.AccountID
+	params.ProductLineIDs = dedupeStrings(params.ProductLineIDs)
 	if len(params.ProductLineIDs) == 0 {
 		return nil, tracing.Trace(span, errNoProductLinesGranted())
 	}

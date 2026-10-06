@@ -7,6 +7,7 @@ import (
 
 	"github.com/open-mrp/api/services/core-service/internal/domain"
 	apierror "github.com/open-mrp/api/shared/errors"
+	"github.com/open-mrp/api/shared/field"
 )
 
 // customerRefKind is a record a customer's account_relation row points at. The row has no foreign keys, so this check is all that stops it naming another account's record.
@@ -106,6 +107,37 @@ func checkCustomerRefs(ctx context.Context, repos domain.RepoFactory, accountID 
 		}
 	}
 	return nil
+}
+
+// checkServiceLevelOnCarrier refuses a service level of a different carrier than the one the record ships on.
+func checkServiceLevelOnCarrier(ctx context.Context, repos domain.RepoFactory, carrierID, serviceLevelID *string) *apierror.APIError {
+	if carrierID == nil || *carrierID == "" || serviceLevelID == nil || *serviceLevelID == "" {
+		return nil
+	}
+	onCarrier, apiErr := repos.NewServiceLevelRepo().IsInCarrier(ctx, *serviceLevelID, *carrierID)
+	if apiErr != nil {
+		return apiErr
+	}
+	if !onCarrier {
+		return apierror.NewValidationErrorWithParam("The service level does not belong to the carrier.", "service_level_id")
+	}
+	return nil
+}
+
+// checkUpdatedServiceLevelOnCarrier checks the pair a record holds once an update applies, so a carrier sent alone is checked against the held service level and the other way round. A pair the update leaves alone is not checked again.
+func checkUpdatedServiceLevelOnCarrier(ctx context.Context, repos domain.RepoFactory, heldCarrierID, heldServiceLevelID, carrierID *string, serviceLevelID field.Clearable[string]) *apierror.APIError {
+	nextCarrierID := heldCarrierID
+	if carrierID != nil {
+		nextCarrierID = carrierID
+	}
+	nextServiceLevelID := heldServiceLevelID
+	if serviceLevelID.WasProvided() {
+		nextServiceLevelID = serviceLevelID.ValuePtr()
+	}
+	if equalStringPtr(nextCarrierID, heldCarrierID) && equalStringPtr(nextServiceLevelID, heldServiceLevelID) {
+		return nil
+	}
+	return checkServiceLevelOnCarrier(ctx, repos, nextCarrierID, nextServiceLevelID)
 }
 
 // findCustomerRefs returns which of ids the account may use as a record of kind.

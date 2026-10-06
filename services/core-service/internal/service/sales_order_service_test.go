@@ -714,6 +714,7 @@ func (suite *SalesOrderSvcTestSuite) expectCreateOrderResolutionChain(accountID 
 func (suite *SalesOrderSvcTestSuite) expectCreateOrderReferenceValidationMocks(accountID string) {
 	suite.serviceLevelRepo.EXPECT().Get(gomock.Any(), accountID, "svcl_default").
 		Return(&domain.ServiceLevel{}, nil).AnyTimes()
+	suite.serviceLevelRepo.EXPECT().IsInCarrier(gomock.Any(), gomock.Any(), gomock.Any()).Return(true, nil).AnyTimes()
 	suite.shippingTermRepo.EXPECT().Get(gomock.Any(), gomock.Any()).
 		Return(&domain.ShippingTerm{}, nil).AnyTimes()
 	suite.paymentTermRepo.EXPECT().Get(gomock.Any(), gomock.Any()).
@@ -1138,6 +1139,24 @@ func (suite *SalesOrderSvcTestSuite) TestCreateSalesOrder_MissingCarrierWithoutC
 	suite.Equal("carrier_id", apiErr.Param)
 }
 
+func (suite *SalesOrderSvcTestSuite) TestCreateSalesOrder_RefusesAServiceLevelOffTheCarrier() {
+	ctx := salesOrderIdempotencyCtx(salesOrderInternalCtx("ac_test"), "/core.CoreService/CreateSalesOrder")
+
+	suite.expectPlanLimitAllows()
+	suite.expectIdempotencyStarted()
+	suite.expectCreateOrderResolutionChain("ac_test")
+	suite.carrierRepo.EXPECT().GetByIDs(gomock.Any(), "ac_test", []string{"cr_default"}).Return([]*domain.Carrier{{ID: "cr_default"}}, nil)
+	suite.serviceLevelRepo.EXPECT().Get(gomock.Any(), "ac_test", "svcl_default").Return(&domain.ServiceLevel{}, nil)
+	suite.serviceLevelRepo.EXPECT().IsInCarrier(gomock.Any(), "svcl_default", "cr_default").Return(false, nil)
+	suite.orderRepo.EXPECT().GetNextOrderNumber(gomock.Any(), gomock.Any()).Times(0)
+	suite.expectCacheError()
+
+	_, apiErr := suite.svc.CreateSalesOrder(ctx, baseCreateOrderParams())
+	suite.Require().NotNil(apiErr)
+	suite.Equal(apierror.ErrorCodeValidationFailed, apiErr.Code)
+	suite.Equal("service_level_id", apiErr.Param)
+}
+
 // The carrier is looked up on its own, so a freight-exempt order that never reaches the shipping-rate lookup cannot store another tenant's carrier.
 func (suite *SalesOrderSvcTestSuite) TestCreateSalesOrder_RefusesACarrierOutsideTheAccount() {
 	ctx := salesOrderIdempotencyCtx(salesOrderInternalCtx("ac_test"), "/core.CoreService/CreateSalesOrder")
@@ -1457,6 +1476,64 @@ func (suite *SalesOrderSvcTestSuite) TestUpdateSalesOrder_KeepsHeldCounterpartyR
 		BillingAddressID:  new("ad_bill"),
 		ShippingAddressID: new("ad_ship"),
 		OrderDiscountID:   field.Set("ords_own"),
+	})
+	suite.Nil(apiErr)
+}
+
+// The pair is checked as the order will hold it, so a carrier or a service level sent alone is checked against the other one already on the order.
+func (suite *SalesOrderSvcTestSuite) TestUpdateSalesOrder_RefusesAServiceLevelOffTheCarrier() {
+	for _, tc := range []struct {
+		name   string
+		params domain.UpdateSalesOrderParams
+		lookup func()
+	}{
+		{"carrier alone", domain.UpdateSalesOrderParams{CarrierID: new("cr_new")}, func() {
+			suite.carrierRepo.EXPECT().GetByIDs(gomock.Any(), "ac_test", []string{"cr_new"}).Return([]*domain.Carrier{{ID: "cr_new"}}, nil)
+			suite.serviceLevelRepo.EXPECT().IsInCarrier(gomock.Any(), "crop_own", "cr_new").Return(false, nil)
+		}},
+		{"service level alone", domain.UpdateSalesOrderParams{ServiceLevelID: field.Set("crop_other")}, func() {
+			suite.carrierRepo.EXPECT().GetOptionsByIDs(gomock.Any(), "ac_test", []string{"crop_other"}).Return([]*domain.ServiceLevel{{ID: "crop_other"}}, nil)
+			suite.serviceLevelRepo.EXPECT().IsInCarrier(gomock.Any(), "crop_other", "cr_own").Return(false, nil)
+		}},
+		{"both", domain.UpdateSalesOrderParams{CarrierID: new("cr_new"), ServiceLevelID: field.Set("crop_other")}, func() {
+			suite.carrierRepo.EXPECT().GetByIDs(gomock.Any(), "ac_test", []string{"cr_new"}).Return([]*domain.Carrier{{ID: "cr_new"}}, nil)
+			suite.carrierRepo.EXPECT().GetOptionsByIDs(gomock.Any(), "ac_test", []string{"crop_other"}).Return([]*domain.ServiceLevel{{ID: "crop_other"}}, nil)
+			suite.serviceLevelRepo.EXPECT().IsInCarrier(gomock.Any(), "crop_other", "cr_new").Return(false, nil)
+		}},
+	} {
+		suite.Run(tc.name, func() {
+			ctx := salesOrderIdempotencyCtx(salesOrderInternalCtx("ac_test"), "/core.CoreService/UpdateSalesOrder")
+			suite.expectIdempotencyStarted()
+			suite.orderRepo.EXPECT().Get(gomock.Any(), "ac_test", "or_1").
+				Return(&domain.SalesOrder{ID: "or_1", BuyerAccountID: "ac_buyer", CarrierID: new("cr_own"), ServiceLevelID: new("crop_own")}, nil)
+			tc.lookup()
+			suite.expectCacheError()
+
+			params := tc.params
+			params.SalesOrderID = "or_1"
+			_, apiErr := suite.svc.UpdateSalesOrder(ctx, params)
+
+			suite.Require().NotNil(apiErr)
+			suite.Equal(apierror.ErrorCodeValidationFailed, apiErr.Code)
+			suite.Equal("service_level_id", apiErr.Param)
+		})
+	}
+}
+
+// Clearing the service level alongside a carrier change leaves nothing to check the new carrier against.
+func (suite *SalesOrderSvcTestSuite) TestUpdateSalesOrder_TakesANewCarrierWithItsServiceLevelCleared() {
+	ctx := salesOrderIdempotencyCtx(salesOrderInternalCtx("ac_test"), "/core.CoreService/UpdateSalesOrder")
+	suite.expectIdempotencyStarted()
+	suite.orderRepo.EXPECT().Get(gomock.Any(), "ac_test", "or_1").
+		Return(&domain.SalesOrder{ID: "or_1", BuyerAccountID: "ac_buyer", CarrierID: new("cr_own"), ServiceLevelID: new("crop_own")}, nil)
+	suite.carrierRepo.EXPECT().GetByIDs(gomock.Any(), "ac_test", []string{"cr_new"}).Return([]*domain.Carrier{{ID: "cr_new"}}, nil)
+	suite.orderRepo.EXPECT().Update(gomock.Any(), gomock.Any()).Return(&domain.SalesOrder{ID: "or_1"}, nil)
+	suite.expectCacheSuccess()
+
+	_, apiErr := suite.svc.UpdateSalesOrder(ctx, domain.UpdateSalesOrderParams{
+		SalesOrderID:   "or_1",
+		CarrierID:      new("cr_new"),
+		ServiceLevelID: field.Clear[string](),
 	})
 	suite.Nil(apiErr)
 }

@@ -332,6 +332,9 @@ func (s *shipmentSvcImpl) UpdateShipment(ctx context.Context, params domain.Upda
 			if apiErr := txSvc.checkShipmentRoutingInAccount(txCtx, params.AccountID, old, params.CarrierID, params.ServiceLevelID); apiErr != nil {
 				return apiErr
 			}
+			if apiErr := checkUpdatedServiceLevelOnCarrier(txCtx, txSvc.repos, &old.CarrierID, old.ServiceLevelID, params.CarrierID, params.ServiceLevelID); apiErr != nil {
+				return apiErr
+			}
 
 			// The SQL assigns the service level outright rather than COALESCE-ing it, so an omitted
 			// field has to carry the current value forward; an explicit null falls through and clears.
@@ -455,6 +458,9 @@ func (s *shipmentSvcImpl) AdminUpdateShipmentTracking(ctx context.Context, param
 			}
 
 			if apiErr := txSvc.checkShipmentRoutingInAccount(txCtx, params.AccountID, old, params.CarrierID, params.ServiceLevelID); apiErr != nil {
+				return apiErr
+			}
+			if apiErr := checkUpdatedServiceLevelOnCarrier(txCtx, txSvc.repos, &old.CarrierID, old.ServiceLevelID, params.CarrierID, params.ServiceLevelID); apiErr != nil {
 				return apiErr
 			}
 

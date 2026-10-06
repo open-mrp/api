@@ -394,7 +394,7 @@ func composeFollowupBody(firstName, paragraph, signature string) string {
 
 %s
 
-I'd love to hear how it's going so far: what you were hoping OpenMRP would handle for you, and whether anything was confusing or missing. Just reply to this email; it comes straight to me.
+I'd love to hear how it's going so far: what you were hoping OpenMRP would handle for you, and whether anything was confusing or missing.
 
 If it would help, I'm also happy to get on a quick call and help you get set up.
 

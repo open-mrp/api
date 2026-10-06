@@ -34,11 +34,20 @@ func machToNullString(s *string) gosql.NullString {
 	return gosql.NullString{String: *s, Valid: true}
 }
 
+// machBuildSearchParams matches machine names that start with the search term.
 func machBuildSearchParams(query *string) gosql.NullString {
 	if query == nil || *query == "" {
 		return gosql.NullString{}
 	}
-	return gosql.NullString{String: *query + "%", Valid: true}
+	return gosql.NullString{String: db.EscapeLike(*query) + "%", Valid: true}
+}
+
+// machCursorMatchTier is the cursor's match tier; a cursor without one is from a list every machine of
+// which is tier 0.
+func machCursorMatchTier(cur pagination.StringCursor) gosql.NullInt64 {
+	tier := db.NullTierInt64Param(cur.MatchTier)
+	tier.Valid = true
+	return tier
 }
 
 func mapMachineForwardRow(row sqlc.ListMachinesForwardRow) *domain.Machine {
@@ -191,40 +200,20 @@ func (r *machineRepoImpl) List(ctx context.Context, params domain.ListMachinesPa
 	defer span.End()
 
 	searchQuery := machBuildSearchParams(params.Query)
-	var cursorDir *pagination.Direction
+	searchExact := db.NullStringPtr(params.Query)
+	tiers := map[string]int32{}
+	matchTier := func(m *domain.Machine) int32 { return tiers[m.ID] }
+	page := func(machines []*domain.Machine, cursorDir *pagination.Direction) *domain.ListMachinesResult {
+		result, pageInfo := pagination.BuildPageStringWithSearchRank(machines, params.Limit, cursorDir, searchExact.Valid, machineCreatedAt, machineID, matchTier)
+		return &domain.ListMachinesResult{Machines: result, PageInfo: pageInfo}
+	}
 
-	if params.Cursor != nil {
-		cur, err := pagination.DecodeStringCursor(*params.Cursor)
-		if err != nil {
-			return nil, apierror.NewValidationErrorWithParam("Invalid pagination cursor.", "cursor")
-		}
-		cursorDir = &cur.Direction
-
-		if cur.Direction == pagination.DirectionBackward {
-			rows, err := r.queries.ListMachinesBackward(ctx, sqlc.ListMachinesBackwardParams{
-				AccountID:       params.AccountID,
-				SearchQuery:     searchQuery,
-				CursorCreatedAt: cur.OccurredAt,
-				CursorID:        cur.ID,
-				Limit:           params.Limit + 1,
-			})
-			if apiErr := db.MapSQLError(err); apiErr != nil {
-				return nil, tracing.Trace(span, apiErr)
-			}
-			machines := make([]*domain.Machine, len(rows))
-			for i, row := range rows {
-				machines[i] = mapMachineBackwardRow(row)
-			}
-			result, pageInfo := pagination.BuildPageString(machines, params.Limit, cursorDir, machineCreatedAt, machineID)
-			return &domain.ListMachinesResult{Machines: result, PageInfo: pageInfo}, nil
-		}
-
+	if params.Cursor == nil {
 		rows, err := r.queries.ListMachinesForward(ctx, sqlc.ListMachinesForwardParams{
-			AccountID:       params.AccountID,
-			SearchQuery:     searchQuery,
-			CursorCreatedAt: gosql.NullTime{Time: cur.OccurredAt, Valid: true},
-			CursorID:        gosql.NullString{String: cur.ID, Valid: true},
-			Limit:           params.Limit + 1,
+			AccountID:   params.AccountID,
+			SearchQuery: searchQuery,
+			SearchExact: searchExact,
+			Limit:       params.Limit + 1,
 		})
 		if apiErr := db.MapSQLError(err); apiErr != nil {
 			return nil, tracing.Trace(span, apiErr)
@@ -232,26 +221,55 @@ func (r *machineRepoImpl) List(ctx context.Context, params domain.ListMachinesPa
 		machines := make([]*domain.Machine, len(rows))
 		for i, row := range rows {
 			machines[i] = mapMachineForwardRow(row)
+			tiers[row.ID] = int32(row.MatchTier)
 		}
-		result, pageInfo := pagination.BuildPageString(machines, params.Limit, cursorDir, machineCreatedAt, machineID)
-		return &domain.ListMachinesResult{Machines: result, PageInfo: pageInfo}, nil
+		return page(machines, nil), nil
+	}
+
+	cur, err := pagination.DecodeStringCursor(*params.Cursor)
+	if err != nil {
+		return nil, apierror.NewValidationErrorWithParam("Invalid pagination cursor.", "cursor")
+	}
+
+	if cur.Direction == pagination.DirectionBackward {
+		rows, err := r.queries.ListMachinesBackward(ctx, sqlc.ListMachinesBackwardParams{
+			AccountID:       params.AccountID,
+			SearchQuery:     searchQuery,
+			SearchExact:     searchExact,
+			CursorMatchTier: machCursorMatchTier(cur),
+			CursorCreatedAt: cur.OccurredAt,
+			CursorID:        cur.ID,
+			Limit:           params.Limit + 1,
+		})
+		if apiErr := db.MapSQLError(err); apiErr != nil {
+			return nil, tracing.Trace(span, apiErr)
+		}
+		machines := make([]*domain.Machine, len(rows))
+		for i, row := range rows {
+			machines[i] = mapMachineBackwardRow(row)
+			tiers[row.ID] = int32(row.MatchTier)
+		}
+		return page(machines, &cur.Direction), nil
 	}
 
 	rows, err := r.queries.ListMachinesForward(ctx, sqlc.ListMachinesForwardParams{
-		AccountID:   params.AccountID,
-		SearchQuery: searchQuery,
-		Limit:       params.Limit + 1,
+		AccountID:       params.AccountID,
+		SearchQuery:     searchQuery,
+		SearchExact:     searchExact,
+		CursorMatchTier: machCursorMatchTier(cur),
+		CursorCreatedAt: gosql.NullTime{Time: cur.OccurredAt, Valid: true},
+		CursorID:        gosql.NullString{String: cur.ID, Valid: true},
+		Limit:           params.Limit + 1,
 	})
 	if apiErr := db.MapSQLError(err); apiErr != nil {
 		return nil, tracing.Trace(span, apiErr)
 	}
-
 	machines := make([]*domain.Machine, len(rows))
 	for i, row := range rows {
 		machines[i] = mapMachineForwardRow(row)
+		tiers[row.ID] = int32(row.MatchTier)
 	}
-	result, pageInfo := pagination.BuildPageString(machines, params.Limit, cursorDir, machineCreatedAt, machineID)
-	return &domain.ListMachinesResult{Machines: result, PageInfo: pageInfo}, nil
+	return page(machines, &cur.Direction), nil
 }
 
 func (r *machineRepoImpl) Export(ctx context.Context, params domain.ExportMachinesParams) ([]*domain.Machine, *apierror.APIError) {

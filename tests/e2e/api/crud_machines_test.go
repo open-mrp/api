@@ -188,6 +188,36 @@ func TestMachines_ListSearch(t *testing.T) {
 	}
 }
 
+// The machine named exactly the search term comes first, ahead of newer machines whose names only start
+// with it: machine "1" must not sit behind "10" through "19". Paging on still visits every match once.
+func TestMachines_ListSearchPutsTheExactNameFirst(t *testing.T) {
+	t.Parallel()
+
+	exact := uniqueName("e2e-mach-exact")
+	var ids []string
+	for _, name := range []string{exact, exact + "0", exact + "1", exact + "2"} {
+		status, body, err := apiClient.Post(machinesPath, map[string]any{
+			"name":          name,
+			"serial_number": uniqueName("e2e-mach-exact-sn"),
+			"department_id": SeedDepartmentID,
+		}, newIdempotencyKey())
+		require.NoError(t, err)
+		requireStatus(t, 201, status, body)
+		id := jsonField(parseJSON(body), "id")
+		require.NotEmpty(t, id)
+		defer apiClient.Delete(machinesPath + "/" + id)
+		ids = append(ids, id)
+	}
+
+	list, status, err := apiClient.GetList(machinesPath, url.Values{"q": {exact}, "limit": {"2"}})
+	require.NoError(t, err)
+	require.Equal(t, 200, status)
+	require.NotEmpty(t, list.Data)
+	assert.Equal(t, ids[0], DataItemField(list.Data[0], "id"), "the machine named exactly %q is listed first", exact)
+
+	assertScopedCursorPagination(t, machinesPath, url.Values{"q": {exact}}, ids)
+}
+
 func TestMachines_ListSearchNoResults(t *testing.T) {
 	t.Parallel()
 	list, _, err := apiClient.GetList(machinesPath, url.Values{"q": {"zzzznotamachine99999"}})

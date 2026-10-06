@@ -54,9 +54,12 @@ func (r *accountRelationRepoImpl) ListChildAccounts(ctx context.Context, params 
 	ctx, span := childAccountRepoTracer.Start(ctx, "repository.child_account.list")
 	defer span.End()
 
-	// Resolve parent counterparty account ID to parent relation ID. If no relation exists, the account has no children — return an empty list.
-	parentRelationID, apiErr := r.FindRelationByOwnerAndCounterparty(ctx, params.OwnerAccountID, params.ParentAccountID)
-	if apiErr != nil {
+	// Resolve the parent customer to its relation. If it is not one of the owner's customers, it has no children — return an empty list.
+	parentRelationID, err := r.queries.GetCustomerRelationID(ctx, sqlc.GetCustomerRelationIDParams{
+		OwnerAccountID:        params.OwnerAccountID,
+		CounterpartyAccountID: params.ParentAccountID,
+	})
+	if apiErr := db.MapSQLError(err); apiErr != nil {
 		if apiErr.Code == apierror.ErrorCodeResourceNotFound {
 			return &domain.ListChildAccountsResult{
 				Items:    []*domain.ChildAccount{},

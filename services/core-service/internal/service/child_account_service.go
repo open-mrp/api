@@ -145,7 +145,38 @@ func (s *childAccountSvcImpl) ListChildAccounts(ctx context.Context, cursor *str
 	})
 }
 
-// AddChildAccount adds a child account relationship (the target account is the parent), setting parent_account_relation_id on the child within a transaction and publishing a child-account create audit event to the outbox. PUT semantics: idempotent — if already set to this parent, return success. Rejects circular relationships where the parent's parent is the child being added.
+// maxHierarchyDepth bounds the ancestor walk, so a cycle already in the data cannot spin it forever.
+const maxHierarchyDepth = 64
+
+// customerRelationID resolves one of the seller's customers to its relation, the node the hierarchy links.
+func (s *childAccountSvcImpl) customerRelationID(ctx context.Context, ownerAccountID, accountID, notFoundMessage string) (string, *apierror.APIError) {
+	relationID, apiErr := s.repos.NewCustomerRepo().GetRelationID(ctx, ownerAccountID, accountID)
+	if apierror.IsNotFound(apiErr) {
+		return "", apierror.NewResourceNotFoundError(notFoundMessage)
+	}
+	return relationID, apiErr
+}
+
+// checkNoHierarchyCycle refuses linking the child beneath the parent when the child is the parent or one of its ancestors.
+func checkNoHierarchyCycle(ctx context.Context, repo domain.AccountRelationRepo, parentRelationID, childRelationID string) *apierror.APIError {
+	current := parentRelationID
+	for range maxHierarchyDepth {
+		if current == childRelationID {
+			return apierror.NewResourceConflictError("You cannot create a circular relationship: the child account is this account or one of its parents.")
+		}
+		next, apiErr := repo.GetParentRelationID(ctx, current)
+		if apiErr != nil {
+			return apiErr
+		}
+		if next == nil {
+			return nil
+		}
+		current = *next
+	}
+	return apierror.NewResourceConflictError("This account hierarchy is too deep to link another account beneath it.")
+}
+
+// AddChildAccount adds a child account relationship (the target account is the parent), setting parent_account_relation_id on the child within a transaction and publishing a child-account create audit event to the outbox. PUT semantics: idempotent — if already set to this parent, return success. Both accounts must be the seller's customers, and the child may be neither the parent nor any of its ancestors.
 func (s *childAccountSvcImpl) AddChildAccount(ctx context.Context, childAccountID string) (*domain.ChildAccount, *apierror.APIError) {
 	ctx, span := childAccountSvcTracer.Start(ctx, "service.child_account.add")
 	defer span.End()
@@ -171,32 +202,21 @@ func (s *childAccountSvcImpl) AddChildAccount(ctx context.Context, childAccountI
 		return nil, tracing.Trace(span, apiErr)
 	}
 
-	repo := s.repos.NewAccountRelationRepo()
-
-	// Resolve parent counterparty account ID to relation ID.
-	parentRelationID, apiErr := repo.FindRelationByOwnerAndCounterparty(ctx, ownerAccountID, parentAccountID)
-	if apiErr != nil {
-		return nil, tracing.Trace(span, apierror.NewResourceNotFoundError("Parent account not found."))
-	}
-
-	// Resolve child counterparty account ID to relation ID.
-	childRelationID, apiErr := repo.FindRelationByOwnerAndCounterparty(ctx, ownerAccountID, childAccountID)
-	if apiErr != nil {
-		return nil, tracing.Trace(span, apierror.NewResourceNotFoundError("Child account not found."))
-	}
-
-	// Check circular relationship: parent's parent cannot be the child being added.
-	parentOfParentID, apiErr := repo.GetParentRelationID(ctx, parentRelationID)
+	parentRelationID, apiErr := s.customerRelationID(ctx, ownerAccountID, parentAccountID, "Parent account not found.")
 	if apiErr != nil {
 		return nil, tracing.Trace(span, apiErr)
 	}
-	if parentOfParentID != nil && *parentOfParentID == childRelationID {
-		return nil, tracing.Trace(span, apierror.NewResourceConflictError("You cannot create a circular relationship."))
+	childRelationID, apiErr := s.customerRelationID(ctx, ownerAccountID, childAccountID, "Child account not found.")
+	if apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
 	}
 
 	// Set parent_account_relation_id on the child (idempotent via UPDATE).
 	var result *domain.ChildAccount
 	apiErr = s.withTx(ctx, func(txCtx context.Context, txSvc *childAccountSvcImpl) *apierror.APIError {
+		if apiErr := checkNoHierarchyCycle(txCtx, txSvc.repos.NewAccountRelationRepo(), parentRelationID, childRelationID); apiErr != nil {
+			return apiErr
+		}
 		if apiErr := txSvc.repos.NewAccountRelationRepo().SetParentRelation(txCtx, ownerAccountID, childRelationID, parentRelationID); apiErr != nil {
 			return apiErr
 		}
@@ -254,22 +274,17 @@ func (s *childAccountSvcImpl) RemoveChildAccount(ctx context.Context, childAccou
 		return tracing.Trace(span, apiErr)
 	}
 
-	repo := s.repos.NewAccountRelationRepo()
-
-	// Resolve parent counterparty account ID to relation ID.
-	parentRelationID, apiErr := repo.FindRelationByOwnerAndCounterparty(ctx, ownerAccountID, parentAccountID)
+	parentRelationID, apiErr := s.customerRelationID(ctx, ownerAccountID, parentAccountID, "Parent account not found.")
 	if apiErr != nil {
-		return tracing.Trace(span, apierror.NewResourceNotFoundError("Parent account not found."))
+		return tracing.Trace(span, apiErr)
 	}
-
-	// Resolve child counterparty account ID to relation ID.
-	childRelationID, apiErr := repo.FindRelationByOwnerAndCounterparty(ctx, ownerAccountID, childAccountID)
+	childRelationID, apiErr := s.customerRelationID(ctx, ownerAccountID, childAccountID, "Child account not found.")
 	if apiErr != nil {
-		return tracing.Trace(span, apierror.NewResourceNotFoundError("Child account not found."))
+		return tracing.Trace(span, apiErr)
 	}
 
 	// Fetch the child account detail before removal for audit diff.
-	childAccount, apiErr := repo.GetChildAccountDetail(ctx, ownerAccountID, childAccountID)
+	childAccount, apiErr := s.repos.NewAccountRelationRepo().GetChildAccountDetail(ctx, ownerAccountID, childAccountID)
 	if apiErr != nil {
 		return tracing.Trace(span, apiErr)
 	}

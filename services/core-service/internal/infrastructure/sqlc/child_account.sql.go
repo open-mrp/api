@@ -46,6 +46,7 @@ INNER JOIN account a ON a.id = ar.counterparty_account_id
 LEFT JOIN account_branding ab ON ab.owner_account_id = ar.counterparty_account_id
 WHERE ar.owner_account_id = ?
   AND ar.counterparty_account_id = ?
+  AND ar.account_relation_role_code = 'customer'
 `
 
 type GetChildAccountDetailParams struct {

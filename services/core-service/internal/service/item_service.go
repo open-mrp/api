@@ -1329,6 +1329,19 @@ func (s *itemSvcImpl) UpdateItemInventory(ctx context.Context, params domain.Upd
 		return tracing.Trace(span, apierror.NewResourceNotFoundError("Item not found."))
 	}
 
+	// The quantity converts to the item's base unit through its unit group; a unit outside it has no conversion.
+	stocking, apiErr := s.repos.NewItemRepo().GetStockingUnit(ctx, accountID, params.ItemID)
+	if apiErr != nil {
+		return tracing.Trace(span, apiErr)
+	}
+	inGroup, apiErr := s.repos.NewUnitRepo().IsUnitInGroup(ctx, stocking.UnitGroupID, params.UnitID)
+	if apiErr != nil {
+		return tracing.Trace(span, apiErr)
+	}
+	if !inGroup {
+		return tracing.Trace(span, apierror.NewValidationErrorWithParam("quantity.unit_id must be a unit in the item's unit group.", "quantity.unit_id"))
+	}
+
 	// If customerID is provided, verify edit access.
 	if params.CustomerID != nil {
 		meds := s.mediators()

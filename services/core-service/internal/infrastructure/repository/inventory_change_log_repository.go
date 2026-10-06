@@ -3,6 +3,7 @@ package repository
 import (
 	"context"
 	gosql "database/sql"
+	"slices"
 	"time"
 
 	"github.com/open-mrp/api/services/core-service/internal/domain"
@@ -214,7 +215,10 @@ func (r *inventoryChangeLogRepoImpl) List(ctx context.Context, params domain.Lis
 		return nil, tracing.Trace(span, apiErr)
 	}
 
+	// Paged over every row the page chose, so a row that cannot be shown still moves the cursor and the
+	// next-page answer along; it is left out of the response only after.
 	result, pageInfo := pagination.BuildPageString(items, params.Limit, cursorDir, iclCreatedAt, iclID)
+	result = slices.DeleteFunc(result, func(icl *domain.InventoryChangeLog) bool { return icl.ItemID == "" || icl.QuantityID == "" })
 	return &domain.ListInventoryChangeLogsResult{Items: result, PageInfo: pageInfo}, nil
 }
 

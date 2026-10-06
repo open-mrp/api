@@ -9,6 +9,7 @@ import (
 	factorymock "github.com/open-mrp/api/services/core-service/internal/domain/mock/factory"
 	mediatormock "github.com/open-mrp/api/services/core-service/internal/domain/mock/mediator"
 	repositorymock "github.com/open-mrp/api/services/core-service/internal/domain/mock/repository"
+	"github.com/open-mrp/api/services/core-service/internal/mediator"
 	"github.com/open-mrp/api/shared/appctx"
 	apierror "github.com/open-mrp/api/shared/errors"
 	"github.com/open-mrp/api/shared/field"
@@ -50,6 +51,7 @@ func (suite *AddressSvcScopeTestSuite) SetupTest() {
 	suite.mediatorFactory.EXPECT().Build(gomock.Any()).Return(domain.Mediators{
 		Idempotency: suite.idempotencyMed,
 		EditAccess:  suite.editAccessMed,
+		Address:     mediator.NewAddressMed(&mediator.AddressMedConfig{Repos: suite.repoFactory}),
 	}).AnyTimes()
 
 	suite.svc = NewAddressSvc(&AddressSvcConfig{

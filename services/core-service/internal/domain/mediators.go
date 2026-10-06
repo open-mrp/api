@@ -55,6 +55,25 @@ type EditAccessMed interface {
 	CheckEditAccess(ctx context.Context, actorAccountID, targetAccountID string) *apierror.APIError
 }
 
+// AddressMed writes addresses and their audit events. It checks no permission: the calling service's own check authorizes the write.
+type AddressMed interface {
+	// Create saves a new address in params.AccountID and records its audit event.
+	//
+	//  1. Trim the name; a blank name is a validation error on `name`.
+	//  2. Insert the geolocation, the address, and the address's link to the account.
+	//  3. Publish the address create audit event to the outbox.
+	Create(ctx context.Context, params CreateAddressParams) (*Address, *apierror.APIError)
+
+	// Update changes an address linked to params.AccountID and records its audit event. Fields the params leave unset keep their stored values.
+	//
+	//  1. Trim a given name; a blank name is a validation error on `name`.
+	//  2. Return not-found unless the address is linked to the account.
+	//  3. When a street, locality, state, postal code or country changes, update the geolocation in place, or move the address to a new one when other addresses share it.
+	//  4. Update the address, writing back the stored phone, email and receiving calendar where the params leave them unset.
+	//  5. Publish the address update audit event to the outbox.
+	Update(ctx context.Context, params UpdateAddressParams) (*Address, *apierror.APIError)
+}
+
 type ProductionFlowMed interface {
 	// LinkFlow recomputes all parent-child production step connections for a step based on its current consumptions and productions.
 	//

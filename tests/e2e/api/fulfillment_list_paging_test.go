@@ -44,13 +44,23 @@ func pagesBackToTheFirstPage(t *testing.T, path string, params url.Values) {
 		"paging back from the second page must return the first")
 }
 
+// Each case pages two packed shipments of the test's own, found by a note only they carry: a search is
+// residual to the key the case walks. The whole list is no fixture, since a seeded shipment dated years
+// ahead heads it and every shipment a parallel test packs lands between that one and the next.
 func TestShipmentsList_PagesBothWays(t *testing.T) {
 	t.Parallel()
 
-	// SHP-001 and SHP-003 are both packed, so each case holds at least two shipments.
+	note := uniqueName("e2e-shipment-paging")
+	for range 2 {
+		id := jsonField(packedShipment(t), "id")
+		status, body, err := apiClient.Patch(shipmentsPath+"/"+id, map[string]any{"note": note}, newIdempotencyKey())
+		require.NoError(t, err)
+		requireStatus(t, 200, status, body)
+	}
+
 	for name, params := range map[string]url.Values{
-		"unfiltered": {},
-		"status":     {"status": {"packed"}},
+		"unfiltered": {"q": {note}},
+		"status":     {"status": {"packed"}, "q": {note}},
 	} {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()

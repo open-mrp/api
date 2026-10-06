@@ -30,6 +30,7 @@ import (
 	"github.com/open-mrp/api/shared/constants"
 	"github.com/open-mrp/api/shared/crypto"
 	apierror "github.com/open-mrp/api/shared/errors"
+	"github.com/open-mrp/api/shared/field"
 	"github.com/open-mrp/api/shared/id"
 	"github.com/open-mrp/api/shared/idempotency"
 	"github.com/open-mrp/api/shared/lease"
@@ -328,6 +329,9 @@ func (s *shipmentSvcImpl) UpdateShipment(ctx context.Context, params domain.Upda
 			if apiErr := checkShipmentRoutingStillMutable(old, params); apiErr != nil {
 				return apiErr
 			}
+			if apiErr := txSvc.checkShipmentRoutingInAccount(txCtx, params.AccountID, old, params.CarrierID, params.ServiceLevelID); apiErr != nil {
+				return apiErr
+			}
 
 			// The SQL assigns the service level outright rather than COALESCE-ing it, so an omitted
 			// field has to carry the current value forward; an explicit null falls through and clears.
@@ -450,7 +454,7 @@ func (s *shipmentSvcImpl) AdminUpdateShipmentTracking(ctx context.Context, param
 				return apierror.NewValidationError("Shipment has not been shipped yet. Use the regular update endpoint.")
 			}
 
-			if apiErr := txSvc.checkAdminTrackingRouting(txCtx, params); apiErr != nil {
+			if apiErr := txSvc.checkShipmentRoutingInAccount(txCtx, params.AccountID, old, params.CarrierID, params.ServiceLevelID); apiErr != nil {
 				return apiErr
 			}
 
@@ -536,15 +540,23 @@ func (s *shipmentSvcImpl) resolveShippedByID(ctx context.Context, identity *type
 	return accountUserID, nil
 }
 
-// Rejects a carrier or service level the account cannot reach, before the override rewrites routing.
-func (s *shipmentSvcImpl) checkAdminTrackingRouting(txCtx context.Context, params domain.AdminUpdateShipmentTrackingParams) *apierror.APIError {
-	if params.CarrierID != nil {
-		if _, apiErr := s.repos.NewCarrierRepo().Get(txCtx, domain.GetCarrierParams{AccountID: params.AccountID, CarrierID: *params.CarrierID}); apiErr != nil {
+// Rejects a carrier or service level the account cannot reach, before routing is rewritten; another
+// tenant's ID 404s like an unknown one. The routing the shipment already has is not looked up again,
+// so a carrier deleted since does not block editing the rest of the shipment.
+func (s *shipmentSvcImpl) checkShipmentRoutingInAccount(txCtx context.Context, accountID string, old *domain.Shipment, carrierID *string, serviceLevelID field.Clearable[string]) *apierror.APIError {
+	if carrierID != nil && *carrierID != old.CarrierID {
+		if _, apiErr := s.repos.NewCarrierRepo().Get(txCtx, domain.GetCarrierParams{AccountID: accountID, CarrierID: *carrierID}); apiErr != nil {
+			if apierror.IsNotFound(apiErr) {
+				return apierror.NewResourceNotFoundError("No carrier found with the provided ID.").WithParam("carrier_id")
+			}
 			return apiErr
 		}
 	}
-	if serviceLevelID, ok := params.ServiceLevelID.Value(); ok {
-		if _, apiErr := s.repos.NewServiceLevelRepo().Get(txCtx, params.AccountID, serviceLevelID); apiErr != nil {
+	if id, ok := serviceLevelID.Value(); ok && !equalStringPtr(&id, old.ServiceLevelID) {
+		if _, apiErr := s.repos.NewServiceLevelRepo().Get(txCtx, accountID, id); apiErr != nil {
+			if apierror.IsNotFound(apiErr) {
+				return apierror.NewResourceNotFoundError("No service level found with the provided ID.").WithParam("service_level_id")
+			}
 			return apiErr
 		}
 	}

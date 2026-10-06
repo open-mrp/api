@@ -4,6 +4,7 @@ package api_test
 
 import (
 	"net/url"
+	"strconv"
 	"testing"
 	"time"
 
@@ -40,6 +41,40 @@ func TestDeliveries_RetrieveResponseShape(t *testing.T) {
 	assert.Contains(t, []string{"accepted", "rejected"}, jsonField(delivery, "status"))
 	assertValidTimestamp(t, jsonField(delivery, "created_at"), "created_at")
 	assertValidTimestamp(t, jsonField(delivery, "updated_at"), "updated_at")
+}
+
+// line_count is always present, so a list can show it without paying for every line.
+func TestDeliveries_RetrieveLineCountMatchesLines(t *testing.T) {
+	t.Parallel()
+
+	status, body, err := apiClient.GetListRaw(deliveriesPath+"/"+SeedDeliveryID, nil)
+	require.NoError(t, err)
+	requireStatus(t, 200, status, body)
+	withoutLines := parseJSON(body)
+	assertNilField(t, withoutLines, "lines")
+
+	status, body, err = apiClient.GetListRaw(deliveriesPath+"/"+SeedDeliveryID, url.Values{"include": {"lines"}})
+	require.NoError(t, err)
+	requireStatus(t, 200, status, body)
+	lines := jsonListData(parseJSON(body), "lines")
+	require.NotEmpty(t, lines, "the seeded delivery has lines")
+
+	assert.Equal(t, strconv.Itoa(len(lines)), jsonField(withoutLines, "line_count"))
+}
+
+func TestDeliveries_ListLineCountMatchesLines(t *testing.T) {
+	t.Parallel()
+
+	list, status, err := apiClient.GetList(deliveriesPath, url.Values{"limit": {"5"}, "status": {"all"}, "include": {"lines"}})
+	require.NoError(t, err)
+	require.Equal(t, 200, status)
+	require.NotEmpty(t, list.Data, "the seeded account has deliveries")
+
+	for _, raw := range list.Data {
+		row := parseJSON(raw)
+		lines := jsonListData(row, "lines")
+		assert.Equal(t, strconv.Itoa(len(lines)), jsonField(row, "line_count"), "delivery %s", jsonField(row, "id"))
+	}
 }
 
 func TestDeliveries_RetrieveUnknownIs404(t *testing.T) {
@@ -172,6 +207,8 @@ func TestDeliveries_ListResponseShape(t *testing.T) {
 		assertObjectField(t, row, "delivery")
 		assertIDFormat(t, jsonField(row, "id"), id.DeliveryIDPrefix)
 		assert.NotEmpty(t, jsonField(row, "number"))
+		assert.NotEmpty(t, jsonField(row, "line_count"), "line_count is present without include=lines")
+		assertNilField(t, row, "lines")
 	}
 }
 

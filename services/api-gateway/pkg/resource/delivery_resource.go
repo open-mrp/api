@@ -51,6 +51,10 @@ type Delivery struct {
 	Status constants.DeliveryStatus `json:"status" validate:"required"`
 	// The goods recorded on this delivery.
 	Lines *List[DeliveryLine] `json:"lines" expandable:"true"`
+	// Total number of lines on this delivery.
+	//
+	// Always populated, even when `lines` is not expanded.
+	LineCount int32 `json:"line_count"`
 	// When goods on this delivery were accepted into inventory.
 	//
 	// A delivery that also had quantities refused has both this and `rejected_at` set.
@@ -70,6 +74,7 @@ var SampleDelivery = &Delivery{
 	Related:    SampleDeliveryRelated,
 	Status:     constants.DeliveryStatusAccepted,
 	Lines:      NewList([]DeliveryLine{*SampleDeliveryLine}, PageInfo{}),
+	LineCount:  1,
 	AcceptedAt: timeutil.TimestampToTimePtr(sampleUpdatedAtTimestamp),
 	CreatedAt:  timeutil.TimestampToTime(sampleCreatedAtTimestamp),
 	UpdatedAt:  timeutil.TimestampToTime(sampleUpdatedAtTimestamp),

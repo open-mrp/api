@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.20.4](https://github.com/open-mrp/api/compare/v2.20.3...v2.20.4) (2026-10-06)
+
+
+### Performance Improvements
+
+* **sales:** bound buyer summary reads and recompute batches by lines ([#261](https://github.com/open-mrp/api/issues/261)) ([5005714](https://github.com/open-mrp/api/commit/5005714d2f03426ba891adba3d6d7c39c0b23d93))
+
 ## [2.20.3](https://github.com/open-mrp/api/compare/v2.20.2...v2.20.3) (2026-10-06)
 
 

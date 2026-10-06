@@ -880,21 +880,11 @@ WHERE c.item_id IN (sqlc.slice('item_ids'))
   AND i.account_id = sqlc.arg('account_id')
   AND i.deleted_at IS NULL;
 
--- SearchItemIDsBySKUFulltext resolves the account's item IDs whose SKU contains the search term, using
--- the ngram FULLTEXT index (item_sku_ngram_idx) for substring matching. Kept as a standalone MATCH — not
--- OR'd with the LIKE fallback below — so the optimizer can drive off the fulltext index; an OR with a
--- non-fulltext predicate would abandon it. Callers feed the result into a downstream item_id filter.
--- name: SearchItemIDsBySKUFulltext :many
-SELECT id
-FROM item
-WHERE account_id = sqlc.arg('account_id')
-  AND MATCH(sku) AGAINST(sqlc.narg('search_query') IN BOOLEAN MODE);
-
--- SearchItemIDsBySKULike is the fallback for terms shorter than the ngram token size, which have no
--- ngram token to match and so cannot use item_sku_ngram_idx.
+-- SearchItemIDsBySKULike resolves the account's item IDs whose SKU matches the pattern. The (account_id,
+-- sku) key covers it, so a substring search reads only the account's index entries.
 -- name: SearchItemIDsBySKULike :many
 SELECT id
-FROM item
+FROM item FORCE INDEX (item_account_id_sku_key)
 WHERE account_id = sqlc.arg('account_id')
   AND sku LIKE sqlc.narg('like_query');
 

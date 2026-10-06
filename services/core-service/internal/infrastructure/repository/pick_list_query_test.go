@@ -8,6 +8,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/open-mrp/api/shared/db"
 	"github.com/open-mrp/api/shared/pagination"
 )
 
@@ -124,7 +125,7 @@ func TestNewPickSearch(t *testing.T) {
 		{"one character is a number prefix", new("2"), pickSearch{NumberPrefix: "2%"}},
 		{"two characters are a number prefix", new("22"), pickSearch{NumberPrefix: "22%"}},
 		{"a prefix escapes LIKE wildcards", new("_%"), pickSearch{NumberPrefix: `\_\%%`}},
-		{"three characters are a substring phrase", new("235"), pickSearch{Phrase: `"235"`}},
+		{"three characters are a substring phrase", new("235"), pickSearch{Phrase: db.NgramSubstring{Tokens: "+23 +35", Like: "%235%"}}},
 		{"characters are counted, not bytes", new("ñé"), pickSearch{NumberPrefix: "ñé%"}},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
@@ -152,11 +153,12 @@ func TestBuildPickListQuery_ArgsBindInPlaceholderOrder(t *testing.T) {
 	t.Run("phrase with too many matches to read up front", func(t *testing.T) {
 		t.Parallel()
 		q := base
-		q.Search = pickSearch{Phrase: `"235"`}
+		q.Search = newPickSearch(new("235"))
 		query, args := buildPickListQuery(q)
 
 		want := []any{
-			"ac_1", "ac_1", `"235"`, "ac_1", `"235"`, "ac_1", `"235"`, "ac_1", `"235"`,
+			"ac_1",
+			"ac_1", "+23 +35", "%235%", "ac_1", "+23 +35", "%235%", "ac_1", "+23 +35", "%235%", "ac_1", "+23 +35", "%235%",
 			"ac_c1", "ac_c2", "pl_1", start.Time, end.Time, int32(51),
 		}
 		if !reflect.DeepEqual(args, want) {
@@ -173,7 +175,7 @@ func TestBuildPickListQuery_ArgsBindInPlaceholderOrder(t *testing.T) {
 	t.Run("phrase read from its few matches", func(t *testing.T) {
 		t.Parallel()
 		q := base
-		q.Search = pickSearch{Phrase: `"235"`}
+		q.Search = newPickSearch(new("235"))
 		q.PhraseIDs, q.DriveFromPhrase = []string{"pk_1", "pk_2"}, true
 		query, args := buildPickListQuery(q)
 
@@ -280,7 +282,7 @@ func TestPickListQuery_MergesOnlyAFewCustomersOffThePhrasePath(t *testing.T) {
 		{"one customer is a single sorted read", pickListQuery{BuyerIDs: []string{"ac_c1"}}, false},
 		{"a few customers merge", pickListQuery{BuyerIDs: []string{"ac_c1", "ac_c2"}}, true},
 		{"too many customers to merge", pickListQuery{BuyerIDs: many}, false},
-		{"a phrase search drives from its matches", pickListQuery{BuyerIDs: []string{"ac_c1", "ac_c2"}, Search: pickSearch{Phrase: `"235"`}}, false},
+		{"a phrase search drives from its matches", pickListQuery{BuyerIDs: []string{"ac_c1", "ac_c2"}, Search: newPickSearch(new("235"))}, false},
 	} {
 		if got := tc.q.mergesBuyers(); got != tc.want {
 			t.Errorf("%s: mergesBuyers = %v, want %v", tc.name, got, tc.want)
@@ -305,12 +307,45 @@ func TestBuildPickBuyerCountQuery_StopsAtTheCap(t *testing.T) {
 	}
 }
 
+// Every arm confirms the phrase with LIKE; a phrase with no token the index holds is LIKE alone, and the
+// number arm then reads the covering number key.
+func TestPickPhraseArms_ConfirmEveryMatchWithLike(t *testing.T) {
+	t.Parallel()
+
+	for _, tc := range []struct {
+		term        string
+		wantMatches int
+		wantHint    bool
+	}{
+		{term: "235", wantMatches: pickPhraseArmCount},
+		{term: "aia", wantMatches: 0, wantHint: true},
+	} {
+		t.Run(tc.term, func(t *testing.T) {
+			t.Parallel()
+			query, args := buildPickPhraseIDsQuery(pickListQuery{AccountID: "ac_1", Search: newPickSearch(new(tc.term))})
+
+			if got := strings.Count(query, "MATCH("); got != tc.wantMatches {
+				t.Errorf("%d MATCH predicates, want %d:\n%s", got, tc.wantMatches, query)
+			}
+			if got := strings.Count(query, " LIKE ?"); got != pickPhraseArmCount {
+				t.Errorf("%d LIKE predicates, want one per arm:\n%s", got, query)
+			}
+			if got := strings.Contains(query, "FORCE INDEX ("+pickAccountNumberIndex+")"); got != tc.wantHint {
+				t.Errorf("number key hinted = %v, want %v:\n%s", got, tc.wantHint, query)
+			}
+			if got := strings.Count(query, "?"); got != len(args) {
+				t.Errorf("%d placeholders but %d args", got, len(args))
+			}
+		})
+	}
+}
+
 // Sizing a filter must stop at its cap: the phrase read streams (UNION ALL) and the counts are capped
 // reads, so none of them collects every match first.
 func TestPickFilterSizing_StopsAtTheCap(t *testing.T) {
 	t.Parallel()
 
-	query, args := buildPickPhraseIDsQuery(pickListQuery{AccountID: "ac_1", Search: pickSearch{Phrase: `"235"`}})
+	query, args := buildPickPhraseIDsQuery(pickListQuery{AccountID: "ac_1", Search: newPickSearch(new("235"))})
 	if strings.Contains(query, " UNION SELECT") || !strings.HasSuffix(query, ") LIMIT ?") {
 		t.Errorf("phrase read does not stream to a limit:\n%s", query)
 	}

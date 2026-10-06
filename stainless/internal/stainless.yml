@@ -284,6 +284,7 @@ resources:
         models:
           account_logo_url: '#/components/schemas/AccountLogoURL'
           account_photo_upload_result: '#/components/schemas/AccountPhotoUploadResult'
+          inline_address_input: '#/components/schemas/InlineAddressInput'
           update_account_request: '#/components/schemas/UpdateAccountRequest'
       child_accounts:
         methods:

@@ -974,6 +974,7 @@ resources:
           create_sales_order_request: '#/components/schemas/CreateSalesOrderRequest'
           created_by: '#/components/schemas/CreatedBy'
           freight: '#/components/schemas/Freight'
+          inline_address_input: '#/components/schemas/InlineAddressInput'
           list_quoted_sales_order_line: '#/components/schemas/List_QuotedSalesOrderLine'
           list_record: '#/components/schemas/List_Record'
           list_sales_order: '#/components/schemas/List_SalesOrder'

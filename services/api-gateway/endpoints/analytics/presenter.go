@@ -112,52 +112,6 @@ func AnalyzeOpenBatchesPresenter(resp *pb.AnalyzeOpenBatchesResponse) *apiresour
 	}
 }
 
-func AnalyzeProductionCostsPresenter(resp *pb.AnalyzeProductionCostsResponse) *apiresource.AnalyzeProductionCostsResponse {
-	if resp == nil {
-		return &apiresource.AnalyzeProductionCostsResponse{
-			Object: constants.ObjectTypeList,
-			Data:   []apiresource.ProductionCostItem{},
-		}
-	}
-
-	items := make([]apiresource.ProductionCostItem, len(resp.Items))
-	for i, item := range resp.Items {
-		var dept *apiresource.Entity
-		if item.Department != nil {
-			dept = apiresource.NewEntity(item.Department.Id, constants.ObjectTypeDepartment, &item.Department.Name, nil)
-		}
-
-		items[i] = apiresource.ProductionCostItem{
-			Department:      dept,
-			Category:        apiresource.NewEntity(item.Category.Id, constants.ObjectTypeItemCategory, &item.Category.Name, nil),
-			TotalCosts:      costBreakdownFromProto(item.TotalCosts),
-			ProductiveCosts: costBreakdownFromProto(item.ProductiveCosts),
-			WasteCosts:      costBreakdownFromProto(item.WasteCosts),
-			SecondsCosts:    costBreakdownFromProto(item.SecondsCosts),
-		}
-	}
-
-	return &apiresource.AnalyzeProductionCostsResponse{
-		Object: constants.ObjectTypeList,
-		Data:   items,
-	}
-}
-
-func costBreakdownFromProto(c *pb.CostBreakdown) apiresource.CostBreakdown {
-	if c == nil {
-		return apiresource.CostBreakdown{}
-	}
-
-	return apiresource.CostBreakdown{
-		Total:     quantityFromProto(c.Total),
-		Labor:     quantityFromProto(c.Labor),
-		Materials: quantityFromProto(c.Materials),
-		Overhead:  quantityFromProto(c.Overhead),
-		Time:      quantityFromProto(c.Time),
-		Quantity:  quantityFromProto(c.Quantity),
-	}
-}
-
 func quantityFromProto(q *pb.BaseQuantity) *apiresource.Quantity {
 	if q == nil {
 		return nil

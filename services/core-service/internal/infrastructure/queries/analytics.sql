@@ -264,25 +264,86 @@ WHERE inv.account_id = sqlc.arg('owner_account_id')
   AND (sqlc.arg('include_buyer_filter') = false OR so.buyer_account_id IN (sqlc.slice('buyer_ids')))
 ORDER BY inv.created_at ASC;
 
--- name: GetProductionCostEntries :many
+-- name: ListProductionCostSteps :many
+-- The terms one run of each step is costed from. Labor time and the rates pricing it are each entered in whatever units suited whoever entered them — seconds a pair against dollars an hour — so every side carries its unit's base ratio.
 SELECT
-    it.id AS item_id,
-    it.sku AS product_sku,
-    it.description AS product_description,
-    pl.name AS product_line,
-    COALESCE(SUM(CAST(b_q.value AS DECIMAL(65,30))), 0) AS total_quantity,
-    0 AS total_cost,
-    0 AS cost_per_unit,
-    b_u.abbreviation AS unit
-FROM batch b
-JOIN item it ON it.id = b.item_id
-JOIN quantity b_q ON b_q.id = b.quantity_id
-JOIN unit b_u ON b_u.id = b_q.unit_id
-LEFT JOIN product p ON p.item_id = it.id AND p.product_type_code = 'sale'
-LEFT JOIN product_line pl ON pl.id = p.product_line_id
-WHERE b.account_id = sqlc.arg('owner_account_id')
-  AND b.closed_at IS NOT NULL
-GROUP BY it.id, it.sku, it.description, pl.name, b_u.abbreviation;
+    ps.id,
+    ps.leveling_factor,
+    ps.allowances,
+    lt.value AS labor_time_value,
+    CAST(COALESCE(ltnu.ratio_numerator / ltnu.ratio_denominator, 1) AS DECIMAL(65,30)) AS labor_time_num_ratio,
+    CAST(COALESCE(ltdu.ratio_numerator / ltdu.ratio_denominator, 1) AS DECIMAL(65,30)) AS labor_time_den_ratio,
+    ltdu.unit_dimension_code AS labor_time_den_unit_type,
+    lr.value AS labor_rate_value,
+    CAST(COALESCE(lrdu.ratio_numerator / lrdu.ratio_denominator, 1) AS DECIMAL(65,30)) AS labor_rate_den_ratio,
+    ohr.value AS overhead_rate_value,
+    CAST(COALESCE(ohrdu.ratio_numerator / ohrdu.ratio_denominator, 1) AS DECIMAL(65,30)) AS overhead_rate_den_ratio
+-- By id: a window names a fraction of the account's steps, so reading all of them by the account key is the slower plan.
+FROM production_step ps FORCE INDEX (PRIMARY)
+LEFT JOIN rate lt ON lt.id = ps.labor_time_id
+LEFT JOIN unit ltnu ON ltnu.id = lt.numerator_unit_id
+LEFT JOIN unit ltdu ON ltdu.id = lt.denominator_unit_id
+LEFT JOIN rate lr ON lr.id = ps.labor_rate_id
+LEFT JOIN unit lrdu ON lrdu.id = lr.denominator_unit_id
+LEFT JOIN rate ohr ON ohr.id = ps.overhead_rate_id
+LEFT JOIN unit ohrdu ON ohrdu.id = ohr.denominator_unit_id
+WHERE ps.account_id = sqlc.arg('account_id')
+  AND ps.id IN (sqlc.slice('step_ids'));
+
+-- name: ListProductionCostProductions :many
+-- Every production of the steps, earliest first per step: a step is costed against its earliest.
+SELECT
+    p.production_step_id,
+    pq.value AS quantity_value,
+    pu.id AS unit_id,
+    pu.unit_dimension_code AS unit_type,
+    pu.ratio_numerator,
+    pu.ratio_denominator,
+    pu.offset_numerator,
+    pu.offset_denominator
+-- The productions are read by step, each step checked as the account's after: driven from the account's steps, or scanned whole, it reads far more than the window names.
+FROM production p FORCE INDEX (production_production_step_id_idx)
+STRAIGHT_JOIN production_step ps ON ps.id = p.production_step_id
+JOIN quantity pq ON pq.id = p.quantity_id
+JOIN unit pu ON pu.id = pq.unit_id
+WHERE ps.account_id = sqlc.arg('account_id')
+  AND p.production_step_id IN (sqlc.slice('step_ids'))
+ORDER BY p.production_step_id, p.created_at, p.id;
+
+-- name: ListProductionCostConsumptions :many
+-- What the steps consume, each side with its unit's base ratio: a carton count against a per-each cost is otherwise priced at a twelfth of what it costs.
+SELECT
+    c.production_step_id,
+    ci.id AS consumed_item_id,
+    ci.item_type_code AS consumed_item_type,
+    cq.value AS consumption_quantity_value,
+    CAST(cqu.ratio_numerator / cqu.ratio_denominator AS DECIMAL(65,30)) AS consumption_unit_ratio,
+    wq.value AS waste_quantity_value,
+    CAST(wqu.ratio_numerator / wqu.ratio_denominator AS DECIMAL(65,30)) AS waste_unit_ratio,
+    COALESCE(ucr.value, 0) AS consumed_item_unit_cost,
+    CAST(COALESCE(ucru.ratio_numerator / ucru.ratio_denominator, 1) AS DECIMAL(65,30)) AS consumed_item_unit_cost_ratio
+-- Read by step, as the productions are.
+FROM consumption c FORCE INDEX (consumption_production_step_id_idx)
+STRAIGHT_JOIN production_step ps ON ps.id = c.production_step_id
+JOIN item ci ON ci.id = c.item_id
+JOIN quantity cq ON cq.id = c.quantity_id
+JOIN unit cqu ON cqu.id = cq.unit_id
+JOIN quantity wq ON wq.id = c.waste_quantity_id
+JOIN unit wqu ON wqu.id = wq.unit_id
+LEFT JOIN rate ucr ON ucr.id = ci.unit_cost_id
+LEFT JOIN unit ucru ON ucru.id = ucr.denominator_unit_id
+WHERE ps.account_id = sqlc.arg('account_id')
+  AND c.production_step_id IN (sqlc.slice('step_ids'));
+
+-- name: ListDepartmentStationIDs :many
+SELECT id FROM scanning_station
+WHERE account_id = sqlc.arg('account_id')
+  AND department_id IN (sqlc.slice('department_ids'));
+
+-- name: ListBaseUnitsByDimension :many
+SELECT unit_dimension_code, id FROM unit
+WHERE account_id IS NULL AND is_base_unit = TRUE
+ORDER BY unit_dimension_code, id;
 
 -- name: GetManufacturingProduction :one
 SELECT COALESCE(SUM(CAST(b_q.value AS DECIMAL(65,30))), 0) AS total_production

@@ -10672,6 +10672,21 @@ func (mr *MockAnalyticsRepoMockRecorder) CountMachinesByDepartment(ctx, accountI
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CountMachinesByDepartment", reflect.TypeOf((*MockAnalyticsRepo)(nil).CountMachinesByDepartment), ctx, accountID)
 }
 
+// GetBaseUnitIDsByDimension mocks base method.
+func (m *MockAnalyticsRepo) GetBaseUnitIDsByDimension(ctx context.Context) (map[string]string, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetBaseUnitIDsByDimension", ctx)
+	ret0, _ := ret[0].(map[string]string)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
+}
+
+// GetBaseUnitIDsByDimension indicates an expected call of GetBaseUnitIDsByDimension.
+func (mr *MockAnalyticsRepoMockRecorder) GetBaseUnitIDsByDimension(ctx any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetBaseUnitIDsByDimension", reflect.TypeOf((*MockAnalyticsRepo)(nil).GetBaseUnitIDsByDimension), ctx)
+}
+
 // GetDeliveryAnalytics mocks base method.
 func (m *MockAnalyticsRepo) GetDeliveryAnalytics(ctx context.Context, params domain.AnalyzeDeliveriesParams) (*domain.DeliveryAnalyticsResult, *apierror.APIError) {
 	m.ctrl.T.Helper()
@@ -10958,19 +10973,34 @@ func (mr *MockAnalyticsRepoMockRecorder) GetProductLineInfo(ctx, accountID, prod
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetProductLineInfo", reflect.TypeOf((*MockAnalyticsRepo)(nil).GetProductLineInfo), ctx, accountID, productLineIDs)
 }
 
-// GetProductionCostEntries mocks base method.
-func (m *MockAnalyticsRepo) GetProductionCostEntries(ctx context.Context, params domain.AnalyzeProductionCostsParams) ([]domain.ProductionCostEntry, *apierror.APIError) {
+// GetProductionCostRows mocks base method.
+func (m *MockAnalyticsRepo) GetProductionCostRows(ctx context.Context, params domain.AnalyzeProductionCostsParams) ([]domain.ProductionCostRow, *apierror.APIError) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetProductionCostEntries", ctx, params)
-	ret0, _ := ret[0].([]domain.ProductionCostEntry)
+	ret := m.ctrl.Call(m, "GetProductionCostRows", ctx, params)
+	ret0, _ := ret[0].([]domain.ProductionCostRow)
 	ret1, _ := ret[1].(*apierror.APIError)
 	return ret0, ret1
 }
 
-// GetProductionCostEntries indicates an expected call of GetProductionCostEntries.
-func (mr *MockAnalyticsRepoMockRecorder) GetProductionCostEntries(ctx, params any) *gomock.Call {
+// GetProductionCostRows indicates an expected call of GetProductionCostRows.
+func (mr *MockAnalyticsRepoMockRecorder) GetProductionCostRows(ctx, params any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetProductionCostEntries", reflect.TypeOf((*MockAnalyticsRepo)(nil).GetProductionCostEntries), ctx, params)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetProductionCostRows", reflect.TypeOf((*MockAnalyticsRepo)(nil).GetProductionCostRows), ctx, params)
+}
+
+// GetProductionCostSteps mocks base method.
+func (m *MockAnalyticsRepo) GetProductionCostSteps(ctx context.Context, accountID string, stepIDs []string) (map[string]domain.ProductionCostStep, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetProductionCostSteps", ctx, accountID, stepIDs)
+	ret0, _ := ret[0].(map[string]domain.ProductionCostStep)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
+}
+
+// GetProductionCostSteps indicates an expected call of GetProductionCostSteps.
+func (mr *MockAnalyticsRepoMockRecorder) GetProductionCostSteps(ctx, accountID, stepIDs any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetProductionCostSteps", reflect.TypeOf((*MockAnalyticsRepo)(nil).GetProductionCostSteps), ctx, accountID, stepIDs)
 }
 
 // GetQuarterlyOrders mocks base method.

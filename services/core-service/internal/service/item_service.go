@@ -531,16 +531,19 @@ type itemStepCost struct {
 	labor    decimal.Decimal
 	overhead decimal.Decimal
 	total    decimal.Decimal
+	// laborHours is the corrected labor time one run takes, in hours.
+	laborHours decimal.Decimal
 }
 
 // calculateStepCost computes the raw cost for a single production step.
 // This mirrors the Dashboard's LightProductionStepUtils.fetchLightCostOfStep.
 func calculateStepCost(step *domain.ProductionFlowStep, consumptions []domain.CostFlowConsumption) *itemStepCost {
 	result := &itemStepCost{
-		material: decimal.Zero,
-		labor:    decimal.Zero,
-		overhead: decimal.Zero,
-		total:    decimal.Zero,
+		material:   decimal.Zero,
+		labor:      decimal.Zero,
+		overhead:   decimal.Zero,
+		total:      decimal.Zero,
+		laborHours: decimal.Zero,
 	}
 
 	prodQty := step.Production.Quantity.Measure
@@ -585,6 +588,7 @@ func calculateStepCost(step *domain.ProductionFlowStep, consumptions []domain.Co
 
 	// Total labor time for the batch.
 	totalLaborTime := prodQty.Mul(correctedLaborTime)
+	result.laborHours = totalLaborTime
 
 	// Labor cost = totalLaborTime * laborRate.
 	result.labor = totalLaborTime.Mul(laborRateValue)

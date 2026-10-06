@@ -80,29 +80,6 @@ type OpenBatchEntry struct {
 	CreatedAt           time.Time
 }
 
-// --- Production Costs ---
-
-type AnalyzeProductionCostsParams struct {
-	AccountID      string
-	StartDate      *time.Time
-	EndDate        *time.Time
-	ItemIDs        []string
-	ProductLineIDs []string
-	DepartmentIDs  []string
-	CategoryIDs    []string
-}
-
-type ProductionCostEntry struct {
-	ItemID             string
-	ProductSku         string
-	ProductDescription *string
-	ProductLine        *string
-	TotalQuantity      float64
-	TotalCost          float64
-	CostPerUnit        float64
-	Unit               string
-}
-
 // --- Delivery Analytics ---
 
 type AnalyzeDeliveriesParams struct {

@@ -105,34 +105,6 @@ func (*AnalyzeOpenBatchesResponse) SchemaExample() any {
 	})
 }
 
-func (*AnalyzeProductionCostsResponse) SchemaExample() any {
-	categoryName := SampleItemCategoryName
-	categoryEnt := NewEntity(SampleItemCategoryID, constants.ObjectTypeItemCategory, &categoryName, nil)
-	return apiexample.ValidateAndMarshalToMap(&AnalyzeProductionCostsResponse{
-		Object: constants.ObjectTypeList,
-		Data: []ProductionCostItem{
-			{
-				Category:        categoryEnt,
-				TotalCosts:      sampleCostBreakdown(),
-				ProductiveCosts: sampleCostBreakdown(),
-				WasteCosts:      sampleCostBreakdown(),
-				SecondsCosts:    sampleCostBreakdown(),
-			},
-		},
-	})
-}
-
-func sampleCostBreakdown() CostBreakdown {
-	return CostBreakdown{
-		Total:     SampleQuantity,
-		Labor:     SampleQuantity,
-		Materials: SampleQuantity,
-		Overhead:  SampleQuantity,
-		Time:      SampleQuantity,
-		Quantity:  SampleQuantity,
-	}
-}
-
 func (*AnalyzeDeliveriesResponse) SchemaExample() any {
 	coords := []Coordinate{{X: 1, Y: 2}}
 	return apiexample.ValidateAndMarshalToMap(&AnalyzeDeliveriesResponse{

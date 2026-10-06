@@ -122,32 +122,6 @@ func (m *analyticsSvcImpl) AnalyzeOpenBatches(ctx context.Context, req *AnalyzeO
 	return AnalyzeOpenBatchesPresenter(resp), nil
 }
 
-func (m *analyticsSvcImpl) AnalyzeProductionCosts(ctx context.Context, req *AnalyzeProductionCostsRequest) (*apiresource.AnalyzeProductionCostsResponse, *apierror.APIError) {
-	pbReq := &pb.AnalyzeProductionCostsRequest{
-		ItemIds:        req.ItemIDs,
-		ProductLineIds: req.ProductLineIDs,
-		DepartmentIds:  req.DepartmentIDs,
-		CategoryIds:    req.CategoryIDs,
-	}
-	if req.StartDate != nil {
-		pbReq.StartDate = timestamppb.New(*req.StartDate)
-	}
-	if req.EndDate != nil {
-		pbReq.EndDate = timestamppb.New(*req.EndDate)
-	}
-
-	resp, apiErr := grpcutil.CallRPC(ctx, analyticsSvcTracer, "service.analytics.analyze_production_costs", domain.ServiceName,
-		func(ctx context.Context, opts ...grpc.CallOption) (*pb.AnalyzeProductionCostsResponse, error) {
-			return m.coreClient.AnalyzeProductionCosts(ctx, pbReq, opts...)
-		})
-
-	if apiErr != nil {
-		return nil, apiErr
-	}
-
-	return AnalyzeProductionCostsPresenter(resp), nil
-}
-
 func (m *analyticsSvcImpl) AnalyzeDeliveries(ctx context.Context, req *AnalyzeDeliveriesRequest) (*apiresource.AnalyzeDeliveriesResponse, *apierror.APIError) {
 	pbReq := &pb.AnalyzeDeliveriesRequest{
 		StartDate:        timestamppb.New(req.StartDate),

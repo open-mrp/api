@@ -108,46 +108,6 @@ type AnalyzeOpenBatchesResponse struct {
 	Data []OpenBatchSummary `json:"data" validate:"required"`
 }
 
-// AnalyzeProductionCostsResponse represents the response from the analyze production costs endpoint.
-type AnalyzeProductionCostsResponse struct {
-	// Resource type identifier.
-	Object constants.ObjectType `json:"object" validate:"required,enum=list"`
-	// The production cost data.
-	Data []ProductionCostItem `json:"data" validate:"required"`
-}
-
-// ProductionCostItem represents an aggregated production cost entry.
-type ProductionCostItem struct {
-	// The department information.
-	Department *Entity `json:"department"`
-	// The category information.
-	Category *Entity `json:"category" validate:"required"`
-	// The total costs.
-	TotalCosts CostBreakdown `json:"total_costs" validate:"required"`
-	// The productive costs.
-	ProductiveCosts CostBreakdown `json:"productive_costs" validate:"required"`
-	// The waste costs.
-	WasteCosts CostBreakdown `json:"waste_costs" validate:"required"`
-	// The seconds costs.
-	SecondsCosts CostBreakdown `json:"seconds_costs" validate:"required"`
-}
-
-// CostBreakdown represents a detailed cost breakdown with sub-quantities.
-type CostBreakdown struct {
-	// The total amount.
-	Total *Quantity `json:"total" validate:"required"`
-	// The labor amount.
-	Labor *Quantity `json:"labor" validate:"required"`
-	// The materials amount.
-	Materials *Quantity `json:"materials" validate:"required"`
-	// The overhead amount.
-	Overhead *Quantity `json:"overhead" validate:"required"`
-	// The time amount.
-	Time *Quantity `json:"time" validate:"required"`
-	// The quantity amount.
-	Quantity *Quantity `json:"quantity" validate:"required"`
-}
-
 // AnalyzeDeliveriesResponse represents the response from the analyze deliveries endpoint.
 type AnalyzeDeliveriesResponse struct {
 	// Resource type identifier.

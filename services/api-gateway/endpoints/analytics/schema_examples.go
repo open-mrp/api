@@ -127,11 +127,9 @@ func (*AnalyzeOrdersRequest) SchemaExample() any {
 }
 
 func (*AnalyzeProductionCostsRequest) SchemaExample() any {
-	s := apiresource.SampleAnalyticsPeriodStart
-	e := apiresource.SampleAnalyticsPeriodEnd
 	return apiexample.ValidateAndMarshalToMap(&AnalyzeProductionCostsRequest{
-		StartDate:      &s,
-		EndDate:        &e,
+		StartDate:      apiresource.SampleAnalyticsPeriodStart,
+		EndDate:        apiresource.SampleAnalyticsPeriodEnd,
 		ItemIDs:        []string{apiresource.SampleItemID},
 		ProductLineIDs: []string{apiresource.SampleProductLineID},
 		DepartmentIDs:  []string{apiresource.SampleDepartmentID},

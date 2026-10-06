@@ -137,32 +137,6 @@ func (r *analyticsRepoImpl) GetOpenBatchEntries(ctx context.Context, params doma
 	return nil, nil
 }
 
-func (r *analyticsRepoImpl) GetProductionCostEntries(ctx context.Context, params domain.AnalyzeProductionCostsParams) ([]domain.ProductionCostEntry, *apierror.APIError) {
-	ctx, span := analyticsRepoTracer.Start(ctx, "repository.analytics.get_production_cost_entries")
-	defer span.End()
-
-	rows, err := r.queries.GetProductionCostEntries(ctx, params.AccountID)
-	if apiErr := db.MapSQLError(err); apiErr != nil {
-		return nil, tracing.Trace(span, apiErr)
-	}
-
-	entries := make([]domain.ProductionCostEntry, len(rows))
-	for i, row := range rows {
-		entries[i] = domain.ProductionCostEntry{
-			ItemID:             row.ItemID,
-			ProductSku:         row.ProductSku,
-			ProductDescription: nullStringPtr(row.ProductDescription),
-			ProductLine:        nullStringPtr(row.ProductLine),
-			TotalQuantity:      decimalToFloat64(row.TotalQuantity),
-			TotalCost:          decimalToFloat64(row.TotalCost),
-			CostPerUnit:        decimalToFloat64(row.CostPerUnit),
-			Unit:               row.Unit,
-		}
-	}
-
-	return entries, nil
-}
-
 func (r *analyticsRepoImpl) GetDeliveryAnalytics(ctx context.Context, params domain.AnalyzeDeliveriesParams) (*domain.DeliveryAnalyticsResult, *apierror.APIError) {
 	ctx, span := analyticsRepoTracer.Start(ctx, "repository.analytics.get_delivery_analytics")
 	defer span.End()

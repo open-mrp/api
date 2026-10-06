@@ -170,27 +170,6 @@ func (s *analyticsSvcImpl) AnalyzeOpenBatches(ctx context.Context, params domain
 	return s.reports().NewAnalyticsRepo().GetOpenBatchEntries(ctx, params)
 }
 
-func (s *analyticsSvcImpl) AnalyzeProductionCosts(ctx context.Context, params domain.AnalyzeProductionCostsParams) ([]domain.ProductionCostEntry, *apierror.APIError) {
-	ctx, span := analyticsSvcTracer.Start(ctx, "service.analytics.analyze_production_costs")
-	defer span.End()
-
-	identity, ok := appctx.GetIdentityFromContext(ctx)
-	if !ok || identity == nil {
-		return nil, tracing.Trace(span, apierror.NewInvariantViolationError("Identity not found in context."))
-	}
-
-	if apiErr := identity.CheckIsInternalActor(); apiErr != nil {
-		return nil, tracing.Trace(span, apiErr)
-	}
-	if apiErr := identity.CheckHasPermission(types.PermissionDomainBatches, types.ActionRead); apiErr != nil {
-		return nil, tracing.Trace(span, apiErr)
-	}
-
-	params.AccountID = identity.Target.AccountID
-
-	return s.reports().NewAnalyticsRepo().GetProductionCostEntries(ctx, params)
-}
-
 func (s *analyticsSvcImpl) AnalyzeDeliveries(ctx context.Context, params domain.AnalyzeDeliveriesParams) (*domain.DeliveryAnalyticsResult, *apierror.APIError) {
 	ctx, span := analyticsSvcTracer.Start(ctx, "service.analytics.analyze_deliveries")
 	defer span.End()

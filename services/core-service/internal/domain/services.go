@@ -905,7 +905,8 @@ type AnalyticsSvc interface {
 	// AnalyzeCustomerPricing sweeps every contracted price and flags those below their peers or under target margin.
 	AnalyzeCustomerPricing(ctx context.Context, params AnalyzeCustomerPricingParams) (*CustomerPricingAnalysis, *apierror.APIError)
 	AnalyzeOpenBatches(ctx context.Context, params AnalyzeOpenBatchesParams) ([]OpenBatchEntry, *apierror.APIError)
-	AnalyzeProductionCosts(ctx context.Context, params AnalyzeProductionCostsParams) ([]ProductionCostEntry, *apierror.APIError)
+	// AnalyzeProductionCosts costs the batches scanned at production steps over a window, overall and by department and item category.
+	AnalyzeProductionCosts(ctx context.Context, params AnalyzeProductionCostsParams) (*ProductionCostReport, *apierror.APIError)
 	AnalyzeDeliveries(ctx context.Context, params AnalyzeDeliveriesParams) (*DeliveryAnalyticsResult, *apierror.APIError)
 	AnalyzeManufacturing(ctx context.Context, params AnalyzeManufacturingParams) (float64, *apierror.APIError)
 	AnalyzeManufacturingBatch(ctx context.Context, params AnalyzeManufacturingBatchParams) (*ManufacturingBatchResult, *apierror.APIError)

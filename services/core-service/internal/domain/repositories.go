@@ -1003,7 +1003,12 @@ type SalesReportRepo interface {
 type AnalyticsRepo interface {
 	GetSalesEntries(ctx context.Context, params AnalyzeSalesParams) ([]SalesEntry, *apierror.APIError)
 	GetOpenBatchEntries(ctx context.Context, params AnalyzeOpenBatchesParams) ([]OpenBatchEntry, *apierror.APIError)
-	GetProductionCostEntries(ctx context.Context, params AnalyzeProductionCostsParams) ([]ProductionCostEntry, *apierror.APIError)
+	// GetProductionCostRows totals the batches scanned at a production step in the window, per step, department and item category.
+	GetProductionCostRows(ctx context.Context, params AnalyzeProductionCostsParams) ([]ProductionCostRow, *apierror.APIError)
+	// GetProductionCostSteps loads the account's steps among stepIDs for costing, keyed by id; a step with no production is left out.
+	GetProductionCostSteps(ctx context.Context, accountID string, stepIDs []string) (map[string]ProductionCostStep, *apierror.APIError)
+	// GetBaseUnitIDsByDimension maps each unit dimension to its platform base unit.
+	GetBaseUnitIDsByDimension(ctx context.Context) (map[string]string, *apierror.APIError)
 	GetDeliveryAnalytics(ctx context.Context, params AnalyzeDeliveriesParams) (*DeliveryAnalyticsResult, *apierror.APIError)
 	GetManufacturingMetric(ctx context.Context, params AnalyzeManufacturingParams) (float64, *apierror.APIError)
 	GetManufacturingBatch(ctx context.Context, params AnalyzeManufacturingBatchParams) (*ManufacturingBatchResult, *apierror.APIError)

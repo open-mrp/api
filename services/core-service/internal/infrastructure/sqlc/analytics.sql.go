@@ -1700,70 +1700,6 @@ func (q *Queries) GetProductLineInfo(ctx context.Context, arg GetProductLineInfo
 	return items, nil
 }
 
-const getProductionCostEntries = `-- name: GetProductionCostEntries :many
-SELECT
-    it.id AS item_id,
-    it.sku AS product_sku,
-    it.description AS product_description,
-    pl.name AS product_line,
-    COALESCE(SUM(CAST(b_q.value AS DECIMAL(65,30))), 0) AS total_quantity,
-    0 AS total_cost,
-    0 AS cost_per_unit,
-    b_u.abbreviation AS unit
-FROM batch b
-JOIN item it ON it.id = b.item_id
-JOIN quantity b_q ON b_q.id = b.quantity_id
-JOIN unit b_u ON b_u.id = b_q.unit_id
-LEFT JOIN product p ON p.item_id = it.id AND p.product_type_code = 'sale'
-LEFT JOIN product_line pl ON pl.id = p.product_line_id
-WHERE b.account_id = ?
-  AND b.closed_at IS NOT NULL
-GROUP BY it.id, it.sku, it.description, pl.name, b_u.abbreviation
-`
-
-type GetProductionCostEntriesRow struct {
-	ItemID             string
-	ProductSku         string
-	ProductDescription sql.NullString
-	ProductLine        sql.NullString
-	TotalQuantity      interface{}
-	TotalCost          int32
-	CostPerUnit        int32
-	Unit               string
-}
-
-func (q *Queries) GetProductionCostEntries(ctx context.Context, ownerAccountID string) ([]GetProductionCostEntriesRow, error) {
-	rows, err := q.db.QueryContext(ctx, getProductionCostEntries, ownerAccountID)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	var items []GetProductionCostEntriesRow
-	for rows.Next() {
-		var i GetProductionCostEntriesRow
-		if err := rows.Scan(
-			&i.ItemID,
-			&i.ProductSku,
-			&i.ProductDescription,
-			&i.ProductLine,
-			&i.TotalQuantity,
-			&i.TotalCost,
-			&i.CostPerUnit,
-			&i.Unit,
-		); err != nil {
-			return nil, err
-		}
-		items = append(items, i)
-	}
-	if err := rows.Close(); err != nil {
-		return nil, err
-	}
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-	return items, nil
-}
-
 const getSaleProductItemIDs = `-- name: GetSaleProductItemIDs :many
 SELECT STRAIGHT_JOIN
     p.item_id,
@@ -2264,6 +2200,344 @@ func (q *Queries) GetWeeksOfSalesOnHand(ctx context.Context, arg GetWeeksOfSales
 	for rows.Next() {
 		var i GetWeeksOfSalesOnHandRow
 		if err := rows.Scan(&i.ItemID, &i.OnHand); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listBaseUnitsByDimension = `-- name: ListBaseUnitsByDimension :many
+SELECT unit_dimension_code, id FROM unit
+WHERE account_id IS NULL AND is_base_unit = TRUE
+ORDER BY unit_dimension_code, id
+`
+
+type ListBaseUnitsByDimensionRow struct {
+	UnitDimensionCode string
+	ID                string
+}
+
+func (q *Queries) ListBaseUnitsByDimension(ctx context.Context) ([]ListBaseUnitsByDimensionRow, error) {
+	rows, err := q.db.QueryContext(ctx, listBaseUnitsByDimension)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []ListBaseUnitsByDimensionRow
+	for rows.Next() {
+		var i ListBaseUnitsByDimensionRow
+		if err := rows.Scan(&i.UnitDimensionCode, &i.ID); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listDepartmentStationIDs = `-- name: ListDepartmentStationIDs :many
+SELECT id FROM scanning_station
+WHERE account_id = ?
+  AND department_id IN (/*SLICE:department_ids*/?)
+`
+
+type ListDepartmentStationIDsParams struct {
+	AccountID     string
+	DepartmentIds []string
+}
+
+func (q *Queries) ListDepartmentStationIDs(ctx context.Context, arg ListDepartmentStationIDsParams) ([]string, error) {
+	query := listDepartmentStationIDs
+	var queryParams []interface{}
+	queryParams = append(queryParams, arg.AccountID)
+	if len(arg.DepartmentIds) > 0 {
+		for _, v := range arg.DepartmentIds {
+			queryParams = append(queryParams, v)
+		}
+		query = strings.Replace(query, "/*SLICE:department_ids*/?", strings.Repeat(",?", len(arg.DepartmentIds))[1:], 1)
+	} else {
+		query = strings.Replace(query, "/*SLICE:department_ids*/?", "NULL", 1)
+	}
+	rows, err := q.db.QueryContext(ctx, query, queryParams...)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []string
+	for rows.Next() {
+		var id string
+		if err := rows.Scan(&id); err != nil {
+			return nil, err
+		}
+		items = append(items, id)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listProductionCostConsumptions = `-- name: ListProductionCostConsumptions :many
+SELECT
+    c.production_step_id,
+    ci.id AS consumed_item_id,
+    ci.item_type_code AS consumed_item_type,
+    cq.value AS consumption_quantity_value,
+    CAST(cqu.ratio_numerator / cqu.ratio_denominator AS DECIMAL(65,30)) AS consumption_unit_ratio,
+    wq.value AS waste_quantity_value,
+    CAST(wqu.ratio_numerator / wqu.ratio_denominator AS DECIMAL(65,30)) AS waste_unit_ratio,
+    COALESCE(ucr.value, 0) AS consumed_item_unit_cost,
+    CAST(COALESCE(ucru.ratio_numerator / ucru.ratio_denominator, 1) AS DECIMAL(65,30)) AS consumed_item_unit_cost_ratio
+FROM consumption c FORCE INDEX (consumption_production_step_id_idx)
+STRAIGHT_JOIN production_step ps ON ps.id = c.production_step_id
+JOIN item ci ON ci.id = c.item_id
+JOIN quantity cq ON cq.id = c.quantity_id
+JOIN unit cqu ON cqu.id = cq.unit_id
+JOIN quantity wq ON wq.id = c.waste_quantity_id
+JOIN unit wqu ON wqu.id = wq.unit_id
+LEFT JOIN rate ucr ON ucr.id = ci.unit_cost_id
+LEFT JOIN unit ucru ON ucru.id = ucr.denominator_unit_id
+WHERE ps.account_id = ?
+  AND c.production_step_id IN (/*SLICE:step_ids*/?)
+`
+
+type ListProductionCostConsumptionsParams struct {
+	AccountID string
+	StepIds   []sql.NullString
+}
+
+type ListProductionCostConsumptionsRow struct {
+	ProductionStepID          sql.NullString
+	ConsumedItemID            string
+	ConsumedItemType          string
+	ConsumptionQuantityValue  string
+	ConsumptionUnitRatio      string
+	WasteQuantityValue        string
+	WasteUnitRatio            string
+	ConsumedItemUnitCost      string
+	ConsumedItemUnitCostRatio string
+}
+
+// What the steps consume, each side with its unit's base ratio: a carton count against a per-each cost is otherwise priced at a twelfth of what it costs.
+// Read by step, as the productions are.
+func (q *Queries) ListProductionCostConsumptions(ctx context.Context, arg ListProductionCostConsumptionsParams) ([]ListProductionCostConsumptionsRow, error) {
+	query := listProductionCostConsumptions
+	var queryParams []interface{}
+	queryParams = append(queryParams, arg.AccountID)
+	if len(arg.StepIds) > 0 {
+		for _, v := range arg.StepIds {
+			queryParams = append(queryParams, v)
+		}
+		query = strings.Replace(query, "/*SLICE:step_ids*/?", strings.Repeat(",?", len(arg.StepIds))[1:], 1)
+	} else {
+		query = strings.Replace(query, "/*SLICE:step_ids*/?", "NULL", 1)
+	}
+	rows, err := q.db.QueryContext(ctx, query, queryParams...)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []ListProductionCostConsumptionsRow
+	for rows.Next() {
+		var i ListProductionCostConsumptionsRow
+		if err := rows.Scan(
+			&i.ProductionStepID,
+			&i.ConsumedItemID,
+			&i.ConsumedItemType,
+			&i.ConsumptionQuantityValue,
+			&i.ConsumptionUnitRatio,
+			&i.WasteQuantityValue,
+			&i.WasteUnitRatio,
+			&i.ConsumedItemUnitCost,
+			&i.ConsumedItemUnitCostRatio,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listProductionCostProductions = `-- name: ListProductionCostProductions :many
+SELECT
+    p.production_step_id,
+    pq.value AS quantity_value,
+    pu.id AS unit_id,
+    pu.unit_dimension_code AS unit_type,
+    pu.ratio_numerator,
+    pu.ratio_denominator,
+    pu.offset_numerator,
+    pu.offset_denominator
+FROM production p FORCE INDEX (production_production_step_id_idx)
+STRAIGHT_JOIN production_step ps ON ps.id = p.production_step_id
+JOIN quantity pq ON pq.id = p.quantity_id
+JOIN unit pu ON pu.id = pq.unit_id
+WHERE ps.account_id = ?
+  AND p.production_step_id IN (/*SLICE:step_ids*/?)
+ORDER BY p.production_step_id, p.created_at, p.id
+`
+
+type ListProductionCostProductionsParams struct {
+	AccountID string
+	StepIds   []sql.NullString
+}
+
+type ListProductionCostProductionsRow struct {
+	ProductionStepID  sql.NullString
+	QuantityValue     string
+	UnitID            string
+	UnitType          string
+	RatioNumerator    string
+	RatioDenominator  string
+	OffsetNumerator   string
+	OffsetDenominator string
+}
+
+// Every production of the steps, earliest first per step: a step is costed against its earliest.
+// The productions are read by step, each step checked as the account's after: driven from the account's steps, or scanned whole, it reads far more than the window names.
+func (q *Queries) ListProductionCostProductions(ctx context.Context, arg ListProductionCostProductionsParams) ([]ListProductionCostProductionsRow, error) {
+	query := listProductionCostProductions
+	var queryParams []interface{}
+	queryParams = append(queryParams, arg.AccountID)
+	if len(arg.StepIds) > 0 {
+		for _, v := range arg.StepIds {
+			queryParams = append(queryParams, v)
+		}
+		query = strings.Replace(query, "/*SLICE:step_ids*/?", strings.Repeat(",?", len(arg.StepIds))[1:], 1)
+	} else {
+		query = strings.Replace(query, "/*SLICE:step_ids*/?", "NULL", 1)
+	}
+	rows, err := q.db.QueryContext(ctx, query, queryParams...)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []ListProductionCostProductionsRow
+	for rows.Next() {
+		var i ListProductionCostProductionsRow
+		if err := rows.Scan(
+			&i.ProductionStepID,
+			&i.QuantityValue,
+			&i.UnitID,
+			&i.UnitType,
+			&i.RatioNumerator,
+			&i.RatioDenominator,
+			&i.OffsetNumerator,
+			&i.OffsetDenominator,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listProductionCostSteps = `-- name: ListProductionCostSteps :many
+SELECT
+    ps.id,
+    ps.leveling_factor,
+    ps.allowances,
+    lt.value AS labor_time_value,
+    CAST(COALESCE(ltnu.ratio_numerator / ltnu.ratio_denominator, 1) AS DECIMAL(65,30)) AS labor_time_num_ratio,
+    CAST(COALESCE(ltdu.ratio_numerator / ltdu.ratio_denominator, 1) AS DECIMAL(65,30)) AS labor_time_den_ratio,
+    ltdu.unit_dimension_code AS labor_time_den_unit_type,
+    lr.value AS labor_rate_value,
+    CAST(COALESCE(lrdu.ratio_numerator / lrdu.ratio_denominator, 1) AS DECIMAL(65,30)) AS labor_rate_den_ratio,
+    ohr.value AS overhead_rate_value,
+    CAST(COALESCE(ohrdu.ratio_numerator / ohrdu.ratio_denominator, 1) AS DECIMAL(65,30)) AS overhead_rate_den_ratio
+FROM production_step ps FORCE INDEX (PRIMARY)
+LEFT JOIN rate lt ON lt.id = ps.labor_time_id
+LEFT JOIN unit ltnu ON ltnu.id = lt.numerator_unit_id
+LEFT JOIN unit ltdu ON ltdu.id = lt.denominator_unit_id
+LEFT JOIN rate lr ON lr.id = ps.labor_rate_id
+LEFT JOIN unit lrdu ON lrdu.id = lr.denominator_unit_id
+LEFT JOIN rate ohr ON ohr.id = ps.overhead_rate_id
+LEFT JOIN unit ohrdu ON ohrdu.id = ohr.denominator_unit_id
+WHERE ps.account_id = ?
+  AND ps.id IN (/*SLICE:step_ids*/?)
+`
+
+type ListProductionCostStepsParams struct {
+	AccountID string
+	StepIds   []string
+}
+
+type ListProductionCostStepsRow struct {
+	ID                   string
+	LevelingFactor       string
+	Allowances           string
+	LaborTimeValue       sql.NullString
+	LaborTimeNumRatio    string
+	LaborTimeDenRatio    string
+	LaborTimeDenUnitType sql.NullString
+	LaborRateValue       sql.NullString
+	LaborRateDenRatio    string
+	OverheadRateValue    sql.NullString
+	OverheadRateDenRatio string
+}
+
+// The terms one run of each step is costed from. Labor time and the rates pricing it are each entered in whatever units suited whoever entered them — seconds a pair against dollars an hour — so every side carries its unit's base ratio.
+// By id: a window names a fraction of the account's steps, so reading all of them by the account key is the slower plan.
+func (q *Queries) ListProductionCostSteps(ctx context.Context, arg ListProductionCostStepsParams) ([]ListProductionCostStepsRow, error) {
+	query := listProductionCostSteps
+	var queryParams []interface{}
+	queryParams = append(queryParams, arg.AccountID)
+	if len(arg.StepIds) > 0 {
+		for _, v := range arg.StepIds {
+			queryParams = append(queryParams, v)
+		}
+		query = strings.Replace(query, "/*SLICE:step_ids*/?", strings.Repeat(",?", len(arg.StepIds))[1:], 1)
+	} else {
+		query = strings.Replace(query, "/*SLICE:step_ids*/?", "NULL", 1)
+	}
+	rows, err := q.db.QueryContext(ctx, query, queryParams...)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []ListProductionCostStepsRow
+	for rows.Next() {
+		var i ListProductionCostStepsRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.LevelingFactor,
+			&i.Allowances,
+			&i.LaborTimeValue,
+			&i.LaborTimeNumRatio,
+			&i.LaborTimeDenRatio,
+			&i.LaborTimeDenUnitType,
+			&i.LaborRateValue,
+			&i.LaborRateDenRatio,
+			&i.OverheadRateValue,
+			&i.OverheadRateDenRatio,
+		); err != nil {
 			return nil, err
 		}
 		items = append(items, i)

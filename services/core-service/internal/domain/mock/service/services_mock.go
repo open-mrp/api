@@ -4843,10 +4843,10 @@ func (mr *MockAnalyticsSvcMockRecorder) AnalyzeOrders(ctx, params any) *gomock.C
 }
 
 // AnalyzeProductionCosts mocks base method.
-func (m *MockAnalyticsSvc) AnalyzeProductionCosts(ctx context.Context, params domain.AnalyzeProductionCostsParams) ([]domain.ProductionCostEntry, *apierror.APIError) {
+func (m *MockAnalyticsSvc) AnalyzeProductionCosts(ctx context.Context, params domain.AnalyzeProductionCostsParams) (*domain.ProductionCostReport, *apierror.APIError) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "AnalyzeProductionCosts", ctx, params)
-	ret0, _ := ret[0].([]domain.ProductionCostEntry)
+	ret0, _ := ret[0].(*domain.ProductionCostReport)
 	ret1, _ := ret[1].(*apierror.APIError)
 	return ret0, ret1
 }

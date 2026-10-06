@@ -596,8 +596,9 @@ func (s *accountUserSvcImpl) UpdateAccountUser(ctx context.Context, params domai
 		return nil, tracing.Trace(span, apiErr)
 	}
 
-	// Users may edit their own membership in their own account without the team permission.
-	if !identity.IsExternalTarget() && identity.Actor.ID != accountUserDetail.UserID {
+	// Users may edit their own name, email and username without the team permission, but not their role, department or commission.
+	selfEdit := identity.Actor.ID == accountUserDetail.UserID
+	if !identity.IsExternalTarget() && (!selfEdit || changesMembership(params)) {
 		if apiErr := checkAccountUserUpdatePermission(identity); apiErr != nil {
 			return nil, tracing.Trace(span, apiErr)
 		}
@@ -1138,6 +1139,11 @@ func checkAccountUserCreatePermission(identity *types.Identity) *apierror.APIErr
 }
 
 // checkAccountUserUpdatePermission checks the permission to change a user or their status: customers:update for a customer account, suppliers:update for a supplier account, team:update for the actor's own account.
+// changesMembership reports whether an update touches what the account grants the member rather than who they are.
+func changesMembership(params domain.UpdateAccountUserParams) bool {
+	return params.RoleID.WasProvided() || params.DepartmentID.WasProvided() || params.IsCommissionEligible.IsSet()
+}
+
 func checkAccountUserUpdatePermission(identity *types.Identity) *apierror.APIError {
 	if !identity.IsInternalActor() {
 		return nil

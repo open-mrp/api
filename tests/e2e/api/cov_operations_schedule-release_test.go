@@ -424,7 +424,7 @@ func TestScheduleRelease_RunWithAScannedBatchCannotBeDeleted(t *testing.T) {
 	status, raw, result := releaseWeek(t, scheduleID, 10)
 	requireStatus(t, 201, status, raw)
 	runID := jsonField(jsonObject(result, "production_run"), "id")
-	batchIDs := releasedBatchIDs(result)
+	batchIDs := releasedBatchIDs(result, SeedGreigeItemID)
 	require.NotEmpty(t, batchIDs)
 	var batchID string
 	for id := range batchIDs {

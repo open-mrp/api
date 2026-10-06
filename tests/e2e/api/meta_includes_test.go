@@ -367,6 +367,10 @@ var includeGetScenarioByOperationID = map[string]includeGetScenario{
 			"account_group":   {"id": "ac_01e2eltchild000004"},
 		},
 	},
+	// A territory's path names the account that owns it, the seller, not the seeded customer the
+	// shared account_id seed points at.
+	"list-territories":   {pathValues: map[string]string{"account_id": SeedAccountID}},
+	"retrieve-territory": {pathValues: map[string]string{"account_id": SeedAccountID, "id": SeedTerritoryID}},
 }
 
 // excludedIncludePaths lists path prefixes skipped by the includes coverage

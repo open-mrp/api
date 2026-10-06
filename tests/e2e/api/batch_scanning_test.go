@@ -156,7 +156,13 @@ func mustScan(t *testing.T, action string, body map[string]any) map[string]any {
 	t.Helper()
 	status, got, raw := postScan(t, action, body)
 	requireStatus(t, 201, status, raw)
-	id := jsonField(got, "id")
+	settleScanAtCleanup(t, action, jsonField(got, "id"))
+	return got
+}
+
+// settleScanAtCleanup registers the cleanup mustScan describes for a scan that returned batch id.
+func settleScanAtCleanup(t *testing.T, action, id string) {
+	t.Helper()
 	if action != "initialize" {
 		t.Cleanup(func() {
 			apiClient.Delete(batchesPath + "/" + id)
@@ -164,7 +170,6 @@ func mustScan(t *testing.T, action string, body map[string]any) map[string]any {
 		})
 	}
 	t.Cleanup(func() { waitForMessagesSettled(t, "core.event.batch_scanned", "core.batch_scanned_inventory", id) })
-	return got
 }
 
 // waitForMessagesSettled waits until every message under routingKey that names batchID has been

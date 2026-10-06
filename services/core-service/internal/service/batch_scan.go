@@ -7,7 +7,9 @@ import (
 	"log/slog"
 	"math"
 	"math/big"
+	"slices"
 	"strconv"
+	"time"
 
 	"github.com/shopspring/decimal"
 
@@ -89,6 +91,39 @@ func (s *batchSvcImpl) idempotentScan(ctx context.Context, identity *types.Ident
 	}
 }
 
+// heldBatch is what a batch row read while holding it says: whether it still exists, and when it was scanned.
+type heldBatch struct {
+	exists    bool
+	scannedAt *time.Time
+}
+
+// holdBatches holds the rows of the batches a scan or an undo works on until its transaction ends, and
+// must be the transaction's first read. Two stations can scan one batch at once, and an undo can land
+// while a scan of the same batch is under way; held rows make the later one wait and then see what the
+// earlier one committed, as if it had come after it. The rows are taken in id order, so operations over
+// overlapping batches queue behind each other rather than deadlock.
+func holdBatches(ctx context.Context, repo domain.BatchRepo, accountID string, idSets ...[]string) (map[string]heldBatch, *apierror.APIError) {
+	held := make(map[string]heldBatch)
+	var ids []string
+	for _, set := range idSets {
+		for _, id := range set {
+			if _, seen := held[id]; !seen {
+				held[id] = heldBatch{}
+				ids = append(ids, id)
+			}
+		}
+	}
+	slices.Sort(ids)
+	for _, id := range ids {
+		scannedAt, exists, apiErr := repo.LockScan(ctx, accountID, id)
+		if apiErr != nil {
+			return nil, apiErr
+		}
+		held[id] = heldBatch{exists: exists, scannedAt: scannedAt}
+	}
+	return held, nil
+}
+
 // ---------------------------------------------------------------------------
 // Initialize
 // ---------------------------------------------------------------------------
@@ -132,11 +167,8 @@ func (s *batchSvcImpl) initializeBatch(ctx context.Context, identity *types.Iden
 		}
 		return nil, apiErr
 	}
-	switch {
-	case batch.ClosedAt != nil:
-		return nil, apierror.NewValidationError("This batch is closed.")
-	case batch.ScannedAt != nil:
-		return nil, apierror.NewValidationError("This batch has been scanned already.")
+	if apiErr := checkInitializable(batch); apiErr != nil {
+		return nil, apiErr
 	}
 
 	init := string(constants.ScanningStationTypeInitBatch)
@@ -176,6 +208,20 @@ func (s *batchSvcImpl) initializeBatch(ctx context.Context, identity *types.Iden
 	apiErr = s.withTx(ctx, func(txCtx context.Context, txSvc *batchSvcImpl) *apierror.APIError {
 		txCtx = event.WithRepos(txCtx, txSvc.repos)
 		txBatchRepo := txSvc.repos.NewBatchRepo()
+
+		if _, apiErr := holdBatches(txCtx, txBatchRepo, accountID, []string{batch.ID}); apiErr != nil {
+			return apiErr
+		}
+		held, apiErr := txBatchRepo.Find(txCtx, accountID, batch.ID)
+		if apiErr != nil {
+			if apierror.IsNotFound(apiErr) {
+				return apierror.NewResourceNotFoundError("Batch not found.")
+			}
+			return apiErr
+		}
+		if apiErr := checkInitializable(held); apiErr != nil {
+			return apiErr
+		}
 
 		if apiErr := txBatchRepo.MarkAsScanned(txCtx, accountID, batch.ID); apiErr != nil {
 			return apiErr
@@ -232,6 +278,17 @@ func (s *batchSvcImpl) initializeBatch(ctx context.Context, identity *types.Iden
 	}
 
 	return result, nil
+}
+
+// checkInitializable refuses a batch an init station cannot stamp.
+func checkInitializable(batch *domain.Batch) *apierror.APIError {
+	switch {
+	case batch.ClosedAt != nil:
+		return apierror.NewValidationError("This batch is closed.")
+	case batch.ScannedAt != nil:
+		return apierror.NewValidationError("This batch has been scanned already.")
+	}
+	return nil
 }
 
 // resolveInitStep picks the step a batch is initialized into. A step the operator chose must be one
@@ -331,20 +388,15 @@ func (s *batchSvcImpl) MoveBatches(ctx context.Context, params domain.MoveBatche
 	}
 
 	result, apiErr := s.idempotentScan(ctx, identity, func(key *domain.IdempotencyKey) (*domain.BaseBatch, *apierror.APIError) {
-		var out *scanOutput
-		var apiErr *apierror.APIError
-		if isMultiPart {
-			out, apiErr = s.planMultiPartMove(ctx, accountID, params)
-		} else {
+		return s.planAndWriteScan(ctx, identity, accountID, key, params.BatchIDs, func(ctx context.Context, svc *batchSvcImpl) (*scanOutput, *apierror.APIError) {
+			if isMultiPart {
+				return svc.planMultiPartMove(ctx, accountID, params)
+			}
 			if len(params.BatchIDs) != 1 {
 				return nil, apierror.NewValidationError("Single-part production step can only accept one batch at a time.")
 			}
-			out, apiErr = s.planSinglePartMove(ctx, accountID, params)
-		}
-		if apiErr != nil {
-			return nil, apiErr
-		}
-		return s.writeScanOutput(ctx, identity, accountID, key, out)
+			return svc.planSinglePartMove(ctx, accountID, params)
+		})
 	})
 	if apiErr != nil {
 		return nil, tracing.Trace(span, apiErr)
@@ -448,21 +500,16 @@ func (s *batchSvcImpl) MergeBatches(ctx context.Context, params domain.MergeBatc
 	}
 
 	result, apiErr := s.idempotentScan(ctx, identity, func(key *domain.IdempotencyKey) (*domain.BaseBatch, *apierror.APIError) {
-		sources, apiErr := s.findScanSources(ctx, accountID, params.BatchIDs, params.ProductionStepID)
-		if apiErr != nil {
-			return nil, apiErr
-		}
-
-		var out *scanOutput
-		if isMultiPart {
-			out, apiErr = s.planMultiPartMerge(ctx, accountID, params, sources)
-		} else {
-			out, apiErr = s.planSinglePartMerge(ctx, accountID, params, sources)
-		}
-		if apiErr != nil {
-			return nil, apiErr
-		}
-		return s.writeScanOutput(ctx, identity, accountID, key, out)
+		return s.planAndWriteScan(ctx, identity, accountID, key, params.BatchIDs, func(ctx context.Context, svc *batchSvcImpl) (*scanOutput, *apierror.APIError) {
+			sources, apiErr := svc.findScanSources(ctx, accountID, params.BatchIDs, params.ProductionStepID)
+			if apiErr != nil {
+				return nil, apiErr
+			}
+			if isMultiPart {
+				return svc.planMultiPartMerge(ctx, accountID, params, sources)
+			}
+			return svc.planSinglePartMerge(ctx, accountID, params, sources)
+		})
 	})
 	if apiErr != nil {
 		return nil, tracing.Trace(span, apiErr)
@@ -572,11 +619,9 @@ func (s *batchSvcImpl) SplitBatch(ctx context.Context, params domain.SplitBatchP
 	}
 
 	result, apiErr := s.idempotentScan(ctx, identity, func(key *domain.IdempotencyKey) (*domain.BaseBatch, *apierror.APIError) {
-		out, apiErr := s.planSplit(ctx, accountID, params, isMultiPart)
-		if apiErr != nil {
-			return nil, apiErr
-		}
-		return s.writeScanOutput(ctx, identity, accountID, key, out)
+		return s.planAndWriteScan(ctx, identity, accountID, key, params.BatchIDs, func(ctx context.Context, svc *batchSvcImpl) (*scanOutput, *apierror.APIError) {
+			return svc.planSplit(ctx, accountID, params, isMultiPart)
+		})
 	})
 	if apiErr != nil {
 		return nil, tracing.Trace(span, apiErr)
@@ -1182,7 +1227,35 @@ type scanOutput struct {
 // writeScanOutput creates the batch a scan makes, already scanned, and in the same transaction connects
 // it to its sources, closes what the scan used up, and writes the batch_scanned event that moves its
 // inventory, the usage meter, and the audit record. A scan is all of these or none of them.
-func (s *batchSvcImpl) writeScanOutput(ctx context.Context, identity *types.Identity, accountID string, key *domain.IdempotencyKey, out *scanOutput) (*domain.BaseBatch, *apierror.APIError) {
+// scanPlan works out what a scan makes and which batches it takes from, reading through svc.
+type scanPlan func(ctx context.Context, svc *batchSvcImpl) (*scanOutput, *apierror.APIError)
+
+// errScanSourcesMoved marks a scan whose plan, made again once its batches were held, takes from a batch
+// it did not hold.
+var errScanSourcesMoved = apierror.NewResourceConflictError("These batches changed while they were being scanned. Scan them again.")
+
+// maxScanPlans bounds how often a scan starts over because the batches it takes from moved under it.
+const maxScanPlans = 3
+
+// planAndWriteScan plans a scan to learn which batches it takes from, then writes it holding them.
+func (s *batchSvcImpl) planAndWriteScan(ctx context.Context, identity *types.Identity, accountID string, key *domain.IdempotencyKey, scannedIDs []string, plan scanPlan) (*domain.BaseBatch, *apierror.APIError) {
+	for range maxScanPlans {
+		out, apiErr := plan(ctx, s)
+		if apiErr != nil {
+			return nil, apiErr
+		}
+		result, apiErr := s.writeScanOutput(ctx, identity, accountID, key, scannedIDs, out, plan)
+		if apiErr != errScanSourcesMoved {
+			return result, apiErr
+		}
+	}
+	return nil, errScanSourcesMoved
+}
+
+// writeScanOutput writes a scan's batch. It first holds the batches the operator scanned and the ones
+// the plan takes from, then plans again: a scan of them that committed while this one waited may have
+// used them up or closed them, and this one must then go as it would have gone after it.
+func (s *batchSvcImpl) writeScanOutput(ctx context.Context, identity *types.Identity, accountID string, key *domain.IdempotencyKey, scannedIDs []string, out *scanOutput, plan scanPlan) (*domain.BaseBatch, *apierror.APIError) {
 	newBatchID, apiErr := id.GenID(id.BatchIDPrefix, nil)
 	if apiErr != nil {
 		return nil, apiErr
@@ -1197,6 +1270,20 @@ func (s *batchSvcImpl) writeScanOutput(ctx context.Context, identity *types.Iden
 	apiErr = s.withTx(ctx, func(txCtx context.Context, txSvc *batchSvcImpl) *apierror.APIError {
 		txCtx = event.WithRepos(txCtx, txSvc.repos)
 		txBatchRepo := txSvc.repos.NewBatchRepo()
+
+		held, apiErr := holdBatches(txCtx, txBatchRepo, accountID, scannedIDs, out.sourceIDs)
+		if apiErr != nil {
+			return apiErr
+		}
+		out, apiErr = plan(txCtx, txSvc)
+		if apiErr != nil {
+			return apiErr
+		}
+		for _, sourceID := range out.sourceIDs {
+			if _, isHeld := held[sourceID]; !isHeld {
+				return errScanSourcesMoved
+			}
+		}
 
 		if _, apiErr := txBatchRepo.Create(txCtx, newBatchID, domain.CreateBatchParams{
 			AccountID:         accountID,

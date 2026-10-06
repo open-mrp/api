@@ -134,8 +134,8 @@ func TestProductUpdate_MovesTheCategoryUnderItemsUpdate(t *testing.T) {
 	assert.Equal(t, "each", rateDenominator(after, "unit_value"))
 	assert.Equal(t, "each", rateDenominator(after, "unit_cost"))
 
+	// A product's price is its item's value, so the move and the price are both audited on the item; a product update event is published only when a product field changes.
 	requireItemCategoryMoveAudited(t, itemID, categoryID)
-	expectAuditEvent(t, productID, "product", "update")
 }
 
 // A refused save moves nothing and writes none of the fields sent with the move.
@@ -168,7 +168,9 @@ func TestItemUpdates_CategoryMoveRefusals(t *testing.T) {
 			func(t *testing.T, status int, body []byte) { requirePermissionRefused(t, status, body, "parts:update") }},
 		{"a material saved under items:update alone", itemsWriter, materialsPath + "/" + materialID,
 			map[string]any{"category_id": ownMaterialCategory, "notes": notes},
-			func(t *testing.T, status int, body []byte) { requirePermissionRefused(t, status, body, "materials:update") }},
+			func(t *testing.T, status int, body []byte) {
+				requirePermissionRefused(t, status, body, "materials:update")
+			}},
 		{"a part moved to a material category", apiClient, partsPath + "/" + partID,
 			map[string]any{"category_id": SeedMaterialCategoryID, "notes": notes},
 			func(t *testing.T, status int, body []byte) {

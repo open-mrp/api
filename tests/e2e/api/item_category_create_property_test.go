@@ -63,7 +63,7 @@ func TestItemCategoryProperties_CreateUnderItemCategoriesUpdateAlone(t *testing.
 	assert.Empty(t, jsonArray(attributes, "data"), "a new property has no attributes yet")
 	assert.Equal(t, "/v1/catalog/properties/"+propertyID, resp.Header.Get("Location"))
 
-	replay, err := editor.PostFull(categoryPropertiesPath(categoryID), map[string]any{"name": name}, key)
+	replay, err := editor.PostFull(withQuery(categoryPropertiesPath(categoryID), url.Values{"include": {"attributes"}}), map[string]any{"name": name}, key)
 	require.NoError(t, err)
 	requireStatus(t, http.StatusCreated, replay.StatusCode, replay.Body)
 	assert.Equal(t, propertyID, jsonField(parseJSON(replay.Body), "id"), "a replay answers with the property the first request created")

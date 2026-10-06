@@ -60,7 +60,9 @@ func TestScheduledMessages_RescheduleUnderMessagingUpdateAlone(t *testing.T) {
 	require.NoError(t, err)
 	requireStatus(t, http.StatusOK, status, body)
 	editor := loginAsUser(t, author.email, covAuthUsersPassword, SeedAccountID)
-	t.Cleanup(func() { _, _, _ = editor.Post("/v1/messaging/messages/"+messageID+"/actions/cancel", map[string]any{}, newIdempotencyKey()) })
+	t.Cleanup(func() {
+		_, _, _ = editor.Post("/v1/messaging/messages/"+messageID+"/actions/cancel", map[string]any{}, newIdempotencyKey())
+	})
 	status, body, err = editor.Post(conversationsPath+"/"+convID+"/messages", map[string]any{"body": "x", "client_message_id": uniqueName("cmid")}, newIdempotencyKey())
 	require.NoError(t, err)
 	requirePermissionRefused(t, status, body, "messaging:create")
@@ -109,7 +111,9 @@ func TestScheduledMessages_RescheduleTimeOnlyKeepsTheBody(t *testing.T) {
 	convID := jsonField(createDM(t, author, SeedAccountUser2ID), "id")
 	text := uniqueName("only the time moves")
 	messageID := scheduleIn(t, author, convID, text, time.Hour)
-	t.Cleanup(func() { _, _, _ = author.Post("/v1/messaging/messages/"+messageID+"/actions/cancel", map[string]any{}, newIdempotencyKey()) })
+	t.Cleanup(func() {
+		_, _, _ = author.Post("/v1/messaging/messages/"+messageID+"/actions/cancel", map[string]any{}, newIdempotencyKey())
+	})
 
 	at := time.Now().Add(2 * time.Hour).UTC().Truncate(time.Second)
 	status, body, err := author.Post(reschedulePath(messageID), map[string]any{"scheduled_at": at.Format(time.RFC3339)}, newIdempotencyKey())
@@ -137,7 +141,9 @@ func TestScheduledMessages_RescheduleRefusals(t *testing.T) {
 	author := chatUserClient(t)
 	convID := jsonField(createDM(t, author, SeedAccountUser2ID), "id")
 	messageID := scheduleIn(t, author, convID, uniqueName("refusals"), time.Hour)
-	t.Cleanup(func() { _, _, _ = author.Post("/v1/messaging/messages/"+messageID+"/actions/cancel", map[string]any{}, newIdempotencyKey()) })
+	t.Cleanup(func() {
+		_, _, _ = author.Post("/v1/messaging/messages/"+messageID+"/actions/cancel", map[string]any{}, newIdempotencyKey())
+	})
 	canceledID := scheduleIn(t, author, convID, uniqueName("canceled"), time.Hour)
 	status, body, err := author.Post("/v1/messaging/messages/"+canceledID+"/actions/cancel", map[string]any{}, newIdempotencyKey())
 	require.NoError(t, err)

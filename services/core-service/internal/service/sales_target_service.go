@@ -275,6 +275,10 @@ func (s *salesTargetSvcImpl) UpsertSalesTarget(ctx context.Context, params domai
 		if apiErr != nil {
 			return nil, tracing.Trace(span, apiErr)
 		}
+		// A target is reached only through the rep it is filed under.
+		if existing.SalesRepID != params.SalesRepID {
+			return nil, tracing.Trace(span, apierror.NewResourceNotFoundError("Sales target not found."))
+		}
 
 		// Dashboard only updates the quantity measure (value) on existing targets. Dates and unit are not changed on update.
 		apiErr = s.withTx(ctx, func(txCtx context.Context, txSvc *salesTargetSvcImpl) *apierror.APIError {

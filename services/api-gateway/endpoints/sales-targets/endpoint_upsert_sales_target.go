@@ -54,7 +54,7 @@ func (*UpsertSalesTargetRequest) SchemaExample() any {
 
 // Creates or updates a sales rep's revenue goal at an ID you choose.
 //
-// If no target with the given ID exists, one is created with the supplied dates, amount, and unit. If it already exists, only the amount value is updated — the dates and unit are left unchanged, so raising or lowering a goal mid-period is the intended use. The sales rep must be an active account user in your account, and the target ID must belong to that account, otherwise the request returns a not-found error.
+// If no target with the given ID exists, one is created with the supplied dates, amount, and unit. If it already exists, only the amount value is updated — the dates and unit are left unchanged, so raising or lowering a goal mid-period is the intended use. The sales rep must be an active account user in your account, and an existing target must be filed under that rep, otherwise the request returns a not-found error.
 type UpsertSalesTargetEndpoint struct{}
 
 func (e *UpsertSalesTargetEndpoint) Materialize() *apiendpoint.APIEndpoint[*UpsertSalesTargetRequest, *apiresource.SalesTarget] {

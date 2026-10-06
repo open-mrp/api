@@ -116,3 +116,16 @@ func (suite *SalesTargetSvcTestSuite) TestACreatedTargetMayNotEndBeforeItStarts(
 	suite.Require().NotNil(apiErr)
 	suite.Equal("ends_at", apiErr.Param)
 }
+
+func (suite *SalesTargetSvcTestSuite) TestAnotherRepsPathDoesNotReachTheTarget() {
+	suite.targetRepo.EXPECT().Exists(gomock.Any(), "tgt_a").Return(true, nil)
+	suite.targetRepo.EXPECT().IsInAccount(gomock.Any(), "tgt_a", salesTargetTestAccount).Return(true, nil)
+	suite.targetRepo.EXPECT().Get(gomock.Any(), "tgt_a").Return(&domain.SalesTarget{ID: "tgt_a", SalesRepID: "au_rep_a", AmountID: "qty_a"}, nil)
+
+	_, apiErr := suite.svc.UpsertSalesTarget(salesTargetCtx(), domain.UpsertSalesTargetParams{
+		TargetID: "tgt_a", SalesRepID: "au_rep_b", StartDate: salesTargetTestStart, EndDate: salesTargetTestEnd, AmountValue: "999", AmountUnitID: "un_dollar",
+	})
+
+	suite.Require().NotNil(apiErr)
+	suite.Equal(apierror.ErrorCodeResourceNotFound, apiErr.Code)
+}

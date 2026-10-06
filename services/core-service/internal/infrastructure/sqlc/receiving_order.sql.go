@@ -101,16 +101,21 @@ DELETE rol FROM receiving_order_line rol
 JOIN receiving_order ro ON rol.receiving_order_id = ro.id
 JOIN (
     SELECT
-        sales_order_line_id,
-        MIN(id) AS keep_id
-    FROM receiving_order_line
-    WHERE receiving_order_line.receiving_order_id = ?
-    GROUP BY sales_order_line_id
+        l.sales_order_line_id,
+        MIN(l.id) AS first_id,
+        SUM(CASE WHEN l.stocked_at IS NOT NULL
+                OR EXISTS (SELECT 1 FROM delivery_line kdl WHERE kdl.receiving_order_line_id = l.id)
+            THEN 1 ELSE 0 END) AS kept_count
+    FROM receiving_order_line l
+    WHERE l.receiving_order_id = ?
+    GROUP BY l.sales_order_line_id
     HAVING COUNT(*) > 1
 ) dup ON dup.sales_order_line_id = rol.sales_order_line_id
 WHERE rol.receiving_order_id = ?
 AND ro.account_id = ?
-AND rol.id <> dup.keep_id
+AND rol.stocked_at IS NULL
+AND NOT EXISTS (SELECT 1 FROM delivery_line dl WHERE dl.receiving_order_line_id = rol.id)
+AND (dup.kept_count > 0 OR rol.id <> dup.first_id)
 `
 
 type DeleteDuplicateReceivingOrderLinesParams struct {
@@ -118,6 +123,7 @@ type DeleteDuplicateReceivingOrderLinesParams struct {
 	AccountID        string
 }
 
+// Leaves one line per order line, but never a stocked line or one a delivery records: deleting it would drop received stock from the order and leave the delivery naming a missing line.
 func (q *Queries) DeleteDuplicateReceivingOrderLines(ctx context.Context, arg DeleteDuplicateReceivingOrderLinesParams) error {
 	_, err := q.db.ExecContext(ctx, deleteDuplicateReceivingOrderLines, arg.ReceivingOrderID, arg.ReceivingOrderID, arg.AccountID)
 	return err

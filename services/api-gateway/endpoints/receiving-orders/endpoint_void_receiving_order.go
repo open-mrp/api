@@ -19,9 +19,9 @@ type VoidReceivingOrderRequest struct {
 
 // Voids a receiving order, resetting all receiving progress.
 //
-// Every line's received quantity is reset to `0` and its stocked state is cleared, the extra lines created for short receipts are removed so that one line per purchase order line remains, and the order returns to open. The receiving order itself is not deleted, and it can be received and stocked again from scratch.
+// Every line's received quantity is reset to `0` and its stocked state is cleared, the extra lines created for short receipts are removed so that one line per purchase order line remains, and the order returns to open. A line a delivery was recorded against is never removed, so the delivery keeps its line. The receiving order itself is not deleted, and it can be received and stocked again from scratch.
 //
-// A receiving order that has already been marked complete is only reopened: the extra lines are still removed, but the lines that remain keep their received quantities and stay marked as stocked.
+// A receiving order that has already been marked complete is only reopened: its lines keep their received quantities and stay marked as stocked, and none is removed.
 //
 // Deliveries and inventory received by earlier stocking are not reversed — voiding only reopens the receiving order.
 type VoidReceivingOrderEndpoint struct{}

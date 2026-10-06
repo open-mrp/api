@@ -57,7 +57,7 @@ type ListAuditEventsRequest struct {
 
 // Returns a paginated list of audit events, newest first.
 //
-// Results cover every change where your account is either the acting account or the account that was acted upon, so a customer's or supplier's changes to your records appear alongside your own. The `q` parameter searches the resource type, action, resource ID, and originating request ID.
+// Results cover every change where your account is either the acting account or the account that was acted upon, so a customer's or supplier's changes to your records appear alongside your own. The `q` parameter matches a resource ID, an originating request ID, a resource type or an action exactly; a type or action can be given as its code (`sales_order`) or its name (`Sales Order`).
 type ListAuditEventsEndpoint struct{}
 
 func (e *ListAuditEventsEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListAuditEventsRequest, *apiresource.List[apiresource.AuditEvent]] {

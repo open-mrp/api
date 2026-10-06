@@ -7,7 +7,6 @@ import (
 
 	"github.com/open-mrp/api/services/platform-service/internal/domain"
 	"github.com/open-mrp/api/services/platform-service/internal/infrastructure/sqlc"
-	"github.com/open-mrp/api/shared/db"
 	"github.com/open-mrp/api/shared/pagination"
 )
 
@@ -18,9 +17,16 @@ const (
 	auditEventActorIDIndex       = "audit_event_account_id_actor_id_occurred_at_type_id_idx"
 	auditEventResourceTypeIndex  = "audit_event_account_id_resource_type_occurred_at_type_id_idx"
 	auditEventActionIndex        = "audit_event_account_id_action_occurred_at_type_id_idx"
+	auditEventRequestIDIndex     = "audit_event_account_id_request_id_occurred_at_type_id_idx"
 	auditEventRootIndex          = "audit_event_root_idx"
 	auditEventActorIndex         = "audit_event_actor_idx"
 	auditEventResourceIndex      = "audit_event_resource_idx"
+
+	auditEventTargetResourceIDIndex   = "audit_event_target_resource_id_idx"
+	auditEventTargetRequestIDIndex    = "audit_event_target_request_id_idx"
+	auditEventTargetResourceTypeIndex = "audit_event_target_resource_type_idx"
+	auditEventTargetActionIndex       = "audit_event_target_action_idx"
+	auditEventTargetRootIndex         = "audit_event_target_root_idx"
 )
 
 // auditEventMaxArms is the most values of one filter read as separate arms, each stopping at a page.
@@ -53,6 +59,12 @@ var auditEventListColumns = []string{
 	"ak.name AS api_key_name",
 	"ak.redacted_value AS api_key_redacted_value",
 	"ik.idempotency_key",
+}
+
+// auditEventPin is a column a search pins to one value, with the key in each scope that yields that value's
+// events in list order.
+type auditEventPin struct {
+	column, value, accountIndex, targetIndex string
 }
 
 // auditEventKeyFilter is an equality filter and the key that yields one of its values' events in list order.
@@ -88,9 +100,14 @@ func buildAuditEventListQuery(
 	b.WriteString("SELECT ")
 	b.WriteString(strings.Join(auditEventListColumns, ", "))
 	b.WriteString(" FROM (SELECT ks.id FROM (")
-	q.writeAccountBranches(&b)
-	b.WriteString(" UNION ")
-	q.writeTargetBranch(&b)
+	for i, pin := range q.searchPins() {
+		if i > 0 {
+			b.WriteString(" UNION ")
+		}
+		q.writeAccountBranches(&b, pin)
+		b.WriteString(" UNION ")
+		q.writeTargetBranch(&b, pin)
+	}
 	b.WriteString(") ks")
 	q.writeOrderAndLimit(&b, "ks.")
 	b.WriteString(") page")
@@ -119,14 +136,45 @@ func (q *auditEventListQuery) keyFilters() []auditEventKeyFilter {
 	return filters
 }
 
+// searchPins are the columns a search matches, each pinned to the term. A search matches the column
+// exactly: a resource or request id as given, a resource type or action as its code ("Sales Order" finds
+// sales_order). Every pin reads its own key in both scopes, so a search that matches nothing reads
+// nothing. With no search there is one empty pin and the branches read as the other filters choose.
+func (q *auditEventListQuery) searchPins() []auditEventPin {
+	if q.filter.Query == nil || strings.TrimSpace(*q.filter.Query) == "" {
+		return []auditEventPin{{}}
+	}
+	term := strings.TrimSpace(*q.filter.Query)
+	code := auditEventSearchCode(term)
+	return []auditEventPin{
+		{column: "ae.resource_id", value: term, accountIndex: auditEventResourceIDIndex, targetIndex: auditEventTargetResourceIDIndex},
+		{column: "ae.request_id", value: term, accountIndex: auditEventRequestIDIndex, targetIndex: auditEventTargetRequestIDIndex},
+		{column: "ae.resource_type", value: code, accountIndex: auditEventResourceTypeIndex, targetIndex: auditEventTargetResourceTypeIndex},
+		{column: "ae.action", value: code, accountIndex: auditEventActionIndex, targetIndex: auditEventTargetActionIndex},
+	}
+}
+
+// auditEventSearchCode turns a searched name into the code form resource types and actions are stored in.
+func auditEventSearchCode(term string) string {
+	return strings.Join(strings.FieldsFunc(strings.ToLower(term), func(r rune) bool {
+		return r == ' ' || r == '-' || r == '_'
+	}), "_")
+}
+
 func (q *auditEventListQuery) hasRootFilter() bool {
 	return q.filter.RootResourceType != "" && q.filter.RootResourceID != ""
 }
 
 // writeAccountBranches reads the acting account's events through keys that yield them in list order; a few values of the leading filter are one arm per value, since no key yields several in order.
 // The unfiltered key is offered only alone: beside a filter's key, the planner trades that key's range for a full scan of it.
-func (q *auditEventListQuery) writeAccountBranches(b *strings.Builder) {
+func (q *auditEventListQuery) writeAccountBranches(b *strings.Builder, pin auditEventPin) {
 	filters := q.keyFilters()
+	// A pinned search column reads its own key alone: the other filters are rare beside a matching id and
+	// dense beside a matching type or action, and either way the pinned key yields the page in order.
+	if pin.column != "" {
+		q.writeBranch(b, "account_id", []string{pin.accountIndex}, filters, -1, "", pin)
+		return
+	}
 	split := -1
 	for i, f := range filters {
 		if n := len(f.values); n > 1 && n <= auditEventMaxArms {
@@ -158,20 +206,34 @@ func (q *auditEventListQuery) writeAccountBranches(b *strings.Builder) {
 	}
 
 	if split < 0 {
-		q.writeBranch(b, "account_id", indexes, filters, -1, "")
+		q.writeBranch(b, "account_id", indexes, filters, -1, "", pin)
 		return
 	}
 	for i, v := range filters[split].values {
 		if i > 0 {
 			b.WriteString(" UNION ")
 		}
-		q.writeBranch(b, "account_id", indexes, filters, split, v)
+		q.writeBranch(b, "account_id", indexes, filters, split, v, pin)
 	}
 }
 
 // writeTargetBranch reads the targeted account's events. Its scope key pins no filter, so the keys that pin one across accounts are offered beside it for a rare value.
-func (q *auditEventListQuery) writeTargetBranch(b *strings.Builder) {
+func (q *auditEventListQuery) writeTargetBranch(b *strings.Builder, pin auditEventPin) {
 	f := q.filter
+	if pin.column != "" {
+		q.writeBranch(b, "target_account_id", []string{pin.targetIndex}, q.keyFilters(), -1, "", pin)
+		return
+	}
+	// A resource or root filter pins rows the scope key would only reach by walking every event the
+	// account was acted upon in; their keys yield them in order instead.
+	if len(f.ResourceIDs) == 1 {
+		q.writeBranch(b, "target_account_id", []string{auditEventTargetResourceIDIndex}, q.keyFilters(), -1, "", pin)
+		return
+	}
+	if q.hasRootFilter() {
+		q.writeBranch(b, "target_account_id", []string{auditEventTargetRootIndex}, q.keyFilters(), -1, "", pin)
+		return
+	}
 	indexes := []string{auditEventTargetAccountIndex}
 	if len(f.ActorAccountIDs) > 0 {
 		indexes = append(indexes, auditEventAccountIndex)
@@ -182,15 +244,22 @@ func (q *auditEventListQuery) writeTargetBranch(b *strings.Builder) {
 	if len(f.ResourceTypes) > 0 {
 		indexes = append(indexes, auditEventResourceIndex)
 	}
-	q.writeBranch(b, "target_account_id", indexes, q.keyFilters(), -1, "")
+	if len(f.ResourceIDs) > 1 {
+		indexes = append(indexes, auditEventTargetResourceIDIndex)
+	}
+	q.writeBranch(b, "target_account_id", indexes, q.keyFilters(), -1, "", pin)
 }
 
 // writeBranch writes one parenthesized keyset branch selecting the page's keys; filters[split] is pinned to value.
-func (q *auditEventListQuery) writeBranch(b *strings.Builder, scopeColumn string, indexes []string, filters []auditEventKeyFilter, split int, value string) {
+func (q *auditEventListQuery) writeBranch(b *strings.Builder, scopeColumn string, indexes []string, filters []auditEventKeyFilter, split int, value string, pin auditEventPin) {
 	b.WriteString("(SELECT ae.id, ae.type_id, ae.occurred_at FROM audit_event ae FORCE INDEX (")
 	b.WriteString(strings.Join(indexes, ", "))
 	b.WriteString(") WHERE ae." + scopeColumn + " = ?")
 	q.args = append(q.args, q.callerAccountID)
+	if pin.column != "" {
+		b.WriteString(" AND " + pin.column + " = ?")
+		q.args = append(q.args, pin.value)
+	}
 	for i, f := range filters {
 		if i == split {
 			b.WriteString(" AND " + f.column + " = ?")
@@ -230,11 +299,6 @@ func (q *auditEventListQuery) writeResidualFilters(b *strings.Builder) {
 	if f.EndDate != nil {
 		b.WriteString(" AND ae.occurred_at <= ?")
 		q.args = append(q.args, *f.EndDate)
-	}
-	if f.Query != nil && *f.Query != "" {
-		like := "%" + db.EscapeLike(*f.Query) + "%"
-		b.WriteString(" AND (ae.resource_type LIKE ? OR ae.action LIKE ? OR ae.resource_id LIKE ? OR ae.request_id LIKE ?)")
-		q.args = append(q.args, like, like, like, like)
 	}
 }
 

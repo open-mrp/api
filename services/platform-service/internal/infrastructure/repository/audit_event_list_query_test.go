@@ -178,8 +178,8 @@ func TestBuildAuditEventListQuery_RootAndAccountFiltersUseTheirKeys(t *testing.T
 		t.Errorf("acting-account branch forced %s", got)
 	}
 	target := branchesScopedTo(branches, "target_account_id")[0]
-	if got := strings.Join(forcedIndexes(t, target), ","); got != auditEventTargetAccountIndex+","+auditEventAccountIndex {
-		t.Errorf("target branch forced %s", got)
+	if got := strings.Join(forcedIndexes(t, target), ","); got != auditEventTargetRootIndex {
+		t.Errorf("target branch forced %s; the root key yields a root's events in order without walking the account's", got)
 	}
 	for _, b := range branches {
 		mustContain(t, b, "ae.root_resource_type = ? AND ae.root_resource_id = ?")
@@ -206,10 +206,10 @@ func TestBuildAuditEventListQuery_EveryFilterReachesBothDirections(t *testing.T)
 			mustContain(t, b, "ae.identity_type IN (?)")
 			mustContain(t, b, "ae.occurred_at >= ?")
 			mustContain(t, b, "ae.occurred_at <= ?")
-			mustContain(t, b, "(ae.resource_type LIKE ? OR ae.action LIKE ? OR ae.resource_id LIKE ? OR ae.request_id LIKE ?)")
+			mustNotContain(t, b, "LIKE")
 		}
-		if !containsArg(args, `%50\%\_off%`) {
-			t.Errorf("search must be LIKE-escaped; args=%#v", args)
+		if !containsArg(args, "50%_off") {
+			t.Errorf("search matches the term as given; args=%#v", args)
 		}
 	}
 }
@@ -313,4 +313,82 @@ func auditEventListColumnNames() []string {
 		_, names[i], _ = strings.Cut(c, ".")
 	}
 	return names
+}
+
+// A search pins each column it matches in turn, reading that column's key in both scopes, so a term that
+// matches nothing reads nothing instead of walking every event the account has.
+func TestBuildAuditEventListQuery_SearchReadsEachColumnsKeyInBothScopes(t *testing.T) {
+	query := "  rq_abc123 "
+	q, args := buildAuditList(t, pagination.DirectionForward, &domain.ListAuditEventsFilter{Query: &query}, nil)
+
+	want := map[string]string{
+		"WHERE ae.account_id = ? AND ae.resource_id = ?":          auditEventResourceIDIndex,
+		"WHERE ae.account_id = ? AND ae.request_id = ?":           auditEventRequestIDIndex,
+		"WHERE ae.account_id = ? AND ae.resource_type = ?":        auditEventResourceTypeIndex,
+		"WHERE ae.account_id = ? AND ae.action = ?":               auditEventActionIndex,
+		"WHERE ae.target_account_id = ? AND ae.resource_id = ?":   auditEventTargetResourceIDIndex,
+		"WHERE ae.target_account_id = ? AND ae.request_id = ?":    auditEventTargetRequestIDIndex,
+		"WHERE ae.target_account_id = ? AND ae.resource_type = ?": auditEventTargetResourceTypeIndex,
+		"WHERE ae.target_account_id = ? AND ae.action = ?":        auditEventTargetActionIndex,
+	}
+	branches := auditBranches(t, q)
+	if len(branches) != len(want) {
+		t.Fatalf("%d branches, want one per column and scope:\n%s", len(branches), strings.Join(branches, "\n"))
+	}
+	for _, b := range branches {
+		matched := false
+		for pinned, index := range want {
+			if strings.Contains(b, pinned) {
+				matched = true
+				if got := strings.Join(forcedIndexes(t, b), ","); got != index {
+					t.Errorf("branch pinning %q forced %s, want %s", pinned, got, index)
+				}
+			}
+		}
+		if !matched {
+			t.Errorf("branch pins no searched column: %s", b)
+		}
+		mustNotContain(t, b, "LIKE")
+	}
+	if !containsArg(args, "rq_abc123") {
+		t.Errorf("ids are matched as given, trimmed; args=%#v", args)
+	}
+}
+
+func TestAuditEventSearchCode_MatchesHowTypesAndActionsAreStored(t *testing.T) {
+	for in, want := range map[string]string{
+		"Sales Order":      "sales_order",
+		"sales_order":      "sales_order",
+		" sales-order ":    "sales_order",
+		"UPDATE":           "update",
+		"Production  Step": "production_step",
+		"rq_01abcDEF":      "rq_01abcdef",
+	} {
+		if got := auditEventSearchCode(in); got != want {
+			t.Errorf("auditEventSearchCode(%q) = %q, want %q", in, got, want)
+		}
+	}
+}
+
+// One resource id is read through the target key that pins it, not by walking every event the account was
+// acted upon in; several ids offer that key beside the scope key.
+func TestBuildAuditEventListQuery_TargetBranchReadsAResourceIDThroughItsKey(t *testing.T) {
+	q, _ := buildAuditList(t, pagination.DirectionForward, &domain.ListAuditEventsFilter{ResourceIDs: []string{"or_1"}}, nil)
+	target := branchesScopedTo(auditBranches(t, q), "target_account_id")[0]
+	if got := strings.Join(forcedIndexes(t, target), ","); got != auditEventTargetResourceIDIndex {
+		t.Errorf("target branch forced %s", got)
+	}
+
+	q, _ = buildAuditList(t, pagination.DirectionForward, &domain.ListAuditEventsFilter{ResourceIDs: []string{"or_1", "or_2"}}, nil)
+	target = branchesScopedTo(auditBranches(t, q), "target_account_id")[0]
+	if got := strings.Join(forcedIndexes(t, target), ","); got != auditEventTargetAccountIndex+","+auditEventTargetResourceIDIndex {
+		t.Errorf("target branch forced %s", got)
+	}
+}
+
+func mustNotContain(t *testing.T, haystack, needle string) {
+	t.Helper()
+	if strings.Contains(haystack, needle) {
+		t.Errorf("expected SQL not to contain %q, got:\n%s", needle, haystack)
+	}
 }

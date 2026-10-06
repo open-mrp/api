@@ -44,7 +44,7 @@ type StockLineItemRequest struct {
 
 // A portion of a line's accepted quantity placed at a storage location.
 type AllocationRequest struct {
-	// ID of the storage location to put the quantity away at.
+	// ID of the storage location to put the quantity away at. It must be one of the account's storage locations.
 	//
 	// When omitted, the inventory receipt is created without a storage location.
 	LocationID field.Optional[string] `json:"location_id,omitzero"`
@@ -77,7 +77,7 @@ func (*StockReceivingOrderRequest) SchemaExample() any {
 //
 // Every unstocked line with a non-zero quantity is marked as stocked. For each entry in `line_items`, the allocations create inventory receipts at the given storage locations (and lot, if one was given), and any `rejected_quantity` is recorded as refused without entering inventory. One delivery is recorded for the whole stocking event, with a line per allocation and a line per refused quantity.
 //
-// Each entry must name a line of this order that is being stocked now, at most once, and its allocations and refusal together may not exceed the quantity received on that line. Otherwise the request is refused and nothing is stocked.
+// Each entry must name a line of this order that is being stocked now, at most once, each allocation must be at one of the account's storage locations, and its allocations and refusal together may not exceed the quantity received on that line. Otherwise the request is refused and nothing is stocked.
 //
 // The newly received stock is then applied to any open inventory issues for the same item, oldest first, so demand already waiting on the item is satisfied automatically.
 //

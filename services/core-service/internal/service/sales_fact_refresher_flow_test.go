@@ -99,6 +99,35 @@ func TestAFailedBuyerRebuildLeavesTheBuyerMarkedForTheNextTick(t *testing.T) {
 	require.NotNil(t, r.drainBuyerDirty(context.Background()))
 }
 
+// A voided shipment's invoice is gone: its facts must go, and its mark clear, even while a buyer rebuild
+// keeps failing. Otherwise the oldest marks are retried forever and every newer one waits behind them.
+func TestAFailedBuyerRebuildStillClearsTheInvoiceMarksWhoseFactsWereWritten(t *testing.T) {
+	r, repo, _ := newMockRefresher(t)
+	voided := domain.SalesFactDirtyMark{ScopeType: domain.SalesFactScopeInvoice, ScopeID: "iv_1", AccountID: "ac_1"}
+	stored := fact("il_1", "10")
+	stored.BuyerAccountID = "ac_buyer"
+	buyer := domain.SalesBuyerKey{AccountID: "ac_1", BuyerAccountID: stored.BuyerAccountID}
+	started := time.Date(2026, 9, 30, 12, 0, 0, 0, time.UTC)
+
+	repo.EXPECT().ListDirty(gomock.Any(), gomock.Any()).Return([]domain.SalesFactDirtyMark{voided}, nil)
+	repo.EXPECT().ResolveInvoiceIDs(gomock.Any(), "ac_1", domain.SalesFactScopeInvoice, []string{"iv_1"}).Return([]string{"iv_1"}, nil)
+	repo.EXPECT().ComputeFacts(gomock.Any(), []string{"iv_1"}).Return(nil, nil)
+	repo.EXPECT().GetFacts(gomock.Any(), []string{"iv_1"}).Return([]domain.SalesLineFact{stored}, nil)
+	repo.EXPECT().GetBuyerSummarySync(gomock.Any()).Return(&domain.SalesBuyerSummarySync{PassStartedAt: &started}, nil)
+	repo.EXPECT().MarkRollupDays(gomock.Any(), gomock.Any()).Return(nil)
+	repo.EXPECT().MarkBuyers(gomock.Any(), []domain.SalesBuyerKey{buyer}).Return(nil)
+	repo.EXPECT().UpsertFacts(gomock.Any(), gomock.Len(0)).Return(nil)
+	repo.EXPECT().DeleteFacts(gomock.Any(), []string{"il_1"}).Return(nil)
+	repo.EXPECT().ListRollupDirty(gomock.Any(), gomock.Any()).Return(nil, nil)
+	repo.EXPECT().ListBuyerDirty(gomock.Any(), gomock.Any()).Return([]domain.SalesBuyerDirtyMark{{Buyer: buyer, MarkedAt: started}}, nil)
+	repo.EXPECT().RebuildBuyerSummaries(gomock.Any(), "ac_1", []string{buyer.BuyerAccountID}).Return(apierror.NewInternalError(nil, "missing index"))
+	repo.EXPECT().ClearBuyerDirty(gomock.Any(), gomock.Any()).Times(0)
+	repo.EXPECT().ClearDirty(gomock.Any(), []domain.SalesFactDirtyMark{voided}).Return(nil)
+
+	require.Nil(t, r.drainDirty(context.Background()))
+	require.True(t, r.backlog, "the buyer stays marked for the next tick")
+}
+
 func TestALineThatChangedBuyerMarksBothBuyers(t *testing.T) {
 	old := fact("il_1", "10")
 	moved := old

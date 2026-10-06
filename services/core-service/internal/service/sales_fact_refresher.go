@@ -251,16 +251,8 @@ func resetTimer(t *time.Timer, d time.Duration) {
 // Tick runs one round of every path and reports whether it left work for a later run. Exported for tests; production calls it under the lease.
 func (s *SalesFactRefresher) Tick(ctx context.Context) bool {
 	s.backlog = false
-	// Days a failed or interrupted refresh left marked are rebuilt first.
-	if apiErr := s.drainRollupDirty(ctx); apiErr != nil {
-		s.backlog = true
-		slog.ErrorContext(ctx, "Sales fact refresher: rebuilding marked rollup days failed", "error", apiErr)
-	}
-	// Buyers a failed or interrupted refresh left marked are rebuilt first too.
-	if apiErr := s.drainBuyerDirty(ctx); apiErr != nil {
-		s.backlog = true
-		slog.ErrorContext(ctx, "Sales fact refresher: rebuilding marked buyer summaries failed", "error", apiErr)
-	}
+	// Days and buyers a failed or interrupted refresh left marked are rebuilt first.
+	s.drainDerived(ctx)
 	if apiErr := s.drainDirty(ctx); apiErr != nil {
 		s.backlog = true
 		slog.ErrorContext(ctx, "Sales fact refresher: draining dirty marks failed", "error", apiErr)
@@ -565,10 +557,21 @@ func (s *SalesFactRefresher) refreshInvoices(ctx context.Context, invoiceIDs []s
 		// Reports that read the facts alone are stale now, whether or not the rollups rebuild below.
 		s.cfg.OnFactsChanged(ctx, accounts)
 	}
+	s.drainDerived(ctx)
+	return changedLines, nil
+}
+
+// drainDerived rebuilds the marked rollup days and buyer summaries. Their marks are written before the
+// facts, so a failed rebuild waits for the next tick without holding back the facts' own marks.
+func (s *SalesFactRefresher) drainDerived(ctx context.Context) {
 	if apiErr := s.drainRollupDirty(ctx); apiErr != nil {
-		return changedLines, apiErr
+		s.backlog = true
+		slog.ErrorContext(ctx, "Sales fact refresher: rebuilding marked rollup days failed", "error", apiErr)
 	}
-	return changedLines, s.drainBuyerDirty(ctx)
+	if apiErr := s.drainBuyerDirty(ctx); apiErr != nil {
+		s.backlog = true
+		slog.ErrorContext(ctx, "Sales fact refresher: rebuilding marked buyer summaries failed", "error", apiErr)
+	}
 }
 
 // buyerSummariesTracked reports whether changed facts must mark their buyers: once the buyer summary sweep

@@ -549,8 +549,8 @@ func TestInlineAddresses_AddressEndpointsStillNeedAddressPermissions(t *testing.
 	requireStatus(t, 403, status, resp)
 }
 
-// An update that points the order at a saved address takes one of the supplier's, the same as create does. Before, any address id was taken, including another tenant's.
-func TestInlineAddresses_PurchaseOrderUpdateTakesOnlyTheSuppliersAddresses(t *testing.T) {
+// An update that points the order at a saved address takes one of the supplier's or one of the ordering account's own, which is what the order page's bill-to and ship-to pickers list. Before, any address id was taken, including another tenant's.
+func TestInlineAddresses_PurchaseOrderUpdateTakesOnlyTheSuppliersOrOwnAddresses(t *testing.T) {
 	t.Parallel()
 	supplierID := inlineSupplier(t)
 	saved := trackInlineAddresses(t, supplierID)
@@ -563,8 +563,7 @@ func TestInlineAddresses_PurchaseOrderUpdateTakesOnlyTheSuppliersAddresses(t *te
 
 	for _, tc := range []struct{ name, field, addressID string }{
 		{"another supplier's address", "billing_address_id", SeedSupplierAddressID},
-		{"the account's own address", "shipping_address_id", ownAddressID},
-		{"another tenant's address", "billing_address_id", otherTenantAddressID},
+		{"another tenant's address", "shipping_address_id", otherTenantAddressID},
 	} {
 		status, body, err := apiClient.Patch(path, map[string]any{tc.field: tc.addressID}, newIdempotencyKey())
 		require.NoError(t, err)
@@ -572,10 +571,10 @@ func TestInlineAddresses_PurchaseOrderUpdateTakesOnlyTheSuppliersAddresses(t *te
 		assertErrorParam(t, requireErrorResponse(t, body, "", "invalid_request_error"), tc.field)
 	}
 
-	status, body, err := apiClient.Patch(path, map[string]any{"billing_address_id": supplierAddressID, "shipping_address_id": supplierAddressID}, newIdempotencyKey())
+	status, body, err := apiClient.Patch(path, map[string]any{"billing_address_id": ownAddressID, "shipping_address_id": supplierAddressID}, newIdempotencyKey())
 	require.NoError(t, err)
 	requireStatus(t, 200, status, body)
 	bill, ship := getWithAddresses(t, path, "billing_address", "shipping_address")
-	assert.Equal(t, supplierAddressID, jsonField(bill, "id"))
-	assert.Equal(t, supplierAddressID, jsonField(ship, "id"))
+	assert.Equal(t, ownAddressID, jsonField(bill, "id"), "the account's own address, as the order page offers")
+	assert.Equal(t, supplierAddressID, jsonField(ship, "id"), "the supplier's address")
 }

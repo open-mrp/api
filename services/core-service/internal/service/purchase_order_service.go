@@ -545,7 +545,7 @@ func (s *purchaseOrderSvcImpl) UpdatePurchaseOrder(ctx context.Context, params d
 				return apiErr
 			}
 
-			// A saved address is one of the supplier's, as on create. One the order already holds is left as it is.
+			// A saved address is the supplier's or the ordering account's own: the order page picks a bill-to or ship-to from the account's own addresses. Any other account's is refused. One the order already holds is left as it is.
 			for _, ref := range []struct {
 				id, held *string
 				param    string
@@ -553,12 +553,12 @@ func (s *purchaseOrderSvcImpl) UpdatePurchaseOrder(ctx context.Context, params d
 				if ref.id == nil || *ref.id == *ref.held {
 					continue
 				}
-				inAccount, apiErr := txSvc.repos.NewAddressRepo().IsInAccount(txCtx, old.SellerAccountID, *ref.id)
+				acct, apiErr := orderAddressAccount(txCtx, txSvc.repos.NewAddressRepo(), params.AccountID, old.SellerAccountID, *ref.id)
 				if apiErr != nil {
 					return apiErr
 				}
-				if !inAccount {
-					return apierror.NewValidationErrorWithParam("The address does not belong to this supplier.", ref.param)
+				if acct == "" {
+					return apierror.NewValidationErrorWithParam("The address belongs to neither this supplier nor your account.", ref.param)
 				}
 			}
 

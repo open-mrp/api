@@ -530,6 +530,10 @@ var pathSpecificParamSeeds = map[string]map[string]string{
 	"/v1/operations/production-schedules/": {
 		"line_id": SeedProductionScheduleLineID,
 	},
+	// A territory's path names the seller that owns it, not a customer.
+	"/v1/sales/accounts/{account_id}/territories": {
+		"account_id": SeedAccountID,
+	},
 }
 
 // pathSpecificParamSeed returns the longest-prefix match for a named path param that

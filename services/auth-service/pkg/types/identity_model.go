@@ -86,6 +86,11 @@ func (i *Identity) IsAPIKey() bool {
 	return i.IsActorSet() && i.Type == IdentityActorTypeAPIKey
 }
 
+// IsAgent reports whether the caller is an agent run calling the API through its tools.
+func (i *Identity) IsAgent() bool {
+	return i != nil && i.Type == IdentityActorTypeAgent
+}
+
 // IsUser checks that the identity is a user and a valid actor was found
 func (i *Identity) IsUser() bool {
 	return i.IsActorSet() && i.Type == IdentityActorTypeUser

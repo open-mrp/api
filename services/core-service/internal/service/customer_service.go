@@ -1360,7 +1360,6 @@ func checkCustomerReadPermission(identity *types.Identity) *apierror.APIError {
 	return identity.CheckHasPermission(types.PermissionDomainCustomers, types.ActionRead)
 }
 
-// ensureAccountAddressLink creates an account_address record linking the given address to the account, if one does not already exist.
 // checkCustomerDefaultAddresses refuses a default billing or shipping address that changes to one the
 // customer's account does not hold. An unchanged default is left alone.
 func checkCustomerDefaultAddresses(ctx context.Context, repo domain.CustomerRepo, params domain.UpdateCustomerParams, old *domain.Customer) *apierror.APIError {
@@ -1391,6 +1390,7 @@ func checkCustomerDefaultAddresses(ctx context.Context, repo domain.CustomerRepo
 	return nil
 }
 
+// ensureAccountAddressLink creates an account_address record linking the given address to the account, if one does not already exist.
 func ensureAccountAddressLink(ctx context.Context, repo domain.CustomerRepo, accountID, addressID string) *apierror.APIError {
 	existingIDs, apiErr := repo.GetAccountAddressIDs(ctx, accountID)
 	if apiErr != nil {

@@ -470,6 +470,7 @@ func (s *customerSvcImpl) UpdateCustomer(ctx context.Context, params domain.Upda
 			params.BillToAddressID = params.BillToAddressID.BackfillUnsetPtr(old.BillToAddressID)
 			params.ShipToAddressID = params.ShipToAddressID.BackfillUnsetPtr(old.ShipToAddressID)
 			params.DefaultLeadTimeDays = params.DefaultLeadTimeDays.BackfillUnsetPtr(old.DefaultLeadTimeDays)
+			params.ReceiveCalendarID = params.ReceiveCalendarID.BackfillUnsetPtr(old.ReceiveCalendarID)
 			params.FulfillmentPolicy = params.FulfillmentPolicy.BackfillUnsetPtr(old.FulfillmentPolicy)
 
 			switch {

@@ -17,6 +17,7 @@ import (
 	"github.com/open-mrp/api/shared/excel"
 	"github.com/open-mrp/api/shared/idempotency"
 	"github.com/open-mrp/api/shared/messaging"
+	"github.com/open-mrp/api/shared/safeconv"
 	"github.com/open-mrp/api/shared/tracing"
 )
 
@@ -96,6 +97,10 @@ type exportSpec[TRow, TFilters any] struct {
 	// Fetch returns every matching row, unpaginated, up to one past ExportRowLimit so an
 	// oversized export is rejected rather than truncated.
 	Fetch func(ctx context.Context, repos domain.RepoFactory, accountID string, filters TFilters) ([]TRow, *apierror.APIError)
+	// Stream walks every matching row a page at a time, handing each page to emit, for a resource too large to hold in memory. Takes precedence over Fetch and is not held to ExportRowLimit.
+	Stream func(ctx context.Context, repos domain.RepoFactory, accountID string, filters TFilters, emit func(rows []TRow) *apierror.APIError) *apierror.APIError
+	// FileName names the file for its filters, where a slug and start date would not tell two downloads apart.
+	FileName func(filters TFilters) string
 	// Project turns one row into its cells, keyed by ColumnSpec.Key.
 	Project func(row TRow) excel.Row
 	// Expand turns one row into several, for a resource that lists a parent's
@@ -108,8 +113,12 @@ type exportSpec[TRow, TFilters any] struct {
 
 // names the object an export job's file is stored under. Derived rather than recorded:
 // every part is already on the job, so the worker and the reader agree without storage.
-func exportObjectKey(accountID, slug, jobID string, startedAt time.Time, ext string) string {
-	return "exports/" + accountID + "/" + slug + "/" + jobID + "/" + excel.FilenameWithExt(slug, startedAt, ext)
+func exportObjectKey(accountID, jobID string, startedAt time.Time, payload exportJobPayload) string {
+	filename := payload.Name
+	if filename == "" {
+		filename = excel.FilenameWithExt(payload.Slug, startedAt, payload.Ext)
+	}
+	return "exports/" + accountID + "/" + payload.Slug + "/" + jobID + "/" + filename
 }
 
 // records on the job what to build. The slug rides along because the download endpoint
@@ -121,6 +130,8 @@ type exportJobPayload struct {
 	// the name the browser saves. Absent on payloads written before non-spreadsheet
 	// exports existed, and those files were uploaded as .xlsx — so empty means xlsx.
 	Ext string `json:"ext,omitempty"`
+	// Name is the file's whole name, for an export named for its filters; empty means the slug and start date name it.
+	Name string `json:"name,omitempty"`
 }
 
 // adapts one resource's spec into the builder the download endpoint calls, decoding the
@@ -179,7 +190,11 @@ func enqueueExport[TRow, TFilters any](
 	if err != nil {
 		return nil, tracing.Trace(span, apierror.NewInternalError(err, "Failed to marshal export filters."))
 	}
-	jobItems, err := json.Marshal(exportJobPayload{Slug: spec.Slug, Filters: rawFilters, Ext: spec.Ext})
+	payload := exportJobPayload{Slug: spec.Slug, Filters: rawFilters, Ext: spec.Ext}
+	if spec.FileName != nil {
+		payload.Name = spec.FileName(filters)
+	}
+	jobItems, err := json.Marshal(payload)
 	if err != nil {
 		return nil, tracing.Trace(span, apierror.NewInternalError(err, "Failed to marshal export filters."))
 	}
@@ -260,6 +275,10 @@ func buildExport[TRow, TFilters any](
 	accountID string,
 	filters TFilters,
 ) (*domain.Export, *apierror.APIError) {
+	if spec.Stream != nil {
+		return buildStreamedExport(ctx, repos, spec, accountID, filters)
+	}
+
 	rows, apiErr := spec.Fetch(ctx, repos, accountID, filters)
 	if apiErr != nil {
 		return nil, apiErr
@@ -275,19 +294,11 @@ func buildExport[TRow, TFilters any](
 	if spec.ColumnsFor != nil {
 		columns = spec.ColumnsFor(rows)
 	}
-	if len(spec.CostColumns) > 0 && !requesterCanReadCosts(ctx) {
-		columns = slices.DeleteFunc(slices.Clone(columns), func(c excel.ColumnSpec) bool { return slices.Contains(spec.CostColumns, c.Key) })
-	}
-
-	sheetName := spec.SheetName
-	if sheetName == "" {
-		sheetName = spec.Name
-	}
 
 	body, err := excel.Build(excel.Spec{
 		Sheets: []excel.Sheet{{
-			Name:    sheetName,
-			Columns: columns,
+			Name:    spec.sheetName(),
+			Columns: spec.visibleColumns(ctx, columns),
 			Rows:    spec.project(rows),
 		}},
 	})
@@ -301,6 +312,65 @@ func buildExport[TRow, TFilters any](
 		// Resource rows, not sheet rows: a grouped export writes one row per child.
 		RowCount: int32(len(rows)), // #nosec G115 - a sheet cannot hold more rows than an int32
 	}, nil
+}
+
+// writes each page into the sheet as the spec's walk reads it, so no more than a page is held at once
+func buildStreamedExport[TRow, TFilters any](
+	ctx context.Context,
+	repos domain.RepoFactory,
+	spec exportSpec[TRow, TFilters],
+	accountID string,
+	filters TFilters,
+) (*domain.Export, *apierror.APIError) {
+	var rowCount int
+	var walkErr *apierror.APIError
+	body, err := excel.Stream(excel.StreamSheet{
+		Name:    spec.sheetName(),
+		Columns: spec.visibleColumns(ctx, spec.Columns),
+		Fill: func(write func(excel.Row) error) error {
+			walkErr = spec.Stream(ctx, repos, accountID, filters, func(rows []TRow) *apierror.APIError {
+				for _, sheetRow := range spec.project(rows) {
+					if err := write(sheetRow); err != nil {
+						return apierror.NewInternalError(err, "Failed to build the export file.")
+					}
+				}
+				rowCount += len(rows)
+				return nil
+			})
+			if walkErr != nil {
+				return walkErr
+			}
+			return nil
+		},
+	})
+	if walkErr != nil {
+		return nil, walkErr
+	}
+	if err != nil {
+		return nil, apierror.NewInternalError(err, "Failed to build the export file.")
+	}
+
+	return &domain.Export{
+		ContentType: excel.ContentType,
+		Body:        body,
+		RowCount:    safeconv.IntToInt32(rowCount),
+	}, nil
+}
+
+// names the worksheet, which is the file's name unless the spec says otherwise
+func (s exportSpec[TRow, TFilters]) sheetName() string {
+	if s.SheetName != "" {
+		return s.SheetName
+	}
+	return s.Name
+}
+
+// leaves the cost columns out for a requester who may not see costs
+func (s exportSpec[TRow, TFilters]) visibleColumns(ctx context.Context, columns []excel.ColumnSpec) []excel.ColumnSpec {
+	if len(s.CostColumns) == 0 || requesterCanReadCosts(ctx) {
+		return columns
+	}
+	return slices.DeleteFunc(slices.Clone(columns), func(c excel.ColumnSpec) bool { return slices.Contains(s.CostColumns, c.Key) })
 }
 
 // reports whether the identity the export was requested under, which its job event carries, may see cost data

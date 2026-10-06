@@ -299,6 +299,7 @@ const (
 	CoreService_ListInventoryChangeLogs_FullMethodName                    = "/core.CoreService/ListInventoryChangeLogs"
 	CoreService_GetInventoryChangeLog_FullMethodName                      = "/core.CoreService/GetInventoryChangeLog"
 	CoreService_ExportInventoryChangeLogs_FullMethodName                  = "/core.CoreService/ExportInventoryChangeLogs"
+	CoreService_StartInventoryChangeLogsExport_FullMethodName             = "/core.CoreService/StartInventoryChangeLogsExport"
 	CoreService_ListInvoices_FullMethodName                               = "/core.CoreService/ListInvoices"
 	CoreService_GetInvoice_FullMethodName                                 = "/core.CoreService/GetInvoice"
 	CoreService_UpdateInvoice_FullMethodName                              = "/core.CoreService/UpdateInvoice"
@@ -940,6 +941,8 @@ type CoreServiceClient interface {
 	GetInventoryChangeLog(ctx context.Context, in *GetInventoryChangeLogRequest, opts ...grpc.CallOption) (*GetInventoryChangeLogResponse, error)
 	// Returns all matching inventory change logs without pagination (for export).
 	ExportInventoryChangeLogs(ctx context.Context, in *ExportInventoryChangeLogsRequest, opts ...grpc.CallOption) (*ExportInventoryChangeLogsResponse, error)
+	// Accepts an export of the inventory change logs the filters select; the file is built by the export worker.
+	StartInventoryChangeLogsExport(ctx context.Context, in *StartInventoryChangeLogsExportRequest, opts ...grpc.CallOption) (*StartInventoryChangeLogsExportResponse, error)
 	ListInvoices(ctx context.Context, in *ListInvoicesRequest, opts ...grpc.CallOption) (*ListInvoicesResponse, error)
 	GetInvoice(ctx context.Context, in *GetInvoiceRequest, opts ...grpc.CallOption) (*GetInvoiceResponse, error)
 	UpdateInvoice(ctx context.Context, in *UpdateInvoiceRequest, opts ...grpc.CallOption) (*UpdateInvoiceResponse, error)
@@ -3856,6 +3859,16 @@ func (c *coreServiceClient) ExportInventoryChangeLogs(ctx context.Context, in *E
 	return out, nil
 }
 
+func (c *coreServiceClient) StartInventoryChangeLogsExport(ctx context.Context, in *StartInventoryChangeLogsExportRequest, opts ...grpc.CallOption) (*StartInventoryChangeLogsExportResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(StartInventoryChangeLogsExportResponse)
+	err := c.cc.Invoke(ctx, CoreService_StartInventoryChangeLogsExport_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 func (c *coreServiceClient) ListInvoices(ctx context.Context, in *ListInvoicesRequest, opts ...grpc.CallOption) (*ListInvoicesResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(ListInvoicesResponse)
@@ -5800,6 +5813,8 @@ type CoreServiceServer interface {
 	GetInventoryChangeLog(context.Context, *GetInventoryChangeLogRequest) (*GetInventoryChangeLogResponse, error)
 	// Returns all matching inventory change logs without pagination (for export).
 	ExportInventoryChangeLogs(context.Context, *ExportInventoryChangeLogsRequest) (*ExportInventoryChangeLogsResponse, error)
+	// Accepts an export of the inventory change logs the filters select; the file is built by the export worker.
+	StartInventoryChangeLogsExport(context.Context, *StartInventoryChangeLogsExportRequest) (*StartInventoryChangeLogsExportResponse, error)
 	ListInvoices(context.Context, *ListInvoicesRequest) (*ListInvoicesResponse, error)
 	GetInvoice(context.Context, *GetInvoiceRequest) (*GetInvoiceResponse, error)
 	UpdateInvoice(context.Context, *UpdateInvoiceRequest) (*UpdateInvoiceResponse, error)
@@ -6811,6 +6826,9 @@ func (UnimplementedCoreServiceServer) GetInventoryChangeLog(context.Context, *Ge
 }
 func (UnimplementedCoreServiceServer) ExportInventoryChangeLogs(context.Context, *ExportInventoryChangeLogsRequest) (*ExportInventoryChangeLogsResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method ExportInventoryChangeLogs not implemented")
+}
+func (UnimplementedCoreServiceServer) StartInventoryChangeLogsExport(context.Context, *StartInventoryChangeLogsExportRequest) (*StartInventoryChangeLogsExportResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method StartInventoryChangeLogsExport not implemented")
 }
 func (UnimplementedCoreServiceServer) ListInvoices(context.Context, *ListInvoicesRequest) (*ListInvoicesResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method ListInvoices not implemented")
@@ -12164,6 +12182,24 @@ func _CoreService_ExportInventoryChangeLogs_Handler(srv interface{}, ctx context
 	return interceptor(ctx, in, info, handler)
 }
 
+func _CoreService_StartInventoryChangeLogsExport_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(StartInventoryChangeLogsExportRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(CoreServiceServer).StartInventoryChangeLogsExport(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: CoreService_StartInventoryChangeLogsExport_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(CoreServiceServer).StartInventoryChangeLogsExport(ctx, req.(*StartInventoryChangeLogsExportRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 func _CoreService_ListInvoices_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(ListInvoicesRequest)
 	if err := dec(in); err != nil {
@@ -15868,6 +15904,10 @@ var CoreService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "ExportInventoryChangeLogs",
 			Handler:    _CoreService_ExportInventoryChangeLogs_Handler,
+		},
+		{
+			MethodName: "StartInventoryChangeLogsExport",
+			Handler:    _CoreService_StartInventoryChangeLogsExport_Handler,
 		},
 		{
 			MethodName: "ListInvoices",

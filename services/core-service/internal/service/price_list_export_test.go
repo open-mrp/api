@@ -19,18 +19,20 @@ func TestExportObjectKey_ExtensionFollowsTheFormat(t *testing.T) {
 	at := time.Date(2026, 8, 14, 0, 0, 0, 0, time.UTC)
 
 	cases := []struct {
-		name    string
-		slug    string
-		ext     string
-		wantEnd string
+		name     string
+		slug     string
+		ext      string
+		fileName string
+		wantEnd  string
 	}{
-		{"price list is a pdf", "price_list", "pdf", "price_list_export_08-14-2026.pdf"},
-		{"spreadsheet exports are unchanged", "departments", "", "departments_export_08-14-2026.xlsx"},
+		{"price list is a pdf", "price_list", "pdf", "", "price_list_export_08-14-2026.pdf"},
+		{"spreadsheet exports are unchanged", "departments", "", "", "departments_export_08-14-2026.xlsx"},
+		{"an export named for its filters keeps that name", "inventory_change_logs", "", "inventory-change-logs-all-all.xlsx", "/inventory-change-logs-all-all.xlsx"},
 	}
 
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			key := exportObjectKey("ac_1", tc.slug, "job_1", at, tc.ext)
+			key := exportObjectKey("ac_1", "job_1", at, exportJobPayload{Slug: tc.slug, Ext: tc.ext, Name: tc.fileName})
 			if !strings.HasSuffix(key, tc.wantEnd) {
 				t.Errorf("key = %q, want it to end in %q", key, tc.wantEnd)
 			}

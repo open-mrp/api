@@ -161,3 +161,33 @@ func (h *gRPCHandler) ExportInventoryChangeLogs(ctx context.Context, req *pb.Exp
 		Count:               int64(len(items)),
 	}, nil
 }
+
+func (h *gRPCHandler) StartInventoryChangeLogsExport(ctx context.Context, req *pb.StartInventoryChangeLogsExportRequest) (*pb.StartInventoryChangeLogsExportResponse, error) {
+	if req == nil {
+		return nil, contracts.NewMissingGRPCRequestDataError()
+	}
+
+	ctx, finalizeIdempotency := contracts.WithIdempotencyTracking(ctx)
+	defer finalizeIdempotency()
+
+	filters := domain.ExportInventoryChangeLogsParams{
+		ItemIDs:          req.ItemIds,
+		ActionTypeCodes:  req.ActionTypeCodes,
+		ChangedByUserIDs: req.ChangedByUserIds,
+	}
+	if req.StartDate != nil {
+		t := req.StartDate.AsTime()
+		filters.StartDate = &t
+	}
+	if req.EndDate != nil {
+		t := req.EndDate.AsTime()
+		filters.EndDate = &t
+	}
+
+	job, apiErr := h.inventoryChangeLogSvc.StartInventoryChangeLogsExport(ctx, filters)
+	if apiErr != nil {
+		return nil, contracts.ConvertAPIErrorToGRPC(apiErr)
+	}
+
+	return &pb.StartInventoryChangeLogsExportResponse{Job: jobToProto(job)}, nil
+}

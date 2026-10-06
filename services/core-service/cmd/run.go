@@ -501,7 +501,11 @@ func Run(
 	})
 
 	inventoryChangeLogSvc := service.NewInventoryChangeLogSvc(&service.InventoryChangeLogSvcConfig{
-		Repos: repoFactory,
+		Repos:           repoFactory,
+		ReportRepos:     reportRepoFactory,
+		MediatorFactory: mediatorFactory,
+		JobSvcFactory:   jobSvcFactory,
+		TxManager:       txManager,
 	})
 
 	invoiceSvc := service.NewInvoiceSvc(&service.InvoiceSvcConfig{
@@ -861,6 +865,7 @@ func Run(
 		"sales_data":              analyticsSvc.BuildExportSalesLines,
 		"open_order_lines":        analyticsSvc.BuildExportOpenOrderLines,
 		"customers":               customerSvc.BuildExportCustomers,
+		"inventory_change_logs":   inventoryChangeLogSvc.BuildExportInventoryChangeLogs,
 	}
 
 	exportRunner := service.NewExportRunner(&service.ExportRunnerConfig{

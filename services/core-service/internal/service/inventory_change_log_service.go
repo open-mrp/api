@@ -15,17 +15,38 @@ import (
 var inventoryChangeLogSvcTracer = tracing.GetTracer("core-service.inventory_change_log_service")
 
 type inventoryChangeLogSvcImpl struct {
-	repos domain.RepoFactory
+	repos           domain.RepoFactory
+	reportRepos     domain.RepoFactory
+	mediatorFactory domain.MediatorFactory
+	jobSvcFactory   domain.JobSvcFactory
+	txManager       TransactionManager
 }
 
 type InventoryChangeLogSvcConfig struct {
 	// Repos (required) is the repository factory.
 	Repos domain.RepoFactory
+	// ReportRepos (optional; default: Repos) builds the repositories an export walks the log through; point it at a read replica.
+	ReportRepos domain.RepoFactory
+	// MediatorFactory (required) builds the mediators an export's accept uses.
+	MediatorFactory domain.MediatorFactory
+	// JobSvcFactory (required) builds the job service an export records on.
+	JobSvcFactory domain.JobSvcFactory
+	// TxManager (required) commits an export's job with the command that runs it.
+	TxManager TransactionManager
 }
 
 func (c *InventoryChangeLogSvcConfig) validate() error {
 	if c.Repos == nil {
 		return fmt.Errorf("inventory change log service: repos is required")
+	}
+	if c.MediatorFactory == nil {
+		return fmt.Errorf("inventory change log service: mediator factory is required")
+	}
+	if c.JobSvcFactory == nil {
+		return fmt.Errorf("inventory change log service: job service factory is required")
+	}
+	if c.TxManager == nil {
+		return fmt.Errorf("inventory change log service: transaction manager is required")
 	}
 	return nil
 }
@@ -35,8 +56,17 @@ func NewInventoryChangeLogSvc(config *InventoryChangeLogSvcConfig) domain.Invent
 		panic(err)
 	}
 
+	reportRepos := config.ReportRepos
+	if reportRepos == nil {
+		reportRepos = config.Repos
+	}
+
 	return &inventoryChangeLogSvcImpl{
-		repos: config.Repos,
+		repos:           config.Repos,
+		reportRepos:     reportRepos,
+		mediatorFactory: config.MediatorFactory,
+		jobSvcFactory:   config.JobSvcFactory,
+		txManager:       config.TxManager,
 	}
 }
 

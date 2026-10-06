@@ -6473,6 +6473,21 @@ func (m *MockInventoryChangeLogSvc) EXPECT() *MockInventoryChangeLogSvcMockRecor
 	return m.recorder
 }
 
+// BuildExportInventoryChangeLogs mocks base method.
+func (m *MockInventoryChangeLogSvc) BuildExportInventoryChangeLogs(ctx context.Context, accountID string, filters json.RawMessage) (*domain.Export, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "BuildExportInventoryChangeLogs", ctx, accountID, filters)
+	ret0, _ := ret[0].(*domain.Export)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
+}
+
+// BuildExportInventoryChangeLogs indicates an expected call of BuildExportInventoryChangeLogs.
+func (mr *MockInventoryChangeLogSvcMockRecorder) BuildExportInventoryChangeLogs(ctx, accountID, filters any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "BuildExportInventoryChangeLogs", reflect.TypeOf((*MockInventoryChangeLogSvc)(nil).BuildExportInventoryChangeLogs), ctx, accountID, filters)
+}
+
 // ExportInventoryChangeLogs mocks base method.
 func (m *MockInventoryChangeLogSvc) ExportInventoryChangeLogs(ctx context.Context, params domain.ExportInventoryChangeLogsParams) ([]*domain.InventoryChangeLog, *apierror.APIError) {
 	m.ctrl.T.Helper()
@@ -6516,6 +6531,21 @@ func (m *MockInventoryChangeLogSvc) ListInventoryChangeLogs(ctx context.Context,
 func (mr *MockInventoryChangeLogSvcMockRecorder) ListInventoryChangeLogs(ctx, params any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListInventoryChangeLogs", reflect.TypeOf((*MockInventoryChangeLogSvc)(nil).ListInventoryChangeLogs), ctx, params)
+}
+
+// StartInventoryChangeLogsExport mocks base method.
+func (m *MockInventoryChangeLogSvc) StartInventoryChangeLogsExport(ctx context.Context, filters domain.ExportInventoryChangeLogsParams) (*domain.Job, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "StartInventoryChangeLogsExport", ctx, filters)
+	ret0, _ := ret[0].(*domain.Job)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
+}
+
+// StartInventoryChangeLogsExport indicates an expected call of StartInventoryChangeLogsExport.
+func (mr *MockInventoryChangeLogSvcMockRecorder) StartInventoryChangeLogsExport(ctx, filters any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "StartInventoryChangeLogsExport", reflect.TypeOf((*MockInventoryChangeLogSvc)(nil).StartInventoryChangeLogsExport), ctx, filters)
 }
 
 // MockInvoiceSvc is a mock of InvoiceSvc interface.

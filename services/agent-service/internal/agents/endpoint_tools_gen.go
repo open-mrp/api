@@ -1564,7 +1564,7 @@ var EndpointTools = []EndpointToolDescriptor{
 	{
 		Slug:                "export_inventory_change_logs",
 		DisplayName:         "Export Inventory Change Logs",
-		Description:         "Exports inventory change logs matching the provided filters as an Excel file.\n\nUnlike the list endpoint, results are not paginated — every matching change log is included in the download, newest first. The download is named for the date range you requested, using `all` in place of a bound you left open.",
+		Description:         "Exports inventory change logs matching the provided filters as an Excel file.\n\nUnlike the list endpoint, results are not paginated — every matching change log is included in the download, newest first. The download is named for the date range you requested, using `all` in place of a bound you left open.\n\nThis endpoint is deprecated: the file is built inside the request, so a wide window on a busy account can outlast the request timeout. Use `POST /v1/operations/inventory-change-logs/actions/export` instead, which builds the same file in the background and returns a job to poll.",
 		Method:              "GET",
 		RouteTemplate:       "/v1/operations/inventory-change-logs/actions/export",
 		InputSchema:         "{\"properties\":{\"action_types\":{\"description\":\"Restricts results to these action types.\",\"items\":{\"enum\":[\"scan\",\"user_action\",\"system_action\",\"user_correction\"],\"type\":\"string\"},\"type\":\"array\"},\"changed_by_user_ids\":{\"description\":\"Restricts results to changes made by these users.\\n\\nChanges that were recorded without a responsible user are excluded whenever this filter is set.\",\"items\":{\"type\":\"string\"},\"type\":\"array\"},\"ends_at\":{\"description\":\"Restricts results to change logs created on or before this timestamp.\",\"format\":\"date-time\",\"type\":\"string\"},\"item_ids\":{\"description\":\"Restricts results to changes affecting these items.\",\"items\":{\"type\":\"string\"},\"type\":\"array\"},\"starts_at\":{\"description\":\"Restricts results to change logs created on or after this timestamp.\",\"format\":\"date-time\",\"type\":\"string\"}},\"type\":\"object\"}",
@@ -4229,6 +4229,24 @@ var EndpointTools = []EndpointToolDescriptor{
 			{Name: "from_name", In: EndpointToolParamBody},
 			{Name: "local_part", In: EndpointToolParamBody},
 			{Name: "reply_to", In: EndpointToolParamBody},
+		},
+	},
+	{
+		Slug:                "start_inventory_change_logs_export",
+		DisplayName:         "Start Inventory Change Logs Export",
+		Description:         "Starts an export of every inventory change log the filters select and returns the job that tracks it.\n\nPoll the job; once it completes, `export.url` links to the Excel file. The file has one row per change log, newest first, with the same columns as the synchronous export, and is named for the window you asked for — `inventory-change-logs-<starts_at>-<ends_at>.xlsx`, each bound as its UTC date and `all` in place of a bound you left open. A file with more change logs than one worksheet holds continues on further worksheets.",
+		Method:              "POST",
+		RouteTemplate:       "/v1/operations/inventory-change-logs/actions/export",
+		InputSchema:         "{\"properties\":{\"action_types\":{\"description\":\"Restricts the file to these action types.\",\"items\":{\"enum\":[\"scan\",\"user_action\",\"system_action\",\"user_correction\"],\"type\":\"string\"},\"type\":\"array\"},\"changed_by_user_ids\":{\"description\":\"Restricts the file to changes made by these users.\\n\\nChanges that were recorded without a responsible user are excluded whenever this filter is set.\",\"items\":{\"type\":\"string\"},\"type\":\"array\"},\"ends_at\":{\"description\":\"Restricts the file to change logs created on or before this timestamp.\",\"format\":\"date-time\",\"type\":\"string\"},\"include\":{\"description\":\"Sub-objects to expand in the response. These nested objects are returned as null by default; pass the field keys you need (e.g. \\\"parent_account\\\") to get their full objects inline. Expand to get authoritative data rather than inferring relationships from names.\",\"items\":{\"enum\":[\"created_by\",\"created_by.role\"],\"type\":\"string\"},\"type\":\"array\"},\"item_ids\":{\"description\":\"Restricts the file to changes affecting these items.\",\"items\":{\"type\":\"string\"},\"type\":\"array\"},\"starts_at\":{\"description\":\"Restricts the file to change logs created on or after this timestamp.\\n\\nUnlike the list, no default window applies: leave it out to export from the account's first change.\",\"format\":\"date-time\",\"type\":\"string\"}},\"type\":\"object\"}",
+		Group:               "Export",
+		RequiredPermissions: []string{"inventory_logs:read"},
+		Params: []EndpointToolParam{
+			{Name: "action_types", In: EndpointToolParamBody},
+			{Name: "changed_by_user_ids", In: EndpointToolParamBody},
+			{Name: "ends_at", In: EndpointToolParamBody},
+			{Name: "include", In: EndpointToolParamQuery, Array: true},
+			{Name: "item_ids", In: EndpointToolParamBody},
+			{Name: "starts_at", In: EndpointToolParamBody},
 		},
 	},
 	{

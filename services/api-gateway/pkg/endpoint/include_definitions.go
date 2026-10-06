@@ -494,7 +494,7 @@ func init() {
 	RegisterIncludes(&ObjectIncludes{
 		ObjectType: constants.ObjectTypeReceivingOrder,
 		Fields: []IncludeFieldDef{
-			{Key: "supplier", ObjectType: constants.ObjectTypeAccount},
+			{Key: "supplier", ObjectType: constants.ObjectTypeSupplier},
 			{Key: "lines", ObjectType: constants.ObjectTypeReceivingOrderLine},
 			{Key: "totals", ObjectType: constants.ObjectTypeReceivingOrderTotals},
 			{Key: "related", ObjectType: constants.ObjectTypeReceivingOrderRelated},

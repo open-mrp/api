@@ -6,6 +6,7 @@ import (
 
 	"github.com/open-mrp/api/services/api-gateway/internal/domain"
 	grpcutil "github.com/open-mrp/api/services/api-gateway/internal/grpc"
+	"github.com/open-mrp/api/services/api-gateway/internal/resourceloaders"
 	apirequest "github.com/open-mrp/api/services/api-gateway/pkg/request"
 	apiresource "github.com/open-mrp/api/services/api-gateway/pkg/resource"
 	"github.com/open-mrp/api/services/api-gateway/pkg/resourcekit"
@@ -243,23 +244,6 @@ func stashSupplierMeta(ctx context.Context, s *pb.SupplierProto, d *apiresource.
 	}
 }
 
-func supplierSummaryFromProto(s *pb.SupplierSummaryProto) apiresource.Supplier {
-	if s == nil {
-		return apiresource.Supplier{}
-	}
-
-	return apiresource.Supplier{
-		ID:            s.Id,
-		Object:        constants.ObjectTypeSupplier,
-		Name:          s.Name,
-		Number:        s.Number,
-		Note:          s.Note,
-		MaterialCount: &s.MaterialCount,
-		CreatedAt:     grpcutil.TimestampToTimePtr(s.CreatedAt),
-		UpdatedAt:     grpcutil.TimestampToTimePtr(s.UpdatedAt),
-	}
-}
-
 // stashSupplierSummaryMeta records a list row's default addresses for the include resolver: the
 // records the backend joined when they were asked for, and their ids either way.
 func stashSupplierSummaryMeta(ctx context.Context, s *pb.SupplierSummaryProto) {
@@ -288,7 +272,7 @@ func supplierListFromProto(ctx context.Context, resp *pb.ListSuppliersResponse) 
 
 	items := make([]apiresource.Supplier, len(resp.Suppliers))
 	for i, s := range resp.Suppliers {
-		items[i] = supplierSummaryFromProto(s)
+		items[i] = resourceloaders.SupplierFromSummaryProto(s)
 		stashSupplierSummaryMeta(ctx, s)
 	}
 

@@ -15,9 +15,11 @@ func init() {
 		Load:       resourceloaders.LoadReceivingOrders,
 		Subs: []resourcekit.SubField{
 			{
-				// Supplier is carried inline (prebuilt) rather than loaded: it is the seller account, which is cross-account and not resolvable via the account-scoped loader. Mirrors PurchaseOrder.
-				Key:      "supplier",
-				Populate: populateSupplierOnReceivingOrder,
+				Key:         "supplier",
+				Target:      constants.ObjectTypeSupplier,
+				Cardinality: resourcekit.CardinalityOnePtr,
+				ExtractIDs:  extractSupplierIDFromReceivingOrder,
+				Populate:    populateSupplierOnReceivingOrder,
 			},
 			{
 				// Totals and related are computed alongside the order rather than loaded from another service, so they are carried inline and only revealed when asked for.
@@ -91,13 +93,21 @@ func extractQuantityRefFromReceivingOrderLine(_ context.Context, parent any) []a
 	return []any{l.Quantity}
 }
 
-func populateSupplierOnReceivingOrder(ctx context.Context, parent any, _ map[string]any) {
+func extractSupplierIDFromReceivingOrder(ctx context.Context, parent any) []string {
 	ro := parent.(*apiresource.ReceivingOrder)
-	v, ok := resourcekit.GetLoadMeta(ctx).Get(constants.ObjectTypeReceivingOrder, ro.ID, "supplier")
-	if !ok {
-		return
+	id, _ := resourcekit.GetLoadMeta(ctx).GetString(constants.ObjectTypeReceivingOrder, ro.ID, "supplier_id")
+	if id == "" {
+		return nil
 	}
-	ro.Supplier = v.(*apiresource.Supplier)
+	return []string{id}
+}
+
+func populateSupplierOnReceivingOrder(ctx context.Context, parent any, loaded map[string]any) {
+	ro := parent.(*apiresource.ReceivingOrder)
+	id, _ := resourcekit.GetLoadMeta(ctx).GetString(constants.ObjectTypeReceivingOrder, ro.ID, "supplier_id")
+	if v, ok := loaded[id]; ok {
+		ro.Supplier = v.(*apiresource.Supplier)
+	}
 }
 
 func extractLineRefsFromReceivingOrder(_ context.Context, parent any) []any {

@@ -10215,6 +10215,21 @@ func (m *MockSupplierSvc) EXPECT() *MockSupplierSvcMockRecorder {
 	return m.recorder
 }
 
+// BatchGetSuppliersByIDs mocks base method.
+func (m *MockSupplierSvc) BatchGetSuppliersByIDs(ctx context.Context, ids []string) ([]*domain.SupplierSummary, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "BatchGetSuppliersByIDs", ctx, ids)
+	ret0, _ := ret[0].([]*domain.SupplierSummary)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
+}
+
+// BatchGetSuppliersByIDs indicates an expected call of BatchGetSuppliersByIDs.
+func (mr *MockSupplierSvcMockRecorder) BatchGetSuppliersByIDs(ctx, ids any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "BatchGetSuppliersByIDs", reflect.TypeOf((*MockSupplierSvc)(nil).BatchGetSuppliersByIDs), ctx, ids)
+}
+
 // BulkDeleteSuppliers mocks base method.
 func (m *MockSupplierSvc) BulkDeleteSuppliers(ctx context.Context, params domain.BulkDeleteSuppliersParams) *apierror.APIError {
 	m.ctrl.T.Helper()

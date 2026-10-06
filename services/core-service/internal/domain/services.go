@@ -1720,6 +1720,8 @@ type SupplierSvc interface {
 	UpdateSupplier(ctx context.Context, params UpdateSupplierParams) (*Supplier, *apierror.APIError)
 	DeleteSupplier(ctx context.Context, params DeleteSupplierParams) (*Supplier, *apierror.APIError)
 	BulkDeleteSuppliers(ctx context.Context, params BulkDeleteSuppliersParams) *apierror.APIError
+	// BatchGetSuppliersByIDs reads the suppliers documents name, for the gateway's include resolver.
+	BatchGetSuppliersByIDs(ctx context.Context, ids []string) ([]*SupplierSummary, *apierror.APIError)
 }
 
 type SysPropertySvc interface {

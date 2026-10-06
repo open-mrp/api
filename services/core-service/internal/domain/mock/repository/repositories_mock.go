@@ -20232,6 +20232,21 @@ func (mr *MockSupplierRepoMockRecorder) Get(ctx, params any) *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Get", reflect.TypeOf((*MockSupplierRepo)(nil).Get), ctx, params)
 }
 
+// GetByIDs mocks base method.
+func (m *MockSupplierRepo) GetByIDs(ctx context.Context, ownerAccountID string, ids []string) ([]*domain.SupplierSummary, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetByIDs", ctx, ownerAccountID, ids)
+	ret0, _ := ret[0].([]*domain.SupplierSummary)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
+}
+
+// GetByIDs indicates an expected call of GetByIDs.
+func (mr *MockSupplierRepoMockRecorder) GetByIDs(ctx, ownerAccountID, ids any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetByIDs", reflect.TypeOf((*MockSupplierRepo)(nil).GetByIDs), ctx, ownerAccountID, ids)
+}
+
 // List mocks base method.
 func (m *MockSupplierRepo) List(ctx context.Context, params domain.ListSuppliersParams) (*domain.ListSuppliersResult, *apierror.APIError) {
 	m.ctrl.T.Helper()

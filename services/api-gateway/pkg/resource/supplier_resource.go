@@ -32,11 +32,9 @@ type Supplier struct {
 	ShipToAddress *Address `json:"ship_to_address" expandable:"true"`
 	// How many materials are linked to the supplier, as listed by the supplier's materials endpoint.
 	//
-	// A material whose item has been deleted is not counted. Null on a supplier named from another document.
+	// A material whose item has been deleted is not counted.
 	MaterialCount *int64 `json:"material_count"`
 	// Creation timestamp.
-	//
-	// Null on a supplier named from another document, which carries its identity rather than its record.
 	CreatedAt *time.Time `json:"created_at"`
 	// Last updated timestamp.
 	UpdatedAt *time.Time `json:"updated_at"`

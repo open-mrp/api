@@ -54,6 +54,23 @@ func supplierToProto(s *domain.Supplier) *pb.SupplierProto {
 	return p
 }
 
+func (h *gRPCHandler) BatchGetSuppliersByIDs(ctx context.Context, req *pb.BatchGetSuppliersByIDsRequest) (*pb.BatchGetSuppliersByIDsResponse, error) {
+	if req == nil {
+		return nil, contracts.NewMissingGRPCRequestDataError()
+	}
+
+	suppliers, apiErr := h.supplierSvc.BatchGetSuppliersByIDs(ctx, req.Ids)
+	if apiErr != nil {
+		return nil, contracts.ConvertAPIErrorToGRPC(apiErr)
+	}
+
+	result := make([]*pb.SupplierSummaryProto, len(suppliers))
+	for i, s := range suppliers {
+		result[i] = supplierSummaryToProto(s)
+	}
+	return &pb.BatchGetSuppliersByIDsResponse{Suppliers: result}, nil
+}
+
 func (h *gRPCHandler) ListSuppliers(ctx context.Context, req *pb.ListSuppliersRequest) (*pb.ListSuppliersResponse, error) {
 	if req == nil {
 		return nil, contracts.NewMissingGRPCRequestDataError()

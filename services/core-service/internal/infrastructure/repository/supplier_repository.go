@@ -136,6 +136,29 @@ func (r *supplierRepoImpl) List(ctx context.Context, params domain.ListSuppliers
 	return &domain.ListSuppliersResult{Items: result, PageInfo: pageInfo}, nil
 }
 
+func (r *supplierRepoImpl) GetByIDs(ctx context.Context, ownerAccountID string, ids []string) ([]*domain.SupplierSummary, *apierror.APIError) {
+	ctx, span := supplierRepoTracer.Start(ctx, "repository.supplier.get_by_ids")
+	defer span.End()
+
+	if len(ids) == 0 {
+		return nil, nil
+	}
+
+	rows, err := r.queries.ListSuppliersByIDs(ctx, sqlc.ListSuppliersByIDsParams{
+		OwnerAccountID: ownerAccountID,
+		Ids:            ids,
+	})
+	if apiErr := db.MapSQLError(err); apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
+
+	out := make([]*domain.SupplierSummary, len(rows))
+	for i, row := range rows {
+		out[i] = mapSupplierSummaryRow(row, nil)
+	}
+	return out, nil
+}
+
 func (r *supplierRepoImpl) Get(ctx context.Context, params domain.GetSupplierParams) (*domain.Supplier, *apierror.APIError) {
 	ctx, span := supplierRepoTracer.Start(ctx, "repository.supplier.get")
 	defer span.End()

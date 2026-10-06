@@ -204,3 +204,49 @@ func TestCreateSupplier_IdenticalShipToReusesTheBillToAddress(t *testing.T) {
 	})
 	require.Nil(t, apiErr)
 }
+
+func supplierRoleCtx(permissions ...string) context.Context {
+	owner := supplierTestOwnerID
+	role := string(constants.RoleTypeCustom)
+	granted := map[string]bool{}
+	for _, p := range permissions {
+		granted[p] = true
+	}
+	return appctx.WithIdentity(context.Background(), &types.Identity{
+		Type:   types.IdentityActorTypeUser,
+		Target: &types.IdentityTarget{AccountID: owner},
+		Actor: &types.IdentityActor{
+			RelationType: types.IdentityRelationTypeInternal,
+			ID:           "us_sup",
+			AccountID:    &owner,
+			RoleType:     &role,
+			Permissions:  granted,
+		},
+	})
+}
+
+func TestSupplierSvc_BatchGetServesWhoeverMayReadADocumentNamingTheSupplier(t *testing.T) {
+	t.Parallel()
+
+	for _, perm := range []string{"suppliers:read", "purchase_orders:read", "receiving_orders:read"} {
+		t.Run(perm, func(t *testing.T) {
+			t.Parallel()
+			d := newSupplierTestDeps(t)
+			want := []*domain.SupplierSummary{{ID: "ac_sup1"}}
+			d.supplierRepo.EXPECT().GetByIDs(gomock.Any(), supplierTestOwnerID, []string{"ac_sup1"}).Return(want, nil)
+
+			got, apiErr := d.supplierSvc.BatchGetSuppliersByIDs(supplierRoleCtx(perm), []string{"ac_sup1"})
+			require.Nil(t, apiErr)
+			assert.Equal(t, want, got)
+		})
+	}
+
+	t.Run("a role that reads none of them", func(t *testing.T) {
+		t.Parallel()
+		d := newSupplierTestDeps(t)
+
+		_, apiErr := d.supplierSvc.BatchGetSuppliersByIDs(supplierRoleCtx("customers:read"), []string{"ac_sup1"})
+		require.NotNil(t, apiErr)
+		assert.Equal(t, http.StatusForbidden, apierror.GetHTTPStatusCode(apiErr.Code))
+	})
+}

@@ -528,12 +528,7 @@ func stashPurchaseOrderSummaryMeta(ctx context.Context, info *pb.PurchaseOrderSu
 	meta := resourcekit.GetLoadMeta(ctx)
 
 	if info.SupplierId != "" {
-		meta.Set(constants.ObjectTypePurchaseOrder, d.ID, "supplier", &apiresource.Supplier{
-			ID:     info.SupplierId,
-			Object: constants.ObjectTypeSupplier,
-			Name:   info.SupplierName,
-			Number: info.SupplierNumber,
-		})
+		meta.Set(constants.ObjectTypePurchaseOrder, d.ID, "supplier_id", info.SupplierId)
 	}
 
 	if info.ShippingAddressId != "" {
@@ -573,12 +568,9 @@ func stashPurchaseOrderDetailMeta(ctx context.Context, info *pb.PurchaseOrderInf
 
 	meta := resourcekit.GetLoadMeta(ctx)
 
-	meta.Set(constants.ObjectTypePurchaseOrder, d.ID, "supplier", &apiresource.Supplier{
-		ID:     info.SupplierId,
-		Object: constants.ObjectTypeSupplier,
-		Name:   info.SupplierName,
-		Number: info.SupplierNumber,
-	})
+	if info.SupplierId != "" {
+		meta.Set(constants.ObjectTypePurchaseOrder, d.ID, "supplier_id", info.SupplierId)
+	}
 
 	if info.BillingAddressId != "" {
 		meta.Set(constants.ObjectTypePurchaseOrder, d.ID, "bill_to_address",

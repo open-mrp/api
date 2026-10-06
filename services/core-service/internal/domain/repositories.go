@@ -1916,6 +1916,8 @@ type SupplierRepo interface {
 	// FindByNames resolves supplier display names to supplier account IDs within the
 	// owner account (case-insensitive). Used by bulk upsert to attach existing suppliers.
 	FindByNames(ctx context.Context, ownerAccountID string, names []string) ([]*SupplierNameMatch, *apierror.APIError)
+	// GetByIDs reads the owner's suppliers among ids as the list shows them; an id that is not one is skipped.
+	GetByIDs(ctx context.Context, ownerAccountID string, ids []string) ([]*SupplierSummary, *apierror.APIError)
 }
 
 type SysPropertyRepo interface {

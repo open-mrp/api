@@ -102,6 +102,30 @@ func (s *supplierSvcImpl) ListSuppliers(ctx context.Context, params domain.ListS
 	return s.repos.NewSupplierRepo().List(ctx, params)
 }
 
+// BatchGetSuppliersByIDs serves the suppliers purchase and receiving orders name, so it admits whoever may read those orders.
+func (s *supplierSvcImpl) BatchGetSuppliersByIDs(ctx context.Context, ids []string) ([]*domain.SupplierSummary, *apierror.APIError) {
+	ctx, span := supplierSvcTracer.Start(ctx, "service.supplier.batch_get_by_ids")
+	defer span.End()
+
+	identity, ok := appctx.GetIdentityFromContext(ctx)
+	if !ok || identity == nil {
+		return nil, tracing.Trace(span, apierror.NewInvariantViolationError("Identity not found in context."))
+	}
+
+	if apiErr := identity.CheckIsInternalActor(); apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
+	if apiErr := identity.CheckHasAnyPermission(
+		types.Permission{Domain: types.PermissionDomainSuppliers, Action: types.ActionRead},
+		types.Permission{Domain: types.PermissionDomainPurchaseOrders, Action: types.ActionRead},
+		types.Permission{Domain: types.PermissionDomainReceivingOrders, Action: types.ActionRead},
+	); apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
+
+	return s.repos.NewSupplierRepo().GetByIDs(ctx, identity.Target.AccountID, ids)
+}
+
 func (s *supplierSvcImpl) GetSupplier(ctx context.Context, params domain.GetSupplierParams) (*domain.Supplier, *apierror.APIError) {
 	ctx, span := supplierSvcTracer.Start(ctx, "service.supplier.get")
 	defer span.End()

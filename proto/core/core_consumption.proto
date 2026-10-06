@@ -437,6 +437,13 @@ message DeleteSupplierResponse {
 message BulkDeleteSuppliersRequest {
   repeated string supplier_ids = 1;
 }
+// Batched read for the api-gateway resourcekit resolver: the suppliers a document names, as the supplier list shows them.
+message BatchGetSuppliersByIDsRequest {
+  repeated string ids = 1;
+}
+message BatchGetSuppliersByIDsResponse {
+  repeated SupplierSummaryProto suppliers = 1;
+}
 message SysPropertyInfo {
   string id = 1;
   string type_id = 2;

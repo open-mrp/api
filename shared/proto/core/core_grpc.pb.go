@@ -427,6 +427,7 @@ const (
 	CoreService_UpdateSupplier_FullMethodName                             = "/core.CoreService/UpdateSupplier"
 	CoreService_DeleteSupplier_FullMethodName                             = "/core.CoreService/DeleteSupplier"
 	CoreService_BulkDeleteSuppliers_FullMethodName                        = "/core.CoreService/BulkDeleteSuppliers"
+	CoreService_BatchGetSuppliersByIDs_FullMethodName                     = "/core.CoreService/BatchGetSuppliersByIDs"
 	CoreService_ListSysProperties_FullMethodName                          = "/core.CoreService/ListSysProperties"
 	CoreService_GetSysProperty_FullMethodName                             = "/core.CoreService/GetSysProperty"
 	CoreService_UpdateSysProperty_FullMethodName                          = "/core.CoreService/UpdateSysProperty"
@@ -1102,6 +1103,7 @@ type CoreServiceClient interface {
 	UpdateSupplier(ctx context.Context, in *UpdateSupplierRequest, opts ...grpc.CallOption) (*UpdateSupplierResponse, error)
 	DeleteSupplier(ctx context.Context, in *DeleteSupplierRequest, opts ...grpc.CallOption) (*DeleteSupplierResponse, error)
 	BulkDeleteSuppliers(ctx context.Context, in *BulkDeleteSuppliersRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
+	BatchGetSuppliersByIDs(ctx context.Context, in *BatchGetSuppliersByIDsRequest, opts ...grpc.CallOption) (*BatchGetSuppliersByIDsResponse, error)
 	ListSysProperties(ctx context.Context, in *ListSysPropertiesRequest, opts ...grpc.CallOption) (*ListSysPropertiesResponse, error)
 	GetSysProperty(ctx context.Context, in *GetSysPropertyRequest, opts ...grpc.CallOption) (*GetSysPropertyResponse, error)
 	UpdateSysProperty(ctx context.Context, in *UpdateSysPropertyRequest, opts ...grpc.CallOption) (*UpdateSysPropertyResponse, error)
@@ -5131,6 +5133,16 @@ func (c *coreServiceClient) BulkDeleteSuppliers(ctx context.Context, in *BulkDel
 	return out, nil
 }
 
+func (c *coreServiceClient) BatchGetSuppliersByIDs(ctx context.Context, in *BatchGetSuppliersByIDsRequest, opts ...grpc.CallOption) (*BatchGetSuppliersByIDsResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(BatchGetSuppliersByIDsResponse)
+	err := c.cc.Invoke(ctx, CoreService_BatchGetSuppliersByIDs_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 func (c *coreServiceClient) ListSysProperties(ctx context.Context, in *ListSysPropertiesRequest, opts ...grpc.CallOption) (*ListSysPropertiesResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(ListSysPropertiesResponse)
@@ -5939,6 +5951,7 @@ type CoreServiceServer interface {
 	UpdateSupplier(context.Context, *UpdateSupplierRequest) (*UpdateSupplierResponse, error)
 	DeleteSupplier(context.Context, *DeleteSupplierRequest) (*DeleteSupplierResponse, error)
 	BulkDeleteSuppliers(context.Context, *BulkDeleteSuppliersRequest) (*emptypb.Empty, error)
+	BatchGetSuppliersByIDs(context.Context, *BatchGetSuppliersByIDsRequest) (*BatchGetSuppliersByIDsResponse, error)
 	ListSysProperties(context.Context, *ListSysPropertiesRequest) (*ListSysPropertiesResponse, error)
 	GetSysProperty(context.Context, *GetSysPropertyRequest) (*GetSysPropertyResponse, error)
 	UpdateSysProperty(context.Context, *UpdateSysPropertyRequest) (*UpdateSysPropertyResponse, error)
@@ -7167,6 +7180,9 @@ func (UnimplementedCoreServiceServer) DeleteSupplier(context.Context, *DeleteSup
 }
 func (UnimplementedCoreServiceServer) BulkDeleteSuppliers(context.Context, *BulkDeleteSuppliersRequest) (*emptypb.Empty, error) {
 	return nil, status.Error(codes.Unimplemented, "method BulkDeleteSuppliers not implemented")
+}
+func (UnimplementedCoreServiceServer) BatchGetSuppliersByIDs(context.Context, *BatchGetSuppliersByIDsRequest) (*BatchGetSuppliersByIDsResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method BatchGetSuppliersByIDs not implemented")
 }
 func (UnimplementedCoreServiceServer) ListSysProperties(context.Context, *ListSysPropertiesRequest) (*ListSysPropertiesResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method ListSysProperties not implemented")
@@ -14434,6 +14450,24 @@ func _CoreService_BulkDeleteSuppliers_Handler(srv interface{}, ctx context.Conte
 	return interceptor(ctx, in, info, handler)
 }
 
+func _CoreService_BatchGetSuppliersByIDs_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(BatchGetSuppliersByIDsRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(CoreServiceServer).BatchGetSuppliersByIDs(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: CoreService_BatchGetSuppliersByIDs_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(CoreServiceServer).BatchGetSuppliersByIDs(ctx, req.(*BatchGetSuppliersByIDsRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 func _CoreService_ListSysProperties_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(ListSysPropertiesRequest)
 	if err := dec(in); err != nil {
@@ -16310,6 +16344,10 @@ var CoreService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "BulkDeleteSuppliers",
 			Handler:    _CoreService_BulkDeleteSuppliers_Handler,
+		},
+		{
+			MethodName: "BatchGetSuppliersByIDs",
+			Handler:    _CoreService_BatchGetSuppliersByIDs_Handler,
 		},
 		{
 			MethodName: "ListSysProperties",

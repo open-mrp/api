@@ -903,6 +903,7 @@ service CoreService {
   rpc UpdateSupplier(UpdateSupplierRequest) returns (UpdateSupplierResponse);
   rpc DeleteSupplier(DeleteSupplierRequest) returns (DeleteSupplierResponse);
   rpc BulkDeleteSuppliers(BulkDeleteSuppliersRequest) returns (google.protobuf.Empty);
+  rpc BatchGetSuppliersByIDs(BatchGetSuppliersByIDsRequest) returns (BatchGetSuppliersByIDsResponse);
 
   // System Properties
 

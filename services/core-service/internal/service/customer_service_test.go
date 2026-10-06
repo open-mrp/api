@@ -22,6 +22,7 @@ import (
 type customerSvcSetup struct {
 	svc         domain.CustomerSvc
 	customers   *repositorymock.MockCustomerRepo
+	salesOrders *repositorymock.MockSalesOrderRepo
 	deleted     *repositorymock.MockDeletedRecordRepo
 	idempotency *mediatormock.MockIdempotencyMed
 	outbox      *recordingOutboxRepo
@@ -31,12 +32,14 @@ func newCustomerSvcSetup(t *testing.T) *customerSvcSetup {
 	ctrl := gomock.NewController(t)
 	s := &customerSvcSetup{
 		customers:   repositorymock.NewMockCustomerRepo(ctrl),
+		salesOrders: repositorymock.NewMockSalesOrderRepo(ctrl),
 		deleted:     repositorymock.NewMockDeletedRecordRepo(ctrl),
 		idempotency: mediatormock.NewMockIdempotencyMed(ctrl),
 		outbox:      &recordingOutboxRepo{},
 	}
 	repos := factorymock.NewMockRepoFactory(ctrl)
 	repos.EXPECT().NewCustomerRepo().Return(s.customers).AnyTimes()
+	repos.EXPECT().NewSalesOrderRepo().Return(s.salesOrders).AnyTimes()
 	repos.EXPECT().NewDeletedRecordRepo().Return(s.deleted).AnyTimes()
 	repos.EXPECT().NewOutboxRepo().Return(s.outbox).AnyTimes()
 	mediators := factorymock.NewMockMediatorFactory(ctrl)
@@ -99,4 +102,53 @@ func TestUpdateCustomer_KeepsTheReceiveCalendarItWasNotSent(t *testing.T) {
 	got, ok := written.ReceiveCalendarID.Value()
 	require.True(t, ok, "the calendar is written back, not cleared")
 	assert.Equal(t, calendarID, got)
+}
+
+// The deleted-customer snapshot names its owner, and only the owner is told the customer was deleted.
+func TestDeleteCustomer_OnlyTheOwnerLearnsACustomerWasDeleted(t *testing.T) {
+	notFound := apierror.NewResourceNotFoundError("Customer not found.")
+
+	t.Run("records the snapshot under the owner", func(t *testing.T) {
+		s := newCustomerSvcSetup(t)
+		customer := &domain.Customer{ID: "ac_buyer"}
+		s.customers.EXPECT().Get(gomock.Any(), "ac_seller", "ac_buyer", gomock.Any()).Return(customer, nil)
+		s.salesOrders.EXPECT().CountSalesOrdersForBuyerAccounts(gomock.Any(), "ac_seller", []string{"ac_buyer"}).Return(int64(0), nil)
+		s.deleted.EXPECT().CreateInAccount(gomock.Any(), constants.DeletedRecordResourceTypeCustomer, "ac_buyer", "ac_seller", customer).Return(nil)
+		s.customers.EXPECT().Delete(gomock.Any(), "ac_seller", "ac_buyer").Return(nil)
+
+		require.Nil(t, s.svc.DeleteCustomer(customerInternalCtx("ac_seller"), domain.DeleteCustomerParams{CustomerAccountID: "ac_buyer"}))
+	})
+
+	t.Run("the owner deleting it again is told it is gone", func(t *testing.T) {
+		s := newCustomerSvcSetup(t)
+		s.customers.EXPECT().Get(gomock.Any(), "ac_seller", "ac_buyer", gomock.Any()).Return(nil, notFound)
+		s.deleted.EXPECT().ExistsInAccount(gomock.Any(), constants.DeletedRecordResourceTypeCustomer, "ac_buyer", "ac_seller").Return(true, nil)
+
+		apiErr := s.svc.DeleteCustomer(customerInternalCtx("ac_seller"), domain.DeleteCustomerParams{CustomerAccountID: "ac_buyer"})
+		require.NotNil(t, apiErr)
+		assert.Equal(t, apierror.ErrorCodeResourceGone, apiErr.Code)
+	})
+
+	t.Run("another tenant is told it was never there", func(t *testing.T) {
+		s := newCustomerSvcSetup(t)
+		s.customers.EXPECT().Get(gomock.Any(), "ac_other", "ac_buyer", gomock.Any()).Return(nil, notFound)
+		s.deleted.EXPECT().ExistsInAccount(gomock.Any(), constants.DeletedRecordResourceTypeCustomer, "ac_buyer", "ac_other").Return(false, nil)
+
+		apiErr := s.svc.DeleteCustomer(customerInternalCtx("ac_other"), domain.DeleteCustomerParams{CustomerAccountID: "ac_buyer"})
+		require.NotNil(t, apiErr)
+		assert.Equal(t, apierror.ErrorCodeResourceNotFound, apiErr.Code)
+	})
+}
+
+func TestBulkDeleteCustomers_RecordsEachSnapshotUnderTheOwner(t *testing.T) {
+	s := newCustomerSvcSetup(t)
+	for _, customerID := range []string{"ac_a", "ac_b"} {
+		customer := &domain.Customer{ID: customerID}
+		s.customers.EXPECT().Get(gomock.Any(), "ac_seller", customerID, gomock.Any()).Return(customer, nil)
+		s.deleted.EXPECT().CreateInAccount(gomock.Any(), constants.DeletedRecordResourceTypeCustomer, customerID, "ac_seller", customer).Return(nil)
+	}
+	s.salesOrders.EXPECT().CountSalesOrdersForBuyerAccounts(gomock.Any(), "ac_seller", []string{"ac_a", "ac_b"}).Return(int64(0), nil)
+	s.customers.EXPECT().BulkDelete(gomock.Any(), "ac_seller", []string{"ac_a", "ac_b"}).Return(nil)
+
+	require.Nil(t, s.svc.BulkDeleteCustomers(customerInternalCtx("ac_seller"), domain.BulkDeleteCustomersParams{CustomerIDs: []string{"ac_a", "ac_b"}}))
 }

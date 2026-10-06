@@ -262,16 +262,8 @@ func (s *customerSvcImpl) CreateCustomer(ctx context.Context, params domain.Crea
 		apiErr = s.withTx(ctx, func(txCtx context.Context, txSvc *customerSvcImpl) *apierror.APIError {
 			txCustomerRepo := txSvc.repos.NewCustomerRepo()
 
-			// Validate that the sales rep account user ID belongs to this account.
-			if params.DefaultSalesRepID != nil {
-				txAccountUserRepo := txSvc.repos.NewAccountUserRepo()
-				_, apiErr := txAccountUserRepo.GetDetailByAccountAndID(txCtx, params.OwnerAccountID, *params.DefaultSalesRepID, nil)
-				if apiErr != nil {
-					if apiErr.Code != apierror.ErrorCodeResourceNotFound {
-						return apiErr
-					}
-					return apierror.NewResourceNotFoundError("No sales rep found with the provided ID.").WithParam("default_sales_rep_id")
-				}
+			if apiErr := checkCustomerRefs(txCtx, txSvc.repos, params.OwnerAccountID, newCustomerRefs(params)); apiErr != nil {
+				return apiErr
 			}
 
 			// Generate or auto-assign customer number.
@@ -455,16 +447,8 @@ func (s *customerSvcImpl) UpdateCustomer(ctx context.Context, params domain.Upda
 				return apiErr
 			}
 
-			if params.DefaultSalesRepID.IsSet() {
-				repID, _ := params.DefaultSalesRepID.Value()
-				txAccountUserRepo := txSvc.repos.NewAccountUserRepo()
-				_, apiErr := txAccountUserRepo.GetDetailByAccountAndID(txCtx, params.OwnerAccountID, repID, nil)
-				if apiErr != nil {
-					if apiErr.Code != apierror.ErrorCodeResourceNotFound {
-						return apiErr
-					}
-					return apierror.NewResourceNotFoundError("No sales rep found with the provided ID.").WithParam("default_sales_rep_id")
-				}
+			if apiErr := checkCustomerRefs(txCtx, txSvc.repos, params.OwnerAccountID, changedCustomerRefs(params, old)); apiErr != nil {
+				return apiErr
 			}
 
 			if params.DefaultCarrierID == nil {

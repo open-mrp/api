@@ -3,6 +3,7 @@
 package api_test
 
 import (
+	"fmt"
 	"testing"
 	"time"
 
@@ -37,9 +38,36 @@ func findOeeDepartment(resp map[string]any, departmentID string) map[string]any 
 	return nil
 }
 
-func oeeWindow() (time.Time, time.Time) {
-	end := time.Now().UTC()
-	return end.Add(-24 * time.Hour), end
+// oeeSeededWindow is a window of the given length that holds the seeded department's seeded production.
+//
+// A department reports OEE only for a window holding some of its production. A window ending now holds some only
+// while another test happens to have scanned there recently, so these tests measure a fixed window around the seed.
+func oeeSeededWindow(t *testing.T, length time.Duration) (time.Time, time.Time) {
+	t.Helper()
+	var scannedAt time.Time
+	require.NoError(t, authDB(t).QueryRow(`SELECT scanned_at FROM batch WHERE id = ?`, SeedBatchID).Scan(&scannedAt))
+	start := scannedAt.UTC().Add(-time.Hour).Truncate(time.Second)
+	return start, start.Add(length)
+}
+
+func oeeWindow(t *testing.T) (time.Time, time.Time) {
+	t.Helper()
+	return oeeSeededWindow(t, 24*time.Hour)
+}
+
+// awaitOeeDepartment re-reads the report until the seeded department passes check. A report is cached, and the
+// downtime a test logs reaches it through its audit event, shortly after the write.
+func awaitOeeDepartment(t *testing.T, body map[string]any, check func(dept map[string]any) error) map[string]any {
+	t.Helper()
+	var dept map[string]any
+	eventually(t, 15*time.Second, 200*time.Millisecond, func() error {
+		dept = findOeeDepartment(analyzeOee(t, body), SeedDepartmentID)
+		if dept == nil {
+			return fmt.Errorf("the seeded department %s is missing from the report", SeedDepartmentID)
+		}
+		return check(dept)
+	})
+	return dept
 }
 
 // ──────────────────────────────────────────────
@@ -50,7 +78,7 @@ func oeeWindow() (time.Time, time.Time) {
 func TestAnalyticsOee_PreservesLegacyShape(t *testing.T) {
 	t.Parallel()
 
-	start, end := oeeWindow()
+	start, end := oeeWindow(t)
 	resp := analyzeOee(t, map[string]any{
 		"starts_at": rfc3339(start),
 		"ends_at":   rfc3339(end),
@@ -78,7 +106,7 @@ func TestAnalyticsOee_PreservesLegacyShape(t *testing.T) {
 func TestAnalyticsOee_ExposesDowntimeFields(t *testing.T) {
 	t.Parallel()
 
-	start, end := oeeWindow()
+	start, end := oeeWindow(t)
 	resp := analyzeOee(t, map[string]any{
 		"starts_at": rfc3339(start),
 		"ends_at":   rfc3339(end),
@@ -109,7 +137,7 @@ func TestAnalyticsOee_ExposesDowntimeFields(t *testing.T) {
 func TestAnalyticsOee_PerformanceIsStandardTimeOverRunTime(t *testing.T) {
 	t.Parallel()
 
-	start, end := oeeWindow()
+	start, end := oeeWindow(t)
 	resp := analyzeOee(t, map[string]any{
 		"starts_at": rfc3339(start),
 		"ends_at":   rfc3339(end),
@@ -146,7 +174,7 @@ func TestAnalyticsOee_PerformanceIsStandardTimeOverRunTime(t *testing.T) {
 func TestAnalyticsOee_DerivesScheduledTimeFromThePublishedPlan(t *testing.T) {
 	t.Parallel()
 
-	start, end := oeeWindow()
+	start, end := oeeWindow(t)
 	resp := analyzeOee(t, map[string]any{
 		"starts_at": rfc3339(start),
 		"ends_at":   rfc3339(end),
@@ -178,7 +206,7 @@ func TestAnalyticsOee_DerivesScheduledTimeFromThePublishedPlan(t *testing.T) {
 func TestAnalyticsOee_QualityComputedWithoutPlannedTime(t *testing.T) {
 	t.Parallel()
 
-	start, end := oeeWindow()
+	start, end := oeeWindow(t)
 	resp := analyzeOee(t, map[string]any{
 		"starts_at": rfc3339(start),
 		"ends_at":   rfc3339(end),
@@ -218,19 +246,16 @@ func TestAnalyticsOee_QualityComputedWithoutPlannedTime(t *testing.T) {
 // up in availability_loss_seconds, the figure a planner reads to see where the time went.
 func TestAnalyticsOee_LoggedDowntimeIsRecordedAsAvailabilityLoss(t *testing.T) {
 	// Not parallel: it asserts on aggregate downtime for the seeded department, which other tests in this package also write to.
-	start := time.Now().UTC().Add(-4 * time.Hour)
-	end := time.Now().UTC()
-
-	baseline := analyzeOee(t, map[string]any{
+	start, end := oeeSeededWindow(t, 4*time.Hour)
+	body := map[string]any{
 		"starts_at":    rfc3339(start),
 		"ends_at":      rfc3339(end),
 		"planned_time": []map[string]any{{"department_id": SeedDepartmentID, "planned_hours": 8}},
-	})
-	baselineDept := findOeeDepartment(baseline, SeedDepartmentID)
-	var baselineLoss float64
-	if baselineDept != nil {
-		baselineLoss, _ = baselineDept["availability_loss_seconds"].(float64)
 	}
+
+	baselineDept := findOeeDepartment(analyzeOee(t, body), SeedDepartmentID)
+	require.NotNil(t, baselineDept, "the seeded department produced in the window")
+	baselineLoss, _ := baselineDept["availability_loss_seconds"].(float64)
 
 	// One hour of breakdown, fully inside the window.
 	downStart := start.Add(time.Hour)
@@ -240,19 +265,13 @@ func TestAnalyticsOee_LoggedDowntimeIsRecordedAsAvailabilityLoss(t *testing.T) {
 	require.NotEmpty(t, id)
 	defer deleteDowntime(t, id)
 
-	after := analyzeOee(t, map[string]any{
-		"starts_at":    rfc3339(start),
-		"ends_at":      rfc3339(end),
-		"planned_time": []map[string]any{{"department_id": SeedDepartmentID, "planned_hours": 8}},
+	// One hour of breakdown must add 3600s of availability loss.
+	dept := awaitOeeDepartment(t, body, func(dept map[string]any) error {
+		if loss, _ := dept["availability_loss_seconds"].(float64); loss < baselineLoss+3595 || loss > baselineLoss+3605 {
+			return fmt.Errorf("availability_loss_seconds = %v, want %v", loss, baselineLoss+3600)
+		}
+		return nil
 	})
-
-	dept := findOeeDepartment(after, SeedDepartmentID)
-	require.NotNil(t, dept, "the seeded department must appear once it has downtime")
-
-	loss, ok := dept["availability_loss_seconds"].(float64)
-	require.True(t, ok)
-	assert.InDelta(t, baselineLoss+3600, loss, 5,
-		"one hour of breakdown must add 3600s of availability loss")
 
 	assert.Equal(t, "measured", jsonField(dept, "measurement_status"),
 		"availability becomes a measurement once downtime is logged")
@@ -287,8 +306,7 @@ func TestAnalyticsOee_LoggedDowntimeIsRecordedAsAvailabilityLoss(t *testing.T) {
 
 // not_scheduled is removed from the denominator rather than charged as a loss: a machine nobody planned to run has no OEE, which is not the same as bad OEE.
 func TestAnalyticsOee_NotScheduledShrinksDenominatorNotAvailability(t *testing.T) {
-	start := time.Now().UTC().Add(-5 * time.Hour)
-	end := time.Now().UTC()
+	start, end := oeeSeededWindow(t, 5*time.Hour)
 	planned := []map[string]any{{"department_id": SeedDepartmentID, "planned_hours": 8}}
 
 	downStart := start.Add(time.Hour)
@@ -298,18 +316,18 @@ func TestAnalyticsOee_NotScheduledShrinksDenominatorNotAvailability(t *testing.T
 	require.NotEmpty(t, id)
 	defer deleteDowntime(t, id)
 
-	resp := analyzeOee(t, map[string]any{
+	// Two not-scheduled hours must be recorded.
+	dept := awaitOeeDepartment(t, map[string]any{
 		"starts_at":    rfc3339(start),
 		"ends_at":      rfc3339(end),
 		"planned_time": planned,
+	}, func(dept map[string]any) error {
+		if notScheduled, _ := dept["not_scheduled_seconds"].(float64); notScheduled < 7200 {
+			return fmt.Errorf("not_scheduled_seconds = %v, want at least 7200", notScheduled)
+		}
+		return nil
 	})
-
-	dept := findOeeDepartment(resp, SeedDepartmentID)
-	require.NotNil(t, dept)
-
-	notScheduled, ok := dept["not_scheduled_seconds"].(float64)
-	require.True(t, ok)
-	assert.GreaterOrEqual(t, notScheduled, 7200.0, "two not-scheduled hours must be recorded")
+	notScheduled := dept["not_scheduled_seconds"].(float64)
 
 	scheduled, _ := dept["scheduled_seconds"].(float64)
 	assert.InDelta(t, 8*3600-notScheduled, scheduled, 1,
@@ -318,8 +336,7 @@ func TestAnalyticsOee_NotScheduledShrinksDenominatorNotAvailability(t *testing.T
 
 // Changeover is an availability reason, so it must charge availability AND be reported separately for the changeover KPI.
 func TestAnalyticsOee_ChangeoverCountsInBothPlaces(t *testing.T) {
-	start := time.Now().UTC().Add(-3 * time.Hour)
-	end := time.Now().UTC()
+	start, end := oeeSeededWindow(t, 3*time.Hour)
 
 	downStart := start.Add(30 * time.Minute)
 	downEnd := downStart.Add(45 * time.Minute)
@@ -328,18 +345,18 @@ func TestAnalyticsOee_ChangeoverCountsInBothPlaces(t *testing.T) {
 	require.NotEmpty(t, id)
 	defer deleteDowntime(t, id)
 
-	resp := analyzeOee(t, map[string]any{
+	// 45 minutes of changeover must be reported.
+	dept := awaitOeeDepartment(t, map[string]any{
 		"starts_at":    rfc3339(start),
 		"ends_at":      rfc3339(end),
 		"planned_time": []map[string]any{{"department_id": SeedDepartmentID, "planned_hours": 8}},
+	}, func(dept map[string]any) error {
+		if changeover, _ := dept["changeover_seconds"].(float64); changeover < 2700 {
+			return fmt.Errorf("changeover_seconds = %v, want at least 2700", changeover)
+		}
+		return nil
 	})
-
-	dept := findOeeDepartment(resp, SeedDepartmentID)
-	require.NotNil(t, dept)
-
-	changeover, ok := dept["changeover_seconds"].(float64)
-	require.True(t, ok)
-	assert.GreaterOrEqual(t, changeover, 2700.0, "45 minutes of changeover must be reported")
+	changeover := dept["changeover_seconds"].(float64)
 
 	availabilityLoss, _ := dept["availability_loss_seconds"].(float64)
 	assert.GreaterOrEqual(t, availabilityLoss, changeover,
@@ -360,39 +377,32 @@ func TestAnalyticsOee_ChangeoverCountsInBothPlaces(t *testing.T) {
 
 // An event that begins before the window and is still running must contribute only its in-window seconds — not zero, and not its whole length.
 func TestAnalyticsOee_ClipsDowntimeToWindow(t *testing.T) {
-	start := time.Now().UTC().Add(-2 * time.Hour)
-	end := time.Now().UTC()
-	planned := []map[string]any{{"department_id": SeedDepartmentID, "planned_hours": 8}}
-
-	// Measure the delta this one event contributes rather than the absolute total, so unrelated downtime in the same window cannot make this pass or fail spuriously.
-	before := analyzeOee(t, map[string]any{
-		"starts_at": rfc3339(start), "ends_at": rfc3339(end), "planned_time": planned,
-	})
-	var lossBefore float64
-	if dept := findOeeDepartment(before, SeedDepartmentID); dept != nil {
-		lossBefore, _ = dept["availability_loss_seconds"].(float64)
+	start, end := oeeSeededWindow(t, 2*time.Hour)
+	body := map[string]any{
+		"starts_at": rfc3339(start), "ends_at": rfc3339(end), "planned_time": []map[string]any{{"department_id": SeedDepartmentID, "planned_hours": 8}},
 	}
 
-	// Starts 6h ago and is still open; the window only covers the last 2h.
-	created := logDowntime(t, "breakdown", time.Now().UTC().Add(-6*time.Hour), nil, nil)
+	// Measure the delta this one event contributes rather than the absolute total, so unrelated downtime in the same window cannot make this pass or fail spuriously.
+	before := findOeeDepartment(analyzeOee(t, body), SeedDepartmentID)
+	require.NotNil(t, before, "the seeded department produced in the window")
+	lossBefore, _ := before["availability_loss_seconds"].(float64)
+
+	// Starts 4h before the 2h window and is still open. Open on a machine of its own: a machine has one open event at a time.
+	created := logDowntimeOn(t, newTestMachine(t), "breakdown", start.Add(-4*time.Hour), nil, nil)
 	id := jsonField(created, "id")
 	require.NotEmpty(t, id)
 	defer deleteDowntime(t, id)
 
-	after := analyzeOee(t, map[string]any{
-		"starts_at": rfc3339(start), "ends_at": rfc3339(end), "planned_time": planned,
+	dept := awaitOeeDepartment(t, body, func(dept map[string]any) error {
+		if loss, _ := dept["availability_loss_seconds"].(float64); loss == lossBefore {
+			return fmt.Errorf("the open event has not registered: availability_loss_seconds is still %v", loss)
+		}
+		return nil
 	})
-
-	dept := findOeeDepartment(after, SeedDepartmentID)
-	require.NotNil(t, dept, "an open event straddling the window must still register")
-
-	lossAfter, ok := dept["availability_loss_seconds"].(float64)
-	require.True(t, ok)
-
-	contribution := lossAfter - lossBefore
+	contribution := dept["availability_loss_seconds"].(float64) - lossBefore
 	assert.Greater(t, contribution, 0.0, "an event overlapping the window must contribute, not be dropped")
 	assert.LessOrEqual(t, contribution, 2*3600.0+30,
-		"a 6-hour event must be clipped to the 2-hour window, not counted in full")
+		"an event that began hours earlier must be clipped to the 2-hour window, not counted in full")
 	assert.InDelta(t, 2*3600.0, contribution, 60,
 		"the clipped contribution should be the window length")
 }
@@ -404,7 +414,7 @@ func TestAnalyticsOee_ClipsDowntimeToWindow(t *testing.T) {
 func TestAnalyticsOee_DepartmentFilter(t *testing.T) {
 	t.Parallel()
 
-	start, end := oeeWindow()
+	start, end := oeeWindow(t)
 	resp := analyzeOee(t, map[string]any{
 		"starts_at":      rfc3339(start),
 		"ends_at":        rfc3339(end),
@@ -422,7 +432,7 @@ func TestAnalyticsOee_DepartmentFilter(t *testing.T) {
 func TestAnalyticsOee_UnknownDepartmentReturnsEmpty(t *testing.T) {
 	t.Parallel()
 
-	start, end := oeeWindow()
+	start, end := oeeWindow(t)
 	resp := analyzeOee(t, map[string]any{
 		"starts_at":      rfc3339(start),
 		"ends_at":        rfc3339(end),
@@ -446,7 +456,7 @@ func TestAnalyticsOee_RejectsMissingDates(t *testing.T) {
 func TestAnalyticsOee_PlannedTimeForUnknownDepartmentIsHarmless(t *testing.T) {
 	t.Parallel()
 
-	start, end := oeeWindow()
+	start, end := oeeWindow(t)
 	resp := analyzeOee(t, map[string]any{
 		"starts_at":    rfc3339(start),
 		"ends_at":      rfc3339(end),
@@ -465,15 +475,15 @@ func TestAnalyticsOee_PlannedTimeForUnknownDepartmentIsHarmless(t *testing.T) {
 func TestAnalyticsOee_ZeroPlannedHoursLeavesRatiosNull(t *testing.T) {
 	t.Parallel()
 
-	start, end := oeeWindow()
+	start, end := oeeWindow(t)
 	resp := analyzeOee(t, map[string]any{
 		"starts_at":    rfc3339(start),
 		"ends_at":      rfc3339(end),
 		"planned_time": []map[string]any{{"department_id": SeedDepartmentID, "planned_hours": 0}},
 	})
 
-	if dept := findOeeDepartment(resp, SeedDepartmentID); dept != nil {
-		assertNilField(t, dept, "availability_pct")
-		assertNilField(t, dept, "oee_pct")
-	}
+	dept := findOeeDepartment(resp, SeedDepartmentID)
+	require.NotNil(t, dept, "the seeded department produced in the window")
+	assertNilField(t, dept, "availability_pct")
+	assertNilField(t, dept, "oee_pct")
 }

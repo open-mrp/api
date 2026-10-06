@@ -23,15 +23,16 @@ type RemoveAccountUserEndpoint struct{}
 
 func (e *RemoveAccountUserEndpoint) Materialize() *apiendpoint.APIEndpoint[*RemoveAccountUserRequest, *apiresource.EmptyResource] {
 	return (&apiendpoint.APIEndpoint[*RemoveAccountUserRequest, *apiresource.EmptyResource]{
-		Title:               "Remove Account User",
-		Method:              http.MethodPut,
-		ContentType:         "application/json",
-		Route:               "/v1/identity/account-users/{id}/actions/remove",
-		SuccessStatusCode:   http.StatusOK,
-		Public:              true,
-		AgentTool:           true,
-		RequiredPermissions: []types.Permission{{Domain: types.PermissionDomainTeamUsers, Action: types.ActionDelete}, {Domain: types.PermissionDomainCustomers, Action: types.ActionDelete}, {Domain: types.PermissionDomainSuppliers, Action: types.ActionDelete}},
-		Preview:             true,
+		Title:                   "Remove Account User",
+		Method:                  http.MethodPut,
+		ContentType:             "application/json",
+		Route:                   "/v1/identity/account-users/{id}/actions/remove",
+		SuccessStatusCode:       http.StatusOK,
+		Public:                  true,
+		AgentTool:               true,
+		RequiredPermissions:     []types.Permission{{Domain: types.PermissionDomainTeamUsers, Action: types.ActionDelete}},
+		CounterpartyPermissions: apiendpoint.Counterparties(types.ActionDelete),
+		Preview:                 true,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *RemoveAccountUserRequest) (*apiresource.EmptyResource, *apierror.APIError) {
 			return svc.(AccountUserSvc).RemoveAccountUser
 		},

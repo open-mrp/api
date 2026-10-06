@@ -174,26 +174,20 @@ func (suite *AddressSvcScopeTestSuite) TestCreateAddress_InternalActor_ScopedToT
 	suite.Equal(accountID, linkedAccountID)
 }
 
-// A roled internal actor on its own account that holds customers:update (the
-// legacy permission for address writes) but NOT addresses:create must still be
-// allowed to create — the downstream check must not be stricter than the
-// gateway's OR-gate. This is the customer-portal regression.
-func (suite *AddressSvcScopeTestSuite) TestCreateAddress_InternalActor_CustomersUpdateOnly_Allowed() {
-	const accountID = "acct_customer_portal"
+// A roled internal actor on its own account that holds customers:update but not addresses:create is refused: in the
+// seller's own account an address write takes the addresses permission, and customers:update reaches only a customer's.
+func (suite *AddressSvcScopeTestSuite) TestCreateAddress_InternalActor_CustomersUpdateOnly_Refused() {
+	const accountID = "acct_internal"
 
-	suite.expectIdempotencyStartedThenSuccess()
-	suite.editAccessMed.EXPECT().CheckEditAccess(gomock.Any(), gomock.Any(), gomock.Any()).Times(0)
-	suite.addressRepo.EXPECT().
-		Create(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
-		DoAndReturn(func(_ context.Context, addressID, _, _ string, params domain.CreateAddressParams) (*domain.Address, *apierror.APIError) {
-			return &domain.Address{ID: addressID, Name: params.Name}, nil
-		}).
-		Times(1)
+	suite.idempotencyMed.EXPECT().UpsertIdempotencyKey(gomock.Any(), gomock.Any()).Times(0)
+	suite.addressRepo.EXPECT().Create(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Times(0)
 
 	ctx := addressInternalCtxWithPerms(accountID, map[string]bool{"customers:update": true})
 	_, apiErr := suite.svc.CreateAddress(ctx, domain.CreateAddressParams{Name: "Ship To", Country: "US"})
 
-	suite.Require().Nil(apiErr, "customers:update must authorize an own-account address create")
+	suite.Require().NotNil(apiErr)
+	suite.Equal(apierror.ErrorCodeInsufficientPerms, apiErr.Code)
+	suite.Contains(apiErr.PublicMessage, "addresses:create")
 }
 
 // Deleting an address that a non-active account still defaults to is allowed:

@@ -47,9 +47,9 @@ type coreCheck struct {
 // literal CheckHasPermission/CheckIsAdmin calls AND calls to relation-permission
 // helpers (check<Entity>Read/WritePermission): a function that delegates its
 // authorization to such a helper is credited with every permission that helper
-// checks, so relation-variable endpoints are VERIFIED against their declared OR-set
-// rather than excused. Helper bodies contain one CheckHasPermission per owner branch
-// (resource / customers / suppliers), so following them yields the full OR-set.
+// checks, so relation-variable endpoints are VERIFIED against their declared own and
+// counterparty permissions rather than excused. Helper bodies contain one CheckHasPermission
+// per owner branch (resource / customers / suppliers), so following them yields all three.
 func parseServiceChecks(t *testing.T, root string, domains, actions map[string]string, dirs ...string) map[string]coreCheck {
 	t.Helper()
 	out := map[string]coreCheck{}
@@ -251,7 +251,7 @@ func parseGatewayHandlerTargets(t *testing.T, root string) map[string]map[string
 //     permissions; declaring the domain would false-reject those readers at the gate.
 //   - gateway private-helper indirection: the gateway method delegates to the core
 //     client through a private helper the static join can't trace; enforcement is a
-//     relation helper and the endpoint declares the matching OR-set (verified by hand).
+//     relation helper and the endpoint declares the matching permissions (verified by hand).
 //   - gateway-gated participant auth: messaging/chat endpoints declare messaging
 //     permissions at the gateway; notification-service enforces conversation membership
 //     via caller/requireParticipant/resolveParticipant with no literal CheckHasPermission.
@@ -286,9 +286,9 @@ var unverifiableEndpoints = map[string]string{
 
 	"search": "gateway per-type dynamic gate: Search loops its providers calling identity.CheckHasPermission(domain, read) per resource type and only includes types the caller can read; endpoint declares the {sales_orders,purchase_orders,invoices,customers,items,shipments,messaging,agents}:read OR-set; no downstream name-matched handler to verify against",
 
-	"activate_account_user": "gateway private-helper indirection: ActivateAccountUser -> transitionAccountUserStatus -> coreClient.UpdateAccountUserStatus -> checkAccountUserUpdatePermission; endpoint declares the {team,customers,suppliers}:update OR-set",
-	"disable_account_user":  "gateway private-helper indirection: DisableAccountUser -> transitionAccountUserStatus -> coreClient.UpdateAccountUserStatus -> checkAccountUserUpdatePermission; endpoint declares the {team,customers,suppliers}:update OR-set",
-	"remove_account_user":   "gateway private-helper indirection: RemoveAccountUser -> transitionAccountUserStatus -> coreClient.UpdateAccountUserStatus -> checkAccountUserDeletePermission; endpoint declares the {team,customers,suppliers}:delete OR-set",
+	"activate_account_user": "gateway private-helper indirection: ActivateAccountUser -> transitionAccountUserStatus -> coreClient.UpdateAccountUserStatus -> checkAccountUserUpdatePermission; endpoint declares team:update with customers:update / suppliers:update for counterparty accounts",
+	"disable_account_user":  "gateway private-helper indirection: DisableAccountUser -> transitionAccountUserStatus -> coreClient.UpdateAccountUserStatus -> checkAccountUserUpdatePermission; endpoint declares team:update with customers:update / suppliers:update for counterparty accounts",
+	"remove_account_user":   "gateway private-helper indirection: RemoveAccountUser -> transitionAccountUserStatus -> coreClient.UpdateAccountUserStatus -> checkAccountUserDeletePermission; endpoint declares team:delete with customers:delete / suppliers:delete for counterparty accounts",
 
 	"create_conversation":          "gateway-gated participant auth: CreateConversation uses caller() + membership; gateway declares messaging:create",
 	"list_conversations":           "gateway-gated participant auth: ListConversations uses caller(); gateway declares messaging:read",
@@ -349,7 +349,7 @@ var unverifiableEndpoints = map[string]string{
 	"close_sales_order":   "gateway private-helper indirection: CloseSalesOrder -> changeSalesOrderStatus -> coreClient.ChangeSalesOrderStatus; endpoint declares sales_orders:update",
 	"open_sales_order":    "gateway private-helper indirection: OpenSalesOrder -> changeSalesOrderStatus -> coreClient.ChangeSalesOrderStatus; endpoint declares sales_orders:update",
 
-	"delete_sales_order_line": "conditional admin gate: DeleteSalesOrderLine calls CheckIsAdmin only when the order is completed or has a shipped shipment; the ordinary path needs only the declared customers:update, so RequiredRoleType admin would false-reject it",
+	"delete_sales_order_line": "conditional admin gate: DeleteSalesOrderLine calls CheckIsAdmin only when the order is completed or has a shipped shipment; the ordinary path needs only the declared sales_orders:update (or its counterparty permission), so RequiredRoleType admin would false-reject it",
 
 	"list_announcements":          "gateway-gated recipient auth: ListAnnouncements uses recipient(); gateway declares messaging:read",
 	"retrieve_announcement":       "gateway-gated recipient auth: GetAnnouncement uses recipient(); gateway declares messaging:read",

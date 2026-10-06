@@ -54,3 +54,25 @@ func TestAddressReadPermission_FollowsTheTarget(t *testing.T) {
 		{supplier, "customers:read", false},
 	})
 }
+
+// Writing addresses takes addresses:create, :update or :delete in the seller's own account; customers:update and suppliers:update reach only a customer's and a supplier's.
+func TestAddressWritePermission_FollowsTheTarget(t *testing.T) {
+	t.Parallel()
+	customer, supplier := types.IdentityRelationTypeCustomer, types.IdentityRelationTypeSupplier
+	for _, action := range []types.Action{types.ActionCreate, types.ActionUpdate, types.ActionDelete} {
+		own := "addresses:" + string(action)
+		check := func(identity *types.Identity) *apierror.APIError {
+			return checkAddressWritePermission(identity, action)
+		}
+		assertAddressPermission(t, string(action), check, []addressPermissionCase{
+			{"", own, true},
+			{"", "customers:update", false},
+			{"", "suppliers:update", false},
+			{customer, "customers:update", true},
+			{customer, own, false},
+			{supplier, "suppliers:update", true},
+			{supplier, own, false},
+			{supplier, "customers:update", false},
+		})
+	}
+}

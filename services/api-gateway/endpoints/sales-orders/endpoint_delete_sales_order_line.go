@@ -25,19 +25,16 @@ type DeleteSalesOrderLineEndpoint struct{}
 
 func (e *DeleteSalesOrderLineEndpoint) Materialize() *apiendpoint.APIEndpoint[*DeleteSalesOrderLineRequest, *apiresource.EmptyResource] {
 	return (&apiendpoint.APIEndpoint[*DeleteSalesOrderLineRequest, *apiresource.EmptyResource]{
-		Title:             "Delete Sales Order Line",
-		Method:            http.MethodDelete,
-		ContentType:       "application/json",
-		Route:             "/v1/sales/sales-orders/{id}/lines/{line_id}",
-		SuccessStatusCode: http.StatusOK,
-		Public:            true,
-		AgentTool:         true,
-		Preview:           true,
-		RequiredPermissions: []types.Permission{
-			{Domain: types.PermissionDomainCustomers, Action: types.ActionUpdate},
-			{Domain: types.PermissionDomainSuppliers, Action: types.ActionUpdate},
-			{Domain: types.PermissionDomainSalesOrders, Action: types.ActionUpdate},
-		},
+		Title:                   "Delete Sales Order Line",
+		Method:                  http.MethodDelete,
+		ContentType:             "application/json",
+		Route:                   "/v1/sales/sales-orders/{id}/lines/{line_id}",
+		SuccessStatusCode:       http.StatusOK,
+		Public:                  true,
+		AgentTool:               true,
+		Preview:                 true,
+		RequiredPermissions:     []types.Permission{{Domain: types.PermissionDomainSalesOrders, Action: types.ActionUpdate}},
+		CounterpartyPermissions: apiendpoint.Counterparties(types.ActionUpdate),
 		ServiceHandler: func(svc any) func(ctx context.Context, req *DeleteSalesOrderLineRequest) (*apiresource.EmptyResource, *apierror.APIError) {
 			return svc.(SalesOrderSvc).DeleteSalesOrderLine
 		},

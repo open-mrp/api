@@ -153,6 +153,7 @@ AND t.id IN (sqlc.slice('transaction_ids'));
 UPDATE invoice
 SET is_paid_in_full = sqlc.arg('is_paid_in_full'),
     is_over_paid = sqlc.arg('is_over_paid'),
+    paid_in_full_marked_by_id = IF(sqlc.arg('clear_mark'), NULL, paid_in_full_marked_by_id),
     updated_at = NOW(3)
 WHERE id = sqlc.arg('id')
 AND account_id = sqlc.arg('account_id');

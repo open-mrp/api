@@ -18017,10 +18017,10 @@ func (mr *MockSettlementRepoMockRecorder) GetDollarUnitID(ctx any) *gomock.Call 
 }
 
 // GetInvoicePaymentTotals mocks base method.
-func (m *MockSettlementRepo) GetInvoicePaymentTotals(ctx context.Context, accountID string, invoiceIDs []string) ([]domain.PaymentTotals, *apierror.APIError) {
+func (m *MockSettlementRepo) GetInvoicePaymentTotals(ctx context.Context, accountID string, invoiceIDs []string) ([]domain.InvoicePaymentTotals, *apierror.APIError) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "GetInvoicePaymentTotals", ctx, accountID, invoiceIDs)
-	ret0, _ := ret[0].([]domain.PaymentTotals)
+	ret0, _ := ret[0].([]domain.InvoicePaymentTotals)
 	ret1, _ := ret[1].(*apierror.APIError)
 	return ret0, ret1
 }
@@ -18134,17 +18134,17 @@ func (mr *MockSettlementRepoMockRecorder) Update(ctx, params any) *gomock.Call {
 }
 
 // UpdateInvoicePaymentStatus mocks base method.
-func (m *MockSettlementRepo) UpdateInvoicePaymentStatus(ctx context.Context, accountID, invoiceID string, isPaidInFull, isOverPaid bool) *apierror.APIError {
+func (m *MockSettlementRepo) UpdateInvoicePaymentStatus(ctx context.Context, accountID, invoiceID string, isPaidInFull, isOverPaid, clearMark bool) *apierror.APIError {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "UpdateInvoicePaymentStatus", ctx, accountID, invoiceID, isPaidInFull, isOverPaid)
+	ret := m.ctrl.Call(m, "UpdateInvoicePaymentStatus", ctx, accountID, invoiceID, isPaidInFull, isOverPaid, clearMark)
 	ret0, _ := ret[0].(*apierror.APIError)
 	return ret0
 }
 
 // UpdateInvoicePaymentStatus indicates an expected call of UpdateInvoicePaymentStatus.
-func (mr *MockSettlementRepoMockRecorder) UpdateInvoicePaymentStatus(ctx, accountID, invoiceID, isPaidInFull, isOverPaid any) *gomock.Call {
+func (mr *MockSettlementRepoMockRecorder) UpdateInvoicePaymentStatus(ctx, accountID, invoiceID, isPaidInFull, isOverPaid, clearMark any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateInvoicePaymentStatus", reflect.TypeOf((*MockSettlementRepo)(nil).UpdateInvoicePaymentStatus), ctx, accountID, invoiceID, isPaidInFull, isOverPaid)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateInvoicePaymentStatus", reflect.TypeOf((*MockSettlementRepo)(nil).UpdateInvoicePaymentStatus), ctx, accountID, invoiceID, isPaidInFull, isOverPaid, clearMark)
 }
 
 // UpdateTransactionsFullyAllocated mocks base method.

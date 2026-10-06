@@ -263,6 +263,7 @@ func (r *invoiceRepoImpl) Update(ctx context.Context, params domain.UpdateInvoic
 	}
 	if params.IsPaidInFull != nil {
 		updateParams.IsPaidInFull = gosql.NullBool{Bool: *params.IsPaidInFull, Valid: true}
+		updateParams.PaidInFullMarkedByID = db.NullStringPtr(params.PaidInFullMarkedByID)
 	}
 
 	err := r.queries.UpdateInvoice(ctx, updateParams)

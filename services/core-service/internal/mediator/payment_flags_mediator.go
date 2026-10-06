@@ -9,6 +9,7 @@ import (
 
 	"github.com/open-mrp/api/services/core-service/internal/domain"
 	"github.com/open-mrp/api/shared/appctx"
+	"github.com/open-mrp/api/shared/constants"
 	"github.com/open-mrp/api/shared/contracts"
 	apierror "github.com/open-mrp/api/shared/errors"
 	"github.com/open-mrp/api/shared/messaging"
@@ -107,9 +108,61 @@ func (m *paymentFlagsMedImpl) Recompute(ctx context.Context, accountID string, t
 			return apierror.NewInternalError(err, "Invoice allocations are not a number.")
 		}
 		isPaidInFull, isOverPaid := domain.InvoicePaymentFlagsFor(invoiced, paid)
-		if apiErr := repo.UpdateInvoicePaymentStatus(ctx, accountID, inv.ID, isPaidInFull, isOverPaid); apiErr != nil {
+		// What has been applied to the invoice decides the flag, over a value someone set by hand. When that
+		// overturns their value, they are told, and the flag is no longer theirs.
+		overturned := inv.MarkedByID != nil && inv.IsPaidInFull != isPaidInFull
+		if apiErr := repo.UpdateInvoicePaymentStatus(ctx, accountID, inv.ID, isPaidInFull, isOverPaid, overturned); apiErr != nil {
 			return apiErr
 		}
+		if overturned {
+			if apiErr := m.notifyMarkOverturned(ctx, accountID, inv, isPaidInFull, invoiced.Sub(paid)); apiErr != nil {
+				return apiErr
+			}
+		}
+	}
+	return nil
+}
+
+// notifyMarkOverturned tells the person who set an invoice's paid-in-full flag by hand that recalculating
+// its payments set it the other way. The alert rides the outbox in the recalculation's transaction.
+func (m *paymentFlagsMedImpl) notifyMarkOverturned(ctx context.Context, accountID string, inv domain.InvoicePaymentTotals, isPaidInFull bool, owed decimal.Decimal) *apierror.APIError {
+	title := "Invoice " + inv.Number + " is no longer marked paid"
+	body := "You marked it paid in full, but recalculating its payments found $" + owed.StringFixed(2) + " still owed."
+	if isPaidInFull {
+		title = "Invoice " + inv.Number + " is now marked paid"
+		body = "You marked it unpaid, but recalculating its payments found it paid in full."
+	}
+	data := messaging.AlertFanoutData{
+		AccountID:        accountID,
+		Category:         string(constants.NotificationCategoryInvoicePaymentStatusChanged),
+		Kind:             "alert",
+		Title:            title,
+		Body:             body,
+		LinkResourceType: string(constants.ObjectTypeInvoice),
+		LinkResourceID:   inv.ID,
+		Priority:         string(constants.NotificationPriorityNormal),
+		SenderType:       string(constants.NotificationSenderTypeSystem),
+		RecipientUserIDs: []string{*inv.MarkedByID},
+	}
+	dataJSON, err := json.Marshal(data)
+	if err != nil {
+		return apierror.NewInternalError(err, "Failed to marshal invoice payment status alert.")
+	}
+	msg := contracts.AmqpMessage{Data: dataJSON}
+	if identity, ok := appctx.GetIdentityFromContext(ctx); ok {
+		msg.Identity = identity
+	}
+	if requestID, ok := appctx.GetRequestID(ctx); ok {
+		msg.RequestID = requestID
+	}
+	if _, err := m.repos.NewOutboxRepo().Create(ctx, messaging.OutboxMessageInput{
+		ServiceName: domain.ServiceName,
+		MessageType: string(contracts.NotificationCmdFanout),
+		Destination: messaging.ApplicationExchange,
+		RoutingKey:  string(contracts.NotificationCmdFanout),
+		Payload:     msg,
+	}); err != nil {
+		return apierror.NewInternalError(err, "Failed to enqueue invoice payment status alert.")
 	}
 	return nil
 }

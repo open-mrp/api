@@ -254,9 +254,13 @@ ORDER BY ta.created_at ASC, ta.id ASC;
 -- invoiced total (each line priced as the dashboard's multiplyRate does and rounded to the cent, as
 -- its calculateTotalInvoiced sums them; see the line-pricing skill) and the sum of every allocation
 -- against the invoice, from any settlement. The flags themselves are decided in Go
--- (domain.InvoicePaymentFlagsFor), which rounds the balance the way the dashboard does.
+-- (domain.InvoicePaymentFlagsFor), which rounds the balance the way the dashboard does. The current flag
+-- and who set it by hand come along, so recalculation can tell that person when it overturns them.
 SELECT
     i.id AS invoice_id,
+    i.number,
+    i.is_paid_in_full,
+    i.paid_in_full_marked_by_id,
     CAST(COALESCE((
         SELECT SUM(ROUND(CASE WHEN ilq.unit_id = solr.denominator_unit_id THEN ilq.value * solr.value ELSE (ilq.value * ilqu.ratio_numerator / ilqu.ratio_denominator) * (solr.value / (solru.ratio_numerator / solru.ratio_denominator)) END, 2))
         FROM invoice_line il
@@ -284,6 +288,8 @@ SET
     has_been_sent = COALESCE(sqlc.narg('has_been_sent'), has_been_sent),
     is_edi_sent = COALESCE(sqlc.narg('is_edi_sent'), is_edi_sent),
     is_paid_in_full = COALESCE(sqlc.narg('is_paid_in_full'), is_paid_in_full),
+    -- Who set the flag by hand, recorded only when this update sets it.
+    paid_in_full_marked_by_id = IF(sqlc.narg('is_paid_in_full') IS NULL, paid_in_full_marked_by_id, sqlc.narg('paid_in_full_marked_by_id')),
     updated_at = CURRENT_TIMESTAMP(3)
 WHERE id = sqlc.arg('id')
 AND account_id = sqlc.arg('account_id');

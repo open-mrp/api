@@ -50,8 +50,8 @@ func TestRecomputePaymentFlagsConsumerRecomputesInOneTransaction(t *testing.T) {
 	settlement.EXPECT().UpdateTransactionsFullyAllocated(gomock.Any(), "ac_1", []string{"tx_1"}, true).Return(nil)
 	settlement.EXPECT().UpdateTransactionsFullyAllocated(gomock.Any(), "ac_1", []string(nil), false).Return(nil)
 	settlement.EXPECT().GetInvoicePaymentTotals(gomock.Any(), "ac_1", []string{"iv_1"}).
-		Return([]domain.PaymentTotals{{ID: "iv_1", Total: "10", Allocated: "10"}}, nil)
-	settlement.EXPECT().UpdateInvoicePaymentStatus(gomock.Any(), "ac_1", "iv_1", true, false).Return(nil)
+		Return([]domain.InvoicePaymentTotals{{PaymentTotals: domain.PaymentTotals{ID: "iv_1", Total: "10", Allocated: "10"}}}, nil)
+	settlement.EXPECT().UpdateInvoicePaymentStatus(gomock.Any(), "ac_1", "iv_1", true, false, false).Return(nil)
 
 	err := consumer.handleMessage(context.Background(), paymentFlagsDelivery(t, contracts.AmqpMessage{},
 		domain.RecomputePaymentFlagsEvent{AccountID: "ac_1", TransactionIDs: []string{"tx_1"}, InvoiceIDs: []string{"iv_1"}}))

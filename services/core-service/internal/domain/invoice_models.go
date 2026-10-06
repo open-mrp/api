@@ -161,7 +161,9 @@ type UpdateInvoiceParams struct {
 	HasBeenSent  *bool
 	IsEdiSent    *bool
 	IsPaidInFull *bool
-	Includes     []string
+	// PaidInFullMarkedByID is the person setting IsPaidInFull by hand, told if recalculation overturns it.
+	PaidInFullMarkedByID *string
+	Includes             []string
 }
 
 // ListCustomerInvoicesParams holds parameters for listing invoices by customer.

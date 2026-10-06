@@ -1727,8 +1727,9 @@ type SettlementRepo interface {
 	// MarkTransactionsCreatedBySettlement records that the settlement created these transactions inline.
 	MarkTransactionsCreatedBySettlement(ctx context.Context, accountID, settlementID string, transactionIDs []string) *apierror.APIError
 	UpdateTransactionsFullyAllocated(ctx context.Context, accountID string, transactionIDs []string, isFullyAllocated bool) *apierror.APIError
-	UpdateInvoicePaymentStatus(ctx context.Context, accountID, invoiceID string, isPaidInFull, isOverPaid bool) *apierror.APIError
-	GetInvoicePaymentTotals(ctx context.Context, accountID string, invoiceIDs []string) ([]PaymentTotals, *apierror.APIError)
+	// UpdateInvoicePaymentStatus writes recalculated payment flags; clearMark forgets who set the paid-in-full flag by hand.
+	UpdateInvoicePaymentStatus(ctx context.Context, accountID, invoiceID string, isPaidInFull, isOverPaid, clearMark bool) *apierror.APIError
+	GetInvoicePaymentTotals(ctx context.Context, accountID string, invoiceIDs []string) ([]InvoicePaymentTotals, *apierror.APIError)
 	GetTransactionAllocationTotals(ctx context.Context, accountID string, transactionIDs []string) ([]PaymentTotals, *apierror.APIError)
 	// LockPaymentFlagRows takes row locks on the account's given transactions, then invoices, each in id order, until the caller's transaction ends.
 	LockPaymentFlagRows(ctx context.Context, accountID string, transactionIDs, invoiceIDs []string) *apierror.APIError

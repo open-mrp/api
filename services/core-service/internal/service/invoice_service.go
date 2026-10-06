@@ -201,6 +201,12 @@ func (s *invoiceSvcImpl) UpdateInvoice(ctx context.Context, params domain.Update
 	}
 
 	params.AccountID = identity.Target.AccountID
+	// Recalculating the invoice's payments later can overturn a paid-in-full flag set here; the person who
+	// set it is told. An API key or agent has no one to tell.
+	params.PaidInFullMarkedByID = nil
+	if params.IsPaidInFull != nil && identity.HasUserActor() {
+		params.PaidInFullMarkedByID = &identity.Actor.ID
+	}
 
 	meds := s.mediators()
 

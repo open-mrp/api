@@ -4,6 +4,7 @@ package api_test
 
 import (
 	"fmt"
+	"net/url"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -209,4 +210,66 @@ func setupFreightExemptOrderCustomer(t *testing.T) string {
 		_, _, _ = apiClient.Delete(customersPath + "/" + customerID)
 	})
 	return customerID
+}
+
+// --- Purchase orders ---
+
+func TestForeignShippingRefs_PurchaseOrderCreateRefusesForeignRefs(t *testing.T) {
+	t.Parallel()
+	foreign := createTenantBShippingRefs(t)
+
+	for _, tc := range []struct{ field, id string }{
+		{"carrier_id", foreign.carrierID},
+		{"service_level_id", foreign.serviceLevelID},
+		{"shipping_term_id", foreign.shippingTermID},
+		{"payment_term_id", foreign.paymentTermID},
+	} {
+		t.Run(tc.field, func(t *testing.T) {
+			t.Parallel()
+			body := validPurchaseOrderBody()
+			body[tc.field] = tc.id
+
+			status, resp, err := apiClient.Post(purchaseOrdersPath, body, newIdempotencyKey())
+			require.NoError(t, err)
+			if status == 201 {
+				id := jsonField(parseJSON(resp), "id")
+				t.Cleanup(func() { _, _, _ = apiClient.Delete(purchaseOrdersPath + "/" + id) })
+			}
+			assertRefNotFound(t, status, resp, tc.field)
+		})
+	}
+}
+
+func TestForeignShippingRefs_PurchaseOrderCreateTakesSystemAndOwnRefs(t *testing.T) {
+	t.Parallel()
+
+	for _, tc := range []struct {
+		name                                                   string
+		carrierID, serviceLevelID, shippingTermID, paymentTerm string
+	}{
+		{"system", SeedSystemCarrierID, SeedSystemServiceLevelID, SeedShippingTermID, SeedDefaultPaymentTermID},
+		{"own", SeedCarrierID, SeedServiceLevelID, SeedCustomShippingTermID, SeedPaymentTermID},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+			created := createPurchaseOrder(t, func(body map[string]any) {
+				body["carrier_id"] = tc.carrierID
+				body["service_level_id"] = tc.serviceLevelID
+				body["shipping_term_id"] = tc.shippingTermID
+				body["payment_term_id"] = tc.paymentTerm
+			})
+
+			status, body, err := apiClient.GetListRaw(purchaseOrdersPath+"/"+jsonField(created, "id"),
+				url.Values{"include": {"freight,shipping_term,payment_term"}})
+			require.NoError(t, err)
+			requireStatus(t, 200, status, body)
+			got := parseJSON(body)
+			freight := jsonObject(got, "freight")
+			require.NotNil(t, freight)
+			assert.Equal(t, tc.carrierID, jsonField(jsonObject(freight, "carrier"), "id"))
+			assert.Equal(t, tc.serviceLevelID, jsonField(jsonObject(freight, "service_level"), "id"))
+			assert.Equal(t, tc.shippingTermID, jsonField(jsonObject(got, "shipping_term"), "id"))
+			assert.Equal(t, tc.paymentTerm, jsonField(jsonObject(got, "payment_term"), "id"))
+		})
+	}
 }

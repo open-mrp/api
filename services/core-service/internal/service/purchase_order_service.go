@@ -301,6 +301,10 @@ func (s *purchaseOrderSvcImpl) CreatePurchaseOrder(ctx context.Context, params d
 		}
 	}
 
+	if apiErr := checkCustomerRefs(ctx, s.repos, params.AccountID, newPurchaseOrderRefs(params)); apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
+
 	meds := s.mediators()
 
 	idempotencyKey, apiErr := meds.Idempotency.UpsertIdempotencyKey(ctx, identity)
@@ -990,6 +994,16 @@ func (s *purchaseOrderSvcImpl) ChangePurchaseOrderStatus(ctx context.Context, pa
 	}
 
 	return updatedOrder, nil
+}
+
+// newPurchaseOrderRefs lists the routing and terms a purchase order create stores.
+func newPurchaseOrderRefs(params domain.CreatePurchaseOrderParams) customerRefs {
+	var refs customerRefs
+	refs.add(customerRefCarrier, params.CarrierID, nil, "carrier_id")
+	refs.add(customerRefServiceLevel, params.ServiceLevelID, nil, "service_level_id")
+	refs.add(customerRefShippingTerm, params.ShippingTermID, nil, "shipping_term_id")
+	refs.add(customerRefPaymentTerm, params.PaymentTermID, nil, "payment_term_id")
+	return refs
 }
 
 // ensureSupplierMaterialLink checks if a material is linked to the supplier on the purchase order. If not, it finds the material by item ID and creates the link.

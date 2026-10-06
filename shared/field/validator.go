@@ -61,6 +61,12 @@ func patchWrappedCustomType(field reflect.Value) any {
 	if !IsClearableType(field.Type()) && !IsOptionalType(field.Type()) {
 		return field.Interface()
 	}
+	// A wrapper inside a struct that was itself unwrapped is not addressable; read it through a copy.
+	if !field.CanAddr() {
+		addressable := reflect.New(field.Type()).Elem()
+		addressable.Set(field)
+		field = addressable
+	}
 	if field.CanAddr() {
 		if IsClearableType(field.Type()) {
 			if isClear := field.Addr().MethodByName("IsClear"); isClear.IsValid() {

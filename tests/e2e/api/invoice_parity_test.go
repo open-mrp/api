@@ -374,6 +374,8 @@ func TestInvoiceParity_InvoicesReadRoleExpandsAllocationTransactions(t *testing.
 	funds := time.Now().UTC()
 	payment := createPayment(t, inv.customerID, "10.00", &funds, nil)
 	settle(t, map[string]any{"allocations": []any{allocation(jsonField(payment, "id"), inv.invoiceID, "10.00")}})
+	// Settling marks the payment fully allocated afterwards; the two reads below must see the same payment.
+	awaitFullyAllocated(t, jsonField(payment, "id"), true)
 	reader := customRoleClient(t, "invoices:read")
 
 	status, body, err := reader.GetListRaw(transactionsPath+"/"+jsonField(payment, "id"), nil)

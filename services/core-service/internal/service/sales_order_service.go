@@ -782,6 +782,12 @@ func (s *salesOrderSvcImpl) UpdateSalesOrder(ctx context.Context, params domain.
 			if apiErr := checkCustomerRefs(txCtx, txSvc.repos, params.AccountID, changedSalesOrderRefs(params, existing)); apiErr != nil {
 				return apiErr
 			}
+			if apiErr := checkSalesOrderCounterpartyRefs(txCtx, txSvc.repos, params, existing); apiErr != nil {
+				return apiErr
+			}
+			if apiErr := checkUpdatedServiceLevelOnCarrier(txCtx, txSvc.repos, existing.CarrierID, existing.ServiceLevelID, params.CarrierID, params.ServiceLevelID); apiErr != nil {
+				return apiErr
+			}
 
 			// Decide whether the caller changed carrier / service level / ship-to BEFORE the
 			// backfill below rewrites omitted fields to the existing values.
@@ -2219,6 +2225,9 @@ func (s *salesOrderSvcImpl) validateSalesOrderReferences(ctx context.Context, pa
 			return mapSalesOrderReferenceError(apiErr, "Service level not found.", "service_level_id")
 		}
 	}
+	if apiErr := checkServiceLevelOnCarrier(ctx, s.repos, params.CarrierID, params.ServiceLevelID); apiErr != nil {
+		return apiErr
+	}
 	if params.ShippingTermID != nil && *params.ShippingTermID != "" {
 		if _, apiErr := s.repos.NewShippingTermRepo().Get(ctx, domain.GetShippingTermParams{AccountID: params.AccountID, ShippingTermID: *params.ShippingTermID}); apiErr != nil {
 			return mapSalesOrderReferenceError(apiErr, "Shipping term not found.", "shipping_term_id")
@@ -2252,6 +2261,49 @@ func changedSalesOrderRefs(params domain.UpdateSalesOrderParams, existing *domai
 	refs.add(customerRefShippingTerm, params.ShippingTermID, existing.ShippingTermID, "shipping_term_id")
 	refs.add(customerRefPaymentTerm, params.PaymentTermID, existing.PaymentTermID, "payment_term_id")
 	return refs
+}
+
+// checkSalesOrderCounterpartyRefs refuses a customer, address or discount the account may not use; an address must be the buyer's or the account's own, as on create. One the order already holds is not looked up again.
+func checkSalesOrderCounterpartyRefs(ctx context.Context, repos domain.RepoFactory, params domain.UpdateSalesOrderParams, existing *domain.SalesOrder) *apierror.APIError {
+	buyerAccountID := existing.BuyerAccountID
+	if params.BuyerAccountID != nil && *params.BuyerAccountID != existing.BuyerAccountID {
+		if _, apiErr := repos.NewCustomerRepo().Get(ctx, params.AccountID, *params.BuyerAccountID, nil); apiErr != nil {
+			if apierror.IsNotFound(apiErr) {
+				return apierror.NewResourceNotFoundError("No customer found with the provided ID.").WithParam("customer_id")
+			}
+			return apiErr
+		}
+		buyerAccountID = *params.BuyerAccountID
+	}
+
+	for _, address := range []struct {
+		id, held *string
+		param    string
+	}{
+		{params.BillingAddressID, &existing.BillingAddressID, "billing_address_id"},
+		{params.ShippingAddressID, &existing.ShippingAddressID, "shipping_address_id"},
+	} {
+		if address.id == nil || *address.id == *address.held {
+			continue
+		}
+		acct, apiErr := orderAddressAccount(ctx, repos.NewAddressRepo(), params.AccountID, buyerAccountID, *address.id)
+		if apiErr != nil {
+			return apiErr
+		}
+		if acct == "" {
+			return apierror.NewResourceNotFoundError("No address found with the provided ID.").WithParam(address.param)
+		}
+	}
+
+	if discountID, ok := params.OrderDiscountID.Value(); ok && !equalStringPtr(&discountID, existing.OrderDiscountID) {
+		if _, apiErr := repos.NewOrderDiscountRepo().Get(ctx, domain.GetOrderDiscountParams{AccountID: params.AccountID, OrderDiscountID: discountID}); apiErr != nil {
+			if apierror.IsNotFound(apiErr) {
+				return apierror.NewResourceNotFoundError("No order discount found with the provided ID.").WithParam("order_discount_id")
+			}
+			return apiErr
+		}
+	}
+	return nil
 }
 
 // validateEmailContactAccountUsers rejects an order email-contact whose account_user_id does not exist in the buyer's account, rather than silently dropping the reference. buyerAccountID scopes the lookup: these contacts are customer-side recipients, so an account_user of the seller (acting) account is not a valid contact.
@@ -2454,17 +2506,9 @@ func (s *salesOrderSvcImpl) resolveSalesRepID(ctx context.Context, accountID, bu
 
 // resolveOrderAddress validates that an order's bill-to / ship-to address exists and belongs to the order's owner or buyer account (matching Dashboard, which only accepts existing address IDs), and returns it as a ShippingAddress for the sales-rep territory + shipping-rate logic.
 func (s *salesOrderSvcImpl) resolveOrderAddress(ctx context.Context, addressRepo domain.AddressRepo, ownerAccountID, buyerAccountID, addressID string) (domain.ShippingAddress, *apierror.APIError) {
-	// Prefer the buyer (customer) account — that is where order addresses live in the Dashboard flow — then fall back to the order's owner account.
-	acct := ""
-	for _, candidate := range []string{buyerAccountID, ownerAccountID} {
-		inAccount, apiErr := addressRepo.IsInAccount(ctx, candidate, addressID)
-		if apiErr != nil {
-			return domain.ShippingAddress{}, apiErr
-		}
-		if inAccount {
-			acct = candidate
-			break
-		}
+	acct, apiErr := orderAddressAccount(ctx, addressRepo, ownerAccountID, buyerAccountID, addressID)
+	if apiErr != nil {
+		return domain.ShippingAddress{}, apiErr
 	}
 	if acct == "" {
 		return domain.ShippingAddress{}, apierror.NewValidationError("Address does not belong to the order's owner or buyer account.")
@@ -2475,6 +2519,20 @@ func (s *salesOrderSvcImpl) resolveOrderAddress(ctx context.Context, addressRepo
 		return domain.ShippingAddress{}, apiErr
 	}
 	return shippingAddressFromDomain(existing), nil
+}
+
+// orderAddressAccount returns which of the order's buyer and owner holds the address, or "" when neither does. The buyer is tried first, since that is where order addresses live in the Dashboard flow.
+func orderAddressAccount(ctx context.Context, addressRepo domain.AddressRepo, ownerAccountID, buyerAccountID, addressID string) (string, *apierror.APIError) {
+	for _, candidate := range []string{buyerAccountID, ownerAccountID} {
+		inAccount, apiErr := addressRepo.IsInAccount(ctx, candidate, addressID)
+		if apiErr != nil {
+			return "", apiErr
+		}
+		if inAccount {
+			return candidate, nil
+		}
+	}
+	return "", nil
 }
 
 // shippingAddressFromDomain projects a stored Address (+ geolocation) into the flat ShippingAddress used by the shipping-rate cascade.

@@ -162,3 +162,52 @@ func (suite *ShipmentRoutingTestSuite) TestAdminTracking_RefusesACarrierOutsideT
 	suite.True(apierror.IsNotFound(apiErr))
 	suite.Equal("carrier_id", apiErr.Param)
 }
+
+func (suite *ShipmentRoutingTestSuite) TestUpdate_RefusesAServiceLevelOffTheHeldCarrier() {
+	suite.expectShipment(&domain.Shipment{ID: "sh_1", CarrierID: "cr_own", ServiceLevelID: new("crop_own")})
+	suite.serviceLevelRepo.EXPECT().Get(gomock.Any(), "ac_seller", "crop_other").Return(&domain.ServiceLevel{ID: "crop_other"}, nil)
+	suite.serviceLevelRepo.EXPECT().IsInCarrier(gomock.Any(), "crop_other", "cr_own").Return(false, nil)
+
+	_, apiErr := suite.svc.UpdateShipment(shipmentWriterCtx("ac_seller", constants.RoleTypeAdmin), domain.UpdateShipmentParams{
+		ShipmentID:     "sh_1",
+		ServiceLevelID: field.Set("crop_other"),
+	})
+
+	suite.Require().NotNil(apiErr)
+	suite.Equal(apierror.ErrorCodeValidationFailed, apiErr.Code)
+	suite.Equal("service_level_id", apiErr.Param)
+}
+
+func (suite *ShipmentRoutingTestSuite) TestUpdate_RefusesACarrierTheHeldServiceLevelIsNotOn() {
+	suite.expectShipment(&domain.Shipment{ID: "sh_1", CarrierID: "cr_own", ServiceLevelID: new("crop_own")})
+	suite.carrierRepo.EXPECT().
+		Get(gomock.Any(), domain.GetCarrierParams{AccountID: "ac_seller", CarrierID: "cr_new"}).
+		Return(&domain.Carrier{ID: "cr_new"}, nil)
+	suite.serviceLevelRepo.EXPECT().IsInCarrier(gomock.Any(), "crop_own", "cr_new").Return(false, nil)
+
+	_, apiErr := suite.svc.UpdateShipment(shipmentWriterCtx("ac_seller", constants.RoleTypeAdmin), domain.UpdateShipmentParams{
+		ShipmentID: "sh_1",
+		CarrierID:  new("cr_new"),
+	})
+
+	suite.Require().NotNil(apiErr)
+	suite.Equal(apierror.ErrorCodeValidationFailed, apiErr.Code)
+	suite.Equal("service_level_id", apiErr.Param)
+}
+
+func (suite *ShipmentRoutingTestSuite) TestAdminTracking_RefusesACarrierTheHeldServiceLevelIsNotOn() {
+	suite.expectShipment(&domain.Shipment{ID: "sh_1", CarrierID: "cr_own", ServiceLevelID: new("crop_own"), ShippedAt: new(time.Now())})
+	suite.carrierRepo.EXPECT().
+		Get(gomock.Any(), domain.GetCarrierParams{AccountID: "ac_seller", CarrierID: "cr_new"}).
+		Return(&domain.Carrier{ID: "cr_new"}, nil)
+	suite.serviceLevelRepo.EXPECT().IsInCarrier(gomock.Any(), "crop_own", "cr_new").Return(false, nil)
+
+	_, apiErr := suite.svc.AdminUpdateShipmentTracking(shipmentWriterCtx("ac_seller", constants.RoleTypeAdmin), domain.AdminUpdateShipmentTrackingParams{
+		ShipmentID: "sh_1",
+		CarrierID:  new("cr_new"),
+	})
+
+	suite.Require().NotNil(apiErr)
+	suite.Equal(apierror.ErrorCodeValidationFailed, apiErr.Code)
+	suite.Equal("service_level_id", apiErr.Param)
+}

@@ -920,7 +920,7 @@ func (s *ProductSvcTestSuite) TestDeleteProduct_Success_SoftDeletes() {
 	// captures pre-delete state.
 	gomock.InOrder(
 		s.deletedRecordRepo.EXPECT().
-			Create(gomock.Any(), constants.DeletedRecordResourceTypeProduct, "it_1", existing).
+			CreateInAccount(gomock.Any(), constants.DeletedRecordResourceTypeProduct, "it_1", "ac_test123", existing).
 			Return(nil).
 			Times(1),
 		s.productRepo.EXPECT().
@@ -944,7 +944,7 @@ func (s *ProductSvcTestSuite) TestDeleteProduct_AlreadyDeleted_Returns410() {
 		Return(nil, apierror.NewResourceNotFoundError("Product not found.")).
 		Times(1)
 	s.deletedRecordRepo.EXPECT().
-		Exists(gomock.Any(), constants.DeletedRecordResourceTypeProduct, "it_gone").
+		ExistsInAccount(gomock.Any(), constants.DeletedRecordResourceTypeProduct, "it_gone", "ac_test123").
 		Return(true, nil).
 		Times(1)
 		// No SoftDelete expected.
@@ -964,7 +964,7 @@ func (s *ProductSvcTestSuite) TestDeleteProduct_GenuinelyNotFound_Returns404() {
 		Return(nil, apierror.NewResourceNotFoundError("Product not found.")).
 		Times(1)
 	s.deletedRecordRepo.EXPECT().
-		Exists(gomock.Any(), constants.DeletedRecordResourceTypeProduct, "it_missing").
+		ExistsInAccount(gomock.Any(), constants.DeletedRecordResourceTypeProduct, "it_missing", "ac_test123").
 		Return(false, nil).
 		Times(1)
 
@@ -1004,7 +1004,7 @@ func (s *ProductSvcTestSuite) TestDeleteProduct_DeletedRecordCreateFails_RollsBa
 		Return(existing, nil).
 		Times(1)
 	s.deletedRecordRepo.EXPECT().
-		Create(gomock.Any(), constants.DeletedRecordResourceTypeProduct, "it_1", gomock.Any()).
+		CreateInAccount(gomock.Any(), constants.DeletedRecordResourceTypeProduct, "it_1", "ac_test123", gomock.Any()).
 		Return(apierror.NewInternalError(nil, "db down")).
 		Times(1)
 		// SoftDelete must not be called when the snapshot insert fails.

@@ -748,7 +748,7 @@ func (suite *UnitGroupSvcTestSuite) TestDeleteUnitGroup_Success() {
 		Return(nil).
 		Times(1)
 	suite.deletedRecordRepo.EXPECT().
-		Create(gomock.Any(), constants.DeletedRecordResourceTypeUnitGroup, "ug_d1", gomock.Any()).
+		CreateInAccount(gomock.Any(), constants.DeletedRecordResourceTypeUnitGroup, "ug_d1", "ac_test123", gomock.Any()).
 		Return(nil).
 		Times(1)
 	suite.unitGroupRepo.EXPECT().
@@ -800,7 +800,7 @@ func (suite *UnitGroupSvcTestSuite) TestDeleteUnitGroup_AlreadyDeleted() {
 		Return(nil, apierror.NewResourceNotFoundError("Unit group not found.")).
 		Times(1)
 	suite.deletedRecordRepo.EXPECT().
-		Exists(gomock.Any(), constants.DeletedRecordResourceTypeUnitGroup, "ug_gone").
+		ExistsInAccount(gomock.Any(), constants.DeletedRecordResourceTypeUnitGroup, "ug_gone", "ac_test123").
 		Return(true, nil).
 		Times(1)
 
@@ -818,7 +818,7 @@ func (suite *UnitGroupSvcTestSuite) TestDeleteUnitGroup_NotFound() {
 		Return(nil, apierror.NewResourceNotFoundError("Unit group not found.")).
 		Times(1)
 	suite.deletedRecordRepo.EXPECT().
-		Exists(gomock.Any(), constants.DeletedRecordResourceTypeUnitGroup, "ug_d_nf").
+		ExistsInAccount(gomock.Any(), constants.DeletedRecordResourceTypeUnitGroup, "ug_d_nf", "ac_test123").
 		Return(false, nil).
 		Times(1)
 
@@ -1017,7 +1017,7 @@ func (suite *UnitGroupSvcTestSuite) TestDeleteUnitGroupUnit_AlreadyDeleted() {
 		}, nil).
 		Times(1)
 	suite.deletedRecordRepo.EXPECT().
-		Exists(gomock.Any(), constants.DeletedRecordResourceTypeUnitGroupUnit, "uguID_gone").
+		ExistsInAccount(gomock.Any(), constants.DeletedRecordResourceTypeUnitGroupUnit, "uguID_gone", "ac_test123").
 		Return(true, nil).
 		Times(1)
 
@@ -1050,7 +1050,7 @@ func (suite *UnitGroupSvcTestSuite) TestDeleteUnitGroupUnit_Success() {
 		}, nil).
 		Times(1)
 	suite.deletedRecordRepo.EXPECT().
-		Create(gomock.Any(), constants.DeletedRecordResourceTypeUnitGroupUnit, "uguID_del", gomock.Any()).
+		CreateInAccount(gomock.Any(), constants.DeletedRecordResourceTypeUnitGroupUnit, "uguID_del", "ac_test123", gomock.Any()).
 		Return(nil).
 		Times(1)
 	suite.unitGroupRepo.EXPECT().

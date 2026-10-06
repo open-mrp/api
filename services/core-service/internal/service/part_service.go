@@ -531,7 +531,7 @@ func (s *partSvcImpl) DeletePart(ctx context.Context, partID string) (*domain.Pa
 	part, apiErr := s.repos.NewPartRepo().Get(ctx, domain.GetPartParams{AccountID: accountID, PartID: partID})
 	if apiErr != nil {
 		if apierror.IsNotFound(apiErr) {
-			wasDeleted, deletedCheckErr := s.repos.NewDeletedRecordRepo().Exists(ctx, constants.DeletedRecordResourceTypePart, partID)
+			wasDeleted, deletedCheckErr := s.repos.NewDeletedRecordRepo().ExistsInAccount(ctx, constants.DeletedRecordResourceTypePart, partID, accountID)
 			if deletedCheckErr != nil {
 				return nil, tracing.Trace(span, deletedCheckErr)
 			}
@@ -544,7 +544,7 @@ func (s *partSvcImpl) DeletePart(ctx context.Context, partID string) (*domain.Pa
 
 	// Soft-delete within a transaction.
 	apiErr = s.withTx(ctx, func(txCtx context.Context, txSvc *partSvcImpl) *apierror.APIError {
-		if apiErr := txSvc.repos.NewDeletedRecordRepo().Create(txCtx, constants.DeletedRecordResourceTypePart, part.ID, part); apiErr != nil {
+		if apiErr := txSvc.repos.NewDeletedRecordRepo().CreateInAccount(txCtx, constants.DeletedRecordResourceTypePart, part.ID, accountID, part); apiErr != nil {
 			return apiErr
 		}
 

@@ -588,3 +588,14 @@ func (suite *ItemCategorySvcTestSuite) TestExportItemCategories_ScopesToTheIdent
 	_, apiErr := suite.buildExport(ctx, domain.ExportItemCategoriesParams{AccountID: "ac_attacker"})
 	suite.Require().Nil(apiErr)
 }
+
+func TestDeleteItemCategory_OnlyTheOwnerLearnsItWasDeleted(t *testing.T) {
+	t.Parallel()
+	assertOnlyTheOwnerLearnsItWasDeleted(t, constants.DeletedRecordResourceTypeItemCategory, "ic_gone", func(h *deletedScopeHarness, accountID string) *apierror.APIError {
+		categories := repositorymock.NewMockItemCategoryRepo(h.ctrl)
+		h.repos.EXPECT().NewItemCategoryRepo().Return(categories).AnyTimes()
+		categories.EXPECT().Get(gomock.Any(), domain.GetItemCategoryParams{AccountID: accountID, ItemCategoryID: "ic_gone"}).Return(nil, deletedScopeNotFound())
+		svc := NewItemCategorySvc(&ItemCategorySvcConfig{Repos: h.repos, MediatorFactory: h.mediators, JobSvcFactory: NewJobSvcFactory(), TxManager: &stubTxManager{factory: h.repos}})
+		return svc.DeleteItemCategory(deletedScopeCtx(accountID), "ic_gone")
+	})
+}

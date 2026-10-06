@@ -346,6 +346,7 @@ type AccountGroupRepo interface {
 }
 
 type DeletedRecordRepo interface {
+	// Create and Exists ignore the tenant: use them only for records every account can see, such as product types.
 	Create(ctx context.Context, resourceType constants.DeletedRecordResourceType, resourceID string, data any) *apierror.APIError
 	Exists(ctx context.Context, resourceType constants.DeletedRecordResourceType, resourceID string) (bool, *apierror.APIError)
 	// CreateInAccount records a snapshot that names its owning account, so only that account is told the record was deleted.

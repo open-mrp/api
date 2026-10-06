@@ -466,7 +466,7 @@ func (s *unitGroupSvcImpl) DeleteUnitGroup(ctx context.Context, unitGroupID stri
 	})
 	if apiErr != nil {
 		if apierror.IsNotFound(apiErr) {
-			wasDeleted, deletedCheckErr := s.repos.NewDeletedRecordRepo().Exists(ctx, constants.DeletedRecordResourceTypeUnitGroup, unitGroupID)
+			wasDeleted, deletedCheckErr := s.repos.NewDeletedRecordRepo().ExistsInAccount(ctx, constants.DeletedRecordResourceTypeUnitGroup, unitGroupID, accountID)
 			if deletedCheckErr != nil {
 				return tracing.Trace(span, deletedCheckErr)
 			}
@@ -488,7 +488,7 @@ func (s *unitGroupSvcImpl) DeleteUnitGroup(ctx context.Context, unitGroupID stri
 			return apiErr
 		}
 
-		if apiErr := txSvc.repos.NewDeletedRecordRepo().Create(txCtx, constants.DeletedRecordResourceTypeUnitGroup, existing.ID, existing); apiErr != nil {
+		if apiErr := txSvc.repos.NewDeletedRecordRepo().CreateInAccount(txCtx, constants.DeletedRecordResourceTypeUnitGroup, existing.ID, accountID, existing); apiErr != nil {
 			return apiErr
 		}
 
@@ -708,7 +708,7 @@ func (s *unitGroupSvcImpl) DeleteUnitGroupUnit(ctx context.Context, params domai
 	}
 
 	if oldUnit == nil {
-		wasDeleted, deletedCheckErr := s.repos.NewDeletedRecordRepo().Exists(ctx, constants.DeletedRecordResourceTypeUnitGroupUnit, params.UnitGroupUnitID)
+		wasDeleted, deletedCheckErr := s.repos.NewDeletedRecordRepo().ExistsInAccount(ctx, constants.DeletedRecordResourceTypeUnitGroupUnit, params.UnitGroupUnitID, params.AccountID)
 		if deletedCheckErr != nil {
 			return tracing.Trace(span, deletedCheckErr)
 		}
@@ -719,7 +719,7 @@ func (s *unitGroupSvcImpl) DeleteUnitGroupUnit(ctx context.Context, params domai
 
 	apiErr = s.withTx(ctx, func(txCtx context.Context, txSvc *unitGroupSvcImpl) *apierror.APIError {
 		if oldUnit != nil {
-			if apiErr := txSvc.repos.NewDeletedRecordRepo().Create(txCtx, constants.DeletedRecordResourceTypeUnitGroupUnit, oldUnit.ID, oldUnit); apiErr != nil {
+			if apiErr := txSvc.repos.NewDeletedRecordRepo().CreateInAccount(txCtx, constants.DeletedRecordResourceTypeUnitGroupUnit, oldUnit.ID, params.AccountID, oldUnit); apiErr != nil {
 				return apiErr
 			}
 		}

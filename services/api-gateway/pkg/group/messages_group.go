@@ -47,6 +47,7 @@ func (*MessagesEndpointGroup) Materialize(config *MessagesEndpointGroupConfig) *
 		apiendpoint.From(&messageep.ApproveSendDraftEndpoint{}).WithService(inner, messageSvc),
 		apiendpoint.From(&messageep.RejectDraftEndpoint{}).WithService(inner, messageSvc),
 		apiendpoint.From(&messageep.CancelScheduledEndpoint{}).WithService(inner, messageSvc),
+		apiendpoint.From(&messageep.RescheduleMessageEndpoint{}).WithService(inner, messageSvc),
 	}
 
 	return &MessagesEndpointGroup{inner}

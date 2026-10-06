@@ -109,6 +109,8 @@ type NotificationRepo interface {
 	ResolveAccountUserID(ctx context.Context, userID, accountID string) (string, *apierror.APIError)
 	// ResolveUserID maps an account_user id back to its user id (us_). The realtime push targets the WS user-topic, which the gateway keys by user id, not account_user id.
 	ResolveUserID(ctx context.Context, accountUserID string) (string, *apierror.APIError)
+	// ResolveUserIDInAccount is ResolveUserID for an account_user of accountID: one of another account is not found. Use it for any account_user id a request names.
+	ResolveUserIDInAccount(ctx context.Context, accountUserID, accountID string) (string, *apierror.APIError)
 	// CountUnseenByUserAccounts aggregates the user's unseen notifications per account across every account they belong to (cross-account unread hint).
 	CountUnseenByUserAccounts(ctx context.Context, userID string) ([]AccountUnread, *apierror.APIError)
 	// ResolveRecipientContact returns a recipient's email + display name for the email bridge.
@@ -302,6 +304,8 @@ type MessageRepo interface {
 	// CancelScheduled marks a scheduled message canceled if owned by the caller's account_user; canceled
 	// is false when it is no longer scheduled, not owned, or not found.
 	CancelScheduled(ctx context.Context, id, accountID, accountUserID string) (canceled bool, apiErr *apierror.APIError)
+	// Reschedule moves a scheduled message owned by the caller's account_user to scheduledFor, replacing its body and preview when given; rescheduled is false when it is not found, not owned, no longer scheduled, or already due.
+	Reschedule(ctx context.Context, id, accountID, accountUserID string, scheduledFor time.Time, body, preview *string) (rescheduled bool, apiErr *apierror.APIError)
 	// ListDueScheduled returns unclaimed scheduled messages whose delivery time has arrived.
 	ListDueScheduled(ctx context.Context, limit int32) ([]*Message, *apierror.APIError)
 	// ClaimScheduled claims a due scheduled message for delivery (compare-and-set on locked_at IS NULL);

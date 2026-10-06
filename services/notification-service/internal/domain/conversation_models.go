@@ -162,6 +162,14 @@ type CreateConversationInput struct {
 	// GroupID, when set, seeds the conversation from a reusable roster: the group's members are snapshotted into participants (in addition to ParticipantAccountUserIDs) and the conversation records this group_id as provenance.
 	GroupID                   *string
 	ParticipantAccountUserIDs []string
+	// Participants seats group members with the role each starts with; a user also in ParticipantAccountUserIDs or the roster takes the role given here.
+	Participants []ParticipantRoleInput
+}
+
+// ParticipantRoleInput names an account user to seat in a new group and the role they start with.
+type ParticipantRoleInput struct {
+	AccountUserID string
+	Role          string
 }
 
 // ConversationListFilter parameterizes the caller's conversation list.

@@ -587,7 +587,7 @@ func (s *productSvcImpl) UpdateProduct(ctx context.Context, params domain.Update
 	}
 }
 
-// updateProductInTx updates a product's item fields (sku/description/notes), portal
+// updateProductInTx updates a product's category, item fields (sku/description/notes), portal
 // readiness, and unit_price within an existing transaction, returning the fresh
 // product. Shared by UpdateProduct (single) and BulkUpsertProducts (batch); it does
 // not own the idempotency/permission envelope, and expects params.AccountID set.
@@ -604,6 +604,21 @@ func (s *productSvcImpl) updateProductInTx(txCtx context.Context, params domain.
 	})
 	if apiErr != nil {
 		return nil, apiErr
+	}
+
+	if params.CategoryID != nil {
+		if _, apiErr := changeItemCategoryInTx(txCtx, s.repos, params.AccountID, old.ItemID, *params.CategoryID, nil); apiErr != nil {
+			return nil, apiErr
+		}
+		// The move is audited on the item, so the product's own diff starts after it.
+		old, apiErr = txProductRepo.Get(txCtx, domain.GetProductFullParams{
+			AccountID: params.AccountID,
+			ProductID: params.ProductID,
+			Includes:  params.Includes,
+		})
+		if apiErr != nil {
+			return nil, apiErr
+		}
 	}
 
 	if old.Item != nil {

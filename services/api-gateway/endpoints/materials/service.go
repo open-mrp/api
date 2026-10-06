@@ -182,6 +182,7 @@ func (m *materialSvcImpl) UpdateMaterial(ctx context.Context, req *UpdateMateria
 		Notes:             req.Notes.Ptr(),
 		UpdateNotes:       req.Notes.IsSet(),
 		UnitCost:          rateInputToProto(req.UnitCost.Ptr()),
+		CategoryId:        req.CategoryID.Ptr(),
 	}
 	if q, ok := req.OrderPoint.Value(); ok {
 		pbReq.OrderPoint = &pb.QuantityInput{Value: q.Value, UnitId: q.UnitID}
@@ -197,7 +198,10 @@ func (m *materialSvcImpl) UpdateMaterial(ctx context.Context, req *UpdateMateria
 	if apiErr != nil {
 		return nil, apiErr
 	}
-	return loadMaterialByID(ctx, resp.Material.Id)
+	// The update answers with the material it saved, so a caller allowed to write it needs no read permission to see the result.
+	result := resourceloaders.MaterialFromProto(resp.Material)
+	resourceloaders.StashMaterialMeta(ctx, resp.Material)
+	return result, nil
 }
 
 func (m *materialSvcImpl) DeleteMaterial(ctx context.Context, req *DeleteMaterialRequest) (*apiresource.Material, *apierror.APIError) {

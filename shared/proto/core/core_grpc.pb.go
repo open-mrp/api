@@ -215,6 +215,7 @@ const (
 	CoreService_UpdateItemCategory_FullMethodName                         = "/core.CoreService/UpdateItemCategory"
 	CoreService_DeleteItemCategory_FullMethodName                         = "/core.CoreService/DeleteItemCategory"
 	CoreService_AddItemCategoryProperty_FullMethodName                    = "/core.CoreService/AddItemCategoryProperty"
+	CoreService_CreateItemCategoryProperty_FullMethodName                 = "/core.CoreService/CreateItemCategoryProperty"
 	CoreService_RemoveItemCategoryProperty_FullMethodName                 = "/core.CoreService/RemoveItemCategoryProperty"
 	CoreService_ChangeItemCategoryUnitGroup_FullMethodName                = "/core.CoreService/ChangeItemCategoryUnitGroup"
 	CoreService_BulkUpsertItemCategories_FullMethodName                   = "/core.CoreService/BulkUpsertItemCategories"
@@ -821,6 +822,8 @@ type CoreServiceClient interface {
 	UpdateItemCategory(ctx context.Context, in *UpdateItemCategoryRequest, opts ...grpc.CallOption) (*UpdateItemCategoryResponse, error)
 	DeleteItemCategory(ctx context.Context, in *DeleteItemCategoryRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
 	AddItemCategoryProperty(ctx context.Context, in *AddItemCategoryPropertyRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
+	// Creates a property and attaches it to an item category in one transaction.
+	CreateItemCategoryProperty(ctx context.Context, in *CreateItemCategoryPropertyRequest, opts ...grpc.CallOption) (*CreateItemCategoryPropertyResponse, error)
 	RemoveItemCategoryProperty(ctx context.Context, in *RemoveItemCategoryPropertyRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
 	// Changes the unit group of an item category and updates related rate units.
 	ChangeItemCategoryUnitGroup(ctx context.Context, in *ChangeItemCategoryUnitGroupRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
@@ -3007,6 +3010,16 @@ func (c *coreServiceClient) AddItemCategoryProperty(ctx context.Context, in *Add
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(emptypb.Empty)
 	err := c.cc.Invoke(ctx, CoreService_AddItemCategoryProperty_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *coreServiceClient) CreateItemCategoryProperty(ctx context.Context, in *CreateItemCategoryPropertyRequest, opts ...grpc.CallOption) (*CreateItemCategoryPropertyResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(CreateItemCategoryPropertyResponse)
+	err := c.cc.Invoke(ctx, CoreService_CreateItemCategoryProperty_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
 	}
@@ -5669,6 +5682,8 @@ type CoreServiceServer interface {
 	UpdateItemCategory(context.Context, *UpdateItemCategoryRequest) (*UpdateItemCategoryResponse, error)
 	DeleteItemCategory(context.Context, *DeleteItemCategoryRequest) (*emptypb.Empty, error)
 	AddItemCategoryProperty(context.Context, *AddItemCategoryPropertyRequest) (*emptypb.Empty, error)
+	// Creates a property and attaches it to an item category in one transaction.
+	CreateItemCategoryProperty(context.Context, *CreateItemCategoryPropertyRequest) (*CreateItemCategoryPropertyResponse, error)
 	RemoveItemCategoryProperty(context.Context, *RemoveItemCategoryPropertyRequest) (*emptypb.Empty, error)
 	// Changes the unit group of an item category and updates related rate units.
 	ChangeItemCategoryUnitGroup(context.Context, *ChangeItemCategoryUnitGroupRequest) (*emptypb.Empty, error)
@@ -6544,6 +6559,9 @@ func (UnimplementedCoreServiceServer) DeleteItemCategory(context.Context, *Delet
 }
 func (UnimplementedCoreServiceServer) AddItemCategoryProperty(context.Context, *AddItemCategoryPropertyRequest) (*emptypb.Empty, error) {
 	return nil, status.Error(codes.Unimplemented, "method AddItemCategoryProperty not implemented")
+}
+func (UnimplementedCoreServiceServer) CreateItemCategoryProperty(context.Context, *CreateItemCategoryPropertyRequest) (*CreateItemCategoryPropertyResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method CreateItemCategoryProperty not implemented")
 }
 func (UnimplementedCoreServiceServer) RemoveItemCategoryProperty(context.Context, *RemoveItemCategoryPropertyRequest) (*emptypb.Empty, error) {
 	return nil, status.Error(codes.Unimplemented, "method RemoveItemCategoryProperty not implemented")
@@ -10630,6 +10648,24 @@ func _CoreService_AddItemCategoryProperty_Handler(srv interface{}, ctx context.C
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(CoreServiceServer).AddItemCategoryProperty(ctx, req.(*AddItemCategoryPropertyRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _CoreService_CreateItemCategoryProperty_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(CreateItemCategoryPropertyRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(CoreServiceServer).CreateItemCategoryProperty(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: CoreService_CreateItemCategoryProperty_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(CoreServiceServer).CreateItemCategoryProperty(ctx, req.(*CreateItemCategoryPropertyRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -15496,6 +15532,10 @@ var CoreService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "AddItemCategoryProperty",
 			Handler:    _CoreService_AddItemCategoryProperty_Handler,
+		},
+		{
+			MethodName: "CreateItemCategoryProperty",
+			Handler:    _CoreService_CreateItemCategoryProperty_Handler,
 		},
 		{
 			MethodName: "RemoveItemCategoryProperty",

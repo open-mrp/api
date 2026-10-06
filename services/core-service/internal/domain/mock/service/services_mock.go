@@ -3982,6 +3982,21 @@ func (mr *MockItemCategorySvcMockRecorder) CreateItemCategory(ctx, params any) *
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateItemCategory", reflect.TypeOf((*MockItemCategorySvc)(nil).CreateItemCategory), ctx, params)
 }
 
+// CreateItemCategoryProperty mocks base method.
+func (m *MockItemCategorySvc) CreateItemCategoryProperty(ctx context.Context, params domain.CreateItemCategoryPropertyParams) (*domain.Property, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "CreateItemCategoryProperty", ctx, params)
+	ret0, _ := ret[0].(*domain.Property)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
+}
+
+// CreateItemCategoryProperty indicates an expected call of CreateItemCategoryProperty.
+func (mr *MockItemCategorySvcMockRecorder) CreateItemCategoryProperty(ctx, params any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateItemCategoryProperty", reflect.TypeOf((*MockItemCategorySvc)(nil).CreateItemCategoryProperty), ctx, params)
+}
+
 // DeleteItemCategory mocks base method.
 func (m *MockItemCategorySvc) DeleteItemCategory(ctx context.Context, itemCategoryID string) *apierror.APIError {
 	m.ctrl.T.Helper()

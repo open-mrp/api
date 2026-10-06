@@ -10,3 +10,10 @@ type CreateScheduledMessageInput struct {
 	Body           string
 	ScheduledFor   time.Time
 }
+
+// RescheduleMessageInput moves a scheduled message to a new send time; Body, when set, replaces what it says.
+type RescheduleMessageInput struct {
+	ID           string
+	ScheduledFor time.Time
+	Body         *string
+}

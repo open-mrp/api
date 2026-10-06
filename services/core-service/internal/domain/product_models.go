@@ -107,7 +107,9 @@ type UpdateProductParams struct {
 	Notes         field.Clearable[string]
 	IsPortalReady *bool
 	UnitPrice     *CreateRateParams
-	Includes      []string
+	// CategoryID, when set, moves the product to that category before the other fields are written.
+	CategoryID *string
+	Includes   []string
 }
 
 // BulkUpsertProductsParams holds parameters for bulk upserting products, matched by SKU.
@@ -117,8 +119,8 @@ type BulkUpsertProductsParams struct {
 
 // UpsertProductParams is a single product to create or update in a bulk upsert. On
 // create all fields apply; on update sku/description/notes/portal/unit_price/unit_cost
-// and properties are applied (type, product line, and category are create-only, matching
-// the single update endpoint). Properties are additive.
+// and properties are applied (type, product line, and category are create-only).
+// Properties are additive.
 type UpsertProductParams struct {
 	SKU             string
 	ProductTypeCode string // create-only; defaults to "sale" when empty

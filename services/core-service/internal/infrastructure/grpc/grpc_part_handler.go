@@ -188,6 +188,7 @@ func (h *gRPCHandler) UpdatePart(ctx context.Context, req *pb.UpdatePartRequest)
 		SKU:         req.Sku,
 		Description: field.StringClearableFromProto(req.Description),
 		Notes:       field.StringClearableFromProto(req.Notes),
+		CategoryID:  req.CategoryId,
 		Includes:    req.Includes,
 	}
 

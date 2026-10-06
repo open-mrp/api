@@ -230,6 +230,7 @@ func (h *gRPCHandler) UpdateProduct(ctx context.Context, req *pb.UpdateProductRe
 		Notes:         field.StringClearableFromProto(req.Notes),
 		IsPortalReady: req.IsPortalReady,
 		UnitPrice:     protoToCreateRateInput(req.UnitPrice),
+		CategoryID:    req.CategoryId,
 		Includes:      req.Includes,
 	}
 

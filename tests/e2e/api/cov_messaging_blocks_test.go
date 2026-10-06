@@ -236,54 +236,17 @@ func TestCovMessagingBlocks_NonexistentTargetRejected(t *testing.T) {
 	assertErrorParam(t, errObj, "blocked_account_user_id")
 }
 
-// TestCovMessagingBlocks_CrossAccountTargetRecordedBehavior pins down actual
-// behavior for Block() resolves the target account_user
-// id via a query with no account_id filter, so a caller can plausibly
-// create a messaging_block row referencing an account_user in a completely
-// different account. SeedChildAccountUserID is an account_user scoped to
-// SeedChildAccountID1 (a different account than SeedAccountID), and is a
-// private pair (dane -> child) not touched by any other test. This test
-// documents whichever branch is actually hit (success or a 4xx rejection) -
-// it must not be a 5xx, and must not fabricate a populated blocked_user for
-// a cross-account row. Observed on the live stack: the create succeeds
-// (201) and the block row is created, but ?include=blocked_user on it
-// resolves to null (the AccountUser resourceloader is account-scoped to
-// the caller's account and silently finds no row) rather than erroring.
-func TestCovMessagingBlocks_CrossAccountTargetRecordedBehavior(t *testing.T) {
+// A user of another account (SeedChildAccountUserID belongs to a child account) is refused as a block target exactly as one that does not exist is.
+func TestCovMessagingBlocks_CrossAccountTargetRefused(t *testing.T) {
 	t.Parallel()
 	user := chatUserClient(t)
-	target := SeedChildAccountUserID
-	t.Cleanup(func() { _, _ = user.DeleteFull(blocksPath + "/" + target) })
+	t.Cleanup(func() { _, _ = user.DeleteFull(blocksPath + "/" + SeedChildAccountUserID) })
 
-	resp, err := user.PostFull(blocksPath, map[string]any{"blocked_account_user_id": target}, newIdempotencyKey())
+	resp, err := user.PostFull(blocksPath, map[string]any{"blocked_account_user_id": SeedChildAccountUserID}, newIdempotencyKey())
 	require.NoError(t, err)
-	require.NotEqual(t, 500, resp.StatusCode, "cross-account block target must not 5xx: %s", string(resp.Body))
-
-	switch resp.StatusCode {
-	case 201:
-		// Currently-observed behavior: no account-scoping on target resolution, so the
-		// cross-account block row is created successfully.
-		created := parseJSON(resp.Body)
-		assertIDFormat(t, jsonField(created, "id"), "mgbk")
-		assertObjectField(t, created, "messaging_block")
-
-		list, status, err := user.GetList(blocksPath, url.Values{"include": {"blocked_user"}})
-		require.NoError(t, err)
-		require.Equal(t, 200, status)
-		for _, raw := range list.Data {
-			if DataItemField(raw, "id") != jsonField(created, "id") {
-				continue
-			}
-			row := parseJSON(raw)
-			assert.Nil(t, row["blocked_user"],
-				"cross-account blocked_user should resolve to null via the account-scoped AccountUser loader, not fabricate a populated sub-object")
-		}
-	case 400:
-		// Alternative (safer) behavior, if some layer does reject cross-account targets.
-		requireErrorResponse(t, resp.Body, "", "invalid_request_error")
-	default:
-		t.Fatalf("unexpected status %d for cross-account block target: %s", resp.StatusCode, string(resp.Body))
-	}
+	requireStatus(t, 400, resp.StatusCode, resp.Body)
+	errObj := requireErrorResponse(t, resp.Body, "parameter_invalid", "invalid_request_error")
+	assertErrorParam(t, errObj, "blocked_account_user_id")
 }
 
 // TestCovMessagingBlocks_UnsupportedQueryParamRejected pins down the
@@ -361,12 +324,11 @@ func TestCovMessagingBlocks_NoAccountMembershipForbidden(t *testing.T) {
 // contract in e2e-test-patterns.md §7 (the existing duplicate-block test in
 // messaging_blocks_reports_extra_test.go intentionally uses two *different*
 // keys to prove the stronger app-level DB-upsert idempotency; this test
-// adds the literal same-key replay case). Private pair (user2 -> child) to
-// avoid racing with any other test's block/unblock cycle.
+// adds the literal same-key replay case). The target is a user of this test's own, so no other test's block/unblock cycle can race it.
 func TestCovMessagingBlocks_IdempotentReplaySameKey(t *testing.T) {
 	t.Parallel()
 	user := chatUser2Client(t)
-	target := SeedChildAccountUserID
+	_, target := customRoleChatUser(t, "messaging:read")
 	t.Cleanup(func() { _, _ = user.DeleteFull(blocksPath + "/" + target) })
 
 	key := newIdempotencyKey()

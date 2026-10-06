@@ -46,6 +46,7 @@ func (*ItemCategoriesEndpointGroup) Materialize(config *ItemCategoriesEndpointGr
 	updateEndpoint := apiendpoint.From(&itemcategoryep.UpdateItemCategoryEndpoint{}).WithService(inner, itemCategorySvc)
 	deleteEndpoint := apiendpoint.From(&itemcategoryep.DeleteItemCategoryEndpoint{}).WithService(inner, itemCategorySvc)
 	addPropertyEndpoint := apiendpoint.From(&itemcategoryep.AddItemCategoryPropertyEndpoint{}).WithService(inner, itemCategorySvc)
+	createPropertyEndpoint := apiendpoint.From(&itemcategoryep.CreateItemCategoryPropertyEndpoint{}).WithService(inner, itemCategorySvc)
 	removePropertyEndpoint := apiendpoint.From(&itemcategoryep.RemoveItemCategoryPropertyEndpoint{}).WithService(inner, itemCategorySvc)
 	changeUnitGroupEndpoint := apiendpoint.From(&itemcategoryep.ChangeItemCategoryUnitGroupEndpoint{}).WithService(inner, itemCategorySvc)
 	bulkUpsertEndpoint := apiendpoint.From(&itemcategoryep.BulkUpsertItemCategoriesEndpoint{}).WithService(inner, itemCategorySvc)
@@ -58,6 +59,7 @@ func (*ItemCategoriesEndpointGroup) Materialize(config *ItemCategoriesEndpointGr
 		updateEndpoint,
 		deleteEndpoint,
 		addPropertyEndpoint,
+		createPropertyEndpoint,
 		removePropertyEndpoint,
 		changeUnitGroupEndpoint,
 		bulkUpsertEndpoint,

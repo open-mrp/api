@@ -28,6 +28,10 @@ type CreateConversationRequest struct {
 	//
 	// The caller is always a participant and does not need to be listed; on a group they become its owner and every other member seeded at creation is notified.
 	ParticipantAccountUserIDs []string `json:"participant_account_user_ids,omitzero" validate:"omitempty,dive,required"`
+	// Members to seat in a group with the role each starts with.
+	//
+	// Each account user listed here joins the group as those in `participant_account_user_ids` do, then takes the role given, exactly as if you set it on the new participant: the change is announced in the thread and recorded on the participant's history. A user also listed in `participant_account_user_ids` or on the roster takes the role given here. You cannot list yourself (you own the group) or the same user twice, and a direct message takes no roles.
+	Participants []ConversationParticipantInput `json:"participants,omitzero" validate:"omitempty,dive"`
 	// Seed a group conversation from a reusable roster.
 	//
 	// The roster's current members are copied into this conversation (in addition to any `participant_account_user_ids`); the conversation is independent afterward. Ignored for direct messages.
@@ -44,11 +48,25 @@ type CreateConversationRequest struct {
 	TopicResourceID field.Optional[string] `json:"topic_resource_id,omitzero"`
 }
 
+// A member to seat in a new group conversation, with the role they start with.
+type ConversationParticipantInput struct {
+	// The account user to add.
+	AccountUserID string `json:"account_user_id" validate:"required"`
+	// The role the member starts with.
+	//
+	// - `owner`: can rename or delete the conversation and manage members and roles, alongside you.
+	// - `admin`: can add and remove members and rename the conversation.
+	// - `member`: can post, leave, mute, and react.
+	// - `viewer`: read-only access.
+	Role constants.ParticipantRole `json:"role" validate:"required"`
+}
+
 var sampleCreateConversationTitle = "Order #1042 — shipping question"
 
 var sampleCreateConversationRequest = &CreateConversationRequest{
 	Type:                      constants.ConversationTypeGroup,
 	ParticipantAccountUserIDs: []string{apiresource.SampleAccountUserID},
+	Participants:              []ConversationParticipantInput{{AccountUserID: apiresource.SampleAccountUserID, Role: constants.ParticipantRoleAdmin}},
 	GroupID:                   field.Some(apiresource.SampleMessagingGroupID),
 	Title:                     field.Some(sampleCreateConversationTitle),
 	TopicResourceType:         field.Some(constants.ObjectTypeSalesOrder),

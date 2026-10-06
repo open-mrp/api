@@ -1185,7 +1185,10 @@ resources:
           properties:
             methods:
               update: put /v1/catalog/item-categories/{id}/properties/{property_id}
+              create: post /v1/catalog/item-categories/{id}/properties
               delete: delete /v1/catalog/item-categories/{id}/properties/{property_id}
+            models:
+              create_item_category_property_request: '#/components/schemas/CreateItemCategoryPropertyRequest'
           actions:
             methods:
               bulk_upsert: post /v1/catalog/item-categories/actions/bulk-upsert
@@ -1497,6 +1500,7 @@ resources:
                   attachment_upload_target: '#/components/schemas/AttachmentUploadTarget'
                   create_attachment_upload_url_request: '#/components/schemas/CreateAttachmentUploadURLRequest'
         models:
+          conversation_participant_input: '#/components/schemas/ConversationParticipantInput'
           create_conversation_request: '#/components/schemas/CreateConversationRequest'
           list_conversation: '#/components/schemas/List_Conversation'
           update_conversation_request: '#/components/schemas/UpdateConversationRequest'
@@ -1509,8 +1513,10 @@ resources:
               approve_send: post /v1/messaging/messages/{id}/actions/approve-send
               reject: post /v1/messaging/messages/{id}/actions/reject
               cancel: post /v1/messaging/messages/{id}/actions/cancel
+              reschedule: post /v1/messaging/messages/{id}/actions/reschedule
             models:
               approve_send_draft_request: '#/components/schemas/ApproveSendDraftRequest'
+              reschedule_message_request: '#/components/schemas/RescheduleMessageRequest'
         models:
           update_draft_request: '#/components/schemas/UpdateDraftRequest'
       groups:

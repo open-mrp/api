@@ -25,6 +25,10 @@ type UpdatePartRequest struct {
 	Description field.Clearable[string] `json:"description,omitzero"`
 	// New free-form notes about the part.
 	Notes field.Clearable[string] `json:"notes,omitzero"`
+	// ID of the item category to move the part to.
+	//
+	// The move is the one Change Item Category makes: the category has to be a product category and has to carry the properties of every attribute the part already has, and the part's rate units switch to the category's base unit while their numbers stay as they were. It is applied before the other fields in the request.
+	CategoryID field.Optional[string] `json:"category_id,omitzero"`
 }
 
 var sampleUpdatePartSKU = apiresource.SamplePartSKU
@@ -34,6 +38,7 @@ var sampleUpdatePartRequest = &UpdatePartRequest{
 	SKU:         field.SomePtr(&sampleUpdatePartSKU),
 	Description: field.Set(sampleUpdatePartDescription),
 	Notes:       field.Set(sampleUpdatePartNotes),
+	CategoryID:  field.Some(apiresource.SampleItemCategoryID),
 }
 
 func (*UpdatePartRequest) SchemaExample() any {
@@ -42,7 +47,7 @@ func (*UpdatePartRequest) SchemaExample() any {
 
 // Partially updates a part.
 //
-// Fields not provided retain their current values. Only the SKU, description, and notes are editable here; the part's category and attributes are changed through the item endpoints.
+// Fields not provided retain their current values. The SKU, description, notes, and category are editable here; the part's attributes are changed through the item endpoints.
 type UpdatePartEndpoint struct{}
 
 func (e *UpdatePartEndpoint) Materialize() *apiendpoint.APIEndpoint[*UpdatePartRequest, *apiresource.Part] {

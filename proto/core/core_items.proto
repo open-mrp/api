@@ -488,6 +488,13 @@ message AddItemCategoryPropertyRequest {
   string id = 1;
   string property_id = 2;
 }
+message CreateItemCategoryPropertyRequest {
+  string id = 1;
+  string name = 2;
+}
+message CreateItemCategoryPropertyResponse {
+  PropertyInfo property = 1;
+}
 message RemoveItemCategoryPropertyRequest {
   string id = 1;
   string property_id = 2;

@@ -299,6 +299,7 @@ var unverifiableEndpoints = map[string]string{
 	"send_message":                 "gateway-gated participant auth: SendMessage uses resolveParticipant(); gateway declares messaging:create",
 	"list_contacts":                "gateway-gated participant auth: ListContacts is auth/account-scoped only; gateway declares messaging:read",
 	"cancel_scheduled":             "gateway-gated participant auth: CancelScheduledMessage uses requireParticipant(); gateway declares messaging:update",
+	"reschedule_message":           "gateway-gated sender auth: RescheduleMessage uses caller() and moves only the caller's own scheduled message; gateway declares messaging:update",
 	"list_scheduled":               "gateway-gated participant auth: ListScheduledMessages uses requireParticipant(); gateway declares messaging:read",
 
 	"set_workflow_status": "gateway-gated admin auth: UpdateWorkflowStatus uses requireMessagingAdmin(update); gateway declares messaging:update",

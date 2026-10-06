@@ -90,7 +90,9 @@ type UpdateMaterialParams struct {
 	OrderPoint        *QuantityInput
 	LeadTime          *QuantityInput
 	UnitCost          *CreateRateParams
-	Includes          []string
+	// CategoryID, when set, moves the material to that category before the other fields are written.
+	CategoryID *string
+	Includes   []string
 }
 
 type DeleteMaterialParams struct {
@@ -105,8 +107,8 @@ type BulkUpsertMaterialsParams struct {
 
 // UpsertMaterialParams is a single material to create or update in a bulk upsert. On
 // create all fields apply; on update sku/description/notes/order_point/lead_time plus
-// unit_price/unit_cost and properties are applied (category is create-only, matching
-// the single update endpoint). Properties are additive.
+// unit_price/unit_cost and properties are applied (category is create-only). Properties
+// are additive.
 type UpsertMaterialParams struct {
 	SKU         string
 	Description *string

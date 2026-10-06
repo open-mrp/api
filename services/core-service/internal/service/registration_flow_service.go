@@ -379,12 +379,9 @@ func (s *registrationFlowSvcImpl) RegisterCustomer(ctx context.Context, params d
 		return tracing.Trace(span, apierror.NewInvariantViolationError("Identity not found in context."))
 	}
 
-	if apiErr := identity.CheckIsAuthenticated(); apiErr != nil {
+	// Registration links the actor to a customer account as a user, which an API key or agent is not.
+	if apiErr := identity.CheckHasUserActor(); apiErr != nil {
 		return tracing.Trace(span, apiErr)
-	}
-
-	if identity.Actor == nil {
-		return tracing.Trace(span, apierror.NewAuthenticationError("Actor is required."))
 	}
 
 	userID := identity.Actor.ID
@@ -500,6 +497,15 @@ func (s *registrationFlowSvcImpl) registerNewCustomer(
 	}
 	if data.CustomerGroupID == nil || *data.CustomerGroupID == "" {
 		return tracing.Trace(span, apierror.NewValidationError("Customer group is required."))
+	}
+
+	// The registrant chooses these, and they are stored on the seller's customer, so each must be the seller's.
+	if apiErr := checkCustomerRefs(ctx, s.repos, ownerAccountID, customerRefs{
+		{kind: customerRefAccountGroup, id: *data.CustomerGroupID, param: "customer_group_id"},
+		{kind: customerRefPaymentTerm, id: *data.PaymentTermID, param: "payment_term_id"},
+		{kind: customerRefShippingTerm, id: *data.ShippingTermID, param: "shipping_term_id"},
+	}); apiErr != nil {
+		return tracing.Trace(span, apiErr)
 	}
 
 	customerRepo := s.repos.NewCustomerRegistrationRepo()

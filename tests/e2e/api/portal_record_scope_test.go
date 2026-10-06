@@ -3,8 +3,12 @@
 package api_test
 
 import (
+	"encoding/json"
 	"net/http"
 	"net/url"
+	"regexp"
+	"sort"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -203,4 +207,124 @@ func TestPortalRecordScope_PortalsReadOnlyTheJobsTheyStarted(t *testing.T) {
 		own := completedExportJobAs(t, portal, productsPath+"/actions/export", nil)
 		assert.Equal(t, "completed", jsonField(own, "status"), "%s follows its own export to completion", who)
 	}
+}
+
+// --- Sweeps ---
+
+var accountIDPattern = regexp.MustCompile(`"(ac_[0-9a-z_]+)"`)
+
+// portalOwnAccounts is the accounts a portal may meet in what it reads: the seller, its own, and its own parent and child accounts, which an include reaches along its relation.
+func portalOwnAccounts(t *testing.T, own string) map[string]bool {
+	t.Helper()
+	accounts := map[string]bool{SeedAccountID: true, own: true}
+	status, body, err := apiClient.GetListRaw(customersPath+"/"+own, url.Values{"include": {"parent_account", "child_accounts"}})
+	require.NoError(t, err)
+	if status != http.StatusOK {
+		return accounts
+	}
+	customer := parseJSON(body)
+	if parent := jsonField(jsonObject(customer, "parent_account"), "id"); parent != "" {
+		accounts[parent] = true
+	}
+	for _, child := range jsonListData(customer, "child_accounts") {
+		accounts[jsonField(child.(map[string]any), "id")] = true
+	}
+	return accounts
+}
+
+func otherAccountsIn(body []byte, own map[string]bool) []string {
+	seen := map[string]bool{}
+	for _, m := range accountIDPattern.FindAllSubmatch(body, -1) {
+		if id := string(m[1]); !own[id] {
+			seen[id] = true
+		}
+	}
+	out := make([]string, 0, len(seen))
+	for id := range seen {
+		out = append(out, id)
+	}
+	sort.Strings(out)
+	return out
+}
+
+func TestPortalRecordScope_CustomerPortalSweepFindsNoOtherBuyersRecords(t *testing.T) {
+	t.Parallel()
+	newOtherBuyer(t)
+	portalRecordSweep(t, "customer portal", getCustomerPortalClient(), portalOwnAccounts(t, SeedCustomerAccountID))
+}
+
+func TestPortalRecordScope_SupplierPortalSweepFindsNoOtherBuyersRecords(t *testing.T) {
+	t.Parallel()
+	newOtherBuyer(t)
+	portalRecordSweep(t, "supplier portal", getSupplierPortalClient(t), portalOwnAccounts(t, SeedSupplierAccountID))
+}
+
+// portalRecordSweep calls every GET the spec documents as a portal, bare and with its includes, and fails on any account in an answer that is not the portal's own or the seller's. A record path is read at the first record the portal's own list returned (or a seed record), and again at the first record the seller's staff list, which belongs to whoever the seller dealt with last.
+func portalRecordSweep(t *testing.T, who string, client *Client, own map[string]bool) {
+	t.Helper()
+	spec, err := LoadFullSpec()
+	require.NoError(t, err)
+
+	paths := make([]string, 0, len(spec.Paths))
+	for p, methods := range spec.Paths {
+		if _, ok := methods["get"]; ok {
+			paths = append(paths, p)
+		}
+	}
+	sort.Strings(paths)
+
+	check := func(what string, body []byte) {
+		if others := otherAccountsIn(body, own); len(others) > 0 {
+			t.Errorf("%s received records of other accounts from %s: %s", who, what, strings.Join(others, ", "))
+		}
+	}
+	read := func(specPath, path string) (bare []byte, ok bool) {
+		status, bare := getAs(t, client, path)
+		if status != http.StatusOK || !json.Valid(bare) {
+			return nil, false
+		}
+		check("GET "+path, bare)
+		includes := operationIncludes(spec.Paths[specPath]["get"])
+		if len(includes) == 0 {
+			return bare, true
+		}
+		if status, body := getAs(t, client, path, includes...); status == http.StatusOK {
+			check("GET "+path+" with every include", body)
+			return bare, true
+		}
+		for _, include := range includes {
+			if status, body := getAs(t, client, path, include); status == http.StatusOK {
+				check("GET "+path+"?include="+include, body)
+			}
+		}
+		return bare, true
+	}
+
+	firstIDs := map[string]string{}
+	reached := 0
+	for _, specPath := range paths {
+		if portalSweepSkipped(specPath) {
+			continue
+		}
+		path, ok := portalSweepPath(specPath, firstIDs)
+		if !ok {
+			continue
+		}
+		if body, ok := read(specPath, path); ok {
+			reached++
+			if id := firstListID(body); id != "" {
+				firstIDs[specPath] = id
+			}
+		}
+
+		params := pathParamsOf(specPath)
+		if i := strings.LastIndex(specPath, "/"); len(params) == 1 && strings.HasSuffix(specPath, "}") {
+			if status, body, err := apiClient.GetListRaw(specPath[:i], nil); err == nil && status == http.StatusOK {
+				if staffID := firstListID(body); staffID != "" && specPath[:i]+"/"+staffID != path {
+					read(specPath, specPath[:i]+"/"+staffID)
+				}
+			}
+		}
+	}
+	assert.Positive(t, reached, "%s reached no endpoint at all, so the sweep checked nothing", who)
 }

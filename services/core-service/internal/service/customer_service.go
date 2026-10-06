@@ -116,7 +116,7 @@ func (s *customerSvcImpl) ListCustomers(ctx context.Context, params domain.ListC
 	return s.repos.NewCustomerRepo().List(ctx, params)
 }
 
-// GetCustomer retrieves a single customer by account ID. Supports both internal and customer actors.
+// GetCustomer retrieves a single customer by account ID. A customer or supplier portal actor reads only its own account's record.
 func (s *customerSvcImpl) GetCustomer(ctx context.Context, customerAccountID string, includes []string) (*domain.Customer, *apierror.APIError) {
 	ctx, span := customerSvcTracer.Start(ctx, "service.customer.get")
 	defer span.End()
@@ -137,10 +137,8 @@ func (s *customerSvcImpl) GetCustomer(ctx context.Context, customerAccountID str
 		return nil, tracing.Trace(span, apierror.NewAuthenticationError("The OpenMRP-Account-ID header is required."))
 	}
 
-	if identity.IsCustomerUser() {
-		if customerAccountID != *identity.ActorAccountID() {
-			return nil, tracing.Trace(span, apierror.NewResourceNotFoundError("Customer not found."))
-		}
+	if own := identity.PortalAccountID(); own != nil && customerAccountID != *own {
+		return nil, tracing.Trace(span, apierror.NewResourceNotFoundError("Customer not found."))
 	}
 
 	if identity.IsExternalTarget() {
@@ -180,10 +178,10 @@ func (s *customerSvcImpl) BatchGetCustomers(ctx context.Context, customerAccount
 	}
 
 	ids := customerAccountIDs
-	if identity.IsCustomerUser() && !identity.IsIncludeRead() {
+	if own := identity.PortalAccountID(); own != nil && !identity.IsIncludeRead() {
 		ids = nil
-		if slices.Contains(customerAccountIDs, *identity.ActorAccountID()) {
-			ids = []string{*identity.ActorAccountID()}
+		if slices.Contains(customerAccountIDs, *own) {
+			ids = []string{*own}
 		}
 	}
 
@@ -789,7 +787,7 @@ func (s *customerSvcImpl) BulkDeleteCustomers(ctx context.Context, params domain
 }
 
 // GetFrequentlyOrderedProducts returns the most frequently ordered products for a customer.
-// Supports customer actor access.
+// A customer or supplier portal actor reads only its own.
 func (s *customerSvcImpl) GetFrequentlyOrderedProducts(ctx context.Context, customerAccountID string) ([]*domain.FrequentlyOrderedProduct, *apierror.APIError) {
 	ctx, span := customerSvcTracer.Start(ctx, "service.customer.frequently_ordered_products")
 	defer span.End()
@@ -807,8 +805,8 @@ func (s *customerSvcImpl) GetFrequentlyOrderedProducts(ctx context.Context, cust
 		return nil, tracing.Trace(span, apierror.NewAuthenticationError("The OpenMRP-Account-ID header is required."))
 	}
 
-	if identity.IsCustomerUser() {
-		if customerAccountID != *identity.ActorAccountID() {
+	if own := identity.PortalAccountID(); own != nil {
+		if customerAccountID != *own {
 			return nil, tracing.Trace(span, apierror.NewResourceNotFoundError("Customer not found."))
 		}
 	} else if identity.IsInternalActor() {

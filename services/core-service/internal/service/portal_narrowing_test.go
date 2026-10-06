@@ -6,6 +6,7 @@ import (
 
 	"github.com/open-mrp/api/services/auth-service/pkg/types"
 	"github.com/open-mrp/api/services/core-service/internal/domain"
+	factorymock "github.com/open-mrp/api/services/core-service/internal/domain/mock/factory"
 	repositorymock "github.com/open-mrp/api/services/core-service/internal/domain/mock/repository"
 	apierror "github.com/open-mrp/api/shared/errors"
 
@@ -98,6 +99,37 @@ func TestPortalNarrowing_SalesOrderBatchKeepsTheBuyerFilterOutsideIncludes(t *te
 
 		repo.EXPECT().GetByIDs(gomock.Any(), inclSellerID, (*string)(nil), []string{"so_1"}).Return(nil, nil)
 		_, apiErr = svc.BatchGetSalesOrders(portal.ctx(true), []string{"so_1"}, nil)
+		require.Nil(t, apiErr, name)
+	}
+}
+
+func (h *inclHarness) customers() (domain.CustomerSvc, *repositorymock.MockCustomerRepo) {
+	repo := repositorymock.NewMockCustomerRepo(h.ctrl)
+	h.repos.EXPECT().NewCustomerRepo().Return(repo).AnyTimes()
+	return NewCustomerSvc(&CustomerSvcConfig{Repos: h.repos, MediatorFactory: h.meds, JobSvcFactory: factorymock.NewMockJobSvcFactory(h.ctrl), TxManager: &stubTxManager{factory: h.repos}}), repo
+}
+
+// The repo mock has no expectation for another account's record, so reading one fails the test.
+func TestPortalNarrowing_CustomerRecordIsThePortalsOwn(t *testing.T) {
+	t.Parallel()
+
+	for name, portal := range portalCases() {
+		h := newInclHarness(t)
+		h.allowCounterpartyReads()
+		svc, repo := h.customers()
+
+		_, apiErr := svc.GetCustomer(portal.ctx(false), inclOtherID, nil)
+		requireNotFound(t, apiErr, name)
+
+		_, apiErr = svc.GetFrequentlyOrderedProducts(portal.ctx(false), inclOtherID)
+		requireNotFound(t, apiErr, name)
+
+		repo.EXPECT().Get(gomock.Any(), inclSellerID, portal.own, gomock.Any()).Return(&domain.Customer{}, nil)
+		_, apiErr = svc.GetCustomer(portal.ctx(false), portal.own, nil)
+		require.Nil(t, apiErr, name)
+
+		repo.EXPECT().GetByIDs(gomock.Any(), inclSellerID, []string{portal.own}).Return(nil, nil)
+		_, apiErr = svc.BatchGetCustomers(portal.ctx(false), []string{inclOtherID, portal.own})
 		require.Nil(t, apiErr, name)
 	}
 }

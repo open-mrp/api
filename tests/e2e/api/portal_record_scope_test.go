@@ -80,3 +80,26 @@ func TestPortalRecordScope_PortalsListOnlyTheOrdersTheirAccountBought(t *testing
 	assert.Equal(t, SeedCustomerAccountID, jsonField(jsonObject(own, "customer"), "id"), "the customer still reads its own order")
 	requireStatusAs(t, http.StatusNotFound, "supplier portal", getSupplierPortalClient(t), salesOrdersPath+"/"+SeedSalesOrderID, nil)
 }
+
+// --- Customers ---
+
+func TestPortalRecordScope_CustomerRecordsArePortalsOwn(t *testing.T) {
+	t.Parallel()
+	otherID := leadTimeCustomer(t, "e2e-portal-scope-cust", nil, "")
+	supplier := getSupplierPortalClient(t)
+
+	for _, path := range []string{customersPath + "/" + SeedCustomerAccountID, customersPath + "/" + SeedCustomerAccountID + "/frequently-ordered-products"} {
+		requireStatusAs(t, http.StatusNotFound, "supplier portal", supplier, path, nil)
+	}
+	for who, portal := range portalClients(t) {
+		for _, path := range []string{customersPath + "/" + otherID, customersPath + "/" + otherID + "/frequently-ordered-products"} {
+			requireStatusAs(t, http.StatusNotFound, who, portal, path, nil)
+		}
+	}
+
+	own := parseJSON(requireStatusAs(t, http.StatusOK, "customer portal", getCustomerPortalClient(), customersPath+"/"+SeedCustomerAccountID, nil))
+	assert.Equal(t, SeedCustomerAccountID, jsonField(own, "id"))
+	requireStatusAs(t, http.StatusOK, "customer portal", getCustomerPortalClient(), customersPath+"/"+SeedCustomerAccountID+"/frequently-ordered-products", nil)
+	assert.Equal(t, SeedSupplierAccountID, jsonField(parseJSON(requireStatusAs(t, http.StatusOK, "supplier portal", supplier, suppliersPath+"/"+SeedSupplierAccountID, nil)), "id"),
+		"the supplier still reads its own supplier record")
+}

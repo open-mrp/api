@@ -12,8 +12,7 @@ import (
 
 // TestSalesOrder_Close_PacksOpenPickLine_Open_ReopensIncomplete pins that closing an order
 // packs its still-open pick lines (so the pick reads as complete with the order), and that
-// reopening the order reopens the lines that are not complete (picked < ordered) so the work
-// can continue.
+// reopening the order reopens the lines the close packed so the work can continue.
 func TestSalesOrder_Close_PacksOpenPickLine_Open_ReopensIncomplete(t *testing.T) {
 	t.Parallel()
 	orderID := createLifecycleOrder(t)
@@ -39,18 +38,19 @@ func TestSalesOrder_Close_PacksOpenPickLine_Open_ReopensIncomplete(t *testing.T)
 	assert.Equal(t, 6.0, rows[0].picked, "the picked quantity is unchanged by closing")
 	assert.True(t, pickIsFinished(t, pickID), "the pick is finished when the order is closed")
 
-	// Reopen the order → the incomplete line (picked 6 < ordered 10) is reopened.
+	// Reopen the order → the line the close packed is reopened.
 	status, body = salesOrderAction(t, orderID, "open", false)
 	requireStatus(t, 200, status, body)
 	rows = fetchPickLines(t, pickID)
 	require.Len(t, rows, 1)
-	assert.False(t, rows[0].packed, "reopening the order reopens the incomplete pick line")
+	assert.False(t, rows[0].packed, "reopening the order reopens the line the close packed")
 	assert.False(t, pickIsFinished(t, pickID), "the pick is no longer finished after reopening")
 }
 
-// TestSalesOrder_Open_LeavesCompletePickLinePacked pins the complement: a fully-picked
-// (complete) line stays packed when the order is reopened — only incomplete lines reopen.
-func TestSalesOrder_Open_LeavesCompletePickLinePacked(t *testing.T) {
+// TestSalesOrder_Open_ReopensACompleteLineTheCloseNeverShipped pins that reopening undoes the close
+// rather than judging lines by how much they hold: a fully-picked line the close packed has no
+// shipment behind it, so it opens again and can still be packed and shipped.
+func TestSalesOrder_Open_ReopensACompleteLineTheCloseNeverShipped(t *testing.T) {
 	t.Parallel()
 	orderID := createLifecycleOrder(t)
 	lineID := orderSaleLineID(t, orderID)
@@ -67,13 +67,15 @@ func TestSalesOrder_Open_LeavesCompletePickLinePacked(t *testing.T) {
 	requireStatus(t, 200, status, body)
 	require.True(t, fetchPickLines(t, pickID)[0].packed, "closing packs the fully-picked line")
 
-	// Reopen → the complete line stays packed (only incomplete lines reopen).
 	status, body = salesOrderAction(t, orderID, "open", false)
 	requireStatus(t, 200, status, body)
 	rows := fetchPickLines(t, pickID)
 	require.Len(t, rows, 1)
-	assert.True(t, rows[0].packed, "a fully-picked (complete) line stays packed after reopening")
-	assert.Equal(t, 10.0, rows[0].picked)
+	assert.False(t, rows[0].packed, "no shipment carries the line, so reopening opens it")
+	assert.Equal(t, 10.0, rows[0].picked, "reopening keeps what was picked")
+
+	packPick(t, pickID)
+	assert.Len(t, pickShipmentNumbers(t, pickID), 1, "the picked goods still ship")
 }
 
 // orderIssueTotals sums the order's inventory issues by status, in the seed unit.

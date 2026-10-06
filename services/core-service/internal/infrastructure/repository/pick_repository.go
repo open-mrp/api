@@ -697,14 +697,53 @@ func (r *pickRepoImpl) FindLinesToPack(ctx context.Context, pickID string) ([]*d
 	return lines, nil
 }
 
-func (r *pickRepoImpl) PackLines(ctx context.Context, pickID string) *apierror.APIError {
+func (r *pickRepoImpl) Lock(ctx context.Context, accountID, pickID string) (bool, *apierror.APIError) {
+	ctx, span := pickRepoTracer.Start(ctx, "repository.pick.lock")
+	defer span.End()
+
+	finishedAt, err := r.queries.LockPick(ctx, sqlc.LockPickParams{PickID: pickID, AccountID: accountID})
+	if errors.Is(err, gosql.ErrNoRows) {
+		return false, tracing.Trace(span, apierror.NewResourceNotFoundError("Pick not found."))
+	}
+	if apiErr := db.MapSQLError(err); apiErr != nil {
+		return false, tracing.Trace(span, apiErr)
+	}
+	return finishedAt.Valid, nil
+}
+
+func (r *pickRepoImpl) LockLinesToPack(ctx context.Context, pickID string) ([]*domain.PickLineToPack, *apierror.APIError) {
+	ctx, span := pickRepoTracer.Start(ctx, "repository.pick.lock_lines_to_pack")
+	defer span.End()
+
+	rows, err := r.queries.LockLinesToPack(ctx, pickID)
+	if apiErr := db.MapSQLError(err); apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
+
+	lines := make([]*domain.PickLineToPack, len(rows))
+	for i, row := range rows {
+		lines[i] = &domain.PickLineToPack{
+			ID:               row.ID,
+			SalesOrderLineID: row.SalesOrderLineID,
+			QuantityValue:    row.QuantityValue,
+			QuantityUnitID:   row.QuantityUnitID,
+		}
+	}
+	return lines, nil
+}
+
+func (r *pickRepoImpl) PackLines(ctx context.Context, pickLineIDs []string) (int64, *apierror.APIError) {
 	ctx, span := pickRepoTracer.Start(ctx, "repository.pick.pack_lines")
 	defer span.End()
 
-	if err := r.queries.PackPickLines(ctx, pickID); err != nil {
-		return tracing.Trace(span, db.MapSQLError(err))
+	if len(pickLineIDs) == 0 {
+		return 0, nil
 	}
-	return nil
+	packed, err := r.queries.PackPickLines(ctx, pickLineIDs)
+	if apiErr := db.MapSQLError(err); apiErr != nil {
+		return 0, tracing.Trace(span, apiErr)
+	}
+	return packed, nil
 }
 
 func (r *pickRepoImpl) MarkFinishedIfAllPacked(ctx context.Context, pickID string) *apierror.APIError {
@@ -727,11 +766,44 @@ func (r *pickRepoImpl) CloseOpenPickLines(ctx context.Context, pickID string) *a
 	return nil
 }
 
-func (r *pickRepoImpl) ReopenIncompletePickLines(ctx context.Context, pickID string) *apierror.APIError {
-	ctx, span := pickRepoTracer.Start(ctx, "repository.pick.reopen_incomplete_pick_lines")
+func (r *pickRepoImpl) ListPackedLines(ctx context.Context, pickID string) ([]*domain.PackedPickLine, *apierror.APIError) {
+	ctx, span := pickRepoTracer.Start(ctx, "repository.pick.list_packed_lines")
 	defer span.End()
 
-	if err := r.queries.ReopenIncompletePickLines(ctx, pickID); err != nil {
+	rows, err := r.queries.ListPackedPickLines(ctx, pickID)
+	if apiErr := db.MapSQLError(err); apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
+	lines := make([]*domain.PackedPickLine, len(rows))
+	for i, row := range rows {
+		lines[i] = &domain.PackedPickLine{ID: row.ID, SalesOrderLineID: row.SalesOrderLineID}
+	}
+	return lines, nil
+}
+
+func (r *pickRepoImpl) CountShipmentLinesByOrderLine(ctx context.Context, pickID string) (map[string]int64, *apierror.APIError) {
+	ctx, span := pickRepoTracer.Start(ctx, "repository.pick.count_shipment_lines_by_order_line")
+	defer span.End()
+
+	rows, err := r.queries.CountShipmentLinesForPick(ctx, pickID)
+	if apiErr := db.MapSQLError(err); apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
+	counts := make(map[string]int64, len(rows))
+	for _, row := range rows {
+		counts[row.SalesOrderLineID] = row.ShipmentLineCount
+	}
+	return counts, nil
+}
+
+func (r *pickRepoImpl) ReopenLines(ctx context.Context, pickLineIDs []string) *apierror.APIError {
+	ctx, span := pickRepoTracer.Start(ctx, "repository.pick.reopen_lines")
+	defer span.End()
+
+	if len(pickLineIDs) == 0 {
+		return nil
+	}
+	if err := r.queries.ReopenPickLines(ctx, pickLineIDs); err != nil {
 		return tracing.Trace(span, db.MapSQLError(err))
 	}
 	return nil

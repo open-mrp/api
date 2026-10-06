@@ -246,6 +246,11 @@ func (s *pickSvcImpl) PickAllLines(ctx context.Context, pickID string) (*domain.
 	apiErr := s.withTx(ctx, func(txCtx context.Context, txSvc *pickSvcImpl) *apierror.APIError {
 		txRepo := txSvc.repos.NewPickRepo()
 
+		// Pick row before lines, the order pack takes them in, so the two cannot deadlock.
+		if _, apiErr := txRepo.Lock(txCtx, accountID, pickID); apiErr != nil {
+			return apiErr
+		}
+
 		old, apiErr := txRepo.Get(txCtx, accountID, pickID)
 		if apiErr != nil {
 			return apiErr
@@ -310,17 +315,7 @@ func (s *pickSvcImpl) VoidPick(ctx context.Context, pickID string) (*domain.Pick
 
 	accountID := identity.Target.AccountID
 
-	repo := s.repos.NewPickRepo()
-
-	hasShipped, apiErr := repo.HasShippedItems(ctx, accountID, pickID)
-	if apiErr != nil {
-		return nil, tracing.Trace(span, apiErr)
-	}
-	if hasShipped {
-		return nil, tracing.Trace(span, apierror.NewValidationError("Cannot void a pick with shipped items."))
-	}
-
-	old, apiErr := repo.Get(ctx, accountID, pickID)
+	old, apiErr := s.repos.NewPickRepo().Get(ctx, accountID, pickID)
 	if apiErr != nil {
 		return nil, tracing.Trace(span, apiErr)
 	}
@@ -328,6 +323,18 @@ func (s *pickSvcImpl) VoidPick(ctx context.Context, pickID string) (*domain.Pick
 	var result *domain.Pick
 	apiErr = s.withTx(ctx, func(txCtx context.Context, txSvc *pickSvcImpl) *apierror.APIError {
 		txRepo := txSvc.repos.NewPickRepo()
+
+		// Locked before the check, so a pack in flight has committed its shipment by the time it reads.
+		if _, apiErr := txRepo.Lock(txCtx, accountID, pickID); apiErr != nil {
+			return apiErr
+		}
+		hasShipped, apiErr := txRepo.HasShippedItems(txCtx, accountID, pickID)
+		if apiErr != nil {
+			return apiErr
+		}
+		if hasShipped {
+			return apierror.NewValidationError("Cannot void a pick with shipped items.")
+		}
 
 		if apiErr := txRepo.VoidAllLines(txCtx, pickID); apiErr != nil {
 			return apiErr
@@ -419,8 +426,12 @@ func (s *pickSvcImpl) PackPick(ctx context.Context, pickID string, shipmentCaseC
 		// Reads the database, so it runs after the key is claimed. A pick nobody can pack is a
 		// bad request, and the caller has to learn that now rather than from a failed job.
 		repo := s.repos.NewPickRepo()
-		if _, apiErr := repo.Get(ctx, accountID, pickID); apiErr != nil {
+		pick, apiErr := repo.Get(ctx, accountID, pickID)
+		if apiErr != nil {
 			return nil, tracing.Trace(span, apiErr)
+		}
+		if pick.FinishedAt != nil {
+			return nil, tracing.Trace(span, errPackFinishedPick())
 		}
 		linesToPack, apiErr := repo.FindLinesToPack(ctx, pickID)
 		if apiErr != nil {
@@ -548,6 +559,11 @@ func (s *pickSvcImpl) ExecutePackPick(ctx context.Context, event domain.BulkOper
 	return nil
 }
 
+// A finished pick's work is complete, matching Dashboard, which never packs one.
+func errPackFinishedPick() *apierror.APIError {
+	return apierror.NewValidationError("Cannot pack a pick that is already finished.")
+}
+
 // Records what one pack created, so the job it ran for can report it.
 type packOutcome struct {
 	ShipmentID     string
@@ -562,8 +578,16 @@ func packPickInTx(txCtx context.Context, txSvc *pickSvcImpl, accountID, pickID s
 	pickLineRepo := txSvc.repos.NewPickLineRepo()
 	var subResources []domain.SubResourceRef
 
-	// Find lines eligible for packing
-	linesToPack, apiErr := txRepo.FindLinesToPack(txCtx, pickID)
+	// A second pack of the same pick waits here, then finds the first one's lines packed.
+	finished, apiErr := txRepo.Lock(txCtx, accountID, pickID)
+	if apiErr != nil {
+		return apiErr
+	}
+	if finished {
+		return errPackFinishedPick()
+	}
+
+	linesToPack, apiErr := txRepo.LockLinesToPack(txCtx, pickID)
 	if apiErr != nil {
 		return apiErr
 	}
@@ -571,9 +595,18 @@ func packPickInTx(txCtx context.Context, txSvc *pickSvcImpl, accountID, pickID s
 		return apierror.NewValidationError("No lines to pack.")
 	}
 
-	// Mark lines as packed
-	if apiErr := txRepo.PackLines(txCtx, pickID); apiErr != nil {
+	lineIDs := make([]string, len(linesToPack))
+	for i, line := range linesToPack {
+		lineIDs[i] = line.ID
+	}
+	packed, apiErr := txRepo.PackLines(txCtx, lineIDs)
+	if apiErr != nil {
 		return apiErr
+	}
+	// Every line read is held by this transaction, so a shortfall means a writer that skipped the
+	// locks; shipping what was read would put lines on two shipments.
+	if packed != int64(len(lineIDs)) {
+		return apierror.NewResourceConflictError("The pick changed while it was being packed. Reload it and try again.")
 	}
 
 	// For each packed line's order line (deduplicated), calculate remaining and create new pick lines if needed
@@ -820,6 +853,41 @@ func packPickInTx(txCtx context.Context, txSvc *pickSvcImpl, accountID, pickID s
 		SubResources:   subResources,
 	}
 	return nil
+}
+
+// Undoes an order close on its pick. The close packed every open line without shipping it, so only
+// lines a shipment accounts for stay packed: reopening a shipped one would let its goods ship twice.
+func reopenClosedPickLines(ctx context.Context, pickRepo domain.PickRepo, accountID, pickID string) *apierror.APIError {
+	if _, apiErr := pickRepo.Lock(ctx, accountID, pickID); apiErr != nil {
+		return apiErr
+	}
+	packed, apiErr := pickRepo.ListPackedLines(ctx, pickID)
+	if apiErr != nil {
+		return apiErr
+	}
+	shipmentLines, apiErr := pickRepo.CountShipmentLinesByOrderLine(ctx, pickID)
+	if apiErr != nil {
+		return apiErr
+	}
+	closed := unshippedPackedLineIDs(packed, shipmentLines)
+	if len(closed) == 0 {
+		return nil
+	}
+	return pickRepo.ReopenLines(ctx, closed)
+}
+
+// A pack raises one shipment line per line it packs, and a close packs only after every pack before
+// it, so on each order line the earliest-packed lines are the shipped ones and the rest were closed.
+func unshippedPackedLineIDs(packed []*domain.PackedPickLine, shipmentLines map[string]int64) []string {
+	var ids []string
+	seen := make(map[string]int64)
+	for _, line := range packed {
+		seen[line.SalesOrderLineID]++
+		if seen[line.SalesOrderLineID] > shipmentLines[line.SalesOrderLineID] {
+			ids = append(ids, line.ID)
+		}
+	}
+	return ids
 }
 
 // checkPickReadPermission checks the appropriate read permission based on the identity context. Internal actors need picks:read for their own account, or customers:read / suppliers:read for external accounts.

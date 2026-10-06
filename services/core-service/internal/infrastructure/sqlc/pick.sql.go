@@ -81,6 +81,44 @@ func (q *Queries) CountPickLinesByPick(ctx context.Context, pickID string) (int6
 	return total, err
 }
 
+const countShipmentLinesForPick = `-- name: CountShipmentLinesForPick :many
+SELECT sl.sales_order_line_id, COUNT(*) AS shipment_line_count
+FROM pick pk
+JOIN shipment s ON s.sales_order_id = pk.sales_order_id
+JOIN shipment_line sl ON sl.shipment_id = s.id
+WHERE pk.id = ?
+GROUP BY sl.sales_order_line_id
+`
+
+type CountShipmentLinesForPickRow struct {
+	SalesOrderLineID  string
+	ShipmentLineCount int64
+}
+
+// How many shipment lines the pick's order has raised on each of its order lines.
+func (q *Queries) CountShipmentLinesForPick(ctx context.Context, pickID string) ([]CountShipmentLinesForPickRow, error) {
+	rows, err := q.db.QueryContext(ctx, countShipmentLinesForPick, pickID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []CountShipmentLinesForPickRow
+	for rows.Next() {
+		var i CountShipmentLinesForPickRow
+		if err := rows.Scan(&i.SalesOrderLineID, &i.ShipmentLineCount); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const countShipmentsByOrder = `-- name: CountShipmentsByOrder :one
 SELECT COUNT(*) AS total FROM shipment
 WHERE sales_order_id = ?
@@ -1530,6 +1568,43 @@ func (q *Queries) IsPickLineInPick(ctx context.Context, arg IsPickLineInPickPara
 	return is_in_pick, err
 }
 
+const listPackedPickLines = `-- name: ListPackedPickLines :many
+SELECT pl.id, pl.sales_order_line_id
+FROM pick_line pl
+WHERE pl.pick_id = ?
+AND pl.packed_at IS NOT NULL
+ORDER BY pl.packed_at, pl.id
+`
+
+type ListPackedPickLinesRow struct {
+	ID               string
+	SalesOrderLineID string
+}
+
+// A pick's packed lines, earliest pack first.
+func (q *Queries) ListPackedPickLines(ctx context.Context, pickID string) ([]ListPackedPickLinesRow, error) {
+	rows, err := q.db.QueryContext(ctx, listPackedPickLines, pickID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []ListPackedPickLinesRow
+	for rows.Next() {
+		var i ListPackedPickLinesRow
+		if err := rows.Scan(&i.ID, &i.SalesOrderLineID); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const listPickLinesForOrderLine = `-- name: ListPickLinesForOrderLine :many
 SELECT pl.id, pl.quantity_id, pl.packed_at, q.value AS quantity_value
 FROM pick_line pl
@@ -1611,6 +1686,95 @@ func (q *Queries) ListShippedOrderLineQuantitiesByShipment(ctx context.Context, 
 	return items, nil
 }
 
+const lockLinesToPack = `-- name: LockLinesToPack :many
+SELECT
+    pl.id,
+    pl.sales_order_line_id,
+    q.value AS quantity_value,
+    q.unit_id AS quantity_unit_id
+FROM pick_line pl
+JOIN quantity q ON q.id = pl.quantity_id
+WHERE pl.pick_id = ?
+AND pl.packed_at IS NULL
+AND q.value > 0
+FOR UPDATE
+`
+
+type LockLinesToPackRow struct {
+	ID               string
+	SalesOrderLineID string
+	QuantityValue    string
+	QuantityUnitID   string
+}
+
+// The lines a pack ships, read current and held until its shipment commits, so a concurrent edit or
+// void of one waits and then finds it packed. No `unit` join: a locking read must not lock rows every
+// account shares.
+func (q *Queries) LockLinesToPack(ctx context.Context, pickID string) ([]LockLinesToPackRow, error) {
+	rows, err := q.db.QueryContext(ctx, lockLinesToPack, pickID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []LockLinesToPackRow
+	for rows.Next() {
+		var i LockLinesToPackRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.SalesOrderLineID,
+			&i.QuantityValue,
+			&i.QuantityUnitID,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const lockPick = `-- name: LockPick :one
+SELECT finished_at FROM pick
+WHERE id = ?
+AND account_id = ?
+FOR UPDATE
+`
+
+type LockPickParams struct {
+	PickID    string
+	AccountID string
+}
+
+// Serializes the writes on one pick that must see each other's commits: two packs (two pods, two
+// tabs), or a pack and a void. Take it first in the transaction so later reads start after it.
+func (q *Queries) LockPick(ctx context.Context, arg LockPickParams) (sql.NullTime, error) {
+	row := q.db.QueryRowContext(ctx, lockPick, arg.PickID, arg.AccountID)
+	var finished_at sql.NullTime
+	err := row.Scan(&finished_at)
+	return finished_at, err
+}
+
+const lockUnpackedPickLine = `-- name: LockUnpackedPickLine :one
+SELECT pl.id FROM pick_line pl
+WHERE pl.id = ?
+AND pl.packed_at IS NULL
+FOR UPDATE
+`
+
+// Holds an open line against a concurrent pack until the caller's edit commits. No row means the
+// line is packed: its quantity is what the shipment carries, so it is no longer editable.
+func (q *Queries) LockUnpackedPickLine(ctx context.Context, pickLineID string) (string, error) {
+	row := q.db.QueryRowContext(ctx, lockUnpackedPickLine, pickLineID)
+	var id string
+	err := row.Scan(&id)
+	return id, err
+}
+
 const markPickFinishedIfAllPacked = `-- name: MarkPickFinishedIfAllPacked :exec
 UPDATE pick pk SET
     pk.finished_at = NOW(3),
@@ -1634,20 +1798,30 @@ func (q *Queries) MarkPickFinishedIfAllPacked(ctx context.Context, pickID string
 	return err
 }
 
-const packPickLines = `-- name: PackPickLines :exec
+const packPickLines = `-- name: PackPickLines :execrows
 UPDATE pick_line SET
     packed_at = NOW(3),
     updated_at = NOW(3)
-WHERE pick_id = ?
+WHERE id IN (/*SLICE:pick_line_ids*/?)
 AND packed_at IS NULL
-AND quantity_id IN (
-    SELECT q.id FROM quantity q WHERE q.value > 0
-)
 `
 
-func (q *Queries) PackPickLines(ctx context.Context, pickID string) error {
-	_, err := q.db.ExecContext(ctx, packPickLines, pickID)
-	return err
+func (q *Queries) PackPickLines(ctx context.Context, pickLineIds []string) (int64, error) {
+	query := packPickLines
+	var queryParams []interface{}
+	if len(pickLineIds) > 0 {
+		for _, v := range pickLineIds {
+			queryParams = append(queryParams, v)
+		}
+		query = strings.Replace(query, "/*SLICE:pick_line_ids*/?", strings.Repeat(",?", len(pickLineIds))[1:], 1)
+	} else {
+		query = strings.Replace(query, "/*SLICE:pick_line_ids*/?", "NULL", 1)
+	}
+	result, err := q.db.ExecContext(ctx, query, queryParams...)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected()
 }
 
 const pickAllLines = `-- name: PickAllLines :exec
@@ -1671,7 +1845,7 @@ LEFT JOIN (
     GROUP BY pl_sum.sales_order_line_id
 ) picked ON picked.sales_order_line_id = pl.sales_order_line_id
 JOIN pick p ON p.id = pl.pick_id
-SET q.value = GREATEST(0, sol_q.value - GREATEST(COALESCE(picked.total_picked_value, 0) - q.value, 0)),
+SET q.value = GREATEST(q.value, sol_q.value - (COALESCE(picked.total_picked_value, 0) - q.value)),
     q.updated_at = NOW(3)
 WHERE pl.pick_id = ?
 AND pl.packed_at IS NULL
@@ -1682,6 +1856,8 @@ type PickAllLinesParams struct {
 	PickID string
 }
 
+// Fills to what the order line's other pick lines leave outstanding (the total less this line's own),
+// never below what the line holds: an over-pick is a real floor event and stays as recorded.
 // A finished pick is completed work; Dashboard filters its pick-all on pick.finishedAt too.
 func (q *Queries) PickAllLines(ctx context.Context, arg PickAllLinesParams) error {
 	_, err := q.db.ExecContext(ctx, pickAllLines, arg.PickID, arg.PickID)
@@ -1696,18 +1872,17 @@ JOIN quantity sol_q ON sol_q.id = sol.quantity_id
 LEFT JOIN (
     SELECT
         pl_sum.sales_order_line_id,
-        SUM(q_sum.value) AS total_picked_value
+        SUM(q_sum.value) AS other_picked_value
     -- Restrict the aggregate to the line being picked: without this the derived table groups every pick_line in the database while the update holds its locks. It stays a derived table rather than a correlated subquery because ` + "`" + `quantity` + "`" + ` is the table being updated.
     -- The scope is a join, not ` + "`" + `IN (SELECT ...)` + "`" + `: MySQL does not semi-join subqueries inside a multi-table UPDATE, so the IN form table-scans pick_line instead of seeking by sales_order_line_id.
     FROM pick_line pl_scope
     JOIN pick_line pl_sum ON pl_sum.sales_order_line_id = pl_scope.sales_order_line_id
     JOIN quantity q_sum ON q_sum.id = pl_sum.quantity_id
     WHERE pl_scope.id = ?
-    -- The line being picked is excluded from its own outstanding calculation. Counting it would subtract what it already holds, so picking an already-picked line set it back to zero — a second click wiping a picker's work rather than doing nothing.
     AND pl_sum.id != ?
     GROUP BY pl_sum.sales_order_line_id
 ) picked ON picked.sales_order_line_id = pl.sales_order_line_id
-SET q.value = GREATEST(0, sol_q.value - GREATEST(COALESCE(picked.total_picked_value, 0) - q.value, 0)),
+SET q.value = GREATEST(q.value, sol_q.value - COALESCE(picked.other_picked_value, 0)),
     q.updated_at = NOW(3)
 WHERE pl.id = ?
 AND pl.packed_at IS NULL
@@ -1717,30 +1892,12 @@ type PickRemainingQuantityForLineParams struct {
 	PickLineID string
 }
 
-// Remaining excludes this line's own quantity, matching PickAllLines. Dashboard subtracts the
-// total including self, so picking a line already holding 3 of 10 leaves it at 7 rather than
-// filling it to 10 — a deliberate divergence, and the two picking paths must agree.
+// Fills to what the order line's other pick lines leave outstanding, never below what the line holds,
+// so a repeat pick changes nothing and an over-pick stays as recorded. Dashboard subtracts the total
+// including self, leaving a line holding 3 of 10 at 7; filling it to 10 is deliberate, and PickAllLines
+// must agree.
 func (q *Queries) PickRemainingQuantityForLine(ctx context.Context, arg PickRemainingQuantityForLineParams) error {
 	_, err := q.db.ExecContext(ctx, pickRemainingQuantityForLine, arg.PickLineID, arg.PickLineID, arg.PickLineID)
-	return err
-}
-
-const reopenIncompletePickLines = `-- name: ReopenIncompletePickLines :exec
-UPDATE pick_line pl
-JOIN quantity q ON q.id = pl.quantity_id
-JOIN sales_order_line sol ON sol.id = pl.sales_order_line_id
-JOIN quantity sol_q ON sol_q.id = sol.quantity_id
-SET pl.packed_at = NULL,
-    pl.updated_at = NOW(3)
-WHERE pl.pick_id = ?
-AND q.value < sol_q.value
-`
-
-// Reopen (unpack) pick lines that are not complete — the pick line's picked quantity is
-// less than its order line's ordered quantity. Fully-picked lines stay packed. Used when a
-// fulfilled order is reopened so outstanding lines can be worked again.
-func (q *Queries) ReopenIncompletePickLines(ctx context.Context, pickID string) error {
-	_, err := q.db.ExecContext(ctx, reopenIncompletePickLines, pickID)
 	return err
 }
 
@@ -1755,6 +1912,29 @@ WHERE id = ?
 // restores its quantity separately (UpdatePickLineQuantity).
 func (q *Queries) ReopenPickLine(ctx context.Context, pickLineID string) error {
 	_, err := q.db.ExecContext(ctx, reopenPickLine, pickLineID)
+	return err
+}
+
+const reopenPickLines = `-- name: ReopenPickLines :exec
+UPDATE pick_line SET
+    packed_at = NULL,
+    updated_at = NOW(3)
+WHERE id IN (/*SLICE:pick_line_ids*/?)
+AND packed_at IS NOT NULL
+`
+
+func (q *Queries) ReopenPickLines(ctx context.Context, pickLineIds []string) error {
+	query := reopenPickLines
+	var queryParams []interface{}
+	if len(pickLineIds) > 0 {
+		for _, v := range pickLineIds {
+			queryParams = append(queryParams, v)
+		}
+		query = strings.Replace(query, "/*SLICE:pick_line_ids*/?", strings.Repeat(",?", len(pickLineIds))[1:], 1)
+	} else {
+		query = strings.Replace(query, "/*SLICE:pick_line_ids*/?", "NULL", 1)
+	}
+	_, err := q.db.ExecContext(ctx, query, queryParams...)
 	return err
 }
 
@@ -1785,6 +1965,7 @@ UPDATE quantity SET
 WHERE id = (
     SELECT pl.quantity_id FROM pick_line pl
     WHERE pl.id = ?
+    AND pl.packed_at IS NULL
 )
 `
 
@@ -1794,6 +1975,7 @@ type UpdatePickLineQuantityParams struct {
 	PickLineID string
 }
 
+// An open line only; reopen a packed line (ReopenPickLine) before restoring its quantity.
 func (q *Queries) UpdatePickLineQuantity(ctx context.Context, arg UpdatePickLineQuantityParams) error {
 	_, err := q.db.ExecContext(ctx, updatePickLineQuantity, arg.Value, arg.UnitID, arg.PickLineID)
 	return err
@@ -1826,6 +2008,7 @@ UPDATE quantity SET
 WHERE id = (
     SELECT pl.quantity_id FROM pick_line pl
     WHERE pl.id = ?
+    AND pl.packed_at IS NULL
 )
 `
 

@@ -16727,6 +16727,21 @@ func (mr *MockPickRepoMockRecorder) CountLines(ctx, pickID any) *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CountLines", reflect.TypeOf((*MockPickRepo)(nil).CountLines), ctx, pickID)
 }
 
+// CountShipmentLinesByOrderLine mocks base method.
+func (m *MockPickRepo) CountShipmentLinesByOrderLine(ctx context.Context, pickID string) (map[string]int64, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "CountShipmentLinesByOrderLine", ctx, pickID)
+	ret0, _ := ret[0].(map[string]int64)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
+}
+
+// CountShipmentLinesByOrderLine indicates an expected call of CountShipmentLinesByOrderLine.
+func (mr *MockPickRepoMockRecorder) CountShipmentLinesByOrderLine(ctx, pickID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CountShipmentLinesByOrderLine", reflect.TypeOf((*MockPickRepo)(nil).CountShipmentLinesByOrderLine), ctx, pickID)
+}
+
 // CountShipmentsByOrder mocks base method.
 func (m *MockPickRepo) CountShipmentsByOrder(ctx context.Context, salesOrderID string) (int64, *apierror.APIError) {
 	m.ctrl.T.Helper()
@@ -16992,6 +17007,51 @@ func (mr *MockPickRepoMockRecorder) List(ctx, params any) *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "List", reflect.TypeOf((*MockPickRepo)(nil).List), ctx, params)
 }
 
+// ListPackedLines mocks base method.
+func (m *MockPickRepo) ListPackedLines(ctx context.Context, pickID string) ([]*domain.PackedPickLine, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ListPackedLines", ctx, pickID)
+	ret0, _ := ret[0].([]*domain.PackedPickLine)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
+}
+
+// ListPackedLines indicates an expected call of ListPackedLines.
+func (mr *MockPickRepoMockRecorder) ListPackedLines(ctx, pickID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListPackedLines", reflect.TypeOf((*MockPickRepo)(nil).ListPackedLines), ctx, pickID)
+}
+
+// Lock mocks base method.
+func (m *MockPickRepo) Lock(ctx context.Context, accountID, pickID string) (bool, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Lock", ctx, accountID, pickID)
+	ret0, _ := ret[0].(bool)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
+}
+
+// Lock indicates an expected call of Lock.
+func (mr *MockPickRepoMockRecorder) Lock(ctx, accountID, pickID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Lock", reflect.TypeOf((*MockPickRepo)(nil).Lock), ctx, accountID, pickID)
+}
+
+// LockLinesToPack mocks base method.
+func (m *MockPickRepo) LockLinesToPack(ctx context.Context, pickID string) ([]*domain.PickLineToPack, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "LockLinesToPack", ctx, pickID)
+	ret0, _ := ret[0].([]*domain.PickLineToPack)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
+}
+
+// LockLinesToPack indicates an expected call of LockLinesToPack.
+func (mr *MockPickRepoMockRecorder) LockLinesToPack(ctx, pickID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "LockLinesToPack", reflect.TypeOf((*MockPickRepo)(nil).LockLinesToPack), ctx, pickID)
+}
+
 // MarkFinishedIfAllPacked mocks base method.
 func (m *MockPickRepo) MarkFinishedIfAllPacked(ctx context.Context, pickID string) *apierror.APIError {
 	m.ctrl.T.Helper()
@@ -17007,17 +17067,18 @@ func (mr *MockPickRepoMockRecorder) MarkFinishedIfAllPacked(ctx, pickID any) *go
 }
 
 // PackLines mocks base method.
-func (m *MockPickRepo) PackLines(ctx context.Context, pickID string) *apierror.APIError {
+func (m *MockPickRepo) PackLines(ctx context.Context, pickLineIDs []string) (int64, *apierror.APIError) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "PackLines", ctx, pickID)
-	ret0, _ := ret[0].(*apierror.APIError)
-	return ret0
+	ret := m.ctrl.Call(m, "PackLines", ctx, pickLineIDs)
+	ret0, _ := ret[0].(int64)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
 }
 
 // PackLines indicates an expected call of PackLines.
-func (mr *MockPickRepoMockRecorder) PackLines(ctx, pickID any) *gomock.Call {
+func (mr *MockPickRepoMockRecorder) PackLines(ctx, pickLineIDs any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "PackLines", reflect.TypeOf((*MockPickRepo)(nil).PackLines), ctx, pickID)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "PackLines", reflect.TypeOf((*MockPickRepo)(nil).PackLines), ctx, pickLineIDs)
 }
 
 // PickAllLines mocks base method.
@@ -17034,18 +17095,18 @@ func (mr *MockPickRepoMockRecorder) PickAllLines(ctx, pickID any) *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "PickAllLines", reflect.TypeOf((*MockPickRepo)(nil).PickAllLines), ctx, pickID)
 }
 
-// ReopenIncompletePickLines mocks base method.
-func (m *MockPickRepo) ReopenIncompletePickLines(ctx context.Context, pickID string) *apierror.APIError {
+// ReopenLines mocks base method.
+func (m *MockPickRepo) ReopenLines(ctx context.Context, pickLineIDs []string) *apierror.APIError {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "ReopenIncompletePickLines", ctx, pickID)
+	ret := m.ctrl.Call(m, "ReopenLines", ctx, pickLineIDs)
 	ret0, _ := ret[0].(*apierror.APIError)
 	return ret0
 }
 
-// ReopenIncompletePickLines indicates an expected call of ReopenIncompletePickLines.
-func (mr *MockPickRepoMockRecorder) ReopenIncompletePickLines(ctx, pickID any) *gomock.Call {
+// ReopenLines indicates an expected call of ReopenLines.
+func (mr *MockPickRepoMockRecorder) ReopenLines(ctx, pickLineIDs any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ReopenIncompletePickLines", reflect.TypeOf((*MockPickRepo)(nil).ReopenIncompletePickLines), ctx, pickID)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ReopenLines", reflect.TypeOf((*MockPickRepo)(nil).ReopenLines), ctx, pickLineIDs)
 }
 
 // UpdateFinishedAt mocks base method.
@@ -17204,6 +17265,21 @@ func (m *MockPickLineRepo) IsInPick(ctx context.Context, pickLineID, pickID stri
 func (mr *MockPickLineRepoMockRecorder) IsInPick(ctx, pickLineID, pickID any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "IsInPick", reflect.TypeOf((*MockPickLineRepo)(nil).IsInPick), ctx, pickLineID, pickID)
+}
+
+// LockUnpacked mocks base method.
+func (m *MockPickLineRepo) LockUnpacked(ctx context.Context, pickLineID string) (bool, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "LockUnpacked", ctx, pickLineID)
+	ret0, _ := ret[0].(bool)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
+}
+
+// LockUnpacked indicates an expected call of LockUnpacked.
+func (mr *MockPickLineRepoMockRecorder) LockUnpacked(ctx, pickLineID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "LockUnpacked", reflect.TypeOf((*MockPickLineRepo)(nil).LockUnpacked), ctx, pickLineID)
 }
 
 // PickRemainingQuantity mocks base method.

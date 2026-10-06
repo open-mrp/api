@@ -1607,13 +1607,22 @@ type PickRepo interface {
 	// into one query per pick.
 	GetShipmentIDsForPicks(ctx context.Context, accountID string, pickIDs []string) (map[string][]string, *apierror.APIError)
 	IsInAccount(ctx context.Context, accountID, pickID string) (bool, *apierror.APIError)
+	// Lock holds the pick's row for the rest of the transaction and reports whether it is finished.
+	Lock(ctx context.Context, accountID, pickID string) (finished bool, apiErr *apierror.APIError)
 	FindLinesToPack(ctx context.Context, pickID string) ([]*PickLine, *apierror.APIError)
-	PackLines(ctx context.Context, pickID string) *apierror.APIError
+	// LockLinesToPack is FindLinesToPack read current and held until the transaction ends.
+	LockLinesToPack(ctx context.Context, pickID string) ([]*PickLineToPack, *apierror.APIError)
+	// PackLines stamps the open lines among pickLineIDs packed and returns how many it stamped.
+	PackLines(ctx context.Context, pickLineIDs []string) (int64, *apierror.APIError)
 	MarkFinishedIfAllPacked(ctx context.Context, pickID string) *apierror.APIError
 	// CloseOpenPickLines packs every still-open pick line (used when the order is closed).
 	CloseOpenPickLines(ctx context.Context, pickID string) *apierror.APIError
-	// ReopenIncompletePickLines reopens pick lines whose picked quantity is below the ordered quantity (used when a fulfilled order is reopened).
-	ReopenIncompletePickLines(ctx context.Context, pickID string) *apierror.APIError
+	// ListPackedLines returns the pick's packed lines, earliest pack first.
+	ListPackedLines(ctx context.Context, pickID string) ([]*PackedPickLine, *apierror.APIError)
+	// CountShipmentLinesByOrderLine counts the shipment lines the pick's order has, keyed by order line.
+	CountShipmentLinesByOrderLine(ctx context.Context, pickID string) (map[string]int64, *apierror.APIError)
+	// ReopenLines unpacks the given lines.
+	ReopenLines(ctx context.Context, pickLineIDs []string) *apierror.APIError
 	CountLines(ctx context.Context, pickID string) (int64, *apierror.APIError)
 	CountShipmentsByOrder(ctx context.Context, salesOrderID string) (int64, *apierror.APIError)
 	GetSalesOrderForPick(ctx context.Context, accountID, pickID string) (*PickSalesOrder, *apierror.APIError)
@@ -1629,6 +1638,8 @@ type PickLineRepo interface {
 	// UpdateQuantity writes the line's picked quantity; a nil value or unit leaves that half unchanged.
 	UpdateQuantity(ctx context.Context, pickLineID string, quantityValue, quantityUnitID *string) *apierror.APIError
 	PickRemainingQuantity(ctx context.Context, pickLineID string) *apierror.APIError
+	// LockUnpacked holds an open line for the rest of the transaction; false means it is packed.
+	LockUnpacked(ctx context.Context, pickLineID string) (bool, *apierror.APIError)
 	VoidLine(ctx context.Context, pickLineID string) *apierror.APIError
 	IsInPick(ctx context.Context, pickLineID, pickID string) (bool, *apierror.APIError)
 	CreateForRemaining(ctx context.Context, id, quantityID, pickID, orderLineID string) *apierror.APIError

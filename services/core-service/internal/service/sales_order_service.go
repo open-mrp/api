@@ -1429,6 +1429,10 @@ func (s *salesOrderSvcImpl) ChangeSalesOrderStatus(ctx context.Context, params d
 			// mark the pick finished, so the pick reads as complete alongside the order.
 			if order.PickID != nil {
 				txPickRepo := txSvc.repos.NewPickRepo()
+				// A pack in flight commits before the open lines are swept, so none of its lines is closed unshipped.
+				if _, apiErr := txPickRepo.Lock(txCtx, params.AccountID, *order.PickID); apiErr != nil {
+					return apiErr
+				}
 				if apiErr := txPickRepo.CloseOpenPickLines(txCtx, *order.PickID); apiErr != nil {
 					return apiErr
 				}
@@ -1509,13 +1513,11 @@ func (s *salesOrderSvcImpl) ChangeSalesOrderStatus(ctx context.Context, params d
 				}
 			}
 
-			// Reopening the order reopens its pick: clear the pick's finished flag and reopen
-			// (unpack) every pick line that is not yet complete — its picked quantity is below
-			// the ordered quantity — so outstanding lines can be worked again. Fully-picked
-			// lines stay packed.
+			// Reopening the order reopens its pick: the lines the close packed are open again and the
+			// pick is no longer finished. Lines a shipment carries stay packed.
 			if order.PickID != nil {
 				txPickRepo := txSvc.repos.NewPickRepo()
-				if apiErr := txPickRepo.ReopenIncompletePickLines(txCtx, *order.PickID); apiErr != nil {
+				if apiErr := reopenClosedPickLines(txCtx, txPickRepo, params.AccountID, *order.PickID); apiErr != nil {
 					return apiErr
 				}
 				if apiErr := txPickRepo.ClearFinishedAt(txCtx, params.AccountID, *order.PickID); apiErr != nil {

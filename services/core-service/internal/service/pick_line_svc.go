@@ -137,6 +137,14 @@ func (s *pickLineSvcImpl) UpdatePickLine(ctx context.Context, params domain.Upda
 		apiErr = s.withTx(ctx, func(txCtx context.Context, txSvc *pickLineSvcImpl) *apierror.APIError {
 			txPickLineRepo := txSvc.repos.NewPickLineRepo()
 
+			unpacked, apiErr := txPickLineRepo.LockUnpacked(txCtx, params.PickLineID)
+			if apiErr != nil {
+				return apiErr
+			}
+			if !unpacked {
+				return apierror.NewValidationError("Cannot update a pick line that has already been packed.")
+			}
+
 			old, apiErr := txPickLineRepo.Get(txCtx, params.PickLineID)
 			if apiErr != nil {
 				return apiErr
@@ -221,11 +229,6 @@ func (s *pickLineSvcImpl) PickPickLine(ctx context.Context, pickID, pickLineID s
 		return nil, tracing.Trace(span, apierror.NewResourceNotFoundError("Pick line not found."))
 	}
 
-	old, apiErr := pickLineRepo.Get(ctx, pickLineID)
-	if apiErr != nil {
-		return nil, tracing.Trace(span, apiErr)
-	}
-
 	// Resolve the parent sales order so the audit event can be scoped to the order's history tree.
 	rootSalesOrder, apiErr := pickRepo.GetSalesOrderForPick(ctx, accountID, pickID)
 	if apiErr != nil {
@@ -251,6 +254,16 @@ func (s *pickLineSvcImpl) PickPickLine(ctx context.Context, pickID, pickLineID s
 		var result *domain.PickLine
 		apiErr = s.withTx(ctx, func(txCtx context.Context, txSvc *pickLineSvcImpl) *apierror.APIError {
 			txPickLineRepo := txSvc.repos.NewPickLineRepo()
+
+			// Pick row before lines, the order pack takes them in, so the two cannot deadlock.
+			if _, apiErr := txSvc.repos.NewPickRepo().Lock(txCtx, accountID, pickID); apiErr != nil {
+				return apiErr
+			}
+
+			old, apiErr := txPickLineRepo.Get(txCtx, pickLineID)
+			if apiErr != nil {
+				return apiErr
+			}
 
 			if apiErr := txPickLineRepo.PickRemainingQuantity(txCtx, pickLineID); apiErr != nil {
 				return apiErr
@@ -329,15 +342,6 @@ func (s *pickLineSvcImpl) VoidPickLine(ctx context.Context, pickID, pickLineID s
 		return nil, tracing.Trace(span, apierror.NewResourceNotFoundError("Pick line not found."))
 	}
 
-	// Get the pick line to check if it's already packed
-	old, apiErr := pickLineRepo.Get(ctx, pickLineID)
-	if apiErr != nil {
-		return nil, tracing.Trace(span, apiErr)
-	}
-	if old.PackedAt != nil {
-		return nil, tracing.Trace(span, apierror.NewValidationError("Cannot void a pick line that has already been packed."))
-	}
-
 	// Resolve the parent sales order so the audit event can be scoped to the order's history tree.
 	rootSalesOrder, apiErr := pickRepo.GetSalesOrderForPick(ctx, accountID, pickID)
 	if apiErr != nil {
@@ -363,6 +367,19 @@ func (s *pickLineSvcImpl) VoidPickLine(ctx context.Context, pickID, pickLineID s
 		var result *domain.PickLine
 		apiErr = s.withTx(ctx, func(txCtx context.Context, txSvc *pickLineSvcImpl) *apierror.APIError {
 			txPickLineRepo := txSvc.repos.NewPickLineRepo()
+
+			unpacked, apiErr := txPickLineRepo.LockUnpacked(txCtx, pickLineID)
+			if apiErr != nil {
+				return apiErr
+			}
+			if !unpacked {
+				return apierror.NewValidationError("Cannot void a pick line that has already been packed.")
+			}
+
+			old, apiErr := txPickLineRepo.Get(txCtx, pickLineID)
+			if apiErr != nil {
+				return apiErr
+			}
 
 			if apiErr := txPickLineRepo.VoidLine(txCtx, pickLineID); apiErr != nil {
 				return apiErr

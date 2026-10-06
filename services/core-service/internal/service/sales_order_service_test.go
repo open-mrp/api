@@ -1536,8 +1536,11 @@ func (suite *SalesOrderSvcTestSuite) TestChangeStatus_Close_MarksPickPacked() {
 		Return(nil).Times(1)
 	suite.expectReservationRelease("ac_test", "or_1")
 
-	// Closing packs every open pick line, then marks the pick finished.
-	suite.pickRepo.EXPECT().CloseOpenPickLines(gomock.Any(), "pk_1").Return(nil).Times(1)
+	// Closing locks the pick, packs every open pick line, then marks the pick finished.
+	gomock.InOrder(
+		suite.pickRepo.EXPECT().Lock(gomock.Any(), "ac_test", "pk_1").Return(false, nil).Times(1),
+		suite.pickRepo.EXPECT().CloseOpenPickLines(gomock.Any(), "pk_1").Return(nil).Times(1),
+	)
 	suite.pickRepo.EXPECT().
 		UpdateFinishedAt(gomock.Any(), "ac_test", "pk_1", gomock.Any()).
 		Return(nil).Times(1)
@@ -1570,8 +1573,16 @@ func (suite *SalesOrderSvcTestSuite) TestChangeStatus_Open_ReopensFulfilled() {
 	suite.orderRepo.EXPECT().GetSaleLinesForIssue(gomock.Any(), "or_1").Return(nil, nil).Times(1)
 	suite.orderRepo.EXPECT().GetUnreservedRemainders(gomock.Any(), "ac_test", "or_1").Return(nil, nil).Times(1)
 
-	// Reopening reopens incomplete pick lines, then clears the pick's finished flag.
-	suite.pickRepo.EXPECT().ReopenIncompletePickLines(gomock.Any(), "pk_1").Return(nil).Times(1)
+	// Reopening reopens the lines the close packed (not the shipped one), then clears the pick's finished flag.
+	gomock.InOrder(
+		suite.pickRepo.EXPECT().Lock(gomock.Any(), "ac_test", "pk_1").Return(true, nil).Times(1),
+		suite.pickRepo.EXPECT().ListPackedLines(gomock.Any(), "pk_1").Return([]*domain.PackedPickLine{
+			{ID: "pkln_shipped", SalesOrderLineID: "orl_1"},
+			{ID: "pkln_closed", SalesOrderLineID: "orl_1"},
+		}, nil).Times(1),
+		suite.pickRepo.EXPECT().CountShipmentLinesByOrderLine(gomock.Any(), "pk_1").Return(map[string]int64{"orl_1": 1}, nil).Times(1),
+		suite.pickRepo.EXPECT().ReopenLines(gomock.Any(), []string{"pkln_closed"}).Return(nil).Times(1),
+	)
 	suite.pickRepo.EXPECT().ClearFinishedAt(gomock.Any(), "ac_test", "pk_1").Return(nil).Times(1)
 
 	suite.orderRepo.EXPECT().Get(gomock.Any(), "ac_test", "or_1").

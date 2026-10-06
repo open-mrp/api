@@ -334,7 +334,9 @@ LEFT JOIN (
     GROUP BY pl_sum.sales_order_line_id
 ) picked ON picked.sales_order_line_id = pl.sales_order_line_id
 JOIN pick p ON p.id = pl.pick_id
-SET q.value = GREATEST(0, sol_q.value - GREATEST(COALESCE(picked.total_picked_value, 0) - q.value, 0)),
+-- Fills to what the order line's other pick lines leave outstanding (the total less this line's own),
+-- never below what the line holds: an over-pick is a real floor event and stays as recorded.
+SET q.value = GREATEST(q.value, sol_q.value - (COALESCE(picked.total_picked_value, 0) - q.value)),
     q.updated_at = NOW(3)
 WHERE pl.pick_id = sqlc.arg('pick_id')
 AND pl.packed_at IS NULL
@@ -349,24 +351,32 @@ JOIN quantity sol_q ON sol_q.id = sol.quantity_id
 LEFT JOIN (
     SELECT
         pl_sum.sales_order_line_id,
-        SUM(q_sum.value) AS total_picked_value
+        SUM(q_sum.value) AS other_picked_value
     -- Restrict the aggregate to the line being picked: without this the derived table groups every pick_line in the database while the update holds its locks. It stays a derived table rather than a correlated subquery because `quantity` is the table being updated.
     -- The scope is a join, not `IN (SELECT ...)`: MySQL does not semi-join subqueries inside a multi-table UPDATE, so the IN form table-scans pick_line instead of seeking by sales_order_line_id.
     FROM pick_line pl_scope
     JOIN pick_line pl_sum ON pl_sum.sales_order_line_id = pl_scope.sales_order_line_id
     JOIN quantity q_sum ON q_sum.id = pl_sum.quantity_id
     WHERE pl_scope.id = sqlc.arg('pick_line_id')
-    -- The line being picked is excluded from its own outstanding calculation. Counting it would subtract what it already holds, so picking an already-picked line set it back to zero — a second click wiping a picker's work rather than doing nothing.
     AND pl_sum.id != sqlc.arg('pick_line_id')
     GROUP BY pl_sum.sales_order_line_id
 ) picked ON picked.sales_order_line_id = pl.sales_order_line_id
--- Remaining excludes this line's own quantity, matching PickAllLines. Dashboard subtracts the
--- total including self, so picking a line already holding 3 of 10 leaves it at 7 rather than
--- filling it to 10 — a deliberate divergence, and the two picking paths must agree.
-SET q.value = GREATEST(0, sol_q.value - GREATEST(COALESCE(picked.total_picked_value, 0) - q.value, 0)),
+-- Fills to what the order line's other pick lines leave outstanding, never below what the line holds,
+-- so a repeat pick changes nothing and an over-pick stays as recorded. Dashboard subtracts the total
+-- including self, leaving a line holding 3 of 10 at 7; filling it to 10 is deliberate, and PickAllLines
+-- must agree.
+SET q.value = GREATEST(q.value, sol_q.value - COALESCE(picked.other_picked_value, 0)),
     q.updated_at = NOW(3)
 WHERE pl.id = sqlc.arg('pick_line_id')
 AND pl.packed_at IS NULL;
+
+-- name: LockUnpackedPickLine :one
+-- Holds an open line against a concurrent pack until the caller's edit commits. No row means the
+-- line is packed: its quantity is what the shipment carries, so it is no longer editable.
+SELECT pl.id FROM pick_line pl
+WHERE pl.id = sqlc.arg('pick_line_id')
+AND pl.packed_at IS NULL
+FOR UPDATE;
 
 -- name: VoidPickLine :exec
 UPDATE quantity SET
@@ -375,9 +385,11 @@ UPDATE quantity SET
 WHERE id = (
     SELECT pl.quantity_id FROM pick_line pl
     WHERE pl.id = sqlc.arg('pick_line_id')
+    AND pl.packed_at IS NULL
 );
 
 -- name: UpdatePickLineQuantity :exec
+-- An open line only; reopen a packed line (ReopenPickLine) before restoring its quantity.
 UPDATE quantity SET
     value = COALESCE(sqlc.narg('value'), value),
     unit_id = COALESCE(sqlc.narg('unit_id'), unit_id),
@@ -385,6 +397,7 @@ UPDATE quantity SET
 WHERE id = (
     SELECT pl.quantity_id FROM pick_line pl
     WHERE pl.id = sqlc.arg('pick_line_id')
+    AND pl.packed_at IS NULL
 );
 
 -- name: IsPickInAccount :one
@@ -430,15 +443,36 @@ WHERE pl.pick_id = sqlc.arg('pick_id')
 AND q.value > 0
 AND pl.packed_at IS NULL;
 
--- name: PackPickLines :exec
+-- name: LockPick :one
+-- Serializes the writes on one pick that must see each other's commits: two packs (two pods, two
+-- tabs), or a pack and a void. Take it first in the transaction so later reads start after it.
+SELECT finished_at FROM pick
+WHERE id = sqlc.arg('pick_id')
+AND account_id = sqlc.arg('account_id')
+FOR UPDATE;
+
+-- name: LockLinesToPack :many
+-- The lines a pack ships, read current and held until its shipment commits, so a concurrent edit or
+-- void of one waits and then finds it packed. No `unit` join: a locking read must not lock rows every
+-- account shares.
+SELECT
+    pl.id,
+    pl.sales_order_line_id,
+    q.value AS quantity_value,
+    q.unit_id AS quantity_unit_id
+FROM pick_line pl
+JOIN quantity q ON q.id = pl.quantity_id
+WHERE pl.pick_id = sqlc.arg('pick_id')
+AND pl.packed_at IS NULL
+AND q.value > 0
+FOR UPDATE;
+
+-- name: PackPickLines :execrows
 UPDATE pick_line SET
     packed_at = NOW(3),
     updated_at = NOW(3)
-WHERE pick_id = sqlc.arg('pick_id')
-AND packed_at IS NULL
-AND quantity_id IN (
-    SELECT q.id FROM quantity q WHERE q.value > 0
-);
+WHERE id IN (sqlc.slice('pick_line_ids'))
+AND packed_at IS NULL;
 
 -- name: MarkPickFinishedIfAllPacked :exec
 -- Finish a pick only when every one of its lines is packed. An unpacked line is
@@ -467,18 +501,29 @@ UPDATE pick_line SET
 WHERE pick_id = sqlc.arg('pick_id')
 AND packed_at IS NULL;
 
--- name: ReopenIncompletePickLines :exec
--- Reopen (unpack) pick lines that are not complete — the pick line's picked quantity is
--- less than its order line's ordered quantity. Fully-picked lines stay packed. Used when a
--- fulfilled order is reopened so outstanding lines can be worked again.
-UPDATE pick_line pl
-JOIN quantity q ON q.id = pl.quantity_id
-JOIN sales_order_line sol ON sol.id = pl.sales_order_line_id
-JOIN quantity sol_q ON sol_q.id = sol.quantity_id
-SET pl.packed_at = NULL,
-    pl.updated_at = NOW(3)
+-- name: ListPackedPickLines :many
+-- A pick's packed lines, earliest pack first.
+SELECT pl.id, pl.sales_order_line_id
+FROM pick_line pl
 WHERE pl.pick_id = sqlc.arg('pick_id')
-AND q.value < sol_q.value;
+AND pl.packed_at IS NOT NULL
+ORDER BY pl.packed_at, pl.id;
+
+-- name: CountShipmentLinesForPick :many
+-- How many shipment lines the pick's order has raised on each of its order lines.
+SELECT sl.sales_order_line_id, COUNT(*) AS shipment_line_count
+FROM pick pk
+JOIN shipment s ON s.sales_order_id = pk.sales_order_id
+JOIN shipment_line sl ON sl.shipment_id = s.id
+WHERE pk.id = sqlc.arg('pick_id')
+GROUP BY sl.sales_order_line_id;
+
+-- name: ReopenPickLines :exec
+UPDATE pick_line SET
+    packed_at = NULL,
+    updated_at = NOW(3)
+WHERE id IN (sqlc.slice('pick_line_ids'))
+AND packed_at IS NOT NULL;
 
 -- name: CountShipmentsByOrder :one
 SELECT COUNT(*) AS total FROM shipment

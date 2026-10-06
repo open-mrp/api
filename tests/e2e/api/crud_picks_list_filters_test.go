@@ -47,13 +47,13 @@ func TestPicksList_SearchMatchesPickNumber(t *testing.T) {
 func TestPicksList_StatusSplitsOpenFromClosed(t *testing.T) {
 	t.Parallel()
 
-	open := pickIDsFiltered(t, url.Values{"status": {"open"}})
-	assert.Contains(t, open, seedOpenPickID)
-	assert.NotContains(t, open, seedClosedPickID, "a finished pick must not appear under open")
+	open := url.Values{"status": {"open"}}
+	assertListContainsID(t, picksPath, open, seedOpenPickID)
+	assert.Nil(t, listFindByField(t, picksPath, open, "id", seedClosedPickID), "a finished pick must not appear under open")
 
-	closed := pickIDsFiltered(t, url.Values{"status": {"closed"}})
-	assert.Contains(t, closed, seedClosedPickID)
-	assert.NotContains(t, closed, seedOpenPickID, "an unfinished pick must not appear under closed")
+	closed := url.Values{"status": {"closed"}}
+	assertListContainsID(t, picksPath, closed, seedClosedPickID)
+	assert.Nil(t, listFindByField(t, picksPath, closed, "id", seedOpenPickID), "an unfinished pick must not appear under closed")
 }
 
 func TestPicksList_FiltersByCustomerAndGroup(t *testing.T) {
@@ -84,14 +84,14 @@ func TestPicksList_FiltersByCreatedDateWindow(t *testing.T) {
 	t.Parallel()
 
 	today := time.Now().UTC().Format("2006-01-02")
-	inWindow := pickIDsFiltered(t, url.Values{"starts_at": {"2000-01-01"}, "ends_at": {today}})
-	assert.Contains(t, inWindow, seedOpenPickID, "a window ending today must include a pick created today")
+	assert.NotNil(t, listFindByField(t, picksPath, url.Values{"starts_at": {"2000-01-01"}, "ends_at": {today}}, "id", seedOpenPickID),
+		"a window ending today must include a pick created today")
 
 	// PICK-003 is four days old, so a window opening yesterday leaves it behind.
 	yesterday := time.Now().UTC().AddDate(0, 0, -1).Format("2006-01-02")
-	recent := pickIDsFiltered(t, url.Values{"starts_at": {yesterday}})
-	assert.Contains(t, recent, seedOpenPickID)
-	assert.NotContains(t, recent, seedOldClosedPickID, "a pick created four days ago is outside the window")
+	recent := url.Values{"starts_at": {yesterday}}
+	assertListContainsID(t, picksPath, recent, seedOpenPickID)
+	assert.Nil(t, listFindByField(t, picksPath, recent, "id", seedOldClosedPickID), "a pick created four days ago is outside the window")
 
 	assert.Empty(t, pickIDsFiltered(t, url.Values{"starts_at": {"2000-01-01"}, "ends_at": {"2000-01-02"}}),
 		"a window that closed decades ago must exclude every pick")

@@ -79,21 +79,24 @@ INSERT INTO sales_order_line (
 ) VALUES (
     sqlc.arg('id'), sqlc.arg('product_sku'), sqlc.narg('product_description'),
     sqlc.narg('edi_line_item_id'), sqlc.arg('line_item_number'),
-    sqlc.narg('product_id'), sqlc.narg('item_id'), sqlc.arg('sales_order_id'),
+    -- A line bought as a product is stocked as that product's item.
+    sqlc.narg('product_id'),
+    COALESCE(sqlc.narg('item_id'), (SELECT p.item_id FROM product p WHERE p.id = sqlc.narg('product_id'))),
+    sqlc.arg('sales_order_id'),
     sqlc.arg('quantity_id'), sqlc.arg('unit_price_id'), sqlc.narg('unit_cost_id'),
     NOW(3), NOW(3)
 );
 
 -- name: UpdatePurchaseOrderLine :exec
-UPDATE sales_order_line SET
+UPDATE sales_order_line sol SET
     product_sku = COALESCE(sqlc.narg('product_sku'), product_sku),
     product_description = COALESCE(sqlc.narg('product_description'), product_description),
     product_id = sqlc.narg('product_id'),
-    item_id = sqlc.narg('item_id'),
+    item_id = COALESCE(sqlc.narg('item_id'), (SELECT p.item_id FROM product p WHERE p.id = sqlc.narg('product_id'))),
     edi_line_item_id = COALESCE(sqlc.narg('edi_line_item_id'), edi_line_item_id),
     updated_at = NOW(3)
-WHERE id = sqlc.arg('id')
-AND sales_order_id = sqlc.arg('sales_order_id');
+WHERE sol.id = sqlc.arg('id')
+AND sol.sales_order_id = sqlc.arg('sales_order_id');
 
 -- name: DeletePurchaseOrderLine :exec
 DELETE FROM sales_order_line

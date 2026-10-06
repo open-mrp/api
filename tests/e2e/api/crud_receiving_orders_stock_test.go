@@ -866,3 +866,39 @@ func TestReceivingOrders_ListSearchFindsAnOrderBySupplierName(t *testing.T) {
 		assert.Equal(t, 1, n, "receiving order %s is listed once, not once per relation", id)
 	}
 }
+
+// A purchase order line can name a product instead of an item. What is stocked is that product's
+// item, so the order line and the delivery line both carry it.
+func TestReceivingOrders_StockingAProductLineRecordsTheProductsItem(t *testing.T) {
+	t.Parallel()
+
+	purchaseOrderID, receivingOrderID := receivedPurchaseOrderReceiving(t)
+	lineID := jsonField(firstLine(t, receivingOrderID), "id")
+
+	status, body := stockReceivingOrder(t, receivingOrderID, []map[string]any{{
+		"receiving_order_line_id": lineID,
+		"allocations":             []map[string]any{{"quantity": pairs("4"), "location_id": SeedLocationID}},
+	}})
+	requireStatus(t, 200, status, body)
+
+	lines := jsonListData(deliveryForReceivingOrder(t, receivingOrderID), "lines")
+	require.NotEmpty(t, lines)
+	for _, raw := range lines {
+		line, ok := raw.(map[string]any)
+		require.True(t, ok)
+		item := jsonObject(line, "item")
+		require.NotNil(t, item, "a delivery line bought as a product carries the product's item: %v", line)
+		assert.Equal(t, SeedItemID, jsonField(item, "id"))
+	}
+
+	getStatus, getBody, err := apiClient.GetListRaw(purchaseOrdersPath+"/"+purchaseOrderID, url.Values{"include": {"lines", "lines.item"}})
+	require.NoError(t, err)
+	requireStatus(t, 200, getStatus, getBody)
+	orderLines := jsonListData(parseJSON(getBody), "lines")
+	require.NotEmpty(t, orderLines)
+	orderLine, ok := orderLines[0].(map[string]any)
+	require.True(t, ok)
+	orderItem := jsonObject(orderLine, "item")
+	require.NotNil(t, orderItem, "a purchase order line bought as a product carries the product's item")
+	assert.Equal(t, SeedItemID, jsonField(orderItem, "id"))
+}

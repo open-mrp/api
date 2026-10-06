@@ -22,6 +22,23 @@ type Identity struct {
 	Actor              *IdentityActor
 	AccountMode        constants.AccountMode
 	SubscriptionStatus *string
+	// IncludeReads marks the copy of a caller's identity that loads what an authorized request includes; set it only through ForIncludeReads.
+	IncludeReads bool `json:"IncludeReads,omitempty"`
+}
+
+// ForIncludeReads returns a copy of the identity for loading what a request includes: whoever may make the request may read everything it includes. The identity itself is left unchanged.
+func (i *Identity) ForIncludeReads() *Identity {
+	if i == nil {
+		return nil
+	}
+	c := *i
+	c.IncludeReads = true
+	return &c
+}
+
+// IsIncludeRead reports whether the identity loads what an authorized request includes, as an internal, customer or supplier actor of the target account.
+func (i *Identity) IsIncludeRead() bool {
+	return i != nil && i.IncludeReads && i.IsTargetAccountSet() && (i.IsInternalActor() || i.IsRelationActor())
 }
 
 // IsAuthenticated checks that the identity exists and is not unauthenticated

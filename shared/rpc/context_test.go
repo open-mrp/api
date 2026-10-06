@@ -74,6 +74,29 @@ func TestPrepareServiceCallCtx_ForwardsContextValues(t *testing.T) {
 	}
 }
 
+// A service that forwards a call made while loading includes forwards the include-reads flag with the identity.
+func TestPrepareServiceCallCtx_ForwardsIncludeReads(t *testing.T) {
+	t.Parallel()
+	ctx := appctx.WithIdentity(context.Background(), testIdentity("usr_123").ForIncludeReads())
+
+	identity, apiErr := contracts.GetIdentityFromMetadata(outgoingMD(t, PrepareServiceCallCtx(ctx)))
+	if apiErr != nil {
+		t.Fatalf("unexpected error reading identity: %v", apiErr)
+	}
+	if !identity.IncludeReads {
+		t.Error("the include-reads flag was dropped on a forwarded call")
+	}
+
+	plain := appctx.WithIdentity(context.Background(), testIdentity("usr_123"))
+	identity, apiErr = contracts.GetIdentityFromMetadata(outgoingMD(t, PrepareServiceCallCtx(plain)))
+	if apiErr != nil {
+		t.Fatalf("unexpected error reading identity: %v", apiErr)
+	}
+	if identity.IncludeReads {
+		t.Error("a forwarded call gained the include-reads flag")
+	}
+}
+
 func TestPrepareServiceCallCtx_OmitsMissingValues(t *testing.T) {
 	t.Parallel()
 	tests := []struct {

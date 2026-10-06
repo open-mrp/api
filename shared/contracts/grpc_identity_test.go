@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"net"
+	"strings"
 	"testing"
 
 	"github.com/open-mrp/api/services/auth-service/pkg/types"
@@ -118,6 +119,39 @@ func TestSetIdentityInMetadata_RoundTrip(t *testing.T) {
 	}
 	if !decoded.Actor.Permissions["orders:create"] {
 		t.Errorf("expected permissions to survive, got %+v", decoded.Actor.Permissions)
+	}
+}
+
+// The include-reads flag crosses the hop with the identity, and an identity without it decodes without it.
+func TestSetIdentityInMetadata_IncludeReadsRoundTrip(t *testing.T) {
+	t.Parallel()
+	identity := &types.Identity{
+		Type:   types.IdentityActorTypeUser,
+		Target: &types.IdentityTarget{AccountID: "acc_target"},
+		Actor:  &types.IdentityActor{RelationType: types.IdentityRelationTypeInternal, ID: "usr_123", AccountID: strPtr("acc_target")},
+	}
+
+	plain := metadata.New(nil)
+	SetIdentityInMetadata(plain, identity)
+	if strings.Contains(plain.Get(IdentityHeader)[0], "IncludeReads") {
+		t.Errorf("an unflagged identity serialized the flag: %s", plain.Get(IdentityHeader)[0])
+	}
+	decoded, apiErr := GetIdentityFromMetadata(plain)
+	if apiErr != nil {
+		t.Fatalf("expected no error, got %v", apiErr)
+	}
+	if decoded.IncludeReads {
+		t.Error("an unflagged identity decoded with the flag")
+	}
+
+	flagged := metadata.New(nil)
+	SetIdentityInMetadata(flagged, identity.ForIncludeReads())
+	decoded, apiErr = GetIdentityFromMetadata(flagged)
+	if apiErr != nil {
+		t.Fatalf("expected no error, got %v", apiErr)
+	}
+	if !decoded.IncludeReads || !decoded.IsIncludeRead() {
+		t.Errorf("the flag did not survive the round trip: %+v", decoded)
 	}
 }
 

@@ -115,13 +115,14 @@ const (
 func TestDeliveries_SupplierFilterNarrowsToTheirOrders(t *testing.T) {
 	t.Parallel()
 
-	one := listIDs(t, deliveriesPath, url.Values{"status": {"all"}, "supplier_ids": {seedSupplierOneID}})
-	assert.Contains(t, one, seedDeliveryOneID)
-	assert.NotContains(t, one, seedDeliveryTwoID, "another supplier's delivery must not appear")
+	// Every purchase order the suite receives is from supplier one, so its seeded delivery is paged to.
+	one := url.Values{"status": {"all"}, "supplier_ids": {seedSupplierOneID}}
+	assertListContainsID(t, deliveriesPath, one, seedDeliveryOneID)
+	assert.Nil(t, listFindByField(t, deliveriesPath, one, "id", seedDeliveryTwoID), "another supplier's delivery must not appear")
 
-	both := listIDs(t, deliveriesPath, url.Values{"status": {"all"}, "supplier_ids": {seedSupplierOneID, seedSupplierTwoID}})
-	assert.Contains(t, both, seedDeliveryOneID)
-	assert.Contains(t, both, seedDeliveryTwoID)
+	both := url.Values{"status": {"all"}, "supplier_ids": {seedSupplierOneID, seedSupplierTwoID}}
+	assertListContainsID(t, deliveriesPath, both, seedDeliveryOneID)
+	assertListContainsID(t, deliveriesPath, both, seedDeliveryTwoID)
 }
 
 func TestDeliveries_ItemFilterMatchesDeliveredLines(t *testing.T) {

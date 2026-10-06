@@ -18,6 +18,8 @@ type ListShipmentLinesRequest struct {
 }
 
 // Returns a paginated list of lines for the specified shipment.
+//
+// A customer or supplier portal lists only the lines of a shipment on an order its own account placed; any other shipment is reported as not found.
 type ListShipmentLinesEndpoint struct{}
 
 func (e *ListShipmentLinesEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListShipmentLinesRequest, *apiresource.List[apiresource.ShipmentLine]] {

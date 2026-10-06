@@ -103,3 +103,35 @@ func TestPortalRecordScope_CustomerRecordsArePortalsOwn(t *testing.T) {
 	assert.Equal(t, SeedSupplierAccountID, jsonField(parseJSON(requireStatusAs(t, http.StatusOK, "supplier portal", supplier, suppliersPath+"/"+SeedSupplierAccountID, nil)), "id"),
 		"the supplier still reads its own supplier record")
 }
+
+// --- Shipments ---
+
+func TestPortalRecordScope_AnotherBuyersShipmentIsNotFound(t *testing.T) {
+	t.Parallel()
+	other := newOtherBuyer(t)
+
+	requireStatusAs(t, http.StatusOK, "staff", apiClient, shipmentsPath+"/"+other.shipmentID+"/lines", nil)
+	for who, portal := range portalClients(t) {
+		for _, path := range []string{
+			shipmentsPath + "/" + other.shipmentID,
+			shipmentsPath + "/" + other.shipmentID + "/lines",
+			shipmentsPath + "/" + other.shipmentID + "/lines/" + other.lineID,
+		} {
+			requireStatusAs(t, http.StatusNotFound, who, portal, path, nil)
+		}
+	}
+}
+
+func TestPortalRecordScope_CustomerReadsItsOwnShipmentAndLines(t *testing.T) {
+	t.Parallel()
+	_, _, shipmentID := packedOrder(t, orderBodyForQuantity(t, "1"))
+	portal := getCustomerPortalClient()
+
+	shipment := parseJSON(requireStatusAs(t, http.StatusOK, "customer portal", portal, shipmentsPath+"/"+shipmentID, url.Values{"include": {"customer"}}))
+	assert.Equal(t, SeedCustomerAccountID, jsonField(jsonObject(shipment, "customer"), "id"))
+	lines := jsonArray(parseJSON(requireStatusAs(t, http.StatusOK, "customer portal", portal, shipmentsPath+"/"+shipmentID+"/lines", nil)), "data")
+	require.NotEmpty(t, lines, "the customer lists its own shipment's lines")
+	requireStatusAs(t, http.StatusOK, "customer portal", portal, shipmentsPath+"/"+shipmentID+"/lines/"+jsonField(lines[0].(map[string]any), "id"), nil)
+
+	requireStatusAs(t, http.StatusNotFound, "supplier portal", getSupplierPortalClient(t), shipmentsPath+"/"+shipmentID, nil)
+}

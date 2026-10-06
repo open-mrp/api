@@ -133,3 +133,67 @@ func TestPortalNarrowing_CustomerRecordIsThePortalsOwn(t *testing.T) {
 		require.Nil(t, apiErr, name)
 	}
 }
+
+func (h *inclHarness) shipments() (domain.ShipmentSvc, domain.ShipmentLineSvc, *repositorymock.MockShipmentRepo, *repositorymock.MockShipmentLineRepo) {
+	shipmentRepo := repositorymock.NewMockShipmentRepo(h.ctrl)
+	lineRepo := repositorymock.NewMockShipmentLineRepo(h.ctrl)
+	h.repos.EXPECT().NewShipmentRepo().Return(shipmentRepo).AnyTimes()
+	h.repos.EXPECT().NewShipmentLineRepo().Return(lineRepo).AnyTimes()
+	shipments := NewShipmentSvc(&ShipmentSvcConfig{Repos: h.repos, MediatorFactory: h.meds, TxManager: &stubTxManager{factory: h.repos}, DispatchLeases: newMemLeases()})
+	lines := NewShipmentLineSvc(&ShipmentLineSvcConfig{Repos: h.repos, MediatorFactory: h.meds, TxManager: &stubTxManager{factory: h.repos}})
+	return shipments, lines, shipmentRepo, lineRepo
+}
+
+func TestPortalNarrowing_AnotherBuyersShipmentIsNotFound(t *testing.T) {
+	t.Parallel()
+
+	for name, portal := range portalCases() {
+		h := newInclHarness(t)
+		h.allowCounterpartyReads()
+		shipments, lines, shipmentRepo, _ := h.shipments()
+		shipmentRepo.EXPECT().Get(gomock.Any(), gomock.Any()).Return(&domain.Shipment{ID: "shp_other", CustomerID: inclOtherID}, nil).AnyTimes()
+
+		_, apiErr := shipments.GetShipment(portal.ctx(false), domain.GetShipmentParams{ShipmentID: "shp_other"})
+		requireNotFound(t, apiErr, name+": the shipment")
+
+		_, apiErr = lines.ListShipmentLines(portal.ctx(false), domain.ListShipmentLinesParams{ShipmentID: "shp_other", Limit: 10})
+		requireNotFound(t, apiErr, name+": its lines")
+
+		_, apiErr = lines.GetShipmentLine(portal.ctx(false), inclSellerID, "shp_other", "shln_1")
+		requireNotFound(t, apiErr, name+": one of its lines")
+	}
+}
+
+func TestPortalNarrowing_ThePortalsOwnShipmentLinesAreRead(t *testing.T) {
+	t.Parallel()
+
+	for name, portal := range portalCases() {
+		h := newInclHarness(t)
+		h.allowCounterpartyReads()
+		_, lines, shipmentRepo, lineRepo := h.shipments()
+		shipmentRepo.EXPECT().Get(gomock.Any(), domain.GetShipmentParams{AccountID: inclSellerID, ShipmentID: "shp_own"}).Return(&domain.Shipment{ID: "shp_own", CustomerID: portal.own}, nil)
+		lineRepo.EXPECT().List(gomock.Any(), gomock.Any()).Return(&domain.ListShipmentLinesResult{}, nil)
+
+		_, apiErr := lines.ListShipmentLines(portal.ctx(false), domain.ListShipmentLinesParams{ShipmentID: "shp_own", Limit: 10})
+		require.Nil(t, apiErr, name)
+	}
+}
+
+// Lines an authorized request includes, and the seller's staff, only need the shipment to be in the account.
+func TestPortalNarrowing_IncludedAndStaffShipmentLinesNeedOnlyTheAccount(t *testing.T) {
+	t.Parallel()
+
+	for name, ctx := range map[string]context.Context{
+		"customer portal include": inclPortal(true),
+		"staff":                   inclStaff(false, "shipments:read"),
+	} {
+		h := newInclHarness(t)
+		h.allowCounterpartyReads()
+		_, lines, shipmentRepo, lineRepo := h.shipments()
+		shipmentRepo.EXPECT().IsInAccount(gomock.Any(), inclSellerID, "shp_other").Return(true, nil)
+		lineRepo.EXPECT().List(gomock.Any(), gomock.Any()).Return(&domain.ListShipmentLinesResult{}, nil)
+
+		_, apiErr := lines.ListShipmentLines(ctx, domain.ListShipmentLinesParams{ShipmentID: "shp_other", Limit: 10})
+		require.Nil(t, apiErr, name)
+	}
+}

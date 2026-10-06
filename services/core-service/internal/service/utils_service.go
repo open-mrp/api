@@ -283,7 +283,12 @@ func (s *utilsSvcImpl) emailRecordStarted(ctx context.Context, span trace.Span, 
 }
 
 func (s *utilsSvcImpl) emailInvoice(ctx context.Context, span trace.Span, invoiceID, accountID string, meds domain.Mediators, idempotencyKey *domain.IdempotencyKey) *apierror.APIError {
-	recipients, apiErr := s.repos.NewInvoiceRepo().GetEmailRecipients(ctx, invoiceID)
+	// Read first: an invoice outside the account has no recipients either, and must 404 rather than succeed.
+	if _, apiErr := s.repos.NewInvoiceRepo().Get(ctx, domain.GetInvoiceParams{AccountID: accountID, InvoiceID: invoiceID}); apiErr != nil {
+		return meds.Idempotency.CacheErrorResponse(ctx, idempotencyKey.TypeID, tracing.Trace(span, apiErr))
+	}
+
+	recipients, apiErr := s.repos.NewInvoiceRepo().GetEmailRecipients(ctx, accountID, invoiceID)
 	if apiErr != nil {
 		return meds.Idempotency.CacheErrorResponse(ctx, idempotencyKey.TypeID, tracing.Trace(span, apiErr))
 	}

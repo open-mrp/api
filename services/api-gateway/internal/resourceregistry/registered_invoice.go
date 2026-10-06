@@ -36,20 +36,9 @@ func init() {
 				ExtractIDs:  extractShipmentIDFromInvoice,
 				Populate:    populateShipmentOnInvoice,
 			},
-			{
-				Key:         "billing_address",
-				Target:      constants.ObjectTypeAddress,
-				Cardinality: resourcekit.CardinalityOnePtr,
-				ExtractIDs:  extractBillingAddressIDFromInvoice,
-				Populate:    populateBillingAddressOnInvoice,
-			},
-			{
-				Key:         "payment_term",
-				Target:      constants.ObjectTypePaymentTerm,
-				Cardinality: resourcekit.CardinalityOnePtr,
-				ExtractIDs:  extractPaymentTermIDFromInvoice,
-				Populate:    populatePaymentTermOnInvoice,
-			},
+			// Read in full with the invoice, so they need no loader (and none of its permissions).
+			{Key: "billing_address", Populate: populateBillingAddressOnInvoice},
+			{Key: "payment_term", Populate: populatePaymentTermOnInvoice},
 			{
 				Key:         "related.sales_order",
 				Target:      constants.ObjectTypeSalesOrder,
@@ -145,6 +134,7 @@ func init() {
 				ExtractIDs:  extractParentAccountIDFromInvoiceForPayment,
 				Populate:    populateParentAccountOnInvoiceForPayment,
 			},
+			{Key: "billing_address", Populate: populateBillingAddressOnInvoiceForPayment},
 			{Key: "allocations", Target: constants.ObjectTypeInvoiceAllocation, ExtractRefs: extractAllocationRefsFromInvoiceForPayment, Populate: populateAllocationsOnInvoiceForPayment},
 		},
 	})
@@ -210,42 +200,16 @@ func populateShipmentOnInvoice(ctx context.Context, parent any, loaded map[strin
 	}
 }
 
-func extractBillingAddressIDFromInvoice(ctx context.Context, parent any) []string {
+func populateBillingAddressOnInvoice(ctx context.Context, parent any, _ map[string]any) {
 	inv := parent.(*apiresource.Invoice)
-	id, _ := resourcekit.GetLoadMeta(ctx).GetString(constants.ObjectTypeInvoice, inv.ID, "billing_address_id")
-	if id == "" {
-		return nil
-	}
-	return []string{id}
-}
-
-func populateBillingAddressOnInvoice(ctx context.Context, parent any, loaded map[string]any) {
-	inv := parent.(*apiresource.Invoice)
-	id, _ := resourcekit.GetLoadMeta(ctx).GetString(constants.ObjectTypeInvoice, inv.ID, "billing_address_id")
-	if id == "" {
-		return
-	}
-	if v, ok := loaded[id]; ok {
+	if v, ok := resourcekit.GetLoadMeta(ctx).Get(constants.ObjectTypeInvoice, inv.ID, "billing_address"); ok {
 		inv.BillingAddress = v.(*apiresource.Address)
 	}
 }
 
-func extractPaymentTermIDFromInvoice(ctx context.Context, parent any) []string {
+func populatePaymentTermOnInvoice(ctx context.Context, parent any, _ map[string]any) {
 	inv := parent.(*apiresource.Invoice)
-	id, _ := resourcekit.GetLoadMeta(ctx).GetString(constants.ObjectTypeInvoice, inv.ID, "payment_term_id")
-	if id == "" {
-		return nil
-	}
-	return []string{id}
-}
-
-func populatePaymentTermOnInvoice(ctx context.Context, parent any, loaded map[string]any) {
-	inv := parent.(*apiresource.Invoice)
-	id, _ := resourcekit.GetLoadMeta(ctx).GetString(constants.ObjectTypeInvoice, inv.ID, "payment_term_id")
-	if id == "" {
-		return
-	}
-	if v, ok := loaded[id]; ok {
+	if v, ok := resourcekit.GetLoadMeta(ctx).Get(constants.ObjectTypeInvoice, inv.ID, "payment_term"); ok {
 		inv.PaymentTerm = v.(*apiresource.PaymentTerm)
 	}
 }
@@ -424,6 +388,13 @@ func populateParentAccountOnInvoiceForPayment(ctx context.Context, parent any, l
 	}
 	if v, ok := loaded[id]; ok {
 		inv.ParentAccount = v.(*apiresource.Account)
+	}
+}
+
+func populateBillingAddressOnInvoiceForPayment(ctx context.Context, parent any, _ map[string]any) {
+	inv := parent.(*apiresource.InvoiceForPayment)
+	if v, ok := resourcekit.GetLoadMeta(ctx).Get(constants.ObjectTypeInvoiceForPayment, inv.ID, "billing_address"); ok {
+		inv.BillingAddress = v.(*apiresource.Address)
 	}
 }
 

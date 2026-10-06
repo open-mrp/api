@@ -11,6 +11,7 @@ import "core/core_consumption.proto";
 import "core/core_invoices.proto";
 import "core/core_patch.proto";
 import "core/core_async.proto";
+import "core/core_analytics.proto";
 
 option go_package = "shared/proto/core;core";
 
@@ -487,4 +488,7 @@ message InvoiceInfo {
   optional string payment_term_name = 34;
   optional bool payment_term_is_active = 35;
   string total_invoiced = 36;
+  // In full, so a caller that may read the invoice renders them without address or payment-term permissions.
+  AddressInfo billing_address = 37;
+  PaymentTermInfo payment_term = 38;
 }

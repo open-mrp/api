@@ -16,6 +16,7 @@ SELECT
     t.id,
     t.number,
     t.created_at,
+    t.funds_received_at,
     tq.value AS original_amount,
     ROUND(
         tq.value - COALESCE((
@@ -30,7 +31,9 @@ JOIN quantity tq ON tq.id = t.amount_id
 WHERE t.account_id = ?
 AND t.customer_account_id = ?
 AND t.is_fully_allocated = false
-ORDER BY t.created_at DESC
+AND t.funds_received_at IS NOT NULL
+HAVING leftover_amount > 0
+ORDER BY t.funds_received_at DESC, t.id DESC
 `
 
 type GetOpenCreditsByCustomerParams struct {
@@ -39,13 +42,15 @@ type GetOpenCreditsByCustomerParams struct {
 }
 
 type GetOpenCreditsByCustomerRow struct {
-	ID             string
-	Number         string
-	CreatedAt      time.Time
-	OriginalAmount string
-	LeftoverAmount float64
+	ID              string
+	Number          string
+	CreatedAt       time.Time
+	FundsReceivedAt sql.NullTime
+	OriginalAmount  string
+	LeftoverAmount  float64
 }
 
+// A credit counts once its funds are received, as the dashboard's statement of account counted it.
 func (q *Queries) GetOpenCreditsByCustomer(ctx context.Context, arg GetOpenCreditsByCustomerParams) ([]GetOpenCreditsByCustomerRow, error) {
 	rows, err := q.db.QueryContext(ctx, getOpenCreditsByCustomer, arg.AccountID, arg.CustomerAccountID)
 	if err != nil {
@@ -59,6 +64,7 @@ func (q *Queries) GetOpenCreditsByCustomer(ctx context.Context, arg GetOpenCredi
 			&i.ID,
 			&i.Number,
 			&i.CreatedAt,
+			&i.FundsReceivedAt,
 			&i.OriginalAmount,
 			&i.LeftoverAmount,
 		); err != nil {

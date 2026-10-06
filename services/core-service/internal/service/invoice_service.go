@@ -83,22 +83,8 @@ func (s *invoiceSvcImpl) ListInvoices(ctx context.Context, params domain.ListInv
 		return nil, tracing.Trace(span, apierror.NewInvariantViolationError("Identity not found in context."))
 	}
 
-	if apiErr := identity.CheckIsAssignedActor(); apiErr != nil {
+	if apiErr := checkInvoiceAccess(identity, types.ActionRead); apiErr != nil {
 		return nil, tracing.Trace(span, apiErr)
-	}
-	if apiErr := checkInvoiceReadPermission(identity); apiErr != nil {
-		return nil, tracing.Trace(span, apiErr)
-	}
-
-	if !identity.IsTargetAccountSet() {
-		return nil, tracing.Trace(span, apierror.NewAuthenticationError("The OpenMRP-Account-ID header is required."))
-	}
-
-	if identity.IsExternalTarget() {
-		meds := s.mediators()
-		if apiErr := meds.ReadAccess.CheckReadAccess(ctx, *identity.ActorAccountID(), identity.Target.AccountID); apiErr != nil {
-			return nil, tracing.Trace(span, apiErr)
-		}
 	}
 
 	params.AccountID = identity.Target.AccountID
@@ -135,22 +121,8 @@ func (s *invoiceSvcImpl) GetInvoice(ctx context.Context, params domain.GetInvoic
 		return nil, tracing.Trace(span, apierror.NewInvariantViolationError("Identity not found in context."))
 	}
 
-	if apiErr := identity.CheckIsAssignedActor(); apiErr != nil {
+	if apiErr := checkInvoiceAccess(identity, types.ActionRead); apiErr != nil {
 		return nil, tracing.Trace(span, apiErr)
-	}
-	if apiErr := checkInvoiceReadPermission(identity); apiErr != nil {
-		return nil, tracing.Trace(span, apiErr)
-	}
-
-	if !identity.IsTargetAccountSet() {
-		return nil, tracing.Trace(span, apierror.NewAuthenticationError("The OpenMRP-Account-ID header is required."))
-	}
-
-	if identity.IsExternalTarget() {
-		meds := s.mediators()
-		if apiErr := meds.ReadAccess.CheckReadAccess(ctx, *identity.ActorAccountID(), identity.Target.AccountID); apiErr != nil {
-			return nil, tracing.Trace(span, apiErr)
-		}
 	}
 
 	params.AccountID = identity.Target.AccountID
@@ -192,22 +164,8 @@ func (s *invoiceSvcImpl) UpdateInvoice(ctx context.Context, params domain.Update
 		return nil, tracing.Trace(span, apierror.NewInvariantViolationError("Identity not found in context."))
 	}
 
-	if apiErr := identity.CheckIsAssignedActor(); apiErr != nil {
+	if apiErr := checkInvoiceAccess(identity, types.ActionUpdate); apiErr != nil {
 		return nil, tracing.Trace(span, apiErr)
-	}
-	if apiErr := checkInvoiceWritePermission(identity, types.ActionUpdate); apiErr != nil {
-		return nil, tracing.Trace(span, apiErr)
-	}
-
-	if !identity.IsTargetAccountSet() {
-		return nil, tracing.Trace(span, apierror.NewAuthenticationError("The OpenMRP-Account-ID header is required."))
-	}
-
-	if identity.IsExternalTarget() {
-		meds := s.mediators()
-		if apiErr := meds.EditAccess.CheckEditAccess(ctx, *identity.ActorAccountID(), identity.Target.AccountID); apiErr != nil {
-			return nil, tracing.Trace(span, apiErr)
-		}
 	}
 
 	params.AccountID = identity.Target.AccountID
@@ -302,22 +260,8 @@ func (s *invoiceSvcImpl) ListCustomerInvoices(ctx context.Context, params domain
 		return nil, tracing.Trace(span, apierror.NewInvariantViolationError("Identity not found in context."))
 	}
 
-	if apiErr := identity.CheckIsAssignedActor(); apiErr != nil {
+	if apiErr := checkInvoiceAccess(identity, types.ActionRead); apiErr != nil {
 		return nil, tracing.Trace(span, apiErr)
-	}
-	if apiErr := checkInvoiceReadPermission(identity); apiErr != nil {
-		return nil, tracing.Trace(span, apiErr)
-	}
-
-	if !identity.IsTargetAccountSet() {
-		return nil, tracing.Trace(span, apierror.NewAuthenticationError("The OpenMRP-Account-ID header is required."))
-	}
-
-	if identity.IsExternalTarget() {
-		meds := s.mediators()
-		if apiErr := meds.ReadAccess.CheckReadAccess(ctx, *identity.ActorAccountID(), identity.Target.AccountID); apiErr != nil {
-			return nil, tracing.Trace(span, apiErr)
-		}
 	}
 
 	params.AccountID = identity.Target.AccountID
@@ -349,32 +293,10 @@ func (s *invoiceSvcImpl) ListCustomerInvoices(ctx context.Context, params domain
 	return result, nil
 }
 
-// checkInvoiceReadPermission checks the appropriate read permission based on the identity context.
-// Internal actors need invoices:read for their own account, or customers:read / suppliers:read for external accounts.
-func checkInvoiceReadPermission(identity *types.Identity) *apierror.APIError {
-	if !identity.IsInternalActor() {
-		return nil
-	}
-	if identity.IsTargetCustomerAccount() {
-		return identity.CheckHasPermission(types.PermissionDomainCustomers, types.ActionRead)
-	}
-	if identity.IsTargetSupplierAccount() {
-		return identity.CheckHasPermission(types.PermissionDomainSuppliers, types.ActionRead)
-	}
-	return identity.CheckHasPermission(types.PermissionDomainInvoices, types.ActionRead)
-}
-
-// checkInvoiceWritePermission checks the appropriate write permission based on the identity context.
-// Internal actors need invoices:{action} for their own account, or customers:update / suppliers:update for external accounts.
-func checkInvoiceWritePermission(identity *types.Identity, action types.Action) *apierror.APIError {
-	if !identity.IsInternalActor() {
-		return nil
-	}
-	if identity.IsTargetCustomerAccount() {
-		return identity.CheckHasPermission(types.PermissionDomainCustomers, types.ActionUpdate)
-	}
-	if identity.IsTargetSupplierAccount() {
-		return identity.CheckHasPermission(types.PermissionDomainSuppliers, types.ActionUpdate)
+// checkInvoiceAccess admits only the seller's own users: an invoice is its ledger, not its customers' or suppliers'.
+func checkInvoiceAccess(identity *types.Identity, action types.Action) *apierror.APIError {
+	if apiErr := identity.CheckIsInternalActor(); apiErr != nil {
+		return apiErr
 	}
 	return identity.CheckHasPermission(types.PermissionDomainInvoices, action)
 }

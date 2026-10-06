@@ -189,7 +189,21 @@ SELECT
         SELECT 1 FROM order_email_contact oec
         WHERE oec.sales_order_id = so.id
         AND oec.notification_type_code = 'invoice'
-    ) THEN true ELSE false END AS accepts_invoice_emails
+    ) THEN true ELSE false END AS accepts_invoice_emails,
+    addr.phone AS billing_address_phone,
+    addr.email AS billing_address_email,
+    addr.is_drop_ship AS billing_address_is_drop_ship,
+    addr.receive_calendar_id AS billing_address_receive_calendar_id,
+    addr.created_at AS billing_address_created_at,
+    addr.updated_at AS billing_address_updated_at,
+    geo.id AS billing_address_geolocation_id,
+    geo.google_place_id AS billing_address_google_place_id,
+    geo.latitude AS billing_address_latitude,
+    geo.longitude AS billing_address_longitude,
+    geo.timezone AS billing_address_timezone,
+    pt.account_id AS payment_term_account_id,
+    pt.created_at AS payment_term_created_at,
+    pt.updated_at AS payment_term_updated_at
 FROM invoice inv
 JOIN sales_order so ON inv.sales_order_id = so.id
 JOIN account_relation ar ON ar.owner_account_id = inv.account_id
@@ -210,40 +224,54 @@ type GetInvoiceParams struct {
 }
 
 type GetInvoiceRow struct {
-	ID                       string
-	Number                   string
-	Note                     sql.NullString
-	IsPaidInFull             bool
-	IsOverPaid               bool
-	IsEdiSent                bool
-	HasBeenSent              bool
-	CreatedAt                time.Time
-	UpdatedAt                time.Time
-	OrderID                  string
-	OrderNumber              string
-	PriorityCode             string
-	CustomerID               string
-	CustomerName             string
-	CustomerNumber           string
-	CustomerStatusCode       sql.NullString
-	CustomerCommissionPolicy sql.NullString
-	CustomerIsEdiEnabled     bool
-	ShipmentID               sql.NullString
-	ShipmentNumber           sql.NullString
-	BillingAddressID         string
-	BillingAddressName       string
-	BillingAddressLine1      sql.NullString
-	BillingAddressLine2      sql.NullString
-	BillingAddressCity       sql.NullString
-	BillingAddressState      sql.NullString
-	BillingAddressZip        sql.NullString
-	BillingAddressCountry    string
-	PaymentTermID            sql.NullString
-	PaymentTermName          sql.NullString
-	PaymentTermIsActive      sql.NullBool
-	LineCount                int64
-	TotalInvoiced            interface{}
-	AcceptsInvoiceEmails     int32
+	ID                              string
+	Number                          string
+	Note                            sql.NullString
+	IsPaidInFull                    bool
+	IsOverPaid                      bool
+	IsEdiSent                       bool
+	HasBeenSent                     bool
+	CreatedAt                       time.Time
+	UpdatedAt                       time.Time
+	OrderID                         string
+	OrderNumber                     string
+	PriorityCode                    string
+	CustomerID                      string
+	CustomerName                    string
+	CustomerNumber                  string
+	CustomerStatusCode              sql.NullString
+	CustomerCommissionPolicy        sql.NullString
+	CustomerIsEdiEnabled            bool
+	ShipmentID                      sql.NullString
+	ShipmentNumber                  sql.NullString
+	BillingAddressID                string
+	BillingAddressName              string
+	BillingAddressLine1             sql.NullString
+	BillingAddressLine2             sql.NullString
+	BillingAddressCity              sql.NullString
+	BillingAddressState             sql.NullString
+	BillingAddressZip               sql.NullString
+	BillingAddressCountry           string
+	PaymentTermID                   sql.NullString
+	PaymentTermName                 sql.NullString
+	PaymentTermIsActive             sql.NullBool
+	LineCount                       int64
+	TotalInvoiced                   interface{}
+	AcceptsInvoiceEmails            int32
+	BillingAddressPhone             sql.NullString
+	BillingAddressEmail             sql.NullString
+	BillingAddressIsDropShip        bool
+	BillingAddressReceiveCalendarID sql.NullString
+	BillingAddressCreatedAt         time.Time
+	BillingAddressUpdatedAt         time.Time
+	BillingAddressGeolocationID     string
+	BillingAddressGooglePlaceID     sql.NullString
+	BillingAddressLatitude          sql.NullFloat64
+	BillingAddressLongitude         sql.NullFloat64
+	BillingAddressTimezone          sql.NullString
+	PaymentTermAccountID            sql.NullString
+	PaymentTermCreatedAt            sql.NullTime
+	PaymentTermUpdatedAt            sql.NullTime
 }
 
 // Selects the same projection, in the same order, as ListInvoicesByIDs so one Go mapper serves
@@ -286,6 +314,20 @@ func (q *Queries) GetInvoice(ctx context.Context, arg GetInvoiceParams) (GetInvo
 		&i.LineCount,
 		&i.TotalInvoiced,
 		&i.AcceptsInvoiceEmails,
+		&i.BillingAddressPhone,
+		&i.BillingAddressEmail,
+		&i.BillingAddressIsDropShip,
+		&i.BillingAddressReceiveCalendarID,
+		&i.BillingAddressCreatedAt,
+		&i.BillingAddressUpdatedAt,
+		&i.BillingAddressGeolocationID,
+		&i.BillingAddressGooglePlaceID,
+		&i.BillingAddressLatitude,
+		&i.BillingAddressLongitude,
+		&i.BillingAddressTimezone,
+		&i.PaymentTermAccountID,
+		&i.PaymentTermCreatedAt,
+		&i.PaymentTermUpdatedAt,
 	)
 	return i, err
 }
@@ -300,10 +342,13 @@ SELECT
     q.id AS amount_id,
     q.value AS amount_value,
     u.id AS amount_unit_id,
-    u.abbreviation AS amount_unit_abbreviation
+    u.abbreviation AS amount_unit_abbreviation,
+    s.id AS settlement_id,
+    s.number AS settlement_number
 FROM transaction_allocation ta
 JOIN quantity q ON q.id = ta.amount_id
 JOIN unit u ON u.id = q.unit_id
+LEFT JOIN settlement s ON s.id = ta.settlement_id
 WHERE ta.invoice_id = ?
 ORDER BY ta.created_at ASC, ta.id ASC
 `
@@ -318,6 +363,8 @@ type GetInvoiceAllocationsRow struct {
 	AmountValue            string
 	AmountUnitID           string
 	AmountUnitAbbreviation string
+	SettlementID           sql.NullString
+	SettlementNumber       sql.NullString
 }
 
 func (q *Queries) GetInvoiceAllocations(ctx context.Context, invoiceID string) ([]GetInvoiceAllocationsRow, error) {
@@ -339,6 +386,8 @@ func (q *Queries) GetInvoiceAllocations(ctx context.Context, invoiceID string) (
 			&i.AmountValue,
 			&i.AmountUnitID,
 			&i.AmountUnitAbbreviation,
+			&i.SettlementID,
+			&i.SettlementNumber,
 		); err != nil {
 			return nil, err
 		}
@@ -364,10 +413,13 @@ SELECT
     q.id AS amount_id,
     q.value AS amount_value,
     u.id AS amount_unit_id,
-    u.abbreviation AS amount_unit_abbreviation
+    u.abbreviation AS amount_unit_abbreviation,
+    s.id AS settlement_id,
+    s.number AS settlement_number
 FROM transaction_allocation ta
 JOIN quantity q ON q.id = ta.amount_id
 JOIN unit u ON u.id = q.unit_id
+LEFT JOIN settlement s ON s.id = ta.settlement_id
 WHERE ta.invoice_id IN (/*SLICE:invoice_ids*/?)
 ORDER BY ta.created_at ASC, ta.id ASC
 `
@@ -383,6 +435,8 @@ type GetInvoiceAllocationsForInvoicesRow struct {
 	AmountValue            string
 	AmountUnitID           string
 	AmountUnitAbbreviation string
+	SettlementID           sql.NullString
+	SettlementNumber       sql.NullString
 }
 
 func (q *Queries) GetInvoiceAllocationsForInvoices(ctx context.Context, invoiceIds []string) ([]GetInvoiceAllocationsForInvoicesRow, error) {
@@ -415,6 +469,8 @@ func (q *Queries) GetInvoiceAllocationsForInvoices(ctx context.Context, invoiceI
 			&i.AmountValue,
 			&i.AmountUnitID,
 			&i.AmountUnitAbbreviation,
+			&i.SettlementID,
+			&i.SettlementNumber,
 		); err != nil {
 			return nil, err
 		}
@@ -435,12 +491,18 @@ JOIN invoice inv ON inv.sales_order_id = oec.sales_order_id
 JOIN account_user au ON au.id = oec.account_user_id
 JOIN user u ON u.id = au.user_id
 WHERE inv.id = ?
+AND inv.account_id = ?
 AND oec.notification_type_code = 'invoice'
 AND u.email IS NOT NULL
 `
 
-func (q *Queries) GetInvoiceEmailRecipients(ctx context.Context, invoiceID string) ([]sql.NullString, error) {
-	rows, err := q.db.QueryContext(ctx, getInvoiceEmailRecipients, invoiceID)
+type GetInvoiceEmailRecipientsParams struct {
+	InvoiceID string
+	AccountID string
+}
+
+func (q *Queries) GetInvoiceEmailRecipients(ctx context.Context, arg GetInvoiceEmailRecipientsParams) ([]sql.NullString, error) {
+	rows, err := q.db.QueryContext(ctx, getInvoiceEmailRecipients, arg.InvoiceID, arg.AccountID)
 	if err != nil {
 		return nil, err
 	}
@@ -755,6 +817,23 @@ SELECT
     ar.payment_term_id AS customer_payment_term_id,
     addr.id AS billing_address_id,
     addr.name AS billing_address_name,
+    addr.phone AS billing_address_phone,
+    addr.email AS billing_address_email,
+    addr.is_drop_ship AS billing_address_is_drop_ship,
+    addr.receive_calendar_id AS billing_address_receive_calendar_id,
+    addr.created_at AS billing_address_created_at,
+    addr.updated_at AS billing_address_updated_at,
+    geo.id AS billing_address_geolocation_id,
+    geo.street_line_1 AS billing_address_line1,
+    geo.street_line_2 AS billing_address_line2,
+    geo.locality AS billing_address_city,
+    geo.state AS billing_address_state,
+    geo.postal_code AS billing_address_zip,
+    geo.country AS billing_address_country,
+    geo.google_place_id AS billing_address_google_place_id,
+    geo.latitude AS billing_address_latitude,
+    geo.longitude AS billing_address_longitude,
+    geo.timezone AS billing_address_timezone,
     COALESCE((
         -- Correlated per invoice: a grouped derived table cannot take the account filter and so aggregates every invoice_line in the database to return one page.
         -- Each line priced as the dashboard's multiplyRate does and rounded to the cent, as its
@@ -776,6 +855,7 @@ JOIN account_relation ar ON ar.owner_account_id = inv.account_id
 JOIN account buyer ON buyer.id = so.buyer_account_id
 LEFT JOIN account_relation par ON par.id = ar.parent_account_relation_id
 LEFT JOIN address addr ON addr.id = so.billing_address_id
+LEFT JOIN geolocation geo ON geo.id = addr.geolocation_id
 WHERE inv.id IN (/*SLICE:invoice_ids*/?)
 AND inv.account_id = ?
 `
@@ -786,23 +866,40 @@ type ListCustomerInvoicesByIDsParams struct {
 }
 
 type ListCustomerInvoicesByIDsRow struct {
-	ID                       string
-	Number                   string
-	IsPaidInFull             bool
-	CreatedAt                time.Time
-	UpdatedAt                time.Time
-	CustomerPoNumber         sql.NullString
-	CustomerID               string
-	CustomerName             string
-	CustomerNumber           string
-	CustomerStatusCode       sql.NullString
-	CustomerCommissionPolicy sql.NullString
-	ParentAccountRelationID  sql.NullString
-	ParentAccountID          sql.NullString
-	CustomerPaymentTermID    sql.NullString
-	BillingAddressID         sql.NullString
-	BillingAddressName       sql.NullString
-	TotalInvoiced            interface{}
+	ID                              string
+	Number                          string
+	IsPaidInFull                    bool
+	CreatedAt                       time.Time
+	UpdatedAt                       time.Time
+	CustomerPoNumber                sql.NullString
+	CustomerID                      string
+	CustomerName                    string
+	CustomerNumber                  string
+	CustomerStatusCode              sql.NullString
+	CustomerCommissionPolicy        sql.NullString
+	ParentAccountRelationID         sql.NullString
+	ParentAccountID                 sql.NullString
+	CustomerPaymentTermID           sql.NullString
+	BillingAddressID                sql.NullString
+	BillingAddressName              sql.NullString
+	BillingAddressPhone             sql.NullString
+	BillingAddressEmail             sql.NullString
+	BillingAddressIsDropShip        sql.NullBool
+	BillingAddressReceiveCalendarID sql.NullString
+	BillingAddressCreatedAt         sql.NullTime
+	BillingAddressUpdatedAt         sql.NullTime
+	BillingAddressGeolocationID     sql.NullString
+	BillingAddressLine1             sql.NullString
+	BillingAddressLine2             sql.NullString
+	BillingAddressCity              sql.NullString
+	BillingAddressState             sql.NullString
+	BillingAddressZip               sql.NullString
+	BillingAddressCountry           sql.NullString
+	BillingAddressGooglePlaceID     sql.NullString
+	BillingAddressLatitude          sql.NullFloat64
+	BillingAddressLongitude         sql.NullFloat64
+	BillingAddressTimezone          sql.NullString
+	TotalInvoiced                   interface{}
 }
 
 // Hydrates a page of a customer's payable invoices chosen by InvoiceRepo.ListByCustomer.
@@ -843,6 +940,23 @@ func (q *Queries) ListCustomerInvoicesByIDs(ctx context.Context, arg ListCustome
 			&i.CustomerPaymentTermID,
 			&i.BillingAddressID,
 			&i.BillingAddressName,
+			&i.BillingAddressPhone,
+			&i.BillingAddressEmail,
+			&i.BillingAddressIsDropShip,
+			&i.BillingAddressReceiveCalendarID,
+			&i.BillingAddressCreatedAt,
+			&i.BillingAddressUpdatedAt,
+			&i.BillingAddressGeolocationID,
+			&i.BillingAddressLine1,
+			&i.BillingAddressLine2,
+			&i.BillingAddressCity,
+			&i.BillingAddressState,
+			&i.BillingAddressZip,
+			&i.BillingAddressCountry,
+			&i.BillingAddressGooglePlaceID,
+			&i.BillingAddressLatitude,
+			&i.BillingAddressLongitude,
+			&i.BillingAddressTimezone,
 			&i.TotalInvoiced,
 		); err != nil {
 			return nil, err
@@ -908,7 +1022,21 @@ SELECT
         SELECT 1 FROM order_email_contact oec
         WHERE oec.sales_order_id = so.id
         AND oec.notification_type_code = 'invoice'
-    ) THEN true ELSE false END AS accepts_invoice_emails
+    ) THEN true ELSE false END AS accepts_invoice_emails,
+    addr.phone AS billing_address_phone,
+    addr.email AS billing_address_email,
+    addr.is_drop_ship AS billing_address_is_drop_ship,
+    addr.receive_calendar_id AS billing_address_receive_calendar_id,
+    addr.created_at AS billing_address_created_at,
+    addr.updated_at AS billing_address_updated_at,
+    geo.id AS billing_address_geolocation_id,
+    geo.google_place_id AS billing_address_google_place_id,
+    geo.latitude AS billing_address_latitude,
+    geo.longitude AS billing_address_longitude,
+    geo.timezone AS billing_address_timezone,
+    pt.account_id AS payment_term_account_id,
+    pt.created_at AS payment_term_created_at,
+    pt.updated_at AS payment_term_updated_at
 FROM invoice inv
 JOIN sales_order so ON inv.sales_order_id = so.id
 JOIN account_relation ar ON ar.owner_account_id = inv.account_id
@@ -929,40 +1057,54 @@ type ListInvoicesByIDsParams struct {
 }
 
 type ListInvoicesByIDsRow struct {
-	ID                       string
-	Number                   string
-	Note                     sql.NullString
-	IsPaidInFull             bool
-	IsOverPaid               bool
-	IsEdiSent                bool
-	HasBeenSent              bool
-	CreatedAt                time.Time
-	UpdatedAt                time.Time
-	OrderID                  string
-	OrderNumber              string
-	PriorityCode             string
-	CustomerID               string
-	CustomerName             string
-	CustomerNumber           string
-	CustomerStatusCode       sql.NullString
-	CustomerCommissionPolicy sql.NullString
-	CustomerIsEdiEnabled     bool
-	ShipmentID               sql.NullString
-	ShipmentNumber           sql.NullString
-	BillingAddressID         string
-	BillingAddressName       string
-	BillingAddressLine1      sql.NullString
-	BillingAddressLine2      sql.NullString
-	BillingAddressCity       sql.NullString
-	BillingAddressState      sql.NullString
-	BillingAddressZip        sql.NullString
-	BillingAddressCountry    string
-	PaymentTermID            sql.NullString
-	PaymentTermName          sql.NullString
-	PaymentTermIsActive      sql.NullBool
-	LineCount                int64
-	TotalInvoiced            interface{}
-	AcceptsInvoiceEmails     int32
+	ID                              string
+	Number                          string
+	Note                            sql.NullString
+	IsPaidInFull                    bool
+	IsOverPaid                      bool
+	IsEdiSent                       bool
+	HasBeenSent                     bool
+	CreatedAt                       time.Time
+	UpdatedAt                       time.Time
+	OrderID                         string
+	OrderNumber                     string
+	PriorityCode                    string
+	CustomerID                      string
+	CustomerName                    string
+	CustomerNumber                  string
+	CustomerStatusCode              sql.NullString
+	CustomerCommissionPolicy        sql.NullString
+	CustomerIsEdiEnabled            bool
+	ShipmentID                      sql.NullString
+	ShipmentNumber                  sql.NullString
+	BillingAddressID                string
+	BillingAddressName              string
+	BillingAddressLine1             sql.NullString
+	BillingAddressLine2             sql.NullString
+	BillingAddressCity              sql.NullString
+	BillingAddressState             sql.NullString
+	BillingAddressZip               sql.NullString
+	BillingAddressCountry           string
+	PaymentTermID                   sql.NullString
+	PaymentTermName                 sql.NullString
+	PaymentTermIsActive             sql.NullBool
+	LineCount                       int64
+	TotalInvoiced                   interface{}
+	AcceptsInvoiceEmails            int32
+	BillingAddressPhone             sql.NullString
+	BillingAddressEmail             sql.NullString
+	BillingAddressIsDropShip        bool
+	BillingAddressReceiveCalendarID sql.NullString
+	BillingAddressCreatedAt         time.Time
+	BillingAddressUpdatedAt         time.Time
+	BillingAddressGeolocationID     string
+	BillingAddressGooglePlaceID     sql.NullString
+	BillingAddressLatitude          sql.NullFloat64
+	BillingAddressLongitude         sql.NullFloat64
+	BillingAddressTimezone          sql.NullString
+	PaymentTermAccountID            sql.NullString
+	PaymentTermCreatedAt            sql.NullTime
+	PaymentTermUpdatedAt            sql.NullTime
 }
 
 // Hydrates a page of the invoice list chosen by InvoiceRepo.List. The projection is GetInvoice's, in
@@ -1022,6 +1164,20 @@ func (q *Queries) ListInvoicesByIDs(ctx context.Context, arg ListInvoicesByIDsPa
 			&i.LineCount,
 			&i.TotalInvoiced,
 			&i.AcceptsInvoiceEmails,
+			&i.BillingAddressPhone,
+			&i.BillingAddressEmail,
+			&i.BillingAddressIsDropShip,
+			&i.BillingAddressReceiveCalendarID,
+			&i.BillingAddressCreatedAt,
+			&i.BillingAddressUpdatedAt,
+			&i.BillingAddressGeolocationID,
+			&i.BillingAddressGooglePlaceID,
+			&i.BillingAddressLatitude,
+			&i.BillingAddressLongitude,
+			&i.BillingAddressTimezone,
+			&i.PaymentTermAccountID,
+			&i.PaymentTermCreatedAt,
+			&i.PaymentTermUpdatedAt,
 		); err != nil {
 			return nil, err
 		}

@@ -16609,18 +16609,18 @@ func (mr *MockInvoiceRepoMockRecorder) GetAllocationsForInvoices(ctx, invoiceIDs
 }
 
 // GetEmailRecipients mocks base method.
-func (m *MockInvoiceRepo) GetEmailRecipients(ctx context.Context, invoiceID string) ([]string, *apierror.APIError) {
+func (m *MockInvoiceRepo) GetEmailRecipients(ctx context.Context, accountID, invoiceID string) ([]string, *apierror.APIError) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetEmailRecipients", ctx, invoiceID)
+	ret := m.ctrl.Call(m, "GetEmailRecipients", ctx, accountID, invoiceID)
 	ret0, _ := ret[0].([]string)
 	ret1, _ := ret[1].(*apierror.APIError)
 	return ret0, ret1
 }
 
 // GetEmailRecipients indicates an expected call of GetEmailRecipients.
-func (mr *MockInvoiceRepoMockRecorder) GetEmailRecipients(ctx, invoiceID any) *gomock.Call {
+func (mr *MockInvoiceRepoMockRecorder) GetEmailRecipients(ctx, accountID, invoiceID any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetEmailRecipients", reflect.TypeOf((*MockInvoiceRepo)(nil).GetEmailRecipients), ctx, invoiceID)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetEmailRecipients", reflect.TypeOf((*MockInvoiceRepo)(nil).GetEmailRecipients), ctx, accountID, invoiceID)
 }
 
 // GetLines mocks base method.

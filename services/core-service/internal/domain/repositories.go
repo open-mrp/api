@@ -1584,7 +1584,7 @@ type InvoiceRepo interface {
 	Update(ctx context.Context, params UpdateInvoiceParams) (*Invoice, *apierror.APIError)
 	ListByCustomer(ctx context.Context, params ListCustomerInvoicesParams) (*ListCustomerInvoicesResult, *apierror.APIError)
 	IsDuplicateNumber(ctx context.Context, accountID, number string) (bool, *apierror.APIError)
-	GetEmailRecipients(ctx context.Context, invoiceID string) ([]string, *apierror.APIError)
+	GetEmailRecipients(ctx context.Context, accountID, invoiceID string) ([]string, *apierror.APIError)
 	MarkEmailSent(ctx context.Context, accountID, invoiceID string) *apierror.APIError
 	DeleteLinesByInvoice(ctx context.Context, invoiceID string) *apierror.APIError
 	Delete(ctx context.Context, accountID, invoiceID string) *apierror.APIError

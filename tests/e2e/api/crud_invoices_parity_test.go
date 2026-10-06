@@ -78,7 +78,8 @@ func TestInvoices_SearchMissesReturnEmpty(t *testing.T) {
 	assert.Empty(t, ids)
 }
 
-// `unpaid` keys off the paid-in-full flag alone, so partially paid and overpaid invoices stay in.
+// `unpaid` keys off the paid-in-full flag alone: partially paid invoices stay in, and overpaid ones,
+// which are paid in full, drop out.
 func TestInvoices_UnpaidStatusKeysOffPaidInFullOnly(t *testing.T) {
 	t.Parallel()
 

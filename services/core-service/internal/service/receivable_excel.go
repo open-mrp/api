@@ -9,6 +9,7 @@ import (
 	"github.com/xuri/excelize/v2"
 
 	"github.com/open-mrp/api/services/core-service/internal/domain"
+	"github.com/open-mrp/api/shared/textutil"
 )
 
 const (
@@ -101,7 +102,7 @@ func GenerateStatementOfAccount(receivables []domain.ReceivableEntry, openCredit
 		totalOver120 += over120
 		totalAll += balance
 
-		if err := writeStatementRow(f, row, entry.InvoiceNumber, poNumber, entry.InvoicedAt, current, over30, over60, over90, over120, balance); err != nil {
+		if err := writeStatementRow(f, row, textutil.FormatRecordNumber(entry.InvoiceNumber), poNumber, entry.InvoicedAt, current, over30, over60, over90, over120, balance); err != nil {
 			return nil, fmt.Errorf("write invoice row: %w", err)
 		}
 		row++
@@ -109,7 +110,8 @@ func GenerateStatementOfAccount(receivables []domain.ReceivableEntry, openCredit
 
 	// Write open credit rows.
 	for _, credit := range openCredits {
-		daysDiff := int(now.Sub(credit.CreatedAt).Hours() / 24)
+		agedFrom := credit.AgedFrom()
+		daysDiff := int(now.Sub(agedFrom).Hours() / 24)
 
 		leftover, err := strconv.ParseFloat(credit.LeftoverAmount, 64)
 		if err != nil {
@@ -126,13 +128,13 @@ func GenerateStatementOfAccount(receivables []domain.ReceivableEntry, openCredit
 		totalOver120 += over120
 		totalAll += negated
 
-		numberLabel := credit.Number
+		numberLabel := textutil.FormatRecordNumber(credit.Number)
 		if numberLabel == "" {
 			numberLabel = "N/A"
 		}
 		invoiceLabel := fmt.Sprintf("Credit: %s", numberLabel)
 
-		if err := writeStatementRow(f, row, invoiceLabel, "", credit.CreatedAt, current, over30, over60, over90, over120, negated); err != nil {
+		if err := writeStatementRow(f, row, invoiceLabel, "", agedFrom, current, over30, over60, over90, over120, negated); err != nil {
 			return nil, fmt.Errorf("write credit row: %w", err)
 		}
 		row++

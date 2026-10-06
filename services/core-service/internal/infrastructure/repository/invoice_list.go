@@ -110,8 +110,9 @@ func (r *invoiceRepoImpl) listInvoicePage(ctx context.Context, params domain.Lis
 	search := buildInvoiceSearchParams(params.Query)
 	if search.Valid {
 		// Reaches the order and relation joined one-to-one, so the search widens without fanning rows out.
-		f.add("(inv.number LIKE ? OR inv.note LIKE ? OR buyer.name LIKE ? OR so.number LIKE ? OR so.customer_po_number LIKE ? OR ar.external_number LIKE ?)",
-			search.String, search.String, search.String, search.String, search.String, search.String)
+		f.add("(inv.number LIKE ? OR inv.note LIKE ? OR buyer.name LIKE ? OR so.number LIKE ? OR so.customer_po_number LIKE ?"+
+			" OR ar.external_number LIKE ? OR ar.alias LIKE ? OR ar.notes LIKE ?)",
+			search.String, search.String, search.String, search.String, search.String, search.String, search.String, search.String)
 	}
 	var status string
 	if params.Status != nil && *params.Status != "" && *params.Status != "all" {
@@ -120,7 +121,7 @@ func (r *invoiceRepoImpl) listInvoicePage(ctx context.Context, params domain.Lis
 		case "paid":
 			f.add("inv.is_paid_in_full = true")
 		case "unpaid":
-			// Overpaid invoices stay in the unpaid bucket: a negative balance is not cleanly settled either.
+			// An overpaid invoice is also paid in full, so it lists under paid, not here.
 			f.add("inv.is_paid_in_full = false")
 		case "overpaid":
 			f.add("inv.is_over_paid = true")
@@ -183,11 +184,11 @@ func (r *invoiceRepoImpl) listCustomerInvoicePage(ctx context.Context, params do
 	}
 	f := &listFilter{}
 	f.add("inv.account_id = ?", params.AccountID)
-	// Overpaid invoices still owe a correction, so they stay in the payable set.
+	// An overpaid invoice is also paid in full, so it owes nothing and is left out.
 	f.add("inv.is_paid_in_full = false")
 	f.in("so.buyer_account_id", buyers)
 	if search := buildInvoiceSearchParams(params.Query); search.Valid {
-		f.add("inv.number LIKE ?", search.String)
+		f.add("(inv.number LIKE ? OR so.number LIKE ? OR so.customer_po_number LIKE ?)", search.String, search.String, search.String)
 	}
 	page := &invoicePage{f: f, joins: invoicePageJoins, joined: []string{"so", "ar", "buyer"}}
 	page.drive("SELECT so2.id FROM sales_order so2 WHERE so2.buyer_account_id IN ("+placeholders(len(buyers))+")", stringArgs(buyers)...)

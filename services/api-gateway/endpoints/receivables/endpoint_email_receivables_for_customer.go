@@ -31,7 +31,9 @@ func (*EmailReceivablesForCustomerRequest) SchemaExample() any {
 
 // Emails a statement of account for a specific customer to the provided recipients.
 //
-// The email carries an Excel attachment listing the customer's outstanding receivables and its open credits, which are transactions such as payments and credit memos that still have an unapplied balance. The statement always reflects current balances; there is no cutoff date. Delivery is asynchronous: the endpoint returns `202 Accepted` once the email is queued.
+// The email carries an Excel attachment listing the customer's outstanding receivables and its open credits, which are transactions such as payments and credit memos whose funds have been received and that still have an unapplied balance; each credit is aged from the day its funds arrived. The statement always reflects current balances; there is no cutoff date. Delivery is asynchronous: the endpoint returns `202 Accepted` once the email is queued.
+//
+// Returns `404` when the account is not one of your customers.
 type EmailReceivablesForCustomerEndpoint struct{}
 
 func (e *EmailReceivablesForCustomerEndpoint) Materialize() *apiendpoint.APIEndpoint[*EmailReceivablesForCustomerRequest, *apiresource.EmptyResource] {

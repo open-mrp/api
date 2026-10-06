@@ -28,16 +28,14 @@ type ListSalesOrdersRequest struct {
 	//
 	// These are account user IDs, matching the `sales_rep` on the order.
 	SalesRepIDs []string `query:"sales_rep_ids"`
-	// Earliest order creation date to include, in `YYYY-MM-DD` format.
-	StartDate *string `query:"starts_at"`
-	// Latest order creation date to include, in `YYYY-MM-DD` format.
-	//
-	// Compared against the creation timestamp at the start of that day, so orders created later on the end date itself are excluded; pass the following day to include them.
-	EndDate *string `query:"ends_at"`
+	// Only include orders created on or after this date (`YYYY-MM-DD`, UTC). A full timestamp (RFC 3339) is also accepted, to bound the range at a local midnight.
+	StartDate *string `query:"starts_at" validate:"omitempty,date_filter"`
+	// Only include orders created at or before the start of this date (`YYYY-MM-DD`, UTC), so orders created later on the end date itself are excluded; pass the following day to include them. A full timestamp (RFC 3339) is also accepted and used as given.
+	EndDate *string `query:"ends_at" validate:"omitempty,date_filter"`
 	// Earliest ship-by date to include, in `YYYY-MM-DD` format. Inclusive of the date itself.
-	ShipByAfter *string `query:"ship_by_after"`
+	ShipByAfter *string `query:"ship_by_after" validate:"omitempty,date_filter"`
 	// Latest ship-by date to include, in `YYYY-MM-DD` format. Inclusive of the date itself.
-	ShipByBefore *string `query:"ship_by_before"`
+	ShipByBefore *string `query:"ship_by_before" validate:"omitempty,date_filter"`
 	// Restricts results to orders that are, or are not, past their ship-by date.
 	//
 	// An order is past due when it is still `issued` and its ship-by date has passed. A fulfilled order that shipped late is not past due — it is delivered, and how late it was is a delivery-performance question rather than a backlog one.

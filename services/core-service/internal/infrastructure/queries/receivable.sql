@@ -239,10 +239,12 @@ ORDER BY inv.created_at ASC, inv.id ASC
 LIMIT ?;
 
 -- name: GetOpenCreditsByCustomer :many
+-- A credit counts once its funds are received, as the dashboard's statement of account counted it.
 SELECT
     t.id,
     t.number,
     t.created_at,
+    t.funds_received_at,
     tq.value AS original_amount,
     ROUND(
         tq.value - COALESCE((
@@ -257,4 +259,6 @@ JOIN quantity tq ON tq.id = t.amount_id
 WHERE t.account_id = sqlc.arg('account_id')
 AND t.customer_account_id = sqlc.arg('customer_account_id')
 AND t.is_fully_allocated = false
-ORDER BY t.created_at DESC;
+AND t.funds_received_at IS NOT NULL
+HAVING leftover_amount > 0
+ORDER BY t.funds_received_at DESC, t.id DESC;

@@ -195,8 +195,12 @@ func invoiceToProto(inv *domain.Invoice) *pb.InvoiceInfo {
 		TotalInvoiced:            inv.TotalInvoiced,
 		CustomerStatusCode:       inv.CustomerStatusCode,
 		CustomerCommissionPolicy: inv.CustomerCommissionPolicy,
+		BillingAddress:           addressToProto(inv.BillingAddress),
 		CreatedAt:                timestamppb.New(inv.CreatedAt),
 		UpdatedAt:                timestamppb.New(inv.UpdatedAt),
+	}
+	if inv.PaymentTerm != nil {
+		info.PaymentTerm = paymentTermToProto(inv.PaymentTerm)
 	}
 
 	return info
@@ -221,6 +225,8 @@ func invoiceLineToProto(l *domain.InvoiceLine) *pb.InvoiceLineInfo {
 		OrderLineItemId:            l.OrderLineItemID,
 		OrderLineItemSku:           l.OrderLineItemSKU,
 		OrderLineProductId:         l.OrderLineProductID,
+		OrderLineItemNumber:        l.OrderLineItemNumber,
+		OrderLineDescription:       l.OrderLineDescription,
 		CreatedAt:                  timestamppb.New(l.CreatedAt),
 		UpdatedAt:                  timestamppb.New(l.UpdatedAt),
 	}
@@ -241,6 +247,8 @@ func invoiceAllocationToProto(a *domain.InvoiceAllocation) *pb.InvoiceAllocation
 		AmountUnitId:           a.AmountUnitID,
 		AmountUnitAbbreviation: a.AmountUnitAbbr,
 		Note:                   a.Note,
+		SettlementId:           a.SettlementID,
+		SettlementNumber:       a.SettlementNumber,
 		CreatedAt:              timestamppb.New(a.CreatedAt),
 		UpdatedAt:              timestamppb.New(a.UpdatedAt),
 	}
@@ -268,6 +276,7 @@ func invoiceForPaymentToProto(inv *domain.InvoiceForPayment) *pb.InvoiceForPayme
 		IsPrepaid:          inv.IsPrepaid,
 		BillingAddressId:   inv.BillingAddressID,
 		BillingAddressName: inv.BillingAddressName,
+		BillingAddress:     addressToProto(inv.BillingAddress),
 		InvoiceTotal:       inv.InvoiceTotal,
 		IsPaidInFull:       inv.IsPaidInFull,
 		Allocations:        allocations,

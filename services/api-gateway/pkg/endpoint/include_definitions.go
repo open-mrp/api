@@ -428,6 +428,7 @@ func init() {
 		Fields: []IncludeFieldDef{
 			{Key: "customer", ObjectType: constants.ObjectTypeCustomer},
 			{Key: "parent_account", ObjectType: constants.ObjectTypeAccount},
+			{Key: "billing_address", ObjectType: constants.ObjectTypeAddress},
 			{Key: "allocations", ObjectType: constants.ObjectTypeInvoiceAllocation},
 		},
 	})

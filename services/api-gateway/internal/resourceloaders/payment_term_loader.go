@@ -31,7 +31,7 @@ func LoadPaymentTerms(ctx context.Context, ids []string) (map[string]any, *apier
 	meta := resourcekit.GetLoadMeta(ctx)
 	out := make(map[string]any, len(resp.PaymentTerms))
 	for _, pt := range resp.PaymentTerms {
-		out[pt.Id] = paymentTermFromProto(pt)
+		out[pt.Id] = PaymentTermFromProto(pt)
 		var accountID string
 		if pt.AccountId != nil {
 			accountID = *pt.AccountId
@@ -41,7 +41,8 @@ func LoadPaymentTerms(ctx context.Context, ids []string) (map[string]any, *apier
 	return out, nil
 }
 
-func paymentTermFromProto(pt *pb.PaymentTermInfo) *apiresource.PaymentTerm {
+// PaymentTermFromProto builds a payment term with its owner left unexpanded.
+func PaymentTermFromProto(pt *pb.PaymentTermInfo) *apiresource.PaymentTerm {
 	return &apiresource.PaymentTerm{
 		ID:        pt.Id,
 		Object:    constants.ObjectTypePaymentTerm,

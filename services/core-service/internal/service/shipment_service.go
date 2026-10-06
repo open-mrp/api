@@ -1918,7 +1918,7 @@ func (s *shipmentSvcImpl) buildInvoiceDocument(txCtx context.Context, accountID,
 // Emails the customer the invoice and flags it sent. Gated on email_customer by the caller.
 func (s *shipmentSvcImpl) emailCustomerInvoiceOnShip(txCtx context.Context, shipment *domain.Shipment, invoiceID string, doc invoiceDoc, attachment *string) *apierror.APIError {
 	accountID := shipment.AccountID
-	recipients, apiErr := s.repos.NewInvoiceRepo().GetEmailRecipients(txCtx, invoiceID)
+	recipients, apiErr := s.repos.NewInvoiceRepo().GetEmailRecipients(txCtx, accountID, invoiceID)
 	if apiErr != nil {
 		return apiErr
 	}

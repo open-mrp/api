@@ -4923,8 +4923,11 @@ type InvoiceInfo struct {
 	PaymentTermName          *string                  `protobuf:"bytes,34,opt,name=payment_term_name,json=paymentTermName,proto3,oneof" json:"payment_term_name,omitempty"`
 	PaymentTermIsActive      *bool                    `protobuf:"varint,35,opt,name=payment_term_is_active,json=paymentTermIsActive,proto3,oneof" json:"payment_term_is_active,omitempty"`
 	TotalInvoiced            string                   `protobuf:"bytes,36,opt,name=total_invoiced,json=totalInvoiced,proto3" json:"total_invoiced,omitempty"`
-	unknownFields            protoimpl.UnknownFields
-	sizeCache                protoimpl.SizeCache
+	// In full, so a caller that may read the invoice renders them without address or payment-term permissions.
+	BillingAddress *AddressInfo     `protobuf:"bytes,37,opt,name=billing_address,json=billingAddress,proto3" json:"billing_address,omitempty"`
+	PaymentTerm    *PaymentTermInfo `protobuf:"bytes,38,opt,name=payment_term,json=paymentTerm,proto3" json:"payment_term,omitempty"`
+	unknownFields  protoimpl.UnknownFields
+	sizeCache      protoimpl.SizeCache
 }
 
 func (x *InvoiceInfo) Reset() {
@@ -5209,11 +5212,25 @@ func (x *InvoiceInfo) GetTotalInvoiced() string {
 	return ""
 }
 
+func (x *InvoiceInfo) GetBillingAddress() *AddressInfo {
+	if x != nil {
+		return x.BillingAddress
+	}
+	return nil
+}
+
+func (x *InvoiceInfo) GetPaymentTerm() *PaymentTermInfo {
+	if x != nil {
+		return x.PaymentTerm
+	}
+	return nil
+}
+
 var File_core_core_users_territories_proto protoreflect.FileDescriptor
 
 const file_core_core_users_territories_proto_rawDesc = "" +
 	"\n" +
-	"!core/core_users_territories.proto\x12\x04core\x1a\x1fgoogle/protobuf/timestamp.proto\x1a!core/core_fuzzy_identifiers.proto\x1a core/core_identity_context.proto\x1a\x15core/core_items.proto\x1a\x1bcore/core_consumption.proto\x1a\x18core/core_invoices.proto\x1a\x15core/core_patch.proto\x1a\x15core/core_async.proto\"\xa6\x03\n" +
+	"!core/core_users_territories.proto\x12\x04core\x1a\x1fgoogle/protobuf/timestamp.proto\x1a!core/core_fuzzy_identifiers.proto\x1a core/core_identity_context.proto\x1a\x15core/core_items.proto\x1a\x1bcore/core_consumption.proto\x1a\x18core/core_invoices.proto\x1a\x15core/core_patch.proto\x1a\x15core/core_async.proto\x1a\x19core/core_analytics.proto\"\xa6\x03\n" +
 	"\x16GetCurrentUserResponse\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x17\n" +
 	"\x04name\x18\x02 \x01(\tH\x00R\x04name\x88\x01\x01\x12\x19\n" +
@@ -5709,7 +5726,7 @@ const file_core_core_users_territories_proto_rawDesc = "" +
 	"\x06_query\"\x84\x01\n" +
 	"\x1cListCustomerInvoicesResponse\x127\n" +
 	"\binvoices\x18\x01 \x03(\v2\x1b.core.InvoiceForPaymentInfoR\binvoices\x12+\n" +
-	"\tpage_info\x18\x02 \x01(\v2\x0e.core.PageInfoR\bpageInfo\"\x9e\x0f\n" +
+	"\tpage_info\x18\x02 \x01(\v2\x0e.core.PageInfoR\bpageInfo\"\x94\x10\n" +
 	"\vInvoiceInfo\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x16\n" +
 	"\x06number\x18\x02 \x01(\tR\x06number\x12\x17\n" +
@@ -5754,7 +5771,9 @@ const file_core_core_users_territories_proto_rawDesc = "" +
 	"\rpriority_code\x18! \x01(\tR\fpriorityCode\x12/\n" +
 	"\x11payment_term_name\x18\" \x01(\tH\fR\x0fpaymentTermName\x88\x01\x01\x128\n" +
 	"\x16payment_term_is_active\x18# \x01(\bH\rR\x13paymentTermIsActive\x88\x01\x01\x12%\n" +
-	"\x0etotal_invoiced\x18$ \x01(\tR\rtotalInvoicedB\a\n" +
+	"\x0etotal_invoiced\x18$ \x01(\tR\rtotalInvoiced\x12:\n" +
+	"\x0fbilling_address\x18% \x01(\v2\x11.core.AddressInfoR\x0ebillingAddress\x128\n" +
+	"\fpayment_term\x18& \x01(\v2\x15.core.PaymentTermInfoR\vpaymentTermB\a\n" +
 	"\x05_noteB\x17\n" +
 	"\x15_billing_address_nameB\x18\n" +
 	"\x16_billing_address_line1B\x18\n" +
@@ -5869,6 +5888,8 @@ var file_core_core_users_territories_proto_goTypes = []any{
 	(*InvoiceForPaymentInfo)(nil),               // 82: core.InvoiceForPaymentInfo
 	(*InvoiceLineInfo)(nil),                     // 83: core.InvoiceLineInfo
 	(*InvoiceAllocationInfo)(nil),               // 84: core.InvoiceAllocationInfo
+	(*AddressInfo)(nil),                         // 85: core.AddressInfo
+	(*PaymentTermInfo)(nil),                     // 86: core.PaymentTermInfo
 }
 var file_core_core_users_territories_proto_depIdxs = []int32{
 	75, // 0: core.GetCurrentUserResponse.email_verified_at:type_name -> google.protobuf.Timestamp
@@ -5956,11 +5977,13 @@ var file_core_core_users_territories_proto_depIdxs = []int32{
 	84, // 82: core.InvoiceInfo.allocations:type_name -> core.InvoiceAllocationInfo
 	75, // 83: core.InvoiceInfo.created_at:type_name -> google.protobuf.Timestamp
 	75, // 84: core.InvoiceInfo.updated_at:type_name -> google.protobuf.Timestamp
-	85, // [85:85] is the sub-list for method output_type
-	85, // [85:85] is the sub-list for method input_type
-	85, // [85:85] is the sub-list for extension type_name
-	85, // [85:85] is the sub-list for extension extendee
-	0,  // [0:85] is the sub-list for field type_name
+	85, // 85: core.InvoiceInfo.billing_address:type_name -> core.AddressInfo
+	86, // 86: core.InvoiceInfo.payment_term:type_name -> core.PaymentTermInfo
+	87, // [87:87] is the sub-list for method output_type
+	87, // [87:87] is the sub-list for method input_type
+	87, // [87:87] is the sub-list for extension type_name
+	87, // [87:87] is the sub-list for extension extendee
+	0,  // [0:87] is the sub-list for field type_name
 }
 
 func init() { file_core_core_users_territories_proto_init() }
@@ -5975,6 +5998,7 @@ func file_core_core_users_territories_proto_init() {
 	file_core_core_invoices_proto_init()
 	file_core_core_patch_proto_init()
 	file_core_core_async_proto_init()
+	file_core_core_analytics_proto_init()
 	file_core_core_users_territories_proto_msgTypes[0].OneofWrappers = []any{}
 	file_core_core_users_territories_proto_msgTypes[4].OneofWrappers = []any{}
 	file_core_core_users_territories_proto_msgTypes[5].OneofWrappers = []any{}

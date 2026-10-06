@@ -50,7 +50,21 @@ SELECT
         SELECT 1 FROM order_email_contact oec
         WHERE oec.sales_order_id = so.id
         AND oec.notification_type_code = 'invoice'
-    ) THEN true ELSE false END AS accepts_invoice_emails
+    ) THEN true ELSE false END AS accepts_invoice_emails,
+    addr.phone AS billing_address_phone,
+    addr.email AS billing_address_email,
+    addr.is_drop_ship AS billing_address_is_drop_ship,
+    addr.receive_calendar_id AS billing_address_receive_calendar_id,
+    addr.created_at AS billing_address_created_at,
+    addr.updated_at AS billing_address_updated_at,
+    geo.id AS billing_address_geolocation_id,
+    geo.google_place_id AS billing_address_google_place_id,
+    geo.latitude AS billing_address_latitude,
+    geo.longitude AS billing_address_longitude,
+    geo.timezone AS billing_address_timezone,
+    pt.account_id AS payment_term_account_id,
+    pt.created_at AS payment_term_created_at,
+    pt.updated_at AS payment_term_updated_at
 FROM invoice inv
 JOIN sales_order so ON inv.sales_order_id = so.id
 JOIN account_relation ar ON ar.owner_account_id = inv.account_id
@@ -116,7 +130,21 @@ SELECT
         SELECT 1 FROM order_email_contact oec
         WHERE oec.sales_order_id = so.id
         AND oec.notification_type_code = 'invoice'
-    ) THEN true ELSE false END AS accepts_invoice_emails
+    ) THEN true ELSE false END AS accepts_invoice_emails,
+    addr.phone AS billing_address_phone,
+    addr.email AS billing_address_email,
+    addr.is_drop_ship AS billing_address_is_drop_ship,
+    addr.receive_calendar_id AS billing_address_receive_calendar_id,
+    addr.created_at AS billing_address_created_at,
+    addr.updated_at AS billing_address_updated_at,
+    geo.id AS billing_address_geolocation_id,
+    geo.google_place_id AS billing_address_google_place_id,
+    geo.latitude AS billing_address_latitude,
+    geo.longitude AS billing_address_longitude,
+    geo.timezone AS billing_address_timezone,
+    pt.account_id AS payment_term_account_id,
+    pt.created_at AS payment_term_created_at,
+    pt.updated_at AS payment_term_updated_at
 FROM invoice inv
 JOIN sales_order so ON inv.sales_order_id = so.id
 JOIN account_relation ar ON ar.owner_account_id = inv.account_id
@@ -191,10 +219,13 @@ SELECT
     q.id AS amount_id,
     q.value AS amount_value,
     u.id AS amount_unit_id,
-    u.abbreviation AS amount_unit_abbreviation
+    u.abbreviation AS amount_unit_abbreviation,
+    s.id AS settlement_id,
+    s.number AS settlement_number
 FROM transaction_allocation ta
 JOIN quantity q ON q.id = ta.amount_id
 JOIN unit u ON u.id = q.unit_id
+LEFT JOIN settlement s ON s.id = ta.settlement_id
 WHERE ta.invoice_id IN (sqlc.slice('invoice_ids'))
 ORDER BY ta.created_at ASC, ta.id ASC;
 
@@ -208,10 +239,13 @@ SELECT
     q.id AS amount_id,
     q.value AS amount_value,
     u.id AS amount_unit_id,
-    u.abbreviation AS amount_unit_abbreviation
+    u.abbreviation AS amount_unit_abbreviation,
+    s.id AS settlement_id,
+    s.number AS settlement_number
 FROM transaction_allocation ta
 JOIN quantity q ON q.id = ta.amount_id
 JOIN unit u ON u.id = q.unit_id
+LEFT JOIN settlement s ON s.id = ta.settlement_id
 WHERE ta.invoice_id = sqlc.arg('invoice_id')
 ORDER BY ta.created_at ASC, ta.id ASC;
 
@@ -273,6 +307,23 @@ SELECT
     ar.payment_term_id AS customer_payment_term_id,
     addr.id AS billing_address_id,
     addr.name AS billing_address_name,
+    addr.phone AS billing_address_phone,
+    addr.email AS billing_address_email,
+    addr.is_drop_ship AS billing_address_is_drop_ship,
+    addr.receive_calendar_id AS billing_address_receive_calendar_id,
+    addr.created_at AS billing_address_created_at,
+    addr.updated_at AS billing_address_updated_at,
+    geo.id AS billing_address_geolocation_id,
+    geo.street_line_1 AS billing_address_line1,
+    geo.street_line_2 AS billing_address_line2,
+    geo.locality AS billing_address_city,
+    geo.state AS billing_address_state,
+    geo.postal_code AS billing_address_zip,
+    geo.country AS billing_address_country,
+    geo.google_place_id AS billing_address_google_place_id,
+    geo.latitude AS billing_address_latitude,
+    geo.longitude AS billing_address_longitude,
+    geo.timezone AS billing_address_timezone,
     COALESCE((
         -- Correlated per invoice: a grouped derived table cannot take the account filter and so aggregates every invoice_line in the database to return one page.
         -- Each line priced as the dashboard's multiplyRate does and rounded to the cent, as its
@@ -294,6 +345,7 @@ JOIN account_relation ar ON ar.owner_account_id = inv.account_id
 JOIN account buyer ON buyer.id = so.buyer_account_id
 LEFT JOIN account_relation par ON par.id = ar.parent_account_relation_id
 LEFT JOIN address addr ON addr.id = so.billing_address_id
+LEFT JOIN geolocation geo ON geo.id = addr.geolocation_id
 WHERE inv.id IN (sqlc.slice('invoice_ids'))
 AND inv.account_id = sqlc.arg('account_id');
 
@@ -308,6 +360,7 @@ JOIN invoice inv ON inv.sales_order_id = oec.sales_order_id
 JOIN account_user au ON au.id = oec.account_user_id
 JOIN user u ON u.id = au.user_id
 WHERE inv.id = sqlc.arg('invoice_id')
+AND inv.account_id = sqlc.arg('account_id')
 AND oec.notification_type_code = 'invoice'
 AND u.email IS NOT NULL;
 

@@ -44,13 +44,15 @@ func TestPicksList_SearchMatchesPickNumber(t *testing.T) {
 }
 
 // The FULLTEXT index holds no token with an "i" (stopwords), so "pic" and "tio" have none to search by;
-// they still match by substring, the pick number and the customer's name respectively.
+// they still match by substring, the pick number and the customer's name respectively. Both terms match
+// every pick the suite makes for the seed customer, so the seed pick is looked for on every page, not
+// just the newest hundred.
 func TestPicksList_SearchMatchesATermTheIndexHoldsNoTokenFor(t *testing.T) {
 	t.Parallel()
 
-	assert.Contains(t, pickIDsFiltered(t, url.Values{"q": {"pic"}, "limit": {"100"}}), seedClosedPickID,
+	assert.Contains(t, dashPicksAllIDs(t, apiClient, picksPath, url.Values{"q": {"pic"}}), seedClosedPickID,
 		`"pic" is a substring of PICK-002`)
-	assert.Contains(t, pickIDsFiltered(t, url.Values{"q": {"tio"}, "limit": {"100"}}), seedClosedPickID,
+	assert.Contains(t, dashPicksAllIDs(t, apiClient, picksPath, url.Values{"q": {"tio"}}), seedClosedPickID,
 		`"tio" is a substring of PICK-002's customer, Global Manufacturing Solutions`)
 }
 

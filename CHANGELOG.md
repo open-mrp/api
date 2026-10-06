@@ -1,5 +1,19 @@
 # Changelog
 
+## [2.20.2](https://github.com/open-mrp/api/compare/v2.20.1...v2.20.2) (2026-10-06)
+
+
+### Performance Improvements
+
+* keep background-job queries under 25ms ([#257](https://github.com/open-mrp/api/issues/257)) ([f9b80d0](https://github.com/open-mrp/api/commit/f9b80d0bf65dc6ca993ea43505380a1996092a9a))
+
+## [2.20.1](https://github.com/open-mrp/api/compare/v2.20.0...v2.20.1) (2026-10-06)
+
+
+### Bug Fixes
+
+* **costs:** add a command to restate sales lines left on an item's stale cost ([#253](https://github.com/open-mrp/api/issues/253)) ([7325938](https://github.com/open-mrp/api/commit/7325938e8f0eb7dc84c871da043fb94dd264b0a9))
+
 ## [2.20.0](https://github.com/open-mrp/api/compare/v2.19.1...v2.20.0) (2026-10-05)
 
 

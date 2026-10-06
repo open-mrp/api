@@ -61,7 +61,7 @@ func NewBurnRateMed(config *BurnRateMedConfig) domain.BurnRateMed {
 //  4. Divide the total by the days elapsed between the first and last log.
 //  5. Persist the resulting per-day rate to the item's burn rate.
 //
-// Every path marks the burn rate fresh (advances rate.updated_at). ListStaleBurnRateItems selects
+// Every path marks the burn rate fresh (advances rate.updated_at). ScanBurnRateItems flags
 // items by rate.updated_at, so an item whose recompute yields no new value must still be touched;
 // otherwise a genuinely idle item never leaves the stale set and the sweep re-enqueues it forever.
 func (m *burnRateMedImpl) RecalculateFromHistory(ctx context.Context, accountID, itemID string) *apierror.APIError {

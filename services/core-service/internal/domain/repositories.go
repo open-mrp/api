@@ -205,9 +205,9 @@ type ItemRepo interface {
 	// bulk upsert category validation.
 	GetCategoryBaseUnitIDs(ctx context.Context, categoryIDs []string) (map[string]CategoryRef, *apierror.APIError)
 	ListConsumptionChangeLogsForBurnRate(ctx context.Context, accountID, itemID string) ([]BurnRateConsumptionLog, *apierror.APIError)
-	// ListStaleBurnRateItems returns up to limit items whose burn rate has not been recomputed
-	// since staleBefore, stalest first, for the periodic sweeper to re-enqueue.
-	ListStaleBurnRateItems(ctx context.Context, staleBefore time.Time, limit int32) ([]StaleBurnRateItem, *apierror.APIError)
+	// ScanBurnRateItems reads the next limit items after afterID in id order, returning those whose burn
+	// rate has not been recomputed since staleBefore and the last id read ("" once past the last item).
+	ScanBurnRateItems(ctx context.Context, afterID string, staleBefore time.Time, limit int32) (stale []StaleBurnRateItem, lastID string, apiErr *apierror.APIError)
 	FetchItemsBySKU(ctx context.Context, accountID string, skus []string) ([]ItemSKUInfo, *apierror.APIError)
 	// FindBySKU returns the existing item's ID and its unit_value rate ID for the given SKU within the account. Returns (nil, nil, nil) when no match exists. Used by bulk upsert flows.
 	FindBySKU(ctx context.Context, accountID, sku string) (itemID *string, unitValueRateID *string, apiErr *apierror.APIError)
@@ -978,10 +978,8 @@ type SalesFactRepo interface {
 	GetSync(ctx context.Context) (*SalesFactSync, *apierror.APIError)
 	SaveSync(ctx context.Context, sync SalesFactSync) *apierror.APIError
 
-	// RebuildRollupDay recomputes the hour and day buckets of one account's UTC day from its facts.
+	// RebuildRollupDay brings the hour and day buckets of one account's UTC day, and the month buckets they sum into, in line with its facts.
 	RebuildRollupDay(ctx context.Context, day SalesRollupDay) *apierror.APIError
-	// RebuildRollupMonth recomputes one account's month buckets from its day buckets; month is the first of the month, midnight UTC.
-	RebuildRollupMonth(ctx context.Context, accountID string, month time.Time) *apierror.APIError
 	// NextRollupDay returns the first (account, UTC day) at or after from that holds facts or rollups, or nil when none is left.
 	NextRollupDay(ctx context.Context, from SalesRollupDay) (*SalesRollupDay, *apierror.APIError)
 	GetRollupSync(ctx context.Context) (*SalesRollupSync, *apierror.APIError)

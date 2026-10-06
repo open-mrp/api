@@ -277,17 +277,36 @@ func TestSalesAnalytics_BreakdownByEveryDimensionResponds(t *testing.T) {
 		body["group_by"] = groupBy
 		body["comparison_starts_at"] = rfc3339(time.Now().UTC().AddDate(-1, 0, 0))
 		body["comparison_ends_at"] = rfc3339(time.Now().UTC().AddDate(-1, 0, 1))
-		status, list, raw := putSales(t, salesBreakdownPath, nil, body)
-		requireStatus(t, 200, status, raw)
-		groups := jsonArray(list, "data")
 		if want, ok := keys[groupBy]; ok {
-			require.Len(t, groups, 1, "%s: %s", groupBy, string(raw))
+			groups := jsonArray(awaitSalesBreakdown(t, nil, body, 1), "data")
 			g := groups[0].(map[string]any)
 			assert.Equal(t, want, jsonField(g, "key"), groupBy)
 			assert.Equal(t, shippedSaleRevenue, computedValue(t, jsonObject(g, "totals"), "revenue"), groupBy)
 			assert.Equal(t, "0", computedValue(t, jsonObject(g, "comparison_totals"), "revenue"), groupBy)
+			continue
 		}
+		status, _, raw := putSales(t, salesBreakdownPath, nil, body)
+		requireStatus(t, 200, status, raw)
 	}
+}
+
+// awaitSalesBreakdown reads a sales breakdown until it holds want groups and returns that read. The
+// breakdown is read from its own source, which can trail the summary a test waited on under load.
+func awaitSalesBreakdown(t *testing.T, params url.Values, body map[string]any, want int) map[string]any {
+	t.Helper()
+	var list map[string]any
+	eventually(t, 45*time.Second, time.Second, func() error {
+		status, got, raw := putSales(t, salesBreakdownPath, params, body)
+		if status != 200 {
+			return fmt.Errorf("breakdown answered %d: %s", status, string(raw))
+		}
+		if n := len(jsonArray(got, "data")); n != want {
+			return fmt.Errorf("breakdown holds %d of %d groups", n, want)
+		}
+		list = got
+		return nil
+	})
+	return list
 }
 
 func TestSalesAnalytics_BreakdownPagesByCursor(t *testing.T) {
@@ -302,17 +321,7 @@ func TestSalesAnalytics_BreakdownPagesByCursor(t *testing.T) {
 	}
 	body := saleFilter(customers[0])
 	body["customer_ids"], body["group_by"] = customers, "customer"
-	// The breakdown is read from its own source, which can trail the summary under load, so wait for it to group all three before walking it.
-	eventually(t, 45*time.Second, time.Second, func() error {
-		status, list, raw := putSales(t, salesBreakdownPath, url.Values{"limit": {"100"}}, body)
-		if status != 200 {
-			return fmt.Errorf("breakdown answered %d: %s", status, string(raw))
-		}
-		if n := len(jsonArray(list, "data")); n != len(customers) {
-			return fmt.Errorf("breakdown groups %d of %d customers", n, len(customers))
-		}
-		return nil
-	})
+	awaitSalesBreakdown(t, url.Values{"limit": {"100"}}, body, len(customers))
 
 	type row struct {
 		key     string

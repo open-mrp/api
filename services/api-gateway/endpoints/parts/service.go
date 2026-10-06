@@ -182,7 +182,10 @@ func (m *partSvcImpl) UpdatePart(ctx context.Context, req *UpdatePartRequest) (*
 		return nil, apiErr
 	}
 
-	return loadPartByID(ctx, resp.Part.Id)
+	// The update answers with the part it saved, so a caller allowed to write it needs no read permission to see the result.
+	result := resourceloaders.PartFromProto(resp.Part)
+	resourceloaders.StashPartMeta(ctx, resp.Part)
+	return result, nil
 }
 
 func (m *partSvcImpl) DeletePart(ctx context.Context, req *DeletePartRequest) (*apiresource.Part, *apierror.APIError) {

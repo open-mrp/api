@@ -221,7 +221,10 @@ func (m *productSvcImpl) UpdateProduct(ctx context.Context, req *UpdateProductRe
 		return nil, apiErr
 	}
 
-	return loadProductByID(ctx, resp.Product.Id)
+	// The update answers with the product it saved, so a caller allowed to write it needs no read permission to see the result.
+	result := resourceloaders.ProductFromProto(resp.Product)
+	resourceloaders.StashProductMeta(ctx, resp.Product)
+	return result, nil
 }
 
 func (m *productSvcImpl) DeleteProduct(ctx context.Context, req *DeleteProductRequest) (*apiresource.Product, *apierror.APIError) {

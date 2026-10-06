@@ -8,6 +8,7 @@ package sqlc
 import (
 	"context"
 	"database/sql"
+	"strings"
 	"time"
 )
 
@@ -58,6 +59,34 @@ type DeleteSupplierMaterialParams struct {
 
 func (q *Queries) DeleteSupplierMaterial(ctx context.Context, arg DeleteSupplierMaterialParams) (sql.Result, error) {
 	return q.db.ExecContext(ctx, deleteSupplierMaterial, arg.ID, arg.OwnerAccountID)
+}
+
+const deleteSupplierMaterialsBySuppliers = `-- name: DeleteSupplierMaterialsBySuppliers :exec
+DELETE FROM supplier_material
+WHERE owner_account_id = ?
+  AND supplier_account_id IN (/*SLICE:supplier_account_ids*/?)
+`
+
+type DeleteSupplierMaterialsBySuppliersParams struct {
+	OwnerAccountID     string
+	SupplierAccountIds []string
+}
+
+// A deleted supplier's links go with it, so its id no longer reaches them.
+func (q *Queries) DeleteSupplierMaterialsBySuppliers(ctx context.Context, arg DeleteSupplierMaterialsBySuppliersParams) error {
+	query := deleteSupplierMaterialsBySuppliers
+	var queryParams []interface{}
+	queryParams = append(queryParams, arg.OwnerAccountID)
+	if len(arg.SupplierAccountIds) > 0 {
+		for _, v := range arg.SupplierAccountIds {
+			queryParams = append(queryParams, v)
+		}
+		query = strings.Replace(query, "/*SLICE:supplier_account_ids*/?", strings.Repeat(",?", len(arg.SupplierAccountIds))[1:], 1)
+	} else {
+		query = strings.Replace(query, "/*SLICE:supplier_account_ids*/?", "NULL", 1)
+	}
+	_, err := q.db.ExecContext(ctx, query, queryParams...)
+	return err
 }
 
 const existsSupplierMaterialByMaterialAndSupplier = `-- name: ExistsSupplierMaterialByMaterialAndSupplier :one

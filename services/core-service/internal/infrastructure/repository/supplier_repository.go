@@ -261,6 +261,14 @@ func (r *supplierRepoImpl) Delete(ctx context.Context, ownerAccountID, supplierA
 		return nil, tracing.Trace(span, apiErr)
 	}
 
+	err = r.queries.DeleteSupplierMaterialsBySuppliers(ctx, sqlc.DeleteSupplierMaterialsBySuppliersParams{
+		OwnerAccountID:     ownerAccountID,
+		SupplierAccountIds: []string{supplierAccountID},
+	})
+	if apiErr := db.MapSQLError(err); apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
+
 	err = r.queries.DeleteSupplierRelation(ctx, sqlc.DeleteSupplierRelationParams{
 		OwnerAccountID:        ownerAccountID,
 		CounterpartyAccountID: supplierAccountID,
@@ -282,6 +290,14 @@ func (r *supplierRepoImpl) BulkDelete(ctx context.Context, ownerAccountID string
 	}
 
 	err = r.queries.BulkDeleteSupplierAccountAddresses(ctx, supplierAccountIDs)
+	if apiErr := db.MapSQLError(err); apiErr != nil {
+		return tracing.Trace(span, apiErr)
+	}
+
+	err = r.queries.DeleteSupplierMaterialsBySuppliers(ctx, sqlc.DeleteSupplierMaterialsBySuppliersParams{
+		OwnerAccountID:     ownerAccountID,
+		SupplierAccountIds: supplierAccountIDs,
+	})
 	if apiErr := db.MapSQLError(err); apiErr != nil {
 		return tracing.Trace(span, apiErr)
 	}

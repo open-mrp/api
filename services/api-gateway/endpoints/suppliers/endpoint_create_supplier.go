@@ -10,6 +10,7 @@ import (
 	apiexample "github.com/open-mrp/api/services/api-gateway/pkg/example"
 	apirequest "github.com/open-mrp/api/services/api-gateway/pkg/request"
 	apiresource "github.com/open-mrp/api/services/api-gateway/pkg/resource"
+	"github.com/open-mrp/api/shared/constants"
 	apierror "github.com/open-mrp/api/shared/errors"
 	"github.com/open-mrp/api/shared/field"
 )
@@ -30,7 +31,7 @@ type CreateSupplierRequest struct {
 	BillToAddress field.Optional[apirequest.AddressInput] `json:"bill_to_address,omitzero"`
 	// Default shipping address to create for the supplier.
 	//
-	// If omitted and `bill_to_address` is provided, the billing address is also used as the default shipping address.
+	// If omitted and `bill_to_address` is provided, the billing address is also used as the default shipping address. If it is identical to `bill_to_address`, no second address is created and both defaults are the one billing address.
 	ShipToAddress field.Optional[apirequest.AddressInput] `json:"ship_to_address,omitzero"`
 }
 
@@ -59,7 +60,7 @@ func (*CreateSupplierRequest) SchemaExample() any {
 
 // Creates a supplier, optionally with inline bill-to and ship-to addresses.
 //
-// Returns a conflict error if another supplier in the account already uses the given number.
+// Returns a conflict error if another supplier in the account already uses the given number. The created addresses are returned when requested with `include`.
 type CreateSupplierEndpoint struct{}
 
 func (e *CreateSupplierEndpoint) Materialize() *apiendpoint.APIEndpoint[*CreateSupplierRequest, *apiresource.Supplier] {
@@ -71,6 +72,7 @@ func (e *CreateSupplierEndpoint) Materialize() *apiendpoint.APIEndpoint[*CreateS
 		SuccessStatusCode: http.StatusCreated,
 		Public:            false,
 		Preview:           true,
+		ObjectType:        constants.ObjectTypeSupplier,
 		RequiredPermissions: []types.Permission{
 			{Domain: types.PermissionDomainSuppliers, Action: types.ActionCreate},
 		},
@@ -80,5 +82,9 @@ func (e *CreateSupplierEndpoint) Materialize() *apiendpoint.APIEndpoint[*CreateS
 		LocationFunc: func(resp *apiresource.Supplier) string {
 			return "/v1/operations/suppliers/" + resp.ID
 		},
+		IncludeConfig: apiendpoint.IncludesFor(apiendpoint.IncludesParams{
+			ObjectType: constants.ObjectTypeSupplier,
+			Fields:     []string{"bill_to_address", "ship_to_address"},
+		}),
 	})
 }

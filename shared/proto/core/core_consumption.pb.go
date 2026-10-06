@@ -3774,6 +3774,8 @@ type SupplierSummaryProto struct {
 	// supplier's account, so the gateway cannot resolve them from the ids alone.
 	BillToAddress *CustomerAddressProto `protobuf:"bytes,10,opt,name=bill_to_address,json=billToAddress,proto3" json:"bill_to_address,omitempty"`
 	ShipToAddress *CustomerAddressProto `protobuf:"bytes,11,opt,name=ship_to_address,json=shipToAddress,proto3" json:"ship_to_address,omitempty"`
+	// Links to the owner's materials, not counting a material whose item was deleted.
+	MaterialCount int64 `protobuf:"varint,12,opt,name=material_count,json=materialCount,proto3" json:"material_count,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -3878,6 +3880,13 @@ func (x *SupplierSummaryProto) GetShipToAddress() *CustomerAddressProto {
 	return nil
 }
 
+func (x *SupplierSummaryProto) GetMaterialCount() int64 {
+	if x != nil {
+		return x.MaterialCount
+	}
+	return 0
+}
+
 type SupplierProto struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
@@ -3888,6 +3897,7 @@ type SupplierProto struct {
 	ShipToAddress *CustomerAddressProto  `protobuf:"bytes,6,opt,name=ship_to_address,json=shipToAddress,proto3,oneof" json:"ship_to_address,omitempty"`
 	CreatedAt     *timestamppb.Timestamp `protobuf:"bytes,8,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
 	UpdatedAt     *timestamppb.Timestamp `protobuf:"bytes,9,opt,name=updated_at,json=updatedAt,proto3" json:"updated_at,omitempty"`
+	MaterialCount int64                  `protobuf:"varint,10,opt,name=material_count,json=materialCount,proto3" json:"material_count,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -3976,6 +3986,13 @@ func (x *SupplierProto) GetUpdatedAt() *timestamppb.Timestamp {
 		return x.UpdatedAt
 	}
 	return nil
+}
+
+func (x *SupplierProto) GetMaterialCount() int64 {
+	if x != nil {
+		return x.MaterialCount
+	}
+	return 0
 }
 
 type CreateSupplierAddressInput struct {
@@ -6482,7 +6499,7 @@ const file_core_core_consumption_proto_rawDesc = "" +
 	"\x1aBulkUpsertLocationsRequest\x12;\n" +
 	"\tlocations\x18\x01 \x03(\v2\x1d.core.BulkUpsertLocationInputR\tlocations\">\n" +
 	"\x1bBulkUpsertLocationsResponse\x12\x1f\n" +
-	"\x03job\x18\x01 \x01(\v2\r.core.JobInfoR\x03job\"\x84\x04\n" +
+	"\x03job\x18\x01 \x01(\v2\r.core.JobInfoR\x03job\"\xab\x04\n" +
 	"\x14SupplierSummaryProto\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x12\n" +
 	"\x04name\x18\x02 \x01(\tR\x04name\x12\x16\n" +
@@ -6496,10 +6513,11 @@ const file_core_core_consumption_proto_rawDesc = "" +
 	"\x12ship_to_address_id\x18\t \x01(\tH\x02R\x0fshipToAddressId\x88\x01\x01\x12B\n" +
 	"\x0fbill_to_address\x18\n" +
 	" \x01(\v2\x1a.core.CustomerAddressProtoR\rbillToAddress\x12B\n" +
-	"\x0fship_to_address\x18\v \x01(\v2\x1a.core.CustomerAddressProtoR\rshipToAddressB\a\n" +
+	"\x0fship_to_address\x18\v \x01(\v2\x1a.core.CustomerAddressProtoR\rshipToAddress\x12%\n" +
+	"\x0ematerial_count\x18\f \x01(\x03R\rmaterialCountB\a\n" +
 	"\x05_noteB\x15\n" +
 	"\x13_bill_to_address_idB\x15\n" +
-	"\x13_ship_to_address_id\"\x9d\x03\n" +
+	"\x13_ship_to_address_id\"\xc4\x03\n" +
 	"\rSupplierProto\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x12\n" +
 	"\x04name\x18\x02 \x01(\tR\x04name\x12\x16\n" +
@@ -6510,7 +6528,9 @@ const file_core_core_consumption_proto_rawDesc = "" +
 	"\n" +
 	"created_at\x18\b \x01(\v2\x1a.google.protobuf.TimestampR\tcreatedAt\x129\n" +
 	"\n" +
-	"updated_at\x18\t \x01(\v2\x1a.google.protobuf.TimestampR\tupdatedAtB\a\n" +
+	"updated_at\x18\t \x01(\v2\x1a.google.protobuf.TimestampR\tupdatedAt\x12%\n" +
+	"\x0ematerial_count\x18\n" +
+	" \x01(\x03R\rmaterialCountB\a\n" +
 	"\x05_noteB\x12\n" +
 	"\x10_bill_to_addressB\x12\n" +
 	"\x10_ship_to_address\"\xb5\x03\n" +

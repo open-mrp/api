@@ -219,13 +219,14 @@ func supplierDetailFromProto(s *pb.SupplierProto) apiresource.Supplier {
 	}
 
 	return apiresource.Supplier{
-		ID:        s.Id,
-		Object:    constants.ObjectTypeSupplier,
-		Name:      s.Name,
-		Number:    s.Number,
-		Note:      s.Note,
-		CreatedAt: grpcutil.TimestampToTimePtr(s.CreatedAt),
-		UpdatedAt: grpcutil.TimestampToTimePtr(s.UpdatedAt),
+		ID:            s.Id,
+		Object:        constants.ObjectTypeSupplier,
+		Name:          s.Name,
+		Number:        s.Number,
+		Note:          s.Note,
+		MaterialCount: &s.MaterialCount,
+		CreatedAt:     grpcutil.TimestampToTimePtr(s.CreatedAt),
+		UpdatedAt:     grpcutil.TimestampToTimePtr(s.UpdatedAt),
 	}
 }
 
@@ -248,18 +249,19 @@ func supplierSummaryFromProto(s *pb.SupplierSummaryProto) apiresource.Supplier {
 	}
 
 	return apiresource.Supplier{
-		ID:        s.Id,
-		Object:    constants.ObjectTypeSupplier,
-		Name:      s.Name,
-		Number:    s.Number,
-		Note:      s.Note,
-		CreatedAt: grpcutil.TimestampToTimePtr(s.CreatedAt),
-		UpdatedAt: grpcutil.TimestampToTimePtr(s.UpdatedAt),
+		ID:            s.Id,
+		Object:        constants.ObjectTypeSupplier,
+		Name:          s.Name,
+		Number:        s.Number,
+		Note:          s.Note,
+		MaterialCount: &s.MaterialCount,
+		CreatedAt:     grpcutil.TimestampToTimePtr(s.CreatedAt),
+		UpdatedAt:     grpcutil.TimestampToTimePtr(s.UpdatedAt),
 	}
 }
 
-// stashSupplierSummaryMeta records which addresses a list row defaults to, so the include resolver
-// can fetch them for a caller that asks. The list itself never joins them.
+// stashSupplierSummaryMeta records a list row's default addresses for the include resolver: the
+// records the backend joined when they were asked for, and their ids either way.
 func stashSupplierSummaryMeta(ctx context.Context, s *pb.SupplierSummaryProto) {
 	if s == nil {
 		return

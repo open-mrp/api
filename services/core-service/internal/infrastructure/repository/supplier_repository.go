@@ -27,27 +27,11 @@ func NewSupplierRepo(queries *sqlc.Queries) domain.SupplierRepo {
 func supplierSummaryCreatedAt(s *domain.SupplierSummary) time.Time { return s.CreatedAt }
 func supplierSummaryID(s *domain.SupplierSummary) string           { return s.ID }
 
-func mapSupplierForwardRow(row sqlc.ListSuppliersForwardRow, includes []string) *domain.SupplierSummary {
-	summary := &domain.SupplierSummary{
-		ID:        row.AccountID,
-		Name:      row.AccountName,
-		Number:    row.ExternalNumber,
-		CreatedAt: row.CreatedAt,
-		UpdatedAt: row.UpdatedAt,
-	}
-	if row.Notes.Valid {
-		summary.Note = &row.Notes.String
-	}
-	if row.DefaultBillingAddressID.Valid {
-		summary.BillToAddressID = &row.DefaultBillingAddressID.String
-	}
-	if row.DefaultShippingAddressID.Valid {
-		summary.ShipToAddressID = &row.DefaultShippingAddressID.String
-	}
-	// A supplier's default addresses belong to the supplier's own account, so the gateway's
-	// account-scoped address loader cannot reach them. The list joins them here, as Get does.
+// supplierAddresses builds the default addresses a caller asked for. A supplier's default addresses belong to the
+// supplier's own account, so the gateway's account-scoped address loader cannot reach them; they are joined here.
+func supplierAddresses(row sqlc.GetSupplierRow, includes []string) (billTo, shipTo *domain.CustomerAddress) {
 	if slices.Contains(includes, "bill_to_address") && row.DefaultBillingAddressID.Valid {
-		summary.BillToAddress = buildCustomerAddress(
+		billTo = buildCustomerAddress(
 			row.DefaultBillingAddressID.String,
 			row.DefaultBillingAddressName.String,
 			row.DefaultBillingAddressPhone,
@@ -65,7 +49,7 @@ func mapSupplierForwardRow(row sqlc.ListSuppliersForwardRow, includes []string) 
 		)
 	}
 	if slices.Contains(includes, "ship_to_address") && row.DefaultShippingAddressID.Valid {
-		summary.ShipToAddress = buildCustomerAddress(
+		shipTo = buildCustomerAddress(
 			row.DefaultShippingAddressID.String,
 			row.DefaultShippingAddressName.String,
 			row.DefaultShippingAddressPhone,
@@ -82,115 +66,73 @@ func mapSupplierForwardRow(row sqlc.ListSuppliersForwardRow, includes []string) 
 			row.DefaultShippingAddressUpdatedAt.Time,
 		)
 	}
-	return summary
+	return billTo, shipTo
 }
 
-// The two list queries select the same columns in the same order, so a backward page is mapped
-// through the forward mapper rather than a second copy that can drift from it — as it had, dropping
-// the note, the updated timestamp and both addresses from every backward page.
-func mapSupplierBackwardRow(row sqlc.ListSuppliersBackwardRow, includes []string) *domain.SupplierSummary {
-	return mapSupplierForwardRow(sqlc.ListSuppliersForwardRow(row), includes)
+func mapSupplierRow(row sqlc.GetSupplierRow, includes []string) *domain.Supplier {
+	billTo, shipTo := supplierAddresses(row, includes)
+	return &domain.Supplier{
+		ID:            row.AccountID,
+		Name:          row.AccountName,
+		Number:        row.ExternalNumber,
+		Note:          nullStringPtr(row.Notes),
+		BillToAddress: billTo,
+		ShipToAddress: shipTo,
+		MaterialCount: row.MaterialCount,
+		CreatedAt:     row.CreatedAt,
+		UpdatedAt:     row.UpdatedAt,
+	}
+}
+
+// The by-IDs query selects GetSupplier's columns, so a listed row is read through the same mapper.
+func mapSupplierSummaryRow(row sqlc.ListSuppliersByIDsRow, includes []string) *domain.SupplierSummary {
+	full := sqlc.GetSupplierRow(row)
+	billTo, shipTo := supplierAddresses(full, includes)
+	return &domain.SupplierSummary{
+		ID:              row.AccountID,
+		Name:            row.AccountName,
+		Number:          row.ExternalNumber,
+		Note:            nullStringPtr(row.Notes),
+		BillToAddressID: nullStringPtr(row.DefaultBillingAddressID),
+		ShipToAddressID: nullStringPtr(row.DefaultShippingAddressID),
+		BillToAddress:   billTo,
+		ShipToAddress:   shipTo,
+		MaterialCount:   row.MaterialCount,
+		CreatedAt:       row.CreatedAt,
+		UpdatedAt:       row.UpdatedAt,
+	}
 }
 
 func (r *supplierRepoImpl) List(ctx context.Context, params domain.ListSuppliersParams) (*domain.ListSuppliersResult, *apierror.APIError) {
 	ctx, span := supplierRepoTracer.Start(ctx, "repository.supplier.list")
 	defer span.End()
 
-	searchQuery := gosql.NullString{}
-	if params.Query != nil && *params.Query != "" {
-		searchQuery = gosql.NullString{String: "%" + db.EscapeLike(*params.Query) + "%", Valid: true}
+	cursor, apiErr := decodeListCursor(params.Cursor)
+	if apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
 	}
 
-	startDate := gosql.NullTime{}
-	if params.StartDate != nil {
-		startDate = gosql.NullTime{Time: *params.StartDate, Valid: true}
-	}
-
-	endDate := gosql.NullTime{}
-	if params.EndDate != nil {
-		endDate = gosql.NullTime{Time: *params.EndDate, Valid: true}
-	}
-
-	hasItemFilter := len(params.ItemIDs) > 0
-	itemIDs := params.ItemIDs
-	if !hasItemFilter {
-		itemIDs = []string{}
-	}
-
-	var cursorDir *pagination.Direction
-
-	if params.Cursor != nil {
-		cur, err := pagination.DecodeStringCursor(*params.Cursor)
-		if err != nil {
-			return nil, apierror.NewValidationErrorWithParam("Invalid pagination cursor.", "cursor")
-		}
-		cursorDir = &cur.Direction
-
-		if cur.Direction == pagination.DirectionBackward {
-			rows, err := r.queries.ListSuppliersBackward(ctx, sqlc.ListSuppliersBackwardParams{
-				OwnerAccountID:  params.OwnerAccountID,
-				SearchQuery:     searchQuery,
-				StartDate:       startDate,
-				EndDate:         endDate,
-				HasItemFilter:   hasItemFilter,
-				ItemIds:         itemIDs,
-				CursorCreatedAt: cur.OccurredAt,
-				CursorID:        cur.ID,
-				Limit:           params.Limit + 1,
-			})
-			if apiErr := db.MapSQLError(err); apiErr != nil {
-				return nil, tracing.Trace(span, apiErr)
-			}
-			items := make([]*domain.SupplierSummary, len(rows))
-			for i, row := range rows {
-				items[i] = mapSupplierBackwardRow(row, params.Includes)
-			}
-			result, pageInfo := pagination.BuildPageString(items, params.Limit, cursorDir, supplierSummaryCreatedAt, supplierSummaryID)
-			return &domain.ListSuppliersResult{Items: result, PageInfo: pageInfo}, nil
-		}
-
-		// Forward with cursor
-		rows, err := r.queries.ListSuppliersForward(ctx, sqlc.ListSuppliersForwardParams{
-			OwnerAccountID:  params.OwnerAccountID,
-			SearchQuery:     searchQuery,
-			StartDate:       startDate,
-			EndDate:         endDate,
-			HasItemFilter:   hasItemFilter,
-			ItemIds:         itemIDs,
-			CursorCreatedAt: gosql.NullTime{Time: cur.OccurredAt, Valid: true},
-			CursorID:        gosql.NullString{String: cur.ID, Valid: true},
-			Limit:           params.Limit + 1,
-		})
-		if apiErr := db.MapSQLError(err); apiErr != nil {
-			return nil, tracing.Trace(span, apiErr)
-		}
-		items := make([]*domain.SupplierSummary, len(rows))
-		for i, row := range rows {
-			items[i] = mapSupplierForwardRow(row, params.Includes)
-		}
-		result, pageInfo := pagination.BuildPageString(items, params.Limit, cursorDir, supplierSummaryCreatedAt, supplierSummaryID)
-		return &domain.ListSuppliersResult{Items: result, PageInfo: pageInfo}, nil
-	}
-
-	// No cursor — first page
-	rows, err := r.queries.ListSuppliersForward(ctx, sqlc.ListSuppliersForwardParams{
-		OwnerAccountID: params.OwnerAccountID,
-		SearchQuery:    searchQuery,
-		StartDate:      startDate,
-		EndDate:        endDate,
-		HasItemFilter:  hasItemFilter,
-		ItemIds:        itemIDs,
-		Limit:          params.Limit + 1,
-	})
+	query, args := supplierListPageQuery(params, cursor, params.Limit+1)
+	ids, err := selectStrings(ctx, r.queries.DB(), query, args...)
 	if apiErr := db.MapSQLError(err); apiErr != nil {
 		return nil, tracing.Trace(span, apiErr)
 	}
 
-	items := make([]*domain.SupplierSummary, len(rows))
-	for i, row := range rows {
-		items[i] = mapSupplierForwardRow(row, params.Includes)
+	byID := make(map[string]*domain.SupplierSummary, len(ids))
+	if len(ids) > 0 {
+		rows, err := r.queries.ListSuppliersByIDs(ctx, sqlc.ListSuppliersByIDsParams{
+			OwnerAccountID: params.OwnerAccountID,
+			Ids:            ids,
+		})
+		if apiErr := db.MapSQLError(err); apiErr != nil {
+			return nil, tracing.Trace(span, apiErr)
+		}
+		for _, row := range rows {
+			byID[row.AccountID] = mapSupplierSummaryRow(row, params.Includes)
+		}
 	}
-	result, pageInfo := pagination.BuildPageString(items, params.Limit, cursorDir, supplierSummaryCreatedAt, supplierSummaryID)
+
+	result, pageInfo := pagination.BuildPageString(inPageOrder(ids, byID), params.Limit, cursorDirection(cursor), supplierSummaryCreatedAt, supplierSummaryID)
 	return &domain.ListSuppliersResult{Items: result, PageInfo: pageInfo}, nil
 }
 
@@ -206,56 +148,7 @@ func (r *supplierRepoImpl) Get(ctx context.Context, params domain.GetSupplierPar
 		return nil, tracing.Trace(span, apiErr)
 	}
 
-	var billToAddress *domain.CustomerAddress
-	if slices.Contains(params.Includes, "bill_to_address") && row.DefaultBillingAddressID.Valid {
-		billToAddress = buildCustomerAddress(
-			row.DefaultBillingAddressID.String,
-			row.DefaultBillingAddressName.String,
-			row.DefaultBillingAddressPhone,
-			row.DefaultBillingAddressEmail,
-			row.DefaultBillingIsDropShip.Bool,
-			row.DefaultBillingGeolocationID,
-			row.DefaultBillingStreetLine1,
-			row.DefaultBillingStreetLine2,
-			row.DefaultBillingLocality,
-			row.DefaultBillingState,
-			row.DefaultBillingPostalCode,
-			row.DefaultBillingCountry,
-			row.DefaultBillingAddressCreatedAt.Time,
-			row.DefaultBillingAddressUpdatedAt.Time,
-		)
-	}
-
-	var shipToAddress *domain.CustomerAddress
-	if slices.Contains(params.Includes, "ship_to_address") && row.DefaultShippingAddressID.Valid {
-		shipToAddress = buildCustomerAddress(
-			row.DefaultShippingAddressID.String,
-			row.DefaultShippingAddressName.String,
-			row.DefaultShippingAddressPhone,
-			row.DefaultShippingAddressEmail,
-			row.DefaultShippingIsDropShip.Bool,
-			row.DefaultShippingGeolocationID,
-			row.DefaultShippingStreetLine1,
-			row.DefaultShippingStreetLine2,
-			row.DefaultShippingLocality,
-			row.DefaultShippingState,
-			row.DefaultShippingPostalCode,
-			row.DefaultShippingCountry,
-			row.DefaultShippingAddressCreatedAt.Time,
-			row.DefaultShippingAddressUpdatedAt.Time,
-		)
-	}
-
-	return &domain.Supplier{
-		ID:            row.AccountID,
-		Name:          row.AccountName,
-		Number:        row.ExternalNumber,
-		Note:          nullStringPtr(row.Notes),
-		BillToAddress: billToAddress,
-		ShipToAddress: shipToAddress,
-		CreatedAt:     row.CreatedAt,
-		UpdatedAt:     row.UpdatedAt,
-	}, nil
+	return mapSupplierRow(row, params.Includes), nil
 }
 
 func (r *supplierRepoImpl) Create(ctx context.Context, accountID, relationID string, params domain.CreateSupplierParams, billToAddressID, shipToAddressID *string) (*domain.Supplier, *apierror.APIError) {
@@ -308,47 +201,18 @@ func (r *supplierRepoImpl) Update(ctx context.Context, params domain.UpdateSuppl
 	ctx, span := supplierRepoTracer.Start(ctx, "repository.supplier.update")
 	defer span.End()
 
-	externalNumber := gosql.NullString{}
-	if params.Number != nil {
-		externalNumber = gosql.NullString{String: *params.Number, Valid: true}
-	}
-
-	notes := gosql.NullString{}
-	if params.Note != nil {
-		notes = gosql.NullString{String: *params.Note, Valid: true}
-	}
-
-	billAddrID := gosql.NullString{}
-	if params.BillToAddressID != nil {
-		billAddrID = gosql.NullString{String: *params.BillToAddressID, Valid: true}
-	}
-
-	shipAddrID := gosql.NullString{}
-	if params.ShipToAddressID != nil {
-		shipAddrID = gosql.NullString{String: *params.ShipToAddressID, Valid: true}
-	}
-
 	err := r.queries.UpdateSupplierRelation(ctx, sqlc.UpdateSupplierRelationParams{
-		ExternalNumber:           externalNumber,
+		Alias:                    ptrToNullString(params.Name),
+		ExternalNumber:           ptrToNullString(params.Number),
 		UpdateNotes:              params.UpdateNote,
-		Notes:                    notes,
-		DefaultBillingAddressID:  billAddrID,
-		DefaultShippingAddressID: shipAddrID,
+		Notes:                    ptrToNullString(params.Note),
+		DefaultBillingAddressID:  ptrToNullString(params.BillToAddressID),
+		DefaultShippingAddressID: ptrToNullString(params.ShipToAddressID),
 		OwnerAccountID:           params.OwnerAccountID,
 		CounterpartyAccountID:    params.SupplierID,
 	})
 	if apiErr := db.MapSQLError(err); apiErr != nil {
 		return nil, tracing.Trace(span, apiErr)
-	}
-
-	if params.Name != nil {
-		err = r.queries.UpdateSupplierAccountName(ctx, sqlc.UpdateSupplierAccountNameParams{
-			Name: *params.Name,
-			ID:   params.SupplierID,
-		})
-		if apiErr := db.MapSQLError(err); apiErr != nil {
-			return nil, tracing.Trace(span, apiErr)
-		}
 	}
 
 	return r.Get(ctx, domain.GetSupplierParams{OwnerAccountID: params.OwnerAccountID, SupplierID: params.SupplierID, Includes: params.Includes})
@@ -418,9 +282,14 @@ func (r *supplierRepoImpl) FindByNames(ctx context.Context, ownerAccountID strin
 		return nil, nil
 	}
 
+	aliasNames := make([]gosql.NullString, len(names))
+	for i, name := range names {
+		aliasNames[i] = gosql.NullString{String: name, Valid: true}
+	}
 	rows, err := r.queries.FindSuppliersByNames(ctx, sqlc.FindSuppliersByNamesParams{
 		OwnerAccountID: ownerAccountID,
-		Names:          names,
+		AliasNames:     aliasNames,
+		AccountNames:   names,
 	})
 	if apiErr := db.MapSQLError(err); apiErr != nil {
 		return nil, tracing.Trace(span, apiErr)

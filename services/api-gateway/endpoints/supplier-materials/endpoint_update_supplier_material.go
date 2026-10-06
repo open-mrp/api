@@ -22,8 +22,8 @@ type UpdateSupplierMaterialRequest struct {
 	MaterialID string `path:"id" validate:"required"`
 	// New part number the supplier uses for this material.
 	SupplierPartNumber field.Optional[string] `json:"supplier_part_number,omitzero" validate:"omitempty,max=255"`
-	// New supplier description of this material.
-	SupplierDescription field.Optional[string] `json:"supplier_description,omitzero" validate:"omitempty,max=255"`
+	// New supplier description of this material, up to 65,535 characters. Pass null to remove it.
+	SupplierDescription field.Clearable[string] `json:"supplier_description,omitzero" validate:"omitempty,max=65535"`
 	// Whether this supplier is currently one you would source the material from.
 	IsActive field.Optional[bool] `json:"is_active,omitzero"`
 }

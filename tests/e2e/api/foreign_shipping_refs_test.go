@@ -116,3 +116,97 @@ func TestForeignShippingRefs_SalesOrderUpdateTakesASystemOrOwnCarrier(t *testing
 		})
 	}
 }
+
+// A freight-exempt order never prices freight, so its carrier has to be checked on its own.
+func TestForeignShippingRefs_SalesOrderCreateRefusesAForeignCarrier(t *testing.T) {
+	t.Parallel()
+	foreign := createTenantBShippingRefs(t)
+	billed := setupOrderCustomer(t)
+	exempt := setupFreightExemptOrderCustomer(t)
+
+	for _, tc := range []struct{ name, customerID string }{
+		{"billed freight", billed},
+		{"freight exempt", exempt},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+			body := minimalSalesOrderCreateBody(t, tc.customerID)
+			body["carrier_id"] = foreign.carrierID
+			delete(body, "service_level_id")
+
+			status, resp, err := apiClient.Post(salesOrdersPath, body, newIdempotencyKey())
+			require.NoError(t, err)
+			if status == 201 {
+				deleteOrder(t, jsonField(parseJSON(resp), "id"))
+			}
+			assertRefNotFound(t, status, resp, "carrier_id")
+		})
+	}
+}
+
+// Create refuses another tenant's service level with the 400 its other reference checks answer.
+func TestForeignShippingRefs_SalesOrderCreateRefusesAForeignServiceLevel(t *testing.T) {
+	t.Parallel()
+	foreign := createTenantBShippingRefs(t)
+	body := minimalSalesOrderCreateBody(t, setupFreightExemptOrderCustomer(t))
+	body["service_level_id"] = foreign.serviceLevelID
+
+	status, resp, err := apiClient.Post(salesOrdersPath, body, newIdempotencyKey())
+	require.NoError(t, err)
+	if status == 201 {
+		deleteOrder(t, jsonField(parseJSON(resp), "id"))
+	}
+	requireStatus(t, 400, status, resp)
+	assertErrorParam(t, requireErrorResponse(t, resp, "", "invalid_request_error"), "service_level_id")
+}
+
+func TestForeignShippingRefs_SalesOrderCreateTakesASystemOrOwnCarrier(t *testing.T) {
+	t.Parallel()
+	exempt := setupFreightExemptOrderCustomer(t)
+
+	for _, tc := range []struct{ name, carrierID, serviceLevelID string }{
+		{"system carrier", SeedSystemCarrierID, SeedSystemServiceLevelID},
+		{"own carrier", SeedCarrierID, SeedServiceLevelID},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+			body := minimalSalesOrderCreateBody(t, exempt)
+			body["carrier_id"] = tc.carrierID
+			body["service_level_id"] = tc.serviceLevelID
+
+			status, resp, err := apiClient.Post(salesOrdersPath, body, newIdempotencyKey())
+			require.NoError(t, err)
+			requireStatus(t, 201, status, resp)
+			orderID := jsonField(parseJSON(resp), "id")
+			deleteOrder(t, orderID)
+
+			carrier, serviceLevel, _, _ := orderRefIDs(t, orderID)
+			assert.Equal(t, tc.carrierID, carrier)
+			assert.Equal(t, tc.serviceLevelID, serviceLevel)
+		})
+	}
+}
+
+// setupFreightExemptOrderCustomer is a customer on free freight, with access to the seed product's line.
+func setupFreightExemptOrderCustomer(t *testing.T) string {
+	t.Helper()
+	body := validCustomerBody(uniqueName("e2e-so-exempt-cust"))
+	body["freight_policy"] = "free_freight"
+	status, resp, err := apiClient.Post(customersPath, body, newIdempotencyKey())
+	require.NoError(t, err)
+	requireStatus(t, 201, status, resp)
+	customerID := jsonField(parseJSON(resp), "id")
+
+	status, resp, err = apiClient.Post(productLineAccessPath, map[string]any{
+		"customer_id":      customerID,
+		"product_line_ids": []string{SeedProductLineID},
+	}, newIdempotencyKey())
+	require.NoError(t, err)
+	requireStatus(t, 201, status, resp)
+
+	t.Cleanup(func() {
+		_, _, _ = apiClient.Delete(productLineAccessPath + "/" + customerID)
+		_, _, _ = apiClient.Delete(customersPath + "/" + customerID)
+	})
+	return customerID
+}

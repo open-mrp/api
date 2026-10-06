@@ -2207,12 +2207,13 @@ func (s *salesOrderSvcImpl) resolveOrderDiscountID(ctx context.Context, accountI
 	return d.ID, nil
 }
 
-// validateSalesOrderReferences rejects caller-supplied foreign keys that don't
-// exist in the account. carrier_id and order_discount_id are validated
-// separately (in the shipping-rate estimate and resolveOrderDiscountID
-// respectively); this covers the remaining references that were previously
-// accepted unchecked.
+// validateSalesOrderReferences rejects caller-supplied foreign keys that don't exist in the account; order_discount_id is resolved separately by resolveOrderDiscountID. The carrier is checked here because a freight-exempt order never reaches the shipping-rate lookup.
 func (s *salesOrderSvcImpl) validateSalesOrderReferences(ctx context.Context, params domain.CreateSalesOrderParams) *apierror.APIError {
+	var carrier customerRefs
+	carrier.add(customerRefCarrier, params.CarrierID, nil, "carrier_id")
+	if apiErr := checkCustomerRefs(ctx, s.repos, params.AccountID, carrier); apiErr != nil {
+		return apiErr
+	}
 	if params.ServiceLevelID != nil && *params.ServiceLevelID != "" {
 		if _, apiErr := s.repos.NewServiceLevelRepo().Get(ctx, params.AccountID, *params.ServiceLevelID); apiErr != nil {
 			return mapSalesOrderReferenceError(apiErr, "Service level not found.", "service_level_id")

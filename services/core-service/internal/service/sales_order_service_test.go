@@ -720,6 +720,14 @@ func (suite *SalesOrderSvcTestSuite) expectCreateOrderReferenceValidationMocks(a
 		Return(&domain.PaymentTerm{}, nil).AnyTimes()
 	suite.carrierRepo.EXPECT().Get(gomock.Any(), gomock.Any()).
 		Return(&domain.Carrier{}, nil).AnyTimes()
+	suite.carrierRepo.EXPECT().GetByIDs(gomock.Any(), accountID, gomock.Any()).
+		DoAndReturn(func(_ context.Context, _ string, ids []string) ([]*domain.Carrier, *apierror.APIError) {
+			carriers := make([]*domain.Carrier, len(ids))
+			for i, id := range ids {
+				carriers[i] = &domain.Carrier{ID: id}
+			}
+			return carriers, nil
+		}).AnyTimes()
 }
 
 // expectCreateOrderHappyRepoChain wires up every non-discretionary repo call in
@@ -1127,6 +1135,27 @@ func (suite *SalesOrderSvcTestSuite) TestCreateSalesOrder_MissingCarrierWithoutC
 	_, apiErr := suite.svc.CreateSalesOrder(ctx, params)
 	suite.Require().NotNil(apiErr)
 	suite.Equal(apierror.ErrorCodeValidationFailed, apiErr.Code)
+	suite.Equal("carrier_id", apiErr.Param)
+}
+
+// The carrier is looked up on its own, so a freight-exempt order that never reaches the shipping-rate lookup cannot store another tenant's carrier.
+func (suite *SalesOrderSvcTestSuite) TestCreateSalesOrder_RefusesACarrierOutsideTheAccount() {
+	ctx := salesOrderIdempotencyCtx(salesOrderInternalCtx("ac_test"), "/core.CoreService/CreateSalesOrder")
+
+	suite.expectPlanLimitAllows()
+	suite.expectIdempotencyStarted()
+	suite.expectCreateOrderResolutionChain("ac_test")
+	suite.carrierRepo.EXPECT().GetByIDs(gomock.Any(), "ac_test", []string{"cr_foreign"}).Return(nil, nil)
+	suite.orderRepo.EXPECT().GetNextOrderNumber(gomock.Any(), gomock.Any()).Times(0)
+	suite.orderRepo.EXPECT().Create(gomock.Any(), gomock.Any(), gomock.Any()).Times(0)
+	suite.expectCacheError()
+
+	params := baseCreateOrderParams()
+	params.CarrierID = new("cr_foreign")
+
+	_, apiErr := suite.svc.CreateSalesOrder(ctx, params)
+	suite.Require().NotNil(apiErr)
+	suite.True(apierror.IsNotFound(apiErr))
 	suite.Equal("carrier_id", apiErr.Param)
 }
 

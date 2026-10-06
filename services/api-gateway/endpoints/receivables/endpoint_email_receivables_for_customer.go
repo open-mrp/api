@@ -18,7 +18,7 @@ type EmailReceivablesForCustomerRequest struct {
 	// Email addresses to send the statement of account to.
 	//
 	// The statement goes only to these addresses; the customer's own notification contacts are not added.
-	RecipientEmails []string `json:"recipient_emails" validate:"required,min=1"`
+	RecipientEmails []string `json:"recipient_emails" validate:"required,min=1,dive,required,custom_email,max=255"`
 }
 
 var sampleEmailReceivablesForCustomerRequest = &EmailReceivablesForCustomerRequest{

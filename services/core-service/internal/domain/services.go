@@ -693,7 +693,7 @@ type BatchSvc interface {
 	AnalyzeOpenBatches(ctx context.Context, itemIDs, productLineIDs []string) ([]OpenBatchSummary, *apierror.APIError)
 
 	// InitializeBatch initializes a batch at a scanning station.
-	InitializeBatch(ctx context.Context, batchID, scanningStationID string) (*BaseBatch, *apierror.APIError)
+	InitializeBatch(ctx context.Context, params InitializeBatchParams) (*BaseBatch, *apierror.APIError)
 
 	// MoveBatches moves one or more batches to a new production step.
 	MoveBatches(ctx context.Context, params MoveBatchesParams) (*BaseBatch, *apierror.APIError)

@@ -396,6 +396,7 @@ func Run(
 		Repos:           repoFactory,
 		MediatorFactory: mediatorFactory,
 		TxManager:       txManager,
+		BillingPub:      billingPublisher,
 	})
 
 	itemCategorySvc := service.NewItemCategorySvc(&service.ItemCategorySvcConfig{

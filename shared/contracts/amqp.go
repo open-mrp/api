@@ -166,6 +166,9 @@ const (
 	// Commands the billing provider's usage metering system to record a created invoice.
 	BillingCmdReportInvoiceCreated AmqpRoutingKey = "billing.cmd.report_invoice_created"
 
+	// Commands the billing provider's usage metering system to record a batch a scan created.
+	BillingCmdReportBatchCreated AmqpRoutingKey = "billing.cmd.report_batch_created"
+
 	// PlatformEventAuditLogged is an event that indicates an audit event has been produced and needs to be persisted by the platform-service.
 	PlatformEventAuditLogged AmqpRoutingKey = "platform.event.audit_logged"
 )

@@ -2597,8 +2597,12 @@ type BaseBatchInfo struct {
 	UpdatedAt           *timestamppb.Timestamp `protobuf:"bytes,16,opt,name=updated_at,json=updatedAt,proto3" json:"updated_at,omitempty"`
 	DepartmentId        *string                `protobuf:"bytes,17,opt,name=department_id,json=departmentId,proto3,oneof" json:"department_id,omitempty"`
 	DepartmentName      *string                `protobuf:"bytes,18,opt,name=department_name,json=departmentName,proto3,oneof" json:"department_name,omitempty"`
-	unknownFields       protoimpl.UnknownFields
-	sizeCache           protoimpl.SizeCache
+	// The machines the batch ran on, and the lots it carries: material lots it consumed, then its
+	// production run's number. A label printed from a scan response reads both.
+	Machines      []*LightMachineInfo `protobuf:"bytes,19,rep,name=machines,proto3" json:"machines,omitempty"`
+	Lots          []*BatchLotInfo     `protobuf:"bytes,20,rep,name=lots,proto3" json:"lots,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
 }
 
 func (x *BaseBatchInfo) Reset() {
@@ -2755,6 +2759,20 @@ func (x *BaseBatchInfo) GetDepartmentName() string {
 		return *x.DepartmentName
 	}
 	return ""
+}
+
+func (x *BaseBatchInfo) GetMachines() []*LightMachineInfo {
+	if x != nil {
+		return x.Machines
+	}
+	return nil
+}
+
+func (x *BaseBatchInfo) GetLots() []*BatchLotInfo {
+	if x != nil {
+		return x.Lots
+	}
+	return nil
 }
 
 type BatchInfo struct {
@@ -3989,8 +4007,14 @@ type InitializeBatchRequest struct {
 	state             protoimpl.MessageState `protogen:"open.v1"`
 	BatchId           string                 `protobuf:"bytes,1,opt,name=batch_id,json=batchId,proto3" json:"batch_id,omitempty"`
 	ScanningStationId string                 `protobuf:"bytes,2,opt,name=scanning_station_id,json=scanningStationId,proto3" json:"scanning_station_id,omitempty"`
-	unknownFields     protoimpl.UnknownFields
-	sizeCache         protoimpl.SizeCache
+	// The station type the operator is scanning as, when it is not the station's own.
+	TypeOverride *string `protobuf:"bytes,3,opt,name=type_override,json=typeOverride,proto3,oneof" json:"type_override,omitempty"`
+	// The step to initialize into, when the operator picked one of several.
+	ProductionStepId *string `protobuf:"bytes,4,opt,name=production_step_id,json=productionStepId,proto3,oneof" json:"production_step_id,omitempty"`
+	// False records the scan without consuming the step's materials. Unset means true.
+	ConsumeMaterials *bool `protobuf:"varint,5,opt,name=consume_materials,json=consumeMaterials,proto3,oneof" json:"consume_materials,omitempty"`
+	unknownFields    protoimpl.UnknownFields
+	sizeCache        protoimpl.SizeCache
 }
 
 func (x *InitializeBatchRequest) Reset() {
@@ -4035,6 +4059,27 @@ func (x *InitializeBatchRequest) GetScanningStationId() string {
 		return x.ScanningStationId
 	}
 	return ""
+}
+
+func (x *InitializeBatchRequest) GetTypeOverride() string {
+	if x != nil && x.TypeOverride != nil {
+		return *x.TypeOverride
+	}
+	return ""
+}
+
+func (x *InitializeBatchRequest) GetProductionStepId() string {
+	if x != nil && x.ProductionStepId != nil {
+		return *x.ProductionStepId
+	}
+	return ""
+}
+
+func (x *InitializeBatchRequest) GetConsumeMaterials() bool {
+	if x != nil && x.ConsumeMaterials != nil {
+		return *x.ConsumeMaterials
+	}
+	return false
 }
 
 type InitializeBatchResponse struct {
@@ -4527,8 +4572,10 @@ type GetScanningStationConsumptionRequest struct {
 	BatchIds          []string               `protobuf:"bytes,2,rep,name=batch_ids,json=batchIds,proto3" json:"batch_ids,omitempty"`
 	ProductionStepId  *string                `protobuf:"bytes,3,opt,name=production_step_id,json=productionStepId,proto3,oneof" json:"production_step_id,omitempty"`
 	SplitQuantity     *BatchQuantityInfo     `protobuf:"bytes,4,opt,name=split_quantity,json=splitQuantity,proto3,oneof" json:"split_quantity,omitempty"`
-	unknownFields     protoimpl.UnknownFields
-	sizeCache         protoimpl.SizeCache
+	// The station type the operator is scanning as, when it is not the station's own.
+	TypeOverride  *string `protobuf:"bytes,5,opt,name=type_override,json=typeOverride,proto3,oneof" json:"type_override,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
 }
 
 func (x *GetScanningStationConsumptionRequest) Reset() {
@@ -4587,6 +4634,13 @@ func (x *GetScanningStationConsumptionRequest) GetSplitQuantity() *BatchQuantity
 		return x.SplitQuantity
 	}
 	return nil
+}
+
+func (x *GetScanningStationConsumptionRequest) GetTypeOverride() string {
+	if x != nil && x.TypeOverride != nil {
+		return *x.TypeOverride
+	}
+	return ""
 }
 
 type GetScanningStationConsumptionResponse struct {
@@ -6212,7 +6266,7 @@ const file_core_core_items_proto_rawDesc = "" +
 	"\ameasure\x18\x02 \x01(\tR\ameasure\x12\x17\n" +
 	"\aunit_id\x18\x03 \x01(\tR\x06unitId\x12+\n" +
 	"\x11unit_abbreviation\x18\x04 \x01(\tR\x10unitAbbreviation\x12\x1b\n" +
-	"\tunit_type\x18\x05 \x01(\tR\bunitType\"\xed\b\n" +
+	"\tunit_type\x18\x05 \x01(\tR\bunitType\"\xc9\t\n" +
 	"\rBaseBatchInfo\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x17\n" +
 	"\aitem_id\x18\x02 \x01(\tR\x06itemId\x12\x19\n" +
@@ -6236,7 +6290,9 @@ const file_core_core_items_proto_rawDesc = "" +
 	"updated_at\x18\x10 \x01(\v2\x1a.google.protobuf.TimestampR\tupdatedAt\x12(\n" +
 	"\rdepartment_id\x18\x11 \x01(\tH\n" +
 	"R\fdepartmentId\x88\x01\x01\x12,\n" +
-	"\x0fdepartment_name\x18\x12 \x01(\tH\vR\x0edepartmentName\x88\x01\x01B\n" +
+	"\x0fdepartment_name\x18\x12 \x01(\tH\vR\x0edepartmentName\x88\x01\x01\x122\n" +
+	"\bmachines\x18\x13 \x03(\v2\x16.core.LightMachineInfoR\bmachines\x12&\n" +
+	"\x04lots\x18\x14 \x03(\v2\x12.core.BatchLotInfoR\x04lotsB\n" +
 	"\n" +
 	"\b_secondsB\b\n" +
 	"\x06_wasteB\x16\n" +
@@ -6366,10 +6422,16 @@ const file_core_core_items_proto_rawDesc = "" +
 	"\bitem_ids\x18\x01 \x03(\tR\aitemIds\x12(\n" +
 	"\x10product_line_ids\x18\x02 \x03(\tR\x0eproductLineIds\"V\n" +
 	"\x1aAnalyzeOpenBatchesResponse\x128\n" +
-	"\tsummaries\x18\x01 \x03(\v2\x1a.core.OpenBatchSummaryInfoR\tsummaries\"c\n" +
+	"\tsummaries\x18\x01 \x03(\v2\x1a.core.OpenBatchSummaryInfoR\tsummaries\"\xb1\x02\n" +
 	"\x16InitializeBatchRequest\x12\x19\n" +
 	"\bbatch_id\x18\x01 \x01(\tR\abatchId\x12.\n" +
-	"\x13scanning_station_id\x18\x02 \x01(\tR\x11scanningStationId\"D\n" +
+	"\x13scanning_station_id\x18\x02 \x01(\tR\x11scanningStationId\x12(\n" +
+	"\rtype_override\x18\x03 \x01(\tH\x00R\ftypeOverride\x88\x01\x01\x121\n" +
+	"\x12production_step_id\x18\x04 \x01(\tH\x01R\x10productionStepId\x88\x01\x01\x120\n" +
+	"\x11consume_materials\x18\x05 \x01(\bH\x02R\x10consumeMaterials\x88\x01\x01B\x10\n" +
+	"\x0e_type_overrideB\x15\n" +
+	"\x13_production_step_idB\x14\n" +
+	"\x12_consume_materials\"D\n" +
 	"\x17InitializeBatchResponse\x12)\n" +
 	"\x05batch\x18\x01 \x01(\v2\x13.core.BaseBatchInfoR\x05batch\"\x8f\x01\n" +
 	"\x12MoveBatchesRequest\x12\x1b\n" +
@@ -6402,14 +6464,16 @@ const file_core_core_items_proto_rawDesc = "" +
 	"\tbatch_ids\x18\x01 \x03(\tR\bbatchIds\x12,\n" +
 	"\x12production_step_id\x18\x02 \x01(\tR\x10productionStepId\"Z\n" +
 	"#GetRemainingQuantityToSplitResponse\x123\n" +
-	"\bquantity\x18\x01 \x01(\v2\x17.core.BatchQuantityInfoR\bquantity\"\x95\x02\n" +
+	"\bquantity\x18\x01 \x01(\v2\x17.core.BatchQuantityInfoR\bquantity\"\xd1\x02\n" +
 	"$GetScanningStationConsumptionRequest\x12.\n" +
 	"\x13scanning_station_id\x18\x01 \x01(\tR\x11scanningStationId\x12\x1b\n" +
 	"\tbatch_ids\x18\x02 \x03(\tR\bbatchIds\x121\n" +
 	"\x12production_step_id\x18\x03 \x01(\tH\x00R\x10productionStepId\x88\x01\x01\x12C\n" +
-	"\x0esplit_quantity\x18\x04 \x01(\v2\x17.core.BatchQuantityInfoH\x01R\rsplitQuantity\x88\x01\x01B\x15\n" +
+	"\x0esplit_quantity\x18\x04 \x01(\v2\x17.core.BatchQuantityInfoH\x01R\rsplitQuantity\x88\x01\x01\x12(\n" +
+	"\rtype_override\x18\x05 \x01(\tH\x02R\ftypeOverride\x88\x01\x01B\x15\n" +
 	"\x13_production_step_idB\x11\n" +
-	"\x0f_split_quantity\"j\n" +
+	"\x0f_split_quantityB\x10\n" +
+	"\x0e_type_override\"j\n" +
 	"%GetScanningStationConsumptionResponse\x12A\n" +
 	"\fconsumptions\x18\x01 \x03(\v2\x1d.core.ScanningConsumptionInfoR\fconsumptions\".\n" +
 	"\x11CloseBatchRequest\x12\x19\n" +
@@ -6683,57 +6747,59 @@ var file_core_core_items_proto_depIdxs = []int32{
 	100, // 48: core.BaseBatchInfo.scanned_at:type_name -> google.protobuf.Timestamp
 	100, // 49: core.BaseBatchInfo.created_at:type_name -> google.protobuf.Timestamp
 	100, // 50: core.BaseBatchInfo.updated_at:type_name -> google.protobuf.Timestamp
-	41,  // 51: core.BatchInfo.quantity:type_name -> core.BatchQuantityInfo
-	41,  // 52: core.BatchInfo.seconds:type_name -> core.BatchQuantityInfo
-	41,  // 53: core.BatchInfo.waste:type_name -> core.BatchQuantityInfo
-	45,  // 54: core.BatchInfo.machines:type_name -> core.LightMachineInfo
-	100, // 55: core.BatchInfo.closed_at:type_name -> google.protobuf.Timestamp
-	100, // 56: core.BatchInfo.scanned_at:type_name -> google.protobuf.Timestamp
-	100, // 57: core.BatchInfo.created_at:type_name -> google.protobuf.Timestamp
-	100, // 58: core.BatchInfo.updated_at:type_name -> google.protobuf.Timestamp
-	44,  // 59: core.BatchInfo.lots:type_name -> core.BatchLotInfo
-	100, // 60: core.LightMachineInfo.created_at:type_name -> google.protobuf.Timestamp
-	100, // 61: core.LightMachineInfo.updated_at:type_name -> google.protobuf.Timestamp
-	43,  // 62: core.BatchFlowNodeInfo.batch:type_name -> core.BatchInfo
-	49,  // 63: core.OpenBatchSummaryInfo.item:type_name -> core.OpenBatchSummaryItemProto
-	50,  // 64: core.OpenBatchSummaryInfo.scanning_station:type_name -> core.OpenBatchSummaryScanningStationProto
-	46,  // 65: core.GetBatchFlowResponse.nodes:type_name -> core.BatchFlowNodeInfo
-	43,  // 66: core.ListBatchesByScanningStationResponse.batches:type_name -> core.BatchInfo
-	106, // 67: core.ListBatchesByScanningStationResponse.page_info:type_name -> core.PageInfo
-	47,  // 68: core.GetBatchPossibleNextStepsResponse.steps:type_name -> core.ScanningProductionStepInfoProto
-	47,  // 69: core.GetBatchPossibleInitStepsResponse.steps:type_name -> core.ScanningProductionStepInfoProto
-	51,  // 70: core.AnalyzeOpenBatchesResponse.summaries:type_name -> core.OpenBatchSummaryInfo
-	42,  // 71: core.InitializeBatchResponse.batch:type_name -> core.BaseBatchInfo
-	42,  // 72: core.MoveBatchesResponse.batch:type_name -> core.BaseBatchInfo
-	42,  // 73: core.MergeBatchesResponse.batch:type_name -> core.BaseBatchInfo
-	41,  // 74: core.SplitBatchRequest.firsts:type_name -> core.BatchQuantityInfo
-	41,  // 75: core.SplitBatchRequest.seconds:type_name -> core.BatchQuantityInfo
-	41,  // 76: core.SplitBatchRequest.waste:type_name -> core.BatchQuantityInfo
-	42,  // 77: core.SplitBatchResponse.batch:type_name -> core.BaseBatchInfo
-	41,  // 78: core.GetRemainingQuantityToSplitResponse.quantity:type_name -> core.BatchQuantityInfo
-	41,  // 79: core.GetScanningStationConsumptionRequest.split_quantity:type_name -> core.BatchQuantityInfo
-	48,  // 80: core.GetScanningStationConsumptionResponse.consumptions:type_name -> core.ScanningConsumptionInfo
-	42,  // 81: core.CloseBatchResponse.batch:type_name -> core.BaseBatchInfo
-	42,  // 82: core.DeleteBatchResponse.batch:type_name -> core.BaseBatchInfo
-	107, // 83: core.ListItemCategoriesResponse.item_categories:type_name -> core.ItemCategoryInfo
-	106, // 84: core.ListItemCategoriesResponse.page_info:type_name -> core.PageInfo
-	104, // 85: core.ExportItemCategoriesResponse.job:type_name -> core.JobInfo
-	107, // 86: core.GetItemCategoryResponse.item_category:type_name -> core.ItemCategoryInfo
-	107, // 87: core.CreateItemCategoryResponse.item_category:type_name -> core.ItemCategoryInfo
-	107, // 88: core.UpdateItemCategoryResponse.item_category:type_name -> core.ItemCategoryInfo
-	102, // 89: core.BulkUpsertItemCategoryInput.unit_group:type_name -> core.ObjectIdentifier
-	93,  // 90: core.BulkUpsertItemCategoriesRequest.item_categories:type_name -> core.BulkUpsertItemCategoryInput
-	104, // 91: core.BulkUpsertItemCategoriesResponse.job:type_name -> core.JobInfo
-	99,  // 92: core.ConsumptionInfo.quantity:type_name -> core.QuantityInfo
-	99,  // 93: core.ConsumptionInfo.waste_quantity:type_name -> core.QuantityInfo
-	100, // 94: core.ConsumptionInfo.created_at:type_name -> google.protobuf.Timestamp
-	100, // 95: core.ConsumptionInfo.updated_at:type_name -> google.protobuf.Timestamp
-	96,  // 96: core.GetConsumptionResponse.consumption:type_name -> core.ConsumptionInfo
-	97,  // [97:97] is the sub-list for method output_type
-	97,  // [97:97] is the sub-list for method input_type
-	97,  // [97:97] is the sub-list for extension type_name
-	97,  // [97:97] is the sub-list for extension extendee
-	0,   // [0:97] is the sub-list for field type_name
+	45,  // 51: core.BaseBatchInfo.machines:type_name -> core.LightMachineInfo
+	44,  // 52: core.BaseBatchInfo.lots:type_name -> core.BatchLotInfo
+	41,  // 53: core.BatchInfo.quantity:type_name -> core.BatchQuantityInfo
+	41,  // 54: core.BatchInfo.seconds:type_name -> core.BatchQuantityInfo
+	41,  // 55: core.BatchInfo.waste:type_name -> core.BatchQuantityInfo
+	45,  // 56: core.BatchInfo.machines:type_name -> core.LightMachineInfo
+	100, // 57: core.BatchInfo.closed_at:type_name -> google.protobuf.Timestamp
+	100, // 58: core.BatchInfo.scanned_at:type_name -> google.protobuf.Timestamp
+	100, // 59: core.BatchInfo.created_at:type_name -> google.protobuf.Timestamp
+	100, // 60: core.BatchInfo.updated_at:type_name -> google.protobuf.Timestamp
+	44,  // 61: core.BatchInfo.lots:type_name -> core.BatchLotInfo
+	100, // 62: core.LightMachineInfo.created_at:type_name -> google.protobuf.Timestamp
+	100, // 63: core.LightMachineInfo.updated_at:type_name -> google.protobuf.Timestamp
+	43,  // 64: core.BatchFlowNodeInfo.batch:type_name -> core.BatchInfo
+	49,  // 65: core.OpenBatchSummaryInfo.item:type_name -> core.OpenBatchSummaryItemProto
+	50,  // 66: core.OpenBatchSummaryInfo.scanning_station:type_name -> core.OpenBatchSummaryScanningStationProto
+	46,  // 67: core.GetBatchFlowResponse.nodes:type_name -> core.BatchFlowNodeInfo
+	43,  // 68: core.ListBatchesByScanningStationResponse.batches:type_name -> core.BatchInfo
+	106, // 69: core.ListBatchesByScanningStationResponse.page_info:type_name -> core.PageInfo
+	47,  // 70: core.GetBatchPossibleNextStepsResponse.steps:type_name -> core.ScanningProductionStepInfoProto
+	47,  // 71: core.GetBatchPossibleInitStepsResponse.steps:type_name -> core.ScanningProductionStepInfoProto
+	51,  // 72: core.AnalyzeOpenBatchesResponse.summaries:type_name -> core.OpenBatchSummaryInfo
+	42,  // 73: core.InitializeBatchResponse.batch:type_name -> core.BaseBatchInfo
+	42,  // 74: core.MoveBatchesResponse.batch:type_name -> core.BaseBatchInfo
+	42,  // 75: core.MergeBatchesResponse.batch:type_name -> core.BaseBatchInfo
+	41,  // 76: core.SplitBatchRequest.firsts:type_name -> core.BatchQuantityInfo
+	41,  // 77: core.SplitBatchRequest.seconds:type_name -> core.BatchQuantityInfo
+	41,  // 78: core.SplitBatchRequest.waste:type_name -> core.BatchQuantityInfo
+	42,  // 79: core.SplitBatchResponse.batch:type_name -> core.BaseBatchInfo
+	41,  // 80: core.GetRemainingQuantityToSplitResponse.quantity:type_name -> core.BatchQuantityInfo
+	41,  // 81: core.GetScanningStationConsumptionRequest.split_quantity:type_name -> core.BatchQuantityInfo
+	48,  // 82: core.GetScanningStationConsumptionResponse.consumptions:type_name -> core.ScanningConsumptionInfo
+	42,  // 83: core.CloseBatchResponse.batch:type_name -> core.BaseBatchInfo
+	42,  // 84: core.DeleteBatchResponse.batch:type_name -> core.BaseBatchInfo
+	107, // 85: core.ListItemCategoriesResponse.item_categories:type_name -> core.ItemCategoryInfo
+	106, // 86: core.ListItemCategoriesResponse.page_info:type_name -> core.PageInfo
+	104, // 87: core.ExportItemCategoriesResponse.job:type_name -> core.JobInfo
+	107, // 88: core.GetItemCategoryResponse.item_category:type_name -> core.ItemCategoryInfo
+	107, // 89: core.CreateItemCategoryResponse.item_category:type_name -> core.ItemCategoryInfo
+	107, // 90: core.UpdateItemCategoryResponse.item_category:type_name -> core.ItemCategoryInfo
+	102, // 91: core.BulkUpsertItemCategoryInput.unit_group:type_name -> core.ObjectIdentifier
+	93,  // 92: core.BulkUpsertItemCategoriesRequest.item_categories:type_name -> core.BulkUpsertItemCategoryInput
+	104, // 93: core.BulkUpsertItemCategoriesResponse.job:type_name -> core.JobInfo
+	99,  // 94: core.ConsumptionInfo.quantity:type_name -> core.QuantityInfo
+	99,  // 95: core.ConsumptionInfo.waste_quantity:type_name -> core.QuantityInfo
+	100, // 96: core.ConsumptionInfo.created_at:type_name -> google.protobuf.Timestamp
+	100, // 97: core.ConsumptionInfo.updated_at:type_name -> google.protobuf.Timestamp
+	96,  // 98: core.GetConsumptionResponse.consumption:type_name -> core.ConsumptionInfo
+	99,  // [99:99] is the sub-list for method output_type
+	99,  // [99:99] is the sub-list for method input_type
+	99,  // [99:99] is the sub-list for extension type_name
+	99,  // [99:99] is the sub-list for extension extendee
+	0,   // [0:99] is the sub-list for field type_name
 }
 
 func init() { file_core_core_items_proto_init() }
@@ -6761,6 +6827,7 @@ func file_core_core_items_proto_init() {
 	file_core_core_items_proto_msgTypes[45].OneofWrappers = []any{}
 	file_core_core_items_proto_msgTypes[48].OneofWrappers = []any{}
 	file_core_core_items_proto_msgTypes[54].OneofWrappers = []any{}
+	file_core_core_items_proto_msgTypes[62].OneofWrappers = []any{}
 	file_core_core_items_proto_msgTypes[68].OneofWrappers = []any{}
 	file_core_core_items_proto_msgTypes[72].OneofWrappers = []any{}
 	file_core_core_items_proto_msgTypes[79].OneofWrappers = []any{}

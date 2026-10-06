@@ -6290,6 +6290,21 @@ func (mr *MockBatchRepoMockRecorder) CountDownstreamBatches(ctx, batchID any) *g
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CountDownstreamBatches", reflect.TypeOf((*MockBatchRepo)(nil).CountDownstreamBatches), ctx, batchID)
 }
 
+// CountScannedSince mocks base method.
+func (m *MockBatchRepo) CountScannedSince(ctx context.Context, accountID string, since time.Time) (int64, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "CountScannedSince", ctx, accountID, since)
+	ret0, _ := ret[0].(int64)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
+}
+
+// CountScannedSince indicates an expected call of CountScannedSince.
+func (mr *MockBatchRepoMockRecorder) CountScannedSince(ctx, accountID, since any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CountScannedSince", reflect.TypeOf((*MockBatchRepo)(nil).CountScannedSince), ctx, accountID, since)
+}
+
 // Create mocks base method.
 func (m *MockBatchRepo) Create(ctx context.Context, id string, params domain.CreateBatchParams) (*domain.BaseBatch, *apierror.APIError) {
 	m.ctrl.T.Helper()
@@ -6571,6 +6586,21 @@ func (m *MockBatchRepo) ReassignMachine(ctx context.Context, accountID, batchID,
 func (mr *MockBatchRepoMockRecorder) ReassignMachine(ctx, accountID, batchID, machineID any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ReassignMachine", reflect.TypeOf((*MockBatchRepo)(nil).ReassignMachine), ctx, accountID, batchID, machineID)
+}
+
+// RemainingToSplit mocks base method.
+func (m *MockBatchRepo) RemainingToSplit(ctx context.Context, accountID string, batch domain.BaseBatch, producedUnit domain.LightUnit, productionStepID string) (decimal.Decimal, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "RemainingToSplit", ctx, accountID, batch, producedUnit, productionStepID)
+	ret0, _ := ret[0].(decimal.Decimal)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
+}
+
+// RemainingToSplit indicates an expected call of RemainingToSplit.
+func (mr *MockBatchRepoMockRecorder) RemainingToSplit(ctx, accountID, batch, producedUnit, productionStepID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RemainingToSplit", reflect.TypeOf((*MockBatchRepo)(nil).RemainingToSplit), ctx, accountID, batch, producedUnit, productionStepID)
 }
 
 // Reopen mocks base method.
@@ -7404,6 +7434,21 @@ func (m *MockInventoryQueryRepo) FetchPhysicalInventoryBaseForItems(ctx context.
 func (mr *MockInventoryQueryRepoMockRecorder) FetchPhysicalInventoryBaseForItems(ctx, accountID, itemIDs any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "FetchPhysicalInventoryBaseForItems", reflect.TypeOf((*MockInventoryQueryRepo)(nil).FetchPhysicalInventoryBaseForItems), ctx, accountID, itemIDs)
+}
+
+// ListAvailableReceiptUnitIDs mocks base method.
+func (m *MockInventoryQueryRepo) ListAvailableReceiptUnitIDs(ctx context.Context, itemID, ownerAccountID string) ([]string, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ListAvailableReceiptUnitIDs", ctx, itemID, ownerAccountID)
+	ret0, _ := ret[0].([]string)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
+}
+
+// ListAvailableReceiptUnitIDs indicates an expected call of ListAvailableReceiptUnitIDs.
+func (mr *MockInventoryQueryRepoMockRecorder) ListAvailableReceiptUnitIDs(ctx, itemID, ownerAccountID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListAvailableReceiptUnitIDs", reflect.TypeOf((*MockInventoryQueryRepo)(nil).ListAvailableReceiptUnitIDs), ctx, itemID, ownerAccountID)
 }
 
 // MockProductLineRepo is a mock of ProductLineRepo interface.

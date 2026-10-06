@@ -765,24 +765,6 @@ func (r *productionRunRepoImpl) hydrateBatches(ctx context.Context, accountID st
 		return []*domain.Batch{}, nil
 	}
 
-	machineRows, err := r.queries.ListMachinesForBatches(ctx, found)
-	if apiErr := db.MapSQLError(err); apiErr != nil {
-		return nil, apiErr
-	}
-	machinesByBatch := make(map[string][]domain.LightMachine)
-	for _, m := range machineRows {
-		machinesByBatch[m.BatchID] = append(machinesByBatch[m.BatchID], domain.LightMachine{ID: m.ID, Name: m.Name, SerialNumber: m.SerialNumber})
-	}
-
-	lotRows, err := r.queries.ListLotsForBatches(ctx, sqlc.ListLotsForBatchesParams{IssuedBatchIds: nullIDs, AllocatedBatchIds: nullIDs})
-	if apiErr := db.MapSQLError(err); apiErr != nil {
-		return nil, apiErr
-	}
-	lotsByBatch := make(map[string][]domain.BatchLot)
-	for _, l := range lotRows {
-		lotsByBatch[l.BatchID.String] = append(lotsByBatch[l.BatchID.String], domain.BatchLot{LotNumber: l.LotNumber, Type: l.LotType})
-	}
-
 	edges, err := r.queries.ListBatchFlowEdgesForBatches(ctx, sqlc.ListBatchFlowEdgesForBatchesParams{DownstreamIds: found, UpstreamIds: found})
 	if apiErr := db.MapSQLError(err); apiErr != nil {
 		return nil, apiErr
@@ -797,30 +779,12 @@ func (r *productionRunRepoImpl) hydrateBatches(ctx context.Context, accountID st
 	batches := make([]*domain.Batch, len(rows))
 	for i, row := range rows {
 		batch := mapBatchRow(sqlc.GetBatchRow(row))
-
-		machines := machinesByBatch[row.ID]
-		if machines == nil {
-			machines = []domain.LightMachine{}
-		}
-		batch.Machines = machines
-
-		seenLots := make(map[string]bool)
-		lots := make([]domain.BatchLot, 0, len(lotsByBatch[row.ID])+1)
-		for _, l := range lotsByBatch[row.ID] {
-			if !seenLots[l.LotNumber] {
-				seenLots[l.LotNumber] = true
-				lots = append(lots, l)
-			}
-		}
-		if batch.ProductionRun != nil && batch.ProductionRun.Number != "" && !seenLots[batch.ProductionRun.Number] {
-			lots = append(lots, domain.BatchLot{LotNumber: batch.ProductionRun.Number, Type: "productionRun"})
-		}
-		batch.Lots = lots
-
 		batch.InputBatchIDs = inputsByBatch[row.ID]
 		batch.OutputBatchIDs = outputsByBatch[row.ID]
-
 		batches[i] = batch
+	}
+	if apiErr := attachMachinesAndLots(ctx, r.queries, batches); apiErr != nil {
+		return nil, apiErr
 	}
 	return batches, nil
 }

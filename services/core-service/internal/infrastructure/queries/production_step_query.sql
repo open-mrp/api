@@ -80,19 +80,31 @@ SELECT p.item_id FROM production p
 WHERE p.production_step_id = sqlc.arg('production_step_id');
 
 -- name: FindProducedUnitByStep :one
-SELECT u.id, u.abbreviation, u.unit_dimension_code AS type
-FROM production p
-JOIN quantity q ON p.quantity_id = q.id
-JOIN unit u ON q.unit_id = u.id
-WHERE p.production_step_id = sqlc.arg('production_step_id');
+-- The unit a step's output is counted in on the scanning floor: the base unit of the produced item's
+-- unit group, not the unit the production happens to be written in.
+SELECT u.id, u.name, u.abbreviation, u.unit_dimension_code AS type,
+    u.ratio_numerator, u.ratio_denominator, u.offset_numerator, u.offset_denominator,
+    u.is_base_unit, u.account_id
+FROM production_step ps
+JOIN production p ON p.production_step_id = ps.id
+JOIN item i ON i.id = p.item_id
+JOIN item_category ic ON ic.id = i.item_category_id
+JOIN unit_group ug ON ug.id = ic.unit_group_id
+JOIN unit u ON u.id = ug.base_unit_id
+WHERE ps.id = sqlc.arg('production_step_id')
+AND ps.account_id = sqlc.arg('account_id')
+LIMIT 1;
 
 -- name: FindStepIDByScanningStationAndItem :one
+-- The step a batch is initialized into: one at this station that makes the batch's item and has no
+-- upstream step (A = downstream), since initializing is where a batch enters the flow.
 SELECT ps.id
 FROM production_step ps
 JOIN production p ON p.production_step_id = ps.id
 WHERE ps.scanning_station_id = sqlc.arg('scanning_station_id')
 AND ps.account_id = sqlc.arg('account_id')
 AND p.item_id = sqlc.arg('item_id')
+AND NOT EXISTS (SELECT 1 FROM _parent_child_production_steps pcps WHERE pcps.A = ps.id)
 LIMIT 1;
 
 -- name: FindStepByScanningStationAndItem :one
@@ -115,6 +127,7 @@ JOIN unit pu ON pq.unit_id = pu.id
 WHERE ps.scanning_station_id = sqlc.arg('scanning_station_id')
 AND ps.account_id = sqlc.arg('account_id')
 AND p.item_id = sqlc.arg('item_id')
+AND NOT EXISTS (SELECT 1 FROM _parent_child_production_steps pcps WHERE pcps.A = ps.id)
 LIMIT 1;
 
 -- name: GetProductionStepChildSteps :many

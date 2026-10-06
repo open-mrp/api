@@ -421,3 +421,10 @@ WHERE b.id = sqlc.arg('batch_id')
   AND ps.scanning_station_id = sqlc.arg('scanning_station_id')
 GROUP BY ps.id, ps.name
 ORDER BY ps.name;
+
+-- name: CountBatchesScannedSince :one
+-- The batches an account has scanned in the current billing period, which is what a plan's batch cap
+-- counts. Served by batch_account_id_scanned_at_idx.
+SELECT COUNT(*) FROM batch
+WHERE account_id = sqlc.arg('account_id')
+AND scanned_at >= sqlc.arg('since');

@@ -114,3 +114,43 @@ func (p *outboxBillingPublisher) PublishReportInvoiceCreated(ctx context.Context
 
 	return nil
 }
+
+func (p *outboxBillingPublisher) PublishReportBatchCreated(ctx context.Context, accountID, batchID string) *apierror.APIError {
+	ctx, span := billingPublisherTracer.Start(ctx, "event.outbox_billing_publisher.publish_report_batch_created")
+	defer span.End()
+
+	repos, ok := GetReposFromContext(ctx)
+	if !ok {
+		return tracing.Trace(span, apierror.NewInternalError(nil, "RepoFactory not found in context for outbox publisher."))
+	}
+
+	dataJSON, err := json.Marshal(messaging.BatchCreatedReportData{
+		AccountID: accountID,
+		BatchID:   batchID,
+	})
+	if err != nil {
+		return tracing.Trace(span, apierror.NewInternalError(err, "Failed to marshal batch created report data."))
+	}
+
+	msg := contracts.AmqpMessage{
+		Data: dataJSON,
+	}
+	if identity, ok := appctx.GetIdentityFromContext(ctx); ok {
+		msg.Identity = identity
+	}
+	if requestID, ok := appctx.GetRequestID(ctx); ok {
+		msg.RequestID = requestID
+	}
+
+	if _, err := repos.NewOutboxRepo().Create(ctx, messaging.OutboxMessageInput{
+		ServiceName: "core-service",
+		MessageType: string(contracts.BillingCmdReportBatchCreated),
+		Destination: messaging.ApplicationExchange,
+		RoutingKey:  string(contracts.BillingCmdReportBatchCreated),
+		Payload:     msg,
+	}); err != nil {
+		return tracing.Trace(span, apierror.NewInternalError(err, "Failed to create outbox message."))
+	}
+
+	return nil
+}

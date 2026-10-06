@@ -587,6 +587,10 @@ type BatchRepo interface {
 	Close(ctx context.Context, accountID, batchID string) (*BaseBatch, *apierror.APIError)
 	CloseIfLastStep(ctx context.Context, accountID, batchID, productionStepID string) *apierror.APIError
 	CloseIfFullyUsed(ctx context.Context, accountID string, batch BaseBatch, producedUnit LightUnit, productionStepID string) *apierror.APIError
+	// RemainingToSplit is a batch's expected output at a step less what has already been split off it — firsts, seconds and waste — both in producedUnit. It is a validation error for producedUnit not to be the step's production unit.
+	RemainingToSplit(ctx context.Context, accountID string, batch BaseBatch, producedUnit LightUnit, productionStepID string) (decimal.Decimal, *apierror.APIError)
+	// CountScannedSince counts the batches the account has scanned since the given time.
+	CountScannedSince(ctx context.Context, accountID string, since time.Time) (int64, *apierror.APIError)
 	Delete(ctx context.Context, accountID, batchID string) (*BaseBatch, *apierror.APIError)
 	DeleteMany(ctx context.Context, accountID string, batchIDs []string) *apierror.APIError
 	// CountDownstreamBatches reports how many batches were fed by this one. A batch something downstream still feeds on cannot be undone.
@@ -672,6 +676,8 @@ type UnitQueryRepo interface {
 // InventoryQueryRepo provides read-only access to inventory data.
 type InventoryQueryRepo interface {
 	FetchCurrentInventory(ctx context.Context, itemID, ownerAccountID string) (*InventorySnapshot, *apierror.APIError)
+	// ListAvailableReceiptUnitIDs returns the distinct units the item's available receipts are recorded in.
+	ListAvailableReceiptUnitIDs(ctx context.Context, itemID, ownerAccountID string) ([]string, *apierror.APIError)
 	FetchOnHandInventoryBulk(ctx context.Context, itemIDs []string, ownerAccountID string) ([]*BulkOnHandInventory, *apierror.APIError)
 	FetchPhysicalInventory(ctx context.Context, itemID, ownerAccountID, unitID string) (decimal.Decimal, *apierror.APIError)
 	// FetchPhysicalInventoryBaseForItems returns each item's physical inventory in base units, so the batch-scan audit trail can level many items with one query instead of one per item.

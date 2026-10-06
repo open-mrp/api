@@ -3,12 +3,13 @@ package repository
 import (
 	"context"
 	"database/sql"
-	"fmt"
+	"errors"
 
 	"github.com/shopspring/decimal"
 
 	"github.com/open-mrp/api/services/core-service/internal/domain"
 	"github.com/open-mrp/api/services/core-service/internal/infrastructure/sqlc"
+	"github.com/open-mrp/api/shared/constants"
 	"github.com/open-mrp/api/shared/db"
 	apierror "github.com/open-mrp/api/shared/errors"
 	"github.com/open-mrp/api/shared/tracing"
@@ -271,7 +272,9 @@ func (r *productionStepQueryRepoImpl) IsMultiPart(ctx context.Context, accountID
 	ctx, span := productionStepQueryRepoTracer.Start(ctx, "repository.production_step_query.is_multi_part")
 	defer span.End()
 
-	count, err := r.queries.CountProductionStepConsumptions(ctx, sql.NullString{String: id, Valid: true})
+	// Multi-part means several parts come together at the step; the materials it also consumes are not
+	// scanned in, so they do not count.
+	count, err := r.queries.CountProductionStepPartConsumptions(ctx, sql.NullString{String: id, Valid: true})
 	if apiErr := db.MapSQLError(err); apiErr != nil {
 		return false, tracing.Trace(span, apiErr)
 	}
@@ -322,16 +325,32 @@ func (r *productionStepQueryRepoImpl) FindProducedUnit(ctx context.Context, acco
 	ctx, span := productionStepQueryRepoTracer.Start(ctx, "repository.production_step_query.find_produced_unit")
 	defer span.End()
 
-	row, err := r.queries.FindProducedUnitByStep(ctx, sql.NullString{String: id, Valid: true})
+	row, err := r.queries.FindProducedUnitByStep(ctx, sqlc.FindProducedUnitByStepParams{
+		ProductionStepID: id,
+		AccountID:        accountID,
+	})
+	if errors.Is(err, sql.ErrNoRows) {
+		return nil, tracing.Trace(span, apierror.NewResourceNotFoundError("Production not found for production step."))
+	}
 	if apiErr := db.MapSQLError(err); apiErr != nil {
 		return nil, tracing.Trace(span, apiErr)
 	}
 
-	return &domain.LightUnit{
-		ID:           row.ID,
-		Abbreviation: row.Abbreviation,
-		Type:         row.Type,
-	}, nil
+	unit := domain.LightUnit{
+		ID:                row.ID,
+		Name:              row.Name,
+		Abbreviation:      row.Abbreviation,
+		Type:              row.Type,
+		RatioNumerator:    row.RatioNumerator,
+		RatioDenominator:  row.RatioDenominator,
+		OffsetNumerator:   row.OffsetNumerator,
+		OffsetDenominator: row.OffsetDenominator,
+		IsBaseUnit:        row.IsBaseUnit,
+	}
+	if row.AccountID.Valid {
+		unit.AccountID = &row.AccountID.String
+	}
+	return &unit, nil
 }
 
 func (r *productionStepQueryRepoImpl) FindIDByScanningStationAndProducedBlock(ctx context.Context, accountID, scanningStationID, itemID string) (string, *apierror.APIError) {
@@ -386,45 +405,58 @@ func (r *productionStepQueryRepoImpl) FindOneByScanningStationAndProducedBlock(c
 	return step, nil
 }
 
+// CalculateNextStepQuantities is how much of a step's output a batch of one of its parts makes: the
+// batch restated in the production's unit, scaled by what the step produces per unit of that part
+// consumed together with the part's own waste.
 func (r *productionStepQueryRepoImpl) CalculateNextStepQuantities(ctx context.Context, accountID, itemID string, batchQuantity domain.BatchQuantity, stepID string) (*domain.NextStepQuantitiesResult, *apierror.APIError) {
 	ctx, span := productionStepQueryRepoTracer.Start(ctx, "repository.production_step_query.calculate_next_step_quantities")
 	defer span.End()
 
 	step, apiErr := r.Find(ctx, accountID, stepID)
 	if apiErr != nil {
+		if apierror.IsNotFound(apiErr) {
+			return nil, tracing.Trace(span, apierror.NewResourceNotFoundError("Production step not found."))
+		}
 		return nil, tracing.Trace(span, apiErr)
 	}
 
-	// Find the consumption that matches the input item.
-	var matchedConsumption *domain.StepConsumption
+	// Only parts are stepped through; a material is consumed, never scanned in.
+	var consumption *domain.StepConsumption
 	for i := range step.Consumptions {
-		if step.Consumptions[i].ConsumedItem.ID == itemID {
-			matchedConsumption = &step.Consumptions[i]
+		c := &step.Consumptions[i]
+		if c.ConsumedItem.ID == itemID && c.ConsumedItem.Type == string(constants.ItemTypeCodePart) {
+			consumption = c
 			break
 		}
 	}
-	if matchedConsumption == nil {
-		return nil, tracing.Trace(span, apierror.NewInternalError(
-			fmt.Errorf("item %s is not a consumption of step %s", itemID, stepID),
-			"Item is not a consumption of the specified production step.",
-		))
+	if consumption == nil {
+		return nil, tracing.Trace(span, apierror.NewResourceNotFoundError("Consumption not found for production step."))
+	}
+	if step.Production.ID == "" {
+		return nil, tracing.Trace(span, apierror.NewResourceNotFoundError("Production not found for production step."))
 	}
 
-	// multiplier = batchQuantity.Measure / consumption.Quantity.Measure
-	if matchedConsumption.Quantity.Measure.IsZero() {
-		return nil, tracing.Trace(span, apierror.NewInternalError(
-			fmt.Errorf("consumption quantity measure is zero for step %s", stepID),
-			"Consumption quantity measure is zero.",
-		))
-	}
-	multiplier := batchQuantity.Measure.Div(matchedConsumption.Quantity.Measure)
+	conv := NewUnitConversionRepo(r.queries)
+	produced := step.Production.Quantity
 
-	// outputQuantity = production.Quantity.Measure * multiplier
-	outputQuantity := step.Production.Quantity.Measure.Mul(multiplier)
+	batchInProductionUnit, apiErr := domain.ConvertScanQuantity(ctx, conv, batchQuantity.Measure, batchQuantity.Unit, produced.Unit)
+	if apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
+	wasteInConsumedUnit, apiErr := domain.ConvertScanQuantity(ctx, conv, consumption.WasteQuantity.Measure, consumption.WasteQuantity.Unit, consumption.Quantity.Unit)
+	if apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
+	consumed := consumption.Quantity.Measure.Add(wasteInConsumedUnit)
+	if consumed.IsZero() {
+		return nil, tracing.Trace(span, apierror.NewValidationError("The production step consumes none of this part."))
+	}
+
+	quantity := batchInProductionUnit.Mul(produced.Measure.Div(consumed))
 
 	return &domain.NextStepQuantitiesResult{
-		Quantity:       outputQuantity,
+		Quantity:       domain.AsScanNumber(quantity),
 		ItemID:         step.Production.ProducedItem.ID,
-		ProducedUnitID: step.Production.Quantity.Unit.ID,
+		ProducedUnitID: produced.Unit.ID,
 	}, nil
 }

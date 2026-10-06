@@ -3,6 +3,7 @@ package stripe
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"log/slog"
 	"math"
@@ -786,11 +787,31 @@ func (c *stripeClientImpl) ReportMeterEvent(ctx context.Context, eventName, stri
 	})
 	if err != nil {
 		span.RecordError(err)
+		var stripeErr *stripe.Error
+		if errors.As(err, &stripeErr) && stripeErr.HTTPStatusCode >= 400 && stripeErr.HTTPStatusCode < 500 &&
+			stripeErr.HTTPStatusCode != http.StatusTooManyRequests {
+			return &RejectedMeterEventError{err: err}
+		}
 		return fmt.Errorf("failed to report meter event: %w", err)
 	}
 
 	return nil
 }
+
+// RejectedMeterEventError is a meter event Stripe refused outright — a meter not configured for the
+// event name, say — which no retry of the same request will change.
+type RejectedMeterEventError struct {
+	err error
+}
+
+func (e *RejectedMeterEventError) Error() string {
+	return "stripe rejected the meter event: " + e.err.Error()
+}
+
+func (e *RejectedMeterEventError) Unwrap() error { return e.err }
+
+// Permanent reports that retrying the same meter event cannot succeed.
+func (e *RejectedMeterEventError) Permanent() bool { return true }
 
 func truncate(s string, maxLen int) string {
 	if len(s) <= maxLen {

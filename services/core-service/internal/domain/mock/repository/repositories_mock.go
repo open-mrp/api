@@ -2096,21 +2096,6 @@ func (mr *MockItemRepoMockRecorder) ListConsumptionChangeLogsForBurnRate(ctx, ac
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListConsumptionChangeLogsForBurnRate", reflect.TypeOf((*MockItemRepo)(nil).ListConsumptionChangeLogsForBurnRate), ctx, accountID, itemID)
 }
 
-// ListStaleBurnRateItems mocks base method.
-func (m *MockItemRepo) ListStaleBurnRateItems(ctx context.Context, staleBefore time.Time, limit int32) ([]domain.StaleBurnRateItem, *apierror.APIError) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "ListStaleBurnRateItems", ctx, staleBefore, limit)
-	ret0, _ := ret[0].([]domain.StaleBurnRateItem)
-	ret1, _ := ret[1].(*apierror.APIError)
-	return ret0, ret1
-}
-
-// ListStaleBurnRateItems indicates an expected call of ListStaleBurnRateItems.
-func (mr *MockItemRepoMockRecorder) ListStaleBurnRateItems(ctx, staleBefore, limit any) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListStaleBurnRateItems", reflect.TypeOf((*MockItemRepo)(nil).ListStaleBurnRateItems), ctx, staleBefore, limit)
-}
-
 // LoadAttributes mocks base method.
 func (m *MockItemRepo) LoadAttributes(ctx context.Context, item *domain.Item) *apierror.APIError {
 	m.ctrl.T.Helper()
@@ -2137,6 +2122,22 @@ func (m *MockItemRepo) RemoveAttribute(ctx context.Context, params domain.Remove
 func (mr *MockItemRepoMockRecorder) RemoveAttribute(ctx, params any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RemoveAttribute", reflect.TypeOf((*MockItemRepo)(nil).RemoveAttribute), ctx, params)
+}
+
+// ScanBurnRateItems mocks base method.
+func (m *MockItemRepo) ScanBurnRateItems(ctx context.Context, afterID string, staleBefore time.Time, limit int32) ([]domain.StaleBurnRateItem, string, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ScanBurnRateItems", ctx, afterID, staleBefore, limit)
+	ret0, _ := ret[0].([]domain.StaleBurnRateItem)
+	ret1, _ := ret[1].(string)
+	ret2, _ := ret[2].(*apierror.APIError)
+	return ret0, ret1, ret2
+}
+
+// ScanBurnRateItems indicates an expected call of ScanBurnRateItems.
+func (mr *MockItemRepoMockRecorder) ScanBurnRateItems(ctx, afterID, staleBefore, limit any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ScanBurnRateItems", reflect.TypeOf((*MockItemRepo)(nil).ScanBurnRateItems), ctx, afterID, staleBefore, limit)
 }
 
 // Update mocks base method.
@@ -10327,20 +10328,6 @@ func (m *MockSalesFactRepo) RebuildRollupDay(ctx context.Context, day domain.Sal
 func (mr *MockSalesFactRepoMockRecorder) RebuildRollupDay(ctx, day any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RebuildRollupDay", reflect.TypeOf((*MockSalesFactRepo)(nil).RebuildRollupDay), ctx, day)
-}
-
-// RebuildRollupMonth mocks base method.
-func (m *MockSalesFactRepo) RebuildRollupMonth(ctx context.Context, accountID string, month time.Time) *apierror.APIError {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "RebuildRollupMonth", ctx, accountID, month)
-	ret0, _ := ret[0].(*apierror.APIError)
-	return ret0
-}
-
-// RebuildRollupMonth indicates an expected call of RebuildRollupMonth.
-func (mr *MockSalesFactRepoMockRecorder) RebuildRollupMonth(ctx, accountID, month any) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RebuildRollupMonth", reflect.TypeOf((*MockSalesFactRepo)(nil).RebuildRollupMonth), ctx, accountID, month)
 }
 
 // ResolveInvoiceIDs mocks base method.

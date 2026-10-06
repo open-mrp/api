@@ -205,8 +205,8 @@ func TestCleanupConfigWithDefaults(t *testing.T) {
 	config := new(CleanupConfig).WithDefaults()
 
 	require.Equal(t, 24*time.Hour, config.Interval)
-	require.Equal(t, 1000, config.BatchSize)
-	require.Equal(t, 100, config.MaxBatchesPerRun)
+	require.Equal(t, 20, config.BatchSize)
+	require.Equal(t, 1000, config.MaxBatchesPerRun)
 }
 
 func TestCleanupConfigValidate(t *testing.T) {

@@ -34,6 +34,9 @@ const (
 	// guard against a thundering herd: even when every item is stale (e.g. first deploy), the backlog
 	// drains a bounded batch per tick rather than flooding the consumer at once.
 	burnRateSweepBatchSize = 500
+
+	// burnRateSweepScanPage is how many items one sweep query reads; each read is an item and its rate by primary key.
+	burnRateSweepScanPage = 250
 )
 
 // BurnRateSchedulerConfig configures the periodic burn-rate sweep.
@@ -87,6 +90,10 @@ type burnRateScheduler struct {
 	pollInterval   time.Duration
 	staleThreshold time.Duration
 	batchSize      int32
+	scanPage       int32
+
+	// cursor is the last item id the sweep read, so each tick resumes the lap where the last one stopped.
+	cursor string
 
 	stopCh chan struct{}
 	wg     sync.WaitGroup
@@ -104,6 +111,7 @@ func NewBurnRateScheduler(config *BurnRateSchedulerConfig) *burnRateScheduler {
 		pollInterval:   config.PollInterval,
 		staleThreshold: config.StaleThreshold,
 		batchSize:      config.BatchSize,
+		scanPage:       burnRateSweepScanPage,
 		stopCh:         make(chan struct{}),
 	}
 }
@@ -143,7 +151,8 @@ func (s *burnRateScheduler) pollLoop(ctx context.Context) {
 	}
 }
 
-// enqueueStaleRecalcs re-enqueues a burn-rate recompute for up to batchSize of the stalest items.
+// enqueueStaleRecalcs re-enqueues a burn-rate recompute for up to batchSize stale items, reading items in id
+// order from where the last tick stopped and wrapping at most once, so each tick reads every item at most once.
 //
 // The tick only enqueues; the actual recompute runs on the shared consumer, one short transaction per
 // item. It never recomputes inline, which would hold the lease for the length of the whole batch and
@@ -153,18 +162,36 @@ func (s *burnRateScheduler) enqueueStaleRecalcs(ctx context.Context) {
 	defer span.End()
 
 	staleBefore := time.Now().UTC().Add(-s.staleThreshold)
-	items, apiErr := s.repos.NewItemRepo().ListStaleBurnRateItems(ctx, staleBefore, s.batchSize)
-	if apiErr != nil {
-		slog.Error("Burn rate sweep: failed to list stale items", "error", apiErr)
-		return
-	}
-
-	for _, item := range items {
-		if apiErr := mediator.EnqueueRecalc(ctx, s.repos, item.AccountID, item.ItemID); apiErr != nil {
-			// One bad enqueue should not abort the batch; it is retried on the next tick, since the
-			// item stays stale until a recompute lands.
-			slog.Error("Burn rate sweep: failed to enqueue recalc",
-				"account_id", item.AccountID, "item_id", item.ItemID, "error", apiErr)
+	start, wrapped, enqueued := s.cursor, false, int32(0)
+	for enqueued < s.batchSize {
+		items, last, apiErr := s.repos.NewItemRepo().ScanBurnRateItems(ctx, s.cursor, staleBefore, s.scanPage)
+		if apiErr != nil {
+			slog.Error("Burn rate sweep: failed to scan items", "error", apiErr)
+			return
+		}
+		for _, item := range items {
+			if enqueued == s.batchSize {
+				// The next tick resumes after the last item enqueued.
+				return
+			}
+			if apiErr := mediator.EnqueueRecalc(ctx, s.repos, item.AccountID, item.ItemID); apiErr != nil {
+				// One bad enqueue should not abort the batch; it is retried on a later tick, since the
+				// item stays stale until a recompute lands.
+				slog.Error("Burn rate sweep: failed to enqueue recalc",
+					"account_id", item.AccountID, "item_id", item.ItemID, "error", apiErr)
+			}
+			enqueued++
+			s.cursor = item.ItemID
+		}
+		s.cursor = last
+		if last == "" {
+			if wrapped || start == "" {
+				return
+			}
+			wrapped = true
+		}
+		if wrapped && s.cursor != "" && s.cursor >= start {
+			return
 		}
 	}
 }

@@ -18,8 +18,8 @@ var salesFactRepoTracer = tracing.GetTracer("core-service.infrastructure.reposit
 
 const salesFactSyncName = "reconcile"
 
-// salesFactUpsertBatch bounds one multi-row upsert: 500 rows x 16 columns stays far below MySQL's 65,535 placeholder limit.
-const salesFactUpsertBatch = 500
+// salesFactWriteBatch bounds the rows one fact or mark statement writes; each fact row updates eight indexes, and 50 keep a statement under 25ms.
+const salesFactWriteBatch = 50
 
 type salesFactRepoImpl struct {
 	queries *sqlc.Queries
@@ -107,8 +107,8 @@ func (r *salesFactRepoImpl) UpsertFacts(ctx context.Context, facts []domain.Sale
 	defer span.End()
 
 	now := time.Now().UTC()
-	for start := 0; start < len(facts); start += salesFactUpsertBatch {
-		batch := facts[start:min(start+salesFactUpsertBatch, len(facts))]
+	for start := 0; start < len(facts); start += salesFactWriteBatch {
+		batch := facts[start:min(start+salesFactWriteBatch, len(facts))]
 		var sb strings.Builder
 		sb.WriteString(`INSERT INTO sales_line_fact (account_id, invoiced_at, invoice_line_id, invoice_id, sales_order_id,
 sales_order_type_code, buyer_account_id, sales_rep_id, order_discount_id, product_id, item_id, product_line_id,
@@ -139,11 +139,11 @@ ordered_at = VALUES(ordered_at), is_priced = VALUES(is_priced), refreshed_at = V
 func (r *salesFactRepoImpl) DeleteFacts(ctx context.Context, invoiceLineIDs []string) *apierror.APIError {
 	ctx, span := salesFactRepoTracer.Start(ctx, "repository.sales_fact.delete_facts")
 	defer span.End()
-	if len(invoiceLineIDs) == 0 {
-		return nil
-	}
-	if apiErr := db.MapSQLError(r.queries.DeleteSalesFactsByLineIDs(ctx, invoiceLineIDs)); apiErr != nil {
-		return tracing.Trace(span, apiErr)
+	for start := 0; start < len(invoiceLineIDs); start += salesFactWriteBatch {
+		batch := invoiceLineIDs[start:min(start+salesFactWriteBatch, len(invoiceLineIDs))]
+		if apiErr := db.MapSQLError(r.queries.DeleteSalesFactsByLineIDs(ctx, batch)); apiErr != nil {
+			return tracing.Trace(span, apiErr)
+		}
 	}
 	return nil
 }
@@ -194,15 +194,15 @@ func (r *salesFactRepoImpl) ListFactInvoiceIDsAfter(ctx context.Context, afterIn
 func (r *salesFactRepoImpl) FilterExistingInvoiceIDs(ctx context.Context, invoiceIDs []string) ([]string, *apierror.APIError) {
 	ctx, span := salesFactRepoTracer.Start(ctx, "repository.sales_fact.filter_existing_invoice_ids")
 	defer span.End()
-	if len(invoiceIDs) == 0 {
-		return nil, nil
+	var out []string
+	for start := 0; start < len(invoiceIDs); start += 500 {
+		ids, err := r.queries.ListExistingInvoiceIDs(ctx, invoiceIDs[start:min(start+500, len(invoiceIDs))])
+		if apiErr := db.MapSQLError(err); apiErr != nil {
+			return nil, tracing.Trace(span, apiErr)
+		}
+		out = append(out, ids...)
 	}
-
-	ids, err := r.queries.ListExistingInvoiceIDs(ctx, invoiceIDs)
-	if apiErr := db.MapSQLError(err); apiErr != nil {
-		return nil, tracing.Trace(span, apiErr)
-	}
-	return ids, nil
+	return out, nil
 }
 
 func (r *salesFactRepoImpl) ResolveInvoiceIDs(ctx context.Context, accountID string, scope domain.SalesFactScope, scopeIDs []string) ([]string, *apierror.APIError) {
@@ -272,8 +272,8 @@ func (r *salesFactRepoImpl) MarkInvoicesDirty(ctx context.Context, accountID str
 	ctx, span := salesFactRepoTracer.Start(ctx, "repository.sales_fact.mark_invoices_dirty")
 	defer span.End()
 
-	for start := 0; start < len(invoiceIDs); start += 500 {
-		batch := invoiceIDs[start:min(start+500, len(invoiceIDs))]
+	for start := 0; start < len(invoiceIDs); start += salesFactWriteBatch {
+		batch := invoiceIDs[start:min(start+salesFactWriteBatch, len(invoiceIDs))]
 		values := strings.Repeat("(?, ?, ?, NOW(3)),", len(batch))
 		args := make([]any, 0, 3*len(batch))
 		for _, id := range batch {
@@ -315,8 +315,8 @@ func (r *salesFactRepoImpl) MarkRollupDays(ctx context.Context, days []domain.Sa
 	ctx, span := salesFactRepoTracer.Start(ctx, "repository.sales_fact.mark_rollup_days")
 	defer span.End()
 
-	for start := 0; start < len(days); start += 500 {
-		batch := days[start:min(start+500, len(days))]
+	for start := 0; start < len(days); start += salesFactWriteBatch {
+		batch := days[start:min(start+salesFactWriteBatch, len(days))]
 		args := make([]any, 0, 3*len(batch))
 		for _, d := range batch {
 			args = append(args, string(domain.SalesFactScopeRollupDay), rollupMarkID(d), d.AccountID)
@@ -422,8 +422,8 @@ type dirtyMarkKey struct {
 // clearDirtyMarks deletes marks from sales_fact_dirty in batches, each only if its marked_at is unchanged:
 // a mark written again while its work ran survives for the next drain.
 func (r *salesFactRepoImpl) clearDirtyMarks(ctx context.Context, keys []dirtyMarkKey) error {
-	for start := 0; start < len(keys); start += 500 {
-		batch := keys[start:min(start+500, len(keys))]
+	for start := 0; start < len(keys); start += salesFactWriteBatch {
+		batch := keys[start:min(start+salesFactWriteBatch, len(keys))]
 		args := make([]any, 0, 3*len(batch))
 		for _, k := range batch {
 			args = append(args, k.scopeType, k.scopeID, k.markedAt)

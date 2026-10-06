@@ -28,8 +28,11 @@ const (
 	// salesFactPassTZ is where the daily passes' midnight falls: the least busy hour for the US accounts they serve.
 	salesFactPassTZ = "America/New_York"
 
-	// salesFactInvoiceBatch bounds one recompute: ~4 lines an invoice keeps the pricing join under ~1k rows.
+	// salesFactInvoiceBatch is how many dirty marks one drain lists, and how many invoices one reconcile page reads.
 	salesFactInvoiceBatch = 200
+
+	// salesFactComputeBatch bounds one recompute: the pricing join reads ~35 rows an invoice, and 25 invoices keep it under 25ms.
+	salesFactComputeBatch = 25
 
 	// salesFactFanOutThreshold is the most invoices one drain refreshes itself. A scope that resolves to
 	// more (a product moved to another product line after years of sales) is fanned out into one mark
@@ -458,7 +461,7 @@ func (s *SalesFactRefresher) reconcile(ctx context.Context) *apierror.APIError {
 // deleteOrphans removes facts whose invoice no longer exists, which the invoice walk cannot reach. Returns how many lines it deleted.
 func (s *SalesFactRefresher) deleteOrphans(ctx context.Context) (int, *apierror.APIError) {
 	repo := s.cfg.Repos.NewSalesFactRepo()
-	const page = 2000
+	const page = 500
 	deleted, after := 0, ""
 	for {
 		ids, apiErr := repo.ListFactInvoiceIDsAfter(ctx, after, page)
@@ -509,8 +512,8 @@ func (s *SalesFactRefresher) refreshInvoices(ctx context.Context, invoiceIDs []s
 	changedAccounts := map[string]struct{}{}
 	// Whether buyers are marked, read once, at the first change.
 	var tracked *bool
-	for start := 0; start < len(invoiceIDs); start += salesFactInvoiceBatch {
-		batch := invoiceIDs[start:min(start+salesFactInvoiceBatch, len(invoiceIDs))]
+	for start := 0; start < len(invoiceIDs); start += salesFactComputeBatch {
+		batch := invoiceIDs[start:min(start+salesFactComputeBatch, len(invoiceIDs))]
 		computed, apiErr := repo.ComputeFacts(ctx, batch)
 		if apiErr != nil {
 			return changedLines, apiErr
@@ -759,8 +762,8 @@ func touchedRollupDays(upserts, deletes, stored []domain.SalesLineFact) []domain
 	return days
 }
 
-// drainRollupDirty rebuilds a batch of marked rollup days, then the months that hold them, and clears
-// each mark that was not re-marked meanwhile.
+// drainRollupDirty rebuilds a batch of marked rollup days and clears each mark that was not re-marked
+// meanwhile.
 func (s *SalesFactRefresher) drainRollupDirty(ctx context.Context) *apierror.APIError {
 	ctx, span := salesFactTracer.Start(ctx, "service.sales_fact_refresher.drain_rollup_dirty")
 	defer span.End()
@@ -797,25 +800,17 @@ func (s *SalesFactRefresher) drainRollupDirty(ctx context.Context) *apierror.API
 	return nil
 }
 
-// rebuildRollups rebuilds the given days' buckets, then the months that hold them.
 func (s *SalesFactRefresher) rebuildRollups(ctx context.Context, days map[domain.SalesRollupDay]struct{}) *apierror.APIError {
 	repo := s.cfg.Repos.NewSalesFactRepo()
-	months := map[domain.SalesRollupDay]struct{}{}
 	for d := range days {
 		if apiErr := repo.RebuildRollupDay(ctx, d); apiErr != nil {
-			return apiErr
-		}
-		months[domain.SalesRollupDay{AccountID: d.AccountID, Day: utcMonth(d.Day)}] = struct{}{}
-	}
-	for m := range months {
-		if apiErr := repo.RebuildRollupMonth(ctx, m.AccountID, m.Day); apiErr != nil {
 			return apiErr
 		}
 	}
 	return nil
 }
 
-// sweepRollups advances the rollup pass by up to ReconcileBudget, rebuilding every (account, day) in order and each month it passes through. Its first pass is the backfill; later passes, started after each midnight in PassLocation, repair any bucket a crash left behind its facts.
+// sweepRollups advances the rollup pass by up to ReconcileBudget, rebuilding every (account, day) in order. Its first pass is the backfill; later passes, started after each midnight in PassLocation, repair any bucket a crash left behind its facts and write nothing for the rest.
 func (s *SalesFactRefresher) sweepRollups(ctx context.Context) *apierror.APIError {
 	ctx, span := salesFactTracer.Start(ctx, "service.sales_fact_refresher.sweep_rollups")
 	defer span.End()
@@ -836,7 +831,7 @@ func (s *SalesFactRefresher) sweepRollups(ctx context.Context) *apierror.APIErro
 	}
 
 	deadline := now.Add(s.cfg.ReconcileBudget)
-	days := map[domain.SalesRollupDay]struct{}{}
+	days := 0
 	for s.cfg.Now().UTC().Before(deadline) {
 		next, apiErr := repo.NextRollupDay(ctx, *state.Cursor)
 		if apiErr != nil {
@@ -849,25 +844,15 @@ func (s *SalesFactRefresher) sweepRollups(ctx context.Context) *apierror.APIErro
 			slog.InfoContext(ctx, "Sales fact refresher: rollup pass completed", "started_at", state.PassStartedAt)
 			break
 		}
-		days[*next] = struct{}{}
+		days++
 		if apiErr := repo.RebuildRollupDay(ctx, *next); apiErr != nil {
 			return tracing.Trace(span, apiErr)
 		}
 		state.Cursor = &domain.SalesRollupDay{AccountID: next.AccountID, Day: next.Day.AddDate(0, 0, 1)}
 	}
-	span.SetAttributes(attribute.Int("sales_fact.rollup_days", len(days)))
+	span.SetAttributes(attribute.Int("sales_fact.rollup_days", days))
 	if state.Cursor != nil {
 		s.backlog = true
-	}
-	// Days are already rebuilt; this brings their months in line before the cursor is saved past them.
-	months := map[domain.SalesRollupDay]struct{}{}
-	for d := range days {
-		months[domain.SalesRollupDay{AccountID: d.AccountID, Day: utcMonth(d.Day)}] = struct{}{}
-	}
-	for m := range months {
-		if apiErr := repo.RebuildRollupMonth(ctx, m.AccountID, m.Day); apiErr != nil {
-			return tracing.Trace(span, apiErr)
-		}
 	}
 	return tracing.Trace(span, repo.SaveRollupSync(ctx, *state))
 }
@@ -875,11 +860,6 @@ func (s *SalesFactRefresher) sweepRollups(ctx context.Context) *apierror.APIErro
 func utcDay(t time.Time) time.Time {
 	t = t.UTC()
 	return time.Date(t.Year(), t.Month(), t.Day(), 0, 0, 0, 0, time.UTC)
-}
-
-func utcMonth(t time.Time) time.Time {
-	t = t.UTC()
-	return time.Date(t.Year(), t.Month(), 1, 0, 0, 0, 0, time.UTC)
 }
 
 // diffSalesFacts returns the computed facts that are new or differ from what is stored, and the stored facts no longer computed.

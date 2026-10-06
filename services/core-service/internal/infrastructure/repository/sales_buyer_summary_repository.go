@@ -26,24 +26,29 @@ func buyerMarkID(b domain.SalesBuyerKey) string {
 // first_ordered_at is the earliest of those lines' order dates; a buyer whose qualifying orders have no
 // issue date has no summary. The %s is the buyer_account_id IN list.
 //
-// FORCE INDEX: left alone, the optimizer starts from product_line (for the name filter) and walks
-// sales_line_fact_product_line_idx, reading every fact the account has (460k for Carolon, ~3s) where the
-// buyer index reads only the batch's buyers.
-const salesBuyerSummarySource = `SELECT f.buyer_account_id, MIN(f.ordered_at), CAST(COALESCE(SUM(f.total_invoiced), 0) AS DECIMAL(65,30))
-FROM sales_line_fact f FORCE INDEX (sales_line_fact_buyer_idx)
-JOIN product_line pl ON pl.id = f.product_line_id
-WHERE f.account_id = ? AND f.buyer_account_id IN (%s)
-  AND f.sales_order_type_code = 'sales_order' AND f.is_priced = 1
-  AND LOWER(pl.name) NOT IN ('shipping', 'misc')
-GROUP BY f.buyer_account_id
-HAVING MIN(f.ordered_at) IS NOT NULL`
+// The inner query reads sales_line_fact_buyer_summary_idx alone; the product line names are joined only
+// to its few (buyer, product line) groups.
+const salesBuyerSummarySource = `SELECT g.buyer_account_id, MIN(g.first_ordered_at), CAST(COALESCE(SUM(g.total_invoiced), 0) AS DECIMAL(65,30))
+FROM (
+  SELECT f.buyer_account_id, f.product_line_id, MIN(f.ordered_at) AS first_ordered_at, SUM(f.total_invoiced) AS total_invoiced
+  FROM sales_line_fact f FORCE INDEX (sales_line_fact_buyer_summary_idx)
+  WHERE f.account_id = ? AND f.buyer_account_id IN (%s) AND f.sales_order_type_code = 'sales_order' AND f.is_priced = 1
+  GROUP BY f.buyer_account_id, f.product_line_id
+) g
+JOIN product_line pl ON pl.id = g.product_line_id
+WHERE LOWER(pl.name) NOT IN ('shipping', 'misc')
+GROUP BY g.buyer_account_id
+HAVING MIN(g.first_ordered_at) IS NOT NULL`
+
+// salesBuyerSummaryBatch is how many buyers one summary query reads; a large buyer has tens of thousands of facts.
+const salesBuyerSummaryBatch = 20
 
 func (r *salesFactRepoImpl) MarkBuyers(ctx context.Context, buyers []domain.SalesBuyerKey) *apierror.APIError {
 	ctx, span := salesFactRepoTracer.Start(ctx, "repository.sales_fact.mark_buyers")
 	defer span.End()
 
-	for start := 0; start < len(buyers); start += 500 {
-		batch := buyers[start:min(start+500, len(buyers))]
+	for start := 0; start < len(buyers); start += salesFactWriteBatch {
+		batch := buyers[start:min(start+salesFactWriteBatch, len(buyers))]
 		args := make([]any, 0, 3*len(batch))
 		for _, b := range batch {
 			args = append(args, string(domain.SalesFactScopeBuyerSummary), buyerMarkID(b), b.AccountID)
@@ -98,8 +103,8 @@ func (r *salesFactRepoImpl) RebuildBuyerSummaries(ctx context.Context, accountID
 	ctx, span := salesFactRepoTracer.Start(ctx, "repository.sales_fact.rebuild_buyer_summaries")
 	defer span.End()
 
-	for start := 0; start < len(buyerIDs); start += 200 {
-		batch := buyerIDs[start:min(start+200, len(buyerIDs))]
+	for start := 0; start < len(buyerIDs); start += salesBuyerSummaryBatch {
+		batch := buyerIDs[start:min(start+salesBuyerSummaryBatch, len(buyerIDs))]
 		args := append([]any{accountID}, stringsToAny(batch)...)
 		rows, err := r.queries.DB().QueryContext(ctx, strings.Replace(salesBuyerSummarySource, "%s", placeholders(len(batch)), 1), args...)
 		if apiErr := db.MapSQLError(err); apiErr != nil {

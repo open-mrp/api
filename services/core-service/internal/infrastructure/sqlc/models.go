@@ -2185,7 +2185,6 @@ type SalesLineFact struct {
 	InvoiceLineID      string
 	InvoiceID          string
 	SalesOrderID       string
-	SalesOrderTypeCode string
 	BuyerAccountID     string
 	SalesRepID         sql.NullString
 	OrderDiscountID    sql.NullString
@@ -2198,6 +2197,7 @@ type SalesLineFact struct {
 	TotalCost          sql.NullString
 	OrderedAt          sql.NullTime
 	IsPriced           bool
+	SalesOrderTypeCode string
 }
 
 type SalesOrder struct {

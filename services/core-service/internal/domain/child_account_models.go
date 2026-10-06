@@ -14,6 +14,9 @@ type ChildAccount struct {
 	Email          *string `audit:"email"`
 	CreatedAt      time.Time
 	UpdatedAt      time.Time
+	// AccountCreatedAt and AccountUpdatedAt are the child account's own timestamps; CreatedAt and UpdatedAt are the relation's.
+	AccountCreatedAt time.Time
+	AccountUpdatedAt time.Time
 }
 
 type ListChildAccountsParams struct {

@@ -24,13 +24,15 @@ func mapChildAccountForwardRow(row sqlc.ListChildAccountsForwardRow) *domain.Chi
 		email = &row.Email.String
 	}
 	return &domain.ChildAccount{
-		RelationID:     row.RelationID,
-		AccountID:      row.AccountID,
-		AccountName:    row.AccountName,
-		ExternalNumber: row.ExternalNumber,
-		Email:          email,
-		CreatedAt:      row.CreatedAt,
-		UpdatedAt:      row.UpdatedAt,
+		RelationID:       row.RelationID,
+		AccountID:        row.AccountID,
+		AccountName:      row.AccountName,
+		ExternalNumber:   row.ExternalNumber,
+		Email:            email,
+		CreatedAt:        row.CreatedAt,
+		UpdatedAt:        row.UpdatedAt,
+		AccountCreatedAt: row.AccountCreatedAt,
+		AccountUpdatedAt: row.AccountUpdatedAt,
 	}
 }
 
@@ -40,13 +42,15 @@ func mapChildAccountBackwardRow(row sqlc.ListChildAccountsBackwardRow) *domain.C
 		email = &row.Email.String
 	}
 	return &domain.ChildAccount{
-		RelationID:     row.RelationID,
-		AccountID:      row.AccountID,
-		AccountName:    row.AccountName,
-		ExternalNumber: row.ExternalNumber,
-		Email:          email,
-		CreatedAt:      row.CreatedAt,
-		UpdatedAt:      row.UpdatedAt,
+		RelationID:       row.RelationID,
+		AccountID:        row.AccountID,
+		AccountName:      row.AccountName,
+		ExternalNumber:   row.ExternalNumber,
+		Email:            email,
+		CreatedAt:        row.CreatedAt,
+		UpdatedAt:        row.UpdatedAt,
+		AccountCreatedAt: row.AccountCreatedAt,
+		AccountUpdatedAt: row.AccountUpdatedAt,
 	}
 }
 
@@ -162,13 +166,15 @@ func (r *accountRelationRepoImpl) GetChildAccountDetail(ctx context.Context, own
 	}
 
 	return &domain.ChildAccount{
-		RelationID:     row.RelationID,
-		AccountID:      row.AccountID,
-		AccountName:    row.AccountName,
-		ExternalNumber: row.ExternalNumber,
-		Email:          email,
-		CreatedAt:      row.CreatedAt,
-		UpdatedAt:      row.UpdatedAt,
+		RelationID:       row.RelationID,
+		AccountID:        row.AccountID,
+		AccountName:      row.AccountName,
+		ExternalNumber:   row.ExternalNumber,
+		Email:            email,
+		CreatedAt:        row.CreatedAt,
+		UpdatedAt:        row.UpdatedAt,
+		AccountCreatedAt: row.AccountCreatedAt,
+		AccountUpdatedAt: row.AccountUpdatedAt,
 	}, nil
 }
 
@@ -193,13 +199,15 @@ func (r *accountRelationRepoImpl) GetChildAccountsByRelationIDs(ctx context.Cont
 			email = &row.Email.String
 		}
 		out[i] = &domain.ChildAccount{
-			RelationID:     row.RelationID,
-			AccountID:      row.AccountID,
-			AccountName:    row.AccountName,
-			ExternalNumber: row.ExternalNumber,
-			Email:          email,
-			CreatedAt:      row.CreatedAt,
-			UpdatedAt:      row.UpdatedAt,
+			RelationID:       row.RelationID,
+			AccountID:        row.AccountID,
+			AccountName:      row.AccountName,
+			ExternalNumber:   row.ExternalNumber,
+			Email:            email,
+			CreatedAt:        row.CreatedAt,
+			UpdatedAt:        row.UpdatedAt,
+			AccountCreatedAt: row.AccountCreatedAt,
+			AccountUpdatedAt: row.AccountUpdatedAt,
 		}
 	}
 	return out, nil

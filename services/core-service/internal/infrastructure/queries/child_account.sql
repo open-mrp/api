@@ -6,7 +6,9 @@ SELECT
     ar.external_number,
     ab.support_email AS email,
     ar.created_at,
-    ar.updated_at
+    ar.updated_at,
+    a.created_at AS account_created_at,
+    a.updated_at AS account_updated_at
 FROM account_relation ar
 INNER JOIN account a ON a.id = ar.counterparty_account_id
 LEFT JOIN account_branding ab ON ab.owner_account_id = ar.counterparty_account_id
@@ -32,7 +34,9 @@ SELECT
     ar.external_number,
     ab.support_email AS email,
     ar.created_at,
-    ar.updated_at
+    ar.updated_at,
+    a.created_at AS account_created_at,
+    a.updated_at AS account_updated_at
 FROM account_relation ar
 INNER JOIN account a ON a.id = ar.counterparty_account_id
 LEFT JOIN account_branding ab ON ab.owner_account_id = ar.counterparty_account_id
@@ -77,7 +81,9 @@ SELECT
     ar.external_number,
     ab.support_email AS email,
     ar.created_at,
-    ar.updated_at
+    ar.updated_at,
+    a.created_at AS account_created_at,
+    a.updated_at AS account_updated_at
 FROM account_relation ar
 INNER JOIN account a ON a.id = ar.counterparty_account_id
 LEFT JOIN account_branding ab ON ab.owner_account_id = ar.counterparty_account_id
@@ -95,7 +101,9 @@ SELECT
     ar.external_number,
     ab.support_email AS email,
     ar.created_at,
-    ar.updated_at
+    ar.updated_at,
+    a.created_at AS account_created_at,
+    a.updated_at AS account_updated_at
 FROM account_relation ar
 INNER JOIN account a ON a.id = ar.counterparty_account_id
 LEFT JOIN account_branding ab ON ab.owner_account_id = ar.counterparty_account_id

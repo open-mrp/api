@@ -2061,16 +2061,18 @@ func (x *BulkUpsertMaterialsResponse) GetJob() *JobInfo {
 }
 
 type ChildAccountProto struct {
-	state          protoimpl.MessageState `protogen:"open.v1"`
-	RelationId     string                 `protobuf:"bytes,1,opt,name=relation_id,json=relationId,proto3" json:"relation_id,omitempty"`
-	AccountId      string                 `protobuf:"bytes,2,opt,name=account_id,json=accountId,proto3" json:"account_id,omitempty"`
-	AccountName    string                 `protobuf:"bytes,3,opt,name=account_name,json=accountName,proto3" json:"account_name,omitempty"`
-	ExternalNumber string                 `protobuf:"bytes,4,opt,name=external_number,json=externalNumber,proto3" json:"external_number,omitempty"`
-	Email          *string                `protobuf:"bytes,5,opt,name=email,proto3,oneof" json:"email,omitempty"`
-	CreatedAt      *timestamppb.Timestamp `protobuf:"bytes,6,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
-	UpdatedAt      *timestamppb.Timestamp `protobuf:"bytes,7,opt,name=updated_at,json=updatedAt,proto3" json:"updated_at,omitempty"`
-	unknownFields  protoimpl.UnknownFields
-	sizeCache      protoimpl.SizeCache
+	state            protoimpl.MessageState `protogen:"open.v1"`
+	RelationId       string                 `protobuf:"bytes,1,opt,name=relation_id,json=relationId,proto3" json:"relation_id,omitempty"`
+	AccountId        string                 `protobuf:"bytes,2,opt,name=account_id,json=accountId,proto3" json:"account_id,omitempty"`
+	AccountName      string                 `protobuf:"bytes,3,opt,name=account_name,json=accountName,proto3" json:"account_name,omitempty"`
+	ExternalNumber   string                 `protobuf:"bytes,4,opt,name=external_number,json=externalNumber,proto3" json:"external_number,omitempty"`
+	Email            *string                `protobuf:"bytes,5,opt,name=email,proto3,oneof" json:"email,omitempty"`
+	CreatedAt        *timestamppb.Timestamp `protobuf:"bytes,6,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
+	UpdatedAt        *timestamppb.Timestamp `protobuf:"bytes,7,opt,name=updated_at,json=updatedAt,proto3" json:"updated_at,omitempty"`
+	AccountCreatedAt *timestamppb.Timestamp `protobuf:"bytes,8,opt,name=account_created_at,json=accountCreatedAt,proto3" json:"account_created_at,omitempty"`
+	AccountUpdatedAt *timestamppb.Timestamp `protobuf:"bytes,9,opt,name=account_updated_at,json=accountUpdatedAt,proto3" json:"account_updated_at,omitempty"`
+	unknownFields    protoimpl.UnknownFields
+	sizeCache        protoimpl.SizeCache
 }
 
 func (x *ChildAccountProto) Reset() {
@@ -2148,6 +2150,20 @@ func (x *ChildAccountProto) GetCreatedAt() *timestamppb.Timestamp {
 func (x *ChildAccountProto) GetUpdatedAt() *timestamppb.Timestamp {
 	if x != nil {
 		return x.UpdatedAt
+	}
+	return nil
+}
+
+func (x *ChildAccountProto) GetAccountCreatedAt() *timestamppb.Timestamp {
+	if x != nil {
+		return x.AccountCreatedAt
+	}
+	return nil
+}
+
+func (x *ChildAccountProto) GetAccountUpdatedAt() *timestamppb.Timestamp {
+	if x != nil {
+		return x.AccountUpdatedAt
 	}
 	return nil
 }
@@ -6156,7 +6172,7 @@ const file_core_core_items_proto_rawDesc = "" +
 	"\x1aBulkUpsertMaterialsRequest\x127\n" +
 	"\tmaterials\x18\x01 \x03(\v2\x19.core.UpsertMaterialInputR\tmaterials\">\n" +
 	"\x1bBulkUpsertMaterialsResponse\x12\x1f\n" +
-	"\x03job\x18\x01 \x01(\v2\r.core.JobInfoR\x03job\"\xba\x02\n" +
+	"\x03job\x18\x01 \x01(\v2\r.core.JobInfoR\x03job\"\xce\x03\n" +
 	"\x11ChildAccountProto\x12\x1f\n" +
 	"\vrelation_id\x18\x01 \x01(\tR\n" +
 	"relationId\x12\x1d\n" +
@@ -6168,7 +6184,9 @@ const file_core_core_items_proto_rawDesc = "" +
 	"\n" +
 	"created_at\x18\x06 \x01(\v2\x1a.google.protobuf.TimestampR\tcreatedAt\x129\n" +
 	"\n" +
-	"updated_at\x18\a \x01(\v2\x1a.google.protobuf.TimestampR\tupdatedAtB\b\n" +
+	"updated_at\x18\a \x01(\v2\x1a.google.protobuf.TimestampR\tupdatedAt\x12H\n" +
+	"\x12account_created_at\x18\b \x01(\v2\x1a.google.protobuf.TimestampR\x10accountCreatedAt\x12H\n" +
+	"\x12account_updated_at\x18\t \x01(\v2\x1a.google.protobuf.TimestampR\x10accountUpdatedAtB\b\n" +
 	"\x06_email\"}\n" +
 	"\x18ListChildAccountsRequest\x12\x1b\n" +
 	"\x06cursor\x18\x01 \x01(\tH\x00R\x06cursor\x88\x01\x01\x12\x14\n" +
@@ -6652,68 +6670,70 @@ var file_core_core_items_proto_depIdxs = []int32{
 	104, // 35: core.BulkUpsertMaterialsResponse.job:type_name -> core.JobInfo
 	100, // 36: core.ChildAccountProto.created_at:type_name -> google.protobuf.Timestamp
 	100, // 37: core.ChildAccountProto.updated_at:type_name -> google.protobuf.Timestamp
-	33,  // 38: core.ListChildAccountsResponse.items:type_name -> core.ChildAccountProto
-	106, // 39: core.ListChildAccountsResponse.page_info:type_name -> core.PageInfo
-	33,  // 40: core.AddChildAccountResponse.child_account:type_name -> core.ChildAccountProto
-	33,  // 41: core.BatchGetChildAccountsByIDsResponse.items:type_name -> core.ChildAccountProto
-	41,  // 42: core.BaseBatchInfo.quantity:type_name -> core.BatchQuantityInfo
-	41,  // 43: core.BaseBatchInfo.seconds:type_name -> core.BatchQuantityInfo
-	41,  // 44: core.BaseBatchInfo.waste:type_name -> core.BatchQuantityInfo
-	100, // 45: core.BaseBatchInfo.closed_at:type_name -> google.protobuf.Timestamp
-	100, // 46: core.BaseBatchInfo.scanned_at:type_name -> google.protobuf.Timestamp
-	100, // 47: core.BaseBatchInfo.created_at:type_name -> google.protobuf.Timestamp
-	100, // 48: core.BaseBatchInfo.updated_at:type_name -> google.protobuf.Timestamp
-	41,  // 49: core.BatchInfo.quantity:type_name -> core.BatchQuantityInfo
-	41,  // 50: core.BatchInfo.seconds:type_name -> core.BatchQuantityInfo
-	41,  // 51: core.BatchInfo.waste:type_name -> core.BatchQuantityInfo
-	45,  // 52: core.BatchInfo.machines:type_name -> core.LightMachineInfo
-	100, // 53: core.BatchInfo.closed_at:type_name -> google.protobuf.Timestamp
-	100, // 54: core.BatchInfo.scanned_at:type_name -> google.protobuf.Timestamp
-	100, // 55: core.BatchInfo.created_at:type_name -> google.protobuf.Timestamp
-	100, // 56: core.BatchInfo.updated_at:type_name -> google.protobuf.Timestamp
-	44,  // 57: core.BatchInfo.lots:type_name -> core.BatchLotInfo
-	100, // 58: core.LightMachineInfo.created_at:type_name -> google.protobuf.Timestamp
-	100, // 59: core.LightMachineInfo.updated_at:type_name -> google.protobuf.Timestamp
-	43,  // 60: core.BatchFlowNodeInfo.batch:type_name -> core.BatchInfo
-	49,  // 61: core.OpenBatchSummaryInfo.item:type_name -> core.OpenBatchSummaryItemProto
-	50,  // 62: core.OpenBatchSummaryInfo.scanning_station:type_name -> core.OpenBatchSummaryScanningStationProto
-	46,  // 63: core.GetBatchFlowResponse.nodes:type_name -> core.BatchFlowNodeInfo
-	43,  // 64: core.ListBatchesByScanningStationResponse.batches:type_name -> core.BatchInfo
-	106, // 65: core.ListBatchesByScanningStationResponse.page_info:type_name -> core.PageInfo
-	47,  // 66: core.GetBatchPossibleNextStepsResponse.steps:type_name -> core.ScanningProductionStepInfoProto
-	47,  // 67: core.GetBatchPossibleInitStepsResponse.steps:type_name -> core.ScanningProductionStepInfoProto
-	51,  // 68: core.AnalyzeOpenBatchesResponse.summaries:type_name -> core.OpenBatchSummaryInfo
-	42,  // 69: core.InitializeBatchResponse.batch:type_name -> core.BaseBatchInfo
-	42,  // 70: core.MoveBatchesResponse.batch:type_name -> core.BaseBatchInfo
-	42,  // 71: core.MergeBatchesResponse.batch:type_name -> core.BaseBatchInfo
-	41,  // 72: core.SplitBatchRequest.firsts:type_name -> core.BatchQuantityInfo
-	41,  // 73: core.SplitBatchRequest.seconds:type_name -> core.BatchQuantityInfo
-	41,  // 74: core.SplitBatchRequest.waste:type_name -> core.BatchQuantityInfo
-	42,  // 75: core.SplitBatchResponse.batch:type_name -> core.BaseBatchInfo
-	41,  // 76: core.GetRemainingQuantityToSplitResponse.quantity:type_name -> core.BatchQuantityInfo
-	41,  // 77: core.GetScanningStationConsumptionRequest.split_quantity:type_name -> core.BatchQuantityInfo
-	48,  // 78: core.GetScanningStationConsumptionResponse.consumptions:type_name -> core.ScanningConsumptionInfo
-	42,  // 79: core.CloseBatchResponse.batch:type_name -> core.BaseBatchInfo
-	42,  // 80: core.DeleteBatchResponse.batch:type_name -> core.BaseBatchInfo
-	107, // 81: core.ListItemCategoriesResponse.item_categories:type_name -> core.ItemCategoryInfo
-	106, // 82: core.ListItemCategoriesResponse.page_info:type_name -> core.PageInfo
-	104, // 83: core.ExportItemCategoriesResponse.job:type_name -> core.JobInfo
-	107, // 84: core.GetItemCategoryResponse.item_category:type_name -> core.ItemCategoryInfo
-	107, // 85: core.CreateItemCategoryResponse.item_category:type_name -> core.ItemCategoryInfo
-	107, // 86: core.UpdateItemCategoryResponse.item_category:type_name -> core.ItemCategoryInfo
-	102, // 87: core.BulkUpsertItemCategoryInput.unit_group:type_name -> core.ObjectIdentifier
-	93,  // 88: core.BulkUpsertItemCategoriesRequest.item_categories:type_name -> core.BulkUpsertItemCategoryInput
-	104, // 89: core.BulkUpsertItemCategoriesResponse.job:type_name -> core.JobInfo
-	99,  // 90: core.ConsumptionInfo.quantity:type_name -> core.QuantityInfo
-	99,  // 91: core.ConsumptionInfo.waste_quantity:type_name -> core.QuantityInfo
-	100, // 92: core.ConsumptionInfo.created_at:type_name -> google.protobuf.Timestamp
-	100, // 93: core.ConsumptionInfo.updated_at:type_name -> google.protobuf.Timestamp
-	96,  // 94: core.GetConsumptionResponse.consumption:type_name -> core.ConsumptionInfo
-	95,  // [95:95] is the sub-list for method output_type
-	95,  // [95:95] is the sub-list for method input_type
-	95,  // [95:95] is the sub-list for extension type_name
-	95,  // [95:95] is the sub-list for extension extendee
-	0,   // [0:95] is the sub-list for field type_name
+	100, // 38: core.ChildAccountProto.account_created_at:type_name -> google.protobuf.Timestamp
+	100, // 39: core.ChildAccountProto.account_updated_at:type_name -> google.protobuf.Timestamp
+	33,  // 40: core.ListChildAccountsResponse.items:type_name -> core.ChildAccountProto
+	106, // 41: core.ListChildAccountsResponse.page_info:type_name -> core.PageInfo
+	33,  // 42: core.AddChildAccountResponse.child_account:type_name -> core.ChildAccountProto
+	33,  // 43: core.BatchGetChildAccountsByIDsResponse.items:type_name -> core.ChildAccountProto
+	41,  // 44: core.BaseBatchInfo.quantity:type_name -> core.BatchQuantityInfo
+	41,  // 45: core.BaseBatchInfo.seconds:type_name -> core.BatchQuantityInfo
+	41,  // 46: core.BaseBatchInfo.waste:type_name -> core.BatchQuantityInfo
+	100, // 47: core.BaseBatchInfo.closed_at:type_name -> google.protobuf.Timestamp
+	100, // 48: core.BaseBatchInfo.scanned_at:type_name -> google.protobuf.Timestamp
+	100, // 49: core.BaseBatchInfo.created_at:type_name -> google.protobuf.Timestamp
+	100, // 50: core.BaseBatchInfo.updated_at:type_name -> google.protobuf.Timestamp
+	41,  // 51: core.BatchInfo.quantity:type_name -> core.BatchQuantityInfo
+	41,  // 52: core.BatchInfo.seconds:type_name -> core.BatchQuantityInfo
+	41,  // 53: core.BatchInfo.waste:type_name -> core.BatchQuantityInfo
+	45,  // 54: core.BatchInfo.machines:type_name -> core.LightMachineInfo
+	100, // 55: core.BatchInfo.closed_at:type_name -> google.protobuf.Timestamp
+	100, // 56: core.BatchInfo.scanned_at:type_name -> google.protobuf.Timestamp
+	100, // 57: core.BatchInfo.created_at:type_name -> google.protobuf.Timestamp
+	100, // 58: core.BatchInfo.updated_at:type_name -> google.protobuf.Timestamp
+	44,  // 59: core.BatchInfo.lots:type_name -> core.BatchLotInfo
+	100, // 60: core.LightMachineInfo.created_at:type_name -> google.protobuf.Timestamp
+	100, // 61: core.LightMachineInfo.updated_at:type_name -> google.protobuf.Timestamp
+	43,  // 62: core.BatchFlowNodeInfo.batch:type_name -> core.BatchInfo
+	49,  // 63: core.OpenBatchSummaryInfo.item:type_name -> core.OpenBatchSummaryItemProto
+	50,  // 64: core.OpenBatchSummaryInfo.scanning_station:type_name -> core.OpenBatchSummaryScanningStationProto
+	46,  // 65: core.GetBatchFlowResponse.nodes:type_name -> core.BatchFlowNodeInfo
+	43,  // 66: core.ListBatchesByScanningStationResponse.batches:type_name -> core.BatchInfo
+	106, // 67: core.ListBatchesByScanningStationResponse.page_info:type_name -> core.PageInfo
+	47,  // 68: core.GetBatchPossibleNextStepsResponse.steps:type_name -> core.ScanningProductionStepInfoProto
+	47,  // 69: core.GetBatchPossibleInitStepsResponse.steps:type_name -> core.ScanningProductionStepInfoProto
+	51,  // 70: core.AnalyzeOpenBatchesResponse.summaries:type_name -> core.OpenBatchSummaryInfo
+	42,  // 71: core.InitializeBatchResponse.batch:type_name -> core.BaseBatchInfo
+	42,  // 72: core.MoveBatchesResponse.batch:type_name -> core.BaseBatchInfo
+	42,  // 73: core.MergeBatchesResponse.batch:type_name -> core.BaseBatchInfo
+	41,  // 74: core.SplitBatchRequest.firsts:type_name -> core.BatchQuantityInfo
+	41,  // 75: core.SplitBatchRequest.seconds:type_name -> core.BatchQuantityInfo
+	41,  // 76: core.SplitBatchRequest.waste:type_name -> core.BatchQuantityInfo
+	42,  // 77: core.SplitBatchResponse.batch:type_name -> core.BaseBatchInfo
+	41,  // 78: core.GetRemainingQuantityToSplitResponse.quantity:type_name -> core.BatchQuantityInfo
+	41,  // 79: core.GetScanningStationConsumptionRequest.split_quantity:type_name -> core.BatchQuantityInfo
+	48,  // 80: core.GetScanningStationConsumptionResponse.consumptions:type_name -> core.ScanningConsumptionInfo
+	42,  // 81: core.CloseBatchResponse.batch:type_name -> core.BaseBatchInfo
+	42,  // 82: core.DeleteBatchResponse.batch:type_name -> core.BaseBatchInfo
+	107, // 83: core.ListItemCategoriesResponse.item_categories:type_name -> core.ItemCategoryInfo
+	106, // 84: core.ListItemCategoriesResponse.page_info:type_name -> core.PageInfo
+	104, // 85: core.ExportItemCategoriesResponse.job:type_name -> core.JobInfo
+	107, // 86: core.GetItemCategoryResponse.item_category:type_name -> core.ItemCategoryInfo
+	107, // 87: core.CreateItemCategoryResponse.item_category:type_name -> core.ItemCategoryInfo
+	107, // 88: core.UpdateItemCategoryResponse.item_category:type_name -> core.ItemCategoryInfo
+	102, // 89: core.BulkUpsertItemCategoryInput.unit_group:type_name -> core.ObjectIdentifier
+	93,  // 90: core.BulkUpsertItemCategoriesRequest.item_categories:type_name -> core.BulkUpsertItemCategoryInput
+	104, // 91: core.BulkUpsertItemCategoriesResponse.job:type_name -> core.JobInfo
+	99,  // 92: core.ConsumptionInfo.quantity:type_name -> core.QuantityInfo
+	99,  // 93: core.ConsumptionInfo.waste_quantity:type_name -> core.QuantityInfo
+	100, // 94: core.ConsumptionInfo.created_at:type_name -> google.protobuf.Timestamp
+	100, // 95: core.ConsumptionInfo.updated_at:type_name -> google.protobuf.Timestamp
+	96,  // 96: core.GetConsumptionResponse.consumption:type_name -> core.ConsumptionInfo
+	97,  // [97:97] is the sub-list for method output_type
+	97,  // [97:97] is the sub-list for method input_type
+	97,  // [97:97] is the sub-list for extension type_name
+	97,  // [97:97] is the sub-list for extension extendee
+	0,   // [0:97] is the sub-list for field type_name
 }
 
 func init() { file_core_core_items_proto_init() }

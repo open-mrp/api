@@ -40,7 +40,9 @@ SELECT
     ar.external_number,
     ab.support_email AS email,
     ar.created_at,
-    ar.updated_at
+    ar.updated_at,
+    a.created_at AS account_created_at,
+    a.updated_at AS account_updated_at
 FROM account_relation ar
 INNER JOIN account a ON a.id = ar.counterparty_account_id
 LEFT JOIN account_branding ab ON ab.owner_account_id = ar.counterparty_account_id
@@ -55,13 +57,15 @@ type GetChildAccountDetailParams struct {
 }
 
 type GetChildAccountDetailRow struct {
-	RelationID     string
-	AccountID      string
-	AccountName    string
-	ExternalNumber string
-	Email          sql.NullString
-	CreatedAt      time.Time
-	UpdatedAt      time.Time
+	RelationID       string
+	AccountID        string
+	AccountName      string
+	ExternalNumber   string
+	Email            sql.NullString
+	CreatedAt        time.Time
+	UpdatedAt        time.Time
+	AccountCreatedAt time.Time
+	AccountUpdatedAt time.Time
 }
 
 func (q *Queries) GetChildAccountDetail(ctx context.Context, arg GetChildAccountDetailParams) (GetChildAccountDetailRow, error) {
@@ -75,6 +79,8 @@ func (q *Queries) GetChildAccountDetail(ctx context.Context, arg GetChildAccount
 		&i.Email,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.AccountCreatedAt,
+		&i.AccountUpdatedAt,
 	)
 	return i, err
 }
@@ -87,7 +93,9 @@ SELECT
     ar.external_number,
     ab.support_email AS email,
     ar.created_at,
-    ar.updated_at
+    ar.updated_at,
+    a.created_at AS account_created_at,
+    a.updated_at AS account_updated_at
 FROM account_relation ar
 INNER JOIN account a ON a.id = ar.counterparty_account_id
 LEFT JOIN account_branding ab ON ab.owner_account_id = ar.counterparty_account_id
@@ -101,13 +109,15 @@ type GetChildAccountsByRelationIDsParams struct {
 }
 
 type GetChildAccountsByRelationIDsRow struct {
-	RelationID     string
-	AccountID      string
-	AccountName    string
-	ExternalNumber string
-	Email          sql.NullString
-	CreatedAt      time.Time
-	UpdatedAt      time.Time
+	RelationID       string
+	AccountID        string
+	AccountName      string
+	ExternalNumber   string
+	Email            sql.NullString
+	CreatedAt        time.Time
+	UpdatedAt        time.Time
+	AccountCreatedAt time.Time
+	AccountUpdatedAt time.Time
 }
 
 // Returns child account relations matching the given relation IDs that belong
@@ -140,6 +150,8 @@ func (q *Queries) GetChildAccountsByRelationIDs(ctx context.Context, arg GetChil
 			&i.Email,
 			&i.CreatedAt,
 			&i.UpdatedAt,
+			&i.AccountCreatedAt,
+			&i.AccountUpdatedAt,
 		); err != nil {
 			return nil, err
 		}
@@ -175,7 +187,9 @@ SELECT
     ar.external_number,
     ab.support_email AS email,
     ar.created_at,
-    ar.updated_at
+    ar.updated_at,
+    a.created_at AS account_created_at,
+    a.updated_at AS account_updated_at
 FROM account_relation ar
 INNER JOIN account a ON a.id = ar.counterparty_account_id
 LEFT JOIN account_branding ab ON ab.owner_account_id = ar.counterparty_account_id
@@ -203,13 +217,15 @@ type ListChildAccountsBackwardParams struct {
 }
 
 type ListChildAccountsBackwardRow struct {
-	RelationID     string
-	AccountID      string
-	AccountName    string
-	ExternalNumber string
-	Email          sql.NullString
-	CreatedAt      time.Time
-	UpdatedAt      time.Time
+	RelationID       string
+	AccountID        string
+	AccountName      string
+	ExternalNumber   string
+	Email            sql.NullString
+	CreatedAt        time.Time
+	UpdatedAt        time.Time
+	AccountCreatedAt time.Time
+	AccountUpdatedAt time.Time
 }
 
 func (q *Queries) ListChildAccountsBackward(ctx context.Context, arg ListChildAccountsBackwardParams) ([]ListChildAccountsBackwardRow, error) {
@@ -238,6 +254,8 @@ func (q *Queries) ListChildAccountsBackward(ctx context.Context, arg ListChildAc
 			&i.Email,
 			&i.CreatedAt,
 			&i.UpdatedAt,
+			&i.AccountCreatedAt,
+			&i.AccountUpdatedAt,
 		); err != nil {
 			return nil, err
 		}
@@ -330,7 +348,9 @@ SELECT
     ar.external_number,
     ab.support_email AS email,
     ar.created_at,
-    ar.updated_at
+    ar.updated_at,
+    a.created_at AS account_created_at,
+    a.updated_at AS account_updated_at
 FROM account_relation ar
 INNER JOIN account a ON a.id = ar.counterparty_account_id
 LEFT JOIN account_branding ab ON ab.owner_account_id = ar.counterparty_account_id
@@ -359,13 +379,15 @@ type ListChildAccountsForwardParams struct {
 }
 
 type ListChildAccountsForwardRow struct {
-	RelationID     string
-	AccountID      string
-	AccountName    string
-	ExternalNumber string
-	Email          sql.NullString
-	CreatedAt      time.Time
-	UpdatedAt      time.Time
+	RelationID       string
+	AccountID        string
+	AccountName      string
+	ExternalNumber   string
+	Email            sql.NullString
+	CreatedAt        time.Time
+	UpdatedAt        time.Time
+	AccountCreatedAt time.Time
+	AccountUpdatedAt time.Time
 }
 
 func (q *Queries) ListChildAccountsForward(ctx context.Context, arg ListChildAccountsForwardParams) ([]ListChildAccountsForwardRow, error) {
@@ -395,6 +417,8 @@ func (q *Queries) ListChildAccountsForward(ctx context.Context, arg ListChildAcc
 			&i.Email,
 			&i.CreatedAt,
 			&i.UpdatedAt,
+			&i.AccountCreatedAt,
+			&i.AccountUpdatedAt,
 		); err != nil {
 			return nil, err
 		}

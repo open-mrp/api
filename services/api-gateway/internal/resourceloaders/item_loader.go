@@ -2,6 +2,7 @@ package resourceloaders
 
 import (
 	"context"
+	"strings"
 
 	"github.com/open-mrp/api/services/api-gateway/internal/domain"
 	grpcutil "github.com/open-mrp/api/services/api-gateway/internal/grpc"
@@ -31,11 +32,15 @@ func LoadItems(ctx context.Context, ids []string) (map[string]any, *apierror.API
 	meta := resourcekit.GetLoadMeta(ctx)
 	out := make(map[string]any, len(resp.Items))
 
+	// Attributes are the only part of an item that names properties, and reading properties takes their own
+	// permission, so they are read only for a caller that asked to see attributes.
 	propertyIDs := map[string]struct{}{}
-	for _, item := range resp.Items {
-		for _, a := range item.Attributes {
-			if a != nil && a.PropertyId != "" {
-				propertyIDs[a.PropertyId] = struct{}{}
+	if itemAttributesRequested(ctx) {
+		for _, item := range resp.Items {
+			for _, a := range item.Attributes {
+				if a != nil && a.PropertyId != "" {
+					propertyIDs[a.PropertyId] = struct{}{}
+				}
 			}
 		}
 	}
@@ -101,6 +106,16 @@ func LoadItems(ctx context.Context, ids []string) (map[string]any, *apierror.API
 			apiresource.NewList(attrs, apiresource.PageInfo{}))
 	}
 	return out, nil
+}
+
+// itemAttributesRequested reports whether some requested include reaches an item's attributes, at any depth.
+func itemAttributesRequested(ctx context.Context) bool {
+	for _, include := range resourcekit.RequestedIncludes(ctx) {
+		if include == "attributes" || strings.HasSuffix(include, ".attributes") {
+			return true
+		}
+	}
+	return false
 }
 
 func itemFromProto(i *pb.ItemInfo) *apiresource.Item {

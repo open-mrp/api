@@ -785,7 +785,7 @@ func (s *salesOrderSvcImpl) UpdateSalesOrder(ctx context.Context, params domain.
 			if apiErr := checkSalesOrderCounterpartyRefs(txCtx, txSvc.repos, params, existing); apiErr != nil {
 				return apiErr
 			}
-			if apiErr := checkUpdatedServiceLevelOnCarrier(txCtx, txSvc.repos, existing.CarrierID, existing.ServiceLevelID, params.CarrierID, params.ServiceLevelID); apiErr != nil {
+			if apiErr := checkUpdatedServiceLevelOnCarrier(txCtx, txSvc.repos, existing.CarrierID, existing.ServiceLevelID, params.CarrierID, params.ServiceLevelID, "service_level_id"); apiErr != nil {
 				return apiErr
 			}
 
@@ -2225,7 +2225,7 @@ func (s *salesOrderSvcImpl) validateSalesOrderReferences(ctx context.Context, pa
 			return mapSalesOrderReferenceError(apiErr, "Service level not found.", "service_level_id")
 		}
 	}
-	if apiErr := checkServiceLevelOnCarrier(ctx, s.repos, params.CarrierID, params.ServiceLevelID); apiErr != nil {
+	if apiErr := checkServiceLevelOnCarrier(ctx, s.repos, params.CarrierID, params.ServiceLevelID, "service_level_id"); apiErr != nil {
 		return apiErr
 	}
 	if params.ShippingTermID != nil && *params.ShippingTermID != "" {

@@ -271,6 +271,9 @@ func (s *customerSvcImpl) CreateCustomer(ctx context.Context, params domain.Crea
 			if apiErr := checkCustomerRefs(txCtx, txSvc.repos, params.OwnerAccountID, newCustomerRefs(params)); apiErr != nil {
 				return apiErr
 			}
+			if apiErr := checkServiceLevelOnCarrier(txCtx, txSvc.repos, params.DefaultCarrierID, params.DefaultServiceLevelID, "default_service_level_id"); apiErr != nil {
+				return apiErr
+			}
 
 			// Generate or auto-assign customer number.
 			var customerNumber string
@@ -462,6 +465,9 @@ func (s *customerSvcImpl) UpdateCustomer(ctx context.Context, params domain.Upda
 			}
 
 			if apiErr := checkCustomerRefs(txCtx, txSvc.repos, params.OwnerAccountID, changedCustomerRefs(params, old)); apiErr != nil {
+				return apiErr
+			}
+			if apiErr := checkUpdatedServiceLevelOnCarrier(txCtx, txSvc.repos, old.DefaultCarrierID, old.DefaultServiceLevelID, params.DefaultCarrierID, params.DefaultServiceLevelID, "default_service_level_id"); apiErr != nil {
 				return apiErr
 			}
 

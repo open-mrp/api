@@ -184,6 +184,67 @@ func (q *Queries) GetRatesByIDs(ctx context.Context, ids []string) ([]GetRatesBy
 	return items, nil
 }
 
+const listRateOwnerTypes = `-- name: ListRateOwnerTypes :many
+SELECT 'item' AS owner_type FROM item iv WHERE iv.unit_value_id = ? AND iv.account_id = ?
+UNION ALL
+SELECT 'item' FROM item ic WHERE ic.unit_cost_id = ? AND ic.account_id = ?
+UNION ALL
+SELECT 'item' FROM item ib WHERE ib.burn_rate_id = ? AND ib.account_id = ?
+UNION ALL
+SELECT 'production_step' FROM production_step pt WHERE pt.labor_time_id = ? AND pt.account_id = ?
+UNION ALL
+SELECT 'production_step' FROM production_step pl WHERE pl.labor_rate_id = ? AND pl.account_id = ?
+UNION ALL
+SELECT 'production_step' FROM production_step po WHERE po.overhead_rate_id = ? AND po.account_id = ?
+UNION ALL
+SELECT 'department' FROM department d WHERE d.labor_rate_id = ? AND d.account_id = ?
+`
+
+type ListRateOwnerTypesParams struct {
+	ID                    string
+	AccountID             string
+	DepartmentLaborRateID sql.NullString
+}
+
+// The kinds of resource in the account a rate belongs to: an item's unit value, unit cost and burn rate, a production step's labor time, labor rate and overhead rate, and a department's labor rate. Each branch is a unique-key lookup.
+func (q *Queries) ListRateOwnerTypes(ctx context.Context, arg ListRateOwnerTypesParams) ([]string, error) {
+	rows, err := q.db.QueryContext(ctx, listRateOwnerTypes,
+		arg.ID,
+		arg.AccountID,
+		arg.ID,
+		arg.AccountID,
+		arg.ID,
+		arg.AccountID,
+		arg.ID,
+		arg.AccountID,
+		arg.ID,
+		arg.AccountID,
+		arg.ID,
+		arg.AccountID,
+		arg.DepartmentLaborRateID,
+		arg.AccountID,
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []string
+	for rows.Next() {
+		var owner_type string
+		if err := rows.Scan(&owner_type); err != nil {
+			return nil, err
+		}
+		items = append(items, owner_type)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const updateRateByID = `-- name: UpdateRateByID :execresult
 UPDATE rate SET
     value = COALESCE(?, value),

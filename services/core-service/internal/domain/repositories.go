@@ -1706,11 +1706,15 @@ type ProductTypeRepo interface {
 type QuantityRepo interface {
 	Get(ctx context.Context, id string) (*Quantity, *apierror.APIError)
 	Update(ctx context.Context, params UpdateQuantityParams) (*Quantity, *apierror.APIError)
+	// OwnerTypes lists the kinds of resource in the account the quantity belongs to; none when the account holds no such quantity.
+	OwnerTypes(ctx context.Context, accountID, id string) ([]constants.ObjectType, *apierror.APIError)
 }
 
 type RateRepo interface {
 	Get(ctx context.Context, id string) (*Rate, *apierror.APIError)
 	Update(ctx context.Context, params UpdateRateParams) (*Rate, *apierror.APIError)
+	// OwnerTypes lists the kinds of resource in the account the rate belongs to; none when the account holds no such rate.
+	OwnerTypes(ctx context.Context, accountID, id string) ([]constants.ObjectType, *apierror.APIError)
 }
 
 type SettlementRepo interface {

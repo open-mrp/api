@@ -53,6 +53,73 @@ func (q *Queries) GetQuantityWithUnit(ctx context.Context, id string) (GetQuanti
 	return i, err
 }
 
+const listQuantityOwnerTypes = `-- name: ListQuantityOwnerTypes :many
+SELECT 'item' AS owner_type
+FROM material m
+JOIN item i ON i.id = m.item_id
+WHERE m.order_point_id = ? AND i.account_id = ?
+UNION ALL
+SELECT 'item'
+FROM material m
+JOIN item i ON i.id = m.item_id
+WHERE m.lead_time_id = ? AND i.account_id = ?
+UNION ALL
+SELECT 'production_step'
+FROM production p
+JOIN production_step ps ON ps.id = p.production_step_id
+WHERE p.quantity_id = ? AND ps.account_id = ?
+UNION ALL
+SELECT 'production_step'
+FROM consumption c
+JOIN production_step ps ON ps.id = c.production_step_id
+WHERE c.quantity_id = ? AND ps.account_id = ?
+UNION ALL
+SELECT 'production_step'
+FROM consumption c
+JOIN production_step ps ON ps.id = c.production_step_id
+WHERE c.waste_quantity_id = ? AND ps.account_id = ?
+`
+
+type ListQuantityOwnerTypesParams struct {
+	ID        string
+	AccountID string
+}
+
+// The kinds of resource in the account a quantity belongs to: a material's order point and lead time are its item's, and a production's or consumption's quantities are its production step's. Each branch is a unique-key lookup.
+func (q *Queries) ListQuantityOwnerTypes(ctx context.Context, arg ListQuantityOwnerTypesParams) ([]string, error) {
+	rows, err := q.db.QueryContext(ctx, listQuantityOwnerTypes,
+		arg.ID,
+		arg.AccountID,
+		arg.ID,
+		arg.AccountID,
+		arg.ID,
+		arg.AccountID,
+		arg.ID,
+		arg.AccountID,
+		arg.ID,
+		arg.AccountID,
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []string
+	for rows.Next() {
+		var owner_type string
+		if err := rows.Scan(&owner_type); err != nil {
+			return nil, err
+		}
+		items = append(items, owner_type)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const updateQuantityByID = `-- name: UpdateQuantityByID :execresult
 UPDATE quantity SET
     value = COALESCE(?, value),

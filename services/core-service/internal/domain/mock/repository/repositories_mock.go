@@ -17821,6 +17821,21 @@ func (mr *MockQuantityRepoMockRecorder) Get(ctx, id any) *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Get", reflect.TypeOf((*MockQuantityRepo)(nil).Get), ctx, id)
 }
 
+// OwnerTypes mocks base method.
+func (m *MockQuantityRepo) OwnerTypes(ctx context.Context, accountID, id string) ([]constants.ObjectType, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "OwnerTypes", ctx, accountID, id)
+	ret0, _ := ret[0].([]constants.ObjectType)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
+}
+
+// OwnerTypes indicates an expected call of OwnerTypes.
+func (mr *MockQuantityRepoMockRecorder) OwnerTypes(ctx, accountID, id any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "OwnerTypes", reflect.TypeOf((*MockQuantityRepo)(nil).OwnerTypes), ctx, accountID, id)
+}
+
 // Update mocks base method.
 func (m *MockQuantityRepo) Update(ctx context.Context, params domain.UpdateQuantityParams) (*domain.Quantity, *apierror.APIError) {
 	m.ctrl.T.Helper()
@@ -17873,6 +17888,21 @@ func (m *MockRateRepo) Get(ctx context.Context, id string) (*domain.Rate, *apier
 func (mr *MockRateRepoMockRecorder) Get(ctx, id any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Get", reflect.TypeOf((*MockRateRepo)(nil).Get), ctx, id)
+}
+
+// OwnerTypes mocks base method.
+func (m *MockRateRepo) OwnerTypes(ctx context.Context, accountID, id string) ([]constants.ObjectType, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "OwnerTypes", ctx, accountID, id)
+	ret0, _ := ret[0].([]constants.ObjectType)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
+}
+
+// OwnerTypes indicates an expected call of OwnerTypes.
+func (mr *MockRateRepoMockRecorder) OwnerTypes(ctx, accountID, id any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "OwnerTypes", reflect.TypeOf((*MockRateRepo)(nil).OwnerTypes), ctx, accountID, id)
 }
 
 // Update mocks base method.

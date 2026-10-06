@@ -779,6 +779,10 @@ func (s *salesOrderSvcImpl) UpdateSalesOrder(ctx context.Context, params domain.
 				}
 			}
 
+			if apiErr := checkCustomerRefs(txCtx, txSvc.repos, params.AccountID, changedSalesOrderRefs(params, existing)); apiErr != nil {
+				return apiErr
+			}
+
 			// Decide whether the caller changed carrier / service level / ship-to BEFORE the
 			// backfill below rewrites omitted fields to the existing values.
 			shippingChanged := salesOrderShippingChanged(existing, params)
@@ -2203,12 +2207,13 @@ func (s *salesOrderSvcImpl) resolveOrderDiscountID(ctx context.Context, accountI
 	return d.ID, nil
 }
 
-// validateSalesOrderReferences rejects caller-supplied foreign keys that don't
-// exist in the account. carrier_id and order_discount_id are validated
-// separately (in the shipping-rate estimate and resolveOrderDiscountID
-// respectively); this covers the remaining references that were previously
-// accepted unchecked.
+// validateSalesOrderReferences rejects caller-supplied foreign keys that don't exist in the account; order_discount_id is resolved separately by resolveOrderDiscountID. The carrier is checked here because a freight-exempt order never reaches the shipping-rate lookup.
 func (s *salesOrderSvcImpl) validateSalesOrderReferences(ctx context.Context, params domain.CreateSalesOrderParams) *apierror.APIError {
+	var carrier customerRefs
+	carrier.add(customerRefCarrier, params.CarrierID, nil, "carrier_id")
+	if apiErr := checkCustomerRefs(ctx, s.repos, params.AccountID, carrier); apiErr != nil {
+		return apiErr
+	}
 	if params.ServiceLevelID != nil && *params.ServiceLevelID != "" {
 		if _, apiErr := s.repos.NewServiceLevelRepo().Get(ctx, params.AccountID, *params.ServiceLevelID); apiErr != nil {
 			return mapSalesOrderReferenceError(apiErr, "Service level not found.", "service_level_id")
@@ -2237,6 +2242,16 @@ func (s *salesOrderSvcImpl) validateSalesOrderReferences(ctx context.Context, pa
 		return apiErr
 	}
 	return nil
+}
+
+// changedSalesOrderRefs lists the routing and terms an update moves to a different record; one the order already holds is not looked up again.
+func changedSalesOrderRefs(params domain.UpdateSalesOrderParams, existing *domain.SalesOrder) customerRefs {
+	var refs customerRefs
+	refs.add(customerRefCarrier, params.CarrierID, existing.CarrierID, "carrier_id")
+	refs.add(customerRefServiceLevel, params.ServiceLevelID.ValuePtr(), existing.ServiceLevelID, "service_level_id")
+	refs.add(customerRefShippingTerm, params.ShippingTermID, existing.ShippingTermID, "shipping_term_id")
+	refs.add(customerRefPaymentTerm, params.PaymentTermID, existing.PaymentTermID, "payment_term_id")
+	return refs
 }
 
 // validateEmailContactAccountUsers rejects an order email-contact whose account_user_id does not exist in the buyer's account, rather than silently dropping the reference. buyerAccountID scopes the lookup: these contacts are customer-side recipients, so an account_user of the seller (acting) account is not a valid contact.

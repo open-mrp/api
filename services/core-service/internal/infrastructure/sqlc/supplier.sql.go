@@ -567,6 +567,20 @@ func (q *Queries) ListSuppliersByIDs(ctx context.Context, arg ListSuppliersByIDs
 	return items, nil
 }
 
+const lockSupplierNumbers = `-- name: LockSupplierNumbers :one
+SELECT id FROM account
+WHERE id = ?
+FOR UPDATE
+`
+
+// No unique index guards supplier numbers, so their writers queue on the owner's account row. Take it before the transaction's first read so the number check sees every earlier holder's commit.
+func (q *Queries) LockSupplierNumbers(ctx context.Context, ownerAccountID string) (string, error) {
+	row := q.db.QueryRowContext(ctx, lockSupplierNumbers, ownerAccountID)
+	var id string
+	err := row.Scan(&id)
+	return id, err
+}
+
 const supplierExistsByNumber = `-- name: SupplierExistsByNumber :one
 SELECT COUNT(*) > 0 AS supplier_exists FROM account_relation
 WHERE owner_account_id = ?

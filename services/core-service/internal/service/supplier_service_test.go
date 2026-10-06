@@ -189,6 +189,7 @@ func TestCreateSupplier_IdenticalShipToReusesTheBillToAddress(t *testing.T) {
 	address := domain.CreateAddressParams{Name: "Dock", StreetLine1: &street, Country: "US"}
 	shipTo := address
 
+	d.supplierRepo.EXPECT().LockNumbers(gomock.Any(), supplierTestOwnerID).Return(nil)
 	d.supplierRepo.EXPECT().ExistsByNumber(gomock.Any(), supplierTestOwnerID, "S-1", nil).Return(false, nil)
 	d.addressRepo.EXPECT().Create(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(&domain.Address{}, nil).Times(1)
 	d.supplierRepo.EXPECT().Create(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
@@ -202,6 +203,53 @@ func TestCreateSupplier_IdenticalShipToReusesTheBillToAddress(t *testing.T) {
 	_, apiErr := d.supplierSvc.CreateSupplier(supplierAdminCtx(), domain.CreateSupplierParams{
 		Name: "Acme", Number: "S-1", BillToAddress: &address, ShipToAddress: &shipTo,
 	})
+	require.Nil(t, apiErr)
+}
+
+// No unique index guards the number, so two concurrent creates both pass a check made without the owner's lock.
+func TestCreateSupplier_ChecksTheNumberOnlyUnderTheOwnersLock(t *testing.T) {
+	t.Parallel()
+	d := newSupplierTestDeps(t)
+	gomock.InOrder(
+		d.supplierRepo.EXPECT().LockNumbers(gomock.Any(), supplierTestOwnerID).Return(nil),
+		d.supplierRepo.EXPECT().ExistsByNumber(gomock.Any(), supplierTestOwnerID, "S-1", nil).Return(true, nil),
+	)
+
+	_, apiErr := d.supplierSvc.CreateSupplier(supplierAdminCtx(), domain.CreateSupplierParams{Name: "Acme", Number: "S-1"})
+
+	require.NotNil(t, apiErr)
+	assert.Equal(t, http.StatusConflict, apierror.GetHTTPStatusCode(apiErr.Code))
+	assert.Equal(t, "number", apiErr.Param)
+}
+
+// The lock precedes every read: a read before it would pin the snapshot the number check sees.
+func TestUpdateSupplier_LocksTheOwnersNumbersBeforeItsFirstRead(t *testing.T) {
+	t.Parallel()
+	d := newSupplierTestDeps(t)
+	self := "ac_sup"
+	gomock.InOrder(
+		d.supplierRepo.EXPECT().LockNumbers(gomock.Any(), supplierTestOwnerID).Return(nil),
+		d.supplierRepo.EXPECT().Get(gomock.Any(), gomock.Any()).Return(&domain.Supplier{ID: self}, nil),
+		d.supplierRepo.EXPECT().ExistsByNumber(gomock.Any(), supplierTestOwnerID, "S-2", &self).Return(true, nil),
+	)
+
+	number := "S-2"
+	_, apiErr := d.supplierSvc.UpdateSupplier(supplierAdminCtx(), domain.UpdateSupplierParams{SupplierID: self, Number: &number})
+
+	require.NotNil(t, apiErr)
+	assert.Equal(t, http.StatusConflict, apierror.GetHTTPStatusCode(apiErr.Code))
+	assert.Equal(t, "number", apiErr.Param)
+}
+
+func TestUpdateSupplier_LeavesTheNumbersUnlockedWhenTheNumberIsNotSent(t *testing.T) {
+	t.Parallel()
+	d := newSupplierTestDeps(t)
+	d.supplierRepo.EXPECT().LockNumbers(gomock.Any(), gomock.Any()).Times(0)
+	d.supplierRepo.EXPECT().Get(gomock.Any(), gomock.Any()).Return(&domain.Supplier{ID: "ac_sup", Name: "Old"}, nil)
+	d.supplierRepo.EXPECT().Update(gomock.Any(), gomock.Any()).Return(&domain.Supplier{ID: "ac_sup", Name: "New"}, nil)
+
+	name := "New"
+	_, apiErr := d.supplierSvc.UpdateSupplier(supplierAdminCtx(), domain.UpdateSupplierParams{SupplierID: "ac_sup", Name: &name})
 	require.Nil(t, apiErr)
 }
 

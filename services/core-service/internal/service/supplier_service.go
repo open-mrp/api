@@ -206,6 +206,10 @@ func (s *supplierSvcImpl) CreateSupplier(ctx context.Context, params domain.Crea
 		apiErr = s.withTx(ctx, func(txCtx context.Context, txSvc *supplierSvcImpl) *apierror.APIError {
 			txSupplierRepo := txSvc.repos.NewSupplierRepo()
 
+			if apiErr := txSupplierRepo.LockNumbers(txCtx, params.OwnerAccountID); apiErr != nil {
+				return apiErr
+			}
+
 			// Check for duplicate supplier number.
 			exists, apiErr := txSupplierRepo.ExistsByNumber(txCtx, params.OwnerAccountID, params.Number, nil)
 			if apiErr != nil {
@@ -323,6 +327,13 @@ func (s *supplierSvcImpl) UpdateSupplier(ctx context.Context, params domain.Upda
 		var result *domain.Supplier
 		apiErr = s.withTx(ctx, func(txCtx context.Context, txSvc *supplierSvcImpl) *apierror.APIError {
 			txSupplierRepo := txSvc.repos.NewSupplierRepo()
+
+			// Before the first read, or the number check below reads a snapshot older than the lock.
+			if params.Number != nil {
+				if apiErr := txSupplierRepo.LockNumbers(txCtx, params.OwnerAccountID); apiErr != nil {
+					return apiErr
+				}
+			}
 
 			old, apiErr := txSupplierRepo.Get(txCtx, domain.GetSupplierParams{OwnerAccountID: params.OwnerAccountID, SupplierID: params.SupplierID, Includes: supplierAddressIncludes})
 			if apiErr != nil {

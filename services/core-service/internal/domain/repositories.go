@@ -1914,6 +1914,8 @@ type SupplierRepo interface {
 	Update(ctx context.Context, params UpdateSupplierParams) (*Supplier, *apierror.APIError)
 	Delete(ctx context.Context, ownerAccountID, supplierAccountID string) (*Supplier, *apierror.APIError)
 	BulkDelete(ctx context.Context, ownerAccountID string, supplierAccountIDs []string) *apierror.APIError
+	// LockNumbers holds the owner's supplier numbers until the transaction ends. Take it before the transaction's first read, then check ExistsByNumber.
+	LockNumbers(ctx context.Context, ownerAccountID string) *apierror.APIError
 	ExistsByNumber(ctx context.Context, ownerAccountID, number string, excludeID *string) (bool, *apierror.APIError)
 	// FindByNames resolves supplier display names to supplier account IDs within the
 	// owner account (case-insensitive). Used by bulk upsert to attach existing suppliers.

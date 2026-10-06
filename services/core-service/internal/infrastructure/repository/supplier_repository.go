@@ -344,6 +344,17 @@ func (r *supplierRepoImpl) FindByNames(ctx context.Context, ownerAccountID strin
 	return matches, nil
 }
 
+func (r *supplierRepoImpl) LockNumbers(ctx context.Context, ownerAccountID string) *apierror.APIError {
+	ctx, span := supplierRepoTracer.Start(ctx, "repository.supplier.lock_numbers")
+	defer span.End()
+
+	_, err := r.queries.LockSupplierNumbers(ctx, ownerAccountID)
+	if apiErr := db.MapSQLError(err); apiErr != nil {
+		return tracing.Trace(span, apiErr)
+	}
+	return nil
+}
+
 func (r *supplierRepoImpl) ExistsByNumber(ctx context.Context, ownerAccountID, number string, excludeID *string) (bool, *apierror.APIError) {
 	ctx, span := supplierRepoTracer.Start(ctx, "repository.supplier.exists_by_number")
 	defer span.End()

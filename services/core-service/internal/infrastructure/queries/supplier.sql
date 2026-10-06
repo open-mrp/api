@@ -158,6 +158,12 @@ WHERE owner_account_id = sqlc.arg('owner_account_id')
   AND counterparty_account_id = sqlc.arg('counterparty_account_id')
   AND account_relation_role_code = 'supplier';
 
+-- name: LockSupplierNumbers :one
+-- No unique index guards supplier numbers, so their writers queue on the owner's account row. Take it before the transaction's first read so the number check sees every earlier holder's commit.
+SELECT id FROM account
+WHERE id = sqlc.arg('owner_account_id')
+FOR UPDATE;
+
 -- name: SupplierExistsByNumber :one
 SELECT COUNT(*) > 0 AS supplier_exists FROM account_relation
 WHERE owner_account_id = sqlc.arg('owner_account_id')

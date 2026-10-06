@@ -20276,6 +20276,20 @@ func (mr *MockSupplierRepoMockRecorder) List(ctx, params any) *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "List", reflect.TypeOf((*MockSupplierRepo)(nil).List), ctx, params)
 }
 
+// LockNumbers mocks base method.
+func (m *MockSupplierRepo) LockNumbers(ctx context.Context, ownerAccountID string) *apierror.APIError {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "LockNumbers", ctx, ownerAccountID)
+	ret0, _ := ret[0].(*apierror.APIError)
+	return ret0
+}
+
+// LockNumbers indicates an expected call of LockNumbers.
+func (mr *MockSupplierRepoMockRecorder) LockNumbers(ctx, ownerAccountID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "LockNumbers", reflect.TypeOf((*MockSupplierRepo)(nil).LockNumbers), ctx, ownerAccountID)
+}
+
 // Update mocks base method.
 func (m *MockSupplierRepo) Update(ctx context.Context, params domain.UpdateSupplierParams) (*domain.Supplier, *apierror.APIError) {
 	m.ctrl.T.Helper()

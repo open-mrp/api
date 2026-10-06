@@ -757,6 +757,9 @@ type ItemCategorySvc interface {
 	// AddItemCategoryProperty adds a property to an item category.
 	AddItemCategoryProperty(ctx context.Context, params AddItemCategoryPropertyParams) *apierror.APIError
 
+	// CreateItemCategoryProperty creates a property and attaches it to an item category in one transaction, authorized by the category's update permission alone.
+	CreateItemCategoryProperty(ctx context.Context, params CreateItemCategoryPropertyParams) (*Property, *apierror.APIError)
+
 	// RemoveItemCategoryProperty removes a property from an item category.
 	RemoveItemCategoryProperty(ctx context.Context, params RemoveItemCategoryPropertyParams) *apierror.APIError
 

@@ -1185,7 +1185,10 @@ resources:
           properties:
             methods:
               update: put /v1/catalog/item-categories/{id}/properties/{property_id}
+              create: post /v1/catalog/item-categories/{id}/properties
               delete: delete /v1/catalog/item-categories/{id}/properties/{property_id}
+            models:
+              create_item_category_property_request: '#/components/schemas/CreateItemCategoryPropertyRequest'
           actions:
             methods:
               bulk_upsert: post /v1/catalog/item-categories/actions/bulk-upsert

@@ -28,19 +28,22 @@ func LoadProperties(ctx context.Context, ids []string) (map[string]any, *apierro
 		return nil, apiErr
 	}
 
-	meta := resourcekit.GetLoadMeta(ctx)
 	out := make(map[string]any, len(resp.Properties))
 	for _, p := range resp.Properties {
 		out[p.Id] = PropertyFromProto(p)
-
-		attrs := make([]apiresource.Attribute, len(p.Attributes))
-		for i, a := range p.Attributes {
-			attrs[i] = *AttributeFromProto(a)
-		}
-		meta.Set(constants.ObjectTypeProperty, p.Id, "attributes_list",
-			apiresource.NewList(attrs, apiresource.PageInfo{}))
+		StashPropertyMeta(ctx, p)
 	}
 	return out, nil
+}
+
+// StashPropertyMeta records a property's attributes for the include resolver. Pair it with PropertyFromProto.
+func StashPropertyMeta(ctx context.Context, p *pb.PropertyInfo) {
+	attrs := make([]apiresource.Attribute, len(p.Attributes))
+	for i, a := range p.Attributes {
+		attrs[i] = *AttributeFromProto(a)
+	}
+	resourcekit.GetLoadMeta(ctx).Set(constants.ObjectTypeProperty, p.Id, "attributes_list",
+		apiresource.NewList(attrs, apiresource.PageInfo{}))
 }
 
 func PropertyFromProto(p *pb.PropertyInfo) *apiresource.Property {

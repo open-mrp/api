@@ -135,6 +135,13 @@ type AddItemCategoryPropertyParams struct {
 	PropertyID     string
 }
 
+// CreateItemCategoryPropertyParams names a new property to create in the account and attach to an item category.
+type CreateItemCategoryPropertyParams struct {
+	AccountID      string
+	ItemCategoryID string
+	Name           string
+}
+
 type RemoveItemCategoryPropertyParams struct {
 	AccountID      string
 	ItemCategoryID string

@@ -545,6 +545,8 @@ service CoreService {
   rpc UpdateItemCategory(UpdateItemCategoryRequest) returns (UpdateItemCategoryResponse);
   rpc DeleteItemCategory(DeleteItemCategoryRequest) returns (google.protobuf.Empty);
   rpc AddItemCategoryProperty(AddItemCategoryPropertyRequest) returns (google.protobuf.Empty);
+  // Creates a property and attaches it to an item category in one transaction.
+  rpc CreateItemCategoryProperty(CreateItemCategoryPropertyRequest) returns (CreateItemCategoryPropertyResponse);
   rpc RemoveItemCategoryProperty(RemoveItemCategoryPropertyRequest) returns (google.protobuf.Empty);
   // Changes the unit group of an item category and updates related rate units.
   rpc ChangeItemCategoryUnitGroup(ChangeItemCategoryUnitGroupRequest) returns (google.protobuf.Empty);

@@ -25,6 +25,7 @@ type ItemCategorySvc interface {
 	UpdateItemCategory(ctx context.Context, req *UpdateItemCategoryRequest) (*apiresource.ItemCategory, *apierror.APIError)
 	DeleteItemCategory(ctx context.Context, req *DeleteItemCategoryRequest) (*apiresource.EmptyResource, *apierror.APIError)
 	AddItemCategoryProperty(ctx context.Context, req *AddItemCategoryPropertyRequest) (*apiresource.EmptyResource, *apierror.APIError)
+	CreateItemCategoryProperty(ctx context.Context, req *CreateItemCategoryPropertyRequest) (*apiresource.Property, *apierror.APIError)
 	RemoveItemCategoryProperty(ctx context.Context, req *RemoveItemCategoryPropertyRequest) (*apiresource.EmptyResource, *apierror.APIError)
 	ChangeItemCategoryUnitGroup(ctx context.Context, req *ChangeItemCategoryUnitGroupRequest) (*apiresource.EmptyResource, *apierror.APIError)
 	BulkUpsertItemCategories(ctx context.Context, req *BulkUpsertItemCategoriesRequest) (*apiresource.Job, *apierror.APIError)
@@ -179,6 +180,25 @@ func (m *itemCategorySvcImpl) AddItemCategoryProperty(ctx context.Context, req *
 	}
 
 	return &apiresource.EmptyResource{}, nil
+}
+
+func (m *itemCategorySvcImpl) CreateItemCategoryProperty(ctx context.Context, req *CreateItemCategoryPropertyRequest) (*apiresource.Property, *apierror.APIError) {
+	pbReq := &pb.CreateItemCategoryPropertyRequest{
+		Id:   req.ItemCategoryID,
+		Name: req.Name,
+	}
+
+	resp, apiErr := grpcutil.CallRPC(ctx, itemCategorySvcTracer, "service.item-categories.create-property", domain.ServiceName,
+		func(ctx context.Context, opts ...grpc.CallOption) (*pb.CreateItemCategoryPropertyResponse, error) {
+			return m.coreClient.CreateItemCategoryProperty(ctx, pbReq, opts...)
+		})
+	if apiErr != nil {
+		return nil, apiErr
+	}
+
+	// Answered from what core created: the category's permission covers the new property, so it is not read back under properties:read.
+	resourceloaders.StashPropertyMeta(ctx, resp.Property)
+	return resourceloaders.PropertyFromProto(resp.Property), nil
 }
 
 func (m *itemCategorySvcImpl) RemoveItemCategoryProperty(ctx context.Context, req *RemoveItemCategoryPropertyRequest) (*apiresource.EmptyResource, *apierror.APIError) {

@@ -579,6 +579,21 @@ var EndpointTools = []EndpointToolDescriptor{
 		},
 	},
 	{
+		Slug:                "create_item_category_property",
+		DisplayName:         "Create Item Category Property",
+		Description:         "Creates a property and attaches it to an item category, returning the new property.\n\nThe property is one of your account's properties like any other, starting with no attributes, and the category carries it from the moment it exists. Both happen in one request that needs only permission to update the category. A name already used by one of your account's properties returns a conflict error naming `name`.",
+		Method:              "POST",
+		RouteTemplate:       "/v1/catalog/item-categories/{id}/properties",
+		InputSchema:         "{\"properties\":{\"id\":{\"description\":\"Item category ID.\",\"type\":\"string\"},\"include\":{\"description\":\"Sub-objects to expand in the response. These nested objects are returned as null by default; pass the field keys you need (e.g. \\\"parent_account\\\") to get their full objects inline. Expand to get authoritative data rather than inferring relationships from names.\",\"items\":{\"enum\":[\"attributes\"],\"type\":\"string\"},\"type\":\"array\"},\"name\":{\"description\":\"Display name of the new property, such as `Color` or `Size`.\\n\\nMust be unique within your account. To attach a property that already exists, use the add item category property endpoint.\",\"type\":\"string\"}},\"required\":[\"name\",\"id\"],\"type\":\"object\"}",
+		Group:               "Item Categories",
+		RequiredPermissions: []string{"item_categories:update"},
+		Params: []EndpointToolParam{
+			{Name: "id", In: EndpointToolParamPath},
+			{Name: "include", In: EndpointToolParamQuery, Array: true},
+			{Name: "name", In: EndpointToolParamBody},
+		},
+	},
+	{
 		Slug:                "create_location",
 		DisplayName:         "Create Location",
 		Description:         "Creates a storage location, optionally placing it in the location hierarchy.",

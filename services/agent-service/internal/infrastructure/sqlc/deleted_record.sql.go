@@ -9,20 +9,23 @@ import (
 	"context"
 )
 
-const countDeletedRecordsByResourceAndResourceID = `-- name: CountDeletedRecordsByResourceAndResourceID :one
+const countDeletedRecordsInAccount = `-- name: CountDeletedRecordsInAccount :one
 SELECT COUNT(*)
 FROM deleted_record
 WHERE resource_type = $1
 AND resource_id = $2
+AND data->>'account_id' = $3::text
 `
 
-type CountDeletedRecordsByResourceAndResourceIDParams struct {
+type CountDeletedRecordsInAccountParams struct {
 	ResourceType string
 	ResourceID   string
+	AccountID    string
 }
 
-func (q *Queries) CountDeletedRecordsByResourceAndResourceID(ctx context.Context, arg CountDeletedRecordsByResourceAndResourceIDParams) (int64, error) {
-	row := q.db.QueryRow(ctx, countDeletedRecordsByResourceAndResourceID, arg.ResourceType, arg.ResourceID)
+// Only a snapshot that records its owner under account_id can match.
+func (q *Queries) CountDeletedRecordsInAccount(ctx context.Context, arg CountDeletedRecordsInAccountParams) (int64, error) {
+	row := q.db.QueryRow(ctx, countDeletedRecordsInAccount, arg.ResourceType, arg.ResourceID, arg.AccountID)
 	var count int64
 	err := row.Scan(&count)
 	return count, err

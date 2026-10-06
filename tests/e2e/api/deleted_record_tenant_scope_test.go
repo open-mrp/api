@@ -437,3 +437,16 @@ func TestDeletedRecordScope_Account(t *testing.T) {
 		},
 	})
 }
+
+func TestDeletedRecordScope_Agents(t *testing.T) {
+	t.Parallel()
+	runDeletedScopeCases(t, []deletedScopeCase{
+		{
+			name: "custom agent",
+			setup: func(t *testing.T) deletedScopeTarget {
+				return createdPath(t, covAiAgentsPath, covAiAgentsMinimalCreateBody("dscope"))
+			},
+			patch: map[string]any{"name": uniqueName("e2e-dscope-agent")},
+		},
+	})
+}

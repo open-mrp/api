@@ -145,6 +145,11 @@ type AnalyticsCache struct {
 	forecast       *cache.Cache[*domain.DemandForecastResult]
 	weeksOfSales   *cache.Cache[*domain.WeeksOfSalesResult]
 	delivery       *cache.Cache[*domain.DeliveryPerformanceResult]
+
+	quarterlyOrders   *cache.Cache[[]domain.YearlyQuarterlyData]
+	openOrdersSummary *cache.Cache[*domain.OpenOrdersSummary]
+	openOrderProducts *cache.Cache[*domain.OpenOrderProductPage]
+	openOrders        *cache.Cache[*domain.OpenOrderPage]
 }
 
 // NewAnalyticsCache returns an empty AnalyticsCache over cfg.Store.
@@ -186,6 +191,18 @@ func NewAnalyticsCache(cfg *AnalyticsCacheConfig) (*AnalyticsCache, error) {
 		return nil, err
 	}
 	if c.delivery, err = newAnalyticsReportCache[*domain.DeliveryPerformanceResult](cfg, "delivery_performance"); err != nil {
+		return nil, err
+	}
+	if c.quarterlyOrders, err = newAnalyticsReportCache[[]domain.YearlyQuarterlyData](cfg, "quarterly_orders"); err != nil {
+		return nil, err
+	}
+	if c.openOrdersSummary, err = newAnalyticsReportCache[*domain.OpenOrdersSummary](cfg, "open_orders_summary"); err != nil {
+		return nil, err
+	}
+	if c.openOrderProducts, err = newAnalyticsReportCache[*domain.OpenOrderProductPage](cfg, "open_order_products"); err != nil {
+		return nil, err
+	}
+	if c.openOrders, err = newAnalyticsReportCache[*domain.OpenOrderPage](cfg, "open_orders"); err != nil {
 		return nil, err
 	}
 	return c, nil

@@ -1003,6 +1003,13 @@ type AnalyticsRepo interface {
 	GetManufacturingMetric(ctx context.Context, params AnalyzeManufacturingParams) (float64, *apierror.APIError)
 	GetManufacturingBatch(ctx context.Context, params AnalyzeManufacturingBatchParams) (*ManufacturingBatchResult, *apierror.APIError)
 	GetOrderEntries(ctx context.Context, params AnalyzeOrdersParams) ([]OrderEntry, *apierror.APIError)
+	// GetOpenOrderLineEntries reads the open sale lines as order entries, oldest order first, at most limit of them.
+	GetOpenOrderLineEntries(ctx context.Context, filter OpenOrderFilter, limit int) ([]OrderEntry, *apierror.APIError)
+	GetOpenOrdersSummary(ctx context.Context, filter OpenOrderFilter) (*OpenOrdersSummary, *apierror.APIError)
+	GetOpenOrderProducts(ctx context.Context, params AnalyzeOpenOrderProductsParams) (*OpenOrderProductPage, *apierror.APIError)
+	ListOpenOrders(ctx context.Context, params ListOpenOrdersParams) (*OpenOrderPage, *apierror.APIError)
+	// GetOpenOrderLines returns one sales order's sale lines; found is false when the account has no such sales order, or salesRepID is set and the order is not theirs.
+	GetOpenOrderLines(ctx context.Context, accountID, orderID string, salesRepID *string) (lines []OpenOrderLine, found bool, apiErr *apierror.APIError)
 	GetQuarterlyOrders(ctx context.Context, params AnalyzeQuarterlyOrdersParams) ([]YearlyQuarterlyData, *apierror.APIError)
 	GetMaterialAnalytics(ctx context.Context, params AnalyzeMaterialsParams) ([]MaterialAnalyticsEntry, *apierror.APIError)
 	GetInventoryReceiptAnalytics(ctx context.Context, params AnalyzeInventoryReceiptsParams) ([]InventoryReceiptEntry, *apierror.APIError)
@@ -1016,6 +1023,8 @@ type AnalyticsRepo interface {
 	GetSaleProductItemIDs(ctx context.Context, accountID string) ([]SaleProductItemRow, *apierror.APIError)
 	GetProductLineInfo(ctx context.Context, accountID string, productLineIDs []string) ([]ProductLineInfoRow, *apierror.APIError)
 	GetOrderQuantitiesByProductLines(ctx context.Context, params GetOrderQuantitiesByProductLinesParams) ([]OrderQuantityByProductLineRow, *apierror.APIError)
+	// GetWeeksOfSalesOnHand returns each item's available stock, deleted items included.
+	GetWeeksOfSalesOnHand(ctx context.Context, accountID string, itemIDs []string) ([]ItemOnHandRow, *apierror.APIError)
 }
 
 // MachineStatusRepo reads the raw pieces the floor-status view is assembled from.

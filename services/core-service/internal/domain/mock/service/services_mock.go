@@ -4797,6 +4797,36 @@ func (mr *MockAnalyticsSvcMockRecorder) AnalyzeOpenBatches(ctx, params any) *gom
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AnalyzeOpenBatches", reflect.TypeOf((*MockAnalyticsSvc)(nil).AnalyzeOpenBatches), ctx, params)
 }
 
+// AnalyzeOpenOrderProducts mocks base method.
+func (m *MockAnalyticsSvc) AnalyzeOpenOrderProducts(ctx context.Context, params domain.AnalyzeOpenOrderProductsParams) (*domain.OpenOrderProductPage, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "AnalyzeOpenOrderProducts", ctx, params)
+	ret0, _ := ret[0].(*domain.OpenOrderProductPage)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
+}
+
+// AnalyzeOpenOrderProducts indicates an expected call of AnalyzeOpenOrderProducts.
+func (mr *MockAnalyticsSvcMockRecorder) AnalyzeOpenOrderProducts(ctx, params any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AnalyzeOpenOrderProducts", reflect.TypeOf((*MockAnalyticsSvc)(nil).AnalyzeOpenOrderProducts), ctx, params)
+}
+
+// AnalyzeOpenOrdersSummary mocks base method.
+func (m *MockAnalyticsSvc) AnalyzeOpenOrdersSummary(ctx context.Context, filter domain.OpenOrderFilter) (*domain.OpenOrdersSummary, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "AnalyzeOpenOrdersSummary", ctx, filter)
+	ret0, _ := ret[0].(*domain.OpenOrdersSummary)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
+}
+
+// AnalyzeOpenOrdersSummary indicates an expected call of AnalyzeOpenOrdersSummary.
+func (mr *MockAnalyticsSvcMockRecorder) AnalyzeOpenOrdersSummary(ctx, filter any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AnalyzeOpenOrdersSummary", reflect.TypeOf((*MockAnalyticsSvc)(nil).AnalyzeOpenOrdersSummary), ctx, filter)
+}
+
 // AnalyzeOrders mocks base method.
 func (m *MockAnalyticsSvc) AnalyzeOrders(ctx context.Context, params domain.AnalyzeOrdersParams) ([]domain.OrderEntry, *apierror.APIError) {
 	m.ctrl.T.Helper()
@@ -4947,6 +4977,21 @@ func (mr *MockAnalyticsSvcMockRecorder) AnalyzeWeeksOfSales(ctx, params any) *go
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AnalyzeWeeksOfSales", reflect.TypeOf((*MockAnalyticsSvc)(nil).AnalyzeWeeksOfSales), ctx, params)
 }
 
+// BuildExportOpenOrderLines mocks base method.
+func (m *MockAnalyticsSvc) BuildExportOpenOrderLines(ctx context.Context, accountID string, filters json.RawMessage) (*domain.Export, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "BuildExportOpenOrderLines", ctx, accountID, filters)
+	ret0, _ := ret[0].(*domain.Export)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
+}
+
+// BuildExportOpenOrderLines indicates an expected call of BuildExportOpenOrderLines.
+func (mr *MockAnalyticsSvcMockRecorder) BuildExportOpenOrderLines(ctx, accountID, filters any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "BuildExportOpenOrderLines", reflect.TypeOf((*MockAnalyticsSvc)(nil).BuildExportOpenOrderLines), ctx, accountID, filters)
+}
+
 // BuildExportSalesLines mocks base method.
 func (m *MockAnalyticsSvc) BuildExportSalesLines(ctx context.Context, accountID string, filters json.RawMessage) (*domain.Export, *apierror.APIError) {
 	m.ctrl.T.Helper()
@@ -4960,6 +5005,21 @@ func (m *MockAnalyticsSvc) BuildExportSalesLines(ctx context.Context, accountID 
 func (mr *MockAnalyticsSvcMockRecorder) BuildExportSalesLines(ctx, accountID, filters any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "BuildExportSalesLines", reflect.TypeOf((*MockAnalyticsSvc)(nil).BuildExportSalesLines), ctx, accountID, filters)
+}
+
+// ExportOpenOrderLines mocks base method.
+func (m *MockAnalyticsSvc) ExportOpenOrderLines(ctx context.Context, params domain.ExportOpenOrderLinesParams) (*domain.Job, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ExportOpenOrderLines", ctx, params)
+	ret0, _ := ret[0].(*domain.Job)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
+}
+
+// ExportOpenOrderLines indicates an expected call of ExportOpenOrderLines.
+func (mr *MockAnalyticsSvcMockRecorder) ExportOpenOrderLines(ctx, params any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ExportOpenOrderLines", reflect.TypeOf((*MockAnalyticsSvc)(nil).ExportOpenOrderLines), ctx, params)
 }
 
 // ExportSalesLines mocks base method.
@@ -5020,6 +5080,36 @@ func (m *MockAnalyticsSvc) ListNewCustomers(ctx context.Context, params domain.L
 func (mr *MockAnalyticsSvcMockRecorder) ListNewCustomers(ctx, params any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListNewCustomers", reflect.TypeOf((*MockAnalyticsSvc)(nil).ListNewCustomers), ctx, params)
+}
+
+// ListOpenOrderLines mocks base method.
+func (m *MockAnalyticsSvc) ListOpenOrderLines(ctx context.Context, orderID string) ([]domain.OpenOrderLine, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ListOpenOrderLines", ctx, orderID)
+	ret0, _ := ret[0].([]domain.OpenOrderLine)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
+}
+
+// ListOpenOrderLines indicates an expected call of ListOpenOrderLines.
+func (mr *MockAnalyticsSvcMockRecorder) ListOpenOrderLines(ctx, orderID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListOpenOrderLines", reflect.TypeOf((*MockAnalyticsSvc)(nil).ListOpenOrderLines), ctx, orderID)
+}
+
+// ListOpenOrders mocks base method.
+func (m *MockAnalyticsSvc) ListOpenOrders(ctx context.Context, params domain.ListOpenOrdersParams) (*domain.OpenOrderPage, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ListOpenOrders", ctx, params)
+	ret0, _ := ret[0].(*domain.OpenOrderPage)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
+}
+
+// ListOpenOrders indicates an expected call of ListOpenOrders.
+func (mr *MockAnalyticsSvcMockRecorder) ListOpenOrders(ctx, params any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListOpenOrders", reflect.TypeOf((*MockAnalyticsSvc)(nil).ListOpenOrders), ctx, params)
 }
 
 // ListSalesLines mocks base method.

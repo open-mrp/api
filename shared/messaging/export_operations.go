@@ -44,6 +44,7 @@ const (
 	ExportHubspotCompanyReviews ExportOperation = "export_hubspot_company_reviews"
 	ExportPriceList             ExportOperation = "export_price_list"
 	ExportSalesData             ExportOperation = "export_sales_data"
+	ExportOpenOrderLines        ExportOperation = "export_open_order_lines"
 	ExportCustomers             ExportOperation = "export_customers"
 )
 
@@ -67,6 +68,7 @@ var ExportOperations = []ExportOperation{
 	ExportHubspotCompanyReviews,
 	ExportPriceList,
 	ExportSalesData,
+	ExportOpenOrderLines,
 	ExportCustomers,
 }
 

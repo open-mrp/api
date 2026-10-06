@@ -770,3 +770,108 @@ message ExportSalesLinesRequest {
 message ExportSalesLinesResponse {
   JobInfo job = 1;
 }
+
+// OpenOrderFilterProto selects the sale lines of open sales orders (issued, not yet completed); every list is empty-means-all and they combine with AND.
+message OpenOrderFilterProto {
+  repeated string customer_ids = 1;
+  repeated string customer_group_ids = 2;
+  repeated string product_line_ids = 3;
+  repeated string sales_rep_ids = 4;
+  repeated string item_ids = 5;
+}
+
+message AnalyzeOpenOrdersSummaryRequest {
+  OpenOrderFilterProto filter = 1;
+}
+
+// Money on the open lines, as exact decimal strings.
+message AnalyzeOpenOrdersSummaryResponse {
+  string ordered = 1;
+  string back_ordered = 2;
+  string invoiced = 3;
+}
+
+message AnalyzeOpenOrderProductsRequest {
+  OpenOrderFilterProto filter = 1;
+  int32 limit = 2;
+  optional string cursor = 3;
+}
+
+// One item's quantities across the open lines, in the item's base unit (unit_id), as exact decimal strings.
+message OpenOrderProductProto {
+  string item_id = 1;
+  string sku = 2;
+  optional string description = 3;
+  string unit_id = 4;
+  string quantity_ordered = 5;
+  string quantity_back_ordered = 6;
+  string quantity_invoiced = 7;
+  // The unit unit_id names; absent when the item's category has no base unit.
+  optional UnitInfo unit = 8;
+}
+
+message AnalyzeOpenOrderProductsResponse {
+  repeated OpenOrderProductProto products = 1;
+  PageInfo page_info = 2;
+}
+
+message ListOpenOrdersRequest {
+  OpenOrderFilterProto filter = 1;
+  int32 limit = 2;
+  optional string cursor = 3;
+}
+
+message OpenOrderProto {
+  string id = 1;
+  string number = 2;
+  string status = 3;
+  google.protobuf.Timestamp issued_at = 4;
+  string customer_id = 5;
+  string customer_name = 6;
+  optional string customer_number = 7;
+  optional string ship_to_state = 8;
+  optional string ship_to_country = 9;
+  int64 line_count = 10;
+  // Exact decimal string.
+  string total_ordered = 11;
+}
+
+message ListOpenOrdersResponse {
+  repeated OpenOrderProto orders = 1;
+  PageInfo page_info = 2;
+}
+
+message ListOpenOrderLinesRequest {
+  string order_id = 1;
+}
+
+// One sale line. Quantities are in the item's base unit (unit_id); the unit price is per the base unit of its denominator's dimension. Amounts are exact decimal strings.
+message OpenOrderLineProto {
+  string id = 1;
+  string item_id = 2;
+  string sku = 3;
+  optional string description = 4;
+  string unit_id = 5;
+  string unit_price = 6;
+  string unit_price_numerator_unit_id = 7;
+  string unit_price_numerator_abbreviation = 8;
+  string unit_price_denominator_unit_id = 9;
+  string unit_price_denominator_abbreviation = 10;
+  string quantity_back_ordered = 11;
+  string quantity_invoiced = 12;
+  string total_ordered = 13;
+  // The unit unit_id names; absent when the item's category has no base unit.
+  optional UnitInfo unit = 14;
+}
+
+message ListOpenOrderLinesResponse {
+  repeated OpenOrderLineProto lines = 1;
+}
+
+message ExportOpenOrderLinesRequest {
+  OpenOrderFilterProto filter = 1;
+}
+
+message ExportOpenOrderLinesResponse {
+  JobInfo job = 1;
+}

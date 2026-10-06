@@ -8,6 +8,7 @@ import (
 	apiresource "github.com/open-mrp/api/services/api-gateway/pkg/resource"
 	"github.com/open-mrp/api/services/auth-service/pkg/types"
 	apierror "github.com/open-mrp/api/shared/errors"
+	"github.com/open-mrp/api/shared/field"
 )
 
 // AnalyzeQuarterlyOrdersRequest is the request to analyze quarterly order data.
@@ -22,9 +23,13 @@ type AnalyzeQuarterlyOrdersRequest struct {
 	CustomerIDs []string `json:"customer_ids,omitempty"`
 	// Optional customer group IDs to filter by.
 	CustomerGroupIDs []string `json:"customer_group_ids,omitempty"`
+	// Calendar years to cover, the current one included. Defaults to 5.
+	YearsBack field.Optional[int32] `json:"years_back,omitzero" validate:"omitempty,min=1,max=100"`
 }
 
-// Returns yearly order totals broken down by quarter.
+// Returns the ordered value of sales orders by the year and quarter they were issued, for the last few calendar years.
+//
+// Each year's quarters and total are the ordered value of sale lines — quantity times unit price, converted between units — on sales orders issued in that quarter (UTC), whatever their status now. Estimates, which have not been issued, and purchase orders are left out. Customers include their child accounts. Sales reps see only their own orders.
 type AnalyzeQuarterlyOrdersEndpoint struct{}
 
 func (e *AnalyzeQuarterlyOrdersEndpoint) Materialize() *apiendpoint.APIEndpoint[*AnalyzeQuarterlyOrdersRequest, *apiresource.AnalyzeQuarterlyOrdersResponse] {

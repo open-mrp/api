@@ -18,7 +18,9 @@ type AnalyzeOpenBatchesRequest struct {
 	ProductLineIDs []string `json:"product_line_ids,omitempty"`
 }
 
-// Returns open batch summaries grouped by scanning station.
+// Returns open batch summaries grouped by scanning station and item.
+//
+// Each open, scanned batch counts for its quantity less what has already gone downstream into output batches. Selecting items or product lines selects the parts their production consumes, recursively, together with the selected items themselves; a selection that leads to no part does not filter.
 type AnalyzeOpenBatchesEndpoint struct{}
 
 func (e *AnalyzeOpenBatchesEndpoint) Materialize() *apiendpoint.APIEndpoint[*AnalyzeOpenBatchesRequest, *apiresource.AnalyzeOpenBatchesResponse] {

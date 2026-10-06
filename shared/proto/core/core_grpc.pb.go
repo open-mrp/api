@@ -262,6 +262,11 @@ const (
 	CoreService_ListNewCustomers_FullMethodName                           = "/core.CoreService/ListNewCustomers"
 	CoreService_ListSalesLines_FullMethodName                             = "/core.CoreService/ListSalesLines"
 	CoreService_ExportSalesLines_FullMethodName                           = "/core.CoreService/ExportSalesLines"
+	CoreService_AnalyzeOpenOrdersSummary_FullMethodName                   = "/core.CoreService/AnalyzeOpenOrdersSummary"
+	CoreService_AnalyzeOpenOrderProducts_FullMethodName                   = "/core.CoreService/AnalyzeOpenOrderProducts"
+	CoreService_ListOpenOrders_FullMethodName                             = "/core.CoreService/ListOpenOrders"
+	CoreService_ListOpenOrderLines_FullMethodName                         = "/core.CoreService/ListOpenOrderLines"
+	CoreService_ExportOpenOrderLines_FullMethodName                       = "/core.CoreService/ExportOpenOrderLines"
 	CoreService_AnalyzeRealizedMargins_FullMethodName                     = "/core.CoreService/AnalyzeRealizedMargins"
 	CoreService_AnalyzeCustomerPricing_FullMethodName                     = "/core.CoreService/AnalyzeCustomerPricing"
 	CoreService_AnalyzeProductionCosts_FullMethodName                     = "/core.CoreService/AnalyzeProductionCosts"
@@ -881,6 +886,16 @@ type CoreServiceClient interface {
 	ListSalesLines(ctx context.Context, in *ListSalesLinesRequest, opts ...grpc.CallOption) (*ListSalesLinesResponse, error)
 	// Accepts an export of the sales lines; the file is built by the export worker.
 	ExportSalesLines(ctx context.Context, in *ExportSalesLinesRequest, opts ...grpc.CallOption) (*ExportSalesLinesResponse, error)
+	// Totals the money on open sales orders.
+	AnalyzeOpenOrdersSummary(ctx context.Context, in *AnalyzeOpenOrdersSummaryRequest, opts ...grpc.CallOption) (*AnalyzeOpenOrdersSummaryResponse, error)
+	// Totals the open lines per item, most back-ordered first.
+	AnalyzeOpenOrderProducts(ctx context.Context, in *AnalyzeOpenOrderProductsRequest, opts ...grpc.CallOption) (*AnalyzeOpenOrderProductsResponse, error)
+	// Lists the open sales orders, newest issue first.
+	ListOpenOrders(ctx context.Context, in *ListOpenOrdersRequest, opts ...grpc.CallOption) (*ListOpenOrdersResponse, error)
+	// Returns one sales order's sale lines.
+	ListOpenOrderLines(ctx context.Context, in *ListOpenOrderLinesRequest, opts ...grpc.CallOption) (*ListOpenOrderLinesResponse, error)
+	// Accepts an export of the open sale lines; the file is built by the export worker.
+	ExportOpenOrderLines(ctx context.Context, in *ExportOpenOrderLinesRequest, opts ...grpc.CallOption) (*ExportOpenOrderLinesResponse, error)
 	// AnalyzeRealizedMargins rolls invoiced lines up to one row per customer and SKU and flags the ones priced below their peers or under target margin. Aggregated here because the raw lines are far too many to ship.
 	AnalyzeRealizedMargins(ctx context.Context, in *AnalyzeRealizedMarginsRequest, opts ...grpc.CallOption) (*AnalyzeRealizedMarginsResponse, error)
 	// AnalyzeCustomerPricing sweeps every contracted price and flags those below their peers or under target margin. Swept here because it reads the prices, the customers and the catalog end to end.
@@ -3466,6 +3481,56 @@ func (c *coreServiceClient) ExportSalesLines(ctx context.Context, in *ExportSale
 	return out, nil
 }
 
+func (c *coreServiceClient) AnalyzeOpenOrdersSummary(ctx context.Context, in *AnalyzeOpenOrdersSummaryRequest, opts ...grpc.CallOption) (*AnalyzeOpenOrdersSummaryResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(AnalyzeOpenOrdersSummaryResponse)
+	err := c.cc.Invoke(ctx, CoreService_AnalyzeOpenOrdersSummary_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *coreServiceClient) AnalyzeOpenOrderProducts(ctx context.Context, in *AnalyzeOpenOrderProductsRequest, opts ...grpc.CallOption) (*AnalyzeOpenOrderProductsResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(AnalyzeOpenOrderProductsResponse)
+	err := c.cc.Invoke(ctx, CoreService_AnalyzeOpenOrderProducts_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *coreServiceClient) ListOpenOrders(ctx context.Context, in *ListOpenOrdersRequest, opts ...grpc.CallOption) (*ListOpenOrdersResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ListOpenOrdersResponse)
+	err := c.cc.Invoke(ctx, CoreService_ListOpenOrders_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *coreServiceClient) ListOpenOrderLines(ctx context.Context, in *ListOpenOrderLinesRequest, opts ...grpc.CallOption) (*ListOpenOrderLinesResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ListOpenOrderLinesResponse)
+	err := c.cc.Invoke(ctx, CoreService_ListOpenOrderLines_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *coreServiceClient) ExportOpenOrderLines(ctx context.Context, in *ExportOpenOrderLinesRequest, opts ...grpc.CallOption) (*ExportOpenOrderLinesResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ExportOpenOrderLinesResponse)
+	err := c.cc.Invoke(ctx, CoreService_ExportOpenOrderLines_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 func (c *coreServiceClient) AnalyzeRealizedMargins(ctx context.Context, in *AnalyzeRealizedMarginsRequest, opts ...grpc.CallOption) (*AnalyzeRealizedMarginsResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(AnalyzeRealizedMarginsResponse)
@@ -5658,6 +5723,16 @@ type CoreServiceServer interface {
 	ListSalesLines(context.Context, *ListSalesLinesRequest) (*ListSalesLinesResponse, error)
 	// Accepts an export of the sales lines; the file is built by the export worker.
 	ExportSalesLines(context.Context, *ExportSalesLinesRequest) (*ExportSalesLinesResponse, error)
+	// Totals the money on open sales orders.
+	AnalyzeOpenOrdersSummary(context.Context, *AnalyzeOpenOrdersSummaryRequest) (*AnalyzeOpenOrdersSummaryResponse, error)
+	// Totals the open lines per item, most back-ordered first.
+	AnalyzeOpenOrderProducts(context.Context, *AnalyzeOpenOrderProductsRequest) (*AnalyzeOpenOrderProductsResponse, error)
+	// Lists the open sales orders, newest issue first.
+	ListOpenOrders(context.Context, *ListOpenOrdersRequest) (*ListOpenOrdersResponse, error)
+	// Returns one sales order's sale lines.
+	ListOpenOrderLines(context.Context, *ListOpenOrderLinesRequest) (*ListOpenOrderLinesResponse, error)
+	// Accepts an export of the open sale lines; the file is built by the export worker.
+	ExportOpenOrderLines(context.Context, *ExportOpenOrderLinesRequest) (*ExportOpenOrderLinesResponse, error)
 	// AnalyzeRealizedMargins rolls invoiced lines up to one row per customer and SKU and flags the ones priced below their peers or under target margin. Aggregated here because the raw lines are far too many to ship.
 	AnalyzeRealizedMargins(context.Context, *AnalyzeRealizedMarginsRequest) (*AnalyzeRealizedMarginsResponse, error)
 	// AnalyzeCustomerPricing sweeps every contracted price and flags those below their peers or under target margin. Swept here because it reads the prices, the customers and the catalog end to end.
@@ -6597,6 +6672,21 @@ func (UnimplementedCoreServiceServer) ListSalesLines(context.Context, *ListSales
 }
 func (UnimplementedCoreServiceServer) ExportSalesLines(context.Context, *ExportSalesLinesRequest) (*ExportSalesLinesResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method ExportSalesLines not implemented")
+}
+func (UnimplementedCoreServiceServer) AnalyzeOpenOrdersSummary(context.Context, *AnalyzeOpenOrdersSummaryRequest) (*AnalyzeOpenOrdersSummaryResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method AnalyzeOpenOrdersSummary not implemented")
+}
+func (UnimplementedCoreServiceServer) AnalyzeOpenOrderProducts(context.Context, *AnalyzeOpenOrderProductsRequest) (*AnalyzeOpenOrderProductsResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method AnalyzeOpenOrderProducts not implemented")
+}
+func (UnimplementedCoreServiceServer) ListOpenOrders(context.Context, *ListOpenOrdersRequest) (*ListOpenOrdersResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method ListOpenOrders not implemented")
+}
+func (UnimplementedCoreServiceServer) ListOpenOrderLines(context.Context, *ListOpenOrderLinesRequest) (*ListOpenOrderLinesResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method ListOpenOrderLines not implemented")
+}
+func (UnimplementedCoreServiceServer) ExportOpenOrderLines(context.Context, *ExportOpenOrderLinesRequest) (*ExportOpenOrderLinesResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method ExportOpenOrderLines not implemented")
 }
 func (UnimplementedCoreServiceServer) AnalyzeRealizedMargins(context.Context, *AnalyzeRealizedMarginsRequest) (*AnalyzeRealizedMarginsResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method AnalyzeRealizedMargins not implemented")
@@ -11374,6 +11464,96 @@ func _CoreService_ExportSalesLines_Handler(srv interface{}, ctx context.Context,
 	return interceptor(ctx, in, info, handler)
 }
 
+func _CoreService_AnalyzeOpenOrdersSummary_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(AnalyzeOpenOrdersSummaryRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(CoreServiceServer).AnalyzeOpenOrdersSummary(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: CoreService_AnalyzeOpenOrdersSummary_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(CoreServiceServer).AnalyzeOpenOrdersSummary(ctx, req.(*AnalyzeOpenOrdersSummaryRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _CoreService_AnalyzeOpenOrderProducts_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(AnalyzeOpenOrderProductsRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(CoreServiceServer).AnalyzeOpenOrderProducts(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: CoreService_AnalyzeOpenOrderProducts_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(CoreServiceServer).AnalyzeOpenOrderProducts(ctx, req.(*AnalyzeOpenOrderProductsRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _CoreService_ListOpenOrders_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ListOpenOrdersRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(CoreServiceServer).ListOpenOrders(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: CoreService_ListOpenOrders_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(CoreServiceServer).ListOpenOrders(ctx, req.(*ListOpenOrdersRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _CoreService_ListOpenOrderLines_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ListOpenOrderLinesRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(CoreServiceServer).ListOpenOrderLines(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: CoreService_ListOpenOrderLines_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(CoreServiceServer).ListOpenOrderLines(ctx, req.(*ListOpenOrderLinesRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _CoreService_ExportOpenOrderLines_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ExportOpenOrderLinesRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(CoreServiceServer).ExportOpenOrderLines(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: CoreService_ExportOpenOrderLines_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(CoreServiceServer).ExportOpenOrderLines(ctx, req.(*ExportOpenOrderLinesRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 func _CoreService_AnalyzeRealizedMargins_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(AnalyzeRealizedMarginsRequest)
 	if err := dec(in); err != nil {
@@ -15470,6 +15650,26 @@ var CoreService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "ExportSalesLines",
 			Handler:    _CoreService_ExportSalesLines_Handler,
+		},
+		{
+			MethodName: "AnalyzeOpenOrdersSummary",
+			Handler:    _CoreService_AnalyzeOpenOrdersSummary_Handler,
+		},
+		{
+			MethodName: "AnalyzeOpenOrderProducts",
+			Handler:    _CoreService_AnalyzeOpenOrderProducts_Handler,
+		},
+		{
+			MethodName: "ListOpenOrders",
+			Handler:    _CoreService_ListOpenOrders_Handler,
+		},
+		{
+			MethodName: "ListOpenOrderLines",
+			Handler:    _CoreService_ListOpenOrderLines_Handler,
+		},
+		{
+			MethodName: "ExportOpenOrderLines",
+			Handler:    _CoreService_ExportOpenOrderLines_Handler,
 		},
 		{
 			MethodName: "AnalyzeRealizedMargins",

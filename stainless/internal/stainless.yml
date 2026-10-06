@@ -414,6 +414,34 @@ resources:
             models:
               list_sales_entry: '#/components/schemas/List_SalesEntry'
               list_sales_lines_request: '#/components/schemas/ListSalesLinesRequest'
+          open_orders:
+            methods:
+              update_summary: put /v1/core/analytics/open-orders/summary
+              update_breakdown: put /v1/core/analytics/open-orders/breakdown
+              update: put /v1/core/analytics/open-orders
+              retrieve_lines: get /v1/core/analytics/open-orders/{id}/lines
+            models:
+              analytics_customer: '#/components/schemas/AnalyticsCustomer'
+              analytics_sales_order: '#/components/schemas/AnalyticsSalesOrder'
+              analytics_ship_to: '#/components/schemas/AnalyticsShipTo'
+              analyze_open_orders_breakdown_request: '#/components/schemas/AnalyzeOpenOrdersBreakdownRequest'
+              analyze_open_orders_summary_request: '#/components/schemas/AnalyzeOpenOrdersSummaryRequest'
+              analyze_open_orders_summary_response: '#/components/schemas/AnalyzeOpenOrdersSummaryResponse'
+              list_open_order: '#/components/schemas/List_OpenOrder'
+              list_open_order_line: '#/components/schemas/List_OpenOrderLine'
+              list_open_order_product: '#/components/schemas/List_OpenOrderProduct'
+              list_open_orders_request: '#/components/schemas/ListOpenOrdersRequest'
+              open_order: '#/components/schemas/OpenOrder'
+              open_order_filters: '#/components/schemas/OpenOrderFilters'
+              open_order_line: '#/components/schemas/OpenOrderLine'
+              open_order_product: '#/components/schemas/OpenOrderProduct'
+          open_order_lines:
+            subresources:
+              actions:
+                methods:
+                  export: post /v1/core/analytics/open-order-lines/actions/export
+                models:
+                  export_open_order_lines_request: '#/components/schemas/ExportOpenOrderLinesRequest'
         models:
           account_group: '#/components/schemas/AccountGroup'
           analytics_item: '#/components/schemas/AnalyticsItem'

@@ -619,6 +619,7 @@ var pathSpecificIDSeeds = map[string]string{
 	"/v1/ai/memories/":                      SeedAgentMemoryID,
 	"/v1/ai/runs/":                          SeedAgentRunID,
 	"/v1/auth/api-keys/":                    SeedAPIKeyID,
+	"/v1/core/analytics/open-orders/":       SeedSalesOrderID,
 	"/v1/core/audit-events/":                SeedAuditEventID,
 	"/v1/core/email-logs/":                  SeedEmailLogID1,
 	"/v1/core/jobs/":                        SeedJobID,

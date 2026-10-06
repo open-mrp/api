@@ -19,6 +19,8 @@ type AnalyzeWeeksOfSalesRequest struct {
 }
 
 // Returns weeks-of-sales metrics per product line, including on-hand quantity, average weekly sales, and weeks of inventory remaining.
+//
+// On-hand stock is the available receipts of the line's sale products, deleted items included, net of what has been drawn against them. Sales are the quantities ordered on the account's orders issued in the trailing period. Both are stated in the product line's base unit, converting each line and receipt from its own unit.
 type AnalyzeWeeksOfSalesEndpoint struct{}
 
 func (e *AnalyzeWeeksOfSalesEndpoint) Materialize() *apiendpoint.APIEndpoint[*AnalyzeWeeksOfSalesRequest, *apiresource.AnalyzeWeeksOfSalesResponse] {

@@ -620,6 +620,16 @@ service CoreService {
   rpc ListSalesLines(ListSalesLinesRequest) returns (ListSalesLinesResponse);
   // Accepts an export of the sales lines; the file is built by the export worker.
   rpc ExportSalesLines(ExportSalesLinesRequest) returns (ExportSalesLinesResponse);
+  // Totals the money on open sales orders.
+  rpc AnalyzeOpenOrdersSummary(AnalyzeOpenOrdersSummaryRequest) returns (AnalyzeOpenOrdersSummaryResponse);
+  // Totals the open lines per item, most back-ordered first.
+  rpc AnalyzeOpenOrderProducts(AnalyzeOpenOrderProductsRequest) returns (AnalyzeOpenOrderProductsResponse);
+  // Lists the open sales orders, newest issue first.
+  rpc ListOpenOrders(ListOpenOrdersRequest) returns (ListOpenOrdersResponse);
+  // Returns one sales order's sale lines.
+  rpc ListOpenOrderLines(ListOpenOrderLinesRequest) returns (ListOpenOrderLinesResponse);
+  // Accepts an export of the open sale lines; the file is built by the export worker.
+  rpc ExportOpenOrderLines(ExportOpenOrderLinesRequest) returns (ExportOpenOrderLinesResponse);
 
   // AnalyzeRealizedMargins rolls invoiced lines up to one row per customer and SKU and flags the ones priced below their peers or under target margin. Aggregated here because the raw lines are far too many to ship.
   rpc AnalyzeRealizedMargins(AnalyzeRealizedMarginsRequest) returns (AnalyzeRealizedMarginsResponse);

@@ -886,6 +886,19 @@ type AnalyticsSvc interface {
 	// BuildExportSalesLines renders the file an accepted sales-lines export recorded.
 	BuildExportSalesLines(ctx context.Context, accountID string, filters json.RawMessage) (*Export, *apierror.APIError)
 
+	// AnalyzeOpenOrdersSummary totals the money on open sales orders: ordered, back-ordered, and invoiced so far.
+	AnalyzeOpenOrdersSummary(ctx context.Context, filter OpenOrderFilter) (*OpenOrdersSummary, *apierror.APIError)
+	// AnalyzeOpenOrderProducts totals the open lines per item, most back-ordered first, a page at a time.
+	AnalyzeOpenOrderProducts(ctx context.Context, params AnalyzeOpenOrderProductsParams) (*OpenOrderProductPage, *apierror.APIError)
+	// ListOpenOrders lists the open sales orders, newest issue first, with what their counted lines total.
+	ListOpenOrders(ctx context.Context, params ListOpenOrdersParams) (*OpenOrderPage, *apierror.APIError)
+	// ListOpenOrderLines returns one sales order's sale lines.
+	ListOpenOrderLines(ctx context.Context, orderID string) ([]OpenOrderLine, *apierror.APIError)
+	// ExportOpenOrderLines accepts an export of the open sale lines and returns the job that builds it.
+	ExportOpenOrderLines(ctx context.Context, params ExportOpenOrderLinesParams) (*Job, *apierror.APIError)
+	// BuildExportOpenOrderLines renders the file an accepted open-order-lines export recorded.
+	BuildExportOpenOrderLines(ctx context.Context, accountID string, filters json.RawMessage) (*Export, *apierror.APIError)
+
 	// AnalyzeRealizedMargins rolls invoiced lines up to one row per customer and SKU and flags those priced below their peers or under target margin.
 	AnalyzeRealizedMargins(ctx context.Context, params AnalyzeRealizedMarginsParams) (*RealizedMarginAnalysis, *apierror.APIError)
 

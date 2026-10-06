@@ -722,64 +722,6 @@ func (r *batchRepoImpl) FindPossibleInitSteps(ctx context.Context, accountID, sc
 	return results, nil
 }
 
-func (r *batchRepoImpl) FindOpenBatches(ctx context.Context, accountID string, itemIDs, productLineIDs []string) ([]domain.OpenBatchSummary, *apierror.APIError) {
-	ctx, span := batchRepoTracer.Start(ctx, "repository.batch.find_open_batches")
-	defer span.End()
-
-	includeItemFilter := len(itemIDs) > 0
-	if itemIDs == nil {
-		itemIDs = []string{}
-	}
-	includeProductLineFilter := len(productLineIDs) > 0
-	// The product_line_id column is nullable, so sqlc types the filter slice as NullString.
-	productLineFilter := make([]gosql.NullString, len(productLineIDs))
-	for i, id := range productLineIDs {
-		productLineFilter[i] = gosql.NullString{String: id, Valid: true}
-	}
-
-	rows, err := r.queries.ListOpenBatches(ctx, sqlc.ListOpenBatchesParams{
-		AccountID:                accountID,
-		IncludeItemFilter:        includeItemFilter,
-		ItemIds:                  itemIDs,
-		IncludeProductLineFilter: includeProductLineFilter,
-		ProductLineIds:           productLineFilter,
-	})
-	if apiErr := db.MapSQLError(err); apiErr != nil {
-		return nil, tracing.Trace(span, apiErr)
-	}
-
-	summaries := make([]domain.OpenBatchSummary, len(rows))
-	for i, row := range rows {
-		departmentName := ""
-		if row.DepartmentName.Valid {
-			departmentName = row.DepartmentName.String
-		}
-
-		scanningStationID := ""
-		if row.ScanningStationID.Valid {
-			scanningStationID = row.ScanningStationID.String
-		}
-
-		totalCount := decimal.Zero
-		if row.TotalCount != nil {
-			if tc, ok := row.TotalCount.(string); ok {
-				totalCount, _ = decimal.NewFromString(tc)
-			}
-		}
-
-		summaries[i] = domain.OpenBatchSummary{
-			DepartmentName:    departmentName,
-			ItemName:          row.ItemName,
-			ItemID:            row.ItemID,
-			ScanningStationID: scanningStationID,
-			Count:             totalCount,
-			Unit:              row.UnitAbbreviation,
-		}
-	}
-
-	return summaries, nil
-}
-
 func (r *batchRepoImpl) FindFurthestRightBatchInFlow(ctx context.Context, accountID, batchID string) (*domain.BaseBatch, *apierror.APIError) {
 	ctx, span := batchRepoTracer.Start(ctx, "repository.batch.find_furthest_right_batch_in_flow")
 	defer span.End()

@@ -10820,6 +10820,67 @@ func (mr *MockAnalyticsRepoMockRecorder) GetOpenBatchEntries(ctx, params any) *g
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetOpenBatchEntries", reflect.TypeOf((*MockAnalyticsRepo)(nil).GetOpenBatchEntries), ctx, params)
 }
 
+// GetOpenOrderLineEntries mocks base method.
+func (m *MockAnalyticsRepo) GetOpenOrderLineEntries(ctx context.Context, filter domain.OpenOrderFilter, limit int) ([]domain.OrderEntry, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetOpenOrderLineEntries", ctx, filter, limit)
+	ret0, _ := ret[0].([]domain.OrderEntry)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
+}
+
+// GetOpenOrderLineEntries indicates an expected call of GetOpenOrderLineEntries.
+func (mr *MockAnalyticsRepoMockRecorder) GetOpenOrderLineEntries(ctx, filter, limit any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetOpenOrderLineEntries", reflect.TypeOf((*MockAnalyticsRepo)(nil).GetOpenOrderLineEntries), ctx, filter, limit)
+}
+
+// GetOpenOrderLines mocks base method.
+func (m *MockAnalyticsRepo) GetOpenOrderLines(ctx context.Context, accountID, orderID string, salesRepID *string) ([]domain.OpenOrderLine, bool, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetOpenOrderLines", ctx, accountID, orderID, salesRepID)
+	ret0, _ := ret[0].([]domain.OpenOrderLine)
+	ret1, _ := ret[1].(bool)
+	ret2, _ := ret[2].(*apierror.APIError)
+	return ret0, ret1, ret2
+}
+
+// GetOpenOrderLines indicates an expected call of GetOpenOrderLines.
+func (mr *MockAnalyticsRepoMockRecorder) GetOpenOrderLines(ctx, accountID, orderID, salesRepID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetOpenOrderLines", reflect.TypeOf((*MockAnalyticsRepo)(nil).GetOpenOrderLines), ctx, accountID, orderID, salesRepID)
+}
+
+// GetOpenOrderProducts mocks base method.
+func (m *MockAnalyticsRepo) GetOpenOrderProducts(ctx context.Context, params domain.AnalyzeOpenOrderProductsParams) (*domain.OpenOrderProductPage, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetOpenOrderProducts", ctx, params)
+	ret0, _ := ret[0].(*domain.OpenOrderProductPage)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
+}
+
+// GetOpenOrderProducts indicates an expected call of GetOpenOrderProducts.
+func (mr *MockAnalyticsRepoMockRecorder) GetOpenOrderProducts(ctx, params any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetOpenOrderProducts", reflect.TypeOf((*MockAnalyticsRepo)(nil).GetOpenOrderProducts), ctx, params)
+}
+
+// GetOpenOrdersSummary mocks base method.
+func (m *MockAnalyticsRepo) GetOpenOrdersSummary(ctx context.Context, filter domain.OpenOrderFilter) (*domain.OpenOrdersSummary, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetOpenOrdersSummary", ctx, filter)
+	ret0, _ := ret[0].(*domain.OpenOrdersSummary)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
+}
+
+// GetOpenOrdersSummary indicates an expected call of GetOpenOrdersSummary.
+func (mr *MockAnalyticsRepoMockRecorder) GetOpenOrdersSummary(ctx, filter any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetOpenOrdersSummary", reflect.TypeOf((*MockAnalyticsRepo)(nil).GetOpenOrdersSummary), ctx, filter)
+}
+
 // GetOrderEntries mocks base method.
 func (m *MockAnalyticsRepo) GetOrderEntries(ctx context.Context, params domain.AnalyzeOrdersParams) ([]domain.OrderEntry, *apierror.APIError) {
 	m.ctrl.T.Helper()
@@ -10923,6 +10984,36 @@ func (m *MockAnalyticsRepo) GetSalesEntries(ctx context.Context, params domain.A
 func (mr *MockAnalyticsRepoMockRecorder) GetSalesEntries(ctx, params any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetSalesEntries", reflect.TypeOf((*MockAnalyticsRepo)(nil).GetSalesEntries), ctx, params)
+}
+
+// GetWeeksOfSalesOnHand mocks base method.
+func (m *MockAnalyticsRepo) GetWeeksOfSalesOnHand(ctx context.Context, accountID string, itemIDs []string) ([]domain.ItemOnHandRow, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetWeeksOfSalesOnHand", ctx, accountID, itemIDs)
+	ret0, _ := ret[0].([]domain.ItemOnHandRow)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
+}
+
+// GetWeeksOfSalesOnHand indicates an expected call of GetWeeksOfSalesOnHand.
+func (mr *MockAnalyticsRepoMockRecorder) GetWeeksOfSalesOnHand(ctx, accountID, itemIDs any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetWeeksOfSalesOnHand", reflect.TypeOf((*MockAnalyticsRepo)(nil).GetWeeksOfSalesOnHand), ctx, accountID, itemIDs)
+}
+
+// ListOpenOrders mocks base method.
+func (m *MockAnalyticsRepo) ListOpenOrders(ctx context.Context, params domain.ListOpenOrdersParams) (*domain.OpenOrderPage, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ListOpenOrders", ctx, params)
+	ret0, _ := ret[0].(*domain.OpenOrderPage)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
+}
+
+// ListOpenOrders indicates an expected call of ListOpenOrders.
+func (mr *MockAnalyticsRepoMockRecorder) ListOpenOrders(ctx, params any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListOpenOrders", reflect.TypeOf((*MockAnalyticsRepo)(nil).ListOpenOrders), ctx, params)
 }
 
 // MockMachineStatusRepo is a mock of MachineStatusRepo interface.

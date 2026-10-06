@@ -20,7 +20,9 @@ type AnalyzeInventoryReceiptsRequest struct {
 	LotIDs []string `json:"lot_ids,omitempty"`
 }
 
-// Returns inventory receipt summaries including remaining quantities, costs, and values.
+// Returns the account's available inventory receipts grouped by item, location, lot, owner and holder, oldest receipt first.
+//
+// Each receipt counts for what is left of it after its allocations, in the item's base unit and never below zero; a receipt without a unit cost is left out. The weighted average unit cost is per base unit, and the inventory value is the remaining quantity at that cost, in the oldest receipt's currency. A group with nothing left has no inventory value and a weighted average cost of zero.
 type AnalyzeInventoryReceiptsEndpoint struct{}
 
 func (e *AnalyzeInventoryReceiptsEndpoint) Materialize() *apiendpoint.APIEndpoint[*AnalyzeInventoryReceiptsRequest, *apiresource.AnalyzeInventoryReceiptsResponse] {

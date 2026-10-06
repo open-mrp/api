@@ -11061,8 +11061,10 @@ type AnalyzeQuarterlyOrdersRequest struct {
 	ProductLineIds   []string               `protobuf:"bytes,3,rep,name=product_line_ids,json=productLineIds,proto3" json:"product_line_ids,omitempty"`
 	CustomerIds      []string               `protobuf:"bytes,4,rep,name=customer_ids,json=customerIds,proto3" json:"customer_ids,omitempty"`
 	CustomerGroupIds []string               `protobuf:"bytes,5,rep,name=customer_group_ids,json=customerGroupIds,proto3" json:"customer_group_ids,omitempty"`
-	unknownFields    protoimpl.UnknownFields
-	sizeCache        protoimpl.SizeCache
+	// Calendar years covered, the current one included; absent means five.
+	YearsBack     *int32 `protobuf:"varint,6,opt,name=years_back,json=yearsBack,proto3,oneof" json:"years_back,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
 }
 
 func (x *AnalyzeQuarterlyOrdersRequest) Reset() {
@@ -11128,6 +11130,13 @@ func (x *AnalyzeQuarterlyOrdersRequest) GetCustomerGroupIds() []string {
 		return x.CustomerGroupIds
 	}
 	return nil
+}
+
+func (x *AnalyzeQuarterlyOrdersRequest) GetYearsBack() int32 {
+	if x != nil && x.YearsBack != nil {
+		return *x.YearsBack
+	}
+	return 0
 }
 
 var File_core_core_identity_context_proto protoreflect.FileDescriptor
@@ -12322,13 +12331,16 @@ const file_core_core_identity_context_proto_rawDesc = "" +
 	"\rtotal_ordered\x18( \x01(\x01R\ftotalOrdered\x12,\n" +
 	"\x12total_back_ordered\x18) \x01(\x01R\x10totalBackOrdered\"H\n" +
 	"\x15AnalyzeOrdersResponse\x12/\n" +
-	"\aentries\x18\x01 \x03(\v2\x15.core.OrderEntryProtoR\aentries\"\xd9\x01\n" +
+	"\aentries\x18\x01 \x03(\v2\x15.core.OrderEntryProtoR\aentries\"\x8c\x02\n" +
 	"\x1dAnalyzeQuarterlyOrdersRequest\x12\"\n" +
 	"\rsales_rep_ids\x18\x01 \x03(\tR\vsalesRepIds\x12\x19\n" +
 	"\bitem_ids\x18\x02 \x03(\tR\aitemIds\x12(\n" +
 	"\x10product_line_ids\x18\x03 \x03(\tR\x0eproductLineIds\x12!\n" +
 	"\fcustomer_ids\x18\x04 \x03(\tR\vcustomerIds\x12,\n" +
-	"\x12customer_group_ids\x18\x05 \x03(\tR\x10customerGroupIds*b\n" +
+	"\x12customer_group_ids\x18\x05 \x03(\tR\x10customerGroupIds\x12\"\n" +
+	"\n" +
+	"years_back\x18\x06 \x01(\x05H\x00R\tyearsBack\x88\x01\x01B\r\n" +
+	"\v_years_back*b\n" +
 	"\vAccountMode\x12\x1c\n" +
 	"\x18ACCOUNT_MODE_UNSPECIFIED\x10\x00\x12\x1b\n" +
 	"\x17ACCOUNT_MODE_PRODUCTION\x10\x01\x12\x18\n" +
@@ -12743,6 +12755,7 @@ func file_core_core_identity_context_proto_init() {
 	file_core_core_identity_context_proto_msgTypes[127].OneofWrappers = []any{}
 	file_core_core_identity_context_proto_msgTypes[134].OneofWrappers = []any{}
 	file_core_core_identity_context_proto_msgTypes[135].OneofWrappers = []any{}
+	file_core_core_identity_context_proto_msgTypes[148].OneofWrappers = []any{}
 	type x struct{}
 	out := protoimpl.TypeBuilder{
 		File: protoimpl.DescBuilder{

@@ -23,6 +23,8 @@ type AnalyzeDemandForecastRequest struct {
 }
 
 // Returns demand forecasts for items, including historical data and projected demand with confidence bounds.
+//
+// Demand is the quantity ordered on sales orders, by month of creation, in each item's base unit; revenue is its ordered value, and sales its invoiced value by month of invoice. Purchase orders are left out. An item first ordered this month is forecast at zero.
 type AnalyzeDemandForecastEndpoint struct{}
 
 func (e *AnalyzeDemandForecastEndpoint) Materialize() *apiendpoint.APIEndpoint[*AnalyzeDemandForecastRequest, *apiresource.AnalyzeDemandForecastResponse] {

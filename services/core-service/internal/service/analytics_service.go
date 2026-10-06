@@ -315,8 +315,37 @@ func (s *analyticsSvcImpl) AnalyzeQuarterlyOrders(ctx context.Context, params do
 	}
 
 	params.AccountID = identity.Target.AccountID
+	if identity.IsSalesRep() && identity.Actor != nil && identity.Actor.ID != "" {
+		accountUser, apiErr := s.repos.NewAccountUserRepo().FindByAccountAndUserID(ctx, identity.Actor.ID, params.AccountID)
+		if apiErr != nil {
+			return nil, tracing.Trace(span, apiErr)
+		}
+		if accountUser != nil {
+			params.SalesRepIDs = []string{accountUser.ID}
+		}
+	}
+	if params.YearsBack < 0 {
+		return nil, tracing.Trace(span, apierror.NewValidationErrorWithParam("years_back must be at least 1.", "years_back"))
+	}
+	if params.YearsBack == 0 {
+		params.YearsBack = domain.DefaultQuarterlyOrdersYearsBack
+	}
+	params.IssuedFrom = quarterlyOrdersIssuedFrom(s.reportCache().cfg.Now(), params.YearsBack)
 
-	return s.reports().NewAnalyticsRepo().GetQuarterlyOrders(ctx, params)
+	return cachedReport(ctx, s.reportCache().quarterlyOrders, analyticsReport{
+		accountID: params.AccountID,
+		family:    analyticsFamilySales,
+		method:    "quarterly_orders",
+		params:    params,
+		ttl:       s.reportCache().cfg.LiveTTL,
+	}, func(ctx context.Context) ([]domain.YearlyQuarterlyData, *apierror.APIError) {
+		return s.reports().NewAnalyticsRepo().GetQuarterlyOrders(ctx, params)
+	})
+}
+
+// quarterlyOrdersIssuedFrom is the start of the earliest of the last yearsBack calendar years, the current one included, in UTC.
+func quarterlyOrdersIssuedFrom(now time.Time, yearsBack int32) time.Time {
+	return time.Date(now.UTC().Year()-int(yearsBack-1), time.January, 1, 0, 0, 0, 0, time.UTC)
 }
 
 func (s *analyticsSvcImpl) AnalyzeMaterials(ctx context.Context, params domain.AnalyzeMaterialsParams) ([]domain.MaterialAnalyticsEntry, *apierror.APIError) {
@@ -581,16 +610,14 @@ func (s *analyticsSvcImpl) buildWeeksOfSales(ctx context.Context, params domain.
 		return nil, tracing.Trace(span, apiErr)
 	}
 
-	// 4. Get on-hand inventory for all items.
-	inventoryRows, apiErr := s.reports().NewInventoryQueryRepo().FetchOnHandInventoryBulk(ctx, allItemIDs, params.AccountID)
+	// 4. Get on-hand inventory for all items, each in its dimension's base unit.
+	inventoryRows, apiErr := repo.GetWeeksOfSalesOnHand(ctx, params.AccountID, allItemIDs)
 	if apiErr != nil {
 		return nil, tracing.Trace(span, apiErr)
 	}
-
-	// Build inventory map: itemID -> onHandQuantity.
-	invMap := make(map[string]float64)
+	invMap := make(map[string]float64, len(inventoryRows))
 	for _, row := range inventoryRows {
-		invMap[row.ItemID] = row.OnHandQuantity
+		invMap[row.ItemID] = row.OnHand
 	}
 
 	// 5. For each product line, compute metrics.
@@ -618,18 +645,19 @@ func (s *analyticsSvcImpl) buildWeeksOfSales(ctx context.Context, params domain.
 	var items []domain.WeeksOfSalesItem
 	for _, plInfo := range plInfoRows {
 		orderRow := ordersByProductLine[plInfo.ID]
-		totalDemand := orderRow.TotalQuantity
 		unitAbbrev := orderRow.UnitAbbreviation
 		unitType := orderRow.UnitType
 
-		// Sum on-hand for items in this product line.
-		itemIDsForLine := itemsByProductLine[plInfo.ID]
+		// Stock and sales are both stated in the product line's base unit.
 		var onHand float64
-		for _, iid := range itemIDsForLine {
+		for _, iid := range itemsByProductLine[plInfo.ID] {
 			onHand += invMap[iid]
 		}
+		if orderRow.BaseRatio != 0 {
+			onHand /= orderRow.BaseRatio
+		}
 
-		avgSales := totalDemand / float64(weeks)
+		avgSales := orderRow.TotalQuantity / float64(weeks)
 		var wos float64
 		if avgSales > 0 {
 			wos = onHand / avgSales

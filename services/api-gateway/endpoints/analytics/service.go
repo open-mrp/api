@@ -41,6 +41,11 @@ type AnalyticsSvc interface {
 	ListNewCustomers(ctx context.Context, req *ListNewCustomersRequest) (*apiresource.List[apiresource.NewCustomer], *apierror.APIError)
 	ListSalesLines(ctx context.Context, req *ListSalesLinesRequest) (*apiresource.List[apiresource.SalesEntry], *apierror.APIError)
 	ExportSalesLines(ctx context.Context, req *ExportSalesLinesRequest) (*apiresource.Job, *apierror.APIError)
+	AnalyzeOpenOrdersSummary(ctx context.Context, req *AnalyzeOpenOrdersSummaryRequest) (*apiresource.AnalyzeOpenOrdersSummaryResponse, *apierror.APIError)
+	AnalyzeOpenOrdersBreakdown(ctx context.Context, req *AnalyzeOpenOrdersBreakdownRequest) (*apiresource.List[apiresource.OpenOrderProduct], *apierror.APIError)
+	ListOpenOrders(ctx context.Context, req *ListOpenOrdersRequest) (*apiresource.List[apiresource.OpenOrder], *apierror.APIError)
+	ListOpenOrderLines(ctx context.Context, req *ListOpenOrderLinesRequest) (*apiresource.List[apiresource.OpenOrderLine], *apierror.APIError)
+	ExportOpenOrderLines(ctx context.Context, req *ExportOpenOrderLinesRequest) (*apiresource.Job, *apierror.APIError)
 	AnalyzeWeeksOfSales(ctx context.Context, req *AnalyzeWeeksOfSalesRequest) (*apiresource.AnalyzeWeeksOfSalesResponse, *apierror.APIError)
 	AnalyzeCustomerPricing(ctx context.Context, req *AnalyzeCustomerPricingRequest) (*apiresource.AnalyzeCustomerPricingResponse, *apierror.APIError)
 	AnalyzeRealizedMargins(ctx context.Context, req *AnalyzeRealizedMarginsRequest) (*apiresource.AnalyzeRealizedMarginsResponse, *apierror.APIError)
@@ -249,6 +254,7 @@ func (m *analyticsSvcImpl) AnalyzeQuarterlyOrders(ctx context.Context, req *Anal
 		ProductLineIds:   req.ProductLineIDs,
 		CustomerIds:      req.CustomerIDs,
 		CustomerGroupIds: req.CustomerGroupIDs,
+		YearsBack:        req.YearsBack.Ptr(),
 	}
 
 	resp, apiErr := grpcutil.CallRPC(ctx, analyticsSvcTracer, "service.analytics.analyze_quarterly_orders", domain.ServiceName,

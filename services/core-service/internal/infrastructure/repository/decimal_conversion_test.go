@@ -28,6 +28,9 @@ func TestDecimalToFloat64_HandlesNullString(t *testing.T) {
 		{"negative", sql.NullString{String: "-1.25", Valid: true}, -1.25},
 		{"bytes", []uint8("3.5"), 3.5},
 		{"unknown type is still zero", struct{}{}, 0},
+		// Accumulating one digit at a time drifted off the nearest double; ParseFloat rounds once, as toNumber() did.
+		{"thirty fractional digits round to the nearest double", "0.123456789012345678901234567890", 0.12345678901234568},
+		{"a cent total is exact", "1234567.890000000000000000000000000000", 1234567.89},
 	}
 
 	for _, c := range cases {

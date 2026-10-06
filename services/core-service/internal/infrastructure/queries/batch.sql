@@ -295,48 +295,6 @@ AND (
     OR b.item_id IN (SELECT it.id FROM item it WHERE it.sku LIKE sqlc.narg('search_query') AND it.account_id = b.account_id)
 );
 
--- name: ListOpenBatches :many
--- The product-line filter matches via EXISTS rather than a join so an item with several products on matching lines is not double-counted by the SUM.
-SELECT
-    d.name AS department_name,
-    i.sku AS item_name,
-    i.id AS item_id,
-    b.scanning_station_id,
-    SUM(q.value - COALESCE((
-        -- A batch's outputs are the downstream (A) side of _batch_flow rows where it is the upstream (B) batch, per the Prisma orientation of the table.
-        --
-        -- Correlated per batch: a grouped derived table cannot take the account filter and so aggregates the whole flow graph on every call.
-        SELECT SUM(oq.value)
-        FROM _batch_flow bf
-        JOIN batch ob ON bf.A = ob.id
-        JOIN quantity oq ON ob.quantity_id = oq.id
-        WHERE bf.B = b.id
-    ), 0)) AS total_count,
-    qu.abbreviation AS unit_abbreviation
-FROM batch b
-JOIN item i ON b.item_id = i.id
-JOIN quantity q ON b.quantity_id = q.id
-JOIN unit qu ON q.unit_id = qu.id
-LEFT JOIN scanning_station ss ON b.scanning_station_id = ss.id
-LEFT JOIN department d ON ss.department_id = d.id
-WHERE b.account_id = sqlc.arg('account_id')
-AND b.closed_at IS NULL
-AND b.scanned_at IS NOT NULL
-AND b.scanning_station_id IS NOT NULL
-AND (
-    sqlc.arg('include_item_filter') = false
-    OR b.item_id IN (sqlc.slice('item_ids'))
-)
-AND (
-    sqlc.arg('include_product_line_filter') = false
-    OR EXISTS (
-        SELECT 1 FROM product p
-        WHERE p.item_id = i.id
-          AND p.product_line_id IN (sqlc.slice('product_line_ids'))
-    )
-)
-GROUP BY d.name, i.sku, i.id, b.scanning_station_id, qu.abbreviation;
-
 -- name: InsertBatchQuantity :exec
 INSERT INTO quantity (id, value, unit_id, created_at, updated_at)
 VALUES (sqlc.arg('id'), sqlc.arg('value'), sqlc.arg('unit_id'), NOW(3), NOW(3));

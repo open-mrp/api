@@ -7844,6 +7844,965 @@ func (x *ExportSalesLinesResponse) GetJob() *JobInfo {
 	return nil
 }
 
+// OpenOrderFilterProto selects the sale lines of open sales orders (issued, not yet completed); every list is empty-means-all and they combine with AND.
+type OpenOrderFilterProto struct {
+	state            protoimpl.MessageState `protogen:"open.v1"`
+	CustomerIds      []string               `protobuf:"bytes,1,rep,name=customer_ids,json=customerIds,proto3" json:"customer_ids,omitempty"`
+	CustomerGroupIds []string               `protobuf:"bytes,2,rep,name=customer_group_ids,json=customerGroupIds,proto3" json:"customer_group_ids,omitempty"`
+	ProductLineIds   []string               `protobuf:"bytes,3,rep,name=product_line_ids,json=productLineIds,proto3" json:"product_line_ids,omitempty"`
+	SalesRepIds      []string               `protobuf:"bytes,4,rep,name=sales_rep_ids,json=salesRepIds,proto3" json:"sales_rep_ids,omitempty"`
+	ItemIds          []string               `protobuf:"bytes,5,rep,name=item_ids,json=itemIds,proto3" json:"item_ids,omitempty"`
+	unknownFields    protoimpl.UnknownFields
+	sizeCache        protoimpl.SizeCache
+}
+
+func (x *OpenOrderFilterProto) Reset() {
+	*x = OpenOrderFilterProto{}
+	mi := &file_core_core_analytics_proto_msgTypes[113]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *OpenOrderFilterProto) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*OpenOrderFilterProto) ProtoMessage() {}
+
+func (x *OpenOrderFilterProto) ProtoReflect() protoreflect.Message {
+	mi := &file_core_core_analytics_proto_msgTypes[113]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use OpenOrderFilterProto.ProtoReflect.Descriptor instead.
+func (*OpenOrderFilterProto) Descriptor() ([]byte, []int) {
+	return file_core_core_analytics_proto_rawDescGZIP(), []int{113}
+}
+
+func (x *OpenOrderFilterProto) GetCustomerIds() []string {
+	if x != nil {
+		return x.CustomerIds
+	}
+	return nil
+}
+
+func (x *OpenOrderFilterProto) GetCustomerGroupIds() []string {
+	if x != nil {
+		return x.CustomerGroupIds
+	}
+	return nil
+}
+
+func (x *OpenOrderFilterProto) GetProductLineIds() []string {
+	if x != nil {
+		return x.ProductLineIds
+	}
+	return nil
+}
+
+func (x *OpenOrderFilterProto) GetSalesRepIds() []string {
+	if x != nil {
+		return x.SalesRepIds
+	}
+	return nil
+}
+
+func (x *OpenOrderFilterProto) GetItemIds() []string {
+	if x != nil {
+		return x.ItemIds
+	}
+	return nil
+}
+
+type AnalyzeOpenOrdersSummaryRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Filter        *OpenOrderFilterProto  `protobuf:"bytes,1,opt,name=filter,proto3" json:"filter,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *AnalyzeOpenOrdersSummaryRequest) Reset() {
+	*x = AnalyzeOpenOrdersSummaryRequest{}
+	mi := &file_core_core_analytics_proto_msgTypes[114]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *AnalyzeOpenOrdersSummaryRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*AnalyzeOpenOrdersSummaryRequest) ProtoMessage() {}
+
+func (x *AnalyzeOpenOrdersSummaryRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_core_core_analytics_proto_msgTypes[114]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use AnalyzeOpenOrdersSummaryRequest.ProtoReflect.Descriptor instead.
+func (*AnalyzeOpenOrdersSummaryRequest) Descriptor() ([]byte, []int) {
+	return file_core_core_analytics_proto_rawDescGZIP(), []int{114}
+}
+
+func (x *AnalyzeOpenOrdersSummaryRequest) GetFilter() *OpenOrderFilterProto {
+	if x != nil {
+		return x.Filter
+	}
+	return nil
+}
+
+// Money on the open lines, as exact decimal strings.
+type AnalyzeOpenOrdersSummaryResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Ordered       string                 `protobuf:"bytes,1,opt,name=ordered,proto3" json:"ordered,omitempty"`
+	BackOrdered   string                 `protobuf:"bytes,2,opt,name=back_ordered,json=backOrdered,proto3" json:"back_ordered,omitempty"`
+	Invoiced      string                 `protobuf:"bytes,3,opt,name=invoiced,proto3" json:"invoiced,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *AnalyzeOpenOrdersSummaryResponse) Reset() {
+	*x = AnalyzeOpenOrdersSummaryResponse{}
+	mi := &file_core_core_analytics_proto_msgTypes[115]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *AnalyzeOpenOrdersSummaryResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*AnalyzeOpenOrdersSummaryResponse) ProtoMessage() {}
+
+func (x *AnalyzeOpenOrdersSummaryResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_core_core_analytics_proto_msgTypes[115]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use AnalyzeOpenOrdersSummaryResponse.ProtoReflect.Descriptor instead.
+func (*AnalyzeOpenOrdersSummaryResponse) Descriptor() ([]byte, []int) {
+	return file_core_core_analytics_proto_rawDescGZIP(), []int{115}
+}
+
+func (x *AnalyzeOpenOrdersSummaryResponse) GetOrdered() string {
+	if x != nil {
+		return x.Ordered
+	}
+	return ""
+}
+
+func (x *AnalyzeOpenOrdersSummaryResponse) GetBackOrdered() string {
+	if x != nil {
+		return x.BackOrdered
+	}
+	return ""
+}
+
+func (x *AnalyzeOpenOrdersSummaryResponse) GetInvoiced() string {
+	if x != nil {
+		return x.Invoiced
+	}
+	return ""
+}
+
+type AnalyzeOpenOrderProductsRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Filter        *OpenOrderFilterProto  `protobuf:"bytes,1,opt,name=filter,proto3" json:"filter,omitempty"`
+	Limit         int32                  `protobuf:"varint,2,opt,name=limit,proto3" json:"limit,omitempty"`
+	Cursor        *string                `protobuf:"bytes,3,opt,name=cursor,proto3,oneof" json:"cursor,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *AnalyzeOpenOrderProductsRequest) Reset() {
+	*x = AnalyzeOpenOrderProductsRequest{}
+	mi := &file_core_core_analytics_proto_msgTypes[116]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *AnalyzeOpenOrderProductsRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*AnalyzeOpenOrderProductsRequest) ProtoMessage() {}
+
+func (x *AnalyzeOpenOrderProductsRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_core_core_analytics_proto_msgTypes[116]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use AnalyzeOpenOrderProductsRequest.ProtoReflect.Descriptor instead.
+func (*AnalyzeOpenOrderProductsRequest) Descriptor() ([]byte, []int) {
+	return file_core_core_analytics_proto_rawDescGZIP(), []int{116}
+}
+
+func (x *AnalyzeOpenOrderProductsRequest) GetFilter() *OpenOrderFilterProto {
+	if x != nil {
+		return x.Filter
+	}
+	return nil
+}
+
+func (x *AnalyzeOpenOrderProductsRequest) GetLimit() int32 {
+	if x != nil {
+		return x.Limit
+	}
+	return 0
+}
+
+func (x *AnalyzeOpenOrderProductsRequest) GetCursor() string {
+	if x != nil && x.Cursor != nil {
+		return *x.Cursor
+	}
+	return ""
+}
+
+// One item's quantities across the open lines, in the item's base unit (unit_id), as exact decimal strings.
+type OpenOrderProductProto struct {
+	state               protoimpl.MessageState `protogen:"open.v1"`
+	ItemId              string                 `protobuf:"bytes,1,opt,name=item_id,json=itemId,proto3" json:"item_id,omitempty"`
+	Sku                 string                 `protobuf:"bytes,2,opt,name=sku,proto3" json:"sku,omitempty"`
+	Description         *string                `protobuf:"bytes,3,opt,name=description,proto3,oneof" json:"description,omitempty"`
+	UnitId              string                 `protobuf:"bytes,4,opt,name=unit_id,json=unitId,proto3" json:"unit_id,omitempty"`
+	QuantityOrdered     string                 `protobuf:"bytes,5,opt,name=quantity_ordered,json=quantityOrdered,proto3" json:"quantity_ordered,omitempty"`
+	QuantityBackOrdered string                 `protobuf:"bytes,6,opt,name=quantity_back_ordered,json=quantityBackOrdered,proto3" json:"quantity_back_ordered,omitempty"`
+	QuantityInvoiced    string                 `protobuf:"bytes,7,opt,name=quantity_invoiced,json=quantityInvoiced,proto3" json:"quantity_invoiced,omitempty"`
+	// The unit unit_id names; absent when the item's category has no base unit.
+	Unit          *UnitInfo `protobuf:"bytes,8,opt,name=unit,proto3,oneof" json:"unit,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *OpenOrderProductProto) Reset() {
+	*x = OpenOrderProductProto{}
+	mi := &file_core_core_analytics_proto_msgTypes[117]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *OpenOrderProductProto) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*OpenOrderProductProto) ProtoMessage() {}
+
+func (x *OpenOrderProductProto) ProtoReflect() protoreflect.Message {
+	mi := &file_core_core_analytics_proto_msgTypes[117]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use OpenOrderProductProto.ProtoReflect.Descriptor instead.
+func (*OpenOrderProductProto) Descriptor() ([]byte, []int) {
+	return file_core_core_analytics_proto_rawDescGZIP(), []int{117}
+}
+
+func (x *OpenOrderProductProto) GetItemId() string {
+	if x != nil {
+		return x.ItemId
+	}
+	return ""
+}
+
+func (x *OpenOrderProductProto) GetSku() string {
+	if x != nil {
+		return x.Sku
+	}
+	return ""
+}
+
+func (x *OpenOrderProductProto) GetDescription() string {
+	if x != nil && x.Description != nil {
+		return *x.Description
+	}
+	return ""
+}
+
+func (x *OpenOrderProductProto) GetUnitId() string {
+	if x != nil {
+		return x.UnitId
+	}
+	return ""
+}
+
+func (x *OpenOrderProductProto) GetQuantityOrdered() string {
+	if x != nil {
+		return x.QuantityOrdered
+	}
+	return ""
+}
+
+func (x *OpenOrderProductProto) GetQuantityBackOrdered() string {
+	if x != nil {
+		return x.QuantityBackOrdered
+	}
+	return ""
+}
+
+func (x *OpenOrderProductProto) GetQuantityInvoiced() string {
+	if x != nil {
+		return x.QuantityInvoiced
+	}
+	return ""
+}
+
+func (x *OpenOrderProductProto) GetUnit() *UnitInfo {
+	if x != nil {
+		return x.Unit
+	}
+	return nil
+}
+
+type AnalyzeOpenOrderProductsResponse struct {
+	state         protoimpl.MessageState   `protogen:"open.v1"`
+	Products      []*OpenOrderProductProto `protobuf:"bytes,1,rep,name=products,proto3" json:"products,omitempty"`
+	PageInfo      *PageInfo                `protobuf:"bytes,2,opt,name=page_info,json=pageInfo,proto3" json:"page_info,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *AnalyzeOpenOrderProductsResponse) Reset() {
+	*x = AnalyzeOpenOrderProductsResponse{}
+	mi := &file_core_core_analytics_proto_msgTypes[118]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *AnalyzeOpenOrderProductsResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*AnalyzeOpenOrderProductsResponse) ProtoMessage() {}
+
+func (x *AnalyzeOpenOrderProductsResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_core_core_analytics_proto_msgTypes[118]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use AnalyzeOpenOrderProductsResponse.ProtoReflect.Descriptor instead.
+func (*AnalyzeOpenOrderProductsResponse) Descriptor() ([]byte, []int) {
+	return file_core_core_analytics_proto_rawDescGZIP(), []int{118}
+}
+
+func (x *AnalyzeOpenOrderProductsResponse) GetProducts() []*OpenOrderProductProto {
+	if x != nil {
+		return x.Products
+	}
+	return nil
+}
+
+func (x *AnalyzeOpenOrderProductsResponse) GetPageInfo() *PageInfo {
+	if x != nil {
+		return x.PageInfo
+	}
+	return nil
+}
+
+type ListOpenOrdersRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Filter        *OpenOrderFilterProto  `protobuf:"bytes,1,opt,name=filter,proto3" json:"filter,omitempty"`
+	Limit         int32                  `protobuf:"varint,2,opt,name=limit,proto3" json:"limit,omitempty"`
+	Cursor        *string                `protobuf:"bytes,3,opt,name=cursor,proto3,oneof" json:"cursor,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ListOpenOrdersRequest) Reset() {
+	*x = ListOpenOrdersRequest{}
+	mi := &file_core_core_analytics_proto_msgTypes[119]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ListOpenOrdersRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ListOpenOrdersRequest) ProtoMessage() {}
+
+func (x *ListOpenOrdersRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_core_core_analytics_proto_msgTypes[119]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ListOpenOrdersRequest.ProtoReflect.Descriptor instead.
+func (*ListOpenOrdersRequest) Descriptor() ([]byte, []int) {
+	return file_core_core_analytics_proto_rawDescGZIP(), []int{119}
+}
+
+func (x *ListOpenOrdersRequest) GetFilter() *OpenOrderFilterProto {
+	if x != nil {
+		return x.Filter
+	}
+	return nil
+}
+
+func (x *ListOpenOrdersRequest) GetLimit() int32 {
+	if x != nil {
+		return x.Limit
+	}
+	return 0
+}
+
+func (x *ListOpenOrdersRequest) GetCursor() string {
+	if x != nil && x.Cursor != nil {
+		return *x.Cursor
+	}
+	return ""
+}
+
+type OpenOrderProto struct {
+	state          protoimpl.MessageState `protogen:"open.v1"`
+	Id             string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	Number         string                 `protobuf:"bytes,2,opt,name=number,proto3" json:"number,omitempty"`
+	Status         string                 `protobuf:"bytes,3,opt,name=status,proto3" json:"status,omitempty"`
+	IssuedAt       *timestamppb.Timestamp `protobuf:"bytes,4,opt,name=issued_at,json=issuedAt,proto3" json:"issued_at,omitempty"`
+	CustomerId     string                 `protobuf:"bytes,5,opt,name=customer_id,json=customerId,proto3" json:"customer_id,omitempty"`
+	CustomerName   string                 `protobuf:"bytes,6,opt,name=customer_name,json=customerName,proto3" json:"customer_name,omitempty"`
+	CustomerNumber *string                `protobuf:"bytes,7,opt,name=customer_number,json=customerNumber,proto3,oneof" json:"customer_number,omitempty"`
+	ShipToState    *string                `protobuf:"bytes,8,opt,name=ship_to_state,json=shipToState,proto3,oneof" json:"ship_to_state,omitempty"`
+	ShipToCountry  *string                `protobuf:"bytes,9,opt,name=ship_to_country,json=shipToCountry,proto3,oneof" json:"ship_to_country,omitempty"`
+	LineCount      int64                  `protobuf:"varint,10,opt,name=line_count,json=lineCount,proto3" json:"line_count,omitempty"`
+	// Exact decimal string.
+	TotalOrdered  string `protobuf:"bytes,11,opt,name=total_ordered,json=totalOrdered,proto3" json:"total_ordered,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *OpenOrderProto) Reset() {
+	*x = OpenOrderProto{}
+	mi := &file_core_core_analytics_proto_msgTypes[120]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *OpenOrderProto) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*OpenOrderProto) ProtoMessage() {}
+
+func (x *OpenOrderProto) ProtoReflect() protoreflect.Message {
+	mi := &file_core_core_analytics_proto_msgTypes[120]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use OpenOrderProto.ProtoReflect.Descriptor instead.
+func (*OpenOrderProto) Descriptor() ([]byte, []int) {
+	return file_core_core_analytics_proto_rawDescGZIP(), []int{120}
+}
+
+func (x *OpenOrderProto) GetId() string {
+	if x != nil {
+		return x.Id
+	}
+	return ""
+}
+
+func (x *OpenOrderProto) GetNumber() string {
+	if x != nil {
+		return x.Number
+	}
+	return ""
+}
+
+func (x *OpenOrderProto) GetStatus() string {
+	if x != nil {
+		return x.Status
+	}
+	return ""
+}
+
+func (x *OpenOrderProto) GetIssuedAt() *timestamppb.Timestamp {
+	if x != nil {
+		return x.IssuedAt
+	}
+	return nil
+}
+
+func (x *OpenOrderProto) GetCustomerId() string {
+	if x != nil {
+		return x.CustomerId
+	}
+	return ""
+}
+
+func (x *OpenOrderProto) GetCustomerName() string {
+	if x != nil {
+		return x.CustomerName
+	}
+	return ""
+}
+
+func (x *OpenOrderProto) GetCustomerNumber() string {
+	if x != nil && x.CustomerNumber != nil {
+		return *x.CustomerNumber
+	}
+	return ""
+}
+
+func (x *OpenOrderProto) GetShipToState() string {
+	if x != nil && x.ShipToState != nil {
+		return *x.ShipToState
+	}
+	return ""
+}
+
+func (x *OpenOrderProto) GetShipToCountry() string {
+	if x != nil && x.ShipToCountry != nil {
+		return *x.ShipToCountry
+	}
+	return ""
+}
+
+func (x *OpenOrderProto) GetLineCount() int64 {
+	if x != nil {
+		return x.LineCount
+	}
+	return 0
+}
+
+func (x *OpenOrderProto) GetTotalOrdered() string {
+	if x != nil {
+		return x.TotalOrdered
+	}
+	return ""
+}
+
+type ListOpenOrdersResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Orders        []*OpenOrderProto      `protobuf:"bytes,1,rep,name=orders,proto3" json:"orders,omitempty"`
+	PageInfo      *PageInfo              `protobuf:"bytes,2,opt,name=page_info,json=pageInfo,proto3" json:"page_info,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ListOpenOrdersResponse) Reset() {
+	*x = ListOpenOrdersResponse{}
+	mi := &file_core_core_analytics_proto_msgTypes[121]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ListOpenOrdersResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ListOpenOrdersResponse) ProtoMessage() {}
+
+func (x *ListOpenOrdersResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_core_core_analytics_proto_msgTypes[121]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ListOpenOrdersResponse.ProtoReflect.Descriptor instead.
+func (*ListOpenOrdersResponse) Descriptor() ([]byte, []int) {
+	return file_core_core_analytics_proto_rawDescGZIP(), []int{121}
+}
+
+func (x *ListOpenOrdersResponse) GetOrders() []*OpenOrderProto {
+	if x != nil {
+		return x.Orders
+	}
+	return nil
+}
+
+func (x *ListOpenOrdersResponse) GetPageInfo() *PageInfo {
+	if x != nil {
+		return x.PageInfo
+	}
+	return nil
+}
+
+type ListOpenOrderLinesRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	OrderId       string                 `protobuf:"bytes,1,opt,name=order_id,json=orderId,proto3" json:"order_id,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ListOpenOrderLinesRequest) Reset() {
+	*x = ListOpenOrderLinesRequest{}
+	mi := &file_core_core_analytics_proto_msgTypes[122]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ListOpenOrderLinesRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ListOpenOrderLinesRequest) ProtoMessage() {}
+
+func (x *ListOpenOrderLinesRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_core_core_analytics_proto_msgTypes[122]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ListOpenOrderLinesRequest.ProtoReflect.Descriptor instead.
+func (*ListOpenOrderLinesRequest) Descriptor() ([]byte, []int) {
+	return file_core_core_analytics_proto_rawDescGZIP(), []int{122}
+}
+
+func (x *ListOpenOrderLinesRequest) GetOrderId() string {
+	if x != nil {
+		return x.OrderId
+	}
+	return ""
+}
+
+// One sale line. Quantities are in the item's base unit (unit_id); the unit price is per the base unit of its denominator's dimension. Amounts are exact decimal strings.
+type OpenOrderLineProto struct {
+	state                            protoimpl.MessageState `protogen:"open.v1"`
+	Id                               string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	ItemId                           string                 `protobuf:"bytes,2,opt,name=item_id,json=itemId,proto3" json:"item_id,omitempty"`
+	Sku                              string                 `protobuf:"bytes,3,opt,name=sku,proto3" json:"sku,omitempty"`
+	Description                      *string                `protobuf:"bytes,4,opt,name=description,proto3,oneof" json:"description,omitempty"`
+	UnitId                           string                 `protobuf:"bytes,5,opt,name=unit_id,json=unitId,proto3" json:"unit_id,omitempty"`
+	UnitPrice                        string                 `protobuf:"bytes,6,opt,name=unit_price,json=unitPrice,proto3" json:"unit_price,omitempty"`
+	UnitPriceNumeratorUnitId         string                 `protobuf:"bytes,7,opt,name=unit_price_numerator_unit_id,json=unitPriceNumeratorUnitId,proto3" json:"unit_price_numerator_unit_id,omitempty"`
+	UnitPriceNumeratorAbbreviation   string                 `protobuf:"bytes,8,opt,name=unit_price_numerator_abbreviation,json=unitPriceNumeratorAbbreviation,proto3" json:"unit_price_numerator_abbreviation,omitempty"`
+	UnitPriceDenominatorUnitId       string                 `protobuf:"bytes,9,opt,name=unit_price_denominator_unit_id,json=unitPriceDenominatorUnitId,proto3" json:"unit_price_denominator_unit_id,omitempty"`
+	UnitPriceDenominatorAbbreviation string                 `protobuf:"bytes,10,opt,name=unit_price_denominator_abbreviation,json=unitPriceDenominatorAbbreviation,proto3" json:"unit_price_denominator_abbreviation,omitempty"`
+	QuantityBackOrdered              string                 `protobuf:"bytes,11,opt,name=quantity_back_ordered,json=quantityBackOrdered,proto3" json:"quantity_back_ordered,omitempty"`
+	QuantityInvoiced                 string                 `protobuf:"bytes,12,opt,name=quantity_invoiced,json=quantityInvoiced,proto3" json:"quantity_invoiced,omitempty"`
+	TotalOrdered                     string                 `protobuf:"bytes,13,opt,name=total_ordered,json=totalOrdered,proto3" json:"total_ordered,omitempty"`
+	// The unit unit_id names; absent when the item's category has no base unit.
+	Unit          *UnitInfo `protobuf:"bytes,14,opt,name=unit,proto3,oneof" json:"unit,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *OpenOrderLineProto) Reset() {
+	*x = OpenOrderLineProto{}
+	mi := &file_core_core_analytics_proto_msgTypes[123]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *OpenOrderLineProto) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*OpenOrderLineProto) ProtoMessage() {}
+
+func (x *OpenOrderLineProto) ProtoReflect() protoreflect.Message {
+	mi := &file_core_core_analytics_proto_msgTypes[123]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use OpenOrderLineProto.ProtoReflect.Descriptor instead.
+func (*OpenOrderLineProto) Descriptor() ([]byte, []int) {
+	return file_core_core_analytics_proto_rawDescGZIP(), []int{123}
+}
+
+func (x *OpenOrderLineProto) GetId() string {
+	if x != nil {
+		return x.Id
+	}
+	return ""
+}
+
+func (x *OpenOrderLineProto) GetItemId() string {
+	if x != nil {
+		return x.ItemId
+	}
+	return ""
+}
+
+func (x *OpenOrderLineProto) GetSku() string {
+	if x != nil {
+		return x.Sku
+	}
+	return ""
+}
+
+func (x *OpenOrderLineProto) GetDescription() string {
+	if x != nil && x.Description != nil {
+		return *x.Description
+	}
+	return ""
+}
+
+func (x *OpenOrderLineProto) GetUnitId() string {
+	if x != nil {
+		return x.UnitId
+	}
+	return ""
+}
+
+func (x *OpenOrderLineProto) GetUnitPrice() string {
+	if x != nil {
+		return x.UnitPrice
+	}
+	return ""
+}
+
+func (x *OpenOrderLineProto) GetUnitPriceNumeratorUnitId() string {
+	if x != nil {
+		return x.UnitPriceNumeratorUnitId
+	}
+	return ""
+}
+
+func (x *OpenOrderLineProto) GetUnitPriceNumeratorAbbreviation() string {
+	if x != nil {
+		return x.UnitPriceNumeratorAbbreviation
+	}
+	return ""
+}
+
+func (x *OpenOrderLineProto) GetUnitPriceDenominatorUnitId() string {
+	if x != nil {
+		return x.UnitPriceDenominatorUnitId
+	}
+	return ""
+}
+
+func (x *OpenOrderLineProto) GetUnitPriceDenominatorAbbreviation() string {
+	if x != nil {
+		return x.UnitPriceDenominatorAbbreviation
+	}
+	return ""
+}
+
+func (x *OpenOrderLineProto) GetQuantityBackOrdered() string {
+	if x != nil {
+		return x.QuantityBackOrdered
+	}
+	return ""
+}
+
+func (x *OpenOrderLineProto) GetQuantityInvoiced() string {
+	if x != nil {
+		return x.QuantityInvoiced
+	}
+	return ""
+}
+
+func (x *OpenOrderLineProto) GetTotalOrdered() string {
+	if x != nil {
+		return x.TotalOrdered
+	}
+	return ""
+}
+
+func (x *OpenOrderLineProto) GetUnit() *UnitInfo {
+	if x != nil {
+		return x.Unit
+	}
+	return nil
+}
+
+type ListOpenOrderLinesResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Lines         []*OpenOrderLineProto  `protobuf:"bytes,1,rep,name=lines,proto3" json:"lines,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ListOpenOrderLinesResponse) Reset() {
+	*x = ListOpenOrderLinesResponse{}
+	mi := &file_core_core_analytics_proto_msgTypes[124]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ListOpenOrderLinesResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ListOpenOrderLinesResponse) ProtoMessage() {}
+
+func (x *ListOpenOrderLinesResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_core_core_analytics_proto_msgTypes[124]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ListOpenOrderLinesResponse.ProtoReflect.Descriptor instead.
+func (*ListOpenOrderLinesResponse) Descriptor() ([]byte, []int) {
+	return file_core_core_analytics_proto_rawDescGZIP(), []int{124}
+}
+
+func (x *ListOpenOrderLinesResponse) GetLines() []*OpenOrderLineProto {
+	if x != nil {
+		return x.Lines
+	}
+	return nil
+}
+
+type ExportOpenOrderLinesRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Filter        *OpenOrderFilterProto  `protobuf:"bytes,1,opt,name=filter,proto3" json:"filter,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ExportOpenOrderLinesRequest) Reset() {
+	*x = ExportOpenOrderLinesRequest{}
+	mi := &file_core_core_analytics_proto_msgTypes[125]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ExportOpenOrderLinesRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ExportOpenOrderLinesRequest) ProtoMessage() {}
+
+func (x *ExportOpenOrderLinesRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_core_core_analytics_proto_msgTypes[125]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ExportOpenOrderLinesRequest.ProtoReflect.Descriptor instead.
+func (*ExportOpenOrderLinesRequest) Descriptor() ([]byte, []int) {
+	return file_core_core_analytics_proto_rawDescGZIP(), []int{125}
+}
+
+func (x *ExportOpenOrderLinesRequest) GetFilter() *OpenOrderFilterProto {
+	if x != nil {
+		return x.Filter
+	}
+	return nil
+}
+
+type ExportOpenOrderLinesResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Job           *JobInfo               `protobuf:"bytes,1,opt,name=job,proto3" json:"job,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ExportOpenOrderLinesResponse) Reset() {
+	*x = ExportOpenOrderLinesResponse{}
+	mi := &file_core_core_analytics_proto_msgTypes[126]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ExportOpenOrderLinesResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ExportOpenOrderLinesResponse) ProtoMessage() {}
+
+func (x *ExportOpenOrderLinesResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_core_core_analytics_proto_msgTypes[126]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ExportOpenOrderLinesResponse.ProtoReflect.Descriptor instead.
+func (*ExportOpenOrderLinesResponse) Descriptor() ([]byte, []int) {
+	return file_core_core_analytics_proto_rawDescGZIP(), []int{126}
+}
+
+func (x *ExportOpenOrderLinesResponse) GetJob() *JobInfo {
+	if x != nil {
+		return x.Job
+	}
+	return nil
+}
+
 var File_core_core_analytics_proto protoreflect.FileDescriptor
 
 const file_core_core_analytics_proto_rawDesc = "" +
@@ -8606,6 +9565,90 @@ const file_core_core_analytics_proto_rawDesc = "" +
 	"\n" +
 	"has_window\x18\x02 \x01(\bR\thasWindow\";\n" +
 	"\x18ExportSalesLinesResponse\x12\x1f\n" +
+	"\x03job\x18\x01 \x01(\v2\r.core.JobInfoR\x03job\"\xd0\x01\n" +
+	"\x14OpenOrderFilterProto\x12!\n" +
+	"\fcustomer_ids\x18\x01 \x03(\tR\vcustomerIds\x12,\n" +
+	"\x12customer_group_ids\x18\x02 \x03(\tR\x10customerGroupIds\x12(\n" +
+	"\x10product_line_ids\x18\x03 \x03(\tR\x0eproductLineIds\x12\"\n" +
+	"\rsales_rep_ids\x18\x04 \x03(\tR\vsalesRepIds\x12\x19\n" +
+	"\bitem_ids\x18\x05 \x03(\tR\aitemIds\"U\n" +
+	"\x1fAnalyzeOpenOrdersSummaryRequest\x122\n" +
+	"\x06filter\x18\x01 \x01(\v2\x1a.core.OpenOrderFilterProtoR\x06filter\"{\n" +
+	" AnalyzeOpenOrdersSummaryResponse\x12\x18\n" +
+	"\aordered\x18\x01 \x01(\tR\aordered\x12!\n" +
+	"\fback_ordered\x18\x02 \x01(\tR\vbackOrdered\x12\x1a\n" +
+	"\binvoiced\x18\x03 \x01(\tR\binvoiced\"\x93\x01\n" +
+	"\x1fAnalyzeOpenOrderProductsRequest\x122\n" +
+	"\x06filter\x18\x01 \x01(\v2\x1a.core.OpenOrderFilterProtoR\x06filter\x12\x14\n" +
+	"\x05limit\x18\x02 \x01(\x05R\x05limit\x12\x1b\n" +
+	"\x06cursor\x18\x03 \x01(\tH\x00R\x06cursor\x88\x01\x01B\t\n" +
+	"\a_cursor\"\xd0\x02\n" +
+	"\x15OpenOrderProductProto\x12\x17\n" +
+	"\aitem_id\x18\x01 \x01(\tR\x06itemId\x12\x10\n" +
+	"\x03sku\x18\x02 \x01(\tR\x03sku\x12%\n" +
+	"\vdescription\x18\x03 \x01(\tH\x00R\vdescription\x88\x01\x01\x12\x17\n" +
+	"\aunit_id\x18\x04 \x01(\tR\x06unitId\x12)\n" +
+	"\x10quantity_ordered\x18\x05 \x01(\tR\x0fquantityOrdered\x122\n" +
+	"\x15quantity_back_ordered\x18\x06 \x01(\tR\x13quantityBackOrdered\x12+\n" +
+	"\x11quantity_invoiced\x18\a \x01(\tR\x10quantityInvoiced\x12'\n" +
+	"\x04unit\x18\b \x01(\v2\x0e.core.UnitInfoH\x01R\x04unit\x88\x01\x01B\x0e\n" +
+	"\f_descriptionB\a\n" +
+	"\x05_unit\"\x88\x01\n" +
+	" AnalyzeOpenOrderProductsResponse\x127\n" +
+	"\bproducts\x18\x01 \x03(\v2\x1b.core.OpenOrderProductProtoR\bproducts\x12+\n" +
+	"\tpage_info\x18\x02 \x01(\v2\x0e.core.PageInfoR\bpageInfo\"\x89\x01\n" +
+	"\x15ListOpenOrdersRequest\x122\n" +
+	"\x06filter\x18\x01 \x01(\v2\x1a.core.OpenOrderFilterProtoR\x06filter\x12\x14\n" +
+	"\x05limit\x18\x02 \x01(\x05R\x05limit\x12\x1b\n" +
+	"\x06cursor\x18\x03 \x01(\tH\x00R\x06cursor\x88\x01\x01B\t\n" +
+	"\a_cursor\"\xd1\x03\n" +
+	"\x0eOpenOrderProto\x12\x0e\n" +
+	"\x02id\x18\x01 \x01(\tR\x02id\x12\x16\n" +
+	"\x06number\x18\x02 \x01(\tR\x06number\x12\x16\n" +
+	"\x06status\x18\x03 \x01(\tR\x06status\x127\n" +
+	"\tissued_at\x18\x04 \x01(\v2\x1a.google.protobuf.TimestampR\bissuedAt\x12\x1f\n" +
+	"\vcustomer_id\x18\x05 \x01(\tR\n" +
+	"customerId\x12#\n" +
+	"\rcustomer_name\x18\x06 \x01(\tR\fcustomerName\x12,\n" +
+	"\x0fcustomer_number\x18\a \x01(\tH\x00R\x0ecustomerNumber\x88\x01\x01\x12'\n" +
+	"\rship_to_state\x18\b \x01(\tH\x01R\vshipToState\x88\x01\x01\x12+\n" +
+	"\x0fship_to_country\x18\t \x01(\tH\x02R\rshipToCountry\x88\x01\x01\x12\x1d\n" +
+	"\n" +
+	"line_count\x18\n" +
+	" \x01(\x03R\tlineCount\x12#\n" +
+	"\rtotal_ordered\x18\v \x01(\tR\ftotalOrderedB\x12\n" +
+	"\x10_customer_numberB\x10\n" +
+	"\x0e_ship_to_stateB\x12\n" +
+	"\x10_ship_to_country\"s\n" +
+	"\x16ListOpenOrdersResponse\x12,\n" +
+	"\x06orders\x18\x01 \x03(\v2\x14.core.OpenOrderProtoR\x06orders\x12+\n" +
+	"\tpage_info\x18\x02 \x01(\v2\x0e.core.PageInfoR\bpageInfo\"6\n" +
+	"\x19ListOpenOrderLinesRequest\x12\x19\n" +
+	"\border_id\x18\x01 \x01(\tR\aorderId\"\x94\x05\n" +
+	"\x12OpenOrderLineProto\x12\x0e\n" +
+	"\x02id\x18\x01 \x01(\tR\x02id\x12\x17\n" +
+	"\aitem_id\x18\x02 \x01(\tR\x06itemId\x12\x10\n" +
+	"\x03sku\x18\x03 \x01(\tR\x03sku\x12%\n" +
+	"\vdescription\x18\x04 \x01(\tH\x00R\vdescription\x88\x01\x01\x12\x17\n" +
+	"\aunit_id\x18\x05 \x01(\tR\x06unitId\x12\x1d\n" +
+	"\n" +
+	"unit_price\x18\x06 \x01(\tR\tunitPrice\x12>\n" +
+	"\x1cunit_price_numerator_unit_id\x18\a \x01(\tR\x18unitPriceNumeratorUnitId\x12I\n" +
+	"!unit_price_numerator_abbreviation\x18\b \x01(\tR\x1eunitPriceNumeratorAbbreviation\x12B\n" +
+	"\x1eunit_price_denominator_unit_id\x18\t \x01(\tR\x1aunitPriceDenominatorUnitId\x12M\n" +
+	"#unit_price_denominator_abbreviation\x18\n" +
+	" \x01(\tR unitPriceDenominatorAbbreviation\x122\n" +
+	"\x15quantity_back_ordered\x18\v \x01(\tR\x13quantityBackOrdered\x12+\n" +
+	"\x11quantity_invoiced\x18\f \x01(\tR\x10quantityInvoiced\x12#\n" +
+	"\rtotal_ordered\x18\r \x01(\tR\ftotalOrdered\x12'\n" +
+	"\x04unit\x18\x0e \x01(\v2\x0e.core.UnitInfoH\x01R\x04unit\x88\x01\x01B\x0e\n" +
+	"\f_descriptionB\a\n" +
+	"\x05_unit\"L\n" +
+	"\x1aListOpenOrderLinesResponse\x12.\n" +
+	"\x05lines\x18\x01 \x03(\v2\x18.core.OpenOrderLineProtoR\x05lines\"Q\n" +
+	"\x1bExportOpenOrderLinesRequest\x122\n" +
+	"\x06filter\x18\x01 \x01(\v2\x1a.core.OpenOrderFilterProtoR\x06filter\"?\n" +
+	"\x1cExportOpenOrderLinesResponse\x12\x1f\n" +
 	"\x03job\x18\x01 \x01(\v2\r.core.JobInfoR\x03jobB\x18Z\x16shared/proto/core;coreb\x06proto3"
 
 var (
@@ -8620,7 +9663,7 @@ func file_core_core_analytics_proto_rawDescGZIP() []byte {
 	return file_core_core_analytics_proto_rawDescData
 }
 
-var file_core_core_analytics_proto_msgTypes = make([]protoimpl.MessageInfo, 114)
+var file_core_core_analytics_proto_msgTypes = make([]protoimpl.MessageInfo, 128)
 var file_core_core_analytics_proto_goTypes = []any{
 	(*QuarterlyDataProto)(nil),                   // 0: core.QuarterlyDataProto
 	(*AnalyzeQuarterlyOrdersResponse)(nil),       // 1: core.AnalyzeQuarterlyOrdersResponse
@@ -8735,49 +9778,63 @@ var file_core_core_analytics_proto_goTypes = []any{
 	(*ListSalesLinesResponse)(nil),               // 110: core.ListSalesLinesResponse
 	(*ExportSalesLinesRequest)(nil),              // 111: core.ExportSalesLinesRequest
 	(*ExportSalesLinesResponse)(nil),             // 112: core.ExportSalesLinesResponse
-	nil,                                          // 113: core.AnalyzeQuarterlyOrdersResponse.DataEntry
-	(*BaseQuantity)(nil),                         // 114: core.BaseQuantity
-	(*BasicInfoProto)(nil),                       // 115: core.BasicInfoProto
-	(*timestamppb.Timestamp)(nil),                // 116: google.protobuf.Timestamp
-	(*PageInfo)(nil),                             // 117: core.PageInfo
-	(*UnitInfo)(nil),                             // 118: core.UnitInfo
-	(*ServiceLevelInfo)(nil),                     // 119: core.ServiceLevelInfo
-	(*QuantityPatch)(nil),                        // 120: core.QuantityPatch
-	(*StringListPatch)(nil),                      // 121: core.StringListPatch
-	(*StringPatch)(nil),                          // 122: core.StringPatch
-	(*SalesEntryProto)(nil),                      // 123: core.SalesEntryProto
-	(*JobInfo)(nil),                              // 124: core.JobInfo
+	(*OpenOrderFilterProto)(nil),                 // 113: core.OpenOrderFilterProto
+	(*AnalyzeOpenOrdersSummaryRequest)(nil),      // 114: core.AnalyzeOpenOrdersSummaryRequest
+	(*AnalyzeOpenOrdersSummaryResponse)(nil),     // 115: core.AnalyzeOpenOrdersSummaryResponse
+	(*AnalyzeOpenOrderProductsRequest)(nil),      // 116: core.AnalyzeOpenOrderProductsRequest
+	(*OpenOrderProductProto)(nil),                // 117: core.OpenOrderProductProto
+	(*AnalyzeOpenOrderProductsResponse)(nil),     // 118: core.AnalyzeOpenOrderProductsResponse
+	(*ListOpenOrdersRequest)(nil),                // 119: core.ListOpenOrdersRequest
+	(*OpenOrderProto)(nil),                       // 120: core.OpenOrderProto
+	(*ListOpenOrdersResponse)(nil),               // 121: core.ListOpenOrdersResponse
+	(*ListOpenOrderLinesRequest)(nil),            // 122: core.ListOpenOrderLinesRequest
+	(*OpenOrderLineProto)(nil),                   // 123: core.OpenOrderLineProto
+	(*ListOpenOrderLinesResponse)(nil),           // 124: core.ListOpenOrderLinesResponse
+	(*ExportOpenOrderLinesRequest)(nil),          // 125: core.ExportOpenOrderLinesRequest
+	(*ExportOpenOrderLinesResponse)(nil),         // 126: core.ExportOpenOrderLinesResponse
+	nil,                                          // 127: core.AnalyzeQuarterlyOrdersResponse.DataEntry
+	(*BaseQuantity)(nil),                         // 128: core.BaseQuantity
+	(*BasicInfoProto)(nil),                       // 129: core.BasicInfoProto
+	(*timestamppb.Timestamp)(nil),                // 130: google.protobuf.Timestamp
+	(*PageInfo)(nil),                             // 131: core.PageInfo
+	(*UnitInfo)(nil),                             // 132: core.UnitInfo
+	(*ServiceLevelInfo)(nil),                     // 133: core.ServiceLevelInfo
+	(*QuantityPatch)(nil),                        // 134: core.QuantityPatch
+	(*StringListPatch)(nil),                      // 135: core.StringListPatch
+	(*StringPatch)(nil),                          // 136: core.StringPatch
+	(*SalesEntryProto)(nil),                      // 137: core.SalesEntryProto
+	(*JobInfo)(nil),                              // 138: core.JobInfo
 }
 var file_core_core_analytics_proto_depIdxs = []int32{
-	113, // 0: core.AnalyzeQuarterlyOrdersResponse.data:type_name -> core.AnalyzeQuarterlyOrdersResponse.DataEntry
+	127, // 0: core.AnalyzeQuarterlyOrdersResponse.data:type_name -> core.AnalyzeQuarterlyOrdersResponse.DataEntry
 	3,   // 1: core.AnalyticsUnitGroup.units:type_name -> core.AnalyticsUnitGroupUnitProto
-	114, // 2: core.MaterialAnalyticsEntryProto.quantity_in_inventory:type_name -> core.BaseQuantity
-	114, // 3: core.MaterialAnalyticsEntryProto.quantity_in_demand:type_name -> core.BaseQuantity
-	114, // 4: core.MaterialAnalyticsEntryProto.order_point:type_name -> core.BaseQuantity
-	114, // 5: core.MaterialAnalyticsEntryProto.lead_time:type_name -> core.BaseQuantity
+	128, // 2: core.MaterialAnalyticsEntryProto.quantity_in_inventory:type_name -> core.BaseQuantity
+	128, // 3: core.MaterialAnalyticsEntryProto.quantity_in_demand:type_name -> core.BaseQuantity
+	128, // 4: core.MaterialAnalyticsEntryProto.order_point:type_name -> core.BaseQuantity
+	128, // 5: core.MaterialAnalyticsEntryProto.lead_time:type_name -> core.BaseQuantity
 	4,   // 6: core.MaterialAnalyticsEntryProto.unit_group:type_name -> core.AnalyticsUnitGroup
 	5,   // 7: core.AnalyzeMaterialsResponse.entries:type_name -> core.MaterialAnalyticsEntryProto
-	114, // 8: core.AnalyticsRateProto.numerator:type_name -> core.BaseQuantity
-	114, // 9: core.AnalyticsRateProto.denominator:type_name -> core.BaseQuantity
+	128, // 8: core.AnalyticsRateProto.numerator:type_name -> core.BaseQuantity
+	128, // 9: core.AnalyticsRateProto.denominator:type_name -> core.BaseQuantity
 	8,   // 10: core.InventoryReceiptEntryProto.item:type_name -> core.LightItemProto
-	115, // 11: core.InventoryReceiptEntryProto.owner_account:type_name -> core.BasicInfoProto
-	115, // 12: core.InventoryReceiptEntryProto.holder_account:type_name -> core.BasicInfoProto
-	114, // 13: core.InventoryReceiptEntryProto.remaining_quantity:type_name -> core.BaseQuantity
+	129, // 11: core.InventoryReceiptEntryProto.owner_account:type_name -> core.BasicInfoProto
+	129, // 12: core.InventoryReceiptEntryProto.holder_account:type_name -> core.BasicInfoProto
+	128, // 13: core.InventoryReceiptEntryProto.remaining_quantity:type_name -> core.BaseQuantity
 	10,  // 14: core.InventoryReceiptEntryProto.weighted_average_unit_cost:type_name -> core.AnalyticsRateProto
-	116, // 15: core.InventoryReceiptEntryProto.oldest_receipt_at:type_name -> google.protobuf.Timestamp
-	116, // 16: core.InventoryReceiptEntryProto.newest_receipt_at:type_name -> google.protobuf.Timestamp
-	115, // 17: core.InventoryReceiptEntryProto.location:type_name -> core.BasicInfoProto
+	130, // 15: core.InventoryReceiptEntryProto.oldest_receipt_at:type_name -> google.protobuf.Timestamp
+	130, // 16: core.InventoryReceiptEntryProto.newest_receipt_at:type_name -> google.protobuf.Timestamp
+	129, // 17: core.InventoryReceiptEntryProto.location:type_name -> core.BasicInfoProto
 	9,   // 18: core.InventoryReceiptEntryProto.lot:type_name -> core.AnalyticsLotProto
-	114, // 19: core.InventoryReceiptEntryProto.inventory_value:type_name -> core.BaseQuantity
+	128, // 19: core.InventoryReceiptEntryProto.inventory_value:type_name -> core.BaseQuantity
 	11,  // 20: core.AnalyzeInventoryReceiptsResponse.entries:type_name -> core.InventoryReceiptEntryProto
-	116, // 21: core.DateTimeCoordinateProto.x:type_name -> google.protobuf.Timestamp
+	130, // 21: core.DateTimeCoordinateProto.x:type_name -> google.protobuf.Timestamp
 	13,  // 22: core.NewCustomersChartDataProto.data:type_name -> core.DateTimeCoordinateProto
-	116, // 23: core.AnalyzeNewCustomersRequest.start_date:type_name -> google.protobuf.Timestamp
-	116, // 24: core.AnalyzeNewCustomersRequest.end_date:type_name -> google.protobuf.Timestamp
+	130, // 23: core.AnalyzeNewCustomersRequest.start_date:type_name -> google.protobuf.Timestamp
+	130, // 24: core.AnalyzeNewCustomersRequest.end_date:type_name -> google.protobuf.Timestamp
 	14,  // 25: core.AnalyzeNewCustomersResponse.new_customers:type_name -> core.NewCustomersChartDataProto
-	116, // 26: core.DemandHistoryPointProto.date:type_name -> google.protobuf.Timestamp
-	116, // 27: core.DemandForecastPointProto.date:type_name -> google.protobuf.Timestamp
-	116, // 28: core.RevenueHistoryPointProto.date:type_name -> google.protobuf.Timestamp
+	130, // 26: core.DemandHistoryPointProto.date:type_name -> google.protobuf.Timestamp
+	130, // 27: core.DemandForecastPointProto.date:type_name -> google.protobuf.Timestamp
+	130, // 28: core.RevenueHistoryPointProto.date:type_name -> google.protobuf.Timestamp
 	17,  // 29: core.DemandForecastRowProto.history:type_name -> core.DemandHistoryPointProto
 	18,  // 30: core.DemandForecastRowProto.forecast:type_name -> core.DemandForecastPointProto
 	19,  // 31: core.DemandForecastRowProto.revenue_history:type_name -> core.RevenueHistoryPointProto
@@ -8786,67 +9843,67 @@ var file_core_core_analytics_proto_depIdxs = []int32{
 	18,  // 34: core.DemandForecastRowProto.sales_forecast:type_name -> core.DemandForecastPointProto
 	20,  // 35: core.AnalyzeDemandForecastResponse.rows:type_name -> core.DemandForecastRowProto
 	23,  // 36: core.OeeDepartmentProto.downtime_breakdown:type_name -> core.OeeDowntimeReasonProto
-	116, // 37: core.AnalyzeOeeRequest.start_date:type_name -> google.protobuf.Timestamp
-	116, // 38: core.AnalyzeOeeRequest.end_date:type_name -> google.protobuf.Timestamp
+	130, // 37: core.AnalyzeOeeRequest.start_date:type_name -> google.protobuf.Timestamp
+	130, // 38: core.AnalyzeOeeRequest.end_date:type_name -> google.protobuf.Timestamp
 	25,  // 39: core.AnalyzeOeeRequest.planned_time:type_name -> core.OeeDepartmentPlannedTimeProto
 	24,  // 40: core.AnalyzeOeeResponse.departments:type_name -> core.OeeDepartmentProto
-	116, // 41: core.AnalyzeOeeTrendRequest.start_date:type_name -> google.protobuf.Timestamp
-	116, // 42: core.AnalyzeOeeTrendRequest.end_date:type_name -> google.protobuf.Timestamp
-	116, // 43: core.OeeTrendPeriodProto.starts_at:type_name -> google.protobuf.Timestamp
-	116, // 44: core.OeeTrendPeriodProto.ends_at:type_name -> google.protobuf.Timestamp
+	130, // 41: core.AnalyzeOeeTrendRequest.start_date:type_name -> google.protobuf.Timestamp
+	130, // 42: core.AnalyzeOeeTrendRequest.end_date:type_name -> google.protobuf.Timestamp
+	130, // 43: core.OeeTrendPeriodProto.starts_at:type_name -> google.protobuf.Timestamp
+	130, // 44: core.OeeTrendPeriodProto.ends_at:type_name -> google.protobuf.Timestamp
 	29,  // 45: core.AnalyzeOeeTrendResponse.periods:type_name -> core.OeeTrendPeriodProto
-	116, // 46: core.PaymentTermInfo.created_at:type_name -> google.protobuf.Timestamp
-	116, // 47: core.PaymentTermInfo.updated_at:type_name -> google.protobuf.Timestamp
+	130, // 46: core.PaymentTermInfo.created_at:type_name -> google.protobuf.Timestamp
+	130, // 47: core.PaymentTermInfo.updated_at:type_name -> google.protobuf.Timestamp
 	31,  // 48: core.ListPaymentTermsResponse.payment_terms:type_name -> core.PaymentTermInfo
-	117, // 49: core.ListPaymentTermsResponse.page_info:type_name -> core.PageInfo
+	131, // 49: core.ListPaymentTermsResponse.page_info:type_name -> core.PageInfo
 	31,  // 50: core.GetPaymentTermResponse.payment_term:type_name -> core.PaymentTermInfo
 	31,  // 51: core.CreatePaymentTermResponse.payment_term:type_name -> core.PaymentTermInfo
 	31,  // 52: core.UpdatePaymentTermResponse.payment_term:type_name -> core.PaymentTermInfo
 	31,  // 53: core.BatchGetPaymentTermsByIDsResponse.payment_terms:type_name -> core.PaymentTermInfo
-	116, // 54: core.QuantityInfo.created_at:type_name -> google.protobuf.Timestamp
-	116, // 55: core.QuantityInfo.updated_at:type_name -> google.protobuf.Timestamp
-	118, // 56: core.QuantityInfo.unit_detail:type_name -> core.UnitInfo
+	130, // 54: core.QuantityInfo.created_at:type_name -> google.protobuf.Timestamp
+	130, // 55: core.QuantityInfo.updated_at:type_name -> google.protobuf.Timestamp
+	132, // 56: core.QuantityInfo.unit_detail:type_name -> core.UnitInfo
 	43,  // 57: core.ShippingTermInfo.flat_rate:type_name -> core.QuantityInfo
 	43,  // 58: core.ShippingTermInfo.minimum_order_value:type_name -> core.QuantityInfo
-	119, // 59: core.ShippingTermInfo.free_shipping_service_levels:type_name -> core.ServiceLevelInfo
-	116, // 60: core.ShippingTermInfo.created_at:type_name -> google.protobuf.Timestamp
-	116, // 61: core.ShippingTermInfo.updated_at:type_name -> google.protobuf.Timestamp
+	133, // 59: core.ShippingTermInfo.free_shipping_service_levels:type_name -> core.ServiceLevelInfo
+	130, // 60: core.ShippingTermInfo.created_at:type_name -> google.protobuf.Timestamp
+	130, // 61: core.ShippingTermInfo.updated_at:type_name -> google.protobuf.Timestamp
 	44,  // 62: core.ListShippingTermsResponse.shipping_terms:type_name -> core.ShippingTermInfo
-	117, // 63: core.ListShippingTermsResponse.page_info:type_name -> core.PageInfo
+	131, // 63: core.ListShippingTermsResponse.page_info:type_name -> core.PageInfo
 	44,  // 64: core.GetShippingTermResponse.shipping_term:type_name -> core.ShippingTermInfo
 	49,  // 65: core.CreateShippingTermRequest.flat_rate:type_name -> core.QuantityInput
 	49,  // 66: core.CreateShippingTermRequest.minimum_order_value:type_name -> core.QuantityInput
 	44,  // 67: core.CreateShippingTermResponse.shipping_term:type_name -> core.ShippingTermInfo
-	120, // 68: core.UpdateShippingTermRequest.flat_rate:type_name -> core.QuantityPatch
-	120, // 69: core.UpdateShippingTermRequest.minimum_order_value:type_name -> core.QuantityPatch
-	121, // 70: core.UpdateShippingTermRequest.free_shipping_service_level_ids:type_name -> core.StringListPatch
+	134, // 68: core.UpdateShippingTermRequest.flat_rate:type_name -> core.QuantityPatch
+	134, // 69: core.UpdateShippingTermRequest.minimum_order_value:type_name -> core.QuantityPatch
+	135, // 70: core.UpdateShippingTermRequest.free_shipping_service_level_ids:type_name -> core.StringListPatch
 	44,  // 71: core.UpdateShippingTermResponse.shipping_term:type_name -> core.ShippingTermInfo
 	44,  // 72: core.BatchGetShippingTermsByIDsResponse.shipping_terms:type_name -> core.ShippingTermInfo
 	58,  // 73: core.AddressInfo.geolocation:type_name -> core.GeolocationInfo
-	116, // 74: core.AddressInfo.created_at:type_name -> google.protobuf.Timestamp
-	116, // 75: core.AddressInfo.updated_at:type_name -> google.protobuf.Timestamp
+	130, // 74: core.AddressInfo.created_at:type_name -> google.protobuf.Timestamp
+	130, // 75: core.AddressInfo.updated_at:type_name -> google.protobuf.Timestamp
 	59,  // 76: core.GetAddressResponse.address:type_name -> core.AddressInfo
 	59,  // 77: core.ListAddressesResponse.addresses:type_name -> core.AddressInfo
-	117, // 78: core.ListAddressesResponse.page_info:type_name -> core.PageInfo
+	131, // 78: core.ListAddressesResponse.page_info:type_name -> core.PageInfo
 	59,  // 79: core.CreateAddressResponse.address:type_name -> core.AddressInfo
-	122, // 80: core.UpdateAddressRequest.phone:type_name -> core.StringPatch
-	122, // 81: core.UpdateAddressRequest.email:type_name -> core.StringPatch
-	122, // 82: core.UpdateAddressRequest.receive_calendar_id:type_name -> core.StringPatch
-	122, // 83: core.UpdateAddressRequest.street_line_2:type_name -> core.StringPatch
+	136, // 80: core.UpdateAddressRequest.phone:type_name -> core.StringPatch
+	136, // 81: core.UpdateAddressRequest.email:type_name -> core.StringPatch
+	136, // 82: core.UpdateAddressRequest.receive_calendar_id:type_name -> core.StringPatch
+	136, // 83: core.UpdateAddressRequest.street_line_2:type_name -> core.StringPatch
 	59,  // 84: core.UpdateAddressResponse.address:type_name -> core.AddressInfo
 	59,  // 85: core.BatchGetAddressesByIDsResponse.addresses:type_name -> core.AddressInfo
 	72,  // 86: core.AutocompleteAddressResponse.suggestions:type_name -> core.AddressSuggestion
 	75,  // 87: core.GetAddressDetailsResponse.address:type_name -> core.AddressComponentsInfo
 	75,  // 88: core.ValidateAddressResponse.components:type_name -> core.AddressComponentsInfo
-	116, // 89: core.AccountStatusInfo.created_at:type_name -> google.protobuf.Timestamp
-	116, // 90: core.AccountStatusInfo.updated_at:type_name -> google.protobuf.Timestamp
+	130, // 89: core.AccountStatusInfo.created_at:type_name -> google.protobuf.Timestamp
+	130, // 90: core.AccountStatusInfo.updated_at:type_name -> google.protobuf.Timestamp
 	79,  // 91: core.ListAccountStatusesResponse.account_statuses:type_name -> core.AccountStatusInfo
-	117, // 92: core.ListAccountStatusesResponse.page_info:type_name -> core.PageInfo
+	131, // 92: core.ListAccountStatusesResponse.page_info:type_name -> core.PageInfo
 	79,  // 93: core.GetAccountStatusResponse.account_status:type_name -> core.AccountStatusInfo
 	79,  // 94: core.BatchGetAccountStatusesByIDsResponse.account_statuses:type_name -> core.AccountStatusInfo
-	116, // 95: core.AnalyzeDeliveryPerformanceRequest.starts_at:type_name -> google.protobuf.Timestamp
-	116, // 96: core.AnalyzeDeliveryPerformanceRequest.ends_at:type_name -> google.protobuf.Timestamp
-	116, // 97: core.DeliveryPerformanceProto.period_start:type_name -> google.protobuf.Timestamp
+	130, // 95: core.AnalyzeDeliveryPerformanceRequest.starts_at:type_name -> google.protobuf.Timestamp
+	130, // 96: core.AnalyzeDeliveryPerformanceRequest.ends_at:type_name -> google.protobuf.Timestamp
+	130, // 97: core.DeliveryPerformanceProto.period_start:type_name -> google.protobuf.Timestamp
 	87,  // 98: core.DeliveryBreakdownProto.performance:type_name -> core.DeliveryPerformanceProto
 	87,  // 99: core.AnalyzeDeliveryPerformanceResponse.overall:type_name -> core.DeliveryPerformanceProto
 	87,  // 100: core.AnalyzeDeliveryPerformanceResponse.periods:type_name -> core.DeliveryPerformanceProto
@@ -8856,21 +9913,21 @@ var file_core_core_analytics_proto_depIdxs = []int32{
 	90,  // 104: core.AnalyzeDeliveryPerformanceResponse.by_customer_group:type_name -> core.DeliveryBreakdownProto
 	90,  // 105: core.AnalyzeDeliveryPerformanceResponse.by_product_line:type_name -> core.DeliveryBreakdownProto
 	90,  // 106: core.AnalyzeDeliveryPerformanceResponse.by_commitment_source:type_name -> core.DeliveryBreakdownProto
-	116, // 107: core.AnalyzeScheduleAttainmentRequest.start_date:type_name -> google.protobuf.Timestamp
-	116, // 108: core.AnalyzeScheduleAttainmentRequest.end_date:type_name -> google.protobuf.Timestamp
-	116, // 109: core.AttainmentBucketInfo.week_start_date:type_name -> google.protobuf.Timestamp
-	116, // 110: core.FrozenAdherenceInfo.frozen_through_date:type_name -> google.protobuf.Timestamp
-	116, // 111: core.AnalyzeScheduleAttainmentResponse.start_date:type_name -> google.protobuf.Timestamp
-	116, // 112: core.AnalyzeScheduleAttainmentResponse.end_date:type_name -> google.protobuf.Timestamp
+	130, // 107: core.AnalyzeScheduleAttainmentRequest.start_date:type_name -> google.protobuf.Timestamp
+	130, // 108: core.AnalyzeScheduleAttainmentRequest.end_date:type_name -> google.protobuf.Timestamp
+	130, // 109: core.AttainmentBucketInfo.week_start_date:type_name -> google.protobuf.Timestamp
+	130, // 110: core.FrozenAdherenceInfo.frozen_through_date:type_name -> google.protobuf.Timestamp
+	130, // 111: core.AnalyzeScheduleAttainmentResponse.start_date:type_name -> google.protobuf.Timestamp
+	130, // 112: core.AnalyzeScheduleAttainmentResponse.end_date:type_name -> google.protobuf.Timestamp
 	93,  // 113: core.AnalyzeScheduleAttainmentResponse.buckets:type_name -> core.AttainmentBucketInfo
 	93,  // 114: core.AnalyzeScheduleAttainmentResponse.totals:type_name -> core.AttainmentBucketInfo
 	94,  // 115: core.AnalyzeScheduleAttainmentResponse.frozen_adherence:type_name -> core.FrozenAdherenceInfo
-	116, // 116: core.SalesReportFilterProto.starts_at:type_name -> google.protobuf.Timestamp
-	116, // 117: core.SalesReportFilterProto.ends_at:type_name -> google.protobuf.Timestamp
-	116, // 118: core.SalesReportFilterProto.comparison_starts_at:type_name -> google.protobuf.Timestamp
-	116, // 119: core.SalesReportFilterProto.comparison_ends_at:type_name -> google.protobuf.Timestamp
+	130, // 116: core.SalesReportFilterProto.starts_at:type_name -> google.protobuf.Timestamp
+	130, // 117: core.SalesReportFilterProto.ends_at:type_name -> google.protobuf.Timestamp
+	130, // 118: core.SalesReportFilterProto.comparison_starts_at:type_name -> google.protobuf.Timestamp
+	130, // 119: core.SalesReportFilterProto.comparison_ends_at:type_name -> google.protobuf.Timestamp
 	96,  // 120: core.AnalyzeSalesSummaryRequest.filter:type_name -> core.SalesReportFilterProto
-	116, // 121: core.SalesTotalsProto.period_start:type_name -> google.protobuf.Timestamp
+	130, // 121: core.SalesTotalsProto.period_start:type_name -> google.protobuf.Timestamp
 	98,  // 122: core.AnalyzeSalesSummaryResponse.current:type_name -> core.SalesTotalsProto
 	98,  // 123: core.AnalyzeSalesSummaryResponse.daily:type_name -> core.SalesTotalsProto
 	98,  // 124: core.AnalyzeSalesSummaryResponse.comparison:type_name -> core.SalesTotalsProto
@@ -8879,28 +9936,41 @@ var file_core_core_analytics_proto_depIdxs = []int32{
 	98,  // 127: core.SalesBreakdownGroupProto.totals:type_name -> core.SalesTotalsProto
 	98,  // 128: core.SalesBreakdownGroupProto.comparison:type_name -> core.SalesTotalsProto
 	101, // 129: core.AnalyzeSalesBreakdownResponse.groups:type_name -> core.SalesBreakdownGroupProto
-	117, // 130: core.AnalyzeSalesBreakdownResponse.page_info:type_name -> core.PageInfo
+	131, // 130: core.AnalyzeSalesBreakdownResponse.page_info:type_name -> core.PageInfo
 	96,  // 131: core.AnalyzeSalesInvoicesRequest.filter:type_name -> core.SalesReportFilterProto
-	116, // 132: core.SalesInvoiceSummaryProto.invoiced_at:type_name -> google.protobuf.Timestamp
+	130, // 132: core.SalesInvoiceSummaryProto.invoiced_at:type_name -> google.protobuf.Timestamp
 	104, // 133: core.AnalyzeSalesInvoicesResponse.invoices:type_name -> core.SalesInvoiceSummaryProto
-	117, // 134: core.AnalyzeSalesInvoicesResponse.page_info:type_name -> core.PageInfo
-	116, // 135: core.ListNewCustomersRequest.starts_at:type_name -> google.protobuf.Timestamp
-	116, // 136: core.ListNewCustomersRequest.ends_at:type_name -> google.protobuf.Timestamp
-	116, // 137: core.NewCustomerProto.first_ordered_at:type_name -> google.protobuf.Timestamp
-	116, // 138: core.NewCustomerProto.customer_created_at:type_name -> google.protobuf.Timestamp
+	131, // 134: core.AnalyzeSalesInvoicesResponse.page_info:type_name -> core.PageInfo
+	130, // 135: core.ListNewCustomersRequest.starts_at:type_name -> google.protobuf.Timestamp
+	130, // 136: core.ListNewCustomersRequest.ends_at:type_name -> google.protobuf.Timestamp
+	130, // 137: core.NewCustomerProto.first_ordered_at:type_name -> google.protobuf.Timestamp
+	130, // 138: core.NewCustomerProto.customer_created_at:type_name -> google.protobuf.Timestamp
 	107, // 139: core.ListNewCustomersResponse.customers:type_name -> core.NewCustomerProto
-	117, // 140: core.ListNewCustomersResponse.page_info:type_name -> core.PageInfo
+	131, // 140: core.ListNewCustomersResponse.page_info:type_name -> core.PageInfo
 	96,  // 141: core.ListSalesLinesRequest.filter:type_name -> core.SalesReportFilterProto
-	123, // 142: core.ListSalesLinesResponse.lines:type_name -> core.SalesEntryProto
-	117, // 143: core.ListSalesLinesResponse.page_info:type_name -> core.PageInfo
+	137, // 142: core.ListSalesLinesResponse.lines:type_name -> core.SalesEntryProto
+	131, // 143: core.ListSalesLinesResponse.page_info:type_name -> core.PageInfo
 	96,  // 144: core.ExportSalesLinesRequest.filter:type_name -> core.SalesReportFilterProto
-	124, // 145: core.ExportSalesLinesResponse.job:type_name -> core.JobInfo
-	0,   // 146: core.AnalyzeQuarterlyOrdersResponse.DataEntry.value:type_name -> core.QuarterlyDataProto
-	147, // [147:147] is the sub-list for method output_type
-	147, // [147:147] is the sub-list for method input_type
-	147, // [147:147] is the sub-list for extension type_name
-	147, // [147:147] is the sub-list for extension extendee
-	0,   // [0:147] is the sub-list for field type_name
+	138, // 145: core.ExportSalesLinesResponse.job:type_name -> core.JobInfo
+	113, // 146: core.AnalyzeOpenOrdersSummaryRequest.filter:type_name -> core.OpenOrderFilterProto
+	113, // 147: core.AnalyzeOpenOrderProductsRequest.filter:type_name -> core.OpenOrderFilterProto
+	132, // 148: core.OpenOrderProductProto.unit:type_name -> core.UnitInfo
+	117, // 149: core.AnalyzeOpenOrderProductsResponse.products:type_name -> core.OpenOrderProductProto
+	131, // 150: core.AnalyzeOpenOrderProductsResponse.page_info:type_name -> core.PageInfo
+	113, // 151: core.ListOpenOrdersRequest.filter:type_name -> core.OpenOrderFilterProto
+	130, // 152: core.OpenOrderProto.issued_at:type_name -> google.protobuf.Timestamp
+	120, // 153: core.ListOpenOrdersResponse.orders:type_name -> core.OpenOrderProto
+	131, // 154: core.ListOpenOrdersResponse.page_info:type_name -> core.PageInfo
+	132, // 155: core.OpenOrderLineProto.unit:type_name -> core.UnitInfo
+	123, // 156: core.ListOpenOrderLinesResponse.lines:type_name -> core.OpenOrderLineProto
+	113, // 157: core.ExportOpenOrderLinesRequest.filter:type_name -> core.OpenOrderFilterProto
+	138, // 158: core.ExportOpenOrderLinesResponse.job:type_name -> core.JobInfo
+	0,   // 159: core.AnalyzeQuarterlyOrdersResponse.DataEntry.value:type_name -> core.QuarterlyDataProto
+	160, // [160:160] is the sub-list for method output_type
+	160, // [160:160] is the sub-list for method input_type
+	160, // [160:160] is the sub-list for extension type_name
+	160, // [160:160] is the sub-list for extension extendee
+	0,   // [0:160] is the sub-list for field type_name
 }
 
 func init() { file_core_core_analytics_proto_init() }
@@ -8946,13 +10016,18 @@ func file_core_core_analytics_proto_init() {
 	file_core_core_analytics_proto_msgTypes[106].OneofWrappers = []any{}
 	file_core_core_analytics_proto_msgTypes[107].OneofWrappers = []any{}
 	file_core_core_analytics_proto_msgTypes[109].OneofWrappers = []any{}
+	file_core_core_analytics_proto_msgTypes[116].OneofWrappers = []any{}
+	file_core_core_analytics_proto_msgTypes[117].OneofWrappers = []any{}
+	file_core_core_analytics_proto_msgTypes[119].OneofWrappers = []any{}
+	file_core_core_analytics_proto_msgTypes[120].OneofWrappers = []any{}
+	file_core_core_analytics_proto_msgTypes[123].OneofWrappers = []any{}
 	type x struct{}
 	out := protoimpl.TypeBuilder{
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_core_core_analytics_proto_rawDesc), len(file_core_core_analytics_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   114,
+			NumMessages:   128,
 			NumExtensions: 0,
 			NumServices:   0,
 		},

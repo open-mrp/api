@@ -4,7 +4,11 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
+	"strconv"
+	"strings"
 	"time"
+
+	"github.com/shopspring/decimal"
 
 	"github.com/open-mrp/api/services/core-service/internal/domain"
 	"github.com/open-mrp/api/services/core-service/internal/infrastructure/sqlc"
@@ -659,134 +663,111 @@ func (r *analyticsRepoImpl) getManufacturingMetricsForPeriod(ctx context.Context
 	}, nil
 }
 
-func (r *analyticsRepoImpl) GetOrderEntries(ctx context.Context, params domain.AnalyzeOrdersParams) ([]domain.OrderEntry, *apierror.APIError) {
-	ctx, span := analyticsRepoTracer.Start(ctx, "repository.analytics.get_order_entries")
-	defer span.End()
-
-	salesRepIDs := toNullStringSlice(params.SalesRepIDs)
-	if salesRepIDs == nil {
-		salesRepIDs = []sql.NullString{}
+// quarterlyOrdersQuery totals the ordered value of sale lines on sales orders issued since issuedFrom, per year and quarter of issue. Every order counts whatever its status now; an estimate has not been issued.
+func quarterlyOrdersQuery(orderIndex, accountID string, issuedFrom time.Time, buyers []string, buyersFiltered bool, salesRepIDs, productLineIDs, itemIDs []string) (string, []any) {
+	preds := []string{
+		"so.owner_account_id = ?",
+		"so.sales_order_type_code = 'sales_order'",
+		"so.issued_at >= ?",
+		"fg.product_type_code = 'sale'",
 	}
-	productLineIDs := toNullStringSlice(params.ProductLineIDs)
-	if productLineIDs == nil {
-		productLineIDs = []sql.NullString{}
+	args := []any{accountID, issuedFrom}
+	in := func(column string, ids []string) {
+		preds = append(preds, column+" IN ("+placeholders(len(ids))+")")
+		args = append(args, stringsToAny(ids)...)
 	}
-	buyers, filtered, apiErr := resolveCustomerBuyers(ctx, r.queries.DB(), params.AccountID, params.CustomerIDs, params.CustomerGroupIDs)
-	if apiErr != nil {
-		return nil, tracing.Trace(span, apiErr)
+	if buyersFiltered {
+		in("so.buyer_account_id", buyers)
 	}
-	if filtered && len(buyers) == 0 {
-		return []domain.OrderEntry{}, nil
+	if len(salesRepIDs) > 0 {
+		in("so.sales_rep_id", salesRepIDs)
 	}
-
-	rows, err := r.queries.GetOrderEntries(ctx, sqlc.GetOrderEntriesParams{
-		OwnerAccountID:           params.AccountID,
-		IncludeSalesRepFilter:    len(params.SalesRepIDs) > 0,
-		SalesRepIds:              salesRepIDs,
-		IncludeBuyerFilter:       filtered,
-		BuyerIds:                 buyers,
-		IncludeProductLineFilter: len(params.ProductLineIDs) > 0,
-		ProductLineIds:           productLineIDs,
-	})
-	if apiErr := db.MapSQLError(err); apiErr != nil {
-		return nil, tracing.Trace(span, apiErr)
+	if len(productLineIDs) > 0 {
+		in("fg.product_line_id", productLineIDs)
 	}
-
-	entries := make([]domain.OrderEntry, len(rows))
-	for i, row := range rows {
-		var customerCreatedAt time.Time
-		if row.CustomerCreatedAt.Valid {
-			customerCreatedAt = row.CustomerCreatedAt.Time
-		}
-
-		entries[i] = domain.OrderEntry{
-			ID:                  row.ID,
-			IssuedAt:            nullTimePtr(row.IssuedAt),
-			CompletedAt:         nullTimePtr(row.CompletedAt),
-			FirstShipAt:         nullTimePtr(row.FirstShipAt),
-			PromisedAt:          nullTimePtr(row.PromisedAt),
-			CustomerPO:          nullStringPtr(row.CustomerPo),
-			OrderNumber:         row.OrderNumber.String,
-			OrderID:             row.OrderID.String,
-			SalesRepID:          nullStringPtr(row.SalesRepID),
-			SalesRepUsername:    nullStringPtr(row.SalesRepUsername),
-			CustomerID:          row.CustomerID.String,
-			ParentCustomerID:    nullStringPtr(row.ParentCustomerID),
-			CustomerName:        row.CustomerName.String,
-			CustomerNumber:      row.CustomerNumber.String,
-			CustomerCreatedAt:   customerCreatedAt,
-			CustomerTypeGroupID: nullStringPtr(row.CustomerTypeGroupID),
-			CustomerGroupName:   nullStringPtr(row.CustomerGroupName),
-			ProductLineID:       nullStringPtr(row.ProductLineID),
-			ProductTypeCode:     row.ProductTypeCode.String,
-			ItemID:              row.ItemID.String,
-			ProductSku:          row.ProductSku.String,
-			ProductDescription:  nullStringPtr(row.ProductDescription),
-			CategoryName:        row.CategoryName.String,
-			ProductLine:         nullStringPtr(row.ProductLine),
-			QuantityOrdered:     decimalToFloat64(row.QuantityOrdered),
-			QuantityInvoiced:    decimalToFloat64(row.QuantityInvoiced),
-			QuantityBackOrdered: decimalToFloat64(row.QuantityBackOrdered),
-			Unit:                row.Unit.String,
-			UnitCost:            decimalToFloat64(row.UnitCost),
-			UnitPrice:           decimalToFloat64(row.UnitPrice),
-			UnitProfit:          decimalToFloat64(row.UnitProfit),
-			TotalInvoiced:       decimalToFloat64(row.TotalInvoiced),
-			TotalCost:           decimalToFloat64(row.TotalCost),
-			TotalProfit:         decimalToFloat64(row.TotalProfit),
-			TotalOrdered:        decimalToFloat64(row.TotalOrdered),
-			TotalBackOrdered:    decimalToFloat64(row.TotalBackOrdered),
-			ShipToState:         nullStringPtr(row.ShipToState),
-			ShipToCity:          nullStringPtr(row.ShipToCity),
-			ShipToZipcode:       nullStringPtr(row.ShipToZipcode),
-			ShipToCountry:       nullStringPtr(row.ShipToCountry),
-			OrderDiscountCode:   nullStringPtr(row.OrderDiscountCode),
-		}
+	if len(itemIDs) > 0 {
+		in("fg.item_id", itemIDs)
 	}
-
-	return entries, nil
+	// The orders drive, through orderIndex: left to choose, the planner starts from a product line's every line ever ordered.
+	query := `SELECT STRAIGHT_JOIN
+    YEAR(so.issued_at) AS order_year,
+    QUARTER(so.issued_at) AS order_quarter,
+    ` + obDecimal("SUM("+obTotalOrdered+")") + ` AS total
+FROM sales_order so FORCE INDEX (` + orderIndex + `)
+JOIN sales_order_line sol ON sol.sales_order_id = so.id
+JOIN product fg ON fg.id = sol.product_id
+JOIN quantity q_ord ON q_ord.id = sol.quantity_id
+JOIN unit u_ord ON u_ord.id = q_ord.unit_id
+LEFT JOIN rate r_price ON r_price.id = sol.unit_price_id
+LEFT JOIN unit u_price_num ON u_price_num.id = r_price.numerator_unit_id
+LEFT JOIN unit u_price_den ON u_price_den.id = r_price.denominator_unit_id
+WHERE ` + strings.Join(preds, " AND ") + `
+GROUP BY order_year, order_quarter
+ORDER BY order_year ASC, order_quarter ASC`
+	return query, args
 }
 
 func (r *analyticsRepoImpl) GetQuarterlyOrders(ctx context.Context, params domain.AnalyzeQuarterlyOrdersParams) ([]domain.YearlyQuarterlyData, *apierror.APIError) {
 	ctx, span := analyticsRepoTracer.Start(ctx, "repository.analytics.get_quarterly_orders")
 	defer span.End()
 
-	salesRepIDs := toNullStringSlice(params.SalesRepIDs)
-	productLineIDs := toNullStringSlice(params.ProductLineIDs)
-	customerGroupIDs := toNullStringSlice(params.CustomerGroupIDs)
-
-	rows, err := r.queries.GetQuarterlyOrderTotals(ctx, sqlc.GetQuarterlyOrderTotalsParams{
-		OwnerAccountID:             params.AccountID,
-		IncludeCustomerFilter:      len(params.CustomerIDs) > 0,
-		CustomerIds:                params.CustomerIDs,
-		IncludeSalesRepFilter:      len(params.SalesRepIDs) > 0,
-		SalesRepIds:                salesRepIDs,
-		IncludeProductLineFilter:   len(params.ProductLineIDs) > 0,
-		ProductLineIds:             productLineIDs,
-		IncludeItemFilter:          len(params.ItemIDs) > 0,
-		ItemIds:                    params.ItemIDs,
-		IncludeCustomerGroupFilter: len(params.CustomerGroupIDs) > 0,
-		CustomerGroupIds:           customerGroupIDs,
-	})
-	if apiErr := db.MapSQLError(err); apiErr != nil {
+	buyers, filtered, apiErr := resolveCustomerBuyers(ctx, r.queries.DB(), params.AccountID, params.CustomerIDs, params.CustomerGroupIDs)
+	if apiErr != nil {
 		return nil, tracing.Trace(span, apiErr)
 	}
-
-	result := make([]domain.YearlyQuarterlyData, 0, len(rows))
-	for _, row := range rows {
-		result = append(result, domain.YearlyQuarterlyData{
-			Year: row.OrderYear,
-			Data: domain.QuarterlyData{
-				Q1:    decimalToFloat64(row.Q1),
-				Q2:    decimalToFloat64(row.Q2),
-				Q3:    decimalToFloat64(row.Q3),
-				Q4:    decimalToFloat64(row.Q4),
-				Total: decimalToFloat64(row.Total),
-			},
-		})
+	if filtered && len(buyers) == 0 {
+		return []domain.YearlyQuarterlyData{}, nil
 	}
 
+	// The orders are read by the window or by the buyer or rep, whichever reaches fewer.
+	orderIndex, apiErr := r.cheapestOrderKey(ctx, append([]keyRange{{
+		index: "sales_order_owner_type_issued_idx",
+		where: "kso.owner_account_id = ? AND kso.sales_order_type_code = 'sales_order' AND kso.issued_at >= ?",
+		args:  []any{params.AccountID, params.IssuedFrom},
+	}}, filterOrderKeys(params.AccountID, buyers, filtered, params.SalesRepIDs)...))
+	if apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
+	query, args := quarterlyOrdersQuery(orderIndex, params.AccountID, params.IssuedFrom, buyers, filtered, params.SalesRepIDs, params.ProductLineIDs, params.ItemIDs)
+	rows, err := r.queries.DB().QueryContext(ctx, query, args...)
+	if err != nil {
+		return nil, tracing.Trace(span, db.MapSQLError(err))
+	}
+	defer rows.Close()
+
+	result := []domain.YearlyQuarterlyData{}
+	for rows.Next() {
+		var (
+			year, quarter int32
+			total         sql.NullString
+		)
+		if err := rows.Scan(&year, &quarter, &total); err != nil {
+			return nil, tracing.Trace(span, db.MapSQLError(err))
+		}
+		if len(result) == 0 || result[len(result)-1].Year != year {
+			result = append(result, domain.YearlyQuarterlyData{Year: year})
+		}
+		addQuarter(&result[len(result)-1].Data, quarter, decimalToFloat(total))
+	}
+	if err := rows.Err(); err != nil {
+		return nil, tracing.Trace(span, db.MapSQLError(err))
+	}
 	return result, nil
+}
+
+// addQuarter books one quarter's total; the year's total is the quarters added in order, as the dashboard added them.
+func addQuarter(d *domain.QuarterlyData, quarter int32, value float64) {
+	switch quarter {
+	case 1:
+		d.Q1 = value
+	case 2:
+		d.Q2 = value
+	case 3:
+		d.Q3 = value
+	case 4:
+		d.Q4 = value
+	}
+	d.Total += value
 }
 
 func (r *analyticsRepoImpl) GetMaterialAnalytics(ctx context.Context, params domain.AnalyzeMaterialsParams) ([]domain.MaterialAnalyticsEntry, *apierror.APIError) {
@@ -845,18 +826,18 @@ func (r *analyticsRepoImpl) GetMaterialAnalytics(ctx context.Context, params dom
 		return nil, tracing.Trace(span, apiErr)
 	}
 
-	// 5. Build lookup maps.
-	onHandMap := make(map[string]float64)
+	// 5. Build lookup maps, each net in the base unit of the item's dimension.
+	onHandMap := make(map[string]decimal.Decimal)
 	for _, row := range onHandRows {
-		onHandMap[row.ItemID] = decimalToFloat64(row.RemainingQuantity)
+		onHandMap[row.ItemID] = parseDecimalOrZero(row.RemainingQuantity)
 	}
-	reservedMap := make(map[string]float64)
+	reservedMap := make(map[string]decimal.Decimal)
 	for _, row := range reservedRows {
-		reservedMap[row.ItemID] = decimalToFloat64(row.RemainingQuantity)
+		reservedMap[row.ItemID] = parseDecimalOrZero(row.RemainingQuantity)
 	}
-	openMap := make(map[string]float64)
+	openMap := make(map[string]decimal.Decimal)
 	for _, row := range openRows {
-		openMap[row.ItemID] = decimalToFloat64(row.RemainingQuantity)
+		openMap[row.ItemID] = parseDecimalOrZero(row.RemainingQuantity)
 	}
 
 	ugUnitsMap := make(map[string][]domain.MaterialUnitGroupUnit)
@@ -892,42 +873,40 @@ func (r *analyticsRepoImpl) GetMaterialAnalytics(ctx context.Context, params dom
 		}
 	}
 
-	// 7. Build results matching dashboard behavior.
+	// 7. Build results matching dashboard behavior: stock and demand are stated in the order point's unit, or in the item's base unit when the order point's row is gone.
 	entries := make([]domain.MaterialAnalyticsEntry, len(materials))
 	for i, m := range materials {
 		onHand := onHandMap[m.ItemID]
-		reserved := reservedMap[m.ItemID]
 		open := openMap[m.ItemID]
-		availableToPromise := onHand - reserved - open
+		availableToPromise := onHand.Sub(reservedMap[m.ItemID]).Sub(open)
 
-		opValue := decimalToFloat64(m.OrderPointValue)
-		orderPoint := domain.MaterialBaseQuantity{
-			Measure:          opValue,
-			UnitName:         m.OrderPointUnitName,
-			UnitAbbreviation: m.OrderPointUnitAbbreviation,
-			UnitType:         m.OrderPointUnitType,
+		display := materialUnit{
+			name: m.BaseUnitName, abbreviation: m.BaseUnitAbbreviation, dimension: m.BaseUnitType,
+			ratioNumerator: m.BaseUnitRatioNumerator, ratioDenominator: m.BaseUnitRatioDenominator,
+			offsetNumerator: m.BaseUnitOffsetNumerator, offsetDenominator: m.BaseUnitOffsetDenominator,
 		}
-
-		ltValue := decimalToFloat64(m.LeadTimeValue)
-		leadTime := domain.MaterialBaseQuantity{
-			Measure:          ltValue,
-			UnitName:         m.LeadTimeUnitName,
-			UnitAbbreviation: m.LeadTimeUnitAbbreviation,
-			UnitType:         m.LeadTimeUnitType,
+		var orderPoint *domain.MaterialBaseQuantity
+		if m.OrderPointValue.Valid && m.OrderPointUnitRatioNumerator.Valid {
+			display = materialUnit{
+				name: m.OrderPointUnitName.String, abbreviation: m.OrderPointUnitAbbreviation.String, dimension: m.OrderPointUnitType.String,
+				ratioNumerator: m.OrderPointUnitRatioNumerator.String, ratioDenominator: m.OrderPointUnitRatioDenominator.String,
+				offsetNumerator: m.OrderPointUnitOffsetNumerator.String, offsetDenominator: m.OrderPointUnitOffsetDenominator.String,
+			}
+			orderPoint = &domain.MaterialBaseQuantity{
+				Measure:          decimalToFloat64(m.OrderPointValue),
+				UnitName:         display.name,
+				UnitAbbreviation: display.abbreviation,
+				UnitType:         display.dimension,
+			}
 		}
-
-		// Normalize inventory and demand to order point unit (matches dashboard BaseQuantityUtils.updateUnit).
-		inventoryQty := domain.MaterialBaseQuantity{
-			Measure:          availableToPromise,
-			UnitName:         orderPoint.UnitName,
-			UnitAbbreviation: orderPoint.UnitAbbreviation,
-			UnitType:         orderPoint.UnitType,
-		}
-		demandQty := domain.MaterialBaseQuantity{
-			Measure:          open,
-			UnitName:         orderPoint.UnitName,
-			UnitAbbreviation: orderPoint.UnitAbbreviation,
-			UnitType:         orderPoint.UnitType,
+		var leadTime *domain.MaterialBaseQuantity
+		if m.LeadTimeValue.Valid && m.LeadTimeUnitName.Valid {
+			leadTime = &domain.MaterialBaseQuantity{
+				Measure:          decimalToFloat64(m.LeadTimeValue),
+				UnitName:         m.LeadTimeUnitName.String,
+				UnitAbbreviation: m.LeadTimeUnitAbbreviation.String,
+				UnitType:         m.LeadTimeUnitType.String,
+			}
 		}
 
 		// Get supplier info for this item.
@@ -950,10 +929,10 @@ func (r *analyticsRepoImpl) GetMaterialAnalytics(ctx context.Context, params dom
 			ItemID:              m.ItemID,
 			Sku:                 m.ItemSku,
 			Description:         nullStringPtr(m.ItemDescription),
-			QuantityInInventory: inventoryQty,
-			OrderPoint:          &orderPoint,
-			LeadTime:            &leadTime,
-			QuantityInDemand:    demandQty,
+			QuantityInInventory: display.quantity(availableToPromise),
+			OrderPoint:          orderPoint,
+			LeadTime:            leadTime,
+			QuantityInDemand:    display.quantity(open),
 			UnitGroup: domain.MaterialUnitGroup{
 				ID:    m.UnitGroupID,
 				Name:  m.UnitGroupName,
@@ -967,81 +946,29 @@ func (r *analyticsRepoImpl) GetMaterialAnalytics(ctx context.Context, params dom
 	return entries, nil
 }
 
-func (r *analyticsRepoImpl) GetInventoryReceiptAnalytics(ctx context.Context, params domain.AnalyzeInventoryReceiptsParams) ([]domain.InventoryReceiptEntry, *apierror.APIError) {
-	ctx, span := analyticsRepoTracer.Start(ctx, "repository.analytics.get_inventory_receipt_analytics")
-	defer span.End()
+// materialUnit is a unit a material's stock is stated in, with the ratio and offset that convert from its dimension's base unit.
+type materialUnit struct {
+	name, abbreviation, dimension                                        string
+	ratioNumerator, ratioDenominator, offsetNumerator, offsetDenominator string
+}
 
-	rows, err := r.queries.GetInventoryReceiptEntries(ctx, sqlc.GetInventoryReceiptEntriesParams{
-		RequestingAccountID: params.AccountID,
-	})
-	if apiErr := db.MapSQLError(err); apiErr != nil {
-		return nil, tracing.Trace(span, apiErr)
+// quantity states an amount held in the dimension's base unit in this unit, as the dashboard's updateUnit converted it.
+func (u materialUnit) quantity(base decimal.Decimal) domain.MaterialBaseQuantity {
+	measure, _ := fromDimensionBase(base, u.ratioNumerator, u.ratioDenominator, u.offsetNumerator, u.offsetDenominator).Float64()
+	return domain.MaterialBaseQuantity{Measure: measure, UnitName: u.name, UnitAbbreviation: u.abbreviation, UnitType: u.dimension}
+}
+
+// fromDimensionBase converts an amount in its dimension's base unit into a unit with the given ratio and offset. A malformed or zero ratio leaves the amount as it is.
+func fromDimensionBase(base decimal.Decimal, ratioNumerator, ratioDenominator, offsetNumerator, offsetDenominator string) decimal.Decimal {
+	rn, rd := parseDecimalOrZero(ratioNumerator), parseDecimalOrZero(ratioDenominator)
+	if rn.IsZero() || rd.IsZero() {
+		return base
 	}
-
-	// Build filter sets for optional filtering (sqlc doesn't support dynamic WHERE with optional slices).
-	itemFilter := make(map[string]bool, len(params.ItemIDs))
-	for _, id := range params.ItemIDs {
-		itemFilter[id] = true
+	offset := decimal.Zero
+	if od := parseDecimalOrZero(offsetDenominator); !od.IsZero() {
+		offset = parseDecimalOrZero(offsetNumerator).DivRound(od, 30)
 	}
-	locationFilter := make(map[string]bool, len(params.LocationIDs))
-	for _, id := range params.LocationIDs {
-		locationFilter[id] = true
-	}
-	lotFilter := make(map[string]bool, len(params.LotIDs))
-	for _, id := range params.LotIDs {
-		lotFilter[id] = true
-	}
-
-	var entries []domain.InventoryReceiptEntry
-	for _, row := range rows {
-		// Apply optional filters.
-		if len(itemFilter) > 0 && !itemFilter[row.ItemID] {
-			continue
-		}
-		if len(locationFilter) > 0 {
-			if !row.StorageLocationID.Valid || !locationFilter[row.StorageLocationID.String] {
-				continue
-			}
-		}
-		if len(lotFilter) > 0 {
-			if !row.LotID.Valid || !lotFilter[row.LotID.String] {
-				continue
-			}
-		}
-
-		entry := domain.InventoryReceiptEntry{
-			ItemID:                          row.ItemID,
-			ProductSku:                      row.ProductSku,
-			ProductDescription:              nullStringPtr(row.ProductDescription),
-			LocationID:                      nullStringPtr(row.StorageLocationID),
-			LocationName:                    nullStringPtr(row.StorageLocationName),
-			LotID:                           nullStringPtr(row.LotID),
-			LotNumber:                       nullStringPtr(row.LotNumber),
-			OwnerAccountID:                  row.OwnerAccountID,
-			OwnerAccountName:                row.OwnerAccountName,
-			HolderAccountID:                 row.HolderAccountID,
-			HolderAccountName:               row.HolderAccountName,
-			RemainingQuantity:               decimalToFloat64(row.RemainingQuantity),
-			WeightedAverageUnitCost:         decimalToFloat64(row.WeightedAverageUnitCost),
-			InventoryValue:                  decimalToFloat64(row.InventoryValue),
-			OldestReceiptAt:                 interfaceToTimePtr(row.OldestReceiptAt),
-			NewestReceiptAt:                 interfaceToTimePtr(row.NewestReceiptAt),
-			Unit:                            row.Unit,
-			UnitName:                        row.UnitName,
-			CostNumeratorUnitAbbreviation:   row.CostNumeratorUnitAbbreviation,
-			CostNumeratorUnitName:           row.CostNumeratorUnitName,
-			CostDenominatorUnitAbbreviation: row.CostDenominatorUnitAbbreviation,
-			CostDenominatorUnitName:         row.CostDenominatorUnitName,
-		}
-
-		entries = append(entries, entry)
-	}
-
-	if entries == nil {
-		entries = []domain.InventoryReceiptEntry{}
-	}
-
-	return entries, nil
+	return base.Sub(offset).Mul(rd).DivRound(rn, 30)
 }
 
 func (r *analyticsRepoImpl) GetNewCustomerEntries(ctx context.Context, params domain.GetNewCustomersAnalyticsParams) ([]domain.NewCustomerEntry, *apierror.APIError) {
@@ -1130,7 +1057,7 @@ func (r *analyticsRepoImpl) GetProductLineInfo(ctx context.Context, accountID st
 	return result, nil
 }
 
-// GetOrderQuantityByProductLine returns the aggregate ordered quantity for one product line in a window.
+// GetOrderQuantitiesByProductLines returns each product line's ordered quantity in a window, in the line's base unit.
 func (r *analyticsRepoImpl) GetOrderQuantitiesByProductLines(ctx context.Context, params domain.GetOrderQuantitiesByProductLinesParams) ([]domain.OrderQuantityByProductLineRow, *apierror.APIError) {
 	ctx, span := analyticsRepoTracer.Start(ctx, "repository.analytics.get_order_quantities_by_product_lines")
 	defer span.End()
@@ -1162,12 +1089,31 @@ func (r *analyticsRepoImpl) GetOrderQuantitiesByProductLines(ctx context.Context
 			TotalQuantity:    decimalToFloat64(row.TotalQuantity),
 			UnitAbbreviation: row.UnitAbbreviation,
 			UnitType:         row.UnitType,
+			BaseRatio:        decimalToFloat64(row.BaseRatio),
 		}
 	}
 	return out, nil
 }
 
-// decimalToFloat64 converts a decimal string (from CAST AS DECIMAL) to float64.
+func (r *analyticsRepoImpl) GetWeeksOfSalesOnHand(ctx context.Context, accountID string, itemIDs []string) ([]domain.ItemOnHandRow, *apierror.APIError) {
+	ctx, span := analyticsRepoTracer.Start(ctx, "repository.analytics.get_weeks_of_sales_on_hand")
+	defer span.End()
+
+	if len(itemIDs) == 0 {
+		return []domain.ItemOnHandRow{}, nil
+	}
+	rows, err := r.queries.GetWeeksOfSalesOnHand(ctx, sqlc.GetWeeksOfSalesOnHandParams{AccountID: accountID, ItemIds: itemIDs})
+	if apiErr := db.MapSQLError(err); apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
+	out := make([]domain.ItemOnHandRow, len(rows))
+	for i, row := range rows {
+		out[i] = domain.ItemOnHandRow{ItemID: row.ItemID, OnHand: decimalToFloat64(row.OnHand)}
+	}
+	return out, nil
+}
+
+// decimalToFloat64 converts a decimal string (from CAST AS DECIMAL) to the nearest float64, the rounding Decimal.toNumber() applied in the dashboard.
 //
 // It takes `any` because sqlc types the same column differently per query, so the sql.NullString case is not optional: whether a ratio column arrives bare or wrapped depends on whether its query happened to LEFT JOIN the table, and the unknown-type default silently returns 0. That cost a real bug — a nullable rate-denominator ratio read as zero, which skipped the unit conversion and left every pair-rated step at twice its true seconds per unit. Handling the wrapper here means a caller cannot lose a number by passing the type sqlc actually gave it.
 func decimalToFloat64(v any) float64 {
@@ -1178,26 +1124,9 @@ func decimalToFloat64(v any) float64 {
 		}
 		return decimalToFloat64(val.String)
 	case string:
-		f := 0.0
-		negative := false
-		decimal := false
-		divisor := 1.0
-		for _, c := range val {
-			if c == '-' {
-				negative = true
-			} else if c == '.' {
-				decimal = true
-			} else if c >= '0' && c <= '9' {
-				if decimal {
-					divisor *= 10
-					f += float64(c-'0') / divisor
-				} else {
-					f = f*10 + float64(c-'0')
-				}
-			}
-		}
-		if negative {
-			f = -f
+		f, err := strconv.ParseFloat(strings.TrimSpace(val), 64)
+		if err != nil {
+			return 0
 		}
 		return f
 	case float64:

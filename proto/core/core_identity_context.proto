@@ -1069,4 +1069,6 @@ message AnalyzeQuarterlyOrdersRequest {
   repeated string product_line_ids = 3;
   repeated string customer_ids = 4;
   repeated string customer_group_ids = 5;
+  // Calendar years covered, the current one included; absent means five.
+  optional int32 years_back = 6;
 }

@@ -857,6 +857,7 @@ func Run(
 		"hubspot_company_reviews": hubspotSyncSvc.BuildExportHubspotCompanyReviews,
 		"price_list":              accountPriceSvc.BuildExportPriceList,
 		"sales_data":              analyticsSvc.BuildExportSalesLines,
+		"open_order_lines":        analyticsSvc.BuildExportOpenOrderLines,
 		"customers":               customerSvc.BuildExportCustomers,
 	}
 

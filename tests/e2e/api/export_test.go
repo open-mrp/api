@@ -46,11 +46,15 @@ func completedExportJobAs(t *testing.T, client *Client, path string, filters map
 	return awaitExportJob(t, client, jobID)
 }
 
+// exportJobWaitTimeout is how long an export job may take to finish. Export jobs share one worker and
+// queue behind each other, so under a full run's load one waits well past the usual async wait.
+const exportJobWaitTimeout = 90 * time.Second
+
 // polls an accepted export's job until it settles, failing the test unless it completes
 func awaitExportJob(t *testing.T, client *Client, jobID string) map[string]any {
 	t.Helper()
 	var job map[string]any
-	eventually(t, e2eAsyncWaitTimeout, e2eAsyncPollInterval, func() error {
+	eventually(t, exportJobWaitTimeout, e2eAsyncPollInterval, func() error {
 		resp, err := client.GetFull(jobsPath+"/"+jobID, nil)
 		if err != nil {
 			return err

@@ -513,8 +513,8 @@ func TestCovAiTools_ToolGroupsSearchQMatchesGroupName(t *testing.T) {
 	require.Equal(t, 200, status)
 
 	type groupRow struct{ id, name, slug string }
+	// The customer pricing report needs costs:read, which an agent never holds, so it is no tool and its group lists nothing.
 	want := []groupRow{
-		{"tgrp_api_customer_pricing", "Customer Pricing", "api_customer_pricing"},
 		{"tgrp_api_customers", "Customers", "api_customers"},
 	}
 	require.Len(t, list.Data, len(want))

@@ -22,10 +22,28 @@ const (
 	seedPackedShipmentID  = "sh_01k0a87w33emw8pmkz1mf86cg2"
 )
 
-// Collects the ids returned by the shipment list under the given filters.
+// Collects the ids the shipment list returns under the given filters, from every page: each run packs
+// more shipments for the seeded customer, which push the seeded ones off the newest-first front page.
 func shipmentIDsFiltered(t *testing.T, params url.Values) []string {
 	t.Helper()
-	return listIDs(t, shipmentsPath, params)
+	merged := url.Values{"limit": {"1000"}}
+	for k, vs := range params {
+		merged[k] = vs
+	}
+	list, status, err := apiClient.GetList(shipmentsPath, merged)
+	ids := []string{}
+	for page := 0; ; page++ {
+		require.NoError(t, err)
+		require.Equal(t, 200, status, "GET %s %v", shipmentsPath, params)
+		for _, raw := range list.Data {
+			ids = append(ids, DataItemField(raw, "id"))
+		}
+		if !list.PageInfo.HasNextPage {
+			return ids
+		}
+		require.Less(t, page, maxListScanPages, "%s %v has more rows than the scan allows", shipmentsPath, params)
+		list, status, err = apiClient.GetListFromPageURL(list.PageInfo.NextPageURL)
+	}
 }
 
 func TestShipmentsList_SearchMatchesShipmentNumber(t *testing.T) {

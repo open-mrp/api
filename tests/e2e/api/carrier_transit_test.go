@@ -430,3 +430,51 @@ func TestCarrierTransit_ServiceLevelDefaultIsConfigurable(t *testing.T) {
 		assert.Equal(t, 400, patchStatus, "body: %s", string(patchBody))
 	})
 }
+
+// An order written before its carrier and service level were checked against each other can pair the
+// rateable carrier with another carrier's service level. Warming that order must not quote the one carrier
+// and file the answer under the other's service level: the estimate would then move the ship-by date of
+// every order on that service level and lane, none of which ships with the carrier that was quoted.
+func TestCarrierTransit_AnOrderOnAnotherCarriersServiceLevelWarmsNothing(t *testing.T) {
+	t.Parallel()
+
+	promised := promisedMonday()
+	// A lane of its own, so nothing another run left behind can answer for it.
+	postal := fmt.Sprintf("4%04d", time.Now().UnixNano()%10000)
+	customerID := leadTimeCustomer(t, "e2e-transit-legacy-pair", nil, "")
+	moveTo := func(orderID string) {
+		t.Helper()
+		status, body, err := apiClient.Patch(salesOrdersPath+"/"+orderID, map[string]any{"shipping_address_id": transitAddress(t, postal)}, newIdempotencyKey())
+		require.NoError(t, err)
+		requireStatus(t, 200, status, body)
+	}
+
+	body := minimalSalesOrderCreateBody(t, customerID)
+	body["promised_at"] = promised.Format("2006-01-02") + "T00:00:00Z"
+	status, respBody, err := apiClient.Post(salesOrdersPath, body, newIdempotencyKey())
+	require.NoError(t, err)
+	requireStatus(t, 201, status, respBody)
+	orderID := jsonField(parseJSON(respBody), "id")
+	deleteOrder(t, orderID)
+
+	// The API refuses this pair now, so the old row is written directly.
+	_, err = authDB(t).Exec("UPDATE sales_order SET carrier_id = ? WHERE id = ?", SeedTransitCarrierID, orderID)
+	require.NoError(t, err)
+	moveTo(orderID)
+
+	// The same lane warms for the carrier's own service level. The control's move is queued behind the
+	// subject's, so once the control is warm the subject's warm has been handled.
+	control := createTransitOrder(t, customerID, SeedTransitGroundServiceLevelID, zipStubNormal, promised)
+	moveTo(control)
+	issueOnceWarm(t, control)
+
+	var filed int
+	require.NoError(t, authDB(t).QueryRow(
+		"SELECT COUNT(*) FROM carrier_transit_estimate WHERE carrier_option_id = ? AND dest_postal = ?",
+		SeedServiceLevelID, postal).Scan(&filed))
+	assert.Zero(t, filed, "the rateable carrier's quote is not filed under another carrier's service level")
+
+	issued := issueOrder(t, orderID)
+	assert.Empty(t, jsonField(commitmentOf(issued), "transit_days"))
+	assert.Equal(t, promised.Format("2006-01-02"), shipByDate(t, issued), "the promise stands with no transit to take off it")
+}

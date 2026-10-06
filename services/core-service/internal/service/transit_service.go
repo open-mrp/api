@@ -109,6 +109,15 @@ func (s *salesOrderSvcImpl) WarmForOrder(ctx context.Context, accountID, salesOr
 		return nil
 	}
 
+	// The quote is filed under the service level's carrier, so it has to be that carrier being rated. An order written before the pair was checked can still hold another carrier's service level, and quoting it would file one carrier's transit times under the other's.
+	onCarrier, apiErr := s.repos.NewServiceLevelRepo().IsInCarrier(ctx, *order.ServiceLevelID, *order.CarrierID)
+	if apiErr != nil {
+		return tracing.Trace(span, apiErr)
+	}
+	if !onCarrier {
+		return nil
+	}
+
 	origin, apiErr := s.repos.NewSalesOrderRepo().GetAccountOriginAddress(ctx, accountID)
 	if apiErr != nil {
 		return tracing.Trace(span, apiErr)

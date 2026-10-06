@@ -472,6 +472,23 @@ func (r *transactionRepoImpl) Get(ctx context.Context, accountID, transactionID 
 	return rows[0], nil
 }
 
+func (r *transactionRepoImpl) GetByIDs(ctx context.Context, accountID string, transactionIDs []string) ([]*domain.Transaction, *apierror.APIError) {
+	ctx, span := transactionRepoTracer.Start(ctx, "repository.transaction.get_by_ids")
+	defer span.End()
+
+	if len(transactionIDs) == 0 {
+		return nil, nil
+	}
+	f := &transactionFilter{}
+	f.add("t.account_id = ?", accountID)
+	f.in("t.id", transactionIDs)
+	rows, err := r.queryTransactions(ctx, f, "", int32(len(transactionIDs)))
+	if apiErr := db.MapSQLError(err); apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
+	return rows, nil
+}
+
 // ListByCustomer lists a customer's transactions together with those of the customer's direct child
 // accounts, as the dashboard's settle flow reads them.
 func (r *transactionRepoImpl) ListByCustomer(ctx context.Context, params domain.ListAccountTransactionsParams) (*domain.ListAccountTransactionsResult, *apierror.APIError) {

@@ -71,10 +71,12 @@ func init() {
 				ExtractRefs: extractAmountRefFromInvoiceAllocation,
 			},
 			{
+				// Read with the invoice (see stashAllocationTransactions), so it needs no loader and none
+				// of its permissions; the refs let the resolver descend into transaction.amount.
 				Key:         "transaction",
 				Target:      constants.ObjectTypeTransaction,
 				Cardinality: resourcekit.CardinalityOnePtr,
-				ExtractIDs:  extractTransactionIDFromInvoiceAllocation,
+				ExtractRefs: extractTransactionRefFromInvoiceAllocation,
 				Populate:    populateTransactionOnInvoiceAllocation,
 			},
 		},
@@ -266,24 +268,22 @@ func extractAllocationRefsFromInvoice(_ context.Context, parent any) []any {
 	return refs
 }
 
-func extractTransactionIDFromInvoiceAllocation(ctx context.Context, parent any) []string {
+func extractTransactionRefFromInvoiceAllocation(_ context.Context, parent any) []any {
 	a := parent.(*apiresource.InvoiceAllocation)
-	id, _ := resourcekit.GetLoadMeta(ctx).
-		GetString(constants.ObjectTypeInvoiceAllocation, a.ID, "transaction_id")
-	if id == "" {
+	if a.Transaction == nil {
 		return nil
 	}
-	return []string{id}
+	return []any{a.Transaction}
 }
 
-func populateTransactionOnInvoiceAllocation(ctx context.Context, parent any, loaded map[string]any) {
+func populateTransactionOnInvoiceAllocation(ctx context.Context, parent any, _ map[string]any) {
 	a := parent.(*apiresource.InvoiceAllocation)
-	id, _ := resourcekit.GetLoadMeta(ctx).
-		GetString(constants.ObjectTypeInvoiceAllocation, a.ID, "transaction_id")
+	meta := resourcekit.GetLoadMeta(ctx)
+	id, _ := meta.GetString(constants.ObjectTypeInvoiceAllocation, a.ID, "transaction_id")
 	if id == "" {
 		return
 	}
-	if v, ok := loaded[id]; ok {
+	if v, ok := meta.Get(constants.ObjectTypeTransaction, id, "allocation_transaction"); ok {
 		a.Transaction = v.(*apiresource.TransactionDetail)
 	}
 }

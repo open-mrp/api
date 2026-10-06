@@ -365,6 +365,54 @@ func TestInvoiceParity_AllocationsNameTheirSettlement(t *testing.T) {
 	assert.Equal(t, want, jsonObject(allocations[0].(map[string]any), "settlement"))
 }
 
+// The transactions an invoice's allocations draw on are part of its ledger, so a role that may read
+// invoices expands them, and their amounts' currency, without transactions:read or units:read — on
+// the invoice, on a PATCH, and on the settle list.
+func TestInvoiceParity_InvoicesReadRoleExpandsAllocationTransactions(t *testing.T) {
+	t.Parallel()
+	inv := invoiceNewCustomer(t)
+	funds := time.Now().UTC()
+	payment := createPayment(t, inv.customerID, "10.00", &funds, nil)
+	settle(t, map[string]any{"allocations": []any{allocation(jsonField(payment, "id"), inv.invoiceID, "10.00")}})
+	reader := customRoleClient(t, "invoices:read")
+
+	status, body, err := reader.GetListRaw(transactionsPath+"/"+jsonField(payment, "id"), nil)
+	require.NoError(t, err)
+	require.Equal(t, http.StatusForbidden, status, "the role cannot read the transaction on its own: %s", string(body))
+
+	includes := url.Values{"include": {
+		"allocations", "allocations.amount", "allocations.amount.unit",
+		"allocations.transaction", "allocations.transaction.amount", "allocations.transaction.amount.unit",
+	}}
+	assertDrawsOnThePayment := func(name string, allocations []any) {
+		t.Helper()
+		require.Len(t, allocations, 1, name)
+		transaction := jsonObject(allocations[0].(map[string]any), "transaction")
+		require.NotNil(t, transaction, "%s: the allocation's transaction is expanded", name)
+		assert.Equal(t, jsonField(payment, "id"), jsonField(transaction, "id"), name)
+		assert.Equal(t, jsonField(payment, "number"), jsonField(transaction, "number"), name)
+		amount := jsonObject(transaction, "amount")
+		require.NotNil(t, amount, name)
+		assert.NotNil(t, jsonObject(amount, "unit"), "%s: the transaction amount's currency is expanded", name)
+	}
+
+	got := parseJSON(mustGetAs(t, reader, invoicesPath+"/"+inv.invoiceID, includes))
+	want := parseJSON(mustGetAs(t, apiClient, invoicesPath+"/"+inv.invoiceID, includes))
+	assert.Equal(t, jsonListData(want, "allocations"), jsonListData(got, "allocations"), "the role reads the allocations exactly as an admin does")
+	assertDrawsOnThePayment("retrieve", jsonListData(got, "allocations"))
+
+	updated := parseJSON(mustPatchWithIncludes(t, invoicesPath+"/"+inv.invoiceID, includes, map[string]any{"has_been_sent": true}))
+	assertDrawsOnThePayment("update", jsonListData(updated, "allocations"))
+
+	payable := invoiceRow(t, reader, customerInvoicesPathFor(inv.customerID), includes, inv.invoiceID)
+	assertDrawsOnThePayment("settle list", jsonListData(payable, "allocations"))
+
+	bare := parseJSON(mustGetAs(t, reader, invoicesPath+"/"+inv.invoiceID, url.Values{"include": {"allocations"}}))
+	allocations := jsonListData(bare, "allocations")
+	require.Len(t, allocations, 1)
+	assertNilField(t, allocations[0].(map[string]any), "transaction")
+}
+
 // --- Payment state ---
 
 // An overpaid invoice is paid in full, which payment_status alone cannot show once the mark is cleared.

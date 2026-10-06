@@ -120,8 +120,19 @@ func (m *invoiceSvcImpl) GetInvoice(ctx context.Context, req *RetrieveInvoiceReq
 		return nil, apiErr
 	}
 
+	stashAllocationTransactions(ctx, resp.AllocationTransactions)
 	result := invoiceFromProto(ctx, resp.Invoice)
 	return &result, nil
+}
+
+// stashAllocationTransactions keeps the transactions core read with the invoice, by id, so the
+// allocations' transaction include is filled from them: they are part of the invoice a caller was
+// allowed to read, so they are not loaded again under transactions:read.
+func stashAllocationTransactions(ctx context.Context, transactions []*pb.TransactionInfo) {
+	meta := resourcekit.GetLoadMeta(ctx)
+	for _, t := range transactions {
+		meta.Set(constants.ObjectTypeTransaction, t.Id, "allocation_transaction", resourceloaders.TransactionReferenceFromProto(meta, t))
+	}
 }
 
 func (m *invoiceSvcImpl) UpdateInvoice(ctx context.Context, req *UpdateInvoiceRequest) (*apiresource.Invoice, *apierror.APIError) {
@@ -143,6 +154,7 @@ func (m *invoiceSvcImpl) UpdateInvoice(ctx context.Context, req *UpdateInvoiceRe
 		return nil, apiErr
 	}
 
+	stashAllocationTransactions(ctx, resp.AllocationTransactions)
 	result := invoiceFromProto(ctx, resp.Invoice)
 	return &result, nil
 }
@@ -171,6 +183,7 @@ func (m *invoiceSvcImpl) ListCustomerInvoices(ctx context.Context, req *ListCust
 		return apiresource.NewList[apiresource.InvoiceForPayment](nil, apiresource.PageInfo{}), nil
 	}
 
+	stashAllocationTransactions(ctx, resp.AllocationTransactions)
 	invoices := make([]apiresource.InvoiceForPayment, len(resp.Invoices))
 	for i, d := range resp.Invoices {
 		invoices[i] = invoiceForPaymentFromProto(ctx, d)

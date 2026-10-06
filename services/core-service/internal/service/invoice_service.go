@@ -148,11 +148,43 @@ func (s *invoiceSvcImpl) GetInvoice(ctx context.Context, params domain.GetInvoic
 			if apiErr != nil {
 				return nil, tracing.Trace(span, apiErr)
 			}
+			if apiErr := attachAllocationTransactions(ctx, s.repos.NewTransactionRepo(), params.AccountID, allocations); apiErr != nil {
+				return nil, tracing.Trace(span, apiErr)
+			}
 			invoice.Allocations = allocations
 		}
 	}
 
 	return invoice, nil
+}
+
+// attachAllocationTransactions reads the transactions the allocations draw on in one query and sets
+// each on its allocation. They are part of the invoice's ledger, so a caller allowed to read the
+// invoice sees them without also holding transactions:read, as the dashboard always showed them.
+func attachAllocationTransactions(ctx context.Context, repo domain.TransactionRepo, accountID string, allocations []*domain.InvoiceAllocation) *apierror.APIError {
+	ids := make([]string, 0, len(allocations))
+	seen := make(map[string]bool, len(allocations))
+	for _, a := range allocations {
+		if a.TransactionID != "" && !seen[a.TransactionID] {
+			seen[a.TransactionID] = true
+			ids = append(ids, a.TransactionID)
+		}
+	}
+	if len(ids) == 0 {
+		return nil
+	}
+	transactions, apiErr := repo.GetByIDs(ctx, accountID, ids)
+	if apiErr != nil {
+		return apiErr
+	}
+	byID := make(map[string]*domain.Transaction, len(transactions))
+	for _, t := range transactions {
+		byID[t.ID] = t
+	}
+	for _, a := range allocations {
+		a.Transaction = byID[a.TransactionID]
+	}
+	return nil
 }
 
 func (s *invoiceSvcImpl) UpdateInvoice(ctx context.Context, params domain.UpdateInvoiceParams) (*domain.Invoice, *apierror.APIError) {
@@ -215,6 +247,9 @@ func (s *invoiceSvcImpl) UpdateInvoice(ctx context.Context, params domain.Update
 				case "allocations":
 					allocations, apiErr := txRepo.GetAllocations(txCtx, params.InvoiceID)
 					if apiErr != nil {
+						return apiErr
+					}
+					if apiErr := attachAllocationTransactions(txCtx, txSvc.repos.NewTransactionRepo(), params.AccountID, allocations); apiErr != nil {
 						return apiErr
 					}
 					updated.Allocations = allocations
@@ -285,8 +320,13 @@ func (s *invoiceSvcImpl) ListCustomerInvoices(ctx context.Context, params domain
 		if apiErr != nil {
 			return nil, tracing.Trace(span, apiErr)
 		}
+		var all []*domain.InvoiceAllocation
 		for _, inv := range result.Invoices {
 			inv.Allocations = byInvoice[inv.ID]
+			all = append(all, inv.Allocations...)
+		}
+		if apiErr := attachAllocationTransactions(ctx, s.repos.NewTransactionRepo(), params.AccountID, all); apiErr != nil {
+			return nil, tracing.Trace(span, apiErr)
 		}
 	}
 

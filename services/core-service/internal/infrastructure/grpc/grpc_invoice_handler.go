@@ -72,8 +72,23 @@ func (h *gRPCHandler) GetInvoice(ctx context.Context, req *pb.GetInvoiceRequest)
 	}
 
 	return &pb.GetInvoiceResponse{
-		Invoice: invoiceToProto(invoice),
+		Invoice:                invoiceToProto(invoice),
+		AllocationTransactions: allocationTransactionsToProto(invoice.Allocations),
 	}, nil
+}
+
+// allocationTransactionsToProto lists each transaction the allocations draw on once.
+func allocationTransactionsToProto(allocations []*domain.InvoiceAllocation) []*pb.TransactionInfo {
+	var out []*pb.TransactionInfo
+	seen := make(map[string]bool)
+	for _, a := range allocations {
+		if a.Transaction == nil || seen[a.Transaction.ID] {
+			continue
+		}
+		seen[a.Transaction.ID] = true
+		out = append(out, transactionToProto(a.Transaction))
+	}
+	return out
 }
 
 func (h *gRPCHandler) UpdateInvoice(ctx context.Context, req *pb.UpdateInvoiceRequest) (*pb.UpdateInvoiceResponse, error) {
@@ -105,7 +120,8 @@ func (h *gRPCHandler) UpdateInvoice(ctx context.Context, req *pb.UpdateInvoiceRe
 	}
 
 	return &pb.UpdateInvoiceResponse{
-		Invoice: invoiceToProto(result),
+		Invoice:                invoiceToProto(result),
+		AllocationTransactions: allocationTransactionsToProto(result.Allocations),
 	}, nil
 }
 
@@ -128,12 +144,15 @@ func (h *gRPCHandler) ListCustomerInvoices(ctx context.Context, req *pb.ListCust
 	}
 
 	invoices := make([]*pb.InvoiceForPaymentInfo, len(result.Invoices))
+	var allocations []*domain.InvoiceAllocation
 	for i, inv := range result.Invoices {
 		invoices[i] = invoiceForPaymentToProto(inv)
+		allocations = append(allocations, inv.Allocations...)
 	}
 
 	return &pb.ListCustomerInvoicesResponse{
-		Invoices: invoices,
+		Invoices:               invoices,
+		AllocationTransactions: allocationTransactionsToProto(allocations),
 		PageInfo: &pb.PageInfo{
 			NextCursor:  result.PageInfo.NextCursor,
 			PrevCursor:  result.PageInfo.PrevCursor,

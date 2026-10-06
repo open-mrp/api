@@ -4586,10 +4586,13 @@ func (x *GetInvoiceRequest) GetIncludes() []string {
 }
 
 type GetInvoiceResponse struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Invoice       *InvoiceInfo           `protobuf:"bytes,1,opt,name=invoice,proto3" json:"invoice,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	state   protoimpl.MessageState `protogen:"open.v1"`
+	Invoice *InvoiceInfo           `protobuf:"bytes,1,opt,name=invoice,proto3" json:"invoice,omitempty"`
+	// The transactions the invoice's allocations draw on, read with the invoice so a caller allowed to
+	// read the invoice sees them; set only when allocations were included.
+	AllocationTransactions []*TransactionInfo `protobuf:"bytes,2,rep,name=allocation_transactions,json=allocationTransactions,proto3" json:"allocation_transactions,omitempty"`
+	unknownFields          protoimpl.UnknownFields
+	sizeCache              protoimpl.SizeCache
 }
 
 func (x *GetInvoiceResponse) Reset() {
@@ -4625,6 +4628,13 @@ func (*GetInvoiceResponse) Descriptor() ([]byte, []int) {
 func (x *GetInvoiceResponse) GetInvoice() *InvoiceInfo {
 	if x != nil {
 		return x.Invoice
+	}
+	return nil
+}
+
+func (x *GetInvoiceResponse) GetAllocationTransactions() []*TransactionInfo {
+	if x != nil {
+		return x.AllocationTransactions
 	}
 	return nil
 }
@@ -4714,10 +4724,11 @@ func (x *UpdateInvoiceRequest) GetIncludes() []string {
 }
 
 type UpdateInvoiceResponse struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Invoice       *InvoiceInfo           `protobuf:"bytes,1,opt,name=invoice,proto3" json:"invoice,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	state                  protoimpl.MessageState `protogen:"open.v1"`
+	Invoice                *InvoiceInfo           `protobuf:"bytes,1,opt,name=invoice,proto3" json:"invoice,omitempty"`
+	AllocationTransactions []*TransactionInfo     `protobuf:"bytes,2,rep,name=allocation_transactions,json=allocationTransactions,proto3" json:"allocation_transactions,omitempty"`
+	unknownFields          protoimpl.UnknownFields
+	sizeCache              protoimpl.SizeCache
 }
 
 func (x *UpdateInvoiceResponse) Reset() {
@@ -4753,6 +4764,13 @@ func (*UpdateInvoiceResponse) Descriptor() ([]byte, []int) {
 func (x *UpdateInvoiceResponse) GetInvoice() *InvoiceInfo {
 	if x != nil {
 		return x.Invoice
+	}
+	return nil
+}
+
+func (x *UpdateInvoiceResponse) GetAllocationTransactions() []*TransactionInfo {
+	if x != nil {
+		return x.AllocationTransactions
 	}
 	return nil
 }
@@ -4834,11 +4852,13 @@ func (x *ListCustomerInvoicesRequest) GetIncludes() []string {
 }
 
 type ListCustomerInvoicesResponse struct {
-	state         protoimpl.MessageState   `protogen:"open.v1"`
-	Invoices      []*InvoiceForPaymentInfo `protobuf:"bytes,1,rep,name=invoices,proto3" json:"invoices,omitempty"`
-	PageInfo      *PageInfo                `protobuf:"bytes,2,opt,name=page_info,json=pageInfo,proto3" json:"page_info,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	state    protoimpl.MessageState   `protogen:"open.v1"`
+	Invoices []*InvoiceForPaymentInfo `protobuf:"bytes,1,rep,name=invoices,proto3" json:"invoices,omitempty"`
+	PageInfo *PageInfo                `protobuf:"bytes,2,opt,name=page_info,json=pageInfo,proto3" json:"page_info,omitempty"`
+	// The transactions the listed invoices' allocations draw on; set only when allocations were included.
+	AllocationTransactions []*TransactionInfo `protobuf:"bytes,3,rep,name=allocation_transactions,json=allocationTransactions,proto3" json:"allocation_transactions,omitempty"`
+	unknownFields          protoimpl.UnknownFields
+	sizeCache              protoimpl.SizeCache
 }
 
 func (x *ListCustomerInvoicesResponse) Reset() {
@@ -4881,6 +4901,13 @@ func (x *ListCustomerInvoicesResponse) GetInvoices() []*InvoiceForPaymentInfo {
 func (x *ListCustomerInvoicesResponse) GetPageInfo() *PageInfo {
 	if x != nil {
 		return x.PageInfo
+	}
+	return nil
+}
+
+func (x *ListCustomerInvoicesResponse) GetAllocationTransactions() []*TransactionInfo {
+	if x != nil {
+		return x.AllocationTransactions
 	}
 	return nil
 }
@@ -5230,7 +5257,7 @@ var File_core_core_users_territories_proto protoreflect.FileDescriptor
 
 const file_core_core_users_territories_proto_rawDesc = "" +
 	"\n" +
-	"!core/core_users_territories.proto\x12\x04core\x1a\x1fgoogle/protobuf/timestamp.proto\x1a!core/core_fuzzy_identifiers.proto\x1a core/core_identity_context.proto\x1a\x15core/core_items.proto\x1a\x1bcore/core_consumption.proto\x1a\x18core/core_invoices.proto\x1a\x15core/core_patch.proto\x1a\x15core/core_async.proto\x1a\x19core/core_analytics.proto\"\xa6\x03\n" +
+	"!core/core_users_territories.proto\x12\x04core\x1a\x1fgoogle/protobuf/timestamp.proto\x1a!core/core_fuzzy_identifiers.proto\x1a core/core_identity_context.proto\x1a\x15core/core_items.proto\x1a\x1bcore/core_consumption.proto\x1a\x18core/core_invoices.proto\x1a\x15core/core_patch.proto\x1a\x15core/core_async.proto\x1a\x19core/core_analytics.proto\x1a\x17core/core_lookups.proto\"\xa6\x03\n" +
 	"\x16GetCurrentUserResponse\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x17\n" +
 	"\x04name\x18\x02 \x01(\tH\x00R\x04name\x88\x01\x01\x12\x19\n" +
@@ -5701,9 +5728,10 @@ const file_core_core_users_territories_proto_rawDesc = "" +
 	"\tpage_info\x18\x02 \x01(\v2\x0e.core.PageInfoR\bpageInfo\"?\n" +
 	"\x11GetInvoiceRequest\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x1a\n" +
-	"\bincludes\x18\x02 \x03(\tR\bincludes\"A\n" +
+	"\bincludes\x18\x02 \x03(\tR\bincludes\"\x91\x01\n" +
 	"\x12GetInvoiceResponse\x12+\n" +
-	"\ainvoice\x18\x01 \x01(\v2\x11.core.InvoiceInfoR\ainvoice\"\x99\x02\n" +
+	"\ainvoice\x18\x01 \x01(\v2\x11.core.InvoiceInfoR\ainvoice\x12N\n" +
+	"\x17allocation_transactions\x18\x02 \x03(\v2\x15.core.TransactionInfoR\x16allocationTransactions\"\x99\x02\n" +
 	"\x14UpdateInvoiceRequest\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12%\n" +
 	"\x04note\x18\x02 \x01(\v2\x11.core.StringPatchR\x04note\x12'\n" +
@@ -5713,9 +5741,10 @@ const file_core_core_users_territories_proto_rawDesc = "" +
 	"\bincludes\x18\x06 \x03(\tR\bincludesB\x10\n" +
 	"\x0e_has_been_sentB\x0e\n" +
 	"\f_is_edi_sentB\x12\n" +
-	"\x10_is_paid_in_full\"D\n" +
+	"\x10_is_paid_in_full\"\x94\x01\n" +
 	"\x15UpdateInvoiceResponse\x12+\n" +
-	"\ainvoice\x18\x01 \x01(\v2\x11.core.InvoiceInfoR\ainvoice\"\xcc\x01\n" +
+	"\ainvoice\x18\x01 \x01(\v2\x11.core.InvoiceInfoR\ainvoice\x12N\n" +
+	"\x17allocation_transactions\x18\x02 \x03(\v2\x15.core.TransactionInfoR\x16allocationTransactions\"\xcc\x01\n" +
 	"\x1bListCustomerInvoicesRequest\x12.\n" +
 	"\x13customer_account_id\x18\x01 \x01(\tR\x11customerAccountId\x12\x1b\n" +
 	"\x06cursor\x18\x02 \x01(\tH\x00R\x06cursor\x88\x01\x01\x12\x14\n" +
@@ -5723,10 +5752,11 @@ const file_core_core_users_territories_proto_rawDesc = "" +
 	"\x05query\x18\x04 \x01(\tH\x01R\x05query\x88\x01\x01\x12\x1a\n" +
 	"\bincludes\x18\x05 \x03(\tR\bincludesB\t\n" +
 	"\a_cursorB\b\n" +
-	"\x06_query\"\x84\x01\n" +
+	"\x06_query\"\xd4\x01\n" +
 	"\x1cListCustomerInvoicesResponse\x127\n" +
 	"\binvoices\x18\x01 \x03(\v2\x1b.core.InvoiceForPaymentInfoR\binvoices\x12+\n" +
-	"\tpage_info\x18\x02 \x01(\v2\x0e.core.PageInfoR\bpageInfo\"\x94\x10\n" +
+	"\tpage_info\x18\x02 \x01(\v2\x0e.core.PageInfoR\bpageInfo\x12N\n" +
+	"\x17allocation_transactions\x18\x03 \x03(\v2\x15.core.TransactionInfoR\x16allocationTransactions\"\x94\x10\n" +
 	"\vInvoiceInfo\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x16\n" +
 	"\x06number\x18\x02 \x01(\tR\x06number\x12\x17\n" +
@@ -5885,11 +5915,12 @@ var file_core_core_users_territories_proto_goTypes = []any{
 	(*JobInfo)(nil),                             // 79: core.JobInfo
 	(*StringPatch)(nil),                         // 80: core.StringPatch
 	(*ObjectIdentifier)(nil),                    // 81: core.ObjectIdentifier
-	(*InvoiceForPaymentInfo)(nil),               // 82: core.InvoiceForPaymentInfo
-	(*InvoiceLineInfo)(nil),                     // 83: core.InvoiceLineInfo
-	(*InvoiceAllocationInfo)(nil),               // 84: core.InvoiceAllocationInfo
-	(*AddressInfo)(nil),                         // 85: core.AddressInfo
-	(*PaymentTermInfo)(nil),                     // 86: core.PaymentTermInfo
+	(*TransactionInfo)(nil),                     // 82: core.TransactionInfo
+	(*InvoiceForPaymentInfo)(nil),               // 83: core.InvoiceForPaymentInfo
+	(*InvoiceLineInfo)(nil),                     // 84: core.InvoiceLineInfo
+	(*InvoiceAllocationInfo)(nil),               // 85: core.InvoiceAllocationInfo
+	(*AddressInfo)(nil),                         // 86: core.AddressInfo
+	(*PaymentTermInfo)(nil),                     // 87: core.PaymentTermInfo
 }
 var file_core_core_users_territories_proto_depIdxs = []int32{
 	75, // 0: core.GetCurrentUserResponse.email_verified_at:type_name -> google.protobuf.Timestamp
@@ -5969,21 +6000,24 @@ var file_core_core_users_territories_proto_depIdxs = []int32{
 	74, // 74: core.ListInvoicesResponse.invoices:type_name -> core.InvoiceInfo
 	76, // 75: core.ListInvoicesResponse.page_info:type_name -> core.PageInfo
 	74, // 76: core.GetInvoiceResponse.invoice:type_name -> core.InvoiceInfo
-	80, // 77: core.UpdateInvoiceRequest.note:type_name -> core.StringPatch
-	74, // 78: core.UpdateInvoiceResponse.invoice:type_name -> core.InvoiceInfo
-	82, // 79: core.ListCustomerInvoicesResponse.invoices:type_name -> core.InvoiceForPaymentInfo
-	76, // 80: core.ListCustomerInvoicesResponse.page_info:type_name -> core.PageInfo
-	83, // 81: core.InvoiceInfo.lines:type_name -> core.InvoiceLineInfo
-	84, // 82: core.InvoiceInfo.allocations:type_name -> core.InvoiceAllocationInfo
-	75, // 83: core.InvoiceInfo.created_at:type_name -> google.protobuf.Timestamp
-	75, // 84: core.InvoiceInfo.updated_at:type_name -> google.protobuf.Timestamp
-	85, // 85: core.InvoiceInfo.billing_address:type_name -> core.AddressInfo
-	86, // 86: core.InvoiceInfo.payment_term:type_name -> core.PaymentTermInfo
-	87, // [87:87] is the sub-list for method output_type
-	87, // [87:87] is the sub-list for method input_type
-	87, // [87:87] is the sub-list for extension type_name
-	87, // [87:87] is the sub-list for extension extendee
-	0,  // [0:87] is the sub-list for field type_name
+	82, // 77: core.GetInvoiceResponse.allocation_transactions:type_name -> core.TransactionInfo
+	80, // 78: core.UpdateInvoiceRequest.note:type_name -> core.StringPatch
+	74, // 79: core.UpdateInvoiceResponse.invoice:type_name -> core.InvoiceInfo
+	82, // 80: core.UpdateInvoiceResponse.allocation_transactions:type_name -> core.TransactionInfo
+	83, // 81: core.ListCustomerInvoicesResponse.invoices:type_name -> core.InvoiceForPaymentInfo
+	76, // 82: core.ListCustomerInvoicesResponse.page_info:type_name -> core.PageInfo
+	82, // 83: core.ListCustomerInvoicesResponse.allocation_transactions:type_name -> core.TransactionInfo
+	84, // 84: core.InvoiceInfo.lines:type_name -> core.InvoiceLineInfo
+	85, // 85: core.InvoiceInfo.allocations:type_name -> core.InvoiceAllocationInfo
+	75, // 86: core.InvoiceInfo.created_at:type_name -> google.protobuf.Timestamp
+	75, // 87: core.InvoiceInfo.updated_at:type_name -> google.protobuf.Timestamp
+	86, // 88: core.InvoiceInfo.billing_address:type_name -> core.AddressInfo
+	87, // 89: core.InvoiceInfo.payment_term:type_name -> core.PaymentTermInfo
+	90, // [90:90] is the sub-list for method output_type
+	90, // [90:90] is the sub-list for method input_type
+	90, // [90:90] is the sub-list for extension type_name
+	90, // [90:90] is the sub-list for extension extendee
+	0,  // [0:90] is the sub-list for field type_name
 }
 
 func init() { file_core_core_users_territories_proto_init() }
@@ -5999,6 +6033,7 @@ func file_core_core_users_territories_proto_init() {
 	file_core_core_patch_proto_init()
 	file_core_core_async_proto_init()
 	file_core_core_analytics_proto_init()
+	file_core_core_lookups_proto_init()
 	file_core_core_users_territories_proto_msgTypes[0].OneofWrappers = []any{}
 	file_core_core_users_territories_proto_msgTypes[4].OneofWrappers = []any{}
 	file_core_core_users_territories_proto_msgTypes[5].OneofWrappers = []any{}

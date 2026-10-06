@@ -95,8 +95,10 @@ type InvoiceAllocation struct {
 	// SettlementID and SettlementNumber name the settlement that recorded the allocation, nil when none did.
 	SettlementID     *string
 	SettlementNumber *string
-	CreatedAt        time.Time
-	UpdatedAt        time.Time
+	// Transaction is the transaction the allocation draws on, read with the invoice; nil when not loaded.
+	Transaction *Transaction
+	CreatedAt   time.Time
+	UpdatedAt   time.Time
 }
 
 // InvoiceForPayment represents an invoice in the customer payment context.

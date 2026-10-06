@@ -18213,6 +18213,21 @@ func (mr *MockTransactionRepoMockRecorder) GetAllocations(ctx, transactionID any
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetAllocations", reflect.TypeOf((*MockTransactionRepo)(nil).GetAllocations), ctx, transactionID)
 }
 
+// GetByIDs mocks base method.
+func (m *MockTransactionRepo) GetByIDs(ctx context.Context, accountID string, transactionIDs []string) ([]*domain.Transaction, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetByIDs", ctx, accountID, transactionIDs)
+	ret0, _ := ret[0].([]*domain.Transaction)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
+}
+
+// GetByIDs indicates an expected call of GetByIDs.
+func (mr *MockTransactionRepoMockRecorder) GetByIDs(ctx, accountID, transactionIDs any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetByIDs", reflect.TypeOf((*MockTransactionRepo)(nil).GetByIDs), ctx, accountID, transactionIDs)
+}
+
 // GetDollarUnitID mocks base method.
 func (m *MockTransactionRepo) GetDollarUnitID(ctx context.Context) (string, *apierror.APIError) {
 	m.ctrl.T.Helper()

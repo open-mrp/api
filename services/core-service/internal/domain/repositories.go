@@ -1728,6 +1728,9 @@ type TransactionRepo interface {
 	FetchAndIncrementTransactionNumber(ctx context.Context, accountID string) (string, *apierror.APIError)
 	List(ctx context.Context, params ListTransactionsParams) (*ListTransactionsResult, *apierror.APIError)
 	Get(ctx context.Context, accountID, transactionID string) (*Transaction, *apierror.APIError)
+	// GetByIDs returns the account's transactions with the given ids, in no particular order; ids the
+	// account does not hold are left out.
+	GetByIDs(ctx context.Context, accountID string, transactionIDs []string) ([]*Transaction, *apierror.APIError)
 	GetAllocations(ctx context.Context, transactionID string) ([]*TransactionAllocation, *apierror.APIError)
 	Update(ctx context.Context, params UpdateTransactionParams) (*Transaction, *apierror.APIError)
 	ExistsByNumber(ctx context.Context, accountID, number string, excludeID *string) (bool, *apierror.APIError)

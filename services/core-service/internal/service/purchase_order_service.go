@@ -545,6 +545,23 @@ func (s *purchaseOrderSvcImpl) UpdatePurchaseOrder(ctx context.Context, params d
 				return apiErr
 			}
 
+			// A saved address is one of the supplier's, as on create. One the order already holds is left as it is.
+			for _, ref := range []struct {
+				id, held *string
+				param    string
+			}{{params.BillingAddressID, &old.BillingAddressID, "billing_address_id"}, {params.ShippingAddressID, &old.ShippingAddressID, "shipping_address_id"}} {
+				if ref.id == nil || *ref.id == *ref.held {
+					continue
+				}
+				inAccount, apiErr := txSvc.repos.NewAddressRepo().IsInAccount(txCtx, old.SellerAccountID, *ref.id)
+				if apiErr != nil {
+					return apiErr
+				}
+				if !inAccount {
+					return apierror.NewValidationErrorWithParam("The address does not belong to this supplier.", ref.param)
+				}
+			}
+
 			billID, shipID, apiErr := saveInlineAddresses(txCtx, txSvc.mediators().Address, old.SellerAccountID, params.BillingAddress, params.ShippingAddress, "billing_address", "shipping_address")
 			if apiErr != nil {
 				return apiErr

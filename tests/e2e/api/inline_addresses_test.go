@@ -46,7 +46,7 @@ func addressIn(t *testing.T, accountID, addressID string) map[string]any {
 	return parseJSON(body)
 }
 
-func counterpartyAddress(t *testing.T, accountID, name string) string {
+func savedCounterpartyAddress(t *testing.T, accountID, name string) string {
 	t.Helper()
 	status, body, err := apiClient.WithAccountID(accountID).Post(addressesPath, map[string]any{
 		"name":          name,
@@ -117,7 +117,7 @@ func TestInlineAddresses_PurchaseOrderCreateNeedsOnlyCreatePermission(t *testing
 	t.Parallel()
 	supplierID := inlineSupplier(t)
 	saved := trackInlineAddresses(t, supplierID)
-	existingID := counterpartyAddress(t, supplierID, uniqueName("e2e-inline-po-existing"))
+	existingID := savedCounterpartyAddress(t, supplierID, uniqueName("e2e-inline-po-existing"))
 	*saved = append(*saved, existingID)
 	client := customRoleClient(t, "purchase_orders:create")
 
@@ -181,7 +181,7 @@ func TestInlineAddresses_PurchaseOrderUpdateNeedsOnlyUpdatePermission(t *testing
 	t.Parallel()
 	supplierID := inlineSupplier(t)
 	saved := trackInlineAddresses(t, supplierID)
-	existingID := counterpartyAddress(t, supplierID, uniqueName("e2e-inline-po-upd-existing"))
+	existingID := savedCounterpartyAddress(t, supplierID, uniqueName("e2e-inline-po-upd-existing"))
 	*saved = append(*saved, existingID)
 
 	body := inlinePurchaseOrderBody(supplierID)
@@ -216,7 +216,7 @@ func TestInlineAddresses_PurchaseOrderRejections(t *testing.T) {
 	t.Parallel()
 	supplierID := inlineSupplier(t)
 	saved := trackInlineAddresses(t, supplierID)
-	supplierAddressID := counterpartyAddress(t, supplierID, uniqueName("e2e-inline-po-rej"))
+	supplierAddressID := savedCounterpartyAddress(t, supplierID, uniqueName("e2e-inline-po-rej"))
 	*saved = append(*saved, supplierAddressID)
 	ownAddressID := createE2EAddress(t, uniqueName("e2e-inline-po-own"))
 	otherTenantAddressID := tenantBAddress(t)
@@ -285,7 +285,7 @@ func TestInlineAddresses_SalesOrderCreateNeedsOnlyCreatePermission(t *testing.T)
 	t.Parallel()
 	customerID := setupOrderCustomer(t)
 	saved := trackInlineAddresses(t, customerID)
-	existingID := counterpartyAddress(t, customerID, uniqueName("e2e-inline-so-existing"))
+	existingID := savedCounterpartyAddress(t, customerID, uniqueName("e2e-inline-so-existing"))
 	*saved = append(*saved, existingID)
 	client := customRoleClient(t, "sales_orders:create")
 
@@ -318,7 +318,7 @@ func TestInlineAddresses_SalesOrderUpdateNeedsOnlyUpdatePermission(t *testing.T)
 	t.Parallel()
 	customerID := setupOrderCustomer(t)
 	saved := trackInlineAddresses(t, customerID)
-	existingID := counterpartyAddress(t, customerID, uniqueName("e2e-inline-so-upd-existing"))
+	existingID := savedCounterpartyAddress(t, customerID, uniqueName("e2e-inline-so-upd-existing"))
 	*saved = append(*saved, existingID)
 
 	body := inlineSalesOrderBody(customerID)
@@ -353,11 +353,11 @@ func TestInlineAddresses_SalesOrderRejections(t *testing.T) {
 	t.Parallel()
 	customerID := setupOrderCustomer(t)
 	saved := trackInlineAddresses(t, customerID)
-	customerAddressID := counterpartyAddress(t, customerID, uniqueName("e2e-inline-so-rej"))
+	customerAddressID := savedCounterpartyAddress(t, customerID, uniqueName("e2e-inline-so-rej"))
 	*saved = append(*saved, customerAddressID)
 	otherCustomerID := setupOrderCustomer(t)
 	otherSaved := trackInlineAddresses(t, otherCustomerID)
-	otherCustomerAddressID := counterpartyAddress(t, otherCustomerID, uniqueName("e2e-inline-so-other"))
+	otherCustomerAddressID := savedCounterpartyAddress(t, otherCustomerID, uniqueName("e2e-inline-so-other"))
 	*otherSaved = append(*otherSaved, otherCustomerAddressID)
 	otherTenantAddressID := tenantBAddress(t)
 
@@ -489,7 +489,7 @@ func TestInlineAddresses_AccountUpdateRejections(t *testing.T) {
 	originalBilling, originalShipping := accountDefaultAddressIDs(t)
 	customerID := setupOrderCustomer(t)
 	saved := trackInlineAddresses(t, customerID)
-	customerAddressID := counterpartyAddress(t, customerID, uniqueName("e2e-inline-acct-cust"))
+	customerAddressID := savedCounterpartyAddress(t, customerID, uniqueName("e2e-inline-acct-cust"))
 	*saved = append(*saved, customerAddressID)
 	otherTenantAddressID := tenantBAddress(t)
 	client := customRoleClient(t, "self:update")
@@ -528,7 +528,7 @@ func TestInlineAddresses_AddressEndpointsStillNeedAddressPermissions(t *testing.
 	t.Parallel()
 	supplierID := inlineSupplier(t)
 	saved := trackInlineAddresses(t, supplierID)
-	supplierAddressID := counterpartyAddress(t, supplierID, uniqueName("e2e-inline-perm"))
+	supplierAddressID := savedCounterpartyAddress(t, supplierID, uniqueName("e2e-inline-perm"))
 	*saved = append(*saved, supplierAddressID)
 	ownAddressID := createE2EAddress(t, uniqueName("e2e-inline-perm-own"))
 	client := customRoleClient(t, "purchase_orders:create", "sales_orders:create", "self:update")
@@ -547,4 +547,35 @@ func TestInlineAddresses_AddressEndpointsStillNeedAddressPermissions(t *testing.
 	status, resp, err = client.Patch(addressesPath+"/"+ownAddressID, map[string]any{"name": "Not allowed"}, newIdempotencyKey())
 	require.NoError(t, err)
 	requireStatus(t, 403, status, resp)
+}
+
+// An update that points the order at a saved address takes one of the supplier's, the same as create does. Before, any address id was taken, including another tenant's.
+func TestInlineAddresses_PurchaseOrderUpdateTakesOnlyTheSuppliersAddresses(t *testing.T) {
+	t.Parallel()
+	supplierID := inlineSupplier(t)
+	saved := trackInlineAddresses(t, supplierID)
+	supplierAddressID := savedCounterpartyAddress(t, supplierID, uniqueName("e2e-inline-po-upd-own"))
+	*saved = append(*saved, supplierAddressID)
+	ownAddressID := createE2EAddress(t, uniqueName("e2e-inline-po-upd-acct"))
+	otherTenantAddressID := tenantBAddress(t)
+	order := createAndCleanup(t, purchaseOrdersPath, inlinePurchaseOrderBody(supplierID))
+	path := purchaseOrdersPath + "/" + jsonField(order, "id")
+
+	for _, tc := range []struct{ name, field, addressID string }{
+		{"another supplier's address", "billing_address_id", SeedSupplierAddressID},
+		{"the account's own address", "shipping_address_id", ownAddressID},
+		{"another tenant's address", "billing_address_id", otherTenantAddressID},
+	} {
+		status, body, err := apiClient.Patch(path, map[string]any{tc.field: tc.addressID}, newIdempotencyKey())
+		require.NoError(t, err)
+		require.Equal(t, 400, status, "%s: %s", tc.name, string(body))
+		assertErrorParam(t, requireErrorResponse(t, body, "", "invalid_request_error"), tc.field)
+	}
+
+	status, body, err := apiClient.Patch(path, map[string]any{"billing_address_id": supplierAddressID, "shipping_address_id": supplierAddressID}, newIdempotencyKey())
+	require.NoError(t, err)
+	requireStatus(t, 200, status, body)
+	bill, ship := getWithAddresses(t, path, "billing_address", "shipping_address")
+	assert.Equal(t, supplierAddressID, jsonField(bill, "id"))
+	assert.Equal(t, supplierAddressID, jsonField(ship, "id"))
 }

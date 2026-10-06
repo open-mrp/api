@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.20.3](https://github.com/open-mrp/api/compare/v2.20.2...v2.20.3) (2026-10-06)
+
+
+### Bug Fixes
+
+* **release:** treat a missing deploy request as missing ([#259](https://github.com/open-mrp/api/issues/259)) ([7d0c516](https://github.com/open-mrp/api/commit/7d0c516b948672df4e9b91c3ecae7d54b6099e3b))
+
 ## [2.20.2](https://github.com/open-mrp/api/compare/v2.20.1...v2.20.2) (2026-10-06)
 
 

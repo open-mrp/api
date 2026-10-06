@@ -20,13 +20,13 @@ type CreateSalesTargetRequest struct {
 	// Must be an active account user in your account.
 	SalesRepID string `path:"id" validate:"required"`
 	// Start of the period the target applies to (inclusive).
-	StartDate time.Time `json:"starts_at"`
-	// End of the period the target applies to.
-	EndDate time.Time `json:"ends_at"`
+	StartDate time.Time `json:"starts_at" validate:"required"`
+	// End of the period the target applies to. It may not be before `starts_at`.
+	EndDate time.Time `json:"ends_at" validate:"required"`
 	// The revenue goal for the period, as a decimal string (e.g. `50000.00`).
-	AmountValue string `json:"amount_value"`
-	// The unit the goal is denominated in, typically a currency unit.
-	AmountUnitID string `json:"amount_unit_id" validate:"max=191"`
+	AmountValue string `json:"amount_value" validate:"required,decimal" format:"decimal"`
+	// The unit the goal is denominated in, typically a currency unit. It must be one of your account's units or a unit every account shares.
+	AmountUnitID string `json:"amount_unit_id" validate:"required,max=191"`
 }
 
 var sampleCreateSalesTargetRequest = &CreateSalesTargetRequest{

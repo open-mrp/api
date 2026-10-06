@@ -26,19 +26,19 @@ type UpsertSalesTargetRequest struct {
 	// Start of the period the target applies to (inclusive).
 	//
 	// Only applied when creating a new target; the dates on an existing target are not changed.
-	StartDate time.Time `json:"starts_at"`
-	// End of the period the target applies to.
+	StartDate time.Time `json:"starts_at" validate:"required"`
+	// End of the period the target applies to. It may not be before `starts_at`.
 	//
 	// Only applied when creating a new target; the dates on an existing target are not changed.
-	EndDate time.Time `json:"ends_at"`
+	EndDate time.Time `json:"ends_at" validate:"required"`
 	// The revenue goal for the period, as a decimal string (e.g. `75000.00`).
 	//
 	// This is the only value an existing target accepts; everything else on it stays as it was.
-	AmountValue string `json:"amount_value"`
-	// The unit the goal is denominated in, typically a currency unit.
+	AmountValue string `json:"amount_value" validate:"required,decimal" format:"decimal"`
+	// The unit the goal is denominated in, typically a currency unit. It must be one of your account's units or a unit every account shares.
 	//
 	// Only applied when creating a new target; the unit on an existing target is not changed.
-	AmountUnitID string `json:"amount_unit_id"`
+	AmountUnitID string `json:"amount_unit_id" validate:"required,max=191"`
 }
 
 var sampleUpsertSalesTargetRequest = &UpsertSalesTargetRequest{

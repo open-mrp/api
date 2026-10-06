@@ -3,6 +3,7 @@ package service
 import (
 	"context"
 	"fmt"
+	"time"
 
 	"github.com/open-mrp/api/services/auth-service/pkg/types"
 	"github.com/open-mrp/api/services/core-service/internal/domain"
@@ -74,6 +75,21 @@ func (s *salesTargetSvcImpl) withTx(ctx context.Context, fn func(context.Context
 	})
 }
 
+// checkNewSalesTarget validates what only a new target takes: a period that does not end before it starts, and a unit the account may use.
+func (s *salesTargetSvcImpl) checkNewSalesTarget(ctx context.Context, accountID string, start, end time.Time, unitID string) *apierror.APIError {
+	if end.Before(start) {
+		return apierror.NewValidationErrorWithParam("'ends_at' must not be before 'starts_at'.", "ends_at")
+	}
+	// The platform's units serve every account; an account's own units serve only it.
+	if _, apiErr := s.repos.NewUnitRepo().Get(ctx, domain.GetUnitParams{AccountID: accountID, UnitID: unitID}); apiErr != nil {
+		if apierror.IsNotFound(apiErr) {
+			return apierror.NewResourceNotFoundError("Unit not found.").WithParam("amount_unit_id")
+		}
+		return apiErr
+	}
+	return nil
+}
+
 // ListSalesTargets returns a paginated list of sales targets for an account user.
 func (s *salesTargetSvcImpl) ListSalesTargets(ctx context.Context, params domain.ListSalesTargetsParams) (*domain.ListSalesTargetsResult, *apierror.APIError) {
 	ctx, span := salesTargetSvcTracer.Start(ctx, "service.sales_target.list")
@@ -134,6 +150,9 @@ func (s *salesTargetSvcImpl) CreateSalesTarget(ctx context.Context, params domai
 	}
 	if !salesRepExists {
 		return nil, tracing.Trace(span, apierror.NewResourceNotFoundError("Account user not found."))
+	}
+	if apiErr := s.checkNewSalesTarget(ctx, params.AccountID, params.StartDate, params.EndDate, params.AmountUnitID); apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
 	}
 
 	targetID, apiErr := id.GenID(id.TargetIDPrefix, nil)
@@ -289,6 +308,9 @@ func (s *salesTargetSvcImpl) UpsertSalesTarget(ctx context.Context, params domai
 		}
 	} else {
 		// Create new target.
+		if apiErr := s.checkNewSalesTarget(ctx, params.AccountID, params.StartDate, params.EndDate, params.AmountUnitID); apiErr != nil {
+			return nil, tracing.Trace(span, apiErr)
+		}
 		quantityID, apiErr := id.GenID(id.QuantityIDPrefix, nil)
 		if apiErr != nil {
 			return nil, tracing.Trace(span, apiErr)

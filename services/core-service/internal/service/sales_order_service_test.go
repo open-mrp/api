@@ -1281,6 +1281,70 @@ func (suite *SalesOrderSvcTestSuite) TestUpdateSalesOrder_NoRepriceWhenShippingU
 	suite.Nil(apiErr)
 }
 
+func (suite *SalesOrderSvcTestSuite) TestUpdateSalesOrder_RefusesRoutingAndTermsOutsideTheAccount() {
+	for _, tc := range []struct {
+		param  string
+		params domain.UpdateSalesOrderParams
+		lookup func()
+	}{
+		{"carrier_id", domain.UpdateSalesOrderParams{CarrierID: new("cr_foreign")}, func() {
+			suite.carrierRepo.EXPECT().GetByIDs(gomock.Any(), "ac_test", []string{"cr_foreign"}).Return(nil, nil)
+		}},
+		{"service_level_id", domain.UpdateSalesOrderParams{ServiceLevelID: field.Set("crop_foreign")}, func() {
+			suite.carrierRepo.EXPECT().GetOptionsByIDs(gomock.Any(), "ac_test", []string{"crop_foreign"}).Return(nil, nil)
+		}},
+		{"shipping_term_id", domain.UpdateSalesOrderParams{ShippingTermID: new("shtm_foreign")}, func() {
+			suite.shippingTermRepo.EXPECT().GetByIDs(gomock.Any(), "ac_test", []string{"shtm_foreign"}).Return(nil, nil)
+		}},
+		{"payment_term_id", domain.UpdateSalesOrderParams{PaymentTermID: new("pytm_foreign")}, func() {
+			suite.paymentTermRepo.EXPECT().GetByIDs(gomock.Any(), "ac_test", []string{"pytm_foreign"}).Return(nil, nil)
+		}},
+	} {
+		suite.Run(tc.param, func() {
+			ctx := salesOrderIdempotencyCtx(salesOrderInternalCtx("ac_test"), "/core.CoreService/UpdateSalesOrder")
+			suite.expectIdempotencyStarted()
+			suite.orderRepo.EXPECT().Get(gomock.Any(), "ac_test", "or_1").
+				Return(&domain.SalesOrder{ID: "or_1", BuyerAccountID: "ac_buyer", CarrierID: new("cr_own")}, nil)
+			tc.lookup()
+			suite.expectCacheError()
+
+			params := tc.params
+			params.SalesOrderID = "or_1"
+			_, apiErr := suite.svc.UpdateSalesOrder(ctx, params)
+
+			suite.Require().NotNil(apiErr)
+			suite.True(apierror.IsNotFound(apiErr))
+			suite.Equal(tc.param, apiErr.Param)
+		})
+	}
+}
+
+func (suite *SalesOrderSvcTestSuite) TestUpdateSalesOrder_KeepsHeldRoutingWithoutLookingItUp() {
+	ctx := salesOrderIdempotencyCtx(salesOrderInternalCtx("ac_test"), "/core.CoreService/UpdateSalesOrder")
+	suite.expectIdempotencyStarted()
+	suite.orderRepo.EXPECT().Get(gomock.Any(), "ac_test", "or_1").
+		Return(&domain.SalesOrder{
+			ID:             "or_1",
+			BuyerAccountID: "ac_buyer",
+			CarrierID:      new("cr_own"),
+			ServiceLevelID: new("crop_own"),
+			ShippingTermID: new("shtm_own"),
+			PaymentTermID:  new("pytm_own"),
+		}, nil)
+	suite.orderRepo.EXPECT().Update(gomock.Any(), gomock.Any()).Return(&domain.SalesOrder{ID: "or_1"}, nil)
+	suite.expectCacheSuccess()
+
+	_, apiErr := suite.svc.UpdateSalesOrder(ctx, domain.UpdateSalesOrderParams{
+		SalesOrderID:   "or_1",
+		Note:           field.Set("resent with the current routing"),
+		CarrierID:      new("cr_own"),
+		ServiceLevelID: field.Set("crop_own"),
+		ShippingTermID: new("shtm_own"),
+		PaymentTermID:  new("pytm_own"),
+	})
+	suite.Nil(apiErr)
+}
+
 // --- QuoteSalesOrderFreight ---
 
 func (suite *SalesOrderSvcTestSuite) TestQuoteSalesOrderFreight_NoCarrierReturnsZeroReadOnly() {

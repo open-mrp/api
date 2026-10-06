@@ -197,3 +197,76 @@ func TestPortalNarrowing_IncludedAndStaffShipmentLinesNeedOnlyTheAccount(t *test
 		require.Nil(t, apiErr, name)
 	}
 }
+
+func (h *inclHarness) accountPrices() (domain.AccountPriceSvc, *repositorymock.MockAccountPriceRepo) {
+	repo := repositorymock.NewMockAccountPriceRepo(h.ctrl)
+	h.repos.EXPECT().NewAccountPriceRepo().Return(repo).AnyTimes()
+	return NewAccountPriceSvc(&AccountPriceSvcConfig{Repos: h.repos, MediatorFactory: h.meds, JobSvcFactory: NewJobSvcFactory(), TxManager: &stubTxManager{factory: h.repos}}), repo
+}
+
+func TestPortalNarrowing_AccountPricesAreThePortalsOwn(t *testing.T) {
+	t.Parallel()
+
+	for name, portal := range portalCases() {
+		h := newInclHarness(t)
+		h.allowCounterpartyReads()
+		svc, repo := h.accountPrices()
+		repo.EXPECT().ResolveRecipientAccountIDs(gomock.Any(), inclSellerID, portal.own).Return([]string{portal.own}, nil).Times(2)
+		repo.EXPECT().List(gomock.Any(), gomock.Any()).DoAndReturn(func(_ context.Context, params domain.ListAccountPricesParams) (*domain.ListAccountPricesResult, *apierror.APIError) {
+			assert.Equal(t, []string{portal.own}, params.RecipientAccountIDs, name)
+			return &domain.ListAccountPricesResult{}, nil
+		})
+
+		_, apiErr := svc.ListAccountPrices(portal.ctx(false), domain.ListAccountPricesParams{Limit: 10, RecipientAccountIDs: []string{inclOtherID}})
+		require.Nil(t, apiErr, name)
+
+		repo.EXPECT().Get(gomock.Any(), inclSellerID, "acpr_other").Return(&domain.AccountPrice{ID: "acpr_other", RecipientAccountID: inclOtherID}, nil)
+		_, apiErr = svc.GetAccountPrice(portal.ctx(false), "acpr_other")
+		requireNotFound(t, apiErr, name)
+	}
+}
+
+func (h *inclHarness) volumeDiscounts() (domain.VolumeDiscountSvc, *repositorymock.MockVolumeDiscountRepo) {
+	repo := repositorymock.NewMockVolumeDiscountRepo(h.ctrl)
+	h.repos.EXPECT().NewVolumeDiscountRepo().Return(repo).AnyTimes()
+	return NewVolumeDiscountSvc(&VolumeDiscountSvcConfig{Repos: h.repos, MediatorFactory: h.meds, TxManager: &stubTxManager{factory: h.repos}}), repo
+}
+
+func TestPortalNarrowing_VolumeDiscountsAreTheOnesThePortalsListingCarries(t *testing.T) {
+	t.Parallel()
+
+	for name, portal := range portalCases() {
+		h := newInclHarness(t)
+		h.allowCounterpartyReads()
+		svc, repo := h.volumeDiscounts()
+
+		repo.EXPECT().List(gomock.Any(), gomock.Any()).DoAndReturn(func(_ context.Context, params domain.ListVolumeDiscountsParams) (*domain.ListVolumeDiscountsResult, *apierror.APIError) {
+			require.NotNil(t, params.CustomerAccountID, name)
+			assert.Equal(t, portal.own, *params.CustomerAccountID, name)
+			return &domain.ListVolumeDiscountsResult{}, nil
+		})
+		_, apiErr := svc.ListVolumeDiscounts(portal.ctx(false), domain.ListVolumeDiscountsParams{Limit: 10})
+		require.Nil(t, apiErr, name)
+
+		repo.EXPECT().AppliesToCustomer(gomock.Any(), inclSellerID, portal.own, "qudi_other_group").Return(false, nil)
+		_, apiErr = svc.GetVolumeDiscount(portal.ctx(false), domain.GetVolumeDiscountParams{VolumeDiscountID: "qudi_other_group"})
+		requireNotFound(t, apiErr, name)
+
+		repo.EXPECT().AppliesToCustomer(gomock.Any(), inclSellerID, portal.own, "qudi_everyone").Return(true, nil)
+		repo.EXPECT().Get(gomock.Any(), gomock.Any()).Return(&domain.VolumeDiscount{ID: "qudi_everyone"}, nil)
+		got, apiErr := svc.GetVolumeDiscount(portal.ctx(false), domain.GetVolumeDiscountParams{VolumeDiscountID: "qudi_everyone"})
+		require.Nil(t, apiErr, name)
+		assert.Equal(t, "qudi_everyone", got.ID, name)
+	}
+}
+
+func TestPortalNarrowing_StaffOpenAnyVolumeDiscount(t *testing.T) {
+	t.Parallel()
+
+	h := newInclHarness(t)
+	svc, repo := h.volumeDiscounts()
+	repo.EXPECT().Get(gomock.Any(), gomock.Any()).Return(&domain.VolumeDiscount{ID: "qudi_other_group"}, nil)
+
+	_, apiErr := svc.GetVolumeDiscount(inclStaff(false, "discounts:read"), domain.GetVolumeDiscountParams{VolumeDiscountID: "qudi_other_group"})
+	require.Nil(t, apiErr)
+}

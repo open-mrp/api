@@ -19,7 +19,7 @@ type RetrieveAccountPriceRequest struct {
 
 // Returns an account price by ID.
 //
-// A customer portal user can only retrieve a price whose recipient is their own account or its parent; any other price is reported as not found.
+// A customer or supplier portal user can only retrieve a price whose recipient is their own account or its parent; any other price is reported as not found.
 type RetrieveAccountPriceEndpoint struct{}
 
 func (e *RetrieveAccountPriceEndpoint) Materialize() *apiendpoint.APIEndpoint[*RetrieveAccountPriceRequest, *apiresource.AccountPrice] {

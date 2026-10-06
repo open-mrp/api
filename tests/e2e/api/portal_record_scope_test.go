@@ -135,3 +135,39 @@ func TestPortalRecordScope_CustomerReadsItsOwnShipmentAndLines(t *testing.T) {
 
 	requireStatusAs(t, http.StatusNotFound, "supplier portal", getSupplierPortalClient(t), shipmentsPath+"/"+shipmentID, nil)
 }
+
+// --- Prices and discounts ---
+
+func TestPortalRecordScope_AnotherBuyersPriceIsHiddenFromEveryPortal(t *testing.T) {
+	t.Parallel()
+	other := newOtherBuyer(t)
+	requireStatusAs(t, http.StatusOK, "staff", apiClient, accountPricesPath+"/"+other.priceID, nil)
+
+	for who, portal := range portalClients(t) {
+		requireStatusAs(t, http.StatusNotFound, who, portal, accountPricesPath+"/"+other.priceID, nil)
+		list := parseJSON(requireStatusAs(t, http.StatusOK, who, portal, accountPricesPath, url.Values{"recipient_account_id": {other.accountID}, "limit": {"100"}}))
+		for _, row := range jsonArray(list, "data") {
+			assert.NotEqual(t, other.priceID, jsonField(row.(map[string]any), "id"), "%s lists another buyer's price", who)
+		}
+	}
+}
+
+func TestPortalRecordScope_DiscountForAnotherGroupIsHiddenFromEveryPortal(t *testing.T) {
+	t.Parallel()
+	groupID := leadTimeAccountGroup(t, "e2e-portal-scope-grp", nil)
+	leadTimeCustomer(t, "e2e-portal-scope-grp-cust", nil, groupID)
+	discountID := jsonField(createVolumeDiscount(t, map[string]any{"customer_group_ids": []string{groupID}}), "id")
+	requireStatusAs(t, http.StatusOK, "staff", apiClient, volumeDiscountsPath+"/"+discountID, nil)
+
+	for who, portal := range portalClients(t) {
+		requireStatusAs(t, http.StatusNotFound, who, portal, volumeDiscountsPath+"/"+discountID, nil)
+
+		// Whatever the portal's listing carries, it can open.
+		list := parseJSON(requireStatusAs(t, http.StatusOK, who, portal, volumeDiscountsPath, url.Values{"limit": {"100"}}))
+		for _, row := range jsonArray(list, "data") {
+			id := jsonField(row.(map[string]any), "id")
+			assert.NotEqual(t, discountID, id, "%s lists another group's discount", who)
+			requireStatusAs(t, http.StatusOK, who, portal, volumeDiscountsPath+"/"+id, nil)
+		}
+	}
+}

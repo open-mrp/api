@@ -13803,6 +13803,21 @@ func (m *MockVolumeDiscountRepo) EXPECT() *MockVolumeDiscountRepoMockRecorder {
 	return m.recorder
 }
 
+// AppliesToCustomer mocks base method.
+func (m *MockVolumeDiscountRepo) AppliesToCustomer(ctx context.Context, accountID, customerAccountID, volumeDiscountID string) (bool, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "AppliesToCustomer", ctx, accountID, customerAccountID, volumeDiscountID)
+	ret0, _ := ret[0].(bool)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
+}
+
+// AppliesToCustomer indicates an expected call of AppliesToCustomer.
+func (mr *MockVolumeDiscountRepoMockRecorder) AppliesToCustomer(ctx, accountID, customerAccountID, volumeDiscountID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AppliesToCustomer", reflect.TypeOf((*MockVolumeDiscountRepo)(nil).AppliesToCustomer), ctx, accountID, customerAccountID, volumeDiscountID)
+}
+
 // Create mocks base method.
 func (m *MockVolumeDiscountRepo) Create(ctx context.Context, id string, params domain.CreateVolumeDiscountParams) (*domain.VolumeDiscount, *apierror.APIError) {
 	m.ctrl.T.Helper()

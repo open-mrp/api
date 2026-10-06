@@ -18,6 +18,8 @@ type RetrieveVolumeDiscountRequest struct {
 }
 
 // Returns a volume discount by ID.
+//
+// A customer or supplier portal user retrieves only a discount its own listing carries: one with no customer-group restriction, or one scoped to a group its account belongs to. Any other discount is reported as not found.
 type RetrieveVolumeDiscountEndpoint struct{}
 
 func (e *RetrieveVolumeDiscountEndpoint) Materialize() *apiendpoint.APIEndpoint[*RetrieveVolumeDiscountRequest, *apiresource.VolumeDiscount] {

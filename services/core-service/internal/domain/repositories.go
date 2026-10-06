@@ -1356,6 +1356,8 @@ type OrderDiscountRepo interface {
 type VolumeDiscountRepo interface {
 	List(ctx context.Context, params ListVolumeDiscountsParams) (*ListVolumeDiscountsResult, *apierror.APIError)
 	Get(ctx context.Context, params GetVolumeDiscountParams) (*VolumeDiscount, *apierror.APIError)
+	// AppliesToCustomer reports whether the discount is one the customer's own listing carries: offered to every customer, or to a group the customer is in.
+	AppliesToCustomer(ctx context.Context, accountID, customerAccountID, volumeDiscountID string) (bool, *apierror.APIError)
 	Create(ctx context.Context, id string, params CreateVolumeDiscountParams) (*VolumeDiscount, *apierror.APIError)
 	Update(ctx context.Context, params UpdateVolumeDiscountParams) (*VolumeDiscount, *apierror.APIError)
 	Delete(ctx context.Context, params DeleteVolumeDiscountParams) *apierror.APIError

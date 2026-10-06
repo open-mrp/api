@@ -18,7 +18,7 @@ type ListVolumeDiscountsRequest struct {
 
 // Returns a paginated list of volume discounts, newest first.
 //
-// The search term matches the discount name, the name of a customer group it is scoped to, or the name of a product line it is scoped to. Customer portal users see only discounts with no customer-group restriction plus those scoped to a group their own account belongs to.
+// The search term matches the discount name, the name of a customer group it is scoped to, or the name of a product line it is scoped to. Customer and supplier portal users see only discounts with no customer-group restriction plus those scoped to a group their own account belongs to.
 type ListVolumeDiscountsEndpoint struct{}
 
 func (e *ListVolumeDiscountsEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListVolumeDiscountsRequest, *apiresource.List[apiresource.VolumeDiscount]] {

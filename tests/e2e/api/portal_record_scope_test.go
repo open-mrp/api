@@ -183,3 +183,24 @@ func TestPortalRecordScope_BillingUsageAndSpendingCapAreRefusedToPortals(t *test
 		}
 	}
 }
+
+// --- Jobs ---
+
+// A job the seller's staff started reads exactly as a missing one does; a portal still follows the jobs it starts itself.
+func TestPortalRecordScope_PortalsReadOnlyTheJobsTheyStarted(t *testing.T) {
+	t.Parallel()
+	status, body, err := apiClient.Post(productsPath+"/actions/export", map[string]any{}, newIdempotencyKey())
+	require.NoError(t, err)
+	requireStatus(t, http.StatusAccepted, status, body)
+	staffJobID := jsonField(parseJSON(body), "id")
+	require.NotEmpty(t, staffJobID)
+
+	missing := parseJSON(requireStatusAs(t, http.StatusNotFound, "customer portal", getCustomerPortalClient(), jobsPath+"/jb_e2eportalscopemissing0", nil))
+	for who, portal := range portalClients(t) {
+		got := parseJSON(requireStatusAs(t, http.StatusNotFound, who, portal, jobsPath+"/"+staffJobID, nil))
+		assert.Equal(t, jsonField(jsonObject(missing, "error"), "message"), jsonField(jsonObject(got, "error"), "message"), "%s cannot tell the job exists", who)
+
+		own := completedExportJobAs(t, portal, productsPath+"/actions/export", nil)
+		assert.Equal(t, "completed", jsonField(own, "status"), "%s follows its own export to completion", who)
+	}
+}

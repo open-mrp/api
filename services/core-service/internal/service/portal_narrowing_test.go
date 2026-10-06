@@ -270,3 +270,50 @@ func TestPortalNarrowing_StaffOpenAnyVolumeDiscount(t *testing.T) {
 	_, apiErr := svc.GetVolumeDiscount(inclStaff(false, "discounts:read"), domain.GetVolumeDiscountParams{VolumeDiscountID: "qudi_other_group"})
 	require.Nil(t, apiErr)
 }
+
+func (h *inclHarness) jobs() (domain.JobSvc, *repositorymock.MockJobRepo) {
+	repo := repositorymock.NewMockJobRepo(h.ctrl)
+	accountUsers := repositorymock.NewMockAccountUserRepo(h.ctrl)
+	accountUsers.EXPECT().ResolveAccountUserID(gomock.Any(), inclSellerID, gomock.Any()).Return("", apierror.NewResourceNotFoundError("Account user not found.")).AnyTimes()
+	h.repos.EXPECT().NewJobRepo().Return(repo).AnyTimes()
+	h.repos.EXPECT().NewAccountUserRepo().Return(accountUsers).AnyTimes()
+	return NewJobSvc(&JobSvcConfig{Repos: h.repos}), repo
+}
+
+// A portal's job is attributed to its own actor; the seller's staff raise the rest.
+func TestPortalNarrowing_JobsAreTheOnesThePortalRaised(t *testing.T) {
+	t.Parallel()
+
+	for name, portal := range portalCases() {
+		h := newInclHarness(t)
+		svc, repo := h.jobs()
+		staffJob := &domain.Job{ID: "jb_staff", CreatedByID: new("acus_staff")}
+		systemJob := &domain.Job{ID: "jb_system"}
+		ownJob := &domain.Job{ID: "jb_own", CreatedByID: new("us_actor")}
+		for _, job := range []*domain.Job{staffJob, systemJob, ownJob} {
+			repo.EXPECT().Get(gomock.Any(), job.ID, inclSellerID).Return(job, nil)
+		}
+
+		for _, id := range []string{"jb_staff", "jb_system"} {
+			_, apiErr := svc.GetJob(portal.ctx(false), id)
+			requireNotFound(t, apiErr, name+": "+id)
+			assert.Equal(t, "Resource not found.", apiErr.PublicMessage, "%s: reads exactly as a missing job", name)
+		}
+
+		got, apiErr := svc.GetJob(portal.ctx(false), "jb_own")
+		require.Nil(t, apiErr, name)
+		assert.Equal(t, "jb_own", got.ID, name)
+	}
+}
+
+func TestPortalNarrowing_StaffReadEveryJobInTheAccount(t *testing.T) {
+	t.Parallel()
+
+	h := newInclHarness(t)
+	svc, repo := h.jobs()
+	repo.EXPECT().Get(gomock.Any(), "jb_other", inclSellerID).Return(&domain.Job{ID: "jb_other", CreatedByID: new("acus_someone_else")}, nil)
+
+	got, apiErr := svc.GetJob(inclStaff(false, "jobs:read"), "jb_other")
+	require.Nil(t, apiErr)
+	assert.Equal(t, "jb_other", got.ID)
+}

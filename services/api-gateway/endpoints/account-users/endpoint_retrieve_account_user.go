@@ -24,15 +24,16 @@ type RetrieveAccountUserEndpoint struct{}
 
 func (e *RetrieveAccountUserEndpoint) Materialize() *apiendpoint.APIEndpoint[*RetrieveAccountUserRequest, *apiresource.AccountUser] {
 	return (&apiendpoint.APIEndpoint[*RetrieveAccountUserRequest, *apiresource.AccountUser]{
-		Title:               "Retrieve Account User",
-		Method:              http.MethodGet,
-		ContentType:         "application/json",
-		Route:               "/v1/identity/account-users/{id}",
-		SuccessStatusCode:   http.StatusOK,
-		Public:              true,
-		AgentTool:           true,
-		RequiredPermissions: []types.Permission{{Domain: types.PermissionDomainTeamUsers, Action: types.ActionRead}, {Domain: types.PermissionDomainCustomers, Action: types.ActionRead}, {Domain: types.PermissionDomainSuppliers, Action: types.ActionRead}},
-		Preview:             true,
+		Title:                   "Retrieve Account User",
+		Method:                  http.MethodGet,
+		ContentType:             "application/json",
+		Route:                   "/v1/identity/account-users/{id}",
+		SuccessStatusCode:       http.StatusOK,
+		Public:                  true,
+		AgentTool:               true,
+		RequiredPermissions:     []types.Permission{{Domain: types.PermissionDomainTeamUsers, Action: types.ActionRead}},
+		CounterpartyPermissions: apiendpoint.Counterparties(types.ActionRead),
+		Preview:                 true,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *RetrieveAccountUserRequest) (*apiresource.AccountUser, *apierror.APIError) {
 			return svc.(AccountUserSvc).GetAccountUser
 		},

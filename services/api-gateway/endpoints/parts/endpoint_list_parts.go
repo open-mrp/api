@@ -32,15 +32,16 @@ type ListPartsEndpoint struct{}
 
 func (e *ListPartsEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListPartsRequest, *apiresource.List[apiresource.Part]] {
 	return (&apiendpoint.APIEndpoint[*ListPartsRequest, *apiresource.List[apiresource.Part]]{
-		Title:               "List Parts",
-		Method:              http.MethodGet,
-		ContentType:         "application/json",
-		Route:               "/v1/catalog/parts",
-		SuccessStatusCode:   http.StatusOK,
-		Public:              true,
-		AgentTool:           true,
-		RequiredPermissions: []types.Permission{{Domain: types.PermissionDomainParts, Action: types.ActionRead}, {Domain: types.PermissionDomainCustomers, Action: types.ActionRead}, {Domain: types.PermissionDomainSuppliers, Action: types.ActionRead}},
-		Preview:             true,
+		Title:                   "List Parts",
+		Method:                  http.MethodGet,
+		ContentType:             "application/json",
+		Route:                   "/v1/catalog/parts",
+		SuccessStatusCode:       http.StatusOK,
+		Public:                  true,
+		AgentTool:               true,
+		RequiredPermissions:     []types.Permission{{Domain: types.PermissionDomainParts, Action: types.ActionRead}},
+		CounterpartyPermissions: apiendpoint.Counterparties(types.ActionRead),
+		Preview:                 true,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *ListPartsRequest) (*apiresource.List[apiresource.Part], *apierror.APIError) {
 			return svc.(PartSvc).ListParts
 		},

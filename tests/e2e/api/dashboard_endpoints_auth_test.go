@@ -77,6 +77,8 @@ type dashboardOperation struct {
 	permissions []string
 	// allOf is set when the caller must hold every permission rather than any one of them.
 	allOf bool
+	// counterparty is what acting in a customer's or supplier's account takes instead; it opens nothing in the caller's own account.
+	counterparty []string
 }
 
 var dashboardPermissionPattern = regexp.MustCompile("`([a-z_]+:[a-z]+)`")
@@ -99,7 +101,7 @@ func loadDashboardOperations(t *testing.T) []dashboardOperation {
 		for method, op := range methods {
 			perms, allOf := documentedPermissions(op.Description)
 			op := dashboardOperation{method: strings.ToUpper(method), path: path, operationID: op.OperationID,
-				permissions: perms, allOf: allOf}
+				permissions: perms, allOf: allOf, counterparty: documentedCounterpartyPermissions(op.Description)}
 			byID[op.operationID] = op
 		}
 	}
@@ -123,6 +125,19 @@ func documentedPermissions(description string) (perms []string, allOf bool) {
 		}
 	}
 	return nil, false
+}
+
+// documentedCounterpartyPermissions reads what the description says acting in a customer's or supplier's account requires.
+func documentedCounterpartyPermissions(description string) []string {
+	var perms []string
+	for _, line := range strings.Split(description, "\n") {
+		if strings.HasPrefix(line, "Acting in a ") {
+			for _, m := range dashboardPermissionPattern.FindAllStringSubmatch(line, -1) {
+				perms = append(perms, m[1])
+			}
+		}
+	}
+	return perms
 }
 
 // dashboardUnknownPath names nothing that exists, bar the caller's own account or user where a route refuses others.
@@ -268,7 +283,7 @@ var dashboardAdminOnlyOperations = map[string]string{
 	"admin-update-shipping-case-tracking": "re-routing a case that already went out overrides the ordinary update",
 }
 
-// A role holding a sibling permission outside the documented set is refused; one holding a documented one is treated like the admin.
+// A role holding a sibling permission outside the documented set is refused, as is one holding only what a customer's or supplier's account takes; one holding a documented one is treated like the admin.
 func TestDashboardEndpoints_EnforceDocumentedPermissions(t *testing.T) {
 	t.Parallel()
 	ops := loadDashboardOperations(t)
@@ -298,6 +313,9 @@ func TestDashboardEndpoints_EnforceDocumentedPermissions(t *testing.T) {
 		for _, perm := range op.permissions {
 			p.holders[perm] = roleClient(perm)
 		}
+		for _, perm := range op.counterparty {
+			roleClient(perm)
+		}
 		if op.allOf {
 			p.all = customRoleClient(t, op.permissions...)
 		}
@@ -314,6 +332,12 @@ func TestDashboardEndpoints_EnforceDocumentedPermissions(t *testing.T) {
 
 			adminStatus, adminBody := dashboardCall(t, apiClient, p.op)
 			require.Less(t, adminStatus, 500, string(adminBody))
+
+			for _, perm := range p.op.counterparty {
+				status, body := dashboardCall(t, clients[perm], p.op)
+				requireStatus(t, http.StatusForbidden, status, body)
+				requireErrorResponse(t, body, "insufficient_permissions", "invalid_request_error")
+			}
 
 			if p.op.allOf {
 				for _, perm := range sortedKeys(p.holders) {

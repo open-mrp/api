@@ -22,16 +22,17 @@ type RetrieveAddressEndpoint struct{}
 
 func (e *RetrieveAddressEndpoint) Materialize() *apiendpoint.APIEndpoint[*RetrieveAddressRequest, *apiresource.Address] {
 	return (&apiendpoint.APIEndpoint[*RetrieveAddressRequest, *apiresource.Address]{
-		Title:               "Retrieve Address",
-		Method:              http.MethodGet,
-		Route:               "/v1/sales/addresses/{id}",
-		ContentType:         "application/json",
-		SuccessStatusCode:   http.StatusOK,
-		Public:              true,
-		AgentTool:           true,
-		RequiredPermissions: []types.Permission{{Domain: types.PermissionDomainAddresses, Action: types.ActionRead}, {Domain: types.PermissionDomainCustomers, Action: types.ActionRead}, {Domain: types.PermissionDomainSuppliers, Action: types.ActionRead}},
-		Preview:             true,
-		ObjectType:          constants.ObjectTypeAddress,
+		Title:                   "Retrieve Address",
+		Method:                  http.MethodGet,
+		Route:                   "/v1/sales/addresses/{id}",
+		ContentType:             "application/json",
+		SuccessStatusCode:       http.StatusOK,
+		Public:                  true,
+		AgentTool:               true,
+		RequiredPermissions:     []types.Permission{{Domain: types.PermissionDomainAddresses, Action: types.ActionRead}},
+		CounterpartyPermissions: apiendpoint.Counterparties(types.ActionRead),
+		Preview:                 true,
+		ObjectType:              constants.ObjectTypeAddress,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *RetrieveAddressRequest) (*apiresource.Address, *apierror.APIError) {
 			return svc.(AddressSvc).GetAddress
 		},

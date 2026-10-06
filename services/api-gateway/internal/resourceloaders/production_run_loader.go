@@ -29,9 +29,6 @@ func LoadProductionRuns(ctx context.Context, ids []string) (map[string]any, *api
 				return coreProductionRunClient.GetProductionRun(ctx, &pb.GetProductionRunRequest{Id: id}, opts...)
 			})
 		if apiErr != nil {
-			if omitOnUnauthorized(apiErr) {
-				return out, nil
-			}
 			// Deleted after the including rows were read: leave this one reference null (see pick_loader.go).
 			if apierror.IsNotFound(apiErr) {
 				continue

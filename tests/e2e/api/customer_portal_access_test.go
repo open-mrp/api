@@ -211,12 +211,11 @@ func TestCustomerPortalAccess_ListSalesOrders(t *testing.T) {
 }
 
 // TestCustomerPortalAccess_OrderRetrieveRelatedShipments verifies that a customer
-// portal actor can retrieve an order they bought with related.shipments expanded
-// (for tracking), while seller-internal related.pick / related.production_run
-// remain omitted rather than 403ing the retrieve. Before customer-safe GetShipment,
-// resolving related.shipments also failed authorization and the include was dropped.
+// portal actor retrieving an order they bought gets every related record it includes:
+// the shipments (for tracking) and the seller's pick and production run alike, since
+// the order's own access covers what it includes.
 // ORD-001 (or_01k0a8bs2yejxbsvqhrx4drkq1) is bought by the seed customer and has
-// both a pick and SHP-003, so the loaders actually fire.
+// a pick, a production run and SHP-003, so the loaders actually fire.
 func TestCustomerPortalAccess_OrderRetrieveRelatedShipments(t *testing.T) {
 	t.Parallel()
 	client := getCustomerPortalClient()
@@ -233,8 +232,8 @@ func TestCustomerPortalAccess_OrderRetrieveRelatedShipments(t *testing.T) {
 
 	related := jsonObject(parsed, "related")
 	require.NotNil(t, related, "related must be present so shipments can surface for tracking")
-	assertNilField(t, related, "pick")
-	assertNilField(t, related, "production_run")
+	assert.Equal(t, SeedPickID, jsonField(jsonObject(related, "pick"), "id"), "the order's pick")
+	assert.Equal(t, "pr_01seedsalesorder0001", jsonField(jsonObject(related, "production_run"), "id"), "the order's production run")
 
 	shipments := jsonObject(related, "shipments")
 	require.NotNil(t, shipments, "related.shipments must populate for a customer on an order they bought")

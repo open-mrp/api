@@ -6,6 +6,7 @@ import (
 	"github.com/open-mrp/api/services/api-gateway/internal/domain"
 	grpcutil "github.com/open-mrp/api/services/api-gateway/internal/grpc"
 	apiresource "github.com/open-mrp/api/services/api-gateway/pkg/resource"
+	"github.com/open-mrp/api/services/api-gateway/pkg/resourcekit"
 	"github.com/open-mrp/api/shared/constants"
 	apierror "github.com/open-mrp/api/shared/errors"
 	pb "github.com/open-mrp/api/shared/proto/core"
@@ -15,7 +16,7 @@ import (
 
 var accountGroupProductLineAccessLoaderTracer = tracing.GetTracer("api-gateway.resourceloaders.account_group_product_line_access")
 
-// LoadAccountGroupProductLineAccess fetches access records by account_group_id via BatchGetAccountGroupProductLineAccessByIDs and embeds the real account group and product line records, loaded as the caller.
+// LoadAccountGroupProductLineAccess fetches access records by account_group_id via BatchGetAccountGroupProductLineAccessByIDs and embeds the real account group and product line records, which whoever may read the access may read.
 func LoadAccountGroupProductLineAccess(ctx context.Context, ids []string) (map[string]any, *apierror.APIError) {
 	if len(ids) == 0 {
 		return nil, nil
@@ -37,11 +38,12 @@ func LoadAccountGroupProductLineAccess(ctx context.Context, ids []string) (map[s
 		groupIDs[i] = item.AccountGroupId
 		granted[i] = item.ProductLines
 	}
-	groups, _, apiErr := loadReadable(ctx, LoadAccountGroups, groupIDs)
+	embedCtx := resourcekit.WithIncludeReads(ctx)
+	groups, apiErr := LoadAccountGroups(embedCtx, groupIDs)
 	if apiErr != nil {
 		return nil, apiErr
 	}
-	lines, linesReadable, apiErr := loadReadable(ctx, LoadProductLines, grantedProductLineIDs(granted...))
+	lines, apiErr := LoadProductLines(embedCtx, grantedProductLineIDs(granted...))
 	if apiErr != nil {
 		return nil, apiErr
 	}
@@ -50,7 +52,7 @@ func LoadAccountGroupProductLineAccess(ctx context.Context, ids []string) (map[s
 	for _, item := range resp.Items {
 		access := &apiresource.AccountGroupProductLineAccess{
 			Object:       constants.ObjectTypeAccountGroupProductLineAccess,
-			ProductLines: grantedProductLines(item.ProductLines, lines, linesReadable),
+			ProductLines: grantedProductLines(item.ProductLines, lines),
 			CreatedAt:    grpcutil.TimestampToTime(item.CreatedAt),
 			UpdatedAt:    grpcutil.TimestampToTime(item.UpdatedAt),
 		}

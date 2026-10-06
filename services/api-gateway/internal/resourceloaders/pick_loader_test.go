@@ -79,17 +79,14 @@ func TestLoadPicks_OneRoundTripForAPage(t *testing.T) {
 	}
 }
 
-// An actor without pick read access still gets the rest of the page, with related.pick null.
-func TestLoadPicks_UnauthorizedOmitsAll(t *testing.T) {
+// Includes load as reads the including request authorized, so a refusal is a real failure, not a null pick.
+func TestLoadPicks_RefusalFailsTheRequest(t *testing.T) {
 	original := corePickingClient
 	t.Cleanup(func() { corePickingClient = original })
 	corePickingClient = stubPickClient{err: contracts.ConvertAPIErrorToGRPC(apierror.NewAuthorizationError("No access."))}
 
 	out, apiErr := LoadPicks(context.Background(), []string{"pk_1"})
-	if apiErr != nil {
-		t.Fatalf("LoadPicks returned %v, want an empty result", apiErr)
-	}
-	if len(out) != 0 {
-		t.Errorf("got %d picks, want none", len(out))
+	if apiErr == nil || apiErr.Code != apierror.ErrorCodeInsufficientPerms {
+		t.Fatalf("LoadPicks returned %v, %v; want the refusal", out, apiErr)
 	}
 }

@@ -107,6 +107,31 @@ func TestCheckHasAnyPermission_IncludeReadsPassReadsOnly(t *testing.T) {
 	}
 }
 
+func TestCheckHasAnyPermission_IncludeReadsNeverStandInForCostsRead(t *testing.T) {
+	t.Parallel()
+
+	costs := Permission{Domain: PermissionDomainCosts, Action: ActionRead}
+	for _, tc := range []struct {
+		name     string
+		identity *Identity
+	}{
+		{"internal actor", internalIdentityWithout(map[string]bool{"sales_orders:read": true})},
+		{"customer portal actor", customerPortalIdentity()},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
+			flagged := tc.identity.ForIncludeReads()
+			if apiErr := flagged.CheckHasAnyPermission(costs); apiErr == nil {
+				t.Fatal("costs:read must never pass on the flag")
+			}
+			if apiErr := flagged.CheckHasAnyPermission(costs, Permission{Domain: PermissionDomainItems, Action: ActionRead}); apiErr != nil {
+				t.Fatalf("another read beside it still passes: %v", apiErr)
+			}
+		})
+	}
+}
+
 func TestCheckHasAnyPermission_IncludeReadsNeverAdmitAnUnauthenticatedCaller(t *testing.T) {
 	t.Parallel()
 

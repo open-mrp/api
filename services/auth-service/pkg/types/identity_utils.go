@@ -177,9 +177,10 @@ func (i *Identity) CheckHasAnyPermission(perms ...Permission) *apierror.APIError
 	return apierror.NewAuthorizationError(i.getAnyOfPermissionErrorMessage(perms))
 }
 
+// anyRead reports whether perms holds a read an include may stand in for. costs:read never qualifies: seeing cost is a grant of its own, never something a request carries along.
 func anyRead(perms []Permission) bool {
 	for _, p := range perms {
-		if p.Action == ActionRead {
+		if p.Action == ActionRead && p.Domain != PermissionDomainCosts {
 			return true
 		}
 	}

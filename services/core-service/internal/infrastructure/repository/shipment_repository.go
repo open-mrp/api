@@ -162,6 +162,7 @@ func (r *shipmentRepoImpl) List(ctx context.Context, params domain.ListShipments
 		Search:         db.NullStringLikePtr(params.Query),
 		ItemIDs:        params.ItemIDs,
 		ProductLineIDs: params.ProductLineIDs,
+		SalesRepIDs:    params.SalesRepIDs,
 		StartDate:      parseDateFilter(params.StartDate),
 		EndDate:        parseEndDateFilter(params.EndDate),
 		Direction:      pagination.DirectionForward,
@@ -205,26 +206,18 @@ func (r *shipmentRepoImpl) List(ctx context.Context, params domain.ListShipments
 	return &domain.ListShipmentsResult{Shipments: result, PageInfo: pageInfo}, nil
 }
 
-// buyerFilter resolves the customer, customer-group and sales-rep filters to the customers a shipment
-// may be for. Nil means no filter; an empty, non-nil set means the filters exclude every customer. A
-// group and a sales rep must hold on the same relation, as they did when the list joined it.
+// buyerFilter resolves the customer and customer-group filters to the customers a shipment may be for.
+// Nil means no filter; an empty, non-nil set means the filters exclude every customer.
 func (r *shipmentRepoImpl) buyerFilter(ctx context.Context, params domain.ListShipmentsParams) ([]string, *apierror.APIError) {
-	if len(params.CustomerGroupIDs) == 0 && len(params.SalesRepIDs) == 0 {
+	if len(params.CustomerGroupIDs) == 0 {
 		if len(params.CustomerIDs) == 0 {
 			return nil, nil
 		}
 		return params.CustomerIDs, nil
 	}
-	query := "SELECT DISTINCT counterparty_account_id FROM account_relation WHERE owner_account_id = ?"
-	args := []any{params.AccountID}
-	if len(params.CustomerGroupIDs) > 0 {
-		query += " AND account_group_id IN (" + placeholders(len(params.CustomerGroupIDs)) + ")"
-		args = append(args, stringArgs(params.CustomerGroupIDs)...)
-	}
-	if len(params.SalesRepIDs) > 0 {
-		query += " AND default_sales_rep_id IN (" + placeholders(len(params.SalesRepIDs)) + ")"
-		args = append(args, stringArgs(params.SalesRepIDs)...)
-	}
+	query := "SELECT DISTINCT counterparty_account_id FROM account_relation WHERE owner_account_id = ?" +
+		" AND account_group_id IN (" + placeholders(len(params.CustomerGroupIDs)) + ")"
+	args := append([]any{params.AccountID}, stringArgs(params.CustomerGroupIDs)...)
 	if len(params.CustomerIDs) > 0 {
 		query += " AND counterparty_account_id IN (" + placeholders(len(params.CustomerIDs)) + ")"
 		args = append(args, stringArgs(params.CustomerIDs)...)
@@ -262,8 +255,11 @@ func (r *shipmentRepoImpl) chooseDrive(ctx context.Context, q shipmentListQuery)
 	if len(q.ProductLineIDs) > 0 {
 		candidates[shipmentDriveProductLines] = q.ProductLineIDs
 	}
+	if len(q.SalesRepIDs) > 0 {
+		candidates[shipmentDriveSalesReps] = q.SalesRepIDs
+	}
 	drive, fewest := shipmentDriveListOrder, shipmentMatchCap
-	for _, candidate := range []shipmentDrive{shipmentDriveBuyers, shipmentDriveItems, shipmentDriveProductLines} {
+	for _, candidate := range []shipmentDrive{shipmentDriveBuyers, shipmentDriveItems, shipmentDriveProductLines, shipmentDriveSalesReps} {
 		ids, ok := candidates[candidate]
 		if !ok {
 			continue

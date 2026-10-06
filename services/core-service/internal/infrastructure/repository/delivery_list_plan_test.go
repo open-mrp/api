@@ -75,9 +75,11 @@ func ensureDeliveryCorpus(t *testing.T) {
 	ensureFulfillmentCorpus(t)
 	db := planDB(t)
 	planDlvCorpusOnce.Do(func() {
-		var have int
+		// Reseeding the fulfillment corpus deletes the purchase orders and leaves the deliveries.
+		var have, orders int
 		require.NoError(t, db.QueryRow("SELECT COUNT(*) FROM delivery WHERE account_id = ?", planFulAccount).Scan(&have))
-		if have >= planDlvDeliveries {
+		require.NoError(t, db.QueryRow("SELECT COUNT(*) FROM sales_order WHERE id LIKE 'po\\_planful\\_%'").Scan(&orders))
+		if have >= planDlvDeliveries && orders >= planDlvOrders {
 			return
 		}
 		t.Logf("seeding the delivery plan corpus (%d deliveries); it is kept for later runs", planDlvDeliveries)

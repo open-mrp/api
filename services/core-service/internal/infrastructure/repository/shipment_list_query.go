@@ -8,9 +8,9 @@ import (
 )
 
 // The shipment list is a deferred join: buildShipmentListQuery pages shipment ids from the shipment
-// table, and GetShipmentsByIDs hydrates the page. Every customer filter (customer, group, sales rep)
-// resolves to buyer_account_id, denormalized from the order, so an (account_id, [filter], created_at,
-// id) key yields the account's shipments in list order and stops at the page.
+// table, and GetShipmentsByIDs hydrates the page. The customer and group filters resolve to
+// buyer_account_id, denormalized from the order, so an (account_id, [filter], created_at, id) key yields
+// the account's shipments in list order and stops at the page.
 const (
 	shipmentCreatedIndex = "shipment_account_created_idx"
 	shipmentStatusIndex  = "shipment_account_id_shipment_status_code_created_at_id_idx"
@@ -18,9 +18,9 @@ const (
 )
 
 // shipmentMatchCap is the most shipments an unordered filter may match and still drive the read: a
-// set of customers (ranges of the buyer key), items or product lines (child tables). Reading every
-// match and sorting is cheap for a few; with more, the filter matches often enough that walking a
-// list-order key with it as a residual fills a page first.
+// set of customers (ranges of the buyer key), items or product lines (child tables), or sales reps
+// (their orders). Reading every match and sorting is cheap for a few; with more, the filter matches
+// often enough that walking a list-order key with it as a residual fills a page first.
 const shipmentMatchCap = 2000
 
 // shipmentDrive is where a page's candidate shipments come from.
@@ -34,6 +34,8 @@ const (
 	// shipmentDriveItems and shipmentDriveProductLines join from the shipments whose lines match.
 	shipmentDriveItems
 	shipmentDriveProductLines
+	// shipmentDriveSalesReps reads the reps' orders and looks up their shipments.
+	shipmentDriveSalesReps
 )
 
 type shipmentListQuery struct {
@@ -43,17 +45,19 @@ type shipmentListQuery struct {
 	// and PO number, and its customer's name.
 	Search gosql.NullString
 	// BuyerIDs, when non-nil, limits the list to these customers: the customer filter intersected with
-	// the customers of the group and sales-rep filters.
+	// the group filter's customers.
 	BuyerIDs       []string
 	ItemIDs        []string
 	ProductLineIDs []string
-	Drive          shipmentDrive
-	StartDate      gosql.NullTime
-	EndDate        gosql.NullTime
-	Direction      pagination.Direction
-	CursorAt       gosql.NullTime
-	CursorID       gosql.NullString
-	Limit          int32
+	// SalesRepIDs limits the list to shipments whose order credits one of these account users.
+	SalesRepIDs []string
+	Drive       shipmentDrive
+	StartDate   gosql.NullTime
+	EndDate     gosql.NullTime
+	Direction   pagination.Direction
+	CursorAt    gosql.NullTime
+	CursorID    gosql.NullString
+	Limit       int32
 }
 
 // indexHint is the list-order keys a walk may use: the status key for a status, the buyer key for one
@@ -89,7 +93,7 @@ const shipmentListable = " AND EXISTS (SELECT 1 FROM sales_order so0" +
 // buildShipmentListQuery returns the query for one page of shipment ids (Limit rows, newest first
 // going forward) and its bind args. Only the predicates the caller set are emitted.
 func buildShipmentListQuery(q shipmentListQuery) (string, []any) {
-	args := make([]any, 0, 16+len(q.BuyerIDs)+len(q.ItemIDs)+len(q.ProductLineIDs))
+	args := make([]any, 0, 16+len(q.BuyerIDs)+len(q.ItemIDs)+len(q.ProductLineIDs)+len(q.SalesRepIDs))
 	var b strings.Builder
 	b.WriteString("SELECT STRAIGHT_JOIN s.id FROM ")
 	switch q.Drive {
@@ -99,6 +103,10 @@ func buildShipmentListQuery(q shipmentListQuery) (string, []any) {
 	case shipmentDriveProductLines:
 		b.WriteString("(" + shipmentsWithProductLines(len(q.ProductLineIDs)) + ") matched JOIN shipment s ON s.id = matched.id")
 		args = append(args, stringArgs(q.ProductLineIDs)...)
+	case shipmentDriveSalesReps:
+		b.WriteString("(SELECT rso.id FROM " + shipmentRepOrders(len(q.SalesRepIDs)) + ") matched JOIN shipment s ON s.sales_order_id = matched.id")
+		args = append(args, q.AccountID)
+		args = append(args, stringArgs(q.SalesRepIDs)...)
 	default:
 		b.WriteString("shipment s FORCE INDEX (" + strings.Join(q.indexHint(), ", ") + ")")
 	}
@@ -133,6 +141,12 @@ func buildShipmentListQuery(q shipmentListQuery) (string, []any) {
 			" JOIN product prod3 ON prod3.id = sol3.product_id" +
 			" WHERE sl3.shipment_id = s.id AND prod3.product_line_id IN (" + placeholders(len(q.ProductLineIDs)) + "))")
 		args = append(args, stringArgs(q.ProductLineIDs)...)
+	}
+	if len(q.SalesRepIDs) > 0 && q.Drive != shipmentDriveSalesReps {
+		// Probed by primary key per shipment read: as IN it is materialized, reading every order of the reps.
+		b.WriteString(" AND EXISTS (SELECT 1 FROM sales_order rso WHERE rso.id = s.sales_order_id" +
+			" AND rso.sales_rep_id IN (" + placeholders(len(q.SalesRepIDs)) + "))")
+		args = append(args, stringArgs(q.SalesRepIDs)...)
 	}
 	if q.StartDate.Valid {
 		b.WriteString(" AND s.created_at >= ?")
@@ -176,10 +190,16 @@ func shipmentsWithProductLines(n int) string {
 	return "SELECT DISTINCT sl.shipment_id AS id FROM " + shipmentProductLineLines(n)
 }
 
+// shipmentRepOrders is the account's orders crediting any of n sales reps, read from the rep key.
+func shipmentRepOrders(n int) string {
+	return "sales_order rso FORCE INDEX (" + salesOrderSalesRepIndex + ")" +
+		" WHERE rso.owner_account_id = ? AND rso.sales_rep_id IN (" + placeholders(n) + ")"
+}
+
 // buildShipmentMatchCountQuery counts what one unordered filter matches, stopping at
-// shipmentMatchCap: the buyer set's shipments, or the item or product-line filter's shipment lines.
-// Lines bound their shipments from above, and counting them stops at the cap where collecting
-// distinct shipments would read every match first.
+// shipmentMatchCap: the buyer set's shipments, the item or product-line filter's shipment lines, or the
+// sales reps' orders. Lines bound their shipments from above, and counting them stops at the cap where
+// collecting distinct shipments would read every match first; orders are what the reps' drive reads.
 func buildShipmentMatchCountQuery(accountID string, drive shipmentDrive, ids []string) (string, []any) {
 	args := make([]any, 0, len(ids)+2)
 	var inner string
@@ -192,6 +212,9 @@ func buildShipmentMatchCountQuery(accountID string, drive shipmentDrive, ids []s
 		inner = shipmentItemLines(len(ids))
 	case shipmentDriveProductLines:
 		inner = shipmentProductLineLines(len(ids))
+	case shipmentDriveSalesReps:
+		args = append(args, accountID)
+		inner = shipmentRepOrders(len(ids))
 	}
 	args = append(args, stringArgs(ids)...)
 	args = append(args, shipmentMatchCap)

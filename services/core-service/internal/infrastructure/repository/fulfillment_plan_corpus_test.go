@@ -33,7 +33,7 @@ const (
 	planFulPackedShips = 5
 
 	// planFulCorpusVersion is bumped whenever the corpus's shape changes, so a stale one is rebuilt.
-	planFulCorpusVersion = "Plan Fulfillment Merchant v1"
+	planFulCorpusVersion = "Plan Fulfillment Merchant v2"
 
 	// planFulBigShipment is the order whose shipment has production's most lines.
 	planFulBigShipment      = planFulOrders / 2
@@ -123,6 +123,31 @@ func planFulLineProducts(i int) []int {
 	return out
 }
 
+// Sales reps credited on orders: dense on every fourth, mid on one in two hundred, rare on three. They
+// ignore the customer's default rep, so filtering on the order's rep and on the customer's differ.
+const (
+	planFulRepDense = "acus_planful_dense"
+	planFulRepMid   = "acus_planful_mid"
+	planFulRepRare  = "acus_planful_rare"
+	// planFulRepDefault is only ever a customer's default rep; no order credits them.
+	planFulRepDefault = "acus_planful_default"
+)
+
+var planFulRareRepOrders = map[int]bool{4_321: true, 14_321: true, 24_321: true}
+
+// planFulOrderRep is the sales rep order i credits, or nil.
+func planFulOrderRep(i int) any {
+	switch {
+	case planFulRareRepOrders[i]:
+		return planFulRepRare
+	case i%200 == 3:
+		return planFulRepMid
+	case i%4 == 1:
+		return planFulRepDense
+	}
+	return nil
+}
+
 // planFulIsOpen reports an order whose pick is still open (and so has no shipment yet).
 func planFulIsOpen(i int) bool { return i >= planFulOrders-planFulOpenPicks }
 
@@ -182,7 +207,7 @@ func seedFulfillmentCorpus(t *testing.T, db *sql.DB) {
 	for _, table := range []string{"shipment_line", "shipment", "pick_line", "pick", "sales_order_line", "sales_order"} {
 		exec("DELETE FROM `"+table+"` WHERE id LIKE ?", "%\\_planful\\_%")
 	}
-	exec("DELETE FROM quantity WHERE id LIKE 'qy\\_planful\\_%'")
+	exec("DELETE FROM quantity WHERE id LIKE 'qy\\_shl\\_planful\\_%'")
 	exec("DELETE FROM product WHERE id LIKE 'pd\\_planful\\_%'")
 	exec("DELETE FROM product_line WHERE id LIKE 'pdln\\_planful\\_%'")
 	exec("DELETE FROM account_relation WHERE owner_account_id = ?", planFulAccount)
@@ -199,9 +224,9 @@ func seedFulfillmentCorpus(t *testing.T, db *sql.DB) {
 		      VALUES (?, ?, ?, 'commission_applied', 'billed_freight', 'type_group')`, "ag_planful_"+g, planFulAccount, "Plan "+g)
 	}
 
-	// Customers: the large twenty and the first of the tail are in the big group with the dense sales
-	// rep's first ten; the once-ordering customers are their own group, half of them one rep's; the rare
-	// customer is alone in the small group with the rare rep.
+	// Customers: the large twenty and the first of the tail are in the big group, the first ten defaulting
+	// to the dense rep; the once-ordering customers are their own group, half defaulting to a rep no order
+	// credits; the rare customer is alone in the small group, defaulting to the rare rep.
 	type customer struct {
 		id, name, group, rep string
 	}
@@ -210,19 +235,19 @@ func seedFulfillmentCorpus(t *testing.T, db *sql.DB) {
 		cu := customer{id: planFulCustomerID(c), name: fmt.Sprintf("Plan Customer %04d", c)}
 		switch {
 		case c == planFulRareCustomer:
-			cu.group, cu.rep = "ag_planful_small", "acus_planful_rare"
+			cu.group, cu.rep = "ag_planful_small", planFulRepRare
 		case c < 200:
 			cu.group = "ag_planful_big"
 		}
 		if c < 10 {
-			cu.rep = "acus_planful_dense"
+			cu.rep = planFulRepDense
 		}
 		customers = append(customers, cu)
 	}
 	for c := range planFulOnceBuyers {
 		cu := customer{id: planFulOnceBuyerID(c), name: fmt.Sprintf("Plan Once Buyer %04d", c), group: "ag_planful_once"}
 		if c%2 == 0 {
-			cu.rep = "acus_planful_once"
+			cu.rep = planFulRepDefault
 		}
 		customers = append(customers, cu)
 	}
@@ -250,7 +275,7 @@ func seedFulfillmentCorpus(t *testing.T, db *sql.DB) {
 
 	insert(`INSERT INTO sales_order (id, billing_address_id, shipping_address_id, number, priority_code,
 	        sales_order_status_code, sales_order_type_code, buyer_account_id, seller_account_id, owner_account_id,
-	        customer_po_number, created_at, updated_at)`, planFulOrders, func(i int) []any {
+	        customer_po_number, sales_rep_id, created_at, updated_at)`, planFulOrders, func(i int) []any {
 		var po any
 		if i%10 < 7 {
 			po = fmt.Sprintf("PO-%07d", 3_000_000+i*13)
@@ -261,7 +286,7 @@ func seedFulfillmentCorpus(t *testing.T, db *sql.DB) {
 		}
 		at := planFulCreatedAt(i)
 		return []any{planFulID("so", i), "ad_planful_bill", "ad_planful_ship", "SO" + planFulNumber(i), "normal",
-			status, "sales_order", planFulBuyer(i), planFulAccount, planFulAccount, po, at, at}
+			status, "sales_order", planFulBuyer(i), planFulAccount, planFulAccount, po, planFulOrderRep(i), at, at}
 	})
 
 	type line struct{ order, product, n int }

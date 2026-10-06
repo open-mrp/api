@@ -34,6 +34,10 @@ type UpdateMaterialRequest struct {
 	//
 	// Follows the same unit rule as on create: `numerator_unit_id` must reference a currency unit and `denominator_unit_id` must reference a non-currency unit.
 	UnitCost field.Optional[apirequest.RateInput] `json:"unit_cost,omitzero"`
+	// ID of the item category to move the material to.
+	//
+	// The move is the one Change Item Category makes: the category has to be a material category and has to carry the properties of every attribute the material already has, and the material's rate and order-point units switch to the category's base unit while their numbers stay as they were. It is applied before the other fields in the request, so an `order_point` or `unit_cost` sent alongside is written after it.
+	CategoryID field.Optional[string] `json:"category_id,omitzero"`
 }
 
 var sampleUpdateMaterialDescription = "Cold-rolled 304 stainless steel sheet, 2.0mm"
@@ -45,6 +49,7 @@ var sampleUpdateMaterialRequest = &UpdateMaterialRequest{
 	OrderPoint:  field.Some(QuantityInputRequest{Value: "150.00", UnitID: apiresource.SampleUnitID}),
 	LeadTime:    field.Some(QuantityInputRequest{Value: "10.00", UnitID: apiresource.SampleUnitID}),
 	UnitCost:    field.Some(apirequest.RateInput{Value: "9.10", NumeratorUnitID: apiresource.SampleUnitID, DenominatorUnitID: apiresource.SampleUnitID}),
+	CategoryID:  field.Some(apiresource.SampleItemCategoryID),
 }
 
 func (*UpdateMaterialRequest) SchemaExample() any {
@@ -53,7 +58,7 @@ func (*UpdateMaterialRequest) SchemaExample() any {
 
 // Partially updates a material.
 //
-// Fields not provided retain their current values. Only the cost side of pricing can be changed here; the selling price set at creation is not editable through this endpoint. Use the Change Item Category endpoint to move the material to a different category.
+// Fields not provided retain their current values. Only the cost side of pricing can be changed here; the selling price set at creation is not editable through this endpoint.
 type UpdateMaterialEndpoint struct{}
 
 func (e *UpdateMaterialEndpoint) Materialize() *apiendpoint.APIEndpoint[*UpdateMaterialRequest, *apiresource.Material] {

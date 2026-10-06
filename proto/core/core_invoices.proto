@@ -142,6 +142,8 @@ message UpdateMaterialRequest {
   // Updated unit cost. Same currency-vs-non-currency rule as on create.
   optional CreateRateInput unit_cost = 9;
   repeated string includes = 10;
+  // Category to move the material to, as Change Item Category does.
+  optional string category_id = 11;
 }
 message UpdateMaterialResponse {
   MaterialInfo material = 1;
@@ -280,6 +282,8 @@ message UpdatePartRequest {
   optional StringPatch description = 3;
   optional StringPatch notes = 4;
   repeated string includes = 5;
+  // Category to move the part to, as Change Item Category does.
+  optional string category_id = 6;
 }
 message UpdatePartResponse {
   PartInfo part = 1;
@@ -441,6 +445,8 @@ message UpdateProductRequest {
   // Updated unit price. Same currency-vs-non-currency rule as on create.
   optional CreateRateInput unit_price = 6;
   repeated string includes = 7;
+  // Category to move the product to, as Change Item Category does.
+  optional string category_id = 8;
 }
 message UpdateProductResponse {
   ProductFullInfo product = 1;

@@ -171,6 +171,7 @@ func (m *partSvcImpl) UpdatePart(ctx context.Context, req *UpdatePartRequest) (*
 		Sku:         req.SKU.Ptr(),
 		Description: field.StringClearableToProto(req.Description),
 		Notes:       field.StringClearableToProto(req.Notes),
+		CategoryId:  req.CategoryID.Ptr(),
 	}
 
 	resp, apiErr := grpcutil.CallRPC(ctx, partSvcTracer, "service.parts.update", domain.ServiceName,

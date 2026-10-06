@@ -210,6 +210,7 @@ func (m *productSvcImpl) UpdateProduct(ctx context.Context, req *UpdateProductRe
 		Notes:         field.StringClearableToProto(req.Notes),
 		IsPortalReady: isPortalReady,
 		UnitPrice:     rateInputToProto(req.UnitPrice.Ptr()),
+		CategoryId:    req.CategoryID.Ptr(),
 	}
 
 	resp, apiErr := grpcutil.CallRPC(ctx, productSvcTracer, "service.products.update", domain.ServiceName,

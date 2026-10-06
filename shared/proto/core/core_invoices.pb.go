@@ -1134,8 +1134,10 @@ type UpdateMaterialRequest struct {
 	OrderPoint        *QuantityInput         `protobuf:"bytes,7,opt,name=order_point,json=orderPoint,proto3,oneof" json:"order_point,omitempty"`
 	LeadTime          *QuantityInput         `protobuf:"bytes,8,opt,name=lead_time,json=leadTime,proto3,oneof" json:"lead_time,omitempty"`
 	// Updated unit cost. Same currency-vs-non-currency rule as on create.
-	UnitCost      *CreateRateInput `protobuf:"bytes,9,opt,name=unit_cost,json=unitCost,proto3,oneof" json:"unit_cost,omitempty"`
-	Includes      []string         `protobuf:"bytes,10,rep,name=includes,proto3" json:"includes,omitempty"`
+	UnitCost *CreateRateInput `protobuf:"bytes,9,opt,name=unit_cost,json=unitCost,proto3,oneof" json:"unit_cost,omitempty"`
+	Includes []string         `protobuf:"bytes,10,rep,name=includes,proto3" json:"includes,omitempty"`
+	// Category to move the material to, as Change Item Category does.
+	CategoryId    *string `protobuf:"bytes,11,opt,name=category_id,json=categoryId,proto3,oneof" json:"category_id,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -1238,6 +1240,13 @@ func (x *UpdateMaterialRequest) GetIncludes() []string {
 		return x.Includes
 	}
 	return nil
+}
+
+func (x *UpdateMaterialRequest) GetCategoryId() string {
+	if x != nil && x.CategoryId != nil {
+		return *x.CategoryId
+	}
+	return ""
 }
 
 type UpdateMaterialResponse struct {
@@ -2730,12 +2739,14 @@ func (x *CreatePartResponse) GetPart() *PartInfo {
 }
 
 type UpdatePartRequest struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
-	Sku           *string                `protobuf:"bytes,2,opt,name=sku,proto3,oneof" json:"sku,omitempty"`
-	Description   *StringPatch           `protobuf:"bytes,3,opt,name=description,proto3,oneof" json:"description,omitempty"`
-	Notes         *StringPatch           `protobuf:"bytes,4,opt,name=notes,proto3,oneof" json:"notes,omitempty"`
-	Includes      []string               `protobuf:"bytes,5,rep,name=includes,proto3" json:"includes,omitempty"`
+	state       protoimpl.MessageState `protogen:"open.v1"`
+	Id          string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	Sku         *string                `protobuf:"bytes,2,opt,name=sku,proto3,oneof" json:"sku,omitempty"`
+	Description *StringPatch           `protobuf:"bytes,3,opt,name=description,proto3,oneof" json:"description,omitempty"`
+	Notes       *StringPatch           `protobuf:"bytes,4,opt,name=notes,proto3,oneof" json:"notes,omitempty"`
+	Includes    []string               `protobuf:"bytes,5,rep,name=includes,proto3" json:"includes,omitempty"`
+	// Category to move the part to, as Change Item Category does.
+	CategoryId    *string `protobuf:"bytes,6,opt,name=category_id,json=categoryId,proto3,oneof" json:"category_id,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -2803,6 +2814,13 @@ func (x *UpdatePartRequest) GetIncludes() []string {
 		return x.Includes
 	}
 	return nil
+}
+
+func (x *UpdatePartRequest) GetCategoryId() string {
+	if x != nil && x.CategoryId != nil {
+		return *x.CategoryId
+	}
+	return ""
 }
 
 type UpdatePartResponse struct {
@@ -4480,8 +4498,10 @@ type UpdateProductRequest struct {
 	Notes         *StringPatch           `protobuf:"bytes,4,opt,name=notes,proto3,oneof" json:"notes,omitempty"`
 	IsPortalReady *bool                  `protobuf:"varint,5,opt,name=is_portal_ready,json=isPortalReady,proto3,oneof" json:"is_portal_ready,omitempty"`
 	// Updated unit price. Same currency-vs-non-currency rule as on create.
-	UnitPrice     *CreateRateInput `protobuf:"bytes,6,opt,name=unit_price,json=unitPrice,proto3,oneof" json:"unit_price,omitempty"`
-	Includes      []string         `protobuf:"bytes,7,rep,name=includes,proto3" json:"includes,omitempty"`
+	UnitPrice *CreateRateInput `protobuf:"bytes,6,opt,name=unit_price,json=unitPrice,proto3,oneof" json:"unit_price,omitempty"`
+	Includes  []string         `protobuf:"bytes,7,rep,name=includes,proto3" json:"includes,omitempty"`
+	// Category to move the product to, as Change Item Category does.
+	CategoryId    *string `protobuf:"bytes,8,opt,name=category_id,json=categoryId,proto3,oneof" json:"category_id,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -4563,6 +4583,13 @@ func (x *UpdateProductRequest) GetIncludes() []string {
 		return x.Includes
 	}
 	return nil
+}
+
+func (x *UpdateProductRequest) GetCategoryId() string {
+	if x != nil && x.CategoryId != nil {
+		return *x.CategoryId
+	}
+	return ""
 }
 
 type UpdateProductResponse struct {
@@ -6348,7 +6375,7 @@ const file_core_core_invoices_proto_rawDesc = "" +
 	"_unit_costJ\x04\b\t\x10\n" +
 	"R\tburn_rate\"H\n" +
 	"\x16CreateMaterialResponse\x12.\n" +
-	"\bmaterial\x18\x01 \x01(\v2\x12.core.MaterialInfoR\bmaterial\"\xe7\x03\n" +
+	"\bmaterial\x18\x01 \x01(\v2\x12.core.MaterialInfoR\bmaterial\"\x9d\x04\n" +
 	"\x15UpdateMaterialRequest\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x15\n" +
 	"\x03sku\x18\x02 \x01(\tH\x00R\x03sku\x88\x01\x01\x12%\n" +
@@ -6361,7 +6388,9 @@ const file_core_core_invoices_proto_rawDesc = "" +
 	"\tlead_time\x18\b \x01(\v2\x13.core.QuantityInputH\x04R\bleadTime\x88\x01\x01\x127\n" +
 	"\tunit_cost\x18\t \x01(\v2\x15.core.CreateRateInputH\x05R\bunitCost\x88\x01\x01\x12\x1a\n" +
 	"\bincludes\x18\n" +
-	" \x03(\tR\bincludesB\x06\n" +
+	" \x03(\tR\bincludes\x12$\n" +
+	"\vcategory_id\x18\v \x01(\tH\x06R\n" +
+	"categoryId\x88\x01\x01B\x06\n" +
 	"\x04_skuB\x0e\n" +
 	"\f_descriptionB\b\n" +
 	"\x06_notesB\x0e\n" +
@@ -6369,7 +6398,8 @@ const file_core_core_invoices_proto_rawDesc = "" +
 	"\n" +
 	"_lead_timeB\f\n" +
 	"\n" +
-	"_unit_cost\"H\n" +
+	"_unit_costB\x0e\n" +
+	"\f_category_id\"H\n" +
 	"\x16UpdateMaterialResponse\x12.\n" +
 	"\bmaterial\x18\x01 \x01(\v2\x12.core.MaterialInfoR\bmaterial\"'\n" +
 	"\x15DeleteMaterialRequest\x12\x0e\n" +
@@ -6501,16 +6531,19 @@ const file_core_core_invoices_proto_rawDesc = "" +
 	"\n" +
 	"_unit_costJ\x04\b\a\x10\bR\tburn_rate\"8\n" +
 	"\x12CreatePartResponse\x12\"\n" +
-	"\x04part\x18\x01 \x01(\v2\x0e.core.PartInfoR\x04part\"\xe0\x01\n" +
+	"\x04part\x18\x01 \x01(\v2\x0e.core.PartInfoR\x04part\"\x96\x02\n" +
 	"\x11UpdatePartRequest\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x15\n" +
 	"\x03sku\x18\x02 \x01(\tH\x00R\x03sku\x88\x01\x01\x128\n" +
 	"\vdescription\x18\x03 \x01(\v2\x11.core.StringPatchH\x01R\vdescription\x88\x01\x01\x12,\n" +
 	"\x05notes\x18\x04 \x01(\v2\x11.core.StringPatchH\x02R\x05notes\x88\x01\x01\x12\x1a\n" +
-	"\bincludes\x18\x05 \x03(\tR\bincludesB\x06\n" +
+	"\bincludes\x18\x05 \x03(\tR\bincludes\x12$\n" +
+	"\vcategory_id\x18\x06 \x01(\tH\x03R\n" +
+	"categoryId\x88\x01\x01B\x06\n" +
 	"\x04_skuB\x0e\n" +
 	"\f_descriptionB\b\n" +
-	"\x06_notes\"8\n" +
+	"\x06_notesB\x0e\n" +
+	"\f_category_id\"8\n" +
 	"\x12UpdatePartResponse\x12\"\n" +
 	"\x04part\x18\x01 \x01(\v2\x0e.core.PartInfoR\x04part\"#\n" +
 	"\x11DeletePartRequest\x12\x0e\n" +
@@ -6667,7 +6700,7 @@ const file_core_core_invoices_proto_rawDesc = "" +
 	"_unit_costJ\x04\b\n" +
 	"\x10\vR\tburn_rate\"H\n" +
 	"\x15CreateProductResponse\x12/\n" +
-	"\aproduct\x18\x01 \x01(\v2\x15.core.ProductFullInfoR\aproduct\"\xee\x02\n" +
+	"\aproduct\x18\x01 \x01(\v2\x15.core.ProductFullInfoR\aproduct\"\xa4\x03\n" +
 	"\x14UpdateProductRequest\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x15\n" +
 	"\x03sku\x18\x02 \x01(\tH\x00R\x03sku\x88\x01\x01\x128\n" +
@@ -6676,12 +6709,15 @@ const file_core_core_invoices_proto_rawDesc = "" +
 	"\x0fis_portal_ready\x18\x05 \x01(\bH\x03R\risPortalReady\x88\x01\x01\x129\n" +
 	"\n" +
 	"unit_price\x18\x06 \x01(\v2\x15.core.CreateRateInputH\x04R\tunitPrice\x88\x01\x01\x12\x1a\n" +
-	"\bincludes\x18\a \x03(\tR\bincludesB\x06\n" +
+	"\bincludes\x18\a \x03(\tR\bincludes\x12$\n" +
+	"\vcategory_id\x18\b \x01(\tH\x05R\n" +
+	"categoryId\x88\x01\x01B\x06\n" +
 	"\x04_skuB\x0e\n" +
 	"\f_descriptionB\b\n" +
 	"\x06_notesB\x12\n" +
 	"\x10_is_portal_readyB\r\n" +
-	"\v_unit_price\"H\n" +
+	"\v_unit_priceB\x0e\n" +
+	"\f_category_id\"H\n" +
 	"\x15UpdateProductResponse\x12/\n" +
 	"\aproduct\x18\x01 \x01(\v2\x15.core.ProductFullInfoR\aproduct\"&\n" +
 	"\x14DeleteProductRequest\x12\x0e\n" +

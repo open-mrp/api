@@ -244,6 +244,7 @@ func (h *gRPCHandler) UpdateMaterial(ctx context.Context, req *pb.UpdateMaterial
 		OrderPoint:        protoToQuantityInput(req.OrderPoint),
 		LeadTime:          protoToQuantityInput(req.LeadTime),
 		UnitCost:          protoToCreateRateInput(req.UnitCost),
+		CategoryID:        req.CategoryId,
 		Includes:          req.Includes,
 	}
 

@@ -1128,6 +1128,80 @@ func validateChangeItemCategoryTypes(item *domain.Item, category *domain.ItemCat
 	return nil
 }
 
+// changeItemCategoryInTx moves an item to categoryID within the caller's transaction, switches its rate, order-point, consumption and production units to the category's base unit, and publishes the item's update event. It checks no permission: the write that carries the move authorizes it.
+func changeItemCategoryInTx(ctx context.Context, repos domain.RepoFactory, accountID, itemID, categoryID string, includes []string) (*domain.Item, *apierror.APIError) {
+	itemRepo := repos.NewItemRepo()
+	auditIncs := itemAuditIncludes(includes)
+
+	before, apiErr := itemRepo.Get(ctx, domain.GetItemParams{
+		AccountID: accountID,
+		ItemID:    itemID,
+		Includes:  auditIncs,
+	})
+	if apiErr != nil {
+		return nil, apiErr
+	}
+	category, apiErr := repos.NewItemCategoryRepo().Get(ctx, domain.GetItemCategoryParams{
+		AccountID:      accountID,
+		ItemCategoryID: categoryID,
+	})
+	if apiErr != nil {
+		return nil, apiErr
+	}
+	if apiErr := validateChangeItemCategoryTypes(before, category); apiErr != nil {
+		return nil, apiErr
+	}
+	if apiErr := validateCategoryCarriesItemAttributes(ctx, repos, before, categoryID, "category_id"); apiErr != nil {
+		return nil, apiErr
+	}
+
+	baseUnitID, _, apiErr := itemRepo.GetCategoryBaseUnitID(ctx, categoryID)
+	if apiErr != nil {
+		return nil, apiErr
+	}
+	if apiErr := itemRepo.ChangeCategory(ctx, domain.ChangeItemCategoryParams{
+		AccountID:  accountID,
+		ItemID:     itemID,
+		CategoryID: categoryID,
+	}); apiErr != nil {
+		return nil, apiErr
+	}
+	if apiErr := itemRepo.UpdateRateUnits(ctx, accountID, itemID, baseUnitID); apiErr != nil {
+		return nil, apiErr
+	}
+	// No-op unless the item is a material.
+	if apiErr := itemRepo.UpdateMaterialOrderPointUnit(ctx, accountID, itemID, baseUnitID); apiErr != nil {
+		return nil, apiErr
+	}
+	if apiErr := itemRepo.UpdateConsumptionProductionQuantityUnits(ctx, accountID, itemID, baseUnitID); apiErr != nil {
+		return nil, apiErr
+	}
+
+	after, apiErr := itemRepo.Get(ctx, domain.GetItemParams{
+		AccountID: accountID,
+		ItemID:    itemID,
+		Includes:  auditIncs,
+	})
+	if apiErr != nil {
+		return nil, apiErr
+	}
+
+	// Re-assigning the item's current category is a no-op; skip the publish when nothing actually changed.
+	if changes := audit.ComputeChanges(before, after); len(changes) > 0 {
+		if apiErr := audit.NewPublisher().Publish(ctx, repos.NewOutboxRepo(), audit.EventData{
+			ServiceName:  domain.ServiceName,
+			Action:       constants.AuditActionUpdate,
+			ResourceType: constants.ObjectTypeItem,
+			ResourceID:   after.ID,
+			Changes:      changes,
+		}); apiErr != nil {
+			return nil, apiErr
+		}
+	}
+
+	return after, nil
+}
+
 // ChangeItemCategory changes the category of an item and updates rate units.
 func (s *itemSvcImpl) ChangeItemCategory(ctx context.Context, itemID, categoryID string, includes []string) (*domain.Item, *apierror.APIError) {
 	ctx, span := itemSvcTracer.Start(ctx, "service.item.change_category")
@@ -1165,86 +1239,11 @@ func (s *itemSvcImpl) ChangeItemCategory(ctx context.Context, itemID, categoryID
 	case domain.RecoveryPointStarted:
 		var result *domain.Item
 		apiErr = s.withTx(ctx, func(txCtx context.Context, txSvc *itemSvcImpl) *apierror.APIError {
-			txRepo := txSvc.repos.NewItemRepo()
-
-			auditIncs := itemAuditIncludes(includes)
-
-			itemForValidation, apiErr := txRepo.Get(txCtx, domain.GetItemParams{
-				AccountID: accountID,
-				ItemID:    itemID,
-				Includes:  auditIncs,
-			})
-			if apiErr != nil {
-				return apiErr
-			}
-			category, apiErr := txSvc.repos.NewItemCategoryRepo().Get(txCtx, domain.GetItemCategoryParams{
-				AccountID:      accountID,
-				ItemCategoryID: categoryID,
-			})
-			if apiErr != nil {
-				return apiErr
-			}
-			if apiErr := validateChangeItemCategoryTypes(itemForValidation, category); apiErr != nil {
-				return apiErr
-			}
-			if apiErr := validateCategoryCarriesItemAttributes(txCtx, txSvc.repos, itemForValidation, categoryID, "category_id"); apiErr != nil {
-				return apiErr
-			}
-
-			// Get the base unit of the new category (type already validated above).
-			baseUnitID, _, apiErr := txRepo.GetCategoryBaseUnitID(txCtx, categoryID)
-			if apiErr != nil {
-				return apiErr
-			}
-
-			// Update the item's category
-			if apiErr := txRepo.ChangeCategory(txCtx, domain.ChangeItemCategoryParams{
-				AccountID:  accountID,
-				ItemID:     itemID,
-				CategoryID: categoryID,
-			}); apiErr != nil {
-				return apiErr
-			}
-
-			// Update all rate units to the new category's base unit
-			if apiErr := txRepo.UpdateRateUnits(txCtx, accountID, itemID, baseUnitID); apiErr != nil {
-				return apiErr
-			}
-
-			// Update material order point unit (no-op if item is not a material)
-			if apiErr := txRepo.UpdateMaterialOrderPointUnit(txCtx, accountID, itemID, baseUnitID); apiErr != nil {
-				return apiErr
-			}
-
-			// Update consumption and production quantity units
-			if apiErr := txRepo.UpdateConsumptionProductionQuantityUnits(txCtx, accountID, itemID, baseUnitID); apiErr != nil {
-				return apiErr
-			}
-
-			item, apiErr := txRepo.Get(txCtx, domain.GetItemParams{
-				AccountID: accountID,
-				ItemID:    itemID,
-				Includes:  auditIncs,
-			})
+			item, apiErr := changeItemCategoryInTx(txCtx, txSvc.repos, accountID, itemID, categoryID, includes)
 			if apiErr != nil {
 				return apiErr
 			}
 			result = item
-
-			changes := audit.ComputeChanges(itemForValidation, item)
-
-			// Re-assigning the item's current category is a no-op; skip the publish when nothing actually changed.
-			if len(changes) > 0 {
-				if apiErr := audit.NewPublisher().Publish(txCtx, txSvc.repos.NewOutboxRepo(), audit.EventData{
-					ServiceName:  domain.ServiceName,
-					Action:       constants.AuditActionUpdate,
-					ResourceType: constants.ObjectTypeItem,
-					ResourceID:   item.ID,
-					Changes:      changes,
-				}); apiErr != nil {
-					return apiErr
-				}
-			}
 
 			return txSvc.mediators().Idempotency.CacheSuccessResponse(txCtx, idempotencyKey.TypeID, result)
 		})

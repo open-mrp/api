@@ -182,6 +182,7 @@ func (m *materialSvcImpl) UpdateMaterial(ctx context.Context, req *UpdateMateria
 		Notes:             req.Notes.Ptr(),
 		UpdateNotes:       req.Notes.IsSet(),
 		UnitCost:          rateInputToProto(req.UnitCost.Ptr()),
+		CategoryId:        req.CategoryID.Ptr(),
 	}
 	if q, ok := req.OrderPoint.Value(); ok {
 		pbReq.OrderPoint = &pb.QuantityInput{Value: q.Value, UnitId: q.UnitID}

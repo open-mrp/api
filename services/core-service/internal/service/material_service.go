@@ -501,7 +501,7 @@ func (s *materialSvcImpl) UpdateMaterial(ctx context.Context, params domain.Upda
 	}
 }
 
-// updateMaterialInTx updates a material's item fields (sku/description/notes), order-point
+// updateMaterialInTx updates a material's category, item fields (sku/description/notes), order-point
 // and lead-time quantities, and unit_cost within an existing transaction, returning the
 // fresh material. Shared by UpdateMaterial (single) and BulkUpsertMaterials (batch); it
 // does not own the idempotency/permission envelope, and expects params.AccountID set.
@@ -514,6 +514,17 @@ func (s *materialSvcImpl) updateMaterialInTx(txCtx context.Context, params domai
 	existing, apiErr := txMaterialRepo.GetByID(txCtx, domain.GetMaterialParams{AccountID: params.AccountID, MaterialID: params.MaterialID, Includes: params.Includes})
 	if apiErr != nil {
 		return nil, apiErr
+	}
+
+	if params.CategoryID != nil {
+		if _, apiErr := changeItemCategoryInTx(txCtx, s.repos, params.AccountID, existing.ItemID, *params.CategoryID, nil); apiErr != nil {
+			return nil, apiErr
+		}
+		// The move is audited on the item, so the material's own diff starts after it.
+		existing, apiErr = txMaterialRepo.GetByID(txCtx, domain.GetMaterialParams{AccountID: params.AccountID, MaterialID: params.MaterialID, Includes: params.Includes})
+		if apiErr != nil {
+			return nil, apiErr
+		}
 	}
 
 	// Check SKU uniqueness if being updated, excluding the current item.

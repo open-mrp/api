@@ -39,6 +39,10 @@ type UpdateProductRequest struct {
 	//
 	// The numerator unit must be a currency unit and the denominator unit must not be. The new rate replaces the price on the product's backing item.
 	UnitPrice field.Optional[apirequest.RateInput] `json:"unit_price,omitzero"`
+	// ID of the item category to move the product to.
+	//
+	// The move is the one Change Item Category makes: the category has to be a product category and has to carry the properties of every attribute the product already has, and the product's rate units switch to the category's base unit while their numbers stay as they were. It is applied before the other fields in the request, so a `unit_price` sent alongside is written after it.
+	CategoryID field.Optional[string] `json:"category_id,omitzero"`
 }
 
 var sampleUpdateProductSKU = "SKU-002"
@@ -51,6 +55,7 @@ var sampleUpdateProductRequest = &UpdateProductRequest{
 	Notes:            field.Set(sampleUpdateProductNotes),
 	PortalVisibility: field.Some(constants.CustomerPortalVisibilityVisible),
 	UnitPrice:        field.Some(apirequest.RateInput{Value: "219.00", NumeratorUnitID: apiresource.SampleUnitID, DenominatorUnitID: apiresource.SampleUnitID}),
+	CategoryID:       field.Some(apiresource.SampleItemCategoryID),
 }
 
 func (*UpdateProductRequest) SchemaExample() any {

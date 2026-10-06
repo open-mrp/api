@@ -18,6 +18,8 @@ type AnalyzeManufacturingRequest struct {
 	// The end date for the analysis period.
 	EndDate time.Time `json:"ends_at" validate:"required"`
 	// The type of manufacturing analytics to compute.
+	//
+	// `costsPerUnit` and `margin` are cost data and also require `costs:read`.
 	Type string `json:"type" validate:"required"`
 }
 

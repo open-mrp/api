@@ -50,7 +50,7 @@ func (e *AnalyzeProductionCostsEndpoint) Materialize() *apiendpoint.APIEndpoint[
 		ReadOnly:            true,
 		Preview:             true,
 		ObjectType:          constants.ObjectTypeAnalyzeProductionCostsResponse,
-		RequiredPermissions: []types.Permission{{Domain: types.PermissionDomainBatches, Action: types.ActionRead}},
+		RequiredPermissions: []types.Permission{{Domain: types.PermissionDomainCosts, Action: types.ActionRead}},
 		ServiceHandler: func(svc any) func(ctx context.Context, req *AnalyzeProductionCostsRequest) (*apiresource.AnalyzeProductionCostsResponse, *apierror.APIError) {
 			return svc.(AnalyticsSvc).AnalyzeProductionCosts
 		},

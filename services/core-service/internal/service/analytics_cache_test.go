@@ -312,3 +312,26 @@ func TestAnalyticsCache_SalesReportsSkipTheCacheWhileSettling(t *testing.T) {
 	_, _ = cachedReport(ctx, c.sales, report(), load)
 	require.EqualValues(t, 3, calls.Load())
 }
+
+// The cost-per-unit and margin metrics are the seller's cost, so they need costs:read on top of the report's own permission; the other metrics do not.
+func TestAnalyzeManufacturing_CostMetricsNeedCostsRead(t *testing.T) {
+	t.Parallel()
+	f := newSalesFixture(t)
+	f.analytics.EXPECT().GetManufacturingMetric(gomock.Any(), gomock.Any()).Return(1.5, nil).Times(3)
+
+	reader := salesCtx("ac_1", string(constants.RoleTypeCustom), map[string]bool{"invoices:read": true})
+	costReader := salesCtx("ac_1", string(constants.RoleTypeCustom), map[string]bool{"invoices:read": true, "costs:read": true})
+
+	for _, metric := range []string{"costsPerUnit", "margin"} {
+		_, apiErr := f.svc.AnalyzeManufacturing(reader, domain.AnalyzeManufacturingParams{Type: metric})
+		require.NotNil(t, apiErr, metric)
+		require.Equal(t, 403, apierror.GetHTTPStatusCode(apiErr.Code), metric)
+
+		value, apiErr := f.svc.AnalyzeManufacturing(costReader, domain.AnalyzeManufacturingParams{Type: metric})
+		require.Nil(t, apiErr, metric)
+		require.EqualValues(t, 1.5, value, metric)
+	}
+
+	_, apiErr := f.svc.AnalyzeManufacturing(reader, domain.AnalyzeManufacturingParams{Type: "production"})
+	require.Nil(t, apiErr, "a metric that is not cost data keeps the report's own permission")
+}

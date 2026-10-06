@@ -20,27 +20,33 @@ import (
 )
 
 type customerSvcSetup struct {
-	svc         domain.CustomerSvc
-	customers   *repositorymock.MockCustomerRepo
-	salesOrders *repositorymock.MockSalesOrderRepo
-	deleted     *repositorymock.MockDeletedRecordRepo
-	idempotency *mediatormock.MockIdempotencyMed
-	outbox      *recordingOutboxRepo
+	svc           domain.CustomerSvc
+	customers     *repositorymock.MockCustomerRepo
+	salesOrders   *repositorymock.MockSalesOrderRepo
+	deleted       *repositorymock.MockDeletedRecordRepo
+	carriers      *repositorymock.MockCarrierRepo
+	serviceLevels *repositorymock.MockServiceLevelRepo
+	idempotency   *mediatormock.MockIdempotencyMed
+	outbox        *recordingOutboxRepo
 }
 
 func newCustomerSvcSetup(t *testing.T) *customerSvcSetup {
 	ctrl := gomock.NewController(t)
 	s := &customerSvcSetup{
-		customers:   repositorymock.NewMockCustomerRepo(ctrl),
-		salesOrders: repositorymock.NewMockSalesOrderRepo(ctrl),
-		deleted:     repositorymock.NewMockDeletedRecordRepo(ctrl),
-		idempotency: mediatormock.NewMockIdempotencyMed(ctrl),
-		outbox:      &recordingOutboxRepo{},
+		customers:     repositorymock.NewMockCustomerRepo(ctrl),
+		salesOrders:   repositorymock.NewMockSalesOrderRepo(ctrl),
+		deleted:       repositorymock.NewMockDeletedRecordRepo(ctrl),
+		carriers:      repositorymock.NewMockCarrierRepo(ctrl),
+		serviceLevels: repositorymock.NewMockServiceLevelRepo(ctrl),
+		idempotency:   mediatormock.NewMockIdempotencyMed(ctrl),
+		outbox:        &recordingOutboxRepo{},
 	}
 	repos := factorymock.NewMockRepoFactory(ctrl)
 	repos.EXPECT().NewCustomerRepo().Return(s.customers).AnyTimes()
 	repos.EXPECT().NewSalesOrderRepo().Return(s.salesOrders).AnyTimes()
 	repos.EXPECT().NewDeletedRecordRepo().Return(s.deleted).AnyTimes()
+	repos.EXPECT().NewCarrierRepo().Return(s.carriers).AnyTimes()
+	repos.EXPECT().NewServiceLevelRepo().Return(s.serviceLevels).AnyTimes()
 	repos.EXPECT().NewOutboxRepo().Return(s.outbox).AnyTimes()
 	mediators := factorymock.NewMockMediatorFactory(ctrl)
 	mediators.EXPECT().Build(gomock.Any()).Return(domain.Mediators{Idempotency: s.idempotency}).AnyTimes()
@@ -193,4 +199,94 @@ func TestCreateCustomer_ChecksATypedNumberOnlyUnderTheOwnersLock(t *testing.T) {
 
 	require.NotNil(t, apiErr)
 	assert.Equal(t, "number", apiErr.Param)
+}
+
+// expectRoutingOwned answers the ownership reads for the default carrier and service level as the account's own.
+func (s *customerSvcSetup) expectRoutingOwned(carrierID, serviceLevelID string) {
+	if carrierID != "" {
+		s.carriers.EXPECT().GetByIDs(gomock.Any(), "ac_seller", []string{carrierID}).Return([]*domain.Carrier{{ID: carrierID}}, nil)
+	}
+	if serviceLevelID != "" {
+		s.carriers.EXPECT().GetOptionsByIDs(gomock.Any(), "ac_seller", []string{serviceLevelID}).Return([]*domain.ServiceLevel{{ID: serviceLevelID}}, nil)
+	}
+}
+
+func TestCreateCustomer_RefusesADefaultServiceLevelOffTheDefaultCarrier(t *testing.T) {
+	s := newCustomerSvcSetup(t)
+	s.expectWrite()
+	s.customers.EXPECT().LockNumbers(gomock.Any(), "ac_seller").Return(nil)
+	s.expectRoutingOwned("cr_own", "crop_other")
+	s.serviceLevels.EXPECT().IsInCarrier(gomock.Any(), "crop_other", "cr_own").Return(false, nil)
+
+	_, apiErr := s.svc.CreateCustomer(customerInternalCtx("ac_seller"), domain.CreateCustomerParams{
+		Name:                  "Buyer Co",
+		DefaultCarrierID:      new("cr_own"),
+		DefaultServiceLevelID: new("crop_other"),
+		BillToAddress:         &domain.CreateAddressParams{},
+		ShipToAddress:         &domain.CreateAddressParams{},
+	})
+
+	require.NotNil(t, apiErr)
+	assert.Equal(t, apierror.ErrorCodeValidationFailed, apiErr.Code)
+	assert.Equal(t, "default_service_level_id", apiErr.Param)
+}
+
+// The pair is checked as the customer will hold it, so a default carrier or service level sent alone is checked against the other one already held.
+func TestUpdateCustomer_RefusesADefaultServiceLevelOffTheDefaultCarrier(t *testing.T) {
+	for _, tc := range []struct {
+		name                     string
+		params                   domain.UpdateCustomerParams
+		carrierID, levelID       string
+		checkLevel, checkCarrier string
+	}{
+		{"carrier alone", domain.UpdateCustomerParams{DefaultCarrierID: new("cr_new")}, "cr_new", "", "crop_own", "cr_new"},
+		{"service level alone", domain.UpdateCustomerParams{DefaultServiceLevelID: field.Set("crop_other")}, "", "crop_other", "crop_other", "cr_own"},
+		{"both", domain.UpdateCustomerParams{DefaultCarrierID: new("cr_new"), DefaultServiceLevelID: field.Set("crop_other")}, "cr_new", "crop_other", "crop_other", "cr_new"},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			s := newCustomerSvcSetup(t)
+			s.expectWrite()
+			s.customers.EXPECT().Get(gomock.Any(), "ac_seller", "ac_buyer", gomock.Any()).
+				Return(&domain.Customer{ID: "ac_buyer", Number: "1001", DefaultCarrierID: new("cr_own"), DefaultServiceLevelID: new("crop_own")}, nil)
+			s.expectRoutingOwned(tc.carrierID, tc.levelID)
+			s.serviceLevels.EXPECT().IsInCarrier(gomock.Any(), tc.checkLevel, tc.checkCarrier).Return(false, nil)
+
+			params := tc.params
+			params.CustomerAccountID = "ac_buyer"
+			_, apiErr := s.svc.UpdateCustomer(customerInternalCtx("ac_seller"), params)
+
+			require.NotNil(t, apiErr)
+			assert.Equal(t, apierror.ErrorCodeValidationFailed, apiErr.Code)
+			assert.Equal(t, "default_service_level_id", apiErr.Param)
+		})
+	}
+}
+
+// Clearing the default service level alongside a new default carrier leaves nothing to check, and an edit that leaves a pair alone does not re-check it.
+func TestUpdateCustomer_TakesANewCarrierWithItsServiceLevelClearedAndLeavesAnUntouchedPair(t *testing.T) {
+	for _, tc := range []struct {
+		name   string
+		params domain.UpdateCustomerParams
+		owned  string
+	}{
+		{"new carrier, level cleared", domain.UpdateCustomerParams{DefaultCarrierID: new("cr_new"), DefaultServiceLevelID: field.Clear[string]()}, "cr_new"},
+		{"pair untouched", domain.UpdateCustomerParams{Note: field.Set("unrelated edit")}, ""},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			s := newCustomerSvcSetup(t)
+			s.expectWrite()
+			// The held pair is already mismatched, so a re-check of it would refuse the edit.
+			old := &domain.Customer{ID: "ac_buyer", Name: "Buyer Co", Number: "1001", DefaultCarrierID: new("cr_own"), DefaultServiceLevelID: new("crop_other")}
+			s.customers.EXPECT().Get(gomock.Any(), "ac_seller", "ac_buyer", gomock.Any()).Return(old, nil).Times(2)
+			s.customers.EXPECT().GetRelationID(gomock.Any(), "ac_seller", "ac_buyer").Return("acre_buyer", nil)
+			s.customers.EXPECT().Update(gomock.Any(), "acre_buyer", gomock.Any()).Return(nil)
+			s.expectRoutingOwned(tc.owned, "")
+
+			params := tc.params
+			params.CustomerAccountID = "ac_buyer"
+			_, apiErr := s.svc.UpdateCustomer(customerInternalCtx("ac_seller"), params)
+
+			require.Nil(t, apiErr)
+		})
+	}
 }

@@ -109,8 +109,8 @@ func checkCustomerRefs(ctx context.Context, repos domain.RepoFactory, accountID 
 	return nil
 }
 
-// checkServiceLevelOnCarrier refuses a service level of a different carrier than the one the record ships on.
-func checkServiceLevelOnCarrier(ctx context.Context, repos domain.RepoFactory, carrierID, serviceLevelID *string) *apierror.APIError {
+// checkServiceLevelOnCarrier refuses, on param, a service level of a different carrier than the one the record ships on.
+func checkServiceLevelOnCarrier(ctx context.Context, repos domain.RepoFactory, carrierID, serviceLevelID *string, param string) *apierror.APIError {
 	if carrierID == nil || *carrierID == "" || serviceLevelID == nil || *serviceLevelID == "" {
 		return nil
 	}
@@ -119,13 +119,13 @@ func checkServiceLevelOnCarrier(ctx context.Context, repos domain.RepoFactory, c
 		return apiErr
 	}
 	if !onCarrier {
-		return apierror.NewValidationErrorWithParam("The service level does not belong to the carrier.", "service_level_id")
+		return apierror.NewValidationErrorWithParam("The service level does not belong to the carrier.", param)
 	}
 	return nil
 }
 
 // checkUpdatedServiceLevelOnCarrier checks the pair a record holds once an update applies, so a carrier sent alone is checked against the held service level and the other way round. A pair the update leaves alone is not checked again.
-func checkUpdatedServiceLevelOnCarrier(ctx context.Context, repos domain.RepoFactory, heldCarrierID, heldServiceLevelID, carrierID *string, serviceLevelID field.Clearable[string]) *apierror.APIError {
+func checkUpdatedServiceLevelOnCarrier(ctx context.Context, repos domain.RepoFactory, heldCarrierID, heldServiceLevelID, carrierID *string, serviceLevelID field.Clearable[string], param string) *apierror.APIError {
 	nextCarrierID := heldCarrierID
 	if carrierID != nil {
 		nextCarrierID = carrierID
@@ -137,7 +137,7 @@ func checkUpdatedServiceLevelOnCarrier(ctx context.Context, repos domain.RepoFac
 	if equalStringPtr(nextCarrierID, heldCarrierID) && equalStringPtr(nextServiceLevelID, heldServiceLevelID) {
 		return nil
 	}
-	return checkServiceLevelOnCarrier(ctx, repos, nextCarrierID, nextServiceLevelID)
+	return checkServiceLevelOnCarrier(ctx, repos, nextCarrierID, nextServiceLevelID, param)
 }
 
 // findCustomerRefs returns which of ids the account may use as a record of kind.

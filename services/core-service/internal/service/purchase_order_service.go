@@ -304,7 +304,7 @@ func (s *purchaseOrderSvcImpl) CreatePurchaseOrder(ctx context.Context, params d
 	if apiErr := checkCustomerRefs(ctx, s.repos, params.AccountID, newPurchaseOrderRefs(params)); apiErr != nil {
 		return nil, tracing.Trace(span, apiErr)
 	}
-	if apiErr := checkServiceLevelOnCarrier(ctx, s.repos, params.CarrierID, params.ServiceLevelID); apiErr != nil {
+	if apiErr := checkServiceLevelOnCarrier(ctx, s.repos, params.CarrierID, params.ServiceLevelID, "service_level_id"); apiErr != nil {
 		return nil, tracing.Trace(span, apiErr)
 	}
 

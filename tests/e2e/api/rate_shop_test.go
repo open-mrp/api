@@ -3,6 +3,7 @@
 package api_test
 
 import (
+	"net/http"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -115,4 +116,59 @@ func TestRateShop_ValidationMissingToAddress(t *testing.T) {
 	require.NoError(t, err)
 	assert.True(t, status == 400 || status == 422,
 		"missing to_address should return 400 or 422, got %d: %s", status, string(body))
+}
+
+// rateShopOptionsByServiceLevel keys a rate-shop response's options by service level id.
+func rateShopOptionsByServiceLevel(t *testing.T, client *Client) map[string]map[string]any {
+	t.Helper()
+	status, body, err := client.Post(rateShopPath, rateShopRequestBody(), newIdempotencyKey())
+	require.NoError(t, err)
+	requireStatus(t, http.StatusOK, status, body)
+	out := map[string]map[string]any{}
+	for _, raw := range jsonListData(parseJSON(body), "options") {
+		opt := raw.(map[string]any)
+		out[jsonField(jsonObject(opt, "service_level"), "id")] = opt
+	}
+	return out
+}
+
+// A role that may rate shop sees its options' carriers and service levels as an admin does; on their own they stay gated.
+func TestRateShop_ShowsCarriersToARoleThatMayRateShop(t *testing.T) {
+	t.Parallel()
+	shipper := customRoleClient(t, "shipments:read")
+
+	for _, path := range []string{carriersPath, carriersPath + "/" + SeedCarrierID, serviceLevelsPath(SeedCarrierID), serviceLevelsPath(SeedCarrierID) + "/" + SeedServiceLevelID} {
+		status, body, err := shipper.GetListRaw(path, nil)
+		require.NoError(t, err)
+		requireStatus(t, http.StatusForbidden, status, body)
+		requireErrorResponse(t, body, "insufficient_permissions", "invalid_request_error")
+	}
+
+	got := rateShopOptionsByServiceLevel(t, shipper)
+	want := rateShopOptionsByServiceLevel(t, apiClient)
+	for _, id := range []string{SeedServiceLevelID, seededExpressServiceLevelID} {
+		opt, ok := got[id]
+		require.True(t, ok, "the seeded %s option is offered to the role", id)
+		assert.Equal(t, want[id], opt, "the role sees the %s option exactly as an admin does", id)
+		carrier := jsonObject(opt, "carrier")
+		require.NotNil(t, carrier)
+		assert.Equal(t, SeedCarrierID, jsonField(carrier, "id"))
+		assert.Equal(t, "Delivery", jsonField(carrier, "name"))
+		assert.NotEmpty(t, jsonField(carrier, "customer_portal_visibility"))
+		assertValidTimestamp(t, jsonField(carrier, "created_at"), "carrier.created_at")
+		serviceLevel := jsonObject(opt, "service_level")
+		assert.NotEmpty(t, jsonField(serviceLevel, "service_level_token"))
+		assertValidTimestamp(t, jsonField(serviceLevel, "created_at"), "service_level.created_at")
+	}
+}
+
+// Rate shopping itself still needs shipments:read; a sibling permission is refused.
+func TestRateShop_RefusesARoleWithoutShipmentsRead(t *testing.T) {
+	t.Parallel()
+	carrierReader := customRoleClient(t, "carriers:read")
+
+	status, body, err := carrierReader.Post(rateShopPath, rateShopRequestBody(), newIdempotencyKey())
+	require.NoError(t, err)
+	requireStatus(t, http.StatusForbidden, status, body)
+	requireErrorResponse(t, body, "insufficient_permissions", "invalid_request_error")
 }

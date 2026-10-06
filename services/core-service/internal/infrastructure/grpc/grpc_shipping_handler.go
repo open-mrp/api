@@ -642,7 +642,15 @@ func (h *shippingGRPCHandler) RateShop(ctx context.Context, req *pb.RateShopRequ
 	}
 
 	resp := &pb.RateShopResponse{
-		Options: options,
+		Options:       options,
+		Carriers:      make([]*pb.CarrierInfo, len(result.Carriers)),
+		ServiceLevels: make([]*pb.ServiceLevelInfo, len(result.ServiceLevels)),
+	}
+	for i, c := range result.Carriers {
+		resp.Carriers[i] = carrierToProto(c)
+	}
+	for i, sl := range result.ServiceLevels {
+		resp.ServiceLevels[i] = serviceLevelToProto(sl)
 	}
 
 	if result.ExemptionType != nil {

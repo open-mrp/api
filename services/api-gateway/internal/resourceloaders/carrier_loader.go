@@ -38,7 +38,7 @@ func LoadCarriers(ctx context.Context, ids []string) (map[string]any, *apierror.
 	meta := resourcekit.GetLoadMeta(ctx)
 	out := make(map[string]any, len(resp.Carriers))
 	for _, c := range resp.Carriers {
-		out[c.Id] = carrierFromProto(c)
+		out[c.Id] = CarrierFromProto(c)
 
 		// FK metadata — read back by SubField closures via LoadMeta.
 		var accountID string
@@ -52,8 +52,8 @@ func LoadCarriers(ctx context.Context, ids []string) (map[string]any, *apierror.
 	return out, nil
 }
 
-// carrierFromProto maps a proto CarrierInfo to a clean apiresource.Carrier. Fields that depend on includes (Owner, ServiceLevels) are left nil — they only become populated when the resolver fires their SubField.Populate.
-func carrierFromProto(c *pb.CarrierInfo) *apiresource.Carrier {
+// CarrierFromProto maps a proto CarrierInfo to a clean apiresource.Carrier. Fields that depend on includes (Owner, ServiceLevels) are left nil — they only become populated when the resolver fires their SubField.Populate.
+func CarrierFromProto(c *pb.CarrierInfo) *apiresource.Carrier {
 	var code *constants.CarrierCode
 	if c.Code != nil {
 		v := constants.CarrierCode(*c.Code)

@@ -336,6 +336,9 @@ message RateShopResponse {
   repeated RateShopOptionInfo options = 1;
   optional string exemption_type = 2;
   optional double flat_rate = 3;
+  // The carriers and service levels the options name, read with the rate shop under its own access.
+  repeated CarrierInfo carriers = 4;
+  repeated ServiceLevelInfo service_levels = 5;
 }
 
 // List shipment lines

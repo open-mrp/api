@@ -112,6 +112,15 @@ func (s *analyticsSvcImpl) AnalyzeSales(ctx context.Context, params domain.Analy
 		return nil, tracing.Trace(span, apiErr)
 	}
 
+	entries, apiErr := s.salesEntries(ctx, identity, params)
+	return entries, tracing.Trace(span, apiErr)
+}
+
+// salesEntries reads the sales report rows the caller's role scopes it to, without checking a permission: the endpoint that asks for them has already decided the caller may see them.
+func (s *analyticsSvcImpl) salesEntries(ctx context.Context, identity *types.Identity, params domain.AnalyzeSalesParams) ([]domain.SalesEntry, *apierror.APIError) {
+	ctx, span := analyticsSvcTracer.Start(ctx, "service.analytics.sales_entries")
+	defer span.End()
+
 	params.AccountID = identity.Target.AccountID
 	isSalesRep := identity.IsSalesRep()
 

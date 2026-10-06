@@ -42,7 +42,8 @@ func (s *analyticsSvcImpl) AnalyzeRealizedMargins(ctx context.Context, params do
 	// The peer benchmark is drawn from every customer that bought the SKU, so the
 	// caller's customer filters are deliberately not pushed into the query — narrowing
 	// the population would compare a customer against a benchmark it helped set.
-	entries, apiErr := s.AnalyzeSales(ctx, domain.AnalyzeSalesParams{
+	// Realized margins is its own report under costs:read, so the sales rows it is built from are read without the sales report's permission.
+	entries, apiErr := s.salesEntries(ctx, identity, domain.AnalyzeSalesParams{
 		StartDate:      params.StartDate,
 		EndDate:        params.EndDate,
 		ProductLineIDs: params.ProductLineIDs,

@@ -203,6 +203,10 @@ func (h *billingHandler) GetAccountUsage(ctx context.Context, req *pb.GetAccount
 	if apiErr := identity.CheckIsAuthenticated(); apiErr != nil {
 		return nil, contracts.ConvertAPIErrorToGRPC(apiErr)
 	}
+	// The usage is the seller's own business: its seats, invoice and batch volume, subscription standing and agent spend.
+	if identity.IsRelationActor() {
+		return nil, contracts.ConvertAPIErrorToGRPC(apierror.NewAuthorizationError("Customer and supplier portals cannot read the account's usage."))
+	}
 	if !identity.IsTargetAccountSet() {
 		return nil, contracts.ConvertAPIErrorToGRPC(apierror.NewAuthenticationError("The OpenMRP-Account header is required."))
 	}

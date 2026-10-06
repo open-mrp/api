@@ -171,3 +171,15 @@ func TestPortalRecordScope_DiscountForAnotherGroupIsHiddenFromEveryPortal(t *tes
 		}
 	}
 }
+
+// --- Billing ---
+
+func TestPortalRecordScope_BillingUsageAndSpendingCapAreRefusedToPortals(t *testing.T) {
+	t.Parallel()
+	for _, path := range []string{"/v1/billing/accounts/usage", "/v1/billing/spending-cap"} {
+		requireStatusAs(t, http.StatusOK, "staff", apiClient, path, nil)
+		for who, portal := range portalClients(t) {
+			requireStatusAs(t, http.StatusForbidden, who, portal, path, nil)
+		}
+	}
+}

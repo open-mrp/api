@@ -7,18 +7,16 @@ import (
 	"testing"
 )
 
-// Releasing a week edits the schedule and creates a production run, so it takes both permissions: either one alone is refused, naming the other.
-func TestScheduleRelease_TakesTheScheduleAndRunPermissionsTogether(t *testing.T) {
+// Releasing a week is an edit to the schedule. The production run it creates is part of that edit, so the schedule permission covers it and production_runs:create neither helps nor is needed.
+func TestScheduleRelease_TakesOnlyTheSchedulePermission(t *testing.T) {
 	t.Parallel()
 	path := schedulePath("pnsc_01cpmissing000000") + "/actions/release-week"
 	body := map[string]any{"week_index": 0, "responsible_user_id": SeedAccountUserID}
 
-	status, resp := counterpartyPost(t, customRoleClient(t, "production_schedules:update"), path, body)
-	requirePermissionRefused(t, status, resp, "production_runs:create")
-	status, resp = counterpartyPost(t, customRoleClient(t, "production_runs:create"), path, body)
+	status, resp := counterpartyPost(t, customRoleClient(t, "production_runs:create"), path, body)
 	requirePermissionRefused(t, status, resp, "production_schedules:update")
 
-	status, resp = counterpartyPost(t, customRoleClient(t, "production_schedules:update", "production_runs:create"), path, body)
+	status, resp = counterpartyPost(t, customRoleClient(t, "production_schedules:update"), path, body)
 	requireStatus(t, http.StatusNotFound, status, resp)
 	requireErrorResponse(t, resp, "resource_not_found", "invalid_request_error")
 }

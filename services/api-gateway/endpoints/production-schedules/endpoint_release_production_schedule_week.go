@@ -57,19 +57,15 @@ type ReleaseProductionScheduleWeekEndpoint struct{}
 
 func (e *ReleaseProductionScheduleWeekEndpoint) Materialize() *apiendpoint.APIEndpoint[*ReleaseProductionScheduleWeekRequest, *apiresource.ReleaseScheduleWeekResult] {
 	return (&apiendpoint.APIEndpoint[*ReleaseProductionScheduleWeekRequest, *apiresource.ReleaseScheduleWeekResult]{
-		Title:             "Release Production Schedule Week",
-		Method:            http.MethodPost,
-		ContentType:       "application/json",
-		Route:             "/v1/operations/production-schedules/{id}/actions/release-week",
-		SuccessStatusCode: http.StatusCreated,
-		Public:            true,
-		Preview:           true,
-		ObjectType:        constants.ObjectTypeProductionScheduleWeekRelease,
-		RequiredPermissions: []types.Permission{
-			{Domain: types.PermissionDomainProductionSchedules, Action: types.ActionUpdate},
-			{Domain: types.PermissionDomainProductionRuns, Action: types.ActionCreate},
-		},
-		RequiresAllPermissions: true,
+		Title:               "Release Production Schedule Week",
+		Method:              http.MethodPost,
+		ContentType:         "application/json",
+		Route:               "/v1/operations/production-schedules/{id}/actions/release-week",
+		SuccessStatusCode:   http.StatusCreated,
+		Public:              true,
+		Preview:             true,
+		ObjectType:          constants.ObjectTypeProductionScheduleWeekRelease,
+		RequiredPermissions: []types.Permission{{Domain: types.PermissionDomainProductionSchedules, Action: types.ActionUpdate}},
 		ServiceHandler: func(svc any) func(ctx context.Context, req *ReleaseProductionScheduleWeekRequest) (*apiresource.ReleaseScheduleWeekResult, *apierror.APIError) {
 			return svc.(ProductionScheduleSvc).ReleaseProductionScheduleWeek
 		},

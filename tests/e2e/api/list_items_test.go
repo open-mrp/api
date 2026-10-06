@@ -88,13 +88,12 @@ func TestListItems_FilterByCategory_NoResults(t *testing.T) {
 	assertEmptyListData(t, list.Data, "Nonsense category filter should return empty data")
 }
 
-func TestListItems_FilterByTypeCode_NoResults(t *testing.T) {
+func TestListItems_FilterByTypeCode_RejectsAnUnknownType(t *testing.T) {
 	t.Parallel()
-	list, _, err := apiClient.GetList(itemsPath, url.Values{
-		"types": {"zzzznotatypecode99999"},
-	})
+	status, body, err := apiClient.GetListRaw(itemsPath, url.Values{"types": {"zzzznotatypecode99999"}})
 	require.NoError(t, err)
-	assertEmptyListData(t, list.Data, "Nonsense type code filter should return empty data")
+	requireStatus(t, 400, status, body)
+	requireErrorResponse(t, body, "parameter_invalid", "invalid_request_error")
 }
 
 func TestListItems_SearchNoResults(t *testing.T) {

@@ -93,8 +93,9 @@ const (
 	SeedUnitGroupUnitID = "ungpun_01seedsocksea000"
 
 	// Measures
-	SeedRateID     = "rt_01seedwssunitval000"
-	SeedQuantityID = "qu_01seediss_ln1_qty00"
+	SeedRateID = "rt_01seedwssunitval000"
+	// A seeded production's quantity: the quantity endpoint edits only quantities an item or a production step owns. Its value is 1, so the schema sweep's PATCH changes nothing.
+	SeedQuantityID = "qu_01seedprod_brdsmbg0"
 
 	// Infrastructure
 	SeedDepartmentID = "dp_01k0a5r01yfx3sj1vy9qgv3dc0"

@@ -161,11 +161,10 @@ func TestCosts_ItemUnitCostNeedsCostsRead(t *testing.T) {
 
 	// The same item embedded in a product follows the same rule.
 	productInclude := url.Values{"include": {"item", "item.unit_cost"}}
-	productsOnly := customRoleClient(t, "products:read")
-	embedded := jsonObject(parseJSON(mustGetAs(t, productsOnly, productsPath+"/"+productID, productInclude)), "item")
+	embedded := jsonObject(parseJSON(mustGetAs(t, itemsOnly, productsPath+"/"+productID, productInclude)), "item")
 	require.NotNil(t, embedded)
 	assertNilField(t, embedded, "unit_cost")
-	embedded = jsonObject(parseJSON(mustGetAs(t, customRoleClient(t, "products:read", costsRead), productsPath+"/"+productID, productInclude)), "item")
+	embedded = jsonObject(parseJSON(mustGetAs(t, withCosts, productsPath+"/"+productID, productInclude)), "item")
 	assert.Equal(t, adminCost, rateValue(t, embedded, "unit_cost"))
 }
 
@@ -194,11 +193,19 @@ func TestCosts_SalesOrderLineUnitCostNeedsCostsRead(t *testing.T) {
 		assertNilField(t, l, "unit_cost")
 		assert.NotNil(t, jsonObject(l, "unit_price"), "the price charged is not cost data")
 	}
+	// A freight line carries no cost for anyone, so the comparison is line by line against what the admin sees.
 	withCosts := linesOf(customRoleClient(t, "sales_orders:read", costsRead))
 	require.Len(t, withCosts, len(admin))
+	costed := 0
 	for i := range admin {
+		if jsonObject(admin[i], "unit_cost") == nil {
+			assertNilField(t, withCosts[i], "unit_cost")
+			continue
+		}
+		costed++
 		assert.Equal(t, rateValue(t, admin[i], "unit_cost"), rateValue(t, withCosts[i], "unit_cost"))
 	}
+	require.Positive(t, costed, "the order has a product line whose cost the admin reads")
 }
 
 func costDepartment(t *testing.T) string {

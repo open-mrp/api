@@ -20,13 +20,13 @@ type UpdateShippingCaseRequest struct {
 	// Carrier tracking number to set on the case, replacing any number already recorded; send `null` to clear it.
 	TrackingNumber field.Clearable[string] `json:"tracking_number,omitzero" validate:"omitempty,max=255"`
 	// New value for the case's freight cost, as a decimal string.
-	FreightAmountValue field.Optional[string] `json:"freight_amount_value,omitzero"`
+	FreightAmountValue field.Optional[string] `json:"freight_amount_value,omitzero" validate:"omitempty,decimal,gte=0" format:"decimal"`
 	// ID of the currency unit the case's freight cost is expressed in.
 	//
 	// Changing the unit relabels the stored freight cost; the number itself is never converted, so send `freight_amount_value` alongside it when the amount should change too.
 	FreightAmountUnitID field.Optional[string] `json:"freight_amount_unit_id,omitzero" validate:"omitempty"`
 	// New value for the case's freight weight, as a decimal string.
-	FreightWeightValue field.Optional[string] `json:"freight_weight_value,omitzero"`
+	FreightWeightValue field.Optional[string] `json:"freight_weight_value,omitzero" validate:"omitempty,decimal,gte=0" format:"decimal"`
 	// ID of the unit the case's freight weight is expressed in.
 	//
 	// Changing the unit relabels the stored weight; the number itself is never converted, so send `freight_weight_value` alongside it when the weight should change too.

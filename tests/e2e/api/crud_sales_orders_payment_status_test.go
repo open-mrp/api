@@ -65,23 +65,10 @@ func TestSalesOrders_PaymentStatus_Detail(t *testing.T) {
 
 // TestSalesOrders_PaymentStatus_List pins that the list endpoint reports the
 // same derived payment_status as detail — the list is where the bug surfaced.
+// Other tests keep adding orders for the seed customer, so each seed order is
+// paged to rather than assumed to be on the first page.
 func TestSalesOrders_PaymentStatus_List(t *testing.T) {
 	t.Parallel()
-
-	params := url.Values{"limit": {"100"}}
-	status, body, err := apiClient.GetListRaw(salesOrdersPath, params)
-	require.NoError(t, err)
-	requireStatus(t, 200, status, body)
-
-	got := parseJSON(body)
-	statuses := map[string]string{}
-	for _, item := range jsonArray(got, "data") {
-		row, ok := item.(map[string]any)
-		if !ok {
-			continue
-		}
-		statuses[jsonField(row, "id")] = jsonField(row, "payment_status")
-	}
 
 	want := map[string]string{
 		SeedFulfilledPaidOrderID: "paid",
@@ -89,10 +76,11 @@ func TestSalesOrders_PaymentStatus_List(t *testing.T) {
 		SeedSalesOrderID:         "partially_paid",
 		SeedEstimateOrderID:      "unpaid",
 	}
+	ofSeedCustomer := url.Values{"customer_ids": {SeedCustomerAccountID}}
 	for id, expected := range want {
-		actual, present := statuses[id]
-		require.Truef(t, present, "order %s missing from list page", id)
-		assert.Equalf(t, expected, actual,
+		row := listFindByField(t, salesOrdersPath, ofSeedCustomer, "id", id)
+		require.NotNilf(t, row, "order %s missing from the list", id)
+		assert.Equalf(t, expected, DataItemField(row, "payment_status"),
 			"list payment_status for %s should match detail (%s)", id, expected)
 	}
 }

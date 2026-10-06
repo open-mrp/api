@@ -207,20 +207,17 @@ func (r *sysPropertyRepoImpl) UpdateValue(ctx context.Context, accountID, id str
 	ctx, span := sysPropertyRepoTracer.Start(ctx, "repository.sys_property.update_value")
 	defer span.End()
 
-	result, err := r.queries.UpdateSysPropertyValue(ctx, sqlc.UpdateSysPropertyValueParams{
+	if _, err := r.queries.UpdateSysPropertyValue(ctx, sqlc.UpdateSysPropertyValueParams{
 		ID: id, AccountID: accountID, Value: value,
-	})
-	if apiErr := db.MapSQLError(err); apiErr != nil {
-		return nil, tracing.Trace(span, apiErr)
+	}); err != nil {
+		return nil, tracing.Trace(span, db.MapSQLError(err))
 	}
-	rowsAffected, err := result.RowsAffected()
-	if err != nil {
-		return nil, tracing.Trace(span, apierror.NewInternalError(err, "Failed to check rows affected."))
-	}
-	if rowsAffected == 0 {
+	// Not the rows affected: MySQL counts none when a concurrent request already wrote the same value in the same millisecond.
+	updated, apiErr := r.Get(ctx, accountID, id)
+	if apierror.IsNotFound(apiErr) {
 		return nil, tracing.Trace(span, apierror.NewResourceNotFoundError("System property not found."))
 	}
-	return r.Get(ctx, accountID, id)
+	return updated, apiErr
 }
 
 // TakenNumbers returns the numbers among candidates that a record in typeCode's series already

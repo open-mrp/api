@@ -70,6 +70,8 @@ type ShipmentRelated struct {
 	// Resource type identifier.
 	Object constants.ObjectType `json:"object" validate:"required,enum=shipment_related"`
 	// The sales order this shipment fulfills.
+	//
+	// Its `metadata` carries `customer_purchase_order_number` when the customer gave the order a PO.
 	SalesOrder *Record `json:"sales_order" expandable:"true"`
 	// The pick this shipment was packed from.
 	Pick *Record `json:"pick" expandable:"true"`

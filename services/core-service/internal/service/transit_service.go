@@ -167,16 +167,24 @@ func (s *salesOrderSvcImpl) fetchLaneRates(ctx context.Context, accountID string
 		return nil, nil
 	}
 
-	encryptedCreds, _, apiErr := integrationRepo.GetEncryptedCredentials(ctx, accountID, constants.IntegrationCodeShippo)
+	encryptedCreds, isActive, apiErr := integrationRepo.GetEncryptedCredentials(ctx, accountID, constants.IntegrationCodeShippo)
 	if apiErr != nil {
 		return nil, apiErr
+	}
+	// A switched-off integration cannot rate, which is the same no-op as having none.
+	if !isActive {
+		return nil, nil
 	}
 	apiKey, apiErr := decryptShippoAPIKey(encryptedCreds, s.encryptionKey, accountID)
 	if apiErr != nil {
 		return nil, apiErr
 	}
+	shippoClient, apiErr := s.shippoFactory.Build(apiKey)
+	if apiErr != nil {
+		return nil, apiErr
+	}
 
-	return s.shippoFactory.Build(apiKey).FetchAllShippingRates(ctx, domain.FetchAllShippingRatesParams{
+	return shippoClient.FetchAllShippingRates(ctx, domain.FetchAllShippingRatesParams{
 		CarrierAccountObjectID: *carrier.ShippoCarrierAccountID,
 		FromAddress:            origin,
 		ToAddress:              dest,

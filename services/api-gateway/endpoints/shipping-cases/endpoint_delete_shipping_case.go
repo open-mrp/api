@@ -18,7 +18,7 @@ type DeleteShippingCaseRequest struct {
 
 // Permanently deletes a shipping case.
 //
-// Only the case is removed; its shipment, the shipment's lines, and the shipment's other cases are left untouched. Deleting a case that has already been deleted returns an error rather than succeeding again.
+// Only the case is removed; its shipment, the shipment's lines, and the shipment's other cases are left untouched. Deleting a case that has already been deleted returns an error rather than succeeding again. A case whose shipping label was bought cannot be deleted until its shipment is voided, which refunds the label; a conflict error is returned instead.
 type DeleteShippingCaseEndpoint struct{}
 
 func (e *DeleteShippingCaseEndpoint) Materialize() *apiendpoint.APIEndpoint[*DeleteShippingCaseRequest, *apiresource.EmptyResource] {

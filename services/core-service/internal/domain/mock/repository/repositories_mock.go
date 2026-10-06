@@ -18593,6 +18593,20 @@ func (mr *MockEDIRepoMockRecorder) DeleteDCLocation(ctx, params any) *gomock.Cal
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteDCLocation", reflect.TypeOf((*MockEDIRepo)(nil).DeleteDCLocation), ctx, params)
 }
 
+// EnqueueOutboundTransmission mocks base method.
+func (m *MockEDIRepo) EnqueueOutboundTransmission(ctx context.Context, params domain.EnqueueEdiTransmissionParams) *apierror.APIError {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "EnqueueOutboundTransmission", ctx, params)
+	ret0, _ := ret[0].(*apierror.APIError)
+	return ret0
+}
+
+// EnqueueOutboundTransmission indicates an expected call of EnqueueOutboundTransmission.
+func (mr *MockEDIRepoMockRecorder) EnqueueOutboundTransmission(ctx, params any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "EnqueueOutboundTransmission", reflect.TypeOf((*MockEDIRepo)(nil).EnqueueOutboundTransmission), ctx, params)
+}
+
 // GetDCLocation mocks base method.
 func (m *MockEDIRepo) GetDCLocation(ctx context.Context, params domain.GetDCLocationParams) (*domain.DCLocation, *apierror.APIError) {
 	m.ctrl.T.Helper()
@@ -18651,6 +18665,21 @@ func (m *MockEDIRepo) GetEDIRunsByIDs(ctx context.Context, accountID string, ids
 func (mr *MockEDIRepoMockRecorder) GetEDIRunsByIDs(ctx, accountID, ids any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetEDIRunsByIDs", reflect.TypeOf((*MockEDIRepo)(nil).GetEDIRunsByIDs), ctx, accountID, ids)
+}
+
+// IsCustomerEdiEnabled mocks base method.
+func (m *MockEDIRepo) IsCustomerEdiEnabled(ctx context.Context, accountID, customerID string) (bool, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "IsCustomerEdiEnabled", ctx, accountID, customerID)
+	ret0, _ := ret[0].(bool)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
+}
+
+// IsCustomerEdiEnabled indicates an expected call of IsCustomerEdiEnabled.
+func (mr *MockEDIRepoMockRecorder) IsCustomerEdiEnabled(ctx, accountID, customerID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "IsCustomerEdiEnabled", reflect.TypeOf((*MockEDIRepo)(nil).IsCustomerEdiEnabled), ctx, accountID, customerID)
 }
 
 // ListDCLocations mocks base method.

@@ -20,6 +20,8 @@ type VoidShipmentRequest struct {
 // Voids a shipped shipment, returning it to the `packed` status so it can be corrected and shipped again.
 //
 // Only shipments in the `shipped` status can be voided; otherwise a conflict error is returned. Voiding clears `shipped_at`, `shipped_by` and the master tracking number, clears the shipped timestamp, tracking number and label on every shipping case and resets each case's freight charge to zero, deletes the invoice raised for the shipment if one exists, and returns the associated sales order to its unfulfilled state. Case SSCCs are kept.
+//
+// Labels bought through the Shippo integration are refunded first. If the carrier refuses a refund, the void fails and nothing is cleared, so the label stays on record and the void can be retried; a label already refunded counts as refunded.
 type VoidShipmentEndpoint struct{}
 
 func (e *VoidShipmentEndpoint) Materialize() *apiendpoint.APIEndpoint[*VoidShipmentRequest, *apiresource.Shipment] {

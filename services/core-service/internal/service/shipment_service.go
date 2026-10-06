@@ -3,6 +3,7 @@ package service
 import (
 	"bytes"
 	"context"
+	"crypto/rand"
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
@@ -31,6 +32,7 @@ import (
 	apierror "github.com/open-mrp/api/shared/errors"
 	"github.com/open-mrp/api/shared/id"
 	"github.com/open-mrp/api/shared/idempotency"
+	"github.com/open-mrp/api/shared/lease"
 	"github.com/open-mrp/api/shared/messaging"
 	"github.com/open-mrp/api/shared/ptrutil"
 	"github.com/open-mrp/api/shared/textutil"
@@ -65,6 +67,7 @@ type shipmentSvcImpl struct {
 	shippingLabelsBucket string
 	frontendURL          string
 	branding             BrandingAssets
+	dispatchLeases       lease.Repo
 }
 
 type ShipmentSvcConfig struct {
@@ -103,6 +106,10 @@ type ShipmentSvcConfig struct {
 
 	// Branding (optional) resolves the merchant logo for the invoice PDF letterhead. Omitted, it falls back to a text-only letterhead.
 	Branding BrandingAssets
+
+	// DispatchLeases (required) holds the per-shipment claim that keeps a ship, void or delete from
+	// running alongside another on the same shipment.
+	DispatchLeases lease.Repo
 }
 
 func (c *ShipmentSvcConfig) validate() error {
@@ -114,6 +121,9 @@ func (c *ShipmentSvcConfig) validate() error {
 	}
 	if c.TxManager == nil {
 		return fmt.Errorf("shipment service: tx manager is required")
+	}
+	if c.DispatchLeases == nil {
+		return fmt.Errorf("shipment service: dispatch leases are required")
 	}
 	return nil
 }
@@ -135,6 +145,7 @@ func NewShipmentSvc(config *ShipmentSvcConfig) domain.ShipmentSvc {
 		shippingLabelsBucket: config.ShippingLabelsBucket,
 		frontendURL:          config.FrontendURL,
 		branding:             config.Branding,
+		dispatchLeases:       config.DispatchLeases,
 	}
 }
 
@@ -155,6 +166,7 @@ func (s *shipmentSvcImpl) withTx(ctx context.Context, fn func(context.Context, *
 			s3Client:             s.s3Client,
 			shippingLabelsBucket: s.shippingLabelsBucket,
 			frontendURL:          s.frontendURL,
+			dispatchLeases:       s.dispatchLeases,
 		}
 		return fn(txCtx, txSvc)
 	})
@@ -557,6 +569,13 @@ func (s *shipmentSvcImpl) DeleteShipment(ctx context.Context, params domain.Dele
 
 	params.AccountID = identity.Target.AccountID
 
+	// Claimed first, so a ship cannot buy labels for cases this delete is about to remove.
+	release, apiErr := s.claimDispatch(ctx, params.ShipmentID)
+	if apiErr != nil {
+		return tracing.Trace(span, apiErr)
+	}
+	defer release()
+
 	shipmentRepo := s.repos.NewShipmentRepo()
 
 	shipment, apiErr := shipmentRepo.Get(ctx, domain.GetShipmentParams{
@@ -577,6 +596,11 @@ func (s *shipmentSvcImpl) DeleteShipment(ctx context.Context, params domain.Dele
 			}
 		}
 		return tracing.Trace(span, apiErr)
+	}
+
+	// A shipped shipment carries an invoice and possibly bought labels; void is what unwinds those.
+	if shipment.StatusCode == string(constants.ShipmentStatusShipped) {
+		return tracing.Trace(span, apierror.NewConflictErrorWithParam("A shipped shipment cannot be deleted; void it first.", "id"))
 	}
 
 	return s.withTx(ctx, func(txCtx context.Context, txSvc *shipmentSvcImpl) *apierror.APIError {
@@ -663,239 +687,192 @@ func (s *shipmentSvcImpl) ShipShipment(ctx context.Context, params domain.ShipSh
 		}
 		return cached.Data, cached.Error
 
-	case domain.RecoveryPointStarted:
-		// Phase 1: Validate shipment and gather data
-		shipmentRepo := s.repos.NewShipmentRepo()
-		shipment, apiErr := shipmentRepo.Get(ctx, domain.GetShipmentParams{
-			AccountID:  params.AccountID,
-			ShipmentID: params.ShipmentID,
-		})
+	case domain.RecoveryPointStarted, domain.RecoveryPointShipLabelsCreated:
+		// Held across the label purchase and the atomic phase, so a second ship of this shipment —
+		// another request, or this one replayed while it is still running — conflicts instead of buying again.
+		release, apiErr := s.claimDispatch(ctx, params.ShipmentID)
 		if apiErr != nil {
 			return nil, tracing.Trace(span, apiErr)
 		}
+		defer release()
 
-		if shipment.StatusCode == "shipped" {
-			return nil, tracing.Trace(span, apierror.NewConflictErrorWithParam("Shipment has already been shipped.", "id"))
-		}
-
-		// Ship creates the invoice, so enforce the per-billing-period invoice limit here — matching
-		// legacy's canCreateInvoice on ship — before any mutation.
-		if apiErr := enforceInvoicesPerPeriodLimit(ctx, s.repos, params.AccountID); apiErr != nil {
-			return nil, tracing.Trace(span, apiErr)
-		}
-
-		shippedByID, apiErr := s.resolveShippedByID(ctx, identity, params.AccountID)
+		result, apiErr := s.shipClaimed(ctx, identity, params, idempotencyKey)
 		if apiErr != nil {
 			return nil, tracing.Trace(span, apiErr)
 		}
-
-		// Resolve the master tracking number for the shipment. Sandbox accounts get a placeholder;
-		// real accounts buy carrier labels from Shippo here — a foreign mutation, so it runs before
-		// the transaction and stages RecoveryPointShipLabelsCreated once its results are persisted.
-		masterTracking, apiErr := s.resolveShipmentTracking(ctx, shipment, idempotencyKey.TypeID)
-		if apiErr != nil {
-			return nil, meds.Idempotency.CacheErrorResponse(ctx, idempotencyKey.TypeID, apiErr)
-		}
-
-		// The invoice PDF embeds the letterhead logo, so fetch its bytes here: inside the transaction
-		// a stalled logo host would hold the ship's row locks for the length of the request.
-		letterheadLogo := fetchAccountLogo(ctx, s.repos, s.branding, params.AccountID)
-
-		// Phase 3: Atomic transaction - mark shipped, create invoice, add SSCC
-		var result *domain.Shipment
-		apiErr = s.withTx(ctx, func(txCtx context.Context, txSvc *shipmentSvcImpl) *apierror.APIError {
-			txShipmentRepo := txSvc.repos.NewShipmentRepo()
-			txCaseRepo := txSvc.repos.NewShippingCaseRepo()
-
-			// Mark shipping cases as shipped
-			if apiErr := txCaseRepo.MarkShippedByShipment(txCtx, params.ShipmentID); apiErr != nil {
-				return apiErr
-			}
-
-			// Add SSCC to shipping cases
-			cases, apiErr := txCaseRepo.ListByShipment(txCtx, params.ShipmentID)
-			if apiErr != nil {
-				return apiErr
-			}
-			for _, sc := range cases {
-				if sc.SSCC == nil {
-					counter, apiErr := txCaseRepo.FindAndIncrementSsccCounter(txCtx, params.AccountID)
-					if apiErr != nil {
-						return apiErr
-					}
-					sscc := domain.GenerateSSCC(counter)
-					if apiErr := txCaseRepo.AddSscc(txCtx, sc.ID, sscc); apiErr != nil {
-						return apiErr
-					}
-				}
-			}
-
-			// Mark shipment as shipped
-			if apiErr := txShipmentRepo.MarkShipped(txCtx, params.AccountID, params.ShipmentID, shippedByID); apiErr != nil {
-				return apiErr
-			}
-
-			if masterTracking != nil {
-				if apiErr := txShipmentRepo.SetMasterTracking(txCtx, params.AccountID, params.ShipmentID, *masterTracking); apiErr != nil {
-					return apiErr
-				}
-			}
-
-			if apiErr := txSvc.createInvoiceAndStampOrderOnShip(txCtx, shipment, params.EmailCustomer, letterheadLogo); apiErr != nil {
-				return apiErr
-			}
-
-			// Re-fetch for response
-			updated, apiErr := txShipmentRepo.Get(txCtx, domain.GetShipmentParams{
-				AccountID:  params.AccountID,
-				ShipmentID: params.ShipmentID,
-			})
-			if apiErr != nil {
-				return apiErr
-			}
-			result = updated
-
-			if slices.Contains(params.Includes, "lines") {
-				lines, apiErr := txSvc.repos.NewShipmentLineRepo().ListByShipment(txCtx, params.ShipmentID)
-				if apiErr != nil {
-					return apiErr
-				}
-				result.Lines = lines
-			}
-			if slices.Contains(params.Includes, "shipping_cases") {
-				cases, apiErr := txSvc.repos.NewShippingCaseRepo().ListByShipment(txCtx, params.ShipmentID)
-				if apiErr != nil {
-					return apiErr
-				}
-				result.ShippingCases = cases
-			}
-
-			changes := audit.ComputeChanges(shipment, updated)
-
-			if apiErr := audit.NewPublisher().Publish(txCtx, txSvc.repos.NewOutboxRepo(), audit.EventData{
-				ServiceName:      domain.ServiceName,
-				Action:           constants.AuditActionUpdate,
-				ResourceType:     constants.ObjectTypeShipment,
-				ResourceID:       updated.ID,
-				RootResourceType: constants.ObjectTypeSalesOrder,
-				RootResourceID:   updated.SalesOrderID,
-				Changes:          changes,
-			}); apiErr != nil {
-				return apiErr
-			}
-
-			return txSvc.mediators().Idempotency.CacheSuccessResponse(txCtx, idempotencyKey.TypeID, result)
-		})
-
-		if apiErr != nil {
-			return nil, meds.Idempotency.CacheErrorResponse(ctx, idempotencyKey.TypeID, apiErr)
-		}
-
-		return result, nil
-
-	case domain.RecoveryPointShipLabelsCreated:
-		// Labels were already created in a prior attempt. Proceed with atomic phase.
-		// Fetch old state for audit diff
-		old, apiErr := s.repos.NewShipmentRepo().Get(ctx, domain.GetShipmentParams{
-			AccountID:  params.AccountID,
-			ShipmentID: params.ShipmentID,
-		})
-		if apiErr != nil {
-			return nil, tracing.Trace(span, apiErr)
-		}
-
-		shippedByID, apiErr := s.resolveShippedByID(ctx, identity, params.AccountID)
-		if apiErr != nil {
-			return nil, tracing.Trace(span, apiErr)
-		}
-
-		// Fetched before the transaction for the same reason as the ship path above.
-		letterheadLogo := fetchAccountLogo(ctx, s.repos, s.branding, params.AccountID)
-
-		var result *domain.Shipment
-		apiErr = s.withTx(ctx, func(txCtx context.Context, txSvc *shipmentSvcImpl) *apierror.APIError {
-			txShipmentRepo := txSvc.repos.NewShipmentRepo()
-			txCaseRepo := txSvc.repos.NewShippingCaseRepo()
-
-			if apiErr := txCaseRepo.MarkShippedByShipment(txCtx, params.ShipmentID); apiErr != nil {
-				return apiErr
-			}
-
-			cases, apiErr := txCaseRepo.ListByShipment(txCtx, params.ShipmentID)
-			if apiErr != nil {
-				return apiErr
-			}
-			for _, sc := range cases {
-				if sc.SSCC == nil {
-					counter, apiErr := txCaseRepo.FindAndIncrementSsccCounter(txCtx, params.AccountID)
-					if apiErr != nil {
-						return apiErr
-					}
-					sscc := domain.GenerateSSCC(counter)
-					if apiErr := txCaseRepo.AddSscc(txCtx, sc.ID, sscc); apiErr != nil {
-						return apiErr
-					}
-				}
-			}
-
-			if apiErr := txShipmentRepo.MarkShipped(txCtx, params.AccountID, params.ShipmentID, shippedByID); apiErr != nil {
-				return apiErr
-			}
-
-			if apiErr := txSvc.createInvoiceAndStampOrderOnShip(txCtx, old, params.EmailCustomer, letterheadLogo); apiErr != nil {
-				return apiErr
-			}
-
-			updated, apiErr := txShipmentRepo.Get(txCtx, domain.GetShipmentParams{
-				AccountID:  params.AccountID,
-				ShipmentID: params.ShipmentID,
-			})
-			if apiErr != nil {
-				return apiErr
-			}
-			result = updated
-
-			if slices.Contains(params.Includes, "lines") {
-				lines, apiErr := txSvc.repos.NewShipmentLineRepo().ListByShipment(txCtx, params.ShipmentID)
-				if apiErr != nil {
-					return apiErr
-				}
-				result.Lines = lines
-			}
-			if slices.Contains(params.Includes, "shipping_cases") {
-				cases, apiErr := txSvc.repos.NewShippingCaseRepo().ListByShipment(txCtx, params.ShipmentID)
-				if apiErr != nil {
-					return apiErr
-				}
-				result.ShippingCases = cases
-			}
-
-			changes := audit.ComputeChanges(old, updated)
-
-			if apiErr := audit.NewPublisher().Publish(txCtx, txSvc.repos.NewOutboxRepo(), audit.EventData{
-				ServiceName:      domain.ServiceName,
-				Action:           constants.AuditActionUpdate,
-				ResourceType:     constants.ObjectTypeShipment,
-				ResourceID:       updated.ID,
-				RootResourceType: constants.ObjectTypeSalesOrder,
-				RootResourceID:   updated.SalesOrderID,
-				Changes:          changes,
-			}); apiErr != nil {
-				return apiErr
-			}
-
-			return txSvc.mediators().Idempotency.CacheSuccessResponse(txCtx, idempotencyKey.TypeID, result)
-		})
-
-		if apiErr != nil {
-			return nil, meds.Idempotency.CacheErrorResponse(ctx, idempotencyKey.TypeID, apiErr)
-		}
-
 		return result, nil
 
 	default:
 		return nil, tracing.Trace(span, apierror.NewInvariantViolationError("Unexpected recovery point: "+idempotencyKey.RecoveryPoint))
 	}
+}
+
+// Ships a claimed shipment: checks, then the label purchase, then one transaction that ships and
+// invoices it. Failures before anything is bought stay uncached, so a fixed request can reuse its key.
+func (s *shipmentSvcImpl) shipClaimed(ctx context.Context, identity *types.Identity, params domain.ShipShipmentParams, idempotencyKey *domain.IdempotencyKey) (*domain.Shipment, *apierror.APIError) {
+	meds := s.mediators()
+	labelsBought := domain.RecoveryPoint(idempotencyKey.RecoveryPoint) == domain.RecoveryPointShipLabelsCreated
+
+	shipment, apiErr := s.repos.NewShipmentRepo().Get(ctx, domain.GetShipmentParams{
+		AccountID:  params.AccountID,
+		ShipmentID: params.ShipmentID,
+	})
+	if apiErr != nil {
+		return nil, apiErr
+	}
+	if shipment.StatusCode == string(constants.ShipmentStatusShipped) {
+		return nil, apierror.NewConflictErrorWithParam("Shipment has already been shipped.", "id")
+	}
+
+	// Ship creates the invoice, so enforce the per-billing-period invoice limit here — matching
+	// legacy's canCreateInvoice on ship. A ship resuming past its purchase already passed it.
+	if !labelsBought {
+		if apiErr := enforceInvoicesPerPeriodLimit(ctx, s.repos, params.AccountID); apiErr != nil {
+			return nil, apiErr
+		}
+	}
+
+	shippedByID, apiErr := s.resolveShippedByID(ctx, identity, params.AccountID)
+	if apiErr != nil {
+		return nil, apiErr
+	}
+
+	if apiErr := checkInvoiceNumberFree(ctx, s.repos, shipment); apiErr != nil {
+		return nil, apiErr
+	}
+
+	labels := shipLabels{CostRecorded: labelsBought}
+	if !labelsBought {
+		purchase, planned, apiErr := s.planShipmentLabels(ctx, shipment)
+		if apiErr != nil {
+			return nil, apiErr
+		}
+		labels = planned
+		if purchase != nil {
+			labels, apiErr = s.buyShipmentLabels(ctx, shipment, purchase, idempotencyKey.TypeID)
+			if apiErr != nil {
+				return nil, meds.Idempotency.CacheErrorResponse(ctx, idempotencyKey.TypeID, apiErr)
+			}
+		}
+	}
+
+	// The invoice PDF embeds the letterhead logo, so fetch its bytes here: inside the transaction
+	// a stalled logo host would hold the ship's row locks for the length of the request.
+	letterheadLogo := fetchAccountLogo(ctx, s.repos, s.branding, params.AccountID)
+
+	var result *domain.Shipment
+	apiErr = s.withTx(ctx, func(txCtx context.Context, txSvc *shipmentSvcImpl) *apierror.APIError {
+		var apiErr *apierror.APIError
+		result, apiErr = txSvc.markShippedAndInvoice(txCtx, shipment, shippedByID, labels, params, letterheadLogo)
+		if apiErr != nil {
+			return apiErr
+		}
+		return txSvc.mediators().Idempotency.CacheSuccessResponse(txCtx, idempotencyKey.TypeID, result)
+	})
+	if apiErr != nil {
+		return nil, meds.Idempotency.CacheErrorResponse(ctx, idempotencyKey.TypeID, apiErr)
+	}
+
+	return result, nil
+}
+
+// The ship's atomic phase: the shipped stamp, case SSCCs, tracking, invoice and freight cost commit
+// together or not at all.
+func (s *shipmentSvcImpl) markShippedAndInvoice(txCtx context.Context, shipment *domain.Shipment, shippedByID string, labels shipLabels, params domain.ShipShipmentParams, logo ackLogo) (*domain.Shipment, *apierror.APIError) {
+	shipmentRepo := s.repos.NewShipmentRepo()
+	caseRepo := s.repos.NewShippingCaseRepo()
+
+	// First, so a ship that raced past the status check blocks on this row and then finds it shipped.
+	if apiErr := shipmentRepo.MarkShipped(txCtx, params.AccountID, params.ShipmentID, shippedByID); apiErr != nil {
+		return nil, apiErr
+	}
+
+	if apiErr := caseRepo.MarkShippedByShipment(txCtx, params.ShipmentID); apiErr != nil {
+		return nil, apiErr
+	}
+
+	cases, apiErr := caseRepo.ListByShipment(txCtx, params.ShipmentID)
+	if apiErr != nil {
+		return nil, apiErr
+	}
+	for _, sc := range cases {
+		if sc.SSCC != nil {
+			continue
+		}
+		counter, apiErr := caseRepo.FindAndIncrementSsccCounter(txCtx, params.AccountID)
+		if apiErr != nil {
+			return nil, apiErr
+		}
+		if apiErr := caseRepo.AddSscc(txCtx, sc.ID, domain.GenerateSSCC(counter)); apiErr != nil {
+			return nil, apiErr
+		}
+	}
+
+	if labels.MasterTracking != nil {
+		if apiErr := shipmentRepo.SetMasterTracking(txCtx, params.AccountID, params.ShipmentID, *labels.MasterTracking); apiErr != nil {
+			return nil, apiErr
+		}
+	}
+
+	if apiErr := s.createInvoiceAndStampOrderOnShip(txCtx, shipment, params.EmailCustomer, logo); apiErr != nil {
+		return nil, apiErr
+	}
+
+	// Legacy records the carrier's charge on every ship; with no label bought it charged nothing.
+	if !labels.CostRecorded {
+		if apiErr := s.writeBackNegotiatedRate(txCtx, shipment, 0); apiErr != nil {
+			return nil, apiErr
+		}
+	}
+
+	updated, apiErr := shipmentRepo.Get(txCtx, domain.GetShipmentParams{
+		AccountID:  params.AccountID,
+		ShipmentID: params.ShipmentID,
+	})
+	if apiErr != nil {
+		return nil, apiErr
+	}
+
+	if slices.Contains(params.Includes, "lines") {
+		lines, apiErr := s.repos.NewShipmentLineRepo().ListByShipment(txCtx, params.ShipmentID)
+		if apiErr != nil {
+			return nil, apiErr
+		}
+		updated.Lines = lines
+	}
+	if slices.Contains(params.Includes, "shipping_cases") {
+		cases, apiErr := caseRepo.ListByShipment(txCtx, params.ShipmentID)
+		if apiErr != nil {
+			return nil, apiErr
+		}
+		updated.ShippingCases = cases
+	}
+
+	if apiErr := audit.NewPublisher().Publish(txCtx, s.repos.NewOutboxRepo(), audit.EventData{
+		ServiceName:      domain.ServiceName,
+		Action:           constants.AuditActionUpdate,
+		ResourceType:     constants.ObjectTypeShipment,
+		ResourceID:       updated.ID,
+		RootResourceType: constants.ObjectTypeSalesOrder,
+		RootResourceID:   updated.SalesOrderID,
+		Changes:          audit.ComputeChanges(shipment, updated),
+	}); apiErr != nil {
+		return nil, apiErr
+	}
+
+	return updated, nil
+}
+
+// Refuses a ship whose invoice number is already taken, before any label is bought for it.
+func checkInvoiceNumberFree(ctx context.Context, repos domain.RepoFactory, shipment *domain.Shipment) *apierror.APIError {
+	isDuplicate, apiErr := repos.NewInvoiceRepo().IsDuplicateNumber(ctx, shipment.AccountID, shipment.Number)
+	if apiErr != nil {
+		return apiErr
+	}
+	if isDuplicate {
+		return apierror.NewResourceConflictError("An invoice already exists for this shipment number.")
+	}
+	return nil
 }
 
 func (s *shipmentSvcImpl) VoidShipment(ctx context.Context, params domain.VoidShipmentParams) (*domain.Shipment, *apierror.APIError) {
@@ -931,149 +908,159 @@ func (s *shipmentSvcImpl) VoidShipment(ctx context.Context, params domain.VoidSh
 		}
 		return cached.Data, cached.Error
 
-	case domain.RecoveryPointStarted:
-		// Phase 1: Validate shipment
-		shipmentRepo := s.repos.NewShipmentRepo()
-		shipment, apiErr := shipmentRepo.Get(ctx, domain.GetShipmentParams{
-			AccountID:  params.AccountID,
-			ShipmentID: params.ShipmentID,
-		})
+	case domain.RecoveryPointStarted, domain.RecoveryPointVoidLabelsRefunded:
+		release, apiErr := s.claimDispatch(ctx, params.ShipmentID)
 		if apiErr != nil {
 			return nil, tracing.Trace(span, apiErr)
 		}
+		defer release()
 
-		if shipment.StatusCode != "shipped" {
-			return nil, tracing.Trace(span, apierror.NewConflictErrorWithParam("Shipment is not in shipped status.", "id"))
-		}
-
-		// Refund any purchased carrier labels before the atomic phase. Sandbox accounts never bought
-		// real labels, so this is a no-op there; for real accounts it refunds each Shippo transaction
-		// and drops the stored label, best-effort, then stages RecoveryPointVoidLabelsRefunded.
-		if apiErr := s.refundShippingLabels(ctx, shipment, idempotencyKey.TypeID); apiErr != nil {
-			return nil, tracing.Trace(span, apiErr)
-		}
-
-		// Phase 3: Atomic transaction - void cases, delete invoice, mark order unfulfilled, mark shipment packed
-		fallthrough
-
-	case domain.RecoveryPointVoidLabelsRefunded:
-		// The items this void will hand back, resolved on the pool so their ordering roots can be the
-		// transaction's first statements. Reading the lines inside the transaction and locking after the
-		// reversal has already written receipts is the inversion, not the fix (Corollary A).
-		voidLines, apiErr := s.repos.NewShipmentLineRepo().ListByShipment(ctx, params.ShipmentID)
+		result, apiErr := s.voidClaimed(ctx, params, idempotencyKey)
 		if apiErr != nil {
 			return nil, tracing.Trace(span, apiErr)
 		}
-		voidItemIDs := make([]string, 0, len(voidLines))
-		for _, line := range voidLines {
-			if line.OrderLineItemID != nil {
-				voidItemIDs = append(voidItemIDs, *line.OrderLineItemID)
-			}
-		}
-
-		var result *domain.Shipment
-		apiErr = s.withTx(ctx, func(txCtx context.Context, txSvc *shipmentSvcImpl) *apierror.APIError {
-			scope, apiErr := ledgerlock.Acquire(txCtx, txSvc.repos.NewInventoryMutationRepo(), voidItemIDs)
-			if apiErr != nil {
-				return apiErr
-			}
-
-			txShipmentRepo := txSvc.repos.NewShipmentRepo()
-			txCaseRepo := txSvc.repos.NewShippingCaseRepo()
-			txInvoiceRepo := txSvc.repos.NewInvoiceRepo()
-			txSalesOrderRepo := txSvc.repos.NewSalesOrderRepo()
-
-			// Look up the shipment to get the sales order ID for unfulfillment
-			shipment, apiErr := txShipmentRepo.Get(txCtx, domain.GetShipmentParams{
-				AccountID:  params.AccountID,
-				ShipmentID: params.ShipmentID,
-			})
-			if apiErr != nil {
-				return apiErr
-			}
-
-			// Delete invoice if one exists for this shipment
-			invoiceID, apiErr := txShipmentRepo.FindInvoiceIDByShipment(txCtx, params.AccountID, params.ShipmentID)
-			if apiErr != nil {
-				return apiErr
-			}
-			if invoiceID != nil {
-				if apiErr := txSvc.reverseInventoryOnVoid(txCtx, scope, shipment); apiErr != nil {
-					return apiErr
-				}
-
-				// Delete invoice lines then invoice
-				if apiErr := txInvoiceRepo.DeleteLinesByInvoice(txCtx, *invoiceID); apiErr != nil {
-					return apiErr
-				}
-				if apiErr := txInvoiceRepo.Delete(txCtx, params.AccountID, *invoiceID); apiErr != nil {
-					return apiErr
-				}
-
-				// Voiding destroys the invoice outright, so the order's history has to record it going.
-				if apiErr := audit.NewPublisher().Publish(txCtx, txSvc.repos.NewOutboxRepo(), audit.EventData{
-					ServiceName:      domain.ServiceName,
-					Action:           constants.AuditActionDelete,
-					ResourceType:     constants.ObjectTypeInvoice,
-					ResourceID:       *invoiceID,
-					RootResourceType: constants.ObjectTypeSalesOrder,
-					RootResourceID:   shipment.SalesOrderID,
-				}); apiErr != nil {
-					return apiErr
-				}
-			}
-
-			// Mark the sales order as unfulfilled (reset to "issued" status, clear completed_at and first_ship_at)
-			if apiErr := txSalesOrderRepo.MarkUnfulfilled(txCtx, params.AccountID, shipment.SalesOrderID); apiErr != nil {
-				return apiErr
-			}
-
-			// Void shipping cases (clear tracking, labels, freight amount)
-			if apiErr := txCaseRepo.VoidByShipment(txCtx, params.ShipmentID); apiErr != nil {
-				return apiErr
-			}
-
-			// Mark shipment as voided (back to packed, clear tracking/invoice/shipped info)
-			if apiErr := txShipmentRepo.MarkVoided(txCtx, params.AccountID, params.ShipmentID); apiErr != nil {
-				return apiErr
-			}
-
-			// Re-fetch for response
-			updated, apiErr := txShipmentRepo.Get(txCtx, domain.GetShipmentParams{
-				AccountID:  params.AccountID,
-				ShipmentID: params.ShipmentID,
-			})
-			if apiErr != nil {
-				return apiErr
-			}
-			result = updated
-
-			changes := audit.ComputeChanges(shipment, updated)
-
-			if apiErr := audit.NewPublisher().Publish(txCtx, txSvc.repos.NewOutboxRepo(), audit.EventData{
-				ServiceName:      domain.ServiceName,
-				Action:           constants.AuditActionUpdate,
-				ResourceType:     constants.ObjectTypeShipment,
-				ResourceID:       updated.ID,
-				RootResourceType: constants.ObjectTypeSalesOrder,
-				RootResourceID:   updated.SalesOrderID,
-				Changes:          changes,
-			}); apiErr != nil {
-				return apiErr
-			}
-
-			return txSvc.mediators().Idempotency.CacheSuccessResponse(txCtx, idempotencyKey.TypeID, result)
-		})
-
-		if apiErr != nil {
-			return nil, meds.Idempotency.CacheErrorResponse(ctx, idempotencyKey.TypeID, apiErr)
-		}
-
 		return result, nil
 
 	default:
 		return nil, tracing.Trace(span, apierror.NewInvariantViolationError("Unexpected recovery point: "+idempotencyKey.RecoveryPoint))
 	}
+}
+
+// Voids a claimed shipment: refunds its bought labels, then unwinds the ship in one transaction. A
+// refund the carrier refuses stops the void before anything is cleared, uncached, so it can be retried.
+func (s *shipmentSvcImpl) voidClaimed(ctx context.Context, params domain.VoidShipmentParams, idempotencyKey *domain.IdempotencyKey) (*domain.Shipment, *apierror.APIError) {
+	meds := s.mediators()
+
+	if domain.RecoveryPoint(idempotencyKey.RecoveryPoint) == domain.RecoveryPointStarted {
+		shipment, apiErr := s.repos.NewShipmentRepo().Get(ctx, domain.GetShipmentParams{
+			AccountID:  params.AccountID,
+			ShipmentID: params.ShipmentID,
+		})
+		if apiErr != nil {
+			return nil, apiErr
+		}
+		if shipment.StatusCode != string(constants.ShipmentStatusShipped) {
+			return nil, apierror.NewConflictErrorWithParam("Shipment is not in shipped status.", "id")
+		}
+
+		if apiErr := s.refundShippingLabels(ctx, shipment, idempotencyKey.TypeID); apiErr != nil {
+			return nil, apiErr
+		}
+	}
+
+	// The items this void will hand back, resolved on the pool so their ordering roots can be the
+	// transaction's first statements. Reading the lines inside the transaction and locking after the
+	// reversal has already written receipts is the inversion, not the fix (Corollary A).
+	voidLines, apiErr := s.repos.NewShipmentLineRepo().ListByShipment(ctx, params.ShipmentID)
+	if apiErr != nil {
+		return nil, apiErr
+	}
+	voidItemIDs := make([]string, 0, len(voidLines))
+	for _, line := range voidLines {
+		if line.OrderLineItemID != nil {
+			voidItemIDs = append(voidItemIDs, *line.OrderLineItemID)
+		}
+	}
+
+	var result *domain.Shipment
+	apiErr = s.withTx(ctx, func(txCtx context.Context, txSvc *shipmentSvcImpl) *apierror.APIError {
+		scope, apiErr := ledgerlock.Acquire(txCtx, txSvc.repos.NewInventoryMutationRepo(), voidItemIDs)
+		if apiErr != nil {
+			return apiErr
+		}
+
+		txShipmentRepo := txSvc.repos.NewShipmentRepo()
+		txCaseRepo := txSvc.repos.NewShippingCaseRepo()
+		txInvoiceRepo := txSvc.repos.NewInvoiceRepo()
+		txSalesOrderRepo := txSvc.repos.NewSalesOrderRepo()
+
+		// Look up the shipment to get the sales order ID for unfulfillment
+		shipment, apiErr := txShipmentRepo.Get(txCtx, domain.GetShipmentParams{
+			AccountID:  params.AccountID,
+			ShipmentID: params.ShipmentID,
+		})
+		if apiErr != nil {
+			return apiErr
+		}
+
+		// Delete invoice if one exists for this shipment
+		invoiceID, apiErr := txShipmentRepo.FindInvoiceIDByShipment(txCtx, params.AccountID, params.ShipmentID)
+		if apiErr != nil {
+			return apiErr
+		}
+		if invoiceID != nil {
+			if apiErr := txSvc.reverseInventoryOnVoid(txCtx, scope, shipment); apiErr != nil {
+				return apiErr
+			}
+
+			// Delete invoice lines then invoice
+			if apiErr := txInvoiceRepo.DeleteLinesByInvoice(txCtx, *invoiceID); apiErr != nil {
+				return apiErr
+			}
+			if apiErr := txInvoiceRepo.Delete(txCtx, params.AccountID, *invoiceID); apiErr != nil {
+				return apiErr
+			}
+
+			// Voiding destroys the invoice outright, so the order's history has to record it going.
+			if apiErr := audit.NewPublisher().Publish(txCtx, txSvc.repos.NewOutboxRepo(), audit.EventData{
+				ServiceName:      domain.ServiceName,
+				Action:           constants.AuditActionDelete,
+				ResourceType:     constants.ObjectTypeInvoice,
+				ResourceID:       *invoiceID,
+				RootResourceType: constants.ObjectTypeSalesOrder,
+				RootResourceID:   shipment.SalesOrderID,
+			}); apiErr != nil {
+				return apiErr
+			}
+		}
+
+		// Mark the sales order as unfulfilled (reset to "issued" status, clear completed_at and first_ship_at)
+		if apiErr := txSalesOrderRepo.MarkUnfulfilled(txCtx, params.AccountID, shipment.SalesOrderID); apiErr != nil {
+			return apiErr
+		}
+
+		// Void shipping cases (clear tracking, labels, freight amount)
+		if apiErr := txCaseRepo.VoidByShipment(txCtx, params.ShipmentID); apiErr != nil {
+			return apiErr
+		}
+
+		// Mark shipment as voided (back to packed, clear tracking/invoice/shipped info)
+		if apiErr := txShipmentRepo.MarkVoided(txCtx, params.AccountID, params.ShipmentID); apiErr != nil {
+			return apiErr
+		}
+
+		// Re-fetch for response
+		updated, apiErr := txShipmentRepo.Get(txCtx, domain.GetShipmentParams{
+			AccountID:  params.AccountID,
+			ShipmentID: params.ShipmentID,
+		})
+		if apiErr != nil {
+			return apiErr
+		}
+		result = updated
+
+		changes := audit.ComputeChanges(shipment, updated)
+
+		if apiErr := audit.NewPublisher().Publish(txCtx, txSvc.repos.NewOutboxRepo(), audit.EventData{
+			ServiceName:      domain.ServiceName,
+			Action:           constants.AuditActionUpdate,
+			ResourceType:     constants.ObjectTypeShipment,
+			ResourceID:       updated.ID,
+			RootResourceType: constants.ObjectTypeSalesOrder,
+			RootResourceID:   updated.SalesOrderID,
+			Changes:          changes,
+		}); apiErr != nil {
+			return apiErr
+		}
+
+		return txSvc.mediators().Idempotency.CacheSuccessResponse(txCtx, idempotencyKey.TypeID, result)
+	})
+
+	if apiErr != nil {
+		return nil, meds.Idempotency.CacheErrorResponse(ctx, idempotencyKey.TypeID, apiErr)
+	}
+
+	return result, nil
 }
 
 func (s *shipmentSvcImpl) EstimateRate(ctx context.Context, params domain.EstimateRateParams) (float64, *apierror.APIError) {
@@ -1116,7 +1103,7 @@ func (s *shipmentSvcImpl) EstimateRate(ctx context.Context, params domain.Estima
 	return estimateShippingRate(ctx, s.repos, s.shippoFactory, s.encryptionKey, params)
 }
 
-// estimateShippingRate computes the posted shipping rate for an order or shipment, mirroring Dashboard's estimatePostedShippingRate cascade: product-line freight exemption → customer/group freight exemption → shipping-term free/flat/min-order → carrier-without-Shippo → no Shippo integration → live Shippo rate (already marked up by the Shippo client). A nil shippoFactory short-circuits the live rate to 0. It is shared by the shipment estimate-rate endpoint and sales-order shipping-line synthesis.
+// estimateShippingRate computes the posted shipping rate for an order or shipment, mirroring Dashboard's estimatePostedShippingRate cascade: product-line freight exemption → customer/group freight exemption → shipping-term free/flat/min-order → carrier-without-Shippo → no Shippo integration → live Shippo rate (already marked up by the Shippo client). A nil shippoFactory short-circuits the live rate to 0. An inactive integration is refused and a carrier that quotes no rate is unavailable, never 0. It is shared by the shipment estimate-rate endpoint and sales-order shipping-line synthesis.
 func estimateShippingRate(ctx context.Context, repos domain.RepoFactory, shippoFactory domain.ShippoClientFactory, encryptionKey []byte, params domain.EstimateRateParams) (float64, *apierror.APIError) {
 	// Check product line freight exemption: if any product line is freight exempt, rate is 0.
 	if len(params.ProductLineIDs) > 0 {
@@ -1225,25 +1212,12 @@ func estimateShippingRate(ctx context.Context, repos domain.RepoFactory, shippoF
 		}
 	}
 
-	// Check if account has Shippo integration enabled.
-	integrationRepo := repos.NewAccountIntegrationRepo()
-	hasIntegration, apiErr := integrationRepo.HasIntegration(ctx, params.AccountID, constants.IntegrationCodeShippo)
+	shippoClient, apiErr := accountShippoClient(ctx, repos, shippoFactory, encryptionKey, params.AccountID)
 	if apiErr != nil {
 		return 0, apiErr
 	}
-	if !hasIntegration || shippoFactory == nil {
+	if shippoClient == nil {
 		return 0, nil
-	}
-
-	// Get account Shippo API key.
-	encryptedCreds, _, apiErr := integrationRepo.GetEncryptedCredentials(ctx, params.AccountID, constants.IntegrationCodeShippo)
-	if apiErr != nil {
-		return 0, apiErr
-	}
-
-	apiKey, apiErr := decryptShippoAPIKey(encryptedCreds, encryptionKey, params.AccountID)
-	if apiErr != nil {
-		return 0, apiErr
 	}
 
 	// A live rate requires a real ship-from address. Refuse to quote from an empty
@@ -1253,8 +1227,6 @@ func estimateShippingRate(ctx context.Context, repos domain.RepoFactory, shippoF
 	if params.FromAddress.Zip == "" || params.FromAddress.Country == "" {
 		return 0, apierror.NewValidationError("Cannot estimate shipping: the account has no default billing (ship-from) address.")
 	}
-
-	shippoClient := shippoFactory.Build(apiKey)
 
 	rate, apiErr := shippoClient.FetchShippingRate(ctx, domain.FetchShippingRateParams{
 		CarrierAccountObjectID: *carrier.ShippoCarrierAccountID,
@@ -1484,15 +1456,21 @@ func (s *shipmentSvcImpl) RateShop(ctx context.Context, params domain.RateShopPa
 		}
 
 		if hasShippoIntegration {
-			encryptedCreds, _, apiErr := integrationRepo.GetEncryptedCredentials(ctx, params.AccountID, constants.IntegrationCodeShippo)
+			encryptedCreds, isActive, apiErr := integrationRepo.GetEncryptedCredentials(ctx, params.AccountID, constants.IntegrationCodeShippo)
 			if apiErr != nil {
 				return nil, tracing.Trace(span, apiErr)
 			}
-			apiKey, apiErr := decryptShippoAPIKey(encryptedCreds, s.encryptionKey, params.AccountID)
-			if apiErr != nil {
-				return nil, tracing.Trace(span, apiErr)
+			// An inactive integration rates nothing, as legacy's rate shop dropped every carrier it refused.
+			if isActive {
+				apiKey, apiErr := decryptShippoAPIKey(encryptedCreds, s.encryptionKey, params.AccountID)
+				if apiErr != nil {
+					return nil, tracing.Trace(span, apiErr)
+				}
+				shippoClient, apiErr = s.shippoFactory.Build(apiKey)
+				if apiErr != nil {
+					return nil, tracing.Trace(span, apiErr)
+				}
 			}
-			shippoClient = s.shippoFactory.Build(apiKey)
 		}
 	}
 
@@ -1813,6 +1791,10 @@ func (s *shipmentSvcImpl) createInvoiceAndStampOrderOnShip(txCtx context.Context
 		return apiErr
 	}
 
+	if apiErr := s.enqueueEdiInvoice(txCtx, shipment, invoiceID); apiErr != nil {
+		return apiErr
+	}
+
 	s.meterInvoiceCreated(txCtx, shipment.AccountID, invoiceID)
 
 	// Link the shipment to its invoice so void (which finds it via shipment.invoice_id) can delete it.
@@ -1860,6 +1842,32 @@ func (s *shipmentSvcImpl) createInvoiceAndStampOrderOnShip(txCtx context.Context
 	}
 
 	return nil
+}
+
+// Owes an EDI-enrolled customer the invoice as an 810, inside the ship's transaction: an invoice that
+// rolls back must not be sent, and one that commits must not go unsent (legacy's ship enqueue).
+func (s *shipmentSvcImpl) enqueueEdiInvoice(txCtx context.Context, shipment *domain.Shipment, invoiceID string) *apierror.APIError {
+	ediRepo := s.repos.NewEDIRepo()
+	enrolled, apiErr := ediRepo.IsCustomerEdiEnabled(txCtx, shipment.AccountID, shipment.CustomerID)
+	if apiErr != nil {
+		return apiErr
+	}
+	if !enrolled {
+		return nil
+	}
+
+	transmissionID, apiErr := id.GenID(id.EDITransmissionIDPrefix, nil)
+	if apiErr != nil {
+		return apiErr
+	}
+	return ediRepo.EnqueueOutboundTransmission(txCtx, domain.EnqueueEdiTransmissionParams{
+		ID:                    transmissionID,
+		AccountID:             shipment.AccountID,
+		DocumentType:          domain.EdiDocumentTypeInvoice,
+		SubjectType:           domain.EdiSubjectTypeInvoice,
+		SubjectID:             invoiceID,
+		CounterpartyAccountID: shipment.CustomerID,
+	})
 }
 
 // Meters a created invoice for usage billing, best effort: metering must never fail a ship (legacy
@@ -1977,112 +1985,286 @@ func (s *shipmentSvcImpl) publishInvoiceEmail(txCtx context.Context, accountID s
 	return s.notificationPub.PublishSendEmail(pubCtx, emailData)
 }
 
-// Resolves the shipment's master tracking for the ship action: sandbox accounts get a deterministic
-// placeholder to persist, real accounts buy carrier labels (which persist tracking themselves).
-func (s *shipmentSvcImpl) resolveShipmentTracking(ctx context.Context, shipment *domain.Shipment, idempotencyTypeID string) (*string, *apierror.APIError) {
+// What the ship's label step leaves for the atomic phase to stamp.
+type shipLabels struct {
+	// MasterTracking, when set, replaces the shipment's master tracking number.
+	MasterTracking *string
+	// CostRecorded means the carrier's charge is already on the freight line and must not be zeroed.
+	CostRecorded bool
+}
+
+// A label purchase resolved and validated in full before any money is spent.
+type labelPurchase struct {
+	client domain.ShippoClient
+	// Holds the shipment's cases in parcel order; the purchased packages come back in the same order.
+	cases  []*domain.ShippingCase
+	params domain.CreateLabelParams
+}
+
+// labelPhonePlaceholder stands in for a phone nobody recorded; carriers refuse a label without one.
+const labelPhonePlaceholder = "555-555-5555"
+
+// Decides what the ship does about carrier labels without buying any: a placeholder for a sandbox,
+// nothing for a carrier or account that cannot buy, the stored labels when they were already bought,
+// otherwise a purchase that has passed every check legacy ran before calling the carrier.
+func (s *shipmentSvcImpl) planShipmentLabels(ctx context.Context, shipment *domain.Shipment) (*labelPurchase, shipLabels, *apierror.APIError) {
 	accountCtx, apiErr := s.repos.NewAccountRepo().GetAccountContext(ctx, shipment.AccountID)
 	if apiErr != nil {
-		return nil, apiErr
+		return nil, shipLabels{}, apiErr
 	}
 	if accountCtx.IsSandbox {
 		tracking := sandboxTrackingNumber(shipment.ID)
-		return &tracking, nil
-	}
-	return s.purchaseShippingLabels(ctx, shipment, idempotencyTypeID)
-}
-
-// Buys the shipment's carrier labels, persisting per-case tracking/label, master tracking and freight cost.
-// Returns tracking when nothing was bought; nil once RecoveryPointShipLabelsCreated is staged against a re-buy.
-func (s *shipmentSvcImpl) purchaseShippingLabels(ctx context.Context, shipment *domain.Shipment, idempotencyTypeID string) (*string, *apierror.APIError) {
-	if s.shippoFactory == nil {
-		return shipment.MasterTrackingNumber, nil
+		return nil, shipLabels{MasterTracking: &tracking}, nil
 	}
 
 	// A label is bought against a Shippo carrier account at a specific service level; without either
 	// there is nothing to buy, matching legacy's "non-Shippo carriers don't generate labels".
 	carrier, apiErr := s.repos.NewCarrierRepo().Get(ctx, domain.GetCarrierParams{AccountID: shipment.AccountID, CarrierID: shipment.CarrierID})
 	if apiErr != nil {
-		return nil, apiErr
+		return nil, shipLabels{}, apiErr
 	}
 	if carrier.ShippoCarrierAccountID == nil || *carrier.ShippoCarrierAccountID == "" {
-		return shipment.MasterTrackingNumber, nil
+		return nil, shipLabels{}, nil
 	}
 	if shipment.ServiceLevelToken == nil || *shipment.ServiceLevelToken == "" {
-		return shipment.MasterTrackingNumber, nil
-	}
-
-	shippoClient, apiErr := s.buildShippoClient(ctx, shipment.AccountID)
-	if apiErr != nil {
-		return nil, apiErr
-	}
-	if shippoClient == nil {
-		return shipment.MasterTrackingNumber, nil
+		return nil, shipLabels{}, nil
 	}
 
 	cases, apiErr := s.repos.NewShippingCaseRepo().ListByShipment(ctx, shipment.ID)
 	if apiErr != nil {
-		return nil, apiErr
+		return nil, shipLabels{}, apiErr
 	}
 	if len(cases) == 0 {
-		return shipment.MasterTrackingNumber, nil
+		return nil, shipLabels{}, nil
+	}
+
+	if stored, bought, apiErr := boughtShipmentLabels(shipment, cases); apiErr != nil || bought {
+		return nil, stored, apiErr
+	}
+
+	shippoClient, apiErr := s.accountShippoClient(ctx, shipment.AccountID)
+	if apiErr != nil {
+		return nil, shipLabels{}, apiErr
+	}
+	if shippoClient == nil {
+		return nil, shipLabels{}, nil
+	}
+
+	for _, c := range cases {
+		if !parseDecimalOrZero(c.FreightWeightValue).IsPositive() {
+			return nil, shipLabels{}, apierror.NewValidationError(fmt.Sprintf("Shipping case %s has no freight weight; weigh every case before buying labels.", c.Number))
+		}
 	}
 
 	// Ship-from is the account's configured origin (its default billing address). Refuse to buy a
 	// label from an empty origin rather than printing one the carrier will reject.
 	var from domain.ShippingAddress
 	if origin, apiErr := s.repos.NewSalesOrderRepo().GetAccountOriginAddress(ctx, shipment.AccountID); apiErr != nil {
-		return nil, apiErr
+		return nil, shipLabels{}, apiErr
 	} else if origin != nil {
 		from = *origin
 	}
 	if from.Zip == "" || from.Country == "" {
-		return nil, apierror.NewValidationError("Cannot buy a shipping label: the account has no default billing (ship-from) address.")
+		return nil, shipLabels{}, apierror.NewValidationError("Cannot buy a shipping label: the account has no default billing (ship-from) address.")
 	}
 
-	result, apiErr := shippoClient.CreateTransactionInstantLabel(ctx, domain.CreateLabelParams{
-		CarrierAccountObjectID: *carrier.ShippoCarrierAccountID,
-		ServiceLevelToken:      *shipment.ServiceLevelToken,
-		FromAddress:            from,
-		ToAddress:              shipmentToAddress(shipment),
-		Parcels:                shippingCaseParcels(cases),
-		Billing:                shipmentThirdPartyBilling(shipment, from),
-	})
+	to := shipmentToAddress(shipment)
+	toPhone, fromPhone, apiErr := s.labelPhones(ctx, shipment, from)
 	if apiErr != nil {
-		return nil, apiErr
+		return nil, shipLabels{}, apiErr
 	}
-	// A result with no labels means no purchase happened (the stub client in test mode), so there is
-	// nothing to persist and nothing to guard against re-buying.
-	if len(result.Packages) == 0 {
-		return shipment.MasterTrackingNumber, nil
-	}
+	to.Phone, from.Phone = &toPhone, &fromPhone
+	to.Company, from.Company = labelCompany(to.Name), labelCompany(from.Name)
 
-	caseRepo := s.repos.NewShippingCaseRepo()
+	return &labelPurchase{
+		client: shippoClient,
+		cases:  cases,
+		params: domain.CreateLabelParams{
+			CarrierAccountObjectID: *carrier.ShippoCarrierAccountID,
+			ServiceLevelToken:      *shipment.ServiceLevelToken,
+			FromAddress:            from,
+			ToAddress:              to,
+			Parcels:                labelParcels(shipment, cases),
+			Billing:                shipmentThirdPartyBilling(shipment),
+			Metadata:               shipment.ID,
+		},
+	}, shipLabels{}, nil
+}
+
+// Reads labels an earlier attempt bought for these cases: buying again would charge twice and orphan
+// the first purchase, whose transactions void refunds. Labels on only some of the cases are refused.
+func boughtShipmentLabels(shipment *domain.Shipment, cases []*domain.ShippingCase) (shipLabels, bool, *apierror.APIError) {
+	bought := 0
+	for _, c := range cases {
+		if c.ShippoTransactionID != nil && *c.ShippoTransactionID != "" {
+			bought++
+		}
+	}
+	switch bought {
+	case 0:
+		return shipLabels{}, false, nil
+	case len(cases):
+		tracking := shipment.MasterTrackingNumber
+		if tracking == nil || *tracking == "" {
+			tracking = cases[0].TrackingNumber
+		}
+		return shipLabels{MasterTracking: tracking, CostRecorded: true}, true, nil
+	default:
+		return shipLabels{}, false, apierror.NewConflictErrorWithParam("Labels were already bought for some of this shipment's cases but not the rest; the rest cannot be bought on their own.", "id")
+	}
+}
+
+// Resolves label phones as legacy did: the recipient at the buyer's own number, then the ship-to's,
+// then the seller's; the sender at its origin's number, then the seller's.
+func (s *shipmentSvcImpl) labelPhones(ctx context.Context, shipment *domain.Shipment, from domain.ShippingAddress) (toPhone, fromPhone string, apiErr *apierror.APIError) {
+	accounts, apiErr := s.repos.NewAccountRepo().GetByIDs(ctx, []string{shipment.AccountID, shipment.CustomerID})
+	if apiErr != nil {
+		return "", "", apiErr
+	}
+	brandingPhone := make(map[string]string, len(accounts))
+	for _, a := range accounts {
+		if a != nil && a.Branding != nil {
+			brandingPhone[a.ID] = ptrutil.Deref(a.Branding.PhoneNumber)
+		}
+	}
+	seller := brandingPhone[shipment.AccountID]
+
+	toPhone = firstNonBlank(brandingPhone[shipment.CustomerID], ptrutil.Deref(shipment.ShippingAddressPhone), seller, labelPhonePlaceholder)
+	fromPhone = firstNonBlank(ptrutil.Deref(from.Phone), seller, labelPhonePlaceholder)
+	return toPhone, fromPhone, nil
+}
+
+func firstNonBlank(values ...string) string {
+	for _, v := range values {
+		if strings.TrimSpace(v) != "" {
+			return v
+		}
+	}
+	return ""
+}
+
+// Prints the address name as the company too, as legacy's label addresses did.
+func labelCompany(name string) *string {
+	if name == "" {
+		return nil
+	}
+	return &name
+}
+
+// Turns the cases into label parcels referenced the way legacy printed them: the customer's PO and
+// the order number when there is a PO, else the order and case numbers. Each parcel carries its case id.
+func labelParcels(shipment *domain.Shipment, cases []*domain.ShippingCase) []domain.Parcel {
+	parcels := shippingCaseParcels(cases)
+	po := strings.TrimSpace(ptrutil.Deref(shipment.CustomerPONumber))
 	for i, c := range cases {
-		if i >= len(result.Packages) {
-			break
+		if po != "" {
+			parcels[i].Reference1 = "PO#" + po
+			parcels[i].Reference2 = "SO#" + shipment.SalesOrderNumber
+		} else {
+			parcels[i].Reference1 = "SO#" + shipment.SalesOrderNumber
+			parcels[i].Reference2 = "C#" + c.Number
 		}
-		pkg := result.Packages[i]
-		s.storeShippingLabel(ctx, shipment.AccountID, c.Number, pkg.LabelURL)
-		if apiErr := caseRepo.UpdateWithShipmentInfo(ctx, c.ID, pkg.TrackingNumber, pkg.ShippoTransactionID, pkg.LabelURL); apiErr != nil {
-			return nil, apiErr
+		parcels[i].Metadata = c.ID
+	}
+	return parcels
+}
+
+// Bound the label purchase, detached from the request so a caller that gives up cannot cut it off
+// between paying and recording; copying the labels to the bucket is best-effort and budgeted apart.
+const (
+	labelPurchaseBudget = 60 * time.Second
+	labelStoreBudget    = 30 * time.Second
+)
+
+// Buys the planned labels and records them before anything else can fail. The recorded transactions
+// are what stop a retry from buying again and what void refunds.
+func (s *shipmentSvcImpl) buyShipmentLabels(ctx context.Context, shipment *domain.Shipment, purchase *labelPurchase, idempotencyTypeID string) (shipLabels, *apierror.APIError) {
+	ctx, cancel := context.WithTimeout(context.WithoutCancel(ctx), labelPurchaseBudget)
+	defer cancel()
+
+	result, apiErr := purchase.client.CreateTransactionInstantLabel(ctx, purchase.params)
+	if apiErr != nil {
+		return shipLabels{}, apiErr
+	}
+	// No labels means no purchase happened (the stub client in test mode): nothing to record.
+	if len(result.Packages) == 0 {
+		return shipLabels{}, nil
+	}
+
+	var recordErr *apierror.APIError
+	if len(result.Packages) != len(purchase.cases) {
+		recordErr = apierror.NewInternalError(nil, fmt.Sprintf("bought %d labels for %d cases", len(result.Packages), len(purchase.cases)))
+	} else {
+		recordErr = s.recordLabelPurchase(ctx, shipment, purchase.cases, result, idempotencyTypeID)
+	}
+	if recordErr != nil {
+		return shipLabels{}, boughtButUnrecorded(ctx, shipment, result, recordErr)
+	}
+
+	storeCtx, cancelStore := context.WithTimeout(context.WithoutCancel(ctx), labelStoreBudget)
+	defer cancelStore()
+	for i, c := range purchase.cases {
+		s.storeShippingLabel(storeCtx, shipment.AccountID, c.Number, result.Packages[i].LabelURL)
+	}
+
+	return shipLabels{CostRecorded: true}, nil
+}
+
+// Reports labels that were paid for but could not be recorded. Not transient: a retry would find no
+// recorded transaction and buy again, so the purchase is logged for reconciliation instead.
+func boughtButUnrecorded(ctx context.Context, shipment *domain.Shipment, result *domain.LabelResult, cause *apierror.APIError) *apierror.APIError {
+	transactionIDs := make([]string, len(result.Packages))
+	for i, pkg := range result.Packages {
+		transactionIDs[i] = pkg.ShippoTransactionID
+	}
+	slog.ErrorContext(ctx, "shipping labels were bought but could not be recorded",
+		"account_id", shipment.AccountID, "shipment_id", shipment.ID,
+		"shippo_transaction_ids", strings.Join(transactionIDs, ","), "error", cause.Error())
+	return apierror.NewResourceConflictError("The shipping labels were purchased but could not be recorded. Contact support before shipping this shipment again.")
+}
+
+// Bound the attempts at recording a purchase: the labels are paid for, so a database blip is retried
+// rather than leaving them unrecorded.
+const (
+	recordLabelAttempts = 3
+	recordLabelBackoff  = 250 * time.Millisecond
+)
+
+// Records bought labels in one transaction — each case's tracking and refundable transaction, the
+// master tracking, the freight cost and the recovery point — so a retry finds all of it or none.
+func (s *shipmentSvcImpl) recordLabelPurchase(ctx context.Context, shipment *domain.Shipment, cases []*domain.ShippingCase, result *domain.LabelResult, idempotencyTypeID string) *apierror.APIError {
+	record := func(txCtx context.Context, txSvc *shipmentSvcImpl) *apierror.APIError {
+		caseRepo := txSvc.repos.NewShippingCaseRepo()
+		for i, c := range cases {
+			pkg := result.Packages[i]
+			if apiErr := caseRepo.UpdateWithShipmentInfo(txCtx, c.ID, pkg.TrackingNumber, pkg.ShippoTransactionID, pkg.LabelURL); apiErr != nil {
+				return apiErr
+			}
+		}
+		if result.MasterTrackingNumber != "" {
+			if apiErr := txSvc.repos.NewShipmentRepo().SetMasterTracking(txCtx, shipment.AccountID, shipment.ID, result.MasterTrackingNumber); apiErr != nil {
+				return apiErr
+			}
+		}
+		if apiErr := txSvc.writeBackNegotiatedRate(txCtx, shipment, result.NegotiatedRate); apiErr != nil {
+			return apiErr
+		}
+		return txSvc.repos.NewIdempotencyKeyRepo().AdvanceRecoveryPoint(txCtx, idempotencyTypeID, domain.RecoveryPointShipLabelsCreated)
+	}
+
+	var apiErr *apierror.APIError
+	for attempt := 1; attempt <= recordLabelAttempts; attempt++ {
+		apiErr = s.withTx(ctx, record)
+		if apiErr == nil || !apiErr.IsTransient || attempt == recordLabelAttempts {
+			return apiErr
+		}
+		select {
+		case <-ctx.Done():
+			return apiErr
+		case <-time.After(time.Duration(attempt) * recordLabelBackoff):
 		}
 	}
-
-	if result.MasterTrackingNumber != "" {
-		if apiErr := s.repos.NewShipmentRepo().SetMasterTracking(ctx, shipment.AccountID, shipment.ID, result.MasterTrackingNumber); apiErr != nil {
-			return nil, apiErr
-		}
-	}
-
-	if apiErr := s.writeBackNegotiatedRate(ctx, shipment, result.NegotiatedRate); apiErr != nil {
-		return nil, apiErr
-	}
-
-	if apiErr := s.repos.NewIdempotencyKeyRepo().AdvanceRecoveryPoint(ctx, idempotencyTypeID, domain.RecoveryPointShipLabelsCreated); apiErr != nil {
-		return nil, apiErr
-	}
-
-	return nil, nil
+	return apiErr
 }
 
 // Bounds the pull of a carrier-hosted label: it is a remote host on the ship path, so it may neither
@@ -2171,14 +2353,20 @@ func (s *shipmentSvcImpl) writeBackNegotiatedRate(ctx context.Context, shipment 
 	return apiErr
 }
 
-// Builds a Shippo client from the account's stored integration credentials. Returns (nil, nil) when
-// the account has no Shippo integration, so callers can skip the carrier round-trip.
-func (s *shipmentSvcImpl) buildShippoClient(ctx context.Context, accountID string) (domain.ShippoClient, *apierror.APIError) {
-	if s.shippoFactory == nil {
+// Builds the account's Shippo client for the ship and void paths.
+func (s *shipmentSvcImpl) accountShippoClient(ctx context.Context, accountID string) (domain.ShippoClient, *apierror.APIError) {
+	return accountShippoClient(ctx, s.repos, s.shippoFactory, s.encryptionKey, accountID)
+}
+
+// Builds the account's Shippo client from its stored credentials. No integration (or no factory) is
+// (nil, nil), so a caller can skip the carrier; one switched off is refused, as legacy's
+// "Shippo integration is inactive." was.
+func accountShippoClient(ctx context.Context, repos domain.RepoFactory, factory domain.ShippoClientFactory, encryptionKey []byte, accountID string) (domain.ShippoClient, *apierror.APIError) {
+	if factory == nil {
 		return nil, nil
 	}
 
-	integrationRepo := s.repos.NewAccountIntegrationRepo()
+	integrationRepo := repos.NewAccountIntegrationRepo()
 	hasIntegration, apiErr := integrationRepo.HasIntegration(ctx, accountID, constants.IntegrationCodeShippo)
 	if apiErr != nil {
 		return nil, apiErr
@@ -2187,16 +2375,19 @@ func (s *shipmentSvcImpl) buildShippoClient(ctx context.Context, accountID strin
 		return nil, nil
 	}
 
-	encryptedCreds, _, apiErr := integrationRepo.GetEncryptedCredentials(ctx, accountID, constants.IntegrationCodeShippo)
+	encryptedCreds, isActive, apiErr := integrationRepo.GetEncryptedCredentials(ctx, accountID, constants.IntegrationCodeShippo)
 	if apiErr != nil {
 		return nil, apiErr
 	}
-	apiKey, apiErr := decryptShippoAPIKey(encryptedCreds, s.encryptionKey, accountID)
+	if !isActive {
+		return nil, apierror.NewValidationError("Shippo integration is inactive.")
+	}
+	apiKey, apiErr := decryptShippoAPIKey(encryptedCreds, encryptionKey, accountID)
 	if apiErr != nil {
 		return nil, apiErr
 	}
 
-	return s.shippoFactory.Build(apiKey), nil
+	return factory.Build(apiKey)
 }
 
 // Names the account's system freight product, whose order line carries the shipping charge.
@@ -2239,17 +2430,17 @@ func shipmentToAddress(shipment *domain.Shipment) domain.ShippingAddress {
 	}
 }
 
-// Bills freight to the third party named on the shipment, passing the seller's origin country and zip
-// through as the billing address (matching Dashboard's createShippingLine). Nil when not third-party billed.
-func shipmentThirdPartyBilling(shipment *domain.Shipment, origin domain.ShippingAddress) *domain.ShippingBilling {
-	if shipment.CarrierBillingType == nil || *shipment.CarrierBillingType != string(constants.CarrierBillingTypeThirdParty) {
+// Bills freight to the third party the order names, with the order's billing-address country and zip
+// as the billing address — legacy's shipment adapter, which read the order alone. Nil when not third-party billed.
+func shipmentThirdPartyBilling(shipment *domain.Shipment) *domain.ShippingBilling {
+	if shipment.OrderCarrierBillingType == nil || *shipment.OrderCarrierBillingType != string(constants.CarrierBillingTypeThirdParty) {
 		return nil
 	}
 	return &domain.ShippingBilling{
 		Type:    "THIRD_PARTY",
-		Account: ptrutil.Deref(shipment.CarrierBillingAccount),
-		Country: origin.Country,
-		Zip:     origin.Zip,
+		Account: ptrutil.Deref(shipment.OrderCarrierBillingAccount),
+		Country: ptrutil.Deref(shipment.BillingAddressCountry),
+		Zip:     ptrutil.Deref(shipment.BillingAddressZip),
 	}
 }
 
@@ -2263,9 +2454,16 @@ func sandboxTrackingNumber(shipmentID string) string {
 	return "SANDBOX-" + strings.ToUpper(suffix)
 }
 
-// Refunds the cases' purchased labels and drops their stored files before void clears them; sandbox no-ops.
-// Best-effort, as in legacy: a carrier refusing a refund must not strand a shipment in shipped state.
+// labelRefundBudget bounds refunding a void's labels, detached from the request so a caller that gives
+// up cannot leave the refunds half-recorded.
+const labelRefundBudget = 60 * time.Second
+
+// Refunds the cases' bought labels and drops their stored files before void clears them; sandbox no-ops.
+// A refused refund aborts the void, as in legacy: clearing the case would erase a charged label's record.
 func (s *shipmentSvcImpl) refundShippingLabels(ctx context.Context, shipment *domain.Shipment, idempotencyTypeID string) *apierror.APIError {
+	ctx, cancel := context.WithTimeout(context.WithoutCancel(ctx), labelRefundBudget)
+	defer cancel()
+
 	accountCtx, apiErr := s.repos.NewAccountRepo().GetAccountContext(ctx, shipment.AccountID)
 	if apiErr != nil {
 		return apiErr
@@ -2279,14 +2477,17 @@ func (s *shipmentSvcImpl) refundShippingLabels(ctx context.Context, shipment *do
 		return apiErr
 	}
 
-	s.refundShippoTransactions(ctx, shipment.AccountID, cases)
+	if apiErr := s.refundShippoTransactions(ctx, shipment.AccountID, cases); apiErr != nil {
+		return apiErr
+	}
 	s.deleteStoredShippingLabels(ctx, shipment.AccountID, cases)
 
 	return s.repos.NewIdempotencyKeyRepo().AdvanceRecoveryPoint(ctx, idempotencyTypeID, domain.RecoveryPointVoidLabelsRefunded)
 }
 
-// Refunds each case's purchased Shippo transaction, logging and continuing past any that fails.
-func (s *shipmentSvcImpl) refundShippoTransactions(ctx context.Context, accountID string, cases []*domain.ShippingCase) {
+// Refunds each case's bought Shippo transaction, stopping at the first the carrier refuses. A label
+// already refunded counts as refunded, so a retried void passes the ones an earlier attempt got through.
+func (s *shipmentSvcImpl) refundShippoTransactions(ctx context.Context, accountID string, cases []*domain.ShippingCase) *apierror.APIError {
 	var transactionIDs []string
 	for _, c := range cases {
 		if c.ShippoTransactionID != nil && *c.ShippoTransactionID != "" {
@@ -2294,25 +2495,23 @@ func (s *shipmentSvcImpl) refundShippoTransactions(ctx context.Context, accountI
 		}
 	}
 	if len(transactionIDs) == 0 {
-		return
+		return nil
 	}
 
-	shippoClient, apiErr := s.buildShippoClient(ctx, accountID)
+	shippoClient, apiErr := s.accountShippoClient(ctx, accountID)
 	if apiErr != nil {
-		slog.WarnContext(ctx, "could not build shippo client to refund shipping labels; voiding anyway",
-			"account_id", accountID, "error", apiErr.Error())
-		return
+		return apiErr
 	}
 	if shippoClient == nil {
-		return
+		return apierror.NewValidationError("The shipment's shipping labels cannot be refunded: the account has no Shippo integration.")
 	}
 
 	for _, transactionID := range transactionIDs {
 		if apiErr := shippoClient.RefundTransaction(ctx, transactionID); apiErr != nil {
-			slog.WarnContext(ctx, "shippo label refund failed; voiding anyway",
-				"account_id", accountID, "shippo_transaction_id", transactionID, "error", apiErr.Error())
+			return apiErr
 		}
 	}
+	return nil
 }
 
 // Removes each case's stored label object, logging and continuing past any that fails.
@@ -2327,4 +2526,32 @@ func (s *shipmentSvcImpl) deleteStoredShippingLabels(ctx context.Context, accoun
 				"account_id", accountID, "s3_key", key, "error", apiErr.Error())
 		}
 	}
+}
+
+// dispatchClaimTTL outlives the longest ship or void attempt — a detached label purchase plus the
+// atomic phase — and frees the shipment by itself if an attempt dies holding it.
+const dispatchClaimTTL = 3 * time.Minute
+
+// Claims the shipment for one ship, void or delete attempt, so a second attempt — even this request
+// replayed while the first still runs — conflicts instead of buying or invoicing again.
+func (s *shipmentSvcImpl) claimDispatch(ctx context.Context, shipmentID string) (func(), *apierror.APIError) {
+	name := "shipment-dispatch:" + shipmentID
+	holder := rand.Text()
+
+	acquired, err := s.dispatchLeases.Acquire(ctx, name, holder, dispatchClaimTTL)
+	if err != nil {
+		return nil, apierror.NewInternalError(err, "Failed to claim the shipment.")
+	}
+	if !acquired {
+		return nil, apierror.NewConflictErrorWithParam("This shipment is already being shipped, voided or deleted by another request; retry once it finishes.", "id")
+	}
+
+	return func() {
+		releaseCtx, cancel := context.WithTimeout(context.WithoutCancel(ctx), 5*time.Second)
+		defer cancel()
+		if err := s.dispatchLeases.Release(releaseCtx, name, holder); err != nil {
+			slog.WarnContext(ctx, "shipment dispatch claim release failed; it lapses on its own",
+				"shipment_id", shipmentID, "error", err.Error())
+		}
+	}, nil
 }

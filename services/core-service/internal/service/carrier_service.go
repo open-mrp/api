@@ -125,7 +125,7 @@ func (s *carrierSvcImpl) getShippoClient(ctx context.Context, accountID string) 
 		return nil, apierror.NewValidationError("Shippo integration is misconfigured. Please reconnect Shippo.")
 	}
 
-	return s.shippoFactory.Build(creds.APIKey), nil
+	return s.shippoFactory.Build(creds.APIKey)
 }
 
 func (s *carrierSvcImpl) ListCarriers(ctx context.Context, params domain.ListCarriersParams) (*domain.ListCarriersResult, *apierror.APIError) {

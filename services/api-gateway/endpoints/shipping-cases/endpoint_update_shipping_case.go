@@ -17,8 +17,8 @@ import (
 type UpdateShippingCaseRequest struct {
 	// Shipping case ID.
 	ShippingCaseID string `path:"id" validate:"required"`
-	// Carrier tracking number to set on the case, replacing any number already recorded.
-	TrackingNumber field.Optional[string] `json:"tracking_number,omitzero" validate:"omitempty,max=255"`
+	// Carrier tracking number to set on the case, replacing any number already recorded; send `null` to clear it.
+	TrackingNumber field.Clearable[string] `json:"tracking_number,omitzero" validate:"omitempty,max=255"`
 	// New value for the case's freight cost, as a decimal string.
 	FreightAmountValue field.Optional[string] `json:"freight_amount_value,omitzero"`
 	// ID of the currency unit the case's freight cost is expressed in.
@@ -35,7 +35,7 @@ type UpdateShippingCaseRequest struct {
 
 var sampleTrackingNumber = "1Z999AA10123456784"
 var sampleUpdateShippingCaseRequest = &UpdateShippingCaseRequest{
-	TrackingNumber: field.Some(sampleTrackingNumber),
+	TrackingNumber: field.Set(sampleTrackingNumber),
 }
 
 func (*UpdateShippingCaseRequest) SchemaExample() any {

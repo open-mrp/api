@@ -151,7 +151,10 @@ SELECT
             JOIN quantity rfw ON rfw.id = rc2.freight_weight_id
             WHERE rc2.shipment_id = s.id AND rfw.value <= 0
         )
-    ) AS is_ready_to_ship
+    ) AS is_ready_to_ship,
+    -- The order's own freight billing, without the customer default carrier_billing_* fall back to.
+    so.carrier_billing_type AS order_carrier_billing_type,
+    so.carrier_billing_account AS order_carrier_billing_account
 FROM shipment s
 JOIN shipment_status ss ON ss.code = s.shipment_status_code
 JOIN sales_order so ON so.id = s.sales_order_id
@@ -247,6 +250,8 @@ type GetShipmentRow struct {
 	PriorityCode                 string
 	CaseCount                    int64
 	IsReadyToShip                sql.NullBool
+	OrderCarrierBillingType      sql.NullString
+	OrderCarrierBillingAccount   sql.NullString
 }
 
 func (q *Queries) GetShipment(ctx context.Context, arg GetShipmentParams) (GetShipmentRow, error) {
@@ -322,6 +327,8 @@ func (q *Queries) GetShipment(ctx context.Context, arg GetShipmentParams) (GetSh
 		&i.PriorityCode,
 		&i.CaseCount,
 		&i.IsReadyToShip,
+		&i.OrderCarrierBillingType,
+		&i.OrderCarrierBillingAccount,
 	)
 	return i, err
 }
@@ -406,7 +413,10 @@ SELECT
             JOIN quantity rfw ON rfw.id = rc2.freight_weight_id
             WHERE rc2.shipment_id = s.id AND rfw.value <= 0
         )
-    ) AS is_ready_to_ship
+    ) AS is_ready_to_ship,
+    -- The order's own freight billing, without the customer default carrier_billing_* fall back to.
+    so.carrier_billing_type AS order_carrier_billing_type,
+    so.carrier_billing_account AS order_carrier_billing_account
 FROM shipment s
 JOIN shipment_status ss ON ss.code = s.shipment_status_code
 JOIN sales_order so ON so.id = s.sales_order_id
@@ -502,6 +512,8 @@ type GetShipmentsByIDsRow struct {
 	PriorityCode                 string
 	CaseCount                    int64
 	IsReadyToShip                sql.NullBool
+	OrderCarrierBillingType      sql.NullString
+	OrderCarrierBillingAccount   sql.NullString
 }
 
 // Hydrates a page of the shipment list, which buildShipmentListQuery chooses; same projection as GetShipment.
@@ -595,6 +607,8 @@ func (q *Queries) GetShipmentsByIDs(ctx context.Context, arg GetShipmentsByIDsPa
 			&i.PriorityCode,
 			&i.CaseCount,
 			&i.IsReadyToShip,
+			&i.OrderCarrierBillingType,
+			&i.OrderCarrierBillingAccount,
 		); err != nil {
 			return nil, err
 		}
@@ -628,7 +642,7 @@ func (q *Queries) LinkShipmentInvoice(ctx context.Context, arg LinkShipmentInvoi
 	return err
 }
 
-const markShipmentShipped = `-- name: MarkShipmentShipped :exec
+const markShipmentShipped = `-- name: MarkShipmentShipped :execrows
 UPDATE shipment SET
     shipment_status_code = 'shipped',
     shipped_at = NOW(3),
@@ -636,6 +650,7 @@ UPDATE shipment SET
     updated_at = NOW(3)
 WHERE id = ?
 AND account_id = ?
+AND shipment_status_code <> 'shipped'
 `
 
 type MarkShipmentShippedParams struct {
@@ -644,12 +659,17 @@ type MarkShipmentShippedParams struct {
 	AccountID   string
 }
 
-func (q *Queries) MarkShipmentShipped(ctx context.Context, arg MarkShipmentShippedParams) error {
-	_, err := q.db.ExecContext(ctx, markShipmentShipped, arg.ShippedByID, arg.ID, arg.AccountID)
-	return err
+// Conditional on the shipment still being unshipped, so of two ships racing past the status check
+// only the first changes a row; the second sees zero and must roll back before invoicing again.
+func (q *Queries) MarkShipmentShipped(ctx context.Context, arg MarkShipmentShippedParams) (int64, error) {
+	result, err := q.db.ExecContext(ctx, markShipmentShipped, arg.ShippedByID, arg.ID, arg.AccountID)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected()
 }
 
-const markShipmentVoided = `-- name: MarkShipmentVoided :exec
+const markShipmentVoided = `-- name: MarkShipmentVoided :execrows
 UPDATE shipment SET
     shipment_status_code = 'packed',
     shipped_at = NULL,
@@ -659,6 +679,7 @@ UPDATE shipment SET
     updated_at = NOW(3)
 WHERE id = ?
 AND account_id = ?
+AND shipment_status_code = 'shipped'
 `
 
 type MarkShipmentVoidedParams struct {
@@ -666,9 +687,13 @@ type MarkShipmentVoidedParams struct {
 	AccountID string
 }
 
-func (q *Queries) MarkShipmentVoided(ctx context.Context, arg MarkShipmentVoidedParams) error {
-	_, err := q.db.ExecContext(ctx, markShipmentVoided, arg.ID, arg.AccountID)
-	return err
+// Conditional on the shipment being shipped, so a second void racing the first changes nothing.
+func (q *Queries) MarkShipmentVoided(ctx context.Context, arg MarkShipmentVoidedParams) (int64, error) {
+	result, err := q.db.ExecContext(ctx, markShipmentVoided, arg.ID, arg.AccountID)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected()
 }
 
 const setShipmentMasterTracking = `-- name: SetShipmentMasterTracking :exec
@@ -754,7 +779,7 @@ const updateShipment = `-- name: UpdateShipment :execresult
 UPDATE shipment SET
     note = COALESCE(?, note),
     number = COALESCE(?, number),
-    master_tracking_number = COALESCE(?, master_tracking_number),
+    master_tracking_number = IF(?, NULL, COALESCE(?, master_tracking_number)),
     carrier_id = COALESCE(?, carrier_id),
     carrier_option_id = ?,
     updated_at = NOW(3)
@@ -763,19 +788,21 @@ AND account_id = ?
 `
 
 type UpdateShipmentParams struct {
-	Note                 sql.NullString
-	Number               sql.NullString
-	MasterTrackingNumber sql.NullString
-	CarrierID            sql.NullString
-	CarrierOptionID      sql.NullString
-	ID                   string
-	AccountID            string
+	Note                      sql.NullString
+	Number                    sql.NullString
+	ClearMasterTrackingNumber interface{}
+	MasterTrackingNumber      interface{}
+	CarrierID                 sql.NullString
+	CarrierOptionID           sql.NullString
+	ID                        string
+	AccountID                 string
 }
 
 func (q *Queries) UpdateShipment(ctx context.Context, arg UpdateShipmentParams) (sql.Result, error) {
 	return q.db.ExecContext(ctx, updateShipment,
 		arg.Note,
 		arg.Number,
+		arg.ClearMasterTrackingNumber,
 		arg.MasterTrackingNumber,
 		arg.CarrierID,
 		arg.CarrierOptionID,

@@ -2,7 +2,10 @@ package stub
 
 import (
 	"context"
+	"fmt"
 	"strings"
+	"sync"
+	"sync/atomic"
 
 	"github.com/open-mrp/api/services/core-service/internal/domain"
 	apierror "github.com/open-mrp/api/shared/errors"
@@ -11,8 +14,8 @@ import (
 // ShippoClientFactory is a no-op factory for use in test mode.
 type ShippoClientFactory struct{}
 
-func (f *ShippoClientFactory) Build(_ string) domain.ShippoClient {
-	return &shippoClient{}
+func (f *ShippoClientFactory) Build(_ string) (domain.ShippoClient, *apierror.APIError) {
+	return &shippoClient{}, nil
 }
 
 type shippoClient struct{}
@@ -34,6 +37,10 @@ const (
 	// ZipStubUncached has no cached rate, standing in for an order placed without the checkout's rate
 	// quote: order create defers its freight to the freight consumer, which quotes it live.
 	ZipStubUncached = "99915"
+	// ZipStubLabels buys labels, numbering each purchase per shipment so a test can count them.
+	ZipStubLabels = "99920"
+	// ZipStubLabelsNoRefund buys labels the carrier then refuses to refund.
+	ZipStubLabelsNoRefund = "99921"
 )
 
 // Tokens the stub quotes against. They match the service levels seeded for the e2e transit carrier.
@@ -161,10 +168,43 @@ func (s *shippoClient) FetchAllShippingRates(_ context.Context, params domain.Fe
 	return ratesForDestination(params.ToAddress.Zip)
 }
 
-func (s *shippoClient) CreateTransactionInstantLabel(_ context.Context, _ domain.CreateLabelParams) (*domain.LabelResult, *apierror.APIError) {
-	return &domain.LabelResult{}, nil
+// stubLabelPurchases counts label purchases per shipment (the purchase metadata), for the whole process.
+var stubLabelPurchases sync.Map
+
+// stubNoRefundMarker tags the transactions of a ZipStubLabelsNoRefund purchase.
+const stubNoRefundMarker = "norefund"
+
+// CreateTransactionInstantLabel buys nothing unless the destination selects a label scenario. A
+// purchase is numbered per shipment and the number is printed into every id it returns —
+// STUB-<n>-<shipment> — so an end-to-end test can tell how many purchases a shipment has seen.
+func (s *shippoClient) CreateTransactionInstantLabel(_ context.Context, params domain.CreateLabelParams) (*domain.LabelResult, *apierror.APIError) {
+	zip := normalizeStubZip(params.ToAddress.Zip)
+	if zip != ZipStubLabels && zip != ZipStubLabelsNoRefund {
+		return &domain.LabelResult{}, nil
+	}
+
+	counter, _ := stubLabelPurchases.LoadOrStore(params.Metadata, new(atomic.Int64))
+	purchase := counter.(*atomic.Int64).Add(1)
+
+	txnPrefix := "stub_txn"
+	if zip == ZipStubLabelsNoRefund {
+		txnPrefix += "_" + stubNoRefundMarker
+	}
+
+	master := fmt.Sprintf("STUB-%d-%s", purchase, params.Metadata)
+	packages := make([]domain.LabelPackage, len(params.Parcels))
+	for i := range params.Parcels {
+		packages[i] = domain.LabelPackage{
+			TrackingNumber:      fmt.Sprintf("%s-%d", master, i+1),
+			ShippoTransactionID: fmt.Sprintf("%s_%d_%s_%d", txnPrefix, purchase, params.Metadata, i+1),
+		}
+	}
+	return &domain.LabelResult{MasterTrackingNumber: master, NegotiatedRate: 12.34, Packages: packages}, nil
 }
 
-func (s *shippoClient) RefundTransaction(_ context.Context, _ string) *apierror.APIError {
+func (s *shippoClient) RefundTransaction(_ context.Context, transactionID string) *apierror.APIError {
+	if strings.Contains(transactionID, stubNoRefundMarker) {
+		return apierror.NewValidationError("SHIPPO: Refund failed for transaction " + transactionID + ".")
+	}
 	return nil
 }

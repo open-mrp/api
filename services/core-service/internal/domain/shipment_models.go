@@ -72,8 +72,12 @@ type Shipment struct {
 	SalesOrderUpdatedAt          time.Time
 	BillingAddressCountry        *string
 	BillingAddressZip            *string
-	PriorityCode                 string
-	CaseCount                    int64
+	// The order's own freight billing, without the customer default CarrierBilling* fall back to. A
+	// label bills only who the order names, as the order's freight quote did.
+	OrderCarrierBillingType    *string
+	OrderCarrierBillingAccount *string
+	PriorityCode               string
+	CaseCount                  int64
 	// Reports whether the shipment can be shipped now: unshipped, cased, every case weighed.
 	IsReadyToShip bool
 	AccountID     string
@@ -117,11 +121,12 @@ type GetShipmentParams struct {
 
 // UpdateShipmentParams holds the parameters for updating a shipment.
 type UpdateShipmentParams struct {
-	AccountID            string
-	ShipmentID           string
-	Note                 *string
-	Number               *string
-	MasterTrackingNumber *string
+	AccountID  string
+	ShipmentID string
+	Note       *string
+	Number     *string
+	// Tri-state: unset keeps the master tracking number, clear removes it.
+	MasterTrackingNumber field.Clearable[string]
 	CarrierID            *string
 	// Tri-state: unset keeps the current service level, null clears it.
 	ServiceLevelID field.Clearable[string]
@@ -130,9 +135,10 @@ type UpdateShipmentParams struct {
 
 // Carries the admin override that corrects a shipped shipment's tracking and routing.
 type AdminUpdateShipmentTrackingParams struct {
-	AccountID            string
-	ShipmentID           string
-	MasterTrackingNumber *string
+	AccountID  string
+	ShipmentID string
+	// Tri-state: unset keeps the master tracking number, clear removes it.
+	MasterTrackingNumber field.Clearable[string]
 	CarrierID            *string
 	// Tri-state: unset keeps the current service level, null clears it.
 	ServiceLevelID field.Clearable[string]

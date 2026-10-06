@@ -3,6 +3,7 @@ package repository
 import (
 	"context"
 	gosql "database/sql"
+	"errors"
 	"time"
 
 	"github.com/open-mrp/api/services/core-service/internal/domain"
@@ -445,4 +446,43 @@ func (r *ediRepoImpl) GetEDIRunsByIDs(ctx context.Context, accountID string, ids
 		}
 	}
 	return out, nil
+}
+
+// ---------------------------------------------------------------------------
+// Outbound transmissions
+// ---------------------------------------------------------------------------
+
+func (r *ediRepoImpl) IsCustomerEdiEnabled(ctx context.Context, accountID, customerID string) (bool, *apierror.APIError) {
+	ctx, span := ediRepoTracer.Start(ctx, "repository.edi.is_customer_edi_enabled")
+	defer span.End()
+
+	enabled, err := r.queries.IsCustomerEdiEnabled(ctx, sqlc.IsCustomerEdiEnabledParams{
+		OwnerAccountID: accountID,
+		CustomerID:     customerID,
+	})
+	if errors.Is(err, gosql.ErrNoRows) {
+		return false, nil
+	}
+	if apiErr := db.MapSQLError(err); apiErr != nil {
+		return false, tracing.Trace(span, apiErr)
+	}
+	return enabled, nil
+}
+
+func (r *ediRepoImpl) EnqueueOutboundTransmission(ctx context.Context, params domain.EnqueueEdiTransmissionParams) *apierror.APIError {
+	ctx, span := ediRepoTracer.Start(ctx, "repository.edi.enqueue_outbound_transmission")
+	defer span.End()
+
+	err := r.queries.EnqueueOutboundEdiTransmission(ctx, sqlc.EnqueueOutboundEdiTransmissionParams{
+		ID:                    params.ID,
+		AccountID:             params.AccountID,
+		DocumentType:          params.DocumentType,
+		SubjectType:           params.SubjectType,
+		SubjectID:             params.SubjectID,
+		CounterpartyAccountID: params.CounterpartyAccountID,
+	})
+	if apiErr := db.MapSQLError(err); apiErr != nil {
+		return tracing.Trace(span, apiErr)
+	}
+	return nil
 }

@@ -60,7 +60,7 @@ WHERE sc.id = sqlc.arg('id')
 
 -- name: UpdateShippingCaseTrackingNumber :execresult
 UPDATE shipping_case SET
-    tracking_number = COALESCE(sqlc.narg('tracking_number'), tracking_number),
+    tracking_number = IF(sqlc.arg('clear_tracking_number'), NULL, COALESCE(sqlc.narg('tracking_number'), tracking_number)),
     updated_at = NOW(3)
 WHERE id = sqlc.arg('id')
   AND account_id = sqlc.arg('account_id');

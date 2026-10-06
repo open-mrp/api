@@ -1774,6 +1774,10 @@ type EDIRepo interface {
 	ListEDIRuns(ctx context.Context, params ListEDIRunsParams) (*ListEDIRunsResult, *apierror.APIError)
 	GetEDIRun(ctx context.Context, accountID, ediRunID string) (*EDIRun, *apierror.APIError)
 	GetEDIRunsByIDs(ctx context.Context, accountID string, ids []string) ([]*EDIRun, *apierror.APIError)
+	// IsCustomerEdiEnabled reports whether the account trades documents with the customer over EDI.
+	IsCustomerEdiEnabled(ctx context.Context, accountID, customerID string) (bool, *apierror.APIError)
+	// EnqueueOutboundTransmission records a document owed to a trading partner; enqueueing the same subject twice is a no-op.
+	EnqueueOutboundTransmission(ctx context.Context, params EnqueueEdiTransmissionParams) *apierror.APIError
 }
 
 type RegistrationFlowRepo interface {
@@ -1808,7 +1812,9 @@ type ShipmentRepo interface {
 	// SyncShipToForOrder re-points every shipment on an order to the given ship-to address, independently of the carrier.
 	SyncShipToForOrder(ctx context.Context, accountID, salesOrderID, shippingAddressID string) *apierror.APIError
 	Delete(ctx context.Context, accountID, shipmentID string) *apierror.APIError
+	// MarkShipped stamps the shipment shipped, and conflicts when it already is.
 	MarkShipped(ctx context.Context, accountID, shipmentID, shippedByID string) *apierror.APIError
+	// MarkVoided returns a shipped shipment to packed, and conflicts when it is not shipped.
 	MarkVoided(ctx context.Context, accountID, shipmentID string) *apierror.APIError
 	FindInvoiceIDByShipment(ctx context.Context, accountID, shipmentID string) (*string, *apierror.APIError)
 	// LinkInvoice points the shipment at the invoice created for it, so void can find it later.

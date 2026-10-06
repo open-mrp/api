@@ -18,12 +18,12 @@ import (
 type AdminUpdateShippingCaseTrackingRequest struct {
 	// Shipping case ID.
 	ShippingCaseID string `path:"id" validate:"required"`
-	// Carrier tracking number the case actually traveled under, replacing any number already recorded.
-	TrackingNumber field.Optional[string] `json:"tracking_number,omitzero" validate:"omitempty,max=255"`
+	// Carrier tracking number the case actually traveled under, replacing any number already recorded; send `null` to clear it.
+	TrackingNumber field.Clearable[string] `json:"tracking_number,omitzero" validate:"omitempty,max=255"`
 }
 
 var sampleAdminUpdateShippingCaseTrackingRequest = &AdminUpdateShippingCaseTrackingRequest{
-	TrackingNumber: field.Some(sampleTrackingNumber),
+	TrackingNumber: field.Set(sampleTrackingNumber),
 }
 
 func (*AdminUpdateShippingCaseTrackingRequest) SchemaExample() any {

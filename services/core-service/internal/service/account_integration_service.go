@@ -46,7 +46,7 @@ type AccountIntegrationSvcConfig struct {
 	// EncryptionKeyID (required) identifies the active encryption key version.
 	EncryptionKeyID string
 
-	// PlatformMode is the deployment mode. In development it relaxes the live-key requirement for Stripe credentials so local, production-type accounts can integrate against Stripe's test environment.
+	// PlatformMode is the deployment mode. In development it relaxes the live-key requirement for Stripe credentials so local, production-type accounts can integrate against Stripe's test environment; outside production it requires Shippo test keys, so no other deployment can buy real labels.
 	PlatformMode constants.PlatformMode
 }
 
@@ -343,13 +343,19 @@ func (s *accountIntegrationSvcImpl) validateShippoCredentials(span trace.Span, c
 		return tracing.Trace(span, apierror.NewValidationErrorWithParam("Shippo API key must start with 'shippo_live_' or 'shippo_test_'.", "credentials"))
 	}
 
-	if isSandbox {
+	// Legacy's rule: only a production deployment spends with a live key, and never for a sandbox.
+	switch {
+	case isSandbox:
 		if !strings.HasPrefix(creds.APIKey, "shippo_test_") {
 			return tracing.Trace(span, apierror.NewValidationErrorWithParam("Sandbox accounts must use test Shippo keys (shippo_test_).", "credentials"))
 		}
-	} else {
+	case s.platformMode.IsProduction():
 		if !strings.HasPrefix(creds.APIKey, "shippo_live_") {
 			return tracing.Trace(span, apierror.NewValidationErrorWithParam("Production accounts must use live Shippo keys (shippo_live_).", "credentials"))
+		}
+	default:
+		if !strings.HasPrefix(creds.APIKey, "shippo_test_") {
+			return tracing.Trace(span, apierror.NewValidationErrorWithParam("Live Shippo keys (shippo_live_) are only accepted in production; use a test key (shippo_test_).", "credentials"))
 		}
 	}
 

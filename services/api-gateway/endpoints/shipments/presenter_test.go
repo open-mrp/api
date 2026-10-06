@@ -69,6 +69,6 @@ func TestShippingCaseDetailPresenter(t *testing.T) {
 		UpdatedAt:              now,
 	}
 
-	result := shippingCaseDetailFromProto(info)
+	result := shippingCaseDetailFromProto(info, nil)
 	resourcetest.ValidateExpandableStubs(t, "ShippingCaseDetail", result)
 }

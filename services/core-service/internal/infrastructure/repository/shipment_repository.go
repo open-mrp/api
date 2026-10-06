@@ -132,6 +132,8 @@ func mapShipmentRow(row sqlc.GetShipmentRow) *domain.Shipment {
 	if row.BillingAddressZip.Valid {
 		shipment.BillingAddressZip = &row.BillingAddressZip.String
 	}
+	shipment.OrderCarrierBillingType = nullStringToPtr(row.OrderCarrierBillingType)
+	shipment.OrderCarrierBillingAccount = nullStringToPtr(row.OrderCarrierBillingAccount)
 
 	shipment.CustomerCreatedAt = row.CustomerCreatedAt
 	shipment.CustomerUpdatedAt = row.CustomerUpdatedAt
@@ -341,13 +343,14 @@ func (r *shipmentRepoImpl) Update(ctx context.Context, params domain.UpdateShipm
 	defer span.End()
 
 	_, err := r.queries.UpdateShipment(ctx, sqlc.UpdateShipmentParams{
-		Note:                 toNullString(params.Note),
-		Number:               toNullString(params.Number),
-		MasterTrackingNumber: toNullString(params.MasterTrackingNumber),
-		CarrierID:            toNullString(params.CarrierID),
-		CarrierOptionID:      toNullString(params.ServiceLevelID.ValuePtr()),
-		ID:                   params.ShipmentID,
-		AccountID:            params.AccountID,
+		Note:                      toNullString(params.Note),
+		Number:                    toNullString(params.Number),
+		MasterTrackingNumber:      toNullString(params.MasterTrackingNumber.ValuePtr()),
+		ClearMasterTrackingNumber: params.MasterTrackingNumber.IsClear(),
+		CarrierID:                 toNullString(params.CarrierID),
+		CarrierOptionID:           toNullString(params.ServiceLevelID.ValuePtr()),
+		ID:                        params.ShipmentID,
+		AccountID:                 params.AccountID,
 	})
 	if apiErr := db.MapSQLError(err); apiErr != nil {
 		return nil, tracing.Trace(span, apiErr)
@@ -423,13 +426,16 @@ func (r *shipmentRepoImpl) MarkShipped(ctx context.Context, accountID, shipmentI
 	ctx, span := shipmentRepoTracer.Start(ctx, "repository.shipment.mark_shipped")
 	defer span.End()
 
-	err := r.queries.MarkShipmentShipped(ctx, sqlc.MarkShipmentShippedParams{
+	changed, err := r.queries.MarkShipmentShipped(ctx, sqlc.MarkShipmentShippedParams{
 		ShippedByID: gosql.NullString{String: shippedByID, Valid: shippedByID != ""},
 		ID:          shipmentID,
 		AccountID:   accountID,
 	})
 	if apiErr := db.MapSQLError(err); apiErr != nil {
 		return tracing.Trace(span, apiErr)
+	}
+	if changed == 0 {
+		return tracing.Trace(span, apierror.NewConflictErrorWithParam("Shipment has already been shipped.", "id"))
 	}
 	return nil
 }
@@ -438,12 +444,15 @@ func (r *shipmentRepoImpl) MarkVoided(ctx context.Context, accountID, shipmentID
 	ctx, span := shipmentRepoTracer.Start(ctx, "repository.shipment.mark_voided")
 	defer span.End()
 
-	err := r.queries.MarkShipmentVoided(ctx, sqlc.MarkShipmentVoidedParams{
+	changed, err := r.queries.MarkShipmentVoided(ctx, sqlc.MarkShipmentVoidedParams{
 		ID:        shipmentID,
 		AccountID: accountID,
 	})
 	if apiErr := db.MapSQLError(err); apiErr != nil {
 		return tracing.Trace(span, apiErr)
+	}
+	if changed == 0 {
+		return tracing.Trace(span, apierror.NewConflictErrorWithParam("Shipment is not in shipped status.", "id"))
 	}
 	return nil
 }

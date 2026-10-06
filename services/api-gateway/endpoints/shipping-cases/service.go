@@ -10,6 +10,7 @@ import (
 	"github.com/open-mrp/api/services/api-gateway/pkg/resourcekit"
 	"github.com/open-mrp/api/shared/constants"
 	apierror "github.com/open-mrp/api/shared/errors"
+	"github.com/open-mrp/api/shared/field"
 	pb "github.com/open-mrp/api/shared/proto/core"
 	"github.com/open-mrp/api/shared/tracing"
 	"google.golang.org/grpc"
@@ -74,7 +75,7 @@ func (m *shippingCaseSvcImpl) GetShippingCase(ctx context.Context, req *Retrieve
 func (m *shippingCaseSvcImpl) UpdateShippingCase(ctx context.Context, req *UpdateShippingCaseRequest) (*apiresource.ShippingCase, *apierror.APIError) {
 	pbReq := &pb.UpdateShippingCaseRequest{
 		Id:                  req.ShippingCaseID,
-		TrackingNumber:      req.TrackingNumber.Ptr(),
+		TrackingNumber:      trackingNumberToProto(req.TrackingNumber),
 		FreightAmountValue:  req.FreightAmountValue.Ptr(),
 		FreightAmountUnitId: req.FreightAmountUnitID.Ptr(),
 		FreightWeightValue:  req.FreightWeightValue.Ptr(),
@@ -99,7 +100,7 @@ func (m *shippingCaseSvcImpl) UpdateShippingCase(ctx context.Context, req *Updat
 func (m *shippingCaseSvcImpl) AdminUpdateShippingCaseTracking(ctx context.Context, req *AdminUpdateShippingCaseTrackingRequest) (*apiresource.ShippingCase, *apierror.APIError) {
 	pbReq := &pb.AdminUpdateShippingCaseTrackingRequest{
 		Id:             req.ShippingCaseID,
-		TrackingNumber: req.TrackingNumber.Ptr(),
+		TrackingNumber: trackingNumberToProto(req.TrackingNumber),
 	}
 
 	resp, apiErr := grpcutil.CallRPC(ctx, shippingCaseSvcTracer, "service.shipping_cases.admin_update_tracking", domain.ServiceName,
@@ -231,4 +232,12 @@ func stashShippingCaseMeta(meta *resourcekit.LoadMeta, sc *pb.ShippingCaseInfo) 
 			UpdatedAt:         grpcutil.TimestampToTime(sc.FreightWeightUnitUpdatedAt),
 		},
 	})
+}
+
+// Puts a tracking number on the wire, where core reads an empty string as the client's null.
+func trackingNumberToProto(f field.Clearable[string]) *string {
+	if f.IsClear() {
+		return new("")
+	}
+	return f.ValuePtr()
 }

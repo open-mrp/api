@@ -21,8 +21,8 @@ type UpdateShipmentRequest struct {
 	Note field.Optional[string] `json:"note,omitzero"`
 	// Human-readable shipment number.
 	Number field.Optional[string] `json:"number,omitzero" validate:"omitempty,max=255"`
-	// Carrier master tracking number covering the shipment as a whole.
-	MasterTrackingNumber field.Optional[string] `json:"master_tracking_number,omitzero" validate:"omitempty,max=255"`
+	// Carrier master tracking number covering the shipment as a whole; send `null` to clear it.
+	MasterTrackingNumber field.Clearable[string] `json:"master_tracking_number,omitzero" validate:"omitempty,max=255"`
 	// ID of the carrier to set on the shipment's freight.
 	//
 	// Changing the carrier records the new selection only; it does not re-rate the shipment, so the freight charges already recorded on the shipping cases are left as they are.

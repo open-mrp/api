@@ -302,7 +302,7 @@ func Run(
 		stripeCheckoutFactory = &stub.StripeCheckoutClientFactory{}
 		hubspotFactory = &stub.HubspotClientFactory{}
 	} else {
-		realShippo, err := shippo.NewClientFactory(&shippo.ClientFactoryConfig{Store: cacheStore})
+		realShippo, err := shippo.NewClientFactory(&shippo.ClientFactoryConfig{Store: cacheStore, PlatformMode: cfg.PlatformMode})
 		if err != nil {
 			return err
 		}
@@ -732,6 +732,7 @@ func Run(
 		ShippingLabelsBucket: cfg.ShippingLabelsBucket,
 		FrontendURL:          cfg.FrontendURL,
 		Branding:             brandingAssets,
+		DispatchLeases:       repository.NewLeaseRepo(queries),
 	})
 
 	shipmentLineSvc := service.NewShipmentLineSvc(&service.ShipmentLineSvcConfig{

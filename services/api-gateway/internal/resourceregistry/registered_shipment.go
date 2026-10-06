@@ -173,6 +173,10 @@ func populateSalesOrderOnShipmentRelated(ctx context.Context, parent any, loaded
 	rec.Number = &so.Number
 	status := string(so.Status)
 	rec.Status = &status
+	// A shipment's labels reference the customer's PO, so the shipment surfaces it.
+	if so.CustomerPurchaseOrderNumber != nil && *so.CustomerPurchaseOrderNumber != "" {
+		rec.Metadata = map[string]string{"customer_purchase_order_number": *so.CustomerPurchaseOrderNumber}
+	}
 	ensureShipmentRelated(s).SalesOrder = rec
 }
 

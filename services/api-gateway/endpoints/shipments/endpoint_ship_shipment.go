@@ -33,6 +33,8 @@ func (*ShipShipmentRequest) SchemaExample() any {
 // Dispatches a packed shipment, marking it and its cases as shipped.
 //
 // Sets the shipment status to `shipped`, records `shipped_at` and the acting user as `shipped_by`, marks all shipping cases as shipped, and assigns an SSCC to any case that does not already have one. Fails with a conflict error if the shipment has already been shipped, so shipping is a one-way move that can only be reversed with the void action.
+//
+// Shipping raises the shipment's invoice, numbered after the shipment, and queues it for EDI transmission when the customer trades over EDI. When the carrier is linked to the account's Shippo integration, a label is bought for every case first; each case must have a freight weight, and the carrier's charge is recorded as the cost of the order's freight line (zero when no label is bought). Labels already bought for the cases by an earlier attempt are reused, never bought twice. A shipment is shipped, voided or deleted by one request at a time: a concurrent request for the same shipment fails with a conflict error and can be retried once the first finishes.
 type ShipShipmentEndpoint struct{}
 
 func (e *ShipShipmentEndpoint) Materialize() *apiendpoint.APIEndpoint[*ShipShipmentRequest, *apiresource.Shipment] {

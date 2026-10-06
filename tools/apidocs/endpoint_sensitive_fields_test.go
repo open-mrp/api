@@ -99,8 +99,11 @@ func walkSensitiveSites(typ reflect.Type, prefix, reason string, visited map[ref
 			switch {
 			case tag == costguard.TagInternal:
 				// The seller's own data is logged, since only its own staff read the log; a secret or a cost below it is not.
+			case tag == redact.TagCostKeys:
+				*out = append(*out, sensitiveSite{path: joinPath(path, redact.CostKey), field: field, reason: reason})
+				continue
 			case !redact.IsSensitiveTag(tag):
-				*out = append(*out, sensitiveSite{path: path, field: field, reason: fmt.Sprintf("its sensitive tag reads %q rather than \"true\", \"cost\" or \"internal\"", tag)})
+				*out = append(*out, sensitiveSite{path: path, field: field, reason: fmt.Sprintf("its sensitive tag reads %q rather than \"true\", \"cost\", \"cost_keys\" or \"internal\"", tag)})
 				continue
 			default:
 				*out = append(*out, sensitiveSite{path: path, field: field, reason: reason})

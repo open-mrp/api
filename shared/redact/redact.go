@@ -8,7 +8,7 @@ import (
 	"strings"
 )
 
-// SensitiveFields collects dot-separated JSON field paths declared with sensitive:"true" (secrets) or sensitive:"cost" (the seller's cost data, which a log reader may not be allowed to see) on structs reachable from root type typ. Root may be a pointer (e.g. *MyRequest); non-struct roots return nil.
+// SensitiveFields collects dot-separated JSON field paths declared with sensitive:"true" (secrets) or sensitive:"cost" (the seller's cost data, which a log reader may not be allowed to see) on structs reachable from root type typ, and for a map tagged sensitive:"cost_keys" the path of its cost-named keys (CostKey). Root may be a pointer (e.g. *MyRequest); non-struct roots return nil.
 //
 // Embedding without a JSON key name preserves the same path prefix so promoted fields align with encoding/json flattened output.
 func SensitiveFields(typ reflect.Type) map[string]bool {
@@ -27,6 +27,34 @@ func SensitiveFields(typ reflect.Type) map[string]bool {
 // IsSensitiveTag reports whether a sensitive struct tag value keeps the field out of logs.
 func IsSensitiveTag(tag string) bool {
 	return tag == "true" || tag == "cost"
+}
+
+// TagCostKeys marks a map whose keys name what they hold, so the entries whose key reads as cost data (IsCostName) are the sensitive ones.
+const TagCostKeys = "cost_keys"
+
+var costNameTokens = map[string]bool{
+	"cost": true, "costs": true, "cogs": true, "margin": true, "margins": true,
+	"profit": true, "profits": true, "valuation": true, "markup": true,
+}
+
+var costNames = map[string]bool{
+	"labor_rate":            true,
+	"overhead_rate":         true,
+	"changeover_labor_rate": true,
+	"inventory_value":       true,
+}
+
+// IsCostName reports whether a snake_case field name reads as the seller's cost or margin data.
+func IsCostName(name string) bool {
+	if costNames[name] {
+		return true
+	}
+	for token := range strings.SplitSeq(name, "_") {
+		if costNameTokens[token] {
+			return true
+		}
+	}
+	return false
 }
 
 func deref(typ reflect.Type) reflect.Type {
@@ -107,6 +135,10 @@ func collectWithVisited(typ reflect.Type, prefix string, out map[string]bool, de
 			out[path] = true
 			continue
 		}
+		if sf.Tag.Get("sensitive") == TagCostKeys {
+			out[pathJoin(path, CostKey)] = true
+			continue
+		}
 
 		switch ftd.Kind() {
 		case reflect.Struct:
@@ -127,6 +159,9 @@ func collectWithVisited(typ reflect.Type, prefix string, out map[string]bool, de
 
 // MapKey is the path segment standing for any key of a map, whose keys are data rather than field names.
 const MapKey = "*"
+
+// CostKey is the path segment standing for any key of a map that reads as cost data (IsCostName).
+const CostKey = "*cost*"
 
 // RedactJSON replaces JSON values whose paths exactly match sensitivePaths keys with the JSON string ****. Arrays reuse the parent's path segment so structs under an array resolve the same dotted paths encoding/json emits (no index in the path), and a MapKey segment matches any object key.
 //
@@ -156,15 +191,19 @@ func RedactJSON(raw []byte, sensitivePaths map[string]bool) []byte {
 	return out
 }
 
-// redactAny walks v with every path it may be at: an object key can be a field name or a map key, so each step tries the key itself and MapKey, keeping only paths that lead to a sensitive one.
+// redactAny walks v with every path it may be at: an object key can be a field name or a map key, so each step tries the key itself, MapKey and, for a key that reads as cost data, CostKey, keeping only paths that lead to a sensitive one.
 func redactAny(v any, paths []string, sensitivePaths, prefixes map[string]bool) {
 	switch x := v.(type) {
 	case map[string]any:
 		for k, child := range x {
 			var next []string
 			masked := false
+			segs := []string{k, MapKey}
+			if IsCostName(k) {
+				segs = append(segs, CostKey)
+			}
 			for _, p := range paths {
-				for _, seg := range [2]string{k, MapKey} {
+				for _, seg := range segs {
 					cur := pathJoin(p, seg)
 					if sensitivePaths[cur] {
 						masked = true

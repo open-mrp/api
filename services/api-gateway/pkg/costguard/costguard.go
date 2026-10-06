@@ -1,15 +1,15 @@
 // Package costguard keeps the seller's cost figures and internal records from callers who may not see them.
 //
-// A response field carrying cost data is tagged `sensitive:"cost"`, and one carrying the seller's internal operational data, such as the other orders a production run holds, `sensitive:"internal"`. Redact nulls every such field reachable from a response, through nested resources, lists, and resolved includes: cost unless the caller is an internal actor holding costs:read (or an admin), internal data unless the caller is one of the seller's own actors. Customer and supplier portal actors see neither.
+// A response field carrying cost data is tagged `sensitive:"cost"`, a map whose cost-named keys carry it `sensitive:"cost_keys"`, and one carrying the seller's internal operational data, such as the other orders a production run holds, `sensitive:"internal"`. Redact nulls every such field reachable from a response, through nested resources, lists, and resolved includes: cost unless the caller is an internal actor holding costs:read (or an admin), internal data unless the caller is one of the seller's own actors. Customer and supplier portal actors see neither.
 package costguard
 
 import (
 	"context"
 	"reflect"
-	"strings"
 	"sync"
 
 	"github.com/open-mrp/api/shared/appctx"
+	"github.com/open-mrp/api/shared/redact"
 )
 
 const (
@@ -17,6 +17,8 @@ const (
 	TagKey = "sensitive"
 	// TagCost marks a field carrying the seller's cost or margin data.
 	TagCost = "cost"
+	// TagCostKeys marks a map[string]any whose keys name what they hold, such as a settings snapshot: the entries whose key reads as cost data are cleared like a cost field.
+	TagCostKeys = redact.TagCostKeys
 	// TagInternal marks a field carrying the seller's internal operational data, which reaches only the seller's own actors.
 	TagInternal = "internal"
 )
@@ -24,6 +26,11 @@ const (
 // IsCostField reports whether sf is tagged as cost data.
 func IsCostField(sf reflect.StructField) bool {
 	return sf.Tag.Get(TagKey) == TagCost
+}
+
+// IsCostKeysField reports whether sf is a map whose cost-named keys are cost data.
+func IsCostKeysField(sf reflect.StructField) bool {
+	return sf.Tag.Get(TagKey) == TagCostKeys
 }
 
 // IsInternalField reports whether sf is tagged as the seller's internal data.
@@ -55,29 +62,9 @@ type Redactor interface {
 	RedactCosts()
 }
 
-var costNameTokens = map[string]bool{
-	"cost": true, "costs": true, "cogs": true, "margin": true, "margins": true,
-	"profit": true, "profits": true, "valuation": true, "markup": true,
-}
-
-var costNames = map[string]bool{
-	"labor_rate":            true,
-	"overhead_rate":         true,
-	"changeover_labor_rate": true,
-	"inventory_value":       true,
-}
-
 // IsCostName reports whether a snake_case field name reads as the seller's cost or margin data.
 func IsCostName(name string) bool {
-	if costNames[name] {
-		return true
-	}
-	for token := range strings.SplitSeq(name, "_") {
-		if costNameTokens[token] {
-			return true
-		}
-	}
-	return false
+	return redact.IsCostName(name)
 }
 
 // Visible reports whether the caller in ctx may see cost data.
@@ -149,6 +136,7 @@ type plan struct {
 	hidden   class
 	kind     reflect.Kind
 	clear    []int
+	keyed    []int
 	fields   []fieldPlan
 	elem     *plan
 	dynamic  bool
@@ -174,6 +162,11 @@ func (p *plan) apply(v reflect.Value) {
 		for _, i := range p.clear {
 			v.Field(i).SetZero()
 		}
+		for _, i := range p.keyed {
+			if m, ok := v.Field(i).Interface().(map[string]any); ok {
+				clearCostKeys(m)
+			}
+		}
 		for _, f := range p.fields {
 			f.plan.apply(v.Field(f.index))
 		}
@@ -196,6 +189,26 @@ func (p *plan) apply(v reflect.Value) {
 				cp.Set(val)
 				p.elem.apply(cp)
 				v.SetMapIndex(iter.Key(), cp)
+			}
+		}
+	}
+}
+
+// clearCostKeys nulls every entry of m, and of the maps nested in it, whose key reads as cost data.
+func clearCostKeys(m map[string]any) {
+	for key, value := range m {
+		if IsCostName(key) {
+			m[key] = nil
+			continue
+		}
+		switch nested := value.(type) {
+		case map[string]any:
+			clearCostKeys(nested)
+		case []any:
+			for _, elem := range nested {
+				if inner, ok := elem.(map[string]any); ok {
+					clearCostKeys(inner)
+				}
 			}
 		}
 	}
@@ -253,6 +266,7 @@ type node struct {
 	t        reflect.Type
 	kind     reflect.Kind
 	clear    []int
+	keyed    []int
 	fields   []fieldNode
 	elem     *node
 	dynamic  bool
@@ -300,6 +314,10 @@ func (b *builder) node(t reflect.Type) *node {
 				n.clear = append(n.clear, i)
 				continue
 			}
+			if b.hidden&classCost != 0 && IsCostKeysField(sf) {
+				n.keyed = append(n.keyed, i)
+				continue
+			}
 			if canNest(sf.Type) {
 				n.fields = append(n.fields, fieldNode{index: i, node: b.node(sf.Type)})
 			}
@@ -322,7 +340,7 @@ var redactorType = reflect.TypeFor[Redactor]()
 
 func (b *builder) finish() {
 	for _, n := range b.nodes {
-		if !n.cached && (len(n.clear) > 0 || n.dynamic || n.redactor) {
+		if !n.cached && (len(n.clear) > 0 || len(n.keyed) > 0 || n.dynamic || n.redactor) {
 			n.live = true
 		}
 	}
@@ -340,7 +358,7 @@ func (b *builder) finish() {
 	}
 	for _, n := range b.nodes {
 		if !n.cached && n.live {
-			n.plan = &plan{hidden: b.hidden, kind: n.kind, clear: n.clear, dynamic: n.dynamic, redactor: n.redactor}
+			n.plan = &plan{hidden: b.hidden, kind: n.kind, clear: n.clear, keyed: n.keyed, dynamic: n.dynamic, redactor: n.redactor}
 		}
 	}
 	for _, n := range b.nodes {

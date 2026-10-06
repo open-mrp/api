@@ -47,6 +47,8 @@ func TestEndpointCostFieldsAreMarked(t *testing.T) {
 				switch {
 				case site.unreachable != "":
 					t.Errorf("%s: %s is cost data but %s, so costguard cannot clear it", where, site.field, site.unreachable)
+				case site.keyed && site.typ != reflect.TypeFor[map[string]any]():
+					t.Errorf("%s: %s is tagged sensitive:\"cost_keys\" but is a %s; costguard clears cost-named keys only in a map[string]any", where, site.field, site.typ)
 				case !site.tagged:
 					t.Errorf("%s: %s (json %q) reads as cost or margin data but is not tagged sensitive:\"cost\"; tag it, or add it to costFieldAllowlist with the reason it is not", where, site.field, site.path)
 				case site.response && !nullableKind(site.kind):
@@ -98,7 +100,9 @@ type costSite struct {
 	path        string
 	field       string
 	kind        reflect.Kind
+	typ         reflect.Type
 	tagged      bool
+	keyed       bool
 	internal    bool
 	response    bool
 	unreachable string
@@ -143,6 +147,10 @@ func walkCostSites(typ reflect.Type, prefix, unreachable string, visited map[ref
 		field := fmt.Sprintf("%s.%s", typ, sf.Name)
 		if costguard.IsInternalField(sf) {
 			*out = append(*out, costSite{path: path, field: field, kind: sf.Type.Kind(), internal: true, unreachable: unreachable})
+		}
+		if costguard.IsCostKeysField(sf) {
+			*out = append(*out, costSite{path: path, field: field, kind: sf.Type.Kind(), typ: sf.Type, tagged: true, keyed: true, unreachable: unreachable})
+			continue
 		}
 		tagged := costguard.IsCostField(sf)
 		if tagged || costguard.IsCostName(name) {
@@ -279,5 +287,26 @@ func TestCostSites_flagsInternalFieldsThatCannotClear(t *testing.T) {
 	}
 	if !slices.Equal(costPaths, []string{"owner.labor_rate"}) {
 		t.Errorf("a cost field below an internal one must still be found, got %v", costPaths)
+	}
+}
+
+// TestCostSites_reportsCostKeysMaps guards the guard for sensitive:"cost_keys": the walk reports each tagged map with its type, so one costguard cannot clear is caught.
+func TestCostSites_reportsCostKeysMaps(t *testing.T) {
+	t.Parallel()
+
+	type resource struct {
+		Snapshot map[string]any     `json:"snapshot" sensitive:"cost_keys"`
+		Rates    map[string]float64 `json:"rates" sensitive:"cost_keys"`
+	}
+
+	got := map[string]costSite{}
+	for _, s := range costSites(reflect.TypeFor[*resource]()) {
+		got[s.path] = s
+	}
+	if len(got) != 2 || !got["snapshot"].keyed || !got["rates"].keyed {
+		t.Fatalf("both tagged maps must be reported as keyed: %+v", got)
+	}
+	if got["snapshot"].typ != reflect.TypeFor[map[string]any]() || got["rates"].typ == reflect.TypeFor[map[string]any]() {
+		t.Errorf("map types wrong: %+v", got)
 	}
 }

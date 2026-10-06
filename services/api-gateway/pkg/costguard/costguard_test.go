@@ -403,3 +403,43 @@ func TestHasInternalFields(t *testing.T) {
 	assert.False(t, HasInternalFields(reflect.TypeFor[*order]()), "cost fields are not internal ones")
 	assert.True(t, HasCostFields(reflect.TypeFor[*run]()), "a run still leads to cost fields")
 }
+
+type schedule struct {
+	ID       string         `json:"id"`
+	Settings map[string]any `json:"settings" sensitive:"cost_keys"`
+}
+
+func sampleSchedule() *schedule {
+	return &schedule{ID: "pnsc_1", Settings: map[string]any{
+		"changeover_labor_rate": 20.0,
+		"holding_rate_pct":      0.25,
+		"hours_per_shift":       7.0,
+		"by_line":               []any{map[string]any{"unit_cost": 3.0, "lot": 60.0}},
+	}}
+}
+
+func TestRedact_CostKeysFollowCostsRead(t *testing.T) {
+	t.Parallel()
+
+	for _, tt := range []struct {
+		name     string
+		identity *types.Identity
+		visible  bool
+	}{
+		{"internal with costs:read", internalIdentity(constants.RoleTypeCustom, "costs:read"), true},
+		{"internal without costs:read", internalIdentity(constants.RoleTypeCustom, "production_schedules:read"), false},
+		{"agent whose role grants costs:read", agentIdentity("costs:read"), false},
+		{"customer portal actor", relationIdentity(types.IdentityRelationTypeCustomer), false},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			got := Redact(ctxWith(tt.identity), sampleSchedule()).(*schedule).Settings
+
+			require.Contains(t, got, "changeover_labor_rate", "the key stays, so the snapshot keeps its shape")
+			assert.Equal(t, tt.visible, got["changeover_labor_rate"] != nil)
+			assert.Equal(t, tt.visible, got["by_line"].([]any)[0].(map[string]any)["unit_cost"] != nil, "a nested cost key follows the same rule")
+			assert.Equal(t, 0.25, got["holding_rate_pct"], "a key that does not read as cost is left alone")
+			assert.Equal(t, 60.0, got["by_line"].([]any)[0].(map[string]any)["lot"])
+		})
+	}
+}

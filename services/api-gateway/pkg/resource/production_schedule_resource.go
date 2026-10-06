@@ -457,7 +457,9 @@ type ProductionSchedule struct {
 	// Version of the solver that produced the plan.
 	SolverVersion string `json:"solver_version" validate:"required"`
 	// The planning assumptions used, frozen at generation so the plan stays explainable after settings change.
-	SettingsSnapshot map[string]any `json:"settings_snapshot"`
+	//
+	// A cost among them, such as `changeover_labor_rate`, is null unless the caller holds `costs:read`; customer and supplier portal users never see it.
+	SettingsSnapshot map[string]any `json:"settings_snapshot" sensitive:"cost_keys"`
 	// What the solver could not do, frozen at generation.
 	Diagnostics ScheduleDiagnostics `json:"diagnostics"`
 	// Why generation failed, when it did.

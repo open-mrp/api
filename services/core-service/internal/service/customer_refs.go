@@ -20,6 +20,7 @@ const (
 	customerRefReceiveCalendar customerRefKind = "receive calendar"
 	customerRefSalesRep        customerRefKind = "sales rep"
 	customerRefAccountGroup    customerRefKind = "account group"
+	customerRefUnit            customerRefKind = "unit"
 )
 
 // customerRef is one id a customer write would store, with the request field it came from.
@@ -52,6 +53,9 @@ func newCustomerRefs(params domain.CreateCustomerParams) customerRefs {
 	for _, groupID := range params.CustomerPriceGroupIDs {
 		refs.add(customerRefAccountGroup, &groupID, nil, "customer_price_group_ids")
 	}
+	if params.CreditLimitValue != nil {
+		refs.add(customerRefUnit, params.CreditLimitUnitID, nil, "credit_limit.unit_id")
+	}
 	return refs
 }
 
@@ -72,6 +76,9 @@ func changedCustomerRefs(params domain.UpdateCustomerParams, old *domain.Custome
 				refs.add(customerRefAccountGroup, &groupID, nil, "customer_price_group_ids")
 			}
 		}
+	}
+	if creditLimit, ok := params.CreditLimit.Value(); ok {
+		refs.add(customerRefUnit, &creditLimit.UnitID, old.CreditLimitUnitID, "credit_limit.unit_id")
 	}
 	return refs
 }
@@ -144,6 +151,14 @@ func findCustomerRefs(ctx context.Context, repos domain.RepoFactory, accountID s
 		}
 		for _, group := range groups {
 			found[group.ID] = true
+		}
+	case customerRefUnit:
+		units, apiErr := repos.NewUnitRepo().GetByIDs(ctx, accountID, ids)
+		if apiErr != nil {
+			return nil, apiErr
+		}
+		for _, unit := range units {
+			found[unit.ID] = true
 		}
 	case customerRefReceiveCalendar:
 		for _, calendarID := range ids {

@@ -22,6 +22,7 @@ type customerRefsSetup struct {
 	groups       *repositorymock.MockAccountGroupRepo
 	calendars    *repositorymock.MockOperatingCalendarRepo
 	accountUsers *repositorymock.MockAccountUserRepo
+	units        *repositorymock.MockUnitRepo
 }
 
 func newCustomerRefsSetup(t *testing.T) *customerRefsSetup {
@@ -33,12 +34,14 @@ func newCustomerRefsSetup(t *testing.T) *customerRefsSetup {
 		groups:       repositorymock.NewMockAccountGroupRepo(ctrl),
 		calendars:    repositorymock.NewMockOperatingCalendarRepo(ctrl),
 		accountUsers: repositorymock.NewMockAccountUserRepo(ctrl),
+		units:        repositorymock.NewMockUnitRepo(ctrl),
 	}
 	s.repos.EXPECT().NewCarrierRepo().Return(s.carriers).AnyTimes()
 	s.repos.EXPECT().NewPaymentTermRepo().Return(s.paymentTerms).AnyTimes()
 	s.repos.EXPECT().NewAccountGroupRepo().Return(s.groups).AnyTimes()
 	s.repos.EXPECT().NewOperatingCalendarRepo().Return(s.calendars).AnyTimes()
 	s.repos.EXPECT().NewAccountUserRepo().Return(s.accountUsers).AnyTimes()
+	s.repos.EXPECT().NewUnitRepo().Return(s.units).AnyTimes()
 	return s
 }
 
@@ -103,11 +106,33 @@ func TestCheckCustomerRefs_PassesAnUnexpectedLookupError(t *testing.T) {
 	assert.Equal(t, apierror.ErrorCodeInternalError, apiErr.Code)
 }
 
+// A credit limit in a unit that does not exist would be stored and then leave the customer unreadable.
+func TestCheckCustomerRefs_RefusesAnUnknownCreditLimitUnit(t *testing.T) {
+	s := newCustomerRefsSetup(t)
+	s.units.EXPECT().GetByIDs(gomock.Any(), "ac_seller", []string{"un_missing"}).Return(nil, nil)
+
+	refs := changedCustomerRefs(domain.UpdateCustomerParams{
+		CreditLimit: field.Set(field.QuantityInput{Value: "10", UnitID: "un_missing"}),
+	}, &domain.Customer{})
+	apiErr := checkCustomerRefs(context.Background(), s.repos, "ac_seller", refs)
+
+	require.NotNil(t, apiErr)
+	assert.Equal(t, apierror.ErrorCodeResourceNotFound, apiErr.Code)
+	assert.Equal(t, "credit_limit.unit_id", apiErr.Param)
+}
+
+func TestNewCustomerRefs_ChecksTheCreditLimitUnitOnlyWithAValue(t *testing.T) {
+	assert.Empty(t, newCustomerRefs(domain.CreateCustomerParams{CreditLimitUnitID: refsPtr("un_usd")}))
+	assert.Equal(t, customerRefs{{kind: customerRefUnit, id: "un_usd", param: "credit_limit.unit_id"}},
+		newCustomerRefs(domain.CreateCustomerParams{CreditLimitValue: refsPtr("10"), CreditLimitUnitID: refsPtr("un_usd")}))
+}
+
 func TestChangedCustomerRefs_LeavesWhatTheCustomerHoldsAlone(t *testing.T) {
 	old := &domain.Customer{
 		DefaultCarrierID:  refsPtr("car_held"),
 		TypeGroupID:       refsPtr("acgp_type"),
 		ReceiveCalendarID: refsPtr("opcal_held"),
+		CreditLimitUnitID: refsPtr("un_held"),
 		PriceGroups:       []domain.CustomerAccountGroup{{ID: "acgp_held"}},
 	}
 
@@ -119,6 +144,7 @@ func TestChangedCustomerRefs_LeavesWhatTheCustomerHoldsAlone(t *testing.T) {
 		CustomerTypeGroupID:      refsPtr("acgp_type"),
 		HasCustomerPriceGroupIDs: true,
 		CustomerPriceGroupIDs:    []string{"acgp_held", "acgp_new"},
+		CreditLimit:              field.Set(field.QuantityInput{Value: "20", UnitID: "un_held"}),
 	}, old)
 
 	assert.Equal(t, customerRefs{

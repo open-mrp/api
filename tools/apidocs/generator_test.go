@@ -14,6 +14,7 @@ import (
 	apiendpoint "github.com/open-mrp/api/services/api-gateway/pkg/endpoint"
 	apiexample "github.com/open-mrp/api/services/api-gateway/pkg/example"
 	apiresource "github.com/open-mrp/api/services/api-gateway/pkg/resource"
+	"github.com/open-mrp/api/services/auth-service/pkg/types"
 	"github.com/open-mrp/api/shared/constants"
 	"github.com/open-mrp/api/shared/field"
 
@@ -983,5 +984,21 @@ func assertOptionalBooleanExampleDefaults(t *testing.T, example any, schema Sche
 		if isJSONNullish(val) {
 			t.Errorf("expected optional boolean %q example to avoid null", name)
 		}
+	}
+}
+
+// An any-of set lists its permissions; one the caller must hold together reads as such.
+func TestAuthRequirementParagraph_AllOfReadsAsAnd(t *testing.T) {
+	update := types.Permission{Domain: types.PermissionDomainCustomers, Action: types.ActionUpdate}
+	del := types.Permission{Domain: types.PermissionDomainCustomers, Action: types.ActionDelete}
+
+	anyOf := &apiendpoint.APIEndpoint[any, any]{RequiredPermissions: types.AnyOfPermissions{update, del}}
+	if got, want := authRequirementParagraph(reflect.ValueOf(anyOf).Elem()), "This endpoint requires the permissions: `customers:update`, `customers:delete`."; got != want {
+		t.Errorf("any-of = %q, want %q", got, want)
+	}
+
+	allOf := &apiendpoint.APIEndpoint[any, any]{RequiredPermissions: types.AnyOfPermissions{update, del}, RequiresAllPermissions: true}
+	if got, want := authRequirementParagraph(reflect.ValueOf(allOf).Elem()), "This endpoint requires the permissions: `customers:update` and `customers:delete`."; got != want {
+		t.Errorf("all-of = %q, want %q", got, want)
 	}
 }

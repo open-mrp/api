@@ -442,17 +442,35 @@ func TestDashCustomers_AReadOnlyRoleCannotChangeCustomers(t *testing.T) {
 	assert.Empty(t, children.Data, "the refused link changed nothing")
 }
 
+// The reference documents merging as needing customers:update and customers:delete together, not either.
+func TestDashCustomers_MergeDocumentsBothPermissions(t *testing.T) {
+	t.Parallel()
+	for _, op := range loadDashboardOperations(t) {
+		if op.operationID == "merge-customers" {
+			assert.ElementsMatch(t, []string{"customers:update", "customers:delete"}, op.permissions)
+			assert.True(t, op.allOf, "the permissions are documented as all-of")
+			return
+		}
+	}
+	t.Fatal("merge-customers is not in the spec")
+}
+
 // Merging deletes the sources, so the service takes customers:update and customers:delete together.
 func TestDashCustomers_MergeNeedsUpdateAndDeleteTogether(t *testing.T) {
 	t.Parallel()
 	targetID := dashCustomersNew(t, "e2e-dc-mrgperm", nil)
 	sourceID := dashCustomersNew(t, "e2e-dc-mrgperm-src", nil)
 
-	for _, perms := range [][]string{{"customers:read", "customers:update"}, {"customers:read", "customers:delete"}} {
+	for missing, perms := range map[string][]string{
+		"customers:delete": {"customers:read", "customers:update"},
+		"customers:update": {"customers:read", "customers:delete"},
+	} {
 		status, body, err := customRoleClient(t, perms...).Post(dashCustomersMergePath(targetID),
 			map[string]any{"source_customer_ids": []string{sourceID}}, newIdempotencyKey())
 		require.NoError(t, err)
 		requireStatus(t, 403, status, body)
+		apiErr := jsonObject(parseJSON(body), "error")
+		assert.Contains(t, jsonField(apiErr, "message"), missing, "the refusal names the permission the role lacks")
 		dashCustomersRequireExists(t, sourceID)
 	}
 

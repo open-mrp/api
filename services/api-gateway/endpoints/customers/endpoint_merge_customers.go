@@ -47,8 +47,10 @@ func (e *MergeCustomersEndpoint) Materialize() *apiendpoint.APIEndpoint[*MergeCu
 		Public:              true,
 		AgentTool:           true,
 		RequiredPermissions: []types.Permission{{Domain: types.PermissionDomainCustomers, Action: types.ActionUpdate}, {Domain: types.PermissionDomainCustomers, Action: types.ActionDelete}},
-		Preview:             true,
-		ObjectType:          constants.ObjectTypeCustomer,
+		// Merging rewrites the target and deletes the sources, so it takes both.
+		RequiresAllPermissions: true,
+		Preview:                true,
+		ObjectType:             constants.ObjectTypeCustomer,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *MergeCustomersRequest) (*apiresource.Customer, *apierror.APIError) {
 			return svc.(CustomerSvc).MergeCustomers
 		},

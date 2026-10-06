@@ -47,9 +47,19 @@ func authRequirementParagraph(spec reflect.Value) string {
 		if len(perms) > 1 {
 			noun = "permissions"
 		}
-		sentences = append(sentences, fmt.Sprintf("This endpoint requires the %s: %s.", noun, strings.Join(quoted, ", ")))
+		list := strings.Join(quoted, ", ")
+		if requiresAllPermissions(spec) && len(quoted) > 1 {
+			list = strings.Join(quoted[:len(quoted)-1], ", ") + " and " + quoted[len(quoted)-1]
+		}
+		sentences = append(sentences, fmt.Sprintf("This endpoint requires the %s: %s.", noun, list))
 	}
 	return strings.Join(sentences, " ")
+}
+
+// requiresAllPermissions reads the endpoint's RequiresAllPermissions: its permissions are listed with "and" rather than as an any-of list.
+func requiresAllPermissions(spec reflect.Value) bool {
+	f := spec.FieldByName("RequiresAllPermissions")
+	return f.IsValid() && f.Kind() == reflect.Bool && f.Bool()
 }
 
 func endpointRequestHasJSONFields(reqType reflect.Type) bool {

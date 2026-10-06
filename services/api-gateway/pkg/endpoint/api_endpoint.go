@@ -67,6 +67,8 @@ type APIEndpoint[TReq, TResp any] struct {
 	ReadOnly bool `json:"-" yaml:"-"`
 	// RequiredPermissions declares the any-of permission set this endpoint requires, using typed domain/action constants (e.g. {types.PermissionDomainCustomers, types.ActionRead}) so typos are caught by the compiler. The gateway gate rejects callers who hold none of the listed permissions; holding one is enough to reach the handler. Agent tools and OpenAPI docs surface the same declaration.
 	RequiredPermissions types.AnyOfPermissions `json:"-" yaml:"-"`
+	// RequiresAllPermissions makes RequiredPermissions all-of, for an endpoint whose service checks the permissions together: the caller must hold every one.
+	RequiresAllPermissions bool `json:"-" yaml:"-"`
 	// SelfPathParam (optional) names the path parameter that holds a user ID, on endpoints where a user may always act on their own record. A signed-in user whose ID it is passes the RequiredPermissions and RequiredRoleType gate without holding them; the downstream service still decides.
 	SelfPathParam string `json:"-" yaml:"-"`
 	// RequiredRoleType, when set, declares that the endpoint requires the caller to have a specific role type (e.g. constants.RoleTypeAdmin) rather than (or in addition to) a permission. The zero value means no role-type requirement.
@@ -188,7 +190,7 @@ func (e *APIEndpoint[TReq, TResp]) ensureSensitivePaths() {
 	})
 }
 
-// authorize enforces the endpoint's declared RequiredRoleType and RequiredPermissions against the caller's identity. Permissions use OR (any-of) semantics — the caller must hold at least one. Admins and customer/supplier-relation actors bypass (the latter are authorized by relation downstream). Endpoints that declare neither are unrestricted here (authorization happens downstream). Returns nil when the request may proceed.
+// authorize enforces the endpoint's declared RequiredRoleType and RequiredPermissions against the caller's identity. Permissions use OR (any-of) semantics — the caller must hold at least one — unless RequiresAllPermissions is set. Admins and customer/supplier-relation actors bypass (the latter are authorized by relation downstream). Endpoints that declare neither are unrestricted here (authorization happens downstream). Returns nil when the request may proceed.
 func (e *APIEndpoint[TReq, TResp]) authorize(ctx context.Context) *apierror.APIError {
 	if e.RequiredRoleType == "" && len(e.RequiredPermissions) == 0 {
 		return nil
@@ -215,6 +217,14 @@ func (e *APIEndpoint[TReq, TResp]) authorize(ctx context.Context) *apierror.APIE
 	}
 	if apiErr := identity.CheckHasRoleType(e.RequiredRoleType); apiErr != nil {
 		return apiErr
+	}
+	if e.RequiresAllPermissions {
+		for _, p := range e.RequiredPermissions {
+			if apiErr := identity.CheckHasPermission(p.Domain, p.Action); apiErr != nil {
+				return apiErr
+			}
+		}
+		return nil
 	}
 	return identity.CheckHasAnyPermission(e.RequiredPermissions...)
 }

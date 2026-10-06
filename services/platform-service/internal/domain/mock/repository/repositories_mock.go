@@ -12,6 +12,7 @@ package repositorymock
 import (
 	context "context"
 	reflect "reflect"
+	time "time"
 
 	domain "github.com/open-mrp/api/services/platform-service/internal/domain"
 	constants "github.com/open-mrp/api/shared/constants"
@@ -294,4 +295,204 @@ func (m *MockIdempotencyKeyRepo) UpsertAndLock(ctx context.Context, key *domain.
 func (mr *MockIdempotencyKeyRepoMockRecorder) UpsertAndLock(ctx, key any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpsertAndLock", reflect.TypeOf((*MockIdempotencyKeyRepo)(nil).UpsertAndLock), ctx, key)
+}
+
+// MockAccountFollowupRepo is a mock of AccountFollowupRepo interface.
+type MockAccountFollowupRepo struct {
+	ctrl     *gomock.Controller
+	recorder *MockAccountFollowupRepoMockRecorder
+	isgomock struct{}
+}
+
+// MockAccountFollowupRepoMockRecorder is the mock recorder for MockAccountFollowupRepo.
+type MockAccountFollowupRepoMockRecorder struct {
+	mock *MockAccountFollowupRepo
+}
+
+// NewMockAccountFollowupRepo creates a new mock instance.
+func NewMockAccountFollowupRepo(ctrl *gomock.Controller) *MockAccountFollowupRepo {
+	mock := &MockAccountFollowupRepo{ctrl: ctrl}
+	mock.recorder = &MockAccountFollowupRepoMockRecorder{mock}
+	return mock
+}
+
+// EXPECT returns an object that allows the caller to indicate expected use.
+func (m *MockAccountFollowupRepo) EXPECT() *MockAccountFollowupRepoMockRecorder {
+	return m.recorder
+}
+
+// Approve mocks base method.
+func (m *MockAccountFollowupRepo) Approve(ctx context.Context, id, subject, body string, now time.Time) (bool, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Approve", ctx, id, subject, body, now)
+	ret0, _ := ret[0].(bool)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
+}
+
+// Approve indicates an expected call of Approve.
+func (mr *MockAccountFollowupRepoMockRecorder) Approve(ctx, id, subject, body, now any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Approve", reflect.TypeOf((*MockAccountFollowupRepo)(nil).Approve), ctx, id, subject, body, now)
+}
+
+// ClaimForDraft mocks base method.
+func (m *MockAccountFollowupRepo) ClaimForDraft(ctx context.Context, id string, staleBefore time.Time) (bool, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ClaimForDraft", ctx, id, staleBefore)
+	ret0, _ := ret[0].(bool)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
+}
+
+// ClaimForDraft indicates an expected call of ClaimForDraft.
+func (mr *MockAccountFollowupRepoMockRecorder) ClaimForDraft(ctx, id, staleBefore any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ClaimForDraft", reflect.TypeOf((*MockAccountFollowupRepo)(nil).ClaimForDraft), ctx, id, staleBefore)
+}
+
+// Create mocks base method.
+func (m *MockAccountFollowupRepo) Create(ctx context.Context, followup *domain.AccountFollowup) *apierror.APIError {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Create", ctx, followup)
+	ret0, _ := ret[0].(*apierror.APIError)
+	return ret0
+}
+
+// Create indicates an expected call of Create.
+func (mr *MockAccountFollowupRepoMockRecorder) Create(ctx, followup any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Create", reflect.TypeOf((*MockAccountFollowupRepo)(nil).Create), ctx, followup)
+}
+
+// Fail mocks base method.
+func (m *MockAccountFollowupRepo) Fail(ctx context.Context, id, lastError string) *apierror.APIError {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Fail", ctx, id, lastError)
+	ret0, _ := ret[0].(*apierror.APIError)
+	return ret0
+}
+
+// Fail indicates an expected call of Fail.
+func (mr *MockAccountFollowupRepoMockRecorder) Fail(ctx, id, lastError any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Fail", reflect.TypeOf((*MockAccountFollowupRepo)(nil).Fail), ctx, id, lastError)
+}
+
+// FindByID mocks base method.
+func (m *MockAccountFollowupRepo) FindByID(ctx context.Context, id string) (*domain.AccountFollowup, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "FindByID", ctx, id)
+	ret0, _ := ret[0].(*domain.AccountFollowup)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
+}
+
+// FindByID indicates an expected call of FindByID.
+func (mr *MockAccountFollowupRepoMockRecorder) FindByID(ctx, id any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "FindByID", reflect.TypeOf((*MockAccountFollowupRepo)(nil).FindByID), ctx, id)
+}
+
+// FindByReviewTokenHash mocks base method.
+func (m *MockAccountFollowupRepo) FindByReviewTokenHash(ctx context.Context, hash []byte) (*domain.AccountFollowup, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "FindByReviewTokenHash", ctx, hash)
+	ret0, _ := ret[0].(*domain.AccountFollowup)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
+}
+
+// FindByReviewTokenHash indicates an expected call of FindByReviewTokenHash.
+func (mr *MockAccountFollowupRepoMockRecorder) FindByReviewTokenHash(ctx, hash any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "FindByReviewTokenHash", reflect.TypeOf((*MockAccountFollowupRepo)(nil).FindByReviewTokenHash), ctx, hash)
+}
+
+// ListDueIDs mocks base method.
+func (m *MockAccountFollowupRepo) ListDueIDs(ctx context.Context, now, staleBefore time.Time, limit int32) ([]string, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ListDueIDs", ctx, now, staleBefore, limit)
+	ret0, _ := ret[0].([]string)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
+}
+
+// ListDueIDs indicates an expected call of ListDueIDs.
+func (mr *MockAccountFollowupRepoMockRecorder) ListDueIDs(ctx, now, staleBefore, limit any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListDueIDs", reflect.TypeOf((*MockAccountFollowupRepo)(nil).ListDueIDs), ctx, now, staleBefore, limit)
+}
+
+// ListRequests mocks base method.
+func (m *MockAccountFollowupRepo) ListRequests(ctx context.Context, accountID string, sandboxAccountID *string, from, to time.Time, limit int32) ([]domain.AccountRequest, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ListRequests", ctx, accountID, sandboxAccountID, from, to, limit)
+	ret0, _ := ret[0].([]domain.AccountRequest)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
+}
+
+// ListRequests indicates an expected call of ListRequests.
+func (mr *MockAccountFollowupRepoMockRecorder) ListRequests(ctx, accountID, sandboxAccountID, from, to, limit any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListRequests", reflect.TypeOf((*MockAccountFollowupRepo)(nil).ListRequests), ctx, accountID, sandboxAccountID, from, to, limit)
+}
+
+// Reschedule mocks base method.
+func (m *MockAccountFollowupRepo) Reschedule(ctx context.Context, id string, at time.Time, lastError string) *apierror.APIError {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Reschedule", ctx, id, at, lastError)
+	ret0, _ := ret[0].(*apierror.APIError)
+	return ret0
+}
+
+// Reschedule indicates an expected call of Reschedule.
+func (mr *MockAccountFollowupRepoMockRecorder) Reschedule(ctx, id, at, lastError any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Reschedule", reflect.TypeOf((*MockAccountFollowupRepo)(nil).Reschedule), ctx, id, at, lastError)
+}
+
+// SaveDraft mocks base method.
+func (m *MockAccountFollowupRepo) SaveDraft(ctx context.Context, id string, draft *domain.AccountFollowupDraft) (bool, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "SaveDraft", ctx, id, draft)
+	ret0, _ := ret[0].(bool)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
+}
+
+// SaveDraft indicates an expected call of SaveDraft.
+func (mr *MockAccountFollowupRepoMockRecorder) SaveDraft(ctx, id, draft any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SaveDraft", reflect.TypeOf((*MockAccountFollowupRepo)(nil).SaveDraft), ctx, id, draft)
+}
+
+// Skip mocks base method.
+func (m *MockAccountFollowupRepo) Skip(ctx context.Context, id string, reason domain.AccountFollowupSkipReason) *apierror.APIError {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Skip", ctx, id, reason)
+	ret0, _ := ret[0].(*apierror.APIError)
+	return ret0
+}
+
+// Skip indicates an expected call of Skip.
+func (mr *MockAccountFollowupRepoMockRecorder) Skip(ctx, id, reason any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Skip", reflect.TypeOf((*MockAccountFollowupRepo)(nil).Skip), ctx, id, reason)
+}
+
+// SkipReview mocks base method.
+func (m *MockAccountFollowupRepo) SkipReview(ctx context.Context, id string, now time.Time) (bool, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "SkipReview", ctx, id, now)
+	ret0, _ := ret[0].(bool)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
+}
+
+// SkipReview indicates an expected call of SkipReview.
+func (mr *MockAccountFollowupRepoMockRecorder) SkipReview(ctx, id, now any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SkipReview", reflect.TypeOf((*MockAccountFollowupRepo)(nil).SkipReview), ctx, id, now)
 }

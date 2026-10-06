@@ -15,6 +15,7 @@ import (
 
 	domain "github.com/open-mrp/api/services/platform-service/internal/domain"
 	apierror "github.com/open-mrp/api/shared/errors"
+	messaging "github.com/open-mrp/api/shared/messaging"
 	gomock "go.uber.org/mock/gomock"
 )
 
@@ -182,4 +183,154 @@ func (m *MockAuditEventSvc) SaveAuditEvent(ctx context.Context, event *domain.Au
 func (mr *MockAuditEventSvcMockRecorder) SaveAuditEvent(ctx, event any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SaveAuditEvent", reflect.TypeOf((*MockAuditEventSvc)(nil).SaveAuditEvent), ctx, event)
+}
+
+// MockAccountFollowupDrafter is a mock of AccountFollowupDrafter interface.
+type MockAccountFollowupDrafter struct {
+	ctrl     *gomock.Controller
+	recorder *MockAccountFollowupDrafterMockRecorder
+	isgomock struct{}
+}
+
+// MockAccountFollowupDrafterMockRecorder is the mock recorder for MockAccountFollowupDrafter.
+type MockAccountFollowupDrafterMockRecorder struct {
+	mock *MockAccountFollowupDrafter
+}
+
+// NewMockAccountFollowupDrafter creates a new mock instance.
+func NewMockAccountFollowupDrafter(ctrl *gomock.Controller) *MockAccountFollowupDrafter {
+	mock := &MockAccountFollowupDrafter{ctrl: ctrl}
+	mock.recorder = &MockAccountFollowupDrafterMockRecorder{mock}
+	return mock
+}
+
+// EXPECT returns an object that allows the caller to indicate expected use.
+func (m *MockAccountFollowupDrafter) EXPECT() *MockAccountFollowupDrafterMockRecorder {
+	return m.recorder
+}
+
+// Draft mocks base method.
+func (m *MockAccountFollowupDrafter) Draft(ctx context.Context, input domain.AccountFollowupDrafterInput) (*domain.AccountFollowupDrafterOutput, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Draft", ctx, input)
+	ret0, _ := ret[0].(*domain.AccountFollowupDrafterOutput)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// Draft indicates an expected call of Draft.
+func (mr *MockAccountFollowupDrafterMockRecorder) Draft(ctx, input any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Draft", reflect.TypeOf((*MockAccountFollowupDrafter)(nil).Draft), ctx, input)
+}
+
+// MockAccountFollowupSvc is a mock of AccountFollowupSvc interface.
+type MockAccountFollowupSvc struct {
+	ctrl     *gomock.Controller
+	recorder *MockAccountFollowupSvcMockRecorder
+	isgomock struct{}
+}
+
+// MockAccountFollowupSvcMockRecorder is the mock recorder for MockAccountFollowupSvc.
+type MockAccountFollowupSvcMockRecorder struct {
+	mock *MockAccountFollowupSvc
+}
+
+// NewMockAccountFollowupSvc creates a new mock instance.
+func NewMockAccountFollowupSvc(ctrl *gomock.Controller) *MockAccountFollowupSvc {
+	mock := &MockAccountFollowupSvc{ctrl: ctrl}
+	mock.recorder = &MockAccountFollowupSvcMockRecorder{mock}
+	return mock
+}
+
+// EXPECT returns an object that allows the caller to indicate expected use.
+func (m *MockAccountFollowupSvc) EXPECT() *MockAccountFollowupSvcMockRecorder {
+	return m.recorder
+}
+
+// Approve mocks base method.
+func (m *MockAccountFollowupSvc) Approve(ctx context.Context, token, subject, body string) (*domain.AccountFollowupReview, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Approve", ctx, token, subject, body)
+	ret0, _ := ret[0].(*domain.AccountFollowupReview)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
+}
+
+// Approve indicates an expected call of Approve.
+func (mr *MockAccountFollowupSvcMockRecorder) Approve(ctx, token, subject, body any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Approve", reflect.TypeOf((*MockAccountFollowupSvc)(nil).Approve), ctx, token, subject, body)
+}
+
+// Draft mocks base method.
+func (m *MockAccountFollowupSvc) Draft(ctx context.Context, followupID string) *apierror.APIError {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Draft", ctx, followupID)
+	ret0, _ := ret[0].(*apierror.APIError)
+	return ret0
+}
+
+// Draft indicates an expected call of Draft.
+func (mr *MockAccountFollowupSvcMockRecorder) Draft(ctx, followupID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Draft", reflect.TypeOf((*MockAccountFollowupSvc)(nil).Draft), ctx, followupID)
+}
+
+// EnqueueDue mocks base method.
+func (m *MockAccountFollowupSvc) EnqueueDue(ctx context.Context) *apierror.APIError {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "EnqueueDue", ctx)
+	ret0, _ := ret[0].(*apierror.APIError)
+	return ret0
+}
+
+// EnqueueDue indicates an expected call of EnqueueDue.
+func (mr *MockAccountFollowupSvcMockRecorder) EnqueueDue(ctx any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "EnqueueDue", reflect.TypeOf((*MockAccountFollowupSvc)(nil).EnqueueDue), ctx)
+}
+
+// GetReview mocks base method.
+func (m *MockAccountFollowupSvc) GetReview(ctx context.Context, token string) (*domain.AccountFollowupReview, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetReview", ctx, token)
+	ret0, _ := ret[0].(*domain.AccountFollowupReview)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
+}
+
+// GetReview indicates an expected call of GetReview.
+func (mr *MockAccountFollowupSvcMockRecorder) GetReview(ctx, token any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetReview", reflect.TypeOf((*MockAccountFollowupSvc)(nil).GetReview), ctx, token)
+}
+
+// Schedule mocks base method.
+func (m *MockAccountFollowupSvc) Schedule(ctx context.Context, data messaging.AccountFollowupScheduleData) *apierror.APIError {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Schedule", ctx, data)
+	ret0, _ := ret[0].(*apierror.APIError)
+	return ret0
+}
+
+// Schedule indicates an expected call of Schedule.
+func (mr *MockAccountFollowupSvcMockRecorder) Schedule(ctx, data any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Schedule", reflect.TypeOf((*MockAccountFollowupSvc)(nil).Schedule), ctx, data)
+}
+
+// Skip mocks base method.
+func (m *MockAccountFollowupSvc) Skip(ctx context.Context, token string) (*domain.AccountFollowupReview, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Skip", ctx, token)
+	ret0, _ := ret[0].(*domain.AccountFollowupReview)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
+}
+
+// Skip indicates an expected call of Skip.
+func (mr *MockAccountFollowupSvcMockRecorder) Skip(ctx, token any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Skip", reflect.TypeOf((*MockAccountFollowupSvc)(nil).Skip), ctx, token)
 }

@@ -3,10 +3,12 @@
 package api_test
 
 import (
+	"database/sql"
 	"fmt"
 	"net/http"
 	"net/url"
 	"testing"
+	"time"
 
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
@@ -146,6 +148,25 @@ func TestRegistration_FullJourney(t *testing.T) {
 	sandboxID, sandboxName := sandboxForOwnerAccount(t, accountID)
 	assert.NotEmpty(t, sandboxID)
 	assert.Equal(t, accountName+" Sandbox", sandboxName)
+
+	// 8. Completing registration has platform-service schedule the registrant's
+	//    follow-up a day out. It arrives over the outbox, so wait for it.
+	var followupStatus, followupEmail string
+	var followupSandboxID sql.NullString
+	var registeredAt, scheduledFor time.Time
+	eventually(t, 30*time.Second, 500*time.Millisecond, func() error {
+		return authDB(t).QueryRow(
+			"SELECT status, registrant_email, sandbox_account_id, registered_at, scheduled_for FROM account_followup WHERE account_id = ?",
+			accountID,
+		).Scan(&followupStatus, &followupEmail, &followupSandboxID, &registeredAt, &scheduledFor)
+	})
+	t.Cleanup(func() {
+		_, _ = authDB(t).Exec("DELETE FROM account_followup WHERE account_id = ?", accountID)
+	})
+	assert.Equal(t, "scheduled", followupStatus)
+	assert.Equal(t, email, followupEmail)
+	assert.Equal(t, sandboxID, followupSandboxID.String)
+	assert.Equal(t, 24*time.Hour, scheduledFor.Sub(registeredAt))
 }
 
 // TestRegistration_VerifyIsIdempotent confirms a token can be verified twice

@@ -240,3 +240,156 @@ type ListAuditEventsResult struct {
 	AuditEvents []*AuditEventRead
 	PageInfo    pagination.PageInfo
 }
+
+// AccountFollowupStatus is where a follow-up is in its life: scheduled at registration, drafted when due, then reviewed and sent or skipped.
+type AccountFollowupStatus string
+
+const (
+	AccountFollowupStatusScheduled     AccountFollowupStatus = "scheduled"
+	AccountFollowupStatusDrafting      AccountFollowupStatus = "drafting"
+	AccountFollowupStatusPendingReview AccountFollowupStatus = "pending_review"
+	AccountFollowupStatusSent          AccountFollowupStatus = "sent"
+	AccountFollowupStatusSkipped       AccountFollowupStatus = "skipped"
+	AccountFollowupStatusFailed        AccountFollowupStatus = "failed"
+)
+
+// AccountFollowupSkipReason records why a follow-up was never drafted.
+type AccountFollowupSkipReason string
+
+const (
+	// AccountFollowupSkipReasonExcludedDomain marks a registrant on an internal or test domain.
+	AccountFollowupSkipReasonExcludedDomain AccountFollowupSkipReason = "excluded_domain"
+	// AccountFollowupSkipReasonReviewer marks a draft the reviewer chose not to send.
+	AccountFollowupSkipReasonReviewer AccountFollowupSkipReason = "reviewer_skipped"
+)
+
+// AccountFollowupEngagement is the drafter's read of how far a registrant got.
+type AccountFollowupEngagement string
+
+const (
+	AccountFollowupEngagementLow    AccountFollowupEngagement = "low"
+	AccountFollowupEngagementMedium AccountFollowupEngagement = "medium"
+	AccountFollowupEngagementHigh   AccountFollowupEngagement = "high"
+)
+
+func (e AccountFollowupEngagement) IsValid() bool {
+	switch e {
+	case AccountFollowupEngagementLow, AccountFollowupEngagementMedium, AccountFollowupEngagementHigh:
+		return true
+	}
+	return false
+}
+
+// AccountFollowup is one registrant's follow-up.
+type AccountFollowup struct {
+	ID               string
+	AccountID        string
+	SandboxAccountID *string
+	UserID           string
+	AccountName      string
+	RegistrantName   string
+	RegistrantEmail  string
+	RegisteredAt     time.Time
+	Status           AccountFollowupStatus
+	ScheduledFor     time.Time
+	Attempts         int
+
+	// Set once drafted.
+	Activity             *AccountActivity
+	Engagement           AccountFollowupEngagement
+	InternalSummary      string
+	DraftSubject         string
+	DraftBody            string
+	ReviewTokenExpiresAt *time.Time
+
+	// Set once reviewed.
+	FinalSubject string
+	FinalBody    string
+	ReviewedAt   *time.Time
+}
+
+// AccountFollowupReview is a follow-up as its reviewer sees it: the row, plus the registrant's activity rendered as lines.
+type AccountFollowupReview struct {
+	Followup *AccountFollowup
+	Timeline []string
+}
+
+// AccountFollowupDraft is what drafting produces, saved for review together with the token that authorizes it.
+type AccountFollowupDraft struct {
+	Activity             AccountActivity
+	Model                string
+	PromptVersion        string
+	Engagement           AccountFollowupEngagement
+	InternalSummary      string
+	Subject              string
+	Body                 string
+	ReviewTokenHash      []byte
+	ReviewTokenExpiresAt time.Time
+	DraftedAt            time.Time
+}
+
+// AccountActivity is a registrant's request activity reduced to what a person would want to know before writing to them: when they came, how long they stayed, and what they did. It holds no request bodies, IPs, or user agents.
+type AccountActivity struct {
+	TotalRequests         int                      `json:"total_requests"`
+	Truncated             bool                     `json:"truncated,omitempty"`
+	Sessions              []AccountActivitySession `json:"sessions"`
+	DaysActive            int                      `json:"days_active"`
+	ReturnedAfterFirstDay bool                     `json:"returned_after_first_day"`
+	Created               []AccountActivityCount   `json:"created,omitempty"`
+	Updated               []AccountActivityCount   `json:"updated,omitempty"`
+	Deleted               []AccountActivityCount   `json:"deleted,omitempty"`
+	Viewed                []string                 `json:"viewed,omitempty"`
+	Errors                []AccountActivityError   `json:"errors,omitempty"`
+	CreatedAPIKey         bool                     `json:"created_api_key,omitempty"`
+	ReadAPIDocs           bool                     `json:"read_api_docs,omitempty"`
+	ViewedPlans           bool                     `json:"viewed_plans,omitempty"`
+}
+
+// AccountActivitySession is a run of requests with no gap longer than the session timeout.
+type AccountActivitySession struct {
+	Start    time.Time `json:"start"`
+	Minutes  int       `json:"minutes"`
+	Requests int       `json:"requests"`
+	// Sandbox is true when every request in the session was in the sandbox account.
+	Sandbox bool `json:"sandbox"`
+}
+
+// AccountActivityCount counts successful writes to one resource, named by its route (e.g. "operations/locations").
+type AccountActivityCount struct {
+	Resource string `json:"resource"`
+	Count    int    `json:"count"`
+}
+
+// AccountActivityError counts failed requests to one route.
+type AccountActivityError struct {
+	Method     string `json:"method"`
+	Resource   string `json:"resource"`
+	StatusCode int    `json:"status_code"`
+	Count      int    `json:"count"`
+}
+
+// AccountRequest is one request_log row, reduced to the fields activity is built from.
+type AccountRequest struct {
+	TargetAccountID string
+	Method          string
+	NormalizedRoute string
+	StatusCode      int
+	OccurredAt      time.Time
+}
+
+// AccountFollowupDrafterInput is everything the drafter may see about a registrant.
+type AccountFollowupDrafterInput struct {
+	FirstName   string
+	AccountName string
+	Activity    AccountActivity
+}
+
+// AccountFollowupDrafterOutput is the drafter's reading of the registrant and the personal paragraph it wrote for them.
+type AccountFollowupDrafterOutput struct {
+	Model           string
+	PromptVersion   string
+	Engagement      AccountFollowupEngagement
+	InternalSummary string
+	Subject         string
+	Paragraph       string
+}

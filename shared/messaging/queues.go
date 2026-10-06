@@ -23,6 +23,12 @@ const (
 	// PlatformEventAuditLogQueue carries audit events produced by application services and needs to be persisted by platform-service.
 	PlatformEventAuditLogQueue = "platform_event_audit_log"
 
+	// PlatformCmdScheduleAccountFollowupQueue carries new self-serve registrations to platform-service, which schedules each one's follow-up.
+	PlatformCmdScheduleAccountFollowupQueue = "platform_cmd_schedule_account_followup"
+
+	// PlatformCmdDraftAccountFollowupQueue carries due account follow-ups to platform-service's drafter. Drafting calls an LLM, so it runs off the scheduler's lease.
+	PlatformCmdDraftAccountFollowupQueue = "platform_cmd_draft_account_followup"
+
 	// CoreCmdPurgeAccountDataQueue carries purge-account-data commands to the core-service. Messages on this queue trigger deletion of all account-scoped data across ~50 tables for a deleted sandbox account.
 	CoreCmdPurgeAccountDataQueue = "core_cmd_purge_account_data"
 
@@ -477,4 +483,28 @@ type RealtimeDeliveryData struct {
 	Sequence       int64           `json:"sequence,omitempty"`
 	UnreadCount    *int64          `json:"unread_count,omitempty"`
 	Payload        json.RawMessage `json:"payload,omitempty"`
+}
+
+// AccountFollowupScheduleData is the payload for PlatformCmdScheduleAccountFollowupQueue messages: a self-serve registration that just completed.
+type AccountFollowupScheduleData struct {
+	// AccountID is the registered company account.
+	AccountID string `json:"account_id"`
+	// SandboxAccountID is the sandbox created alongside it, whose activity counts toward the follow-up too.
+	SandboxAccountID *string `json:"sandbox_account_id,omitempty"`
+	// UserID is the registrant.
+	UserID string `json:"user_id"`
+	// AccountName is the company name the registrant entered.
+	AccountName string `json:"account_name"`
+	// RegistrantName is the registrant's full name.
+	RegistrantName string `json:"registrant_name"`
+	// RegistrantEmail is where the follow-up goes.
+	RegistrantEmail string `json:"registrant_email"`
+	// RegisteredAt is when the registration completed. The follow-up is scheduled relative to it, not to when this message is consumed.
+	RegisteredAt time.Time `json:"registered_at"`
+}
+
+// AccountFollowupDraftData is the payload for PlatformCmdDraftAccountFollowupQueue messages.
+type AccountFollowupDraftData struct {
+	// FollowupID is the account_followup row to draft.
+	FollowupID string `json:"followup_id"`
 }

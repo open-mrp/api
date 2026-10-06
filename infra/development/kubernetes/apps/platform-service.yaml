@@ -69,6 +69,15 @@ spec:
                 secretKeyRef:
                   name: cursor-hmac-key
                   key: key
+            - name: STRIPE_SECRET_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: stripe-credentials
+                  key: secret-key
+            - name: ACCOUNT_FOLLOWUP_ENABLED
+              value: "false"
+            - name: ACCOUNT_FOLLOWUP_REVIEW_BASE_URL
+              value: http://localhost:8081/account-followups/review
 ---
 apiVersion: v1
 kind: Service

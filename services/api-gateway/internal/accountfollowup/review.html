@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<title>Follow-up review</title>
+<style>
+  :root { --bg: #f4f5f7; --card: #fff; --text: #0f172a; --muted: #64748b; --border: #e5e7eb; --accent: #2563eb; --danger: #b91c1c; --field: #f8fafc; }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg: #0b1120; --card: #111827; --text: #e5e7eb; --muted: #94a3b8; --border: #1f2937; --accent: #3b82f6; --danger: #f87171; --field: #0f172a; }
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--text); font: 15px/1.5 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+  main { max-width: 760px; margin: 0 auto; padding: 24px 16px 48px; }
+  .card { background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 20px; margin-bottom: 16px; }
+  h1 { font-size: 20px; margin: 0 0 4px; }
+  h2 { font-size: 15px; margin: 0 0 8px; }
+  .muted { color: var(--muted); }
+  dl { display: grid; grid-template-columns: max-content 1fr; gap: 4px 16px; margin: 12px 0 0; }
+  dt { color: var(--muted); }
+  dd { margin: 0; overflow-wrap: anywhere; }
+  ul { margin: 0; padding-left: 20px; }
+  .pre { white-space: pre-wrap; }
+  label { display: block; font-weight: 600; margin: 12px 0 4px; }
+  input[type=text], textarea { width: 100%; padding: 10px; border: 1px solid var(--border); border-radius: 8px; background: var(--field); color: var(--text); font: inherit; }
+  textarea { min-height: 280px; resize: vertical; }
+  .actions { display: flex; gap: 12px; margin-top: 16px; flex-wrap: wrap; }
+  button { border: 0; border-radius: 8px; padding: 10px 18px; font: inherit; font-weight: 600; cursor: pointer; }
+  .primary { background: var(--accent); color: #fff; }
+  .secondary { background: transparent; color: var(--muted); border: 1px solid var(--border); }
+  .error { color: var(--danger); font-weight: 600; }
+  .badge { display: inline-block; padding: 2px 8px; border-radius: 999px; border: 1px solid var(--border); font-size: 13px; }
+</style>
+</head>
+<body>
+<main>
+{{if .Message}}
+  <div class="card"><h1>Follow-up review</h1><p>{{.Message}}</p></div>
+{{else}}
+  {{with .Review}}
+  <div class="card">
+    <h1>{{.RegistrantName}} <span class="muted">· {{.AccountName}}</span></h1>
+    <dl>
+      <dt>Email</dt><dd>{{.RegistrantEmail}}</dd>
+      <dt>Account</dt><dd>{{.AccountId}}</dd>
+      <dt>Registered</dt><dd>{{date .RegisteredAt}}</dd>
+      <dt>Engagement</dt><dd><span class="badge">{{.Engagement}}</span></dd>
+      <dt>Status</dt><dd><span class="badge">{{.Status}}</span>{{if .ReviewedAt}} <span class="muted">{{date .ReviewedAt}}</span>{{end}}</dd>
+    </dl>
+  </div>
+  <div class="card">
+    <h2>What they did</h2>
+    <p class="pre">{{.InternalSummary}}</p>
+    {{if .Timeline}}<ul>{{range .Timeline}}<li>{{.}}</li>{{end}}</ul>{{end}}
+  </div>
+  {{end}}
+
+  {{if eq .Review.Status "pending_review"}}
+  <form class="card" method="post" action="/account-followups/review">
+    <h2>Draft</h2>
+    <p class="muted">Edit anything. Nothing is sent until you approve. It goes from your address with a copy to you.</p>
+    {{if .Error}}<p class="error">{{.Error}}</p>{{end}}
+    <input type="hidden" name="token" value="{{.Token}}">
+    <label for="subject">Subject</label>
+    <input type="text" id="subject" name="subject" value="{{.Subject}}" maxlength="200" required>
+    <label for="body">Body</label>
+    <textarea id="body" name="body" required>{{.Body}}</textarea>
+    <div class="actions">
+      <button class="primary" type="submit" name="action" value="approve">Approve &amp; send</button>
+      <button class="secondary" type="submit" name="action" value="skip" formnovalidate>Skip, don't send</button>
+    </div>
+    {{with .Review.ReviewExpiresAt}}<p class="muted">This link expires {{date .}}.</p>{{end}}
+  </form>
+  {{else if eq .Review.Status "sent"}}
+  <div class="card">
+    <h2>Sent</h2>
+    <p><strong>{{.Review.FinalSubject}}</strong></p>
+    <p class="pre">{{.Review.FinalBody}}</p>
+  </div>
+  {{else}}
+  <div class="card"><h2>Skipped</h2><p class="muted">This follow-up was not sent.</p></div>
+  {{end}}
+{{end}}
+</main>
+</body>
+</html>

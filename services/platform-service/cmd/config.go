@@ -4,6 +4,8 @@ import (
 	"cmp"
 	"fmt"
 	"strconv"
+	"strings"
+	"time"
 
 	"github.com/open-mrp/api/shared/constants"
 	"github.com/open-mrp/api/shared/contracts"
@@ -21,6 +23,18 @@ const (
 	envRabbitMQURI   = "RABBITMQ_URI"
 	envCursorHMACKey = "CURSOR_HMAC_KEY"
 	envPlatformMode  = "PLATFORM"
+
+	envStripeSecretKey                = "STRIPE_SECRET_KEY"
+	envAccountFollowupEnabled         = "ACCOUNT_FOLLOWUP_ENABLED"
+	envAccountFollowupReviewerEmail   = "ACCOUNT_FOLLOWUP_REVIEWER_EMAIL"
+	envAccountFollowupReviewBaseURL   = "ACCOUNT_FOLLOWUP_REVIEW_BASE_URL"
+	envAccountFollowupModel           = "ACCOUNT_FOLLOWUP_MODEL"
+	envAccountFollowupDelay           = "ACCOUNT_FOLLOWUP_DELAY"
+	envAccountFollowupPollInterval    = "ACCOUNT_FOLLOWUP_POLL_INTERVAL"
+	envAccountFollowupExcludedDomains = "ACCOUNT_FOLLOWUP_EXCLUDED_DOMAINS"
+	defaultAccountFollowupReviewer    = "dane@openmrp.ai"
+	defaultAccountFollowupReviewURL   = "https://api.openmrp.ai/account-followups/review"
+	defaultAccountFollowupModel       = "claude-haiku-4.5"
 )
 
 // config represents the configuration for the platform service.
@@ -39,6 +53,30 @@ type config struct {
 
 	// PlatformMode (optional; default: "production") determines the platform mode.
 	PlatformMode constants.PlatformMode
+
+	// AccountFollowupEnabled (optional; default: false) turns on drafting follow-ups for new registrants. Registrations are recorded either way, so enabling it later still drafts for everyone since.
+	AccountFollowupEnabled bool
+
+	// StripeSecretKey (required when AccountFollowupEnabled) authenticates follow-up drafting to the Stripe AI Gateway.
+	StripeSecretKey string
+
+	// AccountFollowupReviewerEmail (optional; default: "dane@openmrp.ai") receives every draft for approval.
+	AccountFollowupReviewerEmail string
+
+	// AccountFollowupReviewBaseURL (optional; default: "https://api.openmrp.ai/account-followups/review") is the review page linked from each review email.
+	AccountFollowupReviewBaseURL string
+
+	// AccountFollowupModel (optional; default: "claude-haiku-4.5") is the gateway model that drafts follow-ups. A short paragraph from a structured summary does not need a larger model.
+	AccountFollowupModel string
+
+	// AccountFollowupDelay (optional; default: 24h) is how long after registering a follow-up is drafted.
+	AccountFollowupDelay time.Duration
+
+	// AccountFollowupPollInterval (optional; default: 1h) is how often due follow-ups are looked for.
+	AccountFollowupPollInterval time.Duration
+
+	// AccountFollowupExcludedDomains (optional; default: the team's and test domains) is a comma-separated list of registrant domains that never get a follow-up.
+	AccountFollowupExcludedDomains []string
 }
 
 // withDefaults sets the default values for the configuration.
@@ -57,12 +95,31 @@ func (c *config) withDefaults(getenv func(string) string) *config {
 		platformMode = constants.PlatformMode(p)
 	}
 
+	followupEnabled, _ := strconv.ParseBool(env.GetEnv(envAccountFollowupEnabled, getenv))
+	followupDelay, _ := time.ParseDuration(env.GetEnv(envAccountFollowupDelay, getenv))
+	followupPollInterval, _ := time.ParseDuration(env.GetEnv(envAccountFollowupPollInterval, getenv))
+	var excludedDomains []string
+	for _, d := range strings.Split(env.GetEnv(envAccountFollowupExcludedDomains, getenv), ",") {
+		if d = strings.TrimSpace(d); d != "" {
+			excludedDomains = append(excludedDomains, d)
+		}
+	}
+
 	return &config{
 		Port:          port,
 		DBURL:         env.GetEnv(envDBURL, getenv),
 		RabbitMQURI:   cmp.Or(env.GetEnv(envRabbitMQURI, getenv), defaultRabbitMQURI),
 		CursorHMACKey: []byte(env.GetEnv(envCursorHMACKey, getenv)),
 		PlatformMode:  platformMode,
+
+		AccountFollowupEnabled:         followupEnabled,
+		StripeSecretKey:                env.GetEnv(envStripeSecretKey, getenv),
+		AccountFollowupReviewerEmail:   cmp.Or(env.GetEnv(envAccountFollowupReviewerEmail, getenv), defaultAccountFollowupReviewer),
+		AccountFollowupReviewBaseURL:   cmp.Or(env.GetEnv(envAccountFollowupReviewBaseURL, getenv), defaultAccountFollowupReviewURL),
+		AccountFollowupModel:           cmp.Or(env.GetEnv(envAccountFollowupModel, getenv), defaultAccountFollowupModel),
+		AccountFollowupDelay:           followupDelay,
+		AccountFollowupPollInterval:    followupPollInterval,
+		AccountFollowupExcludedDomains: excludedDomains,
 	}
 }
 
@@ -79,6 +136,9 @@ func (c *config) validate() error {
 	}
 	if len(c.CursorHMACKey) == 0 {
 		return fmt.Errorf("platform-service: CURSOR_HMAC_KEY is required")
+	}
+	if c.AccountFollowupEnabled && c.StripeSecretKey == "" {
+		return fmt.Errorf("platform-service: %s is required when %s is set", envStripeSecretKey, envAccountFollowupEnabled)
 	}
 	return nil
 }

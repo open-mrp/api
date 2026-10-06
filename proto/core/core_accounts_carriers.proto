@@ -104,6 +104,9 @@ message UpdateAccountRequest {
   // Branding fields to remove, by name (support_email, phone_number, website_url, facebook_handle,
   // instagram_handle, linkedin_handle, twitter_handle). A field named here and given a value is removed.
   repeated string cleared_branding_fields = 13;
+  // The account's own addresses saved with the update; each excludes its *_address_id.
+  InlineAddressInput default_billing_address = 14;
+  InlineAddressInput default_shipping_address = 15;
 }
 message UpdateAccountResponse {
   AccountInfo account = 1;

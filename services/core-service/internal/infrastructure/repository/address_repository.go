@@ -313,7 +313,7 @@ func (r *addressRepoImpl) Update(ctx context.Context, params domain.UpdateAddres
 		Phone:             field.StringToNullString(params.Phone),
 		Email:             field.StringToNullString(params.Email),
 		IsDropShip:        toNullBool(params.IsDropShip),
-		ReceiveCalendarID: toNullString(params.ReceiveCalendarID),
+		ReceiveCalendarID: field.StringToNullString(params.ReceiveCalendarID),
 	})
 	if apiErr := db.MapSQLError(err); apiErr != nil {
 		return nil, tracing.Trace(span, apiErr)

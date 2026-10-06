@@ -85,6 +85,9 @@ type UpdateAccountParams struct {
 	// DefaultBillingAddressID and DefaultShippingAddressID must name addresses linked to the account.
 	DefaultBillingAddressID  *string
 	DefaultShippingAddressID *string
+	// DefaultBillingAddress and DefaultShippingAddress are the account's own addresses saved with the update, each in place of its ID.
+	DefaultBillingAddress  *InlineAddressParams
+	DefaultShippingAddress *InlineAddressParams
 }
 
 // HasBrandingUpdates returns true if any branding field is set or cleared.

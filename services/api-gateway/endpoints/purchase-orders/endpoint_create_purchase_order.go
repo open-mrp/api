@@ -30,6 +30,14 @@ type CreatePurchaseOrderRequest struct {
 	//
 	// When set, the inline `ship_to_*` fields are ignored.
 	ShipToAddressID field.Optional[string] `json:"ship_to_address_id,omitzero" validate:"omitempty"`
+	// Bill-to address saved to the supplier's account with the order: a new address, or an update to one of the supplier's saved addresses named by its `id`.
+	//
+	// Saving it needs no permission beyond creating the order. Cannot be combined with `bill_to_address_id` or the `bill_to_*` fields.
+	BillToAddress field.Optional[apirequest.InlineAddressInput] `json:"bill_to_address,omitzero"`
+	// Ship-to address saved to the supplier's account with the order: a new address, or an update to one of the supplier's saved addresses named by its `id`.
+	//
+	// Saving it needs no permission beyond creating the order. Cannot be combined with `ship_to_address_id` or the `ship_to_*` fields. An identical `bill_to_address` and `ship_to_address` are saved as one address.
+	ShipToAddress field.Optional[apirequest.InlineAddressInput] `json:"ship_to_address,omitzero"`
 	// Free-form note to record on the order.
 	Note field.Optional[string] `json:"note,omitzero"`
 	// ID of the carrier for the order's freight.
@@ -135,7 +143,7 @@ func (*CreatePurchaseOrderRequest) SchemaExample() any {
 
 // Creates a purchase order.
 //
-// The order number is assigned automatically from a per-account sequence unless `number` is given, and the order starts in `estimate` status; issue it separately to send it to the supplier and open it for receiving. Bill-to and ship-to addresses are either one of the supplier's saved addresses, named by id, or created as new address records from the inline address fields. Any provided lines and email contacts are created with the order.
+// The order number is assigned automatically from a per-account sequence unless `number` is given, and the order starts in `estimate` status; issue it separately to send it to the supplier and open it for receiving. Bill-to and ship-to addresses are either one of the supplier's saved addresses, named by id, an address object saved to the supplier's account with the order, or created as new address records from the flat address fields. Any provided lines and email contacts are created with the order.
 //
 // A line that references an inventory item also links that item's material to the supplier, if it is not linked already, so the material shows up as sourced from them.
 type CreatePurchaseOrderEndpoint struct{}

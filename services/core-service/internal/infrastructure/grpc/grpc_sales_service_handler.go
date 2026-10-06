@@ -658,6 +658,8 @@ func (h *salesGRPCHandler) CreateSalesOrder(ctx context.Context, req *pb.CreateS
 		AcknowledgementEmailContacts: protoToEmailContactInputs(req.AcknowledgementEmailContacts),
 		InvoiceEmailContacts:         protoToEmailContactInputs(req.InvoiceEmailContacts),
 		Includes:                     req.Includes,
+		BillToAddress:                inlineAddressToDomain(req.BillToAddress),
+		ShipToAddress:                inlineAddressToDomain(req.ShipToAddress),
 	}
 
 	if req.PromisedAt != nil {
@@ -699,6 +701,8 @@ func (h *salesGRPCHandler) UpdateSalesOrder(ctx context.Context, req *pb.UpdateS
 		BuyerAccountID:       req.CustomerId,
 		BillingAddressID:     req.BillingAddressId,
 		ShippingAddressID:    req.ShippingAddressId,
+		BillingAddress:       inlineAddressToDomain(req.BillingAddress),
+		ShippingAddress:      inlineAddressToDomain(req.ShippingAddress),
 		Includes:             req.Includes,
 		// Clearable fields (StringPatch / TimestampPatch → Clearable).
 		CustomerPONumber:      field.StringClearableFromProto(req.CustomerPoNumber),

@@ -9,8 +9,10 @@ import (
 	factorymock "github.com/open-mrp/api/services/core-service/internal/domain/mock/factory"
 	mediatormock "github.com/open-mrp/api/services/core-service/internal/domain/mock/mediator"
 	repositorymock "github.com/open-mrp/api/services/core-service/internal/domain/mock/repository"
+	"github.com/open-mrp/api/services/core-service/internal/mediator"
 	"github.com/open-mrp/api/shared/appctx"
 	apierror "github.com/open-mrp/api/shared/errors"
+	"github.com/open-mrp/api/shared/field"
 
 	"github.com/stretchr/testify/suite"
 	"go.uber.org/mock/gomock"
@@ -49,6 +51,7 @@ func (suite *AddressSvcScopeTestSuite) SetupTest() {
 	suite.mediatorFactory.EXPECT().Build(gomock.Any()).Return(domain.Mediators{
 		Idempotency: suite.idempotencyMed,
 		EditAccess:  suite.editAccessMed,
+		Address:     mediator.NewAddressMed(&mediator.AddressMedConfig{Repos: suite.repoFactory}),
 	}).AnyTimes()
 
 	suite.svc = NewAddressSvc(&AddressSvcConfig{
@@ -248,4 +251,32 @@ func (suite *AddressSvcScopeTestSuite) TestCreateAddress_InternalActor_NoWritePe
 	_, apiErr := suite.svc.CreateAddress(ctx, domain.CreateAddressParams{Name: "Ship To", Country: "US"})
 
 	suite.Require().NotNil(apiErr)
+}
+
+// An update that does not name the receiving calendar writes back the one the address already has, since the column is assigned rather than coalesced.
+func (suite *AddressSvcScopeTestSuite) TestUpdateAddress_OmittedReceiveCalendarIsKept() {
+	const accountID = "acct_internal"
+	const addressID = "addr_dock"
+	calendarID := "occd_dock"
+
+	suite.expectIdempotencyStartedThenSuccess()
+	suite.addressRepo.EXPECT().IsInAccount(gomock.Any(), accountID, addressID).Return(true, nil)
+	suite.addressRepo.EXPECT().Get(gomock.Any(), gomock.Any()).Return(&domain.Address{
+		ID: addressID, Name: "Dock", ReceiveCalendarID: &calendarID, Geolocation: &domain.Geolocation{Country: "US"},
+	}, nil)
+
+	var written field.Clearable[string]
+	suite.addressRepo.EXPECT().Update(gomock.Any(), gomock.Any()).
+		DoAndReturn(func(_ context.Context, params domain.UpdateAddressParams) (*domain.Address, *apierror.APIError) {
+			written = params.ReceiveCalendarID
+			return &domain.Address{ID: addressID, Name: "Dock 2", ReceiveCalendarID: &calendarID}, nil
+		})
+
+	name := "Dock 2"
+	_, apiErr := suite.svc.UpdateAddress(addressInternalCtx(accountID), domain.UpdateAddressParams{AddressID: addressID, Name: &name})
+
+	suite.Require().Nil(apiErr)
+	got, ok := written.Value()
+	suite.True(ok, "the existing calendar must be written back")
+	suite.Equal(calendarID, got)
 }

@@ -297,6 +297,141 @@ func (x *Int32Patch) GetValue() int32 {
 	return 0
 }
 
+// An address saved by the write of the record that uses it, in the record's counterparty account (or the
+// account itself, for its default addresses). With id set, that stored address is updated and omitted
+// fields keep their values; without it a new address is created, so name and country are required.
+type InlineAddressInput struct {
+	state             protoimpl.MessageState `protogen:"open.v1"`
+	Id                *string                `protobuf:"bytes,1,opt,name=id,proto3,oneof" json:"id,omitempty"`
+	Name              *string                `protobuf:"bytes,2,opt,name=name,proto3,oneof" json:"name,omitempty"`
+	Phone             *StringPatch           `protobuf:"bytes,3,opt,name=phone,proto3" json:"phone,omitempty"`
+	Email             *StringPatch           `protobuf:"bytes,4,opt,name=email,proto3" json:"email,omitempty"`
+	IsDropShip        *bool                  `protobuf:"varint,5,opt,name=is_drop_ship,json=isDropShip,proto3,oneof" json:"is_drop_ship,omitempty"`
+	ReceiveCalendarId *StringPatch           `protobuf:"bytes,6,opt,name=receive_calendar_id,json=receiveCalendarId,proto3" json:"receive_calendar_id,omitempty"`
+	StreetLine_1      *string                `protobuf:"bytes,7,opt,name=street_line_1,json=streetLine1,proto3,oneof" json:"street_line_1,omitempty"`
+	StreetLine_2      *StringPatch           `protobuf:"bytes,8,opt,name=street_line_2,json=streetLine2,proto3" json:"street_line_2,omitempty"`
+	Locality          *string                `protobuf:"bytes,9,opt,name=locality,proto3,oneof" json:"locality,omitempty"`
+	State             *string                `protobuf:"bytes,10,opt,name=state,proto3,oneof" json:"state,omitempty"`
+	PostalCode        *string                `protobuf:"bytes,11,opt,name=postal_code,json=postalCode,proto3,oneof" json:"postal_code,omitempty"`
+	Country           *string                `protobuf:"bytes,12,opt,name=country,proto3,oneof" json:"country,omitempty"`
+	unknownFields     protoimpl.UnknownFields
+	sizeCache         protoimpl.SizeCache
+}
+
+func (x *InlineAddressInput) Reset() {
+	*x = InlineAddressInput{}
+	mi := &file_core_core_patch_proto_msgTypes[5]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *InlineAddressInput) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*InlineAddressInput) ProtoMessage() {}
+
+func (x *InlineAddressInput) ProtoReflect() protoreflect.Message {
+	mi := &file_core_core_patch_proto_msgTypes[5]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use InlineAddressInput.ProtoReflect.Descriptor instead.
+func (*InlineAddressInput) Descriptor() ([]byte, []int) {
+	return file_core_core_patch_proto_rawDescGZIP(), []int{5}
+}
+
+func (x *InlineAddressInput) GetId() string {
+	if x != nil && x.Id != nil {
+		return *x.Id
+	}
+	return ""
+}
+
+func (x *InlineAddressInput) GetName() string {
+	if x != nil && x.Name != nil {
+		return *x.Name
+	}
+	return ""
+}
+
+func (x *InlineAddressInput) GetPhone() *StringPatch {
+	if x != nil {
+		return x.Phone
+	}
+	return nil
+}
+
+func (x *InlineAddressInput) GetEmail() *StringPatch {
+	if x != nil {
+		return x.Email
+	}
+	return nil
+}
+
+func (x *InlineAddressInput) GetIsDropShip() bool {
+	if x != nil && x.IsDropShip != nil {
+		return *x.IsDropShip
+	}
+	return false
+}
+
+func (x *InlineAddressInput) GetReceiveCalendarId() *StringPatch {
+	if x != nil {
+		return x.ReceiveCalendarId
+	}
+	return nil
+}
+
+func (x *InlineAddressInput) GetStreetLine_1() string {
+	if x != nil && x.StreetLine_1 != nil {
+		return *x.StreetLine_1
+	}
+	return ""
+}
+
+func (x *InlineAddressInput) GetStreetLine_2() *StringPatch {
+	if x != nil {
+		return x.StreetLine_2
+	}
+	return nil
+}
+
+func (x *InlineAddressInput) GetLocality() string {
+	if x != nil && x.Locality != nil {
+		return *x.Locality
+	}
+	return ""
+}
+
+func (x *InlineAddressInput) GetState() string {
+	if x != nil && x.State != nil {
+		return *x.State
+	}
+	return ""
+}
+
+func (x *InlineAddressInput) GetPostalCode() string {
+	if x != nil && x.PostalCode != nil {
+		return *x.PostalCode
+	}
+	return ""
+}
+
+func (x *InlineAddressInput) GetCountry() string {
+	if x != nil && x.Country != nil {
+		return *x.Country
+	}
+	return ""
+}
+
 var File_core_core_patch_proto protoreflect.FileDescriptor
 
 const file_core_core_patch_proto_rawDesc = "" +
@@ -324,7 +459,32 @@ const file_core_core_patch_proto_rawDesc = "" +
 	"Int32Patch\x12\x14\n" +
 	"\x05clear\x18\x01 \x01(\bR\x05clear\x12\x19\n" +
 	"\x05value\x18\x02 \x01(\x05H\x00R\x05value\x88\x01\x01B\b\n" +
-	"\x06_valueB\x18Z\x16shared/proto/core;coreb\x06proto3"
+	"\x06_value\"\xc5\x04\n" +
+	"\x12InlineAddressInput\x12\x13\n" +
+	"\x02id\x18\x01 \x01(\tH\x00R\x02id\x88\x01\x01\x12\x17\n" +
+	"\x04name\x18\x02 \x01(\tH\x01R\x04name\x88\x01\x01\x12'\n" +
+	"\x05phone\x18\x03 \x01(\v2\x11.core.StringPatchR\x05phone\x12'\n" +
+	"\x05email\x18\x04 \x01(\v2\x11.core.StringPatchR\x05email\x12%\n" +
+	"\fis_drop_ship\x18\x05 \x01(\bH\x02R\n" +
+	"isDropShip\x88\x01\x01\x12A\n" +
+	"\x13receive_calendar_id\x18\x06 \x01(\v2\x11.core.StringPatchR\x11receiveCalendarId\x12'\n" +
+	"\rstreet_line_1\x18\a \x01(\tH\x03R\vstreetLine1\x88\x01\x01\x125\n" +
+	"\rstreet_line_2\x18\b \x01(\v2\x11.core.StringPatchR\vstreetLine2\x12\x1f\n" +
+	"\blocality\x18\t \x01(\tH\x04R\blocality\x88\x01\x01\x12\x19\n" +
+	"\x05state\x18\n" +
+	" \x01(\tH\x05R\x05state\x88\x01\x01\x12$\n" +
+	"\vpostal_code\x18\v \x01(\tH\x06R\n" +
+	"postalCode\x88\x01\x01\x12\x1d\n" +
+	"\acountry\x18\f \x01(\tH\aR\acountry\x88\x01\x01B\x05\n" +
+	"\x03_idB\a\n" +
+	"\x05_nameB\x0f\n" +
+	"\r_is_drop_shipB\x10\n" +
+	"\x0e_street_line_1B\v\n" +
+	"\t_localityB\b\n" +
+	"\x06_stateB\x0e\n" +
+	"\f_postal_codeB\n" +
+	"\n" +
+	"\b_countryB\x18Z\x16shared/proto/core;coreb\x06proto3"
 
 var (
 	file_core_core_patch_proto_rawDescOnce sync.Once
@@ -338,22 +498,27 @@ func file_core_core_patch_proto_rawDescGZIP() []byte {
 	return file_core_core_patch_proto_rawDescData
 }
 
-var file_core_core_patch_proto_msgTypes = make([]protoimpl.MessageInfo, 5)
+var file_core_core_patch_proto_msgTypes = make([]protoimpl.MessageInfo, 6)
 var file_core_core_patch_proto_goTypes = []any{
 	(*StringPatch)(nil),           // 0: core.StringPatch
 	(*StringListPatch)(nil),       // 1: core.StringListPatch
 	(*QuantityPatch)(nil),         // 2: core.QuantityPatch
 	(*TimestampPatch)(nil),        // 3: core.TimestampPatch
 	(*Int32Patch)(nil),            // 4: core.Int32Patch
-	(*timestamppb.Timestamp)(nil), // 5: google.protobuf.Timestamp
+	(*InlineAddressInput)(nil),    // 5: core.InlineAddressInput
+	(*timestamppb.Timestamp)(nil), // 6: google.protobuf.Timestamp
 }
 var file_core_core_patch_proto_depIdxs = []int32{
-	5, // 0: core.TimestampPatch.value:type_name -> google.protobuf.Timestamp
-	1, // [1:1] is the sub-list for method output_type
-	1, // [1:1] is the sub-list for method input_type
-	1, // [1:1] is the sub-list for extension type_name
-	1, // [1:1] is the sub-list for extension extendee
-	0, // [0:1] is the sub-list for field type_name
+	6, // 0: core.TimestampPatch.value:type_name -> google.protobuf.Timestamp
+	0, // 1: core.InlineAddressInput.phone:type_name -> core.StringPatch
+	0, // 2: core.InlineAddressInput.email:type_name -> core.StringPatch
+	0, // 3: core.InlineAddressInput.receive_calendar_id:type_name -> core.StringPatch
+	0, // 4: core.InlineAddressInput.street_line_2:type_name -> core.StringPatch
+	5, // [5:5] is the sub-list for method output_type
+	5, // [5:5] is the sub-list for method input_type
+	5, // [5:5] is the sub-list for extension type_name
+	5, // [5:5] is the sub-list for extension extendee
+	0, // [0:5] is the sub-list for field type_name
 }
 
 func init() { file_core_core_patch_proto_init() }
@@ -365,13 +530,14 @@ func file_core_core_patch_proto_init() {
 	file_core_core_patch_proto_msgTypes[2].OneofWrappers = []any{}
 	file_core_core_patch_proto_msgTypes[3].OneofWrappers = []any{}
 	file_core_core_patch_proto_msgTypes[4].OneofWrappers = []any{}
+	file_core_core_patch_proto_msgTypes[5].OneofWrappers = []any{}
 	type x struct{}
 	out := protoimpl.TypeBuilder{
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_core_core_patch_proto_rawDesc), len(file_core_core_patch_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   5,
+			NumMessages:   6,
 			NumExtensions: 0,
 			NumServices:   0,
 		},

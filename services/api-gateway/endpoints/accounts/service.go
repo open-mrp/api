@@ -7,6 +7,7 @@ import (
 	"github.com/open-mrp/api/services/api-gateway/internal/domain"
 	grpcutil "github.com/open-mrp/api/services/api-gateway/internal/grpc"
 	"github.com/open-mrp/api/services/api-gateway/internal/resourceloaders"
+	apirequest "github.com/open-mrp/api/services/api-gateway/pkg/request"
 	apiresource "github.com/open-mrp/api/services/api-gateway/pkg/resource"
 	"github.com/open-mrp/api/services/api-gateway/pkg/resourcekit"
 	"github.com/open-mrp/api/shared/constants"
@@ -180,6 +181,8 @@ func (m *accountSvcImpl) UpdateAccount(ctx context.Context, req *UpdateAccountRe
 
 		DefaultBillingAddressId:  req.DefaultBillingAddressID.Ptr(),
 		DefaultShippingAddressId: req.DefaultShippingAddressID.Ptr(),
+		DefaultBillingAddress:    apirequest.InlineAddressToProto(req.DefaultBillingAddress),
+		DefaultShippingAddress:   apirequest.InlineAddressToProto(req.DefaultShippingAddress),
 	}
 	pbReq.ClearedBrandingFields = clearedBrandingFields(req)
 

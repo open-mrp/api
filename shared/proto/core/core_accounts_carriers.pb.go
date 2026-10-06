@@ -940,8 +940,11 @@ type UpdateAccountRequest struct {
 	// Branding fields to remove, by name (support_email, phone_number, website_url, facebook_handle,
 	// instagram_handle, linkedin_handle, twitter_handle). A field named here and given a value is removed.
 	ClearedBrandingFields []string `protobuf:"bytes,13,rep,name=cleared_branding_fields,json=clearedBrandingFields,proto3" json:"cleared_branding_fields,omitempty"`
-	unknownFields         protoimpl.UnknownFields
-	sizeCache             protoimpl.SizeCache
+	// The account's own addresses saved with the update; each excludes its *_address_id.
+	DefaultBillingAddress  *InlineAddressInput `protobuf:"bytes,14,opt,name=default_billing_address,json=defaultBillingAddress,proto3" json:"default_billing_address,omitempty"`
+	DefaultShippingAddress *InlineAddressInput `protobuf:"bytes,15,opt,name=default_shipping_address,json=defaultShippingAddress,proto3" json:"default_shipping_address,omitempty"`
+	unknownFields          protoimpl.UnknownFields
+	sizeCache              protoimpl.SizeCache
 }
 
 func (x *UpdateAccountRequest) Reset() {
@@ -1061,6 +1064,20 @@ func (x *UpdateAccountRequest) GetDefaultShippingAddressId() string {
 func (x *UpdateAccountRequest) GetClearedBrandingFields() []string {
 	if x != nil {
 		return x.ClearedBrandingFields
+	}
+	return nil
+}
+
+func (x *UpdateAccountRequest) GetDefaultBillingAddress() *InlineAddressInput {
+	if x != nil {
+		return x.DefaultBillingAddress
+	}
+	return nil
+}
+
+func (x *UpdateAccountRequest) GetDefaultShippingAddress() *InlineAddressInput {
+	if x != nil {
+		return x.DefaultShippingAddress
 	}
 	return nil
 }
@@ -6628,7 +6645,7 @@ const file_core_core_accounts_carriers_proto_rawDesc = "" +
 	"\x17GetAccountBySlugRequest\x12\x12\n" +
 	"\x04slug\x18\x01 \x01(\tR\x04slug\"M\n" +
 	"\x18GetAccountBySlugResponse\x121\n" +
-	"\aaccount\x18\x01 \x01(\v2\x17.core.PublicAccountInfoR\aaccount\"\x9a\x06\n" +
+	"\aaccount\x18\x01 \x01(\v2\x17.core.PublicAccountInfoR\aaccount\"\xc0\a\n" +
 	"\x14UpdateAccountRequest\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x17\n" +
 	"\x04name\x18\x02 \x01(\tH\x00R\x04name\x88\x01\x01\x12(\n" +
@@ -6645,7 +6662,9 @@ const file_core_core_accounts_carriers_proto_rawDesc = "" +
 	"\x1adefault_billing_address_id\x18\v \x01(\tH\tR\x17defaultBillingAddressId\x88\x01\x01\x12B\n" +
 	"\x1bdefault_shipping_address_id\x18\f \x01(\tH\n" +
 	"R\x18defaultShippingAddressId\x88\x01\x01\x126\n" +
-	"\x17cleared_branding_fields\x18\r \x03(\tR\x15clearedBrandingFieldsB\a\n" +
+	"\x17cleared_branding_fields\x18\r \x03(\tR\x15clearedBrandingFields\x12P\n" +
+	"\x17default_billing_address\x18\x0e \x01(\v2\x18.core.InlineAddressInputR\x15defaultBillingAddress\x12R\n" +
+	"\x18default_shipping_address\x18\x0f \x01(\v2\x18.core.InlineAddressInputR\x16defaultShippingAddressB\a\n" +
 	"\x05_nameB\x10\n" +
 	"\x0e_support_emailB\x0f\n" +
 	"\r_phone_numberB\a\n" +
@@ -7288,9 +7307,10 @@ var file_core_core_accounts_carriers_proto_goTypes = []any{
 	(*GetItemInventoryRequest)(nil),              // 103: core.GetItemInventoryRequest
 	(*timestamppb.Timestamp)(nil),                // 104: google.protobuf.Timestamp
 	(*PageInfo)(nil),                             // 105: core.PageInfo
-	(*JobInfo)(nil),                              // 106: core.JobInfo
-	(*Int32Patch)(nil),                           // 107: core.Int32Patch
-	(*UnitInfo)(nil),                             // 108: core.UnitInfo
+	(*InlineAddressInput)(nil),                   // 106: core.InlineAddressInput
+	(*JobInfo)(nil),                              // 107: core.JobInfo
+	(*Int32Patch)(nil),                           // 108: core.Int32Patch
+	(*UnitInfo)(nil),                             // 109: core.UnitInfo
 }
 var file_core_core_accounts_carriers_proto_depIdxs = []int32{
 	104, // 0: core.AdjustmentTypeInfo.created_at:type_name -> google.protobuf.Timestamp
@@ -7308,93 +7328,95 @@ var file_core_core_accounts_carriers_proto_depIdxs = []int32{
 	104, // 12: core.AccountPortalInfo.updated_at:type_name -> google.protobuf.Timestamp
 	6,   // 13: core.GetAccountResponse.account:type_name -> core.AccountInfo
 	9,   // 14: core.GetAccountBySlugResponse.account:type_name -> core.PublicAccountInfo
-	6,   // 15: core.UpdateAccountResponse.account:type_name -> core.AccountInfo
-	104, // 16: core.PropertyInfo.created_at:type_name -> google.protobuf.Timestamp
-	104, // 17: core.PropertyInfo.updated_at:type_name -> google.protobuf.Timestamp
-	25,  // 18: core.PropertyInfo.attributes:type_name -> core.AttributeInfo
-	104, // 19: core.AttributeInfo.created_at:type_name -> google.protobuf.Timestamp
-	104, // 20: core.AttributeInfo.updated_at:type_name -> google.protobuf.Timestamp
-	24,  // 21: core.ListPropertiesResponse.properties:type_name -> core.PropertyInfo
-	105, // 22: core.ListPropertiesResponse.page_info:type_name -> core.PageInfo
-	24,  // 23: core.GetPropertyResponse.property:type_name -> core.PropertyInfo
-	24,  // 24: core.CreatePropertyResponse.property:type_name -> core.PropertyInfo
-	24,  // 25: core.UpdatePropertyResponse.property:type_name -> core.PropertyInfo
-	35,  // 26: core.BulkUpsertPropertyInput.attributes:type_name -> core.BulkUpsertPropertyAttributeInput
-	36,  // 27: core.BulkUpsertPropertiesRequest.properties:type_name -> core.BulkUpsertPropertyInput
-	106, // 28: core.BulkUpsertPropertiesResponse.job:type_name -> core.JobInfo
-	106, // 29: core.ExportPropertiesResponse.job:type_name -> core.JobInfo
-	25,  // 30: core.ListAttributesResponse.attributes:type_name -> core.AttributeInfo
-	105, // 31: core.ListAttributesResponse.page_info:type_name -> core.PageInfo
-	25,  // 32: core.GetAttributeResponse.attribute:type_name -> core.AttributeInfo
-	25,  // 33: core.CreateAttributeResponse.attribute:type_name -> core.AttributeInfo
-	25,  // 34: core.UpdateAttributeResponse.attribute:type_name -> core.AttributeInfo
-	25,  // 35: core.BatchGetAttributesByIDsResponse.attributes:type_name -> core.AttributeInfo
-	24,  // 36: core.BatchGetPropertiesByIDsResponse.properties:type_name -> core.PropertyInfo
-	91,  // 37: core.BatchGetItemCategoriesByIDsResponse.item_categories:type_name -> core.ItemCategoryInfo
-	96,  // 38: core.BatchGetItemsByIDsResponse.items:type_name -> core.ItemInfo
-	91,  // 39: core.BatchGetItemsByIDsResponse.categories:type_name -> core.ItemCategoryInfo
-	24,  // 40: core.BatchGetItemsByIDsResponse.attribute_properties:type_name -> core.PropertyInfo
-	104, // 41: core.CarrierInfo.created_at:type_name -> google.protobuf.Timestamp
-	104, // 42: core.CarrierInfo.updated_at:type_name -> google.protobuf.Timestamp
-	104, // 43: core.CarrierInfo.deleted_at:type_name -> google.protobuf.Timestamp
-	59,  // 44: core.CarrierInfo.service_levels:type_name -> core.ServiceLevelInfo
-	104, // 45: core.ServiceLevelInfo.created_at:type_name -> google.protobuf.Timestamp
-	104, // 46: core.ServiceLevelInfo.updated_at:type_name -> google.protobuf.Timestamp
-	58,  // 47: core.ListCarriersResponse.carriers:type_name -> core.CarrierInfo
-	105, // 48: core.ListCarriersResponse.page_info:type_name -> core.PageInfo
-	58,  // 49: core.GetCarrierResponse.carrier:type_name -> core.CarrierInfo
-	58,  // 50: core.BatchGetCarriersByIDsResponse.carriers:type_name -> core.CarrierInfo
-	59,  // 51: core.BatchGetServiceLevelsByIDsResponse.service_levels:type_name -> core.ServiceLevelInfo
-	6,   // 52: core.BatchGetAccountsByIDsResponse.accounts:type_name -> core.AccountInfo
-	58,  // 53: core.CreateCarrierResponse.carrier:type_name -> core.CarrierInfo
-	58,  // 54: core.UpdateCarrierResponse.carrier:type_name -> core.CarrierInfo
-	58,  // 55: core.SyncServiceLevelsResponse.carrier:type_name -> core.CarrierInfo
-	59,  // 56: core.ListServiceLevelsResponse.service_levels:type_name -> core.ServiceLevelInfo
-	105, // 57: core.ListServiceLevelsResponse.page_info:type_name -> core.PageInfo
-	59,  // 58: core.GetServiceLevelResponse.service_level:type_name -> core.ServiceLevelInfo
-	59,  // 59: core.CreateServiceLevelResponse.service_level:type_name -> core.ServiceLevelInfo
-	107, // 60: core.UpdateServiceLevelRequest.default_transit_days:type_name -> core.Int32Patch
-	59,  // 61: core.UpdateServiceLevelResponse.service_level:type_name -> core.ServiceLevelInfo
-	104, // 62: core.RateInfo.created_at:type_name -> google.protobuf.Timestamp
-	104, // 63: core.RateInfo.updated_at:type_name -> google.protobuf.Timestamp
-	104, // 64: core.RateInfo.numerator_unit_created_at:type_name -> google.protobuf.Timestamp
-	104, // 65: core.RateInfo.numerator_unit_updated_at:type_name -> google.protobuf.Timestamp
-	104, // 66: core.RateInfo.denominator_unit_created_at:type_name -> google.protobuf.Timestamp
-	104, // 67: core.RateInfo.denominator_unit_updated_at:type_name -> google.protobuf.Timestamp
-	104, // 68: core.ItemCategoryInfo.created_at:type_name -> google.protobuf.Timestamp
-	104, // 69: core.ItemCategoryInfo.updated_at:type_name -> google.protobuf.Timestamp
-	92,  // 70: core.ItemCategoryInfo.properties:type_name -> core.ItemCategoryPropertyInfo
-	93,  // 71: core.ItemCategoryInfo.unit_group:type_name -> core.ItemCategoryUnitGroupInfo
-	104, // 72: core.ItemCategoryPropertyInfo.created_at:type_name -> google.protobuf.Timestamp
-	104, // 73: core.ItemCategoryPropertyInfo.updated_at:type_name -> google.protobuf.Timestamp
-	104, // 74: core.ItemCategoryUnitGroupInfo.created_at:type_name -> google.protobuf.Timestamp
-	104, // 75: core.ItemCategoryUnitGroupInfo.updated_at:type_name -> google.protobuf.Timestamp
-	108, // 76: core.ItemCategoryUnitGroupInfo.base_unit:type_name -> core.UnitInfo
-	94,  // 77: core.ItemCategoryUnitGroupInfo.associated_units:type_name -> core.ItemCategoryUnitGroupUnitInfo
-	104, // 78: core.ItemCategoryUnitGroupUnitInfo.created_at:type_name -> google.protobuf.Timestamp
-	104, // 79: core.ItemCategoryUnitGroupUnitInfo.updated_at:type_name -> google.protobuf.Timestamp
-	108, // 80: core.ItemCategoryUnitGroupUnitInfo.unit:type_name -> core.UnitInfo
-	104, // 81: core.ItemAttributeInfo.created_at:type_name -> google.protobuf.Timestamp
-	104, // 82: core.ItemAttributeInfo.updated_at:type_name -> google.protobuf.Timestamp
-	91,  // 83: core.ItemInfo.category:type_name -> core.ItemCategoryInfo
-	90,  // 84: core.ItemInfo.unit_value:type_name -> core.RateInfo
-	90,  // 85: core.ItemInfo.unit_cost:type_name -> core.RateInfo
-	90,  // 86: core.ItemInfo.burn_rate:type_name -> core.RateInfo
-	104, // 87: core.ItemInfo.created_at:type_name -> google.protobuf.Timestamp
-	104, // 88: core.ItemInfo.updated_at:type_name -> google.protobuf.Timestamp
-	95,  // 89: core.ItemInfo.attributes:type_name -> core.ItemAttributeInfo
-	104, // 90: core.ListItemsRequest.start_date:type_name -> google.protobuf.Timestamp
-	104, // 91: core.ListItemsRequest.end_date:type_name -> google.protobuf.Timestamp
-	96,  // 92: core.ListItemsResponse.items:type_name -> core.ItemInfo
-	105, // 93: core.ListItemsResponse.page_info:type_name -> core.PageInfo
-	96,  // 94: core.GetItemResponse.item:type_name -> core.ItemInfo
-	91,  // 95: core.GetItemResponse.categories:type_name -> core.ItemCategoryInfo
-	24,  // 96: core.GetItemResponse.attribute_properties:type_name -> core.PropertyInfo
-	97,  // [97:97] is the sub-list for method output_type
-	97,  // [97:97] is the sub-list for method input_type
-	97,  // [97:97] is the sub-list for extension type_name
-	97,  // [97:97] is the sub-list for extension extendee
-	0,   // [0:97] is the sub-list for field type_name
+	106, // 15: core.UpdateAccountRequest.default_billing_address:type_name -> core.InlineAddressInput
+	106, // 16: core.UpdateAccountRequest.default_shipping_address:type_name -> core.InlineAddressInput
+	6,   // 17: core.UpdateAccountResponse.account:type_name -> core.AccountInfo
+	104, // 18: core.PropertyInfo.created_at:type_name -> google.protobuf.Timestamp
+	104, // 19: core.PropertyInfo.updated_at:type_name -> google.protobuf.Timestamp
+	25,  // 20: core.PropertyInfo.attributes:type_name -> core.AttributeInfo
+	104, // 21: core.AttributeInfo.created_at:type_name -> google.protobuf.Timestamp
+	104, // 22: core.AttributeInfo.updated_at:type_name -> google.protobuf.Timestamp
+	24,  // 23: core.ListPropertiesResponse.properties:type_name -> core.PropertyInfo
+	105, // 24: core.ListPropertiesResponse.page_info:type_name -> core.PageInfo
+	24,  // 25: core.GetPropertyResponse.property:type_name -> core.PropertyInfo
+	24,  // 26: core.CreatePropertyResponse.property:type_name -> core.PropertyInfo
+	24,  // 27: core.UpdatePropertyResponse.property:type_name -> core.PropertyInfo
+	35,  // 28: core.BulkUpsertPropertyInput.attributes:type_name -> core.BulkUpsertPropertyAttributeInput
+	36,  // 29: core.BulkUpsertPropertiesRequest.properties:type_name -> core.BulkUpsertPropertyInput
+	107, // 30: core.BulkUpsertPropertiesResponse.job:type_name -> core.JobInfo
+	107, // 31: core.ExportPropertiesResponse.job:type_name -> core.JobInfo
+	25,  // 32: core.ListAttributesResponse.attributes:type_name -> core.AttributeInfo
+	105, // 33: core.ListAttributesResponse.page_info:type_name -> core.PageInfo
+	25,  // 34: core.GetAttributeResponse.attribute:type_name -> core.AttributeInfo
+	25,  // 35: core.CreateAttributeResponse.attribute:type_name -> core.AttributeInfo
+	25,  // 36: core.UpdateAttributeResponse.attribute:type_name -> core.AttributeInfo
+	25,  // 37: core.BatchGetAttributesByIDsResponse.attributes:type_name -> core.AttributeInfo
+	24,  // 38: core.BatchGetPropertiesByIDsResponse.properties:type_name -> core.PropertyInfo
+	91,  // 39: core.BatchGetItemCategoriesByIDsResponse.item_categories:type_name -> core.ItemCategoryInfo
+	96,  // 40: core.BatchGetItemsByIDsResponse.items:type_name -> core.ItemInfo
+	91,  // 41: core.BatchGetItemsByIDsResponse.categories:type_name -> core.ItemCategoryInfo
+	24,  // 42: core.BatchGetItemsByIDsResponse.attribute_properties:type_name -> core.PropertyInfo
+	104, // 43: core.CarrierInfo.created_at:type_name -> google.protobuf.Timestamp
+	104, // 44: core.CarrierInfo.updated_at:type_name -> google.protobuf.Timestamp
+	104, // 45: core.CarrierInfo.deleted_at:type_name -> google.protobuf.Timestamp
+	59,  // 46: core.CarrierInfo.service_levels:type_name -> core.ServiceLevelInfo
+	104, // 47: core.ServiceLevelInfo.created_at:type_name -> google.protobuf.Timestamp
+	104, // 48: core.ServiceLevelInfo.updated_at:type_name -> google.protobuf.Timestamp
+	58,  // 49: core.ListCarriersResponse.carriers:type_name -> core.CarrierInfo
+	105, // 50: core.ListCarriersResponse.page_info:type_name -> core.PageInfo
+	58,  // 51: core.GetCarrierResponse.carrier:type_name -> core.CarrierInfo
+	58,  // 52: core.BatchGetCarriersByIDsResponse.carriers:type_name -> core.CarrierInfo
+	59,  // 53: core.BatchGetServiceLevelsByIDsResponse.service_levels:type_name -> core.ServiceLevelInfo
+	6,   // 54: core.BatchGetAccountsByIDsResponse.accounts:type_name -> core.AccountInfo
+	58,  // 55: core.CreateCarrierResponse.carrier:type_name -> core.CarrierInfo
+	58,  // 56: core.UpdateCarrierResponse.carrier:type_name -> core.CarrierInfo
+	58,  // 57: core.SyncServiceLevelsResponse.carrier:type_name -> core.CarrierInfo
+	59,  // 58: core.ListServiceLevelsResponse.service_levels:type_name -> core.ServiceLevelInfo
+	105, // 59: core.ListServiceLevelsResponse.page_info:type_name -> core.PageInfo
+	59,  // 60: core.GetServiceLevelResponse.service_level:type_name -> core.ServiceLevelInfo
+	59,  // 61: core.CreateServiceLevelResponse.service_level:type_name -> core.ServiceLevelInfo
+	108, // 62: core.UpdateServiceLevelRequest.default_transit_days:type_name -> core.Int32Patch
+	59,  // 63: core.UpdateServiceLevelResponse.service_level:type_name -> core.ServiceLevelInfo
+	104, // 64: core.RateInfo.created_at:type_name -> google.protobuf.Timestamp
+	104, // 65: core.RateInfo.updated_at:type_name -> google.protobuf.Timestamp
+	104, // 66: core.RateInfo.numerator_unit_created_at:type_name -> google.protobuf.Timestamp
+	104, // 67: core.RateInfo.numerator_unit_updated_at:type_name -> google.protobuf.Timestamp
+	104, // 68: core.RateInfo.denominator_unit_created_at:type_name -> google.protobuf.Timestamp
+	104, // 69: core.RateInfo.denominator_unit_updated_at:type_name -> google.protobuf.Timestamp
+	104, // 70: core.ItemCategoryInfo.created_at:type_name -> google.protobuf.Timestamp
+	104, // 71: core.ItemCategoryInfo.updated_at:type_name -> google.protobuf.Timestamp
+	92,  // 72: core.ItemCategoryInfo.properties:type_name -> core.ItemCategoryPropertyInfo
+	93,  // 73: core.ItemCategoryInfo.unit_group:type_name -> core.ItemCategoryUnitGroupInfo
+	104, // 74: core.ItemCategoryPropertyInfo.created_at:type_name -> google.protobuf.Timestamp
+	104, // 75: core.ItemCategoryPropertyInfo.updated_at:type_name -> google.protobuf.Timestamp
+	104, // 76: core.ItemCategoryUnitGroupInfo.created_at:type_name -> google.protobuf.Timestamp
+	104, // 77: core.ItemCategoryUnitGroupInfo.updated_at:type_name -> google.protobuf.Timestamp
+	109, // 78: core.ItemCategoryUnitGroupInfo.base_unit:type_name -> core.UnitInfo
+	94,  // 79: core.ItemCategoryUnitGroupInfo.associated_units:type_name -> core.ItemCategoryUnitGroupUnitInfo
+	104, // 80: core.ItemCategoryUnitGroupUnitInfo.created_at:type_name -> google.protobuf.Timestamp
+	104, // 81: core.ItemCategoryUnitGroupUnitInfo.updated_at:type_name -> google.protobuf.Timestamp
+	109, // 82: core.ItemCategoryUnitGroupUnitInfo.unit:type_name -> core.UnitInfo
+	104, // 83: core.ItemAttributeInfo.created_at:type_name -> google.protobuf.Timestamp
+	104, // 84: core.ItemAttributeInfo.updated_at:type_name -> google.protobuf.Timestamp
+	91,  // 85: core.ItemInfo.category:type_name -> core.ItemCategoryInfo
+	90,  // 86: core.ItemInfo.unit_value:type_name -> core.RateInfo
+	90,  // 87: core.ItemInfo.unit_cost:type_name -> core.RateInfo
+	90,  // 88: core.ItemInfo.burn_rate:type_name -> core.RateInfo
+	104, // 89: core.ItemInfo.created_at:type_name -> google.protobuf.Timestamp
+	104, // 90: core.ItemInfo.updated_at:type_name -> google.protobuf.Timestamp
+	95,  // 91: core.ItemInfo.attributes:type_name -> core.ItemAttributeInfo
+	104, // 92: core.ListItemsRequest.start_date:type_name -> google.protobuf.Timestamp
+	104, // 93: core.ListItemsRequest.end_date:type_name -> google.protobuf.Timestamp
+	96,  // 94: core.ListItemsResponse.items:type_name -> core.ItemInfo
+	105, // 95: core.ListItemsResponse.page_info:type_name -> core.PageInfo
+	96,  // 96: core.GetItemResponse.item:type_name -> core.ItemInfo
+	91,  // 97: core.GetItemResponse.categories:type_name -> core.ItemCategoryInfo
+	24,  // 98: core.GetItemResponse.attribute_properties:type_name -> core.PropertyInfo
+	99,  // [99:99] is the sub-list for method output_type
+	99,  // [99:99] is the sub-list for method input_type
+	99,  // [99:99] is the sub-list for extension type_name
+	99,  // [99:99] is the sub-list for extension extendee
+	0,   // [0:99] is the sub-list for field type_name
 }
 
 func init() { file_core_core_accounts_carriers_proto_init() }

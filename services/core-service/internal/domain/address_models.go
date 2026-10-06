@@ -84,13 +84,74 @@ type UpdateAddressParams struct {
 	Phone             field.Clearable[string]
 	Email             field.Clearable[string]
 	IsDropShip        *bool
-	ReceiveCalendarID *string
+	ReceiveCalendarID field.Clearable[string]
 	StreetLine1       *string
 	StreetLine2       field.Clearable[string]
 	Locality          *string
 	State             *string
 	PostalCode        *string
 	Country           *string
+}
+
+// InlineAddressParams is an address saved by the write of the record that uses it. With ID set, that stored address is updated and unset fields keep their values; without it a new address is created, so Name and Country are required.
+type InlineAddressParams struct {
+	ID                *string
+	Name              *string
+	Phone             field.Clearable[string]
+	Email             field.Clearable[string]
+	IsDropShip        *bool
+	ReceiveCalendarID field.Clearable[string]
+	StreetLine1       *string
+	StreetLine2       field.Clearable[string]
+	Locality          *string
+	State             *string
+	PostalCode        *string
+	Country           *string
+}
+
+// CreateParams is the inline address as a new address in accountID.
+func (p InlineAddressParams) CreateParams(accountID string) CreateAddressParams {
+	params := CreateAddressParams{
+		AccountID:         accountID,
+		Phone:             p.Phone.ValuePtr(),
+		Email:             p.Email.ValuePtr(),
+		IsDropShip:        p.IsDropShip != nil && *p.IsDropShip,
+		ReceiveCalendarID: p.ReceiveCalendarID.ValuePtr(),
+		StreetLine1:       p.StreetLine1,
+		StreetLine2:       p.StreetLine2.ValuePtr(),
+		Locality:          p.Locality,
+		State:             p.State,
+		PostalCode:        p.PostalCode,
+	}
+	if p.Name != nil {
+		params.Name = *p.Name
+	}
+	if p.Country != nil {
+		params.Country = *p.Country
+	}
+	return params
+}
+
+// UpdateParams is the inline address as an update to the stored address its ID names, in accountID.
+func (p InlineAddressParams) UpdateParams(accountID string) UpdateAddressParams {
+	params := UpdateAddressParams{
+		AccountID:         accountID,
+		Name:              p.Name,
+		Phone:             p.Phone,
+		Email:             p.Email,
+		IsDropShip:        p.IsDropShip,
+		ReceiveCalendarID: p.ReceiveCalendarID,
+		StreetLine1:       p.StreetLine1,
+		StreetLine2:       p.StreetLine2,
+		Locality:          p.Locality,
+		State:             p.State,
+		PostalCode:        p.PostalCode,
+		Country:           p.Country,
+	}
+	if p.ID != nil {
+		params.AddressID = *p.ID
+	}
+	return params
 }
 
 // DeleteAddressParams contains the parameters for deleting an address.

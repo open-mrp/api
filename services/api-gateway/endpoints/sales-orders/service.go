@@ -9,6 +9,7 @@ import (
 	"github.com/open-mrp/api/services/api-gateway/internal/domain"
 	grpcutil "github.com/open-mrp/api/services/api-gateway/internal/grpc"
 	"github.com/open-mrp/api/services/api-gateway/internal/resourceloaders"
+	apirequest "github.com/open-mrp/api/services/api-gateway/pkg/request"
 	apiresource "github.com/open-mrp/api/services/api-gateway/pkg/resource"
 	"github.com/open-mrp/api/services/api-gateway/pkg/resourcekit"
 	"github.com/open-mrp/api/shared/constants"
@@ -16,6 +17,7 @@ import (
 	"github.com/open-mrp/api/shared/field"
 	"github.com/open-mrp/api/shared/pricing"
 	pb "github.com/open-mrp/api/shared/proto/core"
+	"github.com/open-mrp/api/shared/ptrutil"
 	"github.com/open-mrp/api/shared/tracing"
 	"github.com/shopspring/decimal"
 	"google.golang.org/grpc"
@@ -208,8 +210,10 @@ func (m *salesOrderSvcImpl) CreateSalesOrder(ctx context.Context, req *CreateSal
 		ShippingTermId:               req.ShippingTermID.Ptr(),
 		PaymentTermId:                req.PaymentTermID.Ptr(),
 		OrderDiscountId:              req.OrderDiscountID.Ptr(),
-		BillToAddressId:              req.BillToAddressID,
-		ShipToAddressId:              req.ShipToAddressID,
+		BillToAddressId:              ptrutil.Deref(req.BillToAddressID.Ptr()),
+		ShipToAddressId:              ptrutil.Deref(req.ShipToAddressID.Ptr()),
+		BillToAddress:                apirequest.InlineAddressToProto(req.BillToAddress),
+		ShipToAddress:                apirequest.InlineAddressToProto(req.ShipToAddress),
 		Lines:                        lines,
 		AcknowledgementEmailContacts: toSalesOrderEmailContactInputs(req.AcknowledgementEmailContacts),
 		InvoiceEmailContacts:         toSalesOrderEmailContactInputs(req.InvoiceEmailContacts),
@@ -270,6 +274,8 @@ func (m *salesOrderSvcImpl) UpdateSalesOrder(ctx context.Context, req *UpdateSal
 		PaymentTermId:                req.PaymentTermID.Ptr(),
 		BillingAddressId:             req.BillingAddressID.Ptr(),
 		ShippingAddressId:            req.ShippingAddressID.Ptr(),
+		BillingAddress:               apirequest.InlineAddressToProto(req.BillingAddress),
+		ShippingAddress:              apirequest.InlineAddressToProto(req.ShippingAddress),
 		CustomerId:                   req.CustomerID.Ptr(),
 		AcknowledgementEmailContacts: toSalesOrderEmailContactList(req.AcknowledgementEmailContacts.Ptr()),
 		InvoiceEmailContacts:         toSalesOrderEmailContactList(req.InvoiceEmailContacts.Ptr()),

@@ -1,4 +1,4 @@
-package service
+package mediator
 
 import (
 	"testing"
@@ -11,15 +11,15 @@ import (
 func TestNormalizeAddressName(t *testing.T) {
 	t.Parallel()
 
-	name, apiErr := normalizeAddressName("  Warehouse  ")
+	name, apiErr := NormalizeAddressName("  Warehouse  ")
 	require.Nil(t, apiErr)
 	assert.Equal(t, "Warehouse", name)
 
-	_, apiErr = normalizeAddressName("")
+	_, apiErr = NormalizeAddressName("")
 	require.NotNil(t, apiErr)
 	assert.Equal(t, apierror.ErrorTypeInvalidRequest, apiErr.Type)
 
-	_, apiErr = normalizeAddressName("   ")
+	_, apiErr = NormalizeAddressName("   ")
 	require.NotNil(t, apiErr)
 	assert.Equal(t, apierror.ErrorTypeInvalidRequest, apiErr.Type)
 }
@@ -27,18 +27,18 @@ func TestNormalizeAddressName(t *testing.T) {
 func TestNormalizeOptionalAddressName(t *testing.T) {
 	t.Parallel()
 
-	name, apiErr := normalizeOptionalAddressName(nil)
+	name, apiErr := NormalizeOptionalAddressName(nil)
 	require.Nil(t, apiErr)
 	assert.Nil(t, name)
 
 	input := " HQ "
-	name, apiErr = normalizeOptionalAddressName(&input)
+	name, apiErr = NormalizeOptionalAddressName(&input)
 	require.Nil(t, apiErr)
 	require.NotNil(t, name)
 	assert.Equal(t, "HQ", *name)
 
 	blank := ""
-	_, apiErr = normalizeOptionalAddressName(&blank)
+	_, apiErr = NormalizeOptionalAddressName(&blank)
 	require.NotNil(t, apiErr)
 	assert.Equal(t, apierror.ErrorTypeInvalidRequest, apiErr.Type)
 }

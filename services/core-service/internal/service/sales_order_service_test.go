@@ -1267,6 +1267,7 @@ func (suite *SalesOrderSvcTestSuite) TestUpdateSalesOrder_ShippingAddressRepoint
 	suite.orderRepo.EXPECT().
 		Get(gomock.Any(), "ac_test", "or_1").
 		Return(&domain.SalesOrder{ID: "or_1", ShippingAddressID: "addr_ship", BuyerAccountID: "ac_buyer"}, nil).Times(1)
+	suite.addressRepo.EXPECT().IsInAccount(gomock.Any(), "ac_buyer", "addr_new").Return(true, nil).Times(1)
 
 	suite.orderRepo.EXPECT().
 		Update(gomock.Any(), gomock.Cond(func(p domain.UpdateSalesOrderParams) bool {
@@ -1370,6 +1371,92 @@ func (suite *SalesOrderSvcTestSuite) TestUpdateSalesOrder_KeepsHeldRoutingWithou
 		ServiceLevelID: field.Set("crop_own"),
 		ShippingTermID: new("shtm_own"),
 		PaymentTermID:  new("pytm_own"),
+	})
+	suite.Nil(apiErr)
+}
+
+func (suite *SalesOrderSvcTestSuite) TestUpdateSalesOrder_RefusesACustomerAddressOrDiscountTheAccountCannotUse() {
+	notFound := apierror.NewResourceNotFoundError("Resource not found.")
+	for _, tc := range []struct {
+		param  string
+		params domain.UpdateSalesOrderParams
+		lookup func()
+	}{
+		{"customer_id", domain.UpdateSalesOrderParams{BuyerAccountID: new("ac_foreign")}, func() {
+			suite.customerRepo.EXPECT().Get(gomock.Any(), "ac_test", "ac_foreign", gomock.Any()).Return(nil, notFound)
+		}},
+		{"billing_address_id", domain.UpdateSalesOrderParams{BillingAddressID: new("ad_foreign")}, func() {
+			suite.addressRepo.EXPECT().IsInAccount(gomock.Any(), "ac_buyer", "ad_foreign").Return(false, nil)
+			suite.addressRepo.EXPECT().IsInAccount(gomock.Any(), "ac_test", "ad_foreign").Return(false, nil)
+		}},
+		{"shipping_address_id", domain.UpdateSalesOrderParams{ShippingAddressID: new("ad_foreign")}, func() {
+			suite.addressRepo.EXPECT().IsInAccount(gomock.Any(), "ac_buyer", "ad_foreign").Return(false, nil)
+			suite.addressRepo.EXPECT().IsInAccount(gomock.Any(), "ac_test", "ad_foreign").Return(false, nil)
+		}},
+		{"order_discount_id", domain.UpdateSalesOrderParams{OrderDiscountID: field.Set("ords_foreign")}, func() {
+			suite.orderDiscountRepo.EXPECT().
+				Get(gomock.Any(), domain.GetOrderDiscountParams{AccountID: "ac_test", OrderDiscountID: "ords_foreign"}).
+				Return(nil, notFound)
+		}},
+	} {
+		suite.Run(tc.param, func() {
+			ctx := salesOrderIdempotencyCtx(salesOrderInternalCtx("ac_test"), "/core.CoreService/UpdateSalesOrder")
+			suite.expectIdempotencyStarted()
+			suite.orderRepo.EXPECT().Get(gomock.Any(), "ac_test", "or_1").
+				Return(&domain.SalesOrder{ID: "or_1", BuyerAccountID: "ac_buyer", BillingAddressID: "ad_bill", ShippingAddressID: "ad_ship"}, nil)
+			tc.lookup()
+			suite.expectCacheError()
+
+			params := tc.params
+			params.SalesOrderID = "or_1"
+			_, apiErr := suite.svc.UpdateSalesOrder(ctx, params)
+
+			suite.Require().NotNil(apiErr)
+			suite.True(apierror.IsNotFound(apiErr))
+			suite.Equal(tc.param, apiErr.Param)
+		})
+	}
+}
+
+// Moving the order to another customer moves whose addresses it may use along with it.
+func (suite *SalesOrderSvcTestSuite) TestUpdateSalesOrder_ChecksANewAddressAgainstTheNewCustomer() {
+	ctx := salesOrderIdempotencyCtx(salesOrderInternalCtx("ac_test"), "/core.CoreService/UpdateSalesOrder")
+	suite.expectIdempotencyStarted()
+	suite.orderRepo.EXPECT().Get(gomock.Any(), "ac_test", "or_1").
+		Return(&domain.SalesOrder{ID: "or_1", BuyerAccountID: "ac_buyer", ShippingAddressID: "ad_ship"}, nil)
+	suite.customerRepo.EXPECT().Get(gomock.Any(), "ac_test", "ac_other", gomock.Any()).Return(&domain.Customer{}, nil)
+	suite.addressRepo.EXPECT().IsInAccount(gomock.Any(), "ac_other", "ad_other").Return(true, nil)
+	suite.orderRepo.EXPECT().Update(gomock.Any(), gomock.Any()).Return(&domain.SalesOrder{ID: "or_1"}, nil)
+	suite.expectCacheSuccess()
+
+	_, apiErr := suite.svc.UpdateSalesOrder(ctx, domain.UpdateSalesOrderParams{
+		SalesOrderID:      "or_1",
+		BuyerAccountID:    new("ac_other"),
+		ShippingAddressID: new("ad_other"),
+	})
+	suite.Nil(apiErr)
+}
+
+func (suite *SalesOrderSvcTestSuite) TestUpdateSalesOrder_KeepsHeldCounterpartyRefsWithoutLookingThemUp() {
+	ctx := salesOrderIdempotencyCtx(salesOrderInternalCtx("ac_test"), "/core.CoreService/UpdateSalesOrder")
+	suite.expectIdempotencyStarted()
+	suite.orderRepo.EXPECT().Get(gomock.Any(), "ac_test", "or_1").
+		Return(&domain.SalesOrder{
+			ID:                "or_1",
+			BuyerAccountID:    "ac_buyer",
+			BillingAddressID:  "ad_bill",
+			ShippingAddressID: "ad_ship",
+			OrderDiscountID:   new("ords_own"),
+		}, nil)
+	suite.orderRepo.EXPECT().Update(gomock.Any(), gomock.Any()).Return(&domain.SalesOrder{ID: "or_1"}, nil)
+	suite.expectCacheSuccess()
+
+	_, apiErr := suite.svc.UpdateSalesOrder(ctx, domain.UpdateSalesOrderParams{
+		SalesOrderID:      "or_1",
+		BuyerAccountID:    new("ac_buyer"),
+		BillingAddressID:  new("ad_bill"),
+		ShippingAddressID: new("ad_ship"),
+		OrderDiscountID:   field.Set("ords_own"),
 	})
 	suite.Nil(apiErr)
 }

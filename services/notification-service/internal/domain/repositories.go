@@ -109,6 +109,8 @@ type NotificationRepo interface {
 	ResolveAccountUserID(ctx context.Context, userID, accountID string) (string, *apierror.APIError)
 	// ResolveUserID maps an account_user id back to its user id (us_). The realtime push targets the WS user-topic, which the gateway keys by user id, not account_user id.
 	ResolveUserID(ctx context.Context, accountUserID string) (string, *apierror.APIError)
+	// ResolveUserIDInAccount is ResolveUserID for an account_user of accountID: one of another account is not found. Use it for any account_user id a request names.
+	ResolveUserIDInAccount(ctx context.Context, accountUserID, accountID string) (string, *apierror.APIError)
 	// CountUnseenByUserAccounts aggregates the user's unseen notifications per account across every account they belong to (cross-account unread hint).
 	CountUnseenByUserAccounts(ctx context.Context, userID string) ([]AccountUnread, *apierror.APIError)
 	// ResolveRecipientContact returns a recipient's email + display name for the email bridge.

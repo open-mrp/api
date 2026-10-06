@@ -906,6 +906,21 @@ func (mr *MockNotificationRepoMockRecorder) ResolveUserID(ctx, accountUserID any
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ResolveUserID", reflect.TypeOf((*MockNotificationRepo)(nil).ResolveUserID), ctx, accountUserID)
 }
 
+// ResolveUserIDInAccount mocks base method.
+func (m *MockNotificationRepo) ResolveUserIDInAccount(ctx context.Context, accountUserID, accountID string) (string, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ResolveUserIDInAccount", ctx, accountUserID, accountID)
+	ret0, _ := ret[0].(string)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
+}
+
+// ResolveUserIDInAccount indicates an expected call of ResolveUserIDInAccount.
+func (mr *MockNotificationRepoMockRecorder) ResolveUserIDInAccount(ctx, accountUserID, accountID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ResolveUserIDInAccount", reflect.TypeOf((*MockNotificationRepo)(nil).ResolveUserIDInAccount), ctx, accountUserID, accountID)
+}
+
 // UpsertCoalesced mocks base method.
 func (m *MockNotificationRepo) UpsertCoalesced(ctx context.Context, notifications []*domain.Notification) ([]*domain.Notification, *apierror.APIError) {
 	m.ctrl.T.Helper()

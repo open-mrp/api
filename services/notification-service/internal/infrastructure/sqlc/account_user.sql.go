@@ -149,6 +149,25 @@ func (q *Queries) GetUserIDByAccountUserID(ctx context.Context, id string) (stri
 	return user_id, err
 }
 
+const getUserIDByAccountUserIDInAccount = `-- name: GetUserIDByAccountUserIDInAccount :one
+SELECT user_id FROM account_user
+WHERE id = ? AND account_id = ?
+`
+
+type GetUserIDByAccountUserIDInAccountParams struct {
+	ID        string
+	AccountID string
+}
+
+// Resolves the user id for an account_user of the given account, so a request naming another
+// account's account_user reads as naming none.
+func (q *Queries) GetUserIDByAccountUserIDInAccount(ctx context.Context, arg GetUserIDByAccountUserIDInAccountParams) (string, error) {
+	row := q.db.QueryRowContext(ctx, getUserIDByAccountUserIDInAccount, arg.ID, arg.AccountID)
+	var user_id string
+	err := row.Scan(&user_id)
+	return user_id, err
+}
+
 const listMessagingContacts = `-- name: ListMessagingContacts :many
 SELECT au.id AS account_user_id, u.name AS name
 FROM account_user au

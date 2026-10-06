@@ -30,14 +30,14 @@ func TestRequestedParticipantRoles_ValidatesEachEntryAsSetRoleDoes(t *testing.T)
 		{"the creator", []domain.ParticipantRoleInput{{AccountUserID: owner, Role: "admin"}}, "", apierror.ErrorCodeParameterInvalid, "participants[0].account_user_id"},
 		{"a user listed twice", []domain.ParticipantRoleInput{{AccountUserID: "acus_a", Role: "admin"}, {AccountUserID: "acus_a", Role: "viewer"}}, "", apierror.ErrorCodeParameterInvalid, "participants[1].account_user_id"},
 		{"an unknown role", []domain.ParticipantRoleInput{{AccountUserID: "acus_a", Role: "boss"}}, "", apierror.ErrorCodeParameterInvalid, "participants[0].role"},
-		{"a user that does not exist", []domain.ParticipantRoleInput{{AccountUserID: "acus_gone", Role: "admin"}}, "acus_gone", apierror.ErrorCodeParameterInvalid, "participants[0].account_user_id"},
+		{"a user that is not one of the account's", []domain.ParticipantRoleInput{{AccountUserID: "acus_elsewhere", Role: "admin"}}, "acus_elsewhere", apierror.ErrorCodeParameterInvalid, "participants[0].account_user_id"},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 			ctrl := gomock.NewController(t)
 			notifRepo := repositorymock.NewMockNotificationRepo(ctrl)
-			notifRepo.EXPECT().ResolveUserID(gomock.Any(), gomock.Any()).DoAndReturn(func(_ context.Context, acus string) (string, *apierror.APIError) {
+			notifRepo.EXPECT().ResolveUserIDInAccount(gomock.Any(), gomock.Any(), "ac_team").DoAndReturn(func(_ context.Context, acus, _ string) (string, *apierror.APIError) {
 				if acus == tt.unknown {
 					return "", apierror.NewResourceNotFoundError("not found")
 				}
@@ -47,7 +47,7 @@ func TestRequestedParticipantRoles_ValidatesEachEntryAsSetRoleDoes(t *testing.T)
 			factory.EXPECT().NewNotificationRepo().Return(notifRepo).AnyTimes()
 			svc := &conversationSvcImpl{repoFactory: factory}
 
-			_, apiErr := svc.requestedParticipantRoles(context.Background(), tt.entries, owner)
+			_, apiErr := svc.requestedParticipantRoles(context.Background(), tt.entries, owner, "ac_team")
 
 			require.NotNil(t, apiErr)
 			assert.Equal(t, tt.wantCode, apiErr.Code)
@@ -59,7 +59,7 @@ func TestRequestedParticipantRoles_ValidatesEachEntryAsSetRoleDoes(t *testing.T)
 		t.Parallel()
 		ctrl := gomock.NewController(t)
 		notifRepo := repositorymock.NewMockNotificationRepo(ctrl)
-		notifRepo.EXPECT().ResolveUserID(gomock.Any(), gomock.Any()).Return("us_x", nil).Times(4)
+		notifRepo.EXPECT().ResolveUserIDInAccount(gomock.Any(), gomock.Any(), "ac_team").Return("us_x", nil).Times(4)
 		factory := factorymock.NewMockRepoFactory(ctrl)
 		factory.EXPECT().NewNotificationRepo().Return(notifRepo).AnyTimes()
 		svc := &conversationSvcImpl{repoFactory: factory}
@@ -67,7 +67,7 @@ func TestRequestedParticipantRoles_ValidatesEachEntryAsSetRoleDoes(t *testing.T)
 		roles, apiErr := svc.requestedParticipantRoles(context.Background(), []domain.ParticipantRoleInput{
 			{AccountUserID: "acus_o", Role: "owner"}, {AccountUserID: "acus_a", Role: "admin"},
 			{AccountUserID: "acus_m", Role: "member"}, {AccountUserID: "acus_v", Role: "viewer"},
-		}, owner)
+		}, owner, "ac_team")
 
 		require.Nil(t, apiErr)
 		assert.Equal(t, map[string]constants.ParticipantRole{

@@ -141,8 +141,8 @@ func (s *conversationSvcImpl) CreateConversation(ctx context.Context, input doma
 	}
 	// A self-DM ("note to self") is an explicitly-allowed conversation where the pair is (caller, caller).
 	isSelfDM := target == callerAcus
-	// The target must be a real account_user (resolvable to a user id).
-	if _, apiErr := s.repoFactory.NewNotificationRepo().ResolveUserID(ctx, target); apiErr != nil {
+	// The target must be a real account_user of this account.
+	if _, apiErr := s.repoFactory.NewNotificationRepo().ResolveUserIDInAccount(ctx, target, accountID); apiErr != nil {
 		if apiErr.Code == apierror.ErrorCodeResourceNotFound {
 			return nil, tracing.Trace(span, apierror.NewParameterInvalidError("The target participant does not exist.", "participant_account_user_ids"))
 		}
@@ -2572,7 +2572,7 @@ func (s *conversationSvcImpl) createGroup(ctx context.Context, input domain.Crea
 	ctx, span := conversationSvcTracer.Start(ctx, "service.conversation.create_group")
 	defer span.End()
 
-	roles, apiErr := s.requestedParticipantRoles(ctx, input.Participants, callerAcus)
+	roles, apiErr := s.requestedParticipantRoles(ctx, input.Participants, callerAcus, accountID)
 	if apiErr != nil {
 		return nil, tracing.Trace(span, apiErr)
 	}
@@ -2620,7 +2620,7 @@ func (s *conversationSvcImpl) createGroup(ctx context.Context, input domain.Crea
 		}
 		seen[m] = struct{}{}
 		if _, resolved := roles[m]; !resolved {
-			if _, apiErr := s.repoFactory.NewNotificationRepo().ResolveUserID(ctx, m); apiErr != nil {
+			if _, apiErr := s.repoFactory.NewNotificationRepo().ResolveUserIDInAccount(ctx, m, accountID); apiErr != nil {
 				if apiErr.Code == apierror.ErrorCodeResourceNotFound {
 					return nil, tracing.Trace(span, apierror.NewParameterInvalidError("A participant does not exist.", "participant_account_user_ids"))
 				}
@@ -2733,7 +2733,7 @@ type participantRoleChange struct {
 }
 
 // requestedParticipantRoles validates the roles a new group's members are to start with, as UpdateParticipantRole validates a role, and returns them by account user. Errors name the offending entry of `participants`.
-func (s *conversationSvcImpl) requestedParticipantRoles(ctx context.Context, participants []domain.ParticipantRoleInput, callerAcus string) (map[string]constants.ParticipantRole, *apierror.APIError) {
+func (s *conversationSvcImpl) requestedParticipantRoles(ctx context.Context, participants []domain.ParticipantRoleInput, callerAcus, accountID string) (map[string]constants.ParticipantRole, *apierror.APIError) {
 	roles := make(map[string]constants.ParticipantRole, len(participants))
 	for i, p := range participants {
 		param := fmt.Sprintf("participants[%d]", i)
@@ -2750,7 +2750,7 @@ func (s *conversationSvcImpl) requestedParticipantRoles(ctx context.Context, par
 		if !role.IsValid() {
 			return nil, apierror.NewParameterInvalidError("The role is invalid.", param+".role")
 		}
-		if _, apiErr := s.repoFactory.NewNotificationRepo().ResolveUserID(ctx, p.AccountUserID); apiErr != nil {
+		if _, apiErr := s.repoFactory.NewNotificationRepo().ResolveUserIDInAccount(ctx, p.AccountUserID, accountID); apiErr != nil {
 			if apiErr.Code == apierror.ErrorCodeResourceNotFound {
 				return nil, apierror.NewParameterInvalidError("The participant does not exist.", param+".account_user_id")
 			}
@@ -2842,7 +2842,7 @@ func (s *conversationSvcImpl) AddParticipant(ctx context.Context, conversationID
 	if targetAccountUserID == "" || targetAccountUserID == callerAcus {
 		return nil, tracing.Trace(span, apierror.NewParameterInvalidError("The participant is invalid.", "account_user_id"))
 	}
-	if _, apiErr := s.repoFactory.NewNotificationRepo().ResolveUserID(ctx, targetAccountUserID); apiErr != nil {
+	if _, apiErr := s.repoFactory.NewNotificationRepo().ResolveUserIDInAccount(ctx, targetAccountUserID, accountID); apiErr != nil {
 		if apiErr.Code == apierror.ErrorCodeResourceNotFound {
 			return nil, tracing.Trace(span, apierror.NewParameterInvalidError("The participant does not exist.", "account_user_id"))
 		}
@@ -3364,7 +3364,7 @@ func (s *conversationSvcImpl) Block(ctx context.Context, blockedAccountUserID st
 	if blockedAccountUserID == "" || blockedAccountUserID == callerAcus {
 		return nil, tracing.Trace(span, apierror.NewParameterInvalidError("The user to block is invalid.", "blocked_account_user_id"))
 	}
-	if _, apiErr := s.repoFactory.NewNotificationRepo().ResolveUserID(ctx, blockedAccountUserID); apiErr != nil {
+	if _, apiErr := s.repoFactory.NewNotificationRepo().ResolveUserIDInAccount(ctx, blockedAccountUserID, accountID); apiErr != nil {
 		if apiErr.Code == apierror.ErrorCodeResourceNotFound {
 			return nil, tracing.Trace(span, apierror.NewParameterInvalidError("The user to block does not exist.", "blocked_account_user_id"))
 		}

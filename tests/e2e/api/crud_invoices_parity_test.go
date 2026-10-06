@@ -308,9 +308,9 @@ func TestCustomerInvoices_AllocationsExpandOnRequest(t *testing.T) {
 	}
 
 	status, body, err = apiClient.GetListRaw(customerInvoicesPath,
-		url.Values{"limit": {"25"}, "include": {"allocations"}})
+		url.Values{"limit": {"100"}, "include": {"allocations"}})
 
-	// Invoices earlier runs created sort ahead of the seeded paid one, so read on until it turns up.
+	// Invoices earlier runs created sort ahead of the seeded paid one, so read on until it turns up, a hundred at a time.
 	sawAllocation := false
 	for page := 0; ; page++ {
 		require.NoError(t, err)

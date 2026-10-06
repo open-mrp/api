@@ -211,7 +211,7 @@ func (suite *AddressSvcScopeTestSuite) TestDeleteAddress_ClearsStaleAccountDefau
 	// A non-active account's default does not block deletion.
 	suite.addressRepo.EXPECT().CheckAddressNotInUse(gomock.Any(), addressID).Return(nil)
 	suite.addressRepo.EXPECT().Get(gomock.Any(), gomock.Any()).Return(&domain.Address{ID: addressID, Name: "Ship To"}, nil)
-	deletedRecordRepo.EXPECT().Create(gomock.Any(), gomock.Any(), addressID, gomock.Any()).Return(nil)
+	deletedRecordRepo.EXPECT().CreateInAccount(gomock.Any(), gomock.Any(), addressID, accountID, gomock.Any()).Return(nil)
 
 	// The stale account-default pointer must be nulled before the address row is deleted.
 	gomock.InOrder(

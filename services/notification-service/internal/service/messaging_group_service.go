@@ -193,7 +193,7 @@ func (s *conversationSvcImpl) DeleteMessagingGroup(ctx context.Context, groupID 
 	if apiErr != nil {
 		if apiErr.Code == apierror.ErrorCodeResourceNotFound {
 			// Distinguish an already-deleted roster (410) from one that never existed (404).
-			if wasDeleted, delErr := s.repoFactory.NewDeletedRecordRepo().Exists(ctx, constants.DeletedRecordResourceTypeMessagingGroup, groupID); delErr != nil {
+			if wasDeleted, delErr := s.repoFactory.NewDeletedRecordRepo().ExistsInAccount(ctx, constants.DeletedRecordResourceTypeMessagingGroup, groupID, accountID); delErr != nil {
 				return tracing.Trace(span, delErr)
 			} else if wasDeleted {
 				return tracing.Trace(span, apierror.NewAlreadyDeletedError("This group has already been deleted and can no longer be modified."))
@@ -209,7 +209,7 @@ func (s *conversationSvcImpl) DeleteMessagingGroup(ctx context.Context, groupID 
 	return s.txManager.WithTx(ctx, func(txCtx context.Context, f domain.RepoFactory) *apierror.APIError {
 		groupRepo := f.NewMessagingGroupRepo()
 		// Snapshot the roster (with members) into deleted_record before the hard delete.
-		if drErr := f.NewDeletedRecordRepo().Create(txCtx, constants.DeletedRecordResourceTypeMessagingGroup, existing.ID, existing); drErr != nil {
+		if drErr := f.NewDeletedRecordRepo().CreateInAccount(txCtx, constants.DeletedRecordResourceTypeMessagingGroup, existing.ID, accountID, existing); drErr != nil {
 			return drErr
 		}
 		deleted, dErr := groupRepo.Delete(txCtx, groupID, accountID)

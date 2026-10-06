@@ -233,3 +233,15 @@ func (suite *MaterialBulkUpsertTestSuite) TestExportMaterials_RejectsAnIdentityl
 	suite.Nil(export)
 	suite.NotNil(apiErr)
 }
+
+func TestDeleteMaterial_OnlyTheOwnerLearnsItWasDeleted(t *testing.T) {
+	t.Parallel()
+	assertOnlyTheOwnerLearnsItWasDeleted(t, constants.DeletedRecordResourceTypeMaterial, "it_gone", func(h *deletedScopeHarness, accountID string) *apierror.APIError {
+		materials := repositorymock.NewMockMaterialRepo(h.ctrl)
+		h.repos.EXPECT().NewMaterialRepo().Return(materials).AnyTimes()
+		materials.EXPECT().GetByID(gomock.Any(), domain.GetMaterialParams{AccountID: accountID, MaterialID: "it_gone"}).Return(nil, deletedScopeNotFound())
+		svc := NewMaterialSvc(&MaterialSvcConfig{Repos: h.repos, MediatorFactory: h.mediators, JobSvcFactory: NewJobSvcFactory(), TxManager: &stubTxManager{factory: h.repos}})
+		_, apiErr := svc.DeleteMaterial(deletedScopeCtx(accountID), "it_gone")
+		return apiErr
+	})
+}

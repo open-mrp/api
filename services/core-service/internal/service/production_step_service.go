@@ -512,7 +512,7 @@ func (s *productionStepSvcImpl) DeleteProductionStep(ctx context.Context, stepID
 	step, apiErr := s.repos.NewProductionStepRepo().Get(ctx, accountID, stepID)
 	if apiErr != nil {
 		if apierror.IsNotFound(apiErr) {
-			wasDeleted, deletedCheckErr := s.repos.NewDeletedRecordRepo().Exists(ctx, constants.DeletedRecordResourceTypeProductionStep, stepID)
+			wasDeleted, deletedCheckErr := s.repos.NewDeletedRecordRepo().ExistsInAccount(ctx, constants.DeletedRecordResourceTypeProductionStep, stepID, accountID)
 			if deletedCheckErr != nil {
 				return tracing.Trace(span, deletedCheckErr)
 			}
@@ -535,7 +535,7 @@ func (s *productionStepSvcImpl) DeleteProductionStep(ctx context.Context, stepID
 			return apiErr
 		}
 
-		if apiErr := txSvc.repos.NewDeletedRecordRepo().Create(txCtx, constants.DeletedRecordResourceTypeProductionStep, step.ID, step); apiErr != nil {
+		if apiErr := txSvc.repos.NewDeletedRecordRepo().CreateInAccount(txCtx, constants.DeletedRecordResourceTypeProductionStep, step.ID, accountID, step); apiErr != nil {
 			return apiErr
 		}
 

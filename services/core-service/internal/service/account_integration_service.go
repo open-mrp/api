@@ -472,7 +472,7 @@ func (s *accountIntegrationSvcImpl) DeleteAccountIntegration(ctx context.Context
 	integration, apiErr := s.repos.NewAccountIntegrationRepo().Get(ctx, params.AccountID, params.ID)
 	if apiErr != nil {
 		if apierror.IsNotFound(apiErr) {
-			wasDeleted, deletedCheckErr := s.repos.NewDeletedRecordRepo().Exists(ctx, constants.DeletedRecordResourceTypeAccountIntegration, params.ID)
+			wasDeleted, deletedCheckErr := s.repos.NewDeletedRecordRepo().ExistsInAccount(ctx, constants.DeletedRecordResourceTypeAccountIntegration, params.ID, params.AccountID)
 			if deletedCheckErr != nil {
 				return nil, tracing.Trace(span, deletedCheckErr)
 			}
@@ -485,7 +485,7 @@ func (s *accountIntegrationSvcImpl) DeleteAccountIntegration(ctx context.Context
 
 	var result *domain.AccountIntegration
 	apiErr = s.withTx(ctx, func(txCtx context.Context, txSvc *accountIntegrationSvcImpl) *apierror.APIError {
-		if apiErr := txSvc.repos.NewDeletedRecordRepo().Create(txCtx, constants.DeletedRecordResourceTypeAccountIntegration, integration.ID, integration); apiErr != nil {
+		if apiErr := txSvc.repos.NewDeletedRecordRepo().CreateInAccount(txCtx, constants.DeletedRecordResourceTypeAccountIntegration, integration.ID, params.AccountID, integration); apiErr != nil {
 			return apiErr
 		}
 

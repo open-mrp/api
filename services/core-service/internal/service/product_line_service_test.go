@@ -207,3 +207,14 @@ func (suite *ProductLineSvcTestSuite) TestGet_UnresolvableUnitGroupStillReturnsT
 	suite.Equal("shipping", result.ID)
 	suite.Nil(result.UnitGroup)
 }
+
+func TestDeleteProductLine_OnlyTheOwnerLearnsItWasDeleted(t *testing.T) {
+	t.Parallel()
+	assertOnlyTheOwnerLearnsItWasDeleted(t, constants.DeletedRecordResourceTypeProductLine, "pl_gone", func(h *deletedScopeHarness, accountID string) *apierror.APIError {
+		productLines := repositorymock.NewMockProductLineRepo(h.ctrl)
+		h.repos.EXPECT().NewProductLineRepo().Return(productLines).AnyTimes()
+		productLines.EXPECT().Get(gomock.Any(), domain.GetProductLineParams{AccountID: accountID, ProductLineID: "pl_gone"}).Return(nil, deletedScopeNotFound())
+		svc := NewProductLineSvc(&ProductLineSvcConfig{Repos: h.repos, MediatorFactory: h.mediators, JobSvcFactory: NewJobSvcFactory(), TxManager: &stubTxManager{factory: h.repos}})
+		return svc.DeleteProductLine(deletedScopeCtx(accountID), "pl_gone")
+	})
+}

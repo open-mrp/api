@@ -643,7 +643,7 @@ func (s *purchaseOrderSvcImpl) DeletePurchaseOrder(ctx context.Context, params d
 	order, apiErr := repo.Get(ctx, params.AccountID, params.PurchaseOrderID)
 	if apiErr != nil {
 		if apierror.IsNotFound(apiErr) {
-			wasDeleted, deletedCheckErr := s.repos.NewDeletedRecordRepo().Exists(ctx, constants.DeletedRecordResourceTypePurchaseOrder, params.PurchaseOrderID)
+			wasDeleted, deletedCheckErr := s.repos.NewDeletedRecordRepo().ExistsInAccount(ctx, constants.DeletedRecordResourceTypePurchaseOrder, params.PurchaseOrderID, params.AccountID)
 			if deletedCheckErr != nil {
 				return tracing.Trace(span, deletedCheckErr)
 			}
@@ -660,7 +660,7 @@ func (s *purchaseOrderSvcImpl) DeletePurchaseOrder(ctx context.Context, params d
 	return s.withTx(ctx, func(txCtx context.Context, txSvc *purchaseOrderSvcImpl) *apierror.APIError {
 		txRepo := txSvc.repos.NewPurchaseOrderRepo()
 
-		if apiErr := txSvc.repos.NewDeletedRecordRepo().Create(txCtx, constants.DeletedRecordResourceTypePurchaseOrder, order.ID, order); apiErr != nil {
+		if apiErr := txSvc.repos.NewDeletedRecordRepo().CreateInAccount(txCtx, constants.DeletedRecordResourceTypePurchaseOrder, order.ID, params.AccountID, order); apiErr != nil {
 			return apiErr
 		}
 
@@ -712,7 +712,7 @@ func (s *purchaseOrderSvcImpl) BulkDeletePurchaseOrders(ctx context.Context, par
 			if order.CompletedAt != nil {
 				return apierror.NewValidationError("Cannot delete a fulfilled purchase order: " + orderID)
 			}
-			if apiErr := txSvc.repos.NewDeletedRecordRepo().Create(txCtx, constants.DeletedRecordResourceTypePurchaseOrder, order.ID, order); apiErr != nil {
+			if apiErr := txSvc.repos.NewDeletedRecordRepo().CreateInAccount(txCtx, constants.DeletedRecordResourceTypePurchaseOrder, order.ID, params.AccountID, order); apiErr != nil {
 				return apiErr
 			}
 			if apiErr := txRepo.DeleteCascade(txCtx, params.AccountID, orderID); apiErr != nil {

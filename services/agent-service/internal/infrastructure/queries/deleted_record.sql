@@ -9,8 +9,10 @@ INSERT INTO deleted_record (
     sqlc.arg('data')
 );
 
--- name: CountDeletedRecordsByResourceAndResourceID :one
+-- name: CountDeletedRecordsInAccount :one
+-- Only a snapshot that records its owner under account_id can match.
 SELECT COUNT(*)
 FROM deleted_record
 WHERE resource_type = sqlc.arg('resource_type')
-AND resource_id = sqlc.arg('resource_id');
+AND resource_id = sqlc.arg('resource_id')
+AND data->>'account_id' = sqlc.arg('account_id')::text;

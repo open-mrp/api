@@ -143,8 +143,8 @@ func upsertUnitGroupInTx(txCtx context.Context, txRepos domain.RepoFactory, acco
 			continue
 		}
 
-		if apiErr := txRepos.NewDeletedRecordRepo().Create(ctx,
-			constants.DeletedRecordResourceTypeUnitGroupUnit, existingUnit.ID, existingUnit,
+		if apiErr := txRepos.NewDeletedRecordRepo().CreateInAccount(ctx,
+			constants.DeletedRecordResourceTypeUnitGroupUnit, existingUnit.ID, accountID, existingUnit,
 		); apiErr != nil {
 			return nil, tracing.Trace(span, apiErr)
 		}

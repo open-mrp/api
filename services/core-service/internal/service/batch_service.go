@@ -259,7 +259,7 @@ func (s *batchSvcImpl) DeleteBatch(ctx context.Context, batchID string) (*domain
 	// Find the batch to get production run ID for post-delete handling.
 	batch, apiErr := batchRepo.Find(ctx, accountID, batchID)
 	if apiErr != nil {
-		return nil, tracing.Trace(span, s.missingBatchError(ctx, batchID, apiErr))
+		return nil, tracing.Trace(span, s.missingBatchError(ctx, accountID, batchID, apiErr))
 	}
 
 	result, apiErr := s.undoBatch(ctx, identity, accountID, batch)
@@ -365,11 +365,11 @@ func (s *batchSvcImpl) orderForUndo(ctx context.Context, batches []*domain.Batch
 }
 
 // missingBatchError answers for a batch that could not be found: one that was deleted says so.
-func (s *batchSvcImpl) missingBatchError(ctx context.Context, batchID string, findErr *apierror.APIError) *apierror.APIError {
+func (s *batchSvcImpl) missingBatchError(ctx context.Context, accountID, batchID string, findErr *apierror.APIError) *apierror.APIError {
 	if !apierror.IsNotFound(findErr) {
 		return findErr
 	}
-	wasDeleted, apiErr := s.repos.NewDeletedRecordRepo().Exists(ctx, constants.DeletedRecordResourceTypeBatch, batchID)
+	wasDeleted, apiErr := s.repos.NewDeletedRecordRepo().ExistsInAccount(ctx, constants.DeletedRecordResourceTypeBatch, batchID, accountID)
 	if apiErr != nil {
 		return apiErr
 	}
@@ -396,7 +396,7 @@ func (s *batchSvcImpl) holdForUndo(ctx context.Context, accountID string, batch 
 		if findErr == nil {
 			return apierror.NewInvariantViolationError("A batch row reported missing was found.")
 		}
-		return s.missingBatchError(ctx, batch.ID, findErr)
+		return s.missingBatchError(ctx, accountID, batch.ID, findErr)
 	}
 	if !sameInstant(now.scannedAt, batch.ScannedAt) {
 		return apierror.NewResourceConflictError("This batch changed while it was being undone. Refresh and try again.")
@@ -495,7 +495,7 @@ func (s *batchSvcImpl) undoBatch(ctx context.Context, identity *types.Identity, 
 				return apiErr
 			}
 		} else {
-			if apiErr := txSvc.repos.NewDeletedRecordRepo().Create(txCtx, constants.DeletedRecordResourceTypeBatch, batch.ID, batch); apiErr != nil {
+			if apiErr := txSvc.repos.NewDeletedRecordRepo().CreateInAccount(txCtx, constants.DeletedRecordResourceTypeBatch, batch.ID, accountID, batch); apiErr != nil {
 				return apiErr
 			}
 
@@ -611,7 +611,7 @@ func (s *batchSvcImpl) deleteBatchRow(ctx context.Context, identity *types.Ident
 			return apiErr
 		}
 
-		if apiErr := txSvc.repos.NewDeletedRecordRepo().Create(txCtx, constants.DeletedRecordResourceTypeBatch, batch.ID, batch); apiErr != nil {
+		if apiErr := txSvc.repos.NewDeletedRecordRepo().CreateInAccount(txCtx, constants.DeletedRecordResourceTypeBatch, batch.ID, accountID, batch); apiErr != nil {
 			return apiErr
 		}
 

@@ -222,7 +222,7 @@ func (s *BatchUndoTestSuite) TestDeletesAPlannedBatchWithoutQueueingAnUndo() {
 	s.expectHeld(batch)
 	s.batchRepo.EXPECT().CountDownstreamBatches(gomock.Any(), batch.ID).Return(int64(0), nil)
 	s.inventoryMutRepo.EXPECT().CountAllocatedReceiptsForBatch(gomock.Any(), undoAccountID, batch.ID).Return(int64(0), nil)
-	s.deletedRecordRepo.EXPECT().Create(gomock.Any(), gomock.Any(), batch.ID, gomock.Any()).Return(nil)
+	s.deletedRecordRepo.EXPECT().CreateInAccount(gomock.Any(), gomock.Any(), batch.ID, undoAccountID, gomock.Any()).Return(nil)
 	s.batchRepo.EXPECT().Delete(gomock.Any(), undoAccountID, batch.ID).Return(&domain.BaseBatch{ID: batch.ID}, nil)
 	s.runActivity.EXPECT().NotifyBatchDeleted(gomock.Any(), gomock.Any(), undoAccountID, batch).Return(nil)
 	s.runRepo.EXPECT().CloseIfAllBatchesScannedOrDeleted(gomock.Any(), undoAccountID, undoRunID).Return(nil)
@@ -272,7 +272,7 @@ func (s *BatchUndoTestSuite) TestDeletesABatchAScanCreatedAndReleasesItsInputs()
 	s.batchRepo.EXPECT().CountDownstreamBatches(gomock.Any(), batch.ID).Return(int64(0), nil)
 	s.inventoryMutRepo.EXPECT().CountAllocatedReceiptsForBatch(gomock.Any(), undoAccountID, batch.ID).Return(int64(0), nil)
 
-	s.deletedRecordRepo.EXPECT().Create(gomock.Any(), gomock.Any(), batch.ID, gomock.Any()).Return(nil)
+	s.deletedRecordRepo.EXPECT().CreateInAccount(gomock.Any(), gomock.Any(), batch.ID, undoAccountID, gomock.Any()).Return(nil)
 	s.batchRepo.EXPECT().Delete(gomock.Any(), undoAccountID, batch.ID).Return(&domain.BaseBatch{ID: batch.ID}, nil)
 	s.runActivity.EXPECT().NotifyBatchDeleted(gomock.Any(), gomock.Any(), undoAccountID, batch).Return(nil)
 
@@ -310,7 +310,7 @@ func (s *BatchUndoTestSuite) TestCarriesTheScrapSnapshotWhenTheRunIsBuildingForA
 			Quantity:     domain.BatchQuantity{Measure: decimal.NewFromInt(1), Unit: domain.LightUnit{ID: "each"}},
 		},
 	}, nil)
-	s.deletedRecordRepo.EXPECT().Create(gomock.Any(), gomock.Any(), batch.ID, gomock.Any()).Return(nil)
+	s.deletedRecordRepo.EXPECT().CreateInAccount(gomock.Any(), gomock.Any(), batch.ID, undoAccountID, gomock.Any()).Return(nil)
 	s.batchRepo.EXPECT().Delete(gomock.Any(), undoAccountID, batch.ID).Return(&domain.BaseBatch{ID: batch.ID}, nil)
 	s.runActivity.EXPECT().NotifyBatchDeleted(gomock.Any(), gomock.Any(), undoAccountID, batch).Return(nil)
 
@@ -344,7 +344,7 @@ func (s *BatchUndoTestSuite) TestBulkDeleteUndoesAChainFromItsDownstreamEnd() {
 		Return(&domain.LineageShortfall{Seconds: decimal.Zero, Waste: decimal.Zero}, nil).Times(2)
 	s.stepRepo.EXPECT().FindProducedUnit(gomock.Any(), undoAccountID, undoStepID).Return(&domain.LightUnit{ID: "each"}, nil).AnyTimes()
 	s.batchRepo.EXPECT().ReopenIfNotFullyUsed(gomock.Any(), undoAccountID, gomock.Any(), gomock.Any(), undoStepID).Return(nil).AnyTimes()
-	s.deletedRecordRepo.EXPECT().Create(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil).Times(2)
+	s.deletedRecordRepo.EXPECT().CreateInAccount(gomock.Any(), gomock.Any(), gomock.Any(), undoAccountID, gomock.Any()).Return(nil).Times(2)
 	s.batchRepo.EXPECT().Delete(gomock.Any(), undoAccountID, gomock.Any()).
 		DoAndReturn(func(_ context.Context, _ string, batchID string) (*domain.BaseBatch, *apierror.APIError) {
 			undone = append(undone, batchID)
@@ -367,7 +367,7 @@ func (s *BatchUndoTestSuite) TestAnUndoThatWaitedForAnotherFindsTheBatchDeleted(
 	s.expectScanUndoPlanned(batch)
 	s.batchRepo.EXPECT().LockScan(gomock.Any(), undoAccountID, batch.ID).Return(nil, false, nil)
 	s.batchRepo.EXPECT().Find(gomock.Any(), undoAccountID, batch.ID).Return(nil, apierror.NewResourceNotFoundError("Batch not found."))
-	s.deletedRecordRepo.EXPECT().Exists(gomock.Any(), constants.DeletedRecordResourceTypeBatch, batch.ID).Return(true, nil)
+	s.deletedRecordRepo.EXPECT().ExistsInAccount(gomock.Any(), constants.DeletedRecordResourceTypeBatch, batch.ID, undoAccountID).Return(true, nil)
 
 	_, apiErr := s.svc.DeleteBatch(undoIdentityCtx(), batch.ID)
 

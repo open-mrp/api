@@ -320,7 +320,7 @@ func (s *sandboxSvcImpl) DeleteSandbox(ctx context.Context, sandboxTypeID string
 	sandbox, apiErr := s.repos.NewSandboxAccountRepo().FindByTypeID(ctx, sandboxTypeID, nil)
 	if apiErr != nil {
 		if apierror.IsNotFound(apiErr) {
-			wasDeleted, deletedCheckErr := s.repos.NewDeletedRecordRepo().Exists(ctx, constants.DeletedRecordResourceTypeSandbox, sandboxTypeID)
+			wasDeleted, deletedCheckErr := s.repos.NewDeletedRecordRepo().ExistsInAccount(ctx, constants.DeletedRecordResourceTypeSandbox, sandboxTypeID, ownerAccountID)
 			if deletedCheckErr != nil {
 				return tracing.Trace(span, deletedCheckErr)
 			}
@@ -338,7 +338,7 @@ func (s *sandboxSvcImpl) DeleteSandbox(ctx context.Context, sandboxTypeID string
 	apiErr = s.withTx(ctx, func(txCtx context.Context, txSvc *sandboxSvcImpl) *apierror.APIError {
 		txMeds := txSvc.mediators()
 
-		if apiErr := txSvc.repos.NewDeletedRecordRepo().Create(txCtx, constants.DeletedRecordResourceTypeSandbox, sandbox.TypeID, sandbox); apiErr != nil {
+		if apiErr := txSvc.repos.NewDeletedRecordRepo().CreateInAccount(txCtx, constants.DeletedRecordResourceTypeSandbox, sandbox.TypeID, ownerAccountID, sandbox); apiErr != nil {
 			return apiErr
 		}
 

@@ -536,7 +536,7 @@ func (suite *UnitSvcTestSuite) TestDeleteUnit_Success() {
 		Return(false, nil).
 		Times(1)
 	suite.deletedRecordRepo.EXPECT().
-		Create(gomock.Any(), constants.DeletedRecordResourceTypeUnit, "un_abc123", gomock.Any()).
+		CreateInAccount(gomock.Any(), constants.DeletedRecordResourceTypeUnit, "un_abc123", "ac_test123", gomock.Any()).
 		Return(nil).
 		Times(1)
 	suite.unitRepo.EXPECT().
@@ -616,7 +616,7 @@ func (suite *UnitSvcTestSuite) TestDeleteUnit_NotFound() {
 		Times(1)
 
 	suite.deletedRecordRepo.EXPECT().
-		Exists(gomock.Any(), constants.DeletedRecordResourceTypeUnit, "un_nonexistent").
+		ExistsInAccount(gomock.Any(), constants.DeletedRecordResourceTypeUnit, "un_nonexistent", "ac_test123").
 		Return(false, nil).
 		Times(1)
 

@@ -506,7 +506,7 @@ func (s *shippingTermSvcImpl) DeleteShippingTerm(ctx context.Context, shippingTe
 	})
 	if apiErr != nil {
 		if apierror.IsNotFound(apiErr) {
-			wasDeleted, deletedCheckErr := s.repos.NewDeletedRecordRepo().Exists(ctx, constants.DeletedRecordResourceTypeShippingTerm, shippingTermID)
+			wasDeleted, deletedCheckErr := s.repos.NewDeletedRecordRepo().ExistsInAccount(ctx, constants.DeletedRecordResourceTypeShippingTerm, shippingTermID, accountID)
 			if deletedCheckErr != nil {
 				return tracing.Trace(span, deletedCheckErr)
 			}
@@ -523,7 +523,7 @@ func (s *shippingTermSvcImpl) DeleteShippingTerm(ctx context.Context, shippingTe
 	apiErr = s.withTx(ctx, func(txCtx context.Context, txSvc *shippingTermSvcImpl) *apierror.APIError {
 		txRepo := txSvc.repos.NewShippingTermRepo()
 
-		if apiErr := txSvc.repos.NewDeletedRecordRepo().Create(txCtx, constants.DeletedRecordResourceTypeShippingTerm, shippingTerm.ID, shippingTerm); apiErr != nil {
+		if apiErr := txSvc.repos.NewDeletedRecordRepo().CreateInAccount(txCtx, constants.DeletedRecordResourceTypeShippingTerm, shippingTerm.ID, accountID, shippingTerm); apiErr != nil {
 			return apiErr
 		}
 

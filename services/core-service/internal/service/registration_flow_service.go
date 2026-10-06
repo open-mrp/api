@@ -302,7 +302,7 @@ func (s *registrationFlowSvcImpl) DeleteRegistrationFlow(ctx context.Context, re
 	registrationFlow, apiErr := s.repos.NewRegistrationFlowRepo().Get(ctx, accountID, registrationFlowID)
 	if apiErr != nil {
 		if apierror.IsNotFound(apiErr) {
-			wasDeleted, deletedCheckErr := s.repos.NewDeletedRecordRepo().Exists(ctx, constants.DeletedRecordResourceTypeRegistrationFlow, registrationFlowID)
+			wasDeleted, deletedCheckErr := s.repos.NewDeletedRecordRepo().ExistsInAccount(ctx, constants.DeletedRecordResourceTypeRegistrationFlow, registrationFlowID, accountID)
 			if deletedCheckErr != nil {
 				return tracing.Trace(span, deletedCheckErr)
 			}
@@ -314,7 +314,7 @@ func (s *registrationFlowSvcImpl) DeleteRegistrationFlow(ctx context.Context, re
 	}
 
 	apiErr = s.withTx(ctx, func(txCtx context.Context, txSvc *registrationFlowSvcImpl) *apierror.APIError {
-		if apiErr := txSvc.repos.NewDeletedRecordRepo().Create(txCtx, constants.DeletedRecordResourceTypeRegistrationFlow, registrationFlow.ID, registrationFlow); apiErr != nil {
+		if apiErr := txSvc.repos.NewDeletedRecordRepo().CreateInAccount(txCtx, constants.DeletedRecordResourceTypeRegistrationFlow, registrationFlow.ID, accountID, registrationFlow); apiErr != nil {
 			return apiErr
 		}
 

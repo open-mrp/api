@@ -631,7 +631,7 @@ func (s *materialSvcImpl) DeleteMaterial(ctx context.Context, materialID string)
 	material, apiErr := s.repos.NewMaterialRepo().GetByID(ctx, domain.GetMaterialParams{AccountID: accountID, MaterialID: materialID})
 	if apiErr != nil {
 		if apierror.IsNotFound(apiErr) {
-			wasDeleted, deletedCheckErr := s.repos.NewDeletedRecordRepo().Exists(ctx, constants.DeletedRecordResourceTypeMaterial, materialID)
+			wasDeleted, deletedCheckErr := s.repos.NewDeletedRecordRepo().ExistsInAccount(ctx, constants.DeletedRecordResourceTypeMaterial, materialID, accountID)
 			if deletedCheckErr != nil {
 				return nil, tracing.Trace(span, deletedCheckErr)
 			}
@@ -647,7 +647,7 @@ func (s *materialSvcImpl) DeleteMaterial(ctx context.Context, materialID string)
 
 	// Soft-delete within a transaction.
 	apiErr = s.withTx(ctx, func(txCtx context.Context, txSvc *materialSvcImpl) *apierror.APIError {
-		if apiErr := txSvc.repos.NewDeletedRecordRepo().Create(txCtx, constants.DeletedRecordResourceTypeMaterial, material.ID, material); apiErr != nil {
+		if apiErr := txSvc.repos.NewDeletedRecordRepo().CreateInAccount(txCtx, constants.DeletedRecordResourceTypeMaterial, material.ID, accountID, material); apiErr != nil {
 			return apiErr
 		}
 

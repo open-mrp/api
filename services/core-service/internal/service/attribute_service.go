@@ -423,7 +423,7 @@ func (s *attributeSvcImpl) DeleteAttribute(ctx context.Context, params domain.De
 	attribute, apiErr := s.repos.NewAttributeRepo().Get(ctx, domain.GetAttributeParams(params))
 	if apiErr != nil {
 		if apierror.IsNotFound(apiErr) {
-			wasDeleted, deletedCheckErr := s.repos.NewDeletedRecordRepo().Exists(ctx, constants.DeletedRecordResourceTypeAttribute, params.AttributeID)
+			wasDeleted, deletedCheckErr := s.repos.NewDeletedRecordRepo().ExistsInAccount(ctx, constants.DeletedRecordResourceTypeAttribute, params.AttributeID, params.AccountID)
 			if deletedCheckErr != nil {
 				return tracing.Trace(span, deletedCheckErr)
 			}
@@ -435,7 +435,7 @@ func (s *attributeSvcImpl) DeleteAttribute(ctx context.Context, params domain.De
 	}
 
 	apiErr = s.withTx(ctx, func(txCtx context.Context, txSvc *attributeSvcImpl) *apierror.APIError {
-		if apiErr := txSvc.repos.NewDeletedRecordRepo().Create(txCtx, constants.DeletedRecordResourceTypeAttribute, attribute.ID, attribute); apiErr != nil {
+		if apiErr := txSvc.repos.NewDeletedRecordRepo().CreateInAccount(txCtx, constants.DeletedRecordResourceTypeAttribute, attribute.ID, params.AccountID, attribute); apiErr != nil {
 			return apiErr
 		}
 

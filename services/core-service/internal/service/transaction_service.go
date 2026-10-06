@@ -385,7 +385,7 @@ func (s *transactionSvcImpl) DeleteTransaction(ctx context.Context, params domai
 	transaction, apiErr := repo.Get(ctx, params.AccountID, params.TransactionID)
 	if apiErr != nil {
 		if apierror.IsNotFound(apiErr) {
-			wasDeleted, deletedCheckErr := s.repos.NewDeletedRecordRepo().Exists(ctx, constants.DeletedRecordResourceTypeTransaction, params.TransactionID)
+			wasDeleted, deletedCheckErr := s.repos.NewDeletedRecordRepo().ExistsInAccount(ctx, constants.DeletedRecordResourceTypeTransaction, params.TransactionID, params.AccountID)
 			if deletedCheckErr != nil {
 				return nil, tracing.Trace(span, deletedCheckErr)
 			}
@@ -399,7 +399,7 @@ func (s *transactionSvcImpl) DeleteTransaction(ctx context.Context, params domai
 	apiErr = s.withTx(ctx, func(txCtx context.Context, txSvc *transactionSvcImpl) *apierror.APIError {
 		txRepo := txSvc.repos.NewTransactionRepo()
 
-		if apiErr := txSvc.repos.NewDeletedRecordRepo().Create(txCtx, constants.DeletedRecordResourceTypeTransaction, transaction.ID, transaction); apiErr != nil {
+		if apiErr := txSvc.repos.NewDeletedRecordRepo().CreateInAccount(txCtx, constants.DeletedRecordResourceTypeTransaction, transaction.ID, params.AccountID, transaction); apiErr != nil {
 			return apiErr
 		}
 

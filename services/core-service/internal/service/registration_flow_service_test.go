@@ -144,3 +144,14 @@ func TestUpdateRegistrationFlow_OffersOnlyTheAccountsTerms(t *testing.T) {
 	assert.Equal(t, apierror.ErrorCodeResourceNotFound, apiErr.Code)
 	assert.Equal(t, "payment_term_ids", apiErr.Param)
 }
+
+func TestDeleteRegistrationFlow_OnlyTheOwnerLearnsItWasDeleted(t *testing.T) {
+	t.Parallel()
+	assertOnlyTheOwnerLearnsItWasDeleted(t, constants.DeletedRecordResourceTypeRegistrationFlow, "rf_gone", func(h *deletedScopeHarness, accountID string) *apierror.APIError {
+		flows := repositorymock.NewMockRegistrationFlowRepo(h.ctrl)
+		h.repos.EXPECT().NewRegistrationFlowRepo().Return(flows).AnyTimes()
+		flows.EXPECT().Get(gomock.Any(), accountID, "rf_gone").Return(nil, deletedScopeNotFound())
+		svc := NewRegistrationFlowSvc(&RegistrationFlowSvcConfig{Repos: h.repos, MediatorFactory: h.mediators, TxManager: &stubTxManager{factory: h.repos}})
+		return svc.DeleteRegistrationFlow(deletedScopeCtx(accountID), "rf_gone")
+	})
+}

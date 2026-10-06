@@ -414,7 +414,7 @@ func (s *accountPriceSvcImpl) DeleteAccountPrice(ctx context.Context, accountPri
 	accountPrice, apiErr := s.repos.NewAccountPriceRepo().Get(ctx, accountID, accountPriceID)
 	if apiErr != nil {
 		if apierror.IsNotFound(apiErr) {
-			wasDeleted, deletedCheckErr := s.repos.NewDeletedRecordRepo().Exists(ctx, constants.DeletedRecordResourceTypeAccountPrice, accountPriceID)
+			wasDeleted, deletedCheckErr := s.repos.NewDeletedRecordRepo().ExistsInAccount(ctx, constants.DeletedRecordResourceTypeAccountPrice, accountPriceID, accountID)
 			if deletedCheckErr != nil {
 				return tracing.Trace(span, deletedCheckErr)
 			}
@@ -429,7 +429,7 @@ func (s *accountPriceSvcImpl) DeleteAccountPrice(ctx context.Context, accountPri
 	}
 
 	apiErr = s.withTx(ctx, func(txCtx context.Context, txSvc *accountPriceSvcImpl) *apierror.APIError {
-		if apiErr := txSvc.repos.NewDeletedRecordRepo().Create(txCtx, constants.DeletedRecordResourceTypeAccountPrice, accountPrice.ID, accountPrice); apiErr != nil {
+		if apiErr := txSvc.repos.NewDeletedRecordRepo().CreateInAccount(txCtx, constants.DeletedRecordResourceTypeAccountPrice, accountPrice.ID, accountID, accountPrice); apiErr != nil {
 			return apiErr
 		}
 

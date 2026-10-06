@@ -687,7 +687,7 @@ func (s *productSvcImpl) DeleteProduct(ctx context.Context, params domain.Delete
 	product, apiErr := s.repos.NewProductRepo().Get(ctx, domain.GetProductFullParams{AccountID: params.AccountID, ProductID: params.ProductID})
 	if apiErr != nil {
 		if apierror.IsNotFound(apiErr) {
-			wasDeleted, deletedCheckErr := s.repos.NewDeletedRecordRepo().Exists(ctx, constants.DeletedRecordResourceTypeProduct, params.ProductID)
+			wasDeleted, deletedCheckErr := s.repos.NewDeletedRecordRepo().ExistsInAccount(ctx, constants.DeletedRecordResourceTypeProduct, params.ProductID, params.AccountID)
 			if deletedCheckErr != nil {
 				return nil, tracing.Trace(span, deletedCheckErr)
 			}
@@ -700,7 +700,7 @@ func (s *productSvcImpl) DeleteProduct(ctx context.Context, params domain.Delete
 
 	// Soft-delete within a transaction.
 	apiErr = s.withTx(ctx, func(txCtx context.Context, txSvc *productSvcImpl) *apierror.APIError {
-		if apiErr := txSvc.repos.NewDeletedRecordRepo().Create(txCtx, constants.DeletedRecordResourceTypeProduct, params.ProductID, product); apiErr != nil {
+		if apiErr := txSvc.repos.NewDeletedRecordRepo().CreateInAccount(txCtx, constants.DeletedRecordResourceTypeProduct, params.ProductID, params.AccountID, product); apiErr != nil {
 			return apiErr
 		}
 

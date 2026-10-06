@@ -360,7 +360,8 @@ type AccountGroupProductLineAccessRepo interface {
 	Create(ctx context.Context, params CreateAccountGroupProductLineAccessParams) (*AccountGroupProductLineAccess, *apierror.APIError)
 	Update(ctx context.Context, params UpdateAccountGroupProductLineAccessParams) (*AccountGroupProductLineAccess, *apierror.APIError)
 	Delete(ctx context.Context, accountID, accountGroupID string) *apierror.APIError
-	ExistsByAccountGroupID(ctx context.Context, accountGroupID string) (bool, *apierror.APIError)
+	// ExistsByAccountGroupID reports whether the account's own group has product line access; another account's group never does.
+	ExistsByAccountGroupID(ctx context.Context, accountID, accountGroupID string) (bool, *apierror.APIError)
 }
 
 type CustomerProductLineAccessRepo interface {

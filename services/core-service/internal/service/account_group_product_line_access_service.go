@@ -195,7 +195,7 @@ func (s *accountGroupProductLineAccessSvcImpl) CreateAccountGroupProductLineAcce
 		apiErr = s.withTx(ctx, func(txCtx context.Context, txSvc *accountGroupProductLineAccessSvcImpl) *apierror.APIError {
 			txRepo := txSvc.repos.NewAccountGroupProductLineAccessRepo()
 
-			exists, apiErr := txRepo.ExistsByAccountGroupID(txCtx, params.AccountGroupID)
+			exists, apiErr := txRepo.ExistsByAccountGroupID(txCtx, params.AccountID, params.AccountGroupID)
 			if apiErr != nil {
 				return apiErr
 			}

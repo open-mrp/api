@@ -110,7 +110,7 @@ func (suite *ProductLineAccessSvcTestSuite) TestACustomerEditNamingALineTwiceGra
 }
 
 func (suite *ProductLineAccessSvcTestSuite) TestAGroupGrantNamingALineTwiceGrantsItOnce() {
-	suite.groupRepo.EXPECT().ExistsByAccountGroupID(gomock.Any(), "ag_retail").Return(false, nil)
+	suite.groupRepo.EXPECT().ExistsByAccountGroupID(gomock.Any(), productLineAccessTestAccount, "ag_retail").Return(false, nil)
 	suite.groupRepo.EXPECT().Create(gomock.Any(), domain.CreateAccountGroupProductLineAccessParams{
 		AccountID: productLineAccessTestAccount, AccountGroupID: "ag_retail", ProductLineIDs: []string{"pl_a"},
 	}).Return(&domain.AccountGroupProductLineAccess{AccountGroupID: "ag_retail"}, nil)

@@ -3830,18 +3830,18 @@ func (mr *MockAccountGroupProductLineAccessRepoMockRecorder) Delete(ctx, account
 }
 
 // ExistsByAccountGroupID mocks base method.
-func (m *MockAccountGroupProductLineAccessRepo) ExistsByAccountGroupID(ctx context.Context, accountGroupID string) (bool, *apierror.APIError) {
+func (m *MockAccountGroupProductLineAccessRepo) ExistsByAccountGroupID(ctx context.Context, accountID, accountGroupID string) (bool, *apierror.APIError) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "ExistsByAccountGroupID", ctx, accountGroupID)
+	ret := m.ctrl.Call(m, "ExistsByAccountGroupID", ctx, accountID, accountGroupID)
 	ret0, _ := ret[0].(bool)
 	ret1, _ := ret[1].(*apierror.APIError)
 	return ret0, ret1
 }
 
 // ExistsByAccountGroupID indicates an expected call of ExistsByAccountGroupID.
-func (mr *MockAccountGroupProductLineAccessRepoMockRecorder) ExistsByAccountGroupID(ctx, accountGroupID any) *gomock.Call {
+func (mr *MockAccountGroupProductLineAccessRepoMockRecorder) ExistsByAccountGroupID(ctx, accountID, accountGroupID any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ExistsByAccountGroupID", reflect.TypeOf((*MockAccountGroupProductLineAccessRepo)(nil).ExistsByAccountGroupID), ctx, accountGroupID)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ExistsByAccountGroupID", reflect.TypeOf((*MockAccountGroupProductLineAccessRepo)(nil).ExistsByAccountGroupID), ctx, accountID, accountGroupID)
 }
 
 // Get mocks base method.

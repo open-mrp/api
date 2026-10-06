@@ -347,9 +347,20 @@ func (r *accountGroupProductLineAccessRepoImpl) Delete(ctx context.Context, acco
 	return nil
 }
 
-func (r *accountGroupProductLineAccessRepoImpl) ExistsByAccountGroupID(ctx context.Context, accountGroupID string) (bool, *apierror.APIError) {
+func (r *accountGroupProductLineAccessRepoImpl) ExistsByAccountGroupID(ctx context.Context, accountID, accountGroupID string) (bool, *apierror.APIError) {
 	ctx, span := accountGroupProductLineAccessRepoTracer.Start(ctx, "repository.account_group_product_line_access.exists_by_account_group_id")
 	defer span.End()
+
+	_, err := r.queries.GetAccountGroupByIDAndAccount(ctx, sqlc.GetAccountGroupByIDAndAccountParams{
+		ID:             accountGroupID,
+		OwnerAccountID: accountID,
+	})
+	if apiErr := db.MapSQLError(err); apiErr != nil {
+		if apierror.IsNotFound(apiErr) {
+			return false, nil
+		}
+		return false, tracing.Trace(span, apiErr)
+	}
 
 	count, err := r.queries.CountAccountGroupProductLinesByAccountGroupID(ctx, accountGroupID)
 	if apiErr := db.MapSQLError(err); apiErr != nil {

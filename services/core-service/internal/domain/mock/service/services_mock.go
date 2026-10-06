@@ -2917,18 +2917,19 @@ func (mr *MockItemSvcMockRecorder) AddItemAttribute(ctx, itemID, attributeID, in
 }
 
 // BatchGetItemsByIDs mocks base method.
-func (m *MockItemSvc) BatchGetItemsByIDs(ctx context.Context, ids []string) ([]*domain.Item, *apierror.APIError) {
+func (m *MockItemSvc) BatchGetItemsByIDs(ctx context.Context, ids []string, embeds domain.ItemEmbeds) ([]*domain.Item, *domain.ItemEmbedded, *apierror.APIError) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "BatchGetItemsByIDs", ctx, ids)
+	ret := m.ctrl.Call(m, "BatchGetItemsByIDs", ctx, ids, embeds)
 	ret0, _ := ret[0].([]*domain.Item)
-	ret1, _ := ret[1].(*apierror.APIError)
-	return ret0, ret1
+	ret1, _ := ret[1].(*domain.ItemEmbedded)
+	ret2, _ := ret[2].(*apierror.APIError)
+	return ret0, ret1, ret2
 }
 
 // BatchGetItemsByIDs indicates an expected call of BatchGetItemsByIDs.
-func (mr *MockItemSvcMockRecorder) BatchGetItemsByIDs(ctx, ids any) *gomock.Call {
+func (mr *MockItemSvcMockRecorder) BatchGetItemsByIDs(ctx, ids, embeds any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "BatchGetItemsByIDs", reflect.TypeOf((*MockItemSvc)(nil).BatchGetItemsByIDs), ctx, ids)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "BatchGetItemsByIDs", reflect.TypeOf((*MockItemSvc)(nil).BatchGetItemsByIDs), ctx, ids, embeds)
 }
 
 // BulkCreateItems mocks base method.
@@ -3007,18 +3008,19 @@ func (mr *MockItemSvcMockRecorder) ExportItems(ctx any) *gomock.Call {
 }
 
 // GetItem mocks base method.
-func (m *MockItemSvc) GetItem(ctx context.Context, itemID string, includes []string) (*domain.Item, *apierror.APIError) {
+func (m *MockItemSvc) GetItem(ctx context.Context, itemID string, includes []string, embeds domain.ItemEmbeds) (*domain.Item, *domain.ItemEmbedded, *apierror.APIError) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetItem", ctx, itemID, includes)
+	ret := m.ctrl.Call(m, "GetItem", ctx, itemID, includes, embeds)
 	ret0, _ := ret[0].(*domain.Item)
-	ret1, _ := ret[1].(*apierror.APIError)
-	return ret0, ret1
+	ret1, _ := ret[1].(*domain.ItemEmbedded)
+	ret2, _ := ret[2].(*apierror.APIError)
+	return ret0, ret1, ret2
 }
 
 // GetItem indicates an expected call of GetItem.
-func (mr *MockItemSvcMockRecorder) GetItem(ctx, itemID, includes any) *gomock.Call {
+func (mr *MockItemSvcMockRecorder) GetItem(ctx, itemID, includes, embeds any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetItem", reflect.TypeOf((*MockItemSvc)(nil).GetItem), ctx, itemID, includes)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetItem", reflect.TypeOf((*MockItemSvc)(nil).GetItem), ctx, itemID, includes, embeds)
 }
 
 // GetItemCosts mocks base method.

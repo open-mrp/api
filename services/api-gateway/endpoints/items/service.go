@@ -116,9 +116,12 @@ func (m *itemSvcImpl) ListItems(ctx context.Context, req *ListItemsRequest) (*ap
 
 // GetItem reads through core GetItem, which admits only the seller's own users; the include loader's BatchGetItemsByIDs also admits portal actors resolving items on their documents.
 func (m *itemSvcImpl) GetItem(ctx context.Context, req *RetrieveItemRequest) (*apiresource.Item, *apierror.APIError) {
+	withCategories, withAttributeProperties := resourceloaders.ItemEmbedsRequested(ctx)
 	pbReq := &pb.GetItemRequest{
-		Id:       req.ItemID,
-		Includes: resourceloaders.ItemRecordIncludes,
+		Id:                      req.ItemID,
+		Includes:                resourceloaders.ItemRecordIncludes,
+		WithCategories:          withCategories,
+		WithAttributeProperties: withAttributeProperties,
 	}
 
 	resp, apiErr := grpcutil.CallRPC(ctx, itemSvcTracer, "service.items.get", domain.ServiceName,
@@ -129,10 +132,7 @@ func (m *itemSvcImpl) GetItem(ctx context.Context, req *RetrieveItemRequest) (*a
 		return nil, apiErr
 	}
 
-	loaded, apiErr := resourceloaders.ItemsFromProto(ctx, []*pb.ItemInfo{resp.Item})
-	if apiErr != nil {
-		return nil, apiErr
-	}
+	loaded := resourceloaders.ItemsFromProto(ctx, []*pb.ItemInfo{resp.Item}, resp.Categories, resp.AttributeProperties)
 	return loaded[resp.Item.Id].(*apiresource.Item), nil
 }
 

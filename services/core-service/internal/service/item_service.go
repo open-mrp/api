@@ -101,30 +101,76 @@ func NewItemSvc(config *ItemSvcConfig) domain.ItemSvc {
 	}
 }
 
-func (s *itemSvcImpl) BatchGetItemsByIDs(ctx context.Context, ids []string) ([]*domain.Item, *apierror.APIError) {
+func (s *itemSvcImpl) BatchGetItemsByIDs(ctx context.Context, ids []string, embeds domain.ItemEmbeds) ([]*domain.Item, *domain.ItemEmbedded, *apierror.APIError) {
 	ctx, span := itemSvcTracer.Start(ctx, "service.item.batch_get_by_ids")
 	defer span.End()
 
 	identity, ok := appctx.GetIdentityFromContext(ctx)
 	if !ok || identity == nil {
-		return nil, tracing.Trace(span, apierror.NewInvariantViolationError("Identity not found in context."))
+		return nil, nil, tracing.Trace(span, apierror.NewInvariantViolationError("Identity not found in context."))
 	}
 	meds := s.mediators()
 	if apiErr := authorizeCatalogBatchRead(ctx, identity, span, meds, func() *apierror.APIError {
 		return identity.CheckHasPermission(types.PermissionDomainItems, types.ActionRead)
 	}); apiErr != nil {
-		return nil, apiErr
+		return nil, nil, apiErr
 	}
 	if len(ids) == 0 {
-		return nil, nil
+		return nil, &domain.ItemEmbedded{}, nil
 	}
 
 	items, apiErr := s.repos.NewItemRepo().GetByIDs(ctx, identity.Target.AccountID, ids)
 	if apiErr != nil {
-		return nil, tracing.Trace(span, apiErr)
+		return nil, nil, tracing.Trace(span, apiErr)
+	}
+	embedded, apiErr := s.readItemEmbeds(ctx, identity.Target.AccountID, items, embeds)
+	if apiErr != nil {
+		return nil, nil, tracing.Trace(span, apiErr)
 	}
 
-	return items, nil
+	return items, embedded, nil
+}
+
+// readItemEmbeds reads the categories and attribute properties of items the caller was already allowed to read, scoped to the account.
+func (s *itemSvcImpl) readItemEmbeds(ctx context.Context, accountID string, items []*domain.Item, embeds domain.ItemEmbeds) (*domain.ItemEmbedded, *apierror.APIError) {
+	embedded := &domain.ItemEmbedded{}
+	if embeds.Categories {
+		var ids []string
+		seen := map[string]bool{}
+		for _, item := range items {
+			if item.ItemCategoryID != "" && !seen[item.ItemCategoryID] {
+				seen[item.ItemCategoryID] = true
+				ids = append(ids, item.ItemCategoryID)
+			}
+		}
+		if len(ids) > 0 {
+			categories, apiErr := readItemCategories(ctx, s.repos.NewItemCategoryRepo(), accountID, ids)
+			if apiErr != nil {
+				return nil, apiErr
+			}
+			embedded.Categories = categories
+		}
+	}
+	if embeds.AttributeProperties {
+		var ids []string
+		seen := map[string]bool{}
+		for _, item := range items {
+			for _, a := range item.Attributes {
+				if a.PropertyID != "" && !seen[a.PropertyID] {
+					seen[a.PropertyID] = true
+					ids = append(ids, a.PropertyID)
+				}
+			}
+		}
+		if len(ids) > 0 {
+			properties, apiErr := s.repos.NewPropertyRepo().GetByIDs(ctx, accountID, ids)
+			if apiErr != nil {
+				return nil, apiErr
+			}
+			embedded.AttributeProperties = properties
+		}
+	}
+	return embedded, nil
 }
 
 // ListItems returns a paginated list of items for the caller's account.
@@ -155,20 +201,20 @@ func (s *itemSvcImpl) ListItems(ctx context.Context, params domain.ListItemsPara
 }
 
 // GetItem returns a single item by ID within the caller's account.
-func (s *itemSvcImpl) GetItem(ctx context.Context, itemID string, includes []string) (*domain.Item, *apierror.APIError) {
+func (s *itemSvcImpl) GetItem(ctx context.Context, itemID string, includes []string, embeds domain.ItemEmbeds) (*domain.Item, *domain.ItemEmbedded, *apierror.APIError) {
 	ctx, span := itemSvcTracer.Start(ctx, "service.item.get")
 	defer span.End()
 
 	identity, ok := appctx.GetIdentityFromContext(ctx)
 	if !ok || identity == nil {
-		return nil, tracing.Trace(span, apierror.NewInvariantViolationError("Identity not found in context."))
+		return nil, nil, tracing.Trace(span, apierror.NewInvariantViolationError("Identity not found in context."))
 	}
 
 	if apiErr := identity.CheckIsInternalActor(); apiErr != nil {
-		return nil, tracing.Trace(span, apiErr)
+		return nil, nil, tracing.Trace(span, apiErr)
 	}
 	if apiErr := identity.CheckHasPermission(types.PermissionDomainItems, types.ActionRead); apiErr != nil {
-		return nil, tracing.Trace(span, apiErr)
+		return nil, nil, tracing.Trace(span, apiErr)
 	}
 
 	item, apiErr := s.repos.NewItemRepo().Get(ctx, domain.GetItemParams{
@@ -177,12 +223,16 @@ func (s *itemSvcImpl) GetItem(ctx context.Context, itemID string, includes []str
 		Includes:  includes,
 	})
 	if apierror.IsNotFound(apiErr) {
-		return nil, tracing.Trace(span, apierror.NewResourceNotFoundError("Item not found."))
+		return nil, nil, tracing.Trace(span, apierror.NewResourceNotFoundError("Item not found."))
 	}
 	if apiErr != nil {
-		return nil, tracing.Trace(span, apiErr)
+		return nil, nil, tracing.Trace(span, apiErr)
 	}
-	return item, nil
+	embedded, apiErr := s.readItemEmbeds(ctx, identity.Target.AccountID, []*domain.Item{item}, embeds)
+	if apiErr != nil {
+		return nil, nil, tracing.Trace(span, apiErr)
+	}
+	return item, embedded, nil
 }
 
 // GetItemInventory returns inventory quantities for an item.

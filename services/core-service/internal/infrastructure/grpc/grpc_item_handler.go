@@ -238,14 +238,35 @@ func (h *gRPCHandler) GetItem(ctx context.Context, req *pb.GetItemRequest) (*pb.
 		return nil, contracts.NewMissingGRPCRequestDataError()
 	}
 
-	item, apiErr := h.itemSvc.GetItem(ctx, req.Id, req.Includes)
+	item, embedded, apiErr := h.itemSvc.GetItem(ctx, req.Id, req.Includes, domain.ItemEmbeds{
+		Categories:          req.WithCategories,
+		AttributeProperties: req.WithAttributeProperties,
+	})
 	if apiErr != nil {
 		return nil, contracts.ConvertAPIErrorToGRPC(apiErr)
 	}
 
+	categories, properties := itemEmbeddedToProto(embedded)
 	return &pb.GetItemResponse{
-		Item: itemToProto(item),
+		Item:                itemToProto(item),
+		Categories:          categories,
+		AttributeProperties: properties,
 	}, nil
+}
+
+func itemEmbeddedToProto(e *domain.ItemEmbedded) ([]*pb.ItemCategoryInfo, []*pb.PropertyInfo) {
+	if e == nil {
+		return nil, nil
+	}
+	categories := make([]*pb.ItemCategoryInfo, len(e.Categories))
+	for i, c := range e.Categories {
+		categories[i] = itemCategoryFullToProto(c)
+	}
+	properties := make([]*pb.PropertyInfo, len(e.AttributeProperties))
+	for i, p := range e.AttributeProperties {
+		properties[i] = propertyToProto(p)
+	}
+	return categories, properties
 }
 
 func (h *gRPCHandler) BatchGetItemsByIDs(ctx context.Context, req *pb.BatchGetItemsByIDsRequest) (*pb.BatchGetItemsByIDsResponse, error) {
@@ -253,7 +274,10 @@ func (h *gRPCHandler) BatchGetItemsByIDs(ctx context.Context, req *pb.BatchGetIt
 		return nil, contracts.NewMissingGRPCRequestDataError()
 	}
 
-	items, apiErr := h.itemSvc.BatchGetItemsByIDs(ctx, req.Ids)
+	items, embedded, apiErr := h.itemSvc.BatchGetItemsByIDs(ctx, req.Ids, domain.ItemEmbeds{
+		Categories:          req.WithCategories,
+		AttributeProperties: req.WithAttributeProperties,
+	})
 	if apiErr != nil {
 		return nil, contracts.ConvertAPIErrorToGRPC(apiErr)
 	}
@@ -263,8 +287,11 @@ func (h *gRPCHandler) BatchGetItemsByIDs(ctx context.Context, req *pb.BatchGetIt
 		pbItems[i] = itemToProto(item)
 	}
 
+	categories, properties := itemEmbeddedToProto(embedded)
 	return &pb.BatchGetItemsByIDsResponse{
-		Items: pbItems,
+		Items:               pbItems,
+		Categories:          categories,
+		AttributeProperties: properties,
 	}, nil
 }
 

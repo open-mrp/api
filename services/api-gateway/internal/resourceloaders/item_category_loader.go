@@ -27,10 +27,14 @@ func LoadItemCategories(ctx context.Context, ids []string) (map[string]any, *api
 	if apiErr != nil {
 		return nil, apiErr
 	}
+	return ItemCategoriesFromProto(ctx, resp.ItemCategories), nil
+}
 
+// ItemCategoriesFromProto builds categories keyed by id and stashes what their expandable fields resolve from.
+func ItemCategoriesFromProto(ctx context.Context, categories []*pb.ItemCategoryInfo) map[string]any {
 	meta := resourcekit.GetLoadMeta(ctx)
-	out := make(map[string]any, len(resp.ItemCategories))
-	for _, ic := range resp.ItemCategories {
+	out := make(map[string]any, len(categories))
+	for _, ic := range categories {
 		out[ic.Id] = itemCategoryFromProto(ic)
 
 		var accountID string
@@ -60,7 +64,7 @@ func LoadItemCategories(ctx context.Context, ids []string) (map[string]any, *api
 			stashUnitGroupMeta(meta, ug)
 		}
 	}
-	return out, nil
+	return out
 }
 
 func itemCategoryFromProto(ic *pb.ItemCategoryInfo) *apiresource.ItemCategory {

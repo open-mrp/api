@@ -3174,10 +3174,13 @@ func (x *BatchGetItemCategoriesByIDsResponse) GetItemCategories() []*ItemCategor
 }
 
 type BatchGetItemsByIDsRequest struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Ids           []string               `protobuf:"bytes,1,rep,name=ids,proto3" json:"ids,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	state protoimpl.MessageState `protogen:"open.v1"`
+	Ids   []string               `protobuf:"bytes,1,rep,name=ids,proto3" json:"ids,omitempty"`
+	// Also return the items' categories and attribute properties, read under the items' own access.
+	WithCategories          bool `protobuf:"varint,2,opt,name=with_categories,json=withCategories,proto3" json:"with_categories,omitempty"`
+	WithAttributeProperties bool `protobuf:"varint,3,opt,name=with_attribute_properties,json=withAttributeProperties,proto3" json:"with_attribute_properties,omitempty"`
+	unknownFields           protoimpl.UnknownFields
+	sizeCache               protoimpl.SizeCache
 }
 
 func (x *BatchGetItemsByIDsRequest) Reset() {
@@ -3217,11 +3220,29 @@ func (x *BatchGetItemsByIDsRequest) GetIds() []string {
 	return nil
 }
 
+func (x *BatchGetItemsByIDsRequest) GetWithCategories() bool {
+	if x != nil {
+		return x.WithCategories
+	}
+	return false
+}
+
+func (x *BatchGetItemsByIDsRequest) GetWithAttributeProperties() bool {
+	if x != nil {
+		return x.WithAttributeProperties
+	}
+	return false
+}
+
 type BatchGetItemsByIDsResponse struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Items         []*ItemInfo            `protobuf:"bytes,1,rep,name=items,proto3" json:"items,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	state protoimpl.MessageState `protogen:"open.v1"`
+	Items []*ItemInfo            `protobuf:"bytes,1,rep,name=items,proto3" json:"items,omitempty"`
+	// The items' categories, hydrated as BatchGetItemCategoriesByIDs returns them; set only when asked for.
+	Categories []*ItemCategoryInfo `protobuf:"bytes,2,rep,name=categories,proto3" json:"categories,omitempty"`
+	// The properties the items' attributes name; set only when asked for.
+	AttributeProperties []*PropertyInfo `protobuf:"bytes,3,rep,name=attribute_properties,json=attributeProperties,proto3" json:"attribute_properties,omitempty"`
+	unknownFields       protoimpl.UnknownFields
+	sizeCache           protoimpl.SizeCache
 }
 
 func (x *BatchGetItemsByIDsResponse) Reset() {
@@ -3257,6 +3278,20 @@ func (*BatchGetItemsByIDsResponse) Descriptor() ([]byte, []int) {
 func (x *BatchGetItemsByIDsResponse) GetItems() []*ItemInfo {
 	if x != nil {
 		return x.Items
+	}
+	return nil
+}
+
+func (x *BatchGetItemsByIDsResponse) GetCategories() []*ItemCategoryInfo {
+	if x != nil {
+		return x.Categories
+	}
+	return nil
+}
+
+func (x *BatchGetItemsByIDsResponse) GetAttributeProperties() []*PropertyInfo {
+	if x != nil {
+		return x.AttributeProperties
 	}
 	return nil
 }
@@ -6200,11 +6235,14 @@ func (x *ListItemsResponse) GetPageInfo() *PageInfo {
 }
 
 type GetItemRequest struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
-	Includes      []string               `protobuf:"bytes,2,rep,name=includes,proto3" json:"includes,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	state    protoimpl.MessageState `protogen:"open.v1"`
+	Id       string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	Includes []string               `protobuf:"bytes,2,rep,name=includes,proto3" json:"includes,omitempty"`
+	// As on BatchGetItemsByIDsRequest.
+	WithCategories          bool `protobuf:"varint,3,opt,name=with_categories,json=withCategories,proto3" json:"with_categories,omitempty"`
+	WithAttributeProperties bool `protobuf:"varint,4,opt,name=with_attribute_properties,json=withAttributeProperties,proto3" json:"with_attribute_properties,omitempty"`
+	unknownFields           protoimpl.UnknownFields
+	sizeCache               protoimpl.SizeCache
 }
 
 func (x *GetItemRequest) Reset() {
@@ -6251,11 +6289,27 @@ func (x *GetItemRequest) GetIncludes() []string {
 	return nil
 }
 
+func (x *GetItemRequest) GetWithCategories() bool {
+	if x != nil {
+		return x.WithCategories
+	}
+	return false
+}
+
+func (x *GetItemRequest) GetWithAttributeProperties() bool {
+	if x != nil {
+		return x.WithAttributeProperties
+	}
+	return false
+}
+
 type GetItemResponse struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Item          *ItemInfo              `protobuf:"bytes,1,opt,name=item,proto3" json:"item,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	state               protoimpl.MessageState `protogen:"open.v1"`
+	Item                *ItemInfo              `protobuf:"bytes,1,opt,name=item,proto3" json:"item,omitempty"`
+	Categories          []*ItemCategoryInfo    `protobuf:"bytes,2,rep,name=categories,proto3" json:"categories,omitempty"`
+	AttributeProperties []*PropertyInfo        `protobuf:"bytes,3,rep,name=attribute_properties,json=attributeProperties,proto3" json:"attribute_properties,omitempty"`
+	unknownFields       protoimpl.UnknownFields
+	sizeCache           protoimpl.SizeCache
 }
 
 func (x *GetItemResponse) Reset() {
@@ -6291,6 +6345,20 @@ func (*GetItemResponse) Descriptor() ([]byte, []int) {
 func (x *GetItemResponse) GetItem() *ItemInfo {
 	if x != nil {
 		return x.Item
+	}
+	return nil
+}
+
+func (x *GetItemResponse) GetCategories() []*ItemCategoryInfo {
+	if x != nil {
+		return x.Categories
+	}
+	return nil
+}
+
+func (x *GetItemResponse) GetAttributeProperties() []*PropertyInfo {
+	if x != nil {
+		return x.AttributeProperties
 	}
 	return nil
 }
@@ -6750,11 +6818,17 @@ const file_core_core_accounts_carriers_proto_rawDesc = "" +
 	"\"BatchGetItemCategoriesByIDsRequest\x12\x10\n" +
 	"\x03ids\x18\x01 \x03(\tR\x03ids\"f\n" +
 	"#BatchGetItemCategoriesByIDsResponse\x12?\n" +
-	"\x0fitem_categories\x18\x01 \x03(\v2\x16.core.ItemCategoryInfoR\x0eitemCategories\"-\n" +
+	"\x0fitem_categories\x18\x01 \x03(\v2\x16.core.ItemCategoryInfoR\x0eitemCategories\"\x92\x01\n" +
 	"\x19BatchGetItemsByIDsRequest\x12\x10\n" +
-	"\x03ids\x18\x01 \x03(\tR\x03ids\"B\n" +
+	"\x03ids\x18\x01 \x03(\tR\x03ids\x12'\n" +
+	"\x0fwith_categories\x18\x02 \x01(\bR\x0ewithCategories\x12:\n" +
+	"\x19with_attribute_properties\x18\x03 \x01(\bR\x17withAttributeProperties\"\xc1\x01\n" +
 	"\x1aBatchGetItemsByIDsResponse\x12$\n" +
-	"\x05items\x18\x01 \x03(\v2\x0e.core.ItemInfoR\x05items\"\xe4\x05\n" +
+	"\x05items\x18\x01 \x03(\v2\x0e.core.ItemInfoR\x05items\x126\n" +
+	"\n" +
+	"categories\x18\x02 \x03(\v2\x16.core.ItemCategoryInfoR\n" +
+	"categories\x12E\n" +
+	"\x14attribute_properties\x18\x03 \x03(\v2\x12.core.PropertyInfoR\x13attributeProperties\"\xe4\x05\n" +
 	"\vCarrierInfo\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x12\n" +
 	"\x04name\x18\x02 \x01(\tR\x04name\x12\x17\n" +
@@ -7068,12 +7142,18 @@ const file_core_core_accounts_carriers_proto_rawDesc = "" +
 	"\t_end_date\"f\n" +
 	"\x11ListItemsResponse\x12$\n" +
 	"\x05items\x18\x01 \x03(\v2\x0e.core.ItemInfoR\x05items\x12+\n" +
-	"\tpage_info\x18\x02 \x01(\v2\x0e.core.PageInfoR\bpageInfo\"<\n" +
+	"\tpage_info\x18\x02 \x01(\v2\x0e.core.PageInfoR\bpageInfo\"\xa1\x01\n" +
 	"\x0eGetItemRequest\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x1a\n" +
-	"\bincludes\x18\x02 \x03(\tR\bincludes\"5\n" +
+	"\bincludes\x18\x02 \x03(\tR\bincludes\x12'\n" +
+	"\x0fwith_categories\x18\x03 \x01(\bR\x0ewithCategories\x12:\n" +
+	"\x19with_attribute_properties\x18\x04 \x01(\bR\x17withAttributeProperties\"\xb4\x01\n" +
 	"\x0fGetItemResponse\x12\"\n" +
-	"\x04item\x18\x01 \x01(\v2\x0e.core.ItemInfoR\x04item\"3\n" +
+	"\x04item\x18\x01 \x01(\v2\x0e.core.ItemInfoR\x04item\x126\n" +
+	"\n" +
+	"categories\x18\x02 \x03(\v2\x16.core.ItemCategoryInfoR\n" +
+	"categories\x12E\n" +
+	"\x14attribute_properties\x18\x03 \x03(\v2\x12.core.PropertyInfoR\x13attributeProperties\"3\n" +
 	"\x18GetItemLotDefaultRequest\x12\x17\n" +
 	"\aitem_id\x18\x01 \x01(\tR\x06itemId\"\xd3\x01\n" +
 	"\x19GetItemLotDefaultResponse\x12\x17\n" +
@@ -7252,65 +7332,69 @@ var file_core_core_accounts_carriers_proto_depIdxs = []int32{
 	24,  // 36: core.BatchGetPropertiesByIDsResponse.properties:type_name -> core.PropertyInfo
 	91,  // 37: core.BatchGetItemCategoriesByIDsResponse.item_categories:type_name -> core.ItemCategoryInfo
 	96,  // 38: core.BatchGetItemsByIDsResponse.items:type_name -> core.ItemInfo
-	104, // 39: core.CarrierInfo.created_at:type_name -> google.protobuf.Timestamp
-	104, // 40: core.CarrierInfo.updated_at:type_name -> google.protobuf.Timestamp
-	104, // 41: core.CarrierInfo.deleted_at:type_name -> google.protobuf.Timestamp
-	59,  // 42: core.CarrierInfo.service_levels:type_name -> core.ServiceLevelInfo
-	104, // 43: core.ServiceLevelInfo.created_at:type_name -> google.protobuf.Timestamp
-	104, // 44: core.ServiceLevelInfo.updated_at:type_name -> google.protobuf.Timestamp
-	58,  // 45: core.ListCarriersResponse.carriers:type_name -> core.CarrierInfo
-	105, // 46: core.ListCarriersResponse.page_info:type_name -> core.PageInfo
-	58,  // 47: core.GetCarrierResponse.carrier:type_name -> core.CarrierInfo
-	58,  // 48: core.BatchGetCarriersByIDsResponse.carriers:type_name -> core.CarrierInfo
-	59,  // 49: core.BatchGetServiceLevelsByIDsResponse.service_levels:type_name -> core.ServiceLevelInfo
-	6,   // 50: core.BatchGetAccountsByIDsResponse.accounts:type_name -> core.AccountInfo
-	58,  // 51: core.CreateCarrierResponse.carrier:type_name -> core.CarrierInfo
-	58,  // 52: core.UpdateCarrierResponse.carrier:type_name -> core.CarrierInfo
-	58,  // 53: core.SyncServiceLevelsResponse.carrier:type_name -> core.CarrierInfo
-	59,  // 54: core.ListServiceLevelsResponse.service_levels:type_name -> core.ServiceLevelInfo
-	105, // 55: core.ListServiceLevelsResponse.page_info:type_name -> core.PageInfo
-	59,  // 56: core.GetServiceLevelResponse.service_level:type_name -> core.ServiceLevelInfo
-	59,  // 57: core.CreateServiceLevelResponse.service_level:type_name -> core.ServiceLevelInfo
-	107, // 58: core.UpdateServiceLevelRequest.default_transit_days:type_name -> core.Int32Patch
-	59,  // 59: core.UpdateServiceLevelResponse.service_level:type_name -> core.ServiceLevelInfo
-	104, // 60: core.RateInfo.created_at:type_name -> google.protobuf.Timestamp
-	104, // 61: core.RateInfo.updated_at:type_name -> google.protobuf.Timestamp
-	104, // 62: core.RateInfo.numerator_unit_created_at:type_name -> google.protobuf.Timestamp
-	104, // 63: core.RateInfo.numerator_unit_updated_at:type_name -> google.protobuf.Timestamp
-	104, // 64: core.RateInfo.denominator_unit_created_at:type_name -> google.protobuf.Timestamp
-	104, // 65: core.RateInfo.denominator_unit_updated_at:type_name -> google.protobuf.Timestamp
-	104, // 66: core.ItemCategoryInfo.created_at:type_name -> google.protobuf.Timestamp
-	104, // 67: core.ItemCategoryInfo.updated_at:type_name -> google.protobuf.Timestamp
-	92,  // 68: core.ItemCategoryInfo.properties:type_name -> core.ItemCategoryPropertyInfo
-	93,  // 69: core.ItemCategoryInfo.unit_group:type_name -> core.ItemCategoryUnitGroupInfo
-	104, // 70: core.ItemCategoryPropertyInfo.created_at:type_name -> google.protobuf.Timestamp
-	104, // 71: core.ItemCategoryPropertyInfo.updated_at:type_name -> google.protobuf.Timestamp
-	104, // 72: core.ItemCategoryUnitGroupInfo.created_at:type_name -> google.protobuf.Timestamp
-	104, // 73: core.ItemCategoryUnitGroupInfo.updated_at:type_name -> google.protobuf.Timestamp
-	108, // 74: core.ItemCategoryUnitGroupInfo.base_unit:type_name -> core.UnitInfo
-	94,  // 75: core.ItemCategoryUnitGroupInfo.associated_units:type_name -> core.ItemCategoryUnitGroupUnitInfo
-	104, // 76: core.ItemCategoryUnitGroupUnitInfo.created_at:type_name -> google.protobuf.Timestamp
-	104, // 77: core.ItemCategoryUnitGroupUnitInfo.updated_at:type_name -> google.protobuf.Timestamp
-	108, // 78: core.ItemCategoryUnitGroupUnitInfo.unit:type_name -> core.UnitInfo
-	104, // 79: core.ItemAttributeInfo.created_at:type_name -> google.protobuf.Timestamp
-	104, // 80: core.ItemAttributeInfo.updated_at:type_name -> google.protobuf.Timestamp
-	91,  // 81: core.ItemInfo.category:type_name -> core.ItemCategoryInfo
-	90,  // 82: core.ItemInfo.unit_value:type_name -> core.RateInfo
-	90,  // 83: core.ItemInfo.unit_cost:type_name -> core.RateInfo
-	90,  // 84: core.ItemInfo.burn_rate:type_name -> core.RateInfo
-	104, // 85: core.ItemInfo.created_at:type_name -> google.protobuf.Timestamp
-	104, // 86: core.ItemInfo.updated_at:type_name -> google.protobuf.Timestamp
-	95,  // 87: core.ItemInfo.attributes:type_name -> core.ItemAttributeInfo
-	104, // 88: core.ListItemsRequest.start_date:type_name -> google.protobuf.Timestamp
-	104, // 89: core.ListItemsRequest.end_date:type_name -> google.protobuf.Timestamp
-	96,  // 90: core.ListItemsResponse.items:type_name -> core.ItemInfo
-	105, // 91: core.ListItemsResponse.page_info:type_name -> core.PageInfo
-	96,  // 92: core.GetItemResponse.item:type_name -> core.ItemInfo
-	93,  // [93:93] is the sub-list for method output_type
-	93,  // [93:93] is the sub-list for method input_type
-	93,  // [93:93] is the sub-list for extension type_name
-	93,  // [93:93] is the sub-list for extension extendee
-	0,   // [0:93] is the sub-list for field type_name
+	91,  // 39: core.BatchGetItemsByIDsResponse.categories:type_name -> core.ItemCategoryInfo
+	24,  // 40: core.BatchGetItemsByIDsResponse.attribute_properties:type_name -> core.PropertyInfo
+	104, // 41: core.CarrierInfo.created_at:type_name -> google.protobuf.Timestamp
+	104, // 42: core.CarrierInfo.updated_at:type_name -> google.protobuf.Timestamp
+	104, // 43: core.CarrierInfo.deleted_at:type_name -> google.protobuf.Timestamp
+	59,  // 44: core.CarrierInfo.service_levels:type_name -> core.ServiceLevelInfo
+	104, // 45: core.ServiceLevelInfo.created_at:type_name -> google.protobuf.Timestamp
+	104, // 46: core.ServiceLevelInfo.updated_at:type_name -> google.protobuf.Timestamp
+	58,  // 47: core.ListCarriersResponse.carriers:type_name -> core.CarrierInfo
+	105, // 48: core.ListCarriersResponse.page_info:type_name -> core.PageInfo
+	58,  // 49: core.GetCarrierResponse.carrier:type_name -> core.CarrierInfo
+	58,  // 50: core.BatchGetCarriersByIDsResponse.carriers:type_name -> core.CarrierInfo
+	59,  // 51: core.BatchGetServiceLevelsByIDsResponse.service_levels:type_name -> core.ServiceLevelInfo
+	6,   // 52: core.BatchGetAccountsByIDsResponse.accounts:type_name -> core.AccountInfo
+	58,  // 53: core.CreateCarrierResponse.carrier:type_name -> core.CarrierInfo
+	58,  // 54: core.UpdateCarrierResponse.carrier:type_name -> core.CarrierInfo
+	58,  // 55: core.SyncServiceLevelsResponse.carrier:type_name -> core.CarrierInfo
+	59,  // 56: core.ListServiceLevelsResponse.service_levels:type_name -> core.ServiceLevelInfo
+	105, // 57: core.ListServiceLevelsResponse.page_info:type_name -> core.PageInfo
+	59,  // 58: core.GetServiceLevelResponse.service_level:type_name -> core.ServiceLevelInfo
+	59,  // 59: core.CreateServiceLevelResponse.service_level:type_name -> core.ServiceLevelInfo
+	107, // 60: core.UpdateServiceLevelRequest.default_transit_days:type_name -> core.Int32Patch
+	59,  // 61: core.UpdateServiceLevelResponse.service_level:type_name -> core.ServiceLevelInfo
+	104, // 62: core.RateInfo.created_at:type_name -> google.protobuf.Timestamp
+	104, // 63: core.RateInfo.updated_at:type_name -> google.protobuf.Timestamp
+	104, // 64: core.RateInfo.numerator_unit_created_at:type_name -> google.protobuf.Timestamp
+	104, // 65: core.RateInfo.numerator_unit_updated_at:type_name -> google.protobuf.Timestamp
+	104, // 66: core.RateInfo.denominator_unit_created_at:type_name -> google.protobuf.Timestamp
+	104, // 67: core.RateInfo.denominator_unit_updated_at:type_name -> google.protobuf.Timestamp
+	104, // 68: core.ItemCategoryInfo.created_at:type_name -> google.protobuf.Timestamp
+	104, // 69: core.ItemCategoryInfo.updated_at:type_name -> google.protobuf.Timestamp
+	92,  // 70: core.ItemCategoryInfo.properties:type_name -> core.ItemCategoryPropertyInfo
+	93,  // 71: core.ItemCategoryInfo.unit_group:type_name -> core.ItemCategoryUnitGroupInfo
+	104, // 72: core.ItemCategoryPropertyInfo.created_at:type_name -> google.protobuf.Timestamp
+	104, // 73: core.ItemCategoryPropertyInfo.updated_at:type_name -> google.protobuf.Timestamp
+	104, // 74: core.ItemCategoryUnitGroupInfo.created_at:type_name -> google.protobuf.Timestamp
+	104, // 75: core.ItemCategoryUnitGroupInfo.updated_at:type_name -> google.protobuf.Timestamp
+	108, // 76: core.ItemCategoryUnitGroupInfo.base_unit:type_name -> core.UnitInfo
+	94,  // 77: core.ItemCategoryUnitGroupInfo.associated_units:type_name -> core.ItemCategoryUnitGroupUnitInfo
+	104, // 78: core.ItemCategoryUnitGroupUnitInfo.created_at:type_name -> google.protobuf.Timestamp
+	104, // 79: core.ItemCategoryUnitGroupUnitInfo.updated_at:type_name -> google.protobuf.Timestamp
+	108, // 80: core.ItemCategoryUnitGroupUnitInfo.unit:type_name -> core.UnitInfo
+	104, // 81: core.ItemAttributeInfo.created_at:type_name -> google.protobuf.Timestamp
+	104, // 82: core.ItemAttributeInfo.updated_at:type_name -> google.protobuf.Timestamp
+	91,  // 83: core.ItemInfo.category:type_name -> core.ItemCategoryInfo
+	90,  // 84: core.ItemInfo.unit_value:type_name -> core.RateInfo
+	90,  // 85: core.ItemInfo.unit_cost:type_name -> core.RateInfo
+	90,  // 86: core.ItemInfo.burn_rate:type_name -> core.RateInfo
+	104, // 87: core.ItemInfo.created_at:type_name -> google.protobuf.Timestamp
+	104, // 88: core.ItemInfo.updated_at:type_name -> google.protobuf.Timestamp
+	95,  // 89: core.ItemInfo.attributes:type_name -> core.ItemAttributeInfo
+	104, // 90: core.ListItemsRequest.start_date:type_name -> google.protobuf.Timestamp
+	104, // 91: core.ListItemsRequest.end_date:type_name -> google.protobuf.Timestamp
+	96,  // 92: core.ListItemsResponse.items:type_name -> core.ItemInfo
+	105, // 93: core.ListItemsResponse.page_info:type_name -> core.PageInfo
+	96,  // 94: core.GetItemResponse.item:type_name -> core.ItemInfo
+	91,  // 95: core.GetItemResponse.categories:type_name -> core.ItemCategoryInfo
+	24,  // 96: core.GetItemResponse.attribute_properties:type_name -> core.PropertyInfo
+	97,  // [97:97] is the sub-list for method output_type
+	97,  // [97:97] is the sub-list for method input_type
+	97,  // [97:97] is the sub-list for extension type_name
+	97,  // [97:97] is the sub-list for extension extendee
+	0,   // [0:97] is the sub-list for field type_name
 }
 
 func init() { file_core_core_accounts_carriers_proto_init() }

@@ -1,0 +1,82 @@
+//go:build e2e
+
+package api_test
+
+import (
+	"net/http"
+	"net/url"
+	"testing"
+
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+)
+
+// A customer or supplier portal reads the seller's account only for what is its own, and a supplier relation opens nothing a customer relation does not. Another buyer's record reads as not found.
+
+// otherBuyer is a second customer of the seller, with an issued order packed into a shipment and a price of its own.
+type otherBuyer struct {
+	accountID   string
+	orderID     string
+	orderNumber string
+	shipmentID  string
+	lineID      string
+	priceID     string
+}
+
+func newOtherBuyer(t *testing.T) otherBuyer {
+	t.Helper()
+	b := otherBuyer{accountID: leadTimeCustomer(t, "e2e-portal-scope-buyer", nil, "")}
+	b.orderID, _, b.shipmentID = packedOrder(t, minimalSalesOrderCreateBody(t, b.accountID))
+	b.orderNumber = jsonField(getSalesOrder(t, b.orderID, nil), "number")
+	lines := jsonListData(readShipment(t, b.shipmentID, "lines"), "lines")
+	require.NotEmpty(t, lines, "the other buyer's shipment has lines")
+	b.lineID = jsonField(lines[0].(map[string]any), "id")
+	b.priceID = jsonField(createAccountPrice(t, b.accountID, "12.34"), "id")
+	return b
+}
+
+func requireStatusAs(t *testing.T, want int, who string, client *Client, path string, params url.Values) []byte {
+	t.Helper()
+	status, body, err := client.GetListRaw(path, params)
+	require.NoError(t, err)
+	require.Equal(t, want, status, "%s GET %s: %s", who, path, string(body))
+	return body
+}
+
+// --- Sales orders ---
+
+func TestPortalRecordScope_AnotherBuyersSalesOrderIsHiddenFromEveryPortal(t *testing.T) {
+	t.Parallel()
+	other := newOtherBuyer(t)
+
+	found := parseJSON(requireStatusAs(t, http.StatusOK, "staff", apiClient, salesOrdersPath, url.Values{"q": {other.orderNumber}}))
+	require.Len(t, jsonArray(found, "data"), 1, "the seller's staff find the other buyer's order by its number")
+
+	for who, portal := range portalClients(t) {
+		list := parseJSON(requireStatusAs(t, http.StatusOK, who, portal, salesOrdersPath, url.Values{"q": {other.orderNumber}}))
+		assert.Empty(t, jsonArray(list, "data"), "%s does not list another buyer's order", who)
+		requireStatusAs(t, http.StatusNotFound, who, portal, salesOrdersPath+"/"+other.orderID, nil)
+	}
+}
+
+// Every order a portal lists is one its own account bought, whichever way it relates to the seller.
+func TestPortalRecordScope_PortalsListOnlyTheOrdersTheirAccountBought(t *testing.T) {
+	t.Parallel()
+	for who, c := range map[string]struct {
+		client *Client
+		own    string
+	}{
+		"customer portal": {getCustomerPortalClient(), SeedCustomerAccountID},
+		"supplier portal": {getSupplierPortalClient(t), SeedSupplierAccountID},
+	} {
+		list := parseJSON(requireStatusAs(t, http.StatusOK, who, c.client, salesOrdersPath, url.Values{"include": {"customer"}, "limit": {"100"}}))
+		for _, row := range jsonArray(list, "data") {
+			order := row.(map[string]any)
+			assert.Equal(t, c.own, jsonField(jsonObject(order, "customer"), "id"), "%s listed order %s", who, jsonField(order, "id"))
+		}
+	}
+
+	own := parseJSON(requireStatusAs(t, http.StatusOK, "customer portal", getCustomerPortalClient(), salesOrdersPath+"/"+SeedSalesOrderID, url.Values{"include": {"customer"}}))
+	assert.Equal(t, SeedCustomerAccountID, jsonField(jsonObject(own, "customer"), "id"), "the customer still reads its own order")
+	requireStatusAs(t, http.StatusNotFound, "supplier portal", getSupplierPortalClient(t), salesOrdersPath+"/"+SeedSalesOrderID, nil)
+}

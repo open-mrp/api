@@ -122,6 +122,14 @@ func (i *Identity) IsRelationActor() bool {
 		(i.Actor.RelationType == IdentityRelationTypeCustomer || i.Actor.RelationType == IdentityRelationTypeSupplier)
 }
 
+// PortalAccountID is the account a customer or supplier portal actor's reads narrow to: its own. Whichever way the actor relates to the seller, the orders it sees are the ones it bought and the customer record it sees is its own. Nil for the seller's own actors, whose reads span the account.
+func (i *Identity) PortalAccountID() *string {
+	if !i.IsRelationActor() {
+		return nil
+	}
+	return i.ActorAccountID()
+}
+
 // IsInternalUser checks that the identity is authenticated, has a valid actor, is of type internal, and has a valid actor account
 func (i *Identity) IsInternalUser() bool {
 	return i.IsActorSet() && i.IsTargetAccountSet() && i.Actor.RelationType == IdentityRelationTypeInternal && *i.Actor.AccountID == i.Target.AccountID

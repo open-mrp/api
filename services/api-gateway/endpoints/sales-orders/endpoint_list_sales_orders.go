@@ -44,7 +44,7 @@ type ListSalesOrdersRequest struct {
 
 // Returns a paginated list of sales orders for the current account, newest first.
 //
-// A free-text search term (`q`) is matched as an exact value against the order number and the customer purchase order number, and still respects the other filters. Customer accounts calling this endpoint only ever see their own orders.
+// A free-text search term (`q`) is matched as an exact value against the order number and the customer purchase order number, and still respects the other filters. A customer or supplier portal calling this endpoint only ever sees the orders its own account placed, whatever filters it sets.
 type ListSalesOrdersEndpoint struct{}
 
 func (e *ListSalesOrdersEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListSalesOrdersRequest, *apiresource.List[apiresource.SalesOrder]] {

@@ -22,6 +22,8 @@ func newMockRefresher(t *testing.T) (*SalesFactRefresher, *repositorymock.MockSa
 	repo := repositorymock.NewMockSalesFactRepo(ctrl)
 	factory := factorymock.NewMockRepoFactory(ctrl)
 	factory.EXPECT().NewSalesFactRepo().Return(repo).AnyTimes()
+	// Unknown line counts pack invoices by salesFactComputeBatch alone.
+	repo.EXPECT().CountInvoiceLines(gomock.Any(), gomock.Any()).Return(nil, nil).AnyTimes()
 	var invalidated [][]string
 	cfg := (&SalesFactRefresherConfig{
 		Repos:          factory,
@@ -426,26 +428,73 @@ func TestTheFirstBuyerSweepWaitsForAReconcilePassCompletedAfterItsRestart(t *tes
 	}
 }
 
-func TestABuyerSweepRebuildsEachAccountsBuyersAndDropsThoseItNeverReached(t *testing.T) {
+func TestABuyerSweepRebuildsStaleBuyersAndDropsThoseWithoutFacts(t *testing.T) {
 	r, repo, _ := newMockRefresher(t)
 	now := time.Date(2026, 9, 30, 12, 0, 0, 0, time.UTC)
 	r.cfg.Now = func() time.Time { return now }
 	since := now.Add(-time.Hour)
 	filled := now.Add(-time.Minute)
+	earlier, later := now.Add(-48*time.Hour), now.Add(-24*time.Hour)
 	repo.EXPECT().GetBuyerSummarySync(gomock.Any()).Return(&domain.SalesBuyerSummarySync{FactsSince: &since}, nil)
 	repo.EXPECT().GetSync(gomock.Any()).Return(&domain.SalesFactSync{LastCompletedAt: &filled}, nil)
-	page := []domain.SalesBuyerKey{{AccountID: "ac_1", BuyerAccountID: "ac_a"}, {AccountID: "ac_1", BuyerAccountID: "ac_b"}, {AccountID: "ac_2", BuyerAccountID: "ac_c"}}
+
+	key := func(account, buyer string) domain.SalesBuyerKey { return domain.SalesBuyerKey{AccountID: account, BuyerAccountID: buyer} }
+	page := []domain.SalesBuyerKey{key("ac_1", "ac_a"), key("ac_1", "ac_b"), key("ac_1", "ac_c"), key("ac_2", "ac_d")}
 	gomock.InOrder(
 		repo.EXPECT().NextBuyers(gomock.Any(), domain.SalesBuyerKey{}, int32(salesBuyerSweepBatch)).Return(page, nil),
-		repo.EXPECT().RebuildBuyerSummaries(gomock.Any(), "ac_1", []string{"ac_a", "ac_b"}).Return(nil),
-		repo.EXPECT().RebuildBuyerSummaries(gomock.Any(), "ac_2", []string{"ac_c"}).Return(nil),
-		repo.EXPECT().NextBuyers(gomock.Any(), page[2], int32(salesBuyerSweepBatch)).Return(nil, nil),
-		repo.EXPECT().DeleteBuyerSummariesRefreshedBefore(gomock.Any(), now).Return(nil),
+		// ac_a is current, ac_b has a fact newer than its summary, ac_c and ac_d have none, ac_gone has no facts.
+		repo.EXPECT().ListBuyerSummaryRefreshes(gomock.Any(), domain.SalesBuyerKey{}, &page[3]).Return(map[domain.SalesBuyerKey]time.Time{
+			key("ac_1", "ac_a"): later, key("ac_1", "ac_b"): earlier, key("ac_1", "ac_gone"): earlier,
+		}, nil),
+		repo.EXPECT().LatestBuyerFactRefreshes(gomock.Any(), "ac_1", []string{"ac_a", "ac_b", "ac_c"}).Return(map[string]time.Time{
+			"ac_a": earlier, "ac_b": later, "ac_c": earlier,
+		}, nil),
+		repo.EXPECT().RebuildBuyerSummaries(gomock.Any(), "ac_1", []string{"ac_b", "ac_c"}).Return(nil),
+		repo.EXPECT().LatestBuyerFactRefreshes(gomock.Any(), "ac_2", []string{"ac_d"}).Return(map[string]time.Time{"ac_d": earlier}, nil),
+		repo.EXPECT().RebuildBuyerSummaries(gomock.Any(), "ac_2", []string{"ac_d"}).Return(nil),
+		repo.EXPECT().DeleteBuyerSummaries(gomock.Any(), []domain.SalesBuyerKey{key("ac_1", "ac_gone")}).Return(nil),
+		repo.EXPECT().NextBuyers(gomock.Any(), page[3], int32(salesBuyerSweepBatch)).Return(nil, nil),
+		// Past the last buyer with facts, every remaining summary is gone.
+		repo.EXPECT().ListBuyerSummaryRefreshes(gomock.Any(), page[3], nil).Return(map[domain.SalesBuyerKey]time.Time{key("ac_3", "ac_e"): earlier}, nil),
+		repo.EXPECT().DeleteBuyerSummaries(gomock.Any(), []domain.SalesBuyerKey{key("ac_3", "ac_e")}).Return(nil),
 		repo.EXPECT().SaveBuyerSummarySync(gomock.Any(), domain.SalesBuyerSummarySync{FactsSince: &since, PassStartedAt: &now, LastCompletedAt: &now}).Return(nil),
 	)
 
 	require.Nil(t, r.sweepBuyers(context.Background()))
 	require.False(t, r.backlog)
+}
+
+func TestPackInvoicesByLines(t *testing.T) {
+	ids := func(n int) []string {
+		out := make([]string, n)
+		for i := range out {
+			out[i] = fmt.Sprintf("iv_%02d", i)
+		}
+		return out
+	}
+	tests := []struct {
+		name  string
+		ids   []string
+		lines map[string]int
+		want  []int
+	}{
+		{"small invoices fill a batch to the invoice cap", ids(30), nil, []int{25, 5}},
+		{"lines close a batch early", ids(3), map[string]int{"iv_00": 40, "iv_01": 30, "iv_02": 10}, []int{1, 2}},
+		{"a large invoice stands alone", ids(3), map[string]int{"iv_00": 5, "iv_01": 177, "iv_02": 5}, []int{1, 1, 1}},
+		{"none", nil, nil, nil},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			var sizes []int
+			var flat []string
+			for _, b := range packInvoicesByLines(tt.ids, tt.lines) {
+				sizes = append(sizes, len(b))
+				flat = append(flat, b...)
+			}
+			require.Equal(t, tt.want, sizes)
+			require.Equal(t, tt.ids, flat)
+		})
+	}
 }
 
 func ptrTime(t time.Time) *time.Time { return &t }

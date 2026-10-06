@@ -1,6 +1,7 @@
 package service
 
 import (
+	"cmp"
 	"context"
 	"fmt"
 	"log/slog"
@@ -31,7 +32,11 @@ const (
 	// salesFactInvoiceBatch is how many dirty marks one drain lists, and how many invoices one reconcile page reads.
 	salesFactInvoiceBatch = 200
 
-	// salesFactComputeBatch bounds one recompute: the pricing join reads ~35 rows an invoice, and 25 invoices keep it under 25ms.
+	// salesFactComputeLines bounds one recompute by invoice lines: the pricing join reads ~10 rows a line, and
+	// 60 lines keep it under 25ms. An invoice with more is recomputed on its own.
+	salesFactComputeLines = 60
+
+	// salesFactComputeBatch caps the invoices in one recompute, whatever their lines.
 	salesFactComputeBatch = 25
 
 	// salesFactFanOutThreshold is the most invoices one drain refreshes itself. A scope that resolves to
@@ -512,8 +517,11 @@ func (s *SalesFactRefresher) refreshInvoices(ctx context.Context, invoiceIDs []s
 	changedAccounts := map[string]struct{}{}
 	// Whether buyers are marked, read once, at the first change.
 	var tracked *bool
-	for start := 0; start < len(invoiceIDs); start += salesFactComputeBatch {
-		batch := invoiceIDs[start:min(start+salesFactComputeBatch, len(invoiceIDs))]
+	lines, apiErr := repo.CountInvoiceLines(ctx, invoiceIDs)
+	if apiErr != nil {
+		return changedLines, apiErr
+	}
+	for _, batch := range packInvoicesByLines(invoiceIDs, lines) {
 		computed, apiErr := repo.ComputeFacts(ctx, batch)
 		if apiErr != nil {
 			return changedLines, apiErr
@@ -569,6 +577,27 @@ func (s *SalesFactRefresher) refreshInvoices(ctx context.Context, invoiceIDs []s
 		return changedLines, apiErr
 	}
 	return changedLines, s.drainBuyerDirty(ctx)
+}
+
+// packInvoicesByLines splits invoices, in order, into recompute batches of at most salesFactComputeLines lines
+// and salesFactComputeBatch invoices. An invoice with no lines counts as one: its stale facts are still read.
+func packInvoicesByLines(invoiceIDs []string, lines map[string]int) [][]string {
+	var batches [][]string
+	var batch []string
+	batchLines := 0
+	for _, id := range invoiceIDs {
+		n := max(lines[id], 1)
+		if len(batch) > 0 && (batchLines+n > salesFactComputeLines || len(batch) == salesFactComputeBatch) {
+			batches = append(batches, batch)
+			batch, batchLines = nil, 0
+		}
+		batch = append(batch, id)
+		batchLines += n
+	}
+	if len(batch) > 0 {
+		batches = append(batches, batch)
+	}
+	return batches
 }
 
 // buyerSummariesTracked reports whether changed facts must mark their buyers: once the buyer summary sweep
@@ -647,12 +676,12 @@ func (s *SalesFactRefresher) drainBuyerDirty(ctx context.Context) *apierror.APIE
 	return nil
 }
 
-// sweepBuyers advances the buyer summary pass by up to ReconcileBudget, rebuilding every buyer with facts
-// in (account, buyer) order, then deleting the summaries of buyers the pass never reached (they have no
-// facts left). Its first pass is the backfill. It needs every fact's order date and price flag, which
-// facts written before those columns lack, so before it the sweep restarts the fact reconcile (which
-// rewrites each fact that differs from what it computes) and waits for that pass to complete. Later
-// passes start after each midnight in PassLocation and repair any summary a crash left behind its facts.
+// sweepBuyers advances the buyer summary pass by up to ReconcileBudget, walking every buyer with facts in
+// (account, buyer) order: it rebuilds a buyer with no summary or a fact written since its summary was, and
+// deletes the summaries of buyers the walk passes who have no facts left. Its first pass is the backfill. It
+// needs every fact's order date and price flag, which facts written before those columns lack, so before it
+// the sweep restarts the fact reconcile and waits for that pass to complete. Later passes start after each
+// midnight in PassLocation and repair any summary a crash left behind its facts.
 func (s *SalesFactRefresher) sweepBuyers(ctx context.Context) *apierror.APIError {
 	ctx, span := salesFactTracer.Start(ctx, "service.sales_fact_refresher.sweep_buyers")
 	defer span.End()
@@ -696,38 +725,76 @@ func (s *SalesFactRefresher) sweepBuyers(ctx context.Context) *apierror.APIError
 		if apiErr != nil {
 			return tracing.Trace(span, apiErr)
 		}
-		if len(next) == 0 {
-			if apiErr := repo.DeleteBuyerSummariesRefreshedBefore(ctx, *state.PassStartedAt); apiErr != nil {
-				return tracing.Trace(span, apiErr)
-			}
+		var through *domain.SalesBuyerKey
+		if len(next) > 0 {
+			through = &next[len(next)-1]
+		}
+		n, apiErr := s.sweepBuyerPage(ctx, *state.Cursor, through, next)
+		if apiErr != nil {
+			return tracing.Trace(span, apiErr)
+		}
+		rebuilt += n
+		if through == nil {
 			completed := s.cfg.Now().UTC()
 			state.Cursor = nil
 			state.LastCompletedAt = &completed
 			slog.InfoContext(ctx, "Sales fact refresher: buyer summary pass completed", "started_at", state.PassStartedAt)
 			break
 		}
-		byAccount := map[string][]string{}
-		var order []string
-		for _, k := range next {
-			if _, ok := byAccount[k.AccountID]; !ok {
-				order = append(order, k.AccountID)
-			}
-			byAccount[k.AccountID] = append(byAccount[k.AccountID], k.BuyerAccountID)
-		}
-		for _, account := range order {
-			if apiErr := repo.RebuildBuyerSummaries(ctx, account, byAccount[account]); apiErr != nil {
-				return tracing.Trace(span, apiErr)
-			}
-		}
-		rebuilt += len(next)
-		last := next[len(next)-1]
-		state.Cursor = &last
+		state.Cursor = through
 	}
 	span.SetAttributes(attribute.Int("sales_fact.buyers_rebuilt", rebuilt))
 	if state.Cursor != nil {
 		s.backlog = true
 	}
 	return tracing.Trace(span, repo.SaveBuyerSummarySync(ctx, *state))
+}
+
+// sweepBuyerPage settles the summaries between after and through (nil for the end): it rebuilds each buyer in
+// page whose summary is missing or older than its latest fact, and deletes the rest of that range's summaries,
+// whose buyers have no facts. Returns how many buyers it rebuilt.
+func (s *SalesFactRefresher) sweepBuyerPage(ctx context.Context, after domain.SalesBuyerKey, through *domain.SalesBuyerKey, page []domain.SalesBuyerKey) (int, *apierror.APIError) {
+	repo := s.cfg.Repos.NewSalesFactRepo()
+	summaries, apiErr := repo.ListBuyerSummaryRefreshes(ctx, after, through)
+	if apiErr != nil {
+		return 0, apiErr
+	}
+	byAccount := map[string][]string{}
+	var order []string
+	for _, k := range page {
+		if _, ok := byAccount[k.AccountID]; !ok {
+			order = append(order, k.AccountID)
+		}
+		byAccount[k.AccountID] = append(byAccount[k.AccountID], k.BuyerAccountID)
+	}
+	rebuilt := 0
+	for _, account := range order {
+		latest, apiErr := repo.LatestBuyerFactRefreshes(ctx, account, byAccount[account])
+		if apiErr != nil {
+			return rebuilt, apiErr
+		}
+		var stale []string
+		for _, buyer := range byAccount[account] {
+			k := domain.SalesBuyerKey{AccountID: account, BuyerAccountID: buyer}
+			refreshed, ok := summaries[k]
+			delete(summaries, k)
+			if !ok || !latest[buyer].Before(refreshed) {
+				stale = append(stale, buyer)
+			}
+		}
+		if apiErr := repo.RebuildBuyerSummaries(ctx, account, stale); apiErr != nil {
+			return rebuilt, apiErr
+		}
+		rebuilt += len(stale)
+	}
+	gone := make([]domain.SalesBuyerKey, 0, len(summaries))
+	for k := range summaries {
+		gone = append(gone, k)
+	}
+	slices.SortFunc(gone, func(a, b domain.SalesBuyerKey) int {
+		return cmp.Or(strings.Compare(a.AccountID, b.AccountID), strings.Compare(a.BuyerAccountID, b.BuyerAccountID))
+	})
+	return rebuilt, repo.DeleteBuyerSummaries(ctx, gone)
 }
 
 // touchedRollupDays returns the (account, UTC day) of every changed line, and for a line that moved,

@@ -3,6 +3,9 @@ package repository
 import (
 	"context"
 	"database/sql"
+	"fmt"
+	"math/big"
+	"slices"
 	"strings"
 	"time"
 
@@ -21,27 +24,162 @@ func buyerMarkID(b domain.SalesBuyerKey) string {
 	return b.AccountID + "/" + b.BuyerAccountID
 }
 
-// salesBuyerSummarySource is one account's qualifying sales per buyer, as the legacy new-customers report
-// counted them: sales orders only, lines priced above zero, outside the shipping and misc product lines.
-// first_ordered_at is the earliest of those lines' order dates; a buyer whose qualifying orders have no
-// issue date has no summary. The %s is the buyer_account_id IN list.
-//
-// The inner query reads sales_line_fact_buyer_summary_idx alone; the product line names are joined only
-// to its few (buyer, product line) groups.
-const salesBuyerSummarySource = `SELECT g.buyer_account_id, MIN(g.first_ordered_at), CAST(COALESCE(SUM(g.total_invoiced), 0) AS DECIMAL(65,30))
+// salesBuyerSummaryPartial is one account's qualifying sales per buyer within an optional invoiced_at window,
+// as the legacy new-customers report counted them: sales orders only, lines priced above zero, outside the
+// shipping and misc product lines. The first %s is the buyer_account_id IN list, the second the window.
+// The inner query reads sales_line_fact_buyer_summary_idx alone; product line names join only to its groups.
+const salesBuyerSummaryPartial = `SELECT g.buyer_account_id, MIN(g.first_ordered_at), SUM(g.total_invoiced)
 FROM (
   SELECT f.buyer_account_id, f.product_line_id, MIN(f.ordered_at) AS first_ordered_at, SUM(f.total_invoiced) AS total_invoiced
   FROM sales_line_fact f FORCE INDEX (sales_line_fact_buyer_summary_idx)
-  WHERE f.account_id = ? AND f.buyer_account_id IN (%s) AND f.sales_order_type_code = 'sales_order' AND f.is_priced = 1
+  WHERE f.account_id = ? AND f.buyer_account_id IN (%s) AND f.sales_order_type_code = 'sales_order' AND f.is_priced = 1%s
   GROUP BY f.buyer_account_id, f.product_line_id
 ) g
 JOIN product_line pl ON pl.id = g.product_line_id
 WHERE LOWER(pl.name) NOT IN ('shipping', 'misc')
-GROUP BY g.buyer_account_id
-HAVING MIN(g.first_ordered_at) IS NOT NULL`
+GROUP BY g.buyer_account_id`
 
-// salesBuyerSummaryBatch is how many buyers one summary query reads; a large buyer has tens of thousands of facts.
-const salesBuyerSummaryBatch = 20
+// salesBuyerSummaryLineBudget is how many facts one summary query may read, keeping it under 25ms. A var so tests can split small buyers.
+var salesBuyerSummaryLineBudget int64 = 3000
+
+// salesBuyerSummaryMaxBuyers caps the buyers in one query whose line counts the rollups do not know.
+const salesBuyerSummaryMaxBuyers = 20
+
+// buyerSummaryRead is one summary query: a set of buyers, over one invoiced_at window (zero bounds are open).
+type buyerSummaryRead struct {
+	buyers   []string
+	from, to time.Time
+}
+
+// planBuyerSummaryReads groups buyers into reads of about salesBuyerSummaryLineBudget facts each, splitting a
+// buyer with more into windows of whole months. Lines per month come from the buyer rollups, an upper bound.
+func planBuyerSummaryReads(buyerIDs []string, monthLines map[string]map[time.Time]int64) []buyerSummaryRead {
+	var reads []buyerSummaryRead
+	var group []string
+	var groupLines int64
+	flush := func() {
+		if len(group) > 0 {
+			reads = append(reads, buyerSummaryRead{buyers: group})
+			group, groupLines = nil, 0
+		}
+	}
+	for _, b := range buyerIDs {
+		var total int64
+		for _, n := range monthLines[b] {
+			total += n
+		}
+		if total <= salesBuyerSummaryLineBudget {
+			if groupLines+total > salesBuyerSummaryLineBudget || len(group) == salesBuyerSummaryMaxBuyers {
+				flush()
+			}
+			group = append(group, b)
+			groupLines += total
+			continue
+		}
+		months := make([]time.Time, 0, len(monthLines[b]))
+		for m := range monthLines[b] {
+			months = append(months, m)
+		}
+		slices.SortFunc(months, func(x, y time.Time) int { return x.Compare(y) })
+		var from time.Time
+		var lines int64
+		for i, m := range months {
+			lines += monthLines[b][m]
+			if i == len(months)-1 {
+				break
+			}
+			if next := months[i+1]; lines+monthLines[b][next] > salesBuyerSummaryLineBudget {
+				reads = append(reads, buyerSummaryRead{buyers: []string{b}, from: from, to: next})
+				from, lines = next, 0
+			}
+		}
+		reads = append(reads, buyerSummaryRead{buyers: []string{b}, from: from})
+	}
+	flush()
+	return reads
+}
+
+// buyerMonthLines is each buyer's facts per UTC month, as the buyer rollups count them.
+func (r *salesFactRepoImpl) buyerMonthLines(ctx context.Context, accountID string, buyerIDs []string) (map[string]map[time.Time]int64, error) {
+	out := map[string]map[time.Time]int64{}
+	for start := 0; start < len(buyerIDs); start += salesFactWriteBatch {
+		batch := buyerIDs[start:min(start+salesFactWriteBatch, len(buyerIDs))]
+		rows, err := r.queries.DB().QueryContext(ctx, `SELECT dimension_id, bucket_start, SUM(line_count)
+FROM sales_fact_rollup FORCE INDEX (sales_fact_rollup_dimension_id_idx)
+WHERE account_id = ? AND dimension = 'buyer' AND product_line_key = '' AND dimension_id IN (`+placeholders(len(batch))+`) AND grain = 'month'
+GROUP BY dimension_id, bucket_start`, append([]any{accountID}, stringsToAny(batch)...)...)
+		if err != nil {
+			return nil, err
+		}
+		for rows.Next() {
+			var (
+				buyer string
+				month time.Time
+				n     int64
+			)
+			if err := rows.Scan(&buyer, &month, &n); err != nil {
+				_ = rows.Close()
+				return nil, err
+			}
+			if out[buyer] == nil {
+				out[buyer] = map[time.Time]int64{}
+			}
+			out[buyer][month.UTC()] = n
+		}
+		_ = rows.Close()
+		if err := rows.Err(); err != nil {
+			return nil, err
+		}
+	}
+	return out, nil
+}
+
+// buyerSummaryTotal accumulates one buyer's partial reads the way MIN and SUM over all of them would.
+type buyerSummaryTotal struct {
+	first *time.Time
+	total *big.Rat
+}
+
+func (r *salesFactRepoImpl) readBuyerSummaries(ctx context.Context, accountID string, read buyerSummaryRead, into map[string]*buyerSummaryTotal) error {
+	window := ""
+	args := append([]any{accountID}, stringsToAny(read.buyers)...)
+	if !read.from.IsZero() {
+		window += " AND f.invoiced_at >= ?"
+		args = append(args, read.from)
+	}
+	if !read.to.IsZero() {
+		window += " AND f.invoiced_at < ?"
+		args = append(args, read.to)
+	}
+	rows, err := r.queries.DB().QueryContext(ctx, fmt.Sprintf(salesBuyerSummaryPartial, placeholders(len(read.buyers)), window), args...)
+	if err != nil {
+		return err
+	}
+	defer func() { _ = rows.Close() }()
+	for rows.Next() {
+		var (
+			buyer string
+			first sql.NullTime
+			total sql.NullString
+		)
+		if err := rows.Scan(&buyer, &first, &total); err != nil {
+			return err
+		}
+		t := into[buyer]
+		if t == nil {
+			t = &buyerSummaryTotal{}
+			into[buyer] = t
+		}
+		if first.Valid && (t.first == nil || first.Time.Before(*t.first)) {
+			f := first.Time
+			t.first = &f
+		}
+		if err := addDecimal(&t.total, total); err != nil {
+			return err
+		}
+	}
+	return rows.Err()
+}
 
 func (r *salesFactRepoImpl) MarkBuyers(ctx context.Context, buyers []domain.SalesBuyerKey) *apierror.APIError {
 	ctx, span := salesFactRepoTracer.Start(ctx, "repository.sales_fact.mark_buyers")
@@ -102,63 +240,51 @@ func (r *salesFactRepoImpl) ClearBuyerDirty(ctx context.Context, marks []domain.
 func (r *salesFactRepoImpl) RebuildBuyerSummaries(ctx context.Context, accountID string, buyerIDs []string) *apierror.APIError {
 	ctx, span := salesFactRepoTracer.Start(ctx, "repository.sales_fact.rebuild_buyer_summaries")
 	defer span.End()
+	if len(buyerIDs) == 0 {
+		return nil
+	}
 
-	for start := 0; start < len(buyerIDs); start += salesBuyerSummaryBatch {
-		batch := buyerIDs[start:min(start+salesBuyerSummaryBatch, len(buyerIDs))]
-		args := append([]any{accountID}, stringsToAny(batch)...)
-		rows, err := r.queries.DB().QueryContext(ctx, strings.Replace(salesBuyerSummarySource, "%s", placeholders(len(batch)), 1), args...)
+	monthLines, err := r.buyerMonthLines(ctx, accountID, buyerIDs)
+	if apiErr := db.MapSQLError(err); apiErr != nil {
+		return tracing.Trace(span, apiErr)
+	}
+	totals := map[string]*buyerSummaryTotal{}
+	for _, read := range planBuyerSummaryReads(buyerIDs, monthLines) {
+		if apiErr := db.MapSQLError(r.readBuyerSummaries(ctx, accountID, read, totals)); apiErr != nil {
+			return tracing.Trace(span, apiErr)
+		}
+	}
+
+	// A buyer whose qualifying orders have no issue date has no summary.
+	now := time.Now().UTC()
+	var upsertArgs []any
+	var gone []string
+	for _, b := range buyerIDs {
+		t := totals[b]
+		if t == nil || t.first == nil {
+			gone = append(gone, b)
+			continue
+		}
+		total := new(big.Rat)
+		if t.total != nil {
+			total = t.total
+		}
+		upsertArgs = append(upsertArgs, accountID, b, *t.first, total.FloatString(30), now)
+	}
+	for start := 0; start < len(upsertArgs); start += 5 * salesFactWriteBatch {
+		batch := upsertArgs[start:min(start+5*salesFactWriteBatch, len(upsertArgs))]
+		values := strings.TrimSuffix(strings.Repeat("(?, ?, ?, ?, ?),", len(batch)/5), ",")
+		_, err := r.queries.DB().ExecContext(ctx, `INSERT INTO sales_buyer_summary (account_id, buyer_account_id, first_ordered_at, total_invoiced, refreshed_at) VALUES `+
+			values+` ON DUPLICATE KEY UPDATE first_ordered_at = VALUES(first_ordered_at), total_invoiced = VALUES(total_invoiced), refreshed_at = VALUES(refreshed_at)`, batch...)
 		if apiErr := db.MapSQLError(err); apiErr != nil {
 			return tracing.Trace(span, apiErr)
 		}
-		type summary struct {
-			buyer   string
-			first   time.Time
-			invoice string
-		}
-		var found []summary
-		for rows.Next() {
-			var s summary
-			if err := rows.Scan(&s.buyer, &s.first, &s.invoice); err != nil {
-				_ = rows.Close()
-				return tracing.Trace(span, db.MapSQLError(err))
-			}
-			found = append(found, s)
-		}
-		_ = rows.Close()
-		if apiErr := db.MapSQLError(rows.Err()); apiErr != nil {
-			return tracing.Trace(span, apiErr)
-		}
-
-		keep := make(map[string]struct{}, len(found))
-		if len(found) > 0 {
-			now := time.Now().UTC()
-			values := strings.TrimSuffix(strings.Repeat("(?, ?, ?, ?, ?),", len(found)), ",")
-			upsertArgs := make([]any, 0, 5*len(found))
-			for _, s := range found {
-				keep[s.buyer] = struct{}{}
-				upsertArgs = append(upsertArgs, accountID, s.buyer, s.first, s.invoice, now)
-			}
-			_, err := r.queries.DB().ExecContext(ctx, `INSERT INTO sales_buyer_summary (account_id, buyer_account_id, first_ordered_at, total_invoiced, refreshed_at) VALUES `+
-				values+` ON DUPLICATE KEY UPDATE first_ordered_at = VALUES(first_ordered_at), total_invoiced = VALUES(total_invoiced), refreshed_at = VALUES(refreshed_at)`, upsertArgs...)
-			if apiErr := db.MapSQLError(err); apiErr != nil {
-				return tracing.Trace(span, apiErr)
-			}
-		}
-		var gone []string
-		for _, b := range batch {
-			if _, ok := keep[b]; !ok {
-				gone = append(gone, b)
-			}
-		}
-		if len(gone) > 0 {
-			_, err := r.queries.DB().ExecContext(ctx, `DELETE FROM sales_buyer_summary WHERE account_id = ? AND buyer_account_id IN (`+placeholders(len(gone))+`)`,
-				append([]any{accountID}, stringsToAny(gone)...)...)
-			if apiErr := db.MapSQLError(err); apiErr != nil {
-				return tracing.Trace(span, apiErr)
-			}
-		}
 	}
-	return nil
+	keys := make([]domain.SalesBuyerKey, len(gone))
+	for i, b := range gone {
+		keys[i] = domain.SalesBuyerKey{AccountID: accountID, BuyerAccountID: b}
+	}
+	return tracing.Trace(span, r.DeleteBuyerSummaries(ctx, keys))
 }
 
 func (r *salesFactRepoImpl) NextBuyers(ctx context.Context, after domain.SalesBuyerKey, limit int32) ([]domain.SalesBuyerKey, *apierror.APIError) {
@@ -186,12 +312,86 @@ LIMIT ?`, after.AccountID, after.AccountID, after.BuyerAccountID, limit)
 	return out, tracing.Trace(span, db.MapSQLError(rows.Err()))
 }
 
-func (r *salesFactRepoImpl) DeleteBuyerSummariesRefreshedBefore(ctx context.Context, t time.Time) *apierror.APIError {
-	ctx, span := salesFactRepoTracer.Start(ctx, "repository.sales_fact.delete_stale_buyer_summaries")
+func (r *salesFactRepoImpl) DeleteBuyerSummaries(ctx context.Context, keys []domain.SalesBuyerKey) *apierror.APIError {
+	ctx, span := salesFactRepoTracer.Start(ctx, "repository.sales_fact.delete_buyer_summaries")
 	defer span.End()
 
-	_, err := r.queries.DB().ExecContext(ctx, `DELETE FROM sales_buyer_summary WHERE refreshed_at < ?`, t)
-	return tracing.Trace(span, db.MapSQLError(err))
+	for start := 0; start < len(keys); start += salesFactWriteBatch {
+		batch := keys[start:min(start+salesFactWriteBatch, len(keys))]
+		args := make([]any, 0, 2*len(batch))
+		for _, k := range batch {
+			args = append(args, k.AccountID, k.BuyerAccountID)
+		}
+		tuples := strings.TrimSuffix(strings.Repeat("(?, ?),", len(batch)), ",")
+		_, err := r.queries.DB().ExecContext(ctx, `DELETE FROM sales_buyer_summary WHERE (account_id, buyer_account_id) IN (`+tuples+`)`, args...)
+		if apiErr := db.MapSQLError(err); apiErr != nil {
+			return tracing.Trace(span, apiErr)
+		}
+	}
+	return nil
+}
+
+func (r *salesFactRepoImpl) ListBuyerSummaryRefreshes(ctx context.Context, after domain.SalesBuyerKey, through *domain.SalesBuyerKey) (map[domain.SalesBuyerKey]time.Time, *apierror.APIError) {
+	ctx, span := salesFactRepoTracer.Start(ctx, "repository.sales_fact.list_buyer_summary_refreshes")
+	defer span.End()
+
+	query := `SELECT account_id, buyer_account_id, refreshed_at FROM sales_buyer_summary
+WHERE account_id >= ? AND (account_id > ? OR buyer_account_id > ?)`
+	args := []any{after.AccountID, after.AccountID, after.BuyerAccountID}
+	if through != nil {
+		query += ` AND account_id <= ? AND (account_id < ? OR buyer_account_id <= ?)`
+		args = append(args, through.AccountID, through.AccountID, through.BuyerAccountID)
+	}
+	rows, err := r.queries.DB().QueryContext(ctx, query, args...)
+	if apiErr := db.MapSQLError(err); apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
+	defer func() { _ = rows.Close() }()
+	out := map[domain.SalesBuyerKey]time.Time{}
+	for rows.Next() {
+		var (
+			k  domain.SalesBuyerKey
+			at time.Time
+		)
+		if err := rows.Scan(&k.AccountID, &k.BuyerAccountID, &at); err != nil {
+			return nil, tracing.Trace(span, db.MapSQLError(err))
+		}
+		out[k] = at
+	}
+	return out, tracing.Trace(span, db.MapSQLError(rows.Err()))
+}
+
+func (r *salesFactRepoImpl) LatestBuyerFactRefreshes(ctx context.Context, accountID string, buyerIDs []string) (map[string]time.Time, *apierror.APIError) {
+	ctx, span := salesFactRepoTracer.Start(ctx, "repository.sales_fact.latest_buyer_fact_refreshes")
+	defer span.End()
+
+	out := map[string]time.Time{}
+	for start := 0; start < len(buyerIDs); start += salesFactWriteBatch {
+		batch := buyerIDs[start:min(start+salesFactWriteBatch, len(buyerIDs))]
+		rows, err := r.queries.DB().QueryContext(ctx, `SELECT buyer_account_id, MAX(refreshed_at)
+FROM sales_line_fact FORCE INDEX (sales_line_fact_buyer_refreshed_idx)
+WHERE account_id = ? AND buyer_account_id IN (`+placeholders(len(batch))+`)
+GROUP BY buyer_account_id`, append([]any{accountID}, stringsToAny(batch)...)...)
+		if apiErr := db.MapSQLError(err); apiErr != nil {
+			return nil, tracing.Trace(span, apiErr)
+		}
+		for rows.Next() {
+			var (
+				buyer string
+				at    time.Time
+			)
+			if err := rows.Scan(&buyer, &at); err != nil {
+				_ = rows.Close()
+				return nil, tracing.Trace(span, db.MapSQLError(err))
+			}
+			out[buyer] = at
+		}
+		_ = rows.Close()
+		if apiErr := db.MapSQLError(rows.Err()); apiErr != nil {
+			return nil, tracing.Trace(span, apiErr)
+		}
+	}
+	return out, nil
 }
 
 func (r *salesFactRepoImpl) GetBuyerSummarySync(ctx context.Context) (*domain.SalesBuyerSummarySync, *apierror.APIError) {

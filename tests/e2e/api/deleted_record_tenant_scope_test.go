@@ -450,3 +450,23 @@ func TestDeletedRecordScope_Agents(t *testing.T) {
 		},
 	})
 }
+
+// Groups are a user's chat rosters, so both sides sign in as the seed user, who is a member of both tenants.
+func TestDeletedRecordScope_Messaging(t *testing.T) {
+	t.Parallel()
+	runDeletedScopeCases(t, []deletedScopeCase{
+		{
+			name: "messaging group",
+			setup: func(t *testing.T) deletedScopeTarget {
+				owner := chatUserClient(t)
+				group := createMessagingGroup(t, owner, uniqueName("e2e-dscope-mg"), nil, nil)
+				return deletedScopeTarget{
+					path:    messagingGroupsPath + "/" + jsonField(group, "id"),
+					owner:   owner,
+					tenantB: loginAsUser(t, seedUserEmail, seedUserPassword, SeedTenantBAccountID),
+				}
+			},
+			patch: map[string]any{"name": uniqueName("e2e-dscope-mg")},
+		},
+	})
+}

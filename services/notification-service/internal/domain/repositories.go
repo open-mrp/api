@@ -355,8 +355,10 @@ type NotificationPreferenceRepo interface {
 
 // DeletedRecordRepo snapshots a row into deleted_record before a hard delete so the record is recoverable and repeat/racing deletes are distinguishable from "never existed".
 type DeletedRecordRepo interface {
-	Create(ctx context.Context, resourceType constants.DeletedRecordResourceType, resourceID string, data any) *apierror.APIError
-	Exists(ctx context.Context, resourceType constants.DeletedRecordResourceType, resourceID string) (bool, *apierror.APIError)
+	// CreateInAccount records a snapshot that names its owning account, so only that account is told the record was deleted.
+	CreateInAccount(ctx context.Context, resourceType constants.DeletedRecordResourceType, resourceID, accountID string, data any) *apierror.APIError
+	// ExistsInAccount matches only a record whose snapshot names its owner as account_id, so another tenant cannot learn the id existed.
+	ExistsInAccount(ctx context.Context, resourceType constants.DeletedRecordResourceType, resourceID, accountID string) (bool, *apierror.APIError)
 }
 
 // IdempotencyKeyRepo persists idempotency rows for handlers that opt into contracts idempotency. Instances are constructed via RepoFactory.NewIdempotencyKeyRepo(); no transport layer wires it yet.

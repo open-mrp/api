@@ -1,5 +1,18 @@
 # Changelog
 
+## [2.21.0](https://github.com/open-mrp/api/compare/v2.20.4...v2.21.0) (2026-10-06)
+
+
+### Features
+
+* **notification:** send platform mail as a person, with BCC and a threaded internal note ([#251](https://github.com/open-mrp/api/issues/251)) ([ac29494](https://github.com/open-mrp/api/commit/ac294943cddee0bb39c48aeb008b5574816b0b3c))
+* **platform:** draft a personal follow-up for each new registrant, sent after review ([#252](https://github.com/open-mrp/api/issues/252)) ([3cf9124](https://github.com/open-mrp/api/commit/3cf9124e62f21b126b82939e2670f697ddef3a34))
+
+
+### Bug Fixes
+
+* **platform:** drop the reply line from account follow-ups ([#264](https://github.com/open-mrp/api/issues/264)) ([fac3412](https://github.com/open-mrp/api/commit/fac3412e2fbd5b5edaee27061f1ec801c1f23e01))
+
 ## [2.20.4](https://github.com/open-mrp/api/compare/v2.20.3...v2.20.4) (2026-10-06)
 
 

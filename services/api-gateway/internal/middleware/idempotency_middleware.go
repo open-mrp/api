@@ -215,7 +215,8 @@ func IdempotencyMiddleware(config *IdempotencyMiddlewareConfig) func(http.Handle
 			}
 
 			scopeHash := idempotency.ComputeHTTPScopeHash(actorID, targetAccountID, r.Method, normalizedRoute, idempotencyKey)
-			requestBodyHash := idempotency.ComputeRequestBodyHash(bodyBytes, params)
+			pathParams, _ := appctx.GetPathParams(r.Context())
+			requestBodyHash := idempotency.ComputeRequestBodyHash(bodyBytes, params, pathParams)
 
 			var paramsBytes []byte
 			if len(params) > 0 {

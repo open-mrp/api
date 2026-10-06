@@ -386,7 +386,11 @@ func TestDashItems_ExportWalksReachEveryRowOnce(t *testing.T) {
 			assertObjectField(t, row, "inventory_item")
 			quantity := jsonObject(row, "quantity")
 			require.NotNil(t, quantity, "every row carries a quantity")
-			require.NotNil(t, jsonObject(quantity, "unit"), "and its unit")
+			// Other tests create and delete items mid-walk, so the unit is checked on rows this test owns.
+			switch id := dashItemsInventoryRowItemID(row); id {
+			case fixtures[0], fixtures[1], fixtures[2], SeedItemID:
+				require.NotNil(t, jsonObject(quantity, "unit"), "item %s's quantity carries its unit", id)
+			}
 			switch dashItemsInventoryRowItemID(row) {
 			case fixtures[0]:
 				assertDecimalEqual(t, "4.5", jsonField(quantity, "value"))

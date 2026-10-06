@@ -23,11 +23,10 @@ import (
 
 const rollupTestAccountID = "ac_01k0a5smf9ekb8rqg12555zjqa"
 
-// rebuildAllRollups rebuilds every day and month, as a complete sweep pass does.
+// rebuildAllRollups rebuilds every day, as a complete sweep pass does.
 func rebuildAllRollups(t *testing.T, ctx context.Context, repo domain.SalesFactRepo) {
 	t.Helper()
 	cursor := domain.SalesRollupDay{Day: salesFactSweepFloor}
-	months := map[domain.SalesRollupDay]bool{}
 	for {
 		next, apiErr := repo.NextRollupDay(ctx, cursor)
 		require.Nil(t, apiErr)
@@ -35,11 +34,7 @@ func rebuildAllRollups(t *testing.T, ctx context.Context, repo domain.SalesFactR
 			break
 		}
 		require.Nil(t, repo.RebuildRollupDay(ctx, *next))
-		months[domain.SalesRollupDay{AccountID: next.AccountID, Day: truncateUTCMonth(next.Day)}] = true
 		cursor = domain.SalesRollupDay{AccountID: next.AccountID, Day: next.Day.AddDate(0, 0, 1)}
-	}
-	for m := range months {
-		require.Nil(t, repo.RebuildRollupMonth(ctx, m.AccountID, m.Day))
 	}
 }
 
@@ -161,19 +156,17 @@ func TestSalesRollupsFollowFactChanges(t *testing.T) {
 	require.NoError(t, pool.QueryRow(`SELECT COALESCE(SUM(line_count), 0) FROM sales_fact_rollup WHERE account_id = ? AND dimension = 'total' AND product_line_key = '' AND grain = 'month' AND bucket_start = ?`,
 		rollupTestAccountID, truncateUTCMonth(day)).Scan(&before))
 
-	// A fact added to a day shows up in that day's and month's buckets once they are rebuilt, and leaves when removed.
+	// A fact added to a day shows up in that day's and month's buckets once the day is rebuilt, and leaves when removed.
 	_, err := pool.Exec(`INSERT INTO sales_line_fact (account_id, invoiced_at, invoice_line_id, invoice_id, sales_order_id, sales_order_type_code, buyer_account_id, product_id, item_id, product_line_id, total_invoiced, refreshed_at)
 VALUES (?, ?, 'ivln_rollup_test', 'iv_rollup_test', 'or_x', 'sales_order', 'ac_x', 'pd_x', 'it_x', 'pl_x', 12.5, NOW(3))`, rollupTestAccountID, day.Add(10*time.Hour))
 	require.NoError(t, err)
 	t.Cleanup(func() {
 		_, _ = pool.Exec(`DELETE FROM sales_line_fact WHERE invoice_line_id = 'ivln_rollup_test'`)
 		_ = repo.RebuildRollupDay(ctx, domain.SalesRollupDay{AccountID: rollupTestAccountID, Day: day})
-		_ = repo.RebuildRollupMonth(ctx, rollupTestAccountID, day)
 	})
 
 	monthLines := func() int64 {
 		require.Nil(t, repo.RebuildRollupDay(ctx, domain.SalesRollupDay{AccountID: rollupTestAccountID, Day: day}))
-		require.Nil(t, repo.RebuildRollupMonth(ctx, rollupTestAccountID, day))
 		var n int64
 		require.NoError(t, pool.QueryRow(`SELECT COALESCE(SUM(line_count), 0) FROM sales_fact_rollup WHERE account_id = ? AND dimension = 'total' AND product_line_key = '' AND grain = 'month' AND bucket_start = ?`,
 			rollupTestAccountID, truncateUTCMonth(day)).Scan(&n))

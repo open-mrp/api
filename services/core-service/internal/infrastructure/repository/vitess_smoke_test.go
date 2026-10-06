@@ -820,7 +820,6 @@ func TestVitessSmoke(t *testing.T) {
 				break
 			}
 			checkAPI("RebuildRollupDay", facts.RebuildRollupDay(ctx, *next))
-			checkAPI("RebuildRollupMonth", facts.RebuildRollupMonth(ctx, next.AccountID, next.Day))
 			cursor = domain.SalesRollupDay{AccountID: next.AccountID, Day: next.Day.AddDate(0, 0, 1)}
 		}
 		checkAPI("SaveRollupSync", facts.SaveRollupSync(ctx, domain.SalesRollupSync{Cursor: &cursor}))

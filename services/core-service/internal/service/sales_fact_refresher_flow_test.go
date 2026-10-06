@@ -50,7 +50,6 @@ func TestRefreshMarksTheDayBeforeWritingItsFactsAndClearsItAfterTheRebuild(t *te
 		repo.EXPECT().DeleteFacts(ctx, []string{}).Return(nil),
 		repo.EXPECT().ListRollupDirty(gomock.Any(), int32(salesRollupDrainBatch)).Return([]domain.SalesRollupDirtyMark{mark}, nil),
 		repo.EXPECT().RebuildRollupDay(gomock.Any(), day).Return(nil),
-		repo.EXPECT().RebuildRollupMonth(gomock.Any(), "ac_1", utcMonth(day.Day)).Return(nil),
 		repo.EXPECT().ClearRollupDirty(gomock.Any(), []domain.SalesRollupDirtyMark{mark}).Return(nil),
 		repo.EXPECT().ListBuyerDirty(gomock.Any(), int32(salesBuyerDrainBatch)).Return([]domain.SalesBuyerDirtyMark{buyerMark}, nil),
 		repo.EXPECT().RebuildBuyerSummaries(gomock.Any(), "ac_1", []string{buyer.BuyerAccountID}).Return(nil),
@@ -81,7 +80,7 @@ func TestNoBuyersAreMarkedBeforeTheFirstSummaryPass(t *testing.T) {
 	repo.EXPECT().ListRollupDirty(gomock.Any(), gomock.Any()).Return(nil, nil)
 	repo.EXPECT().ListBuyerDirty(gomock.Any(), gomock.Any()).Return(nil, nil)
 
-	invoices := make([]string, salesFactInvoiceBatch+1) // two batches, one read of the sweep's state
+	invoices := make([]string, salesFactComputeBatch+1) // two batches, one read of the sweep's state
 	for i := range invoices {
 		invoices[i] = fmt.Sprintf("iv_%04d", i)
 	}
@@ -230,14 +229,13 @@ func TestATickReportsABacklog(t *testing.T) {
 				func(_ context.Context, _ string, _ domain.SalesFactScope, ids []string) ([]string, *apierror.APIError) {
 					return ids, nil
 				})
-			repo.EXPECT().ComputeFacts(gomock.Any(), gomock.Any()).Return(nil, nil)
-			repo.EXPECT().GetFacts(gomock.Any(), gomock.Any()).Return(nil, nil)
+			repo.EXPECT().ComputeFacts(gomock.Any(), gomock.Any()).Return(nil, nil).Times(computeBatches(salesFactInvoiceBatch))
+			repo.EXPECT().GetFacts(gomock.Any(), gomock.Any()).Return(nil, nil).Times(computeBatches(salesFactInvoiceBatch))
 			repo.EXPECT().ClearDirty(gomock.Any(), gomock.Len(salesFactInvoiceBatch)).Return(nil)
 		}},
 		{"more rollup days than one batch", func(repo *repositorymock.MockSalesFactRepo) {
 			repo.EXPECT().ListRollupDirty(gomock.Any(), gomock.Any()).Return(fullRollup, nil)
 			repo.EXPECT().RebuildRollupDay(gomock.Any(), gomock.Any()).Return(nil).Times(salesRollupDrainBatch)
-			repo.EXPECT().RebuildRollupMonth(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil).AnyTimes()
 			repo.EXPECT().ClearRollupDirty(gomock.Any(), gomock.Len(salesRollupDrainBatch)).Return(nil)
 			repo.EXPECT().ListDirty(gomock.Any(), gomock.Any()).Return(nil, nil)
 		}},
@@ -314,8 +312,8 @@ func TestAReconcilePassInProgressLeavesABacklog(t *testing.T) {
 			started := now.AddDate(0, 0, -2)
 			repo.EXPECT().GetSync(gomock.Any()).Return(&domain.SalesFactSync{PassStartedAt: &started, LastCompletedAt: &started}, nil)
 			repo.EXPECT().ListInvoicesAfter(gomock.Any(), gomock.Any(), gomock.Any()).Return(tt.page, nil)
-			repo.EXPECT().ComputeFacts(gomock.Any(), gomock.Any()).Return(nil, nil)
-			repo.EXPECT().GetFacts(gomock.Any(), gomock.Any()).Return(nil, nil)
+			repo.EXPECT().ComputeFacts(gomock.Any(), gomock.Any()).Return(nil, nil).Times(computeBatches(len(tt.page)))
+			repo.EXPECT().GetFacts(gomock.Any(), gomock.Any()).Return(nil, nil).Times(computeBatches(len(tt.page)))
 			repo.EXPECT().ListRollupDirty(gomock.Any(), gomock.Any()).Return(nil, nil)
 			repo.EXPECT().ListBuyerDirty(gomock.Any(), gomock.Any()).Return(nil, nil)
 			if !tt.backlog {
@@ -338,7 +336,6 @@ func TestARollupPassInProgressLeavesABacklog(t *testing.T) {
 	repo.EXPECT().GetRollupSync(gomock.Any()).Return(&domain.SalesRollupSync{Cursor: &domain.SalesRollupDay{Day: salesFactSweepOrigin}, PassStartedAt: &now}, nil)
 	repo.EXPECT().NextRollupDay(gomock.Any(), gomock.Any()).Return(&day, nil)
 	repo.EXPECT().RebuildRollupDay(gomock.Any(), day).Return(nil)
-	repo.EXPECT().RebuildRollupMonth(gomock.Any(), "ac_1", utcMonth(day.Day)).Return(nil)
 	repo.EXPECT().SaveRollupSync(gomock.Any(), gomock.Any()).Return(nil)
 
 	require.Nil(t, r.sweepRollups(context.Background()))
@@ -478,4 +475,9 @@ func TestADailyPassStartsOnlyAfterMidnightEastern(t *testing.T) {
 			require.Equal(t, tt.due, r.passDue(tt.started, tt.now.UTC()))
 		})
 	}
+}
+
+// computeBatches is how many recomputes refreshInvoices runs for n invoices.
+func computeBatches(n int) int {
+	return (n + salesFactComputeBatch - 1) / salesFactComputeBatch
 }

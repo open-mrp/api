@@ -17,8 +17,8 @@ import (
 
 const (
 	defaultCleanupInterval         = 24 * time.Hour
-	defaultCleanupBatchSize        = 1000
-	defaultCleanupMaxBatchesPerRun = 100
+	defaultCleanupBatchSize        = 20
+	defaultCleanupMaxBatchesPerRun = 1000
 	defaultCleanupLeaseName        = "idempotency-cleanup"
 	defaultCleanupLeaseTTL         = 5 * time.Minute
 	defaultCleanupScheduleTZ       = "America/New_York"
@@ -29,10 +29,10 @@ type CleanupConfig struct {
 	// Interval (optional; default: 24h) is how often the cleanup loop fires after the first run. Each tick triggers a full run that processes up to MaxBatchesPerRun batches for each table.
 	Interval time.Duration
 
-	// BatchSize (optional; default: 1000) is the maximum number of expired rows deleted in a single SQL DELETE statement. Keeping this bounded prevents table-lock escalation on MySQL and limits the replication lag each batch introduces.
+	// BatchSize (optional; default: 20) is the maximum number of expired rows deleted in a single SQL DELETE statement. Idempotency keys hold ~12KB response bodies, so 20 keeps a batch under 25ms.
 	BatchSize int
 
-	// MaxBatchesPerRun (optional; default: 100) caps the total number of sequential DELETE batches executed for each table in a single cleanup run. The effective ceiling per run is BatchSize * MaxBatchesPerRun rows per table.
+	// MaxBatchesPerRun (optional; default: 1000) caps the total number of sequential DELETE batches executed for each table in a single cleanup run. The effective ceiling per run is BatchSize * MaxBatchesPerRun rows per table.
 	MaxBatchesPerRun int
 
 	// LeaseName (optional; default: "idempotency-cleanup") identifies the distributed lease this worker acquires before each run so only one pod does the DELETE work.

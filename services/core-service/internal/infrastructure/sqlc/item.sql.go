@@ -2145,56 +2145,6 @@ func (q *Queries) ListItemsForward(ctx context.Context, arg ListItemsForwardPara
 	return items, nil
 }
 
-const listStaleBurnRateItems = `-- name: ListStaleBurnRateItems :many
-SELECT i.id, i.account_id
-FROM item i
-JOIN rate r ON r.id = i.burn_rate_id
-WHERE i.deleted_at IS NULL
-  AND r.updated_at < ?
-ORDER BY r.updated_at ASC
-LIMIT ?
-`
-
-type ListStaleBurnRateItemsParams struct {
-	StaleBefore time.Time
-	Limit       int32
-}
-
-type ListStaleBurnRateItemsRow struct {
-	ID        string
-	AccountID string
-}
-
-// ListStaleBurnRateItems backs the periodic burn-rate sweeper. Each burn-rate rate row's updated_at is
-// set by the recompute write path, so an item kept fresh by ongoing consumption falls out of this set
-// on its own and only genuinely idle items surface. Stalest first (so the oldest is always serviced),
-// and capped by ? so a tick enqueues a bounded batch rather than the whole table (no thundering herd).
-// Do not add an index on rate(updated_at) for this: rate also holds every price and cost, nearly all of
-// them older than stale_before, so leading with it walks ~1M non-burn rows to find a few hundred. Driving
-// from item (thousands of rows) with a PK lookup into rate is the cheap plan.
-func (q *Queries) ListStaleBurnRateItems(ctx context.Context, arg ListStaleBurnRateItemsParams) ([]ListStaleBurnRateItemsRow, error) {
-	rows, err := q.db.QueryContext(ctx, listStaleBurnRateItems, arg.StaleBefore, arg.Limit)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	var items []ListStaleBurnRateItemsRow
-	for rows.Next() {
-		var i ListStaleBurnRateItemsRow
-		if err := rows.Scan(&i.ID, &i.AccountID); err != nil {
-			return nil, err
-		}
-		items = append(items, i)
-	}
-	if err := rows.Close(); err != nil {
-		return nil, err
-	}
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-	return items, nil
-}
-
 const removeItemAttribute = `-- name: RemoveItemAttribute :execresult
 DELETE ia FROM _item_attributes ia
 JOIN item i ON i.id = ia.B
@@ -2212,6 +2162,51 @@ type RemoveItemAttributeParams struct {
 
 func (q *Queries) RemoveItemAttribute(ctx context.Context, arg RemoveItemAttributeParams) (sql.Result, error) {
 	return q.db.ExecContext(ctx, removeItemAttribute, arg.AttributeID, arg.ItemID, arg.AccountID)
+}
+
+const scanBurnRateItems = `-- name: ScanBurnRateItems :many
+SELECT p.id, p.account_id,
+       CAST(COALESCE(p.deleted_at IS NULL AND r.updated_at < ?, 0) AS SIGNED) AS stale
+FROM (SELECT i.id, i.account_id, i.burn_rate_id, i.deleted_at FROM item i WHERE i.id > ? ORDER BY i.id LIMIT ?) p
+LEFT JOIN rate r ON r.id = p.burn_rate_id
+ORDER BY p.id
+`
+
+type ScanBurnRateItemsParams struct {
+	StaleBefore time.Time
+	AfterID     string
+	Limit       int32
+}
+
+type ScanBurnRateItemsRow struct {
+	ID        string
+	AccountID string
+	Stale     int64
+}
+
+// ScanBurnRateItems backs the burn-rate sweeper: the next page of items after the cursor, each flagged stale
+// when the recompute path has not touched its burn rate since stale_before. The page bounds items read, not flagged.
+func (q *Queries) ScanBurnRateItems(ctx context.Context, arg ScanBurnRateItemsParams) ([]ScanBurnRateItemsRow, error) {
+	rows, err := q.db.QueryContext(ctx, scanBurnRateItems, arg.StaleBefore, arg.AfterID, arg.Limit)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []ScanBurnRateItemsRow
+	for rows.Next() {
+		var i ScanBurnRateItemsRow
+		if err := rows.Scan(&i.ID, &i.AccountID, &i.Stale); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
 }
 
 const searchItemIDsBySKUFulltext = `-- name: SearchItemIDsBySKUFulltext :many

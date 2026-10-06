@@ -237,9 +237,6 @@ func ensureAnalyticsCorpus(t *testing.T) {
 		end := planAnaOrigin.AddDate(0, 0, planAnaSpanDays+1)
 		for day := planAnaOrigin; day.Before(end); day = day.AddDate(0, 0, 1) {
 			require.Nil(t, repo.RebuildRollupDay(ctx, domain.SalesRollupDay{AccountID: planAnaAccount, Day: day}))
-			if day.AddDate(0, 0, 1).Day() == 1 || !day.AddDate(0, 0, 1).Before(end) {
-				require.Nil(t, repo.RebuildRollupMonth(ctx, planAnaAccount, day))
-			}
 		}
 		exec("UPDATE account SET name = ? WHERE id = ?", planAnaCorpusVersion, planAnaAccount)
 		exec("ANALYZE TABLE sales_line_fact, sales_fact_rollup, account_relation")

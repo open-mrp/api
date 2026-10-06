@@ -6,11 +6,11 @@ import (
 )
 
 const (
-	// defaultPurgeBatchSize keeps each retention DELETE small. At 1000 rows the outbox purge reached a 1s p99, holding row locks and lagging replicas for its whole duration.
-	defaultPurgeBatchSize = 200
+	// defaultPurgeBatchSize keeps each retention DELETE under 25ms: outbox rows carry ~10KB payloads, and 200 of them reached a 300ms p99.
+	defaultPurgeBatchSize = 25
 
 	// defaultPurgeMaxBatches bounds one purge run, so a large backlog drains over a few ticks instead of in one long run.
-	defaultPurgeMaxBatches = 100
+	defaultPurgeMaxBatches = 800
 
 	// purgeBatchPause lets replicas apply one batch before the next is written.
 	purgeBatchPause = 50 * time.Millisecond

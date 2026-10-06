@@ -239,9 +239,11 @@ func TestRequestLogs_ListFilterByActorIDsImpossible(t *testing.T) {
 
 func TestRequestLogs_ListFilterByIdempotencyKey(t *testing.T) {
 	t.Parallel()
+	// The seed row is dated when the database was seeded, so reach back past it; a list otherwise covers only the last day.
 	filtered, _, err := apiClient.GetList(requestLogsPath, url.Values{
 		"idempotency_key": {SeedRequestLogIdempotencyKey},
 		"limit":           {"10"},
+		"starts_at":       {requestLogSeedEra},
 	})
 	if err != nil {
 		t.Fatal("Request logs endpoint not accessible")

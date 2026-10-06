@@ -514,7 +514,7 @@ func (s *addressSvcImpl) DeleteAddress(ctx context.Context, params domain.Delete
 		return tracing.Trace(span, apiErr)
 	}
 	if !inAccount {
-		wasDeleted, deletedCheckErr := s.repos.NewDeletedRecordRepo().Exists(ctx, constants.DeletedRecordResourceTypeAddress, params.AddressID)
+		wasDeleted, deletedCheckErr := s.repos.NewDeletedRecordRepo().ExistsInAccount(ctx, constants.DeletedRecordResourceTypeAddress, params.AddressID, params.AccountID)
 		if deletedCheckErr != nil {
 			return tracing.Trace(span, deletedCheckErr)
 		}
@@ -537,7 +537,7 @@ func (s *addressSvcImpl) DeleteAddress(ctx context.Context, params domain.Delete
 
 	// Delete in transaction
 	apiErr = s.withTx(ctx, func(txCtx context.Context, txSvc *addressSvcImpl) *apierror.APIError {
-		if apiErr := txSvc.repos.NewDeletedRecordRepo().Create(txCtx, constants.DeletedRecordResourceTypeAddress, address.ID, address); apiErr != nil {
+		if apiErr := txSvc.repos.NewDeletedRecordRepo().CreateInAccount(txCtx, constants.DeletedRecordResourceTypeAddress, address.ID, params.AccountID, address); apiErr != nil {
 			return apiErr
 		}
 

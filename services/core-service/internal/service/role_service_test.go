@@ -249,7 +249,7 @@ func (suite *RoleSvcTestSuite) TestDeleteRole_Success() {
 		Times(1)
 
 	suite.deletedRecordRepo.EXPECT().
-		Create(gomock.Any(), constants.DeletedRecordResourceTypeRole, "rl_1", gomock.Any()).
+		CreateInAccount(gomock.Any(), constants.DeletedRecordResourceTypeRole, "rl_1", "acct_test", gomock.Any()).
 		Return(nil).
 		Times(1)
 

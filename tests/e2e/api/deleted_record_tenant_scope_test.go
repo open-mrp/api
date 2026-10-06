@@ -410,3 +410,30 @@ func TestDeletedRecordScope_Production(t *testing.T) {
 		},
 	})
 }
+
+func TestDeletedRecordScope_Account(t *testing.T) {
+	t.Parallel()
+	runDeletedScopeCases(t, []deletedScopeCase{
+		{
+			name: "address",
+			setup: func(t *testing.T) deletedScopeTarget {
+				return deletedScopeTarget{path: addressesPath + "/" + createE2EAddress(t, uniqueName("e2e-dscope-addr"))}
+			},
+			patch: map[string]any{"name": uniqueName("e2e-dscope-addr")},
+		},
+		{
+			name: "role",
+			setup: func(t *testing.T) deletedScopeTarget {
+				return createdPath(t, rolesPath, map[string]any{"name": uniqueName("e2e-dscope-role")})
+			},
+			patch: map[string]any{"name": uniqueName("e2e-dscope-role")},
+		},
+		{
+			name: "sandbox",
+			setup: func(t *testing.T) deletedScopeTarget {
+				return createdPath(t, sandboxesPath, map[string]any{"name": uniqueName("e2e-dscope-sb"), "mode": "blank"})
+			},
+			deleteStatus: 202,
+		},
+	})
+}

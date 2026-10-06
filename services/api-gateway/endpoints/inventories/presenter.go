@@ -7,6 +7,7 @@ import (
 	itemep "github.com/open-mrp/api/services/api-gateway/endpoints/items"
 	grpcutil "github.com/open-mrp/api/services/api-gateway/internal/grpc"
 	apiresource "github.com/open-mrp/api/services/api-gateway/pkg/resource"
+	"github.com/open-mrp/api/services/api-gateway/pkg/resourcekit"
 	"github.com/open-mrp/api/shared/constants"
 	pb "github.com/open-mrp/api/shared/proto/core"
 )
@@ -28,8 +29,13 @@ func ListInventoriesPresenter(ctx context.Context, resp *pb.ListInventoriesRespo
 		return apiresource.NewList[apiresource.InventoryItem](nil, apiresource.PageInfo{})
 	}
 
+	meta := resourcekit.GetLoadMeta(ctx)
 	items := make([]apiresource.InventoryItem, len(resp.Items))
 	for i, item := range resp.Items {
+		// A row has no id of its own, so the product line it expands to is keyed by the item it reports on.
+		if item.ProductLineId != nil && item.Item != nil {
+			meta.Set(constants.ObjectTypeInventoryItem, item.Item.Id, "product_line_id", *item.ProductLineId)
+		}
 		valueStr := strconv.FormatFloat(item.OnHandQuantity, 'f', -1, 64)
 		presented := itemep.ItemPresenter(item.Item)
 

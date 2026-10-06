@@ -3,6 +3,7 @@ package inventoryep
 import (
 	"context"
 	"net/http"
+	"time"
 
 	"github.com/open-mrp/api/services/auth-service/pkg/types"
 
@@ -15,11 +16,17 @@ import (
 // Request to list inventories.
 type ListInventoriesRequest struct {
 	apiresource.PaginationRequest
+	// Reports each item's stock as it stood at this instant instead of now.
+	//
+	// The figure is then the last inventory level logged for the item at or before `as_of`: its physical stock — on hand less what was short against open demand — when the movement that wrote it happened. An item with nothing logged by then reports zero.
+	AsOf *time.Time `query:"as_of"`
 }
 
-// Returns a paginated list of items with on-hand inventory quantities for the account.
+// Returns a paginated list of items with inventory quantities for the account.
 //
 // Items are listed whether or not they have ever held stock; an item with no recorded inventory reports a zero quantity. Items backed by a non-sale product — the service, shipping, tax, credit, and return products that carry charges on orders — are left out. The `q` search term matches on item SKU and description.
+//
+// Without `as_of`, each quantity is the item's current on-hand stock. With it, each is the item's last logged level at or before that instant, which is what an inventory valuation at a past date reads. Either way the figure is in the base unit of the item's category.
 type ListInventoriesEndpoint struct{}
 
 func (e *ListInventoriesEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListInventoriesRequest, *apiresource.List[apiresource.InventoryItem]] {
@@ -38,5 +45,9 @@ func (e *ListInventoriesEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListIn
 		ServiceHandler: func(svc any) func(ctx context.Context, req *ListInventoriesRequest) (*apiresource.List[apiresource.InventoryItem], *apierror.APIError) {
 			return svc.(InventorySvc).ListInventories
 		},
+		IncludeConfig: apiendpoint.IncludesFor(apiendpoint.IncludesParams{
+			ObjectType: constants.ObjectTypeInventoryItem,
+			Fields:     []string{"product_line"},
+		}),
 	})
 }

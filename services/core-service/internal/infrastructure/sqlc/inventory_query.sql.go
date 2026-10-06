@@ -8,6 +8,7 @@ package sqlc
 import (
 	"context"
 	"strings"
+	"time"
 )
 
 const fetchCurrentInventoryForItem = `-- name: FetchCurrentInventoryForItem :one
@@ -93,6 +94,115 @@ func (q *Queries) FetchCurrentInventoryForItem(ctx context.Context, arg FetchCur
 	var i FetchCurrentInventoryForItemRow
 	err := row.Scan(&i.AvailableToPromise, &i.UnitAbbreviation)
 	return i, err
+}
+
+const fetchInventoryLevelsAsOf = `-- name: FetchInventoryLevelsAsOf :many
+SELECT STRAIGHT_JOIN
+    i.id AS item_id,
+    CAST(COALESCE(CAST(q.value AS DECIMAL(65,30)) * (u.ratio_numerator / u.ratio_denominator), 0)
+        / COALESCE(NULLIF(bu.ratio_numerator / bu.ratio_denominator, 0), 1) AS DECIMAL(65,30)) AS level,
+    bu.id AS unit_id,
+    bu.abbreviation AS unit_abbreviation,
+    ug.unit_type_code AS unit_type
+FROM item i
+JOIN item_category ic ON i.item_category_id = ic.id
+JOIN unit_group ug ON ic.unit_group_id = ug.id
+JOIN unit bu ON ug.base_unit_id = bu.id
+LEFT JOIN (
+    SELECT l.account_id, l.item_id, MAX(l.created_at) AS logged_at
+    FROM inventory_log l FORCE INDEX (inventory_log_account_id_item_id_created_at_idx)
+    WHERE l.account_id = ?
+      AND l.item_id IN (/*SLICE:log_item_ids*/?)
+      AND l.created_at <= ?
+    GROUP BY l.account_id, l.item_id
+) latest ON latest.item_id = i.id
+LEFT JOIN inventory_log il ON il.id = (
+    SELECT MAX(x.id)
+    FROM inventory_log x FORCE INDEX (inventory_log_account_id_item_id_created_at_idx)
+    WHERE x.account_id = ?
+      AND x.item_id = i.id
+      AND x.created_at = latest.logged_at
+)
+LEFT JOIN quantity q ON q.id = il.quantity_id
+LEFT JOIN unit u ON u.id = q.unit_id
+WHERE i.id IN (/*SLICE:item_ids*/?)
+  AND i.account_id = ?
+  AND i.deleted_at IS NULL
+`
+
+type FetchInventoryLevelsAsOfParams struct {
+	AccountID  string
+	LogItemIds []string
+	AsOf       time.Time
+	ItemIds    []string
+}
+
+type FetchInventoryLevelsAsOfRow struct {
+	ItemID           string
+	Level            string
+	UnitID           string
+	UnitAbbreviation string
+	UnitType         string
+}
+
+// FetchInventoryLevelsAsOf is, per item, the last inventory level logged at or before `as_of`, in the
+// item's category base unit; an item with nothing logged by then reads zero. A logged level is the
+// physical figure — on hand less short — at the moment of the movement that wrote it, not on-hand.
+//
+// Each item's last instant comes from a loose scan of (account_id, item_id, created_at): one dive
+// per item, however long its history. Grouping on account_id as well is what qualifies the scan (the
+// group must be the key's leftmost columns); a dependent ORDER BY ... LIMIT 1 reads every log the
+// item has. Logs sharing that instant resolve to the greatest id. STRAIGHT_JOIN keeps the page of
+// items driving: left to choose, the optimizer cross-joins the page with every unit group.
+func (q *Queries) FetchInventoryLevelsAsOf(ctx context.Context, arg FetchInventoryLevelsAsOfParams) ([]FetchInventoryLevelsAsOfRow, error) {
+	query := fetchInventoryLevelsAsOf
+	var queryParams []interface{}
+	queryParams = append(queryParams, arg.AccountID)
+	if len(arg.LogItemIds) > 0 {
+		for _, v := range arg.LogItemIds {
+			queryParams = append(queryParams, v)
+		}
+		query = strings.Replace(query, "/*SLICE:log_item_ids*/?", strings.Repeat(",?", len(arg.LogItemIds))[1:], 1)
+	} else {
+		query = strings.Replace(query, "/*SLICE:log_item_ids*/?", "NULL", 1)
+	}
+	queryParams = append(queryParams, arg.AsOf)
+	queryParams = append(queryParams, arg.AccountID)
+	if len(arg.ItemIds) > 0 {
+		for _, v := range arg.ItemIds {
+			queryParams = append(queryParams, v)
+		}
+		query = strings.Replace(query, "/*SLICE:item_ids*/?", strings.Repeat(",?", len(arg.ItemIds))[1:], 1)
+	} else {
+		query = strings.Replace(query, "/*SLICE:item_ids*/?", "NULL", 1)
+	}
+	queryParams = append(queryParams, arg.AccountID)
+	rows, err := q.db.QueryContext(ctx, query, queryParams...)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []FetchInventoryLevelsAsOfRow
+	for rows.Next() {
+		var i FetchInventoryLevelsAsOfRow
+		if err := rows.Scan(
+			&i.ItemID,
+			&i.Level,
+			&i.UnitID,
+			&i.UnitAbbreviation,
+			&i.UnitType,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
 }
 
 const fetchOnHandInventoryBulk = `-- name: FetchOnHandInventoryBulk :many

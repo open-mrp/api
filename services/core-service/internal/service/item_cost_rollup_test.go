@@ -183,8 +183,8 @@ func TestRecomputeItemCosts_WritesBackInTheItemsStockingUnit(t *testing.T) {
 	}
 }
 
-// GET /v1/catalog/items/{id}/costs recomputes and writes back on every call, so repeated page views
-// are the load this runs under. Each pass has to land on the same value and the same denominator:
+// Every change upstream of an item recomputes and writes its cost back, so repeated passes are the
+// load this runs under. Each pass has to land on the same value and the same denominator:
 // a denominator that moves is a value that silently changes meaning, and the next pass compounds it.
 func TestRecomputeItemCosts_RepeatedCallsAreIdempotent(t *testing.T) {
 	t.Parallel()

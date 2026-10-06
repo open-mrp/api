@@ -3,6 +3,7 @@ package repository
 import (
 	"context"
 	gosql "database/sql"
+	"errors"
 	"fmt"
 	"slices"
 	"strings"
@@ -626,6 +627,7 @@ func (r *itemRepoImpl) GetCostFlowConsumptions(ctx context.Context, stepID strin
 		}
 
 		result = append(result, domain.CostFlowConsumption{
+			ConsumedItemID:           row.ConsumedItemID,
 			ConsumedItemType:         row.ConsumedItemType,
 			ConsumptionQuantity:      consQty,
 			ConsumptionUnitRatio:     consRatio,
@@ -683,37 +685,76 @@ func (r *itemRepoImpl) UpdateUnitCost(ctx context.Context, accountID, itemID str
 	return nil
 }
 
-func (r *itemRepoImpl) GetTrends(ctx context.Context, accountID, itemID, trendType string) (*domain.ItemTrends, *apierror.APIError) {
-	ctx, span := itemRepoTracer.Start(ctx, "repository.item.get_trends")
+func (r *itemRepoImpl) GetInventoryLevelBefore(ctx context.Context, accountID, itemID string, before time.Time) (*domain.InventoryLevel, *apierror.APIError) {
+	ctx, span := itemRepoTracer.Start(ctx, "repository.item.get_inventory_level_before")
 	defer span.End()
 
-	rows, err := r.queries.GetItemTrends(ctx, sqlc.GetItemTrendsParams{
-		ItemID:    itemID,
+	row, err := r.queries.GetItemInventoryLevelBefore(ctx, sqlc.GetItemInventoryLevelBeforeParams{
 		AccountID: accountID,
+		ItemID:    itemID,
+		Before:    before,
+	})
+	if errors.Is(err, gosql.ErrNoRows) {
+		return nil, nil
+	}
+	if apiErr := db.MapSQLError(err); apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
+
+	level, parseErr := decimal.NewFromString(row.Level)
+	if parseErr != nil {
+		return nil, tracing.Trace(span, apierror.NewInternalError(parseErr, "Invalid inventory level."))
+	}
+	return &domain.InventoryLevel{At: row.CreatedAt, Value: level}, nil
+}
+
+func (r *itemRepoImpl) ListDailyClosingInventoryLevels(ctx context.Context, accountID, itemID string, from, to time.Time) ([]domain.InventoryLevel, *apierror.APIError) {
+	ctx, span := itemRepoTracer.Start(ctx, "repository.item.list_daily_closing_inventory_levels")
+	defer span.End()
+
+	rows, err := r.queries.ListItemDailyClosingInventoryLevels(ctx, sqlc.ListItemDailyClosingInventoryLevelsParams{
+		AccountID:   accountID,
+		ItemID:      itemID,
+		WindowStart: from,
+		WindowEnd:   to,
 	})
 	if apiErr := db.MapSQLError(err); apiErr != nil {
 		return nil, tracing.Trace(span, apiErr)
 	}
 
-	// Deduplicate by day: keep only the earliest log entry per calendar day. This matches the Dashboard behavior which iterates ASC-ordered logs and takes the first entry it encounters for each unique day.
-	seen := make(map[string]struct{})
-	var points []*domain.ItemTrend
+	levels := make([]domain.InventoryLevel, 0, len(rows))
 	for _, row := range rows {
-		dayKey := row.Date.Format("2006-01-02")
-		if _, exists := seen[dayKey]; exists {
-			continue
+		level, parseErr := decimal.NewFromString(row.Level)
+		if parseErr != nil {
+			return nil, tracing.Trace(span, apierror.NewInternalError(parseErr, "Invalid inventory level."))
 		}
-		seen[dayKey] = struct{}{}
-		points = append(points, &domain.ItemTrend{
-			Date:  row.Date,
-			Value: row.Value,
-		})
+		levels = append(levels, domain.InventoryLevel{At: row.CreatedAt, Value: level})
+	}
+	return levels, nil
+}
+
+func (r *itemRepoImpl) GetProductLineIDs(ctx context.Context, accountID string, itemIDs []string) (map[string]string, *apierror.APIError) {
+	ctx, span := itemRepoTracer.Start(ctx, "repository.item.get_product_line_ids")
+	defer span.End()
+
+	out := make(map[string]string, len(itemIDs))
+	if len(itemIDs) == 0 {
+		return out, nil
 	}
 
-	return &domain.ItemTrends{
-		TrendType: trendType,
-		Points:    points,
-	}, nil
+	rows, err := r.queries.ListProductLineIDsForItems(ctx, sqlc.ListProductLineIDsForItemsParams{
+		ItemIds:   itemIDs,
+		AccountID: accountID,
+	})
+	if apiErr := db.MapSQLError(err); apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
+	for _, row := range rows {
+		if row.ProductLineID.Valid {
+			out[row.ItemID] = row.ProductLineID.String
+		}
+	}
+	return out, nil
 }
 
 func (r *itemRepoImpl) ExportWithInventory(ctx context.Context, accountID string) (*domain.ExportItemsResult, *apierror.APIError) {
@@ -751,8 +792,9 @@ func (r *itemRepoImpl) ExportWithInventory(ctx context.Context, accountID string
 				CreatedAt:      row.CreatedAt,
 				UpdatedAt:      row.UpdatedAt,
 			},
-			OnHandQuantity: formatDecimal(row.OnHandQuantity),
-			OnHandUnitID:   row.OnHandUnitID,
+			OnHandQuantity:         row.OnHandQuantity,
+			OnHandUnitID:           row.OnHandUnitID,
+			OnHandUnitAbbreviation: row.OnHandUnitAbbreviation,
 		}
 	}
 
@@ -1132,9 +1174,10 @@ func (r *itemRepoImpl) FetchItemsBySKU(ctx context.Context, accountID string, sk
 	result := make([]domain.ItemSKUInfo, len(rows))
 	for i, row := range rows {
 		result[i] = domain.ItemSKUInfo{
-			ItemID:     row.ItemID,
-			SKU:        row.Sku,
-			BaseUnitID: row.BaseUnitID,
+			ItemID:      row.ItemID,
+			SKU:         row.Sku,
+			UnitGroupID: row.UnitGroupID,
+			BaseUnitID:  row.BaseUnitID,
 		}
 	}
 

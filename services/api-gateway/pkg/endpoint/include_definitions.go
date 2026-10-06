@@ -233,6 +233,13 @@ func init() {
 	})
 
 	RegisterIncludes(&ObjectIncludes{
+		ObjectType: constants.ObjectTypeInventoryItem,
+		Fields: []IncludeFieldDef{
+			{Key: "product_line", ObjectType: constants.ObjectTypeProductLine},
+		},
+	})
+
+	RegisterIncludes(&ObjectIncludes{
 		ObjectType: constants.ObjectTypeItemLotDefault,
 		Fields: []IncludeFieldDef{
 			{Key: "unit", ObjectType: constants.ObjectTypeUnit},

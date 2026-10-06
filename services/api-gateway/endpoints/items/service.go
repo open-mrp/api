@@ -205,7 +205,12 @@ func (m *itemSvcImpl) GetItemTrends(ctx context.Context, req *GetItemTrendsReque
 		return nil, apiErr
 	}
 
-	return ItemTrendsPresenter(resp), nil
+	units, apiErr := resourceloaders.LoadUnitsByID(ctx, resp.UnitId)
+	if apiErr != nil {
+		return nil, apiErr
+	}
+
+	return ItemTrendsPresenter(resp, units), nil
 }
 
 func (m *itemSvcImpl) ExportItems(ctx context.Context, req *ExportItemsRequest) (*httptransport.FileDownload, *apierror.APIError) {
@@ -378,7 +383,7 @@ func (m *itemSvcImpl) BulkReconcileItems(ctx context.Context, req *BulkReconcile
 	resp, apiErr := grpcutil.CallRPC(ctx, itemSvcTracer, "service.items.bulk_reconcile", domain.ServiceName,
 		func(ctx context.Context, opts ...grpc.CallOption) (*pb.BulkReconcileItemsResponse, error) {
 			return m.coreClient.BulkReconcileItems(ctx, pbReq, opts...)
-		})
+		}, grpcutil.WithTimeout(grpcutil.BulkWriteTimeout))
 
 	if apiErr != nil {
 		return nil, apiErr

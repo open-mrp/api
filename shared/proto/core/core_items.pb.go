@@ -326,9 +326,11 @@ func (x *GetItemTrendsRequest) GetTrendType() string {
 }
 
 type GetItemTrendsResponse struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	TrendType     string                 `protobuf:"bytes,1,opt,name=trend_type,json=trendType,proto3" json:"trend_type,omitempty"`
-	Points        []*ItemTrendPoint      `protobuf:"bytes,2,rep,name=points,proto3" json:"points,omitempty"`
+	state     protoimpl.MessageState `protogen:"open.v1"`
+	TrendType string                 `protobuf:"bytes,1,opt,name=trend_type,json=trendType,proto3" json:"trend_type,omitempty"`
+	Points    []*ItemTrendPoint      `protobuf:"bytes,2,rep,name=points,proto3" json:"points,omitempty"`
+	// The item's category base unit, which every point's value is in.
+	UnitId        string `protobuf:"bytes,3,opt,name=unit_id,json=unitId,proto3" json:"unit_id,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -377,6 +379,13 @@ func (x *GetItemTrendsResponse) GetPoints() []*ItemTrendPoint {
 	return nil
 }
 
+func (x *GetItemTrendsResponse) GetUnitId() string {
+	if x != nil {
+		return x.UnitId
+	}
+	return ""
+}
+
 type ExportItemsRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	unknownFields protoimpl.UnknownFields
@@ -414,20 +423,21 @@ func (*ExportItemsRequest) Descriptor() ([]byte, []int) {
 }
 
 type ExportItemInfo struct {
-	state          protoimpl.MessageState `protogen:"open.v1"`
-	Id             string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
-	Sku            string                 `protobuf:"bytes,2,opt,name=sku,proto3" json:"sku,omitempty"`
-	Description    *string                `protobuf:"bytes,3,opt,name=description,proto3,oneof" json:"description,omitempty"`
-	Notes          *string                `protobuf:"bytes,4,opt,name=notes,proto3,oneof" json:"notes,omitempty"`
-	ItemTypeCode   string                 `protobuf:"bytes,5,opt,name=item_type_code,json=itemTypeCode,proto3" json:"item_type_code,omitempty"`
-	CategoryName   string                 `protobuf:"bytes,6,opt,name=category_name,json=categoryName,proto3" json:"category_name,omitempty"`
-	AccountId      string                 `protobuf:"bytes,7,opt,name=account_id,json=accountId,proto3" json:"account_id,omitempty"`
-	CreatedAt      *timestamppb.Timestamp `protobuf:"bytes,8,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
-	UpdatedAt      *timestamppb.Timestamp `protobuf:"bytes,9,opt,name=updated_at,json=updatedAt,proto3" json:"updated_at,omitempty"`
-	OnHandQuantity string                 `protobuf:"bytes,10,opt,name=on_hand_quantity,json=onHandQuantity,proto3" json:"on_hand_quantity,omitempty"`
-	OnHandUnitId   string                 `protobuf:"bytes,11,opt,name=on_hand_unit_id,json=onHandUnitId,proto3" json:"on_hand_unit_id,omitempty"`
-	unknownFields  protoimpl.UnknownFields
-	sizeCache      protoimpl.SizeCache
+	state                  protoimpl.MessageState `protogen:"open.v1"`
+	Id                     string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	Sku                    string                 `protobuf:"bytes,2,opt,name=sku,proto3" json:"sku,omitempty"`
+	Description            *string                `protobuf:"bytes,3,opt,name=description,proto3,oneof" json:"description,omitempty"`
+	Notes                  *string                `protobuf:"bytes,4,opt,name=notes,proto3,oneof" json:"notes,omitempty"`
+	ItemTypeCode           string                 `protobuf:"bytes,5,opt,name=item_type_code,json=itemTypeCode,proto3" json:"item_type_code,omitempty"`
+	CategoryName           string                 `protobuf:"bytes,6,opt,name=category_name,json=categoryName,proto3" json:"category_name,omitempty"`
+	AccountId              string                 `protobuf:"bytes,7,opt,name=account_id,json=accountId,proto3" json:"account_id,omitempty"`
+	CreatedAt              *timestamppb.Timestamp `protobuf:"bytes,8,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
+	UpdatedAt              *timestamppb.Timestamp `protobuf:"bytes,9,opt,name=updated_at,json=updatedAt,proto3" json:"updated_at,omitempty"`
+	OnHandQuantity         string                 `protobuf:"bytes,10,opt,name=on_hand_quantity,json=onHandQuantity,proto3" json:"on_hand_quantity,omitempty"`
+	OnHandUnitId           string                 `protobuf:"bytes,11,opt,name=on_hand_unit_id,json=onHandUnitId,proto3" json:"on_hand_unit_id,omitempty"`
+	OnHandUnitAbbreviation string                 `protobuf:"bytes,12,opt,name=on_hand_unit_abbreviation,json=onHandUnitAbbreviation,proto3" json:"on_hand_unit_abbreviation,omitempty"`
+	unknownFields          protoimpl.UnknownFields
+	sizeCache              protoimpl.SizeCache
 }
 
 func (x *ExportItemInfo) Reset() {
@@ -533,6 +543,13 @@ func (x *ExportItemInfo) GetOnHandQuantity() string {
 func (x *ExportItemInfo) GetOnHandUnitId() string {
 	if x != nil {
 		return x.OnHandUnitId
+	}
+	return ""
+}
+
+func (x *ExportItemInfo) GetOnHandUnitAbbreviation() string {
+	if x != nil {
+		return x.OnHandUnitAbbreviation
 	}
 	return ""
 }
@@ -5966,12 +5983,13 @@ const file_core_core_items_proto_rawDesc = "" +
 	"\x14GetItemTrendsRequest\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x1d\n" +
 	"\n" +
-	"trend_type\x18\x02 \x01(\tR\ttrendType\"d\n" +
+	"trend_type\x18\x02 \x01(\tR\ttrendType\"}\n" +
 	"\x15GetItemTrendsResponse\x12\x1d\n" +
 	"\n" +
 	"trend_type\x18\x01 \x01(\tR\ttrendType\x12,\n" +
-	"\x06points\x18\x02 \x03(\v2\x14.core.ItemTrendPointR\x06points\"\x14\n" +
-	"\x12ExportItemsRequest\"\xbf\x03\n" +
+	"\x06points\x18\x02 \x03(\v2\x14.core.ItemTrendPointR\x06points\x12\x17\n" +
+	"\aunit_id\x18\x03 \x01(\tR\x06unitId\"\x14\n" +
+	"\x12ExportItemsRequest\"\xfa\x03\n" +
 	"\x0eExportItemInfo\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x10\n" +
 	"\x03sku\x18\x02 \x01(\tR\x03sku\x12%\n" +
@@ -5987,7 +6005,8 @@ const file_core_core_items_proto_rawDesc = "" +
 	"updated_at\x18\t \x01(\v2\x1a.google.protobuf.TimestampR\tupdatedAt\x12(\n" +
 	"\x10on_hand_quantity\x18\n" +
 	" \x01(\tR\x0eonHandQuantity\x12%\n" +
-	"\x0fon_hand_unit_id\x18\v \x01(\tR\fonHandUnitIdB\x0e\n" +
+	"\x0fon_hand_unit_id\x18\v \x01(\tR\fonHandUnitId\x129\n" +
+	"\x19on_hand_unit_abbreviation\x18\f \x01(\tR\x16onHandUnitAbbreviationB\x0e\n" +
 	"\f_descriptionB\b\n" +
 	"\x06_notes\"W\n" +
 	"\x13ExportItemsResponse\x12*\n" +

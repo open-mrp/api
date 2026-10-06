@@ -181,7 +181,12 @@ type ItemRepo interface {
 	UpdateUnitCost(ctx context.Context, accountID, itemID string, cost decimal.Decimal, denominatorUnitID string) *apierror.APIError
 	// GetStockingUnit resolves the unit an item is counted in, via its category's unit group, and that group. It is the only denominator the item's unit cost may carry, whatever unit the production step producing it is written in.
 	GetStockingUnit(ctx context.Context, accountID, itemID string) (*ItemStockingUnit, *apierror.APIError)
-	GetTrends(ctx context.Context, accountID, itemID, trendType string) (*ItemTrends, *apierror.APIError)
+	// GetInventoryLevelBefore is the last level logged for the item strictly before `before`, or nil when nothing was logged earlier.
+	GetInventoryLevelBefore(ctx context.Context, accountID, itemID string, before time.Time) (*InventoryLevel, *apierror.APIError)
+	// ListDailyClosingInventoryLevels is each UTC day's last logged level in [from, to), oldest first.
+	ListDailyClosingInventoryLevels(ctx context.Context, accountID, itemID string, from, to time.Time) ([]InventoryLevel, *apierror.APIError)
+	// GetProductLineIDs maps each of the given items that sells under a product line to that line.
+	GetProductLineIDs(ctx context.Context, accountID string, itemIDs []string) (map[string]string, *apierror.APIError)
 	ExportWithInventory(ctx context.Context, accountID string) (*ExportItemsResult, *apierror.APIError)
 	Update(ctx context.Context, params UpdateItemParams) *apierror.APIError
 	CheckSKUExists(ctx context.Context, accountID, sku, excludeID string) (bool, *apierror.APIError)
@@ -666,6 +671,8 @@ type InventoryQueryRepo interface {
 	FetchPhysicalInventory(ctx context.Context, itemID, ownerAccountID, unitID string) (decimal.Decimal, *apierror.APIError)
 	// FetchPhysicalInventoryBaseForItems returns each item's physical inventory in base units, so the batch-scan audit trail can level many items with one query instead of one per item.
 	FetchPhysicalInventoryBaseForItems(ctx context.Context, accountID string, itemIDs []string) (map[string]decimal.Decimal, *apierror.APIError)
+	// FetchInventoryLevelsAsOf is each item's last logged level at or before asOf, in its category base unit; zero for an item with none.
+	FetchInventoryLevelsAsOf(ctx context.Context, itemIDs []string, accountID string, asOf time.Time) ([]*BulkOnHandInventory, *apierror.APIError)
 }
 
 type ProductLineRepo interface {

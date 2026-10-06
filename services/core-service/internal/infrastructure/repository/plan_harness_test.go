@@ -564,6 +564,8 @@ type lookupPlanSuite struct {
 	// returned (optional) is how many rows a statement stands for when that is not what it returns,
 	// e.g. the rows an aggregate totals.
 	returned func(t *testing.T, stmt explainedStatement) float64
+	// explainRows (optional) also holds single-row reads to the bar, for a lookup that is one.
+	explainRows bool
 }
 
 // lookupPlanCase is one lookup request, run against q.
@@ -580,7 +582,7 @@ const lookupSlack = 10
 // more than twice the rows the statement returns, plus lookupSlack.
 func (s lookupPlanSuite) run(t *testing.T) {
 	db := planDB(t)
-	edb := &explainingDB{db: db}
+	edb := &explainingDB{db: db, explainRows: s.explainRows}
 	q := sqlc.New(edb)
 	for _, mode := range planStatsModesFor(t, db, s.tables) {
 		t.Run("stats="+mode, func(t *testing.T) {

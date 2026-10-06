@@ -48,7 +48,7 @@ func ItemsToExcel(resp *pb.ExportItemsResponse) ([]byte, error) {
 		_ = f.SetCellValue(sheet, cell(r, 5), item.ItemTypeCode)
 		_ = f.SetCellValue(sheet, cell(r, 6), item.CategoryName)
 		_ = f.SetCellValue(sheet, cell(r, 7), item.OnHandQuantity)
-		_ = f.SetCellValue(sheet, cell(r, 8), item.OnHandUnitId)
+		_ = f.SetCellValue(sheet, cell(r, 8), item.OnHandUnitAbbreviation)
 		_ = f.SetCellValue(sheet, cell(r, 9), formatTime(item.CreatedAt))
 		_ = f.SetCellValue(sheet, cell(r, 10), formatTime(item.UpdatedAt))
 	}

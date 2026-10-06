@@ -327,6 +327,7 @@ func (h *gRPCHandler) GetItemTrends(ctx context.Context, req *pb.GetItemTrendsRe
 	return &pb.GetItemTrendsResponse{
 		TrendType: trends.TrendType,
 		Points:    points,
+		UnitId:    trends.UnitID,
 	}, nil
 }
 
@@ -343,17 +344,18 @@ func (h *gRPCHandler) ExportItems(ctx context.Context, req *pb.ExportItemsReques
 	pbItems := make([]*pb.ExportItemInfo, len(result.Items))
 	for i, item := range result.Items {
 		pbItems[i] = &pb.ExportItemInfo{
-			Id:             item.ID,
-			Sku:            item.SKU,
-			Description:    item.Description,
-			Notes:          item.Notes,
-			ItemTypeCode:   item.ItemTypeCode,
-			CategoryName:   item.CategoryName,
-			AccountId:      item.AccountID,
-			CreatedAt:      timestamppb.New(item.CreatedAt),
-			UpdatedAt:      timestamppb.New(item.UpdatedAt),
-			OnHandQuantity: item.OnHandQuantity,
-			OnHandUnitId:   item.OnHandUnitID,
+			Id:                     item.ID,
+			Sku:                    item.SKU,
+			Description:            item.Description,
+			Notes:                  item.Notes,
+			ItemTypeCode:           item.ItemTypeCode,
+			CategoryName:           item.CategoryName,
+			AccountId:              item.AccountID,
+			CreatedAt:              timestamppb.New(item.CreatedAt),
+			UpdatedAt:              timestamppb.New(item.UpdatedAt),
+			OnHandQuantity:         item.OnHandQuantity,
+			OnHandUnitId:           item.OnHandUnitID,
+			OnHandUnitAbbreviation: item.OnHandUnitAbbreviation,
 		}
 	}
 
@@ -445,6 +447,10 @@ func (h *gRPCHandler) ListInventories(ctx context.Context, req *pb.ListInventori
 		Limit:  req.Limit,
 		Query:  req.Query,
 	}
+	if req.AsOf != nil {
+		asOf := req.AsOf.AsTime()
+		params.AsOf = &asOf
+	}
 
 	result, apiErr := h.itemSvc.ListInventories(ctx, params)
 	if apiErr != nil {
@@ -459,6 +465,7 @@ func (h *gRPCHandler) ListInventories(ctx context.Context, req *pb.ListInventori
 			OnHandUnitId:           item.OnHandUnitID,
 			OnHandUnitAbbreviation: item.OnHandUnitAbbrev,
 			OnHandUnitType:         item.OnHandUnitType,
+			ProductLineId:          item.ProductLineID,
 		}
 	}
 

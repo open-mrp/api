@@ -871,6 +871,8 @@ message ListInventoriesRequest {
   optional string cursor = 1;
   int32 limit = 2;
   optional string query = 3;
+  // Reports each item's last logged level at or before this instant instead of its current on-hand.
+  optional google.protobuf.Timestamp as_of = 4;
 }
 message InventoryItemProto {
   double on_hand_quantity = 1;
@@ -878,6 +880,7 @@ message InventoryItemProto {
   string on_hand_unit_abbreviation = 3;
   string on_hand_unit_type = 4;
   ItemInfo item = 5;
+  optional string product_line_id = 6;
 }
 message ListInventoriesResponse {
   repeated InventoryItemProto items = 1;

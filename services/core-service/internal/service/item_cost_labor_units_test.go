@@ -228,17 +228,10 @@ func TestComputeItemCosts_SewnThenBoxedItemTimedPerCase(t *testing.T) {
 		boxStepID: {
 			perEachMaterial("0.04", "3.26"),
 			perEachMaterial("0.02", "1.458"),
-			{ConsumedItemType: "part", ConsumptionQuantity: decimal.NewFromInt(1), ConsumptionUnitRatio: decimal.NewFromInt(1),
+			{ConsumedItemID: sewnID, ConsumedItemType: "part", ConsumptionQuantity: decimal.NewFromInt(1), ConsumptionUnitRatio: decimal.NewFromInt(1),
 				WasteQuantity: decimal.Zero, WasteUnitRatio: decimal.NewFromInt(1),
 				UnitCost: decimal.RequireFromString("2.36"), UnitCostDenominatorRatio: decimal.NewFromInt(1)},
 		},
-	}
-	details := map[string]*domain.ProductionStepDetail{
-		sewStepID: {ID: sewStepID},
-		boxStepID: {ID: boxStepID, Consumptions: []domain.StepConsumption{{
-			ConsumedItem: domain.LightItem{ID: sewnID},
-			Quantity:     domain.BatchQuantity{Measure: decimal.NewFromInt(1), Unit: countEach},
-		}}},
 	}
 
 	flowRepo := repositorymock.NewMockProductionFlowRepo(ctrl)
@@ -258,19 +251,12 @@ func TestComputeItemCosts_SewnThenBoxedItemTimedPerCase(t *testing.T) {
 	itemRepo.EXPECT().GetStockingUnit(gomock.Any(), accountID, itemID).
 		Return(&domain.ItemStockingUnit{UnitGroupID: "ug_each", BaseUnitID: countEach.ID, CostNumeratorUnitID: currencyID}, nil)
 
-	stepQueryRepo := repositorymock.NewMockProductionStepQueryRepo(ctrl)
-	stepQueryRepo.EXPECT().Find(gomock.Any(), accountID, gomock.Any()).
-		DoAndReturn(func(_ context.Context, _, id string) (*domain.ProductionStepDetail, *apierror.APIError) {
-			return details[id], nil
-		}).Times(2)
-
 	unitRepo := repositorymock.NewMockUnitRepo(ctrl)
 	unitRepo.EXPECT().IsUnitInGroup(gomock.Any(), "ug_each", countEach.ID).Return(true, nil)
 
 	repos := factorymock.NewMockRepoFactory(ctrl)
 	repos.EXPECT().NewProductionFlowRepo().Return(flowRepo).AnyTimes()
 	repos.EXPECT().NewItemRepo().Return(itemRepo).AnyTimes()
-	repos.EXPECT().NewProductionStepQueryRepo().Return(stepQueryRepo).AnyTimes()
 	repos.EXPECT().NewUnitRepo().Return(unitRepo).AnyTimes()
 	repos.EXPECT().NewUnitConversionRepo().Return(repositorymock.NewMockUnitConversionRepo(ctrl)).AnyTimes()
 

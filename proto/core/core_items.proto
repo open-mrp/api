@@ -39,6 +39,8 @@ message GetItemTrendsRequest {
 message GetItemTrendsResponse {
   string trend_type = 1;
   repeated ItemTrendPoint points = 2;
+  // The item's category base unit, which every point's value is in.
+  string unit_id = 3;
 }
 message ExportItemsRequest {}
 message ExportItemInfo {
@@ -53,6 +55,7 @@ message ExportItemInfo {
   google.protobuf.Timestamp updated_at = 9;
   string on_hand_quantity = 10;
   string on_hand_unit_id = 11;
+  string on_hand_unit_abbreviation = 12;
 }
 message ExportItemsResponse {
   repeated ExportItemInfo items = 1;

@@ -15,7 +15,9 @@ type ExportItemsRequest struct{}
 
 // Downloads every item in your account, with its category and on-hand inventory, as an Excel workbook named `items.xlsx`.
 //
-// The export takes no filters and is not paginated: it always covers the whole catalog, one row per item, ordered by SKU.
+// The export takes no filters and is not paginated: it covers the same items the inventory list does, one row per item, ordered by SKU. Non-sale products — the service, shipping, tax, credit and return products that carry charges on orders — are left out. On hand is available stock net of what has been allocated, converted into the base unit of the item's category, and the Unit column names that unit by its abbreviation.
+//
+// A catalog of more than 50,000 items is refused with a validation error rather than exported partially.
 type ExportItemsEndpoint struct{}
 
 func (e *ExportItemsEndpoint) Materialize() *apiendpoint.APIEndpoint[*ExportItemsRequest, *httptransport.FileDownload] {

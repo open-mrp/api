@@ -101,29 +101,38 @@ SELECT
     i.created_at,
     i.updated_at,
     ic.name AS category_name,
-    COALESCE(inv.on_hand, 0) AS on_hand_quantity,
-    COALESCE(rv.denominator_unit_id, '') AS on_hand_unit_id
+    CAST((
+        COALESCE(
+            (SELECT SUM(CAST(q.value AS DECIMAL(65,30)) * (u.ratio_numerator / u.ratio_denominator))
+             FROM inventory_receipt ir
+             JOIN quantity q ON q.id = ir.quantity_id
+             JOIN unit u ON u.id = q.unit_id
+             WHERE ir.item_id = i.id
+             AND (ir.owner_account_id = ? OR ir.holder_account_id = ?)
+             AND ir.status_code = 'available'), 0
+        ) - COALESCE(
+            (SELECT SUM(CAST(aq.value AS DECIMAL(65,30)) * (au.ratio_numerator / au.ratio_denominator))
+             FROM inventory_receipt ir2
+             JOIN inventory_allocation ia2 ON ia2.inventory_receipt_id = ir2.id
+             JOIN quantity aq ON aq.id = ia2.quantity_id
+             JOIN unit au ON au.id = aq.unit_id
+             WHERE ir2.item_id = i.id
+             AND (ir2.owner_account_id = ? OR ir2.holder_account_id = ?)
+             AND ir2.status_code = 'available'), 0
+        )
+    ) / COALESCE(NULLIF(bu.ratio_numerator / bu.ratio_denominator, 0), 1) AS DECIMAL(65,30)) AS on_hand_quantity,
+    bu.id AS on_hand_unit_id,
+    bu.abbreviation AS on_hand_unit_abbreviation
 FROM item i
 JOIN item_category ic ON ic.id = i.item_category_id
-JOIN rate rv ON rv.id = i.unit_value_id
-LEFT JOIN (
-    SELECT
-        ir.item_id,
-        -- Correlated per receipt: a grouped derived table cannot take the account filter and so aggregates all of inventory_allocation on every call.
-        SUM(q.value - COALESCE((
-            SELECT SUM(qa.value)
-            FROM inventory_allocation ia
-            JOIN quantity qa ON qa.id = ia.quantity_id
-            WHERE ia.inventory_receipt_id = ir.id
-        ), 0)) AS on_hand
-    FROM inventory_receipt ir
-    JOIN quantity q ON q.id = ir.quantity_id
-    WHERE ir.status_code = 'available'
-    AND (ir.owner_account_id = ? OR ir.holder_account_id = ?)
-    GROUP BY ir.item_id
-) inv ON inv.item_id = i.id
+JOIN unit_group ug ON ug.id = ic.unit_group_id
+JOIN unit bu ON bu.id = ug.base_unit_id
 WHERE i.account_id = ?
 AND i.deleted_at IS NULL
+AND (
+    NOT EXISTS (SELECT 1 FROM product p WHERE p.item_id = i.id)
+    OR EXISTS (SELECT 1 FROM product p WHERE p.item_id = i.id AND p.product_type_code = 'sale')
+)
 ORDER BY i.sku ASC
 LIMIT ?
 `
@@ -134,22 +143,30 @@ type ExportItemsWithInventoryParams struct {
 }
 
 type ExportItemsWithInventoryRow struct {
-	ID             string
-	Sku            string
-	Description    sql.NullString
-	Notes          sql.NullString
-	ItemTypeCode   string
-	ItemCategoryID string
-	AccountID      string
-	CreatedAt      time.Time
-	UpdatedAt      time.Time
-	CategoryName   string
-	OnHandQuantity interface{}
-	OnHandUnitID   string
+	ID                     string
+	Sku                    string
+	Description            sql.NullString
+	Notes                  sql.NullString
+	ItemTypeCode           string
+	ItemCategoryID         string
+	AccountID              string
+	CreatedAt              time.Time
+	UpdatedAt              time.Time
+	CategoryName           string
+	OnHandQuantity         string
+	OnHandUnitID           string
+	OnHandUnitAbbreviation string
 }
 
+// ExportItemsWithInventory is the item export: every catalog item the inventory list shows, with the
+// same on-hand figure in the same unit — available receipts net of their allocations, each row
+// through its own unit's ratio, expressed in the category's base unit. Non-sale products (service,
+// shipping, tax, credit, return) are left out as the list leaves them out. The caller passes one row
+// past the export cap as the limit so an overflow is detectable rather than silently cut.
 func (q *Queries) ExportItemsWithInventory(ctx context.Context, arg ExportItemsWithInventoryParams) ([]ExportItemsWithInventoryRow, error) {
 	rows, err := q.db.QueryContext(ctx, exportItemsWithInventory,
+		arg.AccountID,
+		arg.AccountID,
 		arg.AccountID,
 		arg.AccountID,
 		arg.AccountID,
@@ -175,6 +192,7 @@ func (q *Queries) ExportItemsWithInventory(ctx context.Context, arg ExportItemsW
 			&i.CategoryName,
 			&i.OnHandQuantity,
 			&i.OnHandUnitID,
+			&i.OnHandUnitAbbreviation,
 		); err != nil {
 			return nil, err
 		}
@@ -193,6 +211,7 @@ const fetchItemsBySKU = `-- name: FetchItemsBySKU :many
 SELECT
     i.id AS item_id,
     i.sku,
+    ic.unit_group_id,
     ug.base_unit_id
 FROM item i
 JOIN item_category ic ON i.item_category_id = ic.id
@@ -208,9 +227,10 @@ type FetchItemsBySKUParams struct {
 }
 
 type FetchItemsBySKURow struct {
-	ItemID     string
-	Sku        string
-	BaseUnitID string
+	ItemID      string
+	Sku         string
+	UnitGroupID string
+	BaseUnitID  string
 }
 
 func (q *Queries) FetchItemsBySKU(ctx context.Context, arg FetchItemsBySKUParams) ([]FetchItemsBySKURow, error) {
@@ -233,7 +253,12 @@ func (q *Queries) FetchItemsBySKU(ctx context.Context, arg FetchItemsBySKUParams
 	var items []FetchItemsBySKURow
 	for rows.Next() {
 		var i FetchItemsBySKURow
-		if err := rows.Scan(&i.ItemID, &i.Sku, &i.BaseUnitID); err != nil {
+		if err := rows.Scan(
+			&i.ItemID,
+			&i.Sku,
+			&i.UnitGroupID,
+			&i.BaseUnitID,
+		); err != nil {
 			return nil, err
 		}
 		items = append(items, i)
@@ -334,6 +359,7 @@ func (q *Queries) FindItemsProducedFromConsumed(ctx context.Context, arg FindIte
 
 const getCostFlowStepConsumptions = `-- name: GetCostFlowStepConsumptions :many
 SELECT
+    ci.id AS consumed_item_id,
     ci.item_type_code AS consumed_item_type,
     cq.value AS consumption_quantity_value,
     CAST(cqu.ratio_numerator / cqu.ratio_denominator AS DECIMAL(65,30)) AS consumption_unit_ratio,
@@ -353,6 +379,7 @@ WHERE c.production_step_id = ?
 `
 
 type GetCostFlowStepConsumptionsRow struct {
+	ConsumedItemID            string
 	ConsumedItemType          string
 	ConsumptionQuantityValue  string
 	ConsumptionUnitRatio      string
@@ -374,6 +401,7 @@ func (q *Queries) GetCostFlowStepConsumptions(ctx context.Context, productionSte
 	for rows.Next() {
 		var i GetCostFlowStepConsumptionsRow
 		if err := rows.Scan(
+			&i.ConsumedItemID,
 			&i.ConsumedItemType,
 			&i.ConsumptionQuantityValue,
 			&i.ConsumptionUnitRatio,
@@ -1029,6 +1057,48 @@ func (q *Queries) GetItemInventory(ctx context.Context, arg GetItemInventoryPara
 	return i, err
 }
 
+const getItemInventoryLevelBefore = `-- name: GetItemInventoryLevelBefore :one
+SELECT STRAIGHT_JOIN
+    il.created_at,
+    CAST(CAST(q.value AS DECIMAL(65,30)) * (u.ratio_numerator / u.ratio_denominator)
+        / COALESCE(NULLIF(bu.ratio_numerator / bu.ratio_denominator, 0), 1) AS DECIMAL(65,30)) AS level
+FROM inventory_log il FORCE INDEX (inventory_log_account_id_item_id_created_at_idx)
+JOIN quantity q ON q.id = il.quantity_id
+JOIN unit u ON u.id = q.unit_id
+JOIN item i ON i.id = il.item_id
+JOIN item_category ic ON ic.id = i.item_category_id
+JOIN unit_group ug ON ug.id = ic.unit_group_id
+JOIN unit bu ON bu.id = ug.base_unit_id
+WHERE il.account_id = ?
+  AND il.item_id = ?
+  AND il.created_at < ?
+ORDER BY il.created_at DESC
+LIMIT 1
+`
+
+type GetItemInventoryLevelBeforeParams struct {
+	AccountID string
+	ItemID    string
+	Before    time.Time
+}
+
+type GetItemInventoryLevelBeforeRow struct {
+	CreatedAt time.Time
+	Level     string
+}
+
+// GetItemInventoryLevelBefore is the last inventory level logged strictly before `before`, in the
+// item's category base unit. Each log is written in the unit of the movement behind it, so every
+// level goes through its own unit's ratio before it is compared with another. The key is forced: the
+// single-column item_id key also matches, and taking it sorts every log the item has. STRAIGHT_JOIN
+// keeps the log driving, so the unit and category tables are read by key and never scanned.
+func (q *Queries) GetItemInventoryLevelBefore(ctx context.Context, arg GetItemInventoryLevelBeforeParams) (GetItemInventoryLevelBeforeRow, error) {
+	row := q.db.QueryRowContext(ctx, getItemInventoryLevelBefore, arg.AccountID, arg.ItemID, arg.Before)
+	var i GetItemInventoryLevelBeforeRow
+	err := row.Scan(&i.CreatedAt, &i.Level)
+	return i, err
+}
+
 const getItemStockingUnit = `-- name: GetItemStockingUnit :one
 SELECT ic.unit_group_id, ug.base_unit_id, rc.numerator_unit_id AS cost_numerator_unit_id
 FROM item i
@@ -1060,51 +1130,6 @@ func (q *Queries) GetItemStockingUnit(ctx context.Context, arg GetItemStockingUn
 	var i GetItemStockingUnitRow
 	err := row.Scan(&i.UnitGroupID, &i.BaseUnitID, &i.CostNumeratorUnitID)
 	return i, err
-}
-
-const getItemTrends = `-- name: GetItemTrends :many
-SELECT
-    il.created_at AS date,
-    q.value
-FROM inventory_log il
-JOIN quantity q ON q.id = il.quantity_id
-WHERE il.item_id = ?
-AND il.account_id = ?
-AND il.created_at >= DATE_SUB(NOW(), INTERVAL 30 DAY)
-ORDER BY il.created_at ASC
-`
-
-type GetItemTrendsParams struct {
-	ItemID    string
-	AccountID string
-}
-
-type GetItemTrendsRow struct {
-	Date  time.Time
-	Value string
-}
-
-func (q *Queries) GetItemTrends(ctx context.Context, arg GetItemTrendsParams) ([]GetItemTrendsRow, error) {
-	rows, err := q.db.QueryContext(ctx, getItemTrends, arg.ItemID, arg.AccountID)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	var items []GetItemTrendsRow
-	for rows.Next() {
-		var i GetItemTrendsRow
-		if err := rows.Scan(&i.Date, &i.Value); err != nil {
-			return nil, err
-		}
-		items = append(items, i)
-	}
-	if err := rows.Close(); err != nil {
-		return nil, err
-	}
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-	return items, nil
 }
 
 const getItemsByIDs = `-- name: GetItemsByIDs :many
@@ -1200,6 +1225,78 @@ func (q *Queries) GetItemsByIDs(ctx context.Context, arg GetItemsByIDsParams) ([
 			&i.CategoryCreatedAt,
 			&i.CategoryUpdatedAt,
 		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listItemDailyClosingInventoryLevels = `-- name: ListItemDailyClosingInventoryLevels :many
+SELECT STRAIGHT_JOIN
+    il.created_at,
+    CAST(CAST(q.value AS DECIMAL(65,30)) * (u.ratio_numerator / u.ratio_denominator)
+        / COALESCE(NULLIF(bu.ratio_numerator / bu.ratio_denominator, 0), 1) AS DECIMAL(65,30)) AS level
+FROM (
+    SELECT MAX(d.created_at) AS closed_at
+    FROM inventory_log d FORCE INDEX (inventory_log_account_id_item_id_created_at_idx)
+    WHERE d.account_id = ?
+      AND d.item_id = ?
+      AND d.created_at >= ?
+      AND d.created_at < ?
+    GROUP BY DATE(d.created_at)
+) closing
+JOIN inventory_log il FORCE INDEX (inventory_log_account_id_item_id_created_at_idx) ON il.account_id = ?
+    AND il.item_id = ?
+    AND il.created_at = closing.closed_at
+JOIN quantity q ON q.id = il.quantity_id
+JOIN unit u ON u.id = q.unit_id
+JOIN item i ON i.id = il.item_id
+JOIN item_category ic ON ic.id = i.item_category_id
+JOIN unit_group ug ON ug.id = ic.unit_group_id
+JOIN unit bu ON bu.id = ug.base_unit_id
+ORDER BY il.created_at, il.id
+`
+
+type ListItemDailyClosingInventoryLevelsParams struct {
+	AccountID   string
+	ItemID      string
+	WindowStart time.Time
+	WindowEnd   time.Time
+}
+
+type ListItemDailyClosingInventoryLevelsRow struct {
+	CreatedAt time.Time
+	Level     string
+}
+
+// ListItemDailyClosingInventoryLevels is each UTC day's last logged inventory level in
+// [window_start, window_end), in the item's category base unit. The day's closing time comes off the
+// (account_id, item_id, created_at) index alone; only those rows are read in full. Two logs sharing
+// the closing instant both come back, oldest id first. STRAIGHT_JOIN keeps the closings driving.
+func (q *Queries) ListItemDailyClosingInventoryLevels(ctx context.Context, arg ListItemDailyClosingInventoryLevelsParams) ([]ListItemDailyClosingInventoryLevelsRow, error) {
+	rows, err := q.db.QueryContext(ctx, listItemDailyClosingInventoryLevels,
+		arg.AccountID,
+		arg.ItemID,
+		arg.WindowStart,
+		arg.WindowEnd,
+		arg.AccountID,
+		arg.ItemID,
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []ListItemDailyClosingInventoryLevelsRow
+	for rows.Next() {
+		var i ListItemDailyClosingInventoryLevelsRow
+		if err := rows.Scan(&i.CreatedAt, &i.Level); err != nil {
 			return nil, err
 		}
 		items = append(items, i)
@@ -2132,6 +2229,61 @@ func (q *Queries) ListItemsForward(ctx context.Context, arg ListItemsForwardPara
 			&i.BurnRateCreatedAt,
 			&i.BurnRateUpdatedAt,
 		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listProductLineIDsForItems = `-- name: ListProductLineIDsForItems :many
+SELECT p.item_id, p.product_line_id
+FROM product p
+JOIN item i ON i.id = p.item_id
+WHERE p.item_id IN (/*SLICE:item_ids*/?)
+  AND i.account_id = ?
+  AND p.product_line_id IS NOT NULL
+`
+
+type ListProductLineIDsForItemsParams struct {
+	ItemIds   []string
+	AccountID string
+}
+
+type ListProductLineIDsForItemsRow struct {
+	ItemID        string
+	ProductLineID sql.NullString
+}
+
+// ListProductLineIDsForItems names the product line each of the given items sells under. Items with
+// no product row, or a product with no line, are absent.
+func (q *Queries) ListProductLineIDsForItems(ctx context.Context, arg ListProductLineIDsForItemsParams) ([]ListProductLineIDsForItemsRow, error) {
+	query := listProductLineIDsForItems
+	var queryParams []interface{}
+	if len(arg.ItemIds) > 0 {
+		for _, v := range arg.ItemIds {
+			queryParams = append(queryParams, v)
+		}
+		query = strings.Replace(query, "/*SLICE:item_ids*/?", strings.Repeat(",?", len(arg.ItemIds))[1:], 1)
+	} else {
+		query = strings.Replace(query, "/*SLICE:item_ids*/?", "NULL", 1)
+	}
+	queryParams = append(queryParams, arg.AccountID)
+	rows, err := q.db.QueryContext(ctx, query, queryParams...)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []ListProductLineIDsForItemsRow
+	for rows.Next() {
+		var i ListProductLineIDsForItemsRow
+		if err := rows.Scan(&i.ItemID, &i.ProductLineID); err != nil {
 			return nil, err
 		}
 		items = append(items, i)

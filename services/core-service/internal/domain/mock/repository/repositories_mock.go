@@ -2065,6 +2065,36 @@ func (mr *MockItemRepoMockRecorder) GetInventory(ctx, accountID, itemID any) *go
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetInventory", reflect.TypeOf((*MockItemRepo)(nil).GetInventory), ctx, accountID, itemID)
 }
 
+// GetInventoryLevelBefore mocks base method.
+func (m *MockItemRepo) GetInventoryLevelBefore(ctx context.Context, accountID, itemID string, before time.Time) (*domain.InventoryLevel, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetInventoryLevelBefore", ctx, accountID, itemID, before)
+	ret0, _ := ret[0].(*domain.InventoryLevel)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
+}
+
+// GetInventoryLevelBefore indicates an expected call of GetInventoryLevelBefore.
+func (mr *MockItemRepoMockRecorder) GetInventoryLevelBefore(ctx, accountID, itemID, before any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetInventoryLevelBefore", reflect.TypeOf((*MockItemRepo)(nil).GetInventoryLevelBefore), ctx, accountID, itemID, before)
+}
+
+// GetProductLineIDs mocks base method.
+func (m *MockItemRepo) GetProductLineIDs(ctx context.Context, accountID string, itemIDs []string) (map[string]string, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetProductLineIDs", ctx, accountID, itemIDs)
+	ret0, _ := ret[0].(map[string]string)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
+}
+
+// GetProductLineIDs indicates an expected call of GetProductLineIDs.
+func (mr *MockItemRepoMockRecorder) GetProductLineIDs(ctx, accountID, itemIDs any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetProductLineIDs", reflect.TypeOf((*MockItemRepo)(nil).GetProductLineIDs), ctx, accountID, itemIDs)
+}
+
 // GetStockingUnit mocks base method.
 func (m *MockItemRepo) GetStockingUnit(ctx context.Context, accountID, itemID string) (*domain.ItemStockingUnit, *apierror.APIError) {
 	m.ctrl.T.Helper()
@@ -2078,21 +2108,6 @@ func (m *MockItemRepo) GetStockingUnit(ctx context.Context, accountID, itemID st
 func (mr *MockItemRepoMockRecorder) GetStockingUnit(ctx, accountID, itemID any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetStockingUnit", reflect.TypeOf((*MockItemRepo)(nil).GetStockingUnit), ctx, accountID, itemID)
-}
-
-// GetTrends mocks base method.
-func (m *MockItemRepo) GetTrends(ctx context.Context, accountID, itemID, trendType string) (*domain.ItemTrends, *apierror.APIError) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetTrends", ctx, accountID, itemID, trendType)
-	ret0, _ := ret[0].(*domain.ItemTrends)
-	ret1, _ := ret[1].(*apierror.APIError)
-	return ret0, ret1
-}
-
-// GetTrends indicates an expected call of GetTrends.
-func (mr *MockItemRepoMockRecorder) GetTrends(ctx, accountID, itemID, trendType any) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetTrends", reflect.TypeOf((*MockItemRepo)(nil).GetTrends), ctx, accountID, itemID, trendType)
 }
 
 // List mocks base method.
@@ -2123,6 +2138,21 @@ func (m *MockItemRepo) ListConsumptionChangeLogsForBurnRate(ctx context.Context,
 func (mr *MockItemRepoMockRecorder) ListConsumptionChangeLogsForBurnRate(ctx, accountID, itemID any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListConsumptionChangeLogsForBurnRate", reflect.TypeOf((*MockItemRepo)(nil).ListConsumptionChangeLogsForBurnRate), ctx, accountID, itemID)
+}
+
+// ListDailyClosingInventoryLevels mocks base method.
+func (m *MockItemRepo) ListDailyClosingInventoryLevels(ctx context.Context, accountID, itemID string, from, to time.Time) ([]domain.InventoryLevel, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ListDailyClosingInventoryLevels", ctx, accountID, itemID, from, to)
+	ret0, _ := ret[0].([]domain.InventoryLevel)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
+}
+
+// ListDailyClosingInventoryLevels indicates an expected call of ListDailyClosingInventoryLevels.
+func (mr *MockItemRepoMockRecorder) ListDailyClosingInventoryLevels(ctx, accountID, itemID, from, to any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListDailyClosingInventoryLevels", reflect.TypeOf((*MockItemRepo)(nil).ListDailyClosingInventoryLevels), ctx, accountID, itemID, from, to)
 }
 
 // ListStaleBurnRateItems mocks base method.
@@ -7284,6 +7314,21 @@ func (m *MockInventoryQueryRepo) FetchCurrentInventory(ctx context.Context, item
 func (mr *MockInventoryQueryRepoMockRecorder) FetchCurrentInventory(ctx, itemID, ownerAccountID any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "FetchCurrentInventory", reflect.TypeOf((*MockInventoryQueryRepo)(nil).FetchCurrentInventory), ctx, itemID, ownerAccountID)
+}
+
+// FetchInventoryLevelsAsOf mocks base method.
+func (m *MockInventoryQueryRepo) FetchInventoryLevelsAsOf(ctx context.Context, itemIDs []string, accountID string, asOf time.Time) ([]*domain.BulkOnHandInventory, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "FetchInventoryLevelsAsOf", ctx, itemIDs, accountID, asOf)
+	ret0, _ := ret[0].([]*domain.BulkOnHandInventory)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
+}
+
+// FetchInventoryLevelsAsOf indicates an expected call of FetchInventoryLevelsAsOf.
+func (mr *MockInventoryQueryRepoMockRecorder) FetchInventoryLevelsAsOf(ctx, itemIDs, accountID, asOf any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "FetchInventoryLevelsAsOf", reflect.TypeOf((*MockInventoryQueryRepo)(nil).FetchInventoryLevelsAsOf), ctx, itemIDs, accountID, asOf)
 }
 
 // FetchOnHandInventoryBulk mocks base method.

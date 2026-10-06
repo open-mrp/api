@@ -37,7 +37,7 @@ type Item struct {
 	UnitValue *Rate `json:"unit_value" expandable:"true"`
 	// Cost per unit, expressed as a rate (e.g. `$10.00 / kg`).
 	//
-	// For items a production flow produces, retrieving the item's costs recomputes this from the flow and stores the result here, so it can change without the item having been edited.
+	// For items a production flow produces, this is restated from the flow shortly after anything the item is built from changes, so it can change without the item having been edited.
 	UnitCost *Rate `json:"unit_cost" expandable:"true"`
 	// Rate at which this item is consumed in production, expressed as a quantity over time (e.g. `100 kg / hr`).
 	BurnRate *Rate `json:"burn_rate" expandable:"true"`
@@ -143,36 +143,39 @@ func (*ItemCosts) SchemaExample() any {
 	return apiexample.ValidateAndMarshalToMap(SampleItemCosts)
 }
 
-// A single measurement in an item's trend series.
+// One day of an item's trend series.
 type ItemTrendPoint struct {
 	// Resource type identifier.
 	Object constants.ObjectType `json:"object" validate:"required,enum=item_trend_point"`
-	// Timestamp of the data point.
+	// Start of the UTC calendar day this point closes.
 	OccurredAt time.Time `json:"occurred_at" validate:"required"`
-	// Recorded value of the trend metric at `occurred_at`.
+	// Value of the trend metric at the end of that day, in the series' `unit`.
 	Value string `json:"value" validate:"required" format:"decimal"`
 }
 
-// Historical trend data for an item, as a time-ordered series of measurements.
+// An item's trend metric over the last 30 UTC calendar days, one point per day.
 type ItemTrends struct {
 	// Resource type identifier.
 	Object constants.ObjectType `json:"object" validate:"required,enum=item_trends"`
 	// The trend type that was requested.
 	TrendType constants.ItemTrendType `json:"trend_type" validate:"required"`
-	// Trend data points, oldest first.
+	// Unit every point's value is counted in: the base unit of the item's category.
 	//
-	// At most one point is returned per calendar day: when several measurements were recorded on the same day, the earliest one is kept.
+	// Always resolved in full. A level is unreadable without its unit, so it is not behind an include.
+	Unit *Unit `json:"unit"`
+	// Exactly 30 points, oldest first, one for each UTC day ending today.
 	Points *List[ItemTrendPoint] `json:"points" validate:"required"`
 }
 
 var SampleItemTrends = &ItemTrends{
 	Object:    constants.ObjectTypeItemTrends,
-	TrendType: "on_hand",
+	TrendType: constants.ItemTrendTypeInventory,
+	Unit:      SampleUnit,
 	Points: NewList([]ItemTrendPoint{
 		{
 			Object:     constants.ObjectTypeItemTrendPoint,
 			OccurredAt: timeutil.TimestampToTime(sampleCreatedAtTimestamp),
-			Value:      "100.000000000000000000000000000000",
+			Value:      "100",
 		},
 	}, PageInfo{}),
 }

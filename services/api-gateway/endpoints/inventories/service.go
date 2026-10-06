@@ -12,6 +12,7 @@ import (
 	pb "github.com/open-mrp/api/shared/proto/core"
 	"github.com/open-mrp/api/shared/tracing"
 	"google.golang.org/grpc"
+	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
 type InventorySvc interface {
@@ -51,6 +52,9 @@ func (m *inventorySvcImpl) ListInventories(ctx context.Context, req *ListInvento
 		Cursor: req.Cursor,
 		Limit:  req.Limit,
 		Query:  req.Query,
+	}
+	if req.AsOf != nil {
+		pbReq.AsOf = timestamppb.New(*req.AsOf)
 	}
 
 	resp, apiErr := grpcutil.CallRPC(ctx, inventorySvcTracer, "service.inventories.list", domain.ServiceName,

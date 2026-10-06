@@ -180,6 +180,7 @@ type ItemCosts struct {
 //
 // The three ratios carry each side's unit into its dimension's base unit. Quantities and the cost that prices them are each recorded in whatever unit was entered, so they can only be multiplied together on that common footing.
 type CostFlowConsumption struct {
+	ConsumedItemID           string
 	ConsumedItemType         string          // e.g. "material", "part", "product"
 	ConsumptionQuantity      decimal.Decimal // quantity consumed
 	ConsumptionUnitRatio     decimal.Decimal // base units per one consumption unit
@@ -197,16 +198,23 @@ type ItemStockingUnit struct {
 	CostNumeratorUnitID string
 }
 
-// ItemTrend represents a single trend data point.
+// ItemTrend is one day of an item's trend: the value it closed the day on.
 type ItemTrend struct {
 	Date  time.Time
 	Value string
 }
 
-// ItemTrends represents historical trend data for an item.
+// ItemTrends is a daily series for an item, every value in UnitID (the category's base unit).
 type ItemTrends struct {
 	TrendType string
+	UnitID    string
 	Points    []*ItemTrend
+}
+
+// InventoryLevel is an inventory level logged at At, in the item's category base unit.
+type InventoryLevel struct {
+	At    time.Time
+	Value decimal.Decimal
 }
 
 // ExportItemsResult represents the export response.
@@ -218,8 +226,9 @@ type ExportItemsResult struct {
 // ExportItem represents an item with inventory for export.
 type ExportItem struct {
 	Item
-	OnHandQuantity string
-	OnHandUnitID   string
+	OnHandQuantity         string
+	OnHandUnitID           string
+	OnHandUnitAbbreviation string
 }
 
 // UpdateItemParams holds parameters for partially updating an item.
@@ -357,6 +366,8 @@ type InventoryItemResult struct {
 	OnHandUnitID     string
 	OnHandUnitAbbrev string
 	OnHandUnitType   string
+	// ProductLineID is the line the item sells under; nil for an item that is not a product or has no line.
+	ProductLineID *string
 }
 
 // ListInventoriesParams contains the parameters for listing inventories.
@@ -365,6 +376,8 @@ type ListInventoriesParams struct {
 	Limit     int32
 	Query     *string
 	AccountID string
+	// AsOf (optional) reports each item's last logged level at or before this instant instead of its current on-hand.
+	AsOf *time.Time
 }
 
 // ListInventoriesResult represents the result of listing all items with inventory.
@@ -376,9 +389,10 @@ type ListInventoriesResult struct {
 
 // ItemSKUInfo represents minimal item info fetched by SKU for bulk operations.
 type ItemSKUInfo struct {
-	SKU        string
-	ItemID     string
-	BaseUnitID string
+	SKU         string
+	ItemID      string
+	UnitGroupID string
+	BaseUnitID  string
 }
 
 // BulkOnHandInventory represents bulk on-hand inventory for multiple items.

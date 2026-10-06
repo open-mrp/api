@@ -160,8 +160,7 @@ func TestItemInventory_FiguresAreNullWithoutInclude(t *testing.T) {
 
 // --- Inventories list ---
 
-// On-hand is the only figure this list reports, so it is not expandable: every row carries the
-// quantity and the unit it is counted in. The endpoint accepts no includes at all.
+// The quantity is not expandable: every row carries it and the unit it is counted in.
 func TestInventories_EveryRowCarriesAResolvedQuantityAndUnit(t *testing.T) {
 	t.Parallel()
 

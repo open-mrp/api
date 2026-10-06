@@ -1101,7 +1101,7 @@ func ensureSupplierMaterialLink(ctx context.Context, repos domain.RepoFactory, a
 	return nil
 }
 
-// checkPurchaseOrderAddressChoices refuses an address given more than one way: by ID, inline, or through the flat bill_to_* / ship_to_* fields.
+// checkPurchaseOrderAddressChoices requires the order's bill-to and ship-to, each given one way: by ID, inline, or through the flat bill_to_* / ship_to_* fields, which then need a name and a country like any new address.
 func checkPurchaseOrderAddressChoices(params domain.CreatePurchaseOrderParams) *apierror.APIError {
 	if apiErr := checkInlineAddressChoices(
 		inlineAddressChoice{params.BillToAddressID != nil, params.BillToAddress, "bill_to_address_id", "bill_to_address"},
@@ -1109,16 +1109,35 @@ func checkPurchaseOrderAddressChoices(params domain.CreatePurchaseOrderParams) *
 	); apiErr != nil {
 		return apiErr
 	}
-	for _, side := range []struct {
-		inline      *domain.InlineAddressParams
-		flat        []*string
-		inlineParam string
+	sides := []struct {
+		hasID         bool
+		inline        *domain.InlineAddressParams
+		flat          []*string
+		name, country *string
+		prefix, label string
 	}{
-		{params.BillToAddress, []*string{params.BillToName, params.BillToStreetLine1, params.BillToStreetLine2, params.BillToLocality, params.BillToState, params.BillToPostalCode, params.BillToCountry}, "bill_to_address"},
-		{params.ShipToAddress, []*string{params.ShipToName, params.ShipToStreetLine1, params.ShipToStreetLine2, params.ShipToLocality, params.ShipToState, params.ShipToPostalCode, params.ShipToCountry}, "ship_to_address"},
-	} {
+		{params.BillToAddressID != nil, params.BillToAddress, []*string{params.BillToName, params.BillToStreetLine1, params.BillToStreetLine2, params.BillToLocality, params.BillToState, params.BillToPostalCode, params.BillToCountry}, params.BillToName, params.BillToCountry, "bill_to_", "bill-to"},
+		{params.ShipToAddressID != nil, params.ShipToAddress, []*string{params.ShipToName, params.ShipToStreetLine1, params.ShipToStreetLine2, params.ShipToLocality, params.ShipToState, params.ShipToPostalCode, params.ShipToCountry}, params.ShipToName, params.ShipToCountry, "ship_to_", "ship-to"},
+	}
+	for _, side := range sides {
 		if side.inline != nil && slices.ContainsFunc(side.flat, func(v *string) bool { return v != nil }) {
-			return apierror.NewValidationErrorWithParam(fmt.Sprintf("Send either %s or the flat %s fields, not both.", side.inlineParam, strings.TrimSuffix(side.inlineParam, "address")+"*"), side.inlineParam)
+			return apierror.NewValidationErrorWithParam(fmt.Sprintf("Send either %saddress or the flat %s* fields, not both.", side.prefix, side.prefix), side.prefix+"address")
+		}
+	}
+	for _, side := range sides {
+		if side.hasID || side.inline != nil {
+			continue
+		}
+		if !slices.ContainsFunc(side.flat, func(v *string) bool { return v != nil }) {
+			return apierror.NewMissingFieldError(fmt.Sprintf("A %s address is required: send %saddress_id, %saddress, or the %s* fields.", side.label, side.prefix, side.prefix, side.prefix), side.prefix+"address_id")
+		}
+		for _, required := range []struct {
+			value *string
+			param string
+		}{{side.name, side.prefix + "name"}, {side.country, side.prefix + "country"}} {
+			if required.value == nil || strings.TrimSpace(*required.value) == "" {
+				return apierror.NewMissingFieldError(fmt.Sprintf("Field '%s' is required when the %s address is given by the %s* fields.", required.param, side.label, side.prefix), required.param)
+			}
 		}
 	}
 	return nil

@@ -231,31 +231,40 @@ func TestInlineAddresses_PurchaseOrderRejections(t *testing.T) {
 	}{
 		{"another supplier's address", func(b map[string]any) {
 			b["bill_to_address"] = map[string]any{"id": SeedSupplierAddressID, "name": "x"}
+			b["ship_to_address_id"] = supplierAddressID
 		}, 404, "", "bill_to_address.id"},
 		{"the account's own address", func(b map[string]any) {
+			b["bill_to_address_id"] = supplierAddressID
 			b["ship_to_address"] = map[string]any{"id": ownAddressID}
 		}, 404, "", "ship_to_address.id"},
 		{"another tenant's address", func(b map[string]any) {
 			b["bill_to_address"] = map[string]any{"id": otherTenantAddressID}
+			b["ship_to_address_id"] = supplierAddressID
 		}, 404, "", "bill_to_address.id"},
 		{"an id and an inline address", func(b map[string]any) {
 			b["bill_to_address_id"] = supplierAddressID
 			b["bill_to_address"] = map[string]any{"id": supplierAddressID}
+			b["ship_to_address_id"] = supplierAddressID
 		}, 400, "validation_failed", "bill_to_address"},
 		{"flat fields and an inline address", func(b map[string]any) {
+			b["bill_to_address_id"] = supplierAddressID
 			b["ship_to_name"] = "Flat"
 			b["ship_to_address"] = inlineAddressBody("Inline", "5 Both St")
 		}, 400, "validation_failed", "ship_to_address"},
 		{"a new address without a country", func(b map[string]any) {
 			b["bill_to_address"] = map[string]any{"name": "No country"}
+			b["ship_to_address_id"] = supplierAddressID
 		}, 400, "missing_field", "bill_to_address.country"},
 		{"a new address without a name", func(b map[string]any) {
 			b["bill_to_address"] = map[string]any{"country": "US"}
+			b["ship_to_address_id"] = supplierAddressID
 		}, 400, "missing_field", "bill_to_address.name"},
 		{"a blank name", func(b map[string]any) {
 			b["bill_to_address"] = map[string]any{"name": "   ", "country": "US"}
+			b["ship_to_address_id"] = supplierAddressID
 		}, 400, "validation_failed", "bill_to_address.name"},
 		{"a malformed email", func(b map[string]any) {
+			b["bill_to_address_id"] = supplierAddressID
 			b["ship_to_address"] = map[string]any{"name": "Bad email", "country": "US", "email": "not-an-email"}
 		}, 400, "invalid_format", "ship_to_address.email"},
 		{"one address edited two ways", func(b map[string]any) {
@@ -558,7 +567,6 @@ func TestInlineAddresses_PurchaseOrderUpdateTakesOnlyTheSuppliersOrOwnAddresses(
 	*saved = append(*saved, supplierAddressID)
 	ownAddressID := createE2EAddress(t, uniqueName("e2e-inline-po-upd-acct"))
 	otherTenantAddressID := tenantBAddress(t)
-	// Created on the supplier's address: an order created without one gets blank addresses of its own.
 	orderBody := inlinePurchaseOrderBody(supplierID)
 	orderBody["bill_to_address_id"], orderBody["ship_to_address_id"] = supplierAddressID, supplierAddressID
 	order := createAndCleanup(t, purchaseOrdersPath, orderBody)

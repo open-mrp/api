@@ -65,6 +65,36 @@ func (r *salesFactRepoImpl) ComputeFacts(ctx context.Context, invoiceIDs []strin
 	return out, nil
 }
 
+func (r *salesFactRepoImpl) CountInvoiceLines(ctx context.Context, invoiceIDs []string) (map[string]int, *apierror.APIError) {
+	ctx, span := salesFactRepoTracer.Start(ctx, "repository.sales_fact.count_invoice_lines")
+	defer span.End()
+
+	out := make(map[string]int, len(invoiceIDs))
+	for start := 0; start < len(invoiceIDs); start += 500 {
+		batch := invoiceIDs[start:min(start+500, len(invoiceIDs))]
+		rows, err := r.queries.DB().QueryContext(ctx, `SELECT invoice_id, COUNT(*) FROM invoice_line WHERE invoice_id IN (`+placeholders(len(batch))+`) GROUP BY invoice_id`, stringsToAny(batch)...)
+		if apiErr := db.MapSQLError(err); apiErr != nil {
+			return nil, tracing.Trace(span, apiErr)
+		}
+		for rows.Next() {
+			var (
+				id string
+				n  int
+			)
+			if err := rows.Scan(&id, &n); err != nil {
+				_ = rows.Close()
+				return nil, tracing.Trace(span, db.MapSQLError(err))
+			}
+			out[id] = n
+		}
+		_ = rows.Close()
+		if apiErr := db.MapSQLError(rows.Err()); apiErr != nil {
+			return nil, tracing.Trace(span, apiErr)
+		}
+	}
+	return out, nil
+}
+
 func (r *salesFactRepoImpl) GetFacts(ctx context.Context, invoiceIDs []string) ([]domain.SalesLineFact, *apierror.APIError) {
 	ctx, span := salesFactRepoTracer.Start(ctx, "repository.sales_fact.get_facts")
 	defer span.End()

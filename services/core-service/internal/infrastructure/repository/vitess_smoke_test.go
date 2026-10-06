@@ -858,7 +858,15 @@ func TestVitessSmoke(t *testing.T) {
 		for _, k := range next {
 			checkAPI("RebuildBuyerSummaries", facts.RebuildBuyerSummaries(ctx, k.AccountID, []string{k.BuyerAccountID}))
 		}
-		checkAPI("DeleteBuyerSummariesRefreshedBefore", facts.DeleteBuyerSummariesRefreshedBefore(ctx, time.Date(2000, 1, 1, 0, 0, 0, 0, time.UTC)))
+		if len(next) > 0 {
+			_, apiErr = facts.ListBuyerSummaryRefreshes(ctx, domain.SalesBuyerKey{}, &next[len(next)-1])
+			checkAPI("ListBuyerSummaryRefreshes", apiErr)
+			_, apiErr = facts.LatestBuyerFactRefreshes(ctx, next[0].AccountID, []string{next[0].BuyerAccountID})
+			checkAPI("LatestBuyerFactRefreshes", apiErr)
+		}
+		checkAPI("DeleteBuyerSummaries", facts.DeleteBuyerSummaries(ctx, []domain.SalesBuyerKey{{AccountID: "ac_none", BuyerAccountID: "ac_none"}}))
+		_, apiErr = facts.CountInvoiceLines(ctx, []string{"iv_none"})
+		checkAPI("CountInvoiceLines", apiErr)
 		completed := time.Now().UTC()
 		checkAPI("SaveBuyerSummarySync", facts.SaveBuyerSummarySync(ctx, domain.SalesBuyerSummarySync{Cursor: &buyer, FactsSince: &completed, LastCompletedAt: &completed}))
 		_, apiErr = facts.GetBuyerSummarySync(ctx)

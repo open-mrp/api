@@ -934,14 +934,19 @@ type SalesFactRepo interface {
 	ListBuyerDirty(ctx context.Context, limit int32) ([]SalesBuyerDirtyMark, *apierror.APIError)
 	// ClearBuyerDirty removes the marks, each unless it was re-marked after it was read.
 	ClearBuyerDirty(ctx context.Context, marks []SalesBuyerDirtyMark) *apierror.APIError
+	// CountInvoiceLines returns how many lines each invoice has; invoices with none are absent.
+	CountInvoiceLines(ctx context.Context, invoiceIDs []string) (map[string]int, *apierror.APIError)
 	// RebuildBuyerSummaries recomputes the summaries of one account's buyers from their facts, deleting
 	// the summary of any buyer left with no qualifying sale.
 	RebuildBuyerSummaries(ctx context.Context, accountID string, buyerIDs []string) *apierror.APIError
 	// NextBuyers returns up to limit buyers with facts after the given one, in (account, buyer) order.
 	NextBuyers(ctx context.Context, after SalesBuyerKey, limit int32) ([]SalesBuyerKey, *apierror.APIError)
-	// DeleteBuyerSummariesRefreshedBefore deletes summaries no rebuild has touched since t: a completed
-	// sweep rebuilt every buyer with facts, so these are buyers who no longer have any.
-	DeleteBuyerSummariesRefreshedBefore(ctx context.Context, t time.Time) *apierror.APIError
+	// DeleteBuyerSummaries deletes the given buyers' summaries.
+	DeleteBuyerSummaries(ctx context.Context, keys []SalesBuyerKey) *apierror.APIError
+	// ListBuyerSummaryRefreshes returns when each summary after after, and up to through (nil for no bound), was last rebuilt.
+	ListBuyerSummaryRefreshes(ctx context.Context, after SalesBuyerKey, through *SalesBuyerKey) (map[SalesBuyerKey]time.Time, *apierror.APIError)
+	// LatestBuyerFactRefreshes returns when each of one account's buyers last had a fact written.
+	LatestBuyerFactRefreshes(ctx context.Context, accountID string, buyerIDs []string) (map[string]time.Time, *apierror.APIError)
 	// GetBuyerSummarySync returns the buyer summary sweep's state; the zero state before its first run.
 	GetBuyerSummarySync(ctx context.Context) (*SalesBuyerSummarySync, *apierror.APIError)
 	// SaveBuyerSummarySync stores the buyer summary sweep's state.

@@ -92,6 +92,102 @@ func (m *addressMedImpl) Update(ctx context.Context, params domain.UpdateAddress
 	return updated, nil
 }
 
+// Preview returns the address an inline save into accountID would leave, without writing anything. Errors name fields under param, the request field the inline address was sent in.
+//
+//  1. With an ID, return not-found on `<param>.id` unless the address is linked to the account, then apply the inline fields to the stored address.
+//  2. Without one, require a name and a country, and build the address from the inline fields.
+func (m *addressMedImpl) Preview(ctx context.Context, accountID string, input domain.InlineAddressParams, param string) (*domain.Address, *apierror.APIError) {
+	ctx, span := addressMedTracer.Start(ctx, "mediator.address.preview")
+	defer span.End()
+
+	if input.ID == nil {
+		params, apiErr := newInlineAddress(accountID, input, param)
+		if apiErr != nil {
+			return nil, tracing.Trace(span, apiErr)
+		}
+		return addressFromCreateParams(params), nil
+	}
+
+	params, apiErr := m.inlineUpdate(ctx, accountID, input, param)
+	if apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
+	stored, apiErr := m.repos.NewAddressRepo().Get(ctx, domain.GetAddressParams{AccountID: accountID, AddressID: params.AddressID})
+	if apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
+	return applyAddressUpdate(stored, params), nil
+}
+
+// Save writes an inline address into accountID: the stored address its ID names is updated, or a new one is created. Errors name fields under param, the request field the inline address was sent in.
+//
+//  1. Validate the inline address as Preview does.
+//  2. Update the named address as Update does, or create a new one as Create does.
+func (m *addressMedImpl) Save(ctx context.Context, accountID string, input domain.InlineAddressParams, param string) (*domain.Address, *apierror.APIError) {
+	ctx, span := addressMedTracer.Start(ctx, "mediator.address.save")
+	defer span.End()
+
+	if input.ID == nil {
+		params, apiErr := newInlineAddress(accountID, input, param)
+		if apiErr != nil {
+			return nil, tracing.Trace(span, apiErr)
+		}
+		created, apiErr := m.create(ctx, params)
+		if apiErr != nil {
+			return nil, tracing.Trace(span, apiErr)
+		}
+		return created, nil
+	}
+
+	params, apiErr := m.inlineUpdate(ctx, accountID, input, param)
+	if apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
+	updated, apiErr := m.update(ctx, params)
+	if apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
+	return updated, nil
+}
+
+// inlineUpdate is an inline address naming a stored one as update params, once the address is known to be the account's and any new name is valid.
+func (m *addressMedImpl) inlineUpdate(ctx context.Context, accountID string, input domain.InlineAddressParams, param string) (domain.UpdateAddressParams, *apierror.APIError) {
+	params := input.UpdateParams(accountID)
+
+	name, apiErr := NormalizeOptionalAddressName(params.Name)
+	if apiErr != nil {
+		return params, apiErr.WithParam(param + ".name")
+	}
+	params.Name = name
+
+	inAccount, apiErr := m.repos.NewAddressRepo().IsInAccount(ctx, accountID, params.AddressID)
+	if apiErr != nil {
+		return params, apiErr
+	}
+	if !inAccount {
+		return params, apierror.NewResourceNotFoundError("No address found with the provided ID.").WithParam(param + ".id")
+	}
+	return params, nil
+}
+
+// newInlineAddress is an inline address without an ID as create params, once its name and country are known to be present.
+func newInlineAddress(accountID string, input domain.InlineAddressParams, param string) (domain.CreateAddressParams, *apierror.APIError) {
+	params := input.CreateParams(accountID)
+	if input.Name == nil {
+		return params, apierror.NewMissingFieldError(fmt.Sprintf("Field '%s.name' is required when no id is given.", param), param+".name")
+	}
+	if strings.TrimSpace(params.Country) == "" {
+		return params, apierror.NewMissingFieldError(fmt.Sprintf("Field '%s.country' is required when no id is given.", param), param+".country")
+	}
+
+	name, apiErr := NormalizeAddressName(params.Name)
+	if apiErr != nil {
+		return params, apiErr.WithParam(param + ".name")
+	}
+	params.Name = name
+	return params, nil
+}
+
 func (m *addressMedImpl) create(ctx context.Context, params domain.CreateAddressParams) (*domain.Address, *apierror.APIError) {
 	addressID, apiErr := id.GenID(id.AddressIDPrefix, nil)
 	if apiErr != nil {
@@ -232,6 +328,51 @@ func coalesceString(update *string, existing string) string {
 		return *update
 	}
 	return existing
+}
+
+// addressFromCreateParams is the address an inline create would store, for callers that need its contents before it is written.
+func addressFromCreateParams(params domain.CreateAddressParams) *domain.Address {
+	return &domain.Address{
+		Name:              params.Name,
+		Phone:             params.Phone,
+		Email:             params.Email,
+		IsDropShip:        params.IsDropShip,
+		ReceiveCalendarID: params.ReceiveCalendarID,
+		Geolocation: &domain.Geolocation{
+			StreetLine1: params.StreetLine1,
+			StreetLine2: params.StreetLine2,
+			Locality:    params.Locality,
+			State:       params.State,
+			PostalCode:  params.PostalCode,
+			Country:     params.Country,
+		},
+	}
+}
+
+// applyAddressUpdate is the stored address with an update's set and cleared fields applied.
+func applyAddressUpdate(stored *domain.Address, params domain.UpdateAddressParams) *domain.Address {
+	out := *stored
+	geo := domain.Geolocation{}
+	if stored.Geolocation != nil {
+		geo = *stored.Geolocation
+	}
+	if params.Name != nil {
+		out.Name = *params.Name
+	}
+	if params.IsDropShip != nil {
+		out.IsDropShip = *params.IsDropShip
+	}
+	out.Phone = params.Phone.StringPtrAfterBackfill(stored.Phone)
+	out.Email = params.Email.StringPtrAfterBackfill(stored.Email)
+	out.ReceiveCalendarID = params.ReceiveCalendarID.StringPtrAfterBackfill(stored.ReceiveCalendarID)
+	geo.StreetLine1 = coalesceStringPtr(params.StreetLine1, geo.StreetLine1)
+	geo.StreetLine2 = params.StreetLine2.StringPtrAfterBackfill(geo.StreetLine2)
+	geo.Locality = coalesceStringPtr(params.Locality, geo.Locality)
+	geo.State = coalesceStringPtr(params.State, geo.State)
+	geo.PostalCode = coalesceStringPtr(params.PostalCode, geo.PostalCode)
+	geo.Country = coalesceString(params.Country, geo.Country)
+	out.Geolocation = &geo
+	return &out
 }
 
 // NormalizeAddressName trims an address name; a blank one is a validation error on `name`.

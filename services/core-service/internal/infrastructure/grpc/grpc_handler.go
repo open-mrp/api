@@ -2472,6 +2472,8 @@ func (h *gRPCHandler) UpdateAccount(ctx context.Context, req *pb.UpdateAccountRe
 
 		DefaultBillingAddressID:  req.DefaultBillingAddressId,
 		DefaultShippingAddressID: req.DefaultShippingAddressId,
+		DefaultBillingAddress:    inlineAddressToDomain(req.DefaultBillingAddress),
+		DefaultShippingAddress:   inlineAddressToDomain(req.DefaultShippingAddress),
 	}
 
 	account, apiErr := h.accountSvc.UpdateAccount(ctx, params)

@@ -300,6 +300,9 @@ type CreatePurchaseOrderParams struct {
 	ShipToCountry         *string
 	Lines                 []CreatePurchaseOrderLineInput
 	ContactAccountUserIDs []string
+	// BillToAddress and ShipToAddress are supplier addresses saved with the order, each in place of its ID and inline fields.
+	BillToAddress *InlineAddressParams
+	ShipToAddress *InlineAddressParams
 }
 
 // CreatePurchaseOrderLineInput represents a line to create with a new purchase order.
@@ -334,6 +337,9 @@ type UpdatePurchaseOrderParams struct {
 	// ReplaceContacts says ContactAccountUserIDs is the new contact set, so an empty one clears them.
 	ReplaceContacts       bool
 	ContactAccountUserIDs []string
+	// BillingAddress and ShippingAddress are supplier addresses saved with the update, each in place of its ID.
+	BillingAddress  *InlineAddressParams
+	ShippingAddress *InlineAddressParams
 }
 
 // DeletePurchaseOrderParams holds the parameters for deleting a purchase order.

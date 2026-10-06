@@ -425,6 +425,10 @@ func (s *salesOrderSvcImpl) CreateSalesOrder(ctx context.Context, params domain.
 		return nil, tracing.Trace(span, apierror.NewAuthorizationError("You are not authorized to create sales orders."))
 	}
 
+	if apiErr := checkSalesOrderCreateAddressChoices(params); apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
+
 	params.AccountID = identity.Target.AccountID
 
 	// For customer-portal creates, fold the customer's saved note into the order note (matches Dashboard: [customer.note, data.note] joined).
@@ -489,12 +493,15 @@ func (s *salesOrderSvcImpl) CreateSalesOrder(ctx context.Context, params domain.
 		// Resolve everything else that only requires reads (and the live Shippo call) BEFORE opening the write transaction, so the external rate lookup never holds a DB transaction open across network latency. The transaction below performs only the inserts.
 		addressRepo := s.repos.NewAddressRepo()
 
-		// Reference the existing bill-to / ship-to addresses by ID (matching Dashboard, which only accepts address IDs; addresses are persisted separately). Each must belong to the order's owner or buyer account. The resolved ship-to feeds the sales-rep territory + shipping-rate logic below; the bill-to supplies the third-party freight-billing address.
-		billAddr, apiErr := s.resolveOrderAddress(ctx, addressRepo, params.AccountID, params.BuyerAccountID, params.BillToAddressID)
+		// A saved bill-to / ship-to must belong to the order's owner or buyer account; an inline one is the buyer's address as it will be once saved with the order. The resolved ship-to feeds the sales-rep territory + shipping-rate logic below; the bill-to supplies the third-party freight-billing address.
+		if apiErr := checkInlineAddressPair(params.BillToAddress, params.ShipToAddress, "ship_to_address"); apiErr != nil {
+			return nil, cacheErr(apiErr)
+		}
+		billAddr, apiErr := s.resolveCreateOrderAddress(ctx, meds.Address, addressRepo, params, params.BillToAddressID, params.BillToAddress, "bill_to_address")
 		if apiErr != nil {
 			return nil, cacheErr(apiErr)
 		}
-		shipAddr, apiErr := s.resolveOrderAddress(ctx, addressRepo, params.AccountID, params.BuyerAccountID, params.ShipToAddressID)
+		shipAddr, apiErr := s.resolveCreateOrderAddress(ctx, meds.Address, addressRepo, params, params.ShipToAddressID, params.ShipToAddress, "ship_to_address")
 		if apiErr != nil {
 			return nil, cacheErr(apiErr)
 		}
@@ -578,6 +585,11 @@ func (s *salesOrderSvcImpl) CreateSalesOrder(ctx context.Context, params domain.
 				return apierror.NewConflictErrorWithParam("A sales order with this number already exists.", "number")
 			}
 
+			billingAddressID, shippingAddressID, apiErr := savedOrderAddressIDs(txCtx, txSvc.mediators().Address, params)
+			if apiErr != nil {
+				return apiErr
+			}
+
 			// Create the order. SellerAccountID and OwnerAccountID default to the target account (the account creating the order), matching Dashboard behavior.
 			createParams := domain.CreateSalesOrderParams{
 				AccountID:             params.AccountID,
@@ -586,8 +598,8 @@ func (s *salesOrderSvcImpl) CreateSalesOrder(ctx context.Context, params domain.
 				OwnerAccountID:        params.AccountID,
 				Number:                orderNumber,
 				SalesOrderStatusCode:  params.SalesOrderStatusCode,
-				BillingAddressID:      params.BillToAddressID,
-				ShippingAddressID:     params.ShipToAddressID,
+				BillingAddressID:      billingAddressID,
+				ShippingAddressID:     shippingAddressID,
 				CustomerPONumber:      params.CustomerPONumber,
 				Note:                  params.Note,
 				CarrierID:             params.CarrierID,
@@ -742,6 +754,13 @@ func (s *salesOrderSvcImpl) UpdateSalesOrder(ctx context.Context, params domain.
 
 	params.AccountID = identity.Target.AccountID
 
+	if apiErr := checkInlineAddressChoices(
+		inlineAddressChoice{params.BillingAddressID != nil, params.BillingAddress, "billing_address_id", "billing_address"},
+		inlineAddressChoice{params.ShippingAddressID != nil, params.ShippingAddress, "shipping_address_id", "shipping_address"},
+	); apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
+
 	meds := s.mediators()
 
 	idempotencyKey, apiErr := meds.Idempotency.UpsertIdempotencyKey(ctx, identity)
@@ -785,6 +804,23 @@ func (s *salesOrderSvcImpl) UpdateSalesOrder(ctx context.Context, params domain.
 			if apiErr := checkSalesOrderCounterpartyRefs(txCtx, txSvc.repos, params, existing); apiErr != nil {
 				return apiErr
 			}
+
+			// Saved into the buyer the order will have, after the customer change above is known to be valid.
+			buyerAccountID := existing.BuyerAccountID
+			if params.BuyerAccountID != nil {
+				buyerAccountID = *params.BuyerAccountID
+			}
+			billID, shipID, apiErr := saveInlineAddresses(txCtx, txSvc.mediators().Address, buyerAccountID, params.BillingAddress, params.ShippingAddress, "billing_address", "shipping_address")
+			if apiErr != nil {
+				return apiErr
+			}
+			if billID != "" {
+				params.BillingAddressID = &billID
+			}
+			if shipID != "" {
+				params.ShippingAddressID = &shipID
+			}
+
 			if apiErr := checkUpdatedServiceLevelOnCarrier(txCtx, txSvc.repos, existing.CarrierID, existing.ServiceLevelID, params.CarrierID, params.ServiceLevelID, "service_level_id"); apiErr != nil {
 				return apiErr
 			}
@@ -847,7 +883,7 @@ func (s *salesOrderSvcImpl) UpdateSalesOrder(ctx context.Context, params domain.
 				}
 			}
 
-			// Address changes re-point the order to an existing address by ID (params.BillingAddressID / params.ShippingAddressID, applied via the order update below). To edit an address's contents, callers use the update-address endpoint directly.
+			// Address changes re-point the order to an address by ID (params.BillingAddressID / params.ShippingAddressID, applied via the order update below); an inline address was saved above and is named the same way.
 
 			// Update the order
 			updated, apiErr := txRepo.Update(txCtx, params)
@@ -2502,6 +2538,50 @@ func (s *salesOrderSvcImpl) resolveSalesRepID(ctx context.Context, accountID, bu
 	}
 
 	return nil
+}
+
+// checkSalesOrderCreateAddressChoices requires each of the order's addresses, given either by ID or inline but not both.
+func checkSalesOrderCreateAddressChoices(params domain.CreateSalesOrderParams) *apierror.APIError {
+	if apiErr := checkInlineAddressChoices(
+		inlineAddressChoice{params.BillToAddressID != "", params.BillToAddress, "bill_to_address_id", "bill_to_address"},
+		inlineAddressChoice{params.ShipToAddressID != "", params.ShipToAddress, "ship_to_address_id", "ship_to_address"},
+	); apiErr != nil {
+		return apiErr
+	}
+	if params.BillToAddressID == "" && params.BillToAddress == nil {
+		return apierror.NewMissingFieldError("Either bill_to_address_id or bill_to_address is required.", "bill_to_address_id")
+	}
+	if params.ShipToAddressID == "" && params.ShipToAddress == nil {
+		return apierror.NewMissingFieldError("Either ship_to_address_id or ship_to_address is required.", "ship_to_address_id")
+	}
+	return nil
+}
+
+// resolveCreateOrderAddress is a new order's bill-to or ship-to for the rate and sales-rep logic: the saved address it names, or its inline address as it will be once saved into the buyer's account.
+func (s *salesOrderSvcImpl) resolveCreateOrderAddress(ctx context.Context, med domain.AddressMed, addressRepo domain.AddressRepo, params domain.CreateSalesOrderParams, savedID string, inline *domain.InlineAddressParams, param string) (domain.ShippingAddress, *apierror.APIError) {
+	if inline == nil {
+		return s.resolveOrderAddress(ctx, addressRepo, params.AccountID, params.BuyerAccountID, savedID)
+	}
+	previewed, apiErr := med.Preview(ctx, params.BuyerAccountID, *inline, param)
+	if apiErr != nil {
+		return domain.ShippingAddress{}, apiErr
+	}
+	return shippingAddressFromDomain(previewed), nil
+}
+
+// savedOrderAddressIDs saves a new order's inline addresses into the buyer's account and returns the bill-to and ship-to IDs the order references.
+func savedOrderAddressIDs(ctx context.Context, med domain.AddressMed, params domain.CreateSalesOrderParams) (string, string, *apierror.APIError) {
+	billID, shipID, apiErr := saveInlineAddresses(ctx, med, params.BuyerAccountID, params.BillToAddress, params.ShipToAddress, "bill_to_address", "ship_to_address")
+	if apiErr != nil {
+		return "", "", apiErr
+	}
+	if billID == "" {
+		billID = params.BillToAddressID
+	}
+	if shipID == "" {
+		shipID = params.ShipToAddressID
+	}
+	return billID, shipID, nil
 }
 
 // resolveOrderAddress validates that an order's bill-to / ship-to address exists and belongs to the order's owner or buyer account (matching Dashboard, which only accepts existing address IDs), and returns it as a ShippingAddress for the sales-rep territory + shipping-rate logic.

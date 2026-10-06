@@ -6,6 +6,7 @@ import (
 
 	apiendpoint "github.com/open-mrp/api/services/api-gateway/pkg/endpoint"
 	apiexample "github.com/open-mrp/api/services/api-gateway/pkg/example"
+	apirequest "github.com/open-mrp/api/services/api-gateway/pkg/request"
 	apiresource "github.com/open-mrp/api/services/api-gateway/pkg/resource"
 	"github.com/open-mrp/api/services/auth-service/pkg/types"
 	"github.com/open-mrp/api/shared/constants"
@@ -42,6 +43,14 @@ type UpdateAccountRequest struct {
 	DefaultBillingAddressID field.Optional[string] `json:"default_billing_address_id,omitzero" validate:"omitempty"`
 	// Default shipping address for the account's orders. Must be one of the account's own addresses.
 	DefaultShippingAddressID field.Optional[string] `json:"default_shipping_address_id,omitzero" validate:"omitempty"`
+	// Default billing address saved to the account with the update, in place of `default_billing_address_id`: a new address, or an update to one of the account's own addresses named by its `id`.
+	//
+	// Saving it needs no permission beyond updating the account.
+	DefaultBillingAddress field.Optional[apirequest.InlineAddressInput] `json:"default_billing_address,omitzero"`
+	// Default shipping address saved to the account with the update, in place of `default_shipping_address_id`: a new address, or an update to one of the account's own addresses named by its `id`.
+	//
+	// Saving it needs no permission beyond updating the account. An identical `default_billing_address` and `default_shipping_address` are saved as one address.
+	DefaultShippingAddress field.Optional[apirequest.InlineAddressInput] `json:"default_shipping_address,omitzero"`
 }
 
 var sampleUpdateAccountRequest = &UpdateAccountRequest{

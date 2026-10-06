@@ -72,12 +72,20 @@ type CreateSalesOrderRequest struct {
 	ShipByOverrideDate field.Optional[time.Time] `json:"ship_by_override_date,omitzero"`
 	// Bill-to address ID.
 	//
-	// Must reference an existing address on the order's owner or buyer account.
-	BillToAddressID string `json:"bill_to_address_id" validate:"required"`
+	// Must reference an existing address on the order's owner or buyer account. Required unless `bill_to_address` is sent instead.
+	BillToAddressID field.Optional[string] `json:"bill_to_address_id,omitzero" validate:"omitempty"`
 	// Ship-to address ID.
 	//
-	// Must reference an existing address on the order's owner or buyer account.
-	ShipToAddressID string `json:"ship_to_address_id" validate:"required"`
+	// Must reference an existing address on the order's owner or buyer account. Required unless `ship_to_address` is sent instead.
+	ShipToAddressID field.Optional[string] `json:"ship_to_address_id,omitzero" validate:"omitempty"`
+	// Bill-to address saved to the customer's account with the order, in place of `bill_to_address_id`: a new address, or an update to one of the customer's saved addresses named by its `id`.
+	//
+	// Saving it needs no permission beyond creating the order.
+	BillToAddress field.Optional[apirequest.InlineAddressInput] `json:"bill_to_address,omitzero"`
+	// Ship-to address saved to the customer's account with the order, in place of `ship_to_address_id`: a new address, or an update to one of the customer's saved addresses named by its `id`.
+	//
+	// Saving it needs no permission beyond creating the order. An identical `bill_to_address` and `ship_to_address` are saved as one address.
+	ShipToAddress field.Optional[apirequest.InlineAddressInput] `json:"ship_to_address,omitzero"`
 	// The line items to put on the order.
 	//
 	// The freight line, and the discount line when `order_discount_id` is supplied, are added on top of these automatically.
@@ -139,8 +147,8 @@ var sampleCreateSalesOrderRequest = &CreateSalesOrderRequest{
 	PaymentTermID:               field.Some(apiresource.SamplePaymentTermID),
 	OrderDiscountID:             field.Some(apiresource.SampleOrderDiscountID),
 	PromisedAt:                  field.Some(time.Date(2026, time.May, 20, 0, 0, 0, 0, time.UTC)),
-	BillToAddressID:             apiresource.SampleAddressID,
-	ShipToAddressID:             apiresource.SampleAddressID,
+	BillToAddressID:             field.Some(apiresource.SampleAddressID),
+	ShipToAddressID:             field.Some(apiresource.SampleAddressID),
 	Lines: []CreateSalesOrderLineInput{
 		{
 			ProductID: apiresource.SampleProductID,

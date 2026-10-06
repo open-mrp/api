@@ -548,14 +548,18 @@ message CreateSalesOrderRequest {
   repeated string includes = 31;
   // Promised delivery date, stored at create time.
   optional google.protobuf.Timestamp promised_at = 32;
-  // Existing bill-to / ship-to address IDs (required). The addresses must belong to
-  // the order's owner or buyer account.
+  // Existing bill-to / ship-to address IDs, each required unless its inline address is sent
+  // instead. The addresses must belong to the order's owner or buyer account.
   string bill_to_address_id = 33;
   string ship_to_address_id = 34;
 
   // Alternatives to promised_at, mutually exclusive with it and with each other.
   optional int32 lead_time_override_days = 35;
   optional google.protobuf.Timestamp ship_by_override_date = 36;
+
+  // Buyer addresses saved with the order, each in place of its *_address_id.
+  InlineAddressInput bill_to_address = 37;
+  InlineAddressInput ship_to_address = 38;
 }
 
 message SalesOrderEmailContactInput {
@@ -599,8 +603,8 @@ message UpdateSalesOrderRequest {
   optional string shipping_term_id = 10;
   optional string payment_term_id = 11;
   StringPatch order_discount_id = 12;
-  // Address references. To change an address's contents, callers use the
-  // update-address endpoint; the order update only re-points to an address ID.
+  // Address references re-point the order to an address ID; billing_address and
+  // shipping_address below save one with the update instead.
   reserved 13 to 26;
   optional string billing_address_id = 34;
   optional string shipping_address_id = 35;
@@ -620,6 +624,9 @@ message UpdateSalesOrderRequest {
   // An empty list clears all invoice contacts; nil/unset leaves existing contacts untouched.
   optional SalesOrderEmailContactList invoice_email_contacts = 32;
   repeated string includes = 33;
+  // Buyer addresses saved with the order; each excludes its *_address_id.
+  InlineAddressInput billing_address = 38;
+  InlineAddressInput shipping_address = 39;
 }
 
 message SalesOrderEmailContactList {

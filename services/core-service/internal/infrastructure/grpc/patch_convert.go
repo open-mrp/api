@@ -30,3 +30,24 @@ func stringListPatchToSliceField(p *pb.StringListPatch) field.Clearable[[]string
 	sl, _ := f.Value()
 	return field.Set([]string(sl))
 }
+
+// inlineAddressToDomain is nil when the request sent no inline address.
+func inlineAddressToDomain(p *pb.InlineAddressInput) *domain.InlineAddressParams {
+	if p == nil {
+		return nil
+	}
+	return &domain.InlineAddressParams{
+		ID:                p.Id,
+		Name:              p.Name,
+		Phone:             field.StringClearableFromProto(p.Phone),
+		Email:             field.StringClearableFromProto(p.Email),
+		IsDropShip:        p.IsDropShip,
+		ReceiveCalendarID: field.StringClearableFromProto(p.ReceiveCalendarId),
+		StreetLine1:       p.StreetLine_1,
+		StreetLine2:       field.StringClearableFromProto(p.StreetLine_2),
+		Locality:          p.Locality,
+		State:             p.State,
+		PostalCode:        p.PostalCode,
+		Country:           p.Country,
+	}
+}

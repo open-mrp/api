@@ -1033,6 +1033,13 @@ func (s *accountSvcImpl) UpdateAccount(ctx context.Context, params domain.Update
 		return nil, tracing.Trace(span, apierror.NewAuthorizationError("You can only update your own account."))
 	}
 
+	if apiErr := checkInlineAddressChoices(
+		inlineAddressChoice{params.DefaultBillingAddressID != nil, params.DefaultBillingAddress, "default_billing_address_id", "default_billing_address"},
+		inlineAddressChoice{params.DefaultShippingAddressID != nil, params.DefaultShippingAddress, "default_shipping_address_id", "default_shipping_address"},
+	); apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
+
 	meds := s.mediators()
 
 	idempotencyKey, apiErr := meds.Idempotency.UpsertIdempotencyKey(ctx, identity)
@@ -1074,6 +1081,17 @@ func (s *accountSvcImpl) UpdateAccount(ctx context.Context, params domain.Update
 				if apiErr := txRepo.UpdateBranding(txCtx, params.AccountID, params.BrandingAfter(before)); apiErr != nil {
 					return apiErr
 				}
+			}
+
+			billID, shipID, apiErr := saveInlineAddresses(txCtx, txSvc.mediators().Address, params.AccountID, params.DefaultBillingAddress, params.DefaultShippingAddress, "default_billing_address", "default_shipping_address")
+			if apiErr != nil {
+				return apiErr
+			}
+			if billID != "" {
+				params.DefaultBillingAddressID = &billID
+			}
+			if shipID != "" {
+				params.DefaultShippingAddressID = &shipID
 			}
 
 			if params.DefaultBillingAddressID != nil || params.DefaultShippingAddressID != nil {

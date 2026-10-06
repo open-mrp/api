@@ -55,7 +55,7 @@ type EditAccessMed interface {
 	CheckEditAccess(ctx context.Context, actorAccountID, targetAccountID string) *apierror.APIError
 }
 
-// AddressMed writes addresses and their audit events. It checks no permission: the calling service's own check authorizes the write.
+// AddressMed writes addresses and their audit events, for the address endpoints and for the records that save an address inline with their own write. It checks no permission: the caller's own write authorizes it.
 type AddressMed interface {
 	// Create saves a new address in params.AccountID and records its audit event.
 	//
@@ -72,6 +72,18 @@ type AddressMed interface {
 	//  4. Update the address, writing back the stored phone, email and receiving calendar where the params leave them unset.
 	//  5. Publish the address update audit event to the outbox.
 	Update(ctx context.Context, params UpdateAddressParams) (*Address, *apierror.APIError)
+
+	// Preview returns the address an inline save into accountID would leave, without writing anything. Errors name fields under param, the request field the inline address was sent in.
+	//
+	//  1. With an ID, return not-found on `<param>.id` unless the address is linked to the account, then apply the inline fields to the stored address.
+	//  2. Without one, require a name and a country, and build the address from the inline fields.
+	Preview(ctx context.Context, accountID string, input InlineAddressParams, param string) (*Address, *apierror.APIError)
+
+	// Save writes an inline address into accountID: the stored address its ID names is updated, or a new one is created. Errors name fields under param, the request field the inline address was sent in.
+	//
+	//  1. Validate the inline address as Preview does.
+	//  2. Update the named address as Update does, or create a new one as Create does.
+	Save(ctx context.Context, accountID string, input InlineAddressParams, param string) (*Address, *apierror.APIError)
 }
 
 type ProductionFlowMed interface {

@@ -1094,8 +1094,10 @@ resources:
           actions:
             methods:
               export: get /v1/operations/inventory-change-logs/actions/export
+              start_export: post /v1/operations/inventory-change-logs/actions/export
             models:
               file_download: '#/components/schemas/FileDownload'
+              start_inventory_change_logs_export_request: '#/components/schemas/StartInventoryChangeLogsExportRequest'
         models:
           inventory_change_log: '#/components/schemas/InventoryChangeLog'
           list_inventory_change_log: '#/components/schemas/List_InventoryChangeLog'

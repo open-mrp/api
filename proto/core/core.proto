@@ -680,6 +680,8 @@ service CoreService {
   rpc GetInventoryChangeLog(GetInventoryChangeLogRequest) returns (GetInventoryChangeLogResponse);
   // Returns all matching inventory change logs without pagination (for export).
   rpc ExportInventoryChangeLogs(ExportInventoryChangeLogsRequest) returns (ExportInventoryChangeLogsResponse);
+  // Accepts an export of the inventory change logs the filters select; the file is built by the export worker.
+  rpc StartInventoryChangeLogsExport(StartInventoryChangeLogsExportRequest) returns (StartInventoryChangeLogsExportResponse);
 
   rpc ListInvoices(ListInvoicesRequest) returns (ListInvoicesResponse);
   rpc GetInvoice(GetInvoiceRequest) returns (GetInvoiceResponse);

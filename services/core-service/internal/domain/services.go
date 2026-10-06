@@ -1176,6 +1176,11 @@ type InventoryChangeLogSvc interface {
 
 	// ExportInventoryChangeLogs returns all inventory change logs matching the provided filters for the caller's account.
 	ExportInventoryChangeLogs(ctx context.Context, params ExportInventoryChangeLogsParams) ([]*InventoryChangeLog, *apierror.APIError)
+
+	// StartInventoryChangeLogsExport accepts an export of the change logs the filters select; the export does its own paging.
+	StartInventoryChangeLogsExport(ctx context.Context, filters ExportInventoryChangeLogsParams) (*Job, *apierror.APIError)
+	// BuildExportInventoryChangeLogs renders the file an accepted export recorded.
+	BuildExportInventoryChangeLogs(ctx context.Context, accountID string, filters json.RawMessage) (*Export, *apierror.APIError)
 }
 
 type InvoiceSvc interface {

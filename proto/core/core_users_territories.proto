@@ -405,6 +405,16 @@ message ExportInventoryChangeLogsResponse {
   repeated InventoryChangeLogInfo inventory_change_logs = 1;
   int64 count = 2;
 }
+message StartInventoryChangeLogsExportRequest {
+  repeated string item_ids = 1;
+  repeated string action_type_codes = 2;
+  repeated string changed_by_user_ids = 3;
+  optional google.protobuf.Timestamp start_date = 4;
+  optional google.protobuf.Timestamp end_date = 5;
+}
+message StartInventoryChangeLogsExportResponse {
+  JobInfo job = 1;
+}
 message ListInvoicesRequest {
   optional string cursor = 1;
   int32 limit = 2;

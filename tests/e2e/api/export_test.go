@@ -3,16 +3,24 @@
 package api_test
 
 import (
+	"context"
 	"fmt"
+	"io"
+	"net"
 	"net/http"
+	"net/url"
+	"path"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
-// accepts an export and polls its job through to completion. The file itself is out of
-// reach — test mode's object store discards the bytes core-service's tests parse.
+// defaultE2EObjectStoreAddr is where the host reaches the stack's object store: minio-e2e, published on 9002.
+const defaultE2EObjectStoreAddr = "127.0.0.1:9002"
+
+// accepts an export and polls its job through to completion
 func completedExportJob(t *testing.T, path string, filters map[string]any) map[string]any {
 	t.Helper()
 	return completedExportJobAs(t, apiClient, path, filters)
@@ -63,6 +71,30 @@ func awaitExportJob(t *testing.T, client *Client, jobID string) map[string]any {
 	})
 
 	return job
+}
+
+// downloadExportFile fetches a completed export's file and the name it downloads under. The link is signed for the object store's in-network host, so the request keeps that host while dialing the port the stack publishes (E2E_OBJECT_STORE_ADDR overrides it).
+func downloadExportFile(t *testing.T, job map[string]any) (filename string, body []byte) {
+	t.Helper()
+	export := jsonObject(job, "export")
+	require.NotNil(t, export, "a completed export links its file: %v", job)
+	signed := jsonField(export, "url")
+	link, err := url.Parse(signed)
+	require.NoError(t, err)
+
+	addr := envOr("E2E_OBJECT_STORE_ADDR", defaultE2EObjectStoreAddr)
+	client := &http.Client{Timeout: 30 * time.Second, Transport: &http.Transport{
+		DialContext: func(ctx context.Context, network, _ string) (net.Conn, error) {
+			return (&net.Dialer{}).DialContext(ctx, network, addr)
+		},
+	}}
+	resp, err := client.Get(signed)
+	require.NoError(t, err, "downloading the export (is the stack up with minio-e2e published on %s?)", addr)
+	defer resp.Body.Close()
+	body, err = io.ReadAll(resp.Body)
+	require.NoError(t, err)
+	require.Equal(t, http.StatusOK, resp.StatusCode, "the signed link serves the file: %s", string(body))
+	return path.Base(link.Path), body
 }
 
 func TestExports_EveryResourceRendersThroughAJob(t *testing.T) {

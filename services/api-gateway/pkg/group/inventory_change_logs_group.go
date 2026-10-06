@@ -43,11 +43,13 @@ func (*InventoryChangeLogsEndpointGroup) Materialize(config *InventoryChangeLogs
 	listEndpoint := apiendpoint.From(&inventorychangelogep.ListInventoryChangeLogsEndpoint{}).WithService(inner, svc)
 	retrieveEndpoint := apiendpoint.From(&inventorychangelogep.RetrieveInventoryChangeLogEndpoint{}).WithService(inner, svc)
 	exportEndpoint := apiendpoint.From(&inventorychangelogep.ExportInventoryChangeLogsEndpoint{}).WithService(inner, svc)
+	startExportEndpoint := apiendpoint.From(&inventorychangelogep.StartInventoryChangeLogsExportEndpoint{}).WithService(inner, svc)
 
 	inner.Endpoints = []apiendpoint.APIEndpointer{
 		listEndpoint,
 		retrieveEndpoint,
 		exportEndpoint,
+		startExportEndpoint,
 	}
 
 	return &InventoryChangeLogsEndpointGroup{inner}

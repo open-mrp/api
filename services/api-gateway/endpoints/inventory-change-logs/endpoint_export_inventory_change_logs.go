@@ -31,6 +31,8 @@ type ExportInventoryChangeLogsRequest struct {
 // Exports inventory change logs matching the provided filters as an Excel file.
 //
 // Unlike the list endpoint, results are not paginated — every matching change log is included in the download, newest first. The download is named for the date range you requested, using `all` in place of a bound you left open.
+//
+// This endpoint is deprecated: the file is built inside the request, so a wide window on a busy account can outlast the request timeout. Use `POST /v1/operations/inventory-change-logs/actions/export` instead, which builds the same file in the background and returns a job to poll.
 type ExportInventoryChangeLogsEndpoint struct{}
 
 func (e *ExportInventoryChangeLogsEndpoint) Materialize() *apiendpoint.APIEndpoint[*ExportInventoryChangeLogsRequest, *httptransport.FileDownload] {

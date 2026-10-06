@@ -1913,7 +1913,7 @@ func (h *gRPCHandler) UpdateAddress(ctx context.Context, req *pb.UpdateAddressRe
 		Phone:             field.StringClearableFromProto(req.Phone),
 		Email:             field.StringClearableFromProto(req.Email),
 		IsDropShip:        req.IsDropShip,
-		ReceiveCalendarID: field.StringClearableFromProto(req.ReceiveCalendarId).ValuePtr(),
+		ReceiveCalendarID: field.StringClearableFromProto(req.ReceiveCalendarId),
 		StreetLine1:       req.StreetLine_1,
 		StreetLine2:       field.StringClearableFromProto(req.StreetLine_2),
 		Locality:          req.Locality,

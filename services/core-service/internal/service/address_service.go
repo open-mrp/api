@@ -442,6 +442,7 @@ func (s *addressSvcImpl) UpdateAddress(ctx context.Context, params domain.Update
 
 			params.Phone = params.Phone.BackfillUnsetPtr(existing.Phone)
 			params.Email = params.Email.BackfillUnsetPtr(existing.Email)
+			params.ReceiveCalendarID = params.ReceiveCalendarID.BackfillUnsetPtr(existing.ReceiveCalendarID)
 
 			// Update address metadata
 			updated, apiErr := txRepo.Update(txCtx, params)

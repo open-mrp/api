@@ -84,7 +84,7 @@ type UpdateAddressParams struct {
 	Phone             field.Clearable[string]
 	Email             field.Clearable[string]
 	IsDropShip        *bool
-	ReceiveCalendarID *string
+	ReceiveCalendarID field.Clearable[string]
 	StreetLine1       *string
 	StreetLine2       field.Clearable[string]
 	Locality          *string

@@ -99,23 +99,19 @@ func TestInvoices_UnpaidStatusKeysOffPaidInFullOnly(t *testing.T) {
 	assert.NotContains(t, ids, SeedInvoiceID)
 }
 
-// Item and product-line filters scope to the order's lines, so a partial invoice still matches.
+// Item and product-line filters reach an invoice through its order's lines. The invoice is the test's own, and the
+// list is narrowed to its customer, so the answer is exact however many invoices other tests have raised.
 func TestInvoices_LineFiltersScopeToOrderLines(t *testing.T) {
 	t.Parallel()
-
-	all := listIDs(t, invoicesPath, nil)
-
-	byItem := listIDs(t, invoicesPath, url.Values{"item_ids": {SeedItemID}})
-	require.NotEmpty(t, byItem, "seed item %s should match invoices through its order lines", SeedItemID)
-	for _, id := range byItem {
-		assert.Contains(t, all, id)
+	inv := invoiceNewCustomer(t) // an order of the seed product, whose item is SeedItemID on SeedProductLineID
+	ofCustomer := func(params url.Values) []string {
+		return listIDs(t, invoicesPath, withCustomers(params, inv.customerID))
 	}
 
-	byProductLine := listIDs(t, invoicesPath, url.Values{"product_line_ids": {SeedProductLineID}})
-	require.NotEmpty(t, byProductLine)
-	for _, id := range byProductLine {
-		assert.Contains(t, all, id)
-	}
+	assert.Equal(t, []string{inv.invoiceID}, ofCustomer(url.Values{"item_ids": {SeedItemID}}))
+	assert.Equal(t, []string{inv.invoiceID}, ofCustomer(url.Values{"product_line_ids": {SeedProductLineID}}))
+	assert.Empty(t, ofCustomer(url.Values{"item_ids": {SeedPurchasedItemID}}), "an item none of the order's lines carry")
+	assert.Empty(t, ofCustomer(url.Values{"product_line_ids": {parityProductLine(t)}}), "a product line none of the order's lines are on")
 }
 
 // An unknown item ID filters everything out instead of being ignored.

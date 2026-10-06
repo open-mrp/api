@@ -34,6 +34,10 @@ func (h *chatGRPCHandler) CreateConversation(ctx context.Context, req *pb.Create
 	ctx, finalizeIdempotency := contracts.WithIdempotencyTracking(ctx)
 	defer finalizeIdempotency()
 
+	participants := make([]domain.ParticipantRoleInput, 0, len(req.Participants))
+	for _, p := range req.Participants {
+		participants = append(participants, domain.ParticipantRoleInput{AccountUserID: p.AccountUserId, Role: p.Role})
+	}
 	conv, apiErr := h.chatSvc.CreateConversation(ctx, domain.CreateConversationInput{
 		Type:                      req.Type,
 		Title:                     req.Title,
@@ -41,6 +45,7 @@ func (h *chatGRPCHandler) CreateConversation(ctx context.Context, req *pb.Create
 		TopicResourceType:         req.TopicResourceType,
 		TopicResourceID:           req.TopicResourceId,
 		ParticipantAccountUserIDs: req.ParticipantAccountUserIds,
+		Participants:              participants,
 	})
 	if apiErr != nil {
 		return nil, contracts.ConvertAPIErrorToGRPC(apiErr)

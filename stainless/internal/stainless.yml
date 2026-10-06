@@ -1500,6 +1500,7 @@ resources:
                   attachment_upload_target: '#/components/schemas/AttachmentUploadTarget'
                   create_attachment_upload_url_request: '#/components/schemas/CreateAttachmentUploadURLRequest'
         models:
+          conversation_participant_input: '#/components/schemas/ConversationParticipantInput'
           create_conversation_request: '#/components/schemas/CreateConversationRequest'
           list_conversation: '#/components/schemas/List_Conversation'
           update_conversation_request: '#/components/schemas/UpdateConversationRequest'

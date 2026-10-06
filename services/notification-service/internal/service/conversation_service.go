@@ -129,6 +129,9 @@ func (s *conversationSvcImpl) CreateConversation(ctx context.Context, input doma
 		return nil, tracing.Trace(span, apierror.NewParameterInvalidError("Unsupported conversation type.", "type"))
 	}
 
+	if len(input.Participants) > 0 {
+		return nil, tracing.Trace(span, apierror.NewParameterInvalidError("A direct message has no roles to assign; name its other participant in participant_account_user_ids.", "participants"))
+	}
 	if len(input.ParticipantAccountUserIDs) != 1 {
 		return nil, tracing.Trace(span, apierror.NewParameterInvalidError("A direct message requires exactly one other participant.", "participant_account_user_ids"))
 	}
@@ -2569,8 +2572,16 @@ func (s *conversationSvcImpl) createGroup(ctx context.Context, input domain.Crea
 	ctx, span := conversationSvcTracer.Start(ctx, "service.conversation.create_group")
 	defer span.End()
 
+	roles, apiErr := s.requestedParticipantRoles(ctx, input.Participants, callerAcus)
+	if apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
+
 	// Seed the participant set from explicitly-requested users plus, when a reusable roster is named, a snapshot of that roster's members. The roster is provenance only: its members are copied in here and the conversation is independent thereafter (later roster edits never reach it).
 	seedUserIDs := append([]string(nil), input.ParticipantAccountUserIDs...)
+	for _, p := range input.Participants {
+		seedUserIDs = append(seedUserIDs, p.AccountUserID)
+	}
 	var seedAgentIDs []string
 	if input.GroupID != nil && *input.GroupID != "" {
 		group, apiErr := s.repoFactory.NewMessagingGroupRepo().Get(ctx, *input.GroupID, accountID)
@@ -2608,11 +2619,13 @@ func (s *conversationSvcImpl) createGroup(ctx context.Context, input domain.Crea
 			continue
 		}
 		seen[m] = struct{}{}
-		if _, apiErr := s.repoFactory.NewNotificationRepo().ResolveUserID(ctx, m); apiErr != nil {
-			if apiErr.Code == apierror.ErrorCodeResourceNotFound {
-				return nil, tracing.Trace(span, apierror.NewParameterInvalidError("A participant does not exist.", "participant_account_user_ids"))
+		if _, resolved := roles[m]; !resolved {
+			if _, apiErr := s.repoFactory.NewNotificationRepo().ResolveUserID(ctx, m); apiErr != nil {
+				if apiErr.Code == apierror.ErrorCodeResourceNotFound {
+					return nil, tracing.Trace(span, apierror.NewParameterInvalidError("A participant does not exist.", "participant_account_user_ids"))
+				}
+				return nil, tracing.Trace(span, apiErr)
 			}
-			return nil, tracing.Trace(span, apiErr)
 		}
 		members = append(members, m)
 	}
@@ -2640,7 +2653,9 @@ func (s *conversationSvcImpl) createGroup(ctx context.Context, input domain.Crea
 		return nil, tracing.Trace(span, apiErr)
 	}
 
+	var roleChanges []participantRoleChange
 	apiErr = s.txManager.WithTx(ctx, func(txCtx context.Context, f domain.RepoFactory) *apierror.APIError {
+		roleChanges = nil
 		if createErr := f.NewConversationRepo().Create(txCtx, conversationID, &input, accountID); createErr != nil {
 			return createErr
 		}
@@ -2667,6 +2682,17 @@ func (s *conversationSvcImpl) createGroup(ctx context.Context, input domain.Crea
 				Role:            role,
 			}); pErr != nil {
 				return pErr
+			}
+			// A requested role is applied as the owner's role change, so it is audited and announced exactly as setting it afterwards would be.
+			if requested, ok := roles[acus]; ok && string(requested) != role {
+				seated, getErr := partRepo.GetByID(txCtx, pid, conversationID)
+				if getErr != nil {
+					return getErr
+				}
+				if rErr := applyParticipantRole(txCtx, f, conversationID, seated, requested); rErr != nil {
+					return rErr
+				}
+				roleChanges = append(roleChanges, participantRoleChange{participantID: pid, role: requested})
 			}
 		}
 		// Roster agent members are seated with the safe default trigger (mention); their per-conversation trigger config can be changed afterward like any other agent participant.
@@ -2695,7 +2721,44 @@ func (s *conversationSvcImpl) createGroup(ctx context.Context, input domain.Crea
 			return nil, tracing.Trace(span, apiErr)
 		}
 	}
+	for _, change := range roleChanges {
+		s.postSystemEvent(ctx, conversationID, accountID, change.participantID, "participant.role_changed", roleChangeBody(change.role))
+	}
 	return s.loadConversation(ctx, conversationID, callerAcus, accountID)
+}
+
+type participantRoleChange struct {
+	participantID string
+	role          constants.ParticipantRole
+}
+
+// requestedParticipantRoles validates the roles a new group's members are to start with, as UpdateParticipantRole validates a role, and returns them by account user. Errors name the offending entry of `participants`.
+func (s *conversationSvcImpl) requestedParticipantRoles(ctx context.Context, participants []domain.ParticipantRoleInput, callerAcus string) (map[string]constants.ParticipantRole, *apierror.APIError) {
+	roles := make(map[string]constants.ParticipantRole, len(participants))
+	for i, p := range participants {
+		param := fmt.Sprintf("participants[%d]", i)
+		switch {
+		case p.AccountUserID == "":
+			return nil, apierror.NewParameterMissingError("An account_user_id is required.", param+".account_user_id")
+		case p.AccountUserID == callerAcus:
+			return nil, apierror.NewParameterInvalidError("You own the group you create, so you cannot be given another role in it.", param+".account_user_id")
+		}
+		if _, dup := roles[p.AccountUserID]; dup {
+			return nil, apierror.NewParameterInvalidError("This account user is listed more than once.", param+".account_user_id")
+		}
+		role := constants.ParticipantRole(p.Role)
+		if !role.IsValid() {
+			return nil, apierror.NewParameterInvalidError("The role is invalid.", param+".role")
+		}
+		if _, apiErr := s.repoFactory.NewNotificationRepo().ResolveUserID(ctx, p.AccountUserID); apiErr != nil {
+			if apiErr.Code == apierror.ErrorCodeResourceNotFound {
+				return nil, apierror.NewParameterInvalidError("The participant does not exist.", param+".account_user_id")
+			}
+			return nil, apiErr
+		}
+		roles[p.AccountUserID] = role
+	}
+	return roles, nil
 }
 
 func (s *conversationSvcImpl) UpdateConversation(ctx context.Context, conversationID string, title *string, status *string, clearTitle bool) (*domain.Conversation, *apierror.APIError) {
@@ -3168,22 +3231,7 @@ func (s *conversationSvcImpl) UpdateParticipantRole(ctx context.Context, convers
 	}
 	roleChanged := target.Role != string(newRole)
 	apiErr = s.txManager.WithTx(ctx, func(txCtx context.Context, f domain.RepoFactory) *apierror.APIError {
-		txPartRepo := f.NewParticipantRepo()
-		if apiErr := txPartRepo.SetRole(txCtx, conversationID, *target.AccountUserID, string(newRole)); apiErr != nil {
-			return apiErr
-		}
-		updated, apiErr := txPartRepo.GetByID(txCtx, participantID, conversationID)
-		if apiErr != nil {
-			return apiErr
-		}
-		// A same-value role set produces an empty diff, which Publish drops as a no-op.
-		return audit.NewPublisher().Publish(txCtx, f.NewOutboxRepo(), audit.EventData{
-			ServiceName:  domain.ServiceName,
-			Action:       constants.AuditActionUpdate,
-			ResourceType: constants.ObjectTypeConversationParticipant,
-			ResourceID:   participantID,
-			Changes:      audit.ComputeChanges(target, updated),
-		})
+		return applyParticipantRole(txCtx, f, conversationID, target, newRole)
 	})
 	if apiErr != nil {
 		return nil, tracing.Trace(span, apiErr)
@@ -3192,6 +3240,26 @@ func (s *conversationSvcImpl) UpdateParticipantRole(ctx context.Context, convers
 		s.postSystemEvent(ctx, conversationID, accountID, target.ID, "participant.role_changed", roleChangeBody(newRole))
 	}
 	return s.loadConversation(ctx, conversationID, callerAcus, accountID)
+}
+
+// applyParticipantRole sets an account-user participant's role and publishes the participant's update event.
+func applyParticipantRole(ctx context.Context, f domain.RepoFactory, conversationID string, before *domain.ConversationParticipant, role constants.ParticipantRole) *apierror.APIError {
+	partRepo := f.NewParticipantRepo()
+	if apiErr := partRepo.SetRole(ctx, conversationID, *before.AccountUserID, string(role)); apiErr != nil {
+		return apiErr
+	}
+	after, apiErr := partRepo.GetByID(ctx, before.ID, conversationID)
+	if apiErr != nil {
+		return apiErr
+	}
+	// A same-value role set produces an empty diff, which Publish drops as a no-op.
+	return audit.NewPublisher().Publish(ctx, f.NewOutboxRepo(), audit.EventData{
+		ServiceName:  domain.ServiceName,
+		Action:       constants.AuditActionUpdate,
+		ResourceType: constants.ObjectTypeConversationParticipant,
+		ResourceID:   before.ID,
+		Changes:      audit.ComputeChanges(before, after),
+	})
 }
 
 // roleChangeBody is the system-event predicate for a role change (subject is the affected member).

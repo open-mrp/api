@@ -682,6 +682,7 @@ resources:
         models:
           conversation: '#/components/schemas/Conversation'
           conversation_participant: '#/components/schemas/ConversationParticipant'
+          conversation_participant_input: '#/components/schemas/ConversationParticipantInput'
           create_conversation_request: '#/components/schemas/CreateConversationRequest'
           list_conversation: '#/components/schemas/List_Conversation'
           list_conversation_participant: '#/components/schemas/List_ConversationParticipant'

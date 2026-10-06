@@ -2511,7 +2511,9 @@ type CreateConversationRequest struct {
 	// When set, seed the conversation from a reusable roster (messaging_group.id): its members are
 	// snapshotted into participants (in addition to any participant_account_user_ids) and the
 	// conversation records this group_id as provenance. Agent members default to mention trigger.
-	GroupId       *string `protobuf:"bytes,6,opt,name=group_id,json=groupId,proto3,oneof" json:"group_id,omitempty"`
+	GroupId *string `protobuf:"bytes,6,opt,name=group_id,json=groupId,proto3,oneof" json:"group_id,omitempty"`
+	// Group members to seat with the role each starts with, validated as UpdateParticipantRole validates a role.
+	Participants  []*ConversationParticipantRoleInput `protobuf:"bytes,7,rep,name=participants,proto3" json:"participants,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -2588,6 +2590,65 @@ func (x *CreateConversationRequest) GetGroupId() string {
 	return ""
 }
 
+func (x *CreateConversationRequest) GetParticipants() []*ConversationParticipantRoleInput {
+	if x != nil {
+		return x.Participants
+	}
+	return nil
+}
+
+type ConversationParticipantRoleInput struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	AccountUserId string                 `protobuf:"bytes,1,opt,name=account_user_id,json=accountUserId,proto3" json:"account_user_id,omitempty"`
+	Role          string                 `protobuf:"bytes,2,opt,name=role,proto3" json:"role,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ConversationParticipantRoleInput) Reset() {
+	*x = ConversationParticipantRoleInput{}
+	mi := &file_notification_notification_chat_proto_msgTypes[35]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ConversationParticipantRoleInput) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ConversationParticipantRoleInput) ProtoMessage() {}
+
+func (x *ConversationParticipantRoleInput) ProtoReflect() protoreflect.Message {
+	mi := &file_notification_notification_chat_proto_msgTypes[35]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ConversationParticipantRoleInput.ProtoReflect.Descriptor instead.
+func (*ConversationParticipantRoleInput) Descriptor() ([]byte, []int) {
+	return file_notification_notification_chat_proto_rawDescGZIP(), []int{35}
+}
+
+func (x *ConversationParticipantRoleInput) GetAccountUserId() string {
+	if x != nil {
+		return x.AccountUserId
+	}
+	return ""
+}
+
+func (x *ConversationParticipantRoleInput) GetRole() string {
+	if x != nil {
+		return x.Role
+	}
+	return ""
+}
+
 type ListConversationsRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Cursor        *string                `protobuf:"bytes,1,opt,name=cursor,proto3,oneof" json:"cursor,omitempty"`
@@ -2600,7 +2661,7 @@ type ListConversationsRequest struct {
 
 func (x *ListConversationsRequest) Reset() {
 	*x = ListConversationsRequest{}
-	mi := &file_notification_notification_chat_proto_msgTypes[35]
+	mi := &file_notification_notification_chat_proto_msgTypes[36]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2612,7 +2673,7 @@ func (x *ListConversationsRequest) String() string {
 func (*ListConversationsRequest) ProtoMessage() {}
 
 func (x *ListConversationsRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_notification_notification_chat_proto_msgTypes[35]
+	mi := &file_notification_notification_chat_proto_msgTypes[36]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2625,7 +2686,7 @@ func (x *ListConversationsRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListConversationsRequest.ProtoReflect.Descriptor instead.
 func (*ListConversationsRequest) Descriptor() ([]byte, []int) {
-	return file_notification_notification_chat_proto_rawDescGZIP(), []int{35}
+	return file_notification_notification_chat_proto_rawDescGZIP(), []int{36}
 }
 
 func (x *ListConversationsRequest) GetCursor() string {
@@ -2666,7 +2727,7 @@ type ListConversationsResponse struct {
 
 func (x *ListConversationsResponse) Reset() {
 	*x = ListConversationsResponse{}
-	mi := &file_notification_notification_chat_proto_msgTypes[36]
+	mi := &file_notification_notification_chat_proto_msgTypes[37]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2678,7 +2739,7 @@ func (x *ListConversationsResponse) String() string {
 func (*ListConversationsResponse) ProtoMessage() {}
 
 func (x *ListConversationsResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_notification_notification_chat_proto_msgTypes[36]
+	mi := &file_notification_notification_chat_proto_msgTypes[37]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2691,7 +2752,7 @@ func (x *ListConversationsResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListConversationsResponse.ProtoReflect.Descriptor instead.
 func (*ListConversationsResponse) Descriptor() ([]byte, []int) {
-	return file_notification_notification_chat_proto_rawDescGZIP(), []int{36}
+	return file_notification_notification_chat_proto_rawDescGZIP(), []int{37}
 }
 
 func (x *ListConversationsResponse) GetConversations() []*ConversationInfo {
@@ -2717,7 +2778,7 @@ type GetConversationRequest struct {
 
 func (x *GetConversationRequest) Reset() {
 	*x = GetConversationRequest{}
-	mi := &file_notification_notification_chat_proto_msgTypes[37]
+	mi := &file_notification_notification_chat_proto_msgTypes[38]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2729,7 +2790,7 @@ func (x *GetConversationRequest) String() string {
 func (*GetConversationRequest) ProtoMessage() {}
 
 func (x *GetConversationRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_notification_notification_chat_proto_msgTypes[37]
+	mi := &file_notification_notification_chat_proto_msgTypes[38]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2742,7 +2803,7 @@ func (x *GetConversationRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetConversationRequest.ProtoReflect.Descriptor instead.
 func (*GetConversationRequest) Descriptor() ([]byte, []int) {
-	return file_notification_notification_chat_proto_rawDescGZIP(), []int{37}
+	return file_notification_notification_chat_proto_rawDescGZIP(), []int{38}
 }
 
 func (x *GetConversationRequest) GetId() string {
@@ -2761,7 +2822,7 @@ type BatchGetConversationsRequest struct {
 
 func (x *BatchGetConversationsRequest) Reset() {
 	*x = BatchGetConversationsRequest{}
-	mi := &file_notification_notification_chat_proto_msgTypes[38]
+	mi := &file_notification_notification_chat_proto_msgTypes[39]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2773,7 +2834,7 @@ func (x *BatchGetConversationsRequest) String() string {
 func (*BatchGetConversationsRequest) ProtoMessage() {}
 
 func (x *BatchGetConversationsRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_notification_notification_chat_proto_msgTypes[38]
+	mi := &file_notification_notification_chat_proto_msgTypes[39]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2786,7 +2847,7 @@ func (x *BatchGetConversationsRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use BatchGetConversationsRequest.ProtoReflect.Descriptor instead.
 func (*BatchGetConversationsRequest) Descriptor() ([]byte, []int) {
-	return file_notification_notification_chat_proto_rawDescGZIP(), []int{38}
+	return file_notification_notification_chat_proto_rawDescGZIP(), []int{39}
 }
 
 func (x *BatchGetConversationsRequest) GetIds() []string {
@@ -2805,7 +2866,7 @@ type BatchGetConversationsResponse struct {
 
 func (x *BatchGetConversationsResponse) Reset() {
 	*x = BatchGetConversationsResponse{}
-	mi := &file_notification_notification_chat_proto_msgTypes[39]
+	mi := &file_notification_notification_chat_proto_msgTypes[40]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2817,7 +2878,7 @@ func (x *BatchGetConversationsResponse) String() string {
 func (*BatchGetConversationsResponse) ProtoMessage() {}
 
 func (x *BatchGetConversationsResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_notification_notification_chat_proto_msgTypes[39]
+	mi := &file_notification_notification_chat_proto_msgTypes[40]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2830,7 +2891,7 @@ func (x *BatchGetConversationsResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use BatchGetConversationsResponse.ProtoReflect.Descriptor instead.
 func (*BatchGetConversationsResponse) Descriptor() ([]byte, []int) {
-	return file_notification_notification_chat_proto_rawDescGZIP(), []int{39}
+	return file_notification_notification_chat_proto_rawDescGZIP(), []int{40}
 }
 
 func (x *BatchGetConversationsResponse) GetConversations() []*ConversationInfo {
@@ -2849,7 +2910,7 @@ type BatchGetMessagesRequest struct {
 
 func (x *BatchGetMessagesRequest) Reset() {
 	*x = BatchGetMessagesRequest{}
-	mi := &file_notification_notification_chat_proto_msgTypes[40]
+	mi := &file_notification_notification_chat_proto_msgTypes[41]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2861,7 +2922,7 @@ func (x *BatchGetMessagesRequest) String() string {
 func (*BatchGetMessagesRequest) ProtoMessage() {}
 
 func (x *BatchGetMessagesRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_notification_notification_chat_proto_msgTypes[40]
+	mi := &file_notification_notification_chat_proto_msgTypes[41]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2874,7 +2935,7 @@ func (x *BatchGetMessagesRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use BatchGetMessagesRequest.ProtoReflect.Descriptor instead.
 func (*BatchGetMessagesRequest) Descriptor() ([]byte, []int) {
-	return file_notification_notification_chat_proto_rawDescGZIP(), []int{40}
+	return file_notification_notification_chat_proto_rawDescGZIP(), []int{41}
 }
 
 func (x *BatchGetMessagesRequest) GetIds() []string {
@@ -2893,7 +2954,7 @@ type BatchGetMessagesResponse struct {
 
 func (x *BatchGetMessagesResponse) Reset() {
 	*x = BatchGetMessagesResponse{}
-	mi := &file_notification_notification_chat_proto_msgTypes[41]
+	mi := &file_notification_notification_chat_proto_msgTypes[42]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2905,7 +2966,7 @@ func (x *BatchGetMessagesResponse) String() string {
 func (*BatchGetMessagesResponse) ProtoMessage() {}
 
 func (x *BatchGetMessagesResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_notification_notification_chat_proto_msgTypes[41]
+	mi := &file_notification_notification_chat_proto_msgTypes[42]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2918,7 +2979,7 @@ func (x *BatchGetMessagesResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use BatchGetMessagesResponse.ProtoReflect.Descriptor instead.
 func (*BatchGetMessagesResponse) Descriptor() ([]byte, []int) {
-	return file_notification_notification_chat_proto_rawDescGZIP(), []int{41}
+	return file_notification_notification_chat_proto_rawDescGZIP(), []int{42}
 }
 
 func (x *BatchGetMessagesResponse) GetMessages() []*MessageInfo {
@@ -2936,7 +2997,7 @@ type ContactSupportRequest struct {
 
 func (x *ContactSupportRequest) Reset() {
 	*x = ContactSupportRequest{}
-	mi := &file_notification_notification_chat_proto_msgTypes[42]
+	mi := &file_notification_notification_chat_proto_msgTypes[43]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2948,7 +3009,7 @@ func (x *ContactSupportRequest) String() string {
 func (*ContactSupportRequest) ProtoMessage() {}
 
 func (x *ContactSupportRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_notification_notification_chat_proto_msgTypes[42]
+	mi := &file_notification_notification_chat_proto_msgTypes[43]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2961,7 +3022,7 @@ func (x *ContactSupportRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ContactSupportRequest.ProtoReflect.Descriptor instead.
 func (*ContactSupportRequest) Descriptor() ([]byte, []int) {
-	return file_notification_notification_chat_proto_rawDescGZIP(), []int{42}
+	return file_notification_notification_chat_proto_rawDescGZIP(), []int{43}
 }
 
 type GetSupportAvailabilityRequest struct {
@@ -2972,7 +3033,7 @@ type GetSupportAvailabilityRequest struct {
 
 func (x *GetSupportAvailabilityRequest) Reset() {
 	*x = GetSupportAvailabilityRequest{}
-	mi := &file_notification_notification_chat_proto_msgTypes[43]
+	mi := &file_notification_notification_chat_proto_msgTypes[44]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2984,7 +3045,7 @@ func (x *GetSupportAvailabilityRequest) String() string {
 func (*GetSupportAvailabilityRequest) ProtoMessage() {}
 
 func (x *GetSupportAvailabilityRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_notification_notification_chat_proto_msgTypes[43]
+	mi := &file_notification_notification_chat_proto_msgTypes[44]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2997,7 +3058,7 @@ func (x *GetSupportAvailabilityRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetSupportAvailabilityRequest.ProtoReflect.Descriptor instead.
 func (*GetSupportAvailabilityRequest) Descriptor() ([]byte, []int) {
-	return file_notification_notification_chat_proto_rawDescGZIP(), []int{43}
+	return file_notification_notification_chat_proto_rawDescGZIP(), []int{44}
 }
 
 type SupportAvailabilityInfo struct {
@@ -3009,7 +3070,7 @@ type SupportAvailabilityInfo struct {
 
 func (x *SupportAvailabilityInfo) Reset() {
 	*x = SupportAvailabilityInfo{}
-	mi := &file_notification_notification_chat_proto_msgTypes[44]
+	mi := &file_notification_notification_chat_proto_msgTypes[45]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3021,7 +3082,7 @@ func (x *SupportAvailabilityInfo) String() string {
 func (*SupportAvailabilityInfo) ProtoMessage() {}
 
 func (x *SupportAvailabilityInfo) ProtoReflect() protoreflect.Message {
-	mi := &file_notification_notification_chat_proto_msgTypes[44]
+	mi := &file_notification_notification_chat_proto_msgTypes[45]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3034,7 +3095,7 @@ func (x *SupportAvailabilityInfo) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use SupportAvailabilityInfo.ProtoReflect.Descriptor instead.
 func (*SupportAvailabilityInfo) Descriptor() ([]byte, []int) {
-	return file_notification_notification_chat_proto_rawDescGZIP(), []int{44}
+	return file_notification_notification_chat_proto_rawDescGZIP(), []int{45}
 }
 
 func (x *SupportAvailabilityInfo) GetAvailable() bool {
@@ -3060,7 +3121,7 @@ type SupportRouteInfo struct {
 
 func (x *SupportRouteInfo) Reset() {
 	*x = SupportRouteInfo{}
-	mi := &file_notification_notification_chat_proto_msgTypes[45]
+	mi := &file_notification_notification_chat_proto_msgTypes[46]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3072,7 +3133,7 @@ func (x *SupportRouteInfo) String() string {
 func (*SupportRouteInfo) ProtoMessage() {}
 
 func (x *SupportRouteInfo) ProtoReflect() protoreflect.Message {
-	mi := &file_notification_notification_chat_proto_msgTypes[45]
+	mi := &file_notification_notification_chat_proto_msgTypes[46]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3085,7 +3146,7 @@ func (x *SupportRouteInfo) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use SupportRouteInfo.ProtoReflect.Descriptor instead.
 func (*SupportRouteInfo) Descriptor() ([]byte, []int) {
-	return file_notification_notification_chat_proto_rawDescGZIP(), []int{45}
+	return file_notification_notification_chat_proto_rawDescGZIP(), []int{46}
 }
 
 func (x *SupportRouteInfo) GetId() string {
@@ -3140,7 +3201,7 @@ type SetSupportRouteRequest struct {
 
 func (x *SetSupportRouteRequest) Reset() {
 	*x = SetSupportRouteRequest{}
-	mi := &file_notification_notification_chat_proto_msgTypes[46]
+	mi := &file_notification_notification_chat_proto_msgTypes[47]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3152,7 +3213,7 @@ func (x *SetSupportRouteRequest) String() string {
 func (*SetSupportRouteRequest) ProtoMessage() {}
 
 func (x *SetSupportRouteRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_notification_notification_chat_proto_msgTypes[46]
+	mi := &file_notification_notification_chat_proto_msgTypes[47]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3165,7 +3226,7 @@ func (x *SetSupportRouteRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use SetSupportRouteRequest.ProtoReflect.Descriptor instead.
 func (*SetSupportRouteRequest) Descriptor() ([]byte, []int) {
-	return file_notification_notification_chat_proto_rawDescGZIP(), []int{46}
+	return file_notification_notification_chat_proto_rawDescGZIP(), []int{47}
 }
 
 func (x *SetSupportRouteRequest) GetRelationAccountId() string {
@@ -3191,7 +3252,7 @@ type ClearSupportRouteRequest struct {
 
 func (x *ClearSupportRouteRequest) Reset() {
 	*x = ClearSupportRouteRequest{}
-	mi := &file_notification_notification_chat_proto_msgTypes[47]
+	mi := &file_notification_notification_chat_proto_msgTypes[48]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3203,7 +3264,7 @@ func (x *ClearSupportRouteRequest) String() string {
 func (*ClearSupportRouteRequest) ProtoMessage() {}
 
 func (x *ClearSupportRouteRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_notification_notification_chat_proto_msgTypes[47]
+	mi := &file_notification_notification_chat_proto_msgTypes[48]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3216,7 +3277,7 @@ func (x *ClearSupportRouteRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ClearSupportRouteRequest.ProtoReflect.Descriptor instead.
 func (*ClearSupportRouteRequest) Descriptor() ([]byte, []int) {
-	return file_notification_notification_chat_proto_rawDescGZIP(), []int{47}
+	return file_notification_notification_chat_proto_rawDescGZIP(), []int{48}
 }
 
 func (x *ClearSupportRouteRequest) GetRelationAccountId() string {
@@ -3235,7 +3296,7 @@ type GetSupportRouteRequest struct {
 
 func (x *GetSupportRouteRequest) Reset() {
 	*x = GetSupportRouteRequest{}
-	mi := &file_notification_notification_chat_proto_msgTypes[48]
+	mi := &file_notification_notification_chat_proto_msgTypes[49]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3247,7 +3308,7 @@ func (x *GetSupportRouteRequest) String() string {
 func (*GetSupportRouteRequest) ProtoMessage() {}
 
 func (x *GetSupportRouteRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_notification_notification_chat_proto_msgTypes[48]
+	mi := &file_notification_notification_chat_proto_msgTypes[49]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3260,7 +3321,7 @@ func (x *GetSupportRouteRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetSupportRouteRequest.ProtoReflect.Descriptor instead.
 func (*GetSupportRouteRequest) Descriptor() ([]byte, []int) {
-	return file_notification_notification_chat_proto_rawDescGZIP(), []int{48}
+	return file_notification_notification_chat_proto_rawDescGZIP(), []int{49}
 }
 
 func (x *GetSupportRouteRequest) GetRelationAccountId() string {
@@ -3285,7 +3346,7 @@ type ConversationLinkInfo struct {
 
 func (x *ConversationLinkInfo) Reset() {
 	*x = ConversationLinkInfo{}
-	mi := &file_notification_notification_chat_proto_msgTypes[49]
+	mi := &file_notification_notification_chat_proto_msgTypes[50]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3297,7 +3358,7 @@ func (x *ConversationLinkInfo) String() string {
 func (*ConversationLinkInfo) ProtoMessage() {}
 
 func (x *ConversationLinkInfo) ProtoReflect() protoreflect.Message {
-	mi := &file_notification_notification_chat_proto_msgTypes[49]
+	mi := &file_notification_notification_chat_proto_msgTypes[50]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3310,7 +3371,7 @@ func (x *ConversationLinkInfo) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ConversationLinkInfo.ProtoReflect.Descriptor instead.
 func (*ConversationLinkInfo) Descriptor() ([]byte, []int) {
-	return file_notification_notification_chat_proto_rawDescGZIP(), []int{49}
+	return file_notification_notification_chat_proto_rawDescGZIP(), []int{50}
 }
 
 func (x *ConversationLinkInfo) GetId() string {
@@ -3372,7 +3433,7 @@ type UpdateConversationWorkflowRequest struct {
 
 func (x *UpdateConversationWorkflowRequest) Reset() {
 	*x = UpdateConversationWorkflowRequest{}
-	mi := &file_notification_notification_chat_proto_msgTypes[50]
+	mi := &file_notification_notification_chat_proto_msgTypes[51]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3384,7 +3445,7 @@ func (x *UpdateConversationWorkflowRequest) String() string {
 func (*UpdateConversationWorkflowRequest) ProtoMessage() {}
 
 func (x *UpdateConversationWorkflowRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_notification_notification_chat_proto_msgTypes[50]
+	mi := &file_notification_notification_chat_proto_msgTypes[51]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3397,7 +3458,7 @@ func (x *UpdateConversationWorkflowRequest) ProtoReflect() protoreflect.Message 
 
 // Deprecated: Use UpdateConversationWorkflowRequest.ProtoReflect.Descriptor instead.
 func (*UpdateConversationWorkflowRequest) Descriptor() ([]byte, []int) {
-	return file_notification_notification_chat_proto_rawDescGZIP(), []int{50}
+	return file_notification_notification_chat_proto_rawDescGZIP(), []int{51}
 }
 
 func (x *UpdateConversationWorkflowRequest) GetConversationId() string {
@@ -3426,7 +3487,7 @@ type AssignConversationRequest struct {
 
 func (x *AssignConversationRequest) Reset() {
 	*x = AssignConversationRequest{}
-	mi := &file_notification_notification_chat_proto_msgTypes[51]
+	mi := &file_notification_notification_chat_proto_msgTypes[52]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3438,7 +3499,7 @@ func (x *AssignConversationRequest) String() string {
 func (*AssignConversationRequest) ProtoMessage() {}
 
 func (x *AssignConversationRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_notification_notification_chat_proto_msgTypes[51]
+	mi := &file_notification_notification_chat_proto_msgTypes[52]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3451,7 +3512,7 @@ func (x *AssignConversationRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use AssignConversationRequest.ProtoReflect.Descriptor instead.
 func (*AssignConversationRequest) Descriptor() ([]byte, []int) {
-	return file_notification_notification_chat_proto_rawDescGZIP(), []int{51}
+	return file_notification_notification_chat_proto_rawDescGZIP(), []int{52}
 }
 
 func (x *AssignConversationRequest) GetConversationId() string {
@@ -3490,7 +3551,7 @@ type ListInboxRequest struct {
 
 func (x *ListInboxRequest) Reset() {
 	*x = ListInboxRequest{}
-	mi := &file_notification_notification_chat_proto_msgTypes[52]
+	mi := &file_notification_notification_chat_proto_msgTypes[53]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3502,7 +3563,7 @@ func (x *ListInboxRequest) String() string {
 func (*ListInboxRequest) ProtoMessage() {}
 
 func (x *ListInboxRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_notification_notification_chat_proto_msgTypes[52]
+	mi := &file_notification_notification_chat_proto_msgTypes[53]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3515,7 +3576,7 @@ func (x *ListInboxRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListInboxRequest.ProtoReflect.Descriptor instead.
 func (*ListInboxRequest) Descriptor() ([]byte, []int) {
-	return file_notification_notification_chat_proto_rawDescGZIP(), []int{52}
+	return file_notification_notification_chat_proto_rawDescGZIP(), []int{53}
 }
 
 func (x *ListInboxRequest) GetCursor() string {
@@ -3571,7 +3632,7 @@ type ListConversationsByResourceRequest struct {
 
 func (x *ListConversationsByResourceRequest) Reset() {
 	*x = ListConversationsByResourceRequest{}
-	mi := &file_notification_notification_chat_proto_msgTypes[53]
+	mi := &file_notification_notification_chat_proto_msgTypes[54]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3583,7 +3644,7 @@ func (x *ListConversationsByResourceRequest) String() string {
 func (*ListConversationsByResourceRequest) ProtoMessage() {}
 
 func (x *ListConversationsByResourceRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_notification_notification_chat_proto_msgTypes[53]
+	mi := &file_notification_notification_chat_proto_msgTypes[54]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3596,7 +3657,7 @@ func (x *ListConversationsByResourceRequest) ProtoReflect() protoreflect.Message
 
 // Deprecated: Use ListConversationsByResourceRequest.ProtoReflect.Descriptor instead.
 func (*ListConversationsByResourceRequest) Descriptor() ([]byte, []int) {
-	return file_notification_notification_chat_proto_rawDescGZIP(), []int{53}
+	return file_notification_notification_chat_proto_rawDescGZIP(), []int{54}
 }
 
 func (x *ListConversationsByResourceRequest) GetResourceType() string {
@@ -3631,7 +3692,7 @@ type AddConversationLinkRequest struct {
 
 func (x *AddConversationLinkRequest) Reset() {
 	*x = AddConversationLinkRequest{}
-	mi := &file_notification_notification_chat_proto_msgTypes[54]
+	mi := &file_notification_notification_chat_proto_msgTypes[55]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3643,7 +3704,7 @@ func (x *AddConversationLinkRequest) String() string {
 func (*AddConversationLinkRequest) ProtoMessage() {}
 
 func (x *AddConversationLinkRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_notification_notification_chat_proto_msgTypes[54]
+	mi := &file_notification_notification_chat_proto_msgTypes[55]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3656,7 +3717,7 @@ func (x *AddConversationLinkRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use AddConversationLinkRequest.ProtoReflect.Descriptor instead.
 func (*AddConversationLinkRequest) Descriptor() ([]byte, []int) {
-	return file_notification_notification_chat_proto_rawDescGZIP(), []int{54}
+	return file_notification_notification_chat_proto_rawDescGZIP(), []int{55}
 }
 
 func (x *AddConversationLinkRequest) GetConversationId() string {
@@ -3690,7 +3751,7 @@ type RemoveConversationLinkRequest struct {
 
 func (x *RemoveConversationLinkRequest) Reset() {
 	*x = RemoveConversationLinkRequest{}
-	mi := &file_notification_notification_chat_proto_msgTypes[55]
+	mi := &file_notification_notification_chat_proto_msgTypes[56]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3702,7 +3763,7 @@ func (x *RemoveConversationLinkRequest) String() string {
 func (*RemoveConversationLinkRequest) ProtoMessage() {}
 
 func (x *RemoveConversationLinkRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_notification_notification_chat_proto_msgTypes[55]
+	mi := &file_notification_notification_chat_proto_msgTypes[56]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3715,7 +3776,7 @@ func (x *RemoveConversationLinkRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use RemoveConversationLinkRequest.ProtoReflect.Descriptor instead.
 func (*RemoveConversationLinkRequest) Descriptor() ([]byte, []int) {
-	return file_notification_notification_chat_proto_rawDescGZIP(), []int{55}
+	return file_notification_notification_chat_proto_rawDescGZIP(), []int{56}
 }
 
 func (x *RemoveConversationLinkRequest) GetConversationId() string {
@@ -3741,7 +3802,7 @@ type ListConversationLinksRequest struct {
 
 func (x *ListConversationLinksRequest) Reset() {
 	*x = ListConversationLinksRequest{}
-	mi := &file_notification_notification_chat_proto_msgTypes[56]
+	mi := &file_notification_notification_chat_proto_msgTypes[57]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3753,7 +3814,7 @@ func (x *ListConversationLinksRequest) String() string {
 func (*ListConversationLinksRequest) ProtoMessage() {}
 
 func (x *ListConversationLinksRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_notification_notification_chat_proto_msgTypes[56]
+	mi := &file_notification_notification_chat_proto_msgTypes[57]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3766,7 +3827,7 @@ func (x *ListConversationLinksRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListConversationLinksRequest.ProtoReflect.Descriptor instead.
 func (*ListConversationLinksRequest) Descriptor() ([]byte, []int) {
-	return file_notification_notification_chat_proto_rawDescGZIP(), []int{56}
+	return file_notification_notification_chat_proto_rawDescGZIP(), []int{57}
 }
 
 func (x *ListConversationLinksRequest) GetConversationId() string {
@@ -3785,7 +3846,7 @@ type ListConversationLinksResponse struct {
 
 func (x *ListConversationLinksResponse) Reset() {
 	*x = ListConversationLinksResponse{}
-	mi := &file_notification_notification_chat_proto_msgTypes[57]
+	mi := &file_notification_notification_chat_proto_msgTypes[58]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3797,7 +3858,7 @@ func (x *ListConversationLinksResponse) String() string {
 func (*ListConversationLinksResponse) ProtoMessage() {}
 
 func (x *ListConversationLinksResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_notification_notification_chat_proto_msgTypes[57]
+	mi := &file_notification_notification_chat_proto_msgTypes[58]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3810,7 +3871,7 @@ func (x *ListConversationLinksResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListConversationLinksResponse.ProtoReflect.Descriptor instead.
 func (*ListConversationLinksResponse) Descriptor() ([]byte, []int) {
-	return file_notification_notification_chat_proto_rawDescGZIP(), []int{57}
+	return file_notification_notification_chat_proto_rawDescGZIP(), []int{58}
 }
 
 func (x *ListConversationLinksResponse) GetLinks() []*ConversationLinkInfo {
@@ -3833,7 +3894,7 @@ type CreateReplyDraftRequest struct {
 
 func (x *CreateReplyDraftRequest) Reset() {
 	*x = CreateReplyDraftRequest{}
-	mi := &file_notification_notification_chat_proto_msgTypes[58]
+	mi := &file_notification_notification_chat_proto_msgTypes[59]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3845,7 +3906,7 @@ func (x *CreateReplyDraftRequest) String() string {
 func (*CreateReplyDraftRequest) ProtoMessage() {}
 
 func (x *CreateReplyDraftRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_notification_notification_chat_proto_msgTypes[58]
+	mi := &file_notification_notification_chat_proto_msgTypes[59]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3858,7 +3919,7 @@ func (x *CreateReplyDraftRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CreateReplyDraftRequest.ProtoReflect.Descriptor instead.
 func (*CreateReplyDraftRequest) Descriptor() ([]byte, []int) {
-	return file_notification_notification_chat_proto_rawDescGZIP(), []int{58}
+	return file_notification_notification_chat_proto_rawDescGZIP(), []int{59}
 }
 
 func (x *CreateReplyDraftRequest) GetConversationId() string {
@@ -3906,7 +3967,7 @@ type ListReplyDraftsRequest struct {
 
 func (x *ListReplyDraftsRequest) Reset() {
 	*x = ListReplyDraftsRequest{}
-	mi := &file_notification_notification_chat_proto_msgTypes[59]
+	mi := &file_notification_notification_chat_proto_msgTypes[60]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3918,7 +3979,7 @@ func (x *ListReplyDraftsRequest) String() string {
 func (*ListReplyDraftsRequest) ProtoMessage() {}
 
 func (x *ListReplyDraftsRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_notification_notification_chat_proto_msgTypes[59]
+	mi := &file_notification_notification_chat_proto_msgTypes[60]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3931,7 +3992,7 @@ func (x *ListReplyDraftsRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListReplyDraftsRequest.ProtoReflect.Descriptor instead.
 func (*ListReplyDraftsRequest) Descriptor() ([]byte, []int) {
-	return file_notification_notification_chat_proto_rawDescGZIP(), []int{59}
+	return file_notification_notification_chat_proto_rawDescGZIP(), []int{60}
 }
 
 func (x *ListReplyDraftsRequest) GetConversationId() string {
@@ -3957,7 +4018,7 @@ type ListReplyDraftsResponse struct {
 
 func (x *ListReplyDraftsResponse) Reset() {
 	*x = ListReplyDraftsResponse{}
-	mi := &file_notification_notification_chat_proto_msgTypes[60]
+	mi := &file_notification_notification_chat_proto_msgTypes[61]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3969,7 +4030,7 @@ func (x *ListReplyDraftsResponse) String() string {
 func (*ListReplyDraftsResponse) ProtoMessage() {}
 
 func (x *ListReplyDraftsResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_notification_notification_chat_proto_msgTypes[60]
+	mi := &file_notification_notification_chat_proto_msgTypes[61]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3982,7 +4043,7 @@ func (x *ListReplyDraftsResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListReplyDraftsResponse.ProtoReflect.Descriptor instead.
 func (*ListReplyDraftsResponse) Descriptor() ([]byte, []int) {
-	return file_notification_notification_chat_proto_rawDescGZIP(), []int{60}
+	return file_notification_notification_chat_proto_rawDescGZIP(), []int{61}
 }
 
 func (x *ListReplyDraftsResponse) GetDrafts() []*MessageInfo {
@@ -4003,7 +4064,7 @@ type UpdateReplyDraftRequest struct {
 
 func (x *UpdateReplyDraftRequest) Reset() {
 	*x = UpdateReplyDraftRequest{}
-	mi := &file_notification_notification_chat_proto_msgTypes[61]
+	mi := &file_notification_notification_chat_proto_msgTypes[62]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -4015,7 +4076,7 @@ func (x *UpdateReplyDraftRequest) String() string {
 func (*UpdateReplyDraftRequest) ProtoMessage() {}
 
 func (x *UpdateReplyDraftRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_notification_notification_chat_proto_msgTypes[61]
+	mi := &file_notification_notification_chat_proto_msgTypes[62]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -4028,7 +4089,7 @@ func (x *UpdateReplyDraftRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use UpdateReplyDraftRequest.ProtoReflect.Descriptor instead.
 func (*UpdateReplyDraftRequest) Descriptor() ([]byte, []int) {
-	return file_notification_notification_chat_proto_rawDescGZIP(), []int{61}
+	return file_notification_notification_chat_proto_rawDescGZIP(), []int{62}
 }
 
 func (x *UpdateReplyDraftRequest) GetDraftId() string {
@@ -4061,7 +4122,7 @@ type RejectReplyDraftRequest struct {
 
 func (x *RejectReplyDraftRequest) Reset() {
 	*x = RejectReplyDraftRequest{}
-	mi := &file_notification_notification_chat_proto_msgTypes[62]
+	mi := &file_notification_notification_chat_proto_msgTypes[63]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -4073,7 +4134,7 @@ func (x *RejectReplyDraftRequest) String() string {
 func (*RejectReplyDraftRequest) ProtoMessage() {}
 
 func (x *RejectReplyDraftRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_notification_notification_chat_proto_msgTypes[62]
+	mi := &file_notification_notification_chat_proto_msgTypes[63]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -4086,7 +4147,7 @@ func (x *RejectReplyDraftRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use RejectReplyDraftRequest.ProtoReflect.Descriptor instead.
 func (*RejectReplyDraftRequest) Descriptor() ([]byte, []int) {
-	return file_notification_notification_chat_proto_rawDescGZIP(), []int{62}
+	return file_notification_notification_chat_proto_rawDescGZIP(), []int{63}
 }
 
 func (x *RejectReplyDraftRequest) GetDraftId() string {
@@ -4106,7 +4167,7 @@ type ApproveAndSendReplyDraftRequest struct {
 
 func (x *ApproveAndSendReplyDraftRequest) Reset() {
 	*x = ApproveAndSendReplyDraftRequest{}
-	mi := &file_notification_notification_chat_proto_msgTypes[63]
+	mi := &file_notification_notification_chat_proto_msgTypes[64]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -4118,7 +4179,7 @@ func (x *ApproveAndSendReplyDraftRequest) String() string {
 func (*ApproveAndSendReplyDraftRequest) ProtoMessage() {}
 
 func (x *ApproveAndSendReplyDraftRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_notification_notification_chat_proto_msgTypes[63]
+	mi := &file_notification_notification_chat_proto_msgTypes[64]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -4131,7 +4192,7 @@ func (x *ApproveAndSendReplyDraftRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ApproveAndSendReplyDraftRequest.ProtoReflect.Descriptor instead.
 func (*ApproveAndSendReplyDraftRequest) Descriptor() ([]byte, []int) {
-	return file_notification_notification_chat_proto_rawDescGZIP(), []int{63}
+	return file_notification_notification_chat_proto_rawDescGZIP(), []int{64}
 }
 
 func (x *ApproveAndSendReplyDraftRequest) GetDraftId() string {
@@ -4162,7 +4223,7 @@ type MessagingGroupMemberInfo struct {
 
 func (x *MessagingGroupMemberInfo) Reset() {
 	*x = MessagingGroupMemberInfo{}
-	mi := &file_notification_notification_chat_proto_msgTypes[64]
+	mi := &file_notification_notification_chat_proto_msgTypes[65]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -4174,7 +4235,7 @@ func (x *MessagingGroupMemberInfo) String() string {
 func (*MessagingGroupMemberInfo) ProtoMessage() {}
 
 func (x *MessagingGroupMemberInfo) ProtoReflect() protoreflect.Message {
-	mi := &file_notification_notification_chat_proto_msgTypes[64]
+	mi := &file_notification_notification_chat_proto_msgTypes[65]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -4187,7 +4248,7 @@ func (x *MessagingGroupMemberInfo) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use MessagingGroupMemberInfo.ProtoReflect.Descriptor instead.
 func (*MessagingGroupMemberInfo) Descriptor() ([]byte, []int) {
-	return file_notification_notification_chat_proto_rawDescGZIP(), []int{64}
+	return file_notification_notification_chat_proto_rawDescGZIP(), []int{65}
 }
 
 func (x *MessagingGroupMemberInfo) GetId() string {
@@ -4247,7 +4308,7 @@ type MessagingGroupInfo struct {
 
 func (x *MessagingGroupInfo) Reset() {
 	*x = MessagingGroupInfo{}
-	mi := &file_notification_notification_chat_proto_msgTypes[65]
+	mi := &file_notification_notification_chat_proto_msgTypes[66]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -4259,7 +4320,7 @@ func (x *MessagingGroupInfo) String() string {
 func (*MessagingGroupInfo) ProtoMessage() {}
 
 func (x *MessagingGroupInfo) ProtoReflect() protoreflect.Message {
-	mi := &file_notification_notification_chat_proto_msgTypes[65]
+	mi := &file_notification_notification_chat_proto_msgTypes[66]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -4272,7 +4333,7 @@ func (x *MessagingGroupInfo) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use MessagingGroupInfo.ProtoReflect.Descriptor instead.
 func (*MessagingGroupInfo) Descriptor() ([]byte, []int) {
-	return file_notification_notification_chat_proto_rawDescGZIP(), []int{65}
+	return file_notification_notification_chat_proto_rawDescGZIP(), []int{66}
 }
 
 func (x *MessagingGroupInfo) GetId() string {
@@ -4335,7 +4396,7 @@ type CreateMessagingGroupRequest struct {
 
 func (x *CreateMessagingGroupRequest) Reset() {
 	*x = CreateMessagingGroupRequest{}
-	mi := &file_notification_notification_chat_proto_msgTypes[66]
+	mi := &file_notification_notification_chat_proto_msgTypes[67]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -4347,7 +4408,7 @@ func (x *CreateMessagingGroupRequest) String() string {
 func (*CreateMessagingGroupRequest) ProtoMessage() {}
 
 func (x *CreateMessagingGroupRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_notification_notification_chat_proto_msgTypes[66]
+	mi := &file_notification_notification_chat_proto_msgTypes[67]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -4360,7 +4421,7 @@ func (x *CreateMessagingGroupRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CreateMessagingGroupRequest.ProtoReflect.Descriptor instead.
 func (*CreateMessagingGroupRequest) Descriptor() ([]byte, []int) {
-	return file_notification_notification_chat_proto_rawDescGZIP(), []int{66}
+	return file_notification_notification_chat_proto_rawDescGZIP(), []int{67}
 }
 
 func (x *CreateMessagingGroupRequest) GetName() string {
@@ -4392,7 +4453,7 @@ type ListMessagingGroupsRequest struct {
 
 func (x *ListMessagingGroupsRequest) Reset() {
 	*x = ListMessagingGroupsRequest{}
-	mi := &file_notification_notification_chat_proto_msgTypes[67]
+	mi := &file_notification_notification_chat_proto_msgTypes[68]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -4404,7 +4465,7 @@ func (x *ListMessagingGroupsRequest) String() string {
 func (*ListMessagingGroupsRequest) ProtoMessage() {}
 
 func (x *ListMessagingGroupsRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_notification_notification_chat_proto_msgTypes[67]
+	mi := &file_notification_notification_chat_proto_msgTypes[68]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -4417,7 +4478,7 @@ func (x *ListMessagingGroupsRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListMessagingGroupsRequest.ProtoReflect.Descriptor instead.
 func (*ListMessagingGroupsRequest) Descriptor() ([]byte, []int) {
-	return file_notification_notification_chat_proto_rawDescGZIP(), []int{67}
+	return file_notification_notification_chat_proto_rawDescGZIP(), []int{68}
 }
 
 type ListMessagingGroupsResponse struct {
@@ -4429,7 +4490,7 @@ type ListMessagingGroupsResponse struct {
 
 func (x *ListMessagingGroupsResponse) Reset() {
 	*x = ListMessagingGroupsResponse{}
-	mi := &file_notification_notification_chat_proto_msgTypes[68]
+	mi := &file_notification_notification_chat_proto_msgTypes[69]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -4441,7 +4502,7 @@ func (x *ListMessagingGroupsResponse) String() string {
 func (*ListMessagingGroupsResponse) ProtoMessage() {}
 
 func (x *ListMessagingGroupsResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_notification_notification_chat_proto_msgTypes[68]
+	mi := &file_notification_notification_chat_proto_msgTypes[69]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -4454,7 +4515,7 @@ func (x *ListMessagingGroupsResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListMessagingGroupsResponse.ProtoReflect.Descriptor instead.
 func (*ListMessagingGroupsResponse) Descriptor() ([]byte, []int) {
-	return file_notification_notification_chat_proto_rawDescGZIP(), []int{68}
+	return file_notification_notification_chat_proto_rawDescGZIP(), []int{69}
 }
 
 func (x *ListMessagingGroupsResponse) GetGroups() []*MessagingGroupInfo {
@@ -4473,7 +4534,7 @@ type GetMessagingGroupRequest struct {
 
 func (x *GetMessagingGroupRequest) Reset() {
 	*x = GetMessagingGroupRequest{}
-	mi := &file_notification_notification_chat_proto_msgTypes[69]
+	mi := &file_notification_notification_chat_proto_msgTypes[70]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -4485,7 +4546,7 @@ func (x *GetMessagingGroupRequest) String() string {
 func (*GetMessagingGroupRequest) ProtoMessage() {}
 
 func (x *GetMessagingGroupRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_notification_notification_chat_proto_msgTypes[69]
+	mi := &file_notification_notification_chat_proto_msgTypes[70]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -4498,7 +4559,7 @@ func (x *GetMessagingGroupRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetMessagingGroupRequest.ProtoReflect.Descriptor instead.
 func (*GetMessagingGroupRequest) Descriptor() ([]byte, []int) {
-	return file_notification_notification_chat_proto_rawDescGZIP(), []int{69}
+	return file_notification_notification_chat_proto_rawDescGZIP(), []int{70}
 }
 
 func (x *GetMessagingGroupRequest) GetGroupId() string {
@@ -4518,7 +4579,7 @@ type UpdateMessagingGroupRequest struct {
 
 func (x *UpdateMessagingGroupRequest) Reset() {
 	*x = UpdateMessagingGroupRequest{}
-	mi := &file_notification_notification_chat_proto_msgTypes[70]
+	mi := &file_notification_notification_chat_proto_msgTypes[71]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -4530,7 +4591,7 @@ func (x *UpdateMessagingGroupRequest) String() string {
 func (*UpdateMessagingGroupRequest) ProtoMessage() {}
 
 func (x *UpdateMessagingGroupRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_notification_notification_chat_proto_msgTypes[70]
+	mi := &file_notification_notification_chat_proto_msgTypes[71]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -4543,7 +4604,7 @@ func (x *UpdateMessagingGroupRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use UpdateMessagingGroupRequest.ProtoReflect.Descriptor instead.
 func (*UpdateMessagingGroupRequest) Descriptor() ([]byte, []int) {
-	return file_notification_notification_chat_proto_rawDescGZIP(), []int{70}
+	return file_notification_notification_chat_proto_rawDescGZIP(), []int{71}
 }
 
 func (x *UpdateMessagingGroupRequest) GetGroupId() string {
@@ -4569,7 +4630,7 @@ type DeleteMessagingGroupRequest struct {
 
 func (x *DeleteMessagingGroupRequest) Reset() {
 	*x = DeleteMessagingGroupRequest{}
-	mi := &file_notification_notification_chat_proto_msgTypes[71]
+	mi := &file_notification_notification_chat_proto_msgTypes[72]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -4581,7 +4642,7 @@ func (x *DeleteMessagingGroupRequest) String() string {
 func (*DeleteMessagingGroupRequest) ProtoMessage() {}
 
 func (x *DeleteMessagingGroupRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_notification_notification_chat_proto_msgTypes[71]
+	mi := &file_notification_notification_chat_proto_msgTypes[72]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -4594,7 +4655,7 @@ func (x *DeleteMessagingGroupRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use DeleteMessagingGroupRequest.ProtoReflect.Descriptor instead.
 func (*DeleteMessagingGroupRequest) Descriptor() ([]byte, []int) {
-	return file_notification_notification_chat_proto_rawDescGZIP(), []int{71}
+	return file_notification_notification_chat_proto_rawDescGZIP(), []int{72}
 }
 
 func (x *DeleteMessagingGroupRequest) GetGroupId() string {
@@ -4616,7 +4677,7 @@ type AddMessagingGroupMemberRequest struct {
 
 func (x *AddMessagingGroupMemberRequest) Reset() {
 	*x = AddMessagingGroupMemberRequest{}
-	mi := &file_notification_notification_chat_proto_msgTypes[72]
+	mi := &file_notification_notification_chat_proto_msgTypes[73]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -4628,7 +4689,7 @@ func (x *AddMessagingGroupMemberRequest) String() string {
 func (*AddMessagingGroupMemberRequest) ProtoMessage() {}
 
 func (x *AddMessagingGroupMemberRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_notification_notification_chat_proto_msgTypes[72]
+	mi := &file_notification_notification_chat_proto_msgTypes[73]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -4641,7 +4702,7 @@ func (x *AddMessagingGroupMemberRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use AddMessagingGroupMemberRequest.ProtoReflect.Descriptor instead.
 func (*AddMessagingGroupMemberRequest) Descriptor() ([]byte, []int) {
-	return file_notification_notification_chat_proto_rawDescGZIP(), []int{72}
+	return file_notification_notification_chat_proto_rawDescGZIP(), []int{73}
 }
 
 func (x *AddMessagingGroupMemberRequest) GetGroupId() string {
@@ -4682,7 +4743,7 @@ type RemoveMessagingGroupMemberRequest struct {
 
 func (x *RemoveMessagingGroupMemberRequest) Reset() {
 	*x = RemoveMessagingGroupMemberRequest{}
-	mi := &file_notification_notification_chat_proto_msgTypes[73]
+	mi := &file_notification_notification_chat_proto_msgTypes[74]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -4694,7 +4755,7 @@ func (x *RemoveMessagingGroupMemberRequest) String() string {
 func (*RemoveMessagingGroupMemberRequest) ProtoMessage() {}
 
 func (x *RemoveMessagingGroupMemberRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_notification_notification_chat_proto_msgTypes[73]
+	mi := &file_notification_notification_chat_proto_msgTypes[74]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -4707,7 +4768,7 @@ func (x *RemoveMessagingGroupMemberRequest) ProtoReflect() protoreflect.Message 
 
 // Deprecated: Use RemoveMessagingGroupMemberRequest.ProtoReflect.Descriptor instead.
 func (*RemoveMessagingGroupMemberRequest) Descriptor() ([]byte, []int) {
-	return file_notification_notification_chat_proto_rawDescGZIP(), []int{73}
+	return file_notification_notification_chat_proto_rawDescGZIP(), []int{74}
 }
 
 func (x *RemoveMessagingGroupMemberRequest) GetGroupId() string {
@@ -4750,7 +4811,7 @@ type SendMessageRequest struct {
 
 func (x *SendMessageRequest) Reset() {
 	*x = SendMessageRequest{}
-	mi := &file_notification_notification_chat_proto_msgTypes[74]
+	mi := &file_notification_notification_chat_proto_msgTypes[75]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -4762,7 +4823,7 @@ func (x *SendMessageRequest) String() string {
 func (*SendMessageRequest) ProtoMessage() {}
 
 func (x *SendMessageRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_notification_notification_chat_proto_msgTypes[74]
+	mi := &file_notification_notification_chat_proto_msgTypes[75]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -4775,7 +4836,7 @@ func (x *SendMessageRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use SendMessageRequest.ProtoReflect.Descriptor instead.
 func (*SendMessageRequest) Descriptor() ([]byte, []int) {
-	return file_notification_notification_chat_proto_rawDescGZIP(), []int{74}
+	return file_notification_notification_chat_proto_rawDescGZIP(), []int{75}
 }
 
 func (x *SendMessageRequest) GetConversationId() string {
@@ -4867,7 +4928,7 @@ type ListMessagesRequest struct {
 
 func (x *ListMessagesRequest) Reset() {
 	*x = ListMessagesRequest{}
-	mi := &file_notification_notification_chat_proto_msgTypes[75]
+	mi := &file_notification_notification_chat_proto_msgTypes[76]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -4879,7 +4940,7 @@ func (x *ListMessagesRequest) String() string {
 func (*ListMessagesRequest) ProtoMessage() {}
 
 func (x *ListMessagesRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_notification_notification_chat_proto_msgTypes[75]
+	mi := &file_notification_notification_chat_proto_msgTypes[76]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -4892,7 +4953,7 @@ func (x *ListMessagesRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListMessagesRequest.ProtoReflect.Descriptor instead.
 func (*ListMessagesRequest) Descriptor() ([]byte, []int) {
-	return file_notification_notification_chat_proto_rawDescGZIP(), []int{75}
+	return file_notification_notification_chat_proto_rawDescGZIP(), []int{76}
 }
 
 func (x *ListMessagesRequest) GetConversationId() string {
@@ -4933,7 +4994,7 @@ type ListMessagesResponse struct {
 
 func (x *ListMessagesResponse) Reset() {
 	*x = ListMessagesResponse{}
-	mi := &file_notification_notification_chat_proto_msgTypes[76]
+	mi := &file_notification_notification_chat_proto_msgTypes[77]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -4945,7 +5006,7 @@ func (x *ListMessagesResponse) String() string {
 func (*ListMessagesResponse) ProtoMessage() {}
 
 func (x *ListMessagesResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_notification_notification_chat_proto_msgTypes[76]
+	mi := &file_notification_notification_chat_proto_msgTypes[77]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -4958,7 +5019,7 @@ func (x *ListMessagesResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListMessagesResponse.ProtoReflect.Descriptor instead.
 func (*ListMessagesResponse) Descriptor() ([]byte, []int) {
-	return file_notification_notification_chat_proto_rawDescGZIP(), []int{76}
+	return file_notification_notification_chat_proto_rawDescGZIP(), []int{77}
 }
 
 func (x *ListMessagesResponse) GetMessages() []*MessageInfo {
@@ -4985,7 +5046,7 @@ type MarkConversationReadRequest struct {
 
 func (x *MarkConversationReadRequest) Reset() {
 	*x = MarkConversationReadRequest{}
-	mi := &file_notification_notification_chat_proto_msgTypes[77]
+	mi := &file_notification_notification_chat_proto_msgTypes[78]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -4997,7 +5058,7 @@ func (x *MarkConversationReadRequest) String() string {
 func (*MarkConversationReadRequest) ProtoMessage() {}
 
 func (x *MarkConversationReadRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_notification_notification_chat_proto_msgTypes[77]
+	mi := &file_notification_notification_chat_proto_msgTypes[78]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -5010,7 +5071,7 @@ func (x *MarkConversationReadRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use MarkConversationReadRequest.ProtoReflect.Descriptor instead.
 func (*MarkConversationReadRequest) Descriptor() ([]byte, []int) {
-	return file_notification_notification_chat_proto_rawDescGZIP(), []int{77}
+	return file_notification_notification_chat_proto_rawDescGZIP(), []int{78}
 }
 
 func (x *MarkConversationReadRequest) GetConversationId() string {
@@ -5036,7 +5097,7 @@ type MarkConversationReadResponse struct {
 
 func (x *MarkConversationReadResponse) Reset() {
 	*x = MarkConversationReadResponse{}
-	mi := &file_notification_notification_chat_proto_msgTypes[78]
+	mi := &file_notification_notification_chat_proto_msgTypes[79]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -5048,7 +5109,7 @@ func (x *MarkConversationReadResponse) String() string {
 func (*MarkConversationReadResponse) ProtoMessage() {}
 
 func (x *MarkConversationReadResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_notification_notification_chat_proto_msgTypes[78]
+	mi := &file_notification_notification_chat_proto_msgTypes[79]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -5061,7 +5122,7 @@ func (x *MarkConversationReadResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use MarkConversationReadResponse.ProtoReflect.Descriptor instead.
 func (*MarkConversationReadResponse) Descriptor() ([]byte, []int) {
-	return file_notification_notification_chat_proto_rawDescGZIP(), []int{78}
+	return file_notification_notification_chat_proto_rawDescGZIP(), []int{79}
 }
 
 func (x *MarkConversationReadResponse) GetUnreadCount() int64 {
@@ -5083,7 +5144,7 @@ type IsParticipantRequest struct {
 
 func (x *IsParticipantRequest) Reset() {
 	*x = IsParticipantRequest{}
-	mi := &file_notification_notification_chat_proto_msgTypes[79]
+	mi := &file_notification_notification_chat_proto_msgTypes[80]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -5095,7 +5156,7 @@ func (x *IsParticipantRequest) String() string {
 func (*IsParticipantRequest) ProtoMessage() {}
 
 func (x *IsParticipantRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_notification_notification_chat_proto_msgTypes[79]
+	mi := &file_notification_notification_chat_proto_msgTypes[80]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -5108,7 +5169,7 @@ func (x *IsParticipantRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use IsParticipantRequest.ProtoReflect.Descriptor instead.
 func (*IsParticipantRequest) Descriptor() ([]byte, []int) {
-	return file_notification_notification_chat_proto_rawDescGZIP(), []int{79}
+	return file_notification_notification_chat_proto_rawDescGZIP(), []int{80}
 }
 
 func (x *IsParticipantRequest) GetConversationId() string {
@@ -5141,7 +5202,7 @@ type IsParticipantResponse struct {
 
 func (x *IsParticipantResponse) Reset() {
 	*x = IsParticipantResponse{}
-	mi := &file_notification_notification_chat_proto_msgTypes[80]
+	mi := &file_notification_notification_chat_proto_msgTypes[81]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -5153,7 +5214,7 @@ func (x *IsParticipantResponse) String() string {
 func (*IsParticipantResponse) ProtoMessage() {}
 
 func (x *IsParticipantResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_notification_notification_chat_proto_msgTypes[80]
+	mi := &file_notification_notification_chat_proto_msgTypes[81]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -5166,7 +5227,7 @@ func (x *IsParticipantResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use IsParticipantResponse.ProtoReflect.Descriptor instead.
 func (*IsParticipantResponse) Descriptor() ([]byte, []int) {
-	return file_notification_notification_chat_proto_rawDescGZIP(), []int{80}
+	return file_notification_notification_chat_proto_rawDescGZIP(), []int{81}
 }
 
 func (x *IsParticipantResponse) GetIsParticipant() bool {
@@ -5185,7 +5246,7 @@ type SendTypingRequest struct {
 
 func (x *SendTypingRequest) Reset() {
 	*x = SendTypingRequest{}
-	mi := &file_notification_notification_chat_proto_msgTypes[81]
+	mi := &file_notification_notification_chat_proto_msgTypes[82]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -5197,7 +5258,7 @@ func (x *SendTypingRequest) String() string {
 func (*SendTypingRequest) ProtoMessage() {}
 
 func (x *SendTypingRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_notification_notification_chat_proto_msgTypes[81]
+	mi := &file_notification_notification_chat_proto_msgTypes[82]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -5210,7 +5271,7 @@ func (x *SendTypingRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use SendTypingRequest.ProtoReflect.Descriptor instead.
 func (*SendTypingRequest) Descriptor() ([]byte, []int) {
-	return file_notification_notification_chat_proto_rawDescGZIP(), []int{81}
+	return file_notification_notification_chat_proto_rawDescGZIP(), []int{82}
 }
 
 func (x *SendTypingRequest) GetConversationId() string {
@@ -5513,18 +5574,22 @@ const file_notification_notification_chat_proto_rawDesc = "" +
 	"\x1c_approved_by_account_user_idB\x14\n" +
 	"\x12_sender_alias_nameB\x16\n" +
 	"\x14_sender_display_nameB\x13\n" +
-	"\x11_agent_error_codeJ\x04\b\x12\x10\x13J\x04\b\x13\x10\x14J\x04\b\x14\x10\x15J\x04\b\x15\x10\x16\"\xd6\x02\n" +
+	"\x11_agent_error_codeJ\x04\b\x12\x10\x13J\x04\b\x13\x10\x14J\x04\b\x14\x10\x15J\x04\b\x15\x10\x16\"\xaa\x03\n" +
 	"\x19CreateConversationRequest\x12\x12\n" +
 	"\x04type\x18\x01 \x01(\tR\x04type\x12?\n" +
 	"\x1cparticipant_account_user_ids\x18\x02 \x03(\tR\x19participantAccountUserIds\x12\x19\n" +
 	"\x05title\x18\x03 \x01(\tH\x00R\x05title\x88\x01\x01\x123\n" +
 	"\x13topic_resource_type\x18\x04 \x01(\tH\x01R\x11topicResourceType\x88\x01\x01\x12/\n" +
 	"\x11topic_resource_id\x18\x05 \x01(\tH\x02R\x0ftopicResourceId\x88\x01\x01\x12\x1e\n" +
-	"\bgroup_id\x18\x06 \x01(\tH\x03R\agroupId\x88\x01\x01B\b\n" +
+	"\bgroup_id\x18\x06 \x01(\tH\x03R\agroupId\x88\x01\x01\x12R\n" +
+	"\fparticipants\x18\a \x03(\v2..notification.ConversationParticipantRoleInputR\fparticipantsB\b\n" +
 	"\x06_titleB\x16\n" +
 	"\x14_topic_resource_typeB\x14\n" +
 	"\x12_topic_resource_idB\v\n" +
-	"\t_group_id\"\x92\x01\n" +
+	"\t_group_id\"^\n" +
+	" ConversationParticipantRoleInput\x12&\n" +
+	"\x0faccount_user_id\x18\x01 \x01(\tR\raccountUserId\x12\x12\n" +
+	"\x04role\x18\x02 \x01(\tR\x04role\"\x92\x01\n" +
 	"\x18ListConversationsRequest\x12\x1b\n" +
 	"\x06cursor\x18\x01 \x01(\tH\x00R\x06cursor\x88\x01\x01\x12\x14\n" +
 	"\x05limit\x18\x02 \x01(\x05R\x05limit\x12\x17\n" +
@@ -5807,7 +5872,7 @@ func file_notification_notification_chat_proto_rawDescGZIP() []byte {
 	return file_notification_notification_chat_proto_rawDescData
 }
 
-var file_notification_notification_chat_proto_msgTypes = make([]protoimpl.MessageInfo, 82)
+var file_notification_notification_chat_proto_msgTypes = make([]protoimpl.MessageInfo, 83)
 var file_notification_notification_chat_proto_goTypes = []any{
 	(*SetLegalHoldRequest)(nil),                // 0: notification.SetLegalHoldRequest
 	(*RedactConversationRequest)(nil),          // 1: notification.RedactConversationRequest
@@ -5844,214 +5909,216 @@ var file_notification_notification_chat_proto_goTypes = []any{
 	(*ParticipantInfo)(nil),                    // 32: notification.ParticipantInfo
 	(*MessageInfo)(nil),                        // 33: notification.MessageInfo
 	(*CreateConversationRequest)(nil),          // 34: notification.CreateConversationRequest
-	(*ListConversationsRequest)(nil),           // 35: notification.ListConversationsRequest
-	(*ListConversationsResponse)(nil),          // 36: notification.ListConversationsResponse
-	(*GetConversationRequest)(nil),             // 37: notification.GetConversationRequest
-	(*BatchGetConversationsRequest)(nil),       // 38: notification.BatchGetConversationsRequest
-	(*BatchGetConversationsResponse)(nil),      // 39: notification.BatchGetConversationsResponse
-	(*BatchGetMessagesRequest)(nil),            // 40: notification.BatchGetMessagesRequest
-	(*BatchGetMessagesResponse)(nil),           // 41: notification.BatchGetMessagesResponse
-	(*ContactSupportRequest)(nil),              // 42: notification.ContactSupportRequest
-	(*GetSupportAvailabilityRequest)(nil),      // 43: notification.GetSupportAvailabilityRequest
-	(*SupportAvailabilityInfo)(nil),            // 44: notification.SupportAvailabilityInfo
-	(*SupportRouteInfo)(nil),                   // 45: notification.SupportRouteInfo
-	(*SetSupportRouteRequest)(nil),             // 46: notification.SetSupportRouteRequest
-	(*ClearSupportRouteRequest)(nil),           // 47: notification.ClearSupportRouteRequest
-	(*GetSupportRouteRequest)(nil),             // 48: notification.GetSupportRouteRequest
-	(*ConversationLinkInfo)(nil),               // 49: notification.ConversationLinkInfo
-	(*UpdateConversationWorkflowRequest)(nil),  // 50: notification.UpdateConversationWorkflowRequest
-	(*AssignConversationRequest)(nil),          // 51: notification.AssignConversationRequest
-	(*ListInboxRequest)(nil),                   // 52: notification.ListInboxRequest
-	(*ListConversationsByResourceRequest)(nil), // 53: notification.ListConversationsByResourceRequest
-	(*AddConversationLinkRequest)(nil),         // 54: notification.AddConversationLinkRequest
-	(*RemoveConversationLinkRequest)(nil),      // 55: notification.RemoveConversationLinkRequest
-	(*ListConversationLinksRequest)(nil),       // 56: notification.ListConversationLinksRequest
-	(*ListConversationLinksResponse)(nil),      // 57: notification.ListConversationLinksResponse
-	(*CreateReplyDraftRequest)(nil),            // 58: notification.CreateReplyDraftRequest
-	(*ListReplyDraftsRequest)(nil),             // 59: notification.ListReplyDraftsRequest
-	(*ListReplyDraftsResponse)(nil),            // 60: notification.ListReplyDraftsResponse
-	(*UpdateReplyDraftRequest)(nil),            // 61: notification.UpdateReplyDraftRequest
-	(*RejectReplyDraftRequest)(nil),            // 62: notification.RejectReplyDraftRequest
-	(*ApproveAndSendReplyDraftRequest)(nil),    // 63: notification.ApproveAndSendReplyDraftRequest
-	(*MessagingGroupMemberInfo)(nil),           // 64: notification.MessagingGroupMemberInfo
-	(*MessagingGroupInfo)(nil),                 // 65: notification.MessagingGroupInfo
-	(*CreateMessagingGroupRequest)(nil),        // 66: notification.CreateMessagingGroupRequest
-	(*ListMessagingGroupsRequest)(nil),         // 67: notification.ListMessagingGroupsRequest
-	(*ListMessagingGroupsResponse)(nil),        // 68: notification.ListMessagingGroupsResponse
-	(*GetMessagingGroupRequest)(nil),           // 69: notification.GetMessagingGroupRequest
-	(*UpdateMessagingGroupRequest)(nil),        // 70: notification.UpdateMessagingGroupRequest
-	(*DeleteMessagingGroupRequest)(nil),        // 71: notification.DeleteMessagingGroupRequest
-	(*AddMessagingGroupMemberRequest)(nil),     // 72: notification.AddMessagingGroupMemberRequest
-	(*RemoveMessagingGroupMemberRequest)(nil),  // 73: notification.RemoveMessagingGroupMemberRequest
-	(*SendMessageRequest)(nil),                 // 74: notification.SendMessageRequest
-	(*ListMessagesRequest)(nil),                // 75: notification.ListMessagesRequest
-	(*ListMessagesResponse)(nil),               // 76: notification.ListMessagesResponse
-	(*MarkConversationReadRequest)(nil),        // 77: notification.MarkConversationReadRequest
-	(*MarkConversationReadResponse)(nil),       // 78: notification.MarkConversationReadResponse
-	(*IsParticipantRequest)(nil),               // 79: notification.IsParticipantRequest
-	(*IsParticipantResponse)(nil),              // 80: notification.IsParticipantResponse
-	(*SendTypingRequest)(nil),                  // 81: notification.SendTypingRequest
-	(*timestamppb.Timestamp)(nil),              // 82: google.protobuf.Timestamp
-	(*PageInfo)(nil),                           // 83: notification.PageInfo
+	(*ConversationParticipantRoleInput)(nil),   // 35: notification.ConversationParticipantRoleInput
+	(*ListConversationsRequest)(nil),           // 36: notification.ListConversationsRequest
+	(*ListConversationsResponse)(nil),          // 37: notification.ListConversationsResponse
+	(*GetConversationRequest)(nil),             // 38: notification.GetConversationRequest
+	(*BatchGetConversationsRequest)(nil),       // 39: notification.BatchGetConversationsRequest
+	(*BatchGetConversationsResponse)(nil),      // 40: notification.BatchGetConversationsResponse
+	(*BatchGetMessagesRequest)(nil),            // 41: notification.BatchGetMessagesRequest
+	(*BatchGetMessagesResponse)(nil),           // 42: notification.BatchGetMessagesResponse
+	(*ContactSupportRequest)(nil),              // 43: notification.ContactSupportRequest
+	(*GetSupportAvailabilityRequest)(nil),      // 44: notification.GetSupportAvailabilityRequest
+	(*SupportAvailabilityInfo)(nil),            // 45: notification.SupportAvailabilityInfo
+	(*SupportRouteInfo)(nil),                   // 46: notification.SupportRouteInfo
+	(*SetSupportRouteRequest)(nil),             // 47: notification.SetSupportRouteRequest
+	(*ClearSupportRouteRequest)(nil),           // 48: notification.ClearSupportRouteRequest
+	(*GetSupportRouteRequest)(nil),             // 49: notification.GetSupportRouteRequest
+	(*ConversationLinkInfo)(nil),               // 50: notification.ConversationLinkInfo
+	(*UpdateConversationWorkflowRequest)(nil),  // 51: notification.UpdateConversationWorkflowRequest
+	(*AssignConversationRequest)(nil),          // 52: notification.AssignConversationRequest
+	(*ListInboxRequest)(nil),                   // 53: notification.ListInboxRequest
+	(*ListConversationsByResourceRequest)(nil), // 54: notification.ListConversationsByResourceRequest
+	(*AddConversationLinkRequest)(nil),         // 55: notification.AddConversationLinkRequest
+	(*RemoveConversationLinkRequest)(nil),      // 56: notification.RemoveConversationLinkRequest
+	(*ListConversationLinksRequest)(nil),       // 57: notification.ListConversationLinksRequest
+	(*ListConversationLinksResponse)(nil),      // 58: notification.ListConversationLinksResponse
+	(*CreateReplyDraftRequest)(nil),            // 59: notification.CreateReplyDraftRequest
+	(*ListReplyDraftsRequest)(nil),             // 60: notification.ListReplyDraftsRequest
+	(*ListReplyDraftsResponse)(nil),            // 61: notification.ListReplyDraftsResponse
+	(*UpdateReplyDraftRequest)(nil),            // 62: notification.UpdateReplyDraftRequest
+	(*RejectReplyDraftRequest)(nil),            // 63: notification.RejectReplyDraftRequest
+	(*ApproveAndSendReplyDraftRequest)(nil),    // 64: notification.ApproveAndSendReplyDraftRequest
+	(*MessagingGroupMemberInfo)(nil),           // 65: notification.MessagingGroupMemberInfo
+	(*MessagingGroupInfo)(nil),                 // 66: notification.MessagingGroupInfo
+	(*CreateMessagingGroupRequest)(nil),        // 67: notification.CreateMessagingGroupRequest
+	(*ListMessagingGroupsRequest)(nil),         // 68: notification.ListMessagingGroupsRequest
+	(*ListMessagingGroupsResponse)(nil),        // 69: notification.ListMessagingGroupsResponse
+	(*GetMessagingGroupRequest)(nil),           // 70: notification.GetMessagingGroupRequest
+	(*UpdateMessagingGroupRequest)(nil),        // 71: notification.UpdateMessagingGroupRequest
+	(*DeleteMessagingGroupRequest)(nil),        // 72: notification.DeleteMessagingGroupRequest
+	(*AddMessagingGroupMemberRequest)(nil),     // 73: notification.AddMessagingGroupMemberRequest
+	(*RemoveMessagingGroupMemberRequest)(nil),  // 74: notification.RemoveMessagingGroupMemberRequest
+	(*SendMessageRequest)(nil),                 // 75: notification.SendMessageRequest
+	(*ListMessagesRequest)(nil),                // 76: notification.ListMessagesRequest
+	(*ListMessagesResponse)(nil),               // 77: notification.ListMessagesResponse
+	(*MarkConversationReadRequest)(nil),        // 78: notification.MarkConversationReadRequest
+	(*MarkConversationReadResponse)(nil),       // 79: notification.MarkConversationReadResponse
+	(*IsParticipantRequest)(nil),               // 80: notification.IsParticipantRequest
+	(*IsParticipantResponse)(nil),              // 81: notification.IsParticipantResponse
+	(*SendTypingRequest)(nil),                  // 82: notification.SendTypingRequest
+	(*timestamppb.Timestamp)(nil),              // 83: google.protobuf.Timestamp
+	(*PageInfo)(nil),                           // 84: notification.PageInfo
 }
 var file_notification_notification_chat_proto_depIdxs = []int32{
-	82, // 0: notification.ScheduleMessageRequest.scheduled_for:type_name -> google.protobuf.Timestamp
+	83, // 0: notification.ScheduleMessageRequest.scheduled_for:type_name -> google.protobuf.Timestamp
 	33, // 1: notification.ListScheduledMessagesResponse.scheduled_messages:type_name -> notification.MessageInfo
 	11, // 2: notification.AttachmentUploadTargetInfo.attachment:type_name -> notification.AttachmentInfo
-	82, // 3: notification.AttachmentUploadTargetInfo.expires_at:type_name -> google.protobuf.Timestamp
-	82, // 4: notification.AttachmentInfo.created_at:type_name -> google.protobuf.Timestamp
-	82, // 5: notification.SetMuteRequest.muted_until:type_name -> google.protobuf.Timestamp
-	82, // 6: notification.BlockInfo.created_at:type_name -> google.protobuf.Timestamp
+	83, // 3: notification.AttachmentUploadTargetInfo.expires_at:type_name -> google.protobuf.Timestamp
+	83, // 4: notification.AttachmentInfo.created_at:type_name -> google.protobuf.Timestamp
+	83, // 5: notification.SetMuteRequest.muted_until:type_name -> google.protobuf.Timestamp
+	83, // 6: notification.BlockInfo.created_at:type_name -> google.protobuf.Timestamp
 	24, // 7: notification.ListBlocksResponse.blocks:type_name -> notification.BlockInfo
 	27, // 8: notification.ListContactsResponse.contacts:type_name -> notification.ContactInfo
-	82, // 9: notification.MessageReportInfo.created_at:type_name -> google.protobuf.Timestamp
-	82, // 10: notification.ConversationInfo.last_message_at:type_name -> google.protobuf.Timestamp
-	82, // 11: notification.ConversationInfo.created_at:type_name -> google.protobuf.Timestamp
-	82, // 12: notification.ConversationInfo.updated_at:type_name -> google.protobuf.Timestamp
+	83, // 9: notification.MessageReportInfo.created_at:type_name -> google.protobuf.Timestamp
+	83, // 10: notification.ConversationInfo.last_message_at:type_name -> google.protobuf.Timestamp
+	83, // 11: notification.ConversationInfo.created_at:type_name -> google.protobuf.Timestamp
+	83, // 12: notification.ConversationInfo.updated_at:type_name -> google.protobuf.Timestamp
 	32, // 13: notification.ConversationInfo.participants:type_name -> notification.ParticipantInfo
 	33, // 14: notification.ConversationInfo.last_message:type_name -> notification.MessageInfo
-	49, // 15: notification.ConversationInfo.links:type_name -> notification.ConversationLinkInfo
-	82, // 16: notification.ParticipantInfo.created_at:type_name -> google.protobuf.Timestamp
-	82, // 17: notification.ParticipantInfo.updated_at:type_name -> google.protobuf.Timestamp
-	82, // 18: notification.ParticipantInfo.last_read_at:type_name -> google.protobuf.Timestamp
-	82, // 19: notification.MessageInfo.edited_at:type_name -> google.protobuf.Timestamp
-	82, // 20: notification.MessageInfo.deleted_at:type_name -> google.protobuf.Timestamp
-	82, // 21: notification.MessageInfo.created_at:type_name -> google.protobuf.Timestamp
-	82, // 22: notification.MessageInfo.updated_at:type_name -> google.protobuf.Timestamp
+	50, // 15: notification.ConversationInfo.links:type_name -> notification.ConversationLinkInfo
+	83, // 16: notification.ParticipantInfo.created_at:type_name -> google.protobuf.Timestamp
+	83, // 17: notification.ParticipantInfo.updated_at:type_name -> google.protobuf.Timestamp
+	83, // 18: notification.ParticipantInfo.last_read_at:type_name -> google.protobuf.Timestamp
+	83, // 19: notification.MessageInfo.edited_at:type_name -> google.protobuf.Timestamp
+	83, // 20: notification.MessageInfo.deleted_at:type_name -> google.protobuf.Timestamp
+	83, // 21: notification.MessageInfo.created_at:type_name -> google.protobuf.Timestamp
+	83, // 22: notification.MessageInfo.updated_at:type_name -> google.protobuf.Timestamp
 	11, // 23: notification.MessageInfo.attachments:type_name -> notification.AttachmentInfo
-	82, // 24: notification.MessageInfo.scheduled_for:type_name -> google.protobuf.Timestamp
-	31, // 25: notification.ListConversationsResponse.conversations:type_name -> notification.ConversationInfo
-	83, // 26: notification.ListConversationsResponse.page_info:type_name -> notification.PageInfo
-	31, // 27: notification.BatchGetConversationsResponse.conversations:type_name -> notification.ConversationInfo
-	33, // 28: notification.BatchGetMessagesResponse.messages:type_name -> notification.MessageInfo
-	82, // 29: notification.SupportRouteInfo.created_at:type_name -> google.protobuf.Timestamp
-	82, // 30: notification.SupportRouteInfo.updated_at:type_name -> google.protobuf.Timestamp
-	82, // 31: notification.ConversationLinkInfo.created_at:type_name -> google.protobuf.Timestamp
-	49, // 32: notification.ListConversationLinksResponse.links:type_name -> notification.ConversationLinkInfo
-	33, // 33: notification.ListReplyDraftsResponse.drafts:type_name -> notification.MessageInfo
-	82, // 34: notification.MessagingGroupMemberInfo.created_at:type_name -> google.protobuf.Timestamp
-	82, // 35: notification.MessagingGroupInfo.created_at:type_name -> google.protobuf.Timestamp
-	82, // 36: notification.MessagingGroupInfo.updated_at:type_name -> google.protobuf.Timestamp
-	64, // 37: notification.MessagingGroupInfo.members:type_name -> notification.MessagingGroupMemberInfo
-	65, // 38: notification.ListMessagingGroupsResponse.groups:type_name -> notification.MessagingGroupInfo
-	10, // 39: notification.SendMessageRequest.attachments:type_name -> notification.AttachmentInput
-	33, // 40: notification.ListMessagesResponse.messages:type_name -> notification.MessageInfo
-	83, // 41: notification.ListMessagesResponse.page_info:type_name -> notification.PageInfo
-	34, // 42: notification.ChatService.CreateConversation:input_type -> notification.CreateConversationRequest
-	35, // 43: notification.ChatService.ListConversations:input_type -> notification.ListConversationsRequest
-	37, // 44: notification.ChatService.GetConversation:input_type -> notification.GetConversationRequest
-	38, // 45: notification.ChatService.BatchGetConversations:input_type -> notification.BatchGetConversationsRequest
-	42, // 46: notification.ChatService.ContactSupport:input_type -> notification.ContactSupportRequest
-	43, // 47: notification.ChatService.GetSupportAvailability:input_type -> notification.GetSupportAvailabilityRequest
-	46, // 48: notification.ChatService.SetSupportRoute:input_type -> notification.SetSupportRouteRequest
-	47, // 49: notification.ChatService.ClearSupportRoute:input_type -> notification.ClearSupportRouteRequest
-	48, // 50: notification.ChatService.GetSupportRoute:input_type -> notification.GetSupportRouteRequest
-	74, // 51: notification.ChatService.SendMessage:input_type -> notification.SendMessageRequest
-	75, // 52: notification.ChatService.ListMessages:input_type -> notification.ListMessagesRequest
-	40, // 53: notification.ChatService.BatchGetMessages:input_type -> notification.BatchGetMessagesRequest
-	77, // 54: notification.ChatService.MarkConversationRead:input_type -> notification.MarkConversationReadRequest
-	79, // 55: notification.ChatService.IsParticipant:input_type -> notification.IsParticipantRequest
-	81, // 56: notification.ChatService.SendTyping:input_type -> notification.SendTypingRequest
-	13, // 57: notification.ChatService.UpdateConversation:input_type -> notification.UpdateConversationRequest
-	14, // 58: notification.ChatService.AddParticipant:input_type -> notification.AddParticipantRequest
-	15, // 59: notification.ChatService.RemoveParticipant:input_type -> notification.RemoveParticipantRequest
-	16, // 60: notification.ChatService.UpdateParticipantRole:input_type -> notification.UpdateParticipantRoleRequest
-	17, // 61: notification.ChatService.LeaveConversation:input_type -> notification.LeaveConversationRequest
-	18, // 62: notification.ChatService.HideConversation:input_type -> notification.HideConversationRequest
-	19, // 63: notification.ChatService.UnhideConversation:input_type -> notification.UnhideConversationRequest
-	20, // 64: notification.ChatService.SetMute:input_type -> notification.SetMuteRequest
-	21, // 65: notification.ChatService.Block:input_type -> notification.BlockRequest
-	22, // 66: notification.ChatService.Unblock:input_type -> notification.UnblockRequest
-	23, // 67: notification.ChatService.ListBlocks:input_type -> notification.ListBlocksRequest
-	26, // 68: notification.ChatService.ListContacts:input_type -> notification.ListContactsRequest
-	29, // 69: notification.ChatService.ReportConversation:input_type -> notification.ReportConversationRequest
-	8,  // 70: notification.ChatService.CreateAttachmentUploadURL:input_type -> notification.CreateAttachmentUploadURLRequest
-	4,  // 71: notification.ChatService.ScheduleMessage:input_type -> notification.ScheduleMessageRequest
-	5,  // 72: notification.ChatService.ListScheduledMessages:input_type -> notification.ListScheduledMessagesRequest
-	7,  // 73: notification.ChatService.CancelScheduledMessage:input_type -> notification.CancelScheduledMessageRequest
-	2,  // 74: notification.ChatService.AddAgentParticipant:input_type -> notification.AddAgentParticipantRequest
-	3,  // 75: notification.ChatService.RemoveAgentParticipant:input_type -> notification.RemoveAgentParticipantRequest
-	0,  // 76: notification.ChatService.SetLegalHold:input_type -> notification.SetLegalHoldRequest
-	1,  // 77: notification.ChatService.RedactConversation:input_type -> notification.RedactConversationRequest
-	50, // 78: notification.ChatService.UpdateConversationWorkflow:input_type -> notification.UpdateConversationWorkflowRequest
-	51, // 79: notification.ChatService.AssignConversation:input_type -> notification.AssignConversationRequest
-	52, // 80: notification.ChatService.ListInbox:input_type -> notification.ListInboxRequest
-	53, // 81: notification.ChatService.ListConversationsByResource:input_type -> notification.ListConversationsByResourceRequest
-	54, // 82: notification.ChatService.AddConversationLink:input_type -> notification.AddConversationLinkRequest
-	55, // 83: notification.ChatService.RemoveConversationLink:input_type -> notification.RemoveConversationLinkRequest
-	56, // 84: notification.ChatService.ListConversationLinks:input_type -> notification.ListConversationLinksRequest
-	58, // 85: notification.ChatService.CreateReplyDraft:input_type -> notification.CreateReplyDraftRequest
-	59, // 86: notification.ChatService.ListReplyDrafts:input_type -> notification.ListReplyDraftsRequest
-	61, // 87: notification.ChatService.UpdateReplyDraft:input_type -> notification.UpdateReplyDraftRequest
-	62, // 88: notification.ChatService.RejectReplyDraft:input_type -> notification.RejectReplyDraftRequest
-	63, // 89: notification.ChatService.ApproveAndSendReplyDraft:input_type -> notification.ApproveAndSendReplyDraftRequest
-	66, // 90: notification.ChatService.CreateMessagingGroup:input_type -> notification.CreateMessagingGroupRequest
-	67, // 91: notification.ChatService.ListMessagingGroups:input_type -> notification.ListMessagingGroupsRequest
-	69, // 92: notification.ChatService.GetMessagingGroup:input_type -> notification.GetMessagingGroupRequest
-	70, // 93: notification.ChatService.UpdateMessagingGroup:input_type -> notification.UpdateMessagingGroupRequest
-	71, // 94: notification.ChatService.DeleteMessagingGroup:input_type -> notification.DeleteMessagingGroupRequest
-	72, // 95: notification.ChatService.AddMessagingGroupMember:input_type -> notification.AddMessagingGroupMemberRequest
-	73, // 96: notification.ChatService.RemoveMessagingGroupMember:input_type -> notification.RemoveMessagingGroupMemberRequest
-	31, // 97: notification.ChatService.CreateConversation:output_type -> notification.ConversationInfo
-	36, // 98: notification.ChatService.ListConversations:output_type -> notification.ListConversationsResponse
-	31, // 99: notification.ChatService.GetConversation:output_type -> notification.ConversationInfo
-	39, // 100: notification.ChatService.BatchGetConversations:output_type -> notification.BatchGetConversationsResponse
-	31, // 101: notification.ChatService.ContactSupport:output_type -> notification.ConversationInfo
-	44, // 102: notification.ChatService.GetSupportAvailability:output_type -> notification.SupportAvailabilityInfo
-	45, // 103: notification.ChatService.SetSupportRoute:output_type -> notification.SupportRouteInfo
-	12, // 104: notification.ChatService.ClearSupportRoute:output_type -> notification.ChatAck
-	45, // 105: notification.ChatService.GetSupportRoute:output_type -> notification.SupportRouteInfo
-	33, // 106: notification.ChatService.SendMessage:output_type -> notification.MessageInfo
-	76, // 107: notification.ChatService.ListMessages:output_type -> notification.ListMessagesResponse
-	41, // 108: notification.ChatService.BatchGetMessages:output_type -> notification.BatchGetMessagesResponse
-	78, // 109: notification.ChatService.MarkConversationRead:output_type -> notification.MarkConversationReadResponse
-	80, // 110: notification.ChatService.IsParticipant:output_type -> notification.IsParticipantResponse
-	12, // 111: notification.ChatService.SendTyping:output_type -> notification.ChatAck
-	31, // 112: notification.ChatService.UpdateConversation:output_type -> notification.ConversationInfo
-	31, // 113: notification.ChatService.AddParticipant:output_type -> notification.ConversationInfo
-	12, // 114: notification.ChatService.RemoveParticipant:output_type -> notification.ChatAck
-	31, // 115: notification.ChatService.UpdateParticipantRole:output_type -> notification.ConversationInfo
-	12, // 116: notification.ChatService.LeaveConversation:output_type -> notification.ChatAck
-	12, // 117: notification.ChatService.HideConversation:output_type -> notification.ChatAck
-	12, // 118: notification.ChatService.UnhideConversation:output_type -> notification.ChatAck
-	31, // 119: notification.ChatService.SetMute:output_type -> notification.ConversationInfo
-	24, // 120: notification.ChatService.Block:output_type -> notification.BlockInfo
-	12, // 121: notification.ChatService.Unblock:output_type -> notification.ChatAck
-	25, // 122: notification.ChatService.ListBlocks:output_type -> notification.ListBlocksResponse
-	28, // 123: notification.ChatService.ListContacts:output_type -> notification.ListContactsResponse
-	30, // 124: notification.ChatService.ReportConversation:output_type -> notification.MessageReportInfo
-	9,  // 125: notification.ChatService.CreateAttachmentUploadURL:output_type -> notification.AttachmentUploadTargetInfo
-	33, // 126: notification.ChatService.ScheduleMessage:output_type -> notification.MessageInfo
-	6,  // 127: notification.ChatService.ListScheduledMessages:output_type -> notification.ListScheduledMessagesResponse
-	33, // 128: notification.ChatService.CancelScheduledMessage:output_type -> notification.MessageInfo
-	32, // 129: notification.ChatService.AddAgentParticipant:output_type -> notification.ParticipantInfo
-	12, // 130: notification.ChatService.RemoveAgentParticipant:output_type -> notification.ChatAck
-	31, // 131: notification.ChatService.SetLegalHold:output_type -> notification.ConversationInfo
-	31, // 132: notification.ChatService.RedactConversation:output_type -> notification.ConversationInfo
-	31, // 133: notification.ChatService.UpdateConversationWorkflow:output_type -> notification.ConversationInfo
-	31, // 134: notification.ChatService.AssignConversation:output_type -> notification.ConversationInfo
-	36, // 135: notification.ChatService.ListInbox:output_type -> notification.ListConversationsResponse
-	36, // 136: notification.ChatService.ListConversationsByResource:output_type -> notification.ListConversationsResponse
-	49, // 137: notification.ChatService.AddConversationLink:output_type -> notification.ConversationLinkInfo
-	12, // 138: notification.ChatService.RemoveConversationLink:output_type -> notification.ChatAck
-	57, // 139: notification.ChatService.ListConversationLinks:output_type -> notification.ListConversationLinksResponse
-	33, // 140: notification.ChatService.CreateReplyDraft:output_type -> notification.MessageInfo
-	60, // 141: notification.ChatService.ListReplyDrafts:output_type -> notification.ListReplyDraftsResponse
-	33, // 142: notification.ChatService.UpdateReplyDraft:output_type -> notification.MessageInfo
-	33, // 143: notification.ChatService.RejectReplyDraft:output_type -> notification.MessageInfo
-	33, // 144: notification.ChatService.ApproveAndSendReplyDraft:output_type -> notification.MessageInfo
-	65, // 145: notification.ChatService.CreateMessagingGroup:output_type -> notification.MessagingGroupInfo
-	68, // 146: notification.ChatService.ListMessagingGroups:output_type -> notification.ListMessagingGroupsResponse
-	65, // 147: notification.ChatService.GetMessagingGroup:output_type -> notification.MessagingGroupInfo
-	65, // 148: notification.ChatService.UpdateMessagingGroup:output_type -> notification.MessagingGroupInfo
-	12, // 149: notification.ChatService.DeleteMessagingGroup:output_type -> notification.ChatAck
-	65, // 150: notification.ChatService.AddMessagingGroupMember:output_type -> notification.MessagingGroupInfo
-	65, // 151: notification.ChatService.RemoveMessagingGroupMember:output_type -> notification.MessagingGroupInfo
-	97, // [97:152] is the sub-list for method output_type
-	42, // [42:97] is the sub-list for method input_type
-	42, // [42:42] is the sub-list for extension type_name
-	42, // [42:42] is the sub-list for extension extendee
-	0,  // [0:42] is the sub-list for field type_name
+	83, // 24: notification.MessageInfo.scheduled_for:type_name -> google.protobuf.Timestamp
+	35, // 25: notification.CreateConversationRequest.participants:type_name -> notification.ConversationParticipantRoleInput
+	31, // 26: notification.ListConversationsResponse.conversations:type_name -> notification.ConversationInfo
+	84, // 27: notification.ListConversationsResponse.page_info:type_name -> notification.PageInfo
+	31, // 28: notification.BatchGetConversationsResponse.conversations:type_name -> notification.ConversationInfo
+	33, // 29: notification.BatchGetMessagesResponse.messages:type_name -> notification.MessageInfo
+	83, // 30: notification.SupportRouteInfo.created_at:type_name -> google.protobuf.Timestamp
+	83, // 31: notification.SupportRouteInfo.updated_at:type_name -> google.protobuf.Timestamp
+	83, // 32: notification.ConversationLinkInfo.created_at:type_name -> google.protobuf.Timestamp
+	50, // 33: notification.ListConversationLinksResponse.links:type_name -> notification.ConversationLinkInfo
+	33, // 34: notification.ListReplyDraftsResponse.drafts:type_name -> notification.MessageInfo
+	83, // 35: notification.MessagingGroupMemberInfo.created_at:type_name -> google.protobuf.Timestamp
+	83, // 36: notification.MessagingGroupInfo.created_at:type_name -> google.protobuf.Timestamp
+	83, // 37: notification.MessagingGroupInfo.updated_at:type_name -> google.protobuf.Timestamp
+	65, // 38: notification.MessagingGroupInfo.members:type_name -> notification.MessagingGroupMemberInfo
+	66, // 39: notification.ListMessagingGroupsResponse.groups:type_name -> notification.MessagingGroupInfo
+	10, // 40: notification.SendMessageRequest.attachments:type_name -> notification.AttachmentInput
+	33, // 41: notification.ListMessagesResponse.messages:type_name -> notification.MessageInfo
+	84, // 42: notification.ListMessagesResponse.page_info:type_name -> notification.PageInfo
+	34, // 43: notification.ChatService.CreateConversation:input_type -> notification.CreateConversationRequest
+	36, // 44: notification.ChatService.ListConversations:input_type -> notification.ListConversationsRequest
+	38, // 45: notification.ChatService.GetConversation:input_type -> notification.GetConversationRequest
+	39, // 46: notification.ChatService.BatchGetConversations:input_type -> notification.BatchGetConversationsRequest
+	43, // 47: notification.ChatService.ContactSupport:input_type -> notification.ContactSupportRequest
+	44, // 48: notification.ChatService.GetSupportAvailability:input_type -> notification.GetSupportAvailabilityRequest
+	47, // 49: notification.ChatService.SetSupportRoute:input_type -> notification.SetSupportRouteRequest
+	48, // 50: notification.ChatService.ClearSupportRoute:input_type -> notification.ClearSupportRouteRequest
+	49, // 51: notification.ChatService.GetSupportRoute:input_type -> notification.GetSupportRouteRequest
+	75, // 52: notification.ChatService.SendMessage:input_type -> notification.SendMessageRequest
+	76, // 53: notification.ChatService.ListMessages:input_type -> notification.ListMessagesRequest
+	41, // 54: notification.ChatService.BatchGetMessages:input_type -> notification.BatchGetMessagesRequest
+	78, // 55: notification.ChatService.MarkConversationRead:input_type -> notification.MarkConversationReadRequest
+	80, // 56: notification.ChatService.IsParticipant:input_type -> notification.IsParticipantRequest
+	82, // 57: notification.ChatService.SendTyping:input_type -> notification.SendTypingRequest
+	13, // 58: notification.ChatService.UpdateConversation:input_type -> notification.UpdateConversationRequest
+	14, // 59: notification.ChatService.AddParticipant:input_type -> notification.AddParticipantRequest
+	15, // 60: notification.ChatService.RemoveParticipant:input_type -> notification.RemoveParticipantRequest
+	16, // 61: notification.ChatService.UpdateParticipantRole:input_type -> notification.UpdateParticipantRoleRequest
+	17, // 62: notification.ChatService.LeaveConversation:input_type -> notification.LeaveConversationRequest
+	18, // 63: notification.ChatService.HideConversation:input_type -> notification.HideConversationRequest
+	19, // 64: notification.ChatService.UnhideConversation:input_type -> notification.UnhideConversationRequest
+	20, // 65: notification.ChatService.SetMute:input_type -> notification.SetMuteRequest
+	21, // 66: notification.ChatService.Block:input_type -> notification.BlockRequest
+	22, // 67: notification.ChatService.Unblock:input_type -> notification.UnblockRequest
+	23, // 68: notification.ChatService.ListBlocks:input_type -> notification.ListBlocksRequest
+	26, // 69: notification.ChatService.ListContacts:input_type -> notification.ListContactsRequest
+	29, // 70: notification.ChatService.ReportConversation:input_type -> notification.ReportConversationRequest
+	8,  // 71: notification.ChatService.CreateAttachmentUploadURL:input_type -> notification.CreateAttachmentUploadURLRequest
+	4,  // 72: notification.ChatService.ScheduleMessage:input_type -> notification.ScheduleMessageRequest
+	5,  // 73: notification.ChatService.ListScheduledMessages:input_type -> notification.ListScheduledMessagesRequest
+	7,  // 74: notification.ChatService.CancelScheduledMessage:input_type -> notification.CancelScheduledMessageRequest
+	2,  // 75: notification.ChatService.AddAgentParticipant:input_type -> notification.AddAgentParticipantRequest
+	3,  // 76: notification.ChatService.RemoveAgentParticipant:input_type -> notification.RemoveAgentParticipantRequest
+	0,  // 77: notification.ChatService.SetLegalHold:input_type -> notification.SetLegalHoldRequest
+	1,  // 78: notification.ChatService.RedactConversation:input_type -> notification.RedactConversationRequest
+	51, // 79: notification.ChatService.UpdateConversationWorkflow:input_type -> notification.UpdateConversationWorkflowRequest
+	52, // 80: notification.ChatService.AssignConversation:input_type -> notification.AssignConversationRequest
+	53, // 81: notification.ChatService.ListInbox:input_type -> notification.ListInboxRequest
+	54, // 82: notification.ChatService.ListConversationsByResource:input_type -> notification.ListConversationsByResourceRequest
+	55, // 83: notification.ChatService.AddConversationLink:input_type -> notification.AddConversationLinkRequest
+	56, // 84: notification.ChatService.RemoveConversationLink:input_type -> notification.RemoveConversationLinkRequest
+	57, // 85: notification.ChatService.ListConversationLinks:input_type -> notification.ListConversationLinksRequest
+	59, // 86: notification.ChatService.CreateReplyDraft:input_type -> notification.CreateReplyDraftRequest
+	60, // 87: notification.ChatService.ListReplyDrafts:input_type -> notification.ListReplyDraftsRequest
+	62, // 88: notification.ChatService.UpdateReplyDraft:input_type -> notification.UpdateReplyDraftRequest
+	63, // 89: notification.ChatService.RejectReplyDraft:input_type -> notification.RejectReplyDraftRequest
+	64, // 90: notification.ChatService.ApproveAndSendReplyDraft:input_type -> notification.ApproveAndSendReplyDraftRequest
+	67, // 91: notification.ChatService.CreateMessagingGroup:input_type -> notification.CreateMessagingGroupRequest
+	68, // 92: notification.ChatService.ListMessagingGroups:input_type -> notification.ListMessagingGroupsRequest
+	70, // 93: notification.ChatService.GetMessagingGroup:input_type -> notification.GetMessagingGroupRequest
+	71, // 94: notification.ChatService.UpdateMessagingGroup:input_type -> notification.UpdateMessagingGroupRequest
+	72, // 95: notification.ChatService.DeleteMessagingGroup:input_type -> notification.DeleteMessagingGroupRequest
+	73, // 96: notification.ChatService.AddMessagingGroupMember:input_type -> notification.AddMessagingGroupMemberRequest
+	74, // 97: notification.ChatService.RemoveMessagingGroupMember:input_type -> notification.RemoveMessagingGroupMemberRequest
+	31, // 98: notification.ChatService.CreateConversation:output_type -> notification.ConversationInfo
+	37, // 99: notification.ChatService.ListConversations:output_type -> notification.ListConversationsResponse
+	31, // 100: notification.ChatService.GetConversation:output_type -> notification.ConversationInfo
+	40, // 101: notification.ChatService.BatchGetConversations:output_type -> notification.BatchGetConversationsResponse
+	31, // 102: notification.ChatService.ContactSupport:output_type -> notification.ConversationInfo
+	45, // 103: notification.ChatService.GetSupportAvailability:output_type -> notification.SupportAvailabilityInfo
+	46, // 104: notification.ChatService.SetSupportRoute:output_type -> notification.SupportRouteInfo
+	12, // 105: notification.ChatService.ClearSupportRoute:output_type -> notification.ChatAck
+	46, // 106: notification.ChatService.GetSupportRoute:output_type -> notification.SupportRouteInfo
+	33, // 107: notification.ChatService.SendMessage:output_type -> notification.MessageInfo
+	77, // 108: notification.ChatService.ListMessages:output_type -> notification.ListMessagesResponse
+	42, // 109: notification.ChatService.BatchGetMessages:output_type -> notification.BatchGetMessagesResponse
+	79, // 110: notification.ChatService.MarkConversationRead:output_type -> notification.MarkConversationReadResponse
+	81, // 111: notification.ChatService.IsParticipant:output_type -> notification.IsParticipantResponse
+	12, // 112: notification.ChatService.SendTyping:output_type -> notification.ChatAck
+	31, // 113: notification.ChatService.UpdateConversation:output_type -> notification.ConversationInfo
+	31, // 114: notification.ChatService.AddParticipant:output_type -> notification.ConversationInfo
+	12, // 115: notification.ChatService.RemoveParticipant:output_type -> notification.ChatAck
+	31, // 116: notification.ChatService.UpdateParticipantRole:output_type -> notification.ConversationInfo
+	12, // 117: notification.ChatService.LeaveConversation:output_type -> notification.ChatAck
+	12, // 118: notification.ChatService.HideConversation:output_type -> notification.ChatAck
+	12, // 119: notification.ChatService.UnhideConversation:output_type -> notification.ChatAck
+	31, // 120: notification.ChatService.SetMute:output_type -> notification.ConversationInfo
+	24, // 121: notification.ChatService.Block:output_type -> notification.BlockInfo
+	12, // 122: notification.ChatService.Unblock:output_type -> notification.ChatAck
+	25, // 123: notification.ChatService.ListBlocks:output_type -> notification.ListBlocksResponse
+	28, // 124: notification.ChatService.ListContacts:output_type -> notification.ListContactsResponse
+	30, // 125: notification.ChatService.ReportConversation:output_type -> notification.MessageReportInfo
+	9,  // 126: notification.ChatService.CreateAttachmentUploadURL:output_type -> notification.AttachmentUploadTargetInfo
+	33, // 127: notification.ChatService.ScheduleMessage:output_type -> notification.MessageInfo
+	6,  // 128: notification.ChatService.ListScheduledMessages:output_type -> notification.ListScheduledMessagesResponse
+	33, // 129: notification.ChatService.CancelScheduledMessage:output_type -> notification.MessageInfo
+	32, // 130: notification.ChatService.AddAgentParticipant:output_type -> notification.ParticipantInfo
+	12, // 131: notification.ChatService.RemoveAgentParticipant:output_type -> notification.ChatAck
+	31, // 132: notification.ChatService.SetLegalHold:output_type -> notification.ConversationInfo
+	31, // 133: notification.ChatService.RedactConversation:output_type -> notification.ConversationInfo
+	31, // 134: notification.ChatService.UpdateConversationWorkflow:output_type -> notification.ConversationInfo
+	31, // 135: notification.ChatService.AssignConversation:output_type -> notification.ConversationInfo
+	37, // 136: notification.ChatService.ListInbox:output_type -> notification.ListConversationsResponse
+	37, // 137: notification.ChatService.ListConversationsByResource:output_type -> notification.ListConversationsResponse
+	50, // 138: notification.ChatService.AddConversationLink:output_type -> notification.ConversationLinkInfo
+	12, // 139: notification.ChatService.RemoveConversationLink:output_type -> notification.ChatAck
+	58, // 140: notification.ChatService.ListConversationLinks:output_type -> notification.ListConversationLinksResponse
+	33, // 141: notification.ChatService.CreateReplyDraft:output_type -> notification.MessageInfo
+	61, // 142: notification.ChatService.ListReplyDrafts:output_type -> notification.ListReplyDraftsResponse
+	33, // 143: notification.ChatService.UpdateReplyDraft:output_type -> notification.MessageInfo
+	33, // 144: notification.ChatService.RejectReplyDraft:output_type -> notification.MessageInfo
+	33, // 145: notification.ChatService.ApproveAndSendReplyDraft:output_type -> notification.MessageInfo
+	66, // 146: notification.ChatService.CreateMessagingGroup:output_type -> notification.MessagingGroupInfo
+	69, // 147: notification.ChatService.ListMessagingGroups:output_type -> notification.ListMessagingGroupsResponse
+	66, // 148: notification.ChatService.GetMessagingGroup:output_type -> notification.MessagingGroupInfo
+	66, // 149: notification.ChatService.UpdateMessagingGroup:output_type -> notification.MessagingGroupInfo
+	12, // 150: notification.ChatService.DeleteMessagingGroup:output_type -> notification.ChatAck
+	66, // 151: notification.ChatService.AddMessagingGroupMember:output_type -> notification.MessagingGroupInfo
+	66, // 152: notification.ChatService.RemoveMessagingGroupMember:output_type -> notification.MessagingGroupInfo
+	98, // [98:153] is the sub-list for method output_type
+	43, // [43:98] is the sub-list for method input_type
+	43, // [43:43] is the sub-list for extension type_name
+	43, // [43:43] is the sub-list for extension extendee
+	0,  // [0:43] is the sub-list for field type_name
 }
 
 func init() { file_notification_notification_chat_proto_init() }
@@ -6074,25 +6141,25 @@ func file_notification_notification_chat_proto_init() {
 	file_notification_notification_chat_proto_msgTypes[32].OneofWrappers = []any{}
 	file_notification_notification_chat_proto_msgTypes[33].OneofWrappers = []any{}
 	file_notification_notification_chat_proto_msgTypes[34].OneofWrappers = []any{}
-	file_notification_notification_chat_proto_msgTypes[35].OneofWrappers = []any{}
-	file_notification_notification_chat_proto_msgTypes[49].OneofWrappers = []any{}
-	file_notification_notification_chat_proto_msgTypes[51].OneofWrappers = []any{}
+	file_notification_notification_chat_proto_msgTypes[36].OneofWrappers = []any{}
+	file_notification_notification_chat_proto_msgTypes[50].OneofWrappers = []any{}
 	file_notification_notification_chat_proto_msgTypes[52].OneofWrappers = []any{}
-	file_notification_notification_chat_proto_msgTypes[58].OneofWrappers = []any{}
+	file_notification_notification_chat_proto_msgTypes[53].OneofWrappers = []any{}
 	file_notification_notification_chat_proto_msgTypes[59].OneofWrappers = []any{}
-	file_notification_notification_chat_proto_msgTypes[61].OneofWrappers = []any{}
-	file_notification_notification_chat_proto_msgTypes[64].OneofWrappers = []any{}
+	file_notification_notification_chat_proto_msgTypes[60].OneofWrappers = []any{}
+	file_notification_notification_chat_proto_msgTypes[62].OneofWrappers = []any{}
 	file_notification_notification_chat_proto_msgTypes[65].OneofWrappers = []any{}
-	file_notification_notification_chat_proto_msgTypes[72].OneofWrappers = []any{}
-	file_notification_notification_chat_proto_msgTypes[74].OneofWrappers = []any{}
+	file_notification_notification_chat_proto_msgTypes[66].OneofWrappers = []any{}
+	file_notification_notification_chat_proto_msgTypes[73].OneofWrappers = []any{}
 	file_notification_notification_chat_proto_msgTypes[75].OneofWrappers = []any{}
+	file_notification_notification_chat_proto_msgTypes[76].OneofWrappers = []any{}
 	type x struct{}
 	out := protoimpl.TypeBuilder{
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_notification_notification_chat_proto_rawDesc), len(file_notification_notification_chat_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   82,
+			NumMessages:   83,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

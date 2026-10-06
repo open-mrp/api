@@ -432,6 +432,13 @@ message CreateConversationRequest {
   // snapshotted into participants (in addition to any participant_account_user_ids) and the
   // conversation records this group_id as provenance. Agent members default to mention trigger.
   optional string group_id = 6;
+  // Group members to seat with the role each starts with, validated as UpdateParticipantRole validates a role.
+  repeated ConversationParticipantRoleInput participants = 7;
+}
+
+message ConversationParticipantRoleInput {
+  string account_user_id = 1;
+  string role = 2;
 }
 
 message ListConversationsRequest {

@@ -15,7 +15,7 @@ import (
 
 var customerProductLineAccessLoaderTracer = tracing.GetTracer("api-gateway.resourceloaders.customer_product_line_access")
 
-// LoadCustomerProductLineAccess fetches access records by customer_id via BatchGetCustomerProductLineAccessByIDs. Inline Customer shell and inline ProductLines list — no expandable sub-resources.
+// LoadCustomerProductLineAccess fetches access records by customer_id via BatchGetCustomerProductLineAccessByIDs and embeds the real customer and product line records, loaded as the caller.
 func LoadCustomerProductLineAccess(ctx context.Context, ids []string) (map[string]any, *apierror.APIError) {
 	if len(ids) == 0 {
 		return nil, nil
@@ -27,34 +27,66 @@ func LoadCustomerProductLineAccess(ctx context.Context, ids []string) (map[strin
 	if apiErr != nil {
 		return nil, apiErr
 	}
+	if len(resp.Items) == 0 {
+		return map[string]any{}, nil
+	}
+
+	customerIDs := make([]string, len(resp.Items))
+	granted := make([][]*pb.ProductLineAccessInfo, len(resp.Items))
+	for i, item := range resp.Items {
+		customerIDs[i] = item.CustomerId
+		granted[i] = item.ProductLines
+	}
+	customers, _, apiErr := loadReadable(ctx, LoadCustomers, customerIDs)
+	if apiErr != nil {
+		return nil, apiErr
+	}
+	lines, linesReadable, apiErr := loadReadable(ctx, LoadProductLines, grantedProductLineIDs(granted...))
+	if apiErr != nil {
+		return nil, apiErr
+	}
+
 	out := make(map[string]any, len(resp.Items))
 	for _, item := range resp.Items {
-		out[item.CustomerId] = CustomerProductLineAccessFromProto(item)
+		access := &apiresource.CustomerProductLineAccess{
+			Object:       constants.ObjectTypeCustomerProductLineAccess,
+			ProductLines: grantedProductLines(item.ProductLines, lines, linesReadable),
+			CreatedAt:    grpcutil.TimestampToTime(item.CreatedAt),
+			UpdatedAt:    grpcutil.TimestampToTime(item.UpdatedAt),
+		}
+		if customer, ok := customers[item.CustomerId].(*apiresource.Customer); ok {
+			access.Customer = customer
+		}
+		out[item.CustomerId] = access
 	}
 	return out, nil
 }
 
-// CustomerProductLineAccessFromProto maps the gRPC proto to the apiresource. Exported for use by mutation handlers that already hold a proto response.
-// NOTE: preserves the legacy presenter's quirk of setting Customer.Object to ObjectTypeAccount rather than ObjectTypeCustomer (the apiresource.Customer type is account-shaped in the existing schema).
-func CustomerProductLineAccessFromProto(item *pb.CustomerProductLineAccessInfo) *apiresource.CustomerProductLineAccess {
-	productLines := make([]apiresource.ProductLine, len(item.ProductLines))
-	for i, pl := range item.ProductLines {
-		productLines[i] = apiresource.ProductLine{
-			ID:     pl.Id,
-			Object: constants.ObjectTypeProductLine,
-			Name:   pl.Name,
+// grantedProductLineIDs is every product line the access records grant, each once.
+func grantedProductLineIDs(granted ...[]*pb.ProductLineAccessInfo) []string {
+	seen := map[string]bool{}
+	var ids []string
+	for _, lines := range granted {
+		for _, pl := range lines {
+			if !seen[pl.Id] {
+				seen[pl.Id] = true
+				ids = append(ids, pl.Id)
+			}
 		}
 	}
-	return &apiresource.CustomerProductLineAccess{
-		Customer: &apiresource.Customer{
-			ID:     item.CustomerId,
-			Object: constants.ObjectTypeAccount,
-			Name:   item.CustomerName,
-			Number: item.CustomerNumber,
-		},
-		Object:       constants.ObjectTypeCustomerProductLineAccess,
-		ProductLines: apiresource.NewList(productLines, apiresource.PageInfo{}),
-		CreatedAt:    grpcutil.TimestampToTime(item.CreatedAt),
-		UpdatedAt:    grpcutil.TimestampToTime(item.UpdatedAt),
+	return ids
+}
+
+// grantedProductLines is the granted lines as their real records, or nil when the caller may not read product lines.
+func grantedProductLines(granted []*pb.ProductLineAccessInfo, loaded map[string]any, readable bool) *apiresource.List[apiresource.ProductLine] {
+	if !readable {
+		return nil
 	}
+	items := make([]apiresource.ProductLine, 0, len(granted))
+	for _, pl := range granted {
+		if line, ok := loaded[pl.Id].(*apiresource.ProductLine); ok {
+			items = append(items, *line)
+		}
+	}
+	return apiresource.NewList(items, apiresource.PageInfo{})
 }

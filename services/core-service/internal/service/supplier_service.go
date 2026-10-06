@@ -411,7 +411,7 @@ func (s *supplierSvcImpl) DeleteSupplier(ctx context.Context, params domain.Dele
 	supplier, apiErr := s.repos.NewSupplierRepo().Get(ctx, domain.GetSupplierParams{OwnerAccountID: params.OwnerAccountID, SupplierID: params.SupplierID, Includes: supplierAddressIncludes})
 	if apiErr != nil {
 		if apierror.IsNotFound(apiErr) {
-			wasDeleted, deletedCheckErr := s.repos.NewDeletedRecordRepo().Exists(ctx, constants.DeletedRecordResourceTypeSupplier, params.SupplierID)
+			wasDeleted, deletedCheckErr := s.repos.NewDeletedRecordRepo().ExistsInAccount(ctx, constants.DeletedRecordResourceTypeSupplier, params.SupplierID, params.OwnerAccountID)
 			if deletedCheckErr != nil {
 				return nil, tracing.Trace(span, deletedCheckErr)
 			}
@@ -424,7 +424,7 @@ func (s *supplierSvcImpl) DeleteSupplier(ctx context.Context, params domain.Dele
 
 	var result *domain.Supplier
 	apiErr = s.withTx(ctx, func(txCtx context.Context, txSvc *supplierSvcImpl) *apierror.APIError {
-		if apiErr := txSvc.repos.NewDeletedRecordRepo().Create(txCtx, constants.DeletedRecordResourceTypeSupplier, supplier.ID, supplier); apiErr != nil {
+		if apiErr := txSvc.repos.NewDeletedRecordRepo().CreateInAccount(txCtx, constants.DeletedRecordResourceTypeSupplier, supplier.ID, params.OwnerAccountID, supplier); apiErr != nil {
 			return apiErr
 		}
 
@@ -488,7 +488,7 @@ func (s *supplierSvcImpl) BulkDeleteSuppliers(ctx context.Context, params domain
 	apiErr := s.withTx(ctx, func(txCtx context.Context, txSvc *supplierSvcImpl) *apierror.APIError {
 		deletedRecordRepo := txSvc.repos.NewDeletedRecordRepo()
 		for _, supplier := range suppliers {
-			if apiErr := deletedRecordRepo.Create(txCtx, constants.DeletedRecordResourceTypeSupplier, supplier.ID, supplier); apiErr != nil {
+			if apiErr := deletedRecordRepo.CreateInAccount(txCtx, constants.DeletedRecordResourceTypeSupplier, supplier.ID, params.OwnerAccountID, supplier); apiErr != nil {
 				return apiErr
 			}
 		}

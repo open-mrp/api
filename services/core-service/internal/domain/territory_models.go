@@ -43,12 +43,6 @@ type Territory struct {
 	UpdatedAt   time.Time
 }
 
-// DeletedTerritory is a deleted territory's snapshot. It names the owning account so only that account is told the territory was deleted.
-type DeletedTerritory struct {
-	AccountID string `json:"account_id"`
-	*Territory
-}
-
 // ListTerritoriesParams contains the parameters for listing territories.
 type ListTerritoriesParams struct {
 	AccountID string

@@ -365,19 +365,7 @@ func TestTerritorySvc_DeleteSnapshotsTheOwningAccount(t *testing.T) {
 	stored := storedTerritory("acu_1", nil, nil, nil)
 	s.territories.EXPECT().Get(gomock.Any(), gomock.Any()).Return(stored, nil)
 	s.territories.EXPECT().Delete(gomock.Any(), gomock.Any()).Return(nil)
-	s.deleted.EXPECT().Create(gomock.Any(), constants.DeletedRecordResourceTypeTerritory, "tr_1", gomock.Any()).
-		DoAndReturn(func(_ context.Context, _ constants.DeletedRecordResourceType, _ string, data any) *apierror.APIError {
-			raw, err := json.Marshal(data)
-			require.NoError(t, err)
-			var snapshot struct {
-				AccountID string `json:"account_id"`
-				ID        string
-			}
-			require.NoError(t, json.Unmarshal(raw, &snapshot))
-			assert.Equal(t, "ac_1", snapshot.AccountID)
-			assert.Equal(t, "tr_1", snapshot.ID)
-			return nil
-		})
+	s.deleted.EXPECT().CreateInAccount(gomock.Any(), constants.DeletedRecordResourceTypeTerritory, "tr_1", "ac_1", stored).Return(nil)
 
 	require.Nil(t, s.svc.DeleteTerritory(territoryInternalCtx("ac_1"), domain.DeleteTerritoryParams{AccountID: "ac_1", TerritoryID: "tr_1"}))
 }

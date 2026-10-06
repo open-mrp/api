@@ -373,7 +373,7 @@ func (s *shippingCaseSvcImpl) DeleteShippingCase(ctx context.Context, accountID,
 	shippingCase, apiErr := repo.Get(ctx, identity.Target.AccountID, shippingCaseID)
 	if apiErr != nil {
 		if apierror.IsNotFound(apiErr) {
-			wasDeleted, deletedCheckErr := s.repos.NewDeletedRecordRepo().Exists(ctx, constants.DeletedRecordResourceTypeShippingCase, shippingCaseID)
+			wasDeleted, deletedCheckErr := s.repos.NewDeletedRecordRepo().ExistsInAccount(ctx, constants.DeletedRecordResourceTypeShippingCase, shippingCaseID, identity.Target.AccountID)
 			if deletedCheckErr != nil {
 				return tracing.Trace(span, deletedCheckErr)
 			}
@@ -390,7 +390,7 @@ func (s *shippingCaseSvcImpl) DeleteShippingCase(ctx context.Context, accountID,
 	}
 
 	apiErr = s.withTx(ctx, func(txCtx context.Context, txSvc *shippingCaseSvcImpl) *apierror.APIError {
-		if apiErr := txSvc.repos.NewDeletedRecordRepo().Create(txCtx, constants.DeletedRecordResourceTypeShippingCase, shippingCase.ID, shippingCase); apiErr != nil {
+		if apiErr := txSvc.repos.NewDeletedRecordRepo().CreateInAccount(txCtx, constants.DeletedRecordResourceTypeShippingCase, shippingCase.ID, identity.Target.AccountID, shippingCase); apiErr != nil {
 			return apiErr
 		}
 

@@ -236,7 +236,7 @@ func TestUpdateAccountUserStatus_CustomerContact(t *testing.T) {
 			Return(&domain.AccountUserDetail{ID: "acus_actor", UserID: counterpartyActorID, StatusCode: constants.AccountUserStatusActive}, nil)
 		accountUserRepo.EXPECT().GetDetailByAccountAndID(gomock.Any(), counterpartyCustomerID, counterpartyAccountUser, gomock.Any()).
 			Return(&domain.AccountUserDetail{ID: counterpartyAccountUser, UserID: counterpartyContactUser, StatusCode: current}, nil).AnyTimes()
-		deletedRepo.EXPECT().Create(gomock.Any(), gomock.Any(), counterpartyAccountUser, gomock.Any()).Return(nil).AnyTimes()
+		deletedRepo.EXPECT().CreateInAccount(gomock.Any(), gomock.Any(), counterpartyAccountUser, counterpartyCustomerID, gomock.Any()).Return(nil).AnyTimes()
 
 		return accountUserRepo, newCounterpartyAccountUserSvc(ctrl, repos, domain.Mediators{EditAccess: editAccess}, billing)
 	}

@@ -391,8 +391,7 @@ func (s *territorySvcImpl) DeleteTerritory(ctx context.Context, params domain.De
 	}
 
 	apiErr = s.withTx(ctx, func(txCtx context.Context, txSvc *territorySvcImpl) *apierror.APIError {
-		snapshot := domain.DeletedTerritory{AccountID: params.AccountID, Territory: territory}
-		if apiErr := txSvc.repos.NewDeletedRecordRepo().Create(txCtx, constants.DeletedRecordResourceTypeTerritory, territory.ID, snapshot); apiErr != nil {
+		if apiErr := txSvc.repos.NewDeletedRecordRepo().CreateInAccount(txCtx, constants.DeletedRecordResourceTypeTerritory, territory.ID, params.AccountID, territory); apiErr != nil {
 			return apiErr
 		}
 

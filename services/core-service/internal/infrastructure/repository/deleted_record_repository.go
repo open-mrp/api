@@ -42,6 +42,27 @@ func (r *deletedRecordRepoImpl) Create(ctx context.Context, resourceType constan
 	return nil
 }
 
+// CreateInAccount records the snapshot with the owning account added under account_id, which ExistsInAccount matches.
+func (r *deletedRecordRepoImpl) CreateInAccount(ctx context.Context, resourceType constants.DeletedRecordResourceType, resourceID, accountID string, data any) *apierror.APIError {
+	ctx, span := deletedRecordRepoTracer.Start(ctx, "repository.deleted_record.create_in_account")
+	defer span.End()
+
+	serialized, err := json.Marshal(data)
+	if err != nil {
+		return tracing.Trace(span, apierror.NewInternalError(err, "Failed to serialize deleted record data."))
+	}
+	var fields map[string]json.RawMessage
+	if err := json.Unmarshal(serialized, &fields); err != nil {
+		return tracing.Trace(span, apierror.NewInternalError(err, "A deleted record's snapshot must be an object."))
+	}
+	owner, err := json.Marshal(accountID)
+	if err != nil {
+		return tracing.Trace(span, apierror.NewInternalError(err, "Failed to serialize deleted record owner."))
+	}
+	fields["account_id"] = owner
+	return r.Create(ctx, resourceType, resourceID, fields)
+}
+
 func (r *deletedRecordRepoImpl) Exists(ctx context.Context, resourceType constants.DeletedRecordResourceType, resourceID string) (bool, *apierror.APIError) {
 	ctx, span := deletedRecordRepoTracer.Start(ctx, "repository.deleted_record.exists")
 	defer span.End()

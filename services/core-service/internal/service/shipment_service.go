@@ -584,7 +584,7 @@ func (s *shipmentSvcImpl) DeleteShipment(ctx context.Context, params domain.Dele
 	})
 	if apiErr != nil {
 		if apierror.IsNotFound(apiErr) {
-			wasDeleted, deletedCheckErr := s.repos.NewDeletedRecordRepo().Exists(ctx, constants.DeletedRecordResourceTypeShipment, params.ShipmentID)
+			wasDeleted, deletedCheckErr := s.repos.NewDeletedRecordRepo().ExistsInAccount(ctx, constants.DeletedRecordResourceTypeShipment, params.ShipmentID, params.AccountID)
 			if deletedCheckErr != nil {
 				return tracing.Trace(span, deletedCheckErr)
 			}
@@ -619,7 +619,7 @@ func (s *shipmentSvcImpl) DeleteShipment(ctx context.Context, params domain.Dele
 			}
 		}
 
-		if apiErr := txSvc.repos.NewDeletedRecordRepo().Create(txCtx, constants.DeletedRecordResourceTypeShipment, shipment.ID, shipment); apiErr != nil {
+		if apiErr := txSvc.repos.NewDeletedRecordRepo().CreateInAccount(txCtx, constants.DeletedRecordResourceTypeShipment, shipment.ID, params.AccountID, shipment); apiErr != nil {
 			return apiErr
 		}
 

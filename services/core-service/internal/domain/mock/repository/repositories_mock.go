@@ -3732,6 +3732,20 @@ func (mr *MockDeletedRecordRepoMockRecorder) Create(ctx, resourceType, resourceI
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Create", reflect.TypeOf((*MockDeletedRecordRepo)(nil).Create), ctx, resourceType, resourceID, data)
 }
 
+// CreateInAccount mocks base method.
+func (m *MockDeletedRecordRepo) CreateInAccount(ctx context.Context, resourceType constants.DeletedRecordResourceType, resourceID, accountID string, data any) *apierror.APIError {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "CreateInAccount", ctx, resourceType, resourceID, accountID, data)
+	ret0, _ := ret[0].(*apierror.APIError)
+	return ret0
+}
+
+// CreateInAccount indicates an expected call of CreateInAccount.
+func (mr *MockDeletedRecordRepoMockRecorder) CreateInAccount(ctx, resourceType, resourceID, accountID, data any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateInAccount", reflect.TypeOf((*MockDeletedRecordRepo)(nil).CreateInAccount), ctx, resourceType, resourceID, accountID, data)
+}
+
 // Exists mocks base method.
 func (m *MockDeletedRecordRepo) Exists(ctx context.Context, resourceType constants.DeletedRecordResourceType, resourceID string) (bool, *apierror.APIError) {
 	m.ctrl.T.Helper()

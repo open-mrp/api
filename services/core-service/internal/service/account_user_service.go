@@ -818,7 +818,7 @@ func (s *accountUserSvcImpl) UpdateAccountUserStatus(ctx context.Context, accoun
 	accountUser, apiErr := s.repos.NewAccountUserRepo().GetDetailByAccountAndID(ctx, accountID, accountUserID, []string{"role"})
 	if apiErr != nil {
 		if apierror.IsNotFound(apiErr) {
-			wasDeleted, deletedCheckErr := s.repos.NewDeletedRecordRepo().Exists(ctx, constants.DeletedRecordResourceTypeAccountUser, accountUserID)
+			wasDeleted, deletedCheckErr := s.repos.NewDeletedRecordRepo().ExistsInAccount(ctx, constants.DeletedRecordResourceTypeAccountUser, accountUserID, accountID)
 			if deletedCheckErr != nil {
 				return tracing.Trace(span, deletedCheckErr)
 			}
@@ -863,7 +863,7 @@ func (s *accountUserSvcImpl) UpdateAccountUserStatus(ctx context.Context, accoun
 
 		// Removal performs a soft-delete and records the deleted snapshot.
 		if targetStatus == constants.AccountUserStatusRemoved {
-			if apiErr := txSvc.repos.NewDeletedRecordRepo().Create(txCtx, constants.DeletedRecordResourceTypeAccountUser, accountUser.ID, accountUser); apiErr != nil {
+			if apiErr := txSvc.repos.NewDeletedRecordRepo().CreateInAccount(txCtx, constants.DeletedRecordResourceTypeAccountUser, accountUser.ID, accountID, accountUser); apiErr != nil {
 				return apiErr
 			}
 			if apiErr := txAccountUserRepo.SoftDelete(txCtx, accountUserID); apiErr != nil {

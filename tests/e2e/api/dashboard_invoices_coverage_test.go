@@ -439,6 +439,9 @@ func TestDashInvoices_ReceivablesFollowPaymentsAndThePaidMark(t *testing.T) {
 			"%s: %s owed after $5 applied, got %s", path, owed, jsonField(entry, "remaining_balance"))
 	}
 
+	// The settlement recomputes the invoice's payment flags after it commits. Mark the invoice paid once
+	// that has run, or the late recompute writes the flag back over the mark.
+	awaitFullyAllocated(t, jsonField(payment, "id"), true)
 	patchInvoice(t, inv.invoiceID, map[string]any{"is_paid_in_full": true})
 	for path, params := range reports {
 		assert.Nil(t, dashInvoicesReceivable(t, path, params, inv.invoiceID), "%s: marked paid, it owes nothing", path)

@@ -83,6 +83,12 @@ INSERT IGNORE INTO account_relation (id, owner_account_id, counterparty_account_
     ('acre_01seedsupplier0000', 'ac_01k0a5smf9ekb8rqg12555zjqa', 'ac_01seedsupplier_acct0', 'supplier', 'SUP-001', 0, 'normal', 'ad_01seedsupplieraddr00', 'ad_01seedsupplieraddr00', NOW(), NOW()),
     ('acre_01seedsupplier0001', 'ac_01k0a5smf9ekb8rqg12555zjqa', 'ac_01seedsupplier_acct1', 'supplier', 'SUP-002', 0, 'normal', 'ad_01seedsupplier2addr0', 'ad_01seedsupplier2addr0', NOW(), NOW());
 
+-- An API key the first supplier holds, so tests can call the seller as a supplier portal actor (SeedSupplierAPIKey).
+-- Full key: mrp_sk_prod_SupPortalE2eTestKey01_SupplierPortalE2eTestSecretValueForCostVisibility1ea3nDd
+-- HMAC-SHA256(pepper='pepper', secret='SupplierPortalE2eTestSecretValueForCostVisibility1')
+INSERT IGNORE INTO api_key (type_id, key_id, name, secret_hash, redacted_value, owner_account_id, role_id, created_at, updated_at) VALUES
+    ('apky_e2esupportal000000000000', 'SupPortalE2eTestKey01', 'Supplier Portal E2E Key', UNHEX('d6ad5a2b73f1102e17ea4c3891f6c5fde1a365d165fdbf860b0fbc146c61427c'), 'mrp_sk_prod_****3nDd', 'ac_01seedsupplier_acct0', 'rl_mtg88e6u6fbu', NOW(), NOW());
+
 -- Set default billing/shipping addresses on supplier accounts themselves so the
 -- Supplier adapter (which falls back to account defaults when the relation lacks them)
 -- always resolves to a concrete address.

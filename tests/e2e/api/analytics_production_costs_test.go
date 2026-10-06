@@ -529,16 +529,18 @@ func TestAnalyticsProductionCosts_AnotherAccountSeesNoneOfIt(t *testing.T) {
 	}
 }
 
-func TestAnalyticsProductionCosts_NeedsBatchesRead(t *testing.T) {
+func TestAnalyticsProductionCosts_NeedsCostsRead(t *testing.T) {
 	t.Parallel()
 	body := map[string]any{"starts_at": pcTimestamp(pcWindowStart), "ends_at": pcTimestamp(pcWindowEnd), "category_ids": []string{SeedItemCategoryID}}
 
-	status, _, raw := putAnalytics(t, customRoleClient(t, "items:read"), productionCostsPath, nil, body)
-	assert.Equal(t, 403, status, string(raw))
+	for _, perm := range []string{"items:read", "batches:read"} {
+		status, _, raw := putAnalytics(t, customRoleClient(t, perm), productionCostsPath, nil, body)
+		assert.Equal(t, 403, status, "%s: %s", perm, string(raw))
+	}
 
-	got := mustPutAnalytics(t, customRoleClient(t, "batches:read"), productionCostsPath, nil, body)
+	got := mustPutAnalytics(t, customRoleClient(t, "costs:read"), productionCostsPath, nil, body)
 	assert.Equal(t, "analyze_production_costs_response", jsonField(got, "object"))
-	assert.Equal(t, "hour", jsonField(jsonObject(got, "time_unit"), "id"), "a batch reader sees the units the report is counted in without units:read")
+	assert.Equal(t, "hour", jsonField(jsonObject(got, "time_unit"), "id"), "a cost reader sees the units the report is counted in without units:read")
 }
 
 func TestAnalyticsProductionCosts_Validation(t *testing.T) {

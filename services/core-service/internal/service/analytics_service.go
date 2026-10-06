@@ -473,6 +473,10 @@ func (s *analyticsSvcImpl) AnalyzeOee(ctx context.Context, params domain.Analyze
 		return nil, tracing.Trace(span, apiErr)
 	}
 
+	if params.EndDate.Before(params.StartDate) {
+		return nil, tracing.Trace(span, apierror.NewValidationErrorWithParam("The period must end on or after it starts.", "ends_at"))
+	}
+
 	params.AccountID = identity.Target.AccountID
 
 	return cachedReport(ctx, s.reportCache().oee, analyticsReport{
@@ -501,6 +505,10 @@ func (s *analyticsSvcImpl) AnalyzeOeeTrend(ctx context.Context, params domain.An
 	}
 	if apiErr := identity.CheckHasPermission(types.PermissionDomainMachineDowntime, types.ActionRead); apiErr != nil {
 		return nil, tracing.Trace(span, apiErr)
+	}
+
+	if params.EndDate.Before(params.StartDate) {
+		return nil, tracing.Trace(span, apierror.NewValidationErrorWithParam("The period must end on or after it starts.", "ends_at"))
 	}
 
 	params.AccountID = identity.Target.AccountID

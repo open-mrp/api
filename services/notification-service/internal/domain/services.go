@@ -316,6 +316,12 @@ type EmailSendData struct {
 	// Attachment fields for raw MIME emails.
 	Attachment []byte  `json:"attachment,omitempty"`
 	Filename   *string `json:"filename,omitempty"`
+	// From is a requested platform sender; SendEmail drops it unless it is on a platform domain.
+	From      *string  `json:"from,omitempty"`
+	Bcc       []string `json:"bcc,omitempty"`
+	PlainText bool     `json:"plain_text,omitempty"`
+	// InReplyToSESMessageID threads this email under one this service already sent, identified by the SES message ID that send returned.
+	InReplyToSESMessageID *string `json:"in_reply_to_ses_message_id,omitempty"`
 }
 
 // EnterpriseRequestData contains data for an enterprise upgrade request email
@@ -339,10 +345,13 @@ type EmailData struct {
 	Attachment []byte   `json:"attachment,omitempty"`
 	Filename   *string  `json:"filename,omitempty"`
 	// Email-bridge fields. From overrides the default noreply@ sender (e.g. a customer inbox address); Cc/InReplyTo/References/MessageID carry rfc822 threading; PlainText sends text/plain not html.
-	From       *string  `json:"from,omitempty"`
-	Cc         []string `json:"cc,omitempty"`
-	InReplyTo  *string  `json:"in_reply_to,omitempty"`
-	References *string  `json:"references,omitempty"`
-	MessageID  *string  `json:"message_id,omitempty"`
-	PlainText  bool     `json:"plain_text,omitempty"`
+	From *string  `json:"from,omitempty"`
+	Cc   []string `json:"cc,omitempty"`
+	Bcc  []string `json:"bcc,omitempty"`
+	// InReplyToSESMessageID is resolved by the sender to the Message-ID header SES assigned that message, since SES replaces any Message-ID we set.
+	InReplyToSESMessageID *string `json:"in_reply_to_ses_message_id,omitempty"`
+	InReplyTo             *string `json:"in_reply_to,omitempty"`
+	References            *string `json:"references,omitempty"`
+	MessageID             *string `json:"message_id,omitempty"`
+	PlainText             bool    `json:"plain_text,omitempty"`
 }

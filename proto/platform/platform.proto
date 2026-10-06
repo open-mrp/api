@@ -419,3 +419,50 @@ message AuditFieldChange {
   optional string old_value_json = 2;
   optional string new_value_json = 3;
 }
+
+// AccountFollowupService serves the review of drafted account follow-ups. It has no identity: every call is authorized by the review token emailed to the reviewer, and only the token's hash is stored.
+service AccountFollowupService {
+  // Returns the follow-up the token was issued for, with the draft and the registrant's activity. Never changes it.
+  rpc GetAccountFollowupReview(GetAccountFollowupReviewRequest) returns (AccountFollowupReview);
+
+  // Sends the follow-up with the reviewer's (possibly edited) subject and body. Approving one that was already reviewed returns it unchanged.
+  rpc ApproveAccountFollowup(ApproveAccountFollowupRequest) returns (AccountFollowupReview);
+
+  // Declines to send the follow-up. Skipping one that was already reviewed returns it unchanged.
+  rpc SkipAccountFollowup(SkipAccountFollowupRequest) returns (AccountFollowupReview);
+}
+
+message GetAccountFollowupReviewRequest {
+  string token = 1;
+}
+
+message ApproveAccountFollowupRequest {
+  string token = 1;
+  string subject = 2;
+  string body = 3;
+}
+
+message SkipAccountFollowupRequest {
+  string token = 1;
+}
+
+message AccountFollowupReview {
+  string id = 1;
+  // pending_review, sent, or skipped.
+  string status = 2;
+  string registrant_name = 3;
+  string registrant_email = 4;
+  string account_name = 5;
+  string account_id = 6;
+  google.protobuf.Timestamp registered_at = 7;
+  string engagement = 8;
+  string internal_summary = 9;
+  repeated string timeline = 10;
+  string draft_subject = 11;
+  string draft_body = 12;
+  // Set once sent.
+  string final_subject = 13;
+  string final_body = 14;
+  google.protobuf.Timestamp review_expires_at = 15;
+  google.protobuf.Timestamp reviewed_at = 16;
+}

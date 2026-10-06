@@ -150,7 +150,12 @@ pscale_cmd() {
 # The deploy request JSON for a branch name, or nothing when it has none. `show` resolves a branch name
 # to its most recent deploy request, even after --auto-delete-branch has removed the branch.
 dr_json() {
-    pscale_cmd deploy-request show "$PS_DATABASE" "$1" --format json 2>/dev/null || true
+    local out
+    out="$(pscale_cmd deploy-request show "$PS_DATABASE" "$1" --format json 2>/dev/null)" || true
+    # pscale reports "not found" as JSON on stdout too; only a deploy request has a number.
+    if echo "$out" | jq -e '.number' >/dev/null 2>&1; then
+        echo "$out"
+    fi
 }
 
 FIRST_PART_BRANCH="$(planetscale_release_part_branch "$BRANCH" 1)"

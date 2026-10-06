@@ -72,7 +72,12 @@ dr_url() {
 # The deploy request JSON for a branch name, or nothing when it has none. `show` takes a branch name as
 # readily as a number and still resolves after --auto-delete-branch has removed the branch.
 dr_json() {
-    pscale_cmd deploy-request show "$PS_DATABASE" "$1" --format json 2>/dev/null || true
+    local out
+    out="$(pscale_cmd deploy-request show "$PS_DATABASE" "$1" --format json 2>/dev/null)" || true
+    # pscale reports "not found" as JSON on stdout too; only a deploy request has a number.
+    if echo "$out" | jq -e '.number' >/dev/null 2>&1; then
+        echo "$out"
+    fi
 }
 
 dr_field() {

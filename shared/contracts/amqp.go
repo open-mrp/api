@@ -171,4 +171,10 @@ const (
 
 	// PlatformEventAuditLogged is an event that indicates an audit event has been produced and needs to be persisted by the platform-service.
 	PlatformEventAuditLogged AmqpRoutingKey = "platform.event.audit_logged"
+
+	// PlatformCmdScheduleAccountFollowup commands platform-service to schedule the personal follow-up for an account that just self-registered.
+	PlatformCmdScheduleAccountFollowup AmqpRoutingKey = "platform.cmd.schedule_account_followup"
+
+	// PlatformCmdDraftAccountFollowup commands platform-service to draft a due account follow-up for review.
+	PlatformCmdDraftAccountFollowup AmqpRoutingKey = "platform.cmd.draft_account_followup"
 )

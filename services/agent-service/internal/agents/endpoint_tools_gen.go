@@ -2301,7 +2301,7 @@ var EndpointTools = []EndpointToolDescriptor{
 	{
 		Slug:                "list_machines",
 		DisplayName:         "List Machines",
-		Description:         "Returns a paginated list of machines in your account, most recently created first.\n\nThe search term matches the machine name.",
+		Description:         "Returns a paginated list of machines in your account, most recently created first.\n\nThe search term matches the start of the machine name, and a machine named exactly the term is listed\nfirst.",
 		Method:              "GET",
 		RouteTemplate:       "/v1/operations/machines",
 		InputSchema:         "{\"properties\":{\"cursor\":{\"description\":\"Opaque cursor token identifying where the page of results starts.\\n\\nUse the `cursor` value embedded in a previous response's `next_page_url` or `previous_page_url` to fetch the adjacent page. Omit to start from the first page.\",\"type\":\"string\"},\"include\":{\"description\":\"Sub-objects to expand in the response. These nested objects are returned as null by default; pass the field keys you need (e.g. \\\"parent_account\\\") to get their full objects inline. Expand to get authoritative data rather than inferring relationships from names.\",\"items\":{\"enum\":[\"department\"],\"type\":\"string\"},\"type\":\"array\"},\"limit\":{\"description\":\"Maximum number of results to return in a single page.\",\"type\":\"integer\"},\"q\":{\"description\":\"Free-text search term used to filter results.\\n\\nWhich fields are matched against the term varies by endpoint.\",\"type\":\"string\"}},\"type\":\"object\"}",

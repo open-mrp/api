@@ -151,33 +151,72 @@ func NewFulltextSearch(s *string) FulltextSearch {
 	return FulltextSearch{Fulltext: ft, Fulltext2: ft}
 }
 
-// ngramTokenSize is the MySQL server's ngram_token_size (default 2). An ngram FULLTEXT index tokenizes
-// text into overlapping tokens of this length, so a query shorter than it has no token to match and
-// must fall back to LIKE.
+// ngramTokenSize is the MySQL server's ngram_token_size (default 2).
 const ngramTokenSize = 2
 
-// NewNgramSearch formats a search term for a MySQL ngram FULLTEXT index (substring search). A term of
-// at least ngramTokenSize characters becomes a boolean-mode phrase ("term"), which forces the ngram
-// tokens to appear consecutively — matching the term as a substring anywhere in the column. Shorter
-// terms have no ngram token and fall back to LIKE.
+// ngramStopwords are the two-letter words on InnoDB's default stopword list that hold neither "a" nor "i".
+var ngramStopwords = map[string]bool{"be": true, "by": true, "de": true, "en": true, "of": true, "on": true, "or": true, "to": true}
+
+// NgramSubstring finds a term anywhere in a column that has an ngram FULLTEXT index: the index narrows
+// to rows holding every token of the term, and LIKE confirms the term itself.
 //
-// Inside a phrase every boolean operator (+, -, *, …) is literal, so — unlike NewFulltextSearch — the
-// term must NOT be run through SanitizeFulltextBoolean: stripping the hyphen from a pick number like
-// "PICK-002" changes its ngram tokens and matches nothing. The only character that must go is the
-// double-quote, which would close the phrase early. A term that is all punctuation stays a (possibly
-// empty) phrase, which matches nothing — never dropping the filter so the list returns every row.
-func NewNgramSearch(s *string) FulltextSearch {
-	if s == nil || *s == "" {
-		return FulltextSearch{}
-	}
-	if len([]rune(*s)) < ngramTokenSize {
-		return FulltextSearch{
-			Like: sql.NullString{String: "%" + EscapeLike(*s) + "%", Valid: true},
+// It never asks the index for a phrase: InnoDB verifies a phrase against token positions it stored, and
+// on production those disagree with some rows, which a phrase search then silently misses.
+type NgramSubstring struct {
+	// Tokens is a boolean-mode query requiring each token of the term the index can hold, or "" when it
+	// can hold none of them.
+	Tokens string
+	// Like matches the term anywhere in the column.
+	Like string
+}
+
+// NewNgramSubstring builds the search for a non-empty term.
+func NewNgramSubstring(term string) NgramSubstring {
+	runes := []rune(strings.ToLower(term))
+	seen := map[string]bool{}
+	var tokens []string
+	for i := 0; i+ngramTokenSize <= len(runes); i++ {
+		token := string(runes[i : i+ngramTokenSize])
+		if !seen[token] && ngramIndexable(token) {
+			seen[token] = true
+			tokens = append(tokens, "+"+token)
 		}
 	}
-	phrase := `"` + strings.ReplaceAll(*s, `"`, "") + `"`
-	ft := sql.NullString{String: phrase, Valid: true}
-	return FulltextSearch{Fulltext: ft, Fulltext2: ft}
+	return NgramSubstring{Tokens: strings.Join(tokens, " "), Like: "%" + EscapeLike(term) + "%"}
+}
+
+// ngramIndexable reports whether the index can hold token, so requiring it does not exclude every row.
+// The server's stopwords keep out any token containing "a" or "i" (themselves stopwords) and the
+// two-letter stopwords; a token with anything but a letter or digit is whitespace the parser skips or
+// an operator in boolean mode.
+func ngramIndexable(token string) bool {
+	for _, r := range token {
+		if (r < '0' || r > '9') && (r < 'b' || r > 'z' || r == 'i') {
+			return false
+		}
+	}
+	return !ngramStopwords[token]
+}
+
+// Indexed reports whether the index can narrow the search; without it, only the LIKE remains.
+func (s NgramSubstring) Indexed() bool {
+	return s.Tokens != ""
+}
+
+// Where is the predicate that col contains the term; Args binds its placeholders.
+func (s NgramSubstring) Where(col string) string {
+	if !s.Indexed() {
+		return col + " LIKE ?"
+	}
+	return "MATCH(" + col + ") AGAINST(? IN BOOLEAN MODE) AND " + col + " LIKE ?"
+}
+
+// Args are the values for Where's placeholders, in order.
+func (s NgramSubstring) Args() []any {
+	if !s.Indexed() {
+		return []any{s.Like}
+	}
+	return []any{s.Tokens, s.Like}
 }
 
 func StringFromNullString(ns sql.NullString) *string {

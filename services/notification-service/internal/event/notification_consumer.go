@@ -153,6 +153,9 @@ func (c *NotificationConsumer) handleSendEmail(ctx context.Context, messageID st
 		TemplateID: payload.TemplateID,
 		AccountID:  payload.AccountID,
 		SentByID:   payload.SentByID,
+		From:       payload.From,
+		Bcc:        payload.Bcc,
+		PlainText:  payload.TemplateID.IsPlainText(),
 	}
 
 	// Pass through attachment fields if present.
@@ -191,12 +194,53 @@ func (c *NotificationConsumer) handleSendEmail(ctx context.Context, messageID st
 		log.Printf("Failed to publish email log event: %v", err)
 	}
 
+	if payload.ThreadNote != nil {
+		c.sendThreadNote(ctx, *sesMessageID, payload)
+	}
+
 	// Retired: the email_sent status event had no external consumer; publishEmailLogEvent above records the send.
 	// if err := c.publishEmailStatus(ctx, payload.AccountID, true, ""); err != nil {
 	// 	log.Printf("Failed to publish email success status: %v", err)
 	// }
 
 	return nil
+}
+
+// sendThreadNote sends the payload's internal note as a reply to the email just sent. Its failure is logged and swallowed: the parent email has already gone out, and failing the message would redeliver it and send that email twice.
+func (c *NotificationConsumer) sendThreadNote(ctx context.Context, parentSESMessageID string, payload messaging.EmailSendData) {
+	ctx, span := c.tracer.Start(ctx, "consumer.send_thread_note",
+		trace.WithAttributes(attribute.String("email.template_id", string(payload.ThreadNote.TemplateID))),
+	)
+	defer span.End()
+
+	note := payload.ThreadNote
+	body, apiErr := c.templateRenderer.RenderTemplate(ctx, note.TemplateID, note.Params)
+	if apiErr != nil {
+		span.RecordError(apiErr)
+		log.Printf("Failed to render thread note template %s: %v", note.TemplateID, apiErr)
+		return
+	}
+
+	sesMessageID, apiErr := c.notificationSvc.SendEmail(ctx, domain.EmailSendData{
+		To:                    note.To,
+		Subject:               "Re: " + payload.Subject,
+		Body:                  body,
+		TemplateID:            note.TemplateID,
+		AccountID:             payload.AccountID,
+		SentByID:              payload.SentByID,
+		PlainText:             note.TemplateID.IsPlainText(),
+		InReplyToSESMessageID: &parentSESMessageID,
+	})
+	if apiErr != nil {
+		span.RecordError(apiErr)
+		log.Printf("Failed to send thread note for %s: %v", parentSESMessageID, apiErr)
+		return
+	}
+
+	notePayload := messaging.EmailSendData{To: note.To, Subject: "Re: " + payload.Subject, AccountID: payload.AccountID, SentByID: payload.SentByID}
+	if err := c.publishEmailLogEvent(ctx, *sesMessageID, notePayload); err != nil {
+		log.Printf("Failed to publish thread note log event: %v", err)
+	}
 }
 
 // logFailedEmail records a send that failed so it is visible in the email log instead of disappearing. The caller returns the original send error either way, so a logging failure is reported and swallowed rather than masking why the email failed.

@@ -23,6 +23,12 @@ const (
 	// PlatformEventAuditLogQueue carries audit events produced by application services and needs to be persisted by platform-service.
 	PlatformEventAuditLogQueue = "platform_event_audit_log"
 
+	// PlatformCmdScheduleAccountFollowupQueue carries new self-serve registrations to platform-service, which schedules each one's follow-up.
+	PlatformCmdScheduleAccountFollowupQueue = "platform_cmd_schedule_account_followup"
+
+	// PlatformCmdDraftAccountFollowupQueue carries due account follow-ups to platform-service's drafter. Drafting calls an LLM, so it runs off the scheduler's lease.
+	PlatformCmdDraftAccountFollowupQueue = "platform_cmd_draft_account_followup"
+
 	// CoreCmdPurgeAccountDataQueue carries purge-account-data commands to the core-service. Messages on this queue trigger deletion of all account-scoped data across ~50 tables for a deleted sandbox account.
 	CoreCmdPurgeAccountDataQueue = "core_cmd_purge_account_data"
 
@@ -175,6 +181,22 @@ type EmailSendData struct {
 	AttachmentFilename *string `json:"attachment_filename,omitempty"`
 	// AttachmentContentType is the MIME content type for the attachment.
 	AttachmentContentType *string `json:"attachment_content_type,omitempty"`
+	// From sends the email as this platform address (e.g. "Dane <dane@openmrp.ai>") instead of the default noreply@ sender. Only addresses on a platform domain are honored; anything else falls back to the default so a payload can never send as a tenant's domain.
+	From *string `json:"from,omitempty"`
+	// Bcc receives a copy without appearing in the headers.
+	Bcc []string `json:"bcc,omitempty"`
+	// ThreadNote, when set, is sent after the email succeeds as a reply to it, so the note sits in the same thread as the sent message in its recipients' inboxes.
+	ThreadNote *EmailThreadNote `json:"thread_note,omitempty"`
+}
+
+// EmailThreadNote is an internal email threaded under the email it accompanies.
+type EmailThreadNote struct {
+	// To is the list of note recipients. They should also receive the parent email (To or Bcc), or there is no thread to land in.
+	To []string `json:"to"`
+	// TemplateID identifies which template renders the note.
+	TemplateID constants.EmailTemplate `json:"template_id"`
+	// Params are the note template's parameters.
+	Params map[string]any `json:"params,omitempty"`
 }
 
 // EmailLogData is the payload for NotificationEventEmailLogQueue messages. It carries the metadata needed to create an email audit record after the notification-service has successfully dispatched an email through SES.
@@ -473,4 +495,28 @@ type RealtimeDeliveryData struct {
 	Sequence       int64           `json:"sequence,omitempty"`
 	UnreadCount    *int64          `json:"unread_count,omitempty"`
 	Payload        json.RawMessage `json:"payload,omitempty"`
+}
+
+// AccountFollowupScheduleData is the payload for PlatformCmdScheduleAccountFollowupQueue messages: a self-serve registration that just completed.
+type AccountFollowupScheduleData struct {
+	// AccountID is the registered company account.
+	AccountID string `json:"account_id"`
+	// SandboxAccountID is the sandbox created alongside it, whose activity counts toward the follow-up too.
+	SandboxAccountID *string `json:"sandbox_account_id,omitempty"`
+	// UserID is the registrant.
+	UserID string `json:"user_id"`
+	// AccountName is the company name the registrant entered.
+	AccountName string `json:"account_name"`
+	// RegistrantName is the registrant's full name.
+	RegistrantName string `json:"registrant_name"`
+	// RegistrantEmail is where the follow-up goes.
+	RegistrantEmail string `json:"registrant_email"`
+	// RegisteredAt is when the registration completed. The follow-up is scheduled relative to it, not to when this message is consumed.
+	RegisteredAt time.Time `json:"registered_at"`
+}
+
+// AccountFollowupDraftData is the payload for PlatformCmdDraftAccountFollowupQueue messages.
+type AccountFollowupDraftData struct {
+	// FollowupID is the account_followup row to draft.
+	FollowupID string `json:"followup_id"`
 }

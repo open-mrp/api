@@ -250,7 +250,7 @@ func (r *pickRepoImpl) chooseDrive(ctx context.Context, q *pickListQuery) *apier
 	if buyers := q.BuyerIDs; buyers != nil && len(buyers) == 0 {
 		return nil
 	}
-	if q.Search.Phrase != "" {
+	if q.Search.hasPhrase() {
 		ids, apiErr := r.phraseMatches(ctx, *q)
 		if apiErr != nil {
 			return apiErr

@@ -18,7 +18,8 @@ type ListMachinesRequest struct {
 
 // Returns a paginated list of machines in your account, most recently created first.
 //
-// The search term matches the machine name.
+// The search term matches the start of the machine name, and a machine named exactly the term is listed
+// first.
 type ListMachinesEndpoint struct{}
 
 func (e *ListMachinesEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListMachinesRequest, *apiresource.List[apiresource.Machine]] {

@@ -762,3 +762,192 @@ var AuditService_ServiceDesc = grpc.ServiceDesc{
 	Streams:  []grpc.StreamDesc{},
 	Metadata: "platform/platform.proto",
 }
+
+const (
+	AccountFollowupService_GetAccountFollowupReview_FullMethodName = "/platform.AccountFollowupService/GetAccountFollowupReview"
+	AccountFollowupService_ApproveAccountFollowup_FullMethodName   = "/platform.AccountFollowupService/ApproveAccountFollowup"
+	AccountFollowupService_SkipAccountFollowup_FullMethodName      = "/platform.AccountFollowupService/SkipAccountFollowup"
+)
+
+// AccountFollowupServiceClient is the client API for AccountFollowupService service.
+//
+// For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
+//
+// AccountFollowupService serves the review of drafted account follow-ups. It has no identity: every call is authorized by the review token emailed to the reviewer, and only the token's hash is stored.
+type AccountFollowupServiceClient interface {
+	// Returns the follow-up the token was issued for, with the draft and the registrant's activity. Never changes it.
+	GetAccountFollowupReview(ctx context.Context, in *GetAccountFollowupReviewRequest, opts ...grpc.CallOption) (*AccountFollowupReview, error)
+	// Sends the follow-up with the reviewer's (possibly edited) subject and body. Approving one that was already reviewed returns it unchanged.
+	ApproveAccountFollowup(ctx context.Context, in *ApproveAccountFollowupRequest, opts ...grpc.CallOption) (*AccountFollowupReview, error)
+	// Declines to send the follow-up. Skipping one that was already reviewed returns it unchanged.
+	SkipAccountFollowup(ctx context.Context, in *SkipAccountFollowupRequest, opts ...grpc.CallOption) (*AccountFollowupReview, error)
+}
+
+type accountFollowupServiceClient struct {
+	cc grpc.ClientConnInterface
+}
+
+func NewAccountFollowupServiceClient(cc grpc.ClientConnInterface) AccountFollowupServiceClient {
+	return &accountFollowupServiceClient{cc}
+}
+
+func (c *accountFollowupServiceClient) GetAccountFollowupReview(ctx context.Context, in *GetAccountFollowupReviewRequest, opts ...grpc.CallOption) (*AccountFollowupReview, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(AccountFollowupReview)
+	err := c.cc.Invoke(ctx, AccountFollowupService_GetAccountFollowupReview_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *accountFollowupServiceClient) ApproveAccountFollowup(ctx context.Context, in *ApproveAccountFollowupRequest, opts ...grpc.CallOption) (*AccountFollowupReview, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(AccountFollowupReview)
+	err := c.cc.Invoke(ctx, AccountFollowupService_ApproveAccountFollowup_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *accountFollowupServiceClient) SkipAccountFollowup(ctx context.Context, in *SkipAccountFollowupRequest, opts ...grpc.CallOption) (*AccountFollowupReview, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(AccountFollowupReview)
+	err := c.cc.Invoke(ctx, AccountFollowupService_SkipAccountFollowup_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+// AccountFollowupServiceServer is the server API for AccountFollowupService service.
+// All implementations must embed UnimplementedAccountFollowupServiceServer
+// for forward compatibility.
+//
+// AccountFollowupService serves the review of drafted account follow-ups. It has no identity: every call is authorized by the review token emailed to the reviewer, and only the token's hash is stored.
+type AccountFollowupServiceServer interface {
+	// Returns the follow-up the token was issued for, with the draft and the registrant's activity. Never changes it.
+	GetAccountFollowupReview(context.Context, *GetAccountFollowupReviewRequest) (*AccountFollowupReview, error)
+	// Sends the follow-up with the reviewer's (possibly edited) subject and body. Approving one that was already reviewed returns it unchanged.
+	ApproveAccountFollowup(context.Context, *ApproveAccountFollowupRequest) (*AccountFollowupReview, error)
+	// Declines to send the follow-up. Skipping one that was already reviewed returns it unchanged.
+	SkipAccountFollowup(context.Context, *SkipAccountFollowupRequest) (*AccountFollowupReview, error)
+	mustEmbedUnimplementedAccountFollowupServiceServer()
+}
+
+// UnimplementedAccountFollowupServiceServer must be embedded to have
+// forward compatible implementations.
+//
+// NOTE: this should be embedded by value instead of pointer to avoid a nil
+// pointer dereference when methods are called.
+type UnimplementedAccountFollowupServiceServer struct{}
+
+func (UnimplementedAccountFollowupServiceServer) GetAccountFollowupReview(context.Context, *GetAccountFollowupReviewRequest) (*AccountFollowupReview, error) {
+	return nil, status.Error(codes.Unimplemented, "method GetAccountFollowupReview not implemented")
+}
+func (UnimplementedAccountFollowupServiceServer) ApproveAccountFollowup(context.Context, *ApproveAccountFollowupRequest) (*AccountFollowupReview, error) {
+	return nil, status.Error(codes.Unimplemented, "method ApproveAccountFollowup not implemented")
+}
+func (UnimplementedAccountFollowupServiceServer) SkipAccountFollowup(context.Context, *SkipAccountFollowupRequest) (*AccountFollowupReview, error) {
+	return nil, status.Error(codes.Unimplemented, "method SkipAccountFollowup not implemented")
+}
+func (UnimplementedAccountFollowupServiceServer) mustEmbedUnimplementedAccountFollowupServiceServer() {
+}
+func (UnimplementedAccountFollowupServiceServer) testEmbeddedByValue() {}
+
+// UnsafeAccountFollowupServiceServer may be embedded to opt out of forward compatibility for this service.
+// Use of this interface is not recommended, as added methods to AccountFollowupServiceServer will
+// result in compilation errors.
+type UnsafeAccountFollowupServiceServer interface {
+	mustEmbedUnimplementedAccountFollowupServiceServer()
+}
+
+func RegisterAccountFollowupServiceServer(s grpc.ServiceRegistrar, srv AccountFollowupServiceServer) {
+	// If the following call panics, it indicates UnimplementedAccountFollowupServiceServer was
+	// embedded by pointer and is nil.  This will cause panics if an
+	// unimplemented method is ever invoked, so we test this at initialization
+	// time to prevent it from happening at runtime later due to I/O.
+	if t, ok := srv.(interface{ testEmbeddedByValue() }); ok {
+		t.testEmbeddedByValue()
+	}
+	s.RegisterService(&AccountFollowupService_ServiceDesc, srv)
+}
+
+func _AccountFollowupService_GetAccountFollowupReview_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetAccountFollowupReviewRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AccountFollowupServiceServer).GetAccountFollowupReview(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: AccountFollowupService_GetAccountFollowupReview_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AccountFollowupServiceServer).GetAccountFollowupReview(ctx, req.(*GetAccountFollowupReviewRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _AccountFollowupService_ApproveAccountFollowup_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ApproveAccountFollowupRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AccountFollowupServiceServer).ApproveAccountFollowup(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: AccountFollowupService_ApproveAccountFollowup_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AccountFollowupServiceServer).ApproveAccountFollowup(ctx, req.(*ApproveAccountFollowupRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _AccountFollowupService_SkipAccountFollowup_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(SkipAccountFollowupRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AccountFollowupServiceServer).SkipAccountFollowup(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: AccountFollowupService_SkipAccountFollowup_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AccountFollowupServiceServer).SkipAccountFollowup(ctx, req.(*SkipAccountFollowupRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+// AccountFollowupService_ServiceDesc is the grpc.ServiceDesc for AccountFollowupService service.
+// It's only intended for direct use with grpc.RegisterService,
+// and not to be introspected or modified (even as a copy)
+var AccountFollowupService_ServiceDesc = grpc.ServiceDesc{
+	ServiceName: "platform.AccountFollowupService",
+	HandlerType: (*AccountFollowupServiceServer)(nil),
+	Methods: []grpc.MethodDesc{
+		{
+			MethodName: "GetAccountFollowupReview",
+			Handler:    _AccountFollowupService_GetAccountFollowupReview_Handler,
+		},
+		{
+			MethodName: "ApproveAccountFollowup",
+			Handler:    _AccountFollowupService_ApproveAccountFollowup_Handler,
+		},
+		{
+			MethodName: "SkipAccountFollowup",
+			Handler:    _AccountFollowupService_SkipAccountFollowup_Handler,
+		},
+	},
+	Streams:  []grpc.StreamDesc{},
+	Metadata: "platform/platform.proto",
+}

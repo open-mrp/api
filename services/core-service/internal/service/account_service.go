@@ -557,6 +557,7 @@ func (s *accountSvcImpl) GetAccountByStripeCustomerID(ctx context.Context, strip
 //     e. Create a sandbox account via the sandbox mediator.
 //     f. Enqueue a seed-data message for the sandbox.
 //     g. Enqueue an admin notification email for the new registration.
+//     h. Enqueue the registrant's follow-up for platform-service to schedule.
 //  5. Return the production account ID and sandbox account ID.
 func (s *accountSvcImpl) CompleteRegistration(ctx context.Context, input domain.CompleteRegistrationInput) (*domain.CompleteRegistrationOutput, *apierror.APIError) {
 	ctx, span := accountSvcTracer.Start(ctx, "service.account.complete_registration")
@@ -692,6 +693,29 @@ func (s *accountSvcImpl) CompleteRegistration(ctx context.Context, input domain.
 			Payload:     emailMsg,
 		}); err != nil {
 			return apierror.NewInternalError(err, "Failed to create registration alert outbox message.")
+		}
+
+		// 8. Have platform-service schedule the registrant's personal follow-up
+		followupJSON, err := json.Marshal(messaging.AccountFollowupScheduleData{
+			AccountID:        accountID,
+			SandboxAccountID: &sandboxAccountID,
+			UserID:           input.UserID,
+			AccountName:      input.AccountData.AccountName,
+			RegistrantName:   input.UserName,
+			RegistrantEmail:  input.UserEmail,
+			RegisteredAt:     time.Now().UTC(),
+		})
+		if err != nil {
+			return apierror.NewInternalError(err, "Failed to marshal account follow-up schedule data.")
+		}
+		if _, err := f.NewOutboxRepo().Create(txCtx, messaging.OutboxMessageInput{
+			ServiceName: domain.ServiceName,
+			MessageType: string(contracts.PlatformCmdScheduleAccountFollowup),
+			Destination: messaging.ApplicationExchange,
+			RoutingKey:  string(contracts.PlatformCmdScheduleAccountFollowup),
+			Payload:     contracts.AmqpMessage{Data: followupJSON},
+		}); err != nil {
+			return apierror.NewInternalError(err, "Failed to create account follow-up outbox message.")
 		}
 
 		return nil

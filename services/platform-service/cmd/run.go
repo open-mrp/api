@@ -11,6 +11,7 @@ import (
 	"github.com/open-mrp/api/services/platform-service/internal/domain"
 	"github.com/open-mrp/api/services/platform-service/internal/event"
 	"github.com/open-mrp/api/services/platform-service/internal/infrastructure/grpc"
+	"github.com/open-mrp/api/services/platform-service/internal/infrastructure/llm"
 	"github.com/open-mrp/api/services/platform-service/internal/infrastructure/repository"
 	"github.com/open-mrp/api/services/platform-service/internal/infrastructure/sqlc"
 	"github.com/open-mrp/api/services/platform-service/internal/service"
@@ -103,6 +104,49 @@ func Run(
 		return err
 	}
 
+	// Account follow-ups: registrations are always recorded; drafting runs only when enabled.
+	var followupDrafter domain.AccountFollowupDrafter
+	if cfg.AccountFollowupEnabled {
+		followupDrafter, err = llm.NewAccountFollowupDrafter(&llm.AccountFollowupDrafterConfig{
+			StripeSecretKey: cfg.StripeSecretKey,
+			Model:           cfg.AccountFollowupModel,
+		})
+		if err != nil {
+			return err
+		}
+	}
+	followupSvc, err := service.NewAccountFollowupSvc(&service.AccountFollowupSvcConfig{
+		Repos:           repository.NewRepoFactory(queries),
+		Tx:              service.NewTransactionManager(dbpool, queries),
+		ReviewerEmail:   cfg.AccountFollowupReviewerEmail,
+		ReviewBaseURL:   cfg.AccountFollowupReviewBaseURL,
+		Drafter:         followupDrafter,
+		Delay:           cfg.AccountFollowupDelay,
+		ExcludedDomains: cfg.AccountFollowupExcludedDomains,
+	})
+	if err != nil {
+		return err
+	}
+	followupConsumer := event.NewAccountFollowupConsumer(rabbitmq, followupSvc, inboxRepo, workerTracer.Tracer(domain.ServiceName+".account_followup_consumer"))
+	if err := followupConsumer.ListenSchedule(ctx); err != nil {
+		return err
+	}
+	if cfg.AccountFollowupEnabled {
+		if err := followupConsumer.ListenDraft(ctx); err != nil {
+			return err
+		}
+		followupScheduler, err := service.NewAccountFollowupScheduler(&service.AccountFollowupSchedulerConfig{
+			Svc:          followupSvc,
+			Lease:        leaseSvc,
+			PollInterval: cfg.AccountFollowupPollInterval,
+		})
+		if err != nil {
+			return err
+		}
+		followupScheduler.Start(ctx)
+		defer followupScheduler.Stop()
+	}
+
 	// Start the outbox enqueuer to publish messages from the outbox table
 	outboxRepo := repository.NewOutboxEnqueuerRepo(dbpool, queries)
 	enqueuer, err := messaging.NewEnqueuer(&messaging.EnqueuerConfig{ServiceName: domain.ServiceName, PlatformMode: cfg.PlatformMode}, outboxRepo, rabbitmq, leaseSvc)
@@ -155,6 +199,7 @@ func Run(
 	grpc.NewGRPCHandler(server.Server(), idempotencyRepo)
 	grpc.NewLoggingHandler(server.Server(), loggingSvc)
 	grpc.NewAuditHandler(server.Server(), auditSvc)
+	grpc.NewAccountFollowupHandler(server.Server(), followupSvc)
 
 	logger.Info("Platform service starting", "port", cfg.Port)
 

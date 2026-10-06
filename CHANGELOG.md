@@ -1,5 +1,39 @@
 # Changelog
 
+## [2.21.1](https://github.com/open-mrp/api/compare/v2.21.0...v2.21.1) (2026-10-06)
+
+
+### Bug Fixes
+
+* **search:** find every match in SKU, pick and machine search ([#265](https://github.com/open-mrp/api/issues/265)) ([e2e1fc7](https://github.com/open-mrp/api/commit/e2e1fc73a18caaf97c6c2a808e0492fcf1c921db))
+
+## [2.21.0](https://github.com/open-mrp/api/compare/v2.20.4...v2.21.0) (2026-10-06)
+
+
+### Features
+
+* **notification:** send platform mail as a person, with BCC and a threaded internal note ([#251](https://github.com/open-mrp/api/issues/251)) ([ac29494](https://github.com/open-mrp/api/commit/ac294943cddee0bb39c48aeb008b5574816b0b3c))
+* **platform:** draft a personal follow-up for each new registrant, sent after review ([#252](https://github.com/open-mrp/api/issues/252)) ([3cf9124](https://github.com/open-mrp/api/commit/3cf9124e62f21b126b82939e2670f697ddef3a34))
+
+
+### Bug Fixes
+
+* **platform:** drop the reply line from account follow-ups ([#264](https://github.com/open-mrp/api/issues/264)) ([fac3412](https://github.com/open-mrp/api/commit/fac3412e2fbd5b5edaee27061f1ec801c1f23e01))
+
+## [2.20.4](https://github.com/open-mrp/api/compare/v2.20.3...v2.20.4) (2026-10-06)
+
+
+### Performance Improvements
+
+* **sales:** bound buyer summary reads and recompute batches by lines ([#261](https://github.com/open-mrp/api/issues/261)) ([5005714](https://github.com/open-mrp/api/commit/5005714d2f03426ba891adba3d6d7c39c0b23d93))
+
+## [2.20.3](https://github.com/open-mrp/api/compare/v2.20.2...v2.20.3) (2026-10-06)
+
+
+### Bug Fixes
+
+* **release:** treat a missing deploy request as missing ([#259](https://github.com/open-mrp/api/issues/259)) ([7d0c516](https://github.com/open-mrp/api/commit/7d0c516b948672df4e9b91c3ecae7d54b6099e3b))
+
 ## [2.20.2](https://github.com/open-mrp/api/compare/v2.20.1...v2.20.2) (2026-10-06)
 
 

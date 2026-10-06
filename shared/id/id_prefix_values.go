@@ -53,6 +53,7 @@ const (
 	VocFormula      = "fm"
 	VocFreight      = "fr"
 	VocFlow         = "fw"
+	VocFollowup     = "fu"
 	VocGeolocation  = "gl"
 	VocGroup        = "gp"
 	VocIdempotency  = "ip"
@@ -454,11 +455,14 @@ var (
 	// Email-related prefix values
 	EmailLogIDPrefix       = composePrefix(VocEmail, VocLog)
 	EmailRecipientIDPrefix = composePrefix(VocEmail, VocRecipient)
-	OrderEmailIDPrefix     = composePrefix(VocOrder, VocEmail)
-	EmailDomainIDPrefix    = composePrefix(VocEmail, VocDomain)
-	EmailInboxIDPrefix     = composePrefix(VocEmail, VocInbox)
-	EmailMessageIDPrefix   = composePrefix(VocEmail, VocMessage)
-	EmailSenderIDPrefix    = composePrefix(VocEmail, VocSender)
+
+	// AccountFollowupIDPrefix identifies the personal follow-up a new registrant receives after signing up.
+	AccountFollowupIDPrefix = composePrefix(VocAccount, VocFollowup)
+	OrderEmailIDPrefix      = composePrefix(VocOrder, VocEmail)
+	EmailDomainIDPrefix     = composePrefix(VocEmail, VocDomain)
+	EmailInboxIDPrefix      = composePrefix(VocEmail, VocInbox)
+	EmailMessageIDPrefix    = composePrefix(VocEmail, VocMessage)
+	EmailSenderIDPrefix     = composePrefix(VocEmail, VocSender)
 
 	// Inventory-related prefix values
 	InventoryChangeLogIDPrefix  = composePrefix(VocInventory, VocChange, VocLog)

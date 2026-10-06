@@ -696,7 +696,7 @@ func TestInvoiceParity_StatementOfAccountEmail(t *testing.T) {
 	require.NoError(t, err)
 	requireStatus(t, 202, status, body)
 
-	email := queuedEmail(t, recipient)
+	email := queuedSendEmail(t, recipient)
 	attachment, ok := email["attachment_data"].(string)
 	require.True(t, ok, "the statement is attached: %v", email["attachment_filename"])
 	raw, err := base64.StdEncoding.DecodeString(attachment)

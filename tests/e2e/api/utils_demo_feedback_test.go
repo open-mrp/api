@@ -18,8 +18,8 @@ const (
 	submitFeedbackPath = "/v1/core/actions/submit-feedback"
 )
 
-// queuedEmail is the one send-email command the outbox holds whose payload contains marker.
-func queuedEmail(t *testing.T, marker string) map[string]any {
+// queuedSendEmail is the one send-email command the outbox holds whose payload contains marker.
+func queuedSendEmail(t *testing.T, marker string) map[string]any {
 	t.Helper()
 	rows, err := authDB(t).Query(`
 		SELECT CAST(FROM_BASE64(JSON_UNQUOTE(JSON_EXTRACT(payload, '$.data'))) AS CHAR)
@@ -82,7 +82,7 @@ func TestUtils_RequestDemoNeedsNoSignIn(t *testing.T) {
 	})
 	requireStatus(t, 200, status, body)
 
-	email := queuedEmail(t, company)
+	email := queuedSendEmail(t, company)
 	assert.Equal(t, "demo_request", email["template_id"])
 	assert.Equal(t, "Demo Requester", emailParam(t, email, "Name"))
 	assert.Equal(t, "demo@e2e-test.openmrp.ai", emailParam(t, email, "Email"))
@@ -106,7 +106,7 @@ func TestUtils_SubmitFeedbackCarriesTheSendersAddress(t *testing.T) {
 	var userEmail string
 	require.NoError(t, authDB(t).QueryRow("SELECT email FROM user WHERE id = ?", SeedUserID).Scan(&userEmail))
 
-	email := queuedEmail(t, answer)
+	email := queuedSendEmail(t, answer)
 	assert.Equal(t, "dashboard_feedback", email["template_id"])
 	assert.Equal(t, userEmail, emailParam(t, email, "UserEmail"))
 	assert.Equal(t, SeedUserID, emailParam(t, email, "ActorID"))
@@ -133,6 +133,6 @@ func TestUtils_SubmitFeedbackFromAnAPIKey(t *testing.T) {
 	require.NoError(t, err)
 	requireStatus(t, 200, status, body)
 
-	email := queuedEmail(t, answer)
+	email := queuedSendEmail(t, answer)
 	assert.Equal(t, "", emailParam(t, email, "UserEmail"))
 }

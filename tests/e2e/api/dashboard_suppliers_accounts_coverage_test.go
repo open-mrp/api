@@ -676,7 +676,7 @@ func TestDashAccounts_CreateReplaySendsOneWelcomeEmail(t *testing.T) {
 	requireStatus(t, 201, replay.StatusCode, replay.Body)
 	assert.Equal(t, parseJSON(first.Body), parseJSON(replay.Body), "the replay is the first response")
 	assert.Equal(t, "true", replay.Header.Get("Idempotent-Replayed"))
-	assert.Equal(t, "new_user_welcome", queuedEmail(t, email)["template_id"], "exactly one welcome email")
+	assert.Equal(t, "new_user_welcome", queuedSendEmail(t, email)["template_id"], "exactly one welcome email")
 
 	body["name"] = uniqueName("e2e-dash-invite-changed")
 	status, resp, err := apiClient.Post(accountUsersPath, body, key)

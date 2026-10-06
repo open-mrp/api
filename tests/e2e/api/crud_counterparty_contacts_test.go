@@ -335,7 +335,7 @@ func TestCounterpartyContacts_Create(t *testing.T) {
 			if kind.welcomed {
 				assert.Equal(t, globalCustomerRoleID, roleID.String, "a customer's contact gets the customer role")
 
-				welcome := queuedEmail(t, email)
+				welcome := queuedSendEmail(t, email)
 				assert.Equal(t, []any{email}, welcome["to"])
 				assert.Equal(t, "new_user_welcome", welcome["template_id"])
 				assert.Contains(t, welcome["subject"], "Welcome to the ")
@@ -718,7 +718,7 @@ func TestCounterpartyContacts_OwnTeamHasNoNotificationTypes(t *testing.T) {
 	assertNilField(t, created, "notification_types")
 	assert.Zero(t, storedPreferenceCount(t, jsonField(created, "id")))
 
-	welcome := queuedEmail(t, email)
+	welcome := queuedSendEmail(t, email)
 	assert.Equal(t, "Welcome to OpenMRP", welcome["subject"])
 	assert.Equal(t, envOr("E2E_FRONTEND_URL", "http://localhost:4200")+"/auth/login", emailParam(t, welcome, "LoginLink"))
 }

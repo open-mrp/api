@@ -356,6 +356,12 @@ func validateMultipleOf(fl validator.FieldLevel) bool {
 	return math.Abs(ratio-math.Round(ratio)) < 1e-9
 }
 
+// RegisterWrappedTypes enforces the field tags inside field.Optional[T] and field.Clearable[T] wrappers whose T is
+// defined outside shared/field. Call it from the package that defines T, at init.
+func RegisterWrappedTypes(wrappers ...any) {
+	field.RegisterWrappedTypes(validate, wrappers...)
+}
+
 // Validate runs all struct-tag validations on v and returns a user-facing [apierror.APIError] on failure (nil on success). When a single field fails, the error's Param is set to that field's JSON/form/query name so the client can highlight the offending input. When multiple fields fail, the error message lists all violations and Param is set to the first failing field.
 func Validate(v any) *apierror.APIError {
 	err := validate.Struct(v)
@@ -577,16 +583,19 @@ func nestedFieldPath(rt reflect.Type, namespace string) (string, bool) {
 		if !found {
 			return "", false
 		}
-		field, found := rt.FieldByName(name)
+		sf, found := rt.FieldByName(name)
 		if !found {
 			return "", false
 		}
 		// Embedded structs are flattened into their parent's JSON.
-		if !field.Anonymous || index != "" {
+		if !sf.Anonymous || index != "" {
 			parts = append(parts, meta.name+index)
 		}
 
-		rt = field.Type
+		rt = sf.Type
+		if inner, ok := field.InnerType(rt); ok {
+			rt = inner
+		}
 		for range strings.Count(index, "[") {
 			for rt.Kind() == reflect.Pointer {
 				rt = rt.Elem()

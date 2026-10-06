@@ -33,6 +33,24 @@ func RegisterValidator(v *validator.Validate) {
 	}
 }
 
+// RegisterWrappedTypes does what RegisterValidator does for wrappers whose T lives outside this package, such as a
+// request's nested input struct, so the tags on T's fields are enforced once the wrapper is set.
+func RegisterWrappedTypes(v *validator.Validate, wrappers ...any) {
+	v.RegisterCustomTypeFunc(patchWrappedCustomType, wrappers...)
+}
+
+// InnerType is the T of a field.Optional[T] or field.Clearable[T]; ok is false for any other type.
+func InnerType(typ reflect.Type) (reflect.Type, bool) {
+	if patchWrapperStructType(typ) == nil || typ.Kind() == reflect.Pointer {
+		return nil, false
+	}
+	inner, ok := reflect.Zero(typ).Interface().(interface{ OpenAPIInnerType() reflect.Type })
+	if !ok {
+		return nil, false
+	}
+	return inner.OpenAPIInnerType(), true
+}
+
 func patchWrappedCustomType(field reflect.Value) any {
 	if field.Kind() == reflect.Pointer {
 		if field.IsNil() {

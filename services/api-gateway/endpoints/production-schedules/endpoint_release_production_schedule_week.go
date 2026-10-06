@@ -69,6 +69,7 @@ func (e *ReleaseProductionScheduleWeekEndpoint) Materialize() *apiendpoint.APIEn
 			{Domain: types.PermissionDomainProductionSchedules, Action: types.ActionUpdate},
 			{Domain: types.PermissionDomainProductionRuns, Action: types.ActionCreate},
 		},
+		RequiresAllPermissions: true,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *ReleaseProductionScheduleWeekRequest) (*apiresource.ReleaseScheduleWeekResult, *apierror.APIError) {
 			return svc.(ProductionScheduleSvc).ReleaseProductionScheduleWeek
 		},

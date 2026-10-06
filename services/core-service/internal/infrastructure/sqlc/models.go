@@ -70,6 +70,38 @@ type AccountBranding struct {
 	CreatedAt       time.Time
 }
 
+type AccountFollowup struct {
+	ID                   string
+	AccountID            string
+	SandboxAccountID     sql.NullString
+	UserID               string
+	AccountName          string
+	RegistrantName       string
+	RegistrantEmail      string
+	RegisteredAt         time.Time
+	Status               string
+	ScheduledFor         time.Time
+	SkipReason           sql.NullString
+	Attempts             int32
+	LastError            sql.NullString
+	ActivitySummary      json.RawMessage
+	LlmModel             sql.NullString
+	PromptVersion        sql.NullString
+	Engagement           sql.NullString
+	InternalSummary      sql.NullString
+	DraftSubject         sql.NullString
+	DraftBody            sql.NullString
+	FinalSubject         sql.NullString
+	FinalBody            sql.NullString
+	ReviewTokenHash      sql.NullString
+	ReviewTokenExpiresAt sql.NullTime
+	DraftedAt            sql.NullTime
+	ReviewedAt           sql.NullTime
+	SentAt               sql.NullTime
+	CreatedAt            time.Time
+	UpdatedAt            time.Time
+}
+
 type AccountGroup struct {
 	ID                    string
 	OwnerAccountID        string

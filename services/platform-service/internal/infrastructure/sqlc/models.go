@@ -1089,18 +1089,19 @@ type Inventoryissuestatus struct {
 }
 
 type Invoice struct {
-	ID               string
-	Number           string
-	Note             sql.NullString
-	HasBeenSent      bool
-	IsPaidInFull     bool
-	SalesOrderID     string
-	BillingAddressID string
-	AccountID        string
-	CreatedAt        time.Time
-	UpdatedAt        time.Time
-	IsOverPaid       bool
-	IsEdiSent        bool
+	ID                   string
+	Number               string
+	Note                 sql.NullString
+	HasBeenSent          bool
+	IsPaidInFull         bool
+	SalesOrderID         string
+	BillingAddressID     string
+	AccountID            string
+	CreatedAt            time.Time
+	UpdatedAt            time.Time
+	IsOverPaid           bool
+	IsEdiSent            bool
+	PaidInFullMarkedByID sql.NullString
 }
 
 type InvoiceLine struct {
@@ -2217,7 +2218,6 @@ type SalesLineFact struct {
 	InvoiceLineID      string
 	InvoiceID          string
 	SalesOrderID       string
-	SalesOrderTypeCode string
 	BuyerAccountID     string
 	SalesRepID         sql.NullString
 	OrderDiscountID    sql.NullString
@@ -2230,6 +2230,7 @@ type SalesLineFact struct {
 	TotalCost          sql.NullString
 	OrderedAt          sql.NullTime
 	IsPriced           bool
+	SalesOrderTypeCode string
 }
 
 type SalesOrder struct {

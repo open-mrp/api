@@ -304,3 +304,38 @@ func TestDeletedRecordScope_Shipping(t *testing.T) {
 		},
 	})
 }
+
+func TestDeletedRecordScope_Payments(t *testing.T) {
+	t.Parallel()
+	runDeletedScopeCases(t, []deletedScopeCase{
+		{
+			name: "transaction",
+			setup: func(t *testing.T) deletedScopeTarget {
+				return createdPath(t, transactionsPath, map[string]any{
+					"customer_id":         SeedCustomerAccountID,
+					"type":                "payment",
+					"amount":              "1.00",
+					"responsible_user_id": SeedAccountUserID,
+				})
+			},
+			patch: map[string]any{"note": "x"},
+		},
+		{
+			name: "settlement",
+			setup: func(t *testing.T) deletedScopeTarget {
+				settlementID, _ := newSettlement(t)
+				return deletedScopeTarget{path: settlementsPath + "/" + settlementID}
+			},
+			patch: map[string]any{"note": "x"},
+		},
+		{
+			name: "transaction allocation",
+			setup: func(t *testing.T) deletedScopeTarget {
+				_, allocationID := newSettlement(t)
+				return deletedScopeTarget{path: financeAllocationsPath + "/" + allocationID}
+			},
+			noGet: true,
+			patch: map[string]any{"amount": "0.50"},
+		},
+	})
+}

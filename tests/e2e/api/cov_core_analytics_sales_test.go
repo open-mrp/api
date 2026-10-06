@@ -302,6 +302,17 @@ func TestSalesAnalytics_BreakdownPagesByCursor(t *testing.T) {
 	}
 	body := saleFilter(customers[0])
 	body["customer_ids"], body["group_by"] = customers, "customer"
+	// The breakdown is read from its own source, which can trail the summary under load, so wait for it to group all three before walking it.
+	eventually(t, 45*time.Second, time.Second, func() error {
+		status, list, raw := putSales(t, salesBreakdownPath, url.Values{"limit": {"100"}}, body)
+		if status != 200 {
+			return fmt.Errorf("breakdown answered %d: %s", status, string(raw))
+		}
+		if n := len(jsonArray(list, "data")); n != len(customers) {
+			return fmt.Errorf("breakdown groups %d of %d customers", n, len(customers))
+		}
+		return nil
+	})
 
 	type row struct {
 		key     string

@@ -31,11 +31,11 @@ type ListShipmentsRequest struct {
 	// Only include shipments created on or after this date (`YYYY-MM-DD`).
 	//
 	// Filters on when the shipment was created, not on when it was shipped.
-	StartDate *string `query:"starts_at"`
+	StartDate *string `query:"starts_at" validate:"omitempty,date_filter"`
 	// Only include shipments created on or before this date (`YYYY-MM-DD`).
 	//
 	// Filters on when the shipment was created, not on when it was shipped.
-	EndDate *string `query:"ends_at"`
+	EndDate *string `query:"ends_at" validate:"omitempty,date_filter"`
 }
 
 // Returns a paginated list of shipments, newest first.

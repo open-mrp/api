@@ -189,3 +189,53 @@ func TestEmailRecord_InvoiceOutsideTheAccountIsNotFound(t *testing.T) {
 	require.NotNil(t, apiErr)
 	assert.Equal(t, apierror.ErrorCodeResourceNotFound, apiErr.Code)
 }
+
+// An id that is not one of the account's orders of the type sent is a 404, read before the recipients, which are looked up by id alone.
+func TestEmailRecord_OrderOutsideTheAccountIsNotFound(t *testing.T) {
+	t.Parallel()
+
+	notFound := apierror.NewResourceNotFoundError("Resource not found.")
+	for _, tc := range []struct {
+		typ    domain.EmailRecordType
+		perm   string
+		refuse func(*repositorymock.MockSalesOrderRepo, *repositorymock.MockPurchaseOrderRepo)
+	}{
+		{domain.EmailRecordTypeSalesOrder, "sales_orders:read", func(so *repositorymock.MockSalesOrderRepo, _ *repositorymock.MockPurchaseOrderRepo) {
+			so.EXPECT().Get(gomock.Any(), invoiceSellerID, "or_elsewhere").Return(nil, notFound)
+		}},
+		{domain.EmailRecordTypePurchaseOrder, "purchase_orders:read", func(_ *repositorymock.MockSalesOrderRepo, po *repositorymock.MockPurchaseOrderRepo) {
+			po.EXPECT().Get(gomock.Any(), invoiceSellerID, "or_elsewhere").Return(nil, notFound)
+		}},
+	} {
+		t.Run(string(tc.typ), func(t *testing.T) {
+			t.Parallel()
+			ctrl := gomock.NewController(t)
+			salesOrders := repositorymock.NewMockSalesOrderRepo(ctrl)
+			purchaseOrders := repositorymock.NewMockPurchaseOrderRepo(ctrl)
+			repos := factorymock.NewMockRepoFactory(ctrl)
+			repos.EXPECT().NewSalesOrderRepo().Return(salesOrders).AnyTimes()
+			repos.EXPECT().NewPurchaseOrderRepo().Return(purchaseOrders).AnyTimes()
+			idempotency := mediatormock.NewMockIdempotencyMed(ctrl)
+			meds := factorymock.NewMockMediatorFactory(ctrl)
+			meds.EXPECT().Build(gomock.Any()).Return(domain.Mediators{Idempotency: idempotency}).AnyTimes()
+			svc := NewUtilsSvc(&UtilsSvcConfig{
+				Repos:                 repos,
+				MediatorFactory:       meds,
+				TxManager:             &stubTxManager{factory: repos},
+				NotificationPublisher: publishermock.NewMockNotificationPublisher(ctrl),
+			})
+
+			idempotency.EXPECT().UpsertIdempotencyKey(gomock.Any(), gomock.Any()).
+				Return(&domain.IdempotencyKey{TypeID: "idk_1", RecoveryPoint: string(domain.RecoveryPointStarted)}, nil)
+			tc.refuse(salesOrders, purchaseOrders)
+			idempotency.EXPECT().CacheErrorResponse(gomock.Any(), "idk_1", gomock.Any()).
+				DoAndReturn(func(_ context.Context, _ string, apiErr *apierror.APIError) *apierror.APIError { return apiErr })
+
+			ctx := invoiceActorCtx(types.IdentityRelationTypeInternal, invoiceSellerID, invoiceSellerID, tc.perm)
+			apiErr := svc.EmailRecord(ctx, domain.EmailRecordParams{Type: tc.typ, ID: "or_elsewhere"})
+
+			require.NotNil(t, apiErr)
+			assert.Equal(t, apierror.ErrorCodeResourceNotFound, apiErr.Code)
+		})
+	}
+}

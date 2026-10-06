@@ -36,6 +36,8 @@ func (*EmailRecordRequest) SchemaExample() any {
 // Emails a record (invoice, sales order, or purchase order) to its configured recipients and marks the record as sent.
 //
 // Delivery is asynchronous: the endpoint returns `202 Accepted` once the email is queued, so a `202` means the send was accepted, not that it reached the recipients. If the record has no configured recipients the request still succeeds and nothing is sent; in that case a sales order or purchase order is also left unmarked, while an invoice is still marked as sent.
+//
+// An `id` that is not one of the account's records of the given `type` answers `404`.
 type EmailRecordEndpoint struct{}
 
 func (e *EmailRecordEndpoint) Materialize() *apiendpoint.APIEndpoint[*EmailRecordRequest, *apiresource.EmptyResource] {

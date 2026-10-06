@@ -331,6 +331,11 @@ func (s *utilsSvcImpl) emailInvoice(ctx context.Context, span trace.Span, invoic
 }
 
 func (s *utilsSvcImpl) emailSalesOrder(ctx context.Context, span trace.Span, salesOrderID, accountID string, meds domain.Mediators, idempotencyKey *domain.IdempotencyKey) *apierror.APIError {
+	// Read first: recipients are looked up by id alone, so anything but one of the account's sales orders would otherwise succeed as a send to nobody.
+	if _, apiErr := s.repos.NewSalesOrderRepo().Get(ctx, accountID, salesOrderID); apiErr != nil {
+		return meds.Idempotency.CacheErrorResponse(ctx, idempotencyKey.TypeID, tracing.Trace(span, apiErr))
+	}
+
 	// Built by the same assembler the automatic send-on-issue uses, so a manual resend delivers an identical acknowledgement (line items, letterhead, PDF attachment).
 	emailData, apiErr := buildOrderAcknowledgementEmail(ctx, s.repos, s.branding, s.frontendURL, accountID, salesOrderID)
 	if apiErr != nil {
@@ -371,6 +376,11 @@ func (s *utilsSvcImpl) emailSalesOrder(ctx context.Context, span trace.Span, sal
 }
 
 func (s *utilsSvcImpl) emailPurchaseOrder(ctx context.Context, span trace.Span, purchaseOrderID, accountID string, meds domain.Mediators, idempotencyKey *domain.IdempotencyKey) *apierror.APIError {
+	// Read first, as for a sales order: the recipients lookup is not scoped to the account.
+	if _, apiErr := s.repos.NewPurchaseOrderRepo().Get(ctx, accountID, purchaseOrderID); apiErr != nil {
+		return meds.Idempotency.CacheErrorResponse(ctx, idempotencyKey.TypeID, tracing.Trace(span, apiErr))
+	}
+
 	// Built by the same assembler the automatic send-on-issue uses, so a manual resend delivers an
 	// identical submission.
 	emailData, apiErr := buildPurchaseOrderSubmissionEmail(ctx, s.repos, s.branding, accountID, purchaseOrderID)

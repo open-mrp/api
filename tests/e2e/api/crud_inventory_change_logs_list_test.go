@@ -385,6 +385,29 @@ func TestInventoryChangeLogs_SearchMatchesSKUSubstring(t *testing.T) {
 	assert.NotContains(t, matched, SeedInventoryChangeLog2ID, `SCK-002 does not contain "001"`)
 }
 
+// The FULLTEXT index holds no token with an "a" or "i" (stopwords), so "navia" has none to search by; it
+// still matches a SKU it is a substring of. Creating a part logs its opening stock, which is the row found.
+func TestInventoryChangeLogs_SearchMatchesASKUFragmentTheIndexHoldsNoTokenFor(t *testing.T) {
+	t.Parallel()
+
+	status, body, err := apiClient.Post(partsPath, validPartBody(uniqueName("e2e-navia")), newIdempotencyKey())
+	require.NoError(t, err)
+	requireStatus(t, 201, status, body)
+	partID := jsonField(parseJSON(body), "id")
+	defer apiClient.Delete(partsPath + "/" + partID)
+
+	status, body, err = apiClient.GetListRaw(partsPath+"/"+partID, url.Values{"include": {"item"}})
+	require.NoError(t, err)
+	requireStatus(t, 200, status, body)
+	item := jsonObject(parseJSON(body), "item")
+	require.NotNil(t, item)
+
+	opening := inventoryChangeLogIDsFiltered(t, url.Values{"item_ids": {jsonField(item, "id")}})
+	require.NotEmpty(t, opening, "creating a part logs its opening stock")
+	assert.Subset(t, inventoryChangeLogIDsFiltered(t, url.Values{"q": {"navia"}, "limit": {"100"}}), opening,
+		`"navia" is a substring of the part's SKU`)
+}
+
 // A SKU no item carries narrows the list to nothing rather than being ignored.
 func TestInventoryChangeLogs_SearchWithNoSKUMatchIsEmpty(t *testing.T) {
 	t.Parallel()

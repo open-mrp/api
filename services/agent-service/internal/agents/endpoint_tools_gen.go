@@ -2301,7 +2301,7 @@ var EndpointTools = []EndpointToolDescriptor{
 	{
 		Slug:                "list_machines",
 		DisplayName:         "List Machines",
-		Description:         "Returns a paginated list of machines in your account, most recently created first.\n\nThe search term matches the machine name.",
+		Description:         "Returns a paginated list of machines in your account, most recently created first.\n\nThe search term matches the start of the machine name, and a machine named exactly the term is listed\nfirst.",
 		Method:              "GET",
 		RouteTemplate:       "/v1/operations/machines",
 		InputSchema:         "{\"properties\":{\"cursor\":{\"description\":\"Opaque cursor token identifying where the page of results starts.\\n\\nUse the `cursor` value embedded in a previous response's `next_page_url` or `previous_page_url` to fetch the adjacent page. Omit to start from the first page.\",\"type\":\"string\"},\"limit\":{\"description\":\"Maximum number of results to return in a single page.\",\"type\":\"integer\"},\"q\":{\"description\":\"Free-text search term used to filter results.\\n\\nWhich fields are matched against the term varies by endpoint.\",\"type\":\"string\"}},\"type\":\"object\"}",

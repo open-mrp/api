@@ -34,9 +34,13 @@ const pickSubstringSearchMinRunes = 3
 type pickSearch struct {
 	// NumberPrefix is a LIKE pattern anchored at the start of the pick number.
 	NumberPrefix string
-	// Phrase is an ngram boolean-mode phrase, matched as a substring of the pick number, the order's
-	// PO number, and the customer's name and number.
-	Phrase string
+	// Phrase is matched as a substring of the pick number, the order's PO number, and the customer's
+	// name and number.
+	Phrase db.NgramSubstring
+}
+
+func (s pickSearch) hasPhrase() bool {
+	return s.Phrase.Like != ""
 }
 
 func newPickSearch(q *string) pickSearch {
@@ -46,7 +50,7 @@ func newPickSearch(q *string) pickSearch {
 	if utf8.RuneCountInString(*q) < pickSubstringSearchMinRunes {
 		return pickSearch{NumberPrefix: db.EscapeLike(*q) + "%"}
 	}
-	return pickSearch{Phrase: db.NewNgramSearch(q).Fulltext.String}
+	return pickSearch{Phrase: db.NewNgramSubstring(*q)}
 }
 
 type pickListQuery struct {
@@ -179,9 +183,9 @@ func buildPickListQuery(q pickListQuery) (string, []any) {
 	case q.PhraseIDs != nil:
 		b.WriteString(" AND p.id IN (" + iclPlaceholders(len(q.PhraseIDs)) + ")")
 		args = append(args, stringArgs(q.PhraseIDs)...)
-	case q.Search.Phrase != "":
+	case q.Search.hasPhrase():
 		// Too many to read up front, so the phrase's matches are collected once and probed per row.
-		b.WriteString(" AND p.id IN (SELECT id FROM (" + pickPhraseMatches + ") phrased)")
+		b.WriteString(" AND p.id IN (SELECT id FROM (" + pickPhraseMatches(q.Search.Phrase) + ") phrased)")
 		args = q.appendPhraseArgs(args)
 	}
 	if len(q.BuyerIDs) > 0 {
@@ -208,13 +212,14 @@ const pickBuyerMergeMax = 50
 // mergesBuyers reports a set of a few customers with nothing narrower to read from. A phrase search
 // is not merged: each merged read would collect the phrase's matches again.
 func (q pickListQuery) mergesBuyers() bool {
-	return q.Search.Phrase == "" && !q.DriveFromProductLines && !q.DriveFromBuyers && !q.DriveFromNumberPrefix &&
+	return !q.Search.hasPhrase() && !q.DriveFromProductLines && !q.DriveFromBuyers && !q.DriveFromNumberPrefix &&
 		len(q.BuyerIDs) >= 2 && len(q.BuyerIDs) <= pickBuyerMergeMax
 }
 
 func (q pickListQuery) appendPhraseArgs(args []any) []any {
-	for range 4 {
-		args = append(args, q.AccountID, q.Search.Phrase)
+	for range pickPhraseArmCount {
+		args = append(args, q.AccountID)
+		args = append(args, q.Search.Phrase.Args()...)
 	}
 	return args
 }
@@ -313,25 +318,36 @@ func (q pickListQuery) cursorComparison() string {
 	return "<"
 }
 
+const pickPhraseArmCount = 4
+
 // pickPhraseArms each select the account's pick ids whose number, PO number, customer name or
 // customer number contains the phrase. Each arm is its own MATCH because an OR of MATCH across joined
-// tables cannot use any of the FULLTEXT indexes. Placeholders per arm: account id, then phrase.
-var pickPhraseArms = []string{
-	`SELECT pk.id FROM pick pk` +
-		` WHERE pk.account_id = ? AND MATCH(pk.number) AGAINST(? IN BOOLEAN MODE)`,
-	`SELECT pk.id FROM sales_order pso JOIN pick pk ON pk.sales_order_id = pso.id` +
-		` WHERE pk.account_id = ? AND MATCH(pso.customer_po_number) AGAINST(? IN BOOLEAN MODE)`,
-	`SELECT pk.id FROM account nba` +
-		` JOIN account_relation nar ON nar.owner_account_id = ? AND nar.counterparty_account_id = nba.id` +
-		` JOIN pick pk ON pk.account_id = nar.owner_account_id AND pk.buyer_account_id = nba.id` +
-		` WHERE MATCH(nba.name) AGAINST(? IN BOOLEAN MODE)`,
-	`SELECT pk.id FROM account_relation rar` +
-		` JOIN pick pk ON pk.account_id = rar.owner_account_id AND pk.buyer_account_id = rar.counterparty_account_id` +
-		` WHERE rar.owner_account_id = ? AND MATCH(rar.external_number) AGAINST(? IN BOOLEAN MODE)`,
+// tables cannot use any of the FULLTEXT indexes. Placeholders per arm: account id, then the phrase's.
+func pickPhraseArms(phrase db.NgramSubstring) []string {
+	numberIndex := ""
+	if !phrase.Indexed() {
+		// The account's number key covers a LIKE, where MySQL would read every pick's row.
+		numberIndex = " FORCE INDEX (" + pickAccountNumberIndex + ")"
+	}
+	return []string{
+		`SELECT pk.id FROM pick pk` + numberIndex +
+			` WHERE pk.account_id = ? AND ` + phrase.Where("pk.number"),
+		`SELECT pk.id FROM sales_order pso JOIN pick pk ON pk.sales_order_id = pso.id` +
+			` WHERE pk.account_id = ? AND ` + phrase.Where("pso.customer_po_number"),
+		`SELECT pk.id FROM account nba` +
+			` JOIN account_relation nar ON nar.owner_account_id = ? AND nar.counterparty_account_id = nba.id` +
+			` JOIN pick pk ON pk.account_id = nar.owner_account_id AND pk.buyer_account_id = nba.id` +
+			` WHERE ` + phrase.Where("nba.name"),
+		`SELECT pk.id FROM account_relation rar` +
+			` JOIN pick pk ON pk.account_id = rar.owner_account_id AND pk.buyer_account_id = rar.counterparty_account_id` +
+			` WHERE rar.owner_account_id = ? AND ` + phrase.Where("rar.external_number"),
+	}
 }
 
 // pickPhraseMatches is the set of picks the phrase matches.
-var pickPhraseMatches = strings.Join(pickPhraseArms, " UNION ")
+func pickPhraseMatches(phrase db.NgramSubstring) string {
+	return strings.Join(pickPhraseArms(phrase), " UNION ")
+}
 
 // pickPhraseScanCap is the most picks a phrase may match and still be read up front to drive the
 // list. A phrase matching more (one in every customer's name matches every pick) is common enough
@@ -343,9 +359,9 @@ const pickPhraseScanCap = 2000
 // set that fits from one that does not. UNION ALL streams and stops at the limit, where UNION would
 // collect every match to deduplicate first; a pick matching several arms is deduplicated by the caller.
 func buildPickPhraseIDsQuery(q pickListQuery) (string, []any) {
-	args := q.appendPhraseArgs(make([]any, 0, 9))
+	args := q.appendPhraseArgs(make([]any, 0, 13))
 	args = append(args, pickPhraseScanCap+1)
-	return "(" + strings.Join(pickPhraseArms, ") UNION ALL (") + ") LIMIT ?", args
+	return "(" + strings.Join(pickPhraseArms(q.Search.Phrase), ") UNION ALL (") + ") LIMIT ?", args
 }
 
 // buildPickPrefixCountQuery counts the account's picks whose number matches the LIKE prefix, stopping

@@ -557,7 +557,8 @@ SELECT
     d.updated_at AS department_updated_at,
     m.production_step_id,
     m.created_at,
-    m.updated_at
+    m.updated_at,
+    CAST(COALESCE(m.name <> ?, 0) AS SIGNED) AS match_tier
 FROM machine m
 JOIN department d ON d.id = m.department_id
 WHERE m.account_id = ?
@@ -566,16 +567,24 @@ AND (
     OR m.name LIKE ?
 )
 AND (
-    m.created_at > ?
-    OR (m.created_at = ? AND m.id > ?)
+    COALESCE(m.name <> ?, 0) < CAST(? AS SIGNED)
+    OR (
+        COALESCE(m.name <> ?, 0) = CAST(? AS SIGNED)
+        AND (
+            m.created_at > ?
+            OR (m.created_at = ? AND m.id > ?)
+        )
+    )
 )
-ORDER BY m.created_at ASC, m.id ASC
+ORDER BY COALESCE(m.name <> ?, 0) DESC, m.created_at ASC, m.id ASC
 LIMIT ?
 `
 
 type ListMachinesBackwardParams struct {
+	SearchExact     sql.NullString
 	AccountID       string
 	SearchQuery     sql.NullString
+	CursorMatchTier sql.NullInt64
 	CursorCreatedAt time.Time
 	CursorID        string
 	Limit           int32
@@ -593,16 +602,23 @@ type ListMachinesBackwardRow struct {
 	ProductionStepID    sql.NullString
 	CreatedAt           time.Time
 	UpdatedAt           time.Time
+	MatchTier           int64
 }
 
 func (q *Queries) ListMachinesBackward(ctx context.Context, arg ListMachinesBackwardParams) ([]ListMachinesBackwardRow, error) {
 	rows, err := q.db.QueryContext(ctx, listMachinesBackward,
+		arg.SearchExact,
 		arg.AccountID,
 		arg.SearchQuery,
 		arg.SearchQuery,
+		arg.SearchExact,
+		arg.CursorMatchTier,
+		arg.SearchExact,
+		arg.CursorMatchTier,
 		arg.CursorCreatedAt,
 		arg.CursorCreatedAt,
 		arg.CursorID,
+		arg.SearchExact,
 		arg.Limit,
 	)
 	if err != nil {
@@ -624,6 +640,7 @@ func (q *Queries) ListMachinesBackward(ctx context.Context, arg ListMachinesBack
 			&i.ProductionStepID,
 			&i.CreatedAt,
 			&i.UpdatedAt,
+			&i.MatchTier,
 		); err != nil {
 			return nil, err
 		}
@@ -650,7 +667,8 @@ SELECT
     d.updated_at AS department_updated_at,
     m.production_step_id,
     m.created_at,
-    m.updated_at
+    m.updated_at,
+    CAST(COALESCE(m.name <> ?, 0) AS SIGNED) AS match_tier
 FROM machine m
 JOIN department d ON d.id = m.department_id
 WHERE m.account_id = ?
@@ -660,17 +678,25 @@ AND (
 )
 AND (
     ? IS NULL
-    OR m.created_at < ?
-    OR (m.created_at = ? AND m.id < ?)
+    OR COALESCE(m.name <> ?, 0) > CAST(? AS SIGNED)
+    OR (
+        COALESCE(m.name <> ?, 0) = CAST(? AS SIGNED)
+        AND (
+            m.created_at < ?
+            OR (m.created_at = ? AND m.id < ?)
+        )
+    )
 )
-ORDER BY m.created_at DESC, m.id DESC
+ORDER BY COALESCE(m.name <> ?, 0) ASC, m.created_at DESC, m.id DESC
 LIMIT ?
 `
 
 type ListMachinesForwardParams struct {
+	SearchExact     sql.NullString
 	AccountID       string
 	SearchQuery     sql.NullString
 	CursorCreatedAt sql.NullTime
+	CursorMatchTier sql.NullInt64
 	CursorID        sql.NullString
 	Limit           int32
 }
@@ -687,17 +713,26 @@ type ListMachinesForwardRow struct {
 	ProductionStepID    sql.NullString
 	CreatedAt           time.Time
 	UpdatedAt           time.Time
+	MatchTier           int64
 }
 
+// A search lists the machine named exactly the term first (match tier 0), then its other prefix matches
+// (tier 1); without a search every machine is tier 0. Newest first within a tier.
 func (q *Queries) ListMachinesForward(ctx context.Context, arg ListMachinesForwardParams) ([]ListMachinesForwardRow, error) {
 	rows, err := q.db.QueryContext(ctx, listMachinesForward,
+		arg.SearchExact,
 		arg.AccountID,
 		arg.SearchQuery,
 		arg.SearchQuery,
 		arg.CursorCreatedAt,
+		arg.SearchExact,
+		arg.CursorMatchTier,
+		arg.SearchExact,
+		arg.CursorMatchTier,
 		arg.CursorCreatedAt,
 		arg.CursorCreatedAt,
 		arg.CursorID,
+		arg.SearchExact,
 		arg.Limit,
 	)
 	if err != nil {
@@ -719,6 +754,7 @@ func (q *Queries) ListMachinesForward(ctx context.Context, arg ListMachinesForwa
 			&i.ProductionStepID,
 			&i.CreatedAt,
 			&i.UpdatedAt,
+			&i.MatchTier,
 		); err != nil {
 			return nil, err
 		}

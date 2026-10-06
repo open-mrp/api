@@ -43,6 +43,17 @@ func TestPicksList_SearchMatchesPickNumber(t *testing.T) {
 		"a search matching nothing must return nothing")
 }
 
+// The FULLTEXT index holds no token with an "i" (stopwords), so "pic" and "tio" have none to search by;
+// they still match by substring, the pick number and the customer's name respectively.
+func TestPicksList_SearchMatchesATermTheIndexHoldsNoTokenFor(t *testing.T) {
+	t.Parallel()
+
+	assert.Contains(t, pickIDsFiltered(t, url.Values{"q": {"pic"}, "limit": {"100"}}), seedClosedPickID,
+		`"pic" is a substring of PICK-002`)
+	assert.Contains(t, pickIDsFiltered(t, url.Values{"q": {"tio"}, "limit": {"100"}}), seedClosedPickID,
+		`"tio" is a substring of PICK-002's customer, Global Manufacturing Solutions`)
+}
+
 // `open` is a pick that has not been finished; `closed` is one that has.
 func TestPicksList_StatusSplitsOpenFromClosed(t *testing.T) {
 	t.Parallel()

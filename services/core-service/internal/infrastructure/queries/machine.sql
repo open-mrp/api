@@ -5,6 +5,8 @@ WHERE m.production_step_id = sqlc.arg('production_step_id')
 AND m.account_id = sqlc.arg('account_id')
 ORDER BY m.id;
 
+-- A search lists the machine named exactly the term first (match tier 0), then its other prefix matches
+-- (tier 1); without a search every machine is tier 0. Newest first within a tier.
 -- name: ListMachinesForward :many
 SELECT
     m.id,
@@ -17,7 +19,8 @@ SELECT
     d.updated_at AS department_updated_at,
     m.production_step_id,
     m.created_at,
-    m.updated_at
+    m.updated_at,
+    CAST(COALESCE(m.name <> sqlc.narg('search_exact'), 0) AS SIGNED) AS match_tier
 FROM machine m
 JOIN department d ON d.id = m.department_id
 WHERE m.account_id = sqlc.arg('account_id')
@@ -27,10 +30,16 @@ AND (
 )
 AND (
     sqlc.narg('cursor_created_at') IS NULL
-    OR m.created_at < sqlc.narg('cursor_created_at')
-    OR (m.created_at = sqlc.narg('cursor_created_at') AND m.id < sqlc.narg('cursor_id'))
+    OR COALESCE(m.name <> sqlc.narg('search_exact'), 0) > CAST(sqlc.narg('cursor_match_tier') AS SIGNED)
+    OR (
+        COALESCE(m.name <> sqlc.narg('search_exact'), 0) = CAST(sqlc.narg('cursor_match_tier') AS SIGNED)
+        AND (
+            m.created_at < sqlc.narg('cursor_created_at')
+            OR (m.created_at = sqlc.narg('cursor_created_at') AND m.id < sqlc.narg('cursor_id'))
+        )
+    )
 )
-ORDER BY m.created_at DESC, m.id DESC
+ORDER BY COALESCE(m.name <> sqlc.narg('search_exact'), 0) ASC, m.created_at DESC, m.id DESC
 LIMIT ?;
 
 -- name: ListMachinesBackward :many
@@ -45,7 +54,8 @@ SELECT
     d.updated_at AS department_updated_at,
     m.production_step_id,
     m.created_at,
-    m.updated_at
+    m.updated_at,
+    CAST(COALESCE(m.name <> sqlc.narg('search_exact'), 0) AS SIGNED) AS match_tier
 FROM machine m
 JOIN department d ON d.id = m.department_id
 WHERE m.account_id = sqlc.arg('account_id')
@@ -54,10 +64,16 @@ AND (
     OR m.name LIKE sqlc.narg('search_query')
 )
 AND (
-    m.created_at > sqlc.arg('cursor_created_at')
-    OR (m.created_at = sqlc.arg('cursor_created_at') AND m.id > sqlc.arg('cursor_id'))
+    COALESCE(m.name <> sqlc.narg('search_exact'), 0) < CAST(sqlc.narg('cursor_match_tier') AS SIGNED)
+    OR (
+        COALESCE(m.name <> sqlc.narg('search_exact'), 0) = CAST(sqlc.narg('cursor_match_tier') AS SIGNED)
+        AND (
+            m.created_at > sqlc.arg('cursor_created_at')
+            OR (m.created_at = sqlc.arg('cursor_created_at') AND m.id > sqlc.arg('cursor_id'))
+        )
+    )
 )
-ORDER BY m.created_at ASC, m.id ASC
+ORDER BY COALESCE(m.name <> sqlc.narg('search_exact'), 0) DESC, m.created_at ASC, m.id ASC
 LIMIT ?;
 
 -- name: GetMachine :one

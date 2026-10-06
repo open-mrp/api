@@ -136,9 +136,9 @@ func pickUnorderedFloor(t *testing.T, db *sql.DB, p domain.ListPicksParams) floa
 	switch search := newPickSearch(p.Query); {
 	case search.NumberPrefix != "":
 		count("p.number LIKE ?", search.NumberPrefix)
-	case search.Phrase != "":
-		count("p.id IN (SELECT id FROM ("+pickPhraseMatches+") matched)",
-			p.AccountID, search.Phrase, p.AccountID, search.Phrase, p.AccountID, search.Phrase, p.AccountID, search.Phrase)
+	case search.hasPhrase():
+		count("p.id IN (SELECT id FROM ("+pickPhraseMatches(search.Phrase)+") matched)",
+			pickListQuery{AccountID: p.AccountID, Search: search}.appendPhraseArgs(nil)...)
 	}
 	if p.Sort != constants.PickSortCreatedAt && (p.StartDate != nil || p.EndDate != nil) {
 		where, args := []string{"TRUE"}, []any{}

@@ -339,3 +339,74 @@ func TestDeletedRecordScope_Payments(t *testing.T) {
 		},
 	})
 }
+
+func TestDeletedRecordScope_Production(t *testing.T) {
+	t.Parallel()
+	runDeletedScopeCases(t, []deletedScopeCase{
+		{
+			name: "production run",
+			setup: func(t *testing.T) deletedScopeTarget {
+				return deletedScopeTarget{path: productionRunPath(jsonField(createProductionRun(t, map[string]any{"responsible_user_id": SeedUserID}), "id"))}
+			},
+			patch: map[string]any{"number": uniqueName("e2e-dscope-run")},
+		},
+		{
+			name: "production step",
+			setup: func(t *testing.T) deletedScopeTarget {
+				stepID := createLinkedStep(t, "e2e-dscope-step", createPartItem(t, "e2e-dscope-made"), createPartItem(t, "e2e-dscope-used"))
+				return deletedScopeTarget{path: productionStepsPath + "/" + stepID}
+			},
+			patch: map[string]any{"name": uniqueName("e2e-dscope-step")},
+		},
+		{
+			// Tenant B has no production step to name it under, so its 404 comes from the step check.
+			name: "consumption",
+			setup: func(t *testing.T) deletedScopeTarget {
+				return deletedScopeTarget{path: consumptionsPath() + "/" + newConsumption(t)}
+			},
+			patch: map[string]any{"quantity_value": "2"},
+		},
+		{
+			name: "batch",
+			setup: func(t *testing.T) deletedScopeTarget {
+				runID := jsonField(createRunWithBatches(t, plannedBatch("1")), "id")
+				batches := runBatches(t, runID, "run")
+				require.Len(t, batches, 1)
+				return deletedScopeTarget{path: batchesPath + "/" + jsonField(batches[0], "id")}
+			},
+			noGet: true,
+		},
+		{
+			name: "machine",
+			setup: func(t *testing.T) deletedScopeTarget {
+				return createdPath(t, machinesPath, map[string]any{
+					"name":          uniqueName("e2e-dscope-mch"),
+					"serial_number": uniqueName("e2e-dscope-sn"),
+					"department_id": SeedDepartmentID,
+				})
+			},
+			patch: map[string]any{"name": uniqueName("e2e-dscope-mch")},
+		},
+		{
+			name: "department",
+			setup: func(t *testing.T) deletedScopeTarget {
+				return createdPath(t, departmentsPath, map[string]any{"name": uniqueName("e2e-dscope-dep")})
+			},
+			patch: map[string]any{"name": uniqueName("e2e-dscope-dep")},
+		},
+		{
+			name: "scanning station",
+			setup: func(t *testing.T) deletedScopeTarget {
+				return createdPath(t, scanningStationsPath, covOperationsScanningStationsCreateBody(uniqueName("e2e-dscope-ss")))
+			},
+			patch: map[string]any{"name": uniqueName("e2e-dscope-ss")},
+		},
+		{
+			name: "location",
+			setup: func(t *testing.T) deletedScopeTarget {
+				return createdPath(t, locationsPath, map[string]any{"name": uniqueName("e2e-dscope-loc"), "type": "building"})
+			},
+			patch: map[string]any{"name": uniqueName("e2e-dscope-loc")},
+		},
+	})
+}

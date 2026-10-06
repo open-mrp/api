@@ -907,7 +907,7 @@ func (suite *LocationSvcTestSuite) TestDeleteLocation_Success() {
 		Return(int64(0), nil).
 		Times(1)
 	suite.deletedRecordRepo.EXPECT().
-		Create(gomock.Any(), constants.DeletedRecordResourceTypeLocation, "loc_d1", gomock.Any()).
+		CreateInAccount(gomock.Any(), constants.DeletedRecordResourceTypeLocation, "loc_d1", "ac_loc1", gomock.Any()).
 		Return(nil).
 		Times(1)
 	suite.locationRepo.EXPECT().
@@ -951,7 +951,7 @@ func (suite *LocationSvcTestSuite) TestDeleteLocation_AlreadyDeleted() {
 		Return(nil, apierror.NewResourceNotFoundError("not found")).
 		Times(1)
 	suite.deletedRecordRepo.EXPECT().
-		Exists(gomock.Any(), constants.DeletedRecordResourceTypeLocation, "loc_gone").
+		ExistsInAccount(gomock.Any(), constants.DeletedRecordResourceTypeLocation, "loc_gone", "ac_loc1").
 		Return(true, nil).
 		Times(1)
 
@@ -969,7 +969,7 @@ func (suite *LocationSvcTestSuite) TestDeleteLocation_NotFound() {
 		Return(nil, apierror.NewResourceNotFoundError("not found")).
 		Times(1)
 	suite.deletedRecordRepo.EXPECT().
-		Exists(gomock.Any(), constants.DeletedRecordResourceTypeLocation, "loc_nf2").
+		ExistsInAccount(gomock.Any(), constants.DeletedRecordResourceTypeLocation, "loc_nf2", "ac_loc1").
 		Return(false, nil).
 		Times(1)
 

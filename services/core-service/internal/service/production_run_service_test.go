@@ -1135,3 +1135,14 @@ func (suite *ProductionRunBulkCreateTestSuite) TestExportProductionRuns_ScopesTo
 	_, apiErr := suite.buildExport(ctx, domain.ExportProductionRunsParams{AccountID: "ac_attacker"})
 	suite.Require().Nil(apiErr)
 }
+
+func TestDeleteProductionRun_OnlyTheOwnerLearnsItWasDeleted(t *testing.T) {
+	t.Parallel()
+	assertOnlyTheOwnerLearnsItWasDeleted(t, constants.DeletedRecordResourceTypeProductionRun, "pr_gone", func(h *deletedScopeHarness, accountID string) *apierror.APIError {
+		runs := repositorymock.NewMockProductionRunRepo(h.ctrl)
+		h.repos.EXPECT().NewProductionRunRepo().Return(runs).AnyTimes()
+		runs.EXPECT().Get(gomock.Any(), domain.GetProductionRunParams{AccountID: accountID, ProductionRunID: "pr_gone"}).Return(nil, deletedScopeNotFound())
+		svc := NewProductionRunSvc(&ProductionRunSvcConfig{Repos: h.repos, MediatorFactory: h.mediators, JobSvcFactory: NewJobSvcFactory(), TxManager: &stubTxManager{factory: h.repos}})
+		return svc.DeleteProductionRun(deletedScopeCtx(accountID), domain.DeleteProductionRunParams{ProductionRunID: "pr_gone"})
+	})
+}

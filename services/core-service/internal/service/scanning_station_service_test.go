@@ -327,3 +327,14 @@ func (suite *ScanningStationExportTestSuite) buildExport(ctx context.Context, pa
 	}
 	return buildExport(ctx, suite.repoFactory, spec, identity.Target.AccountID, params)
 }
+
+func TestDeleteScanningStation_OnlyTheOwnerLearnsItWasDeleted(t *testing.T) {
+	t.Parallel()
+	assertOnlyTheOwnerLearnsItWasDeleted(t, constants.DeletedRecordResourceTypeScanningStation, "ss_gone", func(h *deletedScopeHarness, accountID string) *apierror.APIError {
+		stations := repositorymock.NewMockScanningStationRepo(h.ctrl)
+		h.repos.EXPECT().NewScanningStationRepo().Return(stations).AnyTimes()
+		stations.EXPECT().Get(gomock.Any(), domain.GetScanningStationParams{AccountID: accountID, ScanningStationID: "ss_gone"}).Return(nil, deletedScopeNotFound())
+		svc := NewScanningStationSvc(&ScanningStationSvcConfig{Repos: h.repos, MediatorFactory: h.mediators, JobSvcFactory: NewJobSvcFactory(), TxManager: &stubTxManager{factory: h.repos}})
+		return svc.DeleteScanningStation(deletedScopeCtx(accountID), "ss_gone")
+	})
+}

@@ -384,7 +384,7 @@ func (s *locationSvcImpl) DeleteLocation(ctx context.Context, params domain.Dele
 	location, apiErr := repo.Get(ctx, domain.GetLocationParams{AccountID: params.AccountID, LocationID: params.LocationID})
 	if apiErr != nil {
 		if apierror.IsNotFound(apiErr) {
-			wasDeleted, deletedCheckErr := s.repos.NewDeletedRecordRepo().Exists(ctx, constants.DeletedRecordResourceTypeLocation, params.LocationID)
+			wasDeleted, deletedCheckErr := s.repos.NewDeletedRecordRepo().ExistsInAccount(ctx, constants.DeletedRecordResourceTypeLocation, params.LocationID, params.AccountID)
 			if deletedCheckErr != nil {
 				return tracing.Trace(span, deletedCheckErr)
 			}
@@ -406,7 +406,7 @@ func (s *locationSvcImpl) DeleteLocation(ctx context.Context, params domain.Dele
 
 	// Delete in transaction
 	apiErr = s.withTx(ctx, func(txCtx context.Context, txSvc *locationSvcImpl) *apierror.APIError {
-		if apiErr := txSvc.repos.NewDeletedRecordRepo().Create(txCtx, constants.DeletedRecordResourceTypeLocation, location.ID, location); apiErr != nil {
+		if apiErr := txSvc.repos.NewDeletedRecordRepo().CreateInAccount(txCtx, constants.DeletedRecordResourceTypeLocation, location.ID, params.AccountID, location); apiErr != nil {
 			return apiErr
 		}
 

@@ -463,7 +463,7 @@ func (s *consumptionSvcImpl) DeleteConsumption(ctx context.Context, params domai
 	consumption, apiErr := s.repos.NewConsumptionRepo().Get(ctx, accountID, params.ProductionStepID, params.ConsumptionID)
 	if apiErr != nil {
 		if apierror.IsNotFound(apiErr) {
-			wasDeleted, deletedCheckErr := s.repos.NewDeletedRecordRepo().Exists(ctx, constants.DeletedRecordResourceTypeConsumption, params.ConsumptionID)
+			wasDeleted, deletedCheckErr := s.repos.NewDeletedRecordRepo().ExistsInAccount(ctx, constants.DeletedRecordResourceTypeConsumption, params.ConsumptionID, accountID)
 			if deletedCheckErr != nil {
 				return nil, tracing.Trace(span, deletedCheckErr)
 			}
@@ -497,7 +497,7 @@ func (s *consumptionSvcImpl) DeleteConsumption(ctx context.Context, params domai
 			return apiErr
 		}
 
-		if apiErr := txSvc.repos.NewDeletedRecordRepo().Create(txCtx, constants.DeletedRecordResourceTypeConsumption, consumption.ID, consumption); apiErr != nil {
+		if apiErr := txSvc.repos.NewDeletedRecordRepo().CreateInAccount(txCtx, constants.DeletedRecordResourceTypeConsumption, consumption.ID, accountID, consumption); apiErr != nil {
 			return apiErr
 		}
 

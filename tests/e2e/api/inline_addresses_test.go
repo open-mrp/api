@@ -558,7 +558,10 @@ func TestInlineAddresses_PurchaseOrderUpdateTakesOnlyTheSuppliersOrOwnAddresses(
 	*saved = append(*saved, supplierAddressID)
 	ownAddressID := createE2EAddress(t, uniqueName("e2e-inline-po-upd-acct"))
 	otherTenantAddressID := tenantBAddress(t)
-	order := createAndCleanup(t, purchaseOrdersPath, inlinePurchaseOrderBody(supplierID))
+	// Created on the supplier's address: an order created without one gets blank addresses of its own.
+	orderBody := inlinePurchaseOrderBody(supplierID)
+	orderBody["bill_to_address_id"], orderBody["ship_to_address_id"] = supplierAddressID, supplierAddressID
+	order := createAndCleanup(t, purchaseOrdersPath, orderBody)
 	path := purchaseOrdersPath + "/" + jsonField(order, "id")
 
 	for _, tc := range []struct{ name, field, addressID string }{

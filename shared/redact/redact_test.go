@@ -340,3 +340,24 @@ func TestRedactJSON_mapValues(t *testing.T) {
 		t.Fatalf("got %s want %s", out, want)
 	}
 }
+
+type plannedRun struct {
+	ID       string         `json:"id"`
+	Settings map[string]any `json:"settings" sensitive:"cost_keys"`
+}
+
+func TestSensitiveFields_costKeysTag(t *testing.T) {
+	m := redact.SensitiveFields(reflect.TypeFor[plannedRun]())
+	if len(m) != 1 || !m["settings."+redact.CostKey] {
+		t.Fatalf("got %#v want settings.%s", m, redact.CostKey)
+	}
+}
+
+func TestRedactJSON_costKeysMasksOnlyCostNamedKeys(t *testing.T) {
+	in := []byte(`{"id":"1","settings":{"changeover_labor_rate":20,"holding_rate_pct":0.25,"unit_cost":3,"hours_per_shift":7}}`)
+	out := redact.RedactJSON(in, redact.SensitiveFields(reflect.TypeFor[plannedRun]()))
+	want := `{"id":"1","settings":{"changeover_labor_rate":"****","holding_rate_pct":0.25,"hours_per_shift":7,"unit_cost":"****"}}`
+	if string(out) != want {
+		t.Fatalf("got %s want %s", out, want)
+	}
+}

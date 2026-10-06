@@ -180,7 +180,7 @@ func TestCovAiTools_ToolsSearchQCaseInsensitiveSubstring(t *testing.T) {
 	t.Parallel()
 
 	expectedSlugs := []string{
-		"analyze_customer_pricing", "create_customer", "delete_customer",
+		"create_customer", "delete_customer",
 		"list_customers", "merge_customers", "retrieve_customer",
 		"retrieve_customer_lead_time", "update_customer",
 	}

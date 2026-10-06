@@ -19,11 +19,11 @@ var costFieldAllowlist = map[string]string{
 
 // TestEndpointCostFieldsAreMarked walks the request and response type of every registered endpoint and fails when a field named like cost or margin data is not tagged sensitive:"cost", so a new cost field cannot ship visible to callers without costs:read, or to customer and supplier portals.
 //
-// A tagged response field must serialize as null once cleared, so it has to be a pointer, slice, map or interface; a number or string would read as a real zero. An endpoint that requires costs:read outright needs no marks on its response, since nobody without the permission reaches it.
+// A tagged response field, cost or sensitive:"internal", must serialize as null once cleared, so it has to be a pointer, slice, map or interface; a number or string would read as a real zero. An endpoint that requires costs:read outright needs no cost marks on its response, since nobody without the permission reaches it.
 func TestEndpointCostFieldsAreMarked(t *testing.T) {
 	t.Parallel()
 
-	found := 0
+	found, foundInternal := 0, 0
 	for _, group := range buildAllGroups() {
 		for _, ep := range group.Endpoints {
 			where := ep.GetMethod() + " " + ep.GetRoute()
@@ -36,10 +36,19 @@ func TestEndpointCostFieldsAreMarked(t *testing.T) {
 				sites = append(sites, response...)
 			}
 			for _, site := range sites {
+				if site.internal {
+					if site.response {
+						foundInternal++
+						checkInternalSite(t, where, site)
+					}
+					continue
+				}
 				found++
 				switch {
 				case site.unreachable != "":
 					t.Errorf("%s: %s is cost data but %s, so costguard cannot clear it", where, site.field, site.unreachable)
+				case site.keyed && site.typ != reflect.TypeFor[map[string]any]():
+					t.Errorf("%s: %s is tagged sensitive:\"cost_keys\" but is a %s; costguard clears cost-named keys only in a map[string]any", where, site.field, site.typ)
 				case !site.tagged:
 					t.Errorf("%s: %s (json %q) reads as cost or margin data but is not tagged sensitive:\"cost\"; tag it, or add it to costFieldAllowlist with the reason it is not", where, site.field, site.path)
 				case site.response && !nullableKind(site.kind):
@@ -49,11 +58,27 @@ func TestEndpointCostFieldsAreMarked(t *testing.T) {
 			if typ := ep.GetResponseType(); typ != nil && hasTaggedResponseSite(typ) && !costguard.HasCostFields(typ) {
 				t.Errorf("%s: its response carries a sensitive:\"cost\" field that costguard's plan does not reach", where)
 			}
+			if typ := ep.GetResponseType(); typ != nil && hasInternalSite(typ) && !costguard.HasInternalFields(typ) {
+				t.Errorf("%s: its response carries a sensitive:\"internal\" field that costguard's plan does not reach", where)
+			}
 		}
 	}
 
 	if found == 0 {
 		t.Fatal("no cost fields found across the endpoint surface; the walk is no longer reaching request and response types")
+	}
+	if foundInternal == 0 {
+		t.Fatal("no sensitive:\"internal\" fields found in any response; the walk is no longer reaching them")
+	}
+}
+
+func checkInternalSite(t *testing.T, where string, site costSite) {
+	t.Helper()
+	switch {
+	case site.unreachable != "":
+		t.Errorf("%s: %s is tagged sensitive:\"internal\" but %s, so costguard cannot clear it", where, site.field, site.unreachable)
+	case !nullableKind(site.kind):
+		t.Errorf("%s: %s is tagged sensitive:\"internal\" but is a %s, which serializes as a zero rather than null once cleared; make it a pointer", where, site.field, site.kind)
 	}
 }
 
@@ -75,7 +100,10 @@ type costSite struct {
 	path        string
 	field       string
 	kind        reflect.Kind
+	typ         reflect.Type
 	tagged      bool
+	keyed       bool
+	internal    bool
 	response    bool
 	unreachable string
 }
@@ -117,6 +145,13 @@ func walkCostSites(typ reflect.Type, prefix, unreachable string, visited map[ref
 
 		path := joinPath(prefix, name)
 		field := fmt.Sprintf("%s.%s", typ, sf.Name)
+		if costguard.IsInternalField(sf) {
+			*out = append(*out, costSite{path: path, field: field, kind: sf.Type.Kind(), internal: true, unreachable: unreachable})
+		}
+		if costguard.IsCostKeysField(sf) {
+			*out = append(*out, costSite{path: path, field: field, kind: sf.Type.Kind(), typ: sf.Type, tagged: true, keyed: true, unreachable: unreachable})
+			continue
+		}
 		tagged := costguard.IsCostField(sf)
 		if tagged || costguard.IsCostName(name) {
 			if _, allowed := costFieldAllowlist[field]; !allowed || tagged {
@@ -152,6 +187,10 @@ func nullableKind(k reflect.Kind) bool {
 
 func hasTaggedResponseSite(typ reflect.Type) bool {
 	return slices.ContainsFunc(costSites(typ), func(s costSite) bool { return s.tagged })
+}
+
+func hasInternalSite(typ reflect.Type) bool {
+	return slices.ContainsFunc(costSites(typ), func(s costSite) bool { return s.internal })
 }
 
 // TestCostSites_flagsUnmarkedAndUnclearable guards the guard: the walk must still notice an unmarked cost field, a marked one that cannot read as null, and one costguard cannot reach.
@@ -201,5 +240,73 @@ func TestCostSites_flagsUnmarkedAndUnclearable(t *testing.T) {
 	}
 	if !costguard.IsCostName("weighted_average_unit_cost") || costguard.IsCostName("unit_value") || costguard.IsCostName("costume") {
 		t.Errorf("IsCostName must match whole tokens only")
+	}
+}
+
+// TestCostSites_flagsInternalFieldsThatCannotClear guards the guard for sensitive:"internal": the walk must notice a tagged field that cannot read as null or that costguard cannot reach, and keep looking for cost fields below one.
+func TestCostSites_flagsInternalFieldsThatCannotClear(t *testing.T) {
+	t.Parallel()
+
+	type owner struct {
+		LaborRate *string `json:"labor_rate"`
+	}
+	type promoted struct {
+		Lot *string `json:"lot" sensitive:"internal"`
+	}
+	type resource struct {
+		ID        string    `json:"id"`
+		Summaries *[]string `json:"summaries" sensitive:"internal"`
+		Count     int32     `json:"count" sensitive:"internal"`
+		Owner     *owner    `json:"owner" sensitive:"internal"`
+		promoted
+	}
+
+	internal := map[string]costSite{}
+	var costPaths []string
+	for _, s := range costSites(reflect.TypeFor[*resource]()) {
+		if s.internal {
+			internal[s.path] = s
+			continue
+		}
+		costPaths = append(costPaths, s.path)
+	}
+
+	keys := make([]string, 0, len(internal))
+	for k := range internal {
+		keys = append(keys, k)
+	}
+	sort.Strings(keys)
+	if want := []string{"count", "lot", "owner", "summaries"}; !slices.Equal(keys, want) {
+		t.Fatalf("found %v, want %v", keys, want)
+	}
+	if nullableKind(internal["count"].kind) || !nullableKind(internal["summaries"].kind) {
+		t.Errorf("nullability wrong: %+v", internal)
+	}
+	if internal["lot"].unreachable == "" {
+		t.Errorf("an internal field promoted from an unexported embedded struct must be reported as unreachable")
+	}
+	if !slices.Equal(costPaths, []string{"owner.labor_rate"}) {
+		t.Errorf("a cost field below an internal one must still be found, got %v", costPaths)
+	}
+}
+
+// TestCostSites_reportsCostKeysMaps guards the guard for sensitive:"cost_keys": the walk reports each tagged map with its type, so one costguard cannot clear is caught.
+func TestCostSites_reportsCostKeysMaps(t *testing.T) {
+	t.Parallel()
+
+	type resource struct {
+		Snapshot map[string]any     `json:"snapshot" sensitive:"cost_keys"`
+		Rates    map[string]float64 `json:"rates" sensitive:"cost_keys"`
+	}
+
+	got := map[string]costSite{}
+	for _, s := range costSites(reflect.TypeFor[*resource]()) {
+		got[s.path] = s
+	}
+	if len(got) != 2 || !got["snapshot"].keyed || !got["rates"].keyed {
+		t.Fatalf("both tagged maps must be reported as keyed: %+v", got)
+	}
+	if got["snapshot"].typ != reflect.TypeFor[map[string]any]() || got["rates"].typ == reflect.TypeFor[map[string]any]() {
+		t.Errorf("map types wrong: %+v", got)
 	}
 }

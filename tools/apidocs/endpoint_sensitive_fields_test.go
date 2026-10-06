@@ -7,6 +7,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/open-mrp/api/services/api-gateway/pkg/costguard"
 	"github.com/open-mrp/api/shared/field"
 	"github.com/open-mrp/api/shared/redact"
 )
@@ -95,12 +96,19 @@ func walkSensitiveSites(typ reflect.Type, prefix, reason string, visited map[ref
 		field := fmt.Sprintf("%s.%s", typ, sf.Name)
 
 		if tag, ok := sf.Tag.Lookup("sensitive"); ok {
-			if !redact.IsSensitiveTag(tag) {
-				*out = append(*out, sensitiveSite{path: path, field: field, reason: fmt.Sprintf("its sensitive tag reads %q rather than \"true\" or \"cost\"", tag)})
+			switch {
+			case tag == costguard.TagInternal:
+				// The seller's own data is logged, since only its own staff read the log; a secret or a cost below it is not.
+			case tag == redact.TagCostKeys:
+				*out = append(*out, sensitiveSite{path: joinPath(path, redact.CostKey), field: field, reason: reason})
+				continue
+			case !redact.IsSensitiveTag(tag):
+				*out = append(*out, sensitiveSite{path: path, field: field, reason: fmt.Sprintf("its sensitive tag reads %q rather than \"true\", \"cost\", \"cost_keys\" or \"internal\"", tag)})
+				continue
+			default:
+				*out = append(*out, sensitiveSite{path: path, field: field, reason: reason})
 				continue
 			}
-			*out = append(*out, sensitiveSite{path: path, field: field, reason: reason})
-			continue
 		}
 
 		ft := derefType(sf.Type)

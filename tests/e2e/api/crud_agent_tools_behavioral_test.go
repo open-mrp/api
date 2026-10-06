@@ -92,3 +92,28 @@ func TestAgentDefinitions_CreateRoundTripsEndpointToolSlugs(t *testing.T) {
 	assert.Contains(t, jsonStringSlice(config, "endpoint_tool_slugs"), "*",
 		"endpoint_tool_slugs round-trips through the agent config")
 }
+
+// No agent may read costs, whatever its role grants, so a tool that needs costs:read alone could only ever fail and is never offered.
+func TestAgentTools_CatalogOffersNoCostOnlyTool(t *testing.T) {
+	t.Parallel()
+
+	list, code, err := apiClient.GetList(aiToolsPath, url.Values{"limit": {"1000"}})
+	require.NoError(t, err)
+	require.Equal(t, 200, code)
+	require.NotEmpty(t, list.Data)
+
+	for _, raw := range list.Data {
+		tool := parseJSON(raw)
+		perms, _ := tool["required_permissions"].([]any)
+		if len(perms) == 0 {
+			continue
+		}
+		onlyCosts := true
+		for _, p := range perms {
+			if p != "costs:read" {
+				onlyCosts = false
+			}
+		}
+		assert.False(t, onlyCosts, "%s requires costs:read alone, which no agent holds", jsonField(tool, "slug"))
+	}
+}

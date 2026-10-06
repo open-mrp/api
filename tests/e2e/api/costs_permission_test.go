@@ -569,16 +569,16 @@ func mustJSON(t *testing.T, v any) []byte {
 
 func TestCosts_CustomerPortalSweepFindsNoCost(t *testing.T) {
 	t.Parallel()
-	portalSweep(t, "customer portal", getCustomerPortalClient())
+	portalSweep(t, "customer portal", getCustomerPortalClient(), requireNoCost)
 }
 
 func TestCosts_SupplierPortalSweepFindsNoCost(t *testing.T) {
 	t.Parallel()
-	portalSweep(t, "supplier portal", getSupplierPortalClient(t))
+	portalSweep(t, "supplier portal", getSupplierPortalClient(t), requireNoCost)
 }
 
-// portalSweep calls every GET the spec documents, as a portal actor, and fails on any cost field holding a value. Each endpoint is read bare, then with every include it offers at once, then (when one of them is refused) with each include on its own. A path id is the first record the portal's own list of that resource returned, or a seed record when it has no list.
-func portalSweep(t *testing.T, who string, client *Client) {
+// portalSweep calls every GET the spec documents, as a portal actor, and runs check on every answer. Each endpoint is read bare, then with every include it offers at once, then (when one of them is refused) with each include on its own. A path id is the first record the portal's own list of that resource returned, or a seed record when it has no list.
+func portalSweep(t *testing.T, who string, client *Client, check func(t *testing.T, who, what string, body []byte)) {
 	t.Helper()
 	spec, err := LoadFullSpec()
 	require.NoError(t, err)
@@ -606,7 +606,7 @@ func portalSweep(t *testing.T, who string, client *Client) {
 			continue
 		}
 		reached++
-		requireNoCost(t, who, "GET "+specPath, body)
+		check(t, who, "GET "+specPath, body)
 		if id := firstListID(body); id != "" {
 			firstIDs[specPath] = id
 		}
@@ -617,13 +617,13 @@ func portalSweep(t *testing.T, who string, client *Client) {
 		}
 		if status, body = getAs(t, client, path, includes...); status == http.StatusOK {
 			expanded++
-			requireNoCost(t, who, "GET "+specPath+" with every include", body)
+			check(t, who, "GET "+specPath+" with every include", body)
 			continue
 		}
 		for _, include := range includes {
 			if status, body = getAs(t, client, path, include); status == http.StatusOK {
 				expanded++
-				requireNoCost(t, who, "GET "+specPath+"?include="+include, body)
+				check(t, who, "GET "+specPath+"?include="+include, body)
 			}
 		}
 	}

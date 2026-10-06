@@ -3402,6 +3402,22 @@ var EndpointTools = []EndpointToolDescriptor{
 		},
 	},
 	{
+		Slug:                "reschedule_message",
+		DisplayName:         "Reschedule Message",
+		Description:         "Moves a message you scheduled to a new send time, optionally revising what it says, and returns it.\n\nThe message keeps its id and is sent once, at the new time; the time it had before no longer applies. You can only reschedule a message you scheduled yourself, and only until its send time arrives — once it is due, sent or canceled the request fails.",
+		Method:              "POST",
+		RouteTemplate:       "/v1/messaging/messages/{id}/actions/reschedule",
+		InputSchema:         "{\"properties\":{\"body\":{\"description\":\"The revised message body, replacing what it said before.\\n\\nLeaving it out keeps the current body.\",\"type\":\"string\"},\"id\":{\"description\":\"The id of the scheduled message.\",\"type\":\"string\"},\"include\":{\"description\":\"Sub-objects to expand in the response. These nested objects are returned as null by default; pass the field keys you need (e.g. \\\"parent_account\\\") to get their full objects inline. Expand to get authoritative data rather than inferring relationships from names.\",\"items\":{\"enum\":[\"sender\",\"author\",\"resource\",\"attachments\",\"attachments.resource\",\"conversation\",\"conversation.participants\",\"conversation.last_message\",\"reply_to\",\"reply_to.sender\",\"reply_to.author\",\"reply_to.attachments\",\"agent_run\"],\"type\":\"string\"},\"type\":\"array\"},\"scheduled_at\":{\"description\":\"When the message should now be sent. Must be in the future.\",\"format\":\"date-time\",\"type\":\"string\"}},\"required\":[\"scheduled_at\",\"id\"],\"type\":\"object\"}",
+		Group:               "Messages",
+		RequiredPermissions: []string{"messaging:update"},
+		Params: []EndpointToolParam{
+			{Name: "body", In: EndpointToolParamBody},
+			{Name: "id", In: EndpointToolParamPath},
+			{Name: "include", In: EndpointToolParamQuery, Array: true},
+			{Name: "scheduled_at", In: EndpointToolParamBody},
+		},
+	},
+	{
 		Slug:                "retrieve_account_group",
 		DisplayName:         "Retrieve Account Group",
 		Description:         "Returns an account group by ID.",

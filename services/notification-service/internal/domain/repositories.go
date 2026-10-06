@@ -304,6 +304,8 @@ type MessageRepo interface {
 	// CancelScheduled marks a scheduled message canceled if owned by the caller's account_user; canceled
 	// is false when it is no longer scheduled, not owned, or not found.
 	CancelScheduled(ctx context.Context, id, accountID, accountUserID string) (canceled bool, apiErr *apierror.APIError)
+	// Reschedule moves a scheduled message owned by the caller's account_user to scheduledFor, replacing its body and preview when given; rescheduled is false when it is not found, not owned, no longer scheduled, or already due.
+	Reschedule(ctx context.Context, id, accountID, accountUserID string, scheduledFor time.Time, body, preview *string) (rescheduled bool, apiErr *apierror.APIError)
 	// ListDueScheduled returns unclaimed scheduled messages whose delivery time has arrived.
 	ListDueScheduled(ctx context.Context, limit int32) ([]*Message, *apierror.APIError)
 	// ClaimScheduled claims a due scheduled message for delivery (compare-and-set on locked_at IS NULL);

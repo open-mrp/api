@@ -55,6 +55,7 @@ const (
 	ChatService_ScheduleMessage_FullMethodName             = "/notification.ChatService/ScheduleMessage"
 	ChatService_ListScheduledMessages_FullMethodName       = "/notification.ChatService/ListScheduledMessages"
 	ChatService_CancelScheduledMessage_FullMethodName      = "/notification.ChatService/CancelScheduledMessage"
+	ChatService_RescheduleMessage_FullMethodName           = "/notification.ChatService/RescheduleMessage"
 	ChatService_AddAgentParticipant_FullMethodName         = "/notification.ChatService/AddAgentParticipant"
 	ChatService_RemoveAgentParticipant_FullMethodName      = "/notification.ChatService/RemoveAgentParticipant"
 	ChatService_SetLegalHold_FullMethodName                = "/notification.ChatService/SetLegalHold"
@@ -141,6 +142,8 @@ type ChatServiceClient interface {
 	ScheduleMessage(ctx context.Context, in *ScheduleMessageRequest, opts ...grpc.CallOption) (*MessageInfo, error)
 	ListScheduledMessages(ctx context.Context, in *ListScheduledMessagesRequest, opts ...grpc.CallOption) (*ListScheduledMessagesResponse, error)
 	CancelScheduledMessage(ctx context.Context, in *CancelScheduledMessageRequest, opts ...grpc.CallOption) (*MessageInfo, error)
+	// Moves a scheduled message the caller owns to a new send time, optionally with a new body.
+	RescheduleMessage(ctx context.Context, in *RescheduleMessageRequest, opts ...grpc.CallOption) (*MessageInfo, error)
 	// ── Phase 5: agents as participants ──
 	AddAgentParticipant(ctx context.Context, in *AddAgentParticipantRequest, opts ...grpc.CallOption) (*ParticipantInfo, error)
 	RemoveAgentParticipant(ctx context.Context, in *RemoveAgentParticipantRequest, opts ...grpc.CallOption) (*ChatAck, error)
@@ -518,6 +521,16 @@ func (c *chatServiceClient) CancelScheduledMessage(ctx context.Context, in *Canc
 	return out, nil
 }
 
+func (c *chatServiceClient) RescheduleMessage(ctx context.Context, in *RescheduleMessageRequest, opts ...grpc.CallOption) (*MessageInfo, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(MessageInfo)
+	err := c.cc.Invoke(ctx, ChatService_RescheduleMessage_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 func (c *chatServiceClient) AddAgentParticipant(ctx context.Context, in *AddAgentParticipantRequest, opts ...grpc.CallOption) (*ParticipantInfo, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(ParticipantInfo)
@@ -809,6 +822,8 @@ type ChatServiceServer interface {
 	ScheduleMessage(context.Context, *ScheduleMessageRequest) (*MessageInfo, error)
 	ListScheduledMessages(context.Context, *ListScheduledMessagesRequest) (*ListScheduledMessagesResponse, error)
 	CancelScheduledMessage(context.Context, *CancelScheduledMessageRequest) (*MessageInfo, error)
+	// Moves a scheduled message the caller owns to a new send time, optionally with a new body.
+	RescheduleMessage(context.Context, *RescheduleMessageRequest) (*MessageInfo, error)
 	// ── Phase 5: agents as participants ──
 	AddAgentParticipant(context.Context, *AddAgentParticipantRequest) (*ParticipantInfo, error)
 	RemoveAgentParticipant(context.Context, *RemoveAgentParticipantRequest) (*ChatAck, error)
@@ -961,6 +976,9 @@ func (UnimplementedChatServiceServer) ListScheduledMessages(context.Context, *Li
 }
 func (UnimplementedChatServiceServer) CancelScheduledMessage(context.Context, *CancelScheduledMessageRequest) (*MessageInfo, error) {
 	return nil, status.Error(codes.Unimplemented, "method CancelScheduledMessage not implemented")
+}
+func (UnimplementedChatServiceServer) RescheduleMessage(context.Context, *RescheduleMessageRequest) (*MessageInfo, error) {
+	return nil, status.Error(codes.Unimplemented, "method RescheduleMessage not implemented")
 }
 func (UnimplementedChatServiceServer) AddAgentParticipant(context.Context, *AddAgentParticipantRequest) (*ParticipantInfo, error) {
 	return nil, status.Error(codes.Unimplemented, "method AddAgentParticipant not implemented")
@@ -1628,6 +1646,24 @@ func _ChatService_CancelScheduledMessage_Handler(srv interface{}, ctx context.Co
 	return interceptor(ctx, in, info, handler)
 }
 
+func _ChatService_RescheduleMessage_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(RescheduleMessageRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ChatServiceServer).RescheduleMessage(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: ChatService_RescheduleMessage_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ChatServiceServer).RescheduleMessage(ctx, req.(*RescheduleMessageRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 func _ChatService_AddAgentParticipant_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(AddAgentParticipantRequest)
 	if err := dec(in); err != nil {
@@ -2176,6 +2212,10 @@ var ChatService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "CancelScheduledMessage",
 			Handler:    _ChatService_CancelScheduledMessage_Handler,
+		},
+		{
+			MethodName: "RescheduleMessage",
+			Handler:    _ChatService_RescheduleMessage_Handler,
 		},
 		{
 			MethodName: "AddAgentParticipant",

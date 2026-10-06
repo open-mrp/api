@@ -29,6 +29,7 @@ type MessageSvc interface {
 	ApproveSendDraft(ctx context.Context, req *ApproveSendDraftRequest) (*apiresource.Message, *apierror.APIError)
 	RejectDraft(ctx context.Context, req *RejectDraftRequest) (*apiresource.Message, *apierror.APIError)
 	CancelScheduled(ctx context.Context, req *CancelScheduledRequest) (*apiresource.Message, *apierror.APIError)
+	RescheduleMessage(ctx context.Context, req *RescheduleMessageRequest) (*apiresource.Message, *apierror.APIError)
 }
 
 type MessageSvcConfig struct {
@@ -250,6 +251,18 @@ func (s *messageSvcImpl) CancelScheduled(ctx context.Context, req *CancelSchedul
 	resp, rpcErr := grpcutil.CallRPC(ctx, messageSvcTracer, "service.conversations.cancel_scheduled", domain.ServiceName,
 		func(ctx context.Context, opts ...grpc.CallOption) (*pb.MessageInfo, error) {
 			return s.chatClient.CancelScheduledMessage(ctx, pbReq, opts...)
+		})
+	if rpcErr != nil {
+		return nil, rpcErr
+	}
+	return s.resolveOne(ctx, resp), nil
+}
+
+func (s *messageSvcImpl) RescheduleMessage(ctx context.Context, req *RescheduleMessageRequest) (*apiresource.Message, *apierror.APIError) {
+	pbReq := &pb.RescheduleMessageRequest{Id: req.MessageID, ScheduledFor: timestamppb.New(req.ScheduledAt), Body: req.Body.Ptr()}
+	resp, rpcErr := grpcutil.CallRPC(ctx, messageSvcTracer, "service.conversations.reschedule_message", domain.ServiceName,
+		func(ctx context.Context, opts ...grpc.CallOption) (*pb.MessageInfo, error) {
+			return s.chatClient.RescheduleMessage(ctx, pbReq, opts...)
 		})
 	if rpcErr != nil {
 		return nil, rpcErr

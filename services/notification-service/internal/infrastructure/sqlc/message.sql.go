@@ -923,6 +923,48 @@ func (q *Queries) PromoteScheduledMessage(ctx context.Context, arg PromoteSchedu
 	return result.RowsAffected()
 }
 
+const rescheduleMessageForUser = `-- name: RescheduleMessageForUser :execrows
+UPDATE message m
+JOIN conversation_participant p ON p.id = m.sender_participant_id
+SET m.scheduled_for = ?,
+    m.body = COALESCE(?, m.body),
+    m.preview = COALESCE(?, m.preview),
+    m.updated_at = NOW(3)
+WHERE m.id = ?
+  AND m.account_id = ?
+  AND p.account_user_id = ?
+  AND m.status = 'scheduled'
+  AND m.scheduled_for > NOW(3)
+  AND m.deleted_at IS NULL
+`
+
+type RescheduleMessageForUserParams struct {
+	ScheduledFor  sql.NullTime
+	Body          sql.NullString
+	Preview       sql.NullString
+	ID            string
+	AccountID     string
+	AccountUserID sql.NullString
+}
+
+// Moves a scheduled message owned by the caller to a new send time, replacing its body and preview
+// when given. Only while it is still scheduled and its current time has not come: once due, the
+// worker may already have listed it, and a change then could be delivered at the old time.
+func (q *Queries) RescheduleMessageForUser(ctx context.Context, arg RescheduleMessageForUserParams) (int64, error) {
+	result, err := q.db.ExecContext(ctx, rescheduleMessageForUser,
+		arg.ScheduledFor,
+		arg.Body,
+		arg.Preview,
+		arg.ID,
+		arg.AccountID,
+		arg.AccountUserID,
+	)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected()
+}
+
 const setDraftMessageStatus = `-- name: SetDraftMessageStatus :execrows
 UPDATE message
 SET status = ?, updated_at = NOW(3)

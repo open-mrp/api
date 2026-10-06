@@ -13,18 +13,35 @@ import (
 
 // Creating a group with admins is one request under messaging:create: participants carries each member's starting role, applied as the owner's role change.
 
-// customRoleChatUser is a person signed in to the seed account under a role holding exactly perms. Chat needs an account membership, which an API key does not have.
-func customRoleChatUser(t *testing.T, perms ...string) (client *Client, accountUserID string) {
+// chatRoleUser is a person on the seed account under a role of their own. Chat needs an account membership, which an API key does not have.
+type chatRoleUser struct {
+	client                       *Client
+	accountUserID, roleID, email string
+}
+
+func newChatRoleUser(t *testing.T, perms ...string) chatRoleUser {
 	t.Helper()
 	role := createAndCleanup(t, "/v1/identity/roles", map[string]any{"name": uniqueName("e2e-chat-role"), "permissions": perms})
 	_, email := covAuthPasswordsRegisterUser(t, "e2e-chat-role")
 	status, body, err := apiClient.Post(accountUsersPath, map[string]any{"email": email, "role_id": jsonField(role, "id")}, newIdempotencyKey())
 	require.NoError(t, err)
 	requireStatus(t, http.StatusCreated, status, body)
-	accountUserID = jsonField(parseJSON(body), "id")
+	accountUserID := jsonField(parseJSON(body), "id")
 	require.NotEmpty(t, accountUserID)
 	t.Cleanup(func() { removeAccountUser(accountUserID) })
-	return loginAsUser(t, email, covAuthUsersPassword, SeedAccountID), accountUserID
+	return chatRoleUser{
+		client:        loginAsUser(t, email, covAuthUsersPassword, SeedAccountID),
+		accountUserID: accountUserID,
+		roleID:        jsonField(role, "id"),
+		email:         email,
+	}
+}
+
+// customRoleChatUser is a person signed in to the seed account under a role holding exactly perms.
+func customRoleChatUser(t *testing.T, perms ...string) (client *Client, accountUserID string) {
+	t.Helper()
+	u := newChatRoleUser(t, perms...)
+	return u.client, u.accountUserID
 }
 
 func createConversationAs(t *testing.T, c *Client, body map[string]any) (int, []byte) {

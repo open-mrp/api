@@ -91,6 +91,8 @@ type ConversationSvc interface {
 	ListScheduledMessages(ctx context.Context, conversationID string) ([]*Message, *apierror.APIError)
 	// CancelScheduledMessage cancels a scheduled message the caller created.
 	CancelScheduledMessage(ctx context.Context, id string) (*Message, *apierror.APIError)
+	// RescheduleMessage moves a scheduled message the caller created to a new send time, and replaces its body when one is given. It is refused once the message is due, sent or canceled.
+	RescheduleMessage(ctx context.Context, input RescheduleMessageInput) (*Message, *apierror.APIError)
 	// DeliverDueScheduledMessages materializes all currently-due scheduled messages into real messages. Called by the lease-guarded scheduler worker (no request identity in context).
 	DeliverDueScheduledMessages(ctx context.Context, limit int32) (int, *apierror.APIError)
 

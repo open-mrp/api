@@ -2198,6 +2198,21 @@ func (mr *MockMessageRepoMockRecorder) PromoteScheduled(ctx, id, sequence any) *
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "PromoteScheduled", reflect.TypeOf((*MockMessageRepo)(nil).PromoteScheduled), ctx, id, sequence)
 }
 
+// Reschedule mocks base method.
+func (m *MockMessageRepo) Reschedule(ctx context.Context, id, accountID, accountUserID string, scheduledFor time.Time, body, preview *string) (bool, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Reschedule", ctx, id, accountID, accountUserID, scheduledFor, body, preview)
+	ret0, _ := ret[0].(bool)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
+}
+
+// Reschedule indicates an expected call of Reschedule.
+func (mr *MockMessageRepoMockRecorder) Reschedule(ctx, id, accountID, accountUserID, scheduledFor, body, preview any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Reschedule", reflect.TypeOf((*MockMessageRepo)(nil).Reschedule), ctx, id, accountID, accountUserID, scheduledFor, body, preview)
+}
+
 // SetDraftStatus mocks base method.
 func (m *MockMessageRepo) SetDraftStatus(ctx context.Context, id, accountID, status string) (bool, *apierror.APIError) {
 	m.ctrl.T.Helper()

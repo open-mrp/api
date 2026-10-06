@@ -2305,6 +2305,93 @@ func (s *conversationSvcImpl) CancelScheduledMessage(ctx context.Context, schedu
 	return repo.GetByID(ctx, scheduledID, accountID)
 }
 
+// RescheduleMessage moves a scheduled message the caller created to a new send time, replacing its body when one is given. The message stays the single row the worker promotes, so the old time no longer fires and it is sent once, at the new time.
+func (s *conversationSvcImpl) RescheduleMessage(ctx context.Context, input domain.RescheduleMessageInput) (*domain.Message, *apierror.APIError) {
+	ctx, span := conversationSvcTracer.Start(ctx, "service.conversation.reschedule_message")
+	defer span.End()
+
+	identity, callerAcus, accountID, apiErr := s.caller(ctx)
+	if apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
+	if input.Body != nil && *input.Body == "" {
+		return nil, tracing.Trace(span, apierror.NewParameterInvalidError("A message body must not be blank.", "body"))
+	}
+	if !input.ScheduledFor.After(time.Now()) {
+		return nil, tracing.Trace(span, apierror.NewParameterInvalidError("The scheduled_at time must be in the future.", "scheduled_at"))
+	}
+
+	idemKey, apiErr := upsertIdempotencyKey(ctx, s.repoFactory, identity)
+	if apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
+	switch domain.RecoveryPoint(idemKey.RecoveryPoint) {
+	case domain.RecoveryPointFinished:
+		cached, err := idempotency.UnmarshalCachedResponse[domain.Message](ctx, idemKey.ResponseCode, idemKey.ResponseBody)
+		if err != nil {
+			return nil, tracing.Trace(span, apierror.NewInternalError(err, "Issue unmarshalling cached response."))
+		}
+		return cached.Data, cached.Error
+	case domain.RecoveryPointStarted:
+		var preview *string
+		if input.Body != nil {
+			preview = strPtrIfNotEmpty(truncatePreview(*input.Body))
+		}
+		var result *domain.Message
+		apiErr = s.txManager.WithTx(ctx, func(txCtx context.Context, f domain.RepoFactory) *apierror.APIError {
+			repo := f.NewMessageRepo()
+			moved, apiErr := repo.Reschedule(txCtx, input.ID, accountID, callerAcus, input.ScheduledFor, input.Body, preview)
+			if apiErr != nil {
+				return apiErr
+			}
+			if !moved {
+				return rescheduleRefusal(txCtx, f, input.ID, accountID, callerAcus)
+			}
+			loaded, apiErr := repo.GetByID(txCtx, input.ID, accountID)
+			if apiErr != nil {
+				return apiErr
+			}
+			result = loaded
+			return cacheSuccessResponse(txCtx, f, idemKey.TypeID, result)
+		})
+		if apiErr != nil {
+			return nil, tracing.Trace(span, cacheErrorResponse(ctx, s.repoFactory, idemKey.TypeID, apiErr))
+		}
+		return result, nil
+	default:
+		return nil, tracing.Trace(span, apierror.NewInvariantViolationError("Unexpected recovery point: "+idemKey.RecoveryPoint))
+	}
+}
+
+// rescheduleRefusal says why a scheduled message could not be moved: one the caller did not schedule reads as missing, and one sent, canceled or already due can no longer change.
+func rescheduleRefusal(ctx context.Context, f domain.RepoFactory, id, accountID, callerAcus string) *apierror.APIError {
+	notFound := apierror.NewResourceNotFoundError("Scheduled message not found.")
+	msg, apiErr := f.NewMessageRepo().GetByID(ctx, id, accountID)
+	if apiErr != nil {
+		if apiErr.Code == apierror.ErrorCodeResourceNotFound {
+			return notFound
+		}
+		return apiErr
+	}
+	if msg.SenderParticipantID == nil {
+		return notFound
+	}
+	sender, apiErr := f.NewParticipantRepo().GetByID(ctx, *msg.SenderParticipantID, msg.ConversationID)
+	if apiErr != nil {
+		if apiErr.Code == apierror.ErrorCodeResourceNotFound {
+			return notFound
+		}
+		return apiErr
+	}
+	if sender.AccountUserID == nil || *sender.AccountUserID != callerAcus {
+		return notFound
+	}
+	if msg.Status != string(constants.MessageStatusScheduled) {
+		return apierror.NewValidationError("This scheduled message can no longer be rescheduled (status: " + msg.Status + ").")
+	}
+	return apierror.NewValidationError("This scheduled message is due and being sent, so it can no longer be rescheduled.")
+}
+
 // DeliverDueScheduledMessages promotes each due scheduled message into a sent timeline message in place. It runs without request identity (called by the scheduler worker under a lease). Each delivery re-checks that the conversation still exists and the sender is still an active participant; otherwise the scheduled message is canceled with a reason rather than sent.
 func (s *conversationSvcImpl) DeliverDueScheduledMessages(ctx context.Context, limit int32) (int, *apierror.APIError) {
 	ctx, span := conversationSvcTracer.Start(ctx, "service.conversation.deliver_due_scheduled_messages")

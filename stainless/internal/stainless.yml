@@ -1513,8 +1513,10 @@ resources:
               approve_send: post /v1/messaging/messages/{id}/actions/approve-send
               reject: post /v1/messaging/messages/{id}/actions/reject
               cancel: post /v1/messaging/messages/{id}/actions/cancel
+              reschedule: post /v1/messaging/messages/{id}/actions/reschedule
             models:
               approve_send_draft_request: '#/components/schemas/ApproveSendDraftRequest'
+              reschedule_message_request: '#/components/schemas/RescheduleMessageRequest'
         models:
           update_draft_request: '#/components/schemas/UpdateDraftRequest'
       groups:

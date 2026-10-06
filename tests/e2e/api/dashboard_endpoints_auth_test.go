@@ -60,10 +60,15 @@ var dashboardOperationIDs = []string{
 // dashboardPublicOperations answer without credentials.
 var dashboardPublicOperations = map[string]string{
 	"retrieve-account-by-slug": "the portal's sign-in page shows the seller's branding before anyone signs in",
-	"register-customer":        "a prospective customer registers before having an account",
 	"validate-address":         "address entry on the registration form runs before sign-in",
 	"list-address-suggestions": "address entry on the registration form runs before sign-in",
 	"retrieve-address-details": "address entry on the registration form runs before sign-in",
+}
+
+// dashboardValidBodies pass validation, for operations that decide on credentials only once the body is valid.
+var dashboardValidBodies = map[string]map[string]any{
+	"register-customer": {"account_slug": "e2e-sweep-no-such-seller"},
+	"validate-address":  {"address_line_1": "1 Main St", "city": "Los Angeles", "state": "CA", "postal_code": "90001", "country": "US"},
 }
 
 type dashboardOperation struct {
@@ -175,6 +180,9 @@ func unknownIDLike(op dashboardOperation, param string) string {
 
 // dashboardRequestBody is refused before anything is written, except a report's, which gets a window to run.
 func dashboardRequestBody(op dashboardOperation) map[string]any {
+	if body, ok := dashboardValidBodies[op.operationID]; ok {
+		return body
+	}
 	if strings.HasPrefix(op.path, "/v1/core/analytics/") && op.method == http.MethodPut {
 		end := time.Date(2026, 1, 31, 0, 0, 0, 0, time.UTC)
 		return map[string]any{"starts_at": rfc3339(end.AddDate(0, -1, 0)), "ends_at": rfc3339(end)}

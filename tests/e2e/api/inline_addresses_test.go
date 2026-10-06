@@ -574,7 +574,7 @@ func TestInlineAddresses_PurchaseOrderUpdateTakesOnlyTheSuppliersOrOwnAddresses(
 	status, body, err := apiClient.Patch(path, map[string]any{"billing_address_id": ownAddressID, "shipping_address_id": supplierAddressID}, newIdempotencyKey())
 	require.NoError(t, err)
 	requireStatus(t, 200, status, body)
-	bill, ship := getWithAddresses(t, path, "billing_address", "shipping_address")
+	bill, ship := getWithAddresses(t, path, "bill_to_address", "ship_to_address")
 	assert.Equal(t, ownAddressID, jsonField(bill, "id"), "the account's own address, as the order page offers")
 	assert.Equal(t, supplierAddressID, jsonField(ship, "id"), "the supplier's address")
 }

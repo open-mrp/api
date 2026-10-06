@@ -3,6 +3,7 @@
 package api_test
 
 import (
+	"net/http"
 	"net/url"
 	"strings"
 	"testing"
@@ -724,6 +725,29 @@ func TestDashCustomers_FrequentlyOrderedProductsCountTheCustomersOrders(t *testi
 	assert.Equal(t, "frequently_ordered_product", jsonField(row, "object"))
 	assert.Equal(t, SeedItemID, jsonField(jsonObject(row, "item"), "id"))
 	assert.Equal(t, "1", jsonField(row, "order_count"))
+}
+
+// On the seller's own account a customer's frequent products need items:read, as legacy required.
+func TestDashCustomers_FrequentlyOrderedProductsNeedItemsReadOnTheOwnAccount(t *testing.T) {
+	t.Parallel()
+	customerID := setupOrderCustomer(t)
+	status, body, err := apiClient.Post(salesOrdersPath, minimalSalesOrderCreateBody(t, customerID), newIdempotencyKey())
+	require.NoError(t, err)
+	requireStatus(t, 201, status, body)
+	deleteOrder(t, jsonField(parseJSON(body), "id"))
+	path := customersPath + "/" + customerID + "/frequently-ordered-products"
+	want := parseJSON(mustGetAs(t, apiClient, path, nil))
+	require.NotEmpty(t, jsonArray(want, "data"), "the customer has ordered")
+
+	assert.Equal(t, want, parseJSON(mustGetAs(t, customRoleClient(t, "items:read"), path, nil)), "an items reader sees what the admin sees")
+
+	for _, perms := range [][]string{{"customers:read"}, {"customers:read", "sales_orders:create"}} {
+		status, body, err := customRoleClient(t, perms...).GetListRaw(path, nil)
+		require.NoError(t, err)
+		requireStatus(t, http.StatusForbidden, status, body)
+		apiErr := jsonObject(parseJSON(body), "error")
+		assert.Contains(t, jsonField(apiErr, "message"), "items:read", "%v is refused for want of items:read", perms)
+	}
 }
 
 // ---------------------------------------------------------------------------

@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"log/slog"
+	"time"
 
 	"github.com/shopspring/decimal"
 
@@ -258,16 +259,7 @@ func (s *batchSvcImpl) DeleteBatch(ctx context.Context, batchID string) (*domain
 	// Find the batch to get production run ID for post-delete handling.
 	batch, apiErr := batchRepo.Find(ctx, accountID, batchID)
 	if apiErr != nil {
-		if apierror.IsNotFound(apiErr) {
-			wasDeleted, deletedCheckErr := s.repos.NewDeletedRecordRepo().Exists(ctx, constants.DeletedRecordResourceTypeBatch, batchID)
-			if deletedCheckErr != nil {
-				return nil, tracing.Trace(span, deletedCheckErr)
-			}
-			if wasDeleted {
-				return nil, tracing.Trace(span, apierror.NewAlreadyDeletedError("This batch has already been deleted and can no longer be modified."))
-			}
-		}
-		return nil, tracing.Trace(span, apiErr)
+		return nil, tracing.Trace(span, s.missingBatchError(ctx, batchID, apiErr))
 	}
 
 	result, apiErr := s.undoBatch(ctx, identity, accountID, batch)
@@ -372,6 +364,68 @@ func (s *batchSvcImpl) orderForUndo(ctx context.Context, batches []*domain.Batch
 	return ordered, nil
 }
 
+// missingBatchError answers for a batch that could not be found: one that was deleted says so.
+func (s *batchSvcImpl) missingBatchError(ctx context.Context, batchID string, findErr *apierror.APIError) *apierror.APIError {
+	if !apierror.IsNotFound(findErr) {
+		return findErr
+	}
+	wasDeleted, apiErr := s.repos.NewDeletedRecordRepo().Exists(ctx, constants.DeletedRecordResourceTypeBatch, batchID)
+	if apiErr != nil {
+		return apiErr
+	}
+	if wasDeleted {
+		return apierror.NewAlreadyDeletedError("This batch has already been deleted and can no longer be modified.")
+	}
+	return findErr
+}
+
+// holdForUndo holds a batch being undone and the batches it consumed, then checks again what the undo was
+// decided on, since another undo or scan of them may have committed while it waited. A batch already
+// deleted answers as deleting it again would; one scanned or unscanned since was read in a state it is no
+// longer in; and one a later scan now uses, or whose inventory has been used, cannot be undone.
+func (s *batchSvcImpl) holdForUndo(ctx context.Context, accountID string, batch *domain.Batch, inputBatchIDs []string) *apierror.APIError {
+	batchRepo := s.repos.NewBatchRepo()
+	held, apiErr := holdBatches(ctx, batchRepo, accountID, []string{batch.ID}, inputBatchIDs)
+	if apiErr != nil {
+		return apiErr
+	}
+
+	now := held[batch.ID]
+	if !now.exists {
+		_, findErr := batchRepo.Find(ctx, accountID, batch.ID)
+		if findErr == nil {
+			return apierror.NewInvariantViolationError("A batch row reported missing was found.")
+		}
+		return s.missingBatchError(ctx, batch.ID, findErr)
+	}
+	if !sameInstant(now.scannedAt, batch.ScannedAt) {
+		return apierror.NewResourceConflictError("This batch changed while it was being undone. Refresh and try again.")
+	}
+
+	downstream, apiErr := batchRepo.CountDownstreamBatches(ctx, batch.ID)
+	if apiErr != nil {
+		return apiErr
+	}
+	if downstream > 0 {
+		return apierror.NewValidationError("This batch has already been used by a later scan. Delete that batch first.")
+	}
+	allocated, apiErr := s.repos.NewInventoryMutationRepo().CountAllocatedReceiptsForBatch(ctx, accountID, batch.ID)
+	if apiErr != nil {
+		return apiErr
+	}
+	if allocated > 0 {
+		return apierror.NewValidationError("Inventory produced by this batch has already been used and cannot be reversed.")
+	}
+	return nil
+}
+
+func sameInstant(a, b *time.Time) bool {
+	if a == nil || b == nil {
+		return a == b
+	}
+	return a.Equal(*b)
+}
+
 // undoBatch undoes the scan that produced a batch: the batches it consumed are released, the run it
 // belongs to reopens, and an outbox message goes out to reverse the inventory the scan recorded.
 //
@@ -387,22 +441,6 @@ func (s *batchSvcImpl) undoBatch(ctx context.Context, identity *types.Identity, 
 	defer span.End()
 
 	batchRepo := s.repos.NewBatchRepo()
-
-	downstream, apiErr := batchRepo.CountDownstreamBatches(ctx, batch.ID)
-	if apiErr != nil {
-		return nil, tracing.Trace(span, apiErr)
-	}
-	if downstream > 0 {
-		return nil, tracing.Trace(span, apierror.NewValidationError("This batch has already been used by a later scan. Delete that batch first."))
-	}
-
-	allocated, apiErr := s.repos.NewInventoryMutationRepo().CountAllocatedReceiptsForBatch(ctx, accountID, batch.ID)
-	if apiErr != nil {
-		return nil, tracing.Trace(span, apiErr)
-	}
-	if allocated > 0 {
-		return nil, tracing.Trace(span, apierror.NewValidationError("Inventory produced by this batch has already been used and cannot be reversed."))
-	}
 
 	// An unscanned batch never moved inventory or joined the flow: it is a planned unit of work, and
 	// deleting it is just a delete.
@@ -435,6 +473,10 @@ func (s *batchSvcImpl) undoBatch(ctx context.Context, identity *types.Identity, 
 	apiErr = s.withTx(ctx, func(txCtx context.Context, txSvc *batchSvcImpl) *apierror.APIError {
 		txCtx = event.WithRepos(txCtx, txSvc.repos)
 		txBatchRepo := txSvc.repos.NewBatchRepo()
+
+		if apiErr := txSvc.holdForUndo(txCtx, accountID, batch, inputBatchIDs); apiErr != nil {
+			return apiErr
+		}
 
 		if isInitScan {
 			unscanned, apiErr := txBatchRepo.Unscan(txCtx, accountID, batch.ID)
@@ -564,6 +606,10 @@ func (s *batchSvcImpl) deleteBatchRow(ctx context.Context, identity *types.Ident
 
 	apiErr := s.withTx(ctx, func(txCtx context.Context, txSvc *batchSvcImpl) *apierror.APIError {
 		txCtx = event.WithRepos(txCtx, txSvc.repos)
+
+		if apiErr := txSvc.holdForUndo(txCtx, accountID, batch, nil); apiErr != nil {
+			return apiErr
+		}
 
 		if apiErr := txSvc.repos.NewDeletedRecordRepo().Create(txCtx, constants.DeletedRecordResourceTypeBatch, batch.ID, batch); apiErr != nil {
 			return apiErr

@@ -47,6 +47,12 @@ const (
 	EmailTemplateDemoRequest EmailTemplate = "demo_request"
 	// EmailTemplateDashboardFeedback indicates that the email template is for in-app feedback submitted from the dashboard.
 	EmailTemplateDashboardFeedback EmailTemplate = "dashboard_feedback"
+	// EmailTemplateAccountFollowup is the personal, plain-text follow-up a new registrant receives a day after signing up. Its body is composed and reviewed before it is published, so the template only carries it.
+	EmailTemplateAccountFollowup EmailTemplate = "account_followup"
+	// EmailTemplateAccountFollowupReview asks the reviewer to approve a drafted account follow-up, with the registrant's activity alongside the draft.
+	EmailTemplateAccountFollowupReview EmailTemplate = "account_followup_review"
+	// EmailTemplateAccountFollowupContext is the internal note threaded under a sent account follow-up, so the reviewer's inbox holds the activity summary next to the registrant's reply.
+	EmailTemplateAccountFollowupContext EmailTemplate = "account_followup_context"
 )
 
 func (t EmailTemplate) IsValid() bool {
@@ -71,14 +77,17 @@ func (t EmailTemplate) IsValid() bool {
 		EmailTemplateChatMessage,
 		EmailTemplateMessageFailureAlert,
 		EmailTemplateDemoRequest,
-		EmailTemplateDashboardFeedback:
+		EmailTemplateDashboardFeedback,
+		EmailTemplateAccountFollowup,
+		EmailTemplateAccountFollowupReview,
+		EmailTemplateAccountFollowupContext:
 		return true
 	}
 	return false
 }
 
 func (t EmailTemplate) EnumValues() []string {
-	return []string{string(EmailTemplateWelcome), string(EmailTemplatePasswordReset), string(EmailTemplatePasswordUpdated), string(EmailTemplateRegistrationVerify), string(EmailTemplateRegistrationVerifyExisting), string(EmailTemplateEnterpriseRequest), string(EmailTemplateInternalErrorAlert), string(EmailTemplateNewRegistrationAlert), string(EmailTemplatePlanChangeAlert), string(EmailTemplateRegistrationLimitAlert), string(EmailTemplateNewUserWelcome), string(EmailTemplateOrderCheckout), string(EmailTemplatePurchaseOrderSubmission), string(EmailTemplateStatementOfAccount), string(EmailTemplateInvoice), string(EmailTemplateOrderAcknowledgement), string(EmailTemplateAlreadyRegistered), string(EmailTemplateChatMessage), string(EmailTemplateMessageFailureAlert), string(EmailTemplateDemoRequest), string(EmailTemplateDashboardFeedback)}
+	return []string{string(EmailTemplateWelcome), string(EmailTemplatePasswordReset), string(EmailTemplatePasswordUpdated), string(EmailTemplateRegistrationVerify), string(EmailTemplateRegistrationVerifyExisting), string(EmailTemplateEnterpriseRequest), string(EmailTemplateInternalErrorAlert), string(EmailTemplateNewRegistrationAlert), string(EmailTemplatePlanChangeAlert), string(EmailTemplateRegistrationLimitAlert), string(EmailTemplateNewUserWelcome), string(EmailTemplateOrderCheckout), string(EmailTemplatePurchaseOrderSubmission), string(EmailTemplateStatementOfAccount), string(EmailTemplateInvoice), string(EmailTemplateOrderAcknowledgement), string(EmailTemplateAlreadyRegistered), string(EmailTemplateChatMessage), string(EmailTemplateMessageFailureAlert), string(EmailTemplateDemoRequest), string(EmailTemplateDashboardFeedback), string(EmailTemplateAccountFollowup), string(EmailTemplateAccountFollowupReview), string(EmailTemplateAccountFollowupContext)}
 }
 
 // SendsAsMerchant reports whether the template carries a merchant's own correspondence with their counterparty — an order, an invoice, a statement — rather than Augno's relationship with a user. Only these may leave from an account's configured sender: a password reset arriving from a tenant's domain reads as a spoof of exactly the mail it is meant to authenticate, and puts that tenant's sending reputation behind our credential flow.
@@ -94,4 +103,9 @@ func (t EmailTemplate) SendsAsMerchant() bool {
 		return true
 	}
 	return false
+}
+
+// IsPlainText reports whether the template renders text/plain rather than HTML. A personal note from a person reads as one only without letterhead, and plain-text bodies must not be HTML-escaped.
+func (t EmailTemplate) IsPlainText() bool {
+	return t == EmailTemplateAccountFollowup
 }

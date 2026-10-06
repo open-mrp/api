@@ -156,3 +156,40 @@ func TestSplitString(t *testing.T) {
 		assert.Equal(t, "short", chunked)
 	})
 }
+
+func TestGenerateRawEmailEncodesNonASCIISubject(t *testing.T) {
+	t.Parallel()
+	rawEmail, err := generateRawEmail(rawEmailInput{
+		Subject:     "Quick question — your setup",
+		Body:        "hi",
+		Recipients:  []string{"test@example.com"},
+		SenderEmail: "noreply@example.com",
+	})
+	assert.NoError(t, err)
+	assert.Contains(t, string(rawEmail), "Subject: =?utf-8?q?")
+	assert.NotContains(t, string(rawEmail), "—")
+}
+
+func TestGenerateRawEmailThreadsUnderSESMessage(t *testing.T) {
+	t.Parallel()
+	ids := sesMessageIDHeaders("0100abc", "us-east-2")
+	references := strings.Join(ids, " ")
+	rawEmail, err := generateRawEmail(rawEmailInput{
+		Subject:     "Re: Hello",
+		Body:        "note",
+		Recipients:  []string{"reviewer@example.com"},
+		SenderEmail: "noreply@example.com",
+		InReplyTo:   &ids[0],
+		References:  &references,
+	})
+	assert.NoError(t, err)
+	emailStr := string(rawEmail)
+	assert.Contains(t, emailStr, "In-Reply-To: <0100abc@us-east-2.amazonses.com>")
+	assert.Contains(t, emailStr, "References: <0100abc@us-east-2.amazonses.com> <0100abc@email.amazonses.com>")
+}
+
+func TestSESMessageIDHeaders(t *testing.T) {
+	t.Parallel()
+	assert.Equal(t, []string{"m1@email.amazonses.com"}, sesMessageIDHeaders("m1", "us-east-1"))
+	assert.Equal(t, []string{"m1@us-east-2.amazonses.com", "m1@email.amazonses.com"}, sesMessageIDHeaders("m1", "us-east-2"))
+}

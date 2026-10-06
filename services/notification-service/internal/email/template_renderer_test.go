@@ -217,3 +217,39 @@ func TestRenderInvoiceFooterOmitsUnsetSections(t *testing.T) {
 	require.NotContains(t, body, "instagram.com")
 	require.NotContains(t, body, "since 1975")
 }
+
+// The follow-up goes out as text/plain, so its reviewed body must arrive byte-for-byte: html/template would turn every apostrophe into &#39; in the registrant's inbox.
+func TestRenderAccountFollowupIsNotHTMLEscaped(t *testing.T) {
+	renderer, apiErr := NewTemplateRenderer()
+	require.Nil(t, apiErr)
+
+	body := "Hi Sam,\n\nI saw you set up locations & units — what's next for you?\n\nDane"
+	out, apiErr := renderer.RenderTemplate(context.Background(), constants.EmailTemplateAccountFollowup, map[string]any{"Body": body})
+	require.Nil(t, apiErr)
+	require.Equal(t, body+"\n", out)
+}
+
+// The review email ranges over the activity timeline and embeds the shared context partial, so execute it with real values to catch a field or partial typo.
+func TestRenderAccountFollowupReview(t *testing.T) {
+	renderer, apiErr := NewTemplateRenderer()
+	require.Nil(t, apiErr)
+
+	out, apiErr := renderer.RenderTemplate(context.Background(), constants.EmailTemplateAccountFollowupReview, map[string]any{
+		"RegistrantName":  "Sam Example",
+		"RegistrantEmail": "sam@example.com",
+		"AccountName":     "Example Co",
+		"AccountID":       "ac_example",
+		"RegisteredAt":    "Oct 3, 2026",
+		"Engagement":      "Moderate",
+		"Summary":         "Set up six locations.",
+		"Timeline":        []string{"Created 6 locations", "Opened API docs"},
+		"DraftSubject":    "Quick question about your setup",
+		"DraftBody":       "Hi Sam,\n\nThanks for signing up.",
+		"ReviewURL":       "https://example.com/review?token=abc",
+		"ExpiresAt":       "Oct 10, 2026",
+	})
+	require.Nil(t, apiErr)
+	for _, want := range []string{"sam@example.com", "Created 6 locations", "Opened API docs", "Quick question about your setup", "https://example.com/review?token=abc"} {
+		require.Contains(t, out, want)
+	}
+}

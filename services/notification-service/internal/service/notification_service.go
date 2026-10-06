@@ -4,6 +4,8 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
+	"net/mail"
+	"strings"
 
 	"github.com/open-mrp/api/services/notification-service/internal/domain"
 	"github.com/open-mrp/api/services/notification-service/internal/email"
@@ -119,12 +121,18 @@ func (s *notificationSvcImpl) SendEmail(ctx context.Context, data domain.EmailSe
 	}
 
 	emailData := domain.EmailData{
-		To:         data.To,
-		Subject:    data.Subject,
-		Body:       data.Body,
-		SendAs:     data.SendAs,
-		Attachment: data.Attachment,
-		Filename:   data.Filename,
+		To:                    data.To,
+		Subject:               data.Subject,
+		Body:                  data.Body,
+		SendAs:                data.SendAs,
+		Attachment:            data.Attachment,
+		Filename:              data.Filename,
+		Bcc:                   data.Bcc,
+		PlainText:             data.PlainText,
+		InReplyToSESMessageID: data.InReplyToSESMessageID,
+	}
+	if isPlatformSender(data.From) {
+		emailData.From = data.From
 	}
 
 	sender := s.emailSender
@@ -143,6 +151,22 @@ func (s *notificationSvcImpl) SendEmail(ctx context.Context, data domain.EmailSe
 	}
 
 	return sesMessageID, nil
+}
+
+// platformSenderDomains are the domains the platform sender identity is verified for. A requested From outside them is dropped rather than sent: SES would reject an unverified identity, and honoring an arbitrary address would let any publisher send as a tenant's domain.
+var platformSenderDomains = map[string]bool{"augno.com": true, "openmrp.ai": true}
+
+// isPlatformSender reports whether from is a well-formed address on a platform domain.
+func isPlatformSender(from *string) bool {
+	if from == nil || *from == "" {
+		return false
+	}
+	addr, err := mail.ParseAddress(*from)
+	if err != nil {
+		return false
+	}
+	at := strings.LastIndex(addr.Address, "@")
+	return at > 0 && platformSenderDomains[strings.ToLower(addr.Address[at+1:])]
 }
 
 // resolveMerchantSender returns the account's own outbound identity when this message may use one, and nil to leave it on the platform address — which is the common case and never an error.

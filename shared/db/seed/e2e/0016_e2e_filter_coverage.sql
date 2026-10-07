@@ -37,8 +37,8 @@ INSERT IGNORE INTO account_address (id, account_id, address_id, created_at, upda
 
 -- status_code = 'preferred' (vs 'normal'), default_sales_rep_id = acus_ubdx4zebgl6p
 -- (a different account_user than the existing customer's acus_s83fjhyfmqen).
-INSERT IGNORE INTO account_relation (id, owner_account_id, counterparty_account_id, account_relation_role_code, external_number, is_edi_enabled, priority_code, account_status_code, commission_status_code, freight_status_code, shipping_term_id, payment_term_id, account_group_id, default_sales_rep_id, default_billing_address_id, default_shipping_address_id, default_carrier_id, created_at, updated_at) VALUES
-    ('acre_01seedcust3_00000', 'ac_01k0a5smf9ekb8rqg12555zjqa', 'ac_01seedcust3_acct000', 'customer', '88888', 0, 'normal', 'preferred', 'commission_applied', 'billed_freight', 'prepaid_billed', 'pytm_01seednet3000000', 'acgp_01k0a413mjeth8pe1g70t0thax', 'acus_ubdx4zebgl6p', 'ad_01seedcust3billing0', 'ad_01seedcust3shipping', 'delivery', NOW(), NOW());
+INSERT IGNORE INTO account_relation (id, owner_account_id, counterparty_account_id, account_relation_role_code, external_number, priority_code, account_status_code, commission_status_code, freight_status_code, shipping_term_id, payment_term_id, account_group_id, default_sales_rep_id, default_billing_address_id, default_shipping_address_id, default_carrier_id, created_at, updated_at) VALUES
+    ('acre_01seedcust3_00000', 'ac_01k0a5smf9ekb8rqg12555zjqa', 'ac_01seedcust3_acct000', 'customer', '88888', 'normal', 'preferred', 'commission_applied', 'billed_freight', 'prepaid_billed', 'pytm_01seednet3000000', 'acgp_01k0a413mjeth8pe1g70t0thax', 'acus_ubdx4zebgl6p', 'ad_01seedcust3billing0', 'ad_01seedcust3shipping', 'delivery', NOW(), NOW());
 
 -- Price group = National (acgp_01seedsecondgroup0), distinct from the DME group
 -- every other seeded customer belongs to.

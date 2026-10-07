@@ -283,7 +283,6 @@ type AccountRelation struct {
 	OwnerAccountID           string
 	CounterpartyAccountID    string
 	ExternalNumber           string
-	IsEdiEnabled             bool
 	StripeCustomerID         sql.NullString
 	StripeEmail              sql.NullString
 	HubspotCompanyID         sql.NullString
@@ -659,15 +658,6 @@ type ConversationParticipant struct {
 	UpdatedAt            time.Time
 }
 
-type DcLocation struct {
-	ID             string
-	Location       string
-	AccountID      string
-	CreatedAt      time.Time
-	UpdatedAt      time.Time
-	OwnerAccountID string
-}
-
 type DeletedRecord struct {
 	ID           int64
 	DeletedAt    time.Time
@@ -757,36 +747,6 @@ type DocApiKey struct {
 	EncryptedSecret string
 	CreatedAt       time.Time
 	UpdatedAt       time.Time
-}
-
-type EdiRun struct {
-	ID           string
-	CompletedAt  time.Time
-	AccountID    string
-	CreatedAt    time.Time
-	HasSucceeded bool
-	Failures     json.RawMessage
-	UpdatedAt    time.Time
-}
-
-type EdiTransmission struct {
-	ID                    string
-	AccountID             string
-	Direction             string
-	DocumentType          string
-	SubjectType           string
-	SubjectID             string
-	CounterpartyAccountID string
-	Status                string
-	Attempts              int32
-	AvailableAt           time.Time
-	ClaimOwner            sql.NullString
-	ClaimToken            sql.NullString
-	ClaimExpiresAt        sql.NullTime
-	LastError             sql.NullString
-	TransmittedAt         sql.NullTime
-	CreatedAt             time.Time
-	UpdatedAt             time.Time
 }
 
 type EmailDomain struct {
@@ -1100,7 +1060,6 @@ type Invoice struct {
 	CreatedAt            time.Time
 	UpdatedAt            time.Time
 	IsOverPaid           bool
-	IsEdiSent            bool
 	PaidInFullMarkedByID sql.NullString
 	Metadata             json.RawMessage
 }
@@ -2281,7 +2240,6 @@ type SalesOrderLine struct {
 	ID                 string
 	ProductSku         string
 	ProductDescription sql.NullString
-	EdiLineItemID      sql.NullString
 	LineItemNumber     sql.NullInt32
 	ProductID          sql.NullString
 	ItemID             sql.NullString

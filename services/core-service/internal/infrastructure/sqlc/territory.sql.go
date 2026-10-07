@@ -71,12 +71,14 @@ func (q *Queries) FindSalesRepByState(ctx context.Context, arg FindSalesRepBySta
 
 const findSalesRepByZipcode = `-- name: FindSalesRepByZipcode :one
 SELECT t.sales_rep_id
-FROM territory t
+FROM territory t FORCE INDEX (territory_account_zip_idx)
 WHERE t.account_id = ?
+AND t.start_zipcode <= ?
 AND (
-    (t.start_zipcode <= ? AND t.end_zipcode >= ?)
+    t.end_zipcode >= ?
     OR (t.start_zipcode = ? AND t.end_zipcode IS NULL)
 )
+ORDER BY t.id
 LIMIT 1
 `
 
@@ -85,6 +87,8 @@ type FindSalesRepByZipcodeParams struct {
 	Zipcode   sql.NullInt32
 }
 
+// The zipcode index ranges over start_zipcode and checks end_zipcode without reading the rows.
+// Overlapping territories resolve to the lowest id, the row the account key used to return first.
 func (q *Queries) FindSalesRepByZipcode(ctx context.Context, arg FindSalesRepByZipcodeParams) (string, error) {
 	row := q.db.QueryRowContext(ctx, findSalesRepByZipcode,
 		arg.AccountID,

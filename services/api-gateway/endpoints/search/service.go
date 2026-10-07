@@ -283,7 +283,9 @@ func (m *searchSvcImpl) searchPurchaseOrders(ctx context.Context, query string, 
 }
 
 func (m *searchSvcImpl) searchInvoices(ctx context.Context, query string, limit int32, scope searchScope) ([]apiresource.Entity, *apierror.APIError) {
-	req := &corepb.ListInvoicesRequest{Query: &query, Limit: limit}
+	// Global search finds an invoice by any part of its fields, as it always has.
+	match := string(constants.InvoiceSearchMatchContains)
+	req := &corepb.ListInvoicesRequest{Query: &query, QueryMatch: &match, Limit: limit}
 	if scope.customerID != "" {
 		req.CustomerIds = []string{scope.customerID}
 	}

@@ -340,6 +340,110 @@ func TestPickPhraseArms_ConfirmEveryMatchWithLike(t *testing.T) {
 	}
 }
 
+// A phrase paged in memory reads its sort key with every match, and the customer arms force the buyer
+// key that holds it: with the longer select list MySQL otherwise picks one that does not, and reads every
+// pick of a matched customer. Where the page is read in SQL the arms stay id-only.
+func TestPickPhraseArms_ReadThePageColumnsFromACoveringKey(t *testing.T) {
+	t.Parallel()
+
+	for _, tc := range []struct {
+		name      string
+		q         pickListQuery
+		wantCols  string
+		wantIndex string
+	}{
+		{"ship-by", pickListQuery{SortByShipBy: true}, "pk.ship_by_sort_date FROM", pickBuyerOpenShipByIndex},
+		{"created", pickListQuery{}, "pk.created_at FROM", pickBuyerOpenCreatedIndex},
+		{"created window", pickListQuery{StartDate: gosql.NullTime{Valid: true}}, "pk.created_at FROM", pickBuyerOpenCreatedIndex},
+		{"ship-by window", pickListQuery{SortByShipBy: true, EndDate: gosql.NullTime{Valid: true}}, "", ""},
+		{"product lines", pickListQuery{ProductLineIDs: []string{"pl_1"}}, "", ""},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+			q := tc.q
+			q.AccountID, q.Search = "ac_1", newPickSearch(new("235"))
+			query, args := buildPickPhraseIDsQuery(q)
+
+			if tc.wantCols == "" {
+				if q.phrasePagesInMemory() || strings.Count(query, "SELECT pk.id FROM") != pickPhraseArmCount {
+					t.Errorf("arms read more than ids for a page read in SQL:\n%s", query)
+				}
+				return
+			}
+			if !q.phrasePagesInMemory() {
+				t.Fatalf("page is not computed in memory")
+			}
+			if got := strings.Count(query, "pk.buyer_account_id, pk.finished_at, "+tc.wantCols); got != pickPhraseArmCount {
+				t.Errorf("%d arms read the page columns, want every arm:\n%s", got, query)
+			}
+			if got := strings.Count(query, "JOIN pick pk FORCE INDEX ("+tc.wantIndex+")"); got != 2 {
+				t.Errorf("%d customer arms force %s, want 2:\n%s", got, tc.wantIndex, query)
+			}
+			if got := strings.Count(query, "?"); got != len(args) {
+				t.Errorf("%d placeholders but %d args", got, len(args))
+			}
+		})
+	}
+}
+
+func TestPickPhrasePage_FiltersSortsAndPages(t *testing.T) {
+	t.Parallel()
+
+	day := func(d int) time.Time { return time.Date(2026, 1, d, 0, 0, 0, 0, time.UTC) }
+	open := gosql.NullTime{}
+	done := gosql.NullTime{Time: day(1), Valid: true}
+	buyer := func(id string) gosql.NullString { return gosql.NullString{String: id, Valid: id != ""} }
+	matches := []pickPhraseMatch{
+		{ID: "pk_c", BuyerID: buyer("ac_a"), FinishedAt: open, SortAt: day(2)},
+		{ID: "pk_a", BuyerID: buyer("ac_b"), FinishedAt: done, SortAt: day(2)},
+		{ID: "pk_d", BuyerID: buyer("ac_a"), FinishedAt: done, SortAt: day(1)},
+		{ID: "pk_b", BuyerID: buyer(""), FinishedAt: open, SortAt: day(3)},
+	}
+
+	for _, tc := range []struct {
+		name string
+		q    pickListQuery
+		want []string
+	}{
+		{"ship-by ascending, ties by id", pickListQuery{SortByShipBy: true}, []string{"pk_d", "pk_a", "pk_c", "pk_b"}},
+		{"created descending", pickListQuery{}, []string{"pk_b", "pk_c", "pk_a", "pk_d"}},
+		{"limit", pickListQuery{SortByShipBy: true, Limit: 2}, []string{"pk_d", "pk_a"}},
+		{"open", pickListQuery{SortByShipBy: true, Status: new("open")}, []string{"pk_c", "pk_b"}},
+		{"closed", pickListQuery{SortByShipBy: true, Status: new("closed")}, []string{"pk_d", "pk_a"}},
+		{"customers exclude a pick with none", pickListQuery{SortByShipBy: true, BuyerIDs: []string{"ac_a"}}, []string{"pk_d", "pk_c"}},
+		{"created window", pickListQuery{
+			StartDate: gosql.NullTime{Time: day(2), Valid: true}, EndDate: gosql.NullTime{Time: day(2), Valid: true},
+		}, []string{"pk_c", "pk_a"}},
+		// A ship-by cursor compares by date, as CAST(? AS DATE) does.
+		{"ship-by after a cursor", pickListQuery{
+			SortByShipBy: true, CursorAt: gosql.NullTime{Time: day(2).Add(15 * time.Hour), Valid: true},
+			CursorID: gosql.NullString{String: "pk_a", Valid: true},
+		}, []string{"pk_c", "pk_b"}},
+		{"ship-by before a cursor", pickListQuery{
+			SortByShipBy: true, Direction: pagination.DirectionBackward,
+			CursorAt: gosql.NullTime{Time: day(2), Valid: true}, CursorID: gosql.NullString{String: "pk_c", Valid: true},
+		}, []string{"pk_a", "pk_d"}},
+		{"created after a cursor", pickListQuery{
+			CursorAt: gosql.NullTime{Time: day(2), Valid: true}, CursorID: gosql.NullString{String: "pk_c", Valid: true},
+		}, []string{"pk_a", "pk_d"}},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+			q := tc.q
+			if q.Direction == "" {
+				q.Direction = pagination.DirectionForward
+			}
+			if q.Limit == 0 {
+				q.Limit = 10
+			}
+			q.PhraseMatches = matches
+			if got := q.phrasePage(); !reflect.DeepEqual(got, tc.want) {
+				t.Errorf("page = %v, want %v", got, tc.want)
+			}
+		})
+	}
+}
+
 // Sizing a filter must stop at its cap: the phrase read streams (UNION ALL) and the counts are capped
 // reads, so none of them collects every match first.
 func TestPickFilterSizing_StopsAtTheCap(t *testing.T) {

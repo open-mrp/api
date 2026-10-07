@@ -6,12 +6,16 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
+	"strings"
 	"testing"
 	"time"
 
 	"github.com/open-mrp/api/services/core-service/internal/domain"
 	"github.com/open-mrp/api/services/core-service/internal/infrastructure/sqlc"
+	"github.com/open-mrp/api/shared/constants"
+	dbpkg "github.com/open-mrp/api/shared/db"
 	"github.com/open-mrp/api/shared/pagination"
+	"github.com/stretchr/testify/require"
 )
 
 // planSalesRareSearch matches one invoice number; planSalesDenseSearch matches most of them.
@@ -65,8 +69,17 @@ func invoicePlanDims() []planDim[domain.ListInvoicesParams] {
 		{"search", []planValue[P]{
 			{"search-one", func(p *P) { p.Query = str(planSalesRareSearch) }},
 			{"search-every", func(p *P) { p.Query = str(planSalesDenseSearch) }},
+			{"search-customer", func(p *P) { p.Query = str(planSalesCustomerName(planSalesMidCustomer)) }},
+			{"contains-one", func(p *P) {
+				p.Query, p.QueryMatch = str(planSalesRareSearch), constants.InvoiceSearchMatchContains
+			}},
 		}},
 	}
+}
+
+// planSalesCustomerName is the start of customer c's name, which no other customer's name starts with.
+func planSalesCustomerName(c int) string {
+	return fmt.Sprintf("Plan Sales Customer %04d", c)
 }
 
 // planSalesInvoiceNumbers is n consecutive invoice numbers from the corpus, starting at invoice from.
@@ -193,4 +206,153 @@ func TestCustomerInvoiceList_ReadsAboutAPage(t *testing.T) {
 		},
 		floor: customerInvoiceFloor,
 	}.run(t)
+}
+
+// TestInvoiceList_SearchMatchesEveryField pins a contains search, read from the orders it can match, to
+// the invoices the substring filter over every searched field admits, in list order and across pages.
+func TestInvoiceList_SearchMatchesEveryField(t *testing.T) {
+	ensureSalesCorpus(t)
+	db := planDB(t)
+	q := sqlc.New(db)
+	str := func(s string) *string { return &s }
+	unpaid := "unpaid"
+	cases := map[string]domain.ListInvoicesParams{
+		"invoice number":  {Query: str(planSalesRareSearch)},
+		"order number":    {Query: str("1012345")},
+		"customer po":     {Query: str("PO3012347")},
+		"customer name":   {Query: str(fmt.Sprintf("Customer %04d", planSalesRareCustomer))},
+		"external number": {Query: str(fmt.Sprintf("C%05d", planSalesMidCustomer))},
+		"invoice note":    {Query: str("lockbox")},
+		"dense":           {Query: str(planSalesDenseSearch)},
+		"none":            {Query: str("no such invoice")},
+		"with status":     {Query: str(fmt.Sprintf("Customer %04d", planSalesRareCustomer)), Status: &unpaid},
+		"with customer":   {Query: str(fmt.Sprintf("C%05d", planSalesRareCustomer)), CustomerIDs: []string{planSalesCustomerID(planSalesRareCustomer)}},
+		"dense customer":  {Query: str("PO30"), CustomerIDs: []string{planSalesCustomerID(0)}},
+		"none wildcards":  {Query: str("100_00%")},
+	}
+	const pages, limit = 4, 25
+	for name, params := range cases {
+		t.Run(name, func(t *testing.T) {
+			params.AccountID, params.Limit, params.QueryMatch = planSalesAccount, limit, constants.InvoiceSearchMatchContains
+			like := "%" + dbpkg.EscapeLike(*params.Query) + "%"
+			where := "inv.account_id = ? AND (inv.number LIKE ? OR inv.note LIKE ? OR buyer.name LIKE ? OR so.number LIKE ?" +
+				" OR so.customer_po_number LIKE ? OR ar.external_number LIKE ? OR ar.alias LIKE ? OR ar.notes LIKE ?)"
+			args := []any{planSalesAccount, like, like, like, like, like, like, like, like}
+			if params.Status != nil {
+				where += " AND inv.is_paid_in_full = false"
+			}
+			if len(params.CustomerIDs) > 0 {
+				where += " AND so.buyer_account_id IN (" + placeholders(len(params.CustomerIDs)) + ")"
+				args = append(args, stringArgs(params.CustomerIDs)...)
+			}
+			want, err := selectStrings(context.Background(), db, "SELECT inv.id FROM invoice inv"+invoicePageJoins+`
+JOIN address addr ON addr.id = inv.billing_address_id
+JOIN geolocation geo ON geo.id = addr.geolocation_id
+WHERE `+where+" ORDER BY inv.created_at DESC, inv.id DESC LIMIT ?", append(args, pages*limit)...)
+			require.NoError(t, err)
+			require.Equal(t, strings.HasPrefix(name, "none"), len(want) == 0, "a case must match what it names")
+
+			var got []string
+			for range pages {
+				res, apiErr := NewInvoiceRepo(q).List(context.Background(), params)
+				require.Nil(t, apiErr)
+				for _, inv := range res.Invoices {
+					got = append(got, inv.ID)
+				}
+				if res.PageInfo.NextCursor == nil {
+					break
+				}
+				params.Cursor = res.PageInfo.NextCursor
+			}
+			require.Equal(t, want, got)
+		})
+	}
+}
+
+// TestInvoiceList_PrefixSearchMatchesEveryField pins a prefix search, read from the orders it can match,
+// to the invoices whose number, order number, PO number, or customer name, number, or alias starts with
+// the term, in list order and across pages. Notes are not searched.
+func TestInvoiceList_PrefixSearchMatchesEveryField(t *testing.T) {
+	ensureSalesCorpus(t)
+	db := planDB(t)
+	q := sqlc.New(db)
+	str := func(s string) *string { return &s }
+	unpaid := "unpaid"
+	cases := map[string]domain.ListInvoicesParams{
+		"invoice number":   {Query: str(planSalesRareSearch)},
+		"invoice range":    {Query: str("201234")},
+		"order number":     {Query: str("1012345")},
+		"customer po":      {Query: str("PO3012347")},
+		"customer name":    {Query: str(planSalesCustomerName(planSalesRareCustomer))},
+		"name case":        {Query: str(strings.ToLower(planSalesCustomerName(planSalesMidCustomer)))},
+		"external number":  {Query: str(fmt.Sprintf("C%05d", planSalesMidCustomer))},
+		"dense":            {Query: str(planSalesDenseSearch)},
+		"dense customer":   {Query: str("PO30"), CustomerIDs: []string{planSalesCustomerID(0)}},
+		"with status":      {Query: str(planSalesCustomerName(planSalesRareCustomer)), Status: &unpaid},
+		"none mid number":  {Query: str("012345")},
+		"none note":        {Query: str("Net 30")},
+		"none mid name":    {Query: str(fmt.Sprintf("Customer %04d", planSalesRareCustomer))},
+		"none wildcards":   {Query: str("20_2345")},
+		"none percent":     {Query: str("%2345")},
+		"none backslashed": {Query: str(`2012\345`)},
+	}
+	const pages, limit = 4, 25
+	for name, params := range cases {
+		t.Run(name, func(t *testing.T) {
+			params.AccountID, params.Limit = planSalesAccount, limit
+			like := dbpkg.EscapeLike(*params.Query) + "%"
+			where := "inv.account_id = ? AND (inv.number LIKE ? OR so.number LIKE ? OR so.customer_po_number LIKE ? OR buyer.name LIKE ?" +
+				" OR ar.external_number LIKE ? OR ar.alias LIKE ?)"
+			args := []any{planSalesAccount, like, like, like, like, like, like}
+			if params.Status != nil {
+				where += " AND inv.is_paid_in_full = false"
+			}
+			if len(params.CustomerIDs) > 0 {
+				where += " AND so.buyer_account_id IN (" + placeholders(len(params.CustomerIDs)) + ")"
+				args = append(args, stringArgs(params.CustomerIDs)...)
+			}
+			want, err := selectStrings(context.Background(), db, "SELECT inv.id FROM invoice inv"+invoicePageJoins+`
+JOIN address addr ON addr.id = inv.billing_address_id
+JOIN geolocation geo ON geo.id = addr.geolocation_id
+WHERE `+where+" ORDER BY inv.created_at DESC, inv.id DESC LIMIT ?", append(args, pages*limit)...)
+			require.NoError(t, err)
+			require.Equal(t, strings.HasPrefix(name, "none"), len(want) == 0, "a case must match what it names")
+
+			var got []string
+			for range pages {
+				res, apiErr := NewInvoiceRepo(q).List(context.Background(), params)
+				require.Nil(t, apiErr)
+				for _, inv := range res.Invoices {
+					got = append(got, inv.ID)
+				}
+				if res.PageInfo.NextCursor == nil {
+					break
+				}
+				params.Cursor = res.PageInfo.NextCursor
+			}
+			require.Equal(t, want, got)
+		})
+	}
+}
+
+// TestInvoiceList_PrefixSearchReadsItsMatches holds a rare prefix search's arms to reading about what
+// each returns: every arm is a range on its key, never a walk of the account's invoices, orders, or
+// customers. The page read from the matched orders is held by TestInvoiceList_ReadsAboutAPage.
+func TestInvoiceList_PrefixSearchReadsItsMatches(t *testing.T) {
+	ensureSalesCorpus(t)
+	var cases []lookupPlanCase
+	for name, term := range map[string]string{
+		"invoice number":  planSalesRareSearch,
+		"order number":    "1012345",
+		"customer po":     "PO3012347",
+		"customer name":   planSalesCustomerName(planSalesRareCustomer),
+		"external number": fmt.Sprintf("C%05d", planSalesRareCustomer),
+		"none":            "no such invoice",
+	} {
+		cases = append(cases, lookupPlanCase{name: name, run: func(ctx context.Context, q *sqlc.Queries) error {
+			_, _, err := NewInvoiceRepo(q).(*invoiceRepoImpl).prefixSearchOrders(ctx, planSalesAccount, buildInvoicePrefixSearch(&term).String)
+			return err
+		}})
+	}
+	lookupPlanSuite{tables: []string{"invoice", "sales_order", "account_relation"}, cases: cases}.run(t)
 }

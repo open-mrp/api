@@ -91,11 +91,13 @@ AND (
 ORDER BY icl.created_at DESC, icl.id DESC;
 
 -- name: ListConsumptionChangeLogsForBurnRate :many
+-- FORCE INDEX reads only the item's last 30 days. Left free, production sometimes takes the item key
+-- and reads every change the item ever had.
 SELECT
     q.value,
     q.unit_id,
     icl.created_at
-FROM inventory_change_log icl
+FROM inventory_change_log icl FORCE INDEX (inventory_change_log_account_id_item_id_created_at_id_idx)
 JOIN quantity q ON q.id = icl.quantity_id
 WHERE icl.item_id = sqlc.arg('item_id')
 AND icl.account_id = sqlc.arg('account_id')

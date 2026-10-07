@@ -430,6 +430,8 @@ message ListInvoicesRequest {
   repeated string includes = 12;
   // Exact invoice numbers.
   repeated string numbers = 13;
+  // How query matches: "prefix" (the default when unset) or "contains".
+  optional string query_match = 14;
 }
 message ListInvoicesResponse {
   repeated InvoiceInfo invoices = 1;

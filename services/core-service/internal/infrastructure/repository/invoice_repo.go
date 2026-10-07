@@ -41,6 +41,14 @@ func buildInvoiceSearchParams(query *string) gosql.NullString {
 	return gosql.NullString{String: "%" + db.EscapeLike(*query) + "%", Valid: true}
 }
 
+// buildInvoicePrefixSearch is the LIKE pattern matching values that start with query.
+func buildInvoicePrefixSearch(query *string) gosql.NullString {
+	if query == nil || *query == "" {
+		return gosql.NullString{}
+	}
+	return gosql.NullString{String: db.EscapeLike(*query) + "%", Valid: true}
+}
+
 func toNullStringSlice(ids []string) []gosql.NullString {
 	if len(ids) == 0 {
 		return []gosql.NullString{{}}

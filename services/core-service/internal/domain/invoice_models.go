@@ -127,10 +127,12 @@ type InvoiceForPayment struct {
 
 // ListInvoicesParams holds parameters for listing invoices.
 type ListInvoicesParams struct {
-	AccountID        string
-	Cursor           *string
-	Limit            int32
-	Query            *string
+	AccountID string
+	Cursor    *string
+	Limit     int32
+	Query     *string
+	// QueryMatch is how Query matches; empty means prefix.
+	QueryMatch       constants.InvoiceSearchMatch
 	Status           *string
 	ItemIDs          []string
 	CustomerIDs      []string

@@ -27,7 +27,10 @@ func (r *catalogRepoImpl) ListProductLines(ctx context.Context, accountID string
 	ctx, span := catalogRepoTracer.Start(ctx, "repository.catalog.list_product_lines")
 	defer span.End()
 
-	rows, err := r.queries.ListCatalogProductLines(ctx, accountID)
+	rows, err := r.queries.ListCatalogProductLines(ctx, sqlc.ListCatalogProductLinesParams{
+		LineAccountID: gosql.NullString{String: accountID, Valid: true},
+		AccountID:     accountID,
+	})
 	if apiErr := db.MapSQLError(err); apiErr != nil {
 		return nil, tracing.Trace(span, apiErr)
 	}
@@ -48,6 +51,7 @@ func (r *catalogRepoImpl) ListProductLinesForCustomer(ctx context.Context, accou
 	defer span.End()
 
 	rows, err := r.queries.ListCatalogProductLinesForCustomer(ctx, sqlc.ListCatalogProductLinesForCustomerParams{
+		LineAccountID:     gosql.NullString{String: accountID, Valid: true},
 		AccountID:         accountID,
 		CustomerAccountID: customerAccountID,
 	})

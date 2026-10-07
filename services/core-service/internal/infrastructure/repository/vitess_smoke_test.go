@@ -291,13 +291,15 @@ func TestVitessSmoke(t *testing.T) {
 
 	t.Run("invoice and receivable lists", func(t *testing.T) {
 		invoices := NewInvoiceRepo(q)
-		search, paid, unpaid, overpaid := "1", "paid", "unpaid", "overpaid"
+		search, rare, paid, unpaid, overpaid := "1", "A_b%", "paid", "unpaid", "overpaid"
 		from, to := time.Date(2000, 1, 1, 0, 0, 0, 0, time.UTC), time.Now().UTC().Add(time.Hour)
 		for name, params := range map[string]domain.ListInvoicesParams{
 			"plain":    {AccountID: account, Limit: 1},
 			"paid":     {AccountID: account, Limit: 5, Status: &paid, StartDate: &from, EndDate: &to},
 			"unpaid":   {AccountID: account, Limit: 5, Status: &unpaid, Query: &search},
 			"overpaid": {AccountID: account, Limit: 5, Status: &overpaid},
+			"prefix":   {AccountID: account, Limit: 5, Query: &rare},
+			"contains": {AccountID: account, Limit: 5, Query: &rare, QueryMatch: constants.InvoiceSearchMatchContains},
 			"orders": {AccountID: account, Limit: 5, CustomerIDs: buyers, CustomerGroupIDs: groups, SalesRepIDs: []string{"acus_none"},
 				ItemIDs: []string{"it_none"}, ProductLineIDs: productLines},
 			"customer": {AccountID: account, Limit: 5, CustomerIDs: buyers},

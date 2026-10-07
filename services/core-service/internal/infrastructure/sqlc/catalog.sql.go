@@ -126,29 +126,35 @@ func (q *Queries) ListCatalogProductAttributes(ctx context.Context, itemIds []st
 
 const listCatalogProductLines = `-- name: ListCatalogProductLines :many
 SELECT pl.id, pl.name
-FROM (
-  SELECT DISTINCT p.product_line_id
-  FROM item it FORCE INDEX (item_account_type_created_idx)
-  JOIN product p FORCE INDEX (product_item_id_key) ON p.item_id = it.id
-  WHERE it.account_id = ?
-    AND it.item_type_code = 'product'
-    AND it.deleted_at IS NULL
-    AND p.is_portal_ready = 1
-) portal_lines
-JOIN product_line pl ON pl.id = portal_lines.product_line_id
+FROM product_line pl FORCE INDEX (product_line_account_id_name_key)
+WHERE (pl.account_id = ? OR pl.account_id IS NULL)
+  AND EXISTS (
+    SELECT 1
+    FROM product p FORCE INDEX (product_line_portal_created_idx)
+    JOIN item it ON it.id = p.item_id
+    WHERE p.product_line_id = pl.id
+      AND p.is_portal_ready = 1
+      AND it.account_id = ?
+      AND it.item_type_code = 'product'
+      AND it.deleted_at IS NULL
+  )
 ORDER BY pl.name
 `
+
+type ListCatalogProductLinesParams struct {
+	LineAccountID sql.NullString
+	AccountID     string
+}
 
 type ListCatalogProductLinesRow struct {
 	ID   string
 	Name string
 }
 
-// The lines are read off the account's portal-ready products, through the item type key (every
-// product's item is a product item) and product's item key, never a scan of product or product_line,
-// which hold every tenant's rows.
-func (q *Queries) ListCatalogProductLines(ctx context.Context, accountID string) ([]ListCatalogProductLinesRow, error) {
-	rows, err := q.db.QueryContext(ctx, listCatalogProductLines, accountID)
+// Read from the account's lines and the few with no account (legacy rows), each kept when one of the
+// account's portal-ready products is on it; walking the account's products instead reads all of them.
+func (q *Queries) ListCatalogProductLines(ctx context.Context, arg ListCatalogProductLinesParams) ([]ListCatalogProductLinesRow, error) {
+	rows, err := q.db.QueryContext(ctx, listCatalogProductLines, arg.LineAccountID, arg.AccountID)
 	if err != nil {
 		return nil, err
 	}
@@ -172,17 +178,19 @@ func (q *Queries) ListCatalogProductLines(ctx context.Context, accountID string)
 
 const listCatalogProductLinesForCustomer = `-- name: ListCatalogProductLinesForCustomer :many
 SELECT pl.id, pl.name
-FROM (
-  SELECT DISTINCT p.product_line_id
-  FROM item it FORCE INDEX (item_account_type_created_idx)
-  JOIN product p FORCE INDEX (product_item_id_key) ON p.item_id = it.id
-  WHERE it.account_id = ?
-    AND it.item_type_code = 'product'
-    AND it.deleted_at IS NULL
-    AND p.is_portal_ready = 1
-) portal_lines
-JOIN product_line pl ON pl.id = portal_lines.product_line_id
-WHERE (
+FROM product_line pl FORCE INDEX (product_line_account_id_name_key)
+WHERE (pl.account_id = ? OR pl.account_id IS NULL)
+  AND EXISTS (
+    SELECT 1
+    FROM product p FORCE INDEX (product_line_portal_created_idx)
+    JOIN item it ON it.id = p.item_id
+    WHERE p.product_line_id = pl.id
+      AND p.is_portal_ready = 1
+      AND it.account_id = ?
+      AND it.item_type_code = 'product'
+      AND it.deleted_at IS NULL
+  )
+  AND (
     -- Pathway 1: product line via account group that the customer's account relation belongs to
     EXISTS (
       SELECT 1 FROM account_group_product_line agpl
@@ -216,6 +224,7 @@ ORDER BY pl.name
 `
 
 type ListCatalogProductLinesForCustomerParams struct {
+	LineAccountID     sql.NullString
 	AccountID         string
 	CustomerAccountID string
 }
@@ -228,6 +237,7 @@ type ListCatalogProductLinesForCustomerRow struct {
 // Read as ListCatalogProductLines is, then each line checked against the customer's access.
 func (q *Queries) ListCatalogProductLinesForCustomer(ctx context.Context, arg ListCatalogProductLinesForCustomerParams) ([]ListCatalogProductLinesForCustomerRow, error) {
 	rows, err := q.db.QueryContext(ctx, listCatalogProductLinesForCustomer,
+		arg.LineAccountID,
 		arg.AccountID,
 		arg.AccountID,
 		arg.CustomerAccountID,

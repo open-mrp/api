@@ -355,3 +355,43 @@ func transactionMultiValueFloor(t *testing.T, db *sql.DB, p domain.ListTransacti
 	}
 	return floor
 }
+
+// TestTransactionList_ResolvesTheResponsibleUser pins the responsible user a page shows to the account
+// user the column names, whether it holds an account_user id or (on legacy rows) a user id.
+func TestTransactionList_ResolvesTheResponsibleUser(t *testing.T) {
+	ensureTransactionCorpus(t)
+	db := planDB(t)
+	ctx := context.Background()
+
+	legacy, dangling := planTxID(planTxRows-2), planTxID(planTxRows-3)
+	var legacyWas, danglingWas sql.NullString
+	require.NoError(t, db.QueryRow("SELECT responsible_user_id FROM `transaction` WHERE id = ?", legacy).Scan(&legacyWas))
+	require.NoError(t, db.QueryRow("SELECT responsible_user_id FROM `transaction` WHERE id = ?", dangling).Scan(&danglingWas))
+	_, err := db.Exec("UPDATE `transaction` SET responsible_user_id = 'us_plantx_0000000000000007' WHERE id = ?", legacy)
+	require.NoError(t, err)
+	_, err = db.Exec("UPDATE `transaction` SET responsible_user_id = 'us_plantx_unknown' WHERE id = ?", dangling)
+	require.NoError(t, err)
+	t.Cleanup(func() {
+		_, _ = db.Exec("UPDATE `transaction` SET responsible_user_id = ? WHERE id = ?", legacyWas, legacy)
+		_, _ = db.Exec("UPDATE `transaction` SET responsible_user_id = ? WHERE id = ?", danglingWas, dangling)
+	})
+
+	repo := NewTransactionRepo(sqlc.New(db))
+	str := func(s sql.NullString) string { return s.String }
+	deref := func(s *string) string {
+		if s == nil {
+			return ""
+		}
+		return *s
+	}
+	for _, id := range []string{legacy, dangling, planTxID(planTxRows - 1), planTxID(planTxRows - 15)} {
+		tx, apiErr := repo.Get(ctx, planTxAccount, id)
+		require.Nil(t, apiErr)
+		var want, status sql.NullString
+		require.NoError(t, db.QueryRow("SELECT COALESCE(au.id, t.responsible_user_id), au.status_code FROM `transaction` t"+
+			" LEFT JOIN account_user au ON au.account_id = t.account_id AND (au.id = t.responsible_user_id OR au.user_id = t.responsible_user_id)"+
+			" WHERE t.id = ?", id).Scan(&want, &status))
+		require.Equal(t, str(want), deref(tx.ResponsibleUserID), id)
+		require.Equal(t, str(status), deref(tx.ResponsibleUserStatusCode), id)
+	}
+}

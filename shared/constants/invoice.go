@@ -71,3 +71,34 @@ func (s *InvoiceListStatus) StringPtr() *string {
 	v := string(*s)
 	return &v
 }
+
+// InvoiceSearchMatch is how an invoice list's `q` is matched against the fields it searches.
+type InvoiceSearchMatch string
+
+const (
+	// InvoiceSearchMatchPrefix matches the start of each number and name searched, and does not search notes.
+	InvoiceSearchMatchPrefix InvoiceSearchMatch = "prefix"
+	// InvoiceSearchMatchContains matches anywhere in each field searched, notes included.
+	InvoiceSearchMatchContains InvoiceSearchMatch = "contains"
+)
+
+func (s InvoiceSearchMatch) IsValid() bool {
+	switch s {
+	case InvoiceSearchMatchPrefix, InvoiceSearchMatchContains:
+		return true
+	default:
+		return false
+	}
+}
+
+func (s InvoiceSearchMatch) EnumValues() []string {
+	return []string{string(InvoiceSearchMatchPrefix), string(InvoiceSearchMatchContains)}
+}
+
+func (s *InvoiceSearchMatch) StringPtr() *string {
+	if s == nil {
+		return nil
+	}
+	v := string(*s)
+	return &v
+}

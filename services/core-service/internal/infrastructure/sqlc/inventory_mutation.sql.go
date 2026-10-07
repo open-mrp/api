@@ -44,7 +44,7 @@ LEFT JOIN (
 LEFT JOIN (
     SELECT ii.item_id AS item_id,
            SUM(CAST(q.value AS DECIMAL(65,30)) * (u.ratio_numerator / u.ratio_denominator)) AS qty
-    FROM inventory_issue ii
+    FROM inventory_issue ii FORCE INDEX (inventory_issue_open_paging_idx)
     JOIN quantity q ON q.id = ii.quantity_id
     JOIN unit u ON u.id = q.unit_id
     WHERE ii.item_id IN (/*SLICE:item_ids*/?)
@@ -56,7 +56,7 @@ LEFT JOIN (
     SELECT ii.item_id AS item_id,
            SUM(CAST(aq.value AS DECIMAL(65,30)) * (au.ratio_numerator / au.ratio_denominator)) AS qty
     FROM inventory_allocation ia
-    JOIN inventory_issue ii ON ii.id = ia.inventory_issue_id
+    JOIN inventory_issue ii FORCE INDEX (inventory_issue_open_paging_idx) ON ii.id = ia.inventory_issue_id
     JOIN quantity aq ON aq.id = ia.quantity_id
     JOIN unit au ON au.id = aq.unit_id
     WHERE ii.item_id IN (/*SLICE:item_ids*/?)
@@ -87,6 +87,8 @@ type FetchPhysicalInventoryBaseForItemsRow struct {
 // joined onto the item list, which is what lets one query stand in for the N the audit trail used to
 // run per scan. Each of the four repeats the item list in its own WHERE clause: without it every one aggregates the account's entire ledger and the outer join throws all but the handful of rows asked for away.
 // Nothing is clamped: a row drawn on for more than it holds nets negative and carries.
+// The issue sums FORCE INDEX the open-issue key: left free, production sometimes reads every issue
+// an item ever had through the item key, while this runs under the item's ledger lock.
 func (q *Queries) FetchPhysicalInventoryBaseForItems(ctx context.Context, arg FetchPhysicalInventoryBaseForItemsParams) ([]FetchPhysicalInventoryBaseForItemsRow, error) {
 	query := fetchPhysicalInventoryBaseForItems
 	var queryParams []interface{}

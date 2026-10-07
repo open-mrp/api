@@ -1,34 +1,37 @@
 -- name: ListCatalogProductLines :many
--- The lines are read off the account's portal-ready products, through the item type key (every
--- product's item is a product item) and product's item key, never a scan of product or product_line,
--- which hold every tenant's rows.
+-- Read from the account's lines and the few with no account (legacy rows), each kept when one of the
+-- account's portal-ready products is on it; walking the account's products instead reads all of them.
 SELECT pl.id, pl.name
-FROM (
-  SELECT DISTINCT p.product_line_id
-  FROM item it FORCE INDEX (item_account_type_created_idx)
-  JOIN product p FORCE INDEX (product_item_id_key) ON p.item_id = it.id
-  WHERE it.account_id = sqlc.arg('account_id')
-    AND it.item_type_code = 'product'
-    AND it.deleted_at IS NULL
-    AND p.is_portal_ready = 1
-) portal_lines
-JOIN product_line pl ON pl.id = portal_lines.product_line_id
+FROM product_line pl FORCE INDEX (product_line_account_id_name_key)
+WHERE (pl.account_id = sqlc.narg('line_account_id') OR pl.account_id IS NULL)
+  AND EXISTS (
+    SELECT 1
+    FROM product p FORCE INDEX (product_line_portal_created_idx)
+    JOIN item it ON it.id = p.item_id
+    WHERE p.product_line_id = pl.id
+      AND p.is_portal_ready = 1
+      AND it.account_id = sqlc.arg('account_id')
+      AND it.item_type_code = 'product'
+      AND it.deleted_at IS NULL
+  )
 ORDER BY pl.name;
 
 -- name: ListCatalogProductLinesForCustomer :many
 -- Read as ListCatalogProductLines is, then each line checked against the customer's access.
 SELECT pl.id, pl.name
-FROM (
-  SELECT DISTINCT p.product_line_id
-  FROM item it FORCE INDEX (item_account_type_created_idx)
-  JOIN product p FORCE INDEX (product_item_id_key) ON p.item_id = it.id
-  WHERE it.account_id = sqlc.arg('account_id')
-    AND it.item_type_code = 'product'
-    AND it.deleted_at IS NULL
-    AND p.is_portal_ready = 1
-) portal_lines
-JOIN product_line pl ON pl.id = portal_lines.product_line_id
-WHERE (
+FROM product_line pl FORCE INDEX (product_line_account_id_name_key)
+WHERE (pl.account_id = sqlc.narg('line_account_id') OR pl.account_id IS NULL)
+  AND EXISTS (
+    SELECT 1
+    FROM product p FORCE INDEX (product_line_portal_created_idx)
+    JOIN item it ON it.id = p.item_id
+    WHERE p.product_line_id = pl.id
+      AND p.is_portal_ready = 1
+      AND it.account_id = sqlc.arg('account_id')
+      AND it.item_type_code = 'product'
+      AND it.deleted_at IS NULL
+  )
+  AND (
     -- Pathway 1: product line via account group that the customer's account relation belongs to
     EXISTS (
       SELECT 1 FROM account_group_product_line agpl

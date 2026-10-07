@@ -142,7 +142,8 @@ AND so.seller_account_id = so.owner_account_id;
 
 -- name: GetSalesOrdersByIDs :many
 -- The batched form of GetSalesOrder for include expansion; the columns must stay identical so the
--- rows convert to GetSalesOrderRow.
+-- rows convert to GetSalesOrderRow. FORCE INDEX (PRIMARY): under prod's sampled stats the planner
+-- otherwise drives from the tiny type lookup into (owner, type, …) and reads every order of the type.
 SELECT
     so.id,
     so.number,
@@ -261,7 +262,7 @@ SELECT
     pk.id AS pick_id,
     -- Line count
     (SELECT COUNT(*) FROM sales_order_line sol_count WHERE sol_count.sales_order_id = so.id) AS line_count
-FROM sales_order so
+FROM sales_order so FORCE INDEX (PRIMARY)
 JOIN account_relation ar ON ar.owner_account_id = so.owner_account_id
     AND ar.counterparty_account_id = so.buyer_account_id
 JOIN account ba ON ba.id = so.buyer_account_id

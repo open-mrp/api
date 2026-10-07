@@ -1,5 +1,16 @@
 # Changelog
 
+## [3.0.0](https://github.com/open-mrp/api/compare/v2.21.1...v3.0.0) (2026-10-07)
+
+
+### ⚠ BREAKING CHANGES
+
+* finish the Go migration and authorize by the top-level request (1.0.forge-preview.6) ([#267](https://github.com/open-mrp/api/issues/267))
+
+### Features
+
+* finish the Go migration and authorize by the top-level request (1.0.forge-preview.6) ([#267](https://github.com/open-mrp/api/issues/267)) ([6976ab6](https://github.com/open-mrp/api/commit/6976ab64966fa546afed3ae2e3f7cfae7c5de4a9))
+
 ## [2.21.1](https://github.com/open-mrp/api/compare/v2.21.0...v2.21.1) (2026-10-06)
 
 

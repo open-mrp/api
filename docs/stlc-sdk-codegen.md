@@ -167,7 +167,7 @@ and `GET`/`POST /`, Streamable HTTP, stateless) **and** its own Dockerfile at
   — Deployment + NodePort Service + Ingress on **`mcp.augno.com`**, sharing the api-gateway ALB
   (`group.name: api-gateway`, so no second ALB). Each caller passes their own OpenMRP API key as a Bearer
   token (`parseClientAuthHeaders`), so no shared credential is mounted.
-- **CI:** the `build-deploy-mcp` job in [`release.yml`](../.github/workflows/release.yml) runs after
+- **CI:** the `build-deploy-mcp` job in [`release-publish.yml`](../.github/workflows/release-publish.yml) runs after
   `generate-sdks` (gated on the public spec changing), checks out `open-mrp/typescript-sdk@main`, builds
   the image from the generated Dockerfile, pushes `augno/mcp-server:<tag>`/`:latest`, and rolls it out
   with `kubectl`.
@@ -182,7 +182,7 @@ and `GET`/`POST /`, Streamable HTTP, stateless) **and** its own Dockerfile at
 
 ### Release (canonical)
 
-SDK generation runs **only** from [`.github/workflows/release.yml`](../.github/workflows/release.yml) **`generate-sdks`** after **`publish-openapi-specs`** succeeds:
+SDK generation runs **only** from **`generate-sdks`** in [`.github/workflows/release-publish.yml`](../.github/workflows/release-publish.yml), after **`publish-openapi-specs`** succeeds. [`release.yml`](../.github/workflows/release.yml) dispatches that workflow once **Deploy to EKS** succeeds, so the next release can start while this one is still publishing:
 
 1. **`publish-openapi-specs`** downloads **`openapi.json`** from each bucket into **`specs/sdk-baseline/`** (pre-upload baseline), runs **`make openapi-stainless`** (specs + Stainless configs, since both are uploaded to S3), compares with [`scripts/sdk-openapi-spec-changed.sh`](../scripts/sdk-openapi-spec-changed.sh) for internal and public, then uploads **`openapi.json`** and **`stainless.yml`** (plus versioned copies) to the buckets named by the **`PUBLIC_SPEC_BUCKET`** and **`INTERNAL_SPEC_BUCKET`** Actions variables. Job outputs **`internal_spec_changed`** and **`public_spec_changed`** gate SDK generation.
 

@@ -1,6 +1,6 @@
 name: Generate SDKs with stlc (manual)
 
-# Release-driven SDK generation runs from release.yml (specs from S3 after publish-openapi-specs).
+# Release-driven SDK generation runs from release-publish.yml (specs from S3 after publish-openapi-specs).
 # This workflow is for ad-hoc / emergency runs; it regenerates specs and Stainless configs in the job with make openapi-stainless-quiet.
 on:
   workflow_dispatch:
@@ -59,7 +59,7 @@ jobs:
     needs: resolve
     # The reusable workflow declares `id-token: write` (AWS OIDC on the s3 path);
     # a called workflow can't be granted more than its caller, so this job must
-    # grant it too or the run fails at startup. Mirrors release.yml's generate-sdks.
+    # grant it too or the run fails at startup. Mirrors release-publish.yml's generate-sdks.
     permissions:
       id-token: write
       contents: read

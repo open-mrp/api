@@ -1,0 +1,228 @@
+name: Release Publish
+
+on:
+  workflow_dispatch:
+    inputs:
+      tag_name:
+        description: Deployed release tag to publish specs, SDKs, MCP server and consumer notifications for (e.g. v0.23.1).
+        required: true
+        type: string
+
+concurrency:
+  group: release-publish
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  resolve:
+    name: Resolve Release Tag
+    runs-on: ubuntu-latest
+    outputs:
+      tag_name: ${{ steps.validate.outputs.tag_name }}
+      tag_ref: ${{ steps.validate.outputs.tag_ref }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      - name: Validate tag
+        id: validate
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAG_NAME: ${{ inputs.tag_name }}
+        run: |
+          set -euo pipefail
+
+          if [[ ! "$TAG_NAME" =~ ^v[0-9]+\.[0-9]+\.[0-9]+([.-][0-9A-Za-z][0-9A-Za-z.-]*)?$ ]]; then
+            echo "Invalid release tag: $TAG_NAME" >&2
+            exit 1
+          fi
+
+          release_tag="$(gh release view "$TAG_NAME" --repo "${{ github.repository }}" --json tagName --jq .tagName)"
+
+          git fetch --force --tags origin refs/heads/main:refs/remotes/origin/main
+          tag_sha="$(git rev-parse --verify "refs/tags/${release_tag}^{commit}")"
+          if ! git merge-base --is-ancestor "$tag_sha" refs/remotes/origin/main; then
+            echo "Release tag $release_tag does not point to a commit on main." >&2
+            exit 1
+          fi
+
+          echo "tag_name=${release_tag}" >> "$GITHUB_OUTPUT"
+          echo "tag_ref=refs/tags/${release_tag}" >> "$GITHUB_OUTPUT"
+
+  publish-openapi-specs:
+    name: Publish OpenAPI Specs
+    env:
+      PUBLIC_SPEC_BUCKET: ${{ vars.PUBLIC_SPEC_BUCKET }}
+      INTERNAL_SPEC_BUCKET: ${{ vars.INTERNAL_SPEC_BUCKET }}
+    needs: resolve
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+      contents: read
+    outputs:
+      internal_spec_changed: ${{ steps.compare-internal.outputs.changed }}
+      public_spec_changed: ${{ steps.compare-public.outputs.changed }}
+      api_version: ${{ steps.api-version.outputs.api_version }}
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v7
+        with:
+          ref: ${{ needs.resolve.outputs.tag_ref }}
+
+      - name: Setup Go
+        uses: actions/setup-go@v7
+        with:
+          go-version-file: go.mod
+          cache: true
+
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v6
+        with:
+          role-to-assume: ${{ vars.AWS_ROLE_OPENAPI_WRITER }}
+          aws-region: us-east-2
+
+      - name: Install Modules
+        run: |
+          go mod tidy
+          cd tools && go mod tidy
+
+      - name: Resolve API version
+        id: api-version
+        run: echo "api_version=$(go run ./cmd/print-version)" >> "$GITHUB_OUTPUT"
+
+      - name: Snapshot current OpenAPI specs from S3 (pre-upload baseline)
+        run: |
+          mkdir -p specs/sdk-baseline
+          aws s3 cp "s3://${PUBLIC_SPEC_BUCKET}/openapi.json" specs/sdk-baseline/public_openapi_spec.json 2>/dev/null || true
+          aws s3 cp "s3://${INTERNAL_SPEC_BUCKET}/openapi.json" specs/sdk-baseline/internal_openapi_spec.json 2>/dev/null || true
+
+      - name: Generate OpenAPI Specs and Stainless configs
+        run: make openapi-stainless
+
+      - name: Compare internal OpenAPI spec to S3 baseline
+        id: compare-internal
+        run: ./scripts/sdk-openapi-spec-changed.sh internal
+
+      - name: Compare public OpenAPI spec to S3 baseline
+        id: compare-public
+        run: ./scripts/sdk-openapi-spec-changed.sh public
+
+      - name: Upload Public Release Artifacts to S3
+        run: |
+          api_version="${{ steps.api-version.outputs.api_version }}"
+          aws s3 cp specs/public_openapi_spec.json "s3://${PUBLIC_SPEC_BUCKET}/openapi.json"
+          aws s3 cp specs/public_openapi_spec.json "s3://${PUBLIC_SPEC_BUCKET}/${api_version}.json"
+          aws s3 cp stainless/public/stainless.yml "s3://${PUBLIC_SPEC_BUCKET}/stainless.yml"
+          aws s3 cp stainless/public/stainless.yml "s3://${PUBLIC_SPEC_BUCKET}/${api_version}-stainless.yml"
+
+      - name: Upload Private Release Artifacts to S3
+        run: |
+          api_version="${{ steps.api-version.outputs.api_version }}"
+          aws s3 cp specs/internal_openapi_spec.json "s3://${INTERNAL_SPEC_BUCKET}/openapi.json"
+          aws s3 cp specs/internal_openapi_spec.json "s3://${INTERNAL_SPEC_BUCKET}/${api_version}.json"
+          aws s3 cp stainless/internal/stainless.yml "s3://${INTERNAL_SPEC_BUCKET}/stainless.yml"
+          aws s3 cp stainless/internal/stainless.yml "s3://${INTERNAL_SPEC_BUCKET}/${api_version}-stainless.yml"
+
+  generate-sdks:
+    name: Generate SDKs with stlc
+    needs: [resolve, publish-openapi-specs]
+    permissions:
+      id-token: write
+      contents: read
+    uses: ./.github/workflows/stlc-generate-reusable.yml
+    with:
+      api_version: ${{ needs.resolve.outputs.tag_name }}
+      push_branch: main
+      openapi_specs_source: s3
+      openapi_internal_gate: ${{ needs.publish-openapi-specs.outputs.internal_spec_changed }}
+      openapi_public_gate: ${{ needs.publish-openapi-specs.outputs.public_spec_changed }}
+    secrets:
+      STLC_READ_TOKEN: ${{ secrets.STLC_READ_TOKEN }}
+      SDK_WRITE_TOKEN: ${{ secrets.SDK_WRITE_TOKEN }}
+
+  build-deploy-mcp:
+    name: Build and Deploy MCP Server
+    needs: [resolve, publish-openapi-specs, generate-sdks]
+    if: needs.publish-openapi-specs.outputs.public_spec_changed == 'true'
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+      contents: read
+    env:
+      IMAGE_TAG: ${{ needs.resolve.outputs.tag_name }}
+    steps:
+      - name: Checkout API repo (deploy dispatch script)
+        uses: actions/checkout@v7
+        with:
+          ref: ${{ needs.resolve.outputs.tag_ref }}
+
+      - name: Checkout typescript-sdk (MCP build context)
+        uses: actions/checkout@v7
+        with:
+          repository: open-mrp/typescript-sdk
+          ref: main
+          token: ${{ secrets.SDK_WRITE_TOKEN }}
+          persist-credentials: false
+          path: typescript-sdk-src
+
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v6
+        with:
+          role-to-assume: ${{ vars.AWS_ROLE_MCP_ECR_PUSH }}
+          aws-region: us-east-2
+
+      - name: Login to Amazon ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v2
+
+      # The nodes are Graviton (arm64). The generated Dockerfile builds on the target platform, so
+      # the arm64 half runs under QEMU.
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v4
+
+      - name: Build and Push MCP Server image
+        uses: docker/build-push-action@v7
+        with:
+          context: typescript-sdk-src
+          file: typescript-sdk-src/packages/mcp-server/Dockerfile
+          push: true
+          platforms: linux/amd64,linux/arm64
+          tags: |
+            ${{ steps.login-ecr.outputs.registry }}/augno/mcp-server:${{ env.IMAGE_TAG }}
+            ${{ steps.login-ecr.outputs.registry }}/augno/mcp-server:latest
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Deploy MCP Server via open-mrp/infra
+        run: ./scripts/dispatch-infra-deploy.sh
+        env:
+          GH_TOKEN: ${{ secrets.INFRA_DISPATCH_TOKEN }}
+          IMAGE_TAG: ${{ env.IMAGE_TAG }}
+          DEPLOY_SERVICES: ""
+          MCP_IMAGE_TAG: ${{ env.IMAGE_TAG }}
+
+  notify-consumers:
+    name: Notify ${{ matrix.consumer }}
+    needs: [resolve, publish-openapi-specs]
+    runs-on: ubuntu-latest
+    environment: production
+    strategy:
+      fail-fast: false
+      matrix:
+        consumer:
+          - open-mrp/public-docs
+          - open-mrp/openapi-spec
+    steps:
+      - name: Dispatch api-release
+        uses: peter-evans/repository-dispatch@v4
+        with:
+          token: ${{ secrets.CROSS_REPO_PAT }}
+          repository: ${{ matrix.consumer }}
+          event-type: api-release
+          client-payload: '{"api_version": "${{ needs.publish-openapi-specs.outputs.api_version }}", "release_version": "${{ needs.resolve.outputs.tag_name }}"}'

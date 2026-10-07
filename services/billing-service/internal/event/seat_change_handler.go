@@ -16,6 +16,9 @@ import (
 	"go.opentelemetry.io/otel/trace"
 )
 
+// Names the Stripe meter that bills seats; it must match the meter configured in the Stripe dashboard.
+const seatCountMeterEventName = "openmrp_seats"
+
 // SeatChangeAccountUsageRepo defines the account usage operations needed by the seat change handler.
 type SeatChangeAccountUsageRepo interface {
 	GetStripeCustomerIDByAccountID(ctx context.Context, accountID string) (*string, *apierror.APIError)
@@ -92,7 +95,7 @@ func (h *SeatChangeHandler) Handle(ctx context.Context, msg amqp.Delivery) error
 		attribute.Int("billing.seat_count", seatCount),
 	)
 
-	if err := h.stripeClient.ReportMeterEvent(ctx, "seat_count", *stripeCustomerID, seatCount, msg.MessageId); err != nil {
+	if err := h.stripeClient.ReportMeterEvent(ctx, seatCountMeterEventName, *stripeCustomerID, seatCount, msg.MessageId); err != nil {
 		return fmt.Errorf("failed to report meter event: %w", err)
 	}
 

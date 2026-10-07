@@ -1,5 +1,16 @@
 # Changelog
 
+## [4.0.0](https://github.com/open-mrp/api/compare/v3.1.1...v4.0.0) (2026-10-07)
+
+
+### ⚠ BREAKING CHANGES
+
+* remove the legacy EDI features and fields (1.0.forge-preview.7) ([#273](https://github.com/open-mrp/api/issues/273))
+
+### Features
+
+* remove the legacy EDI features and fields (1.0.forge-preview.7) ([#273](https://github.com/open-mrp/api/issues/273)) ([cf690d8](https://github.com/open-mrp/api/commit/cf690d8e7d00625f4f0fee5052d60cee3bdc0a94))
+
 ## [3.1.1](https://github.com/open-mrp/api/compare/v3.1.0...v3.1.1) (2026-10-07)
 
 

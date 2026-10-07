@@ -1,5 +1,12 @@
 # Changelog
 
+## [4.1.1](https://github.com/open-mrp/api/compare/v4.1.0...v4.1.1) (2026-10-07)
+
+
+### Bug Fixes
+
+* **docs:** mark a list optional when only its elements are required ([#277](https://github.com/open-mrp/api/issues/277)) ([f6e6596](https://github.com/open-mrp/api/commit/f6e65964eae76cd4bd0270feae7797ba331ecf8c))
+
 ## [4.1.0](https://github.com/open-mrp/api/compare/v4.0.0...v4.1.0) (2026-10-07)
 
 

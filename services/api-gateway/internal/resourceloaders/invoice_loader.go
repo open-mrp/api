@@ -58,12 +58,10 @@ func invoiceReferenceFromProto(d *pb.InvoiceInfo) *apiresource.Invoice {
 		PriorityCode:         constants.PriorityCode(d.PriorityCode),
 		PaymentStatus:        paymentStatus,
 		IsPaidInFull:         d.IsPaidInFull,
-		IsEdiSent:            d.IsEdiSent,
 		Metadata:             apiresource.MetadataFromProto(d.Metadata),
 		HasBeenSent:          d.HasBeenSent,
 		TotalInvoiced:        d.TotalInvoiced,
 		AcceptsInvoiceEmails: d.AcceptsInvoiceEmails,
-		CustomerIsEdiEnabled: d.CustomerIsEdiEnabled,
 		CreatedAt:            grpcutil.TimestampToTime(d.CreatedAt),
 		UpdatedAt:            grpcutil.TimestampToTime(d.UpdatedAt),
 	}

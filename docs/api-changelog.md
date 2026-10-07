@@ -2,6 +2,14 @@
 
 Changes to the public API, by the `OpenMRP-Version` that introduces them. A client pinned to an older supported version keeps the shape described for that version; see [API versioning](patterns/api-versioning-patterns.md).
 
+## 1.0.forge-preview.7
+
+### Breaking changes
+
+- **Customer `edi_status` is removed.** OpenMRP no longer exchanges EDI documents itself, so it no longer stores whether a customer trades over EDI. `edi_status` is gone from the `Customer` resource and from `POST /v1/sales/customers` and `PATCH /v1/sales/customers/{id}`.
+  - Older versions: the field is gone from responses in every version, since there is no value left to return. A request pinned to 1.0.forge-preview.6 or earlier that still sends `edi_status` has it dropped rather than refused.
+  - Migration: stop reading and sending `edi_status`. An integration that trades EDI with some customers keeps that list itself.
+
 ## Unreleased
 
 Not breaking, so it ships on 1.0.forge-preview.6 and applies to every version.

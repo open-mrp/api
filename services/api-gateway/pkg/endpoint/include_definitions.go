@@ -705,13 +705,6 @@ func init() {
 	})
 
 	RegisterIncludes(&ObjectIncludes{
-		ObjectType: constants.ObjectTypeDCLocation,
-		Fields: []IncludeFieldDef{
-			{Key: "customer", ObjectType: constants.ObjectTypeCustomer},
-		},
-	})
-
-	RegisterIncludes(&ObjectIncludes{
 		ObjectType: constants.ObjectTypeShippingCase,
 		Fields: []IncludeFieldDef{
 			{Key: "carrier", ObjectType: constants.ObjectTypeCarrier},

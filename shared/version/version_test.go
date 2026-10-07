@@ -284,7 +284,7 @@ func TestSupportedVersionStrings(t *testing.T) {
 		t.Error("Expected at least one supported version")
 	}
 
-	for _, want := range []string{"1.0.forge-preview.1", "1.0.forge-preview.2", "1.0.forge-preview.3", "1.0.forge-preview.5", "1.0.forge-preview.6"} {
+	for _, want := range []string{"1.0.forge-preview.1", "1.0.forge-preview.2", "1.0.forge-preview.3", "1.0.forge-preview.5", "1.0.forge-preview.6", "1.0.forge-preview.7"} {
 		if !slices.Contains(strings, want) {
 			t.Errorf("Expected %s in supported versions", want)
 		}
@@ -341,8 +341,8 @@ func TestMustParse_Invalid(t *testing.T) {
 
 func TestLatest(t *testing.T) {
 	t.Parallel()
-	if Latest.Version != "1.0.forge-preview.6" {
-		t.Errorf("Expected Latest to be 1.0.forge-preview.6, got %s", Latest.Version)
+	if Latest.Version != "1.0.forge-preview.7" {
+		t.Errorf("Expected Latest to be 1.0.forge-preview.7, got %s", Latest.Version)
 	}
 }
 

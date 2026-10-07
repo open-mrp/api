@@ -449,7 +449,7 @@ message UpdateInvoiceRequest {
   string id = 1;
   StringPatch note = 2;
   optional bool has_been_sent = 3;
-  optional bool is_edi_sent = 4;
+  reserved 4; // formerly is_edi_sent (dropped with the legacy EDI pipeline)
   optional bool is_paid_in_full = 5;
   repeated string includes = 6;
   MetadataPatch metadata = 7;
@@ -489,7 +489,7 @@ message InvoiceInfo {
   optional string shipment_number = 15;
   bool is_paid_in_full = 16;
   bool is_over_paid = 17;
-  bool is_edi_sent = 18;
+  reserved 18; // formerly is_edi_sent (dropped with the legacy EDI pipeline)
   bool has_been_sent = 19;
   bool accepts_invoice_emails = 20;
   repeated InvoiceLineInfo lines = 21;
@@ -502,7 +502,7 @@ message InvoiceInfo {
   string customer_number = 28;
   optional string customer_status_code = 29;
   optional string customer_commission_policy = 30;
-  bool customer_is_edi_enabled = 31;
+  reserved 31; // formerly customer_is_edi_enabled (dropped with the legacy EDI pipeline)
   int32 line_count = 32;
   string priority_code = 33;
   optional string payment_term_name = 34;

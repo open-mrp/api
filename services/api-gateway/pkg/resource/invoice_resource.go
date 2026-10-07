@@ -51,10 +51,6 @@ type Invoice struct {
 	//
 	// An overpaid invoice is paid in full too, and Update Invoice can clear the mark on it, so `payment_status` alone cannot tell whether an `overpaid` invoice is marked paid.
 	IsPaidInFull bool `json:"is_paid_in_full"`
-	// Whether the invoice has been transmitted to the customer via EDI.
-	//
-	// Nothing in the platform sets this flag; it is recorded through Update Invoice once the invoice has been transmitted elsewhere.
-	IsEdiSent bool `json:"is_edi_sent"`
 	// Key-value pairs you attach to the invoice for your own references, such as its ID in another system.
 	Metadata map[string]string `json:"metadata"`
 	// Whether the invoice has been sent to the customer.
@@ -69,8 +65,6 @@ type Invoice struct {
 	//
 	// These contacts are the recipients used by Email Record. When no contact is configured, emailing the invoice marks it sent without delivering anything.
 	AcceptsInvoiceEmails bool `json:"accepts_invoice_emails"`
-	// Whether the billed customer is configured to exchange documents via EDI.
-	CustomerIsEdiEnabled bool `json:"customer_is_edi_enabled"`
 	// Line items in this invoice.
 	Lines *List[InvoiceLine] `json:"lines" expandable:"true"`
 	// Transaction allocations applied against this invoice.
@@ -120,12 +114,10 @@ var SampleInvoice = &Invoice{
 	PaymentTerm:          SamplePaymentTerm,
 	PaymentStatus:        constants.InvoicePaymentStatusUnpaid,
 	IsPaidInFull:         false,
-	IsEdiSent:            false,
 	Metadata:             map[string]string{"edi_filename": "Carolon_ACME_81078093_INV-1001.csv"},
 	HasBeenSent:          true,
 	TotalInvoiced:        "1234.56",
 	AcceptsInvoiceEmails: true,
-	CustomerIsEdiEnabled: false,
 	Lines:                NewList([]InvoiceLine{*SampleInvoiceLine}, PageInfo{}),
 	Allocations:          NewList([]InvoiceAllocation{*SampleInvoiceAllocation}, PageInfo{}),
 	Related:              &InvoiceRelated{Object: constants.ObjectTypeInvoiceRelated},

@@ -155,7 +155,7 @@ OpenMRP is split across repositories rather than a monorepo. Everything below is
 | Repo                                                     | What it is                                                                               |
 | -------------------------------------------------------- | ---------------------------------------------------------------------------------------- |
 | **[api](https://github.com/open-mrp/api)** (this repo)   | The Go microservices, the REST API, and the OpenAPI specifications                       |
-| [dashboard](https://github.com/open-mrp/dashboard)       | The Next.js dashboard and customer portal, plus their Express API                        |
+| [dashboard](https://github.com/open-mrp/dashboard)       | The Next.js dashboard and customer portal                                                 |
 | [ui](https://github.com/open-mrp/ui)                     | `@openmrp/ui` — the React component library both frontends are built from                |
 | [internal-sdk](https://github.com/open-mrp/internal-sdk) | `@openmrp/internal-sdk` — the TypeScript client the dashboard uses                       |
 | [openmrp-go](https://github.com/open-mrp/openmrp-go)     | The Go SDK                                                                               |

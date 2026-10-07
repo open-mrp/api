@@ -33,7 +33,6 @@ func sampleInvoiceInfo() *pb.InvoiceInfo {
 		CustomerNumber:           "ACME001",
 		CustomerStatusCode:       &custStatus,
 		CustomerCommissionPolicy: &custCommission,
-		CustomerIsEdiEnabled:     true,
 		OrderId:                  "so_01abc",
 		OrderNumber:              "SO-0001",
 		LineCount:                1,
@@ -41,7 +40,6 @@ func sampleInvoiceInfo() *pb.InvoiceInfo {
 		BillingAddressName:       &addrName,
 		PriorityCode:             "normal",
 		IsPaidInFull:             true,
-		IsEdiSent:                true,
 		HasBeenSent:              true,
 		TotalInvoiced:            "100.00",
 		PaymentTermId:            &ptID,
@@ -74,9 +72,6 @@ func TestInvoicePresenterCarriesListScalars(t *testing.T) {
 	}
 	if result.PriorityCode != constants.PriorityCodeNormal {
 		t.Errorf("PriorityCode = %q, want %q", result.PriorityCode, constants.PriorityCodeNormal)
-	}
-	if !result.CustomerIsEdiEnabled {
-		t.Error("CustomerIsEdiEnabled = false, want true")
 	}
 }
 

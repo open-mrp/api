@@ -252,7 +252,6 @@ var lineNarrationSkip = map[string]bool{
 	"product_type_code":                true,
 	"item_id":                          true,
 	"item_sku":                         true,
-	"edi_line_item_id":                 true,
 	"line_item_number":                 true,
 }
 

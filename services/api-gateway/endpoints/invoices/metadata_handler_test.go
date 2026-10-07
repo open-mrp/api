@@ -62,7 +62,7 @@ func TestUpdateInvoice_MetadataPatch(t *testing.T) {
 		wantSet    map[string]string
 		wantRemove []string
 	}{
-		{name: "omitted leaves metadata alone", body: `{"is_edi_sent": true}`, wantNil: true},
+		{name: "omitted leaves metadata alone", body: `{"has_been_sent": true}`, wantNil: true},
 		{name: "null clears every key", body: `{"metadata": null}`, wantClear: true},
 		{name: "empty object changes nothing", body: `{"metadata": {}}`, wantSet: map[string]string{}},
 		{
@@ -107,7 +107,7 @@ func TestUpdateInvoice_MetadataIsShownAsStored(t *testing.T) {
 	} {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
-			w := patchInvoice(t, &captureInvoiceClient{replyMetadata: tc.stored}, `{"is_edi_sent": true}`)
+			w := patchInvoice(t, &captureInvoiceClient{replyMetadata: tc.stored}, `{"has_been_sent": true}`)
 			require.Equal(t, http.StatusOK, w.Code, w.Body.String())
 			var got map[string]any
 			require.NoError(t, json.Unmarshal(w.Body.Bytes(), &got))

@@ -174,17 +174,6 @@
       "record_type": "customer"
     },
     {
-      "key": "dc-locations",
-      "title": "DC Locations",
-      "path": "/dashboard/dc-locations",
-      "section": "Logistics",
-      "subsection": "EDI",
-      "shells": [
-        "user"
-      ],
-      "record_type": "dc_location"
-    },
-    {
       "key": "deliveries",
       "title": "Deliveries",
       "path": "/dashboard/deliveries",
@@ -235,16 +224,6 @@
         "user"
       ],
       "record_type": "department"
-    },
-    {
-      "key": "edi-runs",
-      "title": "EDI Runs",
-      "path": "/dashboard/edi-runs",
-      "section": "Logistics",
-      "subsection": "EDI",
-      "shells": [
-        "user"
-      ]
     },
     {
       "key": "email-logs",
@@ -976,14 +955,6 @@
       "type": "customer",
       "page_key": "customers",
       "detail_base": "/dashboard/customers",
-      "shells": [
-        "user"
-      ]
-    },
-    {
-      "type": "dc_location",
-      "page_key": "dc-locations",
-      "detail_base": "/dashboard/dc-locations",
       "shells": [
         "user"
       ]

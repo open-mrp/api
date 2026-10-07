@@ -186,7 +186,6 @@ func mapListCustomerForwardRow(row sqlc.ListCustomersForwardRow) *domain.Custome
 		Name:                               row.AccountName,
 		Number:                             row.ExternalNumber,
 		Status:                             constants.AccountStatusCode(row.Status.String),
-		IsEdiEnabled:                       row.IsEdiEnabled,
 		IsParentAccount:                    row.IsParentAccount,
 		CommissionPolicy:                   constants.CommissionPolicy(row.CommissionStatusCode.String),
 		FreightPolicy:                      constants.FreightPolicy(row.FreightStatusCode.String),
@@ -299,7 +298,6 @@ func mapListCustomerBackwardRow(row sqlc.ListCustomersBackwardRow) *domain.Custo
 		Name:                               row.AccountName,
 		Number:                             row.ExternalNumber,
 		Status:                             constants.AccountStatusCode(row.Status.String),
-		IsEdiEnabled:                       row.IsEdiEnabled,
 		IsParentAccount:                    row.IsParentAccount,
 		CommissionPolicy:                   constants.CommissionPolicy(row.CommissionStatusCode.String),
 		FreightPolicy:                      constants.FreightPolicy(row.FreightStatusCode.String),
@@ -810,7 +808,6 @@ func customerFromRow(row sqlc.GetCustomerRow, incs []string) *domain.Customer {
 		Name:                               row.AccountName,
 		Number:                             row.ExternalNumber,
 		Status:                             constants.AccountStatusCode(row.Status.String),
-		IsEdiEnabled:                       row.IsEdiEnabled,
 		IsParentAccount:                    row.IsParentAccount,
 		CommissionPolicy:                   constants.CommissionPolicy(row.CommissionStatusCode.String),
 		FreightPolicy:                      constants.FreightPolicy(row.FreightStatusCode.String),
@@ -1000,11 +997,6 @@ func (r *customerRepoImpl) Create(ctx context.Context, accountID, relationID, br
 		statusCode = *params.StatusCode
 	}
 
-	isEdi := false
-	if params.IsEdiEnabled != nil {
-		isEdi = *params.IsEdiEnabled
-	}
-
 	// Default priority code (column is NOT NULL).
 	priorityCode := string(constants.PriorityCodeNormal)
 	if params.DefaultPriorityCode != nil && *params.DefaultPriorityCode != "" {
@@ -1019,7 +1011,6 @@ func (r *customerRepoImpl) Create(ctx context.Context, accountID, relationID, br
 		Alias:                    gosql.NullString{String: params.Name, Valid: true},
 		ExternalNumber:           customerNumber,
 		Notes:                    toNullString(params.Note),
-		IsEdiEnabled:             isEdi,
 		CommissionStatusCode:     gosql.NullString{String: commissionStatus, Valid: true},
 		FreightStatusCode:        gosql.NullString{String: freightStatus, Valid: true},
 		DefaultCarrierID:         toNullString(params.DefaultCarrierID),
@@ -1061,17 +1052,11 @@ func (r *customerRepoImpl) Update(ctx context.Context, relationID string, params
 		freightStatus = gosql.NullString{String: string(*params.FreightPolicy), Valid: true}
 	}
 
-	var isEdiEnabled gosql.NullBool
-	if params.IsEdiEnabled != nil {
-		isEdiEnabled = gosql.NullBool{Bool: *params.IsEdiEnabled, Valid: true}
-	}
-
 	err := r.queries.UpdateCustomer(ctx, sqlc.UpdateCustomerParams{
 		ID:                       relationID,
 		OwnerAccountID:           params.OwnerAccountID,
 		Alias:                    stringToNullString(params.Name),
 		ExternalNumber:           stringToNullString(params.Number),
-		IsEdiEnabled:             isEdiEnabled,
 		Notes:                    field.StringToNullString(params.Note),
 		CommissionStatusCode:     commissionStatus,
 		FreightStatusCode:        freightStatus,

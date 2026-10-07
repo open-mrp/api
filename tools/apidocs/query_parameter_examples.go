@@ -200,6 +200,8 @@ func sampleQueryExampleForOpenAPIName(openAPIParam string) any {
 		return []any{"item"}
 	case "override_type_codes":
 		return []any{"delta_units"}
+	case "numbers":
+		return []any{"INV-001"}
 	case "reasons":
 		return []any{"breakdown"}
 	case "reason":

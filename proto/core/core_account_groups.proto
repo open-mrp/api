@@ -263,7 +263,7 @@ message AccountPriceRecipientInfo {
   string name = 2;
   string number = 3;
   string status = 4;
-  bool is_edi_enabled = 5;
+  reserved 5; // formerly is_edi_enabled (dropped with the legacy EDI pipeline)
   string commission_policy = 6;
   string relationship_type = 7;
   google.protobuf.Timestamp created_at = 8;

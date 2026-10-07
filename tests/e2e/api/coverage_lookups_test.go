@@ -355,12 +355,3 @@ func TestSystemProperties_EveryCounterTypeAnswers(t *testing.T) {
 // ──────────────────────────────────────────────
 // EDI
 // ──────────────────────────────────────────────
-
-func TestEdiRuns_RetrieveUnknownRunIs404(t *testing.T) {
-	t.Parallel()
-
-	status, body, err := apiClient.GetListRaw("/v1/operations/edi-runs/edir_doesnotexist0", nil)
-	require.NoError(t, err)
-	require.Less(t, status, 500, "must 404 rather than 5xx: %s", string(body))
-	assert.Equal(t, 404, status, "an unknown EDI run must 404: %s", string(body))
-}

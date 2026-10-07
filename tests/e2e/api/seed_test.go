@@ -383,7 +383,6 @@ const (
 	SeedSysPropertyID = "sypp_01seedtxnumber000"
 
 	// Finance (seeded in 0013_finance.sql)
-	SeedDCLocationID            = "dclc_01seeddc_location0"
 	SeedSettlementID            = "sl_01seedsettlement000"
 	SeedTransactionID           = "tx_01seedtransaction00"
 	SeedTransactionAllocationID = "txal_01seedtxalloc0000"
@@ -592,7 +591,6 @@ var pathSpecificIDSeeds = map[string]string{
 	"/v1/operations/carriers/{carrier_id}/service-levels/":               SeedServiceLevelID,
 	"/v1/operations/batches/":                                            SeedBatchID,
 	"/v1/operations/carriers/":                                           SeedCarrierID,
-	"/v1/operations/dc-locations/":                                       SeedDCLocationID,
 	"/v1/operations/departments/":                                        SeedDepartmentID,
 	"/v1/operations/machines/":                                           SeedMachineID,
 	"/v1/catalog/materials/":                                             SeedMaterialID,

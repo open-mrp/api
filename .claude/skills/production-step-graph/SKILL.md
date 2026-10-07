@@ -8,7 +8,7 @@ description: >-
 
 # Production step graph
 
-`_parent_child_production_steps` matches Prisma/dashboard — **not** “A = parent.” Human spec: `docs/patterns/production-step-graph-patterns.md`.
+`_parent_child_production_steps` matches the existing data — **not** “A = parent.” Human spec: `docs/patterns/production-step-graph-patterns.md`.
 
 | Column | Meaning |
 |---|---|

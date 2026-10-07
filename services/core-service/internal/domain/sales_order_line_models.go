@@ -19,7 +19,6 @@ type SalesOrderLine struct {
 	ItemID             *string `audit:"item_id"`
 	ItemSKU            *string `audit:"item_sku"`
 	SalesOrderID       string
-	EdiLineItemID      *string `audit:"edi_line_item_id"`
 	// Metadata is the client's own key/value pairs; never nil. See shared/metadata.
 	Metadata map[string]string `audit:"metadata"`
 
@@ -78,7 +77,6 @@ type CreateSalesOrderLineParams struct {
 	UnitCostValue              *string
 	UnitCostNumeratorUnitID    *string
 	UnitCostDenominatorUnitID  *string
-	EdiLineItemID              *string
 	Metadata                   map[string]string
 }
 
@@ -100,7 +98,6 @@ type UpdateSalesOrderLineParams struct {
 	UnitCostValue              *string
 	UnitCostNumeratorUnitID    *string
 	UnitCostDenominatorUnitID  *string
-	EdiLineItemID              *string
 	Metadata                   metadata.Update
 }
 

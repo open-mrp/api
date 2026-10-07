@@ -46,14 +46,6 @@ func freightPoliciesToStrings(codes []constants.FreightPolicy) []string {
 	return out
 }
 
-func ediStatusToBoolPtr(s *constants.EDIStatus) *bool {
-	if s == nil {
-		return nil
-	}
-	v := *s == constants.EDIStatusEnabled
-	return &v
-}
-
 func addressTypeToDropShip(t *constants.AddressType) bool {
 	return t != nil && *t == constants.AddressTypeDropShip
 }
@@ -252,7 +244,6 @@ func (m *customerSvcImpl) CreateCustomer(ctx context.Context, req *CreateCustome
 		Phone:                 req.Phone.Ptr(),
 		Url:                   req.URL.Ptr(),
 		StatusCode:            &statusCodeStr,
-		IsEdiEnabled:          ediStatusToBoolPtr(req.EDIStatus.Ptr()),
 		CommissionPolicy:      &commissionPolicyStr,
 		FreightPolicy:         &freightPolicyStr,
 		DefaultLeadTimeDays:   req.LeadTimeDays.Ptr(),
@@ -494,7 +485,6 @@ func (m *customerSvcImpl) UpdateCustomer(ctx context.Context, req *UpdateCustome
 		Phone:                    field.StringClearableToProto(req.Phone),
 		Url:                      field.StringClearableToProto(req.URL),
 		StatusCode:               req.StatusCode.Ptr().StringPtr(),
-		IsEdiEnabled:             ediStatusToBoolPtr(req.EDIStatus.Ptr()),
 		CommissionPolicy:         req.CommissionPolicy.Ptr().StringPtr(),
 		FreightPolicy:            req.FreightPolicy.Ptr().StringPtr(),
 		DefaultLeadTimeDays:      field.Int32ClearableToProto(req.LeadTimeDays),
@@ -563,7 +553,6 @@ func customerFromProto(c *pb.CustomerProto) apiresource.Customer {
 		Name:             c.Name,
 		Number:           c.Number,
 		Status:           constants.AccountStatusCode(c.Status),
-		EDIStatus:        ediStatusFromBool(c.IsEdiEnabled),
 		RelationshipType: customerRelationshipType(c.IsParentAccount, c.ParentAccount != nil),
 		CommissionPolicy: new(constants.CommissionPolicy(c.CommissionPolicy)),
 		Note:             c.Note,
@@ -861,13 +850,6 @@ func buildAccountGroupValueFromProto(g *pb.CustomerAccountGroupProto) apiresourc
 		ag.UpdatedAt = g.UpdatedAt.AsTime()
 	}
 	return ag
-}
-
-func ediStatusFromBool(enabled bool) constants.EDIStatus {
-	if enabled {
-		return constants.EDIStatusEnabled
-	}
-	return constants.EDIStatusDisabled
 }
 
 func customerRelationshipType(isParent bool, hasParent bool) constants.CustomerRelationshipType {

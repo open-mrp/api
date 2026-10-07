@@ -130,7 +130,6 @@ func (r *salesOrderLineRepoImpl) Create(ctx context.Context, lineID string, para
 		ID:                 lineID,
 		ProductSku:         params.ProductSKU,
 		ProductDescription: toNullString(params.ProductDescription),
-		EdiLineItemID:      toNullString(params.EdiLineItemID),
 		LineItemNumber:     gosql.NullInt32{Int32: lineItemNumber, Valid: true},
 		ProductID:          gosql.NullString{String: params.ProductID, Valid: params.ProductID != ""},
 		ItemID:             toNullString(params.ItemID),
@@ -159,7 +158,7 @@ func (r *salesOrderLineRepoImpl) CreateMany(ctx context.Context, params []domain
 	const (
 		quantityTuple = "(?, ?, ?, NOW(3), NOW(3))"
 		rateTuple     = "(?, ?, ?, ?, NOW(3), NOW(3))"
-		lineTuple     = "(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(3), NOW(3))"
+		lineTuple     = "(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(3), NOW(3))"
 	)
 
 	quantityTuples := make([]string, 0, len(params))
@@ -167,7 +166,7 @@ func (r *salesOrderLineRepoImpl) CreateMany(ctx context.Context, params []domain
 	rateTuples := make([]string, 0, len(params)*2)
 	rateArgs := make([]any, 0, len(params)*2*4)
 	lineTuples := make([]string, 0, len(params))
-	lineArgs := make([]any, 0, len(params)*12)
+	lineArgs := make([]any, 0, len(params)*11)
 
 	for i, p := range params {
 		quantityID, apiErr := id.GenID(id.QuantityIDPrefix, nil)
@@ -208,7 +207,6 @@ func (r *salesOrderLineRepoImpl) CreateMany(ctx context.Context, params []domain
 			lineID,
 			p.ProductSKU,
 			toNullString(p.ProductDescription),
-			toNullString(p.EdiLineItemID),
 			safeconv.IntToInt32(i+1),
 			gosql.NullString{String: p.ProductID, Valid: p.ProductID != ""},
 			toNullString(p.ItemID),
@@ -234,7 +232,7 @@ func (r *salesOrderLineRepoImpl) CreateMany(ctx context.Context, params []domain
 		return tracing.Trace(span, apiErr)
 	}
 
-	lineSQL := "INSERT INTO sales_order_line (id, product_sku, product_description, edi_line_item_id, line_item_number, product_id, item_id, sales_order_id, quantity_id, unit_price_id, unit_cost_id, metadata, created_at, updated_at) VALUES " + strings.Join(lineTuples, ", ")
+	lineSQL := "INSERT INTO sales_order_line (id, product_sku, product_description, line_item_number, product_id, item_id, sales_order_id, quantity_id, unit_price_id, unit_cost_id, metadata, created_at, updated_at) VALUES " + strings.Join(lineTuples, ", ")
 	_, err = dbtx.ExecContext(ctx, lineSQL, lineArgs...)
 	if apiErr := db.MapSQLError(err); apiErr != nil {
 		return tracing.Trace(span, apiErr)
@@ -291,7 +289,6 @@ func (r *salesOrderLineRepoImpl) Update(ctx context.Context, params domain.Updat
 		ProductDescription: field.StringToNullString(params.ProductDescription),
 		ProductID:          toNullString(params.ProductID),
 		ItemID:             toNullString(params.ItemID),
-		EdiLineItemID:      toNullString(params.EdiLineItemID),
 		MetadataPatch:      metadata.Patch(params.Metadata),
 		MetadataClear:      params.Metadata.Clear,
 		ID:                 params.SalesOrderLineID,
@@ -674,9 +671,6 @@ func mapSalesOrderLineRow(row sqlc.GetSalesOrderLineRow) *domain.SalesOrderLine 
 	if row.ItemSku.Valid {
 		line.ItemSKU = &row.ItemSku.String
 	}
-	if row.EdiLineItemID.Valid {
-		line.EdiLineItemID = &row.EdiLineItemID.String
-	}
 
 	// Aggregated quantity values
 	pickedVal := decimalToString(row.QuantityPickedValue)
@@ -754,9 +748,6 @@ func mapSalesOrderLinesRow(row sqlc.GetSalesOrderLinesRow) *domain.SalesOrderLin
 	}
 	if row.ItemSku.Valid {
 		line.ItemSKU = &row.ItemSku.String
-	}
-	if row.EdiLineItemID.Valid {
-		line.EdiLineItemID = &row.EdiLineItemID.String
 	}
 
 	// Aggregated quantity values

@@ -14,13 +14,13 @@ import (
 
 const createPurchaseOrderLine = `-- name: CreatePurchaseOrderLine :exec
 INSERT INTO sales_order_line (
-    id, product_sku, product_description, edi_line_item_id,
+    id, product_sku, product_description,
     line_item_number, product_id, item_id, sales_order_id,
     quantity_id, unit_price_id, unit_cost_id,
     created_at, updated_at
 ) VALUES (
     ?, ?, ?,
-    ?, ?,
+    ?,
     -- A line bought as a product is stocked as that product's item.
     ?,
     COALESCE(?, (SELECT p.item_id FROM product p WHERE p.id = ?)),
@@ -34,7 +34,6 @@ type CreatePurchaseOrderLineParams struct {
 	ID                 string
 	ProductSku         string
 	ProductDescription sql.NullString
-	EdiLineItemID      sql.NullString
 	LineItemNumber     sql.NullInt32
 	ProductID          sql.NullString
 	ItemID             interface{}
@@ -49,7 +48,6 @@ func (q *Queries) CreatePurchaseOrderLine(ctx context.Context, arg CreatePurchas
 		arg.ID,
 		arg.ProductSku,
 		arg.ProductDescription,
-		arg.EdiLineItemID,
 		arg.LineItemNumber,
 		arg.ProductID,
 		arg.ItemID,
@@ -120,7 +118,6 @@ SELECT
     sol.product_id,
     sol.item_id,
     i.sku AS item_sku,
-    sol.edi_line_item_id,
     -- Quantity ordered
     q.id AS quantity_id,
     q.value AS quantity_value,
@@ -197,7 +194,6 @@ type GetPurchaseOrderLineRow struct {
 	ProductID                            sql.NullString
 	ItemID                               sql.NullString
 	ItemSku                              sql.NullString
-	EdiLineItemID                        sql.NullString
 	QuantityID                           string
 	QuantityValue                        string
 	QuantityUnitID                       string
@@ -236,7 +232,6 @@ func (q *Queries) GetPurchaseOrderLine(ctx context.Context, arg GetPurchaseOrder
 		&i.ProductID,
 		&i.ItemID,
 		&i.ItemSku,
-		&i.EdiLineItemID,
 		&i.QuantityID,
 		&i.QuantityValue,
 		&i.QuantityUnitID,
@@ -345,7 +340,6 @@ UPDATE sales_order_line sol SET
     product_description = COALESCE(?, product_description),
     product_id = ?,
     item_id = COALESCE(?, (SELECT p.item_id FROM product p WHERE p.id = ?)),
-    edi_line_item_id = COALESCE(?, edi_line_item_id),
     updated_at = NOW(3)
 WHERE sol.id = ?
 AND sol.sales_order_id = ?
@@ -356,7 +350,6 @@ type UpdatePurchaseOrderLineParams struct {
 	ProductDescription sql.NullString
 	ProductID          sql.NullString
 	ItemID             sql.NullString
-	EdiLineItemID      sql.NullString
 	ID                 string
 	SalesOrderID       string
 }
@@ -368,7 +361,6 @@ func (q *Queries) UpdatePurchaseOrderLine(ctx context.Context, arg UpdatePurchas
 		arg.ProductID,
 		arg.ItemID,
 		arg.ProductID,
-		arg.EdiLineItemID,
 		arg.ID,
 		arg.SalesOrderID,
 	)

@@ -27,8 +27,6 @@ Keep `-- +goose NO TRANSACTION` on schema migrations (Vitess rejects DDL in an e
 
 Locally: `make migrate-up` then `make sqlc [service]`. sqlc reads the whole migrations directory.
 
-Update the Prisma schema in `dashboard/packages/db` in the same change — it cannot be derived from the DB (`relationMode = "prisma"`).
-
 Every query stays under 100 ms worst case. List filters: `performant-lists` skill.
 
 ## Shipping

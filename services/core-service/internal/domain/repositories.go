@@ -1797,22 +1797,6 @@ type CatalogRepo interface {
 	ListProductsForCustomer(ctx context.Context, accountID, customerAccountID, productLineID string) ([]*CatalogCategory, *apierror.APIError)
 }
 
-type EDIRepo interface {
-	ListDCLocations(ctx context.Context, params ListDCLocationsParams) (*ListDCLocationsResult, *apierror.APIError)
-	GetDCLocation(ctx context.Context, params GetDCLocationParams) (*DCLocation, *apierror.APIError)
-	GetDCLocationsByIDs(ctx context.Context, ownerAccountID string, ids []string) ([]*DCLocation, *apierror.APIError)
-	CreateDCLocation(ctx context.Context, id string, params CreateDCLocationParams) (*DCLocation, *apierror.APIError)
-	UpdateDCLocation(ctx context.Context, params UpdateDCLocationParams) (*DCLocation, *apierror.APIError)
-	DeleteDCLocation(ctx context.Context, params DeleteDCLocationParams) *apierror.APIError
-	ListEDIRuns(ctx context.Context, params ListEDIRunsParams) (*ListEDIRunsResult, *apierror.APIError)
-	GetEDIRun(ctx context.Context, accountID, ediRunID string) (*EDIRun, *apierror.APIError)
-	GetEDIRunsByIDs(ctx context.Context, accountID string, ids []string) ([]*EDIRun, *apierror.APIError)
-	// IsCustomerEdiEnabled reports whether the account trades documents with the customer over EDI.
-	IsCustomerEdiEnabled(ctx context.Context, accountID, customerID string) (bool, *apierror.APIError)
-	// EnqueueOutboundTransmission records a document owed to a trading partner; enqueueing the same subject twice is a no-op.
-	EnqueueOutboundTransmission(ctx context.Context, params EnqueueEdiTransmissionParams) *apierror.APIError
-}
-
 type RegistrationFlowRepo interface {
 	List(ctx context.Context, params ListRegistrationFlowsParams) (*ListRegistrationFlowsResult, *apierror.APIError)
 	Get(ctx context.Context, accountID, id string) (*RegistrationFlow, *apierror.APIError)

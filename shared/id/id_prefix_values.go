@@ -446,9 +446,6 @@ var (
 	// Change Log-related prefix values
 	ChangeLogIDPrefix = composePrefix(VocChange, VocLog)
 
-	// DC Location-related prefix values
-	DCLocationIDPrefix = composePrefix(VocDC, VocLocation)
-
 	// Location-related prefix values
 	LocationIDPrefix = composePrefix(VocLocation)
 
@@ -493,10 +490,6 @@ var (
 	TransactionAllocationIDPrefix = composePrefix(VocTransaction, VocAllocation)
 	TransactionMethodIDPrefix     = composePrefix(VocTransaction, VocMethod)
 	TransactionTypeIDPrefix       = composePrefix(VocTransaction, VocType)
-
-	// EDI-related prefix values
-	EDIRunIDPrefix          = composePrefix(VocEDI, VocRun)
-	EDITransmissionIDPrefix = composePrefix(VocEDI, VocTransaction)
 
 	// Request-related prefix values
 	RequestIDPrefix = composePrefix(VocRequest)

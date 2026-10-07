@@ -827,32 +827,6 @@ service CoreService {
   // Returns products in a product line, grouped by item category.
   rpc ListCatalogProducts(ListCatalogProductsRequest) returns (ListCatalogProductsResponse);
 
-  // EDI (internal actor only)
-
-  // Fetches orders from FTP and processes invoices via Stedi.
-  rpc PullEDIOrders(PullEDIOrdersRequest) returns (PullEDIOrdersResponse);
-  // Resubmits an invoice via EDI.
-  rpc ResubmitEDIInvoice(ResubmitEDIInvoiceRequest) returns (ResubmitEDIInvoiceResponse);
-
-  // DC Locations
-
-  rpc ListDCLocations(ListDCLocationsRequest) returns (ListDCLocationsResponse);
-  rpc GetDCLocation(GetDCLocationRequest) returns (GetDCLocationResponse);
-  rpc CreateDCLocation(CreateDCLocationRequest) returns (CreateDCLocationResponse);
-  rpc UpdateDCLocation(UpdateDCLocationRequest) returns (UpdateDCLocationResponse);
-  rpc DeleteDCLocation(DeleteDCLocationRequest) returns (google.protobuf.Empty);
-
-  // Returns DC locations by ID for the api-gateway include resolver.
-  rpc BatchGetDCLocationsByIDs(BatchGetDCLocationsByIDsRequest) returns (BatchGetDCLocationsByIDsResponse);
-
-  // EDI Runs
-
-  rpc ListEDIRuns(ListEDIRunsRequest) returns (ListEDIRunsResponse);
-  rpc GetEDIRun(GetEDIRunRequest) returns (GetEDIRunResponse);
-
-  // Returns EDI runs by ID for the api-gateway include resolver.
-  rpc BatchGetEDIRunsByIDs(BatchGetEDIRunsByIDsRequest) returns (BatchGetEDIRunsByIDsResponse);
-
   // Roles
 
   rpc ListRoles(ListRolesRequest) returns (ListRolesResponse);

@@ -470,12 +470,6 @@ func Run(
 		MediatorFactory: mediatorFactory,
 	})
 
-	ediSvc := service.NewEDISvc(&service.EDISvcConfig{
-		Repos:           repoFactory,
-		MediatorFactory: mediatorFactory,
-		TxManager:       txManager,
-	})
-
 	machineSvc := service.NewMachineSvc(&service.MachineSvcConfig{
 		Repos:           repoFactory,
 		MediatorFactory: mediatorFactory,
@@ -981,7 +975,6 @@ func Run(
 	grpc.RegisterAccountUserService(srv, accountUserSvc)
 	grpc.RegisterAnalyticsService(srv, analyticsSvc)
 	grpc.RegisterCatalogService(srv, catalogSvc)
-	grpc.RegisterEDIService(srv, ediSvc)
 	grpc.RegisterRoleService(srv, roleSvc)
 	grpc.RegisterCustomerService(srv, customerSvc, childAccountSvc, customerProductLineAccessSvc, productSvc)
 	grpc.RegisterGroupService(srv, accountGroupSvc, accountGroupProductLineAccessSvc)

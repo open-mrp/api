@@ -20,8 +20,6 @@ const (
 	PermissionDomainDepartmentPicks               PermissionDomain = "department_picks"
 	PermissionDomainDepartments                   PermissionDomain = "departments"
 	PermissionDomainDiscounts                     PermissionDomain = "discounts"
-	PermissionDomainEdiLocations                  PermissionDomain = "edi_locations"
-	PermissionDomainEdiRuns                       PermissionDomain = "edi_runs"
 	PermissionDomainEmailLogs                     PermissionDomain = "email_logs"
 	PermissionDomainErrorLogs                     PermissionDomain = "error_logs"
 	PermissionDomainProducts                      PermissionDomain = "products"
@@ -126,8 +124,6 @@ func AllPermissionDomains() []PermissionDomain {
 		PermissionDomainDepartmentPicks,
 		PermissionDomainDepartments,
 		PermissionDomainDiscounts,
-		PermissionDomainEdiLocations,
-		PermissionDomainEdiRuns,
 		PermissionDomainEmailLogs,
 		PermissionDomainErrorLogs,
 		PermissionDomainProducts,

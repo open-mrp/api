@@ -99,7 +99,6 @@ func fullCustomer() *domain.Customer {
 		Name:                    "Harbor Supply",
 		Number:                  "8841",
 		Status:                  constants.AccountStatusCodeHoldShipment,
-		IsEdiEnabled:            true,
 		CommissionPolicy:        constants.CommissionPolicyExempt,
 		FreightPolicy:           constants.FreightPolicyBilled,
 		Note:                    new("Ships Tuesdays"),
@@ -154,7 +153,7 @@ func (suite *CustomerExportTestSuite) TestExport_MatchesTheDashboardsFile() {
 	suite.Equal([]string{
 		"Customer Number", "Name", "Email", "Phone", "Status", "Customer Group", "Sales Rep", "Priority",
 		"Payment Term", "Shipping Term", "Carrier", "Default Billing", "Default Shipping", "Contacts",
-		"Commission Exempt", "Freight Exempt", "EDI Enabled", "Parent Account", "Note", "Created At",
+		"Commission Exempt", "Freight Exempt", "Parent Account", "Note", "Created At",
 	}, rows[0])
 
 	suite.Equal([]string{
@@ -163,14 +162,14 @@ func (suite *CustomerExportTestSuite) TestExport_MatchesTheDashboardsFile() {
 		"1 Main St, Suite 5, Springfield, IL 62701 US",
 		"9 Dock Rd, Springfield, IL 62702 US",
 		"Jane Doe (jane@harbor.test); Sam Roe; dock@harbor.test",
-		"Yes", "No", "Yes", "Yes", "Ships Tuesdays", "03/01/2026",
+		"Yes", "No", "Yes", "Ships Tuesdays", "03/01/2026",
 	}, rows[1])
 
 	// Blank cells mid-row read back as empty strings; the row ends at its last filled column.
 	suite.Equal([]string{
 		"C-12", "Bare Goods", "", "", "Normal", "", "", "",
 		"", "", "", "", "", "",
-		"No", "Yes", "No", "No", "", "02/14/2026",
+		"No", "Yes", "No", "", "02/14/2026",
 	}, rows[2])
 }
 

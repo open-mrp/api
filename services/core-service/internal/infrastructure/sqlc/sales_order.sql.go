@@ -1788,7 +1788,6 @@ SELECT
     sol.product_id,
     sol.item_id,
     i.sku AS item_sku,
-    sol.edi_line_item_id,
     -- Quantity ordered
     q.id AS quantity_id,
     q.value AS quantity_value,
@@ -1884,7 +1883,6 @@ type GetSalesOrderLinesRow struct {
 	ProductID                            sql.NullString
 	ItemID                               sql.NullString
 	ItemSku                              sql.NullString
-	EdiLineItemID                        sql.NullString
 	QuantityID                           string
 	QuantityValue                        string
 	QuantityUnitID                       string
@@ -1934,7 +1932,6 @@ func (q *Queries) GetSalesOrderLines(ctx context.Context, arg GetSalesOrderLines
 			&i.ProductID,
 			&i.ItemID,
 			&i.ItemSku,
-			&i.EdiLineItemID,
 			&i.QuantityID,
 			&i.QuantityValue,
 			&i.QuantityUnitID,
@@ -2035,7 +2032,6 @@ SELECT
     sol.product_id,
     sol.item_id,
     i.sku AS item_sku,
-    sol.edi_line_item_id,
     -- Quantity ordered
     q.id AS quantity_id,
     q.value AS quantity_value,
@@ -2131,7 +2127,6 @@ type GetSalesOrderLinesForOrdersRow struct {
 	ProductID                            sql.NullString
 	ItemID                               sql.NullString
 	ItemSku                              sql.NullString
-	EdiLineItemID                        sql.NullString
 	QuantityID                           string
 	QuantityValue                        string
 	QuantityUnitID                       string
@@ -2209,7 +2204,6 @@ func (q *Queries) GetSalesOrderLinesForOrders(ctx context.Context, arg GetSalesO
 			&i.ProductID,
 			&i.ItemID,
 			&i.ItemSku,
-			&i.EdiLineItemID,
 			&i.QuantityID,
 			&i.QuantityValue,
 			&i.QuantityUnitID,

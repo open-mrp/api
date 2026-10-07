@@ -18,7 +18,6 @@ SELECT STRAIGHT_JOIN
     ar.counterparty_account_id AS account_id,
     COALESCE(NULLIF(ar.alias, ''), a.name) AS account_name,
     ar.external_number,
-    ar.is_edi_enabled,
     ar.notes,
     ar.account_status_code AS status,
     ar.commission_status_code,
@@ -247,7 +246,6 @@ SELECT STRAIGHT_JOIN
     ar.counterparty_account_id AS account_id,
     COALESCE(NULLIF(ar.alias, ''), a.name) AS account_name,
     ar.external_number,
-    ar.is_edi_enabled,
     ar.notes,
     ar.account_status_code AS status,
     ar.commission_status_code,
@@ -584,7 +582,6 @@ SELECT
     ar.counterparty_account_id AS account_id,
     COALESCE(NULLIF(ar.alias, ''), a.name) AS account_name,
     ar.external_number,
-    ar.is_edi_enabled,
     ar.notes,
     ar.account_status_code AS status,
     ar.commission_status_code,
@@ -710,7 +707,6 @@ SELECT
     ar.counterparty_account_id AS account_id,
     COALESCE(NULLIF(ar.alias, ''), a.name) AS account_name,
     ar.external_number,
-    ar.is_edi_enabled,
     ar.notes,
     ar.account_status_code AS status,
     ar.commission_status_code,
@@ -851,7 +847,7 @@ WHERE arnp.account_relation_id = sqlc.arg('account_relation_id');
 -- name: InsertAccountRelation :exec
 INSERT INTO account_relation (
     id, owner_account_id, counterparty_account_id, account_relation_role_code,
-    external_number, is_edi_enabled, notes, parent_account_relation_id,
+    external_number, notes, parent_account_relation_id,
     commission_status_code, freight_status_code,
     default_carrier_id, default_carrier_option_id, default_sales_rep_id,
     account_status_code, payment_term_id, account_group_id, priority_code,
@@ -861,7 +857,7 @@ INSERT INTO account_relation (
     created_at, updated_at
 ) VALUES (
     sqlc.arg('id'), sqlc.arg('owner_account_id'), sqlc.arg('counterparty_account_id'), 'customer',
-    sqlc.narg('external_number'), sqlc.arg('is_edi_enabled'), sqlc.narg('notes'), sqlc.narg('parent_account_relation_id'),
+    sqlc.narg('external_number'), sqlc.narg('notes'), sqlc.narg('parent_account_relation_id'),
     sqlc.narg('commission_status_code'), sqlc.narg('freight_status_code'),
     sqlc.narg('default_carrier_id'), sqlc.narg('default_carrier_option_id'), sqlc.narg('default_sales_rep_id'),
     sqlc.arg('account_status_code'), sqlc.narg('payment_term_id'), sqlc.narg('account_group_id'), sqlc.narg('priority_code'),
@@ -875,7 +871,6 @@ INSERT INTO account_relation (
 UPDATE account_relation SET
     alias = COALESCE(sqlc.narg('alias'), alias),
     external_number = COALESCE(sqlc.narg('external_number'), external_number),
-    is_edi_enabled = COALESCE(sqlc.narg('is_edi_enabled'), is_edi_enabled),
     notes = sqlc.narg('notes'),
     parent_account_relation_id = COALESCE(sqlc.narg('parent_account_relation_id'), parent_account_relation_id),
     commission_status_code = COALESCE(sqlc.narg('commission_status_code'), commission_status_code),
@@ -955,7 +950,7 @@ VALUES (sqlc.arg('id'), sqlc.arg('owner_account_id'), sqlc.narg('support_email')
 -- name: InsertCustomerRelation :exec
 INSERT INTO account_relation (
     id, owner_account_id, counterparty_account_id, account_relation_role_code,
-    alias, external_number, notes, is_edi_enabled,
+    alias, external_number, notes,
     commission_status_code, freight_status_code,
     default_carrier_id, default_carrier_option_id, default_sales_rep_id,
     account_status_code, payment_term_id, account_group_id, priority_code,
@@ -965,7 +960,7 @@ INSERT INTO account_relation (
     created_at, updated_at
 ) VALUES (
     sqlc.arg('id'), sqlc.arg('owner_account_id'), sqlc.arg('counterparty_account_id'), 'customer',
-    sqlc.arg('alias'), sqlc.arg('external_number'), sqlc.narg('notes'), sqlc.arg('is_edi_enabled'),
+    sqlc.arg('alias'), sqlc.arg('external_number'), sqlc.narg('notes'),
     sqlc.arg('commission_status_code'), sqlc.arg('freight_status_code'),
     sqlc.narg('default_carrier_id'), sqlc.narg('default_carrier_option_id'), sqlc.narg('default_sales_rep_id'),
     sqlc.arg('account_status_code'), sqlc.narg('payment_term_id'), sqlc.narg('account_group_id'), sqlc.narg('priority_code'),

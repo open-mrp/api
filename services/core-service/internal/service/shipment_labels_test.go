@@ -88,7 +88,6 @@ type labelHarness struct {
 	accountUserRepo *repositorymock.MockAccountUserRepo
 	accountRepo     *repositorymock.MockAccountRepo
 	invoiceRepo     *repositorymock.MockInvoiceRepo
-	ediRepo         *repositorymock.MockEDIRepo
 	serviceLevels   *repositorymock.MockServiceLevelRepo
 	shippoClient    *clientmock.MockShippoClient
 	leases          *memLeases
@@ -112,7 +111,6 @@ func newLabelHarness(t *testing.T, ctrl *gomock.Controller) *labelHarness {
 		accountUserRepo: repositorymock.NewMockAccountUserRepo(ctrl),
 		accountRepo:     repositorymock.NewMockAccountRepo(ctrl),
 		invoiceRepo:     repositorymock.NewMockInvoiceRepo(ctrl),
-		ediRepo:         repositorymock.NewMockEDIRepo(ctrl),
 		serviceLevels:   repositorymock.NewMockServiceLevelRepo(ctrl),
 		shippoClient:    clientmock.NewMockShippoClient(ctrl),
 		leases:          newMemLeases(),
@@ -128,7 +126,6 @@ func newLabelHarness(t *testing.T, ctrl *gomock.Controller) *labelHarness {
 	h.repoFactory.EXPECT().NewAccountUserRepo().Return(h.accountUserRepo).AnyTimes()
 	h.repoFactory.EXPECT().NewAccountRepo().Return(h.accountRepo).AnyTimes()
 	h.repoFactory.EXPECT().NewInvoiceRepo().Return(h.invoiceRepo).AnyTimes()
-	h.repoFactory.EXPECT().NewEDIRepo().Return(h.ediRepo).AnyTimes()
 	h.repoFactory.EXPECT().NewServiceLevelRepo().Return(h.serviceLevels).AnyTimes()
 	h.repoFactory.EXPECT().NewOutboxRepo().Return(&stubOutboxRepo{}).AnyTimes()
 	h.accountUserRepo.EXPECT().ResolveAccountUserID(gomock.Any(), gomock.Any(), gomock.Any()).
@@ -844,39 +841,6 @@ func TestDeleteShipment_RefusesAShippedShipment(t *testing.T) {
 	apiErr := svc.DeleteShipment(shipmentShipCtx(testLabelAccountID), domain.DeleteShipmentParams{ShipmentID: testLabelShipmentID})
 	require.NotNil(t, apiErr)
 	assert.Equal(t, apierror.ErrorCodeResourceConflict, apiErr.Code)
-}
-
-// --- EDI ---
-
-func TestEnqueueEdiInvoice_QueuesAnInvoiceForAnEdiCustomer(t *testing.T) {
-	ctrl := gomock.NewController(t)
-	h := newLabelHarness(t, ctrl)
-
-	h.ediRepo.EXPECT().IsCustomerEdiEnabled(gomock.Any(), testLabelAccountID, testLabelCustomerID).Return(true, nil)
-	h.ediRepo.EXPECT().EnqueueOutboundTransmission(gomock.Any(), gomock.Any()).
-		DoAndReturn(func(_ context.Context, params domain.EnqueueEdiTransmissionParams) *apierror.APIError {
-			assert.Regexp(t, "^edtx_", params.ID)
-			assert.Equal(t, domain.EnqueueEdiTransmissionParams{
-				ID:                    params.ID,
-				AccountID:             testLabelAccountID,
-				DocumentType:          "810",
-				SubjectType:           "invoice",
-				SubjectID:             "inv_1",
-				CounterpartyAccountID: testLabelCustomerID,
-			}, params)
-			return nil
-		})
-
-	require.Nil(t, h.svc.enqueueEdiInvoice(context.Background(), h.shipment, "inv_1"))
-}
-
-func TestEnqueueEdiInvoice_SkipsACustomerNotOnEdi(t *testing.T) {
-	ctrl := gomock.NewController(t)
-	h := newLabelHarness(t, ctrl)
-
-	h.ediRepo.EXPECT().IsCustomerEdiEnabled(gomock.Any(), testLabelAccountID, testLabelCustomerID).Return(false, nil)
-
-	require.Nil(t, h.svc.enqueueEdiInvoice(context.Background(), h.shipment, "inv_1"))
 }
 
 // --- void: refunds ---

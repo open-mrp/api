@@ -230,7 +230,6 @@ var typeRegistry = map[string]any{
 	"AddressValidationStatus":         AddressValidationStatus(""),
 	"CustomerParentAccountStatus":     CustomerParentAccountStatus(""),
 	"CustomerRelationshipType":        CustomerRelationshipType(""),
-	"EDIStatus":                       EDIStatus(""),
 	"EmailSendStatus":                 EmailSendStatus(""),
 	"EmailRecordType":                 EmailRecordType(""),
 	"InvoiceListStatus":               InvoiceListStatus(""),

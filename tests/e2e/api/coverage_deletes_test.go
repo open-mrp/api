@@ -73,34 +73,6 @@ func TestProductTypes_DeleteUnknownIs404(t *testing.T) {
 // DC locations
 // ──────────────────────────────────────────────
 
-func TestDCLocations_DeleteRemovesIt(t *testing.T) {
-	t.Parallel()
-
-	created := createAndCleanup(t, dcLocationsPath, map[string]any{
-		"customer_id": SeedCustomerAccountID,
-		"location":    uniqueName("cov-dc-del"),
-	})
-	id := jsonField(created, "id")
-
-	status, body, err := apiClient.Delete(dcLocationsPath + "/" + id)
-	require.NoError(t, err)
-	require.Less(t, status, 500, "delete must not 5xx: %s", string(body))
-	requireStatus(t, 200, status, body)
-
-	status, body, err = apiClient.GetListRaw(dcLocationsPath+"/"+id, nil)
-	require.NoError(t, err)
-	assert.Equal(t, 404, status, "a deleted DC location must not read back: %s", string(body))
-}
-
-func TestDCLocations_DeleteUnknownIs404(t *testing.T) {
-	t.Parallel()
-
-	status, body, err := apiClient.Delete(dcLocationsPath + "/dclc_doesnotexist00")
-	require.NoError(t, err)
-	require.Less(t, status, 500, "must not 5xx: %s", string(body))
-	assert.Equal(t, 404, status, "deleting an unknown DC location must 404: %s", string(body))
-}
-
 // ──────────────────────────────────────────────
 // Consumptions
 // ──────────────────────────────────────────────

@@ -34,8 +34,6 @@ type Customer struct {
 	//
 	// The hold statuses are advisory: OpenMRP flags the customer's orders as being on credit hold, but requests to create orders or shipments for the customer are not rejected.
 	Status constants.AccountStatusCode `json:"status" validate:"required"`
-	// Whether EDI (Electronic Data Interchange) is enabled for exchanging orders and documents with this customer.
-	EDIStatus constants.EDIStatus `json:"edi_status" validate:"required"`
 	// The customer's position in the account hierarchy.
 	//
 	// - `standalone`: no parent or child accounts.
@@ -218,7 +216,6 @@ var SampleCustomer = &Customer{
 	Name:             SampleCustomerName,
 	Number:           SampleCustomerNumber,
 	Status:           constants.AccountStatusCodeNormal,
-	EDIStatus:        constants.EDIStatusDisabled,
 	RelationshipType: constants.CustomerRelationshipTypeStandalone,
 	CommissionPolicy: new(constants.CommissionPolicyApplied),
 	Note:             &sampleCustomerNote,

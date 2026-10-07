@@ -380,17 +380,6 @@ const (
 	CoreService_SubmitFeedback_FullMethodName                             = "/core.CoreService/SubmitFeedback"
 	CoreService_ListCatalogProductLines_FullMethodName                    = "/core.CoreService/ListCatalogProductLines"
 	CoreService_ListCatalogProducts_FullMethodName                        = "/core.CoreService/ListCatalogProducts"
-	CoreService_PullEDIOrders_FullMethodName                              = "/core.CoreService/PullEDIOrders"
-	CoreService_ResubmitEDIInvoice_FullMethodName                         = "/core.CoreService/ResubmitEDIInvoice"
-	CoreService_ListDCLocations_FullMethodName                            = "/core.CoreService/ListDCLocations"
-	CoreService_GetDCLocation_FullMethodName                              = "/core.CoreService/GetDCLocation"
-	CoreService_CreateDCLocation_FullMethodName                           = "/core.CoreService/CreateDCLocation"
-	CoreService_UpdateDCLocation_FullMethodName                           = "/core.CoreService/UpdateDCLocation"
-	CoreService_DeleteDCLocation_FullMethodName                           = "/core.CoreService/DeleteDCLocation"
-	CoreService_BatchGetDCLocationsByIDs_FullMethodName                   = "/core.CoreService/BatchGetDCLocationsByIDs"
-	CoreService_ListEDIRuns_FullMethodName                                = "/core.CoreService/ListEDIRuns"
-	CoreService_GetEDIRun_FullMethodName                                  = "/core.CoreService/GetEDIRun"
-	CoreService_BatchGetEDIRunsByIDs_FullMethodName                       = "/core.CoreService/BatchGetEDIRunsByIDs"
 	CoreService_ListRoles_FullMethodName                                  = "/core.CoreService/ListRoles"
 	CoreService_GetRole_FullMethodName                                    = "/core.CoreService/GetRole"
 	CoreService_CreateRole_FullMethodName                                 = "/core.CoreService/CreateRole"
@@ -1054,21 +1043,6 @@ type CoreServiceClient interface {
 	ListCatalogProductLines(ctx context.Context, in *ListCatalogProductLinesRequest, opts ...grpc.CallOption) (*ListCatalogProductLinesResponse, error)
 	// Returns products in a product line, grouped by item category.
 	ListCatalogProducts(ctx context.Context, in *ListCatalogProductsRequest, opts ...grpc.CallOption) (*ListCatalogProductsResponse, error)
-	// Fetches orders from FTP and processes invoices via Stedi.
-	PullEDIOrders(ctx context.Context, in *PullEDIOrdersRequest, opts ...grpc.CallOption) (*PullEDIOrdersResponse, error)
-	// Resubmits an invoice via EDI.
-	ResubmitEDIInvoice(ctx context.Context, in *ResubmitEDIInvoiceRequest, opts ...grpc.CallOption) (*ResubmitEDIInvoiceResponse, error)
-	ListDCLocations(ctx context.Context, in *ListDCLocationsRequest, opts ...grpc.CallOption) (*ListDCLocationsResponse, error)
-	GetDCLocation(ctx context.Context, in *GetDCLocationRequest, opts ...grpc.CallOption) (*GetDCLocationResponse, error)
-	CreateDCLocation(ctx context.Context, in *CreateDCLocationRequest, opts ...grpc.CallOption) (*CreateDCLocationResponse, error)
-	UpdateDCLocation(ctx context.Context, in *UpdateDCLocationRequest, opts ...grpc.CallOption) (*UpdateDCLocationResponse, error)
-	DeleteDCLocation(ctx context.Context, in *DeleteDCLocationRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
-	// Returns DC locations by ID for the api-gateway include resolver.
-	BatchGetDCLocationsByIDs(ctx context.Context, in *BatchGetDCLocationsByIDsRequest, opts ...grpc.CallOption) (*BatchGetDCLocationsByIDsResponse, error)
-	ListEDIRuns(ctx context.Context, in *ListEDIRunsRequest, opts ...grpc.CallOption) (*ListEDIRunsResponse, error)
-	GetEDIRun(ctx context.Context, in *GetEDIRunRequest, opts ...grpc.CallOption) (*GetEDIRunResponse, error)
-	// Returns EDI runs by ID for the api-gateway include resolver.
-	BatchGetEDIRunsByIDs(ctx context.Context, in *BatchGetEDIRunsByIDsRequest, opts ...grpc.CallOption) (*BatchGetEDIRunsByIDsResponse, error)
 	ListRoles(ctx context.Context, in *ListRolesRequest, opts ...grpc.CallOption) (*ListRolesResponse, error)
 	GetRole(ctx context.Context, in *GetRoleRequest, opts ...grpc.CallOption) (*GetRoleResponse, error)
 	CreateRole(ctx context.Context, in *CreateRoleRequest, opts ...grpc.CallOption) (*CreateRoleResponse, error)
@@ -4669,116 +4643,6 @@ func (c *coreServiceClient) ListCatalogProducts(ctx context.Context, in *ListCat
 	return out, nil
 }
 
-func (c *coreServiceClient) PullEDIOrders(ctx context.Context, in *PullEDIOrdersRequest, opts ...grpc.CallOption) (*PullEDIOrdersResponse, error) {
-	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(PullEDIOrdersResponse)
-	err := c.cc.Invoke(ctx, CoreService_PullEDIOrders_FullMethodName, in, out, cOpts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
-func (c *coreServiceClient) ResubmitEDIInvoice(ctx context.Context, in *ResubmitEDIInvoiceRequest, opts ...grpc.CallOption) (*ResubmitEDIInvoiceResponse, error) {
-	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(ResubmitEDIInvoiceResponse)
-	err := c.cc.Invoke(ctx, CoreService_ResubmitEDIInvoice_FullMethodName, in, out, cOpts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
-func (c *coreServiceClient) ListDCLocations(ctx context.Context, in *ListDCLocationsRequest, opts ...grpc.CallOption) (*ListDCLocationsResponse, error) {
-	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(ListDCLocationsResponse)
-	err := c.cc.Invoke(ctx, CoreService_ListDCLocations_FullMethodName, in, out, cOpts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
-func (c *coreServiceClient) GetDCLocation(ctx context.Context, in *GetDCLocationRequest, opts ...grpc.CallOption) (*GetDCLocationResponse, error) {
-	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(GetDCLocationResponse)
-	err := c.cc.Invoke(ctx, CoreService_GetDCLocation_FullMethodName, in, out, cOpts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
-func (c *coreServiceClient) CreateDCLocation(ctx context.Context, in *CreateDCLocationRequest, opts ...grpc.CallOption) (*CreateDCLocationResponse, error) {
-	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(CreateDCLocationResponse)
-	err := c.cc.Invoke(ctx, CoreService_CreateDCLocation_FullMethodName, in, out, cOpts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
-func (c *coreServiceClient) UpdateDCLocation(ctx context.Context, in *UpdateDCLocationRequest, opts ...grpc.CallOption) (*UpdateDCLocationResponse, error) {
-	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(UpdateDCLocationResponse)
-	err := c.cc.Invoke(ctx, CoreService_UpdateDCLocation_FullMethodName, in, out, cOpts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
-func (c *coreServiceClient) DeleteDCLocation(ctx context.Context, in *DeleteDCLocationRequest, opts ...grpc.CallOption) (*emptypb.Empty, error) {
-	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(emptypb.Empty)
-	err := c.cc.Invoke(ctx, CoreService_DeleteDCLocation_FullMethodName, in, out, cOpts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
-func (c *coreServiceClient) BatchGetDCLocationsByIDs(ctx context.Context, in *BatchGetDCLocationsByIDsRequest, opts ...grpc.CallOption) (*BatchGetDCLocationsByIDsResponse, error) {
-	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(BatchGetDCLocationsByIDsResponse)
-	err := c.cc.Invoke(ctx, CoreService_BatchGetDCLocationsByIDs_FullMethodName, in, out, cOpts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
-func (c *coreServiceClient) ListEDIRuns(ctx context.Context, in *ListEDIRunsRequest, opts ...grpc.CallOption) (*ListEDIRunsResponse, error) {
-	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(ListEDIRunsResponse)
-	err := c.cc.Invoke(ctx, CoreService_ListEDIRuns_FullMethodName, in, out, cOpts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
-func (c *coreServiceClient) GetEDIRun(ctx context.Context, in *GetEDIRunRequest, opts ...grpc.CallOption) (*GetEDIRunResponse, error) {
-	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(GetEDIRunResponse)
-	err := c.cc.Invoke(ctx, CoreService_GetEDIRun_FullMethodName, in, out, cOpts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
-func (c *coreServiceClient) BatchGetEDIRunsByIDs(ctx context.Context, in *BatchGetEDIRunsByIDsRequest, opts ...grpc.CallOption) (*BatchGetEDIRunsByIDsResponse, error) {
-	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(BatchGetEDIRunsByIDsResponse)
-	err := c.cc.Invoke(ctx, CoreService_BatchGetEDIRunsByIDs_FullMethodName, in, out, cOpts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
 func (c *coreServiceClient) ListRoles(ctx context.Context, in *ListRolesRequest, opts ...grpc.CallOption) (*ListRolesResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(ListRolesResponse)
@@ -5926,21 +5790,6 @@ type CoreServiceServer interface {
 	ListCatalogProductLines(context.Context, *ListCatalogProductLinesRequest) (*ListCatalogProductLinesResponse, error)
 	// Returns products in a product line, grouped by item category.
 	ListCatalogProducts(context.Context, *ListCatalogProductsRequest) (*ListCatalogProductsResponse, error)
-	// Fetches orders from FTP and processes invoices via Stedi.
-	PullEDIOrders(context.Context, *PullEDIOrdersRequest) (*PullEDIOrdersResponse, error)
-	// Resubmits an invoice via EDI.
-	ResubmitEDIInvoice(context.Context, *ResubmitEDIInvoiceRequest) (*ResubmitEDIInvoiceResponse, error)
-	ListDCLocations(context.Context, *ListDCLocationsRequest) (*ListDCLocationsResponse, error)
-	GetDCLocation(context.Context, *GetDCLocationRequest) (*GetDCLocationResponse, error)
-	CreateDCLocation(context.Context, *CreateDCLocationRequest) (*CreateDCLocationResponse, error)
-	UpdateDCLocation(context.Context, *UpdateDCLocationRequest) (*UpdateDCLocationResponse, error)
-	DeleteDCLocation(context.Context, *DeleteDCLocationRequest) (*emptypb.Empty, error)
-	// Returns DC locations by ID for the api-gateway include resolver.
-	BatchGetDCLocationsByIDs(context.Context, *BatchGetDCLocationsByIDsRequest) (*BatchGetDCLocationsByIDsResponse, error)
-	ListEDIRuns(context.Context, *ListEDIRunsRequest) (*ListEDIRunsResponse, error)
-	GetEDIRun(context.Context, *GetEDIRunRequest) (*GetEDIRunResponse, error)
-	// Returns EDI runs by ID for the api-gateway include resolver.
-	BatchGetEDIRunsByIDs(context.Context, *BatchGetEDIRunsByIDsRequest) (*BatchGetEDIRunsByIDsResponse, error)
 	ListRoles(context.Context, *ListRolesRequest) (*ListRolesResponse, error)
 	GetRole(context.Context, *GetRoleRequest) (*GetRoleResponse, error)
 	CreateRole(context.Context, *CreateRoleRequest) (*CreateRoleResponse, error)
@@ -7069,39 +6918,6 @@ func (UnimplementedCoreServiceServer) ListCatalogProductLines(context.Context, *
 }
 func (UnimplementedCoreServiceServer) ListCatalogProducts(context.Context, *ListCatalogProductsRequest) (*ListCatalogProductsResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method ListCatalogProducts not implemented")
-}
-func (UnimplementedCoreServiceServer) PullEDIOrders(context.Context, *PullEDIOrdersRequest) (*PullEDIOrdersResponse, error) {
-	return nil, status.Error(codes.Unimplemented, "method PullEDIOrders not implemented")
-}
-func (UnimplementedCoreServiceServer) ResubmitEDIInvoice(context.Context, *ResubmitEDIInvoiceRequest) (*ResubmitEDIInvoiceResponse, error) {
-	return nil, status.Error(codes.Unimplemented, "method ResubmitEDIInvoice not implemented")
-}
-func (UnimplementedCoreServiceServer) ListDCLocations(context.Context, *ListDCLocationsRequest) (*ListDCLocationsResponse, error) {
-	return nil, status.Error(codes.Unimplemented, "method ListDCLocations not implemented")
-}
-func (UnimplementedCoreServiceServer) GetDCLocation(context.Context, *GetDCLocationRequest) (*GetDCLocationResponse, error) {
-	return nil, status.Error(codes.Unimplemented, "method GetDCLocation not implemented")
-}
-func (UnimplementedCoreServiceServer) CreateDCLocation(context.Context, *CreateDCLocationRequest) (*CreateDCLocationResponse, error) {
-	return nil, status.Error(codes.Unimplemented, "method CreateDCLocation not implemented")
-}
-func (UnimplementedCoreServiceServer) UpdateDCLocation(context.Context, *UpdateDCLocationRequest) (*UpdateDCLocationResponse, error) {
-	return nil, status.Error(codes.Unimplemented, "method UpdateDCLocation not implemented")
-}
-func (UnimplementedCoreServiceServer) DeleteDCLocation(context.Context, *DeleteDCLocationRequest) (*emptypb.Empty, error) {
-	return nil, status.Error(codes.Unimplemented, "method DeleteDCLocation not implemented")
-}
-func (UnimplementedCoreServiceServer) BatchGetDCLocationsByIDs(context.Context, *BatchGetDCLocationsByIDsRequest) (*BatchGetDCLocationsByIDsResponse, error) {
-	return nil, status.Error(codes.Unimplemented, "method BatchGetDCLocationsByIDs not implemented")
-}
-func (UnimplementedCoreServiceServer) ListEDIRuns(context.Context, *ListEDIRunsRequest) (*ListEDIRunsResponse, error) {
-	return nil, status.Error(codes.Unimplemented, "method ListEDIRuns not implemented")
-}
-func (UnimplementedCoreServiceServer) GetEDIRun(context.Context, *GetEDIRunRequest) (*GetEDIRunResponse, error) {
-	return nil, status.Error(codes.Unimplemented, "method GetEDIRun not implemented")
-}
-func (UnimplementedCoreServiceServer) BatchGetEDIRunsByIDs(context.Context, *BatchGetEDIRunsByIDsRequest) (*BatchGetEDIRunsByIDsResponse, error) {
-	return nil, status.Error(codes.Unimplemented, "method BatchGetEDIRunsByIDs not implemented")
 }
 func (UnimplementedCoreServiceServer) ListRoles(context.Context, *ListRolesRequest) (*ListRolesResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method ListRoles not implemented")
@@ -13640,204 +13456,6 @@ func _CoreService_ListCatalogProducts_Handler(srv interface{}, ctx context.Conte
 	return interceptor(ctx, in, info, handler)
 }
 
-func _CoreService_PullEDIOrders_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(PullEDIOrdersRequest)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(CoreServiceServer).PullEDIOrders(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: CoreService_PullEDIOrders_FullMethodName,
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(CoreServiceServer).PullEDIOrders(ctx, req.(*PullEDIOrdersRequest))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
-func _CoreService_ResubmitEDIInvoice_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(ResubmitEDIInvoiceRequest)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(CoreServiceServer).ResubmitEDIInvoice(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: CoreService_ResubmitEDIInvoice_FullMethodName,
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(CoreServiceServer).ResubmitEDIInvoice(ctx, req.(*ResubmitEDIInvoiceRequest))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
-func _CoreService_ListDCLocations_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(ListDCLocationsRequest)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(CoreServiceServer).ListDCLocations(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: CoreService_ListDCLocations_FullMethodName,
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(CoreServiceServer).ListDCLocations(ctx, req.(*ListDCLocationsRequest))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
-func _CoreService_GetDCLocation_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(GetDCLocationRequest)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(CoreServiceServer).GetDCLocation(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: CoreService_GetDCLocation_FullMethodName,
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(CoreServiceServer).GetDCLocation(ctx, req.(*GetDCLocationRequest))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
-func _CoreService_CreateDCLocation_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(CreateDCLocationRequest)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(CoreServiceServer).CreateDCLocation(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: CoreService_CreateDCLocation_FullMethodName,
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(CoreServiceServer).CreateDCLocation(ctx, req.(*CreateDCLocationRequest))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
-func _CoreService_UpdateDCLocation_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(UpdateDCLocationRequest)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(CoreServiceServer).UpdateDCLocation(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: CoreService_UpdateDCLocation_FullMethodName,
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(CoreServiceServer).UpdateDCLocation(ctx, req.(*UpdateDCLocationRequest))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
-func _CoreService_DeleteDCLocation_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(DeleteDCLocationRequest)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(CoreServiceServer).DeleteDCLocation(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: CoreService_DeleteDCLocation_FullMethodName,
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(CoreServiceServer).DeleteDCLocation(ctx, req.(*DeleteDCLocationRequest))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
-func _CoreService_BatchGetDCLocationsByIDs_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(BatchGetDCLocationsByIDsRequest)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(CoreServiceServer).BatchGetDCLocationsByIDs(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: CoreService_BatchGetDCLocationsByIDs_FullMethodName,
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(CoreServiceServer).BatchGetDCLocationsByIDs(ctx, req.(*BatchGetDCLocationsByIDsRequest))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
-func _CoreService_ListEDIRuns_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(ListEDIRunsRequest)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(CoreServiceServer).ListEDIRuns(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: CoreService_ListEDIRuns_FullMethodName,
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(CoreServiceServer).ListEDIRuns(ctx, req.(*ListEDIRunsRequest))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
-func _CoreService_GetEDIRun_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(GetEDIRunRequest)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(CoreServiceServer).GetEDIRun(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: CoreService_GetEDIRun_FullMethodName,
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(CoreServiceServer).GetEDIRun(ctx, req.(*GetEDIRunRequest))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
-func _CoreService_BatchGetEDIRunsByIDs_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(BatchGetEDIRunsByIDsRequest)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(CoreServiceServer).BatchGetEDIRunsByIDs(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: CoreService_BatchGetEDIRunsByIDs_FullMethodName,
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(CoreServiceServer).BatchGetEDIRunsByIDs(ctx, req.(*BatchGetEDIRunsByIDsRequest))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
 func _CoreService_ListRoles_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(ListRolesRequest)
 	if err := dec(in); err != nil {
@@ -16228,50 +15846,6 @@ var CoreService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "ListCatalogProducts",
 			Handler:    _CoreService_ListCatalogProducts_Handler,
-		},
-		{
-			MethodName: "PullEDIOrders",
-			Handler:    _CoreService_PullEDIOrders_Handler,
-		},
-		{
-			MethodName: "ResubmitEDIInvoice",
-			Handler:    _CoreService_ResubmitEDIInvoice_Handler,
-		},
-		{
-			MethodName: "ListDCLocations",
-			Handler:    _CoreService_ListDCLocations_Handler,
-		},
-		{
-			MethodName: "GetDCLocation",
-			Handler:    _CoreService_GetDCLocation_Handler,
-		},
-		{
-			MethodName: "CreateDCLocation",
-			Handler:    _CoreService_CreateDCLocation_Handler,
-		},
-		{
-			MethodName: "UpdateDCLocation",
-			Handler:    _CoreService_UpdateDCLocation_Handler,
-		},
-		{
-			MethodName: "DeleteDCLocation",
-			Handler:    _CoreService_DeleteDCLocation_Handler,
-		},
-		{
-			MethodName: "BatchGetDCLocationsByIDs",
-			Handler:    _CoreService_BatchGetDCLocationsByIDs_Handler,
-		},
-		{
-			MethodName: "ListEDIRuns",
-			Handler:    _CoreService_ListEDIRuns_Handler,
-		},
-		{
-			MethodName: "GetEDIRun",
-			Handler:    _CoreService_GetEDIRun_Handler,
-		},
-		{
-			MethodName: "BatchGetEDIRunsByIDs",
-			Handler:    _CoreService_BatchGetEDIRunsByIDs_Handler,
 		},
 		{
 			MethodName: "ListRoles",

@@ -6,7 +6,6 @@ SELECT
     ra.name AS recipient_account_name,
     rec_ar.external_number AS recipient_account_number,
     rec_ar.account_status_code AS recipient_account_status,
-    rec_ar.is_edi_enabled AS recipient_account_is_edi_enabled,
     rec_ar.commission_status_code AS recipient_account_commission_policy,
     CASE
         WHEN rec_ar.parent_account_relation_id IS NOT NULL THEN 'child'
@@ -82,7 +81,6 @@ SELECT
     ra.name AS recipient_account_name,
     rec_ar.external_number AS recipient_account_number,
     rec_ar.account_status_code AS recipient_account_status,
-    rec_ar.is_edi_enabled AS recipient_account_is_edi_enabled,
     rec_ar.commission_status_code AS recipient_account_commission_policy,
     CASE
         WHEN rec_ar.parent_account_relation_id IS NOT NULL THEN 'child'
@@ -157,7 +155,6 @@ SELECT
     ra.name AS recipient_account_name,
     rec_ar.external_number AS recipient_account_number,
     rec_ar.account_status_code AS recipient_account_status,
-    rec_ar.is_edi_enabled AS recipient_account_is_edi_enabled,
     rec_ar.commission_status_code AS recipient_account_commission_policy,
     CASE
         WHEN rec_ar.parent_account_relation_id IS NOT NULL THEN 'child'

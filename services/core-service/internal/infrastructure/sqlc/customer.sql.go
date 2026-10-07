@@ -642,7 +642,6 @@ SELECT
     ar.counterparty_account_id AS account_id,
     COALESCE(NULLIF(ar.alias, ''), a.name) AS account_name,
     ar.external_number,
-    ar.is_edi_enabled,
     ar.notes,
     ar.account_status_code AS status,
     ar.commission_status_code,
@@ -771,7 +770,6 @@ type GetCustomerRow struct {
 	AccountID                             string
 	AccountName                           string
 	ExternalNumber                        string
-	IsEdiEnabled                          bool
 	Notes                                 sql.NullString
 	Status                                sql.NullString
 	CommissionStatusCode                  sql.NullString
@@ -876,7 +874,6 @@ func (q *Queries) GetCustomer(ctx context.Context, arg GetCustomerParams) (GetCu
 		&i.AccountID,
 		&i.AccountName,
 		&i.ExternalNumber,
-		&i.IsEdiEnabled,
 		&i.Notes,
 		&i.Status,
 		&i.CommissionStatusCode,
@@ -1129,7 +1126,6 @@ SELECT
     ar.counterparty_account_id AS account_id,
     COALESCE(NULLIF(ar.alias, ''), a.name) AS account_name,
     ar.external_number,
-    ar.is_edi_enabled,
     ar.notes,
     ar.account_status_code AS status,
     ar.commission_status_code,
@@ -1258,7 +1254,6 @@ type GetCustomersByIDsRow struct {
 	AccountID                             string
 	AccountName                           string
 	ExternalNumber                        string
-	IsEdiEnabled                          bool
 	Notes                                 sql.NullString
 	Status                                sql.NullString
 	CommissionStatusCode                  sql.NullString
@@ -1382,7 +1377,6 @@ func (q *Queries) GetCustomersByIDs(ctx context.Context, arg GetCustomersByIDsPa
 			&i.AccountID,
 			&i.AccountName,
 			&i.ExternalNumber,
-			&i.IsEdiEnabled,
 			&i.Notes,
 			&i.Status,
 			&i.CommissionStatusCode,
@@ -1720,7 +1714,7 @@ func (q *Queries) HighestNumericCustomerNumber(ctx context.Context, ownerAccount
 const insertAccountRelation = `-- name: InsertAccountRelation :exec
 INSERT INTO account_relation (
     id, owner_account_id, counterparty_account_id, account_relation_role_code,
-    external_number, is_edi_enabled, notes, parent_account_relation_id,
+    external_number, notes, parent_account_relation_id,
     commission_status_code, freight_status_code,
     default_carrier_id, default_carrier_option_id, default_sales_rep_id,
     account_status_code, payment_term_id, account_group_id, priority_code,
@@ -1730,7 +1724,7 @@ INSERT INTO account_relation (
     created_at, updated_at
 ) VALUES (
     ?, ?, ?, 'customer',
-    ?, ?, ?, ?,
+    ?, ?, ?,
     ?, ?,
     ?, ?, ?,
     ?, ?, ?, ?,
@@ -1746,7 +1740,6 @@ type InsertAccountRelationParams struct {
 	OwnerAccountID           string
 	CounterpartyAccountID    string
 	ExternalNumber           sql.NullString
-	IsEdiEnabled             bool
 	Notes                    sql.NullString
 	ParentAccountRelationID  sql.NullString
 	CommissionStatusCode     sql.NullString
@@ -1775,7 +1768,6 @@ func (q *Queries) InsertAccountRelation(ctx context.Context, arg InsertAccountRe
 		arg.OwnerAccountID,
 		arg.CounterpartyAccountID,
 		arg.ExternalNumber,
-		arg.IsEdiEnabled,
 		arg.Notes,
 		arg.ParentAccountRelationID,
 		arg.CommissionStatusCode,
@@ -1883,7 +1875,7 @@ func (q *Queries) InsertCustomerCreditLimitQuantity(ctx context.Context, arg Ins
 const insertCustomerRelation = `-- name: InsertCustomerRelation :exec
 INSERT INTO account_relation (
     id, owner_account_id, counterparty_account_id, account_relation_role_code,
-    alias, external_number, notes, is_edi_enabled,
+    alias, external_number, notes,
     commission_status_code, freight_status_code,
     default_carrier_id, default_carrier_option_id, default_sales_rep_id,
     account_status_code, payment_term_id, account_group_id, priority_code,
@@ -1893,7 +1885,7 @@ INSERT INTO account_relation (
     created_at, updated_at
 ) VALUES (
     ?, ?, ?, 'customer',
-    ?, ?, ?, ?,
+    ?, ?, ?,
     ?, ?,
     ?, ?, ?,
     ?, ?, ?, ?,
@@ -1911,7 +1903,6 @@ type InsertCustomerRelationParams struct {
 	Alias                    sql.NullString
 	ExternalNumber           string
 	Notes                    sql.NullString
-	IsEdiEnabled             bool
 	CommissionStatusCode     sql.NullString
 	FreightStatusCode        sql.NullString
 	DefaultCarrierID         sql.NullString
@@ -1940,7 +1931,6 @@ func (q *Queries) InsertCustomerRelation(ctx context.Context, arg InsertCustomer
 		arg.Alias,
 		arg.ExternalNumber,
 		arg.Notes,
-		arg.IsEdiEnabled,
 		arg.CommissionStatusCode,
 		arg.FreightStatusCode,
 		arg.DefaultCarrierID,
@@ -2074,7 +2064,6 @@ SELECT STRAIGHT_JOIN
     ar.counterparty_account_id AS account_id,
     COALESCE(NULLIF(ar.alias, ''), a.name) AS account_name,
     ar.external_number,
-    ar.is_edi_enabled,
     ar.notes,
     ar.account_status_code AS status,
     ar.commission_status_code,
@@ -2329,7 +2318,6 @@ type ListCustomersBackwardRow struct {
 	AccountID                             string
 	AccountName                           string
 	ExternalNumber                        string
-	IsEdiEnabled                          bool
 	Notes                                 sql.NullString
 	Status                                sql.NullString
 	CommissionStatusCode                  sql.NullString
@@ -2567,7 +2555,6 @@ func (q *Queries) ListCustomersBackward(ctx context.Context, arg ListCustomersBa
 			&i.AccountID,
 			&i.AccountName,
 			&i.ExternalNumber,
-			&i.IsEdiEnabled,
 			&i.Notes,
 			&i.Status,
 			&i.CommissionStatusCode,
@@ -2682,7 +2669,6 @@ SELECT STRAIGHT_JOIN
     ar.counterparty_account_id AS account_id,
     COALESCE(NULLIF(ar.alias, ''), a.name) AS account_name,
     ar.external_number,
-    ar.is_edi_enabled,
     ar.notes,
     ar.account_status_code AS status,
     ar.commission_status_code,
@@ -2938,7 +2924,6 @@ type ListCustomersForwardRow struct {
 	AccountID                             string
 	AccountName                           string
 	ExternalNumber                        string
-	IsEdiEnabled                          bool
 	Notes                                 sql.NullString
 	Status                                sql.NullString
 	CommissionStatusCode                  sql.NullString
@@ -3177,7 +3162,6 @@ func (q *Queries) ListCustomersForward(ctx context.Context, arg ListCustomersFor
 			&i.AccountID,
 			&i.AccountName,
 			&i.ExternalNumber,
-			&i.IsEdiEnabled,
 			&i.Notes,
 			&i.Status,
 			&i.CommissionStatusCode,
@@ -3932,7 +3916,6 @@ const updateCustomer = `-- name: UpdateCustomer :exec
 UPDATE account_relation SET
     alias = COALESCE(?, alias),
     external_number = COALESCE(?, external_number),
-    is_edi_enabled = COALESCE(?, is_edi_enabled),
     notes = ?,
     parent_account_relation_id = COALESCE(?, parent_account_relation_id),
     commission_status_code = COALESCE(?, commission_status_code),
@@ -3964,7 +3947,6 @@ WHERE id = ?
 type UpdateCustomerParams struct {
 	Alias                    sql.NullString
 	ExternalNumber           sql.NullString
-	IsEdiEnabled             sql.NullBool
 	Notes                    sql.NullString
 	ParentAccountRelationID  sql.NullString
 	CommissionStatusCode     sql.NullString
@@ -3995,7 +3977,6 @@ func (q *Queries) UpdateCustomer(ctx context.Context, arg UpdateCustomerParams) 
 	_, err := q.db.ExecContext(ctx, updateCustomer,
 		arg.Alias,
 		arg.ExternalNumber,
-		arg.IsEdiEnabled,
 		arg.Notes,
 		arg.ParentAccountRelationID,
 		arg.CommissionStatusCode,

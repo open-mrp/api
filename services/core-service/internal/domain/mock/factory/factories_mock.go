@@ -377,20 +377,6 @@ func (mr *MockRepoFactoryMockRecorder) NewDepartmentRepo() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "NewDepartmentRepo", reflect.TypeOf((*MockRepoFactory)(nil).NewDepartmentRepo))
 }
 
-// NewEDIRepo mocks base method.
-func (m *MockRepoFactory) NewEDIRepo() domain.EDIRepo {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "NewEDIRepo")
-	ret0, _ := ret[0].(domain.EDIRepo)
-	return ret0
-}
-
-// NewEDIRepo indicates an expected call of NewEDIRepo.
-func (mr *MockRepoFactoryMockRecorder) NewEDIRepo() *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "NewEDIRepo", reflect.TypeOf((*MockRepoFactory)(nil).NewEDIRepo))
-}
-
 // NewEmailLogRepo mocks base method.
 func (m *MockRepoFactory) NewEmailLogRepo() domain.EmailLogRepo {
 	m.ctrl.T.Helper()

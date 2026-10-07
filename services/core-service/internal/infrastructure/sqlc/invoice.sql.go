@@ -146,7 +146,6 @@ SELECT
     inv.note,
     inv.is_paid_in_full,
     inv.is_over_paid,
-    inv.is_edi_sent,
     inv.has_been_sent,
     inv.created_at,
     inv.updated_at,
@@ -159,7 +158,6 @@ SELECT
     ar.external_number AS customer_number,
     ar.account_status_code AS customer_status_code,
     ar.commission_status_code AS customer_commission_policy,
-    ar.is_edi_enabled AS customer_is_edi_enabled,
     sh.id AS shipment_id,
     sh.number AS shipment_number,
     addr.id AS billing_address_id,
@@ -230,7 +228,6 @@ type GetInvoiceRow struct {
 	Note                            sql.NullString
 	IsPaidInFull                    bool
 	IsOverPaid                      bool
-	IsEdiSent                       bool
 	HasBeenSent                     bool
 	CreatedAt                       time.Time
 	UpdatedAt                       time.Time
@@ -243,7 +240,6 @@ type GetInvoiceRow struct {
 	CustomerNumber                  string
 	CustomerStatusCode              sql.NullString
 	CustomerCommissionPolicy        sql.NullString
-	CustomerIsEdiEnabled            bool
 	ShipmentID                      sql.NullString
 	ShipmentNumber                  sql.NullString
 	BillingAddressID                string
@@ -287,7 +283,6 @@ func (q *Queries) GetInvoice(ctx context.Context, arg GetInvoiceParams) (GetInvo
 		&i.Note,
 		&i.IsPaidInFull,
 		&i.IsOverPaid,
-		&i.IsEdiSent,
 		&i.HasBeenSent,
 		&i.CreatedAt,
 		&i.UpdatedAt,
@@ -300,7 +295,6 @@ func (q *Queries) GetInvoice(ctx context.Context, arg GetInvoiceParams) (GetInvo
 		&i.CustomerNumber,
 		&i.CustomerStatusCode,
 		&i.CustomerCommissionPolicy,
-		&i.CustomerIsEdiEnabled,
 		&i.ShipmentID,
 		&i.ShipmentNumber,
 		&i.BillingAddressID,
@@ -999,7 +993,6 @@ SELECT
     inv.note,
     inv.is_paid_in_full,
     inv.is_over_paid,
-    inv.is_edi_sent,
     inv.has_been_sent,
     inv.created_at,
     inv.updated_at,
@@ -1012,7 +1005,6 @@ SELECT
     ar.external_number AS customer_number,
     ar.account_status_code AS customer_status_code,
     ar.commission_status_code AS customer_commission_policy,
-    ar.is_edi_enabled AS customer_is_edi_enabled,
     sh.id AS shipment_id,
     sh.number AS shipment_number,
     addr.id AS billing_address_id,
@@ -1083,7 +1075,6 @@ type ListInvoicesByIDsRow struct {
 	Note                            sql.NullString
 	IsPaidInFull                    bool
 	IsOverPaid                      bool
-	IsEdiSent                       bool
 	HasBeenSent                     bool
 	CreatedAt                       time.Time
 	UpdatedAt                       time.Time
@@ -1096,7 +1087,6 @@ type ListInvoicesByIDsRow struct {
 	CustomerNumber                  string
 	CustomerStatusCode              sql.NullString
 	CustomerCommissionPolicy        sql.NullString
-	CustomerIsEdiEnabled            bool
 	ShipmentID                      sql.NullString
 	ShipmentNumber                  sql.NullString
 	BillingAddressID                string
@@ -1157,7 +1147,6 @@ func (q *Queries) ListInvoicesByIDs(ctx context.Context, arg ListInvoicesByIDsPa
 			&i.Note,
 			&i.IsPaidInFull,
 			&i.IsOverPaid,
-			&i.IsEdiSent,
 			&i.HasBeenSent,
 			&i.CreatedAt,
 			&i.UpdatedAt,
@@ -1170,7 +1159,6 @@ func (q *Queries) ListInvoicesByIDs(ctx context.Context, arg ListInvoicesByIDsPa
 			&i.CustomerNumber,
 			&i.CustomerStatusCode,
 			&i.CustomerCommissionPolicy,
-			&i.CustomerIsEdiEnabled,
 			&i.ShipmentID,
 			&i.ShipmentNumber,
 			&i.BillingAddressID,
@@ -1237,7 +1225,6 @@ UPDATE invoice
 SET
     note = IF(?, NULL, COALESCE(?, note)),
     has_been_sent = COALESCE(?, has_been_sent),
-    is_edi_sent = COALESCE(?, is_edi_sent),
     is_paid_in_full = COALESCE(?, is_paid_in_full),
     -- Who set the flag by hand, recorded only when this update sets it.
     paid_in_full_marked_by_id = IF(? IS NULL, paid_in_full_marked_by_id, ?),
@@ -1253,7 +1240,6 @@ type UpdateInvoiceParams struct {
 	ClearNote            interface{}
 	Note                 interface{}
 	HasBeenSent          sql.NullBool
-	IsEdiSent            sql.NullBool
 	IsPaidInFull         sql.NullBool
 	PaidInFullMarkedByID interface{}
 	MetadataPatch        sql.NullString
@@ -1267,7 +1253,6 @@ func (q *Queries) UpdateInvoice(ctx context.Context, arg UpdateInvoiceParams) er
 		arg.ClearNote,
 		arg.Note,
 		arg.HasBeenSent,
-		arg.IsEdiSent,
 		arg.IsPaidInFull,
 		arg.IsPaidInFull,
 		arg.PaidInFullMarkedByID,

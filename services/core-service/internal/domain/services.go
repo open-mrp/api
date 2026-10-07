@@ -1645,41 +1645,6 @@ type CatalogSvc interface {
 	ListCatalogProducts(ctx context.Context, params ListCatalogProductsParams) (*ListCatalogProductsResult, *apierror.APIError)
 }
 
-type EDISvc interface {
-	// ListDCLocations returns a paginated list of DC locations.
-	ListDCLocations(ctx context.Context, params ListDCLocationsParams) (*ListDCLocationsResult, *apierror.APIError)
-
-	// GetDCLocation returns a single DC location by ID.
-	GetDCLocation(ctx context.Context, dcLocationID string) (*DCLocation, *apierror.APIError)
-
-	// CreateDCLocation creates a new DC location.
-	CreateDCLocation(ctx context.Context, params CreateDCLocationParams) (*DCLocation, *apierror.APIError)
-
-	// UpdateDCLocation partially updates a DC location.
-	UpdateDCLocation(ctx context.Context, params UpdateDCLocationParams) (*DCLocation, *apierror.APIError)
-
-	// DeleteDCLocation deletes a DC location.
-	DeleteDCLocation(ctx context.Context, dcLocationID string) *apierror.APIError
-
-	// ListEDIRuns returns a paginated list of EDI runs.
-	ListEDIRuns(ctx context.Context, params ListEDIRunsParams) (*ListEDIRunsResult, *apierror.APIError)
-
-	// GetEDIRun returns a single EDI run by ID.
-	GetEDIRun(ctx context.Context, ediRunID string) (*EDIRun, *apierror.APIError)
-
-	// PullOrders processes EDI operations (pull orders from FTP, process invoices).
-	PullOrders(ctx context.Context) *apierror.APIError
-
-	// ResubmitInvoice resubmits an invoice via EDI.
-	ResubmitInvoice(ctx context.Context, invoiceID string) *apierror.APIError
-
-	// BatchGetDCLocationsByIDs returns DC locations matching the input IDs. Used by the api-gateway resourcekit include resolver.
-	BatchGetDCLocationsByIDs(ctx context.Context, ids []string) ([]*DCLocation, *apierror.APIError)
-
-	// BatchGetEDIRunsByIDs returns EDI runs matching the input IDs. Used by the api-gateway resourcekit include resolver.
-	BatchGetEDIRunsByIDs(ctx context.Context, ids []string) ([]*EDIRun, *apierror.APIError)
-}
-
 type RegistrationFlowSvc interface {
 	ListRegistrationFlows(ctx context.Context, params ListRegistrationFlowsParams) (*ListRegistrationFlowsResult, *apierror.APIError)
 	GetRegistrationFlow(ctx context.Context, flowID string) (*RegistrationFlow, *apierror.APIError)

@@ -2417,7 +2417,6 @@ type SalesOrderLineInfo struct {
 	ProductId          *string                `protobuf:"bytes,5,opt,name=product_id,json=productId,proto3,oneof" json:"product_id,omitempty"`
 	ItemId             *string                `protobuf:"bytes,6,opt,name=item_id,json=itemId,proto3,oneof" json:"item_id,omitempty"`
 	ItemSku            *string                `protobuf:"bytes,7,opt,name=item_sku,json=itemSku,proto3,oneof" json:"item_sku,omitempty"`
-	EdiLineItemId      *string                `protobuf:"bytes,8,opt,name=edi_line_item_id,json=ediLineItemId,proto3,oneof" json:"edi_line_item_id,omitempty"`
 	// Quantity ordered
 	QuantityId               string `protobuf:"bytes,9,opt,name=quantity_id,json=quantityId,proto3" json:"quantity_id,omitempty"`
 	QuantityValue            string `protobuf:"bytes,10,opt,name=quantity_value,json=quantityValue,proto3" json:"quantity_value,omitempty"`
@@ -2540,13 +2539,6 @@ func (x *SalesOrderLineInfo) GetItemId() string {
 func (x *SalesOrderLineInfo) GetItemSku() string {
 	if x != nil && x.ItemSku != nil {
 		return *x.ItemSku
-	}
-	return ""
-}
-
-func (x *SalesOrderLineInfo) GetEdiLineItemId() string {
-	if x != nil && x.EdiLineItemId != nil {
-		return *x.EdiLineItemId
 	}
 	return ""
 }
@@ -4879,7 +4871,6 @@ type CreateSalesOrderLineRequest struct {
 	UnitCostValue              *string                `protobuf:"bytes,11,opt,name=unit_cost_value,json=unitCostValue,proto3,oneof" json:"unit_cost_value,omitempty"`
 	UnitCostNumeratorUnitId    *string                `protobuf:"bytes,12,opt,name=unit_cost_numerator_unit_id,json=unitCostNumeratorUnitId,proto3,oneof" json:"unit_cost_numerator_unit_id,omitempty"`
 	UnitCostDenominatorUnitId  *string                `protobuf:"bytes,13,opt,name=unit_cost_denominator_unit_id,json=unitCostDenominatorUnitId,proto3,oneof" json:"unit_cost_denominator_unit_id,omitempty"`
-	EdiLineItemId              *string                `protobuf:"bytes,14,opt,name=edi_line_item_id,json=ediLineItemId,proto3,oneof" json:"edi_line_item_id,omitempty"`
 	// Client-owned key/value pairs, returned unchanged. See shared/metadata.
 	Metadata      map[string]string `protobuf:"bytes,15,rep,name=metadata,proto3" json:"metadata,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
 	unknownFields protoimpl.UnknownFields
@@ -5007,13 +4998,6 @@ func (x *CreateSalesOrderLineRequest) GetUnitCostDenominatorUnitId() string {
 	return ""
 }
 
-func (x *CreateSalesOrderLineRequest) GetEdiLineItemId() string {
-	if x != nil && x.EdiLineItemId != nil {
-		return *x.EdiLineItemId
-	}
-	return ""
-}
-
 func (x *CreateSalesOrderLineRequest) GetMetadata() map[string]string {
 	if x != nil {
 		return x.Metadata
@@ -5081,7 +5065,6 @@ type UpdateSalesOrderLineRequest struct {
 	UnitCostValue              *string                `protobuf:"bytes,12,opt,name=unit_cost_value,json=unitCostValue,proto3,oneof" json:"unit_cost_value,omitempty"`
 	UnitCostNumeratorUnitId    *string                `protobuf:"bytes,13,opt,name=unit_cost_numerator_unit_id,json=unitCostNumeratorUnitId,proto3,oneof" json:"unit_cost_numerator_unit_id,omitempty"`
 	UnitCostDenominatorUnitId  *string                `protobuf:"bytes,14,opt,name=unit_cost_denominator_unit_id,json=unitCostDenominatorUnitId,proto3,oneof" json:"unit_cost_denominator_unit_id,omitempty"`
-	EdiLineItemId              *string                `protobuf:"bytes,15,opt,name=edi_line_item_id,json=ediLineItemId,proto3,oneof" json:"edi_line_item_id,omitempty"`
 	Metadata                   *MetadataPatch         `protobuf:"bytes,17,opt,name=metadata,proto3" json:"metadata,omitempty"`
 	unknownFields              protoimpl.UnknownFields
 	sizeCache                  protoimpl.SizeCache
@@ -5211,13 +5194,6 @@ func (x *UpdateSalesOrderLineRequest) GetUnitCostNumeratorUnitId() string {
 func (x *UpdateSalesOrderLineRequest) GetUnitCostDenominatorUnitId() string {
 	if x != nil && x.UnitCostDenominatorUnitId != nil {
 		return *x.UnitCostDenominatorUnitId
-	}
-	return ""
-}
-
-func (x *UpdateSalesOrderLineRequest) GetEdiLineItemId() string {
-	if x != nil && x.EdiLineItemId != nil {
-		return *x.EdiLineItemId
 	}
 	return ""
 }
@@ -7305,7 +7281,7 @@ const file_core_core_sales_proto_rawDesc = "" +
 	"\aordered\x18\x02 \x01(\tR\aordered\x12\x16\n" +
 	"\x06picked\x18\x03 \x01(\tR\x06picked\x12\x16\n" +
 	"\x06packed\x18\x04 \x01(\tR\x06packed\x12\x1a\n" +
-	"\binvoiced\x18\x05 \x01(\tR\binvoiced\"\xf5\x13\n" +
+	"\binvoiced\x18\x05 \x01(\tR\binvoiced\"\xb8\x13\n" +
 	"\x12SalesOrderLineInfo\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12(\n" +
 	"\x10line_item_number\x18\x02 \x01(\x05R\x0elineItemNumber\x12\x1f\n" +
@@ -7315,8 +7291,7 @@ const file_core_core_sales_proto_rawDesc = "" +
 	"\n" +
 	"product_id\x18\x05 \x01(\tH\x01R\tproductId\x88\x01\x01\x12\x1c\n" +
 	"\aitem_id\x18\x06 \x01(\tH\x02R\x06itemId\x88\x01\x01\x12\x1e\n" +
-	"\bitem_sku\x18\a \x01(\tH\x03R\aitemSku\x88\x01\x01\x12,\n" +
-	"\x10edi_line_item_id\x18\b \x01(\tH\x04R\rediLineItemId\x88\x01\x01\x12\x1f\n" +
+	"\bitem_sku\x18\a \x01(\tH\x03R\aitemSku\x88\x01\x01\x12\x1f\n" +
 	"\vquantity_id\x18\t \x01(\tR\n" +
 	"quantityId\x12%\n" +
 	"\x0equantity_value\x18\n" +
@@ -7325,28 +7300,28 @@ const file_core_core_sales_proto_rawDesc = "" +
 	"\x12quantity_unit_name\x18\f \x01(\tR\x10quantityUnitName\x12<\n" +
 	"\x1aquantity_unit_abbreviation\x18\r \x01(\tR\x18quantityUnitAbbreviation\x12,\n" +
 	"\x12quantity_unit_type\x18\x0e \x01(\tR\x10quantityUnitType\x127\n" +
-	"\x15quantity_picked_value\x18\x0f \x01(\tH\x05R\x13quantityPickedValue\x88\x01\x01\x127\n" +
-	"\x15quantity_packed_value\x18\x10 \x01(\tH\x06R\x13quantityPackedValue\x88\x01\x01\x12;\n" +
-	"\x17quantity_invoiced_value\x18\x11 \x01(\tH\aR\x15quantityInvoicedValue\x88\x01\x01\x12\"\n" +
+	"\x15quantity_picked_value\x18\x0f \x01(\tH\x04R\x13quantityPickedValue\x88\x01\x01\x127\n" +
+	"\x15quantity_packed_value\x18\x10 \x01(\tH\x05R\x13quantityPackedValue\x88\x01\x01\x12;\n" +
+	"\x17quantity_invoiced_value\x18\x11 \x01(\tH\x06R\x15quantityInvoicedValue\x88\x01\x01\x12\"\n" +
 	"\runit_price_id\x18\x12 \x01(\tR\vunitPriceId\x12(\n" +
 	"\x10unit_price_value\x18\x13 \x01(\tR\x0eunitPriceValue\x12>\n" +
 	"\x1cunit_price_numerator_unit_id\x18\x14 \x01(\tR\x18unitPriceNumeratorUnitId\x12R\n" +
 	"&unit_price_numerator_unit_abbreviation\x18\x15 \x01(\tR\"unitPriceNumeratorUnitAbbreviation\x12B\n" +
 	"\x1eunit_price_denominator_unit_id\x18\x16 \x01(\tR\x1aunitPriceDenominatorUnitId\x12V\n" +
 	"(unit_price_denominator_unit_abbreviation\x18\x17 \x01(\tR$unitPriceDenominatorUnitAbbreviation\x12%\n" +
-	"\funit_cost_id\x18\x18 \x01(\tH\bR\n" +
+	"\funit_cost_id\x18\x18 \x01(\tH\aR\n" +
 	"unitCostId\x88\x01\x01\x12+\n" +
-	"\x0funit_cost_value\x18\x19 \x01(\tH\tR\runitCostValue\x88\x01\x01\x12A\n" +
-	"\x1bunit_cost_numerator_unit_id\x18\x1a \x01(\tH\n" +
-	"R\x17unitCostNumeratorUnitId\x88\x01\x01\x12U\n" +
-	"%unit_cost_numerator_unit_abbreviation\x18\x1b \x01(\tH\vR!unitCostNumeratorUnitAbbreviation\x88\x01\x01\x12E\n" +
-	"\x1dunit_cost_denominator_unit_id\x18\x1c \x01(\tH\fR\x19unitCostDenominatorUnitId\x88\x01\x01\x12Y\n" +
-	"'unit_cost_denominator_unit_abbreviation\x18\x1d \x01(\tH\rR#unitCostDenominatorUnitAbbreviation\x88\x01\x01\x129\n" +
+	"\x0funit_cost_value\x18\x19 \x01(\tH\bR\runitCostValue\x88\x01\x01\x12A\n" +
+	"\x1bunit_cost_numerator_unit_id\x18\x1a \x01(\tH\tR\x17unitCostNumeratorUnitId\x88\x01\x01\x12U\n" +
+	"%unit_cost_numerator_unit_abbreviation\x18\x1b \x01(\tH\n" +
+	"R!unitCostNumeratorUnitAbbreviation\x88\x01\x01\x12E\n" +
+	"\x1dunit_cost_denominator_unit_id\x18\x1c \x01(\tH\vR\x19unitCostDenominatorUnitId\x88\x01\x01\x12Y\n" +
+	"'unit_cost_denominator_unit_abbreviation\x18\x1d \x01(\tH\fR#unitCostDenominatorUnitAbbreviation\x88\x01\x01\x129\n" +
 	"\n" +
 	"created_at\x18\x1f \x01(\v2\x1a.google.protobuf.TimestampR\tcreatedAt\x129\n" +
 	"\n" +
 	"updated_at\x18  \x01(\v2\x1a.google.protobuf.TimestampR\tupdatedAt\x12/\n" +
-	"\x11product_type_code\x18! \x01(\tH\x0eR\x0fproductTypeCode\x88\x01\x01\x12G\n" +
+	"\x11product_type_code\x18! \x01(\tH\rR\x0fproductTypeCode\x88\x01\x01\x12G\n" +
 	" pricing_quantity_ratio_numerator\x18\" \x01(\tR\x1dpricingQuantityRatioNumerator\x12K\n" +
 	"\"pricing_quantity_ratio_denominator\x18# \x01(\tR\x1fpricingQuantityRatioDenominator\x12A\n" +
 	"\x1dpricing_price_ratio_numerator\x18$ \x01(\tR\x1apricingPriceRatioNumerator\x12E\n" +
@@ -7360,8 +7335,7 @@ const file_core_core_sales_proto_rawDesc = "" +
 	"\v_product_idB\n" +
 	"\n" +
 	"\b_item_idB\v\n" +
-	"\t_item_skuB\x13\n" +
-	"\x11_edi_line_item_idB\x18\n" +
+	"\t_item_skuB\x18\n" +
 	"\x16_quantity_picked_valueB\x18\n" +
 	"\x16_quantity_packed_valueB\x1a\n" +
 	"\x18_quantity_invoiced_valueB\x0f\n" +
@@ -7371,7 +7345,7 @@ const file_core_core_sales_proto_rawDesc = "" +
 	"&_unit_cost_numerator_unit_abbreviationB \n" +
 	"\x1e_unit_cost_denominator_unit_idB*\n" +
 	"(_unit_cost_denominator_unit_abbreviationB\x14\n" +
-	"\x12_product_type_codeJ\x04\b\x1e\x10\x1f\"\xc4\x05\n" +
+	"\x12_product_type_codeJ\x04\b\b\x10\tJ\x04\b\x1e\x10\x1f\"\xc4\x05\n" +
 	"\x16ListSalesOrdersRequest\x12\x1b\n" +
 	"\x06cursor\x18\x01 \x01(\tH\x00R\x06cursor\x88\x01\x01\x12\x14\n" +
 	"\x05limit\x18\x02 \x01(\x05R\x05limit\x12\x19\n" +
@@ -7620,7 +7594,7 @@ const file_core_core_sales_proto_rawDesc = "" +
 	"$CreateSalesOrderProductionRunRequest\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\"g\n" +
 	"%CreateSalesOrderProductionRunResponse\x12>\n" +
-	"\x0eproduction_run\x18\x01 \x01(\v2\x17.core.ProductionRunInfoR\rproductionRun\"\xd4\a\n" +
+	"\x0eproduction_run\x18\x01 \x01(\v2\x17.core.ProductionRunInfoR\rproductionRun\"\x97\a\n" +
 	"\x1bCreateSalesOrderLineRequest\x12$\n" +
 	"\x0esales_order_id\x18\x01 \x01(\tR\fsalesOrderId\x12\x1d\n" +
 	"\n" +
@@ -7637,8 +7611,7 @@ const file_core_core_sales_proto_rawDesc = "" +
 	" \x01(\tR\x1aunitPriceDenominatorUnitId\x12+\n" +
 	"\x0funit_cost_value\x18\v \x01(\tH\x02R\runitCostValue\x88\x01\x01\x12A\n" +
 	"\x1bunit_cost_numerator_unit_id\x18\f \x01(\tH\x03R\x17unitCostNumeratorUnitId\x88\x01\x01\x12E\n" +
-	"\x1dunit_cost_denominator_unit_id\x18\r \x01(\tH\x04R\x19unitCostDenominatorUnitId\x88\x01\x01\x12,\n" +
-	"\x10edi_line_item_id\x18\x0e \x01(\tH\x05R\rediLineItemId\x88\x01\x01\x12K\n" +
+	"\x1dunit_cost_denominator_unit_id\x18\r \x01(\tH\x04R\x19unitCostDenominatorUnitId\x88\x01\x01\x12K\n" +
 	"\bmetadata\x18\x0f \x03(\v2/.core.CreateSalesOrderLineRequest.MetadataEntryR\bmetadata\x1a;\n" +
 	"\rMetadataEntry\x12\x10\n" +
 	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
@@ -7648,10 +7621,9 @@ const file_core_core_sales_proto_rawDesc = "" +
 	"\x14_product_descriptionB\x12\n" +
 	"\x10_unit_cost_valueB\x1e\n" +
 	"\x1c_unit_cost_numerator_unit_idB \n" +
-	"\x1e_unit_cost_denominator_unit_idB\x13\n" +
-	"\x11_edi_line_item_id\"b\n" +
+	"\x1e_unit_cost_denominator_unit_idJ\x04\b\x0e\x10\x0f\"b\n" +
 	"\x1cCreateSalesOrderLineResponse\x12B\n" +
-	"\x10sales_order_line\x18\x01 \x01(\v2\x18.core.SalesOrderLineInfoR\x0esalesOrderLine\"\xca\b\n" +
+	"\x10sales_order_line\x18\x01 \x01(\v2\x18.core.SalesOrderLineInfoR\x0esalesOrderLine\"\x8d\b\n" +
 	"\x1bUpdateSalesOrderLineRequest\x12$\n" +
 	"\x0esales_order_id\x18\x01 \x01(\tR\fsalesOrderId\x12\x0e\n" +
 	"\x02id\x18\x02 \x01(\tR\x02id\x12\"\n" +
@@ -7670,8 +7642,7 @@ const file_core_core_sales_proto_rawDesc = "" +
 	"\x0funit_cost_value\x18\f \x01(\tH\bR\runitCostValue\x88\x01\x01\x12A\n" +
 	"\x1bunit_cost_numerator_unit_id\x18\r \x01(\tH\tR\x17unitCostNumeratorUnitId\x88\x01\x01\x12E\n" +
 	"\x1dunit_cost_denominator_unit_id\x18\x0e \x01(\tH\n" +
-	"R\x19unitCostDenominatorUnitId\x88\x01\x01\x12,\n" +
-	"\x10edi_line_item_id\x18\x0f \x01(\tH\vR\rediLineItemId\x88\x01\x01\x12/\n" +
+	"R\x19unitCostDenominatorUnitId\x88\x01\x01\x12/\n" +
 	"\bmetadata\x18\x11 \x01(\v2\x13.core.MetadataPatchR\bmetadataB\r\n" +
 	"\v_product_idB\n" +
 	"\n" +
@@ -7684,8 +7655,7 @@ const file_core_core_sales_proto_rawDesc = "" +
 	"\x1f_unit_price_denominator_unit_idB\x12\n" +
 	"\x10_unit_cost_valueB\x1e\n" +
 	"\x1c_unit_cost_numerator_unit_idB \n" +
-	"\x1e_unit_cost_denominator_unit_idB\x13\n" +
-	"\x11_edi_line_item_idJ\x04\b\x06\x10\a\"b\n" +
+	"\x1e_unit_cost_denominator_unit_idJ\x04\b\x06\x10\aJ\x04\b\x0f\x10\x10\"b\n" +
 	"\x1cUpdateSalesOrderLineResponse\x12B\n" +
 	"\x10sales_order_line\x18\x01 \x01(\v2\x18.core.SalesOrderLineInfoR\x0esalesOrderLine\"S\n" +
 	"\x1bDeleteSalesOrderLineRequest\x12$\n" +

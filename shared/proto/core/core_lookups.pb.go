@@ -8658,1164 +8658,6 @@ func (x *CatalogAttributeProto) GetPropertyName() string {
 	return ""
 }
 
-type PullEDIOrdersRequest struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
-}
-
-func (x *PullEDIOrdersRequest) Reset() {
-	*x = PullEDIOrdersRequest{}
-	mi := &file_core_core_lookups_proto_msgTypes[129]
-	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-	ms.StoreMessageInfo(mi)
-}
-
-func (x *PullEDIOrdersRequest) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*PullEDIOrdersRequest) ProtoMessage() {}
-
-func (x *PullEDIOrdersRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_lookups_proto_msgTypes[129]
-	if x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-// Deprecated: Use PullEDIOrdersRequest.ProtoReflect.Descriptor instead.
-func (*PullEDIOrdersRequest) Descriptor() ([]byte, []int) {
-	return file_core_core_lookups_proto_rawDescGZIP(), []int{129}
-}
-
-type PullEDIOrdersResponse struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Message       string                 `protobuf:"bytes,1,opt,name=message,proto3" json:"message,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
-}
-
-func (x *PullEDIOrdersResponse) Reset() {
-	*x = PullEDIOrdersResponse{}
-	mi := &file_core_core_lookups_proto_msgTypes[130]
-	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-	ms.StoreMessageInfo(mi)
-}
-
-func (x *PullEDIOrdersResponse) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*PullEDIOrdersResponse) ProtoMessage() {}
-
-func (x *PullEDIOrdersResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_lookups_proto_msgTypes[130]
-	if x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-// Deprecated: Use PullEDIOrdersResponse.ProtoReflect.Descriptor instead.
-func (*PullEDIOrdersResponse) Descriptor() ([]byte, []int) {
-	return file_core_core_lookups_proto_rawDescGZIP(), []int{130}
-}
-
-func (x *PullEDIOrdersResponse) GetMessage() string {
-	if x != nil {
-		return x.Message
-	}
-	return ""
-}
-
-type ResubmitEDIInvoiceRequest struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	InvoiceId     string                 `protobuf:"bytes,1,opt,name=invoice_id,json=invoiceId,proto3" json:"invoice_id,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
-}
-
-func (x *ResubmitEDIInvoiceRequest) Reset() {
-	*x = ResubmitEDIInvoiceRequest{}
-	mi := &file_core_core_lookups_proto_msgTypes[131]
-	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-	ms.StoreMessageInfo(mi)
-}
-
-func (x *ResubmitEDIInvoiceRequest) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*ResubmitEDIInvoiceRequest) ProtoMessage() {}
-
-func (x *ResubmitEDIInvoiceRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_lookups_proto_msgTypes[131]
-	if x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-// Deprecated: Use ResubmitEDIInvoiceRequest.ProtoReflect.Descriptor instead.
-func (*ResubmitEDIInvoiceRequest) Descriptor() ([]byte, []int) {
-	return file_core_core_lookups_proto_rawDescGZIP(), []int{131}
-}
-
-func (x *ResubmitEDIInvoiceRequest) GetInvoiceId() string {
-	if x != nil {
-		return x.InvoiceId
-	}
-	return ""
-}
-
-type ResubmitEDIInvoiceResponse struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Message       string                 `protobuf:"bytes,1,opt,name=message,proto3" json:"message,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
-}
-
-func (x *ResubmitEDIInvoiceResponse) Reset() {
-	*x = ResubmitEDIInvoiceResponse{}
-	mi := &file_core_core_lookups_proto_msgTypes[132]
-	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-	ms.StoreMessageInfo(mi)
-}
-
-func (x *ResubmitEDIInvoiceResponse) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*ResubmitEDIInvoiceResponse) ProtoMessage() {}
-
-func (x *ResubmitEDIInvoiceResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_lookups_proto_msgTypes[132]
-	if x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-// Deprecated: Use ResubmitEDIInvoiceResponse.ProtoReflect.Descriptor instead.
-func (*ResubmitEDIInvoiceResponse) Descriptor() ([]byte, []int) {
-	return file_core_core_lookups_proto_rawDescGZIP(), []int{132}
-}
-
-func (x *ResubmitEDIInvoiceResponse) GetMessage() string {
-	if x != nil {
-		return x.Message
-	}
-	return ""
-}
-
-type DCLocationProto struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
-	Location      string                 `protobuf:"bytes,2,opt,name=location,proto3" json:"location,omitempty"`
-	CustomerId    string                 `protobuf:"bytes,3,opt,name=customer_id,json=customerId,proto3" json:"customer_id,omitempty"`
-	CustomerName  string                 `protobuf:"bytes,4,opt,name=customer_name,json=customerName,proto3" json:"customer_name,omitempty"`
-	CreatedAt     *timestamppb.Timestamp `protobuf:"bytes,5,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
-	UpdatedAt     *timestamppb.Timestamp `protobuf:"bytes,6,opt,name=updated_at,json=updatedAt,proto3" json:"updated_at,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
-}
-
-func (x *DCLocationProto) Reset() {
-	*x = DCLocationProto{}
-	mi := &file_core_core_lookups_proto_msgTypes[133]
-	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-	ms.StoreMessageInfo(mi)
-}
-
-func (x *DCLocationProto) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*DCLocationProto) ProtoMessage() {}
-
-func (x *DCLocationProto) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_lookups_proto_msgTypes[133]
-	if x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-// Deprecated: Use DCLocationProto.ProtoReflect.Descriptor instead.
-func (*DCLocationProto) Descriptor() ([]byte, []int) {
-	return file_core_core_lookups_proto_rawDescGZIP(), []int{133}
-}
-
-func (x *DCLocationProto) GetId() string {
-	if x != nil {
-		return x.Id
-	}
-	return ""
-}
-
-func (x *DCLocationProto) GetLocation() string {
-	if x != nil {
-		return x.Location
-	}
-	return ""
-}
-
-func (x *DCLocationProto) GetCustomerId() string {
-	if x != nil {
-		return x.CustomerId
-	}
-	return ""
-}
-
-func (x *DCLocationProto) GetCustomerName() string {
-	if x != nil {
-		return x.CustomerName
-	}
-	return ""
-}
-
-func (x *DCLocationProto) GetCreatedAt() *timestamppb.Timestamp {
-	if x != nil {
-		return x.CreatedAt
-	}
-	return nil
-}
-
-func (x *DCLocationProto) GetUpdatedAt() *timestamppb.Timestamp {
-	if x != nil {
-		return x.UpdatedAt
-	}
-	return nil
-}
-
-type ListDCLocationsRequest struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Cursor        *string                `protobuf:"bytes,1,opt,name=cursor,proto3,oneof" json:"cursor,omitempty"`
-	Limit         int32                  `protobuf:"varint,2,opt,name=limit,proto3" json:"limit,omitempty"`
-	Query         *string                `protobuf:"bytes,3,opt,name=query,proto3,oneof" json:"query,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
-}
-
-func (x *ListDCLocationsRequest) Reset() {
-	*x = ListDCLocationsRequest{}
-	mi := &file_core_core_lookups_proto_msgTypes[134]
-	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-	ms.StoreMessageInfo(mi)
-}
-
-func (x *ListDCLocationsRequest) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*ListDCLocationsRequest) ProtoMessage() {}
-
-func (x *ListDCLocationsRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_lookups_proto_msgTypes[134]
-	if x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-// Deprecated: Use ListDCLocationsRequest.ProtoReflect.Descriptor instead.
-func (*ListDCLocationsRequest) Descriptor() ([]byte, []int) {
-	return file_core_core_lookups_proto_rawDescGZIP(), []int{134}
-}
-
-func (x *ListDCLocationsRequest) GetCursor() string {
-	if x != nil && x.Cursor != nil {
-		return *x.Cursor
-	}
-	return ""
-}
-
-func (x *ListDCLocationsRequest) GetLimit() int32 {
-	if x != nil {
-		return x.Limit
-	}
-	return 0
-}
-
-func (x *ListDCLocationsRequest) GetQuery() string {
-	if x != nil && x.Query != nil {
-		return *x.Query
-	}
-	return ""
-}
-
-type ListDCLocationsResponse struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	DcLocations   []*DCLocationProto     `protobuf:"bytes,1,rep,name=dc_locations,json=dcLocations,proto3" json:"dc_locations,omitempty"`
-	PageInfo      *PageInfo              `protobuf:"bytes,2,opt,name=page_info,json=pageInfo,proto3" json:"page_info,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
-}
-
-func (x *ListDCLocationsResponse) Reset() {
-	*x = ListDCLocationsResponse{}
-	mi := &file_core_core_lookups_proto_msgTypes[135]
-	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-	ms.StoreMessageInfo(mi)
-}
-
-func (x *ListDCLocationsResponse) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*ListDCLocationsResponse) ProtoMessage() {}
-
-func (x *ListDCLocationsResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_lookups_proto_msgTypes[135]
-	if x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-// Deprecated: Use ListDCLocationsResponse.ProtoReflect.Descriptor instead.
-func (*ListDCLocationsResponse) Descriptor() ([]byte, []int) {
-	return file_core_core_lookups_proto_rawDescGZIP(), []int{135}
-}
-
-func (x *ListDCLocationsResponse) GetDcLocations() []*DCLocationProto {
-	if x != nil {
-		return x.DcLocations
-	}
-	return nil
-}
-
-func (x *ListDCLocationsResponse) GetPageInfo() *PageInfo {
-	if x != nil {
-		return x.PageInfo
-	}
-	return nil
-}
-
-type GetDCLocationRequest struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
-}
-
-func (x *GetDCLocationRequest) Reset() {
-	*x = GetDCLocationRequest{}
-	mi := &file_core_core_lookups_proto_msgTypes[136]
-	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-	ms.StoreMessageInfo(mi)
-}
-
-func (x *GetDCLocationRequest) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*GetDCLocationRequest) ProtoMessage() {}
-
-func (x *GetDCLocationRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_lookups_proto_msgTypes[136]
-	if x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-// Deprecated: Use GetDCLocationRequest.ProtoReflect.Descriptor instead.
-func (*GetDCLocationRequest) Descriptor() ([]byte, []int) {
-	return file_core_core_lookups_proto_rawDescGZIP(), []int{136}
-}
-
-func (x *GetDCLocationRequest) GetId() string {
-	if x != nil {
-		return x.Id
-	}
-	return ""
-}
-
-type GetDCLocationResponse struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	DcLocation    *DCLocationProto       `protobuf:"bytes,1,opt,name=dc_location,json=dcLocation,proto3" json:"dc_location,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
-}
-
-func (x *GetDCLocationResponse) Reset() {
-	*x = GetDCLocationResponse{}
-	mi := &file_core_core_lookups_proto_msgTypes[137]
-	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-	ms.StoreMessageInfo(mi)
-}
-
-func (x *GetDCLocationResponse) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*GetDCLocationResponse) ProtoMessage() {}
-
-func (x *GetDCLocationResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_lookups_proto_msgTypes[137]
-	if x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-// Deprecated: Use GetDCLocationResponse.ProtoReflect.Descriptor instead.
-func (*GetDCLocationResponse) Descriptor() ([]byte, []int) {
-	return file_core_core_lookups_proto_rawDescGZIP(), []int{137}
-}
-
-func (x *GetDCLocationResponse) GetDcLocation() *DCLocationProto {
-	if x != nil {
-		return x.DcLocation
-	}
-	return nil
-}
-
-type CreateDCLocationRequest struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	CustomerId    string                 `protobuf:"bytes,1,opt,name=customer_id,json=customerId,proto3" json:"customer_id,omitempty"`
-	Location      string                 `protobuf:"bytes,2,opt,name=location,proto3" json:"location,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
-}
-
-func (x *CreateDCLocationRequest) Reset() {
-	*x = CreateDCLocationRequest{}
-	mi := &file_core_core_lookups_proto_msgTypes[138]
-	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-	ms.StoreMessageInfo(mi)
-}
-
-func (x *CreateDCLocationRequest) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*CreateDCLocationRequest) ProtoMessage() {}
-
-func (x *CreateDCLocationRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_lookups_proto_msgTypes[138]
-	if x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-// Deprecated: Use CreateDCLocationRequest.ProtoReflect.Descriptor instead.
-func (*CreateDCLocationRequest) Descriptor() ([]byte, []int) {
-	return file_core_core_lookups_proto_rawDescGZIP(), []int{138}
-}
-
-func (x *CreateDCLocationRequest) GetCustomerId() string {
-	if x != nil {
-		return x.CustomerId
-	}
-	return ""
-}
-
-func (x *CreateDCLocationRequest) GetLocation() string {
-	if x != nil {
-		return x.Location
-	}
-	return ""
-}
-
-type CreateDCLocationResponse struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	DcLocation    *DCLocationProto       `protobuf:"bytes,1,opt,name=dc_location,json=dcLocation,proto3" json:"dc_location,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
-}
-
-func (x *CreateDCLocationResponse) Reset() {
-	*x = CreateDCLocationResponse{}
-	mi := &file_core_core_lookups_proto_msgTypes[139]
-	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-	ms.StoreMessageInfo(mi)
-}
-
-func (x *CreateDCLocationResponse) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*CreateDCLocationResponse) ProtoMessage() {}
-
-func (x *CreateDCLocationResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_lookups_proto_msgTypes[139]
-	if x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-// Deprecated: Use CreateDCLocationResponse.ProtoReflect.Descriptor instead.
-func (*CreateDCLocationResponse) Descriptor() ([]byte, []int) {
-	return file_core_core_lookups_proto_rawDescGZIP(), []int{139}
-}
-
-func (x *CreateDCLocationResponse) GetDcLocation() *DCLocationProto {
-	if x != nil {
-		return x.DcLocation
-	}
-	return nil
-}
-
-type UpdateDCLocationRequest struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
-	CustomerId    *string                `protobuf:"bytes,2,opt,name=customer_id,json=customerId,proto3,oneof" json:"customer_id,omitempty"`
-	Location      *string                `protobuf:"bytes,3,opt,name=location,proto3,oneof" json:"location,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
-}
-
-func (x *UpdateDCLocationRequest) Reset() {
-	*x = UpdateDCLocationRequest{}
-	mi := &file_core_core_lookups_proto_msgTypes[140]
-	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-	ms.StoreMessageInfo(mi)
-}
-
-func (x *UpdateDCLocationRequest) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*UpdateDCLocationRequest) ProtoMessage() {}
-
-func (x *UpdateDCLocationRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_lookups_proto_msgTypes[140]
-	if x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-// Deprecated: Use UpdateDCLocationRequest.ProtoReflect.Descriptor instead.
-func (*UpdateDCLocationRequest) Descriptor() ([]byte, []int) {
-	return file_core_core_lookups_proto_rawDescGZIP(), []int{140}
-}
-
-func (x *UpdateDCLocationRequest) GetId() string {
-	if x != nil {
-		return x.Id
-	}
-	return ""
-}
-
-func (x *UpdateDCLocationRequest) GetCustomerId() string {
-	if x != nil && x.CustomerId != nil {
-		return *x.CustomerId
-	}
-	return ""
-}
-
-func (x *UpdateDCLocationRequest) GetLocation() string {
-	if x != nil && x.Location != nil {
-		return *x.Location
-	}
-	return ""
-}
-
-type UpdateDCLocationResponse struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	DcLocation    *DCLocationProto       `protobuf:"bytes,1,opt,name=dc_location,json=dcLocation,proto3" json:"dc_location,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
-}
-
-func (x *UpdateDCLocationResponse) Reset() {
-	*x = UpdateDCLocationResponse{}
-	mi := &file_core_core_lookups_proto_msgTypes[141]
-	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-	ms.StoreMessageInfo(mi)
-}
-
-func (x *UpdateDCLocationResponse) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*UpdateDCLocationResponse) ProtoMessage() {}
-
-func (x *UpdateDCLocationResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_lookups_proto_msgTypes[141]
-	if x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-// Deprecated: Use UpdateDCLocationResponse.ProtoReflect.Descriptor instead.
-func (*UpdateDCLocationResponse) Descriptor() ([]byte, []int) {
-	return file_core_core_lookups_proto_rawDescGZIP(), []int{141}
-}
-
-func (x *UpdateDCLocationResponse) GetDcLocation() *DCLocationProto {
-	if x != nil {
-		return x.DcLocation
-	}
-	return nil
-}
-
-type DeleteDCLocationRequest struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
-}
-
-func (x *DeleteDCLocationRequest) Reset() {
-	*x = DeleteDCLocationRequest{}
-	mi := &file_core_core_lookups_proto_msgTypes[142]
-	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-	ms.StoreMessageInfo(mi)
-}
-
-func (x *DeleteDCLocationRequest) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*DeleteDCLocationRequest) ProtoMessage() {}
-
-func (x *DeleteDCLocationRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_lookups_proto_msgTypes[142]
-	if x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-// Deprecated: Use DeleteDCLocationRequest.ProtoReflect.Descriptor instead.
-func (*DeleteDCLocationRequest) Descriptor() ([]byte, []int) {
-	return file_core_core_lookups_proto_rawDescGZIP(), []int{142}
-}
-
-func (x *DeleteDCLocationRequest) GetId() string {
-	if x != nil {
-		return x.Id
-	}
-	return ""
-}
-
-// Batched read for the api-gateway resourcekit resolver.
-type BatchGetDCLocationsByIDsRequest struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Ids           []string               `protobuf:"bytes,1,rep,name=ids,proto3" json:"ids,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
-}
-
-func (x *BatchGetDCLocationsByIDsRequest) Reset() {
-	*x = BatchGetDCLocationsByIDsRequest{}
-	mi := &file_core_core_lookups_proto_msgTypes[143]
-	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-	ms.StoreMessageInfo(mi)
-}
-
-func (x *BatchGetDCLocationsByIDsRequest) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*BatchGetDCLocationsByIDsRequest) ProtoMessage() {}
-
-func (x *BatchGetDCLocationsByIDsRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_lookups_proto_msgTypes[143]
-	if x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-// Deprecated: Use BatchGetDCLocationsByIDsRequest.ProtoReflect.Descriptor instead.
-func (*BatchGetDCLocationsByIDsRequest) Descriptor() ([]byte, []int) {
-	return file_core_core_lookups_proto_rawDescGZIP(), []int{143}
-}
-
-func (x *BatchGetDCLocationsByIDsRequest) GetIds() []string {
-	if x != nil {
-		return x.Ids
-	}
-	return nil
-}
-
-type BatchGetDCLocationsByIDsResponse struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	DcLocations   []*DCLocationProto     `protobuf:"bytes,1,rep,name=dc_locations,json=dcLocations,proto3" json:"dc_locations,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
-}
-
-func (x *BatchGetDCLocationsByIDsResponse) Reset() {
-	*x = BatchGetDCLocationsByIDsResponse{}
-	mi := &file_core_core_lookups_proto_msgTypes[144]
-	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-	ms.StoreMessageInfo(mi)
-}
-
-func (x *BatchGetDCLocationsByIDsResponse) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*BatchGetDCLocationsByIDsResponse) ProtoMessage() {}
-
-func (x *BatchGetDCLocationsByIDsResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_lookups_proto_msgTypes[144]
-	if x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-// Deprecated: Use BatchGetDCLocationsByIDsResponse.ProtoReflect.Descriptor instead.
-func (*BatchGetDCLocationsByIDsResponse) Descriptor() ([]byte, []int) {
-	return file_core_core_lookups_proto_rawDescGZIP(), []int{144}
-}
-
-func (x *BatchGetDCLocationsByIDsResponse) GetDcLocations() []*DCLocationProto {
-	if x != nil {
-		return x.DcLocations
-	}
-	return nil
-}
-
-type EDIRunProto struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
-	CompletedAt   *timestamppb.Timestamp `protobuf:"bytes,2,opt,name=completed_at,json=completedAt,proto3,oneof" json:"completed_at,omitempty"`
-	HasSucceeded  bool                   `protobuf:"varint,3,opt,name=has_succeeded,json=hasSucceeded,proto3" json:"has_succeeded,omitempty"`
-	CreatedAt     *timestamppb.Timestamp `protobuf:"bytes,4,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
-	UpdatedAt     *timestamppb.Timestamp `protobuf:"bytes,5,opt,name=updated_at,json=updatedAt,proto3" json:"updated_at,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
-}
-
-func (x *EDIRunProto) Reset() {
-	*x = EDIRunProto{}
-	mi := &file_core_core_lookups_proto_msgTypes[145]
-	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-	ms.StoreMessageInfo(mi)
-}
-
-func (x *EDIRunProto) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*EDIRunProto) ProtoMessage() {}
-
-func (x *EDIRunProto) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_lookups_proto_msgTypes[145]
-	if x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-// Deprecated: Use EDIRunProto.ProtoReflect.Descriptor instead.
-func (*EDIRunProto) Descriptor() ([]byte, []int) {
-	return file_core_core_lookups_proto_rawDescGZIP(), []int{145}
-}
-
-func (x *EDIRunProto) GetId() string {
-	if x != nil {
-		return x.Id
-	}
-	return ""
-}
-
-func (x *EDIRunProto) GetCompletedAt() *timestamppb.Timestamp {
-	if x != nil {
-		return x.CompletedAt
-	}
-	return nil
-}
-
-func (x *EDIRunProto) GetHasSucceeded() bool {
-	if x != nil {
-		return x.HasSucceeded
-	}
-	return false
-}
-
-func (x *EDIRunProto) GetCreatedAt() *timestamppb.Timestamp {
-	if x != nil {
-		return x.CreatedAt
-	}
-	return nil
-}
-
-func (x *EDIRunProto) GetUpdatedAt() *timestamppb.Timestamp {
-	if x != nil {
-		return x.UpdatedAt
-	}
-	return nil
-}
-
-type ListEDIRunsRequest struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Cursor        *string                `protobuf:"bytes,1,opt,name=cursor,proto3,oneof" json:"cursor,omitempty"`
-	Limit         int32                  `protobuf:"varint,2,opt,name=limit,proto3" json:"limit,omitempty"`
-	HasSucceeded  *bool                  `protobuf:"varint,3,opt,name=has_succeeded,json=hasSucceeded,proto3,oneof" json:"has_succeeded,omitempty"`
-	Query         *string                `protobuf:"bytes,4,opt,name=query,proto3,oneof" json:"query,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
-}
-
-func (x *ListEDIRunsRequest) Reset() {
-	*x = ListEDIRunsRequest{}
-	mi := &file_core_core_lookups_proto_msgTypes[146]
-	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-	ms.StoreMessageInfo(mi)
-}
-
-func (x *ListEDIRunsRequest) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*ListEDIRunsRequest) ProtoMessage() {}
-
-func (x *ListEDIRunsRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_lookups_proto_msgTypes[146]
-	if x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-// Deprecated: Use ListEDIRunsRequest.ProtoReflect.Descriptor instead.
-func (*ListEDIRunsRequest) Descriptor() ([]byte, []int) {
-	return file_core_core_lookups_proto_rawDescGZIP(), []int{146}
-}
-
-func (x *ListEDIRunsRequest) GetCursor() string {
-	if x != nil && x.Cursor != nil {
-		return *x.Cursor
-	}
-	return ""
-}
-
-func (x *ListEDIRunsRequest) GetLimit() int32 {
-	if x != nil {
-		return x.Limit
-	}
-	return 0
-}
-
-func (x *ListEDIRunsRequest) GetHasSucceeded() bool {
-	if x != nil && x.HasSucceeded != nil {
-		return *x.HasSucceeded
-	}
-	return false
-}
-
-func (x *ListEDIRunsRequest) GetQuery() string {
-	if x != nil && x.Query != nil {
-		return *x.Query
-	}
-	return ""
-}
-
-type ListEDIRunsResponse struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	EdiRuns       []*EDIRunProto         `protobuf:"bytes,1,rep,name=edi_runs,json=ediRuns,proto3" json:"edi_runs,omitempty"`
-	PageInfo      *PageInfo              `protobuf:"bytes,2,opt,name=page_info,json=pageInfo,proto3" json:"page_info,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
-}
-
-func (x *ListEDIRunsResponse) Reset() {
-	*x = ListEDIRunsResponse{}
-	mi := &file_core_core_lookups_proto_msgTypes[147]
-	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-	ms.StoreMessageInfo(mi)
-}
-
-func (x *ListEDIRunsResponse) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*ListEDIRunsResponse) ProtoMessage() {}
-
-func (x *ListEDIRunsResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_lookups_proto_msgTypes[147]
-	if x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-// Deprecated: Use ListEDIRunsResponse.ProtoReflect.Descriptor instead.
-func (*ListEDIRunsResponse) Descriptor() ([]byte, []int) {
-	return file_core_core_lookups_proto_rawDescGZIP(), []int{147}
-}
-
-func (x *ListEDIRunsResponse) GetEdiRuns() []*EDIRunProto {
-	if x != nil {
-		return x.EdiRuns
-	}
-	return nil
-}
-
-func (x *ListEDIRunsResponse) GetPageInfo() *PageInfo {
-	if x != nil {
-		return x.PageInfo
-	}
-	return nil
-}
-
-type GetEDIRunRequest struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
-}
-
-func (x *GetEDIRunRequest) Reset() {
-	*x = GetEDIRunRequest{}
-	mi := &file_core_core_lookups_proto_msgTypes[148]
-	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-	ms.StoreMessageInfo(mi)
-}
-
-func (x *GetEDIRunRequest) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*GetEDIRunRequest) ProtoMessage() {}
-
-func (x *GetEDIRunRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_lookups_proto_msgTypes[148]
-	if x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-// Deprecated: Use GetEDIRunRequest.ProtoReflect.Descriptor instead.
-func (*GetEDIRunRequest) Descriptor() ([]byte, []int) {
-	return file_core_core_lookups_proto_rawDescGZIP(), []int{148}
-}
-
-func (x *GetEDIRunRequest) GetId() string {
-	if x != nil {
-		return x.Id
-	}
-	return ""
-}
-
-type GetEDIRunResponse struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	EdiRun        *EDIRunProto           `protobuf:"bytes,1,opt,name=edi_run,json=ediRun,proto3" json:"edi_run,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
-}
-
-func (x *GetEDIRunResponse) Reset() {
-	*x = GetEDIRunResponse{}
-	mi := &file_core_core_lookups_proto_msgTypes[149]
-	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-	ms.StoreMessageInfo(mi)
-}
-
-func (x *GetEDIRunResponse) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*GetEDIRunResponse) ProtoMessage() {}
-
-func (x *GetEDIRunResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_lookups_proto_msgTypes[149]
-	if x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-// Deprecated: Use GetEDIRunResponse.ProtoReflect.Descriptor instead.
-func (*GetEDIRunResponse) Descriptor() ([]byte, []int) {
-	return file_core_core_lookups_proto_rawDescGZIP(), []int{149}
-}
-
-func (x *GetEDIRunResponse) GetEdiRun() *EDIRunProto {
-	if x != nil {
-		return x.EdiRun
-	}
-	return nil
-}
-
-// Batched read for the api-gateway resourcekit resolver.
-type BatchGetEDIRunsByIDsRequest struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Ids           []string               `protobuf:"bytes,1,rep,name=ids,proto3" json:"ids,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
-}
-
-func (x *BatchGetEDIRunsByIDsRequest) Reset() {
-	*x = BatchGetEDIRunsByIDsRequest{}
-	mi := &file_core_core_lookups_proto_msgTypes[150]
-	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-	ms.StoreMessageInfo(mi)
-}
-
-func (x *BatchGetEDIRunsByIDsRequest) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*BatchGetEDIRunsByIDsRequest) ProtoMessage() {}
-
-func (x *BatchGetEDIRunsByIDsRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_lookups_proto_msgTypes[150]
-	if x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-// Deprecated: Use BatchGetEDIRunsByIDsRequest.ProtoReflect.Descriptor instead.
-func (*BatchGetEDIRunsByIDsRequest) Descriptor() ([]byte, []int) {
-	return file_core_core_lookups_proto_rawDescGZIP(), []int{150}
-}
-
-func (x *BatchGetEDIRunsByIDsRequest) GetIds() []string {
-	if x != nil {
-		return x.Ids
-	}
-	return nil
-}
-
-type BatchGetEDIRunsByIDsResponse struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	EdiRuns       []*EDIRunProto         `protobuf:"bytes,1,rep,name=edi_runs,json=ediRuns,proto3" json:"edi_runs,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
-}
-
-func (x *BatchGetEDIRunsByIDsResponse) Reset() {
-	*x = BatchGetEDIRunsByIDsResponse{}
-	mi := &file_core_core_lookups_proto_msgTypes[151]
-	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-	ms.StoreMessageInfo(mi)
-}
-
-func (x *BatchGetEDIRunsByIDsResponse) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*BatchGetEDIRunsByIDsResponse) ProtoMessage() {}
-
-func (x *BatchGetEDIRunsByIDsResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_lookups_proto_msgTypes[151]
-	if x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-// Deprecated: Use BatchGetEDIRunsByIDsResponse.ProtoReflect.Descriptor instead.
-func (*BatchGetEDIRunsByIDsResponse) Descriptor() ([]byte, []int) {
-	return file_core_core_lookups_proto_rawDescGZIP(), []int{151}
-}
-
-func (x *BatchGetEDIRunsByIDsResponse) GetEdiRuns() []*EDIRunProto {
-	if x != nil {
-		return x.EdiRuns
-	}
-	return nil
-}
-
 type ListInventoriesRequest struct {
 	state  protoimpl.MessageState `protogen:"open.v1"`
 	Cursor *string                `protobuf:"bytes,1,opt,name=cursor,proto3,oneof" json:"cursor,omitempty"`
@@ -9829,7 +8671,7 @@ type ListInventoriesRequest struct {
 
 func (x *ListInventoriesRequest) Reset() {
 	*x = ListInventoriesRequest{}
-	mi := &file_core_core_lookups_proto_msgTypes[152]
+	mi := &file_core_core_lookups_proto_msgTypes[129]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -9841,7 +8683,7 @@ func (x *ListInventoriesRequest) String() string {
 func (*ListInventoriesRequest) ProtoMessage() {}
 
 func (x *ListInventoriesRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_lookups_proto_msgTypes[152]
+	mi := &file_core_core_lookups_proto_msgTypes[129]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -9854,7 +8696,7 @@ func (x *ListInventoriesRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListInventoriesRequest.ProtoReflect.Descriptor instead.
 func (*ListInventoriesRequest) Descriptor() ([]byte, []int) {
-	return file_core_core_lookups_proto_rawDescGZIP(), []int{152}
+	return file_core_core_lookups_proto_rawDescGZIP(), []int{129}
 }
 
 func (x *ListInventoriesRequest) GetCursor() string {
@@ -9899,7 +8741,7 @@ type InventoryItemProto struct {
 
 func (x *InventoryItemProto) Reset() {
 	*x = InventoryItemProto{}
-	mi := &file_core_core_lookups_proto_msgTypes[153]
+	mi := &file_core_core_lookups_proto_msgTypes[130]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -9911,7 +8753,7 @@ func (x *InventoryItemProto) String() string {
 func (*InventoryItemProto) ProtoMessage() {}
 
 func (x *InventoryItemProto) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_lookups_proto_msgTypes[153]
+	mi := &file_core_core_lookups_proto_msgTypes[130]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -9924,7 +8766,7 @@ func (x *InventoryItemProto) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use InventoryItemProto.ProtoReflect.Descriptor instead.
 func (*InventoryItemProto) Descriptor() ([]byte, []int) {
-	return file_core_core_lookups_proto_rawDescGZIP(), []int{153}
+	return file_core_core_lookups_proto_rawDescGZIP(), []int{130}
 }
 
 func (x *InventoryItemProto) GetOnHandQuantity() float64 {
@@ -9980,7 +8822,7 @@ type ListInventoriesResponse struct {
 
 func (x *ListInventoriesResponse) Reset() {
 	*x = ListInventoriesResponse{}
-	mi := &file_core_core_lookups_proto_msgTypes[154]
+	mi := &file_core_core_lookups_proto_msgTypes[131]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -9992,7 +8834,7 @@ func (x *ListInventoriesResponse) String() string {
 func (*ListInventoriesResponse) ProtoMessage() {}
 
 func (x *ListInventoriesResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_lookups_proto_msgTypes[154]
+	mi := &file_core_core_lookups_proto_msgTypes[131]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -10005,7 +8847,7 @@ func (x *ListInventoriesResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListInventoriesResponse.ProtoReflect.Descriptor instead.
 func (*ListInventoriesResponse) Descriptor() ([]byte, []int) {
-	return file_core_core_lookups_proto_rawDescGZIP(), []int{154}
+	return file_core_core_lookups_proto_rawDescGZIP(), []int{131}
 }
 
 func (x *ListInventoriesResponse) GetItems() []*InventoryItemProto {
@@ -10038,7 +8880,7 @@ type AnalyzeWeeksOfSalesRequest struct {
 
 func (x *AnalyzeWeeksOfSalesRequest) Reset() {
 	*x = AnalyzeWeeksOfSalesRequest{}
-	mi := &file_core_core_lookups_proto_msgTypes[155]
+	mi := &file_core_core_lookups_proto_msgTypes[132]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -10050,7 +8892,7 @@ func (x *AnalyzeWeeksOfSalesRequest) String() string {
 func (*AnalyzeWeeksOfSalesRequest) ProtoMessage() {}
 
 func (x *AnalyzeWeeksOfSalesRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_lookups_proto_msgTypes[155]
+	mi := &file_core_core_lookups_proto_msgTypes[132]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -10063,7 +8905,7 @@ func (x *AnalyzeWeeksOfSalesRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use AnalyzeWeeksOfSalesRequest.ProtoReflect.Descriptor instead.
 func (*AnalyzeWeeksOfSalesRequest) Descriptor() ([]byte, []int) {
-	return file_core_core_lookups_proto_rawDescGZIP(), []int{155}
+	return file_core_core_lookups_proto_rawDescGZIP(), []int{132}
 }
 
 func (x *AnalyzeWeeksOfSalesRequest) GetPeriodInWeeks() int32 {
@@ -10090,7 +8932,7 @@ type WeeksOfSalesItemProto struct {
 
 func (x *WeeksOfSalesItemProto) Reset() {
 	*x = WeeksOfSalesItemProto{}
-	mi := &file_core_core_lookups_proto_msgTypes[156]
+	mi := &file_core_core_lookups_proto_msgTypes[133]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -10102,7 +8944,7 @@ func (x *WeeksOfSalesItemProto) String() string {
 func (*WeeksOfSalesItemProto) ProtoMessage() {}
 
 func (x *WeeksOfSalesItemProto) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_lookups_proto_msgTypes[156]
+	mi := &file_core_core_lookups_proto_msgTypes[133]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -10115,7 +8957,7 @@ func (x *WeeksOfSalesItemProto) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use WeeksOfSalesItemProto.ProtoReflect.Descriptor instead.
 func (*WeeksOfSalesItemProto) Descriptor() ([]byte, []int) {
-	return file_core_core_lookups_proto_rawDescGZIP(), []int{156}
+	return file_core_core_lookups_proto_rawDescGZIP(), []int{133}
 }
 
 func (x *WeeksOfSalesItemProto) GetProductLineId() string {
@@ -10191,7 +9033,7 @@ type AnalyzeWeeksOfSalesResponse struct {
 
 func (x *AnalyzeWeeksOfSalesResponse) Reset() {
 	*x = AnalyzeWeeksOfSalesResponse{}
-	mi := &file_core_core_lookups_proto_msgTypes[157]
+	mi := &file_core_core_lookups_proto_msgTypes[134]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -10203,7 +9045,7 @@ func (x *AnalyzeWeeksOfSalesResponse) String() string {
 func (*AnalyzeWeeksOfSalesResponse) ProtoMessage() {}
 
 func (x *AnalyzeWeeksOfSalesResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_lookups_proto_msgTypes[157]
+	mi := &file_core_core_lookups_proto_msgTypes[134]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -10216,7 +9058,7 @@ func (x *AnalyzeWeeksOfSalesResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use AnalyzeWeeksOfSalesResponse.ProtoReflect.Descriptor instead.
 func (*AnalyzeWeeksOfSalesResponse) Descriptor() ([]byte, []int) {
-	return file_core_core_lookups_proto_rawDescGZIP(), []int{157}
+	return file_core_core_lookups_proto_rawDescGZIP(), []int{134}
 }
 
 func (x *AnalyzeWeeksOfSalesResponse) GetItems() []*WeeksOfSalesItemProto {
@@ -10245,7 +9087,7 @@ type BulkReconcileItemInput struct {
 
 func (x *BulkReconcileItemInput) Reset() {
 	*x = BulkReconcileItemInput{}
-	mi := &file_core_core_lookups_proto_msgTypes[158]
+	mi := &file_core_core_lookups_proto_msgTypes[135]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -10257,7 +9099,7 @@ func (x *BulkReconcileItemInput) String() string {
 func (*BulkReconcileItemInput) ProtoMessage() {}
 
 func (x *BulkReconcileItemInput) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_lookups_proto_msgTypes[158]
+	mi := &file_core_core_lookups_proto_msgTypes[135]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -10270,7 +9112,7 @@ func (x *BulkReconcileItemInput) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use BulkReconcileItemInput.ProtoReflect.Descriptor instead.
 func (*BulkReconcileItemInput) Descriptor() ([]byte, []int) {
-	return file_core_core_lookups_proto_rawDescGZIP(), []int{158}
+	return file_core_core_lookups_proto_rawDescGZIP(), []int{135}
 }
 
 func (x *BulkReconcileItemInput) GetSku() string {
@@ -10304,7 +9146,7 @@ type BulkReconcileItemsRequest struct {
 
 func (x *BulkReconcileItemsRequest) Reset() {
 	*x = BulkReconcileItemsRequest{}
-	mi := &file_core_core_lookups_proto_msgTypes[159]
+	mi := &file_core_core_lookups_proto_msgTypes[136]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -10316,7 +9158,7 @@ func (x *BulkReconcileItemsRequest) String() string {
 func (*BulkReconcileItemsRequest) ProtoMessage() {}
 
 func (x *BulkReconcileItemsRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_lookups_proto_msgTypes[159]
+	mi := &file_core_core_lookups_proto_msgTypes[136]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -10329,7 +9171,7 @@ func (x *BulkReconcileItemsRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use BulkReconcileItemsRequest.ProtoReflect.Descriptor instead.
 func (*BulkReconcileItemsRequest) Descriptor() ([]byte, []int) {
-	return file_core_core_lookups_proto_rawDescGZIP(), []int{159}
+	return file_core_core_lookups_proto_rawDescGZIP(), []int{136}
 }
 
 func (x *BulkReconcileItemsRequest) GetReconcileType() string {
@@ -10362,7 +9204,7 @@ type ReconciledItemProto struct {
 
 func (x *ReconciledItemProto) Reset() {
 	*x = ReconciledItemProto{}
-	mi := &file_core_core_lookups_proto_msgTypes[160]
+	mi := &file_core_core_lookups_proto_msgTypes[137]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -10374,7 +9216,7 @@ func (x *ReconciledItemProto) String() string {
 func (*ReconciledItemProto) ProtoMessage() {}
 
 func (x *ReconciledItemProto) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_lookups_proto_msgTypes[160]
+	mi := &file_core_core_lookups_proto_msgTypes[137]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -10387,7 +9229,7 @@ func (x *ReconciledItemProto) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ReconciledItemProto.ProtoReflect.Descriptor instead.
 func (*ReconciledItemProto) Descriptor() ([]byte, []int) {
-	return file_core_core_lookups_proto_rawDescGZIP(), []int{160}
+	return file_core_core_lookups_proto_rawDescGZIP(), []int{137}
 }
 
 func (x *ReconciledItemProto) GetItemId() string {
@@ -10442,7 +9284,7 @@ type SkippedItemProto struct {
 
 func (x *SkippedItemProto) Reset() {
 	*x = SkippedItemProto{}
-	mi := &file_core_core_lookups_proto_msgTypes[161]
+	mi := &file_core_core_lookups_proto_msgTypes[138]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -10454,7 +9296,7 @@ func (x *SkippedItemProto) String() string {
 func (*SkippedItemProto) ProtoMessage() {}
 
 func (x *SkippedItemProto) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_lookups_proto_msgTypes[161]
+	mi := &file_core_core_lookups_proto_msgTypes[138]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -10467,7 +9309,7 @@ func (x *SkippedItemProto) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use SkippedItemProto.ProtoReflect.Descriptor instead.
 func (*SkippedItemProto) Descriptor() ([]byte, []int) {
-	return file_core_core_lookups_proto_rawDescGZIP(), []int{161}
+	return file_core_core_lookups_proto_rawDescGZIP(), []int{138}
 }
 
 func (x *SkippedItemProto) GetSku() string {
@@ -10495,7 +9337,7 @@ type ReconcileErrorProto struct {
 
 func (x *ReconcileErrorProto) Reset() {
 	*x = ReconcileErrorProto{}
-	mi := &file_core_core_lookups_proto_msgTypes[162]
+	mi := &file_core_core_lookups_proto_msgTypes[139]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -10507,7 +9349,7 @@ func (x *ReconcileErrorProto) String() string {
 func (*ReconcileErrorProto) ProtoMessage() {}
 
 func (x *ReconcileErrorProto) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_lookups_proto_msgTypes[162]
+	mi := &file_core_core_lookups_proto_msgTypes[139]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -10520,7 +9362,7 @@ func (x *ReconcileErrorProto) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ReconcileErrorProto.ProtoReflect.Descriptor instead.
 func (*ReconcileErrorProto) Descriptor() ([]byte, []int) {
-	return file_core_core_lookups_proto_rawDescGZIP(), []int{162}
+	return file_core_core_lookups_proto_rawDescGZIP(), []int{139}
 }
 
 func (x *ReconcileErrorProto) GetSku() string {
@@ -10555,7 +9397,7 @@ type BulkReconcileItemsResponse struct {
 
 func (x *BulkReconcileItemsResponse) Reset() {
 	*x = BulkReconcileItemsResponse{}
-	mi := &file_core_core_lookups_proto_msgTypes[163]
+	mi := &file_core_core_lookups_proto_msgTypes[140]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -10567,7 +9409,7 @@ func (x *BulkReconcileItemsResponse) String() string {
 func (*BulkReconcileItemsResponse) ProtoMessage() {}
 
 func (x *BulkReconcileItemsResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_lookups_proto_msgTypes[163]
+	mi := &file_core_core_lookups_proto_msgTypes[140]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -10580,7 +9422,7 @@ func (x *BulkReconcileItemsResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use BulkReconcileItemsResponse.ProtoReflect.Descriptor instead.
 func (*BulkReconcileItemsResponse) Descriptor() ([]byte, []int) {
-	return file_core_core_lookups_proto_rawDescGZIP(), []int{163}
+	return file_core_core_lookups_proto_rawDescGZIP(), []int{140}
 }
 
 func (x *BulkReconcileItemsResponse) GetReconciledItems() []*ReconciledItemProto {
@@ -11510,90 +10352,7 @@ const file_core_core_lookups_proto_rawDesc = "" +
 	"\x04name\x18\x02 \x01(\tR\x04name\x12\x1f\n" +
 	"\vproperty_id\x18\x03 \x01(\tR\n" +
 	"propertyId\x12#\n" +
-	"\rproperty_name\x18\x04 \x01(\tR\fpropertyName\"\x16\n" +
-	"\x14PullEDIOrdersRequest\"1\n" +
-	"\x15PullEDIOrdersResponse\x12\x18\n" +
-	"\amessage\x18\x01 \x01(\tR\amessage\":\n" +
-	"\x19ResubmitEDIInvoiceRequest\x12\x1d\n" +
-	"\n" +
-	"invoice_id\x18\x01 \x01(\tR\tinvoiceId\"6\n" +
-	"\x1aResubmitEDIInvoiceResponse\x12\x18\n" +
-	"\amessage\x18\x01 \x01(\tR\amessage\"\xf9\x01\n" +
-	"\x0fDCLocationProto\x12\x0e\n" +
-	"\x02id\x18\x01 \x01(\tR\x02id\x12\x1a\n" +
-	"\blocation\x18\x02 \x01(\tR\blocation\x12\x1f\n" +
-	"\vcustomer_id\x18\x03 \x01(\tR\n" +
-	"customerId\x12#\n" +
-	"\rcustomer_name\x18\x04 \x01(\tR\fcustomerName\x129\n" +
-	"\n" +
-	"created_at\x18\x05 \x01(\v2\x1a.google.protobuf.TimestampR\tcreatedAt\x129\n" +
-	"\n" +
-	"updated_at\x18\x06 \x01(\v2\x1a.google.protobuf.TimestampR\tupdatedAt\"{\n" +
-	"\x16ListDCLocationsRequest\x12\x1b\n" +
-	"\x06cursor\x18\x01 \x01(\tH\x00R\x06cursor\x88\x01\x01\x12\x14\n" +
-	"\x05limit\x18\x02 \x01(\x05R\x05limit\x12\x19\n" +
-	"\x05query\x18\x03 \x01(\tH\x01R\x05query\x88\x01\x01B\t\n" +
-	"\a_cursorB\b\n" +
-	"\x06_query\"\x80\x01\n" +
-	"\x17ListDCLocationsResponse\x128\n" +
-	"\fdc_locations\x18\x01 \x03(\v2\x15.core.DCLocationProtoR\vdcLocations\x12+\n" +
-	"\tpage_info\x18\x02 \x01(\v2\x0e.core.PageInfoR\bpageInfo\"&\n" +
-	"\x14GetDCLocationRequest\x12\x0e\n" +
-	"\x02id\x18\x01 \x01(\tR\x02id\"O\n" +
-	"\x15GetDCLocationResponse\x126\n" +
-	"\vdc_location\x18\x01 \x01(\v2\x15.core.DCLocationProtoR\n" +
-	"dcLocation\"V\n" +
-	"\x17CreateDCLocationRequest\x12\x1f\n" +
-	"\vcustomer_id\x18\x01 \x01(\tR\n" +
-	"customerId\x12\x1a\n" +
-	"\blocation\x18\x02 \x01(\tR\blocation\"R\n" +
-	"\x18CreateDCLocationResponse\x126\n" +
-	"\vdc_location\x18\x01 \x01(\v2\x15.core.DCLocationProtoR\n" +
-	"dcLocation\"\x8d\x01\n" +
-	"\x17UpdateDCLocationRequest\x12\x0e\n" +
-	"\x02id\x18\x01 \x01(\tR\x02id\x12$\n" +
-	"\vcustomer_id\x18\x02 \x01(\tH\x00R\n" +
-	"customerId\x88\x01\x01\x12\x1f\n" +
-	"\blocation\x18\x03 \x01(\tH\x01R\blocation\x88\x01\x01B\x0e\n" +
-	"\f_customer_idB\v\n" +
-	"\t_location\"R\n" +
-	"\x18UpdateDCLocationResponse\x126\n" +
-	"\vdc_location\x18\x01 \x01(\v2\x15.core.DCLocationProtoR\n" +
-	"dcLocation\")\n" +
-	"\x17DeleteDCLocationRequest\x12\x0e\n" +
-	"\x02id\x18\x01 \x01(\tR\x02id\"3\n" +
-	"\x1fBatchGetDCLocationsByIDsRequest\x12\x10\n" +
-	"\x03ids\x18\x01 \x03(\tR\x03ids\"\\\n" +
-	" BatchGetDCLocationsByIDsResponse\x128\n" +
-	"\fdc_locations\x18\x01 \x03(\v2\x15.core.DCLocationProtoR\vdcLocations\"\x8d\x02\n" +
-	"\vEDIRunProto\x12\x0e\n" +
-	"\x02id\x18\x01 \x01(\tR\x02id\x12B\n" +
-	"\fcompleted_at\x18\x02 \x01(\v2\x1a.google.protobuf.TimestampH\x00R\vcompletedAt\x88\x01\x01\x12#\n" +
-	"\rhas_succeeded\x18\x03 \x01(\bR\fhasSucceeded\x129\n" +
-	"\n" +
-	"created_at\x18\x04 \x01(\v2\x1a.google.protobuf.TimestampR\tcreatedAt\x129\n" +
-	"\n" +
-	"updated_at\x18\x05 \x01(\v2\x1a.google.protobuf.TimestampR\tupdatedAtB\x0f\n" +
-	"\r_completed_at\"\xb3\x01\n" +
-	"\x12ListEDIRunsRequest\x12\x1b\n" +
-	"\x06cursor\x18\x01 \x01(\tH\x00R\x06cursor\x88\x01\x01\x12\x14\n" +
-	"\x05limit\x18\x02 \x01(\x05R\x05limit\x12(\n" +
-	"\rhas_succeeded\x18\x03 \x01(\bH\x01R\fhasSucceeded\x88\x01\x01\x12\x19\n" +
-	"\x05query\x18\x04 \x01(\tH\x02R\x05query\x88\x01\x01B\t\n" +
-	"\a_cursorB\x10\n" +
-	"\x0e_has_succeededB\b\n" +
-	"\x06_query\"p\n" +
-	"\x13ListEDIRunsResponse\x12,\n" +
-	"\bedi_runs\x18\x01 \x03(\v2\x11.core.EDIRunProtoR\aediRuns\x12+\n" +
-	"\tpage_info\x18\x02 \x01(\v2\x0e.core.PageInfoR\bpageInfo\"\"\n" +
-	"\x10GetEDIRunRequest\x12\x0e\n" +
-	"\x02id\x18\x01 \x01(\tR\x02id\"?\n" +
-	"\x11GetEDIRunResponse\x12*\n" +
-	"\aedi_run\x18\x01 \x01(\v2\x11.core.EDIRunProtoR\x06ediRun\"/\n" +
-	"\x1bBatchGetEDIRunsByIDsRequest\x12\x10\n" +
-	"\x03ids\x18\x01 \x03(\tR\x03ids\"L\n" +
-	"\x1cBatchGetEDIRunsByIDsResponse\x12,\n" +
-	"\bedi_runs\x18\x01 \x03(\v2\x11.core.EDIRunProtoR\aediRuns\"\xbb\x01\n" +
+	"\rproperty_name\x18\x04 \x01(\tR\fpropertyName\"\xbb\x01\n" +
 	"\x16ListInventoriesRequest\x12\x1b\n" +
 	"\x06cursor\x18\x01 \x01(\tH\x00R\x06cursor\x88\x01\x01\x12\x14\n" +
 	"\x05limit\x18\x02 \x01(\x05R\x05limit\x12\x19\n" +
@@ -11680,7 +10439,7 @@ func file_core_core_lookups_proto_rawDescGZIP() []byte {
 }
 
 var file_core_core_lookups_proto_enumTypes = make([]protoimpl.EnumInfo, 2)
-var file_core_core_lookups_proto_msgTypes = make([]protoimpl.MessageInfo, 166)
+var file_core_core_lookups_proto_msgTypes = make([]protoimpl.MessageInfo, 143)
 var file_core_core_lookups_proto_goTypes = []any{
 	(DuplicateCheckType)(0),                     // 0: core.DuplicateCheckType
 	(EmailRecordType)(0),                        // 1: core.EmailRecordType
@@ -11813,100 +10572,77 @@ var file_core_core_lookups_proto_goTypes = []any{
 	(*CatalogProductProto)(nil),                 // 128: core.CatalogProductProto
 	(*CatalogPropertyProto)(nil),                // 129: core.CatalogPropertyProto
 	(*CatalogAttributeProto)(nil),               // 130: core.CatalogAttributeProto
-	(*PullEDIOrdersRequest)(nil),                // 131: core.PullEDIOrdersRequest
-	(*PullEDIOrdersResponse)(nil),               // 132: core.PullEDIOrdersResponse
-	(*ResubmitEDIInvoiceRequest)(nil),           // 133: core.ResubmitEDIInvoiceRequest
-	(*ResubmitEDIInvoiceResponse)(nil),          // 134: core.ResubmitEDIInvoiceResponse
-	(*DCLocationProto)(nil),                     // 135: core.DCLocationProto
-	(*ListDCLocationsRequest)(nil),              // 136: core.ListDCLocationsRequest
-	(*ListDCLocationsResponse)(nil),             // 137: core.ListDCLocationsResponse
-	(*GetDCLocationRequest)(nil),                // 138: core.GetDCLocationRequest
-	(*GetDCLocationResponse)(nil),               // 139: core.GetDCLocationResponse
-	(*CreateDCLocationRequest)(nil),             // 140: core.CreateDCLocationRequest
-	(*CreateDCLocationResponse)(nil),            // 141: core.CreateDCLocationResponse
-	(*UpdateDCLocationRequest)(nil),             // 142: core.UpdateDCLocationRequest
-	(*UpdateDCLocationResponse)(nil),            // 143: core.UpdateDCLocationResponse
-	(*DeleteDCLocationRequest)(nil),             // 144: core.DeleteDCLocationRequest
-	(*BatchGetDCLocationsByIDsRequest)(nil),     // 145: core.BatchGetDCLocationsByIDsRequest
-	(*BatchGetDCLocationsByIDsResponse)(nil),    // 146: core.BatchGetDCLocationsByIDsResponse
-	(*EDIRunProto)(nil),                         // 147: core.EDIRunProto
-	(*ListEDIRunsRequest)(nil),                  // 148: core.ListEDIRunsRequest
-	(*ListEDIRunsResponse)(nil),                 // 149: core.ListEDIRunsResponse
-	(*GetEDIRunRequest)(nil),                    // 150: core.GetEDIRunRequest
-	(*GetEDIRunResponse)(nil),                   // 151: core.GetEDIRunResponse
-	(*BatchGetEDIRunsByIDsRequest)(nil),         // 152: core.BatchGetEDIRunsByIDsRequest
-	(*BatchGetEDIRunsByIDsResponse)(nil),        // 153: core.BatchGetEDIRunsByIDsResponse
-	(*ListInventoriesRequest)(nil),              // 154: core.ListInventoriesRequest
-	(*InventoryItemProto)(nil),                  // 155: core.InventoryItemProto
-	(*ListInventoriesResponse)(nil),             // 156: core.ListInventoriesResponse
-	(*AnalyzeWeeksOfSalesRequest)(nil),          // 157: core.AnalyzeWeeksOfSalesRequest
-	(*WeeksOfSalesItemProto)(nil),               // 158: core.WeeksOfSalesItemProto
-	(*AnalyzeWeeksOfSalesResponse)(nil),         // 159: core.AnalyzeWeeksOfSalesResponse
-	(*BulkReconcileItemInput)(nil),              // 160: core.BulkReconcileItemInput
-	(*BulkReconcileItemsRequest)(nil),           // 161: core.BulkReconcileItemsRequest
-	(*ReconciledItemProto)(nil),                 // 162: core.ReconciledItemProto
-	(*SkippedItemProto)(nil),                    // 163: core.SkippedItemProto
-	(*ReconcileErrorProto)(nil),                 // 164: core.ReconcileErrorProto
-	(*BulkReconcileItemsResponse)(nil),          // 165: core.BulkReconcileItemsResponse
-	nil,                                         // 166: core.ValidateUnitsRequest.UnitMapEntry
-	nil,                                         // 167: core.ValidateUnitsResponse.UnitsEntry
-	(*ProductTypeInfo)(nil),                     // 168: core.ProductTypeInfo
-	(*PageInfo)(nil),                            // 169: core.PageInfo
-	(*RateInfo)(nil),                            // 170: core.RateInfo
-	(*timestamppb.Timestamp)(nil),               // 171: google.protobuf.Timestamp
-	(*QuantityInfo)(nil),                        // 172: core.QuantityInfo
-	(*UnitInfo)(nil),                            // 173: core.UnitInfo
-	(*JobInfo)(nil),                             // 174: core.JobInfo
-	(*StringPatch)(nil),                         // 175: core.StringPatch
-	(*UnitIdentifier)(nil),                      // 176: core.UnitIdentifier
-	(*ItemInfo)(nil),                            // 177: core.ItemInfo
+	(*ListInventoriesRequest)(nil),              // 131: core.ListInventoriesRequest
+	(*InventoryItemProto)(nil),                  // 132: core.InventoryItemProto
+	(*ListInventoriesResponse)(nil),             // 133: core.ListInventoriesResponse
+	(*AnalyzeWeeksOfSalesRequest)(nil),          // 134: core.AnalyzeWeeksOfSalesRequest
+	(*WeeksOfSalesItemProto)(nil),               // 135: core.WeeksOfSalesItemProto
+	(*AnalyzeWeeksOfSalesResponse)(nil),         // 136: core.AnalyzeWeeksOfSalesResponse
+	(*BulkReconcileItemInput)(nil),              // 137: core.BulkReconcileItemInput
+	(*BulkReconcileItemsRequest)(nil),           // 138: core.BulkReconcileItemsRequest
+	(*ReconciledItemProto)(nil),                 // 139: core.ReconciledItemProto
+	(*SkippedItemProto)(nil),                    // 140: core.SkippedItemProto
+	(*ReconcileErrorProto)(nil),                 // 141: core.ReconcileErrorProto
+	(*BulkReconcileItemsResponse)(nil),          // 142: core.BulkReconcileItemsResponse
+	nil,                                         // 143: core.ValidateUnitsRequest.UnitMapEntry
+	nil,                                         // 144: core.ValidateUnitsResponse.UnitsEntry
+	(*ProductTypeInfo)(nil),                     // 145: core.ProductTypeInfo
+	(*PageInfo)(nil),                            // 146: core.PageInfo
+	(*RateInfo)(nil),                            // 147: core.RateInfo
+	(*timestamppb.Timestamp)(nil),               // 148: google.protobuf.Timestamp
+	(*QuantityInfo)(nil),                        // 149: core.QuantityInfo
+	(*UnitInfo)(nil),                            // 150: core.UnitInfo
+	(*JobInfo)(nil),                             // 151: core.JobInfo
+	(*StringPatch)(nil),                         // 152: core.StringPatch
+	(*UnitIdentifier)(nil),                      // 153: core.UnitIdentifier
+	(*ItemInfo)(nil),                            // 154: core.ItemInfo
 }
 var file_core_core_lookups_proto_depIdxs = []int32{
-	168, // 0: core.ListProductTypesResponse.product_types:type_name -> core.ProductTypeInfo
-	169, // 1: core.ListProductTypesResponse.page_info:type_name -> core.PageInfo
-	168, // 2: core.GetProductTypeResponse.product_type:type_name -> core.ProductTypeInfo
-	168, // 3: core.CreateProductTypeResponse.product_type:type_name -> core.ProductTypeInfo
-	168, // 4: core.UpdateProductTypeResponse.product_type:type_name -> core.ProductTypeInfo
-	168, // 5: core.BatchGetProductTypesByIDsResponse.product_types:type_name -> core.ProductTypeInfo
+	145, // 0: core.ListProductTypesResponse.product_types:type_name -> core.ProductTypeInfo
+	146, // 1: core.ListProductTypesResponse.page_info:type_name -> core.PageInfo
+	145, // 2: core.GetProductTypeResponse.product_type:type_name -> core.ProductTypeInfo
+	145, // 3: core.CreateProductTypeResponse.product_type:type_name -> core.ProductTypeInfo
+	145, // 4: core.UpdateProductTypeResponse.product_type:type_name -> core.ProductTypeInfo
+	145, // 5: core.BatchGetProductTypesByIDsResponse.product_types:type_name -> core.ProductTypeInfo
 	14,  // 6: core.GetProductionFlowResponse.steps:type_name -> core.ProductionFlowStepInfo
 	15,  // 7: core.ProductionFlowStepInfo.production:type_name -> core.ProductionFlowProductionInfo
 	16,  // 8: core.ProductionFlowStepInfo.consumptions:type_name -> core.ProductionFlowConsumptionInfo
-	170, // 9: core.ProductionFlowStepInfo.labor_rate:type_name -> core.RateInfo
-	170, // 10: core.ProductionFlowStepInfo.labor_time:type_name -> core.RateInfo
-	170, // 11: core.ProductionFlowStepInfo.overhead_rate:type_name -> core.RateInfo
-	171, // 12: core.ProductionFlowStepInfo.created_at:type_name -> google.protobuf.Timestamp
-	171, // 13: core.ProductionFlowStepInfo.updated_at:type_name -> google.protobuf.Timestamp
-	172, // 14: core.ProductionFlowProductionInfo.quantity:type_name -> core.QuantityInfo
-	172, // 15: core.ProductionFlowConsumptionInfo.quantity:type_name -> core.QuantityInfo
-	172, // 16: core.ProductionFlowConsumptionInfo.waste_quantity:type_name -> core.QuantityInfo
-	171, // 17: core.ProductionFlowConsumptionInfo.created_at:type_name -> google.protobuf.Timestamp
-	171, // 18: core.ProductionFlowConsumptionInfo.updated_at:type_name -> google.protobuf.Timestamp
-	172, // 19: core.UpdateQuantityResponse.quantity:type_name -> core.QuantityInfo
-	170, // 20: core.UpdateRateResponse.rate:type_name -> core.RateInfo
-	171, // 21: core.ReceivableEntryProto.invoiced_at:type_name -> google.protobuf.Timestamp
-	171, // 22: core.OpenCreditEntryProto.created_at:type_name -> google.protobuf.Timestamp
-	171, // 23: core.ListReceivablesRequest.cutoff_date:type_name -> google.protobuf.Timestamp
+	147, // 9: core.ProductionFlowStepInfo.labor_rate:type_name -> core.RateInfo
+	147, // 10: core.ProductionFlowStepInfo.labor_time:type_name -> core.RateInfo
+	147, // 11: core.ProductionFlowStepInfo.overhead_rate:type_name -> core.RateInfo
+	148, // 12: core.ProductionFlowStepInfo.created_at:type_name -> google.protobuf.Timestamp
+	148, // 13: core.ProductionFlowStepInfo.updated_at:type_name -> google.protobuf.Timestamp
+	149, // 14: core.ProductionFlowProductionInfo.quantity:type_name -> core.QuantityInfo
+	149, // 15: core.ProductionFlowConsumptionInfo.quantity:type_name -> core.QuantityInfo
+	149, // 16: core.ProductionFlowConsumptionInfo.waste_quantity:type_name -> core.QuantityInfo
+	148, // 17: core.ProductionFlowConsumptionInfo.created_at:type_name -> google.protobuf.Timestamp
+	148, // 18: core.ProductionFlowConsumptionInfo.updated_at:type_name -> google.protobuf.Timestamp
+	149, // 19: core.UpdateQuantityResponse.quantity:type_name -> core.QuantityInfo
+	147, // 20: core.UpdateRateResponse.rate:type_name -> core.RateInfo
+	148, // 21: core.ReceivableEntryProto.invoiced_at:type_name -> google.protobuf.Timestamp
+	148, // 22: core.OpenCreditEntryProto.created_at:type_name -> google.protobuf.Timestamp
+	148, // 23: core.ListReceivablesRequest.cutoff_date:type_name -> google.protobuf.Timestamp
 	22,  // 24: core.ListReceivablesResponse.receivables:type_name -> core.ReceivableEntryProto
-	169, // 25: core.ListReceivablesResponse.page_info:type_name -> core.PageInfo
-	171, // 26: core.ListReceivablesByCustomerRequest.cutoff_date:type_name -> google.protobuf.Timestamp
+	146, // 25: core.ListReceivablesResponse.page_info:type_name -> core.PageInfo
+	148, // 26: core.ListReceivablesByCustomerRequest.cutoff_date:type_name -> google.protobuf.Timestamp
 	22,  // 27: core.ListReceivablesByCustomerResponse.receivables:type_name -> core.ReceivableEntryProto
-	169, // 28: core.ListReceivablesByCustomerResponse.page_info:type_name -> core.PageInfo
-	171, // 29: core.ExportReceivablesByCustomerRequest.cutoff_date:type_name -> google.protobuf.Timestamp
+	146, // 28: core.ListReceivablesByCustomerResponse.page_info:type_name -> core.PageInfo
+	148, // 29: core.ExportReceivablesByCustomerRequest.cutoff_date:type_name -> google.protobuf.Timestamp
 	22,  // 30: core.ExportReceivablesByCustomerResponse.receivables:type_name -> core.ReceivableEntryProto
-	173, // 31: core.UnitGroupInfo.base_unit:type_name -> core.UnitInfo
+	150, // 31: core.UnitGroupInfo.base_unit:type_name -> core.UnitInfo
 	33,  // 32: core.UnitGroupInfo.unit_conversions:type_name -> core.UnitGroupUnitInfo
-	171, // 33: core.UnitGroupInfo.created_at:type_name -> google.protobuf.Timestamp
-	171, // 34: core.UnitGroupInfo.updated_at:type_name -> google.protobuf.Timestamp
-	171, // 35: core.UnitGroupUnitInfo.created_at:type_name -> google.protobuf.Timestamp
-	171, // 36: core.UnitGroupUnitInfo.updated_at:type_name -> google.protobuf.Timestamp
-	173, // 37: core.UnitGroupUnitInfo.unit:type_name -> core.UnitInfo
+	148, // 33: core.UnitGroupInfo.created_at:type_name -> google.protobuf.Timestamp
+	148, // 34: core.UnitGroupInfo.updated_at:type_name -> google.protobuf.Timestamp
+	148, // 35: core.UnitGroupUnitInfo.created_at:type_name -> google.protobuf.Timestamp
+	148, // 36: core.UnitGroupUnitInfo.updated_at:type_name -> google.protobuf.Timestamp
+	150, // 37: core.UnitGroupUnitInfo.unit:type_name -> core.UnitInfo
 	32,  // 38: core.ListUnitGroupsResponse.unit_groups:type_name -> core.UnitGroupInfo
-	169, // 39: core.ListUnitGroupsResponse.page_info:type_name -> core.PageInfo
-	174, // 40: core.ExportUnitGroupsResponse.job:type_name -> core.JobInfo
+	146, // 39: core.ListUnitGroupsResponse.page_info:type_name -> core.PageInfo
+	151, // 40: core.ExportUnitGroupsResponse.job:type_name -> core.JobInfo
 	32,  // 41: core.GetUnitGroupResponse.unit_group:type_name -> core.UnitGroupInfo
 	40,  // 42: core.CreateUnitGroupRequest.unit_conversions:type_name -> core.CreateUnitGroupUnitParam
 	32,  // 43: core.CreateUnitGroupResponse.unit_group:type_name -> core.UnitGroupInfo
-	175, // 44: core.UpdateUnitGroupRequest.notes:type_name -> core.StringPatch
+	152, // 44: core.UpdateUnitGroupRequest.notes:type_name -> core.StringPatch
 	40,  // 45: core.UpdateUnitGroupRequest.unit_conversions:type_name -> core.CreateUnitGroupUnitParam
 	32,  // 46: core.UpdateUnitGroupResponse.unit_group:type_name -> core.UnitGroupInfo
 	33,  // 47: core.UpsertUnitGroupUnitResponse.unit_group_unit:type_name -> core.UnitGroupUnitInfo
@@ -11914,119 +10650,104 @@ var file_core_core_lookups_proto_depIdxs = []int32{
 	33,  // 49: core.GetUnitGroupUnitResponse.unit_group_unit:type_name -> core.UnitGroupUnitInfo
 	32,  // 50: core.BatchGetUnitGroupsByIDsResponse.unit_groups:type_name -> core.UnitGroupInfo
 	33,  // 51: core.BatchGetUnitGroupUnitsByIDsResponse.unit_group_units:type_name -> core.UnitGroupUnitInfo
-	176, // 52: core.BulkUpsertUnitGroupConversionInput.unit:type_name -> core.UnitIdentifier
-	176, // 53: core.BulkUpsertUnitGroupInput.base_unit:type_name -> core.UnitIdentifier
+	153, // 52: core.BulkUpsertUnitGroupConversionInput.unit:type_name -> core.UnitIdentifier
+	153, // 53: core.BulkUpsertUnitGroupInput.base_unit:type_name -> core.UnitIdentifier
 	57,  // 54: core.BulkUpsertUnitGroupInput.unit_conversions:type_name -> core.BulkUpsertUnitGroupConversionInput
 	58,  // 55: core.BulkUpsertUnitGroupsRequest.unit_groups:type_name -> core.BulkUpsertUnitGroupInput
-	174, // 56: core.BulkUpsertUnitGroupsResponse.job:type_name -> core.JobInfo
-	166, // 57: core.ValidateUnitsRequest.unit_map:type_name -> core.ValidateUnitsRequest.UnitMapEntry
-	167, // 58: core.ValidateUnitsResponse.units:type_name -> core.ValidateUnitsResponse.UnitsEntry
+	151, // 56: core.BulkUpsertUnitGroupsResponse.job:type_name -> core.JobInfo
+	143, // 57: core.ValidateUnitsRequest.unit_map:type_name -> core.ValidateUnitsRequest.UnitMapEntry
+	144, // 58: core.ValidateUnitsResponse.units:type_name -> core.ValidateUnitsResponse.UnitsEntry
 	65,  // 59: core.TransactionInfo.allocations:type_name -> core.TransactionAllocationInfo
-	171, // 60: core.TransactionInfo.created_at:type_name -> google.protobuf.Timestamp
-	171, // 61: core.TransactionInfo.updated_at:type_name -> google.protobuf.Timestamp
-	171, // 62: core.TransactionInfo.customer_created_at:type_name -> google.protobuf.Timestamp
-	171, // 63: core.TransactionInfo.customer_updated_at:type_name -> google.protobuf.Timestamp
-	171, // 64: core.TransactionInfo.responsible_user_created_at:type_name -> google.protobuf.Timestamp
-	171, // 65: core.TransactionInfo.responsible_user_updated_at:type_name -> google.protobuf.Timestamp
-	171, // 66: core.TransactionInfo.funds_received_at:type_name -> google.protobuf.Timestamp
-	171, // 67: core.TransactionSummaryInfo.created_at:type_name -> google.protobuf.Timestamp
-	171, // 68: core.TransactionSummaryInfo.updated_at:type_name -> google.protobuf.Timestamp
-	171, // 69: core.TransactionSummaryInfo.customer_created_at:type_name -> google.protobuf.Timestamp
-	171, // 70: core.TransactionSummaryInfo.customer_updated_at:type_name -> google.protobuf.Timestamp
-	171, // 71: core.TransactionSummaryInfo.funds_received_at:type_name -> google.protobuf.Timestamp
-	171, // 72: core.TransactionAllocationInfo.created_at:type_name -> google.protobuf.Timestamp
-	171, // 73: core.TransactionAllocationInfo.updated_at:type_name -> google.protobuf.Timestamp
-	171, // 74: core.TransactionAllocationInfo.transaction_created_at:type_name -> google.protobuf.Timestamp
-	171, // 75: core.ListTransactionsRequest.start_date:type_name -> google.protobuf.Timestamp
-	171, // 76: core.ListTransactionsRequest.end_date:type_name -> google.protobuf.Timestamp
+	148, // 60: core.TransactionInfo.created_at:type_name -> google.protobuf.Timestamp
+	148, // 61: core.TransactionInfo.updated_at:type_name -> google.protobuf.Timestamp
+	148, // 62: core.TransactionInfo.customer_created_at:type_name -> google.protobuf.Timestamp
+	148, // 63: core.TransactionInfo.customer_updated_at:type_name -> google.protobuf.Timestamp
+	148, // 64: core.TransactionInfo.responsible_user_created_at:type_name -> google.protobuf.Timestamp
+	148, // 65: core.TransactionInfo.responsible_user_updated_at:type_name -> google.protobuf.Timestamp
+	148, // 66: core.TransactionInfo.funds_received_at:type_name -> google.protobuf.Timestamp
+	148, // 67: core.TransactionSummaryInfo.created_at:type_name -> google.protobuf.Timestamp
+	148, // 68: core.TransactionSummaryInfo.updated_at:type_name -> google.protobuf.Timestamp
+	148, // 69: core.TransactionSummaryInfo.customer_created_at:type_name -> google.protobuf.Timestamp
+	148, // 70: core.TransactionSummaryInfo.customer_updated_at:type_name -> google.protobuf.Timestamp
+	148, // 71: core.TransactionSummaryInfo.funds_received_at:type_name -> google.protobuf.Timestamp
+	148, // 72: core.TransactionAllocationInfo.created_at:type_name -> google.protobuf.Timestamp
+	148, // 73: core.TransactionAllocationInfo.updated_at:type_name -> google.protobuf.Timestamp
+	148, // 74: core.TransactionAllocationInfo.transaction_created_at:type_name -> google.protobuf.Timestamp
+	148, // 75: core.ListTransactionsRequest.start_date:type_name -> google.protobuf.Timestamp
+	148, // 76: core.ListTransactionsRequest.end_date:type_name -> google.protobuf.Timestamp
 	64,  // 77: core.ListTransactionsResponse.transactions:type_name -> core.TransactionSummaryInfo
-	169, // 78: core.ListTransactionsResponse.page_info:type_name -> core.PageInfo
+	146, // 78: core.ListTransactionsResponse.page_info:type_name -> core.PageInfo
 	63,  // 79: core.GetTransactionResponse.transaction:type_name -> core.TransactionInfo
-	171, // 80: core.CreateTransactionRequest.created_at:type_name -> google.protobuf.Timestamp
-	171, // 81: core.CreateTransactionRequest.funds_received_at:type_name -> google.protobuf.Timestamp
+	148, // 80: core.CreateTransactionRequest.created_at:type_name -> google.protobuf.Timestamp
+	148, // 81: core.CreateTransactionRequest.funds_received_at:type_name -> google.protobuf.Timestamp
 	63,  // 82: core.CreateTransactionResponse.transaction:type_name -> core.TransactionInfo
-	171, // 83: core.UpdateTransactionRequest.created_at:type_name -> google.protobuf.Timestamp
-	171, // 84: core.UpdateTransactionRequest.funds_received_at:type_name -> google.protobuf.Timestamp
+	148, // 83: core.UpdateTransactionRequest.created_at:type_name -> google.protobuf.Timestamp
+	148, // 84: core.UpdateTransactionRequest.funds_received_at:type_name -> google.protobuf.Timestamp
 	63,  // 85: core.UpdateTransactionResponse.transaction:type_name -> core.TransactionInfo
 	63,  // 86: core.DeleteTransactionResponse.transaction:type_name -> core.TransactionInfo
 	63,  // 87: core.ListAccountTransactionsResponse.transactions:type_name -> core.TransactionInfo
-	169, // 88: core.ListAccountTransactionsResponse.page_info:type_name -> core.PageInfo
-	171, // 89: core.ListSettlementsRequest.start_date:type_name -> google.protobuf.Timestamp
-	171, // 90: core.ListSettlementsRequest.end_date:type_name -> google.protobuf.Timestamp
+	146, // 88: core.ListAccountTransactionsResponse.page_info:type_name -> core.PageInfo
+	148, // 89: core.ListSettlementsRequest.start_date:type_name -> google.protobuf.Timestamp
+	148, // 90: core.ListSettlementsRequest.end_date:type_name -> google.protobuf.Timestamp
 	91,  // 91: core.ListSettlementsResponse.settlements:type_name -> core.SettlementSummaryInfo
-	169, // 92: core.ListSettlementsResponse.page_info:type_name -> core.PageInfo
+	146, // 92: core.ListSettlementsResponse.page_info:type_name -> core.PageInfo
 	90,  // 93: core.GetSettlementResponse.settlement:type_name -> core.SettlementInfo
 	83,  // 94: core.CreateSettlementRequest.allocations:type_name -> core.CreateSettlementAllocationParam
 	84,  // 95: core.CreateSettlementRequest.new_transactions:type_name -> core.NewSettlementTransactionParam
-	171, // 96: core.CreateSettlementAllocationParam.created_at:type_name -> google.protobuf.Timestamp
+	148, // 96: core.CreateSettlementAllocationParam.created_at:type_name -> google.protobuf.Timestamp
 	90,  // 97: core.CreateSettlementResponse.settlement:type_name -> core.SettlementInfo
 	90,  // 98: core.UpdateSettlementResponse.settlement:type_name -> core.SettlementInfo
 	90,  // 99: core.DeleteSettlementResponse.settlement:type_name -> core.SettlementInfo
 	65,  // 100: core.SettlementInfo.allocations:type_name -> core.TransactionAllocationInfo
-	171, // 101: core.SettlementInfo.created_at:type_name -> google.protobuf.Timestamp
-	171, // 102: core.SettlementInfo.updated_at:type_name -> google.protobuf.Timestamp
-	171, // 103: core.SettlementSummaryInfo.created_at:type_name -> google.protobuf.Timestamp
-	171, // 104: core.SettlementSummaryInfo.updated_at:type_name -> google.protobuf.Timestamp
-	171, // 105: core.ListAllocationEntriesRequest.start_date:type_name -> google.protobuf.Timestamp
-	171, // 106: core.ListAllocationEntriesRequest.end_date:type_name -> google.protobuf.Timestamp
+	148, // 101: core.SettlementInfo.created_at:type_name -> google.protobuf.Timestamp
+	148, // 102: core.SettlementInfo.updated_at:type_name -> google.protobuf.Timestamp
+	148, // 103: core.SettlementSummaryInfo.created_at:type_name -> google.protobuf.Timestamp
+	148, // 104: core.SettlementSummaryInfo.updated_at:type_name -> google.protobuf.Timestamp
+	148, // 105: core.ListAllocationEntriesRequest.start_date:type_name -> google.protobuf.Timestamp
+	148, // 106: core.ListAllocationEntriesRequest.end_date:type_name -> google.protobuf.Timestamp
 	94,  // 107: core.ListAllocationEntriesResponse.entries:type_name -> core.AllocationEntryInfo
-	169, // 108: core.ListAllocationEntriesResponse.page_info:type_name -> core.PageInfo
-	171, // 109: core.AllocationEntryInfo.created_at:type_name -> google.protobuf.Timestamp
-	171, // 110: core.UpdateTransactionAllocationRequest.created_at:type_name -> google.protobuf.Timestamp
+	146, // 108: core.ListAllocationEntriesResponse.page_info:type_name -> core.PageInfo
+	148, // 109: core.AllocationEntryInfo.created_at:type_name -> google.protobuf.Timestamp
+	148, // 110: core.UpdateTransactionAllocationRequest.created_at:type_name -> google.protobuf.Timestamp
 	65,  // 111: core.UpdateTransactionAllocationResponse.allocation:type_name -> core.TransactionAllocationInfo
-	171, // 112: core.ListOpenCreditsRequest.start_date:type_name -> google.protobuf.Timestamp
-	171, // 113: core.ListOpenCreditsRequest.end_date:type_name -> google.protobuf.Timestamp
+	148, // 112: core.ListOpenCreditsRequest.start_date:type_name -> google.protobuf.Timestamp
+	148, // 113: core.ListOpenCreditsRequest.end_date:type_name -> google.protobuf.Timestamp
 	101, // 114: core.ListOpenCreditsResponse.entries:type_name -> core.OpenCreditEntryInfo
-	169, // 115: core.ListOpenCreditsResponse.page_info:type_name -> core.PageInfo
+	146, // 115: core.ListOpenCreditsResponse.page_info:type_name -> core.PageInfo
 	102, // 116: core.OpenCreditEntryInfo.invoice_allocations:type_name -> core.OpenCreditInvoiceAllocationInfo
-	171, // 117: core.OpenCreditEntryInfo.created_at:type_name -> google.protobuf.Timestamp
-	171, // 118: core.OpenCreditEntryInfo.funds_received_at:type_name -> google.protobuf.Timestamp
-	171, // 119: core.UserInfo.email_verified_at:type_name -> google.protobuf.Timestamp
-	171, // 120: core.UserInfo.created_at:type_name -> google.protobuf.Timestamp
-	171, // 121: core.UserInfo.updated_at:type_name -> google.protobuf.Timestamp
+	148, // 117: core.OpenCreditEntryInfo.created_at:type_name -> google.protobuf.Timestamp
+	148, // 118: core.OpenCreditEntryInfo.funds_received_at:type_name -> google.protobuf.Timestamp
+	148, // 119: core.UserInfo.email_verified_at:type_name -> google.protobuf.Timestamp
+	148, // 120: core.UserInfo.created_at:type_name -> google.protobuf.Timestamp
+	148, // 121: core.UserInfo.updated_at:type_name -> google.protobuf.Timestamp
 	103, // 122: core.GetUserResponse.user:type_name -> core.UserInfo
 	103, // 123: core.BatchGetUsersByIDsResponse.users:type_name -> core.UserInfo
-	171, // 124: core.UpdateUserRequest.email_verified_at:type_name -> google.protobuf.Timestamp
+	148, // 124: core.UpdateUserRequest.email_verified_at:type_name -> google.protobuf.Timestamp
 	103, // 125: core.UpdateUserResponse.user:type_name -> core.UserInfo
 	0,   // 126: core.CheckDuplicateRequest.type:type_name -> core.DuplicateCheckType
 	1,   // 127: core.EmailRecordRequest.type:type_name -> core.EmailRecordType
 	124, // 128: core.ListCatalogProductLinesResponse.product_lines:type_name -> core.CatalogProductLineProto
-	169, // 129: core.ListCatalogProductLinesResponse.page_info:type_name -> core.PageInfo
+	146, // 129: core.ListCatalogProductLinesResponse.page_info:type_name -> core.PageInfo
 	127, // 130: core.ListCatalogProductsResponse.categories:type_name -> core.CatalogCategoryProto
-	169, // 131: core.ListCatalogProductsResponse.page_info:type_name -> core.PageInfo
+	146, // 131: core.ListCatalogProductsResponse.page_info:type_name -> core.PageInfo
 	128, // 132: core.CatalogCategoryProto.products:type_name -> core.CatalogProductProto
 	129, // 133: core.CatalogCategoryProto.properties:type_name -> core.CatalogPropertyProto
 	130, // 134: core.CatalogProductProto.attributes:type_name -> core.CatalogAttributeProto
-	171, // 135: core.DCLocationProto.created_at:type_name -> google.protobuf.Timestamp
-	171, // 136: core.DCLocationProto.updated_at:type_name -> google.protobuf.Timestamp
-	135, // 137: core.ListDCLocationsResponse.dc_locations:type_name -> core.DCLocationProto
-	169, // 138: core.ListDCLocationsResponse.page_info:type_name -> core.PageInfo
-	135, // 139: core.GetDCLocationResponse.dc_location:type_name -> core.DCLocationProto
-	135, // 140: core.CreateDCLocationResponse.dc_location:type_name -> core.DCLocationProto
-	135, // 141: core.UpdateDCLocationResponse.dc_location:type_name -> core.DCLocationProto
-	135, // 142: core.BatchGetDCLocationsByIDsResponse.dc_locations:type_name -> core.DCLocationProto
-	171, // 143: core.EDIRunProto.completed_at:type_name -> google.protobuf.Timestamp
-	171, // 144: core.EDIRunProto.created_at:type_name -> google.protobuf.Timestamp
-	171, // 145: core.EDIRunProto.updated_at:type_name -> google.protobuf.Timestamp
-	147, // 146: core.ListEDIRunsResponse.edi_runs:type_name -> core.EDIRunProto
-	169, // 147: core.ListEDIRunsResponse.page_info:type_name -> core.PageInfo
-	147, // 148: core.GetEDIRunResponse.edi_run:type_name -> core.EDIRunProto
-	147, // 149: core.BatchGetEDIRunsByIDsResponse.edi_runs:type_name -> core.EDIRunProto
-	171, // 150: core.ListInventoriesRequest.as_of:type_name -> google.protobuf.Timestamp
-	177, // 151: core.InventoryItemProto.item:type_name -> core.ItemInfo
-	155, // 152: core.ListInventoriesResponse.items:type_name -> core.InventoryItemProto
-	169, // 153: core.ListInventoriesResponse.page_info:type_name -> core.PageInfo
-	158, // 154: core.AnalyzeWeeksOfSalesResponse.items:type_name -> core.WeeksOfSalesItemProto
-	160, // 155: core.BulkReconcileItemsRequest.data:type_name -> core.BulkReconcileItemInput
-	162, // 156: core.BulkReconcileItemsResponse.reconciled_items:type_name -> core.ReconciledItemProto
-	163, // 157: core.BulkReconcileItemsResponse.skipped_items:type_name -> core.SkippedItemProto
-	164, // 158: core.BulkReconcileItemsResponse.errors:type_name -> core.ReconcileErrorProto
-	173, // 159: core.ValidateUnitsResponse.UnitsEntry.value:type_name -> core.UnitInfo
-	160, // [160:160] is the sub-list for method output_type
-	160, // [160:160] is the sub-list for method input_type
-	160, // [160:160] is the sub-list for extension type_name
-	160, // [160:160] is the sub-list for extension extendee
-	0,   // [0:160] is the sub-list for field type_name
+	148, // 135: core.ListInventoriesRequest.as_of:type_name -> google.protobuf.Timestamp
+	154, // 136: core.InventoryItemProto.item:type_name -> core.ItemInfo
+	132, // 137: core.ListInventoriesResponse.items:type_name -> core.InventoryItemProto
+	146, // 138: core.ListInventoriesResponse.page_info:type_name -> core.PageInfo
+	135, // 139: core.AnalyzeWeeksOfSalesResponse.items:type_name -> core.WeeksOfSalesItemProto
+	137, // 140: core.BulkReconcileItemsRequest.data:type_name -> core.BulkReconcileItemInput
+	139, // 141: core.BulkReconcileItemsResponse.reconciled_items:type_name -> core.ReconciledItemProto
+	140, // 142: core.BulkReconcileItemsResponse.skipped_items:type_name -> core.SkippedItemProto
+	141, // 143: core.BulkReconcileItemsResponse.errors:type_name -> core.ReconcileErrorProto
+	150, // 144: core.ValidateUnitsResponse.UnitsEntry.value:type_name -> core.UnitInfo
+	145, // [145:145] is the sub-list for method output_type
+	145, // [145:145] is the sub-list for method input_type
+	145, // [145:145] is the sub-list for extension type_name
+	145, // [145:145] is the sub-list for extension extendee
+	0,   // [0:145] is the sub-list for field type_name
 }
 
 func init() { file_core_core_lookups_proto_init() }
@@ -12084,20 +10805,16 @@ func file_core_core_lookups_proto_init() {
 	file_core_core_lookups_proto_msgTypes[118].OneofWrappers = []any{}
 	file_core_core_lookups_proto_msgTypes[120].OneofWrappers = []any{}
 	file_core_core_lookups_proto_msgTypes[123].OneofWrappers = []any{}
-	file_core_core_lookups_proto_msgTypes[134].OneofWrappers = []any{}
-	file_core_core_lookups_proto_msgTypes[140].OneofWrappers = []any{}
-	file_core_core_lookups_proto_msgTypes[145].OneofWrappers = []any{}
-	file_core_core_lookups_proto_msgTypes[146].OneofWrappers = []any{}
-	file_core_core_lookups_proto_msgTypes[152].OneofWrappers = []any{}
-	file_core_core_lookups_proto_msgTypes[153].OneofWrappers = []any{}
-	file_core_core_lookups_proto_msgTypes[155].OneofWrappers = []any{}
+	file_core_core_lookups_proto_msgTypes[129].OneofWrappers = []any{}
+	file_core_core_lookups_proto_msgTypes[130].OneofWrappers = []any{}
+	file_core_core_lookups_proto_msgTypes[132].OneofWrappers = []any{}
 	type x struct{}
 	out := protoimpl.TypeBuilder{
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_core_core_lookups_proto_rawDesc), len(file_core_core_lookups_proto_rawDesc)),
 			NumEnums:      2,
-			NumMessages:   166,
+			NumMessages:   143,
 			NumExtensions: 0,
 			NumServices:   0,
 		},

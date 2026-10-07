@@ -14,7 +14,6 @@ type Customer struct {
 	Name                string                      `audit:"name"`
 	Number              string                      `audit:"number"`
 	Status              constants.AccountStatusCode `audit:"status"`
-	IsEdiEnabled        bool                        `audit:"is_edi_enabled"`
 	IsParentAccount     bool                        `audit:"is_parent_account"`
 	CommissionPolicy    constants.CommissionPolicy  `audit:"commission_policy"`
 	FreightPolicy       constants.FreightPolicy     `audit:"freight_policy"`
@@ -178,7 +177,6 @@ type CreateCustomerParams struct {
 	Phone                 *string
 	URL                   *string
 	StatusCode            *string
-	IsEdiEnabled          *bool
 	CommissionPolicy      *constants.CommissionPolicy
 	FreightPolicy         *constants.FreightPolicy
 	DefaultLeadTimeDays   *int32
@@ -253,7 +251,6 @@ type UpdateCustomerParams struct {
 	Phone                    field.Clearable[string]
 	URL                      field.Clearable[string]
 	StatusCode               *string
-	IsEdiEnabled             *bool
 	CommissionPolicy         *constants.CommissionPolicy
 	FreightPolicy            *constants.FreightPolicy
 	DefaultLeadTimeDays      field.Clearable[int32]

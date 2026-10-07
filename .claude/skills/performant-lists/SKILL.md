@@ -4,12 +4,12 @@ description: >-
   Keyset list-endpoint indexing: scope-leading composites that preserve ORDER BY,
   FORCE INDEX when the optimizer filesorts, and how to add a user-facing filter
   without a table scan. Use when adding or changing a list endpoint, filter, sort,
-  cursor pagination query, or a Prisma @@index on a list table.
+  cursor pagination query, or an index on a list table.
 ---
 
 # Performant list endpoints
 
-Every query must stay under **100 ms** worst case. A list that filesorts or scans a tenant partition is a bug — add or fix the index before merging. Human spec: `docs/patterns/performant-list-endpoint-patterns.md`. Indexes are declared in `dashboard/packages/db/prisma/schema/schema.prisma` even when only Go/sqlc reads the table.
+Every query must stay under **100 ms** worst case. A list that filesorts or scans a tenant partition is a bug — add or fix the index before merging. Human spec: `docs/patterns/performant-list-endpoint-patterns.md`. Indexes are declared in goose schema migrations (`shared/db/migrations`).
 
 ## The query shape
 
@@ -35,7 +35,7 @@ Guarantee: for every request, some index (a) leads with scope, (b) can pin the m
 (scope_col, time_col DESC, id_col DESC)               -- baseline, no filter
 ```
 
-Prisma: always set `map:` (`sales_order_owner_status_created_idx`). Other active filters are residual — cheap because `LIMIT` bounds the window. You do **not** need `2^n` indexes.
+Always name the index (`sales_order_owner_status_created_idx`). Other active filters are residual — cheap because `LIMIT` bounds the window. You do **not** need `2^n` indexes.
 
 If the optimizer still picks a single-column filter index + filesort, `FORCE INDEX` the **entire** sort-free set. Do not list single-column filter indexes. `IGNORE INDEX` of the bad one is not enough; `STRAIGHT_JOIN` does not fix index choice.
 

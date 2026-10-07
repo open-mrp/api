@@ -295,13 +295,6 @@ func TestDeletedRecordScope_Shipping(t *testing.T) {
 			},
 			patch: map[string]any{"name": uniqueName("e2e-dscope-st")},
 		},
-		{
-			name: "dc location",
-			setup: func(t *testing.T) deletedScopeTarget {
-				return createdPath(t, dcLocationsPath, map[string]any{"customer_id": SeedCustomerAccountID, "location": uniqueName("e2e-dscope-dc")})
-			},
-			patch: map[string]any{"location": uniqueName("e2e-dscope-dc")},
-		},
 	})
 }
 

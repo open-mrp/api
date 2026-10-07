@@ -220,7 +220,7 @@ func TestDashInvoices_ListAndDetailExpandWhatTheDashboardRequests(t *testing.T) 
 	assert.Nil(t, detail["note"])
 	assert.Equal(t, "normal", jsonField(detail, "priority"))
 	assert.Equal(t, "unpaid", jsonField(detail, "payment_status"))
-	for _, flag := range []string{"is_paid_in_full", "has_been_sent", "is_edi_sent", "accepts_invoice_emails", "customer_is_edi_enabled"} {
+	for _, flag := range []string{"is_paid_in_full", "has_been_sent", "accepts_invoice_emails"} {
 		assert.Equal(t, "false", jsonField(detail, flag), flag)
 	}
 	assert.True(t, decimal.RequireFromString(jsonField(detail, "total_invoiced")).IsPositive())
@@ -297,7 +297,6 @@ func TestDashInvoices_UpdateRefusesMalformedBodies(t *testing.T) {
 
 	for field, value := range map[string]any{
 		"has_been_sent":   "yes",
-		"is_edi_sent":     1,
 		"is_paid_in_full": "true",
 		"note":            123,
 	} {
@@ -305,7 +304,7 @@ func TestDashInvoices_UpdateRefusesMalformedBodies(t *testing.T) {
 		require.NoError(t, err)
 		dashInvoicesRequireBadRequest(t, status, body, "invalid_format", field)
 	}
-	for _, flag := range []string{"has_been_sent", "is_edi_sent"} {
+	for _, flag := range []string{"has_been_sent"} {
 		status, body, err := apiClient.Patch(path, map[string]any{flag: nil}, newIdempotencyKey())
 		require.NoError(t, err)
 		requireStatus(t, http.StatusBadRequest, status, body)
@@ -317,7 +316,7 @@ func TestDashInvoices_UpdateRefusesMalformedBodies(t *testing.T) {
 	requireErrorResponse(t, body, "resource_not_found", "invalid_request_error")
 
 	after := getInvoice(t, inv.invoiceID)
-	for _, key := range []string{"note", "has_been_sent", "is_edi_sent", "is_paid_in_full", "payment_status", "updated_at"} {
+	for _, key := range []string{"note", "has_been_sent", "is_paid_in_full", "payment_status", "updated_at"} {
 		assert.Equal(t, before[key], after[key], key)
 	}
 	assert.Zero(t, dashInvoicesAuditedUpdates(t, inv.invoiceID), "no refused PATCH was audited")

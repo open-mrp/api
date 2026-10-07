@@ -471,7 +471,6 @@ func salesOrderLineToProto(l *domain.SalesOrderLine) *pb.SalesOrderLineInfo {
 		ProductTypeCode:                      l.ProductTypeCode,
 		ItemId:                               l.ItemID,
 		ItemSku:                              l.ItemSKU,
-		EdiLineItemId:                        l.EdiLineItemID,
 		QuantityId:                           l.QuantityID,
 		QuantityValue:                        l.QuantityValue,
 		QuantityUnitId:                       l.QuantityUnitID,
@@ -975,7 +974,6 @@ func (h *salesGRPCHandler) CreateSalesOrderLine(ctx context.Context, req *pb.Cre
 		UnitCostValue:              req.UnitCostValue,
 		UnitCostNumeratorUnitID:    req.UnitCostNumeratorUnitId,
 		UnitCostDenominatorUnitID:  req.UnitCostDenominatorUnitId,
-		EdiLineItemID:              req.EdiLineItemId,
 	}
 
 	line, apiErr := h.salesOrderLineSvc.CreateSalesOrderLine(ctx, params)
@@ -1012,7 +1010,6 @@ func (h *salesGRPCHandler) UpdateSalesOrderLine(ctx context.Context, req *pb.Upd
 		UnitCostValue:              req.UnitCostValue,
 		UnitCostNumeratorUnitID:    req.UnitCostNumeratorUnitId,
 		UnitCostDenominatorUnitID:  req.UnitCostDenominatorUnitId,
-		EdiLineItemID:              req.EdiLineItemId,
 	}
 
 	line, apiErr := h.salesOrderLineSvc.UpdateSalesOrderLine(ctx, params)

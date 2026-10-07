@@ -5156,7 +5156,6 @@ type CustomerProto struct {
 	Name                  string                        `protobuf:"bytes,2,opt,name=name,proto3" json:"name,omitempty"`
 	Number                string                        `protobuf:"bytes,3,opt,name=number,proto3" json:"number,omitempty"`
 	Status                string                        `protobuf:"bytes,4,opt,name=status,proto3" json:"status,omitempty"`
-	IsEdiEnabled          bool                          `protobuf:"varint,5,opt,name=is_edi_enabled,json=isEdiEnabled,proto3" json:"is_edi_enabled,omitempty"`
 	IsParentAccount       bool                          `protobuf:"varint,6,opt,name=is_parent_account,json=isParentAccount,proto3" json:"is_parent_account,omitempty"`
 	CommissionPolicy      string                        `protobuf:"bytes,7,opt,name=commission_policy,json=commissionPolicy,proto3" json:"commission_policy,omitempty"`
 	FreightPolicy         string                        `protobuf:"bytes,8,opt,name=freight_policy,json=freightPolicy,proto3" json:"freight_policy,omitempty"`
@@ -5248,13 +5247,6 @@ func (x *CustomerProto) GetStatus() string {
 		return x.Status
 	}
 	return ""
-}
-
-func (x *CustomerProto) GetIsEdiEnabled() bool {
-	if x != nil {
-		return x.IsEdiEnabled
-	}
-	return false
 }
 
 func (x *CustomerProto) GetIsParentAccount() bool {
@@ -6903,7 +6895,6 @@ type CreateCustomerRequest struct {
 	Phone                 *string                     `protobuf:"bytes,5,opt,name=phone,proto3,oneof" json:"phone,omitempty"`
 	Url                   *string                     `protobuf:"bytes,6,opt,name=url,proto3,oneof" json:"url,omitempty"`
 	StatusCode            *string                     `protobuf:"bytes,7,opt,name=status_code,json=statusCode,proto3,oneof" json:"status_code,omitempty"`
-	IsEdiEnabled          *bool                       `protobuf:"varint,8,opt,name=is_edi_enabled,json=isEdiEnabled,proto3,oneof" json:"is_edi_enabled,omitempty"`
 	CommissionPolicy      *string                     `protobuf:"bytes,9,opt,name=commission_policy,json=commissionPolicy,proto3,oneof" json:"commission_policy,omitempty"`
 	FreightPolicy         *string                     `protobuf:"bytes,10,opt,name=freight_policy,json=freightPolicy,proto3,oneof" json:"freight_policy,omitempty"`
 	DefaultCarrierId      *string                     `protobuf:"bytes,11,opt,name=default_carrier_id,json=defaultCarrierId,proto3,oneof" json:"default_carrier_id,omitempty"`
@@ -7007,13 +6998,6 @@ func (x *CreateCustomerRequest) GetStatusCode() string {
 		return *x.StatusCode
 	}
 	return ""
-}
-
-func (x *CreateCustomerRequest) GetIsEdiEnabled() bool {
-	if x != nil && x.IsEdiEnabled != nil {
-		return *x.IsEdiEnabled
-	}
-	return false
 }
 
 func (x *CreateCustomerRequest) GetCommissionPolicy() string {
@@ -7224,7 +7208,6 @@ type UpdateCustomerRequest struct {
 	Phone                    *StringPatch           `protobuf:"bytes,6,opt,name=phone,proto3,oneof" json:"phone,omitempty"`
 	Url                      *StringPatch           `protobuf:"bytes,7,opt,name=url,proto3,oneof" json:"url,omitempty"`
 	StatusCode               *string                `protobuf:"bytes,8,opt,name=status_code,json=statusCode,proto3,oneof" json:"status_code,omitempty"`
-	IsEdiEnabled             *bool                  `protobuf:"varint,9,opt,name=is_edi_enabled,json=isEdiEnabled,proto3,oneof" json:"is_edi_enabled,omitempty"`
 	CommissionPolicy         *string                `protobuf:"bytes,10,opt,name=commission_policy,json=commissionPolicy,proto3,oneof" json:"commission_policy,omitempty"`
 	FreightPolicy            *string                `protobuf:"bytes,11,opt,name=freight_policy,json=freightPolicy,proto3,oneof" json:"freight_policy,omitempty"`
 	DefaultCarrierId         *string                `protobuf:"bytes,12,opt,name=default_carrier_id,json=defaultCarrierId,proto3,oneof" json:"default_carrier_id,omitempty"`
@@ -7333,13 +7316,6 @@ func (x *UpdateCustomerRequest) GetStatusCode() string {
 		return *x.StatusCode
 	}
 	return ""
-}
-
-func (x *UpdateCustomerRequest) GetIsEdiEnabled() bool {
-	if x != nil && x.IsEdiEnabled != nil {
-		return *x.IsEdiEnabled
-	}
-	return false
 }
 
 func (x *UpdateCustomerRequest) GetCommissionPolicy() string {
@@ -11734,13 +11710,12 @@ const file_core_core_identity_context_proto_rawDesc = "" +
 	"\n" +
 	"\b_role_idB\x10\n" +
 	"\x0e_department_idB\x0f\n" +
-	"\r_last_used_at\"\xb1\x11\n" +
+	"\r_last_used_at\"\x91\x11\n" +
 	"\rCustomerProto\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x12\n" +
 	"\x04name\x18\x02 \x01(\tR\x04name\x12\x16\n" +
 	"\x06number\x18\x03 \x01(\tR\x06number\x12\x16\n" +
-	"\x06status\x18\x04 \x01(\tR\x06status\x12$\n" +
-	"\x0eis_edi_enabled\x18\x05 \x01(\bR\fisEdiEnabled\x12*\n" +
+	"\x06status\x18\x04 \x01(\tR\x06status\x12*\n" +
 	"\x11is_parent_account\x18\x06 \x01(\bR\x0fisParentAccount\x12+\n" +
 	"\x11commission_policy\x18\a \x01(\tR\x10commissionPolicy\x12%\n" +
 	"\x0efreight_policy\x18\b \x01(\tR\rfreightPolicy\x12\x17\n" +
@@ -11793,7 +11768,7 @@ const file_core_core_identity_context_proto_rawDesc = "" +
 	"\r_credit_limitB\x19\n" +
 	"\x17_default_lead_time_daysB\x16\n" +
 	"\x14_receive_calendar_idB\x1a\n" +
-	"\x18_fulfillment_policy_code\"\x84\x02\n" +
+	"\x18_fulfillment_policy_codeJ\x04\b\x05\x10\x06\"\x84\x02\n" +
 	"\x14CustomerCarrierProto\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x12\n" +
 	"\x04name\x18\x02 \x01(\tR\x04name\x12*\n" +
@@ -11976,7 +11951,7 @@ const file_core_core_identity_context_proto_rawDesc = "" +
 	"\x0e_street_line_2B\v\n" +
 	"\t_localityB\b\n" +
 	"\x06_stateB\x0e\n" +
-	"\f_postal_code\"\x92\x10\n" +
+	"\f_postal_code\"\xda\x0f\n" +
 	"\x15CreateCustomerRequest\x12\x12\n" +
 	"\x04name\x18\x01 \x01(\tR\x04name\x12\x1b\n" +
 	"\x06number\x18\x02 \x01(\tH\x00R\x06number\x88\x01\x01\x12\x17\n" +
@@ -11985,39 +11960,37 @@ const file_core_core_identity_context_proto_rawDesc = "" +
 	"\x05phone\x18\x05 \x01(\tH\x03R\x05phone\x88\x01\x01\x12\x15\n" +
 	"\x03url\x18\x06 \x01(\tH\x04R\x03url\x88\x01\x01\x12$\n" +
 	"\vstatus_code\x18\a \x01(\tH\x05R\n" +
-	"statusCode\x88\x01\x01\x12)\n" +
-	"\x0eis_edi_enabled\x18\b \x01(\bH\x06R\fisEdiEnabled\x88\x01\x01\x120\n" +
-	"\x11commission_policy\x18\t \x01(\tH\aR\x10commissionPolicy\x88\x01\x01\x12*\n" +
+	"statusCode\x88\x01\x01\x120\n" +
+	"\x11commission_policy\x18\t \x01(\tH\x06R\x10commissionPolicy\x88\x01\x01\x12*\n" +
 	"\x0efreight_policy\x18\n" +
-	" \x01(\tH\bR\rfreightPolicy\x88\x01\x01\x121\n" +
-	"\x12default_carrier_id\x18\v \x01(\tH\tR\x10defaultCarrierId\x88\x01\x01\x12<\n" +
-	"\x18default_service_level_id\x18\f \x01(\tH\n" +
-	"R\x15defaultServiceLevelId\x88\x01\x01\x12:\n" +
-	"\x17default_payment_term_id\x18\r \x01(\tH\vR\x14defaultPaymentTermId\x88\x01\x01\x12<\n" +
-	"\x18default_shipping_term_id\x18\x0e \x01(\tH\fR\x15defaultShippingTermId\x88\x01\x01\x127\n" +
-	"\x15default_priority_code\x18\x0f \x01(\tH\rR\x13defaultPriorityCode\x88\x01\x01\x124\n" +
-	"\x14default_sales_rep_id\x18\x10 \x01(\tH\x0eR\x11defaultSalesRepId\x88\x01\x01\x120\n" +
-	"\x12bill_to_address_id\x18\x11 \x01(\tH\x0fR\x0fbillToAddressId\x88\x01\x01\x120\n" +
-	"\x12ship_to_address_id\x18\x12 \x01(\tH\x10R\x0fshipToAddressId\x88\x01\x01\x127\n" +
+	" \x01(\tH\aR\rfreightPolicy\x88\x01\x01\x121\n" +
+	"\x12default_carrier_id\x18\v \x01(\tH\bR\x10defaultCarrierId\x88\x01\x01\x12<\n" +
+	"\x18default_service_level_id\x18\f \x01(\tH\tR\x15defaultServiceLevelId\x88\x01\x01\x12:\n" +
+	"\x17default_payment_term_id\x18\r \x01(\tH\n" +
+	"R\x14defaultPaymentTermId\x88\x01\x01\x12<\n" +
+	"\x18default_shipping_term_id\x18\x0e \x01(\tH\vR\x15defaultShippingTermId\x88\x01\x01\x127\n" +
+	"\x15default_priority_code\x18\x0f \x01(\tH\fR\x13defaultPriorityCode\x88\x01\x01\x124\n" +
+	"\x14default_sales_rep_id\x18\x10 \x01(\tH\rR\x11defaultSalesRepId\x88\x01\x01\x120\n" +
+	"\x12bill_to_address_id\x18\x11 \x01(\tH\x0eR\x0fbillToAddressId\x88\x01\x01\x120\n" +
+	"\x12ship_to_address_id\x18\x12 \x01(\tH\x0fR\x0fshipToAddressId\x88\x01\x01\x127\n" +
 	"\x18customer_price_group_ids\x18\x13 \x03(\tR\x15customerPriceGroupIds\x128\n" +
-	"\x16customer_type_group_id\x18\x14 \x01(\tH\x11R\x13customerTypeGroupId\x88\x01\x01\x125\n" +
-	"\x14carrier_billing_type\x18\x15 \x01(\tH\x12R\x12carrierBillingType\x88\x01\x01\x12;\n" +
-	"\x17carrier_billing_account\x18\x16 \x01(\tH\x13R\x15carrierBillingAccount\x88\x01\x01\x12M\n" +
-	"\x0fbill_to_address\x18\x17 \x01(\v2 .core.CreateCustomerAddressInputH\x14R\rbillToAddress\x88\x01\x01\x12M\n" +
-	"\x0fship_to_address\x18\x18 \x01(\v2 .core.CreateCustomerAddressInputH\x15R\rshipToAddress\x88\x01\x01\x121\n" +
-	"\x12credit_limit_value\x18\x19 \x01(\tH\x16R\x10creditLimitValue\x88\x01\x01\x124\n" +
-	"\x14credit_limit_unit_id\x18\x1a \x01(\tH\x17R\x11creditLimitUnitId\x88\x01\x01\x12\x1a\n" +
+	"\x16customer_type_group_id\x18\x14 \x01(\tH\x10R\x13customerTypeGroupId\x88\x01\x01\x125\n" +
+	"\x14carrier_billing_type\x18\x15 \x01(\tH\x11R\x12carrierBillingType\x88\x01\x01\x12;\n" +
+	"\x17carrier_billing_account\x18\x16 \x01(\tH\x12R\x15carrierBillingAccount\x88\x01\x01\x12M\n" +
+	"\x0fbill_to_address\x18\x17 \x01(\v2 .core.CreateCustomerAddressInputH\x13R\rbillToAddress\x88\x01\x01\x12M\n" +
+	"\x0fship_to_address\x18\x18 \x01(\v2 .core.CreateCustomerAddressInputH\x14R\rshipToAddress\x88\x01\x01\x121\n" +
+	"\x12credit_limit_value\x18\x19 \x01(\tH\x15R\x10creditLimitValue\x88\x01\x01\x124\n" +
+	"\x14credit_limit_unit_id\x18\x1a \x01(\tH\x16R\x11creditLimitUnitId\x88\x01\x01\x12\x1a\n" +
 	"\bincludes\x18\x1b \x03(\tR\bincludes\x128\n" +
-	"\x16default_lead_time_days\x18\x1c \x01(\x05H\x18R\x13defaultLeadTimeDays\x88\x01\x01\x123\n" +
-	"\x13receive_calendar_id\x18\x1d \x01(\tH\x19R\x11receiveCalendarId\x88\x01\x01\x12;\n" +
-	"\x17fulfillment_policy_code\x18\x1e \x01(\tH\x1aR\x15fulfillmentPolicyCode\x88\x01\x01B\t\n" +
+	"\x16default_lead_time_days\x18\x1c \x01(\x05H\x17R\x13defaultLeadTimeDays\x88\x01\x01\x123\n" +
+	"\x13receive_calendar_id\x18\x1d \x01(\tH\x18R\x11receiveCalendarId\x88\x01\x01\x12;\n" +
+	"\x17fulfillment_policy_code\x18\x1e \x01(\tH\x19R\x15fulfillmentPolicyCode\x88\x01\x01B\t\n" +
 	"\a_numberB\a\n" +
 	"\x05_noteB\b\n" +
 	"\x06_emailB\b\n" +
 	"\x06_phoneB\x06\n" +
 	"\x04_urlB\x0e\n" +
-	"\f_status_codeB\x11\n" +
-	"\x0f_is_edi_enabledB\x14\n" +
+	"\f_status_codeB\x14\n" +
 	"\x12_commission_policyB\x11\n" +
 	"\x0f_freight_policyB\x15\n" +
 	"\x13_default_carrier_idB\x1b\n" +
@@ -12037,9 +12010,9 @@ const file_core_core_identity_context_proto_rawDesc = "" +
 	"\x15_credit_limit_unit_idB\x19\n" +
 	"\x17_default_lead_time_daysB\x16\n" +
 	"\x14_receive_calendar_idB\x1a\n" +
-	"\x18_fulfillment_policy_code\"I\n" +
+	"\x18_fulfillment_policy_codeJ\x04\b\b\x10\t\"I\n" +
 	"\x16CreateCustomerResponse\x12/\n" +
-	"\bcustomer\x18\x01 \x01(\v2\x13.core.CustomerProtoR\bcustomer\"\x84\x10\n" +
+	"\bcustomer\x18\x01 \x01(\v2\x13.core.CustomerProtoR\bcustomer\"\xcc\x0f\n" +
 	"\x15UpdateCustomerRequest\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x17\n" +
 	"\x04name\x18\x02 \x01(\tH\x00R\x04name\x88\x01\x01\x12\x1b\n" +
@@ -12049,28 +12022,27 @@ const file_core_core_identity_context_proto_rawDesc = "" +
 	"\x05phone\x18\x06 \x01(\v2\x11.core.StringPatchH\x04R\x05phone\x88\x01\x01\x12(\n" +
 	"\x03url\x18\a \x01(\v2\x11.core.StringPatchH\x05R\x03url\x88\x01\x01\x12$\n" +
 	"\vstatus_code\x18\b \x01(\tH\x06R\n" +
-	"statusCode\x88\x01\x01\x12)\n" +
-	"\x0eis_edi_enabled\x18\t \x01(\bH\aR\fisEdiEnabled\x88\x01\x01\x120\n" +
+	"statusCode\x88\x01\x01\x120\n" +
 	"\x11commission_policy\x18\n" +
-	" \x01(\tH\bR\x10commissionPolicy\x88\x01\x01\x12*\n" +
-	"\x0efreight_policy\x18\v \x01(\tH\tR\rfreightPolicy\x88\x01\x01\x121\n" +
-	"\x12default_carrier_id\x18\f \x01(\tH\n" +
-	"R\x10defaultCarrierId\x88\x01\x01\x12O\n" +
-	"\x18default_service_level_id\x18\r \x01(\v2\x11.core.StringPatchH\vR\x15defaultServiceLevelId\x88\x01\x01\x12:\n" +
-	"\x17default_payment_term_id\x18\x0e \x01(\tH\fR\x14defaultPaymentTermId\x88\x01\x01\x12<\n" +
-	"\x18default_shipping_term_id\x18\x0f \x01(\tH\rR\x15defaultShippingTermId\x88\x01\x01\x127\n" +
-	"\x15default_priority_code\x18\x10 \x01(\tH\x0eR\x13defaultPriorityCode\x88\x01\x01\x12G\n" +
-	"\x14default_sales_rep_id\x18\x11 \x01(\v2\x11.core.StringPatchH\x0fR\x11defaultSalesRepId\x88\x01\x01\x12C\n" +
-	"\x12bill_to_address_id\x18\x12 \x01(\v2\x11.core.StringPatchH\x10R\x0fbillToAddressId\x88\x01\x01\x12C\n" +
-	"\x12ship_to_address_id\x18\x13 \x01(\v2\x11.core.StringPatchH\x11R\x0fshipToAddressId\x88\x01\x01\x127\n" +
+	" \x01(\tH\aR\x10commissionPolicy\x88\x01\x01\x12*\n" +
+	"\x0efreight_policy\x18\v \x01(\tH\bR\rfreightPolicy\x88\x01\x01\x121\n" +
+	"\x12default_carrier_id\x18\f \x01(\tH\tR\x10defaultCarrierId\x88\x01\x01\x12O\n" +
+	"\x18default_service_level_id\x18\r \x01(\v2\x11.core.StringPatchH\n" +
+	"R\x15defaultServiceLevelId\x88\x01\x01\x12:\n" +
+	"\x17default_payment_term_id\x18\x0e \x01(\tH\vR\x14defaultPaymentTermId\x88\x01\x01\x12<\n" +
+	"\x18default_shipping_term_id\x18\x0f \x01(\tH\fR\x15defaultShippingTermId\x88\x01\x01\x127\n" +
+	"\x15default_priority_code\x18\x10 \x01(\tH\rR\x13defaultPriorityCode\x88\x01\x01\x12G\n" +
+	"\x14default_sales_rep_id\x18\x11 \x01(\v2\x11.core.StringPatchH\x0eR\x11defaultSalesRepId\x88\x01\x01\x12C\n" +
+	"\x12bill_to_address_id\x18\x12 \x01(\v2\x11.core.StringPatchH\x0fR\x0fbillToAddressId\x88\x01\x01\x12C\n" +
+	"\x12ship_to_address_id\x18\x13 \x01(\v2\x11.core.StringPatchH\x10R\x0fshipToAddressId\x88\x01\x01\x127\n" +
 	"\x18customer_price_group_ids\x18\x14 \x03(\tR\x15customerPriceGroupIds\x128\n" +
-	"\x16customer_type_group_id\x18\x15 \x01(\tH\x12R\x13customerTypeGroupId\x88\x01\x01\x125\n" +
-	"\x14carrier_billing_type\x18\x16 \x01(\tH\x13R\x12carrierBillingType\x88\x01\x01\x12N\n" +
-	"\x17carrier_billing_account\x18\x17 \x01(\v2\x11.core.StringPatchH\x14R\x15carrierBillingAccount\x88\x01\x01\x12>\n" +
+	"\x16customer_type_group_id\x18\x15 \x01(\tH\x11R\x13customerTypeGroupId\x88\x01\x01\x125\n" +
+	"\x14carrier_billing_type\x18\x16 \x01(\tH\x12R\x12carrierBillingType\x88\x01\x01\x12N\n" +
+	"\x17carrier_billing_account\x18\x17 \x01(\v2\x11.core.StringPatchH\x13R\x15carrierBillingAccount\x88\x01\x01\x12>\n" +
 	"\x1chas_customer_price_group_ids\x18\x18 \x01(\bR\x18hasCustomerPriceGroupIds\x12;\n" +
-	"\fcredit_limit\x18\x19 \x01(\v2\x13.core.QuantityPatchH\x15R\vcreditLimit\x88\x01\x01\x12\x1a\n" +
+	"\fcredit_limit\x18\x19 \x01(\v2\x13.core.QuantityPatchH\x14R\vcreditLimit\x88\x01\x01\x12\x1a\n" +
 	"\bincludes\x18\x1a \x03(\tR\bincludes\x12J\n" +
-	"\x16default_lead_time_days\x18\x1b \x01(\v2\x10.core.Int32PatchH\x16R\x13defaultLeadTimeDays\x88\x01\x01\x12A\n" +
+	"\x16default_lead_time_days\x18\x1b \x01(\v2\x10.core.Int32PatchH\x15R\x13defaultLeadTimeDays\x88\x01\x01\x12A\n" +
 	"\x13receive_calendar_id\x18\x1e \x01(\v2\x11.core.StringPatchR\x11receiveCalendarId\x12I\n" +
 	"\x17fulfillment_policy_code\x18\x1f \x01(\v2\x11.core.StringPatchR\x15fulfillmentPolicyCodeB\a\n" +
 	"\x05_nameB\t\n" +
@@ -12079,8 +12051,7 @@ const file_core_core_identity_context_proto_rawDesc = "" +
 	"\x06_emailB\b\n" +
 	"\x06_phoneB\x06\n" +
 	"\x04_urlB\x0e\n" +
-	"\f_status_codeB\x11\n" +
-	"\x0f_is_edi_enabledB\x14\n" +
+	"\f_status_codeB\x14\n" +
 	"\x12_commission_policyB\x11\n" +
 	"\x0f_freight_policyB\x15\n" +
 	"\x13_default_carrier_idB\x1b\n" +
@@ -12095,7 +12066,8 @@ const file_core_core_identity_context_proto_rawDesc = "" +
 	"\x15_carrier_billing_typeB\x1a\n" +
 	"\x18_carrier_billing_accountB\x0f\n" +
 	"\r_credit_limitB\x19\n" +
-	"\x17_default_lead_time_days\"I\n" +
+	"\x17_default_lead_time_daysJ\x04\b\t\x10\n" +
+	"\"I\n" +
 	"\x16UpdateCustomerResponse\x12/\n" +
 	"\bcustomer\x18\x01 \x01(\v2\x13.core.CustomerProtoR\bcustomer\",\n" +
 	"\x1aGetCustomerLeadTimeRequest\x12\x0e\n" +

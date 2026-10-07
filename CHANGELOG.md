@@ -1,5 +1,12 @@
 # Changelog
 
+## [4.1.0](https://github.com/open-mrp/api/compare/v4.0.0...v4.1.0) (2026-10-07)
+
+
+### Features
+
+* drop the legacy EDI tables and columns ([#275](https://github.com/open-mrp/api/issues/275)) ([c459716](https://github.com/open-mrp/api/commit/c4597169ddb2edd76414a7e7f68fdf3d8e17aa64))
+
 ## [4.0.0](https://github.com/open-mrp/api/compare/v3.1.1...v4.0.0) (2026-10-07)
 
 

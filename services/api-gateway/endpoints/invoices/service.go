@@ -12,6 +12,7 @@ import (
 	"github.com/open-mrp/api/shared/constants"
 	apierror "github.com/open-mrp/api/shared/errors"
 	"github.com/open-mrp/api/shared/field"
+	"github.com/open-mrp/api/shared/metadata"
 	pb "github.com/open-mrp/api/shared/proto/core"
 	"github.com/open-mrp/api/shared/tracing"
 	"google.golang.org/grpc"
@@ -142,6 +143,7 @@ func (m *invoiceSvcImpl) UpdateInvoice(ctx context.Context, req *UpdateInvoiceRe
 		HasBeenSent:  req.HasBeenSent.Ptr(),
 		IsEdiSent:    req.IsEdiSent.Ptr(),
 		IsPaidInFull: req.IsPaidInFull.Ptr(),
+		Metadata:     metadata.PatchToProto(req.Metadata),
 		Includes:     resourcekit.FilterIncludes(ctx, invoiceIncludes...),
 	}
 
@@ -223,6 +225,7 @@ func invoiceFromProto(ctx context.Context, d *pb.InvoiceInfo) apiresource.Invoic
 		PaymentStatus:        invoicePaymentStatus(d.IsPaidInFull, d.IsOverPaid),
 		IsPaidInFull:         d.IsPaidInFull,
 		IsEdiSent:            d.IsEdiSent,
+		Metadata:             apiresource.MetadataFromProto(d.Metadata),
 		HasBeenSent:          d.HasBeenSent,
 		TotalInvoiced:        d.TotalInvoiced,
 		AcceptsInvoiceEmails: d.AcceptsInvoiceEmails,
@@ -346,6 +349,7 @@ func buildSalesOrderLineForInvoice(l *pb.InvoiceLineInfo) *apiresource.SalesOrde
 		LineItemNumber:     l.GetOrderLineItemNumber(),
 		ProductSKU:         l.GetOrderLineItemSku(),
 		ProductDescription: l.OrderLineDescription,
+		Metadata:           apiresource.MetadataFromProto(l.OrderLineMetadata),
 		CreatedAt:          now,
 		UpdatedAt:          grpcutil.TimestampToTime(l.UpdatedAt),
 	}

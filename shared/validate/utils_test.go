@@ -1201,3 +1201,38 @@ func TestValidateSlugTag(t *testing.T) {
 		t.Errorf("an unset slug must pass, got %v", err)
 	}
 }
+
+type topLevelMapTestStruct struct {
+	Metadata map[string]*string `json:"metadata,omitzero" validate:"omitempty,dive,keys,max=3,excludesall=[],endkeys,omitempty,max=5"`
+}
+
+// A top-level map entry used to be reported by its Go field name ("Metadata[key]"), which the caller never
+// sent; it is named by the JSON field plus the key, like a nested one.
+func TestValidate_NamesTopLevelMapEntriesByTheirJSONName(t *testing.T) {
+	t.Parallel()
+
+	long := "toolong"
+	for name, tc := range map[string]struct {
+		in      map[string]*string
+		param   string
+		message string
+	}{
+		"key too long":      {map[string]*string{"abcd": nil}, "metadata[abcd]", "at most 3 characters"},
+		"key with brackets": {map[string]*string{"a[": nil}, "metadata[a[]", "must not contain any of these characters: []."},
+		"value too long":    {map[string]*string{"k": &long}, "metadata[k]", "at most 5 characters"},
+	} {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+			err := Validate(&topLevelMapTestStruct{Metadata: tc.in})
+			if err == nil {
+				t.Fatal("expected validation to fail")
+			}
+			if err.Param != tc.param {
+				t.Errorf("param = %q, want %q", err.Param, tc.param)
+			}
+			if !strings.Contains(err.PublicMessage, tc.message) {
+				t.Errorf("message %q does not contain %q", err.PublicMessage, tc.message)
+			}
+		})
+	}
+}

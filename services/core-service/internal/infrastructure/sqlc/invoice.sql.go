@@ -150,6 +150,7 @@ SELECT
     inv.has_been_sent,
     inv.created_at,
     inv.updated_at,
+    CAST(inv.metadata AS CHAR) AS metadata,
     so.id AS order_id,
     so.number AS order_number,
     so.priority_code,
@@ -233,6 +234,7 @@ type GetInvoiceRow struct {
 	HasBeenSent                     bool
 	CreatedAt                       time.Time
 	UpdatedAt                       time.Time
+	Metadata                        interface{}
 	OrderID                         string
 	OrderNumber                     string
 	PriorityCode                    string
@@ -289,6 +291,7 @@ func (q *Queries) GetInvoice(ctx context.Context, arg GetInvoiceParams) (GetInvo
 		&i.HasBeenSent,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.Metadata,
 		&i.OrderID,
 		&i.OrderNumber,
 		&i.PriorityCode,
@@ -562,7 +565,8 @@ SELECT
     oq.value AS order_line_quantity_ordered,
     -- The order line's own SKU, which the order acknowledgement prints too; not every line has an item.
     sol.product_sku AS order_line_item_sku,
-    sol.product_description AS order_line_description
+    sol.product_description AS order_line_description,
+    CAST(sol.metadata AS CHAR) AS order_line_metadata
 FROM invoice_line il
 JOIN quantity q ON q.id = il.quantity_id
 JOIN unit qu ON qu.id = q.unit_id
@@ -600,6 +604,7 @@ type GetInvoiceLinesRow struct {
 	OrderLineQuantityOrdered             string
 	OrderLineItemSku                     string
 	OrderLineDescription                 sql.NullString
+	OrderLineMetadata                    interface{}
 }
 
 func (q *Queries) GetInvoiceLines(ctx context.Context, invoiceID string) ([]GetInvoiceLinesRow, error) {
@@ -636,6 +641,7 @@ func (q *Queries) GetInvoiceLines(ctx context.Context, invoiceID string) ([]GetI
 			&i.OrderLineQuantityOrdered,
 			&i.OrderLineItemSku,
 			&i.OrderLineDescription,
+			&i.OrderLineMetadata,
 		); err != nil {
 			return nil, err
 		}
@@ -997,6 +1003,7 @@ SELECT
     inv.has_been_sent,
     inv.created_at,
     inv.updated_at,
+    CAST(inv.metadata AS CHAR) AS metadata,
     so.id AS order_id,
     so.number AS order_number,
     so.priority_code,
@@ -1080,6 +1087,7 @@ type ListInvoicesByIDsRow struct {
 	HasBeenSent                     bool
 	CreatedAt                       time.Time
 	UpdatedAt                       time.Time
+	Metadata                        interface{}
 	OrderID                         string
 	OrderNumber                     string
 	PriorityCode                    string
@@ -1153,6 +1161,7 @@ func (q *Queries) ListInvoicesByIDs(ctx context.Context, arg ListInvoicesByIDsPa
 			&i.HasBeenSent,
 			&i.CreatedAt,
 			&i.UpdatedAt,
+			&i.Metadata,
 			&i.OrderID,
 			&i.OrderNumber,
 			&i.PriorityCode,
@@ -1232,6 +1241,9 @@ SET
     is_paid_in_full = COALESCE(?, is_paid_in_full),
     -- Who set the flag by hand, recorded only when this update sets it.
     paid_in_full_marked_by_id = IF(? IS NULL, paid_in_full_marked_by_id, ?),
+    -- A merge patch: keys set to null are removed, keys not sent are kept. metadata_clear merges into
+    -- an empty object instead, so only the patch's own keys remain.
+    metadata = IF(? IS NULL, metadata, JSON_MERGE_PATCH(IF(?, JSON_OBJECT(), COALESCE(metadata, JSON_OBJECT())), ?)),
     updated_at = CURRENT_TIMESTAMP(3)
 WHERE id = ?
 AND account_id = ?
@@ -1244,6 +1256,8 @@ type UpdateInvoiceParams struct {
 	IsEdiSent            sql.NullBool
 	IsPaidInFull         sql.NullBool
 	PaidInFullMarkedByID interface{}
+	MetadataPatch        sql.NullString
+	MetadataClear        interface{}
 	ID                   string
 	AccountID            string
 }
@@ -1257,6 +1271,9 @@ func (q *Queries) UpdateInvoice(ctx context.Context, arg UpdateInvoiceParams) er
 		arg.IsPaidInFull,
 		arg.IsPaidInFull,
 		arg.PaidInFullMarkedByID,
+		arg.MetadataPatch,
+		arg.MetadataClear,
+		arg.MetadataPatch,
 		arg.ID,
 		arg.AccountID,
 	)

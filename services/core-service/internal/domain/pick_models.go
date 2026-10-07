@@ -105,6 +105,7 @@ type PickLine struct {
 	OrderLineItemNumber       int32
 	OrderLineSKU              string
 	OrderLineDescription      *string
+	OrderLineMetadata         map[string]string
 	OrderLineProductID        *string
 	OrderedQuantityID         string
 	OrderedQuantityValue      string

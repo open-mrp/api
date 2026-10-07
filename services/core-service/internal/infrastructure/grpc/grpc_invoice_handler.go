@@ -6,6 +6,7 @@ import (
 	"github.com/open-mrp/api/services/core-service/internal/domain"
 	"github.com/open-mrp/api/shared/contracts"
 	"github.com/open-mrp/api/shared/field"
+	"github.com/open-mrp/api/shared/metadata"
 	pb "github.com/open-mrp/api/shared/proto/core"
 	"google.golang.org/protobuf/types/known/timestamppb"
 )
@@ -103,6 +104,7 @@ func (h *gRPCHandler) UpdateInvoice(ctx context.Context, req *pb.UpdateInvoiceRe
 		InvoiceID: req.Id,
 		Includes:  req.Includes,
 		Note:      field.StringClearableFromProto(req.Note),
+		Metadata:  metadata.PatchFromProto(req.Metadata),
 	}
 	if req.HasBeenSent != nil {
 		params.HasBeenSent = req.HasBeenSent
@@ -200,6 +202,7 @@ func invoiceToProto(inv *domain.Invoice) *pb.InvoiceInfo {
 		IsEdiSent:                inv.IsEdiSent,
 		HasBeenSent:              inv.HasBeenSent,
 		AcceptsInvoiceEmails:     inv.AcceptsInvoiceEmails,
+		Metadata:                 inv.Metadata,
 		Lines:                    lines,
 		Allocations:              allocations,
 		CustomerId:               inv.CustomerID,
@@ -246,6 +249,7 @@ func invoiceLineToProto(l *domain.InvoiceLine) *pb.InvoiceLineInfo {
 		OrderLineProductId:         l.OrderLineProductID,
 		OrderLineItemNumber:        l.OrderLineItemNumber,
 		OrderLineDescription:       l.OrderLineDescription,
+		OrderLineMetadata:          l.OrderLineMetadata,
 		CreatedAt:                  timestamppb.New(l.CreatedAt),
 		UpdatedAt:                  timestamppb.New(l.UpdatedAt),
 	}

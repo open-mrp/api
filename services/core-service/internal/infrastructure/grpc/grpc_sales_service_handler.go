@@ -7,6 +7,7 @@ import (
 	"github.com/open-mrp/api/shared/contracts"
 	apierror "github.com/open-mrp/api/shared/errors"
 	"github.com/open-mrp/api/shared/field"
+	"github.com/open-mrp/api/shared/metadata"
 	pb "github.com/open-mrp/api/shared/proto/core"
 	"github.com/open-mrp/api/shared/safeconv"
 
@@ -224,6 +225,7 @@ func salesOrderToProto(o *domain.SalesOrder) *pb.SalesOrderInfo {
 	}
 
 	info := &pb.SalesOrderInfo{
+		Metadata:              o.Metadata,
 		Id:                    o.ID,
 		Number:                o.Number,
 		CustomerPoNumber:      o.CustomerPONumber,
@@ -460,6 +462,7 @@ func salesOrderLineToProto(l *domain.SalesOrderLine) *pb.SalesOrderLineInfo {
 	}
 
 	info := &pb.SalesOrderLineInfo{
+		Metadata:                             l.Metadata,
 		Id:                                   l.ID,
 		LineItemNumber:                       l.LineItemNumber,
 		ProductSku:                           l.ProductSKU,
@@ -623,6 +626,7 @@ func (h *salesGRPCHandler) CreateSalesOrder(ctx context.Context, req *pb.CreateS
 	lines := make([]domain.CreateSalesOrderLineInput, len(req.Lines))
 	for i, l := range req.Lines {
 		line := domain.CreateSalesOrderLineInput{
+			Metadata:           l.Metadata,
 			ProductID:          l.ProductId,
 			ProductSKU:         l.ProductSku,
 			ProductDescription: l.ProductDescription,
@@ -640,6 +644,7 @@ func (h *salesGRPCHandler) CreateSalesOrder(ctx context.Context, req *pb.CreateS
 	}
 
 	params := domain.CreateSalesOrderParams{
+		Metadata:                     req.Metadata,
 		BuyerAccountID:               req.BuyerAccountId,
 		CustomerPONumber:             req.CustomerPoNumber,
 		Note:                         req.Note,
@@ -691,6 +696,7 @@ func (h *salesGRPCHandler) UpdateSalesOrder(ctx context.Context, req *pb.UpdateS
 	defer finalizeIdempotency()
 
 	params := domain.UpdateSalesOrderParams{
+		Metadata:             metadata.PatchFromProto(req.Metadata),
 		SalesOrderID:         req.Id,
 		Number:               req.Number,
 		CarrierID:            req.CarrierId,
@@ -955,6 +961,7 @@ func (h *salesGRPCHandler) CreateSalesOrderLine(ctx context.Context, req *pb.Cre
 	defer finalizeIdempotency()
 
 	params := domain.CreateSalesOrderLineParams{
+		Metadata:                   req.Metadata,
 		SalesOrderID:               req.SalesOrderId,
 		ProductID:                  req.ProductId,
 		ItemID:                     req.ItemId,
@@ -990,6 +997,7 @@ func (h *salesGRPCHandler) UpdateSalesOrderLine(ctx context.Context, req *pb.Upd
 	defer finalizeIdempotency()
 
 	params := domain.UpdateSalesOrderLineParams{
+		Metadata:                   metadata.PatchFromProto(req.Metadata),
 		SalesOrderLineID:           req.Id,
 		SalesOrderID:               req.SalesOrderId,
 		ProductID:                  req.ProductId,

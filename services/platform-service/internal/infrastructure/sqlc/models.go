@@ -1102,6 +1102,7 @@ type Invoice struct {
 	IsOverPaid           bool
 	IsEdiSent            bool
 	PaidInFullMarkedByID sql.NullString
+	Metadata             json.RawMessage
 }
 
 type InvoiceLine struct {
@@ -2273,6 +2274,7 @@ type SalesOrder struct {
 	PriorityCode           string
 	CarrierBillingType     sql.NullString
 	FreightPendingSince    sql.NullTime
+	Metadata               json.RawMessage
 }
 
 type SalesOrderLine struct {
@@ -2289,6 +2291,7 @@ type SalesOrderLine struct {
 	UnitCostID         sql.NullString
 	CreatedAt          time.Time
 	UpdatedAt          time.Time
+	Metadata           json.RawMessage
 }
 
 type SalesOrderStatus struct {

@@ -31,6 +31,10 @@ type UpdateInvoiceRequest struct {
 	//
 	// Setting this to `true` marks the invoice as paid regardless of the payments recorded against it, which updates the invoice's `payment_status` and drops it from receivables listings. Recording a settlement against the invoice later recalculates the flag from its allocations and can overwrite the value set here.
 	IsPaidInFull field.Optional[bool] `json:"is_paid_in_full,omitzero"`
+	// Key-value pairs to store on the invoice, merged into the ones it already has.
+	//
+	// Keys left out are kept, so `{}` changes nothing. Setting a key to `null` removes it; an empty string is stored as a value. Sending `metadata: null` removes every key. An object holds at most 50 keys. Keys are up to 40 characters and cannot contain `[` or `]`; values are up to 500 characters.
+	Metadata field.Clearable[map[string]*string] `json:"metadata,omitzero" validate:"omitempty,max=50,dive,keys,min=1,max=40,excludesall=[],endkeys,omitempty,max=500"`
 }
 
 var sampleUpdateInvoiceNote = "Payment received via wire transfer"
@@ -44,7 +48,7 @@ func (*UpdateInvoiceRequest) SchemaExample() any {
 	return apiexample.ValidateAndMarshalToMap(sampleUpdateInvoiceRequest)
 }
 
-// Updates an invoice's note and its sent and paid tracking flags.
+// Updates an invoice's note, its sent and paid tracking flags, and its metadata.
 //
 // Only the fields supplied in the request are changed. The invoice's lines, its customer, and the amounts it bills follow the sales order behind the invoice and cannot be changed here.
 type UpdateInvoiceEndpoint struct{}

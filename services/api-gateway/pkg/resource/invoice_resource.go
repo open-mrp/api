@@ -55,6 +55,8 @@ type Invoice struct {
 	//
 	// Nothing in the platform sets this flag; it is recorded through Update Invoice once the invoice has been transmitted elsewhere.
 	IsEdiSent bool `json:"is_edi_sent"`
+	// Key-value pairs you attach to the invoice for your own references, such as its ID in another system.
+	Metadata map[string]string `json:"metadata"`
 	// Whether the invoice has been sent to the customer.
 	//
 	// Set automatically when the invoice is emailed through Email Record, and can also be set directly through Update Invoice.
@@ -119,6 +121,7 @@ var SampleInvoice = &Invoice{
 	PaymentStatus:        constants.InvoicePaymentStatusUnpaid,
 	IsPaidInFull:         false,
 	IsEdiSent:            false,
+	Metadata:             map[string]string{"edi_filename": "Carolon_ACME_81078093_INV-1001.csv"},
 	HasBeenSent:          true,
 	TotalInvoiced:        "1234.56",
 	AcceptsInvoiceEmails: true,

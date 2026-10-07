@@ -45,6 +45,8 @@ type SalesOrderLine struct {
 	UnitCost *Rate `json:"unit_cost" expandable:"true" sensitive:"cost"`
 	// Derived monetary totals for this line.
 	Totals *SalesOrderTotals `json:"totals" expandable:"true"`
+	// Key-value pairs you attach to the line for your own references, such as its ID in another system.
+	Metadata map[string]string `json:"metadata"`
 	// Creation timestamp.
 	CreatedAt time.Time `json:"created_at" validate:"required"`
 	// Last updated timestamp.
@@ -65,6 +67,7 @@ var SampleSalesOrderLine = &SalesOrderLine{
 	UnitPrice:          SampleRate,
 	UnitCost:           SampleRate,
 	Totals:             SampleSalesOrderTotals,
+	Metadata:           map[string]string{"edi_line_item_id": "00010"},
 	CreatedAt:          timeutil.TimestampToTime(sampleCreatedAtTimestamp),
 	UpdatedAt:          timeutil.TimestampToTime(sampleUpdatedAtTimestamp),
 }

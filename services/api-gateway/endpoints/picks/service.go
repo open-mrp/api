@@ -455,6 +455,7 @@ func buildSalesOrderLineForPick(info *pb.PickLineInfo) *apiresource.SalesOrderLi
 		LineItemNumber:     info.OrderLineItemNumber,
 		ProductSKU:         info.OrderLineSku,
 		ProductDescription: info.OrderLineDescription,
+		Metadata:           apiresource.MetadataFromProto(info.OrderLineMetadata),
 		CreatedAt:          createdAt,
 		UpdatedAt:          createdAt,
 	}

@@ -2,6 +2,21 @@
 
 Changes to the public API, by the `OpenMRP-Version` that introduces them. A client pinned to an older supported version keeps the shape described for that version; see [API versioning](patterns/api-versioning-patterns.md).
 
+## Unreleased
+
+Not breaking, so it ships on 1.0.forge-preview.6 and applies to every version.
+
+### Additions
+
+- **`metadata` on sales orders, sales order lines and invoices.** A map of string keys to string values that the client sets and reads back unchanged; OpenMRP never reads it. It is returned on `SalesOrder`, `SalesOrderLine` (also as `lines.order_line` on invoices and `lines.sales_order_line` on shipments and picks) and `Invoice`, and is `{}` when nothing is set.
+  - Set on create with `POST /v1/sales/sales-orders` (on the order and on each of `lines`) and `POST /v1/sales/sales-orders/{id}/lines`. A key sent as `null` is not stored.
+  - Changed with `PATCH /v1/sales/sales-orders/{id}`, `PATCH /v1/sales/sales-orders/{id}/lines/{line_id}` and `PATCH /v1/finance/invoices/{id}`. Keys left out are kept; a key set to `null` is removed; `"metadata": null` removes every key. An empty string is stored as a value.
+  - At most 50 keys per object, counted after the update; keys up to 40 characters without `[` or `]`; values up to 500 characters. An update that would leave more than 50 keys is refused with `400` on `metadata` and changes nothing.
+
+### Fixes
+
+- **Validation errors name a top-level list or map entry by its JSON name.** A failed check on an entry of a top-level array or object field reported `param` with the Go field name, such as `RecipientEmails[0]`; it is now the JSON path, such as `recipient_emails[0]`. Entries of nested fields were already named this way.
+
 ## 1.0.forge-preview.6
 
 ### Breaking changes

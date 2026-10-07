@@ -12,6 +12,7 @@ import (
 	"github.com/open-mrp/api/shared/constants"
 	"github.com/open-mrp/api/shared/db"
 	apierror "github.com/open-mrp/api/shared/errors"
+	"github.com/open-mrp/api/shared/metadata"
 	"github.com/open-mrp/api/shared/pagination"
 	"github.com/open-mrp/api/shared/safeconv"
 	"github.com/open-mrp/api/shared/tracing"
@@ -88,6 +89,7 @@ func mapGetPickLinesRow(row sqlc.GetPickLinesRow) *domain.PickLine {
 		OrderLineItemNumber:                  lineItemNumber,
 		OrderLineSKU:                         row.ProductSku,
 		OrderLineDescription:                 productDescription,
+		OrderLineMetadata:                    metadata.Decode(row.OrderLineMetadata),
 		OrderLineProductID:                   productID,
 		OrderLineItemID:                      nullStringToPtr(row.OrderLineItemID),
 		OrderedQuantityID:                    row.OrderedQuantityID,
@@ -132,6 +134,7 @@ func mapFindLinesToPackRow(row sqlc.FindLinesToPackRow) *domain.PickLine {
 		OrderLineItemNumber:       lineItemNumber,
 		OrderLineSKU:              row.ProductSku,
 		OrderLineDescription:      productDescription,
+		OrderLineMetadata:         metadata.Decode(row.OrderLineMetadata),
 		OrderedQuantityID:         row.OrderedQuantityID,
 		OrderedQuantityValue:      row.OrderedQuantityValue,
 		OrderedQuantityUnitID:     row.OrderedQuantityUnitID,

@@ -38,6 +38,7 @@ SELECT
     so.calendar_adjustment_days,
     so.created_at,
     so.updated_at,
+    CAST(so.metadata AS CHAR) AS metadata,
     -- Customer
     ba.name AS customer_name,
     ar.external_number AS customer_number,
@@ -181,6 +182,7 @@ SELECT
     so.calendar_adjustment_days,
     so.created_at,
     so.updated_at,
+    CAST(so.metadata AS CHAR) AS metadata,
     -- Customer
     ba.name AS customer_name,
     ar.external_number AS customer_number,
@@ -322,6 +324,7 @@ SELECT
     so.calendar_adjustment_days,
     so.created_at,
     so.updated_at,
+    CAST(so.metadata AS CHAR) AS metadata,
     -- Customer
     ba.name AS customer_name,
     ar.external_number AS customer_number,
@@ -481,7 +484,8 @@ SELECT
     p.product_type_code AS product_type_code,
     -- Timestamps
     sol.created_at,
-    sol.updated_at
+    sol.updated_at,
+    CAST(sol.metadata AS CHAR) AS metadata
 FROM sales_order_line sol
 JOIN quantity q ON q.id = sol.quantity_id
 JOIN unit qu ON qu.id = q.unit_id
@@ -574,7 +578,8 @@ SELECT
     p.product_type_code AS product_type_code,
     -- Timestamps
     sol.created_at,
-    sol.updated_at
+    sol.updated_at,
+    CAST(sol.metadata AS CHAR) AS metadata
 FROM sales_order_line sol
 JOIN quantity q ON q.id = sol.quantity_id
 JOIN unit qu ON qu.id = q.unit_id
@@ -617,7 +622,7 @@ INSERT INTO sales_order (
     sales_order_status_code, sales_order_type_code,
     payment_term_id, order_discount_id, promised_at,
     lead_time_override_days, ship_by_override_date,
-    buyer_account_id, seller_account_id, owner_account_id,
+    buyer_account_id, seller_account_id, owner_account_id, metadata,
     created_at, updated_at
 ) VALUES (
     sqlc.arg('id'), sqlc.arg('number'), sqlc.narg('customer_po_number'), sqlc.narg('note'), false,
@@ -628,7 +633,7 @@ INSERT INTO sales_order (
     sqlc.arg('sales_order_status_code'), 'sales_order',
     sqlc.narg('payment_term_id'), sqlc.narg('order_discount_id'), sqlc.narg('promised_at'),
     sqlc.narg('lead_time_override_days'), sqlc.narg('ship_by_override_date'),
-    sqlc.arg('buyer_account_id'), sqlc.arg('seller_account_id'), sqlc.arg('owner_account_id'),
+    sqlc.arg('buyer_account_id'), sqlc.arg('seller_account_id'), sqlc.arg('owner_account_id'), sqlc.narg('metadata'),
     NOW(3), NOW(3)
 );
 
@@ -655,6 +660,9 @@ UPDATE sales_order SET
     buyer_account_id = sqlc.narg('buyer_account_id'),
     billing_address_id = COALESCE(sqlc.narg('billing_address_id'), billing_address_id),
     shipping_address_id = COALESCE(sqlc.narg('shipping_address_id'), shipping_address_id),
+    -- A merge patch: keys set to null are removed, keys not sent are kept. metadata_clear merges into
+    -- an empty object instead, so only the patch's own keys remain.
+    metadata = IF(sqlc.narg('metadata_patch') IS NULL, metadata, JSON_MERGE_PATCH(IF(sqlc.arg('metadata_clear'), JSON_OBJECT(), COALESCE(metadata, JSON_OBJECT())), sqlc.narg('metadata_patch'))),
     updated_at = NOW(3)
 WHERE id = sqlc.arg('id')
 AND owner_account_id = sqlc.arg('account_id');

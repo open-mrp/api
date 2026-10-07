@@ -34,6 +34,10 @@ type UpdateSalesOrderLineRequest struct {
 	//
 	// Rounded to the nearest cent.
 	UnitCost field.Optional[apirequest.RateInput] `json:"unit_cost,omitzero" validate:"omitempty" sensitive:"cost"`
+	// Key-value pairs to store on the line, merged into the ones it already has.
+	//
+	// Keys left out are kept, so `{}` changes nothing. Setting a key to `null` removes it; an empty string is stored as a value. Sending `metadata: null` removes every key. An object holds at most 50 keys. Keys are up to 40 characters and cannot contain `[` or `]`; values are up to 500 characters.
+	Metadata field.Clearable[map[string]*string] `json:"metadata,omitzero" validate:"omitempty,max=50,dive,keys,min=1,max=40,excludesall=[],endkeys,omitempty,max=500"`
 }
 
 var sampleUpdateSalesOrderLineRequest = &UpdateSalesOrderLineRequest{

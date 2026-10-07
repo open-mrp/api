@@ -450,6 +450,7 @@ message UpdateInvoiceRequest {
   optional bool is_edi_sent = 4;
   optional bool is_paid_in_full = 5;
   repeated string includes = 6;
+  MetadataPatch metadata = 7;
 }
 message UpdateInvoiceResponse {
   InvoiceInfo invoice = 1;
@@ -508,4 +509,6 @@ message InvoiceInfo {
   // In full, so a caller that may read the invoice renders them without address or payment-term permissions.
   AddressInfo billing_address = 37;
   PaymentTermInfo payment_term = 38;
+  // Client-owned key/value pairs, returned unchanged. See shared/metadata.
+  map<string, string> metadata = 39;
 }

@@ -98,6 +98,10 @@ type CreateSalesOrderRequest struct {
 	//
 	// Each must be a user on the customer's account.
 	InvoiceEmailContacts []SalesOrderEmailContactInput `json:"invoice_email_contacts,omitzero"`
+	// Key-value pairs to store on the order for your own references, such as its ID in another system.
+	//
+	// Up to 50 keys. Keys are up to 40 characters and cannot contain `[` or `]`; values are strings up to 500 characters, and an empty string is stored as one. A key sent as `null` is not stored.
+	Metadata map[string]*string `json:"metadata,omitzero" validate:"omitempty,max=50,dive,keys,min=1,max=40,excludesall=[],endkeys,omitempty,max=500"`
 }
 
 // Line item input for a create sales order request.
@@ -120,6 +124,10 @@ type CreateSalesOrderLineInput struct {
 	//
 	// Honored only for internal users; for customer accounts it is ignored and the price is calculated server-side.
 	UnitPrice field.Optional[apirequest.RateInput] `json:"unit_price,omitzero"`
+	// Key-value pairs to store on the line for your own references, such as its ID in another system.
+	//
+	// Up to 50 keys. Keys are up to 40 characters and cannot contain `[` or `]`; values are strings up to 500 characters, and an empty string is stored as one. A key sent as `null` is not stored.
+	Metadata map[string]*string `json:"metadata,omitzero" validate:"omitempty,max=50,dive,keys,min=1,max=40,excludesall=[],endkeys,omitempty,max=500"`
 }
 
 // A user subscribed to one of a sales order's email notifications.

@@ -414,6 +414,8 @@ message SalesOrderInfo {
   optional int32 calendar_adjustment_days = 112;
   // Order-level monetary totals, summed over the lines in Go (shared/pricing) so the amounts match the dashboard exactly. Set only when the totals include is requested; nil otherwise (a gateway talking to an older core sums the shipped lines itself). The stage completion fractions travel on picked_completion/packed_completion/invoiced_completion above.
   optional SalesOrderTotalsInfo totals = 113;
+  // Client-owned key/value pairs, returned unchanged. See shared/metadata.
+  map<string, string> metadata = 114;
 }
 
 // SalesOrderTotalsInfo carries a sales order's monetary stage totals as decimal strings, summed over its lines. available is false when a line cannot be priced (its units differ from how the dashboard would price them), in which case no amounts are set and the gateway serializes null totals rather than a wrong number.
@@ -478,6 +480,8 @@ message SalesOrderLineInfo {
   // Set when the line's units cannot be priced the way the dashboard prices them, in which case the
   // ratios are empty and no money can be stated for the line.
   bool pricing_unavailable = 38;
+  // Client-owned key/value pairs, returned unchanged. See shared/metadata.
+  map<string, string> metadata = 39;
 }
 
 // --- Sales Order Request/Response messages ---
@@ -560,6 +564,8 @@ message CreateSalesOrderRequest {
   // Buyer addresses saved with the order, each in place of its *_address_id.
   InlineAddressInput bill_to_address = 37;
   InlineAddressInput ship_to_address = 38;
+  // Client-owned key/value pairs, returned unchanged. See shared/metadata.
+  map<string, string> metadata = 39;
 }
 
 message SalesOrderEmailContactInput {
@@ -582,6 +588,8 @@ message CreateSalesOrderLineInput {
   optional string unit_price_value = 7;
   optional string unit_price_numerator_unit_id = 8;
   optional string unit_price_denominator_unit_id = 9;
+  // Client-owned key/value pairs, returned unchanged. See shared/metadata.
+  map<string, string> metadata = 14;
 }
 
 message CreateSalesOrderResponse {
@@ -627,6 +635,7 @@ message UpdateSalesOrderRequest {
   // Buyer addresses saved with the order; each excludes its *_address_id.
   InlineAddressInput billing_address = 38;
   InlineAddressInput shipping_address = 39;
+  MetadataPatch metadata = 40;
 }
 
 message SalesOrderEmailContactList {
@@ -761,6 +770,8 @@ message CreateSalesOrderLineRequest {
   optional string unit_cost_numerator_unit_id = 12;
   optional string unit_cost_denominator_unit_id = 13;
   optional string edi_line_item_id = 14;
+  // Client-owned key/value pairs, returned unchanged. See shared/metadata.
+  map<string, string> metadata = 15;
 }
 
 message CreateSalesOrderLineResponse {
@@ -787,6 +798,7 @@ message UpdateSalesOrderLineRequest {
   optional string unit_cost_numerator_unit_id = 13;
   optional string unit_cost_denominator_unit_id = 14;
   optional string edi_line_item_id = 15;
+  MetadataPatch metadata = 17;
 }
 
 message UpdateSalesOrderLineResponse {

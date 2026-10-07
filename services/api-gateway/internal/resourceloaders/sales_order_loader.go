@@ -57,6 +57,7 @@ func salesOrderReferenceFromProto(info *pb.SalesOrderInfo) *apiresource.SalesOrd
 		Priority:                    constants.PriorityCode(info.PriorityCode),
 		PaymentStatus:               salesOrderPaymentStatusFromProto(info.PaymentStatus),
 		AcknowledgmentStatus:        ackStatus,
+		Metadata:                    apiresource.MetadataFromProto(info.Metadata),
 		CreatedAt:                   grpcutil.TimestampToTime(info.CreatedAt),
 		UpdatedAt:                   grpcutil.TimestampToTime(info.UpdatedAt),
 	}

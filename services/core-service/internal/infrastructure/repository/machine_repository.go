@@ -11,6 +11,7 @@ import (
 	apierror "github.com/open-mrp/api/shared/errors"
 	"github.com/open-mrp/api/shared/field"
 	"github.com/open-mrp/api/shared/pagination"
+	"github.com/open-mrp/api/shared/safeconv"
 	"github.com/open-mrp/api/shared/tracing"
 )
 
@@ -239,7 +240,7 @@ func (r *machineRepoImpl) List(ctx context.Context, params domain.ListMachinesPa
 		machines := make([]*domain.Machine, len(rows))
 		for i, row := range rows {
 			machines[i] = mapMachineForwardRow(row)
-			tiers[row.ID] = int32(row.MatchTier)
+			tiers[row.ID] = safeconv.Int64ToInt32(row.MatchTier)
 		}
 		return page(machines, nil), nil
 	}
@@ -265,7 +266,7 @@ func (r *machineRepoImpl) List(ctx context.Context, params domain.ListMachinesPa
 		machines := make([]*domain.Machine, len(rows))
 		for i, row := range rows {
 			machines[i] = mapMachineBackwardRow(row)
-			tiers[row.ID] = int32(row.MatchTier)
+			tiers[row.ID] = safeconv.Int64ToInt32(row.MatchTier)
 		}
 		return page(machines, &cur.Direction), nil
 	}
@@ -285,7 +286,7 @@ func (r *machineRepoImpl) List(ctx context.Context, params domain.ListMachinesPa
 	machines := make([]*domain.Machine, len(rows))
 	for i, row := range rows {
 		machines[i] = mapMachineForwardRow(row)
-		tiers[row.ID] = int32(row.MatchTier)
+		tiers[row.ID] = safeconv.Int64ToInt32(row.MatchTier)
 	}
 	return page(machines, &cur.Direction), nil
 }

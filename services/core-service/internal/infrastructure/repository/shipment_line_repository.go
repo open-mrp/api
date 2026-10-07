@@ -9,6 +9,7 @@ import (
 	"github.com/open-mrp/api/services/core-service/internal/infrastructure/sqlc"
 	"github.com/open-mrp/api/shared/db"
 	apierror "github.com/open-mrp/api/shared/errors"
+	"github.com/open-mrp/api/shared/metadata"
 	"github.com/open-mrp/api/shared/pagination"
 	"github.com/open-mrp/api/shared/tracing"
 	"github.com/shopspring/decimal"
@@ -266,6 +267,7 @@ func mapShipmentLineRow(row sqlc.GetShipmentLineRow) *domain.ShipmentLine {
 		QuantityUnitName:         row.QuantityUnitName,
 		QuantityUnitAbbreviation: row.QuantityUnitAbbreviation,
 		QuantityUnitType:         row.QuantityUnitType,
+		OrderLineMetadata:        metadata.Decode(row.OrderLineMetadata),
 		CreatedAt:                row.CreatedAt,
 		UpdatedAt:                row.UpdatedAt,
 	}

@@ -11,6 +11,7 @@ SELECT
     inv.has_been_sent,
     inv.created_at,
     inv.updated_at,
+    CAST(inv.metadata AS CHAR) AS metadata,
     so.id AS order_id,
     so.number AS order_number,
     so.priority_code,
@@ -91,6 +92,7 @@ SELECT
     inv.has_been_sent,
     inv.created_at,
     inv.updated_at,
+    CAST(inv.metadata AS CHAR) AS metadata,
     so.id AS order_id,
     so.number AS order_number,
     so.priority_code,
@@ -196,7 +198,8 @@ SELECT
     oq.value AS order_line_quantity_ordered,
     -- The order line's own SKU, which the order acknowledgement prints too; not every line has an item.
     sol.product_sku AS order_line_item_sku,
-    sol.product_description AS order_line_description
+    sol.product_description AS order_line_description,
+    CAST(sol.metadata AS CHAR) AS order_line_metadata
 FROM invoice_line il
 JOIN quantity q ON q.id = il.quantity_id
 JOIN unit qu ON qu.id = q.unit_id
@@ -290,6 +293,9 @@ SET
     is_paid_in_full = COALESCE(sqlc.narg('is_paid_in_full'), is_paid_in_full),
     -- Who set the flag by hand, recorded only when this update sets it.
     paid_in_full_marked_by_id = IF(sqlc.narg('is_paid_in_full') IS NULL, paid_in_full_marked_by_id, sqlc.narg('paid_in_full_marked_by_id')),
+    -- A merge patch: keys set to null are removed, keys not sent are kept. metadata_clear merges into
+    -- an empty object instead, so only the patch's own keys remain.
+    metadata = IF(sqlc.narg('metadata_patch') IS NULL, metadata, JSON_MERGE_PATCH(IF(sqlc.arg('metadata_clear'), JSON_OBJECT(), COALESCE(metadata, JSON_OBJECT())), sqlc.narg('metadata_patch'))),
     updated_at = CURRENT_TIMESTAMP(3)
 WHERE id = sqlc.arg('id')
 AND account_id = sqlc.arg('account_id');

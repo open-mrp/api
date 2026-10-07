@@ -8,6 +8,7 @@ package sqlc
 import (
 	"context"
 	"database/sql"
+	"encoding/json"
 	"time"
 )
 
@@ -53,13 +54,13 @@ const createSalesOrderLine = `-- name: CreateSalesOrderLine :exec
 INSERT INTO sales_order_line (
     id, product_sku, product_description, edi_line_item_id,
     line_item_number, product_id, item_id, sales_order_id,
-    quantity_id, unit_price_id, unit_cost_id,
+    quantity_id, unit_price_id, unit_cost_id, metadata,
     created_at, updated_at
 ) VALUES (
     ?, ?, ?,
     ?, ?,
     ?, ?, ?,
-    ?, ?, ?,
+    ?, ?, ?, ?,
     NOW(3), NOW(3)
 )
 `
@@ -76,6 +77,7 @@ type CreateSalesOrderLineParams struct {
 	QuantityID         string
 	UnitPriceID        string
 	UnitCostID         sql.NullString
+	Metadata           json.RawMessage
 }
 
 func (q *Queries) CreateSalesOrderLine(ctx context.Context, arg CreateSalesOrderLineParams) error {
@@ -91,6 +93,7 @@ func (q *Queries) CreateSalesOrderLine(ctx context.Context, arg CreateSalesOrder
 		arg.QuantityID,
 		arg.UnitPriceID,
 		arg.UnitCostID,
+		arg.Metadata,
 	)
 	return err
 }
@@ -285,7 +288,8 @@ SELECT
     p.product_type_code AS product_type_code,
     -- Timestamps
     sol.created_at,
-    sol.updated_at
+    sol.updated_at,
+    CAST(sol.metadata AS CHAR) AS metadata
 FROM sales_order_line sol
 JOIN quantity q ON q.id = sol.quantity_id
 JOIN unit qu ON qu.id = q.unit_id
@@ -337,6 +341,7 @@ type GetSalesOrderLineRow struct {
 	ProductTypeCode                      sql.NullString
 	CreatedAt                            time.Time
 	UpdatedAt                            time.Time
+	Metadata                             interface{}
 }
 
 func (q *Queries) GetSalesOrderLine(ctx context.Context, salesOrderLineID string) (GetSalesOrderLineRow, error) {
@@ -379,6 +384,7 @@ func (q *Queries) GetSalesOrderLine(ctx context.Context, salesOrderLineID string
 		&i.ProductTypeCode,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.Metadata,
 	)
 	return i, err
 }
@@ -686,6 +692,9 @@ UPDATE sales_order_line SET
     product_id = COALESCE(?, product_id),
     item_id = COALESCE(?, item_id),
     edi_line_item_id = COALESCE(?, edi_line_item_id),
+    -- A merge patch: keys set to null are removed, keys not sent are kept. metadata_clear merges into
+    -- an empty object instead, so only the patch's own keys remain.
+    metadata = IF(? IS NULL, metadata, JSON_MERGE_PATCH(IF(?, JSON_OBJECT(), COALESCE(metadata, JSON_OBJECT())), ?)),
     updated_at = NOW(3)
 WHERE id = ?
 `
@@ -696,6 +705,8 @@ type UpdateSalesOrderLineParams struct {
 	ProductID          sql.NullString
 	ItemID             sql.NullString
 	EdiLineItemID      sql.NullString
+	MetadataPatch      sql.NullString
+	MetadataClear      interface{}
 	ID                 string
 }
 
@@ -706,6 +717,9 @@ func (q *Queries) UpdateSalesOrderLine(ctx context.Context, arg UpdateSalesOrder
 		arg.ProductID,
 		arg.ItemID,
 		arg.EdiLineItemID,
+		arg.MetadataPatch,
+		arg.MetadataClear,
+		arg.MetadataPatch,
 		arg.ID,
 	)
 	return err

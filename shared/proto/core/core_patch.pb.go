@@ -297,6 +297,68 @@ func (x *Int32Patch) GetValue() int32 {
 	return 0
 }
 
+// A change to a record's metadata. Parent field absent → no change. clear empties the map before
+// set is applied; keys in remove are dropped; keys in set are written (an empty string is a value).
+type MetadataPatch struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Clear         bool                   `protobuf:"varint,1,opt,name=clear,proto3" json:"clear,omitempty"`
+	Set           map[string]string      `protobuf:"bytes,2,rep,name=set,proto3" json:"set,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
+	Remove        []string               `protobuf:"bytes,3,rep,name=remove,proto3" json:"remove,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *MetadataPatch) Reset() {
+	*x = MetadataPatch{}
+	mi := &file_core_core_patch_proto_msgTypes[5]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *MetadataPatch) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*MetadataPatch) ProtoMessage() {}
+
+func (x *MetadataPatch) ProtoReflect() protoreflect.Message {
+	mi := &file_core_core_patch_proto_msgTypes[5]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use MetadataPatch.ProtoReflect.Descriptor instead.
+func (*MetadataPatch) Descriptor() ([]byte, []int) {
+	return file_core_core_patch_proto_rawDescGZIP(), []int{5}
+}
+
+func (x *MetadataPatch) GetClear() bool {
+	if x != nil {
+		return x.Clear
+	}
+	return false
+}
+
+func (x *MetadataPatch) GetSet() map[string]string {
+	if x != nil {
+		return x.Set
+	}
+	return nil
+}
+
+func (x *MetadataPatch) GetRemove() []string {
+	if x != nil {
+		return x.Remove
+	}
+	return nil
+}
+
 // An address saved by the write of the record that uses it, in the record's counterparty account (or the
 // account itself, for its default addresses). With id set, that stored address is updated and omitted
 // fields keep their values; without it a new address is created, so name and country are required.
@@ -320,7 +382,7 @@ type InlineAddressInput struct {
 
 func (x *InlineAddressInput) Reset() {
 	*x = InlineAddressInput{}
-	mi := &file_core_core_patch_proto_msgTypes[5]
+	mi := &file_core_core_patch_proto_msgTypes[6]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -332,7 +394,7 @@ func (x *InlineAddressInput) String() string {
 func (*InlineAddressInput) ProtoMessage() {}
 
 func (x *InlineAddressInput) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_patch_proto_msgTypes[5]
+	mi := &file_core_core_patch_proto_msgTypes[6]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -345,7 +407,7 @@ func (x *InlineAddressInput) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use InlineAddressInput.ProtoReflect.Descriptor instead.
 func (*InlineAddressInput) Descriptor() ([]byte, []int) {
-	return file_core_core_patch_proto_rawDescGZIP(), []int{5}
+	return file_core_core_patch_proto_rawDescGZIP(), []int{6}
 }
 
 func (x *InlineAddressInput) GetId() string {
@@ -459,7 +521,14 @@ const file_core_core_patch_proto_rawDesc = "" +
 	"Int32Patch\x12\x14\n" +
 	"\x05clear\x18\x01 \x01(\bR\x05clear\x12\x19\n" +
 	"\x05value\x18\x02 \x01(\x05H\x00R\x05value\x88\x01\x01B\b\n" +
-	"\x06_value\"\xc5\x04\n" +
+	"\x06_value\"\xa5\x01\n" +
+	"\rMetadataPatch\x12\x14\n" +
+	"\x05clear\x18\x01 \x01(\bR\x05clear\x12.\n" +
+	"\x03set\x18\x02 \x03(\v2\x1c.core.MetadataPatch.SetEntryR\x03set\x12\x16\n" +
+	"\x06remove\x18\x03 \x03(\tR\x06remove\x1a6\n" +
+	"\bSetEntry\x12\x10\n" +
+	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
+	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01\"\xc5\x04\n" +
 	"\x12InlineAddressInput\x12\x13\n" +
 	"\x02id\x18\x01 \x01(\tH\x00R\x02id\x88\x01\x01\x12\x17\n" +
 	"\x04name\x18\x02 \x01(\tH\x01R\x04name\x88\x01\x01\x12'\n" +
@@ -498,27 +567,30 @@ func file_core_core_patch_proto_rawDescGZIP() []byte {
 	return file_core_core_patch_proto_rawDescData
 }
 
-var file_core_core_patch_proto_msgTypes = make([]protoimpl.MessageInfo, 6)
+var file_core_core_patch_proto_msgTypes = make([]protoimpl.MessageInfo, 8)
 var file_core_core_patch_proto_goTypes = []any{
 	(*StringPatch)(nil),           // 0: core.StringPatch
 	(*StringListPatch)(nil),       // 1: core.StringListPatch
 	(*QuantityPatch)(nil),         // 2: core.QuantityPatch
 	(*TimestampPatch)(nil),        // 3: core.TimestampPatch
 	(*Int32Patch)(nil),            // 4: core.Int32Patch
-	(*InlineAddressInput)(nil),    // 5: core.InlineAddressInput
-	(*timestamppb.Timestamp)(nil), // 6: google.protobuf.Timestamp
+	(*MetadataPatch)(nil),         // 5: core.MetadataPatch
+	(*InlineAddressInput)(nil),    // 6: core.InlineAddressInput
+	nil,                           // 7: core.MetadataPatch.SetEntry
+	(*timestamppb.Timestamp)(nil), // 8: google.protobuf.Timestamp
 }
 var file_core_core_patch_proto_depIdxs = []int32{
-	6, // 0: core.TimestampPatch.value:type_name -> google.protobuf.Timestamp
-	0, // 1: core.InlineAddressInput.phone:type_name -> core.StringPatch
-	0, // 2: core.InlineAddressInput.email:type_name -> core.StringPatch
-	0, // 3: core.InlineAddressInput.receive_calendar_id:type_name -> core.StringPatch
-	0, // 4: core.InlineAddressInput.street_line_2:type_name -> core.StringPatch
-	5, // [5:5] is the sub-list for method output_type
-	5, // [5:5] is the sub-list for method input_type
-	5, // [5:5] is the sub-list for extension type_name
-	5, // [5:5] is the sub-list for extension extendee
-	0, // [0:5] is the sub-list for field type_name
+	8, // 0: core.TimestampPatch.value:type_name -> google.protobuf.Timestamp
+	7, // 1: core.MetadataPatch.set:type_name -> core.MetadataPatch.SetEntry
+	0, // 2: core.InlineAddressInput.phone:type_name -> core.StringPatch
+	0, // 3: core.InlineAddressInput.email:type_name -> core.StringPatch
+	0, // 4: core.InlineAddressInput.receive_calendar_id:type_name -> core.StringPatch
+	0, // 5: core.InlineAddressInput.street_line_2:type_name -> core.StringPatch
+	6, // [6:6] is the sub-list for method output_type
+	6, // [6:6] is the sub-list for method input_type
+	6, // [6:6] is the sub-list for extension type_name
+	6, // [6:6] is the sub-list for extension extendee
+	0, // [0:6] is the sub-list for field type_name
 }
 
 func init() { file_core_core_patch_proto_init() }
@@ -530,14 +602,14 @@ func file_core_core_patch_proto_init() {
 	file_core_core_patch_proto_msgTypes[2].OneofWrappers = []any{}
 	file_core_core_patch_proto_msgTypes[3].OneofWrappers = []any{}
 	file_core_core_patch_proto_msgTypes[4].OneofWrappers = []any{}
-	file_core_core_patch_proto_msgTypes[5].OneofWrappers = []any{}
+	file_core_core_patch_proto_msgTypes[6].OneofWrappers = []any{}
 	type x struct{}
 	out := protoimpl.TypeBuilder{
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_core_core_patch_proto_rawDesc), len(file_core_core_patch_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   6,
+			NumMessages:   8,
 			NumExtensions: 0,
 			NumServices:   0,
 		},

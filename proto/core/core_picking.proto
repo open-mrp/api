@@ -142,6 +142,8 @@ message PickLineInfo {
   optional string order_line_product_id = 26;
   // The order line's item, so lines.item resolves without a standalone loader.
   optional string order_line_item_id = 27;
+  // The order line's metadata, so lines.order_line carries it without a second read.
+  map<string, string> order_line_metadata = 28;
 }
 
 // List picks

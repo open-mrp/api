@@ -164,6 +164,7 @@ func pickLineToProto(l *domain.PickLine) *pb.PickLineInfo {
 	if l.OrderLineDescription != nil {
 		info.OrderLineDescription = l.OrderLineDescription
 	}
+	info.OrderLineMetadata = l.OrderLineMetadata
 
 	return info
 }

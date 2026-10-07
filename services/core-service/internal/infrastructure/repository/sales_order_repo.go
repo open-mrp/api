@@ -16,6 +16,7 @@ import (
 	apierror "github.com/open-mrp/api/shared/errors"
 	"github.com/open-mrp/api/shared/field"
 	"github.com/open-mrp/api/shared/id"
+	"github.com/open-mrp/api/shared/metadata"
 	"github.com/open-mrp/api/shared/pagination"
 	"github.com/open-mrp/api/shared/safeconv"
 	"github.com/open-mrp/api/shared/tracing"
@@ -590,6 +591,7 @@ func (r *salesOrderRepoImpl) Create(ctx context.Context, soID string, params dom
 		BuyerAccountID:        params.BuyerAccountID,
 		SellerAccountID:       params.SellerAccountID,
 		OwnerAccountID:        params.OwnerAccountID,
+		Metadata:              metadata.Encode(params.Metadata),
 	})
 	if apiErr := db.MapSQLError(err); apiErr != nil {
 		return nil, tracing.Trace(span, apiErr)
@@ -637,6 +639,8 @@ func (r *salesOrderRepoImpl) Update(ctx context.Context, params domain.UpdateSal
 		IsAcknowledgmentSent: toNullBool(params.IsAcknowledgmentSent),
 		LeadTimeOverrideDays: leadTimeOverrideNull,
 		ShipByOverrideDate:   shipByOverrideNull,
+		MetadataPatch:        metadata.Patch(params.Metadata),
+		MetadataClear:        params.Metadata.Clear,
 		BuyerAccountID:       toNullString(params.BuyerAccountID),
 		BillingAddressID:     toNullString(params.BillingAddressID),
 		ShippingAddressID:    toNullString(params.ShippingAddressID),
@@ -1208,6 +1212,7 @@ func mapGetSalesOrderRow(row sqlc.GetSalesOrderRow) *domain.SalesOrder {
 		OwnerAccountID:       row.OwnerAccountID,
 		CreatedAt:            row.CreatedAt,
 		UpdatedAt:            row.UpdatedAt,
+		Metadata:             metadata.Decode(row.Metadata),
 		CustomerName:         row.CustomerName,
 		CustomerNumber:       row.CustomerNumber,
 		StatusName:           row.StatusName,
@@ -1357,6 +1362,7 @@ func mapGetSalesOrderForCustomerRow(row sqlc.GetSalesOrderForCustomerRow) *domai
 		OwnerAccountID:       row.OwnerAccountID,
 		CreatedAt:            row.CreatedAt,
 		UpdatedAt:            row.UpdatedAt,
+		Metadata:             metadata.Decode(row.Metadata),
 		CustomerName:         row.CustomerName,
 		CustomerNumber:       row.CustomerNumber,
 		StatusName:           row.StatusName,
@@ -1531,6 +1537,7 @@ type listSalesOrderRow struct {
 	CalendarAdjustmentDays      gosql.NullInt32
 	CreatedAt                   time.Time
 	UpdatedAt                   time.Time
+	Metadata                    []byte // CAST(so.metadata AS CHAR); nil when NULL
 	CustomerName                string
 	CustomerNumber              string
 	CustomerStatusCode          gosql.NullString
@@ -1612,6 +1619,7 @@ func mapListSalesOrderRow(row listSalesOrderRow) *domain.SalesOrder {
 		OwnerAccountID:       row.OwnerAccountID,
 		CreatedAt:            row.CreatedAt,
 		UpdatedAt:            row.UpdatedAt,
+		Metadata:             metadata.Decode(row.Metadata),
 		CustomerName:         row.CustomerName,
 		CustomerNumber:       row.CustomerNumber,
 		StatusName:           row.StatusName,

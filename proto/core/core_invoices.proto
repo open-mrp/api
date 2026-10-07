@@ -33,6 +33,8 @@ message InvoiceLineInfo {
   optional int32 order_line_item_number = 16;
   // The product description as it was written on the order line.
   optional string order_line_description = 17;
+  // The order line's metadata, so lines.order_line carries it without a second read.
+  map<string, string> order_line_metadata = 18;
 }
 message InvoiceAllocationInfo {
   string id = 1;

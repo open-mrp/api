@@ -28,6 +28,7 @@ import (
 	"github.com/open-mrp/api/shared/id"
 	"github.com/open-mrp/api/shared/idempotency"
 	"github.com/open-mrp/api/shared/messaging"
+	"github.com/open-mrp/api/shared/metadata"
 	"github.com/open-mrp/api/shared/pricing"
 	"github.com/open-mrp/api/shared/ptrutil"
 	"github.com/open-mrp/api/shared/safeconv"
@@ -611,6 +612,7 @@ func (s *salesOrderSvcImpl) CreateSalesOrder(ctx context.Context, params domain.
 				PromisedAt:            params.PromisedAt,
 				LeadTimeOverrideDays:  params.LeadTimeOverrideDays,
 				ShipByOverrideDate:    params.ShipByOverrideDate,
+				Metadata:              params.Metadata,
 			}
 
 			_, apiErr = txOrderRepo.Create(txCtx, orderID, createParams)
@@ -648,6 +650,7 @@ func (s *salesOrderSvcImpl) CreateSalesOrder(ctx context.Context, params domain.
 					UnitCostValue:              &costValue,
 					UnitCostNumeratorUnitID:    &costNum,
 					UnitCostDenominatorUnitID:  &costDen,
+					Metadata:                   rl.Metadata,
 				})
 			}
 			if apiErr := txLineRepo.CreateMany(txCtx, lineParams); apiErr != nil {
@@ -885,6 +888,9 @@ func (s *salesOrderSvcImpl) UpdateSalesOrder(ctx context.Context, params domain.
 			// Update the order
 			updated, apiErr := txRepo.Update(txCtx, params)
 			if apiErr != nil {
+				return apiErr
+			}
+			if apiErr := metadata.CheckLimit(updated.Metadata, "metadata"); apiErr != nil {
 				return apiErr
 			}
 			result = updated

@@ -385,6 +385,7 @@ SELECT
     sol.line_item_number,
     sol.product_sku,
     sol.product_description,
+    CAST(sol.metadata AS CHAR) AS order_line_metadata,
     sol.product_id,
     sol.item_id AS order_line_item_id,
     -- Ordered quantity
@@ -419,6 +420,7 @@ type FindLinesToPackRow struct {
 	LineItemNumber                  sql.NullInt32
 	ProductSku                      string
 	ProductDescription              sql.NullString
+	OrderLineMetadata               interface{}
 	ProductID                       sql.NullString
 	OrderLineItemID                 sql.NullString
 	OrderedQuantityID               string
@@ -452,6 +454,7 @@ func (q *Queries) FindLinesToPack(ctx context.Context, pickID string) ([]FindLin
 			&i.LineItemNumber,
 			&i.ProductSku,
 			&i.ProductDescription,
+			&i.OrderLineMetadata,
 			&i.ProductID,
 			&i.OrderLineItemID,
 			&i.OrderedQuantityID,
@@ -733,6 +736,7 @@ SELECT
     sol.line_item_number,
     sol.product_sku,
     sol.product_description,
+    CAST(sol.metadata AS CHAR) AS order_line_metadata,
     sol.product_id,
     sol.item_id AS order_line_item_id,
     -- Ordered quantity
@@ -765,6 +769,7 @@ type GetPickLineRow struct {
 	LineItemNumber                  sql.NullInt32
 	ProductSku                      string
 	ProductDescription              sql.NullString
+	OrderLineMetadata               interface{}
 	ProductID                       sql.NullString
 	OrderLineItemID                 sql.NullString
 	OrderedQuantityID               string
@@ -792,6 +797,7 @@ func (q *Queries) GetPickLine(ctx context.Context, pickLineID string) (GetPickLi
 		&i.LineItemNumber,
 		&i.ProductSku,
 		&i.ProductDescription,
+		&i.OrderLineMetadata,
 		&i.ProductID,
 		&i.OrderLineItemID,
 		&i.OrderedQuantityID,
@@ -821,6 +827,7 @@ SELECT
     sol.line_item_number,
     sol.product_sku,
     sol.product_description,
+    CAST(sol.metadata AS CHAR) AS order_line_metadata,
     sol.product_id,
     sol.item_id AS order_line_item_id,
     -- Ordered quantity
@@ -864,6 +871,7 @@ type GetPickLinesRow struct {
 	LineItemNumber                       sql.NullInt32
 	ProductSku                           string
 	ProductDescription                   sql.NullString
+	OrderLineMetadata                    interface{}
 	ProductID                            sql.NullString
 	OrderLineItemID                      sql.NullString
 	OrderedQuantityID                    string
@@ -903,6 +911,7 @@ func (q *Queries) GetPickLines(ctx context.Context, pickID string) ([]GetPickLin
 			&i.LineItemNumber,
 			&i.ProductSku,
 			&i.ProductDescription,
+			&i.OrderLineMetadata,
 			&i.ProductID,
 			&i.OrderLineItemID,
 			&i.OrderedQuantityID,
@@ -948,6 +957,7 @@ SELECT
     sol.line_item_number,
     sol.product_sku,
     sol.product_description,
+    CAST(sol.metadata AS CHAR) AS order_line_metadata,
     sol.product_id,
     sol.item_id AS order_line_item_id,
     -- Ordered quantity
@@ -991,6 +1001,7 @@ type GetPickLinesForPicksRow struct {
 	LineItemNumber                       sql.NullInt32
 	ProductSku                           string
 	ProductDescription                   sql.NullString
+	OrderLineMetadata                    interface{}
 	ProductID                            sql.NullString
 	OrderLineItemID                      sql.NullString
 	OrderedQuantityID                    string
@@ -1043,6 +1054,7 @@ func (q *Queries) GetPickLinesForPicks(ctx context.Context, pickIds []string) ([
 			&i.LineItemNumber,
 			&i.ProductSku,
 			&i.ProductDescription,
+			&i.OrderLineMetadata,
 			&i.ProductID,
 			&i.OrderLineItemID,
 			&i.OrderedQuantityID,

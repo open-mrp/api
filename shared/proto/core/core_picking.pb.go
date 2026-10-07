@@ -544,8 +544,10 @@ type PickLineInfo struct {
 	OrderLineProductId *string `protobuf:"bytes,26,opt,name=order_line_product_id,json=orderLineProductId,proto3,oneof" json:"order_line_product_id,omitempty"`
 	// The order line's item, so lines.item resolves without a standalone loader.
 	OrderLineItemId *string `protobuf:"bytes,27,opt,name=order_line_item_id,json=orderLineItemId,proto3,oneof" json:"order_line_item_id,omitempty"`
-	unknownFields   protoimpl.UnknownFields
-	sizeCache       protoimpl.SizeCache
+	// The order line's metadata, so lines.order_line carries it without a second read.
+	OrderLineMetadata map[string]string `protobuf:"bytes,28,rep,name=order_line_metadata,json=orderLineMetadata,proto3" json:"order_line_metadata,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
+	unknownFields     protoimpl.UnknownFields
+	sizeCache         protoimpl.SizeCache
 }
 
 func (x *PickLineInfo) Reset() {
@@ -765,6 +767,13 @@ func (x *PickLineInfo) GetOrderLineItemId() string {
 		return *x.OrderLineItemId
 	}
 	return ""
+}
+
+func (x *PickLineInfo) GetOrderLineMetadata() map[string]string {
+	if x != nil {
+		return x.OrderLineMetadata
+	}
+	return nil
 }
 
 // List picks
@@ -1809,7 +1818,7 @@ const file_core_core_picking_proto_rawDesc = "" +
 	"\x19_service_level_created_atB\x1b\n" +
 	"\x19_service_level_updated_atB\x17\n" +
 	"\x15_carrier_billing_typeB\x1a\n" +
-	"\x18_carrier_billing_accountJ\x04\b\r\x10\x0e\"\xe6\v\n" +
+	"\x18_carrier_billing_accountJ\x04\b\r\x10\x0e\"\x87\r\n" +
 	"\fPickLineInfo\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x17\n" +
 	"\apick_id\x18\x02 \x01(\tR\x06pickId\x12-\n" +
@@ -1841,7 +1850,11 @@ const file_core_core_picking_proto_rawDesc = "" +
 	"(unit_price_denominator_unit_abbreviation\x18\x18 \x01(\tR$unitPriceDenominatorUnitAbbreviation\x12.\n" +
 	"\x13ordered_quantity_id\x18\x19 \x01(\tR\x11orderedQuantityId\x126\n" +
 	"\x15order_line_product_id\x18\x1a \x01(\tH\x01R\x12orderLineProductId\x88\x01\x01\x120\n" +
-	"\x12order_line_item_id\x18\x1b \x01(\tH\x02R\x0forderLineItemId\x88\x01\x01B\x19\n" +
+	"\x12order_line_item_id\x18\x1b \x01(\tH\x02R\x0forderLineItemId\x88\x01\x01\x12Y\n" +
+	"\x13order_line_metadata\x18\x1c \x03(\v2).core.PickLineInfo.OrderLineMetadataEntryR\x11orderLineMetadata\x1aD\n" +
+	"\x16OrderLineMetadataEntry\x12\x10\n" +
+	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
+	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01B\x19\n" +
 	"\x17_order_line_descriptionB\x18\n" +
 	"\x16_order_line_product_idB\x15\n" +
 	"\x13_order_line_item_id\"\xae\x03\n" +
@@ -1929,7 +1942,7 @@ func file_core_core_picking_proto_rawDescGZIP() []byte {
 	return file_core_core_picking_proto_rawDescData
 }
 
-var file_core_core_picking_proto_msgTypes = make([]protoimpl.MessageInfo, 20)
+var file_core_core_picking_proto_msgTypes = make([]protoimpl.MessageInfo, 21)
 var file_core_core_picking_proto_goTypes = []any{
 	(*PickInfo)(nil),                   // 0: core.PickInfo
 	(*PickLineInfo)(nil),               // 1: core.PickLineInfo
@@ -1951,61 +1964,63 @@ var file_core_core_picking_proto_goTypes = []any{
 	(*PickPickLineResponse)(nil),       // 17: core.PickPickLineResponse
 	(*VoidPickLineRequest)(nil),        // 18: core.VoidPickLineRequest
 	(*VoidPickLineResponse)(nil),       // 19: core.VoidPickLineResponse
-	(*timestamppb.Timestamp)(nil),      // 20: google.protobuf.Timestamp
-	(*PageInfo)(nil),                   // 21: core.PageInfo
-	(*JobInfo)(nil),                    // 22: core.JobInfo
+	nil,                                // 20: core.PickLineInfo.OrderLineMetadataEntry
+	(*timestamppb.Timestamp)(nil),      // 21: google.protobuf.Timestamp
+	(*PageInfo)(nil),                   // 22: core.PageInfo
+	(*JobInfo)(nil),                    // 23: core.JobInfo
 }
 var file_core_core_picking_proto_depIdxs = []int32{
-	20, // 0: core.PickInfo.finished_at:type_name -> google.protobuf.Timestamp
-	20, // 1: core.PickInfo.created_at:type_name -> google.protobuf.Timestamp
-	20, // 2: core.PickInfo.updated_at:type_name -> google.protobuf.Timestamp
+	21, // 0: core.PickInfo.finished_at:type_name -> google.protobuf.Timestamp
+	21, // 1: core.PickInfo.created_at:type_name -> google.protobuf.Timestamp
+	21, // 2: core.PickInfo.updated_at:type_name -> google.protobuf.Timestamp
 	1,  // 3: core.PickInfo.lines:type_name -> core.PickLineInfo
-	20, // 4: core.PickInfo.last_shipped_at:type_name -> google.protobuf.Timestamp
-	20, // 5: core.PickInfo.promised_at:type_name -> google.protobuf.Timestamp
-	20, // 6: core.PickInfo.shipping_address_created_at:type_name -> google.protobuf.Timestamp
-	20, // 7: core.PickInfo.shipping_address_updated_at:type_name -> google.protobuf.Timestamp
-	20, // 8: core.PickInfo.ship_by_date:type_name -> google.protobuf.Timestamp
-	20, // 9: core.PickInfo.ship_by_cutoff_at:type_name -> google.protobuf.Timestamp
-	20, // 10: core.PickInfo.carrier_created_at:type_name -> google.protobuf.Timestamp
-	20, // 11: core.PickInfo.carrier_updated_at:type_name -> google.protobuf.Timestamp
-	20, // 12: core.PickInfo.service_level_created_at:type_name -> google.protobuf.Timestamp
-	20, // 13: core.PickInfo.service_level_updated_at:type_name -> google.protobuf.Timestamp
-	20, // 14: core.PickLineInfo.packed_at:type_name -> google.protobuf.Timestamp
-	20, // 15: core.PickLineInfo.created_at:type_name -> google.protobuf.Timestamp
-	20, // 16: core.PickLineInfo.updated_at:type_name -> google.protobuf.Timestamp
-	0,  // 17: core.ListPicksResponse.picks:type_name -> core.PickInfo
-	21, // 18: core.ListPicksResponse.page_info:type_name -> core.PageInfo
-	0,  // 19: core.GetPickResponse.pick:type_name -> core.PickInfo
-	0,  // 20: core.BatchGetPicksByIDsResponse.picks:type_name -> core.PickInfo
-	0,  // 21: core.PickAllLinesResponse.pick:type_name -> core.PickInfo
-	0,  // 22: core.VoidPickResponse.pick:type_name -> core.PickInfo
-	22, // 23: core.PackPickResponse.job:type_name -> core.JobInfo
-	1,  // 24: core.UpdatePickLineResponse.pick_line:type_name -> core.PickLineInfo
-	1,  // 25: core.PickPickLineResponse.pick_line:type_name -> core.PickLineInfo
-	1,  // 26: core.VoidPickLineResponse.pick_line:type_name -> core.PickLineInfo
-	2,  // 27: core.CorePickingService.ListPicks:input_type -> core.ListPicksRequest
-	4,  // 28: core.CorePickingService.GetPick:input_type -> core.GetPickRequest
-	6,  // 29: core.CorePickingService.BatchGetPicksByIDs:input_type -> core.BatchGetPicksByIDsRequest
-	8,  // 30: core.CorePickingService.PickAllLines:input_type -> core.PickAllLinesRequest
-	10, // 31: core.CorePickingService.VoidPick:input_type -> core.VoidPickRequest
-	12, // 32: core.CorePickingService.PackPick:input_type -> core.PackPickRequest
-	14, // 33: core.CorePickingService.UpdatePickLine:input_type -> core.UpdatePickLineRequest
-	16, // 34: core.CorePickingService.PickPickLine:input_type -> core.PickPickLineRequest
-	18, // 35: core.CorePickingService.VoidPickLine:input_type -> core.VoidPickLineRequest
-	3,  // 36: core.CorePickingService.ListPicks:output_type -> core.ListPicksResponse
-	5,  // 37: core.CorePickingService.GetPick:output_type -> core.GetPickResponse
-	7,  // 38: core.CorePickingService.BatchGetPicksByIDs:output_type -> core.BatchGetPicksByIDsResponse
-	9,  // 39: core.CorePickingService.PickAllLines:output_type -> core.PickAllLinesResponse
-	11, // 40: core.CorePickingService.VoidPick:output_type -> core.VoidPickResponse
-	13, // 41: core.CorePickingService.PackPick:output_type -> core.PackPickResponse
-	15, // 42: core.CorePickingService.UpdatePickLine:output_type -> core.UpdatePickLineResponse
-	17, // 43: core.CorePickingService.PickPickLine:output_type -> core.PickPickLineResponse
-	19, // 44: core.CorePickingService.VoidPickLine:output_type -> core.VoidPickLineResponse
-	36, // [36:45] is the sub-list for method output_type
-	27, // [27:36] is the sub-list for method input_type
-	27, // [27:27] is the sub-list for extension type_name
-	27, // [27:27] is the sub-list for extension extendee
-	0,  // [0:27] is the sub-list for field type_name
+	21, // 4: core.PickInfo.last_shipped_at:type_name -> google.protobuf.Timestamp
+	21, // 5: core.PickInfo.promised_at:type_name -> google.protobuf.Timestamp
+	21, // 6: core.PickInfo.shipping_address_created_at:type_name -> google.protobuf.Timestamp
+	21, // 7: core.PickInfo.shipping_address_updated_at:type_name -> google.protobuf.Timestamp
+	21, // 8: core.PickInfo.ship_by_date:type_name -> google.protobuf.Timestamp
+	21, // 9: core.PickInfo.ship_by_cutoff_at:type_name -> google.protobuf.Timestamp
+	21, // 10: core.PickInfo.carrier_created_at:type_name -> google.protobuf.Timestamp
+	21, // 11: core.PickInfo.carrier_updated_at:type_name -> google.protobuf.Timestamp
+	21, // 12: core.PickInfo.service_level_created_at:type_name -> google.protobuf.Timestamp
+	21, // 13: core.PickInfo.service_level_updated_at:type_name -> google.protobuf.Timestamp
+	21, // 14: core.PickLineInfo.packed_at:type_name -> google.protobuf.Timestamp
+	21, // 15: core.PickLineInfo.created_at:type_name -> google.protobuf.Timestamp
+	21, // 16: core.PickLineInfo.updated_at:type_name -> google.protobuf.Timestamp
+	20, // 17: core.PickLineInfo.order_line_metadata:type_name -> core.PickLineInfo.OrderLineMetadataEntry
+	0,  // 18: core.ListPicksResponse.picks:type_name -> core.PickInfo
+	22, // 19: core.ListPicksResponse.page_info:type_name -> core.PageInfo
+	0,  // 20: core.GetPickResponse.pick:type_name -> core.PickInfo
+	0,  // 21: core.BatchGetPicksByIDsResponse.picks:type_name -> core.PickInfo
+	0,  // 22: core.PickAllLinesResponse.pick:type_name -> core.PickInfo
+	0,  // 23: core.VoidPickResponse.pick:type_name -> core.PickInfo
+	23, // 24: core.PackPickResponse.job:type_name -> core.JobInfo
+	1,  // 25: core.UpdatePickLineResponse.pick_line:type_name -> core.PickLineInfo
+	1,  // 26: core.PickPickLineResponse.pick_line:type_name -> core.PickLineInfo
+	1,  // 27: core.VoidPickLineResponse.pick_line:type_name -> core.PickLineInfo
+	2,  // 28: core.CorePickingService.ListPicks:input_type -> core.ListPicksRequest
+	4,  // 29: core.CorePickingService.GetPick:input_type -> core.GetPickRequest
+	6,  // 30: core.CorePickingService.BatchGetPicksByIDs:input_type -> core.BatchGetPicksByIDsRequest
+	8,  // 31: core.CorePickingService.PickAllLines:input_type -> core.PickAllLinesRequest
+	10, // 32: core.CorePickingService.VoidPick:input_type -> core.VoidPickRequest
+	12, // 33: core.CorePickingService.PackPick:input_type -> core.PackPickRequest
+	14, // 34: core.CorePickingService.UpdatePickLine:input_type -> core.UpdatePickLineRequest
+	16, // 35: core.CorePickingService.PickPickLine:input_type -> core.PickPickLineRequest
+	18, // 36: core.CorePickingService.VoidPickLine:input_type -> core.VoidPickLineRequest
+	3,  // 37: core.CorePickingService.ListPicks:output_type -> core.ListPicksResponse
+	5,  // 38: core.CorePickingService.GetPick:output_type -> core.GetPickResponse
+	7,  // 39: core.CorePickingService.BatchGetPicksByIDs:output_type -> core.BatchGetPicksByIDsResponse
+	9,  // 40: core.CorePickingService.PickAllLines:output_type -> core.PickAllLinesResponse
+	11, // 41: core.CorePickingService.VoidPick:output_type -> core.VoidPickResponse
+	13, // 42: core.CorePickingService.PackPick:output_type -> core.PackPickResponse
+	15, // 43: core.CorePickingService.UpdatePickLine:output_type -> core.UpdatePickLineResponse
+	17, // 44: core.CorePickingService.PickPickLine:output_type -> core.PickPickLineResponse
+	19, // 45: core.CorePickingService.VoidPickLine:output_type -> core.VoidPickLineResponse
+	37, // [37:46] is the sub-list for method output_type
+	28, // [28:37] is the sub-list for method input_type
+	28, // [28:28] is the sub-list for extension type_name
+	28, // [28:28] is the sub-list for extension extendee
+	0,  // [0:28] is the sub-list for field type_name
 }
 
 func init() { file_core_core_picking_proto_init() }
@@ -2025,7 +2040,7 @@ func file_core_core_picking_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_core_core_picking_proto_rawDesc), len(file_core_core_picking_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   20,
+			NumMessages:   21,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

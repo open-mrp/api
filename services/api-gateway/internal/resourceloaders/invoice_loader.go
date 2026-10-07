@@ -59,6 +59,7 @@ func invoiceReferenceFromProto(d *pb.InvoiceInfo) *apiresource.Invoice {
 		PaymentStatus:        paymentStatus,
 		IsPaidInFull:         d.IsPaidInFull,
 		IsEdiSent:            d.IsEdiSent,
+		Metadata:             apiresource.MetadataFromProto(d.Metadata),
 		HasBeenSent:          d.HasBeenSent,
 		TotalInvoiced:        d.TotalInvoiced,
 		AcceptsInvoiceEmails: d.AcceptsInvoiceEmails,

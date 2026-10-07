@@ -4,6 +4,7 @@ import (
 	"time"
 
 	"github.com/open-mrp/api/shared/field"
+	"github.com/open-mrp/api/shared/metadata"
 	"github.com/open-mrp/api/shared/pricing"
 )
 
@@ -19,6 +20,8 @@ type SalesOrderLine struct {
 	ItemSKU            *string `audit:"item_sku"`
 	SalesOrderID       string
 	EdiLineItemID      *string `audit:"edi_line_item_id"`
+	// Metadata is the client's own key/value pairs; never nil. See shared/metadata.
+	Metadata map[string]string `audit:"metadata"`
 
 	// Quantity ordered
 	QuantityID               string
@@ -76,6 +79,7 @@ type CreateSalesOrderLineParams struct {
 	UnitCostNumeratorUnitID    *string
 	UnitCostDenominatorUnitID  *string
 	EdiLineItemID              *string
+	Metadata                   map[string]string
 }
 
 // UpdateSalesOrderLineParams holds the parameters for updating a sales order line.
@@ -97,6 +101,7 @@ type UpdateSalesOrderLineParams struct {
 	UnitCostNumeratorUnitID    *string
 	UnitCostDenominatorUnitID  *string
 	EdiLineItemID              *string
+	Metadata                   metadata.Update
 }
 
 // DeleteSalesOrderLineParams holds the parameters for deleting a sales order line.

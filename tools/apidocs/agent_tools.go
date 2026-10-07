@@ -262,7 +262,7 @@ func buildToolSchema(e apiendpoint.APIEndpointer, method string, docReader *DocR
 				fs := simplifySchema(generateSchema(f.Type, comps, docReader), comps, map[string]bool{})
 				fs.Description = firstNonEmpty(getFieldDoc(reqType, f, docReader), fs.Description)
 				props[q] = fs
-				if strings.Contains(f.Tag.Get("validate"), "required") {
+				if validateRequires(f.Tag.Get("validate")) {
 					required = append(required, q)
 				}
 				params = append(params, agentToolParam{Name: q, In: "query", Array: fs.Type == "array"})

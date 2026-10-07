@@ -227,7 +227,7 @@ func buildOpenAPISpec(groups []apiendpoint.APIEndpointGroup, publicOnly bool, ve
 								Name:        header,
 								In:          "header",
 								Description: desc,
-								Required:    strings.Contains(f.Tag.Get("validate"), "required"),
+								Required:    validateRequires(f.Tag.Get("validate")),
 								Schema:      generateSchema(f.Type, &spec.Components, docReader),
 							})
 						}
@@ -254,7 +254,7 @@ func buildOpenAPISpec(groups []apiendpoint.APIEndpointGroup, publicOnly bool, ve
 								Name:        paramName,
 								In:          "query",
 								Description: desc,
-								Required:    strings.Contains(f.Tag.Get("validate"), "required"),
+								Required:    validateRequires(f.Tag.Get("validate")),
 								Schema:      paramSchema,
 								Example:     queryParameterExample(reqType, f, paramSchema),
 							})
@@ -268,7 +268,7 @@ func buildOpenAPISpec(groups []apiendpoint.APIEndpointGroup, publicOnly bool, ve
 								Name:        cookie,
 								In:          "cookie",
 								Description: desc,
-								Required:    strings.Contains(f.Tag.Get("validate"), "required"),
+								Required:    validateRequires(f.Tag.Get("validate")),
 								Schema:      generateSchema(f.Type, &spec.Components, docReader),
 							})
 						}
@@ -710,7 +710,7 @@ func generateSchema(t reflect.Type, components *Components, docReader *DocReader
 		}
 
 		validateTag := f.Tag.Get("validate")
-		hasRequiredInValidate := strings.Contains(validateTag, "required")
+		hasRequiredInValidate := validateRequires(validateTag)
 
 		// field.Clearable[T] and field.Optional[T] unwrap to the inner type for OpenAPI.
 		isClearable := field.IsClearableType(f.Type)
@@ -1379,4 +1379,11 @@ func flattenStructFieldsWithPrefix(t reflect.Type, prefix []int) []reflect.Struc
 		fields = append(fields, f)
 	}
 	return fields
+}
+
+// validateRequires reports whether a validate tag requires the field itself. Rules after `dive` apply to
+// each element of a list or map, not to the field, so `omitempty,dive,required` is an optional list.
+func validateRequires(tag string) bool {
+	fieldRules, _, _ := strings.Cut(tag, "dive")
+	return strings.Contains(fieldRules, "required")
 }

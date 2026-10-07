@@ -17,7 +17,6 @@ const (
 	invoicePaidIndex     = "invoice_account_unpaid_created_idx"
 	invoiceOverPaidIndex = "invoice_account_over_paid_created_idx"
 	invoiceOrderIndex    = "invoice_account_sales_order_idx"
-	invoiceNumberIndex   = "invoice_account_number_idx"
 	// invoiceNumberOrderIndex is the number key carrying the order, so a number prefix's orders are
 	// read off the key.
 	invoiceNumberOrderIndex = "invoice_account_number_order_idx"
@@ -315,7 +314,7 @@ JOIN geolocation geo ON geo.id = addr.geolocation_id`,
 	// Exact numbers name at most as many invoices as were sent, so they are looked up by number and the
 	// few found sorted, ahead of every other key and of driving a search from the order filters.
 	if len(params.Numbers) > 0 {
-		page.indexes = []string{invoiceNumberIndex}
+		page.indexes = []string{invoiceNumberOrderIndex}
 	}
 	// A search cannot stop a walk in list order early, so a rare one is read from the few orders it can
 	// match; the search itself stays in the filter, so those orders only bound the read.

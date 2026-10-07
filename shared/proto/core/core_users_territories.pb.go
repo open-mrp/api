@@ -4484,7 +4484,9 @@ type ListInvoicesRequest struct {
 	EndDate          *timestamppb.Timestamp `protobuf:"bytes,11,opt,name=end_date,json=endDate,proto3,oneof" json:"end_date,omitempty"`
 	Includes         []string               `protobuf:"bytes,12,rep,name=includes,proto3" json:"includes,omitempty"`
 	// Exact invoice numbers.
-	Numbers       []string `protobuf:"bytes,13,rep,name=numbers,proto3" json:"numbers,omitempty"`
+	Numbers []string `protobuf:"bytes,13,rep,name=numbers,proto3" json:"numbers,omitempty"`
+	// How query matches: "prefix" (the default when unset) or "contains".
+	QueryMatch    *string `protobuf:"bytes,14,opt,name=query_match,json=queryMatch,proto3,oneof" json:"query_match,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -4608,6 +4610,13 @@ func (x *ListInvoicesRequest) GetNumbers() []string {
 		return x.Numbers
 	}
 	return nil
+}
+
+func (x *ListInvoicesRequest) GetQueryMatch() string {
+	if x != nil && x.QueryMatch != nil {
+		return *x.QueryMatch
+	}
+	return ""
 }
 
 type ListInvoicesResponse struct {
@@ -5835,7 +5844,7 @@ const file_core_core_users_territories_proto_rawDesc = "" +
 	"\v_start_dateB\v\n" +
 	"\t_end_date\"I\n" +
 	"&StartInventoryChangeLogsExportResponse\x12\x1f\n" +
-	"\x03job\x18\x01 \x01(\v2\r.core.JobInfoR\x03job\"\xa8\x04\n" +
+	"\x03job\x18\x01 \x01(\v2\r.core.JobInfoR\x03job\"\xde\x04\n" +
 	"\x13ListInvoicesRequest\x12\x1b\n" +
 	"\x06cursor\x18\x01 \x01(\tH\x00R\x06cursor\x88\x01\x01\x12\x14\n" +
 	"\x05limit\x18\x02 \x01(\x05R\x05limit\x12\x19\n" +
@@ -5851,12 +5860,15 @@ const file_core_core_users_territories_proto_rawDesc = "" +
 	" \x01(\v2\x1a.google.protobuf.TimestampH\x03R\tstartDate\x88\x01\x01\x12:\n" +
 	"\bend_date\x18\v \x01(\v2\x1a.google.protobuf.TimestampH\x04R\aendDate\x88\x01\x01\x12\x1a\n" +
 	"\bincludes\x18\f \x03(\tR\bincludes\x12\x18\n" +
-	"\anumbers\x18\r \x03(\tR\anumbersB\t\n" +
+	"\anumbers\x18\r \x03(\tR\anumbers\x12$\n" +
+	"\vquery_match\x18\x0e \x01(\tH\x05R\n" +
+	"queryMatch\x88\x01\x01B\t\n" +
 	"\a_cursorB\b\n" +
 	"\x06_queryB\t\n" +
 	"\a_statusB\r\n" +
 	"\v_start_dateB\v\n" +
-	"\t_end_date\"r\n" +
+	"\t_end_dateB\x0e\n" +
+	"\f_query_match\"r\n" +
 	"\x14ListInvoicesResponse\x12-\n" +
 	"\binvoices\x18\x01 \x03(\v2\x11.core.InvoiceInfoR\binvoices\x12+\n" +
 	"\tpage_info\x18\x02 \x01(\v2\x0e.core.PageInfoR\bpageInfo\"?\n" +

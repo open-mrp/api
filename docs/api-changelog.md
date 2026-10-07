@@ -2,6 +2,15 @@
 
 Changes to the public API, by the `OpenMRP-Version` that introduces them. A client pinned to an older supported version keeps the shape described for that version; see [API versioning](patterns/api-versioning-patterns.md).
 
+## 1.0.forge-preview.8
+
+### Breaking changes
+
+- **Invoice search matches the start of each field.** On `GET /v1/finance/invoices`, `q` now matches the start of the invoice number, the sales order number, the customer PO number, and the customer's name, number and alias, ignoring case. It no longer matches the middle of those fields, and it no longer searches the invoice note or the customer's notes. A search for part of a number such as `2410` finds invoice `24109`; one for `4109` no longer does.
+  - New query parameter `q_match`: `prefix` (the default) or `contains`. `contains` keeps the previous matching, anywhere in every field and in the notes, and is slower on accounts with many invoices.
+  - Older versions: a list pinned to 1.0.forge-preview.7 or earlier that sends `q` without `q_match` is searched with `contains`, as before.
+  - Migration: nothing to change for searches by the start of a number or name. To keep matching the middle of a field or the notes, send `q_match=contains`.
+
 ## 1.0.forge-preview.7
 
 ### Breaking changes

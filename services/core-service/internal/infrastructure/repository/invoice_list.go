@@ -6,6 +6,7 @@ import (
 
 	"github.com/open-mrp/api/services/core-service/internal/domain"
 	"github.com/open-mrp/api/services/core-service/internal/infrastructure/sqlc"
+	"github.com/open-mrp/api/shared/constants"
 	"github.com/open-mrp/api/shared/pagination"
 )
 
@@ -17,6 +18,9 @@ const (
 	invoiceOverPaidIndex = "invoice_account_over_paid_created_idx"
 	invoiceOrderIndex    = "invoice_account_sales_order_idx"
 	invoiceNumberIndex   = "invoice_account_number_idx"
+	// invoiceNumberOrderIndex is the number key carrying the order, so a number prefix's orders are
+	// read off the key.
+	invoiceNumberOrderIndex = "invoice_account_number_order_idx"
 )
 
 // invoiceListIndexes is the keys an invoice page may be read from when it is not driven from a set of
@@ -153,6 +157,68 @@ WHERE so3.owner_account_id = ? AND so3.buyer_account_id IN (`+placeholders(len(b
 	return orders, true, nil
 }
 
+// prefixSearchOrders returns every order whose invoices a prefix search (a LIKE pattern ending in its
+// only wildcard) can match. Each field is a range on a key that holds it after the account, so each
+// read stops at the cap instead of scanning the account. ok is false past invoiceSearchOrderCap.
+func (r *invoiceRepoImpl) prefixSearchOrders(ctx context.Context, accountID, prefix string) (orders []string, ok bool, err error) {
+	q := r.queries.DB()
+	seen := map[string]bool{}
+	add := func(ids []string) bool {
+		for _, id := range ids {
+			if !seen[id] {
+				seen[id] = true
+				orders = append(orders, id)
+			}
+		}
+		return len(orders) <= invoiceSearchOrderCap
+	}
+	limit := invoiceSearchOrderCap + 1
+
+	byInvoice, err := selectStrings(ctx, q, `SELECT si.sales_order_id FROM invoice si FORCE INDEX (`+invoiceNumberOrderIndex+`)
+WHERE si.account_id = ? AND si.number LIKE ? LIMIT ?`, accountID, prefix, limit)
+	if err != nil || !add(byInvoice) {
+		return nil, false, err
+	}
+	// The number key leads with the order type, so each type is its own range.
+	byOrder, err := selectStrings(ctx, q, `SELECT so3.id FROM sales_order so3 FORCE INDEX (sales_order_owner_account_id_sales_order_type_code_number_key)
+WHERE so3.owner_account_id = ? AND so3.sales_order_type_code IN ('sales_order', 'purchase_order') AND so3.number LIKE ? LIMIT ?`,
+		accountID, prefix, limit)
+	if err != nil || !add(byOrder) {
+		return nil, false, err
+	}
+	byPO, err := selectStrings(ctx, q, `SELECT so3.id FROM sales_order so3 FORCE INDEX (sales_order_owner_customer_po_number_idx)
+WHERE so3.owner_account_id = ? AND so3.customer_po_number LIKE ? LIMIT ?`, accountID, prefix, limit)
+	if err != nil || !add(byPO) {
+		return nil, false, err
+	}
+
+	// Names are on the account, shared by every tenant, so the range is over all accounts' names and the
+	// owner's relation is probed by key for each.
+	buyers, err := selectStrings(ctx, q, `SELECT /*+ JOIN_ORDER(nb, nar) */ nar.counterparty_account_id FROM account nb FORCE INDEX (account_name_idx)
+JOIN account_relation nar FORCE INDEX (account_relation_owner_account_id_counterparty_account_id_ac_key)
+    ON nar.owner_account_id = ? AND nar.counterparty_account_id = nb.id AND nar.account_relation_role_code = 'customer'
+WHERE nb.name LIKE ?
+UNION
+SELECT xar.counterparty_account_id FROM account_relation xar FORCE INDEX (account_relation_owner_role_external_number_idx)
+WHERE xar.owner_account_id = ? AND xar.account_relation_role_code = 'customer' AND xar.external_number LIKE ?
+UNION
+SELECT aar.counterparty_account_id FROM account_relation aar FORCE INDEX (account_relation_owner_role_alias_idx)
+WHERE aar.owner_account_id = ? AND aar.account_relation_role_code = 'customer' AND aar.alias LIKE ?`,
+		accountID, prefix, accountID, prefix, accountID, prefix)
+	if err != nil || len(buyers) > invoiceSearchOrderCap {
+		return nil, false, err
+	}
+	if len(buyers) > 0 {
+		byBuyer, err := selectStrings(ctx, q, `SELECT so3.id FROM sales_order so3 FORCE INDEX (sales_order_owner_buyer_created_idx)
+WHERE so3.owner_account_id = ? AND so3.buyer_account_id IN (`+placeholders(len(buyers))+`) LIMIT ?`,
+			append(append([]any{accountID}, stringArgs(buyers)...), limit)...)
+		if err != nil || !add(byBuyer) {
+			return nil, false, err
+		}
+	}
+	return orders, true, nil
+}
+
 // orderSemijoin admits invoices whose order is in a set read from another table first. A filter on the
 // order or its lines is not on the invoice, so no invoice key yields its invoices in list order; as a
 // semijoin the planner can read a rare value's orders and look their invoices up, or walk the invoices
@@ -180,12 +246,21 @@ func (r *invoiceRepoImpl) listInvoicePage(ctx context.Context, params domain.Lis
 
 	f := &listFilter{}
 	f.add("inv.account_id = ?", params.AccountID)
+	contains := params.QueryMatch == constants.InvoiceSearchMatchContains
 	search := buildInvoiceSearchParams(params.Query)
-	if search.Valid {
-		// Reaches the order and relation joined one-to-one, so the search widens without fanning rows out.
+	if !contains {
+		search = buildInvoicePrefixSearch(params.Query)
+	}
+	// Each reaches the order and relation joined one-to-one, so the search widens without fanning rows out.
+	switch {
+	case search.Valid && contains:
 		f.add("(inv.number LIKE ? OR inv.note LIKE ? OR buyer.name LIKE ? OR so.number LIKE ? OR so.customer_po_number LIKE ?"+
 			" OR ar.external_number LIKE ? OR ar.alias LIKE ? OR ar.notes LIKE ?)",
 			search.String, search.String, search.String, search.String, search.String, search.String, search.String, search.String)
+	case search.Valid:
+		f.add("(inv.number LIKE ? OR so.number LIKE ? OR so.customer_po_number LIKE ? OR buyer.name LIKE ?"+
+			" OR ar.external_number LIKE ? OR ar.alias LIKE ?)",
+			search.String, search.String, search.String, search.String, search.String, search.String)
 	}
 	var status string
 	if params.Status != nil && *params.Status != "" && *params.Status != "all" {
@@ -242,11 +317,15 @@ JOIN geolocation geo ON geo.id = addr.geolocation_id`,
 	if len(params.Numbers) > 0 {
 		page.indexes = []string{invoiceNumberIndex}
 	}
-	// A substring search cannot stop a walk in list order early, so a rare one is read from the few
-	// orders it can match; the search itself stays in the filter, so those orders only bound the read.
+	// A search cannot stop a walk in list order early, so a rare one is read from the few orders it can
+	// match; the search itself stays in the filter, so those orders only bound the read.
 	driven := false
 	if search.Valid && len(params.Numbers) == 0 {
-		orders, ok, err := r.searchOrders(ctx, params.AccountID, search.String)
+		find := r.prefixSearchOrders
+		if contains {
+			find = r.searchOrders
+		}
+		orders, ok, err := find(ctx, params.AccountID, search.String)
 		if err != nil {
 			return nil, err
 		}

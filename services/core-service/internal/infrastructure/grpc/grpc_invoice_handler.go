@@ -4,6 +4,7 @@ import (
 	"context"
 
 	"github.com/open-mrp/api/services/core-service/internal/domain"
+	"github.com/open-mrp/api/shared/constants"
 	"github.com/open-mrp/api/shared/contracts"
 	"github.com/open-mrp/api/shared/field"
 	"github.com/open-mrp/api/shared/metadata"
@@ -20,6 +21,7 @@ func (h *gRPCHandler) ListInvoices(ctx context.Context, req *pb.ListInvoicesRequ
 		Cursor:           req.Cursor,
 		Limit:            req.Limit,
 		Query:            req.Query,
+		QueryMatch:       constants.InvoiceSearchMatch(req.GetQueryMatch()),
 		Status:           req.Status,
 		ItemIDs:          req.ItemIds,
 		CustomerIDs:      req.CustomerIds,

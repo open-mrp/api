@@ -33,9 +33,14 @@ type ListInvoicesRequest struct {
 	//
 	// These are account user IDs, matching the `sales_rep` on the order.
 	SalesRepIDs []string `query:"sales_rep_ids"`
+	// How `q` is matched. Defaults to `prefix`.
+	//
+	// - `prefix`: `q` matches the start of the invoice number, the sales order number, the customer PO number, and the customer's name, number, and alias. Notes are not searched.
+	// - `contains`: `q` matches anywhere in those fields, and also in the invoice note and the customer's notes. Slower on accounts with many invoices.
+	QMatch *constants.InvoiceSearchMatch `query:"q_match"`
 	// Restricts results to invoices with any of these numbers, matched exactly.
 	//
-	// Up to 100 numbers. Unlike `q`, which matches part of a number and also searches notes, customers, order numbers and purchase order numbers, this finds exactly the invoices named.
+	// Up to 100 numbers. Unlike `q`, which matches the start of a number (or any part of it with `q_match=contains`) and also searches customers, order numbers and purchase order numbers, this finds exactly the invoices named.
 	Numbers []string `query:"numbers" validate:"omitempty,max=100,dive,required,max=255"`
 	// Only include invoices created on or after this date (`YYYY-MM-DD`, UTC). A full timestamp (RFC 3339) is also accepted, to bound the range at a local midnight.
 	StartDate *string `query:"starts_at" validate:"omitempty,date_filter"`
@@ -45,7 +50,7 @@ type ListInvoicesRequest struct {
 
 // Returns a paginated list of invoices for the current account, newest first.
 //
-// A free-text search term (`q`) is matched against the invoice number, the invoice note, the customer name, the sales order number, the customer PO number, and the customer's number, alias, and notes, and still respects the other filters.
+// A free-text search term (`q`) matches the start of the invoice number, the sales order number, the customer PO number, and the customer's name, number, and alias, and still respects the other filters. With `q_match=contains` it matches anywhere in those fields and also searches the invoice note and the customer's notes.
 type ListInvoicesEndpoint struct{}
 
 func (e *ListInvoicesEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListInvoicesRequest, *apiresource.List[apiresource.Invoice]] {

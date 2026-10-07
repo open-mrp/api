@@ -61,6 +61,7 @@ func (m *invoiceSvcImpl) ListInvoices(ctx context.Context, req *ListInvoicesRequ
 		Cursor:           req.Cursor,
 		Limit:            req.Limit,
 		Query:            req.Query,
+		QueryMatch:       req.QMatch.StringPtr(),
 		Status:           req.Status.StringPtr(),
 		ItemIds:          req.ItemIDs,
 		CustomerIds:      req.CustomerIDs,

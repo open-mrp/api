@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"net/url"
 	"slices"
+	"strings"
 	"testing"
 	"time"
 
@@ -578,7 +579,8 @@ func TestInvoiceParity_ListDatesMustParse(t *testing.T) {
 	}
 }
 
-// The search reaches the invoice, its order, and the customer relation's number, alias and notes.
+// A contains search reaches anywhere in the invoice, its order, and the customer relation's number, alias
+// and notes.
 func TestInvoiceParity_ListSearch(t *testing.T) {
 	t.Parallel()
 	customerA, customerB := parityCustomer(t, ""), parityCustomer(t, "")
@@ -596,7 +598,7 @@ func TestInvoiceParity_ListSearch(t *testing.T) {
 
 	search := func(q string) []string {
 		t.Helper()
-		return invoiceListIDs(t, apiClient, invoicesPath, withCustomers(url.Values{"q": {q}}, customerA, customerB))
+		return invoiceListIDs(t, apiClient, invoicesPath, withCustomers(url.Values{"q": {q}, "q_match": {"contains"}}, customerA, customerB))
 	}
 	for what, q := range map[string]string{
 		"customer alias":  alias,
@@ -614,6 +616,72 @@ func TestInvoiceParity_ListSearch(t *testing.T) {
 		}
 	}
 	assert.Empty(t, search(uniqueName("e2e-no-such-invoice")))
+}
+
+// A search matches the start of the invoice number, the order number, the customer PO, and the customer's
+// name, number and alias. It does not reach into the middle of them, nor into any notes, and a wildcard in
+// the term is a literal character.
+func TestInvoiceParity_ListSearchPrefix(t *testing.T) {
+	t.Parallel()
+	customerA, customerB := parityCustomer(t, ""), parityCustomer(t, "")
+	po := uniqueName("E2E-PO")
+	invA := parityInvoiceFor(t, customerA, map[string]any{"customer_purchase_order_number": po})
+	invB := parityInvoiceFor(t, customerB, nil)
+
+	alias, notes, number := uniqueName("e2e-alias"), uniqueName("e2e-relation-notes"), uniqueName("E2E-CUSTNO")
+	db := authDB(t)
+	_, err := db.Exec(`UPDATE account_relation SET alias = ?, notes = ?, external_number = ? WHERE owner_account_id = ? AND counterparty_account_id = ? AND account_relation_role_code = 'customer'`,
+		alias, notes, number, SeedAccountID, customerA)
+	require.NoError(t, err)
+	invoiceNote := uniqueName("e2e-invoice-note")
+	patchInvoice(t, invA.invoiceID, map[string]any{"note": invoiceNote})
+	name := getCustomerName(t, customerA)
+
+	search := func(q string) []string {
+		t.Helper()
+		return invoiceListIDs(t, apiClient, invoicesPath, withCustomers(url.Values{"q": {q}}, customerA, customerB))
+	}
+	for what, q := range map[string]string{
+		"invoice number":         invA.number,
+		"order number":           invA.orderNumber,
+		"customer PO":            po,
+		"customer PO start":      po[:len(po)-3],
+		"customer name":          name,
+		"customer name start":    name[:len(name)-3],
+		"customer name any case": strings.ToUpper(name),
+		"customer number":        number,
+		"customer number start":  number[:len(number)-3],
+		"customer alias":         alias,
+		"customer alias start":   alias[:len(alias)-3],
+	} {
+		got := search(q)
+		assert.Contains(t, got, invA.invoiceID, "%s %q", what, q)
+		if !strings.HasPrefix(invB.number, q) && !strings.HasPrefix(invB.orderNumber, q) {
+			assert.NotContains(t, got, invB.invoiceID, "%s %q", what, q)
+		}
+	}
+	for what, q := range map[string]string{
+		"invoice note":        invoiceNote,
+		"customer notes":      notes,
+		"middle of the PO":    po[4:],
+		"middle of the name":  name[4:],
+		"middle of the alias": alias[4:],
+		"underscore wildcard": "_" + alias[1:],
+		"percent wildcard":    "%" + alias[1:],
+		"backslash":           `\` + alias,
+		"nothing":             uniqueName("e2e-no-such-invoice"),
+	} {
+		assert.NotContains(t, search(q), invA.invoiceID, "%s %q", what, q)
+	}
+}
+
+// q_match is checked against the values it takes.
+func TestInvoiceParity_ListSearchMatchIsValidated(t *testing.T) {
+	t.Parallel()
+	status, body, err := apiClient.GetListRaw(invoicesPath, url.Values{"q": {"INV"}, "q_match": {"fuzzy"}})
+	require.NoError(t, err)
+	requireStatus(t, 400, status, body)
+	assertErrorParam(t, requireErrorResponse(t, body, "", "invalid_request_error"), "q_match")
 }
 
 // --- Customer invoices (settle) ---

@@ -233,6 +233,7 @@ var typeRegistry = map[string]any{
 	"EmailSendStatus":                 EmailSendStatus(""),
 	"EmailRecordType":                 EmailRecordType(""),
 	"InvoiceListStatus":               InvoiceListStatus(""),
+	"InvoiceSearchMatch":              InvoiceSearchMatch(""),
 	"DeliveryListStatus":              DeliveryListStatus(""),
 	"AgentMemoryCategory":             AgentMemoryCategory(""),
 	"RemovedResourceScope":            RemovedResourceScope(""),

@@ -81,6 +81,78 @@ func (p *invoicePage) ids(ctx context.Context, q sqlc.DBTX, cursor *pagination.S
 	return selectStrings(ctx, q, query, append(append(args, p.f.args...), limit)...)
 }
 
+// invoiceSearchOrderCap is the most orders a search's matches may span for the page to be read from
+// them; a search matching more is dense enough that walking the invoices in list order meets a page sooner.
+const invoiceSearchOrderCap = 1000
+
+// invoiceTableScanAt is how many invoices an account must have for reading the whole table to find a
+// note to beat looking each of the account's invoices up from its key.
+const invoiceTableScanAt = 20_000
+
+// searchOrders returns every order whose invoices a search (a LIKE pattern) can match, each field read
+// from a key or a single table rather than through the page's joins. ok is false past invoiceSearchOrderCap.
+func (r *invoiceRepoImpl) searchOrders(ctx context.Context, accountID, like string) (orders []string, ok bool, err error) {
+	q := r.queries.DB()
+	seen := map[string]bool{}
+	add := func(ids []string) bool {
+		for _, id := range ids {
+			if !seen[id] {
+				seen[id] = true
+				orders = append(orders, id)
+			}
+		}
+		return len(orders) <= invoiceSearchOrderCap
+	}
+	limit := invoiceSearchOrderCap + 1
+
+	var invoices int
+	if err := q.QueryRowContext(ctx, `SELECT COUNT(*) FROM (
+    SELECT 1 FROM invoice si FORCE INDEX (`+invoiceCreatedIndex+`) WHERE si.account_id = ? LIMIT ?) probe`,
+		accountID, invoiceTableScanAt).Scan(&invoices); err != nil {
+		return nil, false, err
+	}
+	invoiceKey := invoiceCreatedIndex
+	if invoices >= invoiceTableScanAt {
+		invoiceKey = "PRIMARY"
+	}
+	byInvoice, err := selectStrings(ctx, q, `SELECT DISTINCT si.sales_order_id FROM invoice si FORCE INDEX (`+invoiceKey+`)
+WHERE si.account_id = ? AND (si.number LIKE ? OR si.note LIKE ?) LIMIT ?`, accountID, like, like, limit)
+	if err != nil || !add(byInvoice) {
+		return nil, false, err
+	}
+
+	// Each read from its own covering key: an OR of the two would read every order's row.
+	byOrder, err := selectStrings(ctx, q, `SELECT so3.id FROM sales_order so3 FORCE INDEX (sales_order_owner_account_id_sales_order_type_code_number_key)
+WHERE so3.owner_account_id = ? AND so3.number LIKE ? LIMIT ?`, accountID, like, limit)
+	if err != nil || !add(byOrder) {
+		return nil, false, err
+	}
+	byPO, err := selectStrings(ctx, q, `SELECT so3.id FROM sales_order so3 FORCE INDEX (sales_order_owner_customer_po_number_idx)
+WHERE so3.owner_account_id = ? AND so3.customer_po_number LIKE ? LIMIT ?`, accountID, like, limit)
+	if err != nil || !add(byPO) {
+		return nil, false, err
+	}
+
+	buyers, err := selectStrings(ctx, q, `SELECT ar2.counterparty_account_id
+FROM account_relation ar2 FORCE INDEX (account_relation_owner_account_id_counterparty_account_id_ac_key)
+JOIN account b2 ON b2.id = ar2.counterparty_account_id
+WHERE ar2.owner_account_id = ? AND ar2.account_relation_role_code = 'customer'
+AND (b2.name LIKE ? OR ar2.external_number LIKE ? OR ar2.alias LIKE ? OR ar2.notes LIKE ?)`,
+		accountID, like, like, like, like)
+	if err != nil || len(buyers) > invoiceSearchOrderCap {
+		return nil, false, err
+	}
+	if len(buyers) > 0 {
+		byBuyer, err := selectStrings(ctx, q, `SELECT so3.id FROM sales_order so3 FORCE INDEX (sales_order_owner_buyer_created_idx)
+WHERE so3.owner_account_id = ? AND so3.buyer_account_id IN (`+placeholders(len(buyers))+`) LIMIT ?`,
+			append(append([]any{accountID}, stringArgs(buyers)...), limit)...)
+		if err != nil || !add(byBuyer) {
+			return nil, false, err
+		}
+	}
+	return orders, true, nil
+}
+
 // orderSemijoin admits invoices whose order is in a set read from another table first. A filter on the
 // order or its lines is not on the invoice, so no invoice key yields its invoices in list order; as a
 // semijoin the planner can read a rare value's orders and look their invoices up, or walk the invoices
@@ -170,8 +242,24 @@ JOIN geolocation geo ON geo.id = addr.geolocation_id`,
 	if len(params.Numbers) > 0 {
 		page.indexes = []string{invoiceNumberIndex}
 	}
+	// A substring search cannot stop a walk in list order early, so a rare one is read from the few
+	// orders it can match; the search itself stays in the filter, so those orders only bound the read.
+	driven := false
+	if search.Valid && len(params.Numbers) == 0 {
+		orders, ok, err := r.searchOrders(ctx, params.AccountID, search.String)
+		if err != nil {
+			return nil, err
+		}
+		if ok && len(orders) == 0 {
+			return nil, nil
+		}
+		if ok {
+			page.drive("SELECT drv_so.id FROM sales_order drv_so WHERE drv_so.id IN ("+placeholders(len(orders))+")", stringArgs(orders)...)
+			driven = true
+		}
+	}
 	for i, set := range sets {
-		if i == 0 && search.Valid && len(params.Numbers) == 0 {
+		if i == 0 && !driven && search.Valid && len(params.Numbers) == 0 {
 			page.drive(set, setArgs[i]...)
 			continue
 		}

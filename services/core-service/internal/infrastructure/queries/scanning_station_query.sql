@@ -20,10 +20,10 @@ WHERE ss.id = sqlc.arg('id')
 AND ss.account_id = sqlc.arg('account_id');
 
 -- name: ListProductionStepsByScanningStationID :many
--- FORCE INDEX reads just the station's steps. Left free, production sometimes walks the account's
--- (account_id, name) key to skip the sort, reading every step the account has.
+-- FORCE INDEX reads just the station's steps, already in name order. Left free, production sometimes
+-- walks the account's (account_id, name) key to skip the sort, reading every step the account has.
 SELECT id, name, leveling_factor, allowances, created_at, updated_at
-FROM production_step FORCE INDEX (production_step_account_id_scanning_station_id_created_at_id_idx)
+FROM production_step FORCE INDEX (production_step_account_station_name_idx)
 WHERE scanning_station_id = sqlc.arg('scanning_station_id')
 AND account_id = sqlc.arg('account_id')
 ORDER BY name ASC;

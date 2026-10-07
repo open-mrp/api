@@ -111,13 +111,17 @@ WHERE t.id IN (sqlc.slice('ids'))
 AND t.account_id = sqlc.arg('account_id');
 
 -- name: FindSalesRepByZipcode :one
+-- The zipcode index ranges over start_zipcode and checks end_zipcode without reading the rows.
+-- Overlapping territories resolve to the lowest id, the row the account key used to return first.
 SELECT t.sales_rep_id
-FROM territory t
+FROM territory t FORCE INDEX (territory_account_zip_idx)
 WHERE t.account_id = sqlc.arg('account_id')
+AND t.start_zipcode <= sqlc.arg('zipcode')
 AND (
-    (t.start_zipcode <= sqlc.arg('zipcode') AND t.end_zipcode >= sqlc.arg('zipcode'))
+    t.end_zipcode >= sqlc.arg('zipcode')
     OR (t.start_zipcode = sqlc.arg('zipcode') AND t.end_zipcode IS NULL)
 )
+ORDER BY t.id
 LIMIT 1;
 
 -- name: FindSalesRepByState :one

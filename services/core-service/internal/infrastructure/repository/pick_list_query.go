@@ -2,7 +2,9 @@ package repository
 
 import (
 	gosql "database/sql"
+	"slices"
 	"strings"
+	"time"
 	"unicode/utf8"
 
 	"github.com/open-mrp/api/shared/db"
@@ -60,6 +62,8 @@ type pickListQuery struct {
 	// PhraseIDs, when non-nil, are the picks a phrase search matches, read up front because there are
 	// few (see pickPhraseScanCap). A phrase with too many is collected again in the query.
 	PhraseIDs []string
+	// PhraseMatches, when non-nil, are PhraseIDs with the columns phrasePage filters and sorts on.
+	PhraseMatches []pickPhraseMatch
 	// DriveFromPhrase reads the page from PhraseIDs by primary key and sorts them.
 	DriveFromPhrase bool
 	Status          *string
@@ -323,30 +327,122 @@ const pickPhraseArmCount = 4
 // pickPhraseArms each select the account's pick ids whose number, PO number, customer name or
 // customer number contains the phrase. Each arm is its own MATCH because an OR of MATCH across joined
 // tables cannot use any of the FULLTEXT indexes. Placeholders per arm: account id, then the phrase's.
-func pickPhraseArms(phrase db.NgramSubstring) []string {
+//
+// With pagesInMemory, every arm also selects pickPhraseMatch's columns. The customer arms otherwise
+// read only a buyer key, so they force the one that covers those columns: MySQL picks a key that
+// does not when the select list grows, and reads every pick of the customer.
+func pickPhraseArms(phrase db.NgramSubstring, q pickListQuery, pagesInMemory bool) []string {
 	numberIndex := ""
 	if !phrase.Indexed() {
 		// The account's number key covers a LIKE, where MySQL would read every pick's row.
 		numberIndex = " FORCE INDEX (" + pickAccountNumberIndex + ")"
 	}
+	columns, buyerIndex := "pk.id", ""
+	if pagesInMemory {
+		columns = "pk.id, pk.buyer_account_id, pk.finished_at, " + strings.Replace(q.sortColumn(), "p.", "pk.", 1)
+		buyerIndex = " FORCE INDEX (" + q.phraseBuyerIndex() + ")"
+	}
 	return []string{
-		`SELECT pk.id FROM pick pk` + numberIndex +
+		`SELECT ` + columns + ` FROM pick pk` + numberIndex +
 			` WHERE pk.account_id = ? AND ` + phrase.Where("pk.number"),
-		`SELECT pk.id FROM sales_order pso JOIN pick pk ON pk.sales_order_id = pso.id` +
+		`SELECT ` + columns + ` FROM sales_order pso JOIN pick pk ON pk.sales_order_id = pso.id` +
 			` WHERE pk.account_id = ? AND ` + phrase.Where("pso.customer_po_number"),
-		`SELECT pk.id FROM account nba` +
+		`SELECT ` + columns + ` FROM account nba` +
 			` JOIN account_relation nar ON nar.owner_account_id = ? AND nar.counterparty_account_id = nba.id` +
-			` JOIN pick pk ON pk.account_id = nar.owner_account_id AND pk.buyer_account_id = nba.id` +
+			` JOIN pick pk` + buyerIndex + ` ON pk.account_id = nar.owner_account_id AND pk.buyer_account_id = nba.id` +
 			` WHERE ` + phrase.Where("nba.name"),
-		`SELECT pk.id FROM account_relation rar` +
-			` JOIN pick pk ON pk.account_id = rar.owner_account_id AND pk.buyer_account_id = rar.counterparty_account_id` +
+		`SELECT ` + columns + ` FROM account_relation rar` +
+			` JOIN pick pk` + buyerIndex + ` ON pk.account_id = rar.owner_account_id AND pk.buyer_account_id = rar.counterparty_account_id` +
 			` WHERE rar.owner_account_id = ? AND ` + phrase.Where("rar.external_number"),
 	}
 }
 
 // pickPhraseMatches is the set of picks the phrase matches.
 func pickPhraseMatches(phrase db.NgramSubstring) string {
-	return strings.Join(pickPhraseArms(phrase), " UNION ")
+	return strings.Join(pickPhraseArms(phrase, pickListQuery{}, false), " UNION ")
+}
+
+// phraseBuyerIndex is the buyer key that holds every column a phrase page reads.
+func (q pickListQuery) phraseBuyerIndex() string {
+	if q.SortByShipBy {
+		return pickBuyerOpenShipByIndex
+	}
+	return pickBuyerOpenCreatedIndex
+}
+
+// phrasePagesInMemory reports whether a phrase's few matches can be paged from the columns read with
+// them. A product-line filter is a child-table EXISTS, and a creation window under the ship-by sort
+// reads a column no buyer key holds alongside the sort, so those page in SQL.
+func (q pickListQuery) phrasePagesInMemory() bool {
+	return len(q.ProductLineIDs) == 0 && !(q.SortByShipBy && (q.StartDate.Valid || q.EndDate.Valid))
+}
+
+// pickPhraseMatch is a pick a phrase matched, with the columns its page is filtered and sorted on.
+type pickPhraseMatch struct {
+	ID         string
+	BuyerID    gosql.NullString
+	FinishedAt gosql.NullTime
+	// SortAt is the list's sort column: ship_by_sort_date (a DATE, so midnight UTC) or created_at.
+	SortAt time.Time
+}
+
+// phrasePage is buildPickListQuery's page over PhraseMatches, computed from the columns already read
+// instead of reading every match's row again. It applies the same predicates and order. Ids compare
+// as bytes, which is the column collation's order for ids: lowercase letters, digits, '-' and '_' at
+// matching positions.
+func (q pickListQuery) phrasePage() []string {
+	var buyers map[string]bool
+	if q.BuyerIDs != nil {
+		buyers = make(map[string]bool, len(q.BuyerIDs))
+		for _, id := range q.BuyerIDs {
+			buyers[id] = true
+		}
+	}
+	cursorAt := q.CursorAt.Time
+	if q.SortByShipBy {
+		// The SQL compares against CAST(? AS DATE) of the UTC value.
+		y, m, d := cursorAt.UTC().Date()
+		cursorAt = time.Date(y, m, d, 0, 0, 0, 0, time.UTC)
+	}
+	asc := q.ascending()
+	after := func(at time.Time, id string) bool {
+		c := at.Compare(cursorAt)
+		if c == 0 {
+			c = strings.Compare(id, q.CursorID.String)
+		}
+		if asc {
+			return c > 0
+		}
+		return c < 0
+	}
+
+	page := make([]pickPhraseMatch, 0, len(q.PhraseMatches))
+	for _, m := range q.PhraseMatches {
+		switch {
+		case buyers != nil && (!m.BuyerID.Valid || !buyers[m.BuyerID.String]):
+		case q.Status != nil && q.openOnly() == m.FinishedAt.Valid:
+		case q.StartDate.Valid && m.SortAt.Before(q.StartDate.Time):
+		case q.EndDate.Valid && m.SortAt.After(q.EndDate.Time):
+		case q.CursorAt.Valid && !after(m.SortAt, m.ID):
+		default:
+			page = append(page, m)
+		}
+	}
+	slices.SortFunc(page, func(a, b pickPhraseMatch) int {
+		c := a.SortAt.Compare(b.SortAt)
+		if c == 0 {
+			c = strings.Compare(a.ID, b.ID)
+		}
+		if !asc {
+			c = -c
+		}
+		return c
+	})
+	ids := make([]string, 0, min(len(page), int(q.Limit)))
+	for _, m := range page[:min(len(page), int(q.Limit))] {
+		ids = append(ids, m.ID)
+	}
+	return ids
 }
 
 // pickPhraseScanCap is the most picks a phrase may match and still be read up front to drive the
@@ -361,7 +457,7 @@ const pickPhraseScanCap = 2000
 func buildPickPhraseIDsQuery(q pickListQuery) (string, []any) {
 	args := q.appendPhraseArgs(make([]any, 0, 13))
 	args = append(args, pickPhraseScanCap+1)
-	return "(" + strings.Join(pickPhraseArms(q.Search.Phrase), ") UNION ALL (") + ") LIMIT ?", args
+	return "(" + strings.Join(pickPhraseArms(q.Search.Phrase, q, q.phrasePagesInMemory()), ") UNION ALL (") + ") LIMIT ?", args
 }
 
 // buildPickPrefixCountQuery counts the account's picks whose number matches the LIKE prefix, stopping

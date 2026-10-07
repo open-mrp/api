@@ -169,8 +169,10 @@ func TestPickList_ReadsAboutAPage(t *testing.T) {
 	listPlanSuite[domain.ListPicksParams]{
 		table: "pick", scopeColumn: "account_id",
 		from: "FROM pick p", alias: "p",
+		// A phrase with few matches pages them in memory, so its read is the request's only one.
 		statement: func(query string) bool {
-			return strings.HasPrefix(query, "SELECT STRAIGHT_JOIN p.id") || strings.HasPrefix(query, "SELECT id FROM (")
+			return strings.HasPrefix(query, "SELECT STRAIGHT_JOIN p.id") || strings.HasPrefix(query, "SELECT id FROM (") ||
+				strings.HasPrefix(query, "(SELECT pk.id")
 		},
 		cases: pickPlanCases(),
 		limit: func(p domain.ListPicksParams) int32 { return p.Limit },

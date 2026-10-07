@@ -300,7 +300,7 @@ SELECT
     q.value,
     q.unit_id,
     icl.created_at
-FROM inventory_change_log icl
+FROM inventory_change_log icl FORCE INDEX (inventory_change_log_account_id_item_id_created_at_id_idx)
 JOIN quantity q ON q.id = icl.quantity_id
 WHERE icl.item_id = ?
 AND icl.account_id = ?
@@ -321,6 +321,8 @@ type ListConsumptionChangeLogsForBurnRateRow struct {
 	CreatedAt time.Time
 }
 
+// FORCE INDEX reads only the item's last 30 days. Left free, production sometimes takes the item key
+// and reads every change the item ever had.
 // Consumption is booked as 'scan' (production draw-down) for materials/parts and 'system_action'
 // (order fulfillment) for products. 'user_correction' is excluded: manual re-baselines of on-hand
 // counts are not demand and would skew the rate (a single large correction dwarfs real usage).

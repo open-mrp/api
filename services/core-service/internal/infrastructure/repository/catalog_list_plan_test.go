@@ -131,3 +131,43 @@ func TestCatalogProducts_ReadsTheirLine(t *testing.T) {
 		})
 	}
 }
+
+// legacyCatalogProductLinesSQL is the account's lines as read off its portal-ready products, which
+// ListCatalogProductLines must keep returning: including a line with no account, which legacy rows have.
+const legacyCatalogProductLinesSQL = `SELECT pl.id FROM (
+  SELECT DISTINCT p.product_line_id FROM item it JOIN product p ON p.item_id = it.id
+  WHERE it.account_id = ? AND it.item_type_code = 'product' AND it.deleted_at IS NULL AND p.is_portal_ready = 1
+) portal_lines JOIN product_line pl ON pl.id = portal_lines.product_line_id ORDER BY pl.name, pl.id`
+
+func TestCatalogProductLines_MatchTheAccountsProducts(t *testing.T) {
+	ensureCatalogCorpus(t)
+	db := planDB(t)
+	ctx := context.Background()
+
+	// A line with no account, holding one of the large tenant's portal-ready products.
+	var productID, lineID string
+	require.NoError(t, db.QueryRow(`SELECT p.id, p.product_line_id FROM product p JOIN item it ON it.id = p.item_id
+		WHERE it.account_id = ? AND p.is_portal_ready = 1 AND it.deleted_at IS NULL AND it.item_type_code = 'product'
+		ORDER BY p.id LIMIT 1`, planCatAccount).Scan(&productID, &lineID))
+	_, err := db.Exec(`INSERT INTO product_line (id, name, unit_group_id, account_id, created_at) VALUES ('pdln_plancat_unowned', 'Plan unowned line', 'ungp_plancat', NULL, NOW())`)
+	require.NoError(t, err)
+	_, err = db.Exec(`UPDATE product SET product_line_id = 'pdln_plancat_unowned' WHERE id = ?`, productID)
+	require.NoError(t, err)
+	t.Cleanup(func() {
+		_, _ = db.Exec(`UPDATE product SET product_line_id = ? WHERE id = ?`, lineID, productID)
+		_, _ = db.Exec(`DELETE FROM product_line WHERE id = 'pdln_plancat_unowned'`)
+	})
+
+	for _, account := range []string{planCatAccount, planSmallTenant(t, db)} {
+		want, err := selectStrings(ctx, db, legacyCatalogProductLinesSQL, account)
+		require.NoError(t, err)
+		lines, apiErr := NewCatalogRepo(sqlc.New(db)).ListProductLines(ctx, account)
+		require.Nil(t, apiErr)
+		got := make([]string, len(lines))
+		for i, l := range lines {
+			got[i] = l.ID
+		}
+		require.ElementsMatch(t, want, got, account)
+		require.NotEmpty(t, got, account)
+	}
+}

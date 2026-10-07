@@ -28,7 +28,8 @@ const transactionColumns = `
 	t.id, t.number,
 	q.id, CAST(q.value AS CHAR), q.unit_id, u.abbreviation,
 	t.customer_account_id, ba.name, ar.external_number, ar.account_status_code, ar.commission_status_code, ar.created_at, ar.updated_at,
-	t.responsible_user_id, au.id, usr.name, au.status_code, au.created_at, au.updated_at,
+	t.responsible_user_id, COALESCE(au.id, auu.id), usr.name, COALESCE(au.status_code, auu.status_code),
+	COALESCE(au.created_at, auu.created_at), COALESCE(au.updated_at, auu.updated_at),
 	t.note,
 	tt.id, tt.code, tt.name,
 	tm.id, tm.code, tm.name,
@@ -66,9 +67,11 @@ JOIN account ba ON ba.id = t.customer_account_id
 LEFT JOIN account_relation ar ON ar.owner_account_id = t.account_id AND ar.counterparty_account_id = t.customer_account_id AND ar.account_relation_role_code = 'customer'
 LEFT JOIN transaction_method tm ON tm.code = t.transaction_method_code
 LEFT JOIN adjustment_type at2 ON at2.code = t.adjustment_type_code
--- responsible_user_id holds an account_user id, or a user id on rows the legacy dashboard wrote.
-LEFT JOIN account_user au ON au.account_id = t.account_id AND (au.id = t.responsible_user_id OR au.user_id = t.responsible_user_id)
-LEFT JOIN ` + "`user`" + ` usr ON usr.id = au.user_id`
+-- responsible_user_id holds an account_user id, or a user id on rows the legacy dashboard wrote. Each
+-- is joined by its own key: one join on either reads every user of the account per transaction.
+LEFT JOIN account_user au ON au.id = t.responsible_user_id AND au.account_id = t.account_id
+LEFT JOIN account_user auu ON auu.user_id = t.responsible_user_id AND auu.account_id = t.account_id
+LEFT JOIN ` + "`user`" + ` usr ON usr.id = COALESCE(au.user_id, auu.user_id)`
 
 type transactionScan struct {
 	id, number                                                 string

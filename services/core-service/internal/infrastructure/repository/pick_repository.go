@@ -147,16 +147,38 @@ func (r *pickRepoImpl) List(ctx context.Context, params domain.ListPicksParams) 
 	ctx, span := pickRepoTracer.Start(ctx, "repository.pick.list")
 	defer span.End()
 
-	// An unset sort means ship-by date, so a caller that never sends the parameter still gets the urgent-first order.
-	sortByShipBy := params.Sort != constants.PickSortCreatedAt
-	sortKey := pickCreatedAt
-	if sortByShipBy {
-		sortKey = pickShipByDate
+	q, cursorDir, apiErr := r.listQuery(ctx, params)
+	if apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
 	}
 
+	// A non-nil empty buyer or phrase set is a filter nothing can match.
+	var ids []string
+	if (q.BuyerIDs == nil || len(q.BuyerIDs) > 0) && (q.PhraseIDs == nil || len(q.PhraseIDs) > 0) {
+		ids, apiErr = r.listIDs(ctx, q)
+		if apiErr != nil {
+			return nil, tracing.Trace(span, apiErr)
+		}
+	}
+	picks, apiErr := r.getByIDsInOrder(ctx, params.AccountID, ids)
+	if apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
+
+	sortKey := pickCreatedAt
+	if q.SortByShipBy {
+		sortKey = pickShipByDate
+	}
+	result, pageInfo := pagination.BuildPageString(picks, params.Limit, cursorDir, sortKey, pickID)
+	return &domain.ListPicksResult{Picks: result, PageInfo: pageInfo}, nil
+}
+
+// listQuery resolves the request into the page query, with the filters it drives from already read.
+func (r *pickRepoImpl) listQuery(ctx context.Context, params domain.ListPicksParams) (pickListQuery, *pagination.Direction, *apierror.APIError) {
+	// An unset sort means ship-by date, so a caller that never sends the parameter still gets the urgent-first order.
 	q := pickListQuery{
 		AccountID:      params.AccountID,
-		SortByShipBy:   sortByShipBy,
+		SortByShipBy:   params.Sort != constants.PickSortCreatedAt,
 		Search:         newPickSearch(params.Query),
 		Status:         params.Status,
 		ProductLineIDs: params.ProductLineIDs,
@@ -168,18 +190,15 @@ func (r *pickRepoImpl) List(ctx context.Context, params domain.ListPicksParams) 
 
 	buyerIDs, apiErr := r.buyerFilter(ctx, params.AccountID, params.CustomerIDs, params.CustomerGroupIDs)
 	if apiErr != nil {
-		return nil, tracing.Trace(span, apiErr)
+		return q, nil, apiErr
 	}
 	q.BuyerIDs = buyerIDs
-	if apiErr := r.chooseDrive(ctx, &q); apiErr != nil {
-		return nil, tracing.Trace(span, apiErr)
-	}
 
 	var cursorDir *pagination.Direction
 	if params.Cursor != nil {
 		cur, err := pagination.DecodeStringCursor(*params.Cursor)
 		if err != nil {
-			return nil, apierror.NewValidationErrorWithParam("Invalid pagination cursor.", "cursor")
+			return q, nil, apierror.NewValidationErrorWithParam("Invalid pagination cursor.", "cursor")
 		}
 		cursorDir = &cur.Direction
 		q.Direction = cur.Direction
@@ -187,22 +206,10 @@ func (r *pickRepoImpl) List(ctx context.Context, params domain.ListPicksParams) 
 		q.CursorAt = gosql.NullTime{Time: cur.OccurredAt, Valid: true}
 		q.CursorID = gosql.NullString{String: cur.ID, Valid: true}
 	}
-
-	// A non-nil empty buyer or phrase set is a filter nothing can match.
-	var ids []string
-	if (buyerIDs == nil || len(buyerIDs) > 0) && (q.PhraseIDs == nil || len(q.PhraseIDs) > 0) {
-		ids, apiErr = r.listIDs(ctx, q)
-		if apiErr != nil {
-			return nil, tracing.Trace(span, apiErr)
-		}
+	if apiErr := r.chooseDrive(ctx, &q); apiErr != nil {
+		return q, nil, apiErr
 	}
-	picks, apiErr := r.getByIDsInOrder(ctx, params.AccountID, ids)
-	if apiErr != nil {
-		return nil, tracing.Trace(span, apiErr)
-	}
-
-	result, pageInfo := pagination.BuildPageString(picks, params.Limit, cursorDir, sortKey, pickID)
-	return &domain.ListPicksResult{Picks: result, PageInfo: pageInfo}, nil
+	return q, cursorDir, nil
 }
 
 // buyerFilter resolves the customer and customer-group filters to the set of customers a pick may be
@@ -254,14 +261,20 @@ func (r *pickRepoImpl) chooseDrive(ctx context.Context, q *pickListQuery) *apier
 		return nil
 	}
 	if q.Search.hasPhrase() {
-		ids, apiErr := r.phraseMatches(ctx, *q)
+		matches, apiErr := r.phraseMatches(ctx, *q)
 		if apiErr != nil {
 			return apiErr
 		}
-		if ids != nil {
-			q.PhraseIDs, q.DriveFromPhrase = ids, true
+		if matches != nil {
+			q.PhraseIDs, q.DriveFromPhrase = make([]string, len(matches)), true
+			for i, m := range matches {
+				q.PhraseIDs[i] = m.ID
+			}
+			if q.phrasePagesInMemory() {
+				q.PhraseMatches = matches
+			}
 		}
-		if ids != nil && len(ids) == 0 {
+		if matches != nil && len(matches) == 0 {
 			return nil
 		}
 	}
@@ -307,26 +320,31 @@ func (r *pickRepoImpl) countPrefixed(ctx context.Context, accountID, prefix stri
 }
 
 // phraseMatches is the picks the phrase matches, or nil when it matches more than pickPhraseScanCap
-// (counting a pick once per arm it matches).
-func (r *pickRepoImpl) phraseMatches(ctx context.Context, q pickListQuery) ([]string, *apierror.APIError) {
+// (counting a pick once per arm it matches). Only IDs are set unless the page is computed in memory.
+func (r *pickRepoImpl) phraseMatches(ctx context.Context, q pickListQuery) ([]pickPhraseMatch, *apierror.APIError) {
 	query, args := buildPickPhraseIDsQuery(q)
 	rows, err := r.queries.DB().QueryContext(ctx, query, args...)
 	if apiErr := db.MapSQLError(err); apiErr != nil {
 		return nil, apiErr
 	}
 	defer rows.Close()
-	ids := []string{}
+	withColumns := q.phrasePagesInMemory()
+	matches := []pickPhraseMatch{}
 	seen := map[string]bool{}
 	read := 0
 	for rows.Next() {
-		var id string
-		if err := rows.Scan(&id); err != nil {
+		var m pickPhraseMatch
+		dest := []any{&m.ID}
+		if withColumns {
+			dest = append(dest, &m.BuyerID, &m.FinishedAt, &m.SortAt)
+		}
+		if err := rows.Scan(dest...); err != nil {
 			return nil, db.MapSQLError(err)
 		}
 		read++
-		if !seen[id] {
-			seen[id] = true
-			ids = append(ids, id)
+		if !seen[m.ID] {
+			seen[m.ID] = true
+			matches = append(matches, m)
 		}
 	}
 	if apiErr := db.MapSQLError(rows.Err()); apiErr != nil {
@@ -335,7 +353,7 @@ func (r *pickRepoImpl) phraseMatches(ctx context.Context, q pickListQuery) ([]st
 	if read > pickPhraseScanCap {
 		return nil, nil
 	}
-	return ids, nil
+	return matches, nil
 }
 
 func (r *pickRepoImpl) countProductLineLines(ctx context.Context, productLineIDs []string) (int, *apierror.APIError) {
@@ -348,6 +366,9 @@ func (r *pickRepoImpl) countProductLineLines(ctx context.Context, productLineIDs
 }
 
 func (r *pickRepoImpl) listIDs(ctx context.Context, q pickListQuery) ([]string, *apierror.APIError) {
+	if q.DriveFromPhrase && q.PhraseMatches != nil {
+		return q.phrasePage(), nil
+	}
 	query, args := buildPickListQuery(q)
 	rows, err := r.queries.DB().QueryContext(ctx, query, args...)
 	if apiErr := db.MapSQLError(err); apiErr != nil {

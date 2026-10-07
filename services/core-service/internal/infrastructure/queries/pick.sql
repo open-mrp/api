@@ -14,8 +14,9 @@ SELECT
     p.created_at,
     p.updated_at,
     (SELECT COUNT(*) FROM pick_line plc WHERE plc.pick_id = p.id) AS line_count,
-    -- Latest ship date across the order's shipments; drives the date in the pick header.
-    (SELECT MAX(sh.shipped_at) FROM shipment sh WHERE sh.sales_order_id = so.id) AS last_shipped_at,
+    -- Latest ship date across the order's shipments; drives the date in the pick header. The forced
+    -- key covers shipped_at; the planner otherwise sometimes reads each shipment row.
+    (SELECT MAX(sh.shipped_at) FROM shipment sh FORCE INDEX (shipment_sales_order_shipped_idx) WHERE sh.sales_order_id = so.id) AS last_shipped_at,
     so.promised_at,
     -- The order's cross-reference and instructions, carried so the floor works the pick without opening the order.
     so.customer_po_number,
@@ -87,8 +88,9 @@ SELECT
     p.created_at,
     p.updated_at,
     (SELECT COUNT(*) FROM pick_line plc WHERE plc.pick_id = p.id) AS line_count,
-    -- Latest ship date across the order's shipments; drives the date in the pick header.
-    (SELECT MAX(sh.shipped_at) FROM shipment sh WHERE sh.sales_order_id = so.id) AS last_shipped_at,
+    -- Latest ship date across the order's shipments; drives the date in the pick header. The forced
+    -- key covers shipped_at; the planner otherwise sometimes reads each shipment row.
+    (SELECT MAX(sh.shipped_at) FROM shipment sh FORCE INDEX (shipment_sales_order_shipped_idx) WHERE sh.sales_order_id = so.id) AS last_shipped_at,
     so.promised_at,
     -- The order's cross-reference and instructions, carried so the floor works the pick without opening the order.
     so.customer_po_number,

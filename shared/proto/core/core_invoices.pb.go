@@ -43,9 +43,12 @@ type InvoiceLineInfo struct {
 	UpdatedAt                  *timestamppb.Timestamp `protobuf:"bytes,14,opt,name=updated_at,json=updatedAt,proto3" json:"updated_at,omitempty"`
 	// The order line's product, carried so lines.order_line.product resolves without a
 	// standalone sales-order-line loader.
-	OrderLineProductId *string `protobuf:"bytes,15,opt,name=order_line_product_id,json=orderLineProductId,proto3,oneof" json:"order_line_product_id,omitempty"`
-	unknownFields      protoimpl.UnknownFields
-	sizeCache          protoimpl.SizeCache
+	OrderLineProductId  *string `protobuf:"bytes,15,opt,name=order_line_product_id,json=orderLineProductId,proto3,oneof" json:"order_line_product_id,omitempty"`
+	OrderLineItemNumber *int32  `protobuf:"varint,16,opt,name=order_line_item_number,json=orderLineItemNumber,proto3,oneof" json:"order_line_item_number,omitempty"`
+	// The product description as it was written on the order line.
+	OrderLineDescription *string `protobuf:"bytes,17,opt,name=order_line_description,json=orderLineDescription,proto3,oneof" json:"order_line_description,omitempty"`
+	unknownFields        protoimpl.UnknownFields
+	sizeCache            protoimpl.SizeCache
 }
 
 func (x *InvoiceLineInfo) Reset() {
@@ -183,6 +186,20 @@ func (x *InvoiceLineInfo) GetOrderLineProductId() string {
 	return ""
 }
 
+func (x *InvoiceLineInfo) GetOrderLineItemNumber() int32 {
+	if x != nil && x.OrderLineItemNumber != nil {
+		return *x.OrderLineItemNumber
+	}
+	return 0
+}
+
+func (x *InvoiceLineInfo) GetOrderLineDescription() string {
+	if x != nil && x.OrderLineDescription != nil {
+		return *x.OrderLineDescription
+	}
+	return ""
+}
+
 type InvoiceAllocationInfo struct {
 	state                  protoimpl.MessageState `protogen:"open.v1"`
 	Id                     string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
@@ -194,8 +211,11 @@ type InvoiceAllocationInfo struct {
 	Note                   *string                `protobuf:"bytes,7,opt,name=note,proto3,oneof" json:"note,omitempty"`
 	CreatedAt              *timestamppb.Timestamp `protobuf:"bytes,8,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
 	UpdatedAt              *timestamppb.Timestamp `protobuf:"bytes,9,opt,name=updated_at,json=updatedAt,proto3" json:"updated_at,omitempty"`
-	unknownFields          protoimpl.UnknownFields
-	sizeCache              protoimpl.SizeCache
+	// The settlement that recorded the allocation; unset for one recorded outside a settlement.
+	SettlementId     *string `protobuf:"bytes,10,opt,name=settlement_id,json=settlementId,proto3,oneof" json:"settlement_id,omitempty"`
+	SettlementNumber *string `protobuf:"bytes,11,opt,name=settlement_number,json=settlementNumber,proto3,oneof" json:"settlement_number,omitempty"`
+	unknownFields    protoimpl.UnknownFields
+	sizeCache        protoimpl.SizeCache
 }
 
 func (x *InvoiceAllocationInfo) Reset() {
@@ -291,6 +311,20 @@ func (x *InvoiceAllocationInfo) GetUpdatedAt() *timestamppb.Timestamp {
 	return nil
 }
 
+func (x *InvoiceAllocationInfo) GetSettlementId() string {
+	if x != nil && x.SettlementId != nil {
+		return *x.SettlementId
+	}
+	return ""
+}
+
+func (x *InvoiceAllocationInfo) GetSettlementNumber() string {
+	if x != nil && x.SettlementNumber != nil {
+		return *x.SettlementNumber
+	}
+	return ""
+}
+
 type InvoiceForPaymentInfo struct {
 	state              protoimpl.MessageState   `protogen:"open.v1"`
 	Id                 string                   `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
@@ -309,8 +343,10 @@ type InvoiceForPaymentInfo struct {
 	Allocations        []*InvoiceAllocationInfo `protobuf:"bytes,14,rep,name=allocations,proto3" json:"allocations,omitempty"`
 	CreatedAt          *timestamppb.Timestamp   `protobuf:"bytes,15,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
 	UpdatedAt          *timestamppb.Timestamp   `protobuf:"bytes,16,opt,name=updated_at,json=updatedAt,proto3" json:"updated_at,omitempty"`
-	unknownFields      protoimpl.UnknownFields
-	sizeCache          protoimpl.SizeCache
+	// The order's billing address in full, unset when the order has none.
+	BillingAddress *AddressInfo `protobuf:"bytes,17,opt,name=billing_address,json=billingAddress,proto3" json:"billing_address,omitempty"`
+	unknownFields  protoimpl.UnknownFields
+	sizeCache      protoimpl.SizeCache
 }
 
 func (x *InvoiceForPaymentInfo) Reset() {
@@ -451,6 +487,13 @@ func (x *InvoiceForPaymentInfo) GetCreatedAt() *timestamppb.Timestamp {
 func (x *InvoiceForPaymentInfo) GetUpdatedAt() *timestamppb.Timestamp {
 	if x != nil {
 		return x.UpdatedAt
+	}
+	return nil
+}
+
+func (x *InvoiceForPaymentInfo) GetBillingAddress() *AddressInfo {
+	if x != nil {
+		return x.BillingAddress
 	}
 	return nil
 }
@@ -1091,8 +1134,10 @@ type UpdateMaterialRequest struct {
 	OrderPoint        *QuantityInput         `protobuf:"bytes,7,opt,name=order_point,json=orderPoint,proto3,oneof" json:"order_point,omitempty"`
 	LeadTime          *QuantityInput         `protobuf:"bytes,8,opt,name=lead_time,json=leadTime,proto3,oneof" json:"lead_time,omitempty"`
 	// Updated unit cost. Same currency-vs-non-currency rule as on create.
-	UnitCost      *CreateRateInput `protobuf:"bytes,9,opt,name=unit_cost,json=unitCost,proto3,oneof" json:"unit_cost,omitempty"`
-	Includes      []string         `protobuf:"bytes,10,rep,name=includes,proto3" json:"includes,omitempty"`
+	UnitCost *CreateRateInput `protobuf:"bytes,9,opt,name=unit_cost,json=unitCost,proto3,oneof" json:"unit_cost,omitempty"`
+	Includes []string         `protobuf:"bytes,10,rep,name=includes,proto3" json:"includes,omitempty"`
+	// Category to move the material to, as Change Item Category does.
+	CategoryId    *string `protobuf:"bytes,11,opt,name=category_id,json=categoryId,proto3,oneof" json:"category_id,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -1195,6 +1240,13 @@ func (x *UpdateMaterialRequest) GetIncludes() []string {
 		return x.Includes
 	}
 	return nil
+}
+
+func (x *UpdateMaterialRequest) GetCategoryId() string {
+	if x != nil && x.CategoryId != nil {
+		return *x.CategoryId
+	}
+	return ""
 }
 
 type UpdateMaterialResponse struct {
@@ -2687,12 +2739,14 @@ func (x *CreatePartResponse) GetPart() *PartInfo {
 }
 
 type UpdatePartRequest struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
-	Sku           *string                `protobuf:"bytes,2,opt,name=sku,proto3,oneof" json:"sku,omitempty"`
-	Description   *StringPatch           `protobuf:"bytes,3,opt,name=description,proto3,oneof" json:"description,omitempty"`
-	Notes         *StringPatch           `protobuf:"bytes,4,opt,name=notes,proto3,oneof" json:"notes,omitempty"`
-	Includes      []string               `protobuf:"bytes,5,rep,name=includes,proto3" json:"includes,omitempty"`
+	state       protoimpl.MessageState `protogen:"open.v1"`
+	Id          string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	Sku         *string                `protobuf:"bytes,2,opt,name=sku,proto3,oneof" json:"sku,omitempty"`
+	Description *StringPatch           `protobuf:"bytes,3,opt,name=description,proto3,oneof" json:"description,omitempty"`
+	Notes       *StringPatch           `protobuf:"bytes,4,opt,name=notes,proto3,oneof" json:"notes,omitempty"`
+	Includes    []string               `protobuf:"bytes,5,rep,name=includes,proto3" json:"includes,omitempty"`
+	// Category to move the part to, as Change Item Category does.
+	CategoryId    *string `protobuf:"bytes,6,opt,name=category_id,json=categoryId,proto3,oneof" json:"category_id,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -2760,6 +2814,13 @@ func (x *UpdatePartRequest) GetIncludes() []string {
 		return x.Includes
 	}
 	return nil
+}
+
+func (x *UpdatePartRequest) GetCategoryId() string {
+	if x != nil && x.CategoryId != nil {
+		return *x.CategoryId
+	}
+	return ""
 }
 
 type UpdatePartResponse struct {
@@ -4437,8 +4498,10 @@ type UpdateProductRequest struct {
 	Notes         *StringPatch           `protobuf:"bytes,4,opt,name=notes,proto3,oneof" json:"notes,omitempty"`
 	IsPortalReady *bool                  `protobuf:"varint,5,opt,name=is_portal_ready,json=isPortalReady,proto3,oneof" json:"is_portal_ready,omitempty"`
 	// Updated unit price. Same currency-vs-non-currency rule as on create.
-	UnitPrice     *CreateRateInput `protobuf:"bytes,6,opt,name=unit_price,json=unitPrice,proto3,oneof" json:"unit_price,omitempty"`
-	Includes      []string         `protobuf:"bytes,7,rep,name=includes,proto3" json:"includes,omitempty"`
+	UnitPrice *CreateRateInput `protobuf:"bytes,6,opt,name=unit_price,json=unitPrice,proto3,oneof" json:"unit_price,omitempty"`
+	Includes  []string         `protobuf:"bytes,7,rep,name=includes,proto3" json:"includes,omitempty"`
+	// Category to move the product to, as Change Item Category does.
+	CategoryId    *string `protobuf:"bytes,8,opt,name=category_id,json=categoryId,proto3,oneof" json:"category_id,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -4520,6 +4583,13 @@ func (x *UpdateProductRequest) GetIncludes() []string {
 		return x.Includes
 	}
 	return nil
+}
+
+func (x *UpdateProductRequest) GetCategoryId() string {
+	if x != nil && x.CategoryId != nil {
+		return *x.CategoryId
+	}
+	return ""
 }
 
 type UpdateProductResponse struct {
@@ -6158,7 +6228,7 @@ var File_core_core_invoices_proto protoreflect.FileDescriptor
 
 const file_core_core_invoices_proto_rawDesc = "" +
 	"\n" +
-	"\x18core/core_invoices.proto\x12\x04core\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\x15core/core_patch.proto\x1a core/core_identity_context.proto\x1a\x19core/core_analytics.proto\x1a!core/core_accounts_carriers.proto\x1a!core/core_fuzzy_identifiers.proto\x1a\x15core/core_async.proto\"\xa4\x06\n" +
+	"\x18core/core_invoices.proto\x12\x04core\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\x15core/core_patch.proto\x1a core/core_identity_context.proto\x1a\x19core/core_analytics.proto\x1a!core/core_accounts_carriers.proto\x1a!core/core_fuzzy_identifiers.proto\x1a\x15core/core_async.proto\"\xcf\a\n" +
 	"\x0fInvoiceLineInfo\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x1f\n" +
 	"\vquantity_id\x18\x02 \x01(\tR\n" +
@@ -6178,10 +6248,14 @@ const file_core_core_invoices_proto_rawDesc = "" +
 	"created_at\x18\r \x01(\v2\x1a.google.protobuf.TimestampR\tcreatedAt\x129\n" +
 	"\n" +
 	"updated_at\x18\x0e \x01(\v2\x1a.google.protobuf.TimestampR\tupdatedAt\x126\n" +
-	"\x15order_line_product_id\x18\x0f \x01(\tH\x02R\x12orderLineProductId\x88\x01\x01B\x15\n" +
+	"\x15order_line_product_id\x18\x0f \x01(\tH\x02R\x12orderLineProductId\x88\x01\x01\x128\n" +
+	"\x16order_line_item_number\x18\x10 \x01(\x05H\x03R\x13orderLineItemNumber\x88\x01\x01\x129\n" +
+	"\x16order_line_description\x18\x11 \x01(\tH\x04R\x14orderLineDescription\x88\x01\x01B\x15\n" +
 	"\x13_order_line_item_idB\x16\n" +
 	"\x14_order_line_item_skuB\x18\n" +
-	"\x16_order_line_product_id\"\x86\x03\n" +
+	"\x16_order_line_product_idB\x19\n" +
+	"\x17_order_line_item_numberB\x19\n" +
+	"\x17_order_line_description\"\x8a\x04\n" +
 	"\x15InvoiceAllocationInfo\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12%\n" +
 	"\x0etransaction_id\x18\x02 \x01(\tR\rtransactionId\x12\x1b\n" +
@@ -6193,8 +6267,13 @@ const file_core_core_invoices_proto_rawDesc = "" +
 	"\n" +
 	"created_at\x18\b \x01(\v2\x1a.google.protobuf.TimestampR\tcreatedAt\x129\n" +
 	"\n" +
-	"updated_at\x18\t \x01(\v2\x1a.google.protobuf.TimestampR\tupdatedAtB\a\n" +
-	"\x05_note\"\x91\x06\n" +
+	"updated_at\x18\t \x01(\v2\x1a.google.protobuf.TimestampR\tupdatedAt\x12(\n" +
+	"\rsettlement_id\x18\n" +
+	" \x01(\tH\x01R\fsettlementId\x88\x01\x01\x120\n" +
+	"\x11settlement_number\x18\v \x01(\tH\x02R\x10settlementNumber\x88\x01\x01B\a\n" +
+	"\x05_noteB\x10\n" +
+	"\x0e_settlement_idB\x14\n" +
+	"\x12_settlement_number\"\xcd\x06\n" +
 	"\x15InvoiceForPaymentInfo\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x16\n" +
 	"\x06number\x18\x02 \x01(\tR\x06number\x12$\n" +
@@ -6217,7 +6296,8 @@ const file_core_core_invoices_proto_rawDesc = "" +
 	"\n" +
 	"created_at\x18\x0f \x01(\v2\x1a.google.protobuf.TimestampR\tcreatedAt\x129\n" +
 	"\n" +
-	"updated_at\x18\x10 \x01(\v2\x1a.google.protobuf.TimestampR\tupdatedAtB\x0e\n" +
+	"updated_at\x18\x10 \x01(\v2\x1a.google.protobuf.TimestampR\tupdatedAt\x12:\n" +
+	"\x0fbilling_address\x18\x11 \x01(\v2\x11.core.AddressInfoR\x0ebillingAddressB\x0e\n" +
 	"\f_customer_poB\x14\n" +
 	"\x12_parent_account_idB\x15\n" +
 	"\x13_billing_address_idB\x17\n" +
@@ -6295,7 +6375,7 @@ const file_core_core_invoices_proto_rawDesc = "" +
 	"_unit_costJ\x04\b\t\x10\n" +
 	"R\tburn_rate\"H\n" +
 	"\x16CreateMaterialResponse\x12.\n" +
-	"\bmaterial\x18\x01 \x01(\v2\x12.core.MaterialInfoR\bmaterial\"\xe7\x03\n" +
+	"\bmaterial\x18\x01 \x01(\v2\x12.core.MaterialInfoR\bmaterial\"\x9d\x04\n" +
 	"\x15UpdateMaterialRequest\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x15\n" +
 	"\x03sku\x18\x02 \x01(\tH\x00R\x03sku\x88\x01\x01\x12%\n" +
@@ -6308,7 +6388,9 @@ const file_core_core_invoices_proto_rawDesc = "" +
 	"\tlead_time\x18\b \x01(\v2\x13.core.QuantityInputH\x04R\bleadTime\x88\x01\x01\x127\n" +
 	"\tunit_cost\x18\t \x01(\v2\x15.core.CreateRateInputH\x05R\bunitCost\x88\x01\x01\x12\x1a\n" +
 	"\bincludes\x18\n" +
-	" \x03(\tR\bincludesB\x06\n" +
+	" \x03(\tR\bincludes\x12$\n" +
+	"\vcategory_id\x18\v \x01(\tH\x06R\n" +
+	"categoryId\x88\x01\x01B\x06\n" +
 	"\x04_skuB\x0e\n" +
 	"\f_descriptionB\b\n" +
 	"\x06_notesB\x0e\n" +
@@ -6316,7 +6398,8 @@ const file_core_core_invoices_proto_rawDesc = "" +
 	"\n" +
 	"_lead_timeB\f\n" +
 	"\n" +
-	"_unit_cost\"H\n" +
+	"_unit_costB\x0e\n" +
+	"\f_category_id\"H\n" +
 	"\x16UpdateMaterialResponse\x12.\n" +
 	"\bmaterial\x18\x01 \x01(\v2\x12.core.MaterialInfoR\bmaterial\"'\n" +
 	"\x15DeleteMaterialRequest\x12\x0e\n" +
@@ -6448,16 +6531,19 @@ const file_core_core_invoices_proto_rawDesc = "" +
 	"\n" +
 	"_unit_costJ\x04\b\a\x10\bR\tburn_rate\"8\n" +
 	"\x12CreatePartResponse\x12\"\n" +
-	"\x04part\x18\x01 \x01(\v2\x0e.core.PartInfoR\x04part\"\xe0\x01\n" +
+	"\x04part\x18\x01 \x01(\v2\x0e.core.PartInfoR\x04part\"\x96\x02\n" +
 	"\x11UpdatePartRequest\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x15\n" +
 	"\x03sku\x18\x02 \x01(\tH\x00R\x03sku\x88\x01\x01\x128\n" +
 	"\vdescription\x18\x03 \x01(\v2\x11.core.StringPatchH\x01R\vdescription\x88\x01\x01\x12,\n" +
 	"\x05notes\x18\x04 \x01(\v2\x11.core.StringPatchH\x02R\x05notes\x88\x01\x01\x12\x1a\n" +
-	"\bincludes\x18\x05 \x03(\tR\bincludesB\x06\n" +
+	"\bincludes\x18\x05 \x03(\tR\bincludes\x12$\n" +
+	"\vcategory_id\x18\x06 \x01(\tH\x03R\n" +
+	"categoryId\x88\x01\x01B\x06\n" +
 	"\x04_skuB\x0e\n" +
 	"\f_descriptionB\b\n" +
-	"\x06_notes\"8\n" +
+	"\x06_notesB\x0e\n" +
+	"\f_category_id\"8\n" +
 	"\x12UpdatePartResponse\x12\"\n" +
 	"\x04part\x18\x01 \x01(\v2\x0e.core.PartInfoR\x04part\"#\n" +
 	"\x11DeletePartRequest\x12\x0e\n" +
@@ -6614,7 +6700,7 @@ const file_core_core_invoices_proto_rawDesc = "" +
 	"_unit_costJ\x04\b\n" +
 	"\x10\vR\tburn_rate\"H\n" +
 	"\x15CreateProductResponse\x12/\n" +
-	"\aproduct\x18\x01 \x01(\v2\x15.core.ProductFullInfoR\aproduct\"\xee\x02\n" +
+	"\aproduct\x18\x01 \x01(\v2\x15.core.ProductFullInfoR\aproduct\"\xa4\x03\n" +
 	"\x14UpdateProductRequest\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x15\n" +
 	"\x03sku\x18\x02 \x01(\tH\x00R\x03sku\x88\x01\x01\x128\n" +
@@ -6623,12 +6709,15 @@ const file_core_core_invoices_proto_rawDesc = "" +
 	"\x0fis_portal_ready\x18\x05 \x01(\bH\x03R\risPortalReady\x88\x01\x01\x129\n" +
 	"\n" +
 	"unit_price\x18\x06 \x01(\v2\x15.core.CreateRateInputH\x04R\tunitPrice\x88\x01\x01\x12\x1a\n" +
-	"\bincludes\x18\a \x03(\tR\bincludesB\x06\n" +
+	"\bincludes\x18\a \x03(\tR\bincludes\x12$\n" +
+	"\vcategory_id\x18\b \x01(\tH\x05R\n" +
+	"categoryId\x88\x01\x01B\x06\n" +
 	"\x04_skuB\x0e\n" +
 	"\f_descriptionB\b\n" +
 	"\x06_notesB\x12\n" +
 	"\x10_is_portal_readyB\r\n" +
-	"\v_unit_price\"H\n" +
+	"\v_unit_priceB\x0e\n" +
+	"\f_category_id\"H\n" +
 	"\x15UpdateProductResponse\x12/\n" +
 	"\aproduct\x18\x01 \x01(\v2\x15.core.ProductFullInfoR\aproduct\"&\n" +
 	"\x14DeleteProductRequest\x12\x0e\n" +
@@ -6881,16 +6970,17 @@ var file_core_core_invoices_proto_goTypes = []any{
 	nil,                                           // 96: core.ValidateProductsRequest.ProductsMapEntry
 	nil,                                           // 97: core.ValidateProductsResponse.ProductsEntry
 	(*timestamppb.Timestamp)(nil),                 // 98: google.protobuf.Timestamp
-	(*ItemInfo)(nil),                              // 99: core.ItemInfo
-	(*QuantityInfo)(nil),                          // 100: core.QuantityInfo
-	(*PageInfo)(nil),                              // 101: core.PageInfo
-	(*JobInfo)(nil),                               // 102: core.JobInfo
-	(*QuantityInput)(nil),                         // 103: core.QuantityInput
-	(*CreateRateInput)(nil),                       // 104: core.CreateRateInput
-	(*StringPatch)(nil),                           // 105: core.StringPatch
-	(*ItemCategoryUnitGroupInfo)(nil),             // 106: core.ItemCategoryUnitGroupInfo
-	(*QuantityPatch)(nil),                         // 107: core.QuantityPatch
-	(*ObjectIdentifier)(nil),                      // 108: core.ObjectIdentifier
+	(*AddressInfo)(nil),                           // 99: core.AddressInfo
+	(*ItemInfo)(nil),                              // 100: core.ItemInfo
+	(*QuantityInfo)(nil),                          // 101: core.QuantityInfo
+	(*PageInfo)(nil),                              // 102: core.PageInfo
+	(*JobInfo)(nil),                               // 103: core.JobInfo
+	(*QuantityInput)(nil),                         // 104: core.QuantityInput
+	(*CreateRateInput)(nil),                       // 105: core.CreateRateInput
+	(*StringPatch)(nil),                           // 106: core.StringPatch
+	(*ItemCategoryUnitGroupInfo)(nil),             // 107: core.ItemCategoryUnitGroupInfo
+	(*QuantityPatch)(nil),                         // 108: core.QuantityPatch
+	(*ObjectIdentifier)(nil),                      // 109: core.ObjectIdentifier
 }
 var file_core_core_invoices_proto_depIdxs = []int32{
 	98,  // 0: core.InvoiceLineInfo.created_at:type_name -> google.protobuf.Timestamp
@@ -6900,122 +6990,123 @@ var file_core_core_invoices_proto_depIdxs = []int32{
 	1,   // 4: core.InvoiceForPaymentInfo.allocations:type_name -> core.InvoiceAllocationInfo
 	98,  // 5: core.InvoiceForPaymentInfo.created_at:type_name -> google.protobuf.Timestamp
 	98,  // 6: core.InvoiceForPaymentInfo.updated_at:type_name -> google.protobuf.Timestamp
-	99,  // 7: core.MaterialInfo.item:type_name -> core.ItemInfo
-	100, // 8: core.MaterialInfo.order_point:type_name -> core.QuantityInfo
-	100, // 9: core.MaterialInfo.lead_time:type_name -> core.QuantityInfo
-	98,  // 10: core.MaterialInfo.created_at:type_name -> google.protobuf.Timestamp
-	98,  // 11: core.MaterialInfo.updated_at:type_name -> google.protobuf.Timestamp
-	98,  // 12: core.ListMaterialsRequest.start_date:type_name -> google.protobuf.Timestamp
-	98,  // 13: core.ListMaterialsRequest.end_date:type_name -> google.protobuf.Timestamp
-	3,   // 14: core.ListMaterialsResponse.materials:type_name -> core.MaterialInfo
-	101, // 15: core.ListMaterialsResponse.page_info:type_name -> core.PageInfo
-	98,  // 16: core.ExportMaterialsRequest.start_date:type_name -> google.protobuf.Timestamp
-	98,  // 17: core.ExportMaterialsRequest.end_date:type_name -> google.protobuf.Timestamp
-	102, // 18: core.ExportMaterialsResponse.job:type_name -> core.JobInfo
-	3,   // 19: core.GetMaterialResponse.material:type_name -> core.MaterialInfo
-	103, // 20: core.CreateMaterialRequest.order_point:type_name -> core.QuantityInput
-	103, // 21: core.CreateMaterialRequest.lead_time:type_name -> core.QuantityInput
-	104, // 22: core.CreateMaterialRequest.unit_price:type_name -> core.CreateRateInput
-	104, // 23: core.CreateMaterialRequest.unit_cost:type_name -> core.CreateRateInput
-	3,   // 24: core.CreateMaterialResponse.material:type_name -> core.MaterialInfo
-	103, // 25: core.UpdateMaterialRequest.order_point:type_name -> core.QuantityInput
-	103, // 26: core.UpdateMaterialRequest.lead_time:type_name -> core.QuantityInput
-	104, // 27: core.UpdateMaterialRequest.unit_cost:type_name -> core.CreateRateInput
-	3,   // 28: core.UpdateMaterialResponse.material:type_name -> core.MaterialInfo
-	3,   // 29: core.DeleteMaterialResponse.material:type_name -> core.MaterialInfo
-	3,   // 30: core.BatchGetMaterialsByIDsResponse.materials:type_name -> core.MaterialInfo
-	98,  // 31: core.SupplierMaterialInfo.created_at:type_name -> google.protobuf.Timestamp
-	98,  // 32: core.SupplierMaterialInfo.updated_at:type_name -> google.protobuf.Timestamp
-	3,   // 33: core.SupplierMaterialInfo.material:type_name -> core.MaterialInfo
-	18,  // 34: core.ListSupplierMaterialsResponse.supplier_materials:type_name -> core.SupplierMaterialInfo
-	101, // 35: core.ListSupplierMaterialsResponse.page_info:type_name -> core.PageInfo
-	18,  // 36: core.GetSupplierMaterialResponse.supplier_material:type_name -> core.SupplierMaterialInfo
-	18,  // 37: core.CreateSupplierMaterialResponse.supplier_material:type_name -> core.SupplierMaterialInfo
-	18,  // 38: core.UpdateSupplierMaterialResponse.supplier_material:type_name -> core.SupplierMaterialInfo
-	18,  // 39: core.DeleteSupplierMaterialResponse.supplier_material:type_name -> core.SupplierMaterialInfo
-	99,  // 40: core.PartInfo.item:type_name -> core.ItemInfo
-	98,  // 41: core.PartInfo.created_at:type_name -> google.protobuf.Timestamp
-	98,  // 42: core.PartInfo.updated_at:type_name -> google.protobuf.Timestamp
-	98,  // 43: core.ListPartsRequest.start_date:type_name -> google.protobuf.Timestamp
-	98,  // 44: core.ListPartsRequest.end_date:type_name -> google.protobuf.Timestamp
-	29,  // 45: core.ListPartsResponse.parts:type_name -> core.PartInfo
-	101, // 46: core.ListPartsResponse.page_info:type_name -> core.PageInfo
-	98,  // 47: core.ExportPartsRequest.start_date:type_name -> google.protobuf.Timestamp
-	98,  // 48: core.ExportPartsRequest.end_date:type_name -> google.protobuf.Timestamp
-	102, // 49: core.ExportPartsResponse.job:type_name -> core.JobInfo
-	29,  // 50: core.GetPartResponse.part:type_name -> core.PartInfo
-	104, // 51: core.CreatePartRequest.unit_price:type_name -> core.CreateRateInput
-	104, // 52: core.CreatePartRequest.unit_cost:type_name -> core.CreateRateInput
-	29,  // 53: core.CreatePartResponse.part:type_name -> core.PartInfo
-	105, // 54: core.UpdatePartRequest.description:type_name -> core.StringPatch
-	105, // 55: core.UpdatePartRequest.notes:type_name -> core.StringPatch
-	29,  // 56: core.UpdatePartResponse.part:type_name -> core.PartInfo
-	29,  // 57: core.DeletePartResponse.part:type_name -> core.PartInfo
-	29,  // 58: core.BatchGetPartsByIDsResponse.parts:type_name -> core.PartInfo
-	98,  // 59: core.PermissionInfo.created_at:type_name -> google.protobuf.Timestamp
-	98,  // 60: core.PermissionInfo.updated_at:type_name -> google.protobuf.Timestamp
-	44,  // 61: core.PermissionGroupInfo.permissions:type_name -> core.PermissionInfo
-	98,  // 62: core.PermissionGroupInfo.created_at:type_name -> google.protobuf.Timestamp
-	98,  // 63: core.PermissionGroupInfo.updated_at:type_name -> google.protobuf.Timestamp
-	45,  // 64: core.BatchGetPermissionGroupsByIDsResponse.permission_groups:type_name -> core.PermissionGroupInfo
-	45,  // 65: core.ListPermissionGroupsResponse.permission_groups:type_name -> core.PermissionGroupInfo
-	101, // 66: core.ListPermissionGroupsResponse.page_info:type_name -> core.PageInfo
-	98,  // 67: core.PriorityInfo.created_at:type_name -> google.protobuf.Timestamp
-	98,  // 68: core.PriorityInfo.updated_at:type_name -> google.protobuf.Timestamp
-	50,  // 69: core.ListPrioritiesResponse.priorities:type_name -> core.PriorityInfo
-	101, // 70: core.ListPrioritiesResponse.page_info:type_name -> core.PageInfo
-	50,  // 71: core.GetPriorityResponse.priority:type_name -> core.PriorityInfo
-	50,  // 72: core.BatchGetPrioritiesByIDsResponse.priorities:type_name -> core.PriorityInfo
-	98,  // 73: core.ProductFullInfo.created_at:type_name -> google.protobuf.Timestamp
-	98,  // 74: core.ProductFullInfo.updated_at:type_name -> google.protobuf.Timestamp
-	99,  // 75: core.ProductFullInfo.item:type_name -> core.ItemInfo
-	76,  // 76: core.ProductFullInfo.product_line:type_name -> core.ProductLineInfo
-	94,  // 77: core.ProductFullInfo.product_type:type_name -> core.ProductTypeInfo
-	98,  // 78: core.ListProductsFullRequest.start_date:type_name -> google.protobuf.Timestamp
-	98,  // 79: core.ListProductsFullRequest.end_date:type_name -> google.protobuf.Timestamp
-	57,  // 80: core.ListProductsFullResponse.products:type_name -> core.ProductFullInfo
-	101, // 81: core.ListProductsFullResponse.page_info:type_name -> core.PageInfo
-	98,  // 82: core.ExportProductsRequest.start_date:type_name -> google.protobuf.Timestamp
-	98,  // 83: core.ExportProductsRequest.end_date:type_name -> google.protobuf.Timestamp
-	102, // 84: core.ExportProductsResponse.job:type_name -> core.JobInfo
-	57,  // 85: core.GetProductResponse.product:type_name -> core.ProductFullInfo
-	104, // 86: core.CreateProductRequest.unit_price:type_name -> core.CreateRateInput
-	104, // 87: core.CreateProductRequest.unit_cost:type_name -> core.CreateRateInput
-	57,  // 88: core.CreateProductResponse.product:type_name -> core.ProductFullInfo
-	105, // 89: core.UpdateProductRequest.description:type_name -> core.StringPatch
-	105, // 90: core.UpdateProductRequest.notes:type_name -> core.StringPatch
-	104, // 91: core.UpdateProductRequest.unit_price:type_name -> core.CreateRateInput
-	57,  // 92: core.UpdateProductResponse.product:type_name -> core.ProductFullInfo
-	57,  // 93: core.DeleteProductResponse.product:type_name -> core.ProductFullInfo
-	57,  // 94: core.ChangeProductProductLineResponse.product:type_name -> core.ProductFullInfo
-	96,  // 95: core.ValidateProductsRequest.products_map:type_name -> core.ValidateProductsRequest.ProductsMapEntry
-	97,  // 96: core.ValidateProductsResponse.products:type_name -> core.ValidateProductsResponse.ProductsEntry
-	57,  // 97: core.BatchGetProductsByIDsResponse.products:type_name -> core.ProductFullInfo
-	98,  // 98: core.ProductLineInfo.created_at:type_name -> google.protobuf.Timestamp
-	98,  // 99: core.ProductLineInfo.updated_at:type_name -> google.protobuf.Timestamp
-	106, // 100: core.ProductLineInfo.unit_group:type_name -> core.ItemCategoryUnitGroupInfo
-	77,  // 101: core.ProductLineInfo.default_lot:type_name -> core.ProductLineDefaultLotInfo
-	76,  // 102: core.ListProductLinesResponse.product_lines:type_name -> core.ProductLineInfo
-	101, // 103: core.ListProductLinesResponse.page_info:type_name -> core.PageInfo
-	102, // 104: core.ExportProductLinesResponse.job:type_name -> core.JobInfo
-	76,  // 105: core.GetProductLineResponse.product_line:type_name -> core.ProductLineInfo
-	107, // 106: core.CreateProductLineRequest.default_lot:type_name -> core.QuantityPatch
-	76,  // 107: core.CreateProductLineResponse.product_line:type_name -> core.ProductLineInfo
-	107, // 108: core.UpdateProductLineRequest.default_lot:type_name -> core.QuantityPatch
-	105, // 109: core.UpdateProductLineRequest.fulfillment_policy_code:type_name -> core.StringPatch
-	76,  // 110: core.UpdateProductLineResponse.product_line:type_name -> core.ProductLineInfo
-	76,  // 111: core.BatchGetProductLinesByIDsResponse.product_lines:type_name -> core.ProductLineInfo
-	108, // 112: core.BulkUpsertProductLineInput.unit_group:type_name -> core.ObjectIdentifier
-	91,  // 113: core.BulkUpsertProductLinesRequest.product_lines:type_name -> core.BulkUpsertProductLineInput
-	102, // 114: core.BulkUpsertProductLinesResponse.job:type_name -> core.JobInfo
-	98,  // 115: core.ProductTypeInfo.created_at:type_name -> google.protobuf.Timestamp
-	98,  // 116: core.ProductTypeInfo.updated_at:type_name -> google.protobuf.Timestamp
-	57,  // 117: core.ValidateProductsResponse.ProductsEntry.value:type_name -> core.ProductFullInfo
-	118, // [118:118] is the sub-list for method output_type
-	118, // [118:118] is the sub-list for method input_type
-	118, // [118:118] is the sub-list for extension type_name
-	118, // [118:118] is the sub-list for extension extendee
-	0,   // [0:118] is the sub-list for field type_name
+	99,  // 7: core.InvoiceForPaymentInfo.billing_address:type_name -> core.AddressInfo
+	100, // 8: core.MaterialInfo.item:type_name -> core.ItemInfo
+	101, // 9: core.MaterialInfo.order_point:type_name -> core.QuantityInfo
+	101, // 10: core.MaterialInfo.lead_time:type_name -> core.QuantityInfo
+	98,  // 11: core.MaterialInfo.created_at:type_name -> google.protobuf.Timestamp
+	98,  // 12: core.MaterialInfo.updated_at:type_name -> google.protobuf.Timestamp
+	98,  // 13: core.ListMaterialsRequest.start_date:type_name -> google.protobuf.Timestamp
+	98,  // 14: core.ListMaterialsRequest.end_date:type_name -> google.protobuf.Timestamp
+	3,   // 15: core.ListMaterialsResponse.materials:type_name -> core.MaterialInfo
+	102, // 16: core.ListMaterialsResponse.page_info:type_name -> core.PageInfo
+	98,  // 17: core.ExportMaterialsRequest.start_date:type_name -> google.protobuf.Timestamp
+	98,  // 18: core.ExportMaterialsRequest.end_date:type_name -> google.protobuf.Timestamp
+	103, // 19: core.ExportMaterialsResponse.job:type_name -> core.JobInfo
+	3,   // 20: core.GetMaterialResponse.material:type_name -> core.MaterialInfo
+	104, // 21: core.CreateMaterialRequest.order_point:type_name -> core.QuantityInput
+	104, // 22: core.CreateMaterialRequest.lead_time:type_name -> core.QuantityInput
+	105, // 23: core.CreateMaterialRequest.unit_price:type_name -> core.CreateRateInput
+	105, // 24: core.CreateMaterialRequest.unit_cost:type_name -> core.CreateRateInput
+	3,   // 25: core.CreateMaterialResponse.material:type_name -> core.MaterialInfo
+	104, // 26: core.UpdateMaterialRequest.order_point:type_name -> core.QuantityInput
+	104, // 27: core.UpdateMaterialRequest.lead_time:type_name -> core.QuantityInput
+	105, // 28: core.UpdateMaterialRequest.unit_cost:type_name -> core.CreateRateInput
+	3,   // 29: core.UpdateMaterialResponse.material:type_name -> core.MaterialInfo
+	3,   // 30: core.DeleteMaterialResponse.material:type_name -> core.MaterialInfo
+	3,   // 31: core.BatchGetMaterialsByIDsResponse.materials:type_name -> core.MaterialInfo
+	98,  // 32: core.SupplierMaterialInfo.created_at:type_name -> google.protobuf.Timestamp
+	98,  // 33: core.SupplierMaterialInfo.updated_at:type_name -> google.protobuf.Timestamp
+	3,   // 34: core.SupplierMaterialInfo.material:type_name -> core.MaterialInfo
+	18,  // 35: core.ListSupplierMaterialsResponse.supplier_materials:type_name -> core.SupplierMaterialInfo
+	102, // 36: core.ListSupplierMaterialsResponse.page_info:type_name -> core.PageInfo
+	18,  // 37: core.GetSupplierMaterialResponse.supplier_material:type_name -> core.SupplierMaterialInfo
+	18,  // 38: core.CreateSupplierMaterialResponse.supplier_material:type_name -> core.SupplierMaterialInfo
+	18,  // 39: core.UpdateSupplierMaterialResponse.supplier_material:type_name -> core.SupplierMaterialInfo
+	18,  // 40: core.DeleteSupplierMaterialResponse.supplier_material:type_name -> core.SupplierMaterialInfo
+	100, // 41: core.PartInfo.item:type_name -> core.ItemInfo
+	98,  // 42: core.PartInfo.created_at:type_name -> google.protobuf.Timestamp
+	98,  // 43: core.PartInfo.updated_at:type_name -> google.protobuf.Timestamp
+	98,  // 44: core.ListPartsRequest.start_date:type_name -> google.protobuf.Timestamp
+	98,  // 45: core.ListPartsRequest.end_date:type_name -> google.protobuf.Timestamp
+	29,  // 46: core.ListPartsResponse.parts:type_name -> core.PartInfo
+	102, // 47: core.ListPartsResponse.page_info:type_name -> core.PageInfo
+	98,  // 48: core.ExportPartsRequest.start_date:type_name -> google.protobuf.Timestamp
+	98,  // 49: core.ExportPartsRequest.end_date:type_name -> google.protobuf.Timestamp
+	103, // 50: core.ExportPartsResponse.job:type_name -> core.JobInfo
+	29,  // 51: core.GetPartResponse.part:type_name -> core.PartInfo
+	105, // 52: core.CreatePartRequest.unit_price:type_name -> core.CreateRateInput
+	105, // 53: core.CreatePartRequest.unit_cost:type_name -> core.CreateRateInput
+	29,  // 54: core.CreatePartResponse.part:type_name -> core.PartInfo
+	106, // 55: core.UpdatePartRequest.description:type_name -> core.StringPatch
+	106, // 56: core.UpdatePartRequest.notes:type_name -> core.StringPatch
+	29,  // 57: core.UpdatePartResponse.part:type_name -> core.PartInfo
+	29,  // 58: core.DeletePartResponse.part:type_name -> core.PartInfo
+	29,  // 59: core.BatchGetPartsByIDsResponse.parts:type_name -> core.PartInfo
+	98,  // 60: core.PermissionInfo.created_at:type_name -> google.protobuf.Timestamp
+	98,  // 61: core.PermissionInfo.updated_at:type_name -> google.protobuf.Timestamp
+	44,  // 62: core.PermissionGroupInfo.permissions:type_name -> core.PermissionInfo
+	98,  // 63: core.PermissionGroupInfo.created_at:type_name -> google.protobuf.Timestamp
+	98,  // 64: core.PermissionGroupInfo.updated_at:type_name -> google.protobuf.Timestamp
+	45,  // 65: core.BatchGetPermissionGroupsByIDsResponse.permission_groups:type_name -> core.PermissionGroupInfo
+	45,  // 66: core.ListPermissionGroupsResponse.permission_groups:type_name -> core.PermissionGroupInfo
+	102, // 67: core.ListPermissionGroupsResponse.page_info:type_name -> core.PageInfo
+	98,  // 68: core.PriorityInfo.created_at:type_name -> google.protobuf.Timestamp
+	98,  // 69: core.PriorityInfo.updated_at:type_name -> google.protobuf.Timestamp
+	50,  // 70: core.ListPrioritiesResponse.priorities:type_name -> core.PriorityInfo
+	102, // 71: core.ListPrioritiesResponse.page_info:type_name -> core.PageInfo
+	50,  // 72: core.GetPriorityResponse.priority:type_name -> core.PriorityInfo
+	50,  // 73: core.BatchGetPrioritiesByIDsResponse.priorities:type_name -> core.PriorityInfo
+	98,  // 74: core.ProductFullInfo.created_at:type_name -> google.protobuf.Timestamp
+	98,  // 75: core.ProductFullInfo.updated_at:type_name -> google.protobuf.Timestamp
+	100, // 76: core.ProductFullInfo.item:type_name -> core.ItemInfo
+	76,  // 77: core.ProductFullInfo.product_line:type_name -> core.ProductLineInfo
+	94,  // 78: core.ProductFullInfo.product_type:type_name -> core.ProductTypeInfo
+	98,  // 79: core.ListProductsFullRequest.start_date:type_name -> google.protobuf.Timestamp
+	98,  // 80: core.ListProductsFullRequest.end_date:type_name -> google.protobuf.Timestamp
+	57,  // 81: core.ListProductsFullResponse.products:type_name -> core.ProductFullInfo
+	102, // 82: core.ListProductsFullResponse.page_info:type_name -> core.PageInfo
+	98,  // 83: core.ExportProductsRequest.start_date:type_name -> google.protobuf.Timestamp
+	98,  // 84: core.ExportProductsRequest.end_date:type_name -> google.protobuf.Timestamp
+	103, // 85: core.ExportProductsResponse.job:type_name -> core.JobInfo
+	57,  // 86: core.GetProductResponse.product:type_name -> core.ProductFullInfo
+	105, // 87: core.CreateProductRequest.unit_price:type_name -> core.CreateRateInput
+	105, // 88: core.CreateProductRequest.unit_cost:type_name -> core.CreateRateInput
+	57,  // 89: core.CreateProductResponse.product:type_name -> core.ProductFullInfo
+	106, // 90: core.UpdateProductRequest.description:type_name -> core.StringPatch
+	106, // 91: core.UpdateProductRequest.notes:type_name -> core.StringPatch
+	105, // 92: core.UpdateProductRequest.unit_price:type_name -> core.CreateRateInput
+	57,  // 93: core.UpdateProductResponse.product:type_name -> core.ProductFullInfo
+	57,  // 94: core.DeleteProductResponse.product:type_name -> core.ProductFullInfo
+	57,  // 95: core.ChangeProductProductLineResponse.product:type_name -> core.ProductFullInfo
+	96,  // 96: core.ValidateProductsRequest.products_map:type_name -> core.ValidateProductsRequest.ProductsMapEntry
+	97,  // 97: core.ValidateProductsResponse.products:type_name -> core.ValidateProductsResponse.ProductsEntry
+	57,  // 98: core.BatchGetProductsByIDsResponse.products:type_name -> core.ProductFullInfo
+	98,  // 99: core.ProductLineInfo.created_at:type_name -> google.protobuf.Timestamp
+	98,  // 100: core.ProductLineInfo.updated_at:type_name -> google.protobuf.Timestamp
+	107, // 101: core.ProductLineInfo.unit_group:type_name -> core.ItemCategoryUnitGroupInfo
+	77,  // 102: core.ProductLineInfo.default_lot:type_name -> core.ProductLineDefaultLotInfo
+	76,  // 103: core.ListProductLinesResponse.product_lines:type_name -> core.ProductLineInfo
+	102, // 104: core.ListProductLinesResponse.page_info:type_name -> core.PageInfo
+	103, // 105: core.ExportProductLinesResponse.job:type_name -> core.JobInfo
+	76,  // 106: core.GetProductLineResponse.product_line:type_name -> core.ProductLineInfo
+	108, // 107: core.CreateProductLineRequest.default_lot:type_name -> core.QuantityPatch
+	76,  // 108: core.CreateProductLineResponse.product_line:type_name -> core.ProductLineInfo
+	108, // 109: core.UpdateProductLineRequest.default_lot:type_name -> core.QuantityPatch
+	106, // 110: core.UpdateProductLineRequest.fulfillment_policy_code:type_name -> core.StringPatch
+	76,  // 111: core.UpdateProductLineResponse.product_line:type_name -> core.ProductLineInfo
+	76,  // 112: core.BatchGetProductLinesByIDsResponse.product_lines:type_name -> core.ProductLineInfo
+	109, // 113: core.BulkUpsertProductLineInput.unit_group:type_name -> core.ObjectIdentifier
+	91,  // 114: core.BulkUpsertProductLinesRequest.product_lines:type_name -> core.BulkUpsertProductLineInput
+	103, // 115: core.BulkUpsertProductLinesResponse.job:type_name -> core.JobInfo
+	98,  // 116: core.ProductTypeInfo.created_at:type_name -> google.protobuf.Timestamp
+	98,  // 117: core.ProductTypeInfo.updated_at:type_name -> google.protobuf.Timestamp
+	57,  // 118: core.ValidateProductsResponse.ProductsEntry.value:type_name -> core.ProductFullInfo
+	119, // [119:119] is the sub-list for method output_type
+	119, // [119:119] is the sub-list for method input_type
+	119, // [119:119] is the sub-list for extension type_name
+	119, // [119:119] is the sub-list for extension extendee
+	0,   // [0:119] is the sub-list for field type_name
 }
 
 func init() { file_core_core_invoices_proto_init() }

@@ -78,9 +78,10 @@ func covSettingsIntegrationsStripeCredentials(suffix string) string {
 	return `{"private_key":"sk_live_e2e` + suffix + `","publishable_key":"pk_live_e2e` + suffix + `","webhook_secret":"whsec_e2e` + suffix + `"}`
 }
 
-// covSettingsIntegrationsShippoCredentials returns valid (production/live) shippo credentials JSON.
+// covSettingsIntegrationsShippoCredentials returns shippo credentials valid on the e2e stack, which
+// is not production and so takes only test keys.
 func covSettingsIntegrationsShippoCredentials(suffix string) string {
-	return `{"api_key":"shippo_live_e2e` + suffix + `"}`
+	return `{"api_key":"shippo_test_e2e` + suffix + `"}`
 }
 
 // ──────────────────────────────────────────────
@@ -586,12 +587,13 @@ func TestCovSettingsIntegrations_CreateValidation(t *testing.T) {
 		assertErrorParam(t, errObj, "credentials")
 	})
 
-	t.Run("ShippoSandboxKeyOnProductionAccount", func(t *testing.T) {
+	// Only a production deployment may spend with a live key; the e2e stack is not one.
+	t.Run("ShippoLiveKeyOutsideProduction", func(t *testing.T) {
 		t.Parallel()
 		status, body, err := apiClient.Post(covSettingsIntegrationsPath, map[string]any{
 			"name":        uniqueName("e2e-covsi-val"),
 			"provider":    "shippo",
-			"credentials": `{"api_key":"shippo_test_x"}`,
+			"credentials": `{"api_key":"shippo_live_x"}`,
 		}, newIdempotencyKey())
 		require.NoError(t, err)
 		requireStatus(t, 400, status, body)

@@ -77,7 +77,7 @@ func TestBuildInvoiceEmail_CarriesTheSignedLogoAndSKUs(t *testing.T) {
 	accounts.EXPECT().GetByID(gomock.Any(), "ac_1").Return(logoAccount(), nil).AnyTimes()
 	invoices.EXPECT().Get(gomock.Any(), gomock.Any()).Return(invoice, nil)
 	invoices.EXPECT().GetLines(gomock.Any(), "iv_1").Return(lines, nil)
-	invoices.EXPECT().GetEmailRecipients(gomock.Any(), "iv_1").Return(nil, nil)
+	invoices.EXPECT().GetEmailRecipients(gomock.Any(), "ac_1", "iv_1").Return(nil, nil)
 	orders.EXPECT().GetAccountOriginAddress(gomock.Any(), "ac_1").Return(nil, nil)
 	customers.EXPECT().Get(gomock.Any(), "ac_1", gomock.Any(), gomock.Any()).Return(nil, nil)
 

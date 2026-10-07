@@ -1913,7 +1913,7 @@ func (h *gRPCHandler) UpdateAddress(ctx context.Context, req *pb.UpdateAddressRe
 		Phone:             field.StringClearableFromProto(req.Phone),
 		Email:             field.StringClearableFromProto(req.Email),
 		IsDropShip:        req.IsDropShip,
-		ReceiveCalendarID: field.StringClearableFromProto(req.ReceiveCalendarId).ValuePtr(),
+		ReceiveCalendarID: field.StringClearableFromProto(req.ReceiveCalendarId),
 		StreetLine1:       req.StreetLine_1,
 		StreetLine2:       field.StringClearableFromProto(req.StreetLine_2),
 		Locality:          req.Locality,
@@ -2454,17 +2454,26 @@ func (h *gRPCHandler) UpdateAccount(ctx context.Context, req *pb.UpdateAccountRe
 	ctx, finalizeIdempotency := contracts.WithIdempotencyTracking(ctx)
 	defer finalizeIdempotency()
 
+	cleared := make(map[string]bool, len(req.ClearedBrandingFields))
+	for _, name := range req.ClearedBrandingFields {
+		cleared[name] = true
+	}
 	params := domain.UpdateAccountParams{
 		AccountID:       req.Id,
 		Name:            req.Name,
-		SupportEmail:    req.SupportEmail,
-		PhoneNumber:     req.PhoneNumber,
+		SupportEmail:    brandingPatch(req.SupportEmail, cleared, "support_email"),
+		PhoneNumber:     brandingPatch(req.PhoneNumber, cleared, "phone_number"),
 		Slug:            req.Slug,
-		WebsiteURL:      req.WebsiteUrl,
-		FacebookHandle:  req.FacebookHandle,
-		InstagramHandle: req.InstagramHandle,
-		LinkedInHandle:  req.LinkedinHandle,
-		TwitterHandle:   req.TwitterHandle,
+		WebsiteURL:      brandingPatch(req.WebsiteUrl, cleared, "website_url"),
+		FacebookHandle:  brandingPatch(req.FacebookHandle, cleared, "facebook_handle"),
+		InstagramHandle: brandingPatch(req.InstagramHandle, cleared, "instagram_handle"),
+		LinkedInHandle:  brandingPatch(req.LinkedinHandle, cleared, "linkedin_handle"),
+		TwitterHandle:   brandingPatch(req.TwitterHandle, cleared, "twitter_handle"),
+
+		DefaultBillingAddressID:  req.DefaultBillingAddressId,
+		DefaultShippingAddressID: req.DefaultShippingAddressId,
+		DefaultBillingAddress:    inlineAddressToDomain(req.DefaultBillingAddress),
+		DefaultShippingAddress:   inlineAddressToDomain(req.DefaultShippingAddress),
 	}
 
 	account, apiErr := h.accountSvc.UpdateAccount(ctx, params)
@@ -2477,12 +2486,24 @@ func (h *gRPCHandler) UpdateAccount(ctx context.Context, req *pb.UpdateAccountRe
 	}, nil
 }
 
+// brandingPatch is a branding field of an account update: removed when named in cleared, set when
+// given, otherwise left alone.
+func brandingPatch(value *string, cleared map[string]bool, name string) field.Clearable[string] {
+	if cleared[name] {
+		return field.Clear[string]()
+	}
+	if value != nil {
+		return field.Set(*value)
+	}
+	return field.Unset[string]()
+}
+
 func (h *gRPCHandler) UploadAccountPhoto(ctx context.Context, req *pb.UploadAccountPhotoRequest) (*pb.UploadAccountPhotoResponse, error) {
 	if req == nil {
 		return nil, contracts.NewMissingGRPCRequestDataError()
 	}
 
-	apiErr := h.accountSvc.UploadAccountPhoto(ctx, req.Id, req.File, req.ContentType)
+	apiErr := h.accountSvc.UploadAccountPhoto(ctx, req.Id, req.File)
 	if apiErr != nil {
 		return nil, contracts.ConvertAPIErrorToGRPC(apiErr)
 	}
@@ -2512,7 +2533,7 @@ func (h *gRPCHandler) UploadAccountFavicon(ctx context.Context, req *pb.UploadAc
 		return nil, contracts.NewMissingGRPCRequestDataError()
 	}
 
-	apiErr := h.accountSvc.UploadAccountFavicon(ctx, req.Id, req.File, req.ContentType)
+	apiErr := h.accountSvc.UploadAccountFavicon(ctx, req.Id, req.File)
 	if apiErr != nil {
 		return nil, contracts.ConvertAPIErrorToGRPC(apiErr)
 	}

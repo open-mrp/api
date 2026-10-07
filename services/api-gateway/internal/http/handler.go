@@ -1,6 +1,7 @@
 package httptransport
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"errors"
@@ -58,7 +59,11 @@ func hasChunked(r *http.Request) bool {
 }
 
 func DecodeJSONInto(dst any, r *http.Request, disallowUnknown bool) error {
-	dec := json.NewDecoder(r.Body)
+	body, err := io.ReadAll(r.Body)
+	if err != nil {
+		return err
+	}
+	dec := json.NewDecoder(bytes.NewReader(body))
 	if disallowUnknown {
 		dec.DisallowUnknownFields()
 	}
@@ -72,11 +77,6 @@ func DecodeJSONInto(dst any, r *http.Request, disallowUnknown bool) error {
 			return apierror.NewParameterUnknownError(msg, field)
 		}
 
-		if uterr, ok := errors.AsType[*json.UnmarshalTypeError](err); ok {
-			msg := fmt.Sprintf("Invalid type for field '%s': expected %s, got %s", uterr.Field, uterr.Type.String(), uterr.Value)
-			return apierror.NewInvalidFormatError(msg, uterr.Field)
-		}
-
 		if serr, ok := errors.AsType[*json.SyntaxError](err); ok {
 			return apierror.NewValidationError(fmt.Sprintf("Invalid JSON in request body at offset %d: %v", serr.Offset, serr.Error()))
 		}
@@ -85,7 +85,7 @@ func DecodeJSONInto(dst any, r *http.Request, disallowUnknown bool) error {
 			return apiErr
 		}
 
-		return err
+		return valueDecodeError(body, dst, err)
 	}
 	if dec.More() {
 		var extra any
@@ -432,9 +432,30 @@ func BindFromPath(r *http.Request, dst any) error {
 	return nil
 }
 
-const maxRawBodySize = 1 << 20 // 1MB limit for raw body
+// DefaultMaxRawBodyBytes caps a raw body when the endpoint sets no limit of its own.
+const DefaultMaxRawBodyBytes = 1 << 20
 
-func BindRawBody(r *http.Request, dst any) error {
+const (
+	// DefaultMaxJSONBodyBytes caps a JSON body when the endpoint sets no limit of its own.
+	DefaultMaxJSONBodyBytes = 1 << 20
+	// MaxJSONBodyBytes is the largest JSON body any endpoint may accept: the bulk imports' cap, and how
+	// much the idempotency middleware buffers before the endpoint's own cap is applied.
+	MaxJSONBodyBytes = 8 << 20
+)
+
+// NewBodyTooLargeError is the 413 for a request body over maxBytes. A body is refused rather than cut
+// short: a truncated one would be stored, verified or parsed as though it were whole.
+func NewBodyTooLargeError(maxBytes int64) *apierror.APIError {
+	return apierror.NewRequestTooLargeError(fmt.Sprintf("The request body is larger than the %s limit.", formatByteSize(maxBytes)))
+}
+
+// BindRawBody reads the request body into dst's `rawbody` []byte field. A body over maxBytes
+// (DefaultMaxRawBodyBytes when maxBytes is not positive) is refused with a 413.
+func BindRawBody(r *http.Request, dst any, maxBytes int64) error {
+	if maxBytes <= 0 {
+		maxBytes = DefaultMaxRawBodyBytes
+	}
+
 	rv := reflect.ValueOf(dst)
 	if rv.Kind() != reflect.Pointer || rv.IsNil() {
 		return errors.New("destination must be a non-nil pointer")
@@ -470,9 +491,12 @@ func BindRawBody(r *http.Request, dst any) error {
 
 		if !bodyRead {
 			var err error
-			bodyData, err = io.ReadAll(io.LimitReader(r.Body, maxRawBodySize))
+			bodyData, err = io.ReadAll(io.LimitReader(r.Body, maxBytes+1))
 			if err != nil {
 				return fmt.Errorf("failed to read request body: %w", err)
+			}
+			if int64(len(bodyData)) > maxBytes {
+				return NewBodyTooLargeError(maxBytes)
 			}
 			bodyRead = true
 		}
@@ -481,6 +505,15 @@ func BindRawBody(r *http.Request, dst any) error {
 	}
 
 	return nil
+}
+
+// formatByteSize renders a size limit for an error message, in whole megabytes when it is one.
+func formatByteSize(n int64) string {
+	const mb = 1 << 20
+	if n >= mb && n%mb == 0 {
+		return fmt.Sprintf("%d MB", n/mb)
+	}
+	return fmt.Sprintf("%d-byte", n)
 }
 
 // RejectUnknownQueryParams returns an error when the URL contains query keys that are not declared on the request struct (via `query` tags). Slice parameters accept either ?key= or ?key[]= shapes; both key forms are treated as allowed. When allowInclude is true, include and include[] are permitted (validated separately by the endpoint).

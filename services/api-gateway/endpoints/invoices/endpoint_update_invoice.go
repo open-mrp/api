@@ -61,8 +61,6 @@ func (e *UpdateInvoiceEndpoint) Materialize() *apiendpoint.APIEndpoint[*UpdateIn
 		ObjectType:        constants.ObjectTypeInvoice,
 		RequiredPermissions: []types.Permission{
 			{Domain: types.PermissionDomainInvoices, Action: types.ActionUpdate},
-			{Domain: types.PermissionDomainCustomers, Action: types.ActionUpdate},
-			{Domain: types.PermissionDomainSuppliers, Action: types.ActionUpdate},
 		},
 		ServiceHandler: func(svc any) func(ctx context.Context, req *UpdateInvoiceRequest) (*apiresource.Invoice, *apierror.APIError) {
 			return svc.(InvoiceSvc).UpdateInvoice

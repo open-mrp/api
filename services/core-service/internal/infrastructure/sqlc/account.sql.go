@@ -12,6 +12,25 @@ import (
 	"time"
 )
 
+const accountHasAddress = `-- name: AccountHasAddress :one
+SELECT EXISTS (
+    SELECT 1 FROM account_address
+    WHERE account_id = ? AND address_id = ?
+) AS linked
+`
+
+type AccountHasAddressParams struct {
+	AccountID string
+	AddressID string
+}
+
+func (q *Queries) AccountHasAddress(ctx context.Context, arg AccountHasAddressParams) (bool, error) {
+	row := q.db.QueryRowContext(ctx, accountHasAddress, arg.AccountID, arg.AddressID)
+	var linked bool
+	err := row.Scan(&linked)
+	return linked, err
+}
+
 const clearAccountPricingPlanSubscription = `-- name: ClearAccountPricingPlanSubscription :exec
 UPDATE account_billing SET
     stripe_pricing_plan_subscription_id = NULL,
@@ -765,68 +784,22 @@ func (q *Queries) ListAccountPlanLimits(ctx context.Context, accountPlanID strin
 	return items, nil
 }
 
-const updateAccountBranding = `-- name: UpdateAccountBranding :execresult
-UPDATE account_branding SET
-    support_email = COALESCE(?, support_email),
-    phone_number = COALESCE(?, phone_number),
-    facebook_handle = COALESCE(?, facebook_handle),
-    instagram_handle = COALESCE(?, instagram_handle),
-    linkedin_handle = COALESCE(?, linkedin_handle),
-    twitter_handle = COALESCE(?, twitter_handle),
-    website_url = COALESCE(?, website_url),
+const setAccountDefaultAddresses = `-- name: SetAccountDefaultAddresses :exec
+UPDATE account SET
+    default_billing_address_id = COALESCE(?, default_billing_address_id),
+    default_shipping_address_id = COALESCE(?, default_shipping_address_id),
     updated_at = NOW(3)
-WHERE owner_account_id = ?
+WHERE id = ?
 `
 
-type UpdateAccountBrandingParams struct {
-	SupportEmail    sql.NullString
-	PhoneNumber     sql.NullString
-	FacebookHandle  sql.NullString
-	InstagramHandle sql.NullString
-	LinkedinHandle  sql.NullString
-	TwitterHandle   sql.NullString
-	WebsiteUrl      sql.NullString
-	AccountID       string
+type SetAccountDefaultAddressesParams struct {
+	BillingAddressID  sql.NullString
+	ShippingAddressID sql.NullString
+	AccountID         string
 }
 
-func (q *Queries) UpdateAccountBranding(ctx context.Context, arg UpdateAccountBrandingParams) (sql.Result, error) {
-	return q.db.ExecContext(ctx, updateAccountBranding,
-		arg.SupportEmail,
-		arg.PhoneNumber,
-		arg.FacebookHandle,
-		arg.InstagramHandle,
-		arg.LinkedinHandle,
-		arg.TwitterHandle,
-		arg.WebsiteUrl,
-		arg.AccountID,
-	)
-}
-
-const updateAccountBrandingFaviconURL = `-- name: UpdateAccountBrandingFaviconURL :exec
-UPDATE account_branding SET favicon_url = ?, updated_at = NOW(3) WHERE owner_account_id = ?
-`
-
-type UpdateAccountBrandingFaviconURLParams struct {
-	FaviconUrl sql.NullString
-	AccountID  string
-}
-
-func (q *Queries) UpdateAccountBrandingFaviconURL(ctx context.Context, arg UpdateAccountBrandingFaviconURLParams) error {
-	_, err := q.db.ExecContext(ctx, updateAccountBrandingFaviconURL, arg.FaviconUrl, arg.AccountID)
-	return err
-}
-
-const updateAccountBrandingLogoURL = `-- name: UpdateAccountBrandingLogoURL :exec
-UPDATE account_branding SET logo_url = ?, updated_at = NOW(3) WHERE owner_account_id = ?
-`
-
-type UpdateAccountBrandingLogoURLParams struct {
-	LogoUrl   sql.NullString
-	AccountID string
-}
-
-func (q *Queries) UpdateAccountBrandingLogoURL(ctx context.Context, arg UpdateAccountBrandingLogoURLParams) error {
-	_, err := q.db.ExecContext(ctx, updateAccountBrandingLogoURL, arg.LogoUrl, arg.AccountID)
+func (q *Queries) SetAccountDefaultAddresses(ctx context.Context, arg SetAccountDefaultAddressesParams) error {
+	_, err := q.db.ExecContext(ctx, setAccountDefaultAddresses, arg.BillingAddressID, arg.ShippingAddressID, arg.AccountID)
 	return err
 }
 
@@ -915,5 +888,108 @@ type UpdateAgentSpendingCapParams struct {
 
 func (q *Queries) UpdateAgentSpendingCap(ctx context.Context, arg UpdateAgentSpendingCapParams) error {
 	_, err := q.db.ExecContext(ctx, updateAgentSpendingCap, arg.AgentMonthlySpendingCapCents, arg.AccountID)
+	return err
+}
+
+const upsertAccountBranding = `-- name: UpsertAccountBranding :exec
+INSERT INTO account_branding (
+    id,
+    owner_account_id,
+    support_email,
+    phone_number,
+    facebook_handle,
+    instagram_handle,
+    linkedin_handle,
+    twitter_handle,
+    website_url,
+    created_at,
+    updated_at
+) VALUES (
+    ?,
+    ?,
+    ?,
+    ?,
+    ?,
+    ?,
+    ?,
+    ?,
+    ?,
+    NOW(3),
+    NOW(3)
+)
+ON DUPLICATE KEY UPDATE
+    support_email = VALUES(support_email),
+    phone_number = VALUES(phone_number),
+    facebook_handle = VALUES(facebook_handle),
+    instagram_handle = VALUES(instagram_handle),
+    linkedin_handle = VALUES(linkedin_handle),
+    twitter_handle = VALUES(twitter_handle),
+    website_url = VALUES(website_url),
+    updated_at = NOW(3)
+`
+
+type UpsertAccountBrandingParams struct {
+	ID              string
+	AccountID       string
+	SupportEmail    sql.NullString
+	PhoneNumber     sql.NullString
+	FacebookHandle  sql.NullString
+	InstagramHandle sql.NullString
+	LinkedinHandle  sql.NullString
+	TwitterHandle   sql.NullString
+	WebsiteUrl      sql.NullString
+}
+
+// The branding as it stands after an update: the service applies the update to what was there, so a
+// cleared field is written as NULL. Accounts made before branding existed have no row, and their first
+// update creates it; id is used only then.
+func (q *Queries) UpsertAccountBranding(ctx context.Context, arg UpsertAccountBrandingParams) error {
+	_, err := q.db.ExecContext(ctx, upsertAccountBranding,
+		arg.ID,
+		arg.AccountID,
+		arg.SupportEmail,
+		arg.PhoneNumber,
+		arg.FacebookHandle,
+		arg.InstagramHandle,
+		arg.LinkedinHandle,
+		arg.TwitterHandle,
+		arg.WebsiteUrl,
+	)
+	return err
+}
+
+const upsertAccountBrandingFaviconURL = `-- name: UpsertAccountBrandingFaviconURL :exec
+INSERT INTO account_branding (id, owner_account_id, favicon_url, created_at, updated_at)
+VALUES (?, ?, ?, NOW(3), NOW(3))
+ON DUPLICATE KEY UPDATE favicon_url = VALUES(favicon_url), updated_at = NOW(3)
+`
+
+type UpsertAccountBrandingFaviconURLParams struct {
+	ID         string
+	AccountID  string
+	FaviconUrl sql.NullString
+}
+
+// Creates the branding row for an account that has none, as UpsertAccountBranding does.
+func (q *Queries) UpsertAccountBrandingFaviconURL(ctx context.Context, arg UpsertAccountBrandingFaviconURLParams) error {
+	_, err := q.db.ExecContext(ctx, upsertAccountBrandingFaviconURL, arg.ID, arg.AccountID, arg.FaviconUrl)
+	return err
+}
+
+const upsertAccountBrandingLogoURL = `-- name: UpsertAccountBrandingLogoURL :exec
+INSERT INTO account_branding (id, owner_account_id, logo_url, created_at, updated_at)
+VALUES (?, ?, ?, NOW(3), NOW(3))
+ON DUPLICATE KEY UPDATE logo_url = VALUES(logo_url), updated_at = NOW(3)
+`
+
+type UpsertAccountBrandingLogoURLParams struct {
+	ID        string
+	AccountID string
+	LogoUrl   sql.NullString
+}
+
+// Creates the branding row for an account that has none, as UpsertAccountBranding does.
+func (q *Queries) UpsertAccountBrandingLogoURL(ctx context.Context, arg UpsertAccountBrandingLogoURLParams) error {
+	_, err := q.db.ExecContext(ctx, upsertAccountBrandingLogoURL, arg.ID, arg.AccountID, arg.LogoUrl)
 	return err
 }

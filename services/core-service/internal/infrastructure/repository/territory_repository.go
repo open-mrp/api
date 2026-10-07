@@ -4,8 +4,6 @@ import (
 	"context"
 	gosql "database/sql"
 	"slices"
-	"strconv"
-	"strings"
 	"time"
 
 	"github.com/open-mrp/api/services/core-service/internal/domain"
@@ -59,6 +57,9 @@ func mapTerritoryRow(
 	if endZipcode.Valid {
 		t.EndZipcode = &endZipcode.Int32
 	}
+	if productLineID.Valid {
+		t.ProductLineID = &productLineID.String
+	}
 
 	if slices.Contains(includes, "sales_rep") {
 		status := constants.AccountUserStatus(salesRepStatus)
@@ -101,30 +102,6 @@ func mapTerritoryRow(
 	return t
 }
 
-func mapForwardTerritoryRow(row sqlc.ListTerritoriesForwardRow, includes []string) *domain.Territory {
-	return mapTerritoryRow(
-		row.ID, row.State, row.StartZipcode, row.EndZipcode,
-		row.SalesRepID, row.ProductLineID, row.CreatedAt, row.UpdatedAt,
-		row.SalesRepName, row.SalesRepEmail,
-		row.SalesRepStatus, row.SalesRepCreatedAt, row.SalesRepUpdatedAt,
-		row.ProductLineName, row.ProductLineIsCommissionExempt, row.ProductLineIsFreightExempt,
-		row.ProductLineCreatedAt, row.ProductLineUpdatedAt,
-		includes,
-	)
-}
-
-func mapBackwardTerritoryRow(row sqlc.ListTerritoriesBackwardRow, includes []string) *domain.Territory {
-	return mapTerritoryRow(
-		row.ID, row.State, row.StartZipcode, row.EndZipcode,
-		row.SalesRepID, row.ProductLineID, row.CreatedAt, row.UpdatedAt,
-		row.SalesRepName, row.SalesRepEmail,
-		row.SalesRepStatus, row.SalesRepCreatedAt, row.SalesRepUpdatedAt,
-		row.ProductLineName, row.ProductLineIsCommissionExempt, row.ProductLineIsFreightExempt,
-		row.ProductLineCreatedAt, row.ProductLineUpdatedAt,
-		includes,
-	)
-}
-
 func mapGetTerritoryRow(row sqlc.GetTerritoryRow, includes []string) *domain.Territory {
 	return mapTerritoryRow(
 		row.ID, row.State, row.StartZipcode, row.EndZipcode,
@@ -137,105 +114,36 @@ func mapGetTerritoryRow(row sqlc.GetTerritoryRow, includes []string) *domain.Ter
 	)
 }
 
-func buildTerritorySearchParams(query *string) (gosql.NullString, gosql.NullInt64) {
-	if query == nil || *query == "" {
-		return gosql.NullString{}, gosql.NullInt64{}
-	}
-
-	searchQuery := gosql.NullString{String: "%" + db.EscapeLike(*query) + "%", Valid: true}
-	zipcodeQuery := parseZipcodeQuery(*query)
-
-	return searchQuery, zipcodeQuery
-}
-
-func parseZipcodeQuery(query string) gosql.NullInt64 {
-	trimmed := strings.TrimLeft(query, "0")
-	if trimmed == "" {
-		return gosql.NullInt64{}
-	}
-
-	val, err := strconv.ParseInt(trimmed, 10, 64)
-	if err != nil {
-		return gosql.NullInt64{}
-	}
-
-	if val < 501 || val > 99999 {
-		return gosql.NullInt64{}
-	}
-
-	return gosql.NullInt64{Int64: val, Valid: true}
-}
-
 func (r *territoryRepoImpl) List(ctx context.Context, params domain.ListTerritoriesParams) (*domain.ListTerritoriesResult, *apierror.APIError) {
 	ctx, span := territoryRepoTracer.Start(ctx, "repository.territory.list")
 	defer span.End()
 
-	searchQuery, zipcodeQuery := buildTerritorySearchParams(params.Query)
-	var cursorDir *pagination.Direction
-
-	if params.Cursor != nil {
-		cur, err := pagination.DecodeStringCursor(*params.Cursor)
-		if err != nil {
-			return nil, apierror.NewValidationErrorWithParam("Invalid pagination cursor.", "cursor")
-		}
-		cursorDir = &cur.Direction
-
-		if cur.Direction == pagination.DirectionBackward {
-			rows, err := r.queries.ListTerritoriesBackward(ctx, sqlc.ListTerritoriesBackwardParams{
-				AccountID:       params.AccountID,
-				SearchQuery:     searchQuery,
-				ZipcodeQuery:    zipcodeQuery,
-				CursorCreatedAt: cur.OccurredAt,
-				CursorID:        cur.ID,
-				Limit:           params.Limit + 1,
-			})
-			if apiErr := db.MapSQLError(err); apiErr != nil {
-				return nil, tracing.Trace(span, apiErr)
-			}
-			territories := make([]*domain.Territory, len(rows))
-			for i, row := range rows {
-				territories[i] = mapBackwardTerritoryRow(row, params.Includes)
-			}
-			result, pageInfo := pagination.BuildPageString(territories, params.Limit, cursorDir, territoryCreatedAt, territoryID)
-			return &domain.ListTerritoriesResult{Territories: result, PageInfo: pageInfo}, nil
-		}
-
-		// Forward with cursor
-		rows, err := r.queries.ListTerritoriesForward(ctx, sqlc.ListTerritoriesForwardParams{
-			AccountID:       params.AccountID,
-			SearchQuery:     searchQuery,
-			ZipcodeQuery:    zipcodeQuery,
-			CursorCreatedAt: gosql.NullTime{Time: cur.OccurredAt, Valid: true},
-			CursorID:        gosql.NullString{String: cur.ID, Valid: true},
-			Limit:           params.Limit + 1,
-		})
-		if apiErr := db.MapSQLError(err); apiErr != nil {
-			return nil, tracing.Trace(span, apiErr)
-		}
-		territories := make([]*domain.Territory, len(rows))
-		for i, row := range rows {
-			territories[i] = mapForwardTerritoryRow(row, params.Includes)
-		}
-		result, pageInfo := pagination.BuildPageString(territories, params.Limit, cursorDir, territoryCreatedAt, territoryID)
-		return &domain.ListTerritoriesResult{Territories: result, PageInfo: pageInfo}, nil
+	cursor, apiErr := decodeListCursor(params.Cursor)
+	if apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
 	}
 
-	// No cursor — first page
-	rows, err := r.queries.ListTerritoriesForward(ctx, sqlc.ListTerritoriesForwardParams{
-		AccountID:    params.AccountID,
-		SearchQuery:  searchQuery,
-		ZipcodeQuery: zipcodeQuery,
-		Limit:        params.Limit + 1,
-	})
+	query, args := territoryListPageQuery(params.AccountID, params.Query, cursor, params.Limit+1)
+	ids, err := selectStrings(ctx, r.queries.DB(), query, args...)
 	if apiErr := db.MapSQLError(err); apiErr != nil {
 		return nil, tracing.Trace(span, apiErr)
 	}
 
-	territories := make([]*domain.Territory, len(rows))
-	for i, row := range rows {
-		territories[i] = mapForwardTerritoryRow(row, params.Includes)
+	byID := make(map[string]*domain.Territory, len(ids))
+	if len(ids) > 0 {
+		rows, err := r.queries.GetTerritoriesByIDs(ctx, sqlc.GetTerritoriesByIDsParams{
+			Ids:       ids,
+			AccountID: params.AccountID,
+		})
+		if apiErr := db.MapSQLError(err); apiErr != nil {
+			return nil, tracing.Trace(span, apiErr)
+		}
+		for _, row := range rows {
+			byID[row.ID] = mapGetTerritoriesByIDsRow(row, params.Includes)
+		}
 	}
-	result, pageInfo := pagination.BuildPageString(territories, params.Limit, cursorDir, territoryCreatedAt, territoryID)
+
+	result, pageInfo := pagination.BuildPageString(inPageOrder(ids, byID), params.Limit, cursorDirection(cursor), territoryCreatedAt, territoryID)
 	return &domain.ListTerritoriesResult{Territories: result, PageInfo: pageInfo}, nil
 }
 
@@ -258,17 +166,11 @@ func (r *territoryRepoImpl) Create(ctx context.Context, territoryID string, para
 	ctx, span := territoryRepoTracer.Start(ctx, "repository.territory.create")
 	defer span.End()
 
-	// Enforce zipcode null coercion: if start is nil, end must be nil
-	endZipcode := params.EndZipcode
-	if params.StartZipcode == nil {
-		endZipcode = nil
-	}
-
 	if err := r.queries.InsertTerritory(ctx, sqlc.InsertTerritoryParams{
 		ID:            territoryID,
 		State:         params.State,
 		StartZipcode:  toNullInt32(params.StartZipcode),
-		EndZipcode:    toNullInt32(endZipcode),
+		EndZipcode:    toNullInt32(params.EndZipcode),
 		SalesRepID:    params.SalesRepID,
 		AccountID:     params.AccountID,
 		ProductLineID: toNullString(params.ProductLineID),
@@ -289,12 +191,6 @@ func (r *territoryRepoImpl) Update(ctx context.Context, params domain.UpdateTerr
 	ctx, span := territoryRepoTracer.Start(ctx, "repository.territory.update")
 	defer span.End()
 
-	// Enforce zipcode null coercion: if clearing start, also clear end
-	clearEndZipcode := params.ClearEndZipcode
-	if params.ClearStartZipcode {
-		clearEndZipcode = true
-	}
-
 	if err := r.queries.UpdateTerritory(ctx, sqlc.UpdateTerritoryParams{
 		ID:                params.TerritoryID,
 		AccountID:         params.AccountID,
@@ -305,7 +201,7 @@ func (r *territoryRepoImpl) Update(ctx context.Context, params domain.UpdateTerr
 		ProductLineID:     toNullString(params.ProductLineID),
 		ClearProductLine:  params.ClearProductLine,
 		ClearStartZipcode: params.ClearStartZipcode,
-		ClearEndZipcode:   clearEndZipcode,
+		ClearEndZipcode:   params.ClearEndZipcode,
 	}); err != nil {
 		if apiErr := db.MapSQLError(err); apiErr != nil {
 			return nil, tracing.Trace(span, apiErr)
@@ -335,7 +231,7 @@ func (r *territoryRepoImpl) Delete(ctx context.Context, params domain.DeleteTerr
 	return nil
 }
 
-func mapGetTerritoriesByIDsRow(row sqlc.GetTerritoriesByIDsRow) *domain.Territory {
+func mapGetTerritoriesByIDsRow(row sqlc.GetTerritoriesByIDsRow, includes []string) *domain.Territory {
 	return mapTerritoryRow(
 		row.ID, row.State, row.StartZipcode, row.EndZipcode,
 		row.SalesRepID, row.ProductLineID, row.CreatedAt, row.UpdatedAt,
@@ -343,7 +239,7 @@ func mapGetTerritoriesByIDsRow(row sqlc.GetTerritoriesByIDsRow) *domain.Territor
 		row.SalesRepStatus, row.SalesRepCreatedAt, row.SalesRepUpdatedAt,
 		row.ProductLineName, row.ProductLineIsCommissionExempt, row.ProductLineIsFreightExempt,
 		row.ProductLineCreatedAt, row.ProductLineUpdatedAt,
-		[]string{"sales_rep", "product_line"},
+		includes,
 	)
 }
 
@@ -361,7 +257,7 @@ func (r *territoryRepoImpl) GetByIDs(ctx context.Context, accountID string, ids 
 
 	territories := make([]*domain.Territory, len(rows))
 	for i, row := range rows {
-		territories[i] = mapGetTerritoriesByIDsRow(row)
+		territories[i] = mapGetTerritoriesByIDsRow(row, []string{"sales_rep", "product_line"})
 	}
 	return territories, nil
 }

@@ -80,29 +80,6 @@ type OpenBatchEntry struct {
 	CreatedAt           time.Time
 }
 
-// --- Production Costs ---
-
-type AnalyzeProductionCostsParams struct {
-	AccountID      string
-	StartDate      *time.Time
-	EndDate        *time.Time
-	ItemIDs        []string
-	ProductLineIDs []string
-	DepartmentIDs  []string
-	CategoryIDs    []string
-}
-
-type ProductionCostEntry struct {
-	ItemID             string
-	ProductSku         string
-	ProductDescription *string
-	ProductLine        *string
-	TotalQuantity      float64
-	TotalCost          float64
-	CostPerUnit        float64
-	Unit               string
-}
-
 // --- Delivery Analytics ---
 
 type AnalyzeDeliveriesParams struct {
@@ -253,7 +230,14 @@ type AnalyzeQuarterlyOrdersParams struct {
 	ProductLineIDs   []string
 	CustomerIDs      []string
 	CustomerGroupIDs []string
+	// YearsBack is how many calendar years the report covers, the current one included; zero means DefaultQuarterlyOrdersYearsBack.
+	YearsBack int32
+	// IssuedFrom is set by the service: the first instant of the earliest year covered, UTC.
+	IssuedFrom time.Time
 }
+
+// DefaultQuarterlyOrdersYearsBack is the quarterly-orders window when the caller names none.
+const DefaultQuarterlyOrdersYearsBack = 5
 
 type QuarterlyData struct {
 	Q1    float64
@@ -321,28 +305,33 @@ type AnalyzeInventoryReceiptsParams struct {
 }
 
 type InventoryReceiptEntry struct {
-	ItemID                          string
-	ProductSku                      string
-	ProductDescription              *string
-	LocationID                      *string
-	LocationName                    *string
-	LotID                           *string
-	LotNumber                       *string
-	OwnerAccountID                  string
-	OwnerAccountName                string
-	HolderAccountID                 string
-	HolderAccountName               string
-	RemainingQuantity               float64
-	WeightedAverageUnitCost         float64
-	InventoryValue                  float64
+	ItemID             string
+	ProductSku         string
+	ProductDescription *string
+	LocationID         *string
+	LocationName       *string
+	LotID              *string
+	LotNumber          *string
+	OwnerAccountID     string
+	OwnerAccountName   string
+	HolderAccountID    string
+	HolderAccountName  string
+	// RemainingQuantity is in the item's base unit, which Unit names.
+	RemainingQuantity       float64
+	WeightedAverageUnitCost float64
+	// InventoryValue is nil when nothing remains.
+	InventoryValue                  *float64
 	OldestReceiptAt                 *time.Time
 	NewestReceiptAt                 *time.Time
 	Unit                            string
 	UnitName                        string
+	UnitType                        string
 	CostNumeratorUnitAbbreviation   string
 	CostNumeratorUnitName           string
+	CostNumeratorUnitType           string
 	CostDenominatorUnitAbbreviation string
 	CostDenominatorUnitName         string
+	CostDenominatorUnitType         string
 }
 
 // --- New Customers Analytics ---
@@ -418,9 +407,11 @@ type DemandForecastResult struct {
 
 // GetDemandForecastWindowParams bounds the raw monthly demand/revenue reads used to build the demand forecast.
 type GetDemandForecastWindowParams struct {
-	AccountID string
-	StartDate time.Time
-	EndDate   time.Time
+	AccountID      string
+	StartDate      time.Time
+	EndDate        time.Time
+	ProductLineIDs []string
+	ItemIDs        []string
 }
 
 // DemandForecastMonthlyDemandRow is one item-month of order-based demand and revenue.
@@ -472,12 +463,20 @@ type GetOrderQuantitiesByProductLinesParams struct {
 	EndDate        time.Time
 }
 
-// OrderQuantityByProductLineRow is the aggregate ordered quantity for a product line within a window.
+// OrderQuantityByProductLineRow is the aggregate ordered quantity for a product line within a window, in the line's base unit.
 type OrderQuantityByProductLineRow struct {
 	ProductLineID    string
 	TotalQuantity    float64
 	UnitAbbreviation string
 	UnitType         string
+	// BaseRatio is the base unit's size in its dimension's base unit.
+	BaseRatio float64
+}
+
+// ItemOnHandRow is an item's on-hand stock in the base unit of its dimension.
+type ItemOnHandRow struct {
+	ItemID string
+	OnHand float64
 }
 
 type WeeksOfSalesItem struct {

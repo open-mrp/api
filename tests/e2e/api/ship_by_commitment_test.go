@@ -520,39 +520,22 @@ func TestSalesOrders_PastDueFilterValidatesItsInput(t *testing.T) {
 	assert.Equal(t, 400, status, "body: %s", string(body))
 }
 
-// A ship-by bound that is not a date is currently ignored rather than rejected,
-// inherited from how starts_at/ends_at have always parsed: anything that does not
-// match a date layout produces no filter at all.
-//
-// Pinned rather than left implicit because the failure mode is silent — a client
-// sending a malformed date gets the unfiltered list back and reads it as an answer.
-// The day this is tightened into a 400 this test fails, which is the point: it
-// should be a deliberate change rather than one nobody noticed.
-func TestSalesOrders_MalformedShipByFilterIsIgnored(t *testing.T) {
+// A ship-by bound that is not a date is refused on its parameter, as starts_at and ends_at are: read
+// as no filter, it would hand back the unfiltered list as though it were an answer.
+func TestSalesOrders_MalformedShipByFilterIsRejected(t *testing.T) {
 	t.Parallel()
 
-	customerID := leadTimeCustomer(t, "e2e-shipby-malformed", ptrInt(30), "")
-	order := issueOrderForCustomer(t, customerID, nil)
-	orderID := jsonField(order, "id")
-	require.NotEmpty(t, shipByDate(t, order))
-
 	for _, tc := range []struct {
-		name   string
-		params url.Values
+		param, value string
 	}{
-		{"ship_by_after not a date", url.Values{"ship_by_after": {"last-tuesday"}}},
-		{"ship_by_before not a date", url.Values{"ship_by_before": {"2026-13-45"}}},
+		{"ship_by_after", "last-tuesday"},
+		{"ship_by_before", "2026-13-45"},
 	} {
-		t.Run(tc.name, func(t *testing.T) {
-			status, body, err := apiClient.GetListRaw(salesOrdersPath, tc.params)
+		t.Run(tc.param, func(t *testing.T) {
+			status, body, err := apiClient.GetListRaw(salesOrdersPath, url.Values{tc.param: {tc.value}})
 			require.NoError(t, err)
-			require.Less(t, status, 500, "a malformed filter must not 5xx: %s", string(body))
-			requireStatus(t, 200, status, body)
-
-			// Ignored, not applied: the order is still there, exactly as it would be with
-			// no filter at all.
-			assert.True(t, orderAppearsInFilteredList(t, orderID, tc.params),
-				"an unparseable bound narrows nothing, so the list comes back unfiltered")
+			requireStatus(t, 400, status, body)
+			assertErrorParam(t, requireErrorResponse(t, body, "", "invalid_request_error"), tc.param)
 		})
 	}
 }

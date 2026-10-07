@@ -3,6 +3,7 @@ package repository
 import (
 	"context"
 	"fmt"
+	"time"
 
 	"github.com/shopspring/decimal"
 
@@ -145,4 +146,50 @@ func (r *inventoryQueryRepoImpl) FetchPhysicalInventoryBaseForItems(ctx context.
 		out[row.ItemID] = measure
 	}
 	return out, nil
+}
+
+func (r *inventoryQueryRepoImpl) ListAvailableReceiptUnitIDs(ctx context.Context, itemID, ownerAccountID string) ([]string, *apierror.APIError) {
+	ctx, span := inventoryQueryRepoTracer.Start(ctx, "repository.inventory_query.list_available_receipt_unit_ids")
+	defer span.End()
+
+	unitIDs, err := r.queries.ListAvailableReceiptUnitIDsForItem(ctx, sqlc.ListAvailableReceiptUnitIDsForItemParams{
+		ItemID:         itemID,
+		OwnerAccountID: ownerAccountID,
+	})
+	if apiErr := db.MapSQLError(err); apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
+	return unitIDs, nil
+}
+
+func (r *inventoryQueryRepoImpl) FetchInventoryLevelsAsOf(ctx context.Context, itemIDs []string, accountID string, asOf time.Time) ([]*domain.BulkOnHandInventory, *apierror.APIError) {
+	ctx, span := inventoryQueryRepoTracer.Start(ctx, "repository.inventory_query.fetch_inventory_levels_as_of")
+	defer span.End()
+
+	rows, err := r.queries.FetchInventoryLevelsAsOf(ctx, sqlc.FetchInventoryLevelsAsOfParams{
+		AccountID:  accountID,
+		AsOf:       asOf,
+		LogItemIds: itemIDs,
+		ItemIds:    itemIDs,
+	})
+	if apiErr := db.MapSQLError(err); apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
+
+	result := make([]*domain.BulkOnHandInventory, len(rows))
+	for i, row := range rows {
+		level, parseErr := decimal.NewFromString(row.Level)
+		if parseErr != nil {
+			return nil, tracing.Trace(span, apierror.NewInternalError(parseErr, "Invalid inventory level."))
+		}
+		measure, _ := level.Float64()
+		result[i] = &domain.BulkOnHandInventory{
+			ItemID:           row.ItemID,
+			OnHandQuantity:   measure,
+			UnitID:           row.UnitID,
+			UnitAbbreviation: row.UnitAbbreviation,
+			UnitType:         row.UnitType,
+		}
+	}
+	return result, nil
 }

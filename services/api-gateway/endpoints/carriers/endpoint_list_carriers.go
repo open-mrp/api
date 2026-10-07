@@ -23,20 +23,17 @@ type ListCarriersEndpoint struct{}
 
 func (e *ListCarriersEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListCarriersRequest, *apiresource.List[apiresource.Carrier]] {
 	return (&apiendpoint.APIEndpoint[*ListCarriersRequest, *apiresource.List[apiresource.Carrier]]{
-		Title:             "List Carriers",
-		Method:            http.MethodGet,
-		ContentType:       "application/json",
-		Route:             "/v1/operations/carriers",
-		SuccessStatusCode: http.StatusOK,
-		Public:            true,
-		AgentTool:         true,
-		RequiredPermissions: []types.Permission{
-			{Domain: types.PermissionDomainCarriers, Action: types.ActionRead},
-			{Domain: types.PermissionDomainCustomers, Action: types.ActionRead},
-			{Domain: types.PermissionDomainSuppliers, Action: types.ActionRead},
-		},
-		Preview:    true,
-		ObjectType: constants.ObjectTypeCarrier,
+		Title:                   "List Carriers",
+		Method:                  http.MethodGet,
+		ContentType:             "application/json",
+		Route:                   "/v1/operations/carriers",
+		SuccessStatusCode:       http.StatusOK,
+		Public:                  true,
+		AgentTool:               true,
+		RequiredPermissions:     []types.Permission{{Domain: types.PermissionDomainCarriers, Action: types.ActionRead}},
+		CounterpartyPermissions: apiendpoint.Counterparties(types.ActionRead),
+		Preview:                 true,
+		ObjectType:              constants.ObjectTypeCarrier,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *ListCarriersRequest) (*apiresource.List[apiresource.Carrier], *apierror.APIError) {
 			return svc.(CarrierSvc).ListCarriers
 		},

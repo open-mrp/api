@@ -41,9 +41,8 @@ func (e *AnalyzeCustomerPricingEndpoint) Materialize() *apiendpoint.APIEndpoint[
 		ContentType:         "application/json",
 		SuccessStatusCode:   http.StatusOK,
 		Public:              false,
-		AgentTool:           true,
 		Preview:             true,
-		RequiredPermissions: []types.Permission{{Domain: types.PermissionDomainDiscounts, Action: types.ActionRead}},
+		RequiredPermissions: []types.Permission{{Domain: types.PermissionDomainCosts, Action: types.ActionRead}},
 		// The roots the include resolver walks are the findings, not the response wrapper, so ObjectType names the finding and ExtractRoots reaches into the list.
 		ObjectType:    constants.ObjectTypeCustomerPricingFinding,
 		IncludeConfig: customerPricingIncludeConfig(),

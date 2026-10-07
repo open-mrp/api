@@ -22,12 +22,10 @@ services/core-service/internal/infrastructure/sqlc/address.sql.go:listAddressesF
 services/core-service/internal/infrastructure/sqlc/adjustment_type.sql.go:listAdjustmentTypesBackward 1
 services/core-service/internal/infrastructure/sqlc/adjustment_type.sql.go:listAdjustmentTypesForward 2
 services/core-service/internal/infrastructure/sqlc/analytics.sql.go:getNewCustomerEntries 2
-services/core-service/internal/infrastructure/sqlc/analytics.sql.go:getQuarterlyOrderTotals 5
 services/core-service/internal/infrastructure/sqlc/attribute.sql.go:countAttributesByTextInAccount 1
 services/core-service/internal/infrastructure/sqlc/batch.sql.go:countBatchesByScanningStation 1
 services/core-service/internal/infrastructure/sqlc/batch.sql.go:listBatchesByScanningStationBackward 1
 services/core-service/internal/infrastructure/sqlc/batch.sql.go:listBatchesByScanningStationForward 2
-services/core-service/internal/infrastructure/sqlc/batch.sql.go:listOpenBatches 2
 services/core-service/internal/infrastructure/sqlc/carrier.sql.go:countCarriersByName 1
 services/core-service/internal/infrastructure/sqlc/carrier.sql.go:listCarriersBackward 1
 services/core-service/internal/infrastructure/sqlc/carrier.sql.go:listCarriersForward 2
@@ -189,8 +187,6 @@ services/core-service/internal/infrastructure/sqlc/supplier_material.sql.go:list
 services/core-service/internal/infrastructure/sqlc/supplier_material.sql.go:listSupplierMaterialsForward 2
 services/core-service/internal/infrastructure/sqlc/sys_property.sql.go:listSysPropertiesBackward 1
 services/core-service/internal/infrastructure/sqlc/sys_property.sql.go:listSysPropertiesForward 2
-services/core-service/internal/infrastructure/sqlc/territory.sql.go:listTerritoriesBackward 2
-services/core-service/internal/infrastructure/sqlc/territory.sql.go:listTerritoriesForward 3
 services/core-service/internal/infrastructure/sqlc/transaction.sql.go:countAccountTransactions 3
 services/core-service/internal/infrastructure/sqlc/transaction.sql.go:countTransactions 9
 services/core-service/internal/infrastructure/sqlc/transaction.sql.go:existsTransactionByNumber 1

@@ -72,3 +72,21 @@ type ListEDIRunsResult struct {
 	EDIRuns  []*EDIRun
 	PageInfo pagination.PageInfo
 }
+
+// The document an outbound EDI transmission carries; the dashboard API's transmitter sends it.
+const (
+	// EdiDocumentTypeInvoice is the X12 810 invoice.
+	EdiDocumentTypeInvoice = "810"
+	// EdiSubjectTypeInvoice names an invoice as the record a transmission is about.
+	EdiSubjectTypeInvoice = "invoice"
+)
+
+// Records an outbound document owed to a trading partner, due for transmission now.
+type EnqueueEdiTransmissionParams struct {
+	ID                    string
+	AccountID             string
+	DocumentType          string
+	SubjectType           string
+	SubjectID             string
+	CounterpartyAccountID string
+}

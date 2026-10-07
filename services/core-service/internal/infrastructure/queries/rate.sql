@@ -55,3 +55,19 @@ UPDATE rate SET
     denominator_unit_id = COALESCE(sqlc.narg('denominator_unit_id'), denominator_unit_id),
     updated_at = NOW(3)
 WHERE id = sqlc.arg('id');
+
+-- name: ListRateOwnerTypes :many
+-- The kinds of resource in the account a rate belongs to: an item's unit value, unit cost and burn rate, a production step's labor time, labor rate and overhead rate, and a department's labor rate. Each branch is a unique-key lookup.
+SELECT 'item' AS owner_type FROM item iv WHERE iv.unit_value_id = sqlc.arg('id') AND iv.account_id = sqlc.arg('account_id')
+UNION ALL
+SELECT 'item' FROM item ic WHERE ic.unit_cost_id = sqlc.arg('id') AND ic.account_id = sqlc.arg('account_id')
+UNION ALL
+SELECT 'item' FROM item ib WHERE ib.burn_rate_id = sqlc.arg('id') AND ib.account_id = sqlc.arg('account_id')
+UNION ALL
+SELECT 'production_step' FROM production_step pt WHERE pt.labor_time_id = sqlc.arg('id') AND pt.account_id = sqlc.arg('account_id')
+UNION ALL
+SELECT 'production_step' FROM production_step pl WHERE pl.labor_rate_id = sqlc.arg('id') AND pl.account_id = sqlc.arg('account_id')
+UNION ALL
+SELECT 'production_step' FROM production_step po WHERE po.overhead_rate_id = sqlc.arg('id') AND po.account_id = sqlc.arg('account_id')
+UNION ALL
+SELECT 'department' FROM department d WHERE d.labor_rate_id = sqlc.arg('department_labor_rate_id') AND d.account_id = sqlc.arg('account_id');

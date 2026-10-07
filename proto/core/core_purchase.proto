@@ -335,6 +335,9 @@ message CreatePurchaseOrderRequest {
   // Existing supplier addresses to use instead of creating ones from the inline fields.
   optional string bill_to_address_id = 29;
   optional string ship_to_address_id = 30;
+  // Supplier addresses saved with the order; each excludes its *_address_id and bill_to_*/ship_to_* fields.
+  InlineAddressInput bill_to_address = 31;
+  InlineAddressInput ship_to_address = 32;
 }
 
 message CreatePurchaseOrderLineInput {
@@ -371,6 +374,9 @@ message UpdatePurchaseOrderRequest {
   bool clear_promised_at = 10;
   // Marks contact_account_user_ids as the new contact set, so an empty list clears the contacts.
   bool replace_contacts = 11;
+  // Supplier addresses saved with the order; each excludes its *_address_id.
+  InlineAddressInput billing_address = 12;
+  InlineAddressInput shipping_address = 13;
 }
 
 message UpdatePurchaseOrderResponse {

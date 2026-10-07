@@ -142,12 +142,12 @@ func (s *accountPriceSvcImpl) ListAccountPrices(ctx context.Context, params doma
 
 	repo := s.repos.NewAccountPriceRepo()
 
-	// A portal user sees their own prices whatever they asked for; an internal caller sees
+	// A customer or supplier portal sees its own prices whatever it asked for; an internal caller sees
 	// the customer they filtered on. Either way the customer is expanded to include its
 	// parent, whose prices also price that customer's orders.
 	requestedRecipientID := ""
-	if identity.IsCustomerUser() {
-		requestedRecipientID = *identity.Actor.AccountID
+	if own := identity.PortalAccountID(); own != nil {
+		requestedRecipientID = *own
 	} else if len(params.RecipientAccountIDs) > 0 {
 		requestedRecipientID = params.RecipientAccountIDs[0]
 	}
@@ -164,13 +164,13 @@ func (s *accountPriceSvcImpl) ListAccountPrices(ctx context.Context, params doma
 }
 
 // GetAccountPrice retrieves a single account price by ID, scoped to the caller's account.
-// Customer actors can only see prices whose recipient is their own account or its parent.
+// Customer and supplier portal actors see only prices whose recipient is their own account or its parent.
 //
 // 1. Extract and validate the caller's identity via CheckIsAssignedActor.
 // 2. For internal actors, require discounts:read permission.
 // 3. Require the OpenMRP-Account header.
 // 4. Fetch the account price from the repository.
-// 5. For customer actors, verify the price's recipient is their own account or its parent.
+// 5. For portal actors, verify the price's recipient is their own account or its parent.
 func (s *accountPriceSvcImpl) GetAccountPrice(ctx context.Context, accountPriceID string) (*domain.AccountPrice, *apierror.APIError) {
 	ctx, span := accountPriceSvcTracer.Start(ctx, "service.account_price.get")
 	defer span.End()
@@ -207,8 +207,8 @@ func (s *accountPriceSvcImpl) GetAccountPrice(ctx context.Context, accountPriceI
 
 	// Matched against the customer's parent as well as itself, so that the prices a portal
 	// user can list are the same ones they can open.
-	if identity.IsCustomerUser() {
-		recipientIDs, apiErr := repo.ResolveRecipientAccountIDs(ctx, identity.Target.AccountID, *identity.Actor.AccountID)
+	if own := identity.PortalAccountID(); own != nil {
+		recipientIDs, apiErr := repo.ResolveRecipientAccountIDs(ctx, identity.Target.AccountID, *own)
 		if apiErr != nil {
 			return nil, tracing.Trace(span, apiErr)
 		}
@@ -414,7 +414,7 @@ func (s *accountPriceSvcImpl) DeleteAccountPrice(ctx context.Context, accountPri
 	accountPrice, apiErr := s.repos.NewAccountPriceRepo().Get(ctx, accountID, accountPriceID)
 	if apiErr != nil {
 		if apierror.IsNotFound(apiErr) {
-			wasDeleted, deletedCheckErr := s.repos.NewDeletedRecordRepo().Exists(ctx, constants.DeletedRecordResourceTypeAccountPrice, accountPriceID)
+			wasDeleted, deletedCheckErr := s.repos.NewDeletedRecordRepo().ExistsInAccount(ctx, constants.DeletedRecordResourceTypeAccountPrice, accountPriceID, accountID)
 			if deletedCheckErr != nil {
 				return tracing.Trace(span, deletedCheckErr)
 			}
@@ -429,7 +429,7 @@ func (s *accountPriceSvcImpl) DeleteAccountPrice(ctx context.Context, accountPri
 	}
 
 	apiErr = s.withTx(ctx, func(txCtx context.Context, txSvc *accountPriceSvcImpl) *apierror.APIError {
-		if apiErr := txSvc.repos.NewDeletedRecordRepo().Create(txCtx, constants.DeletedRecordResourceTypeAccountPrice, accountPrice.ID, accountPrice); apiErr != nil {
+		if apiErr := txSvc.repos.NewDeletedRecordRepo().CreateInAccount(txCtx, constants.DeletedRecordResourceTypeAccountPrice, accountPrice.ID, accountID, accountPrice); apiErr != nil {
 			return apiErr
 		}
 

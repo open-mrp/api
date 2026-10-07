@@ -48,9 +48,13 @@ type Customer struct {
 	// - `commission_applied`: sales commission is calculated on this customer's orders.
 	//
 	// The customer counts as exempt if this field, its `type` group, or any of its `price_groups` is `commission_exempt`. Exempt customers never have a sales rep assigned automatically when an order is created without one.
-	CommissionPolicy constants.CommissionPolicy `json:"commission_policy" validate:"required"`
+	//
+	// Null to customer and supplier portal users, like the rest of your commission settings.
+	CommissionPolicy *constants.CommissionPolicy `json:"commission_policy" validate:"required" sensitive:"internal"`
 	// Free-form note about the customer.
-	Note *string `json:"note"`
+	//
+	// Null to customer and supplier portal users: it is your own team's note.
+	Note *string `json:"note" sensitive:"internal"`
 	// Maximum credit extended to this customer.
 	//
 	// Used to flag orders once the customer's outstanding balance approaches or passes the limit; orders that exceed it are not rejected.
@@ -144,8 +148,8 @@ type CustomerDefaults struct {
 	// - `make_to_stock`: their order history feeds the production-schedule forecast, so stock is built ahead of their demand.
 	// - `make_to_order`: their history is left out of the forecast; their orders are produced only once placed, and fit into the schedule on their own ship-by dates.
 	//
-	// With none set here the customer inherits its account group's policy, then falls back to make-to-stock.
-	FulfillmentPolicy *constants.FulfillmentPolicy `json:"fulfillment_policy"`
+	// With none set here the customer inherits its account group's policy, then falls back to make-to-stock. Always null to customer and supplier portal users, like the rest of your production planning.
+	FulfillmentPolicy *constants.FulfillmentPolicy `json:"fulfillment_policy" sensitive:"internal"`
 }
 
 // The ship-by lead time a new order for this customer would be committed to.
@@ -216,7 +220,7 @@ var SampleCustomer = &Customer{
 	Status:           constants.AccountStatusCodeNormal,
 	EDIStatus:        constants.EDIStatusDisabled,
 	RelationshipType: constants.CustomerRelationshipTypeStandalone,
-	CommissionPolicy: constants.CommissionPolicyApplied,
+	CommissionPolicy: new(constants.CommissionPolicyApplied),
 	Note:             &sampleCustomerNote,
 	CreditLimit:      SampleQuantity,
 	ContactInfo: &CustomerContactInfo{

@@ -3,15 +3,14 @@ package service
 import (
 	"context"
 	"fmt"
-	"strings"
 
 	"github.com/open-mrp/api/services/auth-service/pkg/types"
 	"github.com/open-mrp/api/services/core-service/internal/domain"
+	"github.com/open-mrp/api/services/core-service/internal/mediator"
 	"github.com/open-mrp/api/shared/appctx"
 	"github.com/open-mrp/api/shared/audit"
 	"github.com/open-mrp/api/shared/constants"
 	apierror "github.com/open-mrp/api/shared/errors"
-	"github.com/open-mrp/api/shared/id"
 	"github.com/open-mrp/api/shared/idempotency"
 	"github.com/open-mrp/api/shared/tracing"
 )
@@ -209,24 +208,7 @@ func (s *addressSvcImpl) CreateAddress(ctx context.Context, params domain.Create
 
 	params.AccountID = accountID
 
-	normalizedName, apiErr := normalizeAddressName(params.Name)
-	if apiErr != nil {
-		return nil, tracing.Trace(span, apiErr)
-	}
-	params.Name = normalizedName
-
-	addressID, apiErr := id.GenID(id.AddressIDPrefix, nil)
-	if apiErr != nil {
-		return nil, tracing.Trace(span, apiErr)
-	}
-
-	geolocationID, apiErr := id.GenID(id.GeolocationIDPrefix, nil)
-	if apiErr != nil {
-		return nil, tracing.Trace(span, apiErr)
-	}
-
-	accountAddressID, apiErr := id.GenID(id.AccountAddressIDPrefix, nil)
-	if apiErr != nil {
+	if _, apiErr := mediator.NormalizeAddressName(params.Name); apiErr != nil {
 		return nil, tracing.Trace(span, apiErr)
 	}
 
@@ -248,27 +230,13 @@ func (s *addressSvcImpl) CreateAddress(ctx context.Context, params domain.Create
 	case domain.RecoveryPointStarted:
 		var result *domain.Address
 		apiErr = s.withTx(ctx, func(txCtx context.Context, txSvc *addressSvcImpl) *apierror.APIError {
-			txRepo := txSvc.repos.NewAddressRepo()
-
-			created, apiErr := txRepo.Create(txCtx, addressID, geolocationID, accountAddressID, params)
+			txMeds := txSvc.mediators()
+			created, apiErr := txMeds.Address.Create(txCtx, params)
 			if apiErr != nil {
 				return apiErr
 			}
 			result = created
-
-			changes := audit.ComputeChanges(nil, created)
-
-			if apiErr := audit.NewPublisher().Publish(txCtx, txSvc.repos.NewOutboxRepo(), audit.EventData{
-				ServiceName:  domain.ServiceName,
-				Action:       constants.AuditActionCreate,
-				ResourceType: constants.ObjectTypeAddress,
-				ResourceID:   created.ID,
-				Changes:      changes,
-			}); apiErr != nil {
-				return apiErr
-			}
-
-			return txSvc.mediators().Idempotency.CacheSuccessResponse(txCtx, idempotencyKey.TypeID, result)
+			return txMeds.Idempotency.CacheSuccessResponse(txCtx, idempotencyKey.TypeID, result)
 		})
 
 		if apiErr != nil {
@@ -312,11 +280,9 @@ func (s *addressSvcImpl) UpdateAddress(ctx context.Context, params domain.Update
 
 	params.AccountID = accountID
 
-	normalizedName, apiErr := normalizeOptionalAddressName(params.Name)
-	if apiErr != nil {
+	if _, apiErr := mediator.NormalizeOptionalAddressName(params.Name); apiErr != nil {
 		return nil, tracing.Trace(span, apiErr)
 	}
-	params.Name = normalizedName
 
 	meds := s.mediators()
 
@@ -336,133 +302,13 @@ func (s *addressSvcImpl) UpdateAddress(ctx context.Context, params domain.Update
 	case domain.RecoveryPointStarted:
 		var result *domain.Address
 		apiErr = s.withTx(ctx, func(txCtx context.Context, txSvc *addressSvcImpl) *apierror.APIError {
-			txRepo := txSvc.repos.NewAddressRepo()
-
-			// Verify address is in account
-			inAccount, apiErr := txRepo.IsInAccount(txCtx, params.AccountID, params.AddressID)
-			if apiErr != nil {
-				return apiErr
-			}
-			if !inAccount {
-				return apierror.NewResourceNotFoundError("Address not found.")
-			}
-
-			// Fetch existing address to detect core field changes
-			existing, apiErr := txRepo.Get(txCtx, domain.GetAddressParams{
-				AccountID: params.AccountID,
-				AddressID: params.AddressID,
-			})
-			if apiErr != nil {
-				return apiErr
-			}
-
-			streetLine2Field := params.StreetLine2
-
-			// Check if core geo fields changed
-			coreGeoChanged := false
-			if params.StreetLine1 != nil && (existing.Geolocation.StreetLine1 == nil || *params.StreetLine1 != *existing.Geolocation.StreetLine1) {
-				coreGeoChanged = true
-			}
-			if params.Locality != nil && (existing.Geolocation.Locality == nil || *params.Locality != *existing.Geolocation.Locality) {
-				coreGeoChanged = true
-			}
-			if params.State != nil && (existing.Geolocation.State == nil || *params.State != *existing.Geolocation.State) {
-				coreGeoChanged = true
-			}
-			if params.PostalCode != nil && (existing.Geolocation.PostalCode == nil || *params.PostalCode != *existing.Geolocation.PostalCode) {
-				coreGeoChanged = true
-			}
-			if params.Country != nil && *params.Country != existing.Geolocation.Country {
-				coreGeoChanged = true
-			}
-
-			if coreGeoChanged {
-				// Get current geolocation ID
-				geoID, apiErr := txRepo.GetGeolocationIDByAddressID(txCtx, params.AddressID)
-				if apiErr != nil {
-					return apiErr
-				}
-
-				// Check if geolocation is shared
-				sharedCount, apiErr := txRepo.GetGeolocationSharedCount(txCtx, geoID)
-				if apiErr != nil {
-					return apiErr
-				}
-
-				// Clear google_place_id on geo change
-				clearGeoParams := params
-				clearGeoParams.StreetLine2 = streetLine2Field.BackfillUnsetPtr(existing.Geolocation.StreetLine2)
-				// Build the update params with cleared google_place_id by ensuring we send all geo fields to the update
-
-				if sharedCount > 1 {
-					// Shared: create new geolocation and relink
-					newGeoID, apiErr := id.GenID(id.GeolocationIDPrefix, nil)
-					if apiErr != nil {
-						return apiErr
-					}
-
-					// Build create params from existing + updates
-					createParams := domain.CreateAddressParams{
-						StreetLine1: coalesceStringPtr(params.StreetLine1, existing.Geolocation.StreetLine1),
-						StreetLine2: streetLine2Field.StringPtrAfterBackfill(existing.Geolocation.StreetLine2),
-						Locality:    coalesceStringPtr(params.Locality, existing.Geolocation.Locality),
-						State:       coalesceStringPtr(params.State, existing.Geolocation.State),
-						PostalCode:  coalesceStringPtr(params.PostalCode, existing.Geolocation.PostalCode),
-						Country:     coalesceString(params.Country, &existing.Geolocation.Country),
-					}
-
-					if apiErr := txRepo.CreateGeolocation(txCtx, newGeoID, createParams); apiErr != nil {
-						return apiErr
-					}
-
-					if apiErr := txRepo.RelinkGeolocation(txCtx, params.AddressID, newGeoID); apiErr != nil {
-						return apiErr
-					}
-				} else {
-					// Not shared: update in-place, clear google_place_id
-					if apiErr := txRepo.UpdateGeolocation(txCtx, geoID, clearGeoParams); apiErr != nil {
-						return apiErr
-					}
-				}
-			} else {
-				// Only metadata changed, but still update line2 on geolocation
-				if streetLine2Field.WasProvided() {
-					geoID, apiErr := txRepo.GetGeolocationIDByAddressID(txCtx, params.AddressID)
-					if apiErr != nil {
-						return apiErr
-					}
-					geoUpdateParams := domain.UpdateAddressParams{
-						StreetLine2: streetLine2Field,
-					}
-					if apiErr := txRepo.UpdateGeolocation(txCtx, geoID, geoUpdateParams); apiErr != nil {
-						return apiErr
-					}
-				}
-			}
-
-			params.Phone = params.Phone.BackfillUnsetPtr(existing.Phone)
-			params.Email = params.Email.BackfillUnsetPtr(existing.Email)
-
-			// Update address metadata
-			updated, apiErr := txRepo.Update(txCtx, params)
+			txMeds := txSvc.mediators()
+			updated, apiErr := txMeds.Address.Update(txCtx, params)
 			if apiErr != nil {
 				return apiErr
 			}
 			result = updated
-
-			changes := audit.ComputeChanges(existing, updated)
-
-			if apiErr := audit.NewPublisher().Publish(txCtx, txSvc.repos.NewOutboxRepo(), audit.EventData{
-				ServiceName:  domain.ServiceName,
-				Action:       constants.AuditActionUpdate,
-				ResourceType: constants.ObjectTypeAddress,
-				ResourceID:   updated.ID,
-				Changes:      changes,
-			}); apiErr != nil {
-				return apiErr
-			}
-
-			return txSvc.mediators().Idempotency.CacheSuccessResponse(txCtx, idempotencyKey.TypeID, result)
+			return txMeds.Idempotency.CacheSuccessResponse(txCtx, idempotencyKey.TypeID, result)
 		})
 
 		if apiErr != nil {
@@ -514,7 +360,7 @@ func (s *addressSvcImpl) DeleteAddress(ctx context.Context, params domain.Delete
 		return tracing.Trace(span, apiErr)
 	}
 	if !inAccount {
-		wasDeleted, deletedCheckErr := s.repos.NewDeletedRecordRepo().Exists(ctx, constants.DeletedRecordResourceTypeAddress, params.AddressID)
+		wasDeleted, deletedCheckErr := s.repos.NewDeletedRecordRepo().ExistsInAccount(ctx, constants.DeletedRecordResourceTypeAddress, params.AddressID, params.AccountID)
 		if deletedCheckErr != nil {
 			return tracing.Trace(span, deletedCheckErr)
 		}
@@ -537,7 +383,7 @@ func (s *addressSvcImpl) DeleteAddress(ctx context.Context, params domain.Delete
 
 	// Delete in transaction
 	apiErr = s.withTx(ctx, func(txCtx context.Context, txSvc *addressSvcImpl) *apierror.APIError {
-		if apiErr := txSvc.repos.NewDeletedRecordRepo().Create(txCtx, constants.DeletedRecordResourceTypeAddress, address.ID, address); apiErr != nil {
+		if apiErr := txSvc.repos.NewDeletedRecordRepo().CreateInAccount(txCtx, constants.DeletedRecordResourceTypeAddress, address.ID, params.AccountID, address); apiErr != nil {
 			return apiErr
 		}
 
@@ -600,7 +446,7 @@ func resolveAddressAccountScope(identity *types.Identity) (string, *apierror.API
 	return *actorAccountID, nil
 }
 
-// checkAddressReadPermission checks the appropriate read permission based on the identity context. For a cross-account target the check is precise (customers:read / suppliers:read). For the actor's own account it accepts any of the read permissions the read endpoints declare, so the downstream check never rejects a caller the coarse gateway gate admitted.
+// checkAddressReadPermission checks the appropriate read permission based on the identity context: addresses:read in the actor's own account, customers:read in a customer's account and suppliers:read in a supplier's.
 func checkAddressReadPermission(identity *types.Identity) *apierror.APIError {
 	if !identity.IsInternalActor() {
 		return nil
@@ -616,16 +462,10 @@ func checkAddressReadPermission(identity *types.Identity) *apierror.APIError {
 	if identity.IsTargetSupplierAccount() {
 		return identity.CheckHasPermission(types.PermissionDomainSuppliers, types.ActionRead)
 	}
-	// Own-account: accept any read permission the read endpoints declare, so the
-	// downstream check never rejects a caller the coarse gateway gate admitted.
-	return identity.CheckHasAnyPermission(
-		types.Permission{Domain: types.PermissionDomainAddresses, Action: types.ActionRead},
-		types.Permission{Domain: types.PermissionDomainCustomers, Action: types.ActionRead},
-		types.Permission{Domain: types.PermissionDomainSuppliers, Action: types.ActionRead},
-	)
+	return identity.CheckHasPermission(types.PermissionDomainAddresses, types.ActionRead)
 }
 
-// checkAddressWritePermission checks the appropriate write permission based on the identity context. For a cross-account target the check is precise (customers:update / suppliers:update). For the actor's own account it accepts any of the write permissions the write endpoints declare, so the downstream check never rejects a caller the coarse gateway gate admitted.
+// checkAddressWritePermission checks the appropriate write permission based on the identity context: addresses:{action} in the actor's own account, customers:update in a customer's account and suppliers:update in a supplier's.
 func checkAddressWritePermission(identity *types.Identity, action types.Action) *apierror.APIError {
 	if !identity.IsInternalActor() {
 		return nil
@@ -640,49 +480,5 @@ func checkAddressWritePermission(identity *types.Identity, action types.Action) 
 	if identity.IsTargetSupplierAccount() {
 		return identity.CheckHasPermission(types.PermissionDomainSuppliers, types.ActionUpdate)
 	}
-	// Own-account: accept any write permission the write endpoints declare, so the
-	// downstream check never rejects a caller the coarse gateway gate admitted. This
-	// mirrors the legacy Dashboard, which gated own-account address writes on
-	// customers:update rather than a dedicated addresses domain.
-	return identity.CheckHasAnyPermission(
-		types.Permission{Domain: types.PermissionDomainAddresses, Action: action},
-		types.Permission{Domain: types.PermissionDomainCustomers, Action: types.ActionUpdate},
-		types.Permission{Domain: types.PermissionDomainSuppliers, Action: types.ActionUpdate},
-	)
-}
-
-func coalesceStringPtr(update *string, existing *string) *string {
-	if update != nil {
-		return update
-	}
-	return existing
-}
-
-func coalesceString(update *string, existing *string) string {
-	if update != nil {
-		return *update
-	}
-	if existing != nil {
-		return *existing
-	}
-	return ""
-}
-
-func normalizeAddressName(name string) (string, *apierror.APIError) {
-	trimmed := strings.TrimSpace(name)
-	if trimmed == "" {
-		return "", apierror.NewValidationErrorWithParam("Address name is required.", "name")
-	}
-	return trimmed, nil
-}
-
-func normalizeOptionalAddressName(name *string) (*string, *apierror.APIError) {
-	if name == nil {
-		return nil, nil
-	}
-	normalized, apiErr := normalizeAddressName(*name)
-	if apiErr != nil {
-		return nil, apiErr
-	}
-	return &normalized, nil
+	return identity.CheckHasPermission(types.PermissionDomainAddresses, action)
 }

@@ -100,7 +100,7 @@ client_settings:
   # info.version by `make stainless` (see tools/apidocs/stainless.go).
   default_headers:
     OpenMRP-Version:
-      value: "1.0.forge-preview.5"
+      value: "1.0.forge-preview.6"
       version_header: true
   bearer_token_refresh:
     method: PUT
@@ -410,7 +410,10 @@ resources:
           properties:
             methods:
               update: put /v1/catalog/item-categories/{id}/properties/{property_id}
+              create: post /v1/catalog/item-categories/{id}/properties
               delete: delete /v1/catalog/item-categories/{id}/properties/{property_id}
+            models:
+              create_item_category_property_request: '#/components/schemas/CreateItemCategoryPropertyRequest'
           actions:
             methods:
               bulk_upsert: post /v1/catalog/item-categories/actions/bulk-upsert
@@ -679,6 +682,7 @@ resources:
         models:
           conversation: '#/components/schemas/Conversation'
           conversation_participant: '#/components/schemas/ConversationParticipant'
+          conversation_participant_input: '#/components/schemas/ConversationParticipantInput'
           create_conversation_request: '#/components/schemas/CreateConversationRequest'
           list_conversation: '#/components/schemas/List_Conversation'
           list_conversation_participant: '#/components/schemas/List_ConversationParticipant'
@@ -699,8 +703,10 @@ resources:
               approve_send: post /v1/messaging/messages/{id}/actions/approve-send
               reject: post /v1/messaging/messages/{id}/actions/reject
               cancel: post /v1/messaging/messages/{id}/actions/cancel
+              reschedule: post /v1/messaging/messages/{id}/actions/reschedule
             models:
               approve_send_draft_request: '#/components/schemas/ApproveSendDraftRequest'
+              reschedule_message_request: '#/components/schemas/RescheduleMessageRequest'
         models:
           update_draft_request: '#/components/schemas/UpdateDraftRequest'
       groups:
@@ -968,6 +974,7 @@ resources:
           create_sales_order_request: '#/components/schemas/CreateSalesOrderRequest'
           created_by: '#/components/schemas/CreatedBy'
           freight: '#/components/schemas/Freight'
+          inline_address_input: '#/components/schemas/InlineAddressInput'
           list_quoted_sales_order_line: '#/components/schemas/List_QuotedSalesOrderLine'
           list_record: '#/components/schemas/List_Record'
           list_sales_order: '#/components/schemas/List_SalesOrder'
@@ -1087,8 +1094,10 @@ resources:
           actions:
             methods:
               export: get /v1/operations/inventory-change-logs/actions/export
+              start_export: post /v1/operations/inventory-change-logs/actions/export
             models:
               file_download: '#/components/schemas/FileDownload'
+              start_inventory_change_logs_export_request: '#/components/schemas/StartInventoryChangeLogsExportRequest'
         models:
           inventory_change_log: '#/components/schemas/InventoryChangeLog'
           list_inventory_change_log: '#/components/schemas/List_InventoryChangeLog'

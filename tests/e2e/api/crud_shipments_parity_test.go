@@ -134,16 +134,17 @@ func TestShipmentsParity_ListAndDetailAgreeOnTheSameShipment(t *testing.T) {
 
 	// The collapse's whole point: one resource, one shape. A field that differs between the two
 	// means the list projection has drifted from the detail again.
-	params := url.Values{"limit": {"25"}}
+	detail := readShipment(t, SeedShipmentID, shipmentPageIncludes...)
+
+	// Every run adds shipments ahead of the seeded one, so search for it rather than page to it.
+	params := url.Values{"limit": {"25"}, "q": {jsonField(detail, "number")}}
 	for _, inc := range shipmentPageIncludes {
 		params.Add("include", inc)
 	}
-	// Earlier runs' shipments sort ahead of the seeded one, so page until it turns up.
 	raw := listFindByField(t, shipmentsPath, params, "id", SeedShipmentID)
-	require.NotNil(t, raw, "seed shipment must appear in the unfiltered list")
+	require.NotNil(t, raw, "the seed shipment must be listed")
 	row := parseJSON(raw)
 
-	detail := readShipment(t, SeedShipmentID, shipmentPageIncludes...)
 	for _, field := range []string{
 		"id", "object", "number", "status", "priority", "case_count", "is_ready_to_ship",
 		"note", "bill_of_lading", "master_tracking_number", "shipped_at", "created_at",

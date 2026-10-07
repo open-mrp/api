@@ -10,6 +10,7 @@ import (
 	"github.com/open-mrp/api/services/api-gateway/pkg/resourcekit"
 	"github.com/open-mrp/api/shared/constants"
 	apierror "github.com/open-mrp/api/shared/errors"
+	"github.com/open-mrp/api/shared/field"
 	pb "github.com/open-mrp/api/shared/proto/core"
 	"github.com/open-mrp/api/shared/tracing"
 	"google.golang.org/grpc"
@@ -108,7 +109,7 @@ func (m *consumptionSvcImpl) UpdateConsumption(ctx context.Context, req *UpdateC
 		QuantityUnitId:      req.QuantityUnitID.Ptr(),
 		WasteQuantityValue:  req.WasteQuantityValue.Ptr(),
 		WasteQuantityUnitId: req.WasteQuantityUnitID.Ptr(),
-		Instructions:        req.Instructions.Ptr(),
+		Instructions:        clearableInstructionsToProto(req.Instructions),
 		Includes:            resourcekit.FilterIncludes(ctx, consumptionIncludes...),
 	}
 
@@ -189,5 +190,26 @@ func stashConsumptionMeta(meta *resourcekit.LoadMeta, c *pb.ConsumptionInfo) {
 	// than the consumption guessing a type and reporting its own timestamps as the item's.
 	if c.ItemId != "" {
 		meta.Set(constants.ObjectTypeConsumption, c.Id, "consumed_item_id", c.ItemId)
+	}
+
+	// The quantities arrive with only their units' ids, stashed so `quantity.unit` resolves.
+	for _, q := range []*pb.QuantityInfo{c.Quantity, c.WasteQuantity} {
+		if q != nil && q.Id != "" {
+			meta.Set(constants.ObjectTypeQuantity, q.Id, "unit_id", q.UnitId)
+		}
+	}
+}
+
+// clearableInstructionsToProto maps the request's instructions onto the update: absent leaves them, a
+// value sets them, and null clears them, which core reads from an empty string.
+func clearableInstructionsToProto(f field.Clearable[string]) *string {
+	switch {
+	case f.IsClear():
+		empty := ""
+		return &empty
+	case f.IsSet():
+		return f.ValuePtr()
+	default:
+		return nil
 	}
 }

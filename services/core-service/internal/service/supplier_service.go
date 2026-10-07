@@ -17,6 +17,9 @@ import (
 
 var supplierSvcTracer = tracing.GetTracer("core-service.supplier_service")
 
+// supplierAddressIncludes reads a supplier with its addresses. The gateway shows them only to a caller that asked.
+var supplierAddressIncludes = []string{"bill_to_address", "ship_to_address"}
+
 type supplierSvcImpl struct {
 	repos           domain.RepoFactory
 	mediatorFactory domain.MediatorFactory
@@ -99,6 +102,30 @@ func (s *supplierSvcImpl) ListSuppliers(ctx context.Context, params domain.ListS
 	return s.repos.NewSupplierRepo().List(ctx, params)
 }
 
+// BatchGetSuppliersByIDs serves the suppliers purchase and receiving orders name, so it admits whoever may read those orders.
+func (s *supplierSvcImpl) BatchGetSuppliersByIDs(ctx context.Context, ids []string) ([]*domain.SupplierSummary, *apierror.APIError) {
+	ctx, span := supplierSvcTracer.Start(ctx, "service.supplier.batch_get_by_ids")
+	defer span.End()
+
+	identity, ok := appctx.GetIdentityFromContext(ctx)
+	if !ok || identity == nil {
+		return nil, tracing.Trace(span, apierror.NewInvariantViolationError("Identity not found in context."))
+	}
+
+	if apiErr := identity.CheckIsInternalActorForRead(); apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
+	if apiErr := identity.CheckHasAnyPermission(
+		types.Permission{Domain: types.PermissionDomainSuppliers, Action: types.ActionRead},
+		types.Permission{Domain: types.PermissionDomainPurchaseOrders, Action: types.ActionRead},
+		types.Permission{Domain: types.PermissionDomainReceivingOrders, Action: types.ActionRead},
+	); apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
+
+	return s.repos.NewSupplierRepo().GetByIDs(ctx, identity.Target.AccountID, ids)
+}
+
 func (s *supplierSvcImpl) GetSupplier(ctx context.Context, params domain.GetSupplierParams) (*domain.Supplier, *apierror.APIError) {
 	ctx, span := supplierSvcTracer.Start(ctx, "service.supplier.get")
 	defer span.End()
@@ -179,6 +206,10 @@ func (s *supplierSvcImpl) CreateSupplier(ctx context.Context, params domain.Crea
 		apiErr = s.withTx(ctx, func(txCtx context.Context, txSvc *supplierSvcImpl) *apierror.APIError {
 			txSupplierRepo := txSvc.repos.NewSupplierRepo()
 
+			if apiErr := txSupplierRepo.LockNumbers(txCtx, params.OwnerAccountID); apiErr != nil {
+				return apiErr
+			}
+
 			// Check for duplicate supplier number.
 			exists, apiErr := txSupplierRepo.ExistsByNumber(txCtx, params.OwnerAccountID, params.Number, nil)
 			if apiErr != nil {
@@ -203,9 +234,11 @@ func (s *supplierSvcImpl) CreateSupplier(ctx context.Context, params domain.Crea
 				billToAddressID = &addrID
 			}
 
-			// Create ship-to address if provided.
+			// Create ship-to address if provided, reusing the bill-to when it is the same address.
 			var shipToAddressID *string
-			if params.ShipToAddress != nil {
+			if params.ShipToAddress != nil && params.BillToAddress != nil && addressParamsEqual(*params.BillToAddress, *params.ShipToAddress) {
+				shipToAddressID = billToAddressID
+			} else if params.ShipToAddress != nil {
 				addrID, geoID, acctAddrID, err := generateAddressIDs()
 				if err != nil {
 					return err
@@ -223,6 +256,8 @@ func (s *supplierSvcImpl) CreateSupplier(ctx context.Context, params domain.Crea
 				shipToAddressID = billToAddressID
 			}
 
+			// The audit records the addresses whether or not the caller asked for them back.
+			params.Includes = supplierAddressIncludes
 			created, apiErr := txSupplierRepo.Create(txCtx, accountID, relationID, params, billToAddressID, shipToAddressID)
 			if apiErr != nil {
 				return apiErr
@@ -293,8 +328,22 @@ func (s *supplierSvcImpl) UpdateSupplier(ctx context.Context, params domain.Upda
 		apiErr = s.withTx(ctx, func(txCtx context.Context, txSvc *supplierSvcImpl) *apierror.APIError {
 			txSupplierRepo := txSvc.repos.NewSupplierRepo()
 
-			old, apiErr := txSupplierRepo.Get(txCtx, domain.GetSupplierParams{OwnerAccountID: params.OwnerAccountID, SupplierID: params.SupplierID, Includes: []string{"bill_to_address", "ship_to_address"}})
+			// Before the first read, or the number check below reads a snapshot older than the lock.
+			if params.Number != nil {
+				if apiErr := txSupplierRepo.LockNumbers(txCtx, params.OwnerAccountID); apiErr != nil {
+					return apiErr
+				}
+			}
+
+			old, apiErr := txSupplierRepo.Get(txCtx, domain.GetSupplierParams{OwnerAccountID: params.OwnerAccountID, SupplierID: params.SupplierID, Includes: supplierAddressIncludes})
 			if apiErr != nil {
+				return apiErr
+			}
+
+			if apiErr := txSvc.checkSupplierAddress(txCtx, params.SupplierID, params.BillToAddressID, old.BillToAddress, "bill_to_address_id"); apiErr != nil {
+				return apiErr
+			}
+			if apiErr := txSvc.checkSupplierAddress(txCtx, params.SupplierID, params.ShipToAddressID, old.ShipToAddress, "ship_to_address_id"); apiErr != nil {
 				return apiErr
 			}
 
@@ -317,6 +366,8 @@ func (s *supplierSvcImpl) UpdateSupplier(ctx context.Context, params domain.Upda
 				}
 			}
 
+			// Read back as old was read, or the diff reports every address the caller did not ask for as removed.
+			params.Includes = supplierAddressIncludes
 			updated, apiErr := txSupplierRepo.Update(txCtx, params)
 			if apiErr != nil {
 				return apiErr
@@ -368,10 +419,10 @@ func (s *supplierSvcImpl) DeleteSupplier(ctx context.Context, params domain.Dele
 
 	params.OwnerAccountID = identity.Target.AccountID
 
-	supplier, apiErr := s.repos.NewSupplierRepo().Get(ctx, domain.GetSupplierParams{OwnerAccountID: params.OwnerAccountID, SupplierID: params.SupplierID, Includes: []string{"bill_to_address", "ship_to_address"}})
+	supplier, apiErr := s.repos.NewSupplierRepo().Get(ctx, domain.GetSupplierParams{OwnerAccountID: params.OwnerAccountID, SupplierID: params.SupplierID, Includes: supplierAddressIncludes})
 	if apiErr != nil {
 		if apierror.IsNotFound(apiErr) {
-			wasDeleted, deletedCheckErr := s.repos.NewDeletedRecordRepo().Exists(ctx, constants.DeletedRecordResourceTypeSupplier, params.SupplierID)
+			wasDeleted, deletedCheckErr := s.repos.NewDeletedRecordRepo().ExistsInAccount(ctx, constants.DeletedRecordResourceTypeSupplier, params.SupplierID, params.OwnerAccountID)
 			if deletedCheckErr != nil {
 				return nil, tracing.Trace(span, deletedCheckErr)
 			}
@@ -384,7 +435,7 @@ func (s *supplierSvcImpl) DeleteSupplier(ctx context.Context, params domain.Dele
 
 	var result *domain.Supplier
 	apiErr = s.withTx(ctx, func(txCtx context.Context, txSvc *supplierSvcImpl) *apierror.APIError {
-		if apiErr := txSvc.repos.NewDeletedRecordRepo().Create(txCtx, constants.DeletedRecordResourceTypeSupplier, supplier.ID, supplier); apiErr != nil {
+		if apiErr := txSvc.repos.NewDeletedRecordRepo().CreateInAccount(txCtx, constants.DeletedRecordResourceTypeSupplier, supplier.ID, params.OwnerAccountID, supplier); apiErr != nil {
 			return apiErr
 		}
 
@@ -438,7 +489,7 @@ func (s *supplierSvcImpl) BulkDeleteSuppliers(ctx context.Context, params domain
 	supplierRepo := s.repos.NewSupplierRepo()
 	suppliers := make([]*domain.Supplier, 0, len(params.SupplierIDs))
 	for _, supplierID := range params.SupplierIDs {
-		supplier, apiErr := supplierRepo.Get(ctx, domain.GetSupplierParams{OwnerAccountID: params.OwnerAccountID, SupplierID: supplierID, Includes: []string{"bill_to_address", "ship_to_address"}})
+		supplier, apiErr := supplierRepo.Get(ctx, domain.GetSupplierParams{OwnerAccountID: params.OwnerAccountID, SupplierID: supplierID, Includes: supplierAddressIncludes})
 		if apiErr != nil {
 			return tracing.Trace(span, apiErr)
 		}
@@ -448,7 +499,7 @@ func (s *supplierSvcImpl) BulkDeleteSuppliers(ctx context.Context, params domain
 	apiErr := s.withTx(ctx, func(txCtx context.Context, txSvc *supplierSvcImpl) *apierror.APIError {
 		deletedRecordRepo := txSvc.repos.NewDeletedRecordRepo()
 		for _, supplier := range suppliers {
-			if apiErr := deletedRecordRepo.Create(txCtx, constants.DeletedRecordResourceTypeSupplier, supplier.ID, supplier); apiErr != nil {
+			if apiErr := deletedRecordRepo.CreateInAccount(txCtx, constants.DeletedRecordResourceTypeSupplier, supplier.ID, params.OwnerAccountID, supplier); apiErr != nil {
 				return apiErr
 			}
 		}
@@ -481,6 +532,22 @@ func (s *supplierSvcImpl) BulkDeleteSuppliers(ctx context.Context, params domain
 		return tracing.Trace(span, apiErr)
 	}
 
+	return nil
+}
+
+// checkSupplierAddress refuses a default address that is not one of the supplier's own. Another account's
+// address would otherwise be read back through this supplier.
+func (s *supplierSvcImpl) checkSupplierAddress(ctx context.Context, supplierID string, addressID *string, current *domain.CustomerAddress, param string) *apierror.APIError {
+	if addressID == nil || (current != nil && current.ID == *addressID) {
+		return nil
+	}
+	inAccount, apiErr := s.repos.NewAddressRepo().IsInAccount(ctx, supplierID, *addressID)
+	if apiErr != nil {
+		return apiErr
+	}
+	if !inAccount {
+		return apierror.NewResourceNotFoundError("No address of this supplier has the provided ID.").WithParam(param)
+	}
 	return nil
 }
 

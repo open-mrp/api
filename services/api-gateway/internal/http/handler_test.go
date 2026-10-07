@@ -173,7 +173,7 @@ func TestBindRawBody(t *testing.T) {
 		req := httptest.NewRequest(http.MethodPost, "/webhook", bytes.NewReader(body))
 
 		dst := &rawBodyTestRequest{}
-		err := BindRawBody(req, dst)
+		err := BindRawBody(req, dst, 0)
 
 		if err != nil {
 			t.Errorf("expected no error, got %v", err)
@@ -187,7 +187,7 @@ func TestBindRawBody(t *testing.T) {
 		req := httptest.NewRequest(http.MethodPost, "/webhook", bytes.NewReader([]byte{}))
 
 		dst := &rawBodyTestRequest{}
-		err := BindRawBody(req, dst)
+		err := BindRawBody(req, dst, 0)
 
 		if err != nil {
 			t.Errorf("expected no error, got %v", err)
@@ -205,13 +205,34 @@ func TestBindRawBody(t *testing.T) {
 
 		req := httptest.NewRequest(http.MethodPost, "/test", bytes.NewReader([]byte("test")))
 		dst := &noTagRequest{}
-		err := BindRawBody(req, dst)
+		err := BindRawBody(req, dst, 0)
 
 		if err != nil {
 			t.Errorf("expected no error, got %v", err)
 		}
 		if dst.Body != nil {
 			t.Errorf("expected nil body, got %v", dst.Body)
+		}
+	})
+
+	t.Run("Refuses a body over the limit instead of truncating it", func(t *testing.T) {
+		const limit = 16
+		dst := &rawBodyTestRequest{}
+		err := BindRawBody(httptest.NewRequest(http.MethodPut, "/photo", bytes.NewReader(bytes.Repeat([]byte("a"), limit+1))), dst, limit)
+		apiErr, ok := errors.AsType[*apierror.APIError](err)
+		if !ok || apierror.GetHTTPStatusCode(apiErr.Code) != http.StatusRequestEntityTooLarge {
+			t.Fatalf("expected a 413 APIError, got %v", err)
+		}
+		if dst.RawBody != nil {
+			t.Errorf("a refused body must not be bound, got %d bytes", len(dst.RawBody))
+		}
+
+		body := bytes.Repeat([]byte("b"), limit)
+		if err := BindRawBody(httptest.NewRequest(http.MethodPut, "/photo", bytes.NewReader(body)), dst, limit); err != nil {
+			t.Fatalf("a body of exactly the limit must bind, got %v", err)
+		}
+		if !bytes.Equal(dst.RawBody, body) {
+			t.Errorf("expected the whole body, got %d bytes", len(dst.RawBody))
 		}
 	})
 
@@ -222,7 +243,7 @@ func TestBindRawBody(t *testing.T) {
 
 		req := httptest.NewRequest(http.MethodPost, "/test", bytes.NewReader([]byte("test")))
 		dst := &invalidTagRequest{}
-		err := BindRawBody(req, dst)
+		err := BindRawBody(req, dst, 0)
 
 		if err == nil {
 			t.Error("expected error for non-[]byte field with rawbody tag")

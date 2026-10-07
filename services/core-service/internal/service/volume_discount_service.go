@@ -112,9 +112,8 @@ func (s *volumeDiscountSvcImpl) ListVolumeDiscounts(ctx context.Context, params 
 
 	params.AccountID = identity.Target.AccountID
 
-	if identity.IsCustomerUser() {
-		actorAccountID := identity.ActorAccountID()
-		params.CustomerAccountID = actorAccountID
+	if own := identity.PortalAccountID(); own != nil {
+		params.CustomerAccountID = own
 	}
 
 	return s.repos.NewVolumeDiscountRepo().List(ctx, params)
@@ -153,7 +152,20 @@ func (s *volumeDiscountSvcImpl) GetVolumeDiscount(ctx context.Context, params do
 
 	params.AccountID = identity.Target.AccountID
 
-	return s.repos.NewVolumeDiscountRepo().Get(ctx, params)
+	repo := s.repos.NewVolumeDiscountRepo()
+
+	// A portal opens only the discounts its own listing carries.
+	if own := identity.PortalAccountID(); own != nil {
+		applies, apiErr := repo.AppliesToCustomer(ctx, params.AccountID, *own, params.VolumeDiscountID)
+		if apiErr != nil {
+			return nil, tracing.Trace(span, apiErr)
+		}
+		if !applies {
+			return nil, tracing.Trace(span, apierror.NewResourceNotFoundError("Volume discount not found."))
+		}
+	}
+
+	return repo.Get(ctx, params)
 }
 
 func (s *volumeDiscountSvcImpl) CreateVolumeDiscount(ctx context.Context, params domain.CreateVolumeDiscountParams) (*domain.VolumeDiscount, *apierror.APIError) {
@@ -413,7 +425,7 @@ func (s *volumeDiscountSvcImpl) DeleteVolumeDiscount(ctx context.Context, volume
 	})
 	if apiErr != nil {
 		if apierror.IsNotFound(apiErr) {
-			wasDeleted, deletedCheckErr := s.repos.NewDeletedRecordRepo().Exists(ctx, constants.DeletedRecordResourceTypeVolumeDiscount, volumeDiscountID)
+			wasDeleted, deletedCheckErr := s.repos.NewDeletedRecordRepo().ExistsInAccount(ctx, constants.DeletedRecordResourceTypeVolumeDiscount, volumeDiscountID, accountID)
 			if deletedCheckErr != nil {
 				return tracing.Trace(span, deletedCheckErr)
 			}
@@ -425,7 +437,7 @@ func (s *volumeDiscountSvcImpl) DeleteVolumeDiscount(ctx context.Context, volume
 	}
 
 	apiErr = s.withTx(ctx, func(txCtx context.Context, txSvc *volumeDiscountSvcImpl) *apierror.APIError {
-		if apiErr := txSvc.repos.NewDeletedRecordRepo().Create(txCtx, constants.DeletedRecordResourceTypeVolumeDiscount, volumeDiscount.ID, volumeDiscount); apiErr != nil {
+		if apiErr := txSvc.repos.NewDeletedRecordRepo().CreateInAccount(txCtx, constants.DeletedRecordResourceTypeVolumeDiscount, volumeDiscount.ID, accountID, volumeDiscount); apiErr != nil {
 			return apiErr
 		}
 

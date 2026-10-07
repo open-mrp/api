@@ -32,14 +32,9 @@ func LoadPurchaseOrders(ctx context.Context, ids []string) (map[string]any, *api
 	out := make(map[string]any, len(resp.PurchaseOrders))
 	for _, po := range resp.PurchaseOrders {
 		out[po.Id] = purchaseOrderReferenceFromProto(po)
-		// Stash the supplier (cross-account, carried inline on the proto) so a nested ?include=...purchase_order.supplier resolves on a loaded PO.
+		// So a nested ?include=...purchase_order.supplier resolves on a loaded PO.
 		if po.SupplierId != "" {
-			meta.Set(constants.ObjectTypePurchaseOrder, po.Id, "supplier", &apiresource.Supplier{
-				ID:     po.SupplierId,
-				Object: constants.ObjectTypeSupplier,
-				Name:   po.SupplierName,
-				Number: po.SupplierNumber,
-			})
+			meta.Set(constants.ObjectTypePurchaseOrder, po.Id, "supplier_id", po.SupplierId)
 		}
 	}
 	return out, nil

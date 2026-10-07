@@ -41,6 +41,11 @@ type AnalyticsSvc interface {
 	ListNewCustomers(ctx context.Context, req *ListNewCustomersRequest) (*apiresource.List[apiresource.NewCustomer], *apierror.APIError)
 	ListSalesLines(ctx context.Context, req *ListSalesLinesRequest) (*apiresource.List[apiresource.SalesEntry], *apierror.APIError)
 	ExportSalesLines(ctx context.Context, req *ExportSalesLinesRequest) (*apiresource.Job, *apierror.APIError)
+	AnalyzeOpenOrdersSummary(ctx context.Context, req *AnalyzeOpenOrdersSummaryRequest) (*apiresource.AnalyzeOpenOrdersSummaryResponse, *apierror.APIError)
+	AnalyzeOpenOrdersBreakdown(ctx context.Context, req *AnalyzeOpenOrdersBreakdownRequest) (*apiresource.List[apiresource.OpenOrderProduct], *apierror.APIError)
+	ListOpenOrders(ctx context.Context, req *ListOpenOrdersRequest) (*apiresource.List[apiresource.OpenOrder], *apierror.APIError)
+	ListOpenOrderLines(ctx context.Context, req *ListOpenOrderLinesRequest) (*apiresource.List[apiresource.OpenOrderLine], *apierror.APIError)
+	ExportOpenOrderLines(ctx context.Context, req *ExportOpenOrderLinesRequest) (*apiresource.Job, *apierror.APIError)
 	AnalyzeWeeksOfSales(ctx context.Context, req *AnalyzeWeeksOfSalesRequest) (*apiresource.AnalyzeWeeksOfSalesResponse, *apierror.APIError)
 	AnalyzeCustomerPricing(ctx context.Context, req *AnalyzeCustomerPricingRequest) (*apiresource.AnalyzeCustomerPricingResponse, *apierror.APIError)
 	AnalyzeRealizedMargins(ctx context.Context, req *AnalyzeRealizedMarginsRequest) (*apiresource.AnalyzeRealizedMarginsResponse, *apierror.APIError)
@@ -115,32 +120,6 @@ func (m *analyticsSvcImpl) AnalyzeOpenBatches(ctx context.Context, req *AnalyzeO
 	}
 
 	return AnalyzeOpenBatchesPresenter(resp), nil
-}
-
-func (m *analyticsSvcImpl) AnalyzeProductionCosts(ctx context.Context, req *AnalyzeProductionCostsRequest) (*apiresource.AnalyzeProductionCostsResponse, *apierror.APIError) {
-	pbReq := &pb.AnalyzeProductionCostsRequest{
-		ItemIds:        req.ItemIDs,
-		ProductLineIds: req.ProductLineIDs,
-		DepartmentIds:  req.DepartmentIDs,
-		CategoryIds:    req.CategoryIDs,
-	}
-	if req.StartDate != nil {
-		pbReq.StartDate = timestamppb.New(*req.StartDate)
-	}
-	if req.EndDate != nil {
-		pbReq.EndDate = timestamppb.New(*req.EndDate)
-	}
-
-	resp, apiErr := grpcutil.CallRPC(ctx, analyticsSvcTracer, "service.analytics.analyze_production_costs", domain.ServiceName,
-		func(ctx context.Context, opts ...grpc.CallOption) (*pb.AnalyzeProductionCostsResponse, error) {
-			return m.coreClient.AnalyzeProductionCosts(ctx, pbReq, opts...)
-		})
-
-	if apiErr != nil {
-		return nil, apiErr
-	}
-
-	return AnalyzeProductionCostsPresenter(resp), nil
 }
 
 func (m *analyticsSvcImpl) AnalyzeDeliveries(ctx context.Context, req *AnalyzeDeliveriesRequest) (*apiresource.AnalyzeDeliveriesResponse, *apierror.APIError) {
@@ -249,6 +228,7 @@ func (m *analyticsSvcImpl) AnalyzeQuarterlyOrders(ctx context.Context, req *Anal
 		ProductLineIds:   req.ProductLineIDs,
 		CustomerIds:      req.CustomerIDs,
 		CustomerGroupIds: req.CustomerGroupIDs,
+		YearsBack:        req.YearsBack.Ptr(),
 	}
 
 	resp, apiErr := grpcutil.CallRPC(ctx, analyticsSvcTracer, "service.analytics.analyze_quarterly_orders", domain.ServiceName,

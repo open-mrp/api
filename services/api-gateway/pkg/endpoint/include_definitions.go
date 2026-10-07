@@ -233,6 +233,13 @@ func init() {
 	})
 
 	RegisterIncludes(&ObjectIncludes{
+		ObjectType: constants.ObjectTypeInventoryItem,
+		Fields: []IncludeFieldDef{
+			{Key: "product_line", ObjectType: constants.ObjectTypeProductLine},
+		},
+	})
+
+	RegisterIncludes(&ObjectIncludes{
 		ObjectType: constants.ObjectTypeItemLotDefault,
 		Fields: []IncludeFieldDef{
 			{Key: "unit", ObjectType: constants.ObjectTypeUnit},
@@ -421,6 +428,7 @@ func init() {
 		Fields: []IncludeFieldDef{
 			{Key: "customer", ObjectType: constants.ObjectTypeCustomer},
 			{Key: "parent_account", ObjectType: constants.ObjectTypeAccount},
+			{Key: "billing_address", ObjectType: constants.ObjectTypeAddress},
 			{Key: "allocations", ObjectType: constants.ObjectTypeInvoiceAllocation},
 		},
 	})
@@ -486,7 +494,7 @@ func init() {
 	RegisterIncludes(&ObjectIncludes{
 		ObjectType: constants.ObjectTypeReceivingOrder,
 		Fields: []IncludeFieldDef{
-			{Key: "supplier", ObjectType: constants.ObjectTypeAccount},
+			{Key: "supplier", ObjectType: constants.ObjectTypeSupplier},
 			{Key: "lines", ObjectType: constants.ObjectTypeReceivingOrderLine},
 			{Key: "totals", ObjectType: constants.ObjectTypeReceivingOrderTotals},
 			{Key: "related", ObjectType: constants.ObjectTypeReceivingOrderRelated},
@@ -878,6 +886,8 @@ func init() {
 		ObjectType: constants.ObjectTypeProduction,
 		Fields: []IncludeFieldDef{
 			{Key: "produced_item", ObjectType: constants.ObjectTypeItem},
+			// The quantity is always on the production; naming it lets a caller reach its unit.
+			{Key: "quantity", ObjectType: constants.ObjectTypeQuantity},
 		},
 	})
 
@@ -891,6 +901,11 @@ func init() {
 			{Key: "department", ObjectType: constants.ObjectTypeDepartment},
 			{Key: "in_steps", ObjectType: constants.ObjectTypeProductionStep},
 			{Key: "out_steps", ObjectType: constants.ObjectTypeProductionStep},
+			// The rates are always on the step; naming them here is what lets a caller reach through
+			// to the units they are counted in.
+			{Key: "labor_rate", ObjectType: constants.ObjectTypeRate},
+			{Key: "labor_time", ObjectType: constants.ObjectTypeRate},
+			{Key: "overhead_rate", ObjectType: constants.ObjectTypeRate},
 		},
 	})
 

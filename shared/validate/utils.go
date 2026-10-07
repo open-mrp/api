@@ -11,6 +11,7 @@
 //   - "date_filter":          a list endpoint's date-window string, in YYYY-MM-DD or RFC 3339 form.
 //   - "max_days_ahead=N":     a time.Time (or field.Optional[time.Time]) no more than N days in the future. Past/zero values pass.
 //   - "multiple_of=N":        a numeric field (or field.Optional[float64]) that is a whole multiple of N (e.g. multiple_of=0.1). Zero/unset values pass.
+//   - "slug":                 a URL path segment of letters and digits in runs joined by single hyphens (acme-inc). Letters of either case pass; slugs are stored lowercased.
 //
 // The built-in "gt", "gte", "lt", and "lte" tags are also extended: on a string field they compare the value as a decimal rather than as a length, so a quantity carried as "12.5" takes the same bound as one carried as an int32. Every other kind keeps the stock behavior.
 //
@@ -69,6 +70,7 @@ func init() {
 	}
 	_ = validate.RegisterValidation("max_days_ahead", validateMaxDaysAhead)
 	_ = validate.RegisterValidation("multiple_of", validateMultipleOf)
+	_ = validate.RegisterValidation("slug", validateSlug)
 	// "enum" is enforced by reflection in httptransport.ValidateEnumFields, which runs before this validator and knows the allowed values from the field's type. It is registered as a no-op only so the tag cannot panic: go-playground panics on an unknown tag while building its struct cache, so a single `validate:"enum"` on a request struct would 500 that endpoint on every request. The tag is common on response structs, where this validator never sees it.
 	_ = validate.RegisterValidation("enum", func(validator.FieldLevel) bool { return true })
 }
@@ -107,6 +109,19 @@ func validateUsername(fl validator.FieldLevel) bool {
 		return false
 	}
 	return usernameOnlyRegex.MatchString(value)
+}
+
+// slugRegex matches a slug as it appears in a URL: no spaces, slashes, or query and fragment
+// characters, and no leading, trailing, or doubled hyphen. Every stored portal slug has this shape.
+var slugRegex = regexp.MustCompile(`^[a-zA-Z0-9]+(-[a-zA-Z0-9]+)*$`)
+
+// validateSlug implements the "slug" struct tag. Empty strings pass (combine with "required" to enforce presence).
+func validateSlug(fl validator.FieldLevel) bool {
+	f := fl.Field()
+	if !f.IsValid() || f.String() == "" {
+		return true
+	}
+	return slugRegex.MatchString(f.String())
 }
 
 // validateUsernameOrEmail implements the "identifier" struct tag. If the value contains an "@" it is validated as an email via isValidEmail. Otherwise it is treated as a username: 3–50 runes, alphanumeric, underscores, and hyphens only. Empty strings pass (combine with "required" to enforce presence).
@@ -341,6 +356,12 @@ func validateMultipleOf(fl validator.FieldLevel) bool {
 	return math.Abs(ratio-math.Round(ratio)) < 1e-9
 }
 
+// RegisterWrappedTypes enforces the field tags inside field.Optional[T] and field.Clearable[T] wrappers whose T is
+// defined outside shared/field. Call it from the package that defines T, at init.
+func RegisterWrappedTypes(wrappers ...any) {
+	field.RegisterWrappedTypes(validate, wrappers...)
+}
+
 // Validate runs all struct-tag validations on v and returns a user-facing [apierror.APIError] on failure (nil on success). When a single field fails, the error's Param is set to that field's JSON/form/query name so the client can highlight the offending input. When multiple fields fail, the error message lists all violations and Param is set to the first failing field.
 func Validate(v any) *apierror.APIError {
 	err := validate.Struct(v)
@@ -451,6 +472,10 @@ func formatFieldError(fieldErr validator.FieldError, structValue any) string {
 		return fmt.Sprintf("%s '%s' must be no more than %s days in the future.", source, fieldName, fieldErr.Param())
 	case "multiple_of":
 		return fmt.Sprintf("%s '%s' must be a multiple of %s.", source, fieldName, fieldErr.Param())
+	case "slug":
+		return fmt.Sprintf("%s '%s' may contain only letters, digits, and single hyphens between them (e.g. acme-inc).", source, fieldName)
+	case "http_url":
+		return fmt.Sprintf("%s '%s' must be a valid http or https URL.", source, fieldName)
 	default:
 		return fmt.Sprintf("%s '%s' is invalid (%s).", source, fieldName, fieldErr.Tag())
 	}
@@ -558,16 +583,19 @@ func nestedFieldPath(rt reflect.Type, namespace string) (string, bool) {
 		if !found {
 			return "", false
 		}
-		field, found := rt.FieldByName(name)
+		sf, found := rt.FieldByName(name)
 		if !found {
 			return "", false
 		}
 		// Embedded structs are flattened into their parent's JSON.
-		if !field.Anonymous || index != "" {
+		if !sf.Anonymous || index != "" {
 			parts = append(parts, meta.name+index)
 		}
 
-		rt = field.Type
+		rt = sf.Type
+		if inner, ok := field.InnerType(rt); ok {
+			rt = inner
+		}
 		for range strings.Count(index, "[") {
 			for rt.Kind() == reflect.Pointer {
 				rt = rt.Elem()

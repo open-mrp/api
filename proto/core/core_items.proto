@@ -39,6 +39,8 @@ message GetItemTrendsRequest {
 message GetItemTrendsResponse {
   string trend_type = 1;
   repeated ItemTrendPoint points = 2;
+  // The item's category base unit, which every point's value is in.
+  string unit_id = 3;
 }
 message ExportItemsRequest {}
 message ExportItemInfo {
@@ -53,6 +55,7 @@ message ExportItemInfo {
   google.protobuf.Timestamp updated_at = 9;
   string on_hand_quantity = 10;
   string on_hand_unit_id = 11;
+  string on_hand_unit_abbreviation = 12;
 }
 message ExportItemsResponse {
   repeated ExportItemInfo items = 1;
@@ -197,6 +200,8 @@ message ChildAccountProto {
   optional string email = 5;
   google.protobuf.Timestamp created_at = 6;
   google.protobuf.Timestamp updated_at = 7;
+  google.protobuf.Timestamp account_created_at = 8;
+  google.protobuf.Timestamp account_updated_at = 9;
 }
 message ListChildAccountsRequest {
   optional string cursor = 1;
@@ -249,6 +254,10 @@ message BaseBatchInfo {
   google.protobuf.Timestamp updated_at = 16;
   optional string department_id = 17;
   optional string department_name = 18;
+  // The machines the batch ran on, and the lots it carries: material lots it consumed, then its
+  // production run's number. A label printed from a scan response reads both.
+  repeated LightMachineInfo machines = 19;
+  repeated BatchLotInfo lots = 20;
 }
 message BatchInfo {
   string id = 1;
@@ -285,6 +294,7 @@ message LightMachineInfo {
   string serial_number = 3;
   google.protobuf.Timestamp created_at = 4;
   google.protobuf.Timestamp updated_at = 5;
+  optional string department_id = 6;
 }
 message BatchFlowNodeInfo {
   BatchInfo batch = 1;
@@ -358,6 +368,12 @@ message AnalyzeOpenBatchesResponse {
 message InitializeBatchRequest {
   string batch_id = 1;
   string scanning_station_id = 2;
+  // The station type the operator is scanning as, when it is not the station's own.
+  optional string type_override = 3;
+  // The step to initialize into, when the operator picked one of several.
+  optional string production_step_id = 4;
+  // False records the scan without consuming the step's materials. Unset means true.
+  optional bool consume_materials = 5;
 }
 message InitializeBatchResponse {
   BaseBatchInfo batch = 1;
@@ -402,6 +418,8 @@ message GetScanningStationConsumptionRequest {
   repeated string batch_ids = 2;
   optional string production_step_id = 3;
   optional BatchQuantityInfo split_quantity = 4;
+  // The station type the operator is scanning as, when it is not the station's own.
+  optional string type_override = 5;
 }
 message GetScanningStationConsumptionResponse {
   repeated ScanningConsumptionInfo consumptions = 1;
@@ -469,6 +487,13 @@ message DeleteItemCategoryRequest {
 message AddItemCategoryPropertyRequest {
   string id = 1;
   string property_id = 2;
+}
+message CreateItemCategoryPropertyRequest {
+  string id = 1;
+  string name = 2;
+}
+message CreateItemCategoryPropertyResponse {
+  PropertyInfo property = 1;
 }
 message RemoveItemCategoryPropertyRequest {
   string id = 1;

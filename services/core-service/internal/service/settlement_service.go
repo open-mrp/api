@@ -413,7 +413,7 @@ func (s *settlementSvcImpl) DeleteSettlement(ctx context.Context, params domain.
 	settlement, apiErr := repo.Get(ctx, params.AccountID, params.SettlementID)
 	if apiErr != nil {
 		if apierror.IsNotFound(apiErr) {
-			wasDeleted, deletedCheckErr := s.repos.NewDeletedRecordRepo().Exists(ctx, constants.DeletedRecordResourceTypeSettlement, params.SettlementID)
+			wasDeleted, deletedCheckErr := s.repos.NewDeletedRecordRepo().ExistsInAccount(ctx, constants.DeletedRecordResourceTypeSettlement, params.SettlementID, params.AccountID)
 			if deletedCheckErr != nil {
 				return nil, tracing.Trace(span, deletedCheckErr)
 			}
@@ -455,7 +455,7 @@ func (s *settlementSvcImpl) DeleteSettlement(ctx context.Context, params domain.
 			return apiErr
 		}
 
-		if apiErr := txSvc.repos.NewDeletedRecordRepo().Create(txCtx, constants.DeletedRecordResourceTypeSettlement, settlement.ID, settlement); apiErr != nil {
+		if apiErr := txSvc.repos.NewDeletedRecordRepo().CreateInAccount(txCtx, constants.DeletedRecordResourceTypeSettlement, settlement.ID, params.AccountID, settlement); apiErr != nil {
 			return apiErr
 		}
 

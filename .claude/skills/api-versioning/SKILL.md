@@ -48,7 +48,7 @@ When in doubt, treat the change as breaking. An extra transformer is cheap; a si
 5. Audit `ObjectType` on every endpoint that returns or accepts the changed resource (including action endpoints).
 6. Bump `defaultAPIVersion` in e2e; rewrite latest-shape assertions.
 7. Add `tests/e2e/api/version_compat_<resource>_test.go` pinned to the previous version.
-8. `make openapi`. Changelog the new shape and the migration path.
+8. `make openapi`. Record the new shape, what older versions get, and the migration path under the version in `docs/api-changelog.md`.
 
 ## Forced includes
 

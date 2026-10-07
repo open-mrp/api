@@ -6,6 +6,8 @@ import (
 
 	"github.com/open-mrp/api/services/api-gateway/internal/domain"
 	grpcutil "github.com/open-mrp/api/services/api-gateway/internal/grpc"
+	"github.com/open-mrp/api/services/api-gateway/internal/resourceloaders"
+	apirequest "github.com/open-mrp/api/services/api-gateway/pkg/request"
 	apiresource "github.com/open-mrp/api/services/api-gateway/pkg/resource"
 	"github.com/open-mrp/api/services/api-gateway/pkg/resourcekit"
 	"github.com/open-mrp/api/shared/constants"
@@ -168,15 +170,21 @@ func (m *accountSvcImpl) UpdateAccount(ctx context.Context, req *UpdateAccountRe
 	pbReq := &pb.UpdateAccountRequest{
 		Id:              req.AccountID,
 		Name:            req.Name.Ptr(),
-		SupportEmail:    req.SupportEmail.Ptr(),
-		PhoneNumber:     req.PhoneNumber.Ptr(),
+		SupportEmail:    req.SupportEmail.ValuePtr(),
+		PhoneNumber:     req.PhoneNumber.ValuePtr(),
 		Slug:            req.Slug.Ptr(),
-		WebsiteUrl:      req.WebsiteURL.Ptr(),
-		FacebookHandle:  req.FacebookHandle.Ptr(),
-		InstagramHandle: req.InstagramHandle.Ptr(),
-		LinkedinHandle:  req.LinkedInHandle.Ptr(),
-		TwitterHandle:   req.TwitterHandle.Ptr(),
+		WebsiteUrl:      req.WebsiteURL.ValuePtr(),
+		FacebookHandle:  req.FacebookHandle.ValuePtr(),
+		InstagramHandle: req.InstagramHandle.ValuePtr(),
+		LinkedinHandle:  req.LinkedInHandle.ValuePtr(),
+		TwitterHandle:   req.TwitterHandle.ValuePtr(),
+
+		DefaultBillingAddressId:  req.DefaultBillingAddressID.Ptr(),
+		DefaultShippingAddressId: req.DefaultShippingAddressID.Ptr(),
+		DefaultBillingAddress:    apirequest.InlineAddressToProto(req.DefaultBillingAddress),
+		DefaultShippingAddress:   apirequest.InlineAddressToProto(req.DefaultShippingAddress),
 	}
+	pbReq.ClearedBrandingFields = clearedBrandingFields(req)
 
 	resp, apiErr := grpcutil.CallRPC(ctx, accountSvcTracer, "service.accounts.update", domain.ServiceName,
 		func(ctx context.Context, opts ...grpc.CallOption) (*pb.UpdateAccountResponse, error) {
@@ -195,9 +203,8 @@ func (m *accountSvcImpl) UpdateAccount(ctx context.Context, req *UpdateAccountRe
 
 func (m *accountSvcImpl) UploadAccountPhoto(ctx context.Context, req *UploadAccountPhotoRequest) (*apiresource.AccountPhotoUploadResult, *apierror.APIError) {
 	pbReq := &pb.UploadAccountPhotoRequest{
-		Id:          req.AccountID,
-		File:        req.RawBody,
-		ContentType: req.ContentType,
+		Id:   req.AccountID,
+		File: req.RawBody,
 	}
 
 	resp, apiErr := grpcutil.CallRPC(ctx, accountSvcTracer, "service.accounts.upload_photo", domain.ServiceName,
@@ -237,9 +244,8 @@ func (m *accountSvcImpl) GetAccountLogoURL(ctx context.Context, req *GetAccountL
 
 func (m *accountSvcImpl) UploadAccountFavicon(ctx context.Context, req *UploadAccountFaviconRequest) (*apiresource.EmptyResource, *apierror.APIError) {
 	pbReq := &pb.UploadAccountFaviconRequest{
-		Id:          req.AccountID,
-		File:        req.RawBody,
-		ContentType: req.ContentType,
+		Id:   req.AccountID,
+		File: req.RawBody,
 	}
 
 	_, apiErr := grpcutil.CallRPC(ctx, accountSvcTracer, "service.accounts.upload_favicon", domain.ServiceName,
@@ -292,6 +298,7 @@ func stashAccountMeta(meta *resourcekit.LoadMeta, a *pb.AccountInfo) {
 	if a == nil {
 		return
 	}
+	resourceloaders.StashAccountAddressIDs(meta, a)
 
 	if a.Branding != nil {
 		meta.Set(constants.ObjectTypeAccount, a.Id, "branding", &apiresource.AccountBranding{
@@ -337,4 +344,22 @@ func publicAccountFromProto(a *pb.PublicAccountInfo) apiresource.PublicAccount {
 		PortalDomain: a.PortalDomain,
 		FaviconURL:   a.FaviconUrl,
 	}
+}
+
+// clearedBrandingFields names the branding fields an account update removes.
+func clearedBrandingFields(req *UpdateAccountRequest) []string {
+	var cleared []string
+	add := func(isClear bool, name string) {
+		if isClear {
+			cleared = append(cleared, name)
+		}
+	}
+	add(req.SupportEmail.IsClear(), "support_email")
+	add(req.PhoneNumber.IsClear(), "phone_number")
+	add(req.WebsiteURL.IsClear(), "website_url")
+	add(req.FacebookHandle.IsClear(), "facebook_handle")
+	add(req.InstagramHandle.IsClear(), "instagram_handle")
+	add(req.LinkedInHandle.IsClear(), "linkedin_handle")
+	add(req.TwitterHandle.IsClear(), "twitter_handle")
+	return cleared
 }

@@ -107,14 +107,8 @@ func (s *shipmentLineSvcImpl) ListShipmentLines(ctx context.Context, params doma
 
 	params.AccountID = identity.Target.AccountID
 
-	// Verify shipment is in account
-	shipmentRepo := s.repos.NewShipmentRepo()
-	inAccount, apiErr := shipmentRepo.IsInAccount(ctx, params.AccountID, params.ShipmentID)
-	if apiErr != nil {
+	if apiErr := s.checkShipmentReadable(ctx, identity, params.AccountID, params.ShipmentID); apiErr != nil {
 		return nil, tracing.Trace(span, apiErr)
-	}
-	if !inAccount {
-		return nil, tracing.Trace(span, apierror.NewResourceNotFoundError("Shipment not found."))
 	}
 
 	return s.repos.NewShipmentLineRepo().List(ctx, params)
@@ -150,15 +144,8 @@ func (s *shipmentLineSvcImpl) GetShipmentLine(ctx context.Context, accountID, sh
 		}
 	}
 
-	acctID := identity.Target.AccountID
-
-	shipmentRepo := s.repos.NewShipmentRepo()
-	inAccount, apiErr := shipmentRepo.IsInAccount(ctx, acctID, shipmentID)
-	if apiErr != nil {
+	if apiErr := s.checkShipmentReadable(ctx, identity, identity.Target.AccountID, shipmentID); apiErr != nil {
 		return nil, tracing.Trace(span, apiErr)
-	}
-	if !inAccount {
-		return nil, tracing.Trace(span, apierror.NewResourceNotFoundError("Shipment not found."))
 	}
 
 	lineRepo := s.repos.NewShipmentLineRepo()
@@ -424,7 +411,7 @@ func (s *shipmentLineSvcImpl) DeleteShipmentLine(ctx context.Context, params dom
 	shipmentLine, apiErr := lineRepo.Get(ctx, params.ShipmentLineID)
 	if apiErr != nil {
 		if apierror.IsNotFound(apiErr) {
-			wasDeleted, deletedCheckErr := s.repos.NewDeletedRecordRepo().Exists(ctx, constants.DeletedRecordResourceTypeShipmentLine, params.ShipmentLineID)
+			wasDeleted, deletedCheckErr := s.repos.NewDeletedRecordRepo().ExistsInAccount(ctx, constants.DeletedRecordResourceTypeShipmentLine, params.ShipmentLineID, params.AccountID)
 			if deletedCheckErr != nil {
 				return tracing.Trace(span, deletedCheckErr)
 			}
@@ -444,7 +431,7 @@ func (s *shipmentLineSvcImpl) DeleteShipmentLine(ctx context.Context, params dom
 	apiErr = s.withTx(ctx, func(txCtx context.Context, txSvc *shipmentLineSvcImpl) *apierror.APIError {
 		txLineRepo := txSvc.repos.NewShipmentLineRepo()
 
-		if apiErr := txSvc.repos.NewDeletedRecordRepo().Create(txCtx, constants.DeletedRecordResourceTypeShipmentLine, shipmentLine.ID, shipmentLine); apiErr != nil {
+		if apiErr := txSvc.repos.NewDeletedRecordRepo().CreateInAccount(txCtx, constants.DeletedRecordResourceTypeShipmentLine, shipmentLine.ID, params.AccountID, shipmentLine); apiErr != nil {
 			return apiErr
 		}
 
@@ -473,6 +460,29 @@ func (s *shipmentLineSvcImpl) DeleteShipmentLine(ctx context.Context, params dom
 		return tracing.Trace(span, apiErr)
 	}
 
+	return nil
+}
+
+// checkShipmentReadable refuses a shipment outside the account as not found, and to a portal also one on an order it did not buy, unless a request it was allowed to make includes it.
+func (s *shipmentLineSvcImpl) checkShipmentReadable(ctx context.Context, identity *types.Identity, accountID, shipmentID string) *apierror.APIError {
+	shipmentRepo := s.repos.NewShipmentRepo()
+	if own := identity.PortalAccountID(); own != nil && !identity.IsIncludeRead() {
+		shipment, apiErr := shipmentRepo.Get(ctx, domain.GetShipmentParams{AccountID: accountID, ShipmentID: shipmentID})
+		if apiErr != nil {
+			return apiErr
+		}
+		if shipment.CustomerID != *own {
+			return apierror.NewResourceNotFoundError("Shipment not found.")
+		}
+		return nil
+	}
+	inAccount, apiErr := shipmentRepo.IsInAccount(ctx, accountID, shipmentID)
+	if apiErr != nil {
+		return apiErr
+	}
+	if !inAccount {
+		return apierror.NewResourceNotFoundError("Shipment not found.")
+	}
 	return nil
 }
 

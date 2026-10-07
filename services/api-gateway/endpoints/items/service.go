@@ -71,7 +71,7 @@ func (m *itemSvcImpl) ListItems(ctx context.Context, req *ListItemsRequest) (*ap
 		Cursor:                   req.Cursor,
 		Limit:                    req.Limit,
 		Query:                    req.Query,
-		Types:                    req.Types,
+		Types:                    itemTypeStrings(req.Types),
 		CategoryIds:              req.CategoryIDs,
 		AttributeIds:             req.AttributeIDs,
 		SupplierId:               req.SupplierID,
@@ -114,8 +114,26 @@ func (m *itemSvcImpl) ListItems(ctx context.Context, req *ListItemsRequest) (*ap
 	return apiresource.NewList(items, grpcutil.MapProtoPageInfo(ctx, resp.PageInfo)), nil
 }
 
+// GetItem reads through core GetItem, which admits only the seller's own users; the include loader's BatchGetItemsByIDs also admits portal actors resolving items on their documents.
 func (m *itemSvcImpl) GetItem(ctx context.Context, req *RetrieveItemRequest) (*apiresource.Item, *apierror.APIError) {
-	return loadItemByID(ctx, req.ItemID)
+	withCategories, withAttributeProperties := resourceloaders.ItemEmbedsRequested(ctx)
+	pbReq := &pb.GetItemRequest{
+		Id:                      req.ItemID,
+		Includes:                resourceloaders.ItemRecordIncludes,
+		WithCategories:          withCategories,
+		WithAttributeProperties: withAttributeProperties,
+	}
+
+	resp, apiErr := grpcutil.CallRPC(ctx, itemSvcTracer, "service.items.get", domain.ServiceName,
+		func(ctx context.Context, opts ...grpc.CallOption) (*pb.GetItemResponse, error) {
+			return m.coreClient.GetItem(ctx, pbReq, opts...)
+		})
+	if apiErr != nil {
+		return nil, apiErr
+	}
+
+	loaded := resourceloaders.ItemsFromProto(ctx, []*pb.ItemInfo{resp.Item}, resp.Categories, resp.AttributeProperties)
+	return loaded[resp.Item.Id].(*apiresource.Item), nil
 }
 
 func (m *itemSvcImpl) GetItemInventory(ctx context.Context, req *RetrieveItemInventoryRequest) (*apiresource.ItemInventory, *apierror.APIError) {
@@ -205,7 +223,12 @@ func (m *itemSvcImpl) GetItemTrends(ctx context.Context, req *GetItemTrendsReque
 		return nil, apiErr
 	}
 
-	return ItemTrendsPresenter(resp), nil
+	units, apiErr := resourceloaders.LoadUnitsByID(ctx, resp.UnitId)
+	if apiErr != nil {
+		return nil, apiErr
+	}
+
+	return ItemTrendsPresenter(resp, units), nil
 }
 
 func (m *itemSvcImpl) ExportItems(ctx context.Context, req *ExportItemsRequest) (*httptransport.FileDownload, *apierror.APIError) {
@@ -378,7 +401,7 @@ func (m *itemSvcImpl) BulkReconcileItems(ctx context.Context, req *BulkReconcile
 	resp, apiErr := grpcutil.CallRPC(ctx, itemSvcTracer, "service.items.bulk_reconcile", domain.ServiceName,
 		func(ctx context.Context, opts ...grpc.CallOption) (*pb.BulkReconcileItemsResponse, error) {
 			return m.coreClient.BulkReconcileItems(ctx, pbReq, opts...)
-		})
+		}, grpcutil.WithTimeout(grpcutil.BulkWriteTimeout))
 
 	if apiErr != nil {
 		return nil, apiErr
@@ -402,4 +425,12 @@ func loadItemByID(ctx context.Context, id string) (*apiresource.Item, *apierror.
 		return nil, apierror.NewResourceNotFoundError("Item not found.")
 	}
 	return v.(*apiresource.Item), nil
+}
+
+func itemTypeStrings(types []constants.ItemTypeCode) []string {
+	out := make([]string, len(types))
+	for i, t := range types {
+		out[i] = string(t)
+	}
+	return out
 }

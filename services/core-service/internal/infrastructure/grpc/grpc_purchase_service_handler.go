@@ -501,6 +501,8 @@ func (h *purchaseGRPCHandler) CreatePurchaseOrder(ctx context.Context, req *pb.C
 		RequestedNumber:       req.Number,
 		BillToAddressID:       req.BillToAddressId,
 		ShipToAddressID:       req.ShipToAddressId,
+		BillToAddress:         inlineAddressToDomain(req.BillToAddress),
+		ShipToAddress:         inlineAddressToDomain(req.ShipToAddress),
 	}
 
 	order, apiErr := h.purchaseOrderSvc.CreatePurchaseOrder(ctx, params)
@@ -533,6 +535,8 @@ func (h *purchaseGRPCHandler) UpdatePurchaseOrder(ctx context.Context, req *pb.U
 		ReplaceContacts:       req.ReplaceContacts,
 		ContactAccountUserIDs: req.ContactAccountUserIds,
 		Includes:              req.Includes,
+		BillingAddress:        inlineAddressToDomain(req.BillingAddress),
+		ShippingAddress:       inlineAddressToDomain(req.ShippingAddress),
 	}
 
 	order, apiErr := h.purchaseOrderSvc.UpdatePurchaseOrder(ctx, params)

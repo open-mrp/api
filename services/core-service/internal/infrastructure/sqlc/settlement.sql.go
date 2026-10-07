@@ -491,6 +491,7 @@ const updateInvoicePaymentStatus = `-- name: UpdateInvoicePaymentStatus :exec
 UPDATE invoice
 SET is_paid_in_full = ?,
     is_over_paid = ?,
+    paid_in_full_marked_by_id = IF(?, NULL, paid_in_full_marked_by_id),
     updated_at = NOW(3)
 WHERE id = ?
 AND account_id = ?
@@ -499,6 +500,7 @@ AND account_id = ?
 type UpdateInvoicePaymentStatusParams struct {
 	IsPaidInFull bool
 	IsOverPaid   bool
+	ClearMark    interface{}
 	ID           string
 	AccountID    string
 }
@@ -507,6 +509,7 @@ func (q *Queries) UpdateInvoicePaymentStatus(ctx context.Context, arg UpdateInvo
 	_, err := q.db.ExecContext(ctx, updateInvoicePaymentStatus,
 		arg.IsPaidInFull,
 		arg.IsOverPaid,
+		arg.ClearMark,
 		arg.ID,
 		arg.AccountID,
 	)

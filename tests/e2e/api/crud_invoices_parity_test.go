@@ -78,7 +78,8 @@ func TestInvoices_SearchMissesReturnEmpty(t *testing.T) {
 	assert.Empty(t, ids)
 }
 
-// `unpaid` keys off the paid-in-full flag alone, so partially paid and overpaid invoices stay in.
+// `unpaid` keys off the paid-in-full flag alone: partially paid invoices stay in, and overpaid ones,
+// which are paid in full, drop out.
 func TestInvoices_UnpaidStatusKeysOffPaidInFullOnly(t *testing.T) {
 	t.Parallel()
 
@@ -98,23 +99,18 @@ func TestInvoices_UnpaidStatusKeysOffPaidInFullOnly(t *testing.T) {
 	assert.NotContains(t, ids, SeedInvoiceID)
 }
 
-// Item and product-line filters scope to the order's lines, so a partial invoice still matches.
+// Item and product-line filters reach an invoice through its order's lines; the test's own customer makes the answer exact.
 func TestInvoices_LineFiltersScopeToOrderLines(t *testing.T) {
 	t.Parallel()
-
-	all := listIDs(t, invoicesPath, nil)
-
-	byItem := listIDs(t, invoicesPath, url.Values{"item_ids": {SeedItemID}})
-	require.NotEmpty(t, byItem, "seed item %s should match invoices through its order lines", SeedItemID)
-	for _, id := range byItem {
-		assert.Contains(t, all, id)
+	inv := invoiceNewCustomer(t) // an order of the seed product, whose item is SeedItemID on SeedProductLineID
+	ofCustomer := func(params url.Values) []string {
+		return listIDs(t, invoicesPath, withCustomers(params, inv.customerID))
 	}
 
-	byProductLine := listIDs(t, invoicesPath, url.Values{"product_line_ids": {SeedProductLineID}})
-	require.NotEmpty(t, byProductLine)
-	for _, id := range byProductLine {
-		assert.Contains(t, all, id)
-	}
+	assert.Equal(t, []string{inv.invoiceID}, ofCustomer(url.Values{"item_ids": {SeedItemID}}))
+	assert.Equal(t, []string{inv.invoiceID}, ofCustomer(url.Values{"product_line_ids": {SeedProductLineID}}))
+	assert.Empty(t, ofCustomer(url.Values{"item_ids": {SeedPurchasedItemID}}), "an item none of the order's lines carry")
+	assert.Empty(t, ofCustomer(url.Values{"product_line_ids": {parityProductLine(t)}}), "a product line none of the order's lines are on")
 }
 
 // An unknown item ID filters everything out instead of being ignored.
@@ -312,9 +308,9 @@ func TestCustomerInvoices_AllocationsExpandOnRequest(t *testing.T) {
 	}
 
 	status, body, err = apiClient.GetListRaw(customerInvoicesPath,
-		url.Values{"limit": {"25"}, "include": {"allocations"}})
+		url.Values{"limit": {"100"}, "include": {"allocations"}})
 
-	// Invoices earlier runs created sort ahead of the seeded paid one, so read on until it turns up.
+	// Invoices earlier runs created sort ahead of the seeded paid one, so read on until it turns up, a hundred at a time.
 	sawAllocation := false
 	for page := 0; ; page++ {
 		require.NoError(t, err)

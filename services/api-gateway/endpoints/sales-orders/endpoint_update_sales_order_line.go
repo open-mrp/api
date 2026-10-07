@@ -33,7 +33,7 @@ type UpdateSalesOrderLineRequest struct {
 	// Internal cost per unit, used to derive line profitability.
 	//
 	// Rounded to the nearest cent.
-	UnitCost field.Optional[apirequest.RateInput] `json:"unit_cost,omitzero" validate:"omitempty"`
+	UnitCost field.Optional[apirequest.RateInput] `json:"unit_cost,omitzero" validate:"omitempty" sensitive:"cost"`
 }
 
 var sampleUpdateSalesOrderLineRequest = &UpdateSalesOrderLineRequest{
@@ -59,20 +59,17 @@ type UpdateSalesOrderLineEndpoint struct{}
 
 func (e *UpdateSalesOrderLineEndpoint) Materialize() *apiendpoint.APIEndpoint[*UpdateSalesOrderLineRequest, *apiresource.SalesOrderLine] {
 	return (&apiendpoint.APIEndpoint[*UpdateSalesOrderLineRequest, *apiresource.SalesOrderLine]{
-		Title:             "Update Sales Order Line",
-		Method:            http.MethodPatch,
-		ContentType:       "application/json",
-		Route:             "/v1/sales/sales-orders/{id}/lines/{line_id}",
-		SuccessStatusCode: http.StatusOK,
-		Public:            true,
-		AgentTool:         true,
-		Preview:           true,
-		ObjectType:        constants.ObjectTypeSalesOrderLine,
-		RequiredPermissions: []types.Permission{
-			{Domain: types.PermissionDomainCustomers, Action: types.ActionUpdate},
-			{Domain: types.PermissionDomainSuppliers, Action: types.ActionUpdate},
-			{Domain: types.PermissionDomainSalesOrders, Action: types.ActionUpdate},
-		},
+		Title:                   "Update Sales Order Line",
+		Method:                  http.MethodPatch,
+		ContentType:             "application/json",
+		Route:                   "/v1/sales/sales-orders/{id}/lines/{line_id}",
+		SuccessStatusCode:       http.StatusOK,
+		Public:                  true,
+		AgentTool:               true,
+		Preview:                 true,
+		ObjectType:              constants.ObjectTypeSalesOrderLine,
+		RequiredPermissions:     []types.Permission{{Domain: types.PermissionDomainSalesOrders, Action: types.ActionUpdate}},
+		CounterpartyPermissions: apiendpoint.Counterparties(types.ActionUpdate),
 		ServiceHandler: func(svc any) func(ctx context.Context, req *UpdateSalesOrderLineRequest) (*apiresource.SalesOrderLine, *apierror.APIError) {
 			return svc.(SalesOrderSvc).UpdateSalesOrderLine
 		},

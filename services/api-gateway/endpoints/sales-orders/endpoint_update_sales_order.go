@@ -7,6 +7,7 @@ import (
 
 	apiendpoint "github.com/open-mrp/api/services/api-gateway/pkg/endpoint"
 	apiexample "github.com/open-mrp/api/services/api-gateway/pkg/example"
+	apirequest "github.com/open-mrp/api/services/api-gateway/pkg/request"
 	apiresource "github.com/open-mrp/api/services/api-gateway/pkg/resource"
 	"github.com/open-mrp/api/services/auth-service/pkg/types"
 	"github.com/open-mrp/api/shared/constants"
@@ -47,12 +48,20 @@ type UpdateSalesOrderRequest struct {
 	OrderDiscountID field.Clearable[string] `json:"order_discount_id,omitzero" validate:"omitempty"`
 	// Billing address ID.
 	//
-	// Re-points the order to an existing address. To change an address's contents, use the update-address endpoint.
+	// Re-points the order to an existing address. To change the address's contents with the order, send `billing_address` instead.
 	BillingAddressID field.Optional[string] `json:"billing_address_id,omitzero" validate:"omitempty"`
 	// Shipping address ID.
 	//
-	// Re-points the order to an existing address. To change an address's contents, use the update-address endpoint.
+	// Re-points the order to an existing address. To change the address's contents with the order, send `shipping_address` instead.
 	ShippingAddressID field.Optional[string] `json:"shipping_address_id,omitzero" validate:"omitempty"`
+	// Billing address saved to the customer's account with the update: a new address, or an update to one of the customer's saved addresses named by its `id`.
+	//
+	// Saving it needs no permission beyond updating the order. Cannot be combined with `billing_address_id`. When `customer_id` changes in the same request, the address belongs to the new customer.
+	BillingAddress field.Optional[apirequest.InlineAddressInput] `json:"billing_address,omitzero"`
+	// Shipping address saved to the customer's account with the update: a new address, or an update to one of the customer's saved addresses named by its `id`.
+	//
+	// Saving it needs no permission beyond updating the order. Cannot be combined with `shipping_address_id`. An identical `billing_address` and `shipping_address` are saved as one address.
+	ShippingAddress field.Optional[apirequest.InlineAddressInput] `json:"shipping_address,omitzero"`
 	// Acknowledgment status of the order.
 	//
 	// Set to `sent` to mark the acknowledgement as sent without emailing the customer, or `not_sent` to reset it.

@@ -418,7 +418,7 @@ func (s *roleSvcImpl) DeleteRole(ctx context.Context, roleID string) *apierror.A
 	role, apiErr := s.repos.NewRoleRepo().Get(ctx, roleID, accountID)
 	if apiErr != nil {
 		if apierror.IsNotFound(apiErr) {
-			wasDeleted, deletedCheckErr := s.repos.NewDeletedRecordRepo().Exists(ctx, constants.DeletedRecordResourceTypeRole, roleID)
+			wasDeleted, deletedCheckErr := s.repos.NewDeletedRecordRepo().ExistsInAccount(ctx, constants.DeletedRecordResourceTypeRole, roleID, accountID)
 			if deletedCheckErr != nil {
 				return tracing.Trace(span, deletedCheckErr)
 			}
@@ -441,7 +441,7 @@ func (s *roleSvcImpl) DeleteRole(ctx context.Context, roleID string) *apierror.A
 	}
 
 	apiErr = s.withTx(ctx, func(txCtx context.Context, txSvc *roleSvcImpl) *apierror.APIError {
-		if apiErr := txSvc.repos.NewDeletedRecordRepo().Create(txCtx, constants.DeletedRecordResourceTypeRole, role.ID, role); apiErr != nil {
+		if apiErr := txSvc.repos.NewDeletedRecordRepo().CreateInAccount(txCtx, constants.DeletedRecordResourceTypeRole, role.ID, accountID, role); apiErr != nil {
 			return apiErr
 		}
 
@@ -483,7 +483,7 @@ func (s *roleSvcImpl) BatchGetRolesByIDs(ctx context.Context, ids []string) ([]*
 		return nil, tracing.Trace(span, apierror.NewInvariantViolationError("Identity not found in context."))
 	}
 
-	if apiErr := identity.CheckIsInternalActor(); apiErr != nil {
+	if apiErr := identity.CheckIsInternalActorForRead(); apiErr != nil {
 		return nil, tracing.Trace(span, apiErr)
 	}
 	if apiErr := identity.CheckHasPermission(types.PermissionDomainRoles, types.ActionRead); apiErr != nil {

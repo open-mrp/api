@@ -407,7 +407,7 @@ func (s *unitSvcImpl) DeleteUnit(ctx context.Context, unitID string) *apierror.A
 	unit, apiErr := s.repos.NewUnitRepo().Get(ctx, domain.GetUnitParams{AccountID: accountID, UnitID: unitID})
 	if apiErr != nil {
 		if apierror.IsNotFound(apiErr) {
-			wasDeleted, deletedCheckErr := s.repos.NewDeletedRecordRepo().Exists(ctx, constants.DeletedRecordResourceTypeUnit, unitID)
+			wasDeleted, deletedCheckErr := s.repos.NewDeletedRecordRepo().ExistsInAccount(ctx, constants.DeletedRecordResourceTypeUnit, unitID, accountID)
 			if deletedCheckErr != nil {
 				return tracing.Trace(span, deletedCheckErr)
 			}
@@ -440,7 +440,7 @@ func (s *unitSvcImpl) DeleteUnit(ctx context.Context, unitID string) *apierror.A
 			return apierror.NewResourceConflictError("This unit is in use: quantities or prices are recorded in it. Remove it from its unit groups instead so it can no longer be chosen.")
 		}
 
-		if apiErr := txSvc.repos.NewDeletedRecordRepo().Create(txCtx, constants.DeletedRecordResourceTypeUnit, unit.ID, unit); apiErr != nil {
+		if apiErr := txSvc.repos.NewDeletedRecordRepo().CreateInAccount(txCtx, constants.DeletedRecordResourceTypeUnit, unit.ID, accountID, unit); apiErr != nil {
 			return apiErr
 		}
 
@@ -562,11 +562,11 @@ func (s *unitSvcImpl) BatchGetUnitsByIDs(ctx context.Context, ids []string) ([]*
 		return nil, tracing.Trace(span, apierror.NewAuthenticationError("The OpenMRP-Account-ID header is required."))
 	}
 
-	if identity.IsInternalActor() {
-		if apiErr := checkUnitReadPermission(identity); apiErr != nil {
-			return nil, tracing.Trace(span, apiErr)
-		}
-	} else if !identity.IsCustomerUser() && !identity.IsSupplierUser() {
+	// The include resolver is the only caller: it loads the units of the quantities and rates on a
+	// record the caller was already allowed to read, so a role that may read batches or invoices sees
+	// the units they are counted in without also holding units:read, as the dashboard always showed
+	// them. Listing or retrieving units directly still requires it.
+	if !identity.IsInternalActor() && !identity.IsCustomerUser() && !identity.IsSupplierUser() {
 		return nil, tracing.Trace(span, apierror.NewAuthorizationError("You do not have access to this resource."))
 	}
 

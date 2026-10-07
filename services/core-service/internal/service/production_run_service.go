@@ -118,7 +118,7 @@ func (s *productionRunSvcImpl) GetProductionRun(ctx context.Context, params doma
 		return nil, tracing.Trace(span, apierror.NewInvariantViolationError("Identity not found in context."))
 	}
 
-	if apiErr := identity.CheckIsInternalActor(); apiErr != nil {
+	if apiErr := identity.CheckIsInternalActorForRead(); apiErr != nil {
 		return nil, tracing.Trace(span, apiErr)
 	}
 	if apiErr := identity.CheckHasPermission(types.PermissionDomainProductionRuns, types.ActionRead); apiErr != nil {
@@ -367,7 +367,7 @@ func (s *productionRunSvcImpl) DeleteProductionRun(ctx context.Context, params d
 	productionRun, apiErr := repo.Get(ctx, domain.GetProductionRunParams(params))
 	if apiErr != nil {
 		if apierror.IsNotFound(apiErr) {
-			wasDeleted, deletedCheckErr := s.repos.NewDeletedRecordRepo().Exists(ctx, constants.DeletedRecordResourceTypeProductionRun, params.ProductionRunID)
+			wasDeleted, deletedCheckErr := s.repos.NewDeletedRecordRepo().ExistsInAccount(ctx, constants.DeletedRecordResourceTypeProductionRun, params.ProductionRunID, params.AccountID)
 			if deletedCheckErr != nil {
 				return tracing.Trace(span, deletedCheckErr)
 			}
@@ -398,7 +398,7 @@ func (s *productionRunSvcImpl) DeleteProductionRun(ctx context.Context, params d
 			return apiErr
 		}
 
-		if apiErr := txSvc.repos.NewDeletedRecordRepo().Create(txCtx, constants.DeletedRecordResourceTypeProductionRun, productionRun.ID, productionRun); apiErr != nil {
+		if apiErr := txSvc.repos.NewDeletedRecordRepo().CreateInAccount(txCtx, constants.DeletedRecordResourceTypeProductionRun, productionRun.ID, params.AccountID, productionRun); apiErr != nil {
 			return apiErr
 		}
 

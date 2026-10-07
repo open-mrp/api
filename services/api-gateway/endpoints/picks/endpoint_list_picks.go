@@ -40,20 +40,17 @@ type ListPicksEndpoint struct{}
 
 func (e *ListPicksEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListPicksRequest, *apiresource.List[apiresource.Pick]] {
 	return (&apiendpoint.APIEndpoint[*ListPicksRequest, *apiresource.List[apiresource.Pick]]{
-		Title:             "List Picks",
-		Method:            http.MethodGet,
-		ContentType:       "application/json",
-		Route:             "/v1/operations/picks",
-		SuccessStatusCode: http.StatusOK,
-		Public:            true,
-		Preview:           true,
-		AgentTool:         true,
-		ObjectType:        constants.ObjectTypePick,
-		RequiredPermissions: []types.Permission{
-			{Domain: types.PermissionDomainPicks, Action: types.ActionRead},
-			{Domain: types.PermissionDomainCustomers, Action: types.ActionRead},
-			{Domain: types.PermissionDomainSuppliers, Action: types.ActionRead},
-		},
+		Title:                   "List Picks",
+		Method:                  http.MethodGet,
+		ContentType:             "application/json",
+		Route:                   "/v1/operations/picks",
+		SuccessStatusCode:       http.StatusOK,
+		Public:                  true,
+		Preview:                 true,
+		AgentTool:               true,
+		ObjectType:              constants.ObjectTypePick,
+		RequiredPermissions:     []types.Permission{{Domain: types.PermissionDomainPicks, Action: types.ActionRead}},
+		CounterpartyPermissions: apiendpoint.Counterparties(types.ActionRead),
 		ServiceHandler: func(svc any) func(ctx context.Context, req *ListPicksRequest) (*apiresource.List[apiresource.Pick], *apierror.APIError) {
 			return svc.(PickSvc).ListPicks
 		},

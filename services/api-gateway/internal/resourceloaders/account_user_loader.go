@@ -28,26 +28,31 @@ func LoadAccountUsers(ctx context.Context, ids []string) (map[string]any, *apier
 		return nil, apiErr
 	}
 
-	meta := resourcekit.GetLoadMeta(ctx)
 	out := make(map[string]any, len(resp.AccountUsers))
 	for _, au := range resp.AccountUsers {
-		out[au.Id] = accountUserFromProto(au)
-
-		meta.Set(constants.ObjectTypeAccountUser, au.Id, "user_id", au.UserId)
-
-		var roleID string
-		if au.RoleId != nil {
-			roleID = *au.RoleId
-		}
-		meta.Set(constants.ObjectTypeAccountUser, au.Id, "role_id", roleID)
-
-		var departmentID string
-		if au.DepartmentId != nil {
-			departmentID = *au.DepartmentId
-		}
-		meta.Set(constants.ObjectTypeAccountUser, au.Id, "department_id", departmentID)
+		out[au.Id] = AccountUserFromDetail(ctx, au)
 	}
 	return out, nil
+}
+
+// AccountUserFromDetail maps an account user and stashes the references its includes resolve from.
+func AccountUserFromDetail(ctx context.Context, au *pb.AccountUserDetail) *apiresource.AccountUser {
+	meta := resourcekit.GetLoadMeta(ctx)
+	meta.Set(constants.ObjectTypeAccountUser, au.Id, "user_id", au.UserId)
+
+	var roleID string
+	if au.RoleId != nil {
+		roleID = *au.RoleId
+	}
+	meta.Set(constants.ObjectTypeAccountUser, au.Id, "role_id", roleID)
+
+	var departmentID string
+	if au.DepartmentId != nil {
+		departmentID = *au.DepartmentId
+	}
+	meta.Set(constants.ObjectTypeAccountUser, au.Id, "department_id", departmentID)
+
+	return accountUserFromProto(au)
 }
 
 // AccountUserName is a resolved display name + handle (email) + profile photo for an account user,
@@ -83,9 +88,22 @@ func accountUserFromProto(au *pb.AccountUserDetail) *apiresource.AccountUser {
 		ID:                   au.Id,
 		Object:               constants.ObjectTypeAccountUser,
 		Status:               constants.AccountUserStatus(au.StatusCode),
-		IsCommissionEligible: au.IsCommissionEligible,
+		IsCommissionEligible: new(au.IsCommissionEligible),
+		NotificationTypes:    notificationTypesFromProto(au.NotificationTypes),
 		LastUsedAt:           grpcutil.TimestampToTimePtr(au.LastUsedAt),
 		CreatedAt:            grpcutil.TimestampToTime(au.CreatedAt),
 		UpdatedAt:            grpcutil.TimestampToTime(au.UpdatedAt),
 	}
+}
+
+// notificationTypesFromProto keeps an unset field nil (serialized as null) and an empty one an empty list.
+func notificationTypesFromProto(in *pb.AccountUserNotificationTypes) *[]constants.AccountRelationNotificationType {
+	if in == nil {
+		return nil
+	}
+	out := make([]constants.AccountRelationNotificationType, len(in.Codes))
+	for i, code := range in.Codes {
+		out[i] = constants.AccountRelationNotificationType(code)
+	}
+	return &out
 }

@@ -57,7 +57,7 @@ func TestMaterials_BurnRate_IgnoresManualInventoryCorrections(t *testing.T) {
 	adjust := func(delta string) {
 		t.Helper()
 		patchBody := map[string]any{
-			"quantity":  map[string]any{"value": delta, "unit_id": nonCurrencyUnitID},
+			"quantity":  map[string]any{"value": delta, "unit_id": poundUnitID},
 			"operation": "adjust",
 		}
 		status, resp, patchErr := apiClient.Patch(itemsPath+"/"+itemID+"/inventory", patchBody, newIdempotencyKey())

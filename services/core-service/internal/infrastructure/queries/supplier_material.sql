@@ -288,3 +288,9 @@ WHERE m.item_id = sqlc.arg('item_id')
 SELECT m.item_id
 FROM material m
 WHERE m.id = sqlc.arg('material_id');
+
+-- name: DeleteSupplierMaterialsBySuppliers :exec
+-- A deleted supplier's links go with it, so its id no longer reaches them.
+DELETE FROM supplier_material
+WHERE owner_account_id = sqlc.arg('owner_account_id')
+  AND supplier_account_id IN (sqlc.slice('supplier_account_ids'));

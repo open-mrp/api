@@ -93,9 +93,8 @@ func (m *userSvcImpl) UpdateUser(ctx context.Context, req *UpdateUserRequest) (*
 
 func (m *userSvcImpl) UploadUserPhoto(ctx context.Context, req *UploadUserPhotoRequest) (*apiresource.UserPhotoUploadResult, *apierror.APIError) {
 	pbReq := &pb.UploadUserPhotoRequest{
-		Id:          req.UserID,
-		File:        req.RawBody,
-		ContentType: req.ContentType,
+		Id:   req.UserID,
+		File: req.RawBody,
 	}
 
 	resp, apiErr := grpcutil.CallRPC(ctx, userSvcTracer, "service.users.upload_photo", domain.ServiceName,

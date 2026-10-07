@@ -22,7 +22,9 @@ type ItemCategory struct {
 	// Display name of the item category.
 	Name string `json:"name" validate:"required"`
 	// Free-form notes about the item category.
-	Notes *string `json:"notes"`
+	//
+	// Null to customer and supplier portal users: they are your own team's notes.
+	Notes *string `json:"notes" sensitive:"internal"`
 	// What kind of items this category groups.
 	//
 	// - `material_category`: groups raw materials and components (items of type `material`).

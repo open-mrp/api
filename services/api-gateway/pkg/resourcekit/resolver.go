@@ -6,6 +6,7 @@ import (
 
 	"golang.org/x/sync/errgroup"
 
+	"github.com/open-mrp/api/shared/appctx"
 	"github.com/open-mrp/api/shared/constants"
 	apierror "github.com/open-mrp/api/shared/errors"
 )
@@ -22,8 +23,20 @@ const DefaultMaxIncludeDepth = 8
 //
 // The function is safe to call with an empty or nil tree (no-op) and with an
 // empty roots slice (no-op).
+//
+// Every load runs under WithIncludeReads: the request that returned roots
+// already authorized everything it includes.
 func ResolveIncludes(ctx context.Context, roots []any, objectType constants.ObjectType, tree *IncludeNode) *apierror.APIError {
-	return resolveIncludesAt(ctx, roots, objectType, tree, 0)
+	return resolveIncludesAt(WithIncludeReads(ctx), roots, objectType, tree, 0)
+}
+
+// WithIncludeReads returns ctx with the caller's identity as it loads what an authorized request includes or embeds (types.Identity.ForIncludeReads). Never use it for the request's own records.
+func WithIncludeReads(ctx context.Context) context.Context {
+	identity, ok := appctx.GetIdentityFromContext(ctx)
+	if !ok || identity == nil || identity.IncludeReads {
+		return ctx
+	}
+	return appctx.WithIdentity(ctx, identity.ForIncludeReads())
 }
 
 func resolveIncludesAt(ctx context.Context, roots []any, objectType constants.ObjectType, tree *IncludeNode, depth int) *apierror.APIError {

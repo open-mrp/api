@@ -211,7 +211,7 @@ func (s *transactionAllocationSvcImpl) DeleteTransactionAllocation(ctx context.C
 	allocation, apiErr := repo.GetByID(ctx, params.AccountID, params.AllocationID)
 	if apiErr != nil {
 		if apierror.IsNotFound(apiErr) {
-			wasDeleted, deletedCheckErr := s.repos.NewDeletedRecordRepo().Exists(ctx, constants.DeletedRecordResourceTypeTransactionAllocation, params.AllocationID)
+			wasDeleted, deletedCheckErr := s.repos.NewDeletedRecordRepo().ExistsInAccount(ctx, constants.DeletedRecordResourceTypeTransactionAllocation, params.AllocationID, params.AccountID)
 			if deletedCheckErr != nil {
 				return tracing.Trace(span, deletedCheckErr)
 			}
@@ -223,7 +223,7 @@ func (s *transactionAllocationSvcImpl) DeleteTransactionAllocation(ctx context.C
 	}
 
 	apiErr = s.withTx(ctx, func(txCtx context.Context, txSvc *transactionAllocationSvcImpl) *apierror.APIError {
-		if apiErr := txSvc.repos.NewDeletedRecordRepo().Create(txCtx, constants.DeletedRecordResourceTypeTransactionAllocation, allocation.ID, allocation); apiErr != nil {
+		if apiErr := txSvc.repos.NewDeletedRecordRepo().CreateInAccount(txCtx, constants.DeletedRecordResourceTypeTransactionAllocation, allocation.ID, params.AccountID, allocation); apiErr != nil {
 			return apiErr
 		}
 

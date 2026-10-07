@@ -11,6 +11,7 @@ import (
 
 	"github.com/open-mrp/api/services/core-service/internal/domain"
 	"github.com/open-mrp/api/shared/cache"
+	"github.com/open-mrp/api/shared/constants"
 	apierror "github.com/open-mrp/api/shared/errors"
 )
 
@@ -35,6 +36,10 @@ type ClientFactoryConfig struct {
 
 	// CarrierAccountsTTL (optional; default: 1h) is how long a Shippo token's carrier account list is reused.
 	CarrierAccountsTTL time.Duration
+
+	// PlatformMode (optional; default: production) gates live keys: only production may build a client
+	// that spends real money, so a live key reaching any other deployment is refused.
+	PlatformMode constants.PlatformMode
 }
 
 func (c *ClientFactoryConfig) WithDefaults() *ClientFactoryConfig {
@@ -48,12 +53,18 @@ func (c *ClientFactoryConfig) WithDefaults() *ClientFactoryConfig {
 	if out.CarrierAccountsTTL == 0 {
 		out.CarrierAccountsTTL = defaultCarrierAccountsTTL
 	}
+	if out.PlatformMode == "" {
+		out.PlatformMode = constants.PlatformModeProduction
+	}
 	return &out
 }
 
 func (c *ClientFactoryConfig) validate() error {
 	if c.RateTTL < 0 || c.CarrierAccountsTTL < 0 {
 		return fmt.Errorf("shippo: cache TTLs must not be negative")
+	}
+	if !c.PlatformMode.IsValid() {
+		return fmt.Errorf("shippo: invalid platform mode %q", c.PlatformMode)
 	}
 	return nil
 }

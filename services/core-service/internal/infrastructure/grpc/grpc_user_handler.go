@@ -106,7 +106,7 @@ func (h *gRPCHandler) UploadUserPhoto(ctx context.Context, req *pb.UploadUserPho
 		return nil, contracts.NewMissingGRPCRequestDataError()
 	}
 
-	apiErr := h.userSvc.UploadUserPhoto(ctx, req.Id, req.File, req.ContentType)
+	apiErr := h.userSvc.UploadUserPhoto(ctx, req.Id, req.File)
 	if apiErr != nil {
 		return nil, contracts.ConvertAPIErrorToGRPC(apiErr)
 	}

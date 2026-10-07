@@ -151,6 +151,20 @@ type UpdatePickLineParams struct {
 	QuantityValue *string
 }
 
+// A pick line a pack is about to ship, as read under the pack's lock.
+type PickLineToPack struct {
+	ID               string
+	SalesOrderLineID string
+	QuantityValue    string
+	QuantityUnitID   string
+}
+
+// A packed pick line and the order line it fills.
+type PackedPickLine struct {
+	ID               string
+	SalesOrderLineID string
+}
+
 // Records what a pack was accepted to do. Stored on the job, so it carries only resolved ids.
 type PackPickJob struct {
 	PickID            string

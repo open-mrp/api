@@ -178,6 +178,23 @@ JOIN conversation_participant p ON p.id = m.sender_participant_id
 SET m.status = 'canceled', m.updated_at = NOW(3)
 WHERE m.id = ? AND m.account_id = ? AND p.account_user_id = ? AND m.status = 'scheduled' AND m.deleted_at IS NULL;
 
+-- name: RescheduleMessageForUser :execrows
+-- Moves a scheduled message owned by the caller to a new send time, replacing its body and preview
+-- when given. Only while it is still scheduled and its current time has not come: once due, the
+-- worker may already have listed it, and a change then could be delivered at the old time.
+UPDATE message m
+JOIN conversation_participant p ON p.id = m.sender_participant_id
+SET m.scheduled_for = sqlc.arg('scheduled_for'),
+    m.body = COALESCE(sqlc.narg('body'), m.body),
+    m.preview = COALESCE(sqlc.narg('preview'), m.preview),
+    m.updated_at = NOW(3)
+WHERE m.id = sqlc.arg('id')
+  AND m.account_id = sqlc.arg('account_id')
+  AND p.account_user_id = sqlc.arg('account_user_id')
+  AND m.status = 'scheduled'
+  AND m.scheduled_for > NOW(3)
+  AND m.deleted_at IS NULL;
+
 -- name: ListDueScheduledMessages :many
 -- Scheduled messages whose time has arrived and that are not already claimed by a worker. Served by
 -- message_status_sched_idx (status, scheduled_for).

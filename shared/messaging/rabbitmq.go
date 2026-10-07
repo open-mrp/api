@@ -1097,6 +1097,15 @@ func (r *rabbitMQ) setupExchangesAndQueues() error {
 		return err
 	}
 
+	// Billing report batch created command queue (handled by billing-service)
+	if err := r.declareAndBindQueue(
+		BillingCmdReportBatchCreatedQueue,
+		[]string{string(contracts.BillingCmdReportBatchCreated)},
+		ApplicationExchange,
+	); err != nil {
+		return err
+	}
+
 	// Agent command queue: execute run (handled by agent-service)
 	if err := r.declareAndBindQueue(
 		AgentCmdExecuteRunQueue,
@@ -1182,8 +1191,16 @@ func (r *rabbitMQ) declareAndBindQueue(queueName string, messageTypes []string, 
 }
 
 // declareAndBindInstanceQueue declares an ephemeral queue owned by this process and binds it to the application exchange for each of the given routing keys. Unlike declareAndBindQueue, the queue is non-durable, exclusive (usable only by this connection), and auto-deleting (removed once the last consumer disconnects), so it lives and dies with this instance. No dead-letter routing is configured: fan-out delivery is best-effort and the persisted rows are the source of truth, so a rejected realtime event is simply dropped rather than parked in the DLQ. It is invoked on every (re)connect by the consume loop because the queue is torn down whenever its connection drops.
+//
+// It holds mu because every consumer declares on the shared channel: concurrent declares there can hand one consumer another's reply, binding its queue to the other's routing keys.
 func (r *rabbitMQ) declareAndBindInstanceQueue(queueName string, routingKeys []string) error {
-	q, err := r.Channel.QueueDeclare(
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	if r.Channel == nil || r.Channel.IsClosed() {
+		return fmt.Errorf("channel is not ready")
+	}
+
+	_, err := r.Channel.QueueDeclare(
 		queueName, // name
 		false,     // durable
 		true,      // delete when unused
@@ -1197,7 +1214,7 @@ func (r *rabbitMQ) declareAndBindInstanceQueue(queueName string, routingKeys []s
 
 	for _, rk := range routingKeys {
 		if err := r.Channel.QueueBind(
-			q.Name,              // queue name
+			queueName,           // queue name
 			rk,                  // routing key
 			ApplicationExchange, // exchange
 			false,

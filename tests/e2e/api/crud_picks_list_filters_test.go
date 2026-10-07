@@ -44,13 +44,15 @@ func TestPicksList_SearchMatchesPickNumber(t *testing.T) {
 }
 
 // The FULLTEXT index holds no token with an "i" (stopwords), so "pic" and "tio" have none to search by;
-// they still match by substring, the pick number and the customer's name respectively.
+// they still match by substring, the pick number and the customer's name respectively. Both terms match
+// every pick the suite makes for the seed customer, so the seed pick is looked for on every page, not
+// just the newest hundred.
 func TestPicksList_SearchMatchesATermTheIndexHoldsNoTokenFor(t *testing.T) {
 	t.Parallel()
 
-	assert.Contains(t, pickIDsFiltered(t, url.Values{"q": {"pic"}, "limit": {"100"}}), seedClosedPickID,
+	assert.Contains(t, dashPicksAllIDs(t, apiClient, picksPath, url.Values{"q": {"pic"}}), seedClosedPickID,
 		`"pic" is a substring of PICK-002`)
-	assert.Contains(t, pickIDsFiltered(t, url.Values{"q": {"tio"}, "limit": {"100"}}), seedClosedPickID,
+	assert.Contains(t, dashPicksAllIDs(t, apiClient, picksPath, url.Values{"q": {"tio"}}), seedClosedPickID,
 		`"tio" is a substring of PICK-002's customer, Global Manufacturing Solutions`)
 }
 
@@ -58,13 +60,13 @@ func TestPicksList_SearchMatchesATermTheIndexHoldsNoTokenFor(t *testing.T) {
 func TestPicksList_StatusSplitsOpenFromClosed(t *testing.T) {
 	t.Parallel()
 
-	open := pickIDsFiltered(t, url.Values{"status": {"open"}})
-	assert.Contains(t, open, seedOpenPickID)
-	assert.NotContains(t, open, seedClosedPickID, "a finished pick must not appear under open")
+	open := url.Values{"status": {"open"}}
+	assertListContainsID(t, picksPath, open, seedOpenPickID)
+	assert.Nil(t, listFindByField(t, picksPath, open, "id", seedClosedPickID), "a finished pick must not appear under open")
 
-	closed := pickIDsFiltered(t, url.Values{"status": {"closed"}})
-	assert.Contains(t, closed, seedClosedPickID)
-	assert.NotContains(t, closed, seedOpenPickID, "an unfinished pick must not appear under closed")
+	closed := url.Values{"status": {"closed"}}
+	assertListContainsID(t, picksPath, closed, seedClosedPickID)
+	assert.Nil(t, listFindByField(t, picksPath, closed, "id", seedOpenPickID), "an unfinished pick must not appear under closed")
 }
 
 func TestPicksList_FiltersByCustomerAndGroup(t *testing.T) {
@@ -95,14 +97,14 @@ func TestPicksList_FiltersByCreatedDateWindow(t *testing.T) {
 	t.Parallel()
 
 	today := time.Now().UTC().Format("2006-01-02")
-	inWindow := pickIDsFiltered(t, url.Values{"starts_at": {"2000-01-01"}, "ends_at": {today}})
-	assert.Contains(t, inWindow, seedOpenPickID, "a window ending today must include a pick created today")
+	assert.NotNil(t, listFindByField(t, picksPath, url.Values{"starts_at": {"2000-01-01"}, "ends_at": {today}}, "id", seedOpenPickID),
+		"a window ending today must include a pick created today")
 
 	// PICK-003 is four days old, so a window opening yesterday leaves it behind.
 	yesterday := time.Now().UTC().AddDate(0, 0, -1).Format("2006-01-02")
-	recent := pickIDsFiltered(t, url.Values{"starts_at": {yesterday}})
-	assert.Contains(t, recent, seedOpenPickID)
-	assert.NotContains(t, recent, seedOldClosedPickID, "a pick created four days ago is outside the window")
+	recent := url.Values{"starts_at": {yesterday}}
+	assertListContainsID(t, picksPath, recent, seedOpenPickID)
+	assert.Nil(t, listFindByField(t, picksPath, recent, "id", seedOldClosedPickID), "a pick created four days ago is outside the window")
 
 	assert.Empty(t, pickIDsFiltered(t, url.Values{"starts_at": {"2000-01-01"}, "ends_at": {"2000-01-02"}}),
 		"a window that closed decades ago must exclude every pick")

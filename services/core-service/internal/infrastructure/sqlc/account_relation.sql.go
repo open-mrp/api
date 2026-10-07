@@ -568,6 +568,63 @@ func (q *Queries) ListNotificationPreferencesByRelation(ctx context.Context, acc
 	return items, nil
 }
 
+const listNotificationTypesForRecipients = `-- name: ListNotificationTypesForRecipients :many
+SELECT arnp.recipient_account_user_id, arnp.notification_type_code
+FROM account_relation ar
+INNER JOIN account_relation_notification_preference arnp ON arnp.account_relation_id = ar.id
+WHERE ar.owner_account_id = ?
+  AND ar.counterparty_account_id = ?
+  AND arnp.recipient_account_user_id IN (/*SLICE:recipient_account_user_ids*/?)
+ORDER BY arnp.recipient_account_user_id, arnp.notification_type_code
+`
+
+type ListNotificationTypesForRecipientsParams struct {
+	OwnerAccountID          string
+	CounterpartyAccountID   string
+	RecipientAccountUserIds []string
+}
+
+type ListNotificationTypesForRecipientsRow struct {
+	RecipientAccountUserID string
+	NotificationTypeCode   string
+}
+
+// The notification types the owner sends each of the given counterparty account users.
+func (q *Queries) ListNotificationTypesForRecipients(ctx context.Context, arg ListNotificationTypesForRecipientsParams) ([]ListNotificationTypesForRecipientsRow, error) {
+	query := listNotificationTypesForRecipients
+	var queryParams []interface{}
+	queryParams = append(queryParams, arg.OwnerAccountID)
+	queryParams = append(queryParams, arg.CounterpartyAccountID)
+	if len(arg.RecipientAccountUserIds) > 0 {
+		for _, v := range arg.RecipientAccountUserIds {
+			queryParams = append(queryParams, v)
+		}
+		query = strings.Replace(query, "/*SLICE:recipient_account_user_ids*/?", strings.Repeat(",?", len(arg.RecipientAccountUserIds))[1:], 1)
+	} else {
+		query = strings.Replace(query, "/*SLICE:recipient_account_user_ids*/?", "NULL", 1)
+	}
+	rows, err := q.db.QueryContext(ctx, query, queryParams...)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []ListNotificationTypesForRecipientsRow
+	for rows.Next() {
+		var i ListNotificationTypesForRecipientsRow
+		if err := rows.Scan(&i.RecipientAccountUserID, &i.NotificationTypeCode); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const listRelatedCounterpartyIDs = `-- name: ListRelatedCounterpartyIDs :many
 SELECT DISTINCT counterparty_account_id
 FROM account_relation

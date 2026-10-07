@@ -212,11 +212,18 @@ func (s *itemCategorySvcImpl) BatchGetItemCategoriesByIDs(ctx context.Context, i
 		return nil, nil
 	}
 
-	repo := s.repos.NewItemCategoryRepo()
-
-	categories, apiErr := repo.GetByIDs(ctx, identity.Target.AccountID, ids)
+	categories, apiErr := readItemCategories(ctx, s.repos.NewItemCategoryRepo(), identity.Target.AccountID, ids)
 	if apiErr != nil {
 		return nil, tracing.Trace(span, apiErr)
+	}
+	return categories, nil
+}
+
+// readItemCategories reads categories whole: their properties, and their unit group with its base unit and units.
+func readItemCategories(ctx context.Context, repo domain.ItemCategoryRepo, accountID string, ids []string) ([]*domain.ItemCategoryFull, *apierror.APIError) {
+	categories, apiErr := repo.GetByIDs(ctx, accountID, ids)
+	if apiErr != nil {
+		return nil, apiErr
 	}
 
 	allIncludes := []string{"unit_group", "unit_group.base_unit", "unit_group.associated_units", "unit_group.associated_units.unit"}
@@ -229,11 +236,11 @@ func (s *itemCategorySvcImpl) BatchGetItemCategoriesByIDs(ctx context.Context, i
 	}
 	properties, apiErr := repo.GetPropertiesForCategories(ctx, categoryIDs)
 	if apiErr != nil {
-		return nil, tracing.Trace(span, apiErr)
+		return nil, apiErr
 	}
 	unitGroups, apiErr := repo.GetUnitGroups(ctx, unitGroupIDs, allIncludes)
 	if apiErr != nil {
-		return nil, tracing.Trace(span, apiErr)
+		return nil, apiErr
 	}
 	for _, cat := range categories {
 		cat.Properties = properties[cat.ID]
@@ -553,7 +560,7 @@ func (s *itemCategorySvcImpl) DeleteItemCategory(ctx context.Context, itemCatego
 	})
 	if apiErr != nil {
 		if apierror.IsNotFound(apiErr) {
-			wasDeleted, deletedCheckErr := s.repos.NewDeletedRecordRepo().Exists(ctx, constants.DeletedRecordResourceTypeItemCategory, itemCategoryID)
+			wasDeleted, deletedCheckErr := s.repos.NewDeletedRecordRepo().ExistsInAccount(ctx, constants.DeletedRecordResourceTypeItemCategory, itemCategoryID, accountID)
 			if deletedCheckErr != nil {
 				return tracing.Trace(span, deletedCheckErr)
 			}
@@ -565,7 +572,7 @@ func (s *itemCategorySvcImpl) DeleteItemCategory(ctx context.Context, itemCatego
 	}
 
 	apiErr = s.withTx(ctx, func(txCtx context.Context, txSvc *itemCategorySvcImpl) *apierror.APIError {
-		if apiErr := txSvc.repos.NewDeletedRecordRepo().Create(txCtx, constants.DeletedRecordResourceTypeItemCategory, category.ID, category); apiErr != nil {
+		if apiErr := txSvc.repos.NewDeletedRecordRepo().CreateInAccount(txCtx, constants.DeletedRecordResourceTypeItemCategory, category.ID, accountID, category); apiErr != nil {
 			return apiErr
 		}
 
@@ -708,6 +715,135 @@ func (s *itemCategorySvcImpl) AddItemCategoryProperty(ctx context.Context, param
 
 	default:
 		return tracing.Trace(span, apierror.NewInvariantViolationError("Unexpected recovery point: "+idempotencyKey.RecoveryPoint))
+	}
+}
+
+// CreateItemCategoryProperty creates a property and attaches it to the category in one transaction. The new property is part of the category edit, so item_categories:update alone authorizes it.
+func (s *itemCategorySvcImpl) CreateItemCategoryProperty(ctx context.Context, params domain.CreateItemCategoryPropertyParams) (*domain.Property, *apierror.APIError) {
+	ctx, span := itemCategorySvcTracer.Start(ctx, "service.item_category.create_property")
+	defer span.End()
+
+	identity, ok := appctx.GetIdentityFromContext(ctx)
+	if !ok || identity == nil {
+		return nil, tracing.Trace(span, apierror.NewInvariantViolationError("Identity not found in context."))
+	}
+
+	if apiErr := identity.CheckIsInternalActor(); apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
+	if apiErr := identity.CheckHasPermission(types.PermissionDomainCategories, types.ActionUpdate); apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
+
+	if domain.IsDefaultCategory(params.ItemCategoryID) {
+		return nil, tracing.Trace(span, apierror.NewAuthorizationError("Default categories cannot be updated."))
+	}
+
+	params.AccountID = identity.Target.AccountID
+
+	isInAccount, apiErr := s.repos.NewItemCategoryRepo().IsInAccount(ctx, params.AccountID, params.ItemCategoryID)
+	if apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
+	if !isInAccount {
+		return nil, tracing.Trace(span, apierror.NewResourceNotFoundError("Item category not found."))
+	}
+
+	propertyID, apiErr := id.GenID(id.PropertyIDPrefix, nil)
+	if apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
+
+	meds := s.mediators()
+
+	idempotencyKey, apiErr := meds.Idempotency.UpsertIdempotencyKey(ctx, identity)
+	if apiErr != nil {
+		return nil, apiErr
+	}
+
+	switch domain.RecoveryPoint(idempotencyKey.RecoveryPoint) {
+	case domain.RecoveryPointFinished:
+		cached, err := idempotency.UnmarshalCachedResponse[domain.Property](ctx, idempotencyKey.ResponseCode, idempotencyKey.ResponseBody)
+		if err != nil {
+			return nil, tracing.Trace(span, apierror.NewInternalError(err, "Issue unmarshalling cached response."))
+		}
+		return cached.Data, cached.Error
+
+	case domain.RecoveryPointStarted:
+		var result *domain.Property
+		apiErr = s.withTx(ctx, func(txCtx context.Context, txSvc *itemCategorySvcImpl) *apierror.APIError {
+			txRepo := txSvc.repos.NewItemCategoryRepo()
+			txPropertyRepo := txSvc.repos.NewPropertyRepo()
+
+			oldFull, apiErr := loadItemCategoryFullTx(txCtx, txRepo, params.AccountID, params.ItemCategoryID)
+			if apiErr != nil {
+				return apiErr
+			}
+
+			exists, apiErr := txPropertyRepo.ExistsByName(txCtx, params.AccountID, params.Name, nil)
+			if apiErr != nil {
+				return apiErr
+			}
+			if exists {
+				return apierror.NewConflictErrorWithParam("A property with this name already exists; add it to the category instead.", "name")
+			}
+			exists, apiErr = txRepo.PropertyExistsByNameInCategory(txCtx, params.AccountID, params.ItemCategoryID, params.Name, nil)
+			if apiErr != nil {
+				return apiErr
+			}
+			if exists {
+				return apierror.NewConflictErrorWithParam("A property with this name already exists in this category.", "name")
+			}
+
+			created, apiErr := txPropertyRepo.Create(txCtx, propertyID, domain.CreatePropertyParams{AccountID: params.AccountID, Name: params.Name})
+			if apiErr != nil {
+				return apiErr
+			}
+			result = created
+
+			if apiErr := audit.NewPublisher().Publish(txCtx, txSvc.repos.NewOutboxRepo(), audit.EventData{
+				ServiceName:  domain.ServiceName,
+				Action:       constants.AuditActionCreate,
+				ResourceType: constants.ObjectTypeProperty,
+				ResourceID:   created.ID,
+				Changes:      audit.ComputeChanges(nil, created),
+			}); apiErr != nil {
+				return apiErr
+			}
+
+			if apiErr := txRepo.AddProperty(txCtx, domain.AddItemCategoryPropertyParams{
+				AccountID:      params.AccountID,
+				ItemCategoryID: params.ItemCategoryID,
+				PropertyID:     created.ID,
+			}); apiErr != nil {
+				return apiErr
+			}
+
+			newFull, apiErr := loadItemCategoryFullTx(txCtx, txRepo, params.AccountID, params.ItemCategoryID)
+			if apiErr != nil {
+				return apiErr
+			}
+			if apiErr := audit.NewPublisher().Publish(txCtx, txSvc.repos.NewOutboxRepo(), audit.EventData{
+				ServiceName:  domain.ServiceName,
+				Action:       constants.AuditActionUpdate,
+				ResourceType: constants.ObjectTypeItemCategory,
+				ResourceID:   params.ItemCategoryID,
+				Changes:      audit.ComputeChanges(oldFull, newFull),
+			}); apiErr != nil {
+				return apiErr
+			}
+
+			return txSvc.mediators().Idempotency.CacheSuccessResponse(txCtx, idempotencyKey.TypeID, result)
+		})
+
+		if apiErr != nil {
+			return nil, meds.Idempotency.CacheErrorResponse(ctx, idempotencyKey.TypeID, apiErr)
+		}
+
+		return result, nil
+
+	default:
+		return nil, tracing.Trace(span, apierror.NewInvariantViolationError("Unexpected recovery point: "+idempotencyKey.RecoveryPoint))
 	}
 }
 

@@ -1,6 +1,10 @@
 package domain
 
-import "time"
+import (
+	"time"
+
+	"github.com/open-mrp/api/shared/field"
+)
 
 // ShippingCase represents a shipping case domain model with joined fields for reads.
 type ShippingCase struct {
@@ -56,9 +60,10 @@ type ShippingCase struct {
 
 // UpdateShippingCaseParams holds the parameters for updating a shipping case.
 type UpdateShippingCaseParams struct {
-	AccountID           string
-	ShippingCaseID      string
-	TrackingNumber      *string
+	AccountID      string
+	ShippingCaseID string
+	// Tri-state: unset keeps the tracking number, clear removes it.
+	TrackingNumber      field.Clearable[string]
 	FreightAmountValue  *string
 	FreightAmountUnitID *string
 	FreightWeightValue  *string
@@ -69,5 +74,6 @@ type UpdateShippingCaseParams struct {
 type AdminUpdateShippingCaseTrackingParams struct {
 	AccountID      string
 	ShippingCaseID string
-	TrackingNumber *string
+	// Tri-state: unset keeps the tracking number, clear removes it.
+	TrackingNumber field.Clearable[string]
 }

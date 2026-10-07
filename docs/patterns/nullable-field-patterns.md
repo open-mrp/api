@@ -56,16 +56,16 @@ type UpdateCustomerRequest struct {
 	// Settable but NOT clearable (column is non-nullable): field.Optional[T].
 	// Omit to leave unchanged; an explicit null is rejected.
 	Name field.Optional[string] `json:"name,omitzero" validate:"omitempty,max=255"`
-	// Settable AND clearable (nullable column): *field.Clearable[T].
+	// Settable AND clearable (nullable column): field.Clearable[T].
 	// Omit = leave; null = clear; value = set.
-	Note *field.Clearable[string] `json:"note,omitzero"`
+	Note field.Clearable[string] `json:"note,omitzero"`
 	// "Replace the whole collection when provided" — needs absent-vs-empty,
 	// so wrap the slice: field.Optional[[]T].
 	PriceGroupIDs field.Optional[[]string] `json:"customer_price_group_ids,omitzero"`
 }
 ```
 
-> **We do not use bare `*string` for PATCH inputs anymore.** A `*string` can't be told apart from `null` at decode time and silently treats `{"name": null}` as "leave unchanged," which is surprising. `field.Optional[T]` rejects the null explicitly. `*field.Clearable[T]` is the *only* request shape that accepts `null`, and it does so on purpose (to clear).
+> **We do not use bare `*string` for PATCH inputs anymore.** A `*string` can't be told apart from `null` at decode time and silently treats `{"name": null}` as "leave unchanged," which is surprising. `field.Optional[T]` rejects the null explicitly. `field.Clearable[T]` is the *only* request shape that accepts `null`, and it does so on purpose (to clear).
 
 ### 3. Responses (resource structs)
 
@@ -107,7 +107,7 @@ Add a new fragment to `pkg/request/` when a value + unit pairing shows up in a s
 | Context | Always present / required | Optional, not clearable | Clearable (accepts `null`) |
 |---------|---------------------------|-------------------------|----------------------------|
 | **Create / action** | `T` + `validate:"required"`, no tag | `field.Optional[T]` + `,omitzero` | — (creates don't clear) |
-| **Update / PATCH** | `T` (path params only) | `field.Optional[T]` + `,omitzero` | `*field.Clearable[T]` + `,omitzero` |
+| **Update / PATCH** | `T` (path params only) | `field.Optional[T]` + `,omitzero` | `field.Clearable[T]` + `,omitzero` |
 | **Response** | `T` + `validate:"required"` | `*T` (nullable, **no** omit tag) | `*T` (nullable, **no** omit tag) |
 
 Optional **slices**: `[]T` + `,omitzero` on create (absent vs. empty doesn't matter); `field.Optional[[]T]` on update when "provided replaces the collection" must be distinguishable from "omitted."
@@ -121,7 +121,7 @@ This is the rule that looks arbitrary until you know it:
 | You wrote | Use this json tag | Why |
 |-----------|-------------------|-----|
 | `field.Optional[T]` (value) | `,omitzero` | The wrapper implements `IsZero()`. `omitzero` (Go 1.24+) calls it, so an unset value is dropped from generated examples. `omitempty` does **not** call `IsZero` on a struct and would emit a broken `{}`. |
-| `*field.Clearable[T]` (pointer) | `,omitzero` | Nil pointer is the zero value, so `omitzero` drops it. (`omitempty` also works on pointers, but we standardize on `omitzero` everywhere in requests so there is one rule.) |
+| `field.Clearable[T]` (value) | `,omitzero` | Same as `Optional`: its unset state is what `IsZero()` reports, so `omitzero` drops it. |
 | `[]T` / `field.Optional[[]T]` | `,omitzero` | Same: one rule. |
 | `*T` in a **response** | **no omit tag** | Responses must serialize `null`, not drop the key. |
 
@@ -136,11 +136,11 @@ This is the rule that looks arbitrary until you know it:
 The gateway request pipeline (in `services/api-gateway/pkg/endpoint/api_endpoint.go`, `Execute`) runs, in order:
 
 1. **`DecodeJSONInto`** → `encoding/json` unmarshal. Each wrapper's custom `UnmarshalJSON` fires here.
-   - `field.Optional[T].UnmarshalJSON(null)` returns `field.ErrExplicitNull`; `Execute` catches it and `field.ExplicitNullField` turns it into a field-named `400 "Field 'x' cannot be null."`.
+   - `field.Optional[T].UnmarshalJSON(null)` returns `field.ErrExplicitNull`; `DecodeJSONInto` names the field from the body with `field.BadValuePath` and returns a field-named `400 "Field 'x' cannot be null."` (`Execute` falls back to `field.ExplicitNullField`).
+   - A value of the wrong type, or a malformed timestamp, inside a wrapper is a `400 invalid_format` whose `param` is the value's JSON path (`quantity.value`, `lines[1].quantity`). The wrapper decodes its value with its own `json.Unmarshal`, so the decoder's error carries no field; `field.BadValuePath` re-reads the body to find it.
    - `field.Clearable[T].UnmarshalJSON(null)` records the **clear** state (no error).
-2. **`field.ApplyPtrClearableNulls`** — `encoding/json` leaves a `*field.Clearable[T]` nil when the key is an explicit `null`, so this pass walks the raw body and restores the clear sentinel.
-3. **`validate.ApplySlicePresenceFlags`** — legacy `Has*` companions for a few slice fields.
-4. **`validate.RejectExplicitJSONNulls`** — the guard for everything that is *not* a wrapper:
+2. **`validate.ApplySlicePresenceFlags`** — legacy `Has*` companions for a few slice fields.
+3. **`validate.RejectExplicitJSONNulls`** — the guard for everything that is *not* a wrapper:
    - **Bare `*T` + `omitempty`**: rejects explicit `null` **and** blank/whitespace strings.
    - **`field.Clearable[T]`**: skipped (it accepts `null` by design).
    - **`field.Optional[T]`**: `null` was already rejected at step 1; this pass additionally rejects a present-but-**blank** string, so `{"name": ""}` is a `400 "Field 'x' must not be blank."` rather than silently setting `""`. (This applies uniformly to create and update Optional fields.)
@@ -151,7 +151,7 @@ Net behavior, by type:
 |------|---------------|---------------|-------------|--------------|
 | `T` + `required` | `400` (required) | `400` | depends on `validate` | set |
 | `field.Optional[T]` | unset (OK) | **`400` cannot be null** | **`400` must not be blank** | set |
-| `*field.Clearable[T]` | unset (OK) | **clear** | set to `""` | set |
+| `field.Clearable[T]` | unset (OK) | **clear** | set to `""` | set |
 
 ---
 
@@ -162,13 +162,14 @@ Net behavior, by type:
 if v, ok := req.Name.Value(); ok { /* provided */ }
 pbReq.Name = req.Name.Ptr()            // *T: non-nil only when set
 
-// *field.Clearable[T]
-c := field.Coalesce(req.Note)          // nil *Clearable -> Unset
-pbReq.Note = field.StringClearablePtrToProto(req.Note) // -> proto StringPatch
-val := c.StringPtrAfterBackfill(existing) // clear -> nil; set -> &v; unset -> existing
+// field.Clearable[T]
+pbReq.Note = field.StringClearableToProto(req.Note) // -> proto StringPatch; nil when unset
+note := field.StringClearableFromProto(pb.Note)     // core-service: back to Clearable
+note = note.BackfillUnsetPtr(existing)              // unset -> existing; clear and set kept
+val := note.StringPtrAfterBackfill(existing)         // clear -> nil; set -> &v; unset -> existing
 ```
 
-Key accessors: `Value() (T, bool)`, `Ptr() *T`, `IsSet()/IsUnset()` (both); `IsClear()/WasProvided()`, `BackfillUnset`, `Coalesce` (Clearable). Build samples with `field.Some(v)` / `field.SomePtr(&v)` (Optional) and `field.Set(v)` / `field.Ptr(...)` (Clearable) — never `&field.Optional[T]{}`.
+Key accessors: `Value() (T, bool)`, `Ptr() *T`, `IsSet()/IsUnset()` (both); `IsClear()/WasProvided()`, `BackfillUnset`, `BackfillUnsetPtr` (Clearable). Build samples with `field.Some(v)` / `field.SomePtr(&v)` (Optional) and `field.Set(v)` / `field.Ptr(...)` (Clearable) — never `&field.Optional[T]{}`.
 
 ---
 
@@ -178,11 +179,11 @@ Key accessors: `Value() (T, bool)`, `Ptr() *T`, `IsSet()/IsUnset()` (both); `IsC
 |---------------|------------|------------|-------|
 | `T` (no omit) | yes | no | |
 | `field.Optional[T]` | **no** (always optional) | **no** | documents inner `T`; rejects explicit null |
-| `*field.Clearable[T]` | no | **yes** | in a request body, nullable means "send null to clear" |
+| `field.Clearable[T]` | no | **yes** | in a request body, nullable means "send null to clear" |
 | `*T` + `omitempty` (legacy/none left) | no | no | |
 | `*T` no omit (**response only**) | yes | yes | "value or null" |
 
-You never set `required`/`nullable` by hand — the generator reads the type + tags. After changing any request struct, run `make openapi` and commit the regenerated spec.
+You never set `required`/`nullable` by hand — the generator reads the type + tags. After changing any request struct, run `make openapi`; the spec is generated, not committed.
 
 ---
 
@@ -192,7 +193,7 @@ You never set `required`/`nullable` by hand — the generator reads the type + t
 
 **PATCH, settable but not clearable:** `field.Optional[T]` + `json:"x,omitzero"`. Read with `.Ptr()`/`.Value()`.
 
-**PATCH, clearable (nullable column):** `*field.Clearable[T]` + `json:"x,omitzero"`. Map with the `field.*ClearablePtrToProto` helpers; in core-service use `field.Clearable`/backfill. `make openapi`.
+**PATCH, clearable (nullable column):** `field.Clearable[T]` + `json:"x,omitzero"`. Map with the `field.*ClearableToProto` helpers; in core-service read it back with `field.*ClearableFromProto` and backfill. `make openapi`.
 
 **Value that carries a unit:** the shared fragment — `apirequest.RateInput` / `QuantityInput` / `AddressInput` — not its parts as sibling scalars. On PATCH, `field.Optional[apirequest.RateInput]` (replaced whole).
 
@@ -209,4 +210,4 @@ A bare `*T` means different things in the two directions, distinguished only by 
 - **Request** `*T` + `omitempty` → "optional input, null rejected" (legacy; prefer `field.Optional`).
 - **Response** `*T`, no tag → "always present, may be `null`."
 
-If you find yourself reaching for a bare pointer on a *request*, you almost certainly want `field.Optional[T]` (set-or-absent) or `*field.Clearable[T]` (set/clear/absent) instead.
+If you find yourself reaching for a bare pointer on a *request*, you almost certainly want `field.Optional[T]` (set-or-absent) or `field.Clearable[T]` (set/clear/absent) instead.

@@ -258,10 +258,10 @@ Request structs model field *presence* through the field's type, not a bare poin
 | Context | Required / always present | Optional, not clearable | Clearable (accepts `null`) |
 |---------|---------------------------|-------------------------|----------------------------|
 | Create / action | `T` + `validate:"required"`, no omit tag | `field.Optional[T]` + `,omitzero` | — |
-| Update / PATCH | `T` (path params) | `field.Optional[T]` + `,omitzero` | `*field.Clearable[T]` + `,omitzero` |
+| Update / PATCH | `T` (path params) | `field.Optional[T]` + `,omitzero` | `field.Clearable[T]` + `,omitzero` |
 | Response | `T` + `validate:"required"` | `*T` (nullable, **no** omit tag) | `*T` (nullable, **no** omit tag) |
 
-Rules: every **request** field uses `,omitzero` (never `,omitempty`) on its json tag; `validate:"omitempty,..."` is a separate validator keyword and stays. `field.Optional[T]` rejects an explicit `null` and a blank string (`400`); `*field.Clearable[T]` is the only request shape that accepts `null` (to clear). Never use a bare `*T` for an optional *request* field, and never use `omitempty` on a *response* field. After changing any request struct, run `make openapi` and commit the regenerated spec.
+Rules: every **request** field uses `,omitzero` (never `,omitempty`) on its json tag; `validate:"omitempty,..."` is a separate validator keyword and stays. `field.Optional[T]` rejects an explicit `null` and a blank string (`400`); `field.Clearable[T]` is the only request shape that accepts `null` (to clear). Never use a bare `*T` for an optional *request* field, and never use `omitempty` on a *response* field. After changing any request struct, run `make openapi`; the spec is generated, not committed.
 
 ### Expandable subresources: real data on include, `null` otherwise (NON-NEGOTIABLE)
 

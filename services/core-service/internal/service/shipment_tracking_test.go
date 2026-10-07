@@ -6,9 +6,8 @@ import (
 	"testing"
 
 	"github.com/open-mrp/api/services/core-service/internal/domain"
-	clientmock "github.com/open-mrp/api/services/core-service/internal/domain/mock/client"
-	factorymock "github.com/open-mrp/api/services/core-service/internal/domain/mock/factory"
-	repositorymock "github.com/open-mrp/api/services/core-service/internal/domain/mock/repository"
+	"github.com/open-mrp/api/shared/constants"
+	apierror "github.com/open-mrp/api/shared/errors"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -27,46 +26,59 @@ func TestSandboxTrackingNumber(t *testing.T) {
 	assert.True(t, strings.HasPrefix(sandboxTrackingNumber("sh_1"), "SANDBOX-"))
 }
 
-func TestResolveShipmentTracking_Sandbox(t *testing.T) {
-	existing := "EXISTING-TRACK-123"
-	shipment := &domain.Shipment{ID: "sh_track_test_0001", AccountID: "ac_test", MasterTrackingNumber: &existing}
-
-	ctrl := gomock.NewController(t)
-	accountRepo := repositorymock.NewMockAccountRepo(ctrl)
-	accountRepo.EXPECT().GetAccountContext(gomock.Any(), shipment.AccountID).
-		Return(&domain.AccountContext{AccountID: shipment.AccountID, IsSandbox: true}, nil)
-	repoFactory := factorymock.NewMockRepoFactory(ctrl)
-	repoFactory.EXPECT().NewAccountRepo().Return(accountRepo).AnyTimes()
-
-	// The factory has no expectations: a sandbox ship must never reach Shippo.
-	shippoFactory := clientmock.NewMockShippoClientFactory(ctrl)
-
-	svc := &shipmentSvcImpl{repos: repoFactory, shippoFactory: shippoFactory}
-
-	got, apiErr := svc.resolveShipmentTracking(context.Background(), shipment, "idk_test")
-	require.Nil(t, apiErr)
-	require.NotNil(t, got)
-	assert.Equal(t, sandboxTrackingNumber(shipment.ID), *got)
-	assert.NotEqual(t, existing, *got)
+// Stubs the carrier and service level a live quote needs, for an account with no customer exemptions in play.
+func (h *labelHarness) expectQuotableCarrier() {
+	h.expectShippoCarrier()
+	token := "ups_ground"
+	h.serviceLevels.EXPECT().Get(gomock.Any(), testLabelAccountID, "crop_ground").
+		Return(&domain.ServiceLevel{ID: "crop_ground", ServiceLevelToken: &token}, nil)
 }
 
-func TestResolveShipmentTracking_NonSandboxBuysLabels(t *testing.T) {
+func estimateParams() domain.EstimateRateParams {
+	return domain.EstimateRateParams{
+		AccountID:      testLabelAccountID,
+		CarrierID:      "car_ups",
+		ServiceLevelID: "crop_ground",
+		FromAddress:    *testOrigin(),
+		ToAddress:      domain.ShippingAddress{Street1: "185 Berry St", City: "San Francisco", State: "CA", Zip: "94107", Country: "US"},
+		Parcels:        []domain.Parcel{{Weight: "5"}},
+	}
+}
+
+func TestEstimateShippingRate_InactiveIntegrationIsRefused(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	h := newLabelHarness(t, ctrl)
+	h.expectQuotableCarrier()
+	h.expectShippoCredentials(false)
 
-	accountRepo := repositorymock.NewMockAccountRepo(ctrl)
-	accountRepo.EXPECT().GetAccountContext(gomock.Any(), testLabelAccountID).
-		Return(&domain.AccountContext{AccountID: testLabelAccountID, IsSandbox: false}, nil)
-	h.repoFactory.EXPECT().NewAccountRepo().Return(accountRepo).AnyTimes()
+	// The Shippo client carries no expectations: an inactive integration is never quoted against.
+	_, apiErr := estimateShippingRate(context.Background(), h.repoFactory, h.svc.shippoFactory, testEncryptionKey(), estimateParams())
+	require.NotNil(t, apiErr)
+	assert.Equal(t, "Shippo integration is inactive.", apiErr.PublicMessage)
+}
 
-	h.expectSuccessfulPurchase(&domain.LabelResult{
-		MasterTrackingNumber: "1Z-MASTER",
-		Packages: []domain.LabelPackage{
-			{TrackingNumber: "1Z-CASE-1", LabelURL: "https://shippo/label1.png", ShippoTransactionID: "txn_1"},
-		},
-	})
+// A carrier that answers without a rate is unavailable; quoting it as 0 would post free freight.
+func TestEstimateShippingRate_MissingRateIsUnavailableNotFree(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	h := newLabelHarness(t, ctrl)
+	h.expectQuotableCarrier()
+	h.expectShippoCredentials(true)
+	h.shippoClient.EXPECT().FetchShippingRate(gomock.Any(), gomock.Any()).
+		Return(0.0, domain.NewShippingRateUnavailableError("no rate"))
 
-	got, apiErr := h.svc.resolveShipmentTracking(context.Background(), h.shipment, "idk_test")
+	rate, apiErr := estimateShippingRate(context.Background(), h.repoFactory, h.svc.shippoFactory, testEncryptionKey(), estimateParams())
+	require.NotNil(t, apiErr)
+	assert.Equal(t, apierror.ErrorCodeSvcUnavailable, apiErr.Code)
+	assert.True(t, apiErr.IsTransient, "the carrier may answer on a retry")
+	assert.Zero(t, rate)
+}
+
+func TestAccountShippoClient_NoIntegrationSkipsTheCarrier(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	h := newLabelHarness(t, ctrl)
+	h.integrationRepo.EXPECT().HasIntegration(gomock.Any(), testLabelAccountID, constants.IntegrationCodeShippo).Return(false, nil)
+
+	client, apiErr := accountShippoClient(context.Background(), h.repoFactory, h.svc.shippoFactory, testEncryptionKey(), testLabelAccountID)
 	require.Nil(t, apiErr)
-	assert.Nil(t, got, "a live purchase persists the master tracking itself")
+	assert.Nil(t, client)
 }

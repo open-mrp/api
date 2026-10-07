@@ -46,61 +46,7 @@ func mapRateFromRow(id, value sql.NullString, numID, numAbbr, numType, denID, de
 	}
 }
 
-func mapListForwardRow(row sqlc.ListProductionStepsForwardRow) *domain.ProductionStep {
-	step := &domain.ProductionStep{
-		ID:             row.ID,
-		Name:           row.Name,
-		Notes:          nullStringToPtr(row.Notes),
-		LevelingFactor: row.LevelingFactor,
-		Allowances:     row.Allowances,
-		DepartmentID:   nullStringToPtr(row.DepartmentID),
-		CreatedAt:      row.CreatedAt,
-		UpdatedAt:      row.UpdatedAt,
-		Production: &domain.Production{
-			ID:              row.ProductionID,
-			ItemID:          row.ProducedItemID,
-			ItemSKU:         row.ProducedItemSku,
-			ItemDescription: nullStringToPtr(row.ProducedItemDescription),
-			ItemTypeCode:    row.ProducedItemTypeCode,
-			Quantity: domain.Quantity{
-				ID:               row.ProducedQuantityID,
-				Value:            row.ProducedQuantityValue,
-				UnitID:           row.ProducedUnitID,
-				UnitAbbreviation: row.ProducedUnitAbbreviation,
-				UnitType:         row.ProducedUnitType,
-			},
-			ProductionStepID: row.ID,
-			CreatedAt:        row.ProductionCreatedAt,
-			UpdatedAt:        row.ProductionUpdatedAt,
-		},
-		LaborRate: mapRateFromRow(
-			row.LaborRateID, row.LaborRateValue,
-			row.LaborRateNumUnitID, row.LaborRateNumUnitAbbr, row.LaborRateNumUnitType,
-			row.LaborRateDenUnitID, row.LaborRateDenUnitAbbr, row.LaborRateDenUnitType,
-		),
-		LaborTime: mapRateFromRow(
-			row.LaborTimeID, row.LaborTimeValue,
-			row.LaborTimeNumUnitID, row.LaborTimeNumUnitAbbr, row.LaborTimeNumUnitType,
-			row.LaborTimeDenUnitID, row.LaborTimeDenUnitAbbr, row.LaborTimeDenUnitType,
-		),
-		OverheadRate: mapRateFromRow(
-			row.OverheadRateID, row.OverheadRateValue,
-			row.OverheadRateNumUnitID, row.OverheadRateNumUnitAbbr, row.OverheadRateNumUnitType,
-			row.OverheadRateDenUnitID, row.OverheadRateDenUnitAbbr, row.OverheadRateDenUnitType,
-		),
-	}
-
-	if row.ScanningStationID.Valid {
-		step.ScanningStation = &domain.LightScanningStation{
-			ID:   row.ScanningStationID.String,
-			Name: row.ScanningStationName.String,
-		}
-	}
-
-	return step
-}
-
-func mapListBackwardRow(row sqlc.ListProductionStepsBackwardRow) *domain.ProductionStep {
+func mapListRow(row sqlc.ListProductionStepsByIDsRow) *domain.ProductionStep {
 	step := &domain.ProductionStep{
 		ID:             row.ID,
 		Name:           row.Name,
@@ -208,54 +154,6 @@ func mapGetFullRow(row sqlc.GetProductionStepFullRow) *domain.ProductionStep {
 	return step
 }
 
-func (r *productionStepRepoImpl) buildListParams(params domain.ListProductionStepsParams) (searchQuery sql.NullString, includeItemFilter, includeMachineFilter, includeScanningStationFilter, includeInputStepFilter, includeOutputStepFilter bool, itemIDs, machineIDs []string, scanningStationIDs []sql.NullString, inputStepIDs, outputStepIDs []string, startDate, endDate sql.NullTime) {
-	if params.Query != nil && *params.Query != "" {
-		searchQuery = sql.NullString{String: *params.Query + "*", Valid: true}
-	}
-
-	includeItemFilter = len(params.ItemIDs) > 0
-	itemIDs = params.ItemIDs
-	if itemIDs == nil {
-		itemIDs = []string{}
-	}
-
-	includeMachineFilter = len(params.MachineIDs) > 0
-	machineIDs = params.MachineIDs
-	if machineIDs == nil {
-		machineIDs = []string{}
-	}
-
-	includeScanningStationFilter = len(params.ScanningStationIDs) > 0
-	scanningStationIDs = make([]sql.NullString, len(params.ScanningStationIDs))
-	for i, id := range params.ScanningStationIDs {
-		scanningStationIDs[i] = sql.NullString{String: id, Valid: true}
-	}
-	if len(scanningStationIDs) == 0 {
-		scanningStationIDs = []sql.NullString{}
-	}
-
-	includeInputStepFilter = len(params.InputStepIDs) > 0
-	inputStepIDs = params.InputStepIDs
-	if inputStepIDs == nil {
-		inputStepIDs = []string{}
-	}
-
-	includeOutputStepFilter = len(params.OutputStepIDs) > 0
-	outputStepIDs = params.OutputStepIDs
-	if outputStepIDs == nil {
-		outputStepIDs = []string{}
-	}
-
-	if params.StartDate != nil {
-		startDate = sql.NullTime{Time: *params.StartDate, Valid: true}
-	}
-	if params.EndDate != nil {
-		endDate = sql.NullTime{Time: *params.EndDate, Valid: true}
-	}
-
-	return
-}
-
 func (r *productionStepRepoImpl) enrichSteps(ctx context.Context, steps []*domain.ProductionStep) *apierror.APIError {
 	for _, step := range steps {
 		machines, apiErr := r.GetMachines(ctx, step.ID)
@@ -330,110 +228,56 @@ func (r *productionStepRepoImpl) List(ctx context.Context, params domain.ListPro
 	ctx, span := productionStepRepoTracer.Start(ctx, "repository.production_step.list")
 	defer span.End()
 
-	searchQuery, includeItemFilter, includeMachineFilter, includeScanningStationFilter, includeInputStepFilter, includeOutputStepFilter, itemIDs, machineIDs, scanningStationIDs, inputStepIDs, outputStepIDs, startDate, endDate := r.buildListParams(params)
-
+	var cursor *stepListCursor
 	var cursorDir *pagination.Direction
-
 	if params.Cursor != nil {
 		cur, err := pagination.DecodeStringCursor(*params.Cursor)
 		if err != nil {
 			return nil, apierror.NewValidationErrorWithParam("Invalid pagination cursor.", "cursor")
 		}
 		cursorDir = &cur.Direction
-
-		if cur.Direction == pagination.DirectionBackward {
-			rows, err := r.queries.ListProductionStepsBackward(ctx, sqlc.ListProductionStepsBackwardParams{
-				AccountID:                    params.AccountID,
-				SearchQuery:                  searchQuery,
-				IncludeItemFilter:            includeItemFilter,
-				ItemIds:                      itemIDs,
-				IncludeMachineFilter:         includeMachineFilter,
-				MachineIds:                   machineIDs,
-				IncludeScanningStationFilter: includeScanningStationFilter,
-				ScanningStationIds:           scanningStationIDs,
-				IncludeInputStepFilter:       includeInputStepFilter,
-				InputStepIds:                 inputStepIDs,
-				IncludeOutputStepFilter:      includeOutputStepFilter,
-				OutputStepIds:                outputStepIDs,
-				StartDate:                    startDate,
-				EndDate:                      endDate,
-				CursorCreatedAt:              cur.OccurredAt,
-				CursorID:                     cur.ID,
-				Limit:                        params.Limit + 1,
-			})
-			if apiErr := db.MapSQLError(err); apiErr != nil {
-				return nil, tracing.Trace(span, apiErr)
-			}
-			steps := make([]*domain.ProductionStep, len(rows))
-			for i, row := range rows {
-				steps[i] = mapListBackwardRow(row)
-			}
-			result, pageInfo := pagination.BuildPageString(steps, params.Limit, cursorDir, psCreatedAt, psID)
-			if apiErr := r.enrichSteps(ctx, result); apiErr != nil {
-				return nil, tracing.Trace(span, apiErr)
-			}
-			return &domain.ListProductionStepsResult{Steps: result, PageInfo: pageInfo}, nil
-		}
-
-		rows, err := r.queries.ListProductionStepsForward(ctx, sqlc.ListProductionStepsForwardParams{
-			AccountID:                    params.AccountID,
-			SearchQuery:                  searchQuery,
-			IncludeItemFilter:            includeItemFilter,
-			ItemIds:                      itemIDs,
-			IncludeMachineFilter:         includeMachineFilter,
-			MachineIds:                   machineIDs,
-			IncludeScanningStationFilter: includeScanningStationFilter,
-			ScanningStationIds:           scanningStationIDs,
-			IncludeInputStepFilter:       includeInputStepFilter,
-			InputStepIds:                 inputStepIDs,
-			IncludeOutputStepFilter:      includeOutputStepFilter,
-			OutputStepIds:                outputStepIDs,
-			StartDate:                    startDate,
-			EndDate:                      endDate,
-			CursorCreatedAt:              sql.NullTime{Time: cur.OccurredAt, Valid: true},
-			CursorID:                     sql.NullString{String: cur.ID, Valid: true},
-			Limit:                        params.Limit + 1,
-		})
-		if apiErr := db.MapSQLError(err); apiErr != nil {
-			return nil, tracing.Trace(span, apiErr)
-		}
-		steps := make([]*domain.ProductionStep, len(rows))
-		for i, row := range rows {
-			steps[i] = mapListForwardRow(row)
-		}
-		result, pageInfo := pagination.BuildPageString(steps, params.Limit, cursorDir, psCreatedAt, psID)
-		if apiErr := r.enrichSteps(ctx, result); apiErr != nil {
-			return nil, tracing.Trace(span, apiErr)
-		}
-		return &domain.ListProductionStepsResult{Steps: result, PageInfo: pageInfo}, nil
+		cursor = &stepListCursor{createdAt: cur.OccurredAt, id: cur.ID, backward: cur.Direction == pagination.DirectionBackward}
 	}
 
-	// No cursor — first page
-	rows, err := r.queries.ListProductionStepsForward(ctx, sqlc.ListProductionStepsForwardParams{
-		AccountID:                    params.AccountID,
-		SearchQuery:                  searchQuery,
-		IncludeItemFilter:            includeItemFilter,
-		ItemIds:                      itemIDs,
-		IncludeMachineFilter:         includeMachineFilter,
-		MachineIds:                   machineIDs,
-		IncludeScanningStationFilter: includeScanningStationFilter,
-		ScanningStationIds:           scanningStationIDs,
-		IncludeInputStepFilter:       includeInputStepFilter,
-		InputStepIds:                 inputStepIDs,
-		IncludeOutputStepFilter:      includeOutputStepFilter,
-		OutputStepIds:                outputStepIDs,
-		StartDate:                    startDate,
-		EndDate:                      endDate,
-		Limit:                        params.Limit + 1,
-	})
+	// The page is chosen from the steps alone, then its rows read by ID.
+	query, args := buildStepListPageQuery(params, cursor, params.Limit+1)
+	idRows, err := r.queries.DB().QueryContext(ctx, query, args...)
 	if apiErr := db.MapSQLError(err); apiErr != nil {
 		return nil, tracing.Trace(span, apiErr)
 	}
-
-	steps := make([]*domain.ProductionStep, len(rows))
-	for i, row := range rows {
-		steps[i] = mapListForwardRow(row)
+	var ids []string
+	for idRows.Next() {
+		var id string
+		if err := idRows.Scan(&id); err != nil {
+			_ = idRows.Close()
+			return nil, tracing.Trace(span, apierror.NewInternalError(err, "Failed to read production step page."))
+		}
+		ids = append(ids, id)
 	}
+	if err := idRows.Close(); err != nil {
+		return nil, tracing.Trace(span, apierror.NewInternalError(err, "Failed to read production step page."))
+	}
+	if apiErr := db.MapSQLError(idRows.Err()); apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
+
+	steps := make([]*domain.ProductionStep, 0, len(ids))
+	if len(ids) > 0 {
+		rows, err := r.queries.ListProductionStepsByIDs(ctx, sqlc.ListProductionStepsByIDsParams{AccountID: params.AccountID, Ids: ids})
+		if apiErr := db.MapSQLError(err); apiErr != nil {
+			return nil, tracing.Trace(span, apiErr)
+		}
+		byID := make(map[string]*domain.ProductionStep, len(rows))
+		for _, row := range rows {
+			byID[row.ID] = mapListRow(row)
+		}
+		for _, id := range ids {
+			if step, ok := byID[id]; ok {
+				steps = append(steps, step)
+			}
+		}
+	}
+
 	result, pageInfo := pagination.BuildPageString(steps, params.Limit, cursorDir, psCreatedAt, psID)
 	if apiErr := r.enrichSteps(ctx, result); apiErr != nil {
 		return nil, tracing.Trace(span, apiErr)
@@ -498,6 +342,8 @@ func (r *productionStepRepoImpl) Update(ctx context.Context, params domain.Updat
 		Allowances:            ptrToNullString(params.Allowances),
 		UpdateScanningStation: params.ScanningStationID != nil,
 		ScanningStationID:     ptrToNullString(params.ScanningStationID),
+		UpdateNotes:           params.Notes.WasProvided(),
+		Notes:                 ptrToNullString(params.Notes.ValuePtr()),
 	})
 	if apiErr := db.MapSQLError(err); apiErr != nil {
 		return tracing.Trace(span, apiErr)
@@ -588,6 +434,7 @@ func (r *productionStepRepoImpl) DeleteOwnedRows(ctx context.Context, id string)
 		func() error { return r.queries.DeleteProductionStepProductions(ctx, stepID) },
 		func() error { return r.queries.DeleteProductionStepConsumptions(ctx, stepID) },
 		func() error { return r.queries.ClearProductionStepFromMachines(ctx, stepID) },
+		func() error { return r.queries.ClearProductionStepFromBatches(ctx, stepID) },
 	}
 	for _, step := range steps {
 		if apiErr := db.MapSQLError(step()); apiErr != nil {
@@ -641,7 +488,8 @@ func (r *productionStepRepoImpl) GetMachines(ctx context.Context, id string) ([]
 
 	machines := make([]domain.LightMachine, len(rows))
 	for i, row := range rows {
-		machines[i] = domain.LightMachine{ID: row.ID, Name: row.Name}
+		departmentID := row.DepartmentID
+		machines[i] = domain.LightMachine{ID: row.ID, Name: row.Name, SerialNumber: row.SerialNumber, DepartmentID: &departmentID}
 	}
 	return machines, nil
 }

@@ -1,6 +1,8 @@
 package idempotency
 
 import (
+	"crypto/sha256"
+	"encoding/hex"
 	"encoding/json"
 	"testing"
 )
@@ -289,8 +291,8 @@ func TestComputeServiceScopeHash_NilVsEmptyTargetAccountID(t *testing.T) {
 func TestComputeRequestBodyHash_SameBodySameHash(t *testing.T) {
 	t.Parallel()
 	body := []byte(`{"name":"test","value":1}`)
-	hash1 := ComputeRequestBodyHash(body, nil)
-	hash2 := ComputeRequestBodyHash(body, nil)
+	hash1 := ComputeRequestBodyHash(body, nil, nil)
+	hash2 := ComputeRequestBodyHash(body, nil, nil)
 	if hash1 != hash2 {
 		t.Errorf("expected same hash, got %s and %s", hash1, hash2)
 	}
@@ -300,8 +302,8 @@ func TestComputeRequestBodyHash_KeyOrderInsensitive(t *testing.T) {
 	t.Parallel()
 	body1 := []byte(`{"name":"test","value":1}`)
 	body2 := []byte(`{"value":1,"name":"test"}`)
-	hash1 := ComputeRequestBodyHash(body1, nil)
-	hash2 := ComputeRequestBodyHash(body2, nil)
+	hash1 := ComputeRequestBodyHash(body1, nil, nil)
+	hash2 := ComputeRequestBodyHash(body2, nil, nil)
 	if hash1 != hash2 {
 		t.Errorf("expected same hash regardless of JSON key order, got %s and %s", hash1, hash2)
 	}
@@ -311,8 +313,8 @@ func TestComputeRequestBodyHash_DifferentBodyDifferentHash(t *testing.T) {
 	t.Parallel()
 	body1 := []byte(`{"name":"a"}`)
 	body2 := []byte(`{"name":"b"}`)
-	hash1 := ComputeRequestBodyHash(body1, nil)
-	hash2 := ComputeRequestBodyHash(body2, nil)
+	hash1 := ComputeRequestBodyHash(body1, nil, nil)
+	hash2 := ComputeRequestBodyHash(body2, nil, nil)
 	if hash1 == hash2 {
 		t.Errorf("expected different hashes for different bodies, got same: %s", hash1)
 	}
@@ -322,13 +324,13 @@ func TestComputeRequestBodyHash_WithParams(t *testing.T) {
 	t.Parallel()
 	body := []byte(`{"name":"test"}`)
 	params := map[string]string{"page": "1", "limit": "10"}
-	hash := ComputeRequestBodyHash(body, params)
+	hash := ComputeRequestBodyHash(body, params, nil)
 	if hash == "" {
 		t.Error("expected non-empty hash")
 	}
 
 	// Same params, same hash
-	hash2 := ComputeRequestBodyHash(body, params)
+	hash2 := ComputeRequestBodyHash(body, params, nil)
 	if hash != hash2 {
 		t.Errorf("expected same hash for same params, got %s and %s", hash, hash2)
 	}
@@ -339,8 +341,8 @@ func TestComputeRequestBodyHash_ParamOrderInsensitive(t *testing.T) {
 	body := []byte(`{}`)
 	params1 := map[string]string{"b": "2", "a": "1"}
 	params2 := map[string]string{"a": "1", "b": "2"}
-	hash1 := ComputeRequestBodyHash(body, params1)
-	hash2 := ComputeRequestBodyHash(body, params2)
+	hash1 := ComputeRequestBodyHash(body, params1, nil)
+	hash2 := ComputeRequestBodyHash(body, params2, nil)
 	if hash1 != hash2 {
 		t.Errorf("expected same hash regardless of param order, got %s and %s", hash1, hash2)
 	}
@@ -349,8 +351,8 @@ func TestComputeRequestBodyHash_ParamOrderInsensitive(t *testing.T) {
 func TestComputeRequestBodyHash_DifferentParamsDifferentHash(t *testing.T) {
 	t.Parallel()
 	body := []byte(`{}`)
-	hash1 := ComputeRequestBodyHash(body, map[string]string{"page": "1"})
-	hash2 := ComputeRequestBodyHash(body, map[string]string{"page": "2"})
+	hash1 := ComputeRequestBodyHash(body, map[string]string{"page": "1"}, nil)
+	hash2 := ComputeRequestBodyHash(body, map[string]string{"page": "2"}, nil)
 	if hash1 == hash2 {
 		t.Errorf("expected different hashes for different params, got same: %s", hash1)
 	}
@@ -359,8 +361,8 @@ func TestComputeRequestBodyHash_DifferentParamsDifferentHash(t *testing.T) {
 func TestComputeRequestBodyHash_NilVsEmptyParams(t *testing.T) {
 	t.Parallel()
 	body := []byte(`{"name":"test"}`)
-	hashNil := ComputeRequestBodyHash(body, nil)
-	hashEmpty := ComputeRequestBodyHash(body, map[string]string{})
+	hashNil := ComputeRequestBodyHash(body, nil, nil)
+	hashEmpty := ComputeRequestBodyHash(body, map[string]string{}, nil)
 	if hashNil != hashEmpty {
 		t.Errorf("expected same hash for nil and empty params, got %s and %s", hashNil, hashEmpty)
 	}
@@ -368,7 +370,7 @@ func TestComputeRequestBodyHash_NilVsEmptyParams(t *testing.T) {
 
 func TestComputeRequestBodyHash_EmptyBody(t *testing.T) {
 	t.Parallel()
-	hash := ComputeRequestBodyHash([]byte{}, nil)
+	hash := ComputeRequestBodyHash([]byte{}, nil, nil)
 	if hash == "" {
 		t.Error("expected non-empty hash for empty body")
 	}
@@ -377,8 +379,8 @@ func TestComputeRequestBodyHash_EmptyBody(t *testing.T) {
 func TestComputeRequestBodyHash_InvalidJSON_FallsBackToRawBody(t *testing.T) {
 	t.Parallel()
 	body := []byte(`not valid json`)
-	hash1 := ComputeRequestBodyHash(body, nil)
-	hash2 := ComputeRequestBodyHash(body, nil)
+	hash1 := ComputeRequestBodyHash(body, nil, nil)
+	hash2 := ComputeRequestBodyHash(body, nil, nil)
 	if hash1 != hash2 {
 		t.Errorf("expected deterministic hash for invalid JSON, got %s and %s", hash1, hash2)
 	}
@@ -388,8 +390,8 @@ func TestComputeRequestBodyHash_NestedJSON(t *testing.T) {
 	t.Parallel()
 	body1 := []byte(`{"outer":{"b":2,"a":1}}`)
 	body2 := []byte(`{"outer":{"a":1,"b":2}}`)
-	hash1 := ComputeRequestBodyHash(body1, nil)
-	hash2 := ComputeRequestBodyHash(body2, nil)
+	hash1 := ComputeRequestBodyHash(body1, nil, nil)
+	hash2 := ComputeRequestBodyHash(body2, nil, nil)
 	if hash1 != hash2 {
 		t.Errorf("expected same hash for nested JSON with reordered keys, got %s and %s", hash1, hash2)
 	}
@@ -399,10 +401,59 @@ func TestComputeRequestBodyHash_WhitespaceInsensitive(t *testing.T) {
 	t.Parallel()
 	compact := []byte(`{"a":1,"b":2}`)
 	pretty := []byte(`{  "a" : 1 ,  "b" : 2  }`)
-	hash1 := ComputeRequestBodyHash(compact, nil)
-	hash2 := ComputeRequestBodyHash(pretty, nil)
+	hash1 := ComputeRequestBodyHash(compact, nil, nil)
+	hash2 := ComputeRequestBodyHash(pretty, nil, nil)
 	if hash1 != hash2 {
 		t.Errorf("expected same hash regardless of whitespace, got %s and %s", hash1, hash2)
+	}
+}
+
+// A key reused on another resource under the same route must not match the first request.
+func TestComputeRequestBodyHash_DifferentPathParamsDifferentHash(t *testing.T) {
+	t.Parallel()
+	body := []byte(`{"quantity":"1"}`)
+	hashA := ComputeRequestBodyHash(body, nil, map[string]string{"id": "itm_a"})
+	hashB := ComputeRequestBodyHash(body, nil, map[string]string{"id": "itm_b"})
+	if hashA == hashB {
+		t.Errorf("expected different hashes for different path parameters, got same: %s", hashA)
+	}
+	if again := ComputeRequestBodyHash(body, nil, map[string]string{"id": "itm_a"}); again != hashA {
+		t.Errorf("expected same hash for the same path parameters, got %s and %s", hashA, again)
+	}
+}
+
+func TestComputeRequestBodyHash_SwappedPathParamValuesDifferentHash(t *testing.T) {
+	t.Parallel()
+	body := []byte(`{}`)
+	hash1 := ComputeRequestBodyHash(body, nil, map[string]string{"id": "itm_a", "attribute_id": "at_b"})
+	hash2 := ComputeRequestBodyHash(body, nil, map[string]string{"id": "at_b", "attribute_id": "itm_a"})
+	if hash1 == hash2 {
+		t.Errorf("expected different hashes when path parameter values swap, got same: %s", hash1)
+	}
+}
+
+func TestComputeRequestBodyHash_PathParamIsNotAQueryParam(t *testing.T) {
+	t.Parallel()
+	body := []byte(`{}`)
+	asQuery := ComputeRequestBodyHash(body, map[string]string{"id": "itm_a"}, nil)
+	asPath := ComputeRequestBodyHash(body, nil, map[string]string{"id": "itm_a"})
+	if asQuery == asPath {
+		t.Errorf("expected a query parameter and a path parameter of the same name and value to differ, got same: %s", asQuery)
+	}
+}
+
+// Keys stored for routes without path parameters must keep matching their retries.
+func TestComputeRequestBodyHash_WithoutPathParamsIsBodyAndQueryDigest(t *testing.T) {
+	t.Parallel()
+	body := []byte(`{"name":"test"}`)
+	query := map[string]string{"page": "1", "limit": "10"}
+	sum := sha256.Sum256([]byte(`{"name":"test"}` + "\x1flimit=10\x1fpage=1"))
+	want := hex.EncodeToString(sum[:])
+
+	for name, pathParams := range map[string]map[string]string{"nil": nil, "empty": {}} {
+		if got := ComputeRequestBodyHash(body, query, pathParams); got != want {
+			t.Errorf("%s path parameters: got %s, want %s", name, got, want)
+		}
 	}
 }
 

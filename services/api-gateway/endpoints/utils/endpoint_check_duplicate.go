@@ -23,7 +23,7 @@ type CheckDuplicateRequest struct {
 	Type constants.DuplicateCheckType `json:"type" validate:"required"`
 	// The record number to check for an existing match.
 	//
-	// Surrounding whitespace is trimmed before the number is compared against existing records.
+	// Surrounding whitespace is trimmed before the number is compared against existing records, and a number that is only whitespace is refused.
 	RecordNumber string `json:"record_number" validate:"required"`
 	// ID of the customer to scope the check to.
 	//

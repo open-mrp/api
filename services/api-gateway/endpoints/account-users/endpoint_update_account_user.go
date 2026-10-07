@@ -41,7 +41,7 @@ type UpdateAccountUserRequest struct {
 	IsCommissionEligible field.Optional[bool] `json:"is_commission_eligible,omitzero"`
 	// Notification preference toggles to apply.
 	//
-	// Only allowed when updating a user in another account you manage (cross-account); rejected otherwise. Notification types omitted from the list are left unchanged.
+	// Only allowed when updating a user in a customer or supplier account you manage; rejected otherwise. Notification types omitted from the list are left unchanged, and the result is returned in `notification_types`.
 	Preferences []NotificationPreferenceItem `json:"preferences,omitzero"`
 }
 
@@ -72,15 +72,16 @@ type UpdateAccountUserEndpoint struct{}
 
 func (e *UpdateAccountUserEndpoint) Materialize() *apiendpoint.APIEndpoint[*UpdateAccountUserRequest, *apiresource.AccountUser] {
 	return (&apiendpoint.APIEndpoint[*UpdateAccountUserRequest, *apiresource.AccountUser]{
-		Title:               "Update Account User",
-		Method:              http.MethodPatch,
-		ContentType:         "application/json",
-		Route:               "/v1/identity/account-users/{id}",
-		SuccessStatusCode:   http.StatusOK,
-		Public:              true,
-		AgentTool:           true,
-		RequiredPermissions: []types.Permission{{Domain: types.PermissionDomainTeamUsers, Action: types.ActionUpdate}, {Domain: types.PermissionDomainCustomers, Action: types.ActionUpdate}, {Domain: types.PermissionDomainSuppliers, Action: types.ActionUpdate}},
-		Preview:             true,
+		Title:                   "Update Account User",
+		Method:                  http.MethodPatch,
+		ContentType:             "application/json",
+		Route:                   "/v1/identity/account-users/{id}",
+		SuccessStatusCode:       http.StatusOK,
+		Public:                  true,
+		AgentTool:               true,
+		RequiredPermissions:     []types.Permission{{Domain: types.PermissionDomainTeamUsers, Action: types.ActionUpdate}},
+		CounterpartyPermissions: apiendpoint.Counterparties(types.ActionUpdate),
+		Preview:                 true,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *UpdateAccountUserRequest) (*apiresource.AccountUser, *apierror.APIError) {
 			return svc.(AccountUserSvc).UpdateAccountUser
 		},

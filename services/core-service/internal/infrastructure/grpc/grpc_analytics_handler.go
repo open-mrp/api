@@ -145,38 +145,18 @@ func (h *gRPCHandler) AnalyzeProductionCosts(ctx context.Context, req *pb.Analyz
 		DepartmentIDs:  req.DepartmentIds,
 		CategoryIDs:    req.CategoryIds,
 	}
-
 	if req.StartDate != nil {
-		t := req.StartDate.AsTime()
-		params.StartDate = &t
+		params.StartDate = req.StartDate.AsTime()
 	}
 	if req.EndDate != nil {
-		t := req.EndDate.AsTime()
-		params.EndDate = &t
+		params.EndDate = req.EndDate.AsTime()
 	}
 
-	entries, apiErr := h.analyticsSvc.AnalyzeProductionCosts(ctx, params)
+	report, apiErr := h.analyticsSvc.AnalyzeProductionCosts(ctx, params)
 	if apiErr != nil {
 		return nil, contracts.ConvertAPIErrorToGRPC(apiErr)
 	}
-
-	pbEntries := make([]*pb.ProductionCostEntryProto, len(entries))
-	for i, e := range entries {
-		pbEntries[i] = &pb.ProductionCostEntryProto{
-			TotalCosts: &pb.CostBreakdown{
-				Total: &pb.BaseQuantity{
-					Measure: e.TotalCost,
-					Unit: &pb.BaseQuantityUnitProto{
-						Abbreviation: e.Unit,
-					},
-				},
-			},
-		}
-	}
-
-	return &pb.AnalyzeProductionCostsResponse{
-		Items: pbEntries,
-	}, nil
+	return productionCostReportToProto(report), nil
 }
 
 func (h *gRPCHandler) AnalyzeDeliveries(ctx context.Context, req *pb.AnalyzeDeliveriesRequest) (*pb.AnalyzeDeliveriesResponse, error) {
@@ -378,6 +358,7 @@ func (h *gRPCHandler) AnalyzeQuarterlyOrders(ctx context.Context, req *pb.Analyz
 		ProductLineIDs:   req.ProductLineIds,
 		CustomerIDs:      req.CustomerIds,
 		CustomerGroupIDs: req.CustomerGroupIds,
+		YearsBack:        req.GetYearsBack(),
 	}
 
 	years, apiErr := h.analyticsSvc.AnalyzeQuarterlyOrders(ctx, params)
@@ -530,6 +511,7 @@ func (h *gRPCHandler) AnalyzeInventoryReceipts(ctx context.Context, req *pb.Anal
 				Unit: &pb.BaseQuantityUnitProto{
 					Name:         e.UnitName,
 					Abbreviation: e.Unit,
+					Type:         e.UnitType,
 				},
 			},
 			WeightedAverageUnitCost: &pb.AnalyticsRateProto{
@@ -538,6 +520,7 @@ func (h *gRPCHandler) AnalyzeInventoryReceipts(ctx context.Context, req *pb.Anal
 					Unit: &pb.BaseQuantityUnitProto{
 						Name:         e.CostNumeratorUnitName,
 						Abbreviation: e.CostNumeratorUnitAbbreviation,
+						Type:         e.CostNumeratorUnitType,
 					},
 				},
 				Denominator: &pb.BaseQuantity{
@@ -545,16 +528,20 @@ func (h *gRPCHandler) AnalyzeInventoryReceipts(ctx context.Context, req *pb.Anal
 					Unit: &pb.BaseQuantityUnitProto{
 						Name:         e.CostDenominatorUnitName,
 						Abbreviation: e.CostDenominatorUnitAbbreviation,
+						Type:         e.CostDenominatorUnitType,
 					},
 				},
 			},
-			InventoryValue: &pb.BaseQuantity{
-				Measure: e.InventoryValue,
+		}
+		if e.InventoryValue != nil {
+			entry.InventoryValue = &pb.BaseQuantity{
+				Measure: *e.InventoryValue,
 				Unit: &pb.BaseQuantityUnitProto{
 					Name:         e.CostNumeratorUnitName,
 					Abbreviation: e.CostNumeratorUnitAbbreviation,
+					Type:         e.CostNumeratorUnitType,
 				},
-			},
+			}
 		}
 		if e.OldestReceiptAt != nil {
 			entry.OldestReceiptAt = timestamppb.New(*e.OldestReceiptAt)

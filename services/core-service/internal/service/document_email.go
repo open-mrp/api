@@ -122,7 +122,7 @@ func (s *utilsSvcImpl) SendInvoiceEmail(ctx context.Context, params domain.SendI
 
 	var customers []string
 	if params.EmailCustomer {
-		recipients, apiErr := invoiceRepo.GetEmailRecipients(ctx, params.InvoiceID)
+		recipients, apiErr := invoiceRepo.GetEmailRecipients(ctx, params.AccountID, params.InvoiceID)
 		if apiErr != nil {
 			return tracing.Trace(span, apiErr)
 		}

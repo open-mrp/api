@@ -2,6 +2,7 @@ package resourceloaders
 
 import (
 	"context"
+	"strings"
 
 	"github.com/open-mrp/api/services/api-gateway/internal/domain"
 	grpcutil "github.com/open-mrp/api/services/api-gateway/internal/grpc"
@@ -16,52 +17,48 @@ import (
 
 var itemLoaderTracer = tracing.GetTracer("api-gateway.resourceloaders.item")
 
+// ItemRecordIncludes are the stitches BatchGetItemsByIDs always applies; core GetItem needs them named to return the same record.
+var ItemRecordIncludes = []string{"unit_value", "unit_cost", "burn_rate", "attributes"}
+
 func LoadItems(ctx context.Context, ids []string) (map[string]any, *apierror.APIError) {
 	if len(ids) == 0 {
 		return nil, nil
 	}
+	withCategories, withAttributeProperties := ItemEmbedsRequested(ctx)
 	resp, apiErr := grpcutil.CallRPC(ctx, itemLoaderTracer, "loader.items.batch_get", domain.ServiceName,
 		func(ctx context.Context, opts ...grpc.CallOption) (*pb.BatchGetItemsByIDsResponse, error) {
-			return coreClient.BatchGetItemsByIDs(ctx, &pb.BatchGetItemsByIDsRequest{Ids: ids}, opts...)
+			return coreClient.BatchGetItemsByIDs(ctx, &pb.BatchGetItemsByIDsRequest{
+				Ids:                     ids,
+				WithCategories:          withCategories,
+				WithAttributeProperties: withAttributeProperties,
+			}, opts...)
 		})
 	if apiErr != nil {
 		return nil, apiErr
 	}
+	return ItemsFromProto(ctx, resp.Items, resp.Categories, resp.AttributeProperties), nil
+}
 
+// ItemsFromProto builds items keyed by id and stashes what their expandable fields resolve from.
+//
+// categories and properties were read with the items, so whoever may read an item sees them without their own permissions.
+func ItemsFromProto(ctx context.Context, items []*pb.ItemInfo, categories []*pb.ItemCategoryInfo, properties []*pb.PropertyInfo) map[string]any {
 	meta := resourcekit.GetLoadMeta(ctx)
-	out := make(map[string]any, len(resp.Items))
+	out := make(map[string]any, len(items))
 
-	propertyIDs := map[string]struct{}{}
-	for _, item := range resp.Items {
-		for _, a := range item.Attributes {
-			if a != nil && a.PropertyId != "" {
-				propertyIDs[a.PropertyId] = struct{}{}
-			}
-		}
-	}
-	propertyMap := map[string]*apiresource.Property{}
-	if len(propertyIDs) > 0 {
-		ids := make([]string, 0, len(propertyIDs))
-		for id := range propertyIDs {
-			ids = append(ids, id)
-		}
-		// Returned rather than swallowed: presenting every attribute's property as null on a
-		// transient lookup failure is indistinguishable from a property that was deleted, so the
-		// caller cannot tell it should retry.
-		loaded, apiErr := LoadProperties(ctx, ids)
-		if apiErr != nil {
-			return nil, apiErr
-		}
-		for id, v := range loaded {
-			propertyMap[id] = v.(*apiresource.Property)
-		}
+	categoryMap := ItemCategoriesFromProto(ctx, categories)
+	propertyMap := make(map[string]*apiresource.Property, len(properties))
+	for _, p := range properties {
+		propertyMap[p.Id] = PropertyFromProto(p)
 	}
 
-	for _, item := range resp.Items {
+	for _, item := range items {
 		out[item.Id] = itemFromProto(item)
 
 		if item.Category != nil {
-			meta.Set(constants.ObjectTypeItem, item.Id, "item_category_id", item.Category.Id)
+			if c, ok := categoryMap[item.Category.Id]; ok {
+				meta.Set(constants.ObjectTypeItem, item.Id, "category", c)
+			}
 		}
 
 		if item.UnitValue != nil {
@@ -100,7 +97,20 @@ func LoadItems(ctx context.Context, ids []string) (map[string]any, *apierror.API
 		meta.Set(constants.ObjectTypeItem, item.Id, "attributes_list",
 			apiresource.NewList(attrs, apiresource.PageInfo{}))
 	}
-	return out, nil
+	return out
+}
+
+// ItemEmbedsRequested reports whether some requested include reaches an item's category or its attributes, at any depth.
+func ItemEmbedsRequested(ctx context.Context) (categories, attributeProperties bool) {
+	for _, include := range resourcekit.RequestedIncludes(ctx) {
+		if include == "category" || strings.HasSuffix(include, ".category") {
+			categories = true
+		}
+		if include == "attributes" || strings.HasSuffix(include, ".attributes") {
+			attributeProperties = true
+		}
+	}
+	return categories, attributeProperties
 }
 
 func itemFromProto(i *pb.ItemInfo) *apiresource.Item {

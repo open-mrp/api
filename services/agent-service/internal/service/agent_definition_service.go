@@ -497,7 +497,7 @@ func (s *agentDefSvcImpl) DeleteCustomAgent(ctx context.Context, params domain.D
 	def, apiErr := defRepo.GetByID(ctx, params.AgentDefinitionID)
 	if apiErr != nil {
 		if apierror.IsNotFound(apiErr) {
-			wasDeleted, deletedCheckErr := s.repos.NewDeletedRecordRepo().Exists(ctx, constants.DeletedRecordResourceTypeCustomAgent, params.AgentDefinitionID)
+			wasDeleted, deletedCheckErr := s.repos.NewDeletedRecordRepo().ExistsInAccount(ctx, constants.DeletedRecordResourceTypeCustomAgent, params.AgentDefinitionID, accountID)
 			if deletedCheckErr != nil {
 				return tracing.Trace(span, deletedCheckErr)
 			}
@@ -523,7 +523,7 @@ func (s *agentDefSvcImpl) DeleteCustomAgent(ctx context.Context, params domain.D
 		txDefRepo := txSvc.repos.NewAgentDefinitionRepo()
 		statusRepo := txSvc.repos.NewAgentAccountStatusRepo()
 
-		if apiErr := txSvc.repos.NewDeletedRecordRepo().Create(txCtx, constants.DeletedRecordResourceTypeCustomAgent, def.ID, def); apiErr != nil {
+		if apiErr := txSvc.repos.NewDeletedRecordRepo().CreateInAccount(txCtx, constants.DeletedRecordResourceTypeCustomAgent, def.ID, accountID, def); apiErr != nil {
 			return apiErr
 		}
 
@@ -566,7 +566,7 @@ func (s *agentDefSvcImpl) GetAgentDefinition(ctx context.Context, agentDefinitio
 		return nil, tracing.Trace(span, apierror.NewInvariantViolationError("Identity not found in context."))
 	}
 
-	if apiErr := identity.CheckIsInternalActor(); apiErr != nil {
+	if apiErr := identity.CheckIsInternalActorForRead(); apiErr != nil {
 		return nil, tracing.Trace(span, apiErr)
 	}
 	if apiErr := identity.CheckHasPermission(types.PermissionDomainAgents, types.ActionRead); apiErr != nil {
@@ -2270,7 +2270,7 @@ func (s *agentDefSvcImpl) DeleteAgentMemory(ctx context.Context, params domain.D
 
 		// Snapshot the row into deleted_record before the hard delete so it is recoverable and
 		// repeat/racing deletes are distinguishable from "never existed" (deleted-record convention).
-		if apiErr := txSvc.repos.NewDeletedRecordRepo().Create(txCtx, constants.DeletedRecordResourceTypeAgentMemory, old.ID, old); apiErr != nil {
+		if apiErr := txSvc.repos.NewDeletedRecordRepo().CreateInAccount(txCtx, constants.DeletedRecordResourceTypeAgentMemory, old.ID, accountID, old); apiErr != nil {
 			return apiErr
 		}
 

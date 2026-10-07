@@ -202,15 +202,14 @@ func TestAccountGroupProductLineAccess_DeleteRevokesEverything(t *testing.T) {
 	require.Less(t, status, 500, "revoke must not 5xx: %s", string(body))
 	requireStatus(t, 200, status, body)
 
-	// Access is a grant list, so revoking it leaves the group with none — the group itself remains.
+	// Access is a grant list, so revoking it leaves no record to read; the group itself remains.
 	status, body, err = apiClient.GetListRaw(accountGroupAccessPath+"/"+groupID, nil)
 	require.NoError(t, err)
 	require.Less(t, status, 500, "read-back must not 5xx: %s", string(body))
-	if status == 200 {
-		assert.NotContains(t, string(body), SeedProductLineID, "the revoked product line must be gone: %s", string(body))
-	} else {
-		assert.Equal(t, 404, status, "a fully revoked group must read as 404 or an empty grant: %s", string(body))
-	}
+	assert.Equal(t, 404, status, "a fully revoked group has no access to read: %s", string(body))
+	status, body, err = apiClient.GetListRaw(accountGroupsPath+"/"+groupID, nil)
+	require.NoError(t, err)
+	assert.Equal(t, 200, status, "revoking access leaves the group: %s", string(body))
 }
 
 func TestAccountGroupProductLineAccess_DeleteUnknownGroupIs404(t *testing.T) {

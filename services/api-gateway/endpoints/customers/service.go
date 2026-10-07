@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 
+	jobep "github.com/open-mrp/api/services/api-gateway/endpoints/jobs"
 	"github.com/open-mrp/api/services/api-gateway/internal/domain"
 	grpcutil "github.com/open-mrp/api/services/api-gateway/internal/grpc"
 	"github.com/open-mrp/api/services/api-gateway/internal/resourceloaders"
@@ -77,6 +78,7 @@ type CustomerSvc interface {
 	UpdateNotificationRecipients(ctx context.Context, req *UpdateNotificationRecipientsRequest) (*apiresource.List[apiresource.OrderNotificationRecipient], *apierror.APIError)
 	MergeCustomers(ctx context.Context, req *MergeCustomersRequest) (*apiresource.Customer, *apierror.APIError)
 	UpdateCustomer(ctx context.Context, req *UpdateCustomerRequest) (*apiresource.Customer, *apierror.APIError)
+	ExportCustomers(ctx context.Context, req *ExportCustomersRequest) (*apiresource.Job, *apierror.APIError)
 }
 
 type CustomerSvcConfig struct {
@@ -161,6 +163,42 @@ func (m *customerSvcImpl) ListCustomers(ctx context.Context, req *ListCustomersR
 		stashCustomerMeta(ctx, &items[i], c)
 	}
 	return apiresource.NewList(items, grpcutil.MapProtoPageInfo(ctx, resp.PageInfo)), nil
+}
+
+func (m *customerSvcImpl) ExportCustomers(ctx context.Context, req *ExportCustomersRequest) (*apiresource.Job, *apierror.APIError) {
+	pbReq := &pb.ExportCustomersRequest{
+		Query:                 req.Query.Ptr(),
+		CustomerGroupIds:      req.CustomerGroupIDs,
+		PricingGroupIds:       req.PricingGroupIDs,
+		SalesRepIds:           req.SalesRepIDs,
+		StatusCodes:           accountStatusCodesToStrings(req.StatusCodes),
+		ShippingTermIds:       req.ShippingTermIDs,
+		PaymentTermIds:        req.PaymentTermIDs,
+		CommissionStatusCodes: commissionPoliciesToStrings(req.CommissionPolicyCodes),
+		FreightStatusCodes:    freightPoliciesToStrings(req.FreightPolicyCodes),
+		CarrierIds:            req.CarrierIDs,
+		ServiceLevelIds:       req.ServiceLevelIDs,
+		IsParentAccount:       parentAccountStatusToBoolPtr(req.ParentAccountStatus.Ptr()),
+		City:                  req.City.Ptr(),
+		State:                 req.State.Ptr(),
+		PostalCode:            req.PostalCode.Ptr(),
+	}
+	if startDate, ok := req.StartDate.Value(); ok {
+		pbReq.StartDate = timestamppb.New(startDate)
+	}
+	if endDate, ok := req.EndDate.Value(); ok {
+		pbReq.EndDate = timestamppb.New(endDate)
+	}
+
+	resp, apiErr := grpcutil.CallRPC(ctx, customerSvcTracer, "service.customers.export", domain.ServiceName,
+		func(ctx context.Context, opts ...grpc.CallOption) (*pb.ExportCustomersResponse, error) {
+			return m.coreClient.ExportCustomers(ctx, pbReq, opts...)
+		})
+	if apiErr != nil {
+		return nil, apiErr
+	}
+
+	return jobep.JobFromProto(resp.GetJob()), nil
 }
 
 func (m *customerSvcImpl) GetCustomer(ctx context.Context, req *RetrieveCustomerRequest) (*apiresource.Customer, *apierror.APIError) {
@@ -527,7 +565,7 @@ func customerFromProto(c *pb.CustomerProto) apiresource.Customer {
 		Status:           constants.AccountStatusCode(c.Status),
 		EDIStatus:        ediStatusFromBool(c.IsEdiEnabled),
 		RelationshipType: customerRelationshipType(c.IsParentAccount, c.ParentAccount != nil),
-		CommissionPolicy: constants.CommissionPolicy(c.CommissionPolicy),
+		CommissionPolicy: new(constants.CommissionPolicy(c.CommissionPolicy)),
 		Note:             c.Note,
 		CreatedAt:        grpcutil.TimestampToTime(c.CreatedAt),
 		UpdatedAt:        grpcutil.TimestampToTime(c.UpdatedAt),
@@ -794,7 +832,7 @@ func buildAccountGroupFromProto(g *pb.CustomerAccountGroupProto) *apiresource.Ac
 		ID:               g.Id,
 		Object:           constants.ObjectTypeAccountGroup,
 		Name:             g.Name,
-		CommissionPolicy: constants.CommissionPolicy(g.CommissionPolicy),
+		CommissionPolicy: new(constants.CommissionPolicy(g.CommissionPolicy)),
 		FreightPolicy:    constants.FreightPolicy(g.FreightPolicy),
 		Type:             constants.AccountGroupType(g.Type),
 	}
@@ -812,7 +850,7 @@ func buildAccountGroupValueFromProto(g *pb.CustomerAccountGroupProto) apiresourc
 		ID:               g.Id,
 		Object:           constants.ObjectTypeAccountGroup,
 		Name:             g.Name,
-		CommissionPolicy: constants.CommissionPolicy(g.CommissionPolicy),
+		CommissionPolicy: new(constants.CommissionPolicy(g.CommissionPolicy)),
 		FreightPolicy:    constants.FreightPolicy(g.FreightPolicy),
 		Type:             constants.AccountGroupType(g.Type),
 	}

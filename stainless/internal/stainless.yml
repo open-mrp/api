@@ -53,7 +53,7 @@ client_settings:
   # info.version by `make stainless` (see tools/apidocs/stainless.go).
   default_headers:
     OpenMRP-Version:
-      value: "1.0.forge-preview.5"
+      value: "1.0.forge-preview.6"
       version_header: true
   bearer_token_refresh:
     method: PUT
@@ -284,6 +284,7 @@ resources:
         models:
           account_logo_url: '#/components/schemas/AccountLogoURL'
           account_photo_upload_result: '#/components/schemas/AccountPhotoUploadResult'
+          inline_address_input: '#/components/schemas/InlineAddressInput'
           update_account_request: '#/components/schemas/UpdateAccountRequest'
       child_accounts:
         methods:
@@ -414,6 +415,34 @@ resources:
             models:
               list_sales_entry: '#/components/schemas/List_SalesEntry'
               list_sales_lines_request: '#/components/schemas/ListSalesLinesRequest'
+          open_orders:
+            methods:
+              update_summary: put /v1/core/analytics/open-orders/summary
+              update_breakdown: put /v1/core/analytics/open-orders/breakdown
+              update: put /v1/core/analytics/open-orders
+              retrieve_lines: get /v1/core/analytics/open-orders/{id}/lines
+            models:
+              analytics_customer: '#/components/schemas/AnalyticsCustomer'
+              analytics_sales_order: '#/components/schemas/AnalyticsSalesOrder'
+              analytics_ship_to: '#/components/schemas/AnalyticsShipTo'
+              analyze_open_orders_breakdown_request: '#/components/schemas/AnalyzeOpenOrdersBreakdownRequest'
+              analyze_open_orders_summary_request: '#/components/schemas/AnalyzeOpenOrdersSummaryRequest'
+              analyze_open_orders_summary_response: '#/components/schemas/AnalyzeOpenOrdersSummaryResponse'
+              list_open_order: '#/components/schemas/List_OpenOrder'
+              list_open_order_line: '#/components/schemas/List_OpenOrderLine'
+              list_open_order_product: '#/components/schemas/List_OpenOrderProduct'
+              list_open_orders_request: '#/components/schemas/ListOpenOrdersRequest'
+              open_order: '#/components/schemas/OpenOrder'
+              open_order_filters: '#/components/schemas/OpenOrderFilters'
+              open_order_line: '#/components/schemas/OpenOrderLine'
+              open_order_product: '#/components/schemas/OpenOrderProduct'
+          open_order_lines:
+            subresources:
+              actions:
+                methods:
+                  export: post /v1/core/analytics/open-order-lines/actions/export
+                models:
+                  export_open_order_lines_request: '#/components/schemas/ExportOpenOrderLinesRequest'
         models:
           account_group: '#/components/schemas/AccountGroup'
           analytics_item: '#/components/schemas/AnalyticsItem'
@@ -468,7 +497,6 @@ resources:
           computed_quantity: '#/components/schemas/ComputedQuantity'
           computed_rate: '#/components/schemas/ComputedRate'
           coordinate: '#/components/schemas/Coordinate'
-          cost_breakdown: '#/components/schemas/CostBreakdown'
           customer: '#/components/schemas/Customer'
           customer_contact_info: '#/components/schemas/CustomerContactInfo'
           customer_defaults: '#/components/schemas/CustomerDefaults'
@@ -490,6 +518,7 @@ resources:
           inventory_receipt_summary_entry: '#/components/schemas/InventoryReceiptSummaryEntry'
           list_account_group: '#/components/schemas/List_AccountGroup'
           list_attainment_bucket: '#/components/schemas/List_AttainmentBucket'
+          list_computed_quantity: '#/components/schemas/List_ComputedQuantity'
           list_customer: '#/components/schemas/List_Customer'
           list_customer_pricing_finding: '#/components/schemas/List_CustomerPricingFinding'
           list_delivery_backlog_bucket: '#/components/schemas/List_DeliveryBacklogBucket'
@@ -503,6 +532,9 @@ resources:
           list_oee_department: '#/components/schemas/List_OeeDepartment'
           list_oee_downtime_reason: '#/components/schemas/List_OeeDowntimeReason'
           list_oee_trend_period: '#/components/schemas/List_OeeTrendPeriod'
+          list_production_cost_category: '#/components/schemas/List_ProductionCostCategory'
+          list_production_cost_department: '#/components/schemas/List_ProductionCostDepartment'
+          list_production_cost_department_category: '#/components/schemas/List_ProductionCostDepartmentCategory'
           list_realized_margin_finding: '#/components/schemas/List_RealizedMarginFinding'
           list_sales_breakdown: '#/components/schemas/List_SalesBreakdown'
           list_sales_invoice: '#/components/schemas/List_SalesInvoice'
@@ -521,7 +553,11 @@ resources:
           payment_term: '#/components/schemas/PaymentTerm'
           priority: '#/components/schemas/Priority'
           product_line: '#/components/schemas/ProductLine'
-          production_cost_item: '#/components/schemas/ProductionCostItem'
+          production_cost: '#/components/schemas/ProductionCost'
+          production_cost_category: '#/components/schemas/ProductionCostCategory'
+          production_cost_department: '#/components/schemas/ProductionCostDepartment'
+          production_cost_department_category: '#/components/schemas/ProductionCostDepartmentCategory'
+          production_cost_totals: '#/components/schemas/ProductionCostTotals'
           realized_margin_finding: '#/components/schemas/RealizedMarginFinding'
           realized_margin_summary: '#/components/schemas/RealizedMarginSummary'
           revenue_forecast_point: '#/components/schemas/RevenueForecastPoint'
@@ -641,8 +677,10 @@ resources:
             methods:
               bulk_delete: post /v1/sales/customers/actions/bulk-delete
               merge: post /v1/sales/customers/{id}/actions/merge
+              export: post /v1/sales/customers/actions/export
             models:
               bulk_delete_customers_request: '#/components/schemas/BulkDeleteCustomersRequest'
+              export_customers_request: '#/components/schemas/ExportCustomersRequest'
               merge_customers_request: '#/components/schemas/MergeCustomersRequest'
           notification_recipients:
             methods:
@@ -1148,7 +1186,10 @@ resources:
           properties:
             methods:
               update: put /v1/catalog/item-categories/{id}/properties/{property_id}
+              create: post /v1/catalog/item-categories/{id}/properties
               delete: delete /v1/catalog/item-categories/{id}/properties/{property_id}
+            models:
+              create_item_category_property_request: '#/components/schemas/CreateItemCategoryPropertyRequest'
           actions:
             methods:
               bulk_upsert: post /v1/catalog/item-categories/actions/bulk-upsert
@@ -1460,6 +1501,7 @@ resources:
                   attachment_upload_target: '#/components/schemas/AttachmentUploadTarget'
                   create_attachment_upload_url_request: '#/components/schemas/CreateAttachmentUploadURLRequest'
         models:
+          conversation_participant_input: '#/components/schemas/ConversationParticipantInput'
           create_conversation_request: '#/components/schemas/CreateConversationRequest'
           list_conversation: '#/components/schemas/List_Conversation'
           update_conversation_request: '#/components/schemas/UpdateConversationRequest'
@@ -1472,8 +1514,10 @@ resources:
               approve_send: post /v1/messaging/messages/{id}/actions/approve-send
               reject: post /v1/messaging/messages/{id}/actions/reject
               cancel: post /v1/messaging/messages/{id}/actions/cancel
+              reschedule: post /v1/messaging/messages/{id}/actions/reschedule
             models:
               approve_send_draft_request: '#/components/schemas/ApproveSendDraftRequest'
+              reschedule_message_request: '#/components/schemas/RescheduleMessageRequest'
         models:
           update_draft_request: '#/components/schemas/UpdateDraftRequest'
       groups:
@@ -1940,6 +1984,9 @@ resources:
           actions:
             methods:
               export: get /v1/operations/inventory-change-logs/actions/export
+              start_export: post /v1/operations/inventory-change-logs/actions/export
+            models:
+              start_inventory_change_logs_export_request: '#/components/schemas/StartInventoryChangeLogsExportRequest'
         models:
           inventory_change_log: '#/components/schemas/InventoryChangeLog'
           list_inventory_change_log: '#/components/schemas/List_InventoryChangeLog'

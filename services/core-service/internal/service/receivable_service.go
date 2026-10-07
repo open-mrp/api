@@ -201,6 +201,11 @@ func (s *receivableSvcImpl) EmailReceivablesForCustomer(ctx context.Context, par
 		return cached.Error
 
 	case domain.RecoveryPointStarted:
+		// Only a customer of the account has a statement: anything else is a 404, not an empty attachment.
+		if _, apiErr := s.repos.NewCustomerRepo().Get(ctx, accountID, params.CustomerAccountID, nil); apiErr != nil {
+			return meds.Idempotency.CacheErrorResponse(ctx, idempotencyKey.TypeID, tracing.Trace(span, apiErr))
+		}
+
 		receivableRepo := s.repos.NewReceivableRepo()
 
 		// Fetch all receivables for the customer (no cutoff date).

@@ -198,3 +198,16 @@ func TestAgentToolNullableFieldsUseTypeUnion(t *testing.T) {
 		t.Errorf("bill_to_address_id type = %#v, want a union containing \"null\"", billTo.Type)
 	}
 }
+
+// TestAgentToolsNeverRequireOnlyCostsRead keeps every report that is nothing but cost out of the agent-tool catalog: no agent may hold costs:read, so the tool could only ever fail.
+func TestAgentToolsNeverRequireOnlyCostsRead(t *testing.T) {
+	t.Parallel()
+
+	for _, group := range buildAllGroups() {
+		for _, ep := range group.Endpoints {
+			if ep.IsAgentTool() && requiresOnlyCostsRead(ep) {
+				t.Errorf("%s %s is an agent tool but requires costs:read alone, which no agent holds; drop AgentTool", ep.GetMethod(), ep.GetRoute())
+			}
+		}
+	}
+}

@@ -176,6 +176,90 @@ func (mr *MockEditAccessMedMockRecorder) CheckEditAccess(ctx, actorAccountID, ta
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CheckEditAccess", reflect.TypeOf((*MockEditAccessMed)(nil).CheckEditAccess), ctx, actorAccountID, targetAccountID)
 }
 
+// MockAddressMed is a mock of AddressMed interface.
+type MockAddressMed struct {
+	ctrl     *gomock.Controller
+	recorder *MockAddressMedMockRecorder
+	isgomock struct{}
+}
+
+// MockAddressMedMockRecorder is the mock recorder for MockAddressMed.
+type MockAddressMedMockRecorder struct {
+	mock *MockAddressMed
+}
+
+// NewMockAddressMed creates a new mock instance.
+func NewMockAddressMed(ctrl *gomock.Controller) *MockAddressMed {
+	mock := &MockAddressMed{ctrl: ctrl}
+	mock.recorder = &MockAddressMedMockRecorder{mock}
+	return mock
+}
+
+// EXPECT returns an object that allows the caller to indicate expected use.
+func (m *MockAddressMed) EXPECT() *MockAddressMedMockRecorder {
+	return m.recorder
+}
+
+// Create mocks base method.
+func (m *MockAddressMed) Create(ctx context.Context, params domain.CreateAddressParams) (*domain.Address, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Create", ctx, params)
+	ret0, _ := ret[0].(*domain.Address)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
+}
+
+// Create indicates an expected call of Create.
+func (mr *MockAddressMedMockRecorder) Create(ctx, params any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Create", reflect.TypeOf((*MockAddressMed)(nil).Create), ctx, params)
+}
+
+// Preview mocks base method.
+func (m *MockAddressMed) Preview(ctx context.Context, accountID string, input domain.InlineAddressParams, param string) (*domain.Address, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Preview", ctx, accountID, input, param)
+	ret0, _ := ret[0].(*domain.Address)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
+}
+
+// Preview indicates an expected call of Preview.
+func (mr *MockAddressMedMockRecorder) Preview(ctx, accountID, input, param any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Preview", reflect.TypeOf((*MockAddressMed)(nil).Preview), ctx, accountID, input, param)
+}
+
+// Save mocks base method.
+func (m *MockAddressMed) Save(ctx context.Context, accountID string, input domain.InlineAddressParams, param string) (*domain.Address, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Save", ctx, accountID, input, param)
+	ret0, _ := ret[0].(*domain.Address)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
+}
+
+// Save indicates an expected call of Save.
+func (mr *MockAddressMedMockRecorder) Save(ctx, accountID, input, param any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Save", reflect.TypeOf((*MockAddressMed)(nil).Save), ctx, accountID, input, param)
+}
+
+// Update mocks base method.
+func (m *MockAddressMed) Update(ctx context.Context, params domain.UpdateAddressParams) (*domain.Address, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Update", ctx, params)
+	ret0, _ := ret[0].(*domain.Address)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
+}
+
+// Update indicates an expected call of Update.
+func (mr *MockAddressMedMockRecorder) Update(ctx, params any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Update", reflect.TypeOf((*MockAddressMed)(nil).Update), ctx, params)
+}
+
 // MockProductionFlowMed is a mock of ProductionFlowMed interface.
 type MockProductionFlowMed struct {
 	ctrl     *gomock.Controller

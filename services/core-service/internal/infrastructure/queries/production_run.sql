@@ -73,14 +73,6 @@ WHERE production_run_id = sqlc.arg('production_run_id')
 AND owner_account_id = sqlc.arg('account_id');
 
 
--- name: GetNextProductionRunNumberFull :one
--- FOR UPDATE serializes concurrent allocators per account: without it two
--- transactions can read the same MAX and collide on the (account_id, number)
--- unique key.
-SELECT COALESCE(MAX(CAST(number AS UNSIGNED)), 0) + 1 AS next_number
-FROM production_run WHERE account_id = sqlc.arg('account_id')
-FOR UPDATE;
-
 -- AllocateNextProductionRunNumber atomically reserves the next run number for the account
 -- and returns it via LAST_INSERT_ID.
 --
@@ -92,20 +84,26 @@ INSERT INTO sys_property (id, account_id, sys_property_type_code, value, created
 VALUES (sqlc.arg('id'), sqlc.arg('account_id'), 'production_run_number', LAST_INSERT_ID(1), NOW(3), NOW(3))
 ON DUPLICATE KEY UPDATE value = LAST_INSERT_ID(value + 1), updated_at = NOW(3);
 
--- SeedProductionRunNumberCounter primes the counter from existing rows the first time an
--- account allocates, so a database that already has runs does not restart numbering at 1.
+-- HighestNumericProductionRunNumber is the highest all-digit run number the account uses that the
+-- counter (an INT) could also hand out. It is read when the counter is created or turns out to be behind
+-- a run renamed or imported ahead of it, never on the usual allocation. A plain read: it locks nothing,
+-- where seeding the counter with INSERT ... SELECT MAX share-locked every run of the account on every
+-- allocation and deadlocked run creation against scans starting runs.
 --
--- Only all-digit numbers count toward the series. Runs imported with a prefixed number
--- ('PR-FC-001') are not part of it, and casting them would fail the whole statement under
--- strict mode rather than being ignored the way a bare SELECT's warning is.
--- name: SeedProductionRunNumberCounter :exec
+-- Runs imported with a prefixed number ('PR-FC-001') are not part of the series.
+-- name: HighestNumericProductionRunNumber :one
+SELECT CAST(COALESCE(MAX(CAST(number AS UNSIGNED)), 0) AS SIGNED) AS highest
+FROM production_run
+WHERE account_id = sqlc.arg('account_id')
+AND number REGEXP '^[0-9]{1,10}$'
+AND CAST(number AS UNSIGNED) < 2147483647;
+
+-- RaiseProductionRunNumberCounter moves the counter up to value, creating it there if the account has
+-- none. It never moves it down.
+-- name: RaiseProductionRunNumberCounter :exec
 INSERT INTO sys_property (id, account_id, sys_property_type_code, value, created_at, updated_at)
-SELECT sqlc.arg('id'), sqlc.arg('account_id'), 'production_run_number',
-       COALESCE(MAX(CAST(pr.number AS UNSIGNED)), 0), NOW(3), NOW(3)
-FROM production_run pr
-WHERE pr.account_id = sqlc.arg('account_id')
-AND pr.number REGEXP '^[0-9]+$'
-ON DUPLICATE KEY UPDATE id = id;
+VALUES (sqlc.arg('id'), sqlc.arg('account_id'), 'production_run_number', sqlc.arg('value'), NOW(3), NOW(3))
+ON DUPLICATE KEY UPDATE value = GREATEST(value, sqlc.arg('value')), updated_at = NOW(3);
 
 -- name: SetBatchProductionRunID :exec
 UPDATE batch SET production_run_id = sqlc.arg('production_run_id'), updated_at = NOW(3)

@@ -9,18 +9,23 @@ import (
 )
 
 // iclListColumns is the SELECT list for the change-log listing, in the exact order scanICLListRows reads it. Kept as one constant so the projection and the scanner cannot drift.
+// The item, quantity and unit are outer-joined (see iclListJoins), so their columns carry defaults; a row
+// whose item or quantity is gone reads with an empty id, and the listing drops it after paging.
 const iclListColumns = `icl.id, icl.action_type_code, icl.account_id, icl.created_at, icl.updated_at, ` +
-	`i.id, i.sku, i.item_type_code, i.created_at, i.updated_at, ` +
-	`q.id, q.value, ` +
-	`u.id, u.name, u.abbreviation, u.unit_dimension_code, ` +
-	`u.ratio_numerator, u.ratio_denominator, u.offset_numerator, u.offset_denominator, u.created_at, u.updated_at, ` +
+	`COALESCE(i.id, ''), COALESCE(i.sku, ''), COALESCE(i.item_type_code, ''), COALESCE(i.created_at, icl.created_at), COALESCE(i.updated_at, icl.updated_at), ` +
+	`COALESCE(q.id, ''), COALESCE(q.value, 0), ` +
+	`COALESCE(u.id, ''), COALESCE(u.name, ''), COALESCE(u.abbreviation, ''), COALESCE(u.unit_dimension_code, ''), ` +
+	`COALESCE(u.ratio_numerator, 1), COALESCE(u.ratio_denominator, 1), COALESCE(u.offset_numerator, 0), COALESCE(u.offset_denominator, 1), ` +
+	`COALESCE(u.created_at, icl.created_at), COALESCE(u.updated_at, icl.updated_at), ` +
 	`icl.scanning_station_id, ss.name, ss.scanning_station_type_code, ss.created_at, ss.updated_at, ` +
 	`icl.responsible_user_id, usr.name, usr.created_at, usr.updated_at`
 
-// iclListJoins reach every joined table by primary key from the page's change-log rows.
-const iclListJoins = ` JOIN item i ON i.id = icl.item_id` +
-	` JOIN quantity q ON q.id = icl.quantity_id` +
-	` JOIN unit u ON u.id = q.unit_id` +
+// iclListJoins reach every joined table by primary key from the page's change-log rows. They are outer
+// joins so every row the page chose comes back: an inner join dropped a row whose item was gone, which
+// shortened the page and made it report no next page, cutting the list off.
+const iclListJoins = ` LEFT JOIN item i ON i.id = icl.item_id` +
+	` LEFT JOIN quantity q ON q.id = icl.quantity_id` +
+	` LEFT JOIN unit u ON u.id = q.unit_id` +
 	` LEFT JOIN scanning_station ss ON ss.id = icl.scanning_station_id` +
 	" LEFT JOIN `user` usr ON usr.id = icl.responsible_user_id"
 

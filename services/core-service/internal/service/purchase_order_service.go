@@ -160,7 +160,7 @@ func (s *purchaseOrderSvcImpl) BatchGetPurchaseOrderLinesByIDs(ctx context.Conte
 	if !ok || identity == nil {
 		return nil, tracing.Trace(span, apierror.NewInvariantViolationError("Identity not found in context."))
 	}
-	if apiErr := identity.CheckIsInternalActor(); apiErr != nil {
+	if apiErr := identity.CheckIsInternalActorForRead(); apiErr != nil {
 		return nil, tracing.Trace(span, apiErr)
 	}
 	if apiErr := identity.CheckHasPermission(types.PermissionDomainPurchaseOrders, types.ActionRead); apiErr != nil {
@@ -279,6 +279,10 @@ func (s *purchaseOrderSvcImpl) CreatePurchaseOrder(ctx context.Context, params d
 		return nil, tracing.Trace(span, apiErr)
 	}
 
+	if apiErr := checkPurchaseOrderAddressChoices(params); apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
+
 	// Checked here rather than inside the transaction so a bad unit is refused before an order number is taken and an idempotency key is spent.
 	if apiErr := validatePurchaseOrderLineUnits(ctx, s.repos, params.AccountID, params.Lines, "quantity_unit_id"); apiErr != nil {
 		return nil, tracing.Trace(span, apiErr)
@@ -299,6 +303,16 @@ func (s *purchaseOrderSvcImpl) CreatePurchaseOrder(ctx context.Context, params d
 		if !inAccount {
 			return nil, tracing.Trace(span, apierror.NewValidationErrorWithParam("The address does not belong to this supplier.", ref.param))
 		}
+	}
+	if apiErr := previewInlineAddresses(ctx, s.mediators().Address, params.SupplierAccountID, params.BillToAddress, params.ShipToAddress, "bill_to_address", "ship_to_address"); apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
+
+	if apiErr := checkCustomerRefs(ctx, s.repos, params.AccountID, newPurchaseOrderRefs(params)); apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
+	if apiErr := checkServiceLevelOnCarrier(ctx, s.repos, params.CarrierID, params.ServiceLevelID, "service_level_id"); apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
 	}
 
 	meds := s.mediators()
@@ -349,7 +363,11 @@ func (s *purchaseOrderSvcImpl) CreatePurchaseOrder(ctx context.Context, params d
 				return apierror.NewConflictErrorWithParam("A purchase order with this number already exists.", "number")
 			}
 
-			billAddrID, shipAddrID, apiErr := createPurchaseOrderAddresses(txCtx, txAddressRepo, params)
+			addressParams, apiErr := withSavedInlineAddresses(txCtx, txSvc.mediators().Address, params)
+			if apiErr != nil {
+				return apiErr
+			}
+			billAddrID, shipAddrID, apiErr := createPurchaseOrderAddresses(txCtx, txAddressRepo, addressParams)
 			if apiErr != nil {
 				return apiErr
 			}
@@ -494,6 +512,13 @@ func (s *purchaseOrderSvcImpl) UpdatePurchaseOrder(ctx context.Context, params d
 
 	params.AccountID = identity.Target.AccountID
 
+	if apiErr := checkInlineAddressChoices(
+		inlineAddressChoice{params.BillingAddressID != nil, params.BillingAddress, "billing_address_id", "billing_address"},
+		inlineAddressChoice{params.ShippingAddressID != nil, params.ShippingAddress, "shipping_address_id", "shipping_address"},
+	); apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
+
 	meds := s.mediators()
 
 	idempotencyKey, apiErr := meds.Idempotency.UpsertIdempotencyKey(ctx, identity)
@@ -518,6 +543,34 @@ func (s *purchaseOrderSvcImpl) UpdatePurchaseOrder(ctx context.Context, params d
 			old, apiErr := txRepo.Get(txCtx, params.AccountID, params.PurchaseOrderID)
 			if apiErr != nil {
 				return apiErr
+			}
+
+			// A saved address is the supplier's or the ordering account's own: the order page picks a bill-to or ship-to from the account's own addresses. Any other account's is refused. One the order already holds is left as it is.
+			for _, ref := range []struct {
+				id, held *string
+				param    string
+			}{{params.BillingAddressID, &old.BillingAddressID, "billing_address_id"}, {params.ShippingAddressID, &old.ShippingAddressID, "shipping_address_id"}} {
+				if ref.id == nil || *ref.id == *ref.held {
+					continue
+				}
+				acct, apiErr := orderAddressAccount(txCtx, txSvc.repos.NewAddressRepo(), params.AccountID, old.SellerAccountID, *ref.id)
+				if apiErr != nil {
+					return apiErr
+				}
+				if acct == "" {
+					return apierror.NewValidationErrorWithParam("The address belongs to neither this supplier nor your account.", ref.param)
+				}
+			}
+
+			billID, shipID, apiErr := saveInlineAddresses(txCtx, txSvc.mediators().Address, old.SellerAccountID, params.BillingAddress, params.ShippingAddress, "billing_address", "shipping_address")
+			if apiErr != nil {
+				return apiErr
+			}
+			if billID != "" {
+				params.BillingAddressID = &billID
+			}
+			if shipID != "" {
+				params.ShippingAddressID = &shipID
 			}
 
 			// Backfill unchanged nullable fields with existing values. Since the SQL uses direct assignment (no COALESCE) for these fields, we must provide the existing value when the field was not sent.
@@ -639,7 +692,7 @@ func (s *purchaseOrderSvcImpl) DeletePurchaseOrder(ctx context.Context, params d
 	order, apiErr := repo.Get(ctx, params.AccountID, params.PurchaseOrderID)
 	if apiErr != nil {
 		if apierror.IsNotFound(apiErr) {
-			wasDeleted, deletedCheckErr := s.repos.NewDeletedRecordRepo().Exists(ctx, constants.DeletedRecordResourceTypePurchaseOrder, params.PurchaseOrderID)
+			wasDeleted, deletedCheckErr := s.repos.NewDeletedRecordRepo().ExistsInAccount(ctx, constants.DeletedRecordResourceTypePurchaseOrder, params.PurchaseOrderID, params.AccountID)
 			if deletedCheckErr != nil {
 				return tracing.Trace(span, deletedCheckErr)
 			}
@@ -656,7 +709,7 @@ func (s *purchaseOrderSvcImpl) DeletePurchaseOrder(ctx context.Context, params d
 	return s.withTx(ctx, func(txCtx context.Context, txSvc *purchaseOrderSvcImpl) *apierror.APIError {
 		txRepo := txSvc.repos.NewPurchaseOrderRepo()
 
-		if apiErr := txSvc.repos.NewDeletedRecordRepo().Create(txCtx, constants.DeletedRecordResourceTypePurchaseOrder, order.ID, order); apiErr != nil {
+		if apiErr := txSvc.repos.NewDeletedRecordRepo().CreateInAccount(txCtx, constants.DeletedRecordResourceTypePurchaseOrder, order.ID, params.AccountID, order); apiErr != nil {
 			return apiErr
 		}
 
@@ -708,7 +761,7 @@ func (s *purchaseOrderSvcImpl) BulkDeletePurchaseOrders(ctx context.Context, par
 			if order.CompletedAt != nil {
 				return apierror.NewValidationError("Cannot delete a fulfilled purchase order: " + orderID)
 			}
-			if apiErr := txSvc.repos.NewDeletedRecordRepo().Create(txCtx, constants.DeletedRecordResourceTypePurchaseOrder, order.ID, order); apiErr != nil {
+			if apiErr := txSvc.repos.NewDeletedRecordRepo().CreateInAccount(txCtx, constants.DeletedRecordResourceTypePurchaseOrder, order.ID, params.AccountID, order); apiErr != nil {
 				return apiErr
 			}
 			if apiErr := txRepo.DeleteCascade(txCtx, params.AccountID, orderID); apiErr != nil {
@@ -992,6 +1045,16 @@ func (s *purchaseOrderSvcImpl) ChangePurchaseOrderStatus(ctx context.Context, pa
 	return updatedOrder, nil
 }
 
+// newPurchaseOrderRefs lists the routing and terms a purchase order create stores.
+func newPurchaseOrderRefs(params domain.CreatePurchaseOrderParams) customerRefs {
+	var refs customerRefs
+	refs.add(customerRefCarrier, params.CarrierID, nil, "carrier_id")
+	refs.add(customerRefServiceLevel, params.ServiceLevelID, nil, "service_level_id")
+	refs.add(customerRefShippingTerm, params.ShippingTermID, nil, "shipping_term_id")
+	refs.add(customerRefPaymentTerm, params.PaymentTermID, nil, "payment_term_id")
+	return refs
+}
+
 // ensureSupplierMaterialLink checks if a material is linked to the supplier on the purchase order. If not, it finds the material by item ID and creates the link.
 func ensureSupplierMaterialLink(ctx context.Context, repos domain.RepoFactory, accountID, purchaseOrderID, itemID, itemSKU string) *apierror.APIError {
 	poRepo := repos.NewPurchaseOrderRepo()
@@ -1036,6 +1099,63 @@ func ensureSupplierMaterialLink(ctx context.Context, repos domain.RepoFactory, a
 	// Ignore errors from creation - a conflict means the link already exists, and any other error should not block the purchase order operation.
 
 	return nil
+}
+
+// checkPurchaseOrderAddressChoices requires the order's bill-to and ship-to, each given one way: by ID, inline, or through the flat bill_to_* / ship_to_* fields, which then need a name and a country like any new address.
+func checkPurchaseOrderAddressChoices(params domain.CreatePurchaseOrderParams) *apierror.APIError {
+	if apiErr := checkInlineAddressChoices(
+		inlineAddressChoice{params.BillToAddressID != nil, params.BillToAddress, "bill_to_address_id", "bill_to_address"},
+		inlineAddressChoice{params.ShipToAddressID != nil, params.ShipToAddress, "ship_to_address_id", "ship_to_address"},
+	); apiErr != nil {
+		return apiErr
+	}
+	sides := []struct {
+		hasID         bool
+		inline        *domain.InlineAddressParams
+		flat          []*string
+		name, country *string
+		prefix, label string
+	}{
+		{params.BillToAddressID != nil, params.BillToAddress, []*string{params.BillToName, params.BillToStreetLine1, params.BillToStreetLine2, params.BillToLocality, params.BillToState, params.BillToPostalCode, params.BillToCountry}, params.BillToName, params.BillToCountry, "bill_to_", "bill-to"},
+		{params.ShipToAddressID != nil, params.ShipToAddress, []*string{params.ShipToName, params.ShipToStreetLine1, params.ShipToStreetLine2, params.ShipToLocality, params.ShipToState, params.ShipToPostalCode, params.ShipToCountry}, params.ShipToName, params.ShipToCountry, "ship_to_", "ship-to"},
+	}
+	for _, side := range sides {
+		if side.inline != nil && slices.ContainsFunc(side.flat, func(v *string) bool { return v != nil }) {
+			return apierror.NewValidationErrorWithParam(fmt.Sprintf("Send either %saddress or the flat %s* fields, not both.", side.prefix, side.prefix), side.prefix+"address")
+		}
+	}
+	for _, side := range sides {
+		if side.hasID || side.inline != nil {
+			continue
+		}
+		if !slices.ContainsFunc(side.flat, func(v *string) bool { return v != nil }) {
+			return apierror.NewMissingFieldError(fmt.Sprintf("A %s address is required: send %saddress_id, %saddress, or the %s* fields.", side.label, side.prefix, side.prefix, side.prefix), side.prefix+"address_id")
+		}
+		for _, required := range []struct {
+			value *string
+			param string
+		}{{side.name, side.prefix + "name"}, {side.country, side.prefix + "country"}} {
+			if required.value == nil || strings.TrimSpace(*required.value) == "" {
+				return apierror.NewMissingFieldError(fmt.Sprintf("Field '%s' is required when the %s address is given by the %s* fields.", required.param, side.label, side.prefix), required.param)
+			}
+		}
+	}
+	return nil
+}
+
+// withSavedInlineAddresses saves the order's inline supplier addresses and returns params naming them by ID, so the order is built from them as from any saved address.
+func withSavedInlineAddresses(ctx context.Context, med domain.AddressMed, params domain.CreatePurchaseOrderParams) (domain.CreatePurchaseOrderParams, *apierror.APIError) {
+	billID, shipID, apiErr := saveInlineAddresses(ctx, med, params.SupplierAccountID, params.BillToAddress, params.ShipToAddress, "bill_to_address", "ship_to_address")
+	if apiErr != nil {
+		return params, apiErr
+	}
+	if billID != "" {
+		params.BillToAddressID = &billID
+	}
+	if shipID != "" {
+		params.ShipToAddressID = &shipID
+	}
+	return params, nil
 }
 
 // createPurchaseOrderAddresses returns the order's bill-to and ship-to address ids: a saved address

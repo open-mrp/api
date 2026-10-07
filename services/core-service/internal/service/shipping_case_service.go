@@ -3,6 +3,7 @@ package service
 import (
 	"context"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/open-mrp/api/services/auth-service/pkg/types"
@@ -169,7 +170,7 @@ func (s *shippingCaseSvcImpl) UpdateShippingCase(ctx context.Context, params dom
 			}
 
 			// Update tracking number on the shipping case itself
-			if params.TrackingNumber != nil {
+			if params.TrackingNumber.WasProvided() {
 				if apiErr := txShippingCaseRepo.Update(txCtx, params); apiErr != nil {
 					return apiErr
 				}
@@ -298,7 +299,7 @@ func (s *shippingCaseSvcImpl) AdminUpdateShippingCaseTracking(ctx context.Contex
 				return apierror.NewValidationError("Shipping case has not been shipped yet. Use the regular update endpoint.")
 			}
 
-			if params.TrackingNumber != nil {
+			if params.TrackingNumber.WasProvided() {
 				if apiErr := txShippingCaseRepo.Update(txCtx, domain.UpdateShippingCaseParams{
 					AccountID:      params.AccountID,
 					ShippingCaseID: params.ShippingCaseID,
@@ -372,7 +373,7 @@ func (s *shippingCaseSvcImpl) DeleteShippingCase(ctx context.Context, accountID,
 	shippingCase, apiErr := repo.Get(ctx, identity.Target.AccountID, shippingCaseID)
 	if apiErr != nil {
 		if apierror.IsNotFound(apiErr) {
-			wasDeleted, deletedCheckErr := s.repos.NewDeletedRecordRepo().Exists(ctx, constants.DeletedRecordResourceTypeShippingCase, shippingCaseID)
+			wasDeleted, deletedCheckErr := s.repos.NewDeletedRecordRepo().ExistsInAccount(ctx, constants.DeletedRecordResourceTypeShippingCase, shippingCaseID, identity.Target.AccountID)
 			if deletedCheckErr != nil {
 				return tracing.Trace(span, deletedCheckErr)
 			}
@@ -383,8 +384,13 @@ func (s *shippingCaseSvcImpl) DeleteShippingCase(ctx context.Context, accountID,
 		return tracing.Trace(span, apiErr)
 	}
 
+	// Its transaction is the only handle for refunding the bought label, which void does first.
+	if shippingCase.ShippoTransactionID != nil && *shippingCase.ShippoTransactionID != "" {
+		return tracing.Trace(span, apierror.NewConflictErrorWithParam("A shipping case with a purchased label cannot be deleted; void its shipment first.", "id"))
+	}
+
 	apiErr = s.withTx(ctx, func(txCtx context.Context, txSvc *shippingCaseSvcImpl) *apierror.APIError {
-		if apiErr := txSvc.repos.NewDeletedRecordRepo().Create(txCtx, constants.DeletedRecordResourceTypeShippingCase, shippingCase.ID, shippingCase); apiErr != nil {
+		if apiErr := txSvc.repos.NewDeletedRecordRepo().CreateInAccount(txCtx, constants.DeletedRecordResourceTypeShippingCase, shippingCase.ID, identity.Target.AccountID, shippingCase); apiErr != nil {
 			return apiErr
 		}
 
@@ -456,7 +462,7 @@ func (s *shippingCaseSvcImpl) GetShippingCaseLabel(ctx context.Context, accountI
 	}
 
 	if !exists {
-		return nil, nil
+		return s.carrierHostedLabelURL(ctx, identity.Target.AccountID, shippingCaseID)
 	}
 
 	url, apiErr := s.s3Client.GetPresignedURL(ctx, s.shippingLabelsBucket, s3Key, time.Hour)
@@ -465,6 +471,19 @@ func (s *shippingCaseSvcImpl) GetShippingCaseLabel(ctx context.Context, accountI
 	}
 
 	return &url, nil
+}
+
+// Falls back to the label URL the carrier returned at purchase, for a label whose copy never reached
+// the bucket. Only an absolute URL qualifies: rows the dashboard wrote hold a relative app path.
+func (s *shippingCaseSvcImpl) carrierHostedLabelURL(ctx context.Context, accountID, shippingCaseID string) (*string, *apierror.APIError) {
+	sc, apiErr := s.repos.NewShippingCaseRepo().Get(ctx, accountID, shippingCaseID)
+	if apiErr != nil {
+		return nil, apiErr
+	}
+	if sc.ShippingLabelURL == nil || !strings.HasPrefix(*sc.ShippingLabelURL, "https://") {
+		return nil, nil
+	}
+	return sc.ShippingLabelURL, nil
 }
 
 // Locates a shipping case's stored label. The layout is shared with the dashboard API, which uploads

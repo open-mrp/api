@@ -101,16 +101,21 @@ DELETE rol FROM receiving_order_line rol
 JOIN receiving_order ro ON rol.receiving_order_id = ro.id
 JOIN (
     SELECT
-        sales_order_line_id,
-        MIN(id) AS keep_id
-    FROM receiving_order_line
-    WHERE receiving_order_line.receiving_order_id = ?
-    GROUP BY sales_order_line_id
+        l.sales_order_line_id,
+        MIN(l.id) AS first_id,
+        SUM(CASE WHEN l.stocked_at IS NOT NULL
+                OR EXISTS (SELECT 1 FROM delivery_line kdl WHERE kdl.receiving_order_line_id = l.id)
+            THEN 1 ELSE 0 END) AS kept_count
+    FROM receiving_order_line l
+    WHERE l.receiving_order_id = ?
+    GROUP BY l.sales_order_line_id
     HAVING COUNT(*) > 1
 ) dup ON dup.sales_order_line_id = rol.sales_order_line_id
 WHERE rol.receiving_order_id = ?
 AND ro.account_id = ?
-AND rol.id <> dup.keep_id
+AND rol.stocked_at IS NULL
+AND NOT EXISTS (SELECT 1 FROM delivery_line dl WHERE dl.receiving_order_line_id = rol.id)
+AND (dup.kept_count > 0 OR rol.id <> dup.first_id)
 `
 
 type DeleteDuplicateReceivingOrderLinesParams struct {
@@ -118,6 +123,7 @@ type DeleteDuplicateReceivingOrderLinesParams struct {
 	AccountID        string
 }
 
+// Leaves one line per order line, but never a stocked line or one a delivery records: deleting it would drop received stock from the order and leave the delivery naming a missing line.
 func (q *Queries) DeleteDuplicateReceivingOrderLines(ctx context.Context, arg DeleteDuplicateReceivingOrderLinesParams) error {
 	_, err := q.db.ExecContext(ctx, deleteDuplicateReceivingOrderLines, arg.ReceivingOrderID, arg.ReceivingOrderID, arg.AccountID)
 	return err
@@ -409,6 +415,7 @@ SELECT
     qu.abbreviation AS quantity_unit_abbreviation,
     sol.id AS order_line_id,
     sol.item_id AS order_line_item_id,
+    p.item_id AS order_line_product_item_id,
     sol.product_id AS order_line_product_id,
     sol.line_item_number AS order_line_item_number,
     i.sku AS order_line_item_sku,
@@ -429,7 +436,8 @@ FROM receiving_order_line rol
 JOIN quantity q ON rol.quantity_id = q.id
 JOIN unit qu ON q.unit_id = qu.id
 JOIN sales_order_line sol ON rol.sales_order_line_id = sol.id
-LEFT JOIN item i ON sol.item_id = i.id
+LEFT JOIN product p ON p.id = sol.product_id
+LEFT JOIN item i ON i.id = COALESCE(NULLIF(sol.item_id, ''), p.item_id)
 JOIN quantity oq ON sol.quantity_id = oq.id
 JOIN unit ou ON oq.unit_id = ou.id
 WHERE rol.id = ?
@@ -446,6 +454,7 @@ type GetReceivingOrderLineRow struct {
 	QuantityUnitAbbreviation  string
 	OrderLineID               string
 	OrderLineItemID           sql.NullString
+	OrderLineProductItemID    sql.NullString
 	OrderLineProductID        sql.NullString
 	OrderLineItemNumber       sql.NullInt32
 	OrderLineItemSku          sql.NullString
@@ -471,6 +480,7 @@ func (q *Queries) GetReceivingOrderLine(ctx context.Context, lineID string) (Get
 		&i.QuantityUnitAbbreviation,
 		&i.OrderLineID,
 		&i.OrderLineItemID,
+		&i.OrderLineProductItemID,
 		&i.OrderLineProductID,
 		&i.OrderLineItemNumber,
 		&i.OrderLineItemSku,
@@ -488,12 +498,14 @@ const getReceivingOrderLineUnitPrice = `-- name: GetReceivingOrderLineUnitPrice 
 SELECT
     rol.id AS receiving_order_line_id,
     sol.item_id,
+    p.item_id AS product_item_id,
     r.value AS unit_price_value,
     r.numerator_unit_id AS unit_price_numerator_unit_id,
     r.denominator_unit_id AS unit_price_denominator_unit_id,
     qu.id AS quantity_unit_id
 FROM receiving_order_line rol
 JOIN sales_order_line sol ON rol.sales_order_line_id = sol.id
+LEFT JOIN product p ON p.id = sol.product_id
 JOIN rate r ON sol.unit_price_id = r.id
 JOIN quantity q ON rol.quantity_id = q.id
 JOIN unit qu ON q.unit_id = qu.id
@@ -503,6 +515,7 @@ WHERE rol.receiving_order_id = ?
 type GetReceivingOrderLineUnitPriceRow struct {
 	ReceivingOrderLineID       string
 	ItemID                     sql.NullString
+	ProductItemID              sql.NullString
 	UnitPriceValue             string
 	UnitPriceNumeratorUnitID   string
 	UnitPriceDenominatorUnitID string
@@ -521,6 +534,7 @@ func (q *Queries) GetReceivingOrderLineUnitPrice(ctx context.Context, receivingO
 		if err := rows.Scan(
 			&i.ReceivingOrderLineID,
 			&i.ItemID,
+			&i.ProductItemID,
 			&i.UnitPriceValue,
 			&i.UnitPriceNumeratorUnitID,
 			&i.UnitPriceDenominatorUnitID,
@@ -855,6 +869,44 @@ func (q *Queries) ListDeliveryRefsForOrders(ctx context.Context, orderIds []stri
 	return items, nil
 }
 
+const listProductIDsForItems = `-- name: ListProductIDsForItems :many
+SELECT p.id FROM product p WHERE p.item_id IN (/*SLICE:item_ids*/?)
+`
+
+// ListProductIDsForItems names the products made from the given items.
+func (q *Queries) ListProductIDsForItems(ctx context.Context, itemIds []string) ([]string, error) {
+	query := listProductIDsForItems
+	var queryParams []interface{}
+	if len(itemIds) > 0 {
+		for _, v := range itemIds {
+			queryParams = append(queryParams, v)
+		}
+		query = strings.Replace(query, "/*SLICE:item_ids*/?", strings.Repeat(",?", len(itemIds))[1:], 1)
+	} else {
+		query = strings.Replace(query, "/*SLICE:item_ids*/?", "NULL", 1)
+	}
+	rows, err := q.db.QueryContext(ctx, query, queryParams...)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []string
+	for rows.Next() {
+		var id string
+		if err := rows.Scan(&id); err != nil {
+			return nil, err
+		}
+		items = append(items, id)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const listReceivingOrderLinesByOrderIDs = `-- name: ListReceivingOrderLinesByOrderIDs :many
 SELECT
     rol.id,
@@ -868,6 +920,7 @@ SELECT
     qu.abbreviation AS quantity_unit_abbreviation,
     sol.id AS order_line_id,
     sol.item_id AS order_line_item_id,
+    p.item_id AS order_line_product_item_id,
     sol.product_id AS order_line_product_id,
     sol.line_item_number AS order_line_item_number,
     i.sku AS order_line_item_sku,
@@ -888,7 +941,8 @@ FROM receiving_order_line rol
 JOIN quantity q ON rol.quantity_id = q.id
 JOIN unit qu ON q.unit_id = qu.id
 JOIN sales_order_line sol ON rol.sales_order_line_id = sol.id
-LEFT JOIN item i ON sol.item_id = i.id
+LEFT JOIN product p ON p.id = sol.product_id
+LEFT JOIN item i ON i.id = COALESCE(NULLIF(sol.item_id, ''), p.item_id)
 JOIN quantity oq ON sol.quantity_id = oq.id
 JOIN unit ou ON oq.unit_id = ou.id
 WHERE rol.receiving_order_id IN (/*SLICE:receiving_order_ids*/?)
@@ -907,6 +961,7 @@ type ListReceivingOrderLinesByOrderIDsRow struct {
 	QuantityUnitAbbreviation  string
 	OrderLineID               string
 	OrderLineItemID           sql.NullString
+	OrderLineProductItemID    sql.NullString
 	OrderLineProductID        sql.NullString
 	OrderLineItemNumber       sql.NullInt32
 	OrderLineItemSku          sql.NullString
@@ -950,6 +1005,7 @@ func (q *Queries) ListReceivingOrderLinesByOrderIDs(ctx context.Context, receivi
 			&i.QuantityUnitAbbreviation,
 			&i.OrderLineID,
 			&i.OrderLineItemID,
+			&i.OrderLineProductItemID,
 			&i.OrderLineProductID,
 			&i.OrderLineItemNumber,
 			&i.OrderLineItemSku,
@@ -1025,7 +1081,12 @@ AND (
         SELECT 1 FROM receiving_order_line rol2
         JOIN sales_order_line sol ON rol2.sales_order_line_id = sol.id
         WHERE rol2.receiving_order_id = ro.id
-        AND sol.item_id IN (/*SLICE:item_ids*/?)
+        AND (
+            sol.item_id IN (/*SLICE:item_ids*/?)
+            -- A line that orders a product names no item of its own and receives the product's. The
+            -- products are named up front so either branch can drive the read from its key.
+            OR (sol.product_id IN (/*SLICE:product_ids*/?) AND COALESCE(sol.item_id, '') = '')
+        )
     )
 )
 AND (
@@ -1054,6 +1115,7 @@ type ListReceivingOrdersBackwardParams struct {
 	Status                interface{}
 	IncludeItemFilter     interface{}
 	ItemIds               []sql.NullString
+	ProductIds            []sql.NullString
 	IncludeSupplierFilter interface{}
 	SupplierIds           []string
 	StartDate             sql.NullTime
@@ -1106,6 +1168,14 @@ func (q *Queries) ListReceivingOrdersBackward(ctx context.Context, arg ListRecei
 		query = strings.Replace(query, "/*SLICE:item_ids*/?", strings.Repeat(",?", len(arg.ItemIds))[1:], 1)
 	} else {
 		query = strings.Replace(query, "/*SLICE:item_ids*/?", "NULL", 1)
+	}
+	if len(arg.ProductIds) > 0 {
+		for _, v := range arg.ProductIds {
+			queryParams = append(queryParams, v)
+		}
+		query = strings.Replace(query, "/*SLICE:product_ids*/?", strings.Repeat(",?", len(arg.ProductIds))[1:], 1)
+	} else {
+		query = strings.Replace(query, "/*SLICE:product_ids*/?", "NULL", 1)
 	}
 	queryParams = append(queryParams, arg.IncludeSupplierFilter)
 	if len(arg.SupplierIds) > 0 {
@@ -1211,7 +1281,12 @@ AND (
         SELECT 1 FROM receiving_order_line rol2
         JOIN sales_order_line sol ON rol2.sales_order_line_id = sol.id
         WHERE rol2.receiving_order_id = ro.id
-        AND sol.item_id IN (/*SLICE:item_ids*/?)
+        AND (
+            sol.item_id IN (/*SLICE:item_ids*/?)
+            -- A line that orders a product names no item of its own and receives the product's. The
+            -- products are named up front so either branch can drive the read from its key.
+            OR (sol.product_id IN (/*SLICE:product_ids*/?) AND COALESCE(sol.item_id, '') = '')
+        )
     )
 )
 AND (
@@ -1241,6 +1316,7 @@ type ListReceivingOrdersForwardParams struct {
 	Status                interface{}
 	IncludeItemFilter     interface{}
 	ItemIds               []sql.NullString
+	ProductIds            []sql.NullString
 	IncludeSupplierFilter interface{}
 	SupplierIds           []string
 	StartDate             sql.NullTime
@@ -1293,6 +1369,14 @@ func (q *Queries) ListReceivingOrdersForward(ctx context.Context, arg ListReceiv
 		query = strings.Replace(query, "/*SLICE:item_ids*/?", strings.Repeat(",?", len(arg.ItemIds))[1:], 1)
 	} else {
 		query = strings.Replace(query, "/*SLICE:item_ids*/?", "NULL", 1)
+	}
+	if len(arg.ProductIds) > 0 {
+		for _, v := range arg.ProductIds {
+			queryParams = append(queryParams, v)
+		}
+		query = strings.Replace(query, "/*SLICE:product_ids*/?", strings.Repeat(",?", len(arg.ProductIds))[1:], 1)
+	} else {
+		query = strings.Replace(query, "/*SLICE:product_ids*/?", "NULL", 1)
 	}
 	queryParams = append(queryParams, arg.IncludeSupplierFilter)
 	if len(arg.SupplierIds) > 0 {

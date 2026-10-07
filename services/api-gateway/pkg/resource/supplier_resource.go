@@ -30,9 +30,11 @@ type Supplier struct {
 	//
 	// When a supplier is created with only a bill-to address, that same address also becomes the default shipping address.
 	ShipToAddress *Address `json:"ship_to_address" expandable:"true"`
-	// Creation timestamp.
+	// How many materials are linked to the supplier, as listed by the supplier's materials endpoint.
 	//
-	// Null on a supplier named from another document, which carries its identity rather than its record.
+	// A material whose item has been deleted is not counted.
+	MaterialCount *int64 `json:"material_count"`
+	// Creation timestamp.
 	CreatedAt *time.Time `json:"created_at"`
 	// Last updated timestamp.
 	UpdatedAt *time.Time `json:"updated_at"`
@@ -40,6 +42,7 @@ type Supplier struct {
 
 var sampleSupplierCreatedAt = timeutil.TimestampToTime(sampleCreatedAtTimestamp)
 var sampleSupplierUpdatedAt = timeutil.TimestampToTime(sampleUpdatedAtTimestamp)
+var sampleSupplierMaterialCount int64 = 12
 
 var SampleSupplier = &Supplier{
 	ID:            SampleSupplierID,
@@ -48,6 +51,7 @@ var SampleSupplier = &Supplier{
 	Number:        SampleSupplierNumber,
 	BillToAddress: SampleAddress,
 	ShipToAddress: SampleAddress,
+	MaterialCount: &sampleSupplierMaterialCount,
 	CreatedAt:     &sampleSupplierCreatedAt,
 	UpdatedAt:     &sampleSupplierUpdatedAt,
 }

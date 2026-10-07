@@ -173,6 +173,12 @@ func (r *accountGroupProductLineAccessRepoImpl) Get(ctx context.Context, account
 		return nil, tracing.Trace(span, apiErr)
 	}
 
+	// A group's access record is its product lines; with none, there is no record, as Update and
+	// Delete already hold.
+	if len(plRows) == 0 {
+		return nil, tracing.Trace(span, apierror.NewResourceNotFoundError("No product line access found for this account group."))
+	}
+
 	productLines := make([]domain.ProductLineInfo, len(plRows))
 	for i, row := range plRows {
 		productLines[i] = domain.ProductLineInfo{
@@ -341,9 +347,20 @@ func (r *accountGroupProductLineAccessRepoImpl) Delete(ctx context.Context, acco
 	return nil
 }
 
-func (r *accountGroupProductLineAccessRepoImpl) ExistsByAccountGroupID(ctx context.Context, accountGroupID string) (bool, *apierror.APIError) {
+func (r *accountGroupProductLineAccessRepoImpl) ExistsByAccountGroupID(ctx context.Context, accountID, accountGroupID string) (bool, *apierror.APIError) {
 	ctx, span := accountGroupProductLineAccessRepoTracer.Start(ctx, "repository.account_group_product_line_access.exists_by_account_group_id")
 	defer span.End()
+
+	_, err := r.queries.GetAccountGroupByIDAndAccount(ctx, sqlc.GetAccountGroupByIDAndAccountParams{
+		ID:             accountGroupID,
+		OwnerAccountID: accountID,
+	})
+	if apiErr := db.MapSQLError(err); apiErr != nil {
+		if apierror.IsNotFound(apiErr) {
+			return false, nil
+		}
+		return false, tracing.Trace(span, apiErr)
+	}
 
 	count, err := r.queries.CountAccountGroupProductLinesByAccountGroupID(ctx, accountGroupID)
 	if apiErr := db.MapSQLError(err); apiErr != nil {

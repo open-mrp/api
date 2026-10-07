@@ -6,6 +6,7 @@ import (
 
 	"github.com/open-mrp/api/services/auth-service/pkg/types"
 	"github.com/open-mrp/api/services/core-service/internal/domain"
+	"github.com/open-mrp/api/services/core-service/internal/event"
 	"github.com/open-mrp/api/shared/appctx"
 	"github.com/open-mrp/api/shared/audit"
 	"github.com/open-mrp/api/shared/constants"
@@ -197,6 +198,10 @@ func (s *consumptionSvcImpl) CreateConsumption(ctx context.Context, params domai
 				return apiErr
 			}
 
+			if apiErr := publishStepCostBasisChanged(txCtx, txSvc.repos, params.AccountID, params.ProductionStepID, event.CostBasisConsumptionCreated); apiErr != nil {
+				return apiErr
+			}
+
 			changes := audit.ComputeChanges(nil, created)
 
 			if apiErr := audit.NewPublisher().Publish(txCtx, txSvc.repos.NewOutboxRepo(), audit.EventData{
@@ -342,6 +347,10 @@ func (s *consumptionSvcImpl) UpdateConsumption(ctx context.Context, params domai
 				}
 				result = fetched
 
+				if apiErr := publishStepCostBasisChanged(txCtx, txSvc.repos, params.AccountID, params.ProductionStepID, event.CostBasisConsumptionUpdated); apiErr != nil {
+					return apiErr
+				}
+
 				changes := audit.ComputeChanges(old, result)
 
 				if apiErr := audit.NewPublisher().Publish(txCtx, txSvc.repos.NewOutboxRepo(), audit.EventData{
@@ -386,6 +395,10 @@ func (s *consumptionSvcImpl) UpdateConsumption(ctx context.Context, params domai
 					return apiErr
 				}
 				result = fetched
+
+				if apiErr := publishStepCostBasisChanged(txCtx, txSvc.repos, params.AccountID, params.ProductionStepID, event.CostBasisConsumptionUpdated); apiErr != nil {
+					return apiErr
+				}
 
 				changes := audit.ComputeChanges(old, result)
 
@@ -450,7 +463,7 @@ func (s *consumptionSvcImpl) DeleteConsumption(ctx context.Context, params domai
 	consumption, apiErr := s.repos.NewConsumptionRepo().Get(ctx, accountID, params.ProductionStepID, params.ConsumptionID)
 	if apiErr != nil {
 		if apierror.IsNotFound(apiErr) {
-			wasDeleted, deletedCheckErr := s.repos.NewDeletedRecordRepo().Exists(ctx, constants.DeletedRecordResourceTypeConsumption, params.ConsumptionID)
+			wasDeleted, deletedCheckErr := s.repos.NewDeletedRecordRepo().ExistsInAccount(ctx, constants.DeletedRecordResourceTypeConsumption, params.ConsumptionID, accountID)
 			if deletedCheckErr != nil {
 				return nil, tracing.Trace(span, deletedCheckErr)
 			}
@@ -484,7 +497,7 @@ func (s *consumptionSvcImpl) DeleteConsumption(ctx context.Context, params domai
 			return apiErr
 		}
 
-		if apiErr := txSvc.repos.NewDeletedRecordRepo().Create(txCtx, constants.DeletedRecordResourceTypeConsumption, consumption.ID, consumption); apiErr != nil {
+		if apiErr := txSvc.repos.NewDeletedRecordRepo().CreateInAccount(txCtx, constants.DeletedRecordResourceTypeConsumption, consumption.ID, accountID, consumption); apiErr != nil {
 			return apiErr
 		}
 
@@ -516,7 +529,7 @@ func (s *consumptionSvcImpl) DeleteConsumption(ctx context.Context, params domai
 			return apiErr
 		}
 
-		return nil
+		return publishStepCostBasisChanged(txCtx, txSvc.repos, accountID, params.ProductionStepID, event.CostBasisConsumptionDeleted)
 	})
 
 	if apiErr != nil {

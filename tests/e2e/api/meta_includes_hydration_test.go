@@ -111,25 +111,29 @@ func TestIncludes_HydratedToOneMatchesCanonical(t *testing.T) {
 					}
 					stillIncluded := func(id string) bool { return includedLeaf(id) != nil }
 
-					for _, leaf := range leaves {
-						rt, ok := retrieveByType[jsonField(leaf, "object")]
-						require.True(t, ok, "include %q mixes object types: %v", include, leaf)
-						id := jsonField(leaf, "id")
-						canonPath, status, canon := retrieveCanonical(t, rt, id, owners)
-						if status == 200 {
-							// A parallel test may also edit the row between the two reads. A real hydration gap
-							// mismatches on every read; an edit settles, so compare a fresh pair before failing.
-							if !hydratedMatchesCanonical(include, leaf, canon) {
-								if fresh := includedLeaf(id); fresh != nil {
-									leaf = fresh
+					// A page of short-lived rows can vanish between reads, so read it again before giving up.
+					for round := 0; round < 3; round++ {
+						for _, leaf := range leaves {
+							rt, ok := retrieveByType[jsonField(leaf, "object")]
+							require.True(t, ok, "include %q mixes object types: %v", include, leaf)
+							id := jsonField(leaf, "id")
+							canonPath, status, canon := retrieveCanonical(t, rt, id, owners)
+							if status == 200 {
+								// A parallel test may also edit the row between the two reads. A real hydration gap
+								// mismatches on every read; an edit settles, so compare a fresh pair before failing.
+								if !hydratedMatchesCanonical(include, leaf, canon) {
+									if fresh := includedLeaf(id); fresh != nil {
+										leaf = fresh
+									}
+									_, _, canon = retrieveCanonical(t, rt, id, owners)
 								}
-								_, _, canon = retrieveCanonical(t, rt, id, owners)
+								assertHydratedMatchesCanonical(t, include, leaf, canon)
+								return
 							}
-							assertHydratedMatchesCanonical(t, include, leaf, canon)
-							return
+							require.Falsef(t, stillIncluded(id),
+								"the include hands out %s, which no account in the response can retrieve (status %d)", canonPath, status)
 						}
-						require.Falsef(t, stillIncluded(id),
-							"the include hands out %s, which no account in the response can retrieve (status %d)", canonPath, status)
+						leaves = collectIncludeLeafResources(parseJSON(mustGetAs(t, apiClient, path, withIncludeQuery(query, include))), include)
 					}
 					t.Fatalf("every %q the include handed out was deleted before it could be cross-checked", include)
 				})

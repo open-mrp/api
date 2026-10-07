@@ -35,7 +35,7 @@ type CreatePartRequest struct {
 	// Initial cost per unit.
 	//
 	// Follows the same unit rule as `unit_price`: currency numerator, non-currency denominator. When omitted, the cost is initialized to a zero rate in the category's base unit.
-	UnitCost field.Optional[apirequest.RateInput] `json:"unit_cost,omitzero"`
+	UnitCost field.Optional[apirequest.RateInput] `json:"unit_cost,omitzero" sensitive:"cost"`
 	// IDs of existing attributes to link to the part at creation time.
 	//
 	// Each attribute's property must be one the part's category carries; an attribute from any other property fails the whole request.
@@ -65,15 +65,16 @@ type CreatePartEndpoint struct{}
 
 func (e *CreatePartEndpoint) Materialize() *apiendpoint.APIEndpoint[*CreatePartRequest, *apiresource.Part] {
 	return (&apiendpoint.APIEndpoint[*CreatePartRequest, *apiresource.Part]{
-		Title:               "Create Part",
-		Method:              http.MethodPost,
-		Route:               "/v1/catalog/parts",
-		ContentType:         "application/json",
-		SuccessStatusCode:   http.StatusCreated,
-		Public:              true,
-		AgentTool:           true,
-		RequiredPermissions: []types.Permission{{Domain: types.PermissionDomainParts, Action: types.ActionCreate}, {Domain: types.PermissionDomainCustomers, Action: types.ActionUpdate}, {Domain: types.PermissionDomainSuppliers, Action: types.ActionUpdate}},
-		Preview:             true,
+		Title:                   "Create Part",
+		Method:                  http.MethodPost,
+		Route:                   "/v1/catalog/parts",
+		ContentType:             "application/json",
+		SuccessStatusCode:       http.StatusCreated,
+		Public:                  true,
+		AgentTool:               true,
+		RequiredPermissions:     []types.Permission{{Domain: types.PermissionDomainParts, Action: types.ActionCreate}},
+		CounterpartyPermissions: apiendpoint.Counterparties(types.ActionUpdate),
+		Preview:                 true,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *CreatePartRequest) (*apiresource.Part, *apierror.APIError) {
 			return svc.(PartSvc).CreatePart
 		},

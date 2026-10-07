@@ -26,6 +26,7 @@ const (
 )
 
 type laborCostFixture struct {
+	materialID     string
 	materialItemID string
 	partItemID     string
 }
@@ -53,7 +54,11 @@ func createLaborCostFixture(t *testing.T) laborCostFixture {
 	partItem := jsonObject(part, "item")
 	require.NotNil(t, materialItem, "material must carry its item: %s", body)
 	require.NotNil(t, partItem, "part must carry its item: %s", body)
-	return laborCostFixture{materialItemID: jsonField(materialItem, "id"), partItemID: jsonField(partItem, "id")}
+	return laborCostFixture{
+		materialID:     jsonField(material, "id"),
+		materialItemID: jsonField(materialItem, "id"),
+		partItemID:     jsonField(partItem, "id"),
+	}
 }
 
 type laborEntry struct {

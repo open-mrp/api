@@ -28,7 +28,7 @@ type GetLatestSysPropertyValueRequest struct {
 
 // Returns the next available counter value for a system property type.
 //
-// Initializes the counter at `1` if it does not yet exist for the account. If the current value is already used by an existing record (for example, a transaction with that number), the counter is incremented before the value is returned. The `sscc_count` counter is returned as-is, without a duplicate check.
+// The value is the first number from the counter on that no existing record carries (for example, no transaction has that number). When the counter's current value is already taken, the counter is moved forward to that number and rests there: the number is not reserved, so reading again returns it until a record takes it. A counter that does not yet exist for the account is created at the first free number from `1`. If every number in the next 10,000 is taken, the request fails with `resource_conflict`; move the counter past the numbers already issued. The `sscc_count` counter is returned as-is, without a duplicate check.
 type GetLatestSysPropertyValueEndpoint struct{}
 
 func (e *GetLatestSysPropertyValueEndpoint) Materialize() *apiendpoint.APIEndpoint[*GetLatestSysPropertyValueRequest, *apiresource.SysPropertyValue] {

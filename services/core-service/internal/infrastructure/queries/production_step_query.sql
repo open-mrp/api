@@ -80,19 +80,31 @@ SELECT p.item_id FROM production p
 WHERE p.production_step_id = sqlc.arg('production_step_id');
 
 -- name: FindProducedUnitByStep :one
-SELECT u.id, u.abbreviation, u.unit_dimension_code AS type
-FROM production p
-JOIN quantity q ON p.quantity_id = q.id
-JOIN unit u ON q.unit_id = u.id
-WHERE p.production_step_id = sqlc.arg('production_step_id');
+-- The unit a step's output is counted in on the scanning floor: the base unit of the produced item's
+-- unit group, not the unit the production happens to be written in.
+SELECT u.id, u.name, u.abbreviation, u.unit_dimension_code AS type,
+    u.ratio_numerator, u.ratio_denominator, u.offset_numerator, u.offset_denominator,
+    u.is_base_unit, u.account_id
+FROM production_step ps
+JOIN production p ON p.production_step_id = ps.id
+JOIN item i ON i.id = p.item_id
+JOIN item_category ic ON ic.id = i.item_category_id
+JOIN unit_group ug ON ug.id = ic.unit_group_id
+JOIN unit u ON u.id = ug.base_unit_id
+WHERE ps.id = sqlc.arg('production_step_id')
+AND ps.account_id = sqlc.arg('account_id')
+LIMIT 1;
 
 -- name: FindStepIDByScanningStationAndItem :one
+-- The step a batch is initialized into: one at this station that makes the batch's item and has no
+-- upstream step (A = downstream), since initializing is where a batch enters the flow.
 SELECT ps.id
 FROM production_step ps
 JOIN production p ON p.production_step_id = ps.id
 WHERE ps.scanning_station_id = sqlc.arg('scanning_station_id')
 AND ps.account_id = sqlc.arg('account_id')
 AND p.item_id = sqlc.arg('item_id')
+AND NOT EXISTS (SELECT 1 FROM _parent_child_production_steps pcps WHERE pcps.A = ps.id)
 LIMIT 1;
 
 -- name: FindStepByScanningStationAndItem :one
@@ -115,6 +127,7 @@ JOIN unit pu ON pq.unit_id = pu.id
 WHERE ps.scanning_station_id = sqlc.arg('scanning_station_id')
 AND ps.account_id = sqlc.arg('account_id')
 AND p.item_id = sqlc.arg('item_id')
+AND NOT EXISTS (SELECT 1 FROM _parent_child_production_steps pcps WHERE pcps.A = ps.id)
 LIMIT 1;
 
 -- name: GetProductionStepChildSteps :many
@@ -125,7 +138,8 @@ WHERE B = sqlc.arg('parent_step_id');
 SELECT scanning_station_id FROM production_step
 WHERE id = sqlc.arg('id') AND account_id = sqlc.arg('account_id');
 
--- name: ListProductionStepsForward :many
+-- The list's rows for a page of step IDs, chosen by the page query built in production_step_list_query.go.
+-- name: ListProductionStepsByIDs :many
 SELECT
     ps.id,
     ps.name,
@@ -174,155 +188,7 @@ LEFT JOIN rate ohr ON ps.overhead_rate_id = ohr.id
 LEFT JOIN unit ohrnu ON ohr.numerator_unit_id = ohrnu.id
 LEFT JOIN unit ohrdu ON ohr.denominator_unit_id = ohrdu.id
 WHERE ps.account_id = sqlc.arg('account_id')
-AND (
-    sqlc.narg('search_query') IS NULL
-    OR MATCH(ps.name) AGAINST(sqlc.narg('search_query') IN BOOLEAN MODE)
-)
-AND (
-    sqlc.arg('include_item_filter') = false
-    OR p.item_id IN (sqlc.slice('item_ids'))
-    OR EXISTS (
-        SELECT 1 FROM consumption c
-        WHERE c.production_step_id = ps.id
-        AND c.item_id IN (sqlc.slice('item_ids'))
-    )
-)
-AND (
-    sqlc.arg('include_machine_filter') = false
-    OR EXISTS (
-        SELECT 1 FROM machine m
-        WHERE m.production_step_id = ps.id
-        AND m.id IN (sqlc.slice('machine_ids'))
-    )
-)
-AND (
-    sqlc.arg('include_scanning_station_filter') = false
-    OR ps.scanning_station_id IN (sqlc.slice('scanning_station_ids'))
-)
-AND (
-    sqlc.arg('include_input_step_filter') = false
-    OR EXISTS (
-        SELECT 1 FROM _parent_child_production_steps pcps
-        WHERE pcps.A = ps.id
-        AND pcps.B IN (sqlc.slice('input_step_ids'))
-    )
-)
-AND (
-    sqlc.arg('include_output_step_filter') = false
-    OR EXISTS (
-        SELECT 1 FROM _parent_child_production_steps pcps
-        WHERE pcps.B = ps.id
-        AND pcps.A IN (sqlc.slice('output_step_ids'))
-    )
-)
-AND (sqlc.narg('start_date') IS NULL OR ps.created_at >= sqlc.narg('start_date'))
-AND (sqlc.narg('end_date') IS NULL OR ps.created_at <= sqlc.narg('end_date'))
-AND (
-    sqlc.narg('cursor_created_at') IS NULL
-    OR ps.created_at < sqlc.narg('cursor_created_at')
-    OR (ps.created_at = sqlc.narg('cursor_created_at') AND ps.id < sqlc.narg('cursor_id'))
-)
-ORDER BY ps.created_at DESC, ps.id DESC
-LIMIT ?;
-
--- name: ListProductionStepsBackward :many
-SELECT
-    ps.id,
-    ps.name,
-    ps.notes,
-    ps.leveling_factor,
-    ps.allowances,
-    ps.department_id,
-    ps.created_at,
-    ps.updated_at,
-    p.id AS production_id,
-    pi.id AS produced_item_id,
-    pi.sku AS produced_item_sku,
-    pi.description AS produced_item_description,
-    pi.item_type_code AS produced_item_type_code,
-    pq.id AS produced_quantity_id,
-    pq.value AS produced_quantity_value,
-    pu.id AS produced_unit_id,
-    pu.abbreviation AS produced_unit_abbreviation,
-    pu.unit_dimension_code AS produced_unit_type,
-    p.created_at AS production_created_at,
-    p.updated_at AS production_updated_at,
-    ss.id AS scanning_station_id,
-    ss.name AS scanning_station_name,
-    lr.id AS labor_rate_id, lr.value AS labor_rate_value,
-    lrnu.id AS labor_rate_num_unit_id, lrnu.abbreviation AS labor_rate_num_unit_abbr, lrnu.unit_dimension_code AS labor_rate_num_unit_type,
-    lrdu.id AS labor_rate_den_unit_id, lrdu.abbreviation AS labor_rate_den_unit_abbr, lrdu.unit_dimension_code AS labor_rate_den_unit_type,
-    lt.id AS labor_time_id, lt.value AS labor_time_value,
-    ltnu.id AS labor_time_num_unit_id, ltnu.abbreviation AS labor_time_num_unit_abbr, ltnu.unit_dimension_code AS labor_time_num_unit_type,
-    ltdu.id AS labor_time_den_unit_id, ltdu.abbreviation AS labor_time_den_unit_abbr, ltdu.unit_dimension_code AS labor_time_den_unit_type,
-    ohr.id AS overhead_rate_id, ohr.value AS overhead_rate_value,
-    ohrnu.id AS overhead_rate_num_unit_id, ohrnu.abbreviation AS overhead_rate_num_unit_abbr, ohrnu.unit_dimension_code AS overhead_rate_num_unit_type,
-    ohrdu.id AS overhead_rate_den_unit_id, ohrdu.abbreviation AS overhead_rate_den_unit_abbr, ohrdu.unit_dimension_code AS overhead_rate_den_unit_type
-FROM production_step ps
-JOIN production p ON p.production_step_id = ps.id
-JOIN item pi ON p.item_id = pi.id
-JOIN quantity pq ON p.quantity_id = pq.id
-JOIN unit pu ON pq.unit_id = pu.id
-LEFT JOIN scanning_station ss ON ps.scanning_station_id = ss.id
-LEFT JOIN rate lr ON ps.labor_rate_id = lr.id
-LEFT JOIN unit lrnu ON lr.numerator_unit_id = lrnu.id
-LEFT JOIN unit lrdu ON lr.denominator_unit_id = lrdu.id
-LEFT JOIN rate lt ON ps.labor_time_id = lt.id
-LEFT JOIN unit ltnu ON lt.numerator_unit_id = ltnu.id
-LEFT JOIN unit ltdu ON lt.denominator_unit_id = ltdu.id
-LEFT JOIN rate ohr ON ps.overhead_rate_id = ohr.id
-LEFT JOIN unit ohrnu ON ohr.numerator_unit_id = ohrnu.id
-LEFT JOIN unit ohrdu ON ohr.denominator_unit_id = ohrdu.id
-WHERE ps.account_id = sqlc.arg('account_id')
-AND (
-    sqlc.narg('search_query') IS NULL
-    OR MATCH(ps.name) AGAINST(sqlc.narg('search_query') IN BOOLEAN MODE)
-)
-AND (
-    sqlc.arg('include_item_filter') = false
-    OR p.item_id IN (sqlc.slice('item_ids'))
-    OR EXISTS (
-        SELECT 1 FROM consumption c
-        WHERE c.production_step_id = ps.id
-        AND c.item_id IN (sqlc.slice('item_ids'))
-    )
-)
-AND (
-    sqlc.arg('include_machine_filter') = false
-    OR EXISTS (
-        SELECT 1 FROM machine m
-        WHERE m.production_step_id = ps.id
-        AND m.id IN (sqlc.slice('machine_ids'))
-    )
-)
-AND (
-    sqlc.arg('include_scanning_station_filter') = false
-    OR ps.scanning_station_id IN (sqlc.slice('scanning_station_ids'))
-)
-AND (
-    sqlc.arg('include_input_step_filter') = false
-    OR EXISTS (
-        SELECT 1 FROM _parent_child_production_steps pcps
-        WHERE pcps.A = ps.id
-        AND pcps.B IN (sqlc.slice('input_step_ids'))
-    )
-)
-AND (
-    sqlc.arg('include_output_step_filter') = false
-    OR EXISTS (
-        SELECT 1 FROM _parent_child_production_steps pcps
-        WHERE pcps.B = ps.id
-        AND pcps.A IN (sqlc.slice('output_step_ids'))
-    )
-)
-AND (sqlc.narg('start_date') IS NULL OR ps.created_at >= sqlc.narg('start_date'))
-AND (sqlc.narg('end_date') IS NULL OR ps.created_at <= sqlc.narg('end_date'))
-AND (
-    ps.created_at > sqlc.arg('cursor_created_at')
-    OR (ps.created_at = sqlc.arg('cursor_created_at') AND ps.id > sqlc.arg('cursor_id'))
-)
-ORDER BY ps.created_at ASC, ps.id ASC
-LIMIT ?;
+AND ps.id IN (sqlc.slice('ids'));
 
 -- name: GetProductionStepFull :one
 SELECT
@@ -390,7 +256,7 @@ JOIN production_step ps ON ps.id = pcps.A
 WHERE pcps.B = sqlc.arg('step_id');
 
 -- name: GetProductionStepMachines :many
-SELECT m.id, m.name FROM machine m
+SELECT m.id, m.name, m.serial_number, m.department_id FROM machine m
 WHERE m.production_step_id = sqlc.arg('production_step_id');
 
 -- name: InsertProductionStep :exec
@@ -457,6 +323,10 @@ UPDATE production_step SET
         WHEN sqlc.arg('update_scanning_station') = true THEN sqlc.narg('scanning_station_id')
         ELSE scanning_station_id
     END,
+    notes = CASE
+        WHEN sqlc.arg('update_notes') = true THEN sqlc.narg('notes')
+        ELSE notes
+    END,
     updated_at = NOW(3)
 WHERE id = sqlc.arg('id')
 AND account_id = sqlc.arg('account_id');
@@ -493,6 +363,13 @@ DELETE FROM consumption WHERE production_step_id = sqlc.arg('step_id');
 -- name: ClearProductionStepFromMachines :exec
 UPDATE machine SET production_step_id = NULL, updated_at = NOW(3)
 WHERE production_step_id = sqlc.arg('step_id');
+
+-- name: ClearProductionStepFromBatches :exec
+-- A deleted step's batches keep their history but no longer name it, as the dashboard's delete left
+-- them; a dangling id would send a later undo looking for a step that is gone. Served by
+-- batch_production_step_id_idx.
+UPDATE batch SET production_step_id = NULL, updated_at = NOW(3)
+WHERE production_step_id = sqlc.arg('production_step_id');
 
 -- name: ExistsProductionStepByName :one
 SELECT COUNT(*) FROM production_step

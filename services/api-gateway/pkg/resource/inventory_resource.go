@@ -11,16 +11,21 @@ type InventoryItem struct {
 	Object constants.ObjectType `json:"object" validate:"required,enum=inventory_item"`
 	// The item this inventory entry reports on.
 	Item *Item `json:"item" validate:"required"`
-	// Current on-hand quantity of the item.
+	// The item's quantity, in the base unit of its category.
 	//
-	// Derived rather than stored: the stock from available receipts less anything already allocated, measured in the base unit of the item's category. Items with no recorded inventory report zero.
+	// Derived rather than stored. Normally the current on-hand stock: available receipts less anything already allocated. When the list was asked for `as_of` a past instant, the last inventory level logged by then instead. Items with no recorded inventory report zero.
 	Quantity *ComputedQuantity `json:"quantity" validate:"required"`
+	// The product line the item sells under.
+	//
+	// Null for an item that is not a product or has no line, and unless requested with `include=product_line`.
+	ProductLine *ProductLine `json:"product_line" expandable:"true"`
 }
 
 var SampleInventoryItem = &InventoryItem{
-	Object:   constants.ObjectTypeInventoryItem,
-	Item:     SampleItem,
-	Quantity: SampleComputedQuantity,
+	Object:      constants.ObjectTypeInventoryItem,
+	Item:        SampleItem,
+	Quantity:    SampleComputedQuantity,
+	ProductLine: SampleProductLine,
 }
 
 func (*InventoryItem) SchemaExample() any {

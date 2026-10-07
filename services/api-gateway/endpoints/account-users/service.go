@@ -115,7 +115,8 @@ func (m *accountUserSvcImpl) CreateAccountUser(ctx context.Context, req *CreateA
 		return nil, apiErr
 	}
 
-	return loadAccountUserByID(ctx, resp.AccountUser.Id)
+	// Answered from the write itself: re-reading it would take a read permission a writer may not hold.
+	return resourceloaders.AccountUserFromDetail(ctx, resp.AccountUser), nil
 }
 
 func (m *accountUserSvcImpl) UpdateAccountUser(ctx context.Context, req *UpdateAccountUserRequest) (*apiresource.AccountUser, *apierror.APIError) {
@@ -138,7 +139,7 @@ func (m *accountUserSvcImpl) UpdateAccountUser(ctx context.Context, req *UpdateA
 		return nil, apiErr
 	}
 
-	return loadAccountUserByID(ctx, resp.AccountUser.Id)
+	return resourceloaders.AccountUserFromDetail(ctx, resp.AccountUser), nil
 }
 
 func (m *accountUserSvcImpl) ActivateAccountUser(ctx context.Context, req *ActivateAccountUserRequest) (*apiresource.EmptyResource, *apierror.APIError) {

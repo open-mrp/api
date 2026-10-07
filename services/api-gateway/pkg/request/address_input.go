@@ -4,7 +4,12 @@ import (
 	apiexample "github.com/open-mrp/api/services/api-gateway/pkg/example"
 	"github.com/open-mrp/api/shared/constants"
 	"github.com/open-mrp/api/shared/field"
+	"github.com/open-mrp/api/shared/validate"
 )
+
+func init() {
+	validate.RegisterWrappedTypes(field.Optional[AddressInput]{})
+}
 
 // Address details supplied when creating an address, either on its own or inline on another resource.
 //

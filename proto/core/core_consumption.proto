@@ -358,6 +358,8 @@ message SupplierSummaryProto {
   // supplier's account, so the gateway cannot resolve them from the ids alone.
   CustomerAddressProto bill_to_address = 10;
   CustomerAddressProto ship_to_address = 11;
+  // Links to the owner's materials, not counting a material whose item was deleted.
+  int64 material_count = 12;
 }
 message SupplierProto {
   string id = 1;
@@ -368,6 +370,7 @@ message SupplierProto {
   optional CustomerAddressProto ship_to_address = 6;
   google.protobuf.Timestamp created_at = 8;
   google.protobuf.Timestamp updated_at = 9;
+  int64 material_count = 10;
 }
 message CreateSupplierAddressInput {
   string name = 1;
@@ -433,6 +436,13 @@ message DeleteSupplierResponse {
 }
 message BulkDeleteSuppliersRequest {
   repeated string supplier_ids = 1;
+}
+// Batched read for the api-gateway resourcekit resolver: the suppliers a document names, as the supplier list shows them.
+message BatchGetSuppliersByIDsRequest {
+  repeated string ids = 1;
+}
+message BatchGetSuppliersByIDsResponse {
+  repeated SupplierSummaryProto suppliers = 1;
 }
 message SysPropertyInfo {
   string id = 1;

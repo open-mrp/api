@@ -36,13 +36,13 @@ type CreateProductionStepRequest struct {
 	// Cost of labor for this step, expressed as a rate of currency per unit of time (e.g. `$` per `hr`).
 	//
 	// The numerator unit must be a currency and the denominator must not be.
-	LaborRate CreateRateInput `json:"labor_rate" validate:"required"`
+	LaborRate CreateRateInput `json:"labor_rate" validate:"required" sensitive:"cost"`
 	// Labor duration for this step, expressed as a rate (e.g. time per unit of output).
 	LaborTime CreateRateInput `json:"labor_time" validate:"required"`
 	// Overhead cost for this step, expressed as a rate of currency per unit of time (e.g. `$` per `hr`).
 	//
 	// The numerator unit must be a currency and the denominator must not be.
-	OverheadRate CreateRateInput `json:"overhead_rate" validate:"required"`
+	OverheadRate CreateRateInput `json:"overhead_rate" validate:"required" sensitive:"cost"`
 	// The item and quantity this step produces.
 	Production CreateProductionInput `json:"production" validate:"required"`
 	// Materials consumed by the step.
@@ -150,5 +150,9 @@ func (e *CreateProductionStepEndpoint) Materialize() *apiendpoint.APIEndpoint[*C
 		LocationFunc: func(resp *apiresource.ProductionStep) string {
 			return "/v1/operations/production-steps/" + resp.ID
 		},
+		IncludeConfig: apiendpoint.IncludesFor(apiendpoint.IncludesParams{
+			ObjectType: constants.ObjectTypeProductionStep,
+			Fields:     productionStepIncludes,
+		}),
 	})
 }

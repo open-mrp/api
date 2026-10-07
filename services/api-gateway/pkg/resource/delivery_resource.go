@@ -51,6 +51,10 @@ type Delivery struct {
 	Status constants.DeliveryStatus `json:"status" validate:"required"`
 	// The goods recorded on this delivery.
 	Lines *List[DeliveryLine] `json:"lines" expandable:"true"`
+	// Total number of lines on this delivery.
+	//
+	// Always populated, even when `lines` is not expanded.
+	LineCount int32 `json:"line_count"`
 	// When goods on this delivery were accepted into inventory.
 	//
 	// A delivery that also had quantities refused has both this and `rejected_at` set.
@@ -70,6 +74,7 @@ var SampleDelivery = &Delivery{
 	Related:    SampleDeliveryRelated,
 	Status:     constants.DeliveryStatusAccepted,
 	Lines:      NewList([]DeliveryLine{*SampleDeliveryLine}, PageInfo{}),
+	LineCount:  1,
 	AcceptedAt: timeutil.TimestampToTimePtr(sampleUpdatedAtTimestamp),
 	CreatedAt:  timeutil.TimestampToTime(sampleCreatedAtTimestamp),
 	UpdatedAt:  timeutil.TimestampToTime(sampleUpdatedAtTimestamp),
@@ -114,7 +119,9 @@ type DeliveryLine struct {
 	// Cost per unit of the goods on this line.
 	//
 	// Copied from the originating purchase order line's unit price at the moment of stocking, so later price changes on the purchase order leave it untouched.
-	UnitCost *Rate `json:"unit_cost" expandable:"true"`
+	//
+	// Null unless the caller holds `costs:read`; customer and supplier portal users never see it.
+	UnitCost *Rate `json:"unit_cost" expandable:"true" sensitive:"cost"`
 	// Storage location the goods on this line were put away at.
 	//
 	// Not set on refused lines, or when the quantity was stocked without naming a location.

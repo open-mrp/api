@@ -36,3 +36,21 @@ message Int32Patch {
   bool clear = 1;
   optional int32 value = 2;
 }
+
+// An address saved by the write of the record that uses it, in the record's counterparty account (or the
+// account itself, for its default addresses). With id set, that stored address is updated and omitted
+// fields keep their values; without it a new address is created, so name and country are required.
+message InlineAddressInput {
+  optional string id = 1;
+  optional string name = 2;
+  StringPatch phone = 3;
+  StringPatch email = 4;
+  optional bool is_drop_ship = 5;
+  StringPatch receive_calendar_id = 6;
+  optional string street_line_1 = 7;
+  StringPatch street_line_2 = 8;
+  optional string locality = 9;
+  optional string state = 10;
+  optional string postal_code = 11;
+  optional string country = 12;
+}

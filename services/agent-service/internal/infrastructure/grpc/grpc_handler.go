@@ -672,7 +672,7 @@ func (h *agentHandler) GetRun(ctx context.Context, req *pb.GetRunRequest) (*pb.G
 	if !ok || identity == nil {
 		return nil, contracts.ConvertAPIErrorToGRPC(apierror.NewInvariantViolationError("Identity not found in context."))
 	}
-	if apiErr := identity.CheckIsInternalActor(); apiErr != nil {
+	if apiErr := identity.CheckIsInternalActorForRead(); apiErr != nil {
 		return nil, contracts.ConvertAPIErrorToGRPC(apiErr)
 	}
 	if apiErr := identity.CheckHasPermission(types.PermissionDomainAgentRuns, types.ActionRead); apiErr != nil {

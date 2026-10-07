@@ -193,14 +193,16 @@ func (r *invoiceRepoImpl) GetAllocationsForInvoices(ctx context.Context, invoice
 	byInvoice := make(map[string][]*domain.InvoiceAllocation, len(invoiceIDs))
 	for _, row := range rows {
 		alloc := &domain.InvoiceAllocation{
-			ID:             row.ID,
-			TransactionID:  row.TransactionID,
-			AmountID:       row.AmountID,
-			AmountValue:    row.AmountValue,
-			AmountUnitID:   row.AmountUnitID,
-			AmountUnitAbbr: row.AmountUnitAbbreviation,
-			CreatedAt:      row.CreatedAt,
-			UpdatedAt:      row.UpdatedAt,
+			ID:               row.ID,
+			TransactionID:    row.TransactionID,
+			AmountID:         row.AmountID,
+			AmountValue:      row.AmountValue,
+			AmountUnitID:     row.AmountUnitID,
+			AmountUnitAbbr:   row.AmountUnitAbbreviation,
+			SettlementID:     nullStringToPtr(row.SettlementID),
+			SettlementNumber: nullStringToPtr(row.SettlementNumber),
+			CreatedAt:        row.CreatedAt,
+			UpdatedAt:        row.UpdatedAt,
 		}
 		if row.Note.Valid {
 			alloc.Note = &row.Note.String
@@ -223,14 +225,16 @@ func (r *invoiceRepoImpl) GetAllocations(ctx context.Context, invoiceID string) 
 	allocations := make([]*domain.InvoiceAllocation, len(rows))
 	for i, row := range rows {
 		alloc := &domain.InvoiceAllocation{
-			ID:             row.ID,
-			TransactionID:  row.TransactionID,
-			AmountID:       row.AmountID,
-			AmountValue:    row.AmountValue,
-			AmountUnitID:   row.AmountUnitID,
-			AmountUnitAbbr: row.AmountUnitAbbreviation,
-			CreatedAt:      row.CreatedAt,
-			UpdatedAt:      row.UpdatedAt,
+			ID:               row.ID,
+			TransactionID:    row.TransactionID,
+			AmountID:         row.AmountID,
+			AmountValue:      row.AmountValue,
+			AmountUnitID:     row.AmountUnitID,
+			AmountUnitAbbr:   row.AmountUnitAbbreviation,
+			SettlementID:     nullStringToPtr(row.SettlementID),
+			SettlementNumber: nullStringToPtr(row.SettlementNumber),
+			CreatedAt:        row.CreatedAt,
+			UpdatedAt:        row.UpdatedAt,
 		}
 		if row.Note.Valid {
 			alloc.Note = &row.Note.String
@@ -259,6 +263,7 @@ func (r *invoiceRepoImpl) Update(ctx context.Context, params domain.UpdateInvoic
 	}
 	if params.IsPaidInFull != nil {
 		updateParams.IsPaidInFull = gosql.NullBool{Bool: *params.IsPaidInFull, Valid: true}
+		updateParams.PaidInFullMarkedByID = db.NullStringPtr(params.PaidInFullMarkedByID)
 	}
 
 	err := r.queries.UpdateInvoice(ctx, updateParams)
@@ -292,11 +297,14 @@ func (r *invoiceRepoImpl) IsDuplicateNumber(ctx context.Context, accountID, numb
 	return cnt > 0, nil
 }
 
-func (r *invoiceRepoImpl) GetEmailRecipients(ctx context.Context, invoiceID string) ([]string, *apierror.APIError) {
+func (r *invoiceRepoImpl) GetEmailRecipients(ctx context.Context, accountID, invoiceID string) ([]string, *apierror.APIError) {
 	ctx, span := invoiceRepoTracer.Start(ctx, "repository.invoice.get_email_recipients")
 	defer span.End()
 
-	rows, err := r.queries.GetInvoiceEmailRecipients(ctx, invoiceID)
+	rows, err := r.queries.GetInvoiceEmailRecipients(ctx, sqlc.GetInvoiceEmailRecipientsParams{
+		InvoiceID: invoiceID,
+		AccountID: accountID,
+	})
 	if apiErr := db.MapSQLError(err); apiErr != nil {
 		return nil, tracing.Trace(span, apiErr)
 	}
@@ -440,6 +448,27 @@ func mapInvoiceRow(row sqlc.GetInvoiceRow) *domain.Invoice {
 	invoice.CustomerStatusCode = nullStringToPtr(row.CustomerStatusCode)
 	invoice.CustomerCommissionPolicy = nullStringToPtr(row.CustomerCommissionPolicy)
 
+	invoice.BillingAddress = mapAddressRow(
+		row.BillingAddressID, row.BillingAddressName, row.BillingAddressPhone, row.BillingAddressEmail, row.BillingAddressIsDropShip,
+		row.BillingAddressCreatedAt, row.BillingAddressUpdatedAt,
+		row.BillingAddressGeolocationID, row.BillingAddressLine1, row.BillingAddressLine2, row.BillingAddressCity, row.BillingAddressState, row.BillingAddressZip,
+		row.BillingAddressCountry, row.BillingAddressGooglePlaceID, row.BillingAddressLatitude, row.BillingAddressLongitude, row.BillingAddressTimezone,
+		row.BillingAddressReceiveCalendarID,
+	)
+	if row.PaymentTermID.Valid {
+		invoice.PaymentTerm = &domain.PaymentTerm{
+			ID:        row.PaymentTermID.String,
+			Name:      row.PaymentTermName.String,
+			Status:    constants.PaymentTermStatusInactive,
+			AccountID: nullStringToPtr(row.PaymentTermAccountID),
+			CreatedAt: row.PaymentTermCreatedAt.Time,
+			UpdatedAt: row.PaymentTermUpdatedAt.Time,
+		}
+		if row.PaymentTermIsActive.Bool {
+			invoice.PaymentTerm.Status = constants.PaymentTermStatusActive
+		}
+	}
+
 	return invoice
 }
 
@@ -467,6 +496,15 @@ func mapCustomerInvoiceRow(row sqlc.ListCustomerInvoicesByIDsRow) *domain.Invoic
 	}
 	if row.BillingAddressName.Valid {
 		inv.BillingAddressName = &row.BillingAddressName.String
+	}
+	if row.BillingAddressID.Valid && row.BillingAddressGeolocationID.Valid {
+		inv.BillingAddress = mapAddressRow(
+			row.BillingAddressID.String, row.BillingAddressName.String, row.BillingAddressPhone, row.BillingAddressEmail, row.BillingAddressIsDropShip.Bool,
+			row.BillingAddressCreatedAt.Time, row.BillingAddressUpdatedAt.Time,
+			row.BillingAddressGeolocationID.String, row.BillingAddressLine1, row.BillingAddressLine2, row.BillingAddressCity, row.BillingAddressState, row.BillingAddressZip,
+			row.BillingAddressCountry.String, row.BillingAddressGooglePlaceID, row.BillingAddressLatitude, row.BillingAddressLongitude, row.BillingAddressTimezone,
+			row.BillingAddressReceiveCalendarID,
+		)
 	}
 	inv.IsPrepaid = row.CustomerPaymentTermID.Valid && row.CustomerPaymentTermID.String == "prepaid"
 	return inv

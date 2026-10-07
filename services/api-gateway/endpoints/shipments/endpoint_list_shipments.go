@@ -24,17 +24,18 @@ type ListShipmentsRequest struct {
 	ProductLineIDs []string `query:"product_line_ids"`
 	// Only include shipments whose customer belongs to any of these customer groups.
 	CustomerGroupIDs []string `query:"customer_group_ids"`
-	// Only include shipments whose customer is assigned to any of these sales reps, given as account
-	// user IDs matching the customer's default sales rep.
+	// Only include shipments whose sales order is credited to any of these sales reps.
+	//
+	// These are account user IDs, matching the `sales_rep` on the order, not the customer's default sales rep.
 	SalesRepIDs []string `query:"sales_rep_ids"`
 	// Only include shipments created on or after this date (`YYYY-MM-DD`).
 	//
 	// Filters on when the shipment was created, not on when it was shipped.
-	StartDate *string `query:"starts_at"`
+	StartDate *string `query:"starts_at" validate:"omitempty,date_filter"`
 	// Only include shipments created on or before this date (`YYYY-MM-DD`).
 	//
 	// Filters on when the shipment was created, not on when it was shipped.
-	EndDate *string `query:"ends_at"`
+	EndDate *string `query:"ends_at" validate:"omitempty,date_filter"`
 }
 
 // Returns a paginated list of shipments, newest first.

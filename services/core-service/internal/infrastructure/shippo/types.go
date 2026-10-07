@@ -75,6 +75,15 @@ type Parcel struct {
 	Height       string `json:"height"`
 	MassUnit     string `json:"mass_unit"`
 	DistanceUnit string `json:"distance_unit"`
+	// Extra and Metadata ride only on a label purchase; a rating request leaves them out.
+	Extra    *ParcelExtra `json:"extra,omitempty"`
+	Metadata string       `json:"metadata,omitempty"`
+}
+
+// Carries the references a carrier prints on a purchased label.
+type ParcelExtra struct {
+	Reference1 string `json:"reference_1,omitempty"`
+	Reference2 string `json:"reference_2,omitempty"`
 }
 
 // Asks Shippo to rate a shipment. Used both to quote a real customer's parcels and, with throwaway
@@ -131,6 +140,7 @@ type CreateTransactionRequest struct {
 	Shipment          LabelShipment `json:"shipment"`
 	LabelFileType     string        `json:"label_file_type"`
 	Async             bool          `json:"async"`
+	Metadata          string        `json:"metadata,omitempty"`
 }
 
 // Represents a Shippo transaction — one purchased label, or the master transaction.

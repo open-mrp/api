@@ -415,7 +415,7 @@ func (s *propertySvcImpl) DeleteProperty(ctx context.Context, propertyID string)
 	})
 	if apiErr != nil {
 		if apierror.IsNotFound(apiErr) {
-			wasDeleted, deletedCheckErr := s.repos.NewDeletedRecordRepo().Exists(ctx, constants.DeletedRecordResourceTypeProperty, propertyID)
+			wasDeleted, deletedCheckErr := s.repos.NewDeletedRecordRepo().ExistsInAccount(ctx, constants.DeletedRecordResourceTypeProperty, propertyID, accountID)
 			if deletedCheckErr != nil {
 				return tracing.Trace(span, deletedCheckErr)
 			}
@@ -429,7 +429,7 @@ func (s *propertySvcImpl) DeleteProperty(ctx context.Context, propertyID string)
 	return s.withTx(ctx, func(txCtx context.Context, txSvc *propertySvcImpl) *apierror.APIError {
 		txRepo := txSvc.repos.NewPropertyRepo()
 
-		if apiErr := txSvc.repos.NewDeletedRecordRepo().Create(txCtx, constants.DeletedRecordResourceTypeProperty, property.ID, property); apiErr != nil {
+		if apiErr := txSvc.repos.NewDeletedRecordRepo().CreateInAccount(txCtx, constants.DeletedRecordResourceTypeProperty, property.ID, accountID, property); apiErr != nil {
 			return apiErr
 		}
 

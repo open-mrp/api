@@ -11,11 +11,13 @@ import (
 )
 
 type UserSvc interface {
+	// GetUser returns a user by ID, email, or username: the caller themselves, or a user who belongs to the target account.
 	GetUser(ctx context.Context, userID string) (*UserRecord, *apierror.APIError)
 	// BatchGetUsersByIDs returns users matching the given IDs that are affiliated with the target account.
 	BatchGetUsersByIDs(ctx context.Context, ids []string) ([]*UserRecord, *apierror.APIError)
 	UpdateUser(ctx context.Context, userID string, params UpdateUserParams) (*UserRecord, *apierror.APIError)
-	UploadUserPhoto(ctx context.Context, userID string, file []byte, contentType string) *apierror.APIError
+	// UploadUserPhoto stores the user's photo under the image type read from its bytes.
+	UploadUserPhoto(ctx context.Context, userID string, file []byte) *apierror.APIError
 	GetUserPhotoURL(ctx context.Context, userID string) (*string, *apierror.APIError)
 }
 
@@ -517,8 +519,8 @@ type ItemSvc interface {
 	// ListItems returns a paginated list of items for the caller's account. Supports filtering by type, category, attribute, supplier, date range, and full-text search.
 	ListItems(ctx context.Context, params ListItemsParams) (*ListItemsResult, *apierror.APIError)
 
-	// GetItem returns a single item by ID within the caller's account.
-	GetItem(ctx context.Context, itemID string, includes []string) (*Item, *apierror.APIError)
+	// GetItem returns a single item by ID within the caller's account, with the records embeds asks for.
+	GetItem(ctx context.Context, itemID string, includes []string, embeds ItemEmbeds) (*Item, *ItemEmbedded, *apierror.APIError)
 
 	// GetItemInventory returns inventory quantities (on-hand, reserved, ATP, short) for an item.
 	GetItemInventory(ctx context.Context, itemID string) (*ItemInventory, *apierror.APIError)
@@ -559,8 +561,8 @@ type ItemSvc interface {
 	// BulkReconcileItems reconciles inventory for multiple items by SKU.
 	BulkReconcileItems(ctx context.Context, params BulkReconcileItemsParams) (*BulkReconcileItemsResult, *apierror.APIError)
 
-	// BatchGetItemsByIDs returns items by ID for the api-gateway include resolver. Always populates rates and attributes.
-	BatchGetItemsByIDs(ctx context.Context, ids []string) ([]*Item, *apierror.APIError)
+	// BatchGetItemsByIDs returns items by ID for the api-gateway include resolver. Always populates rates and attributes; embeds adds the records the items embed.
+	BatchGetItemsByIDs(ctx context.Context, ids []string, embeds ItemEmbeds) ([]*Item, *ItemEmbedded, *apierror.APIError)
 
 	// ListInventories returns all items with their on-hand inventory quantities.
 	ListInventories(ctx context.Context, params ListInventoriesParams) (*ListInventoriesResult, *apierror.APIError)
@@ -629,14 +631,14 @@ type AccountSvc interface {
 	// UpdateAccount partially updates an account's name, branding, and/or portal slug.
 	UpdateAccount(ctx context.Context, params UpdateAccountParams) (*Account, *apierror.APIError)
 
-	// UploadAccountPhoto uploads an account logo to S3 and updates the branding record.
-	UploadAccountPhoto(ctx context.Context, accountID string, file []byte, contentType string) *apierror.APIError
+	// UploadAccountPhoto uploads an account logo to S3, under the image type read from its bytes, and points the branding at it.
+	UploadAccountPhoto(ctx context.Context, accountID string, file []byte) *apierror.APIError
 
 	// GetAccountLogoURL returns a presigned S3 URL for the account's logo, or nil if none.
 	GetAccountLogoURL(ctx context.Context, accountID string) (*string, *apierror.APIError)
 
-	// UploadAccountFavicon uploads a customer-portal favicon to S3 and updates the branding record.
-	UploadAccountFavicon(ctx context.Context, accountID string, file []byte, contentType string) *apierror.APIError
+	// UploadAccountFavicon uploads a customer-portal favicon to S3, under the image type read from its bytes, and points the branding at it.
+	UploadAccountFavicon(ctx context.Context, accountID string, file []byte) *apierror.APIError
 
 	// GetAccountFaviconURL returns a presigned S3 URL for the account's customer-portal favicon, or nil if none.
 	GetAccountFaviconURL(ctx context.Context, accountID string) (*string, *apierror.APIError)
@@ -691,7 +693,7 @@ type BatchSvc interface {
 	AnalyzeOpenBatches(ctx context.Context, itemIDs, productLineIDs []string) ([]OpenBatchSummary, *apierror.APIError)
 
 	// InitializeBatch initializes a batch at a scanning station.
-	InitializeBatch(ctx context.Context, batchID, scanningStationID string) (*BaseBatch, *apierror.APIError)
+	InitializeBatch(ctx context.Context, params InitializeBatchParams) (*BaseBatch, *apierror.APIError)
 
 	// MoveBatches moves one or more batches to a new production step.
 	MoveBatches(ctx context.Context, params MoveBatchesParams) (*BaseBatch, *apierror.APIError)
@@ -754,6 +756,9 @@ type ItemCategorySvc interface {
 
 	// AddItemCategoryProperty adds a property to an item category.
 	AddItemCategoryProperty(ctx context.Context, params AddItemCategoryPropertyParams) *apierror.APIError
+
+	// CreateItemCategoryProperty creates a property and attaches it to an item category in one transaction, authorized by the category's update permission alone.
+	CreateItemCategoryProperty(ctx context.Context, params CreateItemCategoryPropertyParams) (*Property, *apierror.APIError)
 
 	// RemoveItemCategoryProperty removes a property from an item category.
 	RemoveItemCategoryProperty(ctx context.Context, params RemoveItemCategoryPropertyParams) *apierror.APIError
@@ -859,6 +864,11 @@ type CustomerSvc interface {
 
 	// MergeCustomers merges source customers into a target customer.
 	MergeCustomers(ctx context.Context, params MergeCustomersParams) (*Customer, *apierror.APIError)
+
+	// ExportCustomers accepts an export of the customers the list's filters select; the export does its own paging.
+	ExportCustomers(ctx context.Context, filters ListCustomersParams) (*Job, *apierror.APIError)
+	// BuildExportCustomers renders the file an accepted export recorded.
+	BuildExportCustomers(ctx context.Context, accountID string, filters json.RawMessage) (*Export, *apierror.APIError)
 }
 
 type AnalyticsSvc interface {
@@ -879,13 +889,27 @@ type AnalyticsSvc interface {
 	// BuildExportSalesLines renders the file an accepted sales-lines export recorded.
 	BuildExportSalesLines(ctx context.Context, accountID string, filters json.RawMessage) (*Export, *apierror.APIError)
 
+	// AnalyzeOpenOrdersSummary totals the money on open sales orders: ordered, back-ordered, and invoiced so far.
+	AnalyzeOpenOrdersSummary(ctx context.Context, filter OpenOrderFilter) (*OpenOrdersSummary, *apierror.APIError)
+	// AnalyzeOpenOrderProducts totals the open lines per item, most back-ordered first, a page at a time.
+	AnalyzeOpenOrderProducts(ctx context.Context, params AnalyzeOpenOrderProductsParams) (*OpenOrderProductPage, *apierror.APIError)
+	// ListOpenOrders lists the open sales orders, newest issue first, with what their counted lines total.
+	ListOpenOrders(ctx context.Context, params ListOpenOrdersParams) (*OpenOrderPage, *apierror.APIError)
+	// ListOpenOrderLines returns one sales order's sale lines.
+	ListOpenOrderLines(ctx context.Context, orderID string) ([]OpenOrderLine, *apierror.APIError)
+	// ExportOpenOrderLines accepts an export of the open sale lines and returns the job that builds it.
+	ExportOpenOrderLines(ctx context.Context, params ExportOpenOrderLinesParams) (*Job, *apierror.APIError)
+	// BuildExportOpenOrderLines renders the file an accepted open-order-lines export recorded.
+	BuildExportOpenOrderLines(ctx context.Context, accountID string, filters json.RawMessage) (*Export, *apierror.APIError)
+
 	// AnalyzeRealizedMargins rolls invoiced lines up to one row per customer and SKU and flags those priced below their peers or under target margin.
 	AnalyzeRealizedMargins(ctx context.Context, params AnalyzeRealizedMarginsParams) (*RealizedMarginAnalysis, *apierror.APIError)
 
 	// AnalyzeCustomerPricing sweeps every contracted price and flags those below their peers or under target margin.
 	AnalyzeCustomerPricing(ctx context.Context, params AnalyzeCustomerPricingParams) (*CustomerPricingAnalysis, *apierror.APIError)
 	AnalyzeOpenBatches(ctx context.Context, params AnalyzeOpenBatchesParams) ([]OpenBatchEntry, *apierror.APIError)
-	AnalyzeProductionCosts(ctx context.Context, params AnalyzeProductionCostsParams) ([]ProductionCostEntry, *apierror.APIError)
+	// AnalyzeProductionCosts costs the batches scanned at production steps over a window, overall and by department and item category.
+	AnalyzeProductionCosts(ctx context.Context, params AnalyzeProductionCostsParams) (*ProductionCostReport, *apierror.APIError)
 	AnalyzeDeliveries(ctx context.Context, params AnalyzeDeliveriesParams) (*DeliveryAnalyticsResult, *apierror.APIError)
 	AnalyzeManufacturing(ctx context.Context, params AnalyzeManufacturingParams) (float64, *apierror.APIError)
 	AnalyzeManufacturingBatch(ctx context.Context, params AnalyzeManufacturingBatchParams) (*ManufacturingBatchResult, *apierror.APIError)
@@ -1152,6 +1176,11 @@ type InventoryChangeLogSvc interface {
 
 	// ExportInventoryChangeLogs returns all inventory change logs matching the provided filters for the caller's account.
 	ExportInventoryChangeLogs(ctx context.Context, params ExportInventoryChangeLogsParams) ([]*InventoryChangeLog, *apierror.APIError)
+
+	// StartInventoryChangeLogsExport accepts an export of the change logs the filters select; the export does its own paging.
+	StartInventoryChangeLogsExport(ctx context.Context, filters ExportInventoryChangeLogsParams) (*Job, *apierror.APIError)
+	// BuildExportInventoryChangeLogs renders the file an accepted export recorded.
+	BuildExportInventoryChangeLogs(ctx context.Context, accountID string, filters json.RawMessage) (*Export, *apierror.APIError)
 }
 
 type InvoiceSvc interface {
@@ -1699,6 +1728,8 @@ type SupplierSvc interface {
 	UpdateSupplier(ctx context.Context, params UpdateSupplierParams) (*Supplier, *apierror.APIError)
 	DeleteSupplier(ctx context.Context, params DeleteSupplierParams) (*Supplier, *apierror.APIError)
 	BulkDeleteSuppliers(ctx context.Context, params BulkDeleteSuppliersParams) *apierror.APIError
+	// BatchGetSuppliersByIDs reads the suppliers documents name, for the gateway's include resolver.
+	BatchGetSuppliersByIDs(ctx context.Context, ids []string) ([]*SupplierSummary, *apierror.APIError)
 }
 
 type SysPropertySvc interface {

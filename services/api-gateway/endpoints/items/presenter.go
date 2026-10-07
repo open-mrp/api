@@ -190,7 +190,7 @@ func ItemCostsPresenter(resp *pb.GetItemCostsResponse, units map[string]*apireso
 	}
 }
 
-func ItemTrendsPresenter(resp *pb.GetItemTrendsResponse) *apiresource.ItemTrends {
+func ItemTrendsPresenter(resp *pb.GetItemTrendsResponse, units map[string]*apiresource.Unit) *apiresource.ItemTrends {
 	if resp == nil {
 		return nil
 	}
@@ -207,6 +207,7 @@ func ItemTrendsPresenter(resp *pb.GetItemTrendsResponse) *apiresource.ItemTrends
 	return &apiresource.ItemTrends{
 		Object:    constants.ObjectTypeItemTrends,
 		TrendType: constants.ItemTrendType(resp.TrendType),
+		Unit:      units[resp.UnitId],
 		Points:    apiresource.NewList(points, apiresource.PageInfo{}),
 	}
 }

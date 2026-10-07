@@ -17,13 +17,15 @@ type GetItemTrendsRequest struct {
 	ItemID string `path:"id" validate:"required"`
 	// The trend metric to fetch.
 	//
-	// `inventory` returns the item's inventory-level measurements from the last 30 days.
+	// `inventory` returns the item's logged inventory level at the close of each of the last 30 days.
 	TrendType constants.ItemTrendType `query:"trend_type" validate:"required"`
 }
 
-// Returns how an item's stock level has moved over the last 30 days, as a series of point-in-time measurements.
+// Returns how an item's stock level has moved over the last 30 days: exactly 30 points, one per UTC calendar day ending today, oldest first.
 //
-// Days on which nothing was logged produce no point, and days with several entries contribute only the first, so the series is sparse rather than one point per calendar day.
+// Each point is the last inventory level logged on or before the end of its day, so a day with several movements reports where it closed. A day with nothing logged carries the previous day's level forward, and the series opens at the last level logged before the window rather than at zero, so an item that has not moved for a month shows its stock rather than a flat line at zero. An item never logged reads zero throughout.
+//
+// A logged level is the item's physical stock — on hand less what is short against open demand — at the moment of the movement that wrote it. Every value is converted into the base unit of the item's category, returned as `unit`, whatever unit the movement was recorded in.
 type GetItemTrendsEndpoint struct{}
 
 func (e *GetItemTrendsEndpoint) Materialize() *apiendpoint.APIEndpoint[*GetItemTrendsRequest, *apiresource.ItemTrends] {

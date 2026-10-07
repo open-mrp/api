@@ -36,19 +36,23 @@ func TestListItems_SearchBySKU(t *testing.T) {
 	assert.True(t, found, "Seeded item with SKU %q not found in search results", SeedItemSKU)
 }
 
+// The search reaches a description: the word is in this test's own item's description and nowhere else.
 func TestListItems_SearchByDescription(t *testing.T) {
 	t.Parallel()
-	list, _, err := apiClient.GetList(itemsPath, url.Values{"q": {"sock"}})
+	word := searchToken("e2edesc")
+	body := validPartBody(uniqueName("e2e-desc-search"))
+	body["description"] = "Ribbed " + word + " cuff"
+	status, respBody, err := apiClient.Post(partsPath+"?include=item", body, newIdempotencyKey())
 	require.NoError(t, err)
-	assert.GreaterOrEqual(t, len(list.Data), 1, "Search for 'sock' should return at least 1 result")
+	requireStatus(t, 201, status, respBody)
+	part := parseJSON(respBody)
+	t.Cleanup(func() { _, _, _ = apiClient.Delete(partsPath + "/" + jsonField(part, "id")) })
 
-	for _, item := range list.Data {
-		desc := DataItemField(item, "description")
-		assert.True(t,
-			strings.Contains(strings.ToLower(desc), "sock"),
-			"Search result description %q should contain 'sock'", desc,
-		)
-	}
+	list, _, err := apiClient.GetList(itemsPath, url.Values{"q": {word}})
+	require.NoError(t, err)
+	require.Len(t, list.Data, 1, "searching a word only the item's description holds")
+	assert.Equal(t, jsonField(jsonObject(part, "item"), "id"), DataItemField(list.Data[0], "id"))
+	assert.True(t, strings.Contains(DataItemField(list.Data[0], "description"), word))
 }
 
 func TestListItems_FilterByCategory(t *testing.T) {
@@ -84,13 +88,12 @@ func TestListItems_FilterByCategory_NoResults(t *testing.T) {
 	assertEmptyListData(t, list.Data, "Nonsense category filter should return empty data")
 }
 
-func TestListItems_FilterByTypeCode_NoResults(t *testing.T) {
+func TestListItems_FilterByTypeCode_RejectsAnUnknownType(t *testing.T) {
 	t.Parallel()
-	list, _, err := apiClient.GetList(itemsPath, url.Values{
-		"types": {"zzzznotatypecode99999"},
-	})
+	status, body, err := apiClient.GetListRaw(itemsPath, url.Values{"types": {"zzzznotatypecode99999"}})
 	require.NoError(t, err)
-	assertEmptyListData(t, list.Data, "Nonsense type code filter should return empty data")
+	requireStatus(t, 400, status, body)
+	requireErrorResponse(t, body, "parameter_invalid", "invalid_request_error")
 }
 
 func TestListItems_SearchNoResults(t *testing.T) {

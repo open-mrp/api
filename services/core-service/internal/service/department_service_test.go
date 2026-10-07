@@ -188,3 +188,14 @@ func (suite *DepartmentBulkUpsertTestSuite) TestExportDepartments_ScopesToTheIde
 	_, apiErr := suite.buildExport(ctx, domain.ExportDepartmentsParams{AccountID: "ac_attacker"})
 	suite.Require().Nil(apiErr)
 }
+
+func TestDeleteDepartment_OnlyTheOwnerLearnsItWasDeleted(t *testing.T) {
+	t.Parallel()
+	assertOnlyTheOwnerLearnsItWasDeleted(t, constants.DeletedRecordResourceTypeDepartment, "dep_gone", func(h *deletedScopeHarness, accountID string) *apierror.APIError {
+		departments := repositorymock.NewMockDepartmentRepo(h.ctrl)
+		h.repos.EXPECT().NewDepartmentRepo().Return(departments).AnyTimes()
+		departments.EXPECT().Get(gomock.Any(), domain.GetDepartmentParams{AccountID: accountID, DepartmentID: "dep_gone"}).Return(nil, deletedScopeNotFound())
+		svc := NewDepartmentSvc(&DepartmentSvcConfig{Repos: h.repos, MediatorFactory: h.mediators, JobSvcFactory: NewJobSvcFactory(), TxManager: &stubTxManager{factory: h.repos}})
+		return svc.DeleteDepartment(deletedScopeCtx(accountID), "dep_gone")
+	})
+}

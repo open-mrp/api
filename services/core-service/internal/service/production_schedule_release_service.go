@@ -421,10 +421,6 @@ func (s *productionScheduleSvcImpl) ReleaseProductionScheduleWeek(
 	if apiErr != nil {
 		return nil, tracing.Trace(span, apiErr)
 	}
-	// Releasing creates a production run, so it needs the authority to create one. Without this check the schedule permission would be a way around production-run permissions.
-	if apiErr := identity.CheckHasPermission(types.PermissionDomainProductionRuns, types.ActionCreate); apiErr != nil {
-		return nil, tracing.Trace(span, apiErr)
-	}
 	accountID := identity.Target.AccountID
 
 	meds := s.mediators()

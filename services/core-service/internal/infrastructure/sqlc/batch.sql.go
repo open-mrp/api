@@ -41,6 +41,26 @@ func (q *Queries) CountBatchesByScanningStation(ctx context.Context, arg CountBa
 	return count, err
 }
 
+const countBatchesScannedSince = `-- name: CountBatchesScannedSince :one
+SELECT COUNT(*) FROM batch
+WHERE account_id = ?
+AND scanned_at >= ?
+`
+
+type CountBatchesScannedSinceParams struct {
+	AccountID string
+	Since     sql.NullTime
+}
+
+// The batches an account has scanned in the current billing period, which is what a plan's batch cap
+// counts. Served by batch_account_id_scanned_at_idx.
+func (q *Queries) CountBatchesScannedSince(ctx context.Context, arg CountBatchesScannedSinceParams) (int64, error) {
+	row := q.db.QueryRowContext(ctx, countBatchesScannedSince, arg.AccountID, arg.Since)
+	var count int64
+	err := row.Scan(&count)
+	return count, err
+}
+
 const deleteBatch = `-- name: DeleteBatch :exec
 DELETE FROM batch WHERE id = ? AND account_id = ?
 `
@@ -1303,117 +1323,6 @@ func (q *Queries) ListBatchesByScanningStationForward(ctx context.Context, arg L
 			&i.ProductionStepName,
 			&i.ProductionRunID2,
 			&i.ProductionRunNumber,
-		); err != nil {
-			return nil, err
-		}
-		items = append(items, i)
-	}
-	if err := rows.Close(); err != nil {
-		return nil, err
-	}
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-	return items, nil
-}
-
-const listOpenBatches = `-- name: ListOpenBatches :many
-SELECT
-    d.name AS department_name,
-    i.sku AS item_name,
-    i.id AS item_id,
-    b.scanning_station_id,
-    SUM(q.value - COALESCE((
-        -- A batch's outputs are the downstream (A) side of _batch_flow rows where it is the upstream (B) batch, per the Prisma orientation of the table.
-        --
-        -- Correlated per batch: a grouped derived table cannot take the account filter and so aggregates the whole flow graph on every call.
-        SELECT SUM(oq.value)
-        FROM _batch_flow bf
-        JOIN batch ob ON bf.A = ob.id
-        JOIN quantity oq ON ob.quantity_id = oq.id
-        WHERE bf.B = b.id
-    ), 0)) AS total_count,
-    qu.abbreviation AS unit_abbreviation
-FROM batch b
-JOIN item i ON b.item_id = i.id
-JOIN quantity q ON b.quantity_id = q.id
-JOIN unit qu ON q.unit_id = qu.id
-LEFT JOIN scanning_station ss ON b.scanning_station_id = ss.id
-LEFT JOIN department d ON ss.department_id = d.id
-WHERE b.account_id = ?
-AND b.closed_at IS NULL
-AND b.scanned_at IS NOT NULL
-AND b.scanning_station_id IS NOT NULL
-AND (
-    ? = false
-    OR b.item_id IN (/*SLICE:item_ids*/?)
-)
-AND (
-    ? = false
-    OR EXISTS (
-        SELECT 1 FROM product p
-        WHERE p.item_id = i.id
-          AND p.product_line_id IN (/*SLICE:product_line_ids*/?)
-    )
-)
-GROUP BY d.name, i.sku, i.id, b.scanning_station_id, qu.abbreviation
-`
-
-type ListOpenBatchesParams struct {
-	AccountID                string
-	IncludeItemFilter        interface{}
-	ItemIds                  []string
-	IncludeProductLineFilter interface{}
-	ProductLineIds           []sql.NullString
-}
-
-type ListOpenBatchesRow struct {
-	DepartmentName    sql.NullString
-	ItemName          string
-	ItemID            string
-	ScanningStationID sql.NullString
-	TotalCount        interface{}
-	UnitAbbreviation  string
-}
-
-// The product-line filter matches via EXISTS rather than a join so an item with several products on matching lines is not double-counted by the SUM.
-func (q *Queries) ListOpenBatches(ctx context.Context, arg ListOpenBatchesParams) ([]ListOpenBatchesRow, error) {
-	query := listOpenBatches
-	var queryParams []interface{}
-	queryParams = append(queryParams, arg.AccountID)
-	queryParams = append(queryParams, arg.IncludeItemFilter)
-	if len(arg.ItemIds) > 0 {
-		for _, v := range arg.ItemIds {
-			queryParams = append(queryParams, v)
-		}
-		query = strings.Replace(query, "/*SLICE:item_ids*/?", strings.Repeat(",?", len(arg.ItemIds))[1:], 1)
-	} else {
-		query = strings.Replace(query, "/*SLICE:item_ids*/?", "NULL", 1)
-	}
-	queryParams = append(queryParams, arg.IncludeProductLineFilter)
-	if len(arg.ProductLineIds) > 0 {
-		for _, v := range arg.ProductLineIds {
-			queryParams = append(queryParams, v)
-		}
-		query = strings.Replace(query, "/*SLICE:product_line_ids*/?", strings.Repeat(",?", len(arg.ProductLineIds))[1:], 1)
-	} else {
-		query = strings.Replace(query, "/*SLICE:product_line_ids*/?", "NULL", 1)
-	}
-	rows, err := q.db.QueryContext(ctx, query, queryParams...)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	var items []ListOpenBatchesRow
-	for rows.Next() {
-		var i ListOpenBatchesRow
-		if err := rows.Scan(
-			&i.DepartmentName,
-			&i.ItemName,
-			&i.ItemID,
-			&i.ScanningStationID,
-			&i.TotalCount,
-			&i.UnitAbbreviation,
 		); err != nil {
 			return nil, err
 		}

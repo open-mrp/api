@@ -177,6 +177,12 @@ func (m *batchSvcImpl) InitializeBatch(ctx context.Context, req *InitializeBatch
 	pbReq := &pb.InitializeBatchRequest{
 		BatchId:           req.BatchID,
 		ScanningStationId: req.ScanningStationID,
+		ProductionStepId:  req.ProductionStepID.Ptr(),
+		ConsumeMaterials:  req.ConsumeMaterials.Ptr(),
+	}
+	if typeOverride, ok := req.TypeOverride.Value(); ok {
+		override := string(typeOverride)
+		pbReq.TypeOverride = &override
 	}
 
 	resp, apiErr := grpcutil.CallRPC(ctx, batchSvcTracer, "service.batches.initialize", domain.ServiceName,
@@ -315,6 +321,10 @@ func (m *batchSvcImpl) GetScanningStationConsumption(ctx context.Context, req *G
 		ScanningStationId: req.ScanningStationID,
 		BatchIds:          req.BatchIDs,
 		ProductionStepId:  req.ProductionStepID.Ptr(),
+	}
+	if typeOverride, ok := req.TypeOverride.Value(); ok {
+		override := string(typeOverride)
+		pbReq.TypeOverride = &override
 	}
 
 	if splitQuantity, ok := req.SplitQuantity.Value(); ok {

@@ -29,9 +29,6 @@ func LoadProductionRuns(ctx context.Context, ids []string) (map[string]any, *api
 				return coreProductionRunClient.GetProductionRun(ctx, &pb.GetProductionRunRequest{Id: id}, opts...)
 			})
 		if apiErr != nil {
-			if omitOnUnauthorized(apiErr) {
-				return out, nil
-			}
 			// Deleted after the including rows were read: leave this one reference null (see pick_loader.go).
 			if apierror.IsNotFound(apiErr) {
 				continue
@@ -54,7 +51,7 @@ func productionRunReferenceFromProto(info *pb.ProductionRunInfo) *apiresource.Pr
 		ID:             info.Id,
 		Object:         constants.ObjectTypeProductionRun,
 		Number:         info.Number,
-		BatchCount:     info.BatchCount,
+		BatchCount:     &info.BatchCount,
 		BatchSummaries: grpcutil.ProductionRunBatchSummariesFromProto(info.BatchSummaries),
 		StartedAt:      grpcutil.TimestampToTimePtr(info.StartedAt),
 		CompletedAt:    grpcutil.TimestampToTimePtr(info.CompletedAt),

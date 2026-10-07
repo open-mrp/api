@@ -112,7 +112,7 @@ func gatherInvoiceDoc(ctx context.Context, repos domain.RepoFactory, accountID s
 		cases, _ = repos.NewShippingCaseRepo().ListByShipment(ctx, *invoice.ShipmentID)
 	}
 
-	contacts, _ := repos.NewInvoiceRepo().GetEmailRecipients(ctx, invoice.ID)
+	contacts, _ := repos.NewInvoiceRepo().GetEmailRecipients(ctx, accountID, invoice.ID)
 
 	convs, apiErr := invoiceLineConversions(lines)
 	if apiErr != nil {

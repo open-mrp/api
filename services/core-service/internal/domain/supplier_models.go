@@ -14,6 +14,8 @@ type Supplier struct {
 	Note          *string          `audit:"note"`
 	BillToAddress *CustomerAddress `audit:"bill_to_address"`
 	ShipToAddress *CustomerAddress `audit:"ship_to_address"`
+	// MaterialCount is how many of the owner's materials the supplier is linked to; derived, so not audited.
+	MaterialCount int64
 	CreatedAt     time.Time
 	UpdatedAt     time.Time
 }
@@ -32,6 +34,7 @@ type SupplierSummary struct {
 	ShipToAddressID *string
 	BillToAddress   *CustomerAddress
 	ShipToAddress   *CustomerAddress
+	MaterialCount   int64
 	CreatedAt       time.Time
 	UpdatedAt       time.Time
 }

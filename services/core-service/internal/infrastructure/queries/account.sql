@@ -272,17 +272,44 @@ WHERE ap.slug = sqlc.arg('slug');
 -- name: UpdateAccountName :execresult
 UPDATE account SET name = sqlc.arg('name'), updated_at = NOW(3) WHERE id = sqlc.arg('account_id');
 
--- name: UpdateAccountBranding :execresult
-UPDATE account_branding SET
-    support_email = COALESCE(sqlc.narg('support_email'), support_email),
-    phone_number = COALESCE(sqlc.narg('phone_number'), phone_number),
-    facebook_handle = COALESCE(sqlc.narg('facebook_handle'), facebook_handle),
-    instagram_handle = COALESCE(sqlc.narg('instagram_handle'), instagram_handle),
-    linkedin_handle = COALESCE(sqlc.narg('linkedin_handle'), linkedin_handle),
-    twitter_handle = COALESCE(sqlc.narg('twitter_handle'), twitter_handle),
-    website_url = COALESCE(sqlc.narg('website_url'), website_url),
-    updated_at = NOW(3)
-WHERE owner_account_id = sqlc.arg('account_id');
+-- The branding as it stands after an update: the service applies the update to what was there, so a
+-- cleared field is written as NULL. Accounts made before branding existed have no row, and their first
+-- update creates it; id is used only then.
+-- name: UpsertAccountBranding :exec
+INSERT INTO account_branding (
+    id,
+    owner_account_id,
+    support_email,
+    phone_number,
+    facebook_handle,
+    instagram_handle,
+    linkedin_handle,
+    twitter_handle,
+    website_url,
+    created_at,
+    updated_at
+) VALUES (
+    sqlc.arg('id'),
+    sqlc.arg('account_id'),
+    sqlc.narg('support_email'),
+    sqlc.narg('phone_number'),
+    sqlc.narg('facebook_handle'),
+    sqlc.narg('instagram_handle'),
+    sqlc.narg('linkedin_handle'),
+    sqlc.narg('twitter_handle'),
+    sqlc.narg('website_url'),
+    NOW(3),
+    NOW(3)
+)
+ON DUPLICATE KEY UPDATE
+    support_email = VALUES(support_email),
+    phone_number = VALUES(phone_number),
+    facebook_handle = VALUES(facebook_handle),
+    instagram_handle = VALUES(instagram_handle),
+    linkedin_handle = VALUES(linkedin_handle),
+    twitter_handle = VALUES(twitter_handle),
+    website_url = VALUES(website_url),
+    updated_at = NOW(3);
 
 -- name: UpdateAccountPortalSlug :execresult
 UPDATE account_portal SET slug = sqlc.arg('slug'), updated_at = NOW(3) WHERE owner_account_id = sqlc.arg('account_id');
@@ -294,14 +321,33 @@ SELECT EXISTS(
     AND owner_account_id != sqlc.arg('exclude_account_id')
 ) AS slug_exists;
 
--- name: UpdateAccountBrandingLogoURL :exec
-UPDATE account_branding SET logo_url = sqlc.arg('logo_url'), updated_at = NOW(3) WHERE owner_account_id = sqlc.arg('account_id');
+-- Creates the branding row for an account that has none, as UpsertAccountBranding does.
+-- name: UpsertAccountBrandingLogoURL :exec
+INSERT INTO account_branding (id, owner_account_id, logo_url, created_at, updated_at)
+VALUES (sqlc.arg('id'), sqlc.arg('account_id'), sqlc.arg('logo_url'), NOW(3), NOW(3))
+ON DUPLICATE KEY UPDATE logo_url = VALUES(logo_url), updated_at = NOW(3);
 
 -- name: GetAccountBrandingLogoKey :one
 SELECT logo_url FROM account_branding WHERE owner_account_id = sqlc.arg('account_id');
 
--- name: UpdateAccountBrandingFaviconURL :exec
-UPDATE account_branding SET favicon_url = sqlc.arg('favicon_url'), updated_at = NOW(3) WHERE owner_account_id = sqlc.arg('account_id');
+-- Creates the branding row for an account that has none, as UpsertAccountBranding does.
+-- name: UpsertAccountBrandingFaviconURL :exec
+INSERT INTO account_branding (id, owner_account_id, favicon_url, created_at, updated_at)
+VALUES (sqlc.arg('id'), sqlc.arg('account_id'), sqlc.arg('favicon_url'), NOW(3), NOW(3))
+ON DUPLICATE KEY UPDATE favicon_url = VALUES(favicon_url), updated_at = NOW(3);
 
 -- name: GetAccountBrandingFaviconKey :one
 SELECT favicon_url FROM account_branding WHERE owner_account_id = sqlc.arg('account_id');
+
+-- name: SetAccountDefaultAddresses :exec
+UPDATE account SET
+    default_billing_address_id = COALESCE(sqlc.narg('billing_address_id'), default_billing_address_id),
+    default_shipping_address_id = COALESCE(sqlc.narg('shipping_address_id'), default_shipping_address_id),
+    updated_at = NOW(3)
+WHERE id = sqlc.arg('account_id');
+
+-- name: AccountHasAddress :one
+SELECT EXISTS (
+    SELECT 1 FROM account_address
+    WHERE account_id = sqlc.arg('account_id') AND address_id = sqlc.arg('address_id')
+) AS linked;

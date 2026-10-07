@@ -40,7 +40,7 @@ func (e *RetrieveConsumptionEndpoint) Materialize() *apiendpoint.APIEndpoint[*Re
 		},
 		IncludeConfig: apiendpoint.IncludesFor(apiendpoint.IncludesParams{
 			ObjectType: constants.ObjectTypeConsumption,
-			Fields:     []string{"consumed_item"},
+			Fields:     consumptionEndpointIncludes,
 		}),
 	})
 }

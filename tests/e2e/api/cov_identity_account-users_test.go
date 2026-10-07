@@ -19,16 +19,8 @@ import (
 // email / malformed username validation, invalid role_id/department_id FK
 // behavior, invalid list-filter enum values, and cursor-pagination advance.
 //
-// Cross-account (external-target) preferences on create/update — called out
-// as untested in the task brief — turned out to be **unreachable** through
-// the live API, not merely untested: see
-// TestCovIdentityAccountUsers_ListCrossAccountCustomerReadBlockedByHydrationBug
-// below and the accompanying notes. That single read-only test pins the
-// confirmed root cause without leaving orphaned data; a polluting
-// create-cross-account variant was deliberately not added (see notes
-// returned by the harness) since every cross-account create leaks an
-// unrecoverable account_user + user row (confirmed via direct DB
-// inspection) that the HTTP-only e2e client has no way to clean up.
+// Cross-account (customer and supplier contact) create, update, preferences,
+// and removal are covered in crud_counterparty_contacts_test.go.
 
 // ──────────────────────────────────────────────
 // Update idempotency
@@ -183,10 +175,9 @@ func TestCovIdentityAccountUsers_ActionsOnNonexistentIDReturn404(t *testing.T) {
 // ──────────────────────────────────────────────
 
 // TestCovIdentityAccountUsers_CreatePreferencesSameAccountSilentlyIgnored
-// covers the documented, testable half of the create-preferences contract:
-// "silently ignored (not rejected) when creating in your own account". The
-// cross-account "applied" half is unreachable — see the top-of-file note and
-// TestCovIdentityAccountUsers_ListCrossAccountCustomerReadBlockedByHydrationBug.
+// covers the own-account half of the create-preferences contract: "ignored
+// when adding a user to your own account". The cross-account half is in
+// crud_counterparty_contacts_test.go.
 func TestCovIdentityAccountUsers_CreatePreferencesSameAccountSilentlyIgnored(t *testing.T) {
 	t.Parallel()
 	name := uniqueName("e2e-cov-au-prefcreate")
@@ -236,15 +227,8 @@ func TestCovIdentityAccountUsers_UpdatePreferencesSameAccountRejected(t *testing
 }
 
 // TestCovIdentityAccountUsers_InvalidNotificationTypeCode confirms the
-// service-layer notification_type_code check via the one reachable path: the
-// validation runs (and fails, cleanly rolling back the transaction) before
-// the create-vs-ignore branch even matters, because it is gated on
-// IsExternalTarget() && len(preferences) > 0 — reachable during a
-// cross-account create even though the *success* path is not observable
-// through the gateway (see the hydration-bug note). Verified via direct DB
-// inspection that an invalid-type-code cross-account create leaves no
-// orphaned row (the error surfaces from inside the same transaction as the
-// insert, unlike the hydration-bug case).
+// service-layer notification_type_code check on a cross-account create. The
+// error surfaces inside the create's transaction, so no user is left behind.
 func TestCovIdentityAccountUsers_InvalidNotificationTypeCode(t *testing.T) {
 	t.Parallel()
 	custClient := apiClient.WithAccountID(SeedCustomerAccountID)
@@ -380,43 +364,12 @@ func TestCovIdentityAccountUsers_ListCursorPaginationAdvances(t *testing.T) {
 }
 
 // ──────────────────────────────────────────────
-// cross-account account-user hydration
+// cross-account (customer target)
 // ──────────────────────────────────────────────
 
-// TestCovIdentityAccountUsers_ListCrossAccountCustomerReadBlockedByHydrationBug
-// pins the cross-account
-// (?WithAccountID) preferences tests called for in the coverage task.
-//
-// account_user_service.checkAccountUserReadPermission (and
-// checkAccountUserWritePermission) explicitly support internal actors
-// managing a *customer* target account's users, gated on
-// PermissionDomainCustomers — the same pattern addresses/orders/invoices
-// use for cross-account access. ListAccountUsers/GetAccountUser/
-// CreateAccountUser all honor this at the raw-RPC level.
-//
-// However, the api-gateway never returns those raw RPC results directly:
-// every response (list, get, and — critically — create/update, whose
-// response is re-fetched after the mutation) is hydrated through
-// resourceloaders.LoadAccountUsers, which always calls the
-// BatchGetAccountUsersByIDs RPC. That RPC enforces a *stricter*,
-// unconditional identity.CheckIsInternalActor() gate (same-account
-// membership only — see account_user_service.go's BatchGetAccountUsersByIDs)
-// with no customer/supplier branch at all. The result: cross-account access
-// to this endpoint group is completely blocked in practice, contradicting
-// the read/write permission logic's own design and the CreateAccountUser
-// preferences field's doc comment ("Only applies when creating a user in
-// another account you manage (cross-account)").
-//
-// Confirmed via core-service logs + direct DB inspection during
-// implementation: a cross-account POST to this endpoint returns HTTP 403
-// ("You must be an internal user for this account to access this
-// resource.") from the post-create hydration call, but CreateAccountUser
-// itself already returned grpc_code=OK and committed the account_user (and,
-// for a fresh email, a new user) row — an unrecoverable orphan, since every
-// read path (Get/List) hits the same gate. This test uses List (read-only,
-// no side effects) to pin the bug without leaking data; see the top-of-file
-// note for why a create-based variant was deliberately not added.
-func TestCovIdentityAccountUsers_ListCrossAccountCustomerReadBlockedByHydrationBug(t *testing.T) {
+// A seller lists its customer's users by acting in the customer's account.
+// crud_counterparty_contacts_test.go covers managing them.
+func TestCovIdentityAccountUsers_ListCrossAccountCustomer(t *testing.T) {
 	t.Parallel()
 	custClient := apiClient.WithAccountID(SeedCustomerAccountID)
 
@@ -425,17 +378,9 @@ func TestCovIdentityAccountUsers_ListCrossAccountCustomerReadBlockedByHydrationB
 	requireStatus(t, 200, status, body)
 }
 
-// TestCovIdentityAccountUsers_UpdateCrossAccountBlocked pins the current,
-// deliberate behavior of UpdateAccountUser: it calls
-// identity.CheckIsInternalActor() unconditionally at the top (unlike
-// Create/List/Get), so cross-account PATCH is always rejected regardless of
-// account_relation ownership. Note this makes the "preferences applied when
-// external" branch further down in UpdateAccountUser (and its accompanying
-// request-field doc comment) unreachable dead code — flagged separately as
-// a doc/implementation mismatch, not asserted here since
-// unlike the List/Get/Create case this restriction is applied consistently
-// with role/department/user management elsewhere and may be intentional.
-func TestCovIdentityAccountUsers_UpdateCrossAccountBlocked(t *testing.T) {
+// Acting in a customer's account scopes the update to that account's users, so
+// one of the seller's own users is not found there.
+func TestCovIdentityAccountUsers_UpdateCrossAccountScopedToTarget(t *testing.T) {
 	t.Parallel()
 	custClient := apiClient.WithAccountID(SeedCustomerAccountID)
 
@@ -443,5 +388,5 @@ func TestCovIdentityAccountUsers_UpdateCrossAccountBlocked(t *testing.T) {
 		"name": "Cross Account Update Attempt",
 	}, newIdempotencyKey())
 	require.NoError(t, err)
-	requireStatus(t, 403, status, body)
+	requireStatus(t, 404, status, body)
 }

@@ -127,7 +127,7 @@ func (s *accountGroupSvcImpl) BatchGetAccountGroupsByIDs(ctx context.Context, id
 	if !ok || identity == nil {
 		return nil, tracing.Trace(span, apierror.NewInvariantViolationError("Identity not found in context."))
 	}
-	if apiErr := identity.CheckIsInternalActor(); apiErr != nil {
+	if apiErr := identity.CheckIsInternalActorForRead(); apiErr != nil {
 		return nil, tracing.Trace(span, apiErr)
 	}
 	if apiErr := identity.CheckHasPermission(types.PermissionDomainCustomerGroups, types.ActionRead); apiErr != nil {
@@ -334,7 +334,7 @@ func (s *accountGroupSvcImpl) DeleteAccountGroup(ctx context.Context, accountGro
 	accountGroup, apiErr := s.repos.NewAccountGroupRepo().Get(ctx, accountID, accountGroupID)
 	if apiErr != nil {
 		if apierror.IsNotFound(apiErr) {
-			wasDeleted, deletedCheckErr := s.repos.NewDeletedRecordRepo().Exists(ctx, constants.DeletedRecordResourceTypeAccountGroup, accountGroupID)
+			wasDeleted, deletedCheckErr := s.repos.NewDeletedRecordRepo().ExistsInAccount(ctx, constants.DeletedRecordResourceTypeAccountGroup, accountGroupID, accountID)
 			if deletedCheckErr != nil {
 				return tracing.Trace(span, deletedCheckErr)
 			}
@@ -361,7 +361,7 @@ func (s *accountGroupSvcImpl) DeleteAccountGroup(ctx context.Context, accountGro
 			}
 		}
 
-		if apiErr := txSvc.repos.NewDeletedRecordRepo().Create(txCtx, constants.DeletedRecordResourceTypeAccountGroup, accountGroup.ID, accountGroup); apiErr != nil {
+		if apiErr := txSvc.repos.NewDeletedRecordRepo().CreateInAccount(txCtx, constants.DeletedRecordResourceTypeAccountGroup, accountGroup.ID, accountID, accountGroup); apiErr != nil {
 			return apiErr
 		}
 

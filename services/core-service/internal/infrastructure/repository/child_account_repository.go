@@ -24,13 +24,15 @@ func mapChildAccountForwardRow(row sqlc.ListChildAccountsForwardRow) *domain.Chi
 		email = &row.Email.String
 	}
 	return &domain.ChildAccount{
-		RelationID:     row.RelationID,
-		AccountID:      row.AccountID,
-		AccountName:    row.AccountName,
-		ExternalNumber: row.ExternalNumber,
-		Email:          email,
-		CreatedAt:      row.CreatedAt,
-		UpdatedAt:      row.UpdatedAt,
+		RelationID:       row.RelationID,
+		AccountID:        row.AccountID,
+		AccountName:      row.AccountName,
+		ExternalNumber:   row.ExternalNumber,
+		Email:            email,
+		CreatedAt:        row.CreatedAt,
+		UpdatedAt:        row.UpdatedAt,
+		AccountCreatedAt: row.AccountCreatedAt,
+		AccountUpdatedAt: row.AccountUpdatedAt,
 	}
 }
 
@@ -40,13 +42,15 @@ func mapChildAccountBackwardRow(row sqlc.ListChildAccountsBackwardRow) *domain.C
 		email = &row.Email.String
 	}
 	return &domain.ChildAccount{
-		RelationID:     row.RelationID,
-		AccountID:      row.AccountID,
-		AccountName:    row.AccountName,
-		ExternalNumber: row.ExternalNumber,
-		Email:          email,
-		CreatedAt:      row.CreatedAt,
-		UpdatedAt:      row.UpdatedAt,
+		RelationID:       row.RelationID,
+		AccountID:        row.AccountID,
+		AccountName:      row.AccountName,
+		ExternalNumber:   row.ExternalNumber,
+		Email:            email,
+		CreatedAt:        row.CreatedAt,
+		UpdatedAt:        row.UpdatedAt,
+		AccountCreatedAt: row.AccountCreatedAt,
+		AccountUpdatedAt: row.AccountUpdatedAt,
 	}
 }
 
@@ -54,9 +58,12 @@ func (r *accountRelationRepoImpl) ListChildAccounts(ctx context.Context, params 
 	ctx, span := childAccountRepoTracer.Start(ctx, "repository.child_account.list")
 	defer span.End()
 
-	// Resolve parent counterparty account ID to parent relation ID. If no relation exists, the account has no children — return an empty list.
-	parentRelationID, apiErr := r.FindRelationByOwnerAndCounterparty(ctx, params.OwnerAccountID, params.ParentAccountID)
-	if apiErr != nil {
+	// Resolve the parent customer to its relation. If it is not one of the owner's customers, it has no children — return an empty list.
+	parentRelationID, err := r.queries.GetCustomerRelationID(ctx, sqlc.GetCustomerRelationIDParams{
+		OwnerAccountID:        params.OwnerAccountID,
+		CounterpartyAccountID: params.ParentAccountID,
+	})
+	if apiErr := db.MapSQLError(err); apiErr != nil {
 		if apiErr.Code == apierror.ErrorCodeResourceNotFound {
 			return &domain.ListChildAccountsResult{
 				Items:    []*domain.ChildAccount{},
@@ -159,13 +166,15 @@ func (r *accountRelationRepoImpl) GetChildAccountDetail(ctx context.Context, own
 	}
 
 	return &domain.ChildAccount{
-		RelationID:     row.RelationID,
-		AccountID:      row.AccountID,
-		AccountName:    row.AccountName,
-		ExternalNumber: row.ExternalNumber,
-		Email:          email,
-		CreatedAt:      row.CreatedAt,
-		UpdatedAt:      row.UpdatedAt,
+		RelationID:       row.RelationID,
+		AccountID:        row.AccountID,
+		AccountName:      row.AccountName,
+		ExternalNumber:   row.ExternalNumber,
+		Email:            email,
+		CreatedAt:        row.CreatedAt,
+		UpdatedAt:        row.UpdatedAt,
+		AccountCreatedAt: row.AccountCreatedAt,
+		AccountUpdatedAt: row.AccountUpdatedAt,
 	}, nil
 }
 
@@ -190,13 +199,15 @@ func (r *accountRelationRepoImpl) GetChildAccountsByRelationIDs(ctx context.Cont
 			email = &row.Email.String
 		}
 		out[i] = &domain.ChildAccount{
-			RelationID:     row.RelationID,
-			AccountID:      row.AccountID,
-			AccountName:    row.AccountName,
-			ExternalNumber: row.ExternalNumber,
-			Email:          email,
-			CreatedAt:      row.CreatedAt,
-			UpdatedAt:      row.UpdatedAt,
+			RelationID:       row.RelationID,
+			AccountID:        row.AccountID,
+			AccountName:      row.AccountName,
+			ExternalNumber:   row.ExternalNumber,
+			Email:            email,
+			CreatedAt:        row.CreatedAt,
+			UpdatedAt:        row.UpdatedAt,
+			AccountCreatedAt: row.AccountCreatedAt,
+			AccountUpdatedAt: row.AccountUpdatedAt,
 		}
 	}
 	return out, nil

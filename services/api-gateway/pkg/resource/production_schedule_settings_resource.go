@@ -59,7 +59,9 @@ type ProductionScheduleSettings struct {
 	// Hourly labor rate charged to a changeover.
 	//
 	// This is a dedicated technician rate rather than an allocated production rate, because one person works a single machine through a changeover. Together with the typical changeover duration it prices the setup cost that decides economic campaign sizes. The constraint department's own labor rate takes precedence when it has one, leaving this as the fallback.
-	ChangeoverLaborRate float64 `json:"changeover_labor_rate"`
+	//
+	// Null unless the caller holds `costs:read`; customer and supplier portal users never see it.
+	ChangeoverLaborRate *float64 `json:"changeover_labor_rate" sensitive:"cost"`
 
 	// Annual cost of holding stock, as a share of item value.
 	//
@@ -162,7 +164,7 @@ var SampleProductionScheduleSettings = &ProductionScheduleSettings{
 	ChangeoverAvgMinutes:           30,
 	ChangeoverMinMinutes:           15,
 	ChangeoverMaxMinutes:           90,
-	ChangeoverLaborRate:            20,
+	ChangeoverLaborRate:            ptrFloat64(20),
 	HoldingRatePct:                 0.25,
 	ServiceLevelZ:                  1.645,
 	FinishLeadTimeWeeks:            6,
@@ -283,7 +285,9 @@ type FulfillmentRecommendation struct {
 	// Calendar days customers are promised on average, weighted by how much each buys.
 	DemandWeightedLeadTimeDays float64 `json:"demand_weighted_lead_time_days"`
 	// Annual cost of goods for this item: demand times unit cost.
-	AnnualCOGS float64 `json:"annual_cogs"`
+	//
+	// Null unless the caller holds `costs:read`; customer and supplier portal users never see it.
+	AnnualCOGS *float64 `json:"annual_cogs" sensitive:"cost"`
 	// Months since anything last sold, capped at the observation window.
 	MonthsSinceLastSale int32 `json:"months_since_last_sale"`
 	// Percentage of demand from customers whose own stated policy disagrees with the recommendation.
@@ -308,7 +312,7 @@ var SampleFulfillmentRecommendation = &FulfillmentRecommendation{
 	TopCustomerSharePct:        95,
 	TopCustomerName:            &sampleTopCustomerName,
 	DemandWeightedLeadTimeDays: 90,
-	AnnualCOGS:                 4000,
+	AnnualCOGS:                 ptrFloat64(4000),
 	MonthsSinceLastSale:        1,
 	MixedStreamSharePct:        95,
 }

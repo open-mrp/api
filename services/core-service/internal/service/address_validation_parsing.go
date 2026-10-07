@@ -21,7 +21,7 @@ func classifyAddressValidationError(statusCode int, respBody []byte, country str
 		_ = json.Unmarshal(respBody, &parsed)
 
 		if strings.Contains(strings.ToLower(parsed.Error.Message), "region code") {
-			return apierror.NewValidationErrorWithParam(fmt.Sprintf("Address validation is not supported for country %q.", country), "country")
+			return domain.UnsupportedAddressRegionError(country)
 		}
 		return apierror.NewValidationError("The address could not be validated. Check the address fields and try again.")
 	}

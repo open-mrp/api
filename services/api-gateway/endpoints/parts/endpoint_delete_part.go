@@ -23,15 +23,16 @@ type DeletePartEndpoint struct{}
 
 func (e *DeletePartEndpoint) Materialize() *apiendpoint.APIEndpoint[*DeletePartRequest, *apiresource.Part] {
 	return (&apiendpoint.APIEndpoint[*DeletePartRequest, *apiresource.Part]{
-		Title:               "Delete Part",
-		Method:              http.MethodDelete,
-		ContentType:         "application/json",
-		Route:               "/v1/catalog/parts/{id}",
-		SuccessStatusCode:   http.StatusOK,
-		Public:              true,
-		AgentTool:           true,
-		RequiredPermissions: []types.Permission{{Domain: types.PermissionDomainParts, Action: types.ActionDelete}, {Domain: types.PermissionDomainCustomers, Action: types.ActionUpdate}, {Domain: types.PermissionDomainSuppliers, Action: types.ActionUpdate}},
-		Preview:             true,
+		Title:                   "Delete Part",
+		Method:                  http.MethodDelete,
+		ContentType:             "application/json",
+		Route:                   "/v1/catalog/parts/{id}",
+		SuccessStatusCode:       http.StatusOK,
+		Public:                  true,
+		AgentTool:               true,
+		RequiredPermissions:     []types.Permission{{Domain: types.PermissionDomainParts, Action: types.ActionDelete}},
+		CounterpartyPermissions: apiendpoint.Counterparties(types.ActionUpdate),
+		Preview:                 true,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *DeletePartRequest) (*apiresource.Part, *apierror.APIError) {
 			return svc.(PartSvc).DeletePart
 		},

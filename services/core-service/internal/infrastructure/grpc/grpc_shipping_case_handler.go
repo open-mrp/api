@@ -101,7 +101,7 @@ func (h *shippingCaseGRPCHandler) UpdateShippingCase(ctx context.Context, req *p
 
 	params := domain.UpdateShippingCaseParams{
 		ShippingCaseID:      req.Id,
-		TrackingNumber:      req.TrackingNumber,
+		TrackingNumber:      trackingNumberFromProto(req.TrackingNumber),
 		FreightAmountValue:  req.FreightAmountValue,
 		FreightAmountUnitID: req.FreightAmountUnitId,
 		FreightWeightValue:  req.FreightWeightValue,
@@ -129,7 +129,7 @@ func (h *shippingCaseGRPCHandler) AdminUpdateShippingCaseTracking(ctx context.Co
 
 	sc, apiErr := h.shippingCaseSvc.AdminUpdateShippingCaseTracking(ctx, domain.AdminUpdateShippingCaseTrackingParams{
 		ShippingCaseID: req.Id,
-		TrackingNumber: req.TrackingNumber,
+		TrackingNumber: trackingNumberFromProto(req.TrackingNumber),
 	})
 	if apiErr != nil {
 		return nil, contracts.ConvertAPIErrorToGRPC(apiErr)

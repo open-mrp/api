@@ -49,13 +49,14 @@ type ShippoClient interface {
 	// CreateTransactionInstantLabel buys carrier labels for a shipment's cases and returns the
 	// master tracking number, negotiated rate, and per-case tracking/label details.
 	CreateTransactionInstantLabel(ctx context.Context, params CreateLabelParams) (*LabelResult, *apierror.APIError)
-	// RefundTransaction refunds a purchased Shippo label transaction (best-effort; used on void).
+	// RefundTransaction refunds a purchased Shippo label transaction; an already-refunded one succeeds.
 	RefundTransaction(ctx context.Context, transactionID string) *apierror.APIError
 }
 
 // Builds ShippoClient instances from API keys.
 type ShippoClientFactory interface {
-	Build(apiKey string) ShippoClient
+	// Build refuses a key the deployment may not spend with — a live key outside production.
+	Build(apiKey string) (ShippoClient, *apierror.APIError)
 }
 
 // HubspotCompany is the subset of a HubSpot company the sync reads or writes.

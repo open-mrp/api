@@ -3,8 +3,10 @@ package shippo
 import (
 	"context"
 	"encoding/json"
+	"io"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 
 	"github.com/open-mrp/api/services/core-service/internal/domain"
@@ -144,5 +146,87 @@ func TestParseTransactionRate(t *testing.T) {
 	}
 	if id, _ := parseTransactionRate(nil); id != "" {
 		t.Errorf("missing rate: got %q", id)
+	}
+}
+
+func TestCreateTransactionInstantLabel_SendsReferencesAndMetadata(t *testing.T) {
+	client := newStubClient(t, func(w http.ResponseWriter, r *http.Request) {
+		switch {
+		case r.Method == http.MethodPost && r.URL.Path == "/transactions":
+			var req map[string]any
+			if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+				t.Errorf("decoding transaction request: %v", err)
+			}
+			if req["metadata"] != "sh_1" {
+				t.Errorf("the purchase must name its shipment, got metadata %v", req["metadata"])
+			}
+			shipment := req["shipment"].(map[string]any)
+			to := shipment["address_to"].(map[string]any)
+			if to["company"] != "Buyer Dock" || to["phone"] != "555-0199" {
+				t.Errorf("recipient company/phone not sent: %v", to)
+			}
+			parcel := shipment["parcels"].([]any)[0].(map[string]any)
+			extra, _ := parcel["extra"].(map[string]any)
+			if extra["reference_1"] != "PO#77" || extra["reference_2"] != "SO#100" || parcel["metadata"] != "shc_1" {
+				t.Errorf("parcel references/metadata not sent: %v", parcel)
+			}
+			w.WriteHeader(http.StatusCreated)
+			_, _ = w.Write([]byte(`{"object_id":"txn_master","status":"SUCCESS","tracking_number":"1Z","rate":{"object_id":"rate_1","amount":"9"}}`))
+		default:
+			_, _ = w.Write([]byte(`{"results":[{"object_id":"txn_a","tracking_number":"1Z","label_url":"https://labels/a.png"}]}`))
+		}
+	})
+
+	company, phone := "Buyer Dock", "555-0199"
+	_, apiErr := client.CreateTransactionInstantLabel(context.Background(), domain.CreateLabelParams{
+		Metadata:  "sh_1",
+		ToAddress: domain.ShippingAddress{Name: "Buyer Dock", Company: &company, Phone: &phone},
+		Parcels:   []domain.Parcel{{Weight: "10", Reference1: "PO#77", Reference2: "SO#100", Metadata: "shc_1"}},
+	})
+	if apiErr != nil {
+		t.Fatalf("unexpected error: %v", apiErr)
+	}
+}
+
+// Rating requests share the parcel type, so a label's extras must not leak into them.
+func TestCreateShipmentForRates_SendsNoLabelExtras(t *testing.T) {
+	client := newStubClient(t, func(w http.ResponseWriter, r *http.Request) {
+		body, _ := io.ReadAll(r.Body)
+		if strings.Contains(string(body), "reference_1") || strings.Contains(string(body), `"metadata"`) {
+			t.Errorf("a rating request carried label extras: %s", body)
+		}
+		w.WriteHeader(http.StatusCreated)
+		_, _ = w.Write([]byte(`{"rates":[]}`))
+	})
+
+	if _, apiErr := client.createShipmentForRates(context.Background(), "ca_1", domain.ShippingAddress{}, domain.ShippingAddress{}, []domain.Parcel{{Weight: "1"}}, nil); apiErr != nil {
+		t.Fatalf("unexpected error: %v", apiErr)
+	}
+}
+
+// Once Shippo has sold the labels, a failure to read them back must not invite a retry that buys again.
+func TestCreateTransactionInstantLabel_UnreadablePurchaseIsNotRetriable(t *testing.T) {
+	reads := 0
+	client := newStubClient(t, func(w http.ResponseWriter, r *http.Request) {
+		if r.Method == http.MethodPost {
+			w.WriteHeader(http.StatusCreated)
+			_, _ = w.Write([]byte(`{"object_id":"txn_master","status":"SUCCESS","rate":{"object_id":"rate_1","amount":"9"}}`))
+			return
+		}
+		reads++
+		w.WriteHeader(http.StatusBadGateway)
+	})
+
+	_, apiErr := client.CreateTransactionInstantLabel(context.Background(), domain.CreateLabelParams{
+		Parcels: []domain.Parcel{{Weight: "10"}},
+	})
+	if apiErr == nil {
+		t.Fatal("an unreadable purchase must fail")
+	}
+	if apiErr.IsTransient {
+		t.Error("the purchase already happened, so the error must not be retriable")
+	}
+	if reads != listParcelAttempts {
+		t.Errorf("parcel reads = %d, want %d", reads, listParcelAttempts)
 	}
 }

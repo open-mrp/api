@@ -310,7 +310,7 @@ func (s *ediSvcImpl) DeleteDCLocation(ctx context.Context, dcLocationID string) 
 	})
 	if apiErr != nil {
 		if apierror.IsNotFound(apiErr) {
-			wasDeleted, deletedCheckErr := s.repos.NewDeletedRecordRepo().Exists(ctx, constants.DeletedRecordResourceTypeDCLocation, dcLocationID)
+			wasDeleted, deletedCheckErr := s.repos.NewDeletedRecordRepo().ExistsInAccount(ctx, constants.DeletedRecordResourceTypeDCLocation, dcLocationID, ownerAccountID)
 			if deletedCheckErr != nil {
 				return tracing.Trace(span, deletedCheckErr)
 			}
@@ -322,7 +322,7 @@ func (s *ediSvcImpl) DeleteDCLocation(ctx context.Context, dcLocationID string) 
 	}
 
 	apiErr = s.withTx(ctx, func(txCtx context.Context, txSvc *ediSvcImpl) *apierror.APIError {
-		if apiErr := txSvc.repos.NewDeletedRecordRepo().Create(txCtx, constants.DeletedRecordResourceTypeDCLocation, dcLocation.ID, dcLocation); apiErr != nil {
+		if apiErr := txSvc.repos.NewDeletedRecordRepo().CreateInAccount(txCtx, constants.DeletedRecordResourceTypeDCLocation, dcLocation.ID, ownerAccountID, dcLocation); apiErr != nil {
 			return apiErr
 		}
 

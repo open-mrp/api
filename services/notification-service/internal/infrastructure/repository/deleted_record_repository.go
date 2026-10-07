@@ -22,11 +22,25 @@ func NewDeletedRecordRepo(queries *sqlc.Queries) domain.DeletedRecordRepo {
 	return &deletedRecordRepoImpl{queries: queries}
 }
 
-func (r *deletedRecordRepoImpl) Create(ctx context.Context, resourceType constants.DeletedRecordResourceType, resourceID string, data any) *apierror.APIError {
-	ctx, span := deletedRecordRepoTracer.Start(ctx, "repository.deleted_record.create")
+// CreateInAccount records the snapshot with the owning account added under account_id, which ExistsInAccount matches.
+func (r *deletedRecordRepoImpl) CreateInAccount(ctx context.Context, resourceType constants.DeletedRecordResourceType, resourceID, accountID string, data any) *apierror.APIError {
+	ctx, span := deletedRecordRepoTracer.Start(ctx, "repository.deleted_record.create_in_account")
 	defer span.End()
 
-	serializedData, err := json.Marshal(data)
+	serialized, err := json.Marshal(data)
+	if err != nil {
+		return tracing.Trace(span, apierror.NewInternalError(err, "Failed to serialize deleted record data."))
+	}
+	var fields map[string]json.RawMessage
+	if err := json.Unmarshal(serialized, &fields); err != nil {
+		return tracing.Trace(span, apierror.NewInternalError(err, "A deleted record's snapshot must be an object."))
+	}
+	owner, err := json.Marshal(accountID)
+	if err != nil {
+		return tracing.Trace(span, apierror.NewInternalError(err, "Failed to serialize deleted record owner."))
+	}
+	fields["account_id"] = owner
+	serializedData, err := json.Marshal(fields)
 	if err != nil {
 		return tracing.Trace(span, apierror.NewInternalError(err, "Failed to serialize deleted record data."))
 	}
@@ -42,13 +56,14 @@ func (r *deletedRecordRepoImpl) Create(ctx context.Context, resourceType constan
 	return nil
 }
 
-func (r *deletedRecordRepoImpl) Exists(ctx context.Context, resourceType constants.DeletedRecordResourceType, resourceID string) (bool, *apierror.APIError) {
-	ctx, span := deletedRecordRepoTracer.Start(ctx, "repository.deleted_record.exists")
+func (r *deletedRecordRepoImpl) ExistsInAccount(ctx context.Context, resourceType constants.DeletedRecordResourceType, resourceID, accountID string) (bool, *apierror.APIError) {
+	ctx, span := deletedRecordRepoTracer.Start(ctx, "repository.deleted_record.exists_in_account")
 	defer span.End()
 
-	count, err := r.queries.CountDeletedRecordsByResourceAndResourceID(ctx, sqlc.CountDeletedRecordsByResourceAndResourceIDParams{
+	count, err := r.queries.CountDeletedRecordsInAccount(ctx, sqlc.CountDeletedRecordsInAccountParams{
 		ResourceType: string(resourceType),
 		ResourceID:   resourceID,
+		AccountID:    accountID,
 	})
 	if apiErr := db.MapSQLError(err); apiErr != nil {
 		return false, tracing.Trace(span, apiErr)

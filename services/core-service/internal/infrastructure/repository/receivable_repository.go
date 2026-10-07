@@ -331,6 +331,9 @@ func (r *receivableRepoImpl) ListOpenCreditsByCustomer(ctx context.Context, acco
 			OriginalAmount: row.OriginalAmount,
 			LeftoverAmount: fmt.Sprintf("%.2f", row.LeftoverAmount),
 		}
+		if row.FundsReceivedAt.Valid {
+			items[i].FundsReceivedAt = &row.FundsReceivedAt.Time
+		}
 	}
 	return items, nil
 }

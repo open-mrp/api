@@ -27,6 +27,12 @@ type UpdateProductionStepRequest struct {
 	Allowances field.Optional[string] `json:"allowances,omitzero"`
 	// Scanning station where batches at this step are scanned.
 	ScanningStationID field.Optional[string] `json:"scanning_station_id,omitzero" validate:"omitempty"`
+	// Free-form notes. Pass null to remove them.
+	Notes field.Clearable[string] `json:"notes,omitzero" validate:"omitempty,max=65535"`
+	// Machines assigned to the step, replacing the current set.
+	//
+	// A machine belongs to one step, so a machine assigned to another step moves to this one. Pass an empty list to unassign every machine.
+	MachineIDs field.Optional[[]string] `json:"machine_ids,omitzero"`
 }
 
 var sampleUpdateProductionStepName = "Assembly Step A"
@@ -61,5 +67,9 @@ func (e *UpdateProductionStepEndpoint) Materialize() *apiendpoint.APIEndpoint[*U
 		ServiceHandler: func(svc any) func(ctx context.Context, req *UpdateProductionStepRequest) (*apiresource.ProductionStep, *apierror.APIError) {
 			return svc.(ProductionStepSvc).UpdateProductionStep
 		},
+		IncludeConfig: apiendpoint.IncludesFor(apiendpoint.IncludesParams{
+			ObjectType: constants.ObjectTypeProductionStep,
+			Fields:     productionStepIncludes,
+		}),
 	})
 }

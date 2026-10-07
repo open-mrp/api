@@ -17,7 +17,7 @@ type ListInvoicesRequest struct {
 	// Restricts results to invoices in this payment state.
 	//
 	// - `all`: no payment-state filtering, the same as omitting the parameter.
-	// - `paid`: only invoices marked paid in full.
+	// - `paid`: only invoices marked paid in full, overpaid ones included.
 	// - `unpaid`: only invoices not marked paid in full, including invoices carrying partial payments.
 	// - `overpaid`: only invoices whose applied payments exceed the invoiced amount.
 	Status *constants.InvoiceListStatus `query:"status"`
@@ -33,17 +33,15 @@ type ListInvoicesRequest struct {
 	//
 	// These are account user IDs, matching the `sales_rep` on the order.
 	SalesRepIDs []string `query:"sales_rep_ids"`
-	// Earliest invoice creation date to include, in `YYYY-MM-DD` format.
-	StartDate *string `query:"starts_at"`
-	// Latest invoice creation date to include, in `YYYY-MM-DD` format.
-	//
-	// Compared against the creation timestamp at the start of that day, so invoices created later on the end date itself are excluded; pass the following day to include them.
-	EndDate *string `query:"ends_at"`
+	// Only include invoices created on or after this date (`YYYY-MM-DD`, UTC). A full timestamp (RFC 3339) is also accepted, to bound the range at a local midnight.
+	StartDate *string `query:"starts_at" validate:"omitempty,date_filter"`
+	// Only include invoices created on or before this date (`YYYY-MM-DD`, UTC), covering that whole day. A full timestamp (RFC 3339) is also accepted, to bound the range at a local midnight.
+	EndDate *string `query:"ends_at" validate:"omitempty,date_filter"`
 }
 
 // Returns a paginated list of invoices for the current account, newest first.
 //
-// A free-text search term (`q`) is matched against the invoice number, the invoice note, the customer name, the sales order number, the customer PO number, and the customer number, and still respects the other filters.
+// A free-text search term (`q`) is matched against the invoice number, the invoice note, the customer name, the sales order number, the customer PO number, and the customer's number, alias, and notes, and still respects the other filters.
 type ListInvoicesEndpoint struct{}
 
 func (e *ListInvoicesEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListInvoicesRequest, *apiresource.List[apiresource.Invoice]] {
@@ -58,8 +56,6 @@ func (e *ListInvoicesEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListInvoi
 		ObjectType:        constants.ObjectTypeInvoice,
 		RequiredPermissions: []types.Permission{
 			{Domain: types.PermissionDomainInvoices, Action: types.ActionRead},
-			{Domain: types.PermissionDomainCustomers, Action: types.ActionRead},
-			{Domain: types.PermissionDomainSuppliers, Action: types.ActionRead},
 		},
 		ServiceHandler: func(svc any) func(ctx context.Context, req *ListInvoicesRequest) (*apiresource.List[apiresource.Invoice], *apierror.APIError) {
 			return svc.(InvoiceSvc).ListInvoices

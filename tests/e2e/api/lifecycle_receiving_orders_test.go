@@ -27,8 +27,15 @@ const receivingOrdersPath = "/v1/operations/receiving-orders"
 // unissues it if it needs the purchase order deleted.
 func issuedPurchaseOrderReceiving(t *testing.T) (purchaseOrderID, receivingOrderID string) {
 	t.Helper()
+	return issuedPurchaseOrderReceivingOf(t, nil)
+}
 
-	purchaseOrderID = jsonField(createPurchaseOrder(t, nil), "id")
+// issuedPurchaseOrderReceivingOf is issuedPurchaseOrderReceiving for an order whose create body
+// mutate changes first.
+func issuedPurchaseOrderReceivingOf(t *testing.T, mutate func(map[string]any)) (purchaseOrderID, receivingOrderID string) {
+	t.Helper()
+
+	purchaseOrderID = jsonField(createPurchaseOrder(t, mutate), "id")
 
 	status, body := changePurchaseOrderStatus(t, purchaseOrderID, "issue")
 	requireStatus(t, 200, status, body)
@@ -55,8 +62,15 @@ func issuedPurchaseOrderReceiving(t *testing.T) (purchaseOrderID, receivingOrder
 // stocking then puts away.
 func receivedPurchaseOrderReceiving(t *testing.T) (purchaseOrderID, receivingOrderID string) {
 	t.Helper()
+	return receivedPurchaseOrderReceivingOf(t, nil)
+}
 
-	purchaseOrderID, receivingOrderID = issuedPurchaseOrderReceiving(t)
+// receivedPurchaseOrderReceivingOf is receivedPurchaseOrderReceiving for an order whose create body
+// mutate changes first.
+func receivedPurchaseOrderReceivingOf(t *testing.T, mutate func(map[string]any)) (purchaseOrderID, receivingOrderID string) {
+	t.Helper()
+
+	purchaseOrderID, receivingOrderID = issuedPurchaseOrderReceivingOf(t, mutate)
 	status, body, err := apiClient.Put(receivingOrdersPath+"/"+receivingOrderID+"/actions/receive", nil)
 	require.NoError(t, err)
 	requireStatus(t, 200, status, body)

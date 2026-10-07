@@ -4,14 +4,15 @@ import (
 	"context"
 	gosql "database/sql"
 	"errors"
-	"sort"
 	"strings"
 	"time"
 
 	"github.com/shopspring/decimal"
+	"go.opentelemetry.io/otel/trace"
 
 	"github.com/open-mrp/api/services/core-service/internal/domain"
 	"github.com/open-mrp/api/services/core-service/internal/infrastructure/sqlc"
+	"github.com/open-mrp/api/shared/constants"
 	"github.com/open-mrp/api/shared/db"
 	apierror "github.com/open-mrp/api/shared/errors"
 	"github.com/open-mrp/api/shared/id"
@@ -369,20 +370,9 @@ func (r *batchRepoImpl) Find(ctx context.Context, accountID, batchID string) (*d
 	}
 
 	batch := mapBatchRow(row)
-
-	machineRows, err := r.queries.GetBatchMachines(ctx, batchID)
-	if apiErr := db.MapSQLError(err); apiErr != nil {
+	if apiErr := attachMachinesAndLots(ctx, r.queries, []*domain.Batch{batch}); apiErr != nil {
 		return nil, tracing.Trace(span, apiErr)
 	}
-
-	machines := make([]domain.LightMachine, len(machineRows))
-	for i, m := range machineRows {
-		machines[i] = domain.LightMachine{
-			ID:   m.ID,
-			Name: m.Name,
-		}
-	}
-	batch.Machines = machines
 
 	return batch, nil
 }
@@ -430,7 +420,7 @@ func (r *batchRepoImpl) FindBatchFlow(ctx context.Context, accountID, batchID st
 	}
 
 	// For each visited batch, fetch full data and build the flow node.
-	nodes := make([]domain.BatchFlowNode, 0, len(visited))
+	batches := make([]*domain.Batch, 0, len(visited))
 	for id := range visited {
 		row, err := r.queries.GetBatch(ctx, sqlc.GetBatchParams{
 			ID:        id,
@@ -439,24 +429,19 @@ func (r *batchRepoImpl) FindBatchFlow(ctx context.Context, accountID, batchID st
 		if apiErr := db.MapSQLError(err); apiErr != nil {
 			return nil, tracing.Trace(span, apiErr)
 		}
+		batches = append(batches, mapBatchRow(row))
+	}
+	if apiErr := attachMachinesAndLots(ctx, r.queries, batches); apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
 
-		batch := mapBatchRow(row)
-
-		machineRows, err := r.queries.GetBatchMachines(ctx, id)
-		if apiErr := db.MapSQLError(err); apiErr != nil {
-			return nil, tracing.Trace(span, apiErr)
-		}
-		machines := make([]domain.LightMachine, len(machineRows))
-		for i, m := range machineRows {
-			machines[i] = domain.LightMachine{ID: m.ID, Name: m.Name, SerialNumber: m.SerialNumber}
-		}
-		batch.Machines = machines
-
-		out := outgoingMap[id]
+	nodes := make([]domain.BatchFlowNode, 0, len(batches))
+	for _, batch := range batches {
+		out := outgoingMap[batch.ID]
 		if out == nil {
 			out = []string{}
 		}
-		in := incomingMap[id]
+		in := incomingMap[batch.ID]
 		if in == nil {
 			in = []string{}
 		}
@@ -474,6 +459,21 @@ func (r *batchRepoImpl) FindBatchFlow(ctx context.Context, accountID, batchID st
 func (r *batchRepoImpl) FindByScanningStation(ctx context.Context, params domain.ListBatchesByScanningStationParams) (*domain.ListBatchesByScanningStationResult, *apierror.APIError) {
 	ctx, span := batchRepoTracer.Start(ctx, "repository.batch.find_by_scanning_station")
 	defer span.End()
+
+	result, apiErr := r.findByScanningStation(ctx, params)
+	if apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
+	// The station's scan history is where labels are reprinted from, and a label carries the batch's
+	// machines and lots.
+	if apiErr := attachMachinesAndLots(ctx, r.queries, result.Batches); apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
+	return result, nil
+}
+
+func (r *batchRepoImpl) findByScanningStation(ctx context.Context, params domain.ListBatchesByScanningStationParams) (*domain.ListBatchesByScanningStationResult, *apierror.APIError) {
+	span := trace.SpanFromContext(ctx)
 
 	scanningStationID := db.NullString(params.ScanningStationID)
 
@@ -722,64 +722,6 @@ func (r *batchRepoImpl) FindPossibleInitSteps(ctx context.Context, accountID, sc
 	return results, nil
 }
 
-func (r *batchRepoImpl) FindOpenBatches(ctx context.Context, accountID string, itemIDs, productLineIDs []string) ([]domain.OpenBatchSummary, *apierror.APIError) {
-	ctx, span := batchRepoTracer.Start(ctx, "repository.batch.find_open_batches")
-	defer span.End()
-
-	includeItemFilter := len(itemIDs) > 0
-	if itemIDs == nil {
-		itemIDs = []string{}
-	}
-	includeProductLineFilter := len(productLineIDs) > 0
-	// The product_line_id column is nullable, so sqlc types the filter slice as NullString.
-	productLineFilter := make([]gosql.NullString, len(productLineIDs))
-	for i, id := range productLineIDs {
-		productLineFilter[i] = gosql.NullString{String: id, Valid: true}
-	}
-
-	rows, err := r.queries.ListOpenBatches(ctx, sqlc.ListOpenBatchesParams{
-		AccountID:                accountID,
-		IncludeItemFilter:        includeItemFilter,
-		ItemIds:                  itemIDs,
-		IncludeProductLineFilter: includeProductLineFilter,
-		ProductLineIds:           productLineFilter,
-	})
-	if apiErr := db.MapSQLError(err); apiErr != nil {
-		return nil, tracing.Trace(span, apiErr)
-	}
-
-	summaries := make([]domain.OpenBatchSummary, len(rows))
-	for i, row := range rows {
-		departmentName := ""
-		if row.DepartmentName.Valid {
-			departmentName = row.DepartmentName.String
-		}
-
-		scanningStationID := ""
-		if row.ScanningStationID.Valid {
-			scanningStationID = row.ScanningStationID.String
-		}
-
-		totalCount := decimal.Zero
-		if row.TotalCount != nil {
-			if tc, ok := row.TotalCount.(string); ok {
-				totalCount, _ = decimal.NewFromString(tc)
-			}
-		}
-
-		summaries[i] = domain.OpenBatchSummary{
-			DepartmentName:    departmentName,
-			ItemName:          row.ItemName,
-			ItemID:            row.ItemID,
-			ScanningStationID: scanningStationID,
-			Count:             totalCount,
-			Unit:              row.UnitAbbreviation,
-		}
-	}
-
-	return summaries, nil
-}
-
 func (r *batchRepoImpl) FindFurthestRightBatchInFlow(ctx context.Context, accountID, batchID string) (*domain.BaseBatch, *apierror.APIError) {
 	ctx, span := batchRepoTracer.Start(ctx, "repository.batch.find_furthest_right_batch_in_flow")
 	defer span.End()
@@ -818,98 +760,95 @@ func (r *batchRepoImpl) FindFurthestRightBatchInFlow(ctx context.Context, accoun
 	}
 
 	// Get all batches and filter to scanned && !closed, sort by scannedAt desc.
-	type candidate struct {
-		batch     *domain.BaseBatch
-		scannedAt time.Time
-	}
-	var candidates []candidate
-
+	// The newest scan in the flow that is still open is where the flow's work stands. Ties on the scan
+	// time go to the lowest id, so the answer does not depend on the order the walk found them in.
+	var furthest *domain.BaseBatch
 	for id := range visited {
 		row, err := r.queries.GetBatchBase(ctx, sqlc.GetBatchBaseParams{
 			ID:        id,
 			AccountID: accountID,
 		})
+		if errors.Is(err, gosql.ErrNoRows) {
+			continue
+		}
 		if apiErr := db.MapSQLError(err); apiErr != nil {
 			return nil, tracing.Trace(span, apiErr)
 		}
 
 		b := mapBaseBatchRow(row)
-		if b.ScannedAt != nil && b.ClosedAt == nil {
-			candidates = append(candidates, candidate{batch: b, scannedAt: *b.ScannedAt})
+		if b.ScannedAt == nil || b.ClosedAt != nil {
+			continue
+		}
+		if furthest == nil ||
+			b.ScannedAt.After(*furthest.ScannedAt) ||
+			(b.ScannedAt.Equal(*furthest.ScannedAt) && b.ID < furthest.ID) {
+			furthest = b
 		}
 	}
 
-	if len(candidates) == 0 {
-		// Fall back to the original batch itself.
-		row, err := r.queries.GetBatchBase(ctx, sqlc.GetBatchBaseParams{
-			ID:        batchID,
-			AccountID: accountID,
-		})
-		if apiErr := db.MapSQLError(err); apiErr != nil {
-			return nil, tracing.Trace(span, apiErr)
-		}
-		return mapBaseBatchRow(row), nil
+	if furthest == nil {
+		return nil, tracing.Trace(span, apierror.NewResourceNotFoundError("Batch not found."))
 	}
-
-	sort.Slice(candidates, func(i, j int) bool {
-		return candidates[i].scannedAt.After(candidates[j].scannedAt)
-	})
-
-	return candidates[0].batch, nil
+	return furthest, nil
 }
 
+// FindNextAvailableBatchInFlow follows a scanned batch forward to the one that is waiting at the
+// step: open, scanned, and made by a step that feeds productionStepID. Closed batches are walked
+// through to what they became; a batch never scanned, or scanned at no step, is a dead end, as is an
+// id that is not the account's.
 func (r *batchRepoImpl) FindNextAvailableBatchInFlow(ctx context.Context, accountID, batchID, productionStepID string) (*domain.BaseBatch, *apierror.APIError) {
 	ctx, span := batchRepoTracer.Start(ctx, "repository.batch.find_next_available_batch_in_flow")
 	defer span.End()
 
-	// BFS through the flow graph following outgoing edges.
-	visited := map[string]bool{batchID: true}
+	visited := map[string]bool{}
 	queue := []string{batchID}
 
 	for len(queue) > 0 {
 		current := queue[0]
 		queue = queue[1:]
+		if current == "" || visited[current] {
+			continue
+		}
+		visited[current] = true
 
 		row, err := r.queries.GetBatchBase(ctx, sqlc.GetBatchBaseParams{
 			ID:        current,
 			AccountID: accountID,
 		})
+		if errors.Is(err, gosql.ErrNoRows) {
+			continue
+		}
 		if apiErr := db.MapSQLError(err); apiErr != nil {
 			return nil, tracing.Trace(span, apiErr)
 		}
 
 		b := mapBaseBatchRow(row)
-
-		// If the batch is scanned, not closed, and its production step is an input of the target step, return it.
-		if b.ScannedAt != nil && b.ClosedAt == nil && b.ProductionStep != nil {
-			count, err := r.queries.IsInputOfProductionStep(ctx, sqlc.IsInputOfProductionStepParams{
-				CurrentStepID: productionStepID,
-				InputStepID:   b.ProductionStep.ID,
-			})
-			if apiErr := db.MapSQLError(err); apiErr != nil {
-				return nil, tracing.Trace(span, apiErr)
-			}
-			if count > 0 {
-				return b, nil
-			}
+		if b.ScannedAt == nil || b.ProductionStep == nil {
+			continue
 		}
 
-		// If closed, continue BFS through output batches.
 		if b.ClosedAt != nil {
 			outgoing, err := r.queries.GetBatchFlowOutgoing(ctx, current)
 			if apiErr := db.MapSQLError(err); apiErr != nil {
 				return nil, tracing.Trace(span, apiErr)
 			}
-			for _, neighbor := range outgoing {
-				if !visited[neighbor] {
-					visited[neighbor] = true
-					queue = append(queue, neighbor)
-				}
-			}
+			queue = append(queue, outgoing...)
+			continue
+		}
+
+		count, err := r.queries.IsInputOfProductionStep(ctx, sqlc.IsInputOfProductionStepParams{
+			CurrentStepID: productionStepID,
+			InputStepID:   b.ProductionStep.ID,
+		})
+		if apiErr := db.MapSQLError(err); apiErr != nil {
+			return nil, tracing.Trace(span, apiErr)
+		}
+		if count > 0 {
+			return b, nil
 		}
 	}
 
-	return nil, tracing.Trace(span, apierror.NewResourceNotFoundError("No available batch found in the flow."))
+	return nil, tracing.Trace(span, apierror.NewValidationError("Batch not compatible with production step."))
 }
 
 func (r *batchRepoImpl) FindAvailableBatchesInFlow(ctx context.Context, accountID string, batchIDs []string, productionStepID string) ([]domain.BaseBatch, *apierror.APIError) {
@@ -918,6 +857,11 @@ func (r *batchRepoImpl) FindAvailableBatchesInFlow(ctx context.Context, accountI
 
 	var results []domain.BaseBatch
 	for _, bid := range batchIDs {
+		// A blank id names no batch; it is dropped rather than walked, so the caller's count check is
+		// what reports it.
+		if bid == "" {
+			continue
+		}
 		b, apiErr := r.FindNextAvailableBatchInFlow(ctx, accountID, bid, productionStepID)
 		if apiErr != nil {
 			return nil, tracing.Trace(span, apiErr)
@@ -1195,41 +1139,46 @@ func (r *batchRepoImpl) CloseIfLastStep(ctx context.Context, accountID, batchID,
 	return nil
 }
 
+// CloseIfFullyUsed closes a batch once what has been split off it — firsts, seconds and waste, in
+// producedUnit — accounts for everything it is expected to make at the step, to the whole unit.
 func (r *batchRepoImpl) CloseIfFullyUsed(ctx context.Context, accountID string, batch domain.BaseBatch, producedUnit domain.LightUnit, productionStepID string) *apierror.APIError {
 	ctx, span := batchRepoTracer.Start(ctx, "repository.batch.close_if_fully_used")
 	defer span.End()
 
-	// Get output batches for the given batch.
-	outputBatches, apiErr := r.FindOutputBatches(ctx, accountID, batch.ID)
+	remaining, apiErr := r.RemainingToSplit(ctx, accountID, batch, producedUnit, productionStepID)
 	if apiErr != nil {
 		return tracing.Trace(span, apiErr)
 	}
-
-	// Sum all output batch quantities (firsts + seconds + waste).
-	totalUsed := decimal.Zero
-	for _, ob := range outputBatches {
-		totalUsed = totalUsed.Add(ob.Quantity.Measure)
-		if ob.Seconds != nil {
-			totalUsed = totalUsed.Add(ob.Seconds.Measure)
-		}
-		if ob.Waste != nil {
-			totalUsed = totalUsed.Add(ob.Waste.Measure)
-		}
-	}
-
-	// Compare against the batch's quantity.
-	remaining := batch.Quantity.Measure.Sub(totalUsed)
-	if remaining.LessThanOrEqual(decimal.Zero) {
-		err := r.queries.UpdateBatchClosedAt(ctx, sqlc.UpdateBatchClosedAtParams{
-			ID:        batch.ID,
-			AccountID: accountID,
-		})
-		if apiErr := db.MapSQLError(err); apiErr != nil {
+	if remaining.Round(0).LessThanOrEqual(decimal.Zero) {
+		if _, apiErr := r.Close(ctx, accountID, batch.ID); apiErr != nil {
 			return tracing.Trace(span, apiErr)
 		}
 	}
-
 	return nil
+}
+
+// RemainingToSplit is a batch's expected output at a step less what has already been split off it,
+// both in producedUnit.
+func (r *batchRepoImpl) RemainingToSplit(ctx context.Context, accountID string, batch domain.BaseBatch, producedUnit domain.LightUnit, productionStepID string) (decimal.Decimal, *apierror.APIError) {
+	expected, apiErr := NewProductionStepQueryRepo(r.queries).CalculateNextStepQuantities(ctx, accountID, batch.Item.ID, batch.Quantity, productionStepID)
+	if apiErr != nil {
+		return decimal.Zero, apiErr
+	}
+
+	outputs, apiErr := r.FindOutputBatches(ctx, accountID, batch.ID)
+	if apiErr != nil {
+		return decimal.Zero, apiErr
+	}
+
+	used, apiErr := sumOutputsInUnit(ctx, NewUnitConversionRepo(r.queries), outputs, producedUnit)
+	if apiErr != nil {
+		return decimal.Zero, apiErr
+	}
+	if producedUnit.ID != expected.ProducedUnitID {
+		return decimal.Zero, apierror.NewValidationError("Produced unit mismatch.")
+	}
+
+	return expected.Quantity.Sub(used), nil
 }
 
 func (r *batchRepoImpl) CountDownstreamBatches(ctx context.Context, batchID string) (int64, *apierror.APIError) {
@@ -1392,6 +1341,8 @@ func (r *batchRepoImpl) ReassignMachine(ctx context.Context, accountID, batchID,
 	return nil
 }
 
+// ReopenIfNotFullyUsed is CloseIfFullyUsed in reverse, run when a batch made from this one is undone:
+// it reopens once something is left to split off it again.
 func (r *batchRepoImpl) ReopenIfNotFullyUsed(ctx context.Context, accountID string, batch domain.BaseBatch, producedUnit domain.LightUnit, productionStepID string) *apierror.APIError {
 	ctx, span := batchRepoTracer.Start(ctx, "repository.batch.reopen_if_not_fully_used")
 	defer span.End()
@@ -1406,18 +1357,11 @@ func (r *batchRepoImpl) ReopenIfNotFullyUsed(ctx context.Context, accountID stri
 		return r.Reopen(ctx, accountID, batch.ID)
 	}
 
-	totalUsed := decimal.Zero
-	for _, ob := range outputBatches {
-		totalUsed = totalUsed.Add(ob.Quantity.Measure)
-		if ob.Seconds != nil {
-			totalUsed = totalUsed.Add(ob.Seconds.Measure)
-		}
-		if ob.Waste != nil {
-			totalUsed = totalUsed.Add(ob.Waste.Measure)
-		}
+	remaining, apiErr := r.RemainingToSplit(ctx, accountID, batch, producedUnit, productionStepID)
+	if apiErr != nil {
+		return tracing.Trace(span, apiErr)
 	}
-
-	if batch.Quantity.Measure.Sub(totalUsed).GreaterThan(decimal.Zero) {
+	if remaining.Round(0).GreaterThan(decimal.Zero) {
 		return r.Reopen(ctx, accountID, batch.ID)
 	}
 
@@ -1599,4 +1543,74 @@ func (r *batchRepoImpl) CreateMany(ctx context.Context, batches []domain.NewBatc
 		}
 	}
 	return created, nil
+}
+
+func (r *batchRepoImpl) CountScannedSince(ctx context.Context, accountID string, since time.Time) (int64, *apierror.APIError) {
+	ctx, span := batchRepoTracer.Start(ctx, "repository.batch.count_scanned_since")
+	defer span.End()
+
+	count, err := r.queries.CountBatchesScannedSince(ctx, sqlc.CountBatchesScannedSinceParams{
+		AccountID: accountID,
+		Since:     gosql.NullTime{Time: since, Valid: true},
+	})
+	if apiErr := db.MapSQLError(err); apiErr != nil {
+		return 0, tracing.Trace(span, apiErr)
+	}
+	return count, nil
+}
+
+// attachMachinesAndLots loads the machines and lots of a set of batches in two queries, however many
+// batches there are. A batch's lots are the material lots it consumed, then its production run's
+// number, each lot number once.
+func attachMachinesAndLots(ctx context.Context, queries *sqlc.Queries, batches []*domain.Batch) *apierror.APIError {
+	if len(batches) == 0 {
+		return nil
+	}
+
+	ids := make([]string, len(batches))
+	nullIDs := make([]gosql.NullString, len(batches))
+	for i, b := range batches {
+		ids[i] = b.ID
+		nullIDs[i] = gosql.NullString{String: b.ID, Valid: true}
+	}
+
+	machineRows, err := queries.ListMachinesForBatches(ctx, ids)
+	if apiErr := db.MapSQLError(err); apiErr != nil {
+		return apiErr
+	}
+	machinesByBatch := make(map[string][]domain.LightMachine)
+	for _, m := range machineRows {
+		machinesByBatch[m.BatchID] = append(machinesByBatch[m.BatchID], domain.LightMachine{ID: m.ID, Name: m.Name, SerialNumber: m.SerialNumber})
+	}
+
+	lotRows, err := queries.ListLotsForBatches(ctx, sqlc.ListLotsForBatchesParams{IssuedBatchIds: nullIDs, AllocatedBatchIds: nullIDs})
+	if apiErr := db.MapSQLError(err); apiErr != nil {
+		return apiErr
+	}
+	lotsByBatch := make(map[string][]domain.BatchLot)
+	for _, l := range lotRows {
+		lotsByBatch[l.BatchID.String] = append(lotsByBatch[l.BatchID.String], domain.BatchLot{LotNumber: l.LotNumber, Type: l.LotType})
+	}
+
+	for _, batch := range batches {
+		machines := machinesByBatch[batch.ID]
+		if machines == nil {
+			machines = []domain.LightMachine{}
+		}
+		batch.Machines = machines
+
+		seenLots := make(map[string]bool)
+		lots := make([]domain.BatchLot, 0, len(lotsByBatch[batch.ID])+1)
+		for _, l := range lotsByBatch[batch.ID] {
+			if !seenLots[l.LotNumber] {
+				seenLots[l.LotNumber] = true
+				lots = append(lots, l)
+			}
+		}
+		if batch.ProductionRun != nil && batch.ProductionRun.Number != "" && !seenLots[batch.ProductionRun.Number] {
+			lots = append(lots, domain.BatchLot{LotNumber: batch.ProductionRun.Number, Type: string(constants.BatchLotTypeProductionRun)})
+		}
+		batch.Lots = lots
+	}
+	return nil
 }

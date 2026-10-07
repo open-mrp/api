@@ -220,31 +220,18 @@ func TestSalesOrders_List_IncludeLineProductItemCategory(t *testing.T) {
 // SalesOrderSummary). These tests pin that a list row can expand the same
 // includes as detail, while inline scalars like line_count are always present.
 
-// salesOrderListRow fetches the sales-order list with the given query params and
-// returns the row for SeedSalesOrderID, failing if it is not on the page.
+// salesOrderListRow pages the seed customer's orders, with the given query params, to the row for
+// SeedSalesOrderID: every run adds orders, so the seed order is rarely on the first page.
 func salesOrderListRow(t *testing.T, params url.Values) map[string]any {
 	t.Helper()
-	if params == nil {
-		params = url.Values{}
+	scoped := url.Values{"customer_ids": {SeedCustomerAccountID}}
+	for k, vs := range params {
+		scoped[k] = vs
 	}
-	params.Set("limit", "100")
 
-	status, body, err := apiClient.GetListRaw(salesOrdersPath, params)
-	require.NoError(t, err)
-	requireStatus(t, 200, status, body)
-
-	got := parseJSON(body)
-	for _, item := range jsonArray(got, "data") {
-		row, ok := item.(map[string]any)
-		if !ok {
-			continue
-		}
-		if jsonField(row, "id") == SeedSalesOrderID {
-			return row
-		}
-	}
-	require.FailNowf(t, "seed sales order not found in list", "id %s not in list response", SeedSalesOrderID)
-	return nil
+	raw := listFindByField(t, salesOrdersPath, scoped, "id", SeedSalesOrderID)
+	require.NotNil(t, raw, "seed sales order %s must be in its customer's order list", SeedSalesOrderID)
+	return parseJSON(raw)
 }
 
 func TestSalesOrders_List_ExpandableFieldsNullWithoutInclude(t *testing.T) {

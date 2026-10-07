@@ -64,17 +64,25 @@ type SalesEntry struct {
 	// The unit of measure.
 	Unit string `json:"unit" validate:"required"`
 	// The unit cost.
-	UnitCost float64 `json:"unit_cost" validate:"required"`
+	//
+	// Null unless the caller holds `costs:read`; customer and supplier portal users never see it.
+	UnitCost *float64 `json:"unit_cost" sensitive:"cost"`
 	// The unit price.
 	UnitPrice float64 `json:"unit_price" validate:"required"`
 	// The unit profit.
-	UnitProfit float64 `json:"unit_profit" validate:"required"`
+	//
+	// Null unless the caller holds `costs:read`; customer and supplier portal users never see it.
+	UnitProfit *float64 `json:"unit_profit" sensitive:"cost"`
 	// The total invoiced amount.
 	TotalInvoiced float64 `json:"total_invoiced" validate:"required"`
 	// The total cost.
-	TotalCost float64 `json:"total_cost" validate:"required"`
+	//
+	// Null unless the caller holds `costs:read`; customer and supplier portal users never see it.
+	TotalCost *float64 `json:"total_cost" sensitive:"cost"`
 	// The total profit.
-	TotalProfit float64 `json:"total_profit" validate:"required"`
+	//
+	// Null unless the caller holds `costs:read`; customer and supplier portal users never see it.
+	TotalProfit *float64 `json:"total_profit" sensitive:"cost"`
 	// The ship-to city.
 	ShipToCity *string `json:"ship_to_city"`
 	// The ship-to zipcode.
@@ -106,46 +114,6 @@ type AnalyzeOpenBatchesResponse struct {
 	Object constants.ObjectType `json:"object" validate:"required,enum=list"`
 	// The open batch summary data.
 	Data []OpenBatchSummary `json:"data" validate:"required"`
-}
-
-// AnalyzeProductionCostsResponse represents the response from the analyze production costs endpoint.
-type AnalyzeProductionCostsResponse struct {
-	// Resource type identifier.
-	Object constants.ObjectType `json:"object" validate:"required,enum=list"`
-	// The production cost data.
-	Data []ProductionCostItem `json:"data" validate:"required"`
-}
-
-// ProductionCostItem represents an aggregated production cost entry.
-type ProductionCostItem struct {
-	// The department information.
-	Department *Entity `json:"department"`
-	// The category information.
-	Category *Entity `json:"category" validate:"required"`
-	// The total costs.
-	TotalCosts CostBreakdown `json:"total_costs" validate:"required"`
-	// The productive costs.
-	ProductiveCosts CostBreakdown `json:"productive_costs" validate:"required"`
-	// The waste costs.
-	WasteCosts CostBreakdown `json:"waste_costs" validate:"required"`
-	// The seconds costs.
-	SecondsCosts CostBreakdown `json:"seconds_costs" validate:"required"`
-}
-
-// CostBreakdown represents a detailed cost breakdown with sub-quantities.
-type CostBreakdown struct {
-	// The total amount.
-	Total *Quantity `json:"total" validate:"required"`
-	// The labor amount.
-	Labor *Quantity `json:"labor" validate:"required"`
-	// The materials amount.
-	Materials *Quantity `json:"materials" validate:"required"`
-	// The overhead amount.
-	Overhead *Quantity `json:"overhead" validate:"required"`
-	// The time amount.
-	Time *Quantity `json:"time" validate:"required"`
-	// The quantity amount.
-	Quantity *Quantity `json:"quantity" validate:"required"`
 }
 
 // AnalyzeDeliveriesResponse represents the response from the analyze deliveries endpoint.
@@ -233,9 +201,13 @@ type ManufacturingMetrics struct {
 	// The production metric value.
 	Production float64 `json:"production" validate:"required"`
 	// The costs per unit metric value.
-	CostsPerUnit float64 `json:"costs_per_unit" validate:"required"`
+	//
+	// Null unless the caller holds `costs:read`; customer and supplier portal users never see it.
+	CostsPerUnit *float64 `json:"costs_per_unit" sensitive:"cost"`
 	// The margin metric value.
-	Margin float64 `json:"margin" validate:"required"`
+	//
+	// Null unless the caller holds `costs:read`; customer and supplier portal users never see it.
+	Margin *float64 `json:"margin" sensitive:"cost"`
 	// The quality metric value.
 	Quality float64 `json:"quality" validate:"required"`
 	// The labor efficiency metric value.
@@ -299,17 +271,25 @@ type OrderEntry struct {
 	// The unit of measure.
 	Unit string `json:"unit" validate:"required"`
 	// The unit cost.
-	UnitCost float64 `json:"unit_cost" validate:"required"`
+	//
+	// Null unless the caller holds `costs:read`; customer and supplier portal users never see it.
+	UnitCost *float64 `json:"unit_cost" sensitive:"cost"`
 	// The unit price.
 	UnitPrice float64 `json:"unit_price" validate:"required"`
 	// The unit profit.
-	UnitProfit float64 `json:"unit_profit" validate:"required"`
+	//
+	// Null unless the caller holds `costs:read`; customer and supplier portal users never see it.
+	UnitProfit *float64 `json:"unit_profit" sensitive:"cost"`
 	// The total invoiced amount.
 	TotalInvoiced float64 `json:"total_invoiced" validate:"required"`
 	// The total cost.
-	TotalCost float64 `json:"total_cost" validate:"required"`
+	//
+	// Null unless the caller holds `costs:read`; customer and supplier portal users never see it.
+	TotalCost *float64 `json:"total_cost" sensitive:"cost"`
 	// The total profit.
-	TotalProfit float64 `json:"total_profit" validate:"required"`
+	//
+	// Null unless the caller holds `costs:read`; customer and supplier portal users never see it.
+	TotalProfit *float64 `json:"total_profit" sensitive:"cost"`
 	// The ship-to city.
 	ShipToCity *string `json:"ship_to_city"`
 	// The ship-to zipcode.
@@ -439,9 +419,13 @@ type InventoryReceiptSummaryEntry struct {
 	// The remaining quantity.
 	RemainingQuantity *Quantity `json:"remaining_quantity" validate:"required"`
 	// The weighted average unit cost.
-	WeightedAverageUnitCost AnalyticsRate `json:"weighted_average_unit_cost" validate:"required"`
+	//
+	// Null unless the caller holds `costs:read`; customer and supplier portal users never see it.
+	WeightedAverageUnitCost *AnalyticsRate `json:"weighted_average_unit_cost" sensitive:"cost"`
 	// The inventory value.
-	InventoryValue *Quantity `json:"inventory_value"`
+	//
+	// Null unless the caller holds `costs:read`; customer and supplier portal users never see it.
+	InventoryValue *Quantity `json:"inventory_value" sensitive:"cost"`
 	// The date of the oldest receipt.
 	OldestReceiptAt *time.Time `json:"oldest_receipt_at"`
 	// The date of the newest receipt.
@@ -1017,7 +1001,9 @@ type CustomerPricingFinding struct {
 	// How far below the peer median this price sits, as a fraction between 0 and 1. Null when there is no peer median.
 	BelowPeerMedianFraction *string `json:"below_peer_median_fraction" format:"decimal"`
 	// Gross margin at this price, as a fraction between 0 and 1. Null when no comparable cost could be established.
-	GrossMargin *string `json:"gross_margin" format:"decimal"`
+	//
+	// Null unless the caller holds `costs:read`; customer and supplier portal users never see it.
+	GrossMargin *string `json:"gross_margin" format:"decimal" sensitive:"cost"`
 }
 
 // CustomerPricingSummary reports the shape of the analysis behind the findings.
@@ -1067,7 +1053,9 @@ type RealizedMarginFinding struct {
 	// Revenue invoiced over the window.
 	Revenue *ComputedQuantity `json:"revenue" validate:"required"`
 	// Cost of goods for the quantity invoiced.
-	Cost *ComputedQuantity `json:"cost" validate:"required"`
+	//
+	// Null unless the caller holds `costs:read`; customer and supplier portal users never see it.
+	Cost *ComputedQuantity `json:"cost" validate:"required" sensitive:"cost"`
 	// Revenue divided by quantity: the price actually achieved across the window.
 	AverageUnitPrice *ComputedRate `json:"average_unit_price" validate:"required"`
 	// Median achieved price for this item across every customer that bought it. Null when no other customer bought it.
@@ -1077,7 +1065,9 @@ type RealizedMarginFinding struct {
 	// How far below the peer median this customer's achieved price sits, as a fraction between 0 and 1. Null when there is no peer median.
 	BelowPeerMedianFraction *string `json:"below_peer_median_fraction" format:"decimal"`
 	// Realized gross margin, as a fraction between 0 and 1. Null when no cost was captured on the lines.
-	GrossMargin *string `json:"gross_margin" format:"decimal"`
+	//
+	// Null unless the caller holds `costs:read`; customer and supplier portal users never see it.
+	GrossMargin *string `json:"gross_margin" format:"decimal" sensitive:"cost"`
 }
 
 // RealizedMarginSummary reports the shape of the analysis behind the findings.

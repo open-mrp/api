@@ -36,19 +36,16 @@ type ReorderSalesOrderLinesEndpoint struct{}
 
 func (e *ReorderSalesOrderLinesEndpoint) Materialize() *apiendpoint.APIEndpoint[*ReorderSalesOrderLinesRequest, *apiresource.EmptyResource] {
 	return (&apiendpoint.APIEndpoint[*ReorderSalesOrderLinesRequest, *apiresource.EmptyResource]{
-		Title:             "Reorder Sales Order Lines",
-		Method:            http.MethodPost,
-		ContentType:       "application/json",
-		Route:             "/v1/sales/sales-orders/{id}/lines/actions/reorder",
-		SuccessStatusCode: http.StatusOK,
-		Public:            true,
-		AgentTool:         true,
-		Preview:           true,
-		RequiredPermissions: []types.Permission{
-			{Domain: types.PermissionDomainCustomers, Action: types.ActionUpdate},
-			{Domain: types.PermissionDomainSuppliers, Action: types.ActionUpdate},
-			{Domain: types.PermissionDomainSalesOrders, Action: types.ActionUpdate},
-		},
+		Title:                   "Reorder Sales Order Lines",
+		Method:                  http.MethodPost,
+		ContentType:             "application/json",
+		Route:                   "/v1/sales/sales-orders/{id}/lines/actions/reorder",
+		SuccessStatusCode:       http.StatusOK,
+		Public:                  true,
+		AgentTool:               true,
+		Preview:                 true,
+		RequiredPermissions:     []types.Permission{{Domain: types.PermissionDomainSalesOrders, Action: types.ActionUpdate}},
+		CounterpartyPermissions: apiendpoint.Counterparties(types.ActionUpdate),
 		ServiceHandler: func(svc any) func(ctx context.Context, req *ReorderSalesOrderLinesRequest) (*apiresource.EmptyResource, *apierror.APIError) {
 			return svc.(SalesOrderSvc).ReorderSalesOrderLines
 		},

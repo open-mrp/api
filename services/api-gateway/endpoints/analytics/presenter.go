@@ -58,12 +58,12 @@ func salesEntryFromProto(e *pb.SalesEntryProto) apiresource.SalesEntry {
 		CategoryName:        e.CategoryName,
 		QuantityInvoiced:    e.QuantityInvoiced,
 		Unit:                e.Unit,
-		UnitCost:            e.UnitCost,
+		UnitCost:            new(e.UnitCost),
 		UnitPrice:           e.UnitPrice,
-		UnitProfit:          e.UnitProfit,
+		UnitProfit:          new(e.UnitProfit),
 		TotalInvoiced:       e.TotalInvoiced,
-		TotalCost:           e.TotalCost,
-		TotalProfit:         e.TotalProfit,
+		TotalCost:           new(e.TotalCost),
+		TotalProfit:         new(e.TotalProfit),
 		ShipToCity:          ptrStringOrNil(e.ShipToCity),
 		ShipToZipcode:       ptrStringOrNil(e.ShipToZipcode),
 		ShipToState:         ptrStringOrNil(e.ShipToState),
@@ -109,52 +109,6 @@ func AnalyzeOpenBatchesPresenter(resp *pb.AnalyzeOpenBatchesResponse) *apiresour
 	return &apiresource.AnalyzeOpenBatchesResponse{
 		Object: constants.ObjectTypeList,
 		Data:   summaries,
-	}
-}
-
-func AnalyzeProductionCostsPresenter(resp *pb.AnalyzeProductionCostsResponse) *apiresource.AnalyzeProductionCostsResponse {
-	if resp == nil {
-		return &apiresource.AnalyzeProductionCostsResponse{
-			Object: constants.ObjectTypeList,
-			Data:   []apiresource.ProductionCostItem{},
-		}
-	}
-
-	items := make([]apiresource.ProductionCostItem, len(resp.Items))
-	for i, item := range resp.Items {
-		var dept *apiresource.Entity
-		if item.Department != nil {
-			dept = apiresource.NewEntity(item.Department.Id, constants.ObjectTypeDepartment, &item.Department.Name, nil)
-		}
-
-		items[i] = apiresource.ProductionCostItem{
-			Department:      dept,
-			Category:        apiresource.NewEntity(item.Category.Id, constants.ObjectTypeItemCategory, &item.Category.Name, nil),
-			TotalCosts:      costBreakdownFromProto(item.TotalCosts),
-			ProductiveCosts: costBreakdownFromProto(item.ProductiveCosts),
-			WasteCosts:      costBreakdownFromProto(item.WasteCosts),
-			SecondsCosts:    costBreakdownFromProto(item.SecondsCosts),
-		}
-	}
-
-	return &apiresource.AnalyzeProductionCostsResponse{
-		Object: constants.ObjectTypeList,
-		Data:   items,
-	}
-}
-
-func costBreakdownFromProto(c *pb.CostBreakdown) apiresource.CostBreakdown {
-	if c == nil {
-		return apiresource.CostBreakdown{}
-	}
-
-	return apiresource.CostBreakdown{
-		Total:     quantityFromProto(c.Total),
-		Labor:     quantityFromProto(c.Labor),
-		Materials: quantityFromProto(c.Materials),
-		Overhead:  quantityFromProto(c.Overhead),
-		Time:      quantityFromProto(c.Time),
-		Quantity:  quantityFromProto(c.Quantity),
 	}
 }
 
@@ -278,8 +232,8 @@ func manufacturingMetricsFromProto(m *pb.ManufacturingMetricsProto) apiresource.
 
 	return apiresource.ManufacturingMetrics{
 		Production:      m.Production,
-		CostsPerUnit:    m.CostsPerUnit,
-		Margin:          m.Margin,
+		CostsPerUnit:    new(m.CostsPerUnit),
+		Margin:          new(m.Margin),
 		Quality:         m.Quality,
 		LaborEfficiency: m.LaborEfficiency,
 	}
@@ -333,12 +287,12 @@ func orderEntryFromProto(e *pb.OrderEntryProto) apiresource.OrderEntry {
 		CategoryName:        e.CategoryName,
 		QuantityInvoiced:    e.QuantityInvoiced,
 		Unit:                e.Unit,
-		UnitCost:            e.UnitCost,
+		UnitCost:            new(e.UnitCost),
 		UnitPrice:           e.UnitPrice,
-		UnitProfit:          e.UnitProfit,
+		UnitProfit:          new(e.UnitProfit),
 		TotalInvoiced:       e.TotalInvoiced,
-		TotalCost:           e.TotalCost,
-		TotalProfit:         e.TotalProfit,
+		TotalCost:           new(e.TotalCost),
+		TotalProfit:         new(e.TotalProfit),
 		ShipToCity:          ptrStringOrNil(e.ShipToCity),
 		ShipToZipcode:       ptrStringOrNil(e.ShipToZipcode),
 		ShipToState:         ptrStringOrNil(e.ShipToState),
@@ -462,7 +416,7 @@ func AnalyzeInventoryReceiptsPresenter(resp *pb.AnalyzeInventoryReceiptsResponse
 			OwnerAccount:      apiresource.NewEntity(e.OwnerAccount.Id, constants.ObjectTypeAccount, &e.OwnerAccount.Name, nil),
 			HolderAccount:     apiresource.NewEntity(e.HolderAccount.Id, constants.ObjectTypeAccount, &e.HolderAccount.Name, nil),
 			RemainingQuantity: quantityFromProto(e.RemainingQuantity),
-			WeightedAverageUnitCost: apiresource.AnalyticsRate{
+			WeightedAverageUnitCost: &apiresource.AnalyticsRate{
 				Numerator:   quantityFromProto(e.WeightedAverageUnitCost.Numerator),
 				Denominator: quantityFromProto(e.WeightedAverageUnitCost.Denominator),
 			},

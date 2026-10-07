@@ -28,16 +28,14 @@ type ListSalesOrdersRequest struct {
 	//
 	// These are account user IDs, matching the `sales_rep` on the order.
 	SalesRepIDs []string `query:"sales_rep_ids"`
-	// Earliest order creation date to include, in `YYYY-MM-DD` format.
-	StartDate *string `query:"starts_at"`
-	// Latest order creation date to include, in `YYYY-MM-DD` format.
-	//
-	// Compared against the creation timestamp at the start of that day, so orders created later on the end date itself are excluded; pass the following day to include them.
-	EndDate *string `query:"ends_at"`
+	// Only include orders created on or after this date (`YYYY-MM-DD`, UTC). A full timestamp (RFC 3339) is also accepted, to bound the range at a local midnight.
+	StartDate *string `query:"starts_at" validate:"omitempty,date_filter"`
+	// Only include orders created at or before the start of this date (`YYYY-MM-DD`, UTC), so orders created later on the end date itself are excluded; pass the following day to include them. A full timestamp (RFC 3339) is also accepted and used as given.
+	EndDate *string `query:"ends_at" validate:"omitempty,date_filter"`
 	// Earliest ship-by date to include, in `YYYY-MM-DD` format. Inclusive of the date itself.
-	ShipByAfter *string `query:"ship_by_after"`
+	ShipByAfter *string `query:"ship_by_after" validate:"omitempty,date_filter"`
 	// Latest ship-by date to include, in `YYYY-MM-DD` format. Inclusive of the date itself.
-	ShipByBefore *string `query:"ship_by_before"`
+	ShipByBefore *string `query:"ship_by_before" validate:"omitempty,date_filter"`
 	// Restricts results to orders that are, or are not, past their ship-by date.
 	//
 	// An order is past due when it is still `issued` and its ship-by date has passed. A fulfilled order that shipped late is not past due — it is delivered, and how late it was is a delivery-performance question rather than a backlog one.
@@ -46,21 +44,22 @@ type ListSalesOrdersRequest struct {
 
 // Returns a paginated list of sales orders for the current account, newest first.
 //
-// A free-text search term (`q`) is matched as an exact value against the order number and the customer purchase order number, and still respects the other filters. Customer accounts calling this endpoint only ever see their own orders.
+// A free-text search term (`q`) is matched as an exact value against the order number and the customer purchase order number, and still respects the other filters. A customer or supplier portal calling this endpoint only ever sees the orders its own account placed, whatever filters it sets.
 type ListSalesOrdersEndpoint struct{}
 
 func (e *ListSalesOrdersEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListSalesOrdersRequest, *apiresource.List[apiresource.SalesOrder]] {
 	return (&apiendpoint.APIEndpoint[*ListSalesOrdersRequest, *apiresource.List[apiresource.SalesOrder]]{
-		Title:               "List Sales Orders",
-		Method:              http.MethodGet,
-		ContentType:         "application/json",
-		Route:               "/v1/sales/sales-orders",
-		SuccessStatusCode:   http.StatusOK,
-		Public:              true,
-		Preview:             true,
-		AgentTool:           true,
-		RequiredPermissions: []types.Permission{{Domain: types.PermissionDomainSalesOrders, Action: types.ActionRead}, {Domain: types.PermissionDomainCustomers, Action: types.ActionRead}, {Domain: types.PermissionDomainSuppliers, Action: types.ActionRead}},
-		ObjectType:          constants.ObjectTypeSalesOrder,
+		Title:                   "List Sales Orders",
+		Method:                  http.MethodGet,
+		ContentType:             "application/json",
+		Route:                   "/v1/sales/sales-orders",
+		SuccessStatusCode:       http.StatusOK,
+		Public:                  true,
+		Preview:                 true,
+		AgentTool:               true,
+		RequiredPermissions:     []types.Permission{{Domain: types.PermissionDomainSalesOrders, Action: types.ActionRead}},
+		CounterpartyPermissions: apiendpoint.Counterparties(types.ActionRead),
+		ObjectType:              constants.ObjectTypeSalesOrder,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *ListSalesOrdersRequest) (*apiresource.List[apiresource.SalesOrder], *apierror.APIError) {
 			return svc.(SalesOrderSvc).ListSalesOrders
 		},

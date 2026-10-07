@@ -4,6 +4,7 @@ package api_test
 
 import (
 	"net/url"
+	"strconv"
 	"testing"
 	"time"
 
@@ -40,6 +41,40 @@ func TestDeliveries_RetrieveResponseShape(t *testing.T) {
 	assert.Contains(t, []string{"accepted", "rejected"}, jsonField(delivery, "status"))
 	assertValidTimestamp(t, jsonField(delivery, "created_at"), "created_at")
 	assertValidTimestamp(t, jsonField(delivery, "updated_at"), "updated_at")
+}
+
+// line_count is always present, so a list can show it without paying for every line.
+func TestDeliveries_RetrieveLineCountMatchesLines(t *testing.T) {
+	t.Parallel()
+
+	status, body, err := apiClient.GetListRaw(deliveriesPath+"/"+SeedDeliveryID, nil)
+	require.NoError(t, err)
+	requireStatus(t, 200, status, body)
+	withoutLines := parseJSON(body)
+	assertNilField(t, withoutLines, "lines")
+
+	status, body, err = apiClient.GetListRaw(deliveriesPath+"/"+SeedDeliveryID, url.Values{"include": {"lines"}})
+	require.NoError(t, err)
+	requireStatus(t, 200, status, body)
+	lines := jsonListData(parseJSON(body), "lines")
+	require.NotEmpty(t, lines, "the seeded delivery has lines")
+
+	assert.Equal(t, strconv.Itoa(len(lines)), jsonField(withoutLines, "line_count"))
+}
+
+func TestDeliveries_ListLineCountMatchesLines(t *testing.T) {
+	t.Parallel()
+
+	list, status, err := apiClient.GetList(deliveriesPath, url.Values{"limit": {"5"}, "status": {"all"}, "include": {"lines"}})
+	require.NoError(t, err)
+	require.Equal(t, 200, status)
+	require.NotEmpty(t, list.Data, "the seeded account has deliveries")
+
+	for _, raw := range list.Data {
+		row := parseJSON(raw)
+		lines := jsonListData(row, "lines")
+		assert.Equal(t, strconv.Itoa(len(lines)), jsonField(row, "line_count"), "delivery %s", jsonField(row, "id"))
+	}
 }
 
 func TestDeliveries_RetrieveUnknownIs404(t *testing.T) {
@@ -172,6 +207,8 @@ func TestDeliveries_ListResponseShape(t *testing.T) {
 		assertObjectField(t, row, "delivery")
 		assertIDFormat(t, jsonField(row, "id"), id.DeliveryIDPrefix)
 		assert.NotEmpty(t, jsonField(row, "number"))
+		assert.NotEmpty(t, jsonField(row, "line_count"), "line_count is present without include=lines")
+		assertNilField(t, row, "lines")
 	}
 }
 
@@ -204,19 +241,29 @@ func TestDeliveries_ListStatusRejectedNarrowsThePage(t *testing.T) {
 	}
 }
 
+// A delivery where everything was refused is hidden by default and shown under `all`, beside the accepted
+// ones. Membership rather than counts: parallel tests stock and unissue orders between two list calls.
 func TestDeliveries_ListStatusAllIsAtLeastAsBroadAsTheDefault(t *testing.T) {
 	t.Parallel()
 
-	accepted, status, err := apiClient.GetList(deliveriesPath, url.Values{"status": {"accepted"}, "limit": {"50"}})
-	require.NoError(t, err)
-	require.Equal(t, 200, status)
+	_, receivingOrderID := receivedPurchaseOrderReceiving(t)
+	lineID := jsonField(firstLine(t, receivingOrderID), "id")
+	status, body := stockReceivingOrder(t, receivingOrderID, []map[string]any{{
+		"receiving_order_line_id": lineID,
+		"rejected_quantity":       pairs("4"),
+		"allocations":             []map[string]any{},
+	}})
+	requireStatus(t, 200, status, body)
 
-	all, status, err := apiClient.GetList(deliveriesPath, url.Values{"status": {"all"}, "limit": {"50"}})
-	require.NoError(t, err)
-	require.Equal(t, 200, status)
+	rejected := deliveryForReceivingOrder(t, receivingOrderID)
+	rejectedID := jsonField(rejected, "id")
+	require.Equal(t, "rejected", jsonField(rejected, "status"), "nothing was accepted: %v", rejected)
 
-	assert.GreaterOrEqual(t, len(all.Data), len(accepted.Data),
-		"`all` cannot return fewer deliveries than `accepted`")
+	assertListContainsID(t, deliveriesPath, url.Values{"status": {"all"}}, rejectedID)
+	assertListContainsID(t, deliveriesPath, url.Values{"status": {"all"}}, SeedDeliveryID)
+	assertListContainsID(t, deliveriesPath, url.Values{"status": {"accepted"}}, SeedDeliveryID)
+	assert.Nil(t, listFindByField(t, deliveriesPath, url.Values{"status": {"accepted"}}, "id", rejectedID),
+		"a delivery where nothing was accepted is hidden by default")
 }
 
 func TestDeliveries_ListRejectsAnUnknownStatus(t *testing.T) {

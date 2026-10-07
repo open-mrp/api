@@ -22,10 +22,28 @@ const (
 	seedPackedShipmentID  = "sh_01k0a87w33emw8pmkz1mf86cg2"
 )
 
-// Collects the ids returned by the shipment list under the given filters.
+// Collects the ids the shipment list returns under the given filters, from every page: each run packs
+// more shipments for the seeded customer, which push the seeded ones off the newest-first front page.
 func shipmentIDsFiltered(t *testing.T, params url.Values) []string {
 	t.Helper()
-	return listIDs(t, shipmentsPath, params)
+	merged := url.Values{"limit": {"1000"}}
+	for k, vs := range params {
+		merged[k] = vs
+	}
+	list, status, err := apiClient.GetList(shipmentsPath, merged)
+	ids := []string{}
+	for page := 0; ; page++ {
+		require.NoError(t, err)
+		require.Equal(t, 200, status, "GET %s %v", shipmentsPath, params)
+		for _, raw := range list.Data {
+			ids = append(ids, DataItemField(raw, "id"))
+		}
+		if !list.PageInfo.HasNextPage {
+			return ids
+		}
+		require.Less(t, page, maxListScanPages, "%s %v has more rows than the scan allows", shipmentsPath, params)
+		list, status, err = apiClient.GetListFromPageURL(list.PageInfo.NextPageURL)
+	}
 }
 
 func TestShipmentsList_SearchMatchesShipmentNumber(t *testing.T) {
@@ -70,7 +88,7 @@ func TestShipmentsList_FiltersByItemAndProductLine(t *testing.T) {
 	assert.Empty(t, shipmentIDsFiltered(t, url.Values{"product_line_ids": {"pdln_01nosuchline00000"}}))
 }
 
-// Both filters resolve through the customer relation: its group, and its default sales rep.
+// The group is the customer's; the sales rep is the one the order credits (ORD-001's is the seed user).
 func TestShipmentsList_FiltersByCustomerGroupAndSalesRep(t *testing.T) {
 	t.Parallel()
 
@@ -79,6 +97,54 @@ func TestShipmentsList_FiltersByCustomerGroupAndSalesRep(t *testing.T) {
 
 	assert.Contains(t, shipmentIDsFiltered(t, url.Values{"sales_rep_ids": {SeedAccountUserID}}), seedPackedShipmentID)
 	assert.Empty(t, shipmentIDsFiltered(t, url.Values{"sales_rep_ids": {"acus_nosuchsalesrep00"}}))
+}
+
+// The sales rep is the order's, as on the legacy dashboard list, not the customer's default rep: a
+// customer defaulting to one rep can place an order another rep is credited with.
+func TestShipmentsList_SalesRepIsTheOrdersRepNotTheCustomers(t *testing.T) {
+	t.Parallel()
+
+	_, orderRep := paritySalesRep(t)
+	_, defaultRep := paritySalesRep(t)
+	groupID := leadTimeAccountGroup(t, "e2e-shp-rep-grp", nil)
+	customerID := parityCustomer(t, groupID)
+	status, body, err := apiClient.Patch(customersPath+"/"+customerID, map[string]any{"default_sales_rep_id": defaultRep}, newIdempotencyKey())
+	require.NoError(t, err)
+	requireStatus(t, 200, status, body)
+
+	order := parityOrderBody(t, customerID)
+	order["sales_rep_id"] = orderRep
+	orderID, _, shipmentID := packedOrder(t, order)
+
+	status, body, err = apiClient.GetListRaw(salesOrdersPath+"/"+orderID, url.Values{"include": {"sales_rep"}})
+	require.NoError(t, err)
+	requireStatus(t, 200, status, body)
+	require.Equal(t, orderRep, jsonField(jsonObject(parseJSON(body), "sales_rep"), "id"), "the order credits its own rep")
+	status, body, err = apiClient.GetListRaw(customersPath+"/"+customerID, url.Values{"include": {"defaults.sales_rep"}})
+	require.NoError(t, err)
+	requireStatus(t, 200, status, body)
+	require.Equal(t, defaultRep, jsonField(jsonObject(jsonObject(parseJSON(body), "defaults"), "sales_rep"), "id"))
+
+	only := []string{shipmentID}
+	assert.Equal(t, only, shipmentIDsFiltered(t, url.Values{"sales_rep_ids": {orderRep}}))
+	assert.Empty(t, shipmentIDsFiltered(t, url.Values{"sales_rep_ids": {defaultRep}}), "the customer's default rep is not the order's")
+	assert.Equal(t, only, shipmentIDsFiltered(t, url.Values{"sales_rep_ids": {defaultRep, orderRep}}), "reps match any of")
+
+	// The group still narrows through the customer relation, alongside the order's rep.
+	assert.Equal(t, only, shipmentIDsFiltered(t, url.Values{"customer_group_ids": {groupID}, "sales_rep_ids": {orderRep}}))
+	assert.Empty(t, shipmentIDsFiltered(t, url.Values{"customer_group_ids": {groupID}, "sales_rep_ids": {defaultRep}}))
+	assert.Empty(t, shipmentIDsFiltered(t, url.Values{"customer_group_ids": {SeedCustomerGroupID}, "sales_rep_ids": {orderRep}}),
+		"the rep's shipment is for a customer outside that group")
+
+	// Two customers can drive the read instead, leaving the rep to be checked per shipment.
+	pair := []string{customerID, "ac_01nosuchcustomer000"}
+	assert.Equal(t, only, shipmentIDsFiltered(t, url.Values{"customer_ids": pair, "sales_rep_ids": {orderRep}}))
+	assert.Empty(t, shipmentIDsFiltered(t, url.Values{"customer_ids": pair, "sales_rep_ids": {defaultRep}}))
+
+	status, body, err = getTenantBClient().GetListRaw(shipmentsPath, url.Values{"sales_rep_ids": {orderRep}})
+	require.NoError(t, err)
+	requireStatus(t, 200, status, body)
+	assert.Empty(t, jsonArray(parseJSON(body), "data"), "another account filtering on the rep sees none of this account's shipments")
 }
 
 // The window filters on creation, not on when the shipment shipped.

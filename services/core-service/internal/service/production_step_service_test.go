@@ -331,3 +331,14 @@ func (suite *ProductionStepBulkUpsertTestSuite) TestExportProductionSteps_Scopes
 	_, apiErr := suite.buildExport(ctx, domain.ExportProductionStepsParams{AccountID: "ac_attacker"})
 	suite.Require().Nil(apiErr)
 }
+
+func TestDeleteProductionStep_OnlyTheOwnerLearnsItWasDeleted(t *testing.T) {
+	t.Parallel()
+	assertOnlyTheOwnerLearnsItWasDeleted(t, constants.DeletedRecordResourceTypeProductionStep, "ps_gone", func(h *deletedScopeHarness, accountID string) *apierror.APIError {
+		steps := repositorymock.NewMockProductionStepRepo(h.ctrl)
+		h.repos.EXPECT().NewProductionStepRepo().Return(steps).AnyTimes()
+		steps.EXPECT().Get(gomock.Any(), accountID, "ps_gone").Return(nil, deletedScopeNotFound())
+		svc := NewProductionStepSvc(&ProductionStepSvcConfig{Repos: h.repos, MediatorFactory: h.mediators, JobSvcFactory: NewJobSvcFactory(), TxManager: &stubTxManager{factory: h.repos}})
+		return svc.DeleteProductionStep(deletedScopeCtx(accountID), "ps_gone")
+	})
+}

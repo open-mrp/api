@@ -132,6 +132,8 @@ func mapShipmentRow(row sqlc.GetShipmentRow) *domain.Shipment {
 	if row.BillingAddressZip.Valid {
 		shipment.BillingAddressZip = &row.BillingAddressZip.String
 	}
+	shipment.OrderCarrierBillingType = nullStringToPtr(row.OrderCarrierBillingType)
+	shipment.OrderCarrierBillingAccount = nullStringToPtr(row.OrderCarrierBillingAccount)
 
 	shipment.CustomerCreatedAt = row.CustomerCreatedAt
 	shipment.CustomerUpdatedAt = row.CustomerUpdatedAt
@@ -160,6 +162,7 @@ func (r *shipmentRepoImpl) List(ctx context.Context, params domain.ListShipments
 		Search:         db.NullStringLikePtr(params.Query),
 		ItemIDs:        params.ItemIDs,
 		ProductLineIDs: params.ProductLineIDs,
+		SalesRepIDs:    params.SalesRepIDs,
 		StartDate:      parseDateFilter(params.StartDate),
 		EndDate:        parseEndDateFilter(params.EndDate),
 		Direction:      pagination.DirectionForward,
@@ -203,26 +206,18 @@ func (r *shipmentRepoImpl) List(ctx context.Context, params domain.ListShipments
 	return &domain.ListShipmentsResult{Shipments: result, PageInfo: pageInfo}, nil
 }
 
-// buyerFilter resolves the customer, customer-group and sales-rep filters to the customers a shipment
-// may be for. Nil means no filter; an empty, non-nil set means the filters exclude every customer. A
-// group and a sales rep must hold on the same relation, as they did when the list joined it.
+// buyerFilter resolves the customer and customer-group filters to the customers a shipment may be for.
+// Nil means no filter; an empty, non-nil set means the filters exclude every customer.
 func (r *shipmentRepoImpl) buyerFilter(ctx context.Context, params domain.ListShipmentsParams) ([]string, *apierror.APIError) {
-	if len(params.CustomerGroupIDs) == 0 && len(params.SalesRepIDs) == 0 {
+	if len(params.CustomerGroupIDs) == 0 {
 		if len(params.CustomerIDs) == 0 {
 			return nil, nil
 		}
 		return params.CustomerIDs, nil
 	}
-	query := "SELECT DISTINCT counterparty_account_id FROM account_relation WHERE owner_account_id = ?"
-	args := []any{params.AccountID}
-	if len(params.CustomerGroupIDs) > 0 {
-		query += " AND account_group_id IN (" + placeholders(len(params.CustomerGroupIDs)) + ")"
-		args = append(args, stringArgs(params.CustomerGroupIDs)...)
-	}
-	if len(params.SalesRepIDs) > 0 {
-		query += " AND default_sales_rep_id IN (" + placeholders(len(params.SalesRepIDs)) + ")"
-		args = append(args, stringArgs(params.SalesRepIDs)...)
-	}
+	query := "SELECT DISTINCT counterparty_account_id FROM account_relation WHERE owner_account_id = ?" +
+		" AND account_group_id IN (" + placeholders(len(params.CustomerGroupIDs)) + ")"
+	args := append([]any{params.AccountID}, stringArgs(params.CustomerGroupIDs)...)
 	if len(params.CustomerIDs) > 0 {
 		query += " AND counterparty_account_id IN (" + placeholders(len(params.CustomerIDs)) + ")"
 		args = append(args, stringArgs(params.CustomerIDs)...)
@@ -260,8 +255,11 @@ func (r *shipmentRepoImpl) chooseDrive(ctx context.Context, q shipmentListQuery)
 	if len(q.ProductLineIDs) > 0 {
 		candidates[shipmentDriveProductLines] = q.ProductLineIDs
 	}
+	if len(q.SalesRepIDs) > 0 {
+		candidates[shipmentDriveSalesReps] = q.SalesRepIDs
+	}
 	drive, fewest := shipmentDriveListOrder, shipmentMatchCap
-	for _, candidate := range []shipmentDrive{shipmentDriveBuyers, shipmentDriveItems, shipmentDriveProductLines} {
+	for _, candidate := range []shipmentDrive{shipmentDriveBuyers, shipmentDriveItems, shipmentDriveProductLines, shipmentDriveSalesReps} {
 		ids, ok := candidates[candidate]
 		if !ok {
 			continue
@@ -341,13 +339,14 @@ func (r *shipmentRepoImpl) Update(ctx context.Context, params domain.UpdateShipm
 	defer span.End()
 
 	_, err := r.queries.UpdateShipment(ctx, sqlc.UpdateShipmentParams{
-		Note:                 toNullString(params.Note),
-		Number:               toNullString(params.Number),
-		MasterTrackingNumber: toNullString(params.MasterTrackingNumber),
-		CarrierID:            toNullString(params.CarrierID),
-		CarrierOptionID:      toNullString(params.ServiceLevelID.ValuePtr()),
-		ID:                   params.ShipmentID,
-		AccountID:            params.AccountID,
+		Note:                      toNullString(params.Note),
+		Number:                    toNullString(params.Number),
+		MasterTrackingNumber:      toNullString(params.MasterTrackingNumber.ValuePtr()),
+		ClearMasterTrackingNumber: params.MasterTrackingNumber.IsClear(),
+		CarrierID:                 toNullString(params.CarrierID),
+		CarrierOptionID:           toNullString(params.ServiceLevelID.ValuePtr()),
+		ID:                        params.ShipmentID,
+		AccountID:                 params.AccountID,
 	})
 	if apiErr := db.MapSQLError(err); apiErr != nil {
 		return nil, tracing.Trace(span, apiErr)
@@ -423,13 +422,16 @@ func (r *shipmentRepoImpl) MarkShipped(ctx context.Context, accountID, shipmentI
 	ctx, span := shipmentRepoTracer.Start(ctx, "repository.shipment.mark_shipped")
 	defer span.End()
 
-	err := r.queries.MarkShipmentShipped(ctx, sqlc.MarkShipmentShippedParams{
+	changed, err := r.queries.MarkShipmentShipped(ctx, sqlc.MarkShipmentShippedParams{
 		ShippedByID: gosql.NullString{String: shippedByID, Valid: shippedByID != ""},
 		ID:          shipmentID,
 		AccountID:   accountID,
 	})
 	if apiErr := db.MapSQLError(err); apiErr != nil {
 		return tracing.Trace(span, apiErr)
+	}
+	if changed == 0 {
+		return tracing.Trace(span, apierror.NewConflictErrorWithParam("Shipment has already been shipped.", "id"))
 	}
 	return nil
 }
@@ -438,12 +440,15 @@ func (r *shipmentRepoImpl) MarkVoided(ctx context.Context, accountID, shipmentID
 	ctx, span := shipmentRepoTracer.Start(ctx, "repository.shipment.mark_voided")
 	defer span.End()
 
-	err := r.queries.MarkShipmentVoided(ctx, sqlc.MarkShipmentVoidedParams{
+	changed, err := r.queries.MarkShipmentVoided(ctx, sqlc.MarkShipmentVoidedParams{
 		ID:        shipmentID,
 		AccountID: accountID,
 	})
 	if apiErr := db.MapSQLError(err); apiErr != nil {
 		return tracing.Trace(span, apiErr)
+	}
+	if changed == 0 {
+		return tracing.Trace(span, apierror.NewConflictErrorWithParam("Shipment is not in shipped status.", "id"))
 	}
 	return nil
 }

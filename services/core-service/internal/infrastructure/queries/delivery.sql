@@ -58,6 +58,7 @@ SELECT
     r.created_at AS unit_cost_created_at,
     r.updated_at AS unit_cost_updated_at,
     sol.item_id,
+    p.item_id AS product_item_id,
     i.sku AS item_sku,
     i.description AS item_description,
     dl.storage_location_id,
@@ -72,7 +73,8 @@ JOIN unit rnu ON r.numerator_unit_id = rnu.id
 JOIN unit rdu ON r.denominator_unit_id = rdu.id
 JOIN receiving_order_line rol ON dl.receiving_order_line_id = rol.id
 JOIN sales_order_line sol ON rol.sales_order_line_id = sol.id
-LEFT JOIN item i ON sol.item_id = i.id
+LEFT JOIN product p ON p.id = sol.product_id
+LEFT JOIN item i ON i.id = COALESCE(NULLIF(sol.item_id, ''), p.item_id)
 LEFT JOIN storage_location sl ON dl.storage_location_id = sl.id
 LEFT JOIN lot l ON dl.lot_id = l.id
 WHERE dl.delivery_id = sqlc.arg('delivery_id')

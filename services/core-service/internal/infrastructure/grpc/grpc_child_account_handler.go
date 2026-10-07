@@ -13,13 +13,15 @@ import (
 
 func childAccountToProto(ca *domain.ChildAccount) *pb.ChildAccountProto {
 	p := &pb.ChildAccountProto{
-		RelationId:     ca.RelationID,
-		AccountId:      ca.AccountID,
-		AccountName:    ca.AccountName,
-		ExternalNumber: ca.ExternalNumber,
-		Email:          ca.Email,
-		CreatedAt:      timestamppb.New(ca.CreatedAt),
-		UpdatedAt:      timestamppb.New(ca.UpdatedAt),
+		RelationId:       ca.RelationID,
+		AccountId:        ca.AccountID,
+		AccountName:      ca.AccountName,
+		ExternalNumber:   ca.ExternalNumber,
+		Email:            ca.Email,
+		CreatedAt:        timestamppb.New(ca.CreatedAt),
+		UpdatedAt:        timestamppb.New(ca.UpdatedAt),
+		AccountCreatedAt: timestamppb.New(ca.AccountCreatedAt),
+		AccountUpdatedAt: timestamppb.New(ca.AccountUpdatedAt),
 	}
 	return p
 }

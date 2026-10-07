@@ -2,6 +2,8 @@ package repository
 
 import (
 	"context"
+	gosql "database/sql"
+	"errors"
 	"time"
 
 	"github.com/shopspring/decimal"
@@ -103,6 +105,20 @@ func (r *pickLineRepoImpl) PickRemainingQuantity(ctx context.Context, pickLineID
 	}
 
 	return nil
+}
+
+func (r *pickLineRepoImpl) LockUnpacked(ctx context.Context, pickLineID string) (bool, *apierror.APIError) {
+	ctx, span := pickLineRepoTracer.Start(ctx, "repository.pick_line.lock_unpacked")
+	defer span.End()
+
+	_, err := r.queries.LockUnpackedPickLine(ctx, pickLineID)
+	if errors.Is(err, gosql.ErrNoRows) {
+		return false, nil
+	}
+	if apiErr := db.MapSQLError(err); apiErr != nil {
+		return false, tracing.Trace(span, apiErr)
+	}
+	return true, nil
 }
 
 func (r *pickLineRepoImpl) VoidLine(ctx context.Context, pickLineID string) *apierror.APIError {
@@ -254,14 +270,15 @@ func (r *pickLineRepoImpl) unpackOrderLine(ctx context.Context, orderLineID, shi
 		reopened = decimal.Zero
 	}
 
+	// Reopened first: UpdatePickLineQuantity writes open lines only.
+	if err := r.queries.ReopenPickLine(ctx, shipped.ID); err != nil {
+		return db.MapSQLError(err)
+	}
 	reopenedValue := reopened.String()
 	if err := r.queries.UpdatePickLineQuantity(ctx, sqlc.UpdatePickLineQuantityParams{
 		Value:      toNullString(&reopenedValue),
 		PickLineID: shipped.ID,
 	}); err != nil {
-		return db.MapSQLError(err)
-	}
-	if err := r.queries.ReopenPickLine(ctx, shipped.ID); err != nil {
 		return db.MapSQLError(err)
 	}
 

@@ -131,6 +131,9 @@ const (
 	// Carries report-invoice-created commands to the billing-service; each triggers a usage meter report to Stripe.
 	BillingCmdReportInvoiceCreatedQueue = "billing_cmd_report_invoice_created"
 
+	// Carries report-batch-created commands to the billing-service; each triggers a usage meter report to Stripe.
+	BillingCmdReportBatchCreatedQueue = "billing_cmd_report_batch_created"
+
 	// NotificationCmdFanoutQueue carries alert/message fan-out intents to notification-service. It is inbox-deduped and bound to NotificationCmdFanout (and NotificationCmdSendMessage).
 	NotificationCmdFanoutQueue = "notification_cmd_fanout"
 
@@ -309,6 +312,15 @@ type InvoiceCreatedReportData struct {
 	AccountID string `json:"account_id"`
 	// Identifies the invoice that triggered the report.
 	InvoiceID string `json:"invoice_id"`
+}
+
+// Carries a batch a scan created to the usage meter. The meter counts one event per message, so the
+// batch id travels only for traceability.
+type BatchCreatedReportData struct {
+	// Names the account the batch belongs to.
+	AccountID string `json:"account_id"`
+	// Identifies the batch that triggered the report.
+	BatchID string `json:"batch_id"`
 }
 
 // GenerateProductionScheduleData is the payload for CoreCmdGenerateProductionScheduleQueue messages. The schedule row already exists in `generating` status when the message is published, so the consumer solves into a row that is already visible rather than creating one — a tick that enqueued and then died would otherwise leave no trace.

@@ -4,6 +4,7 @@ import (
 	"context"
 	gosql "database/sql"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/open-mrp/api/services/core-service/internal/domain"
@@ -206,100 +207,65 @@ func (r *sysPropertyRepoImpl) UpdateValue(ctx context.Context, accountID, id str
 	ctx, span := sysPropertyRepoTracer.Start(ctx, "repository.sys_property.update_value")
 	defer span.End()
 
-	result, err := r.queries.UpdateSysPropertyValue(ctx, sqlc.UpdateSysPropertyValueParams{
+	if _, err := r.queries.UpdateSysPropertyValue(ctx, sqlc.UpdateSysPropertyValueParams{
 		ID: id, AccountID: accountID, Value: value,
-	})
-	if apiErr := db.MapSQLError(err); apiErr != nil {
-		return nil, tracing.Trace(span, apiErr)
+	}); err != nil {
+		return nil, tracing.Trace(span, db.MapSQLError(err))
 	}
-	rowsAffected, err := result.RowsAffected()
-	if err != nil {
-		return nil, tracing.Trace(span, apierror.NewInternalError(err, "Failed to check rows affected."))
-	}
-	if rowsAffected == 0 {
+	// Not the rows affected: MySQL counts none when a concurrent request already wrote the same value in the same millisecond.
+	updated, apiErr := r.Get(ctx, accountID, id)
+	if apierror.IsNotFound(apiErr) {
 		return nil, tracing.Trace(span, apierror.NewResourceNotFoundError("System property not found."))
 	}
-	return r.Get(ctx, accountID, id)
+	return updated, apiErr
 }
 
-func (r *sysPropertyRepoImpl) IncrementValue(ctx context.Context, accountID, id string) (*domain.SysProperty, *apierror.APIError) {
-	ctx, span := sysPropertyRepoTracer.Start(ctx, "repository.sys_property.increment_value")
+// TakenNumbers returns the numbers among candidates that a record in typeCode's series already
+// carries. The columns' collation ignores trailing spaces, so a stored number is trimmed of them
+// before it is matched back to its candidate.
+func (r *sysPropertyRepoImpl) TakenNumbers(ctx context.Context, accountID string, typeCode constants.SysPropertyTypeCode, candidates []string) ([]string, *apierror.APIError) {
+	ctx, span := sysPropertyRepoTracer.Start(ctx, "repository.sys_property.taken_numbers")
 	defer span.End()
 
-	result, err := r.queries.IncrementSysPropertyValue(ctx, sqlc.IncrementSysPropertyValueParams{
-		ID: id, AccountID: accountID,
-	})
-	if apiErr := db.MapSQLError(err); apiErr != nil {
-		return nil, tracing.Trace(span, apiErr)
+	if len(candidates) == 0 {
+		return nil, nil
 	}
-	rowsAffected, err := result.RowsAffected()
-	if err != nil {
-		return nil, tracing.Trace(span, apierror.NewInternalError(err, "Failed to check rows affected."))
-	}
-	if rowsAffected == 0 {
-		return nil, tracing.Trace(span, apierror.NewResourceNotFoundError("System property not found."))
-	}
-	return r.Get(ctx, accountID, id)
-}
 
-func (r *sysPropertyRepoImpl) IsDuplicate(ctx context.Context, accountID string, typeCode constants.SysPropertyTypeCode, value string) (bool, *apierror.APIError) {
-	ctx, span := sysPropertyRepoTracer.Start(ctx, "repository.sys_property.is_duplicate")
-	defer span.End()
-
+	var rows []string
+	var err error
 	switch typeCode {
 	case constants.SysPropertyTypeCodeTransactionNumber:
-		count, err := r.queries.CheckDuplicateTransactionNumber(ctx, sqlc.CheckDuplicateTransactionNumberParams{Value: value, AccountID: accountID})
-		if apiErr := db.MapSQLError(err); apiErr != nil {
-			return false, tracing.Trace(span, apiErr)
-		}
-		return count > 0, nil
-
+		rows, err = r.queries.ListTakenTransactionNumbers(ctx, sqlc.ListTakenTransactionNumbersParams{AccountID: accountID, Numbers: candidates})
 	case constants.SysPropertyTypeCodeSettlementNumber:
-		count, err := r.queries.CheckDuplicateSettlementNumber(ctx, sqlc.CheckDuplicateSettlementNumberParams{Value: value, AccountID: accountID})
-		if apiErr := db.MapSQLError(err); apiErr != nil {
-			return false, tracing.Trace(span, apiErr)
-		}
-		return count > 0, nil
-
+		rows, err = r.queries.ListTakenSettlementNumbers(ctx, sqlc.ListTakenSettlementNumbersParams{AccountID: accountID, Numbers: candidates})
 	case constants.SysPropertyTypeCodeSalesOrderNumber:
-		count, err := r.queries.CheckDuplicateSalesOrderNumber(ctx, sqlc.CheckDuplicateSalesOrderNumberParams{Value: value, AccountID: accountID})
-		if apiErr := db.MapSQLError(err); apiErr != nil {
-			return false, tracing.Trace(span, apiErr)
-		}
-		return count > 0, nil
-
+		rows, err = r.queries.ListTakenSalesOrderNumbers(ctx, sqlc.ListTakenSalesOrderNumbersParams{AccountID: accountID, Numbers: candidates})
 	case constants.SysPropertyTypeCodePurchaseOrderNumber:
-		count, err := r.queries.CheckDuplicatePurchaseOrderNumber(ctx, sqlc.CheckDuplicatePurchaseOrderNumberParams{Value: value, AccountID: accountID})
-		if apiErr := db.MapSQLError(err); apiErr != nil {
-			return false, tracing.Trace(span, apiErr)
-		}
-		return count > 0, nil
-
+		rows, err = r.queries.ListTakenPurchaseOrderNumbers(ctx, sqlc.ListTakenPurchaseOrderNumbersParams{AccountID: accountID, Numbers: candidates})
 	case constants.SysPropertyTypeCodeSupplierNumber:
-		count, err := r.queries.CheckDuplicateSupplierNumber(ctx, sqlc.CheckDuplicateSupplierNumberParams{Value: value, AccountID: accountID})
-		if apiErr := db.MapSQLError(err); apiErr != nil {
-			return false, tracing.Trace(span, apiErr)
-		}
-		return count > 0, nil
-
+		rows, err = r.queries.ListTakenSupplierNumbers(ctx, sqlc.ListTakenSupplierNumbersParams{AccountID: accountID, Numbers: candidates})
 	case constants.SysPropertyTypeCodeCustomerNumber:
-		count, err := r.queries.CheckDuplicateCustomerNumber(ctx, sqlc.CheckDuplicateCustomerNumberParams{Value: value, AccountID: accountID})
-		if apiErr := db.MapSQLError(err); apiErr != nil {
-			return false, tracing.Trace(span, apiErr)
-		}
-		return count > 0, nil
-
+		rows, err = r.queries.ListTakenCustomerNumbers(ctx, sqlc.ListTakenCustomerNumbersParams{AccountID: accountID, Numbers: candidates})
 	case constants.SysPropertyTypeCodeProductionRunNumber:
-		count, err := r.queries.CheckDuplicateProductionRunNumber(ctx, sqlc.CheckDuplicateProductionRunNumberParams{Value: value, AccountID: accountID})
-		if apiErr := db.MapSQLError(err); apiErr != nil {
-			return false, tracing.Trace(span, apiErr)
-		}
-		return count > 0, nil
-
+		rows, err = r.queries.ListTakenProductionRunNumbers(ctx, sqlc.ListTakenProductionRunNumbersParams{AccountID: accountID, Numbers: candidates})
 	case constants.SysPropertyTypeCodeSsccCount:
-		return false, nil
-
+		return nil, nil
 	default:
-		return false, tracing.Trace(span, apierror.NewValidationError(fmt.Sprintf("Unknown system property type code: %s", typeCode)))
+		return nil, tracing.Trace(span, apierror.NewValidationError(fmt.Sprintf("Unknown system property type code: %s", typeCode)))
 	}
+	if apiErr := db.MapSQLError(err); apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
+
+	stored := make(map[string]struct{}, len(rows))
+	for _, n := range rows {
+		stored[strings.TrimRight(n, " ")] = struct{}{}
+	}
+	var taken []string
+	for _, c := range candidates {
+		if _, ok := stored[c]; ok {
+			taken = append(taken, c)
+		}
+	}
+	return taken, nil
 }

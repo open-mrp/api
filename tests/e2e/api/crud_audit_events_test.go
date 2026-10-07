@@ -757,3 +757,41 @@ func TestAuditEvents_IncludeRequest_ScrubsInternalAgentInfra(t *testing.T) {
 	assert.Nil(t, req["client_ip"],
 		"pod IP must never leak via an audit-event include")
 }
+
+// A search reaches events another account made on the caller's records as well as the caller's own.
+func TestAuditEvents_ListSearchReachesEventsOnTheCallersRecords(t *testing.T) {
+	t.Parallel()
+	ids := auditEventIDsAs(t, apiClient, url.Values{"q": {SeedAuditScopeTargetRes}, "limit": {"50"}})
+	assert.True(t, ids[SeedAuditScopeTargetID], "a search for a resource id finds the event another account made on it")
+}
+
+// A resource type or action is matched by its code or its name, so "Item" finds item events.
+func TestAuditEvents_ListSearchMatchesATypeByItsName(t *testing.T) {
+	t.Parallel()
+	for _, term := range []string{"Item", "item"} {
+		list, _, err := apiClient.GetList(auditEventsPath, url.Values{"q": {term}, "limit": {"50"}})
+		require.NoError(t, err)
+		require.NotEmpty(t, list.Data, "a search for %q finds item events", term)
+		var found bool
+		for _, item := range list.Data {
+			assert.True(t, DataItemField(item, "resource_type") == "item" || DataItemField(item, "action") == "item",
+				"a search for %q returns only events of that type or action, got %s", term, DataItemField(item, "resource_type"))
+			if DataItemField(item, "resource_id") == SeedAuditEventSearchResourceID {
+				found = true
+			}
+		}
+		assert.True(t, found, "a search for %q includes the seeded item event", term)
+	}
+}
+
+// Search matches a whole id: part of one is not a match, so no search has to read every event an account
+// has to find the few that contain it.
+func TestAuditEvents_ListSearchMatchesWholeIDs(t *testing.T) {
+	t.Parallel()
+	part := SeedAuditEventSearchResourceID[:len(SeedAuditEventSearchResourceID)-3]
+	list, _, err := apiClient.GetList(auditEventsPath, url.Values{"q": {part}, "limit": {"50"}})
+	require.NoError(t, err)
+	for _, item := range list.Data {
+		assert.NotEqual(t, SeedAuditEventSearchResourceID, DataItemField(item, "resource_id"), "part of an id does not match it")
+	}
+}

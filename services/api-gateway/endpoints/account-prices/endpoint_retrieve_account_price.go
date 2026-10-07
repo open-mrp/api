@@ -19,25 +19,22 @@ type RetrieveAccountPriceRequest struct {
 
 // Returns an account price by ID.
 //
-// A customer portal user can only retrieve a price whose recipient is their own account or its parent; any other price is reported as not found.
+// A customer or supplier portal user can only retrieve a price whose recipient is their own account or its parent; any other price is reported as not found.
 type RetrieveAccountPriceEndpoint struct{}
 
 func (e *RetrieveAccountPriceEndpoint) Materialize() *apiendpoint.APIEndpoint[*RetrieveAccountPriceRequest, *apiresource.AccountPrice] {
 	return (&apiendpoint.APIEndpoint[*RetrieveAccountPriceRequest, *apiresource.AccountPrice]{
-		Title:             "Retrieve Account Price",
-		Method:            http.MethodGet,
-		Route:             "/v1/sales/account-prices/{id}",
-		ContentType:       "application/json",
-		SuccessStatusCode: http.StatusOK,
-		Public:            true,
-		AgentTool:         true,
-		Preview:           true,
-		ObjectType:        constants.ObjectTypeAccountPrice,
-		RequiredPermissions: []types.Permission{
-			{Domain: types.PermissionDomainDiscounts, Action: types.ActionRead},
-			{Domain: types.PermissionDomainCustomers, Action: types.ActionRead},
-			{Domain: types.PermissionDomainSuppliers, Action: types.ActionRead},
-		},
+		Title:                   "Retrieve Account Price",
+		Method:                  http.MethodGet,
+		Route:                   "/v1/sales/account-prices/{id}",
+		ContentType:             "application/json",
+		SuccessStatusCode:       http.StatusOK,
+		Public:                  true,
+		AgentTool:               true,
+		Preview:                 true,
+		ObjectType:              constants.ObjectTypeAccountPrice,
+		RequiredPermissions:     []types.Permission{{Domain: types.PermissionDomainDiscounts, Action: types.ActionRead}},
+		CounterpartyPermissions: apiendpoint.Counterparties(types.ActionRead),
 		ServiceHandler: func(svc any) func(ctx context.Context, req *RetrieveAccountPriceRequest) (*apiresource.AccountPrice, *apierror.APIError) {
 			return svc.(AccountPriceSvc).GetAccountPrice
 		},

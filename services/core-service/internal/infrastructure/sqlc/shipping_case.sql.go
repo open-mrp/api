@@ -500,20 +500,26 @@ func (q *Queries) RepointShippingCasesToCarrierByOrder(ctx context.Context, arg 
 
 const updateShippingCaseTrackingNumber = `-- name: UpdateShippingCaseTrackingNumber :execresult
 UPDATE shipping_case SET
-    tracking_number = COALESCE(?, tracking_number),
+    tracking_number = IF(?, NULL, COALESCE(?, tracking_number)),
     updated_at = NOW(3)
 WHERE id = ?
   AND account_id = ?
 `
 
 type UpdateShippingCaseTrackingNumberParams struct {
-	TrackingNumber sql.NullString
-	ID             string
-	AccountID      string
+	ClearTrackingNumber interface{}
+	TrackingNumber      interface{}
+	ID                  string
+	AccountID           string
 }
 
 func (q *Queries) UpdateShippingCaseTrackingNumber(ctx context.Context, arg UpdateShippingCaseTrackingNumberParams) (sql.Result, error) {
-	return q.db.ExecContext(ctx, updateShippingCaseTrackingNumber, arg.TrackingNumber, arg.ID, arg.AccountID)
+	return q.db.ExecContext(ctx, updateShippingCaseTrackingNumber,
+		arg.ClearTrackingNumber,
+		arg.TrackingNumber,
+		arg.ID,
+		arg.AccountID,
+	)
 }
 
 const updateShippingCaseWithShipmentInfo = `-- name: UpdateShippingCaseWithShipmentInfo :exec

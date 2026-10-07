@@ -125,6 +125,7 @@ type Mediators struct {
 	BurnRate              BurnRateMed
 	PaymentFlags          PaymentFlagsMed
 	ProductionRunActivity ProductionRunActivityMed
+	Address               AddressMed
 }
 
 // MediatorFactory builds mediators bound to a given repository factory (e.g., per transaction).

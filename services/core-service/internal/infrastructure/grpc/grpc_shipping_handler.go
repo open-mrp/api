@@ -443,9 +443,7 @@ func (h *shippingGRPCHandler) UpdateShipment(ctx context.Context, req *pb.Update
 	if req.Number != nil {
 		params.Number = req.Number
 	}
-	if req.MasterTrackingNumber != nil {
-		params.MasterTrackingNumber = req.MasterTrackingNumber
-	}
+	params.MasterTrackingNumber = trackingNumberFromProto(req.MasterTrackingNumber)
 	if req.CarrierId != nil {
 		params.CarrierID = req.CarrierId
 	}
@@ -472,7 +470,7 @@ func (h *shippingGRPCHandler) AdminUpdateShipmentTracking(ctx context.Context, r
 
 	params := domain.AdminUpdateShipmentTrackingParams{
 		ShipmentID:           req.Id,
-		MasterTrackingNumber: req.MasterTrackingNumber,
+		MasterTrackingNumber: trackingNumberFromProto(req.MasterTrackingNumber),
 		CarrierID:            req.CarrierId,
 		ServiceLevelID:       field.StringClearableFromProto(req.ServiceLevelId),
 		Includes:             req.Includes,
@@ -486,6 +484,19 @@ func (h *shippingGRPCHandler) AdminUpdateShipmentTracking(ctx context.Context, r
 	return &pb.AdminUpdateShipmentTrackingResponse{
 		Shipment: shipmentToProto(shipment),
 	}, nil
+}
+
+// Reads a tracking number off the wire, where the gateway sends a client's null as an empty string:
+// absent leaves it, blank clears it. A blank tracking number is no tracking number either way.
+func trackingNumberFromProto(v *string) field.Clearable[string] {
+	switch {
+	case v == nil:
+		return field.Unset[string]()
+	case *v == "":
+		return field.Clear[string]()
+	default:
+		return field.Set(*v)
+	}
 }
 
 // DeleteShipment deletes a shipment by its ID.
@@ -631,7 +642,15 @@ func (h *shippingGRPCHandler) RateShop(ctx context.Context, req *pb.RateShopRequ
 	}
 
 	resp := &pb.RateShopResponse{
-		Options: options,
+		Options:       options,
+		Carriers:      make([]*pb.CarrierInfo, len(result.Carriers)),
+		ServiceLevels: make([]*pb.ServiceLevelInfo, len(result.ServiceLevels)),
+	}
+	for i, c := range result.Carriers {
+		resp.Carriers[i] = carrierToProto(c)
+	}
+	for i, sl := range result.ServiceLevels {
+		resp.ServiceLevels[i] = serviceLevelToProto(sl)
 	}
 
 	if result.ExemptionType != nil {

@@ -1960,8 +1960,11 @@ type CreatePurchaseOrderRequest struct {
 	// Existing supplier addresses to use instead of creating ones from the inline fields.
 	BillToAddressId *string `protobuf:"bytes,29,opt,name=bill_to_address_id,json=billToAddressId,proto3,oneof" json:"bill_to_address_id,omitempty"`
 	ShipToAddressId *string `protobuf:"bytes,30,opt,name=ship_to_address_id,json=shipToAddressId,proto3,oneof" json:"ship_to_address_id,omitempty"`
-	unknownFields   protoimpl.UnknownFields
-	sizeCache       protoimpl.SizeCache
+	// Supplier addresses saved with the order; each excludes its *_address_id and bill_to_*/ship_to_* fields.
+	BillToAddress *InlineAddressInput `protobuf:"bytes,31,opt,name=bill_to_address,json=billToAddress,proto3" json:"bill_to_address,omitempty"`
+	ShipToAddress *InlineAddressInput `protobuf:"bytes,32,opt,name=ship_to_address,json=shipToAddress,proto3" json:"ship_to_address,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
 }
 
 func (x *CreatePurchaseOrderRequest) Reset() {
@@ -2204,6 +2207,20 @@ func (x *CreatePurchaseOrderRequest) GetShipToAddressId() string {
 	return ""
 }
 
+func (x *CreatePurchaseOrderRequest) GetBillToAddress() *InlineAddressInput {
+	if x != nil {
+		return x.BillToAddress
+	}
+	return nil
+}
+
+func (x *CreatePurchaseOrderRequest) GetShipToAddress() *InlineAddressInput {
+	if x != nil {
+		return x.ShipToAddress
+	}
+	return nil
+}
+
 type CreatePurchaseOrderLineInput struct {
 	state                      protoimpl.MessageState `protogen:"open.v1"`
 	ProductId                  *string                `protobuf:"bytes,1,opt,name=product_id,json=productId,proto3,oneof" json:"product_id,omitempty"`
@@ -2396,6 +2413,9 @@ type UpdatePurchaseOrderRequest struct {
 	ClearPromisedAt bool `protobuf:"varint,10,opt,name=clear_promised_at,json=clearPromisedAt,proto3" json:"clear_promised_at,omitempty"`
 	// Marks contact_account_user_ids as the new contact set, so an empty list clears the contacts.
 	ReplaceContacts bool `protobuf:"varint,11,opt,name=replace_contacts,json=replaceContacts,proto3" json:"replace_contacts,omitempty"`
+	// Supplier addresses saved with the order; each excludes its *_address_id.
+	BillingAddress  *InlineAddressInput `protobuf:"bytes,12,opt,name=billing_address,json=billingAddress,proto3" json:"billing_address,omitempty"`
+	ShippingAddress *InlineAddressInput `protobuf:"bytes,13,opt,name=shipping_address,json=shippingAddress,proto3" json:"shipping_address,omitempty"`
 	unknownFields   protoimpl.UnknownFields
 	sizeCache       protoimpl.SizeCache
 }
@@ -2505,6 +2525,20 @@ func (x *UpdatePurchaseOrderRequest) GetReplaceContacts() bool {
 		return x.ReplaceContacts
 	}
 	return false
+}
+
+func (x *UpdatePurchaseOrderRequest) GetBillingAddress() *InlineAddressInput {
+	if x != nil {
+		return x.BillingAddress
+	}
+	return nil
+}
+
+func (x *UpdatePurchaseOrderRequest) GetShippingAddress() *InlineAddressInput {
+	if x != nil {
+		return x.ShippingAddress
+	}
+	return nil
 }
 
 type UpdatePurchaseOrderResponse struct {
@@ -3507,7 +3541,7 @@ const file_core_core_purchase_proto_rawDesc = "" +
 	"&BatchGetPurchaseOrderLinesByIDsRequest\x12\x10\n" +
 	"\x03ids\x18\x01 \x03(\tR\x03ids\"\\\n" +
 	"'BatchGetPurchaseOrderLinesByIDsResponse\x121\n" +
-	"\x05lines\x18\x01 \x03(\v2\x1b.core.PurchaseOrderLineInfoR\x05lines\"\x83\x0f\n" +
+	"\x05lines\x18\x01 \x03(\v2\x1b.core.PurchaseOrderLineInfoR\x05lines\"\x87\x10\n" +
 	"\x1aCreatePurchaseOrderRequest\x12.\n" +
 	"\x13supplier_account_id\x18\x01 \x01(\tR\x11supplierAccountId\x12\x17\n" +
 	"\x04note\x18\x02 \x01(\tH\x00R\x04note\x88\x01\x01\x12\"\n" +
@@ -3544,7 +3578,9 @@ const file_core_core_purchase_proto_rawDesc = "" +
 	"\bincludes\x18\x1b \x03(\tR\bincludes\x12\x1b\n" +
 	"\x06number\x18\x1c \x01(\tH\x16R\x06number\x88\x01\x01\x120\n" +
 	"\x12bill_to_address_id\x18\x1d \x01(\tH\x17R\x0fbillToAddressId\x88\x01\x01\x120\n" +
-	"\x12ship_to_address_id\x18\x1e \x01(\tH\x18R\x0fshipToAddressId\x88\x01\x01B\a\n" +
+	"\x12ship_to_address_id\x18\x1e \x01(\tH\x18R\x0fshipToAddressId\x88\x01\x01\x12@\n" +
+	"\x0fbill_to_address\x18\x1f \x01(\v2\x18.core.InlineAddressInputR\rbillToAddress\x12@\n" +
+	"\x0fship_to_address\x18  \x01(\v2\x18.core.InlineAddressInputR\rshipToAddressB\a\n" +
 	"\x05_noteB\r\n" +
 	"\v_carrier_idB\x13\n" +
 	"\x11_service_level_idB\x17\n" +
@@ -3594,7 +3630,7 @@ const file_core_core_purchase_proto_rawDesc = "" +
 	"\x1c_unit_cost_numerator_unit_idB \n" +
 	"\x1e_unit_cost_denominator_unit_id\"]\n" +
 	"\x1bCreatePurchaseOrderResponse\x12>\n" +
-	"\x0epurchase_order\x18\x01 \x01(\v2\x17.core.PurchaseOrderInfoR\rpurchaseOrder\"\xab\x04\n" +
+	"\x0epurchase_order\x18\x01 \x01(\v2\x17.core.PurchaseOrderInfoR\rpurchaseOrder\"\xb3\x05\n" +
 	"\x1aUpdatePurchaseOrderRequest\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x17\n" +
 	"\x04note\x18\x02 \x01(\tH\x00R\x04note\x88\x01\x01\x12\x1b\n" +
@@ -3608,7 +3644,9 @@ const file_core_core_purchase_proto_rawDesc = "" +
 	"\bincludes\x18\t \x03(\tR\bincludes\x12*\n" +
 	"\x11clear_promised_at\x18\n" +
 	" \x01(\bR\x0fclearPromisedAt\x12)\n" +
-	"\x10replace_contacts\x18\v \x01(\bR\x0freplaceContactsB\a\n" +
+	"\x10replace_contacts\x18\v \x01(\bR\x0freplaceContacts\x12A\n" +
+	"\x0fbilling_address\x18\f \x01(\v2\x18.core.InlineAddressInputR\x0ebillingAddress\x12C\n" +
+	"\x10shipping_address\x18\r \x01(\v2\x18.core.InlineAddressInputR\x0fshippingAddressB\a\n" +
 	"\x05_noteB\t\n" +
 	"\a_numberB\x10\n" +
 	"\x0e_priority_codeB\x15\n" +
@@ -3751,7 +3789,8 @@ var file_core_core_purchase_proto_goTypes = []any{
 	(*ReceivingOrderInfo)(nil),                      // 28: core.ReceivingOrderInfo
 	(*DocumentRefInfo)(nil),                         // 29: core.DocumentRefInfo
 	(*PageInfo)(nil),                                // 30: core.PageInfo
-	(*emptypb.Empty)(nil),                           // 31: google.protobuf.Empty
+	(*InlineAddressInput)(nil),                      // 31: core.InlineAddressInput
+	(*emptypb.Empty)(nil),                           // 32: google.protobuf.Empty
 }
 var file_core_core_purchase_proto_depIdxs = []int32{
 	27, // 0: core.PurchaseOrderSummaryInfo.issued_at:type_name -> google.protobuf.Timestamp
@@ -3799,40 +3838,44 @@ var file_core_core_purchase_proto_depIdxs = []int32{
 	1,  // 42: core.BatchGetPurchaseOrdersByIDsResponse.purchase_orders:type_name -> core.PurchaseOrderInfo
 	2,  // 43: core.BatchGetPurchaseOrderLinesByIDsResponse.lines:type_name -> core.PurchaseOrderLineInfo
 	14, // 44: core.CreatePurchaseOrderRequest.lines:type_name -> core.CreatePurchaseOrderLineInput
-	1,  // 45: core.CreatePurchaseOrderResponse.purchase_order:type_name -> core.PurchaseOrderInfo
-	1,  // 46: core.UpdatePurchaseOrderResponse.purchase_order:type_name -> core.PurchaseOrderInfo
-	1,  // 47: core.ChangePurchaseOrderStatusResponse.purchase_order:type_name -> core.PurchaseOrderInfo
-	2,  // 48: core.CreatePurchaseOrderLineResponse.purchase_order_line:type_name -> core.PurchaseOrderLineInfo
-	2,  // 49: core.UpdatePurchaseOrderLineResponse.purchase_order_line:type_name -> core.PurchaseOrderLineInfo
-	5,  // 50: core.CorePurchaseService.ListPurchaseOrders:input_type -> core.ListPurchaseOrdersRequest
-	7,  // 51: core.CorePurchaseService.GetPurchaseOrder:input_type -> core.GetPurchaseOrderRequest
-	9,  // 52: core.CorePurchaseService.BatchGetPurchaseOrdersByIDs:input_type -> core.BatchGetPurchaseOrdersByIDsRequest
-	11, // 53: core.CorePurchaseService.BatchGetPurchaseOrderLinesByIDs:input_type -> core.BatchGetPurchaseOrderLinesByIDsRequest
-	13, // 54: core.CorePurchaseService.CreatePurchaseOrder:input_type -> core.CreatePurchaseOrderRequest
-	16, // 55: core.CorePurchaseService.UpdatePurchaseOrder:input_type -> core.UpdatePurchaseOrderRequest
-	18, // 56: core.CorePurchaseService.DeletePurchaseOrder:input_type -> core.DeletePurchaseOrderRequest
-	19, // 57: core.CorePurchaseService.BulkDeletePurchaseOrders:input_type -> core.BulkDeletePurchaseOrdersRequest
-	20, // 58: core.CorePurchaseService.ChangePurchaseOrderStatus:input_type -> core.ChangePurchaseOrderStatusRequest
-	22, // 59: core.CorePurchaseService.CreatePurchaseOrderLine:input_type -> core.CreatePurchaseOrderLineRequest
-	24, // 60: core.CorePurchaseService.UpdatePurchaseOrderLine:input_type -> core.UpdatePurchaseOrderLineRequest
-	26, // 61: core.CorePurchaseService.DeletePurchaseOrderLine:input_type -> core.DeletePurchaseOrderLineRequest
-	6,  // 62: core.CorePurchaseService.ListPurchaseOrders:output_type -> core.ListPurchaseOrdersResponse
-	8,  // 63: core.CorePurchaseService.GetPurchaseOrder:output_type -> core.GetPurchaseOrderResponse
-	10, // 64: core.CorePurchaseService.BatchGetPurchaseOrdersByIDs:output_type -> core.BatchGetPurchaseOrdersByIDsResponse
-	12, // 65: core.CorePurchaseService.BatchGetPurchaseOrderLinesByIDs:output_type -> core.BatchGetPurchaseOrderLinesByIDsResponse
-	15, // 66: core.CorePurchaseService.CreatePurchaseOrder:output_type -> core.CreatePurchaseOrderResponse
-	17, // 67: core.CorePurchaseService.UpdatePurchaseOrder:output_type -> core.UpdatePurchaseOrderResponse
-	31, // 68: core.CorePurchaseService.DeletePurchaseOrder:output_type -> google.protobuf.Empty
-	31, // 69: core.CorePurchaseService.BulkDeletePurchaseOrders:output_type -> google.protobuf.Empty
-	21, // 70: core.CorePurchaseService.ChangePurchaseOrderStatus:output_type -> core.ChangePurchaseOrderStatusResponse
-	23, // 71: core.CorePurchaseService.CreatePurchaseOrderLine:output_type -> core.CreatePurchaseOrderLineResponse
-	25, // 72: core.CorePurchaseService.UpdatePurchaseOrderLine:output_type -> core.UpdatePurchaseOrderLineResponse
-	31, // 73: core.CorePurchaseService.DeletePurchaseOrderLine:output_type -> google.protobuf.Empty
-	62, // [62:74] is the sub-list for method output_type
-	50, // [50:62] is the sub-list for method input_type
-	50, // [50:50] is the sub-list for extension type_name
-	50, // [50:50] is the sub-list for extension extendee
-	0,  // [0:50] is the sub-list for field type_name
+	31, // 45: core.CreatePurchaseOrderRequest.bill_to_address:type_name -> core.InlineAddressInput
+	31, // 46: core.CreatePurchaseOrderRequest.ship_to_address:type_name -> core.InlineAddressInput
+	1,  // 47: core.CreatePurchaseOrderResponse.purchase_order:type_name -> core.PurchaseOrderInfo
+	31, // 48: core.UpdatePurchaseOrderRequest.billing_address:type_name -> core.InlineAddressInput
+	31, // 49: core.UpdatePurchaseOrderRequest.shipping_address:type_name -> core.InlineAddressInput
+	1,  // 50: core.UpdatePurchaseOrderResponse.purchase_order:type_name -> core.PurchaseOrderInfo
+	1,  // 51: core.ChangePurchaseOrderStatusResponse.purchase_order:type_name -> core.PurchaseOrderInfo
+	2,  // 52: core.CreatePurchaseOrderLineResponse.purchase_order_line:type_name -> core.PurchaseOrderLineInfo
+	2,  // 53: core.UpdatePurchaseOrderLineResponse.purchase_order_line:type_name -> core.PurchaseOrderLineInfo
+	5,  // 54: core.CorePurchaseService.ListPurchaseOrders:input_type -> core.ListPurchaseOrdersRequest
+	7,  // 55: core.CorePurchaseService.GetPurchaseOrder:input_type -> core.GetPurchaseOrderRequest
+	9,  // 56: core.CorePurchaseService.BatchGetPurchaseOrdersByIDs:input_type -> core.BatchGetPurchaseOrdersByIDsRequest
+	11, // 57: core.CorePurchaseService.BatchGetPurchaseOrderLinesByIDs:input_type -> core.BatchGetPurchaseOrderLinesByIDsRequest
+	13, // 58: core.CorePurchaseService.CreatePurchaseOrder:input_type -> core.CreatePurchaseOrderRequest
+	16, // 59: core.CorePurchaseService.UpdatePurchaseOrder:input_type -> core.UpdatePurchaseOrderRequest
+	18, // 60: core.CorePurchaseService.DeletePurchaseOrder:input_type -> core.DeletePurchaseOrderRequest
+	19, // 61: core.CorePurchaseService.BulkDeletePurchaseOrders:input_type -> core.BulkDeletePurchaseOrdersRequest
+	20, // 62: core.CorePurchaseService.ChangePurchaseOrderStatus:input_type -> core.ChangePurchaseOrderStatusRequest
+	22, // 63: core.CorePurchaseService.CreatePurchaseOrderLine:input_type -> core.CreatePurchaseOrderLineRequest
+	24, // 64: core.CorePurchaseService.UpdatePurchaseOrderLine:input_type -> core.UpdatePurchaseOrderLineRequest
+	26, // 65: core.CorePurchaseService.DeletePurchaseOrderLine:input_type -> core.DeletePurchaseOrderLineRequest
+	6,  // 66: core.CorePurchaseService.ListPurchaseOrders:output_type -> core.ListPurchaseOrdersResponse
+	8,  // 67: core.CorePurchaseService.GetPurchaseOrder:output_type -> core.GetPurchaseOrderResponse
+	10, // 68: core.CorePurchaseService.BatchGetPurchaseOrdersByIDs:output_type -> core.BatchGetPurchaseOrdersByIDsResponse
+	12, // 69: core.CorePurchaseService.BatchGetPurchaseOrderLinesByIDs:output_type -> core.BatchGetPurchaseOrderLinesByIDsResponse
+	15, // 70: core.CorePurchaseService.CreatePurchaseOrder:output_type -> core.CreatePurchaseOrderResponse
+	17, // 71: core.CorePurchaseService.UpdatePurchaseOrder:output_type -> core.UpdatePurchaseOrderResponse
+	32, // 72: core.CorePurchaseService.DeletePurchaseOrder:output_type -> google.protobuf.Empty
+	32, // 73: core.CorePurchaseService.BulkDeletePurchaseOrders:output_type -> google.protobuf.Empty
+	21, // 74: core.CorePurchaseService.ChangePurchaseOrderStatus:output_type -> core.ChangePurchaseOrderStatusResponse
+	23, // 75: core.CorePurchaseService.CreatePurchaseOrderLine:output_type -> core.CreatePurchaseOrderLineResponse
+	25, // 76: core.CorePurchaseService.UpdatePurchaseOrderLine:output_type -> core.UpdatePurchaseOrderLineResponse
+	32, // 77: core.CorePurchaseService.DeletePurchaseOrderLine:output_type -> google.protobuf.Empty
+	66, // [66:78] is the sub-list for method output_type
+	54, // [54:66] is the sub-list for method input_type
+	54, // [54:54] is the sub-list for extension type_name
+	54, // [54:54] is the sub-list for extension extendee
+	0,  // [0:54] is the sub-list for field type_name
 }
 
 func init() { file_core_core_purchase_proto_init() }

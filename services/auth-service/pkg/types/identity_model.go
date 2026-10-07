@@ -22,6 +22,23 @@ type Identity struct {
 	Actor              *IdentityActor
 	AccountMode        constants.AccountMode
 	SubscriptionStatus *string
+	// IncludeReads marks the copy of a caller's identity that loads what an authorized request includes; set it only through ForIncludeReads.
+	IncludeReads bool `json:"IncludeReads,omitempty"`
+}
+
+// ForIncludeReads returns a copy of the identity for loading what a request includes: whoever may make the request may read everything it includes. The identity itself is left unchanged.
+func (i *Identity) ForIncludeReads() *Identity {
+	if i == nil {
+		return nil
+	}
+	c := *i
+	c.IncludeReads = true
+	return &c
+}
+
+// IsIncludeRead reports whether the identity loads what an authorized request includes, as an internal, customer or supplier actor of the target account.
+func (i *Identity) IsIncludeRead() bool {
+	return i != nil && i.IncludeReads && i.IsTargetAccountSet() && (i.IsInternalActor() || i.IsRelationActor())
 }
 
 // IsAuthenticated checks that the identity exists and is not unauthenticated
@@ -69,6 +86,11 @@ func (i *Identity) IsAPIKey() bool {
 	return i.IsActorSet() && i.Type == IdentityActorTypeAPIKey
 }
 
+// IsAgent reports whether the caller is an agent run calling the API through its tools.
+func (i *Identity) IsAgent() bool {
+	return i != nil && i.Type == IdentityActorTypeAgent
+}
+
 // IsUser checks that the identity is a user and a valid actor was found
 func (i *Identity) IsUser() bool {
 	return i.IsActorSet() && i.Type == IdentityActorTypeUser
@@ -98,6 +120,14 @@ func (i *Identity) IsInternalActor() bool {
 func (i *Identity) IsRelationActor() bool {
 	return i.IsActorSet() &&
 		(i.Actor.RelationType == IdentityRelationTypeCustomer || i.Actor.RelationType == IdentityRelationTypeSupplier)
+}
+
+// PortalAccountID is the account a customer or supplier portal actor's reads narrow to: its own. Whichever way the actor relates to the seller, the orders it sees are the ones it bought and the customer record it sees is its own. Nil for the seller's own actors, whose reads span the account.
+func (i *Identity) PortalAccountID() *string {
+	if !i.IsRelationActor() {
+		return nil
+	}
+	return i.ActorAccountID()
 }
 
 // IsInternalUser checks that the identity is authenticated, has a valid actor, is of type internal, and has a valid actor account

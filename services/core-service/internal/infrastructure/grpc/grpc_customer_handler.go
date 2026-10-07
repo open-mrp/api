@@ -107,7 +107,8 @@ func customerToProto(c *domain.Customer) *pb.CustomerProto {
 		p.CarrierBillingType = &s
 	}
 
-	if c.CreditLimitID != nil {
+	// A credit limit whose unit row is missing cannot be stated, so it reads as none instead of failing the whole customer.
+	if c.CreditLimitID != nil && c.CreditLimitUnitID != nil {
 		p.CreditLimit = &pb.CustomerCreditLimitProto{
 			Id:               *c.CreditLimitID,
 			Value:            *c.CreditLimitValue,
@@ -643,6 +644,48 @@ func (h *gRPCHandler) MergeCustomers(ctx context.Context, req *pb.MergeCustomers
 	return &pb.MergeCustomersResponse{
 		Customer: customerToProto(customer),
 	}, nil
+}
+
+func (h *gRPCHandler) ExportCustomers(ctx context.Context, req *pb.ExportCustomersRequest) (*pb.ExportCustomersResponse, error) {
+	if req == nil {
+		return nil, contracts.NewMissingGRPCRequestDataError()
+	}
+
+	ctx, finalizeIdempotency := contracts.WithIdempotencyTracking(ctx)
+	defer finalizeIdempotency()
+
+	filters := domain.ListCustomersParams{
+		Query:                 req.Query,
+		CustomerGroupIDs:      req.CustomerGroupIds,
+		PricingGroupIDs:       req.PricingGroupIds,
+		SalesRepIDs:           req.SalesRepIds,
+		StatusCodes:           req.StatusCodes,
+		ShippingTermIDs:       req.ShippingTermIds,
+		PaymentTermIDs:        req.PaymentTermIds,
+		CommissionPolicyCodes: req.CommissionStatusCodes,
+		FreightPolicyCodes:    req.FreightStatusCodes,
+		CarrierIDs:            req.CarrierIds,
+		ServiceLevelIDs:       req.ServiceLevelIds,
+		IsParentAccount:       req.IsParentAccount,
+		City:                  req.City,
+		State:                 req.State,
+		PostalCode:            req.PostalCode,
+	}
+	if req.StartDate != nil {
+		t := req.StartDate.AsTime()
+		filters.StartDate = &t
+	}
+	if req.EndDate != nil {
+		t := req.EndDate.AsTime()
+		filters.EndDate = &t
+	}
+
+	job, apiErr := h.customerSvc.ExportCustomers(ctx, filters)
+	if apiErr != nil {
+		return nil, contracts.ConvertAPIErrorToGRPC(apiErr)
+	}
+
+	return &pb.ExportCustomersResponse{Job: jobToProto(job)}, nil
 }
 
 func protoCustomerAddressInputToCreateParams(input *pb.CreateCustomerAddressInput) *domain.CreateAddressParams {

@@ -127,11 +127,9 @@ func (*AnalyzeOrdersRequest) SchemaExample() any {
 }
 
 func (*AnalyzeProductionCostsRequest) SchemaExample() any {
-	s := apiresource.SampleAnalyticsPeriodStart
-	e := apiresource.SampleAnalyticsPeriodEnd
 	return apiexample.ValidateAndMarshalToMap(&AnalyzeProductionCostsRequest{
-		StartDate:      &s,
-		EndDate:        &e,
+		StartDate:      apiresource.SampleAnalyticsPeriodStart,
+		EndDate:        apiresource.SampleAnalyticsPeriodEnd,
 		ItemIDs:        []string{apiresource.SampleItemID},
 		ProductLineIDs: []string{apiresource.SampleProductLineID},
 		DepartmentIDs:  []string{apiresource.SampleDepartmentID},
@@ -146,6 +144,7 @@ func (*AnalyzeQuarterlyOrdersRequest) SchemaExample() any {
 		ProductLineIDs:   []string{apiresource.SampleProductLineID},
 		CustomerIDs:      []string{apiresource.SampleCustomerID},
 		CustomerGroupIDs: []string{apiresource.SampleAccountGroupID},
+		YearsBack:        field.Some(int32(5)),
 	})
 }
 
@@ -273,4 +272,40 @@ func (*ExportSalesLinesRequest) SchemaExample() any {
 		EndDate:            field.Some(apiresource.SampleAnalyticsPeriodEnd),
 		SalesReportFilters: sampleSalesReportFilters(),
 	})
+}
+
+func sampleOpenOrderFilters() OpenOrderFilters {
+	return OpenOrderFilters{
+		CustomerIDs:      []string{apiresource.SampleCustomerID},
+		CustomerGroupIDs: []string{apiresource.SampleAccountGroupID},
+		SalesRepIDs:      []string{apiresource.SampleAccountUserID},
+		ProductLineIDs:   []string{apiresource.SampleProductLineID},
+		ItemIDs:          []string{apiresource.SampleItemID},
+	}
+}
+
+func (*AnalyzeOpenOrdersSummaryRequest) SchemaExample() any {
+	return apiexample.ValidateAndMarshalToMap(&AnalyzeOpenOrdersSummaryRequest{OpenOrderFilters: sampleOpenOrderFilters()})
+}
+
+func (*AnalyzeOpenOrdersBreakdownRequest) SchemaExample() any {
+	ex := apiexample.ValidateAndMarshalToMap(&AnalyzeOpenOrdersBreakdownRequest{OpenOrderFilters: sampleOpenOrderFilters(), Limit: 10})
+	// The cursor is a query parameter, documented from this map by its query key.
+	ex["cursor"] = pagination.EncodeDocumentationValueCursor("840", apiresource.SampleItemID)
+	return ex
+}
+
+func (*ListOpenOrdersRequest) SchemaExample() any {
+	ex := apiexample.ValidateAndMarshalToMap(&ListOpenOrdersRequest{OpenOrderFilters: sampleOpenOrderFilters(), Limit: 10})
+	// The cursor is a query parameter, documented from this map by its query key.
+	ex["cursor"] = pagination.EncodeDocumentationStringCursor(apiresource.SampleAnalyticsPeriodStart, apiresource.SampleSalesOrderID)
+	return ex
+}
+
+func (*ListOpenOrderLinesRequest) SchemaExample() any {
+	return apiexample.ValidateAndMarshalToMap(&ListOpenOrderLinesRequest{SalesOrderID: apiresource.SampleSalesOrderID})
+}
+
+func (*ExportOpenOrderLinesRequest) SchemaExample() any {
+	return apiexample.ValidateAndMarshalToMap(&ExportOpenOrderLinesRequest{OpenOrderFilters: sampleOpenOrderFilters()})
 }

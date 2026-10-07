@@ -20,7 +20,9 @@ type ListCustomerInvoicesRequest struct {
 
 // Returns a paginated list of a customer's open invoices, newest first, in the shape used to apply a payment.
 //
-// Only invoices that still owe a balance are returned; invoices marked paid in full are omitted, while overpaid ones are kept because they still need correcting. Invoices billed to the customer's child accounts are included alongside its own, because the parent settles for them. Each invoice carries the payments already allocated to it, so the remaining balance can be worked out client-side.
+// Only invoices not marked paid in full are returned; an overpaid invoice is marked paid in full, so it is omitted too. Invoices billed to the customer's child accounts are included alongside its own, because the parent settles for them. Each invoice carries the payments already allocated to it, so the remaining balance can be worked out client-side.
+//
+// A free-text search term (`q`) is matched against the invoice number, the sales order number, and the customer PO number.
 type ListCustomerInvoicesEndpoint struct{}
 
 func (e *ListCustomerInvoicesEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListCustomerInvoicesRequest, *apiresource.List[apiresource.InvoiceForPayment]] {
@@ -35,15 +37,13 @@ func (e *ListCustomerInvoicesEndpoint) Materialize() *apiendpoint.APIEndpoint[*L
 		ObjectType:        constants.ObjectTypeInvoiceForPayment,
 		RequiredPermissions: []types.Permission{
 			{Domain: types.PermissionDomainInvoices, Action: types.ActionRead},
-			{Domain: types.PermissionDomainCustomers, Action: types.ActionRead},
-			{Domain: types.PermissionDomainSuppliers, Action: types.ActionRead},
 		},
 		ServiceHandler: func(svc any) func(ctx context.Context, req *ListCustomerInvoicesRequest) (*apiresource.List[apiresource.InvoiceForPayment], *apierror.APIError) {
 			return svc.(InvoiceSvc).ListCustomerInvoices
 		},
 		IncludeConfig: apiendpoint.IncludesFor(apiendpoint.IncludesParams{
 			ObjectType: constants.ObjectTypeInvoiceForPayment,
-			Fields:     []string{"customer", "parent_account", "allocations", "allocations.amount", "allocations.amount.unit", "allocations.transaction", "allocations.transaction.amount", "allocations.transaction.amount.unit"},
+			Fields:     []string{"customer", "parent_account", "billing_address", "allocations", "allocations.amount", "allocations.amount.unit", "allocations.transaction", "allocations.transaction.amount", "allocations.transaction.amount.unit"},
 		}),
 	})
 }

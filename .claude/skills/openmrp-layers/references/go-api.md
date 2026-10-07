@@ -150,7 +150,7 @@ exist, repositories.go ⇒ factories.go, main calls Run) — not imports.
   fields; expandables `null` unless `?include=`, never fabricated
   (AGENTS.md:170-192, 323-338).
 - Nullability: value + `validate:"required"` vs `field.Optional[T]` vs
-  `*field.Clearable[T]`; always `,omitzero`, never `omitempty`
+  `field.Clearable[T]`; always `,omitzero`, never `omitempty`
   (AGENTS.md:172-182).
 - Pattern catalog: `docs/patterns/` (architecture, authentication,
   domain-layer, audit-event, entity-id, canonical-log, api-versioning,

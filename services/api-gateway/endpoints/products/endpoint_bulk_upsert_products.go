@@ -4,6 +4,7 @@ import (
 	"context"
 	"net/http"
 
+	httptransport "github.com/open-mrp/api/services/api-gateway/internal/http"
 	apiendpoint "github.com/open-mrp/api/services/api-gateway/pkg/endpoint"
 	apiexample "github.com/open-mrp/api/services/api-gateway/pkg/example"
 	apirequest "github.com/open-mrp/api/services/api-gateway/pkg/request"
@@ -47,7 +48,7 @@ type UpsertProductInput struct {
 	// omitted on update.
 	UnitPrice field.Optional[apirequest.RateInput] `json:"unit_price,omitzero"`
 	// Cost per unit. Same currency-vs-non-currency rule as `unit_price`.
-	UnitCost field.Optional[apirequest.RateInput] `json:"unit_cost,omitzero"`
+	UnitCost field.Optional[apirequest.RateInput] `json:"unit_cost,omitzero" sensitive:"cost"`
 	// Properties to attach to the product, matched/created by name + value. Additive —
 	// existing attributes are not removed.
 	Properties []UpsertProductProperty `json:"properties" default:"[]" validate:"dive"`
@@ -74,6 +75,8 @@ func (*BulkUpsertProductsRequest) SchemaExample() any {
 
 // Creates or updates multiple products for the account, matched by SKU. Validates and
 // resolves synchronously, then writes asynchronously — 202 with a job to poll.
+//
+// At most 1,000 products and an 8 MB request body per call.
 type BulkUpsertProductsEndpoint struct{}
 
 func (e *BulkUpsertProductsEndpoint) Materialize() *apiendpoint.APIEndpoint[*BulkUpsertProductsRequest, *apiresource.Job] {
@@ -90,6 +93,7 @@ func (e *BulkUpsertProductsEndpoint) Materialize() *apiendpoint.APIEndpoint[*Bul
 			ObjectType: constants.ObjectTypeJob,
 			Fields:     []string{"created_by", "created_by.role"},
 		}),
+		Extras: apiendpoint.APIEndpointExtras{MaxJSONBodyBytes: httptransport.MaxJSONBodyBytes},
 		ServiceHandler: func(svc any) func(ctx context.Context, req *BulkUpsertProductsRequest) (*apiresource.Job, *apierror.APIError) {
 			return svc.(ProductSvc).BulkUpsertProducts
 		},

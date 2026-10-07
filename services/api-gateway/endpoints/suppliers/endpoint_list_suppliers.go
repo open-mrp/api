@@ -28,7 +28,7 @@ type ListSuppliersRequest struct {
 
 // Returns a paginated list of suppliers for the current account, newest first.
 //
-// Filters combine with AND, so an item filter and a date range narrow the list together. The `q` search term matches the supplier name and number.
+// Filters combine with AND, so an item filter and a date range narrow the list together. The `q` search term is split into words, and a supplier matches when every word appears in its name, number or notes.
 type ListSuppliersEndpoint struct{}
 
 func (e *ListSuppliersEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListSuppliersRequest, *apiresource.List[apiresource.Supplier]] {

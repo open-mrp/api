@@ -7,6 +7,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/open-mrp/api/services/core-service/internal/domain"
 	"github.com/open-mrp/api/shared/pagination"
 )
 
@@ -28,6 +29,8 @@ func TestBuildShipmentListQuery_IndexHintFollowsFilters(t *testing.T) {
 		// A set's ranges of the buyer key come out of order, so walking it for the set would sort.
 		{"a customer set walks the others", shipmentListQuery{BuyerIDs: []string{"ac_c1", "ac_c2"}}, shipmentCreatedIndex},
 		{"a few customers read their ranges", shipmentListQuery{BuyerIDs: []string{"ac_c1", "ac_c2"}, Drive: shipmentDriveBuyers}, shipmentBuyerIndex},
+		// No shipment key holds the order's rep, so a walk for one is a walk in list order.
+		{"a sales rep walks in list order", shipmentListQuery{SalesRepIDs: []string{"acus_1"}}, shipmentCreatedIndex},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
@@ -73,7 +76,7 @@ func TestBuildShipmentListQuery_ArgsBindInPlaceholderOrder(t *testing.T) {
 	cursor := gosql.NullTime{Time: time.Date(2026, 1, 15, 0, 0, 0, 0, time.UTC), Valid: true}
 	base := shipmentListQuery{
 		AccountID: "ac_1", Status: new("shipped"), Search: gosql.NullString{String: "%x%", Valid: true},
-		BuyerIDs: []string{"ac_c1", "ac_c2"}, ItemIDs: []string{"it_1"}, ProductLineIDs: []string{"pl_1"},
+		BuyerIDs: []string{"ac_c1", "ac_c2"}, ItemIDs: []string{"it_1"}, ProductLineIDs: []string{"pl_1"}, SalesRepIDs: []string{"acus_1"},
 		StartDate: start, EndDate: end, CursorAt: cursor, CursorID: gosql.NullString{String: "sh_9", Valid: true}, Limit: 26,
 	}
 	search := []any{"%x%", "%x%", "%x%", "%x%", "%x%", "%x%", "%x%"}
@@ -86,13 +89,15 @@ func TestBuildShipmentListQuery_ArgsBindInPlaceholderOrder(t *testing.T) {
 		from  string
 	}{
 		{"walk", shipmentDriveListOrder,
-			concat([]any{"ac_1", "shipped", "ac_c1", "ac_c2"}, search, []any{"it_1", "pl_1"}, tail), "FROM shipment s FORCE INDEX"},
+			concat([]any{"ac_1", "shipped", "ac_c1", "ac_c2"}, search, []any{"it_1", "pl_1", "acus_1"}, tail), "FROM shipment s FORCE INDEX"},
 		{"buyers", shipmentDriveBuyers,
-			concat([]any{"ac_1", "shipped", "ac_c1", "ac_c2"}, search, []any{"it_1", "pl_1"}, tail), "FROM shipment s FORCE INDEX (" + shipmentBuyerIndex + ")"},
+			concat([]any{"ac_1", "shipped", "ac_c1", "ac_c2"}, search, []any{"it_1", "pl_1", "acus_1"}, tail), "FROM shipment s FORCE INDEX (" + shipmentBuyerIndex + ")"},
 		{"items", shipmentDriveItems,
-			concat([]any{"it_1", "ac_1", "shipped", "ac_c1", "ac_c2"}, search, []any{"pl_1"}, tail), ") matched JOIN shipment s ON s.id = matched.id"},
+			concat([]any{"it_1", "ac_1", "shipped", "ac_c1", "ac_c2"}, search, []any{"pl_1", "acus_1"}, tail), ") matched JOIN shipment s ON s.id = matched.id"},
 		{"product lines", shipmentDriveProductLines,
-			concat([]any{"pl_1", "ac_1", "shipped", "ac_c1", "ac_c2"}, search, []any{"it_1"}, tail), ") matched JOIN shipment s ON s.id = matched.id"},
+			concat([]any{"pl_1", "ac_1", "shipped", "ac_c1", "ac_c2"}, search, []any{"it_1", "acus_1"}, tail), ") matched JOIN shipment s ON s.id = matched.id"},
+		{"sales reps", shipmentDriveSalesReps,
+			concat([]any{"ac_1", "acus_1", "ac_1", "shipped", "ac_c1", "ac_c2"}, search, []any{"it_1", "pl_1"}, tail), ") matched JOIN shipment s ON s.sales_order_id = matched.id"},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
@@ -123,6 +128,7 @@ func TestBuildShipmentMatchCountQuery_StopsAtTheCap(t *testing.T) {
 		{shipmentDriveBuyers, []any{"ac_1", "ac_c1", "ac_c2", shipmentMatchCap}},
 		{shipmentDriveItems, []any{"ac_c1", "ac_c2", shipmentMatchCap}},
 		{shipmentDriveProductLines, []any{"ac_c1", "ac_c2", shipmentMatchCap}},
+		{shipmentDriveSalesReps, []any{"ac_1", "ac_c1", "ac_c2", shipmentMatchCap}},
 	} {
 		query, args := buildShipmentMatchCountQuery("ac_1", tc.drive, []string{"ac_c1", "ac_c2"})
 		if !strings.Contains(query, "LIMIT ?) capped") || strings.Contains(query, "DISTINCT") {
@@ -137,12 +143,51 @@ func TestBuildShipmentMatchCountQuery_StopsAtTheCap(t *testing.T) {
 	}
 }
 
+// The sales-rep filter is the order's rep, never the customer's default. Walking, it probes each
+// shipment's own order by primary key; driving, it ranges the account's rep key.
+func TestBuildShipmentListQuery_SalesRepIsTheOrdersRep(t *testing.T) {
+	t.Parallel()
+
+	q := shipmentListQuery{AccountID: "ac_1", SalesRepIDs: []string{"acus_1", "acus_2"}, Limit: 26}
+	walk, _ := buildShipmentListQuery(q)
+	q.Drive = shipmentDriveSalesReps
+	drive, _ := buildShipmentListQuery(q)
+
+	probe := "EXISTS (SELECT 1 FROM sales_order rso WHERE rso.id = s.sales_order_id AND rso.sales_rep_id IN (?,?))"
+	if !strings.Contains(walk, probe) {
+		t.Errorf("walk does not probe the order:\n%s", walk)
+	}
+	ranged := "FROM (SELECT rso.id FROM sales_order rso FORCE INDEX (" + salesOrderSalesRepIndex + ")" +
+		" WHERE rso.owner_account_id = ? AND rso.sales_rep_id IN (?,?)) matched"
+	if !strings.Contains(drive, ranged) || strings.Contains(drive, probe) {
+		t.Errorf("drive does not read the reps' orders alone:\n%s", drive)
+	}
+	for _, query := range []string{walk, drive} {
+		if strings.Contains(query, "default_sales_rep_id") {
+			t.Errorf("query reads the customer's default rep:\n%s", query)
+		}
+	}
+}
+
+// A sales rep alone narrows no customers, so it reaches the list without a relation lookup (the
+// repository here has no database to look one up in).
+func TestShipmentBuyerFilter_IgnoresSalesReps(t *testing.T) {
+	t.Parallel()
+
+	buyers, apiErr := (&shipmentRepoImpl{}).buyerFilter(t.Context(), domain.ListShipmentsParams{
+		AccountID: "ac_1", SalesRepIDs: []string{"acus_1"},
+	})
+	if apiErr != nil || buyers != nil {
+		t.Errorf("buyers = %v, %v; want no customer filter", buyers, apiErr)
+	}
+}
+
 // The hint names the index, so a rename or a dropped migration turns the query into a 1176 at runtime.
 func TestShipmentListIndexes_AreDeclaredInMigrations(t *testing.T) {
 	t.Parallel()
 
 	schema := migrationsText(t)
-	for _, index := range []string{shipmentCreatedIndex, shipmentStatusIndex, shipmentBuyerIndex} {
+	for _, index := range []string{shipmentCreatedIndex, shipmentStatusIndex, shipmentBuyerIndex, salesOrderSalesRepIndex} {
 		if !strings.Contains(schema, index) {
 			t.Errorf("%s is FORCE INDEX'd by the shipment list but no migration creates it", index)
 		}

@@ -130,6 +130,13 @@ type CustomerAccountGroup struct {
 	UpdatedAt        time.Time
 }
 
+// CustomerContact is someone who signs in to a customer account.
+type CustomerContact struct {
+	CustomerAccountID string
+	Name              *string
+	Email             *string
+}
+
 // ListCustomersParams holds the parameters for listing customers.
 type ListCustomersParams struct {
 	AccountID             string

@@ -57,9 +57,9 @@ func TestShippingCases_UpdateTrackingAndWeightKeepsTheStoredUnit(t *testing.T) {
 		require.NoError(t, err)
 		requireStatus(t, 200, status, resp)
 	}
-	// A blank tracking number is rejected, so it is only restored when the case had one.
+	// A case that had no tracking number gets it cleared again with null.
 	t.Cleanup(func() {
-		restore := map[string]any{"freight_weight_value": strconv.FormatFloat(beforeValue, 'f', -1, 64)}
+		restore := map[string]any{"freight_weight_value": strconv.FormatFloat(beforeValue, 'f', -1, 64), "tracking_number": nil}
 		if beforeTracking != "" {
 			restore["tracking_number"] = beforeTracking
 		}

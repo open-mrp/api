@@ -60,6 +60,7 @@ var analyticsFamilyResources = map[analyticsFamily][]constants.ObjectType{
 		constants.ObjectTypeProductionScheduleDeviation, constants.ObjectTypeProductionStep, constants.ObjectTypeProductionRun,
 		constants.ObjectTypeDepartment, constants.ObjectTypeMachine, constants.ObjectTypeScanningStation, constants.ObjectTypeItem,
 		constants.ObjectTypeRate, constants.ObjectTypeQuantity, constants.ObjectTypeUnit, constants.ObjectTypeUnitGroup,
+		constants.ObjectTypeItemCategory, constants.ObjectTypeConsumption, constants.ObjectTypeProduct, constants.ObjectTypeProductLine,
 	},
 	analyticsFamilyDelivery: {
 		constants.ObjectTypeSalesOrder, constants.ObjectTypeSalesOrderLine, constants.ObjectTypePick, constants.ObjectTypePickLine,
@@ -141,10 +142,16 @@ type AnalyticsCache struct {
 	pricing        *cache.Cache[*domain.CustomerPricingAnalysis]
 	oee            *cache.Cache[[]domain.OeeDepartment]
 	oeeTrend       *cache.Cache[[]domain.OeeTrendPeriod]
+	productionCost *cache.Cache[*domain.ProductionCostReport]
 	attainment     *cache.Cache[*domain.ScheduleAttainmentResult]
 	forecast       *cache.Cache[*domain.DemandForecastResult]
 	weeksOfSales   *cache.Cache[*domain.WeeksOfSalesResult]
 	delivery       *cache.Cache[*domain.DeliveryPerformanceResult]
+
+	quarterlyOrders   *cache.Cache[[]domain.YearlyQuarterlyData]
+	openOrdersSummary *cache.Cache[*domain.OpenOrdersSummary]
+	openOrderProducts *cache.Cache[*domain.OpenOrderProductPage]
+	openOrders        *cache.Cache[*domain.OpenOrderPage]
 }
 
 // NewAnalyticsCache returns an empty AnalyticsCache over cfg.Store.
@@ -176,6 +183,9 @@ func NewAnalyticsCache(cfg *AnalyticsCacheConfig) (*AnalyticsCache, error) {
 	if c.oeeTrend, err = newAnalyticsReportCache[[]domain.OeeTrendPeriod](cfg, "oee_trend"); err != nil {
 		return nil, err
 	}
+	if c.productionCost, err = newAnalyticsReportCache[*domain.ProductionCostReport](cfg, "production_costs"); err != nil {
+		return nil, err
+	}
 	if c.attainment, err = newAnalyticsReportCache[*domain.ScheduleAttainmentResult](cfg, "schedule_attainment"); err != nil {
 		return nil, err
 	}
@@ -186,6 +196,18 @@ func NewAnalyticsCache(cfg *AnalyticsCacheConfig) (*AnalyticsCache, error) {
 		return nil, err
 	}
 	if c.delivery, err = newAnalyticsReportCache[*domain.DeliveryPerformanceResult](cfg, "delivery_performance"); err != nil {
+		return nil, err
+	}
+	if c.quarterlyOrders, err = newAnalyticsReportCache[[]domain.YearlyQuarterlyData](cfg, "quarterly_orders"); err != nil {
+		return nil, err
+	}
+	if c.openOrdersSummary, err = newAnalyticsReportCache[*domain.OpenOrdersSummary](cfg, "open_orders_summary"); err != nil {
+		return nil, err
+	}
+	if c.openOrderProducts, err = newAnalyticsReportCache[*domain.OpenOrderProductPage](cfg, "open_order_products"); err != nil {
+		return nil, err
+	}
+	if c.openOrders, err = newAnalyticsReportCache[*domain.OpenOrderPage](cfg, "open_orders"); err != nil {
 		return nil, err
 	}
 	return c, nil

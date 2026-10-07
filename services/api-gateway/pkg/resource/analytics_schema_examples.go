@@ -32,12 +32,12 @@ func sampleSalesEntry() SalesEntry {
 		CategoryName:      SampleItemCategoryName,
 		QuantityInvoiced:  10,
 		Unit:              SampleUnitAbbreviation,
-		UnitCost:          5,
+		UnitCost:          ptrFloat64(5),
 		UnitPrice:         12,
-		UnitProfit:        7,
+		UnitProfit:        ptrFloat64(7),
 		TotalInvoiced:     120,
-		TotalCost:         50,
-		TotalProfit:       70,
+		TotalCost:         ptrFloat64(50),
+		TotalProfit:       ptrFloat64(70),
 		InvoiceID:         SampleInvoiceID,
 		InvoiceNumber:     "INV-001",
 		InvoicedAt:        inv,
@@ -105,34 +105,6 @@ func (*AnalyzeOpenBatchesResponse) SchemaExample() any {
 	})
 }
 
-func (*AnalyzeProductionCostsResponse) SchemaExample() any {
-	categoryName := SampleItemCategoryName
-	categoryEnt := NewEntity(SampleItemCategoryID, constants.ObjectTypeItemCategory, &categoryName, nil)
-	return apiexample.ValidateAndMarshalToMap(&AnalyzeProductionCostsResponse{
-		Object: constants.ObjectTypeList,
-		Data: []ProductionCostItem{
-			{
-				Category:        categoryEnt,
-				TotalCosts:      sampleCostBreakdown(),
-				ProductiveCosts: sampleCostBreakdown(),
-				WasteCosts:      sampleCostBreakdown(),
-				SecondsCosts:    sampleCostBreakdown(),
-			},
-		},
-	})
-}
-
-func sampleCostBreakdown() CostBreakdown {
-	return CostBreakdown{
-		Total:     SampleQuantity,
-		Labor:     SampleQuantity,
-		Materials: SampleQuantity,
-		Overhead:  SampleQuantity,
-		Time:      SampleQuantity,
-		Quantity:  SampleQuantity,
-	}
-}
-
 func (*AnalyzeDeliveriesResponse) SchemaExample() any {
 	coords := []Coordinate{{X: 1, Y: 2}}
 	return apiexample.ValidateAndMarshalToMap(&AnalyzeDeliveriesResponse{
@@ -183,8 +155,8 @@ func (*AnalyzeManufacturingResponse) SchemaExample() any {
 func (*AnalyzeManufacturingBatchResponse) SchemaExample() any {
 	mm := ManufacturingMetrics{
 		Production:      100,
-		CostsPerUnit:    4.5,
-		Margin:          0.22,
+		CostsPerUnit:    ptrFloat64(4.5),
+		Margin:          ptrFloat64(0.22),
 		Quality:         0.98,
 		LaborEfficiency: 0.91,
 	}
@@ -266,7 +238,7 @@ func (*AnalyzeInventoryReceiptsResponse) SchemaExample() any {
 				OwnerAccount:            owner,
 				HolderAccount:           holder,
 				RemainingQuantity:       SampleQuantity,
-				WeightedAverageUnitCost: sampleAnalyticsRate(),
+				WeightedAverageUnitCost: new(sampleAnalyticsRate()),
 				InventoryValue:          SampleQuantity,
 				OldestReceiptAt:         ptrTime(analyticsExampleTime()),
 				NewestReceiptAt:         ptrTime(analyticsExampleTime()),

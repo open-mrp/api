@@ -15,6 +15,7 @@ import (
 	"github.com/open-mrp/api/shared/constants"
 	apierror "github.com/open-mrp/api/shared/errors"
 	"github.com/open-mrp/api/shared/idempotency"
+	"github.com/open-mrp/api/shared/imageupload"
 	"github.com/open-mrp/api/shared/tracing"
 )
 
@@ -125,9 +126,30 @@ func (s *userSvcImpl) GetUser(ctx context.Context, identifier string) (*domain.U
 		return nil, tracing.Trace(span, apiErr)
 	}
 
+	if apiErr := s.checkUserInTargetAccount(ctx, identity, user.ID); apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
+
 	normalizeUserImageURL(user)
 
 	return user, nil
+}
+
+// checkUserInTargetAccount refuses a user who is neither the caller nor a member of the account the
+// caller acts in. The team permission says the caller may manage users in their own account, not
+// that the user named is one of them; a user outside it is reported as not found, so the answer does
+// not reveal that an ID or email belongs to someone elsewhere.
+func (s *userSvcImpl) checkUserInTargetAccount(ctx context.Context, identity *types.Identity, userID string) *apierror.APIError {
+	if identity.Actor != nil && identity.Actor.ID == userID {
+		return nil
+	}
+	if _, apiErr := s.repos.NewAccountUserRepo().FindByAccountAndUserID(ctx, userID, identity.Target.AccountID); apiErr != nil {
+		if apierror.IsNotFound(apiErr) {
+			return apierror.NewResourceNotFoundError("User not found.")
+		}
+		return apiErr
+	}
+	return nil
 }
 
 func (s *userSvcImpl) BatchGetUsersByIDs(ctx context.Context, ids []string) ([]*domain.UserRecord, *apierror.APIError) {
@@ -139,14 +161,18 @@ func (s *userSvcImpl) BatchGetUsersByIDs(ctx context.Context, ids []string) ([]*
 		return nil, tracing.Trace(span, apierror.NewInvariantViolationError("Identity not found in context."))
 	}
 
-	if apiErr := identity.CheckIsInternalActor(); apiErr != nil {
+	// The users returned are members of the target account, so reading them is reading that account's users: a merchant
+	// reaching a customer's or supplier's contacts needs that domain's read permission, not the one for its own team.
+	if !identity.IsIncludeRead() {
+		if apiErr := checkSellerStaff(identity); apiErr != nil {
+			return nil, tracing.Trace(span, apiErr)
+		}
+	}
+	if apiErr := checkAccountUserReadPermission(identity); apiErr != nil {
 		return nil, tracing.Trace(span, apiErr)
 	}
-	if apiErr := identity.CheckHasPermission(types.PermissionDomainTeamUsers, types.ActionRead); apiErr != nil {
+	if apiErr := checkExternalReadAccess(ctx, s.mediators().ReadAccess, identity); apiErr != nil {
 		return nil, tracing.Trace(span, apiErr)
-	}
-	if !identity.IsTargetAccountSet() {
-		return nil, tracing.Trace(span, apierror.NewAuthenticationError("The OpenMRP-Account-ID header is required."))
 	}
 
 	users, apiErr := s.repos.NewUserRepo().GetByIDs(ctx, identity.Target.AccountID, ids)
@@ -159,6 +185,19 @@ func (s *userSvcImpl) BatchGetUsersByIDs(ctx context.Context, ids []string) ([]*
 	}
 
 	return users, nil
+}
+
+// externalUserPhoto returns imageURL when it is an image hosted elsewhere, such as the avatar an
+// identity provider supplied at sign-up, which a browser loads as is. A photo uploaded here is
+// stored as a path or as a URL into the photos bucket, and only a presigned URL serves it.
+func externalUserPhoto(imageURL *string) (string, bool) {
+	if imageURL == nil || strings.Contains(*imageURL, "augno-user-photos") {
+		return "", false
+	}
+	if strings.HasPrefix(*imageURL, "https://") || strings.HasPrefix(*imageURL, "http://") {
+		return *imageURL, true
+	}
+	return "", false
 }
 
 // normalizeUserImageURL converts legacy S3 signed URLs to the endpoint path format.
@@ -189,6 +228,10 @@ func (s *userSvcImpl) UpdateUser(ctx context.Context, userID string, params doma
 		if apiErr := identity.CheckHasPermission(types.PermissionDomainTeamUsers, types.ActionUpdate); apiErr != nil {
 			return nil, tracing.Trace(span, apiErr)
 		}
+	}
+
+	if apiErr := s.checkUserInTargetAccount(ctx, identity, userID); apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
 	}
 
 	meds := s.mediators()
@@ -252,7 +295,7 @@ func (s *userSvcImpl) UpdateUser(ctx context.Context, userID string, params doma
 	}
 }
 
-func (s *userSvcImpl) UploadUserPhoto(ctx context.Context, userID string, file []byte, contentType string) *apierror.APIError {
+func (s *userSvcImpl) UploadUserPhoto(ctx context.Context, userID string, file []byte) *apierror.APIError {
 	ctx, span := userSvcTracer.Start(ctx, "service.user.upload_photo")
 	defer span.End()
 
@@ -275,22 +318,16 @@ func (s *userSvcImpl) UploadUserPhoto(ctx context.Context, userID string, file [
 		return tracing.Trace(span, apierror.NewAuthenticationError("The OpenMRP-Account-ID header is required."))
 	}
 
-	accountUserRepo := s.repos.NewAccountUserRepo()
-
-	// The permission above only says the caller may manage users in their own account; it says
-	// nothing about whether this user is one of them. Without this, any account could repoint
-	// any user's photo at an image of its choosing.
-	if _, apiErr := accountUserRepo.FindByAccountAndUserID(ctx, userID, identity.Target.AccountID); apiErr != nil {
+	if apiErr := s.checkUserInTargetAccount(ctx, identity, userID); apiErr != nil {
 		return tracing.Trace(span, apiErr)
 	}
 
-	// The photo belongs to the user, not to the account that happened to upload it, so the key
-	// is derived the same way on both sides. Deriving it from the calling account instead meant
-	// a user who belongs to two accounts could upload a photo the read path never looked for.
-	key, apiErr := s.userPhotoKey(ctx, userID)
+	contentType, apiErr := imageupload.Photo(file)
 	if apiErr != nil {
 		return tracing.Trace(span, apiErr)
 	}
+
+	key := userPhotoKey(identity, userID)
 
 	if apiErr := s.s3Client.Upload(ctx, s.userPhotosBucket, key, bytes.NewReader(file), contentType); apiErr != nil {
 		return tracing.Trace(span, apiErr)
@@ -305,20 +342,13 @@ func (s *userSvcImpl) UploadUserPhoto(ctx context.Context, userID string, file [
 	return nil
 }
 
-// userPhotoKey is where a user's photo lives, derived identically by the upload and the read.
-// A user may belong to several accounts but has only one photo, so the account in the key is
-// incidental — it just has to be the same one every time, or an upload lands somewhere the
-// read never looks. Returns an empty key for a user who belongs to no account.
-func (s *userSvcImpl) userPhotoKey(ctx context.Context, userID string) (string, *apierror.APIError) {
-	accountID, apiErr := s.repos.NewAccountUserRepo().FindFirstAccountIDByUserID(ctx, userID)
-	if apiErr != nil {
-		return "", apiErr
-	}
-	if accountID == "" {
-		return "", nil
-	}
-
-	return accountID + "/" + userID + ".png", nil
+// userPhotoKey is where a user's photo lives: {account}/{user}.png under the account the request
+// targets. It is the key /me and the team list sign (tenancy and account-user services) and the one
+// the dashboard API wrote, so a photo is per account, as it always was. Keying the upload and this read
+// by the user's first account instead meant a user in two accounts uploaded where those reads never
+// looked.
+func userPhotoKey(identity *types.Identity, userID string) string {
+	return identity.Target.AccountID + "/" + userID + ".png"
 }
 
 func (s *userSvcImpl) GetUserPhotoURL(ctx context.Context, userID string) (*string, *apierror.APIError) {
@@ -340,22 +370,16 @@ func (s *userSvcImpl) GetUserPhotoURL(ctx context.Context, userID string) (*stri
 		}
 	}
 
-	// Same membership check as the upload path: a photo URL is a link to a person's face, and
-	// resolving one for a user in another tenancy is not a read this caller is entitled to.
-	accountUserRepo := s.repos.NewAccountUserRepo()
-	if identity.Actor == nil || identity.Actor.ID != userID {
-		if _, apiErr := accountUserRepo.FindByAccountAndUserID(ctx, userID, identity.Target.AccountID); apiErr != nil {
-			return nil, tracing.Trace(span, apiErr)
-		}
-	}
-
-	key, apiErr := s.userPhotoKey(ctx, userID)
-	if apiErr != nil {
+	// A photo URL is a link to a person's face, and resolving one for a user in another tenancy is
+	// not a read this caller is entitled to.
+	if apiErr := s.checkUserInTargetAccount(ctx, identity, userID); apiErr != nil {
 		return nil, tracing.Trace(span, apiErr)
 	}
-	if key == "" {
+
+	if !identity.IsTargetAccountSet() {
 		return nil, nil
 	}
+	key := userPhotoKey(identity, userID)
 
 	exists, _ := s.s3Client.FileExists(ctx, s.userPhotosBucket, key)
 	if !exists {

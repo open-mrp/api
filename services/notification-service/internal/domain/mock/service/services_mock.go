@@ -766,6 +766,21 @@ func (mr *MockConversationSvcMockRecorder) ReportConversation(ctx, conversationI
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ReportConversation", reflect.TypeOf((*MockConversationSvc)(nil).ReportConversation), ctx, conversationID, messageID, reason)
 }
 
+// RescheduleMessage mocks base method.
+func (m *MockConversationSvc) RescheduleMessage(ctx context.Context, input domain.RescheduleMessageInput) (*domain.Message, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "RescheduleMessage", ctx, input)
+	ret0, _ := ret[0].(*domain.Message)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
+}
+
+// RescheduleMessage indicates an expected call of RescheduleMessage.
+func (mr *MockConversationSvcMockRecorder) RescheduleMessage(ctx, input any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RescheduleMessage", reflect.TypeOf((*MockConversationSvc)(nil).RescheduleMessage), ctx, input)
+}
+
 // ScheduleMessage mocks base method.
 func (m *MockConversationSvc) ScheduleMessage(ctx context.Context, input domain.CreateScheduledMessageInput) (*domain.Message, *apierror.APIError) {
 	m.ctrl.T.Helper()

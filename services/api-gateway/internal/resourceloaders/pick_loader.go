@@ -28,9 +28,6 @@ func LoadPicks(ctx context.Context, ids []string) (map[string]any, *apierror.API
 			return corePickingClient.BatchGetPicksByIDs(ctx, &pb.BatchGetPicksByIDsRequest{Ids: ids}, opts...)
 		})
 	if apiErr != nil {
-		if omitOnUnauthorized(apiErr) {
-			return map[string]any{}, nil
-		}
 		return nil, apiErr
 	}
 	out := make(map[string]any, len(resp.Picks))

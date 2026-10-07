@@ -19,7 +19,7 @@ type CreateCustomerProductLineAccessRequest struct {
 	// IDs of the product lines the customer can access.
 	//
 	// Must contain at least one ID, and each one must be a product line your account owns; the shared system product lines cannot be granted.
-	ProductLineIDs []string `json:"product_line_ids" validate:"required"`
+	ProductLineIDs []string `json:"product_line_ids" validate:"required,min=1,dive,required"`
 }
 
 var sampleCreateCustomerProductLineAccessRequest = &CreateCustomerProductLineAccessRequest{

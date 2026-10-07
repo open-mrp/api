@@ -47,9 +47,9 @@ type coreCheck struct {
 // literal CheckHasPermission/CheckIsAdmin calls AND calls to relation-permission
 // helpers (check<Entity>Read/WritePermission): a function that delegates its
 // authorization to such a helper is credited with every permission that helper
-// checks, so relation-variable endpoints are VERIFIED against their declared OR-set
-// rather than excused. Helper bodies contain one CheckHasPermission per owner branch
-// (resource / customers / suppliers), so following them yields the full OR-set.
+// checks, so relation-variable endpoints are VERIFIED against their declared own and
+// counterparty permissions rather than excused. Helper bodies contain one CheckHasPermission
+// per owner branch (resource / customers / suppliers), so following them yields all three.
 func parseServiceChecks(t *testing.T, root string, domains, actions map[string]string, dirs ...string) map[string]coreCheck {
 	t.Helper()
 	out := map[string]coreCheck{}
@@ -61,7 +61,7 @@ func parseServiceChecks(t *testing.T, root string, domains, actions map[string]s
 	// are matched and verified rather than appearing as unaccounted.
 	permRe := regexp.MustCompile(`CheckHasPermission\(\s*(?:[A-Za-z0-9_]+\.)?PermissionDomain([A-Za-z]+),\s*(?:[A-Za-z0-9_]+\.)?Action([A-Za-z]+)`)
 	// A call to a relation-permission helper, e.g. checkMaterialReadPermission(...),
-	// s.checkSalesOrderReadPermission(...), checkAccountUserWritePermission(...).
+	// s.checkSalesOrderReadPermission(...), checkAccountUserCreatePermission(...).
 	helperCallRe := regexp.MustCompile(`(?:^|[^A-Za-z0-9_])(check[A-Za-z0-9_]*Permission)\(`)
 	for _, dir := range dirs {
 		_ = filepath.WalkDir(filepath.Join(root, dir), func(path string, d os.DirEntry, err error) error {
@@ -148,11 +148,12 @@ type endpointDecl struct {
 	roleAdmin bool
 }
 
-// parseEndpointDecls scans the api-gateway endpoints for AgentTool endpoints and returns each one's folder, handler method, declared permissions, and role-type.
+// parseEndpointDecls scans the api-gateway endpoints for AgentTool endpoints and returns each one's folder, handler method, declared permissions (counterparty ones included), and role-type.
 func parseEndpointDecls(t *testing.T, root string, domains, actions map[string]string) []endpointDecl {
 	t.Helper()
 	handlerRe := regexp.MustCompile(`svc\.\([A-Za-z]+\)\.([A-Za-z0-9_]+)`)
 	permRe := regexp.MustCompile(`\{(?:Domain: )?types\.PermissionDomain([A-Za-z]+), (?:Action: )?types\.Action([A-Za-z]+)\}`)
+	counterpartiesRe := regexp.MustCompile(`apiendpoint\.Counterparties\(types\.Action([A-Za-z]+)\)`)
 	var out []endpointDecl
 	_ = filepath.WalkDir(filepath.Join(root, "services/api-gateway/endpoints"), func(path string, d os.DirEntry, err error) error {
 		if err != nil || d.IsDir() || !strings.HasSuffix(path, ".go") || strings.HasSuffix(path, "_test.go") {
@@ -177,6 +178,12 @@ func parseEndpointDecls(t *testing.T, root string, domains, actions map[string]s
 				if act, ok := actions[m[2]]; ok {
 					e.perms[dom+":"+act] = true
 				}
+			}
+		}
+		for _, m := range counterpartiesRe.FindAllStringSubmatch(src, -1) {
+			if act, ok := actions[m[1]]; ok {
+				e.perms[domains["Customers"]+":"+act] = true
+				e.perms[domains["Suppliers"]+":"+act] = true
 			}
 		}
 		out = append(out, e)
@@ -244,7 +251,7 @@ func parseGatewayHandlerTargets(t *testing.T, root string) map[string]map[string
 //     permissions; declaring the domain would false-reject those readers at the gate.
 //   - gateway private-helper indirection: the gateway method delegates to the core
 //     client through a private helper the static join can't trace; enforcement is a
-//     relation helper and the endpoint declares the matching OR-set (verified by hand).
+//     relation helper and the endpoint declares the matching permissions (verified by hand).
 //   - gateway-gated participant auth: messaging/chat endpoints declare messaging
 //     permissions at the gateway; notification-service enforces conversation membership
 //     via caller/requireParticipant/resolveParticipant with no literal CheckHasPermission.
@@ -274,14 +281,15 @@ var unverifiableEndpoints = map[string]string{
 
 	"list_adjustment_types": "external-exempt global lookup: checkAdjustmentTypeReadPermission requires adjustment_types:read for internal actors but exempts external actors; declaring it would false-reject those readers at the gate",
 
-	"export_customer_price_list": "variable-domain export gate: ExportPriceList -> enqueueExport -> authorizeExport -> exportSpec.checkPermission(), which closes over spec.PermissionDomain (discounts) and calls CheckHasPermission(domainName, ActionRead); the domain is a variable, so the literal matcher cannot resolve it. Endpoint declares discounts:read, matching the spec",
-	"analyze_realized_margins":   "service call-chain indirection: AnalyzeRealizedMargins delegates the read to AnalyzeSales, which checks CheckIsInternalActor + invoices:read; the guard folds in check*Permission helpers but does not follow service-to-service calls. Endpoint declares invoices:read, matching AnalyzeSales",
+	"export_customer_price_list":         "variable-domain export gate: ExportPriceList -> enqueueExport -> authorizeExport -> exportSpec.checkPermission(), which closes over spec.PermissionDomain (discounts) and calls CheckHasPermission(domainName, ActionRead); the domain is a variable, so the literal matcher cannot resolve it. Endpoint declares discounts:read, matching the spec",
+	"start_inventory_change_logs_export": "variable-domain export gate: StartInventoryChangeLogsExport -> enqueueExport -> authorizeExport -> exportSpec.checkPermission(), which closes over spec.PermissionDomain (inventory_logs) and calls CheckHasPermission(domainName, ActionRead); the domain is a variable, so the literal matcher cannot resolve it. Endpoint declares inventory_logs:read, matching the spec",
+	"analyze_realized_margins":           "service call-chain indirection: AnalyzeRealizedMargins delegates the read to AnalyzeSales, which checks CheckIsInternalActor + invoices:read; the guard folds in check*Permission helpers but does not follow service-to-service calls. Endpoint declares invoices:read, matching AnalyzeSales",
 
 	"search": "gateway per-type dynamic gate: Search loops its providers calling identity.CheckHasPermission(domain, read) per resource type and only includes types the caller can read; endpoint declares the {sales_orders,purchase_orders,invoices,customers,items,shipments,messaging,agents}:read OR-set; no downstream name-matched handler to verify against",
 
-	"activate_account_user": "gateway private-helper indirection: ActivateAccountUser -> transitionAccountUserStatus -> coreClient.UpdateAccountUserStatus -> checkAccountUserWritePermission; endpoint declares the {team,customers,suppliers} OR-set",
-	"disable_account_user":  "gateway private-helper indirection: DisableAccountUser -> transitionAccountUserStatus -> coreClient.UpdateAccountUserStatus -> checkAccountUserWritePermission; endpoint declares the {team,customers,suppliers} OR-set",
-	"remove_account_user":   "gateway private-helper indirection: RemoveAccountUser -> transitionAccountUserStatus -> coreClient.UpdateAccountUserStatus -> checkAccountUserWritePermission; endpoint declares the {team,customers,suppliers} OR-set",
+	"activate_account_user": "gateway private-helper indirection: ActivateAccountUser -> transitionAccountUserStatus -> coreClient.UpdateAccountUserStatus -> checkAccountUserUpdatePermission; endpoint declares team:update with customers:update / suppliers:update for counterparty accounts",
+	"disable_account_user":  "gateway private-helper indirection: DisableAccountUser -> transitionAccountUserStatus -> coreClient.UpdateAccountUserStatus -> checkAccountUserUpdatePermission; endpoint declares team:update with customers:update / suppliers:update for counterparty accounts",
+	"remove_account_user":   "gateway private-helper indirection: RemoveAccountUser -> transitionAccountUserStatus -> coreClient.UpdateAccountUserStatus -> checkAccountUserDeletePermission; endpoint declares team:delete with customers:delete / suppliers:delete for counterparty accounts",
 
 	"create_conversation":          "gateway-gated participant auth: CreateConversation uses caller() + membership; gateway declares messaging:create",
 	"list_conversations":           "gateway-gated participant auth: ListConversations uses caller(); gateway declares messaging:read",
@@ -292,6 +300,7 @@ var unverifiableEndpoints = map[string]string{
 	"send_message":                 "gateway-gated participant auth: SendMessage uses resolveParticipant(); gateway declares messaging:create",
 	"list_contacts":                "gateway-gated participant auth: ListContacts is auth/account-scoped only; gateway declares messaging:read",
 	"cancel_scheduled":             "gateway-gated participant auth: CancelScheduledMessage uses requireParticipant(); gateway declares messaging:update",
+	"reschedule_message":           "gateway-gated sender auth: RescheduleMessage uses caller() and moves only the caller's own scheduled message; gateway declares messaging:update",
 	"list_scheduled":               "gateway-gated participant auth: ListScheduledMessages uses requireParticipant(); gateway declares messaging:read",
 
 	"set_workflow_status": "gateway-gated admin auth: UpdateWorkflowStatus uses requireMessagingAdmin(update); gateway declares messaging:update",
@@ -342,7 +351,7 @@ var unverifiableEndpoints = map[string]string{
 	"close_sales_order":   "gateway private-helper indirection: CloseSalesOrder -> changeSalesOrderStatus -> coreClient.ChangeSalesOrderStatus; endpoint declares sales_orders:update",
 	"open_sales_order":    "gateway private-helper indirection: OpenSalesOrder -> changeSalesOrderStatus -> coreClient.ChangeSalesOrderStatus; endpoint declares sales_orders:update",
 
-	"delete_sales_order_line": "conditional admin gate: DeleteSalesOrderLine calls CheckIsAdmin only when the order is completed or has a shipped shipment; the ordinary path needs only the declared customers:update, so RequiredRoleType admin would false-reject it",
+	"delete_sales_order_line": "conditional admin gate: DeleteSalesOrderLine calls CheckIsAdmin only when the order is completed or has a shipped shipment; the ordinary path needs only the declared sales_orders:update (or its counterparty permission), so RequiredRoleType admin would false-reject it",
 
 	"list_announcements":          "gateway-gated recipient auth: ListAnnouncements uses recipient(); gateway declares messaging:read",
 	"retrieve_announcement":       "gateway-gated recipient auth: GetAnnouncement uses recipient(); gateway declares messaging:read",

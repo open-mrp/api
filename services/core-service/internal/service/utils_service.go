@@ -104,7 +104,8 @@ func (s *utilsSvcImpl) withTx(ctx context.Context, fn func(context.Context, *uti
 }
 
 // CheckDuplicate checks whether a record number already exists.
-// Allows both internal and customer actors (CheckIsAssignedActor).
+// Customer and supplier actors are refused by CheckReadAccess, which grants only the owner→counterparty
+// direction: nothing scopes the check to the counterparty, so an answer would expose the owner's numbers.
 // For internal actors, verifies appropriate read permissions per type.
 // PUT endpoint — idempotent by design, no idempotency keys needed.
 func (s *utilsSvcImpl) CheckDuplicate(ctx context.Context, params domain.CheckDuplicateParams) (*domain.CheckDuplicateResult, *apierror.APIError) {
@@ -158,6 +159,9 @@ func (s *utilsSvcImpl) CheckDuplicate(ctx context.Context, params domain.CheckDu
 
 	accountID := identity.Target.AccountID
 	recordNumber := strings.TrimSpace(params.RecordNumber)
+	if recordNumber == "" {
+		return nil, tracing.Trace(span, apierror.NewInvalidFormatError("Field 'record_number' must not be blank.", "record_number"))
+	}
 
 	var isDuplicate bool
 	var message *string
@@ -258,28 +262,34 @@ func (s *utilsSvcImpl) EmailRecord(ctx context.Context, params domain.EmailRecor
 		return cached.Error
 
 	case domain.RecoveryPointStarted:
-		return s.emailRecordStarted(ctx, span, params, accountID, meds, idempotencyKey)
+		return s.emailRecordStarted(ctx, span, params, accountID, identity.Actor.ID, meds, idempotencyKey)
 
 	default:
 		return tracing.Trace(span, apierror.NewInvariantViolationError("Unexpected recovery point: "+idempotencyKey.RecoveryPoint))
 	}
 }
 
-func (s *utilsSvcImpl) emailRecordStarted(ctx context.Context, span trace.Span, params domain.EmailRecordParams, accountID string, meds domain.Mediators, idempotencyKey *domain.IdempotencyKey) *apierror.APIError {
+// emailRecordStarted sends the record as sentByID, the actor the email log attributes the send to, unlike the automatic sends on issue and ship.
+func (s *utilsSvcImpl) emailRecordStarted(ctx context.Context, span trace.Span, params domain.EmailRecordParams, accountID, sentByID string, meds domain.Mediators, idempotencyKey *domain.IdempotencyKey) *apierror.APIError {
 	switch params.Type {
 	case domain.EmailRecordTypeInvoice:
-		return s.emailInvoice(ctx, span, params.ID, accountID, meds, idempotencyKey)
+		return s.emailInvoice(ctx, span, params.ID, accountID, sentByID, meds, idempotencyKey)
 	case domain.EmailRecordTypeSalesOrder:
-		return s.emailSalesOrder(ctx, span, params.ID, accountID, meds, idempotencyKey)
+		return s.emailSalesOrder(ctx, span, params.ID, accountID, sentByID, meds, idempotencyKey)
 	case domain.EmailRecordTypePurchaseOrder:
-		return s.emailPurchaseOrder(ctx, span, params.ID, accountID, meds, idempotencyKey)
+		return s.emailPurchaseOrder(ctx, span, params.ID, accountID, sentByID, meds, idempotencyKey)
 	default:
 		return tracing.Trace(span, apierror.NewValidationError("Unsupported email record type."))
 	}
 }
 
-func (s *utilsSvcImpl) emailInvoice(ctx context.Context, span trace.Span, invoiceID, accountID string, meds domain.Mediators, idempotencyKey *domain.IdempotencyKey) *apierror.APIError {
-	recipients, apiErr := s.repos.NewInvoiceRepo().GetEmailRecipients(ctx, invoiceID)
+func (s *utilsSvcImpl) emailInvoice(ctx context.Context, span trace.Span, invoiceID, accountID, sentByID string, meds domain.Mediators, idempotencyKey *domain.IdempotencyKey) *apierror.APIError {
+	// Read first: an invoice outside the account has no recipients either, and must 404 rather than succeed.
+	if _, apiErr := s.repos.NewInvoiceRepo().Get(ctx, domain.GetInvoiceParams{AccountID: accountID, InvoiceID: invoiceID}); apiErr != nil {
+		return meds.Idempotency.CacheErrorResponse(ctx, idempotencyKey.TypeID, tracing.Trace(span, apiErr))
+	}
+
+	recipients, apiErr := s.repos.NewInvoiceRepo().GetEmailRecipients(ctx, accountID, invoiceID)
 	if apiErr != nil {
 		return meds.Idempotency.CacheErrorResponse(ctx, idempotencyKey.TypeID, tracing.Trace(span, apiErr))
 	}
@@ -295,6 +305,7 @@ func (s *utilsSvcImpl) emailInvoice(ctx context.Context, span trace.Span, invoic
 			return meds.Idempotency.CacheErrorResponse(ctx, idempotencyKey.TypeID, tracing.Trace(span, apiErr))
 		}
 		addressed := built.addressedTo(recipients)
+		addressed.SentByID = &sentByID
 		emailData = &addressed
 	}
 
@@ -321,7 +332,12 @@ func (s *utilsSvcImpl) emailInvoice(ctx context.Context, span trace.Span, invoic
 	return nil
 }
 
-func (s *utilsSvcImpl) emailSalesOrder(ctx context.Context, span trace.Span, salesOrderID, accountID string, meds domain.Mediators, idempotencyKey *domain.IdempotencyKey) *apierror.APIError {
+func (s *utilsSvcImpl) emailSalesOrder(ctx context.Context, span trace.Span, salesOrderID, accountID, sentByID string, meds domain.Mediators, idempotencyKey *domain.IdempotencyKey) *apierror.APIError {
+	// Read first: recipients are looked up by id alone, so anything but one of the account's sales orders would otherwise succeed as a send to nobody.
+	if _, apiErr := s.repos.NewSalesOrderRepo().Get(ctx, accountID, salesOrderID); apiErr != nil {
+		return meds.Idempotency.CacheErrorResponse(ctx, idempotencyKey.TypeID, tracing.Trace(span, apiErr))
+	}
+
 	// Built by the same assembler the automatic send-on-issue uses, so a manual resend delivers an identical acknowledgement (line items, letterhead, PDF attachment).
 	emailData, apiErr := buildOrderAcknowledgementEmail(ctx, s.repos, s.branding, s.frontendURL, accountID, salesOrderID)
 	if apiErr != nil {
@@ -338,6 +354,7 @@ func (s *utilsSvcImpl) emailSalesOrder(ctx context.Context, span trace.Span, sal
 		}
 		return nil
 	}
+	emailData.SentByID = &sentByID
 
 	// Publish email and mark as sent inside a transaction.
 	apiErr = s.withTx(ctx, func(txCtx context.Context, txSvc *utilsSvcImpl) *apierror.APIError {
@@ -361,7 +378,12 @@ func (s *utilsSvcImpl) emailSalesOrder(ctx context.Context, span trace.Span, sal
 	return nil
 }
 
-func (s *utilsSvcImpl) emailPurchaseOrder(ctx context.Context, span trace.Span, purchaseOrderID, accountID string, meds domain.Mediators, idempotencyKey *domain.IdempotencyKey) *apierror.APIError {
+func (s *utilsSvcImpl) emailPurchaseOrder(ctx context.Context, span trace.Span, purchaseOrderID, accountID, sentByID string, meds domain.Mediators, idempotencyKey *domain.IdempotencyKey) *apierror.APIError {
+	// Read first, as for a sales order: the recipients lookup is not scoped to the account.
+	if _, apiErr := s.repos.NewPurchaseOrderRepo().Get(ctx, accountID, purchaseOrderID); apiErr != nil {
+		return meds.Idempotency.CacheErrorResponse(ctx, idempotencyKey.TypeID, tracing.Trace(span, apiErr))
+	}
+
 	// Built by the same assembler the automatic send-on-issue uses, so a manual resend delivers an
 	// identical submission.
 	emailData, apiErr := buildPurchaseOrderSubmissionEmail(ctx, s.repos, s.branding, accountID, purchaseOrderID)
@@ -379,6 +401,7 @@ func (s *utilsSvcImpl) emailPurchaseOrder(ctx context.Context, span trace.Span, 
 		}
 		return nil
 	}
+	emailData.SentByID = &sentByID
 
 	// Publish email and mark as sent inside a transaction.
 	apiErr = s.withTx(ctx, func(txCtx context.Context, txSvc *utilsSvcImpl) *apierror.APIError {
@@ -459,6 +482,16 @@ func (s *utilsSvcImpl) SubmitFeedback(ctx context.Context, params domain.SubmitF
 		"page_url", params.PageURL,
 	)
 
+	// The reply goes to the actor's address. An actor that is not a user (an API key) has none.
+	userEmail := ""
+	actorUser, apiErr := s.repos.NewUserRepo().FindByID(ctx, identity.Actor.ID)
+	if apiErr != nil && !apierror.IsNotFound(apiErr) {
+		return tracing.Trace(span, apiErr)
+	}
+	if actorUser != nil {
+		userEmail = ptrutil.Deref(actorUser.Email)
+	}
+
 	accountID := identity.Target.AccountID
 	emailData := messaging.EmailSendData{
 		To:         []string{internalAlertRecipient},
@@ -467,9 +500,7 @@ func (s *utilsSvcImpl) SubmitFeedback(ctx context.Context, params domain.SubmitF
 		Params: map[string]any{
 			"UserName":  ptrutil.Deref(identity.Actor.Name),
 			"ActorType": string(identity.Actor.RelationType),
-			// The actor's address is not on the identity, so the feedback names the account and
-			// actor id and leaves the reply route to a lookup on receipt.
-			"UserEmail": "",
+			"UserEmail": userEmail,
 			"ActorID":   identity.Actor.ID,
 			"AccountID": accountID,
 			"PageURL":   ptrutil.Deref(params.PageURL),

@@ -19,6 +19,8 @@ type AnalyzeMaterialsRequest struct {
 }
 
 // Returns material inventory and demand analytics per material, including quantities, unit groups, and supplier information.
+//
+// The quantity in inventory is available to promise: available receipts less reserved and open issues, each net of its allocations. The quantity in demand is the open issues. Both are converted to the order point's unit, or the item's base unit for a material without an order point.
 type AnalyzeMaterialsEndpoint struct{}
 
 func (e *AnalyzeMaterialsEndpoint) Materialize() *apiendpoint.APIEndpoint[*AnalyzeMaterialsRequest, *apiresource.AnalyzeMaterialsResponse] {

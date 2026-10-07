@@ -61,19 +61,10 @@ func (r *customerRegistrationRepoImpl) AllocateNextCustomerNumber(ctx context.Co
 	ctx, span := customerRegistrationRepoTracer.Start(ctx, "repository.customer_registration.allocate_next_customer_number")
 	defer span.End()
 
-	res, err := r.queries.AllocateNextCustomerNumber(ctx, sqlc.AllocateNextCustomerNumberParams{
-		ID:        sysPropertyID,
-		AccountID: accountID,
-	})
-	if apiErr := db.MapSQLError(err); apiErr != nil {
+	number, apiErr := customerNumbers(r.queries, accountID).next(ctx, sysPropertyID)
+	if apiErr != nil {
 		return 0, tracing.Trace(span, apiErr)
 	}
-
-	number, err := res.LastInsertId()
-	if err != nil {
-		return 0, tracing.Trace(span, apierror.NewInternalError(err, "Failed to read the reserved customer number."))
-	}
-
 	return number, nil
 }
 

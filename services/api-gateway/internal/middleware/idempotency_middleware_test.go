@@ -2,13 +2,22 @@ package middleware
 
 import (
 	"bytes"
+	"context"
 	"io"
 	"net/http"
 	"net/http/httptest"
 	"strings"
+	"sync"
 	"testing"
 
+	grpcclient "github.com/open-mrp/api/services/api-gateway/grpc-client"
+	"github.com/open-mrp/api/services/api-gateway/internal/header"
+	"github.com/open-mrp/api/services/auth-service/pkg/types"
+	"github.com/open-mrp/api/shared/appctx"
+	apierror "github.com/open-mrp/api/shared/errors"
 	"github.com/open-mrp/api/shared/idempotency"
+	pb "github.com/open-mrp/api/shared/proto/platform"
+	"google.golang.org/grpc"
 )
 
 func TestIdempotencyScopeHash_SameTargetAccountSharesScope(t *testing.T) {
@@ -125,8 +134,8 @@ func TestReadAndRestoreBody_RejectsOversizedBody(t *testing.T) {
 	if got != nil {
 		t.Errorf("expected nil body bytes when over the limit, got %d bytes", len(got))
 	}
-	if !strings.Contains(apiErr.PublicMessage, "exceeds the maximum allowed size") {
-		t.Errorf("unexpected public message: %q", apiErr.PublicMessage)
+	if apiErr.Code != apierror.ErrorCodeRequestTooLarge {
+		t.Errorf("an oversized body is a 413 request_too_large, got %q: %q", apiErr.Code, apiErr.PublicMessage)
 	}
 }
 
@@ -200,5 +209,113 @@ func TestResponseRecorder_KeepsLargeBodiesWhole(t *testing.T) {
 	}
 	if !bytes.Equal(out.Body.Bytes(), body) {
 		t.Errorf("client got %d bytes, want %d", out.Body.Len(), len(body))
+	}
+}
+
+// fakeIdempotencyStore keeps the platform service's contract: one row per scope hash, a differing request hash is a mismatch.
+type fakeIdempotencyStore struct {
+	pb.IdempotencyServiceClient
+
+	mu   sync.Mutex
+	rows map[string]*fakeIdempotencyRow
+}
+
+type fakeIdempotencyRow struct {
+	id              string
+	requestBodyHash string
+	responseCode    *int32
+	responseBody    []byte
+}
+
+func (f *fakeIdempotencyStore) ProcessIdempotencyKey(_ context.Context, in *pb.ProcessIdempotencyKeyRequest, _ ...grpc.CallOption) (*pb.ProcessIdempotencyKeyResponse, error) {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	row, ok := f.rows[in.ScopeHash]
+	if !ok {
+		row = &fakeIdempotencyRow{id: in.ScopeHash, requestBodyHash: in.RequestBodyHash}
+		f.rows[in.ScopeHash] = row
+		return &pb.ProcessIdempotencyKeyResponse{Result: pb.ProcessIdempotencyKeyResult_PROCESS_RESULT_NEW, IdempotencyKeyId: row.id}, nil
+	}
+	if row.requestBodyHash != in.RequestBodyHash {
+		return &pb.ProcessIdempotencyKeyResponse{Result: pb.ProcessIdempotencyKeyResult_PROCESS_RESULT_HASH_MISMATCH}, nil
+	}
+	return &pb.ProcessIdempotencyKeyResponse{
+		Result:           pb.ProcessIdempotencyKeyResult_PROCESS_RESULT_REPLAY,
+		IdempotencyKeyId: row.id,
+		ResponseCode:     row.responseCode,
+		ResponseBody:     row.responseBody,
+	}, nil
+}
+
+func (f *fakeIdempotencyStore) SetIdempotencyKeyResponse(_ context.Context, in *pb.SetIdempotencyKeyResponseRequest, _ ...grpc.CallOption) (*pb.SetIdempotencyKeyResponseResponse, error) {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	for _, row := range f.rows {
+		if row.id == in.IdempotencyKeyId {
+			code := in.ResponseCode
+			row.responseCode = &code
+			row.responseBody = in.ResponseBody
+		}
+	}
+	return &pb.SetIdempotencyKeyResponseResponse{Success: true}, nil
+}
+
+// patchItemInventory sends a request the way the router hands it on: route pattern and path parameters already on the context.
+func patchItemInventory(handler http.HandlerFunc, itemID, key string) *httptest.ResponseRecorder {
+	actorAccount := "ac_seller"
+	req := httptest.NewRequest(http.MethodPatch, "/v1/catalog/items/"+itemID+"/inventory", strings.NewReader(`{"quantity":"1"}`))
+	req.Header.Set(header.IdempotencyKeyHeader, key)
+	ctx := appctx.WithIdentity(req.Context(), &types.Identity{
+		Type:   types.IdentityActorTypeAPIKey,
+		Target: &types.IdentityTarget{AccountID: actorAccount},
+		Actor:  &types.IdentityActor{ID: "ak_actor", AccountID: &actorAccount, RelationType: types.IdentityRelationTypeInternal},
+	})
+	ctx = appctx.WithRequestLog(ctx, &appctx.RequestLog{ID: "req_" + itemID})
+	ctx = appctx.WithRoutePattern(ctx, "/v1/catalog/items/{id}/inventory")
+	ctx = appctx.WithPathParams(ctx, map[string]string{"id": itemID})
+
+	w := httptest.NewRecorder()
+	handler(w, req.WithContext(ctx))
+	return w
+}
+
+// A key belongs to one request: reused on another item it is refused, not answered with the first item's result.
+func TestIdempotencyMiddleware_KeyReusedOnAnotherResourceIsNotReplayed(t *testing.T) {
+	t.Parallel()
+
+	store := &fakeIdempotencyStore{rows: map[string]*fakeIdempotencyRow{}}
+	adjusted := []string{}
+	handler := IdempotencyMiddleware(&IdempotencyMiddlewareConfig{
+		PlatformClient: &grpcclient.PlatformServiceClient{Client: store},
+	})(func(w http.ResponseWriter, r *http.Request) {
+		params, _ := appctx.GetPathParams(r.Context())
+		adjusted = append(adjusted, params["id"])
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write([]byte(`{"item":"` + params["id"] + `"}`))
+	})
+
+	first := patchItemInventory(handler, "itm_a", "key-1")
+	if first.Code != http.StatusOK {
+		t.Fatalf("first request: status %d: %s", first.Code, first.Body.String())
+	}
+
+	retry := patchItemInventory(handler, "itm_a", "key-1")
+	if retry.Code != http.StatusOK || retry.Header().Get(header.IdempotentReplayedHeader) != "true" {
+		t.Fatalf("a retry of the same request replays: status %d, replayed %q", retry.Code, retry.Header().Get(header.IdempotentReplayedHeader))
+	}
+	if retry.Body.String() != first.Body.String() {
+		t.Errorf("replayed body %s, want %s", retry.Body.String(), first.Body.String())
+	}
+
+	other := patchItemInventory(handler, "itm_b", "key-1")
+	if other.Header().Get(header.IdempotentReplayedHeader) == "true" {
+		t.Fatalf("the other item's request was answered with a replay: %s", other.Body.String())
+	}
+	if other.Code != http.StatusBadRequest || !strings.Contains(other.Body.String(), `"idempotency_error"`) {
+		t.Errorf("key reused on another item: status %d: %s, want 400 idempotency_error", other.Code, other.Body.String())
+	}
+
+	if len(adjusted) != 1 || adjusted[0] != "itm_a" {
+		t.Errorf("handler ran for %v, want only itm_a", adjusted)
 	}
 }

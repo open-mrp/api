@@ -23,6 +23,8 @@ const (
 	NotificationCategoryCustomerRegistered NotificationCategory = "customer.registered"
 	// NotificationCategoryProductionRunUpdated indicates someone other than a production run's responsible user added or deleted its batches.
 	NotificationCategoryProductionRunUpdated NotificationCategory = "production_run.updated"
+	// NotificationCategoryInvoicePaymentStatusChanged tells the person who set an invoice's paid-in-full flag by hand that recalculating its payments overturned it.
+	NotificationCategoryInvoicePaymentStatusChanged NotificationCategory = "invoice.payment_status_changed"
 )
 
 func (c NotificationCategory) IsValid() bool {
@@ -35,7 +37,8 @@ func (c NotificationCategory) IsValid() bool {
 		NotificationCategoryAgentAlert,
 		NotificationCategorySystemBroadcast,
 		NotificationCategoryCustomerRegistered,
-		NotificationCategoryProductionRunUpdated:
+		NotificationCategoryProductionRunUpdated,
+		NotificationCategoryInvoicePaymentStatusChanged:
 		return true
 	default:
 		return false
@@ -53,6 +56,7 @@ func (c NotificationCategory) EnumValues() []string {
 		string(NotificationCategorySystemBroadcast),
 		string(NotificationCategoryCustomerRegistered),
 		string(NotificationCategoryProductionRunUpdated),
+		string(NotificationCategoryInvoicePaymentStatusChanged),
 	}
 }
 

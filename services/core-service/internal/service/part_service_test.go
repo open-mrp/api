@@ -230,3 +230,15 @@ func (suite *PartBulkUpsertTestSuite) TestExportParts_RejectsAnIdentitylessConte
 	suite.Nil(export)
 	suite.NotNil(apiErr)
 }
+
+func TestDeletePart_OnlyTheOwnerLearnsItWasDeleted(t *testing.T) {
+	t.Parallel()
+	assertOnlyTheOwnerLearnsItWasDeleted(t, constants.DeletedRecordResourceTypePart, "it_gone", func(h *deletedScopeHarness, accountID string) *apierror.APIError {
+		parts := repositorymock.NewMockPartRepo(h.ctrl)
+		h.repos.EXPECT().NewPartRepo().Return(parts).AnyTimes()
+		parts.EXPECT().Get(gomock.Any(), domain.GetPartParams{AccountID: accountID, PartID: "it_gone"}).Return(nil, deletedScopeNotFound())
+		svc := NewPartSvc(&PartSvcConfig{Repos: h.repos, MediatorFactory: h.mediators, JobSvcFactory: NewJobSvcFactory(), TxManager: &stubTxManager{factory: h.repos}})
+		_, apiErr := svc.DeletePart(deletedScopeCtx(accountID), "it_gone")
+		return apiErr
+	})
+}

@@ -57,6 +57,8 @@ type ReceivingOrderLine struct {
 	RejectedQuantityValue    *string `audit:"rejected_quantity_value"`
 	OrderLineID              string
 	OrderLineProductID       *string
+	// OrderLineProductItemID is the item of the product the order line orders.
+	OrderLineProductItemID   *string
 	OrderLineItemNumber      *int32
 	OrderLineItemID          *string `audit:"order_line_item_id"`
 	OrderLineItemSKU         *string `audit:"order_line_item_sku"`
@@ -70,6 +72,14 @@ type ReceivingOrderLine struct {
 	StockedAt                 *time.Time `audit:"stocked_at"`
 	CreatedAt                 time.Time
 	UpdatedAt                 time.Time
+}
+
+// ReceivedItemID is the item the line receives: the one its order line names, or else its product's.
+func (l *ReceivingOrderLine) ReceivedItemID() *string {
+	if l.OrderLineItemID != nil && *l.OrderLineItemID != "" {
+		return l.OrderLineItemID
+	}
+	return l.OrderLineProductItemID
 }
 
 // ReceivingOrderTotals is what a receiving order is worth and how far it has been put away, aggregated over its lines.
@@ -180,7 +190,8 @@ type UnstockedLine struct {
 
 // ReceivingOrderLineUnitPrice holds unit price information for a receiving order line.
 type ReceivingOrderLineUnitPrice struct {
-	ReceivingOrderLineID       string
+	ReceivingOrderLineID string
+	// ItemID is the item the line restocks: the one it names, or else its product's. Empty when it has neither.
 	ItemID                     string
 	UnitPriceValue             string
 	UnitPriceNumeratorUnitID   string

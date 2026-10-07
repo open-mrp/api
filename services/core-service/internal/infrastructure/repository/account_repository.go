@@ -3,6 +3,7 @@ package repository
 import (
 	"context"
 	"database/sql"
+	"errors"
 	"fmt"
 	"time"
 
@@ -11,6 +12,7 @@ import (
 	"github.com/open-mrp/api/shared/constants"
 	"github.com/open-mrp/api/shared/db"
 	apierror "github.com/open-mrp/api/shared/errors"
+	"github.com/open-mrp/api/shared/id"
 	"github.com/open-mrp/api/shared/tracing"
 )
 
@@ -457,18 +459,24 @@ func (r *accountRepoImpl) UpdateName(ctx context.Context, accountID, name string
 	return nil
 }
 
-func (r *accountRepoImpl) UpdateBranding(ctx context.Context, accountID string, params domain.UpdateAccountParams) *apierror.APIError {
+func (r *accountRepoImpl) UpdateBranding(ctx context.Context, accountID string, branding domain.AccountBranding) *apierror.APIError {
 	ctx, span := accountRepoTracer.Start(ctx, "repository.account.update_branding")
 	defer span.End()
 
-	_, err := r.queries.UpdateAccountBranding(ctx, sqlc.UpdateAccountBrandingParams{
-		SupportEmail:    db.NullStringPtr(params.SupportEmail),
-		PhoneNumber:     db.NullStringPtr(params.PhoneNumber),
-		FacebookHandle:  db.NullStringPtr(params.FacebookHandle),
-		InstagramHandle: db.NullStringPtr(params.InstagramHandle),
-		LinkedinHandle:  db.NullStringPtr(params.LinkedInHandle),
-		TwitterHandle:   db.NullStringPtr(params.TwitterHandle),
-		WebsiteUrl:      db.NullStringPtr(params.WebsiteURL),
+	brandingID, genErr := id.GenID(id.AccountBrandingIDPrefix, nil)
+	if genErr != nil {
+		return tracing.Trace(span, genErr)
+	}
+
+	err := r.queries.UpsertAccountBranding(ctx, sqlc.UpsertAccountBrandingParams{
+		ID:              brandingID,
+		SupportEmail:    db.NullStringPtr(branding.SupportEmail),
+		PhoneNumber:     db.NullStringPtr(branding.PhoneNumber),
+		FacebookHandle:  db.NullStringPtr(branding.FacebookHandle),
+		InstagramHandle: db.NullStringPtr(branding.InstagramHandle),
+		LinkedinHandle:  db.NullStringPtr(branding.LinkedInHandle),
+		TwitterHandle:   db.NullStringPtr(branding.TwitterHandle),
+		WebsiteUrl:      db.NullStringPtr(branding.WebsiteURL),
 		AccountID:       accountID,
 	})
 	if apiErr := db.MapSQLError(err); apiErr != nil {
@@ -476,6 +484,32 @@ func (r *accountRepoImpl) UpdateBranding(ctx context.Context, accountID string, 
 	}
 
 	return nil
+}
+
+func (r *accountRepoImpl) SetDefaultAddresses(ctx context.Context, accountID string, billingAddressID, shippingAddressID *string) *apierror.APIError {
+	ctx, span := accountRepoTracer.Start(ctx, "repository.account.set_default_addresses")
+	defer span.End()
+
+	err := r.queries.SetAccountDefaultAddresses(ctx, sqlc.SetAccountDefaultAddressesParams{
+		BillingAddressID:  ptrToNullString(billingAddressID),
+		ShippingAddressID: ptrToNullString(shippingAddressID),
+		AccountID:         accountID,
+	})
+	if apiErr := db.MapSQLError(err); apiErr != nil {
+		return tracing.Trace(span, apiErr)
+	}
+	return nil
+}
+
+func (r *accountRepoImpl) HasAddress(ctx context.Context, accountID, addressID string) (bool, *apierror.APIError) {
+	ctx, span := accountRepoTracer.Start(ctx, "repository.account.has_address")
+	defer span.End()
+
+	linked, err := r.queries.AccountHasAddress(ctx, sqlc.AccountHasAddressParams{AccountID: accountID, AddressID: addressID})
+	if apiErr := db.MapSQLError(err); apiErr != nil {
+		return false, tracing.Trace(span, apiErr)
+	}
+	return linked, nil
 }
 
 func (r *accountRepoImpl) UpdatePortalSlug(ctx context.Context, accountID, slug string) *apierror.APIError {
@@ -494,8 +528,31 @@ func (r *accountRepoImpl) UpdatePortalSlug(ctx context.Context, accountID, slug 
 	if err != nil {
 		return tracing.Trace(span, apierror.NewInternalError(err, "Failed to check rows affected"))
 	}
-	if rowsAffected == 0 {
-		return tracing.Trace(span, apierror.NewResourceNotFoundError("Account portal not found."))
+	if rowsAffected > 0 {
+		return nil
+	}
+
+	// No row changed: the portal already has this slug, or the account has no portal at all, as
+	// accounts made before portals existed do. Their first slug creates it, as registration would.
+	_, err = r.queries.GetAccountPortalSlugByAccountID(ctx, accountID)
+	if err == nil {
+		return nil
+	}
+	if !errors.Is(err, sql.ErrNoRows) {
+		return tracing.Trace(span, db.MapSQLError(err))
+	}
+
+	portalID, genErr := id.GenID(id.AccountPortalIDPrefix, nil)
+	if genErr != nil {
+		return tracing.Trace(span, genErr)
+	}
+	err = r.queries.CreateAccountPortal(ctx, sqlc.CreateAccountPortalParams{
+		ID:             portalID,
+		OwnerAccountID: accountID,
+		Slug:           slug,
+	})
+	if apiErr := db.MapSQLError(err); apiErr != nil {
+		return tracing.Trace(span, apiErr)
 	}
 
 	return nil
@@ -520,7 +577,13 @@ func (r *accountRepoImpl) UpdateBrandingLogoURL(ctx context.Context, accountID, 
 	ctx, span := accountRepoTracer.Start(ctx, "repository.account.update_branding_logo_url")
 	defer span.End()
 
-	err := r.queries.UpdateAccountBrandingLogoURL(ctx, sqlc.UpdateAccountBrandingLogoURLParams{
+	brandingID, genErr := id.GenID(id.AccountBrandingIDPrefix, nil)
+	if genErr != nil {
+		return tracing.Trace(span, genErr)
+	}
+
+	err := r.queries.UpsertAccountBrandingLogoURL(ctx, sqlc.UpsertAccountBrandingLogoURLParams{
+		ID:        brandingID,
 		LogoUrl:   sql.NullString{String: logoURL, Valid: true},
 		AccountID: accountID,
 	})
@@ -554,7 +617,13 @@ func (r *accountRepoImpl) UpdateBrandingFaviconURL(ctx context.Context, accountI
 	ctx, span := accountRepoTracer.Start(ctx, "repository.account.update_branding_favicon_url")
 	defer span.End()
 
-	err := r.queries.UpdateAccountBrandingFaviconURL(ctx, sqlc.UpdateAccountBrandingFaviconURLParams{
+	brandingID, genErr := id.GenID(id.AccountBrandingIDPrefix, nil)
+	if genErr != nil {
+		return tracing.Trace(span, genErr)
+	}
+
+	err := r.queries.UpsertAccountBrandingFaviconURL(ctx, sqlc.UpsertAccountBrandingFaviconURLParams{
+		ID:         brandingID,
 		FaviconUrl: sql.NullString{String: faviconURL, Valid: true},
 		AccountID:  accountID,
 	})

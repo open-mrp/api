@@ -282,10 +282,12 @@ func (s *purchaseOrderLineSvcImpl) UpdatePurchaseOrderLine(ctx context.Context, 
 			}
 
 			// Backfill unchanged nullable fields with existing values. Since the SQL uses direct assignment (no COALESCE) for these fields, we must provide the existing value when the field was not sent.
+			// A new product brings its own item, which the update resolves; the old item only carries over while the product stays.
+			productChanged := params.ProductID != nil
 			if params.ProductID == nil {
 				params.ProductID = old.ProductID
 			}
-			if params.ItemID == nil {
+			if params.ItemID == nil && !productChanged {
 				params.ItemID = old.ItemID
 			}
 
@@ -396,7 +398,7 @@ func (s *purchaseOrderLineSvcImpl) DeletePurchaseOrderLine(ctx context.Context, 
 	line, apiErr := lineRepo.Get(ctx, params.PurchaseOrderLineID, params.SalesOrderID)
 	if apiErr != nil {
 		if apierror.IsNotFound(apiErr) {
-			wasDeleted, deletedCheckErr := s.repos.NewDeletedRecordRepo().Exists(ctx, constants.DeletedRecordResourceTypePurchaseOrderLine, params.PurchaseOrderLineID)
+			wasDeleted, deletedCheckErr := s.repos.NewDeletedRecordRepo().ExistsInAccount(ctx, constants.DeletedRecordResourceTypePurchaseOrderLine, params.PurchaseOrderLineID, params.AccountID)
 			if deletedCheckErr != nil {
 				return tracing.Trace(span, deletedCheckErr)
 			}
@@ -416,7 +418,7 @@ func (s *purchaseOrderLineSvcImpl) DeletePurchaseOrderLine(ctx context.Context, 
 			return apiErr
 		}
 
-		if apiErr := txSvc.repos.NewDeletedRecordRepo().Create(txCtx, constants.DeletedRecordResourceTypePurchaseOrderLine, line.ID, line); apiErr != nil {
+		if apiErr := txSvc.repos.NewDeletedRecordRepo().CreateInAccount(txCtx, constants.DeletedRecordResourceTypePurchaseOrderLine, line.ID, params.AccountID, line); apiErr != nil {
 			return apiErr
 		}
 

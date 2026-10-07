@@ -37,6 +37,8 @@ func (*UpdatePickLineRequest) SchemaExample() any {
 // Updates a pick line's picked quantity.
 //
 // Use this to record a short or partial pick; Pick Pick Line fills in the full outstanding quantity instead.
+//
+// Returns a validation error if the line has already been packed, since its quantity is what the shipment carries.
 type UpdatePickLineEndpoint struct{}
 
 func (e *UpdatePickLineEndpoint) Materialize() *apiendpoint.APIEndpoint[*UpdatePickLineRequest, *apiresource.PickLine] {

@@ -47,6 +47,10 @@ type Invoice struct {
 	// - `overpaid`: the payments applied to the invoice exceed the invoiced amount.
 	// - `partially_paid`: not currently returned; an invoice carrying a partial payment reports `unpaid`.
 	PaymentStatus constants.InvoicePaymentStatus `json:"payment_status" validate:"required"`
+	// Whether the invoice is marked paid in full.
+	//
+	// An overpaid invoice is paid in full too, and Update Invoice can clear the mark on it, so `payment_status` alone cannot tell whether an `overpaid` invoice is marked paid.
+	IsPaidInFull bool `json:"is_paid_in_full"`
 	// Whether the invoice has been transmitted to the customer via EDI.
 	//
 	// Nothing in the platform sets this flag; it is recorded through Update Invoice once the invoice has been transmitted elsewhere.
@@ -113,6 +117,7 @@ var SampleInvoice = &Invoice{
 	PriorityCode:         constants.PriorityCodeNormal,
 	PaymentTerm:          SamplePaymentTerm,
 	PaymentStatus:        constants.InvoicePaymentStatusUnpaid,
+	IsPaidInFull:         false,
 	IsEdiSent:            false,
 	HasBeenSent:          true,
 	TotalInvoiced:        "1234.56",
@@ -186,6 +191,8 @@ type InvoiceAllocation struct {
 	Amount *Quantity `json:"amount" validate:"required"`
 	// Note about this allocation.
 	Note *string `json:"note"`
+	// The settlement that recorded the allocation, or `null` when it was recorded outside one.
+	Settlement *AllocationSettlement `json:"settlement"`
 	// Timestamp when the allocation was created.
 	CreatedAt time.Time `json:"created_at" validate:"required"`
 	// Timestamp when the allocation was last updated.
@@ -206,8 +213,9 @@ var SampleInvoiceAllocation = &InvoiceAllocation{
 		DisplayValue: "$500.00",
 		Unit:         newSampleUnit("US Dollar", "$", constants.UnitTypeCurrency),
 	},
-	CreatedAt: timeutil.TimestampToTime(sampleCreatedAtTimestamp),
-	UpdatedAt: timeutil.TimestampToTime(sampleUpdatedAtTimestamp),
+	Settlement: &AllocationSettlement{ID: SampleSettlementID, Object: constants.ObjectTypeSettlement, Number: "1"},
+	CreatedAt:  timeutil.TimestampToTime(sampleCreatedAtTimestamp),
+	UpdatedAt:  timeutil.TimestampToTime(sampleUpdatedAtTimestamp),
 }
 
 func (*InvoiceAllocation) SchemaExample() any {
@@ -216,7 +224,7 @@ func (*InvoiceAllocation) SchemaExample() any {
 
 // A payment-oriented view of an invoice, as returned by List Customer Invoices.
 //
-// Carries the fields needed to apply a customer payment: the invoice total, the allocations already applied, and the billing relationship of the customer being charged. Only invoices that still owe a balance are represented.
+// Carries the fields needed to apply a customer payment: the invoice total, the allocations already applied, and the billing relationship of the customer being charged. Only invoices not marked paid in full are represented; an overpaid invoice is marked paid in full.
 type InvoiceForPayment struct {
 	// Invoice ID.
 	ID string `json:"id" validate:"required"`
@@ -236,13 +244,13 @@ type InvoiceForPayment struct {
 	ParentAccount *Account `json:"parent_account" expandable:"true"`
 	// Whether the billed customer's payment term is prepaid.
 	IsPrepaid bool `json:"is_prepaid"`
-	// Address the invoice is billed to.
+	// Billing address on the invoice's sales order.
 	BillingAddress *Address `json:"billing_address" expandable:"true"`
 	// Total amount billed by this invoice.
 	InvoiceTotal string `json:"invoice_total" validate:"required" format:"decimal"`
 	// Whether the invoice has been paid in full.
 	//
-	// Always `false` here, because only invoices that still owe a balance are listed.
+	// Always `false` here, because only invoices not marked paid in full are listed.
 	IsPaidInFull bool `json:"is_paid_in_full"`
 	// Transaction allocations already applied against this invoice.
 	Allocations *List[InvoiceAllocation] `json:"allocations" expandable:"true"`

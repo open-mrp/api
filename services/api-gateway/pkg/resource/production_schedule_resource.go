@@ -37,11 +37,17 @@ type SchedulePolicy struct {
 	// How long one unit occupies the constraint.
 	SecondsPerUnit float64 `json:"seconds_per_unit"`
 	// Standard cost per unit.
-	UnitCost float64 `json:"unit_cost"`
+	//
+	// Null unless the caller holds `costs:read`; customer and supplier portal users never see it.
+	UnitCost *float64 `json:"unit_cost" sensitive:"cost"`
 	// Cost of one changeover, used as the setup cost in the lot-size calculation.
-	SetupCost float64 `json:"setup_cost"`
+	//
+	// Null unless the caller holds `costs:read`; customer and supplier portal users never see it.
+	SetupCost *float64 `json:"setup_cost" sensitive:"cost"`
 	// Annual cost of holding one unit.
-	HoldingCost float64 `json:"holding_cost"`
+	//
+	// Null unless the caller holds `costs:read`; customer and supplier portal users never see it.
+	HoldingCost *float64 `json:"holding_cost" sensitive:"cost"`
 	// Economic order quantity: the campaign size that balances the cost of a changeover against the cost of holding what it produces.
 	EOQUnits float64 `json:"eoq_units"`
 	// Observed or default lead time at the constraint.
@@ -363,9 +369,9 @@ var SampleProductionSchedulePreview = &ProductionSchedulePreview{
 		AnnualDemand:            5200,
 		WeeklyDemand:            100,
 		SecondsPerUnit:          30,
-		UnitCost:                4,
-		SetupCost:               50,
-		HoldingCost:             1,
+		UnitCost:                ptrFloat64(4),
+		SetupCost:               ptrFloat64(50),
+		HoldingCost:             ptrFloat64(1),
 		EOQUnits:                720,
 		ConstraintLeadTimeWeeks: 1.3,
 		FinishLeadTimeWeeks:     6,
@@ -451,7 +457,9 @@ type ProductionSchedule struct {
 	// Version of the solver that produced the plan.
 	SolverVersion string `json:"solver_version" validate:"required"`
 	// The planning assumptions used, frozen at generation so the plan stays explainable after settings change.
-	SettingsSnapshot map[string]any `json:"settings_snapshot"`
+	//
+	// A cost among them, such as `changeover_labor_rate`, is null unless the caller holds `costs:read`; customer and supplier portal users never see it.
+	SettingsSnapshot map[string]any `json:"settings_snapshot" sensitive:"cost_keys"`
 	// What the solver could not do, frozen at generation.
 	Diagnostics ScheduleDiagnostics `json:"diagnostics"`
 	// Why generation failed, when it did.
@@ -673,11 +681,17 @@ type ProductionScheduleItemPolicy struct {
 	// How long one unit occupies the constraint.
 	SecondsPerUnit float64 `json:"seconds_per_unit"`
 	// Standard cost per unit.
-	UnitCost float64 `json:"unit_cost"`
+	//
+	// Null unless the caller holds `costs:read`; customer and supplier portal users never see it.
+	UnitCost *float64 `json:"unit_cost" sensitive:"cost"`
 	// Cost of one changeover.
-	SetupCost float64 `json:"setup_cost"`
+	//
+	// Null unless the caller holds `costs:read`; customer and supplier portal users never see it.
+	SetupCost *float64 `json:"setup_cost" sensitive:"cost"`
 	// Annual cost of holding one unit.
-	HoldingCost float64 `json:"holding_cost"`
+	//
+	// Null unless the caller holds `costs:read`; customer and supplier portal users never see it.
+	HoldingCost *float64 `json:"holding_cost" sensitive:"cost"`
 	// Economic order quantity: the campaign size that balances the cost of a changeover against the cost of holding what it produces.
 	EOQUnits float64 `json:"eoq_units"`
 	// Observed or default lead time at the constraint.
@@ -752,9 +766,9 @@ var SampleProductionScheduleItemPolicy = &ProductionScheduleItemPolicy{
 	AnnualDemand:            5200,
 	WeeklyDemand:            100,
 	SecondsPerUnit:          30,
-	UnitCost:                4,
-	SetupCost:               50,
-	HoldingCost:             1,
+	UnitCost:                ptrFloat64(4),
+	SetupCost:               ptrFloat64(50),
+	HoldingCost:             ptrFloat64(1),
 	EOQUnits:                720,
 	ConstraintLeadTimeWeeks: 1.3,
 	FinishLeadTimeWeeks:     6,

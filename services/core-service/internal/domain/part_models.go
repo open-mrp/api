@@ -34,7 +34,9 @@ type UpdatePartParams struct {
 	SKU         *string
 	Description field.Clearable[string]
 	Notes       field.Clearable[string]
-	Includes    []string
+	// CategoryID, when set, moves the part to that category before the other fields are written.
+	CategoryID *string
+	Includes   []string
 }
 
 type PartUpdateItemParams struct {

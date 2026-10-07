@@ -58,6 +58,8 @@ const (
 	ErrorCodeInvalidFormat ErrorCode = "invalid_format"
 	// ErrorCodeMethodNotAllowed indicates the HTTP method is not supported for this endpoint.
 	ErrorCodeMethodNotAllowed ErrorCode = "method_not_allowed"
+	// ErrorCodeRequestTooLarge indicates the request body is larger than the endpoint accepts (413): 1 MB of JSON by default, 8 MB on the bulk imports.
+	ErrorCodeRequestTooLarge ErrorCode = "request_too_large"
 
 	// --- Resource errors (404/409/410) ---
 
@@ -132,7 +134,7 @@ func (c ErrorCode) IsValid() bool {
 		ErrorCodeInvalidCredentials, ErrorCodeInsufficientPerms, ErrorCodePaymentRequired,
 		ErrorCodeAgentSpendingCapReached,
 		ErrorCodeValidationFailed, ErrorCodeMissingField, ErrorCodeInvalidFormat,
-		ErrorCodeMethodNotAllowed, ErrorCodeResourceNotFound, ErrorCodeResourceExists,
+		ErrorCodeMethodNotAllowed, ErrorCodeRequestTooLarge, ErrorCodeResourceNotFound, ErrorCodeResourceExists,
 		ErrorCodeResourceConflict, ErrorCodeResourceGone, ErrorCodeIdempotencyInProgress,
 		ErrorCodeLimitExceeded, ErrorCodeRegistrationClosed, ErrorCodeRateLimitExceeded,
 		ErrorCodeParameterMissing, ErrorCodeParameterInvalid, ErrorCodeParameterUnknown,
@@ -160,6 +162,7 @@ func (c ErrorCode) EnumValues() []string {
 		string(ErrorCodeMissingField),
 		string(ErrorCodeInvalidFormat),
 		string(ErrorCodeMethodNotAllowed),
+		string(ErrorCodeRequestTooLarge),
 		string(ErrorCodeResourceNotFound),
 		string(ErrorCodeResourceExists),
 		string(ErrorCodeResourceConflict),
@@ -561,6 +564,11 @@ func NewMethodNotAllowedError(publicMessage string) *APIError {
 	return NewAPIError(ErrorCodeMethodNotAllowed, ErrorTypeInvalidRequest, publicMessage, "", WithDocURL(docURLMethodNotAllowed))
 }
 
+// NewRequestTooLargeError creates a 413 Content Too Large error for a request body over the endpoint's size limit.
+func NewRequestTooLargeError(publicMessage string) *APIError {
+	return NewAPIError(ErrorCodeRequestTooLarge, ErrorTypeInvalidRequest, publicMessage, "", WithDocURL(docURLRequestTooLarge))
+}
+
 // NewRequestTimeoutError creates a 504 Gateway Timeout error. The deadline was exceeded on our side, not the client's, so this is a server failure rather than a 408. Marked as transient.
 func NewRequestTimeoutError(internalMessage string) *APIError {
 	return NewAPIError(ErrorCodeRequestTimeout, ErrorTypeAPI, "Request timed out.", internalMessage, WithDocURL(docURLRequestTimeout))
@@ -691,6 +699,8 @@ func GetHTTPStatusCode(code ErrorCode) int {
 		return http.StatusBadRequest
 	case ErrorCodeMethodNotAllowed:
 		return http.StatusMethodNotAllowed
+	case ErrorCodeRequestTooLarge:
+		return http.StatusRequestEntityTooLarge
 	case ErrorCodeResourceNotFound:
 		return http.StatusNotFound
 	case ErrorCodeResourceGone:

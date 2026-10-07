@@ -7,7 +7,6 @@ import (
 
 	"github.com/open-mrp/api/services/auth-service/pkg/types"
 	"github.com/open-mrp/api/services/core-service/internal/domain"
-	"github.com/open-mrp/api/shared/appctx"
 	apierror "github.com/open-mrp/api/shared/errors"
 	"github.com/open-mrp/api/shared/tracing"
 )
@@ -17,32 +16,15 @@ type salesReportAccess struct {
 	accountID string
 	// ownRepID is set for a sales rep, whose reports are forced to their own sales.
 	ownRepID *string
-	// includeCost is false for sales reps, who never see cost.
+	// includeCost is false for sales reps, who never see cost, and for anyone without costs:read.
 	includeCost bool
 }
 
 // salesReportAccessFor gates every sales report the same way the dashboard's analytics did: internal actors with invoice read access; sales reps see only their own sales and no cost.
 func (s *analyticsSvcImpl) salesReportAccessFor(ctx context.Context) (*salesReportAccess, *apierror.APIError) {
-	identity, ok := appctx.GetIdentityFromContext(ctx)
-	if !ok || identity == nil {
-		return nil, apierror.NewInvariantViolationError("Identity not found in context.")
-	}
-	if apiErr := identity.CheckIsInternalActor(); apiErr != nil {
+	access, apiErr := s.orderReportAccessFor(ctx, types.PermissionDomainInvoices)
+	if apiErr != nil {
 		return nil, apiErr
-	}
-	if apiErr := identity.CheckHasPermission(types.PermissionDomainInvoices, types.ActionRead); apiErr != nil {
-		return nil, apiErr
-	}
-
-	access := &salesReportAccess{accountID: identity.Target.AccountID, includeCost: !identity.IsSalesRep()}
-	if identity.IsSalesRep() && identity.Actor != nil && identity.Actor.ID != "" {
-		accountUser, apiErr := s.repos.NewAccountUserRepo().FindByAccountAndUserID(ctx, identity.Actor.ID, access.accountID)
-		if apiErr != nil {
-			return nil, apiErr
-		}
-		if accountUser != nil {
-			access.ownRepID = &accountUser.ID
-		}
 	}
 
 	ready, apiErr := s.reports().NewSalesReportRepo().FactsReady(ctx)

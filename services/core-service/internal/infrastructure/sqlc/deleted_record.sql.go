@@ -29,6 +29,28 @@ func (q *Queries) CountDeletedRecordsByResourceAndResourceID(ctx context.Context
 	return count, err
 }
 
+const countDeletedRecordsInAccount = `-- name: CountDeletedRecordsInAccount :one
+SELECT COUNT(*)
+FROM deleted_record
+WHERE resource_type = ?
+AND resource_id = ?
+AND JSON_UNQUOTE(JSON_EXTRACT(data, '$.account_id')) = CAST(? AS CHAR)
+`
+
+type CountDeletedRecordsInAccountParams struct {
+	ResourceType string
+	ResourceID   string
+	AccountID    interface{}
+}
+
+// Only a snapshot that records its owner under account_id can match.
+func (q *Queries) CountDeletedRecordsInAccount(ctx context.Context, arg CountDeletedRecordsInAccountParams) (int64, error) {
+	row := q.db.QueryRowContext(ctx, countDeletedRecordsInAccount, arg.ResourceType, arg.ResourceID, arg.AccountID)
+	var count int64
+	err := row.Scan(&count)
+	return count, err
+}
+
 const insertDeletedRecord = `-- name: InsertDeletedRecord :exec
 INSERT INTO deleted_record (
     resource_type,

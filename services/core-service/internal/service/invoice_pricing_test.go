@@ -181,7 +181,7 @@ func invoiceDocRepos(ctrl *gomock.Controller) invoiceDocRepoMocks {
 	orders.EXPECT().GetAccountOriginAddress(gomock.Any(), gomock.Any()).
 		Return(&domain.ShippingAddress{Street1: "601 Forum Parkway", City: "Rural Hall", State: "NC", Zip: "27045", Timezone: poPtr("America/New_York")}, nil).AnyTimes()
 	invoices := repositorymock.NewMockInvoiceRepo(ctrl)
-	invoices.EXPECT().GetEmailRecipients(gomock.Any(), gomock.Any()).Return([]string{"jamie@texaseva.com"}, nil).AnyTimes()
+	invoices.EXPECT().GetEmailRecipients(gomock.Any(), gomock.Any(), gomock.Any()).Return([]string{"jamie@texaseva.com"}, nil).AnyTimes()
 
 	m.factory.EXPECT().NewAccountRepo().Return(accounts).AnyTimes()
 	m.factory.EXPECT().NewSalesOrderRepo().Return(orders).AnyTimes()

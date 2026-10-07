@@ -300,6 +300,10 @@ func shouldPromotePrefix(prefix []string, stats *prefixStats) bool {
 	if prefix[len(prefix)-1] == "actions" {
 		return true
 	}
+	// A segment after `actions` names a verb, never a resource, so two methods on one action stay methods of `actions`.
+	if len(prefix) > 1 && prefix[len(prefix)-2] == "actions" {
+		return false
+	}
 	if len(stats.exactMethods) > 1 {
 		return true
 	}

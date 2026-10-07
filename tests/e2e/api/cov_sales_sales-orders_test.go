@@ -735,21 +735,17 @@ func TestCovSalesSalesOrders_ListStatusCodesUnknownRejected(t *testing.T) {
 	assertErrorParam(t, errObj, "status_codes")
 }
 
-// TestCovSalesSalesOrders_ListMalformedDateFiltersIgnoredNot5xx pins the
-// actual observed behavior for starts_at/ends_at, which are plain *string
-// query params with no gateway-side date-format validation: a malformed
-// value is currently silently ignored (dropped from the filter) rather than
-// rejected with 400.
-func TestCovSalesSalesOrders_ListMalformedDateFiltersIgnoredNot5xx(t *testing.T) {
+// A malformed date window is refused on its parameter rather than read as no filter.
+func TestCovSalesSalesOrders_ListMalformedDateFiltersRejected(t *testing.T) {
 	t.Parallel()
-	for _, param := range []string{"starts_at", "ends_at"} {
+	for _, param := range []string{"starts_at", "ends_at", "ship_by_after", "ship_by_before"} {
 		param := param
 		t.Run(param, func(t *testing.T) {
 			t.Parallel()
-			list, status, err := apiClient.GetList(salesOrdersPath, url.Values{param: {"not-a-date"}})
+			status, body, err := apiClient.GetListRaw(salesOrdersPath, url.Values{param: {"not-a-date"}})
 			require.NoError(t, err)
-			require.Equal(t, 200, status)
-			assert.NotEmpty(t, list.Data, "a malformed %s must not error and must not silently exclude every order", param)
+			requireStatus(t, 400, status, body)
+			assertErrorParam(t, requireErrorResponse(t, body, "", "invalid_request_error"), param)
 		})
 	}
 }

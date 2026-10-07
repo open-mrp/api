@@ -83,6 +83,14 @@ func (i *Identity) CheckIsInternalActor() *apierror.APIError {
 	return nil
 }
 
+// CheckIsInternalActorForRead is CheckIsInternalActor for a read, which also admits an actor loading what an authorized request includes.
+func (i *Identity) CheckIsInternalActorForRead() *apierror.APIError {
+	if i.IsIncludeRead() {
+		return nil
+	}
+	return i.CheckIsInternalActor()
+}
+
 // CheckIsAdmin checks that the identity is an admin
 func (i *Identity) CheckIsAdmin() *apierror.APIError {
 	if apiErr := i.CheckIsTargetAccountSet(); apiErr != nil {
@@ -138,6 +146,10 @@ func (i *Identity) CheckHasPermission(domain PermissionDomain, action Action) *a
 // authorizes against, so they hold no permissions here. Customer/supplier-side
 // capabilities (e.g. a portal order) are authorized separately via
 // CheckHasRelationCapability, which reads those same carried permissions.
+//
+// Loading what an authorized request includes (IsIncludeRead), any read permission passes; a create, update or delete never does.
+//
+// An agent never holds costs, whatever its role grants (see CanReadCosts).
 func (i *Identity) CheckHasAnyPermission(perms ...Permission) *apierror.APIError {
 	if len(perms) == 0 {
 		return nil
@@ -147,6 +159,14 @@ func (i *Identity) CheckHasAnyPermission(perms ...Permission) *apierror.APIError
 	// authenticate) instead of the generic "no permission" 403.
 	if !i.IsAuthenticated() {
 		return i.CheckIsAuthenticated()
+	}
+	if i.IsAgent() {
+		if perms = withoutCosts(perms); len(perms) == 0 {
+			return i.agentCostsRefusal()
+		}
+	}
+	if i.IsIncludeRead() && anyRead(perms) {
+		return nil
 	}
 	if i.IsRelationActor() {
 		return apierror.NewAuthorizationError(i.getAnyOfPermissionErrorMessage(perms))
@@ -162,6 +182,16 @@ func (i *Identity) CheckHasAnyPermission(perms ...Permission) *apierror.APIError
 		}
 	}
 	return apierror.NewAuthorizationError(i.getAnyOfPermissionErrorMessage(perms))
+}
+
+// anyRead reports whether perms holds a read an include may stand in for. costs:read never qualifies: seeing cost is a grant of its own, never something a request carries along.
+func anyRead(perms []Permission) bool {
+	for _, p := range perms {
+		if p.Action == ActionRead && p.Domain != PermissionDomainCosts {
+			return true
+		}
+	}
+	return false
 }
 
 // CheckHasRelationCapability reports whether a customer/supplier relation actor holds

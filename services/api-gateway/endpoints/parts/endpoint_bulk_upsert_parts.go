@@ -4,6 +4,7 @@ import (
 	"context"
 	"net/http"
 
+	httptransport "github.com/open-mrp/api/services/api-gateway/internal/http"
 	apiendpoint "github.com/open-mrp/api/services/api-gateway/pkg/endpoint"
 	apiexample "github.com/open-mrp/api/services/api-gateway/pkg/example"
 	apirequest "github.com/open-mrp/api/services/api-gateway/pkg/request"
@@ -38,7 +39,7 @@ type UpsertPartInput struct {
 	// defaults to a zero rate in the category's base unit and is left unchanged on update.
 	UnitPrice field.Optional[apirequest.RateInput] `json:"unit_price,omitzero"`
 	// Cost per unit. Same unit rule and omission behavior as `unit_price`.
-	UnitCost field.Optional[apirequest.RateInput] `json:"unit_cost,omitzero"`
+	UnitCost field.Optional[apirequest.RateInput] `json:"unit_cost,omitzero" sensitive:"cost"`
 	// Properties to attach to the part, matched/created by name + value. Additive —
 	// existing attributes are not removed.
 	Properties []UpsertPartProperty `json:"properties" default:"[]" validate:"dive"`
@@ -65,6 +66,8 @@ func (*BulkUpsertPartsRequest) SchemaExample() any {
 
 // Creates or updates multiple parts for the account, matched by SKU, then writes
 // asynchronously — 202 with a job to poll.
+//
+// At most 1,000 parts and an 8 MB request body per call.
 type BulkUpsertPartsEndpoint struct{}
 
 func (e *BulkUpsertPartsEndpoint) Materialize() *apiendpoint.APIEndpoint[*BulkUpsertPartsRequest, *apiresource.Job] {
@@ -81,6 +84,7 @@ func (e *BulkUpsertPartsEndpoint) Materialize() *apiendpoint.APIEndpoint[*BulkUp
 			ObjectType: constants.ObjectTypeJob,
 			Fields:     []string{"created_by", "created_by.role"},
 		}),
+		Extras: apiendpoint.APIEndpointExtras{MaxJSONBodyBytes: httptransport.MaxJSONBodyBytes},
 		ServiceHandler: func(svc any) func(ctx context.Context, req *BulkUpsertPartsRequest) (*apiresource.Job, *apierror.APIError) {
 			return svc.(PartSvc).BulkUpsertParts
 		},

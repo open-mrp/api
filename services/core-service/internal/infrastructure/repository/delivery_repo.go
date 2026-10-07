@@ -360,8 +360,12 @@ func mapDeliveryLineRow(row sqlc.ListDeliveryLinesRow) *domain.DeliveryLine {
 	if row.RejectedAt.Valid {
 		line.RejectedAt = &row.RejectedAt.Time
 	}
-	if row.ItemID.Valid {
+	// A line that orders a product names no item of its own: what it received is the product's.
+	switch {
+	case row.ItemID.Valid && row.ItemID.String != "":
 		line.ItemID = &row.ItemID.String
+	case row.ProductItemID.Valid:
+		line.ItemID = &row.ProductItemID.String
 	}
 	if row.ItemSku.Valid {
 		line.ItemSKU = &row.ItemSku.String

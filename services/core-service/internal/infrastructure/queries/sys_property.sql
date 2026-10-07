@@ -1,3 +1,7 @@
+-- The production_schedule_version counter is excluded from every read the settings endpoints serve:
+-- schedule generation allocates versions from it under a unique key, so it is not a number series a
+-- user may see or move — moving it below the latest version would make the next generation collide.
+
 -- name: ListSysPropertiesForward :many
 SELECT
     sp.id,
@@ -11,6 +15,7 @@ SELECT
 FROM sys_property sp
 JOIN sys_property_type spt ON sp.sys_property_type_code = spt.code
 WHERE sp.account_id = sqlc.arg('account_id')
+AND sp.sys_property_type_code <> 'production_schedule_version'
 AND (
     sqlc.narg('search_query') IS NULL
     OR spt.name LIKE sqlc.narg('search_query')
@@ -36,6 +41,7 @@ SELECT
 FROM sys_property sp
 JOIN sys_property_type spt ON sp.sys_property_type_code = spt.code
 WHERE sp.account_id = sqlc.arg('account_id')
+AND sp.sys_property_type_code <> 'production_schedule_version'
 AND (
     sqlc.narg('search_query') IS NULL
     OR spt.name LIKE sqlc.narg('search_query')
@@ -60,7 +66,8 @@ SELECT
 FROM sys_property sp
 JOIN sys_property_type spt ON sp.sys_property_type_code = spt.code
 WHERE sp.id = sqlc.arg('id')
-AND sp.account_id = sqlc.arg('account_id');
+AND sp.account_id = sqlc.arg('account_id')
+AND sp.sys_property_type_code <> 'production_schedule_version';
 
 -- name: GetSysPropertiesByIDs :many
 -- Returns sys properties matching the given IDs that belong to the caller's
@@ -77,7 +84,8 @@ SELECT
 FROM sys_property sp
 JOIN sys_property_type spt ON sp.sys_property_type_code = spt.code
 WHERE sp.id IN (sqlc.slice('ids'))
-AND sp.account_id = sqlc.arg('account_id');
+AND sp.account_id = sqlc.arg('account_id')
+AND sp.sys_property_type_code <> 'production_schedule_version';
 
 -- name: GetSysPropertyByTypeCode :one
 SELECT
@@ -125,43 +133,46 @@ UPDATE sys_property SET
 WHERE id = sqlc.arg('id')
 AND account_id = sqlc.arg('account_id');
 
--- name: CheckDuplicateTransactionNumber :one
-SELECT COUNT(*) FROM transaction
-WHERE number = sqlc.arg('value')
-AND account_id = sqlc.arg('account_id');
+-- The ListTaken*Numbers queries return which of the given candidate numbers a record in the series
+-- already carries, so the next free number is found a batch of candidates per query.
 
--- name: CheckDuplicateSettlementNumber :one
-SELECT COUNT(*) FROM settlement
-WHERE number = sqlc.arg('value')
-AND account_id = sqlc.arg('account_id');
+-- name: ListTakenTransactionNumbers :many
+SELECT number FROM transaction
+WHERE account_id = sqlc.arg('account_id')
+AND number IN (sqlc.slice('numbers'));
 
--- name: CheckDuplicateSalesOrderNumber :one
-SELECT COUNT(*) FROM sales_order
-WHERE number = sqlc.arg('value')
-AND owner_account_id = sqlc.arg('account_id')
+-- name: ListTakenSettlementNumbers :many
+SELECT number FROM settlement
+WHERE account_id = sqlc.arg('account_id')
+AND number IN (sqlc.slice('numbers'));
+
+-- name: ListTakenSalesOrderNumbers :many
+SELECT number FROM sales_order
+WHERE owner_account_id = sqlc.arg('account_id')
 AND seller_account_id = sqlc.arg('account_id')
-AND sales_order_type_code = 'sales_order';
+AND sales_order_type_code = 'sales_order'
+AND number IN (sqlc.slice('numbers'));
 
--- name: CheckDuplicatePurchaseOrderNumber :one
-SELECT COUNT(*) FROM sales_order
-WHERE number = sqlc.arg('value')
-AND owner_account_id = sqlc.arg('account_id')
+-- name: ListTakenPurchaseOrderNumbers :many
+SELECT number FROM sales_order
+WHERE owner_account_id = sqlc.arg('account_id')
 AND buyer_account_id = sqlc.arg('account_id')
-AND sales_order_type_code = 'purchase_order';
+AND sales_order_type_code = 'purchase_order'
+AND number IN (sqlc.slice('numbers'));
 
--- name: CheckDuplicateSupplierNumber :one
-SELECT COUNT(*) FROM account_relation
-WHERE external_number = sqlc.arg('value')
-AND owner_account_id = sqlc.arg('account_id')
-AND account_relation_role_code = 'supplier';
+-- name: ListTakenSupplierNumbers :many
+SELECT external_number FROM account_relation
+WHERE owner_account_id = sqlc.arg('account_id')
+AND account_relation_role_code = 'supplier'
+AND external_number IN (sqlc.slice('numbers'));
 
--- name: CheckDuplicateCustomerNumber :one
-SELECT COUNT(*) FROM account_relation
-WHERE external_number = sqlc.arg('value')
-AND owner_account_id = sqlc.arg('account_id')
-AND account_relation_role_code = 'customer';
+-- name: ListTakenCustomerNumbers :many
+SELECT external_number FROM account_relation
+WHERE owner_account_id = sqlc.arg('account_id')
+AND account_relation_role_code = 'customer'
+AND external_number IN (sqlc.slice('numbers'));
 
--- name: CheckDuplicateProductionRunNumber :one
-SELECT COUNT(*) FROM production_run
-WHERE number = sqlc.arg('value')
-AND account_id = sqlc.arg('account_id');
+-- name: ListTakenProductionRunNumbers :many
+SELECT number FROM production_run
+WHERE account_id = sqlc.arg('account_id')
+AND number IN (sqlc.slice('numbers'));

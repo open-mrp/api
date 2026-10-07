@@ -96,7 +96,7 @@ func (s *machineSvcImpl) BatchGetMachinesByIDs(ctx context.Context, ids []string
 		return nil, tracing.Trace(span, apierror.NewInvariantViolationError("Identity not found in context."))
 	}
 
-	if apiErr := identity.CheckIsInternalActor(); apiErr != nil {
+	if apiErr := identity.CheckIsInternalActorForRead(); apiErr != nil {
 		return nil, tracing.Trace(span, apiErr)
 	}
 	if apiErr := identity.CheckHasPermission(types.PermissionDomainMachines, types.ActionRead); apiErr != nil {
@@ -374,7 +374,7 @@ func (s *machineSvcImpl) DeleteMachine(ctx context.Context, machineID string) *a
 	})
 	if apiErr != nil {
 		if apierror.IsNotFound(apiErr) {
-			wasDeleted, deletedCheckErr := s.repos.NewDeletedRecordRepo().Exists(ctx, constants.DeletedRecordResourceTypeMachine, machineID)
+			wasDeleted, deletedCheckErr := s.repos.NewDeletedRecordRepo().ExistsInAccount(ctx, constants.DeletedRecordResourceTypeMachine, machineID, accountID)
 			if deletedCheckErr != nil {
 				return tracing.Trace(span, deletedCheckErr)
 			}
@@ -386,7 +386,7 @@ func (s *machineSvcImpl) DeleteMachine(ctx context.Context, machineID string) *a
 	}
 
 	apiErr = s.withTx(ctx, func(txCtx context.Context, txSvc *machineSvcImpl) *apierror.APIError {
-		if apiErr := txSvc.repos.NewDeletedRecordRepo().Create(txCtx, constants.DeletedRecordResourceTypeMachine, machine.ID, machine); apiErr != nil {
+		if apiErr := txSvc.repos.NewDeletedRecordRepo().CreateInAccount(txCtx, constants.DeletedRecordResourceTypeMachine, machine.ID, accountID, machine); apiErr != nil {
 			return apiErr
 		}
 

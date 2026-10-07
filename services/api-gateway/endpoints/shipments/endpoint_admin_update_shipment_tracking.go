@@ -18,8 +18,8 @@ import (
 type AdminUpdateShipmentTrackingRequest struct {
 	// ID of the shipment to correct.
 	ShipmentID string `path:"id" validate:"required"`
-	// Carrier master tracking number covering the shipment as a whole.
-	MasterTrackingNumber field.Optional[string] `json:"master_tracking_number,omitzero" validate:"omitempty,max=255"`
+	// Carrier master tracking number covering the shipment as a whole; send `null` to clear it.
+	MasterTrackingNumber field.Clearable[string] `json:"master_tracking_number,omitzero" validate:"omitempty,max=255"`
 	// ID of the carrier that actually carried the shipment; the shipment's cases move with it.
 	CarrierID field.Optional[string] `json:"carrier_id,omitzero" validate:"omitempty"`
 	// ID of the carrier service level the shipment actually traveled on.
@@ -28,7 +28,7 @@ type AdminUpdateShipmentTrackingRequest struct {
 }
 
 var sampleAdminUpdateShipmentTrackingRequest = &AdminUpdateShipmentTrackingRequest{
-	MasterTrackingNumber: field.Some("1Z999AA10123456784"),
+	MasterTrackingNumber: field.Set("1Z999AA10123456784"),
 }
 
 func (*AdminUpdateShipmentTrackingRequest) SchemaExample() any {

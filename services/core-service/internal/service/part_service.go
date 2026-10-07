@@ -433,8 +433,8 @@ func (s *partSvcImpl) UpdatePart(ctx context.Context, params domain.UpdatePartPa
 	}
 }
 
-// updatePartInTx updates a part's item fields (sku, description, notes) within an
-// existing transaction and returns the fresh part. Shared by UpdatePart (single) and
+// updatePartInTx updates a part's category and item fields (sku, description, notes)
+// within an existing transaction and returns the fresh part. Shared by UpdatePart (single) and
 // BulkUpsertParts (batch); it does not own the idempotency/permission envelope.
 func (s *partSvcImpl) updatePartInTx(txCtx context.Context, params domain.UpdatePartParams) (*domain.Part, *apierror.APIError) {
 	txPartRepo := s.repos.NewPartRepo()
@@ -444,6 +444,17 @@ func (s *partSvcImpl) updatePartInTx(txCtx context.Context, params domain.Update
 	old, apiErr := txPartRepo.Get(txCtx, domain.GetPartParams{AccountID: params.AccountID, PartID: params.PartID, Includes: params.Includes})
 	if apiErr != nil {
 		return nil, apiErr
+	}
+
+	if params.CategoryID != nil {
+		if _, apiErr := changeItemCategoryInTx(txCtx, s.repos, params.AccountID, old.ItemID, *params.CategoryID, nil); apiErr != nil {
+			return nil, apiErr
+		}
+		// The move is audited on the item, so the part's own diff starts after it.
+		old, apiErr = txPartRepo.Get(txCtx, domain.GetPartParams{AccountID: params.AccountID, PartID: params.PartID, Includes: params.Includes})
+		if apiErr != nil {
+			return nil, apiErr
+		}
 	}
 
 	// Check SKU uniqueness if being updated, excluding the current item.
@@ -531,7 +542,7 @@ func (s *partSvcImpl) DeletePart(ctx context.Context, partID string) (*domain.Pa
 	part, apiErr := s.repos.NewPartRepo().Get(ctx, domain.GetPartParams{AccountID: accountID, PartID: partID})
 	if apiErr != nil {
 		if apierror.IsNotFound(apiErr) {
-			wasDeleted, deletedCheckErr := s.repos.NewDeletedRecordRepo().Exists(ctx, constants.DeletedRecordResourceTypePart, partID)
+			wasDeleted, deletedCheckErr := s.repos.NewDeletedRecordRepo().ExistsInAccount(ctx, constants.DeletedRecordResourceTypePart, partID, accountID)
 			if deletedCheckErr != nil {
 				return nil, tracing.Trace(span, deletedCheckErr)
 			}
@@ -544,7 +555,7 @@ func (s *partSvcImpl) DeletePart(ctx context.Context, partID string) (*domain.Pa
 
 	// Soft-delete within a transaction.
 	apiErr = s.withTx(ctx, func(txCtx context.Context, txSvc *partSvcImpl) *apierror.APIError {
-		if apiErr := txSvc.repos.NewDeletedRecordRepo().Create(txCtx, constants.DeletedRecordResourceTypePart, part.ID, part); apiErr != nil {
+		if apiErr := txSvc.repos.NewDeletedRecordRepo().CreateInAccount(txCtx, constants.DeletedRecordResourceTypePart, part.ID, accountID, part); apiErr != nil {
 			return apiErr
 		}
 

@@ -18,5 +18,6 @@ func (f *mediatorFactoryImpl) Build(repoFactory domain.RepoFactory) domain.Media
 		BurnRate:              NewBurnRateMed(&BurnRateMedConfig{Repos: repoFactory}),
 		PaymentFlags:          NewPaymentFlagsMed(&PaymentFlagsMedConfig{Repos: repoFactory}),
 		ProductionRunActivity: NewProductionRunActivityMed(&ProductionRunActivityMedConfig{Repos: repoFactory}),
+		Address:               NewAddressMed(&AddressMedConfig{Repos: repoFactory}),
 	}
 }

@@ -24,12 +24,20 @@ type CreatePurchaseOrderRequest struct {
 	Number field.Optional[string] `json:"number,omitzero" validate:"omitempty,max=255"`
 	// ID of one of the supplier's saved addresses to bill the order to.
 	//
-	// When set, the inline `bill_to_*` fields are ignored.
+	// A bill-to address is required: give it here, as `bill_to_address`, or through the flat `bill_to_*` fields. When set, the flat `bill_to_*` fields are ignored.
 	BillToAddressID field.Optional[string] `json:"bill_to_address_id,omitzero" validate:"omitempty"`
 	// ID of one of the supplier's saved addresses to ship the order to.
 	//
-	// When set, the inline `ship_to_*` fields are ignored.
+	// A ship-to address is required: give it here, as `ship_to_address`, or through the flat `ship_to_*` fields. When set, the flat `ship_to_*` fields are ignored.
 	ShipToAddressID field.Optional[string] `json:"ship_to_address_id,omitzero" validate:"omitempty"`
+	// Bill-to address saved to the supplier's account with the order: a new address, or an update to one of the supplier's saved addresses named by its `id`.
+	//
+	// Saving it needs no permission beyond creating the order. Cannot be combined with `bill_to_address_id` or the `bill_to_*` fields.
+	BillToAddress field.Optional[apirequest.InlineAddressInput] `json:"bill_to_address,omitzero"`
+	// Ship-to address saved to the supplier's account with the order: a new address, or an update to one of the supplier's saved addresses named by its `id`.
+	//
+	// Saving it needs no permission beyond creating the order. Cannot be combined with `ship_to_address_id` or the `ship_to_*` fields. An identical `bill_to_address` and `ship_to_address` are saved as one address.
+	ShipToAddress field.Optional[apirequest.InlineAddressInput] `json:"ship_to_address,omitzero"`
 	// Free-form note to record on the order.
 	Note field.Optional[string] `json:"note,omitzero"`
 	// ID of the carrier for the order's freight.
@@ -50,6 +58,8 @@ type CreatePurchaseOrderRequest struct {
 	// ID of the payment term agreed with the supplier.
 	PaymentTermID field.Optional[string] `json:"payment_term_id,omitzero" validate:"omitempty"`
 	// Bill-to address name.
+	//
+	// Required when the bill-to address is given through the flat `bill_to_*` fields.
 	BillToName field.Optional[string] `json:"bill_to_name,omitzero" validate:"omitempty,max=255"`
 	// Bill-to street line 1.
 	BillToStreetLine1 field.Optional[string] `json:"bill_to_street_line_1,omitzero" validate:"omitempty,max=255"`
@@ -62,8 +72,12 @@ type CreatePurchaseOrderRequest struct {
 	// Bill-to postal code.
 	BillToPostalCode field.Optional[string] `json:"bill_to_postal_code,omitzero" validate:"omitempty,max=255"`
 	// Bill-to country as a two-letter code.
+	//
+	// Required when the bill-to address is given through the flat `bill_to_*` fields.
 	BillToCountry field.Optional[string] `json:"bill_to_country,omitzero" validate:"omitempty,max=2"`
 	// Ship-to address name.
+	//
+	// Required when the ship-to address is given through the flat `ship_to_*` fields.
 	ShipToName field.Optional[string] `json:"ship_to_name,omitzero" validate:"omitempty,max=255"`
 	// Ship-to street line 1.
 	ShipToStreetLine1 field.Optional[string] `json:"ship_to_street_line_1,omitzero" validate:"omitempty,max=255"`
@@ -76,6 +90,8 @@ type CreatePurchaseOrderRequest struct {
 	// Ship-to postal code.
 	ShipToPostalCode field.Optional[string] `json:"ship_to_postal_code,omitzero" validate:"omitempty,max=255"`
 	// Ship-to country as a two-letter code.
+	//
+	// Required when the ship-to address is given through the flat `ship_to_*` fields.
 	ShipToCountry field.Optional[string] `json:"ship_to_country,omitzero" validate:"omitempty,max=2"`
 	// Order lines to create with the order.
 	//
@@ -107,6 +123,7 @@ var sampleCreatePOShipToPostalCode = apiresource.SampleAddressPostalCode
 var sampleCreatePOShipToCountry = apiresource.SampleAddressCountry
 var sampleCreatePurchaseOrderRequest = &CreatePurchaseOrderRequest{
 	SupplierAccountID: apiresource.SampleSupplierID,
+	BillToAddressID:   field.Some(apiresource.SampleCRUDAddressID),
 	Note:              field.Some(sampleCreatePONote),
 	CarrierID:         field.Some(sampleCreatePOCarrierID),
 	ServiceLevelID:    field.Some(sampleCreatePOServiceLevelID),
@@ -135,7 +152,7 @@ func (*CreatePurchaseOrderRequest) SchemaExample() any {
 
 // Creates a purchase order.
 //
-// The order number is assigned automatically from a per-account sequence unless `number` is given, and the order starts in `estimate` status; issue it separately to send it to the supplier and open it for receiving. Bill-to and ship-to addresses are either one of the supplier's saved addresses, named by id, or created as new address records from the inline address fields. Any provided lines and email contacts are created with the order.
+// The order number is assigned automatically from a per-account sequence unless `number` is given, and the order starts in `estimate` status; issue it separately to send it to the supplier and open it for receiving. Both a bill-to and a ship-to address are required. Each is one of the supplier's saved addresses, named by id, an address object saved to the supplier's account with the order, or a new address record created from the flat address fields, which then need at least a name and a country. Any provided lines and email contacts are created with the order.
 //
 // A line that references an inventory item also links that item's material to the supplier, if it is not linked already, so the material shows up as sourced from them.
 type CreatePurchaseOrderEndpoint struct{}

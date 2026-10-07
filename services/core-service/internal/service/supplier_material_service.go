@@ -17,6 +17,9 @@ import (
 
 var supplierMaterialSvcTracer = tracing.GetTracer("core-service.supplier_material_service")
 
+// supplierDescriptionMaxBytes is what supplier_material.supplier_description, a TEXT column, holds.
+const supplierDescriptionMaxBytes = 65535
+
 type supplierMaterialSvcImpl struct {
 	repos           domain.RepoFactory
 	mediatorFactory domain.MediatorFactory
@@ -133,7 +136,7 @@ func (s *supplierMaterialSvcImpl) GetSupplierMaterial(ctx context.Context, suppl
 // 1. Extract and validate the caller's identity, actor type, and suppliers:create permission.
 // 2. Generate a unique supplier material ID.
 // 3. Upsert an idempotency key; if already finished, return the cached response.
-// 4. Within a transaction, check for duplicate material+supplier combination.
+// 4. Within a transaction, require the supplier and the material to be the caller's, then refuse a duplicate link.
 // 5. Insert the supplier material record and cache the success response.
 // 6. On error, cache the error response for idempotent replay.
 func (s *supplierMaterialSvcImpl) CreateSupplierMaterial(ctx context.Context, params domain.CreateSupplierMaterialParams) (*domain.SupplierMaterial, *apierror.APIError) {
@@ -149,6 +152,9 @@ func (s *supplierMaterialSvcImpl) CreateSupplierMaterial(ctx context.Context, pa
 		return nil, tracing.Trace(span, apiErr)
 	}
 	if apiErr := identity.CheckHasPermission(types.PermissionDomainSuppliers, types.ActionCreate); apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
+	if apiErr := checkSupplierDescription(params.SupplierDescription); apiErr != nil {
 		return nil, tracing.Trace(span, apiErr)
 	}
 
@@ -178,6 +184,20 @@ func (s *supplierMaterialSvcImpl) CreateSupplierMaterial(ctx context.Context, pa
 		var result *domain.SupplierMaterial
 		apiErr = s.withTx(ctx, func(txCtx context.Context, txSvc *supplierMaterialSvcImpl) *apierror.APIError {
 			txRepo := txSvc.repos.NewSupplierMaterialRepo()
+
+			// Both ends of the link must be the owner's: the supplier one of its suppliers, the material one of its items.
+			if _, apiErr := txSvc.repos.NewSupplierRepo().Get(txCtx, domain.GetSupplierParams{OwnerAccountID: params.OwnerAccountID, SupplierID: params.SupplierAccountID}); apiErr != nil {
+				if apierror.IsNotFound(apiErr) {
+					return apierror.NewResourceNotFoundError("No supplier found with the provided ID.").WithParam("supplier_id")
+				}
+				return apiErr
+			}
+			if _, apiErr := txSvc.repos.NewMaterialRepo().GetByID(txCtx, domain.GetMaterialParams{AccountID: params.OwnerAccountID, MaterialID: params.MaterialID}); apiErr != nil {
+				if apierror.IsNotFound(apiErr) {
+					return apierror.NewResourceNotFoundError("No material found with the provided ID.").WithParam("material_id")
+				}
+				return apiErr
+			}
 
 			exists, apiErr := txRepo.ExistsByMaterialAndSupplier(txCtx, params.OwnerAccountID, params.MaterialID, params.SupplierAccountID)
 			if apiErr != nil {
@@ -238,6 +258,9 @@ func (s *supplierMaterialSvcImpl) UpdateSupplierMaterial(ctx context.Context, pa
 		return nil, tracing.Trace(span, apiErr)
 	}
 	if apiErr := identity.CheckHasPermission(types.PermissionDomainSuppliers, types.ActionUpdate); apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
+	if apiErr := checkSupplierDescription(params.SupplierDescription); apiErr != nil {
 		return nil, tracing.Trace(span, apiErr)
 	}
 
@@ -330,7 +353,7 @@ func (s *supplierMaterialSvcImpl) DeleteSupplierMaterial(ctx context.Context, pa
 
 	var result *domain.SupplierMaterial
 	apiErr = s.withTx(ctx, func(txCtx context.Context, txSvc *supplierMaterialSvcImpl) *apierror.APIError {
-		if apiErr := txSvc.repos.NewDeletedRecordRepo().Create(txCtx, constants.DeletedRecordResourceTypeSupplierMaterial, entity.ID, entity); apiErr != nil {
+		if apiErr := txSvc.repos.NewDeletedRecordRepo().CreateInAccount(txCtx, constants.DeletedRecordResourceTypeSupplierMaterial, entity.ID, params.OwnerAccountID, entity); apiErr != nil {
 			return apiErr
 		}
 
@@ -360,4 +383,13 @@ func (s *supplierMaterialSvcImpl) DeleteSupplierMaterial(ctx context.Context, pa
 	}
 
 	return result, nil
+}
+
+// checkSupplierDescription refuses a description the column cannot hold. The gateway counts characters, and a
+// character can take up to four bytes.
+func checkSupplierDescription(description *string) *apierror.APIError {
+	if description != nil && len(*description) > supplierDescriptionMaxBytes {
+		return apierror.NewValidationErrorWithParam("The supplier description must be at most 65,535 bytes.", "supplier_description")
+	}
+	return nil
 }

@@ -9,8 +9,10 @@ import (
 	factorymock "github.com/open-mrp/api/services/core-service/internal/domain/mock/factory"
 	mediatormock "github.com/open-mrp/api/services/core-service/internal/domain/mock/mediator"
 	repositorymock "github.com/open-mrp/api/services/core-service/internal/domain/mock/repository"
+	"github.com/open-mrp/api/services/core-service/internal/mediator"
 	"github.com/open-mrp/api/shared/appctx"
 	apierror "github.com/open-mrp/api/shared/errors"
+	"github.com/open-mrp/api/shared/field"
 
 	"github.com/stretchr/testify/suite"
 	"go.uber.org/mock/gomock"
@@ -49,6 +51,7 @@ func (suite *AddressSvcScopeTestSuite) SetupTest() {
 	suite.mediatorFactory.EXPECT().Build(gomock.Any()).Return(domain.Mediators{
 		Idempotency: suite.idempotencyMed,
 		EditAccess:  suite.editAccessMed,
+		Address:     mediator.NewAddressMed(&mediator.AddressMedConfig{Repos: suite.repoFactory}),
 	}).AnyTimes()
 
 	suite.svc = NewAddressSvc(&AddressSvcConfig{
@@ -174,26 +177,20 @@ func (suite *AddressSvcScopeTestSuite) TestCreateAddress_InternalActor_ScopedToT
 	suite.Equal(accountID, linkedAccountID)
 }
 
-// A roled internal actor on its own account that holds customers:update (the
-// legacy permission for address writes) but NOT addresses:create must still be
-// allowed to create — the downstream check must not be stricter than the
-// gateway's OR-gate. This is the customer-portal regression.
-func (suite *AddressSvcScopeTestSuite) TestCreateAddress_InternalActor_CustomersUpdateOnly_Allowed() {
-	const accountID = "acct_customer_portal"
+// A roled internal actor on its own account that holds customers:update but not addresses:create is refused: in the
+// seller's own account an address write takes the addresses permission, and customers:update reaches only a customer's.
+func (suite *AddressSvcScopeTestSuite) TestCreateAddress_InternalActor_CustomersUpdateOnly_Refused() {
+	const accountID = "acct_internal"
 
-	suite.expectIdempotencyStartedThenSuccess()
-	suite.editAccessMed.EXPECT().CheckEditAccess(gomock.Any(), gomock.Any(), gomock.Any()).Times(0)
-	suite.addressRepo.EXPECT().
-		Create(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
-		DoAndReturn(func(_ context.Context, addressID, _, _ string, params domain.CreateAddressParams) (*domain.Address, *apierror.APIError) {
-			return &domain.Address{ID: addressID, Name: params.Name}, nil
-		}).
-		Times(1)
+	suite.idempotencyMed.EXPECT().UpsertIdempotencyKey(gomock.Any(), gomock.Any()).Times(0)
+	suite.addressRepo.EXPECT().Create(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Times(0)
 
 	ctx := addressInternalCtxWithPerms(accountID, map[string]bool{"customers:update": true})
 	_, apiErr := suite.svc.CreateAddress(ctx, domain.CreateAddressParams{Name: "Ship To", Country: "US"})
 
-	suite.Require().Nil(apiErr, "customers:update must authorize an own-account address create")
+	suite.Require().NotNil(apiErr)
+	suite.Equal(apierror.ErrorCodeInsufficientPerms, apiErr.Code)
+	suite.Contains(apiErr.PublicMessage, "addresses:create")
 }
 
 // Deleting an address that a non-active account still defaults to is allowed:
@@ -211,7 +208,7 @@ func (suite *AddressSvcScopeTestSuite) TestDeleteAddress_ClearsStaleAccountDefau
 	// A non-active account's default does not block deletion.
 	suite.addressRepo.EXPECT().CheckAddressNotInUse(gomock.Any(), addressID).Return(nil)
 	suite.addressRepo.EXPECT().Get(gomock.Any(), gomock.Any()).Return(&domain.Address{ID: addressID, Name: "Ship To"}, nil)
-	deletedRecordRepo.EXPECT().Create(gomock.Any(), gomock.Any(), addressID, gomock.Any()).Return(nil)
+	deletedRecordRepo.EXPECT().CreateInAccount(gomock.Any(), gomock.Any(), addressID, accountID, gomock.Any()).Return(nil)
 
 	// The stale account-default pointer must be nulled before the address row is deleted.
 	gomock.InOrder(
@@ -254,4 +251,32 @@ func (suite *AddressSvcScopeTestSuite) TestCreateAddress_InternalActor_NoWritePe
 	_, apiErr := suite.svc.CreateAddress(ctx, domain.CreateAddressParams{Name: "Ship To", Country: "US"})
 
 	suite.Require().NotNil(apiErr)
+}
+
+// An update that does not name the receiving calendar writes back the one the address already has, since the column is assigned rather than coalesced.
+func (suite *AddressSvcScopeTestSuite) TestUpdateAddress_OmittedReceiveCalendarIsKept() {
+	const accountID = "acct_internal"
+	const addressID = "addr_dock"
+	calendarID := "occd_dock"
+
+	suite.expectIdempotencyStartedThenSuccess()
+	suite.addressRepo.EXPECT().IsInAccount(gomock.Any(), accountID, addressID).Return(true, nil)
+	suite.addressRepo.EXPECT().Get(gomock.Any(), gomock.Any()).Return(&domain.Address{
+		ID: addressID, Name: "Dock", ReceiveCalendarID: &calendarID, Geolocation: &domain.Geolocation{Country: "US"},
+	}, nil)
+
+	var written field.Clearable[string]
+	suite.addressRepo.EXPECT().Update(gomock.Any(), gomock.Any()).
+		DoAndReturn(func(_ context.Context, params domain.UpdateAddressParams) (*domain.Address, *apierror.APIError) {
+			written = params.ReceiveCalendarID
+			return &domain.Address{ID: addressID, Name: "Dock 2", ReceiveCalendarID: &calendarID}, nil
+		})
+
+	name := "Dock 2"
+	_, apiErr := suite.svc.UpdateAddress(addressInternalCtx(accountID), domain.UpdateAddressParams{AddressID: addressID, Name: &name})
+
+	suite.Require().Nil(apiErr)
+	got, ok := written.Value()
+	suite.True(ok, "the existing calendar must be written back")
+	suite.Equal(calendarID, got)
 }

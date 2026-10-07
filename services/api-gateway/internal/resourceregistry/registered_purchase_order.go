@@ -14,7 +14,13 @@ func init() {
 		ObjectType: constants.ObjectTypePurchaseOrder,
 		Load:       resourceloaders.LoadPurchaseOrders,
 		Subs: []resourcekit.SubField{
-			{Key: "supplier", Populate: populateSupplierOnPO},
+			{
+				Key:         "supplier",
+				Target:      constants.ObjectTypeSupplier,
+				Cardinality: resourcekit.CardinalityOnePtr,
+				ExtractIDs:  extractSupplierIDFromPO,
+				Populate:    populateSupplierOnPO,
+			},
 			{
 				Key:         "created_by",
 				Target:      constants.ObjectTypeCreatedBy,
@@ -129,13 +135,21 @@ func extractUnitPriceRefFromPOLine(_ context.Context, parent any) []any {
 	return []any{l.UnitPrice}
 }
 
-func populateSupplierOnPO(ctx context.Context, parent any, _ map[string]any) {
+func extractSupplierIDFromPO(ctx context.Context, parent any) []string {
 	po := parent.(*apiresource.PurchaseOrder)
-	v, ok := resourcekit.GetLoadMeta(ctx).Get(constants.ObjectTypePurchaseOrder, po.ID, "supplier")
-	if !ok {
-		return
+	id, _ := resourcekit.GetLoadMeta(ctx).GetString(constants.ObjectTypePurchaseOrder, po.ID, "supplier_id")
+	if id == "" {
+		return nil
 	}
-	po.Supplier = v.(*apiresource.Supplier)
+	return []string{id}
+}
+
+func populateSupplierOnPO(ctx context.Context, parent any, loaded map[string]any) {
+	po := parent.(*apiresource.PurchaseOrder)
+	id, _ := resourcekit.GetLoadMeta(ctx).GetString(constants.ObjectTypePurchaseOrder, po.ID, "supplier_id")
+	if v, ok := loaded[id]; ok {
+		po.Supplier = v.(*apiresource.Supplier)
+	}
 }
 
 func populateBillToAddressOnPO(ctx context.Context, parent any, _ map[string]any) {

@@ -77,6 +77,13 @@ func (s *customerProductLineAccessSvcImpl) withTx(ctx context.Context, fn func(c
 	})
 }
 
+// errNoProductLinesGranted refuses a grant of no product lines. An access record is its product lines,
+// so an empty set would leave nothing to read, edit or delete; revoking access is a delete.
+func errNoProductLinesGranted() *apierror.APIError {
+	return apierror.NewValidationErrorWithParam(
+		"Grant at least one product line. To revoke access entirely, delete the product line access.", "product_line_ids")
+}
+
 func (s *customerProductLineAccessSvcImpl) ListCustomerProductLineAccess(ctx context.Context, params domain.ListCustomerProductLineAccessParams) (*domain.ListCustomerProductLineAccessResult, *apierror.APIError) {
 	ctx, span := customerProductLineAccessSvcTracer.Start(ctx, "service.customer_product_line_access.list")
 	defer span.End()
@@ -182,6 +189,10 @@ func (s *customerProductLineAccessSvcImpl) CreateCustomerProductLineAccess(ctx c
 	}
 
 	params.AccountID = identity.Target.AccountID
+	params.ProductLineIDs = dedupeStrings(params.ProductLineIDs)
+	if len(params.ProductLineIDs) == 0 {
+		return nil, tracing.Trace(span, errNoProductLinesGranted())
+	}
 
 	meds := s.mediators()
 
@@ -264,6 +275,10 @@ func (s *customerProductLineAccessSvcImpl) UpdateCustomerProductLineAccess(ctx c
 	}
 
 	params.AccountID = identity.Target.AccountID
+	params.ProductLineIDs = dedupeStrings(params.ProductLineIDs)
+	if len(params.ProductLineIDs) == 0 {
+		return nil, tracing.Trace(span, errNoProductLinesGranted())
+	}
 
 	meds := s.mediators()
 
@@ -347,7 +362,7 @@ func (s *customerProductLineAccessSvcImpl) DeleteCustomerProductLineAccess(ctx c
 	existing, apiErr := s.repos.NewCustomerProductLineAccessRepo().Get(ctx, accountID, customerID)
 	if apiErr != nil {
 		if apierror.IsNotFound(apiErr) {
-			wasDeleted, deletedCheckErr := s.repos.NewDeletedRecordRepo().Exists(ctx, constants.DeletedRecordResourceTypeCustomerProductLineAccess, customerID)
+			wasDeleted, deletedCheckErr := s.repos.NewDeletedRecordRepo().ExistsInAccount(ctx, constants.DeletedRecordResourceTypeCustomerProductLineAccess, customerID, accountID)
 			if deletedCheckErr != nil {
 				return tracing.Trace(span, deletedCheckErr)
 			}
@@ -362,7 +377,7 @@ func (s *customerProductLineAccessSvcImpl) DeleteCustomerProductLineAccess(ctx c
 	}
 
 	apiErr = s.withTx(ctx, func(txCtx context.Context, txSvc *customerProductLineAccessSvcImpl) *apierror.APIError {
-		if apiErr := txSvc.repos.NewDeletedRecordRepo().Create(txCtx, constants.DeletedRecordResourceTypeCustomerProductLineAccess, existing.CustomerID, existing); apiErr != nil {
+		if apiErr := txSvc.repos.NewDeletedRecordRepo().CreateInAccount(txCtx, constants.DeletedRecordResourceTypeCustomerProductLineAccess, existing.CustomerID, accountID, existing); apiErr != nil {
 			return apiErr
 		}
 

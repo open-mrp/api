@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"encoding/json"
+	"time"
 
 	"github.com/open-mrp/api/services/notification-service/internal/domain"
 	"github.com/open-mrp/api/services/notification-service/internal/infrastructure/sqlc"
@@ -432,6 +433,23 @@ func (r *messageRepoImpl) CancelScheduled(ctx context.Context, id, accountID, ac
 	ctx, span := messageRepoTracer.Start(ctx, "repository.message.cancel_scheduled")
 	defer span.End()
 	rows, err := r.db.CancelScheduledMessageForUser(ctx, sqlc.CancelScheduledMessageForUserParams{
+		ID:            id,
+		AccountID:     accountID,
+		AccountUserID: db.NullStringPtr(&accountUserID),
+	})
+	if apiErr := db.MapSQLError(err); apiErr != nil {
+		return false, tracing.Trace(span, apiErr)
+	}
+	return rows > 0, nil
+}
+
+func (r *messageRepoImpl) Reschedule(ctx context.Context, id, accountID, accountUserID string, scheduledFor time.Time, body, preview *string) (bool, *apierror.APIError) {
+	ctx, span := messageRepoTracer.Start(ctx, "repository.message.reschedule")
+	defer span.End()
+	rows, err := r.db.RescheduleMessageForUser(ctx, sqlc.RescheduleMessageForUserParams{
+		ScheduledFor:  sql.NullTime{Time: scheduledFor, Valid: true},
+		Body:          db.NullStringPtr(body),
+		Preview:       db.NullStringPtr(preview),
 		ID:            id,
 		AccountID:     accountID,
 		AccountUserID: db.NullStringPtr(&accountUserID),

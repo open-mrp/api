@@ -1698,6 +1698,25 @@ func (q *Queries) GetRelationsProductLines(ctx context.Context, relationIds []st
 	return items, nil
 }
 
+const highestNumericCustomerNumber = `-- name: HighestNumericCustomerNumber :one
+SELECT CAST(COALESCE(MAX(CAST(external_number AS UNSIGNED)), 0) AS SIGNED) AS highest
+FROM account_relation
+WHERE owner_account_id = ?
+AND account_relation_role_code = 'customer'
+AND external_number REGEXP '^[0-9]{1,10}$'
+AND CAST(external_number AS UNSIGNED) < 2147483647
+`
+
+// HighestNumericCustomerNumber is the highest all-digit customer number the owner uses that the counter
+// (an INT) could also hand out. It is read only when the counter is created or turns out to be behind a
+// number someone typed in.
+func (q *Queries) HighestNumericCustomerNumber(ctx context.Context, ownerAccountID string) (int64, error) {
+	row := q.db.QueryRowContext(ctx, highestNumericCustomerNumber, ownerAccountID)
+	var highest int64
+	err := row.Scan(&highest)
+	return highest, err
+}
+
 const insertAccountRelation = `-- name: InsertAccountRelation :exec
 INSERT INTO account_relation (
     id, owner_account_id, counterparty_account_id, account_relation_role_code,
@@ -1996,6 +2015,57 @@ func (q *Queries) IsCustomerCommissionExempt(ctx context.Context, arg IsCustomer
 	var exists bool
 	err := row.Scan(&exists)
 	return exists, err
+}
+
+const listCustomerContacts = `-- name: ListCustomerContacts :many
+SELECT
+    au.account_id,
+    u.name,
+    u.email
+FROM account_user au FORCE INDEX (account_user_account_id_status_code_created_at_id_idx)
+INNER JOIN ` + "`" + `user` + "`" + ` u ON u.id = au.user_id
+WHERE au.account_id IN (/*SLICE:account_ids*/?)
+ORDER BY au.account_id, au.created_at, au.id
+`
+
+type ListCustomerContactsRow struct {
+	AccountID string
+	Name      sql.NullString
+	Email     sql.NullString
+}
+
+// The people who sign in to each customer account, oldest member first. FORCE INDEX: past the index-dive limit the planner sizes an IN list from production's thinly sampled statistics and can scan every member.
+func (q *Queries) ListCustomerContacts(ctx context.Context, accountIds []string) ([]ListCustomerContactsRow, error) {
+	query := listCustomerContacts
+	var queryParams []interface{}
+	if len(accountIds) > 0 {
+		for _, v := range accountIds {
+			queryParams = append(queryParams, v)
+		}
+		query = strings.Replace(query, "/*SLICE:account_ids*/?", strings.Repeat(",?", len(accountIds))[1:], 1)
+	} else {
+		query = strings.Replace(query, "/*SLICE:account_ids*/?", "NULL", 1)
+	}
+	rows, err := q.db.QueryContext(ctx, query, queryParams...)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []ListCustomerContactsRow
+	for rows.Next() {
+		var i ListCustomerContactsRow
+		if err := rows.Scan(&i.AccountID, &i.Name, &i.Email); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
 }
 
 const listCustomersBackward = `-- name: ListCustomersBackward :many
@@ -3370,6 +3440,22 @@ func (q *Queries) ListPriceGroupRelationIDs(ctx context.Context, accountGroupIds
 	return items, nil
 }
 
+const lockCustomerNumbers = `-- name: LockCustomerNumbers :one
+SELECT id FROM account
+WHERE id = ?
+FOR UPDATE
+`
+
+// No unique index guards customer numbers, so their writers queue on the owner's account row, as
+// supplier numbers do. Take it before the transaction's first read so the number check sees every
+// earlier holder's commit.
+func (q *Queries) LockCustomerNumbers(ctx context.Context, ownerAccountID string) (string, error) {
+	row := q.db.QueryRowContext(ctx, lockCustomerNumbers, ownerAccountID)
+	var id string
+	err := row.Scan(&id)
+	return id, err
+}
+
 const mergeCustomerAccountPrices = `-- name: MergeCustomerAccountPrices :exec
 UPDATE account_price SET recipient_account_id = ?, updated_at = NOW(3)
 WHERE owner_account_id = ?
@@ -3761,6 +3847,30 @@ func (q *Queries) MoveAccountUsers(ctx context.Context, arg MoveAccountUsersPara
 		query = strings.Replace(query, "/*SLICE:ids*/?", "NULL", 1)
 	}
 	_, err := q.db.ExecContext(ctx, query, queryParams...)
+	return err
+}
+
+const raiseCustomerNumberCounter = `-- name: RaiseCustomerNumberCounter :exec
+INSERT INTO sys_property (id, account_id, sys_property_type_code, value, created_at, updated_at)
+VALUES (?, ?, 'customer_number', ?, NOW(3), NOW(3))
+ON DUPLICATE KEY UPDATE value = GREATEST(value, ?), updated_at = NOW(3)
+`
+
+type RaiseCustomerNumberCounterParams struct {
+	ID        string
+	AccountID string
+	Value     int32
+}
+
+// RaiseCustomerNumberCounter moves the counter up to value, creating it there if the owner has none.
+// It never moves it down.
+func (q *Queries) RaiseCustomerNumberCounter(ctx context.Context, arg RaiseCustomerNumberCounterParams) error {
+	_, err := q.db.ExecContext(ctx, raiseCustomerNumberCounter,
+		arg.ID,
+		arg.AccountID,
+		arg.Value,
+		arg.Value,
+	)
 	return err
 }
 

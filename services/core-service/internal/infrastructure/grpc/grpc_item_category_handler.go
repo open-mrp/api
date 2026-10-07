@@ -209,6 +209,27 @@ func (h *gRPCHandler) AddItemCategoryProperty(ctx context.Context, req *pb.AddIt
 	return &emptypb.Empty{}, nil
 }
 
+func (h *gRPCHandler) CreateItemCategoryProperty(ctx context.Context, req *pb.CreateItemCategoryPropertyRequest) (*pb.CreateItemCategoryPropertyResponse, error) {
+	if req == nil {
+		return nil, contracts.NewMissingGRPCRequestDataError()
+	}
+
+	ctx, finalizeIdempotency := contracts.WithIdempotencyTracking(ctx)
+	defer finalizeIdempotency()
+
+	property, apiErr := h.itemCategorySvc.CreateItemCategoryProperty(ctx, domain.CreateItemCategoryPropertyParams{
+		ItemCategoryID: req.Id,
+		Name:           req.Name,
+	})
+	if apiErr != nil {
+		return nil, contracts.ConvertAPIErrorToGRPC(apiErr)
+	}
+
+	return &pb.CreateItemCategoryPropertyResponse{
+		Property: propertyToProto(property),
+	}, nil
+}
+
 func (h *gRPCHandler) RemoveItemCategoryProperty(ctx context.Context, req *pb.RemoveItemCategoryPropertyRequest) (*emptypb.Empty, error) {
 	if req == nil {
 		return nil, contracts.NewMissingGRPCRequestDataError()

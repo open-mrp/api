@@ -7,6 +7,7 @@ import (
 	"github.com/open-mrp/api/services/api-gateway/internal/domain"
 	grpcutil "github.com/open-mrp/api/services/api-gateway/internal/grpc"
 	"github.com/open-mrp/api/services/api-gateway/internal/resourceloaders"
+	apirequest "github.com/open-mrp/api/services/api-gateway/pkg/request"
 	apiresource "github.com/open-mrp/api/services/api-gateway/pkg/resource"
 	"github.com/open-mrp/api/services/api-gateway/pkg/resourcekit"
 	"github.com/open-mrp/api/shared/constants"
@@ -227,6 +228,8 @@ func (m *purchaseOrderSvcImpl) CreatePurchaseOrder(ctx context.Context, req *Cre
 		Number:                req.Number.Ptr(),
 		BillToAddressId:       req.BillToAddressID.Ptr(),
 		ShipToAddressId:       req.ShipToAddressID.Ptr(),
+		BillToAddress:         apirequest.InlineAddressToProto(req.BillToAddress),
+		ShipToAddress:         apirequest.InlineAddressToProto(req.ShipToAddress),
 		Includes:              resourcekit.FilterIncludes(ctx, purchaseOrderIncludes...),
 	}
 
@@ -256,6 +259,8 @@ func (m *purchaseOrderSvcImpl) UpdatePurchaseOrder(ctx context.Context, req *Upd
 		PriorityCode:          req.PriorityCode.Ptr().StringPtr(),
 		BillingAddressId:      req.BillingAddressID.Ptr(),
 		ShippingAddressId:     req.ShippingAddressID.Ptr(),
+		BillingAddress:        apirequest.InlineAddressToProto(req.BillingAddress),
+		ShippingAddress:       apirequest.InlineAddressToProto(req.ShippingAddress),
 		ContactAccountUserIds: contactAccountUserIDs,
 		ReplaceContacts:       replaceContacts,
 		Includes:              resourcekit.FilterIncludes(ctx, purchaseOrderIncludes...),
@@ -528,12 +533,7 @@ func stashPurchaseOrderSummaryMeta(ctx context.Context, info *pb.PurchaseOrderSu
 	meta := resourcekit.GetLoadMeta(ctx)
 
 	if info.SupplierId != "" {
-		meta.Set(constants.ObjectTypePurchaseOrder, d.ID, "supplier", &apiresource.Supplier{
-			ID:     info.SupplierId,
-			Object: constants.ObjectTypeSupplier,
-			Name:   info.SupplierName,
-			Number: info.SupplierNumber,
-		})
+		meta.Set(constants.ObjectTypePurchaseOrder, d.ID, "supplier_id", info.SupplierId)
 	}
 
 	if info.ShippingAddressId != "" {
@@ -573,12 +573,9 @@ func stashPurchaseOrderDetailMeta(ctx context.Context, info *pb.PurchaseOrderInf
 
 	meta := resourcekit.GetLoadMeta(ctx)
 
-	meta.Set(constants.ObjectTypePurchaseOrder, d.ID, "supplier", &apiresource.Supplier{
-		ID:     info.SupplierId,
-		Object: constants.ObjectTypeSupplier,
-		Name:   info.SupplierName,
-		Number: info.SupplierNumber,
-	})
+	if info.SupplierId != "" {
+		meta.Set(constants.ObjectTypePurchaseOrder, d.ID, "supplier_id", info.SupplierId)
+	}
 
 	if info.BillingAddressId != "" {
 		meta.Set(constants.ObjectTypePurchaseOrder, d.ID, "bill_to_address",

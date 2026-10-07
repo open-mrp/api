@@ -43,10 +43,13 @@ type Invoice struct {
 	IsEdiSent                bool                   `audit:"is_edi_sent"`
 	HasBeenSent              bool                   `audit:"has_been_sent"`
 	AcceptsInvoiceEmails     bool                   `audit:"accepts_invoice_emails"`
-	Lines                    []*InvoiceLine
-	Allocations              []*InvoiceAllocation
-	CreatedAt                time.Time
-	UpdatedAt                time.Time
+	// BillingAddress and PaymentTerm repeat the flat fields above in full, for callers that render the records.
+	BillingAddress *Address
+	PaymentTerm    *PaymentTerm
+	Lines          []*InvoiceLine
+	Allocations    []*InvoiceAllocation
+	CreatedAt      time.Time
+	UpdatedAt      time.Time
 }
 
 // InvoiceLine represents a line item in an invoice.
@@ -89,8 +92,13 @@ type InvoiceAllocation struct {
 	AmountUnitID   string
 	AmountUnitAbbr string
 	Note           *string
-	CreatedAt      time.Time
-	UpdatedAt      time.Time
+	// SettlementID and SettlementNumber name the settlement that recorded the allocation, nil when none did.
+	SettlementID     *string
+	SettlementNumber *string
+	// Transaction is the transaction the allocation draws on, read with the invoice; nil when not loaded.
+	Transaction *Transaction
+	CreatedAt   time.Time
+	UpdatedAt   time.Time
 }
 
 // InvoiceForPayment represents an invoice in the customer payment context.
@@ -106,11 +114,13 @@ type InvoiceForPayment struct {
 	IsPrepaid          bool
 	BillingAddressID   *string
 	BillingAddressName *string
-	InvoiceTotal       string
-	IsPaidInFull       bool
-	Allocations        []*InvoiceAllocation
-	CreatedAt          time.Time
-	UpdatedAt          time.Time
+	// BillingAddress is the order's billing address in full, nil when the order has none.
+	BillingAddress *Address
+	InvoiceTotal   string
+	IsPaidInFull   bool
+	Allocations    []*InvoiceAllocation
+	CreatedAt      time.Time
+	UpdatedAt      time.Time
 }
 
 // ListInvoicesParams holds parameters for listing invoices.
@@ -151,7 +161,9 @@ type UpdateInvoiceParams struct {
 	HasBeenSent  *bool
 	IsEdiSent    *bool
 	IsPaidInFull *bool
-	Includes     []string
+	// PaidInFullMarkedByID is the person setting IsPaidInFull by hand, told if recalculation overturns it.
+	PaidInFullMarkedByID *string
+	Includes             []string
 }
 
 // ListCustomerInvoicesParams holds parameters for listing invoices by customer.

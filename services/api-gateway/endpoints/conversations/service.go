@@ -187,6 +187,9 @@ func (s *conversationSvcImpl) CreateConversation(ctx context.Context, req *Creat
 	}
 	pbReq.TopicResourceId = req.TopicResourceID.Ptr()
 	pbReq.GroupId = req.GroupID.Ptr()
+	for _, p := range req.Participants {
+		pbReq.Participants = append(pbReq.Participants, &pb.ConversationParticipantRoleInput{AccountUserId: p.AccountUserID, Role: string(p.Role)})
+	}
 
 	resp, rpcErr := grpcutil.CallRPC(ctx, conversationSvcTracer, "service.conversations.create", domain.ServiceName,
 		func(ctx context.Context, opts ...grpc.CallOption) (*pb.ConversationInfo, error) {

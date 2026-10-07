@@ -72,8 +72,23 @@ func (h *gRPCHandler) GetInvoice(ctx context.Context, req *pb.GetInvoiceRequest)
 	}
 
 	return &pb.GetInvoiceResponse{
-		Invoice: invoiceToProto(invoice),
+		Invoice:                invoiceToProto(invoice),
+		AllocationTransactions: allocationTransactionsToProto(invoice.Allocations),
 	}, nil
+}
+
+// allocationTransactionsToProto lists each transaction the allocations draw on once.
+func allocationTransactionsToProto(allocations []*domain.InvoiceAllocation) []*pb.TransactionInfo {
+	var out []*pb.TransactionInfo
+	seen := make(map[string]bool)
+	for _, a := range allocations {
+		if a.Transaction == nil || seen[a.Transaction.ID] {
+			continue
+		}
+		seen[a.Transaction.ID] = true
+		out = append(out, transactionToProto(a.Transaction))
+	}
+	return out
 }
 
 func (h *gRPCHandler) UpdateInvoice(ctx context.Context, req *pb.UpdateInvoiceRequest) (*pb.UpdateInvoiceResponse, error) {
@@ -105,7 +120,8 @@ func (h *gRPCHandler) UpdateInvoice(ctx context.Context, req *pb.UpdateInvoiceRe
 	}
 
 	return &pb.UpdateInvoiceResponse{
-		Invoice: invoiceToProto(result),
+		Invoice:                invoiceToProto(result),
+		AllocationTransactions: allocationTransactionsToProto(result.Allocations),
 	}, nil
 }
 
@@ -128,12 +144,15 @@ func (h *gRPCHandler) ListCustomerInvoices(ctx context.Context, req *pb.ListCust
 	}
 
 	invoices := make([]*pb.InvoiceForPaymentInfo, len(result.Invoices))
+	var allocations []*domain.InvoiceAllocation
 	for i, inv := range result.Invoices {
 		invoices[i] = invoiceForPaymentToProto(inv)
+		allocations = append(allocations, inv.Allocations...)
 	}
 
 	return &pb.ListCustomerInvoicesResponse{
-		Invoices: invoices,
+		Invoices:               invoices,
+		AllocationTransactions: allocationTransactionsToProto(allocations),
 		PageInfo: &pb.PageInfo{
 			NextCursor:  result.PageInfo.NextCursor,
 			PrevCursor:  result.PageInfo.PrevCursor,
@@ -195,8 +214,12 @@ func invoiceToProto(inv *domain.Invoice) *pb.InvoiceInfo {
 		TotalInvoiced:            inv.TotalInvoiced,
 		CustomerStatusCode:       inv.CustomerStatusCode,
 		CustomerCommissionPolicy: inv.CustomerCommissionPolicy,
+		BillingAddress:           addressToProto(inv.BillingAddress),
 		CreatedAt:                timestamppb.New(inv.CreatedAt),
 		UpdatedAt:                timestamppb.New(inv.UpdatedAt),
+	}
+	if inv.PaymentTerm != nil {
+		info.PaymentTerm = paymentTermToProto(inv.PaymentTerm)
 	}
 
 	return info
@@ -221,6 +244,8 @@ func invoiceLineToProto(l *domain.InvoiceLine) *pb.InvoiceLineInfo {
 		OrderLineItemId:            l.OrderLineItemID,
 		OrderLineItemSku:           l.OrderLineItemSKU,
 		OrderLineProductId:         l.OrderLineProductID,
+		OrderLineItemNumber:        l.OrderLineItemNumber,
+		OrderLineDescription:       l.OrderLineDescription,
 		CreatedAt:                  timestamppb.New(l.CreatedAt),
 		UpdatedAt:                  timestamppb.New(l.UpdatedAt),
 	}
@@ -241,6 +266,8 @@ func invoiceAllocationToProto(a *domain.InvoiceAllocation) *pb.InvoiceAllocation
 		AmountUnitId:           a.AmountUnitID,
 		AmountUnitAbbreviation: a.AmountUnitAbbr,
 		Note:                   a.Note,
+		SettlementId:           a.SettlementID,
+		SettlementNumber:       a.SettlementNumber,
 		CreatedAt:              timestamppb.New(a.CreatedAt),
 		UpdatedAt:              timestamppb.New(a.UpdatedAt),
 	}
@@ -268,6 +295,7 @@ func invoiceForPaymentToProto(inv *domain.InvoiceForPayment) *pb.InvoiceForPayme
 		IsPrepaid:          inv.IsPrepaid,
 		BillingAddressId:   inv.BillingAddressID,
 		BillingAddressName: inv.BillingAddressName,
+		BillingAddress:     addressToProto(inv.BillingAddress),
 		InvoiceTotal:       inv.InvoiceTotal,
 		IsPaidInFull:       inv.IsPaidInFull,
 		Allocations:        allocations,

@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"log/slog"
 	"net/http"
 	"net/url"
 	"strconv"
@@ -43,7 +44,8 @@ type clientImpl struct {
 
 // ClientFactory creates ShippoClient instances from API keys.
 type ClientFactory struct {
-	caches *rateCaches
+	caches          *rateCaches
+	liveKeysAllowed bool
 }
 
 func NewClientFactory(cfg *ClientFactoryConfig) (*ClientFactory, error) {
@@ -55,16 +57,22 @@ func NewClientFactory(cfg *ClientFactoryConfig) (*ClientFactory, error) {
 	if err != nil {
 		return nil, err
 	}
-	return &ClientFactory{caches: caches}, nil
+	return &ClientFactory{caches: caches, liveKeysAllowed: cfg.PlatformMode.IsProduction()}, nil
 }
 
-func (f *ClientFactory) Build(apiKey string) domain.ShippoClient {
+// liveKeyPrefix marks a Shippo key that buys real labels and is billed for them.
+const liveKeyPrefix = "shippo_live_"
+
+func (f *ClientFactory) Build(apiKey string) (domain.ShippoClient, *apierror.APIError) {
+	if !f.liveKeysAllowed && strings.HasPrefix(apiKey, liveKeyPrefix) {
+		return nil, apierror.NewValidationError("Live Shippo keys (shippo_live_) are only used in production; connect a test key (shippo_test_).")
+	}
 	return &clientImpl{
 		apiKey:     apiKey,
 		httpClient: &http.Client{Timeout: shippoRequestTimeout},
 		baseURL:    shippoBaseURL,
 		caches:     f.caches,
-	}
+	}, nil
 }
 
 func (c *clientImpl) authHeader() string {
@@ -685,10 +693,10 @@ func (c *clientImpl) FetchShippingRate(ctx context.Context, params domain.FetchS
 }
 
 // pickShippingRate selects the requested service level's rate, else Shippo's BESTVALUE, else the
-// cheapest, marked up. No matching rate is 0.
+// cheapest, marked up. A missing rate is unavailable, never a quote of 0 (matching legacy's 503).
 func pickShippingRate(rates []ShipmentRate, serviceLevelToken string) (float64, *apierror.APIError) {
 	if len(rates) == 0 {
-		return 0, nil
+		return 0, domain.NewShippingRateUnavailableError("carrier returned no rates for the shipment")
 	}
 
 	if serviceLevelToken != "" {
@@ -701,7 +709,7 @@ func pickShippingRate(rates []ShipmentRate, serviceLevelToken string) (float64, 
 				return applyShippingMarkup(amount), nil
 			}
 		}
-		return 0, nil
+		return 0, domain.NewShippingRateUnavailableError("carrier returned no rate for service level " + serviceLevelToken)
 	}
 
 	for _, r := range rates {
@@ -727,7 +735,7 @@ func pickShippingRate(rates []ShipmentRate, serviceLevelToken string) (float64, 
 		}
 	}
 	if cheapest < 0 {
-		return 0, nil
+		return 0, domain.NewShippingRateUnavailableError("carrier returned no priced rates for the shipment")
 	}
 	return applyShippingMarkup(cheapest), nil
 }
@@ -817,6 +825,10 @@ func (c *clientImpl) CreateTransactionInstantLabel(ctx context.Context, params d
 			Height:       normalizeShippoDecimal(parcel.Height),
 			MassUnit:     "lb",
 			DistanceUnit: "in",
+			Metadata:     parcel.Metadata,
+		}
+		if parcel.Reference1 != "" || parcel.Reference2 != "" {
+			parcels[i].Extra = &ParcelExtra{Reference1: parcel.Reference1, Reference2: parcel.Reference2}
 		}
 	}
 
@@ -824,6 +836,7 @@ func (c *clientImpl) CreateTransactionInstantLabel(ctx context.Context, params d
 		CarrierAccount:    params.CarrierAccountObjectID,
 		ServiceLevelToken: params.ServiceLevelToken,
 		LabelFileType:     labelFileType,
+		Metadata:          params.Metadata,
 		Shipment: LabelShipment{
 			AddressFrom: toLabelAddress(params.FromAddress),
 			AddressTo:   toLabelAddress(params.ToAddress),
@@ -863,12 +876,9 @@ func (c *clientImpl) CreateTransactionInstantLabel(ctx context.Context, params d
 	}
 
 	// The instant-label call returns one transaction; the per-parcel labels hang off the rate it bought.
-	parcelTransactions, apiErr := c.listTransactionsByRate(ctx, rateObjectID)
+	parcelTransactions, apiErr := c.listParcelTransactions(ctx, rateObjectID, len(params.Parcels))
 	if apiErr != nil {
-		return nil, tracing.Trace(span, apiErr)
-	}
-	if len(parcelTransactions) < len(params.Parcels) {
-		return nil, tracing.Trace(span, apierror.NewValidationError("SHIPPO: Parcel transactions not found."))
+		return nil, tracing.Trace(span, boughtButUnreadable(ctx, transaction.ObjectID, params.Metadata, apiErr))
 	}
 
 	masterTracking := transaction.TrackingNumber
@@ -900,6 +910,45 @@ func (c *clientImpl) CreateTransactionInstantLabel(ctx context.Context, params d
 		NegotiatedRate:       amount,
 		Packages:             packages,
 	}, nil
+}
+
+// Bound the re-reads of a purchased rate's parcel transactions.
+const (
+	listParcelAttempts = 3
+	listParcelBackoff  = 500 * time.Millisecond
+)
+
+// Reads a purchased rate's parcel transactions, retrying because the purchase cannot be repeated:
+// a read that fails after the money is spent is the only thing between it and a lost label.
+func (c *clientImpl) listParcelTransactions(ctx context.Context, rateObjectID string, parcelCount int) ([]TransactionResponse, *apierror.APIError) {
+	var lastErr *apierror.APIError
+	for attempt := 1; attempt <= listParcelAttempts; attempt++ {
+		transactions, apiErr := c.listTransactionsByRate(ctx, rateObjectID)
+		if apiErr == nil && len(transactions) >= parcelCount {
+			return transactions, nil
+		}
+		lastErr = apiErr
+		if lastErr == nil {
+			lastErr = apierror.NewValidationError("SHIPPO: Parcel transactions not found.")
+		}
+		if attempt == listParcelAttempts {
+			break
+		}
+		select {
+		case <-ctx.Done():
+			return nil, lastErr
+		case <-time.After(time.Duration(attempt) * listParcelBackoff):
+		}
+	}
+	return nil, lastErr
+}
+
+// Reports labels that were paid for but could not be read back. Not transient: a retry would buy
+// them again, so the purchase is logged for reconciliation and the error stays with the request.
+func boughtButUnreadable(ctx context.Context, transactionID, metadata string, cause *apierror.APIError) *apierror.APIError {
+	slog.ErrorContext(ctx, "shippo labels were bought but their parcel transactions could not be read",
+		"shippo_transaction_id", transactionID, "metadata", metadata, "error", cause.Error())
+	return apierror.NewResourceConflictError("SHIPPO: The labels were purchased but could not be read back (transaction " + transactionID + "). Contact support before shipping again.")
 }
 
 // Lists the transactions Shippo created for one purchased rate — one per parcel.

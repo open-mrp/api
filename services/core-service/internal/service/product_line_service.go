@@ -509,7 +509,7 @@ func (s *productLineSvcImpl) DeleteProductLine(ctx context.Context, productLineI
 	})
 	if apiErr != nil {
 		if apierror.IsNotFound(apiErr) {
-			wasDeleted, deletedCheckErr := s.repos.NewDeletedRecordRepo().Exists(ctx, constants.DeletedRecordResourceTypeProductLine, productLineID)
+			wasDeleted, deletedCheckErr := s.repos.NewDeletedRecordRepo().ExistsInAccount(ctx, constants.DeletedRecordResourceTypeProductLine, productLineID, accountID)
 			if deletedCheckErr != nil {
 				return tracing.Trace(span, deletedCheckErr)
 			}
@@ -521,7 +521,7 @@ func (s *productLineSvcImpl) DeleteProductLine(ctx context.Context, productLineI
 	}
 
 	apiErr = s.withTx(ctx, func(txCtx context.Context, txSvc *productLineSvcImpl) *apierror.APIError {
-		if apiErr := txSvc.repos.NewDeletedRecordRepo().Create(txCtx, constants.DeletedRecordResourceTypeProductLine, productLine.ID, productLine); apiErr != nil {
+		if apiErr := txSvc.repos.NewDeletedRecordRepo().CreateInAccount(txCtx, constants.DeletedRecordResourceTypeProductLine, productLine.ID, accountID, productLine); apiErr != nil {
 			return apiErr
 		}
 

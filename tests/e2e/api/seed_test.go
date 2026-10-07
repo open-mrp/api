@@ -93,8 +93,9 @@ const (
 	SeedUnitGroupUnitID = "ungpun_01seedsocksea000"
 
 	// Measures
-	SeedRateID     = "rt_01seedwssunitval000"
-	SeedQuantityID = "qu_01seediss_ln1_qty00"
+	SeedRateID = "rt_01seedwssunitval000"
+	// A seeded production's quantity: the quantity endpoint edits only quantities an item or a production step owns. Its value is 1, so the schema sweep's PATCH changes nothing.
+	SeedQuantityID = "qu_01seedprod_brdsmbg0"
 
 	// Infrastructure
 	SeedDepartmentID = "dp_01k0a5r01yfx3sj1vy9qgv3dc0"
@@ -530,6 +531,10 @@ var pathSpecificParamSeeds = map[string]map[string]string{
 	"/v1/operations/production-schedules/": {
 		"line_id": SeedProductionScheduleLineID,
 	},
+	// A territory's path names the seller that owns it, not a customer.
+	"/v1/sales/accounts/{account_id}/territories": {
+		"account_id": SeedAccountID,
+	},
 }
 
 // pathSpecificParamSeed returns the longest-prefix match for a named path param that
@@ -619,6 +624,7 @@ var pathSpecificIDSeeds = map[string]string{
 	"/v1/ai/memories/":                      SeedAgentMemoryID,
 	"/v1/ai/runs/":                          SeedAgentRunID,
 	"/v1/auth/api-keys/":                    SeedAPIKeyID,
+	"/v1/core/analytics/open-orders/":       SeedSalesOrderID,
 	"/v1/core/audit-events/":                SeedAuditEventID,
 	"/v1/core/email-logs/":                  SeedEmailLogID1,
 	"/v1/core/jobs/":                        SeedJobID,
@@ -630,7 +636,8 @@ var pathSpecificIDSeeds = map[string]string{
 	"/v1/operations/suppliers/":                                   SeedSupplierAccountID,
 	"/v1/messaging/email-inboxes/":                                SeedEmailInboxID,
 	"/v1/messaging/email-domains/":                                SeedEmailDomainID,
-	"/v1/operations/location-types/":                              "building", // static type row; {id} accepts the code
+	"/v1/messaging/messages/":                                     "mg_01e2esweepnone0", // no message is seeded; sweeps that reach a message by id are refused before it is looked up
+	"/v1/operations/location-types/":                              "building",           // static type row; {id} accepts the code
 	"/v1/sales/account-statuses/":                                 SeedAccountStatusID,
 	"/v1/sales/accounts/{account_id}/territories/":                SeedTerritoryID,
 	"/v1/sales/accounts/":                                         SeedCustomerAccountID,

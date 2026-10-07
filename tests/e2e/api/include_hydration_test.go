@@ -160,8 +160,7 @@ func TestItemInventory_FiguresAreNullWithoutInclude(t *testing.T) {
 
 // --- Inventories list ---
 
-// On-hand is the only figure this list reports, so it is not expandable: every row carries the
-// quantity and the unit it is counted in. The endpoint accepts no includes at all.
+// The quantity is not expandable: every row carries it and the unit it is counted in.
 func TestInventories_EveryRowCarriesAResolvedQuantityAndUnit(t *testing.T) {
 	t.Parallel()
 
@@ -407,31 +406,18 @@ func TestPurchaseOrders_LineItemExpandsFullyHydrated(t *testing.T) {
 func TestSuppliers_ListAddressesExpandWithInclude(t *testing.T) {
 	t.Parallel()
 
-	list, status, err := apiClient.GetList(suppliersPath, url.Values{
-		"include": {"bill_to_address", "ship_to_address"},
-		"limit":   {"5"},
-	})
-	require.NoError(t, err)
-	require.Less(t, status, 500, "suppliers list must not 5xx")
-	requireStatus(t, 200, status, nil)
-	require.NotEmpty(t, list.Data, "the seeded account has suppliers")
+	raw := listFindByField(t, suppliersPath, url.Values{"include": {"bill_to_address", "ship_to_address"}}, "id", SeedSupplierAccountID)
+	require.NotNil(t, raw, "the seeded supplier is listed")
+	row := parseJSON(raw)
+	assertObjectField(t, row, "supplier")
 
-	var sawAddress bool
-	for _, raw := range list.Data {
-		row := parseJSON(raw)
-		assertObjectField(t, row, "supplier")
-
-		address := jsonObject(row, "bill_to_address")
-		if address == nil {
-			continue
-		}
-		sawAddress = true
+	for _, key := range []string{"bill_to_address", "ship_to_address"} {
+		address := jsonObject(row, key)
+		require.NotNil(t, address, "the seeded supplier's %s expands", key)
 		assertObjectField(t, address, "address")
-		assert.NotEmpty(t, jsonField(address, "id"), "an expanded address is a whole record")
-		assertValidTimestamp(t, jsonField(address, "created_at"), "bill_to_address.created_at")
+		assert.Equal(t, SeedSupplierAddressID, jsonField(address, "id"), "an expanded address is a whole record")
+		assertValidTimestamp(t, jsonField(address, "created_at"), key+".created_at")
 	}
-	assert.True(t, sawAddress, "at least one seeded supplier has a default billing address: %s",
-		formatListDataForLog(list.Data))
 }
 
 func TestSuppliers_ListAddressesAreNullWithoutInclude(t *testing.T) {

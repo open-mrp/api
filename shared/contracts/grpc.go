@@ -214,7 +214,7 @@ func ConvertAPIErrorToGRPC(apiErr *apierror.APIError) error {
 	// Validation errors
 	case apierror.ErrorCodeValidationFailed, apierror.ErrorCodeMissingField, apierror.ErrorCodeInvalidFormat,
 		apierror.ErrorCodeParameterMissing, apierror.ErrorCodeParameterInvalid, apierror.ErrorCodeParameterUnknown,
-		apierror.ErrorCodeParametersExclusive:
+		apierror.ErrorCodeParametersExclusive, apierror.ErrorCodeRequestTooLarge:
 		grpcCode = grpccodes.InvalidArgument
 
 	// Resource errors

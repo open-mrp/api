@@ -71,7 +71,7 @@ func (e *CreateConsumptionEndpoint) Materialize() *apiendpoint.APIEndpoint[*Crea
 		},
 		IncludeConfig: apiendpoint.IncludesFor(apiendpoint.IncludesParams{
 			ObjectType: constants.ObjectTypeConsumption,
-			Fields:     []string{"consumed_item"},
+			Fields:     consumptionEndpointIncludes,
 		}),
 	})
 }

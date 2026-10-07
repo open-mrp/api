@@ -4,6 +4,7 @@ package api_test
 
 import (
 	"encoding/json"
+	"math"
 	"net/url"
 	"sort"
 	"strings"
@@ -49,8 +50,9 @@ type arrayFilterCase struct {
 	// fromSelf is true when valuePath lives on the endpoint's own response, so a
 	// discovered value MUST return rows when filtered (an empty result is a dead /
 	// broken filter and fails the test). When false the values are sourced from a
-	// sibling endpoint (see fromPath) and an empty result only means the seed data
-	// has no linked rows, so the case skips instead of failing.
+	// sibling endpoint (see fromPath), where a value need not link to any row (a
+	// parallel test's newest item has no supplier yet), so the first two values
+	// that return rows are used, and the case fails if fewer than two do.
 	fromSelf bool
 	// fromPath / fromInclude source candidate values from a sibling list endpoint
 	// when the filtered value is not reflected on the endpoint's own response.
@@ -132,7 +134,7 @@ func arrayFilterCases() []arrayFilterCase {
 		{name: "inventory-change-logs/item_ids", path: "/v1/operations/inventory-change-logs", param: "item_ids", valuePath: "item.id", include: "item", fromSelf: true},
 		{name: "inventory-change-logs/changed_by_user_ids", path: "/v1/operations/inventory-change-logs", param: "changed_by_user_ids", valuePath: "responsible_user.id", include: "responsible_user", fromSelf: true},
 
-		{name: "production-runs/item_ids", path: "/v1/operations/production-runs", param: "item_ids", valuePath: "id", fromSelf: false, fromPath: "/v1/catalog/items"},
+		{name: "production-runs/item_ids", path: "/v1/operations/production-runs", param: "item_ids", valuePath: "batch_summaries.data[].item.id", fromSelf: true},
 
 		{name: "production-steps/item_ids", path: "/v1/operations/production-steps", param: "item_ids", valuePath: "production.produced_item.id", include: "production.produced_item", fromSelf: true},
 		{name: "production-steps/machine_ids", path: "/v1/operations/production-steps", param: "machine_ids", valuePath: "machines.data[].id", include: "machines", fromSelf: true},
@@ -161,28 +163,30 @@ func TestArrayFilters_UnionExclusion(t *testing.T) {
 func runArrayFilterUnion(t *testing.T, c arrayFilterCase) {
 	t.Helper()
 
-	// 1. Discover two distinct candidate filter values.
-	discoverPath, discoverInclude, discoverField := c.path, c.include, c.valuePath
-	if !c.fromSelf {
-		discoverPath, discoverInclude, discoverField = c.fromPath, c.fromInclude, c.valuePath
+	// 1. Discover two distinct filter values and their single-value result sets.
+	var a, b string
+	var s1, s2 map[string]struct{}
+	if c.fromSelf {
+		values := discoverFieldValues(t, c.path, c.include, c.valuePath, 2)
+		require.GreaterOrEqualf(t, len(values), 2,
+			"%s %s: fewer than 2 distinct values for %q available in seed data — every array filter must have seed coverage (no skips)",
+			c.path, c.param, c.valuePath)
+		a, b = values[0], values[1]
+		s1 = filteredIDSet(t, c.path, c.param, a)
+		s2 = filteredIDSet(t, c.path, c.param, b)
+		// The value is a live row of this endpoint, so filtering by it must return rows. Empty means a
+		// dead or broken filter, and fails rather than skips.
+		require.NotEmptyf(t, s1, "%s: filtering by a sourced value (%q) produced no results — filter %q broken", c.path, a, c.param)
+		require.NotEmptyf(t, s2, "%s: filtering by a sourced value (%q) produced no results — filter %q broken", c.path, b, c.param)
+	} else {
+		values, sets := linkedFilterValues(t, c, 2)
+		require.Lenf(t, values, 2,
+			"%s: fewer than 2 values from %s %q produced results — filter %q broken or missing seed coverage",
+			c.path, c.fromPath, c.valuePath, c.param)
+		a, b, s1, s2 = values[0], values[1], sets[0], sets[1]
 	}
-	values := discoverFieldValues(t, discoverPath, discoverInclude, discoverField, 2)
-	require.GreaterOrEqualf(t, len(values), 2,
-		"%s %s: fewer than 2 distinct values for %q available in seed data — every array filter must have seed coverage (no skips)",
-		c.path, c.param, c.valuePath)
-	a, b := values[0], values[1]
 
-	// 2. Single-value result sets.
-	s1 := filteredIDSet(t, c.path, c.param, a)
-	s2 := filteredIDSet(t, c.path, c.param, b)
-	// Filtering by a value that was sourced from real data must return rows — for
-	// fromSelf cases the value is a live row of this endpoint, and for sibling-fed
-	// cases the seed links the sourced values. Empty means a dead/broken filter or
-	// a seed gap; either way it must fail, never skip.
-	require.NotEmptyf(t, s1, "%s: filtering by a sourced value (%q) produced no results — filter %q broken or missing seed coverage", c.path, a, c.param)
-	require.NotEmptyf(t, s2, "%s: filtering by a sourced value (%q) produced no results — filter %q broken or missing seed coverage", c.path, b, c.param)
-
-	// 3. Combined result set and the union/exclusion checks, with one retry to
+	// 2. Combined result set and the union/exclusion checks, with one retry to
 	//    absorb a row created/deleted by another parallel test between calls.
 	for attempt := 0; attempt < 2; attempt++ {
 		s12 := filteredIDSet(t, c.path, c.param, a, b)
@@ -228,6 +232,34 @@ func discoverFieldValues(t *testing.T, path, include, valuePath string, n int) [
 		out = appendFieldValues(out, seen, list.Data, valuePath, n)
 		if len(out) >= n || !list.PageInfo.HasNextPage || page >= maxListScanPages {
 			return out
+		}
+		list, status, err = apiClient.GetListFromPageURL(list.PageInfo.NextPageURL)
+	}
+}
+
+// linkedFilterValues pages c's sibling feed for candidate values and returns the first n whose
+// single-value filter returns rows, with those rows' ids.
+func linkedFilterValues(t *testing.T, c arrayFilterCase, n int) (values []string, sets []map[string]struct{}) {
+	t.Helper()
+	params := url.Values{"limit": {"50"}}
+	if c.fromInclude != "" {
+		params.Set("include", c.fromInclude)
+	}
+	list, status, err := apiClient.GetList(c.fromPath, params)
+	seen := map[string]struct{}{}
+	for page := 0; ; page++ {
+		require.NoError(t, err, "listing %s", c.fromPath)
+		require.Equal(t, 200, status, "listing %s", c.fromPath)
+		for _, v := range appendFieldValues(nil, seen, list.Data, c.valuePath, math.MaxInt) {
+			if set := filteredIDSet(t, c.path, c.param, v); len(set) > 0 {
+				values, sets = append(values, v), append(sets, set)
+				if len(values) == n {
+					return values, sets
+				}
+			}
+		}
+		if !list.PageInfo.HasNextPage || page >= maxListScanPages {
+			return values, sets
 		}
 		list, status, err = apiClient.GetListFromPageURL(list.PageInfo.NextPageURL)
 	}

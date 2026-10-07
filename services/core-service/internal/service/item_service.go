@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"slices"
 	"strings"
+	"time"
 
 	"github.com/shopspring/decimal"
 
@@ -100,30 +101,76 @@ func NewItemSvc(config *ItemSvcConfig) domain.ItemSvc {
 	}
 }
 
-func (s *itemSvcImpl) BatchGetItemsByIDs(ctx context.Context, ids []string) ([]*domain.Item, *apierror.APIError) {
+func (s *itemSvcImpl) BatchGetItemsByIDs(ctx context.Context, ids []string, embeds domain.ItemEmbeds) ([]*domain.Item, *domain.ItemEmbedded, *apierror.APIError) {
 	ctx, span := itemSvcTracer.Start(ctx, "service.item.batch_get_by_ids")
 	defer span.End()
 
 	identity, ok := appctx.GetIdentityFromContext(ctx)
 	if !ok || identity == nil {
-		return nil, tracing.Trace(span, apierror.NewInvariantViolationError("Identity not found in context."))
+		return nil, nil, tracing.Trace(span, apierror.NewInvariantViolationError("Identity not found in context."))
 	}
 	meds := s.mediators()
 	if apiErr := authorizeCatalogBatchRead(ctx, identity, span, meds, func() *apierror.APIError {
 		return identity.CheckHasPermission(types.PermissionDomainItems, types.ActionRead)
 	}); apiErr != nil {
-		return nil, apiErr
+		return nil, nil, apiErr
 	}
 	if len(ids) == 0 {
-		return nil, nil
+		return nil, &domain.ItemEmbedded{}, nil
 	}
 
 	items, apiErr := s.repos.NewItemRepo().GetByIDs(ctx, identity.Target.AccountID, ids)
 	if apiErr != nil {
-		return nil, tracing.Trace(span, apiErr)
+		return nil, nil, tracing.Trace(span, apiErr)
+	}
+	embedded, apiErr := s.readItemEmbeds(ctx, identity.Target.AccountID, items, embeds)
+	if apiErr != nil {
+		return nil, nil, tracing.Trace(span, apiErr)
 	}
 
-	return items, nil
+	return items, embedded, nil
+}
+
+// readItemEmbeds reads the categories and attribute properties of items the caller was already allowed to read, scoped to the account.
+func (s *itemSvcImpl) readItemEmbeds(ctx context.Context, accountID string, items []*domain.Item, embeds domain.ItemEmbeds) (*domain.ItemEmbedded, *apierror.APIError) {
+	embedded := &domain.ItemEmbedded{}
+	if embeds.Categories {
+		var ids []string
+		seen := map[string]bool{}
+		for _, item := range items {
+			if item.ItemCategoryID != "" && !seen[item.ItemCategoryID] {
+				seen[item.ItemCategoryID] = true
+				ids = append(ids, item.ItemCategoryID)
+			}
+		}
+		if len(ids) > 0 {
+			categories, apiErr := readItemCategories(ctx, s.repos.NewItemCategoryRepo(), accountID, ids)
+			if apiErr != nil {
+				return nil, apiErr
+			}
+			embedded.Categories = categories
+		}
+	}
+	if embeds.AttributeProperties {
+		var ids []string
+		seen := map[string]bool{}
+		for _, item := range items {
+			for _, a := range item.Attributes {
+				if a.PropertyID != "" && !seen[a.PropertyID] {
+					seen[a.PropertyID] = true
+					ids = append(ids, a.PropertyID)
+				}
+			}
+		}
+		if len(ids) > 0 {
+			properties, apiErr := s.repos.NewPropertyRepo().GetByIDs(ctx, accountID, ids)
+			if apiErr != nil {
+				return nil, apiErr
+			}
+			embedded.AttributeProperties = properties
+		}
+	}
+	return embedded, nil
 }
 
 // ListItems returns a paginated list of items for the caller's account.
@@ -154,27 +201,38 @@ func (s *itemSvcImpl) ListItems(ctx context.Context, params domain.ListItemsPara
 }
 
 // GetItem returns a single item by ID within the caller's account.
-func (s *itemSvcImpl) GetItem(ctx context.Context, itemID string, includes []string) (*domain.Item, *apierror.APIError) {
+func (s *itemSvcImpl) GetItem(ctx context.Context, itemID string, includes []string, embeds domain.ItemEmbeds) (*domain.Item, *domain.ItemEmbedded, *apierror.APIError) {
 	ctx, span := itemSvcTracer.Start(ctx, "service.item.get")
 	defer span.End()
 
 	identity, ok := appctx.GetIdentityFromContext(ctx)
 	if !ok || identity == nil {
-		return nil, tracing.Trace(span, apierror.NewInvariantViolationError("Identity not found in context."))
+		return nil, nil, tracing.Trace(span, apierror.NewInvariantViolationError("Identity not found in context."))
 	}
 
 	if apiErr := identity.CheckIsInternalActor(); apiErr != nil {
-		return nil, tracing.Trace(span, apiErr)
+		return nil, nil, tracing.Trace(span, apiErr)
 	}
 	if apiErr := identity.CheckHasPermission(types.PermissionDomainItems, types.ActionRead); apiErr != nil {
-		return nil, tracing.Trace(span, apiErr)
+		return nil, nil, tracing.Trace(span, apiErr)
 	}
 
-	return s.repos.NewItemRepo().Get(ctx, domain.GetItemParams{
+	item, apiErr := s.repos.NewItemRepo().Get(ctx, domain.GetItemParams{
 		AccountID: identity.Target.AccountID,
 		ItemID:    itemID,
 		Includes:  includes,
 	})
+	if apierror.IsNotFound(apiErr) {
+		return nil, nil, tracing.Trace(span, apierror.NewResourceNotFoundError("Item not found."))
+	}
+	if apiErr != nil {
+		return nil, nil, tracing.Trace(span, apiErr)
+	}
+	embedded, apiErr := s.readItemEmbeds(ctx, identity.Target.AccountID, []*domain.Item{item}, embeds)
+	if apiErr != nil {
+		return nil, nil, tracing.Trace(span, apiErr)
+	}
+	return item, embedded, nil
 }
 
 // GetItemInventory returns inventory quantities for an item.
@@ -197,14 +255,7 @@ func (s *itemSvcImpl) GetItemInventory(ctx context.Context, itemID string) (*dom
 	return s.repos.NewItemRepo().GetInventory(ctx, identity.Target.AccountID, itemID)
 }
 
-// GetItemCosts returns production cost breakdown for an item.
-//
-// This replicates the Dashboard's fetchCosts logic:
-// 1. Find the production step that produces this item.
-// 2. BFS backward through the production flow graph to find all contributing steps.
-// 3. Calculate per-step costs (labor, overhead, material) using leveling factor and allowances.
-// 4. Normalize and aggregate costs across the flow using a forward pass.
-// 5. Update the item's unit cost and clear the dirty flag.
+// GetItemCosts returns the production cost breakdown for one unit of an item, computed and not stored.
 func (s *itemSvcImpl) GetItemCosts(ctx context.Context, itemID string) (*domain.ItemCosts, *apierror.APIError) {
 	ctx, span := itemSvcTracer.Start(ctx, "service.item.get_costs")
 	defer span.End()
@@ -217,7 +268,7 @@ func (s *itemSvcImpl) GetItemCosts(ctx context.Context, itemID string) (*domain.
 	if apiErr := identity.CheckIsInternalActor(); apiErr != nil {
 		return nil, tracing.Trace(span, apiErr)
 	}
-	if apiErr := identity.CheckHasPermission(types.PermissionDomainItems, types.ActionRead); apiErr != nil {
+	if apiErr := identity.CheckHasPermission(types.PermissionDomainCosts, types.ActionRead); apiErr != nil {
 		return nil, tracing.Trace(span, apiErr)
 	}
 
@@ -306,7 +357,6 @@ func (s *itemSvcImpl) ComputeItemCosts(ctx context.Context, accountID, itemID st
 	}
 
 	// 3. Fetch all step data.
-	stepQueryRepo := s.repos.NewProductionStepQueryRepo()
 	type flowStepData struct {
 		step         *domain.ProductionFlowStep
 		consumptions []domain.CostFlowConsumption
@@ -324,21 +374,10 @@ func (s *itemSvcImpl) ComputeItemCosts(ctx context.Context, accountID, itemID st
 			return nil, tracing.Trace(span, apiErr)
 		}
 
-		// Get consumptions with item type and unit cost for cost calculation.
 		consumptions, apiErr := itemRepo.GetCostFlowConsumptions(ctx, stepID)
 		if apiErr != nil {
 			return nil, tracing.Trace(span, apiErr)
 		}
-
-		// Also get structural consumptions for the flow graph.
-		stepDetail, apiErr := stepQueryRepo.Find(ctx, accountID, stepID)
-		if apierror.IsNotFound(apiErr) {
-			continue
-		}
-		if apiErr != nil {
-			return nil, tracing.Trace(span, apiErr)
-		}
-		step.Consumptions = stepDetail.Consumptions
 
 		stepDataMap[stepID] = &flowStepData{step: step, consumptions: consumptions}
 	}
@@ -389,15 +428,15 @@ func (s *itemSvcImpl) ComputeItemCosts(ctx context.Context, accountID, itemID st
 
 	normMap := make(map[string]decimal.Decimal, len(stepDataMap))
 
-	// Target step normalization: 1 / production quantity (cost per 1 unit of output).
+	// Target step normalization: 1 / production quantity (cost per 1 unit of output). A step that
+	// makes nothing cannot be costed per unit, which is the same answer as there being no flow.
 	if targetProdQty.IsZero() {
-		return nil, tracing.Trace(span, apierror.NewInternalError(nil, "Target production quantity is zero."))
+		return nil, tracing.Trace(span, apierror.NewResourceNotFoundError("Production flow not found: the step that produces this item has a zero production quantity."))
 	}
 	normMap[targetStepID] = decimal.NewFromInt(1).Div(targetProdQty)
 
-	// BFS backward from target to compute normalization factors.
-	// For each parent step, the normalization factor is:
-	// parentNorm = childNorm * (consumption quantity of parent's produced item in child step / parent's production quantity)
+	// BFS backward from the target: a parent runs as many times per target unit as the child draws of
+	// what it makes, over what one run of it makes.
 	normQueue := []string{targetStepID}
 	normVisited := map[string]bool{targetStepID: true}
 
@@ -414,26 +453,7 @@ func (s *itemSvcImpl) ComputeItemCosts(ctx context.Context, accountID, itemID st
 			normVisited[parentID] = true
 
 			parentData := stepDataMap[parentID]
-			parentProdQty := parentData.step.Production.Quantity.Measure
-
-			if parentProdQty.IsZero() {
-				normMap[parentID] = decimal.Zero
-				normQueue = append(normQueue, parentID)
-				continue
-			}
-
-			// Find how much of the parent's produced item is consumed by the current step.
-			consumedQty := decimal.Zero
-			parentProducedItemID := parentData.step.Production.ProducedItem.ID
-			for _, cons := range currentData.step.Consumptions {
-				if cons.ConsumedItem.ID == parentProducedItemID {
-					consumedQty = consumedQty.Add(cons.Quantity.Measure)
-					break
-				}
-			}
-
-			// parentNorm = currentNorm * consumedQty / parentProdQty
-			normMap[parentID] = currentNorm.Mul(consumedQty).Div(parentProdQty)
+			normMap[parentID] = currentNorm.Mul(parentRunsPerChildRun(parentData.step, currentData.consumptions))
 			normQueue = append(normQueue, parentID)
 		}
 	}
@@ -453,7 +473,7 @@ func (s *itemSvcImpl) ComputeItemCosts(ctx context.Context, accountID, itemID st
 		totalOverhead = totalOverhead.Add(cost.overhead.Mul(norm))
 	}
 
-	// 7. Restate the costs against the unit the item is stocked in, and write the total back as the item's unit cost.
+	// 7. Restate the costs against the unit the item is stocked in.
 	stepUnitID := targetStep.Production.Quantity.Unit.ID
 	stocking, apiErr := itemRepo.GetStockingUnit(ctx, accountID, itemID)
 	if apiErr != nil {
@@ -493,6 +513,33 @@ func (s *itemSvcImpl) ComputeItemCosts(ctx context.Context, accountID, itemID st
 		UnitID:             stocking.BaseUnitID,
 		NumeratorUnitID:    numeratorUnitID,
 	}, nil
+}
+
+// parentRunsPerChildRun is how many runs of parent one run of a child consuming childConsumptions
+// draws on: the child's consumption of what parent produces over one run's output. Both sides go
+// through their own unit's base ratio first — a child drawing 2 dozen from a parent producing 12
+// eaches is two runs, not a sixth of one. A parent that produces nothing, or that the child does not
+// consume, contributes nothing.
+func parentRunsPerChildRun(parent *domain.ProductionFlowStep, childConsumptions []domain.CostFlowConsumption) decimal.Decimal {
+	produced := parent.Production.Quantity
+	producedBase := produced.Measure.Mul(unitRatio(produced.Unit.RatioNumerator, produced.Unit.RatioDenominator))
+	if producedBase.IsZero() {
+		return decimal.Zero
+	}
+	for _, cons := range childConsumptions {
+		if cons.ConsumedItemID == parent.Production.ProducedItem.ID {
+			return cons.ConsumptionQuantity.Mul(baseRatioOrOne(cons.ConsumptionUnitRatio)).Div(producedBase)
+		}
+	}
+	return decimal.Zero
+}
+
+// baseRatioOrOne is a ratio read off a unit row, taking an unrecorded (zero) one as 1 like unitRatio does.
+func baseRatioOrOne(ratio decimal.Decimal) decimal.Decimal {
+	if ratio.IsZero() {
+		return decimal.NewFromInt(1)
+	}
+	return ratio
 }
 
 // stepUnitsPerStockingUnit is the factor that carries a per-step-unit amount onto a per-stocking-unit footing. A rate's denominator scales the opposite way to a measure's, so this is the quantity conversion run backwards.
@@ -541,16 +588,19 @@ type itemStepCost struct {
 	labor    decimal.Decimal
 	overhead decimal.Decimal
 	total    decimal.Decimal
+	// laborHours is the corrected labor time one run takes, in hours.
+	laborHours decimal.Decimal
 }
 
 // calculateStepCost computes the raw cost for a single production step.
 // This mirrors the Dashboard's LightProductionStepUtils.fetchLightCostOfStep.
 func calculateStepCost(step *domain.ProductionFlowStep, consumptions []domain.CostFlowConsumption) *itemStepCost {
 	result := &itemStepCost{
-		material: decimal.Zero,
-		labor:    decimal.Zero,
-		overhead: decimal.Zero,
-		total:    decimal.Zero,
+		material:   decimal.Zero,
+		labor:      decimal.Zero,
+		overhead:   decimal.Zero,
+		total:      decimal.Zero,
+		laborHours: decimal.Zero,
 	}
 
 	prodQty := step.Production.Quantity.Measure
@@ -595,6 +645,7 @@ func calculateStepCost(step *domain.ProductionFlowStep, consumptions []domain.Co
 
 	// Total labor time for the batch.
 	totalLaborTime := prodQty.Mul(correctedLaborTime)
+	result.laborHours = totalLaborTime
 
 	// Labor cost = totalLaborTime * laborRate.
 	result.labor = totalLaborTime.Mul(laborRateValue)
@@ -621,7 +672,10 @@ func calculateStepCost(step *domain.ProductionFlowStep, consumptions []domain.Co
 	return result
 }
 
-// GetItemTrends returns historical trend data for an item.
+// itemTrendDays is how many UTC calendar days an item trend covers, ending today.
+const itemTrendDays = 30
+
+// GetItemTrends returns the item's inventory level at the close of each of the last itemTrendDays UTC days.
 func (s *itemSvcImpl) GetItemTrends(ctx context.Context, itemID string, trendType string) (*domain.ItemTrends, *apierror.APIError) {
 	ctx, span := itemSvcTracer.Start(ctx, "service.item.get_trends")
 	defer span.End()
@@ -646,17 +700,58 @@ func (s *itemSvcImpl) GetItemTrends(ctx context.Context, itemID string, trendTyp
 		))
 	}
 
+	accountID := identity.Target.AccountID
 	itemRepo := s.repos.NewItemRepo()
 
-	// An item with nothing logged and an item that does not exist both produce an empty series, so without this read the endpoint would answer for another account's item ID as readily as for a real one of your own.
-	if _, apiErr := itemRepo.Get(ctx, domain.GetItemParams{
-		AccountID: identity.Target.AccountID,
-		ItemID:    itemID,
-	}); apiErr != nil {
+	// Scoped to the account, so another account's item ID is not answered with a flat series of zeros.
+	stocking, apiErr := itemRepo.GetStockingUnit(ctx, accountID, itemID)
+	if apierror.IsNotFound(apiErr) {
+		return nil, tracing.Trace(span, apierror.NewResourceNotFoundError("Item not found."))
+	}
+	if apiErr != nil {
 		return nil, tracing.Trace(span, apiErr)
 	}
 
-	return itemRepo.GetTrends(ctx, identity.Target.AccountID, itemID, trendType)
+	today := time.Now().UTC().Truncate(24 * time.Hour)
+	start := today.AddDate(0, 0, -(itemTrendDays - 1))
+
+	seed, apiErr := itemRepo.GetInventoryLevelBefore(ctx, accountID, itemID, start)
+	if apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
+	closings, apiErr := itemRepo.ListDailyClosingInventoryLevels(ctx, accountID, itemID, start, today.AddDate(0, 0, 1))
+	if apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
+
+	opening := decimal.Zero
+	if seed != nil {
+		opening = seed.Value
+	}
+	return &domain.ItemTrends{
+		TrendType: trendType,
+		UnitID:    stocking.BaseUnitID,
+		Points:    dailyClosingSeries(start, itemTrendDays, opening, closings),
+	}, nil
+}
+
+// dailyClosingSeries is one point per UTC day from start: the last level logged by the day's end,
+// carried forward across days with nothing logged and opened at the level before the window.
+// closings must be oldest first.
+func dailyClosingSeries(start time.Time, days int, opening decimal.Decimal, closings []domain.InventoryLevel) []*domain.ItemTrend {
+	points := make([]*domain.ItemTrend, days)
+	level := opening
+	next := 0
+	for d := range days {
+		day := start.AddDate(0, 0, d)
+		dayEnd := day.AddDate(0, 0, 1)
+		for next < len(closings) && closings[next].At.Before(dayEnd) {
+			level = closings[next].Value
+			next++
+		}
+		points[d] = &domain.ItemTrend{Date: day, Value: level.String()}
+	}
+	return points
 }
 
 // ExportItems returns all items with on-hand inventory for the caller's account.
@@ -676,7 +771,16 @@ func (s *itemSvcImpl) ExportItems(ctx context.Context) (*domain.ExportItemsResul
 		return nil, tracing.Trace(span, apiErr)
 	}
 
-	return s.repos.NewItemRepo().ExportWithInventory(ctx, identity.Target.AccountID)
+	result, apiErr := s.repos.NewItemRepo().ExportWithInventory(ctx, identity.Target.AccountID)
+	if apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
+	// The read takes one row past the cap, so an overflow fails here rather than export a truncated catalog.
+	if len(result.Items) > domain.ExportRowLimit {
+		return nil, tracing.Trace(span, apierror.NewValidationError(fmt.Sprintf(
+			"This export would hold more than %d items, more than one file can.", domain.ExportRowLimit)))
+	}
+	return result, nil
 }
 
 func (s *itemSvcImpl) mediators() domain.Mediators {
@@ -1024,6 +1128,80 @@ func validateChangeItemCategoryTypes(item *domain.Item, category *domain.ItemCat
 	return nil
 }
 
+// changeItemCategoryInTx moves an item to categoryID within the caller's transaction, switches its rate, order-point, consumption and production units to the category's base unit, and publishes the item's update event. It checks no permission: the write that carries the move authorizes it.
+func changeItemCategoryInTx(ctx context.Context, repos domain.RepoFactory, accountID, itemID, categoryID string, includes []string) (*domain.Item, *apierror.APIError) {
+	itemRepo := repos.NewItemRepo()
+	auditIncs := itemAuditIncludes(includes)
+
+	before, apiErr := itemRepo.Get(ctx, domain.GetItemParams{
+		AccountID: accountID,
+		ItemID:    itemID,
+		Includes:  auditIncs,
+	})
+	if apiErr != nil {
+		return nil, apiErr
+	}
+	category, apiErr := repos.NewItemCategoryRepo().Get(ctx, domain.GetItemCategoryParams{
+		AccountID:      accountID,
+		ItemCategoryID: categoryID,
+	})
+	if apiErr != nil {
+		return nil, apiErr
+	}
+	if apiErr := validateChangeItemCategoryTypes(before, category); apiErr != nil {
+		return nil, apiErr
+	}
+	if apiErr := validateCategoryCarriesItemAttributes(ctx, repos, before, categoryID, "category_id"); apiErr != nil {
+		return nil, apiErr
+	}
+
+	baseUnitID, _, apiErr := itemRepo.GetCategoryBaseUnitID(ctx, categoryID)
+	if apiErr != nil {
+		return nil, apiErr
+	}
+	if apiErr := itemRepo.ChangeCategory(ctx, domain.ChangeItemCategoryParams{
+		AccountID:  accountID,
+		ItemID:     itemID,
+		CategoryID: categoryID,
+	}); apiErr != nil {
+		return nil, apiErr
+	}
+	if apiErr := itemRepo.UpdateRateUnits(ctx, accountID, itemID, baseUnitID); apiErr != nil {
+		return nil, apiErr
+	}
+	// No-op unless the item is a material.
+	if apiErr := itemRepo.UpdateMaterialOrderPointUnit(ctx, accountID, itemID, baseUnitID); apiErr != nil {
+		return nil, apiErr
+	}
+	if apiErr := itemRepo.UpdateConsumptionProductionQuantityUnits(ctx, accountID, itemID, baseUnitID); apiErr != nil {
+		return nil, apiErr
+	}
+
+	after, apiErr := itemRepo.Get(ctx, domain.GetItemParams{
+		AccountID: accountID,
+		ItemID:    itemID,
+		Includes:  auditIncs,
+	})
+	if apiErr != nil {
+		return nil, apiErr
+	}
+
+	// Re-assigning the item's current category is a no-op; skip the publish when nothing actually changed.
+	if changes := audit.ComputeChanges(before, after); len(changes) > 0 {
+		if apiErr := audit.NewPublisher().Publish(ctx, repos.NewOutboxRepo(), audit.EventData{
+			ServiceName:  domain.ServiceName,
+			Action:       constants.AuditActionUpdate,
+			ResourceType: constants.ObjectTypeItem,
+			ResourceID:   after.ID,
+			Changes:      changes,
+		}); apiErr != nil {
+			return nil, apiErr
+		}
+	}
+
+	return after, nil
+}
+
 // ChangeItemCategory changes the category of an item and updates rate units.
 func (s *itemSvcImpl) ChangeItemCategory(ctx context.Context, itemID, categoryID string, includes []string) (*domain.Item, *apierror.APIError) {
 	ctx, span := itemSvcTracer.Start(ctx, "service.item.change_category")
@@ -1061,86 +1239,11 @@ func (s *itemSvcImpl) ChangeItemCategory(ctx context.Context, itemID, categoryID
 	case domain.RecoveryPointStarted:
 		var result *domain.Item
 		apiErr = s.withTx(ctx, func(txCtx context.Context, txSvc *itemSvcImpl) *apierror.APIError {
-			txRepo := txSvc.repos.NewItemRepo()
-
-			auditIncs := itemAuditIncludes(includes)
-
-			itemForValidation, apiErr := txRepo.Get(txCtx, domain.GetItemParams{
-				AccountID: accountID,
-				ItemID:    itemID,
-				Includes:  auditIncs,
-			})
-			if apiErr != nil {
-				return apiErr
-			}
-			category, apiErr := txSvc.repos.NewItemCategoryRepo().Get(txCtx, domain.GetItemCategoryParams{
-				AccountID:      accountID,
-				ItemCategoryID: categoryID,
-			})
-			if apiErr != nil {
-				return apiErr
-			}
-			if apiErr := validateChangeItemCategoryTypes(itemForValidation, category); apiErr != nil {
-				return apiErr
-			}
-			if apiErr := validateCategoryCarriesItemAttributes(txCtx, txSvc.repos, itemForValidation, categoryID, "category_id"); apiErr != nil {
-				return apiErr
-			}
-
-			// Get the base unit of the new category (type already validated above).
-			baseUnitID, _, apiErr := txRepo.GetCategoryBaseUnitID(txCtx, categoryID)
-			if apiErr != nil {
-				return apiErr
-			}
-
-			// Update the item's category
-			if apiErr := txRepo.ChangeCategory(txCtx, domain.ChangeItemCategoryParams{
-				AccountID:  accountID,
-				ItemID:     itemID,
-				CategoryID: categoryID,
-			}); apiErr != nil {
-				return apiErr
-			}
-
-			// Update all rate units to the new category's base unit
-			if apiErr := txRepo.UpdateRateUnits(txCtx, accountID, itemID, baseUnitID); apiErr != nil {
-				return apiErr
-			}
-
-			// Update material order point unit (no-op if item is not a material)
-			if apiErr := txRepo.UpdateMaterialOrderPointUnit(txCtx, accountID, itemID, baseUnitID); apiErr != nil {
-				return apiErr
-			}
-
-			// Update consumption and production quantity units
-			if apiErr := txRepo.UpdateConsumptionProductionQuantityUnits(txCtx, accountID, itemID, baseUnitID); apiErr != nil {
-				return apiErr
-			}
-
-			item, apiErr := txRepo.Get(txCtx, domain.GetItemParams{
-				AccountID: accountID,
-				ItemID:    itemID,
-				Includes:  auditIncs,
-			})
+			item, apiErr := changeItemCategoryInTx(txCtx, txSvc.repos, accountID, itemID, categoryID, includes)
 			if apiErr != nil {
 				return apiErr
 			}
 			result = item
-
-			changes := audit.ComputeChanges(itemForValidation, item)
-
-			// Re-assigning the item's current category is a no-op; skip the publish when nothing actually changed.
-			if len(changes) > 0 {
-				if apiErr := audit.NewPublisher().Publish(txCtx, txSvc.repos.NewOutboxRepo(), audit.EventData{
-					ServiceName:  domain.ServiceName,
-					Action:       constants.AuditActionUpdate,
-					ResourceType: constants.ObjectTypeItem,
-					ResourceID:   item.ID,
-					Changes:      changes,
-				}); apiErr != nil {
-					return apiErr
-				}
-			}
 
 			return txSvc.mediators().Idempotency.CacheSuccessResponse(txCtx, idempotencyKey.TypeID, result)
 		})
@@ -1156,7 +1259,7 @@ func (s *itemSvcImpl) ChangeItemCategory(ctx context.Context, itemID, categoryID
 	}
 }
 
-// ListInventories returns all items with their on-hand inventory quantities.
+// ListInventories returns a page of items with their on-hand inventory, or with their last logged level as of params.AsOf.
 func (s *itemSvcImpl) ListInventories(ctx context.Context, params domain.ListInventoriesParams) (*domain.ListInventoriesResult, *apierror.APIError) {
 	ctx, span := itemSvcTracer.Start(ctx, "service.item.list_inventories")
 	defer span.End()
@@ -1196,8 +1299,18 @@ func (s *itemSvcImpl) ListInventories(ctx context.Context, params domain.ListInv
 		itemIDs[i] = item.ID
 	}
 
-	// Fetch bulk on-hand inventory
-	inventoryData, apiErr := s.repos.NewInventoryQueryRepo().FetchOnHandInventoryBulk(ctx, itemIDs, accountID)
+	invQueryRepo := s.repos.NewInventoryQueryRepo()
+	var inventoryData []*domain.BulkOnHandInventory
+	if params.AsOf != nil {
+		inventoryData, apiErr = invQueryRepo.FetchInventoryLevelsAsOf(ctx, itemIDs, accountID, *params.AsOf)
+	} else {
+		inventoryData, apiErr = invQueryRepo.FetchOnHandInventoryBulk(ctx, itemIDs, accountID)
+	}
+	if apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
+
+	productLines, apiErr := s.repos.NewItemRepo().GetProductLineIDs(ctx, accountID, itemIDs)
 	if apiErr != nil {
 		return nil, tracing.Trace(span, apiErr)
 	}
@@ -1212,6 +1325,9 @@ func (s *itemSvcImpl) ListInventories(ctx context.Context, params domain.ListInv
 	results := make([]*domain.InventoryItemResult, len(itemResult.Items))
 	for i, item := range itemResult.Items {
 		result := &domain.InventoryItemResult{Item: item}
+		if productLineID, ok := productLines[item.ID]; ok {
+			result.ProductLineID = &productLineID
+		}
 		if inv, ok := invMap[item.ID]; ok {
 			result.OnHandQuantity = inv.OnHandQuantity
 			result.OnHandUnitID = inv.UnitID
@@ -1267,6 +1383,19 @@ func (s *itemSvcImpl) UpdateItemInventory(ctx context.Context, params domain.Upd
 	}
 	if item == nil {
 		return tracing.Trace(span, apierror.NewResourceNotFoundError("Item not found."))
+	}
+
+	// The quantity converts to the item's base unit through its unit group; a unit outside it has no conversion.
+	stocking, apiErr := s.repos.NewItemRepo().GetStockingUnit(ctx, accountID, params.ItemID)
+	if apiErr != nil {
+		return tracing.Trace(span, apiErr)
+	}
+	inGroup, apiErr := s.repos.NewUnitRepo().IsUnitInGroup(ctx, stocking.UnitGroupID, params.UnitID)
+	if apiErr != nil {
+		return tracing.Trace(span, apiErr)
+	}
+	if !inGroup {
+		return tracing.Trace(span, apierror.NewValidationErrorWithParam("quantity.unit_id must be a unit in the item's unit group.", "quantity.unit_id"))
 	}
 
 	// If customerID is provided, verify edit access.
@@ -2097,275 +2226,6 @@ func (s *itemSvcImpl) bulkCreatePartInTx(txCtx context.Context, accountID, itemI
 	}
 }
 
-// BulkReconcileItems reconciles inventory for multiple items by SKU.
-func (s *itemSvcImpl) BulkReconcileItems(ctx context.Context, params domain.BulkReconcileItemsParams) (*domain.BulkReconcileItemsResult, *apierror.APIError) {
-	ctx, span := itemSvcTracer.Start(ctx, "service.item.bulk_reconcile_items")
-	defer span.End()
-
-	identity, ok := appctx.GetIdentityFromContext(ctx)
-	if !ok || identity == nil {
-		return nil, tracing.Trace(span, apierror.NewInvariantViolationError("Identity not found in context."))
-	}
-
-	if apiErr := identity.CheckIsInternalActor(); apiErr != nil {
-		return nil, tracing.Trace(span, apiErr)
-	}
-	if apiErr := identity.CheckHasPermission(types.PermissionDomainItems, types.ActionCreate); apiErr != nil {
-		return nil, tracing.Trace(span, apiErr)
-	}
-
-	accountID := identity.Target.AccountID
-	params.AccountID = accountID
-	if identity.Actor != nil {
-		params.ResponsibleUserID = &identity.Actor.ID
-	}
-
-	meds := s.mediators()
-
-	idempotencyKey, apiErr := meds.Idempotency.UpsertIdempotencyKey(ctx, identity)
-	if apiErr != nil {
-		return nil, apiErr
-	}
-
-	switch domain.RecoveryPoint(idempotencyKey.RecoveryPoint) {
-	case domain.RecoveryPointFinished:
-		cached, err := idempotency.UnmarshalCachedResponse[domain.BulkReconcileItemsResult](ctx, idempotencyKey.ResponseCode, idempotencyKey.ResponseBody)
-		if err != nil {
-			return nil, tracing.Trace(span, apierror.NewInternalError(err, "Issue unmarshalling cached response."))
-		}
-		return cached.Data, cached.Error
-
-	case domain.RecoveryPointStarted:
-		result := &domain.BulkReconcileItemsResult{}
-
-		// Extract unique SKUs and units
-		uniqueSKUs := make(map[string]bool)
-		uniqueUnits := make(map[string]bool)
-		for _, d := range params.Data {
-			uniqueSKUs[d.SKU] = true
-			uniqueUnits[d.Unit] = true
-		}
-		skuList := make([]string, 0, len(uniqueSKUs))
-		for sku := range uniqueSKUs {
-			skuList = append(skuList, sku)
-		}
-		unitList := make([]string, 0, len(uniqueUnits))
-		for u := range uniqueUnits {
-			unitList = append(unitList, u)
-		}
-
-		// Batch-fetch items and units
-		items, apiErr := s.repos.NewItemRepo().FetchItemsBySKU(ctx, accountID, skuList)
-		if apiErr != nil {
-			return nil, meds.Idempotency.CacheErrorResponse(ctx, idempotencyKey.TypeID, tracing.Trace(span, apiErr))
-		}
-		units, apiErr := s.repos.NewUnitRepo().FindByAbbreviations(ctx, accountID, unitList)
-		if apiErr != nil {
-			return nil, meds.Idempotency.CacheErrorResponse(ctx, idempotencyKey.TypeID, tracing.Trace(span, apiErr))
-		}
-
-		// Build lookup maps
-		itemMap := make(map[string]domain.ItemSKUInfo, len(items))
-		for _, item := range items {
-			itemMap[item.SKU] = item
-		}
-		unitMap := make(map[string]*domain.Unit, len(units))
-		for _, unit := range units {
-			unitMap[unit.Abbreviation] = unit
-		}
-
-		// Categorize data
-		var validItems []domain.BulkReconcileItemInput
-		for _, d := range params.Data {
-			if _, ok := itemMap[d.SKU]; !ok {
-				result.SkippedItems = append(result.SkippedItems, domain.SkippedItem{SKU: d.SKU, Reason: "Item not found"})
-				continue
-			}
-			if _, ok := unitMap[d.Unit]; !ok {
-				result.Errors = append(result.Errors, domain.ReconcileError{ItemID: itemMap[d.SKU].ItemID, SKU: d.SKU, Error: fmt.Sprintf("Unit '%s' not found", d.Unit)})
-				continue
-			}
-			validItems = append(validItems, d)
-		}
-
-		if len(validItems) == 0 {
-			apiErr = s.withTx(ctx, func(txCtx context.Context, txSvc *itemSvcImpl) *apierror.APIError {
-				return txSvc.mediators().Idempotency.CacheSuccessResponse(txCtx, idempotencyKey.TypeID, result)
-			})
-			if apiErr != nil {
-				return nil, meds.Idempotency.CacheErrorResponse(ctx, idempotencyKey.TypeID, apiErr)
-			}
-			return result, nil
-		}
-
-		// Fetch physical inventory for all valid items before batch processing.
-		// This matches the Dashboard pattern which bulk-fetches inventory before processing.
-		// Uses physical inventory (receipts - open issues) instead of ATP to match Dashboard's physicalInventory metric.
-		invQueryRepo := s.repos.NewInventoryQueryRepo()
-		physicalInvMap := make(map[string]decimal.Decimal)
-		for _, d := range validItems {
-			item := itemMap[d.SKU]
-			if _, already := physicalInvMap[item.ItemID]; already {
-				continue
-			}
-			// In the base unit, which is what the rows below are written in.
-			physInv, fetchErr := invQueryRepo.FetchPhysicalInventory(ctx, item.ItemID, accountID, item.BaseUnitID)
-			if fetchErr != nil {
-				// Skip items where inventory cannot be fetched, matching Dashboard behavior where items with no currentInventory are silently skipped.
-				continue
-			}
-			physicalInvMap[item.ItemID] = physInv
-		}
-
-		// Process in batches of 50
-		batchSize := 50
-		for batchStart := 0; batchStart < len(validItems); batchStart += batchSize {
-			batchEnd := min(batchStart+batchSize, len(validItems))
-			batch := validItems[batchStart:batchEnd]
-
-			// Built inside the callback and assigned out once, then merged into the caller's result here.
-			// transaction.go's contract is that the callback re-runs on a lock conflict, so appending
-			// straight to `result` from inside it meant a retried batch reported every one of its rows
-			// twice. tools/txaudit enforces this shape.
-			var batchErrors []domain.ReconcileError
-			var batchReconciled []domain.ReconciledItem
-
-			apiErr = s.withTx(ctx, func(txCtx context.Context, txSvc *itemSvcImpl) *apierror.APIError {
-				var errs []domain.ReconcileError
-				var reconciled []domain.ReconciledItem
-				invMutRepo := txSvc.repos.NewInventoryMutationRepo()
-				// Every item in the batch, so the roots are the transaction's first statements. The set
-				// comes from `batch`, which was sliced before the transaction opened (Corollary A).
-				batchItemIDs := make([]string, 0, len(batch))
-				for _, d := range batch {
-					batchItemIDs = append(batchItemIDs, itemMap[d.SKU].ItemID)
-				}
-				scope, apiErr := ledgerlock.Acquire(txCtx, invMutRepo, batchItemIDs)
-				if apiErr != nil {
-					return apiErr
-				}
-
-				for _, d := range batch {
-					item := itemMap[d.SKU]
-
-					currentQty, ok := physicalInvMap[item.ItemID]
-					if !ok {
-						// Item has no inventory data; skip silently (matches Dashboard behavior where items without currentInventory are skipped without error).
-						continue
-					}
-
-					var newQty, delta decimal.Decimal
-					if params.ReconcileType == "force" {
-						newQty = d.Measure
-						delta = d.Measure.Sub(currentQty)
-					} else { // addition
-						delta = d.Measure
-						newQty = currentQty.Add(delta)
-					}
-
-					measure := delta.Abs()
-					unitID := item.BaseUnitID
-
-					if delta.GreaterThan(decimal.Zero) {
-						if apiErr := invMutRepo.CreateInventoryReceipt(txCtx, scope, domain.CreateInventoryReceiptParams{
-							AccountID: accountID, ItemID: item.ItemID, Measure: measure, UnitID: unitID,
-						}); apiErr != nil {
-							errs = append(errs, domain.ReconcileError{SKU: d.SKU, Error: "Failed to create receipt"})
-							continue
-						}
-					} else if delta.LessThan(decimal.Zero) {
-						if apiErr := invMutRepo.CreateInventoryIssue(txCtx, scope, domain.CreateInventoryIssueParams{
-							AccountID: accountID, ItemID: item.ItemID, Measure: measure, UnitID: unitID,
-						}); apiErr != nil {
-							errs = append(errs, domain.ReconcileError{SKU: d.SKU, Error: "Failed to create issue"})
-							continue
-						}
-					}
-
-					if apiErr := mediator.RecordInventoryAuditTrail(
-						txCtx,
-						txSvc.repos,
-						accountID,
-						item.ItemID,
-						delta,
-						unitID,
-						"user_correction",
-						nil,
-						params.ResponsibleUserID,
-					); apiErr != nil {
-						errs = append(errs, domain.ReconcileError{ItemID: item.ItemID, SKU: d.SKU, Error: "Failed to record inventory audit trail"})
-						continue
-					}
-
-					reconciled = append(reconciled, domain.ReconciledItem{
-						ItemID: item.ItemID, SKU: d.SKU,
-						PreviousMeasure: currentQty, NewMeasure: newQty,
-						UnitID: item.BaseUnitID,
-					})
-
-					// Empty when the reconciled quantity equals the current quantity; the publisher skips the event as a no-op.
-					var changes []audit.FieldChange
-					if !delta.IsZero() {
-						changes = append(changes, audit.NewFieldChange("quantity", currentQty, newQty))
-					}
-
-					if apiErr := audit.NewPublisher().Publish(txCtx, txSvc.repos.NewOutboxRepo(), audit.EventData{
-						ServiceName:  domain.ServiceName,
-						Action:       constants.AuditActionUpdate,
-						ResourceType: constants.ObjectTypeItem,
-						ResourceID:   item.ItemID,
-						Changes:      changes,
-					}); apiErr != nil {
-						errs = append(errs, domain.ReconcileError{SKU: d.SKU, Error: "Failed to publish audit event"})
-						continue
-					}
-				}
-
-				// Reconciling writes receipts and issues and then never offered that stock to anything
-				// waiting on it: an item adjusted upward stayed short against its own open demand until
-				// something unrelated happened to trigger allocation. Inside this transaction, so the
-				// request exists if and only if the rows that justify it do.
-				requestIDs := make([]string, 0, len(reconciled))
-				for _, item := range reconciled {
-					requestIDs = append(requestIDs, item.ItemID)
-				}
-				if apiErr := mediator.EnqueueAllocateOpenIssues(txCtx, txSvc.repos, accountID, requestIDs...); apiErr != nil {
-					return apiErr
-				}
-
-				// Assigned, not appended: the callback re-runs on a lock conflict and the second run must
-				// replace the first run's rows rather than add to them.
-				batchErrors = errs
-				batchReconciled = reconciled
-				return nil
-			})
-
-			if apiErr != nil {
-				return nil, meds.Idempotency.CacheErrorResponse(ctx, idempotencyKey.TypeID, apiErr)
-			}
-
-			result.Errors = append(result.Errors, batchErrors...)
-			result.ReconciledItems = append(result.ReconciledItems, batchReconciled...)
-		}
-
-		// Cached once, after every batch has committed, rather than once per batch from inside the
-		// callback. It was being handed the accumulating slice mid-run, so a retried batch cached a
-		// response body containing its rows twice — and the cached body is what a replay of the
-		// idempotency key returns.
-		apiErr = s.withTx(ctx, func(txCtx context.Context, txSvc *itemSvcImpl) *apierror.APIError {
-			return txSvc.mediators().Idempotency.CacheSuccessResponse(txCtx, idempotencyKey.TypeID, result)
-		})
-		if apiErr != nil {
-			return nil, meds.Idempotency.CacheErrorResponse(ctx, idempotencyKey.TypeID, apiErr)
-		}
-
-		return result, nil
-
-	default:
-		return nil, tracing.Trace(span, apierror.NewInvariantViolationError("Unexpected recovery point: "+idempotencyKey.RecoveryPoint))
-	}
-}
-
 // --- Export ---
 
 // lists the fixed columns every item sheet carries; extra lands between the
@@ -2386,6 +2246,9 @@ func itemBaseColumns(extra ...excel.ColumnSpec) []excel.ColumnSpec {
 		excel.ColumnSpec{Header: "Unit Cost", Key: "unit_cost", Width: 14},
 	)
 }
+
+// the item sheet columns a requester without costs:read does not get
+var itemCostColumns = []string{"unit_cost"}
 
 // fills the fixed item cells shared by the product, part and material sheets
 func addItemBaseCells(row excel.Row, rowID string, item *domain.Item) {

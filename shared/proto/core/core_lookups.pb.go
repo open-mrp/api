@@ -9817,10 +9817,12 @@ func (x *BatchGetEDIRunsByIDsResponse) GetEdiRuns() []*EDIRunProto {
 }
 
 type ListInventoriesRequest struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Cursor        *string                `protobuf:"bytes,1,opt,name=cursor,proto3,oneof" json:"cursor,omitempty"`
-	Limit         int32                  `protobuf:"varint,2,opt,name=limit,proto3" json:"limit,omitempty"`
-	Query         *string                `protobuf:"bytes,3,opt,name=query,proto3,oneof" json:"query,omitempty"`
+	state  protoimpl.MessageState `protogen:"open.v1"`
+	Cursor *string                `protobuf:"bytes,1,opt,name=cursor,proto3,oneof" json:"cursor,omitempty"`
+	Limit  int32                  `protobuf:"varint,2,opt,name=limit,proto3" json:"limit,omitempty"`
+	Query  *string                `protobuf:"bytes,3,opt,name=query,proto3,oneof" json:"query,omitempty"`
+	// Reports each item's last logged level at or before this instant instead of its current on-hand.
+	AsOf          *timestamppb.Timestamp `protobuf:"bytes,4,opt,name=as_of,json=asOf,proto3,oneof" json:"as_of,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -9876,6 +9878,13 @@ func (x *ListInventoriesRequest) GetQuery() string {
 	return ""
 }
 
+func (x *ListInventoriesRequest) GetAsOf() *timestamppb.Timestamp {
+	if x != nil {
+		return x.AsOf
+	}
+	return nil
+}
+
 type InventoryItemProto struct {
 	state                  protoimpl.MessageState `protogen:"open.v1"`
 	OnHandQuantity         float64                `protobuf:"fixed64,1,opt,name=on_hand_quantity,json=onHandQuantity,proto3" json:"on_hand_quantity,omitempty"`
@@ -9883,6 +9892,7 @@ type InventoryItemProto struct {
 	OnHandUnitAbbreviation string                 `protobuf:"bytes,3,opt,name=on_hand_unit_abbreviation,json=onHandUnitAbbreviation,proto3" json:"on_hand_unit_abbreviation,omitempty"`
 	OnHandUnitType         string                 `protobuf:"bytes,4,opt,name=on_hand_unit_type,json=onHandUnitType,proto3" json:"on_hand_unit_type,omitempty"`
 	Item                   *ItemInfo              `protobuf:"bytes,5,opt,name=item,proto3" json:"item,omitempty"`
+	ProductLineId          *string                `protobuf:"bytes,6,opt,name=product_line_id,json=productLineId,proto3,oneof" json:"product_line_id,omitempty"`
 	unknownFields          protoimpl.UnknownFields
 	sizeCache              protoimpl.SizeCache
 }
@@ -9950,6 +9960,13 @@ func (x *InventoryItemProto) GetItem() *ItemInfo {
 		return x.Item
 	}
 	return nil
+}
+
+func (x *InventoryItemProto) GetProductLineId() string {
+	if x != nil && x.ProductLineId != nil {
+		return *x.ProductLineId
+	}
+	return ""
 }
 
 type ListInventoriesResponse struct {
@@ -11576,19 +11593,23 @@ const file_core_core_lookups_proto_rawDesc = "" +
 	"\x1bBatchGetEDIRunsByIDsRequest\x12\x10\n" +
 	"\x03ids\x18\x01 \x03(\tR\x03ids\"L\n" +
 	"\x1cBatchGetEDIRunsByIDsResponse\x12,\n" +
-	"\bedi_runs\x18\x01 \x03(\v2\x11.core.EDIRunProtoR\aediRuns\"{\n" +
+	"\bedi_runs\x18\x01 \x03(\v2\x11.core.EDIRunProtoR\aediRuns\"\xbb\x01\n" +
 	"\x16ListInventoriesRequest\x12\x1b\n" +
 	"\x06cursor\x18\x01 \x01(\tH\x00R\x06cursor\x88\x01\x01\x12\x14\n" +
 	"\x05limit\x18\x02 \x01(\x05R\x05limit\x12\x19\n" +
-	"\x05query\x18\x03 \x01(\tH\x01R\x05query\x88\x01\x01B\t\n" +
+	"\x05query\x18\x03 \x01(\tH\x01R\x05query\x88\x01\x01\x124\n" +
+	"\x05as_of\x18\x04 \x01(\v2\x1a.google.protobuf.TimestampH\x02R\x04asOf\x88\x01\x01B\t\n" +
 	"\a_cursorB\b\n" +
-	"\x06_query\"\xef\x01\n" +
+	"\x06_queryB\b\n" +
+	"\x06_as_of\"\xb0\x02\n" +
 	"\x12InventoryItemProto\x12(\n" +
 	"\x10on_hand_quantity\x18\x01 \x01(\x01R\x0eonHandQuantity\x12%\n" +
 	"\x0fon_hand_unit_id\x18\x02 \x01(\tR\fonHandUnitId\x129\n" +
 	"\x19on_hand_unit_abbreviation\x18\x03 \x01(\tR\x16onHandUnitAbbreviation\x12)\n" +
 	"\x11on_hand_unit_type\x18\x04 \x01(\tR\x0eonHandUnitType\x12\"\n" +
-	"\x04item\x18\x05 \x01(\v2\x0e.core.ItemInfoR\x04item\"\x8c\x01\n" +
+	"\x04item\x18\x05 \x01(\v2\x0e.core.ItemInfoR\x04item\x12+\n" +
+	"\x0fproduct_line_id\x18\x06 \x01(\tH\x00R\rproductLineId\x88\x01\x01B\x12\n" +
+	"\x10_product_line_id\"\x8c\x01\n" +
 	"\x17ListInventoriesResponse\x12.\n" +
 	"\x05items\x18\x01 \x03(\v2\x18.core.InventoryItemProtoR\x05items\x12\x14\n" +
 	"\x05count\x18\x02 \x01(\x03R\x05count\x12+\n" +
@@ -11991,20 +12012,21 @@ var file_core_core_lookups_proto_depIdxs = []int32{
 	169, // 147: core.ListEDIRunsResponse.page_info:type_name -> core.PageInfo
 	147, // 148: core.GetEDIRunResponse.edi_run:type_name -> core.EDIRunProto
 	147, // 149: core.BatchGetEDIRunsByIDsResponse.edi_runs:type_name -> core.EDIRunProto
-	177, // 150: core.InventoryItemProto.item:type_name -> core.ItemInfo
-	155, // 151: core.ListInventoriesResponse.items:type_name -> core.InventoryItemProto
-	169, // 152: core.ListInventoriesResponse.page_info:type_name -> core.PageInfo
-	158, // 153: core.AnalyzeWeeksOfSalesResponse.items:type_name -> core.WeeksOfSalesItemProto
-	160, // 154: core.BulkReconcileItemsRequest.data:type_name -> core.BulkReconcileItemInput
-	162, // 155: core.BulkReconcileItemsResponse.reconciled_items:type_name -> core.ReconciledItemProto
-	163, // 156: core.BulkReconcileItemsResponse.skipped_items:type_name -> core.SkippedItemProto
-	164, // 157: core.BulkReconcileItemsResponse.errors:type_name -> core.ReconcileErrorProto
-	173, // 158: core.ValidateUnitsResponse.UnitsEntry.value:type_name -> core.UnitInfo
-	159, // [159:159] is the sub-list for method output_type
-	159, // [159:159] is the sub-list for method input_type
-	159, // [159:159] is the sub-list for extension type_name
-	159, // [159:159] is the sub-list for extension extendee
-	0,   // [0:159] is the sub-list for field type_name
+	171, // 150: core.ListInventoriesRequest.as_of:type_name -> google.protobuf.Timestamp
+	177, // 151: core.InventoryItemProto.item:type_name -> core.ItemInfo
+	155, // 152: core.ListInventoriesResponse.items:type_name -> core.InventoryItemProto
+	169, // 153: core.ListInventoriesResponse.page_info:type_name -> core.PageInfo
+	158, // 154: core.AnalyzeWeeksOfSalesResponse.items:type_name -> core.WeeksOfSalesItemProto
+	160, // 155: core.BulkReconcileItemsRequest.data:type_name -> core.BulkReconcileItemInput
+	162, // 156: core.BulkReconcileItemsResponse.reconciled_items:type_name -> core.ReconciledItemProto
+	163, // 157: core.BulkReconcileItemsResponse.skipped_items:type_name -> core.SkippedItemProto
+	164, // 158: core.BulkReconcileItemsResponse.errors:type_name -> core.ReconcileErrorProto
+	173, // 159: core.ValidateUnitsResponse.UnitsEntry.value:type_name -> core.UnitInfo
+	160, // [160:160] is the sub-list for method output_type
+	160, // [160:160] is the sub-list for method input_type
+	160, // [160:160] is the sub-list for extension type_name
+	160, // [160:160] is the sub-list for extension extendee
+	0,   // [0:160] is the sub-list for field type_name
 }
 
 func init() { file_core_core_lookups_proto_init() }
@@ -12067,6 +12089,7 @@ func file_core_core_lookups_proto_init() {
 	file_core_core_lookups_proto_msgTypes[145].OneofWrappers = []any{}
 	file_core_core_lookups_proto_msgTypes[146].OneofWrappers = []any{}
 	file_core_core_lookups_proto_msgTypes[152].OneofWrappers = []any{}
+	file_core_core_lookups_proto_msgTypes[153].OneofWrappers = []any{}
 	file_core_core_lookups_proto_msgTypes[155].OneofWrappers = []any{}
 	type x struct{}
 	out := protoimpl.TypeBuilder{

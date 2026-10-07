@@ -220,6 +220,7 @@ func TestGetHTTPStatusCode(t *testing.T) {
 		ErrorCodeAPIVersionInvalid:       http.StatusBadRequest,
 		ErrorCodeAPIVersionTooOld:        http.StatusBadRequest,
 		ErrorCodeMethodNotAllowed:        http.StatusMethodNotAllowed,
+		ErrorCodeRequestTooLarge:         http.StatusRequestEntityTooLarge,
 		ErrorCodeResourceNotFound:        http.StatusNotFound,
 		ErrorCodeResourceGone:            http.StatusGone,
 		ErrorCodeResourceExists:          http.StatusConflict,

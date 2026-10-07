@@ -69,6 +69,8 @@ func (f *jobSvcFactoryImpl) Build(repos domain.RepoFactory) domain.JobSvc {
 // for, so a job ID from another tenant reads as absent rather than as someone else's
 // work. Reading a job is the one thing a client does with one directly, so it is the
 // one place a jobs permission is checked.
+//
+// A customer or supplier portal reads only the jobs it raised itself: a job the seller's staff raised can carry the link to an export of the seller's records. Anyone else's job reads as absent, exactly as a missing one does.
 func (s *jobSvcImpl) GetJob(ctx context.Context, jobID string) (*domain.Job, *apierror.APIError) {
 	ctx, span := jobSvcTracer.Start(ctx, "service.job.get")
 	defer span.End()
@@ -82,7 +84,22 @@ func (s *jobSvcImpl) GetJob(ctx context.Context, jobID string) (*domain.Job, *ap
 		return nil, tracing.Trace(span, apiErr)
 	}
 
-	return s.repos.NewJobRepo().Get(ctx, jobID, identity.Target.AccountID)
+	accountID := identity.Target.AccountID
+	job, apiErr := s.repos.NewJobRepo().Get(ctx, jobID, accountID)
+	if apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
+
+	if identity.IsRelationActor() && !raisedBy(job, jobCreatedByID(ctx, s.repos, accountID, identity)) {
+		return nil, tracing.Trace(span, apierror.NewResourceNotFoundError("Resource not found."))
+	}
+
+	return job, nil
+}
+
+// raisedBy reports whether job was raised by the caller attributed as createdByID.
+func raisedBy(job *domain.Job, createdByID *string) bool {
+	return job.CreatedByID != nil && createdByID != nil && *job.CreatedByID == *createdByID
 }
 
 // GetJobForExecution reads a job for the worker running it. See domain.JobSvc for

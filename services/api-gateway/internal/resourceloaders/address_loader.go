@@ -29,12 +29,13 @@ func LoadAddresses(ctx context.Context, ids []string) (map[string]any, *apierror
 	}
 	out := make(map[string]any, len(resp.Addresses))
 	for _, a := range resp.Addresses {
-		out[a.Id] = addressFromProto(a)
+		out[a.Id] = AddressFromProto(a)
 	}
 	return out, nil
 }
 
-func addressFromProto(a *pb.AddressInfo) *apiresource.Address {
+// AddressFromProto builds an address with its geolocation, which is always inline.
+func AddressFromProto(a *pb.AddressInfo) *apiresource.Address {
 	addressType := constants.AddressTypeStandard
 	if a.IsDropShip {
 		addressType = constants.AddressTypeDropShip

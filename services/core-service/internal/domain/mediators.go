@@ -55,6 +55,37 @@ type EditAccessMed interface {
 	CheckEditAccess(ctx context.Context, actorAccountID, targetAccountID string) *apierror.APIError
 }
 
+// AddressMed writes addresses and their audit events, for the address endpoints and for the records that save an address inline with their own write. It checks no permission: the caller's own write authorizes it.
+type AddressMed interface {
+	// Create saves a new address in params.AccountID and records its audit event.
+	//
+	//  1. Trim the name; a blank name is a validation error on `name`.
+	//  2. Insert the geolocation, the address, and the address's link to the account.
+	//  3. Publish the address create audit event to the outbox.
+	Create(ctx context.Context, params CreateAddressParams) (*Address, *apierror.APIError)
+
+	// Update changes an address linked to params.AccountID and records its audit event. Fields the params leave unset keep their stored values.
+	//
+	//  1. Trim a given name; a blank name is a validation error on `name`.
+	//  2. Return not-found unless the address is linked to the account.
+	//  3. When a street, locality, state, postal code or country changes, update the geolocation in place, or move the address to a new one when other addresses share it.
+	//  4. Update the address, writing back the stored phone, email and receiving calendar where the params leave them unset.
+	//  5. Publish the address update audit event to the outbox.
+	Update(ctx context.Context, params UpdateAddressParams) (*Address, *apierror.APIError)
+
+	// Preview returns the address an inline save into accountID would leave, without writing anything. Errors name fields under param, the request field the inline address was sent in.
+	//
+	//  1. With an ID, return not-found on `<param>.id` unless the address is linked to the account, then apply the inline fields to the stored address.
+	//  2. Without one, require a name and a country, and build the address from the inline fields.
+	Preview(ctx context.Context, accountID string, input InlineAddressParams, param string) (*Address, *apierror.APIError)
+
+	// Save writes an inline address into accountID: the stored address its ID names is updated, or a new one is created. Errors name fields under param, the request field the inline address was sent in.
+	//
+	//  1. Validate the inline address as Preview does.
+	//  2. Update the named address as Update does, or create a new one as Create does.
+	Save(ctx context.Context, accountID string, input InlineAddressParams, param string) (*Address, *apierror.APIError)
+}
+
 type ProductionFlowMed interface {
 	// LinkFlow recomputes all parent-child production step connections for a step based on its current consumptions and productions.
 	//

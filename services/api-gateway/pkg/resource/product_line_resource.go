@@ -29,12 +29,16 @@ type ProductLine struct {
 	// Free-form description of the product line.
 	Description *string `json:"description"`
 	// Free-form notes about the product line.
-	Notes *string `json:"notes"`
+	//
+	// Null to customer and supplier portal users: they are your own team's notes.
+	Notes *string `json:"notes" sensitive:"internal"`
 	// Default commission policy for products in this product line.
 	//
 	// - `commission_exempt`: no commission applies to these products.
 	// - `commission_applied`: commission applies to these products, unless overridden elsewhere.
-	CommissionPolicy constants.CommissionPolicy `json:"commission_policy" validate:"required"`
+	//
+	// Null to customer and supplier portal users, like the rest of your commission settings.
+	CommissionPolicy *constants.CommissionPolicy `json:"commission_policy" validate:"required" sensitive:"internal"`
 	// Default freight policy for products in this product line.
 	//
 	// - `free_freight`: these products do not incur a freight charge.
@@ -53,14 +57,16 @@ type ProductLine struct {
 	// Sizes the campaigns a production schedule plans, and defaults the quantity when a batch is added to a production run. The unit is part of the value — 60 counted in pairs and 60 counted in eaches are different lots — and is drawn from this product line's unit group.
 	//
 	// An item's own lot override still takes precedence over the line's. When the line has no lot convention, planning falls back to the lot of the line the item feeds into, and then to the account-wide default lot size.
-	DefaultLot *Quantity `json:"default_lot" expandable:"true"`
+	//
+	// Null to customer and supplier portal users, like the rest of your production planning.
+	DefaultLot *Quantity `json:"default_lot" expandable:"true" sensitive:"internal"`
 	// How products in this line are produced when they do not say for themselves.
 	//
 	// - `make_to_stock`: built to the forecast, holding a safety stock against its variability.
 	// - `make_to_order`: built only against orders already on the book, holding no buffer.
 	//
-	// Null falls through to the account default.
-	FulfillmentPolicy *constants.FulfillmentPolicy `json:"fulfillment_policy"`
+	// Null falls through to the account default. Always null to customer and supplier portal users, like the rest of your production planning.
+	FulfillmentPolicy *constants.FulfillmentPolicy `json:"fulfillment_policy" sensitive:"internal"`
 	// Creation timestamp.
 	CreatedAt time.Time `json:"created_at" validate:"required"`
 	// Last-updated timestamp.
@@ -73,7 +79,7 @@ var SampleProductLine = &ProductLine{
 	Name:             SampleProductLineName,
 	Description:      &sampleProductLineDescription,
 	Notes:            &sampleProductLineNotes,
-	CommissionPolicy: constants.CommissionPolicyExempt,
+	CommissionPolicy: new(constants.CommissionPolicyExempt),
 	FreightPolicy:    constants.FreightPolicyBilled,
 	Owner:            SampleOwnerSystem,
 	UnitGroup:        SampleUnitGroup,

@@ -144,6 +144,15 @@ func baseBatchToProto(b *domain.BaseBatch) *pb.BaseBatchInfo {
 		pbBatch.ScannedAt = timestamppb.New(*b.ScannedAt)
 	}
 
+	pbBatch.Machines = make([]*pb.LightMachineInfo, len(b.Machines))
+	for i, m := range b.Machines {
+		pbBatch.Machines[i] = &pb.LightMachineInfo{Id: m.ID, Name: m.Name, SerialNumber: m.SerialNumber}
+	}
+	pbBatch.Lots = make([]*pb.BatchLotInfo, len(b.Lots))
+	for i, l := range b.Lots {
+		pbBatch.Lots[i] = &pb.BatchLotInfo{LotNumber: l.LotNumber, Type: l.Type}
+	}
+
 	return pbBatch
 }
 
@@ -319,7 +328,13 @@ func (h *gRPCHandler) InitializeBatch(ctx context.Context, req *pb.InitializeBat
 	ctx, finalizeIdempotency := contracts.WithIdempotencyTracking(ctx)
 	defer finalizeIdempotency()
 
-	batch, apiErr := h.batchSvc.InitializeBatch(ctx, req.BatchId, req.ScanningStationId)
+	batch, apiErr := h.batchSvc.InitializeBatch(ctx, domain.InitializeBatchParams{
+		BatchID:           req.BatchId,
+		ScanningStationID: req.ScanningStationId,
+		TypeOverride:      req.TypeOverride,
+		ProductionStepID:  req.ProductionStepId,
+		ConsumeMaterials:  req.ConsumeMaterials,
+	})
 	if apiErr != nil {
 		return nil, contracts.ConvertAPIErrorToGRPC(apiErr)
 	}
@@ -430,6 +445,7 @@ func (h *gRPCHandler) GetScanningStationConsumption(ctx context.Context, req *pb
 		BatchIDs:          req.BatchIds,
 		ProductionStepID:  req.ProductionStepId,
 		SplitQuantity:     batchQuantityPtrFromProto(req.SplitQuantity),
+		TypeOverride:      req.TypeOverride,
 	}
 
 	consumptions, apiErr := h.batchSvc.GetScanningStationConsumption(ctx, params)

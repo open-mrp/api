@@ -146,6 +146,10 @@ func (s *registrationFlowSvcImpl) CreateRegistrationFlow(ctx context.Context, pa
 
 	params.AccountID = identity.Target.AccountID
 
+	if apiErr := checkCustomerRefs(ctx, s.repos, params.AccountID, registrationFlowTermRefs(params.PaymentTermIDs, params.ShippingTermIDs)); apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
+
 	meds := s.mediators()
 
 	idempotencyKey, apiErr := meds.Idempotency.UpsertIdempotencyKey(ctx, identity)
@@ -215,6 +219,10 @@ func (s *registrationFlowSvcImpl) UpdateRegistrationFlow(ctx context.Context, pa
 	}
 
 	params.AccountID = identity.Target.AccountID
+
+	if apiErr := checkCustomerRefs(ctx, s.repos, params.AccountID, registrationFlowTermRefs(params.PaymentTermIDs, params.ShippingTermIDs)); apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
 
 	meds := s.mediators()
 
@@ -294,7 +302,7 @@ func (s *registrationFlowSvcImpl) DeleteRegistrationFlow(ctx context.Context, re
 	registrationFlow, apiErr := s.repos.NewRegistrationFlowRepo().Get(ctx, accountID, registrationFlowID)
 	if apiErr != nil {
 		if apierror.IsNotFound(apiErr) {
-			wasDeleted, deletedCheckErr := s.repos.NewDeletedRecordRepo().Exists(ctx, constants.DeletedRecordResourceTypeRegistrationFlow, registrationFlowID)
+			wasDeleted, deletedCheckErr := s.repos.NewDeletedRecordRepo().ExistsInAccount(ctx, constants.DeletedRecordResourceTypeRegistrationFlow, registrationFlowID, accountID)
 			if deletedCheckErr != nil {
 				return tracing.Trace(span, deletedCheckErr)
 			}
@@ -306,7 +314,7 @@ func (s *registrationFlowSvcImpl) DeleteRegistrationFlow(ctx context.Context, re
 	}
 
 	apiErr = s.withTx(ctx, func(txCtx context.Context, txSvc *registrationFlowSvcImpl) *apierror.APIError {
-		if apiErr := txSvc.repos.NewDeletedRecordRepo().Create(txCtx, constants.DeletedRecordResourceTypeRegistrationFlow, registrationFlow.ID, registrationFlow); apiErr != nil {
+		if apiErr := txSvc.repos.NewDeletedRecordRepo().CreateInAccount(txCtx, constants.DeletedRecordResourceTypeRegistrationFlow, registrationFlow.ID, accountID, registrationFlow); apiErr != nil {
 			return apiErr
 		}
 
@@ -379,12 +387,9 @@ func (s *registrationFlowSvcImpl) RegisterCustomer(ctx context.Context, params d
 		return tracing.Trace(span, apierror.NewInvariantViolationError("Identity not found in context."))
 	}
 
-	if apiErr := identity.CheckIsAuthenticated(); apiErr != nil {
+	// Registration links the actor to a customer account as a user, which an API key or agent is not.
+	if apiErr := identity.CheckHasUserActor(); apiErr != nil {
 		return tracing.Trace(span, apiErr)
-	}
-
-	if identity.Actor == nil {
-		return tracing.Trace(span, apierror.NewAuthenticationError("Actor is required."))
 	}
 
 	userID := identity.Actor.ID
@@ -475,6 +480,18 @@ func (s *registrationFlowSvcImpl) registerExistingCustomer(
 	return nil
 }
 
+// registrationFlowTermRefs lists the terms a flow would offer its registrants, who then choose one for their customer record.
+func registrationFlowTermRefs(paymentTermIDs, shippingTermIDs []string) customerRefs {
+	var refs customerRefs
+	for _, termID := range paymentTermIDs {
+		refs.add(customerRefPaymentTerm, &termID, nil, "payment_term_ids")
+	}
+	for _, termID := range shippingTermIDs {
+		refs.add(customerRefShippingTerm, &termID, nil, "shipping_term_ids")
+	}
+	return refs
+}
+
 func (s *registrationFlowSvcImpl) registerNewCustomer(
 	ctx context.Context,
 	span trace.Span,
@@ -502,6 +519,15 @@ func (s *registrationFlowSvcImpl) registerNewCustomer(
 		return tracing.Trace(span, apierror.NewValidationError("Customer group is required."))
 	}
 
+	// The registrant chooses these, and they are stored on the seller's customer, so each must be the seller's.
+	if apiErr := checkCustomerRefs(ctx, s.repos, ownerAccountID, customerRefs{
+		{kind: customerRefAccountGroup, id: *data.CustomerGroupID, param: "customer_group_id"},
+		{kind: customerRefPaymentTerm, id: *data.PaymentTermID, param: "payment_term_id"},
+		{kind: customerRefShippingTerm, id: *data.ShippingTermID, param: "shipping_term_id"},
+	}); apiErr != nil {
+		return tracing.Trace(span, apiErr)
+	}
+
 	customerRepo := s.repos.NewCustomerRegistrationRepo()
 
 	// Get user email for branding
@@ -519,6 +545,12 @@ func (s *registrationFlowSvcImpl) registerNewCustomer(
 
 	apiErr = s.withTx(ctx, func(txCtx context.Context, txSvc *registrationFlowSvcImpl) *apierror.APIError {
 		txRepo := txSvc.repos.NewCustomerRegistrationRepo()
+
+		// Queue behind the seller's other customer number writers, so a number someone is typing in
+		// right now is not handed out here as well.
+		if apiErr := txSvc.repos.NewCustomerRepo().LockNumbers(txCtx, ownerAccountID); apiErr != nil {
+			return apiErr
+		}
 
 		// Reserve the number inside the transaction. Two people completing registration at
 		// the same moment used to read the same counter and both be given that number.

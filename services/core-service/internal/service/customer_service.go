@@ -14,6 +14,7 @@ import (
 	"github.com/open-mrp/api/shared/constants"
 	"github.com/open-mrp/api/shared/contracts"
 	apierror "github.com/open-mrp/api/shared/errors"
+	"github.com/open-mrp/api/shared/field"
 	"github.com/open-mrp/api/shared/id"
 	"github.com/open-mrp/api/shared/idempotency"
 	"github.com/open-mrp/api/shared/messaging"
@@ -25,6 +26,7 @@ var customerSvcTracer = tracing.GetTracer("core-service.service.customer")
 type customerSvcImpl struct {
 	repos           domain.RepoFactory
 	mediatorFactory domain.MediatorFactory
+	jobSvcFactory   domain.JobSvcFactory
 	txManager       TransactionManager
 }
 
@@ -34,6 +36,9 @@ type CustomerSvcConfig struct {
 
 	// MediatorFactory (required) builds the mediators used by this service.
 	MediatorFactory domain.MediatorFactory
+
+	// JobSvcFactory (required) builds the job service an export records on.
+	JobSvcFactory domain.JobSvcFactory
 
 	// TxManager (required) wraps multi-step operations in database transactions.
 	TxManager TransactionManager
@@ -45,6 +50,9 @@ func (c *CustomerSvcConfig) validate() error {
 	}
 	if c.MediatorFactory == nil {
 		return fmt.Errorf("customer service: MediatorFactory is required")
+	}
+	if c.JobSvcFactory == nil {
+		return fmt.Errorf("customer service: JobSvcFactory is required")
 	}
 	if c.TxManager == nil {
 		return fmt.Errorf("customer service: TxManager is required")
@@ -60,6 +68,7 @@ func NewCustomerSvc(config *CustomerSvcConfig) domain.CustomerSvc {
 	return &customerSvcImpl{
 		repos:           config.Repos,
 		mediatorFactory: config.MediatorFactory,
+		jobSvcFactory:   config.JobSvcFactory,
 		txManager:       config.TxManager,
 	}
 }
@@ -77,6 +86,7 @@ func (s *customerSvcImpl) withTx(ctx context.Context, fn func(context.Context, *
 		txSvc := &customerSvcImpl{
 			repos:           f,
 			mediatorFactory: s.mediatorFactory,
+			jobSvcFactory:   s.jobSvcFactory,
 			txManager:       s.txManager,
 		}
 		return fn(txCtx, txSvc)
@@ -106,7 +116,7 @@ func (s *customerSvcImpl) ListCustomers(ctx context.Context, params domain.ListC
 	return s.repos.NewCustomerRepo().List(ctx, params)
 }
 
-// GetCustomer retrieves a single customer by account ID. Supports both internal and customer actors.
+// GetCustomer retrieves a single customer by account ID. A customer or supplier portal actor reads only its own account's record.
 func (s *customerSvcImpl) GetCustomer(ctx context.Context, customerAccountID string, includes []string) (*domain.Customer, *apierror.APIError) {
 	ctx, span := customerSvcTracer.Start(ctx, "service.customer.get")
 	defer span.End()
@@ -127,10 +137,8 @@ func (s *customerSvcImpl) GetCustomer(ctx context.Context, customerAccountID str
 		return nil, tracing.Trace(span, apierror.NewAuthenticationError("The OpenMRP-Account-ID header is required."))
 	}
 
-	if identity.IsCustomerUser() {
-		if customerAccountID != *identity.ActorAccountID() {
-			return nil, tracing.Trace(span, apierror.NewResourceNotFoundError("Customer not found."))
-		}
+	if own := identity.PortalAccountID(); own != nil && customerAccountID != *own {
+		return nil, tracing.Trace(span, apierror.NewResourceNotFoundError("Customer not found."))
 	}
 
 	if identity.IsExternalTarget() {
@@ -170,10 +178,10 @@ func (s *customerSvcImpl) BatchGetCustomers(ctx context.Context, customerAccount
 	}
 
 	ids := customerAccountIDs
-	if identity.IsCustomerUser() {
+	if own := identity.PortalAccountID(); own != nil && !identity.IsIncludeRead() {
 		ids = nil
-		if slices.Contains(customerAccountIDs, *identity.ActorAccountID()) {
-			ids = []string{*identity.ActorAccountID()}
+		if slices.Contains(customerAccountIDs, *own) {
+			ids = []string{*own}
 		}
 	}
 
@@ -252,16 +260,17 @@ func (s *customerSvcImpl) CreateCustomer(ctx context.Context, params domain.Crea
 		apiErr = s.withTx(ctx, func(txCtx context.Context, txSvc *customerSvcImpl) *apierror.APIError {
 			txCustomerRepo := txSvc.repos.NewCustomerRepo()
 
-			// Validate that the sales rep account user ID belongs to this account.
-			if params.DefaultSalesRepID != nil {
-				txAccountUserRepo := txSvc.repos.NewAccountUserRepo()
-				_, apiErr := txAccountUserRepo.GetDetailByAccountAndID(txCtx, params.OwnerAccountID, *params.DefaultSalesRepID, nil)
-				if apiErr != nil {
-					if apiErr.Code != apierror.ErrorCodeResourceNotFound {
-						return apiErr
-					}
-					return apierror.NewResourceNotFoundError("No sales rep found with the provided ID.").WithParam("default_sales_rep_id")
-				}
+			// Every create takes a number, typed in or allocated, so it queues behind the owner's other
+			// number writers before anything else is read.
+			if apiErr := txCustomerRepo.LockNumbers(txCtx, params.OwnerAccountID); apiErr != nil {
+				return apiErr
+			}
+
+			if apiErr := checkCustomerRefs(txCtx, txSvc.repos, params.OwnerAccountID, newCustomerRefs(params)); apiErr != nil {
+				return apiErr
+			}
+			if apiErr := checkServiceLevelOnCarrier(txCtx, txSvc.repos, params.DefaultCarrierID, params.DefaultServiceLevelID, "default_service_level_id"); apiErr != nil {
+				return apiErr
 			}
 
 			// Generate or auto-assign customer number.
@@ -279,7 +288,8 @@ func (s *customerSvcImpl) CreateCustomer(ctx context.Context, params domain.Crea
 				}
 			} else {
 				// Auto-generate the next customer number, reserved in one locked statement so
-				// two customers created at the same moment cannot be given the same one.
+				// two customers created at the same moment cannot be given the same one, and past
+				// any number someone typed in.
 				sysPropertyID, apiErr := id.GenID(id.SysPropertyIDPrefix, nil)
 				if apiErr != nil {
 					return apiErr
@@ -440,21 +450,23 @@ func (s *customerSvcImpl) UpdateCustomer(ctx context.Context, params domain.Upda
 		apiErr = s.withTx(ctx, func(txCtx context.Context, txSvc *customerSvcImpl) *apierror.APIError {
 			txCustomerRepo := txSvc.repos.NewCustomerRepo()
 
+			// Before the first read, or the number check below reads a snapshot older than the lock.
+			if params.Number != nil && *params.Number != "" {
+				if apiErr := txCustomerRepo.LockNumbers(txCtx, params.OwnerAccountID); apiErr != nil {
+					return apiErr
+				}
+			}
+
 			old, apiErr := txCustomerRepo.Get(txCtx, params.OwnerAccountID, params.CustomerAccountID, []string{"price_groups", "notification_preferences", "bill_to_address", "ship_to_address"})
 			if apiErr != nil {
 				return apiErr
 			}
 
-			if params.DefaultSalesRepID.IsSet() {
-				repID, _ := params.DefaultSalesRepID.Value()
-				txAccountUserRepo := txSvc.repos.NewAccountUserRepo()
-				_, apiErr := txAccountUserRepo.GetDetailByAccountAndID(txCtx, params.OwnerAccountID, repID, nil)
-				if apiErr != nil {
-					if apiErr.Code != apierror.ErrorCodeResourceNotFound {
-						return apiErr
-					}
-					return apierror.NewResourceNotFoundError("No sales rep found with the provided ID.").WithParam("default_sales_rep_id")
-				}
+			if apiErr := checkCustomerRefs(txCtx, txSvc.repos, params.OwnerAccountID, changedCustomerRefs(params, old)); apiErr != nil {
+				return apiErr
+			}
+			if apiErr := checkUpdatedServiceLevelOnCarrier(txCtx, txSvc.repos, old.DefaultCarrierID, old.DefaultServiceLevelID, params.DefaultCarrierID, params.DefaultServiceLevelID, "default_service_level_id"); apiErr != nil {
+				return apiErr
 			}
 
 			if params.DefaultCarrierID == nil {
@@ -476,6 +488,7 @@ func (s *customerSvcImpl) UpdateCustomer(ctx context.Context, params domain.Upda
 			params.BillToAddressID = params.BillToAddressID.BackfillUnsetPtr(old.BillToAddressID)
 			params.ShipToAddressID = params.ShipToAddressID.BackfillUnsetPtr(old.ShipToAddressID)
 			params.DefaultLeadTimeDays = params.DefaultLeadTimeDays.BackfillUnsetPtr(old.DefaultLeadTimeDays)
+			params.ReceiveCalendarID = params.ReceiveCalendarID.BackfillUnsetPtr(old.ReceiveCalendarID)
 			params.FulfillmentPolicy = params.FulfillmentPolicy.BackfillUnsetPtr(old.FulfillmentPolicy)
 
 			switch {
@@ -524,6 +537,12 @@ func (s *customerSvcImpl) UpdateCustomer(ctx context.Context, params domain.Upda
 				return apiErr
 			}
 
+			// A new default address must be one of the customer's own: linking any other id would attach
+			// another account's address to this customer, readable through its includes.
+			if apiErr := checkCustomerDefaultAddresses(txCtx, txCustomerRepo, params, old); apiErr != nil {
+				return apiErr
+			}
+
 			// Update the account_relation record.
 			if apiErr := txCustomerRepo.Update(txCtx, relationID, params); apiErr != nil {
 				return apiErr
@@ -538,13 +557,6 @@ func (s *customerSvcImpl) UpdateCustomer(ctx context.Context, params domain.Upda
 			if params.ShipToAddressID.IsSet() {
 				addrID, _ := params.ShipToAddressID.Value()
 				if apiErr := ensureAccountAddressLink(txCtx, txCustomerRepo, params.CustomerAccountID, addrID); apiErr != nil {
-					return apiErr
-				}
-			}
-
-			// Update account name if provided.
-			if params.Name != nil {
-				if apiErr := txCustomerRepo.UpdateName(txCtx, params.CustomerAccountID, *params.Name); apiErr != nil {
 					return apiErr
 				}
 			}
@@ -639,7 +651,7 @@ func (s *customerSvcImpl) DeleteCustomer(ctx context.Context, params domain.Dele
 	customer, apiErr := repo.Get(ctx, params.OwnerAccountID, params.CustomerAccountID, []string{"price_groups", "notification_preferences"})
 	if apiErr != nil {
 		if apierror.IsNotFound(apiErr) {
-			wasDeleted, deletedCheckErr := s.repos.NewDeletedRecordRepo().Exists(ctx, constants.DeletedRecordResourceTypeCustomer, params.CustomerAccountID)
+			wasDeleted, deletedCheckErr := s.repos.NewDeletedRecordRepo().ExistsInAccount(ctx, constants.DeletedRecordResourceTypeCustomer, params.CustomerAccountID, params.OwnerAccountID)
 			if deletedCheckErr != nil {
 				return tracing.Trace(span, deletedCheckErr)
 			}
@@ -665,7 +677,7 @@ func (s *customerSvcImpl) DeleteCustomer(ctx context.Context, params domain.Dele
 	}
 
 	apiErr = s.withTx(ctx, func(txCtx context.Context, txSvc *customerSvcImpl) *apierror.APIError {
-		if apiErr := txSvc.repos.NewDeletedRecordRepo().Create(txCtx, constants.DeletedRecordResourceTypeCustomer, customer.ID, customer); apiErr != nil {
+		if apiErr := txSvc.repos.NewDeletedRecordRepo().CreateInAccount(txCtx, constants.DeletedRecordResourceTypeCustomer, customer.ID, params.OwnerAccountID, customer); apiErr != nil {
 			return apiErr
 		}
 
@@ -738,7 +750,7 @@ func (s *customerSvcImpl) BulkDeleteCustomers(ctx context.Context, params domain
 
 	apiErr = s.withTx(ctx, func(txCtx context.Context, txSvc *customerSvcImpl) *apierror.APIError {
 		for _, customer := range customers {
-			if apiErr := txSvc.repos.NewDeletedRecordRepo().Create(txCtx, constants.DeletedRecordResourceTypeCustomer, customer.ID, customer); apiErr != nil {
+			if apiErr := txSvc.repos.NewDeletedRecordRepo().CreateInAccount(txCtx, constants.DeletedRecordResourceTypeCustomer, customer.ID, params.OwnerAccountID, customer); apiErr != nil {
 				return apiErr
 			}
 		}
@@ -775,7 +787,7 @@ func (s *customerSvcImpl) BulkDeleteCustomers(ctx context.Context, params domain
 }
 
 // GetFrequentlyOrderedProducts returns the most frequently ordered products for a customer.
-// Supports customer actor access.
+// A customer or supplier portal actor reads only its own.
 func (s *customerSvcImpl) GetFrequentlyOrderedProducts(ctx context.Context, customerAccountID string) ([]*domain.FrequentlyOrderedProduct, *apierror.APIError) {
 	ctx, span := customerSvcTracer.Start(ctx, "service.customer.frequently_ordered_products")
 	defer span.End()
@@ -793,8 +805,8 @@ func (s *customerSvcImpl) GetFrequentlyOrderedProducts(ctx context.Context, cust
 		return nil, tracing.Trace(span, apierror.NewAuthenticationError("The OpenMRP-Account-ID header is required."))
 	}
 
-	if identity.IsCustomerUser() {
-		if customerAccountID != *identity.ActorAccountID() {
+	if own := identity.PortalAccountID(); own != nil {
+		if customerAccountID != *own {
 			return nil, tracing.Trace(span, apierror.NewResourceNotFoundError("Customer not found."))
 		}
 	} else if identity.IsInternalActor() {
@@ -1349,6 +1361,36 @@ func checkCustomerReadPermission(identity *types.Identity) *apierror.APIError {
 		return identity.CheckHasPermission(types.PermissionDomainSuppliers, types.ActionRead)
 	}
 	return identity.CheckHasPermission(types.PermissionDomainCustomers, types.ActionRead)
+}
+
+// checkCustomerDefaultAddresses refuses a default billing or shipping address that changes to one the
+// customer's account does not hold. An unchanged default is left alone.
+func checkCustomerDefaultAddresses(ctx context.Context, repo domain.CustomerRepo, params domain.UpdateCustomerParams, old *domain.Customer) *apierror.APIError {
+	var held []string
+	for _, ref := range []struct {
+		value field.Clearable[string]
+		was   *string
+		param string
+	}{
+		{params.BillToAddressID, old.BillToAddressID, "bill_to_address_id"},
+		{params.ShipToAddressID, old.ShipToAddressID, "ship_to_address_id"},
+	} {
+		addressID, ok := ref.value.Value()
+		if !ok || (ref.was != nil && *ref.was == addressID) {
+			continue
+		}
+		if held == nil {
+			ids, apiErr := repo.GetAccountAddressIDs(ctx, params.CustomerAccountID)
+			if apiErr != nil {
+				return apiErr
+			}
+			held = append(ids, "")
+		}
+		if !slices.Contains(held, addressID) {
+			return apierror.NewResourceNotFoundError("No address of this customer has the provided ID.").WithParam(ref.param)
+		}
+	}
+	return nil
 }
 
 // ensureAccountAddressLink creates an account_address record linking the given address to the account, if one does not already exist.

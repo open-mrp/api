@@ -8,6 +8,7 @@ import (
 
 	"github.com/open-mrp/api/services/auth-service/pkg/types"
 	"github.com/open-mrp/api/services/core-service/internal/domain"
+	"github.com/open-mrp/api/services/core-service/internal/event"
 	"github.com/open-mrp/api/shared/appctx"
 	"github.com/open-mrp/api/shared/audit"
 	"github.com/open-mrp/api/shared/constants"
@@ -500,7 +501,7 @@ func (s *materialSvcImpl) UpdateMaterial(ctx context.Context, params domain.Upda
 	}
 }
 
-// updateMaterialInTx updates a material's item fields (sku/description/notes), order-point
+// updateMaterialInTx updates a material's category, item fields (sku/description/notes), order-point
 // and lead-time quantities, and unit_cost within an existing transaction, returning the
 // fresh material. Shared by UpdateMaterial (single) and BulkUpsertMaterials (batch); it
 // does not own the idempotency/permission envelope, and expects params.AccountID set.
@@ -513,6 +514,17 @@ func (s *materialSvcImpl) updateMaterialInTx(txCtx context.Context, params domai
 	existing, apiErr := txMaterialRepo.GetByID(txCtx, domain.GetMaterialParams{AccountID: params.AccountID, MaterialID: params.MaterialID, Includes: params.Includes})
 	if apiErr != nil {
 		return nil, apiErr
+	}
+
+	if params.CategoryID != nil {
+		if _, apiErr := changeItemCategoryInTx(txCtx, s.repos, params.AccountID, existing.ItemID, *params.CategoryID, nil); apiErr != nil {
+			return nil, apiErr
+		}
+		// The move is audited on the item, so the material's own diff starts after it.
+		existing, apiErr = txMaterialRepo.GetByID(txCtx, domain.GetMaterialParams{AccountID: params.AccountID, MaterialID: params.MaterialID, Includes: params.Includes})
+		if apiErr != nil {
+			return nil, apiErr
+		}
 	}
 
 	// Check SKU uniqueness if being updated, excluding the current item.
@@ -538,6 +550,10 @@ func (s *materialSvcImpl) updateMaterialInTx(txCtx context.Context, params domai
 			return nil, apiErr
 		}
 		if apiErr := txItemRepo.ClearItemDirtyFlag(txCtx, params.AccountID, existing.ItemID); apiErr != nil {
+			return nil, apiErr
+		}
+		// Everything built from this material is now costed from a price that has moved.
+		if apiErr := event.PublishItemCostBasisChanged(txCtx, s.repos, params.AccountID, existing.ItemID, event.CostBasisUnitCostUpdated); apiErr != nil {
 			return nil, apiErr
 		}
 	}
@@ -626,7 +642,7 @@ func (s *materialSvcImpl) DeleteMaterial(ctx context.Context, materialID string)
 	material, apiErr := s.repos.NewMaterialRepo().GetByID(ctx, domain.GetMaterialParams{AccountID: accountID, MaterialID: materialID})
 	if apiErr != nil {
 		if apierror.IsNotFound(apiErr) {
-			wasDeleted, deletedCheckErr := s.repos.NewDeletedRecordRepo().Exists(ctx, constants.DeletedRecordResourceTypeMaterial, materialID)
+			wasDeleted, deletedCheckErr := s.repos.NewDeletedRecordRepo().ExistsInAccount(ctx, constants.DeletedRecordResourceTypeMaterial, materialID, accountID)
 			if deletedCheckErr != nil {
 				return nil, tracing.Trace(span, deletedCheckErr)
 			}
@@ -642,7 +658,7 @@ func (s *materialSvcImpl) DeleteMaterial(ctx context.Context, materialID string)
 
 	// Soft-delete within a transaction.
 	apiErr = s.withTx(ctx, func(txCtx context.Context, txSvc *materialSvcImpl) *apierror.APIError {
-		if apiErr := txSvc.repos.NewDeletedRecordRepo().Create(txCtx, constants.DeletedRecordResourceTypeMaterial, material.ID, material); apiErr != nil {
+		if apiErr := txSvc.repos.NewDeletedRecordRepo().CreateInAccount(txCtx, constants.DeletedRecordResourceTypeMaterial, material.ID, accountID, material); apiErr != nil {
 			return apiErr
 		}
 
@@ -682,7 +698,7 @@ func (s *materialSvcImpl) BatchGetMaterialsByIDs(ctx context.Context, ids []stri
 	if !ok || identity == nil {
 		return nil, tracing.Trace(span, apierror.NewInvariantViolationError("Identity not found in context."))
 	}
-	if apiErr := identity.CheckIsInternalActor(); apiErr != nil {
+	if apiErr := identity.CheckIsInternalActorForRead(); apiErr != nil {
 		return nil, tracing.Trace(span, apiErr)
 	}
 	if apiErr := checkMaterialReadPermission(identity); apiErr != nil {

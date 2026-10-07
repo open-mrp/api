@@ -34,6 +34,10 @@ func (h *chatGRPCHandler) CreateConversation(ctx context.Context, req *pb.Create
 	ctx, finalizeIdempotency := contracts.WithIdempotencyTracking(ctx)
 	defer finalizeIdempotency()
 
+	participants := make([]domain.ParticipantRoleInput, 0, len(req.Participants))
+	for _, p := range req.Participants {
+		participants = append(participants, domain.ParticipantRoleInput{AccountUserID: p.AccountUserId, Role: p.Role})
+	}
 	conv, apiErr := h.chatSvc.CreateConversation(ctx, domain.CreateConversationInput{
 		Type:                      req.Type,
 		Title:                     req.Title,
@@ -41,6 +45,7 @@ func (h *chatGRPCHandler) CreateConversation(ctx context.Context, req *pb.Create
 		TopicResourceType:         req.TopicResourceType,
 		TopicResourceID:           req.TopicResourceId,
 		ParticipantAccountUserIDs: req.ParticipantAccountUserIds,
+		Participants:              participants,
 	})
 	if apiErr != nil {
 		return nil, contracts.ConvertAPIErrorToGRPC(apiErr)
@@ -797,6 +802,29 @@ func (h *chatGRPCHandler) CancelScheduledMessage(ctx context.Context, req *pb.Ca
 		return nil, contracts.NewMissingGRPCRequestDataError()
 	}
 	sm, apiErr := h.chatSvc.CancelScheduledMessage(ctx, req.Id)
+	if apiErr != nil {
+		return nil, contracts.ConvertAPIErrorToGRPC(apiErr)
+	}
+	return messageToProto(sm), nil
+}
+
+func (h *chatGRPCHandler) RescheduleMessage(ctx context.Context, req *pb.RescheduleMessageRequest) (*pb.MessageInfo, error) {
+	if req == nil {
+		return nil, contracts.NewMissingGRPCRequestDataError()
+	}
+
+	ctx, finalizeIdempotency := contracts.WithIdempotencyTracking(ctx)
+	defer finalizeIdempotency()
+
+	var scheduledFor time.Time
+	if req.ScheduledFor != nil {
+		scheduledFor = req.ScheduledFor.AsTime()
+	}
+	sm, apiErr := h.chatSvc.RescheduleMessage(ctx, domain.RescheduleMessageInput{
+		ID:           req.Id,
+		ScheduledFor: scheduledFor,
+		Body:         req.Body,
+	})
 	if apiErr != nil {
 		return nil, contracts.ConvertAPIErrorToGRPC(apiErr)
 	}

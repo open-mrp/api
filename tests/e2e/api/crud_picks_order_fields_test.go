@@ -214,27 +214,17 @@ func TestPicks_IncludeCreatedBy(t *testing.T) {
 }
 
 // The seeded pick's row off the list endpoint, so an include can be checked on the list projection
-// as well as on detail.
+// as well as on detail. Every run adds picks for the seed customer, so its list is paged to the row.
 func seedPickListRow(t *testing.T, includes ...string) map[string]any {
 	t.Helper()
 
-	params := url.Values{"customer_ids": {SeedCustomerAccountID}, "limit": {"100"}}
+	params := url.Values{"customer_ids": {SeedCustomerAccountID}}
 	for _, inc := range includes {
 		params.Add("include", inc)
 	}
-	list, status, err := apiClient.GetList(picksPath, params)
-	require.NoError(t, err)
-	require.Equal(t, 200, status, "picks list should return 200")
-
-	for _, raw := range list.Data {
-		var row map[string]any
-		require.NoError(t, json.Unmarshal(raw, &row))
-		if jsonField(row, "id") == SeedPickID {
-			return row
-		}
-	}
-	require.FailNow(t, "the seeded pick must appear in its customer's pick list")
-	return nil
+	raw := listFindByField(t, picksPath, params, "id", SeedPickID)
+	require.NotNil(t, raw, "the seeded pick must appear in its customer's pick list")
+	return parseJSON(raw)
 }
 
 func retrieveSalesOrder(t *testing.T, orderID string, includes ...string) map[string]any {

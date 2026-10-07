@@ -529,3 +529,14 @@ func TestAddItemPropertyCells_IgnoresAnAttributeOffTheCategory(t *testing.T) {
 	assert.Len(t, row, 1)
 	assert.Equal(t, "Merino", row[propertyKeyPrefix+"Fibre"])
 }
+
+func TestDeleteProperty_OnlyTheOwnerLearnsItWasDeleted(t *testing.T) {
+	t.Parallel()
+	assertOnlyTheOwnerLearnsItWasDeleted(t, constants.DeletedRecordResourceTypeProperty, "prp_gone", func(h *deletedScopeHarness, accountID string) *apierror.APIError {
+		properties := repositorymock.NewMockPropertyRepo(h.ctrl)
+		h.repos.EXPECT().NewPropertyRepo().Return(properties).AnyTimes()
+		properties.EXPECT().Get(gomock.Any(), domain.GetPropertyParams{AccountID: accountID, PropertyID: "prp_gone"}).Return(nil, deletedScopeNotFound())
+		svc := NewPropertySvc(&PropertySvcConfig{Repos: h.repos, MediatorFactory: h.mediators, JobSvcFactory: NewJobSvcFactory(), TxManager: &stubTxManager{factory: h.repos}})
+		return svc.DeleteProperty(deletedScopeCtx(accountID), "prp_gone")
+	})
+}

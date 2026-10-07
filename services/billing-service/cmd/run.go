@@ -171,6 +171,12 @@ func Run(
 		return err
 	}
 
+	batchCreatedHandler := event.NewBatchCreatedHandler(accountUsageRepo, stripeClient)
+	batchCreatedConsumer := event.NewBatchCreatedConsumer(rabbitmq, inboxRepo, batchCreatedHandler)
+	if err := batchCreatedConsumer.Listen(ctx); err != nil {
+		return err
+	}
+
 	server, err := contracts.NewGRPCServer(domain.ServiceName, nil, nil)
 	if err != nil {
 		return err

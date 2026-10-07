@@ -587,7 +587,7 @@ func (s *productSvcImpl) UpdateProduct(ctx context.Context, params domain.Update
 	}
 }
 
-// updateProductInTx updates a product's item fields (sku/description/notes), portal
+// updateProductInTx updates a product's category, item fields (sku/description/notes), portal
 // readiness, and unit_price within an existing transaction, returning the fresh
 // product. Shared by UpdateProduct (single) and BulkUpsertProducts (batch); it does
 // not own the idempotency/permission envelope, and expects params.AccountID set.
@@ -604,6 +604,21 @@ func (s *productSvcImpl) updateProductInTx(txCtx context.Context, params domain.
 	})
 	if apiErr != nil {
 		return nil, apiErr
+	}
+
+	if params.CategoryID != nil {
+		if _, apiErr := changeItemCategoryInTx(txCtx, s.repos, params.AccountID, old.ItemID, *params.CategoryID, nil); apiErr != nil {
+			return nil, apiErr
+		}
+		// The move is audited on the item, so the product's own diff starts after it.
+		old, apiErr = txProductRepo.Get(txCtx, domain.GetProductFullParams{
+			AccountID: params.AccountID,
+			ProductID: params.ProductID,
+			Includes:  params.Includes,
+		})
+		if apiErr != nil {
+			return nil, apiErr
+		}
 	}
 
 	if old.Item != nil {
@@ -687,7 +702,7 @@ func (s *productSvcImpl) DeleteProduct(ctx context.Context, params domain.Delete
 	product, apiErr := s.repos.NewProductRepo().Get(ctx, domain.GetProductFullParams{AccountID: params.AccountID, ProductID: params.ProductID})
 	if apiErr != nil {
 		if apierror.IsNotFound(apiErr) {
-			wasDeleted, deletedCheckErr := s.repos.NewDeletedRecordRepo().Exists(ctx, constants.DeletedRecordResourceTypeProduct, params.ProductID)
+			wasDeleted, deletedCheckErr := s.repos.NewDeletedRecordRepo().ExistsInAccount(ctx, constants.DeletedRecordResourceTypeProduct, params.ProductID, params.AccountID)
 			if deletedCheckErr != nil {
 				return nil, tracing.Trace(span, deletedCheckErr)
 			}
@@ -700,7 +715,7 @@ func (s *productSvcImpl) DeleteProduct(ctx context.Context, params domain.Delete
 
 	// Soft-delete within a transaction.
 	apiErr = s.withTx(ctx, func(txCtx context.Context, txSvc *productSvcImpl) *apierror.APIError {
-		if apiErr := txSvc.repos.NewDeletedRecordRepo().Create(txCtx, constants.DeletedRecordResourceTypeProduct, params.ProductID, product); apiErr != nil {
+		if apiErr := txSvc.repos.NewDeletedRecordRepo().CreateInAccount(txCtx, constants.DeletedRecordResourceTypeProduct, params.ProductID, params.AccountID, product); apiErr != nil {
 			return apiErr
 		}
 

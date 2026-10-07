@@ -98,6 +98,15 @@ message UpdateAccountRequest {
   optional string instagram_handle = 8;
   optional string linkedin_handle = 9;
   optional string twitter_handle = 10;
+  // Must be one of the account's own addresses.
+  optional string default_billing_address_id = 11;
+  optional string default_shipping_address_id = 12;
+  // Branding fields to remove, by name (support_email, phone_number, website_url, facebook_handle,
+  // instagram_handle, linkedin_handle, twitter_handle). A field named here and given a value is removed.
+  repeated string cleared_branding_fields = 13;
+  // The account's own addresses saved with the update; each excludes its *_address_id.
+  InlineAddressInput default_billing_address = 14;
+  InlineAddressInput default_shipping_address = 15;
 }
 message UpdateAccountResponse {
   AccountInfo account = 1;
@@ -262,9 +271,16 @@ message BatchGetItemCategoriesByIDsResponse {
 }
 message BatchGetItemsByIDsRequest {
   repeated string ids = 1;
+  // Also return the items' categories and attribute properties, read under the items' own access.
+  bool with_categories = 2;
+  bool with_attribute_properties = 3;
 }
 message BatchGetItemsByIDsResponse {
   repeated ItemInfo items = 1;
+  // The items' categories, hydrated as BatchGetItemCategoriesByIDs returns them; set only when asked for.
+  repeated ItemCategoryInfo categories = 2;
+  // The properties the items' attributes name; set only when asked for.
+  repeated PropertyInfo attribute_properties = 3;
 }
 message CarrierInfo {
   string id = 1;
@@ -553,9 +569,14 @@ message ListItemsResponse {
 message GetItemRequest {
   string id = 1;
   repeated string includes = 2;
+  // As on BatchGetItemsByIDsRequest.
+  bool with_categories = 3;
+  bool with_attribute_properties = 4;
 }
 message GetItemResponse {
   ItemInfo item = 1;
+  repeated ItemCategoryInfo categories = 2;
+  repeated PropertyInfo attribute_properties = 3;
 }
 message GetItemLotDefaultRequest {
   string item_id = 1;

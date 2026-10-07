@@ -34,7 +34,7 @@ var SampleAccountGroupProductLineAccess = &AccountGroupProductLineAccess{
 		ID:               SampleAccountGroupID,
 		Object:           constants.ObjectTypeAccountGroup,
 		Name:             SampleAccountGroupName,
-		CommissionPolicy: constants.CommissionPolicyApplied,
+		CommissionPolicy: new(constants.CommissionPolicyApplied),
 		FreightPolicy:    constants.FreightPolicyBilled,
 		Type:             constants.AccountGroupTypePricingGroup,
 		CreatedAt:        timeutil.TimestampToTime(sampleCreatedAtTimestamp),

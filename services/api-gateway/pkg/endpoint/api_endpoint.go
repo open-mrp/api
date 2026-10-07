@@ -15,6 +15,7 @@ import (
 
 	"github.com/open-mrp/api/services/api-gateway/internal/header"
 	httptransport "github.com/open-mrp/api/services/api-gateway/internal/http"
+	"github.com/open-mrp/api/services/api-gateway/pkg/costguard"
 	"github.com/open-mrp/api/services/api-gateway/pkg/resourcekit"
 	"github.com/open-mrp/api/services/auth-service/pkg/types"
 	"github.com/open-mrp/api/shared/appctx"
@@ -32,7 +33,11 @@ import (
 
 type APIEndpointExtras struct {
 	SkipRequestBodyParsing bool `json:"skip_request_body_parsing" yaml:"skip_request_body_parsing"`
-	SkipRequestLogging     bool `json:"skip_request_logging" yaml:"skip_request_logging"`
+	// MaxRawBodyBytes (optional; default: httptransport.DefaultMaxRawBodyBytes) caps the raw body an endpoint with SkipRequestBodyParsing accepts. A larger body is refused with a 413.
+	MaxRawBodyBytes int64 `json:"max_raw_body_bytes" yaml:"max_raw_body_bytes"`
+	// MaxJSONBodyBytes (optional; default: httptransport.DefaultMaxJSONBodyBytes) caps the JSON body the endpoint accepts, up to httptransport.MaxJSONBodyBytes. A larger body is refused with a 413.
+	MaxJSONBodyBytes   int64 `json:"max_json_body_bytes" yaml:"max_json_body_bytes"`
+	SkipRequestLogging bool  `json:"skip_request_logging" yaml:"skip_request_logging"`
 	// HideFromRequestLog persists the request log but omits it from the default request-log listing. Use for high-frequency polling endpoints that would otherwise flood the log (e.g. notification unread-count). Unlike SkipRequestLogging the row is still saved.
 	HideFromRequestLog bool `json:"hide_from_request_log" yaml:"hide_from_request_log"`
 }
@@ -63,6 +68,12 @@ type APIEndpoint[TReq, TResp any] struct {
 	ReadOnly bool `json:"-" yaml:"-"`
 	// RequiredPermissions declares the any-of permission set this endpoint requires, using typed domain/action constants (e.g. {types.PermissionDomainCustomers, types.ActionRead}) so typos are caught by the compiler. The gateway gate rejects callers who hold none of the listed permissions; holding one is enough to reach the handler. Agent tools and OpenAPI docs surface the same declaration.
 	RequiredPermissions types.AnyOfPermissions `json:"-" yaml:"-"`
+	// RequiresAllPermissions makes RequiredPermissions all-of, for an endpoint whose service checks the permissions together: the caller must hold every one.
+	RequiresAllPermissions bool `json:"-" yaml:"-"`
+	// CounterpartyPermissions (optional) is what a request acting in a customer's or supplier's account needs in place of RequiredPermissions, which then govern only the caller's own account.
+	CounterpartyPermissions CounterpartyPermissions `json:"-" yaml:"-"`
+	// SelfPathParam (optional) names the path parameter that holds a user ID, on endpoints where a user may always act on their own record. A signed-in user whose ID it is passes the RequiredPermissions and RequiredRoleType gate without holding them; the downstream service still decides.
+	SelfPathParam string `json:"-" yaml:"-"`
 	// RequiredRoleType, when set, declares that the endpoint requires the caller to have a specific role type (e.g. constants.RoleTypeAdmin) rather than (or in addition to) a permission. The zero value means no role-type requirement.
 	RequiredRoleType constants.RoleType                        `json:"-" yaml:"-"`
 	ServiceHandler   func(svc any) ServiceHandler[TReq, TResp] `json:"-" yaml:"-"`
@@ -153,6 +164,9 @@ func From[TReq, TResp any, T interface {
 }](source T) *APIEndpoint[TReq, TResp] {
 	ep := source.Materialize()
 	field.AssertValuePatchFields(reflect.TypeFor[TReq]())
+	if ep.Extras.MaxJSONBodyBytes > httptransport.MaxJSONBodyBytes {
+		panic(fmt.Sprintf("%s %s: MaxJSONBodyBytes %d is over the gateway's %d ceiling", ep.Method, ep.Route, ep.Extras.MaxJSONBodyBytes, httptransport.MaxJSONBodyBytes))
+	}
 	t := reflect.TypeOf(source)
 	if t.Kind() == reflect.Pointer {
 		t = t.Elem()
@@ -179,7 +193,7 @@ func (e *APIEndpoint[TReq, TResp]) ensureSensitivePaths() {
 	})
 }
 
-// authorize enforces the endpoint's declared RequiredRoleType and RequiredPermissions against the caller's identity. Permissions use OR (any-of) semantics — the caller must hold at least one. Admins and customer/supplier-relation actors bypass (the latter are authorized by relation downstream). Endpoints that declare neither are unrestricted here (authorization happens downstream). Returns nil when the request may proceed.
+// authorize enforces the endpoint's declared RequiredRoleType and RequiredPermissions against the caller's identity. Permissions use OR (any-of) semantics — the caller must hold at least one — unless RequiresAllPermissions is set, and a request acting in a customer's or supplier's account needs the matching CounterpartyPermissions entry instead when the endpoint declares one. Admins and customer/supplier-relation actors bypass (the latter are authorized by relation downstream). Endpoints that declare neither are unrestricted here (authorization happens downstream). Returns nil when the request may proceed.
 func (e *APIEndpoint[TReq, TResp]) authorize(ctx context.Context) *apierror.APIError {
 	if e.RequiredRoleType == "" && len(e.RequiredPermissions) == 0 {
 		return nil
@@ -207,7 +221,30 @@ func (e *APIEndpoint[TReq, TResp]) authorize(ctx context.Context) *apierror.APIE
 	if apiErr := identity.CheckHasRoleType(e.RequiredRoleType); apiErr != nil {
 		return apiErr
 	}
+	if p, ok := e.CounterpartyPermissions.For(identity); ok {
+		return identity.CheckHasPermission(p.Domain, p.Action)
+	}
+	if e.RequiresAllPermissions {
+		for _, p := range e.RequiredPermissions {
+			if apiErr := identity.CheckHasPermission(p.Domain, p.Action); apiErr != nil {
+				return apiErr
+			}
+		}
+		return nil
+	}
 	return identity.CheckHasAnyPermission(e.RequiredPermissions...)
+}
+
+// actsOnSelf reports whether the caller is the signed-in user named by the endpoint's SelfPathParam.
+func (e *APIEndpoint[TReq, TResp]) actsOnSelf(r *http.Request) bool {
+	if e.SelfPathParam == "" {
+		return false
+	}
+	identity, ok := appctx.GetIdentityFromContext(r.Context())
+	if !ok || identity == nil || !identity.HasUserActor() {
+		return false
+	}
+	return identity.Actor.ID == httptransport.PathExtractor(r)(e.SelfPathParam)
 }
 
 func (e *APIEndpoint[TReq, TResp]) Execute(w http.ResponseWriter, r *http.Request) {
@@ -229,7 +266,7 @@ func (e *APIEndpoint[TReq, TResp]) Execute(w http.ResponseWriter, r *http.Reques
 	// declared permissions or lack its required role. This is a coarse "OR" gate
 	// (it never rejects anyone who could be authorized); the precise, possibly
 	// relation-dependent check still runs in the downstream service.
-	if apiErr := e.authorize(ctx); apiErr != nil {
+	if apiErr := e.authorize(ctx); apiErr != nil && !e.actsOnSelf(r) {
 		span := trace.SpanFromContext(ctx)
 		recordAndRespondAPIError(ctx, w, span, "authorization", apiErr)
 		return
@@ -309,11 +346,19 @@ func (e *APIEndpoint[TReq, TResp]) Execute(w http.ResponseWriter, r *http.Reques
 	// Buffer JSON bodies once for decode, null validation, and optional request logging.
 	var jsonBodyBytes []byte
 	if !e.Extras.SkipRequestBodyParsing && httptransport.ShouldDecodeBody(r) {
-		const maxJSONBodyBytes = 1 << 20 // 1 MiB
-		bodyBytes, err := io.ReadAll(io.LimitReader(r.Body, maxJSONBodyBytes))
+		maxBodyBytes := e.Extras.MaxJSONBodyBytes
+		if maxBodyBytes <= 0 {
+			maxBodyBytes = httptransport.DefaultMaxJSONBodyBytes
+		}
+		// One byte past the cap tells an oversized body from one exactly at it.
+		bodyBytes, err := io.ReadAll(io.LimitReader(r.Body, maxBodyBytes+1))
 		_ = r.Body.Close()
 		if err != nil {
 			recordAndRespondAPIError(ctx, w, span, "body_read", apierror.NewValidationError(fmt.Sprintf("Failed to read request body: %v", err)))
+			return
+		}
+		if int64(len(bodyBytes)) > maxBodyBytes {
+			recordAndRespondAPIError(ctx, w, span, "body_too_large", httptransport.NewBodyTooLargeError(maxBodyBytes))
 			return
 		}
 		jsonBodyBytes = bodyBytes
@@ -336,13 +381,15 @@ func (e *APIEndpoint[TReq, TResp]) Execute(w http.ResponseWriter, r *http.Reques
 		r.Body = io.NopCloser(bytes.NewReader(bodyBytes))
 	}
 
+	// The body the request is decoded from: an older version's body after it has been upgraded to the latest shape.
+	var bytesForNull []byte
 	if e.Extras.SkipRequestBodyParsing {
-		if err := httptransport.BindRawBody(r, any(req)); err != nil {
+		if err := httptransport.BindRawBody(r, any(req), e.Extras.MaxRawBodyBytes); err != nil {
 			recordAndRespondAPIError(ctx, w, span, "raw_body_binding", coercePlainExecuteError(err))
 			return
 		}
 	} else if httptransport.ShouldDecodeBody(r) {
-		bytesForNull := jsonBodyBytes
+		bytesForNull = jsonBodyBytes
 
 		// Transform request body if versioned and ObjectType is set
 		if e.ObjectType != "" {
@@ -385,8 +432,15 @@ func (e *APIEndpoint[TReq, TResp]) Execute(w http.ResponseWriter, r *http.Reques
 		}
 	}
 
-	if r.Method == http.MethodPatch && len(jsonBodyBytes) > 0 {
-		if apiErr := validate.RejectEmptyPatchBody(jsonBodyBytes, any(req)); apiErr != nil {
+	// An upgrade can drop the only keys an older version sent (fields that version ignored), so an upgraded update is empty only if the client sent no keys at all.
+	if r.Method == http.MethodPatch && len(bytesForNull) > 0 {
+		var apiErr *apierror.APIError
+		if bytes.Equal(bytesForNull, jsonBodyBytes) {
+			apiErr = validate.RejectEmptyPatchBody(bytesForNull, any(req))
+		} else {
+			apiErr = validate.RejectKeylessPatchBody(jsonBodyBytes)
+		}
+		if apiErr != nil {
 			recordAndRespondAPIError(ctx, w, span, "empty_patch_validation", apiErr)
 			return
 		}
@@ -464,8 +518,10 @@ func (e *APIEndpoint[TReq, TResp]) Execute(w http.ResponseWriter, r *http.Reques
 		}
 	}
 
+	// After includes, so a cost field an include brought in is covered too.
+	respPayload := costguard.Redact(ctx, any(resp))
+
 	// Downgrade the response shape when the caller is on an older API version.
-	respPayload := any(resp)
 	if e.ObjectType != "" {
 		if requestVersion, ok := appctx.GetAPIVersionFromContext(ctx); ok && !requestVersion.Equal(version.Latest) {
 			if transformed, ok := transformResponsePayload(respPayload, version.Latest, requestVersion, e.ObjectType); ok {
@@ -516,7 +572,7 @@ func (e *APIEndpoint[TReq, TResp]) transformRequestBody(r *http.Request, from, t
 	}
 
 	// Apply request transformers (upgrade from older version to newer)
-	transformed := version.TransformRequest(from, to, e.ObjectType, data)
+	transformed := version.TransformEndpointRequest(from, to, e.ObjectType, e.Method, e.Route, data)
 
 	// Re-encode to JSON
 	transformedBody, err := json.Marshal(transformed)

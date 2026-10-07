@@ -260,6 +260,8 @@ func TestAccountUsers_CreateAndUpdateAllFields(t *testing.T) {
 	_, hasIsVerified := got["is_verified"]
 	assert.False(t, hasIsVerified, "is_verified should not be exposed on the resource")
 	assertNilField(t, got, "last_used_at")
+	// Notification types belong to a customer's or supplier's contacts; the seller's own users have none.
+	assertNilField(t, got, "notification_types")
 	assertValidTimestamp(t, jsonField(got, "created_at"), "created_at")
 	assertValidTimestamp(t, jsonField(got, "updated_at"), "updated_at")
 

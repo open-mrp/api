@@ -906,6 +906,21 @@ func (mr *MockNotificationRepoMockRecorder) ResolveUserID(ctx, accountUserID any
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ResolveUserID", reflect.TypeOf((*MockNotificationRepo)(nil).ResolveUserID), ctx, accountUserID)
 }
 
+// ResolveUserIDInAccount mocks base method.
+func (m *MockNotificationRepo) ResolveUserIDInAccount(ctx context.Context, accountUserID, accountID string) (string, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ResolveUserIDInAccount", ctx, accountUserID, accountID)
+	ret0, _ := ret[0].(string)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
+}
+
+// ResolveUserIDInAccount indicates an expected call of ResolveUserIDInAccount.
+func (mr *MockNotificationRepoMockRecorder) ResolveUserIDInAccount(ctx, accountUserID, accountID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ResolveUserIDInAccount", reflect.TypeOf((*MockNotificationRepo)(nil).ResolveUserIDInAccount), ctx, accountUserID, accountID)
+}
+
 // UpsertCoalesced mocks base method.
 func (m *MockNotificationRepo) UpsertCoalesced(ctx context.Context, notifications []*domain.Notification) ([]*domain.Notification, *apierror.APIError) {
 	m.ctrl.T.Helper()
@@ -2183,6 +2198,21 @@ func (mr *MockMessageRepoMockRecorder) PromoteScheduled(ctx, id, sequence any) *
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "PromoteScheduled", reflect.TypeOf((*MockMessageRepo)(nil).PromoteScheduled), ctx, id, sequence)
 }
 
+// Reschedule mocks base method.
+func (m *MockMessageRepo) Reschedule(ctx context.Context, id, accountID, accountUserID string, scheduledFor time.Time, body, preview *string) (bool, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Reschedule", ctx, id, accountID, accountUserID, scheduledFor, body, preview)
+	ret0, _ := ret[0].(bool)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
+}
+
+// Reschedule indicates an expected call of Reschedule.
+func (mr *MockMessageRepoMockRecorder) Reschedule(ctx, id, accountID, accountUserID, scheduledFor, body, preview any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Reschedule", reflect.TypeOf((*MockMessageRepo)(nil).Reschedule), ctx, id, accountID, accountUserID, scheduledFor, body, preview)
+}
+
 // SetDraftStatus mocks base method.
 func (m *MockMessageRepo) SetDraftStatus(ctx context.Context, id, accountID, status string) (bool, *apierror.APIError) {
 	m.ctrl.T.Helper()
@@ -2593,33 +2623,33 @@ func (m *MockDeletedRecordRepo) EXPECT() *MockDeletedRecordRepoMockRecorder {
 	return m.recorder
 }
 
-// Create mocks base method.
-func (m *MockDeletedRecordRepo) Create(ctx context.Context, resourceType constants.DeletedRecordResourceType, resourceID string, data any) *apierror.APIError {
+// CreateInAccount mocks base method.
+func (m *MockDeletedRecordRepo) CreateInAccount(ctx context.Context, resourceType constants.DeletedRecordResourceType, resourceID, accountID string, data any) *apierror.APIError {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Create", ctx, resourceType, resourceID, data)
+	ret := m.ctrl.Call(m, "CreateInAccount", ctx, resourceType, resourceID, accountID, data)
 	ret0, _ := ret[0].(*apierror.APIError)
 	return ret0
 }
 
-// Create indicates an expected call of Create.
-func (mr *MockDeletedRecordRepoMockRecorder) Create(ctx, resourceType, resourceID, data any) *gomock.Call {
+// CreateInAccount indicates an expected call of CreateInAccount.
+func (mr *MockDeletedRecordRepoMockRecorder) CreateInAccount(ctx, resourceType, resourceID, accountID, data any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Create", reflect.TypeOf((*MockDeletedRecordRepo)(nil).Create), ctx, resourceType, resourceID, data)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateInAccount", reflect.TypeOf((*MockDeletedRecordRepo)(nil).CreateInAccount), ctx, resourceType, resourceID, accountID, data)
 }
 
-// Exists mocks base method.
-func (m *MockDeletedRecordRepo) Exists(ctx context.Context, resourceType constants.DeletedRecordResourceType, resourceID string) (bool, *apierror.APIError) {
+// ExistsInAccount mocks base method.
+func (m *MockDeletedRecordRepo) ExistsInAccount(ctx context.Context, resourceType constants.DeletedRecordResourceType, resourceID, accountID string) (bool, *apierror.APIError) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Exists", ctx, resourceType, resourceID)
+	ret := m.ctrl.Call(m, "ExistsInAccount", ctx, resourceType, resourceID, accountID)
 	ret0, _ := ret[0].(bool)
 	ret1, _ := ret[1].(*apierror.APIError)
 	return ret0, ret1
 }
 
-// Exists indicates an expected call of Exists.
-func (mr *MockDeletedRecordRepoMockRecorder) Exists(ctx, resourceType, resourceID any) *gomock.Call {
+// ExistsInAccount indicates an expected call of ExistsInAccount.
+func (mr *MockDeletedRecordRepoMockRecorder) ExistsInAccount(ctx, resourceType, resourceID, accountID any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Exists", reflect.TypeOf((*MockDeletedRecordRepo)(nil).Exists), ctx, resourceType, resourceID)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ExistsInAccount", reflect.TypeOf((*MockDeletedRecordRepo)(nil).ExistsInAccount), ctx, resourceType, resourceID, accountID)
 }
 
 // MockIdempotencyKeyRepo is a mock of IdempotencyKeyRepo interface.

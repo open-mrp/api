@@ -752,6 +752,29 @@ message MergeCustomersRequest {
 message MergeCustomersResponse {
   CustomerProto customer = 1;
 }
+// ListCustomersRequest's filters, without its paging or includes.
+message ExportCustomersRequest {
+  optional string query = 1;
+  repeated string customer_group_ids = 2;
+  repeated string pricing_group_ids = 3;
+  repeated string sales_rep_ids = 4;
+  repeated string status_codes = 5;
+  repeated string shipping_term_ids = 6;
+  repeated string payment_term_ids = 7;
+  repeated string commission_status_codes = 8;
+  repeated string freight_status_codes = 9;
+  repeated string carrier_ids = 10;
+  repeated string service_level_ids = 11;
+  optional bool is_parent_account = 12;
+  optional string city = 13;
+  optional string state = 14;
+  optional string postal_code = 15;
+  optional google.protobuf.Timestamp start_date = 16;
+  optional google.protobuf.Timestamp end_date = 17;
+}
+message ExportCustomersResponse {
+  JobInfo job = 1;
+}
 message AnalyzeCustomerPricingRequest {
   repeated string customer_ids = 1;
   repeated string customer_group_ids = 2;
@@ -897,24 +920,42 @@ message BaseQuantity {
   double measure = 1;
   BaseQuantityUnitProto unit = 2;
 }
-message CostBreakdown {
-  BaseQuantity total = 1;
-  BaseQuantity labor = 2;
-  BaseQuantity materials = 3;
-  BaseQuantity overhead = 4;
-  BaseQuantity time = 5;
-  BaseQuantity quantity = 6;
+// An amount produced, as an exact decimal string in the base unit of its dimension.
+message ProductionCostProducedProto {
+  string unit_id = 1;
+  string value = 2;
 }
-message ProductionCostEntryProto {
+// The cost of some output, as exact decimal strings: money in the report's currency unit, labor time in its time unit.
+message ProductionCostProto {
+  string materials = 1;
+  string labor = 2;
+  string overhead = 3;
+  string total = 4;
+  string labor_time = 5;
+  repeated ProductionCostProducedProto produced = 6;
+}
+message ProductionCostSetProto {
+  ProductionCostProto productive = 1;
+  ProductionCostProto seconds = 2;
+  ProductionCostProto waste = 3;
+  ProductionCostProto total = 4;
+}
+// One department, one category, or one department and category. Department is absent for batches with no department and in category groups; category is absent in department groups.
+message ProductionCostGroupProto {
   BasicInfoProto department = 1;
   BasicInfoProto category = 2;
-  CostBreakdown total_costs = 3;
-  CostBreakdown productive_costs = 4;
-  CostBreakdown waste_costs = 5;
-  CostBreakdown seconds_costs = 6;
+  ProductionCostSetProto costs = 3;
 }
 message AnalyzeProductionCostsResponse {
-  repeated ProductionCostEntryProto items = 1;
+  reserved 1;
+  reserved "items";
+  string currency_unit_id = 2;
+  string time_unit_id = 3;
+  repeated UnitInfo units = 4;
+  ProductionCostSetProto totals = 5;
+  repeated ProductionCostGroupProto departments = 6;
+  repeated ProductionCostGroupProto categories = 7;
+  repeated ProductionCostGroupProto department_categories = 8;
 }
 message AnalyzeDeliveriesRequest {
   google.protobuf.Timestamp start_date = 1;
@@ -1046,4 +1087,6 @@ message AnalyzeQuarterlyOrdersRequest {
   repeated string product_line_ids = 3;
   repeated string customer_ids = 4;
   repeated string customer_group_ids = 5;
+  // Calendar years covered, the current one included; absent means five.
+  optional int32 years_back = 6;
 }

@@ -5,6 +5,7 @@ import (
 	"testing"
 	"time"
 
+	apierror "github.com/open-mrp/api/shared/errors"
 	"github.com/open-mrp/api/shared/field"
 )
 
@@ -1156,5 +1157,47 @@ func TestValidate_NamesNestedSliceFieldsByTheirJSONPath(t *testing.T) {
 	}
 	if !strings.Contains(err.PublicMessage, "'batches[1].quantity_value'") {
 		t.Errorf("expected the message to name the JSON path, got: %s", err.PublicMessage)
+	}
+}
+
+type slugTestStruct struct {
+	Slug field.Optional[string] `json:"slug,omitzero" validate:"omitempty,slug"`
+}
+
+// A slug is a path segment of the customer portal's URL, so anything a URL would split on or escape is
+// refused.
+func TestValidateSlugTag(t *testing.T) {
+	t.Parallel()
+	for slug, valid := range map[string]bool{
+		"acme-inc":        true,
+		"ac-hh6mrlkv08n8": true,
+		"acme2":           true,
+		"ACME-INC":        true,
+		"has spaces":      false,
+		"slash/slug":      false,
+		"query?x=1":       false,
+		"frag#ment":       false,
+		"under_score":     false,
+		"-leading":        false,
+		"trailing-":       false,
+		"double--hyphen":  false,
+		"café":            false,
+	} {
+		err := Validate(&slugTestStruct{Slug: field.Some(slug)})
+		if valid && err != nil {
+			t.Errorf("%q: expected to pass, got %v", slug, err)
+		}
+		if !valid {
+			if err == nil {
+				t.Errorf("%q: expected to fail", slug)
+				continue
+			}
+			if err.Code != apierror.ErrorCodeInvalidFormat || err.Param != "slug" {
+				t.Errorf("%q: got %s on %q, want invalid_format on slug", slug, err.Code, err.Param)
+			}
+		}
+	}
+	if err := Validate(&slugTestStruct{}); err != nil {
+		t.Errorf("an unset slug must pass, got %v", err)
 	}
 }

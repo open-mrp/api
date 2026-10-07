@@ -12,6 +12,19 @@ import (
 	"time"
 )
 
+const clearProductionStepFromBatches = `-- name: ClearProductionStepFromBatches :exec
+UPDATE batch SET production_step_id = NULL, updated_at = NOW(3)
+WHERE production_step_id = ?
+`
+
+// A deleted step's batches keep their history but no longer name it, as the dashboard's delete left
+// them; a dangling id would send a later undo looking for a step that is gone. Served by
+// batch_production_step_id_idx.
+func (q *Queries) ClearProductionStepFromBatches(ctx context.Context, productionStepID sql.NullString) error {
+	_, err := q.db.ExecContext(ctx, clearProductionStepFromBatches, productionStepID)
+	return err
+}
+
 const clearProductionStepFromMachines = `-- name: ClearProductionStepFromMachines :exec
 UPDATE machine SET production_step_id = NULL, updated_at = NOW(3)
 WHERE production_step_id = ?
@@ -393,23 +406,55 @@ func (q *Queries) FindProducedItemIDByStep(ctx context.Context, productionStepID
 }
 
 const findProducedUnitByStep = `-- name: FindProducedUnitByStep :one
-SELECT u.id, u.abbreviation, u.unit_dimension_code AS type
-FROM production p
-JOIN quantity q ON p.quantity_id = q.id
-JOIN unit u ON q.unit_id = u.id
-WHERE p.production_step_id = ?
+SELECT u.id, u.name, u.abbreviation, u.unit_dimension_code AS type,
+    u.ratio_numerator, u.ratio_denominator, u.offset_numerator, u.offset_denominator,
+    u.is_base_unit, u.account_id
+FROM production_step ps
+JOIN production p ON p.production_step_id = ps.id
+JOIN item i ON i.id = p.item_id
+JOIN item_category ic ON ic.id = i.item_category_id
+JOIN unit_group ug ON ug.id = ic.unit_group_id
+JOIN unit u ON u.id = ug.base_unit_id
+WHERE ps.id = ?
+AND ps.account_id = ?
+LIMIT 1
 `
 
-type FindProducedUnitByStepRow struct {
-	ID           string
-	Abbreviation string
-	Type         string
+type FindProducedUnitByStepParams struct {
+	ProductionStepID string
+	AccountID        string
 }
 
-func (q *Queries) FindProducedUnitByStep(ctx context.Context, productionStepID sql.NullString) (FindProducedUnitByStepRow, error) {
-	row := q.db.QueryRowContext(ctx, findProducedUnitByStep, productionStepID)
+type FindProducedUnitByStepRow struct {
+	ID                string
+	Name              string
+	Abbreviation      string
+	Type              string
+	RatioNumerator    string
+	RatioDenominator  string
+	OffsetNumerator   string
+	OffsetDenominator string
+	IsBaseUnit        bool
+	AccountID         sql.NullString
+}
+
+// The unit a step's output is counted in on the scanning floor: the base unit of the produced item's
+// unit group, not the unit the production happens to be written in.
+func (q *Queries) FindProducedUnitByStep(ctx context.Context, arg FindProducedUnitByStepParams) (FindProducedUnitByStepRow, error) {
+	row := q.db.QueryRowContext(ctx, findProducedUnitByStep, arg.ProductionStepID, arg.AccountID)
 	var i FindProducedUnitByStepRow
-	err := row.Scan(&i.ID, &i.Abbreviation, &i.Type)
+	err := row.Scan(
+		&i.ID,
+		&i.Name,
+		&i.Abbreviation,
+		&i.Type,
+		&i.RatioNumerator,
+		&i.RatioDenominator,
+		&i.OffsetNumerator,
+		&i.OffsetDenominator,
+		&i.IsBaseUnit,
+		&i.AccountID,
+	)
 	return i, err
 }
 
@@ -530,6 +575,7 @@ JOIN unit pu ON pq.unit_id = pu.id
 WHERE ps.scanning_station_id = ?
 AND ps.account_id = ?
 AND p.item_id = ?
+AND NOT EXISTS (SELECT 1 FROM _parent_child_production_steps pcps WHERE pcps.A = ps.id)
 LIMIT 1
 `
 
@@ -577,6 +623,7 @@ JOIN production p ON p.production_step_id = ps.id
 WHERE ps.scanning_station_id = ?
 AND ps.account_id = ?
 AND p.item_id = ?
+AND NOT EXISTS (SELECT 1 FROM _parent_child_production_steps pcps WHERE pcps.A = ps.id)
 LIMIT 1
 `
 
@@ -586,6 +633,8 @@ type FindStepIDByScanningStationAndItemParams struct {
 	ItemID            string
 }
 
+// The step a batch is initialized into: one at this station that makes the batch's item and has no
+// upstream step (A = downstream), since initializing is where a batch enters the flow.
 func (q *Queries) FindStepIDByScanningStationAndItem(ctx context.Context, arg FindStepIDByScanningStationAndItemParams) (string, error) {
 	row := q.db.QueryRowContext(ctx, findStepIDByScanningStationAndItem, arg.ScanningStationID, arg.AccountID, arg.ItemID)
 	var id string
@@ -1100,13 +1149,15 @@ func (q *Queries) GetProductionStepInputSteps(ctx context.Context, stepID string
 }
 
 const getProductionStepMachines = `-- name: GetProductionStepMachines :many
-SELECT m.id, m.name FROM machine m
+SELECT m.id, m.name, m.serial_number, m.department_id FROM machine m
 WHERE m.production_step_id = ?
 `
 
 type GetProductionStepMachinesRow struct {
-	ID   string
-	Name string
+	ID           string
+	Name         string
+	SerialNumber string
+	DepartmentID string
 }
 
 func (q *Queries) GetProductionStepMachines(ctx context.Context, productionStepID sql.NullString) ([]GetProductionStepMachinesRow, error) {
@@ -1118,7 +1169,12 @@ func (q *Queries) GetProductionStepMachines(ctx context.Context, productionStepI
 	var items []GetProductionStepMachinesRow
 	for rows.Next() {
 		var i GetProductionStepMachinesRow
-		if err := rows.Scan(&i.ID, &i.Name); err != nil {
+		if err := rows.Scan(
+			&i.ID,
+			&i.Name,
+			&i.SerialNumber,
+			&i.DepartmentID,
+		); err != nil {
 			return nil, err
 		}
 		items = append(items, i)
@@ -1409,7 +1465,7 @@ func (q *Queries) ListProductionStepOwnedQuantityIDs(ctx context.Context, arg Li
 	return items, nil
 }
 
-const listProductionStepsBackward = `-- name: ListProductionStepsBackward :many
+const listProductionStepsByIDs = `-- name: ListProductionStepsByIDs :many
 SELECT
     ps.id,
     ps.name,
@@ -1458,78 +1514,15 @@ LEFT JOIN rate ohr ON ps.overhead_rate_id = ohr.id
 LEFT JOIN unit ohrnu ON ohr.numerator_unit_id = ohrnu.id
 LEFT JOIN unit ohrdu ON ohr.denominator_unit_id = ohrdu.id
 WHERE ps.account_id = ?
-AND (
-    ? IS NULL
-    OR MATCH(ps.name) AGAINST(? IN BOOLEAN MODE)
-)
-AND (
-    ? = false
-    OR p.item_id IN (/*SLICE:item_ids*/?)
-    OR EXISTS (
-        SELECT 1 FROM consumption c
-        WHERE c.production_step_id = ps.id
-        AND c.item_id IN (/*SLICE:item_ids*/?)
-    )
-)
-AND (
-    ? = false
-    OR EXISTS (
-        SELECT 1 FROM machine m
-        WHERE m.production_step_id = ps.id
-        AND m.id IN (/*SLICE:machine_ids*/?)
-    )
-)
-AND (
-    ? = false
-    OR ps.scanning_station_id IN (/*SLICE:scanning_station_ids*/?)
-)
-AND (
-    ? = false
-    OR EXISTS (
-        SELECT 1 FROM _parent_child_production_steps pcps
-        WHERE pcps.A = ps.id
-        AND pcps.B IN (/*SLICE:input_step_ids*/?)
-    )
-)
-AND (
-    ? = false
-    OR EXISTS (
-        SELECT 1 FROM _parent_child_production_steps pcps
-        WHERE pcps.B = ps.id
-        AND pcps.A IN (/*SLICE:output_step_ids*/?)
-    )
-)
-AND (? IS NULL OR ps.created_at >= ?)
-AND (? IS NULL OR ps.created_at <= ?)
-AND (
-    ps.created_at > ?
-    OR (ps.created_at = ? AND ps.id > ?)
-)
-ORDER BY ps.created_at ASC, ps.id ASC
-LIMIT ?
+AND ps.id IN (/*SLICE:ids*/?)
 `
 
-type ListProductionStepsBackwardParams struct {
-	AccountID                    string
-	SearchQuery                  sql.NullString
-	IncludeItemFilter            interface{}
-	ItemIds                      []string
-	IncludeMachineFilter         interface{}
-	MachineIds                   []string
-	IncludeScanningStationFilter interface{}
-	ScanningStationIds           []sql.NullString
-	IncludeInputStepFilter       interface{}
-	InputStepIds                 []string
-	IncludeOutputStepFilter      interface{}
-	OutputStepIds                []string
-	StartDate                    sql.NullTime
-	EndDate                      sql.NullTime
-	CursorCreatedAt              time.Time
-	CursorID                     string
-	Limit                        int32
+type ListProductionStepsByIDsParams struct {
+	AccountID string
+	Ids       []string
 }
 
-type ListProductionStepsBackwardRow struct {
+type ListProductionStepsByIDsRow struct {
 	ID                       string
 	Name                     string
 	Notes                    sql.NullString
@@ -1578,388 +1571,27 @@ type ListProductionStepsBackwardRow struct {
 	OverheadRateDenUnitType  sql.NullString
 }
 
-func (q *Queries) ListProductionStepsBackward(ctx context.Context, arg ListProductionStepsBackwardParams) ([]ListProductionStepsBackwardRow, error) {
-	query := listProductionStepsBackward
+// The list's rows for a page of step IDs, chosen by the page query built in production_step_list_query.go.
+func (q *Queries) ListProductionStepsByIDs(ctx context.Context, arg ListProductionStepsByIDsParams) ([]ListProductionStepsByIDsRow, error) {
+	query := listProductionStepsByIDs
 	var queryParams []interface{}
 	queryParams = append(queryParams, arg.AccountID)
-	queryParams = append(queryParams, arg.SearchQuery)
-	queryParams = append(queryParams, arg.SearchQuery)
-	queryParams = append(queryParams, arg.IncludeItemFilter)
-	if len(arg.ItemIds) > 0 {
-		for _, v := range arg.ItemIds {
+	if len(arg.Ids) > 0 {
+		for _, v := range arg.Ids {
 			queryParams = append(queryParams, v)
 		}
-		query = strings.Replace(query, "/*SLICE:item_ids*/?", strings.Repeat(",?", len(arg.ItemIds))[1:], 1)
+		query = strings.Replace(query, "/*SLICE:ids*/?", strings.Repeat(",?", len(arg.Ids))[1:], 1)
 	} else {
-		query = strings.Replace(query, "/*SLICE:item_ids*/?", "NULL", 1)
+		query = strings.Replace(query, "/*SLICE:ids*/?", "NULL", 1)
 	}
-	if len(arg.ItemIds) > 0 {
-		for _, v := range arg.ItemIds {
-			queryParams = append(queryParams, v)
-		}
-		query = strings.Replace(query, "/*SLICE:item_ids*/?", strings.Repeat(",?", len(arg.ItemIds))[1:], 1)
-	} else {
-		query = strings.Replace(query, "/*SLICE:item_ids*/?", "NULL", 1)
-	}
-	queryParams = append(queryParams, arg.IncludeMachineFilter)
-	if len(arg.MachineIds) > 0 {
-		for _, v := range arg.MachineIds {
-			queryParams = append(queryParams, v)
-		}
-		query = strings.Replace(query, "/*SLICE:machine_ids*/?", strings.Repeat(",?", len(arg.MachineIds))[1:], 1)
-	} else {
-		query = strings.Replace(query, "/*SLICE:machine_ids*/?", "NULL", 1)
-	}
-	queryParams = append(queryParams, arg.IncludeScanningStationFilter)
-	if len(arg.ScanningStationIds) > 0 {
-		for _, v := range arg.ScanningStationIds {
-			queryParams = append(queryParams, v)
-		}
-		query = strings.Replace(query, "/*SLICE:scanning_station_ids*/?", strings.Repeat(",?", len(arg.ScanningStationIds))[1:], 1)
-	} else {
-		query = strings.Replace(query, "/*SLICE:scanning_station_ids*/?", "NULL", 1)
-	}
-	queryParams = append(queryParams, arg.IncludeInputStepFilter)
-	if len(arg.InputStepIds) > 0 {
-		for _, v := range arg.InputStepIds {
-			queryParams = append(queryParams, v)
-		}
-		query = strings.Replace(query, "/*SLICE:input_step_ids*/?", strings.Repeat(",?", len(arg.InputStepIds))[1:], 1)
-	} else {
-		query = strings.Replace(query, "/*SLICE:input_step_ids*/?", "NULL", 1)
-	}
-	queryParams = append(queryParams, arg.IncludeOutputStepFilter)
-	if len(arg.OutputStepIds) > 0 {
-		for _, v := range arg.OutputStepIds {
-			queryParams = append(queryParams, v)
-		}
-		query = strings.Replace(query, "/*SLICE:output_step_ids*/?", strings.Repeat(",?", len(arg.OutputStepIds))[1:], 1)
-	} else {
-		query = strings.Replace(query, "/*SLICE:output_step_ids*/?", "NULL", 1)
-	}
-	queryParams = append(queryParams, arg.StartDate)
-	queryParams = append(queryParams, arg.StartDate)
-	queryParams = append(queryParams, arg.EndDate)
-	queryParams = append(queryParams, arg.EndDate)
-	queryParams = append(queryParams, arg.CursorCreatedAt)
-	queryParams = append(queryParams, arg.CursorCreatedAt)
-	queryParams = append(queryParams, arg.CursorID)
-	queryParams = append(queryParams, arg.Limit)
 	rows, err := q.db.QueryContext(ctx, query, queryParams...)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	var items []ListProductionStepsBackwardRow
+	var items []ListProductionStepsByIDsRow
 	for rows.Next() {
-		var i ListProductionStepsBackwardRow
-		if err := rows.Scan(
-			&i.ID,
-			&i.Name,
-			&i.Notes,
-			&i.LevelingFactor,
-			&i.Allowances,
-			&i.DepartmentID,
-			&i.CreatedAt,
-			&i.UpdatedAt,
-			&i.ProductionID,
-			&i.ProducedItemID,
-			&i.ProducedItemSku,
-			&i.ProducedItemDescription,
-			&i.ProducedItemTypeCode,
-			&i.ProducedQuantityID,
-			&i.ProducedQuantityValue,
-			&i.ProducedUnitID,
-			&i.ProducedUnitAbbreviation,
-			&i.ProducedUnitType,
-			&i.ProductionCreatedAt,
-			&i.ProductionUpdatedAt,
-			&i.ScanningStationID,
-			&i.ScanningStationName,
-			&i.LaborRateID,
-			&i.LaborRateValue,
-			&i.LaborRateNumUnitID,
-			&i.LaborRateNumUnitAbbr,
-			&i.LaborRateNumUnitType,
-			&i.LaborRateDenUnitID,
-			&i.LaborRateDenUnitAbbr,
-			&i.LaborRateDenUnitType,
-			&i.LaborTimeID,
-			&i.LaborTimeValue,
-			&i.LaborTimeNumUnitID,
-			&i.LaborTimeNumUnitAbbr,
-			&i.LaborTimeNumUnitType,
-			&i.LaborTimeDenUnitID,
-			&i.LaborTimeDenUnitAbbr,
-			&i.LaborTimeDenUnitType,
-			&i.OverheadRateID,
-			&i.OverheadRateValue,
-			&i.OverheadRateNumUnitID,
-			&i.OverheadRateNumUnitAbbr,
-			&i.OverheadRateNumUnitType,
-			&i.OverheadRateDenUnitID,
-			&i.OverheadRateDenUnitAbbr,
-			&i.OverheadRateDenUnitType,
-		); err != nil {
-			return nil, err
-		}
-		items = append(items, i)
-	}
-	if err := rows.Close(); err != nil {
-		return nil, err
-	}
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-	return items, nil
-}
-
-const listProductionStepsForward = `-- name: ListProductionStepsForward :many
-SELECT
-    ps.id,
-    ps.name,
-    ps.notes,
-    ps.leveling_factor,
-    ps.allowances,
-    ps.department_id,
-    ps.created_at,
-    ps.updated_at,
-    p.id AS production_id,
-    pi.id AS produced_item_id,
-    pi.sku AS produced_item_sku,
-    pi.description AS produced_item_description,
-    pi.item_type_code AS produced_item_type_code,
-    pq.id AS produced_quantity_id,
-    pq.value AS produced_quantity_value,
-    pu.id AS produced_unit_id,
-    pu.abbreviation AS produced_unit_abbreviation,
-    pu.unit_dimension_code AS produced_unit_type,
-    p.created_at AS production_created_at,
-    p.updated_at AS production_updated_at,
-    ss.id AS scanning_station_id,
-    ss.name AS scanning_station_name,
-    lr.id AS labor_rate_id, lr.value AS labor_rate_value,
-    lrnu.id AS labor_rate_num_unit_id, lrnu.abbreviation AS labor_rate_num_unit_abbr, lrnu.unit_dimension_code AS labor_rate_num_unit_type,
-    lrdu.id AS labor_rate_den_unit_id, lrdu.abbreviation AS labor_rate_den_unit_abbr, lrdu.unit_dimension_code AS labor_rate_den_unit_type,
-    lt.id AS labor_time_id, lt.value AS labor_time_value,
-    ltnu.id AS labor_time_num_unit_id, ltnu.abbreviation AS labor_time_num_unit_abbr, ltnu.unit_dimension_code AS labor_time_num_unit_type,
-    ltdu.id AS labor_time_den_unit_id, ltdu.abbreviation AS labor_time_den_unit_abbr, ltdu.unit_dimension_code AS labor_time_den_unit_type,
-    ohr.id AS overhead_rate_id, ohr.value AS overhead_rate_value,
-    ohrnu.id AS overhead_rate_num_unit_id, ohrnu.abbreviation AS overhead_rate_num_unit_abbr, ohrnu.unit_dimension_code AS overhead_rate_num_unit_type,
-    ohrdu.id AS overhead_rate_den_unit_id, ohrdu.abbreviation AS overhead_rate_den_unit_abbr, ohrdu.unit_dimension_code AS overhead_rate_den_unit_type
-FROM production_step ps
-JOIN production p ON p.production_step_id = ps.id
-JOIN item pi ON p.item_id = pi.id
-JOIN quantity pq ON p.quantity_id = pq.id
-JOIN unit pu ON pq.unit_id = pu.id
-LEFT JOIN scanning_station ss ON ps.scanning_station_id = ss.id
-LEFT JOIN rate lr ON ps.labor_rate_id = lr.id
-LEFT JOIN unit lrnu ON lr.numerator_unit_id = lrnu.id
-LEFT JOIN unit lrdu ON lr.denominator_unit_id = lrdu.id
-LEFT JOIN rate lt ON ps.labor_time_id = lt.id
-LEFT JOIN unit ltnu ON lt.numerator_unit_id = ltnu.id
-LEFT JOIN unit ltdu ON lt.denominator_unit_id = ltdu.id
-LEFT JOIN rate ohr ON ps.overhead_rate_id = ohr.id
-LEFT JOIN unit ohrnu ON ohr.numerator_unit_id = ohrnu.id
-LEFT JOIN unit ohrdu ON ohr.denominator_unit_id = ohrdu.id
-WHERE ps.account_id = ?
-AND (
-    ? IS NULL
-    OR MATCH(ps.name) AGAINST(? IN BOOLEAN MODE)
-)
-AND (
-    ? = false
-    OR p.item_id IN (/*SLICE:item_ids*/?)
-    OR EXISTS (
-        SELECT 1 FROM consumption c
-        WHERE c.production_step_id = ps.id
-        AND c.item_id IN (/*SLICE:item_ids*/?)
-    )
-)
-AND (
-    ? = false
-    OR EXISTS (
-        SELECT 1 FROM machine m
-        WHERE m.production_step_id = ps.id
-        AND m.id IN (/*SLICE:machine_ids*/?)
-    )
-)
-AND (
-    ? = false
-    OR ps.scanning_station_id IN (/*SLICE:scanning_station_ids*/?)
-)
-AND (
-    ? = false
-    OR EXISTS (
-        SELECT 1 FROM _parent_child_production_steps pcps
-        WHERE pcps.A = ps.id
-        AND pcps.B IN (/*SLICE:input_step_ids*/?)
-    )
-)
-AND (
-    ? = false
-    OR EXISTS (
-        SELECT 1 FROM _parent_child_production_steps pcps
-        WHERE pcps.B = ps.id
-        AND pcps.A IN (/*SLICE:output_step_ids*/?)
-    )
-)
-AND (? IS NULL OR ps.created_at >= ?)
-AND (? IS NULL OR ps.created_at <= ?)
-AND (
-    ? IS NULL
-    OR ps.created_at < ?
-    OR (ps.created_at = ? AND ps.id < ?)
-)
-ORDER BY ps.created_at DESC, ps.id DESC
-LIMIT ?
-`
-
-type ListProductionStepsForwardParams struct {
-	AccountID                    string
-	SearchQuery                  sql.NullString
-	IncludeItemFilter            interface{}
-	ItemIds                      []string
-	IncludeMachineFilter         interface{}
-	MachineIds                   []string
-	IncludeScanningStationFilter interface{}
-	ScanningStationIds           []sql.NullString
-	IncludeInputStepFilter       interface{}
-	InputStepIds                 []string
-	IncludeOutputStepFilter      interface{}
-	OutputStepIds                []string
-	StartDate                    sql.NullTime
-	EndDate                      sql.NullTime
-	CursorCreatedAt              sql.NullTime
-	CursorID                     sql.NullString
-	Limit                        int32
-}
-
-type ListProductionStepsForwardRow struct {
-	ID                       string
-	Name                     string
-	Notes                    sql.NullString
-	LevelingFactor           string
-	Allowances               string
-	DepartmentID             sql.NullString
-	CreatedAt                time.Time
-	UpdatedAt                time.Time
-	ProductionID             string
-	ProducedItemID           string
-	ProducedItemSku          string
-	ProducedItemDescription  sql.NullString
-	ProducedItemTypeCode     string
-	ProducedQuantityID       string
-	ProducedQuantityValue    string
-	ProducedUnitID           string
-	ProducedUnitAbbreviation string
-	ProducedUnitType         string
-	ProductionCreatedAt      time.Time
-	ProductionUpdatedAt      time.Time
-	ScanningStationID        sql.NullString
-	ScanningStationName      sql.NullString
-	LaborRateID              sql.NullString
-	LaborRateValue           sql.NullString
-	LaborRateNumUnitID       sql.NullString
-	LaborRateNumUnitAbbr     sql.NullString
-	LaborRateNumUnitType     sql.NullString
-	LaborRateDenUnitID       sql.NullString
-	LaborRateDenUnitAbbr     sql.NullString
-	LaborRateDenUnitType     sql.NullString
-	LaborTimeID              sql.NullString
-	LaborTimeValue           sql.NullString
-	LaborTimeNumUnitID       sql.NullString
-	LaborTimeNumUnitAbbr     sql.NullString
-	LaborTimeNumUnitType     sql.NullString
-	LaborTimeDenUnitID       sql.NullString
-	LaborTimeDenUnitAbbr     sql.NullString
-	LaborTimeDenUnitType     sql.NullString
-	OverheadRateID           sql.NullString
-	OverheadRateValue        sql.NullString
-	OverheadRateNumUnitID    sql.NullString
-	OverheadRateNumUnitAbbr  sql.NullString
-	OverheadRateNumUnitType  sql.NullString
-	OverheadRateDenUnitID    sql.NullString
-	OverheadRateDenUnitAbbr  sql.NullString
-	OverheadRateDenUnitType  sql.NullString
-}
-
-func (q *Queries) ListProductionStepsForward(ctx context.Context, arg ListProductionStepsForwardParams) ([]ListProductionStepsForwardRow, error) {
-	query := listProductionStepsForward
-	var queryParams []interface{}
-	queryParams = append(queryParams, arg.AccountID)
-	queryParams = append(queryParams, arg.SearchQuery)
-	queryParams = append(queryParams, arg.SearchQuery)
-	queryParams = append(queryParams, arg.IncludeItemFilter)
-	if len(arg.ItemIds) > 0 {
-		for _, v := range arg.ItemIds {
-			queryParams = append(queryParams, v)
-		}
-		query = strings.Replace(query, "/*SLICE:item_ids*/?", strings.Repeat(",?", len(arg.ItemIds))[1:], 1)
-	} else {
-		query = strings.Replace(query, "/*SLICE:item_ids*/?", "NULL", 1)
-	}
-	if len(arg.ItemIds) > 0 {
-		for _, v := range arg.ItemIds {
-			queryParams = append(queryParams, v)
-		}
-		query = strings.Replace(query, "/*SLICE:item_ids*/?", strings.Repeat(",?", len(arg.ItemIds))[1:], 1)
-	} else {
-		query = strings.Replace(query, "/*SLICE:item_ids*/?", "NULL", 1)
-	}
-	queryParams = append(queryParams, arg.IncludeMachineFilter)
-	if len(arg.MachineIds) > 0 {
-		for _, v := range arg.MachineIds {
-			queryParams = append(queryParams, v)
-		}
-		query = strings.Replace(query, "/*SLICE:machine_ids*/?", strings.Repeat(",?", len(arg.MachineIds))[1:], 1)
-	} else {
-		query = strings.Replace(query, "/*SLICE:machine_ids*/?", "NULL", 1)
-	}
-	queryParams = append(queryParams, arg.IncludeScanningStationFilter)
-	if len(arg.ScanningStationIds) > 0 {
-		for _, v := range arg.ScanningStationIds {
-			queryParams = append(queryParams, v)
-		}
-		query = strings.Replace(query, "/*SLICE:scanning_station_ids*/?", strings.Repeat(",?", len(arg.ScanningStationIds))[1:], 1)
-	} else {
-		query = strings.Replace(query, "/*SLICE:scanning_station_ids*/?", "NULL", 1)
-	}
-	queryParams = append(queryParams, arg.IncludeInputStepFilter)
-	if len(arg.InputStepIds) > 0 {
-		for _, v := range arg.InputStepIds {
-			queryParams = append(queryParams, v)
-		}
-		query = strings.Replace(query, "/*SLICE:input_step_ids*/?", strings.Repeat(",?", len(arg.InputStepIds))[1:], 1)
-	} else {
-		query = strings.Replace(query, "/*SLICE:input_step_ids*/?", "NULL", 1)
-	}
-	queryParams = append(queryParams, arg.IncludeOutputStepFilter)
-	if len(arg.OutputStepIds) > 0 {
-		for _, v := range arg.OutputStepIds {
-			queryParams = append(queryParams, v)
-		}
-		query = strings.Replace(query, "/*SLICE:output_step_ids*/?", strings.Repeat(",?", len(arg.OutputStepIds))[1:], 1)
-	} else {
-		query = strings.Replace(query, "/*SLICE:output_step_ids*/?", "NULL", 1)
-	}
-	queryParams = append(queryParams, arg.StartDate)
-	queryParams = append(queryParams, arg.StartDate)
-	queryParams = append(queryParams, arg.EndDate)
-	queryParams = append(queryParams, arg.EndDate)
-	queryParams = append(queryParams, arg.CursorCreatedAt)
-	queryParams = append(queryParams, arg.CursorCreatedAt)
-	queryParams = append(queryParams, arg.CursorCreatedAt)
-	queryParams = append(queryParams, arg.CursorID)
-	queryParams = append(queryParams, arg.Limit)
-	rows, err := q.db.QueryContext(ctx, query, queryParams...)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	var items []ListProductionStepsForwardRow
-	for rows.Next() {
-		var i ListProductionStepsForwardRow
+		var i ListProductionStepsByIDsRow
 		if err := rows.Scan(
 			&i.ID,
 			&i.Name,
@@ -2030,6 +1662,10 @@ UPDATE production_step SET
         WHEN ? = true THEN ?
         ELSE scanning_station_id
     END,
+    notes = CASE
+        WHEN ? = true THEN ?
+        ELSE notes
+    END,
     updated_at = NOW(3)
 WHERE id = ?
 AND account_id = ?
@@ -2041,6 +1677,8 @@ type UpdateProductionStepFieldsParams struct {
 	Allowances            sql.NullString
 	UpdateScanningStation interface{}
 	ScanningStationID     sql.NullString
+	UpdateNotes           interface{}
+	Notes                 sql.NullString
 	ID                    string
 	AccountID             string
 }
@@ -2052,6 +1690,8 @@ func (q *Queries) UpdateProductionStepFields(ctx context.Context, arg UpdateProd
 		arg.Allowances,
 		arg.UpdateScanningStation,
 		arg.ScanningStationID,
+		arg.UpdateNotes,
+		arg.Notes,
 		arg.ID,
 		arg.AccountID,
 	)

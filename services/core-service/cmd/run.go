@@ -251,6 +251,7 @@ func Run(
 		S3Client:              s3Store,
 		UserPhotosBucket:      cfg.UserPhotosBucket,
 		Branding:              brandingAssets,
+		FrontendURL:           cfg.FrontendURL,
 		PlatformMode:          cfg.PlatformMode,
 	})
 	accountPriceSvc := service.NewAccountPriceSvc(&service.AccountPriceSvcConfig{
@@ -301,7 +302,7 @@ func Run(
 		stripeCheckoutFactory = &stub.StripeCheckoutClientFactory{}
 		hubspotFactory = &stub.HubspotClientFactory{}
 	} else {
-		realShippo, err := shippo.NewClientFactory(&shippo.ClientFactoryConfig{Store: cacheStore})
+		realShippo, err := shippo.NewClientFactory(&shippo.ClientFactoryConfig{Store: cacheStore, PlatformMode: cfg.PlatformMode})
 		if err != nil {
 			return err
 		}
@@ -395,6 +396,7 @@ func Run(
 		Repos:           repoFactory,
 		MediatorFactory: mediatorFactory,
 		TxManager:       txManager,
+		BillingPub:      billingPublisher,
 	})
 
 	itemCategorySvc := service.NewItemCategorySvc(&service.ItemCategorySvcConfig{
@@ -445,6 +447,7 @@ func Run(
 	customerSvc := service.NewCustomerSvc(&service.CustomerSvcConfig{
 		Repos:           repoFactory,
 		MediatorFactory: mediatorFactory,
+		JobSvcFactory:   jobSvcFactory,
 		TxManager:       txManager,
 	})
 
@@ -498,7 +501,11 @@ func Run(
 	})
 
 	inventoryChangeLogSvc := service.NewInventoryChangeLogSvc(&service.InventoryChangeLogSvcConfig{
-		Repos: repoFactory,
+		Repos:           repoFactory,
+		ReportRepos:     reportRepoFactory,
+		MediatorFactory: mediatorFactory,
+		JobSvcFactory:   jobSvcFactory,
+		TxManager:       txManager,
 	})
 
 	invoiceSvc := service.NewInvoiceSvc(&service.InvoiceSvcConfig{
@@ -730,6 +737,7 @@ func Run(
 		ShippingLabelsBucket: cfg.ShippingLabelsBucket,
 		FrontendURL:          cfg.FrontendURL,
 		Branding:             brandingAssets,
+		DispatchLeases:       repository.NewLeaseRepo(queries),
 	})
 
 	shipmentLineSvc := service.NewShipmentLineSvc(&service.ShipmentLineSvcConfig{
@@ -855,6 +863,9 @@ func Run(
 		"hubspot_company_reviews": hubspotSyncSvc.BuildExportHubspotCompanyReviews,
 		"price_list":              accountPriceSvc.BuildExportPriceList,
 		"sales_data":              analyticsSvc.BuildExportSalesLines,
+		"open_order_lines":        analyticsSvc.BuildExportOpenOrderLines,
+		"customers":               customerSvc.BuildExportCustomers,
+		"inventory_change_logs":   inventoryChangeLogSvc.BuildExportInventoryChangeLogs,
 	}
 
 	exportRunner := service.NewExportRunner(&service.ExportRunnerConfig{

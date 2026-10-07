@@ -98,6 +98,10 @@ func (s *productionScheduleSvcImpl) UpdateProductionScheduleSettings(ctx context
 
 		settings := params.Settings
 		settings.AccountID = accountID
+		// The changeover labor rate is cost data. A caller who cannot read it is shown null and so cannot send it back; the stored rate is kept rather than replaced by whatever such a caller sent.
+		if before != nil && !identity.CanReadCosts() {
+			settings.ChangeoverLaborRate = before.ChangeoverLaborRate
+		}
 		if apiErr := repo.UpsertSettings(txCtx, &settings); apiErr != nil {
 			return apiErr
 		}

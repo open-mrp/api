@@ -17,11 +17,20 @@ type ReceivableEntry struct {
 
 // OpenCredit represents an open credit memo or payment with remaining balance.
 type OpenCredit struct {
-	ID             string
-	Number         string
-	CreatedAt      time.Time
-	OriginalAmount string
-	LeftoverAmount string
+	ID              string
+	Number          string
+	CreatedAt       time.Time
+	FundsReceivedAt *time.Time
+	OriginalAmount  string
+	LeftoverAmount  string
+}
+
+// AgedFrom is the date a credit ages from on a statement: when its funds arrived, else when it was recorded.
+func (c OpenCredit) AgedFrom() time.Time {
+	if c.FundsReceivedAt != nil {
+		return *c.FundsReceivedAt
+	}
+	return c.CreatedAt
 }
 
 // ListReceivablesParams holds parameters for listing receivables.

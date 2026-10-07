@@ -254,11 +254,12 @@ func (m *MockShippoClientFactory) EXPECT() *MockShippoClientFactoryMockRecorder 
 }
 
 // Build mocks base method.
-func (m *MockShippoClientFactory) Build(apiKey string) domain.ShippoClient {
+func (m *MockShippoClientFactory) Build(apiKey string) (domain.ShippoClient, *apierror.APIError) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Build", apiKey)
 	ret0, _ := ret[0].(domain.ShippoClient)
-	return ret0
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
 }
 
 // Build indicates an expected call of Build.

@@ -41,10 +41,7 @@ func validPurchaseOrderBody() map[string]any {
 		"supplier_account_id": SeedSupplierAccountID,
 		"priority_code":       SeedPriorityCode,
 		"lines":               []map[string]any{purchaseOrderLineBody("E2E-PO-SKU")},
-		// Names are supplied on both addresses on purpose. Create builds a bill-to and a ship-to
-		// unconditionally, and with the name omitted it stores an empty one — which the address
-		// resource declares required, so an unnamed address left lying around fails the shared
-		// list-addresses contract for every other test in the suite.
+		// A purchase order needs both addresses; the flat fields create each as a new address.
 		"bill_to_name":    "E2E PO bill-to",
 		"bill_to_country": "US",
 		"ship_to_name":    "E2E PO ship-to",
@@ -120,11 +117,9 @@ func TestPurchaseOrders_CreateRejectsAMissingSupplier(t *testing.T) {
 func TestPurchaseOrders_CreateRejectsAnUnknownSupplier(t *testing.T) {
 	t.Parallel()
 
-	status, respBody, err := apiClient.Post(purchaseOrdersPath, map[string]any{
-		"supplier_account_id": "ac_doesnotexist00000",
-		"priority_code":       SeedPriorityCode,
-		"lines":               []map[string]any{purchaseOrderLineBody("E2E-PO-NOSUP")},
-	}, newIdempotencyKey())
+	body := validPurchaseOrderBody()
+	body["supplier_account_id"] = "ac_doesnotexist00000"
+	status, respBody, err := apiClient.Post(purchaseOrdersPath, body, newIdempotencyKey())
 	require.NoError(t, err)
 	require.Less(t, status, 500, "must reject rather than 5xx: %s", string(respBody))
 	assert.Contains(t, []int{400, 404}, status, "an unknown supplier must be refused: %s", string(respBody))
@@ -134,14 +129,114 @@ func TestPurchaseOrders_CreateRejectsAnUnknownSupplier(t *testing.T) {
 func TestPurchaseOrders_CreateRejectsANonSupplierAccount(t *testing.T) {
 	t.Parallel()
 
-	status, respBody, err := apiClient.Post(purchaseOrdersPath, map[string]any{
-		"supplier_account_id": SeedCustomerAccountID,
-		"priority_code":       SeedPriorityCode,
-		"lines":               []map[string]any{purchaseOrderLineBody("E2E-PO-CUST")},
-	}, newIdempotencyKey())
+	body := validPurchaseOrderBody()
+	body["supplier_account_id"] = SeedCustomerAccountID
+	status, respBody, err := apiClient.Post(purchaseOrdersPath, body, newIdempotencyKey())
 	require.NoError(t, err)
 	require.Less(t, status, 500, "must reject rather than 5xx: %s", string(respBody))
 	assert.Contains(t, []int{400, 404}, status, "a customer must not be usable as a supplier: %s", string(respBody))
+}
+
+// An order is billed and shipped somewhere, so create requires both addresses: by id, inline, or through the flat fields with at least a name and a country.
+func TestPurchaseOrders_CreateRequiresABillToAndAShipTo(t *testing.T) {
+	t.Parallel()
+
+	for _, tc := range []struct {
+		name   string
+		mutate func(map[string]any)
+		param  string
+	}{
+		{"no bill-to", func(b map[string]any) {
+			delete(b, "bill_to_name")
+			delete(b, "bill_to_country")
+		}, "bill_to_address_id"},
+		{"no ship-to", func(b map[string]any) {
+			delete(b, "ship_to_name")
+			delete(b, "ship_to_country")
+		}, "ship_to_address_id"},
+		{"neither", func(b map[string]any) {
+			for _, key := range []string{"bill_to_name", "bill_to_country", "ship_to_name", "ship_to_country"} {
+				delete(b, key)
+			}
+		}, "bill_to_address_id"},
+		{"a flat bill-to without a country", func(b map[string]any) {
+			delete(b, "bill_to_country")
+			b["bill_to_locality"] = "Columbus"
+		}, "bill_to_country"},
+		{"a flat ship-to without a name", func(b map[string]any) {
+			delete(b, "ship_to_name")
+			b["ship_to_street_line_1"] = "1 Dock Rd"
+		}, "ship_to_name"},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+			body := validPurchaseOrderBody()
+			tc.mutate(body)
+
+			status, respBody, err := apiClient.Post(purchaseOrdersPath, body, newIdempotencyKey())
+			require.NoError(t, err)
+			if status == 201 {
+				t.Cleanup(func() { _, _, _ = apiClient.Delete(purchaseOrdersPath + "/" + jsonField(parseJSON(respBody), "id")) })
+			}
+			requireStatus(t, 400, status, respBody)
+			assertErrorParam(t, requireErrorResponse(t, respBody, "missing_field", "invalid_request_error"), tc.param)
+		})
+	}
+}
+
+// Every way of giving the addresses leaves the order on named addresses with a country, which is what the address resource requires of every row.
+func TestPurchaseOrders_CreateLeavesNoBlankAddress(t *testing.T) {
+	t.Parallel()
+	supplierID := inlineSupplier(t)
+	supplierAddresses := trackInlineAddresses(t, supplierID)
+	ownAddresses := trackInlineAddresses(t, SeedAccountID)
+	savedID := savedCounterpartyAddress(t, supplierID, uniqueName("e2e-po-addr-saved"))
+	*supplierAddresses = append(*supplierAddresses, savedID)
+
+	for _, tc := range []struct {
+		name    string
+		mutate  func(map[string]any)
+		created *[]string
+	}{
+		{"by id", func(b map[string]any) {
+			b["bill_to_address_id"] = savedID
+			b["ship_to_address_id"] = savedID
+		}, nil},
+		{"inline", func(b map[string]any) {
+			b["bill_to_address"] = inlineAddressBody(uniqueName("e2e-po-addr-bill"), "1 Inline Way")
+			b["ship_to_address"] = inlineAddressBody(uniqueName("e2e-po-addr-ship"), "2 Inline Way")
+		}, supplierAddresses},
+		{"flat fields", func(b map[string]any) {
+			b["bill_to_name"], b["bill_to_country"] = uniqueName("e2e-po-addr-bill"), "US"
+			b["ship_to_name"], b["ship_to_country"] = uniqueName("e2e-po-addr-ship"), "US"
+		}, ownAddresses},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			body := inlinePurchaseOrderBody(supplierID)
+			tc.mutate(body)
+			orderID := jsonField(createAndCleanup(t, purchaseOrdersPath, body), "id")
+
+			rows, err := authDB(t).Query(`SELECT a.id, a.name, g.country FROM sales_order so
+				JOIN address a ON a.id IN (so.billing_address_id, so.shipping_address_id)
+				JOIN geolocation g ON g.id = a.geolocation_id
+				WHERE so.id = ?`, orderID)
+			require.NoError(t, err)
+			defer rows.Close()
+			found := 0
+			for rows.Next() {
+				var id, name, country string
+				require.NoError(t, rows.Scan(&id, &name, &country))
+				found++
+				if tc.created != nil {
+					*tc.created = append(*tc.created, id)
+				}
+				assert.NotEmpty(t, name, "address %s has no name", id)
+				assert.NotEmpty(t, country, "address %s has no country", id)
+			}
+			require.NoError(t, rows.Err())
+			require.Positive(t, found, "the order must point at its addresses")
+		})
+	}
 }
 
 func TestPurchaseOrders_CreateRejectsAnUnknownPriority(t *testing.T) {

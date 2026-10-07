@@ -208,9 +208,6 @@ func (r *auditEventRepoImpl) List(ctx context.Context, callerAccountID string, f
 	ctx, span := auditEventRepoTracer.Start(ctx, "repository.audit_event.list")
 	defer span.End()
 
-	includeChanges := includeJSONFieldParam(includes, "changes")
-	includeMetadata := includeJSONFieldParam(includes, "metadata")
-
 	limit := filter.Limit
 	if limit <= 0 {
 		limit = 100
@@ -219,128 +216,32 @@ func (r *auditEventRepoImpl) List(ctx context.Context, callerAccountID string, f
 		limit = 1000
 	}
 
-	var cursorDir *pagination.Direction
 	var cur *pagination.StringCursor
+	var cursorDir *pagination.Direction
+	dir := pagination.DirectionForward
 	if filter.Cursor != nil {
 		decoded, err := pagination.DecodeStringCursor(*filter.Cursor)
 		if err != nil {
 			return nil, apierror.NewValidationErrorWithParam("Invalid pagination cursor.", "cursor")
 		}
-		cursorDir = &decoded.Direction
 		cur = &decoded
+		cursorDir = &decoded.Direction
+		dir = decoded.Direction
 	}
 
-	includeResourceTypeFilter := len(filter.ResourceTypes) > 0
-	resourceTypes := ensureStringSlice(filter.ResourceTypes)
-	includeResourceIDFilter := len(filter.ResourceIDs) > 0
-	resourceIDs := ensureStringSlice(filter.ResourceIDs)
-	includeActorIDFilter := len(filter.ActorIDs) > 0
-	actorIDs := ensureStringSlice(filter.ActorIDs)
-	includeActorTypeFilter := len(filter.ActorTypes) > 0
-	actorTypes := ensureStringSlice(filter.ActorTypes)
-	includeActionFilter := len(filter.Actions) > 0
-	actions := ensureStringSlice(filter.Actions)
-	includeActorAccountFilter := len(filter.ActorAccountIDs) > 0
-	actorAccountIDs := ensureStringSlice(filter.ActorAccountIDs)
-	includeTargetAccountFilter := len(filter.TargetAccountIDs) > 0
-	targetAccountIDs := ensureNullStringSlice(filter.TargetAccountIDs)
-	includeRootFilter := filter.RootResourceType != "" && filter.RootResourceID != ""
-
-	searchQuery := sql.NullString{}
-	if filter.Query != nil && *filter.Query != "" {
-		searchQuery = sql.NullString{String: "%" + db.EscapeLike(*filter.Query) + "%", Valid: true}
-	}
-
-	startDate := db.NullTimePtr(filter.StartDate)
-	endDate := db.NullTimePtr(filter.EndDate)
-
-	if cursorDir == nil || *cursorDir == pagination.DirectionForward {
-		// Forward query order DESC, returned rows are already in correct direction for BuildPageString.
-		var cursorOccurredAt sql.NullTime
-		var cursorID sql.NullString
-		if cur != nil {
-			cursorOccurredAt = sql.NullTime{Time: cur.OccurredAt, Valid: true}
-			cursorID = sql.NullString{String: cur.ID, Valid: true}
-		}
-
-		rows, err := r.db.ListAuditEventsForward(ctx, sqlc.ListAuditEventsForwardParams{
-			IncludeChanges:             includeChanges,
-			IncludeMetadata:            includeMetadata,
-			CallerAccountIDActor:       callerAccountID,
-			CallerAccountIDTarget:      db.NullString(callerAccountID),
-			IncludeActorAccountFilter:  includeActorAccountFilter,
-			ActorAccountIds:            actorAccountIDs,
-			IncludeTargetAccountFilter: includeTargetAccountFilter,
-			TargetAccountIds:           targetAccountIDs,
-			IncludeResourceTypeFilter:  includeResourceTypeFilter,
-			ResourceTypes:              resourceTypes,
-			IncludeResourceIDFilter:    includeResourceIDFilter,
-			ResourceIds:                resourceIDs,
-			IncludeRootFilter:          includeRootFilter,
-			RootResourceType:           db.NullString(filter.RootResourceType),
-			RootResourceID:             db.NullString(filter.RootResourceID),
-			IncludeActorIDFilter:       includeActorIDFilter,
-			ActorIds:                   actorIDs,
-			IncludeActorTypeFilter:     includeActorTypeFilter,
-			ActorTypes:                 actorTypes,
-			IncludeActionFilter:        includeActionFilter,
-			Actions:                    actions,
-			StartDate:                  startDate,
-			EndDate:                    endDate,
-			SearchQuery:                searchQuery,
-			CursorOccurredAt:           cursorOccurredAt,
-			CursorID:                   cursorID,
-			Limit:                      limit + 1,
-		})
-		if err != nil {
-			return nil, tracing.Trace(span, apierror.NewInternalError(err, "Failed to query audit events."))
-		}
-
-		results := make([]*domain.AuditEventRead, len(rows))
-		for i := range rows {
-			results[i] = mapAuditEventRowToRead(&rows[i])
-		}
-
-		paged, pageInfo := pagination.BuildPageString(results, limit, cursorDir, auditEventOccurredAt, auditEventID)
-		return &domain.ListAuditEventsResult{AuditEvents: paged, PageInfo: pageInfo}, nil
-	}
-
-	// Backward direction: query order ASC and BuildPageString will reverse.
-	rows, err := r.db.ListAuditEventsBackward(ctx, sqlc.ListAuditEventsBackwardParams{
-		IncludeChanges:             includeChanges,
-		IncludeMetadata:            includeMetadata,
-		CallerAccountIDActor:       callerAccountID,
-		CallerAccountIDTarget:      db.NullString(callerAccountID),
-		IncludeActorAccountFilter:  includeActorAccountFilter,
-		ActorAccountIds:            actorAccountIDs,
-		IncludeTargetAccountFilter: includeTargetAccountFilter,
-		TargetAccountIds:           targetAccountIDs,
-		IncludeResourceTypeFilter:  includeResourceTypeFilter,
-		ResourceTypes:              resourceTypes,
-		IncludeResourceIDFilter:    includeResourceIDFilter,
-		ResourceIds:                resourceIDs,
-		IncludeRootFilter:          includeRootFilter,
-		RootResourceType:           db.NullString(filter.RootResourceType),
-		RootResourceID:             db.NullString(filter.RootResourceID),
-		IncludeActorIDFilter:       includeActorIDFilter,
-		ActorIds:                   actorIDs,
-		IncludeActionFilter:        includeActionFilter,
-		Actions:                    actions,
-		StartDate:                  startDate,
-		EndDate:                    endDate,
-		SearchQuery:                searchQuery,
-		CursorOccurredAt:           cur.OccurredAt,
-		CursorID:                   cur.ID,
-		Limit:                      limit + 1,
-	})
+	query, args := buildAuditEventListQuery(dir, callerAccountID, filter,
+		anyIncludeRequested(includes, "changes"), anyIncludeRequested(includes, "metadata"), cur, limit+1)
+	rows, err := r.db.DB().QueryContext(ctx, query, args...)
 	if err != nil {
 		return nil, tracing.Trace(span, apierror.NewInternalError(err, "Failed to query audit events."))
 	}
+	defer rows.Close()
 
-	results := make([]*domain.AuditEventRead, len(rows))
-	for i := range rows {
-		results[i] = mapAuditEventRowToRead(&rows[i])
+	results, err := scanAuditEventListRows(rows)
+	if err != nil {
+		return nil, tracing.Trace(span, apierror.NewInternalError(err, "Failed to scan audit events."))
 	}
+	sortAuditEventPage(results, dir)
 
 	paged, pageInfo := pagination.BuildPageString(results, limit, cursorDir, auditEventOccurredAt, auditEventID)
 	return &domain.ListAuditEventsResult{AuditEvents: paged, PageInfo: pageInfo}, nil
@@ -349,18 +250,8 @@ func (r *auditEventRepoImpl) List(ctx context.Context, callerAccountID string, f
 func auditEventOccurredAt(ae *domain.AuditEventRead) time.Time { return ae.OccurredAt }
 func auditEventID(ae *domain.AuditEventRead) string            { return ae.ID }
 
-func mapAuditEventRowToRead(row any) *domain.AuditEventRead {
-	switch r := row.(type) {
-	case *sqlc.FindAuditEventByIDRow:
-		return mapAuditEventBaseRow(r.TypeID, r.ActorID, r.ActorType, r.IdentityType, r.AccountID, r.TargetAccountID, r.AccountName, r.AccountCreatedAt, r.AccountUpdatedAt, r.Action, r.ResourceType, r.ResourceID, r.Changes, r.Metadata, r.ServiceName, r.RequestID, r.IdempotencyKeyID, r.SourceIp, r.OccurredAt, r.CreatedAt, r.UserName, r.UserEmail, r.ApiKeyName, r.ApiKeyRedactedValue, r.IdempotencyKey)
-	case *sqlc.ListAuditEventsForwardRow:
-		return mapAuditEventBaseRow(r.TypeID, r.ActorID, r.ActorType, r.IdentityType, r.AccountID, r.TargetAccountID, r.AccountName, r.AccountCreatedAt, r.AccountUpdatedAt, r.Action, r.ResourceType, r.ResourceID, r.Changes, r.Metadata, r.ServiceName, r.RequestID, r.IdempotencyKeyID, r.SourceIp, r.OccurredAt, r.CreatedAt, r.UserName, r.UserEmail, r.ApiKeyName, r.ApiKeyRedactedValue, r.IdempotencyKey)
-	case *sqlc.ListAuditEventsBackwardRow:
-		return mapAuditEventBaseRow(r.TypeID, r.ActorID, r.ActorType, r.IdentityType, r.AccountID, r.TargetAccountID, r.AccountName, r.AccountCreatedAt, r.AccountUpdatedAt, r.Action, r.ResourceType, r.ResourceID, r.Changes, r.Metadata, r.ServiceName, r.RequestID, r.IdempotencyKeyID, r.SourceIp, r.OccurredAt, r.CreatedAt, r.UserName, r.UserEmail, r.ApiKeyName, r.ApiKeyRedactedValue, r.IdempotencyKey)
-	default:
-		// Should never happen
-		return &domain.AuditEventRead{}
-	}
+func mapAuditEventRowToRead(r *sqlc.FindAuditEventByIDRow) *domain.AuditEventRead {
+	return mapAuditEventBaseRow(r.TypeID, r.ActorID, r.ActorType, r.IdentityType, r.AccountID, r.TargetAccountID, r.AccountName, r.AccountCreatedAt, r.AccountUpdatedAt, r.Action, r.ResourceType, r.ResourceID, r.Changes, r.Metadata, r.ServiceName, r.RequestID, r.IdempotencyKeyID, r.SourceIp, r.OccurredAt, r.CreatedAt, r.UserName, r.UserEmail, r.ApiKeyName, r.ApiKeyRedactedValue, r.IdempotencyKey)
 }
 
 func mapAuditEventBaseRow(
@@ -451,25 +342,6 @@ func mapAuditEventBaseRow(
 	}
 
 	return read
-}
-
-func ensureStringSlice(vals []string) []string {
-	if len(vals) == 0 {
-		return []string{""}
-	}
-	return vals
-}
-
-// ensureNullStringSlice mirrors ensureStringSlice for the nullable target_account_id IN (...) filter: the slice must always have at least one element so sqlc emits a valid placeholder, even when the filter is disabled (the `include_account_filter = false OR ...` guard short-circuits the IN).
-func ensureNullStringSlice(vals []string) []sql.NullString {
-	if len(vals) == 0 {
-		return []sql.NullString{{}}
-	}
-	out := make([]sql.NullString, len(vals))
-	for i, v := range vals {
-		out[i] = sql.NullString{String: v, Valid: true}
-	}
-	return out
 }
 
 func interfaceToBytes(v any) []byte {

@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 
+	jobep "github.com/open-mrp/api/services/api-gateway/endpoints/jobs"
 	"github.com/open-mrp/api/services/api-gateway/internal/domain"
 	"github.com/open-mrp/api/services/api-gateway/internal/export"
 	grpcutil "github.com/open-mrp/api/services/api-gateway/internal/grpc"
@@ -22,6 +23,7 @@ type InventoryChangeLogSvc interface {
 	ListInventoryChangeLogs(ctx context.Context, req *ListInventoryChangeLogsRequest) (*apiresource.List[apiresource.InventoryChangeLog], *apierror.APIError)
 	GetInventoryChangeLog(ctx context.Context, req *RetrieveInventoryChangeLogRequest) (*apiresource.InventoryChangeLog, *apierror.APIError)
 	ExportInventoryChangeLogs(ctx context.Context, req *ExportInventoryChangeLogsRequest) (*httptransport.FileDownload, *apierror.APIError)
+	StartInventoryChangeLogsExport(ctx context.Context, req *StartInventoryChangeLogsExportRequest) (*apiresource.Job, *apierror.APIError)
 }
 
 type InventoryChangeLogSvcConfig struct {
@@ -151,6 +153,30 @@ func (m *inventoryChangeLogSvcImpl) ExportInventoryChangeLogs(ctx context.Contex
 		Filename:    filename,
 		Body:        body,
 	}, nil
+}
+
+func (m *inventoryChangeLogSvcImpl) StartInventoryChangeLogsExport(ctx context.Context, req *StartInventoryChangeLogsExportRequest) (*apiresource.Job, *apierror.APIError) {
+	pbReq := &pb.StartInventoryChangeLogsExportRequest{
+		ItemIds:          req.ItemIDs,
+		ActionTypeCodes:  actionTypeStrings(req.ActionTypes),
+		ChangedByUserIds: req.ChangedByUserIDs,
+	}
+	if startsAt, ok := req.StartsAt.Value(); ok {
+		pbReq.StartDate = timestamppb.New(startsAt)
+	}
+	if endsAt, ok := req.EndsAt.Value(); ok {
+		pbReq.EndDate = timestamppb.New(endsAt)
+	}
+
+	resp, apiErr := grpcutil.CallRPC(ctx, inventoryChangeLogSvcTracer, "service.inventory_change_logs.start_export", domain.ServiceName,
+		func(ctx context.Context, opts ...grpc.CallOption) (*pb.StartInventoryChangeLogsExportResponse, error) {
+			return m.coreClient.StartInventoryChangeLogsExport(ctx, pbReq, opts...)
+		})
+	if apiErr != nil {
+		return nil, apiErr
+	}
+
+	return jobep.JobFromProto(resp.GetJob()), nil
 }
 
 // actionTypeStrings unwraps the typed filter for the proto request, which carries codes as plain strings.

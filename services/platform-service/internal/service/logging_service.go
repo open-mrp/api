@@ -63,7 +63,7 @@ func (s *loggingSvcImpl) GetRequestLog(ctx context.Context, id string, includes 
 		return nil, tracing.Trace(span, apierror.NewInvariantViolationError("Identity not found in context."))
 	}
 
-	if apiErr := identity.CheckIsInternalActor(); apiErr != nil {
+	if apiErr := identity.CheckIsInternalActorForRead(); apiErr != nil {
 		return nil, tracing.Trace(span, apiErr)
 	}
 	if apiErr := identity.CheckHasPermission(types.PermissionDomainRequestLogs, types.ActionRead); apiErr != nil {

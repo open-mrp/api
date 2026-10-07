@@ -17,6 +17,9 @@ import (
 )
 
 func salesReportFilterToProto(startsAt, endsAt *timestamppb.Timestamp, cmp *SalesComparisonPeriod, f SalesReportFilters) (*pb.SalesReportFilterProto, *apierror.APIError) {
+	if startsAt != nil && endsAt != nil && endsAt.AsTime().Before(startsAt.AsTime()) {
+		return nil, apierror.NewValidationErrorWithParam("Must not be before starts_at.", "ends_at")
+	}
 	out := &pb.SalesReportFilterProto{
 		StartsAt:         startsAt,
 		EndsAt:           endsAt,
@@ -31,6 +34,9 @@ func salesReportFilterToProto(startsAt, endsAt *timestamppb.Timestamp, cmp *Sale
 		end, hasEnd := cmp.ComparisonEndDate.Value()
 		if hasStart != hasEnd {
 			return nil, apierror.NewParameterInvalidError("comparison_starts_at and comparison_ends_at must be set together.", "comparison_starts_at")
+		}
+		if hasStart && end.Before(start) {
+			return nil, apierror.NewValidationErrorWithParam("Must not be before comparison_starts_at.", "comparison_ends_at")
 		}
 		if hasStart {
 			out.ComparisonStartsAt = timestamppb.New(start)

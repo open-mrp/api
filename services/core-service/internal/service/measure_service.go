@@ -5,6 +5,7 @@ import (
 	"fmt"
 
 	"github.com/open-mrp/api/services/core-service/internal/domain"
+	"github.com/open-mrp/api/services/core-service/internal/event"
 	"github.com/open-mrp/api/shared/appctx"
 	"github.com/open-mrp/api/shared/audit"
 	"github.com/open-mrp/api/shared/constants"
@@ -89,6 +90,19 @@ func (s *measureSvcImpl) checkObjectPermission(identity *types.Identity, objectT
 	}
 }
 
+// checkOwnerPermission asks for the update permission of every resource the measure belongs to in the account, so editing an item's measure takes items:update whatever the request says it belongs to. A measure no such resource holds reads as not found.
+func (s *measureSvcImpl) checkOwnerPermission(identity *types.Identity, owners []constants.ObjectType, notFound string) *apierror.APIError {
+	if len(owners) == 0 {
+		return apierror.NewResourceNotFoundError(notFound)
+	}
+	for _, owner := range owners {
+		if apiErr := s.checkObjectPermission(identity, owner); apiErr != nil {
+			return apiErr
+		}
+	}
+	return nil
+}
+
 func (s *measureSvcImpl) verifyObjectExists(ctx context.Context, accountID string, objectID string, objectType constants.ObjectType) *apierror.APIError {
 	switch objectType {
 	case constants.ObjectTypeItem:
@@ -123,17 +137,20 @@ func (s *measureSvcImpl) UpdateQuantity(ctx context.Context, params domain.Updat
 	if apiErr := identity.CheckIsInternalActor(); apiErr != nil {
 		return nil, tracing.Trace(span, apiErr)
 	}
-	if params.ObjectType != nil {
-		if apiErr := s.checkObjectPermission(identity, *params.ObjectType); apiErr != nil {
-			return nil, tracing.Trace(span, apiErr)
-		}
-	}
 
 	if !identity.IsTargetAccountSet() {
 		return nil, tracing.Trace(span, apierror.NewAuthenticationError("The OpenMRP-Account-ID header is required."))
 	}
 
 	accountID := identity.Target.AccountID
+
+	owners, apiErr := s.repos.NewQuantityRepo().OwnerTypes(ctx, accountID, params.QuantityID)
+	if apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
+	if apiErr := s.checkOwnerPermission(identity, owners, "Quantity not found."); apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
 
 	if params.ObjectID != nil && params.ObjectType != nil {
 		if apiErr := s.verifyObjectExists(ctx, accountID, *params.ObjectID, *params.ObjectType); apiErr != nil {
@@ -210,17 +227,20 @@ func (s *measureSvcImpl) UpdateRate(ctx context.Context, params domain.UpdateRat
 	if apiErr := identity.CheckIsInternalActor(); apiErr != nil {
 		return nil, tracing.Trace(span, apiErr)
 	}
-	if params.ObjectType != nil {
-		if apiErr := s.checkObjectPermission(identity, *params.ObjectType); apiErr != nil {
-			return nil, tracing.Trace(span, apiErr)
-		}
-	}
 
 	if !identity.IsTargetAccountSet() {
 		return nil, tracing.Trace(span, apierror.NewAuthenticationError("The OpenMRP-Account-ID header is required."))
 	}
 
 	accountID := identity.Target.AccountID
+
+	owners, apiErr := s.repos.NewRateRepo().OwnerTypes(ctx, accountID, params.RateID)
+	if apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
+	if apiErr := s.checkOwnerPermission(identity, owners, "Rate not found."); apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
 
 	if params.ObjectID != nil && params.ObjectType != nil {
 		if apiErr := s.verifyObjectExists(ctx, accountID, *params.ObjectID, *params.ObjectType); apiErr != nil {
@@ -258,6 +278,20 @@ func (s *measureSvcImpl) UpdateRate(ctx context.Context, params domain.UpdateRat
 				return apiErr
 			}
 			result = updated
+
+			// An item's unit cost and a step's labor and overhead rates are inputs to what items cost.
+			if params.ObjectID != nil && params.ObjectType != nil {
+				switch *params.ObjectType {
+				case constants.ObjectTypeItem:
+					if apiErr := event.PublishItemCostBasisChanged(txCtx, txSvc.repos, accountID, *params.ObjectID, event.CostBasisRateUpdated); apiErr != nil {
+						return apiErr
+					}
+				case constants.ObjectTypeProductionStep:
+					if apiErr := publishStepCostBasisChanged(txCtx, txSvc.repos, accountID, *params.ObjectID, event.CostBasisRateUpdated); apiErr != nil {
+						return apiErr
+					}
+				}
+			}
 
 			changes := audit.ComputeChanges(old, updated)
 

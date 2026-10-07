@@ -1071,8 +1071,12 @@ type UpdateProductionStepRequest struct {
 	LevelingFactor    *string                `protobuf:"bytes,3,opt,name=leveling_factor,json=levelingFactor,proto3,oneof" json:"leveling_factor,omitempty"`
 	Allowances        *string                `protobuf:"bytes,4,opt,name=allowances,proto3,oneof" json:"allowances,omitempty"`
 	ScanningStationId *string                `protobuf:"bytes,5,opt,name=scanning_station_id,json=scanningStationId,proto3,oneof" json:"scanning_station_id,omitempty"`
-	unknownFields     protoimpl.UnknownFields
-	sizeCache         protoimpl.SizeCache
+	// Clear removes the notes.
+	Notes *StringPatch `protobuf:"bytes,6,opt,name=notes,proto3,oneof" json:"notes,omitempty"`
+	// Replaces the machines assigned to the step; machines assigned elsewhere move here. Clear (or an empty list) unassigns all.
+	MachineIds    *StringListPatch `protobuf:"bytes,7,opt,name=machine_ids,json=machineIds,proto3,oneof" json:"machine_ids,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
 }
 
 func (x *UpdateProductionStepRequest) Reset() {
@@ -1138,6 +1142,20 @@ func (x *UpdateProductionStepRequest) GetScanningStationId() string {
 		return *x.ScanningStationId
 	}
 	return ""
+}
+
+func (x *UpdateProductionStepRequest) GetNotes() *StringPatch {
+	if x != nil {
+		return x.Notes
+	}
+	return nil
+}
+
+func (x *UpdateProductionStepRequest) GetMachineIds() *StringListPatch {
+	if x != nil {
+		return x.MachineIds
+	}
+	return nil
 }
 
 type UpdateProductionStepResponse struct {
@@ -2298,7 +2316,7 @@ var File_core_core_production_step_proto protoreflect.FileDescriptor
 
 const file_core_core_production_step_proto_rawDesc = "" +
 	"\n" +
-	"\x1fcore/core_production_step.proto\x12\x04core\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\x0fcore/core.proto\x1a!core/core_fuzzy_identifiers.proto\x1a\x15core/core_async.proto\"\xfb\x06\n" +
+	"\x1fcore/core_production_step.proto\x12\x04core\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\x0fcore/core.proto\x1a!core/core_fuzzy_identifiers.proto\x1a\x15core/core_async.proto\x1a\x15core/core_patch.proto\"\xfb\x06\n" +
 	"\x12ProductionStepInfo\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x12\n" +
 	"\x04name\x18\x02 \x01(\tR\x04name\x12\x19\n" +
@@ -2415,7 +2433,7 @@ const file_core_core_production_step_proto_rawDesc = "" +
 	"\finstructions\x18\x06 \x01(\tH\x00R\finstructions\x88\x01\x01B\x0f\n" +
 	"\r_instructions\"a\n" +
 	"\x1cCreateProductionStepResponse\x12A\n" +
-	"\x0fproduction_step\x18\x01 \x01(\v2\x18.core.ProductionStepInfoR\x0eproductionStep\"\x92\x02\n" +
+	"\x0fproduction_step\x18\x01 \x01(\v2\x18.core.ProductionStepInfoR\x0eproductionStep\"\x97\x03\n" +
 	"\x1bUpdateProductionStepRequest\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x17\n" +
 	"\x04name\x18\x02 \x01(\tH\x00R\x04name\x88\x01\x01\x12,\n" +
@@ -2423,11 +2441,16 @@ const file_core_core_production_step_proto_rawDesc = "" +
 	"\n" +
 	"allowances\x18\x04 \x01(\tH\x02R\n" +
 	"allowances\x88\x01\x01\x123\n" +
-	"\x13scanning_station_id\x18\x05 \x01(\tH\x03R\x11scanningStationId\x88\x01\x01B\a\n" +
+	"\x13scanning_station_id\x18\x05 \x01(\tH\x03R\x11scanningStationId\x88\x01\x01\x12,\n" +
+	"\x05notes\x18\x06 \x01(\v2\x11.core.StringPatchH\x04R\x05notes\x88\x01\x01\x12;\n" +
+	"\vmachine_ids\x18\a \x01(\v2\x15.core.StringListPatchH\x05R\n" +
+	"machineIds\x88\x01\x01B\a\n" +
 	"\x05_nameB\x12\n" +
 	"\x10_leveling_factorB\r\n" +
 	"\v_allowancesB\x16\n" +
-	"\x14_scanning_station_id\"a\n" +
+	"\x14_scanning_station_idB\b\n" +
+	"\x06_notesB\x0e\n" +
+	"\f_machine_ids\"a\n" +
 	"\x1cUpdateProductionStepResponse\x12A\n" +
 	"\x0fproduction_step\x18\x01 \x01(\v2\x18.core.ProductionStepInfoR\x0eproductionStep\"-\n" +
 	"\x1bDeleteProductionStepRequest\x12\x0e\n" +
@@ -2608,9 +2631,11 @@ var file_core_core_production_step_proto_goTypes = []any{
 	(*PageInfo)(nil),                          // 39: core.PageInfo
 	(*JobInfo)(nil),                           // 40: core.JobInfo
 	(*CreateRateInput)(nil),                   // 41: core.CreateRateInput
-	(*UnitIdentifier)(nil),                    // 42: core.UnitIdentifier
-	(*ItemIdentifier)(nil),                    // 43: core.ItemIdentifier
-	(*ObjectIdentifier)(nil),                  // 44: core.ObjectIdentifier
+	(*StringPatch)(nil),                       // 42: core.StringPatch
+	(*StringListPatch)(nil),                   // 43: core.StringListPatch
+	(*UnitIdentifier)(nil),                    // 44: core.UnitIdentifier
+	(*ItemIdentifier)(nil),                    // 45: core.ItemIdentifier
+	(*ObjectIdentifier)(nil),                  // 46: core.ObjectIdentifier
 }
 var file_core_core_production_step_proto_depIdxs = []int32{
 	1,  // 0: core.ProductionStepInfo.labor_rate:type_name -> core.ProductionStepRateInfo
@@ -2639,54 +2664,56 @@ var file_core_core_production_step_proto_depIdxs = []int32{
 	10, // 23: core.CreateProductionStepRequest.production:type_name -> core.CreateProductionInput
 	11, // 24: core.CreateProductionStepRequest.consumptions:type_name -> core.CreateStepConsumptionInput
 	0,  // 25: core.CreateProductionStepResponse.production_step:type_name -> core.ProductionStepInfo
-	0,  // 26: core.UpdateProductionStepResponse.production_step:type_name -> core.ProductionStepInfo
-	2,  // 27: core.GetProductionResponse.production:type_name -> core.ProductionInfo
-	2,  // 28: core.UpdateProductionResponse.production:type_name -> core.ProductionInfo
-	21, // 29: core.BulkCreateProductionStepInput.consumptions:type_name -> core.BulkCreateConsumptionInput
-	22, // 30: core.BulkCreateProductionStepInput.productions:type_name -> core.BulkCreateProductionInput
-	23, // 31: core.BulkCreateProductionStepsRequest.steps:type_name -> core.BulkCreateProductionStepInput
-	25, // 32: core.BulkCreateProductionStepsResponse.results:type_name -> core.BulkCreateProductionStepResult
-	42, // 33: core.UpsertRateInput.numerator_unit:type_name -> core.UnitIdentifier
-	42, // 34: core.UpsertRateInput.denominator_unit:type_name -> core.UnitIdentifier
-	43, // 35: core.UpsertProductionInput.item:type_name -> core.ItemIdentifier
-	42, // 36: core.UpsertProductionInput.quantity_unit:type_name -> core.UnitIdentifier
-	43, // 37: core.UpsertStepConsumptionInput.item:type_name -> core.ItemIdentifier
-	42, // 38: core.UpsertStepConsumptionInput.quantity_unit:type_name -> core.UnitIdentifier
-	42, // 39: core.UpsertStepConsumptionInput.waste_quantity_unit:type_name -> core.UnitIdentifier
-	44, // 40: core.UpsertProductionStepInput.scanning_station:type_name -> core.ObjectIdentifier
-	44, // 41: core.UpsertProductionStepInput.department:type_name -> core.ObjectIdentifier
-	27, // 42: core.UpsertProductionStepInput.labor_rate:type_name -> core.UpsertRateInput
-	27, // 43: core.UpsertProductionStepInput.labor_time:type_name -> core.UpsertRateInput
-	27, // 44: core.UpsertProductionStepInput.overhead_rate:type_name -> core.UpsertRateInput
-	28, // 45: core.UpsertProductionStepInput.production:type_name -> core.UpsertProductionInput
-	29, // 46: core.UpsertProductionStepInput.consumptions:type_name -> core.UpsertStepConsumptionInput
-	30, // 47: core.BulkUpsertProductionStepsRequest.production_steps:type_name -> core.UpsertProductionStepInput
-	40, // 48: core.BulkUpsertProductionStepsResponse.job:type_name -> core.JobInfo
-	3,  // 49: core.CoreProductionStepService.ListProductionSteps:input_type -> core.ListProductionStepsRequest
-	5,  // 50: core.CoreProductionStepService.ExportProductionSteps:input_type -> core.ExportProductionStepsRequest
-	7,  // 51: core.CoreProductionStepService.GetProductionStep:input_type -> core.GetProductionStepRequest
-	9,  // 52: core.CoreProductionStepService.CreateProductionStep:input_type -> core.CreateProductionStepRequest
-	13, // 53: core.CoreProductionStepService.UpdateProductionStep:input_type -> core.UpdateProductionStepRequest
-	15, // 54: core.CoreProductionStepService.DeleteProductionStep:input_type -> core.DeleteProductionStepRequest
-	17, // 55: core.CoreProductionStepService.GetProduction:input_type -> core.GetProductionRequest
-	19, // 56: core.CoreProductionStepService.UpdateProduction:input_type -> core.UpdateProductionRequest
-	24, // 57: core.CoreProductionStepService.BulkCreateProductionSteps:input_type -> core.BulkCreateProductionStepsRequest
-	31, // 58: core.CoreProductionStepService.BulkUpsertProductionSteps:input_type -> core.BulkUpsertProductionStepsRequest
-	4,  // 59: core.CoreProductionStepService.ListProductionSteps:output_type -> core.ListProductionStepsResponse
-	6,  // 60: core.CoreProductionStepService.ExportProductionSteps:output_type -> core.ExportProductionStepsResponse
-	8,  // 61: core.CoreProductionStepService.GetProductionStep:output_type -> core.GetProductionStepResponse
-	12, // 62: core.CoreProductionStepService.CreateProductionStep:output_type -> core.CreateProductionStepResponse
-	14, // 63: core.CoreProductionStepService.UpdateProductionStep:output_type -> core.UpdateProductionStepResponse
-	16, // 64: core.CoreProductionStepService.DeleteProductionStep:output_type -> core.DeleteProductionStepResponse
-	18, // 65: core.CoreProductionStepService.GetProduction:output_type -> core.GetProductionResponse
-	20, // 66: core.CoreProductionStepService.UpdateProduction:output_type -> core.UpdateProductionResponse
-	26, // 67: core.CoreProductionStepService.BulkCreateProductionSteps:output_type -> core.BulkCreateProductionStepsResponse
-	32, // 68: core.CoreProductionStepService.BulkUpsertProductionSteps:output_type -> core.BulkUpsertProductionStepsResponse
-	59, // [59:69] is the sub-list for method output_type
-	49, // [49:59] is the sub-list for method input_type
-	49, // [49:49] is the sub-list for extension type_name
-	49, // [49:49] is the sub-list for extension extendee
-	0,  // [0:49] is the sub-list for field type_name
+	42, // 26: core.UpdateProductionStepRequest.notes:type_name -> core.StringPatch
+	43, // 27: core.UpdateProductionStepRequest.machine_ids:type_name -> core.StringListPatch
+	0,  // 28: core.UpdateProductionStepResponse.production_step:type_name -> core.ProductionStepInfo
+	2,  // 29: core.GetProductionResponse.production:type_name -> core.ProductionInfo
+	2,  // 30: core.UpdateProductionResponse.production:type_name -> core.ProductionInfo
+	21, // 31: core.BulkCreateProductionStepInput.consumptions:type_name -> core.BulkCreateConsumptionInput
+	22, // 32: core.BulkCreateProductionStepInput.productions:type_name -> core.BulkCreateProductionInput
+	23, // 33: core.BulkCreateProductionStepsRequest.steps:type_name -> core.BulkCreateProductionStepInput
+	25, // 34: core.BulkCreateProductionStepsResponse.results:type_name -> core.BulkCreateProductionStepResult
+	44, // 35: core.UpsertRateInput.numerator_unit:type_name -> core.UnitIdentifier
+	44, // 36: core.UpsertRateInput.denominator_unit:type_name -> core.UnitIdentifier
+	45, // 37: core.UpsertProductionInput.item:type_name -> core.ItemIdentifier
+	44, // 38: core.UpsertProductionInput.quantity_unit:type_name -> core.UnitIdentifier
+	45, // 39: core.UpsertStepConsumptionInput.item:type_name -> core.ItemIdentifier
+	44, // 40: core.UpsertStepConsumptionInput.quantity_unit:type_name -> core.UnitIdentifier
+	44, // 41: core.UpsertStepConsumptionInput.waste_quantity_unit:type_name -> core.UnitIdentifier
+	46, // 42: core.UpsertProductionStepInput.scanning_station:type_name -> core.ObjectIdentifier
+	46, // 43: core.UpsertProductionStepInput.department:type_name -> core.ObjectIdentifier
+	27, // 44: core.UpsertProductionStepInput.labor_rate:type_name -> core.UpsertRateInput
+	27, // 45: core.UpsertProductionStepInput.labor_time:type_name -> core.UpsertRateInput
+	27, // 46: core.UpsertProductionStepInput.overhead_rate:type_name -> core.UpsertRateInput
+	28, // 47: core.UpsertProductionStepInput.production:type_name -> core.UpsertProductionInput
+	29, // 48: core.UpsertProductionStepInput.consumptions:type_name -> core.UpsertStepConsumptionInput
+	30, // 49: core.BulkUpsertProductionStepsRequest.production_steps:type_name -> core.UpsertProductionStepInput
+	40, // 50: core.BulkUpsertProductionStepsResponse.job:type_name -> core.JobInfo
+	3,  // 51: core.CoreProductionStepService.ListProductionSteps:input_type -> core.ListProductionStepsRequest
+	5,  // 52: core.CoreProductionStepService.ExportProductionSteps:input_type -> core.ExportProductionStepsRequest
+	7,  // 53: core.CoreProductionStepService.GetProductionStep:input_type -> core.GetProductionStepRequest
+	9,  // 54: core.CoreProductionStepService.CreateProductionStep:input_type -> core.CreateProductionStepRequest
+	13, // 55: core.CoreProductionStepService.UpdateProductionStep:input_type -> core.UpdateProductionStepRequest
+	15, // 56: core.CoreProductionStepService.DeleteProductionStep:input_type -> core.DeleteProductionStepRequest
+	17, // 57: core.CoreProductionStepService.GetProduction:input_type -> core.GetProductionRequest
+	19, // 58: core.CoreProductionStepService.UpdateProduction:input_type -> core.UpdateProductionRequest
+	24, // 59: core.CoreProductionStepService.BulkCreateProductionSteps:input_type -> core.BulkCreateProductionStepsRequest
+	31, // 60: core.CoreProductionStepService.BulkUpsertProductionSteps:input_type -> core.BulkUpsertProductionStepsRequest
+	4,  // 61: core.CoreProductionStepService.ListProductionSteps:output_type -> core.ListProductionStepsResponse
+	6,  // 62: core.CoreProductionStepService.ExportProductionSteps:output_type -> core.ExportProductionStepsResponse
+	8,  // 63: core.CoreProductionStepService.GetProductionStep:output_type -> core.GetProductionStepResponse
+	12, // 64: core.CoreProductionStepService.CreateProductionStep:output_type -> core.CreateProductionStepResponse
+	14, // 65: core.CoreProductionStepService.UpdateProductionStep:output_type -> core.UpdateProductionStepResponse
+	16, // 66: core.CoreProductionStepService.DeleteProductionStep:output_type -> core.DeleteProductionStepResponse
+	18, // 67: core.CoreProductionStepService.GetProduction:output_type -> core.GetProductionResponse
+	20, // 68: core.CoreProductionStepService.UpdateProduction:output_type -> core.UpdateProductionResponse
+	26, // 69: core.CoreProductionStepService.BulkCreateProductionSteps:output_type -> core.BulkCreateProductionStepsResponse
+	32, // 70: core.CoreProductionStepService.BulkUpsertProductionSteps:output_type -> core.BulkUpsertProductionStepsResponse
+	61, // [61:71] is the sub-list for method output_type
+	51, // [51:61] is the sub-list for method input_type
+	51, // [51:51] is the sub-list for extension type_name
+	51, // [51:51] is the sub-list for extension extendee
+	0,  // [0:51] is the sub-list for field type_name
 }
 
 func init() { file_core_core_production_step_proto_init() }
@@ -2697,6 +2724,7 @@ func file_core_core_production_step_proto_init() {
 	file_core_core_proto_init()
 	file_core_core_fuzzy_identifiers_proto_init()
 	file_core_core_async_proto_init()
+	file_core_core_patch_proto_init()
 	file_core_core_production_step_proto_msgTypes[0].OneofWrappers = []any{}
 	file_core_core_production_step_proto_msgTypes[2].OneofWrappers = []any{}
 	file_core_core_production_step_proto_msgTypes[3].OneofWrappers = []any{}

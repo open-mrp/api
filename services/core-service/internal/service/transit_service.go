@@ -109,6 +109,15 @@ func (s *salesOrderSvcImpl) WarmForOrder(ctx context.Context, accountID, salesOr
 		return nil
 	}
 
+	// The quote is filed under the service level's carrier, so it has to be that carrier being rated. An order written before the pair was checked can still hold another carrier's service level, and quoting it would file one carrier's transit times under the other's.
+	onCarrier, apiErr := s.repos.NewServiceLevelRepo().IsInCarrier(ctx, *order.ServiceLevelID, *order.CarrierID)
+	if apiErr != nil {
+		return tracing.Trace(span, apiErr)
+	}
+	if !onCarrier {
+		return nil
+	}
+
 	origin, apiErr := s.repos.NewSalesOrderRepo().GetAccountOriginAddress(ctx, accountID)
 	if apiErr != nil {
 		return tracing.Trace(span, apiErr)
@@ -167,16 +176,24 @@ func (s *salesOrderSvcImpl) fetchLaneRates(ctx context.Context, accountID string
 		return nil, nil
 	}
 
-	encryptedCreds, _, apiErr := integrationRepo.GetEncryptedCredentials(ctx, accountID, constants.IntegrationCodeShippo)
+	encryptedCreds, isActive, apiErr := integrationRepo.GetEncryptedCredentials(ctx, accountID, constants.IntegrationCodeShippo)
 	if apiErr != nil {
 		return nil, apiErr
+	}
+	// A switched-off integration cannot rate, which is the same no-op as having none.
+	if !isActive {
+		return nil, nil
 	}
 	apiKey, apiErr := decryptShippoAPIKey(encryptedCreds, s.encryptionKey, accountID)
 	if apiErr != nil {
 		return nil, apiErr
 	}
+	shippoClient, apiErr := s.shippoFactory.Build(apiKey)
+	if apiErr != nil {
+		return nil, apiErr
+	}
 
-	return s.shippoFactory.Build(apiKey).FetchAllShippingRates(ctx, domain.FetchAllShippingRatesParams{
+	return shippoClient.FetchAllShippingRates(ctx, domain.FetchAllShippingRatesParams{
 		CarrierAccountObjectID: *carrier.ShippoCarrierAccountID,
 		FromAddress:            origin,
 		ToAddress:              dest,

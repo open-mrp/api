@@ -14,6 +14,8 @@ import (
 // Returns the account's resource usage against its plan limits, along with subscription status, plan pricing, and estimated agent spending.
 //
 // Seats and sandboxes are current totals, while invoices and batches are counted from the start of the current billing period. The plan name and base fee come from the pricing plan configured in Stripe, so they can differ from the name and price the same plan advertises on the pricing page.
+//
+// Customer and supplier portal users are refused with `403`: the usage is the seller's own.
 type GetAccountUsageEndpoint struct{}
 
 func (e *GetAccountUsageEndpoint) Materialize() *apiendpoint.APIEndpoint[*apiresource.EmptyResource, *apiresource.AccountUsageResponse] {

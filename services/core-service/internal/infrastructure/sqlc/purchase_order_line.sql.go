@@ -21,7 +21,10 @@ INSERT INTO sales_order_line (
 ) VALUES (
     ?, ?, ?,
     ?, ?,
-    ?, ?, ?,
+    -- A line bought as a product is stocked as that product's item.
+    ?,
+    COALESCE(?, (SELECT p.item_id FROM product p WHERE p.id = ?)),
+    ?,
     ?, ?, ?,
     NOW(3), NOW(3)
 )
@@ -34,7 +37,7 @@ type CreatePurchaseOrderLineParams struct {
 	EdiLineItemID      sql.NullString
 	LineItemNumber     sql.NullInt32
 	ProductID          sql.NullString
-	ItemID             sql.NullString
+	ItemID             interface{}
 	SalesOrderID       string
 	QuantityID         string
 	UnitPriceID        string
@@ -50,6 +53,7 @@ func (q *Queries) CreatePurchaseOrderLine(ctx context.Context, arg CreatePurchas
 		arg.LineItemNumber,
 		arg.ProductID,
 		arg.ItemID,
+		arg.ProductID,
 		arg.SalesOrderID,
 		arg.QuantityID,
 		arg.UnitPriceID,
@@ -336,15 +340,15 @@ func (q *Queries) IsLineInPurchaseOrder(ctx context.Context, arg IsLineInPurchas
 }
 
 const updatePurchaseOrderLine = `-- name: UpdatePurchaseOrderLine :exec
-UPDATE sales_order_line SET
+UPDATE sales_order_line sol SET
     product_sku = COALESCE(?, product_sku),
     product_description = COALESCE(?, product_description),
     product_id = ?,
-    item_id = ?,
+    item_id = COALESCE(?, (SELECT p.item_id FROM product p WHERE p.id = ?)),
     edi_line_item_id = COALESCE(?, edi_line_item_id),
     updated_at = NOW(3)
-WHERE id = ?
-AND sales_order_id = ?
+WHERE sol.id = ?
+AND sol.sales_order_id = ?
 `
 
 type UpdatePurchaseOrderLineParams struct {
@@ -363,6 +367,7 @@ func (q *Queries) UpdatePurchaseOrderLine(ctx context.Context, arg UpdatePurchas
 		arg.ProductDescription,
 		arg.ProductID,
 		arg.ItemID,
+		arg.ProductID,
 		arg.EdiLineItemID,
 		arg.ID,
 		arg.SalesOrderID,

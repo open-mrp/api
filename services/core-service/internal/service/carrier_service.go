@@ -125,7 +125,7 @@ func (s *carrierSvcImpl) getShippoClient(ctx context.Context, accountID string) 
 		return nil, apierror.NewValidationError("Shippo integration is misconfigured. Please reconnect Shippo.")
 	}
 
-	return s.shippoFactory.Build(creds.APIKey), nil
+	return s.shippoFactory.Build(creds.APIKey)
 }
 
 func (s *carrierSvcImpl) ListCarriers(ctx context.Context, params domain.ListCarriersParams) (*domain.ListCarriersResult, *apierror.APIError) {
@@ -610,7 +610,7 @@ func (s *carrierSvcImpl) DeleteCarrier(ctx context.Context, carrierID string) *a
 	carrier, apiErr := s.repos.NewCarrierRepo().Get(ctx, domain.GetCarrierParams{AccountID: accountID, CarrierID: carrierID})
 	if apiErr != nil {
 		if apierror.IsNotFound(apiErr) {
-			wasDeleted, deletedCheckErr := s.repos.NewDeletedRecordRepo().Exists(ctx, constants.DeletedRecordResourceTypeCarrier, carrierID)
+			wasDeleted, deletedCheckErr := s.repos.NewDeletedRecordRepo().ExistsInAccount(ctx, constants.DeletedRecordResourceTypeCarrier, carrierID, accountID)
 			if deletedCheckErr != nil {
 				return tracing.Trace(span, deletedCheckErr)
 			}
@@ -654,7 +654,7 @@ func (s *carrierSvcImpl) DeleteCarrier(ctx context.Context, carrierID string) *a
 			return apiErr
 		}
 
-		if apiErr := txSvc.repos.NewDeletedRecordRepo().Create(txCtx, constants.DeletedRecordResourceTypeCarrier, carrier.ID, carrier); apiErr != nil {
+		if apiErr := txSvc.repos.NewDeletedRecordRepo().CreateInAccount(txCtx, constants.DeletedRecordResourceTypeCarrier, carrier.ID, accountID, carrier); apiErr != nil {
 			return apiErr
 		}
 

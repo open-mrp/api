@@ -44,9 +44,10 @@ func shipmentPlanDims() []planDim[domain.ListShipmentsParams] {
 			{"small", func(p *domain.ListShipmentsParams) { p.CustomerGroupIDs = []string{"ag_planful_small"} }},
 		}},
 		{"sales_rep", []planValue[domain.ListShipmentsParams]{
-			{"dense", func(p *domain.ListShipmentsParams) { p.SalesRepIDs = []string{"acus_planful_dense"} }},
-			{"once", func(p *domain.ListShipmentsParams) { p.SalesRepIDs = []string{"acus_planful_once"} }},
-			{"rare", func(p *domain.ListShipmentsParams) { p.SalesRepIDs = []string{"acus_planful_rare"} }},
+			{"dense", func(p *domain.ListShipmentsParams) { p.SalesRepIDs = []string{planFulRepDense} }},
+			{"mid", func(p *domain.ListShipmentsParams) { p.SalesRepIDs = []string{planFulRepMid} }},
+			{"rare", func(p *domain.ListShipmentsParams) { p.SalesRepIDs = []string{planFulRepRare} }},
+			{"zero", func(p *domain.ListShipmentsParams) { p.SalesRepIDs = []string{planFulRepDefault} }},
 		}},
 		{"item", []planValue[domain.ListShipmentsParams]{
 			{"dense", func(p *domain.ListShipmentsParams) { p.ItemIDs = []string{planFulItemID(0)} }},
@@ -90,12 +91,12 @@ func shipmentPlanCases() []planCase[domain.ListShipmentsParams] {
 // shipmentRepoImpl.buyerFilter resolves, read here independently of it.
 func shipmentBuyerSet(t *testing.T, db *sql.DB, p domain.ListShipmentsParams) []string {
 	t.Helper()
-	if len(p.CustomerGroupIDs) == 0 && len(p.SalesRepIDs) == 0 {
+	if len(p.CustomerGroupIDs) == 0 {
 		return p.CustomerIDs
 	}
 	where, args := []string{"owner_account_id = ?"}, []any{p.AccountID}
 	for column, values := range map[string][]string{
-		"account_group_id": p.CustomerGroupIDs, "default_sales_rep_id": p.SalesRepIDs, "counterparty_account_id": p.CustomerIDs,
+		"account_group_id": p.CustomerGroupIDs, "counterparty_account_id": p.CustomerIDs,
 	} {
 		if len(values) > 0 {
 			where, args = append(where, column+" IN ("+placeholders(len(values))+")"), append(args, stringArgs(values)...)
@@ -115,8 +116,9 @@ func shipmentBuyerSet(t *testing.T, db *sql.DB, p domain.ListShipmentsParams) []
 }
 
 // shipmentUnorderedFloor is how many shipments the request's narrowest unordered filter matches, or 0
-// when it has none. No key yields these in list order: a set of customers (ranges of the buyer key)
-// and items or product lines (child tables). The best any plan can do is read one filter's matches.
+// when it has none. No key yields these in list order: a set of customers (ranges of the buyer key),
+// items or product lines (child tables), and sales reps (on the order). The best any plan can do is
+// read one filter's matches.
 func shipmentUnorderedFloor(t *testing.T, db *sql.DB, p domain.ListShipmentsParams) float64 {
 	t.Helper()
 	var floors []float64
@@ -134,6 +136,10 @@ func shipmentUnorderedFloor(t *testing.T, db *sql.DB, p domain.ListShipmentsPara
 	}
 	if len(p.ProductLineIDs) > 0 {
 		count("s.id IN ("+shipmentsWithProductLines(len(p.ProductLineIDs))+")", stringArgs(p.ProductLineIDs)...)
+	}
+	if len(p.SalesRepIDs) > 0 {
+		count("s.sales_order_id IN (SELECT rso.id FROM "+shipmentRepOrders(len(p.SalesRepIDs))+")",
+			append([]any{p.AccountID}, stringArgs(p.SalesRepIDs)...)...)
 	}
 	if len(floors) == 0 {
 		return 0
@@ -167,5 +173,8 @@ func TestShipmentList_ReadsAboutAPage(t *testing.T) {
 			buyers := shipmentBuyerSet(t, db, p)
 			return buyers != nil && len(buyers) == 0
 		},
+		statsTables: []string{"sales_order"},
+		// The sales-rep filter's orders: one probe per shipment read, or the reps' orders when they drive.
+		reads: []planRead[domain.ListShipmentsParams]{{alias: "rso", fanout: 1}},
 	}.run(t)
 }

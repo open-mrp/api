@@ -20,123 +20,6 @@ WHERE ar.owner_account_id = sqlc.arg('owner_account_id')
   )
 ORDER BY ar.created_at ASC;
 
--- name: GetQuarterlyOrderTotals :many
-SELECT
-    YEAR(so.issued_at) AS order_year,
-    CAST(SUM(
-        CASE WHEN QUARTER(so.issued_at) = 1 THEN
-            (
-                (CAST(q.value AS DECIMAL(65,30)) * (CAST(u_ord.ratio_numerator AS DECIMAL(65,30)) / CAST(u_ord.ratio_denominator AS DECIMAL(65,30))))
-                + (CAST(u_ord.offset_numerator AS DECIMAL(65,30)) / CAST(u_ord.offset_denominator AS DECIMAL(65,30)))
-            )
-            *
-            (
-                (
-                    (CAST(r_price.value AS DECIMAL(65,30)) * (CAST(u_price_num.ratio_numerator AS DECIMAL(65,30)) / CAST(u_price_num.ratio_denominator AS DECIMAL(65,30))))
-                    + (CAST(u_price_num.offset_numerator AS DECIMAL(65,30)) / CAST(u_price_num.offset_denominator AS DECIMAL(65,30)))
-                )
-                / NULLIF(((CAST(u_price_den.ratio_numerator AS DECIMAL(65,30)) / CAST(u_price_den.ratio_denominator AS DECIMAL(65,30))) + (CAST(u_price_den.offset_numerator AS DECIMAL(65,30)) / CAST(u_price_den.offset_denominator AS DECIMAL(65,30)))), 0)
-            )
-        ELSE 0 END
-    ) AS DECIMAL(65,30)) AS q1,
-    CAST(SUM(
-        CASE WHEN QUARTER(so.issued_at) = 2 THEN
-            (
-                (CAST(q.value AS DECIMAL(65,30)) * (CAST(u_ord.ratio_numerator AS DECIMAL(65,30)) / CAST(u_ord.ratio_denominator AS DECIMAL(65,30))))
-                + (CAST(u_ord.offset_numerator AS DECIMAL(65,30)) / CAST(u_ord.offset_denominator AS DECIMAL(65,30)))
-            )
-            *
-            (
-                (
-                    (CAST(r_price.value AS DECIMAL(65,30)) * (CAST(u_price_num.ratio_numerator AS DECIMAL(65,30)) / CAST(u_price_num.ratio_denominator AS DECIMAL(65,30))))
-                    + (CAST(u_price_num.offset_numerator AS DECIMAL(65,30)) / CAST(u_price_num.offset_denominator AS DECIMAL(65,30)))
-                )
-                / NULLIF(((CAST(u_price_den.ratio_numerator AS DECIMAL(65,30)) / CAST(u_price_den.ratio_denominator AS DECIMAL(65,30))) + (CAST(u_price_den.offset_numerator AS DECIMAL(65,30)) / CAST(u_price_den.offset_denominator AS DECIMAL(65,30)))), 0)
-            )
-        ELSE 0 END
-    ) AS DECIMAL(65,30)) AS q2,
-    CAST(SUM(
-        CASE WHEN QUARTER(so.issued_at) = 3 THEN
-            (
-                (CAST(q.value AS DECIMAL(65,30)) * (CAST(u_ord.ratio_numerator AS DECIMAL(65,30)) / CAST(u_ord.ratio_denominator AS DECIMAL(65,30))))
-                + (CAST(u_ord.offset_numerator AS DECIMAL(65,30)) / CAST(u_ord.offset_denominator AS DECIMAL(65,30)))
-            )
-            *
-            (
-                (
-                    (CAST(r_price.value AS DECIMAL(65,30)) * (CAST(u_price_num.ratio_numerator AS DECIMAL(65,30)) / CAST(u_price_num.ratio_denominator AS DECIMAL(65,30))))
-                    + (CAST(u_price_num.offset_numerator AS DECIMAL(65,30)) / CAST(u_price_num.offset_denominator AS DECIMAL(65,30)))
-                )
-                / NULLIF(((CAST(u_price_den.ratio_numerator AS DECIMAL(65,30)) / CAST(u_price_den.ratio_denominator AS DECIMAL(65,30))) + (CAST(u_price_den.offset_numerator AS DECIMAL(65,30)) / CAST(u_price_den.offset_denominator AS DECIMAL(65,30)))), 0)
-            )
-        ELSE 0 END
-    ) AS DECIMAL(65,30)) AS q3,
-    CAST(SUM(
-        CASE WHEN QUARTER(so.issued_at) = 4 THEN
-            (
-                (CAST(q.value AS DECIMAL(65,30)) * (CAST(u_ord.ratio_numerator AS DECIMAL(65,30)) / CAST(u_ord.ratio_denominator AS DECIMAL(65,30))))
-                + (CAST(u_ord.offset_numerator AS DECIMAL(65,30)) / CAST(u_ord.offset_denominator AS DECIMAL(65,30)))
-            )
-            *
-            (
-                (
-                    (CAST(r_price.value AS DECIMAL(65,30)) * (CAST(u_price_num.ratio_numerator AS DECIMAL(65,30)) / CAST(u_price_num.ratio_denominator AS DECIMAL(65,30))))
-                    + (CAST(u_price_num.offset_numerator AS DECIMAL(65,30)) / CAST(u_price_num.offset_denominator AS DECIMAL(65,30)))
-                )
-                / NULLIF(((CAST(u_price_den.ratio_numerator AS DECIMAL(65,30)) / CAST(u_price_den.ratio_denominator AS DECIMAL(65,30))) + (CAST(u_price_den.offset_numerator AS DECIMAL(65,30)) / CAST(u_price_den.offset_denominator AS DECIMAL(65,30)))), 0)
-            )
-        ELSE 0 END
-    ) AS DECIMAL(65,30)) AS q4,
-    CAST(SUM(
-        (
-            (CAST(q.value AS DECIMAL(65,30)) * (CAST(u_ord.ratio_numerator AS DECIMAL(65,30)) / CAST(u_ord.ratio_denominator AS DECIMAL(65,30))))
-            + (CAST(u_ord.offset_numerator AS DECIMAL(65,30)) / CAST(u_ord.offset_denominator AS DECIMAL(65,30)))
-        )
-        *
-        (
-            (
-                (CAST(r_price.value AS DECIMAL(65,30)) * (CAST(u_price_num.ratio_numerator AS DECIMAL(65,30)) / CAST(u_price_num.ratio_denominator AS DECIMAL(65,30))))
-                + (CAST(u_price_num.offset_numerator AS DECIMAL(65,30)) / CAST(u_price_num.offset_denominator AS DECIMAL(65,30)))
-            )
-            / NULLIF(((CAST(u_price_den.ratio_numerator AS DECIMAL(65,30)) / CAST(u_price_den.ratio_denominator AS DECIMAL(65,30))) + (CAST(u_price_den.offset_numerator AS DECIMAL(65,30)) / CAST(u_price_den.offset_denominator AS DECIMAL(65,30)))), 0)
-        )
-    ) AS DECIMAL(65,30)) AS total
-FROM sales_order_line sol
-JOIN sales_order so ON so.id = sol.sales_order_id
-JOIN product fg ON fg.id = sol.product_id
-JOIN quantity q ON q.id = sol.quantity_id
-JOIN unit u_ord ON u_ord.id = q.unit_id
-LEFT JOIN rate r_price ON r_price.id = sol.unit_price_id
-LEFT JOIN unit u_price_num ON u_price_num.id = r_price.numerator_unit_id
-LEFT JOIN unit u_price_den ON u_price_den.id = r_price.denominator_unit_id
-LEFT JOIN account_relation ar ON ar.owner_account_id = so.owner_account_id
-    AND ar.counterparty_account_id = so.buyer_account_id
-    AND ar.account_relation_role_code = 'customer'
-WHERE so.owner_account_id = sqlc.arg('owner_account_id')
-  AND fg.product_type_code = 'sale'
-  AND (sqlc.arg('include_customer_filter') = false OR (
-      so.buyer_account_id IN (sqlc.slice('customer_ids'))
-      OR EXISTS (
-          SELECT 1
-          FROM account_relation ar_child
-          WHERE ar_child.owner_account_id = so.owner_account_id
-            AND ar_child.account_relation_role_code = 'customer'
-            AND ar_child.counterparty_account_id = so.buyer_account_id
-            AND ar_child.parent_account_relation_id IN (
-                SELECT ar_parent.id
-                FROM account_relation ar_parent
-                WHERE ar_parent.owner_account_id = so.owner_account_id
-                  AND ar_parent.account_relation_role_code = 'customer'
-                  AND ar_parent.counterparty_account_id IN (sqlc.slice('customer_ids'))
-            )
-      )
-  ))
-  AND (sqlc.arg('include_sales_rep_filter') = false OR so.sales_rep_id IN (sqlc.slice('sales_rep_ids')))
-  AND (sqlc.arg('include_product_line_filter') = false OR fg.product_line_id IN (sqlc.slice('product_line_ids')))
-  AND (sqlc.arg('include_item_filter') = false OR fg.item_id IN (sqlc.slice('item_ids')))
-  AND (sqlc.arg('include_customer_group_filter') = false OR ar.account_group_id IN (sqlc.slice('customer_group_ids')))
-GROUP BY order_year ORDER BY order_year ASC;
-
 -- GetSalesEntries reads the window's invoices first: left to choose, a customer-group or product-line filter made the optimizer start from that filter's every order or line ever invoiced.
 -- The customer and customer-group filters arrive resolved to the buyers they admit (resolveCustomerBuyers).
 -- name: GetSalesEntries :many
@@ -381,318 +264,86 @@ WHERE inv.account_id = sqlc.arg('owner_account_id')
   AND (sqlc.arg('include_buyer_filter') = false OR so.buyer_account_id IN (sqlc.slice('buyer_ids')))
 ORDER BY inv.created_at ASC;
 
--- The customer and customer-group filters arrive resolved to the buyers they admit (resolveCustomerBuyers).
--- name: GetOrderEntries :many
+-- name: ListProductionCostSteps :many
+-- The terms one run of each step is costed from. Labor time and the rates pricing it are each entered in whatever units suited whoever entered them — seconds a pair against dollars an hour — so every side carries its unit's base ratio.
 SELECT
-    sol.id AS id,
-    so.issued_at AS issued_at,
-    so.completed_at AS completed_at,
-    so.first_ship_at AS first_ship_at,
-    so.promised_at AS promised_at,
-    so.customer_po_number AS customer_po,
-    so.number AS order_number,
-    so.id AS order_id,
-    so.sales_rep_id AS sales_rep_id,
-    bu.username AS sales_rep_username,
-    so.buyer_account_id AS customer_id,
-    parent_ar.counterparty_account_id AS parent_customer_id,
-    buyer.name AS customer_name,
-    ar.external_number AS customer_number,
-    buyer.created_at AS customer_created_at,
-    ar.account_group_id AS customer_type_group_id,
-    ag.name AS customer_group_name,
-    fg.product_line_id AS product_line_id,
-    fg.product_type_code AS product_type_code,
-    pb.id AS item_id,
-    pb.sku AS product_sku,
-    pb.description AS product_description,
-    ic.name AS category_name,
-    pl.name AS product_line,
-    CAST(
-        (
-            (
-                (q_ord.value * (u_ord.ratio_numerator / u_ord.ratio_denominator))
-                + (u_ord.offset_numerator / u_ord.offset_denominator)
-            )
-            - (bu_unit.offset_numerator / bu_unit.offset_denominator)
-        )
-        / NULLIF((bu_unit.ratio_numerator / bu_unit.ratio_denominator), 0)
-        AS DECIMAL(65,30)
-    ) AS quantity_ordered,
-    CAST(
-        (
-            COALESCE(inv.qty_inv_norm, 0)
-            - (bu_unit.offset_numerator / bu_unit.offset_denominator)
-        )
-        / NULLIF((bu_unit.ratio_numerator / bu_unit.ratio_denominator), 0)
-        AS DECIMAL(65,30)
-    ) AS quantity_invoiced,
-    CAST(
-        (
-            (
-                (
-                    (q_ord.value * (u_ord.ratio_numerator / u_ord.ratio_denominator))
-                    + (u_ord.offset_numerator / u_ord.offset_denominator)
-                )
-                - (bu_unit.offset_numerator / bu_unit.offset_denominator)
-            )
-            / NULLIF((bu_unit.ratio_numerator / bu_unit.ratio_denominator), 0)
-            -
-            (
-                COALESCE(inv.qty_inv_norm, 0)
-                - (bu_unit.offset_numerator / bu_unit.offset_denominator)
-            )
-            / NULLIF((bu_unit.ratio_numerator / bu_unit.ratio_denominator), 0)
-        )
-        AS DECIMAL(65,30)
-    ) AS quantity_back_ordered,
-    bu_unit.abbreviation AS unit,
-    CAST(
-        (
-            (
-                (q_ord.value * (u_ord.ratio_numerator / u_ord.ratio_denominator))
-                + (u_ord.offset_numerator / u_ord.offset_denominator)
-            )
-            *
-            (
-                (
-                    (r_price.value * (u_price_num.ratio_numerator / u_price_num.ratio_denominator))
-                    + (u_price_num.offset_numerator / u_price_num.offset_denominator)
-                )
-                / NULLIF(((u_price_den.ratio_numerator / u_price_den.ratio_denominator) + (u_price_den.offset_numerator / u_price_den.offset_denominator)), 0)
-            )
-        ) AS DECIMAL(65,30)
-    ) AS total_ordered,
-    CAST(
-        COALESCE(inv.qty_inv_norm, 0)
-        *
-        (
-            (
-                (r_price.value * (u_price_num.ratio_numerator / u_price_num.ratio_denominator))
-                + (u_price_num.offset_numerator / u_price_num.offset_denominator)
-            )
-            / NULLIF(((u_price_den.ratio_numerator / u_price_den.ratio_denominator) + (u_price_den.offset_numerator / u_price_den.offset_denominator)), 0)
-        )
-        AS DECIMAL(65,30)
-    ) AS total_invoiced,
-    CAST(
-        (
-            (
-                (q_ord.value * (u_ord.ratio_numerator / u_ord.ratio_denominator))
-                + (u_ord.offset_numerator / u_ord.offset_denominator)
-            )
-            - COALESCE(inv.qty_inv_norm, 0)
-        )
-        *
-        (
-            (
-                (r_price.value * (u_price_num.ratio_numerator / u_price_num.ratio_denominator))
-                + (u_price_num.offset_numerator / u_price_num.offset_denominator)
-            )
-            / NULLIF(((u_price_den.ratio_numerator / u_price_den.ratio_denominator) + (u_price_den.offset_numerator / u_price_den.offset_denominator)), 0)
-        )
-        AS DECIMAL(65,30)
-    ) AS total_back_ordered,
-    CAST(
-        COALESCE(inv.qty_inv_norm, 0)
-        *
-        (
-            (
-                (COALESCE(r_cost.value, 0) * (COALESCE(u_cost_num.ratio_numerator, 1) / COALESCE(u_cost_num.ratio_denominator, 1)))
-                + (COALESCE(u_cost_num.offset_numerator, 0) / COALESCE(u_cost_num.offset_denominator, 1))
-            )
-            / NULLIF(((COALESCE(u_cost_den.ratio_numerator, 1) / COALESCE(u_cost_den.ratio_denominator, 1)) + (COALESCE(u_cost_den.offset_numerator, 0) / COALESCE(u_cost_den.offset_denominator, 1))), 0)
-        )
-        AS DECIMAL(65,30)
-    ) AS total_cost,
-    CAST(
-        (
-            COALESCE(inv.qty_inv_norm, 0)
-            *
-            (
-                (
-                    (r_price.value * (u_price_num.ratio_numerator / u_price_num.ratio_denominator))
-                    + (u_price_num.offset_numerator / u_price_num.offset_denominator)
-                )
-                / NULLIF(((u_price_den.ratio_numerator / u_price_den.ratio_denominator) + (u_price_den.offset_numerator / u_price_den.offset_denominator)), 0)
-            )
-        )
-        -
-        (
-            COALESCE(inv.qty_inv_norm, 0)
-            *
-            (
-                (
-                    (COALESCE(r_cost.value, 0) * (COALESCE(u_cost_num.ratio_numerator, 1) / COALESCE(u_cost_num.ratio_denominator, 1)))
-                    + (COALESCE(u_cost_num.offset_numerator, 0) / COALESCE(u_cost_num.offset_denominator, 1))
-                )
-                / NULLIF(((COALESCE(u_cost_den.ratio_numerator, 1) / COALESCE(u_cost_den.ratio_denominator, 1)) + (COALESCE(u_cost_den.offset_numerator, 0) / COALESCE(u_cost_den.offset_denominator, 1))), 0)
-            )
-        )
-        AS DECIMAL(65,30)
-    ) AS total_profit,
-    -- Nothing invoiced yet leaves the per-unit price, cost, and profit undefined (x / 0): 0, as the row mapper reads a NULL.
-    COALESCE(CAST(
-        (
-            COALESCE(inv.qty_inv_norm, 0)
-            *
-            (
-                (
-                    (r_price.value * (u_price_num.ratio_numerator / u_price_num.ratio_denominator))
-                    + (u_price_num.offset_numerator / u_price_num.offset_denominator)
-                )
-                / NULLIF(((u_price_den.ratio_numerator / u_price_den.ratio_denominator) + (u_price_den.offset_numerator / u_price_den.offset_denominator)), 0)
-            )
-        )
-        / NULLIF(
-            (
-                COALESCE(inv.qty_inv_norm, 0)
-                - (bu_unit.offset_numerator / bu_unit.offset_denominator)
-            )
-            / NULLIF((bu_unit.ratio_numerator / bu_unit.ratio_denominator), 0),
-            0
-        )
-        AS DECIMAL(65,30)
-    ), 0) AS unit_price,
-    COALESCE(CAST(
-        (
-            COALESCE(inv.qty_inv_norm, 0)
-            *
-            (
-                (
-                    (COALESCE(r_cost.value, 0) * (COALESCE(u_cost_num.ratio_numerator, 1) / COALESCE(u_cost_num.ratio_denominator, 1)))
-                    + (COALESCE(u_cost_num.offset_numerator, 0) / COALESCE(u_cost_num.offset_denominator, 1))
-                )
-                / NULLIF(((COALESCE(u_cost_den.ratio_numerator, 1) / COALESCE(u_cost_den.ratio_denominator, 1)) + (COALESCE(u_cost_den.offset_numerator, 0) / COALESCE(u_cost_den.offset_denominator, 1))), 0)
-            )
-        )
-        / NULLIF(
-            (
-                COALESCE(inv.qty_inv_norm, 0)
-                - (bu_unit.offset_numerator / bu_unit.offset_denominator)
-            )
-            / NULLIF((bu_unit.ratio_numerator / bu_unit.ratio_denominator), 0),
-            0
-        )
-        AS DECIMAL(65,30)
-    ), 0) AS unit_cost,
-    COALESCE(CAST(
-        (
-            (
-                COALESCE(inv.qty_inv_norm, 0)
-                *
-                (
-                    (
-                        (r_price.value * (u_price_num.ratio_numerator / u_price_num.ratio_denominator))
-                        + (u_price_num.offset_numerator / u_price_num.offset_denominator)
-                    )
-                    / NULLIF(((u_price_den.ratio_numerator / u_price_den.ratio_denominator) + (u_price_den.offset_numerator / u_price_den.offset_denominator)), 0)
-                )
-            )
-            -
-            (
-                COALESCE(inv.qty_inv_norm, 0)
-                *
-                (
-                    (
-                        (COALESCE(r_cost.value, 0) * (COALESCE(u_cost_num.ratio_numerator, 1) / COALESCE(u_cost_num.ratio_denominator, 1)))
-                        + (COALESCE(u_cost_num.offset_numerator, 0) / COALESCE(u_cost_num.offset_denominator, 1))
-                    )
-                    / NULLIF(((COALESCE(u_cost_den.ratio_numerator, 1) / COALESCE(u_cost_den.ratio_denominator, 1)) + (COALESCE(u_cost_den.offset_numerator, 0) / COALESCE(u_cost_den.offset_denominator, 1))), 0)
-                )
-            )
-        )
-        / NULLIF(
-            (
-                COALESCE(inv.qty_inv_norm, 0)
-                - (bu_unit.offset_numerator / bu_unit.offset_denominator)
-            )
-            / NULLIF((bu_unit.ratio_numerator / bu_unit.ratio_denominator), 0),
-            0
-        )
-        AS DECIMAL(65,30)
-    ), 0) AS unit_profit,
-    shipping_geolocation.state AS ship_to_state,
-    shipping_geolocation.locality AS ship_to_city,
-    shipping_geolocation.postal_code AS ship_to_zipcode,
-    shipping_geolocation.country AS ship_to_country,
-    od.code AS order_discount_code
-FROM sales_order_line sol
-LEFT JOIN product fg ON sol.product_id = fg.id
-LEFT JOIN item pb ON fg.item_id = pb.id
-LEFT JOIN item_category ic ON pb.item_category_id = ic.id
-LEFT JOIN unit_group ug ON ug.id = ic.unit_group_id
-LEFT JOIN unit bu_unit ON bu_unit.id = ug.base_unit_id
-LEFT JOIN product_line pl ON fg.product_line_id = pl.id
-LEFT JOIN sales_order so ON sol.sales_order_id = so.id
-LEFT JOIN account buyer ON so.buyer_account_id = buyer.id
-LEFT JOIN account_relation ar ON ar.owner_account_id = so.owner_account_id AND ar.counterparty_account_id = so.buyer_account_id AND ar.account_relation_role_code = 'customer'
-LEFT JOIN account_relation parent_ar ON parent_ar.id = ar.parent_account_relation_id AND parent_ar.owner_account_id = ar.owner_account_id
-LEFT JOIN account_group ag ON ar.account_group_id = ag.id
-LEFT JOIN address shipping_address ON so.shipping_address_id = shipping_address.id
-LEFT JOIN geolocation shipping_geolocation ON shipping_address.geolocation_id = shipping_geolocation.id
-LEFT JOIN account_user ou ON so.sales_rep_id = ou.id
-LEFT JOIN `user` bu ON ou.user_id = bu.id
-LEFT JOIN order_discount od ON so.order_discount_id = od.id
--- ordered quantity and unit
-LEFT JOIN quantity q_ord ON q_ord.id = sol.quantity_id
-LEFT JOIN unit u_ord ON u_ord.id = q_ord.unit_id
--- aggregated invoice quantities (normalized to base)
-LEFT JOIN (
-    SELECT
-        il.sales_order_line_id AS line_id,
-        SUM(
-            (q_in.value * (u_in.ratio_numerator / u_in.ratio_denominator))
-            + (u_in.offset_numerator / u_in.offset_denominator)
-        ) AS qty_inv_norm
-    FROM invoice_line il
-    JOIN quantity q_in ON q_in.id = il.quantity_id
-    JOIN unit u_in ON u_in.id = q_in.unit_id
-    -- Restrict the aggregate to the tenant's own issued orders: without this the derived table groups every invoice_line in the database on every call, since the outer account filter cannot reach a grouped derived table.
-    WHERE il.sales_order_line_id IN (
-        SELECT sol2.id
-        FROM sales_order_line sol2
-        JOIN sales_order so2 ON so2.id = sol2.sales_order_id
-        WHERE so2.owner_account_id = sqlc.arg('owner_account_id')
-          AND so2.sales_order_status_code = 'issued'
-    )
-    GROUP BY il.sales_order_line_id
-) inv ON inv.line_id = sol.id
--- prices and units
-LEFT JOIN rate r_price ON r_price.id = sol.unit_price_id
-LEFT JOIN unit u_price_num ON u_price_num.id = r_price.numerator_unit_id
-LEFT JOIN unit u_price_den ON u_price_den.id = r_price.denominator_unit_id
--- costs and units
-LEFT JOIN rate r_cost ON r_cost.id = sol.unit_cost_id
-LEFT JOIN unit u_cost_num ON u_cost_num.id = r_cost.numerator_unit_id
-LEFT JOIN unit u_cost_den ON u_cost_den.id = r_cost.denominator_unit_id
-WHERE so.owner_account_id = sqlc.arg('owner_account_id')
-  AND so.sales_order_status_code = 'issued'
-  AND fg.product_type_code = 'sale'
-  AND (sqlc.arg('include_sales_rep_filter') = false OR so.sales_rep_id IN (sqlc.slice('sales_rep_ids')))
-  AND (sqlc.arg('include_buyer_filter') = false OR so.buyer_account_id IN (sqlc.slice('buyer_ids')))
-  AND (sqlc.arg('include_product_line_filter') = false OR fg.product_line_id IN (sqlc.slice('product_line_ids')))
-ORDER BY so.issued_at ASC;
+    ps.id,
+    ps.leveling_factor,
+    ps.allowances,
+    lt.value AS labor_time_value,
+    CAST(COALESCE(ltnu.ratio_numerator / ltnu.ratio_denominator, 1) AS DECIMAL(65,30)) AS labor_time_num_ratio,
+    CAST(COALESCE(ltdu.ratio_numerator / ltdu.ratio_denominator, 1) AS DECIMAL(65,30)) AS labor_time_den_ratio,
+    ltdu.unit_dimension_code AS labor_time_den_unit_type,
+    lr.value AS labor_rate_value,
+    CAST(COALESCE(lrdu.ratio_numerator / lrdu.ratio_denominator, 1) AS DECIMAL(65,30)) AS labor_rate_den_ratio,
+    ohr.value AS overhead_rate_value,
+    CAST(COALESCE(ohrdu.ratio_numerator / ohrdu.ratio_denominator, 1) AS DECIMAL(65,30)) AS overhead_rate_den_ratio
+-- By id: a window names a fraction of the account's steps, so reading all of them by the account key is the slower plan.
+FROM production_step ps FORCE INDEX (PRIMARY)
+LEFT JOIN rate lt ON lt.id = ps.labor_time_id
+LEFT JOIN unit ltnu ON ltnu.id = lt.numerator_unit_id
+LEFT JOIN unit ltdu ON ltdu.id = lt.denominator_unit_id
+LEFT JOIN rate lr ON lr.id = ps.labor_rate_id
+LEFT JOIN unit lrdu ON lrdu.id = lr.denominator_unit_id
+LEFT JOIN rate ohr ON ohr.id = ps.overhead_rate_id
+LEFT JOIN unit ohrdu ON ohrdu.id = ohr.denominator_unit_id
+WHERE ps.account_id = sqlc.arg('account_id')
+  AND ps.id IN (sqlc.slice('step_ids'));
 
--- name: GetProductionCostEntries :many
+-- name: ListProductionCostProductions :many
+-- Every production of the steps, earliest first per step: a step is costed against its earliest.
 SELECT
-    it.id AS item_id,
-    it.sku AS product_sku,
-    it.description AS product_description,
-    pl.name AS product_line,
-    COALESCE(SUM(CAST(b_q.value AS DECIMAL(65,30))), 0) AS total_quantity,
-    0 AS total_cost,
-    0 AS cost_per_unit,
-    b_u.abbreviation AS unit
-FROM batch b
-JOIN item it ON it.id = b.item_id
-JOIN quantity b_q ON b_q.id = b.quantity_id
-JOIN unit b_u ON b_u.id = b_q.unit_id
-LEFT JOIN product p ON p.item_id = it.id AND p.product_type_code = 'sale'
-LEFT JOIN product_line pl ON pl.id = p.product_line_id
-WHERE b.account_id = sqlc.arg('owner_account_id')
-  AND b.closed_at IS NOT NULL
-GROUP BY it.id, it.sku, it.description, pl.name, b_u.abbreviation;
+    p.production_step_id,
+    pq.value AS quantity_value,
+    pu.id AS unit_id,
+    pu.unit_dimension_code AS unit_type,
+    pu.ratio_numerator,
+    pu.ratio_denominator,
+    pu.offset_numerator,
+    pu.offset_denominator
+-- The productions are read by step, each step checked as the account's after: driven from the account's steps, or scanned whole, it reads far more than the window names.
+FROM production p FORCE INDEX (production_production_step_id_idx)
+STRAIGHT_JOIN production_step ps ON ps.id = p.production_step_id
+JOIN quantity pq ON pq.id = p.quantity_id
+JOIN unit pu ON pu.id = pq.unit_id
+WHERE ps.account_id = sqlc.arg('account_id')
+  AND p.production_step_id IN (sqlc.slice('step_ids'))
+ORDER BY p.production_step_id, p.created_at, p.id;
+
+-- name: ListProductionCostConsumptions :many
+-- What the steps consume, each side with its unit's base ratio: a carton count against a per-each cost is otherwise priced at a twelfth of what it costs.
+SELECT
+    c.production_step_id,
+    ci.id AS consumed_item_id,
+    ci.item_type_code AS consumed_item_type,
+    cq.value AS consumption_quantity_value,
+    CAST(cqu.ratio_numerator / cqu.ratio_denominator AS DECIMAL(65,30)) AS consumption_unit_ratio,
+    wq.value AS waste_quantity_value,
+    CAST(wqu.ratio_numerator / wqu.ratio_denominator AS DECIMAL(65,30)) AS waste_unit_ratio,
+    COALESCE(ucr.value, 0) AS consumed_item_unit_cost,
+    CAST(COALESCE(ucru.ratio_numerator / ucru.ratio_denominator, 1) AS DECIMAL(65,30)) AS consumed_item_unit_cost_ratio
+-- Read by step, as the productions are.
+FROM consumption c FORCE INDEX (consumption_production_step_id_idx)
+STRAIGHT_JOIN production_step ps ON ps.id = c.production_step_id
+JOIN item ci ON ci.id = c.item_id
+JOIN quantity cq ON cq.id = c.quantity_id
+JOIN unit cqu ON cqu.id = cq.unit_id
+JOIN quantity wq ON wq.id = c.waste_quantity_id
+JOIN unit wqu ON wqu.id = wq.unit_id
+LEFT JOIN rate ucr ON ucr.id = ci.unit_cost_id
+LEFT JOIN unit ucru ON ucru.id = ucr.denominator_unit_id
+WHERE ps.account_id = sqlc.arg('account_id')
+  AND c.production_step_id IN (sqlc.slice('step_ids'));
+
+-- name: ListDepartmentStationIDs :many
+SELECT id FROM scanning_station
+WHERE account_id = sqlc.arg('account_id')
+  AND department_id IN (sqlc.slice('department_ids'));
+
+-- name: ListBaseUnitsByDimension :many
+SELECT unit_dimension_code, id FROM unit
+WHERE account_id IS NULL AND is_base_unit = TRUE
+ORDER BY unit_dimension_code, id;
 
 -- name: GetManufacturingProduction :one
 SELECT COALESCE(SUM(CAST(b_q.value AS DECIMAL(65,30))), 0) AS total_production
@@ -940,67 +591,6 @@ WHERE i.account_id = sqlc.arg('owner_account_id')
   AND i.created_at >= sqlc.arg('start_date')
   AND i.created_at <= sqlc.arg('end_date');
 
--- name: GetInventoryReceiptEntries :many
-SELECT
-    it.id AS item_id,
-    it.sku AS product_sku,
-    it.description AS product_description,
-    sl.id AS storage_location_id,
-    sl.name AS storage_location_name,
-    l.id AS lot_id,
-    l.lot_number AS lot_number,
-    ir.owner_account_id AS owner_account_id,
-    oa.name AS owner_account_name,
-    ir.holder_account_id AS holder_account_id,
-    ha.name AS holder_account_name,
-    SUM(GREATEST(CAST(ir_q.value AS DECIMAL(65,30)) - COALESCE(alloc_sum.total_allocated, 0), 0)) AS remaining_quantity,
-    CASE
-        WHEN SUM(GREATEST(CAST(ir_q.value AS DECIMAL(65,30)) - COALESCE(alloc_sum.total_allocated, 0), 0)) > 0
-        THEN SUM(GREATEST(CAST(ir_q.value AS DECIMAL(65,30)) - COALESCE(alloc_sum.total_allocated, 0), 0) * COALESCE(CAST(r_cost.value AS DECIMAL(65,30)), 0))
-             / SUM(GREATEST(CAST(ir_q.value AS DECIMAL(65,30)) - COALESCE(alloc_sum.total_allocated, 0), 0))
-        ELSE 0
-    END AS weighted_average_unit_cost,
-    SUM(GREATEST(CAST(ir_q.value AS DECIMAL(65,30)) - COALESCE(alloc_sum.total_allocated, 0), 0) * COALESCE(CAST(r_cost.value AS DECIMAL(65,30)), 0)) AS inventory_value,
-    MIN(ir.received_at) AS oldest_receipt_at,
-    MAX(ir.received_at) AS newest_receipt_at,
-    ir_u.abbreviation AS unit,
-    ir_u.name AS unit_name,
-    COALESCE(r_cost_nu.abbreviation, '') AS cost_numerator_unit_abbreviation,
-    COALESCE(r_cost_nu.name, '') AS cost_numerator_unit_name,
-    COALESCE(r_cost_du.abbreviation, '') AS cost_denominator_unit_abbreviation,
-    COALESCE(r_cost_du.name, '') AS cost_denominator_unit_name
-FROM inventory_receipt ir
-JOIN item it ON it.id = ir.item_id
-JOIN quantity ir_q ON ir_q.id = ir.quantity_id
-JOIN unit ir_u ON ir_u.id = ir_q.unit_id
-LEFT JOIN rate r_cost ON r_cost.id = ir.unit_cost_id
-LEFT JOIN unit r_cost_nu ON r_cost_nu.id = r_cost.numerator_unit_id
-LEFT JOIN unit r_cost_du ON r_cost_du.id = r_cost.denominator_unit_id
-LEFT JOIN storage_location sl ON sl.id = ir.storage_location_id
-LEFT JOIN lot l ON l.id = ir.lot_id
-JOIN account oa ON oa.id = ir.owner_account_id
-JOIN account ha ON ha.id = ir.holder_account_id
-LEFT JOIN (
-    SELECT ia.inventory_receipt_id, SUM(CAST(aq.value AS DECIMAL(65,30))) AS total_allocated
-    FROM inventory_allocation ia
-    JOIN quantity aq ON aq.id = ia.quantity_id
-    -- Restrict the aggregate to the tenant's own available receipts: without this the derived table groups all of inventory_allocation on every call, since the outer account filter cannot reach a grouped derived table.
-    WHERE ia.inventory_receipt_id IN (
-        SELECT ir2.id
-        FROM inventory_receipt ir2
-        WHERE (ir2.owner_account_id = sqlc.arg('requesting_account_id') OR ir2.holder_account_id = sqlc.arg('requesting_account_id'))
-          AND ir2.status_code = 'available'
-    )
-    GROUP BY ia.inventory_receipt_id
-) alloc_sum ON alloc_sum.inventory_receipt_id = ir.id
-WHERE (ir.owner_account_id = sqlc.arg('requesting_account_id') OR ir.holder_account_id = sqlc.arg('requesting_account_id'))
-  AND ir.status_code = 'available'
-GROUP BY it.id, it.sku, it.description, sl.id, sl.name, l.id, l.lot_number,
-         ir.owner_account_id, oa.name, ir.holder_account_id, ha.name,
-         ir_u.abbreviation, ir_u.name,
-         r_cost_nu.abbreviation, r_cost_nu.name,
-         r_cost_du.abbreviation, r_cost_du.name;
-
 -- GetOeeDepartmentData returns the unit counts and the standard time earned per department.
 --
 -- standard_seconds_earned is the numerator of OEE Performance: the time the work *should* have taken at the production step's own labor rate. The rate is a Rate whose numerator unit decides its scale, converted to seconds via that unit's ratio_numerator/ratio_denominator (its size in the time base, the hour) rather than a hardcoded abbreviation table — the same conversion the solver applies in SecondsPerUnitFromLaborTime, which now reads the same columns, so the two never disagree about what a run rate means and both handle day and account-defined time units.
@@ -1111,86 +701,72 @@ WHERE b.account_id = sqlc.arg('owner_account_id')
   )
 GROUP BY d.id, d.name;
 
--- name: GetDemandForecastMonthlyDemand :many
-SELECT
-    it.id AS item_id,
-    it.sku AS product_sku,
-    it.description AS product_description,
-    pl.id AS product_line_id,
-    sol_u.abbreviation AS unit,
-    COALESCE(u_price_num.abbreviation, '$') AS currency,
-    YEAR(so.created_at) AS demand_year,
-    MONTH(so.created_at) AS demand_month,
-    COALESCE(SUM(CAST(sol_q.value AS DECIMAL(65,30))), 0) AS monthly_demand,
-    COALESCE(SUM(CAST(sol_q.value AS DECIMAL(65,30)) * COALESCE(CAST(r_sell.value AS DECIMAL(65,30)), 0)), 0) AS monthly_revenue
-FROM sales_order so
-JOIN sales_order_line sol ON sol.sales_order_id = so.id
-JOIN product p ON p.id = sol.product_id
-JOIN item it ON it.id = p.item_id
-JOIN quantity sol_q ON sol_q.id = sol.quantity_id
-JOIN unit sol_u ON sol_u.id = sol_q.unit_id
-LEFT JOIN product_line pl ON pl.id = p.product_line_id
-LEFT JOIN rate r_sell ON r_sell.id = sol.unit_price_id
-LEFT JOIN unit u_price_num ON u_price_num.id = r_sell.numerator_unit_id
-WHERE so.owner_account_id = sqlc.arg('owner_account_id')
-  AND so.created_at >= sqlc.arg('start_date')
-  AND so.created_at < sqlc.arg('end_date')
-  AND so.sales_order_status_code != 'cancelled'
-  AND p.product_type_code = 'sale'
-GROUP BY it.id, it.sku, it.description, pl.id, sol_u.abbreviation, u_price_num.abbreviation, YEAR(so.created_at), MONTH(so.created_at)
-ORDER BY it.id, demand_year, demand_month;
-
--- name: GetDemandForecastMonthlyRevenue :many
-SELECT
-    it.id AS item_id,
-    YEAR(inv.created_at) AS revenue_year,
-    MONTH(inv.created_at) AS revenue_month,
-    COALESCE(SUM(CAST(il_q.value AS DECIMAL(65,30)) * COALESCE(CAST(r_sell.value AS DECIMAL(65,30)), 0)), 0) AS monthly_revenue
-FROM invoice inv
-JOIN invoice_line il ON il.invoice_id = inv.id
-JOIN sales_order_line sol ON sol.id = il.sales_order_line_id
-JOIN sales_order so ON so.id = sol.sales_order_id
-JOIN product p ON p.id = sol.product_id
-JOIN item it ON it.id = p.item_id
-JOIN quantity il_q ON il_q.id = il.quantity_id
-LEFT JOIN rate r_sell ON r_sell.id = sol.unit_price_id
-WHERE so.owner_account_id = sqlc.arg('owner_account_id')
-  AND inv.created_at >= sqlc.arg('start_date')
-  AND inv.created_at < sqlc.arg('end_date')
-  AND p.product_type_code = 'sale'
-GROUP BY it.id, YEAR(inv.created_at), MONTH(inv.created_at)
-ORDER BY it.id, revenue_year, revenue_month;
-
+-- GetSaleProductItemIDs returns every sale product's item and product line, deleted items included: their stock is still on hand.
+-- The account's items drive: left to choose, the planner reads every tenant's sale products by type.
 -- name: GetSaleProductItemIDs :many
-SELECT
+SELECT STRAIGHT_JOIN
     p.item_id,
     p.product_line_id
-FROM product p
-JOIN item i ON i.id = p.item_id
+FROM item i FORCE INDEX (item_account_created_idx)
+JOIN product p ON p.item_id = i.id
 WHERE i.account_id = sqlc.arg('owner_account_id')
-  AND p.product_type_code = 'sale'
-  AND i.deleted_at IS NULL;
+  AND p.product_type_code = 'sale';
 
--- GetOrderQuantitiesByProductLines returns, for each requested product line, the quantity ordered in the window and the line's base unit. A line with no orders still returns a row with zero demand.
+-- GetWeeksOfSalesOnHand is each item's available receipts net of what has been drawn against them, in the base unit of the item's dimension, deleted items included. Nothing is clamped: a receipt drawn on for more than it holds nets negative, as the dashboard's ledger did.
+-- name: GetWeeksOfSalesOnHand :many
+SELECT
+    i.id AS item_id,
+    CAST((
+        COALESCE(
+            (SELECT SUM((q.value * (u.ratio_numerator / u.ratio_denominator)) + (u.offset_numerator / u.offset_denominator))
+             FROM inventory_receipt ir
+             JOIN quantity q ON q.id = ir.quantity_id
+             JOIN unit u ON u.id = q.unit_id
+             WHERE ir.item_id = i.id
+             AND (ir.owner_account_id = sqlc.arg('account_id') OR ir.holder_account_id = sqlc.arg('account_id'))
+             AND ir.status_code = 'available'), 0
+        ) - COALESCE(
+            (SELECT SUM((aq.value * (au.ratio_numerator / au.ratio_denominator)) + (au.offset_numerator / au.offset_denominator))
+             FROM inventory_receipt ir2
+             JOIN inventory_allocation ia2 ON ia2.inventory_receipt_id = ir2.id
+             JOIN quantity aq ON aq.id = ia2.quantity_id
+             JOIN unit au ON au.id = aq.unit_id
+             WHERE ir2.item_id = i.id
+             AND (ir2.owner_account_id = sqlc.arg('account_id') OR ir2.holder_account_id = sqlc.arg('account_id'))
+             AND ir2.status_code = 'available'), 0
+        )
+    ) AS DECIMAL(65,30)) AS on_hand
+FROM item i
+WHERE i.id IN (sqlc.slice('item_ids'))
+  AND i.account_id = sqlc.arg('account_id');
+
+-- GetOrderQuantitiesByProductLines returns, for each requested product line, the quantity ordered on sales orders issued in the window in the line's base unit, and that unit. A line with no orders still returns a row with zero demand.
+-- base_ratio is the base unit's size in its dimension's base unit, for bringing on-hand stock to it.
+-- The orders drive, ranged by issue date: left to choose, the planner starts from the product lines' every line ever ordered.
 -- name: GetOrderQuantitiesByProductLines :many
 SELECT
     pl.id AS product_line_id,
-    CAST(COALESCE(demand.total_quantity, 0) AS DECIMAL(65,30)) AS total_quantity,
+    CAST(COALESCE(
+        (demand.total_quantity - (bu.offset_numerator / bu.offset_denominator)) / NULLIF(bu.ratio_numerator / bu.ratio_denominator, 0),
+        0
+    ) AS DECIMAL(65,30)) AS total_quantity,
     COALESCE(bu.abbreviation, '') AS unit_abbreviation,
-    COALESCE(ug.unit_type_code, '') AS unit_type
+    COALESCE(ug.unit_type_code, '') AS unit_type,
+    CAST(COALESCE(bu.ratio_numerator / bu.ratio_denominator, 1) AS DECIMAL(65,30)) AS base_ratio
 FROM product_line pl
 LEFT JOIN unit_group ug ON ug.id = pl.unit_group_id
 LEFT JOIN unit bu ON bu.id = ug.base_unit_id
 LEFT JOIN (
-    SELECT
+    SELECT STRAIGHT_JOIN
         p.product_line_id,
-        SUM(CAST(sol_q.value AS DECIMAL(65,30))) AS total_quantity
-    FROM sales_order so
+        SUM((sol_q.value * (sol_u.ratio_numerator / sol_u.ratio_denominator)) + (sol_u.offset_numerator / sol_u.offset_denominator)) AS total_quantity
+    FROM sales_order so FORCE INDEX (sales_order_owner_type_issued_idx)
     JOIN sales_order_line sol ON sol.sales_order_id = so.id
     JOIN product p ON p.id = sol.product_id
-    JOIN item i ON i.id = p.item_id
     JOIN quantity sol_q ON sol_q.id = sol.quantity_id
+    JOIN unit sol_u ON sol_u.id = sol_q.unit_id
     WHERE so.owner_account_id = sqlc.arg('owner_account_id')
+      AND so.sales_order_type_code = 'sales_order'
       AND p.product_line_id IN (sqlc.slice('demand_product_line_ids'))
       AND so.issued_at >= sqlc.arg('start_date')
       AND so.issued_at <= sqlc.arg('end_date')
@@ -1204,7 +780,8 @@ SELECT
     pl.name
 FROM product_line pl
 WHERE pl.id IN (sqlc.slice('product_line_ids'))
-  AND (pl.account_id = sqlc.arg('owner_account_id') OR pl.account_id IS NULL);
+  AND (pl.account_id = sqlc.arg('owner_account_id') OR pl.account_id IS NULL)
+ORDER BY pl.name ASC, pl.id ASC;
 
 -- name: GetDeliveryEntries :many
 SELECT
@@ -1221,30 +798,44 @@ WHERE inv.account_id = sqlc.arg('owner_account_id')
   AND inv.created_at <= sqlc.arg('end_date')
 ORDER BY inv.created_at ASC;
 
+-- GetMaterialsWithDetails lists the account's materials with what converting their stock needs: the order point's unit, and the item's base unit for a material whose order point row is gone.
+-- The account's items drive: material carries no account, and read first it is every tenant's.
 -- name: GetMaterialsWithDetails :many
-SELECT
+SELECT STRAIGHT_JOIN
     m.id AS material_id,
     it.id AS item_id,
     it.sku AS item_sku,
     it.description AS item_description,
-    CAST(op_q.value AS DECIMAL(65,30)) AS order_point_value,
+    op_q.value AS order_point_value,
     op_u.name AS order_point_unit_name,
     op_u.abbreviation AS order_point_unit_abbreviation,
     op_u.unit_dimension_code AS order_point_unit_type,
-    CAST(lt_q.value AS DECIMAL(65,30)) AS lead_time_value,
+    op_u.ratio_numerator AS order_point_unit_ratio_numerator,
+    op_u.ratio_denominator AS order_point_unit_ratio_denominator,
+    op_u.offset_numerator AS order_point_unit_offset_numerator,
+    op_u.offset_denominator AS order_point_unit_offset_denominator,
+    lt_q.value AS lead_time_value,
     lt_u.name AS lead_time_unit_name,
     lt_u.abbreviation AS lead_time_unit_abbreviation,
     lt_u.unit_dimension_code AS lead_time_unit_type,
     ug.id AS unit_group_id,
-    ug.name AS unit_group_name
-FROM material m
-JOIN item it ON it.id = m.item_id
-JOIN quantity op_q ON op_q.id = m.order_point_id
-JOIN unit op_u ON op_u.id = op_q.unit_id
-JOIN quantity lt_q ON lt_q.id = m.lead_time_id
-JOIN unit lt_u ON lt_u.id = lt_q.unit_id
+    ug.name AS unit_group_name,
+    bu.name AS base_unit_name,
+    bu.abbreviation AS base_unit_abbreviation,
+    bu.unit_dimension_code AS base_unit_type,
+    bu.ratio_numerator AS base_unit_ratio_numerator,
+    bu.ratio_denominator AS base_unit_ratio_denominator,
+    bu.offset_numerator AS base_unit_offset_numerator,
+    bu.offset_denominator AS base_unit_offset_denominator
+FROM item it FORCE INDEX (item_account_created_idx)
+JOIN material m ON m.item_id = it.id
+LEFT JOIN quantity op_q ON op_q.id = m.order_point_id
+LEFT JOIN unit op_u ON op_u.id = op_q.unit_id
+LEFT JOIN quantity lt_q ON lt_q.id = m.lead_time_id
+LEFT JOIN unit lt_u ON lt_u.id = lt_q.unit_id
 JOIN item_category ic ON ic.id = it.item_category_id
 JOIN unit_group ug ON ug.id = ic.unit_group_id
+JOIN unit bu ON bu.id = ug.base_unit_id
 WHERE it.account_id = sqlc.arg('owner_account_id')
   AND it.deleted_at IS NULL;
 
@@ -1260,61 +851,73 @@ FROM unit_group_unit ugu
 JOIN unit u ON u.id = ugu.unit_id
 WHERE ugu.unit_group_id IN (sqlc.slice('unit_group_ids'));
 
+-- GetMaterialOnHandByItem nets each item's available receipts against what has been drawn on them, in the base unit of the item's dimension. Nothing is clamped: a row drawn on for more than it holds nets negative and carries, as the dashboard's ledger did.
+-- The receipts are read by item: left to choose, the planner reads every tenant's available receipts by status.
 -- name: GetMaterialOnHandByItem :many
 SELECT
     ir.item_id,
-    SUM(GREATEST(
-        -- Correlated per receipt: a grouped derived table cannot take the account and item filters and so aggregates all of inventory_allocation on every call.
-        CAST(ir_q.value AS DECIMAL(65,30)) - COALESCE((
-            SELECT SUM(CAST(aq.value AS DECIMAL(65,30)))
+    CAST(SUM(
+        (ir_q.value * (ir_u.ratio_numerator / ir_u.ratio_denominator)) + (ir_u.offset_numerator / ir_u.offset_denominator)
+        - COALESCE((
+            -- Correlated per row: a grouped derived table cannot take the account and item filters and so aggregates all of inventory_allocation on every call.
+            SELECT SUM((aq.value * (au.ratio_numerator / au.ratio_denominator)) + (au.offset_numerator / au.offset_denominator))
             FROM inventory_allocation ia
             JOIN quantity aq ON aq.id = ia.quantity_id
+            JOIN unit au ON au.id = aq.unit_id
             WHERE ia.inventory_receipt_id = ir.id
-        ), 0),
-        0
-    )) AS remaining_quantity
-FROM inventory_receipt ir
+        ), 0)
+    ) AS DECIMAL(65,30)) AS remaining_quantity
+FROM inventory_receipt ir FORCE INDEX (inventory_receipt_item_id_status_code_idx)
 JOIN quantity ir_q ON ir_q.id = ir.quantity_id
+JOIN unit ir_u ON ir_u.id = ir_q.unit_id
 WHERE (ir.owner_account_id = sqlc.arg('account_id') OR ir.holder_account_id = sqlc.arg('account_id'))
   AND ir.item_id IN (sqlc.slice('item_ids'))
   AND ir.status_code = 'available'
 GROUP BY ir.item_id;
 
+-- GetMaterialReservedByItem nets each item's reserved issues against what has been drawn on them, in the base unit of the item's dimension. Nothing is clamped: a row drawn on for more than it holds nets negative and carries, as the dashboard's ledger did.
+-- The issues are read by account and item: left to choose, the planner reads every tenant's issues by status.
 -- name: GetMaterialReservedByItem :many
 SELECT
     ii.item_id,
-    SUM(GREATEST(
-        -- Correlated per issue: a grouped derived table cannot take the account and item filters and so aggregates all of inventory_allocation on every call.
-        CAST(ii_q.value AS DECIMAL(65,30)) - COALESCE((
-            SELECT SUM(CAST(aq.value AS DECIMAL(65,30)))
+    CAST(SUM(
+        (ii_q.value * (ii_u.ratio_numerator / ii_u.ratio_denominator)) + (ii_u.offset_numerator / ii_u.offset_denominator)
+        - COALESCE((
+            -- Correlated per row: a grouped derived table cannot take the account and item filters and so aggregates all of inventory_allocation on every call.
+            SELECT SUM((aq.value * (au.ratio_numerator / au.ratio_denominator)) + (au.offset_numerator / au.offset_denominator))
             FROM inventory_allocation ia
             JOIN quantity aq ON aq.id = ia.quantity_id
+            JOIN unit au ON au.id = aq.unit_id
             WHERE ia.inventory_issue_id = ii.id
-        ), 0),
-        0
-    )) AS remaining_quantity
-FROM inventory_issue ii
+        ), 0)
+    ) AS DECIMAL(65,30)) AS remaining_quantity
+FROM inventory_issue ii FORCE INDEX (inventory_issue_open_paging_idx)
 JOIN quantity ii_q ON ii_q.id = ii.quantity_id
+JOIN unit ii_u ON ii_u.id = ii_q.unit_id
 WHERE ii.account_id = sqlc.arg('account_id')
   AND ii.item_id IN (sqlc.slice('item_ids'))
   AND ii.status_code = 'reserved'
 GROUP BY ii.item_id;
 
+-- GetMaterialOpenByItem nets each item's open issues against what has been drawn on them, in the base unit of the item's dimension. Nothing is clamped: a row drawn on for more than it holds nets negative and carries, as the dashboard's ledger did.
+-- The issues are read by account and item: left to choose, the planner reads every tenant's issues by status.
 -- name: GetMaterialOpenByItem :many
 SELECT
     ii.item_id,
-    SUM(GREATEST(
-        -- Correlated per issue: a grouped derived table cannot take the account and item filters and so aggregates all of inventory_allocation on every call.
-        CAST(ii_q.value AS DECIMAL(65,30)) - COALESCE((
-            SELECT SUM(CAST(aq.value AS DECIMAL(65,30)))
+    CAST(SUM(
+        (ii_q.value * (ii_u.ratio_numerator / ii_u.ratio_denominator)) + (ii_u.offset_numerator / ii_u.offset_denominator)
+        - COALESCE((
+            -- Correlated per row: a grouped derived table cannot take the account and item filters and so aggregates all of inventory_allocation on every call.
+            SELECT SUM((aq.value * (au.ratio_numerator / au.ratio_denominator)) + (au.offset_numerator / au.offset_denominator))
             FROM inventory_allocation ia
             JOIN quantity aq ON aq.id = ia.quantity_id
+            JOIN unit au ON au.id = aq.unit_id
             WHERE ia.inventory_issue_id = ii.id
-        ), 0),
-        0
-    )) AS remaining_quantity
-FROM inventory_issue ii
+        ), 0)
+    ) AS DECIMAL(65,30)) AS remaining_quantity
+FROM inventory_issue ii FORCE INDEX (inventory_issue_open_paging_idx)
 JOIN quantity ii_q ON ii_q.id = ii.quantity_id
+JOIN unit ii_u ON ii_u.id = ii_q.unit_id
 WHERE ii.account_id = sqlc.arg('account_id')
   AND ii.item_id IN (sqlc.slice('item_ids'))
   AND ii.status_code = 'open'
@@ -1324,10 +927,13 @@ GROUP BY ii.item_id;
 SELECT
     m.item_id,
     sm.supplier_part_number,
-    a.name AS supplier_name
+    COALESCE(NULLIF(ar.alias, ''), a.name) AS supplier_name
 FROM supplier_material sm
 JOIN material m ON m.id = sm.material_id
 JOIN account a ON a.id = sm.supplier_account_id
+LEFT JOIN account_relation ar ON ar.owner_account_id = sm.owner_account_id
+    AND ar.counterparty_account_id = sm.supplier_account_id
+    AND ar.account_relation_role_code = 'supplier'
 WHERE sm.owner_account_id = sqlc.arg('owner_account_id')
   AND sm.supplier_account_id IN (sqlc.slice('supplier_ids'));
 

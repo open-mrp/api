@@ -170,6 +170,10 @@ func (s *accountGroupProductLineAccessSvcImpl) CreateAccountGroupProductLineAcce
 	}
 
 	params.AccountID = identity.Target.AccountID
+	params.ProductLineIDs = dedupeStrings(params.ProductLineIDs)
+	if len(params.ProductLineIDs) == 0 {
+		return nil, tracing.Trace(span, errNoProductLinesGranted())
+	}
 
 	meds := s.mediators()
 
@@ -191,7 +195,7 @@ func (s *accountGroupProductLineAccessSvcImpl) CreateAccountGroupProductLineAcce
 		apiErr = s.withTx(ctx, func(txCtx context.Context, txSvc *accountGroupProductLineAccessSvcImpl) *apierror.APIError {
 			txRepo := txSvc.repos.NewAccountGroupProductLineAccessRepo()
 
-			exists, apiErr := txRepo.ExistsByAccountGroupID(txCtx, params.AccountGroupID)
+			exists, apiErr := txRepo.ExistsByAccountGroupID(txCtx, params.AccountID, params.AccountGroupID)
 			if apiErr != nil {
 				return apiErr
 			}
@@ -248,6 +252,10 @@ func (s *accountGroupProductLineAccessSvcImpl) UpdateAccountGroupProductLineAcce
 	}
 
 	params.AccountID = identity.Target.AccountID
+	params.ProductLineIDs = dedupeStrings(params.ProductLineIDs)
+	if len(params.ProductLineIDs) == 0 {
+		return nil, tracing.Trace(span, errNoProductLinesGranted())
+	}
 
 	meds := s.mediators()
 
@@ -327,7 +335,7 @@ func (s *accountGroupProductLineAccessSvcImpl) DeleteAccountGroupProductLineAcce
 	existing, apiErr := s.repos.NewAccountGroupProductLineAccessRepo().Get(ctx, accountID, accountGroupID)
 	if apiErr != nil {
 		if apierror.IsNotFound(apiErr) {
-			wasDeleted, deletedCheckErr := s.repos.NewDeletedRecordRepo().Exists(ctx, constants.DeletedRecordResourceTypeAccountGroupProductLineAccess, accountGroupID)
+			wasDeleted, deletedCheckErr := s.repos.NewDeletedRecordRepo().ExistsInAccount(ctx, constants.DeletedRecordResourceTypeAccountGroupProductLineAccess, accountGroupID, accountID)
 			if deletedCheckErr != nil {
 				return tracing.Trace(span, deletedCheckErr)
 			}
@@ -339,7 +347,7 @@ func (s *accountGroupProductLineAccessSvcImpl) DeleteAccountGroupProductLineAcce
 	}
 
 	apiErr = s.withTx(ctx, func(txCtx context.Context, txSvc *accountGroupProductLineAccessSvcImpl) *apierror.APIError {
-		if apiErr := txSvc.repos.NewDeletedRecordRepo().Create(txCtx, constants.DeletedRecordResourceTypeAccountGroupProductLineAccess, existing.AccountGroupID, existing); apiErr != nil {
+		if apiErr := txSvc.repos.NewDeletedRecordRepo().CreateInAccount(txCtx, constants.DeletedRecordResourceTypeAccountGroupProductLineAccess, existing.AccountGroupID, accountID, existing); apiErr != nil {
 			return apiErr
 		}
 

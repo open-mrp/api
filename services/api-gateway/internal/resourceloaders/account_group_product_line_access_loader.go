@@ -6,6 +6,7 @@ import (
 	"github.com/open-mrp/api/services/api-gateway/internal/domain"
 	grpcutil "github.com/open-mrp/api/services/api-gateway/internal/grpc"
 	apiresource "github.com/open-mrp/api/services/api-gateway/pkg/resource"
+	"github.com/open-mrp/api/services/api-gateway/pkg/resourcekit"
 	"github.com/open-mrp/api/shared/constants"
 	apierror "github.com/open-mrp/api/shared/errors"
 	pb "github.com/open-mrp/api/shared/proto/core"
@@ -15,7 +16,7 @@ import (
 
 var accountGroupProductLineAccessLoaderTracer = tracing.GetTracer("api-gateway.resourceloaders.account_group_product_line_access")
 
-// LoadAccountGroupProductLineAccess fetches access records by account_group_id via BatchGetAccountGroupProductLineAccessByIDs. The inline AccountGroup shell + ProductLines list are built from denormalized proto fields — no expandable sub-resources.
+// LoadAccountGroupProductLineAccess fetches access records by account_group_id via BatchGetAccountGroupProductLineAccessByIDs and embeds the real account group and product line records, which whoever may read the access may read.
 func LoadAccountGroupProductLineAccess(ctx context.Context, ids []string) (map[string]any, *apierror.APIError) {
 	if len(ids) == 0 {
 		return nil, nil
@@ -27,32 +28,38 @@ func LoadAccountGroupProductLineAccess(ctx context.Context, ids []string) (map[s
 	if apiErr != nil {
 		return nil, apiErr
 	}
+	if len(resp.Items) == 0 {
+		return map[string]any{}, nil
+	}
+
+	groupIDs := make([]string, len(resp.Items))
+	granted := make([][]*pb.ProductLineAccessInfo, len(resp.Items))
+	for i, item := range resp.Items {
+		groupIDs[i] = item.AccountGroupId
+		granted[i] = item.ProductLines
+	}
+	embedCtx := resourcekit.WithIncludeReads(ctx)
+	groups, apiErr := LoadAccountGroups(embedCtx, groupIDs)
+	if apiErr != nil {
+		return nil, apiErr
+	}
+	lines, apiErr := LoadProductLines(embedCtx, grantedProductLineIDs(granted...))
+	if apiErr != nil {
+		return nil, apiErr
+	}
+
 	out := make(map[string]any, len(resp.Items))
 	for _, item := range resp.Items {
-		out[item.AccountGroupId] = AccountGroupProductLineAccessFromProto(item)
+		access := &apiresource.AccountGroupProductLineAccess{
+			Object:       constants.ObjectTypeAccountGroupProductLineAccess,
+			ProductLines: grantedProductLines(item.ProductLines, lines),
+			CreatedAt:    grpcutil.TimestampToTime(item.CreatedAt),
+			UpdatedAt:    grpcutil.TimestampToTime(item.UpdatedAt),
+		}
+		if group, ok := groups[item.AccountGroupId].(*apiresource.AccountGroup); ok {
+			access.AccountGroup = group
+		}
+		out[item.AccountGroupId] = access
 	}
 	return out, nil
-}
-
-// AccountGroupProductLineAccessFromProto maps the gRPC proto to the apiresource. Exported so endpoint service methods that already hold a proto response (Create/Update return the resource directly) can reuse it.
-func AccountGroupProductLineAccessFromProto(item *pb.AccountGroupProductLineAccessInfo) *apiresource.AccountGroupProductLineAccess {
-	productLines := make([]apiresource.ProductLine, len(item.ProductLines))
-	for i, pl := range item.ProductLines {
-		productLines[i] = apiresource.ProductLine{
-			ID:     pl.Id,
-			Object: constants.ObjectTypeProductLine,
-			Name:   pl.Name,
-		}
-	}
-	return &apiresource.AccountGroupProductLineAccess{
-		AccountGroup: &apiresource.AccountGroup{
-			ID:     item.AccountGroupId,
-			Object: constants.ObjectTypeAccountGroup,
-			Name:   item.AccountGroupName,
-		},
-		Object:       constants.ObjectTypeAccountGroupProductLineAccess,
-		ProductLines: apiresource.NewList(productLines, apiresource.PageInfo{}),
-		CreatedAt:    grpcutil.TimestampToTime(item.CreatedAt),
-		UpdatedAt:    grpcutil.TimestampToTime(item.UpdatedAt),
-	}
 }

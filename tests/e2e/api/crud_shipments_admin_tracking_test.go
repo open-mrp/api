@@ -77,15 +77,19 @@ func shippingCaseCarrierID(t *testing.T, caseID string) string {
 	return jsonField(carrier, "id")
 }
 
-// Puts SHP-SB-001 back on the carrier it started on, after the dispatch has been undone.
-func restoreShipmentCarrier(t *testing.T, carrierID string) {
+// Puts SHP-SB-001 back on the carrier and service level it started on, after the dispatch has been undone.
+func restoreShipmentRouting(t *testing.T, carrierID, serviceLevelID string) {
 	t.Helper()
 
-	if shipmentCarrierID(t, sbShipmentID) == carrierID {
+	if carrier, serviceLevel := dashShipmentsFreightIDs(t, sbShipmentID); carrier == carrierID && serviceLevel == serviceLevelID {
 		return
 	}
+	var level any
+	if serviceLevelID != "" {
+		level = serviceLevelID
+	}
 	status, body, err := apiClient.Patch(shipmentsPath+"/"+sbShipmentID,
-		map[string]any{"carrier_id": carrierID}, newIdempotencyKey())
+		map[string]any{"carrier_id": carrierID, "service_level_id": level}, newIdempotencyKey())
 	require.NoError(t, err)
 	requireStatus(t, 200, status, body)
 }
@@ -93,10 +97,10 @@ func restoreShipmentCarrier(t *testing.T, carrierID string) {
 // --- item 1: admin shipment tracking override ------------------------------
 
 func TestShipmentsAdmin_TrackingOverrideReroutesAShippedShipment(t *testing.T) {
-	originalCarrier := shipmentCarrierID(t, sbShipmentID)
+	originalCarrier, originalServiceLevel := dashShipmentsFreightIDs(t, sbShipmentID)
 	defer func() {
 		restoreShipmentSB(t)
-		restoreShipmentCarrier(t, originalCarrier)
+		restoreShipmentRouting(t, originalCarrier, originalServiceLevel)
 	}()
 
 	status, body, err := apiClient.Post(shipmentsPath+"/"+sbShipmentID+"/actions/ship",
@@ -112,9 +116,9 @@ func TestShipmentsAdmin_TrackingOverrideReroutesAShippedShipment(t *testing.T) {
 	require.NoError(t, err)
 	requireStatus(t, 409, status, body)
 
-	// The admin override is the sanctioned way through that guard.
+	// The admin override is the sanctioned way through that guard. The fixture's service level is the old carrier's, so it is cleared with the move.
 	status, body, err = apiClient.Post(shipmentsPath+"/"+sbShipmentID+adminUpdateTrackingAction+"?include=freight",
-		map[string]any{"carrier_id": target, "master_tracking_number": "1Z-ADMIN-FIX"}, newIdempotencyKey())
+		map[string]any{"carrier_id": target, "service_level_id": nil, "master_tracking_number": "1Z-ADMIN-FIX"}, newIdempotencyKey())
 	require.NoError(t, err)
 	requireStatus(t, 200, status, body)
 
@@ -188,16 +192,17 @@ func TestShippingCasesAdmin_TrackingOverrideRejectsAnUnshippedCase(t *testing.T)
 // --- item 4: a carrier change cascades to the shipment's cases -------------
 
 func TestShipmentsBehavioral_CarrierChangeCascadesToShippingCases(t *testing.T) {
-	originalCarrier := shipmentCarrierID(t, sbShipmentID)
-	defer restoreShipmentCarrier(t, originalCarrier)
+	originalCarrier, originalServiceLevel := dashShipmentsFreightIDs(t, sbShipmentID)
+	defer restoreShipmentRouting(t, originalCarrier, originalServiceLevel)
 
 	caseIDs := shipmentCaseIDs(t, sbShipmentID)
 	require.NotEmpty(t, caseIDs, "fixture must be cased")
 
 	target := otherCarrierID(t, originalCarrier)
 
+	// The fixture's service level is the old carrier's, so it is cleared with the move.
 	status, body, err := apiClient.Patch(shipmentsPath+"/"+sbShipmentID,
-		map[string]any{"carrier_id": target}, newIdempotencyKey())
+		map[string]any{"carrier_id": target, "service_level_id": nil}, newIdempotencyKey())
 	require.NoError(t, err)
 	requireStatus(t, 200, status, body)
 

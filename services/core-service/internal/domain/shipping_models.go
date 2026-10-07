@@ -73,6 +73,11 @@ type Parcel struct {
 	Length string
 	Width  string
 	Height string
+	// Reference1 and Reference2 (optional) print on a purchased label; rating ignores them.
+	Reference1 string
+	Reference2 string
+	// Metadata (optional) tags a purchased parcel at the carrier, for reconciling it back to its case.
+	Metadata string
 }
 
 // FetchShippingRateParams contains the parameters for fetching a shipping rate.
@@ -101,6 +106,10 @@ type RateShopResult struct {
 	Options       []*RateShopOption
 	ExemptionType *string
 	FlatRate      *float64
+
+	// The carriers and service levels the options name.
+	Carriers      []*Carrier
+	ServiceLevels []*ServiceLevel
 }
 
 // RateShopOption represents a single carrier option with its rate.
@@ -156,6 +165,9 @@ type CreateLabelParams struct {
 	// Holds one entry per shipping case, in case order; the result packages match this order.
 	Parcels []Parcel
 	Billing *ShippingBilling
+	// Metadata (optional) tags the purchase at the carrier — the shipment id — so a label bought but
+	// never recorded can still be traced to what it was bought for.
+	Metadata string
 }
 
 // Reports the outcome of a label purchase across a shipment's cases.
@@ -176,3 +188,11 @@ type LabelPackage struct {
 // ErrShippingRateNotCached is returned by a CachedOnly rate lookup when no rate is cached for the
 // shipment; the caller defers the live quote instead of waiting on the carrier.
 var ErrShippingRateNotCached = apierror.NewInternalError(errors.New("shipping rate not cached"), "Shipping rate not cached.")
+
+// NewShippingRateUnavailableError reports a carrier that answered without a rate for the requested
+// service: an outage or an unserved lane, never free freight. Transient, so the caller may retry.
+func NewShippingRateUnavailableError(internalMessage string) *apierror.APIError {
+	return apierror.NewAPIError(apierror.ErrorCodeSvcUnavailable, apierror.ErrorTypeAPI,
+		"No shipping rate is available for the selected carrier and service. The carrier may be temporarily unavailable; try again shortly or choose a different shipping option.",
+		internalMessage)
+}

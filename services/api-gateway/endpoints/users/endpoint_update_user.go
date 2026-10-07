@@ -44,6 +44,8 @@ func (*UpdateUserRequest) SchemaExample() any {
 // Updates a user's global profile.
 //
 // Changes apply everywhere the user appears, in every account they belong to. Account-specific details such as their status, role, and department are changed on the account user record instead.
+//
+// Users may always update their own profile. Updating another user requires permission to update team users, and that user must belong to the account you are acting in; any other user is not found.
 type UpdateUserEndpoint struct{}
 
 func (e *UpdateUserEndpoint) Materialize() *apiendpoint.APIEndpoint[*UpdateUserRequest, *apiresource.User] {
@@ -59,6 +61,7 @@ func (e *UpdateUserEndpoint) Materialize() *apiendpoint.APIEndpoint[*UpdateUserR
 		RequiredPermissions: []types.Permission{
 			{Domain: types.PermissionDomainTeamUsers, Action: types.ActionUpdate},
 		},
+		SelfPathParam: "id",
 		ServiceHandler: func(svc any) func(ctx context.Context, req *UpdateUserRequest) (*apiresource.User, *apierror.APIError) {
 			return svc.(UserSvc).UpdateUser
 		},

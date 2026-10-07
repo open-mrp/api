@@ -260,7 +260,7 @@ var SampleOpenBatchSummary = &OpenBatchSummary{
 	DepartmentName:  "Production",
 	Item:            NewEntity(SampleItemID, constants.ObjectTypeItem, new(SampleItemSKU), nil),
 	ScanningStation: NewEntity(SampleScanningStationID, constants.ObjectTypeScanningStation, new(SampleScanningStationName), nil),
-	Count:           "5.000000000000000000000000000000",
+	Count:           "5",
 	Unit:            "kg",
 }
 

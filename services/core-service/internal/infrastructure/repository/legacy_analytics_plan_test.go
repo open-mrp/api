@@ -191,12 +191,8 @@ func TestDeliveryEntries_ReadsItsScope(t *testing.T) {
 func TestOrderEntries_ReadsItsScope(t *testing.T) {
 	ensureLegacyAnalyticsCorpus(t)
 	aggregatePlanSuite[legacyPlanRequest]{
-		tables: []aggregateTable{
-			{table: "sales_order", scopeColumn: "owner_account_id", from: "JOIN sales_order so", alias: "so"},
-			{table: "sales_order_line", scopeColumn: "sales_order_id", from: "FROM sales_order_line sol", alias: "sol"},
-			{table: "invoice_line", scopeColumn: "sales_order_line_id", from: "FROM invoice_line il", alias: "il"},
-		},
-		cases: legacyPlanCases(false),
+		tables: orderBookPlanTables,
+		cases:  legacyPlanCases(false),
 		report: func(ctx context.Context, q *sqlc.Queries, p legacyPlanRequest) error {
 			_, apiErr := NewAnalyticsRepo(q).GetOrderEntries(ctx, domain.AnalyzeOrdersParams{AccountID: planAnaAccount,
 				ProductLineIDs: p.productLineIDs, CustomerIDs: p.customerIDs, SalesRepIDs: p.salesRepIDs, CustomerGroupIDs: p.customerGroupIDs})
@@ -206,12 +202,7 @@ func TestOrderEntries_ReadsItsScope(t *testing.T) {
 			return nil
 		},
 		floor: func(t *testing.T, db *sql.DB, p legacyPlanRequest) map[string]float64 {
-			var orders, lines, invoiced float64
-			// The invoiced quantities are aggregated over every open order's lines, whatever the filters.
-			require.NoError(t, db.QueryRow(`SELECT COUNT(DISTINCT so.id), COUNT(DISTINCT sol.id), COUNT(il.id) FROM sales_order so
-				JOIN sales_order_line sol ON sol.sales_order_id = so.id LEFT JOIN invoice_line il ON il.sales_order_line_id = sol.id
-				WHERE so.owner_account_id = ? AND so.sales_order_status_code = 'issued'`, planAnaAccount).Scan(&orders, &lines, &invoiced))
-			return map[string]float64{"so": 2 * orders, "sol": 2 * lines, "il": invoiced}
+			return orderBookFloor(t, db, false)
 		},
 	}.run(t)
 }

@@ -25,17 +25,15 @@ type DeletePurchaseOrderLineEndpoint struct{}
 
 func (e *DeletePurchaseOrderLineEndpoint) Materialize() *apiendpoint.APIEndpoint[*DeletePurchaseOrderLineRequest, *apiresource.EmptyResource] {
 	return (&apiendpoint.APIEndpoint[*DeletePurchaseOrderLineRequest, *apiresource.EmptyResource]{
-		Title:             "Delete Purchase Order Line",
-		Method:            http.MethodDelete,
-		ContentType:       "application/json",
-		Route:             "/v1/operations/purchase-orders/{id}/lines/{line_id}",
-		SuccessStatusCode: http.StatusOK,
-		Public:            false,
-		Preview:           true,
-		RequiredPermissions: []types.Permission{
-			{Domain: types.PermissionDomainPurchaseOrders, Action: types.ActionUpdate},
-			{Domain: types.PermissionDomainSuppliers, Action: types.ActionUpdate},
-		},
+		Title:                   "Delete Purchase Order Line",
+		Method:                  http.MethodDelete,
+		ContentType:             "application/json",
+		Route:                   "/v1/operations/purchase-orders/{id}/lines/{line_id}",
+		SuccessStatusCode:       http.StatusOK,
+		Public:                  false,
+		Preview:                 true,
+		RequiredPermissions:     []types.Permission{{Domain: types.PermissionDomainPurchaseOrders, Action: types.ActionUpdate}},
+		CounterpartyPermissions: apiendpoint.CounterpartyPermissions{Supplier: types.Permission{Domain: types.PermissionDomainSuppliers, Action: types.ActionUpdate}},
 		ServiceHandler: func(svc any) func(ctx context.Context, req *DeletePurchaseOrderLineRequest) (*apiresource.EmptyResource, *apierror.APIError) {
 			return svc.(PurchaseOrderSvc).DeletePurchaseOrderLine
 		},

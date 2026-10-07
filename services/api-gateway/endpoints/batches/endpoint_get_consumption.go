@@ -8,6 +8,7 @@ import (
 	apiexample "github.com/open-mrp/api/services/api-gateway/pkg/example"
 	apiresource "github.com/open-mrp/api/services/api-gateway/pkg/resource"
 	"github.com/open-mrp/api/services/auth-service/pkg/types"
+	"github.com/open-mrp/api/shared/constants"
 	apierror "github.com/open-mrp/api/shared/errors"
 	"github.com/open-mrp/api/shared/field"
 )
@@ -22,12 +23,16 @@ type GetScanningStationConsumptionRequest struct {
 	BatchIDs []string `json:"batch_ids" validate:"required"`
 	// Production step ID to scope the consumption calculation.
 	//
-	// Required for `move_batch`, `split_batch`, and `merge_batch` stations. Ignored for `init_batch` stations, where the step is derived from the station and the batch's item.
+	// Required for `move_batch`, `split_batch`, and `merge_batch` stations. At `init_batch` stations the step is derived from the station and the batch's item, unless this names one of the steps the station runs for that item.
 	ProductionStepID field.Optional[string] `json:"production_step_id,omitzero"`
 	// Proposed split quantity to factor into the consumption calculation.
 	//
 	// Required for `split_batch` stations. It is applied only when splitting a single batch at a single-part step, where material demand is scaled to this quantity instead of the batch's full expected output; splits covering several batches or several parts ignore it.
 	SplitQuantity field.Optional[SplitQuantityInput] `json:"split_quantity,omitzero"`
+	// Station type to preview the scan as, when it differs from the station's own.
+	//
+	// Requires the `update` permission on scanning stations when it differs from the station's type.
+	TypeOverride field.Optional[constants.ScanningStationType] `json:"type_override,omitzero"`
 }
 
 var sampleGetScanningStationConsumptionRequest = &GetScanningStationConsumptionRequest{

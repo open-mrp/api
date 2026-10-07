@@ -78,7 +78,10 @@ SELECT
             JOIN quantity rfw ON rfw.id = rc2.freight_weight_id
             WHERE rc2.shipment_id = s.id AND rfw.value <= 0
         )
-    ) AS is_ready_to_ship
+    ) AS is_ready_to_ship,
+    -- The order's own freight billing, without the customer default carrier_billing_* fall back to.
+    so.carrier_billing_type AS order_carrier_billing_type,
+    so.carrier_billing_account AS order_carrier_billing_account
 FROM shipment s
 JOIN shipment_status ss ON ss.code = s.shipment_status_code
 JOIN sales_order so ON so.id = s.sales_order_id
@@ -179,7 +182,10 @@ SELECT
             JOIN quantity rfw ON rfw.id = rc2.freight_weight_id
             WHERE rc2.shipment_id = s.id AND rfw.value <= 0
         )
-    ) AS is_ready_to_ship
+    ) AS is_ready_to_ship,
+    -- The order's own freight billing, without the customer default carrier_billing_* fall back to.
+    so.carrier_billing_type AS order_carrier_billing_type,
+    so.carrier_billing_account AS order_carrier_billing_account
 FROM shipment s
 JOIN shipment_status ss ON ss.code = s.shipment_status_code
 JOIN sales_order so ON so.id = s.sales_order_id
@@ -203,7 +209,7 @@ AND s.account_id = sqlc.arg('account_id');
 UPDATE shipment SET
     note = COALESCE(sqlc.narg('note'), note),
     number = COALESCE(sqlc.narg('number'), number),
-    master_tracking_number = COALESCE(sqlc.narg('master_tracking_number'), master_tracking_number),
+    master_tracking_number = IF(sqlc.arg('clear_master_tracking_number'), NULL, COALESCE(sqlc.narg('master_tracking_number'), master_tracking_number)),
     carrier_id = COALESCE(sqlc.narg('carrier_id'), carrier_id),
     carrier_option_id = sqlc.narg('carrier_option_id'),
     updated_at = NOW(3)
@@ -215,14 +221,17 @@ DELETE FROM shipment
 WHERE id = sqlc.arg('id')
 AND account_id = sqlc.arg('account_id');
 
--- name: MarkShipmentShipped :exec
+-- name: MarkShipmentShipped :execrows
+-- Conditional on the shipment still being unshipped, so of two ships racing past the status check
+-- only the first changes a row; the second sees zero and must roll back before invoicing again.
 UPDATE shipment SET
     shipment_status_code = 'shipped',
     shipped_at = NOW(3),
     shipped_by_id = sqlc.arg('shipped_by_id'),
     updated_at = NOW(3)
 WHERE id = sqlc.arg('id')
-AND account_id = sqlc.arg('account_id');
+AND account_id = sqlc.arg('account_id')
+AND shipment_status_code <> 'shipped';
 
 -- name: SetShipmentMasterTracking :exec
 UPDATE shipment SET
@@ -238,7 +247,8 @@ UPDATE shipment SET
 WHERE id = sqlc.arg('id')
 AND account_id = sqlc.arg('account_id');
 
--- name: MarkShipmentVoided :exec
+-- name: MarkShipmentVoided :execrows
+-- Conditional on the shipment being shipped, so a second void racing the first changes nothing.
 UPDATE shipment SET
     shipment_status_code = 'packed',
     shipped_at = NULL,
@@ -247,7 +257,8 @@ UPDATE shipment SET
     master_tracking_number = NULL,
     updated_at = NOW(3)
 WHERE id = sqlc.arg('id')
-AND account_id = sqlc.arg('account_id');
+AND account_id = sqlc.arg('account_id')
+AND shipment_status_code = 'shipped';
 
 -- name: FindInvoiceIDByShipment :one
 SELECT inv.id

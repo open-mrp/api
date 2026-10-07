@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"strconv"
+	"time"
 
 	"github.com/open-mrp/api/services/api-gateway/internal/domain"
 	grpcutil "github.com/open-mrp/api/services/api-gateway/internal/grpc"
@@ -48,6 +49,10 @@ type shipmentSvcImpl struct {
 }
 
 var shipmentSvcTracer = tracing.GetTracer("api-gateway.endpoints.shipments.service")
+
+// labelOperationTimeout covers ship and void, which buy or refund a carrier label per case. It sits
+// under the server's write timeout so the caller gets the API's own timeout error, not a dropped response.
+const labelOperationTimeout = 25 * time.Second
 
 var shipmentIncludes = []string{"lines", "shipping_cases", "sales_order", "customer", "freight", "shipping_address", "shipped_by", "invoice", "pick"}
 
@@ -133,7 +138,7 @@ func (m *shipmentSvcImpl) UpdateShipment(ctx context.Context, req *UpdateShipmen
 		Id:                   req.ShipmentID,
 		Note:                 req.Note.Ptr(),
 		Number:               req.Number.Ptr(),
-		MasterTrackingNumber: req.MasterTrackingNumber.Ptr(),
+		MasterTrackingNumber: trackingNumberToProto(req.MasterTrackingNumber),
 		CarrierId:            req.CarrierID.Ptr(),
 		ServiceLevelId:       field.StringClearableToProto(req.ServiceLevelID),
 		Includes:             resourcekit.FilterIncludes(ctx, shipmentIncludes...),
@@ -156,7 +161,7 @@ func (m *shipmentSvcImpl) UpdateShipment(ctx context.Context, req *UpdateShipmen
 func (m *shipmentSvcImpl) AdminUpdateShipmentTracking(ctx context.Context, req *AdminUpdateShipmentTrackingRequest) (*apiresource.Shipment, *apierror.APIError) {
 	pbReq := &pb.AdminUpdateShipmentTrackingRequest{
 		Id:                   req.ShipmentID,
-		MasterTrackingNumber: req.MasterTrackingNumber.Ptr(),
+		MasterTrackingNumber: trackingNumberToProto(req.MasterTrackingNumber),
 		CarrierId:            req.CarrierID.Ptr(),
 		ServiceLevelId:       field.StringClearableToProto(req.ServiceLevelID),
 		Includes:             resourcekit.FilterIncludes(ctx, shipmentIncludes...),
@@ -203,7 +208,7 @@ func (m *shipmentSvcImpl) ShipShipment(ctx context.Context, req *ShipShipmentReq
 	resp, apiErr := grpcutil.CallRPC(ctx, shipmentSvcTracer, "service.shipments.ship", domain.ServiceName,
 		func(ctx context.Context, opts ...grpc.CallOption) (*pb.ShipShipmentResponse, error) {
 			return m.coreClient.ShipShipment(ctx, pbReq, opts...)
-		})
+		}, grpcutil.WithTimeout(labelOperationTimeout))
 
 	if apiErr != nil {
 		return nil, apiErr
@@ -222,7 +227,7 @@ func (m *shipmentSvcImpl) VoidShipment(ctx context.Context, req *VoidShipmentReq
 	resp, apiErr := grpcutil.CallRPC(ctx, shipmentSvcTracer, "service.shipments.void", domain.ServiceName,
 		func(ctx context.Context, opts ...grpc.CallOption) (*pb.VoidShipmentResponse, error) {
 			return m.coreClient.VoidShipment(ctx, pbReq, opts...)
-		})
+		}, grpcutil.WithTimeout(labelOperationTimeout))
 
 	if apiErr != nil {
 		return nil, apiErr
@@ -303,61 +308,21 @@ func (m *shipmentSvcImpl) RateShop(ctx context.Context, req *RateShopRequest) (*
 		return nil, apiErr
 	}
 
-	// The core RateShop RPC only echoes back carrier/service-level ids and names, so batch-hydrate the full resources here — otherwise fields like service_level_token and customer_portal_visibility come back empty.
-	carriers, serviceLevels, apiErr := m.loadRateShopResources(ctx, resp)
-	if apiErr != nil {
-		return nil, apiErr
-	}
-
+	carriers, serviceLevels := rateShopResources(resp)
 	return rateShopFromProto(resp, carriers, serviceLevels), nil
 }
 
-// loadRateShopResources batch-loads the full Carrier and ServiceLevel resources referenced by a rate-shop response, keyed by id, via the shared resource loaders.
-func (m *shipmentSvcImpl) loadRateShopResources(ctx context.Context, resp *pb.RateShopResponse) (map[string]*apiresource.Carrier, map[string]*apiresource.ServiceLevel, *apierror.APIError) {
-	if resp == nil || len(resp.Options) == 0 {
-		return nil, nil, nil
+// rateShopResources maps the carriers and service levels core read with the quote, keyed by id. They are part of it, so they are not loaded again under carriers:read.
+func rateShopResources(resp *pb.RateShopResponse) (map[string]*apiresource.Carrier, map[string]*apiresource.ServiceLevel) {
+	carriers := make(map[string]*apiresource.Carrier, len(resp.GetCarriers()))
+	for _, c := range resp.GetCarriers() {
+		carriers[c.Id] = resourceloaders.CarrierFromProto(c)
 	}
-
-	carrierIDs := uniqueStrings(resp.Options, func(o *pb.RateShopOptionInfo) string { return o.CarrierId })
-	serviceLevelIDs := uniqueStrings(resp.Options, func(o *pb.RateShopOptionInfo) string { return o.ServiceLevelId })
-
-	carrierMap, apiErr := resourceloaders.LoadCarriers(ctx, carrierIDs)
-	if apiErr != nil {
-		return nil, nil, apiErr
+	serviceLevels := make(map[string]*apiresource.ServiceLevel, len(resp.GetServiceLevels()))
+	for _, sl := range resp.GetServiceLevels() {
+		serviceLevels[sl.Id] = resourceloaders.ServiceLevelFromProto(sl)
 	}
-	serviceLevelMap, apiErr := resourceloaders.LoadServiceLevels(ctx, serviceLevelIDs)
-	if apiErr != nil {
-		return nil, nil, apiErr
-	}
-
-	carriers := make(map[string]*apiresource.Carrier, len(carrierMap))
-	for id, v := range carrierMap {
-		if c, ok := v.(*apiresource.Carrier); ok {
-			carriers[id] = c
-		}
-	}
-	serviceLevels := make(map[string]*apiresource.ServiceLevel, len(serviceLevelMap))
-	for id, v := range serviceLevelMap {
-		if sl, ok := v.(*apiresource.ServiceLevel); ok {
-			serviceLevels[id] = sl
-		}
-	}
-	return carriers, serviceLevels, nil
-}
-
-// uniqueStrings collects the distinct non-empty keys returned by keyOf across options, preserving first-seen order.
-func uniqueStrings(options []*pb.RateShopOptionInfo, keyOf func(*pb.RateShopOptionInfo) string) []string {
-	seen := make(map[string]bool, len(options))
-	out := make([]string, 0, len(options))
-	for _, o := range options {
-		k := keyOf(o)
-		if k == "" || seen[k] {
-			continue
-		}
-		seen[k] = true
-		out = append(out, k)
-	}
-	return out
+	return carriers, serviceLevels
 }
 
 func (m *shipmentSvcImpl) ListShipmentLines(ctx context.Context, req *ListShipmentLinesRequest) (*apiresource.List[apiresource.ShipmentLine], *apierror.APIError) {
@@ -566,7 +531,7 @@ func stashShipmentMeta(ctx context.Context, s *pb.ShipmentInfo, d *apiresource.S
 	if s.ShippingCases != nil {
 		cases := make([]apiresource.ShippingCaseDetail, len(s.ShippingCases))
 		for i, c := range s.ShippingCases {
-			cases[i] = shippingCaseDetailFromProto(c)
+			cases[i] = shippingCaseDetailFromProto(c, s)
 		}
 		meta.Set(constants.ObjectTypeShipment, d.ID, "shipping_cases", apiresource.NewList(cases, apiresource.PageInfo{}))
 	}
@@ -628,6 +593,7 @@ func shipmentFreightFromProto(s *pb.ShipmentInfo) *apiresource.Freight {
 			ID:     s.CarrierId,
 			Object: constants.ObjectTypeCarrier,
 			Name:   s.CarrierName,
+			Code:   constants.EnumPtr[constants.CarrierCode](s.CarrierCode),
 		}
 		if s.CarrierIsPortalEnabled != nil && *s.CarrierIsPortalEnabled {
 			carrier.CustomerPortalVisibility = constants.CustomerPortalVisibilityVisible
@@ -729,7 +695,9 @@ func buildSalesOrderLineForShipmentLine(l *pb.ShipmentLineInfo) *apiresource.Sal
 	}
 }
 
-func shippingCaseDetailFromProto(c *pb.ShippingCaseDetailInfo) apiresource.ShippingCaseDetail {
+// Builds a case of the given shipment. The case row carries no carrier code, so a case on the
+// shipment's own carrier — which updates keep every case on — takes the shipment's.
+func shippingCaseDetailFromProto(c *pb.ShippingCaseDetailInfo, shipment *pb.ShipmentInfo) apiresource.ShippingCaseDetail {
 	if c == nil {
 		return apiresource.ShippingCaseDetail{}
 	}
@@ -770,6 +738,9 @@ func shippingCaseDetailFromProto(c *pb.ShippingCaseDetailInfo) apiresource.Shipp
 			ID:     c.CarrierId,
 			Object: constants.ObjectTypeCarrier,
 			Name:   c.CarrierName,
+		}
+		if shipment != nil && shipment.CarrierId == c.CarrierId {
+			result.Carrier.Code = constants.EnumPtr[constants.CarrierCode](shipment.CarrierCode)
 		}
 		if c.CarrierIsPortalEnabled != nil && *c.CarrierIsPortalEnabled {
 			result.Carrier.CustomerPortalVisibility = constants.CustomerPortalVisibilityVisible
@@ -835,4 +806,12 @@ func rateShopFromProto(resp *pb.RateShopResponse, carriers map[string]*apiresour
 		ExemptionType: constants.EnumPtr[constants.FreightExemptionType](resp.ExemptionType),
 		FlatRate:      resp.FlatRate,
 	}
+}
+
+// Puts a tracking number on the wire, where core reads an empty string as the client's null.
+func trackingNumberToProto(f field.Clearable[string]) *string {
+	if f.IsClear() {
+		return new("")
+	}
+	return f.ValuePtr()
 }

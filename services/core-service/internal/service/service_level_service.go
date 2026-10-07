@@ -290,7 +290,7 @@ func (s *serviceLevelSvcImpl) UpdateServiceLevel(ctx context.Context, params dom
 				return apiErr
 			}
 			if !isInCarrier {
-				wasDeleted, deletedCheckErr := txSvc.repos.NewDeletedRecordRepo().Exists(txCtx, constants.DeletedRecordResourceTypeServiceLevel, params.ServiceLevelID)
+				wasDeleted, deletedCheckErr := txSvc.repos.NewDeletedRecordRepo().ExistsInAccount(txCtx, constants.DeletedRecordResourceTypeServiceLevel, params.ServiceLevelID, params.AccountID)
 				if deletedCheckErr != nil {
 					return deletedCheckErr
 				}
@@ -390,7 +390,7 @@ func (s *serviceLevelSvcImpl) DeleteServiceLevel(ctx context.Context, carrierID,
 		return tracing.Trace(span, apiErr)
 	}
 	if !isInCarrier {
-		wasDeleted, deletedCheckErr := s.repos.NewDeletedRecordRepo().Exists(ctx, constants.DeletedRecordResourceTypeServiceLevel, serviceLevelID)
+		wasDeleted, deletedCheckErr := s.repos.NewDeletedRecordRepo().ExistsInAccount(ctx, constants.DeletedRecordResourceTypeServiceLevel, serviceLevelID, accountID)
 		if deletedCheckErr != nil {
 			return tracing.Trace(span, deletedCheckErr)
 		}
@@ -404,7 +404,7 @@ func (s *serviceLevelSvcImpl) DeleteServiceLevel(ctx context.Context, carrierID,
 	existing, apiErr := serviceLevelRepo.Get(ctx, accountID, serviceLevelID)
 	if apiErr != nil {
 		if apierror.IsNotFound(apiErr) {
-			wasDeleted, deletedCheckErr := s.repos.NewDeletedRecordRepo().Exists(ctx, constants.DeletedRecordResourceTypeServiceLevel, serviceLevelID)
+			wasDeleted, deletedCheckErr := s.repos.NewDeletedRecordRepo().ExistsInAccount(ctx, constants.DeletedRecordResourceTypeServiceLevel, serviceLevelID, accountID)
 			if deletedCheckErr != nil {
 				return tracing.Trace(span, deletedCheckErr)
 			}
@@ -425,7 +425,7 @@ func (s *serviceLevelSvcImpl) DeleteServiceLevel(ctx context.Context, carrierID,
 	}
 
 	apiErr = s.withTx(ctx, func(txCtx context.Context, txSvc *serviceLevelSvcImpl) *apierror.APIError {
-		if apiErr := txSvc.repos.NewDeletedRecordRepo().Create(txCtx, constants.DeletedRecordResourceTypeServiceLevel, existing.ID, existing); apiErr != nil {
+		if apiErr := txSvc.repos.NewDeletedRecordRepo().CreateInAccount(txCtx, constants.DeletedRecordResourceTypeServiceLevel, existing.ID, accountID, existing); apiErr != nil {
 			return apiErr
 		}
 

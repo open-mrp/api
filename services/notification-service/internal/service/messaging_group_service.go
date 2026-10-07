@@ -32,7 +32,7 @@ func (s *conversationSvcImpl) CreateMessagingGroup(ctx context.Context, input do
 		return nil, tracing.Trace(span, apierror.NewParameterMissingError("A group name is required.", "name"))
 	}
 
-	userIDs, agentIDs, apiErr := s.dedupeAndValidateMembers(ctx, input.MemberAccountUserIDs, input.MemberAgentConfigIDs)
+	userIDs, agentIDs, apiErr := s.dedupeAndValidateMembers(ctx, accountID, input.MemberAccountUserIDs, input.MemberAgentConfigIDs)
 	if apiErr != nil {
 		return nil, tracing.Trace(span, apiErr)
 	}
@@ -193,7 +193,7 @@ func (s *conversationSvcImpl) DeleteMessagingGroup(ctx context.Context, groupID 
 	if apiErr != nil {
 		if apiErr.Code == apierror.ErrorCodeResourceNotFound {
 			// Distinguish an already-deleted roster (410) from one that never existed (404).
-			if wasDeleted, delErr := s.repoFactory.NewDeletedRecordRepo().Exists(ctx, constants.DeletedRecordResourceTypeMessagingGroup, groupID); delErr != nil {
+			if wasDeleted, delErr := s.repoFactory.NewDeletedRecordRepo().ExistsInAccount(ctx, constants.DeletedRecordResourceTypeMessagingGroup, groupID, accountID); delErr != nil {
 				return tracing.Trace(span, delErr)
 			} else if wasDeleted {
 				return tracing.Trace(span, apierror.NewAlreadyDeletedError("This group has already been deleted and can no longer be modified."))
@@ -209,7 +209,7 @@ func (s *conversationSvcImpl) DeleteMessagingGroup(ctx context.Context, groupID 
 	return s.txManager.WithTx(ctx, func(txCtx context.Context, f domain.RepoFactory) *apierror.APIError {
 		groupRepo := f.NewMessagingGroupRepo()
 		// Snapshot the roster (with members) into deleted_record before the hard delete.
-		if drErr := f.NewDeletedRecordRepo().Create(txCtx, constants.DeletedRecordResourceTypeMessagingGroup, existing.ID, existing); drErr != nil {
+		if drErr := f.NewDeletedRecordRepo().CreateInAccount(txCtx, constants.DeletedRecordResourceTypeMessagingGroup, existing.ID, accountID, existing); drErr != nil {
 			return drErr
 		}
 		deleted, dErr := groupRepo.Delete(txCtx, groupID, accountID)
@@ -264,7 +264,7 @@ func (s *conversationSvcImpl) AddMessagingGroupMember(ctx context.Context, input
 		if input.AccountUserID == "" {
 			return nil, tracing.Trace(span, apierror.NewParameterMissingError("A member account_user_id is required.", "account_user_id"))
 		}
-		if _, apiErr := s.repoFactory.NewNotificationRepo().ResolveUserID(ctx, input.AccountUserID); apiErr != nil {
+		if _, apiErr := s.repoFactory.NewNotificationRepo().ResolveUserIDInAccount(ctx, input.AccountUserID, accountID); apiErr != nil {
 			if apiErr.Code == apierror.ErrorCodeResourceNotFound {
 				return nil, tracing.Trace(span, apierror.NewParameterInvalidError("The member does not exist.", "account_user_id"))
 			}
@@ -378,7 +378,7 @@ func (s *conversationSvcImpl) loadMessagingGroup(ctx context.Context, groupID, a
 
 // dedupeAndValidateMembers de-duplicates user/agent member ids and validates that each user exists.
 // Agent ids are accepted as-is (their configs live in a separate database, like AddAgentParticipant).
-func (s *conversationSvcImpl) dedupeAndValidateMembers(ctx context.Context, userIDs, agentIDs []string) ([]string, []string, *apierror.APIError) {
+func (s *conversationSvcImpl) dedupeAndValidateMembers(ctx context.Context, accountID string, userIDs, agentIDs []string) ([]string, []string, *apierror.APIError) {
 	users := make([]string, 0, len(userIDs))
 	seenUser := map[string]struct{}{}
 	for _, u := range userIDs {
@@ -389,7 +389,7 @@ func (s *conversationSvcImpl) dedupeAndValidateMembers(ctx context.Context, user
 			continue
 		}
 		seenUser[u] = struct{}{}
-		if _, apiErr := s.repoFactory.NewNotificationRepo().ResolveUserID(ctx, u); apiErr != nil {
+		if _, apiErr := s.repoFactory.NewNotificationRepo().ResolveUserIDInAccount(ctx, u, accountID); apiErr != nil {
 			if apiErr.Code == apierror.ErrorCodeResourceNotFound {
 				return nil, nil, apierror.NewParameterInvalidError("A member does not exist.", "member_account_user_ids")
 			}

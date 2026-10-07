@@ -495,7 +495,8 @@ var (
 	TransactionTypeIDPrefix       = composePrefix(VocTransaction, VocType)
 
 	// EDI-related prefix values
-	EDIRunIDPrefix = composePrefix(VocEDI, VocRun)
+	EDIRunIDPrefix          = composePrefix(VocEDI, VocRun)
+	EDITransmissionIDPrefix = composePrefix(VocEDI, VocTransaction)
 
 	// Request-related prefix values
 	RequestIDPrefix = composePrefix(VocRequest)

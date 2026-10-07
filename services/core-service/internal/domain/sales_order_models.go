@@ -256,6 +256,9 @@ type CreateSalesOrderParams struct {
 	// Email contact recipients to write into order_email_contact on create.
 	AcknowledgementEmailContacts []SalesOrderEmailContactInput
 	InvoiceEmailContacts         []SalesOrderEmailContactInput
+	// BillToAddress and ShipToAddress are buyer addresses saved with the order, each in place of its ID.
+	BillToAddress *InlineAddressParams
+	ShipToAddress *InlineAddressParams
 }
 
 // SalesOrderEmailContactInput represents a single recipient to wire to a sales order.
@@ -314,6 +317,9 @@ type UpdateSalesOrderParams struct {
 	AcknowledgementEmailContacts *[]SalesOrderEmailContactInput
 	// When non-nil, replaces the invoice email contacts on the order. Empty slice clears all contacts; nil leaves existing contacts untouched.
 	InvoiceEmailContacts *[]SalesOrderEmailContactInput
+	// BillingAddress and ShippingAddress are buyer addresses saved with the update, each in place of its ID.
+	BillingAddress  *InlineAddressParams
+	ShippingAddress *InlineAddressParams
 }
 
 // DeleteSalesOrderParams holds the parameters for deleting a sales order.

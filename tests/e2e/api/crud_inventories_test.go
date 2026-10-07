@@ -84,8 +84,8 @@ func TestInventories_QuantityAlwaysCarriesItsUnit(t *testing.T) {
 	assertUnitHydrated(t, jsonObject(quantity, "unit"), "quantity.unit")
 }
 
-// The unit is already on every row, so there is nothing to ask for: the endpoint offers no includes
-// at all and refuses `quantity.unit` rather than accepting a key that would change nothing.
+// The unit is already on every row, so there is nothing to ask for: the endpoint refuses
+// `quantity.unit` rather than accepting a key that would change nothing.
 func TestInventories_RejectsTheQuantityUnitInclude(t *testing.T) {
 	t.Parallel()
 

@@ -44,12 +44,14 @@ func LoadTransactions(ctx context.Context, ids []string) (map[string]any, *apier
 		if resp.Transaction == nil {
 			continue
 		}
-		out[resp.Transaction.Id] = transactionReferenceFromProto(meta, resp.Transaction)
+		out[resp.Transaction.Id] = TransactionReferenceFromProto(meta, resp.Transaction)
 	}
 	return out, nil
 }
 
-func transactionReferenceFromProto(meta *resourcekit.LoadMeta, d *pb.TransactionInfo) *apiresource.TransactionDetail {
+// TransactionReferenceFromProto builds the TransactionDetail a transaction include carries, stashing its
+// customer and responsible user as ids for their own includes.
+func TransactionReferenceFromProto(meta *resourcekit.LoadMeta, d *pb.TransactionInfo) *apiresource.TransactionDetail {
 	tx := &apiresource.TransactionDetail{
 		ID:               d.Id,
 		Object:           constants.ObjectTypeTransaction,

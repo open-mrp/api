@@ -2,7 +2,6 @@ package service
 
 import (
 	"context"
-	"slices"
 	"time"
 
 	"github.com/open-mrp/api/services/core-service/internal/domain"
@@ -47,9 +46,11 @@ func (s *analyticsSvcImpl) buildDemandForecast(ctx context.Context, params domai
 
 	repo := s.reports().NewAnalyticsRepo()
 	window := domain.GetDemandForecastWindowParams{
-		AccountID: params.AccountID,
-		StartDate: historyStart,
-		EndDate:   nextMonthStart,
+		AccountID:      params.AccountID,
+		StartDate:      historyStart,
+		EndDate:        nextMonthStart,
+		ProductLineIDs: params.ProductLineIDs,
+		ItemIDs:        params.ItemIDs,
 	}
 
 	// Fetch monthly demand data (order-based).
@@ -106,23 +107,6 @@ func (s *analyticsSvcImpl) buildDemandForecast(ctx context.Context, params domai
 	itemsMap := make(map[string]*itemAccumulator)
 	var itemOrder []string
 	for _, row := range demandRows {
-		// Apply filters (sqlc doesn't support optional IN clauses).
-		if len(params.ProductLineIDs) > 0 {
-			if row.ProductLineID == nil {
-				continue
-			}
-			found := slices.Contains(params.ProductLineIDs, *row.ProductLineID)
-			if !found {
-				continue
-			}
-		}
-		if len(params.ItemIDs) > 0 {
-			found := slices.Contains(params.ItemIDs, row.ItemID)
-			if !found {
-				continue
-			}
-		}
-
 		acc, ok := itemsMap[row.ItemID]
 		if !ok {
 			acc = &itemAccumulator{
@@ -319,6 +303,8 @@ func (s *analyticsSvcImpl) buildDemandForecast(ctx context.Context, params domai
 }
 
 // seasonalEMAForecast adapts the shared forecaster (internal/forecast) to the analytics row shape. The algorithm itself lives there because the production scheduler forecasts the same demand and the two must not drift apart.
+//
+// An item first ordered this month has no complete month to learn from; it still gets its months at zero, as the dashboard drew them, because a chart with no forecast points is hidden.
 func seasonalEMAForecast(
 	completeMonths []forecastMonth,
 	numForecastMonths int,
@@ -326,6 +312,13 @@ func seasonalEMAForecast(
 	zScore float64,
 	valueExtractor func(forecastMonth) float64,
 ) []domain.DemandForecastPoint {
+	if len(completeMonths) == 0 {
+		out := make([]domain.DemandForecastPoint, numForecastMonths)
+		for i := range out {
+			out[i] = domain.DemandForecastPoint{Date: time.Date(baseForecastStart.Year(), baseForecastStart.Month()+time.Month(i+2), 1, 0, 0, 0, 0, time.UTC)}
+		}
+		return out
+	}
 	observations := make([]forecast.Observation, len(completeMonths))
 	for i, cm := range completeMonths {
 		observations[i] = forecast.Observation{

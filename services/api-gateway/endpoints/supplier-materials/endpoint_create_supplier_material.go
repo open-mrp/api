@@ -18,12 +18,12 @@ type CreateSupplierMaterialRequest struct {
 	SupplierID string `path:"supplier_id" validate:"required"`
 	// ID of the material the supplier provides.
 	//
-	// A material can be linked to a given supplier at most once; creating a duplicate link fails with a conflict error.
+	// The material must be one of your account's. A material can be linked to a given supplier at most once; creating a duplicate link fails with a conflict error.
 	MaterialID string `json:"material_id" validate:"required"`
 	// The part number the supplier uses for this material in their own catalog.
 	SupplierPartNumber string `json:"supplier_part_number" validate:"required,max=255"`
-	// The supplier's own description of this material.
-	SupplierDescription field.Optional[string] `json:"supplier_description,omitzero" validate:"omitempty,max=255"`
+	// The supplier's own description of this material, up to 65,535 characters.
+	SupplierDescription field.Optional[string] `json:"supplier_description,omitzero" validate:"omitempty,max=65535"`
 	// Whether this supplier is currently one you would source the material from.
 	//
 	// Links are created active unless this is explicitly set to `false`.
@@ -43,6 +43,8 @@ func (*CreateSupplierMaterialRequest) SchemaExample() any {
 }
 
 // Links a material to a supplier, recording the supplier's part number and description for it.
+//
+// Returns a not-found error when the supplier is not one of your account's suppliers or the material is not one of your account's materials.
 type CreateSupplierMaterialEndpoint struct{}
 
 func (e *CreateSupplierMaterialEndpoint) Materialize() *apiendpoint.APIEndpoint[*CreateSupplierMaterialRequest, *apiresource.SupplierMaterial] {

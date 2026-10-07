@@ -129,8 +129,8 @@ func receivingOrderLineToProto(l *domain.ReceivingOrderLine) *pb.ReceivingOrderL
 		info.OrderLineProductId = l.OrderLineProductID
 	}
 	info.OrderLineItemNumber = l.OrderLineItemNumber
-	if l.OrderLineItemID != nil {
-		info.OrderLineItemId = l.OrderLineItemID
+	if itemID := l.ReceivedItemID(); itemID != nil {
+		info.OrderLineItemId = itemID
 	}
 	if l.OrderLineItemSKU != nil {
 		info.OrderLineItemSku = l.OrderLineItemSKU

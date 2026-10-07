@@ -349,7 +349,7 @@ func (s *orderDiscountSvcImpl) DeleteOrderDiscount(ctx context.Context, orderDis
 	})
 	if apiErr != nil {
 		if apierror.IsNotFound(apiErr) {
-			wasDeleted, deletedCheckErr := s.repos.NewDeletedRecordRepo().Exists(ctx, constants.DeletedRecordResourceTypeOrderDiscount, orderDiscountID)
+			wasDeleted, deletedCheckErr := s.repos.NewDeletedRecordRepo().ExistsInAccount(ctx, constants.DeletedRecordResourceTypeOrderDiscount, orderDiscountID, identity.Target.AccountID)
 			if deletedCheckErr != nil {
 				return nil, tracing.Trace(span, deletedCheckErr)
 			}
@@ -362,7 +362,7 @@ func (s *orderDiscountSvcImpl) DeleteOrderDiscount(ctx context.Context, orderDis
 
 	var result *domain.OrderDiscount
 	apiErr = s.withTx(ctx, func(txCtx context.Context, txSvc *orderDiscountSvcImpl) *apierror.APIError {
-		if apiErr := txSvc.repos.NewDeletedRecordRepo().Create(txCtx, constants.DeletedRecordResourceTypeOrderDiscount, orderDiscount.ID, orderDiscount); apiErr != nil {
+		if apiErr := txSvc.repos.NewDeletedRecordRepo().CreateInAccount(txCtx, constants.DeletedRecordResourceTypeOrderDiscount, orderDiscount.ID, identity.Target.AccountID, orderDiscount); apiErr != nil {
 			return apiErr
 		}
 

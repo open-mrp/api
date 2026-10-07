@@ -344,7 +344,7 @@ func (r *settlementRepoImpl) UpdateTransactionsFullyAllocated(ctx context.Contex
 	return nil
 }
 
-func (r *settlementRepoImpl) UpdateInvoicePaymentStatus(ctx context.Context, accountID, invoiceID string, isPaidInFull, isOverPaid bool) *apierror.APIError {
+func (r *settlementRepoImpl) UpdateInvoicePaymentStatus(ctx context.Context, accountID, invoiceID string, isPaidInFull, isOverPaid, clearMark bool) *apierror.APIError {
 	ctx, span := settlementRepoTracer.Start(ctx, "repository.settlement.update_invoice_payment_status")
 	defer span.End()
 
@@ -353,6 +353,7 @@ func (r *settlementRepoImpl) UpdateInvoicePaymentStatus(ctx context.Context, acc
 		ID:           invoiceID,
 		IsPaidInFull: isPaidInFull,
 		IsOverPaid:   isOverPaid,
+		ClearMark:    clearMark,
 	})
 	if apiErr := db.MapSQLError(err); apiErr != nil {
 		return tracing.Trace(span, apiErr)
@@ -361,7 +362,7 @@ func (r *settlementRepoImpl) UpdateInvoicePaymentStatus(ctx context.Context, acc
 }
 
 // GetInvoicePaymentTotals returns each invoice's invoiced total and the sum of its allocations, from which its payment flags are decided.
-func (r *settlementRepoImpl) GetInvoicePaymentTotals(ctx context.Context, accountID string, invoiceIDs []string) ([]domain.PaymentTotals, *apierror.APIError) {
+func (r *settlementRepoImpl) GetInvoicePaymentTotals(ctx context.Context, accountID string, invoiceIDs []string) ([]domain.InvoicePaymentTotals, *apierror.APIError) {
 	ctx, span := settlementRepoTracer.Start(ctx, "repository.settlement.get_invoice_payment_totals")
 	defer span.End()
 
@@ -374,9 +375,14 @@ func (r *settlementRepoImpl) GetInvoicePaymentTotals(ctx context.Context, accoun
 		return nil, tracing.Trace(span, apiErr)
 	}
 
-	totals := make([]domain.PaymentTotals, len(rows))
+	totals := make([]domain.InvoicePaymentTotals, len(rows))
 	for i, row := range rows {
-		totals[i] = domain.PaymentTotals{ID: row.InvoiceID, Total: decimalOrZero(row.InvoicedTotal), Allocated: decimalOrZero(row.AllocatedTotal)}
+		totals[i] = domain.InvoicePaymentTotals{
+			PaymentTotals: domain.PaymentTotals{ID: row.InvoiceID, Total: decimalOrZero(row.InvoicedTotal), Allocated: decimalOrZero(row.AllocatedTotal)},
+			Number:        row.Number,
+			IsPaidInFull:  row.IsPaidInFull,
+			MarkedByID:    db.StringFromNullString(row.PaidInFullMarkedByID),
+		}
 	}
 	return totals, nil
 }

@@ -18,6 +18,8 @@ type RetrieveShipmentRequest struct {
 }
 
 // Returns a shipment by ID.
+//
+// A customer or supplier portal retrieves only a shipment on an order its own account placed; any other shipment is reported as not found.
 type RetrieveShipmentEndpoint struct{}
 
 func (e *RetrieveShipmentEndpoint) Materialize() *apiendpoint.APIEndpoint[*RetrieveShipmentRequest, *apiresource.Shipment] {

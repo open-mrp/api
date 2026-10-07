@@ -285,6 +285,20 @@ func (r *notificationRepoImpl) ResolveUserID(ctx context.Context, accountUserID 
 	return userID, nil
 }
 
+func (r *notificationRepoImpl) ResolveUserIDInAccount(ctx context.Context, accountUserID, accountID string) (string, *apierror.APIError) {
+	ctx, span := notificationRepoTracer.Start(ctx, "repository.notification.resolve_user_id_in_account")
+	defer span.End()
+
+	userID, err := r.db.GetUserIDByAccountUserIDInAccount(ctx, sqlc.GetUserIDByAccountUserIDInAccountParams{ID: accountUserID, AccountID: accountID})
+	if apiErr := db.MapSQLError(err); apiErr != nil {
+		if apiErr.Code == apierror.ErrorCodeResourceNotFound {
+			return "", apiErr
+		}
+		return "", tracing.Trace(span, apiErr)
+	}
+	return userID, nil
+}
+
 func (r *notificationRepoImpl) ResolveRecipientContact(ctx context.Context, accountUserID string) (*domain.RecipientContact, *apierror.APIError) {
 	ctx, span := notificationRepoTracer.Start(ctx, "repository.notification.resolve_recipient_contact")
 	defer span.End()

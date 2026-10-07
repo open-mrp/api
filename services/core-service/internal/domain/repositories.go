@@ -41,11 +41,19 @@ type AccountRepo interface {
 	GetByIDs(ctx context.Context, ids []string) ([]*Account, *apierror.APIError)
 	GetBySlug(ctx context.Context, slug string) (*PublicAccountBySlug, *apierror.APIError)
 	UpdateName(ctx context.Context, accountID, name string) *apierror.APIError
-	UpdateBranding(ctx context.Context, accountID string, params UpdateAccountParams) *apierror.APIError
+	// UpdateBranding writes the account's branding fields as given; a nil field is stored as NULL. An account without a branding row gets one.
+	UpdateBranding(ctx context.Context, accountID string, branding AccountBranding) *apierror.APIError
+	// UpdatePortalSlug sets the account's portal slug, creating the portal when the account has none.
 	UpdatePortalSlug(ctx context.Context, accountID, slug string) *apierror.APIError
+	// SetDefaultAddresses points the account's default billing and/or shipping address at addresses it holds; nil leaves one as it is.
+	SetDefaultAddresses(ctx context.Context, accountID string, billingAddressID, shippingAddressID *string) *apierror.APIError
+	// HasAddress reports whether the address is linked to the account.
+	HasAddress(ctx context.Context, accountID, addressID string) (bool, *apierror.APIError)
 	ExistsPortalSlug(ctx context.Context, slug, excludeAccountID string) (bool, *apierror.APIError)
+	// UpdateBrandingLogoURL points the account's branding at an uploaded logo, creating the branding row when the account has none.
 	UpdateBrandingLogoURL(ctx context.Context, accountID, logoURL string) *apierror.APIError
 	GetBrandingLogoKey(ctx context.Context, accountID string) (*string, *apierror.APIError)
+	// UpdateBrandingFaviconURL points the account's branding at an uploaded favicon, creating the branding row when the account has none.
 	UpdateBrandingFaviconURL(ctx context.Context, accountID, faviconURL string) *apierror.APIError
 	GetBrandingFaviconKey(ctx context.Context, accountID string) (*string, *apierror.APIError)
 	ListPlanLimits(ctx context.Context, accountPlanID string) (map[string]*int32, *apierror.APIError)
@@ -75,7 +83,6 @@ type AccountUserRepo interface {
 	UpdateStatus(ctx context.Context, accountUserID string, status constants.AccountUserStatus) *apierror.APIError
 	CountByRoleID(ctx context.Context, accountID, roleID string) (int64, *apierror.APIError)
 	RevokeRefreshTokensByUserID(ctx context.Context, userID string) *apierror.APIError
-	FindFirstAccountIDByUserID(ctx context.Context, userID string) (string, *apierror.APIError)
 	FindTenancyAccountsByUserID(ctx context.Context, userID string) ([]TenancyAccount, *apierror.APIError)
 	MarkUsedByAccountAndUser(ctx context.Context, accountID, userID string) *apierror.APIError
 	GetByIDs(ctx context.Context, accountID string, ids []string) ([]*AccountUserDetail, *apierror.APIError)
@@ -118,6 +125,8 @@ type AccountRelationRepo interface {
 	CreateNotificationPreference(ctx context.Context, id, accountRelationID, recipientAccountUserID string, notificationTypeCode string) *apierror.APIError
 	ListNotificationPreferences(ctx context.Context, accountRelationID, recipientAccountUserID string) ([]NotificationPreference, *apierror.APIError)
 	ListNotificationRecipients(ctx context.Context, accountRelationID string) ([]NotificationRecipientRef, *apierror.APIError)
+	// ListNotificationTypesForRecipients returns, keyed by account user ID, the notification types the owner sends each of the given counterparty account users. Users with none are absent from the map.
+	ListNotificationTypesForRecipients(ctx context.Context, ownerAccountID, counterpartyAccountID string, recipientAccountUserIDs []string) (map[string][]string, *apierror.APIError)
 	DeleteNotificationPreference(ctx context.Context, accountRelationID, recipientAccountUserID, notificationTypeCode string) *apierror.APIError
 	DeleteNotificationPreferencesByTypes(ctx context.Context, accountRelationID string, notificationTypeCodes []string) *apierror.APIError
 	ListChildAccounts(ctx context.Context, params ListChildAccountsParams) (*ListChildAccountsResult, *apierror.APIError)
@@ -172,7 +181,12 @@ type ItemRepo interface {
 	UpdateUnitCost(ctx context.Context, accountID, itemID string, cost decimal.Decimal, denominatorUnitID string) *apierror.APIError
 	// GetStockingUnit resolves the unit an item is counted in, via its category's unit group, and that group. It is the only denominator the item's unit cost may carry, whatever unit the production step producing it is written in.
 	GetStockingUnit(ctx context.Context, accountID, itemID string) (*ItemStockingUnit, *apierror.APIError)
-	GetTrends(ctx context.Context, accountID, itemID, trendType string) (*ItemTrends, *apierror.APIError)
+	// GetInventoryLevelBefore is the last level logged for the item strictly before `before`, or nil when nothing was logged earlier.
+	GetInventoryLevelBefore(ctx context.Context, accountID, itemID string, before time.Time) (*InventoryLevel, *apierror.APIError)
+	// ListDailyClosingInventoryLevels is each UTC day's last logged level in [from, to), oldest first.
+	ListDailyClosingInventoryLevels(ctx context.Context, accountID, itemID string, from, to time.Time) ([]InventoryLevel, *apierror.APIError)
+	// GetProductLineIDs maps each of the given items that sells under a product line to that line.
+	GetProductLineIDs(ctx context.Context, accountID string, itemIDs []string) (map[string]string, *apierror.APIError)
 	ExportWithInventory(ctx context.Context, accountID string) (*ExportItemsResult, *apierror.APIError)
 	Update(ctx context.Context, params UpdateItemParams) *apierror.APIError
 	CheckSKUExists(ctx context.Context, accountID, sku, excludeID string) (bool, *apierror.APIError)
@@ -332,8 +346,13 @@ type AccountGroupRepo interface {
 }
 
 type DeletedRecordRepo interface {
+	// Create and Exists ignore the tenant: use them only for records every account can see, such as product types.
 	Create(ctx context.Context, resourceType constants.DeletedRecordResourceType, resourceID string, data any) *apierror.APIError
 	Exists(ctx context.Context, resourceType constants.DeletedRecordResourceType, resourceID string) (bool, *apierror.APIError)
+	// CreateInAccount records a snapshot that names its owning account, so only that account is told the record was deleted.
+	CreateInAccount(ctx context.Context, resourceType constants.DeletedRecordResourceType, resourceID, accountID string, data any) *apierror.APIError
+	// ExistsInAccount matches only a record whose snapshot names its owner as account_id, so another tenant cannot learn the id existed.
+	ExistsInAccount(ctx context.Context, resourceType constants.DeletedRecordResourceType, resourceID, accountID string) (bool, *apierror.APIError)
 }
 
 type AccountGroupProductLineAccessRepo interface {
@@ -342,7 +361,8 @@ type AccountGroupProductLineAccessRepo interface {
 	Create(ctx context.Context, params CreateAccountGroupProductLineAccessParams) (*AccountGroupProductLineAccess, *apierror.APIError)
 	Update(ctx context.Context, params UpdateAccountGroupProductLineAccessParams) (*AccountGroupProductLineAccess, *apierror.APIError)
 	Delete(ctx context.Context, accountID, accountGroupID string) *apierror.APIError
-	ExistsByAccountGroupID(ctx context.Context, accountGroupID string) (bool, *apierror.APIError)
+	// ExistsByAccountGroupID reports whether the account's own group has product line access; another account's group never does.
+	ExistsByAccountGroupID(ctx context.Context, accountID, accountGroupID string) (bool, *apierror.APIError)
 }
 
 type CustomerProductLineAccessRepo interface {
@@ -568,6 +588,10 @@ type BatchRepo interface {
 	Close(ctx context.Context, accountID, batchID string) (*BaseBatch, *apierror.APIError)
 	CloseIfLastStep(ctx context.Context, accountID, batchID, productionStepID string) *apierror.APIError
 	CloseIfFullyUsed(ctx context.Context, accountID string, batch BaseBatch, producedUnit LightUnit, productionStepID string) *apierror.APIError
+	// RemainingToSplit is a batch's expected output at a step less what has already been split off it — firsts, seconds and waste — both in producedUnit. It is a validation error for producedUnit not to be the step's production unit.
+	RemainingToSplit(ctx context.Context, accountID string, batch BaseBatch, producedUnit LightUnit, productionStepID string) (decimal.Decimal, *apierror.APIError)
+	// CountScannedSince counts the batches the account has scanned since the given time.
+	CountScannedSince(ctx context.Context, accountID string, since time.Time) (int64, *apierror.APIError)
 	Delete(ctx context.Context, accountID, batchID string) (*BaseBatch, *apierror.APIError)
 	DeleteMany(ctx context.Context, accountID string, batchIDs []string) *apierror.APIError
 	// CountDownstreamBatches reports how many batches were fed by this one. A batch something downstream still feeds on cannot be undone.
@@ -653,10 +677,14 @@ type UnitQueryRepo interface {
 // InventoryQueryRepo provides read-only access to inventory data.
 type InventoryQueryRepo interface {
 	FetchCurrentInventory(ctx context.Context, itemID, ownerAccountID string) (*InventorySnapshot, *apierror.APIError)
+	// ListAvailableReceiptUnitIDs returns the distinct units the item's available receipts are recorded in.
+	ListAvailableReceiptUnitIDs(ctx context.Context, itemID, ownerAccountID string) ([]string, *apierror.APIError)
 	FetchOnHandInventoryBulk(ctx context.Context, itemIDs []string, ownerAccountID string) ([]*BulkOnHandInventory, *apierror.APIError)
 	FetchPhysicalInventory(ctx context.Context, itemID, ownerAccountID, unitID string) (decimal.Decimal, *apierror.APIError)
 	// FetchPhysicalInventoryBaseForItems returns each item's physical inventory in base units, so the batch-scan audit trail can level many items with one query instead of one per item.
 	FetchPhysicalInventoryBaseForItems(ctx context.Context, accountID string, itemIDs []string) (map[string]decimal.Decimal, *apierror.APIError)
+	// FetchInventoryLevelsAsOf is each item's last logged level at or before asOf, in its category base unit; zero for an item with none.
+	FetchInventoryLevelsAsOf(ctx context.Context, itemIDs []string, accountID string, asOf time.Time) ([]*BulkOnHandInventory, *apierror.APIError)
 }
 
 type ProductLineRepo interface {
@@ -866,6 +894,9 @@ type CustomerRepo interface {
 	ExistsByNumber(ctx context.Context, ownerAccountID, number string, excludeID *string) (bool, *apierror.APIError)
 	// AllocateNextCustomerNumber reserves the account's next customer number in one locked statement, so two registrations landing together cannot be handed the same one.
 	AllocateNextCustomerNumber(ctx context.Context, sysPropertyID, accountID string) (int64, *apierror.APIError)
+	// LockNumbers holds the owner's account row until the transaction ends so customer number writers
+	// queue. Call it before the transaction's first read, or the number checks after it read an older snapshot.
+	LockNumbers(ctx context.Context, ownerAccountID string) *apierror.APIError
 	InsertPriceGroup(ctx context.Context, id, relationID, groupID string) *apierror.APIError
 	DeletePriceGroups(ctx context.Context, relationID string) *apierror.APIError
 	GetFrequentlyOrderedProducts(ctx context.Context, ownerAccountID, customerAccountID string) ([]*FrequentlyOrderedProduct, *apierror.APIError)
@@ -894,6 +925,8 @@ type CustomerRepo interface {
 	InsertAccountAddress(ctx context.Context, id, accountID, addressID string) *apierror.APIError
 	DeleteAccountAddresses(ctx context.Context, accountID string) *apierror.APIError
 	GetAccountUsers(ctx context.Context, accountID string) ([]AccountUserRef, *apierror.APIError)
+	// ListContacts returns the people who sign in to each of the given customer accounts.
+	ListContacts(ctx context.Context, customerAccountIDs []string) ([]CustomerContact, *apierror.APIError)
 	MoveAccountUsers(ctx context.Context, targetAccountID string, ids []string) *apierror.APIError
 	DeleteAccountUsers(ctx context.Context, accountID string) *apierror.APIError
 	GetStripeCustomerID(ctx context.Context, ownerAccountID, customerAccountID string) (stripeCustomerID *string, stripeEmail *string, err *apierror.APIError)
@@ -990,11 +1023,23 @@ type SalesReportRepo interface {
 type AnalyticsRepo interface {
 	GetSalesEntries(ctx context.Context, params AnalyzeSalesParams) ([]SalesEntry, *apierror.APIError)
 	GetOpenBatchEntries(ctx context.Context, params AnalyzeOpenBatchesParams) ([]OpenBatchEntry, *apierror.APIError)
-	GetProductionCostEntries(ctx context.Context, params AnalyzeProductionCostsParams) ([]ProductionCostEntry, *apierror.APIError)
+	// GetProductionCostRows totals the batches scanned at a production step in the window, per step, department and item category.
+	GetProductionCostRows(ctx context.Context, params AnalyzeProductionCostsParams) ([]ProductionCostRow, *apierror.APIError)
+	// GetProductionCostSteps loads the account's steps among stepIDs for costing, keyed by id; a step with no production is left out.
+	GetProductionCostSteps(ctx context.Context, accountID string, stepIDs []string) (map[string]ProductionCostStep, *apierror.APIError)
+	// GetBaseUnitIDsByDimension maps each unit dimension to its platform base unit.
+	GetBaseUnitIDsByDimension(ctx context.Context) (map[string]string, *apierror.APIError)
 	GetDeliveryAnalytics(ctx context.Context, params AnalyzeDeliveriesParams) (*DeliveryAnalyticsResult, *apierror.APIError)
 	GetManufacturingMetric(ctx context.Context, params AnalyzeManufacturingParams) (float64, *apierror.APIError)
 	GetManufacturingBatch(ctx context.Context, params AnalyzeManufacturingBatchParams) (*ManufacturingBatchResult, *apierror.APIError)
 	GetOrderEntries(ctx context.Context, params AnalyzeOrdersParams) ([]OrderEntry, *apierror.APIError)
+	// GetOpenOrderLineEntries reads the open sale lines as order entries, oldest order first, at most limit of them.
+	GetOpenOrderLineEntries(ctx context.Context, filter OpenOrderFilter, limit int) ([]OrderEntry, *apierror.APIError)
+	GetOpenOrdersSummary(ctx context.Context, filter OpenOrderFilter) (*OpenOrdersSummary, *apierror.APIError)
+	GetOpenOrderProducts(ctx context.Context, params AnalyzeOpenOrderProductsParams) (*OpenOrderProductPage, *apierror.APIError)
+	ListOpenOrders(ctx context.Context, params ListOpenOrdersParams) (*OpenOrderPage, *apierror.APIError)
+	// GetOpenOrderLines returns one sales order's sale lines; found is false when the account has no such sales order, or salesRepID is set and the order is not theirs.
+	GetOpenOrderLines(ctx context.Context, accountID, orderID string, salesRepID *string) (lines []OpenOrderLine, found bool, apiErr *apierror.APIError)
 	GetQuarterlyOrders(ctx context.Context, params AnalyzeQuarterlyOrdersParams) ([]YearlyQuarterlyData, *apierror.APIError)
 	GetMaterialAnalytics(ctx context.Context, params AnalyzeMaterialsParams) ([]MaterialAnalyticsEntry, *apierror.APIError)
 	GetInventoryReceiptAnalytics(ctx context.Context, params AnalyzeInventoryReceiptsParams) ([]InventoryReceiptEntry, *apierror.APIError)
@@ -1008,6 +1053,8 @@ type AnalyticsRepo interface {
 	GetSaleProductItemIDs(ctx context.Context, accountID string) ([]SaleProductItemRow, *apierror.APIError)
 	GetProductLineInfo(ctx context.Context, accountID string, productLineIDs []string) ([]ProductLineInfoRow, *apierror.APIError)
 	GetOrderQuantitiesByProductLines(ctx context.Context, params GetOrderQuantitiesByProductLinesParams) ([]OrderQuantityByProductLineRow, *apierror.APIError)
+	// GetWeeksOfSalesOnHand returns each item's available stock, deleted items included.
+	GetWeeksOfSalesOnHand(ctx context.Context, accountID string, itemIDs []string) ([]ItemOnHandRow, *apierror.APIError)
 }
 
 // MachineStatusRepo reads the raw pieces the floor-status view is assembled from.
@@ -1026,6 +1073,8 @@ type MachineRepo interface {
 	Export(ctx context.Context, params ExportMachinesParams) ([]*Machine, *apierror.APIError)
 	Get(ctx context.Context, params GetMachineParams) (*Machine, *apierror.APIError)
 	GetByIDs(ctx context.Context, accountID string, ids []string) ([]*Machine, *apierror.APIError)
+	// SetProductionStep assigns the machines to a production step, or unassigns them when productionStepID is nil.
+	SetProductionStep(ctx context.Context, accountID string, ids []string, productionStepID *string) *apierror.APIError
 	Create(ctx context.Context, id string, params CreateMachineParams) (*Machine, *apierror.APIError)
 	Update(ctx context.Context, params UpdateMachineParams) (*Machine, *apierror.APIError)
 	Delete(ctx context.Context, params DeleteMachineParams) *apierror.APIError
@@ -1307,6 +1356,8 @@ type OrderDiscountRepo interface {
 type VolumeDiscountRepo interface {
 	List(ctx context.Context, params ListVolumeDiscountsParams) (*ListVolumeDiscountsResult, *apierror.APIError)
 	Get(ctx context.Context, params GetVolumeDiscountParams) (*VolumeDiscount, *apierror.APIError)
+	// AppliesToCustomer reports whether the discount is one the customer's own listing carries: offered to every customer, or to a group the customer is in.
+	AppliesToCustomer(ctx context.Context, accountID, customerAccountID, volumeDiscountID string) (bool, *apierror.APIError)
 	Create(ctx context.Context, id string, params CreateVolumeDiscountParams) (*VolumeDiscount, *apierror.APIError)
 	Update(ctx context.Context, params UpdateVolumeDiscountParams) (*VolumeDiscount, *apierror.APIError)
 	Delete(ctx context.Context, params DeleteVolumeDiscountParams) *apierror.APIError
@@ -1558,7 +1609,7 @@ type InvoiceRepo interface {
 	Update(ctx context.Context, params UpdateInvoiceParams) (*Invoice, *apierror.APIError)
 	ListByCustomer(ctx context.Context, params ListCustomerInvoicesParams) (*ListCustomerInvoicesResult, *apierror.APIError)
 	IsDuplicateNumber(ctx context.Context, accountID, number string) (bool, *apierror.APIError)
-	GetEmailRecipients(ctx context.Context, invoiceID string) ([]string, *apierror.APIError)
+	GetEmailRecipients(ctx context.Context, accountID, invoiceID string) ([]string, *apierror.APIError)
 	MarkEmailSent(ctx context.Context, accountID, invoiceID string) *apierror.APIError
 	DeleteLinesByInvoice(ctx context.Context, invoiceID string) *apierror.APIError
 	Delete(ctx context.Context, accountID, invoiceID string) *apierror.APIError
@@ -1597,13 +1648,22 @@ type PickRepo interface {
 	// into one query per pick.
 	GetShipmentIDsForPicks(ctx context.Context, accountID string, pickIDs []string) (map[string][]string, *apierror.APIError)
 	IsInAccount(ctx context.Context, accountID, pickID string) (bool, *apierror.APIError)
+	// Lock holds the pick's row for the rest of the transaction and reports whether it is finished.
+	Lock(ctx context.Context, accountID, pickID string) (finished bool, apiErr *apierror.APIError)
 	FindLinesToPack(ctx context.Context, pickID string) ([]*PickLine, *apierror.APIError)
-	PackLines(ctx context.Context, pickID string) *apierror.APIError
+	// LockLinesToPack is FindLinesToPack read current and held until the transaction ends.
+	LockLinesToPack(ctx context.Context, pickID string) ([]*PickLineToPack, *apierror.APIError)
+	// PackLines stamps the open lines among pickLineIDs packed and returns how many it stamped.
+	PackLines(ctx context.Context, pickLineIDs []string) (int64, *apierror.APIError)
 	MarkFinishedIfAllPacked(ctx context.Context, pickID string) *apierror.APIError
 	// CloseOpenPickLines packs every still-open pick line (used when the order is closed).
 	CloseOpenPickLines(ctx context.Context, pickID string) *apierror.APIError
-	// ReopenIncompletePickLines reopens pick lines whose picked quantity is below the ordered quantity (used when a fulfilled order is reopened).
-	ReopenIncompletePickLines(ctx context.Context, pickID string) *apierror.APIError
+	// ListPackedLines returns the pick's packed lines, earliest pack first.
+	ListPackedLines(ctx context.Context, pickID string) ([]*PackedPickLine, *apierror.APIError)
+	// CountShipmentLinesByOrderLine counts the shipment lines the pick's order has, keyed by order line.
+	CountShipmentLinesByOrderLine(ctx context.Context, pickID string) (map[string]int64, *apierror.APIError)
+	// ReopenLines unpacks the given lines.
+	ReopenLines(ctx context.Context, pickLineIDs []string) *apierror.APIError
 	CountLines(ctx context.Context, pickID string) (int64, *apierror.APIError)
 	CountShipmentsByOrder(ctx context.Context, salesOrderID string) (int64, *apierror.APIError)
 	GetSalesOrderForPick(ctx context.Context, accountID, pickID string) (*PickSalesOrder, *apierror.APIError)
@@ -1619,6 +1679,8 @@ type PickLineRepo interface {
 	// UpdateQuantity writes the line's picked quantity; a nil value or unit leaves that half unchanged.
 	UpdateQuantity(ctx context.Context, pickLineID string, quantityValue, quantityUnitID *string) *apierror.APIError
 	PickRemainingQuantity(ctx context.Context, pickLineID string) *apierror.APIError
+	// LockUnpacked holds an open line for the rest of the transaction; false means it is packed.
+	LockUnpacked(ctx context.Context, pickLineID string) (bool, *apierror.APIError)
 	VoidLine(ctx context.Context, pickLineID string) *apierror.APIError
 	IsInPick(ctx context.Context, pickLineID, pickID string) (bool, *apierror.APIError)
 	CreateForRemaining(ctx context.Context, id, quantityID, pickID, orderLineID string) *apierror.APIError
@@ -1646,11 +1708,15 @@ type ProductTypeRepo interface {
 type QuantityRepo interface {
 	Get(ctx context.Context, id string) (*Quantity, *apierror.APIError)
 	Update(ctx context.Context, params UpdateQuantityParams) (*Quantity, *apierror.APIError)
+	// OwnerTypes lists the kinds of resource in the account the quantity belongs to; none when the account holds no such quantity.
+	OwnerTypes(ctx context.Context, accountID, id string) ([]constants.ObjectType, *apierror.APIError)
 }
 
 type RateRepo interface {
 	Get(ctx context.Context, id string) (*Rate, *apierror.APIError)
 	Update(ctx context.Context, params UpdateRateParams) (*Rate, *apierror.APIError)
+	// OwnerTypes lists the kinds of resource in the account the rate belongs to; none when the account holds no such rate.
+	OwnerTypes(ctx context.Context, accountID, id string) ([]constants.ObjectType, *apierror.APIError)
 }
 
 type SettlementRepo interface {
@@ -1673,8 +1739,9 @@ type SettlementRepo interface {
 	// MarkTransactionsCreatedBySettlement records that the settlement created these transactions inline.
 	MarkTransactionsCreatedBySettlement(ctx context.Context, accountID, settlementID string, transactionIDs []string) *apierror.APIError
 	UpdateTransactionsFullyAllocated(ctx context.Context, accountID string, transactionIDs []string, isFullyAllocated bool) *apierror.APIError
-	UpdateInvoicePaymentStatus(ctx context.Context, accountID, invoiceID string, isPaidInFull, isOverPaid bool) *apierror.APIError
-	GetInvoicePaymentTotals(ctx context.Context, accountID string, invoiceIDs []string) ([]PaymentTotals, *apierror.APIError)
+	// UpdateInvoicePaymentStatus writes recalculated payment flags; clearMark forgets who set the paid-in-full flag by hand.
+	UpdateInvoicePaymentStatus(ctx context.Context, accountID, invoiceID string, isPaidInFull, isOverPaid, clearMark bool) *apierror.APIError
+	GetInvoicePaymentTotals(ctx context.Context, accountID string, invoiceIDs []string) ([]InvoicePaymentTotals, *apierror.APIError)
 	GetTransactionAllocationTotals(ctx context.Context, accountID string, transactionIDs []string) ([]PaymentTotals, *apierror.APIError)
 	// LockPaymentFlagRows takes row locks on the account's given transactions, then invoices, each in id order, until the caller's transaction ends.
 	LockPaymentFlagRows(ctx context.Context, accountID string, transactionIDs, invoiceIDs []string) *apierror.APIError
@@ -1693,6 +1760,9 @@ type TransactionRepo interface {
 	FetchAndIncrementTransactionNumber(ctx context.Context, accountID string) (string, *apierror.APIError)
 	List(ctx context.Context, params ListTransactionsParams) (*ListTransactionsResult, *apierror.APIError)
 	Get(ctx context.Context, accountID, transactionID string) (*Transaction, *apierror.APIError)
+	// GetByIDs returns the account's transactions with the given ids, in no particular order; ids the
+	// account does not hold are left out.
+	GetByIDs(ctx context.Context, accountID string, transactionIDs []string) ([]*Transaction, *apierror.APIError)
 	GetAllocations(ctx context.Context, transactionID string) ([]*TransactionAllocation, *apierror.APIError)
 	Update(ctx context.Context, params UpdateTransactionParams) (*Transaction, *apierror.APIError)
 	ExistsByNumber(ctx context.Context, accountID, number string, excludeID *string) (bool, *apierror.APIError)
@@ -1737,6 +1807,10 @@ type EDIRepo interface {
 	ListEDIRuns(ctx context.Context, params ListEDIRunsParams) (*ListEDIRunsResult, *apierror.APIError)
 	GetEDIRun(ctx context.Context, accountID, ediRunID string) (*EDIRun, *apierror.APIError)
 	GetEDIRunsByIDs(ctx context.Context, accountID string, ids []string) ([]*EDIRun, *apierror.APIError)
+	// IsCustomerEdiEnabled reports whether the account trades documents with the customer over EDI.
+	IsCustomerEdiEnabled(ctx context.Context, accountID, customerID string) (bool, *apierror.APIError)
+	// EnqueueOutboundTransmission records a document owed to a trading partner; enqueueing the same subject twice is a no-op.
+	EnqueueOutboundTransmission(ctx context.Context, params EnqueueEdiTransmissionParams) *apierror.APIError
 }
 
 type RegistrationFlowRepo interface {
@@ -1771,7 +1845,9 @@ type ShipmentRepo interface {
 	// SyncShipToForOrder re-points every shipment on an order to the given ship-to address, independently of the carrier.
 	SyncShipToForOrder(ctx context.Context, accountID, salesOrderID, shippingAddressID string) *apierror.APIError
 	Delete(ctx context.Context, accountID, shipmentID string) *apierror.APIError
+	// MarkShipped stamps the shipment shipped, and conflicts when it already is.
 	MarkShipped(ctx context.Context, accountID, shipmentID, shippedByID string) *apierror.APIError
+	// MarkVoided returns a shipped shipment to packed, and conflicts when it is not shipped.
 	MarkVoided(ctx context.Context, accountID, shipmentID string) *apierror.APIError
 	FindInvoiceIDByShipment(ctx context.Context, accountID, shipmentID string) (*string, *apierror.APIError)
 	// LinkInvoice points the shipment at the invoice created for it, so void can find it later.
@@ -1861,10 +1937,14 @@ type SupplierRepo interface {
 	Update(ctx context.Context, params UpdateSupplierParams) (*Supplier, *apierror.APIError)
 	Delete(ctx context.Context, ownerAccountID, supplierAccountID string) (*Supplier, *apierror.APIError)
 	BulkDelete(ctx context.Context, ownerAccountID string, supplierAccountIDs []string) *apierror.APIError
+	// LockNumbers holds the owner's supplier numbers until the transaction ends. Take it before the transaction's first read, then check ExistsByNumber.
+	LockNumbers(ctx context.Context, ownerAccountID string) *apierror.APIError
 	ExistsByNumber(ctx context.Context, ownerAccountID, number string, excludeID *string) (bool, *apierror.APIError)
 	// FindByNames resolves supplier display names to supplier account IDs within the
 	// owner account (case-insensitive). Used by bulk upsert to attach existing suppliers.
 	FindByNames(ctx context.Context, ownerAccountID string, names []string) ([]*SupplierNameMatch, *apierror.APIError)
+	// GetByIDs reads the owner's suppliers among ids as the list shows them; an id that is not one is skipped.
+	GetByIDs(ctx context.Context, ownerAccountID string, ids []string) ([]*SupplierSummary, *apierror.APIError)
 }
 
 type SysPropertyRepo interface {
@@ -1874,8 +1954,8 @@ type SysPropertyRepo interface {
 	GetByTypeCode(ctx context.Context, accountID string, typeCode constants.SysPropertyTypeCode) (*SysProperty, *apierror.APIError)
 	Create(ctx context.Context, id, accountID string, typeCode constants.SysPropertyTypeCode, value int32) (*SysProperty, *apierror.APIError)
 	UpdateValue(ctx context.Context, accountID, id string, value int32) (*SysProperty, *apierror.APIError)
-	IncrementValue(ctx context.Context, accountID, id string) (*SysProperty, *apierror.APIError)
-	IsDuplicate(ctx context.Context, accountID string, typeCode constants.SysPropertyTypeCode, value string) (bool, *apierror.APIError)
+	// TakenNumbers returns the numbers among candidates that a record in typeCode's series already carries.
+	TakenNumbers(ctx context.Context, accountID string, typeCode constants.SysPropertyTypeCode, candidates []string) ([]string, *apierror.APIError)
 }
 
 type TerritoryRepo interface {

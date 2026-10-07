@@ -32,3 +32,12 @@ type PaymentTotals struct {
 	Total     string
 	Allocated string
 }
+
+// InvoicePaymentTotals are an invoice's payment totals with its current paid-in-full flag and who, if
+// anyone, set that flag by hand.
+type InvoicePaymentTotals struct {
+	PaymentTotals
+	Number       string
+	IsPaidInFull bool
+	MarkedByID   *string
+}

@@ -150,6 +150,11 @@ JOIN department d ON d.id = m.department_id
 WHERE m.id IN (sqlc.slice('ids'))
 AND m.account_id = sqlc.arg('account_id');
 
+-- name: SetMachinesProductionStep :exec
+UPDATE machine SET production_step_id = sqlc.narg('production_step_id'), updated_at = NOW(3)
+WHERE id IN (sqlc.slice('ids'))
+AND account_id = sqlc.arg('account_id');
+
 -- name: CountMachinesByName :one
 SELECT COUNT(*) FROM machine m
 WHERE m.name = ? AND m.account_id = ?

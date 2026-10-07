@@ -9,6 +9,7 @@ import (
 	"github.com/open-mrp/api/shared/constants"
 	"github.com/open-mrp/api/shared/db"
 	apierror "github.com/open-mrp/api/shared/errors"
+	"github.com/open-mrp/api/shared/field"
 	"github.com/open-mrp/api/shared/tracing"
 )
 
@@ -41,15 +42,11 @@ func (r *shippingCaseRepoImpl) Update(ctx context.Context, params domain.UpdateS
 	ctx, span := shippingCaseRepoTracer.Start(ctx, "repository.shipping_case.update")
 	defer span.End()
 
-	var trackingNumber sql.NullString
-	if params.TrackingNumber != nil {
-		trackingNumber = sql.NullString{String: *params.TrackingNumber, Valid: true}
-	}
-
 	_, err := r.queries.UpdateShippingCaseTrackingNumber(ctx, sqlc.UpdateShippingCaseTrackingNumberParams{
-		ID:             params.ShippingCaseID,
-		AccountID:      params.AccountID,
-		TrackingNumber: trackingNumber,
+		ID:                  params.ShippingCaseID,
+		AccountID:           params.AccountID,
+		TrackingNumber:      field.StringToNullString(params.TrackingNumber),
+		ClearTrackingNumber: params.TrackingNumber.IsClear(),
 	})
 	if err != nil {
 		return tracing.Trace(span, db.MapSQLError(err))

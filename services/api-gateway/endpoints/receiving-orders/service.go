@@ -14,7 +14,6 @@ import (
 	"github.com/open-mrp/api/shared/constants"
 	apierror "github.com/open-mrp/api/shared/errors"
 	pb "github.com/open-mrp/api/shared/proto/core"
-	"github.com/open-mrp/api/shared/ptrutil"
 	"github.com/open-mrp/api/shared/safeconv"
 	"github.com/open-mrp/api/shared/tracing"
 	"google.golang.org/grpc"
@@ -313,7 +312,7 @@ func receivingOrderSummaryFromProto(ctx context.Context, info *pb.ReceivingOrder
 		UpdatedAt:   grpcutil.TimestampToTime(info.UpdatedAt),
 	}
 
-	stashReceivingOrderFKs(ctx, info.Id, info.SupplierId, info.SupplierName, info.SupplierNumber, info.PurchaseOrderId, info.PurchaseOrderNumber, info.PurchaseOrderStatus, info.Totals, info.Deliveries)
+	stashReceivingOrderFKs(ctx, info.Id, info.SupplierId, info.PurchaseOrderId, info.PurchaseOrderNumber, info.PurchaseOrderStatus, info.Totals, info.Deliveries)
 
 	// Lines are populated on the summary only when the list includes them.
 	if len(info.Lines) > 0 {
@@ -349,7 +348,7 @@ func receivingOrderFromProto(ctx context.Context, info *pb.ReceivingOrderInfo, u
 		UpdatedAt:   grpcutil.TimestampToTime(info.UpdatedAt),
 	}
 
-	stashReceivingOrderFKs(ctx, info.Id, info.SupplierId, info.SupplierName, info.SupplierNumber, info.PurchaseOrderId, info.PurchaseOrderNumber, info.PurchaseOrderStatus, info.Totals, info.Deliveries)
+	stashReceivingOrderFKs(ctx, info.Id, info.SupplierId, info.PurchaseOrderId, info.PurchaseOrderNumber, info.PurchaseOrderStatus, info.Totals, info.Deliveries)
 
 	// Lines (expandable): stash the pre-built list plus each line's order_line
 	// reference so the include resolver can populate them on ?include=lines and
@@ -370,16 +369,11 @@ func receivingOrderFromProto(ctx context.Context, info *pb.ReceivingOrderInfo, u
 
 // stashReceivingOrderFKs stashes the sub-objects the include resolver reveals on request.
 //
-// The supplier is the seller account — cross-account, so not resolvable through the account-scoped loader — and totals and related are computed with the order rather than fetched, so all three are carried inline from what the query already returned. Never fabricate the referenced documents.
-func stashReceivingOrderFKs(ctx context.Context, id string, supplierID, supplierName, supplierNumber *string, purchaseOrderID, purchaseOrderNumber, purchaseOrderStatus string, totals *pb.ReceivingOrderTotalsInfo, deliveries []*pb.DocumentRefInfo) {
+// The supplier is loaded by id; totals and related are computed with the order rather than fetched, so they are carried inline from what the query already returned. Never fabricate the referenced documents.
+func stashReceivingOrderFKs(ctx context.Context, id string, supplierID *string, purchaseOrderID, purchaseOrderNumber, purchaseOrderStatus string, totals *pb.ReceivingOrderTotalsInfo, deliveries []*pb.DocumentRefInfo) {
 	meta := resourcekit.GetLoadMeta(ctx)
 	if supplierID != nil {
-		meta.Set(constants.ObjectTypeReceivingOrder, id, "supplier", &apiresource.Supplier{
-			ID:     *supplierID,
-			Object: constants.ObjectTypeSupplier,
-			Name:   ptrutil.Deref(supplierName),
-			Number: ptrutil.Deref(supplierNumber),
-		})
+		meta.Set(constants.ObjectTypeReceivingOrder, id, "supplier_id", *supplierID)
 	}
 	related := &apiresource.ReceivingOrderRelated{Object: constants.ObjectTypeReceivingOrderRelated}
 	if purchaseOrderID != "" {

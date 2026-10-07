@@ -17,8 +17,8 @@ import (
 // what the dashboard's reconcile importer reports back to the operator, so each of the three
 // outcome lists is exercised here rather than just the happy path.
 //
-// Every test reconciles items it created itself. Reconciling a seeded item would move a figure
-// other tests assert against.
+// Every test reconciles items it created itself — yarn, stocked by the pound, so rows name `lbs`.
+// Reconciling a seeded item would move a figure other tests assert against.
 
 const bulkReconcilePath = "/v1/catalog/items/actions/bulk-reconcile"
 
@@ -79,7 +79,7 @@ func TestBulkReconcileItems_ResponseShape(t *testing.T) {
 
 	sku, _ := newReconcilableItem(t)
 	resp := bulkReconcile(t, []map[string]any{
-		{"sku": sku, "unit": "ea", "quantity": "5"},
+		{"sku": sku, "unit": "lbs", "quantity": "5"},
 	}, "force")
 
 	assertObjectField(t, resp, "bulk_reconcile_items_response")
@@ -122,7 +122,7 @@ func TestBulkReconcileItems_ReconciledQuantitiesCarryAFullyResolvedUnit(t *testi
 
 	sku, _ := newReconcilableItem(t)
 	resp := bulkReconcile(t, []map[string]any{
-		{"sku": sku, "unit": "ea", "quantity": "5"},
+		{"sku": sku, "unit": "lbs", "quantity": "5"},
 	}, "force")
 
 	reconciled := jsonListData(resp, "reconciled_items")
@@ -144,12 +144,12 @@ func TestBulkReconcileItems_ForceSetsTheExactQuantity(t *testing.T) {
 
 	sku, itemID := newReconcilableItem(t)
 
-	bulkReconcile(t, []map[string]any{{"sku": sku, "unit": "ea", "quantity": "25"}}, "force")
+	bulkReconcile(t, []map[string]any{{"sku": sku, "unit": "lbs", "quantity": "25"}}, "force")
 	assertDecimalEqual(t, "25", onHandValue(t, itemID), "force sets the quantity to exactly what was sent")
 
 	// Forcing to the figure already on hand writes nothing, which is the property that makes a
 	// re-uploaded spreadsheet safe.
-	bulkReconcile(t, []map[string]any{{"sku": sku, "unit": "ea", "quantity": "25"}}, "force")
+	bulkReconcile(t, []map[string]any{{"sku": sku, "unit": "lbs", "quantity": "25"}}, "force")
 	assertDecimalEqual(t, "25", onHandValue(t, itemID), "forcing to the current figure is a no-op")
 }
 
@@ -158,10 +158,10 @@ func TestBulkReconcileItems_AdditionAddsToTheCurrentQuantity(t *testing.T) {
 
 	sku, itemID := newReconcilableItem(t)
 
-	bulkReconcile(t, []map[string]any{{"sku": sku, "unit": "ea", "quantity": "10"}}, "force")
+	bulkReconcile(t, []map[string]any{{"sku": sku, "unit": "lbs", "quantity": "10"}}, "force")
 	assertDecimalEqual(t, "10", onHandValue(t, itemID))
 
-	bulkReconcile(t, []map[string]any{{"sku": sku, "unit": "ea", "quantity": "5"}}, "addition")
+	bulkReconcile(t, []map[string]any{{"sku": sku, "unit": "lbs", "quantity": "5"}}, "addition")
 	assertDecimalEqual(t, "15", onHandValue(t, itemID), "addition adds rather than replaces")
 }
 
@@ -170,8 +170,8 @@ func TestBulkReconcileItems_PreviousAndNewQuantityBracketTheChange(t *testing.T)
 
 	sku, _ := newReconcilableItem(t)
 
-	bulkReconcile(t, []map[string]any{{"sku": sku, "unit": "ea", "quantity": "7"}}, "force")
-	resp := bulkReconcile(t, []map[string]any{{"sku": sku, "unit": "ea", "quantity": "12"}}, "force")
+	bulkReconcile(t, []map[string]any{{"sku": sku, "unit": "lbs", "quantity": "7"}}, "force")
+	resp := bulkReconcile(t, []map[string]any{{"sku": sku, "unit": "lbs", "quantity": "12"}}, "force")
 
 	reconciled := jsonListData(resp, "reconciled_items")
 	require.Len(t, reconciled, 1)
@@ -191,8 +191,8 @@ func TestBulkReconcileItems_UnknownSKUIsSkippedAndDoesNotFailTheBatch(t *testing
 	missingSKU := uniqueName("e2e-rec-missing")
 
 	resp := bulkReconcile(t, []map[string]any{
-		{"sku": missingSKU, "unit": "ea", "quantity": "3"},
-		{"sku": sku, "unit": "ea", "quantity": "9"},
+		{"sku": missingSKU, "unit": "lbs", "quantity": "3"},
+		{"sku": sku, "unit": "lbs", "quantity": "9"},
 	}, "force")
 
 	skipped := jsonListData(resp, "skipped_items")
@@ -243,9 +243,9 @@ func TestBulkReconcileItems_MixedBatchPartitionsEveryRow(t *testing.T) {
 	missingSKU := uniqueName("e2e-rec-absent")
 
 	resp := bulkReconcile(t, []map[string]any{
-		{"sku": goodSKU, "unit": "ea", "quantity": "6"},
+		{"sku": goodSKU, "unit": "lbs", "quantity": "6"},
 		{"sku": badUnitSKU, "unit": "not-a-unit", "quantity": "6"},
-		{"sku": missingSKU, "unit": "ea", "quantity": "6"},
+		{"sku": missingSKU, "unit": "lbs", "quantity": "6"},
 	}, "force")
 
 	assert.Len(t, jsonListData(resp, "reconciled_items"), 1, "one row reconciled: %v", resp)
@@ -257,19 +257,17 @@ func TestBulkReconcileItems_MixedBatchPartitionsEveryRow(t *testing.T) {
 
 // --- Units ---
 
-// The unit is checked for existence but the quantity is always recorded in the item's own base
-// unit, so a row naming a different real unit is not converted.
-func TestBulkReconcileItems_QuantityIsRecordedInTheItemsBaseUnit(t *testing.T) {
+// A row is converted from its unit into the item's base unit: these items are stocked by the pound,
+// and 14,000 grains are two of them.
+func TestBulkReconcileItems_QuantityIsConvertedIntoTheItemsBaseUnit(t *testing.T) {
 	t.Parallel()
 
 	sku, itemID := newReconcilableItem(t)
 
-	resp := bulkReconcile(t, []map[string]any{{"sku": sku, "unit": "pr", "quantity": "8"}}, "force")
-	require.Len(t, jsonListData(resp, "reconciled_items"), 1,
-		"a real account unit is accepted: %v", resp)
+	resp := bulkReconcile(t, []map[string]any{{"sku": sku, "unit": "gr", "quantity": "14000"}}, "force")
+	require.Len(t, jsonListData(resp, "reconciled_items"), 1, "a unit in the item's group is accepted: %v", resp)
 
-	assertDecimalEqual(t, "8", onHandValue(t, itemID),
-		"the figure is taken as already expressed in the item's base unit, not converted from pairs")
+	assertDecimalEqual(t, "2", onHandValue(t, itemID), "grains are converted into pounds before they are applied")
 }
 
 // --- Idempotency ---
@@ -280,7 +278,7 @@ func TestBulkReconcileItems_IsIdempotent(t *testing.T) {
 	sku, itemID := newReconcilableItem(t)
 	key := newIdempotencyKey()
 	body := map[string]any{
-		"data":           []map[string]any{{"sku": sku, "unit": "ea", "quantity": "3"}},
+		"data":           []map[string]any{{"sku": sku, "unit": "lbs", "quantity": "3"}},
 		"reconcile_type": "addition",
 	}
 
@@ -305,7 +303,7 @@ func TestBulkReconcileItems_RejectsAnUnknownReconcileType(t *testing.T) {
 	sku, _ := newReconcilableItem(t)
 
 	status, body, err := apiClient.Post(bulkReconcilePath, map[string]any{
-		"data":           []map[string]any{{"sku": sku, "unit": "ea", "quantity": "1"}},
+		"data":           []map[string]any{{"sku": sku, "unit": "lbs", "quantity": "1"}},
 		"reconcile_type": "bogus_e2e_type",
 	}, newIdempotencyKey())
 	require.NoError(t, err)
@@ -319,7 +317,7 @@ func TestBulkReconcileItems_RejectsAMissingReconcileType(t *testing.T) {
 	sku, _ := newReconcilableItem(t)
 
 	status, body, err := apiClient.Post(bulkReconcilePath, map[string]any{
-		"data": []map[string]any{{"sku": sku, "unit": "ea", "quantity": "1"}},
+		"data": []map[string]any{{"sku": sku, "unit": "lbs", "quantity": "1"}},
 	}, newIdempotencyKey())
 	require.NoError(t, err)
 	require.Less(t, status, 500, "a missing reconcile type is a client error: %s", string(body))
@@ -347,7 +345,7 @@ func TestBulkReconcileItems_RowMissingSKUOrUnitIsReportedPerRow(t *testing.T) {
 		name string
 		row  map[string]any
 	}{
-		{"no sku", map[string]any{"unit": "ea", "quantity": "1"}},
+		{"no sku", map[string]any{"unit": "lbs", "quantity": "1"}},
 		{"no unit", map[string]any{"sku": "E2E-SKU-ABSENT", "quantity": "1"}},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
@@ -374,7 +372,7 @@ func TestBulkReconcileItems_RejectsAMalformedQuantity(t *testing.T) {
 	t.Parallel()
 
 	status, body, err := apiClient.Post(bulkReconcilePath, map[string]any{
-		"data":           []map[string]any{{"sku": "E2E-SKU", "unit": "ea", "quantity": "not-a-number"}},
+		"data":           []map[string]any{{"sku": "E2E-SKU", "unit": "lbs", "quantity": "not-a-number"}},
 		"reconcile_type": "force",
 	}, newIdempotencyKey())
 	require.NoError(t, err)
@@ -388,7 +386,7 @@ func TestBulkReconcileItems_RejectsAnUnknownBodyField(t *testing.T) {
 	sku, _ := newReconcilableItem(t)
 
 	status, body, err := apiClient.Post(bulkReconcilePath, map[string]any{
-		"data":            []map[string]any{{"sku": sku, "unit": "ea", "quantity": "1"}},
+		"data":            []map[string]any{{"sku": sku, "unit": "lbs", "quantity": "1"}},
 		"reconcile_type":  "force",
 		bogusE2EJSONField: true,
 	}, newIdempotencyKey())

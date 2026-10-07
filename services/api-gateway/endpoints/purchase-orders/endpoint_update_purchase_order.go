@@ -6,6 +6,7 @@ import (
 
 	apiendpoint "github.com/open-mrp/api/services/api-gateway/pkg/endpoint"
 	apiexample "github.com/open-mrp/api/services/api-gateway/pkg/example"
+	apirequest "github.com/open-mrp/api/services/api-gateway/pkg/request"
 	apiresource "github.com/open-mrp/api/services/api-gateway/pkg/resource"
 	"github.com/open-mrp/api/services/auth-service/pkg/types"
 	"github.com/open-mrp/api/shared/constants"
@@ -29,6 +30,14 @@ type UpdatePurchaseOrderRequest struct {
 	BillingAddressID field.Optional[string] `json:"billing_address_id,omitzero" validate:"omitempty"`
 	// ID of an existing address to use as the ship-to address.
 	ShippingAddressID field.Optional[string] `json:"shipping_address_id,omitzero" validate:"omitempty"`
+	// Bill-to address saved to the supplier's account with the update: a new address, or an update to one of the supplier's saved addresses named by its `id`.
+	//
+	// Saving it needs no permission beyond updating the order. Cannot be combined with `billing_address_id`.
+	BillingAddress field.Optional[apirequest.InlineAddressInput] `json:"billing_address,omitzero"`
+	// Ship-to address saved to the supplier's account with the update: a new address, or an update to one of the supplier's saved addresses named by its `id`.
+	//
+	// Saving it needs no permission beyond updating the order. Cannot be combined with `shipping_address_id`. An identical `billing_address` and `shipping_address` are saved as one address.
+	ShippingAddress field.Optional[apirequest.InlineAddressInput] `json:"shipping_address,omitzero"`
 	// Promised delivery date, as a `YYYY-MM-DD` date (midnight UTC) or an RFC 3339 timestamp; `null` clears it.
 	//
 	// Returned as `scheduled_at` on the purchase order resource.
@@ -56,7 +65,7 @@ func (*UpdatePurchaseOrderRequest) SchemaExample() any {
 
 // Partially updates a purchase order.
 //
-// Only the fields sent are changed. Addresses are repointed at existing address records here, unlike create, which builds new addresses from inline fields; the order's lifecycle status is changed through the change-status endpoint instead.
+// Only the fields sent are changed. Addresses are repointed at existing address records by id, or saved to the supplier's account from an address object; the order's lifecycle status is changed through the change-status endpoint instead.
 type UpdatePurchaseOrderEndpoint struct{}
 
 func (e *UpdatePurchaseOrderEndpoint) Materialize() *apiendpoint.APIEndpoint[*UpdatePurchaseOrderRequest, *apiresource.PurchaseOrder] {

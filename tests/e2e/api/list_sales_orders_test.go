@@ -187,17 +187,34 @@ func TestListSalesOrders_LineCountMatchesIncludedLines(t *testing.T) {
 	t.Parallel()
 	// line_count is populated by the batched GetSalesOrderLineCounts query, not a
 	// per-row subquery; it must equal the number of rows in ?include=lines.
-	row := salesOrderListRow(t, url.Values{"include": {"lines"}})
+	customerID := setupOrderCustomer(t)
+	body := minimalSalesOrderCreateBody(t, customerID)
+	line := body["lines"].([]map[string]any)[0]
+	body["lines"] = []map[string]any{line, line}
+	status, respBody, err := apiClient.Post(salesOrdersPath, body, newIdempotencyKey())
+	require.NoError(t, err)
+	requireStatus(t, 201, status, respBody)
+	orderID := jsonField(parseJSON(respBody), "id")
+	deleteOrder(t, orderID)
+
+	status, listBody, err := apiClient.GetListRaw(salesOrdersPath, url.Values{"customer_ids": {customerID}, "include": {"lines"}})
+	require.NoError(t, err)
+	requireStatus(t, 200, status, listBody)
+	rows := jsonArray(parseJSON(listBody), "data")
+	require.Len(t, rows, 1, "the customer was created for this test and has one order")
+	row := rows[0].(map[string]any)
+	require.Equal(t, orderID, jsonField(row, "id"))
 
 	lineCount, ok := row["line_count"].(float64)
 	require.True(t, ok, "line_count should be a number on a list row")
-	require.Greater(t, lineCount, float64(0), "seed sales order has lines")
+	require.GreaterOrEqual(t, lineCount, float64(2), "both product lines are counted")
 
 	lines := jsonObject(row, "lines")
 	require.NotNil(t, lines, "lines should be populated with ?include=lines")
-	data := jsonArray(lines, "data")
-	assert.Equal(t, int(lineCount), len(data),
+	assert.Equal(t, int(lineCount), len(jsonArray(lines, "data")),
 		"line_count must equal the number of included lines")
+	assert.Equal(t, int(lineCount), len(jsonArray(jsonObject(retrieveSalesOrder(t, orderID, "lines"), "lines"), "data")),
+		"line_count must equal the order's own line count")
 }
 
 // --- Combined filters ---

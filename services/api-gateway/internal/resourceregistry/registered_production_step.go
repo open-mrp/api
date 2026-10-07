@@ -19,7 +19,7 @@ func init() {
 			// consumptions.consumed_item.
 			{Key: "production", Target: constants.ObjectTypeProduction, ExtractRefs: extractProductionRefFromProductionStep, Populate: populateProductionOnProductionStep},
 			{Key: "consumptions", Target: constants.ObjectTypeConsumption, ExtractRefs: extractConsumptionRefsFromProductionStep, Populate: populateConsumptionsOnProductionStep},
-			{Key: "machines", Populate: populateMachinesOnProductionStep},
+			{Key: "machines", Target: constants.ObjectTypeMachine, ExtractRefs: extractMachineRefsFromProductionStep, Populate: populateMachinesOnProductionStep},
 			{
 				Key:         "scanning_station",
 				Target:      constants.ObjectTypeScanningStation,
@@ -36,6 +36,10 @@ func init() {
 			},
 			{Key: "in_steps", Populate: populateInStepsOnProductionStep},
 			{Key: "out_steps", Populate: populateOutStepsOnProductionStep},
+			// The rates are always on the step; these let the resolver descend to their units.
+			{Key: "labor_rate", Target: constants.ObjectTypeRate, ExtractRefs: extractLaborRateRefFromProductionStep},
+			{Key: "labor_time", Target: constants.ObjectTypeRate, ExtractRefs: extractLaborTimeRefFromProductionStep},
+			{Key: "overhead_rate", Target: constants.ObjectTypeRate, ExtractRefs: extractOverheadRateRefFromProductionStep},
 		},
 	})
 
@@ -44,6 +48,7 @@ func init() {
 		Load:       resourceloaders.LoadProductions,
 		Subs: []resourcekit.SubField{
 			{Key: "produced_item", Target: constants.ObjectTypeItem, Cardinality: resourcekit.CardinalityOnePtr, ExtractIDs: extractProducedItemIDFromProduction, Populate: populateProducedItemOnProduction},
+			{Key: "quantity", Target: constants.ObjectTypeQuantity, ExtractRefs: extractQuantityRefFromProduction},
 		},
 	})
 }
@@ -178,4 +183,46 @@ func populateProducedItemOnProduction(ctx context.Context, parent any, loaded ma
 	if v, ok := loaded[id]; ok {
 		p.ProducedItem = v.(*apiresource.Item)
 	}
+}
+
+func extractLaborRateRefFromProductionStep(_ context.Context, parent any) []any {
+	return rateRef(parent.(*apiresource.ProductionStep).LaborRate)
+}
+
+func extractLaborTimeRefFromProductionStep(_ context.Context, parent any) []any {
+	return rateRef(parent.(*apiresource.ProductionStep).LaborTime)
+}
+
+func extractOverheadRateRefFromProductionStep(_ context.Context, parent any) []any {
+	return rateRef(parent.(*apiresource.ProductionStep).OverheadRate)
+}
+
+func rateRef(r *apiresource.Rate) []any {
+	if r == nil {
+		return nil
+	}
+	return []any{r}
+}
+
+func extractQuantityRefFromProduction(_ context.Context, parent any) []any {
+	return quantityRef(parent.(*apiresource.ProductionOutput).Quantity)
+}
+
+func quantityRef(q *apiresource.Quantity) []any {
+	if q == nil {
+		return nil
+	}
+	return []any{q}
+}
+
+func extractMachineRefsFromProductionStep(_ context.Context, parent any) []any {
+	ps := parent.(*apiresource.ProductionStep)
+	if ps.Machines == nil {
+		return nil
+	}
+	refs := make([]any, len(ps.Machines.Data))
+	for i := range ps.Machines.Data {
+		refs[i] = &ps.Machines.Data[i]
+	}
+	return refs
 }

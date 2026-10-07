@@ -6,6 +6,7 @@ import (
 
 	"github.com/open-mrp/api/services/api-gateway/internal/domain"
 	grpcutil "github.com/open-mrp/api/services/api-gateway/internal/grpc"
+	"github.com/open-mrp/api/services/api-gateway/internal/resourceloaders"
 	apiresource "github.com/open-mrp/api/services/api-gateway/pkg/resource"
 	"github.com/open-mrp/api/services/api-gateway/pkg/resourcekit"
 	"github.com/open-mrp/api/shared/constants"
@@ -119,8 +120,19 @@ func (m *invoiceSvcImpl) GetInvoice(ctx context.Context, req *RetrieveInvoiceReq
 		return nil, apiErr
 	}
 
+	stashAllocationTransactions(ctx, resp.AllocationTransactions)
 	result := invoiceFromProto(ctx, resp.Invoice)
 	return &result, nil
+}
+
+// stashAllocationTransactions keeps the transactions core read with the invoice, by id, so the
+// allocations' transaction include is filled from them: they are part of the invoice a caller was
+// allowed to read, so they are not loaded again under transactions:read.
+func stashAllocationTransactions(ctx context.Context, transactions []*pb.TransactionInfo) {
+	meta := resourcekit.GetLoadMeta(ctx)
+	for _, t := range transactions {
+		meta.Set(constants.ObjectTypeTransaction, t.Id, "allocation_transaction", resourceloaders.TransactionReferenceFromProto(meta, t))
+	}
 }
 
 func (m *invoiceSvcImpl) UpdateInvoice(ctx context.Context, req *UpdateInvoiceRequest) (*apiresource.Invoice, *apierror.APIError) {
@@ -142,6 +154,7 @@ func (m *invoiceSvcImpl) UpdateInvoice(ctx context.Context, req *UpdateInvoiceRe
 		return nil, apiErr
 	}
 
+	stashAllocationTransactions(ctx, resp.AllocationTransactions)
 	result := invoiceFromProto(ctx, resp.Invoice)
 	return &result, nil
 }
@@ -170,6 +183,7 @@ func (m *invoiceSvcImpl) ListCustomerInvoices(ctx context.Context, req *ListCust
 		return apiresource.NewList[apiresource.InvoiceForPayment](nil, apiresource.PageInfo{}), nil
 	}
 
+	stashAllocationTransactions(ctx, resp.AllocationTransactions)
 	invoices := make([]apiresource.InvoiceForPayment, len(resp.Invoices))
 	for i, d := range resp.Invoices {
 		invoices[i] = invoiceForPaymentFromProto(ctx, d)
@@ -207,6 +221,7 @@ func invoiceFromProto(ctx context.Context, d *pb.InvoiceInfo) apiresource.Invoic
 		LineCount:            d.LineCount,
 		PriorityCode:         constants.PriorityCode(d.PriorityCode),
 		PaymentStatus:        invoicePaymentStatus(d.IsPaidInFull, d.IsOverPaid),
+		IsPaidInFull:         d.IsPaidInFull,
 		IsEdiSent:            d.IsEdiSent,
 		HasBeenSent:          d.HasBeenSent,
 		TotalInvoiced:        d.TotalInvoiced,
@@ -227,22 +242,22 @@ func stashInvoiceMeta(ctx context.Context, d *pb.InvoiceInfo, inv *apiresource.I
 
 	meta := resourcekit.GetLoadMeta(ctx)
 
-	// order / shipment / billing_address are expandable references: stash the FK id
-	// so the registered loader fetches the real resource on ?include=. Never fabricate.
+	// order / shipment / customer are expandable references, loaded by the stashed id on ?include=.
 	if d.OrderId != "" {
 		meta.Set(constants.ObjectTypeInvoice, inv.ID, "order_id", d.OrderId)
 	}
 	if d.ShipmentId != nil && *d.ShipmentId != "" {
 		meta.Set(constants.ObjectTypeInvoice, inv.ID, "shipment_id", *d.ShipmentId)
 	}
-	if d.BillingAddressId != "" {
-		meta.Set(constants.ObjectTypeInvoice, inv.ID, "billing_address_id", d.BillingAddressId)
-	}
 	if d.CustomerId != "" {
 		meta.Set(constants.ObjectTypeInvoice, inv.ID, "customer_id", d.CustomerId)
 	}
-	if d.PaymentTermId != nil && *d.PaymentTermId != "" {
-		meta.Set(constants.ObjectTypeInvoice, inv.ID, "payment_term_id", *d.PaymentTermId)
+	// Core reads these in full with the invoice, so expanding them needs no address or payment-term permission.
+	if d.BillingAddress != nil {
+		meta.Set(constants.ObjectTypeInvoice, inv.ID, "billing_address", resourceloaders.AddressFromProto(d.BillingAddress))
+	}
+	if d.PaymentTerm != nil {
+		meta.Set(constants.ObjectTypeInvoice, inv.ID, "payment_term", resourceloaders.PaymentTermFromProto(d.PaymentTerm))
 	}
 
 	lines := make([]apiresource.InvoiceLine, len(d.Lines))
@@ -326,11 +341,13 @@ func invoiceLineFromProto(ctx context.Context, l *pb.InvoiceLineInfo) apiresourc
 func buildSalesOrderLineForInvoice(l *pb.InvoiceLineInfo) *apiresource.SalesOrderLine {
 	now := grpcutil.TimestampToTime(l.CreatedAt)
 	return &apiresource.SalesOrderLine{
-		ID:         l.OrderLineId,
-		Object:     constants.ObjectTypeSalesOrderLine,
-		ProductSKU: l.GetOrderLineItemSku(),
-		CreatedAt:  now,
-		UpdatedAt:  grpcutil.TimestampToTime(l.UpdatedAt),
+		ID:                 l.OrderLineId,
+		Object:             constants.ObjectTypeSalesOrderLine,
+		LineItemNumber:     l.GetOrderLineItemNumber(),
+		ProductSKU:         l.GetOrderLineItemSku(),
+		ProductDescription: l.OrderLineDescription,
+		CreatedAt:          now,
+		UpdatedAt:          grpcutil.TimestampToTime(l.UpdatedAt),
 	}
 }
 
@@ -345,9 +362,11 @@ func invoiceAllocationFromProto(meta *resourcekit.LoadMeta, a *pb.InvoiceAllocat
 	meta.Set(constants.ObjectTypeQuantity, a.AmountId, "unit_id", a.AmountUnitId)
 	meta.Set(constants.ObjectTypeInvoiceAllocation, a.Id, "transaction_id", a.TransactionId)
 
+	_, settlement := apiresource.AllocationReferences(nil, nil, a.SettlementId, a.SettlementNumber)
 	return apiresource.InvoiceAllocation{
-		ID:     a.Id,
-		Object: constants.ObjectTypeInvoiceAllocation,
+		ID:         a.Id,
+		Object:     constants.ObjectTypeInvoiceAllocation,
+		Settlement: settlement,
 		Amount: &apiresource.Quantity{
 			ID:           a.AmountId,
 			Object:       constants.ObjectTypeQuantity,
@@ -388,14 +407,15 @@ func invoiceForPaymentFromProto(ctx context.Context, d *pb.InvoiceForPaymentInfo
 		UpdatedAt: grpcutil.TimestampToTime(d.UpdatedAt),
 	}
 
-	// customer, parent_account, and billing_address are expandable references:
-	// left nil (null) and populated with real data by registered loaders on
-	// ?include=. Never fabricate.
+	// customer and parent_account are expandable references, loaded by the stashed id on ?include=.
 	if d.CustomerId != "" {
 		meta.Set(constants.ObjectTypeInvoiceForPayment, inv.ID, "customer_id", d.CustomerId)
 	}
 	if d.ParentAccountId != nil && *d.ParentAccountId != "" {
 		meta.Set(constants.ObjectTypeInvoiceForPayment, inv.ID, "parent_account_id", *d.ParentAccountId)
+	}
+	if d.BillingAddress != nil {
+		meta.Set(constants.ObjectTypeInvoiceForPayment, inv.ID, "billing_address", resourceloaders.AddressFromProto(d.BillingAddress))
 	}
 	meta.Set(constants.ObjectTypeInvoiceForPayment, inv.ID, "allocations", apiresource.NewList(allocations, apiresource.PageInfo{}))
 	return inv

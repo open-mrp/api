@@ -215,6 +215,7 @@ const (
 	CoreService_UpdateItemCategory_FullMethodName                         = "/core.CoreService/UpdateItemCategory"
 	CoreService_DeleteItemCategory_FullMethodName                         = "/core.CoreService/DeleteItemCategory"
 	CoreService_AddItemCategoryProperty_FullMethodName                    = "/core.CoreService/AddItemCategoryProperty"
+	CoreService_CreateItemCategoryProperty_FullMethodName                 = "/core.CoreService/CreateItemCategoryProperty"
 	CoreService_RemoveItemCategoryProperty_FullMethodName                 = "/core.CoreService/RemoveItemCategoryProperty"
 	CoreService_ChangeItemCategoryUnitGroup_FullMethodName                = "/core.CoreService/ChangeItemCategoryUnitGroup"
 	CoreService_BulkUpsertItemCategories_FullMethodName                   = "/core.CoreService/BulkUpsertItemCategories"
@@ -254,6 +255,7 @@ const (
 	CoreService_UpdateCustomerNotificationRecipients_FullMethodName       = "/core.CoreService/UpdateCustomerNotificationRecipients"
 	CoreService_UpdateCustomer_FullMethodName                             = "/core.CoreService/UpdateCustomer"
 	CoreService_MergeCustomers_FullMethodName                             = "/core.CoreService/MergeCustomers"
+	CoreService_ExportCustomers_FullMethodName                            = "/core.CoreService/ExportCustomers"
 	CoreService_AnalyzeSales_FullMethodName                               = "/core.CoreService/AnalyzeSales"
 	CoreService_AnalyzeSalesSummary_FullMethodName                        = "/core.CoreService/AnalyzeSalesSummary"
 	CoreService_AnalyzeSalesBreakdown_FullMethodName                      = "/core.CoreService/AnalyzeSalesBreakdown"
@@ -261,6 +263,11 @@ const (
 	CoreService_ListNewCustomers_FullMethodName                           = "/core.CoreService/ListNewCustomers"
 	CoreService_ListSalesLines_FullMethodName                             = "/core.CoreService/ListSalesLines"
 	CoreService_ExportSalesLines_FullMethodName                           = "/core.CoreService/ExportSalesLines"
+	CoreService_AnalyzeOpenOrdersSummary_FullMethodName                   = "/core.CoreService/AnalyzeOpenOrdersSummary"
+	CoreService_AnalyzeOpenOrderProducts_FullMethodName                   = "/core.CoreService/AnalyzeOpenOrderProducts"
+	CoreService_ListOpenOrders_FullMethodName                             = "/core.CoreService/ListOpenOrders"
+	CoreService_ListOpenOrderLines_FullMethodName                         = "/core.CoreService/ListOpenOrderLines"
+	CoreService_ExportOpenOrderLines_FullMethodName                       = "/core.CoreService/ExportOpenOrderLines"
 	CoreService_AnalyzeRealizedMargins_FullMethodName                     = "/core.CoreService/AnalyzeRealizedMargins"
 	CoreService_AnalyzeCustomerPricing_FullMethodName                     = "/core.CoreService/AnalyzeCustomerPricing"
 	CoreService_AnalyzeProductionCosts_FullMethodName                     = "/core.CoreService/AnalyzeProductionCosts"
@@ -292,6 +299,7 @@ const (
 	CoreService_ListInventoryChangeLogs_FullMethodName                    = "/core.CoreService/ListInventoryChangeLogs"
 	CoreService_GetInventoryChangeLog_FullMethodName                      = "/core.CoreService/GetInventoryChangeLog"
 	CoreService_ExportInventoryChangeLogs_FullMethodName                  = "/core.CoreService/ExportInventoryChangeLogs"
+	CoreService_StartInventoryChangeLogsExport_FullMethodName             = "/core.CoreService/StartInventoryChangeLogsExport"
 	CoreService_ListInvoices_FullMethodName                               = "/core.CoreService/ListInvoices"
 	CoreService_GetInvoice_FullMethodName                                 = "/core.CoreService/GetInvoice"
 	CoreService_UpdateInvoice_FullMethodName                              = "/core.CoreService/UpdateInvoice"
@@ -421,6 +429,7 @@ const (
 	CoreService_UpdateSupplier_FullMethodName                             = "/core.CoreService/UpdateSupplier"
 	CoreService_DeleteSupplier_FullMethodName                             = "/core.CoreService/DeleteSupplier"
 	CoreService_BulkDeleteSuppliers_FullMethodName                        = "/core.CoreService/BulkDeleteSuppliers"
+	CoreService_BatchGetSuppliersByIDs_FullMethodName                     = "/core.CoreService/BatchGetSuppliersByIDs"
 	CoreService_ListSysProperties_FullMethodName                          = "/core.CoreService/ListSysProperties"
 	CoreService_GetSysProperty_FullMethodName                             = "/core.CoreService/GetSysProperty"
 	CoreService_UpdateSysProperty_FullMethodName                          = "/core.CoreService/UpdateSysProperty"
@@ -814,6 +823,8 @@ type CoreServiceClient interface {
 	UpdateItemCategory(ctx context.Context, in *UpdateItemCategoryRequest, opts ...grpc.CallOption) (*UpdateItemCategoryResponse, error)
 	DeleteItemCategory(ctx context.Context, in *DeleteItemCategoryRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
 	AddItemCategoryProperty(ctx context.Context, in *AddItemCategoryPropertyRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
+	// Creates a property and attaches it to an item category in one transaction.
+	CreateItemCategoryProperty(ctx context.Context, in *CreateItemCategoryPropertyRequest, opts ...grpc.CallOption) (*CreateItemCategoryPropertyResponse, error)
 	RemoveItemCategoryProperty(ctx context.Context, in *RemoveItemCategoryPropertyRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
 	// Changes the unit group of an item category and updates related rate units.
 	ChangeItemCategoryUnitGroup(ctx context.Context, in *ChangeItemCategoryUnitGroupRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
@@ -869,6 +880,8 @@ type CoreServiceClient interface {
 	UpdateCustomer(ctx context.Context, in *UpdateCustomerRequest, opts ...grpc.CallOption) (*UpdateCustomerResponse, error)
 	// Merges source customers into a target customer.
 	MergeCustomers(ctx context.Context, in *MergeCustomersRequest, opts ...grpc.CallOption) (*MergeCustomersResponse, error)
+	// Accepts an export of the customers the list's filters select; the file is built by the export worker.
+	ExportCustomers(ctx context.Context, in *ExportCustomersRequest, opts ...grpc.CallOption) (*ExportCustomersResponse, error)
 	AnalyzeSales(ctx context.Context, in *AnalyzeSalesRequest, opts ...grpc.CallOption) (*AnalyzeSalesResponse, error)
 	// Sales reports read sales_line_fact, invoice lines pre-priced for analytics.
 	AnalyzeSalesSummary(ctx context.Context, in *AnalyzeSalesSummaryRequest, opts ...grpc.CallOption) (*AnalyzeSalesSummaryResponse, error)
@@ -878,6 +891,16 @@ type CoreServiceClient interface {
 	ListSalesLines(ctx context.Context, in *ListSalesLinesRequest, opts ...grpc.CallOption) (*ListSalesLinesResponse, error)
 	// Accepts an export of the sales lines; the file is built by the export worker.
 	ExportSalesLines(ctx context.Context, in *ExportSalesLinesRequest, opts ...grpc.CallOption) (*ExportSalesLinesResponse, error)
+	// Totals the money on open sales orders.
+	AnalyzeOpenOrdersSummary(ctx context.Context, in *AnalyzeOpenOrdersSummaryRequest, opts ...grpc.CallOption) (*AnalyzeOpenOrdersSummaryResponse, error)
+	// Totals the open lines per item, most back-ordered first.
+	AnalyzeOpenOrderProducts(ctx context.Context, in *AnalyzeOpenOrderProductsRequest, opts ...grpc.CallOption) (*AnalyzeOpenOrderProductsResponse, error)
+	// Lists the open sales orders, newest issue first.
+	ListOpenOrders(ctx context.Context, in *ListOpenOrdersRequest, opts ...grpc.CallOption) (*ListOpenOrdersResponse, error)
+	// Returns one sales order's sale lines.
+	ListOpenOrderLines(ctx context.Context, in *ListOpenOrderLinesRequest, opts ...grpc.CallOption) (*ListOpenOrderLinesResponse, error)
+	// Accepts an export of the open sale lines; the file is built by the export worker.
+	ExportOpenOrderLines(ctx context.Context, in *ExportOpenOrderLinesRequest, opts ...grpc.CallOption) (*ExportOpenOrderLinesResponse, error)
 	// AnalyzeRealizedMargins rolls invoiced lines up to one row per customer and SKU and flags the ones priced below their peers or under target margin. Aggregated here because the raw lines are far too many to ship.
 	AnalyzeRealizedMargins(ctx context.Context, in *AnalyzeRealizedMarginsRequest, opts ...grpc.CallOption) (*AnalyzeRealizedMarginsResponse, error)
 	// AnalyzeCustomerPricing sweeps every contracted price and flags those below their peers or under target margin. Swept here because it reads the prices, the customers and the catalog end to end.
@@ -918,6 +941,8 @@ type CoreServiceClient interface {
 	GetInventoryChangeLog(ctx context.Context, in *GetInventoryChangeLogRequest, opts ...grpc.CallOption) (*GetInventoryChangeLogResponse, error)
 	// Returns all matching inventory change logs without pagination (for export).
 	ExportInventoryChangeLogs(ctx context.Context, in *ExportInventoryChangeLogsRequest, opts ...grpc.CallOption) (*ExportInventoryChangeLogsResponse, error)
+	// Accepts an export of the inventory change logs the filters select; the file is built by the export worker.
+	StartInventoryChangeLogsExport(ctx context.Context, in *StartInventoryChangeLogsExportRequest, opts ...grpc.CallOption) (*StartInventoryChangeLogsExportResponse, error)
 	ListInvoices(ctx context.Context, in *ListInvoicesRequest, opts ...grpc.CallOption) (*ListInvoicesResponse, error)
 	GetInvoice(ctx context.Context, in *GetInvoiceRequest, opts ...grpc.CallOption) (*GetInvoiceResponse, error)
 	UpdateInvoice(ctx context.Context, in *UpdateInvoiceRequest, opts ...grpc.CallOption) (*UpdateInvoiceResponse, error)
@@ -1084,6 +1109,7 @@ type CoreServiceClient interface {
 	UpdateSupplier(ctx context.Context, in *UpdateSupplierRequest, opts ...grpc.CallOption) (*UpdateSupplierResponse, error)
 	DeleteSupplier(ctx context.Context, in *DeleteSupplierRequest, opts ...grpc.CallOption) (*DeleteSupplierResponse, error)
 	BulkDeleteSuppliers(ctx context.Context, in *BulkDeleteSuppliersRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
+	BatchGetSuppliersByIDs(ctx context.Context, in *BatchGetSuppliersByIDsRequest, opts ...grpc.CallOption) (*BatchGetSuppliersByIDsResponse, error)
 	ListSysProperties(ctx context.Context, in *ListSysPropertiesRequest, opts ...grpc.CallOption) (*ListSysPropertiesResponse, error)
 	GetSysProperty(ctx context.Context, in *GetSysPropertyRequest, opts ...grpc.CallOption) (*GetSysPropertyResponse, error)
 	UpdateSysProperty(ctx context.Context, in *UpdateSysPropertyRequest, opts ...grpc.CallOption) (*UpdateSysPropertyResponse, error)
@@ -2993,6 +3019,16 @@ func (c *coreServiceClient) AddItemCategoryProperty(ctx context.Context, in *Add
 	return out, nil
 }
 
+func (c *coreServiceClient) CreateItemCategoryProperty(ctx context.Context, in *CreateItemCategoryPropertyRequest, opts ...grpc.CallOption) (*CreateItemCategoryPropertyResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(CreateItemCategoryPropertyResponse)
+	err := c.cc.Invoke(ctx, CoreService_CreateItemCategoryProperty_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 func (c *coreServiceClient) RemoveItemCategoryProperty(ctx context.Context, in *RemoveItemCategoryPropertyRequest, opts ...grpc.CallOption) (*emptypb.Empty, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(emptypb.Empty)
@@ -3383,6 +3419,16 @@ func (c *coreServiceClient) MergeCustomers(ctx context.Context, in *MergeCustome
 	return out, nil
 }
 
+func (c *coreServiceClient) ExportCustomers(ctx context.Context, in *ExportCustomersRequest, opts ...grpc.CallOption) (*ExportCustomersResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ExportCustomersResponse)
+	err := c.cc.Invoke(ctx, CoreService_ExportCustomers_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 func (c *coreServiceClient) AnalyzeSales(ctx context.Context, in *AnalyzeSalesRequest, opts ...grpc.CallOption) (*AnalyzeSalesResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(AnalyzeSalesResponse)
@@ -3447,6 +3493,56 @@ func (c *coreServiceClient) ExportSalesLines(ctx context.Context, in *ExportSale
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(ExportSalesLinesResponse)
 	err := c.cc.Invoke(ctx, CoreService_ExportSalesLines_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *coreServiceClient) AnalyzeOpenOrdersSummary(ctx context.Context, in *AnalyzeOpenOrdersSummaryRequest, opts ...grpc.CallOption) (*AnalyzeOpenOrdersSummaryResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(AnalyzeOpenOrdersSummaryResponse)
+	err := c.cc.Invoke(ctx, CoreService_AnalyzeOpenOrdersSummary_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *coreServiceClient) AnalyzeOpenOrderProducts(ctx context.Context, in *AnalyzeOpenOrderProductsRequest, opts ...grpc.CallOption) (*AnalyzeOpenOrderProductsResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(AnalyzeOpenOrderProductsResponse)
+	err := c.cc.Invoke(ctx, CoreService_AnalyzeOpenOrderProducts_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *coreServiceClient) ListOpenOrders(ctx context.Context, in *ListOpenOrdersRequest, opts ...grpc.CallOption) (*ListOpenOrdersResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ListOpenOrdersResponse)
+	err := c.cc.Invoke(ctx, CoreService_ListOpenOrders_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *coreServiceClient) ListOpenOrderLines(ctx context.Context, in *ListOpenOrderLinesRequest, opts ...grpc.CallOption) (*ListOpenOrderLinesResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ListOpenOrderLinesResponse)
+	err := c.cc.Invoke(ctx, CoreService_ListOpenOrderLines_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *coreServiceClient) ExportOpenOrderLines(ctx context.Context, in *ExportOpenOrderLinesRequest, opts ...grpc.CallOption) (*ExportOpenOrderLinesResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ExportOpenOrderLinesResponse)
+	err := c.cc.Invoke(ctx, CoreService_ExportOpenOrderLines_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
 	}
@@ -3757,6 +3853,16 @@ func (c *coreServiceClient) ExportInventoryChangeLogs(ctx context.Context, in *E
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(ExportInventoryChangeLogsResponse)
 	err := c.cc.Invoke(ctx, CoreService_ExportInventoryChangeLogs_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *coreServiceClient) StartInventoryChangeLogsExport(ctx context.Context, in *StartInventoryChangeLogsExportRequest, opts ...grpc.CallOption) (*StartInventoryChangeLogsExportResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(StartInventoryChangeLogsExportResponse)
+	err := c.cc.Invoke(ctx, CoreService_StartInventoryChangeLogsExport_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
 	}
@@ -5053,6 +5159,16 @@ func (c *coreServiceClient) BulkDeleteSuppliers(ctx context.Context, in *BulkDel
 	return out, nil
 }
 
+func (c *coreServiceClient) BatchGetSuppliersByIDs(ctx context.Context, in *BatchGetSuppliersByIDsRequest, opts ...grpc.CallOption) (*BatchGetSuppliersByIDsResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(BatchGetSuppliersByIDsResponse)
+	err := c.cc.Invoke(ctx, CoreService_BatchGetSuppliersByIDs_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 func (c *coreServiceClient) ListSysProperties(ctx context.Context, in *ListSysPropertiesRequest, opts ...grpc.CallOption) (*ListSysPropertiesResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(ListSysPropertiesResponse)
@@ -5579,6 +5695,8 @@ type CoreServiceServer interface {
 	UpdateItemCategory(context.Context, *UpdateItemCategoryRequest) (*UpdateItemCategoryResponse, error)
 	DeleteItemCategory(context.Context, *DeleteItemCategoryRequest) (*emptypb.Empty, error)
 	AddItemCategoryProperty(context.Context, *AddItemCategoryPropertyRequest) (*emptypb.Empty, error)
+	// Creates a property and attaches it to an item category in one transaction.
+	CreateItemCategoryProperty(context.Context, *CreateItemCategoryPropertyRequest) (*CreateItemCategoryPropertyResponse, error)
 	RemoveItemCategoryProperty(context.Context, *RemoveItemCategoryPropertyRequest) (*emptypb.Empty, error)
 	// Changes the unit group of an item category and updates related rate units.
 	ChangeItemCategoryUnitGroup(context.Context, *ChangeItemCategoryUnitGroupRequest) (*emptypb.Empty, error)
@@ -5634,6 +5752,8 @@ type CoreServiceServer interface {
 	UpdateCustomer(context.Context, *UpdateCustomerRequest) (*UpdateCustomerResponse, error)
 	// Merges source customers into a target customer.
 	MergeCustomers(context.Context, *MergeCustomersRequest) (*MergeCustomersResponse, error)
+	// Accepts an export of the customers the list's filters select; the file is built by the export worker.
+	ExportCustomers(context.Context, *ExportCustomersRequest) (*ExportCustomersResponse, error)
 	AnalyzeSales(context.Context, *AnalyzeSalesRequest) (*AnalyzeSalesResponse, error)
 	// Sales reports read sales_line_fact, invoice lines pre-priced for analytics.
 	AnalyzeSalesSummary(context.Context, *AnalyzeSalesSummaryRequest) (*AnalyzeSalesSummaryResponse, error)
@@ -5643,6 +5763,16 @@ type CoreServiceServer interface {
 	ListSalesLines(context.Context, *ListSalesLinesRequest) (*ListSalesLinesResponse, error)
 	// Accepts an export of the sales lines; the file is built by the export worker.
 	ExportSalesLines(context.Context, *ExportSalesLinesRequest) (*ExportSalesLinesResponse, error)
+	// Totals the money on open sales orders.
+	AnalyzeOpenOrdersSummary(context.Context, *AnalyzeOpenOrdersSummaryRequest) (*AnalyzeOpenOrdersSummaryResponse, error)
+	// Totals the open lines per item, most back-ordered first.
+	AnalyzeOpenOrderProducts(context.Context, *AnalyzeOpenOrderProductsRequest) (*AnalyzeOpenOrderProductsResponse, error)
+	// Lists the open sales orders, newest issue first.
+	ListOpenOrders(context.Context, *ListOpenOrdersRequest) (*ListOpenOrdersResponse, error)
+	// Returns one sales order's sale lines.
+	ListOpenOrderLines(context.Context, *ListOpenOrderLinesRequest) (*ListOpenOrderLinesResponse, error)
+	// Accepts an export of the open sale lines; the file is built by the export worker.
+	ExportOpenOrderLines(context.Context, *ExportOpenOrderLinesRequest) (*ExportOpenOrderLinesResponse, error)
 	// AnalyzeRealizedMargins rolls invoiced lines up to one row per customer and SKU and flags the ones priced below their peers or under target margin. Aggregated here because the raw lines are far too many to ship.
 	AnalyzeRealizedMargins(context.Context, *AnalyzeRealizedMarginsRequest) (*AnalyzeRealizedMarginsResponse, error)
 	// AnalyzeCustomerPricing sweeps every contracted price and flags those below their peers or under target margin. Swept here because it reads the prices, the customers and the catalog end to end.
@@ -5683,6 +5813,8 @@ type CoreServiceServer interface {
 	GetInventoryChangeLog(context.Context, *GetInventoryChangeLogRequest) (*GetInventoryChangeLogResponse, error)
 	// Returns all matching inventory change logs without pagination (for export).
 	ExportInventoryChangeLogs(context.Context, *ExportInventoryChangeLogsRequest) (*ExportInventoryChangeLogsResponse, error)
+	// Accepts an export of the inventory change logs the filters select; the file is built by the export worker.
+	StartInventoryChangeLogsExport(context.Context, *StartInventoryChangeLogsExportRequest) (*StartInventoryChangeLogsExportResponse, error)
 	ListInvoices(context.Context, *ListInvoicesRequest) (*ListInvoicesResponse, error)
 	GetInvoice(context.Context, *GetInvoiceRequest) (*GetInvoiceResponse, error)
 	UpdateInvoice(context.Context, *UpdateInvoiceRequest) (*UpdateInvoiceResponse, error)
@@ -5849,6 +5981,7 @@ type CoreServiceServer interface {
 	UpdateSupplier(context.Context, *UpdateSupplierRequest) (*UpdateSupplierResponse, error)
 	DeleteSupplier(context.Context, *DeleteSupplierRequest) (*DeleteSupplierResponse, error)
 	BulkDeleteSuppliers(context.Context, *BulkDeleteSuppliersRequest) (*emptypb.Empty, error)
+	BatchGetSuppliersByIDs(context.Context, *BatchGetSuppliersByIDsRequest) (*BatchGetSuppliersByIDsResponse, error)
 	ListSysProperties(context.Context, *ListSysPropertiesRequest) (*ListSysPropertiesResponse, error)
 	GetSysProperty(context.Context, *GetSysPropertyRequest) (*GetSysPropertyResponse, error)
 	UpdateSysProperty(context.Context, *UpdateSysPropertyRequest) (*UpdateSysPropertyResponse, error)
@@ -6442,6 +6575,9 @@ func (UnimplementedCoreServiceServer) DeleteItemCategory(context.Context, *Delet
 func (UnimplementedCoreServiceServer) AddItemCategoryProperty(context.Context, *AddItemCategoryPropertyRequest) (*emptypb.Empty, error) {
 	return nil, status.Error(codes.Unimplemented, "method AddItemCategoryProperty not implemented")
 }
+func (UnimplementedCoreServiceServer) CreateItemCategoryProperty(context.Context, *CreateItemCategoryPropertyRequest) (*CreateItemCategoryPropertyResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method CreateItemCategoryProperty not implemented")
+}
 func (UnimplementedCoreServiceServer) RemoveItemCategoryProperty(context.Context, *RemoveItemCategoryPropertyRequest) (*emptypb.Empty, error) {
 	return nil, status.Error(codes.Unimplemented, "method RemoveItemCategoryProperty not implemented")
 }
@@ -6559,6 +6695,9 @@ func (UnimplementedCoreServiceServer) UpdateCustomer(context.Context, *UpdateCus
 func (UnimplementedCoreServiceServer) MergeCustomers(context.Context, *MergeCustomersRequest) (*MergeCustomersResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method MergeCustomers not implemented")
 }
+func (UnimplementedCoreServiceServer) ExportCustomers(context.Context, *ExportCustomersRequest) (*ExportCustomersResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method ExportCustomers not implemented")
+}
 func (UnimplementedCoreServiceServer) AnalyzeSales(context.Context, *AnalyzeSalesRequest) (*AnalyzeSalesResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method AnalyzeSales not implemented")
 }
@@ -6579,6 +6718,21 @@ func (UnimplementedCoreServiceServer) ListSalesLines(context.Context, *ListSales
 }
 func (UnimplementedCoreServiceServer) ExportSalesLines(context.Context, *ExportSalesLinesRequest) (*ExportSalesLinesResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method ExportSalesLines not implemented")
+}
+func (UnimplementedCoreServiceServer) AnalyzeOpenOrdersSummary(context.Context, *AnalyzeOpenOrdersSummaryRequest) (*AnalyzeOpenOrdersSummaryResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method AnalyzeOpenOrdersSummary not implemented")
+}
+func (UnimplementedCoreServiceServer) AnalyzeOpenOrderProducts(context.Context, *AnalyzeOpenOrderProductsRequest) (*AnalyzeOpenOrderProductsResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method AnalyzeOpenOrderProducts not implemented")
+}
+func (UnimplementedCoreServiceServer) ListOpenOrders(context.Context, *ListOpenOrdersRequest) (*ListOpenOrdersResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method ListOpenOrders not implemented")
+}
+func (UnimplementedCoreServiceServer) ListOpenOrderLines(context.Context, *ListOpenOrderLinesRequest) (*ListOpenOrderLinesResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method ListOpenOrderLines not implemented")
+}
+func (UnimplementedCoreServiceServer) ExportOpenOrderLines(context.Context, *ExportOpenOrderLinesRequest) (*ExportOpenOrderLinesResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method ExportOpenOrderLines not implemented")
 }
 func (UnimplementedCoreServiceServer) AnalyzeRealizedMargins(context.Context, *AnalyzeRealizedMarginsRequest) (*AnalyzeRealizedMarginsResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method AnalyzeRealizedMargins not implemented")
@@ -6672,6 +6826,9 @@ func (UnimplementedCoreServiceServer) GetInventoryChangeLog(context.Context, *Ge
 }
 func (UnimplementedCoreServiceServer) ExportInventoryChangeLogs(context.Context, *ExportInventoryChangeLogsRequest) (*ExportInventoryChangeLogsResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method ExportInventoryChangeLogs not implemented")
+}
+func (UnimplementedCoreServiceServer) StartInventoryChangeLogsExport(context.Context, *StartInventoryChangeLogsExportRequest) (*StartInventoryChangeLogsExportResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method StartInventoryChangeLogsExport not implemented")
 }
 func (UnimplementedCoreServiceServer) ListInvoices(context.Context, *ListInvoicesRequest) (*ListInvoicesResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method ListInvoices not implemented")
@@ -7059,6 +7216,9 @@ func (UnimplementedCoreServiceServer) DeleteSupplier(context.Context, *DeleteSup
 }
 func (UnimplementedCoreServiceServer) BulkDeleteSuppliers(context.Context, *BulkDeleteSuppliersRequest) (*emptypb.Empty, error) {
 	return nil, status.Error(codes.Unimplemented, "method BulkDeleteSuppliers not implemented")
+}
+func (UnimplementedCoreServiceServer) BatchGetSuppliersByIDs(context.Context, *BatchGetSuppliersByIDsRequest) (*BatchGetSuppliersByIDsResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method BatchGetSuppliersByIDs not implemented")
 }
 func (UnimplementedCoreServiceServer) ListSysProperties(context.Context, *ListSysPropertiesRequest) (*ListSysPropertiesResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method ListSysProperties not implemented")
@@ -10510,6 +10670,24 @@ func _CoreService_AddItemCategoryProperty_Handler(srv interface{}, ctx context.C
 	return interceptor(ctx, in, info, handler)
 }
 
+func _CoreService_CreateItemCategoryProperty_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(CreateItemCategoryPropertyRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(CoreServiceServer).CreateItemCategoryProperty(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: CoreService_CreateItemCategoryProperty_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(CoreServiceServer).CreateItemCategoryProperty(ctx, req.(*CreateItemCategoryPropertyRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 func _CoreService_RemoveItemCategoryProperty_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(RemoveItemCategoryPropertyRequest)
 	if err := dec(in); err != nil {
@@ -11212,6 +11390,24 @@ func _CoreService_MergeCustomers_Handler(srv interface{}, ctx context.Context, d
 	return interceptor(ctx, in, info, handler)
 }
 
+func _CoreService_ExportCustomers_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ExportCustomersRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(CoreServiceServer).ExportCustomers(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: CoreService_ExportCustomers_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(CoreServiceServer).ExportCustomers(ctx, req.(*ExportCustomersRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 func _CoreService_AnalyzeSales_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(AnalyzeSalesRequest)
 	if err := dec(in); err != nil {
@@ -11334,6 +11530,96 @@ func _CoreService_ExportSalesLines_Handler(srv interface{}, ctx context.Context,
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(CoreServiceServer).ExportSalesLines(ctx, req.(*ExportSalesLinesRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _CoreService_AnalyzeOpenOrdersSummary_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(AnalyzeOpenOrdersSummaryRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(CoreServiceServer).AnalyzeOpenOrdersSummary(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: CoreService_AnalyzeOpenOrdersSummary_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(CoreServiceServer).AnalyzeOpenOrdersSummary(ctx, req.(*AnalyzeOpenOrdersSummaryRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _CoreService_AnalyzeOpenOrderProducts_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(AnalyzeOpenOrderProductsRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(CoreServiceServer).AnalyzeOpenOrderProducts(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: CoreService_AnalyzeOpenOrderProducts_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(CoreServiceServer).AnalyzeOpenOrderProducts(ctx, req.(*AnalyzeOpenOrderProductsRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _CoreService_ListOpenOrders_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ListOpenOrdersRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(CoreServiceServer).ListOpenOrders(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: CoreService_ListOpenOrders_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(CoreServiceServer).ListOpenOrders(ctx, req.(*ListOpenOrdersRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _CoreService_ListOpenOrderLines_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ListOpenOrderLinesRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(CoreServiceServer).ListOpenOrderLines(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: CoreService_ListOpenOrderLines_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(CoreServiceServer).ListOpenOrderLines(ctx, req.(*ListOpenOrderLinesRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _CoreService_ExportOpenOrderLines_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ExportOpenOrderLinesRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(CoreServiceServer).ExportOpenOrderLines(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: CoreService_ExportOpenOrderLines_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(CoreServiceServer).ExportOpenOrderLines(ctx, req.(*ExportOpenOrderLinesRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -11892,6 +12178,24 @@ func _CoreService_ExportInventoryChangeLogs_Handler(srv interface{}, ctx context
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(CoreServiceServer).ExportInventoryChangeLogs(ctx, req.(*ExportInventoryChangeLogsRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _CoreService_StartInventoryChangeLogsExport_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(StartInventoryChangeLogsExportRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(CoreServiceServer).StartInventoryChangeLogsExport(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: CoreService_StartInventoryChangeLogsExport_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(CoreServiceServer).StartInventoryChangeLogsExport(ctx, req.(*StartInventoryChangeLogsExportRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -14218,6 +14522,24 @@ func _CoreService_BulkDeleteSuppliers_Handler(srv interface{}, ctx context.Conte
 	return interceptor(ctx, in, info, handler)
 }
 
+func _CoreService_BatchGetSuppliersByIDs_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(BatchGetSuppliersByIDsRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(CoreServiceServer).BatchGetSuppliersByIDs(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: CoreService_BatchGetSuppliersByIDs_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(CoreServiceServer).BatchGetSuppliersByIDs(ctx, req.(*BatchGetSuppliersByIDsRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 func _CoreService_ListSysProperties_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(ListSysPropertiesRequest)
 	if err := dec(in); err != nil {
@@ -15248,6 +15570,10 @@ var CoreService_ServiceDesc = grpc.ServiceDesc{
 			Handler:    _CoreService_AddItemCategoryProperty_Handler,
 		},
 		{
+			MethodName: "CreateItemCategoryProperty",
+			Handler:    _CoreService_CreateItemCategoryProperty_Handler,
+		},
+		{
 			MethodName: "RemoveItemCategoryProperty",
 			Handler:    _CoreService_RemoveItemCategoryProperty_Handler,
 		},
@@ -15404,6 +15730,10 @@ var CoreService_ServiceDesc = grpc.ServiceDesc{
 			Handler:    _CoreService_MergeCustomers_Handler,
 		},
 		{
+			MethodName: "ExportCustomers",
+			Handler:    _CoreService_ExportCustomers_Handler,
+		},
+		{
 			MethodName: "AnalyzeSales",
 			Handler:    _CoreService_AnalyzeSales_Handler,
 		},
@@ -15430,6 +15760,26 @@ var CoreService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "ExportSalesLines",
 			Handler:    _CoreService_ExportSalesLines_Handler,
+		},
+		{
+			MethodName: "AnalyzeOpenOrdersSummary",
+			Handler:    _CoreService_AnalyzeOpenOrdersSummary_Handler,
+		},
+		{
+			MethodName: "AnalyzeOpenOrderProducts",
+			Handler:    _CoreService_AnalyzeOpenOrderProducts_Handler,
+		},
+		{
+			MethodName: "ListOpenOrders",
+			Handler:    _CoreService_ListOpenOrders_Handler,
+		},
+		{
+			MethodName: "ListOpenOrderLines",
+			Handler:    _CoreService_ListOpenOrderLines_Handler,
+		},
+		{
+			MethodName: "ExportOpenOrderLines",
+			Handler:    _CoreService_ExportOpenOrderLines_Handler,
 		},
 		{
 			MethodName: "AnalyzeRealizedMargins",
@@ -15554,6 +15904,10 @@ var CoreService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "ExportInventoryChangeLogs",
 			Handler:    _CoreService_ExportInventoryChangeLogs_Handler,
+		},
+		{
+			MethodName: "StartInventoryChangeLogsExport",
+			Handler:    _CoreService_StartInventoryChangeLogsExport_Handler,
 		},
 		{
 			MethodName: "ListInvoices",
@@ -16070,6 +16424,10 @@ var CoreService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "BulkDeleteSuppliers",
 			Handler:    _CoreService_BulkDeleteSuppliers_Handler,
+		},
+		{
+			MethodName: "BatchGetSuppliersByIDs",
+			Handler:    _CoreService_BatchGetSuppliersByIDs_Handler,
 		},
 		{
 			MethodName: "ListSysProperties",

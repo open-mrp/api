@@ -113,8 +113,8 @@ func (s *supplierMaterialSvcImpl) UpdateSupplierMaterial(ctx context.Context, re
 		SupplierAccountId:   req.SupplierID,
 		MaterialId:          req.MaterialID,
 		SupplierPartNumber:  req.SupplierPartNumber.Ptr(),
-		SupplierDescription: req.SupplierDescription.Ptr(),
-		UpdateDescription:   req.SupplierDescription.Ptr() != nil,
+		SupplierDescription: req.SupplierDescription.ValuePtr(),
+		UpdateDescription:   req.SupplierDescription.WasProvided(),
 		IsActive:            req.IsActive.Ptr(),
 	}
 	resp, apiErr := grpcutil.CallRPC(ctx, supplierMaterialSvcTracer, "service.supplier_materials.update", domain.ServiceName,

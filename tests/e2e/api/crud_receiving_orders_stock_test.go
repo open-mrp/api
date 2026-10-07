@@ -361,6 +361,125 @@ func TestReceivingOrders_StockWithoutALocationIsAccepted(t *testing.T) {
 	assertNilField(t, line, "location")
 }
 
+// A line orders a product, or names the item it restocks. Either way the stock lands on an item: the
+// product's, or the one named. Each case orders a fresh one, so its on-hand and change log hold only
+// this stocking.
+func TestReceivingOrders_StockingRestocksTheLinesItem(t *testing.T) {
+	t.Parallel()
+
+	for name, tc := range map[string]struct {
+		line   func(t *testing.T) (line map[string]any, itemID string)
+		onHand string
+	}{
+		"product": {
+			line: func(t *testing.T) (map[string]any, string) {
+				productID, itemID := newProductItemIDs(t, "e2e-ro-stock-product")
+				line := purchaseOrderLineBody("E2E-RO-STOCK-PRODUCT")
+				line["product_id"] = productID
+				return line, itemID
+			},
+			onHand: "4",
+		},
+		"item": {
+			line: func(t *testing.T) (map[string]any, string) {
+				_, itemID := newReconcilableItem(t)
+				line := materialLineBody("E2E-RO-STOCK-ITEM")
+				line["item_id"] = itemID
+				return line, itemID
+			},
+			onHand: "40",
+		},
+	} {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+
+			line, itemID := tc.line(t)
+			quantity, ok := line["quantity"].(map[string]any)
+			require.True(t, ok)
+			_, receivingOrderID := receivedPurchaseOrderReceivingOf(t, func(b map[string]any) {
+				b["lines"] = []map[string]any{line}
+			})
+
+			status, body := stockReceivingOrder(t, receivingOrderID, []map[string]any{{
+				"receiving_order_line_id": jsonField(firstLine(t, receivingOrderID), "id"),
+				"allocations":             []map[string]any{{"quantity": quantity, "location_id": SeedLocationID}},
+			}})
+			requireStatus(t, 200, status, body)
+
+			// Creating the item logged its opening level as a user action; stocking is the system's.
+			logs, status, err := apiClient.GetList(inventoryChangeLogsPath, url.Values{
+				"item_ids": {itemID}, "action_types": {"system_action"}, "include": {"item"},
+			})
+			require.NoError(t, err)
+			require.Equal(t, 200, status)
+			require.Len(t, logs.Data, 1, "stocking logs one change, on the line's item")
+			log := parseJSON(logs.Data[0])
+			assert.Equal(t, itemID, jsonField(jsonObject(log, "item"), "id"))
+			assertDecimalEqual(t, fmt.Sprint(quantity["value"]), jsonField(jsonObject(log, "quantity"), "value"))
+
+			assertDecimalEqual(t, tc.onHand, readInventory(t, itemID).onHand.String(), "the put-away stock is on hand")
+		})
+	}
+}
+
+// A line that orders a product names no item of its own. Its receiving line and the delivery line it
+// is stocked onto show the product's item, and each list's item filter finds them by it. The product
+// is a fresh one, so the filtered lists hold only this order's documents.
+func TestReceivingOrders_AProductOrderedLineShowsAndFiltersByTheProductsItem(t *testing.T) {
+	t.Parallel()
+
+	productID, itemID := newProductItemIDs(t, "e2e-ro-product-item")
+	_, otherItemID := newProductItemIDs(t, "e2e-ro-product-other")
+	line := purchaseOrderLineBody("E2E-RO-PRODUCT-ITEM")
+	line["product_id"] = productID
+	quantity, ok := line["quantity"].(map[string]any)
+	require.True(t, ok)
+	_, receivingOrderID := receivedPurchaseOrderReceivingOf(t, func(b map[string]any) {
+		b["lines"] = []map[string]any{line}
+	})
+	itemOf := func(row any) string {
+		t.Helper()
+		m, ok := row.(map[string]any)
+		require.True(t, ok)
+		item := jsonObject(m, "item")
+		require.NotNil(t, item, "the line's item must expand: %v", m)
+		return jsonField(item, "id")
+	}
+
+	status, body, err := apiClient.GetListRaw(receivingOrdersPath+"/"+receivingOrderID, url.Values{"include": {"lines", "lines.item"}})
+	require.NoError(t, err)
+	requireStatus(t, 200, status, body)
+	lines := jsonListData(parseJSON(body), "lines")
+	require.Len(t, lines, 1)
+	assert.Equal(t, itemID, itemOf(lines[0]), "the receiving order's line receives the product's item")
+
+	lineID := jsonField(lines[0].(map[string]any), "id")
+	status, body, err = apiClient.Patch(receivingOrdersPath+"/"+receivingOrderID+"/lines/"+lineID+"?include=item",
+		map[string]any{"quantity": quantity}, newIdempotencyKey())
+	require.NoError(t, err)
+	requireStatus(t, 200, status, body)
+	assert.Equal(t, itemID, itemOf(parseJSON(body)), "and so does the line read on its own")
+
+	assert.Equal(t, []string{receivingOrderID}, listIDs(t, receivingOrdersPath, url.Values{"item_ids": {itemID}}),
+		"the receiving order list's item filter finds the order by the product's item")
+	assert.Empty(t, listIDs(t, receivingOrdersPath, url.Values{"item_ids": {otherItemID}}))
+
+	status, body = stockReceivingOrder(t, receivingOrderID, []map[string]any{{
+		"receiving_order_line_id": lineID,
+		"allocations":             []map[string]any{{"quantity": quantity, "location_id": SeedLocationID}},
+	}})
+	requireStatus(t, 200, status, body)
+
+	delivery := deliveryForReceivingOrder(t, receivingOrderID)
+	deliveryLines := jsonListData(delivery, "lines")
+	require.Len(t, deliveryLines, 1)
+	assert.Equal(t, itemID, itemOf(deliveryLines[0]), "the delivery line received the product's item")
+
+	assert.Equal(t, []string{jsonField(delivery, "id")}, listIDs(t, deliveriesPath, url.Values{"item_ids": {itemID}}),
+		"the delivery list's item filter finds the delivery by the product's item")
+	assert.Empty(t, listIDs(t, deliveriesPath, url.Values{"item_ids": {otherItemID}}))
+}
+
 // A lot number creates the lot on first use and applies to every allocation on the line.
 func TestReceivingOrders_StockUnderALotRecordsItOnEveryDeliveryLine(t *testing.T) {
 	t.Parallel()
@@ -746,4 +865,40 @@ func TestReceivingOrders_ListSearchFindsAnOrderBySupplierName(t *testing.T) {
 	for id, n := range seen {
 		assert.Equal(t, 1, n, "receiving order %s is listed once, not once per relation", id)
 	}
+}
+
+// A purchase order line can name a product instead of an item. What is stocked is that product's
+// item, so the order line and the delivery line both carry it.
+func TestReceivingOrders_StockingAProductLineRecordsTheProductsItem(t *testing.T) {
+	t.Parallel()
+
+	purchaseOrderID, receivingOrderID := receivedPurchaseOrderReceiving(t)
+	lineID := jsonField(firstLine(t, receivingOrderID), "id")
+
+	status, body := stockReceivingOrder(t, receivingOrderID, []map[string]any{{
+		"receiving_order_line_id": lineID,
+		"allocations":             []map[string]any{{"quantity": pairs("4"), "location_id": SeedLocationID}},
+	}})
+	requireStatus(t, 200, status, body)
+
+	lines := jsonListData(deliveryForReceivingOrder(t, receivingOrderID), "lines")
+	require.NotEmpty(t, lines)
+	for _, raw := range lines {
+		line, ok := raw.(map[string]any)
+		require.True(t, ok)
+		item := jsonObject(line, "item")
+		require.NotNil(t, item, "a delivery line bought as a product carries the product's item: %v", line)
+		assert.Equal(t, SeedItemID, jsonField(item, "id"))
+	}
+
+	getStatus, getBody, err := apiClient.GetListRaw(purchaseOrdersPath+"/"+purchaseOrderID, url.Values{"include": {"lines", "lines.item"}})
+	require.NoError(t, err)
+	requireStatus(t, 200, getStatus, getBody)
+	orderLines := jsonListData(parseJSON(getBody), "lines")
+	require.NotEmpty(t, orderLines)
+	orderLine, ok := orderLines[0].(map[string]any)
+	require.True(t, ok)
+	orderItem := jsonObject(orderLine, "item")
+	require.NotNil(t, orderItem, "a purchase order line bought as a product carries the product's item")
+	assert.Equal(t, SeedItemID, jsonField(orderItem, "id"))
 }

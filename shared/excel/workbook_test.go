@@ -2,6 +2,8 @@ package excel
 
 import (
 	"bytes"
+	"errors"
+	"strings"
 	"testing"
 	"time"
 
@@ -240,4 +242,97 @@ func TestBuild_NilCellIsBlank(t *testing.T) {
 	got, err = f.GetCellValue("Nils", "B2")
 	require.NoError(t, err)
 	assert.Equal(t, "set", got)
+}
+
+// fills a streamed sheet with n numbered rows
+func countedRows(n int) func(write func(Row) error) error {
+	return func(write func(Row) error) error {
+		for i := 1; i <= n; i++ {
+			if err := write(Row{"n": i}); err != nil {
+				return err
+			}
+		}
+		return nil
+	}
+}
+
+func TestStream_WritesHeaderAndRowsInOrder(t *testing.T) {
+	data, err := Stream(StreamSheet{
+		Name:    "Logs",
+		Columns: []ColumnSpec{{Header: "N", Key: "n"}, {Header: "Label", Key: "label"}},
+		Fill: func(write func(Row) error) error {
+			for _, row := range []Row{{"n": 1, "label": "first"}, {"label": "second", "n": 2}} {
+				if err := write(row); err != nil {
+					return err
+				}
+			}
+			return nil
+		},
+	})
+	require.NoError(t, err)
+
+	f := reopen(t, data)
+	assert.Equal(t, []string{"Logs"}, f.GetSheetList())
+	rows, err := f.GetRows("Logs")
+	require.NoError(t, err)
+	assert.Equal(t, [][]string{{"N", "Label"}, {"1", "first"}, {"2", "second"}}, rows)
+
+	styleID, err := f.GetCellStyle("Logs", "B1")
+	require.NoError(t, err)
+	style, err := f.GetStyle(styleID)
+	require.NoError(t, err)
+	require.NotNil(t, style.Font)
+	assert.True(t, style.Font.Bold)
+}
+
+func TestStream_NoRowsYieldsHeaderOnlySheet(t *testing.T) {
+	data, err := Stream(StreamSheet{Name: "Logs", Columns: []ColumnSpec{{Header: "N", Key: "n"}}, Fill: countedRows(0)})
+	require.NoError(t, err)
+
+	rows, err := reopen(t, data).GetRows("Logs")
+	require.NoError(t, err)
+	assert.Equal(t, [][]string{{"N"}}, rows)
+}
+
+// A sheet holds a fixed number of rows, so a stream longer than that carries on in a sheet of its own, header and all, rather than failing or dropping rows.
+func TestStream_ContinuesOnANewSheetOnceOneIsFull(t *testing.T) {
+	limit := sheetRowLimit
+	sheetRowLimit = 2
+	t.Cleanup(func() { sheetRowLimit = limit })
+
+	data, err := Stream(StreamSheet{Name: "Logs", Columns: []ColumnSpec{{Header: "N", Key: "n", Width: 12}}, Fill: countedRows(5)})
+	require.NoError(t, err)
+
+	f := reopen(t, data)
+	require.Equal(t, []string{"Logs", "Logs 2", "Logs 3"}, f.GetSheetList())
+	for sheet, want := range map[string][][]string{
+		"Logs":   {{"N"}, {"1"}, {"2"}},
+		"Logs 2": {{"N"}, {"3"}, {"4"}},
+		"Logs 3": {{"N"}, {"5"}},
+	} {
+		rows, err := f.GetRows(sheet)
+		require.NoError(t, err)
+		assert.Equal(t, want, rows, sheet)
+		width, err := f.GetColWidth(sheet, "A")
+		require.NoError(t, err)
+		assert.InDelta(t, 12.0, width, 0.01, "%s keeps the column widths", sheet)
+	}
+}
+
+func TestStream_ReturnsTheFillError(t *testing.T) {
+	failed := errors.New("page read failed")
+	_, err := Stream(StreamSheet{
+		Name:    "Logs",
+		Columns: []ColumnSpec{{Header: "N", Key: "n"}},
+		Fill:    func(func(Row) error) error { return failed },
+	})
+	require.ErrorIs(t, err, failed)
+}
+
+func TestContinuationName_StaysWithinExcelsLimit(t *testing.T) {
+	assert.Equal(t, "Logs 2", continuationName("Logs", 2))
+	long := strings.Repeat("x", excelize.MaxSheetNameLength)
+	got := continuationName(long, 12)
+	assert.Len(t, got, excelize.MaxSheetNameLength)
+	assert.True(t, strings.HasSuffix(got, " 12"))
 }

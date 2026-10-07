@@ -16,6 +16,3 @@ WHERE id = sqlc.arg('id') AND account_id = sqlc.arg('account_id') AND completed_
 INSERT INTO production_run (id, responsible_user_id, number, account_id, created_at, updated_at)
 VALUES (sqlc.arg('id'), sqlc.arg('responsible_user_id'), sqlc.arg('number'), sqlc.arg('account_id'), NOW(3), NOW(3));
 
--- name: GetNextProductionRunNumber :one
-SELECT COALESCE(MAX(CAST(number AS UNSIGNED)), 0) + 1 AS next_number
-FROM production_run WHERE account_id = sqlc.arg('account_id');

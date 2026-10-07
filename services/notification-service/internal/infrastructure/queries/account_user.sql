@@ -12,6 +12,12 @@ WHERE user_id = ? AND account_id = ?;
 SELECT user_id FROM account_user
 WHERE id = ?;
 
+-- name: GetUserIDByAccountUserIDInAccount :one
+-- Resolves the user id for an account_user of the given account, so a request naming another
+-- account's account_user reads as naming none.
+SELECT user_id FROM account_user
+WHERE id = sqlc.arg('id') AND account_id = sqlc.arg('account_id');
+
 -- name: GetUserContactByAccountUserID :one
 -- Resolves a recipient's email + display name for the email bridge (chat-notification emails).
 SELECT u.email AS email, u.name AS name

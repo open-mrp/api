@@ -19,6 +19,8 @@ type RetrieveJobRequest struct {
 
 // Returns a job by ID — poll the job named in a `202 Accepted` response's `Location` to observe its outcome.
 // A completed export carries the link to its file on `export.url`.
+//
+// A customer or supplier portal reads only the jobs it started itself; any other job is reported as not found.
 type RetrieveJobEndpoint struct{}
 
 func (e *RetrieveJobEndpoint) Materialize() *apiendpoint.APIEndpoint[*RetrieveJobRequest, *apiresource.Job] {
@@ -29,16 +31,12 @@ func (e *RetrieveJobEndpoint) Materialize() *apiendpoint.APIEndpoint[*RetrieveJo
 		Route:             "/v1/core/jobs/{id}",
 		SuccessStatusCode: http.StatusOK,
 		// Public: the polling companion for every async operation, including the public bulk endpoints whose 202 Location points here.
-		Public:     true,
-		AgentTool:  true,
-		Preview:    true,
-		ObjectType: constants.ObjectTypeJob,
-		// The OR-set checkJobReadPermission enforces: jobs:read for an internal actor reading its own account, customers:read / suppliers:read when the target is an external account.
-		RequiredPermissions: []types.Permission{
-			{Domain: types.PermissionDomainJobs, Action: types.ActionRead},
-			{Domain: types.PermissionDomainCustomers, Action: types.ActionRead},
-			{Domain: types.PermissionDomainSuppliers, Action: types.ActionRead},
-		},
+		Public:                  true,
+		AgentTool:               true,
+		Preview:                 true,
+		ObjectType:              constants.ObjectTypeJob,
+		RequiredPermissions:     []types.Permission{{Domain: types.PermissionDomainJobs, Action: types.ActionRead}},
+		CounterpartyPermissions: apiendpoint.Counterparties(types.ActionRead),
 		IncludeConfig: apiendpoint.IncludesFor(apiendpoint.IncludesParams{
 			ObjectType: constants.ObjectTypeJob,
 			Fields:     []string{"created_by", "created_by.role"},

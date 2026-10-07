@@ -18,24 +18,23 @@ type RetrieveVolumeDiscountRequest struct {
 }
 
 // Returns a volume discount by ID.
+//
+// A customer or supplier portal user retrieves only a discount its own listing carries: one with no customer-group restriction, or one scoped to a group its account belongs to. Any other discount is reported as not found.
 type RetrieveVolumeDiscountEndpoint struct{}
 
 func (e *RetrieveVolumeDiscountEndpoint) Materialize() *apiendpoint.APIEndpoint[*RetrieveVolumeDiscountRequest, *apiresource.VolumeDiscount] {
 	return (&apiendpoint.APIEndpoint[*RetrieveVolumeDiscountRequest, *apiresource.VolumeDiscount]{
-		Title:             "Retrieve Volume Discount",
-		Method:            http.MethodGet,
-		Route:             "/v1/sales/volume-discounts/{id}",
-		ContentType:       "application/json",
-		SuccessStatusCode: http.StatusOK,
-		Public:            true,
-		AgentTool:         true,
-		Preview:           true,
-		RequiredPermissions: []types.Permission{
-			{Domain: types.PermissionDomainDiscounts, Action: types.ActionRead},
-			{Domain: types.PermissionDomainCustomers, Action: types.ActionRead},
-			{Domain: types.PermissionDomainSuppliers, Action: types.ActionRead},
-		},
-		ObjectType: constants.ObjectTypeVolumeDiscount,
+		Title:                   "Retrieve Volume Discount",
+		Method:                  http.MethodGet,
+		Route:                   "/v1/sales/volume-discounts/{id}",
+		ContentType:             "application/json",
+		SuccessStatusCode:       http.StatusOK,
+		Public:                  true,
+		AgentTool:               true,
+		Preview:                 true,
+		RequiredPermissions:     []types.Permission{{Domain: types.PermissionDomainDiscounts, Action: types.ActionRead}},
+		CounterpartyPermissions: apiendpoint.Counterparties(types.ActionRead),
+		ObjectType:              constants.ObjectTypeVolumeDiscount,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *RetrieveVolumeDiscountRequest) (*apiresource.VolumeDiscount, *apierror.APIError) {
 			return svc.(VolumeDiscountSvc).GetVolumeDiscount
 		},

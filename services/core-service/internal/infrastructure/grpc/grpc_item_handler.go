@@ -238,14 +238,35 @@ func (h *gRPCHandler) GetItem(ctx context.Context, req *pb.GetItemRequest) (*pb.
 		return nil, contracts.NewMissingGRPCRequestDataError()
 	}
 
-	item, apiErr := h.itemSvc.GetItem(ctx, req.Id, req.Includes)
+	item, embedded, apiErr := h.itemSvc.GetItem(ctx, req.Id, req.Includes, domain.ItemEmbeds{
+		Categories:          req.WithCategories,
+		AttributeProperties: req.WithAttributeProperties,
+	})
 	if apiErr != nil {
 		return nil, contracts.ConvertAPIErrorToGRPC(apiErr)
 	}
 
+	categories, properties := itemEmbeddedToProto(embedded)
 	return &pb.GetItemResponse{
-		Item: itemToProto(item),
+		Item:                itemToProto(item),
+		Categories:          categories,
+		AttributeProperties: properties,
 	}, nil
+}
+
+func itemEmbeddedToProto(e *domain.ItemEmbedded) ([]*pb.ItemCategoryInfo, []*pb.PropertyInfo) {
+	if e == nil {
+		return nil, nil
+	}
+	categories := make([]*pb.ItemCategoryInfo, len(e.Categories))
+	for i, c := range e.Categories {
+		categories[i] = itemCategoryFullToProto(c)
+	}
+	properties := make([]*pb.PropertyInfo, len(e.AttributeProperties))
+	for i, p := range e.AttributeProperties {
+		properties[i] = propertyToProto(p)
+	}
+	return categories, properties
 }
 
 func (h *gRPCHandler) BatchGetItemsByIDs(ctx context.Context, req *pb.BatchGetItemsByIDsRequest) (*pb.BatchGetItemsByIDsResponse, error) {
@@ -253,7 +274,10 @@ func (h *gRPCHandler) BatchGetItemsByIDs(ctx context.Context, req *pb.BatchGetIt
 		return nil, contracts.NewMissingGRPCRequestDataError()
 	}
 
-	items, apiErr := h.itemSvc.BatchGetItemsByIDs(ctx, req.Ids)
+	items, embedded, apiErr := h.itemSvc.BatchGetItemsByIDs(ctx, req.Ids, domain.ItemEmbeds{
+		Categories:          req.WithCategories,
+		AttributeProperties: req.WithAttributeProperties,
+	})
 	if apiErr != nil {
 		return nil, contracts.ConvertAPIErrorToGRPC(apiErr)
 	}
@@ -263,8 +287,11 @@ func (h *gRPCHandler) BatchGetItemsByIDs(ctx context.Context, req *pb.BatchGetIt
 		pbItems[i] = itemToProto(item)
 	}
 
+	categories, properties := itemEmbeddedToProto(embedded)
 	return &pb.BatchGetItemsByIDsResponse{
-		Items: pbItems,
+		Items:               pbItems,
+		Categories:          categories,
+		AttributeProperties: properties,
 	}, nil
 }
 
@@ -327,6 +354,7 @@ func (h *gRPCHandler) GetItemTrends(ctx context.Context, req *pb.GetItemTrendsRe
 	return &pb.GetItemTrendsResponse{
 		TrendType: trends.TrendType,
 		Points:    points,
+		UnitId:    trends.UnitID,
 	}, nil
 }
 
@@ -343,17 +371,18 @@ func (h *gRPCHandler) ExportItems(ctx context.Context, req *pb.ExportItemsReques
 	pbItems := make([]*pb.ExportItemInfo, len(result.Items))
 	for i, item := range result.Items {
 		pbItems[i] = &pb.ExportItemInfo{
-			Id:             item.ID,
-			Sku:            item.SKU,
-			Description:    item.Description,
-			Notes:          item.Notes,
-			ItemTypeCode:   item.ItemTypeCode,
-			CategoryName:   item.CategoryName,
-			AccountId:      item.AccountID,
-			CreatedAt:      timestamppb.New(item.CreatedAt),
-			UpdatedAt:      timestamppb.New(item.UpdatedAt),
-			OnHandQuantity: item.OnHandQuantity,
-			OnHandUnitId:   item.OnHandUnitID,
+			Id:                     item.ID,
+			Sku:                    item.SKU,
+			Description:            item.Description,
+			Notes:                  item.Notes,
+			ItemTypeCode:           item.ItemTypeCode,
+			CategoryName:           item.CategoryName,
+			AccountId:              item.AccountID,
+			CreatedAt:              timestamppb.New(item.CreatedAt),
+			UpdatedAt:              timestamppb.New(item.UpdatedAt),
+			OnHandQuantity:         item.OnHandQuantity,
+			OnHandUnitId:           item.OnHandUnitID,
+			OnHandUnitAbbreviation: item.OnHandUnitAbbreviation,
 		}
 	}
 
@@ -445,6 +474,10 @@ func (h *gRPCHandler) ListInventories(ctx context.Context, req *pb.ListInventori
 		Limit:  req.Limit,
 		Query:  req.Query,
 	}
+	if req.AsOf != nil {
+		asOf := req.AsOf.AsTime()
+		params.AsOf = &asOf
+	}
 
 	result, apiErr := h.itemSvc.ListInventories(ctx, params)
 	if apiErr != nil {
@@ -459,6 +492,7 @@ func (h *gRPCHandler) ListInventories(ctx context.Context, req *pb.ListInventori
 			OnHandUnitId:           item.OnHandUnitID,
 			OnHandUnitAbbreviation: item.OnHandUnitAbbrev,
 			OnHandUnitType:         item.OnHandUnitType,
+			ProductLineId:          item.ProductLineID,
 		}
 	}
 

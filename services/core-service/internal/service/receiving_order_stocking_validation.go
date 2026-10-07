@@ -15,7 +15,7 @@ var stockingTolerance = decimal.RequireFromString("0.001")
 
 // validateStockingData refuses a stocking request that would book inventory the receiving order does not account for.
 //
-// Every line item must name a line of this order that is being stocked now (unstocked, with something received on it), at most once. Each allocation must be positive and each refusal non-negative, in a unit of the line's item. Together they may not exceed what was received on the line. The dashboard checks the same before it sends; without these checks a request could put stock away against a line that was already stocked, or against another order's line, and book inventory twice.
+// Every line item must name a line of this order that is being stocked now (unstocked, with something received on it), at most once. Each allocation must be positive, at one of the account's storage locations, and each refusal non-negative, in a unit of the line's item. Together they may not exceed what was received on the line. The dashboard checks the same before it sends; without these checks a request could put stock away against a line that was already stocked, or against another order's line, and book inventory twice.
 func validateStockingData(ctx context.Context, repos domain.RepoFactory, accountID string, data domain.StockingData, lines []*domain.ReceivingOrderLine, stockable map[string]struct{}) *apierror.APIError {
 	if len(data.LineItems) == 0 {
 		return nil
@@ -27,8 +27,8 @@ func validateStockingData(ctx context.Context, repos domain.RepoFactory, account
 	}
 
 	seen := make(map[string]struct{}, len(data.LineItems))
-	var itemIDs, productIDs []string
-	seenItems, seenProducts := map[string]struct{}{}, map[string]struct{}{}
+	var itemIDs, productIDs, locationIDs []string
+	seenItems, seenProducts, seenLocations := map[string]struct{}{}, map[string]struct{}{}, map[string]struct{}{}
 	unitIDs := map[string]struct{}{}
 	for _, li := range data.LineItems {
 		if _, dup := seen[li.ReceivingOrderLineID]; dup {
@@ -49,6 +49,9 @@ func validateStockingData(ctx context.Context, repos domain.RepoFactory, account
 				return apierror.NewValidationErrorWithParam("An allocated quantity must be greater than zero.", "line_items.allocations.quantity.value")
 			}
 			unitIDs[a.Quantity.UnitID] = struct{}{}
+			if a.LocationID != nil {
+				locationIDs = appendUnseen(locationIDs, seenLocations, *a.LocationID)
+			}
 		}
 		if li.RejectedQuantity != nil {
 			if li.RejectedQuantity.Value.IsNegative() {
@@ -64,6 +67,10 @@ func validateStockingData(ctx context.Context, repos domain.RepoFactory, account
 		case line.OrderLineProductID != nil && *line.OrderLineProductID != "":
 			productIDs = appendUnseen(productIDs, seenProducts, *line.OrderLineProductID)
 		}
+	}
+
+	if apiErr := validateStockingLocations(ctx, repos, accountID, locationIDs); apiErr != nil {
+		return apiErr
 	}
 
 	pricingRepo := repos.NewPricingRepo()
@@ -140,6 +147,27 @@ func validateStockingData(ctx context.Context, repos domain.RepoFactory, account
 		}
 	}
 
+	return nil
+}
+
+// validateStockingLocations refuses a put-away at a location that is not one of the account's, whose receipt nobody could find on the floor.
+func validateStockingLocations(ctx context.Context, repos domain.RepoFactory, accountID string, locationIDs []string) *apierror.APIError {
+	if len(locationIDs) == 0 {
+		return nil
+	}
+	locations, apiErr := repos.NewLocationRepo().GetByIDs(ctx, accountID, locationIDs)
+	if apiErr != nil {
+		return apiErr
+	}
+	found := make(map[string]struct{}, len(locations))
+	for _, l := range locations {
+		found[l.ID] = struct{}{}
+	}
+	for _, id := range locationIDs {
+		if _, ok := found[id]; !ok {
+			return apierror.NewValidationErrorWithParam("The storage location was not found.", "line_items.allocations.location_id")
+		}
+	}
 	return nil
 }
 

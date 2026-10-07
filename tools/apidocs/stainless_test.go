@@ -85,6 +85,19 @@ func TestCollectEndpointSDKMetadataUsesCRUDDefaultsAndOverrides(t *testing.T) {
 				SuccessStatusCode: http.StatusOK,
 				Public:            true,
 			},
+			&apiendpoint.APIEndpoint[*stainlessTestRequest, *stainlessTestResponse]{
+				Method:            http.MethodGet,
+				Route:             "/v1/operations/logs/actions/export",
+				SuccessStatusCode: http.StatusOK,
+				Public:            true,
+			},
+			&apiendpoint.APIEndpoint[*stainlessTestRequest, *stainlessTestResponse]{
+				Method:            http.MethodPost,
+				Route:             "/v1/operations/logs/actions/export",
+				SDKMethodKey:      "start_export",
+				SuccessStatusCode: http.StatusAccepted,
+				Public:            true,
+			},
 		},
 	}
 
@@ -121,6 +134,9 @@ func TestCollectEndpointSDKMetadataUsesCRUDDefaultsAndOverrides(t *testing.T) {
 	assertMeta("/v1/auth/access-tokens", http.MethodPut, []string{"auth"}, "update_access_tokens")
 	assertMeta("/v1/identity/me/tenancy/customer-accounts/{vendor_account_id}", http.MethodGet, []string{"identity", "me", "tenancy"}, "retrieve_customer_accounts")
 	assertMeta("/v1/catalog/items/{id}/category/{category_id}", http.MethodPut, []string{"catalog", "items"}, "update")
+	// Two methods on one action stay methods of `actions` rather than turning the action into a resource.
+	assertMeta("/v1/operations/logs/actions/export", http.MethodGet, []string{"operations", "logs", "actions"}, "export")
+	assertMeta("/v1/operations/logs/actions/export", http.MethodPost, []string{"operations", "logs", "actions"}, "start_export")
 }
 
 func TestGenerateStainlessConfigBuildsAPIKeyMethodsForPublicAndInternal(t *testing.T) {

@@ -3,6 +3,7 @@ package apiendpoint
 import (
 	"context"
 	"net/http"
+	"strings"
 	"testing"
 
 	"github.com/open-mrp/api/services/auth-service/pkg/types"
@@ -151,5 +152,139 @@ func TestAuthorize_InternalActorWithoutPermission_Rejected(t *testing.T) {
 	read := types.AnyOfPermissions{{Domain: types.PermissionDomainSalesOrders, Action: types.ActionRead}}
 	if err := ep(read, "").authorize(ctxWithRelationActor(types.IdentityRelationTypeInternal)); err == nil {
 		t.Error("an internal actor holding none of the declared permissions should be rejected")
+	}
+}
+
+// A user may act on their own record without the permission the endpoint asks of anyone acting on
+// someone else's, when the endpoint names the path parameter that identifies them.
+func TestActsOnSelf(t *testing.T) {
+	update := types.AnyOfPermissions{{Domain: types.PermissionDomainTeamUsers, Action: types.ActionUpdate}}
+	request := func(ctx context.Context, pathID string) *http.Request {
+		r, _ := http.NewRequestWithContext(appctx.WithPathParams(ctx, map[string]string{"id": pathID}), http.MethodPatch, "/v1/identity/users/"+pathID, nil)
+		return r
+	}
+	withoutPerms := ctxWithPerms(map[string]bool{}, "")
+
+	self := &APIEndpoint[any, any]{RequiredPermissions: update, SelfPathParam: "id"}
+	if !self.actsOnSelf(request(withoutPerms, "user_1")) {
+		t.Error("the caller's own ID in the path should count as acting on themselves")
+	}
+	if self.actsOnSelf(request(withoutPerms, "user_2")) {
+		t.Error("another user's ID in the path must not count as acting on themselves")
+	}
+	if ep(update, "").actsOnSelf(request(withoutPerms, "user_1")) {
+		t.Error("an endpoint that names no self parameter must not exempt anyone")
+	}
+
+	apiKey := ctxWithRelationActor(types.IdentityRelationTypeInternal)
+	if self.actsOnSelf(request(apiKey, "apky_1")) {
+		t.Error("only a signed-in user acts on themselves; an API key's ID in the path must not count")
+	}
+	unauthenticated := appctx.WithIdentity(context.Background(), types.GetUnauthenticatedIdentity(nil))
+	if self.actsOnSelf(request(unauthenticated, "")) {
+		t.Error("an unauthenticated caller must not count as acting on themselves")
+	}
+}
+
+func TestAuthorize_RequiresAllPermissions(t *testing.T) {
+	both := &APIEndpoint[any, any]{
+		RequiredPermissions: types.AnyOfPermissions{
+			{Domain: types.PermissionDomainCustomers, Action: types.ActionUpdate},
+			{Domain: types.PermissionDomainCustomers, Action: types.ActionDelete},
+		},
+		RequiresAllPermissions: true,
+	}
+
+	for _, perms := range []map[string]bool{{"customers:update": true}, {"customers:delete": true}} {
+		if err := both.authorize(ctxWithPerms(perms, "")); err == nil || err.Code != apierror.ErrorCodeInsufficientPerms {
+			t.Errorf("caller with only %v should be refused, got %v", perms, err)
+		}
+	}
+	if err := both.authorize(ctxWithPerms(map[string]bool{"customers:update": true, "customers:delete": true}, "")); err != nil {
+		t.Errorf("caller with both should pass, got %v", err)
+	}
+	if err := both.authorize(ctxWithPerms(map[string]bool{}, string(constants.RoleTypeAdmin))); err != nil {
+		t.Errorf("admin should bypass the permission gate, got %v", err)
+	}
+}
+
+// ctxActingIn builds an internal caller holding perms that acts in an account it relates to as relation, or in its own account when relation is empty.
+func ctxActingIn(relation types.IdentityRelationType, perms map[string]bool, roleType string) context.Context {
+	ctx := ctxWithPerms(perms, roleType)
+	if relation == "" {
+		return ctx
+	}
+	id, _ := appctx.GetIdentityFromContext(ctx)
+	id.Target = &types.IdentityTarget{AccountID: "acct_counterparty", RelationType: &relation}
+	return ctx
+}
+
+// A counterparty-routed endpoint asks for exactly one permission per request: its own in the caller's account, and the customers or suppliers permission when acting in one of those accounts.
+func TestAuthorize_CounterpartyPermissions(t *testing.T) {
+	readOrders := &APIEndpoint[any, any]{
+		RequiredPermissions:     types.AnyOfPermissions{{Domain: types.PermissionDomainSalesOrders, Action: types.ActionRead}},
+		CounterpartyPermissions: Counterparties(types.ActionRead),
+	}
+	createMaterials := &APIEndpoint[any, any]{
+		RequiredPermissions:     types.AnyOfPermissions{{Domain: types.PermissionDomainMaterials, Action: types.ActionCreate}},
+		CounterpartyPermissions: Counterparties(types.ActionUpdate),
+	}
+	poLines := &APIEndpoint[any, any]{
+		RequiredPermissions:     types.AnyOfPermissions{{Domain: types.PermissionDomainPurchaseOrders, Action: types.ActionUpdate}},
+		CounterpartyPermissions: CounterpartyPermissions{Supplier: types.Permission{Domain: types.PermissionDomainSuppliers, Action: types.ActionUpdate}},
+	}
+	own, customer, supplier := types.IdentityRelationType(""), types.IdentityRelationTypeCustomer, types.IdentityRelationTypeSupplier
+
+	cases := []struct {
+		name     string
+		endpoint *APIEndpoint[any, any]
+		relation types.IdentityRelationType
+		holds    string
+		allowed  bool
+		names    string
+	}{
+		{"own account, own permission", readOrders, own, "sales_orders:read", true, ""},
+		{"own account, customers permission", readOrders, own, "customers:read", false, "sales_orders:read"},
+		{"own account, suppliers permission", readOrders, own, "suppliers:read", false, "sales_orders:read"},
+		{"customer account, customers permission", readOrders, customer, "customers:read", true, ""},
+		{"customer account, own permission", readOrders, customer, "sales_orders:read", false, "customers:read"},
+		{"customer account, suppliers permission", readOrders, customer, "suppliers:read", false, "customers:read"},
+		{"supplier account, suppliers permission", readOrders, supplier, "suppliers:read", true, ""},
+		{"supplier account, customers permission", readOrders, supplier, "customers:read", false, "suppliers:read"},
+		{"create in own account", createMaterials, own, "materials:create", true, ""},
+		{"create in own account with customers:update", createMaterials, own, "customers:update", false, "materials:create"},
+		{"create in a customer's account takes customers:update", createMaterials, customer, "customers:update", true, ""},
+		{"create in a customer's account refuses customers:create", createMaterials, customer, "customers:create", false, "customers:update"},
+		{"create in a supplier's account takes suppliers:update", createMaterials, supplier, "suppliers:update", true, ""},
+		{"no customer entry keeps the own permission", poLines, customer, "purchase_orders:update", true, ""},
+		{"no customer entry refuses customers:update", poLines, customer, "customers:update", false, "purchase_orders:update"},
+		{"supplier entry", poLines, supplier, "suppliers:update", true, ""},
+		{"supplier entry refuses the own permission", poLines, supplier, "purchase_orders:update", false, "suppliers:update"},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			err := tc.endpoint.authorize(ctxActingIn(tc.relation, map[string]bool{tc.holds: true}, ""))
+			if tc.allowed {
+				if err != nil {
+					t.Fatalf("holding %s should pass, got %v", tc.holds, err)
+				}
+				return
+			}
+			if err == nil || err.Code != apierror.ErrorCodeInsufficientPerms {
+				t.Fatalf("holding %s should be refused, got %v", tc.holds, err)
+			}
+			if !strings.Contains(err.PublicMessage, tc.names) {
+				t.Errorf("refusal %q should name %s", err.PublicMessage, tc.names)
+			}
+		})
+	}
+
+	for _, relation := range []types.IdentityRelationType{own, customer, supplier} {
+		if err := readOrders.authorize(ctxActingIn(relation, map[string]bool{}, string(constants.RoleTypeAdmin))); err != nil {
+			t.Errorf("admin acting in a %q account should pass, got %v", relation, err)
+		}
+	}
+	if err := readOrders.authorize(ctxWithRelationActor(customer)); err != nil {
+		t.Errorf("a customer-relation actor is authorized downstream, got %v", err)
 	}
 }

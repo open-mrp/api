@@ -22,6 +22,7 @@ import (
 	apierror "github.com/open-mrp/api/shared/errors"
 	"github.com/open-mrp/api/shared/id"
 	"github.com/open-mrp/api/shared/idempotency"
+	"github.com/open-mrp/api/shared/imageupload"
 	"github.com/open-mrp/api/shared/messaging"
 	"github.com/open-mrp/api/shared/tracing"
 )
@@ -875,7 +876,7 @@ func (s *accountSvcImpl) BatchGetAccountsByIDs(ctx context.Context, ids []string
 	if !ok || identity == nil {
 		return nil, tracing.Trace(span, apierror.NewInvariantViolationError("Identity not found in context."))
 	}
-	if apiErr := identity.CheckIsInternalActor(); apiErr != nil {
+	if apiErr := identity.CheckIsInternalActorForRead(); apiErr != nil {
 		return nil, tracing.Trace(span, apiErr)
 	}
 	if apiErr := identity.CheckHasPermission(types.PermissionDomainAccount, types.ActionRead); apiErr != nil {
@@ -1032,6 +1033,13 @@ func (s *accountSvcImpl) UpdateAccount(ctx context.Context, params domain.Update
 		return nil, tracing.Trace(span, apierror.NewAuthorizationError("You can only update your own account."))
 	}
 
+	if apiErr := checkInlineAddressChoices(
+		inlineAddressChoice{params.DefaultBillingAddressID != nil, params.DefaultBillingAddress, "default_billing_address_id", "default_billing_address"},
+		inlineAddressChoice{params.DefaultShippingAddressID != nil, params.DefaultShippingAddress, "default_shipping_address_id", "default_shipping_address"},
+	); apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
+
 	meds := s.mediators()
 
 	idempotencyKey, apiErr := meds.Idempotency.UpsertIdempotencyKey(ctx, identity)
@@ -1066,13 +1074,54 @@ func (s *accountSvcImpl) UpdateAccount(ctx context.Context, params domain.Update
 			}
 
 			if params.HasBrandingUpdates() {
-				if apiErr := txRepo.UpdateBranding(txCtx, params.AccountID, params); apiErr != nil {
+				var before domain.AccountBranding
+				if old.Branding != nil {
+					before = *old.Branding
+				}
+				if apiErr := txRepo.UpdateBranding(txCtx, params.AccountID, params.BrandingAfter(before)); apiErr != nil {
+					return apiErr
+				}
+			}
+
+			billID, shipID, apiErr := saveInlineAddresses(txCtx, txSvc.mediators().Address, params.AccountID, params.DefaultBillingAddress, params.DefaultShippingAddress, "default_billing_address", "default_shipping_address")
+			if apiErr != nil {
+				return apiErr
+			}
+			if billID != "" {
+				params.DefaultBillingAddressID = &billID
+			}
+			if shipID != "" {
+				params.DefaultShippingAddressID = &shipID
+			}
+
+			if params.DefaultBillingAddressID != nil || params.DefaultShippingAddressID != nil {
+				for _, f := range []struct {
+					id    *string
+					param string
+				}{
+					{params.DefaultBillingAddressID, "default_billing_address_id"},
+					{params.DefaultShippingAddressID, "default_shipping_address_id"},
+				} {
+					if f.id == nil {
+						continue
+					}
+					linked, apiErr := txRepo.HasAddress(txCtx, params.AccountID, *f.id)
+					if apiErr != nil {
+						return apiErr
+					}
+					if !linked {
+						return apierror.NewValidationErrorWithParam("The address is not one of the account's addresses.", f.param)
+					}
+				}
+				if apiErr := txRepo.SetDefaultAddresses(txCtx, params.AccountID, params.DefaultBillingAddressID, params.DefaultShippingAddressID); apiErr != nil {
 					return apiErr
 				}
 			}
 
 			if params.Slug != nil {
-				exists, apiErr := txRepo.ExistsPortalSlug(txCtx, *params.Slug, params.AccountID)
+				// The slug lookup ignores case, so one spelling is stored: the lowercase every portal link uses.
+				slug := strings.ToLower(*params.Slug)
+				exists, apiErr := txRepo.ExistsPortalSlug(txCtx, slug, params.AccountID)
 				if apiErr != nil {
 					return apiErr
 				}
@@ -1080,7 +1129,7 @@ func (s *accountSvcImpl) UpdateAccount(ctx context.Context, params domain.Update
 					return apierror.NewConflictErrorWithParam("A portal with this slug already exists.", "slug")
 				}
 
-				if apiErr := txRepo.UpdatePortalSlug(txCtx, params.AccountID, *params.Slug); apiErr != nil {
+				if apiErr := txRepo.UpdatePortalSlug(txCtx, params.AccountID, slug); apiErr != nil {
 					return apiErr
 				}
 			}
@@ -1091,7 +1140,7 @@ func (s *accountSvcImpl) UpdateAccount(ctx context.Context, params domain.Update
 			}
 			result = updated
 
-			changes := audit.ComputeChanges(old, updated)
+			changes := accountChanges(old, updated)
 
 			if apiErr := audit.NewPublisher().Publish(txCtx, txSvc.repos.NewOutboxRepo(), audit.EventData{
 				ServiceName:  domain.ServiceName,
@@ -1118,8 +1167,31 @@ func (s *accountSvcImpl) UpdateAccount(ctx context.Context, params domain.Update
 	}
 }
 
-// UploadAccountPhoto uploads an account logo to S3 and updates the branding record.
-func (s *accountSvcImpl) UploadAccountPhoto(ctx context.Context, accountID string, file []byte, contentType string) *apierror.APIError {
+// accountChanges is the audit diff of an account update: the account's own fields, then each branding
+// and portal field, named as the update request names them (phone_number, slug). A branding or portal
+// the account did not have before counts as one with every field unset.
+func accountChanges(old, updated *domain.Account) []audit.FieldChange {
+	changes := audit.ComputeChanges(old, updated)
+	changes = append(changes, audit.ComputeChanges(brandingOrEmpty(old), brandingOrEmpty(updated))...)
+	return append(changes, audit.ComputeChanges(portalOrEmpty(old), portalOrEmpty(updated))...)
+}
+
+func brandingOrEmpty(account *domain.Account) *domain.AccountBranding {
+	if account.Branding == nil {
+		return &domain.AccountBranding{}
+	}
+	return account.Branding
+}
+
+func portalOrEmpty(account *domain.Account) *domain.AccountPortal {
+	if account.Portal == nil {
+		return &domain.AccountPortal{}
+	}
+	return account.Portal
+}
+
+// UploadAccountPhoto uploads an account logo to S3 and points the account's branding at it.
+func (s *accountSvcImpl) UploadAccountPhoto(ctx context.Context, accountID string, file []byte) *apierror.APIError {
 	ctx, span := accountSvcTracer.Start(ctx, "service.account.upload_account_photo")
 	defer span.End()
 
@@ -1139,8 +1211,9 @@ func (s *accountSvcImpl) UploadAccountPhoto(ctx context.Context, accountID strin
 		return tracing.Trace(span, apierror.NewAuthorizationError("You can only update your own account."))
 	}
 
-	if contentType == "" {
-		contentType = "image/png"
+	contentType, apiErr := imageupload.Photo(file)
+	if apiErr != nil {
+		return tracing.Trace(span, apiErr)
 	}
 
 	s3Key := accountID + "/logo.png"
@@ -1190,8 +1263,8 @@ func (s *accountSvcImpl) GetAccountLogoURL(ctx context.Context, accountID string
 	return s.brandingAssetURL(ctx, logoKey), nil
 }
 
-// UploadAccountFavicon uploads a customer-portal favicon to S3 and updates the branding record.
-func (s *accountSvcImpl) UploadAccountFavicon(ctx context.Context, accountID string, file []byte, contentType string) *apierror.APIError {
+// UploadAccountFavicon uploads a customer-portal favicon to S3 and points the account's branding at it.
+func (s *accountSvcImpl) UploadAccountFavicon(ctx context.Context, accountID string, file []byte) *apierror.APIError {
 	ctx, span := accountSvcTracer.Start(ctx, "service.account.upload_account_favicon")
 	defer span.End()
 
@@ -1211,8 +1284,9 @@ func (s *accountSvcImpl) UploadAccountFavicon(ctx context.Context, accountID str
 		return tracing.Trace(span, apierror.NewAuthorizationError("You can only update your own account."))
 	}
 
-	if contentType == "" {
-		contentType = "image/png"
+	contentType, apiErr := imageupload.Favicon(file)
+	if apiErr != nil {
+		return tracing.Trace(span, apiErr)
 	}
 
 	s3Key := accountID + "/favicon.png"

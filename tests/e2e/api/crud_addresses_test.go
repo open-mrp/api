@@ -520,3 +520,27 @@ func TestAddresses_DeleteInUse(t *testing.T) {
 	assert.True(t, delStatus == 400 || delStatus == 409 || delStatus == 422,
 		"Deleting in-use address should return 400, 409, or 422, got %d: %s", delStatus, string(delBody))
 }
+
+// A PATCH changes only what it names, so the dock's receiving calendar survives an edit to the address's other fields and goes only when cleared.
+func TestAddresses_UpdateKeepsReceiveCalendarUnlessCleared(t *testing.T) {
+	t.Parallel()
+	calendarID := createCalendar(t, "receive", "1111100", nil)
+
+	created := createAndCleanup(t, addressesPath, map[string]any{
+		"name":                uniqueName("e2e-addr-cal"),
+		"receive_calendar_id": calendarID,
+		"country":             "US",
+	})
+	id := jsonField(created, "id")
+	require.Equal(t, calendarID, jsonField(created, "receive_calendar_id"))
+
+	status, body, err := apiClient.Patch(addressesPath+"/"+id, map[string]any{"name": uniqueName("e2e-addr-cal-renamed")}, newIdempotencyKey())
+	require.NoError(t, err)
+	requireStatus(t, 200, status, body)
+	assert.Equal(t, calendarID, jsonField(parseJSON(body), "receive_calendar_id"), "an update that does not name the calendar must keep it")
+
+	status, body, err = apiClient.Patch(addressesPath+"/"+id, map[string]any{"receive_calendar_id": nil}, newIdempotencyKey())
+	require.NoError(t, err)
+	requireStatus(t, 200, status, body)
+	assertNilField(t, parseJSON(body), "receive_calendar_id")
+}

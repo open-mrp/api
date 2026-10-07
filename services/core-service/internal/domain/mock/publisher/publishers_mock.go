@@ -199,6 +199,20 @@ func (m *MockBillingPublisher) EXPECT() *MockBillingPublisherMockRecorder {
 	return m.recorder
 }
 
+// PublishReportBatchCreated mocks base method.
+func (m *MockBillingPublisher) PublishReportBatchCreated(ctx context.Context, accountID, batchID string) *apierror.APIError {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "PublishReportBatchCreated", ctx, accountID, batchID)
+	ret0, _ := ret[0].(*apierror.APIError)
+	return ret0
+}
+
+// PublishReportBatchCreated indicates an expected call of PublishReportBatchCreated.
+func (mr *MockBillingPublisherMockRecorder) PublishReportBatchCreated(ctx, accountID, batchID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "PublishReportBatchCreated", reflect.TypeOf((*MockBillingPublisher)(nil).PublishReportBatchCreated), ctx, accountID, batchID)
+}
+
 // PublishReportInvoiceCreated mocks base method.
 func (m *MockBillingPublisher) PublishReportInvoiceCreated(ctx context.Context, accountID, invoiceID string) *apierror.APIError {
 	m.ctrl.T.Helper()

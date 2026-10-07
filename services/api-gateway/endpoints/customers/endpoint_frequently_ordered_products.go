@@ -19,18 +19,21 @@ type GetFrequentlyOrderedProductsRequest struct {
 // Returns the products a customer orders most often, based on historical sales order data.
 //
 // Returns up to 12 items, each paired with the unit the customer orders it in most often and ranked by the number of order lines placed in that unit. Only products of type `sale` that are visible in the customer portal are counted, so lines for services, shipping, tax, credits, and returns are ignored, and hiding a product from the portal removes its lines from the ranking.
+//
+// A customer or supplier portal reads only its own account's products; any other customer is reported as not found.
 type GetFrequentlyOrderedProductsEndpoint struct{}
 
 func (e *GetFrequentlyOrderedProductsEndpoint) Materialize() *apiendpoint.APIEndpoint[*GetFrequentlyOrderedProductsRequest, *apiresource.List[apiresource.FrequentlyOrderedProduct]] {
 	return (&apiendpoint.APIEndpoint[*GetFrequentlyOrderedProductsRequest, *apiresource.List[apiresource.FrequentlyOrderedProduct]]{
-		Title:               "Get Frequently Ordered Products",
-		Method:              http.MethodGet,
-		ContentType:         "application/json",
-		Route:               "/v1/sales/customers/{id}/frequently-ordered-products",
-		SuccessStatusCode:   http.StatusOK,
-		Public:              false,
-		Preview:             true,
-		RequiredPermissions: []types.Permission{{Domain: types.PermissionDomainCustomers, Action: types.ActionRead}, {Domain: types.PermissionDomainSuppliers, Action: types.ActionRead}, {Domain: types.PermissionDomainItems, Action: types.ActionRead}},
+		Title:                   "Get Frequently Ordered Products",
+		Method:                  http.MethodGet,
+		ContentType:             "application/json",
+		Route:                   "/v1/sales/customers/{id}/frequently-ordered-products",
+		SuccessStatusCode:       http.StatusOK,
+		Public:                  false,
+		Preview:                 true,
+		RequiredPermissions:     []types.Permission{{Domain: types.PermissionDomainItems, Action: types.ActionRead}},
+		CounterpartyPermissions: apiendpoint.Counterparties(types.ActionRead),
 		ServiceHandler: func(svc any) func(ctx context.Context, req *GetFrequentlyOrderedProductsRequest) (*apiresource.List[apiresource.FrequentlyOrderedProduct], *apierror.APIError) {
 			return svc.(CustomerSvc).GetFrequentlyOrderedProducts
 		},

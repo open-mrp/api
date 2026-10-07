@@ -254,3 +254,14 @@ func (suite *MachineExportTestSuite) buildExport(ctx context.Context, params dom
 	}
 	return buildExport(ctx, suite.repoFactory, spec, identity.Target.AccountID, params)
 }
+
+func TestDeleteMachine_OnlyTheOwnerLearnsItWasDeleted(t *testing.T) {
+	t.Parallel()
+	assertOnlyTheOwnerLearnsItWasDeleted(t, constants.DeletedRecordResourceTypeMachine, "mch_gone", func(h *deletedScopeHarness, accountID string) *apierror.APIError {
+		machines := repositorymock.NewMockMachineRepo(h.ctrl)
+		h.repos.EXPECT().NewMachineRepo().Return(machines).AnyTimes()
+		machines.EXPECT().Get(gomock.Any(), domain.GetMachineParams{AccountID: accountID, MachineID: "mch_gone"}).Return(nil, deletedScopeNotFound())
+		svc := NewMachineSvc(&MachineSvcConfig{Repos: h.repos, MediatorFactory: h.mediators, JobSvcFactory: NewJobSvcFactory(), TxManager: &stubTxManager{factory: h.repos}})
+		return svc.DeleteMachine(deletedScopeCtx(accountID), "mch_gone")
+	})
+}

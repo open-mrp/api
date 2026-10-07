@@ -26,9 +26,11 @@ type AccountUserDetail struct {
 	DepartmentUpdatedAt  *time.Time
 	StatusCode           constants.AccountUserStatus `audit:"status_code"`
 	IsCommissionEligible bool                        `audit:"is_commission_eligible"`
-	LastUsedAt           *time.Time
-	CreatedAt            time.Time
-	UpdatedAt            time.Time
+	// NotificationTypes are the notification types the acting account sends this user when it manages the user's account as a customer or supplier. Nil for the acting account's own users.
+	NotificationTypes []string `audit:"notification_types"`
+	LastUsedAt        *time.Time
+	CreatedAt         time.Time
+	UpdatedAt         time.Time
 }
 
 // ListAccountUsersParams are the parameters for listing account users.

@@ -76,7 +76,7 @@ func productLineFromProto(pl *pb.ProductLineInfo) *apiresource.ProductLine {
 		Name:             pl.Name,
 		Description:      pl.Description,
 		Notes:            pl.Notes,
-		CommissionPolicy: constants.CommissionPolicy(pl.CommissionPolicy),
+		CommissionPolicy: new(constants.CommissionPolicy(pl.CommissionPolicy)),
 		FreightPolicy:    constants.FreightPolicy(pl.FreightPolicy),
 		CreatedAt:        grpcutil.TimestampToTime(pl.CreatedAt),
 		UpdatedAt:        grpcutil.TimestampToTime(pl.UpdatedAt),

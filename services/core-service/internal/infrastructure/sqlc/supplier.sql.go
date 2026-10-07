@@ -80,72 +80,6 @@ func (q *Queries) BulkDeleteSupplierRelations(ctx context.Context, arg BulkDelet
 	return err
 }
 
-const countSuppliers = `-- name: CountSuppliers :one
-SELECT COUNT(*) AS total
-FROM account_relation ar
-INNER JOIN account a ON a.id = ar.counterparty_account_id
-WHERE ar.owner_account_id = ?
-  AND ar.account_relation_role_code = 'supplier'
-  AND (
-    ? IS NULL
-    OR a.name LIKE ?
-    OR ar.external_number LIKE ?
-  )
-  AND (
-    ? IS NULL
-    OR ar.created_at >= ?
-  )
-  AND (
-    ? IS NULL
-    OR ar.created_at <= ?
-  )
-  AND (
-    ? = false
-    OR EXISTS (
-        SELECT 1 FROM supplier_material sm2
-        INNER JOIN material m ON m.id = sm2.material_id
-        WHERE sm2.supplier_account_id = ar.counterparty_account_id
-          AND sm2.owner_account_id = ar.owner_account_id
-          AND m.item_id IN (/*SLICE:item_ids*/?)
-    )
-  )
-`
-
-type CountSuppliersParams struct {
-	OwnerAccountID string
-	SearchQuery    sql.NullString
-	StartDate      sql.NullTime
-	EndDate        sql.NullTime
-	HasItemFilter  interface{}
-	ItemIds        []string
-}
-
-func (q *Queries) CountSuppliers(ctx context.Context, arg CountSuppliersParams) (int64, error) {
-	query := countSuppliers
-	var queryParams []interface{}
-	queryParams = append(queryParams, arg.OwnerAccountID)
-	queryParams = append(queryParams, arg.SearchQuery)
-	queryParams = append(queryParams, arg.SearchQuery)
-	queryParams = append(queryParams, arg.SearchQuery)
-	queryParams = append(queryParams, arg.StartDate)
-	queryParams = append(queryParams, arg.StartDate)
-	queryParams = append(queryParams, arg.EndDate)
-	queryParams = append(queryParams, arg.EndDate)
-	queryParams = append(queryParams, arg.HasItemFilter)
-	if len(arg.ItemIds) > 0 {
-		for _, v := range arg.ItemIds {
-			queryParams = append(queryParams, v)
-		}
-		query = strings.Replace(query, "/*SLICE:item_ids*/?", strings.Repeat(",?", len(arg.ItemIds))[1:], 1)
-	} else {
-		query = strings.Replace(query, "/*SLICE:item_ids*/?", "NULL", 1)
-	}
-	row := q.db.QueryRowContext(ctx, query, queryParams...)
-	var total int64
-	err := row.Scan(&total)
-	return total, err
-}
-
 const deleteSupplierAccountAddresses = `-- name: DeleteSupplierAccountAddresses :exec
 DELETE FROM account_address
 WHERE account_id = ?
@@ -186,17 +120,21 @@ func (q *Queries) DeleteSupplierRelation(ctx context.Context, arg DeleteSupplier
 const findSuppliersByNames = `-- name: FindSuppliersByNames :many
 SELECT
     ar.counterparty_account_id AS account_id,
-    a.name AS account_name
+    COALESCE(NULLIF(ar.alias, ''), a.name) AS account_name
 FROM account_relation ar
 INNER JOIN account a ON a.id = ar.counterparty_account_id
 WHERE ar.owner_account_id = ?
   AND ar.account_relation_role_code = 'supplier'
-  AND a.name IN (/*SLICE:names*/?)
+  AND (
+    (ar.alias <> '' AND ar.alias IN (/*SLICE:alias_names*/?))
+    OR (COALESCE(ar.alias, '') = '' AND a.name IN (/*SLICE:account_names*/?))
+  )
 `
 
 type FindSuppliersByNamesParams struct {
 	OwnerAccountID string
-	Names          []string
+	AliasNames     []sql.NullString
+	AccountNames   []string
 }
 
 type FindSuppliersByNamesRow struct {
@@ -205,18 +143,27 @@ type FindSuppliersByNamesRow struct {
 }
 
 // Used by bulk upsert to resolve supplier names to supplier account IDs within the
-// owner account. Match is case-insensitive via the column collation.
+// owner account. A name is the owner's alias for the supplier, or the supplier account's
+// own name when it has none. Match is case-insensitive via the column collation.
 func (q *Queries) FindSuppliersByNames(ctx context.Context, arg FindSuppliersByNamesParams) ([]FindSuppliersByNamesRow, error) {
 	query := findSuppliersByNames
 	var queryParams []interface{}
 	queryParams = append(queryParams, arg.OwnerAccountID)
-	if len(arg.Names) > 0 {
-		for _, v := range arg.Names {
+	if len(arg.AliasNames) > 0 {
+		for _, v := range arg.AliasNames {
 			queryParams = append(queryParams, v)
 		}
-		query = strings.Replace(query, "/*SLICE:names*/?", strings.Repeat(",?", len(arg.Names))[1:], 1)
+		query = strings.Replace(query, "/*SLICE:alias_names*/?", strings.Repeat(",?", len(arg.AliasNames))[1:], 1)
 	} else {
-		query = strings.Replace(query, "/*SLICE:names*/?", "NULL", 1)
+		query = strings.Replace(query, "/*SLICE:alias_names*/?", "NULL", 1)
+	}
+	if len(arg.AccountNames) > 0 {
+		for _, v := range arg.AccountNames {
+			queryParams = append(queryParams, v)
+		}
+		query = strings.Replace(query, "/*SLICE:account_names*/?", strings.Repeat(",?", len(arg.AccountNames))[1:], 1)
+	} else {
+		query = strings.Replace(query, "/*SLICE:account_names*/?", "NULL", 1)
 	}
 	rows, err := q.db.QueryContext(ctx, query, queryParams...)
 	if err != nil {
@@ -244,7 +191,7 @@ const getSupplier = `-- name: GetSupplier :one
 SELECT
     ar.id AS relation_id,
     ar.counterparty_account_id AS account_id,
-    a.name AS account_name,
+    COALESCE(NULLIF(ar.alias, ''), a.name) AS account_name,
     ar.external_number,
     ar.notes,
     ba.id AS default_billing_address_id,
@@ -275,6 +222,15 @@ SELECT
     sg.country AS default_shipping_country,
     sa.created_at AS default_shipping_address_created_at,
     sa.updated_at AS default_shipping_address_updated_at,
+    (
+        SELECT STRAIGHT_JOIN COUNT(*)
+        FROM supplier_material smc FORCE INDEX (supplier_material_supplier_account_id_idx)
+        JOIN material mc ON mc.id = smc.material_id
+        JOIN item ic ON ic.id = mc.item_id
+        WHERE smc.supplier_account_id = ar.counterparty_account_id
+          AND smc.owner_account_id = ar.owner_account_id
+          AND ic.deleted_at IS NULL
+    ) AS material_count,
     ar.created_at,
     ar.updated_at
 FROM account_relation ar
@@ -327,6 +283,7 @@ type GetSupplierRow struct {
 	DefaultShippingCountry          sql.NullString
 	DefaultShippingAddressCreatedAt sql.NullTime
 	DefaultShippingAddressUpdatedAt sql.NullTime
+	MaterialCount                   int64
 	CreatedAt                       time.Time
 	UpdatedAt                       time.Time
 }
@@ -368,6 +325,7 @@ func (q *Queries) GetSupplier(ctx context.Context, arg GetSupplierParams) (GetSu
 		&i.DefaultShippingCountry,
 		&i.DefaultShippingAddressCreatedAt,
 		&i.DefaultShippingAddressUpdatedAt,
+		&i.MaterialCount,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 	)
@@ -435,11 +393,11 @@ func (q *Queries) InsertSupplierRelation(ctx context.Context, arg InsertSupplier
 	return err
 }
 
-const listSuppliersBackward = `-- name: ListSuppliersBackward :many
+const listSuppliersByIDs = `-- name: ListSuppliersByIDs :many
 SELECT
     ar.id AS relation_id,
     ar.counterparty_account_id AS account_id,
-    a.name AS account_name,
+    COALESCE(NULLIF(ar.alias, ''), a.name) AS account_name,
     ar.external_number,
     ar.notes,
     ba.id AS default_billing_address_id,
@@ -470,6 +428,16 @@ SELECT
     sg.country AS default_shipping_country,
     sa.created_at AS default_shipping_address_created_at,
     sa.updated_at AS default_shipping_address_updated_at,
+    -- The links the supplier's materials list returns: a material whose item was deleted is not one.
+    (
+        SELECT STRAIGHT_JOIN COUNT(*)
+        FROM supplier_material smc FORCE INDEX (supplier_material_supplier_account_id_idx)
+        JOIN material mc ON mc.id = smc.material_id
+        JOIN item ic ON ic.id = mc.item_id
+        WHERE smc.supplier_account_id = ar.counterparty_account_id
+          AND smc.owner_account_id = ar.owner_account_id
+          AND ic.deleted_at IS NULL
+    ) AS material_count,
     ar.created_at,
     ar.updated_at
 FROM account_relation ar
@@ -480,50 +448,15 @@ LEFT JOIN address sa ON sa.id = ar.default_shipping_address_id
 LEFT JOIN geolocation sg ON sg.id = sa.geolocation_id
 WHERE ar.owner_account_id = ?
   AND ar.account_relation_role_code = 'supplier'
-  AND (
-    ? IS NULL
-    OR a.name LIKE ?
-    OR ar.external_number LIKE ?
-  )
-  AND (
-    ? IS NULL
-    OR ar.created_at >= ?
-  )
-  AND (
-    ? IS NULL
-    OR ar.created_at <= ?
-  )
-  AND (
-    ? = false
-    OR EXISTS (
-        SELECT 1 FROM supplier_material sm2
-        INNER JOIN material m ON m.id = sm2.material_id
-        WHERE sm2.supplier_account_id = ar.counterparty_account_id
-          AND sm2.owner_account_id = ar.owner_account_id
-          AND m.item_id IN (/*SLICE:item_ids*/?)
-    )
-  )
-  AND (
-    ar.created_at > ?
-    OR (ar.created_at = ? AND ar.counterparty_account_id > ?)
-  )
-ORDER BY ar.created_at ASC, ar.counterparty_account_id ASC
-LIMIT ?
+  AND ar.counterparty_account_id IN (/*SLICE:ids*/?)
 `
 
-type ListSuppliersBackwardParams struct {
-	OwnerAccountID  string
-	SearchQuery     sql.NullString
-	StartDate       sql.NullTime
-	EndDate         sql.NullTime
-	HasItemFilter   interface{}
-	ItemIds         []string
-	CursorCreatedAt time.Time
-	CursorID        string
-	Limit           int32
+type ListSuppliersByIDsParams struct {
+	OwnerAccountID string
+	Ids            []string
 }
 
-type ListSuppliersBackwardRow struct {
+type ListSuppliersByIDsRow struct {
 	RelationID                      string
 	AccountID                       string
 	AccountName                     string
@@ -557,42 +490,32 @@ type ListSuppliersBackwardRow struct {
 	DefaultShippingCountry          sql.NullString
 	DefaultShippingAddressCreatedAt sql.NullTime
 	DefaultShippingAddressUpdatedAt sql.NullTime
+	MaterialCount                   int64
 	CreatedAt                       time.Time
 	UpdatedAt                       time.Time
 }
 
-func (q *Queries) ListSuppliersBackward(ctx context.Context, arg ListSuppliersBackwardParams) ([]ListSuppliersBackwardRow, error) {
-	query := listSuppliersBackward
+// Reads the rows of a page buildSupplierListPageQuery chose. Its columns match GetSupplier's, so one mapper reads both.
+func (q *Queries) ListSuppliersByIDs(ctx context.Context, arg ListSuppliersByIDsParams) ([]ListSuppliersByIDsRow, error) {
+	query := listSuppliersByIDs
 	var queryParams []interface{}
 	queryParams = append(queryParams, arg.OwnerAccountID)
-	queryParams = append(queryParams, arg.SearchQuery)
-	queryParams = append(queryParams, arg.SearchQuery)
-	queryParams = append(queryParams, arg.SearchQuery)
-	queryParams = append(queryParams, arg.StartDate)
-	queryParams = append(queryParams, arg.StartDate)
-	queryParams = append(queryParams, arg.EndDate)
-	queryParams = append(queryParams, arg.EndDate)
-	queryParams = append(queryParams, arg.HasItemFilter)
-	if len(arg.ItemIds) > 0 {
-		for _, v := range arg.ItemIds {
+	if len(arg.Ids) > 0 {
+		for _, v := range arg.Ids {
 			queryParams = append(queryParams, v)
 		}
-		query = strings.Replace(query, "/*SLICE:item_ids*/?", strings.Repeat(",?", len(arg.ItemIds))[1:], 1)
+		query = strings.Replace(query, "/*SLICE:ids*/?", strings.Repeat(",?", len(arg.Ids))[1:], 1)
 	} else {
-		query = strings.Replace(query, "/*SLICE:item_ids*/?", "NULL", 1)
+		query = strings.Replace(query, "/*SLICE:ids*/?", "NULL", 1)
 	}
-	queryParams = append(queryParams, arg.CursorCreatedAt)
-	queryParams = append(queryParams, arg.CursorCreatedAt)
-	queryParams = append(queryParams, arg.CursorID)
-	queryParams = append(queryParams, arg.Limit)
 	rows, err := q.db.QueryContext(ctx, query, queryParams...)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	var items []ListSuppliersBackwardRow
+	var items []ListSuppliersByIDsRow
 	for rows.Next() {
-		var i ListSuppliersBackwardRow
+		var i ListSuppliersByIDsRow
 		if err := rows.Scan(
 			&i.RelationID,
 			&i.AccountID,
@@ -627,6 +550,7 @@ func (q *Queries) ListSuppliersBackward(ctx context.Context, arg ListSuppliersBa
 			&i.DefaultShippingCountry,
 			&i.DefaultShippingAddressCreatedAt,
 			&i.DefaultShippingAddressUpdatedAt,
+			&i.MaterialCount,
 			&i.CreatedAt,
 			&i.UpdatedAt,
 		); err != nil {
@@ -643,214 +567,18 @@ func (q *Queries) ListSuppliersBackward(ctx context.Context, arg ListSuppliersBa
 	return items, nil
 }
 
-const listSuppliersForward = `-- name: ListSuppliersForward :many
-SELECT
-    ar.id AS relation_id,
-    ar.counterparty_account_id AS account_id,
-    a.name AS account_name,
-    ar.external_number,
-    ar.notes,
-    ba.id AS default_billing_address_id,
-    ba.name AS default_billing_address_name,
-    ba.phone AS default_billing_address_phone,
-    ba.email AS default_billing_address_email,
-    ba.is_drop_ship AS default_billing_is_drop_ship,
-    bg.id AS default_billing_geolocation_id,
-    bg.street_line_1 AS default_billing_street_line_1,
-    bg.street_line_2 AS default_billing_street_line_2,
-    bg.locality AS default_billing_locality,
-    bg.state AS default_billing_state,
-    bg.postal_code AS default_billing_postal_code,
-    bg.country AS default_billing_country,
-    ba.created_at AS default_billing_address_created_at,
-    ba.updated_at AS default_billing_address_updated_at,
-    sa.id AS default_shipping_address_id,
-    sa.name AS default_shipping_address_name,
-    sa.phone AS default_shipping_address_phone,
-    sa.email AS default_shipping_address_email,
-    sa.is_drop_ship AS default_shipping_is_drop_ship,
-    sg.id AS default_shipping_geolocation_id,
-    sg.street_line_1 AS default_shipping_street_line_1,
-    sg.street_line_2 AS default_shipping_street_line_2,
-    sg.locality AS default_shipping_locality,
-    sg.state AS default_shipping_state,
-    sg.postal_code AS default_shipping_postal_code,
-    sg.country AS default_shipping_country,
-    sa.created_at AS default_shipping_address_created_at,
-    sa.updated_at AS default_shipping_address_updated_at,
-    ar.created_at,
-    ar.updated_at
-FROM account_relation ar
-INNER JOIN account a ON a.id = ar.counterparty_account_id
-LEFT JOIN address ba ON ba.id = ar.default_billing_address_id
-LEFT JOIN geolocation bg ON bg.id = ba.geolocation_id
-LEFT JOIN address sa ON sa.id = ar.default_shipping_address_id
-LEFT JOIN geolocation sg ON sg.id = sa.geolocation_id
-WHERE ar.owner_account_id = ?
-  AND ar.account_relation_role_code = 'supplier'
-  AND (
-    ? IS NULL
-    OR a.name LIKE ?
-    OR ar.external_number LIKE ?
-  )
-  AND (
-    ? IS NULL
-    OR ar.created_at >= ?
-  )
-  AND (
-    ? IS NULL
-    OR ar.created_at <= ?
-  )
-  AND (
-    ? = false
-    OR EXISTS (
-        SELECT 1 FROM supplier_material sm2
-        INNER JOIN material m ON m.id = sm2.material_id
-        WHERE sm2.supplier_account_id = ar.counterparty_account_id
-          AND sm2.owner_account_id = ar.owner_account_id
-          AND m.item_id IN (/*SLICE:item_ids*/?)
-    )
-  )
-  AND (
-    ? IS NULL
-    OR ar.created_at < ?
-    OR (ar.created_at = ? AND ar.counterparty_account_id < ?)
-  )
-ORDER BY ar.created_at DESC, ar.counterparty_account_id DESC
-LIMIT ?
+const lockSupplierNumbers = `-- name: LockSupplierNumbers :one
+SELECT id FROM account
+WHERE id = ?
+FOR UPDATE
 `
 
-type ListSuppliersForwardParams struct {
-	OwnerAccountID  string
-	SearchQuery     sql.NullString
-	StartDate       sql.NullTime
-	EndDate         sql.NullTime
-	HasItemFilter   interface{}
-	ItemIds         []string
-	CursorCreatedAt sql.NullTime
-	CursorID        sql.NullString
-	Limit           int32
-}
-
-type ListSuppliersForwardRow struct {
-	RelationID                      string
-	AccountID                       string
-	AccountName                     string
-	ExternalNumber                  string
-	Notes                           sql.NullString
-	DefaultBillingAddressID         sql.NullString
-	DefaultBillingAddressName       sql.NullString
-	DefaultBillingAddressPhone      sql.NullString
-	DefaultBillingAddressEmail      sql.NullString
-	DefaultBillingIsDropShip        sql.NullBool
-	DefaultBillingGeolocationID     sql.NullString
-	DefaultBillingStreetLine1       sql.NullString
-	DefaultBillingStreetLine2       sql.NullString
-	DefaultBillingLocality          sql.NullString
-	DefaultBillingState             sql.NullString
-	DefaultBillingPostalCode        sql.NullString
-	DefaultBillingCountry           sql.NullString
-	DefaultBillingAddressCreatedAt  sql.NullTime
-	DefaultBillingAddressUpdatedAt  sql.NullTime
-	DefaultShippingAddressID        sql.NullString
-	DefaultShippingAddressName      sql.NullString
-	DefaultShippingAddressPhone     sql.NullString
-	DefaultShippingAddressEmail     sql.NullString
-	DefaultShippingIsDropShip       sql.NullBool
-	DefaultShippingGeolocationID    sql.NullString
-	DefaultShippingStreetLine1      sql.NullString
-	DefaultShippingStreetLine2      sql.NullString
-	DefaultShippingLocality         sql.NullString
-	DefaultShippingState            sql.NullString
-	DefaultShippingPostalCode       sql.NullString
-	DefaultShippingCountry          sql.NullString
-	DefaultShippingAddressCreatedAt sql.NullTime
-	DefaultShippingAddressUpdatedAt sql.NullTime
-	CreatedAt                       time.Time
-	UpdatedAt                       time.Time
-}
-
-func (q *Queries) ListSuppliersForward(ctx context.Context, arg ListSuppliersForwardParams) ([]ListSuppliersForwardRow, error) {
-	query := listSuppliersForward
-	var queryParams []interface{}
-	queryParams = append(queryParams, arg.OwnerAccountID)
-	queryParams = append(queryParams, arg.SearchQuery)
-	queryParams = append(queryParams, arg.SearchQuery)
-	queryParams = append(queryParams, arg.SearchQuery)
-	queryParams = append(queryParams, arg.StartDate)
-	queryParams = append(queryParams, arg.StartDate)
-	queryParams = append(queryParams, arg.EndDate)
-	queryParams = append(queryParams, arg.EndDate)
-	queryParams = append(queryParams, arg.HasItemFilter)
-	if len(arg.ItemIds) > 0 {
-		for _, v := range arg.ItemIds {
-			queryParams = append(queryParams, v)
-		}
-		query = strings.Replace(query, "/*SLICE:item_ids*/?", strings.Repeat(",?", len(arg.ItemIds))[1:], 1)
-	} else {
-		query = strings.Replace(query, "/*SLICE:item_ids*/?", "NULL", 1)
-	}
-	queryParams = append(queryParams, arg.CursorCreatedAt)
-	queryParams = append(queryParams, arg.CursorCreatedAt)
-	queryParams = append(queryParams, arg.CursorCreatedAt)
-	queryParams = append(queryParams, arg.CursorID)
-	queryParams = append(queryParams, arg.Limit)
-	rows, err := q.db.QueryContext(ctx, query, queryParams...)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	var items []ListSuppliersForwardRow
-	for rows.Next() {
-		var i ListSuppliersForwardRow
-		if err := rows.Scan(
-			&i.RelationID,
-			&i.AccountID,
-			&i.AccountName,
-			&i.ExternalNumber,
-			&i.Notes,
-			&i.DefaultBillingAddressID,
-			&i.DefaultBillingAddressName,
-			&i.DefaultBillingAddressPhone,
-			&i.DefaultBillingAddressEmail,
-			&i.DefaultBillingIsDropShip,
-			&i.DefaultBillingGeolocationID,
-			&i.DefaultBillingStreetLine1,
-			&i.DefaultBillingStreetLine2,
-			&i.DefaultBillingLocality,
-			&i.DefaultBillingState,
-			&i.DefaultBillingPostalCode,
-			&i.DefaultBillingCountry,
-			&i.DefaultBillingAddressCreatedAt,
-			&i.DefaultBillingAddressUpdatedAt,
-			&i.DefaultShippingAddressID,
-			&i.DefaultShippingAddressName,
-			&i.DefaultShippingAddressPhone,
-			&i.DefaultShippingAddressEmail,
-			&i.DefaultShippingIsDropShip,
-			&i.DefaultShippingGeolocationID,
-			&i.DefaultShippingStreetLine1,
-			&i.DefaultShippingStreetLine2,
-			&i.DefaultShippingLocality,
-			&i.DefaultShippingState,
-			&i.DefaultShippingPostalCode,
-			&i.DefaultShippingCountry,
-			&i.DefaultShippingAddressCreatedAt,
-			&i.DefaultShippingAddressUpdatedAt,
-			&i.CreatedAt,
-			&i.UpdatedAt,
-		); err != nil {
-			return nil, err
-		}
-		items = append(items, i)
-	}
-	if err := rows.Close(); err != nil {
-		return nil, err
-	}
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-	return items, nil
+// No unique index guards supplier numbers, so their writers queue on the owner's account row. Take it before the transaction's first read so the number check sees every earlier holder's commit.
+func (q *Queries) LockSupplierNumbers(ctx context.Context, ownerAccountID string) (string, error) {
+	row := q.db.QueryRowContext(ctx, lockSupplierNumbers, ownerAccountID)
+	var id string
+	err := row.Scan(&id)
+	return id, err
 }
 
 const supplierExistsByNumber = `-- name: SupplierExistsByNumber :one
@@ -879,25 +607,9 @@ func (q *Queries) SupplierExistsByNumber(ctx context.Context, arg SupplierExists
 	return supplier_exists, err
 }
 
-const updateSupplierAccountName = `-- name: UpdateSupplierAccountName :exec
-UPDATE account SET
-    name = ?,
-    updated_at = NOW(3)
-WHERE id = ?
-`
-
-type UpdateSupplierAccountNameParams struct {
-	Name string
-	ID   string
-}
-
-func (q *Queries) UpdateSupplierAccountName(ctx context.Context, arg UpdateSupplierAccountNameParams) error {
-	_, err := q.db.ExecContext(ctx, updateSupplierAccountName, arg.Name, arg.ID)
-	return err
-}
-
 const updateSupplierRelation = `-- name: UpdateSupplierRelation :exec
 UPDATE account_relation SET
+    alias = COALESCE(?, alias),
     external_number = COALESCE(?, external_number),
     notes = CASE WHEN ? = true THEN ? ELSE notes END,
     default_billing_address_id = ?,
@@ -909,6 +621,7 @@ WHERE owner_account_id = ?
 `
 
 type UpdateSupplierRelationParams struct {
+	Alias                    sql.NullString
 	ExternalNumber           sql.NullString
 	UpdateNotes              interface{}
 	Notes                    sql.NullString
@@ -918,8 +631,10 @@ type UpdateSupplierRelationParams struct {
 	CounterpartyAccountID    string
 }
 
+// A rename is the owner's name for the supplier, so it lands on the relation's alias, never on the supplier's account.
 func (q *Queries) UpdateSupplierRelation(ctx context.Context, arg UpdateSupplierRelationParams) error {
 	_, err := q.db.ExecContext(ctx, updateSupplierRelation,
+		arg.Alias,
 		arg.ExternalNumber,
 		arg.UpdateNotes,
 		arg.Notes,

@@ -96,7 +96,7 @@ func (s *scanningStationSvcImpl) BatchGetScanningStationsByIDs(ctx context.Conte
 		return nil, tracing.Trace(span, apierror.NewInvariantViolationError("Identity not found in context."))
 	}
 
-	if apiErr := identity.CheckIsInternalActor(); apiErr != nil {
+	if apiErr := identity.CheckIsInternalActorForRead(); apiErr != nil {
 		return nil, tracing.Trace(span, apiErr)
 	}
 	if apiErr := identity.CheckHasPermission(types.PermissionDomainScanningStations, types.ActionRead); apiErr != nil {
@@ -363,7 +363,7 @@ func (s *scanningStationSvcImpl) DeleteScanningStation(ctx context.Context, scan
 	})
 	if apiErr != nil {
 		if apierror.IsNotFound(apiErr) {
-			wasDeleted, deletedCheckErr := s.repos.NewDeletedRecordRepo().Exists(ctx, constants.DeletedRecordResourceTypeScanningStation, scanningStationID)
+			wasDeleted, deletedCheckErr := s.repos.NewDeletedRecordRepo().ExistsInAccount(ctx, constants.DeletedRecordResourceTypeScanningStation, scanningStationID, accountID)
 			if deletedCheckErr != nil {
 				return tracing.Trace(span, deletedCheckErr)
 			}
@@ -378,7 +378,7 @@ func (s *scanningStationSvcImpl) DeleteScanningStation(ctx context.Context, scan
 	}
 
 	apiErr = s.withTx(ctx, func(txCtx context.Context, txSvc *scanningStationSvcImpl) *apierror.APIError {
-		if apiErr := txSvc.repos.NewDeletedRecordRepo().Create(txCtx, constants.DeletedRecordResourceTypeScanningStation, scanningStation.ID, scanningStation); apiErr != nil {
+		if apiErr := txSvc.repos.NewDeletedRecordRepo().CreateInAccount(txCtx, constants.DeletedRecordResourceTypeScanningStation, scanningStation.ID, accountID, scanningStation); apiErr != nil {
 			return apiErr
 		}
 

@@ -32,16 +32,17 @@ type ListMaterialsEndpoint struct{}
 
 func (e *ListMaterialsEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListMaterialsRequest, *apiresource.List[apiresource.Material]] {
 	return (&apiendpoint.APIEndpoint[*ListMaterialsRequest, *apiresource.List[apiresource.Material]]{
-		Title:               "List Materials",
-		Method:              http.MethodGet,
-		ContentType:         "application/json",
-		Route:               "/v1/catalog/materials",
-		SuccessStatusCode:   http.StatusOK,
-		Public:              true,
-		AgentTool:           true,
-		RequiredPermissions: []types.Permission{{Domain: types.PermissionDomainMaterials, Action: types.ActionRead}, {Domain: types.PermissionDomainCustomers, Action: types.ActionRead}, {Domain: types.PermissionDomainSuppliers, Action: types.ActionRead}},
-		Preview:             true,
-		ObjectType:          constants.ObjectTypeMaterial,
+		Title:                   "List Materials",
+		Method:                  http.MethodGet,
+		ContentType:             "application/json",
+		Route:                   "/v1/catalog/materials",
+		SuccessStatusCode:       http.StatusOK,
+		Public:                  true,
+		AgentTool:               true,
+		RequiredPermissions:     []types.Permission{{Domain: types.PermissionDomainMaterials, Action: types.ActionRead}},
+		CounterpartyPermissions: apiendpoint.Counterparties(types.ActionRead),
+		Preview:                 true,
+		ObjectType:              constants.ObjectTypeMaterial,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *ListMaterialsRequest) (*apiresource.List[apiresource.Material], *apierror.APIError) {
 			return svc.(MaterialSvc).ListMaterials
 		},

@@ -195,6 +195,24 @@ func (r *machineRepoImpl) GetByIDs(ctx context.Context, accountID string, ids []
 	return machines, nil
 }
 
+func (r *machineRepoImpl) SetProductionStep(ctx context.Context, accountID string, ids []string, productionStepID *string) *apierror.APIError {
+	ctx, span := machineRepoTracer.Start(ctx, "repository.machine.set_production_step")
+	defer span.End()
+
+	if len(ids) == 0 {
+		return nil
+	}
+	err := r.queries.SetMachinesProductionStep(ctx, sqlc.SetMachinesProductionStepParams{
+		ProductionStepID: ptrToNullString(productionStepID),
+		Ids:              ids,
+		AccountID:        accountID,
+	})
+	if apiErr := db.MapSQLError(err); apiErr != nil {
+		return tracing.Trace(span, apiErr)
+	}
+	return nil
+}
+
 func (r *machineRepoImpl) List(ctx context.Context, params domain.ListMachinesParams) (*domain.ListMachinesResult, *apierror.APIError) {
 	ctx, span := machineRepoTracer.Start(ctx, "repository.machine.list")
 	defer span.End()

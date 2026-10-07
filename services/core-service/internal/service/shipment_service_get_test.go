@@ -49,6 +49,7 @@ func (suite *ShipmentSvcGetTestSuite) SetupTest() {
 		Repos:           suite.repoFactory,
 		MediatorFactory: suite.mediatorFactory,
 		TxManager:       &stubTxManager{factory: suite.repoFactory},
+		DispatchLeases:  newMemLeases(),
 	})
 }
 

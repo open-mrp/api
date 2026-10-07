@@ -38,7 +38,7 @@ func (e *RetrieveProductionEndpoint) Materialize() *apiendpoint.APIEndpoint[*Ret
 		},
 		IncludeConfig: apiendpoint.IncludesFor(apiendpoint.IncludesParams{
 			ObjectType: constants.ObjectTypeProduction,
-			Fields:     []string{"produced_item"},
+			Fields:     productionIncludes,
 		}),
 	})
 }

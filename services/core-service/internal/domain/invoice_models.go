@@ -139,9 +139,11 @@ type ListInvoicesParams struct {
 	ProductLineIDs   []string
 	CustomerGroupIDs []string
 	SalesRepIDs      []string
-	StartDate        *time.Time
-	EndDate          *time.Time
-	Includes         []string
+	// Numbers are exact invoice numbers.
+	Numbers   []string
+	StartDate *time.Time
+	EndDate   *time.Time
+	Includes  []string
 }
 
 // Holds one page of invoices plus its cursors.

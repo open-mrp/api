@@ -67,6 +67,7 @@ func (m *invoiceSvcImpl) ListInvoices(ctx context.Context, req *ListInvoicesRequ
 		ProductLineIds:   req.ProductLineIDs,
 		CustomerGroupIds: req.CustomerGroupIDs,
 		SalesRepIds:      req.SalesRepIDs,
+		Numbers:          req.Numbers,
 		// Ask the backend to expand lines when requested (the rest of the includes
 		// are resolved gateway-side).
 		Includes: resourcekit.FilterIncludes(ctx, "lines"),

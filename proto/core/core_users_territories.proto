@@ -428,6 +428,8 @@ message ListInvoicesRequest {
   optional google.protobuf.Timestamp start_date = 10;
   optional google.protobuf.Timestamp end_date = 11;
   repeated string includes = 12;
+  // Exact invoice numbers.
+  repeated string numbers = 13;
 }
 message ListInvoicesResponse {
   repeated InvoiceInfo invoices = 1;

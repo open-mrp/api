@@ -1,5 +1,12 @@
 # Changelog
 
+## [4.1.4](https://github.com/open-mrp/api/compare/v4.1.3...v4.1.4) (2026-10-07)
+
+
+### Performance Improvements
+
+* **invoices:** look up exact invoice numbers on the number-and-order key ([#283](https://github.com/open-mrp/api/issues/283)) ([fd58747](https://github.com/open-mrp/api/commit/fd5874734e852b205a9ca02871bb5de3bcbf341d))
+
 ## [4.1.3](https://github.com/open-mrp/api/compare/v4.1.2...v4.1.3) (2026-10-07)
 
 

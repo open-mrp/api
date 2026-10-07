@@ -2742,7 +2742,7 @@ func (s *conversationSvcImpl) createGroup(ctx context.Context, input domain.Crea
 
 	var roleChanges []participantRoleChange
 	apiErr = s.txManager.WithTx(ctx, func(txCtx context.Context, f domain.RepoFactory) *apierror.APIError {
-		roleChanges = nil
+		var changes []participantRoleChange
 		if createErr := f.NewConversationRepo().Create(txCtx, conversationID, &input, accountID); createErr != nil {
 			return createErr
 		}
@@ -2779,7 +2779,7 @@ func (s *conversationSvcImpl) createGroup(ctx context.Context, input domain.Crea
 				if rErr := applyParticipantRole(txCtx, f, conversationID, seated, requested); rErr != nil {
 					return rErr
 				}
-				roleChanges = append(roleChanges, participantRoleChange{participantID: pid, role: requested})
+				changes = append(changes, participantRoleChange{participantID: pid, role: requested})
 			}
 		}
 		// Roster agent members are seated with the safe default trigger (mention); their per-conversation trigger config can be changed afterward like any other agent participant.
@@ -2796,6 +2796,7 @@ func (s *conversationSvcImpl) createGroup(ctx context.Context, input domain.Crea
 				return pErr
 			}
 		}
+		roleChanges = changes
 		return nil
 	})
 	if apiErr != nil {

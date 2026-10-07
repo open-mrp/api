@@ -1,5 +1,12 @@
 # Changelog
 
+## [3.1.1](https://github.com/open-mrp/api/compare/v3.1.0...v3.1.1) (2026-10-07)
+
+
+### Bug Fixes
+
+* **finance:** find invoices by exact number ([#271](https://github.com/open-mrp/api/issues/271)) ([1030e0d](https://github.com/open-mrp/api/commit/1030e0d362e817b397f4857e7b90850e4707f489))
+
 ## [3.1.0](https://github.com/open-mrp/api/compare/v3.0.0...v3.1.0) (2026-10-07)
 
 

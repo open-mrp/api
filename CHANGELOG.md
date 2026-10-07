@@ -1,5 +1,12 @@
 # Changelog
 
+## [3.1.0](https://github.com/open-mrp/api/compare/v3.0.0...v3.1.0) (2026-10-07)
+
+
+### Features
+
+* **sales:** metadata on sales orders, lines and invoices ([#269](https://github.com/open-mrp/api/issues/269)) ([c516483](https://github.com/open-mrp/api/commit/c516483b6ebc57bfa0c11f4841d673f70c6b1d81))
+
 ## [3.0.0](https://github.com/open-mrp/api/compare/v2.21.1...v3.0.0) (2026-10-07)
 
 

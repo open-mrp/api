@@ -160,6 +160,7 @@ SELECT
     sol.line_item_number,
     sol.product_sku,
     sol.product_description,
+    CAST(sol.metadata AS CHAR) AS order_line_metadata,
     sol.product_id,
     sol.item_id AS order_line_item_id,
     -- Ordered quantity
@@ -208,6 +209,7 @@ SELECT
     sol.line_item_number,
     sol.product_sku,
     sol.product_description,
+    CAST(sol.metadata AS CHAR) AS order_line_metadata,
     sol.product_id,
     sol.item_id AS order_line_item_id,
     -- Ordered quantity
@@ -425,6 +427,7 @@ SELECT
     sol.line_item_number,
     sol.product_sku,
     sol.product_description,
+    CAST(sol.metadata AS CHAR) AS order_line_metadata,
     sol.product_id,
     sol.item_id AS order_line_item_id,
     -- Ordered quantity
@@ -600,6 +603,7 @@ SELECT
     sol.line_item_number,
     sol.product_sku,
     sol.product_description,
+    CAST(sol.metadata AS CHAR) AS order_line_metadata,
     sol.product_id,
     sol.item_id AS order_line_item_id,
     -- Ordered quantity

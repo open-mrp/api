@@ -37,6 +37,14 @@ message Int32Patch {
   optional int32 value = 2;
 }
 
+// A change to a record's metadata. Parent field absent → no change. clear empties the map before
+// set is applied; keys in remove are dropped; keys in set are written (an empty string is a value).
+message MetadataPatch {
+  bool clear = 1;
+  map<string, string> set = 2;
+  repeated string remove = 3;
+}
+
 // An address saved by the write of the record that uses it, in the record's counterparty account (or the
 // account itself, for its default addresses). With id set, that stored address is updated and omitted
 // fields keep their values; without it a new address is created, so name and country are required.

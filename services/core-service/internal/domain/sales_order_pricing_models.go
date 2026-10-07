@@ -58,6 +58,8 @@ type ResolvedSalesOrderLine struct {
 	QuantityUnitID     string
 	UnitPrice          RateValue
 	UnitCost           RateValue
+	// Metadata is passed through from the caller's line unchanged.
+	Metadata map[string]string
 }
 
 // --- Pricing data bundle loaded from the repository -------------------------

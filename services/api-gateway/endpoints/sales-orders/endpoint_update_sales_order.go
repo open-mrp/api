@@ -84,6 +84,10 @@ type UpdateSalesOrderRequest struct {
 	//
 	// An empty list clears all contacts; omitting the field leaves existing contacts untouched.
 	InvoiceEmailContacts field.Optional[[]SalesOrderEmailContactInput] `json:"invoice_email_contacts,omitzero"`
+	// Key-value pairs to store on the order, merged into the ones it already has.
+	//
+	// Keys left out are kept, so `{}` changes nothing. Setting a key to `null` removes it; an empty string is stored as a value. Sending `metadata: null` removes every key. An object holds at most 50 keys. Keys are up to 40 characters and cannot contain `[` or `]`; values are up to 500 characters.
+	Metadata field.Clearable[map[string]*string] `json:"metadata,omitzero" validate:"omitempty,max=50,dive,keys,min=1,max=40,excludesall=[],endkeys,omitempty,max=500"`
 }
 
 var sampleUpdateSONote = "Updated shipping instructions"

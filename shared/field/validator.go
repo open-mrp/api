@@ -20,6 +20,7 @@ func RegisterValidator(v *validator.Validate) {
 		Clearable[float64]{},
 		Clearable[bool]{},
 		Clearable[time.Time]{},
+		Clearable[map[string]*string]{},
 		Optional[string]{},
 		Optional[[]string]{},
 		Optional[int]{},

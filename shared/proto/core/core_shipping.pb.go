@@ -662,8 +662,10 @@ type ShipmentLineInfo struct {
 	OrderLineItemId     *string `protobuf:"bytes,14,opt,name=order_line_item_id,json=orderLineItemId,proto3,oneof" json:"order_line_item_id,omitempty"`
 	OrderLineItemNumber int32   `protobuf:"varint,15,opt,name=order_line_item_number,json=orderLineItemNumber,proto3" json:"order_line_item_number,omitempty"`
 	OrderLineProductId  *string `protobuf:"bytes,16,opt,name=order_line_product_id,json=orderLineProductId,proto3,oneof" json:"order_line_product_id,omitempty"`
-	unknownFields       protoimpl.UnknownFields
-	sizeCache           protoimpl.SizeCache
+	// The order line's metadata, so lines.order_line carries it without a second read.
+	OrderLineMetadata map[string]string `protobuf:"bytes,17,rep,name=order_line_metadata,json=orderLineMetadata,proto3" json:"order_line_metadata,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
+	unknownFields     protoimpl.UnknownFields
+	sizeCache         protoimpl.SizeCache
 }
 
 func (x *ShipmentLineInfo) Reset() {
@@ -806,6 +808,13 @@ func (x *ShipmentLineInfo) GetOrderLineProductId() string {
 		return *x.OrderLineProductId
 	}
 	return ""
+}
+
+func (x *ShipmentLineInfo) GetOrderLineMetadata() map[string]string {
+	if x != nil {
+		return x.OrderLineMetadata
+	}
+	return nil
 }
 
 // ShippingCaseDetailInfo represents a shipping case within a shipment.
@@ -3039,7 +3048,7 @@ const file_core_core_shipping_proto_rawDesc = "" +
 	"\x17_shipping_address_phoneB\x19\n" +
 	"\x17_shipping_address_emailB \n" +
 	"\x1e_shipping_address_is_drop_shipB\"\n" +
-	" _shipping_address_geolocation_id\"\xc0\x06\n" +
+	" _shipping_address_geolocation_id\"\xe5\a\n" +
 	"\x10ShipmentLineInfo\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x1f\n" +
 	"\vshipment_id\x18\x02 \x01(\tR\n" +
@@ -3061,7 +3070,11 @@ const file_core_core_shipping_proto_rawDesc = "" +
 	"updated_at\x18\r \x01(\v2\x1a.google.protobuf.TimestampR\tupdatedAt\x120\n" +
 	"\x12order_line_item_id\x18\x0e \x01(\tH\x01R\x0forderLineItemId\x88\x01\x01\x123\n" +
 	"\x16order_line_item_number\x18\x0f \x01(\x05R\x13orderLineItemNumber\x126\n" +
-	"\x15order_line_product_id\x18\x10 \x01(\tH\x02R\x12orderLineProductId\x88\x01\x01B\x19\n" +
+	"\x15order_line_product_id\x18\x10 \x01(\tH\x02R\x12orderLineProductId\x88\x01\x01\x12]\n" +
+	"\x13order_line_metadata\x18\x11 \x03(\v2-.core.ShipmentLineInfo.OrderLineMetadataEntryR\x11orderLineMetadata\x1aD\n" +
+	"\x16OrderLineMetadataEntry\x12\x10\n" +
+	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
+	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01B\x19\n" +
 	"\x17_order_line_descriptionB\x15\n" +
 	"\x13_order_line_item_idB\x18\n" +
 	"\x16_order_line_product_id\"\xa9\v\n" +
@@ -3306,7 +3319,7 @@ func file_core_core_shipping_proto_rawDescGZIP() []byte {
 	return file_core_core_shipping_proto_rawDescData
 }
 
-var file_core_core_shipping_proto_msgTypes = make([]protoimpl.MessageInfo, 32)
+var file_core_core_shipping_proto_msgTypes = make([]protoimpl.MessageInfo, 33)
 var file_core_core_shipping_proto_goTypes = []any{
 	(*ShipmentInfo)(nil),                        // 0: core.ShipmentInfo
 	(*ShipmentLineInfo)(nil),                    // 1: core.ShipmentLineInfo
@@ -3340,98 +3353,100 @@ var file_core_core_shipping_proto_goTypes = []any{
 	(*UpdateShipmentLineRequest)(nil),           // 29: core.UpdateShipmentLineRequest
 	(*UpdateShipmentLineResponse)(nil),          // 30: core.UpdateShipmentLineResponse
 	(*DeleteShipmentLineRequest)(nil),           // 31: core.DeleteShipmentLineRequest
-	(*timestamppb.Timestamp)(nil),               // 32: google.protobuf.Timestamp
-	(*PageInfo)(nil),                            // 33: core.PageInfo
-	(*StringPatch)(nil),                         // 34: core.StringPatch
-	(*CarrierInfo)(nil),                         // 35: core.CarrierInfo
-	(*ServiceLevelInfo)(nil),                    // 36: core.ServiceLevelInfo
-	(*emptypb.Empty)(nil),                       // 37: google.protobuf.Empty
+	nil,                                         // 32: core.ShipmentLineInfo.OrderLineMetadataEntry
+	(*timestamppb.Timestamp)(nil),               // 33: google.protobuf.Timestamp
+	(*PageInfo)(nil),                            // 34: core.PageInfo
+	(*StringPatch)(nil),                         // 35: core.StringPatch
+	(*CarrierInfo)(nil),                         // 36: core.CarrierInfo
+	(*ServiceLevelInfo)(nil),                    // 37: core.ServiceLevelInfo
+	(*emptypb.Empty)(nil),                       // 38: google.protobuf.Empty
 }
 var file_core_core_shipping_proto_depIdxs = []int32{
-	32, // 0: core.ShipmentInfo.shipped_at:type_name -> google.protobuf.Timestamp
-	32, // 1: core.ShipmentInfo.created_at:type_name -> google.protobuf.Timestamp
-	32, // 2: core.ShipmentInfo.updated_at:type_name -> google.protobuf.Timestamp
+	33, // 0: core.ShipmentInfo.shipped_at:type_name -> google.protobuf.Timestamp
+	33, // 1: core.ShipmentInfo.created_at:type_name -> google.protobuf.Timestamp
+	33, // 2: core.ShipmentInfo.updated_at:type_name -> google.protobuf.Timestamp
 	1,  // 3: core.ShipmentInfo.lines:type_name -> core.ShipmentLineInfo
 	2,  // 4: core.ShipmentInfo.shipping_cases:type_name -> core.ShippingCaseDetailInfo
-	32, // 5: core.ShipmentInfo.service_level_created_at:type_name -> google.protobuf.Timestamp
-	32, // 6: core.ShipmentInfo.service_level_updated_at:type_name -> google.protobuf.Timestamp
-	32, // 7: core.ShipmentInfo.carrier_created_at:type_name -> google.protobuf.Timestamp
-	32, // 8: core.ShipmentInfo.carrier_updated_at:type_name -> google.protobuf.Timestamp
-	32, // 9: core.ShipmentInfo.customer_created_at:type_name -> google.protobuf.Timestamp
-	32, // 10: core.ShipmentInfo.customer_updated_at:type_name -> google.protobuf.Timestamp
-	32, // 11: core.ShipmentInfo.sales_order_created_at:type_name -> google.protobuf.Timestamp
-	32, // 12: core.ShipmentInfo.sales_order_updated_at:type_name -> google.protobuf.Timestamp
-	32, // 13: core.ShipmentInfo.shipping_address_created_at:type_name -> google.protobuf.Timestamp
-	32, // 14: core.ShipmentInfo.shipping_address_updated_at:type_name -> google.protobuf.Timestamp
-	32, // 15: core.ShipmentInfo.shipped_by_created_at:type_name -> google.protobuf.Timestamp
-	32, // 16: core.ShipmentInfo.shipped_by_updated_at:type_name -> google.protobuf.Timestamp
-	32, // 17: core.ShipmentInfo.invoice_created_at:type_name -> google.protobuf.Timestamp
-	32, // 18: core.ShipmentInfo.invoice_updated_at:type_name -> google.protobuf.Timestamp
-	32, // 19: core.ShipmentInfo.pick_created_at:type_name -> google.protobuf.Timestamp
-	32, // 20: core.ShipmentInfo.pick_updated_at:type_name -> google.protobuf.Timestamp
-	32, // 21: core.ShipmentLineInfo.created_at:type_name -> google.protobuf.Timestamp
-	32, // 22: core.ShipmentLineInfo.updated_at:type_name -> google.protobuf.Timestamp
-	32, // 23: core.ShippingCaseDetailInfo.shipped_at:type_name -> google.protobuf.Timestamp
-	32, // 24: core.ShippingCaseDetailInfo.created_at:type_name -> google.protobuf.Timestamp
-	32, // 25: core.ShippingCaseDetailInfo.updated_at:type_name -> google.protobuf.Timestamp
-	32, // 26: core.ShippingCaseDetailInfo.carrier_created_at:type_name -> google.protobuf.Timestamp
-	32, // 27: core.ShippingCaseDetailInfo.carrier_updated_at:type_name -> google.protobuf.Timestamp
-	0,  // 28: core.ListShipmentsResponse.shipments:type_name -> core.ShipmentInfo
-	33, // 29: core.ListShipmentsResponse.page_info:type_name -> core.PageInfo
-	0,  // 30: core.GetShipmentResponse.shipment:type_name -> core.ShipmentInfo
-	34, // 31: core.UpdateShipmentRequest.service_level_id:type_name -> core.StringPatch
-	0,  // 32: core.UpdateShipmentResponse.shipment:type_name -> core.ShipmentInfo
-	34, // 33: core.AdminUpdateShipmentTrackingRequest.service_level_id:type_name -> core.StringPatch
-	0,  // 34: core.AdminUpdateShipmentTrackingResponse.shipment:type_name -> core.ShipmentInfo
-	0,  // 35: core.ShipShipmentResponse.shipment:type_name -> core.ShipmentInfo
-	0,  // 36: core.VoidShipmentResponse.shipment:type_name -> core.ShipmentInfo
-	4,  // 37: core.EstimateRateRequest.from:type_name -> core.AddressInput
-	4,  // 38: core.EstimateRateRequest.to:type_name -> core.AddressInput
-	3,  // 39: core.EstimateRateRequest.parcels:type_name -> core.ParcelInfo
-	4,  // 40: core.RateShopRequest.from:type_name -> core.AddressInput
-	4,  // 41: core.RateShopRequest.to:type_name -> core.AddressInput
-	3,  // 42: core.RateShopRequest.parcels:type_name -> core.ParcelInfo
-	5,  // 43: core.RateShopResponse.options:type_name -> core.RateShopOptionInfo
-	35, // 44: core.RateShopResponse.carriers:type_name -> core.CarrierInfo
-	36, // 45: core.RateShopResponse.service_levels:type_name -> core.ServiceLevelInfo
-	1,  // 46: core.ListShipmentLinesResponse.shipment_lines:type_name -> core.ShipmentLineInfo
-	33, // 47: core.ListShipmentLinesResponse.page_info:type_name -> core.PageInfo
-	1,  // 48: core.GetShipmentLineResponse.shipment_line:type_name -> core.ShipmentLineInfo
-	1,  // 49: core.CreateShipmentLineResponse.shipment_line:type_name -> core.ShipmentLineInfo
-	1,  // 50: core.UpdateShipmentLineResponse.shipment_line:type_name -> core.ShipmentLineInfo
-	6,  // 51: core.CoreShippingService.ListShipments:input_type -> core.ListShipmentsRequest
-	8,  // 52: core.CoreShippingService.GetShipment:input_type -> core.GetShipmentRequest
-	10, // 53: core.CoreShippingService.UpdateShipment:input_type -> core.UpdateShipmentRequest
-	12, // 54: core.CoreShippingService.AdminUpdateShipmentTracking:input_type -> core.AdminUpdateShipmentTrackingRequest
-	14, // 55: core.CoreShippingService.DeleteShipment:input_type -> core.DeleteShipmentRequest
-	15, // 56: core.CoreShippingService.ShipShipment:input_type -> core.ShipShipmentRequest
-	17, // 57: core.CoreShippingService.VoidShipment:input_type -> core.VoidShipmentRequest
-	19, // 58: core.CoreShippingService.EstimateRate:input_type -> core.EstimateRateRequest
-	21, // 59: core.CoreShippingService.RateShop:input_type -> core.RateShopRequest
-	23, // 60: core.CoreShippingService.ListShipmentLines:input_type -> core.ListShipmentLinesRequest
-	25, // 61: core.CoreShippingService.GetShipmentLine:input_type -> core.GetShipmentLineRequest
-	27, // 62: core.CoreShippingService.CreateShipmentLine:input_type -> core.CreateShipmentLineRequest
-	29, // 63: core.CoreShippingService.UpdateShipmentLine:input_type -> core.UpdateShipmentLineRequest
-	31, // 64: core.CoreShippingService.DeleteShipmentLine:input_type -> core.DeleteShipmentLineRequest
-	7,  // 65: core.CoreShippingService.ListShipments:output_type -> core.ListShipmentsResponse
-	9,  // 66: core.CoreShippingService.GetShipment:output_type -> core.GetShipmentResponse
-	11, // 67: core.CoreShippingService.UpdateShipment:output_type -> core.UpdateShipmentResponse
-	13, // 68: core.CoreShippingService.AdminUpdateShipmentTracking:output_type -> core.AdminUpdateShipmentTrackingResponse
-	37, // 69: core.CoreShippingService.DeleteShipment:output_type -> google.protobuf.Empty
-	16, // 70: core.CoreShippingService.ShipShipment:output_type -> core.ShipShipmentResponse
-	18, // 71: core.CoreShippingService.VoidShipment:output_type -> core.VoidShipmentResponse
-	20, // 72: core.CoreShippingService.EstimateRate:output_type -> core.EstimateRateResponse
-	22, // 73: core.CoreShippingService.RateShop:output_type -> core.RateShopResponse
-	24, // 74: core.CoreShippingService.ListShipmentLines:output_type -> core.ListShipmentLinesResponse
-	26, // 75: core.CoreShippingService.GetShipmentLine:output_type -> core.GetShipmentLineResponse
-	28, // 76: core.CoreShippingService.CreateShipmentLine:output_type -> core.CreateShipmentLineResponse
-	30, // 77: core.CoreShippingService.UpdateShipmentLine:output_type -> core.UpdateShipmentLineResponse
-	37, // 78: core.CoreShippingService.DeleteShipmentLine:output_type -> google.protobuf.Empty
-	65, // [65:79] is the sub-list for method output_type
-	51, // [51:65] is the sub-list for method input_type
-	51, // [51:51] is the sub-list for extension type_name
-	51, // [51:51] is the sub-list for extension extendee
-	0,  // [0:51] is the sub-list for field type_name
+	33, // 5: core.ShipmentInfo.service_level_created_at:type_name -> google.protobuf.Timestamp
+	33, // 6: core.ShipmentInfo.service_level_updated_at:type_name -> google.protobuf.Timestamp
+	33, // 7: core.ShipmentInfo.carrier_created_at:type_name -> google.protobuf.Timestamp
+	33, // 8: core.ShipmentInfo.carrier_updated_at:type_name -> google.protobuf.Timestamp
+	33, // 9: core.ShipmentInfo.customer_created_at:type_name -> google.protobuf.Timestamp
+	33, // 10: core.ShipmentInfo.customer_updated_at:type_name -> google.protobuf.Timestamp
+	33, // 11: core.ShipmentInfo.sales_order_created_at:type_name -> google.protobuf.Timestamp
+	33, // 12: core.ShipmentInfo.sales_order_updated_at:type_name -> google.protobuf.Timestamp
+	33, // 13: core.ShipmentInfo.shipping_address_created_at:type_name -> google.protobuf.Timestamp
+	33, // 14: core.ShipmentInfo.shipping_address_updated_at:type_name -> google.protobuf.Timestamp
+	33, // 15: core.ShipmentInfo.shipped_by_created_at:type_name -> google.protobuf.Timestamp
+	33, // 16: core.ShipmentInfo.shipped_by_updated_at:type_name -> google.protobuf.Timestamp
+	33, // 17: core.ShipmentInfo.invoice_created_at:type_name -> google.protobuf.Timestamp
+	33, // 18: core.ShipmentInfo.invoice_updated_at:type_name -> google.protobuf.Timestamp
+	33, // 19: core.ShipmentInfo.pick_created_at:type_name -> google.protobuf.Timestamp
+	33, // 20: core.ShipmentInfo.pick_updated_at:type_name -> google.protobuf.Timestamp
+	33, // 21: core.ShipmentLineInfo.created_at:type_name -> google.protobuf.Timestamp
+	33, // 22: core.ShipmentLineInfo.updated_at:type_name -> google.protobuf.Timestamp
+	32, // 23: core.ShipmentLineInfo.order_line_metadata:type_name -> core.ShipmentLineInfo.OrderLineMetadataEntry
+	33, // 24: core.ShippingCaseDetailInfo.shipped_at:type_name -> google.protobuf.Timestamp
+	33, // 25: core.ShippingCaseDetailInfo.created_at:type_name -> google.protobuf.Timestamp
+	33, // 26: core.ShippingCaseDetailInfo.updated_at:type_name -> google.protobuf.Timestamp
+	33, // 27: core.ShippingCaseDetailInfo.carrier_created_at:type_name -> google.protobuf.Timestamp
+	33, // 28: core.ShippingCaseDetailInfo.carrier_updated_at:type_name -> google.protobuf.Timestamp
+	0,  // 29: core.ListShipmentsResponse.shipments:type_name -> core.ShipmentInfo
+	34, // 30: core.ListShipmentsResponse.page_info:type_name -> core.PageInfo
+	0,  // 31: core.GetShipmentResponse.shipment:type_name -> core.ShipmentInfo
+	35, // 32: core.UpdateShipmentRequest.service_level_id:type_name -> core.StringPatch
+	0,  // 33: core.UpdateShipmentResponse.shipment:type_name -> core.ShipmentInfo
+	35, // 34: core.AdminUpdateShipmentTrackingRequest.service_level_id:type_name -> core.StringPatch
+	0,  // 35: core.AdminUpdateShipmentTrackingResponse.shipment:type_name -> core.ShipmentInfo
+	0,  // 36: core.ShipShipmentResponse.shipment:type_name -> core.ShipmentInfo
+	0,  // 37: core.VoidShipmentResponse.shipment:type_name -> core.ShipmentInfo
+	4,  // 38: core.EstimateRateRequest.from:type_name -> core.AddressInput
+	4,  // 39: core.EstimateRateRequest.to:type_name -> core.AddressInput
+	3,  // 40: core.EstimateRateRequest.parcels:type_name -> core.ParcelInfo
+	4,  // 41: core.RateShopRequest.from:type_name -> core.AddressInput
+	4,  // 42: core.RateShopRequest.to:type_name -> core.AddressInput
+	3,  // 43: core.RateShopRequest.parcels:type_name -> core.ParcelInfo
+	5,  // 44: core.RateShopResponse.options:type_name -> core.RateShopOptionInfo
+	36, // 45: core.RateShopResponse.carriers:type_name -> core.CarrierInfo
+	37, // 46: core.RateShopResponse.service_levels:type_name -> core.ServiceLevelInfo
+	1,  // 47: core.ListShipmentLinesResponse.shipment_lines:type_name -> core.ShipmentLineInfo
+	34, // 48: core.ListShipmentLinesResponse.page_info:type_name -> core.PageInfo
+	1,  // 49: core.GetShipmentLineResponse.shipment_line:type_name -> core.ShipmentLineInfo
+	1,  // 50: core.CreateShipmentLineResponse.shipment_line:type_name -> core.ShipmentLineInfo
+	1,  // 51: core.UpdateShipmentLineResponse.shipment_line:type_name -> core.ShipmentLineInfo
+	6,  // 52: core.CoreShippingService.ListShipments:input_type -> core.ListShipmentsRequest
+	8,  // 53: core.CoreShippingService.GetShipment:input_type -> core.GetShipmentRequest
+	10, // 54: core.CoreShippingService.UpdateShipment:input_type -> core.UpdateShipmentRequest
+	12, // 55: core.CoreShippingService.AdminUpdateShipmentTracking:input_type -> core.AdminUpdateShipmentTrackingRequest
+	14, // 56: core.CoreShippingService.DeleteShipment:input_type -> core.DeleteShipmentRequest
+	15, // 57: core.CoreShippingService.ShipShipment:input_type -> core.ShipShipmentRequest
+	17, // 58: core.CoreShippingService.VoidShipment:input_type -> core.VoidShipmentRequest
+	19, // 59: core.CoreShippingService.EstimateRate:input_type -> core.EstimateRateRequest
+	21, // 60: core.CoreShippingService.RateShop:input_type -> core.RateShopRequest
+	23, // 61: core.CoreShippingService.ListShipmentLines:input_type -> core.ListShipmentLinesRequest
+	25, // 62: core.CoreShippingService.GetShipmentLine:input_type -> core.GetShipmentLineRequest
+	27, // 63: core.CoreShippingService.CreateShipmentLine:input_type -> core.CreateShipmentLineRequest
+	29, // 64: core.CoreShippingService.UpdateShipmentLine:input_type -> core.UpdateShipmentLineRequest
+	31, // 65: core.CoreShippingService.DeleteShipmentLine:input_type -> core.DeleteShipmentLineRequest
+	7,  // 66: core.CoreShippingService.ListShipments:output_type -> core.ListShipmentsResponse
+	9,  // 67: core.CoreShippingService.GetShipment:output_type -> core.GetShipmentResponse
+	11, // 68: core.CoreShippingService.UpdateShipment:output_type -> core.UpdateShipmentResponse
+	13, // 69: core.CoreShippingService.AdminUpdateShipmentTracking:output_type -> core.AdminUpdateShipmentTrackingResponse
+	38, // 70: core.CoreShippingService.DeleteShipment:output_type -> google.protobuf.Empty
+	16, // 71: core.CoreShippingService.ShipShipment:output_type -> core.ShipShipmentResponse
+	18, // 72: core.CoreShippingService.VoidShipment:output_type -> core.VoidShipmentResponse
+	20, // 73: core.CoreShippingService.EstimateRate:output_type -> core.EstimateRateResponse
+	22, // 74: core.CoreShippingService.RateShop:output_type -> core.RateShopResponse
+	24, // 75: core.CoreShippingService.ListShipmentLines:output_type -> core.ListShipmentLinesResponse
+	26, // 76: core.CoreShippingService.GetShipmentLine:output_type -> core.GetShipmentLineResponse
+	28, // 77: core.CoreShippingService.CreateShipmentLine:output_type -> core.CreateShipmentLineResponse
+	30, // 78: core.CoreShippingService.UpdateShipmentLine:output_type -> core.UpdateShipmentLineResponse
+	38, // 79: core.CoreShippingService.DeleteShipmentLine:output_type -> google.protobuf.Empty
+	66, // [66:80] is the sub-list for method output_type
+	52, // [52:66] is the sub-list for method input_type
+	52, // [52:52] is the sub-list for extension type_name
+	52, // [52:52] is the sub-list for extension extendee
+	0,  // [0:52] is the sub-list for field type_name
 }
 
 func init() { file_core_core_shipping_proto_init() }
@@ -3460,7 +3475,7 @@ func file_core_core_shipping_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_core_core_shipping_proto_rawDesc), len(file_core_core_shipping_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   32,
+			NumMessages:   33,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

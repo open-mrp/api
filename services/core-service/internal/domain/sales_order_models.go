@@ -7,6 +7,7 @@ import (
 
 	"github.com/open-mrp/api/shared/constants"
 	"github.com/open-mrp/api/shared/field"
+	"github.com/open-mrp/api/shared/metadata"
 	"github.com/open-mrp/api/shared/pagination"
 )
 
@@ -52,6 +53,8 @@ type SalesOrder struct {
 	CalendarAdjustmentDays *int32     `audit:"calendar_adjustment_days"`
 	CreatedAt              time.Time
 	UpdatedAt              time.Time
+	// Metadata is the client's own key/value pairs; never nil. See shared/metadata.
+	Metadata map[string]string `audit:"metadata"`
 
 	// Joined customer details
 	CustomerName             string
@@ -259,6 +262,7 @@ type CreateSalesOrderParams struct {
 	// BillToAddress and ShipToAddress are buyer addresses saved with the order, each in place of its ID.
 	BillToAddress *InlineAddressParams
 	ShipToAddress *InlineAddressParams
+	Metadata      map[string]string
 }
 
 // SalesOrderEmailContactInput represents a single recipient to wire to a sales order.
@@ -283,6 +287,7 @@ type CreateSalesOrderLineInput struct {
 	ProductDescription *string
 	// Overrides the server-computed price; honored only for internal actors.
 	UnitPrice *RateValue
+	Metadata  map[string]string
 }
 
 // UpdateSalesOrderParams holds the parameters for updating a sales order.
@@ -320,6 +325,7 @@ type UpdateSalesOrderParams struct {
 	// BillingAddress and ShippingAddress are buyer addresses saved with the update, each in place of its ID.
 	BillingAddress  *InlineAddressParams
 	ShippingAddress *InlineAddressParams
+	Metadata        metadata.Update
 }
 
 // DeleteSalesOrderParams holds the parameters for deleting a sales order.

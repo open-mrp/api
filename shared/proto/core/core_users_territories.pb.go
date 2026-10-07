@@ -4767,6 +4767,7 @@ type UpdateInvoiceRequest struct {
 	IsEdiSent     *bool                  `protobuf:"varint,4,opt,name=is_edi_sent,json=isEdiSent,proto3,oneof" json:"is_edi_sent,omitempty"`
 	IsPaidInFull  *bool                  `protobuf:"varint,5,opt,name=is_paid_in_full,json=isPaidInFull,proto3,oneof" json:"is_paid_in_full,omitempty"`
 	Includes      []string               `protobuf:"bytes,6,rep,name=includes,proto3" json:"includes,omitempty"`
+	Metadata      *MetadataPatch         `protobuf:"bytes,7,opt,name=metadata,proto3" json:"metadata,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -4839,6 +4840,13 @@ func (x *UpdateInvoiceRequest) GetIsPaidInFull() bool {
 func (x *UpdateInvoiceRequest) GetIncludes() []string {
 	if x != nil {
 		return x.Includes
+	}
+	return nil
+}
+
+func (x *UpdateInvoiceRequest) GetMetadata() *MetadataPatch {
+	if x != nil {
+		return x.Metadata
 	}
 	return nil
 }
@@ -5073,8 +5081,10 @@ type InvoiceInfo struct {
 	// In full, so a caller that may read the invoice renders them without address or payment-term permissions.
 	BillingAddress *AddressInfo     `protobuf:"bytes,37,opt,name=billing_address,json=billingAddress,proto3" json:"billing_address,omitempty"`
 	PaymentTerm    *PaymentTermInfo `protobuf:"bytes,38,opt,name=payment_term,json=paymentTerm,proto3" json:"payment_term,omitempty"`
-	unknownFields  protoimpl.UnknownFields
-	sizeCache      protoimpl.SizeCache
+	// Client-owned key/value pairs, returned unchanged. See shared/metadata.
+	Metadata      map[string]string `protobuf:"bytes,39,rep,name=metadata,proto3" json:"metadata,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
 }
 
 func (x *InvoiceInfo) Reset() {
@@ -5369,6 +5379,13 @@ func (x *InvoiceInfo) GetBillingAddress() *AddressInfo {
 func (x *InvoiceInfo) GetPaymentTerm() *PaymentTermInfo {
 	if x != nil {
 		return x.PaymentTerm
+	}
+	return nil
+}
+
+func (x *InvoiceInfo) GetMetadata() map[string]string {
+	if x != nil {
+		return x.Metadata
 	}
 	return nil
 }
@@ -5862,14 +5879,15 @@ const file_core_core_users_territories_proto_rawDesc = "" +
 	"\bincludes\x18\x02 \x03(\tR\bincludes\"\x91\x01\n" +
 	"\x12GetInvoiceResponse\x12+\n" +
 	"\ainvoice\x18\x01 \x01(\v2\x11.core.InvoiceInfoR\ainvoice\x12N\n" +
-	"\x17allocation_transactions\x18\x02 \x03(\v2\x15.core.TransactionInfoR\x16allocationTransactions\"\x99\x02\n" +
+	"\x17allocation_transactions\x18\x02 \x03(\v2\x15.core.TransactionInfoR\x16allocationTransactions\"\xca\x02\n" +
 	"\x14UpdateInvoiceRequest\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12%\n" +
 	"\x04note\x18\x02 \x01(\v2\x11.core.StringPatchR\x04note\x12'\n" +
 	"\rhas_been_sent\x18\x03 \x01(\bH\x00R\vhasBeenSent\x88\x01\x01\x12#\n" +
 	"\vis_edi_sent\x18\x04 \x01(\bH\x01R\tisEdiSent\x88\x01\x01\x12*\n" +
 	"\x0fis_paid_in_full\x18\x05 \x01(\bH\x02R\fisPaidInFull\x88\x01\x01\x12\x1a\n" +
-	"\bincludes\x18\x06 \x03(\tR\bincludesB\x10\n" +
+	"\bincludes\x18\x06 \x03(\tR\bincludes\x12/\n" +
+	"\bmetadata\x18\a \x01(\v2\x13.core.MetadataPatchR\bmetadataB\x10\n" +
 	"\x0e_has_been_sentB\x0e\n" +
 	"\f_is_edi_sentB\x12\n" +
 	"\x10_is_paid_in_full\"\x94\x01\n" +
@@ -5887,7 +5905,7 @@ const file_core_core_users_territories_proto_rawDesc = "" +
 	"\x1cListCustomerInvoicesResponse\x127\n" +
 	"\binvoices\x18\x01 \x03(\v2\x1b.core.InvoiceForPaymentInfoR\binvoices\x12+\n" +
 	"\tpage_info\x18\x02 \x01(\v2\x0e.core.PageInfoR\bpageInfo\x12N\n" +
-	"\x17allocation_transactions\x18\x03 \x03(\v2\x15.core.TransactionInfoR\x16allocationTransactions\"\x94\x10\n" +
+	"\x17allocation_transactions\x18\x03 \x03(\v2\x15.core.TransactionInfoR\x16allocationTransactions\"\x8e\x11\n" +
 	"\vInvoiceInfo\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x16\n" +
 	"\x06number\x18\x02 \x01(\tR\x06number\x12\x17\n" +
@@ -5934,7 +5952,11 @@ const file_core_core_users_territories_proto_rawDesc = "" +
 	"\x16payment_term_is_active\x18# \x01(\bH\rR\x13paymentTermIsActive\x88\x01\x01\x12%\n" +
 	"\x0etotal_invoiced\x18$ \x01(\tR\rtotalInvoiced\x12:\n" +
 	"\x0fbilling_address\x18% \x01(\v2\x11.core.AddressInfoR\x0ebillingAddress\x128\n" +
-	"\fpayment_term\x18& \x01(\v2\x15.core.PaymentTermInfoR\vpaymentTermB\a\n" +
+	"\fpayment_term\x18& \x01(\v2\x15.core.PaymentTermInfoR\vpaymentTerm\x12;\n" +
+	"\bmetadata\x18' \x03(\v2\x1f.core.InvoiceInfo.MetadataEntryR\bmetadata\x1a;\n" +
+	"\rMetadataEntry\x12\x10\n" +
+	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
+	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01B\a\n" +
 	"\x05_noteB\x17\n" +
 	"\x15_billing_address_nameB\x18\n" +
 	"\x16_billing_address_line1B\x18\n" +
@@ -5962,7 +5984,7 @@ func file_core_core_users_territories_proto_rawDescGZIP() []byte {
 	return file_core_core_users_territories_proto_rawDescData
 }
 
-var file_core_core_users_territories_proto_msgTypes = make([]protoimpl.MessageInfo, 77)
+var file_core_core_users_territories_proto_msgTypes = make([]protoimpl.MessageInfo, 78)
 var file_core_core_users_territories_proto_goTypes = []any{
 	(*GetCurrentUserResponse)(nil),                 // 0: core.GetCurrentUserResponse
 	(*CustomerAccountSummaryProto)(nil),            // 1: core.CustomerAccountSummaryProto
@@ -6041,35 +6063,37 @@ var file_core_core_users_territories_proto_goTypes = []any{
 	(*ListCustomerInvoicesRequest)(nil),            // 74: core.ListCustomerInvoicesRequest
 	(*ListCustomerInvoicesResponse)(nil),           // 75: core.ListCustomerInvoicesResponse
 	(*InvoiceInfo)(nil),                            // 76: core.InvoiceInfo
-	(*timestamppb.Timestamp)(nil),                  // 77: google.protobuf.Timestamp
-	(*PageInfo)(nil),                               // 78: core.PageInfo
-	(*LightScanningStationInfo)(nil),               // 79: core.LightScanningStationInfo
-	(*LightMachineInfo)(nil),                       // 80: core.LightMachineInfo
-	(*JobInfo)(nil),                                // 81: core.JobInfo
-	(*StringPatch)(nil),                            // 82: core.StringPatch
-	(*ObjectIdentifier)(nil),                       // 83: core.ObjectIdentifier
-	(*TransactionInfo)(nil),                        // 84: core.TransactionInfo
-	(*InvoiceForPaymentInfo)(nil),                  // 85: core.InvoiceForPaymentInfo
-	(*InvoiceLineInfo)(nil),                        // 86: core.InvoiceLineInfo
-	(*InvoiceAllocationInfo)(nil),                  // 87: core.InvoiceAllocationInfo
-	(*AddressInfo)(nil),                            // 88: core.AddressInfo
-	(*PaymentTermInfo)(nil),                        // 89: core.PaymentTermInfo
+	nil,                                            // 77: core.InvoiceInfo.MetadataEntry
+	(*timestamppb.Timestamp)(nil),                  // 78: google.protobuf.Timestamp
+	(*PageInfo)(nil),                               // 79: core.PageInfo
+	(*LightScanningStationInfo)(nil),               // 80: core.LightScanningStationInfo
+	(*LightMachineInfo)(nil),                       // 81: core.LightMachineInfo
+	(*JobInfo)(nil),                                // 82: core.JobInfo
+	(*StringPatch)(nil),                            // 83: core.StringPatch
+	(*ObjectIdentifier)(nil),                       // 84: core.ObjectIdentifier
+	(*TransactionInfo)(nil),                        // 85: core.TransactionInfo
+	(*MetadataPatch)(nil),                          // 86: core.MetadataPatch
+	(*InvoiceForPaymentInfo)(nil),                  // 87: core.InvoiceForPaymentInfo
+	(*InvoiceLineInfo)(nil),                        // 88: core.InvoiceLineInfo
+	(*InvoiceAllocationInfo)(nil),                  // 89: core.InvoiceAllocationInfo
+	(*AddressInfo)(nil),                            // 90: core.AddressInfo
+	(*PaymentTermInfo)(nil),                        // 91: core.PaymentTermInfo
 }
 var file_core_core_users_territories_proto_depIdxs = []int32{
-	77, // 0: core.GetCurrentUserResponse.email_verified_at:type_name -> google.protobuf.Timestamp
-	77, // 1: core.GetCurrentUserResponse.created_at:type_name -> google.protobuf.Timestamp
-	77, // 2: core.GetCurrentUserResponse.updated_at:type_name -> google.protobuf.Timestamp
+	78, // 0: core.GetCurrentUserResponse.email_verified_at:type_name -> google.protobuf.Timestamp
+	78, // 1: core.GetCurrentUserResponse.created_at:type_name -> google.protobuf.Timestamp
+	78, // 2: core.GetCurrentUserResponse.updated_at:type_name -> google.protobuf.Timestamp
 	1,  // 3: core.ListCustomerAccountsForUserResponse.accounts:type_name -> core.CustomerAccountSummaryProto
-	77, // 4: core.TerritoryAccountUserInfo.created_at:type_name -> google.protobuf.Timestamp
-	77, // 5: core.TerritoryAccountUserInfo.updated_at:type_name -> google.protobuf.Timestamp
-	77, // 6: core.TerritoryProductLineInfo.created_at:type_name -> google.protobuf.Timestamp
-	77, // 7: core.TerritoryProductLineInfo.updated_at:type_name -> google.protobuf.Timestamp
+	78, // 4: core.TerritoryAccountUserInfo.created_at:type_name -> google.protobuf.Timestamp
+	78, // 5: core.TerritoryAccountUserInfo.updated_at:type_name -> google.protobuf.Timestamp
+	78, // 6: core.TerritoryProductLineInfo.created_at:type_name -> google.protobuf.Timestamp
+	78, // 7: core.TerritoryProductLineInfo.updated_at:type_name -> google.protobuf.Timestamp
 	4,  // 8: core.TerritoryInfo.sales_rep:type_name -> core.TerritoryAccountUserInfo
 	5,  // 9: core.TerritoryInfo.product_line:type_name -> core.TerritoryProductLineInfo
-	77, // 10: core.TerritoryInfo.created_at:type_name -> google.protobuf.Timestamp
-	77, // 11: core.TerritoryInfo.updated_at:type_name -> google.protobuf.Timestamp
+	78, // 10: core.TerritoryInfo.created_at:type_name -> google.protobuf.Timestamp
+	78, // 11: core.TerritoryInfo.updated_at:type_name -> google.protobuf.Timestamp
 	6,  // 12: core.ListTerritoriesResponse.territories:type_name -> core.TerritoryInfo
-	78, // 13: core.ListTerritoriesResponse.page_info:type_name -> core.PageInfo
+	79, // 13: core.ListTerritoriesResponse.page_info:type_name -> core.PageInfo
 	6,  // 14: core.GetTerritoryResponse.territory:type_name -> core.TerritoryInfo
 	6,  // 15: core.CreateTerritoryResponse.territory:type_name -> core.TerritoryInfo
 	6,  // 16: core.UpdateTerritoryResponse.territory:type_name -> core.TerritoryInfo
@@ -6077,83 +6101,85 @@ var file_core_core_users_territories_proto_depIdxs = []int32{
 	18, // 18: core.RegistrationFlowInfo.customer_group_options:type_name -> core.RegistrationFlowOptionInfo
 	18, // 19: core.RegistrationFlowInfo.payment_term_options:type_name -> core.RegistrationFlowOptionInfo
 	18, // 20: core.RegistrationFlowInfo.shipping_term_options:type_name -> core.RegistrationFlowOptionInfo
-	77, // 21: core.RegistrationFlowInfo.created_at:type_name -> google.protobuf.Timestamp
-	77, // 22: core.RegistrationFlowInfo.updated_at:type_name -> google.protobuf.Timestamp
+	78, // 21: core.RegistrationFlowInfo.created_at:type_name -> google.protobuf.Timestamp
+	78, // 22: core.RegistrationFlowInfo.updated_at:type_name -> google.protobuf.Timestamp
 	19, // 23: core.ListRegistrationFlowsResponse.registration_flows:type_name -> core.RegistrationFlowInfo
-	78, // 24: core.ListRegistrationFlowsResponse.page_info:type_name -> core.PageInfo
+	79, // 24: core.ListRegistrationFlowsResponse.page_info:type_name -> core.PageInfo
 	19, // 25: core.GetRegistrationFlowResponse.registration_flow:type_name -> core.RegistrationFlowInfo
 	19, // 26: core.CreateRegistrationFlowResponse.registration_flow:type_name -> core.RegistrationFlowInfo
 	19, // 27: core.UpdateRegistrationFlowResponse.registration_flow:type_name -> core.RegistrationFlowInfo
 	19, // 28: core.GetRegistrationFlowBySlugResponse.registration_flow:type_name -> core.RegistrationFlowInfo
 	31, // 29: core.RegisterCustomerRequest.address:type_name -> core.RegisterCustomerAddressInput
-	79, // 30: core.DepartmentInfo.scanning_stations:type_name -> core.LightScanningStationInfo
-	80, // 31: core.DepartmentInfo.machines:type_name -> core.LightMachineInfo
-	77, // 32: core.DepartmentInfo.created_at:type_name -> google.protobuf.Timestamp
-	77, // 33: core.DepartmentInfo.updated_at:type_name -> google.protobuf.Timestamp
+	80, // 30: core.DepartmentInfo.scanning_stations:type_name -> core.LightScanningStationInfo
+	81, // 31: core.DepartmentInfo.machines:type_name -> core.LightMachineInfo
+	78, // 32: core.DepartmentInfo.created_at:type_name -> google.protobuf.Timestamp
+	78, // 33: core.DepartmentInfo.updated_at:type_name -> google.protobuf.Timestamp
 	34, // 34: core.DepartmentInfo.labor_rate:type_name -> core.DepartmentRateInfo
 	36, // 35: core.ListDepartmentsResponse.departments:type_name -> core.DepartmentInfo
-	78, // 36: core.ListDepartmentsResponse.page_info:type_name -> core.PageInfo
-	81, // 37: core.ExportDepartmentsResponse.job:type_name -> core.JobInfo
+	79, // 36: core.ListDepartmentsResponse.page_info:type_name -> core.PageInfo
+	82, // 37: core.ExportDepartmentsResponse.job:type_name -> core.JobInfo
 	36, // 38: core.GetDepartmentResponse.department:type_name -> core.DepartmentInfo
 	35, // 39: core.CreateDepartmentRequest.labor_rate:type_name -> core.DepartmentRateInput
 	36, // 40: core.CreateDepartmentResponse.department:type_name -> core.DepartmentInfo
-	82, // 41: core.UpdateDepartmentRequest.notes:type_name -> core.StringPatch
+	83, // 41: core.UpdateDepartmentRequest.notes:type_name -> core.StringPatch
 	35, // 42: core.UpdateDepartmentRequest.labor_rate:type_name -> core.DepartmentRateInput
 	36, // 43: core.UpdateDepartmentResponse.department:type_name -> core.DepartmentInfo
-	83, // 44: core.UpsertDepartmentInput.location:type_name -> core.ObjectIdentifier
+	84, // 44: core.UpsertDepartmentInput.location:type_name -> core.ObjectIdentifier
 	48, // 45: core.BulkUpsertDepartmentsRequest.departments:type_name -> core.UpsertDepartmentInput
-	81, // 46: core.BulkUpsertDepartmentsResponse.job:type_name -> core.JobInfo
+	82, // 46: core.BulkUpsertDepartmentsResponse.job:type_name -> core.JobInfo
 	36, // 47: core.BatchGetDepartmentsByIDsResponse.departments:type_name -> core.DepartmentInfo
 	53, // 48: core.EmailLogInfo.sent_by:type_name -> core.EmailLogActor
-	77, // 49: core.EmailLogInfo.created_at:type_name -> google.protobuf.Timestamp
-	77, // 50: core.EmailLogInfo.updated_at:type_name -> google.protobuf.Timestamp
+	78, // 49: core.EmailLogInfo.created_at:type_name -> google.protobuf.Timestamp
+	78, // 50: core.EmailLogInfo.updated_at:type_name -> google.protobuf.Timestamp
 	54, // 51: core.ListEmailLogsResponse.email_logs:type_name -> core.EmailLogInfo
-	78, // 52: core.ListEmailLogsResponse.page_info:type_name -> core.PageInfo
+	79, // 52: core.ListEmailLogsResponse.page_info:type_name -> core.PageInfo
 	54, // 53: core.GetEmailLogResponse.email_log:type_name -> core.EmailLogInfo
-	77, // 54: core.InventoryChangeLogInfo.created_at:type_name -> google.protobuf.Timestamp
-	77, // 55: core.InventoryChangeLogInfo.updated_at:type_name -> google.protobuf.Timestamp
-	77, // 56: core.InventoryChangeLogInfo.item_created_at:type_name -> google.protobuf.Timestamp
-	77, // 57: core.InventoryChangeLogInfo.item_updated_at:type_name -> google.protobuf.Timestamp
-	77, // 58: core.InventoryChangeLogInfo.quantity_unit_created_at:type_name -> google.protobuf.Timestamp
-	77, // 59: core.InventoryChangeLogInfo.quantity_unit_updated_at:type_name -> google.protobuf.Timestamp
-	77, // 60: core.InventoryChangeLogInfo.scanning_station_created_at:type_name -> google.protobuf.Timestamp
-	77, // 61: core.InventoryChangeLogInfo.scanning_station_updated_at:type_name -> google.protobuf.Timestamp
-	77, // 62: core.InventoryChangeLogInfo.responsible_user_created_at:type_name -> google.protobuf.Timestamp
-	77, // 63: core.InventoryChangeLogInfo.responsible_user_updated_at:type_name -> google.protobuf.Timestamp
-	77, // 64: core.ListInventoryChangeLogsRequest.start_date:type_name -> google.protobuf.Timestamp
-	77, // 65: core.ListInventoryChangeLogsRequest.end_date:type_name -> google.protobuf.Timestamp
+	78, // 54: core.InventoryChangeLogInfo.created_at:type_name -> google.protobuf.Timestamp
+	78, // 55: core.InventoryChangeLogInfo.updated_at:type_name -> google.protobuf.Timestamp
+	78, // 56: core.InventoryChangeLogInfo.item_created_at:type_name -> google.protobuf.Timestamp
+	78, // 57: core.InventoryChangeLogInfo.item_updated_at:type_name -> google.protobuf.Timestamp
+	78, // 58: core.InventoryChangeLogInfo.quantity_unit_created_at:type_name -> google.protobuf.Timestamp
+	78, // 59: core.InventoryChangeLogInfo.quantity_unit_updated_at:type_name -> google.protobuf.Timestamp
+	78, // 60: core.InventoryChangeLogInfo.scanning_station_created_at:type_name -> google.protobuf.Timestamp
+	78, // 61: core.InventoryChangeLogInfo.scanning_station_updated_at:type_name -> google.protobuf.Timestamp
+	78, // 62: core.InventoryChangeLogInfo.responsible_user_created_at:type_name -> google.protobuf.Timestamp
+	78, // 63: core.InventoryChangeLogInfo.responsible_user_updated_at:type_name -> google.protobuf.Timestamp
+	78, // 64: core.ListInventoryChangeLogsRequest.start_date:type_name -> google.protobuf.Timestamp
+	78, // 65: core.ListInventoryChangeLogsRequest.end_date:type_name -> google.protobuf.Timestamp
 	59, // 66: core.ListInventoryChangeLogsResponse.inventory_change_logs:type_name -> core.InventoryChangeLogInfo
-	78, // 67: core.ListInventoryChangeLogsResponse.page_info:type_name -> core.PageInfo
+	79, // 67: core.ListInventoryChangeLogsResponse.page_info:type_name -> core.PageInfo
 	59, // 68: core.GetInventoryChangeLogResponse.inventory_change_log:type_name -> core.InventoryChangeLogInfo
-	77, // 69: core.ExportInventoryChangeLogsRequest.start_date:type_name -> google.protobuf.Timestamp
-	77, // 70: core.ExportInventoryChangeLogsRequest.end_date:type_name -> google.protobuf.Timestamp
+	78, // 69: core.ExportInventoryChangeLogsRequest.start_date:type_name -> google.protobuf.Timestamp
+	78, // 70: core.ExportInventoryChangeLogsRequest.end_date:type_name -> google.protobuf.Timestamp
 	59, // 71: core.ExportInventoryChangeLogsResponse.inventory_change_logs:type_name -> core.InventoryChangeLogInfo
-	77, // 72: core.StartInventoryChangeLogsExportRequest.start_date:type_name -> google.protobuf.Timestamp
-	77, // 73: core.StartInventoryChangeLogsExportRequest.end_date:type_name -> google.protobuf.Timestamp
-	81, // 74: core.StartInventoryChangeLogsExportResponse.job:type_name -> core.JobInfo
-	77, // 75: core.ListInvoicesRequest.start_date:type_name -> google.protobuf.Timestamp
-	77, // 76: core.ListInvoicesRequest.end_date:type_name -> google.protobuf.Timestamp
+	78, // 72: core.StartInventoryChangeLogsExportRequest.start_date:type_name -> google.protobuf.Timestamp
+	78, // 73: core.StartInventoryChangeLogsExportRequest.end_date:type_name -> google.protobuf.Timestamp
+	82, // 74: core.StartInventoryChangeLogsExportResponse.job:type_name -> core.JobInfo
+	78, // 75: core.ListInvoicesRequest.start_date:type_name -> google.protobuf.Timestamp
+	78, // 76: core.ListInvoicesRequest.end_date:type_name -> google.protobuf.Timestamp
 	76, // 77: core.ListInvoicesResponse.invoices:type_name -> core.InvoiceInfo
-	78, // 78: core.ListInvoicesResponse.page_info:type_name -> core.PageInfo
+	79, // 78: core.ListInvoicesResponse.page_info:type_name -> core.PageInfo
 	76, // 79: core.GetInvoiceResponse.invoice:type_name -> core.InvoiceInfo
-	84, // 80: core.GetInvoiceResponse.allocation_transactions:type_name -> core.TransactionInfo
-	82, // 81: core.UpdateInvoiceRequest.note:type_name -> core.StringPatch
-	76, // 82: core.UpdateInvoiceResponse.invoice:type_name -> core.InvoiceInfo
-	84, // 83: core.UpdateInvoiceResponse.allocation_transactions:type_name -> core.TransactionInfo
-	85, // 84: core.ListCustomerInvoicesResponse.invoices:type_name -> core.InvoiceForPaymentInfo
-	78, // 85: core.ListCustomerInvoicesResponse.page_info:type_name -> core.PageInfo
-	84, // 86: core.ListCustomerInvoicesResponse.allocation_transactions:type_name -> core.TransactionInfo
-	86, // 87: core.InvoiceInfo.lines:type_name -> core.InvoiceLineInfo
-	87, // 88: core.InvoiceInfo.allocations:type_name -> core.InvoiceAllocationInfo
-	77, // 89: core.InvoiceInfo.created_at:type_name -> google.protobuf.Timestamp
-	77, // 90: core.InvoiceInfo.updated_at:type_name -> google.protobuf.Timestamp
-	88, // 91: core.InvoiceInfo.billing_address:type_name -> core.AddressInfo
-	89, // 92: core.InvoiceInfo.payment_term:type_name -> core.PaymentTermInfo
-	93, // [93:93] is the sub-list for method output_type
-	93, // [93:93] is the sub-list for method input_type
-	93, // [93:93] is the sub-list for extension type_name
-	93, // [93:93] is the sub-list for extension extendee
-	0,  // [0:93] is the sub-list for field type_name
+	85, // 80: core.GetInvoiceResponse.allocation_transactions:type_name -> core.TransactionInfo
+	83, // 81: core.UpdateInvoiceRequest.note:type_name -> core.StringPatch
+	86, // 82: core.UpdateInvoiceRequest.metadata:type_name -> core.MetadataPatch
+	76, // 83: core.UpdateInvoiceResponse.invoice:type_name -> core.InvoiceInfo
+	85, // 84: core.UpdateInvoiceResponse.allocation_transactions:type_name -> core.TransactionInfo
+	87, // 85: core.ListCustomerInvoicesResponse.invoices:type_name -> core.InvoiceForPaymentInfo
+	79, // 86: core.ListCustomerInvoicesResponse.page_info:type_name -> core.PageInfo
+	85, // 87: core.ListCustomerInvoicesResponse.allocation_transactions:type_name -> core.TransactionInfo
+	88, // 88: core.InvoiceInfo.lines:type_name -> core.InvoiceLineInfo
+	89, // 89: core.InvoiceInfo.allocations:type_name -> core.InvoiceAllocationInfo
+	78, // 90: core.InvoiceInfo.created_at:type_name -> google.protobuf.Timestamp
+	78, // 91: core.InvoiceInfo.updated_at:type_name -> google.protobuf.Timestamp
+	90, // 92: core.InvoiceInfo.billing_address:type_name -> core.AddressInfo
+	91, // 93: core.InvoiceInfo.payment_term:type_name -> core.PaymentTermInfo
+	77, // 94: core.InvoiceInfo.metadata:type_name -> core.InvoiceInfo.MetadataEntry
+	95, // [95:95] is the sub-list for method output_type
+	95, // [95:95] is the sub-list for method input_type
+	95, // [95:95] is the sub-list for extension type_name
+	95, // [95:95] is the sub-list for extension extendee
+	0,  // [0:95] is the sub-list for field type_name
 }
 
 func init() { file_core_core_users_territories_proto_init() }
@@ -6204,7 +6230,7 @@ func file_core_core_users_territories_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_core_core_users_territories_proto_rawDesc), len(file_core_core_users_territories_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   77,
+			NumMessages:   78,
 			NumExtensions: 0,
 			NumServices:   0,
 		},

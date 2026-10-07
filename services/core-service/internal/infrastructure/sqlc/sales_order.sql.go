@@ -8,6 +8,7 @@ package sqlc
 import (
 	"context"
 	"database/sql"
+	"encoding/json"
 	"strings"
 	"time"
 )
@@ -242,7 +243,7 @@ INSERT INTO sales_order (
     sales_order_status_code, sales_order_type_code,
     payment_term_id, order_discount_id, promised_at,
     lead_time_override_days, ship_by_override_date,
-    buyer_account_id, seller_account_id, owner_account_id,
+    buyer_account_id, seller_account_id, owner_account_id, metadata,
     created_at, updated_at
 ) VALUES (
     ?, ?, ?, ?, false,
@@ -253,7 +254,7 @@ INSERT INTO sales_order (
     ?, 'sales_order',
     ?, ?, ?,
     ?, ?,
-    ?, ?, ?,
+    ?, ?, ?, ?,
     NOW(3), NOW(3)
 )
 `
@@ -281,6 +282,7 @@ type CreateSalesOrderParams struct {
 	BuyerAccountID        string
 	SellerAccountID       string
 	OwnerAccountID        string
+	Metadata              json.RawMessage
 }
 
 func (q *Queries) CreateSalesOrder(ctx context.Context, arg CreateSalesOrderParams) error {
@@ -307,6 +309,7 @@ func (q *Queries) CreateSalesOrder(ctx context.Context, arg CreateSalesOrderPara
 		arg.BuyerAccountID,
 		arg.SellerAccountID,
 		arg.OwnerAccountID,
+		arg.Metadata,
 	)
 	return err
 }
@@ -828,6 +831,7 @@ SELECT
     so.calendar_adjustment_days,
     so.created_at,
     so.updated_at,
+    CAST(so.metadata AS CHAR) AS metadata,
     -- Customer
     ba.name AS customer_name,
     ar.external_number AS customer_number,
@@ -974,6 +978,7 @@ type GetSalesOrderRow struct {
 	CalendarAdjustmentDays      sql.NullInt32
 	CreatedAt                   time.Time
 	UpdatedAt                   time.Time
+	Metadata                    interface{}
 	CustomerName                string
 	CustomerNumber              string
 	CustomerStatusCode          sql.NullString
@@ -1083,6 +1088,7 @@ func (q *Queries) GetSalesOrder(ctx context.Context, arg GetSalesOrderParams) (G
 		&i.CalendarAdjustmentDays,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.Metadata,
 		&i.CustomerName,
 		&i.CustomerNumber,
 		&i.CustomerStatusCode,
@@ -1267,6 +1273,7 @@ SELECT
     so.calendar_adjustment_days,
     so.created_at,
     so.updated_at,
+    CAST(so.metadata AS CHAR) AS metadata,
     -- Customer
     ba.name AS customer_name,
     ar.external_number AS customer_number,
@@ -1415,6 +1422,7 @@ type GetSalesOrderForCustomerRow struct {
 	CalendarAdjustmentDays      sql.NullInt32
 	CreatedAt                   time.Time
 	UpdatedAt                   time.Time
+	Metadata                    interface{}
 	CustomerName                string
 	CustomerNumber              string
 	CustomerStatusCode          sql.NullString
@@ -1524,6 +1532,7 @@ func (q *Queries) GetSalesOrderForCustomer(ctx context.Context, arg GetSalesOrde
 		&i.CalendarAdjustmentDays,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.Metadata,
 		&i.CustomerName,
 		&i.CustomerNumber,
 		&i.CustomerStatusCode,
@@ -1826,7 +1835,8 @@ SELECT
     p.product_type_code AS product_type_code,
     -- Timestamps
     sol.created_at,
-    sol.updated_at
+    sol.updated_at,
+    CAST(sol.metadata AS CHAR) AS metadata
 FROM sales_order_line sol
 JOIN quantity q ON q.id = sol.quantity_id
 JOIN unit qu ON qu.id = q.unit_id
@@ -1903,6 +1913,7 @@ type GetSalesOrderLinesRow struct {
 	ProductTypeCode                      sql.NullString
 	CreatedAt                            time.Time
 	UpdatedAt                            time.Time
+	Metadata                             interface{}
 }
 
 func (q *Queries) GetSalesOrderLines(ctx context.Context, arg GetSalesOrderLinesParams) ([]GetSalesOrderLinesRow, error) {
@@ -1952,6 +1963,7 @@ func (q *Queries) GetSalesOrderLines(ctx context.Context, arg GetSalesOrderLines
 			&i.ProductTypeCode,
 			&i.CreatedAt,
 			&i.UpdatedAt,
+			&i.Metadata,
 		); err != nil {
 			return nil, err
 		}
@@ -2070,7 +2082,8 @@ SELECT
     p.product_type_code AS product_type_code,
     -- Timestamps
     sol.created_at,
-    sol.updated_at
+    sol.updated_at,
+    CAST(sol.metadata AS CHAR) AS metadata
 FROM sales_order_line sol
 JOIN quantity q ON q.id = sol.quantity_id
 JOIN unit qu ON qu.id = q.unit_id
@@ -2147,6 +2160,7 @@ type GetSalesOrderLinesForOrdersRow struct {
 	ProductTypeCode                      sql.NullString
 	CreatedAt                            time.Time
 	UpdatedAt                            time.Time
+	Metadata                             interface{}
 }
 
 // The batched form of GetSalesOrderLines for a page of orders; the columns must stay identical so
@@ -2224,6 +2238,7 @@ func (q *Queries) GetSalesOrderLinesForOrders(ctx context.Context, arg GetSalesO
 			&i.ProductTypeCode,
 			&i.CreatedAt,
 			&i.UpdatedAt,
+			&i.Metadata,
 		); err != nil {
 			return nil, err
 		}
@@ -2535,6 +2550,7 @@ SELECT
     so.calendar_adjustment_days,
     so.created_at,
     so.updated_at,
+    CAST(so.metadata AS CHAR) AS metadata,
     -- Customer
     ba.name AS customer_name,
     ar.external_number AS customer_number,
@@ -2681,6 +2697,7 @@ type GetSalesOrdersByIDsRow struct {
 	CalendarAdjustmentDays      sql.NullInt32
 	CreatedAt                   time.Time
 	UpdatedAt                   time.Time
+	Metadata                    interface{}
 	CustomerName                string
 	CustomerNumber              string
 	CustomerStatusCode          sql.NullString
@@ -2809,6 +2826,7 @@ func (q *Queries) GetSalesOrdersByIDs(ctx context.Context, arg GetSalesOrdersByI
 			&i.CalendarAdjustmentDays,
 			&i.CreatedAt,
 			&i.UpdatedAt,
+			&i.Metadata,
 			&i.CustomerName,
 			&i.CustomerNumber,
 			&i.CustomerStatusCode,
@@ -3510,6 +3528,9 @@ UPDATE sales_order SET
     buyer_account_id = ?,
     billing_address_id = COALESCE(?, billing_address_id),
     shipping_address_id = COALESCE(?, shipping_address_id),
+    -- A merge patch: keys set to null are removed, keys not sent are kept. metadata_clear merges into
+    -- an empty object instead, so only the patch's own keys remain.
+    metadata = IF(? IS NULL, metadata, JSON_MERGE_PATCH(IF(?, JSON_OBJECT(), COALESCE(metadata, JSON_OBJECT())), ?)),
     updated_at = NOW(3)
 WHERE id = ?
 AND owner_account_id = ?
@@ -3535,6 +3556,8 @@ type UpdateSalesOrderParams struct {
 	BuyerAccountID        sql.NullString
 	BillingAddressID      sql.NullString
 	ShippingAddressID     sql.NullString
+	MetadataPatch         sql.NullString
+	MetadataClear         interface{}
 	ID                    string
 	AccountID             string
 }
@@ -3560,6 +3583,9 @@ func (q *Queries) UpdateSalesOrder(ctx context.Context, arg UpdateSalesOrderPara
 		arg.BuyerAccountID,
 		arg.BillingAddressID,
 		arg.ShippingAddressID,
+		arg.MetadataPatch,
+		arg.MetadataClear,
+		arg.MetadataPatch,
 		arg.ID,
 		arg.AccountID,
 	)

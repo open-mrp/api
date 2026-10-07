@@ -32,6 +32,10 @@ type CreateSalesOrderLineRequest struct {
 	//
 	// When omitted, the line is priced server-side from the product's pricing rules (customer price, unit-conversion and volume discounts, account-price overrides) — the same pricing applied when the order is created. An explicit value is honored only for internal users. The unit cost is always resolved from the product and never taken from the request.
 	UnitPrice field.Optional[apirequest.RateInput] `json:"unit_price,omitzero"`
+	// Key-value pairs to store on the line for your own references, such as its ID in another system.
+	//
+	// Up to 50 keys. Keys are up to 40 characters and cannot contain `[` or `]`; values are strings up to 500 characters, and an empty string is stored as one. A key sent as `null` is not stored.
+	Metadata map[string]*string `json:"metadata,omitzero" validate:"omitempty,max=50,dive,keys,min=1,max=40,excludesall=[],endkeys,omitempty,max=500"`
 }
 
 var sampleCreateSalesOrderLineRequest = &CreateSalesOrderLineRequest{

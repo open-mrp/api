@@ -181,6 +181,8 @@ type SalesOrder struct {
 	ExpiredAt *time.Time `json:"expired_at"`
 	// When this order is due to ship: the date promised or pinned, what it resolved to, and which rule decided.
 	Commitment *Commitment `json:"commitment"`
+	// Key-value pairs you attach to the order for your own references, such as its ID in another system.
+	Metadata map[string]string `json:"metadata"`
 	// Creation timestamp.
 	CreatedAt time.Time `json:"created_at" validate:"required"`
 	// Last updated timestamp.
@@ -228,6 +230,7 @@ var SampleSalesOrder = &SalesOrder{
 		Acknowledgement: []string{"purchasing@acme.example.com"},
 	},
 	Commitment: SampleCommitment,
+	Metadata:   map[string]string{"edi_po": "81078093", "edi_partner": "acme"},
 	CreatedAt:  timeutil.TimestampToTime(sampleCreatedAtTimestamp),
 	UpdatedAt:  timeutil.TimestampToTime(sampleUpdatedAtTimestamp),
 }

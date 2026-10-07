@@ -61,7 +61,8 @@ SELECT
     p.product_type_code AS product_type_code,
     -- Timestamps
     sol.created_at,
-    sol.updated_at
+    sol.updated_at,
+    CAST(sol.metadata AS CHAR) AS metadata
 FROM sales_order_line sol
 JOIN quantity q ON q.id = sol.quantity_id
 JOIN unit qu ON qu.id = q.unit_id
@@ -79,13 +80,13 @@ WHERE sol.id = sqlc.arg('sales_order_line_id');
 INSERT INTO sales_order_line (
     id, product_sku, product_description, edi_line_item_id,
     line_item_number, product_id, item_id, sales_order_id,
-    quantity_id, unit_price_id, unit_cost_id,
+    quantity_id, unit_price_id, unit_cost_id, metadata,
     created_at, updated_at
 ) VALUES (
     sqlc.arg('id'), sqlc.arg('product_sku'), sqlc.narg('product_description'),
     sqlc.narg('edi_line_item_id'), sqlc.arg('line_item_number'),
     sqlc.narg('product_id'), sqlc.narg('item_id'), sqlc.arg('sales_order_id'),
-    sqlc.arg('quantity_id'), sqlc.arg('unit_price_id'), sqlc.narg('unit_cost_id'),
+    sqlc.arg('quantity_id'), sqlc.arg('unit_price_id'), sqlc.narg('unit_cost_id'), sqlc.narg('metadata'),
     NOW(3), NOW(3)
 );
 
@@ -98,6 +99,9 @@ UPDATE sales_order_line SET
     product_id = COALESCE(sqlc.narg('product_id'), product_id),
     item_id = COALESCE(sqlc.narg('item_id'), item_id),
     edi_line_item_id = COALESCE(sqlc.narg('edi_line_item_id'), edi_line_item_id),
+    -- A merge patch: keys set to null are removed, keys not sent are kept. metadata_clear merges into
+    -- an empty object instead, so only the patch's own keys remain.
+    metadata = IF(sqlc.narg('metadata_patch') IS NULL, metadata, JSON_MERGE_PATCH(IF(sqlc.arg('metadata_clear'), JSON_OBJECT(), COALESCE(metadata, JSON_OBJECT())), sqlc.narg('metadata_patch'))),
     updated_at = NOW(3)
 WHERE id = sqlc.arg('id');
 

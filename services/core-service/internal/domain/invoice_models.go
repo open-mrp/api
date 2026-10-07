@@ -5,6 +5,7 @@ import (
 
 	"github.com/open-mrp/api/shared/constants"
 	"github.com/open-mrp/api/shared/field"
+	"github.com/open-mrp/api/shared/metadata"
 	"github.com/open-mrp/api/shared/pagination"
 	"github.com/open-mrp/api/shared/pricing"
 )
@@ -43,6 +44,8 @@ type Invoice struct {
 	IsEdiSent                bool                   `audit:"is_edi_sent"`
 	HasBeenSent              bool                   `audit:"has_been_sent"`
 	AcceptsInvoiceEmails     bool                   `audit:"accepts_invoice_emails"`
+	// Metadata is the client's own key/value pairs; never nil. See shared/metadata.
+	Metadata map[string]string `audit:"metadata"`
 	// BillingAddress and PaymentTerm repeat the flat fields above in full, for callers that render the records.
 	BillingAddress *Address
 	PaymentTerm    *PaymentTerm
@@ -79,6 +82,7 @@ type InvoiceLine struct {
 	OrderLineQtyOrdered             string
 	OrderLineItemSKU                *string
 	OrderLineDescription            *string
+	OrderLineMetadata               map[string]string
 	CreatedAt                       time.Time
 	UpdatedAt                       time.Time
 }
@@ -161,6 +165,7 @@ type UpdateInvoiceParams struct {
 	HasBeenSent  *bool
 	IsEdiSent    *bool
 	IsPaidInFull *bool
+	Metadata     metadata.Update
 	// PaidInFullMarkedByID is the person setting IsPaidInFull by hand, told if recalculation overturns it.
 	PaidInFullMarkedByID *string
 	Includes             []string

@@ -11,6 +11,7 @@ import (
 	"github.com/open-mrp/api/shared/db"
 	apierror "github.com/open-mrp/api/shared/errors"
 	"github.com/open-mrp/api/shared/pagination"
+	"github.com/open-mrp/api/shared/safeconv"
 	"github.com/open-mrp/api/shared/tracing"
 )
 
@@ -482,7 +483,7 @@ func (r *transactionRepoImpl) GetByIDs(ctx context.Context, accountID string, tr
 	f := &transactionFilter{}
 	f.add("t.account_id = ?", accountID)
 	f.in("t.id", transactionIDs)
-	rows, err := r.queryTransactions(ctx, f, "", int32(len(transactionIDs)))
+	rows, err := r.queryTransactions(ctx, f, "", safeconv.IntToInt32(len(transactionIDs)))
 	if apiErr := db.MapSQLError(err); apiErr != nil {
 		return nil, tracing.Trace(span, apiErr)
 	}

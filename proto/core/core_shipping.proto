@@ -159,6 +159,8 @@ message ShipmentLineInfo {
   optional string order_line_item_id = 14;
   int32 order_line_item_number = 15;
   optional string order_line_product_id = 16;
+  // The order line's metadata, so lines.order_line carries it without a second read.
+  map<string, string> order_line_metadata = 17;
 }
 
 // ShippingCaseDetailInfo represents a shipping case within a shipment.

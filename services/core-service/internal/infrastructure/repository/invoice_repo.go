@@ -12,6 +12,7 @@ import (
 	"github.com/open-mrp/api/shared/db"
 	apierror "github.com/open-mrp/api/shared/errors"
 	"github.com/open-mrp/api/shared/id"
+	"github.com/open-mrp/api/shared/metadata"
 	"github.com/open-mrp/api/shared/pagination"
 	"github.com/open-mrp/api/shared/safeconv"
 	"github.com/open-mrp/api/shared/tracing"
@@ -151,6 +152,7 @@ func (r *invoiceRepoImpl) GetLines(ctx context.Context, invoiceID string) ([]*do
 			PricingPriceRatioDenominator:    sqlValueToString(row.PricingPriceRatioDenominator),
 			OrderLineID:                     row.OrderLineID,
 			OrderLineQtyOrdered:             row.OrderLineQuantityOrdered,
+			OrderLineMetadata:               metadata.Decode(row.OrderLineMetadata),
 			CreatedAt:                       row.CreatedAt,
 			UpdatedAt:                       row.UpdatedAt,
 		}
@@ -250,10 +252,12 @@ func (r *invoiceRepoImpl) Update(ctx context.Context, params domain.UpdateInvoic
 	defer span.End()
 
 	updateParams := sqlc.UpdateInvoiceParams{
-		ID:        params.InvoiceID,
-		AccountID: params.AccountID,
-		Note:      dtNullString(params.Note.ValuePtr()),
-		ClearNote: params.Note.IsClear(),
+		ID:            params.InvoiceID,
+		AccountID:     params.AccountID,
+		Note:          dtNullString(params.Note.ValuePtr()),
+		ClearNote:     params.Note.IsClear(),
+		MetadataPatch: metadata.Patch(params.Metadata),
+		MetadataClear: params.Metadata.Clear,
 	}
 	if params.HasBeenSent != nil {
 		updateParams.HasBeenSent = gosql.NullBool{Bool: *params.HasBeenSent, Valid: true}
@@ -410,6 +414,7 @@ func mapInvoiceRow(row sqlc.GetInvoiceRow) *domain.Invoice {
 		IsEdiSent:             row.IsEdiSent,
 		HasBeenSent:           row.HasBeenSent,
 		AcceptsInvoiceEmails:  row.AcceptsInvoiceEmails != 0,
+		Metadata:              metadata.Decode(row.Metadata),
 		CreatedAt:             row.CreatedAt,
 		UpdatedAt:             row.UpdatedAt,
 	}

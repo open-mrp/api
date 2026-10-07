@@ -12,6 +12,7 @@ import (
 	"github.com/open-mrp/api/services/core-service/internal/infrastructure/sqlc"
 	"github.com/open-mrp/api/shared/db"
 	apierror "github.com/open-mrp/api/shared/errors"
+	"github.com/open-mrp/api/shared/metadata"
 	"github.com/open-mrp/api/shared/tracing"
 )
 
@@ -61,6 +62,7 @@ func mapGetPickLineRow(row sqlc.GetPickLineRow) *domain.PickLine {
 		OrderLineItemNumber:       lineItemNumber,
 		OrderLineSKU:              row.ProductSku,
 		OrderLineDescription:      productDescription,
+		OrderLineMetadata:         metadata.Decode(row.OrderLineMetadata),
 		OrderLineProductID:        productID,
 		OrderedQuantityValue:      row.OrderedQuantityValue,
 		OrderedQuantityUnitID:     row.OrderedQuantityUnitID,

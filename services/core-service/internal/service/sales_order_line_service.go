@@ -16,6 +16,7 @@ import (
 	apierror "github.com/open-mrp/api/shared/errors"
 	"github.com/open-mrp/api/shared/id"
 	"github.com/open-mrp/api/shared/idempotency"
+	"github.com/open-mrp/api/shared/metadata"
 	"github.com/open-mrp/api/shared/tracing"
 )
 
@@ -616,6 +617,9 @@ func (s *salesOrderLineSvcImpl) UpdateSalesOrderLine(ctx context.Context, params
 			if apiErr != nil {
 				return apiErr
 			}
+			if apiErr := metadata.CheckLimit(updated.Metadata, "metadata"); apiErr != nil {
+				return apiErr
+			}
 			result = updated
 
 			changes := audit.ComputeChanges(old, updated)
@@ -876,7 +880,7 @@ func (s *salesOrderLineSvcImpl) DeleteSalesOrderLine(ctx context.Context, params
 						ID:                   order.ID,
 						Number:               order.Number,
 						SalesOrderStatusCode: string(constants.SalesOrderStatusCodeEstimate),
-					}),
+					}, "SalesOrderStatusCode"),
 				}); apiErr != nil {
 					return apiErr
 				}

@@ -214,6 +214,7 @@ func shipmentLineToProto(l *domain.ShipmentLine) *pb.ShipmentLineInfo {
 	if l.OrderLineDesc != nil {
 		info.OrderLineDescription = l.OrderLineDesc
 	}
+	info.OrderLineMetadata = l.OrderLineMetadata
 	if l.OrderLineItemID != nil {
 		info.OrderLineItemId = l.OrderLineItemID
 	}

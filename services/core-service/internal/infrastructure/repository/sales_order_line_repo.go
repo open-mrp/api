@@ -12,6 +12,7 @@ import (
 	apierror "github.com/open-mrp/api/shared/errors"
 	"github.com/open-mrp/api/shared/field"
 	"github.com/open-mrp/api/shared/id"
+	"github.com/open-mrp/api/shared/metadata"
 	"github.com/open-mrp/api/shared/safeconv"
 	"github.com/open-mrp/api/shared/tracing"
 )
@@ -137,6 +138,7 @@ func (r *salesOrderLineRepoImpl) Create(ctx context.Context, lineID string, para
 		QuantityID:         quantityID,
 		UnitPriceID:        unitPriceID,
 		UnitCostID:         unitCostID,
+		Metadata:           metadata.Encode(params.Metadata),
 	})
 	if apiErr := db.MapSQLError(err); apiErr != nil {
 		return nil, tracing.Trace(span, apiErr)
@@ -157,7 +159,7 @@ func (r *salesOrderLineRepoImpl) CreateMany(ctx context.Context, params []domain
 	const (
 		quantityTuple = "(?, ?, ?, NOW(3), NOW(3))"
 		rateTuple     = "(?, ?, ?, ?, NOW(3), NOW(3))"
-		lineTuple     = "(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(3), NOW(3))"
+		lineTuple     = "(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(3), NOW(3))"
 	)
 
 	quantityTuples := make([]string, 0, len(params))
@@ -165,7 +167,7 @@ func (r *salesOrderLineRepoImpl) CreateMany(ctx context.Context, params []domain
 	rateTuples := make([]string, 0, len(params)*2)
 	rateArgs := make([]any, 0, len(params)*2*4)
 	lineTuples := make([]string, 0, len(params))
-	lineArgs := make([]any, 0, len(params)*11)
+	lineArgs := make([]any, 0, len(params)*12)
 
 	for i, p := range params {
 		quantityID, apiErr := id.GenID(id.QuantityIDPrefix, nil)
@@ -214,6 +216,7 @@ func (r *salesOrderLineRepoImpl) CreateMany(ctx context.Context, params []domain
 			quantityID,
 			unitPriceID,
 			unitCostID,
+			metadata.Encode(p.Metadata),
 		)
 	}
 
@@ -231,7 +234,7 @@ func (r *salesOrderLineRepoImpl) CreateMany(ctx context.Context, params []domain
 		return tracing.Trace(span, apiErr)
 	}
 
-	lineSQL := "INSERT INTO sales_order_line (id, product_sku, product_description, edi_line_item_id, line_item_number, product_id, item_id, sales_order_id, quantity_id, unit_price_id, unit_cost_id, created_at, updated_at) VALUES " + strings.Join(lineTuples, ", ")
+	lineSQL := "INSERT INTO sales_order_line (id, product_sku, product_description, edi_line_item_id, line_item_number, product_id, item_id, sales_order_id, quantity_id, unit_price_id, unit_cost_id, metadata, created_at, updated_at) VALUES " + strings.Join(lineTuples, ", ")
 	_, err = dbtx.ExecContext(ctx, lineSQL, lineArgs...)
 	if apiErr := db.MapSQLError(err); apiErr != nil {
 		return tracing.Trace(span, apiErr)
@@ -289,6 +292,8 @@ func (r *salesOrderLineRepoImpl) Update(ctx context.Context, params domain.Updat
 		ProductID:          toNullString(params.ProductID),
 		ItemID:             toNullString(params.ItemID),
 		EdiLineItemID:      toNullString(params.EdiLineItemID),
+		MetadataPatch:      metadata.Patch(params.Metadata),
+		MetadataClear:      params.Metadata.Clear,
 		ID:                 params.SalesOrderLineID,
 	})
 	if apiErr := db.MapSQLError(err); apiErr != nil {
@@ -648,6 +653,7 @@ func mapSalesOrderLineRow(row sqlc.GetSalesOrderLineRow) *domain.SalesOrderLine 
 		PricingPriceRatioDenominator:    sqlValueToString(row.PricingPriceRatioDenominator),
 		CreatedAt:                       row.CreatedAt,
 		UpdatedAt:                       row.UpdatedAt,
+		Metadata:                        metadata.Decode(row.Metadata),
 	}
 
 	if row.LineItemNumber.Valid {
@@ -728,6 +734,7 @@ func mapSalesOrderLinesRow(row sqlc.GetSalesOrderLinesRow) *domain.SalesOrderLin
 		PricingPriceRatioDenominator:    sqlValueToString(row.PricingPriceRatioDenominator),
 		CreatedAt:                       row.CreatedAt,
 		UpdatedAt:                       row.UpdatedAt,
+		Metadata:                        metadata.Decode(row.Metadata),
 	}
 
 	if row.LineItemNumber.Valid {

@@ -162,6 +162,7 @@ func resolveSalesOrderCreateLines(
 				NumeratorUnitID:   product.UnitCostNumeratorUnitID,
 				DenominatorUnitID: product.UnitCostDenominatorUnitID,
 			},
+			Metadata: line.Metadata,
 		}
 	}
 

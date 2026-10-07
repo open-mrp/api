@@ -70,6 +70,38 @@ type AccountBranding struct {
 	CreatedAt       time.Time
 }
 
+type AccountFollowup struct {
+	ID                   string
+	AccountID            string
+	SandboxAccountID     sql.NullString
+	UserID               string
+	AccountName          string
+	RegistrantName       string
+	RegistrantEmail      string
+	RegisteredAt         time.Time
+	Status               string
+	ScheduledFor         time.Time
+	SkipReason           sql.NullString
+	Attempts             int32
+	LastError            sql.NullString
+	ActivitySummary      json.RawMessage
+	LlmModel             sql.NullString
+	PromptVersion        sql.NullString
+	Engagement           sql.NullString
+	InternalSummary      sql.NullString
+	DraftSubject         sql.NullString
+	DraftBody            sql.NullString
+	FinalSubject         sql.NullString
+	FinalBody            sql.NullString
+	ReviewTokenHash      sql.NullString
+	ReviewTokenExpiresAt sql.NullTime
+	DraftedAt            sql.NullTime
+	ReviewedAt           sql.NullTime
+	SentAt               sql.NullTime
+	CreatedAt            time.Time
+	UpdatedAt            time.Time
+}
+
 type AccountGroup struct {
 	ID                    string
 	OwnerAccountID        string
@@ -1057,18 +1089,20 @@ type Inventoryissuestatus struct {
 }
 
 type Invoice struct {
-	ID               string
-	Number           string
-	Note             sql.NullString
-	HasBeenSent      bool
-	IsPaidInFull     bool
-	SalesOrderID     string
-	BillingAddressID string
-	AccountID        string
-	CreatedAt        time.Time
-	UpdatedAt        time.Time
-	IsOverPaid       bool
-	IsEdiSent        bool
+	ID                   string
+	Number               string
+	Note                 sql.NullString
+	HasBeenSent          bool
+	IsPaidInFull         bool
+	SalesOrderID         string
+	BillingAddressID     string
+	AccountID            string
+	CreatedAt            time.Time
+	UpdatedAt            time.Time
+	IsOverPaid           bool
+	IsEdiSent            bool
+	PaidInFullMarkedByID sql.NullString
+	Metadata             json.RawMessage
 }
 
 type InvoiceLine struct {
@@ -2147,6 +2181,59 @@ type RoleType struct {
 	UpdatedAt time.Time
 }
 
+type SalesBuyerSummary struct {
+	AccountID      string
+	BuyerAccountID string
+	FirstOrderedAt time.Time
+	TotalInvoiced  string
+	RefreshedAt    time.Time
+}
+
+type SalesFactDirty struct {
+	ScopeType string
+	ScopeID   string
+	AccountID string
+	MarkedAt  time.Time
+}
+
+type SalesFactRollup struct {
+	AccountID          string
+	SalesOrderTypeCode string
+	Dimension          string
+	ProductLineKey     string
+	Grain              string
+	BucketStart        time.Time
+	RowHash            []byte
+	DimensionID        string
+	SalesRepKey        string
+	QuantityBase       sql.NullString
+	TotalInvoiced      sql.NullString
+	TotalCost          sql.NullString
+	InvoiceCount       int32
+	LineCount          int32
+}
+
+type SalesLineFact struct {
+	AccountID          string
+	InvoicedAt         time.Time
+	InvoiceLineID      string
+	InvoiceID          string
+	SalesOrderID       string
+	BuyerAccountID     string
+	SalesRepID         sql.NullString
+	OrderDiscountID    sql.NullString
+	ProductID          string
+	ItemID             string
+	ProductLineID      string
+	RefreshedAt        time.Time
+	QuantityBase       sql.NullString
+	TotalInvoiced      sql.NullString
+	TotalCost          sql.NullString
+	OrderedAt          sql.NullTime
+	IsPriced           bool
+	SalesOrderTypeCode string
+}
+
 type SalesOrder struct {
 	ID                     string
 	BillingAddressID       string
@@ -2187,6 +2274,7 @@ type SalesOrder struct {
 	PriorityCode           string
 	CarrierBillingType     sql.NullString
 	FreightPendingSince    sql.NullTime
+	Metadata               json.RawMessage
 }
 
 type SalesOrderLine struct {
@@ -2203,6 +2291,7 @@ type SalesOrderLine struct {
 	UnitCostID         sql.NullString
 	CreatedAt          time.Time
 	UpdatedAt          time.Time
+	Metadata           json.RawMessage
 }
 
 type SalesOrderStatus struct {
@@ -2219,6 +2308,19 @@ type SalesOrderType struct {
 	Name      string
 	CreatedAt time.Time
 	UpdatedAt time.Time
+}
+
+type SalesSync struct {
+	Name                 string
+	CursorCreatedAt      sql.NullTime
+	CursorInvoiceID      sql.NullString
+	CursorAccountID      sql.NullString
+	CursorDay            sql.NullTime
+	CursorBuyerAccountID sql.NullString
+	FactsSince           sql.NullTime
+	PassStartedAt        sql.NullTime
+	LastCompletedAt      sql.NullTime
+	UpdatedAt            time.Time
 }
 
 type SandboxAccount struct {
@@ -2308,6 +2410,7 @@ type Shipment struct {
 	UpdatedAt            time.Time
 	MasterTrackingNumber sql.NullString
 	ShipmentStatusCode   string
+	BuyerAccountID       sql.NullString
 }
 
 type ShipmentLine struct {
@@ -2488,17 +2591,20 @@ type Transaction struct {
 	TransactionTypeCode   string
 	TransactionMethodCode sql.NullString
 	AdjustmentTypeCode    sql.NullString
+	CreatedBySettlementID sql.NullString
 }
 
 type TransactionAllocation struct {
-	ID            string
-	TransactionID string
-	AmountID      string
-	InvoiceID     string
-	SettlementID  sql.NullString
-	CreatedAt     time.Time
-	UpdatedAt     time.Time
-	Note          sql.NullString
+	ID                  string
+	TransactionID       string
+	AmountID            string
+	InvoiceID           string
+	SettlementID        sql.NullString
+	CreatedAt           time.Time
+	UpdatedAt           time.Time
+	Note                sql.NullString
+	AccountID           sql.NullString
+	TransactionTypeCode sql.NullString
 }
 
 type TransactionMethod struct {

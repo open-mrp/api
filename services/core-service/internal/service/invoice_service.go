@@ -12,6 +12,7 @@ import (
 	"github.com/open-mrp/api/shared/constants"
 	apierror "github.com/open-mrp/api/shared/errors"
 	"github.com/open-mrp/api/shared/idempotency"
+	"github.com/open-mrp/api/shared/metadata"
 	"github.com/open-mrp/api/shared/tracing"
 )
 
@@ -240,6 +241,9 @@ func (s *invoiceSvcImpl) UpdateInvoice(ctx context.Context, params domain.Update
 			if apiErr != nil {
 				return apiErr
 			}
+			if apiErr := metadata.CheckLimit(updated.Metadata, "metadata"); apiErr != nil {
+				return apiErr
+			}
 
 			// Expand the same relations a read would, so a PATCH answers ?include= like a GET does.
 			for _, include := range params.Includes {
@@ -264,7 +268,7 @@ func (s *invoiceSvcImpl) UpdateInvoice(ctx context.Context, params domain.Update
 			result = updated
 
 			// Names the fields explicitly so only the updatable ones are diffed.
-			changes := audit.ComputeChanges(old, updated, "Note", "HasBeenSent", "IsEdiSent", "IsPaidInFull")
+			changes := audit.ComputeChanges(old, updated, "Note", "HasBeenSent", "IsEdiSent", "IsPaidInFull", "Metadata")
 
 			if apiErr := audit.NewPublisher().Publish(txCtx, txSvc.repos.NewOutboxRepo(), audit.EventData{
 				ServiceName:      domain.ServiceName,

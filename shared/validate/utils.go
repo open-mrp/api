@@ -454,6 +454,8 @@ func formatFieldError(fieldErr validator.FieldError, structValue any) string {
 		return fmt.Sprintf("%s '%s' must be less than %s.", source, fieldName, fieldErr.Param())
 	case "oneof":
 		return fmt.Sprintf("%s '%s' must be one of: %s.", source, fieldName, fieldErr.Param())
+	case "excludesall":
+		return fmt.Sprintf("%s '%s' must not contain any of these characters: %s.", source, fieldName, fieldErr.Param())
 	case "omitempty":
 		return fmt.Sprintf("%s '%s' validation failed.", source, fieldName)
 	case "password":
@@ -549,7 +551,13 @@ func getFieldMetadata(fieldErr validator.FieldError, structValue any) fieldMetad
 		return fieldMetadata{name: path, source: "field"}
 	}
 
-	if meta, found := lookupFieldMetadata(rv.Type(), fieldName); found {
+	// A top-level slice or map entry ("Metadata[key]") is named by its field's JSON name plus the index.
+	name, index := fieldName, ""
+	if i := strings.IndexByte(fieldName, '['); i >= 0 {
+		name, index = fieldName[:i], fieldName[i:]
+	}
+	if meta, found := lookupFieldMetadata(rv.Type(), name); found {
+		meta.name += index
 		return meta
 	}
 

@@ -146,6 +146,7 @@ SELECT
     sol.line_item_number AS order_line_item_number,
     sol.product_sku,
     sol.product_description,
+    CAST(sol.metadata AS CHAR) AS order_line_metadata,
     sol.item_id AS order_line_item_id,
     sol.product_id AS order_line_product_id,
     -- Quantity
@@ -172,6 +173,7 @@ type GetShipmentLineRow struct {
 	OrderLineItemNumber      sql.NullInt32
 	ProductSku               string
 	ProductDescription       sql.NullString
+	OrderLineMetadata        interface{}
 	OrderLineItemID          sql.NullString
 	OrderLineProductID       sql.NullString
 	QuantityID               string
@@ -194,6 +196,7 @@ func (q *Queries) GetShipmentLine(ctx context.Context, shipmentLineID string) (G
 		&i.OrderLineItemNumber,
 		&i.ProductSku,
 		&i.ProductDescription,
+		&i.OrderLineMetadata,
 		&i.OrderLineItemID,
 		&i.OrderLineProductID,
 		&i.QuantityID,
@@ -236,6 +239,7 @@ SELECT
     sol.line_item_number AS order_line_item_number,
     sol.product_sku,
     sol.product_description,
+    CAST(sol.metadata AS CHAR) AS order_line_metadata,
     sol.item_id AS order_line_item_id,
     sol.product_id AS order_line_product_id,
     -- Quantity
@@ -282,6 +286,7 @@ type ListShipmentLinesBackwardRow struct {
 	OrderLineItemNumber      sql.NullInt32
 	ProductSku               string
 	ProductDescription       sql.NullString
+	OrderLineMetadata        interface{}
 	OrderLineItemID          sql.NullString
 	OrderLineProductID       sql.NullString
 	QuantityID               string
@@ -320,6 +325,7 @@ func (q *Queries) ListShipmentLinesBackward(ctx context.Context, arg ListShipmen
 			&i.OrderLineItemNumber,
 			&i.ProductSku,
 			&i.ProductDescription,
+			&i.OrderLineMetadata,
 			&i.OrderLineItemID,
 			&i.OrderLineProductID,
 			&i.QuantityID,
@@ -352,6 +358,7 @@ SELECT
     sol.line_item_number AS order_line_item_number,
     sol.product_sku,
     sol.product_description,
+    CAST(sol.metadata AS CHAR) AS order_line_metadata,
     sol.item_id AS order_line_item_id,
     sol.product_id AS order_line_product_id,
     -- Quantity
@@ -379,6 +386,7 @@ type ListShipmentLinesByShipmentRow struct {
 	OrderLineItemNumber      sql.NullInt32
 	ProductSku               string
 	ProductDescription       sql.NullString
+	OrderLineMetadata        interface{}
 	OrderLineItemID          sql.NullString
 	OrderLineProductID       sql.NullString
 	QuantityID               string
@@ -407,6 +415,7 @@ func (q *Queries) ListShipmentLinesByShipment(ctx context.Context, shipmentID st
 			&i.OrderLineItemNumber,
 			&i.ProductSku,
 			&i.ProductDescription,
+			&i.OrderLineMetadata,
 			&i.OrderLineItemID,
 			&i.OrderLineProductID,
 			&i.QuantityID,
@@ -439,6 +448,7 @@ SELECT
     sol.line_item_number AS order_line_item_number,
     sol.product_sku,
     sol.product_description,
+    CAST(sol.metadata AS CHAR) AS order_line_metadata,
     sol.item_id AS order_line_item_id,
     sol.product_id AS order_line_product_id,
     -- Quantity
@@ -486,6 +496,7 @@ type ListShipmentLinesForwardRow struct {
 	OrderLineItemNumber      sql.NullInt32
 	ProductSku               string
 	ProductDescription       sql.NullString
+	OrderLineMetadata        interface{}
 	OrderLineItemID          sql.NullString
 	OrderLineProductID       sql.NullString
 	QuantityID               string
@@ -525,6 +536,7 @@ func (q *Queries) ListShipmentLinesForward(ctx context.Context, arg ListShipment
 			&i.OrderLineItemNumber,
 			&i.ProductSku,
 			&i.ProductDescription,
+			&i.OrderLineMetadata,
 			&i.OrderLineItemID,
 			&i.OrderLineProductID,
 			&i.QuantityID,

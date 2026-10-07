@@ -15,6 +15,7 @@ import (
 	"github.com/open-mrp/api/shared/constants"
 	apierror "github.com/open-mrp/api/shared/errors"
 	"github.com/open-mrp/api/shared/field"
+	"github.com/open-mrp/api/shared/metadata"
 	"github.com/open-mrp/api/shared/pricing"
 	pb "github.com/open-mrp/api/shared/proto/core"
 	"github.com/open-mrp/api/shared/ptrutil"
@@ -177,6 +178,7 @@ func (m *salesOrderSvcImpl) CreateSalesOrder(ctx context.Context, req *CreateSal
 	lines := make([]*pb.CreateSalesOrderLineInput, len(req.Lines))
 	for i, l := range req.Lines {
 		line := &pb.CreateSalesOrderLineInput{
+			Metadata:           metadata.FromCreateRequest(l.Metadata),
 			ProductId:          l.ProductID,
 			ProductSku:         l.ProductSKU.Ptr(),
 			ProductDescription: l.ProductDescription.Ptr(),
@@ -198,6 +200,7 @@ func (m *salesOrderSvcImpl) CreateSalesOrder(ctx context.Context, req *CreateSal
 	}
 
 	pbReq := &pb.CreateSalesOrderRequest{
+		Metadata:                     metadata.FromCreateRequest(req.Metadata),
 		BuyerAccountId:               req.BuyerAccountID,
 		CustomerPoNumber:             req.CustomerPurchaseOrderNumber.Ptr(),
 		Note:                         req.Note.Ptr(),
@@ -255,7 +258,8 @@ func (m *salesOrderSvcImpl) UpdateSalesOrder(ctx context.Context, req *UpdateSal
 	}
 
 	pbReq := &pb.UpdateSalesOrderRequest{
-		Id: req.SalesOrderID,
+		Metadata: metadata.PatchToProto(req.Metadata),
+		Id:       req.SalesOrderID,
 		// Clearable nullable fields → *Patch (clear / set / leave).
 		CustomerPoNumber:      field.StringClearableToProto(req.CustomerPurchaseOrderNumber),
 		Note:                  field.StringClearableToProto(req.Note),
@@ -611,6 +615,7 @@ func (m *salesOrderSvcImpl) CreateSalesOrderProductionRun(ctx context.Context, r
 
 func (m *salesOrderSvcImpl) CreateSalesOrderLine(ctx context.Context, req *CreateSalesOrderLineRequest) (*apiresource.SalesOrderLine, *apierror.APIError) {
 	pbReq := &pb.CreateSalesOrderLineRequest{
+		Metadata:           metadata.FromCreateRequest(req.Metadata),
 		SalesOrderId:       req.SalesOrderID,
 		ProductId:          req.ProductID,
 		ProductSku:         req.ProductSKU,
@@ -658,6 +663,7 @@ func (m *salesOrderSvcImpl) ReorderSalesOrderLines(ctx context.Context, req *Reo
 
 func (m *salesOrderSvcImpl) UpdateSalesOrderLine(ctx context.Context, req *UpdateSalesOrderLineRequest) (*apiresource.SalesOrderLine, *apierror.APIError) {
 	pbReq := &pb.UpdateSalesOrderLineRequest{
+		Metadata:           metadata.PatchToProto(req.Metadata),
 		SalesOrderId:       req.SalesOrderID,
 		Id:                 req.SalesOrderLineID,
 		ProductSku:         req.ProductSKU.Ptr(),
@@ -710,6 +716,7 @@ func (m *salesOrderSvcImpl) DeleteSalesOrderLine(ctx context.Context, req *Delet
 
 func salesOrderDetailFromProto(info *pb.SalesOrderInfo) apiresource.SalesOrder {
 	d := apiresource.SalesOrder{
+		Metadata:                    apiresource.MetadataFromProto(info.Metadata),
 		ID:                          info.Id,
 		Object:                      constants.ObjectTypeSalesOrder,
 		Number:                      info.Number,
@@ -1137,6 +1144,7 @@ func hydrateSalesReps(ctx context.Context, orderIDs []string) {
 
 func salesOrderLineDetailFromProto(info *pb.SalesOrderLineInfo) apiresource.SalesOrderLine {
 	l := apiresource.SalesOrderLine{
+		Metadata:           apiresource.MetadataFromProto(info.Metadata),
 		ID:                 info.Id,
 		Object:             constants.ObjectTypeSalesOrderLine,
 		LineItemNumber:     info.LineItemNumber,

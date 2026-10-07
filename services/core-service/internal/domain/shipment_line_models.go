@@ -15,6 +15,7 @@ type ShipmentLine struct {
 	SalesOrderLineID   string  `audit:"sales_order_line_id"`
 	OrderLineSKU       string  `audit:"order_line_sku"`
 	OrderLineDesc      *string `audit:"order_line_desc"`
+	OrderLineMetadata  map[string]string
 	OrderLineItemID    *string
 	OrderLineProductID *string
 	// Position of the sales order line the shipment line fulfills.

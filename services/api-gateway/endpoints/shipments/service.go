@@ -690,6 +690,7 @@ func buildSalesOrderLineForShipmentLine(l *pb.ShipmentLineInfo) *apiresource.Sal
 		LineItemNumber:     l.OrderLineItemNumber,
 		ProductSKU:         l.OrderLineSku,
 		ProductDescription: l.OrderLineDescription,
+		Metadata:           apiresource.MetadataFromProto(l.OrderLineMetadata),
 		CreatedAt:          now,
 		UpdatedAt:          now,
 	}

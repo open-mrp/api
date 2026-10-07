@@ -1,5 +1,12 @@
 # Changelog
 
+## [4.1.2](https://github.com/open-mrp/api/compare/v4.1.1...v4.1.2) (2026-10-07)
+
+
+### Bug Fixes
+
+* **billing:** report seat counts to the openmrp_seats meter ([#279](https://github.com/open-mrp/api/issues/279)) ([741ccb9](https://github.com/open-mrp/api/commit/741ccb917f93a8dea4a14e6ed073d6c361e4f3ea))
+
 ## [4.1.1](https://github.com/open-mrp/api/compare/v4.1.0...v4.1.1) (2026-10-07)
 
 

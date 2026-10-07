@@ -1,13 +1,6 @@
 -- 0013_finance.sql
--- Seeds dc_locations, settlements, transactions, and transaction allocations.
+-- Seeds settlements, transactions, and transaction allocations.
 -- Runs after 0012 so all FK dependencies (accounts, invoices, users) exist.
-
--- ============================================================
--- DC LOCATIONS
--- ============================================================
-
-INSERT IGNORE INTO dc_location (id, location, account_id, owner_account_id, created_at, updated_at) VALUES
-    ('dclc_01seeddc_location0', 'Distribution Center East', 'ac_01k09wm2fgevdsc344gpbcj30f', 'ac_01k0a5smf9ekb8rqg12555zjqa', NOW(), NOW());
 
 -- ============================================================
 -- SETTLEMENTS

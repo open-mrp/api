@@ -192,7 +192,6 @@ INSERT IGNORE INTO permission_group (id, code, name, created_at, updated_at) VAL
     ('pmgp_01seedcustomers000', 'customers', 'Customers', NOW(), NOW()),
     ('pmgp_01seedcustportals0', 'customer_portals', 'Customer Portals', NOW(), NOW()),
     ('pmgp_01seeddepartments0', 'departments', 'Departments', NOW(), NOW()),
-    ('pmgp_01seededi000000000', 'edi', 'Edi', NOW(), NOW()),
     ('pmgp_01seedinventory000', 'inventory', 'Inventory', NOW(), NOW()),
     ('pmgp_01seedinvoices0000', 'invoices', 'Invoices', NOW(), NOW()),
     ('pmgp_01seeditems0000000', 'items', 'Items', NOW(), NOW()),

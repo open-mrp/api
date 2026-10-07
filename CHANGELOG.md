@@ -1,5 +1,12 @@
 # Changelog
 
+## [4.1.3](https://github.com/open-mrp/api/compare/v4.1.2...v4.1.3) (2026-10-07)
+
+
+### Performance Improvements
+
+* faster slow queries; prefix invoice search in 1.0.forge-preview.8 ([#281](https://github.com/open-mrp/api/issues/281)) ([470d884](https://github.com/open-mrp/api/commit/470d884afde958f3e126013c7d7746809644b16d))
+
 ## [4.1.2](https://github.com/open-mrp/api/compare/v4.1.1...v4.1.2) (2026-10-07)
 
 

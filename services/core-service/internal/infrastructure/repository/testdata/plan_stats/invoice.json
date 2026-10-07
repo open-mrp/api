@@ -1,20 +1,20 @@
 {
- "source": "augno_core/prod, mysql.innodb_table_stats and mysql.innodb_index_stats, last_update 2026-09-28 13:38:02 UTC",
+ "source": "augno_core/prod, mysql.innodb_table_stats and mysql.innodb_index_stats, last_update 2026-10-07 17:28:27 UTC",
  "table": {
-  "n_rows": 124819,
-  "clustered_index_size": 1703,
-  "sum_of_other_index_sizes": 8393
+  "n_rows": 123355,
+  "clustered_index_size": 1831,
+  "sum_of_other_index_sizes": 11107
  },
  "indexes": [
   {
    "index": "FTS_DOC_ID_INDEX",
    "stat": "n_diff_pfx01",
-   "value": 127608
+   "value": 127276
   },
   {
    "index": "FTS_DOC_ID_INDEX",
    "stat": "n_leaf_pages",
-   "value": 385
+   "value": 384
   },
   {
    "index": "FTS_DOC_ID_INDEX",
@@ -24,32 +24,32 @@
   {
    "index": "PRIMARY",
    "stat": "n_diff_pfx01",
-   "value": 125611
+   "value": 123355
   },
   {
    "index": "PRIMARY",
    "stat": "n_leaf_pages",
-   "value": 1585
+   "value": 1766
   },
   {
    "index": "PRIMARY",
    "stat": "size",
-   "value": 1767
+   "value": 1831
   },
   {
    "index": "invoice_account_created_idx",
    "stat": "n_diff_pfx01",
-   "value": 7
+   "value": 12
   },
   {
    "index": "invoice_account_created_idx",
    "stat": "n_diff_pfx02",
-   "value": 31194
+   "value": 22041
   },
   {
    "index": "invoice_account_created_idx",
    "stat": "n_diff_pfx03",
-   "value": 124516
+   "value": 138179
   },
   {
    "index": "invoice_account_created_idx",
@@ -62,104 +62,144 @@
    "value": 1129
   },
   {
-   "index": "invoice_account_number_idx",
+   "index": "invoice_account_number_order_idx",
    "stat": "n_diff_pfx01",
-   "value": 7
+   "value": 12
   },
   {
-   "index": "invoice_account_number_idx",
+   "index": "invoice_account_number_order_idx",
    "stat": "n_diff_pfx02",
-   "value": 127669
+   "value": 133477
   },
   {
-   "index": "invoice_account_number_idx",
+   "index": "invoice_account_number_order_idx",
    "stat": "n_diff_pfx03",
-   "value": 124726
+   "value": 122612
   },
   {
-   "index": "invoice_account_number_idx",
+   "index": "invoice_account_number_order_idx",
+   "stat": "n_diff_pfx04",
+   "value": 116291
+  },
+  {
+   "index": "invoice_account_number_order_idx",
    "stat": "n_leaf_pages",
-   "value": 965
+   "value": 1317
   },
   {
-   "index": "invoice_account_number_idx",
+   "index": "invoice_account_number_order_idx",
+   "stat": "size",
+   "value": 1521
+  },
+  {
+   "index": "invoice_account_over_paid_created_idx",
+   "stat": "n_diff_pfx01",
+   "value": 12
+  },
+  {
+   "index": "invoice_account_over_paid_created_idx",
+   "stat": "n_diff_pfx02",
+   "value": 13
+  },
+  {
+   "index": "invoice_account_over_paid_created_idx",
+   "stat": "n_diff_pfx03",
+   "value": 25031
+  },
+  {
+   "index": "invoice_account_over_paid_created_idx",
+   "stat": "n_diff_pfx04",
+   "value": 124968
+  },
+  {
+   "index": "invoice_account_over_paid_created_idx",
+   "stat": "n_leaf_pages",
+   "value": 968
+  },
+  {
+   "index": "invoice_account_over_paid_created_idx",
    "stat": "size",
    "value": 1129
   },
   {
    "index": "invoice_account_sales_order_idx",
    "stat": "n_diff_pfx01",
-   "value": 7
+   "value": 12
   },
   {
    "index": "invoice_account_sales_order_idx",
    "stat": "n_diff_pfx02",
-   "value": 124931
+   "value": 129132
   },
   {
    "index": "invoice_account_sales_order_idx",
    "stat": "n_diff_pfx03",
-   "value": 130164
+   "value": 117259
+  },
+  {
+   "index": "invoice_account_sales_order_idx",
+   "stat": "n_diff_pfx04",
+   "value": 119340
   },
   {
    "index": "invoice_account_sales_order_idx",
    "stat": "n_leaf_pages",
-   "value": 1203
+   "value": 1224
   },
   {
    "index": "invoice_account_sales_order_idx",
    "stat": "size",
-   "value": 1390
+   "value": 1456
   },
   {
    "index": "invoice_account_unpaid_created_idx",
    "stat": "n_diff_pfx01",
-   "value": 7
+   "value": 12
   },
   {
    "index": "invoice_account_unpaid_created_idx",
    "stat": "n_diff_pfx02",
-   "value": 8
+   "value": 13
   },
   {
    "index": "invoice_account_unpaid_created_idx",
    "stat": "n_diff_pfx03",
-   "value": 27177
+   "value": 27157
   },
   {
    "index": "invoice_account_unpaid_created_idx",
    "stat": "n_diff_pfx04",
-   "value": 119537
+   "value": 132031
   },
   {
    "index": "invoice_account_unpaid_created_idx",
    "stat": "n_diff_pfx05",
-   "value": 117503
+   "value": 125628
   },
   {
    "index": "invoice_account_unpaid_created_idx",
    "stat": "n_leaf_pages",
-   "value": 1271
+   "value": 1392
   },
   {
    "index": "invoice_account_unpaid_created_idx",
    "stat": "size",
-   "value": 1521
+   "value": 1649
   },
   {
    "index": "invoice_billing_address_id_idx",
    "stat": "n_diff_pfx01",
-   "value": 1711
+   "value": 2476
   },
   {
    "index": "invoice_billing_address_id_idx",
    "stat": "n_diff_pfx02",
-   "value": 147631
+   "value": 127747
   },
   {
    "index": "invoice_billing_address_id_idx",
    "stat": "n_leaf_pages",
-   "value": 822
+   "value": 821
   },
   {
    "index": "invoice_billing_address_id_idx",
@@ -169,17 +209,17 @@
   {
    "index": "invoice_created_at_idx",
    "stat": "n_diff_pfx01",
-   "value": 25245
+   "value": 29154
   },
   {
    "index": "invoice_created_at_idx",
    "stat": "n_diff_pfx02",
-   "value": 122698
+   "value": 112039
   },
   {
    "index": "invoice_created_at_idx",
    "stat": "n_leaf_pages",
-   "value": 564
+   "value": 567
   },
   {
    "index": "invoice_created_at_idx",
@@ -189,17 +229,17 @@
   {
    "index": "invoice_sales_order_id_idx",
    "stat": "n_diff_pfx01",
-   "value": 130422
+   "value": 131284
   },
   {
    "index": "invoice_sales_order_id_idx",
    "stat": "n_diff_pfx02",
-   "value": 115962
+   "value": 132204
   },
   {
    "index": "invoice_sales_order_id_idx",
    "stat": "n_leaf_pages",
-   "value": 924
+   "value": 920
   },
   {
    "index": "invoice_sales_order_id_idx",

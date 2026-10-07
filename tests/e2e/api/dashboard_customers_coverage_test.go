@@ -262,7 +262,6 @@ func TestDashCustomers_UpdateRejectsInvalidValues(t *testing.T) {
 		{"blank number", map[string]any{"number": ""}, "number"},
 		{"null status", map[string]any{"status": nil}, "status"},
 		{"unknown status", map[string]any{"status": "bogus"}, "status"},
-		{"unknown edi status", map[string]any{"edi_status": "bogus"}, "edi_status"},
 		{"unknown priority", map[string]any{"default_priority": "bogus"}, "default_priority"},
 		{"unknown fulfillment policy", map[string]any{"fulfillment_policy": "bogus"}, "fulfillment_policy"},
 		{"unknown carrier billing type", map[string]any{"carrier_billing_type": "bogus"}, "carrier_billing_type"},

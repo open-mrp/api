@@ -39,8 +39,6 @@ type UpdateCustomerRequest struct {
 	Phone field.Clearable[string] `json:"phone,omitzero" validate:"omitempty,max=255"`
 	// Website URL.
 	URL field.Clearable[string] `json:"url,omitzero" validate:"omitempty,max=255"`
-	// Whether EDI (Electronic Data Interchange) is enabled for exchanging orders and documents with this customer.
-	EDIStatus field.Optional[constants.EDIStatus] `json:"edi_status,omitzero"`
 	// How sales commission applies to this customer's orders.
 	//
 	// - `commission_exempt`: this customer's orders are exempt from sales commission.
@@ -121,7 +119,6 @@ var sampleUpdateCustomerRequest = &UpdateCustomerRequest{
 	Email:                 field.Set(sampleUpdateCustomerEmail),
 	Phone:                 field.Set(sampleUpdateCustomerPhone),
 	URL:                   field.Set(sampleUpdateCustomerURL),
-	EDIStatus:             field.Some(constants.EDIStatusDisabled),
 	CommissionPolicy:      field.Some(constants.CommissionPolicyApplied),
 	FreightPolicy:         field.Some(sampleUpdateCustomerFreightPolicy),
 	FulfillmentPolicy:     field.Set(constants.FulfillmentPolicyMakeToOrder),

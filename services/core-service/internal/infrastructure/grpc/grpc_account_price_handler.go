@@ -41,7 +41,6 @@ func accountPriceToProto(ap *domain.AccountPrice) *pb.AccountPriceInfo {
 			Name:             ap.RecipientAccountName,
 			Number:           ap.RecipientAccountNumber,
 			Status:           ap.RecipientAccountStatus,
-			IsEdiEnabled:     ap.RecipientAccountIsEdiEnabled,
 			CommissionPolicy: ap.RecipientAccountCommissionPolicy,
 			RelationshipType: ap.RecipientAccountRelationshipType,
 			CreatedAt:        timestamppb.New(ap.RecipientAccountCreatedAt),

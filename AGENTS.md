@@ -147,8 +147,7 @@ To add/modify schema:
 1. `make migrate-create name=add_something` — writes a new numbered migration in `shared/db/migrations`.
 2. Fill in the Up and Down halves. Keep the `-- +goose NO TRANSACTION` line the template starts with: Vitess rejects DDL inside an explicit transaction.
 3. `make migrate-up` to apply it to the local Docker MySQL, then `make sqlc [service]` for affected services. sqlc reads the whole migrations directory, so no dump needs regenerating.
-4. Update the Prisma schema in `dashboard/packages/db` to match, in the same change — it is the dashboard's model definition and cannot be derived from the database (no foreign keys, `relationMode = "prisma"`). Nothing enforces this automatically; it is caught in review.
-5. Shipping is automated — the release PR opens a PlanetScale deploy request for review, and merging it deploys the schema before any service image rolls. Never run DDL against prod yourself.
+4. Shipping is automated — the release PR opens a PlanetScale deploy request for review, and merging it deploys the schema before any service image rolls. Never run DDL against prod yourself.
 
 The agent-service Postgres schema works the same way but lives in `services/agent-service/db/migrations` (`make migrate-agent-create`). Postgres has no deploy requests — PlanetScale applies Postgres DDL directly — so those migrations are applied on merge.
 
@@ -422,7 +421,7 @@ rather than:
 8. New endpoints should be added to the openapi spec generator.
 9. Sensitive HTTP request or response fields that must not appear verbatim in persisted request logs should be tagged `sensitive:"true"` on the corresponding struct field (`shared/redact` redacts logged JSON at the gateway). Omit entire request-log rows via `Extras.SkipRequestLogging` when logging the request is unacceptable.
 10. Any breaking change to an existing public request or response shape requires a new API version plus a transformer in `services/api-gateway/internal/versiontransforms/`. See the non-negotiable section at the top of this file and the `api-versioning` skill.
-11. **`_parent_child_production_steps` column order is fixed**: **`A` = downstream step, `B` = upstream (parent)** — matches Prisma/dashboard. Never revert queries or seeds to "`A` = parent." See the `production-step-graph` skill.
+11. **`_parent_child_production_steps` column order is fixed**: **`A` = downstream step, `B` = upstream (parent)** — matches the existing data. Never revert queries or seeds to "`A` = parent." See the `production-step-graph` skill.
 
 ## Skill and doc index
 

@@ -406,15 +406,6 @@ func buildAllGroups() []apiendpoint.APIEndpointGroup {
 		*(&httpgroup.RatesEndpointGroup{}).Materialize(&httpgroup.RatesEndpointGroupConfig{
 			CoreClient: coreClient,
 		}).APIEndpointGroup,
-		*(&httpgroup.EDIEndpointGroup{}).Materialize(&httpgroup.EDIEndpointGroupConfig{
-			CoreClient: coreClient,
-		}).APIEndpointGroup,
-		*(&httpgroup.EDIDCLocationsEndpointGroup{}).Materialize(&httpgroup.EDIDCLocationsEndpointGroupConfig{
-			CoreClient: coreClient,
-		}).APIEndpointGroup,
-		*(&httpgroup.EDIRunsEndpointGroup{}).Materialize(&httpgroup.EDIRunsEndpointGroupConfig{
-			CoreClient: coreClient,
-		}).APIEndpointGroup,
 		*(&httpgroup.CatalogEndpointGroup{}).Materialize(&httpgroup.CatalogEndpointGroupConfig{
 			CoreClient: coreClient,
 		}).APIEndpointGroup,

@@ -23,7 +23,6 @@ type Invoice struct {
 	CustomerNumber           string                 `audit:"customer_number"`
 	CustomerStatusCode       *string                `audit:"customer_status_code"`
 	CustomerCommissionPolicy *string                `audit:"customer_commission_policy"`
-	CustomerIsEdiEnabled     bool                   `audit:"customer_is_edi_enabled"`
 	PaymentTermID            *string                `audit:"payment_term_id"`
 	PaymentTermName          *string                `audit:"payment_term_name"`
 	PaymentTermIsActive      *bool                  `audit:"payment_term_is_active"`
@@ -41,7 +40,6 @@ type Invoice struct {
 	TotalInvoiced            string                 `audit:"total_invoiced"`
 	IsPaidInFull             bool                   `audit:"is_paid_in_full"`
 	IsOverPaid               bool                   `audit:"is_over_paid"`
-	IsEdiSent                bool                   `audit:"is_edi_sent"`
 	HasBeenSent              bool                   `audit:"has_been_sent"`
 	AcceptsInvoiceEmails     bool                   `audit:"accepts_invoice_emails"`
 	// Metadata is the client's own key/value pairs; never nil. See shared/metadata.
@@ -165,7 +163,6 @@ type UpdateInvoiceParams struct {
 	InvoiceID    string
 	Note         field.Clearable[string]
 	HasBeenSent  *bool
-	IsEdiSent    *bool
 	IsPaidInFull *bool
 	Metadata     metadata.Update
 	// PaidInFullMarkedByID is the person setting IsPaidInFull by hand, told if recalculation overturns it.

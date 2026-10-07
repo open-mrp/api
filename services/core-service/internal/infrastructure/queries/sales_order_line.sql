@@ -7,7 +7,6 @@ SELECT
     sol.product_id,
     sol.item_id,
     i.sku AS item_sku,
-    sol.edi_line_item_id,
     -- Quantity ordered
     q.id AS quantity_id,
     q.value AS quantity_value,
@@ -78,13 +77,13 @@ WHERE sol.id = sqlc.arg('sales_order_line_id');
 
 -- name: CreateSalesOrderLine :exec
 INSERT INTO sales_order_line (
-    id, product_sku, product_description, edi_line_item_id,
+    id, product_sku, product_description,
     line_item_number, product_id, item_id, sales_order_id,
     quantity_id, unit_price_id, unit_cost_id, metadata,
     created_at, updated_at
 ) VALUES (
     sqlc.arg('id'), sqlc.arg('product_sku'), sqlc.narg('product_description'),
-    sqlc.narg('edi_line_item_id'), sqlc.arg('line_item_number'),
+    sqlc.arg('line_item_number'),
     sqlc.narg('product_id'), sqlc.narg('item_id'), sqlc.arg('sales_order_id'),
     sqlc.arg('quantity_id'), sqlc.arg('unit_price_id'), sqlc.narg('unit_cost_id'), sqlc.narg('metadata'),
     NOW(3), NOW(3)
@@ -98,7 +97,6 @@ UPDATE sales_order_line SET
     product_description = sqlc.narg('product_description'),
     product_id = COALESCE(sqlc.narg('product_id'), product_id),
     item_id = COALESCE(sqlc.narg('item_id'), item_id),
-    edi_line_item_id = COALESCE(sqlc.narg('edi_line_item_id'), edi_line_item_id),
     -- A merge patch: keys set to null are removed, keys not sent are kept. metadata_clear merges into
     -- an empty object instead, so only the patch's own keys remain.
     metadata = IF(sqlc.narg('metadata_patch') IS NULL, metadata, JSON_MERGE_PATCH(IF(sqlc.arg('metadata_clear'), JSON_OBJECT(), COALESCE(metadata, JSON_OBJECT())), sqlc.narg('metadata_patch'))),

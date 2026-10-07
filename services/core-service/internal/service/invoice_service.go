@@ -268,7 +268,7 @@ func (s *invoiceSvcImpl) UpdateInvoice(ctx context.Context, params domain.Update
 			result = updated
 
 			// Names the fields explicitly so only the updatable ones are diffed.
-			changes := audit.ComputeChanges(old, updated, "Note", "HasBeenSent", "IsEdiSent", "IsPaidInFull", "Metadata")
+			changes := audit.ComputeChanges(old, updated, "Note", "HasBeenSent", "IsPaidInFull", "Metadata")
 
 			if apiErr := audit.NewPublisher().Publish(txCtx, txSvc.repos.NewOutboxRepo(), audit.EventData{
 				ServiceName:      domain.ServiceName,

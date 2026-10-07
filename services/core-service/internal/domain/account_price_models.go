@@ -14,7 +14,6 @@ type AccountPrice struct {
 	RecipientAccountName             string `audit:"recipient_account_name"`
 	RecipientAccountNumber           string
 	RecipientAccountStatus           string
-	RecipientAccountIsEdiEnabled     bool
 	RecipientAccountCommissionPolicy string
 	RecipientAccountRelationshipType string
 	RecipientAccountCreatedAt        time.Time

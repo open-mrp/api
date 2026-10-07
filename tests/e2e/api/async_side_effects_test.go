@@ -286,7 +286,6 @@ func TestCustomers_AuditEvents_UpdateAllFields(t *testing.T) {
 		"email":                   "audit-update@e2e.openmrp.ai",
 		"phone":                   "555-AUDIT",
 		"url":                     "https://audit.e2e.openmrp.ai",
-		"edi_status":              "enabled",
 		"commission_policy":       "commission_applied",
 		"freight_policy":          "free_freight",
 		"carrier_billing_type":    "third_party",
@@ -323,12 +322,6 @@ func TestCustomers_AuditEvents_UpdateAllFields(t *testing.T) {
 		assert.Nil(t, change["old_value"], "%s old_value should be null", tc.field)
 		assert.Equal(t, tc.value, jsonField(change, "new_value"), "%s new_value mismatch", tc.field)
 	}
-
-	// Verify EDI status updates the underlying audited field.
-	ediChange, ok := changeForField(changes, "is_edi_enabled")
-	require.True(t, ok, "should include is_edi_enabled change")
-	assert.Equal(t, "false", jsonField(ediChange, "old_value"), "is_edi_enabled old_value should be false")
-	assert.Equal(t, "true", jsonField(ediChange, "new_value"), "is_edi_enabled new_value should be true")
 
 	// Verify enum/policy field changes.
 	commChange, ok := changeForField(changes, "commission_policy")

@@ -53,7 +53,7 @@ client_settings:
   # info.version by `make stainless` (see tools/apidocs/stainless.go).
   default_headers:
     OpenMRP-Version:
-      value: "1.0.forge-preview.6"
+      value: "1.0.forge-preview.7"
       version_header: true
   bearer_token_refresh:
     method: PUT
@@ -2393,34 +2393,6 @@ resources:
         models:
           list_shipment: '#/components/schemas/List_Shipment'
           update_shipment_request: '#/components/schemas/UpdateShipmentRequest'
-      edi:
-        subresources:
-          actions:
-            methods:
-              pull_orders: put /v1/operations/edi/actions/pull-orders
-              resubmit_invoice: post /v1/operations/edi/actions/resubmit-invoice
-            models:
-              resubmit_edi_invoice_request: '#/components/schemas/ResubmitEDIInvoiceRequest'
-      dc_locations:
-        methods:
-          list: get /v1/operations/dc-locations
-          retrieve: get /v1/operations/dc-locations/{id}
-          create: post /v1/operations/dc-locations
-          update: patch /v1/operations/dc-locations/{id}
-          delete: delete /v1/operations/dc-locations/{id}
-        models:
-          create_dc_location_request: '#/components/schemas/CreateDCLocationRequest'
-          dc_location: '#/components/schemas/DCLocation'
-          dc_location_customer: '#/components/schemas/DCLocationCustomer'
-          list_dc_location: '#/components/schemas/List_DCLocation'
-          update_dc_location_request: '#/components/schemas/UpdateDCLocationRequest'
-      edi_runs:
-        methods:
-          list: get /v1/operations/edi-runs
-          retrieve: get /v1/operations/edi-runs/{id}
-        models:
-          edi_run: '#/components/schemas/EDIRun'
-          list_edi_run: '#/components/schemas/List_EDIRun'
     models:
       demand_override_type: '#/components/schemas/DemandOverrideType'
       inventory_item: '#/components/schemas/InventoryItem'

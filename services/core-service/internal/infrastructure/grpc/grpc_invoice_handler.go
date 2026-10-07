@@ -110,9 +110,6 @@ func (h *gRPCHandler) UpdateInvoice(ctx context.Context, req *pb.UpdateInvoiceRe
 	if req.HasBeenSent != nil {
 		params.HasBeenSent = req.HasBeenSent
 	}
-	if req.IsEdiSent != nil {
-		params.IsEdiSent = req.IsEdiSent
-	}
 	if req.IsPaidInFull != nil {
 		params.IsPaidInFull = req.IsPaidInFull
 	}
@@ -200,7 +197,6 @@ func invoiceToProto(inv *domain.Invoice) *pb.InvoiceInfo {
 		ShipmentNumber:           inv.ShipmentNumber,
 		IsPaidInFull:             inv.IsPaidInFull,
 		IsOverPaid:               inv.IsOverPaid,
-		IsEdiSent:                inv.IsEdiSent,
 		HasBeenSent:              inv.HasBeenSent,
 		AcceptsInvoiceEmails:     inv.AcceptsInvoiceEmails,
 		Metadata:                 inv.Metadata,
@@ -209,7 +205,6 @@ func invoiceToProto(inv *domain.Invoice) *pb.InvoiceInfo {
 		CustomerId:               inv.CustomerID,
 		CustomerName:             inv.CustomerName,
 		CustomerNumber:           inv.CustomerNumber,
-		CustomerIsEdiEnabled:     inv.CustomerIsEdiEnabled,
 		PriorityCode:             string(inv.PriorityCode),
 		PaymentTermId:            inv.PaymentTermID,
 		PaymentTermName:          inv.PaymentTermName,

@@ -617,7 +617,6 @@ SELECT STRAIGHT_JOIN
     sol.product_id,
     sol.item_id,
     i.sku AS item_sku,
-    sol.edi_line_item_id,
     -- Quantity ordered
     q.id AS quantity_id,
     q.value AS quantity_value,
@@ -692,7 +691,6 @@ type GetPurchaseOrderLinesRow struct {
 	ProductID                            sql.NullString
 	ItemID                               sql.NullString
 	ItemSku                              sql.NullString
-	EdiLineItemID                        sql.NullString
 	QuantityID                           string
 	QuantityValue                        string
 	QuantityUnitID                       string
@@ -742,7 +740,6 @@ func (q *Queries) GetPurchaseOrderLines(ctx context.Context, salesOrderID string
 			&i.ProductID,
 			&i.ItemID,
 			&i.ItemSku,
-			&i.EdiLineItemID,
 			&i.QuantityID,
 			&i.QuantityValue,
 			&i.QuantityUnitID,
@@ -794,7 +791,6 @@ SELECT STRAIGHT_JOIN
     sol.product_id,
     sol.item_id,
     i.sku AS item_sku,
-    sol.edi_line_item_id,
     -- Quantity ordered
     q.id AS quantity_id,
     q.value AS quantity_value,
@@ -877,7 +873,6 @@ type GetPurchaseOrderLinesByIDsRow struct {
 	ProductID                            sql.NullString
 	ItemID                               sql.NullString
 	ItemSku                              sql.NullString
-	EdiLineItemID                        sql.NullString
 	QuantityID                           string
 	QuantityValue                        string
 	QuantityUnitID                       string
@@ -941,7 +936,6 @@ func (q *Queries) GetPurchaseOrderLinesByIDs(ctx context.Context, arg GetPurchas
 			&i.ProductID,
 			&i.ItemID,
 			&i.ItemSku,
-			&i.EdiLineItemID,
 			&i.QuantityID,
 			&i.QuantityValue,
 			&i.QuantityUnitID,
@@ -993,7 +987,6 @@ SELECT STRAIGHT_JOIN
     sol.product_id,
     sol.item_id,
     i.sku AS item_sku,
-    sol.edi_line_item_id,
     -- Quantity ordered
     q.id AS quantity_id,
     q.value AS quantity_value,
@@ -1068,7 +1061,6 @@ type GetPurchaseOrderLinesByOrderIDsRow struct {
 	ProductID                            sql.NullString
 	ItemID                               sql.NullString
 	ItemSku                              sql.NullString
-	EdiLineItemID                        sql.NullString
 	QuantityID                           string
 	QuantityValue                        string
 	QuantityUnitID                       string
@@ -1130,7 +1122,6 @@ func (q *Queries) GetPurchaseOrderLinesByOrderIDs(ctx context.Context, salesOrde
 			&i.ProductID,
 			&i.ItemID,
 			&i.ItemSku,
-			&i.EdiLineItemID,
 			&i.QuantityID,
 			&i.QuantityValue,
 			&i.QuantityUnitID,

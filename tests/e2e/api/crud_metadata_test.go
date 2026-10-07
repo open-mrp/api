@@ -454,7 +454,7 @@ func TestInvoiceMetadata_UpdateSemantics(t *testing.T) {
 		assert.Equal(t, want, metadataOf(t, got), "%s: response", name)
 		assert.Equal(t, want, metadataOf(t, getInvoice(t, invoiceID)), "%s: retrieve", name)
 	}
-	step("set with the EDI flag", map[string]any{"is_edi_sent": true, "metadata": map[string]any{"edi_filename": "INV.csv", "edi_sent_at": "2026-10-06T12:00:00Z"}},
+	step("set", map[string]any{"metadata": map[string]any{"edi_filename": "INV.csv", "edi_sent_at": "2026-10-06T12:00:00Z"}},
 		map[string]any{"edi_filename": "INV.csv", "edi_sent_at": "2026-10-06T12:00:00Z"})
 	step("another field alone leaves metadata alone", map[string]any{"note": "x"},
 		map[string]any{"edi_filename": "INV.csv", "edi_sent_at": "2026-10-06T12:00:00Z"})
@@ -463,8 +463,6 @@ func TestInvoiceMetadata_UpdateSemantics(t *testing.T) {
 	step("null removes a key, an empty string is kept", map[string]any{"metadata": map[string]any{"edi_sent_at": nil, "edi_filename": ""}},
 		map[string]any{"edi_filename": ""})
 	step("null clears", map[string]any{"metadata": nil}, map[string]any{})
-
-	assert.Equal(t, "true", jsonField(getInvoice(t, invoiceID), "is_edi_sent"))
 
 	status, body := patchStatus(t, path, map[string]any{"metadata": map[string]any{"k": strings.Repeat("v", 501)}})
 	assert.Equal(t, 400, status, "%v", body)

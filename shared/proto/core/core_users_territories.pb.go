@@ -4773,7 +4773,6 @@ type UpdateInvoiceRequest struct {
 	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
 	Note          *StringPatch           `protobuf:"bytes,2,opt,name=note,proto3" json:"note,omitempty"`
 	HasBeenSent   *bool                  `protobuf:"varint,3,opt,name=has_been_sent,json=hasBeenSent,proto3,oneof" json:"has_been_sent,omitempty"`
-	IsEdiSent     *bool                  `protobuf:"varint,4,opt,name=is_edi_sent,json=isEdiSent,proto3,oneof" json:"is_edi_sent,omitempty"`
 	IsPaidInFull  *bool                  `protobuf:"varint,5,opt,name=is_paid_in_full,json=isPaidInFull,proto3,oneof" json:"is_paid_in_full,omitempty"`
 	Includes      []string               `protobuf:"bytes,6,rep,name=includes,proto3" json:"includes,omitempty"`
 	Metadata      *MetadataPatch         `protobuf:"bytes,7,opt,name=metadata,proto3" json:"metadata,omitempty"`
@@ -4828,13 +4827,6 @@ func (x *UpdateInvoiceRequest) GetNote() *StringPatch {
 func (x *UpdateInvoiceRequest) GetHasBeenSent() bool {
 	if x != nil && x.HasBeenSent != nil {
 		return *x.HasBeenSent
-	}
-	return false
-}
-
-func (x *UpdateInvoiceRequest) GetIsEdiSent() bool {
-	if x != nil && x.IsEdiSent != nil {
-		return *x.IsEdiSent
 	}
 	return false
 }
@@ -5068,7 +5060,6 @@ type InvoiceInfo struct {
 	ShipmentNumber           *string                  `protobuf:"bytes,15,opt,name=shipment_number,json=shipmentNumber,proto3,oneof" json:"shipment_number,omitempty"`
 	IsPaidInFull             bool                     `protobuf:"varint,16,opt,name=is_paid_in_full,json=isPaidInFull,proto3" json:"is_paid_in_full,omitempty"`
 	IsOverPaid               bool                     `protobuf:"varint,17,opt,name=is_over_paid,json=isOverPaid,proto3" json:"is_over_paid,omitempty"`
-	IsEdiSent                bool                     `protobuf:"varint,18,opt,name=is_edi_sent,json=isEdiSent,proto3" json:"is_edi_sent,omitempty"`
 	HasBeenSent              bool                     `protobuf:"varint,19,opt,name=has_been_sent,json=hasBeenSent,proto3" json:"has_been_sent,omitempty"`
 	AcceptsInvoiceEmails     bool                     `protobuf:"varint,20,opt,name=accepts_invoice_emails,json=acceptsInvoiceEmails,proto3" json:"accepts_invoice_emails,omitempty"`
 	Lines                    []*InvoiceLineInfo       `protobuf:"bytes,21,rep,name=lines,proto3" json:"lines,omitempty"`
@@ -5081,7 +5072,6 @@ type InvoiceInfo struct {
 	CustomerNumber           string                   `protobuf:"bytes,28,opt,name=customer_number,json=customerNumber,proto3" json:"customer_number,omitempty"`
 	CustomerStatusCode       *string                  `protobuf:"bytes,29,opt,name=customer_status_code,json=customerStatusCode,proto3,oneof" json:"customer_status_code,omitempty"`
 	CustomerCommissionPolicy *string                  `protobuf:"bytes,30,opt,name=customer_commission_policy,json=customerCommissionPolicy,proto3,oneof" json:"customer_commission_policy,omitempty"`
-	CustomerIsEdiEnabled     bool                     `protobuf:"varint,31,opt,name=customer_is_edi_enabled,json=customerIsEdiEnabled,proto3" json:"customer_is_edi_enabled,omitempty"`
 	LineCount                int32                    `protobuf:"varint,32,opt,name=line_count,json=lineCount,proto3" json:"line_count,omitempty"`
 	PriorityCode             string                   `protobuf:"bytes,33,opt,name=priority_code,json=priorityCode,proto3" json:"priority_code,omitempty"`
 	PaymentTermName          *string                  `protobuf:"bytes,34,opt,name=payment_term_name,json=paymentTermName,proto3,oneof" json:"payment_term_name,omitempty"`
@@ -5245,13 +5235,6 @@ func (x *InvoiceInfo) GetIsOverPaid() bool {
 	return false
 }
 
-func (x *InvoiceInfo) GetIsEdiSent() bool {
-	if x != nil {
-		return x.IsEdiSent
-	}
-	return false
-}
-
 func (x *InvoiceInfo) GetHasBeenSent() bool {
 	if x != nil {
 		return x.HasBeenSent
@@ -5334,13 +5317,6 @@ func (x *InvoiceInfo) GetCustomerCommissionPolicy() string {
 		return *x.CustomerCommissionPolicy
 	}
 	return ""
-}
-
-func (x *InvoiceInfo) GetCustomerIsEdiEnabled() bool {
-	if x != nil {
-		return x.CustomerIsEdiEnabled
-	}
-	return false
 }
 
 func (x *InvoiceInfo) GetLineCount() int32 {
@@ -5889,18 +5865,16 @@ const file_core_core_users_territories_proto_rawDesc = "" +
 	"\bincludes\x18\x02 \x03(\tR\bincludes\"\x91\x01\n" +
 	"\x12GetInvoiceResponse\x12+\n" +
 	"\ainvoice\x18\x01 \x01(\v2\x11.core.InvoiceInfoR\ainvoice\x12N\n" +
-	"\x17allocation_transactions\x18\x02 \x03(\v2\x15.core.TransactionInfoR\x16allocationTransactions\"\xca\x02\n" +
+	"\x17allocation_transactions\x18\x02 \x03(\v2\x15.core.TransactionInfoR\x16allocationTransactions\"\x9b\x02\n" +
 	"\x14UpdateInvoiceRequest\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12%\n" +
 	"\x04note\x18\x02 \x01(\v2\x11.core.StringPatchR\x04note\x12'\n" +
-	"\rhas_been_sent\x18\x03 \x01(\bH\x00R\vhasBeenSent\x88\x01\x01\x12#\n" +
-	"\vis_edi_sent\x18\x04 \x01(\bH\x01R\tisEdiSent\x88\x01\x01\x12*\n" +
-	"\x0fis_paid_in_full\x18\x05 \x01(\bH\x02R\fisPaidInFull\x88\x01\x01\x12\x1a\n" +
+	"\rhas_been_sent\x18\x03 \x01(\bH\x00R\vhasBeenSent\x88\x01\x01\x12*\n" +
+	"\x0fis_paid_in_full\x18\x05 \x01(\bH\x01R\fisPaidInFull\x88\x01\x01\x12\x1a\n" +
 	"\bincludes\x18\x06 \x03(\tR\bincludes\x12/\n" +
 	"\bmetadata\x18\a \x01(\v2\x13.core.MetadataPatchR\bmetadataB\x10\n" +
-	"\x0e_has_been_sentB\x0e\n" +
-	"\f_is_edi_sentB\x12\n" +
-	"\x10_is_paid_in_full\"\x94\x01\n" +
+	"\x0e_has_been_sentB\x12\n" +
+	"\x10_is_paid_in_fullJ\x04\b\x04\x10\x05\"\x94\x01\n" +
 	"\x15UpdateInvoiceResponse\x12+\n" +
 	"\ainvoice\x18\x01 \x01(\v2\x11.core.InvoiceInfoR\ainvoice\x12N\n" +
 	"\x17allocation_transactions\x18\x02 \x03(\v2\x15.core.TransactionInfoR\x16allocationTransactions\"\xcc\x01\n" +
@@ -5915,7 +5889,7 @@ const file_core_core_users_territories_proto_rawDesc = "" +
 	"\x1cListCustomerInvoicesResponse\x127\n" +
 	"\binvoices\x18\x01 \x03(\v2\x1b.core.InvoiceForPaymentInfoR\binvoices\x12+\n" +
 	"\tpage_info\x18\x02 \x01(\v2\x0e.core.PageInfoR\bpageInfo\x12N\n" +
-	"\x17allocation_transactions\x18\x03 \x03(\v2\x15.core.TransactionInfoR\x16allocationTransactions\"\x8e\x11\n" +
+	"\x17allocation_transactions\x18\x03 \x03(\v2\x15.core.TransactionInfoR\x16allocationTransactions\"\xc3\x10\n" +
 	"\vInvoiceInfo\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x16\n" +
 	"\x06number\x18\x02 \x01(\tR\x06number\x12\x17\n" +
@@ -5936,8 +5910,7 @@ const file_core_core_users_territories_proto_rawDesc = "" +
 	"\x0fshipment_number\x18\x0f \x01(\tH\bR\x0eshipmentNumber\x88\x01\x01\x12%\n" +
 	"\x0fis_paid_in_full\x18\x10 \x01(\bR\fisPaidInFull\x12 \n" +
 	"\fis_over_paid\x18\x11 \x01(\bR\n" +
-	"isOverPaid\x12\x1e\n" +
-	"\vis_edi_sent\x18\x12 \x01(\bR\tisEdiSent\x12\"\n" +
+	"isOverPaid\x12\"\n" +
 	"\rhas_been_sent\x18\x13 \x01(\bR\vhasBeenSent\x124\n" +
 	"\x16accepts_invoice_emails\x18\x14 \x01(\bR\x14acceptsInvoiceEmails\x12+\n" +
 	"\x05lines\x18\x15 \x03(\v2\x15.core.InvoiceLineInfoR\x05lines\x12=\n" +
@@ -5953,8 +5926,7 @@ const file_core_core_users_territories_proto_rawDesc = "" +
 	"\x0fcustomer_number\x18\x1c \x01(\tR\x0ecustomerNumber\x125\n" +
 	"\x14customer_status_code\x18\x1d \x01(\tH\n" +
 	"R\x12customerStatusCode\x88\x01\x01\x12A\n" +
-	"\x1acustomer_commission_policy\x18\x1e \x01(\tH\vR\x18customerCommissionPolicy\x88\x01\x01\x125\n" +
-	"\x17customer_is_edi_enabled\x18\x1f \x01(\bR\x14customerIsEdiEnabled\x12\x1d\n" +
+	"\x1acustomer_commission_policy\x18\x1e \x01(\tH\vR\x18customerCommissionPolicy\x88\x01\x01\x12\x1d\n" +
 	"\n" +
 	"line_count\x18  \x01(\x05R\tlineCount\x12#\n" +
 	"\rpriority_code\x18! \x01(\tR\fpriorityCode\x12/\n" +
@@ -5980,7 +5952,7 @@ const file_core_core_users_territories_proto_rawDesc = "" +
 	"\x15_customer_status_codeB\x1d\n" +
 	"\x1b_customer_commission_policyB\x14\n" +
 	"\x12_payment_term_nameB\x19\n" +
-	"\x17_payment_term_is_activeB\x18Z\x16shared/proto/core;coreb\x06proto3"
+	"\x17_payment_term_is_activeJ\x04\b\x12\x10\x13J\x04\b\x1f\x10 B\x18Z\x16shared/proto/core;coreb\x06proto3"
 
 var (
 	file_core_core_users_territories_proto_rawDescOnce sync.Once

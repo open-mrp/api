@@ -1,6 +1,6 @@
 # Production step graph (`_parent_child_production_steps`)
 
-The implicit join table `_parent_child_production_steps` links production steps in a directed process graph. **Column meaning matches Prisma / dashboard**, not an alternate “A = parent” convention.
+The implicit join table `_parent_child_production_steps` links production steps in a directed process graph. **Column meaning matches the existing data**, not an alternate “A = parent” convention.
 
 ## Invariants (do not revert)
 
@@ -11,7 +11,7 @@ The implicit join table `_parent_child_production_steps` links production steps 
 
 Direction of the edge is **upstream → downstream**, i.e. **`B` → `A`**.
 
-Prisma documents this as: row `(A, B)` means `B` is in `A`’s `in` relation and `A` is in `B`’s `out` relation (see `services/core-service/internal/infrastructure/queries/sandbox_seed.sql`, SECTION 26).
+In other words, row `(A, B)` means `B` is in `A`’s `in` relation and `A` is in `B`’s `out` relation (see `services/core-service/internal/infrastructure/queries/sandbox_seed.sql`, SECTION 26).
 
 ## Writes (`ConnectSteps`)
 
@@ -35,7 +35,7 @@ Implementations: [`production_flow.sql`](../../services/core-service/internal/in
 
 Treating **`A` as parent and `B` as child** breaks alignment with:
 
-- Dashboard Prisma schema and any flows written from the UI.
+- Every flow already stored, including those written from the dashboard.
 - Seed files that already encode **`A` = downstream** (e.g. [`shared/db/seed/0009_production.sql`](../../shared/db/seed/0009_production.sql)).
 
 Symptoms include wrong `in_steps` / `out_steps`, broken flow traversal, and incorrect **`subassembly_filter=initial_only`** on list items.

@@ -83,7 +83,6 @@ type gRPCHandler struct {
 	utilsSvc                         domain.UtilsSvc
 	analyticsSvc                     domain.AnalyticsSvc
 	catalogSvc                       domain.CatalogSvc
-	ediSvc                           domain.EDISvc
 	roleSvc                          domain.RoleSvc
 }
 
@@ -132,10 +131,6 @@ func RegisterAnalyticsService(server *grpc.Server, analyticsSvc domain.Analytics
 
 func RegisterCatalogService(server *grpc.Server, catalogSvc domain.CatalogSvc) {
 	handler.catalogSvc = catalogSvc
-}
-
-func RegisterEDIService(server *grpc.Server, ediSvc domain.EDISvc) {
-	handler.ediSvc = ediSvc
 }
 
 func RegisterRoleService(server *grpc.Server, roleSvc domain.RoleSvc) {

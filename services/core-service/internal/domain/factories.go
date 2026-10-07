@@ -96,7 +96,6 @@ type RepoFactory interface {
 	NewSalesFactRepo() SalesFactRepo
 	NewSalesReportRepo() SalesReportRepo
 	NewCatalogRepo() CatalogRepo
-	NewEDIRepo() EDIRepo
 	NewRegistrationFlowRepo() RegistrationFlowRepo
 	NewShippingCaseRepo() ShippingCaseRepo
 	NewSysPropertyRepo() SysPropertyRepo

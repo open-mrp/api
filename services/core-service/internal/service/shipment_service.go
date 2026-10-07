@@ -1838,10 +1838,6 @@ func (s *shipmentSvcImpl) createInvoiceAndStampOrderOnShip(txCtx context.Context
 		return apiErr
 	}
 
-	if apiErr := s.enqueueEdiInvoice(txCtx, shipment, invoiceID); apiErr != nil {
-		return apiErr
-	}
-
 	s.meterInvoiceCreated(txCtx, shipment.AccountID, invoiceID)
 
 	// Link the shipment to its invoice so void (which finds it via shipment.invoice_id) can delete it.
@@ -1889,32 +1885,6 @@ func (s *shipmentSvcImpl) createInvoiceAndStampOrderOnShip(txCtx context.Context
 	}
 
 	return nil
-}
-
-// Owes an EDI-enrolled customer the invoice as an 810, inside the ship's transaction: an invoice that
-// rolls back must not be sent, and one that commits must not go unsent (legacy's ship enqueue).
-func (s *shipmentSvcImpl) enqueueEdiInvoice(txCtx context.Context, shipment *domain.Shipment, invoiceID string) *apierror.APIError {
-	ediRepo := s.repos.NewEDIRepo()
-	enrolled, apiErr := ediRepo.IsCustomerEdiEnabled(txCtx, shipment.AccountID, shipment.CustomerID)
-	if apiErr != nil {
-		return apiErr
-	}
-	if !enrolled {
-		return nil
-	}
-
-	transmissionID, apiErr := id.GenID(id.EDITransmissionIDPrefix, nil)
-	if apiErr != nil {
-		return apiErr
-	}
-	return ediRepo.EnqueueOutboundTransmission(txCtx, domain.EnqueueEdiTransmissionParams{
-		ID:                    transmissionID,
-		AccountID:             shipment.AccountID,
-		DocumentType:          domain.EdiDocumentTypeInvoice,
-		SubjectType:           domain.EdiSubjectTypeInvoice,
-		SubjectID:             invoiceID,
-		CounterpartyAccountID: shipment.CustomerID,
-	})
 }
 
 // Meters a created invoice for usage billing, best effort: metering must never fail a ship (legacy

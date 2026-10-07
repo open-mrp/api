@@ -5,9 +5,8 @@ user-facing filters. It is the generalization of the `sales_order` list fix
 (see `services/core-service/internal/infrastructure/queries/sales_order.sql`)
 and supersedes the triage notes in `docs/WIP-list-filter-index-audit.md`.
 
-The schema (MySQL on PlanetScale) is owned by Prisma in
-`dashboard/packages/db/prisma/schema/schema.prisma`. **All indexes described
-here are declared there**, even for tables only read by Go (`sqlc`) services.
+The schema (MySQL on PlanetScale) is owned by the goose migrations in
+`shared/db/migrations`. **All indexes described here are declared there.**
 
 ---
 
@@ -97,19 +96,18 @@ Plus one **baseline** index for the no-filter path:
 (scope_col, time_col DESC, id_col DESC)
 ```
 
-### Prisma declaration
+### Declaring the index
 
-MySQL 8 supports descending key parts; declare them so the index matches the
-`ORDER BY` and avoids a filesort.
+In a schema migration:
 
-```prisma
-@@index([ownerAccountID, statusCode, createdAt(sort: Desc), id(sort: Desc)], map: "sales_order_owner_status_created_idx")
-@@index([ownerAccountID, createdAt(sort: Desc), id(sort: Desc)], map: "sales_order_owner_created_idx")
+```sql
+ALTER TABLE `sales_order`
+  ADD KEY `sales_order_owner_status_created_idx` (`owner_account_id`, `sales_order_status_code`, `created_at`, `id`);
 ```
 
 Naming convention: `<table>_<scope>_<filter>_<time>_idx` (e.g.
-`sales_order_owner_status_created_idx`). Always set an explicit `map:` name so
-the migration and any `FORCE INDEX` hint can reference it.
+`sales_order_owner_status_created_idx`). Always name it explicitly so any
+`FORCE INDEX` hint can reference it.
 
 ---
 
@@ -194,5 +192,5 @@ rows-read) are the production backstop for anything that slips through.
 - [ ] `EXPLAIN ANALYZE` verified on a big tenant for dense **and** zero-match values — no filesort, bounded rows.
 - [ ] If the optimizer mis-picks, `FORCE INDEX` lists exactly the sort-free driving set.
 - [ ] Write cost considered on high-insert tables; only used filters indexed.
-- [ ] Index declared in `dashboard/packages/db/prisma/schema/schema.prisma` with an explicit `map:` name.
+- [ ] Index declared in a goose schema migration with an explicit name.
 ```

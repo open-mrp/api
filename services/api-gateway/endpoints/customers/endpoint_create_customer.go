@@ -37,8 +37,6 @@ type CreateCustomerRequest struct {
 	// - `hold_shipment`: the customer's shipments should be held, typically over a credit problem, while orders can still be placed.
 	// - `hold_all`: all activity for the customer should be held.
 	StatusCode field.Optional[constants.AccountStatusCode] `json:"status,omitzero" default:"normal"`
-	// Whether EDI (Electronic Data Interchange) is enabled for exchanging orders and documents with this customer.
-	EDIStatus field.Optional[constants.EDIStatus] `json:"edi_status,omitzero" default:"disabled"`
 	// How sales commission applies to this customer's orders.
 	//
 	// - `commission_exempt`: this customer's orders are exempt from sales commission.
@@ -118,7 +116,6 @@ var sampleCreateCustomerRequest = &CreateCustomerRequest{
 	Phone:                 field.Some(sampleCreateCustomerPhone),
 	URL:                   field.Some(sampleCreateCustomerURL),
 	StatusCode:            field.Some(constants.AccountStatusCodeNormal),
-	EDIStatus:             field.Some(constants.EDIStatusDisabled),
 	CommissionPolicy:      field.Some(constants.CommissionPolicyApplied),
 	FreightPolicy:         field.Some(constants.FreightPolicyBilled),
 	FulfillmentPolicy:     field.Some(constants.FulfillmentPolicyMakeToOrder),

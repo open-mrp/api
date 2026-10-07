@@ -61,7 +61,6 @@ SELECT
     ra.name AS recipient_account_name,
     rec_ar.external_number AS recipient_account_number,
     rec_ar.account_status_code AS recipient_account_status,
-    rec_ar.is_edi_enabled AS recipient_account_is_edi_enabled,
     rec_ar.commission_status_code AS recipient_account_commission_policy,
     CASE
         WHEN rec_ar.parent_account_relation_id IS NOT NULL THEN 'child'
@@ -127,7 +126,6 @@ type GetAccountPriceRow struct {
 	RecipientAccountName             string
 	RecipientAccountNumber           string
 	RecipientAccountStatus           sql.NullString
-	RecipientAccountIsEdiEnabled     bool
 	RecipientAccountCommissionPolicy sql.NullString
 	RecipientAccountRelationshipType string
 	RecipientAccountCreatedAt        time.Time
@@ -176,7 +174,6 @@ func (q *Queries) GetAccountPrice(ctx context.Context, arg GetAccountPriceParams
 		&i.RecipientAccountName,
 		&i.RecipientAccountNumber,
 		&i.RecipientAccountStatus,
-		&i.RecipientAccountIsEdiEnabled,
 		&i.RecipientAccountCommissionPolicy,
 		&i.RecipientAccountRelationshipType,
 		&i.RecipientAccountCreatedAt,
@@ -417,7 +414,6 @@ SELECT
     ra.name AS recipient_account_name,
     rec_ar.external_number AS recipient_account_number,
     rec_ar.account_status_code AS recipient_account_status,
-    rec_ar.is_edi_enabled AS recipient_account_is_edi_enabled,
     rec_ar.commission_status_code AS recipient_account_commission_policy,
     CASE
         WHEN rec_ar.parent_account_relation_id IS NOT NULL THEN 'child'
@@ -502,7 +498,6 @@ type ListAccountPricesBackwardRow struct {
 	RecipientAccountName             string
 	RecipientAccountNumber           string
 	RecipientAccountStatus           sql.NullString
-	RecipientAccountIsEdiEnabled     bool
 	RecipientAccountCommissionPolicy sql.NullString
 	RecipientAccountRelationshipType string
 	RecipientAccountCreatedAt        time.Time
@@ -576,7 +571,6 @@ func (q *Queries) ListAccountPricesBackward(ctx context.Context, arg ListAccount
 			&i.RecipientAccountName,
 			&i.RecipientAccountNumber,
 			&i.RecipientAccountStatus,
-			&i.RecipientAccountIsEdiEnabled,
 			&i.RecipientAccountCommissionPolicy,
 			&i.RecipientAccountRelationshipType,
 			&i.RecipientAccountCreatedAt,
@@ -635,7 +629,6 @@ SELECT
     ra.name AS recipient_account_name,
     rec_ar.external_number AS recipient_account_number,
     rec_ar.account_status_code AS recipient_account_status,
-    rec_ar.is_edi_enabled AS recipient_account_is_edi_enabled,
     rec_ar.commission_status_code AS recipient_account_commission_policy,
     CASE
         WHEN rec_ar.parent_account_relation_id IS NOT NULL THEN 'child'
@@ -721,7 +714,6 @@ type ListAccountPricesForwardRow struct {
 	RecipientAccountName             string
 	RecipientAccountNumber           string
 	RecipientAccountStatus           sql.NullString
-	RecipientAccountIsEdiEnabled     bool
 	RecipientAccountCommissionPolicy sql.NullString
 	RecipientAccountRelationshipType string
 	RecipientAccountCreatedAt        time.Time
@@ -796,7 +788,6 @@ func (q *Queries) ListAccountPricesForward(ctx context.Context, arg ListAccountP
 			&i.RecipientAccountName,
 			&i.RecipientAccountNumber,
 			&i.RecipientAccountStatus,
-			&i.RecipientAccountIsEdiEnabled,
 			&i.RecipientAccountCommissionPolicy,
 			&i.RecipientAccountRelationshipType,
 			&i.RecipientAccountCreatedAt,

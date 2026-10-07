@@ -463,7 +463,7 @@ func TestInvoiceParity_UpdateEachField(t *testing.T) {
 		for _, key := range []string{"number", "total_invoiced", "line_count", "priority", "created_at"} {
 			assert.Equal(t, original[key], got[key], key)
 		}
-		for _, key := range []string{"note", "has_been_sent", "is_edi_sent", "is_paid_in_full"} {
+		for _, key := range []string{"note", "has_been_sent", "is_paid_in_full"} {
 			if !slices.Contains(except, key) {
 				assert.Equal(t, getInvoice(t, inv.invoiceID)[key], got[key], key)
 			}
@@ -481,10 +481,6 @@ func TestInvoiceParity_UpdateEachField(t *testing.T) {
 	assert.Equal(t, note, jsonField(got, "note"), "omitting the note keeps it")
 	preserved(got)
 
-	got = patchInvoice(t, inv.invoiceID, map[string]any{"is_edi_sent": true})
-	assert.Equal(t, "true", jsonField(got, "is_edi_sent"))
-	preserved(got)
-
 	got = patchInvoice(t, inv.invoiceID, map[string]any{"is_paid_in_full": true})
 	assert.Equal(t, "true", jsonField(got, "is_paid_in_full"))
 	assert.Equal(t, "paid", jsonField(got, "payment_status"))
@@ -494,11 +490,10 @@ func TestInvoiceParity_UpdateEachField(t *testing.T) {
 	assert.Nil(t, got["note"], "null clears the note")
 	assert.Equal(t, "true", jsonField(got, "is_paid_in_full"))
 
-	got = patchInvoice(t, inv.invoiceID, map[string]any{"is_paid_in_full": false, "has_been_sent": false, "is_edi_sent": false})
+	got = patchInvoice(t, inv.invoiceID, map[string]any{"is_paid_in_full": false, "has_been_sent": false})
 	assert.Equal(t, "unpaid", jsonField(got, "payment_status"))
 	assert.Equal(t, "false", jsonField(got, "is_paid_in_full"))
 	assert.Equal(t, "false", jsonField(got, "has_been_sent"))
-	assert.Equal(t, "false", jsonField(got, "is_edi_sent"))
 	assert.Nil(t, got["note"], "a cleared note stays cleared")
 
 	status, body, err := apiClient.Patch(path, map[string]any{bogusE2EJSONField: true}, newIdempotencyKey())

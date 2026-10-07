@@ -472,7 +472,7 @@ message CustomerProto {
   string name = 2;
   string number = 3;
   string status = 4;
-  bool is_edi_enabled = 5;
+  reserved 5; // formerly is_edi_enabled (dropped with the legacy EDI pipeline)
   bool is_parent_account = 6;
   string commission_policy = 7;
   string freight_policy = 8;
@@ -650,7 +650,7 @@ message CreateCustomerRequest {
   optional string phone = 5;
   optional string url = 6;
   optional string status_code = 7;
-  optional bool is_edi_enabled = 8;
+  reserved 8; // formerly is_edi_enabled (dropped with the legacy EDI pipeline)
   optional string commission_policy = 9;
   optional string freight_policy = 10;
   optional string default_carrier_id = 11;
@@ -686,7 +686,7 @@ message UpdateCustomerRequest {
   optional StringPatch phone = 6;
   optional StringPatch url = 7;
   optional string status_code = 8;
-  optional bool is_edi_enabled = 9;
+  reserved 9; // formerly is_edi_enabled (dropped with the legacy EDI pipeline)
   optional string commission_policy = 10;
   optional string freight_policy = 11;
   optional string default_carrier_id = 12;

@@ -432,7 +432,6 @@ SELECT STRAIGHT_JOIN
     sol.product_id,
     sol.item_id,
     i.sku AS item_sku,
-    sol.edi_line_item_id,
     -- Quantity ordered
     q.id AS quantity_id,
     q.value AS quantity_value,
@@ -511,7 +510,6 @@ SELECT STRAIGHT_JOIN
     sol.product_id,
     sol.item_id,
     i.sku AS item_sku,
-    sol.edi_line_item_id,
     -- Quantity ordered
     q.id AS quantity_id,
     q.value AS quantity_value,
@@ -591,7 +589,6 @@ SELECT STRAIGHT_JOIN
     sol.product_id,
     sol.item_id,
     i.sku AS item_sku,
-    sol.edi_line_item_id,
     -- Quantity ordered
     q.id AS quantity_id,
     q.value AS quantity_value,

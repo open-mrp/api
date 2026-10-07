@@ -2734,7 +2734,6 @@ type AccountPriceRecipientInfo struct {
 	Name             string                 `protobuf:"bytes,2,opt,name=name,proto3" json:"name,omitempty"`
 	Number           string                 `protobuf:"bytes,3,opt,name=number,proto3" json:"number,omitempty"`
 	Status           string                 `protobuf:"bytes,4,opt,name=status,proto3" json:"status,omitempty"`
-	IsEdiEnabled     bool                   `protobuf:"varint,5,opt,name=is_edi_enabled,json=isEdiEnabled,proto3" json:"is_edi_enabled,omitempty"`
 	CommissionPolicy string                 `protobuf:"bytes,6,opt,name=commission_policy,json=commissionPolicy,proto3" json:"commission_policy,omitempty"`
 	RelationshipType string                 `protobuf:"bytes,7,opt,name=relationship_type,json=relationshipType,proto3" json:"relationship_type,omitempty"`
 	CreatedAt        *timestamppb.Timestamp `protobuf:"bytes,8,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
@@ -2799,13 +2798,6 @@ func (x *AccountPriceRecipientInfo) GetStatus() string {
 		return x.Status
 	}
 	return ""
-}
-
-func (x *AccountPriceRecipientInfo) GetIsEdiEnabled() bool {
-	if x != nil {
-		return x.IsEdiEnabled
-	}
-	return false
 }
 
 func (x *AccountPriceRecipientInfo) GetCommissionPolicy() string {
@@ -6180,19 +6172,18 @@ const file_core_core_account_groups_proto_rawDesc = "" +
 	"\n" +
 	"created_at\x18\a \x01(\v2\x1a.google.protobuf.TimestampR\tcreatedAt\x129\n" +
 	"\n" +
-	"updated_at\x18\b \x01(\v2\x1a.google.protobuf.TimestampR\tupdatedAt\"\xe5\x02\n" +
+	"updated_at\x18\b \x01(\v2\x1a.google.protobuf.TimestampR\tupdatedAt\"\xc5\x02\n" +
 	"\x19AccountPriceRecipientInfo\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x12\n" +
 	"\x04name\x18\x02 \x01(\tR\x04name\x12\x16\n" +
 	"\x06number\x18\x03 \x01(\tR\x06number\x12\x16\n" +
-	"\x06status\x18\x04 \x01(\tR\x06status\x12$\n" +
-	"\x0eis_edi_enabled\x18\x05 \x01(\bR\fisEdiEnabled\x12+\n" +
+	"\x06status\x18\x04 \x01(\tR\x06status\x12+\n" +
 	"\x11commission_policy\x18\x06 \x01(\tR\x10commissionPolicy\x12+\n" +
 	"\x11relationship_type\x18\a \x01(\tR\x10relationshipType\x129\n" +
 	"\n" +
 	"created_at\x18\b \x01(\v2\x1a.google.protobuf.TimestampR\tcreatedAt\x129\n" +
 	"\n" +
-	"updated_at\x18\t \x01(\v2\x1a.google.protobuf.TimestampR\tupdatedAt\"\x8b\x02\n" +
+	"updated_at\x18\t \x01(\v2\x1a.google.protobuf.TimestampR\tupdatedAtJ\x04\b\x05\x10\x06\"\x8b\x02\n" +
 	"\x1bAccountPriceProductLineInfo\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x12\n" +
 	"\x04name\x18\x02 \x01(\tR\x04name\x12+\n" +

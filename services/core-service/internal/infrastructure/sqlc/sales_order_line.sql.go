@@ -52,13 +52,13 @@ func (q *Queries) CreateOrderLineRate(ctx context.Context, arg CreateOrderLineRa
 
 const createSalesOrderLine = `-- name: CreateSalesOrderLine :exec
 INSERT INTO sales_order_line (
-    id, product_sku, product_description, edi_line_item_id,
+    id, product_sku, product_description,
     line_item_number, product_id, item_id, sales_order_id,
     quantity_id, unit_price_id, unit_cost_id, metadata,
     created_at, updated_at
 ) VALUES (
     ?, ?, ?,
-    ?, ?,
+    ?,
     ?, ?, ?,
     ?, ?, ?, ?,
     NOW(3), NOW(3)
@@ -69,7 +69,6 @@ type CreateSalesOrderLineParams struct {
 	ID                 string
 	ProductSku         string
 	ProductDescription sql.NullString
-	EdiLineItemID      sql.NullString
 	LineItemNumber     sql.NullInt32
 	ProductID          sql.NullString
 	ItemID             sql.NullString
@@ -85,7 +84,6 @@ func (q *Queries) CreateSalesOrderLine(ctx context.Context, arg CreateSalesOrder
 		arg.ID,
 		arg.ProductSku,
 		arg.ProductDescription,
-		arg.EdiLineItemID,
 		arg.LineItemNumber,
 		arg.ProductID,
 		arg.ItemID,
@@ -234,7 +232,6 @@ SELECT
     sol.product_id,
     sol.item_id,
     i.sku AS item_sku,
-    sol.edi_line_item_id,
     -- Quantity ordered
     q.id AS quantity_id,
     q.value AS quantity_value,
@@ -312,7 +309,6 @@ type GetSalesOrderLineRow struct {
 	ProductID                            sql.NullString
 	ItemID                               sql.NullString
 	ItemSku                              sql.NullString
-	EdiLineItemID                        sql.NullString
 	QuantityID                           string
 	QuantityValue                        string
 	QuantityUnitID                       string
@@ -355,7 +351,6 @@ func (q *Queries) GetSalesOrderLine(ctx context.Context, salesOrderLineID string
 		&i.ProductID,
 		&i.ItemID,
 		&i.ItemSku,
-		&i.EdiLineItemID,
 		&i.QuantityID,
 		&i.QuantityValue,
 		&i.QuantityUnitID,
@@ -691,7 +686,6 @@ UPDATE sales_order_line SET
     product_description = ?,
     product_id = COALESCE(?, product_id),
     item_id = COALESCE(?, item_id),
-    edi_line_item_id = COALESCE(?, edi_line_item_id),
     -- A merge patch: keys set to null are removed, keys not sent are kept. metadata_clear merges into
     -- an empty object instead, so only the patch's own keys remain.
     metadata = IF(? IS NULL, metadata, JSON_MERGE_PATCH(IF(?, JSON_OBJECT(), COALESCE(metadata, JSON_OBJECT())), ?)),
@@ -704,7 +698,6 @@ type UpdateSalesOrderLineParams struct {
 	ProductDescription sql.NullString
 	ProductID          sql.NullString
 	ItemID             sql.NullString
-	EdiLineItemID      sql.NullString
 	MetadataPatch      sql.NullString
 	MetadataClear      interface{}
 	ID                 string
@@ -716,7 +709,6 @@ func (q *Queries) UpdateSalesOrderLine(ctx context.Context, arg UpdateSalesOrder
 		arg.ProductDescription,
 		arg.ProductID,
 		arg.ItemID,
-		arg.EdiLineItemID,
 		arg.MetadataPatch,
 		arg.MetadataClear,
 		arg.MetadataPatch,

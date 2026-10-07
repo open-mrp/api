@@ -23,10 +23,6 @@ type UpdateInvoiceRequest struct {
 	//
 	// Emailing the invoice through Email Record sets this on its own, so it only needs to be set here when the invoice was delivered outside the platform.
 	HasBeenSent field.Optional[bool] `json:"has_been_sent,omitzero"`
-	// Records whether the invoice has been transmitted to the customer via EDI.
-	//
-	// A tracking flag only; setting it does not transmit anything.
-	IsEdiSent field.Optional[bool] `json:"is_edi_sent,omitzero"`
 	// Whether the invoice has been paid in full.
 	//
 	// Setting this to `true` marks the invoice as paid regardless of the payments recorded against it, which updates the invoice's `payment_status` and drops it from receivables listings. Recording a settlement against the invoice later recalculates the flag from its allocations and can overwrite the value set here.

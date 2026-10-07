@@ -262,9 +262,6 @@ func (r *invoiceRepoImpl) Update(ctx context.Context, params domain.UpdateInvoic
 	if params.HasBeenSent != nil {
 		updateParams.HasBeenSent = gosql.NullBool{Bool: *params.HasBeenSent, Valid: true}
 	}
-	if params.IsEdiSent != nil {
-		updateParams.IsEdiSent = gosql.NullBool{Bool: *params.IsEdiSent, Valid: true}
-	}
 	if params.IsPaidInFull != nil {
 		updateParams.IsPaidInFull = gosql.NullBool{Bool: *params.IsPaidInFull, Valid: true}
 		updateParams.PaidInFullMarkedByID = db.NullStringPtr(params.PaidInFullMarkedByID)
@@ -403,7 +400,6 @@ func mapInvoiceRow(row sqlc.GetInvoiceRow) *domain.Invoice {
 		CustomerID:            row.CustomerID,
 		CustomerName:          row.CustomerName,
 		CustomerNumber:        row.CustomerNumber,
-		CustomerIsEdiEnabled:  row.CustomerIsEdiEnabled,
 		BillingAddressID:      row.BillingAddressID,
 		BillingAddressName:    &row.BillingAddressName,
 		BillingAddressCountry: row.BillingAddressCountry,
@@ -411,7 +407,6 @@ func mapInvoiceRow(row sqlc.GetInvoiceRow) *domain.Invoice {
 		TotalInvoiced:         decimalToString(row.TotalInvoiced),
 		IsPaidInFull:          row.IsPaidInFull,
 		IsOverPaid:            row.IsOverPaid,
-		IsEdiSent:             row.IsEdiSent,
 		HasBeenSent:           row.HasBeenSent,
 		AcceptsInvoiceEmails:  row.AcceptsInvoiceEmails != 0,
 		Metadata:              metadata.Decode(row.Metadata),

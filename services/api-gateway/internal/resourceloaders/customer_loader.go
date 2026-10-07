@@ -81,10 +81,6 @@ func HydrateCustomerEntities(ctx context.Context, entities []*apiresource.Entity
 }
 
 func customerReferenceFromProto(c *pb.CustomerProto) *apiresource.Customer {
-	edi := constants.EDIStatusDisabled
-	if c.IsEdiEnabled {
-		edi = constants.EDIStatusEnabled
-	}
 	relationship := constants.CustomerRelationshipTypeStandalone
 	if c.IsParentAccount {
 		relationship = constants.CustomerRelationshipTypeParent
@@ -97,7 +93,6 @@ func customerReferenceFromProto(c *pb.CustomerProto) *apiresource.Customer {
 		Name:             c.Name,
 		Number:           c.Number,
 		Status:           constants.AccountStatusCode(c.Status),
-		EDIStatus:        edi,
 		RelationshipType: relationship,
 		CommissionPolicy: new(constants.CommissionPolicy(c.CommissionPolicy)),
 		Note:             c.Note,

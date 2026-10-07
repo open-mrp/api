@@ -377,10 +377,6 @@ func (r *repoFactoryImpl) NewCatalogRepo() domain.CatalogRepo {
 	return NewCatalogRepo(r.queries)
 }
 
-func (r *repoFactoryImpl) NewEDIRepo() domain.EDIRepo {
-	return NewEDIRepo(r.queries)
-}
-
 func (r *repoFactoryImpl) NewRegistrationFlowRepo() domain.RegistrationFlowRepo {
 	return NewRegistrationFlowRepo(r.queries)
 }

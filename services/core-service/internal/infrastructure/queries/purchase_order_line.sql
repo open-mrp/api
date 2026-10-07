@@ -7,7 +7,6 @@ SELECT
     sol.product_id,
     sol.item_id,
     i.sku AS item_sku,
-    sol.edi_line_item_id,
     -- Quantity ordered
     q.id AS quantity_id,
     q.value AS quantity_value,
@@ -72,13 +71,13 @@ AND sol.sales_order_id = sqlc.arg('sales_order_id');
 
 -- name: CreatePurchaseOrderLine :exec
 INSERT INTO sales_order_line (
-    id, product_sku, product_description, edi_line_item_id,
+    id, product_sku, product_description,
     line_item_number, product_id, item_id, sales_order_id,
     quantity_id, unit_price_id, unit_cost_id,
     created_at, updated_at
 ) VALUES (
     sqlc.arg('id'), sqlc.arg('product_sku'), sqlc.narg('product_description'),
-    sqlc.narg('edi_line_item_id'), sqlc.arg('line_item_number'),
+    sqlc.arg('line_item_number'),
     -- A line bought as a product is stocked as that product's item.
     sqlc.narg('product_id'),
     COALESCE(sqlc.narg('item_id'), (SELECT p.item_id FROM product p WHERE p.id = sqlc.narg('product_id'))),
@@ -93,7 +92,6 @@ UPDATE sales_order_line sol SET
     product_description = COALESCE(sqlc.narg('product_description'), product_description),
     product_id = sqlc.narg('product_id'),
     item_id = COALESCE(sqlc.narg('item_id'), (SELECT p.item_id FROM product p WHERE p.id = sqlc.narg('product_id'))),
-    edi_line_item_id = COALESCE(sqlc.narg('edi_line_item_id'), edi_line_item_id),
     updated_at = NOW(3)
 WHERE sol.id = sqlc.arg('id')
 AND sol.sales_order_id = sqlc.arg('sales_order_id');

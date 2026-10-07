@@ -870,28 +870,6 @@ func (r *router) InitEndpointGroups(config MainRouterConfig) {
 		}
 	}
 
-	// EDI
-	ediGroup := (&httpgroup.EDIEndpointGroup{}).Materialize(&httpgroup.EDIEndpointGroupConfig{
-		CoreClient: config.CoreClient,
-	})
-	if ediGroup != nil {
-		registry.RegisterGroup(ediGroup.APIEndpointGroup)
-	}
-
-	ediDCLocationsGroup := (&httpgroup.EDIDCLocationsEndpointGroup{}).Materialize(&httpgroup.EDIDCLocationsEndpointGroupConfig{
-		CoreClient: config.CoreClient,
-	})
-	if ediDCLocationsGroup != nil {
-		registry.RegisterGroup(ediDCLocationsGroup.APIEndpointGroup)
-	}
-
-	ediRunsGroup := (&httpgroup.EDIRunsEndpointGroup{}).Materialize(&httpgroup.EDIRunsEndpointGroupConfig{
-		CoreClient: config.CoreClient,
-	})
-	if ediRunsGroup != nil {
-		registry.RegisterGroup(ediRunsGroup.APIEndpointGroup)
-	}
-
 	// Catalog
 	catalogGroup := (&httpgroup.CatalogEndpointGroup{}).Materialize(&httpgroup.CatalogEndpointGroupConfig{
 		CoreClient: config.CoreClient,

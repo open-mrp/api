@@ -33,6 +33,10 @@ type ListInvoicesRequest struct {
 	//
 	// These are account user IDs, matching the `sales_rep` on the order.
 	SalesRepIDs []string `query:"sales_rep_ids"`
+	// Restricts results to invoices with any of these numbers, matched exactly.
+	//
+	// Up to 100 numbers. Unlike `q`, which matches part of a number and also searches notes, customers, order numbers and purchase order numbers, this finds exactly the invoices named.
+	Numbers []string `query:"numbers" validate:"omitempty,max=100,dive,required,max=255"`
 	// Only include invoices created on or after this date (`YYYY-MM-DD`, UTC). A full timestamp (RFC 3339) is also accepted, to bound the range at a local midnight.
 	StartDate *string `query:"starts_at" validate:"omitempty,date_filter"`
 	// Only include invoices created on or before this date (`YYYY-MM-DD`, UTC), covering that whole day. A full timestamp (RFC 3339) is also accepted, to bound the range at a local midnight.

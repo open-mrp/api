@@ -16,6 +16,7 @@ const (
 	invoicePaidIndex     = "invoice_account_unpaid_created_idx"
 	invoiceOverPaidIndex = "invoice_account_over_paid_created_idx"
 	invoiceOrderIndex    = "invoice_account_sales_order_idx"
+	invoiceNumberIndex   = "invoice_account_number_idx"
 )
 
 // invoiceListIndexes is the keys an invoice page may be read from when it is not driven from a set of
@@ -132,6 +133,7 @@ func (r *invoiceRepoImpl) listInvoicePage(ctx context.Context, params domain.Lis
 	f.in("so.buyer_account_id", params.CustomerIDs)
 	f.in("ar.account_group_id", params.CustomerGroupIDs)
 	f.in("so.sales_rep_id", params.SalesRepIDs)
+	f.in("inv.number", params.Numbers)
 	if params.StartDate != nil {
 		f.add("inv.created_at >= ?", *params.StartDate)
 	}
@@ -163,8 +165,13 @@ JOIN address addr ON addr.id = inv.billing_address_id
 JOIN geolocation geo ON geo.id = addr.geolocation_id`,
 		joined: []string{"so", "ar", "buyer", "addr", "geo"},
 	}
+	// Exact numbers name at most as many invoices as were sent, so they are looked up by number and the
+	// few found sorted, ahead of every other key and of driving a search from the order filters.
+	if len(params.Numbers) > 0 {
+		page.indexes = []string{invoiceNumberIndex}
+	}
 	for i, set := range sets {
-		if i == 0 && search.Valid {
+		if i == 0 && search.Valid && len(params.Numbers) == 0 {
 			page.drive(set, setArgs[i]...)
 			continue
 		}

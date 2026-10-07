@@ -4483,8 +4483,10 @@ type ListInvoicesRequest struct {
 	StartDate        *timestamppb.Timestamp `protobuf:"bytes,10,opt,name=start_date,json=startDate,proto3,oneof" json:"start_date,omitempty"`
 	EndDate          *timestamppb.Timestamp `protobuf:"bytes,11,opt,name=end_date,json=endDate,proto3,oneof" json:"end_date,omitempty"`
 	Includes         []string               `protobuf:"bytes,12,rep,name=includes,proto3" json:"includes,omitempty"`
-	unknownFields    protoimpl.UnknownFields
-	sizeCache        protoimpl.SizeCache
+	// Exact invoice numbers.
+	Numbers       []string `protobuf:"bytes,13,rep,name=numbers,proto3" json:"numbers,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
 }
 
 func (x *ListInvoicesRequest) Reset() {
@@ -4597,6 +4599,13 @@ func (x *ListInvoicesRequest) GetEndDate() *timestamppb.Timestamp {
 func (x *ListInvoicesRequest) GetIncludes() []string {
 	if x != nil {
 		return x.Includes
+	}
+	return nil
+}
+
+func (x *ListInvoicesRequest) GetNumbers() []string {
+	if x != nil {
+		return x.Numbers
 	}
 	return nil
 }
@@ -5850,7 +5859,7 @@ const file_core_core_users_territories_proto_rawDesc = "" +
 	"\v_start_dateB\v\n" +
 	"\t_end_date\"I\n" +
 	"&StartInventoryChangeLogsExportResponse\x12\x1f\n" +
-	"\x03job\x18\x01 \x01(\v2\r.core.JobInfoR\x03job\"\x8e\x04\n" +
+	"\x03job\x18\x01 \x01(\v2\r.core.JobInfoR\x03job\"\xa8\x04\n" +
 	"\x13ListInvoicesRequest\x12\x1b\n" +
 	"\x06cursor\x18\x01 \x01(\tH\x00R\x06cursor\x88\x01\x01\x12\x14\n" +
 	"\x05limit\x18\x02 \x01(\x05R\x05limit\x12\x19\n" +
@@ -5865,7 +5874,8 @@ const file_core_core_users_territories_proto_rawDesc = "" +
 	"start_date\x18\n" +
 	" \x01(\v2\x1a.google.protobuf.TimestampH\x03R\tstartDate\x88\x01\x01\x12:\n" +
 	"\bend_date\x18\v \x01(\v2\x1a.google.protobuf.TimestampH\x04R\aendDate\x88\x01\x01\x12\x1a\n" +
-	"\bincludes\x18\f \x03(\tR\bincludesB\t\n" +
+	"\bincludes\x18\f \x03(\tR\bincludes\x12\x18\n" +
+	"\anumbers\x18\r \x03(\tR\anumbersB\t\n" +
 	"\a_cursorB\b\n" +
 	"\x06_queryB\t\n" +
 	"\a_statusB\r\n" +

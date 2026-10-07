@@ -26,6 +26,7 @@ func (h *gRPCHandler) ListInvoices(ctx context.Context, req *pb.ListInvoicesRequ
 		ProductLineIDs:   req.ProductLineIds,
 		CustomerGroupIDs: req.CustomerGroupIds,
 		SalesRepIDs:      req.SalesRepIds,
+		Numbers:          req.Numbers,
 		Includes:         req.Includes,
 	}
 

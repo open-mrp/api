@@ -5,6 +5,7 @@ package repository
 import (
 	"context"
 	"database/sql"
+	"fmt"
 	"testing"
 	"time"
 
@@ -56,11 +57,25 @@ func invoicePlanDims() []planDim[domain.ListInvoicesParams] {
 			{"last30d", func(p *P) { p.StartDate = at(recent.Add(-30 * 24 * time.Hour)) }},
 			{"old30d", func(p *P) { p.StartDate, p.EndDate = at(old), at(old.Add(30*24*time.Hour)) }},
 		}},
+		{"number", []planValue[P]{
+			{"number-one", func(p *P) { p.Numbers = []string{planSalesRareSearch} }},
+			{"number-batch", func(p *P) { p.Numbers = planSalesInvoiceNumbers(planSalesOrders/2, 50) }},
+			{"number-none", func(p *P) { p.Numbers = []string{"9999999"} }},
+		}},
 		{"search", []planValue[P]{
 			{"search-one", func(p *P) { p.Query = str(planSalesRareSearch) }},
 			{"search-every", func(p *P) { p.Query = str(planSalesDenseSearch) }},
 		}},
 	}
+}
+
+// planSalesInvoiceNumbers is n consecutive invoice numbers from the corpus, starting at invoice from.
+func planSalesInvoiceNumbers(from, n int) []string {
+	numbers := make([]string, n)
+	for i := range numbers {
+		numbers[i] = fmt.Sprintf("%07d", 2_000_000+from+i)
+	}
+	return numbers
 }
 
 func invoicePlanPages[P any](setCursor func(*P, *string)) []planValue[P] {

@@ -490,6 +490,15 @@ type AuditEvent struct {
 	RootResourceType sql.NullString
 }
 
+type BackfillProgress struct {
+	Name        string
+	CursorValue string
+	RowsDone    int64
+	CompletedAt sql.NullTime
+	CreatedAt   time.Time
+	UpdatedAt   time.Time
+}
+
 type Batch struct {
 	ID                string
 	CreatedAt         time.Time

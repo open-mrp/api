@@ -57,7 +57,7 @@ Resolve a filter on a joined table to base-table IDs first (`customer_group_ids`
 | Rare / admin-only | usually residual |
 | `EXISTS` / child-table | index the **child**; parent composite cannot help |
 | Filter on a joined table | denormalize onto the base table, or rewrite; parent composite cannot help |
-| `LIKE '%term%'` | not a B-tree — FULLTEXT, exact, or prefix |
+| `LIKE '%term%'` | not a B-tree. Fine on small per-tenant tables (tenant-scoped scan); otherwise prefix `LIKE 'q%'` or ngram FULLTEXT. See `public-api-design` |
 
 High-insert tables (`sales_order`, `transaction`, `request_log`, `audit_event`, `inventory_change_log`, `batch`): only composites for filters the UI actually exposes.
 

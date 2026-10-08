@@ -1779,6 +1779,11 @@ type ExportSvc interface {
 type JobSvc interface {
 	GetJob(ctx context.Context, jobID string) (*Job, *apierror.APIError)
 	GetJobForExecution(ctx context.Context, jobID string) (*Job, *apierror.APIError)
+	// GetJobItems returns the payload a job was raised with.
+	GetJobItems(ctx context.Context, job *Job) (json.RawMessage, *apierror.APIError)
+	// StageJobItems reserves a job id and places its payload, outside any transaction, so the
+	// object-store write never holds one open. Pass the result to CreateJob.
+	StageJobItems(ctx context.Context, items json.RawMessage) (*StagedJobItems, *apierror.APIError)
 	CreateJob(ctx context.Context, params CreateJobServiceParams) (*Job, *apierror.APIError)
 	UpdateJob(ctx context.Context, params UpdateJobServiceParams) (*Job, *apierror.APIError)
 	StartJob(ctx context.Context, params StartJobParams) (time.Time, *apierror.APIError)

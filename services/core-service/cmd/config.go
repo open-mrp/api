@@ -35,6 +35,7 @@ const (
 	envUserPhotosBucket           = "USER_PHOTOS_BUCKET"
 	envShippingLabelsBucket       = "SHIPPING_LABELS_BUCKET"
 	envExportsBucket              = "EXPORTS_BUCKET"
+	envPayloadsBucket             = "PAYLOADS_BUCKET"
 	envFrontendURL                = "FRONTEND_URL"
 	envPortalURL                  = "PORTAL_URL"
 	envAuthServiceURL             = "AUTH_SERVICE_URL"
@@ -103,6 +104,11 @@ type config struct {
 	// Not enforced when PlatformMode is "test".
 	ExportsBucket string
 
+	// PayloadsBucket (optional; default: "") is the S3 bucket for documents too large to keep in
+	// their rows, such as bulk job payloads and large idempotent responses. When empty, every
+	// document stays in its row.
+	PayloadsBucket string
+
 	// FrontendURL (required) is the base URL of the dashboard, used in links for the account's own users.
 	FrontendURL string
 
@@ -161,6 +167,7 @@ func (c *config) withDefaults(getenv func(string) string) *config {
 		UserPhotosBucket:           env.GetEnv(envUserPhotosBucket, getenv),
 		ShippingLabelsBucket:       env.GetEnv(envShippingLabelsBucket, getenv),
 		ExportsBucket:              env.GetEnv(envExportsBucket, getenv),
+		PayloadsBucket:             env.GetEnv(envPayloadsBucket, getenv),
 		FrontendURL:                env.GetEnv(envFrontendURL, getenv),
 		PortalURL:                  cmp.Or(env.GetEnv(envPortalURL, getenv), defaultPortalURL),
 		AuthServiceURL:             env.GetEnv(envAuthServiceURL, getenv),

@@ -27,6 +27,7 @@ import (
 	// versiontransforms's init() registers the version.Transformer chain that downgrades responses (and upgrades requests) for callers on older API versions. Blank-imported so the init runs at startup.
 	_ "github.com/open-mrp/api/services/api-gateway/internal/versiontransforms"
 	"github.com/open-mrp/api/services/api-gateway/internal/ws"
+	"github.com/open-mrp/api/shared/blobstore"
 	"github.com/open-mrp/api/shared/db"
 	"github.com/open-mrp/api/shared/lease"
 	"github.com/open-mrp/api/shared/messaging"
@@ -208,7 +209,11 @@ func Run(
 	resourceloaders.SetEmailBridgeClient(notificationClient.EmailBridgeClient)
 
 	// Initialize the request log publisher.
-	reqLogPublisher := publisher.NewRequestLogOutboxPublisher(repository.NewOutboxRepo(queries), coreClient.Client, cfg.FrontendURL, cfg.PlatformMode)
+	payloads, err := blobstore.Open(ctx, cfg.AWSRegion, cfg.PayloadsBucket)
+	if err != nil {
+		return fmt.Errorf("failed to open payload store: %w", err)
+	}
+	reqLogPublisher := publisher.NewRequestLogOutboxPublisher(repository.NewOutboxRepo(queries), coreClient.Client, payloads, cfg.FrontendURL, cfg.PlatformMode)
 
 	// Initialize the main router.
 	mainBaseCfg := router.BuildBaseConfig(cfg.PlatformMode, "main ", authClient, coreClient, billingClient, platformClient, agentClient, notificationClient, reqLogPublisher, stdout, cfg.TrustedProxyHops)

@@ -15,6 +15,7 @@ import (
 	"github.com/open-mrp/api/services/platform-service/internal/infrastructure/repository"
 	"github.com/open-mrp/api/services/platform-service/internal/infrastructure/sqlc"
 	"github.com/open-mrp/api/services/platform-service/internal/service"
+	"github.com/open-mrp/api/shared/blobstore"
 	"github.com/open-mrp/api/shared/contracts"
 	"github.com/open-mrp/api/shared/db"
 	"github.com/open-mrp/api/shared/lease"
@@ -69,12 +70,18 @@ func Run(
 
 	leaseSvc := lease.New(repository.NewLeaseRepo(queries))
 
+	payloads, err := blobstore.Open(ctx, cfg.AWSRegion, cfg.PayloadsBucket)
+	if err != nil {
+		return err
+	}
+	repos := repository.NewRepoFactory(queries, payloads)
+
 	loggingSvc := service.NewLoggingSvc(&service.LoggingSvcConfig{
-		Repos: repository.NewRepoFactory(queries),
+		Repos: repos,
 	})
 
 	auditSvc := service.NewAuditEventSvc(&service.AuditEventSvcConfig{
-		Repos: repository.NewRepoFactory(queries),
+		Repos: repos,
 	})
 
 	inboxRepo := repository.NewInboxRepo(queries)
@@ -116,8 +123,8 @@ func Run(
 		}
 	}
 	followupSvc, err := service.NewAccountFollowupSvc(&service.AccountFollowupSvcConfig{
-		Repos:           repository.NewRepoFactory(queries),
-		Tx:              service.NewTransactionManager(dbpool, queries),
+		Repos:           repos,
+		Tx:              service.NewTransactionManager(dbpool, queries, payloads),
 		ReviewerEmail:   cfg.AccountFollowupReviewerEmail,
 		ReviewBaseURL:   cfg.AccountFollowupReviewBaseURL,
 		Drafter:         followupDrafter,
@@ -162,7 +169,13 @@ func Run(
 		return err
 	}
 
-	idempotencyRepo := repository.NewIdempotencyKeyRepo(dbpool, queries)
+	idempotencyRepo := repository.NewIdempotencyKeyRepo(dbpool, queries, payloads)
+
+	if !cfg.BackfillsPaused {
+		if err := startBackfills(ctx, cfg, queries, payloads, leaseSvc); err != nil {
+			return err
+		}
+	}
 
 	// Start the idempotency key cleanup worker to delete expired keys
 	cleanupRepo := repository.NewCleanupRepo(queries)

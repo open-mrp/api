@@ -5,10 +5,12 @@ import (
 	"encoding/json"
 	"fmt"
 	"log/slog"
+	"time"
 
 	"github.com/open-mrp/api/services/api-gateway/internal/domain"
 	grpcutil "github.com/open-mrp/api/services/api-gateway/internal/grpc"
 	"github.com/open-mrp/api/shared/appctx"
+	"github.com/open-mrp/api/shared/blobstore"
 	"github.com/open-mrp/api/shared/constants"
 	"github.com/open-mrp/api/shared/contracts"
 	"github.com/open-mrp/api/shared/messaging"
@@ -31,18 +33,24 @@ type accountNameResolver interface {
 type requestLogOutboxPublisher struct {
 	outboxRepo   messaging.OutboxRepo
 	coreClient   accountNameResolver
+	payloads     *blobstore.Store
 	frontendURL  string
 	platformMode constants.PlatformMode
 }
 
-func NewRequestLogOutboxPublisher(outboxRepo messaging.OutboxRepo, coreClient accountNameResolver, frontendURL string, platformMode constants.PlatformMode) domain.RequestLogPublisher {
+// NewRequestLogOutboxPublisher builds the publisher. A nil payloads store keeps every log's bodies inline on the outbox message.
+func NewRequestLogOutboxPublisher(outboxRepo messaging.OutboxRepo, coreClient accountNameResolver, payloads *blobstore.Store, frontendURL string, platformMode constants.PlatformMode) domain.RequestLogPublisher {
 	return &requestLogOutboxPublisher{
 		outboxRepo:   outboxRepo,
 		coreClient:   coreClient,
+		payloads:     payloads,
 		frontendURL:  frontendURL,
 		platformMode: platformMode,
 	}
 }
+
+// payloadUploadTimeout bounds the post-response upload so a slow object store cannot pile up goroutines.
+const payloadUploadTimeout = 10 * time.Second
 
 func (p *requestLogOutboxPublisher) Create(ctx context.Context, rl *appctx.RequestLog) error {
 	ctx, span := requestLogPublisherTracer.Start(ctx, "publisher.request_log.create")
@@ -81,17 +89,8 @@ func (p *requestLogOutboxPublisher) Create(ctx context.Context, rl *appctx.Reque
 		ResponseJson:         rl.ResponseJSON,
 	}
 
-	_, marshalSpan := requestLogPublisherTracer.Start(ctx, "publisher.request_log.marshal")
-	data, err := protojson.Marshal(pbLog)
-	marshalSpan.End()
-	if err != nil {
-		slog.Error("Failed to marshal request log", "error", err, "request_id", rl.ID)
-		return err
-	}
-
 	msg := contracts.AmqpMessage{
 		RequestID: rl.ID,
-		Data:      data,
 	}
 	// Capture the actor's display name from the identity while the request context is still available; the error-alert goroutine below runs on a detached context that no longer carries it.
 	var actorName *string
@@ -102,24 +101,11 @@ func (p *requestLogOutboxPublisher) Create(ctx context.Context, rl *appctx.Reque
 		}
 	}
 
-	input := messaging.OutboxMessageInput{
-		ServiceName: "api-gateway",
-		MessageType: string(contracts.LoggingEventRequestLogged),
-		Destination: messaging.ApplicationExchange,
-		RoutingKey:  string(contracts.LoggingEventRequestLogged),
-		Payload:     msg,
-	}
-
 	// Save to outbox asynchronously - don't block the HTTP response
 	// No tracing here since this runs after the request completes
 	go func() { // #nosec G118 - runs after the response; a request-scoped context would cancel it
-		err := messaging.WithOutboxDBLockRetry(context.Background(), messaging.OutboxDBRetryConfig(p.platformMode), "request_log_outbox.create", func() error {
-			_, err := p.outboxRepo.Create(context.Background(), input)
-			return err
-		})
-		if err != nil {
-			slog.Error("Failed to save request log to outbox", "error", err, "request_id", rl.ID)
-		}
+		p.offloadPayload(pbLog)
+		p.saveToOutbox(pbLog, msg)
 
 		// Send an email alert for 5xx errors (skip in development mode)
 		if rl.StatusCode >= 500 && p.platformMode != constants.PlatformModeDevelopment {
@@ -128,6 +114,65 @@ func (p *requestLogOutboxPublisher) Create(ctx context.Context, rl *appctx.Reque
 	}()
 
 	return nil
+}
+
+func (p *requestLogOutboxPublisher) saveToOutbox(pbLog *pb.RequestLog, msg contracts.AmqpMessage) {
+	data, err := protojson.Marshal(pbLog)
+	if err != nil {
+		slog.Error("Failed to marshal request log", "error", err, "request_id", pbLog.Id)
+		return
+	}
+	msg.Data = data
+
+	input := messaging.OutboxMessageInput{
+		ServiceName: "api-gateway",
+		MessageType: string(contracts.LoggingEventRequestLogged),
+		Destination: messaging.ApplicationExchange,
+		RoutingKey:  string(contracts.LoggingEventRequestLogged),
+		Payload:     msg,
+	}
+
+	err = messaging.WithOutboxDBLockRetry(context.Background(), messaging.OutboxDBRetryConfig(p.platformMode), "request_log_outbox.create", func() error {
+		_, err := p.outboxRepo.Create(context.Background(), input)
+		return err
+	})
+	if err != nil {
+		slog.Error("Failed to save request log to outbox", "error", err, "request_id", pbLog.Id)
+	}
+}
+
+// offloadPayload moves the log's large fields into object storage and leaves their key on the
+// message, keeping request and response bodies out of message_outbox and request_log. The object is
+// written before the message that points at it. If the upload fails the fields stay inline, so the
+// log keeps its bodies either way.
+func (p *requestLogOutboxPublisher) offloadPayload(pbLog *pb.RequestLog) {
+	if p.payloads == nil {
+		return
+	}
+	payload := contracts.RequestLogPayload{
+		QueryJSON:        pbLog.QueryJson,
+		RequestBodyJSON:  pbLog.BodyJson,
+		ResponseBodyJSON: pbLog.ResponseJson,
+		StackTrace:       pbLog.StackTrace,
+	}
+	if payload == (contracts.RequestLogPayload{}) {
+		return
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), payloadUploadTimeout)
+	defer cancel()
+
+	key := contracts.RequestLogPayloadKey(pbLog.Id)
+	if apiErr := p.payloads.Put(ctx, key, payload); apiErr != nil {
+		slog.Warn("Failed to store request log payload; keeping it inline", "error", apiErr, "request_id", pbLog.Id)
+		return
+	}
+
+	pbLog.PayloadKey = &key
+	pbLog.QueryJson = nil
+	pbLog.BodyJson = nil
+	pbLog.ResponseJson = nil
+	pbLog.StackTrace = nil
 }
 
 func (p *requestLogOutboxPublisher) publishErrorAlert(rl *appctx.RequestLog, actorName *string) {

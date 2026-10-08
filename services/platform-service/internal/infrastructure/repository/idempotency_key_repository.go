@@ -5,9 +5,12 @@ import (
 	"database/sql"
 	"encoding/json"
 	"errors"
+	"log/slog"
+	"time"
 
 	"github.com/open-mrp/api/services/platform-service/internal/domain"
 	"github.com/open-mrp/api/services/platform-service/internal/infrastructure/sqlc"
+	"github.com/open-mrp/api/shared/blobstore"
 	"github.com/open-mrp/api/shared/db"
 	apierror "github.com/open-mrp/api/shared/errors"
 	"github.com/open-mrp/api/shared/tracing"
@@ -16,12 +19,23 @@ import (
 var idempotencyKeyRepoTracer = tracing.GetTracer("platform-service.idempotency_key_repository")
 
 type idempotencyKeyRepoImpl struct {
-	db     *sql.DB
-	shared *sqlc.Queries
+	db       *sql.DB
+	shared   *sqlc.Queries
+	payloads *blobstore.Store
 }
 
-func NewIdempotencyKeyRepo(db *sql.DB, shared *sqlc.Queries) domain.IdempotencyKeyRepo {
-	return &idempotencyKeyRepoImpl{db: db, shared: shared}
+// NewIdempotencyKeyRepo builds the repository. payloads takes cached responses over the inline limit; nil keeps them all in the row.
+func NewIdempotencyKeyRepo(db *sql.DB, shared *sqlc.Queries, payloads *blobstore.Store) domain.IdempotencyKeyRepo {
+	return &idempotencyKeyRepoImpl{db: db, shared: shared, payloads: payloads}
+}
+
+// responseMoveTimeout bounds the move of a large response into object storage.
+const responseMoveTimeout = 30 * time.Second
+
+// responseBodyKey is the object key of a cached HTTP response. It derives from the key's own id,
+// so a repeated move overwrites the same object.
+func responseBodyKey(typeID string) string {
+	return "idempotency/http/" + typeID + ".json.gz"
 }
 
 func (r *idempotencyKeyRepoImpl) SetResponse(ctx context.Context, params domain.SetResponseParams) *apierror.APIError {
@@ -50,7 +64,32 @@ func (r *idempotencyKeyRepoImpl) SetResponse(ctx context.Context, params domain.
 	if err != nil {
 		return tracing.Trace(span, db.MapSQLError(err))
 	}
+
+	if r.payloads != nil && len(params.Body) > blobstore.InlineLimit {
+		go r.moveResponseBody(context.WithoutCancel(ctx), params.ID, params.Body)
+	}
 	return nil
+}
+
+// moveResponseBody moves a stored response body out of its row. The response is written inline
+// first, so the gateway's reply never waits on object storage; the move follows in the background.
+// The object is written before the row points at it, and a move that fails part way leaves the
+// body inline, where a replay still reads it.
+func (r *idempotencyKeyRepoImpl) moveResponseBody(ctx context.Context, typeID string, body json.RawMessage) {
+	ctx, cancel := context.WithTimeout(ctx, responseMoveTimeout)
+	defer cancel()
+
+	key := responseBodyKey(typeID)
+	if apiErr := r.payloads.PutJSON(ctx, key, body); apiErr != nil {
+		slog.WarnContext(ctx, "Failed to move idempotent response to object storage; keeping it inline", "error", apiErr, "idempotency_key_id", typeID)
+		return
+	}
+	if err := r.shared.MoveIdempotencyKeyResponseToObjectStorage(ctx, sqlc.MoveIdempotencyKeyResponseToObjectStorageParams{
+		ResponseBodyKey: sql.NullString{String: key, Valid: true},
+		TypeID:          typeID,
+	}); err != nil {
+		slog.WarnContext(ctx, "Failed to point idempotent response at object storage; keeping it inline", "error", err, "idempotency_key_id", typeID)
+	}
 }
 
 const maxDeadlockRetries = 3
@@ -127,6 +166,14 @@ func (r *idempotencyKeyRepoImpl) upsertAndLockOnce(ctx context.Context, key *dom
 	if existingKey.HasResponse() {
 		if commitErr := tx.Commit(); commitErr != nil {
 			return nil, apierror.NewInternalError(commitErr, "Failed to commit transaction."), false
+		}
+		// Read after the commit: a replay of a large response must not hold the row lock on the bucket.
+		if existing.ResponseBodyKey.Valid {
+			body, apiErr := r.payloads.Fill(ctx, nil, &existing.ResponseBodyKey.String)
+			if apiErr != nil {
+				return nil, apiErr, false
+			}
+			existingKey.ResponseBody = body
 		}
 		return &domain.UpsertAndLockResult{
 			Key:     existingKey,

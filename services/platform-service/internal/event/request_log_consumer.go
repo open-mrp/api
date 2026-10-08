@@ -117,5 +117,6 @@ func mapEventToDomain(event *loggingpb.RequestLog) *domain.RequestLog {
 		Hidden:               event.GetHidden(),
 		BodyJSON:             event.BodyJson,
 		ResponseJSON:         event.ResponseJson,
+		PayloadKey:           event.PayloadKey,
 	}
 }

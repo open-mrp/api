@@ -8,7 +8,6 @@ package sqlc
 import (
 	"context"
 	"database/sql"
-	"encoding/json"
 	"time"
 
 	"github.com/open-mrp/api/shared/db"
@@ -22,6 +21,7 @@ SELECT
     j.account_id,
     j.created_by,
     j.job_items,
+    j.job_items_key,
     j.results,
     j.error,
     j.errors,
@@ -47,7 +47,8 @@ type GetJobRow struct {
 	ResourceType sql.NullString
 	AccountID    sql.NullString
 	CreatedBy    sql.NullString
-	JobItems     json.RawMessage
+	JobItems     db.NullableRawMessage
+	JobItemsKey  sql.NullString
 	Results      db.NullableRawMessage
 	Error        db.NullableRawMessage
 	Errors       db.NullableRawMessage
@@ -70,6 +71,7 @@ func (q *Queries) GetJob(ctx context.Context, arg GetJobParams) (GetJobRow, erro
 		&i.AccountID,
 		&i.CreatedBy,
 		&i.JobItems,
+		&i.JobItemsKey,
 		&i.Results,
 		&i.Error,
 		&i.Errors,
@@ -91,10 +93,12 @@ INSERT INTO job (
     account_id,
     created_by,
     job_items,
+    job_items_key,
     results,
     created_at,
     updated_at
 ) Values (
+    ?,
     ?,
     ?,
     ?,
@@ -113,7 +117,8 @@ type InsertJobParams struct {
 	ResourceType sql.NullString
 	AccountID    sql.NullString
 	CreatedBy    sql.NullString
-	JobItems     json.RawMessage
+	JobItems     db.NullableRawMessage
+	JobItemsKey  sql.NullString
 	Results      db.NullableRawMessage
 }
 
@@ -125,6 +130,7 @@ func (q *Queries) InsertJob(ctx context.Context, arg InsertJobParams) error {
 		arg.AccountID,
 		arg.CreatedBy,
 		arg.JobItems,
+		arg.JobItemsKey,
 		arg.Results,
 	)
 	return err

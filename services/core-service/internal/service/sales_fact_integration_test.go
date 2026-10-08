@@ -48,7 +48,7 @@ func salesFactDB(t *testing.T) (*sql.DB, domain.RepoFactory) {
 		t.Fatalf("ping mysql: %v", err)
 	}
 	pagination.Init([]byte("sales-fact-integration-test"))
-	return pool, repository.NewRepoFactory(sqlc.New(pool))
+	return pool, repository.NewRepoFactory(sqlc.New(pool), nil)
 }
 
 func newTestRefresher(repos domain.RepoFactory, pool *sql.DB) *SalesFactRefresher {

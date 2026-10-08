@@ -20676,6 +20676,37 @@ func (mr *MockJobRepoMockRecorder) Get(ctx, jobID, accountID any) *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Get", reflect.TypeOf((*MockJobRepo)(nil).Get), ctx, jobID, accountID)
 }
 
+// GetItems mocks base method.
+func (m *MockJobRepo) GetItems(ctx context.Context, job *domain.Job) (json.RawMessage, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetItems", ctx, job)
+	ret0, _ := ret[0].(json.RawMessage)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
+}
+
+// GetItems indicates an expected call of GetItems.
+func (mr *MockJobRepoMockRecorder) GetItems(ctx, job any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetItems", reflect.TypeOf((*MockJobRepo)(nil).GetItems), ctx, job)
+}
+
+// PutItems mocks base method.
+func (m *MockJobRepo) PutItems(ctx context.Context, jobID string, items json.RawMessage) (json.RawMessage, *string, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "PutItems", ctx, jobID, items)
+	ret0, _ := ret[0].(json.RawMessage)
+	ret1, _ := ret[1].(*string)
+	ret2, _ := ret[2].(*apierror.APIError)
+	return ret0, ret1, ret2
+}
+
+// PutItems indicates an expected call of PutItems.
+func (mr *MockJobRepoMockRecorder) PutItems(ctx, jobID, items any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "PutItems", reflect.TypeOf((*MockJobRepo)(nil).PutItems), ctx, jobID, items)
+}
+
 // Update mocks base method.
 func (m *MockJobRepo) Update(ctx context.Context, params domain.UpdateJobRepositoryParams) (int64, *apierror.APIError) {
 	m.ctrl.T.Helper()

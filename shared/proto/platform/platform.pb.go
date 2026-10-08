@@ -750,7 +750,10 @@ type RequestLog struct {
 	// Absent for shielded endpoints and responses exceeding 256 KB.
 	ResponseJson *string `protobuf:"bytes,29,opt,name=response_json,json=responseJson,proto3,oneof" json:"response_json,omitempty"`
 	// When true, the log is persisted but omitted from the default request-log listing.
-	Hidden        bool `protobuf:"varint,30,opt,name=hidden,proto3" json:"hidden,omitempty"`
+	Hidden bool `protobuf:"varint,30,opt,name=hidden,proto3" json:"hidden,omitempty"`
+	// Object key of the RequestLogPayload holding query_json, body_json, response_json, and
+	// stack_trace. When set, those fields are absent from this message.
+	PayloadKey    *string `protobuf:"bytes,31,opt,name=payload_key,json=payloadKey,proto3,oneof" json:"payload_key,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -993,6 +996,13 @@ func (x *RequestLog) GetHidden() bool {
 		return x.Hidden
 	}
 	return false
+}
+
+func (x *RequestLog) GetPayloadKey() string {
+	if x != nil && x.PayloadKey != nil {
+		return *x.PayloadKey
+	}
+	return ""
 }
 
 type CreateRequestLogRequest struct {
@@ -3162,7 +3172,7 @@ const file_platform_platform_proto_rawDesc = "" +
 	"\x0erecovery_point\x18\x01 \x01(\tR\rrecoveryPoint\x12 \n" +
 	"\tstep_data\x18\x02 \x01(\fH\x00R\bstepData\x88\x01\x01B\f\n" +
 	"\n" +
-	"_step_data\"\xb2\v\n" +
+	"_step_data\"\xe8\v\n" +
 	"\n" +
 	"RequestLog\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x16\n" +
@@ -3207,7 +3217,9 @@ const file_platform_platform_proto_rawDesc = "" +
 	"\x0fpublic_endpoint\x18\x1b \x01(\bR\x0epublicEndpoint\x12 \n" +
 	"\tbody_json\x18\x1c \x01(\tH\x11R\bbodyJson\x88\x01\x01\x12(\n" +
 	"\rresponse_json\x18\x1d \x01(\tH\x12R\fresponseJson\x88\x01\x01\x12\x16\n" +
-	"\x06hidden\x18\x1e \x01(\bR\x06hiddenB\r\n" +
+	"\x06hidden\x18\x1e \x01(\bR\x06hidden\x12$\n" +
+	"\vpayload_key\x18\x1f \x01(\tH\x13R\n" +
+	"payloadKey\x88\x01\x01B\r\n" +
 	"\v_query_jsonB\r\n" +
 	"\v_account_idB\x14\n" +
 	"\x12_target_account_idB\f\n" +
@@ -3228,7 +3240,8 @@ const file_platform_platform_proto_rawDesc = "" +
 	"\t_trace_idB\f\n" +
 	"\n" +
 	"_body_jsonB\x10\n" +
-	"\x0e_response_json\"P\n" +
+	"\x0e_response_jsonB\x0e\n" +
+	"\f_payload_key\"P\n" +
 	"\x17CreateRequestLogRequest\x125\n" +
 	"\vrequest_log\x18\x01 \x01(\v2\x14.platform.RequestLogR\n" +
 	"requestLog\"4\n" +

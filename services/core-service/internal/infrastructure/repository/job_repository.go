@@ -10,6 +10,7 @@ import (
 
 	"github.com/open-mrp/api/services/core-service/internal/domain"
 	"github.com/open-mrp/api/services/core-service/internal/infrastructure/sqlc"
+	"github.com/open-mrp/api/shared/blobstore"
 	"github.com/open-mrp/api/shared/constants"
 	"github.com/open-mrp/api/shared/db"
 	apierror "github.com/open-mrp/api/shared/errors"
@@ -19,11 +20,41 @@ import (
 var jobRepoTracer = tracing.GetTracer("core-service.job_repository")
 
 type jobRepoImpl struct {
-	queries *sqlc.Queries
+	queries  *sqlc.Queries
+	payloads *blobstore.Store
 }
 
-func NewJobRepo(queries *sqlc.Queries) domain.JobRepo {
-	return &jobRepoImpl{queries: queries}
+// NewJobRepo builds the repository. payloads holds job payloads over the inline limit; nil keeps every payload in the row.
+func NewJobRepo(queries *sqlc.Queries, payloads *blobstore.Store) domain.JobRepo {
+	return &jobRepoImpl{queries: queries, payloads: payloads}
+}
+
+// jobItemsKey is the object key of a job's payload. It derives from the job id alone, so
+// re-staging the same job overwrites the same object.
+func jobItemsKey(jobID string) string {
+	return "jobs/" + jobID + "/items.json.gz"
+}
+
+func (r *jobRepoImpl) PutItems(ctx context.Context, jobID string, items json.RawMessage) (json.RawMessage, *string, *apierror.APIError) {
+	ctx, span := jobRepoTracer.Start(ctx, "repository.job.put_items")
+	defer span.End()
+
+	inline, key, apiErr := r.payloads.Spill(ctx, jobItemsKey(jobID), items)
+	if apiErr != nil {
+		return nil, nil, tracing.Trace(span, apiErr)
+	}
+	return inline, key, nil
+}
+
+func (r *jobRepoImpl) GetItems(ctx context.Context, job *domain.Job) (json.RawMessage, *apierror.APIError) {
+	ctx, span := jobRepoTracer.Start(ctx, "repository.job.get_items")
+	defer span.End()
+
+	items, apiErr := r.payloads.Fill(ctx, job.JobItems, job.JobItemsKey)
+	if apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
+	return items, nil
 }
 
 // objectTypePtr narrows an object type to the optional string the column stores: the
@@ -268,7 +299,8 @@ func mapGetJobRow(row sqlc.GetJobRow) (*domain.Job, *apierror.APIError) {
 		ResourceType:     resourceType,
 		AccountID:        nullStringPtr(row.AccountID),
 		CreatedByID:      nullStringPtr(row.CreatedBy),
-		JobItems:         row.JobItems,
+		JobItems:         json.RawMessage(row.JobItems),
+		JobItemsKey:      nullStringPtr(row.JobItemsKey),
 		Results:          results,
 		ResultsTruncated: truncated,
 		Error:            jobError,
@@ -315,7 +347,8 @@ func (r *jobRepoImpl) Create(ctx context.Context, params domain.CreateJobReposit
 		Type:         string(params.Type),
 		ResourceType: toNullString(objectTypePtr(params.ResourceType)),
 		CreatedBy:    toNullString(params.CreatedByID),
-		JobItems:     params.JobItems,
+		JobItems:     db.NullableRawMessage(params.JobItems),
+		JobItemsKey:  toNullString(params.JobItemsKey),
 		Results:      results,
 	})
 	if apiErr := db.MapSQLError(err); apiErr != nil {

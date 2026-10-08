@@ -26,6 +26,7 @@ import (
 	"github.com/open-mrp/api/services/core-service/internal/service"
 	"github.com/open-mrp/api/services/core-service/internal/stripesync"
 	"github.com/open-mrp/api/shared/audit"
+	"github.com/open-mrp/api/shared/blobstore"
 	"github.com/open-mrp/api/shared/cache"
 	s3client "github.com/open-mrp/api/shared/cloud/s3"
 	"github.com/open-mrp/api/shared/contracts"
@@ -98,7 +99,8 @@ func Run(
 		return err
 	}
 	defer reportDB.Close()
-	reportRepoFactory := repository.NewRepoFactory(sqlc.New(reportDB))
+	// Reports only read their own tables, none of which keep documents in the payloads bucket.
+	reportRepoFactory := repository.NewRepoFactory(sqlc.New(reportDB), nil)
 
 	leaseSvc := lease.New(repository.NewLeaseRepo(queries))
 
@@ -131,8 +133,17 @@ func Run(
 		s3Store = s3
 	}
 
-	repoFactory := repository.NewRepoFactory(queries)
-	txManager := service.NewTransactionManager(db, queries)
+	var payloads *repository.Payloads
+	if cfg.PayloadsBucket != "" {
+		store, err := blobstore.New(&blobstore.Config{Objects: s3Store, Bucket: cfg.PayloadsBucket})
+		if err != nil {
+			return err
+		}
+		payloads = &repository.Payloads{Store: store, Pool: queries}
+	}
+
+	repoFactory := repository.NewRepoFactory(queries, payloads)
+	txManager := service.NewTransactionManager(db, queries, payloads)
 
 	// Connect to auth-service lazily (no WaitForReady) to avoid a startup deadlock:
 	// auth-service waits for core-service to be ready, so core-service cannot

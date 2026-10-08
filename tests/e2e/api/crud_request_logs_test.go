@@ -3,6 +3,7 @@
 package api_test
 
 import (
+	"database/sql"
 	"encoding/json"
 	"fmt"
 	"net/url"
@@ -1032,6 +1033,18 @@ func TestRequestLogs_CapturesPayloads(t *testing.T) {
 	qp := jsonObject(got, "query_params")
 	require.NotNil(t, qp, "query_params should be present with ?include=query_params")
 	assert.Equal(t, "unit_group", jsonField(qp, "include"))
+
+	// The bodies above were served from the payloads bucket: the row holds only the key.
+	var payloadKey sql.NullString
+	var queryJSON, requestBody, responseBody sql.NullString
+	err = authDB(t).QueryRow(
+		"SELECT payload_key, query_json, request_body_json, response_body_json FROM request_log WHERE id = ?", logID,
+	).Scan(&payloadKey, &queryJSON, &requestBody, &responseBody)
+	require.NoError(t, err)
+	assert.Equal(t, "request-logs/"+logID+".json.gz", payloadKey.String)
+	assert.False(t, queryJSON.Valid, "query_json must not be stored in the row")
+	assert.False(t, requestBody.Valid, "request_body_json must not be stored in the row")
+	assert.False(t, responseBody.Valid, "response_body_json must not be stored in the row")
 }
 
 func TestRequestLogs_ListIncludeActor(t *testing.T) {

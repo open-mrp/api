@@ -91,6 +91,7 @@ func (suite *ProductionRunBulkCreateTestSuite) SetupTest() {
 	// what keeps the job's storage out of these tests: they assert what the bulk
 	// create asks of the job service, not how a job row is written.
 	suite.jobSvc = servicemock.NewMockJobSvc(suite.ctrl)
+	expectInlineJobPayloads(suite.T(), suite.jobSvc)
 	jobSvcFactory := factorymock.NewMockJobSvcFactory(suite.ctrl)
 	jobSvcFactory.EXPECT().Build(gomock.Any()).Return(suite.jobSvc).AnyTimes()
 

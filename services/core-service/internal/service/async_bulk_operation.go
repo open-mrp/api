@@ -237,14 +237,23 @@ func enqueueBulkOperation[TInput, TResolved any](
 
 		createdByID := jobCreatedByID(ctx, deps.repos, accountID, identity)
 
+		// A payload of up to a thousand rows goes to object storage here, before the transaction,
+		// so the upload never holds it open.
+		staged, apiErr := deps.jobs(deps.repos).StageJobItems(ctx, jobItems)
+		if apiErr != nil {
+			return nil, tracing.Trace(span, apiErr)
+		}
+
 		var raisedJob *domain.Job
 		apiErr = deps.txManager.WithTx(ctx, func(txCtx context.Context, txRepos domain.RepoFactory) *apierror.APIError {
 			// Record the resolved payload on a job and enqueue only that job's id. The
-			// row is the single copy of the requested work, so the message stays a
+			// job is the single copy of the requested work, so the message stays a
 			// constant size no matter how many rows were submitted, and the client has
 			// something to poll for the outcome.
 			job, apiErr := deps.jobs(txRepos).CreateJob(txCtx, domain.CreateJobServiceParams{
-				JobItems:     jobItems,
+				JobID:        staged.JobID,
+				JobItems:     staged.JobItems,
+				JobItemsKey:  staged.JobItemsKey,
 				Type:         spec.JobType,
 				ResourceType: spec.ResourceType,
 				CreatedByID:  createdByID,
@@ -336,8 +345,13 @@ func executeBulkOperation[TInput, TResolved any](
 		return nil
 	}
 
+	jobItems, apiErr := deps.jobs(deps.repos).GetJobItems(ctx, job)
+	if apiErr != nil {
+		return tracing.Trace(span, apiErr)
+	}
+
 	var rows []TResolved
-	if err := json.Unmarshal(job.JobItems, &rows); err != nil {
+	if err := json.Unmarshal(jobItems, &rows); err != nil {
 		apiErr := apierror.NewInternalError(err, "Job items are not a bulk operation payload.")
 		deps.jobs(deps.repos).FailJob(ctx, domain.FailJobParams{JobID: job.ID, ApiErr: apiErr})
 		return tracing.Trace(span, apiErr)

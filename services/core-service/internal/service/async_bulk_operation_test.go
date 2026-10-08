@@ -70,6 +70,7 @@ func (suite *AsyncBulkEngineTestSuite) SetupTest() {
 	suite.jobSvc = servicemock.NewMockJobSvc(suite.ctrl)
 	jobSvcFactory := factorymock.NewMockJobSvcFactory(suite.ctrl)
 	jobSvcFactory.EXPECT().Build(gomock.Any()).Return(suite.jobSvc).AnyTimes()
+	expectInlineJobPayloads(suite.T(), suite.jobSvc)
 
 	suite.deps = asyncBulkDeps{
 		repos:           suite.repoFactory,
@@ -291,6 +292,19 @@ func (suite *AsyncBulkEngineTestSuite) TestEnqueue_EmptyRejected() {
 	suite.Nil(ack)
 	suite.NotNil(apiErr)
 	suite.Equal(apierror.ErrorCodeValidationFailed, apiErr.Code)
+}
+
+// expectInlineJobPayloads keeps every staged payload inline. Where a payload is stored is the
+// job repository's concern and is tested there.
+func expectInlineJobPayloads(t *testing.T, jobSvc *servicemock.MockJobSvc) {
+	jobSvc.EXPECT().StageJobItems(gomock.Any(), gomock.Any()).
+		DoAndReturn(func(_ context.Context, items json.RawMessage) (*domain.StagedJobItems, *apierror.APIError) {
+			return &domain.StagedJobItems{JobID: genTestID(t, id.JobIDPrefix), JobItems: items}, nil
+		}).AnyTimes()
+	jobSvc.EXPECT().GetJobItems(gomock.Any(), gomock.Any()).
+		DoAndReturn(func(_ context.Context, job *domain.Job) (json.RawMessage, *apierror.APIError) {
+			return job.JobItems, nil
+		}).AnyTimes()
 }
 
 // --- Execute phase ---

@@ -34,6 +34,11 @@ sql:
             go_type:
               import: "github.com/open-mrp/api/shared/db"
               type: "NullableRawMessage"
+          # NULL when the payload is in the bucket under job.job_items_key.
+          - column: "job.job_items"
+            go_type:
+              import: "github.com/open-mrp/api/shared/db"
+              type: "NullableRawMessage"
           - column: "hubspot_sync_job.cursors"
             go_type:
               import: "github.com/open-mrp/api/shared/db"

@@ -11,6 +11,8 @@ import (
 
 type TransactionManager = db.TransactionManager[*sqlc.Queries, domain.RepoFactory]
 
-func NewTransactionManager(sqlDB *sql.DB, queries *sqlc.Queries) TransactionManager {
-	return db.NewTransactionManager(sqlDB, queries, repository.NewRepoFactory)
+func NewTransactionManager(sqlDB *sql.DB, queries *sqlc.Queries, payloads *repository.Payloads) TransactionManager {
+	return db.NewTransactionManager(sqlDB, queries, func(q *sqlc.Queries) domain.RepoFactory {
+		return repository.NewRepoFactory(q, payloads)
+	})
 }

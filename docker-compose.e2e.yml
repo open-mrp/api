@@ -39,7 +39,7 @@ services:
     entrypoint: >
       /bin/sh -c "
       mc alias set e2e http://minio-e2e:9000 e2eaccesskey e2esecretkey &&
-      for b in augno-account-photos augno-user-photos augno-shipping-labels augno-exports augno-chat-attachments augno-inbound-email; do
+      for b in augno-account-photos augno-user-photos augno-shipping-labels augno-exports augno-chat-attachments augno-inbound-email augno-payloads; do
         mc mb --ignore-existing e2e/$$b;
       done
       "
@@ -137,11 +137,18 @@ services:
       DB_URL: root:Testing123!@tcp(mysql-e2e:3306)/openmrp?parseTime=true
       RABBITMQ_URI: amqp://guest:guest@rabbitmq:5672/
       CURSOR_HMAC_KEY: b073b04358fbd77eaf3ce224de1ba3c7d8f91fa5bdea440dc5a37c9e1627197d
+      S3_ENDPOINT_URL: http://minio-e2e:9000
+      AWS_REGION: us-east-2
+      AWS_ACCESS_KEY_ID: e2eaccesskey
+      AWS_SECRET_ACCESS_KEY: e2esecretkey
+      PAYLOADS_BUCKET: augno-payloads
     depends_on:
       mysql-e2e:
         condition: service_healthy
       rabbitmq:
         condition: service_healthy
+      minio-e2e-init:
+        condition: service_completed_successfully
     healthcheck:
       test: ["CMD", "sh", "-c", "nc -z localhost 9092 || exit 1"]
       interval: 5s
@@ -178,6 +185,7 @@ services:
       USER_PHOTOS_BUCKET: augno-user-photos
       SHIPPING_LABELS_BUCKET: augno-shipping-labels
       EXPORTS_BUCKET: augno-exports
+      PAYLOADS_BUCKET: augno-payloads
       REDIS_URL: redis://redis:6379/0
     depends_on:
       mysql-e2e:
@@ -354,6 +362,11 @@ services:
       PLATFORM_SERVICE_URL: platform-service:9092
       AGENT_SERVICE_URL: agent-service:9092
       FRONTEND_URL: http://localhost:4200
+      S3_ENDPOINT_URL: http://minio-e2e:9000
+      AWS_REGION: us-east-2
+      AWS_ACCESS_KEY_ID: e2eaccesskey
+      AWS_SECRET_ACCESS_KEY: e2esecretkey
+      PAYLOADS_BUCKET: augno-payloads
     ports:
       - "8082:8081"
     depends_on:

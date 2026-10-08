@@ -1,5 +1,12 @@
 # Changelog
 
+## [4.4.0](https://github.com/open-mrp/api/compare/v4.3.1...v4.4.0) (2026-10-08)
+
+
+### Features
+
+* **api-gateway:** allow W3C trace context headers in CORS ([8b8ba39](https://github.com/open-mrp/api/commit/8b8ba392d7ec531e12fb5d9fb6d6f69dfe496863))
+
 ## [4.3.1](https://github.com/open-mrp/api/compare/v4.3.0...v4.3.1) (2026-10-08)
 
 

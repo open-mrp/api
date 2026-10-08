@@ -68,7 +68,12 @@ func TestListInvoices_NumbersMatchExactly(t *testing.T) {
 		require.Equal(t, 200, status)
 		assert.Empty(t, got, "the number belongs to another customer")
 
-		status, got = listInvoiceNumbers(t, url.Values{"numbers": {numA, numB}, "q": {numB}})
+		// A number can appear inside another customer's generated name, so search by B's whole name.
+		status, body, err := apiClient.GetListRaw(customersPath+"/"+b.customerID, nil)
+		require.NoError(t, err)
+		requireStatus(t, 200, status, body)
+		nameB := jsonField(parseJSON(body), "name")
+		status, got = listInvoiceNumbers(t, url.Values{"numbers": {numA, numB}, "q": {nameB}})
 		require.Equal(t, 200, status)
 		assert.Equal(t, []string{numB}, got, "a search narrows the named invoices further")
 	})

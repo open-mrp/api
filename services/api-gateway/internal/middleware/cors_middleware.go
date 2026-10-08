@@ -23,7 +23,7 @@ func CORSMiddleware() func(http.HandlerFunc) http.HandlerFunc {
 				w.Header().Set("Access-Control-Allow-Methods", strings.Join(methods, ", "))
 			}
 			w.Header().Set("Access-Control-Allow-Headers",
-				"Content-Type, Authorization, X-Requested-With, X-Retry, OpenMRP-Account, OpenMRP-Actor-Account, Idempotency-Key, Accept, Origin, User-Agent, Cache-Control, Pragma, OpenMRP-Version, "+
+				"Content-Type, Authorization, X-Requested-With, X-Retry, OpenMRP-Account, OpenMRP-Actor-Account, Idempotency-Key, Accept, Origin, User-Agent, Cache-Control, Pragma, OpenMRP-Version, traceparent, tracestate, "+
 					"X-Stainless-Arch, X-Stainless-Lang, X-Stainless-OS, X-Stainless-Package-Version, X-Stainless-Read-Timeout, "+
 					"X-Stainless-Retry-Count, X-Stainless-Runtime, X-Stainless-Runtime-Version, X-Stainless-Timeout",
 			)

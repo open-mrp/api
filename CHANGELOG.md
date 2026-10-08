@@ -1,5 +1,12 @@
 # Changelog
 
+## [4.3.0](https://github.com/open-mrp/api/compare/v4.2.2...v4.3.0) (2026-10-08)
+
+
+### Features
+
+* **storage:** keep large JSON in S3 instead of MySQL ([68d752d](https://github.com/open-mrp/api/commit/68d752de781c4b4718f0de79ad9d86e64bdcda76))
+
 ## [4.2.2](https://github.com/open-mrp/api/compare/v4.2.1...v4.2.2) (2026-10-08)
 
 

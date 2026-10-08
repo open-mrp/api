@@ -1,5 +1,12 @@
 # Changelog
 
+## [4.2.1](https://github.com/open-mrp/api/compare/v4.2.0...v4.2.1) (2026-10-08)
+
+
+### Performance Improvements
+
+* **messaging:** batch outbox publisher confirms and claim per service; speed up e2e ([337c735](https://github.com/open-mrp/api/commit/337c7354f3d136f76adf12c6ad88d3183dc48007))
+
 ## [4.2.0](https://github.com/open-mrp/api/compare/v4.1.4...v4.2.0) (2026-10-08)
 
 

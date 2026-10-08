@@ -7,7 +7,6 @@ import (
 	"os"
 	"os/signal"
 	"syscall"
-	"time"
 
 	"github.com/open-mrp/api/services/agent-service/internal/agents"
 	"github.com/open-mrp/api/services/agent-service/internal/domain"
@@ -69,17 +68,7 @@ func Run(
 	leaseSvc := lease.New(repository.NewLeaseRepo(queries))
 
 	outboxRepo := repository.NewOutboxEnqueuerRepo(pgpool, queries)
-	enqueuerCfg := &messaging.EnqueuerConfig{
-		ServiceName:  domain.ServiceName,
-		PlatformMode: cfg.PlatformMode,
-	}
-	if !cfg.PlatformMode.IsTest() {
-		// Every outbox write wakes the enqueuer on commit (messaging.NotifyOnCommit), so this ceiling
-		// only paces rows nothing kicked: delayed auto-retry resumes and failed-publish retries. Kept
-		// below the 30s shared default so a resume isn't held much past its next_run_at.
-		enqueuerCfg.MaxPollInterval = 5 * time.Second
-	}
-	enqueuer, err := messaging.NewEnqueuer(enqueuerCfg, outboxRepo, rabbitmq, leaseSvc)
+	enqueuer, err := messaging.NewEnqueuer(&messaging.EnqueuerConfig{ServiceName: domain.ServiceName, PlatformMode: cfg.PlatformMode}, outboxRepo, rabbitmq, leaseSvc)
 	if err != nil {
 		return err
 	}

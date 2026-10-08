@@ -24,9 +24,9 @@ func queuedSendEmail(t *testing.T, marker string) map[string]any {
 	rows, err := authDB(t).Query(`
 		SELECT CAST(FROM_BASE64(JSON_UNQUOTE(JSON_EXTRACT(payload, '$.data'))) AS CHAR)
 		FROM message_outbox
-		WHERE routing_key = 'notification.cmd.send_email'
+		WHERE id > ? AND routing_key = 'notification.cmd.send_email'
 		AND CAST(FROM_BASE64(JSON_UNQUOTE(JSON_EXTRACT(payload, '$.data'))) AS CHAR) LIKE ?`,
-		"%"+marker+"%")
+		outboxFloor(t), "%"+marker+"%")
 	require.NoError(t, err)
 	defer rows.Close()
 
@@ -71,6 +71,7 @@ func postAnonymously(t *testing.T, path string, body any) (int, []byte) {
 // A demo request comes from the marketing site, before the requester has any account.
 func TestUtils_RequestDemoNeedsNoSignIn(t *testing.T) {
 	t.Parallel()
+	markOutbox(t)
 	company := uniqueName("e2e-demo-co")
 
 	status, body := postAnonymously(t, requestDemoPath, map[string]any{
@@ -93,6 +94,7 @@ func TestUtils_RequestDemoNeedsNoSignIn(t *testing.T) {
 // Feedback names who sent it, with the address a reply goes to.
 func TestUtils_SubmitFeedbackCarriesTheSendersAddress(t *testing.T) {
 	t.Parallel()
+	markOutbox(t)
 	answer := uniqueName("e2e-feedback")
 
 	status, body, err := loginAsSeedUser(t).Post(submitFeedbackPath, map[string]any{
@@ -124,6 +126,7 @@ func TestUtils_SubmitFeedbackCarriesTheSendersAddress(t *testing.T) {
 // An API key has no address, so its feedback goes without one.
 func TestUtils_SubmitFeedbackFromAnAPIKey(t *testing.T) {
 	t.Parallel()
+	markOutbox(t)
 	answer := uniqueName("e2e-feedback-key")
 
 	status, body, err := apiClient.Post(submitFeedbackPath, map[string]any{

@@ -196,9 +196,9 @@ func queuedEmailCount(t *testing.T, marker string) int {
 	var n int
 	require.NoError(t, authDB(t).QueryRow(`
 		SELECT COUNT(*) FROM message_outbox
-		WHERE routing_key = 'notification.cmd.send_email'
+		WHERE id > ? AND routing_key = 'notification.cmd.send_email'
 		AND CAST(FROM_BASE64(JSON_UNQUOTE(JSON_EXTRACT(payload, '$.data'))) AS CHAR) LIKE ?`,
-		"%"+marker+"%").Scan(&n))
+		outboxFloor(t), "%"+marker+"%").Scan(&n))
 	return n
 }
 
@@ -299,6 +299,7 @@ func (s sellerSession) do(t *testing.T, targetAccountID, method, path string, bo
 // the seller's portal; a supplier's gets neither.
 func TestCounterpartyContacts_Create(t *testing.T) {
 	t.Parallel()
+	markOutbox(t)
 	for _, kind := range counterpartyKinds {
 		t.Run(kind.name, func(t *testing.T) {
 			t.Parallel()
@@ -700,6 +701,7 @@ func TestCounterpartyContacts_TenantIsolation(t *testing.T) {
 // with a new team member are ignored. The welcome email links to the dashboard's sign-in page.
 func TestCounterpartyContacts_OwnTeamHasNoNotificationTypes(t *testing.T) {
 	t.Parallel()
+	markOutbox(t)
 
 	got := parseJSON(mustGet(t, accountUsersPath+"/"+SeedAccountUserID))
 	assert.Contains(t, got, "notification_types")

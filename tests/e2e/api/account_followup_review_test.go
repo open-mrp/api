@@ -98,7 +98,8 @@ type queuedEmail struct {
 func followupEmailsQueued(t *testing.T, registrantEmail string) []queuedEmail {
 	t.Helper()
 	rows, err := authDB(t).Query(
-		"SELECT payload FROM message_outbox WHERE service_name = 'platform-service' AND routing_key = 'notification.cmd.send_email' AND created_at > NOW(3) - INTERVAL 15 MINUTE",
+		"SELECT payload FROM message_outbox WHERE id > ? AND service_name = 'platform-service' AND routing_key = 'notification.cmd.send_email'",
+		outboxFloor(t),
 	)
 	require.NoError(t, err)
 	defer rows.Close()
@@ -122,6 +123,7 @@ func followupEmailsQueued(t *testing.T, registrantEmail string) []queuedEmail {
 
 func TestAccountFollowupReview_ApproveSendsOnce(t *testing.T) {
 	t.Parallel()
+	markOutbox(t)
 	token := "e2e-review-" + uuid.New().String()
 	id, email := plantFollowupForReview(t, token, time.Hour)
 
@@ -170,6 +172,7 @@ func TestAccountFollowupReview_ApproveSendsOnce(t *testing.T) {
 
 func TestAccountFollowupReview_Skip(t *testing.T) {
 	t.Parallel()
+	markOutbox(t)
 	token := "e2e-review-" + uuid.New().String()
 	id, email := plantFollowupForReview(t, token, time.Hour)
 
@@ -183,6 +186,7 @@ func TestAccountFollowupReview_Skip(t *testing.T) {
 
 func TestAccountFollowupReview_InvalidInputKeepsEdits(t *testing.T) {
 	t.Parallel()
+	markOutbox(t)
 	token := "e2e-review-" + uuid.New().String()
 	id, email := plantFollowupForReview(t, token, time.Hour)
 
@@ -198,6 +202,7 @@ func TestAccountFollowupReview_InvalidInputKeepsEdits(t *testing.T) {
 
 func TestAccountFollowupReview_BadLinks(t *testing.T) {
 	t.Parallel()
+	markOutbox(t)
 
 	t.Run("unknown token", func(t *testing.T) {
 		t.Parallel()

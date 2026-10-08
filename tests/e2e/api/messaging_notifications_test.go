@@ -23,10 +23,9 @@ import (
 //
 // Recipient is identity.Actor.ID. We act as the seeded admin user (dane → SeedAccountUserID)
 // for both send and read (a valid "notify a specific user" / "note to self" scenario), and
-// use the API-key client (a different actor) to prove recipient scoping. These tests do not
-// call t.Parallel(): they share one recipient feed, so running sequentially keeps unread-count
-// deltas deterministic. Assertions key off a per-test unique title rather than absolute counts,
-// so they are robust to notifications left by prior e2e runs against the same database.
+// use the API-key client (a different actor) to prove recipient scoping. They share one
+// recipient feed, so assertions key off a per-test unique title rather than absolute counts;
+// only tests that assert unread-count deltas or mark the whole feed run serially.
 
 const (
 	notificationsPath           = "/v1/messaging/notifications"
@@ -162,6 +161,7 @@ func notifID(t *testing.T, m map[string]any) string {
 // ── Send + feed shape ──────────────────────────────────────────────
 
 func TestNotifications_SendAppearsInFeedWithCorrectShape(t *testing.T) {
+	t.Parallel()
 	user := notifUserClient(t)
 	title := uniqueTitle(t)
 
@@ -185,6 +185,7 @@ func TestNotifications_SendAppearsInFeedWithCorrectShape(t *testing.T) {
 // ── Unread count + mark seen ───────────────────────────────────────
 
 func TestNotifications_UnreadCountAndMarkSeen(t *testing.T) {
+	// Not parallel: asserts exact unread-count deltas on the seed user's shared feed.
 	user := notifUserClient(t)
 	title := uniqueTitle(t)
 
@@ -228,6 +229,7 @@ func TestNotifications_UnreadCountAndMarkSeen(t *testing.T) {
 // ── Mark read ──────────────────────────────────────────────────────
 
 func TestNotifications_MarkRead(t *testing.T) {
+	t.Parallel()
 	user := notifUserClient(t)
 	title := uniqueTitle(t)
 	sendNotif(t, user, "order.updated", title, nil)
@@ -248,6 +250,7 @@ func TestNotifications_MarkRead(t *testing.T) {
 // ── Dismiss ────────────────────────────────────────────────────────
 
 func TestNotifications_MarkDismissedRemovesFromDefaultFeed(t *testing.T) {
+	t.Parallel()
 	user := notifUserClient(t)
 	title := uniqueTitle(t)
 	sendNotif(t, user, "order.updated", title, nil)
@@ -270,6 +273,7 @@ func TestNotifications_MarkDismissedRemovesFromDefaultFeed(t *testing.T) {
 // ── Mark all seen ──────────────────────────────────────────────────
 
 func TestNotifications_MarkAllSeen(t *testing.T) {
+	// Not parallel: marks every seed-user notification seen and asserts unread is 0.
 	user := notifUserClient(t)
 	titleA := uniqueTitle(t)
 	titleB := uniqueTitle(t)
@@ -295,6 +299,7 @@ func TestNotifications_MarkAllSeen(t *testing.T) {
 // ── Category filter ────────────────────────────────────────────────
 
 func TestNotifications_FilterByCategory(t *testing.T) {
+	t.Parallel()
 	user := notifUserClient(t)
 	orderTitle := uniqueTitle(t)
 	systemTitle := uniqueTitle(t)
@@ -314,6 +319,7 @@ func TestNotifications_FilterByCategory(t *testing.T) {
 // ── Recipient scoping ──────────────────────────────────────────────
 
 func TestNotifications_RecipientScoping(t *testing.T) {
+	t.Parallel()
 	user := notifUserClient(t)
 	title := uniqueTitle(t)
 	sendNotif(t, user, "order.updated", title, nil)
@@ -335,6 +341,7 @@ func TestNotifications_RecipientScoping(t *testing.T) {
 // ── Cursor pagination ──────────────────────────────────────────────
 
 func TestNotifications_CursorPaginationAdvances(t *testing.T) {
+	t.Parallel()
 	user := notifUserClient(t)
 	sendNotif(t, user, "order.updated", uniqueTitle(t), nil)
 	sendNotif(t, user, "order.updated", uniqueTitle(t), nil)
@@ -369,6 +376,7 @@ func TestNotifications_CursorPaginationAdvances(t *testing.T) {
 // ── Send validation ────────────────────────────────────────────────
 
 func TestNotifications_SendValidation(t *testing.T) {
+	t.Parallel()
 	user := notifUserClient(t)
 
 	// Missing title.
@@ -391,6 +399,7 @@ func TestNotifications_SendValidation(t *testing.T) {
 // ── Marking a nonexistent / non-owned notification ─────────────────
 
 func TestNotifications_MarkNonexistentReturns404(t *testing.T) {
+	t.Parallel()
 	user := notifUserClient(t)
 	status, body, err := user.Post(notificationsPath+"/nf_doesnotexist000000000000/actions/seen", nil, newIdempotencyKey())
 	require.NoError(t, err)
@@ -400,6 +409,7 @@ func TestNotifications_MarkNonexistentReturns404(t *testing.T) {
 // ── Response schema conformance ────────────────────────────────────
 
 func TestNotifications_ResponsesConformToSpec(t *testing.T) {
+	t.Parallel()
 	user := notifUserClient(t)
 	title := uniqueTitle(t)
 	sendNotif(t, user, "order.updated", title, map[string]any{"body": "b", "priority": "high"})
@@ -423,6 +433,7 @@ func TestNotifications_ResponsesConformToSpec(t *testing.T) {
 // ── Send to another user (positive cross-user) ─────────────────────
 
 func TestNotifications_SendToAnotherUser(t *testing.T) {
+	t.Parallel()
 	admin := notifUserClient(t) // dane, holds alerts:create
 	title := uniqueTitle(t)
 	sendNotifTo(t, admin, SeedAccountUser2ID, "order.updated", title, nil)
@@ -440,6 +451,7 @@ func TestNotifications_SendToAnotherUser(t *testing.T) {
 // ── Linked notification round-trip ─────────────────────────────────
 
 func TestNotifications_LinkedRoundTrip(t *testing.T) {
+	t.Parallel()
 	user := notifUserClient(t)
 	title := uniqueTitle(t)
 	sendNotif(t, user, "order.updated", title, map[string]any{
@@ -459,6 +471,7 @@ func TestNotifications_LinkedRoundTrip(t *testing.T) {
 // ── Status filter exhaustiveness ───────────────────────────────────
 
 func TestNotifications_StatusFilters(t *testing.T) {
+	t.Parallel()
 	user := notifUserClient(t)
 	unseenTitle := uniqueTitle(t)
 	seenTitle := uniqueTitle(t)
@@ -499,6 +512,7 @@ func mustMark(t *testing.T, c *Client, id, action string) {
 // ── Send idempotency (same Idempotency-Key) ────────────────────────
 
 func TestNotifications_SendIdempotency(t *testing.T) {
+	t.Parallel()
 	user := notifUserClient(t)
 	title := uniqueTitle(t)
 	key := newIdempotencyKey()
@@ -528,6 +542,7 @@ func TestNotifications_SendIdempotency(t *testing.T) {
 // ── Send permission enforcement ────────────────────────────────────
 
 func TestNotifications_SendRequiresPermission(t *testing.T) {
+	t.Parallel()
 	// The customer API key is a relation actor with no alerts permission; it must not
 	// be able to send notifications.
 	customer := apiClient.WithBearerToken(SeedCustomerAPIKey, SeedAccountID)

@@ -44,6 +44,7 @@ func chatFeedHasBody(t *testing.T, reader *Client, body string) bool {
 }
 
 func TestNotificationPreferences_UpsertAndList(t *testing.T) {
+	// Not parallel: rewrites seed user2's global and chat.message preferences, briefly disabling chat bells.
 	user := chatUser2Client(t)
 
 	// Global default (null category).
@@ -92,6 +93,7 @@ func TestNotificationPreferences_UpsertAndList(t *testing.T) {
 }
 
 func TestNotificationPreferences_InvalidDigestRejected(t *testing.T) {
+	t.Parallel()
 	user := chatUser2Client(t)
 	resp, err := user.PutFull(preferencesPath, map[string]any{
 		"in_app_enabled": true,
@@ -102,6 +104,7 @@ func TestNotificationPreferences_InvalidDigestRejected(t *testing.T) {
 }
 
 func TestChatBell_MessageCreatesBellNotification(t *testing.T) {
+	t.Parallel()
 	dane := chatUserClient(t)
 	user2 := chatUser2Client(t)
 
@@ -131,6 +134,7 @@ func TestChatBell_MessageCreatesBellNotification(t *testing.T) {
 }
 
 func TestChatBell_InAppDisabledSuppressesBell(t *testing.T) {
+	// Not parallel: disables seed user2's chat.message in-app bells, which other tests rely on.
 	dane := chatUserClient(t)
 	user2 := chatUser2Client(t)
 
@@ -160,6 +164,7 @@ func TestChatBell_InAppDisabledSuppressesBell(t *testing.T) {
 }
 
 func TestChatBell_MuteSuppressesBellButKeepsUnread(t *testing.T) {
+	// Not parallel: mutes the shared seed dane-user2 DM, suppressing other tests' bells.
 	dane := chatUserClient(t)
 	user2 := chatUser2Client(t)
 

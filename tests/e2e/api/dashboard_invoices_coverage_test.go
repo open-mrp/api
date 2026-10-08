@@ -65,9 +65,9 @@ func dashInvoicesQueuedEmails(t *testing.T, marker string) []map[string]any {
 	rows, err := authDB(t).Query(`
 		SELECT CAST(FROM_BASE64(JSON_UNQUOTE(JSON_EXTRACT(payload, '$.data'))) AS CHAR)
 		FROM message_outbox
-		WHERE routing_key = 'notification.cmd.send_email'
+		WHERE id > ? AND routing_key = 'notification.cmd.send_email'
 		AND CAST(FROM_BASE64(JSON_UNQUOTE(JSON_EXTRACT(payload, '$.data'))) AS CHAR) LIKE ?`,
-		"%"+marker+"%")
+		outboxFloor(t), "%"+marker+"%")
 	require.NoError(t, err)
 	defer rows.Close()
 	var emails []map[string]any
@@ -86,9 +86,9 @@ func dashInvoicesAuditedUpdates(t *testing.T, invoiceID string) int {
 	var n int
 	require.NoError(t, authDB(t).QueryRow(`
 		SELECT COUNT(*) FROM message_outbox
-		WHERE routing_key = 'platform.event.audit_logged'
+		WHERE id > ? AND routing_key = 'platform.event.audit_logged'
 		AND CAST(FROM_BASE64(JSON_UNQUOTE(JSON_EXTRACT(payload, '$.data'))) AS CHAR) LIKE ?`,
-		`%"action":"update","resource_type":"invoice","resource_id":"`+invoiceID+`"%`).Scan(&n))
+		outboxFloor(t), `%"action":"update","resource_type":"invoice","resource_id":"`+invoiceID+`"%`).Scan(&n))
 	return n
 }
 
@@ -287,6 +287,7 @@ func TestDashInvoices_ListTakesTheDashboardsTimestampsAndRefusesBadFilters(t *te
 // A PATCH that names nothing, or names a field with the wrong type, is refused and changes nothing.
 func TestDashInvoices_UpdateRefusesMalformedBodies(t *testing.T) {
 	t.Parallel()
+	markOutbox(t)
 	inv := parityInvoiceFor(t, parityCustomer(t, ""), nil)
 	path := invoicesPath + "/" + inv.invoiceID
 	before := getInvoice(t, inv.invoiceID)
@@ -326,6 +327,7 @@ func TestDashInvoices_UpdateRefusesMalformedBodies(t *testing.T) {
 // made under another key survives the replay. The same key with another body is refused.
 func TestDashInvoices_UpdateReplayReturnsTheFirstResultWithoutReapplying(t *testing.T) {
 	t.Parallel()
+	markOutbox(t)
 	inv := parityInvoiceFor(t, parityCustomer(t, ""), nil)
 	path := invoicesPath + "/" + inv.invoiceID
 	first, second := uniqueName("e2e first note"), uniqueName("e2e second note")
@@ -618,6 +620,7 @@ func TestDashInvoices_AccountPathsLeakNothingAcrossAccounts(t *testing.T) {
 // refused before anything is queued.
 func TestDashInvoices_StatementEmailRefusesBadRecipients(t *testing.T) {
 	t.Parallel()
+	markOutbox(t)
 	customerID := parityCustomer(t, "")
 	path := emailReceivablesPathFor(customerID)
 	post := func(body map[string]any) (int, []byte) {
@@ -646,6 +649,7 @@ func TestDashInvoices_StatementEmailRefusesBadRecipients(t *testing.T) {
 // sends again. The send reaches the email log, attributed to whoever sent it.
 func TestDashInvoices_StatementEmailReplaySendsOnce(t *testing.T) {
 	t.Parallel()
+	markOutbox(t)
 	customerID := parityCustomer(t, "")
 	path := emailReceivablesPathFor(customerID)
 	token := searchToken("e2edashinvsoa")
@@ -694,6 +698,7 @@ func TestDashInvoices_StatementEmailReplaySendsOnce(t *testing.T) {
 // marks it sent; replaying the request answers the same and sends nothing more.
 func TestDashInvoices_EmailInvoiceSendsToItsContactsOnce(t *testing.T) {
 	t.Parallel()
+	markOutbox(t)
 	customerID := parityCustomer(t, "")
 	contactID, contactEmail := dashInvoicesContact(t, customerID)
 	description := uniqueName("e2e emailed invoice line")
@@ -758,6 +763,7 @@ func TestDashInvoices_EmailedInvoiceIsAttributedToItsSender(t *testing.T) {
 // it alone, but nothing is queued.
 func TestDashInvoices_EmailInvoiceWithoutContactsMarksItSentAndSendsNothing(t *testing.T) {
 	t.Parallel()
+	markOutbox(t)
 	description := uniqueName("e2e unaddressed invoice line")
 	inv := parityInvoiceFor(t, parityCustomer(t, ""), nil, dashInvoicesSoldLine(description))
 	assert.Equal(t, "false", jsonField(getInvoice(t, inv.invoiceID), "accepts_invoice_emails"))

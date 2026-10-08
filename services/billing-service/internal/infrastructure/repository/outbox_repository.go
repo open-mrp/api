@@ -108,7 +108,7 @@ func NewOutboxEnqueuerRepo(dbPool *sql.DB, queries *sqlc.Queries) messaging.Outb
 	return &outboxEnqueuerRepoImpl{dbPool: dbPool, queries: queries}
 }
 
-func (r *outboxEnqueuerRepoImpl) AcquireAndLock(ctx context.Context, lockOwner string, limit int, lockDurationSeconds int) ([]*messaging.OutboxMessage, error) {
+func (r *outboxEnqueuerRepoImpl) AcquireAndLock(ctx context.Context, serviceName, lockOwner string, limit int, lockDurationSeconds int) ([]*messaging.OutboxMessage, error) {
 	ctx, span := tracing.StartSpan(ctx, outboxRepoTracer, "repository.outbox.acquire_and_lock")
 	defer span.End()
 
@@ -121,7 +121,10 @@ func (r *outboxEnqueuerRepoImpl) AcquireAndLock(ctx context.Context, lockOwner s
 
 	txQueries := r.queries.WithTx(tx)
 
-	ids, err := txQueries.SelectOutboxMessageIDsForLock(ctx, int32(limit)) // #nosec G115 - small config value
+	ids, err := txQueries.SelectOutboxMessageIDsForLock(ctx, sqlc.SelectOutboxMessageIDsForLockParams{
+		ServiceName: serviceName,
+		Limit:       int32(limit), // #nosec G115 - small config value
+	})
 	if err != nil {
 		span.RecordError(err)
 		return nil, err

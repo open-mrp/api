@@ -14,6 +14,7 @@ import (
 // resource links (link_resource_type/id), and non-participant send rejection.
 
 func TestChat_ReplyToThreadsMessages(t *testing.T) {
+	t.Parallel()
 	user := chatUserClient(t)
 	convID := jsonField(createDM(t, user, SeedAccountUser2ID), "id")
 
@@ -36,6 +37,7 @@ func TestChat_ReplyToThreadsMessages(t *testing.T) {
 }
 
 func TestChat_LinkResourceOnMessage(t *testing.T) {
+	t.Parallel()
 	user := chatUserClient(t)
 	convID := jsonField(createDM(t, user, SeedAccountUser2ID), "id")
 
@@ -55,6 +57,7 @@ func TestChat_LinkResourceOnMessage(t *testing.T) {
 }
 
 func TestChat_NonParticipantCannotSend(t *testing.T) {
+	t.Parallel()
 	user := chatUserClient(t)
 	convID := jsonField(createDM(t, user, SeedAccountUser2ID), "id")
 

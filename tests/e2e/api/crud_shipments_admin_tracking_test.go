@@ -12,7 +12,8 @@ import (
 
 // Coverage for the admin tracking overrides on shipments and shipping cases, plus the carrier
 // cascade a shipment update runs onto its cases. These MUTATE the SHP-SB-001 fixture (they ship it
-// and re-route it), so they restore both the dispatch state and the carrier and never run parallel.
+// and re-route it), so those restore both the dispatch state and the carrier and never run parallel;
+// the rejection tests only read it.
 
 const adminUpdateTrackingAction = "/actions/admin-update-tracking"
 
@@ -97,6 +98,7 @@ func restoreShipmentRouting(t *testing.T, carrierID, serviceLevelID string) {
 // --- item 1: admin shipment tracking override ------------------------------
 
 func TestShipmentsAdmin_TrackingOverrideReroutesAShippedShipment(t *testing.T) {
+	// Not parallel: ships and re-routes SHP-SB-001, which other tests read as packed, then restores it.
 	originalCarrier, originalServiceLevel := dashShipmentsFreightIDs(t, sbShipmentID)
 	defer func() {
 		restoreShipmentSB(t)
@@ -139,6 +141,8 @@ func TestShipmentsAdmin_TrackingOverrideReroutesAShippedShipment(t *testing.T) {
 }
 
 func TestShipmentsAdmin_TrackingOverrideRejectsAnUnshippedShipment(t *testing.T) {
+	t.Parallel()
+
 	require.Nil(t, readShipment(t, sbShipmentID)["shipped_at"], "fixture must start packed")
 
 	status, body, err := apiClient.Post(shipmentsPath+"/"+sbShipmentID+adminUpdateTrackingAction,
@@ -152,6 +156,7 @@ func TestShipmentsAdmin_TrackingOverrideRejectsAnUnshippedShipment(t *testing.T)
 // --- item 2: admin shipping-case tracking override -------------------------
 
 func TestShippingCasesAdmin_TrackingOverrideOnAShippedCase(t *testing.T) {
+	// Not parallel: ships SHP-SB-001, which other tests read as packed, then voids it back.
 	defer restoreShipmentSB(t)
 
 	caseIDs := shipmentCaseIDs(t, sbShipmentID)
@@ -176,6 +181,8 @@ func TestShippingCasesAdmin_TrackingOverrideOnAShippedCase(t *testing.T) {
 }
 
 func TestShippingCasesAdmin_TrackingOverrideRejectsAnUnshippedCase(t *testing.T) {
+	t.Parallel()
+
 	require.Nil(t, readShipment(t, sbShipmentID)["shipped_at"], "fixture must start packed")
 
 	caseIDs := shipmentCaseIDs(t, sbShipmentID)
@@ -192,6 +199,7 @@ func TestShippingCasesAdmin_TrackingOverrideRejectsAnUnshippedCase(t *testing.T)
 // --- item 4: a carrier change cascades to the shipment's cases -------------
 
 func TestShipmentsBehavioral_CarrierChangeCascadesToShippingCases(t *testing.T) {
+	// Not parallel: re-routes SHP-SB-001 and its cases, which other tests read, then restores it.
 	originalCarrier, originalServiceLevel := dashShipmentsFreightIDs(t, sbShipmentID)
 	defer restoreShipmentRouting(t, originalCarrier, originalServiceLevel)
 

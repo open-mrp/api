@@ -152,6 +152,7 @@ func arrayFilterCases() []arrayFilterCase {
 }
 
 func TestArrayFilters_UnionExclusion(t *testing.T) {
+	// Not parallel: compares separate whole-account list snapshots that concurrent tests create and re-status rows in.
 	for _, c := range arrayFilterCases() {
 		c := c
 		t.Run(c.name, func(t *testing.T) {

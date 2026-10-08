@@ -22,10 +22,10 @@ func costBasisReasons(t *testing.T, itemID string) []string {
 	rows, err := authDB(t).Query(`
 		SELECT CAST(FROM_BASE64(JSON_UNQUOTE(JSON_EXTRACT(payload, '$.data'))) AS CHAR)
 		FROM message_outbox
-		WHERE routing_key = ?
+		WHERE id > ? AND routing_key = ?
 		AND CAST(FROM_BASE64(JSON_UNQUOTE(JSON_EXTRACT(payload, '$.data'))) AS CHAR) LIKE ?
 		ORDER BY id`,
-		costBasisChangedKey, "%"+itemID+"%")
+		outboxFloor(t), costBasisChangedKey, "%"+itemID+"%")
 	require.NoError(t, err)
 	defer rows.Close()
 
@@ -104,6 +104,7 @@ func createEditableStep(t *testing.T) editableStep {
 // costs stale until something else happens to touch the item.
 func TestProductionSteps_EditsRestateWhatTheItemCosts(t *testing.T) {
 	t.Parallel()
+	markOutbox(t)
 	s := createEditableStep(t)
 	part := s.fixture.partItemID
 

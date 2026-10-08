@@ -15,6 +15,7 @@ import (
 // an audit shell.
 
 func TestRedaction_LegalHoldBlocksThenAllowsRedaction(t *testing.T) {
+	// Not parallel: holds and redacts the shared seed dane-user2 DM that other tests post to.
 	admin := chatUserClient(t)
 
 	// A DM with some content to redact.
@@ -61,6 +62,7 @@ func TestRedaction_LegalHoldBlocksThenAllowsRedaction(t *testing.T) {
 }
 
 func TestRedaction_RequiresInternalActor(t *testing.T) {
+	t.Parallel()
 	customer := getCustomerPortalClient()
 
 	// Provision a support conversation as the customer.

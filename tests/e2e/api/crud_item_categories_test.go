@@ -370,6 +370,7 @@ func TestItemCategories_UpdateOnlyNotes(t *testing.T) {
 }
 
 func TestItemCategories_UpdateSeededCategoryPreservesType(t *testing.T) {
+	// Not parallel: renames the seeded item category, whose name other tests read.
 	newName := uniqueName("e2e-itcg-seedupd")
 	patchStatus, patchBody, err := apiClient.Patch(itemCategoriesPath+"/"+SeedItemCategoryID, map[string]any{
 		"name": newName,

@@ -72,8 +72,8 @@ type OutboxRepo interface {
 
 // OutboxEnqueuerRepo defines the read/update interface used exclusively by the Enqueuer to process outbox messages. It is kept separate from OutboxRepo because the enqueuer operates outside of business transactions and needs different operations (locking, bulk fetch, status updates).
 type OutboxEnqueuerRepo interface {
-	// AcquireAndLock atomically selects up to `limit` pending messages whose next_run_at has passed and locks them to the given lockOwner for lockDurationSeconds. Returns the locked messages for publishing.
-	AcquireAndLock(ctx context.Context, lockOwner string, limit int, lockDurationSeconds int) ([]*OutboxMessage, error)
+	// AcquireAndLock atomically selects up to `limit` of serviceName's pending messages whose next_run_at has passed and locks them to the given lockOwner for lockDurationSeconds. Returns the locked messages for publishing.
+	AcquireAndLock(ctx context.Context, serviceName, lockOwner string, limit int, lockDurationSeconds int) ([]*OutboxMessage, error)
 
 	// MarkPublished updates the given messages' status to 'published' with a timestamp, preserving the records for audit and debugging purposes. The enqueuer calls this once per batch with every id it published, so the implementation should issue a single set-based UPDATE.
 	MarkPublished(ctx context.Context, ids []int64) error

@@ -660,6 +660,7 @@ func TestDashAccounts_AnotherTenantGets404ForTheTeam(t *testing.T) {
 // A retried invite returns the first response and sends one welcome email.
 func TestDashAccounts_CreateReplaySendsOneWelcomeEmail(t *testing.T) {
 	t.Parallel()
+	markOutbox(t)
 	name := uniqueName("e2e-dash-invite")
 	email := name + "@e2e-test.openmrp.ai"
 	key := newIdempotencyKey()

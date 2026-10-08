@@ -36,9 +36,9 @@ func invoiceAlertsQueued(t *testing.T, invoiceID string) int {
 	var n int
 	require.NoError(t, authDB(t).QueryRow(`
 		SELECT COUNT(*) FROM message_outbox
-		WHERE routing_key = 'notification.cmd.fanout'
+		WHERE id > ? AND routing_key = 'notification.cmd.fanout'
 		AND CAST(FROM_BASE64(JSON_UNQUOTE(JSON_EXTRACT(payload, '$.data'))) AS CHAR) LIKE ?`,
-		"%"+invoiceID+"%").Scan(&n))
+		outboxFloor(t), "%"+invoiceID+"%").Scan(&n))
 	return n
 }
 
@@ -52,6 +52,7 @@ func payInvoice(t *testing.T, customerID, invoiceID, amount string) {
 
 func TestInvoicePaidMark_RecalculationWinsAndTellsWhoSetIt(t *testing.T) {
 	t.Parallel()
+	markOutbox(t)
 	person := notifUserClient(t)
 	customerID := parityCustomer(t, "")
 	inv := parityInvoiceFor(t, customerID, nil)
@@ -73,6 +74,7 @@ func TestInvoicePaidMark_RecalculationWinsAndTellsWhoSetIt(t *testing.T) {
 
 func TestInvoicePaidMark_AnAPIKeysMarkIsOverturnedWithoutAnAlert(t *testing.T) {
 	t.Parallel()
+	markOutbox(t)
 	customerID := parityCustomer(t, "")
 	inv := parityInvoiceFor(t, customerID, nil)
 
@@ -85,6 +87,7 @@ func TestInvoicePaidMark_AnAPIKeysMarkIsOverturnedWithoutAnAlert(t *testing.T) {
 
 func TestInvoicePaidMark_AMarkTheRecalculationAgreesWithStands(t *testing.T) {
 	t.Parallel()
+	markOutbox(t)
 	person := notifUserClient(t)
 	customerID := parityCustomer(t, "")
 	inv := parityInvoiceFor(t, customerID, nil)

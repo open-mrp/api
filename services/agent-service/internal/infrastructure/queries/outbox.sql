@@ -9,6 +9,7 @@ RETURNING id;
 WITH rows AS (
     SELECT id FROM message_outbox
     WHERE status = 'pending'
+      AND message_outbox.service_name = $4
       AND next_run_at <= now()
       AND (locked_at IS NULL OR lock_expires_at < now())
       AND attempts < max_attempts

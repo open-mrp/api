@@ -13,7 +13,7 @@ import (
 
 // These tests cover the broadcast-announcement path, polymorphic sender attribution, free-text
 // search / sender filtering, and the cross-account unread summary. Like the notification tests
-// they avoid t.Parallel() and key off per-test unique titles for DB-state independence.
+// they key off per-test unique titles for DB-state independence.
 
 const (
 	announcementsPath        = "/v1/messaging/announcements"
@@ -70,6 +70,7 @@ func findAnnouncement(t *testing.T, reader *Client, title string) map[string]any
 }
 
 func TestAnnouncements_BroadcastCreatesAnnouncement(t *testing.T) {
+	t.Parallel()
 	user := notifUserClient(t)
 	title := uniqueName("e2e-announce")
 
@@ -92,6 +93,7 @@ func TestAnnouncements_BroadcastCreatesAnnouncement(t *testing.T) {
 }
 
 func TestAnnouncements_MarkSeenReadDismiss(t *testing.T) {
+	t.Parallel()
 	user := notifUserClient(t)
 	title := uniqueName("e2e-announce-mark")
 
@@ -130,6 +132,7 @@ func TestAnnouncements_MarkSeenReadDismiss(t *testing.T) {
 }
 
 func TestAnnouncements_BroadcastReachesAllUsersInAccount(t *testing.T) {
+	t.Parallel()
 	sender := notifUserClient(t)
 	title := uniqueName("e2e-announce-broadcast-all")
 	broadcastAnnouncement(t, sender, title)
@@ -142,6 +145,7 @@ func TestAnnouncements_BroadcastReachesAllUsersInAccount(t *testing.T) {
 }
 
 func TestAnnouncements_RetrieveByIDAndNotFound(t *testing.T) {
+	t.Parallel()
 	user := notifUserClient(t)
 	title := uniqueName("e2e-announce-get")
 	broadcastAnnouncement(t, user, title)
@@ -158,6 +162,7 @@ func TestAnnouncements_RetrieveByIDAndNotFound(t *testing.T) {
 }
 
 func TestAnnouncements_MarkNonexistentReturns404(t *testing.T) {
+	t.Parallel()
 	user := notifUserClient(t)
 	status, body, err := user.Post(announcementsPath+"/an_doesnotexist0000000000/actions/seen", nil, newIdempotencyKey())
 	require.NoError(t, err)
@@ -165,6 +170,7 @@ func TestAnnouncements_MarkNonexistentReturns404(t *testing.T) {
 }
 
 func TestAnnouncements_CursorPaginationAdvances(t *testing.T) {
+	t.Parallel()
 	user := notifUserClient(t)
 	broadcastAnnouncement(t, user, uniqueName("e2e-announce-page"))
 	broadcastAnnouncement(t, user, uniqueName("e2e-announce-page"))
@@ -194,6 +200,7 @@ func TestAnnouncements_CursorPaginationAdvances(t *testing.T) {
 }
 
 func TestAnnouncements_CountedInUnreadTotalNotSubcount(t *testing.T) {
+	// Not parallel: asserts exact unread totals for the seed user, which parallel sends change.
 	user := notifUserClient(t)
 	title := uniqueName("e2e-announce-unread")
 
@@ -228,6 +235,7 @@ func TestAnnouncements_CountedInUnreadTotalNotSubcount(t *testing.T) {
 // ── Target validation ──────────────────────────────────────────────
 
 func TestNotifications_SendTargetValidation(t *testing.T) {
+	t.Parallel()
 	user := notifUserClient(t)
 
 	// Unsupported target type.
@@ -252,6 +260,7 @@ func TestNotifications_SendTargetValidation(t *testing.T) {
 // ── Sender attribution + filters ───────────────────────────────────
 
 func TestNotifications_SenderDerivedFromIdentity(t *testing.T) {
+	t.Parallel()
 	user := notifUserClient(t)
 	title := uniqueName("e2e-sender")
 	sendNotif(t, user, "order.updated", title, nil)
@@ -266,6 +275,7 @@ func TestNotifications_SenderDerivedFromIdentity(t *testing.T) {
 }
 
 func TestNotifications_FilterBySenderType(t *testing.T) {
+	t.Parallel()
 	user := notifUserClient(t)
 	title := uniqueName("e2e-senderfilter")
 	sendNotif(t, user, "order.updated", title, nil)
@@ -280,6 +290,7 @@ func TestNotifications_FilterBySenderType(t *testing.T) {
 }
 
 func TestNotifications_FilterBySenderID(t *testing.T) {
+	t.Parallel()
 	user := notifUserClient(t)
 	title := uniqueName("e2e-senderidfilter")
 	sendNotif(t, user, "order.updated", title, nil)
@@ -293,6 +304,7 @@ func TestNotifications_FilterBySenderID(t *testing.T) {
 }
 
 func TestNotifications_SearchByTitle(t *testing.T) {
+	t.Parallel()
 	user := notifUserClient(t)
 	needle := uniqueName("zzqsearch")
 	title := "Quarterly report " + needle
@@ -308,6 +320,7 @@ func TestNotifications_SearchByTitle(t *testing.T) {
 // ── Cross-account unread summary ───────────────────────────────────
 
 func TestNotifications_UnreadSummaryShape(t *testing.T) {
+	t.Parallel()
 	user := notifUserClient(t)
 	title := uniqueName("e2e-summary")
 	sendNotif(t, user, "order.updated", title, nil)

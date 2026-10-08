@@ -330,6 +330,7 @@ func (q *Queries) SelectExpiredOutboxLockIDs(ctx context.Context, limit int32) (
 const selectOutboxMessageIDsForLock = `-- name: SelectOutboxMessageIDsForLock :many
 SELECT id FROM message_outbox
 WHERE status = 'pending'
+  AND service_name = ?
   AND next_run_at <= NOW(3)
   AND (locked_at IS NULL OR lock_expires_at < NOW(3))
   AND attempts < max_attempts
@@ -337,8 +338,14 @@ ORDER BY next_run_at ASC, id ASC
 LIMIT ?
 `
 
-func (q *Queries) SelectOutboxMessageIDsForLock(ctx context.Context, limit int32) ([]int64, error) {
-	rows, err := q.db.QueryContext(ctx, selectOutboxMessageIDsForLock, limit)
+type SelectOutboxMessageIDsForLockParams struct {
+	ServiceName string
+	Limit       int32
+}
+
+// Scoped to the calling service so the services sharing this table do not race each other for the same rows.
+func (q *Queries) SelectOutboxMessageIDsForLock(ctx context.Context, arg SelectOutboxMessageIDsForLockParams) ([]int64, error) {
+	rows, err := q.db.QueryContext(ctx, selectOutboxMessageIDsForLock, arg.ServiceName, arg.Limit)
 	if err != nil {
 		return nil, err
 	}

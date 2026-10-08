@@ -16,6 +16,7 @@ import (
 // Fields are discovered from the OpenAPI spec. Only fields with a known seed
 // value are tested; the rest are covered by per-resource CRUD tests.
 func TestUpdateEndpoints_NullableClearFields(t *testing.T) {
+	// Not parallel: sets, clears and restores fields on seeded resources other tests read.
 	for _, ep := range updateEndpoints {
 		if len(ep.NullableClearFields) == 0 {
 			continue

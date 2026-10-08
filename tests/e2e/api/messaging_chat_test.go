@@ -87,6 +87,7 @@ func sendMessage(t *testing.T, c *Client, conversationID, body, clientMessageID 
 }
 
 func TestChat_CreateDMIsDeduped(t *testing.T) {
+	t.Parallel()
 	user := chatUserClient(t)
 	dm := createDM(t, user, SeedAccountUser2ID)
 	assert.Equal(t, "conversation", jsonField(dm, "object"))
@@ -105,6 +106,7 @@ func TestChat_CreateDMIsDeduped(t *testing.T) {
 }
 
 func TestChat_SendAndListMessages(t *testing.T) {
+	t.Parallel()
 	user := chatUserClient(t)
 	dm := createDM(t, user, SeedAccountUser2ID)
 	convID := jsonField(dm, "id")
@@ -131,6 +133,7 @@ func TestChat_SendAndListMessages(t *testing.T) {
 }
 
 func TestChat_SendIsIdempotentOnClientMessageID(t *testing.T) {
+	t.Parallel()
 	user := chatUserClient(t)
 	convID := jsonField(createDM(t, user, SeedAccountUser2ID), "id")
 
@@ -144,6 +147,7 @@ func TestChat_SendIsIdempotentOnClientMessageID(t *testing.T) {
 }
 
 func TestChat_SequencesAreMonotonic(t *testing.T) {
+	t.Parallel()
 	user := chatUserClient(t)
 	convID := jsonField(createDM(t, user, SeedAccountUser2ID), "id")
 
@@ -156,6 +160,7 @@ func TestChat_SequencesAreMonotonic(t *testing.T) {
 }
 
 func TestChat_UnreadAndReadCursor(t *testing.T) {
+	// Not parallel: asserts exact unread counts on the shared dane-user2 DM, which parallel sends change.
 	user := chatUserClient(t)
 	other := chatUser2Client(t)
 	dm := createDM(t, user, SeedAccountUser2ID)
@@ -199,6 +204,7 @@ func TestChat_UnreadAndReadCursor(t *testing.T) {
 }
 
 func TestChat_NonParticipantCannotRead(t *testing.T) {
+	t.Parallel()
 	user := chatUserClient(t)
 	convID := jsonField(createDM(t, user, SeedAccountUser2ID), "id")
 
@@ -211,6 +217,7 @@ func TestChat_NonParticipantCannotRead(t *testing.T) {
 }
 
 func TestChat_SendValidation(t *testing.T) {
+	t.Parallel()
 	user := chatUserClient(t)
 	convID := jsonField(createDM(t, user, SeedAccountUser2ID), "id")
 

@@ -121,6 +121,7 @@ func deleteOrderProductionRun(t *testing.T, orderID string) {
 }
 
 func TestProductionRun_ExplodesBOMToLeafMaterialsWithWaste(t *testing.T) {
+	// Not parallel: the run mints batches and reserves seeded raw materials, solver inputs other tests' plans read.
 	user := productionRunUser(t)
 	customerID := setupOrderCustomer(t)
 	orderID := createProductionOrder(t, customerID, largeBeigeProductID, "1", SeedUnitID) // 1 pair
@@ -154,6 +155,7 @@ func TestProductionRun_ExplodesBOMToLeafMaterialsWithWaste(t *testing.T) {
 }
 
 func TestProductionRun_NormalizesNonBaseOrderUnit(t *testing.T) {
+	// Not parallel: the run mints batches and reserves seeded raw materials, solver inputs other tests' plans read.
 	user := productionRunUser(t)
 	customerID := setupOrderCustomer(t)
 	// 1 dozen = 6 pair. Demand must scale ×6, not ×1 (raw math treats dozen as pair).
@@ -167,6 +169,7 @@ func TestProductionRun_NormalizesNonBaseOrderUnit(t *testing.T) {
 }
 
 func TestProductionRun_AggregatesReservationsPerMaterial(t *testing.T) {
+	// Not parallel: the run mints batches and reserves seeded raw materials, solver inputs other tests' plans read.
 	user := productionRunUser(t)
 	customerID := setupOrderCustomer(t)
 
@@ -193,6 +196,7 @@ func TestProductionRun_AggregatesReservationsPerMaterial(t *testing.T) {
 }
 
 func TestProductionRun_NoFlowFinishedGoodReservesNothing(t *testing.T) {
+	// Not parallel: the run mints batches and reserves seeded raw materials, solver inputs other tests' plans read.
 	user := productionRunUser(t)
 	customerID := setupOrderCustomer(t)
 	orderID := createProductionOrder(t, customerID, noFlowProductID, "5", SeedUnitID)

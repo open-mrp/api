@@ -56,6 +56,7 @@ func participantMuted(t *testing.T, conv map[string]any, accountUserID string) b
 }
 
 func TestChatGroup_CreateWithRoles(t *testing.T) {
+	t.Parallel()
 	owner := chatUserClient(t)
 	conv := createGroupConversation(t, owner, uniqueName("team"), SeedAccountUser2ID)
 	assert.Equal(t, "group", jsonField(conv, "type"))
@@ -67,6 +68,7 @@ func TestChatGroup_CreateWithRoles(t *testing.T) {
 }
 
 func TestChatGroup_RemoveAndReaddParticipant(t *testing.T) {
+	t.Parallel()
 	owner := chatUserClient(t)
 	conv := createGroupConversation(t, owner, uniqueName("team"), SeedAccountUser2ID)
 	convID := jsonField(conv, "id")
@@ -94,6 +96,7 @@ func TestChatGroup_RemoveAndReaddParticipant(t *testing.T) {
 }
 
 func TestChatGroup_MemberCannotManage(t *testing.T) {
+	t.Parallel()
 	owner := chatUserClient(t)
 	conv := createGroupConversation(t, owner, uniqueName("team"), SeedAccountUser2ID)
 	convID := jsonField(conv, "id")
@@ -111,6 +114,7 @@ func TestChatGroup_MemberCannotManage(t *testing.T) {
 }
 
 func TestChatGroup_UpdateRoleAndRename(t *testing.T) {
+	t.Parallel()
 	owner := chatUserClient(t)
 	conv := createGroupConversation(t, owner, uniqueName("team"), SeedAccountUser2ID)
 	convID := jsonField(conv, "id")
@@ -133,6 +137,7 @@ func TestChatGroup_UpdateRoleAndRename(t *testing.T) {
 }
 
 func TestChatGroup_LeaveHidesConversation(t *testing.T) {
+	t.Parallel()
 	owner := chatUserClient(t)
 	conv := createGroupConversation(t, owner, uniqueName("team"), SeedAccountUser2ID)
 	convID := jsonField(conv, "id")
@@ -147,6 +152,7 @@ func TestChatGroup_LeaveHidesConversation(t *testing.T) {
 }
 
 func TestChatGroup_MuteUnmute(t *testing.T) {
+	t.Parallel()
 	owner := chatUserClient(t)
 	convID := jsonField(createGroupConversation(t, owner, uniqueName("team"), SeedAccountUser2ID), "id")
 
@@ -162,6 +168,7 @@ func TestChatGroup_MuteUnmute(t *testing.T) {
 }
 
 func TestChatGroup_DMCannotBeManaged(t *testing.T) {
+	t.Parallel()
 	user := chatUserClient(t)
 	convID := jsonField(createDM(t, user, SeedAccountUser2ID), "id")
 
@@ -176,6 +183,7 @@ func TestChatGroup_DMCannotBeManaged(t *testing.T) {
 }
 
 func TestChatGroup_BlockPreventsDM(t *testing.T) {
+	// Not parallel: blocks user2, breaking the shared dane-user2 DM other tests use.
 	user := chatUserClient(t) // dane
 
 	// dane blocks user2. Register the unblock cleanup first so a failed assertion still restores the

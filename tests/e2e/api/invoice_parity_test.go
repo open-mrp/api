@@ -743,6 +743,7 @@ func TestInvoiceParity_CustomerReceivablesPageAndCutOff(t *testing.T) {
 // dated by when their funds arrived, and prints numbers as the dashboard pads them.
 func TestInvoiceParity_StatementOfAccountEmail(t *testing.T) {
 	t.Parallel()
+	markOutbox(t)
 	for _, stranger := range []string{SeedTenantBAccountID, "ac_01nosuchaccount0000"} {
 		status, body, err := apiClient.Post(emailReceivablesPathFor(stranger), map[string]any{"recipient_emails": []string{"ap@example.com"}}, newIdempotencyKey())
 		require.NoError(t, err)

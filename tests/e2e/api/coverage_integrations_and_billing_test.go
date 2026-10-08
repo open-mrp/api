@@ -10,7 +10,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-// Endpoints that talk to somebody else — Stripe, Shippo, HubSpot, an EDI partner.
+// Endpoints that talk to somebody else — Stripe, Shippo, HubSpot.
 //
 // These run against the stack's stub clients rather than the real services, so what is under
 // test is our own routing, scoping, and error handling: which events we act on, whose records
@@ -26,6 +26,7 @@ const (
 // ──────────────────────────────────────────────
 
 func TestBilling_EnsureCustomerIsIdempotent(t *testing.T) {
+	// Not parallel: ensures the seed account's Stripe customer, which parallel billing tests may rely on existing.
 	// Sequential: the second call must observe the first, which is the whole point.
 
 	status, body, err := apiClient.PutRaw(billingPath+"/accounts", nil, nil)
@@ -363,20 +364,6 @@ func TestHubspotSync_CancelRejectsAnotherTenantsJob(t *testing.T) {
 	require.NoError(t, err)
 	require.Less(t, status, 500, "must not 5xx: %s", string(body))
 	assert.Equal(t, 404, status, "another tenant's sync job must not be reachable: %s", string(body))
-}
-
-// ──────────────────────────────────────────────
-// EDI
-// ──────────────────────────────────────────────
-
-func TestEdi_PullOrders(t *testing.T) {
-	t.Parallel()
-
-	status, body, err := apiClient.PutRaw("/v1/operations/edi/actions/pull-orders", nil, nil)
-	require.NoError(t, err)
-	require.Less(t, status, 500, "must not 5xx: %s", string(body))
-	requireStatus(t, 200, status, body)
-	assert.NotEmpty(t, jsonField(parseJSON(body), "message"), "the outcome must be reported: %s", string(body))
 }
 
 // ──────────────────────────────────────────────

@@ -520,6 +520,39 @@ func (r *rabbitMQ) untilClosed(parent context.Context) (context.Context, context
 
 // PublishMessage serializes an AmqpMessage to JSON and publishes it to the given exchange with the specified routing key. If the message has no MessageID, one is auto-generated using the shared id package (msg_ prefix, 22 chars). The publish is traced via tracing.TracedPublisher and uses publishWithReconnect to transparently recover from connection failures.
 func (r *rabbitMQ) PublishMessage(ctx context.Context, exchange, routingKey string, message contracts.AmqpMessage) error {
+	msg, err := newPublishing(message)
+	if err != nil {
+		return err
+	}
+	return tracing.TracedPublisher(ctx, exchange, routingKey, msg, r.publishWithReconnect)
+}
+
+// PublishMessages sends every message before waiting on any confirm, so a batch costs about one broker round trip rather than one per message. A channel that dies mid-batch resolves the confirms still outstanding on it as un-acked, so those messages report errors and are retried like any failed publish.
+func (r *rabbitMQ) PublishMessages(ctx context.Context, messages []OutboundMessage) []error {
+	errs := make([]error, len(messages))
+	confirmations := make([]*amqp.DeferredConfirmation, len(messages))
+	for i, m := range messages {
+		msg, err := newPublishing(m.Message)
+		if err != nil {
+			errs[i] = err
+			continue
+		}
+		errs[i] = tracing.TracedPublisher(ctx, m.Exchange, m.RoutingKey, msg, func(ctx context.Context, exchange, routingKey string, msg amqp.Publishing) error {
+			var err error
+			confirmations[i], err = r.sendWithReconnect(ctx, exchange, routingKey, msg)
+			return err
+		})
+	}
+	for i, confirmation := range confirmations {
+		if errs[i] == nil {
+			errs[i] = awaitConfirm(ctx, confirmation, messages[i].Exchange, messages[i].RoutingKey)
+		}
+	}
+	return errs
+}
+
+// newPublishing serializes message into a persistent AMQP publishing, generating a MessageID (msg_ prefix, 22 chars) when it has none.
+func newPublishing(message contracts.AmqpMessage) (amqp.Publishing, error) {
 	if message.MessageID == "" {
 		length := id.IDLength22
 		msgID, _ := id.GenID(id.MessageIDPrefix, &length)
@@ -528,34 +561,42 @@ func (r *rabbitMQ) PublishMessage(ctx context.Context, exchange, routingKey stri
 
 	jsonMsg, err := json.Marshal(message)
 	if err != nil {
-		return fmt.Errorf("failed to marshal message: %v", err)
+		return amqp.Publishing{}, fmt.Errorf("failed to marshal message: %v", err)
 	}
 
-	msg := amqp.Publishing{
+	return amqp.Publishing{
 		MessageId:    message.MessageID,
 		DeliveryMode: amqp.Persistent,
 		ContentType:  "application/json",
 		Timestamp:    time.Now(),
 		Body:         jsonMsg,
-	}
-
-	return tracing.TracedPublisher(ctx, exchange, routingKey, msg, r.publishWithReconnect)
+	}, nil
 }
 
 // publish sends a single AMQP publishing to the given exchange and routing key and blocks until the broker confirms it. This is the low-level publish that assumes the channel is already open. It is called through publishFunc, which is indirected for testability.
 //
 // The wait is what makes the transactional outbox honest: the caller may only mark a message published once the broker has taken responsibility for it. An unconfirmed publish is reported as an error so the outbox marks the row failed and a later pass republishes it — consumers deduplicate via the inbox, so the retry costs nothing.
 func (r *rabbitMQ) publish(ctx context.Context, exchange, routingKey string, msg amqp.Publishing) error {
-	confirmation, err := r.Channel.PublishWithDeferredConfirmWithContext(ctx,
+	confirmation, err := r.send(ctx, exchange, routingKey, msg)
+	if err != nil {
+		return err
+	}
+	return awaitConfirm(ctx, confirmation, exchange, routingKey)
+}
+
+// send hands one publishing to the open channel and returns the confirmation to wait on, without waiting.
+func (r *rabbitMQ) send(ctx context.Context, exchange, routingKey string, msg amqp.Publishing) (*amqp.DeferredConfirmation, error) {
+	return r.Channel.PublishWithDeferredConfirmWithContext(ctx,
 		exchange,   // exchange
 		routingKey, // routing key
 		false,      // mandatory
 		false,      // immediate
 		msg,
 	)
-	if err != nil {
-		return err
-	}
+}
+
+// awaitConfirm blocks until the broker acks or nacks a send.
+func awaitConfirm(ctx context.Context, confirmation *amqp.DeferredConfirmation, exchange, routingKey string) error {
 	if confirmation == nil {
 		// Only happens on a channel that never had Confirm() applied. connect always applies it, so reaching here means the channel came from somewhere else and the delivery guarantee does not hold.
 		return fmt.Errorf("publish to exchange %q: channel is not in confirm mode", exchange)
@@ -571,6 +612,22 @@ func (r *rabbitMQ) publish(ctx context.Context, exchange, routingKey string, msg
 	}
 
 	return nil
+}
+
+// sendWithReconnect is publishWithReconnect for a send that does not wait for its confirm.
+func (r *rabbitMQ) sendWithReconnect(ctx context.Context, exchange, routingKey string, msg amqp.Publishing) (*amqp.DeferredConfirmation, error) {
+	if err := r.ensureChannel(ctx); err != nil {
+		return nil, err
+	}
+
+	confirmation, err := r.send(ctx, exchange, routingKey, msg)
+	if err != nil && shouldReconnect(err) {
+		if recErr := r.reconnectFunc(ctx); recErr != nil {
+			return nil, fmt.Errorf("reconnect after publish failure: %w", recErr)
+		}
+		return r.send(ctx, exchange, routingKey, msg)
+	}
+	return confirmation, err
 }
 
 // publishWithReconnect is a resilient publish wrapper. It first ensures the channel is open (reconnecting if needed), then attempts the publish. If the publish fails with a recoverable error (closed connection, channel error, or connection forced), it reconnects once and retries. Non-recoverable errors are returned immediately.

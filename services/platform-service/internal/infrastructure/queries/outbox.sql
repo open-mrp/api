@@ -4,9 +4,11 @@ INSERT INTO message_outbox (
     headers, payload, status, max_attempts, next_run_at, request_id, parent_message_id
 ) VALUES (?, ?, ?, ?, ?, ?, ?, 'pending', ?, NOW(3), ?, ?);
 
+-- Scoped to the calling service so the services sharing this table do not race each other for the same rows.
 -- name: SelectOutboxMessageIDsForLock :many
 SELECT id FROM message_outbox
 WHERE status = 'pending'
+  AND service_name = sqlc.arg('service_name')
   AND next_run_at <= NOW(3)
   AND (locked_at IS NULL OR lock_expires_at < NOW(3))
   AND attempts < max_attempts

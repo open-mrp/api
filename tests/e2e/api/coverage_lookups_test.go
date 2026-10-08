@@ -351,7 +351,3 @@ func TestSystemProperties_EveryCounterTypeAnswers(t *testing.T) {
 		})
 	}
 }
-
-// ──────────────────────────────────────────────
-// EDI
-// ──────────────────────────────────────────────

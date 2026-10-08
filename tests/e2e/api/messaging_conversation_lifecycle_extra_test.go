@@ -14,6 +14,7 @@ import (
 // invalid-input handling on mute, redact, and legal-hold.
 
 func TestChat_MuteWithExpiry(t *testing.T) {
+	t.Parallel()
 	owner := chatUserClient(t)
 	convID := jsonField(createGroupConversation(t, owner, uniqueName("tmute"), SeedAccountUser2ID), "id")
 
@@ -33,6 +34,7 @@ func TestChat_MuteWithExpiry(t *testing.T) {
 }
 
 func TestChat_MuteUnknownConversation(t *testing.T) {
+	t.Parallel()
 	user := chatUserClient(t)
 	status, body, err := user.Post(conversationsPath+"/cv_doesnotexist0000000000/actions/mute", map[string]any{}, newIdempotencyKey())
 	require.NoError(t, err)
@@ -40,6 +42,7 @@ func TestChat_MuteUnknownConversation(t *testing.T) {
 }
 
 func TestChat_RedactUnknownConversation(t *testing.T) {
+	t.Parallel()
 	user := chatUserClient(t)
 	status, body, err := user.Post(conversationsPath+"/cv_doesnotexist0000000000/redact", map[string]any{}, newIdempotencyKey())
 	require.NoError(t, err)
@@ -47,6 +50,7 @@ func TestChat_RedactUnknownConversation(t *testing.T) {
 }
 
 func TestChat_LegalHoldUnknownConversation(t *testing.T) {
+	t.Parallel()
 	user := chatUserClient(t)
 	status, body, err := user.Post(conversationsPath+"/cv_doesnotexist0000000000/actions/set-legal-hold",
 		map[string]any{"legal_hold": "held"}, newIdempotencyKey())
@@ -55,6 +59,7 @@ func TestChat_LegalHoldUnknownConversation(t *testing.T) {
 }
 
 func TestChat_LegalHoldInvalidStatusRejected(t *testing.T) {
+	t.Parallel()
 	owner := chatUserClient(t)
 	convID := jsonField(createGroupConversation(t, owner, uniqueName("lh"), SeedAccountUser2ID), "id")
 

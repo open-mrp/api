@@ -30,6 +30,7 @@ func clearDefaultSupportRoute(t *testing.T, c *Client) {
 }
 
 func TestSupportRoute_SetGetClear(t *testing.T) {
+	// Not parallel: sets and clears the account-default support route.
 	owner := chatUserClient(t)
 	t.Cleanup(func() { clearDefaultSupportRoute(t, owner) })
 
@@ -65,6 +66,7 @@ func TestSupportRoute_SetGetClear(t *testing.T) {
 }
 
 func TestSupportRoute_RejectsNonGroupTarget(t *testing.T) {
+	// Not parallel: cleanup clears the account-default support route.
 	owner := chatUserClient(t)
 	t.Cleanup(func() { clearDefaultSupportRoute(t, owner) })
 
@@ -78,6 +80,7 @@ func TestSupportRoute_RejectsNonGroupTarget(t *testing.T) {
 }
 
 func TestSupportRoute_RejectsUnknownConversation(t *testing.T) {
+	// Not parallel: cleanup clears the account-default support route.
 	owner := chatUserClient(t)
 	t.Cleanup(func() { clearDefaultSupportRoute(t, owner) })
 
@@ -90,6 +93,7 @@ func TestSupportRoute_RejectsUnknownConversation(t *testing.T) {
 }
 
 func TestSupportRoute_RelationOverride(t *testing.T) {
+	// Not parallel: sets the seeded customer's support route and clears the account default.
 	owner := chatUserClient(t)
 	t.Cleanup(func() {
 		clearDefaultSupportRoute(t, owner)

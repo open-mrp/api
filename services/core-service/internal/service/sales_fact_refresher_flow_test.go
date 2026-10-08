@@ -467,7 +467,9 @@ func TestABuyerSweepRebuildsStaleBuyersAndDropsThoseWithoutFacts(t *testing.T) {
 	repo.EXPECT().GetBuyerSummarySync(gomock.Any()).Return(&domain.SalesBuyerSummarySync{FactsSince: &since}, nil)
 	repo.EXPECT().GetSync(gomock.Any()).Return(&domain.SalesFactSync{LastCompletedAt: &filled}, nil)
 
-	key := func(account, buyer string) domain.SalesBuyerKey { return domain.SalesBuyerKey{AccountID: account, BuyerAccountID: buyer} }
+	key := func(account, buyer string) domain.SalesBuyerKey {
+		return domain.SalesBuyerKey{AccountID: account, BuyerAccountID: buyer}
+	}
 	page := []domain.SalesBuyerKey{key("ac_1", "ac_a"), key("ac_1", "ac_b"), key("ac_1", "ac_c"), key("ac_2", "ac_d")}
 	gomock.InOrder(
 		repo.EXPECT().NextBuyers(gomock.Any(), domain.SalesBuyerKey{}, int32(salesBuyerSweepBatch)).Return(page, nil),

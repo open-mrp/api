@@ -1,4 +1,4 @@
-// Package vercel implements the portal domain provider on top of the Vercel Domains API. Domains are attached to the single Vercel project that serves the dashboard frontend; Vercel issues and renews TLS certificates automatically once the customer's DNS points at it.
+// Package vercel implements the portal domain provider on top of the Vercel Domains API. Domains are attached to the single Vercel project that serves the customer portal; Vercel issues and renews TLS certificates automatically once the customer's DNS points at it.
 package vercel
 
 import (

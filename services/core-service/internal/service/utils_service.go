@@ -28,7 +28,7 @@ type utilsSvcImpl struct {
 	mediatorFactory       domain.MediatorFactory
 	txManager             TransactionManager
 	notificationPublisher domain.NotificationPublisher
-	frontendURL           string
+	portalURL             string
 	branding              BrandingAssets
 }
 
@@ -46,8 +46,8 @@ type UtilsSvcConfig struct {
 	// NotificationPublisher (required) publishes notification messages to the outbox.
 	NotificationPublisher domain.NotificationPublisher
 
-	// FrontendURL (optional; default: "") is the dashboard base URL used in links. It is not validated at construction.
-	FrontendURL string
+	// PortalURL (optional; default: "") is the customer portal base URL used in links when the merchant has no verified custom domain. It is not validated at construction.
+	PortalURL string
 
 	// Branding (optional) resolves the merchant logo for the acknowledgement email and PDF letterhead. Omitted, both fall back to a text-only letterhead.
 	Branding BrandingAssets
@@ -80,7 +80,7 @@ func NewUtilsSvc(config *UtilsSvcConfig) domain.UtilsSvc {
 		mediatorFactory:       config.MediatorFactory,
 		txManager:             config.TxManager,
 		notificationPublisher: config.NotificationPublisher,
-		frontendURL:           config.FrontendURL,
+		portalURL:             config.PortalURL,
 		branding:              config.Branding,
 	}
 }
@@ -96,7 +96,7 @@ func (s *utilsSvcImpl) withTx(ctx context.Context, fn func(context.Context, *uti
 			mediatorFactory:       s.mediatorFactory,
 			txManager:             s.txManager,
 			notificationPublisher: s.notificationPublisher,
-			frontendURL:           s.frontendURL,
+			portalURL:             s.portalURL,
 			branding:              s.branding,
 		}
 		return fn(txCtx, txSvc)
@@ -339,7 +339,7 @@ func (s *utilsSvcImpl) emailSalesOrder(ctx context.Context, span trace.Span, sal
 	}
 
 	// Built by the same assembler the automatic send-on-issue uses, so a manual resend delivers an identical acknowledgement (line items, letterhead, PDF attachment).
-	emailData, apiErr := buildOrderAcknowledgementEmail(ctx, s.repos, s.branding, s.frontendURL, accountID, salesOrderID)
+	emailData, apiErr := buildOrderAcknowledgementEmail(ctx, s.repos, s.branding, s.portalURL, accountID, salesOrderID)
 	if apiErr != nil {
 		return meds.Idempotency.CacheErrorResponse(ctx, idempotencyKey.TypeID, tracing.Trace(span, apiErr))
 	}

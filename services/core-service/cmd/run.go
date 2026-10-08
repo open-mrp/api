@@ -252,6 +252,7 @@ func Run(
 		UserPhotosBucket:      cfg.UserPhotosBucket,
 		Branding:              brandingAssets,
 		FrontendURL:           cfg.FrontendURL,
+		PortalURL:             cfg.PortalURL,
 		PlatformMode:          cfg.PlatformMode,
 	})
 	accountPriceSvc := service.NewAccountPriceSvc(&service.AccountPriceSvcConfig{
@@ -533,7 +534,7 @@ func Run(
 		SalesOrderPublisher:   event.NewOutboxSalesOrderEventPublisher(),
 		ShippoFactory:         shippoFactory,
 		EncryptionKey:         integrationEncryptionKey,
-		FrontendURL:           cfg.FrontendURL,
+		PortalURL:             cfg.PortalURL,
 		Branding:              brandingAssets,
 	})
 
@@ -672,7 +673,7 @@ func Run(
 		MediatorFactory:       mediatorFactory,
 		TxManager:             txManager,
 		NotificationPublisher: notificationPublisher,
-		FrontendURL:           cfg.FrontendURL,
+		PortalURL:             cfg.PortalURL,
 		Branding:              brandingAssets,
 	})
 
@@ -729,7 +730,7 @@ func Run(
 		BillingPub:           billingPublisher,
 		S3Client:             s3Store,
 		ShippingLabelsBucket: cfg.ShippingLabelsBucket,
-		FrontendURL:          cfg.FrontendURL,
+		PortalURL:            cfg.PortalURL,
 		Branding:             brandingAssets,
 		DispatchLeases:       repository.NewLeaseRepo(queries),
 	})

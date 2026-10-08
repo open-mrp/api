@@ -192,7 +192,7 @@ func (s *utilsSvcImpl) SendSalesOrderAcknowledgement(ctx context.Context, params
 
 	// Built by the same assembler the automatic send-on-issue uses, so this delivers an identical
 	// acknowledgement (line items, letterhead, PDF attachment).
-	emailData, apiErr := buildOrderAcknowledgementEmail(ctx, s.repos, s.branding, s.frontendURL, params.AccountID, params.SalesOrderID)
+	emailData, apiErr := buildOrderAcknowledgementEmail(ctx, s.repos, s.branding, s.portalURL, params.AccountID, params.SalesOrderID)
 	if apiErr != nil {
 		return tracing.Trace(span, apiErr)
 	}

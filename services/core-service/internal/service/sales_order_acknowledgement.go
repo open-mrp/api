@@ -403,18 +403,35 @@ func buildOrderAcknowledgementEmail(ctx context.Context, repos domain.RepoFactor
 	return emailData, nil
 }
 
-// portalRegisterLink returns the customer-portal registration URL for the account, or "" when the account has no customer portal configured. A verified custom portal domain is targeted directly; otherwise the slug-prefixed frontend URL is used. Best-effort: lookup failures yield "".
-func portalRegisterLink(ctx context.Context, repos domain.RepoFactory, frontendURL, accountID string) string {
+// portalRegisterLink returns the customer-portal registration URL for the account, or "" when the account has no customer portal configured. A verified custom portal domain is targeted directly; otherwise the slug under the shared portal host is used. Best-effort: lookup failures yield "".
+func portalRegisterLink(ctx context.Context, repos domain.RepoFactory, portalURL, accountID string) string {
 	// Path mirrors the frontend's FrontendPaths.register ("/auth/register").
 	const registerPath = "/auth/register"
-	if portalDomain, _ := repos.NewPortalDomainRepo().GetByAccountID(ctx, accountID); portalDomain != nil && portalDomain.Status == constants.PortalDomainStatusVerified {
-		return "https://" + portalDomain.Domain + registerPath
+	if origin := verifiedPortalOrigin(ctx, repos, accountID); origin != "" {
+		return origin + registerPath
 	}
 	slug, _ := repos.NewAccountRepo().GetPortalSlug(ctx, accountID)
-	if slug != nil && strings.TrimSpace(*slug) != "" && frontendURL != "" {
-		return fmt.Sprintf("%s/%s%s", frontendURL, *slug, registerPath)
+	if base := slugPortalBase(portalURL, slug); base != "" {
+		return base + registerPath
 	}
 	return ""
+}
+
+// verifiedPortalOrigin returns the origin of the account's verified custom portal domain, or "" when it has none. Best-effort: a failed lookup yields "".
+func verifiedPortalOrigin(ctx context.Context, repos domain.RepoFactory, accountID string) string {
+	if portalDomain, _ := repos.NewPortalDomainRepo().GetByAccountID(ctx, accountID); portalDomain != nil && portalDomain.Status == constants.PortalDomainStatusVerified {
+		return "https://" + portalDomain.Domain
+	}
+	return ""
+}
+
+// slugPortalBase returns the account's portal under the shared portal host, or "" when either the host or the slug is blank.
+func slugPortalBase(portalURL string, slug *string) string {
+	portalURL = strings.TrimRight(portalURL, "/")
+	if portalURL == "" || slug == nil || strings.TrimSpace(*slug) == "" {
+		return ""
+	}
+	return portalURL + "/" + strings.TrimSpace(*slug)
 }
 
 // inDocumentZone reads a record's timestamp in the merchant's zone, taken from its origin address.

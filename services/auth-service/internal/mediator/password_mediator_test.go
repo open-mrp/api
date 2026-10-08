@@ -49,6 +49,7 @@ func (suite *PasswordMedTestSuite) SetupSuite() {
 		JWTSecret:             testutil.JWTSecret,
 		NotificationPublisher: suite.notificationPublisher,
 		FrontendURL:           "https://test.example.com",
+		PortalURL:             "https://portal.example.com",
 	}
 	suite.passwordMed = NewPasswordMed(passwordMedConfig)
 }
@@ -66,7 +67,7 @@ func TestPasswordMedTestSuite(t *testing.T) {
 
 // TestRequestReset_ResetLinkStaysFirstParty guards the fix for the portal-domain
 // token-exfiltration finding: a client-controlled account slug may scope the link
-// path but must never move the token off the first-party frontend host.
+// path but must never move the token off the first-party portal host.
 func (suite *PasswordMedTestSuite) TestRequestReset_ResetLinkStaysFirstParty() {
 	ctx := context.Background()
 	identifier := "victim@example.com"
@@ -90,7 +91,7 @@ func (suite *PasswordMedTestSuite) TestRequestReset_ResetLinkStaysFirstParty() {
 		DoAndReturn(func(ctx context.Context, data messaging.EmailSendData) *apierror.APIError {
 			resetLink, ok := data.Params["ResetLink"].(string)
 			suite.True(ok)
-			suite.True(strings.HasPrefix(resetLink, "https://test.example.com/"+accountSlug+string(constants.DashboardPathResetPassword)))
+			suite.True(strings.HasPrefix(resetLink, "https://portal.example.com/"+accountSlug+string(constants.DashboardPathResetPassword)))
 			return nil
 		}).
 		Times(1)
@@ -98,6 +99,27 @@ func (suite *PasswordMedTestSuite) TestRequestReset_ResetLinkStaysFirstParty() {
 	apiErr := suite.passwordMed.RequestReset(ctx, identifier, &accountSlug)
 
 	suite.Nil(apiErr)
+}
+
+// TestRequestReset_OperatorLinkGoesToDashboard: without an account slug the user is an operator, who resets
+// their password on the dashboard, not the customer portal.
+func (suite *PasswordMedTestSuite) TestRequestReset_OperatorLinkGoesToDashboard() {
+	ctx := context.Background()
+	email := "operator@example.com"
+	user := &types.User{ID: testutil.EntityIDUser, Email: &email, CreatedAt: time.Now(), UpdatedAt: time.Now()}
+
+	suite.userRepo.EXPECT().Find(gomock.Any(), email).Return(user, nil).Times(1)
+	suite.notificationPublisher.EXPECT().
+		PublishSendEmail(gomock.Any(), gomock.Any()).
+		DoAndReturn(func(ctx context.Context, data messaging.EmailSendData) *apierror.APIError {
+			resetLink, ok := data.Params["ResetLink"].(string)
+			suite.True(ok)
+			suite.True(strings.HasPrefix(resetLink, "https://test.example.com"+string(constants.DashboardPathResetPassword)+"?t="))
+			return nil
+		}).
+		Times(1)
+
+	suite.Nil(suite.passwordMed.RequestReset(ctx, email, nil))
 }
 
 func (suite *PasswordMedTestSuite) TestUpdatePassword_Success() {

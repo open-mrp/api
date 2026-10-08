@@ -57,7 +57,7 @@ func NewDocAPIKeySvc(config *DocAPIKeySvcConfig) domain.DocAPIKeySvc {
 	}
 }
 
-func BuildDocAPIKeySvcConfig(queries *sqlc.Queries, jwtSecret string, pepper []byte, frontendURL string, coreClient domain.AuthCoreClient, encryptionKey []byte) *DocAPIKeySvcConfig {
+func BuildDocAPIKeySvcConfig(queries *sqlc.Queries, jwtSecret string, pepper []byte, frontendURL, portalURL string, coreClient domain.AuthCoreClient, encryptionKey []byte) *DocAPIKeySvcConfig {
 	repoFactory := repository.NewRepoFactory(queries)
 
 	mediatorFactory := mediator.NewMediatorFactory(&mediator.MediatorFactoryConfig{
@@ -65,6 +65,7 @@ func BuildDocAPIKeySvcConfig(queries *sqlc.Queries, jwtSecret string, pepper []b
 		APIKeyPepper:           pepper,
 		NotificationPublisher:  event.NewOutboxNotificationPublisher(),
 		FrontendURL:            frontendURL,
+		PortalURL:              portalURL,
 		CoreClient:             coreClient,
 		DocAPIKeyEncryptionKey: encryptionKey,
 	})

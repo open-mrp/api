@@ -15,6 +15,7 @@ import (
 var (
 	defaultPort        = contracts.GRPCPort
 	defaultRabbitMQURI = "amqp://guest:guest@rabbitmq:5672/" // #nosec G101 - Default dev URI, not a production credential
+	defaultPortalURL   = "https://portal.openmrp.ai"
 )
 
 const (
@@ -35,6 +36,7 @@ const (
 	envShippingLabelsBucket       = "SHIPPING_LABELS_BUCKET"
 	envExportsBucket              = "EXPORTS_BUCKET"
 	envFrontendURL                = "FRONTEND_URL"
+	envPortalURL                  = "PORTAL_URL"
 	envAuthServiceURL             = "AUTH_SERVICE_URL"
 	envVercelAPIToken             = "VERCEL_API_TOKEN" // #nosec G101 - Env var name, not a credential
 	envVercelProjectID            = "VERCEL_PROJECT_ID"
@@ -101,8 +103,11 @@ type config struct {
 	// Not enforced when PlatformMode is "test".
 	ExportsBucket string
 
-	// FrontendURL (required) is the base URL of the frontend application, used for checkout return URLs.
+	// FrontendURL (required) is the base URL of the dashboard, used in links for the account's own users.
 	FrontendURL string
+
+	// PortalURL (optional; default: "https://portal.openmrp.ai") is the base URL of the customer portal; links for a merchant without a verified custom domain go to {PortalURL}/{slug}.
+	PortalURL string
 
 	// AuthServiceURL (required) is the gRPC address of auth-service.
 	AuthServiceURL string
@@ -110,7 +115,7 @@ type config struct {
 	// VercelAPIToken (required in production) authenticates portal custom domain calls to the Vercel API. When empty outside production, the stub portal domain provider is used instead.
 	VercelAPIToken string
 
-	// VercelProjectID (required in production) is the Vercel project that serves the dashboard frontend; portal custom domains are attached to it.
+	// VercelProjectID (required in production) is the Vercel project that serves the customer portal; portal custom domains are attached to it.
 	VercelProjectID string
 
 	// VercelTeamID (optional) scopes Vercel API calls to a team; empty for personal-scope tokens.
@@ -157,6 +162,7 @@ func (c *config) withDefaults(getenv func(string) string) *config {
 		ShippingLabelsBucket:       env.GetEnv(envShippingLabelsBucket, getenv),
 		ExportsBucket:              env.GetEnv(envExportsBucket, getenv),
 		FrontendURL:                env.GetEnv(envFrontendURL, getenv),
+		PortalURL:                  cmp.Or(env.GetEnv(envPortalURL, getenv), defaultPortalURL),
 		AuthServiceURL:             env.GetEnv(envAuthServiceURL, getenv),
 		VercelAPIToken:             env.GetEnv(envVercelAPIToken, getenv),
 		VercelProjectID:            env.GetEnv(envVercelProjectID, getenv),

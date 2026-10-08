@@ -66,7 +66,7 @@ func NewPasswordSvc(config *PasswordSvcConfig) domain.PasswordSvc {
 	}
 }
 
-func BuildPasswordSvcConfig(queries *sqlc.Queries, jwtSecret string, pepper []byte, frontendURL string, coreClient domain.AuthCoreClient) *PasswordSvcConfig {
+func BuildPasswordSvcConfig(queries *sqlc.Queries, jwtSecret string, pepper []byte, frontendURL, portalURL string, coreClient domain.AuthCoreClient) *PasswordSvcConfig {
 	repoFactory := repository.NewRepoFactory(queries)
 	notificationPublisher := event.NewOutboxNotificationPublisher()
 
@@ -75,6 +75,7 @@ func BuildPasswordSvcConfig(queries *sqlc.Queries, jwtSecret string, pepper []by
 		APIKeyPepper:          pepper,
 		NotificationPublisher: notificationPublisher,
 		FrontendURL:           frontendURL,
+		PortalURL:             portalURL,
 		CoreClient:            coreClient,
 	})
 

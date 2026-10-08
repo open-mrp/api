@@ -14,6 +14,7 @@ import (
 var (
 	defaultPort              = contracts.GRPCPort
 	defaultRabbitMQURI       = "amqp://guest:guest@rabbitmq:5672/" // #nosec G101 - Default dev URI, not a production credential
+	defaultPortalURL         = "https://portal.openmrp.ai"
 	defaultCoreServiceURL    = fmt.Sprintf("core-service:%d", contracts.GRPCPort)
 	defaultBillingServiceURL = fmt.Sprintf("billing-service:%d", contracts.GRPCPort)
 )
@@ -22,6 +23,7 @@ const (
 	envPort                   = "PORT"
 	envDBURL                  = "DB_URL"
 	envFrontendURL            = "FRONTEND_URL"
+	envPortalURL              = "PORTAL_URL"
 	envJWTSecret              = "JWT_SECRET"
 	envPepper                 = "PEPPER"
 	envRabbitMQURI            = "RABBITMQ_URI"
@@ -42,8 +44,11 @@ type config struct {
 	// DBURL (required) is the database connection URI.
 	DBURL string
 
-	// FrontendURL (required) is the base URL of the frontend application.
+	// FrontendURL (required) is the base URL of the dashboard.
 	FrontendURL string
+
+	// PortalURL (optional; default: "https://portal.openmrp.ai") is the base URL of the customer portal, used in slug-scoped links sent to portal customers.
+	PortalURL string
 
 	// JWTSecret (required) is the secret used to sign JWT tokens.
 	JWTSecret string // #nosec G117 - Struct field, not a hardcoded credential
@@ -103,6 +108,7 @@ func (c *config) withDefaults(getenv func(string) string) *config {
 		Port:                      port,
 		DBURL:                     env.GetEnv(envDBURL, getenv),
 		FrontendURL:               env.GetEnv(envFrontendURL, getenv),
+		PortalURL:                 cmp.Or(env.GetEnv(envPortalURL, getenv), defaultPortalURL),
 		JWTSecret:                 env.GetEnv(envJWTSecret, getenv),
 		Pepper:                    []byte(env.GetEnv(envPepper, getenv)),
 		RabbitMQURI:               cmp.Or(env.GetEnv(envRabbitMQURI, getenv), defaultRabbitMQURI),

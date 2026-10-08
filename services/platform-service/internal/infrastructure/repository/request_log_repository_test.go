@@ -396,7 +396,7 @@ func (f execErrDB) ExecContext(context.Context, string, ...interface{}) (sql.Res
 }
 
 func TestCreate_DuplicateIDIsAlreadyStored(t *testing.T) {
-	repo := NewRequestLogRepo(sqlc.New(execErrDB{err: &mysql.MySQLError{Number: 1062, Message: "Duplicate entry 'rq_x' for key 'request_log.PRIMARY'"}}))
+	repo := NewRequestLogRepo(sqlc.New(execErrDB{err: &mysql.MySQLError{Number: 1062, Message: "Duplicate entry 'rq_x' for key 'request_log.PRIMARY'"}}), nil)
 
 	if apiErr := repo.Create(context.Background(), &domain.RequestLog{ID: "rq_x", StatusCode: 200}); apiErr != nil {
 		t.Fatalf("expected a redelivered log to succeed, got %v", apiErr)
@@ -404,7 +404,7 @@ func TestCreate_DuplicateIDIsAlreadyStored(t *testing.T) {
 }
 
 func TestCreate_OtherInsertErrorsFail(t *testing.T) {
-	repo := NewRequestLogRepo(sqlc.New(execErrDB{err: &mysql.MySQLError{Number: 1205, Message: "Lock wait timeout exceeded"}}))
+	repo := NewRequestLogRepo(sqlc.New(execErrDB{err: &mysql.MySQLError{Number: 1205, Message: "Lock wait timeout exceeded"}}), nil)
 
 	if apiErr := repo.Create(context.Background(), &domain.RequestLog{ID: "rq_x", StatusCode: 200}); apiErr == nil {
 		t.Fatal("expected a non-duplicate insert error to be returned")

@@ -1969,6 +1969,12 @@ type PricingRepo interface {
 type JobRepo interface {
 	Get(ctx context.Context, jobID, accountID string) (*Job, *apierror.APIError)
 	Create(ctx context.Context, params CreateJobRepositoryParams) *apierror.APIError
+	// PutItems places a job's payload ahead of its row: a large one is written to object storage
+	// and its key returned, anything else comes back to be stored inline. It makes no database
+	// write, so call it before the transaction that creates the job.
+	PutItems(ctx context.Context, jobID string, items json.RawMessage) (json.RawMessage, *string, *apierror.APIError)
+	// GetItems returns the job's payload wherever PutItems placed it.
+	GetItems(ctx context.Context, job *Job) (json.RawMessage, *apierror.APIError)
 	// returns the number of rows changed; the query guards on the terminal timestamps, so an
 	// already-settled job matches zero rows, which serializes a cancel against a completion.
 	Update(ctx context.Context, params UpdateJobRepositoryParams) (int64, *apierror.APIError)

@@ -58,6 +58,7 @@ SELECT
     j.account_id,
     j.created_by,
     j.job_items,
+    j.job_items_key,
     j.results,
     j.error,
     j.errors,
@@ -79,6 +80,7 @@ INSERT INTO job (
     account_id,
     created_by,
     job_items,
+    job_items_key,
     results,
     created_at,
     updated_at
@@ -88,7 +90,8 @@ INSERT INTO job (
     sqlc.narg('resource_type'),
     sqlc.arg('account_id'),
     sqlc.arg('created_by'),
-    sqlc.arg('job_items'),
+    sqlc.narg('job_items'),
+    sqlc.narg('job_items_key'),
     sqlc.narg('results'),
     NOW(3),
     NOW(3)

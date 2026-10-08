@@ -1,6 +1,7 @@
 package repository
 
 import (
+	"cmp"
 	"context"
 	"database/sql"
 	"encoding/json"
@@ -10,7 +11,9 @@ import (
 
 	"github.com/open-mrp/api/services/platform-service/internal/domain"
 	"github.com/open-mrp/api/services/platform-service/internal/infrastructure/sqlc"
+	"github.com/open-mrp/api/shared/blobstore"
 	"github.com/open-mrp/api/shared/constants"
+	"github.com/open-mrp/api/shared/contracts"
 	"github.com/open-mrp/api/shared/db"
 	apierror "github.com/open-mrp/api/shared/errors"
 	"github.com/open-mrp/api/shared/pagination"
@@ -20,11 +23,13 @@ import (
 var requestLogRepoTracer = tracing.GetTracer("platform-service.request_log_repository")
 
 type requestLogRepoImpl struct {
-	db *sqlc.Queries
+	db       *sqlc.Queries
+	payloads *blobstore.Store
 }
 
-func NewRequestLogRepo(db *sqlc.Queries) domain.RequestLogRepo {
-	return &requestLogRepoImpl{db: db}
+// NewRequestLogRepo builds the repository. payloads reads the bodies of logs stored in object storage; nil when no bucket is configured.
+func NewRequestLogRepo(db *sqlc.Queries, payloads *blobstore.Store) domain.RequestLogRepo {
+	return &requestLogRepoImpl{db: db, payloads: payloads}
 }
 
 // jsonColumn keeps a malformed payload from failing the insert. MySQL rejects the whole row when a JSON column gets an unparseable document, and because the request log arrives over the inbox that means endless retries on a message that can never succeed — one truncated response body costs the log row, the message, and a permanently stuck inbox record. Substitute the size so the log still shows something happened.
@@ -44,14 +49,18 @@ func (r *requestLogRepoImpl) Create(ctx context.Context, rl *domain.RequestLog) 
 		queryJSON = jsonColumn(*rl.QueryJSON)
 	}
 
-	bodyJSON := db.NullableRawMessage("{}")
-	if rl.BodyJSON != nil && *rl.BodyJSON != "" {
-		bodyJSON = jsonColumn(*rl.BodyJSON)
-	}
+	// A log with a payload key keeps its bodies in object storage, so its columns stay NULL.
+	var bodyJSON, responseJSON db.NullableRawMessage
+	if rl.PayloadKey == nil {
+		bodyJSON = db.NullableRawMessage("{}")
+		if rl.BodyJSON != nil && *rl.BodyJSON != "" {
+			bodyJSON = jsonColumn(*rl.BodyJSON)
+		}
 
-	responseJSON := db.NullableRawMessage("{}")
-	if rl.ResponseJSON != nil && *rl.ResponseJSON != "" {
-		responseJSON = jsonColumn(*rl.ResponseJSON)
+		responseJSON = db.NullableRawMessage("{}")
+		if rl.ResponseJSON != nil && *rl.ResponseJSON != "" {
+			responseJSON = jsonColumn(*rl.ResponseJSON)
+		}
 	}
 
 	statusCode := rl.StatusCode
@@ -91,6 +100,7 @@ func (r *requestLogRepoImpl) Create(ctx context.Context, rl *domain.RequestLog) 
 		Hidden:               rl.Hidden,
 		RequestBodyJson:      bodyJSON,
 		ResponseBodyJson:     responseJSON,
+		PayloadKey:           db.NullStringPtr(rl.PayloadKey),
 	})
 	// The id is the request's own, so a duplicate is a redelivery of a log already stored.
 	if db.IsDuplicateEntry(err) {
@@ -122,6 +132,9 @@ func (r *requestLogRepoImpl) FindByID(ctx context.Context, id, callerAccountID s
 			return nil, tracing.Trace(span, apiErr)
 		}
 		read := mapRowToRequestLogRead(&row)
+		if apiErr := r.loadPayload(ctx, read, db.StringFromNullString(row.PayloadKey), includes); apiErr != nil {
+			return nil, tracing.Trace(span, apiErr)
+		}
 		applyRequestedJSONIncludes(read, includes)
 		return read, nil
 	}
@@ -137,8 +150,34 @@ func (r *requestLogRepoImpl) FindByID(ctx context.Context, id, callerAccountID s
 		return nil, tracing.Trace(span, apiErr)
 	}
 	read := mapBaseRowToRequestLogRead(&row)
+	if apiErr := r.loadPayload(ctx, read, db.StringFromNullString(row.PayloadKey), includes); apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
 	applyRequestedJSONIncludes(read, includes)
 	return read, nil
+}
+
+// loadPayload fills the body includes of a log whose bodies live in object storage. It reads the
+// object only when one of them was asked for, so a log opened without them never touches the bucket.
+// A missing body reads as {} — what the row's own columns hold for a request or response without one.
+func (r *requestLogRepoImpl) loadPayload(ctx context.Context, read *domain.RequestLogRead, key *string, includes []string) *apierror.APIError {
+	if key == nil || !anyIncludeRequested(includes, "query_params", "request_body", "response_body") {
+		return nil
+	}
+	if r.payloads == nil {
+		return apierror.NewInternalError(nil, "Request log payload is stored in object storage, but no payloads bucket is configured.")
+	}
+
+	var payload contracts.RequestLogPayload
+	if apiErr := r.payloads.Get(ctx, *key, &payload); apiErr != nil {
+		return apiErr
+	}
+
+	emptyObject := "{}"
+	read.QueryJSON = payload.QueryJSON
+	read.BodyJSON = cmp.Or(payload.RequestBodyJSON, &emptyObject)
+	read.ResponseJSON = cmp.Or(payload.ResponseBodyJSON, &emptyObject)
+	return nil
 }
 
 func (r *requestLogRepoImpl) List(ctx context.Context, callerAccountID string, filter *domain.ListRequestLogsFilter, includes []string) (*domain.ListRequestLogsResult, *apierror.APIError) {

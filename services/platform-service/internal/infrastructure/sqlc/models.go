@@ -490,6 +490,15 @@ type AuditEvent struct {
 	RootResourceType sql.NullString
 }
 
+type BackfillProgress struct {
+	Name        string
+	CursorValue string
+	RowsDone    int64
+	CompletedAt sql.NullTime
+	CreatedAt   time.Time
+	UpdatedAt   time.Time
+}
+
 type Batch struct {
 	ID                string
 	CreatedAt         time.Time
@@ -952,6 +961,7 @@ type IdempotencyKey struct {
 	UpdatedAt       time.Time
 	LastRunAt       sql.NullTime
 	ExpiresAt       sql.NullTime
+	ResponseBodyKey sql.NullString
 }
 
 type InventoryAllocation struct {
@@ -1136,7 +1146,6 @@ type Job struct {
 	ID           int64
 	JobID        string
 	Type         string
-	JobItems     json.RawMessage
 	AccountID    sql.NullString
 	CreatedBy    sql.NullString
 	Results      json.RawMessage
@@ -1150,6 +1159,8 @@ type Job struct {
 	FailedAt     sql.NullTime
 	Error        json.RawMessage
 	ResourceType sql.NullString
+	JobItems     json.RawMessage
+	JobItemsKey  sql.NullString
 }
 
 type JournalPosting struct {
@@ -2109,6 +2120,7 @@ type RequestLog struct {
 	ErrorCode            sql.NullString
 	IdentityType         sql.NullString
 	ActorType            sql.NullString
+	PayloadKey           sql.NullString
 }
 
 type Role struct {
@@ -2321,24 +2333,25 @@ type ScheduleDeviationType struct {
 }
 
 type ServiceIdempotencyKey struct {
-	ID             int64
-	TypeID         string
-	ServiceName    string
-	Handler        string
-	IdempotencyKey string
-	ActorID        sql.NullString
-	IdentityType   string
-	ScopeHash      string
-	ResponseCode   sql.NullInt32
-	ResponseBody   json.RawMessage
-	RecoveryPoint  string
-	LockedAt       sql.NullTime
-	LockOwner      sql.NullString
-	LockExpiresAt  sql.NullTime
-	CreatedAt      time.Time
-	UpdatedAt      time.Time
-	LastRunAt      sql.NullTime
-	ExpiresAt      sql.NullTime
+	ID              int64
+	TypeID          string
+	ServiceName     string
+	Handler         string
+	IdempotencyKey  string
+	ActorID         sql.NullString
+	IdentityType    string
+	ScopeHash       string
+	ResponseCode    sql.NullInt32
+	ResponseBody    json.RawMessage
+	RecoveryPoint   string
+	LockedAt        sql.NullTime
+	LockOwner       sql.NullString
+	LockExpiresAt   sql.NullTime
+	CreatedAt       time.Time
+	UpdatedAt       time.Time
+	LastRunAt       sql.NullTime
+	ExpiresAt       sql.NullTime
+	ResponseBodyKey sql.NullString
 }
 
 type Settlement struct {

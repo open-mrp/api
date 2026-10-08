@@ -13,6 +13,13 @@ SET response_code = ?, response_body = ?, response_headers = ?,
     last_run_at = NOW(3), updated_at = NOW(3), recovery_point = ?
 WHERE type_id = ?;
 
+-- name: MoveIdempotencyKeyResponseToObjectStorage :exec
+-- Runs once the response is stored and its body is in the bucket. The guard makes a repeated
+-- move a no-op.
+UPDATE idempotency_key
+SET response_body = NULL, response_body_key = sqlc.arg('response_body_key')
+WHERE type_id = sqlc.arg('type_id') AND response_body_key IS NULL;
+
 -- name: LockIdempotencyKey :execresult
 UPDATE idempotency_key
 SET locked_at = NOW(3), lock_owner = ?, lock_expires_at = DATE_ADD(NOW(3), INTERVAL 5 MINUTE),

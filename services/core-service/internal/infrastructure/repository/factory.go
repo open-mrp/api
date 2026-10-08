@@ -10,11 +10,13 @@ import (
 const exportQueryLimit = domain.ExportRowLimit + 1
 
 type repoFactoryImpl struct {
-	queries *sqlc.Queries
+	queries  *sqlc.Queries
+	payloads *Payloads
 }
 
-func NewRepoFactory(queries *sqlc.Queries) domain.RepoFactory {
-	return &repoFactoryImpl{queries: queries}
+// NewRepoFactory builds the repositories. payloads holds documents too large for their rows; nil keeps them all inline.
+func NewRepoFactory(queries *sqlc.Queries, payloads *Payloads) domain.RepoFactory {
+	return &repoFactoryImpl{queries: queries, payloads: payloads}
 }
 
 func (r *repoFactoryImpl) NewAccountRepo() domain.AccountRepo {
@@ -46,7 +48,7 @@ func (r *repoFactoryImpl) NewRegistrationRepo() domain.RegistrationRepo {
 }
 
 func (r *repoFactoryImpl) NewIdempotencyKeyRepo() domain.IdempotencyKeyRepo {
-	return NewIdempotencyKeyRepo(r.queries)
+	return NewIdempotencyKeyRepo(r.queries, r.payloads)
 }
 
 func (r *repoFactoryImpl) NewUnitRepo() domain.UnitRepo {
@@ -430,7 +432,7 @@ func (r *repoFactoryImpl) NewPricingRepo() domain.PricingRepo {
 }
 
 func (r *repoFactoryImpl) NewJobRepo() domain.JobRepo {
-	return NewJobRepo(r.queries)
+	return NewJobRepo(r.queries, r.payloads.store())
 }
 
 func (r *repoFactoryImpl) NewPortalDomainRepo() domain.PortalDomainRepo {

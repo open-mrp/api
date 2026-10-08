@@ -76,7 +76,7 @@ const getIdempotencyKeyByScopeHash = `-- name: GetIdempotencyKeyByScopeHash :one
 SELECT id, type_id, service_name, handler, idempotency_key, actor_id, identity_type,
        scope_hash, response_code, response_body, recovery_point,
        locked_at, lock_owner, lock_expires_at, created_at, updated_at,
-       last_run_at, expires_at
+       last_run_at, expires_at, response_body_key
 FROM service_idempotency_key
 WHERE service_name = ? AND scope_hash = ?
 FOR UPDATE
@@ -109,6 +109,7 @@ func (q *Queries) GetIdempotencyKeyByScopeHash(ctx context.Context, arg GetIdemp
 		&i.UpdatedAt,
 		&i.LastRunAt,
 		&i.ExpiresAt,
+		&i.ResponseBodyKey,
 	)
 	return i, err
 }
@@ -117,7 +118,7 @@ const getIdempotencyKeyByTypeID = `-- name: GetIdempotencyKeyByTypeID :one
 SELECT id, type_id, service_name, handler, idempotency_key, actor_id, identity_type,
        scope_hash, response_code, response_body, recovery_point,
        locked_at, lock_owner, lock_expires_at, created_at, updated_at,
-       last_run_at, expires_at
+       last_run_at, expires_at, response_body_key
 FROM service_idempotency_key
 WHERE type_id = ?
 `
@@ -144,6 +145,7 @@ func (q *Queries) GetIdempotencyKeyByTypeID(ctx context.Context, typeID string) 
 		&i.UpdatedAt,
 		&i.LastRunAt,
 		&i.ExpiresAt,
+		&i.ResponseBodyKey,
 	)
 	return i, err
 }

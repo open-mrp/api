@@ -109,7 +109,7 @@ func (q *Queries) DeleteExpiredServiceIdempotencyKeys(ctx context.Context, limit
 }
 
 const getIdempotencyKeyByScopeHashForUpdate = `-- name: GetIdempotencyKeyByScopeHashForUpdate :one
-SELECT id, type_id, idempotency_key, actor_id, identity_type, target_account_id, request_method, normalized_route, request_body_hash, scope_hash, request_params, response_code, response_body, response_headers, recovery_point, locked_at, lock_owner, lock_expires_at, created_at, updated_at, last_run_at, expires_at FROM idempotency_key WHERE scope_hash = ? FOR UPDATE
+SELECT id, type_id, idempotency_key, actor_id, identity_type, target_account_id, request_method, normalized_route, request_body_hash, scope_hash, request_params, response_code, response_body, response_headers, recovery_point, locked_at, lock_owner, lock_expires_at, created_at, updated_at, last_run_at, expires_at, response_body_key FROM idempotency_key WHERE scope_hash = ? FOR UPDATE
 `
 
 func (q *Queries) GetIdempotencyKeyByScopeHashForUpdate(ctx context.Context, scopeHash string) (IdempotencyKey, error) {
@@ -138,6 +138,7 @@ func (q *Queries) GetIdempotencyKeyByScopeHashForUpdate(ctx context.Context, sco
 		&i.UpdatedAt,
 		&i.LastRunAt,
 		&i.ExpiresAt,
+		&i.ResponseBodyKey,
 	)
 	return i, err
 }
@@ -174,6 +175,24 @@ type LockIdempotencyKeyParams struct {
 
 func (q *Queries) LockIdempotencyKey(ctx context.Context, arg LockIdempotencyKeyParams) (sql.Result, error) {
 	return q.db.ExecContext(ctx, lockIdempotencyKey, arg.LockOwner, arg.TypeID)
+}
+
+const moveIdempotencyKeyResponseToObjectStorage = `-- name: MoveIdempotencyKeyResponseToObjectStorage :exec
+UPDATE idempotency_key
+SET response_body = NULL, response_body_key = ?
+WHERE type_id = ? AND response_body_key IS NULL
+`
+
+type MoveIdempotencyKeyResponseToObjectStorageParams struct {
+	ResponseBodyKey sql.NullString
+	TypeID          string
+}
+
+// Runs once the response is stored and its body is in the bucket. The guard makes a repeated
+// move a no-op.
+func (q *Queries) MoveIdempotencyKeyResponseToObjectStorage(ctx context.Context, arg MoveIdempotencyKeyResponseToObjectStorageParams) error {
+	_, err := q.db.ExecContext(ctx, moveIdempotencyKeyResponseToObjectStorage, arg.ResponseBodyKey, arg.TypeID)
+	return err
 }
 
 const releaseIdempotencyKeyLock = `-- name: ReleaseIdempotencyKeyLock :exec

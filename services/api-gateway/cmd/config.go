@@ -21,6 +21,7 @@ var (
 	defaultNotificationServiceURI = fmt.Sprintf("notification-service:%d", contracts.GRPCPort)
 	defaultRabbitMQURI            = "amqp://guest:guest@rabbitmq:5672/" // #nosec G101 - Default dev URI, not a production credential
 	defaultPlatformMode           = constants.PlatformModeProduction
+	defaultAWSRegion              = "us-east-2"
 )
 
 const (
@@ -39,6 +40,8 @@ const (
 	envFrontendURL            = "FRONTEND_URL"
 	envTrustedProxyHops       = "TRUSTED_PROXY_HOPS"
 	envWSTicketSecret         = "WS_TICKET_SECRET" // #nosec G101 - Env var name, not a credential
+	envAWSRegion              = "AWS_REGION"
+	envPayloadsBucket         = "PAYLOADS_BUCKET"
 )
 
 // config represents the configuration for the API gateway.
@@ -92,6 +95,13 @@ type config struct {
 	// to 0 the X-Forwarded-For header is ignored entirely. In production behind
 	// AWS ALB this should be 1.
 	TrustedProxyHops int
+
+	// AWSRegion (optional; default: "us-east-2") is the AWS region of the payloads bucket.
+	AWSRegion string
+
+	// PayloadsBucket (optional; default: "") is the S3 bucket request log bodies are written to.
+	// When empty, the bodies travel inline on the outbox message and land in request_log.
+	PayloadsBucket string
 }
 
 // withDefaults sets the default values for the configuration.
@@ -137,6 +147,8 @@ func (c *config) withDefaults(getenv func(string) string) *config {
 		RabbitMQURI:            cmp.Or(env.GetEnv(envRabbitMQURI, getenv), defaultRabbitMQURI),
 		FrontendURL:            env.GetEnv(envFrontendURL, getenv),
 		TrustedProxyHops:       trustedProxyHops,
+		AWSRegion:              cmp.Or(env.GetEnv(envAWSRegion, getenv), defaultAWSRegion),
+		PayloadsBucket:         env.GetEnv(envPayloadsBucket, getenv),
 	}
 }
 

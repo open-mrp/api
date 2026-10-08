@@ -44,9 +44,11 @@ INSERT INTO request_log (
         public_endpoint,
         hidden,
         request_body_json,
-        response_body_json
+        response_body_json,
+        payload_key
     )
 VALUES (
+        ?,
         ?,
         ?,
         ?,
@@ -111,6 +113,7 @@ type CreateRequestLogParams struct {
 	Hidden               bool
 	RequestBodyJson      db.NullableRawMessage
 	ResponseBodyJson     db.NullableRawMessage
+	PayloadKey           sql.NullString
 }
 
 func (q *Queries) CreateRequestLog(ctx context.Context, arg CreateRequestLogParams) error {
@@ -145,6 +148,7 @@ func (q *Queries) CreateRequestLog(ctx context.Context, arg CreateRequestLogPara
 		arg.Hidden,
 		arg.RequestBodyJson,
 		arg.ResponseBodyJson,
+		arg.PayloadKey,
 	)
 	return err
 }
@@ -166,7 +170,7 @@ SELECT rl.id, rl.method, rl.host, rl.path, rl.normalized_route,
        rl.status_code, rl.latency_us, rl.api_version, rl.actor_id AS actor_id,
        rl.actor_type, rl.identity_type, rl.client_ip_string, rl.user_agent,
        rl.referrer, rl.error_code, rl.error_message, rl.occurred_at, rl.created_at,
-       rl.idempotency_key_id,
+       rl.idempotency_key_id, rl.payload_key,
        COALESCE(CASE WHEN ? THEN rl.request_body_json ELSE NULL END, '') AS request_body_json,
        COALESCE(CASE WHEN ? THEN rl.response_body_json ELSE NULL END, '') AS response_body_json,
        rl.target_account_id,
@@ -206,6 +210,7 @@ type FindRequestLogBaseByIDRow struct {
 	OccurredAt       time.Time
 	CreatedAt        time.Time
 	IdempotencyKeyID sql.NullString
+	PayloadKey       sql.NullString
 	RequestBodyJson  interface{}
 	ResponseBodyJson interface{}
 	TargetAccountID  sql.NullString
@@ -249,6 +254,7 @@ func (q *Queries) FindRequestLogBaseByID(ctx context.Context, arg FindRequestLog
 		&i.OccurredAt,
 		&i.CreatedAt,
 		&i.IdempotencyKeyID,
+		&i.PayloadKey,
 		&i.RequestBodyJson,
 		&i.ResponseBodyJson,
 		&i.TargetAccountID,
@@ -263,7 +269,7 @@ SELECT rl.id, rl.method, rl.host, rl.path, rl.normalized_route,
        rl.status_code, rl.latency_us, rl.api_version, rl.actor_id AS actor_id,
        rl.actor_type, rl.identity_type, rl.client_ip_string, rl.user_agent,
        rl.referrer, rl.error_code, rl.error_message, rl.occurred_at, rl.created_at,
-       rl.idempotency_key_id,
+       rl.idempotency_key_id, rl.payload_key,
        COALESCE(CASE WHEN ? THEN rl.request_body_json ELSE NULL END, '') AS request_body_json,
        COALESCE(CASE WHEN ? THEN rl.response_body_json ELSE NULL END, '') AS response_body_json,
        u.email AS user_email, u.name AS user_name,
@@ -317,6 +323,7 @@ type FindRequestLogByIDRow struct {
 	OccurredAt          time.Time
 	CreatedAt           time.Time
 	IdempotencyKeyID    sql.NullString
+	PayloadKey          sql.NullString
 	RequestBodyJson     interface{}
 	ResponseBodyJson    interface{}
 	UserEmail           sql.NullString
@@ -373,6 +380,7 @@ func (q *Queries) FindRequestLogByID(ctx context.Context, arg FindRequestLogByID
 		&i.OccurredAt,
 		&i.CreatedAt,
 		&i.IdempotencyKeyID,
+		&i.PayloadKey,
 		&i.RequestBodyJson,
 		&i.ResponseBodyJson,
 		&i.UserEmail,

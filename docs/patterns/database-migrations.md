@@ -49,6 +49,23 @@ While the release PR is open, `prepare-migrations` applies the pending core sche
 
 Merging runs `deploy-migrations`, which applies everything in order: core schema, agent schema, core backfills, agent backfills. The EKS rollout requires it to succeed, so a failed migration stops the release before any image ships.
 
-That order is the point: new code never meets a missing column, then never meets an empty one. The matching contract step — dropping the old column — belongs in a _later_ release, once nothing running reads it. A long backfill holds the release open while it runs, so write big ones batched and resumable.
+That order is the point: new code never meets a missing column, then never meets an empty one. The matching contract step — dropping the old column — belongs in a _later_ release, once nothing running reads it.
+
+## Keeping data changes off the database's back
+
+Every statement against production stays under **50 ms**, migrations included. Deploy-time backfills run on the primary, unthrottled, while live traffic is on it. One heavy statement there can hold locks, flood the binlog, and evict the buffer pool pages that requests are reading.
+
+**A deploy-time backfill (`data-migrations/*.sql`) must be small.** Each statement must be measured on production-sized data (`EXPLAIN ANALYZE` on a branch) and stay under 50 ms. In practice that means seeding or fixing a bounded set of rows by primary key or a selective index. Repeating a `LIMIT 5000` statement does not qualify: each copy is still one long statement.
+
+**Anything bigger is a background backfill on `shared/db/backfill`, not a migration.** Register it in its service, as `platform-service/cmd/backfills.go` does. The runner gives every backfill:
+
+- **Keyset batches from a saved cursor** (`backfill_progress`), so it resumes after a restart or deploy, and never runs again once complete.
+- **Adaptive batch size.** Each batch wraps its statements in `Meter.Time`. The size shrinks when the slowest statement passes 25 ms and grows when well under, so statements stay inside the budget whatever the row sizes.
+- **Duty-cycle pacing.** After each batch it sleeps four times the batch's database time, so a backfill never takes more than about 20% of one connection.
+- **One pod at a time** (`Runner.Keep`, under a lease), with a smaller retry after a failed batch, and a kill switch (`BACKFILLS_PAUSED`).
+
+Write each batch to be repeatable. Walk a narrow index for the next page instead of the clustered rows. Read bulk data from the replica when the rows are immutable. Keep primary writes to short primary-key updates, guarded so a re-run changes nothing (`… WHERE id IN (…) AND new_col IS NULL`). Work outside the database, such as an S3 upload, happens before the row update that depends on it, never inside a transaction.
+
+Expand-contract still applies: ship the code that reads both shapes first, let the backfill finish, then drop the old column in a later release.
 
 Postgres has no deploy request to review, since PlanetScale applies Postgres DDL directly. The PR comment is the review surface for it and for both sets of backfills.

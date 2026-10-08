@@ -9,7 +9,7 @@ description: >-
 
 # Performant list endpoints
 
-Every query must stay under **100 ms** worst case. A list that filesorts or scans a tenant partition is a bug — add or fix the index before merging. Human spec: `docs/patterns/performant-list-endpoint-patterns.md`. Indexes are declared in goose schema migrations (`shared/db/migrations`).
+Every query must stay under **50 ms** worst case. A list that filesorts or scans a tenant partition is a bug — add or fix the index before merging. Human spec: `docs/patterns/performant-list-endpoint-patterns.md`. Indexes are declared in goose schema migrations (`shared/db/migrations`).
 
 ## The query shape
 

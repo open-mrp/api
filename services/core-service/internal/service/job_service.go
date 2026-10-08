@@ -2,6 +2,7 @@ package service
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"log/slog"
 	"sort"
@@ -117,6 +118,37 @@ func (s *jobSvcImpl) GetJobForExecution(ctx context.Context, jobID string) (*dom
 	return s.repos.NewJobRepo().Get(ctx, jobID, identity.Target.AccountID)
 }
 
+// GetJobItems returns the payload a job was raised with.
+func (s *jobSvcImpl) GetJobItems(ctx context.Context, job *domain.Job) (json.RawMessage, *apierror.APIError) {
+	ctx, span := jobSvcTracer.Start(ctx, "service.job.get_items")
+	defer span.End()
+
+	items, apiErr := s.repos.NewJobRepo().GetItems(ctx, job)
+	if apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
+	return items, nil
+}
+
+// StageJobItems reserves a job id and places the job's payload ahead of the transaction that
+// creates the job. If that transaction rolls back, a payload already in object storage is left
+// unreferenced and the bucket's lifecycle rule expires it.
+func (s *jobSvcImpl) StageJobItems(ctx context.Context, items json.RawMessage) (*domain.StagedJobItems, *apierror.APIError) {
+	ctx, span := jobSvcTracer.Start(ctx, "service.job.stage_items")
+	defer span.End()
+
+	jobID, apiErr := id.GenID(id.JobIDPrefix, nil)
+	if apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
+
+	inline, key, apiErr := s.repos.NewJobRepo().PutItems(ctx, jobID, items)
+	if apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
+	return &domain.StagedJobItems{JobID: jobID, JobItems: inline, JobItemsKey: key}, nil
+}
+
 // CreateJob raises a job to track a piece of asynchronous work, and returns it.
 func (s *jobSvcImpl) CreateJob(ctx context.Context, params domain.CreateJobServiceParams) (*domain.Job, *apierror.APIError) {
 	ctx, span := jobSvcTracer.Start(ctx, "service.job.create")
@@ -131,9 +163,13 @@ func (s *jobSvcImpl) CreateJob(ctx context.Context, params domain.CreateJobServi
 		return nil, tracing.Trace(span, apierror.NewValidationErrorWithParam("Unknown job type.", "type"))
 	}
 
-	jobID, apiErr := id.GenID(id.JobIDPrefix, nil)
-	if apiErr != nil {
-		return nil, tracing.Trace(span, apiErr)
+	jobID := params.JobID
+	if jobID == "" {
+		generated, apiErr := id.GenID(id.JobIDPrefix, nil)
+		if apiErr != nil {
+			return nil, tracing.Trace(span, apiErr)
+		}
+		jobID = generated
 	}
 
 	accountID := identity.Target.AccountID
@@ -142,6 +178,7 @@ func (s *jobSvcImpl) CreateJob(ctx context.Context, params domain.CreateJobServi
 	if apiErr := repo.Create(ctx, domain.CreateJobRepositoryParams{
 		JobID:        jobID,
 		JobItems:     params.JobItems,
+		JobItemsKey:  params.JobItemsKey,
 		Type:         params.Type,
 		ResourceType: params.ResourceType,
 		AccountID:    accountID,

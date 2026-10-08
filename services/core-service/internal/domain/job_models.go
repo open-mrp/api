@@ -14,8 +14,12 @@ type Job struct {
 	ResourceType constants.ObjectType
 	AccountID    *string
 	CreatedByID  *string
-	JobItems     json.RawMessage
-	Results      []RowResult
+	// JobItems is the payload the job was raised with, kept off the wire and out of cached
+	// responses. A payload placed by JobSvc.StageJobItems may live in object storage under
+	// JobItemsKey instead, with JobItems nil; read those through JobSvc.GetJobItems.
+	JobItems    json.RawMessage `json:"-"`
+	JobItemsKey *string         `json:"-"`
+	Results     []RowResult
 	// ResultsTruncated reports that the executor produced more rows than Results carries.
 	ResultsTruncated bool
 	// Error is the failure that sank the job as a whole. A row that failed carries its
@@ -94,16 +98,29 @@ func (j *Job) IsTerminal() bool {
 }
 
 type CreateJobServiceParams struct {
+	// JobID is the id StageJobItems reserved; empty generates one.
+	JobID        string
 	Type         constants.JobType
 	ResourceType constants.ObjectType
-	JobItems     json.RawMessage
-	CreatedByID  *string
-	Results      []RowResult
+	// Exactly one of JobItems / JobItemsKey is set, as StageJobItems returned them.
+	JobItems    json.RawMessage
+	JobItemsKey *string
+	CreatedByID *string
+	Results     []RowResult
+}
+
+// StagedJobItems is a job payload placed before the job row is written: inline in JobItems, or
+// already in object storage under JobItemsKey.
+type StagedJobItems struct {
+	JobID       string
+	JobItems    json.RawMessage
+	JobItemsKey *string
 }
 
 type CreateJobRepositoryParams struct {
 	JobID        string
 	JobItems     json.RawMessage
+	JobItemsKey  *string
 	Type         constants.JobType
 	ResourceType constants.ObjectType
 	AccountID    string

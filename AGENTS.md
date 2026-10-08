@@ -153,7 +153,7 @@ The agent-service Postgres schema works the same way but lives in `services/agen
 
 Data backfills are not schema: they go in `shared/db/data-migrations` (`make migrate-create-data`) or `services/agent-service/db/data-migrations` (`make migrate-agent-create-data`). A PlanetScale deploy request diffs schema only, so DML written into a schema migration silently never reaches production. Backfills run after both schemas are live and before any image rolls.
 
-**Every query must run in under 100 ms — that is the worst-case ceiling, not a target.** Before committing a new or changed query, validate it against production-scale data in PlanetScale (Insights, or `EXPLAIN` against a branch with representative data) and confirm it stays under 100 ms. Treat a query that cannot meet this without a table scan as a bug: add or fix the supporting index (see the `performant-lists` skill) before merging. Do not ship a query you have not checked.
+**Every query must run in under 50 ms — that is the worst-case ceiling, not a target.** Before committing a new or changed query, validate it against production-scale data in PlanetScale (Insights, or `EXPLAIN` against a branch with representative data) and confirm it stays under 50 ms. Treat a query that cannot meet this without a table scan as a bug: add or fix the supporting index (see the `performant-lists` skill) before merging. Do not ship a query you have not checked.
 
 ## Code Style
 

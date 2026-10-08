@@ -33,17 +33,17 @@ func TestJobRepo_Get_ReadsAJobWhoseJSONColumnsAreNull(t *testing.T) {
 	mock.ExpectQuery("SELECT").
 		WillReturnRows(sqlmock.NewRows([]string{
 			"id", "type", "resource_type", "account_id", "created_by",
-			"job_items", "results", "error", "errors",
+			"job_items", "job_items_key", "results", "error", "errors",
 			"started_at", "completed_at", "failed_at", "cancelled_at",
 			"created_at", "updated_at",
 		}).AddRow(
 			"jo_test", "bulk_create", "production_run", "ac_test", nil,
-			[]byte(`{"runs":[]}`), nil, nil, nil,
+			[]byte(`{"runs":[]}`), nil, nil, nil, nil,
 			nil, nil, nil, nil,
 			now, now,
 		))
 
-	repo := NewJobRepo(sqlc.New(db))
+	repo := NewJobRepo(sqlc.New(db), nil)
 
 	job, apiErr := repo.Get(context.Background(), "jo_test", "ac_test")
 
@@ -81,12 +81,12 @@ func TestJobRepo_Get_DecodesRowOutcomes(t *testing.T) {
 	mock.ExpectQuery("SELECT").
 		WillReturnRows(sqlmock.NewRows([]string{
 			"id", "type", "resource_type", "account_id", "created_by",
-			"job_items", "results", "error", "errors",
+			"job_items", "job_items_key", "results", "error", "errors",
 			"started_at", "completed_at", "failed_at", "cancelled_at",
 			"created_at", "updated_at",
 		}).AddRow(
 			"jo_test", "bulk_upsert", "unit", "ac_test", nil,
-			[]byte(`{}`),
+			[]byte(`{}`), nil,
 			[]byte(`{"rows":[{"index":0,"status":"created","resource_type":"unit","id":"un_1","sub_resources":[{"resource_type":"batch","id":"ba_1"}]},{"index":1,"status":"failed","error":{"code":"validation_failed","type":"invalid_request_error","message":"bad row","param":"name"}}],"truncated":true}`),
 			[]byte(`{"code":"internal_error","type":"api_error","message":"the whole batch fell over"}`),
 			nil,
@@ -94,7 +94,7 @@ func TestJobRepo_Get_DecodesRowOutcomes(t *testing.T) {
 			now, now,
 		))
 
-	repo := NewJobRepo(sqlc.New(db))
+	repo := NewJobRepo(sqlc.New(db), nil)
 
 	job, apiErr := repo.Get(context.Background(), "jo_test", "ac_test")
 	if apiErr != nil {
@@ -152,12 +152,12 @@ func TestJobRepo_Get_FoldsALegacyJobsSeparateErrorsIntoItsRows(t *testing.T) {
 	mock.ExpectQuery("SELECT").
 		WillReturnRows(sqlmock.NewRows([]string{
 			"id", "type", "resource_type", "account_id", "created_by",
-			"job_items", "results", "error", "errors",
+			"job_items", "job_items_key", "results", "error", "errors",
 			"started_at", "completed_at", "failed_at", "cancelled_at",
 			"created_at", "updated_at",
 		}).AddRow(
 			"jo_test", "bulkupsert", "unit", "ac_test", nil,
-			[]byte(`{}`),
+			[]byte(`{}`), nil,
 			[]byte(`[{"Index":0,"ID":"un_1","Action":"created","SubResourceIDs":["ba_1"]}]`),
 			nil,
 			[]byte(`[{"index":1,"error":{"code":"validation_failed","type":"invalid_request_error","message":"bad row","param":"name"}},{"error":{"code":"internal_error","type":"api_error","message":"the whole batch fell over"}}]`),
@@ -165,7 +165,7 @@ func TestJobRepo_Get_FoldsALegacyJobsSeparateErrorsIntoItsRows(t *testing.T) {
 			now, now,
 		))
 
-	repo := NewJobRepo(sqlc.New(db))
+	repo := NewJobRepo(sqlc.New(db), nil)
 
 	job, apiErr := repo.Get(context.Background(), "jo_test", "ac_test")
 	if apiErr != nil {
@@ -214,7 +214,7 @@ func TestJobRepo_Update_GuardsOnTheTerminalStatesOnly(t *testing.T) {
 
 	mock.ExpectExec("UPDATE").WillReturnResult(sqlmock.NewResult(0, 1))
 
-	repo := NewJobRepo(sqlc.New(db))
+	repo := NewJobRepo(sqlc.New(db), nil)
 	completedAt := time.Now().UTC()
 	if _, apiErr := repo.Update(context.Background(), domain.UpdateJobRepositoryParams{
 		JobID:       "jo_test",
@@ -272,7 +272,7 @@ func TestJobRepo_Update_EncodesAnEmptyResultsListDistinctlyFromNone(t *testing.T
 				WithArgs(tc.want, nil, nil, sqlmock.AnyArg(), nil, nil, "jo_test", "ac_test").
 				WillReturnResult(sqlmock.NewResult(0, 1))
 
-			repo := NewJobRepo(sqlc.New(db))
+			repo := NewJobRepo(sqlc.New(db), nil)
 			completedAt := time.Now().UTC()
 
 			if _, apiErr := repo.Update(context.Background(), domain.UpdateJobRepositoryParams{

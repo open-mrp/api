@@ -39,6 +39,8 @@ type RequestLog struct {
 	Hidden               bool
 	BodyJSON             *string
 	ResponseJSON         *string
+	// PayloadKey is the object key of the log's RequestLogPayload. When set, QueryJSON, BodyJSON, ResponseJSON, and StackTrace are nil.
+	PayloadKey *string
 }
 
 type IdempotencyKey struct {

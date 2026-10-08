@@ -11,7 +11,6 @@ import (
 	"github.com/open-mrp/api/services/platform-service/internal/domain"
 	"github.com/open-mrp/api/services/platform-service/internal/infrastructure/sqlc"
 	"github.com/open-mrp/api/shared/constants"
-	"github.com/open-mrp/api/shared/db"
 )
 
 func nullStr(s string) sql.NullString {
@@ -281,38 +280,6 @@ func TestMapRowToRequestLogRead_AccountInfo(t *testing.T) {
 	}
 }
 
-func TestMapRowToRequestLogRead_QueryAndBodyJSON(t *testing.T) {
-	t.Parallel()
-	row := baseRow()
-	row.QueryJson = db.NullableRawMessage(`{"page":"2"}`)
-	row.RequestBodyJson = `{"name":"test"}`
-
-	rl := mapRowToRequestLogRead(&row)
-
-	if rl.QueryJSON == nil || *rl.QueryJSON != `{"page":"2"}` {
-		t.Errorf("expected QueryJSON, got %v", rl.QueryJSON)
-	}
-	if rl.BodyJSON == nil || *rl.BodyJSON != `{"name":"test"}` {
-		t.Errorf("expected BodyJSON, got %v", rl.BodyJSON)
-	}
-}
-
-func TestMapRowToRequestLogRead_NilQueryAndBodyJSON(t *testing.T) {
-	t.Parallel()
-	row := baseRow()
-	row.QueryJson = nil
-	row.RequestBodyJson = ""
-
-	rl := mapRowToRequestLogRead(&row)
-
-	if rl.QueryJSON != nil {
-		t.Errorf("expected QueryJSON nil, got %v", rl.QueryJSON)
-	}
-	if rl.BodyJSON != nil {
-		t.Errorf("expected BodyJSON nil, got %v", rl.BodyJSON)
-	}
-}
-
 func TestMapRowToRequestLogRead_IdempotencyKey(t *testing.T) {
 	t.Parallel()
 	row := baseRow()
@@ -361,27 +328,27 @@ func TestMapRowToRequestLogRead_BasicFields(t *testing.T) {
 	}
 }
 
-func TestJSONColumn_ValidPayloadPassesThrough(t *testing.T) {
+func TestValidJSON_ValidPayloadPassesThrough(t *testing.T) {
 	t.Parallel()
 
-	const payload = `{"object":"item","id":"itm_1"}`
-	if got := string(jsonColumn(payload)); got != payload {
-		t.Fatalf("jsonColumn = %q want %q", got, payload)
+	payload := `{"object":"item","id":"itm_1"}`
+	if got := validJSON(&payload); got != &payload {
+		t.Fatalf("validJSON = %q want %q", *got, payload)
 	}
 }
 
-func TestJSONColumn_MalformedPayloadBecomesPlaceholder(t *testing.T) {
+func TestValidJSON_MalformedPayloadBecomesPlaceholder(t *testing.T) {
 	t.Parallel()
 
-	// A response captured from a connection that died mid-write; MySQL would reject the whole insert.
-	const truncated = `{"object":"list","data":[{"id":"itm_1","name":"unterminat`
-	got := string(jsonColumn(truncated))
+	// A response captured from a connection that died mid-write; embedded raw, it would break the API response.
+	truncated := `{"object":"list","data":[{"id":"itm_1","name":"unterminat`
+	got := *validJSON(&truncated)
 
 	if !json.Valid([]byte(got)) {
-		t.Fatalf("jsonColumn produced invalid JSON: %q", got)
+		t.Fatalf("validJSON produced invalid JSON: %q", got)
 	}
 	if want := `{"_invalid_json":true,"_original_size":57}`; got != want {
-		t.Fatalf("jsonColumn = %q want %q", got, want)
+		t.Fatalf("validJSON = %q want %q", got, want)
 	}
 }
 

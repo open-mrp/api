@@ -17,7 +17,7 @@ func emptyFilter() *domain.ListRequestLogsFilter {
 }
 
 func TestBuildListQuery_NoFiltersEmitsOnlyBaselinePredicates(t *testing.T) {
-	sql, _ := buildListQuery(queryModeBase, pagination.DirectionForward, "acc_1", emptyFilter(), false, false, false, nil, 101)
+	sql, _ := buildListQuery(queryModeBase, pagination.DirectionForward, "acc_1", emptyFilter(), nil, 101)
 
 	// The dual-scope security filter is a UNION of two single-column keyset
 	// branches, not a single `account_id = ? OR target_account_id = ?`. The OR
@@ -63,7 +63,7 @@ func TestBuildListQuery_NoFiltersEmitsOnlyBaselinePredicates(t *testing.T) {
 // is handled by the scanner rather than a SQL-side default.
 func TestBuildListQuery_ActorIDSelectedDirectly(t *testing.T) {
 	for _, mode := range []queryMode{queryModeBase, queryModeActor, queryModeFull} {
-		sql, _ := buildListQuery(mode, pagination.DirectionForward, "acc_1", emptyFilter(), false, false, false, nil, 101)
+		sql, _ := buildListQuery(mode, pagination.DirectionForward, "acc_1", emptyFilter(), nil, 101)
 		mustContain(t, sql, "rl.actor_id AS actor_id")
 		if strings.Contains(sql, "COALESCE(au.id") {
 			t.Errorf("query should no longer translate actor_id via account_user; SQL:\n%s", sql)
@@ -75,7 +75,7 @@ func TestBuildListQuery_ActorTypesEmitsInPredicate(t *testing.T) {
 	f := emptyFilter()
 	f.ActorTypes = []string{"user", "api_key"}
 
-	sql, args := buildListQuery(queryModeBase, pagination.DirectionForward, "acc_1", f, false, false, false, nil, 101)
+	sql, args := buildListQuery(queryModeBase, pagination.DirectionForward, "acc_1", f, nil, 101)
 
 	mustContain(t, sql, "rl.identity_type IN (?, ?)")
 	if !containsArg(args, "user") || !containsArg(args, "api_key") {
@@ -91,7 +91,7 @@ func TestBuildListQuery_ExcludeErrorCodesGuardsNullRows(t *testing.T) {
 	f := emptyFilter()
 	f.ExcludeErrorCodes = []string{"expired_token"}
 
-	sql, args := buildListQuery(queryModeBase, pagination.DirectionForward, "acc_1", f, false, false, false, nil, 101)
+	sql, args := buildListQuery(queryModeBase, pagination.DirectionForward, "acc_1", f, nil, 101)
 
 	mustContain(t, sql, "(rl.error_code IS NULL OR rl.error_code NOT IN (?))")
 	if !containsArg(args, "expired_token") {
@@ -109,7 +109,7 @@ func TestBuildListQuery_ForwardCursorEmitsLessThanComparison(t *testing.T) {
 		ID:         "rlog_cursor",
 		Direction:  pagination.DirectionForward,
 	}
-	sql, _ := buildListQuery(queryModeBase, pagination.DirectionForward, "acc_1", emptyFilter(), false, false, false, cur, 101)
+	sql, _ := buildListQuery(queryModeBase, pagination.DirectionForward, "acc_1", emptyFilter(), cur, 101)
 
 	mustContain(t, sql, "rl.occurred_at < ?")
 	mustContain(t, sql, "ORDER BY rl.occurred_at DESC, rl.id DESC LIMIT ?")
@@ -124,7 +124,7 @@ func TestBuildListQuery_BackwardCursorEmitsGreaterThanComparison(t *testing.T) {
 		ID:         "rlog_cursor",
 		Direction:  pagination.DirectionBackward,
 	}
-	sql, _ := buildListQuery(queryModeBase, pagination.DirectionBackward, "acc_1", emptyFilter(), false, false, false, cur, 101)
+	sql, _ := buildListQuery(queryModeBase, pagination.DirectionBackward, "acc_1", emptyFilter(), cur, 101)
 
 	mustContain(t, sql, "rl.occurred_at > ?")
 	mustContain(t, sql, "ORDER BY rl.occurred_at ASC, rl.id ASC LIMIT ?")
@@ -134,7 +134,7 @@ func TestBuildListQuery_BackwardCursorEmitsGreaterThanComparison(t *testing.T) {
 }
 
 func TestBuildListQuery_ActorModeWrapsInDerivedTableWithUserAndApiKeyJoins(t *testing.T) {
-	sql, _ := buildListQuery(queryModeActor, pagination.DirectionForward, "acc_1", emptyFilter(), false, false, false, nil, 101)
+	sql, _ := buildListQuery(queryModeActor, pagination.DirectionForward, "acc_1", emptyFilter(), nil, 101)
 
 	mustContain(t, sql, " FROM (")
 	mustContain(t, sql, ") page")
@@ -159,7 +159,7 @@ func TestBuildListQuery_IdempotencyKeyUsesExistsOnLinkedRow(t *testing.T) {
 	key := "550e8400-e29b-41d4-a716-446655440000"
 	f.IdempotencyKey = &key
 
-	sql, args := buildListQuery(queryModeBase, pagination.DirectionForward, "acc_1", f, false, false, false, nil, 101)
+	sql, args := buildListQuery(queryModeBase, pagination.DirectionForward, "acc_1", f, nil, 101)
 
 	mustContain(t, sql, "EXISTS (SELECT 1 FROM idempotency_key ik2 WHERE ik2.type_id = rl.idempotency_key_id AND ik2.idempotency_key = ?)")
 	if !containsArg(args, key) {
@@ -173,7 +173,7 @@ func TestBuildListQuery_IdempotencyKeyUsesExistsOnLinkedRow(t *testing.T) {
 // flat join-everything-then-LIMIT shape filesorts the whole account partition
 // and times out on a large request_log table.
 func TestBuildListQuery_FullModeWrapsInDerivedTableWithAllJoins(t *testing.T) {
-	sql, _ := buildListQuery(queryModeFull, pagination.DirectionForward, "acc_1", emptyFilter(), false, false, false, nil, 101)
+	sql, _ := buildListQuery(queryModeFull, pagination.DirectionForward, "acc_1", emptyFilter(), nil, 101)
 
 	mustContain(t, sql, " FROM (")
 	mustContain(t, sql, ") page")
@@ -218,7 +218,7 @@ func TestBuildListQuery_SliceFiltersExpandToMatchingPlaceholderCounts(t *testing
 	f.NormalizedRoutes = []string{"/a", "/b"}
 	f.Hosts = []string{"api.example.com"}
 
-	sql, args := buildListQuery(queryModeBase, pagination.DirectionForward, "acc_1", f, false, false, false, nil, 101)
+	sql, args := buildListQuery(queryModeBase, pagination.DirectionForward, "acc_1", f, nil, 101)
 
 	mustContain(t, sql, "rl.method IN (?, ?)")
 	mustContain(t, sql, "rl.status_code IN (?, ?, ?)")
@@ -232,50 +232,42 @@ func TestBuildListQuery_SliceFiltersExpandToMatchingPlaceholderCounts(t *testing
 	mustContain(t, sql, normalizedRouteColumnExpr+" IN (?, ?)")
 	mustContain(t, sql, "rl.host IN (?)")
 
-	// The 3 JSON-include booleans (query/request/response) bind once, in the outer
-	// SELECT list. The dual-scope filter is a UNION of two keyset branches, so every
-	// per-branch bind appears twice. Per branch: 1 scope-account bind + 2 methods +
-	// 3 status codes + 1 error code + 2 actor account ids + 1 target account id +
-	// 3 actor ids + 1 actor type + 2 routes + 1 host + branch LIMIT = 18. Include
-	// booleans (3) + two branches (36) + the merged id page's LIMIT (1) = 40.
+	// The dual-scope filter is a UNION of two keyset branches, so every per-branch
+	// bind appears twice. Per branch: 1 scope-account bind + 2 methods + 3 status
+	// codes + 1 error code + 2 actor account ids + 1 target account id + 3 actor ids
+	// + 1 actor type + 2 routes + 1 host + branch LIMIT = 18. Two branches (36) +
+	// the merged id page's LIMIT (1) = 37.
 	perBranch := 1 + 2 + 3 + 1 + 2 + 1 + 3 + 1 + 2 + 1 + 1
-	want := 3 + perBranch*2 + 1
+	want := perBranch*2 + 1
 	if len(args) != want {
 		t.Errorf("unexpected arg count: got %d, want %d; args=%#v", len(args), want, args)
 	}
 }
 
 // Every ORDER BY in the generated SQL must sort only the (id, occurred_at)
-// keyset pair. MySQL's filesort cannot pack JSON/TEXT addon columns, so a single
-// oversized request/response body inside a sorted row exceeds sort_buffer_size
-// and kills the query with error 1038 "Out of sort memory" — the production
-// failure this shape exists to prevent. The JSON payload columns may appear only
-// in the outermost SELECT, which joins back by primary key after all ordering.
+// keyset pair. MySQL's filesort cannot pack TEXT addon columns, so a single
+// oversized value inside a sorted row exceeds sort_buffer_size and kills the
+// query with error 1038 "Out of sort memory". Wide columns may appear only in
+// the outermost SELECT, which joins back by primary key after all ordering.
 func TestBuildListQuery_PayloadColumnsNeverEnterASortedSet(t *testing.T) {
 	for _, mode := range []queryMode{queryModeBase, queryModeActor, queryModeFull} {
-		sql, args := buildListQuery(mode, pagination.DirectionForward, "acc_1", emptyFilter(), true, true, true, nil, 101)
+		sql, _ := buildListQuery(mode, pagination.DirectionForward, "acc_1", emptyFilter(), nil, 101)
 
 		pageEnd := strings.Index(sql, ") page")
 		if pageEnd < 0 {
 			t.Fatalf("expected an id-page derived table; SQL:\n%s", sql)
 		}
 		derived := sql[strings.Index(sql, "FROM (")+len("FROM (") : pageEnd]
-		for _, payload := range []string{"query_json", "request_body_json", "response_body_json", "error_message", "user_agent"} {
+		for _, payload := range []string{"error_message", "user_agent", "referrer"} {
 			if strings.Contains(derived, payload) {
 				t.Errorf("wide column %q leaked into the sorted id page; SQL:\n%s", payload, sql)
 			}
 		}
 
-		// The outermost query (the only part that carries the JSON columns) must
+		// The outermost query (the only part that carries the wide columns) must
 		// not sort — keyset order is restored in Go by sortListResults.
 		if outer := sql[pageEnd:]; strings.Contains(outer, "ORDER BY") {
 			t.Errorf("outermost query must not ORDER BY payload-carrying rows; SQL:\n%s", sql)
-		}
-
-		// The JSON-include booleans bind to the outer SELECT list, which precedes
-		// the derived table in text order — they must be the first three args.
-		if len(args) < 3 || args[0] != true || args[1] != true || args[2] != true {
-			t.Errorf("expected JSON-include booleans as leading args; got %#v", args)
 		}
 	}
 }

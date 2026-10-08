@@ -171,12 +171,6 @@ func Run(
 
 	idempotencyRepo := repository.NewIdempotencyKeyRepo(dbpool, queries, payloads)
 
-	if !cfg.BackfillsPaused {
-		if err := startBackfills(ctx, cfg, queries, payloads, leaseSvc); err != nil {
-			return err
-		}
-	}
-
 	// Start the idempotency key cleanup worker to delete expired keys
 	cleanupRepo := repository.NewCleanupRepo(queries)
 	cleanupWorker, err := messaging.NewCleanupWorker(&messaging.CleanupConfig{}, cleanupRepo, leaseSvc)

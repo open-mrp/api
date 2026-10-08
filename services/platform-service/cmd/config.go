@@ -18,15 +18,13 @@ var (
 )
 
 const (
-	envPort            = "PORT"
-	envDBURL           = "DB_URL"
-	envDBReplicaURL    = "DB_REPLICA_URL"
-	envBackfillsPaused = "BACKFILLS_PAUSED"
-	envRabbitMQURI     = "RABBITMQ_URI"
-	envCursorHMACKey   = "CURSOR_HMAC_KEY"
-	envPlatformMode    = "PLATFORM"
-	envAWSRegion       = "AWS_REGION"
-	envPayloadsBucket  = "PAYLOADS_BUCKET"
+	envPort           = "PORT"
+	envDBURL          = "DB_URL"
+	envRabbitMQURI    = "RABBITMQ_URI"
+	envCursorHMACKey  = "CURSOR_HMAC_KEY"
+	envPlatformMode   = "PLATFORM"
+	envAWSRegion      = "AWS_REGION"
+	envPayloadsBucket = "PAYLOADS_BUCKET"
 
 	envStripeSecretKey                = "STRIPE_SECRET_KEY"
 	envAccountFollowupEnabled         = "ACCOUNT_FOLLOWUP_ENABLED"
@@ -49,14 +47,6 @@ type config struct {
 
 	// DBURL (required) is the database connection URI.
 	DBURL string
-
-	// DBReplicaURL (optional; default: DBURL) is a read-replica connection URI. Backfills read the rows
-	// they move from it, keeping their bulk reads off the primary.
-	DBReplicaURL string
-
-	// BackfillsPaused (optional; default: false) stops every backfill from starting. A running one
-	// stops at the next restart and resumes from its cursor once unpaused.
-	BackfillsPaused bool
 
 	// RabbitMQURI (optional; default: "amqp://guest:guest@rabbitmq:5672/") is the RabbitMQ connection URI.
 	RabbitMQURI string
@@ -116,7 +106,6 @@ func (c *config) withDefaults(getenv func(string) string) *config {
 	}
 
 	followupEnabled, _ := strconv.ParseBool(env.GetEnv(envAccountFollowupEnabled, getenv))
-	backfillsPaused, _ := strconv.ParseBool(env.GetEnv(envBackfillsPaused, getenv))
 	followupDelay, _ := time.ParseDuration(env.GetEnv(envAccountFollowupDelay, getenv))
 	followupPollInterval, _ := time.ParseDuration(env.GetEnv(envAccountFollowupPollInterval, getenv))
 	var excludedDomains []string
@@ -127,15 +116,13 @@ func (c *config) withDefaults(getenv func(string) string) *config {
 	}
 
 	return &config{
-		Port:            port,
-		DBURL:           env.GetEnv(envDBURL, getenv),
-		DBReplicaURL:    cmp.Or(env.GetEnv(envDBReplicaURL, getenv), env.GetEnv(envDBURL, getenv)),
-		BackfillsPaused: backfillsPaused,
-		RabbitMQURI:     cmp.Or(env.GetEnv(envRabbitMQURI, getenv), defaultRabbitMQURI),
-		CursorHMACKey:   []byte(env.GetEnv(envCursorHMACKey, getenv)),
-		PlatformMode:    platformMode,
-		AWSRegion:       cmp.Or(env.GetEnv(envAWSRegion, getenv), defaultAWSRegion),
-		PayloadsBucket:  env.GetEnv(envPayloadsBucket, getenv),
+		Port:           port,
+		DBURL:          env.GetEnv(envDBURL, getenv),
+		RabbitMQURI:    cmp.Or(env.GetEnv(envRabbitMQURI, getenv), defaultRabbitMQURI),
+		CursorHMACKey:  []byte(env.GetEnv(envCursorHMACKey, getenv)),
+		PlatformMode:   platformMode,
+		AWSRegion:      cmp.Or(env.GetEnv(envAWSRegion, getenv), defaultAWSRegion),
+		PayloadsBucket: env.GetEnv(envPayloadsBucket, getenv),
 
 		AccountFollowupEnabled:         followupEnabled,
 		StripeSecretKey:                env.GetEnv(envStripeSecretKey, getenv),

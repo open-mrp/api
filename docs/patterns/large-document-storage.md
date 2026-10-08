@@ -27,6 +27,8 @@ queries actually read. They live in the payloads bucket instead, and the owning 
 7. **Small documents stay inline.** `blobstore.Store.Spill` keeps anything up to
    `blobstore.InlineLimit` (16 KiB) in the row, so the common case pays no round trip. Request logs
    are the exception and always go to the bucket: their volume, not their size, is the problem.
+   If the gateway's upload fails, platform-service uploads the bodies when it consumes the log.
+   Without a bucket (local stacks), request-log bodies are not kept.
 8. **Retention is a bucket lifecycle rule per prefix, not a DELETE loop.** Each prefix's expiry is
    at least as long as its row's.
 9. **Redact before upload.** The bucket holds what the row would have held, no more. It is private
@@ -43,17 +45,13 @@ queries actually read. They live in the payloads bucket instead, and the owning 
 ## Moving existing rows
 
 Rows written before a document moved to the bucket are moved by a background backfill on
-`shared/db/backfill`, never by a deploy-time migration (see `database-migrations.md`). The
-`request_log_payloads` backfill in platform-service works like this:
-
-- It walks `request_log_occurred_at_idx` from the replica and reads the bodies from the replica.
-- It uploads each payload before setting `payload_key` on the primary.
-- It skips rows whose bodies are only the `{}` placeholder.
-- Once it reports complete, a later release drops the body columns. That rebuild then copies only
-  the slim rows.
+`shared/db/backfill`, never by a deploy-time migration (see `database-migrations.md`). Once it
+reports complete, a later release drops the old columns, and that rebuild copies only the slim rows.
+`request_log` went this way: its bodies now exist only in the bucket. A log with no
+`payload_key` had no bodies, and its body includes read as `{}`.
 
 ## Local stacks
 
 `PAYLOADS_BUCKET` is optional. When it is unset, `blobstore.Open` returns a nil `*Store`, and a nil
-store keeps every document inline. The e2e stack sets it against MinIO, so the object-storage path
+store keeps every document inline, except request-log bodies, which are dropped. The e2e stack sets it against MinIO, so the object-storage path
 is what e2e exercises.

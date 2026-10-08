@@ -490,6 +490,15 @@ type AuditEvent struct {
 	RootResourceType sql.NullString
 }
 
+type BackfillProgress struct {
+	Name        string
+	CursorValue string
+	RowsDone    int64
+	CompletedAt sql.NullTime
+	CreatedAt   time.Time
+	UpdatedAt   time.Time
+}
+
 type Batch struct {
 	ID                string
 	CreatedAt         time.Time
@@ -2086,9 +2095,6 @@ type RequestLog struct {
 	Host                 string
 	Path                 string
 	NormalizedRoute      string
-	QueryJson            json.RawMessage
-	RequestBodyJson      json.RawMessage
-	ResponseBodyJson     json.RawMessage
 	StatusCode           int32
 	LatencyUs            int64
 	TargetAccountID      sql.NullString
@@ -2104,7 +2110,6 @@ type RequestLog struct {
 	CreatedAt            time.Time
 	OccurredAt           time.Time
 	IdempotencyKeyID     sql.NullString
-	StackTrace           sql.NullString
 	InternalErrorMessage sql.NullString
 	TraceID              sql.NullString
 	Hidden               bool

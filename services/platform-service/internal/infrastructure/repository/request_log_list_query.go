@@ -25,9 +25,7 @@ func normalizeRouteParams(route string) string {
 // normalizedRouteColumnExpr is the SQL counterpart to normalizeRouteParams: it collapses `{param}` tokens in the stored rl.normalized_route column to `{}` with the same shape so the IN comparison lines up. The doubled backslashes escape the regex braces for MySQL's REGEXP_REPLACE (ICU) engine.
 const normalizedRouteColumnExpr = `REGEXP_REPLACE(rl.normalized_route, '\\{[^}]+\\}', '{}')`
 
-// requestLogRLBaseColumns is the request_log SELECT list used by every list mode. Kept as a single slice so SELECT list and row scanners can't drift.
-//
-// JSON columns (query_json, request_body_json, response_body_json) are emitted as COALESCE(CASE WHEN ? THEN col ELSE NULL END, ”) so includeQueryJson / includeRequestBodyJson / includeResponseBodyJson boolean args control whether the payload is returned without changing the column count.
+// requestLogRLBaseColumns is the request_log SELECT list used by every list mode. Kept as a single slice so SELECT list and row scanners can't drift. A list never returns bodies: they live in object storage and are read only for a single log.
 //
 // This projection must only ever appear in the outermost SELECT, after all ORDER BYs have run — see buildListQuery.
 var requestLogRLBaseColumns = []string{
@@ -36,7 +34,6 @@ var requestLogRLBaseColumns = []string{
 	"rl.host",
 	"rl.path",
 	"rl.normalized_route",
-	"COALESCE(CASE WHEN ? THEN rl.query_json ELSE NULL END, '') AS query_json",
 	"rl.status_code",
 	"rl.latency_us",
 	"rl.api_version",
@@ -51,8 +48,6 @@ var requestLogRLBaseColumns = []string{
 	"rl.occurred_at",
 	"rl.created_at",
 	"rl.idempotency_key_id",
-	"COALESCE(CASE WHEN ? THEN rl.request_body_json ELSE NULL END, '') AS request_body_json",
-	"COALESCE(CASE WHEN ? THEN rl.response_body_json ELSE NULL END, '') AS response_body_json",
 	"rl.target_account_id",
 }
 
@@ -68,11 +63,9 @@ func buildListQuery(
 	dir pagination.Direction,
 	callerAccountID string,
 	f *domain.ListRequestLogsFilter,
-	includeQueryJSON, includeRequestBody, includeResponseBody bool,
 	cursor *pagination.StringCursor,
 	limit int32,
 ) (string, []any) {
-	// unionArgs collects binds for the id-page derived table only; the JSON-include booleans bind to the outer SELECT list, which precedes the derived table in the final SQL text, so the two groups are concatenated in text order at the end.
 	var unionArgs []any
 
 	// writeScopeBranch emits one keyset branch scoped to a single account column (rl.account_id or rl.target_account_id). It selects only the keyset pair (id, occurred_at) from request_log alone — no payload columns, no enrichment joins — so the WHERE + ORDER BY + LIMIT ride the branch's (scope, occurred_at DESC, id DESC) composite as a covering index and any residual-filter filesort handles only tiny rows. It appends the branch's bind args (scope id, filter values, cursor values, LIMIT) to unionArgs in the exact left-to-right order the placeholders appear.
@@ -141,11 +134,7 @@ func buildListQuery(
 		}
 	}
 
-	// Final args in SQL text order: the outer SELECT list's three JSON-include booleans come first, then the id-page derived table's binds.
-	args := make([]any, 0, len(unionArgs)+3)
-	args = append(args, includeQueryJSON, includeRequestBody, includeResponseBody)
-	args = append(args, unionArgs...)
-	return outer.String(), args
+	return outer.String(), unionArgs
 }
 
 // writeFilterPredicates appends the caller-supplied filter predicates (and their bind args) shared by both scope branches. Predicates are omitted entirely when the caller did not supply a value, so MySQL sees only the predicates that actually narrow the result set. Both branches must emit identical filter SQL so the UNION column/placeholder shapes line up.
@@ -335,12 +324,10 @@ func scanBaseListRows(rows *sql.Rows) ([]*domain.RequestLogRead, error) {
 		var r sqlc.FindRequestLogBaseByIDRow
 		if err := rows.Scan(
 			&r.ID, &r.Method, &r.Host, &r.Path, &r.NormalizedRoute,
-			&r.QueryJson,
 			&r.StatusCode, &r.LatencyUs, &r.ApiVersion, &r.ActorID,
 			&r.ActorType, &r.IdentityType, &r.ClientIpString, &r.UserAgent,
 			&r.Referrer, &r.ErrorCode, &r.ErrorMessage, &r.OccurredAt, &r.CreatedAt,
 			&r.IdempotencyKeyID,
-			&r.RequestBodyJson, &r.ResponseBodyJson,
 			&r.TargetAccountID,
 			&r.IdempotencyKey,
 		); err != nil {
@@ -363,12 +350,10 @@ func scanFullListRows(rows *sql.Rows) ([]*domain.RequestLogRead, error) {
 		var r sqlc.FindRequestLogByIDRow
 		if err := rows.Scan(
 			&r.ID, &r.Method, &r.Host, &r.Path, &r.NormalizedRoute,
-			&r.QueryJson,
 			&r.StatusCode, &r.LatencyUs, &r.ApiVersion, &r.ActorID,
 			&r.ActorType, &r.IdentityType, &r.ClientIpString, &r.UserAgent,
 			&r.Referrer, &r.ErrorCode, &r.ErrorMessage, &r.OccurredAt, &r.CreatedAt,
 			&r.IdempotencyKeyID,
-			&r.RequestBodyJson, &r.ResponseBodyJson,
 			&r.TargetAccountID,
 			&r.UserEmail, &r.UserName,
 			&r.ApiKeyTypeID, &r.ApiKeyRedactedValue, &r.ApiKeyName,
@@ -393,12 +378,10 @@ func scanActorListRows(rows *sql.Rows) ([]*domain.RequestLogRead, error) {
 		var r sqlc.FindRequestLogByIDRow
 		if err := rows.Scan(
 			&r.ID, &r.Method, &r.Host, &r.Path, &r.NormalizedRoute,
-			&r.QueryJson,
 			&r.StatusCode, &r.LatencyUs, &r.ApiVersion, &r.ActorID,
 			&r.ActorType, &r.IdentityType, &r.ClientIpString, &r.UserAgent,
 			&r.Referrer, &r.ErrorCode, &r.ErrorMessage, &r.OccurredAt, &r.CreatedAt,
 			&r.IdempotencyKeyID,
-			&r.RequestBodyJson, &r.ResponseBodyJson,
 			&r.TargetAccountID,
 			&r.UserEmail, &r.UserName,
 			&r.ApiKeyTypeID, &r.ApiKeyRedactedValue, &r.ApiKeyName,

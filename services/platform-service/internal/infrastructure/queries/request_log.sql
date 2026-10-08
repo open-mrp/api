@@ -1,12 +1,9 @@
 -- name: FindRequestLogByID :one
 SELECT rl.id, rl.method, rl.host, rl.path, rl.normalized_route,
-       COALESCE(CASE WHEN sqlc.arg('include_query_json') THEN rl.query_json ELSE NULL END, '') AS query_json,
        rl.status_code, rl.latency_us, rl.api_version, rl.actor_id AS actor_id,
        rl.actor_type, rl.identity_type, rl.client_ip_string, rl.user_agent,
        rl.referrer, rl.error_code, rl.error_message, rl.occurred_at, rl.created_at,
        rl.idempotency_key_id, rl.payload_key,
-       COALESCE(CASE WHEN sqlc.arg('include_request_body_json') THEN rl.request_body_json ELSE NULL END, '') AS request_body_json,
-       COALESCE(CASE WHEN sqlc.arg('include_response_body_json') THEN rl.response_body_json ELSE NULL END, '') AS response_body_json,
        u.email AS user_email, u.name AS user_name,
        ak.type_id AS api_key_type_id, ak.redacted_value AS api_key_redacted_value,
        ak.name AS api_key_name,
@@ -41,13 +38,10 @@ WHERE rl.id = sqlc.arg('id')
 
 -- name: FindRequestLogBaseByID :one
 SELECT rl.id, rl.method, rl.host, rl.path, rl.normalized_route,
-       COALESCE(CASE WHEN sqlc.arg('include_query_json') THEN rl.query_json ELSE NULL END, '') AS query_json,
        rl.status_code, rl.latency_us, rl.api_version, rl.actor_id AS actor_id,
        rl.actor_type, rl.identity_type, rl.client_ip_string, rl.user_agent,
        rl.referrer, rl.error_code, rl.error_message, rl.occurred_at, rl.created_at,
        rl.idempotency_key_id, rl.payload_key,
-       COALESCE(CASE WHEN sqlc.arg('include_request_body_json') THEN rl.request_body_json ELSE NULL END, '') AS request_body_json,
-       COALESCE(CASE WHEN sqlc.arg('include_response_body_json') THEN rl.response_body_json ELSE NULL END, '') AS response_body_json,
        rl.target_account_id,
        ik.idempotency_key
 FROM request_log rl
@@ -68,7 +62,6 @@ INSERT INTO request_log (
         host,
         path,
         normalized_route,
-        query_json,
         status_code,
         latency_us,
         account_id,
@@ -85,21 +78,14 @@ INSERT INTO request_log (
         actor_id,
         actor_type,
         internal_error_message,
-        stack_trace,
         identity_type,
         api_version,
         trace_id,
         public_endpoint,
         hidden,
-        request_body_json,
-        response_body_json,
         payload_key
     )
 VALUES (
-        ?,
-        ?,
-        ?,
-        ?,
         ?,
         ?,
         ?,

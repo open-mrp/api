@@ -1,5 +1,17 @@
 # Changelog
 
+## [4.3.1](https://github.com/open-mrp/api/compare/v4.3.0...v4.3.1) (2026-10-08)
+
+
+### Bug Fixes
+
+* **lease:** read the holder back instead of trusting rows affected ([a2cdd72](https://github.com/open-mrp/api/commit/a2cdd7290dcaa0b2da8f62d5dfc4421f0d02127b))
+
+
+### Documentation
+
+* forge.1 public API design review and conventions ([7739ee2](https://github.com/open-mrp/api/commit/7739ee2d8b5d76d7c81cf067ce464d3e2d71bfcd))
+
 ## [4.3.0](https://github.com/open-mrp/api/compare/v4.2.2...v4.3.0) (2026-10-08)
 
 

@@ -1,5 +1,12 @@
 # Changelog
 
+## [4.2.2](https://github.com/open-mrp/api/compare/v4.2.1...v4.2.2) (2026-10-08)
+
+
+### Performance Improvements
+
+* **messaging:** drop the superseded outbox status/next_run_at index ([ccf983a](https://github.com/open-mrp/api/commit/ccf983a7ba1914dbd75142bcaad2b027b0e51c2b))
+
 ## [4.2.1](https://github.com/open-mrp/api/compare/v4.2.0...v4.2.1) (2026-10-08)
 
 

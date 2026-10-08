@@ -161,7 +161,7 @@ type GetOutboxBacklogStatsRow struct {
 	OldestAgeUs  int64
 }
 
-// Leads on message_outbox_status_next_run_at_idx, so it reads only the unpublished rows, never the published history.
+// Ranges on status, so it reads only the unpublished rows, never the published history.
 func (q *Queries) GetOutboxBacklogStats(ctx context.Context, serviceName string) ([]GetOutboxBacklogStatsRow, error) {
 	rows, err := q.db.QueryContext(ctx, getOutboxBacklogStats, serviceName)
 	if err != nil {

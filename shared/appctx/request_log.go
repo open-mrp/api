@@ -2,10 +2,30 @@ package appctx
 
 import (
 	"context"
+	"fmt"
 	"time"
 )
 
 const requestLogKey contextKey = "request_log"
+
+const (
+	// MaxLoggedBodyBytes caps a request or response body kept on a request log. Bodies go to the
+	// payloads bucket, so the cap only bounds what the gateway holds in memory per request; a larger
+	// body is recorded as a truncation marker. It matches the 8 MiB request body limit.
+	MaxLoggedBodyBytes = 8 << 20
+	// MaxMessageBodyBytes caps a body carried on an outbox message (a log whose upload failed, or an
+	// error alert), which would otherwise bloat message_outbox.
+	MaxMessageBodyBytes = 256 << 10
+)
+
+// CapBody returns body, or a truncation marker recording its size when it is longer than limit.
+func CapBody(body *string, limit int) *string {
+	if body == nil || len(*body) <= limit {
+		return body
+	}
+	marker := fmt.Sprintf(`{"_truncated":true,"_original_size":%d}`, len(*body))
+	return &marker
+}
 
 // RequestLog captures metadata about an HTTP request for logging and auditing.
 type RequestLog struct {

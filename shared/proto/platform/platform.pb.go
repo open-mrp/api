@@ -747,7 +747,7 @@ type RequestLog struct {
 	PublicEndpoint bool `protobuf:"varint,27,opt,name=public_endpoint,json=publicEndpoint,proto3" json:"public_endpoint,omitempty"`
 	// Absent for shielded endpoints and requests with no body.
 	BodyJson *string `protobuf:"bytes,28,opt,name=body_json,json=bodyJson,proto3,oneof" json:"body_json,omitempty"`
-	// Absent for shielded endpoints and responses exceeding 256 KB.
+	// Absent for shielded endpoints; a truncation marker for responses over 8 MiB.
 	ResponseJson *string `protobuf:"bytes,29,opt,name=response_json,json=responseJson,proto3,oneof" json:"response_json,omitempty"`
 	// When true, the log is persisted but omitted from the default request-log listing.
 	Hidden bool `protobuf:"varint,30,opt,name=hidden,proto3" json:"hidden,omitempty"`

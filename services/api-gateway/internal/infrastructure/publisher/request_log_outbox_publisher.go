@@ -143,11 +143,19 @@ func (p *requestLogOutboxPublisher) saveToOutbox(pbLog *pb.RequestLog, msg contr
 
 // offloadPayload moves the log's large fields into object storage and leaves their key on the
 // message, keeping request and response bodies out of message_outbox and request_log. The object is
-// written before the message that points at it. If the upload fails the fields stay inline, so the
-// log keeps its bodies either way.
+// written before the message that points at it. If the upload fails the fields stay on the message
+// for platform-service to store, capped so a multi-megabyte body cannot bloat the outbox.
 func (p *requestLogOutboxPublisher) offloadPayload(pbLog *pb.RequestLog) {
+	if !p.uploadPayload(pbLog) {
+		pbLog.BodyJson = appctx.CapBody(pbLog.BodyJson, appctx.MaxMessageBodyBytes)
+		pbLog.ResponseJson = appctx.CapBody(pbLog.ResponseJson, appctx.MaxMessageBodyBytes)
+	}
+}
+
+// uploadPayload reports whether the log's fields are now in object storage.
+func (p *requestLogOutboxPublisher) uploadPayload(pbLog *pb.RequestLog) bool {
 	if p.payloads == nil {
-		return
+		return false
 	}
 	payload := contracts.RequestLogPayload{
 		QueryJSON:        pbLog.QueryJson,
@@ -156,7 +164,7 @@ func (p *requestLogOutboxPublisher) offloadPayload(pbLog *pb.RequestLog) {
 		StackTrace:       pbLog.StackTrace,
 	}
 	if payload == (contracts.RequestLogPayload{}) {
-		return
+		return true
 	}
 
 	ctx, cancel := context.WithTimeout(context.Background(), payloadUploadTimeout)
@@ -165,7 +173,7 @@ func (p *requestLogOutboxPublisher) offloadPayload(pbLog *pb.RequestLog) {
 	key := contracts.RequestLogPayloadKey(pbLog.Id)
 	if apiErr := p.payloads.Put(ctx, key, payload); apiErr != nil {
 		slog.Warn("Failed to store request log payload; keeping it inline", "error", apiErr, "request_id", pbLog.Id)
-		return
+		return false
 	}
 
 	pbLog.PayloadKey = &key
@@ -173,6 +181,7 @@ func (p *requestLogOutboxPublisher) offloadPayload(pbLog *pb.RequestLog) {
 	pbLog.BodyJson = nil
 	pbLog.ResponseJson = nil
 	pbLog.StackTrace = nil
+	return true
 }
 
 func (p *requestLogOutboxPublisher) publishErrorAlert(rl *appctx.RequestLog, actorName *string) {
@@ -190,8 +199,8 @@ func (p *requestLogOutboxPublisher) publishErrorAlert(rl *appctx.RequestLog, act
 	setOptionalParam(params, "ErrorMessage", rl.ErrorMessage)
 	setOptionalParam(params, "InternalErrorMessage", rl.InternalErrorMessage)
 	setOptionalParam(params, "StackTrace", rl.StackTrace)
-	setOptionalParam(params, "RequestBody", rl.BodyJSON)
-	setOptionalParam(params, "ResponseBody", rl.ResponseJSON)
+	setOptionalParam(params, "RequestBody", appctx.CapBody(rl.BodyJSON, appctx.MaxMessageBodyBytes))
+	setOptionalParam(params, "ResponseBody", appctx.CapBody(rl.ResponseJSON, appctx.MaxMessageBodyBytes))
 	setOptionalParam(params, "UserName", actorName)
 	setOptionalParam(params, "ActorID", rl.ActorID)
 	setOptionalParam(params, "AccountID", rl.AccountID)

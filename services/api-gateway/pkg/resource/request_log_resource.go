@@ -83,11 +83,11 @@ type RequestLog struct {
 	IdempotencyKey *string `json:"idempotency_key"`
 	// The JSON body the request was sent with.
 	//
-	// Sensitive values such as passwords, tokens, and secrets are redacted before the body is stored. Bodies larger than 256 KB are not stored in full; a small marker object with `_truncated` set to `true` is stored in their place.
+	// Sensitive values such as passwords, tokens, and secrets are redacted before the body is stored. Bodies larger than 8 MiB are not stored in full; a small marker object with `_truncated` set to `true` is stored in their place.
 	RequestBodyJSON json.RawMessage `json:"request_body" expandable:"true"`
 	// The JSON body OpenMRP responded with.
 	//
-	// Sensitive values such as generated API key secrets are redacted before the body is stored. Bodies larger than 256 KB are not stored in full; a small marker object with `_truncated` set to `true` is stored in their place.
+	// Sensitive values such as generated API key secrets are redacted before the body is stored. Bodies larger than 8 MiB are not stored in full; a small marker object with `_truncated` set to `true` is stored in their place.
 	ResponseBodyJSON json.RawMessage `json:"response_body" expandable:"true"`
 }
 

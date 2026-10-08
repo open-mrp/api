@@ -6,6 +6,11 @@ ON DUPLICATE KEY UPDATE
     acquired_at = IF(expires_at < NOW(6) OR holder = VALUES(holder), VALUES(acquired_at), acquired_at),
     expires_at  = IF(expires_at < NOW(6) OR holder = VALUES(holder), VALUES(expires_at), expires_at);
 
+-- name: GetTaskLeaseHolder :one
+SELECT holder
+FROM task_leases
+WHERE name = ?;
+
 -- name: RenewTaskLease :execresult
 UPDATE task_leases
 SET expires_at = DATE_ADD(NOW(6), INTERVAL ? SECOND)

@@ -24,21 +24,22 @@ func (r *leaseRepoImpl) Acquire(ctx context.Context, name, holder string, ttl ti
 	ctx, span := tracing.StartSpan(ctx, leaseRepoTracer, "repository.lease.acquire")
 	defer span.End()
 
-	result, err := r.queries.AcquireTaskLease(ctx, sqlc.AcquireTaskLeaseParams{
+	if _, err := r.queries.AcquireTaskLease(ctx, sqlc.AcquireTaskLeaseParams{
 		Name:    name,
 		Holder:  holder,
 		Column3: int64(ttl / time.Second),
-	})
+	}); err != nil {
+		span.RecordError(err)
+		return false, err
+	}
+	// Read the holder back instead of trusting rows affected: PlanetScale counts the upsert's matched
+	// row even when it leaves another pod's lease in place, so every pod would think it acquired it.
+	current, err := r.queries.GetTaskLeaseHolder(ctx, name)
 	if err != nil {
 		span.RecordError(err)
 		return false, err
 	}
-	affected, err := result.RowsAffected()
-	if err != nil {
-		span.RecordError(err)
-		return false, err
-	}
-	return affected > 0, nil
+	return current == holder, nil
 }
 
 func (r *leaseRepoImpl) Renew(ctx context.Context, name, holder string, ttl time.Duration) (bool, error) {

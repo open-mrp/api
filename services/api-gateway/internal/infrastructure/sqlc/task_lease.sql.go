@@ -29,6 +29,19 @@ func (q *Queries) AcquireTaskLease(ctx context.Context, arg AcquireTaskLeasePara
 	return q.db.ExecContext(ctx, acquireTaskLease, arg.Name, arg.Holder, arg.Column3)
 }
 
+const getTaskLeaseHolder = `-- name: GetTaskLeaseHolder :one
+SELECT holder
+FROM task_leases
+WHERE name = ?
+`
+
+func (q *Queries) GetTaskLeaseHolder(ctx context.Context, name string) (string, error) {
+	row := q.db.QueryRowContext(ctx, getTaskLeaseHolder, name)
+	var holder string
+	err := row.Scan(&holder)
+	return holder, err
+}
+
 const releaseTaskLease = `-- name: ReleaseTaskLease :exec
 DELETE FROM task_leases
 WHERE name = ? AND holder = ?

@@ -1,5 +1,12 @@
 # Changelog
 
+## [4.2.0](https://github.com/open-mrp/api/compare/v4.1.4...v4.2.0) (2026-10-08)
+
+
+### Features
+
+* build customer-portal links on PORTAL_URL ([a0ea7b7](https://github.com/open-mrp/api/commit/a0ea7b74c179ed9f078fe4264388db2be225ae3b))
+
 ## [4.1.4](https://github.com/open-mrp/api/compare/v4.1.3...v4.1.4) (2026-10-07)
 
 

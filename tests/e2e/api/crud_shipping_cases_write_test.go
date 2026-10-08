@@ -79,7 +79,8 @@ func TestShippingCases_UpdateTrackingAndWeightKeepsTheStoredUnit(t *testing.T) {
 
 // Editing one field must not blank the other — the page sends only what the user touched.
 func TestShippingCases_UpdateLeavesUntouchedFieldsAlone(t *testing.T) {
-	// Not parallel: shares the seeded case with the test above.
+	t.Parallel()
+
 	beforeValue, _ := caseFreightWeight(t, sb5CaseID)
 	beforeTracking := jsonField(readShippingCase(t, sb5CaseID), "tracking_number")
 

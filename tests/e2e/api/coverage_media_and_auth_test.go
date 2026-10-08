@@ -37,6 +37,8 @@ func onePixelPNG(t *testing.T) []byte {
 // The upload route is /photo while the read route is /logo — an asymmetry worth pinning, since
 // a caller guessing the pair from either half alone gets a 404.
 func TestAccountLogo_UploadThenRead(t *testing.T) {
+	t.Parallel()
+
 	status, body, err := apiClient.PutBytes("/v1/identity/accounts/"+SeedAccountID+"/photo", "image/png", onePixelPNG(t))
 	require.NoError(t, err)
 	require.Less(t, status, 500, "upload must not 5xx: %s", string(body))
@@ -52,6 +54,8 @@ func TestAccountLogo_UploadThenRead(t *testing.T) {
 }
 
 func TestAccountFavicon_UploadThenRead(t *testing.T) {
+	t.Parallel()
+
 	status, body, err := apiClient.PutBytes("/v1/identity/accounts/"+SeedAccountID+"/favicon", "image/png", onePixelPNG(t))
 	require.NoError(t, err)
 	require.Less(t, status, 500, "upload must not 5xx: %s", string(body))
@@ -95,6 +99,8 @@ func TestAccountLogo_UnknownAccountReportsNoURL(t *testing.T) {
 // ──────────────────────────────────────────────
 
 func TestUserPhoto_UploadThenRead(t *testing.T) {
+	t.Parallel()
+
 	status, body, err := apiClient.PutBytes("/v1/identity/users/"+SeedUserID+"/photo", "image/png", onePixelPNG(t))
 	require.NoError(t, err)
 	require.Less(t, status, 500, "upload must not 5xx: %s", string(body))

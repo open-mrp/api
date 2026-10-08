@@ -33,6 +33,7 @@ func feedHasBody(t *testing.T, reader *Client, category, body string) bool {
 }
 
 func TestMentions_PierceMute(t *testing.T) {
+	t.Parallel()
 	owner := chatUserClient(t)
 	member := chatUser2Client(t)
 

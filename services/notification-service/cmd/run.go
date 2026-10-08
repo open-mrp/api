@@ -7,7 +7,6 @@ import (
 	"os"
 	"os/signal"
 	"syscall"
-	"time"
 
 	"github.com/open-mrp/api/services/notification-service/internal/domain"
 	"github.com/open-mrp/api/services/notification-service/internal/email"
@@ -76,15 +75,7 @@ func Run(
 	leaseSvc := lease.New(repository.NewLeaseRepo(queries))
 
 	outboxEnqueuerRepo := repository.NewOutboxEnqueuerRepo(db, queries)
-	enqueuerCfg := &messaging.EnqueuerConfig{
-		ServiceName:  domain.ServiceName,
-		PlatformMode: cfg.PlatformMode,
-	}
-	if !cfg.PlatformMode.IsTest() {
-		// Every outbox write wakes its own service's enqueuer on commit (messaging.NotifyOnCommit), so this ceiling only paces failed-publish retries and rows orphaned by a crashed pod. It stays below the 30s default because the poll is not scoped by service_name: this is the sweep that recovers those rows for every service on augno_core.
-		enqueuerCfg.MaxPollInterval = 5 * time.Second
-	}
-	enqueuer, err := messaging.NewEnqueuer(enqueuerCfg, outboxEnqueuerRepo, rabbitmq, leaseSvc)
+	enqueuer, err := messaging.NewEnqueuer(&messaging.EnqueuerConfig{ServiceName: domain.ServiceName, PlatformMode: cfg.PlatformMode}, outboxEnqueuerRepo, rabbitmq, leaseSvc)
 	if err != nil {
 		return err
 	}

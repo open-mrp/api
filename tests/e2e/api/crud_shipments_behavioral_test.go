@@ -53,6 +53,7 @@ func restoreShipmentSB(t *testing.T) {
 }
 
 func TestShipmentsBehavioral_ShipMarksShippedAndAssignsSSCC(t *testing.T) {
+	// Not parallel: ships SHP-SB-001, which other tests read as packed, and voids it back.
 	defer restoreShipmentSB(t)
 
 	before := readShipment(t, sbShipmentID, "shipping_cases")
@@ -81,6 +82,7 @@ func TestShipmentsBehavioral_ShipMarksShippedAndAssignsSSCC(t *testing.T) {
 }
 
 func TestShipmentsBehavioral_ShipTwiceConflicts(t *testing.T) {
+	// Not parallel: ships SHP-SB-001, which other tests read as packed, and voids it back.
 	defer restoreShipmentSB(t)
 
 	status, body, err := apiClient.Post(shipmentsPath+"/"+sbShipmentID+"/actions/ship",
@@ -95,6 +97,7 @@ func TestShipmentsBehavioral_ShipTwiceConflicts(t *testing.T) {
 }
 
 func TestShipmentsBehavioral_VoidReturnsToPackedAndClearsCases(t *testing.T) {
+	// Not parallel: ships SHP-SB-001, which other tests read as packed, and voids it back.
 	defer restoreShipmentSB(t)
 
 	status, body, err := apiClient.Post(shipmentsPath+"/"+sbShipmentID+"/actions/ship",
@@ -123,6 +126,8 @@ func TestShipmentsBehavioral_VoidReturnsToPackedAndClearsCases(t *testing.T) {
 }
 
 func TestShipmentsBehavioral_VoidUnshippedConflicts(t *testing.T) {
+	t.Parallel()
+
 	require.Nil(t, readShipment(t, sbShipmentID)["shipped_at"], "fixture must start packed")
 
 	status, body, err := apiClient.Post(shipmentsPath+"/"+sbShipmentID+"/actions/void", nil, newIdempotencyKey())
@@ -131,6 +136,8 @@ func TestShipmentsBehavioral_VoidUnshippedConflicts(t *testing.T) {
 }
 
 func TestShipmentsBehavioral_UpdateLeavesUntouchedFieldsAlone(t *testing.T) {
+	t.Parallel()
+
 	before := readShipment(t, sbShipmentID, "freight")
 	freightBefore := before["freight"].(map[string]any)
 
@@ -195,6 +202,7 @@ func TestShipmentsBehavioral_UpdateServiceLevelIsThreeState(t *testing.T) {
 }
 
 func TestShipmentsBehavioral_ShippedShipmentCannotBeRerouted(t *testing.T) {
+	// Not parallel: ships SHP-SB-001, which other tests read as packed, and voids it back.
 	defer restoreShipmentSB(t)
 
 	status, body, err := apiClient.Post(shipmentsPath+"/"+sbShipmentID+"/actions/ship",
@@ -389,6 +397,7 @@ func readOrderStatus(t *testing.T, orderID string) string {
 }
 
 func TestShipmentsBehavioral_ShipCreatesInvoiceForShippedGoods(t *testing.T) {
+	// Not parallel: ships SHP-SB-001, which other tests read as packed, and voids it back.
 	defer restoreShipmentSB(t)
 
 	status, body, err := apiClient.Post(shipmentsPath+"/"+sbShipmentID+"/actions/ship",
@@ -445,6 +454,7 @@ func TestShipmentsBehavioral_ShippingWholeOrderFulfillsBillsFreightAndEmails(t *
 }
 
 func TestShipmentsBehavioral_ShipWithoutEmailDoesNotSendInvoice(t *testing.T) {
+	// Not parallel: ships SHP-SB-001, which other tests read as packed, and voids it back.
 	defer restoreShipmentSB(t)
 
 	status, body, err := apiClient.Post(shipmentsPath+"/"+sbShipmentID+"/actions/ship",
@@ -461,6 +471,7 @@ func TestShipmentsBehavioral_ShipWithoutEmailDoesNotSendInvoice(t *testing.T) {
 }
 
 func TestShipmentsBehavioral_VoidDeletesTheInvoiceAndReopensTheOrder(t *testing.T) {
+	// Not parallel: ships SHP-SB-001, which other tests read as packed, and voids it back.
 	defer restoreShipmentSB(t)
 
 	status, body, err := apiClient.Post(shipmentsPath+"/"+sbShipmentID+"/actions/ship",

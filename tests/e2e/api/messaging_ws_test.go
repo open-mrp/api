@@ -108,6 +108,7 @@ func frameEvent(f wsFrame) string {
 }
 
 func TestWS_TargetedNotificationPush(t *testing.T) {
+	// Not parallel: matches any frame of a type on the seed users' shared topics, which parallel tests also trigger.
 	conn := dialNotificationWS(t, SeedAccountID)
 	user := notifUserClient(t)
 	title := uniqueName("e2e-ws-notif")
@@ -121,6 +122,7 @@ func TestWS_TargetedNotificationPush(t *testing.T) {
 }
 
 func TestWS_BroadcastAnnouncementPush(t *testing.T) {
+	// Not parallel: matches any frame of a type on the seed users' shared topics, which parallel tests also trigger.
 	conn := dialNotificationWS(t, SeedAccountID)
 	user := notifUserClient(t)
 	title := uniqueName("e2e-ws-announce")
@@ -134,6 +136,7 @@ func TestWS_BroadcastAnnouncementPush(t *testing.T) {
 }
 
 func TestWS_UnreadChangedOnMarkSeen(t *testing.T) {
+	// Not parallel: matches any frame of a type on the seed users' shared topics, which parallel tests also trigger.
 	user := notifUserClient(t)
 	title := uniqueName("e2e-ws-unread")
 	sendNotif(t, user, "order.updated", title, nil)
@@ -151,6 +154,7 @@ func TestWS_UnreadChangedOnMarkSeen(t *testing.T) {
 }
 
 func TestWS_ChatMessagePushToRecipient(t *testing.T) {
+	// Not parallel: matches any frame of a type on the seed users' shared topics, which parallel tests also trigger.
 	// dane DMs user2; user2's live connection should receive the message on their
 	// per-user topic (no explicit conversation subscribe needed — the server fans to it).
 	user := chatUserClient(t)
@@ -167,6 +171,7 @@ func TestWS_ChatMessagePushToRecipient(t *testing.T) {
 }
 
 func TestWS_CrossAccountHintOnUserGlobal(t *testing.T) {
+	// Not parallel: matches any frame of a type on the seed users' shared topics, which parallel tests also trigger.
 	conn := dialNotificationWS(t, SeedAccountID)
 	user := notifUserClient(t)
 	title := uniqueName("e2e-ws-hint")

@@ -102,6 +102,8 @@ func downloadExportFile(t *testing.T, job map[string]any) (filename string, body
 }
 
 func TestExports_EveryResourceRendersThroughAJob(t *testing.T) {
+	t.Parallel()
+
 	for _, tc := range []struct {
 		name string
 		path string
@@ -133,6 +135,8 @@ func TestExports_EveryResourceRendersThroughAJob(t *testing.T) {
 // A filter reaches the worker: it is stored on the job at accept and read back when the
 // render runs, so a request that narrows still produces a file.
 func TestExports_AcceptCarriesFiltersThroughToTheWorker(t *testing.T) {
+	t.Parallel()
+
 	sku := uniqueName("e2e-export-filter")
 	createdIDs, _ := bulkUpsertMaterialIDs(t, map[string]any{
 		"sku":      sku,
@@ -149,6 +153,8 @@ func TestExports_AcceptCarriesFiltersThroughToTheWorker(t *testing.T) {
 // Reading a job answers with the job, never a redirect to its file — a client polling one
 // must not be sent somewhere else on the poll that happens to succeed.
 func TestExports_ReadingAJobNeverRedirects(t *testing.T) {
+	t.Parallel()
+
 	job := completedExportJob(t, materialsPath+"/actions/export", nil)
 	jobID := jsonField(job, "id")
 
@@ -160,6 +166,8 @@ func TestExports_ReadingAJobNeverRedirects(t *testing.T) {
 
 // Only an export carries a file, so a bulk job's export stays null.
 func TestExports_ABulkJobHasNoDownload(t *testing.T) {
+	t.Parallel()
+
 	job := bulkUpsertMaterialsJob(t, map[string]any{
 		"sku":      uniqueName("e2e-export-bulkjob"),
 		"category": map[string]any{"id": SeedMaterialCategoryID},

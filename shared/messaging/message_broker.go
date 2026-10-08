@@ -49,3 +49,16 @@ type MessageBroker interface {
 	// Close stops consumers, waits briefly for their in-flight deliveries, then shuts down the AMQP channel and connection. Safe to call multiple times.
 	Close()
 }
+
+// OutboundMessage is one message in a PublishMessages batch.
+type OutboundMessage struct {
+	Exchange   string
+	RoutingKey string
+	Message    contracts.AmqpMessage
+}
+
+// BatchPublisher is a MessageBroker that can publish several messages before waiting for the broker to confirm any of them. Waiting on each confirm before sending the next caps a publisher at one round trip per message; the enqueuer publishes through this when its broker offers it.
+type BatchPublisher interface {
+	// PublishMessages publishes the messages in order on one channel and returns one error per message: nil once the broker has confirmed it, otherwise why it was not.
+	PublishMessages(ctx context.Context, messages []OutboundMessage) []error
+}

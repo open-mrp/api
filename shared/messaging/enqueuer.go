@@ -19,7 +19,7 @@ import (
 
 // EnqueuerConfig holds the configuration for the outbox enqueuer.
 type EnqueuerConfig struct {
-	// ServiceName (required) identifies which service owns this enqueuer instance. Stamped onto rows this service writes and used in log messages; it does not scope the poll, which claims pending rows from every service sharing the database.
+	// ServiceName (required) identifies which service owns this enqueuer instance. Stamped onto rows this service writes, and the poll claims only rows carrying it: services sharing a database would otherwise race for the same oldest rows, and every pod but the winner would come away empty.
 	ServiceName string
 
 	// PlatformMode (optional) is the platform mode. When set to "test", default intervals are minimized so e2e runs observe async side-effects quickly (see WithDefaults).
@@ -31,9 +31,9 @@ type EnqueuerConfig struct {
 	// PollInterval (optional; default: 250ms in production, 10ms in test) controls how frequently the enqueuer polls the outbox table for pending messages while there is work to do.
 	PollInterval time.Duration
 
-	// MaxPollInterval (optional; default: 30s in production, == PollInterval in test) is the ceiling for idle backoff. When consecutive polls find nothing, the interval doubles from PollInterval up to this value so an empty outbox is not queried at full rate. Any poll that finds work resets the interval to PollInterval, so pickup latency and throughput under load are unchanged; only the steady-state idle poll rate drops. The tradeoff is that the first message after a sustained idle period waits up to MaxPollInterval to be picked up. Must be >= PollInterval (clamped in WithDefaults).
+	// MaxPollInterval (optional; default: 5s in production, == PollInterval in test) is the ceiling for idle backoff. When consecutive polls find nothing, the interval doubles from PollInterval up to this value so an empty outbox is not queried at full rate. Any poll that finds work resets the interval to PollInterval, so pickup latency and throughput under load are unchanged; only the steady-state idle poll rate drops. The tradeoff is that the first message after a sustained idle period waits up to MaxPollInterval to be picked up. Must be >= PollInterval (clamped in WithDefaults).
 	//
-	// The default can be this slow because outbox writes wake their own process's enqueuer on commit (NotifyOnCommit, called by every outbox repo's Create), so the idle poll only paces rows nothing kicked: DelaySeconds retries, failed-publish retries, and rows orphaned by a crashed pod. The poll query is not scoped by service_name, so a service that overrides this to a tighter ceiling also sweeps every other service's rows on the same database.
+	// Outbox writes wake their own process's enqueuer on commit (NotifyOnCommit, called by every outbox repo's Create), so the idle poll only paces rows nothing kicked: DelaySeconds retries, failed-publish retries, and rows orphaned by a crashed pod. Each service's poll is the only one that picks those up, so the ceiling is how long they can wait past due.
 	MaxPollInterval time.Duration
 
 	// BatchSize (optional; default: 100) is the maximum number of outbox messages to lock and publish in a single poll cycle.
@@ -89,7 +89,7 @@ func (c *EnqueuerConfig) WithDefaults() *EnqueuerConfig {
 			// Keep e2e cadence tight so async side-effects are observed quickly: no backoff.
 			c.MaxPollInterval = c.PollInterval
 		} else {
-			c.MaxPollInterval = 30 * time.Second
+			c.MaxPollInterval = 5 * time.Second
 		}
 	}
 	if c.MaxPollInterval < c.PollInterval {
@@ -367,12 +367,12 @@ func (e *Enqueuer) cleanupLoop() {
 	}
 }
 
-// processBatch acquires up to BatchSize pending outbox messages (locked to this instance's LockOwner), publishes each to RabbitMQ via publishMessage, and marks the results in the database: successfully published messages are marked in one set-based MarkPublished call; failed messages have their attempt count incremented and are scheduled for retry with exponential backoff (MarkFailed). Returns the number of messages acquired so drainPending can tell whether the backlog may hold more work (a full batch) or is drained (a short batch).
+// processBatch acquires up to BatchSize pending outbox messages (locked to this instance's LockOwner), publishes them to RabbitMQ via publishMessages, and marks the results in the database: successfully published messages are marked in one set-based MarkPublished call; failed messages have their attempt count incremented and are scheduled for retry with exponential backoff (MarkFailed). Returns the number of messages acquired so drainPending can tell whether the backlog may hold more work (a full batch) or is drained (a short batch).
 func (e *Enqueuer) processBatch() int {
 	var messages []*OutboxMessage
 	err := WithOutboxDBLockRetry(e.ctx, e.config.DBRetryBackoff, "outbox.acquire_and_lock", func() error {
 		var err error
-		messages, err = e.repo.AcquireAndLock(e.ctx, e.config.LockOwner, e.config.BatchSize, e.config.LockDurationSeconds)
+		messages, err = e.repo.AcquireAndLock(e.ctx, e.config.ServiceName, e.config.LockOwner, e.config.BatchSize, e.config.LockDurationSeconds)
 		return err
 	})
 	if err != nil {
@@ -386,9 +386,10 @@ func (e *Enqueuer) processBatch() int {
 
 	slog.Debug("Processing outbox messages", "count", len(messages))
 
+	publishErrs := e.publishMessages(messages)
 	publishedIDs := make([]int64, 0, len(messages))
-	for _, msg := range messages {
-		if err := e.publishMessage(msg); err != nil {
+	for i, msg := range messages {
+		if err := publishErrs[i]; err != nil {
 			e.metrics.recordPublishError(e.ctx, msg.MessageType)
 			delay := retry.CalculateDelay(e.config.RetryBackoff, msg.Attempts)
 			delaySecs := max(int(delay.Seconds()), 1)
@@ -426,12 +427,23 @@ func (e *Enqueuer) processBatch() int {
 	return len(messages)
 }
 
-// publishMessage publishes an OutboxMessage via the message broker. It stamps the outbox-generated MessageID onto the payload before publishing.
-func (e *Enqueuer) publishMessage(msg *OutboxMessage) error {
-	payload := msg.Payload
-	payload.MessageID = msg.MessageID
+// publishMessages publishes a batch through the broker, stamping each outbox-generated MessageID onto its payload, and returns one error per message. A broker that is a BatchPublisher gets the whole batch at once; any other is sent one message at a time.
+func (e *Enqueuer) publishMessages(messages []*OutboxMessage) []error {
+	outbound := make([]OutboundMessage, len(messages))
+	for i, msg := range messages {
+		payload := msg.Payload
+		payload.MessageID = msg.MessageID
+		outbound[i] = OutboundMessage{Exchange: msg.Destination, RoutingKey: msg.RoutingKey, Message: payload}
+	}
 
-	return e.broker.PublishMessage(e.ctx, msg.Destination, msg.RoutingKey, payload)
+	if batch, ok := e.broker.(BatchPublisher); ok {
+		return batch.PublishMessages(e.ctx, outbound)
+	}
+	errs := make([]error, len(outbound))
+	for i, m := range outbound {
+		errs[i] = e.broker.PublishMessage(e.ctx, m.Exchange, m.RoutingKey, m.Message)
+	}
+	return errs
 }
 
 // cleanupExpiredLocks delegates to the repository to release outbox locks that have exceeded LockDurationSeconds. This handles the case where a process crashes after locking messages but before publishing them — the locks expire and the messages become available for another enqueuer instance to pick up.

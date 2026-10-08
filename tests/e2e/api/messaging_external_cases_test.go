@@ -39,6 +39,7 @@ func openCustomerCase(t *testing.T, customer *Client) string {
 // An internal note posted on an external case is never serialized into a customer payload, while a
 // customer reply is. Staff see everything; the customer sees only customer/system messages.
 func TestExternalCase_InternalNoteHiddenFromCustomer(t *testing.T) {
+	// Not parallel: sets the seed account's support route and uses the shared per-customer support case.
 	seedSupportRoute(t)
 	customer := getCustomerPortalClient()
 	dane := chatUserClient(t)
@@ -113,6 +114,7 @@ func customerUnread(t *testing.T, customer *Client, convID string) float64 {
 // Internal notes do not bump the customer's unread count: posting team-only notes leaves the
 // customer's unread unchanged (only customer-visible messages count for the customer).
 func TestExternalCase_CustomerUnreadIgnoresInternalNotes(t *testing.T) {
+	// Not parallel: sets the seed account's support route and uses the shared per-customer support case.
 	seedSupportRoute(t)
 	customer := getCustomerPortalClient()
 	dane := chatUserClient(t)
@@ -137,6 +139,7 @@ func TestExternalCase_CustomerUnreadIgnoresInternalNotes(t *testing.T) {
 
 // Case triage: set status, assign, and find the case in the support inbox by status.
 func TestExternalCase_TriageAndInbox(t *testing.T) {
+	// Not parallel: sets the seed account's support route and uses the shared per-customer support case.
 	seedSupportRoute(t)
 	customer := getCustomerPortalClient()
 	dane := chatUserClient(t)
@@ -178,6 +181,7 @@ func TestExternalCase_TriageAndInbox(t *testing.T) {
 // Draft-first reply: an agent/user proposes a draft, then a human approves and sends it, which
 // materializes exactly one customer-visible message.
 func TestExternalCase_DraftApproveSend(t *testing.T) {
+	// Not parallel: sets the seed account's support route and uses the shared per-customer support case.
 	seedSupportRoute(t)
 	customer := getCustomerPortalClient()
 	dane := chatUserClient(t)
@@ -228,6 +232,7 @@ func TestExternalCase_DraftApproveSend(t *testing.T) {
 // set-status — a customer message → waiting on team, a staff reply → waiting on customer, a pending
 // draft → needs approval, a rejected draft → back to the team. A still-untriaged case stays "new".
 func TestExternalCase_AutoStatusFromActivity(t *testing.T) {
+	// Not parallel: sets the seed account's support route and uses the shared per-customer support case.
 	seedSupportRoute(t)
 	customer := getCustomerPortalClient()
 	dane := chatUserClient(t)
@@ -296,6 +301,7 @@ func TestExternalCase_AutoStatusFromActivity(t *testing.T) {
 
 // Linking business records to a conversation and listing conversations by record.
 func TestExternalCase_RecordLinks(t *testing.T) {
+	// Not parallel: sets the seed account's support route and uses the shared per-customer support case.
 	seedSupportRoute(t)
 	customer := getCustomerPortalClient()
 	dane := chatUserClient(t)

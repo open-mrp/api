@@ -19,14 +19,16 @@ type mockEnqueuerRepo struct {
 	batches [][]*OutboxMessage
 
 	acquireCalls   int
+	claimedFor     []string
 	publishedCalls [][]int64
 	failedIDs      []int64
 }
 
-func (m *mockEnqueuerRepo) AcquireAndLock(_ context.Context, _ string, _ int, _ int) ([]*OutboxMessage, error) {
+func (m *mockEnqueuerRepo) AcquireAndLock(_ context.Context, serviceName, _ string, _ int, _ int) ([]*OutboxMessage, error) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 	m.acquireCalls++
+	m.claimedFor = append(m.claimedFor, serviceName)
 	if len(m.batches) == 0 {
 		return nil, nil
 	}
@@ -92,6 +94,23 @@ func (b *mockEnqueuerBroker) ConsumeFanout(context.Context, string, []string, Me
 
 func (b *mockEnqueuerBroker) IsReady() bool { return true }
 func (b *mockEnqueuerBroker) Close()        {}
+
+// mockBatchBroker is a mockEnqueuerBroker that also publishes whole batches, recording the size of each.
+type mockBatchBroker struct {
+	mockEnqueuerBroker
+	batchSizes []int
+}
+
+func (b *mockBatchBroker) PublishMessages(ctx context.Context, messages []OutboundMessage) []error {
+	b.mu.Lock()
+	b.batchSizes = append(b.batchSizes, len(messages))
+	b.mu.Unlock()
+	errs := make([]error, len(messages))
+	for i, m := range messages {
+		errs[i] = b.mockEnqueuerBroker.PublishMessage(ctx, m.Exchange, m.RoutingKey, m.Message)
+	}
+	return errs
+}
 
 func outboxBatch(start, count int) []*OutboxMessage {
 	batch := make([]*OutboxMessage, count)
@@ -172,6 +191,45 @@ func TestEnqueuerProcessBatchMarksPublishedAsBatch(t *testing.T) {
 
 	if acquired != 3 {
 		t.Errorf("expected processBatch to report 3 acquired, got %d", acquired)
+	}
+	if len(repo.publishedCalls) != 1 {
+		t.Fatalf("expected exactly 1 MarkPublished call for the batch, got %d", len(repo.publishedCalls))
+	}
+	if got := repo.publishedCalls[0]; len(got) != 2 || got[0] != 0 || got[1] != 2 {
+		t.Errorf("expected published ids [0 2], got %v", got)
+	}
+	if len(repo.failedIDs) != 1 || repo.failedIDs[0] != 1 {
+		t.Errorf("expected failed ids [1], got %v", repo.failedIDs)
+	}
+}
+
+// Services share one outbox table, so an enqueuer must claim only the rows its own service wrote.
+func TestEnqueuerClaimsOnlyItsOwnServicesRows(t *testing.T) {
+	t.Parallel()
+
+	repo := &mockEnqueuerRepo{}
+	e := newTestEnqueuer(t, repo, &mockEnqueuerBroker{}, 3)
+
+	e.processBatch()
+
+	if len(repo.claimedFor) != 1 || repo.claimedFor[0] != "test-service" {
+		t.Errorf("expected one claim for test-service, got %v", repo.claimedFor)
+	}
+}
+
+// A broker that publishes batches gets the whole batch in one call, and its per-message results decide
+// what is marked published and what is retried.
+func TestEnqueuerPublishesThroughABatchPublisher(t *testing.T) {
+	t.Parallel()
+
+	repo := &mockEnqueuerRepo{batches: [][]*OutboxMessage{outboxBatch(0, 3)}}
+	broker := &mockBatchBroker{mockEnqueuerBroker: mockEnqueuerBroker{failKeys: map[string]bool{"rk_1": true}}}
+	e := newTestEnqueuer(t, repo, broker, 3)
+
+	e.processBatch()
+
+	if len(broker.batchSizes) != 1 || broker.batchSizes[0] != 3 {
+		t.Errorf("expected one PublishMessages call with 3 messages, got %v", broker.batchSizes)
 	}
 	if len(repo.publishedCalls) != 1 {
 		t.Fatalf("expected exactly 1 MarkPublished call for the batch, got %d", len(repo.publishedCalls))
@@ -291,7 +349,7 @@ type endlessRepo struct {
 	calls int
 }
 
-func (m *endlessRepo) AcquireAndLock(_ context.Context, _ string, limit int, _ int) ([]*OutboxMessage, error) {
+func (m *endlessRepo) AcquireAndLock(_ context.Context, _, _ string, limit int, _ int) ([]*OutboxMessage, error) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 	m.calls++

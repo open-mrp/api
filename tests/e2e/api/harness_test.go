@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"net/url"
 	"os"
+	"sync"
 	"testing"
 	"time"
 )
@@ -16,7 +17,7 @@ import (
 const (
 	defaultBaseURL     = "http://localhost:8082"
 	healthPollTimeout  = 60 * time.Second
-	healthPollInterval = 2 * time.Second
+	healthPollInterval = 100 * time.Millisecond
 	// warmupTimeout bounds how long we wait for the notification fan-out pipeline to deliver its
 	// first row on a cold stack before giving up and running the tests anyway.
 	warmupTimeout = 60 * time.Second
@@ -34,6 +35,10 @@ func TestMain(m *testing.M) {
 	baseURL := envOr("E2E_BASE_URL", defaultBaseURL)
 	apiKey := envOr("E2E_API_KEY", SeedAPIKey)
 	accountID := envOr("E2E_ACCOUNT_ID", SeedAccountID)
+
+	// Go keeps two idle connections per host by default, so a suite running dozens of tests at once would
+	// reopen a connection to the gateway for most requests.
+	http.DefaultTransport.(*http.Transport).MaxIdleConnsPerHost = 256
 
 	apiClient = NewClient(baseURL, apiKey, accountID)
 
@@ -55,12 +60,11 @@ func TestMain(m *testing.M) {
 	}
 	log.Println("Authentication verified")
 
-	if err := trimRuntimeRequestLogs(); err != nil {
-		log.Fatalf("Trimming request logs from earlier runs failed: %v", err)
-	}
-	if err := trimPublishedOutbox(); err != nil {
-		log.Fatalf("Trimming delivered outbox messages from earlier runs failed: %v", err)
-	}
+	// The trims and the warm-up touch different tables, so they run side by side.
+	var trimRequestLogsErr, trimOutboxErr error
+	var trims sync.WaitGroup
+	trims.Go(func() { trimRequestLogsErr = trimRuntimeRequestLogs() })
+	trims.Go(func() { trimOutboxErr = trimPublishedOutbox() })
 
 	// Warm the notification fan-out pipeline before running tests. /healthz only reflects the API
 	// gateway being up; it does not guarantee the notification-service RabbitMQ fan-out consumer has
@@ -72,6 +76,14 @@ func TestMain(m *testing.M) {
 		log.Printf("WARNING: notification pipeline warm-up did not complete: %v", err)
 	} else {
 		log.Println("Notification pipeline warm")
+	}
+
+	trims.Wait()
+	if trimRequestLogsErr != nil {
+		log.Fatalf("Trimming request logs from earlier runs failed: %v", trimRequestLogsErr)
+	}
+	if trimOutboxErr != nil {
+		log.Fatalf("Trimming delivered outbox messages from earlier runs failed: %v", trimOutboxErr)
 	}
 
 	// Load list endpoints from the OpenAPI spec.

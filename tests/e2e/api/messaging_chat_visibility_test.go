@@ -19,6 +19,7 @@ import (
 var hiddenListQuery = url.Values{"status": {"hidden"}}
 
 func TestChat_HideAndUnhide(t *testing.T) {
+	t.Parallel()
 	// The owner cannot hide a group they own, so hiding is exercised by a member.
 	owner := chatUserClient(t)
 	member := chatUser2Client(t)
@@ -60,6 +61,7 @@ func TestChat_HideAndUnhide(t *testing.T) {
 }
 
 func TestChat_UnhideNonHiddenIsNoop(t *testing.T) {
+	t.Parallel()
 	owner := chatUserClient(t)
 	member := chatUser2Client(t)
 	convID := jsonField(createGroupConversation(t, owner, uniqueName("nothidden"), SeedAccountUser2ID), "id")
@@ -72,6 +74,7 @@ func TestChat_UnhideNonHiddenIsNoop(t *testing.T) {
 }
 
 func TestChat_HideUnhideUnknownConversation(t *testing.T) {
+	t.Parallel()
 	user := chatUserClient(t)
 	missing := "cv_doesnotexist0000000000"
 
@@ -83,6 +86,7 @@ func TestChat_HideUnhideUnknownConversation(t *testing.T) {
 }
 
 func TestChat_HideNonParticipantRejected(t *testing.T) {
+	t.Parallel()
 	owner := chatUserClient(t)
 	convID := jsonField(createGroupConversation(t, owner, uniqueName("private"), SeedAccountUser2ID), "id")
 
@@ -95,6 +99,7 @@ func TestChat_HideNonParticipantRejected(t *testing.T) {
 }
 
 func TestChat_TypingIndicator(t *testing.T) {
+	t.Parallel()
 	owner := chatUserClient(t)
 	convID := jsonField(createGroupConversation(t, owner, uniqueName("typing"), SeedAccountUser2ID), "id")
 
@@ -105,6 +110,7 @@ func TestChat_TypingIndicator(t *testing.T) {
 }
 
 func TestChat_TypingUnknownConversation(t *testing.T) {
+	t.Parallel()
 	user := chatUserClient(t)
 	missing := "cv_doesnotexist0000000000"
 	status, body, err := user.Post(conversationsPath+"/"+missing+"/actions/typing", map[string]any{}, newIdempotencyKey())
@@ -113,6 +119,7 @@ func TestChat_TypingUnknownConversation(t *testing.T) {
 }
 
 func TestChat_TypingNonParticipantRejected(t *testing.T) {
+	t.Parallel()
 	owner := chatUserClient(t)
 	convID := jsonField(createGroupConversation(t, owner, uniqueName("typingpriv"), SeedAccountUser2ID), "id")
 

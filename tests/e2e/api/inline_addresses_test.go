@@ -493,8 +493,10 @@ func TestInlineAddresses_AccountUpdateNeedsOnlySelfUpdate(t *testing.T) {
 	assert.Equal(t, shipName, jsonField(addressIn(t, SeedAccountID, shipping), "name"))
 }
 
-// Not parallel for the same reason as above, though every request here is refused.
+// Every request here is refused, so the seeded account's defaults never move.
 func TestInlineAddresses_AccountUpdateRejections(t *testing.T) {
+	t.Parallel()
+
 	originalBilling, originalShipping := accountDefaultAddressIDs(t)
 	customerID := setupOrderCustomer(t)
 	saved := trackInlineAddresses(t, customerID)

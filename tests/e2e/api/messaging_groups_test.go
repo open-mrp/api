@@ -60,6 +60,7 @@ func groupMemberID(t *testing.T, group map[string]any, actorID string) string {
 }
 
 func TestMessagingGroup_CRUD(t *testing.T) {
+	t.Parallel()
 	owner := chatUserClient(t)
 
 	// Create a roster with a user and an agent.
@@ -136,6 +137,7 @@ func startConversationFromGroup(t *testing.T, c *Client, groupID, title string) 
 }
 
 func TestMessagingGroup_SeedsConversationsWithSnapshot(t *testing.T) {
+	t.Parallel()
 	owner := chatUserClient(t)
 	group := createMessagingGroup(t, owner, uniqueName("ops"), []string{SeedAccountUser2ID}, []string{SeedAgentConfigID})
 	groupID := jsonField(group, "id")
@@ -183,6 +185,7 @@ func TestMessagingGroup_SeedsConversationsWithSnapshot(t *testing.T) {
 }
 
 func TestMessagingGroup_DeleteDetachesConversations(t *testing.T) {
+	t.Parallel()
 	owner := chatUserClient(t)
 	group := createMessagingGroup(t, owner, uniqueName("ops"), []string{SeedAccountUser2ID}, nil)
 	groupID := jsonField(group, "id")
@@ -204,6 +207,7 @@ func TestMessagingGroup_DeleteDetachesConversations(t *testing.T) {
 }
 
 func TestMessagingGroup_AdHocGroupStillWorks(t *testing.T) {
+	t.Parallel()
 	owner := chatUserClient(t)
 	// A group conversation created without a roster (ad-hoc) keeps working and has no group link.
 	conv := createGroupConversation(t, owner, uniqueName("adhoc"), SeedAccountUser2ID)

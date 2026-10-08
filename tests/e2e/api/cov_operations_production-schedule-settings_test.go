@@ -114,6 +114,7 @@ func TestScheduleSettings_ReadReturnsFullyPopulatedAssumptions(t *testing.T) {
 }
 
 func TestScheduleSettings_UpdatePersistsAndFlipsToStored(t *testing.T) {
+	// Not parallel: changes the account-wide planning horizon and capacity assumptions.
 	original := claimScheduleSettings(t)
 
 	body := settingsWriteBody(original)
@@ -136,6 +137,7 @@ func TestScheduleSettings_UpdatePersistsAndFlipsToStored(t *testing.T) {
 }
 
 func TestScheduleSettings_UpdateRejectsUnworkableAssumptions(t *testing.T) {
+	// Not parallel: rewrites the account-wide schedule settings on cleanup.
 	original := claimScheduleSettings(t)
 
 	cases := []struct {
@@ -168,6 +170,7 @@ func TestScheduleSettings_UpdateRejectsUnworkableAssumptions(t *testing.T) {
 }
 
 func TestScheduleSettings_CadenceRequiresParseableCron(t *testing.T) {
+	// Not parallel: turns on the account-wide generation cadence.
 	original := claimScheduleSettings(t)
 
 	// A cadence that cannot be parsed would simply never fire, and the merchant would have no way to tell that from "nothing was due yet".
@@ -283,6 +286,7 @@ func TestScheduleResourceSettings_UpsertReplacesRatherThanDuplicates(t *testing.
 }
 
 func TestScheduleResourceSettings_DeleteReturnsResourceToDefaults(t *testing.T) {
+	// Not parallel: excludes the seeded production step from planning while it runs.
 	planningMu.Lock()
 	t.Cleanup(planningMu.Unlock)
 
@@ -331,6 +335,7 @@ func TestScheduleResourceSettings_UpsertRejectsUnknownScope(t *testing.T) {
 // an order that falls all the way through it. A setting nothing reads is a number
 // on a form.
 func TestScheduleSettings_DefaultLeadTimeDrivesTheChain(t *testing.T) {
+	// Not parallel: changes the account-wide default lead time every order without one reads.
 	original := claimScheduleSettings(t)
 
 	body := settingsWriteBody(original)
@@ -350,6 +355,7 @@ func TestScheduleSettings_DefaultLeadTimeDrivesTheChain(t *testing.T) {
 // Zero is a real commitment — same-day shipping — and must be storable rather than
 // read as "unset" and quietly replaced by a default.
 func TestScheduleSettings_ZeroLeadTimeIsSameDay(t *testing.T) {
+	// Not parallel: changes the account-wide default lead time every order without one reads.
 	original := claimScheduleSettings(t)
 
 	body := settingsWriteBody(original)
@@ -369,6 +375,7 @@ func TestScheduleSettings_ZeroLeadTimeIsSameDay(t *testing.T) {
 // The default policy is what a SKU falls back to when neither it nor its product
 // line says, so changing it has to change how such a SKU is reported as planned.
 func TestScheduleSettings_DefaultPolicyDrivesUnclassifiedItems(t *testing.T) {
+	// Not parallel: changes the account-wide default fulfillment policy other tests' items are planned on.
 	original := claimScheduleSettings(t)
 
 	// Its own product, in no product line, so nothing above the account has an
@@ -391,6 +398,7 @@ func TestScheduleSettings_DefaultPolicyDrivesUnclassifiedItems(t *testing.T) {
 // The whole set is validated together, so an assumption that contradicts another is
 // rejected rather than saved and left to produce a plan nobody intended.
 func TestScheduleSettings_RejectsContradictoryAssumptions(t *testing.T) {
+	// Not parallel: rewrites the account-wide schedule settings on cleanup.
 	original := claimScheduleSettings(t)
 
 	horizon, ok := original["planning_horizon_weeks"].(float64)

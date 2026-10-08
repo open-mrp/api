@@ -10,10 +10,11 @@ import (
 )
 
 // Gap coverage for notifications: single retrieve + recipient scoping, mark-read
-// idempotency, and the unread-summary shape. These share the seeded recipient
-// feed, so they run sequentially (no t.Parallel) like messaging_notifications_test.go.
+// idempotency, and the unread-summary shape. They share the seeded recipient
+// feed, so they key off per-test unique titles.
 
 func TestNotifications_RetrieveSingleAndScoping(t *testing.T) {
+	t.Parallel()
 	user := notifUserClient(t)
 	title := uniqueName("retrieve-single")
 	sendNotif(t, user, "order.updated", title, nil)
@@ -36,6 +37,7 @@ func TestNotifications_RetrieveSingleAndScoping(t *testing.T) {
 }
 
 func TestNotifications_MarkReadIsIdempotent(t *testing.T) {
+	t.Parallel()
 	user := notifUserClient(t)
 	title := uniqueName("mark-read-idem")
 	sendNotif(t, user, "order.updated", title, nil)

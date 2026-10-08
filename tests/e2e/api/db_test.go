@@ -4,6 +4,7 @@ package api_test
 
 import (
 	"database/sql"
+	"strings"
 	"sync"
 	"testing"
 
@@ -37,6 +38,35 @@ func authDB(t *testing.T) *sql.DB {
 	})
 	require.NoError(t, e2eDBErr, "connecting to e2e database (is the stack up with mysql-e2e published on 3307?)")
 	return e2eDB
+}
+
+// outboxFloors holds, per top-level test, the highest message_outbox id from before the test caused any message.
+var outboxFloors sync.Map
+
+// markOutbox records the outbox floor for t's top-level test the first time it runs; call it before the test
+// causes a message it will read back. message_outbox has no routing_key index and a full run writes tens of
+// thousands of rows, so a read that decodes payloads without a floor scans all of them, taking over a second
+// per call even on an idle database.
+func markOutbox(t *testing.T) {
+	t.Helper()
+	root, _, _ := strings.Cut(t.Name(), "/")
+	if _, ok := outboxFloors.Load(root); ok {
+		return
+	}
+	var maxID sql.NullInt64
+	require.NoError(t, authDB(t).QueryRow("SELECT MAX(id) FROM message_outbox").Scan(&maxID))
+	outboxFloors.LoadOrStore(root, maxID.Int64)
+}
+
+// outboxFloor is the id every outbox message t's top-level test caused is above. A floor taken after the
+// messages were written would make an assertion that a message is absent pass for the wrong reason, so a
+// test that never called markOutbox fails here.
+func outboxFloor(t *testing.T) int64 {
+	t.Helper()
+	root, _, _ := strings.Cut(t.Name(), "/")
+	floor, ok := outboxFloors.Load(root)
+	require.True(t, ok, "%s reads the outbox without calling markOutbox first", root)
+	return floor.(int64)
 }
 
 // registrationVerificationToken reads the verification token for a registration

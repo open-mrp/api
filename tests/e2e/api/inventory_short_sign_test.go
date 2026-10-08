@@ -102,6 +102,7 @@ func inventoryMeasure(t *testing.T, itemID, field string) float64 {
 // same group covers exactly what it says once both sides are normalized through their ratios.
 // Subtracting the raw columns instead reports the covered issue as short by -5.
 func TestItemInventory_ShortNetsAllocationsAcrossUnits(t *testing.T) {
+	// Not parallel: compares the seeded item's short figure before and after, which other tests' orders move.
 	// Orders earlier runs could not delete leave their own demand on the item, so the figure is
 	// compared with itself rather than with zero.
 	before := inventoryMeasure(t, SeedItemID, "short")

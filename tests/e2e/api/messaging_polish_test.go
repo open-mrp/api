@@ -12,6 +12,7 @@ import (
 // §12.12 self-DM ("note to self"): a DM where the pair is the caller themselves is allowed and has a
 // single participant.
 func TestSelfDM_Allowed(t *testing.T) {
+	t.Parallel()
 	user := chatUserClient(t)
 
 	dm := createDM(t, user, SeedAccountUserID) // target == caller
@@ -34,6 +35,7 @@ func TestSelfDM_Allowed(t *testing.T) {
 
 // §12.12 being added to a conversation writes a chat.added bell for the added user.
 func TestAddedToConversation_WritesBell(t *testing.T) {
+	t.Parallel()
 	owner := chatUserClient(t)
 	member := chatUser2Client(t)
 

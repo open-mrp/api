@@ -42,6 +42,7 @@ func listContainsConversation(t *testing.T, c *Client, conversationID string, pa
 // A conversation nobody has written in has no last-message time. Pages used to stop at the first
 // one with has_next_page still true and no next_page_url, stranding every older empty conversation.
 func TestChat_ListPagesThroughConversationsWithoutMessages(t *testing.T) {
+	t.Parallel()
 	owner := chatUserClient(t)
 	member := chatUser2Client(t)
 
@@ -69,6 +70,7 @@ func TestChat_ListPagesThroughConversationsWithoutMessages(t *testing.T) {
 }
 
 func TestChat_DMDedupIsOrderIndependent(t *testing.T) {
+	t.Parallel()
 	user := chatUserClient(t)   // dane (SeedAccountUserID)
 	other := chatUser2Client(t) // user2 (SeedAccountUser2ID)
 
@@ -80,6 +82,7 @@ func TestChat_DMDedupIsOrderIndependent(t *testing.T) {
 }
 
 func TestChat_ListConversationsForBothParticipantsAndTypeFilter(t *testing.T) {
+	t.Parallel()
 	user := chatUserClient(t)
 	other := chatUser2Client(t)
 	convID := jsonField(createDM(t, user, SeedAccountUser2ID), "id")
@@ -96,6 +99,7 @@ func TestChat_ListConversationsForBothParticipantsAndTypeFilter(t *testing.T) {
 }
 
 func TestChat_BidirectionalReply(t *testing.T) {
+	// Not parallel: asserts dane's unread on the shared dane-user2 DM, which dane's parallel sends reset.
 	user := chatUserClient(t)
 	other := chatUser2Client(t)
 	convID := jsonField(createDM(t, user, SeedAccountUser2ID), "id")
@@ -123,6 +127,7 @@ func TestChat_BidirectionalReply(t *testing.T) {
 }
 
 func TestChat_MessagePaginationAndCatchup(t *testing.T) {
+	t.Parallel()
 	user := chatUserClient(t)
 	convID := jsonField(createDM(t, user, SeedAccountUser2ID), "id")
 
@@ -157,6 +162,7 @@ func TestChat_MessagePaginationAndCatchup(t *testing.T) {
 }
 
 func TestChat_ReadCursorIsForwardOnly(t *testing.T) {
+	// Not parallel: asserts user2's unread is 0 on the shared dane-user2 DM, which parallel sends bump.
 	user := chatUserClient(t)
 	other := chatUser2Client(t)
 	convID := jsonField(createDM(t, user, SeedAccountUser2ID), "id")
@@ -183,6 +189,7 @@ func TestChat_ReadCursorIsForwardOnly(t *testing.T) {
 }
 
 func TestChat_NotFoundOnUnknownConversation(t *testing.T) {
+	t.Parallel()
 	user := chatUserClient(t)
 	missing := "cv_doesnotexist0000000000"
 

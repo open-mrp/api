@@ -302,6 +302,7 @@ func TestAnalyticsOee_LoggedDowntimeIsRecordedAsAvailabilityLoss(t *testing.T) {
 
 // not_scheduled is removed from the denominator rather than charged as a loss: a machine nobody planned to run has no OEE, which is not the same as bad OEE.
 func TestAnalyticsOee_NotScheduledShrinksDenominatorNotAvailability(t *testing.T) {
+	// Not parallel: logs downtime on the seeded department's window that other OEE tests aggregate.
 	start, end := oeeSeededWindow(t, 5*time.Hour)
 	planned := []map[string]any{{"department_id": SeedDepartmentID, "planned_hours": 8}}
 
@@ -332,6 +333,7 @@ func TestAnalyticsOee_NotScheduledShrinksDenominatorNotAvailability(t *testing.T
 
 // Changeover is an availability reason, so it must charge availability AND be reported separately for the changeover KPI.
 func TestAnalyticsOee_ChangeoverCountsInBothPlaces(t *testing.T) {
+	// Not parallel: logs downtime on the seeded department's window that other OEE tests aggregate.
 	start, end := oeeSeededWindow(t, 3*time.Hour)
 
 	downStart := start.Add(30 * time.Minute)
@@ -373,6 +375,7 @@ func TestAnalyticsOee_ChangeoverCountsInBothPlaces(t *testing.T) {
 
 // An event that begins before the window and is still running must contribute only its in-window seconds — not zero, and not its whole length.
 func TestAnalyticsOee_ClipsDowntimeToWindow(t *testing.T) {
+	// Not parallel: asserts a delta on the seeded department's aggregate downtime, which other tests also write to.
 	start, end := oeeSeededWindow(t, 2*time.Hour)
 	body := map[string]any{
 		"starts_at": rfc3339(start), "ends_at": rfc3339(end), "planned_time": []map[string]any{{"department_id": SeedDepartmentID, "planned_hours": 8}},
@@ -399,8 +402,14 @@ func TestAnalyticsOee_ClipsDowntimeToWindow(t *testing.T) {
 	assert.Greater(t, contribution, 0.0, "an event overlapping the window must contribute, not be dropped")
 	assert.LessOrEqual(t, contribution, 2*3600.0+30,
 		"an event that began hours earlier must be clipped to the 2-hour window, not counted in full")
-	assert.InDelta(t, 2*3600.0, contribution, 60,
-		"the clipped contribution should be the window length")
+	// An open event runs until now, and the window is anchored on the seed's scan, so on a freshly seeded
+	// stack the window still reaches into the future and the event has covered only part of it.
+	inWindowEnd := end
+	if now := time.Now().UTC(); now.Before(end) {
+		inWindowEnd = now
+	}
+	assert.InDelta(t, inWindowEnd.Sub(start).Seconds(), contribution, 60,
+		"the clipped contribution should be the part of the window the event has covered")
 }
 
 // ──────────────────────────────────────────────

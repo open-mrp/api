@@ -38,6 +38,7 @@ func TestVersionCompat_ScheduleSettings_Retrieve(t *testing.T) {
 
 // The save answers with the settings it stored, in the caller's version.
 func TestVersionCompat_ScheduleSettings_Update(t *testing.T) {
+	// Not parallel: rewrites the account-wide schedule settings.
 	original := claimScheduleSettings(t)
 	rate := original["changeover_labor_rate"]
 	require.NotNil(t, rate, "the admin reads the changeover labor rate")

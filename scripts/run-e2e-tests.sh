@@ -8,6 +8,12 @@ run_regex="${2:-}"
 pkg="./tests/e2e/api/..."
 args=(-tags e2e -count=1 -timeout "$timeout")
 
+# Raising this past go test's one-per-CPU default backs up the outbox: the enqueuers publish slower than
+# a wider run writes messages, and the async waits time out behind the backlog.
+if [[ -n "${E2E_PARALLEL:-}" ]]; then
+	args+=(-parallel "$E2E_PARALLEL")
+fi
+
 if [[ -n "${run_regex}" ]]; then
 	args+=(-run "$run_regex")
 fi

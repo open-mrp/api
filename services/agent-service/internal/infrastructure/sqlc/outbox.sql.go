@@ -16,6 +16,7 @@ const acquireOutboxMessages = `-- name: AcquireOutboxMessages :exec
 WITH rows AS (
     SELECT id FROM message_outbox
     WHERE status = 'pending'
+      AND message_outbox.service_name = $4
       AND next_run_at <= now()
       AND (locked_at IS NULL OR lock_expires_at < now())
       AND attempts < max_attempts
@@ -31,13 +32,19 @@ WHERE id IN (SELECT id FROM rows)
 `
 
 type AcquireOutboxMessagesParams struct {
-	LockOwner pgtype.Text
-	Column2   pgtype.Text
-	Limit     int32
+	LockOwner   pgtype.Text
+	Column2     pgtype.Text
+	Limit       int32
+	ServiceName string
 }
 
 func (q *Queries) AcquireOutboxMessages(ctx context.Context, arg AcquireOutboxMessagesParams) error {
-	_, err := q.db.Exec(ctx, acquireOutboxMessages, arg.LockOwner, arg.Column2, arg.Limit)
+	_, err := q.db.Exec(ctx, acquireOutboxMessages,
+		arg.LockOwner,
+		arg.Column2,
+		arg.Limit,
+		arg.ServiceName,
+	)
 	return err
 }
 

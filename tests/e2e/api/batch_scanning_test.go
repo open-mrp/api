@@ -3,10 +3,8 @@
 package api_test
 
 import (
-	"database/sql"
 	"encoding/json"
 	"fmt"
-	"math"
 	"net/url"
 	"testing"
 	"time"
@@ -70,6 +68,7 @@ func newScanMaterial(t *testing.T) scanItem {
 
 func newScanStation(t *testing.T, stationType string) string {
 	t.Helper()
+	markOutbox(t)
 	status, raw, err := apiClient.Post(scanningStationsPath, map[string]any{
 		"name":                 uniqueName("e2e-scan-" + stationType),
 		"type":                 stationType,
@@ -127,6 +126,7 @@ func newScanStep(t *testing.T, stationID string, produce scanQty, consumes ...sc
 // planScanBatch puts one planned batch on a run of its own and returns the batch.
 func planScanBatch(t *testing.T, itemID, value, unitID string) string {
 	t.Helper()
+	markOutbox(t)
 	run := createRunWithBatches(t, map[string]any{"item_id": itemID, "quantity_value": value, "quantity_unit_id": unitID})
 	batches := runBatches(t, jsonField(run, "id"), "run")
 	require.Len(t, batches, 1)
@@ -145,6 +145,7 @@ func stockScanItem(t *testing.T, itemID, value, unitID string) {
 
 func postScan(t *testing.T, action string, body map[string]any) (int, map[string]any, []byte) {
 	t.Helper()
+	markOutbox(t)
 	status, raw, err := apiClient.Post(batchesPath+"/actions/"+action, body, newIdempotencyKey())
 	require.NoError(t, err)
 	require.Less(t, status, 500, "%s must not 5xx: %s", action, string(raw))
@@ -194,35 +195,19 @@ func waitForMessagesSettled(t *testing.T, routingKey, handler, batchID string) {
 }
 
 // unhandledBatchMessages counts the messages under routingKey naming batchID that handler has not handled.
-//
-// The batch id is only inside each message's payload, so every candidate is decoded. A full run writes
-// well over a hundred thousand outbox rows, and decoding all of them took longer than the wait, so the
-// candidates are the messages published in the last ten minutes and the ones not yet published, each
-// found through a status index. A scan's messages are written while its test runs, well inside that.
+// The batch id is only inside each message's payload, so every candidate is decoded; the candidates are
+// the ones written since the test began.
 func unhandledBatchMessages(t *testing.T, routingKey, handler, batchID string) int {
 	t.Helper()
-	var floor sql.NullInt64
-	require.NoError(t, authDB(t).QueryRow(`
-		SELECT MIN(id) FROM message_outbox
-		WHERE status = 'published' AND published_at >= NOW(3) - INTERVAL 10 MINUTE`).Scan(&floor))
-	if !floor.Valid {
-		floor.Int64 = math.MaxInt64
-	}
-
 	var pending int
 	require.NoError(t, authDB(t).QueryRow(`
 		SELECT COUNT(*)
-		FROM (
-			SELECT message_id, payload FROM message_outbox
-			WHERE status = 'published' AND id >= ? AND routing_key = ?
-			UNION ALL
-			SELECT message_id, payload FROM message_outbox
-			WHERE status IN ('pending', 'failed') AND routing_key = ?
-		) o
+		FROM message_outbox o
 		LEFT JOIN message_inbox i ON i.message_id = o.message_id AND i.handler = ?
-		WHERE CAST(FROM_BASE64(JSON_UNQUOTE(JSON_EXTRACT(o.payload, '$.data'))) AS CHAR) LIKE ?
+		WHERE o.id > ? AND o.routing_key = ?
+		AND CAST(FROM_BASE64(JSON_UNQUOTE(JSON_EXTRACT(o.payload, '$.data'))) AS CHAR) LIKE ?
 		AND (i.status IS NULL OR i.status = 'received')`,
-		floor.Int64, routingKey, routingKey, handler, "%"+batchID+"%").Scan(&pending))
+		handler, outboxFloor(t), routingKey, "%"+batchID+"%").Scan(&pending))
 	return pending
 }
 
@@ -369,9 +354,9 @@ func scanEvents(t *testing.T, routingKey, batchID string) []map[string]any {
 	rows, err := authDB(t).Query(`
 		SELECT CAST(FROM_BASE64(JSON_UNQUOTE(JSON_EXTRACT(payload, '$.data'))) AS CHAR)
 		FROM message_outbox
-		WHERE routing_key = ?
+		WHERE id > ? AND routing_key = ?
 		AND CAST(FROM_BASE64(JSON_UNQUOTE(JSON_EXTRACT(payload, '$.data'))) AS CHAR) LIKE ?`,
-		routingKey, "%"+batchID+"%")
+		outboxFloor(t), routingKey, "%"+batchID+"%")
 	require.NoError(t, err)
 	defer rows.Close()
 

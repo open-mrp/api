@@ -14,6 +14,7 @@ import (
 // owner-only role-change rule.
 
 func TestChatGroup_ArchiveStatusRoundTrip(t *testing.T) {
+	t.Parallel()
 	owner := chatUserClient(t)
 	convID := jsonField(createGroupConversation(t, owner, uniqueName("team"), SeedAccountUser2ID), "id")
 
@@ -29,6 +30,7 @@ func TestChatGroup_ArchiveStatusRoundTrip(t *testing.T) {
 }
 
 func TestChatGroup_BlockPreventsSendInExistingDM(t *testing.T) {
+	// Not parallel: blocks user2, breaking the shared dane-user2 DM other tests use.
 	dane := chatUserClient(t)
 	convID := jsonField(createDM(t, dane, SeedAccountUser2ID), "id")
 
@@ -53,6 +55,7 @@ func TestChatGroup_BlockPreventsSendInExistingDM(t *testing.T) {
 }
 
 func TestChatGroup_ViewerCannotPost(t *testing.T) {
+	t.Parallel()
 	owner := chatUserClient(t)
 	conv := createGroupConversation(t, owner, uniqueName("team"), SeedAccountUser2ID)
 	convID := jsonField(conv, "id")
@@ -73,6 +76,7 @@ func TestChatGroup_ViewerCannotPost(t *testing.T) {
 }
 
 func TestChatGroup_RemovedParticipantCannotSend(t *testing.T) {
+	t.Parallel()
 	owner := chatUserClient(t)
 	conv := createGroupConversation(t, owner, uniqueName("team"), SeedAccountUser2ID)
 	convID := jsonField(conv, "id")
@@ -91,6 +95,7 @@ func TestChatGroup_RemovedParticipantCannotSend(t *testing.T) {
 }
 
 func TestChatGroup_AddParticipantRoleValidation(t *testing.T) {
+	t.Parallel()
 	owner := chatUserClient(t)
 	conv := createGroupConversation(t, owner, uniqueName("team"), SeedAccountUser2ID)
 	convID := jsonField(conv, "id")
@@ -119,6 +124,7 @@ func TestChatGroup_AddParticipantRoleValidation(t *testing.T) {
 }
 
 func TestChatGroup_OnlyOwnerChangesRoles(t *testing.T) {
+	t.Parallel()
 	owner := chatUserClient(t)
 	conv := createGroupConversation(t, owner, uniqueName("team"), SeedAccountUser2ID)
 	convID := jsonField(conv, "id")

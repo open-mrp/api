@@ -123,6 +123,7 @@ func flowByBatch(t *testing.T, flow map[string]any) map[string]any {
 // scanAs makes a scan as client, the way the station sends it, and registers its cleanup.
 func scanAs(t *testing.T, client *Client, action string, body map[string]any) map[string]any {
 	t.Helper()
+	markOutbox(t)
 	got := postAs(t, client, batchesPath+"/actions/"+action+"?include="+stationBatchIncludes, body, http.StatusCreated)
 	settleScanAtCleanup(t, action, jsonField(got, "id"))
 	return got

@@ -33,6 +33,7 @@ func seedSupportRoute(t *testing.T) {
 }
 
 func TestCustomerSupport_ProvisionDedupAndPost(t *testing.T) {
+	// Not parallel: sets the seed account's support route and uses the shared per-customer support case.
 	seedSupportRoute(t)
 	customer := getCustomerPortalClient()
 
@@ -75,6 +76,7 @@ func TestCustomerSupport_ProvisionDedupAndPost(t *testing.T) {
 }
 
 func TestCustomerSupport_Availability(t *testing.T) {
+	// Not parallel: clears and sets the seed account's support route, then asserts availability.
 	customer := getCustomerPortalClient()
 	owner := chatUserClient(t)
 
@@ -95,6 +97,7 @@ func TestCustomerSupport_Availability(t *testing.T) {
 }
 
 func TestCustomerSupport_CannotAccessOtherConversations(t *testing.T) {
+	t.Parallel()
 	customer := getCustomerPortalClient()
 	dane := chatUserClient(t)
 
@@ -108,6 +111,7 @@ func TestCustomerSupport_CannotAccessOtherConversations(t *testing.T) {
 }
 
 func TestCustomerSupport_StaffReplyAnonymizedToCustomer(t *testing.T) {
+	// Not parallel: sets the seed account's support route and uses the shared per-customer support case.
 	seedSupportRoute(t)
 	customer := getCustomerPortalClient()
 	dane := chatUserClient(t)

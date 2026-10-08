@@ -68,6 +68,7 @@ func resetPBPick(t *testing.T) {
 // --- item 6: line ops -----------------------------------------------------
 
 func TestPicks_PickLine_FillsRemainingExcludingItself(t *testing.T) {
+	// Not parallel: resets and re-picks the shared PICK-PB-001 lines.
 	resetPBPick(t)
 
 	// From zero, picking the line fills it to the full ordered quantity.
@@ -87,6 +88,7 @@ func TestPicks_PickLine_FillsRemainingExcludingItself(t *testing.T) {
 }
 
 func TestPicks_UpdateAndVoidLine(t *testing.T) {
+	// Not parallel: resets and re-picks the shared PICK-PB-001 lines.
 	resetPBPick(t)
 
 	status, body, err := apiClient.Patch(picksPath+"/"+pbPickID+"/lines/"+pbLine2ID,
@@ -114,6 +116,7 @@ func TestPicks_LineOps_RejectLineFromAnotherPick(t *testing.T) {
 // --- item 7: pick-all -----------------------------------------------------
 
 func TestPicks_PickAllLines_FillsEveryUnpackedLine(t *testing.T) {
+	// Not parallel: resets and re-picks the shared PICK-PB-001 lines.
 	resetPBPick(t)
 
 	status, body, err := apiClient.Put(picksPath+"/"+pbPickID+"/actions/pick", nil)
@@ -133,6 +136,7 @@ func TestPicks_PickAllLines_FillsEveryUnpackedLine(t *testing.T) {
 // --- item 8: void ---------------------------------------------------------
 
 func TestPicks_Void_ZeroesLinesAndClearsFinishedAt(t *testing.T) {
+	// Not parallel: resets and re-picks the shared PICK-PB-001 lines.
 	resetPBPick(t)
 
 	status, body, err := apiClient.Put(picksPath+"/"+pbPickID+"/actions/pick", nil)
@@ -236,6 +240,7 @@ func firstUnpackedPickLine(t *testing.T, pickID string) string {
 }
 
 func TestPicks_Pack_RejectsWhenNothingToPack(t *testing.T) {
+	// Not parallel: resets and re-picks the shared PICK-PB-001 lines.
 	resetPBPick(t)
 
 	// All lines sit at zero after the reset, so there is nothing eligible. Packing is async, but
@@ -329,6 +334,7 @@ func TestPicks_Pack_CreatesCasesWithResolvedUnits(t *testing.T) {
 // A short pick is normal and an over-pick is a real floor event, so the quantity is stored as
 // given; capping it at the ordered amount would silently lose what was actually pulled.
 func TestPicks_UpdateLine_AcceptsMoreThanOrdered(t *testing.T) {
+	// Not parallel: resets and re-picks the shared PICK-PB-001 lines.
 	resetPBPick(t)
 
 	over := pbLine2Ordered + 2

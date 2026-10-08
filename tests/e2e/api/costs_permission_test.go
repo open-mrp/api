@@ -271,6 +271,7 @@ func TestCosts_ScheduleSettingsChangeoverLaborRateNeedsCostsRead(t *testing.T) {
 
 // A planner without costs:read is shown the changeover labor rate as null, so the settings it saves back carry no rate. The stored rate is kept rather than replaced by what that save sent; a planner with costs:read still sets it.
 func TestCosts_ScheduleSettingsSaveKeepsTheRateACallerCannotRead(t *testing.T) {
+	// Not parallel: changes the account-wide changeover labor rate.
 	original := claimScheduleSettings(t)
 	require.NotNil(t, original["changeover_labor_rate"], "the admin reads the changeover labor rate")
 	rate := jsonField(original, "changeover_labor_rate")

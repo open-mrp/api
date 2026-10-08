@@ -92,7 +92,7 @@ UPDATE message_outbox
 SET alerted_at = NOW(3)
 WHERE id IN (sqlc.slice('ids'));
 
--- Leads on message_outbox_status_next_run_at_idx, so it reads only the unpublished rows, never the published history.
+-- Ranges on status, so it reads only the unpublished rows, never the published history.
 -- name: GetOutboxBacklogStats :many
 SELECT status,
        COUNT(*) AS message_count,

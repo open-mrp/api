@@ -34,6 +34,7 @@ type accountUserSvcImpl struct {
 	userPhotosBucket      string
 	branding              BrandingAssets
 	frontendURL           string
+	portalURL             string
 }
 
 type AccountUserSvcConfig struct {
@@ -61,8 +62,11 @@ type AccountUserSvcConfig struct {
 	// Branding (optional) resolves the merchant logo for the branded portal welcome email. Omitted, the email renders unbranded.
 	Branding BrandingAssets
 
-	// FrontendURL (optional; default: "") is the dashboard base URL behind the welcome email's sign-in link. Empty, the link is left out unless the merchant's portal has a verified custom domain.
+	// FrontendURL (optional; default: "") is the dashboard base URL behind the welcome email's sign-in link for the acting account's own users. Empty, their link is left out.
 	FrontendURL string
+
+	// PortalURL (optional; default: "") is the customer portal base URL behind a customer user's welcome sign-in link. Empty, the link is left out unless the merchant's portal has a verified custom domain.
+	PortalURL string
 
 	// PlatformMode (required) gates test-only relaxations; in test mode UserPhotosBucket is not required.
 	PlatformMode constants.PlatformMode
@@ -108,6 +112,7 @@ func NewAccountUserSvc(config *AccountUserSvcConfig) domain.AccountUserSvc {
 		userPhotosBucket:      config.UserPhotosBucket,
 		branding:              config.Branding,
 		frontendURL:           config.FrontendURL,
+		portalURL:             config.PortalURL,
 	}
 }
 
@@ -127,6 +132,7 @@ func (s *accountUserSvcImpl) withTx(ctx context.Context, fn func(context.Context
 			branding:              s.branding,
 			userPhotosBucket:      s.userPhotosBucket,
 			frontendURL:           s.frontendURL,
+			portalURL:             s.portalURL,
 		}
 		return fn(txCtx, txSvc)
 	})
@@ -486,7 +492,7 @@ func (s *accountUserSvcImpl) CreateAccountUser(ctx context.Context, params domai
 				}
 
 				subject := "Welcome to OpenMRP"
-				if loginLink := welcomeLoginLink(txSvc.frontendURL, "", nil); loginLink != "" {
+				if loginLink := welcomeLoginLink(txSvc.frontendURL, txSvc.portalURL, "", nil); loginLink != "" {
 					emailParams["LoginLink"] = loginLink
 				}
 
@@ -508,7 +514,7 @@ func (s *accountUserSvcImpl) CreateAccountUser(ctx context.Context, params domai
 					if portalDomain, _ := txSvc.repos.NewPortalDomainRepo().GetByAccountID(txCtx, actorAccountID); portalDomain != nil && portalDomain.Status == constants.PortalDomainStatusVerified {
 						verifiedDomain = portalDomain.Domain
 					}
-					if loginLink := welcomeLoginLink(txSvc.frontendURL, verifiedDomain, slug); loginLink != "" {
+					if loginLink := welcomeLoginLink(txSvc.frontendURL, txSvc.portalURL, verifiedDomain, slug); loginLink != "" {
 						emailParams["LoginLink"] = loginLink
 					}
 					subject = "Welcome to the " + accountName + " platform"
@@ -1233,17 +1239,20 @@ func applyNotificationPreferences(ctx context.Context, relationRepo domain.Accou
 // loginPath mirrors the frontend's FrontendPaths.login.
 const loginPath = "/auth/login"
 
-// welcomeLoginLink returns where a newly added user signs in, or "" when there is no URL to give. The acting account's own users sign in to the dashboard (no portal domain or slug); a customer's users sign in to the merchant's portal, which a verified custom domain serves without the slug prefix.
-func welcomeLoginLink(frontendURL, verifiedPortalDomain string, portalSlug *string) string {
+// welcomeLoginLink returns where a newly added user signs in, or "" when there is no URL to give. The acting account's own users sign in to the dashboard (no portal domain or slug); a customer's users sign in to the merchant's portal: its verified custom domain when it has one, else its slug under the shared portal host.
+func welcomeLoginLink(frontendURL, portalURL, verifiedPortalDomain string, portalSlug *string) string {
 	if verifiedPortalDomain != "" {
 		return "https://" + verifiedPortalDomain + loginPath
+	}
+	if portalSlug != nil && strings.TrimSpace(*portalSlug) != "" {
+		if base := slugPortalBase(portalURL, portalSlug); base != "" {
+			return base + loginPath
+		}
+		return ""
 	}
 	frontendURL = strings.TrimRight(frontendURL, "/")
 	if frontendURL == "" {
 		return ""
-	}
-	if portalSlug != nil && strings.TrimSpace(*portalSlug) != "" {
-		return frontendURL + "/" + strings.TrimSpace(*portalSlug) + loginPath
 	}
 	return frontendURL + loginPath
 }

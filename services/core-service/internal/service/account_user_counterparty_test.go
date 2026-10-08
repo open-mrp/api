@@ -100,27 +100,29 @@ func TestAccountUserPermissions_FollowTheTargetAndAction(t *testing.T) {
 }
 
 // The link in a welcome email goes to the dashboard for the seller's own staff and to the seller's portal for a
-// customer's users, on its verified custom domain when there is one.
+// customer's users: its verified custom domain when there is one, else its slug on the shared portal host.
 func TestWelcomeLoginLink(t *testing.T) {
 	t.Parallel()
 
+	const dash, portal = "https://app.example.com", "https://portal.example.com"
 	slug := "acme"
 	blank := "  "
 	cases := []struct {
-		name, frontendURL, domain string
-		slug                      *string
-		want                      string
+		name, frontendURL, portalURL, domain string
+		slug                                 *string
+		want                                 string
 	}{
-		{name: "own staff sign in to the dashboard", frontendURL: "https://app.example.com", want: "https://app.example.com/auth/login"},
-		{name: "a trailing slash is not doubled", frontendURL: "https://app.example.com/", want: "https://app.example.com/auth/login"},
-		{name: "portal users sign in under the slug", frontendURL: "https://app.example.com", slug: &slug, want: "https://app.example.com/acme/auth/login"},
-		{name: "a verified custom domain serves the portal without the slug", frontendURL: "https://app.example.com", domain: "portal.example.com", slug: &slug, want: "https://portal.example.com/auth/login"},
-		{name: "a blank slug falls back to the dashboard", frontendURL: "https://app.example.com", slug: &blank, want: "https://app.example.com/auth/login"},
-		{name: "no frontend and no domain gives no link", slug: &slug, want: ""},
-		{name: "a custom domain needs no frontend", domain: "portal.example.com", want: "https://portal.example.com/auth/login"},
+		{name: "own staff sign in to the dashboard", frontendURL: dash, portalURL: portal, want: dash + "/auth/login"},
+		{name: "a trailing slash is not doubled", frontendURL: dash + "/", portalURL: portal + "/", slug: &slug, want: portal + "/acme/auth/login"},
+		{name: "portal users sign in under the slug on the portal host", frontendURL: dash, portalURL: portal, slug: &slug, want: portal + "/acme/auth/login"},
+		{name: "a verified custom domain serves the portal without the slug", frontendURL: dash, portalURL: portal, domain: "shop.example.net", slug: &slug, want: "https://shop.example.net/auth/login"},
+		{name: "a blank slug falls back to the dashboard", frontendURL: dash, portalURL: portal, slug: &blank, want: dash + "/auth/login"},
+		{name: "no portal host and no domain gives a portal user no link", frontendURL: dash, slug: &slug, want: ""},
+		{name: "no frontend gives own staff no link", portalURL: portal, want: ""},
+		{name: "a custom domain needs neither host", domain: "shop.example.net", slug: &slug, want: "https://shop.example.net/auth/login"},
 	}
 	for _, tc := range cases {
-		assert.Equal(t, tc.want, welcomeLoginLink(tc.frontendURL, tc.domain, tc.slug), tc.name)
+		assert.Equal(t, tc.want, welcomeLoginLink(tc.frontendURL, tc.portalURL, tc.domain, tc.slug), tc.name)
 	}
 }
 

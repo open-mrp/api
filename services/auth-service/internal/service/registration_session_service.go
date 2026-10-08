@@ -84,7 +84,7 @@ func NewRegistrationSessionSvc(config *RegistrationSessionSvcConfig) domain.Regi
 	}
 }
 
-func BuildRegistrationSessionSvcConfig(queries *sqlc.Queries, jwtSecret string, pepper []byte, frontendURL string, coreClient domain.AuthCoreClient, billingClient domain.AuthBillingClient) *RegistrationSessionSvcConfig {
+func BuildRegistrationSessionSvcConfig(queries *sqlc.Queries, jwtSecret string, pepper []byte, frontendURL, portalURL string, coreClient domain.AuthCoreClient, billingClient domain.AuthBillingClient) *RegistrationSessionSvcConfig {
 	repoFactory := repository.NewRepoFactory(queries)
 	notificationPublisher := event.NewOutboxNotificationPublisher()
 
@@ -93,6 +93,7 @@ func BuildRegistrationSessionSvcConfig(queries *sqlc.Queries, jwtSecret string, 
 		APIKeyPepper:          pepper,
 		NotificationPublisher: notificationPublisher,
 		FrontendURL:           frontendURL,
+		PortalURL:             portalURL,
 		CoreClient:            coreClient,
 	})
 

@@ -1,6 +1,7 @@
 package mediator
 
 import (
+	"cmp"
 	"context"
 	"fmt"
 	"strings"
@@ -25,6 +26,7 @@ type userMedImpl struct {
 	repos                 domain.RepoFactory
 	jwtSecret             string
 	frontendURL           string
+	portalURL             string
 	refreshTokenMed       domain.RefreshTokenMed
 	apiKeyMed             domain.APIKeyMed
 	coreClient            domain.AuthCoreClient
@@ -40,6 +42,9 @@ type UserMedConfig struct {
 
 	// FrontendURL (required) is the dashboard base URL used in user emails.
 	FrontendURL string
+
+	// PortalURL (optional; default: FrontendURL) is the customer portal base URL used in user emails sent to a portal customer.
+	PortalURL string
 
 	// RefreshTokenMed (required) manages refresh tokens for user sessions.
 	RefreshTokenMed domain.RefreshTokenMed
@@ -88,6 +93,7 @@ func NewUserMed(config *UserMedConfig) domain.UserMed {
 		repos:                 config.Repos,
 		jwtSecret:             config.JWTSecret,
 		frontendURL:           config.FrontendURL,
+		portalURL:             cmp.Or(config.PortalURL, config.FrontendURL),
 		refreshTokenMed:       config.RefreshTokenMed,
 		apiKeyMed:             config.APIKeyMed,
 		coreClient:            config.CoreClient,
@@ -194,7 +200,7 @@ func (s *userMedImpl) SendAlreadyRegisteredEmail(ctx context.Context, user *type
 
 	var loginURL string
 	if accountSlug != nil && *accountSlug != "" {
-		loginURL = fmt.Sprintf("%s/%s%s?t=%s", s.frontendURL, *accountSlug, constants.DashboardPathMagicLogin, magicToken)
+		loginURL = fmt.Sprintf("%s/%s%s?t=%s", s.portalURL, *accountSlug, constants.DashboardPathMagicLogin, magicToken)
 	} else {
 		loginURL = fmt.Sprintf("%s%s?t=%s", s.frontendURL, constants.DashboardPathMagicLogin, magicToken)
 	}

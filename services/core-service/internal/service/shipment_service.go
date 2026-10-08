@@ -66,7 +66,7 @@ type shipmentSvcImpl struct {
 	billingPub           domain.BillingPublisher
 	s3Client             s3client.ObjectStore
 	shippingLabelsBucket string
-	frontendURL          string
+	portalURL            string
 	branding             BrandingAssets
 	dispatchLeases       lease.Repo
 }
@@ -101,9 +101,9 @@ type ShipmentSvcConfig struct {
 	// Names the S3 bucket holding shipping labels (optional; default: ""). Not validated; an empty bucket skips both.
 	ShippingLabelsBucket string
 
-	// FrontendURL (optional; default: "") is the dashboard base URL behind the invoice email's
-	// order-online link. Not validated; an empty URL drops the link.
-	FrontendURL string
+	// PortalURL (optional; default: "") is the customer portal base URL behind the invoice email's
+	// order-online link when the merchant has no verified custom domain. Not validated; an empty URL drops the link.
+	PortalURL string
 
 	// Branding (optional) resolves the merchant logo for the invoice PDF letterhead. Omitted, it falls back to a text-only letterhead.
 	Branding BrandingAssets
@@ -144,7 +144,7 @@ func NewShipmentSvc(config *ShipmentSvcConfig) domain.ShipmentSvc {
 		billingPub:           config.BillingPub,
 		s3Client:             config.S3Client,
 		shippingLabelsBucket: config.ShippingLabelsBucket,
-		frontendURL:          config.FrontendURL,
+		portalURL:            config.PortalURL,
 		branding:             config.Branding,
 		dispatchLeases:       config.DispatchLeases,
 	}
@@ -166,7 +166,7 @@ func (s *shipmentSvcImpl) withTx(ctx context.Context, fn func(context.Context, *
 			billingPub:           s.billingPub,
 			s3Client:             s.s3Client,
 			shippingLabelsBucket: s.shippingLabelsBucket,
-			frontendURL:          s.frontendURL,
+			portalURL:            s.portalURL,
 			dispatchLeases:       s.dispatchLeases,
 		}
 		return fn(txCtx, txSvc)
@@ -1919,7 +1919,7 @@ func (s *shipmentSvcImpl) buildInvoiceDocument(txCtx context.Context, accountID,
 	if apiErr != nil {
 		return invoiceDoc{}, nil, apiErr
 	}
-	doc.Header.OrderOnlineLink = portalRegisterLink(txCtx, s.repos, s.frontendURL, accountID)
+	doc.Header.OrderOnlineLink = portalRegisterLink(txCtx, s.repos, s.portalURL, accountID)
 	// Fetched before the transaction opened, because embedding needs the bytes and a stalled logo
 	// host must not hold the ship's row locks.
 	doc.Header.LogoImageType, doc.Header.LogoImage, doc.Header.LogoURL = logo.ImageType, logo.Image, logo.URL

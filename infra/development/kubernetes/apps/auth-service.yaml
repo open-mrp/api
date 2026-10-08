@@ -56,6 +56,11 @@ spec:
                 configMapKeyRef:
                   key: FRONTEND_URL
                   name: app-config
+            - name: PORTAL_URL
+              valueFrom:
+                configMapKeyRef:
+                  key: PORTAL_URL
+                  name: app-config
             - name: RABBITMQ_URI
               valueFrom:
                 secretKeyRef:

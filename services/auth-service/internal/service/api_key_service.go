@@ -59,7 +59,7 @@ func NewAPIKeySvc(config *APIKeySvcConfig) domain.APIKeySvc {
 	}
 }
 
-func BuildAPIKeySvcConfig(queries *sqlc.Queries, jwtSecret string, pepper []byte, frontendURL string, coreClient domain.AuthCoreClient, encryptionKey []byte) *APIKeySvcConfig {
+func BuildAPIKeySvcConfig(queries *sqlc.Queries, jwtSecret string, pepper []byte, frontendURL, portalURL string, coreClient domain.AuthCoreClient, encryptionKey []byte) *APIKeySvcConfig {
 	repoFactory := repository.NewRepoFactory(queries)
 	notificationPublisher := event.NewOutboxNotificationPublisher()
 
@@ -68,6 +68,7 @@ func BuildAPIKeySvcConfig(queries *sqlc.Queries, jwtSecret string, pepper []byte
 		APIKeyPepper:           pepper,
 		NotificationPublisher:  notificationPublisher,
 		FrontendURL:            frontendURL,
+		PortalURL:              portalURL,
 		CoreClient:             coreClient,
 		DocAPIKeyEncryptionKey: encryptionKey,
 	})

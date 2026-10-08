@@ -203,7 +203,7 @@ func queuedEmailCount(t *testing.T, marker string) int {
 }
 
 // sellerPortalLoginLink is where the seed seller's portal users sign in: its verified custom domain when it has one,
-// else its slug under the dashboard.
+// else its slug on the portal host.
 func sellerPortalLoginLink(t *testing.T) string {
 	t.Helper()
 	var domain string
@@ -214,7 +214,7 @@ func sellerPortalLoginLink(t *testing.T) string {
 	require.True(t, errors.Is(err, sql.ErrNoRows), "reading the portal domain: %v", err)
 	var slug string
 	require.NoError(t, authDB(t).QueryRow(`SELECT slug FROM account_portal WHERE owner_account_id = ?`, SeedAccountID).Scan(&slug))
-	return envOr("E2E_FRONTEND_URL", "http://localhost:4200") + "/" + slug + "/auth/login"
+	return envOr("E2E_PORTAL_URL", "http://localhost:4300") + "/" + slug + "/auth/login"
 }
 
 // contactsRoleClient is an API key on the seed seller whose role holds exactly perms, acting in accountID.

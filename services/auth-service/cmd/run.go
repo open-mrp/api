@@ -114,31 +114,31 @@ func Run(
 	}
 
 	txManager := service.NewTransactionManager(db, queries)
-	authConfig := service.BuildAuthSvcConfig(queries, cfg.JWTSecret, cfg.Pepper, cfg.FrontendURL, coreClient)
+	authConfig := service.BuildAuthSvcConfig(queries, cfg.JWTSecret, cfg.Pepper, cfg.FrontendURL, cfg.PortalURL, coreClient)
 	authConfig.TxManager = txManager
 	authSvc := service.NewAuthSvc(authConfig)
 
-	userConfig := service.BuildUserSvcConfig(queries, cfg.JWTSecret, cfg.Pepper, cfg.FrontendURL, coreClient)
+	userConfig := service.BuildUserSvcConfig(queries, cfg.JWTSecret, cfg.Pepper, cfg.FrontendURL, cfg.PortalURL, coreClient)
 	userConfig.TxManager = txManager
 	userSvc := service.NewUserSvc(userConfig)
 
-	tokenConfig := service.BuildTokenSvcConfig(queries, cfg.JWTSecret, cfg.Pepper, cfg.FrontendURL, coreClient)
+	tokenConfig := service.BuildTokenSvcConfig(queries, cfg.JWTSecret, cfg.Pepper, cfg.FrontendURL, cfg.PortalURL, coreClient)
 	tokenConfig.TxManager = txManager
 	tokenSvc := service.NewTokenSvc(tokenConfig)
 
-	passwordConfig := service.BuildPasswordSvcConfig(queries, cfg.JWTSecret, cfg.Pepper, cfg.FrontendURL, coreClient)
+	passwordConfig := service.BuildPasswordSvcConfig(queries, cfg.JWTSecret, cfg.Pepper, cfg.FrontendURL, cfg.PortalURL, coreClient)
 	passwordConfig.TxManager = txManager
 	passwordSvc := service.NewPasswordSvc(passwordConfig)
 
-	apiKeyConfig := service.BuildAPIKeySvcConfig(queries, cfg.JWTSecret, cfg.Pepper, cfg.FrontendURL, coreClient, cfg.DocAPIKeyEncryptionKey)
+	apiKeyConfig := service.BuildAPIKeySvcConfig(queries, cfg.JWTSecret, cfg.Pepper, cfg.FrontendURL, cfg.PortalURL, coreClient, cfg.DocAPIKeyEncryptionKey)
 	apiKeyConfig.TxManager = txManager
 	apiKeySvc := service.NewAPIKeySvc(apiKeyConfig)
 
-	docAPIKeyConfig := service.BuildDocAPIKeySvcConfig(queries, cfg.JWTSecret, cfg.Pepper, cfg.FrontendURL, coreClient, cfg.DocAPIKeyEncryptionKey)
+	docAPIKeyConfig := service.BuildDocAPIKeySvcConfig(queries, cfg.JWTSecret, cfg.Pepper, cfg.FrontendURL, cfg.PortalURL, coreClient, cfg.DocAPIKeyEncryptionKey)
 	docAPIKeyConfig.TxManager = txManager
 	docAPIKeySvc := service.NewDocAPIKeySvc(docAPIKeyConfig)
 
-	registrationSessionConfig := service.BuildRegistrationSessionSvcConfig(queries, cfg.JWTSecret, cfg.Pepper, cfg.FrontendURL, coreClient, billingClient)
+	registrationSessionConfig := service.BuildRegistrationSessionSvcConfig(queries, cfg.JWTSecret, cfg.Pepper, cfg.FrontendURL, cfg.PortalURL, coreClient, billingClient)
 	registrationSessionConfig.TxManager = txManager
 	registrationSessionSvc := service.NewRegistrationSessionSvc(registrationSessionConfig)
 

@@ -1,6 +1,7 @@
 package service
 
 import (
+	"cmp"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -47,7 +48,7 @@ type salesOrderSvcImpl struct {
 	salesOrderPublisher   domain.SalesOrderEventPublisher
 	shippoFactory         domain.ShippoClientFactory
 	encryptionKey         []byte
-	frontendURL           string
+	portalURL             string
 	branding              BrandingAssets
 }
 
@@ -76,8 +77,8 @@ type SalesOrderSvcConfig struct {
 	// EncryptionKey (optional; default: nil) encrypts sensitive fields at rest. It is not validated at construction.
 	EncryptionKey []byte
 
-	// FrontendURL (optional; default: "") is the dashboard base URL used in links. It is not validated at construction.
-	FrontendURL string
+	// PortalURL (optional; default: "") is the customer portal base URL used in links when the merchant has no verified custom domain. It is not validated at construction.
+	PortalURL string
 
 	// Branding (optional) resolves the merchant logo for the acknowledgement email and PDF letterhead. Omitted, both fall back to a text-only letterhead.
 	Branding BrandingAssets
@@ -110,7 +111,7 @@ func NewSalesOrderSvc(config *SalesOrderSvcConfig) domain.SalesOrderSvc {
 		salesOrderPublisher:   config.SalesOrderPublisher,
 		shippoFactory:         config.ShippoFactory,
 		encryptionKey:         config.EncryptionKey,
-		frontendURL:           config.FrontendURL,
+		portalURL:             config.PortalURL,
 		branding:              config.Branding,
 	}
 }
@@ -2847,7 +2848,7 @@ func (s *salesOrderSvcImpl) CheckoutSalesOrder(ctx context.Context, params domai
 		}}
 
 		// Build the checkout success/cancel redirect URLs server-side from the
-		// account's portal slug. These are never accepted from the caller: Stripe
+		// account's portal (custom domain or slug). These are never accepted from the caller: Stripe
 		// redirects the customer to them verbatim after checkout, so a caller-supplied
 		// URL would turn the emailed checkout link into an open-redirect/phishing
 		// vector. Both land on the customer-portal order page (mirroring the embedded
@@ -2859,7 +2860,8 @@ func (s *salesOrderSvcImpl) CheckoutSalesOrder(ctx context.Context, params domai
 		if slug == nil || *slug == "" {
 			return nil, tracing.Trace(span, apierror.NewResourceNotFoundError("Account portal slug not found."))
 		}
-		orderPageURL := fmt.Sprintf("%s/%s/dashboard/sales-orders/%s", s.frontendURL, *slug, order.ID)
+		portalBase := cmp.Or(verifiedPortalOrigin(ctx, s.repos, params.AccountID), slugPortalBase(s.portalURL, slug))
+		orderPageURL := fmt.Sprintf("%s/dashboard/sales-orders/%s", portalBase, order.ID)
 		successURL := orderPageURL + "?payment=success"
 		cancelURL := orderPageURL + "?payment=cancelled"
 
@@ -3095,7 +3097,8 @@ func (s *salesOrderSvcImpl) CreateCustomerCheckoutSession(ctx context.Context, p
 			return nil, tracing.Trace(span, apierror.NewResourceNotFoundError("Account not found."))
 		}
 
-		returnURL := fmt.Sprintf("%s/%s/dashboard/sales-orders/%s", s.frontendURL, *slug, params.OrderID)
+		portalBase := cmp.Or(verifiedPortalOrigin(ctx, s.repos, targetAccountID), slugPortalBase(s.portalURL, slug))
+		returnURL := fmt.Sprintf("%s/dashboard/sales-orders/%s", portalBase, params.OrderID)
 
 		// 6. Create embedded checkout session (foreign mutation)
 		session, apiErr := checkoutClient.CreateEmbeddedCheckoutSession(ctx, domain.CreateEmbeddedCheckoutSessionParams{

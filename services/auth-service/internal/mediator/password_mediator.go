@@ -1,6 +1,7 @@
 package mediator
 
 import (
+	"cmp"
 	"context"
 	"fmt"
 	"time"
@@ -24,6 +25,7 @@ type passwordMedImpl struct {
 	jwtSecret             string
 	notificationPublisher domain.NotificationPublisher
 	frontendURL           string
+	portalURL             string
 }
 
 type PasswordMedConfig struct {
@@ -41,6 +43,9 @@ type PasswordMedConfig struct {
 
 	// FrontendURL (required) is the dashboard base URL used in password emails.
 	FrontendURL string
+
+	// PortalURL (optional; default: FrontendURL) is the customer portal base URL used in password emails sent to a portal customer.
+	PortalURL string
 }
 
 func (c *PasswordMedConfig) validate() error {
@@ -73,6 +78,7 @@ func NewPasswordMed(config *PasswordMedConfig) domain.PasswordMed {
 		jwtSecret:             config.JWTSecret,
 		notificationPublisher: config.NotificationPublisher,
 		frontendURL:           config.FrontendURL,
+		portalURL:             cmp.Or(config.PortalURL, config.FrontendURL),
 	}
 }
 
@@ -236,7 +242,7 @@ func (s *passwordMedImpl) RequestReset(ctx context.Context, identifier string, a
 	return s.sendPasswordResetEmail(ctx, user, accountSlug)
 }
 
-// sendPasswordResetEmail mints a short-lived password reset JWT (15 minutes), builds a reset link optionally scoped to an account slug, and publishes the password reset email via the outbox. The link always stays on the first-party frontend so the token is never exposed to a client-controlled host. Caller must ensure user.Email is non-nil.
+// sendPasswordResetEmail mints a short-lived password reset JWT (15 minutes), builds a reset link optionally scoped to an account slug, and publishes the password reset email via the outbox. A slug-scoped link goes to the shared portal host, any other to the dashboard; both are first-party, so the token is never exposed to a client-controlled host. Caller must ensure user.Email is non-nil.
 func (s *passwordMedImpl) sendPasswordResetEmail(ctx context.Context, user *types.User, accountSlug *string) *apierror.APIError {
 	ctx, span := passwordMedTracer.Start(ctx, "mediator.password.send_password_reset_email")
 	defer span.End()
@@ -248,7 +254,7 @@ func (s *passwordMedImpl) sendPasswordResetEmail(ctx context.Context, user *type
 
 	var resetLink string
 	if accountSlug != nil && *accountSlug != "" {
-		resetLink = fmt.Sprintf("%s/%s%s?t=%s", s.frontendURL, *accountSlug, constants.DashboardPathResetPassword, resetToken)
+		resetLink = fmt.Sprintf("%s/%s%s?t=%s", s.portalURL, *accountSlug, constants.DashboardPathResetPassword, resetToken)
 	} else {
 		resetLink = fmt.Sprintf("%s%s?t=%s", s.frontendURL, constants.DashboardPathResetPassword, resetToken)
 	}

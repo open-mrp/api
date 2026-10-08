@@ -41,6 +41,7 @@ type SalesOrderSvcTestSuite struct {
 
 	// Repos (everything the service touches).
 	accountRepo              *repositorymock.MockAccountRepo
+	portalDomainRepo         *repositorymock.MockPortalDomainRepo
 	accountUserRepo          *repositorymock.MockAccountUserRepo
 	accountIntegrationRepo   *repositorymock.MockAccountIntegrationRepo
 	addressRepo              *repositorymock.MockAddressRepo
@@ -92,6 +93,7 @@ func (suite *SalesOrderSvcTestSuite) SetupTest() {
 	suite.ctrl = gomock.NewController(suite.T())
 
 	suite.accountRepo = repositorymock.NewMockAccountRepo(suite.ctrl)
+	suite.portalDomainRepo = repositorymock.NewMockPortalDomainRepo(suite.ctrl)
 	suite.accountUserRepo = repositorymock.NewMockAccountUserRepo(suite.ctrl)
 	suite.accountIntegrationRepo = repositorymock.NewMockAccountIntegrationRepo(suite.ctrl)
 	suite.addressRepo = repositorymock.NewMockAddressRepo(suite.ctrl)
@@ -134,6 +136,7 @@ func (suite *SalesOrderSvcTestSuite) SetupTest() {
 
 	suite.repoFactory = factorymock.NewMockRepoFactory(suite.ctrl)
 	suite.repoFactory.EXPECT().NewAccountRepo().Return(suite.accountRepo).AnyTimes()
+	suite.repoFactory.EXPECT().NewPortalDomainRepo().Return(suite.portalDomainRepo).AnyTimes()
 	suite.repoFactory.EXPECT().NewAccountUserRepo().Return(suite.accountUserRepo).AnyTimes()
 	suite.repoFactory.EXPECT().NewAccountIntegrationRepo().Return(suite.accountIntegrationRepo).AnyTimes()
 	suite.repoFactory.EXPECT().NewAddressRepo().Return(suite.addressRepo).AnyTimes()
@@ -191,7 +194,7 @@ func (suite *SalesOrderSvcTestSuite) SetupTest() {
 		NotificationPublisher: suite.notifier,
 		SalesOrderPublisher:   suite.orderPublisher,
 		EncryptionKey:         suite.encryptionKey,
-		FrontendURL:           "https://dash.test",
+		PortalURL:             "https://portal.test",
 	})
 }
 
@@ -2072,6 +2075,7 @@ func (suite *SalesOrderSvcTestSuite) TestCheckoutSalesOrder_Success() {
 	portalSlug := "acme"
 	suite.expectCheckoutSellerLookups()
 	suite.accountRepo.EXPECT().GetPortalSlug(gomock.Any(), "ac_test").Return(&portalSlug, nil).Times(1)
+	suite.portalDomainRepo.EXPECT().GetByAccountID(gomock.Any(), "ac_test").Return(nil, nil).Times(1)
 
 	suite.checkoutFactory.EXPECT().Build("sk_test_xxx").Return(suite.checkoutClient).Times(1)
 	suite.checkoutClient.EXPECT().
@@ -2098,11 +2102,11 @@ func (suite *SalesOrderSvcTestSuite) TestCheckoutSalesOrder_Success() {
 			suite.Equal("or_1", params.PaymentIntentMetadata["orderID"])
 			suite.Equal("ac_buyer", params.PaymentIntentMetadata["customerID"])
 			// Redirect URLs point at the customer-portal order page, derived from
-			// FrontendURL + portal slug + order id — not anything caller-supplied.
+			// PortalURL + portal slug + order id — not anything caller-supplied.
 			suite.Require().NotNil(params.SuccessURL)
 			suite.Require().NotNil(params.CancelURL)
-			suite.Equal("https://dash.test/acme/dashboard/sales-orders/or_1?payment=success", *params.SuccessURL)
-			suite.Equal("https://dash.test/acme/dashboard/sales-orders/or_1?payment=cancelled", *params.CancelURL)
+			suite.Equal("https://portal.test/acme/dashboard/sales-orders/or_1?payment=success", *params.SuccessURL)
+			suite.Equal("https://portal.test/acme/dashboard/sales-orders/or_1?payment=cancelled", *params.CancelURL)
 			return &domain.StripeCheckoutSession{URL: "https://checkout.stripe.com/test"}, nil
 		}).Times(1)
 
@@ -2186,6 +2190,7 @@ func (suite *SalesOrderSvcTestSuite) TestCheckoutSalesOrder_CreatesStripeCustome
 	portalSlug := "acme"
 	suite.expectCheckoutSellerLookups()
 	suite.accountRepo.EXPECT().GetPortalSlug(gomock.Any(), "ac_test").Return(&portalSlug, nil).Times(1)
+	suite.portalDomainRepo.EXPECT().GetByAccountID(gomock.Any(), "ac_test").Return(nil, nil).Times(1)
 
 	suite.checkoutClient.EXPECT().
 		CreateOneTimeCheckoutSession(gomock.Any(), gomock.Any()).
@@ -2257,6 +2262,7 @@ func (suite *SalesOrderSvcTestSuite) TestCheckoutSalesOrder_CreatesStripeCustome
 	portalSlug := "acme"
 	suite.expectCheckoutSellerLookups()
 	suite.accountRepo.EXPECT().GetPortalSlug(gomock.Any(), "ac_test").Return(&portalSlug, nil).Times(1)
+	suite.portalDomainRepo.EXPECT().GetByAccountID(gomock.Any(), "ac_test").Return(nil, nil).Times(1)
 	suite.checkoutClient.EXPECT().
 		CreateOneTimeCheckoutSession(gomock.Any(), gomock.Any()).
 		Return(&domain.StripeCheckoutSession{URL: "https://checkout.stripe.com/test"}, nil).Times(1)
@@ -2341,6 +2347,7 @@ func (suite *SalesOrderSvcTestSuite) TestCreateCustomerCheckoutSession_ChargesSt
 
 	portalSlug := "acme"
 	suite.accountRepo.EXPECT().GetPortalSlug(gomock.Any(), "ac_target").Return(&portalSlug, nil).Times(1)
+	suite.portalDomainRepo.EXPECT().GetByAccountID(gomock.Any(), "ac_target").Return(&domain.PortalDomain{Domain: "shop.example.net", Status: constants.PortalDomainStatusVerified}, nil).Times(1)
 
 	suite.checkoutFactory.EXPECT().Build("sk_test_xxx").Return(suite.checkoutClient).Times(1)
 	suite.checkoutClient.EXPECT().
@@ -2349,6 +2356,8 @@ func (suite *SalesOrderSvcTestSuite) TestCreateCustomerCheckoutSession_ChargesSt
 			suite.Equal(int64(3600), params.OrderTotalCents)
 			suite.Equal("001001", params.OrderNumber)
 			suite.Equal("or_1", params.OrderID)
+			// A verified custom domain serves the portal, so the customer returns there without the slug.
+			suite.Equal("https://shop.example.net/dashboard/sales-orders/or_1", params.ReturnURL)
 			return &domain.StripeEmbeddedCheckoutSession{ClientSecret: "cs_secret"}, nil
 		}).Times(1)
 

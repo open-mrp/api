@@ -7,6 +7,7 @@ data:
     PORT: "8081"
     AWS_REGION: "us-east-2"
     FRONTEND_URL: "http://localhost:4200"
+    PORTAL_URL: "http://localhost:4300"
     ACCOUNT_PHOTOS_BUCKET: "augno-org-logos-dev-us-east-2"
     USER_PHOTOS_BUCKET: "augno-user-photos-dev-us-east-2"
     SHIPPING_LABELS_BUCKET: "augno-shipping-labels-dev-us-east-2"

@@ -20,6 +20,9 @@ type MediatorFactoryConfig struct {
 	// FrontendURL (required) is the dashboard base URL used in emails and redirects.
 	FrontendURL string
 
+	// PortalURL (optional; default: FrontendURL) is the customer portal base URL used in emails sent to portal customers.
+	PortalURL string
+
 	// CoreClient (required) is the core-service client used by the mediators.
 	CoreClient domain.AuthCoreClient
 
@@ -32,6 +35,7 @@ type mediatorFactoryImpl struct {
 	apiKeyPepper           []byte
 	notificationPublisher  domain.NotificationPublisher
 	frontendURL            string
+	portalURL              string
 	coreClient             domain.AuthCoreClient
 	docAPIKeyEncryptionKey []byte
 }
@@ -66,6 +70,7 @@ func NewMediatorFactory(config *MediatorFactoryConfig) domain.MediatorFactory {
 		apiKeyPepper:           config.APIKeyPepper,
 		notificationPublisher:  config.NotificationPublisher,
 		frontendURL:            config.FrontendURL,
+		portalURL:              config.PortalURL,
 		coreClient:             config.CoreClient,
 		docAPIKeyEncryptionKey: config.DocAPIKeyEncryptionKey,
 	}
@@ -86,6 +91,7 @@ func (f *mediatorFactoryImpl) Build(repoFactory domain.RepoFactory) domain.Media
 		Repos:                 repoFactory,
 		JWTSecret:             f.jwtSecret,
 		FrontendURL:           f.frontendURL,
+		PortalURL:             f.portalURL,
 		RefreshTokenMed:       refreshTokenMed,
 		APIKeyMed:             apiKeyMed,
 		CoreClient:            f.coreClient,
@@ -101,6 +107,7 @@ func (f *mediatorFactoryImpl) Build(repoFactory domain.RepoFactory) domain.Media
 			JWTSecret:             f.jwtSecret,
 			NotificationPublisher: f.notificationPublisher,
 			FrontendURL:           f.frontendURL,
+			PortalURL:             f.portalURL,
 		}),
 		RefreshToken: refreshTokenMed,
 		Idempotency:  NewIdempotencyMed(&IdempotencyMedConfig{Repos: repoFactory}),

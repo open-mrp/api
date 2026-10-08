@@ -168,6 +168,7 @@ services:
       INTEGRATION_ENCRYPTION_KEY: "4815cd74058e6ce82216c9b89dac44dbd171371243342f96fa7a6d8c81c1a491"
       INTEGRATION_ENCRYPTION_KEY_ID: dev-key-1
       FRONTEND_URL: http://localhost:4200
+      PORTAL_URL: http://localhost:4300
       AUTH_SERVICE_URL: auth-service:9092
       S3_ENDPOINT_URL: http://minio-e2e:9000
       AWS_REGION: us-east-2
@@ -217,6 +218,7 @@ services:
       BILLING_SERVICE_URL: billing-service:9092
       PLATFORM_SERVICE_URL: platform-service:9092
       FRONTEND_URL: http://localhost:4200
+      PORTAL_URL: http://localhost:4300
     depends_on:
       mysql-e2e:
         condition: service_healthy

@@ -176,8 +176,8 @@ Paginated list endpoints return a `List[T]` wrapper. The same `List[T]` type is 
 {
     "object": "list",
     "page_info": {
-        "next_cursor": "...",
-        "prev_cursor": null,
+        "next_page_url": "/v1/...?cursor=...",
+        "previous_page_url": null,
         "has_next_page": true,
         "has_prev_page": false
     },

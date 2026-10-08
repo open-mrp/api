@@ -12,6 +12,7 @@ This file provides guidance when working with code in this repository.
 |---|---|
 | Changing **any** existing public request/response shape or behavior | `api-versioning` — and see the breaking-change rule below |
 | Adding or changing an endpoint's request/response shape | `api-resources` |
+| Designing or reviewing a public endpoint's shape, delete, search, pagination, or docstrings | `public-api-design` |
 | Writing a service, mediator, repository, or transaction | `architecture-patterns` and `openmrp-layers` |
 | Writing anything that touches `inventory_issue`, `inventory_receipt` or `inventory_allocation` | `architecture-patterns` — "Inventory ledger lock order", before writing the transaction |
 | Touching identity, permissions, or actor checks | `authentication-authorization` |
@@ -434,6 +435,7 @@ The routing table at the top maps tasks to skills. Skills are distilled; `docs/p
 | `async-bulk-operations` | (bulk-job workflow) |
 | `api-versioning` | `docs/patterns/api-versioning-patterns.md` |
 | `api-resources` | `docs/patterns/api-resource-conventions.md`, `docs/patterns/nullable-field-patterns.md` |
+| `public-api-design` | `docs/patterns/public-api-design-conventions.md` |
 | `architecture-patterns` | `docs/patterns/architecture-patterns.md` |
 | `authentication-authorization` | `docs/patterns/authentication-patterns.md`, `docs/patterns/authorization-check-patterns.md` |
 | `performant-lists` | `docs/patterns/performant-list-endpoint-patterns.md` |
@@ -453,6 +455,7 @@ Always-on, not a skill: `docs/patterns/important-patterns.md` — the short list
 
 Other docs (not skills):
 
+- `docs/forge1-api-review.md` — Per-resource change list from the forge.1 stable API review
 - `docs/api-migration-instructions.md` — Dashboard API → Go API migration context
 - `docs/migration-checklist.md` — Per-endpoint checklist for the dashboard → Go migration
 - `docs/stlc-sdk-codegen.md` — Stainless SDK codegen: regeneration flow, config, and release

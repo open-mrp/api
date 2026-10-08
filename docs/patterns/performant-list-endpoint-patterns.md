@@ -151,7 +151,7 @@ cost on high-insert tables. Not every filter deserves a composite.
 | Rare / admin-only filters | **Usually no** | leave residual — bounded by `LIMIT` anyway |
 | `EXISTS` / child-table filters (e.g. `item_id`, `product_line_id` via order lines) | **Different** | index the **child** table's join+filter columns; the outer query keeps driving on `(scope, time)`. A composite on the parent can't help. |
 | Filters on a **joined** table (e.g. paginate `invoice`, filter by `sales_order.buyer_account_id`) | **Composite won't help** | needs denormalization of the filter column onto the base table, or a filter-first subquery rewrite |
-| `LIKE '%term%'` free-text (`name`, `subject`) | **Not a B-tree** | leading-wildcard is non-sargable; use `FULLTEXT … MATCH/AGAINST`, an exact-match seek, or a prefix anchor — not a composite |
+| `LIKE '%term%'` free-text (`name`, `subject`) | **Not a B-tree** | leading-wildcard is non-sargable. On small per-tenant tables (lookups) a tenant-scoped `LIKE '%q%'` scan is fine; otherwise use a prefix anchor, an exact-match seek, or ngram `FULLTEXT` (never the default word parser for names). See `public-api-design-conventions.md` → Search |
 
 High-insert tables (`sales_order`, `transaction`, `request_log`, `audit_event`,
 `inventory_change_log`, `batch`) pay the index tax on every write. On those,

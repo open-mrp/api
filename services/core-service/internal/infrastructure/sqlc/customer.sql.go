@@ -306,6 +306,31 @@ func (q *Queries) CustomerExistsByExternalNumber(ctx context.Context, arg Custom
 	return customer_exists, err
 }
 
+const customerNumberValueInUse = `-- name: CustomerNumberValueInUse :one
+SELECT EXISTS (
+    SELECT 1 FROM account_relation
+    WHERE owner_account_id = ?
+    AND account_relation_role_code = 'customer'
+    AND (
+        external_number = ?
+        OR (external_number LIKE '0%' AND external_number REGEXP '^[0-9]+$' AND CAST(external_number AS UNSIGNED) = ?)
+    )
+) AS in_use
+`
+
+type CustomerNumberValueInUseParams struct {
+	OwnerAccountID string
+	Number         string
+	Value          string
+}
+
+func (q *Queries) CustomerNumberValueInUse(ctx context.Context, arg CustomerNumberValueInUseParams) (bool, error) {
+	row := q.db.QueryRowContext(ctx, customerNumberValueInUse, arg.OwnerAccountID, arg.Number, arg.Value)
+	var in_use bool
+	err := row.Scan(&in_use)
+	return in_use, err
+}
+
 const deleteAccountAddressesByAccountID = `-- name: DeleteAccountAddressesByAccountID :exec
 DELETE FROM account_address
 WHERE account_id = ?
@@ -1697,7 +1722,7 @@ SELECT CAST(COALESCE(MAX(CAST(external_number AS UNSIGNED)), 0) AS SIGNED) AS hi
 FROM account_relation
 WHERE owner_account_id = ?
 AND account_relation_role_code = 'customer'
-AND external_number REGEXP '^[0-9]{1,10}$'
+AND external_number REGEXP '^0*[0-9]{1,10}$'
 AND CAST(external_number AS UNSIGNED) < 2147483647
 `
 
@@ -3430,9 +3455,8 @@ WHERE id = ?
 FOR UPDATE
 `
 
-// No unique index guards customer numbers, so their writers queue on the owner's account row, as
-// supplier numbers do. Take it before the transaction's first read so the number check sees every
-// earlier holder's commit.
+// Customer number writers queue on the owner's account row, as supplier numbers do. Take it before the
+// transaction's first read so the number check sees every earlier holder's commit.
 func (q *Queries) LockCustomerNumbers(ctx context.Context, ownerAccountID string) (string, error) {
 	row := q.db.QueryRowContext(ctx, lockCustomerNumbers, ownerAccountID)
 	var id string

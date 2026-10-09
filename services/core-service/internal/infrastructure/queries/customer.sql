@@ -911,10 +911,20 @@ AND external_number = sqlc.arg('external_number')
 AND account_relation_role_code = 'customer'
 AND (sqlc.narg('exclude_counterparty_id') IS NULL OR counterparty_account_id != sqlc.narg('exclude_counterparty_id'));
 
+-- name: CustomerNumberValueInUse :one
+SELECT EXISTS (
+    SELECT 1 FROM account_relation
+    WHERE owner_account_id = sqlc.arg('owner_account_id')
+    AND account_relation_role_code = 'customer'
+    AND (
+        external_number = sqlc.arg('number')
+        OR (external_number LIKE '0%' AND external_number REGEXP '^[0-9]+$' AND CAST(external_number AS UNSIGNED) = sqlc.arg('value'))
+    )
+) AS in_use;
+
 -- name: LockCustomerNumbers :one
--- No unique index guards customer numbers, so their writers queue on the owner's account row, as
--- supplier numbers do. Take it before the transaction's first read so the number check sees every
--- earlier holder's commit.
+-- Customer number writers queue on the owner's account row, as supplier numbers do. Take it before the
+-- transaction's first read so the number check sees every earlier holder's commit.
 SELECT id FROM account
 WHERE id = sqlc.arg('owner_account_id')
 FOR UPDATE;
@@ -927,7 +937,7 @@ SELECT CAST(COALESCE(MAX(CAST(external_number AS UNSIGNED)), 0) AS SIGNED) AS hi
 FROM account_relation
 WHERE owner_account_id = sqlc.arg('owner_account_id')
 AND account_relation_role_code = 'customer'
-AND external_number REGEXP '^[0-9]{1,10}$'
+AND external_number REGEXP '^0*[0-9]{1,10}$'
 AND CAST(external_number AS UNSIGNED) < 2147483647;
 
 -- RaiseCustomerNumberCounter moves the counter up to value, creating it there if the owner has none.

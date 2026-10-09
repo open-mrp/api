@@ -168,7 +168,7 @@ func (r *customerRegistrationRepoImpl) CreateNewCustomerAccount(ctx context.Cont
 		StripeEmail:              gosql.NullString{String: params.Email, Valid: true},
 		DefaultCarrierOptionID:   gosql.NullString{String: "ground", Valid: true},
 	})
-	if apiErr := db.MapSQLError(err); apiErr != nil {
+	if apiErr := db.MapSQLErrorWithDuplicateKeys(err, customerNumberDuplicateKeyMapping); apiErr != nil {
 		return "", tracing.Trace(span, apiErr)
 	}
 

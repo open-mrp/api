@@ -26,6 +26,18 @@ type numberCounter struct {
 	raise    func(ctx context.Context, sysPropertyID string, value int32) error
 }
 
+var customerNumberDuplicateKeyMapping = db.DuplicateKeyMapping{
+	"account_relation_owner_role_external_number_key": func() *apierror.APIError {
+		return apierror.NewConflictErrorWithParam("A customer with this number already exists.", "number")
+	},
+}
+
+var supplierNumberDuplicateKeyMapping = db.DuplicateKeyMapping{
+	"account_relation_owner_role_external_number_key": func() *apierror.APIError {
+		return apierror.NewConflictErrorWithParam("A supplier with this number already exists.", "number")
+	},
+}
+
 // maxNumberAllocations bounds the retries after a number turns out to be taken. Catching the counter up
 // leaves it past every number in use, so the next allocation is free unless another writer took it.
 const maxNumberAllocations = 3
@@ -108,7 +120,7 @@ func customerNumbers(q *sqlc.Queries, ownerAccountID string) numberCounter {
 			return q.AllocateNextCustomerNumber(ctx, sqlc.AllocateNextCustomerNumberParams{ID: sysPropertyID, AccountID: ownerAccountID})
 		},
 		inUse: func(ctx context.Context, number string) (bool, error) {
-			return q.CustomerExistsByExternalNumber(ctx, sqlc.CustomerExistsByExternalNumberParams{OwnerAccountID: ownerAccountID, ExternalNumber: number})
+			return q.CustomerNumberValueInUse(ctx, sqlc.CustomerNumberValueInUseParams{OwnerAccountID: ownerAccountID, Number: number, Value: number})
 		},
 		highest: func(ctx context.Context) (int64, error) {
 			return q.HighestNumericCustomerNumber(ctx, ownerAccountID)

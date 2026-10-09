@@ -114,7 +114,7 @@ var SampleInvoice = &Invoice{
 	PaymentTerm:          SamplePaymentTerm,
 	PaymentStatus:        constants.InvoicePaymentStatusUnpaid,
 	IsPaidInFull:         false,
-	Metadata:             map[string]string{"edi_filename": "Carolon_ACME_81078093_INV-1001.csv"},
+	Metadata:             map[string]string{"edi_filename": "ACME_81078093_INV-1001.csv"},
 	HasBeenSent:          true,
 	TotalInvoiced:        "1234.56",
 	AcceptsInvoiceEmails: true,

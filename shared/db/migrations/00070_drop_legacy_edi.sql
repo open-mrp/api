@@ -1,7 +1,7 @@
 -- +goose NO TRANSACTION
 -- +goose Up
 
--- The legacy EDI pipeline's storage. OpenMRP no longer exchanges EDI documents itself: the Carolon EDI
+-- The legacy EDI pipeline's storage. OpenMRP no longer exchanges EDI documents itself: an external EDI
 -- runner does, keeping its partner line numbers and sent markers in metadata (backfilled in data
 -- migration 00014). Nothing reads these since the release that removed the EDI code.
 DROP TABLE `edi_transmission`;

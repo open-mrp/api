@@ -8,7 +8,7 @@ type RegistrationLimits struct {
 
 // RegistrationLimitsByPlan maps each plan code to its registration caps. Every public plan shares the same defaults today; the map makes it easy to override per-plan later without changing the enforcement code.
 var RegistrationLimitsByPlan = map[PlanCode]RegistrationLimits{
-	PlanCodeFree:    {PublicLimit: 10, TotalLimit: 10},
+	PlanCodeFree:    {PublicLimit: 1000, TotalLimit: 1000},
 	PlanCodeStarter: {PublicLimit: 20, TotalLimit: 20},
 	PlanCodePro:     {PublicLimit: 20, TotalLimit: 20},
 }

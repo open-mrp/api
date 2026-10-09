@@ -105,16 +105,19 @@ func TestLoadPayload_SkipsObjectStoreWithoutBodyIncludes(t *testing.T) {
 	}
 }
 
-func TestLoadPayload_LeavesInlineLogsAlone(t *testing.T) {
+// A log stored without an object had no bodies; it reads as the {} placeholder those rows held.
+func TestLoadPayload_LogWithoutObjectReadsAsEmptyBodies(t *testing.T) {
 	repo := &requestLogRepoImpl{}
-	inline := `{"a":1}`
-	read := &domain.RequestLogRead{BodyJSON: &inline}
+	read := &domain.RequestLogRead{}
 
-	if apiErr := repo.loadPayload(context.Background(), read, nil, []string{"request_body"}); apiErr != nil {
+	if apiErr := repo.loadPayload(context.Background(), read, nil, []string{"request_body", "response_body", "query_params"}); apiErr != nil {
 		t.Fatalf("loadPayload: %v", apiErr)
 	}
-	if read.BodyJSON != &inline {
-		t.Error("inline body must be left in place")
+	if read.BodyJSON == nil || *read.BodyJSON != "{}" || read.ResponseJSON == nil || *read.ResponseJSON != "{}" {
+		t.Errorf("bodies must read as {}: body=%v response=%v", read.BodyJSON, read.ResponseJSON)
+	}
+	if read.QueryJSON != nil {
+		t.Errorf("query: got %v, want nil", *read.QueryJSON)
 	}
 }
 

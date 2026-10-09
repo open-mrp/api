@@ -9,8 +9,6 @@ import (
 	"context"
 	"database/sql"
 	"time"
-
-	"github.com/open-mrp/api/shared/db"
 )
 
 const createRequestLog = `-- name: CreateRequestLog :exec
@@ -20,7 +18,6 @@ INSERT INTO request_log (
         host,
         path,
         normalized_route,
-        query_json,
         status_code,
         latency_us,
         account_id,
@@ -37,21 +34,14 @@ INSERT INTO request_log (
         actor_id,
         actor_type,
         internal_error_message,
-        stack_trace,
         identity_type,
         api_version,
         trace_id,
         public_endpoint,
         hidden,
-        request_body_json,
-        response_body_json,
         payload_key
     )
 VALUES (
-        ?,
-        ?,
-        ?,
-        ?,
         ?,
         ?,
         ?,
@@ -88,7 +78,6 @@ type CreateRequestLogParams struct {
 	Host                 string
 	Path                 string
 	NormalizedRoute      string
-	QueryJson            db.NullableRawMessage
 	StatusCode           int32
 	LatencyUs            int64
 	AccountID            sql.NullString
@@ -105,14 +94,11 @@ type CreateRequestLogParams struct {
 	ActorID              sql.NullString
 	ActorType            sql.NullString
 	InternalErrorMessage sql.NullString
-	StackTrace           sql.NullString
 	IdentityType         sql.NullString
 	ApiVersion           sql.NullString
 	TraceID              sql.NullString
 	PublicEndpoint       bool
 	Hidden               bool
-	RequestBodyJson      db.NullableRawMessage
-	ResponseBodyJson     db.NullableRawMessage
 	PayloadKey           sql.NullString
 }
 
@@ -123,7 +109,6 @@ func (q *Queries) CreateRequestLog(ctx context.Context, arg CreateRequestLogPara
 		arg.Host,
 		arg.Path,
 		arg.NormalizedRoute,
-		arg.QueryJson,
 		arg.StatusCode,
 		arg.LatencyUs,
 		arg.AccountID,
@@ -140,14 +125,11 @@ func (q *Queries) CreateRequestLog(ctx context.Context, arg CreateRequestLogPara
 		arg.ActorID,
 		arg.ActorType,
 		arg.InternalErrorMessage,
-		arg.StackTrace,
 		arg.IdentityType,
 		arg.ApiVersion,
 		arg.TraceID,
 		arg.PublicEndpoint,
 		arg.Hidden,
-		arg.RequestBodyJson,
-		arg.ResponseBodyJson,
 		arg.PayloadKey,
 	)
 	return err
@@ -166,13 +148,10 @@ func (q *Queries) DeleteExpiredRequestLogs(ctx context.Context, limit int32) (sq
 const findRequestLogBaseByID = `-- name: FindRequestLogBaseByID :one
 
 SELECT rl.id, rl.method, rl.host, rl.path, rl.normalized_route,
-       COALESCE(CASE WHEN ? THEN rl.query_json ELSE NULL END, '') AS query_json,
        rl.status_code, rl.latency_us, rl.api_version, rl.actor_id AS actor_id,
        rl.actor_type, rl.identity_type, rl.client_ip_string, rl.user_agent,
        rl.referrer, rl.error_code, rl.error_message, rl.occurred_at, rl.created_at,
        rl.idempotency_key_id, rl.payload_key,
-       COALESCE(CASE WHEN ? THEN rl.request_body_json ELSE NULL END, '') AS request_body_json,
-       COALESCE(CASE WHEN ? THEN rl.response_body_json ELSE NULL END, '') AS response_body_json,
        rl.target_account_id,
        ik.idempotency_key
 FROM request_log rl
@@ -182,11 +161,8 @@ WHERE rl.id = ?
 `
 
 type FindRequestLogBaseByIDParams struct {
-	IncludeQueryJson        db.NullableRawMessage
-	IncludeRequestBodyJson  db.NullableRawMessage
-	IncludeResponseBodyJson db.NullableRawMessage
-	ID                      string
-	CallerAccountID         sql.NullString
+	ID              string
+	CallerAccountID sql.NullString
 }
 
 type FindRequestLogBaseByIDRow struct {
@@ -195,7 +171,6 @@ type FindRequestLogBaseByIDRow struct {
 	Host             string
 	Path             string
 	NormalizedRoute  string
-	QueryJson        interface{}
 	StatusCode       int32
 	LatencyUs        int64
 	ApiVersion       sql.NullString
@@ -211,8 +186,6 @@ type FindRequestLogBaseByIDRow struct {
 	CreatedAt        time.Time
 	IdempotencyKeyID sql.NullString
 	PayloadKey       sql.NullString
-	RequestBodyJson  interface{}
-	ResponseBodyJson interface{}
 	TargetAccountID  sql.NullString
 	IdempotencyKey   sql.NullString
 }
@@ -224,14 +197,7 @@ type FindRequestLogBaseByIDRow struct {
 // per-side (…, occurred_at DESC, id DESC) cursor indexes.
 // Visible when the caller's account is either the acting account or the target.
 func (q *Queries) FindRequestLogBaseByID(ctx context.Context, arg FindRequestLogBaseByIDParams) (FindRequestLogBaseByIDRow, error) {
-	row := q.db.QueryRowContext(ctx, findRequestLogBaseByID,
-		arg.IncludeQueryJson,
-		arg.IncludeRequestBodyJson,
-		arg.IncludeResponseBodyJson,
-		arg.ID,
-		arg.CallerAccountID,
-		arg.CallerAccountID,
-	)
+	row := q.db.QueryRowContext(ctx, findRequestLogBaseByID, arg.ID, arg.CallerAccountID, arg.CallerAccountID)
 	var i FindRequestLogBaseByIDRow
 	err := row.Scan(
 		&i.ID,
@@ -239,7 +205,6 @@ func (q *Queries) FindRequestLogBaseByID(ctx context.Context, arg FindRequestLog
 		&i.Host,
 		&i.Path,
 		&i.NormalizedRoute,
-		&i.QueryJson,
 		&i.StatusCode,
 		&i.LatencyUs,
 		&i.ApiVersion,
@@ -255,8 +220,6 @@ func (q *Queries) FindRequestLogBaseByID(ctx context.Context, arg FindRequestLog
 		&i.CreatedAt,
 		&i.IdempotencyKeyID,
 		&i.PayloadKey,
-		&i.RequestBodyJson,
-		&i.ResponseBodyJson,
 		&i.TargetAccountID,
 		&i.IdempotencyKey,
 	)
@@ -265,13 +228,10 @@ func (q *Queries) FindRequestLogBaseByID(ctx context.Context, arg FindRequestLog
 
 const findRequestLogByID = `-- name: FindRequestLogByID :one
 SELECT rl.id, rl.method, rl.host, rl.path, rl.normalized_route,
-       COALESCE(CASE WHEN ? THEN rl.query_json ELSE NULL END, '') AS query_json,
        rl.status_code, rl.latency_us, rl.api_version, rl.actor_id AS actor_id,
        rl.actor_type, rl.identity_type, rl.client_ip_string, rl.user_agent,
        rl.referrer, rl.error_code, rl.error_message, rl.occurred_at, rl.created_at,
        rl.idempotency_key_id, rl.payload_key,
-       COALESCE(CASE WHEN ? THEN rl.request_body_json ELSE NULL END, '') AS request_body_json,
-       COALESCE(CASE WHEN ? THEN rl.response_body_json ELSE NULL END, '') AS response_body_json,
        u.email AS user_email, u.name AS user_name,
        ak.type_id AS api_key_type_id, ak.redacted_value AS api_key_redacted_value,
        ak.name AS api_key_name,
@@ -295,11 +255,8 @@ WHERE rl.id = ?
 `
 
 type FindRequestLogByIDParams struct {
-	IncludeQueryJson        db.NullableRawMessage
-	IncludeRequestBodyJson  db.NullableRawMessage
-	IncludeResponseBodyJson db.NullableRawMessage
-	ID                      string
-	CallerAccountID         sql.NullString
+	ID              string
+	CallerAccountID sql.NullString
 }
 
 type FindRequestLogByIDRow struct {
@@ -308,7 +265,6 @@ type FindRequestLogByIDRow struct {
 	Host                string
 	Path                string
 	NormalizedRoute     string
-	QueryJson           interface{}
 	StatusCode          int32
 	LatencyUs           int64
 	ApiVersion          sql.NullString
@@ -324,8 +280,6 @@ type FindRequestLogByIDRow struct {
 	CreatedAt           time.Time
 	IdempotencyKeyID    sql.NullString
 	PayloadKey          sql.NullString
-	RequestBodyJson     interface{}
-	ResponseBodyJson    interface{}
 	UserEmail           sql.NullString
 	UserName            sql.NullString
 	ApiKeyTypeID        sql.NullString
@@ -350,14 +304,7 @@ type FindRequestLogByIDRow struct {
 // (user_id, target account).
 // Visible when the caller's account is either the acting account or the target.
 func (q *Queries) FindRequestLogByID(ctx context.Context, arg FindRequestLogByIDParams) (FindRequestLogByIDRow, error) {
-	row := q.db.QueryRowContext(ctx, findRequestLogByID,
-		arg.IncludeQueryJson,
-		arg.IncludeRequestBodyJson,
-		arg.IncludeResponseBodyJson,
-		arg.ID,
-		arg.CallerAccountID,
-		arg.CallerAccountID,
-	)
+	row := q.db.QueryRowContext(ctx, findRequestLogByID, arg.ID, arg.CallerAccountID, arg.CallerAccountID)
 	var i FindRequestLogByIDRow
 	err := row.Scan(
 		&i.ID,
@@ -365,7 +312,6 @@ func (q *Queries) FindRequestLogByID(ctx context.Context, arg FindRequestLogByID
 		&i.Host,
 		&i.Path,
 		&i.NormalizedRoute,
-		&i.QueryJson,
 		&i.StatusCode,
 		&i.LatencyUs,
 		&i.ApiVersion,
@@ -381,8 +327,6 @@ func (q *Queries) FindRequestLogByID(ctx context.Context, arg FindRequestLogByID
 		&i.CreatedAt,
 		&i.IdempotencyKeyID,
 		&i.PayloadKey,
-		&i.RequestBodyJson,
-		&i.ResponseBodyJson,
 		&i.UserEmail,
 		&i.UserName,
 		&i.ApiKeyTypeID,

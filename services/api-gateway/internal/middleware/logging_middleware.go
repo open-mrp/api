@@ -206,7 +206,7 @@ func LoggingMiddleware(logger *log.Logger, next http.HandlerFunc, saver saver, r
 	}
 }
 
-const maxResponseLogSize = 256 << 10 // 256 KB
+const maxResponseLogSize = appctx.MaxLoggedBodyBytes
 
 type loggingResponseWriter struct {
 	http.ResponseWriter

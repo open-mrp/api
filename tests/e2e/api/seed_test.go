@@ -475,7 +475,7 @@ const (
 	SeedInventoryChangeLog2ItemID = "it_01k0a7100aedgv8416p4p2v9ks" // SCK-002
 	SeedInventoryChangeLog2UserID = SeedUser2ID                     // Sarah Martinez
 	SeedRequestLogErrorID         = "rqlog_01seedreqlog4_000"       // has error_code=validation_failed for filter tests
-	SeedRequestLogQueryParamsID   = "rqlog_01seedreqlog5_000"       // has query_json populated for include=query_params tests
+	SeedRequestLogQueryParamsID   = "rqlog_01seedreqlog5_000"       // has no stored payload, for the no-object read path
 	// referrer set on SeedReqLogInfraUserID (rqlog_01infrauser00) — only seed row
 	// that populates the otherwise-always-null referrer field.
 	SeedRequestLogReferrerValue = "https://dashboard.openmrp.ai/inbox"

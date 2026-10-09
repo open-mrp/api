@@ -2107,9 +2107,6 @@ type RequestLog struct {
 	Host                 string
 	Path                 string
 	NormalizedRoute      string
-	QueryJson            json.RawMessage
-	RequestBodyJson      json.RawMessage
-	ResponseBodyJson     json.RawMessage
 	StatusCode           int32
 	LatencyUs            int64
 	TargetAccountID      sql.NullString
@@ -2125,7 +2122,6 @@ type RequestLog struct {
 	CreatedAt            time.Time
 	OccurredAt           time.Time
 	IdempotencyKeyID     sql.NullString
-	StackTrace           sql.NullString
 	InternalErrorMessage sql.NullString
 	TraceID              sql.NullString
 	Hidden               bool

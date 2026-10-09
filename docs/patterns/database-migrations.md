@@ -57,12 +57,12 @@ Every statement against production stays under **50 ms**, migrations included. D
 
 **A deploy-time backfill (`data-migrations/*.sql`) must be small.** Each statement must be measured on production-sized data (`EXPLAIN ANALYZE` on a branch) and stay under 50 ms. In practice that means seeding or fixing a bounded set of rows by primary key or a selective index. Repeating a `LIMIT 5000` statement does not qualify: each copy is still one long statement.
 
-**Anything bigger is a background backfill on `shared/db/backfill`, not a migration.** Register it in its service, as `platform-service/cmd/backfills.go` does. The runner gives every backfill:
+**Anything bigger is a background backfill on `shared/db/backfill`, not a migration.** For a worked example, see the `request_log_payloads` backfill in commit `68d752de` (`platform-service/cmd/backfills.go` and `repository/request_log_payload_backfill.go`). It wires a small replica pool, a `backfill.Progress` on `backfill_progress`, and `Runner.Keep` under the service's lease, behind a `BACKFILLS_PAUSED` kill switch. Delete it once it has completed and the change it served has shipped. The runner gives every backfill:
 
 - **Keyset batches from a saved cursor** (`backfill_progress`), so it resumes after a restart or deploy, and never runs again once complete.
 - **Adaptive batch size.** Each batch wraps its statements in `Meter.Time`. The size shrinks when the slowest statement passes 25 ms and grows when well under, so statements stay inside the budget whatever the row sizes.
 - **Duty-cycle pacing.** After each batch it sleeps four times the batch's database time, so a backfill never takes more than about 20% of one connection.
-- **One pod at a time** (`Runner.Keep`, under a lease), with a smaller retry after a failed batch, and a kill switch (`BACKFILLS_PAUSED`).
+- **One pod at a time** (`Runner.Keep`, under a lease), with a smaller retry after a failed batch.
 
 Write each batch to be repeatable. Walk a narrow index for the next page instead of the clustered rows. Read bulk data from the replica when the rows are immutable. Keep primary writes to short primary-key updates, guarded so a re-run changes nothing (`… WHERE id IN (…) AND new_col IS NULL`). Work outside the database, such as an S3 upload, happens before the row update that depends on it, never inside a transaction.
 

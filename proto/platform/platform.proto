@@ -189,7 +189,7 @@ message RequestLog {
   bool public_endpoint = 27;
   // Absent for shielded endpoints and requests with no body.
   optional string body_json = 28;
-  // Absent for shielded endpoints and responses exceeding 256 KB.
+  // Absent for shielded endpoints; a truncation marker for responses over 8 MiB.
   optional string response_json = 29;
   // When true, the log is persisted but omitted from the default request-log listing.
   bool hidden = 30;

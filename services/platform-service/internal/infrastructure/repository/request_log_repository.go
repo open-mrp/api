@@ -32,35 +32,24 @@ func NewRequestLogRepo(db *sqlc.Queries, payloads *blobstore.Store) domain.Reque
 	return &requestLogRepoImpl{db: db, payloads: payloads}
 }
 
-// jsonColumn keeps a malformed payload from failing the insert. MySQL rejects the whole row when a JSON column gets an unparseable document, and because the request log arrives over the inbox that means endless retries on a message that can never succeed — one truncated response body costs the log row, the message, and a permanently stuck inbox record. Substitute the size so the log still shows something happened.
-func jsonColumn(s string) db.NullableRawMessage {
-	if !json.Valid([]byte(s)) {
-		return db.NullableRawMessage(fmt.Sprintf(`{"_invalid_json":true,"_original_size":%d}`, len(s)))
+// validJSON keeps a malformed stored body from reaching the API, which embeds it as raw JSON: one
+// truncated body would otherwise make the whole response unparseable. Substitute the size so the log
+// still shows something was there.
+func validJSON(s *string) *string {
+	if s == nil || json.Valid([]byte(*s)) {
+		return s
 	}
-	return db.NullableRawMessage(s)
+	placeholder := fmt.Sprintf(`{"_invalid_json":true,"_original_size":%d}`, len(*s))
+	return &placeholder
 }
 
 func (r *requestLogRepoImpl) Create(ctx context.Context, rl *domain.RequestLog) *apierror.APIError {
 	ctx, span := requestLogRepoTracer.Start(ctx, "repository.request_log.create")
 	defer span.End()
 
-	var queryJSON db.NullableRawMessage
-	if rl.QueryJSON != nil && *rl.QueryJSON != "" {
-		queryJSON = jsonColumn(*rl.QueryJSON)
-	}
-
-	// A log with a payload key keeps its bodies in object storage, so its columns stay NULL.
-	var bodyJSON, responseJSON db.NullableRawMessage
-	if rl.PayloadKey == nil {
-		bodyJSON = db.NullableRawMessage("{}")
-		if rl.BodyJSON != nil && *rl.BodyJSON != "" {
-			bodyJSON = jsonColumn(*rl.BodyJSON)
-		}
-
-		responseJSON = db.NullableRawMessage("{}")
-		if rl.ResponseJSON != nil && *rl.ResponseJSON != "" {
-			responseJSON = jsonColumn(*rl.ResponseJSON)
-		}
+	payloadKey, apiErr := r.storeInlinePayload(ctx, rl)
+	if apiErr != nil {
+		return tracing.Trace(span, apiErr)
 	}
 
 	statusCode := rl.StatusCode
@@ -75,7 +64,6 @@ func (r *requestLogRepoImpl) Create(ctx context.Context, rl *domain.RequestLog) 
 		Host:                 rl.Host,
 		Path:                 rl.Path,
 		NormalizedRoute:      rl.NormalizedRoute,
-		QueryJson:            queryJSON,
 		StatusCode:           statusCode,
 		LatencyUs:            rl.LatencyUs,
 		AccountID:            db.NullStringPtr(rl.AccountID),
@@ -92,15 +80,12 @@ func (r *requestLogRepoImpl) Create(ctx context.Context, rl *domain.RequestLog) 
 		ActorID:              db.NullStringPtr(rl.ActorID),
 		ActorType:            db.NullStringPtr(rl.ActorType),
 		InternalErrorMessage: db.NullStringPtr(rl.InternalErrorMessage),
-		StackTrace:           db.NullStringPtr(rl.StackTrace),
 		IdentityType:         db.NullStringPtr(rl.IdentityType),
 		ApiVersion:           db.NullStringPtr(rl.APIVersion),
 		TraceID:              db.NullStringPtr(rl.TraceID),
 		PublicEndpoint:       rl.PublicEndpoint,
 		Hidden:               rl.Hidden,
-		RequestBodyJson:      bodyJSON,
-		ResponseBodyJson:     responseJSON,
-		PayloadKey:           db.NullStringPtr(rl.PayloadKey),
+		PayloadKey:           db.NullStringPtr(payloadKey),
 	})
 	// The id is the request's own, so a duplicate is a redelivery of a log already stored.
 	if db.IsDuplicateEntry(err) {
@@ -113,20 +98,38 @@ func (r *requestLogRepoImpl) Create(ctx context.Context, rl *domain.RequestLog) 
 	return nil
 }
 
+// storeInlinePayload stores the bodies of a log the gateway could not upload, so they still reach
+// object storage rather than the row. The key derives from the log id, so a redelivered log
+// rewrites the same object. A failed upload fails the message, which is redelivered. Without a
+// payloads bucket, as on a local stack, the bodies are dropped.
+func (r *requestLogRepoImpl) storeInlinePayload(ctx context.Context, rl *domain.RequestLog) (*string, *apierror.APIError) {
+	if rl.PayloadKey != nil {
+		return rl.PayloadKey, nil
+	}
+	payload := contracts.RequestLogPayload{
+		QueryJSON:        nonEmptyStringPtr(rl.QueryJSON),
+		RequestBodyJSON:  nonEmptyStringPtr(rl.BodyJSON),
+		ResponseBodyJSON: nonEmptyStringPtr(rl.ResponseJSON),
+		StackTrace:       nonEmptyStringPtr(rl.StackTrace),
+	}
+	if payload == (contracts.RequestLogPayload{}) || r.payloads == nil {
+		return nil, nil
+	}
+
+	key := contracts.RequestLogPayloadKey(rl.ID)
+	if apiErr := r.payloads.Put(ctx, key, payload); apiErr != nil {
+		return nil, apiErr
+	}
+	return &key, nil
+}
+
 func (r *requestLogRepoImpl) FindByID(ctx context.Context, id, callerAccountID string, includes []string) (*domain.RequestLogRead, *apierror.APIError) {
 	ctx, span := requestLogRepoTracer.Start(ctx, "repository.request_log.find_by_id")
 	defer span.End()
-	includeQueryJSON := includeJSONFieldParam(includes, "query_params")
-	includeRequestBody := includeJSONFieldParam(includes, "request_body")
-	includeResponseBody := includeJSONFieldParam(includes, "response_body")
-
 	if needsEnrichedFindByID(includes) {
 		row, err := r.db.FindRequestLogByID(ctx, sqlc.FindRequestLogByIDParams{
-			IncludeQueryJson:        includeQueryJSON,
-			IncludeRequestBodyJson:  includeRequestBody,
-			IncludeResponseBodyJson: includeResponseBody,
-			ID:                      id,
-			CallerAccountID:         db.NullString(callerAccountID),
+			ID:              id,
+			CallerAccountID: db.NullString(callerAccountID),
 		})
 		if apiErr := db.MapSQLError(err); apiErr != nil {
 			return nil, tracing.Trace(span, apiErr)
@@ -140,11 +143,8 @@ func (r *requestLogRepoImpl) FindByID(ctx context.Context, id, callerAccountID s
 	}
 
 	row, err := r.db.FindRequestLogBaseByID(ctx, sqlc.FindRequestLogBaseByIDParams{
-		IncludeQueryJson:        includeQueryJSON,
-		IncludeRequestBodyJson:  includeRequestBody,
-		IncludeResponseBodyJson: includeResponseBody,
-		ID:                      id,
-		CallerAccountID:         db.NullString(callerAccountID),
+		ID:              id,
+		CallerAccountID: db.NullString(callerAccountID),
 	})
 	if apiErr := db.MapSQLError(err); apiErr != nil {
 		return nil, tracing.Trace(span, apiErr)
@@ -157,11 +157,17 @@ func (r *requestLogRepoImpl) FindByID(ctx context.Context, id, callerAccountID s
 	return read, nil
 }
 
-// loadPayload fills the body includes of a log whose bodies live in object storage. It reads the
-// object only when one of them was asked for, so a log opened without them never touches the bucket.
-// A missing body reads as {} — what the row's own columns hold for a request or response without one.
+// loadPayload fills a log's body includes from object storage. It reads the object only when one
+// of them was asked for, so a log opened without them never touches the bucket. A log with no
+// object, or a body the object lacks, reads as {}: a request or response without a body.
 func (r *requestLogRepoImpl) loadPayload(ctx context.Context, read *domain.RequestLogRead, key *string, includes []string) *apierror.APIError {
-	if key == nil || !anyIncludeRequested(includes, "query_params", "request_body", "response_body") {
+	if !anyIncludeRequested(includes, "query_params", "request_body", "response_body") {
+		return nil
+	}
+	emptyObject := "{}"
+	if key == nil {
+		read.BodyJSON = &emptyObject
+		read.ResponseJSON = &emptyObject
 		return nil
 	}
 	if r.payloads == nil {
@@ -173,10 +179,9 @@ func (r *requestLogRepoImpl) loadPayload(ctx context.Context, read *domain.Reque
 		return apiErr
 	}
 
-	emptyObject := "{}"
-	read.QueryJSON = payload.QueryJSON
-	read.BodyJSON = cmp.Or(payload.RequestBodyJSON, &emptyObject)
-	read.ResponseJSON = cmp.Or(payload.ResponseBodyJSON, &emptyObject)
+	read.QueryJSON = validJSON(payload.QueryJSON)
+	read.BodyJSON = cmp.Or(validJSON(payload.RequestBodyJSON), &emptyObject)
+	read.ResponseJSON = cmp.Or(validJSON(payload.ResponseBodyJSON), &emptyObject)
 	return nil
 }
 
@@ -194,10 +199,6 @@ func (r *requestLogRepoImpl) List(ctx context.Context, callerAccountID string, f
 
 	mode := pickQueryMode(includes, filter)
 
-	includeQueryJSON := anyIncludeRequested(includes, "query_params")
-	includeRequestBody := anyIncludeRequested(includes, "request_body")
-	includeResponseBody := anyIncludeRequested(includes, "response_body")
-
 	var cur *pagination.StringCursor
 	var cursorDir *pagination.Direction
 	dir := pagination.DirectionForward
@@ -212,8 +213,7 @@ func (r *requestLogRepoImpl) List(ctx context.Context, callerAccountID string, f
 	}
 
 	// actor_id stores the raw id the API exposes (user_id for user actors), so the caller's filter.ActorIDs match rl.actor_id directly — no translation.
-	rawSQL, args := buildListQuery(mode, dir, callerAccountID, filter,
-		includeQueryJSON, includeRequestBody, includeResponseBody, cur, limit+1)
+	rawSQL, args := buildListQuery(mode, dir, callerAccountID, filter, cur, limit+1)
 
 	rows, err := r.db.DB().QueryContext(ctx, rawSQL, args...)
 	if err != nil {
@@ -334,33 +334,6 @@ func buildMinimalActor(actorID string, identityType sql.NullString) *domain.Requ
 	return nil
 }
 
-func anyToStringPtr(v any) *string {
-	switch x := v.(type) {
-	case nil:
-		return nil
-	case string:
-		if x == "" {
-			return nil
-		}
-		s := x
-		return &s
-	case []byte:
-		if len(x) == 0 {
-			return nil
-		}
-		s := string(x)
-		return &s
-	case db.NullableRawMessage:
-		if len(x) == 0 {
-			return nil
-		}
-		s := string(x)
-		return &s
-	default:
-		return nil
-	}
-}
-
 func nonEmptyStringPtr(s *string) *string {
 	if s == nil || *s == "" {
 		return nil
@@ -399,10 +372,6 @@ func mapRowToRequestLogRead(row *sqlc.FindRequestLogByIDRow) *domain.RequestLogR
 		t := row.AccountUpdatedAt.Time
 		rl.AccountUpdatedAt = &t
 	}
-
-	rl.QueryJSON = anyToStringPtr(row.QueryJson)
-	rl.BodyJSON = anyToStringPtr(row.RequestBodyJson)
-	rl.ResponseJSON = anyToStringPtr(row.ResponseBodyJson)
 
 	identType := db.StringFromNullString(row.IdentityType)
 	actorID := row.ActorID.String
@@ -465,10 +434,6 @@ func mapBaseRowToRequestLogRead(row *sqlc.FindRequestLogBaseByIDRow) *domain.Req
 		AccountID:       db.StringFromNullString(row.TargetAccountID),
 		IdempotencyKey:  db.StringFromNullString(row.IdempotencyKey),
 	}
-
-	rl.QueryJSON = anyToStringPtr(row.QueryJson)
-	rl.BodyJSON = anyToStringPtr(row.RequestBodyJson)
-	rl.ResponseJSON = anyToStringPtr(row.ResponseBodyJson)
 
 	return rl
 }

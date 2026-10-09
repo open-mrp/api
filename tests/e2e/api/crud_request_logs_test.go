@@ -959,19 +959,23 @@ func TestRequestLogs_ListFilterByEndDateExcludesAll(t *testing.T) {
 	assertEmptyListData(t, list.Data, "ends_at far in the past should exclude all logs")
 }
 
-func TestRequestLogs_IncludeQueryParams(t *testing.T) {
+// A log stored with no payload object (no query string, no bodies) reads its includes as empty:
+// no query params, and the {} a request or response without a body has always read as.
+// TestRequestLogs_CapturesPayloads covers a log whose includes come from its object.
+func TestRequestLogs_IncludesWithoutStoredPayload(t *testing.T) {
 	t.Parallel()
-	status, body, err := apiClient.GetListRaw(requestLogsPath+"/"+SeedRequestLogQueryParamsID, url.Values{"include": {"query_params"}})
+	status, body, err := apiClient.GetListRaw(requestLogsPath+"/"+SeedRequestLogQueryParamsID, url.Values{
+		"include": {"query_params", "request_body", "response_body"},
+	})
 	require.NoError(t, err)
 	skipOnNonClientError(t, requestLogsPath, status)
 	requireStatus(t, 200, status, body)
 
 	got := parseJSON(body)
 	assert.Equal(t, SeedRequestLogQueryParamsID, jsonField(got, "id"))
-
-	qp := jsonObject(got, "query_params")
-	require.NotNil(t, qp, "query_params should be present with ?include=query_params")
-	assert.Equal(t, "10", jsonField(qp, "limit"), "query_params.limit should match seeded value")
+	assert.Nil(t, got["query_params"], "a log without a query string has no query_params")
+	assert.Equal(t, map[string]any{}, got["request_body"])
+	assert.Equal(t, map[string]any{}, got["response_body"])
 }
 
 func TestRequestLogs_CapturesPayloads(t *testing.T) {
@@ -1036,15 +1040,9 @@ func TestRequestLogs_CapturesPayloads(t *testing.T) {
 
 	// The bodies above were served from the payloads bucket: the row holds only the key.
 	var payloadKey sql.NullString
-	var queryJSON, requestBody, responseBody sql.NullString
-	err = authDB(t).QueryRow(
-		"SELECT payload_key, query_json, request_body_json, response_body_json FROM request_log WHERE id = ?", logID,
-	).Scan(&payloadKey, &queryJSON, &requestBody, &responseBody)
+	err = authDB(t).QueryRow("SELECT payload_key FROM request_log WHERE id = ?", logID).Scan(&payloadKey)
 	require.NoError(t, err)
 	assert.Equal(t, "request-logs/"+logID+".json.gz", payloadKey.String)
-	assert.False(t, queryJSON.Valid, "query_json must not be stored in the row")
-	assert.False(t, requestBody.Valid, "request_body_json must not be stored in the row")
-	assert.False(t, responseBody.Valid, "response_body_json must not be stored in the row")
 }
 
 func TestRequestLogs_ListIncludeActor(t *testing.T) {

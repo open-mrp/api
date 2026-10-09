@@ -560,7 +560,8 @@ func TestExecute_JSON_trailingGarbage_returns400(t *testing.T) {
 	}
 }
 
-func TestExecute_requestLog_truncatesLargeBodyJSON(t *testing.T) {
+// Bodies are stored in object storage, so one well past the old 256 KB inline cap is kept whole.
+func TestExecute_requestLog_keepsLargeBodyJSON(t *testing.T) {
 	t.Parallel()
 	ep := &APIEndpoint[*stubRequest, *stubResponse]{
 		Method:            http.MethodPost,
@@ -596,15 +597,8 @@ func TestExecute_requestLog_truncatesLargeBodyJSON(t *testing.T) {
 	if rl.BodyJSON == nil {
 		t.Fatal("expected BodyJSON")
 	}
-	var meta struct {
-		Truncated    bool `json:"_truncated"`
-		OriginalSize int  `json:"_original_size"`
-	}
-	if err := json.Unmarshal([]byte(*rl.BodyJSON), &meta); err != nil {
-		t.Fatalf("BodyJSON: %v", err)
-	}
-	if !meta.Truncated || meta.OriginalSize != len(payload) {
-		t.Fatalf("truncation meta wrong: %+v", meta)
+	if *rl.BodyJSON != string(payload) {
+		t.Fatalf("BodyJSON was altered: got %d bytes, want %d", len(*rl.BodyJSON), len(payload))
 	}
 }
 

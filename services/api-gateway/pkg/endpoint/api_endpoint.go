@@ -363,8 +363,7 @@ func (e *APIEndpoint[TReq, TResp]) Execute(w http.ResponseWriter, r *http.Reques
 		}
 		jsonBodyBytes = bodyBytes
 		if rl, ok := appctx.GetRequestLog(ctx); ok && len(bodyBytes) > 0 {
-			const maxBodyLogSize = 256 << 10 // 256 KB
-			if len(bodyBytes) > maxBodyLogSize {
+			if len(bodyBytes) > appctx.MaxLoggedBodyBytes {
 				s := fmt.Sprintf(`{"_truncated":true,"_original_size":%d}`, len(bodyBytes))
 				rl.BodyJSON = &s
 			} else if len(e.sensitiveReqPaths) > 0 {

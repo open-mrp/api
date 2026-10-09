@@ -730,6 +730,11 @@ func Run(
 		MediatorFactory: mediatorFactory,
 		TxManager:       txManager,
 	})
+	documentSettingSvc := service.NewDocumentSettingSvc(&service.DocumentSettingSvcConfig{
+		Repos:           repoFactory,
+		MediatorFactory: mediatorFactory,
+		TxManager:       txManager,
+	})
 
 	shipmentSvc := service.NewShipmentSvc(&service.ShipmentSvcConfig{
 		Repos:                repoFactory,
@@ -1015,6 +1020,7 @@ func Run(
 	grpc.RegisterRegistrationFlowService(srv, registrationFlowSvc)
 	grpc.RegisterPortalRegistrationSessionService(srv, portalRegistrationSessionSvc)
 	grpc.RegisterTerritoryService(srv, territorySvc)
+	grpc.RegisterDocumentSettingService(srv, documentSettingSvc)
 	grpc.RegisterShippingService(srv, shipmentSvc, shipmentLineSvc)
 	grpc.RegisterAccountService(srv, accountSvc, sandboxSvc, accountStatusSvc)
 

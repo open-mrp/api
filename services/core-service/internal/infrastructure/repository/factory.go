@@ -411,6 +411,10 @@ func (r *repoFactoryImpl) NewShipmentLineRepo() domain.ShipmentLineRepo {
 	return NewShipmentLineRepo(r.queries)
 }
 
+func (r *repoFactoryImpl) NewDocumentSettingRepo() domain.DocumentSettingRepo {
+	return NewDocumentSettingRepo(r.queries)
+}
+
 func (r *repoFactoryImpl) NewTerritoryRepo() domain.TerritoryRepo {
 	return NewTerritoryRepo(r.queries)
 }

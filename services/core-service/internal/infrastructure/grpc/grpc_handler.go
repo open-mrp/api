@@ -77,6 +77,7 @@ type gRPCHandler struct {
 	tenancySvc                       domain.TenancySvc
 	userSvc                          domain.UserSvc
 	territorySvc                     domain.TerritorySvc
+	documentSettingSvc               domain.DocumentSettingSvc
 	transactionAllocationSvc         domain.TransactionAllocationSvc
 	transactionSvc                   domain.TransactionSvc
 	unitGroupSvc                     domain.UnitGroupSvc

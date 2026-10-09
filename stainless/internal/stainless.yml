@@ -294,6 +294,17 @@ resources:
         models:
           child_account: '#/components/schemas/ChildAccount'
           list_child_account: '#/components/schemas/List_ChildAccount'
+      document_settings:
+        methods:
+          list: get /v1/identity/document-settings
+          retrieve: get /v1/identity/document-settings/{document_type}
+          update: patch /v1/identity/document-settings/{document_type}
+        models:
+          document_control: '#/components/schemas/DocumentControl'
+          document_control_input: '#/components/schemas/DocumentControlInput'
+          document_setting: '#/components/schemas/DocumentSetting'
+          list_document_setting: '#/components/schemas/List_DocumentSetting'
+          update_document_setting_request: '#/components/schemas/UpdateDocumentSettingRequest'
       roles:
         methods:
           list: get /v1/identity/roles

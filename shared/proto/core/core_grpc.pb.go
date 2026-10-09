@@ -434,6 +434,9 @@ const (
 	CoreService_UpdateTerritory_FullMethodName                            = "/core.CoreService/UpdateTerritory"
 	CoreService_DeleteTerritory_FullMethodName                            = "/core.CoreService/DeleteTerritory"
 	CoreService_BatchGetTerritoriesByIDs_FullMethodName                   = "/core.CoreService/BatchGetTerritoriesByIDs"
+	CoreService_ListDocumentSettings_FullMethodName                       = "/core.CoreService/ListDocumentSettings"
+	CoreService_GetDocumentSetting_FullMethodName                         = "/core.CoreService/GetDocumentSetting"
+	CoreService_UpdateDocumentSetting_FullMethodName                      = "/core.CoreService/UpdateDocumentSetting"
 )
 
 // CoreServiceClient is the client API for CoreService service.
@@ -1103,6 +1106,11 @@ type CoreServiceClient interface {
 	UpdateTerritory(ctx context.Context, in *UpdateTerritoryRequest, opts ...grpc.CallOption) (*UpdateTerritoryResponse, error)
 	DeleteTerritory(ctx context.Context, in *DeleteTerritoryRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
 	BatchGetTerritoriesByIDs(ctx context.Context, in *BatchGetTerritoriesByIDsRequest, opts ...grpc.CallOption) (*BatchGetTerritoriesByIDsResponse, error)
+	// Returns the caller's account's setting for every document type.
+	ListDocumentSettings(ctx context.Context, in *ListDocumentSettingsRequest, opts ...grpc.CallOption) (*ListDocumentSettingsResponse, error)
+	GetDocumentSetting(ctx context.Context, in *GetDocumentSettingRequest, opts ...grpc.CallOption) (*GetDocumentSettingResponse, error)
+	// Saves the account's setting for one document type, creating it on the first save.
+	UpdateDocumentSetting(ctx context.Context, in *UpdateDocumentSettingRequest, opts ...grpc.CallOption) (*UpdateDocumentSettingResponse, error)
 }
 
 type coreServiceClient struct {
@@ -5183,6 +5191,36 @@ func (c *coreServiceClient) BatchGetTerritoriesByIDs(ctx context.Context, in *Ba
 	return out, nil
 }
 
+func (c *coreServiceClient) ListDocumentSettings(ctx context.Context, in *ListDocumentSettingsRequest, opts ...grpc.CallOption) (*ListDocumentSettingsResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ListDocumentSettingsResponse)
+	err := c.cc.Invoke(ctx, CoreService_ListDocumentSettings_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *coreServiceClient) GetDocumentSetting(ctx context.Context, in *GetDocumentSettingRequest, opts ...grpc.CallOption) (*GetDocumentSettingResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(GetDocumentSettingResponse)
+	err := c.cc.Invoke(ctx, CoreService_GetDocumentSetting_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *coreServiceClient) UpdateDocumentSetting(ctx context.Context, in *UpdateDocumentSettingRequest, opts ...grpc.CallOption) (*UpdateDocumentSettingResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(UpdateDocumentSettingResponse)
+	err := c.cc.Invoke(ctx, CoreService_UpdateDocumentSetting_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // CoreServiceServer is the server API for CoreService service.
 // All implementations must embed UnimplementedCoreServiceServer
 // for forward compatibility.
@@ -5850,6 +5888,11 @@ type CoreServiceServer interface {
 	UpdateTerritory(context.Context, *UpdateTerritoryRequest) (*UpdateTerritoryResponse, error)
 	DeleteTerritory(context.Context, *DeleteTerritoryRequest) (*emptypb.Empty, error)
 	BatchGetTerritoriesByIDs(context.Context, *BatchGetTerritoriesByIDsRequest) (*BatchGetTerritoriesByIDsResponse, error)
+	// Returns the caller's account's setting for every document type.
+	ListDocumentSettings(context.Context, *ListDocumentSettingsRequest) (*ListDocumentSettingsResponse, error)
+	GetDocumentSetting(context.Context, *GetDocumentSettingRequest) (*GetDocumentSettingResponse, error)
+	// Saves the account's setting for one document type, creating it on the first save.
+	UpdateDocumentSetting(context.Context, *UpdateDocumentSettingRequest) (*UpdateDocumentSettingResponse, error)
 	mustEmbedUnimplementedCoreServiceServer()
 }
 
@@ -7080,6 +7123,15 @@ func (UnimplementedCoreServiceServer) DeleteTerritory(context.Context, *DeleteTe
 }
 func (UnimplementedCoreServiceServer) BatchGetTerritoriesByIDs(context.Context, *BatchGetTerritoriesByIDsRequest) (*BatchGetTerritoriesByIDsResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method BatchGetTerritoriesByIDs not implemented")
+}
+func (UnimplementedCoreServiceServer) ListDocumentSettings(context.Context, *ListDocumentSettingsRequest) (*ListDocumentSettingsResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method ListDocumentSettings not implemented")
+}
+func (UnimplementedCoreServiceServer) GetDocumentSetting(context.Context, *GetDocumentSettingRequest) (*GetDocumentSettingResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method GetDocumentSetting not implemented")
+}
+func (UnimplementedCoreServiceServer) UpdateDocumentSetting(context.Context, *UpdateDocumentSettingRequest) (*UpdateDocumentSettingResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method UpdateDocumentSetting not implemented")
 }
 func (UnimplementedCoreServiceServer) mustEmbedUnimplementedCoreServiceServer() {}
 func (UnimplementedCoreServiceServer) testEmbeddedByValue()                     {}
@@ -14428,6 +14480,60 @@ func _CoreService_BatchGetTerritoriesByIDs_Handler(srv interface{}, ctx context.
 	return interceptor(ctx, in, info, handler)
 }
 
+func _CoreService_ListDocumentSettings_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ListDocumentSettingsRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(CoreServiceServer).ListDocumentSettings(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: CoreService_ListDocumentSettings_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(CoreServiceServer).ListDocumentSettings(ctx, req.(*ListDocumentSettingsRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _CoreService_GetDocumentSetting_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetDocumentSettingRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(CoreServiceServer).GetDocumentSetting(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: CoreService_GetDocumentSetting_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(CoreServiceServer).GetDocumentSetting(ctx, req.(*GetDocumentSettingRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _CoreService_UpdateDocumentSetting_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(UpdateDocumentSettingRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(CoreServiceServer).UpdateDocumentSetting(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: CoreService_UpdateDocumentSetting_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(CoreServiceServer).UpdateDocumentSetting(ctx, req.(*UpdateDocumentSettingRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // CoreService_ServiceDesc is the grpc.ServiceDesc for CoreService service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -16062,6 +16168,18 @@ var CoreService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "BatchGetTerritoriesByIDs",
 			Handler:    _CoreService_BatchGetTerritoriesByIDs_Handler,
+		},
+		{
+			MethodName: "ListDocumentSettings",
+			Handler:    _CoreService_ListDocumentSettings_Handler,
+		},
+		{
+			MethodName: "GetDocumentSetting",
+			Handler:    _CoreService_GetDocumentSetting_Handler,
+		},
+		{
+			MethodName: "UpdateDocumentSetting",
+			Handler:    _CoreService_UpdateDocumentSetting_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

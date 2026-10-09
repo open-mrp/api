@@ -264,6 +264,7 @@ var typeRegistry = map[string]any{
 	"LocationTypeCode":                LocationTypeCode(""),
 	"LabelSizeCode":                   LabelSizeCode(""),
 	"LabelTypeCode":                   LabelTypeCode(""),
+	"DocumentType":                    DocumentType(""),
 	"ProductTypeCode":                 ProductTypeCode(""),
 	"OperatorRequirement":             OperatorRequirement(""),
 	"JobStatus":                       JobStatus(""),

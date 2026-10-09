@@ -1942,6 +1942,16 @@ type SysPropertyRepo interface {
 	TakenNumbers(ctx context.Context, accountID string, typeCode constants.SysPropertyTypeCode, candidates []string) ([]string, *apierror.APIError)
 }
 
+type DocumentSettingRepo interface {
+	// List returns the account's saved document settings; a type the account never saved has no entry.
+	List(ctx context.Context, accountID string) ([]*DocumentSetting, *apierror.APIError)
+	// Get returns the account's saved setting for the type, or nil when it has none.
+	Get(ctx context.Context, accountID string, documentType constants.DocumentType) (*DocumentSetting, *apierror.APIError)
+	// Upsert writes the setting's fields as given; a nil field is stored as NULL. settingID is used only when
+	// the account has no row for the type yet.
+	Upsert(ctx context.Context, settingID string, setting DocumentSetting) *apierror.APIError
+}
+
 type TerritoryRepo interface {
 	List(ctx context.Context, params ListTerritoriesParams) (*ListTerritoriesResult, *apierror.APIError)
 	Get(ctx context.Context, params GetTerritoryParams) (*Territory, *apierror.APIError)

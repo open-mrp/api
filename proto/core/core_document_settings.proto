@@ -1,0 +1,42 @@
+syntax = "proto3";
+
+// CoreService message types (imported by core.proto).
+package core;
+
+import "google/protobuf/timestamp.proto";
+import "core/core_patch.proto";
+
+option go_package = "shared/proto/core;core";
+
+// An account's customizations to one document type. id and the timestamps are unset for a type the account
+// has never saved.
+message DocumentSettingInfo {
+  optional string id = 1;
+  string document_type = 2;
+  optional string process_owner = 3;
+  optional string document_number = 4;
+  optional string revision = 5;
+  optional string footer_text = 6;
+  optional google.protobuf.Timestamp created_at = 7;
+  optional google.protobuf.Timestamp updated_at = 8;
+}
+message ListDocumentSettingsRequest {}
+message ListDocumentSettingsResponse {
+  repeated DocumentSettingInfo document_settings = 1;
+}
+message GetDocumentSettingRequest {
+  string document_type = 1;
+}
+message GetDocumentSettingResponse {
+  DocumentSettingInfo document_setting = 1;
+}
+message UpdateDocumentSettingRequest {
+  string document_type = 1;
+  StringPatch process_owner = 2;
+  StringPatch document_number = 3;
+  StringPatch revision = 4;
+  StringPatch footer_text = 5;
+}
+message UpdateDocumentSettingResponse {
+  DocumentSettingInfo document_setting = 1;
+}

@@ -358,6 +358,9 @@ func buildAllGroups() []apiendpoint.APIEndpointGroup {
 		*(&httpgroup.ProductionScheduleSettingsEndpointGroup{}).Materialize(&httpgroup.ProductionScheduleSettingsEndpointGroupConfig{
 			CoreClient: coreClient,
 		}).APIEndpointGroup,
+		*(&httpgroup.DocumentSettingsEndpointGroup{}).Materialize(&httpgroup.DocumentSettingsEndpointGroupConfig{
+			CoreClient: coreClient,
+		}).APIEndpointGroup,
 		*(&httpgroup.VolumeDiscountsEndpointGroup{}).Materialize(&httpgroup.VolumeDiscountsEndpointGroupConfig{
 			CoreClient: coreClient,
 		}).APIEndpointGroup,

@@ -20396,6 +20396,74 @@ func (mr *MockSysPropertyRepoMockRecorder) UpdateValue(ctx, accountID, id, value
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateValue", reflect.TypeOf((*MockSysPropertyRepo)(nil).UpdateValue), ctx, accountID, id, value)
 }
 
+// MockDocumentSettingRepo is a mock of DocumentSettingRepo interface.
+type MockDocumentSettingRepo struct {
+	ctrl     *gomock.Controller
+	recorder *MockDocumentSettingRepoMockRecorder
+	isgomock struct{}
+}
+
+// MockDocumentSettingRepoMockRecorder is the mock recorder for MockDocumentSettingRepo.
+type MockDocumentSettingRepoMockRecorder struct {
+	mock *MockDocumentSettingRepo
+}
+
+// NewMockDocumentSettingRepo creates a new mock instance.
+func NewMockDocumentSettingRepo(ctrl *gomock.Controller) *MockDocumentSettingRepo {
+	mock := &MockDocumentSettingRepo{ctrl: ctrl}
+	mock.recorder = &MockDocumentSettingRepoMockRecorder{mock}
+	return mock
+}
+
+// EXPECT returns an object that allows the caller to indicate expected use.
+func (m *MockDocumentSettingRepo) EXPECT() *MockDocumentSettingRepoMockRecorder {
+	return m.recorder
+}
+
+// Get mocks base method.
+func (m *MockDocumentSettingRepo) Get(ctx context.Context, accountID string, documentType constants.DocumentType) (*domain.DocumentSetting, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Get", ctx, accountID, documentType)
+	ret0, _ := ret[0].(*domain.DocumentSetting)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
+}
+
+// Get indicates an expected call of Get.
+func (mr *MockDocumentSettingRepoMockRecorder) Get(ctx, accountID, documentType any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Get", reflect.TypeOf((*MockDocumentSettingRepo)(nil).Get), ctx, accountID, documentType)
+}
+
+// List mocks base method.
+func (m *MockDocumentSettingRepo) List(ctx context.Context, accountID string) ([]*domain.DocumentSetting, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "List", ctx, accountID)
+	ret0, _ := ret[0].([]*domain.DocumentSetting)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
+}
+
+// List indicates an expected call of List.
+func (mr *MockDocumentSettingRepoMockRecorder) List(ctx, accountID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "List", reflect.TypeOf((*MockDocumentSettingRepo)(nil).List), ctx, accountID)
+}
+
+// Upsert mocks base method.
+func (m *MockDocumentSettingRepo) Upsert(ctx context.Context, settingID string, setting domain.DocumentSetting) *apierror.APIError {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Upsert", ctx, settingID, setting)
+	ret0, _ := ret[0].(*apierror.APIError)
+	return ret0
+}
+
+// Upsert indicates an expected call of Upsert.
+func (mr *MockDocumentSettingRepoMockRecorder) Upsert(ctx, settingID, setting any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Upsert", reflect.TypeOf((*MockDocumentSettingRepo)(nil).Upsert), ctx, settingID, setting)
+}
+
 // MockTerritoryRepo is a mock of TerritoryRepo interface.
 type MockTerritoryRepo struct {
 	ctrl     *gomock.Controller

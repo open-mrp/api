@@ -217,6 +217,9 @@ var (
 	APIKeyIDPrefix      = composePrefix(VocAPI, VocKey)
 	DocAPIKeyIDPrefix   = composePrefix(VocDocument, VocAPI, VocKey)
 
+	// Document-related prefix values
+	DocumentSettingIDPrefix = composePrefix(VocDocument, VocSetting)
+
 	// Attribute-related prefix values
 	AttributeIDPrefix = composePrefix(VocAttribute)
 

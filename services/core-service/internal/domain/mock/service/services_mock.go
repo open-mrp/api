@@ -10378,6 +10378,75 @@ func (mr *MockTenancySvcMockRecorder) SwitchAccount(ctx, userID, accountID any) 
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SwitchAccount", reflect.TypeOf((*MockTenancySvc)(nil).SwitchAccount), ctx, userID, accountID)
 }
 
+// MockDocumentSettingSvc is a mock of DocumentSettingSvc interface.
+type MockDocumentSettingSvc struct {
+	ctrl     *gomock.Controller
+	recorder *MockDocumentSettingSvcMockRecorder
+	isgomock struct{}
+}
+
+// MockDocumentSettingSvcMockRecorder is the mock recorder for MockDocumentSettingSvc.
+type MockDocumentSettingSvcMockRecorder struct {
+	mock *MockDocumentSettingSvc
+}
+
+// NewMockDocumentSettingSvc creates a new mock instance.
+func NewMockDocumentSettingSvc(ctrl *gomock.Controller) *MockDocumentSettingSvc {
+	mock := &MockDocumentSettingSvc{ctrl: ctrl}
+	mock.recorder = &MockDocumentSettingSvcMockRecorder{mock}
+	return mock
+}
+
+// EXPECT returns an object that allows the caller to indicate expected use.
+func (m *MockDocumentSettingSvc) EXPECT() *MockDocumentSettingSvcMockRecorder {
+	return m.recorder
+}
+
+// GetDocumentSetting mocks base method.
+func (m *MockDocumentSettingSvc) GetDocumentSetting(ctx context.Context, documentType constants.DocumentType) (*domain.DocumentSetting, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetDocumentSetting", ctx, documentType)
+	ret0, _ := ret[0].(*domain.DocumentSetting)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
+}
+
+// GetDocumentSetting indicates an expected call of GetDocumentSetting.
+func (mr *MockDocumentSettingSvcMockRecorder) GetDocumentSetting(ctx, documentType any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetDocumentSetting", reflect.TypeOf((*MockDocumentSettingSvc)(nil).GetDocumentSetting), ctx, documentType)
+}
+
+// ListDocumentSettings mocks base method.
+func (m *MockDocumentSettingSvc) ListDocumentSettings(ctx context.Context) ([]*domain.DocumentSetting, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ListDocumentSettings", ctx)
+	ret0, _ := ret[0].([]*domain.DocumentSetting)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
+}
+
+// ListDocumentSettings indicates an expected call of ListDocumentSettings.
+func (mr *MockDocumentSettingSvcMockRecorder) ListDocumentSettings(ctx any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListDocumentSettings", reflect.TypeOf((*MockDocumentSettingSvc)(nil).ListDocumentSettings), ctx)
+}
+
+// UpdateDocumentSetting mocks base method.
+func (m *MockDocumentSettingSvc) UpdateDocumentSetting(ctx context.Context, params domain.UpdateDocumentSettingParams) (*domain.DocumentSetting, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "UpdateDocumentSetting", ctx, params)
+	ret0, _ := ret[0].(*domain.DocumentSetting)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
+}
+
+// UpdateDocumentSetting indicates an expected call of UpdateDocumentSetting.
+func (mr *MockDocumentSettingSvcMockRecorder) UpdateDocumentSetting(ctx, params any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateDocumentSetting", reflect.TypeOf((*MockDocumentSettingSvc)(nil).UpdateDocumentSetting), ctx, params)
+}
+
 // MockTerritorySvc is a mock of TerritorySvc interface.
 type MockTerritorySvc struct {
 	ctrl     *gomock.Controller

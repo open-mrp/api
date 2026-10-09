@@ -17,7 +17,7 @@ Finalizing a resource in this review also means clearing `Preview: true` on all 
 
 ## Cross-cutting changes (apply to every resource)
 
-These came out of a single resource review but apply everywhere. Implement once in the framework where possible, then sweep.
+These came out of a single resource review but apply everywhere. Implement once in the framework where possible, then sweep. The framework is `apikit` (see Shared API kit below).
 
 - [ ] **Page size: default 25, max 100.** `apiresource.PaginationRequest.Limit` is `default:"100" validate:"min=1,max=1000"` → `default:"25" validate:"min=1,max=100"`. Audit dashboard callers that pass `limit` > 100 (dropdowns, exports) before shipping; they must paginate. (Payment terms review.)
 - [ ] **Delete returns a deleted stub.** Replace `*apiresource.EmptyResource` on every DELETE with a `DeletedResource` `{ "id", "object", "deleted": true }` where `object` is the deleted resource's object type. 200 status. Replayed delete stays 410. (Payment terms review.)
@@ -1406,6 +1406,27 @@ Docstrings
 | Request · order `instructions` | Instructions for this order. Omit to copy the customer's (or supplier's) instructions; send `null` for none. |
 | `order_instructions` | The order's `instructions`, shown here for convenience. ¶ Read-only; always the order's current value. Always `null` for portal users. |
 | Payment `description` | Description of the payment, such as how it was captured. |
+
+## Shared API kit (`apikit`) ✅ decided 2026-10-08
+
+The generic API framework moves to a new repo, `github.com/open-mrp/apikit`, so other APIs can use it. The kit is built to the forge.1 contract from the start, and this repo adopts it in one migration when forge.1 ships, not package by package before. Nearly every kit package returns the kit's forge.1 `APIError`, so a partial adoption would leave two error types in flight. Until then, `api` keeps its own `shared/errors` and the current preview behaviour, with no compatibility transformers for older previews. The first consumer is a new small API, a single HTTP binary.
+
+The cross-cutting framework changes in this review are implemented once in the kit: the error object (X8, G5: no `hint`, no top-level `param`), `rate_limited` and the idempotency and rate-limit rules (X10), the deleted stub, page size and `page_info`, and `Deprecation` / `Sunset` headers.
+
+- [ ] **Kit contents:**
+  - Utilities: `field`, `validate`, `pagination`, `crypto`, `id` generator, `retry`, `cache`, `redact`, `safeconv`, `ptrutil`, `timeutil` (with the `_on` date type) and `fuzzy`.
+  - Errors: `apierror`, the forge.1 error object with a code registry.
+  - HTTP layer: request binding and responses, `APIEndpoint` and its groups, includes, router, version engine, `sensitive` tag redaction (from `costguard`), generic middleware, an idempotency `Store` interface, and the forge.1 shapes (deleted stub, job, `Money`, `page_info`, metadata limits).
+  - Service plumbing: request context (`appctx`), tracing, canonical logs, `db`, `lease`, `querytag`, and the S3, SQS and blobstore wrappers.
+  - Tooling: a generic OpenAPI generator (with the agent-tool catalog, optional Stainless config, public-endpoint inventory and error-code index), forge.1 conformance checks, and `txaudit`.
+- [ ] **Stays in `api`:**
+  - Domain code: constants, protos, endpoint definitions, resources, request inputs, version transforms and include definitions.
+  - Auth, platform, sandbox and subscription middleware, plus auth cookies.
+  - Migrations and seeds.
+  - Business error codes, which register as kit extensions: `limit_exceeded` with `quota`, `payment_required`, `agent_spending_cap_reached` and `registration_closed`.
+- [ ] **Deferred until an API needs them:** gRPC contracts and `rpc`, `messaging` (outbox and RabbitMQ), `audit`, and the PlanetScale tools `vtparse` and `schemasplit`. They stay here, and moving them later is additive.
+- [ ] **Identity and permissions are app-defined.** The context holds the app's own identity type (`Identity[T]`). An endpoint carries an `Auth` policy value checked by an `Authorizer` the app registers. Our permission fields (`RequiredPermissions`, `CounterpartyPermissions`, `SelfPathParam`, `RequiredRoleType`) become OpenMRP's policy type.
+- [ ] **Migration at forge.1:** switch every import to apikit and delete the local copies. Register OpenMRP's error codes, ID prefixes, versions, sensitive-tag policies, `Authorizer` and identity type. Diff the generated OpenAPI spec and Stainless config against the pre-migration output, so the only changes are the forge.1 ones.
 
 ## Dashboard breaking changes
 

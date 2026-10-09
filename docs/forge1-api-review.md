@@ -1428,7 +1428,7 @@ The cross-cutting framework changes in this review are implemented once in the k
   - Business error codes, which register as kit extensions: `limit_exceeded` with `quota`, `payment_required`, `agent_spending_cap_reached` and `registration_closed`.
 - [ ] **Deferred until an API needs them:** gRPC contracts and `rpc`, `messaging` (outbox and RabbitMQ), `audit`, and the PlanetScale tools `vtparse` and `schemasplit`. They stay here, and moving them later is additive.
 - [ ] **Identity and permissions are app-defined.** The context holds the app's own identity type (`Identity[T]`). An endpoint carries an `Auth` policy value checked by an `Authorizer` the app registers. Our permission fields (`RequiredPermissions`, `CounterpartyPermissions`, `SelfPathParam`, `RequiredRoleType`) become OpenMRP's policy type.
-- [ ] **Migration at forge.1:** switch every import to apikit and delete the local copies. Register OpenMRP's error codes, ID prefixes, versions, sensitive-tag policies, `Authorizer` and identity type. Diff the generated OpenAPI spec and Stainless config against the pre-migration output, so the only changes are the forge.1 ones.
+- [ ] **Migration at forge.1:** follow `docs/apikit-migration.md` (steps, rename map, what OpenMRP registers, client-visible changes, verification). In short: switch every import to apikit and delete the local copies. Register OpenMRP's error codes, ID prefixes, versions, sensitive-tag policies, `Authorizer` and identity type. Diff the generated OpenAPI spec and Stainless config against the pre-migration output, so the only changes are the forge.1 ones.
 
 ## Dashboard breaking changes
 

@@ -1,5 +1,20 @@
 # Changelog
 
+## [4.5.0](https://github.com/open-mrp/api/compare/v4.4.1...v4.5.0) (2026-10-09)
+
+
+### Features
+
+* **core-service:** per-account document settings ([#304](https://github.com/open-mrp/api/issues/304)) ([e38950d](https://github.com/open-mrp/api/commit/e38950d6a1453bde4c0038cd4a0c7f53829d553a))
+
+
+### Documentation
+
+* drop hint and top-level param from the forge.1 error object ([4984db1](https://github.com/open-mrp/api/commit/4984db11b68320773127c38255965a21a677c72f))
+* drop request_log_url from the forge.1 error object ([ab859f8](https://github.com/open-mrp/api/commit/ab859f80fc6d11e8aa9910f07ae2b34b98bb4e01))
+* plan the apikit extraction in the forge.1 review ([586154d](https://github.com/open-mrp/api/commit/586154dc918b82ce326ebc6688e5995bee3dc1f8))
+* restore the top-level param on the forge.1 error object ([b3a50ac](https://github.com/open-mrp/api/commit/b3a50acd786bc9c1a0cb1e1124fe35e50496f646))
+
 ## [4.4.1](https://github.com/open-mrp/api/compare/v4.4.0...v4.4.1) (2026-10-09)
 
 

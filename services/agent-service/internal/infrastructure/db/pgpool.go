@@ -16,8 +16,9 @@ func NewPgPool(ctx context.Context, dbURL string) (*pgxpool.Pool, error) {
 	if err != nil {
 		return nil, err
 	}
-	config.MaxConns = 50
-	config.MinConns = 5
+	// agent-db allows 22 non-superuser connections. Two replicas plus a rollout's surge pods must fit under that.
+	config.MaxConns = 6
+	config.MinConns = 2
 
 	pool, err := pgxpool.NewWithConfig(ctx, config)
 	if err != nil {

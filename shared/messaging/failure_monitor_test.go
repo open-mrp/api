@@ -333,8 +333,8 @@ func TestFailureMonitorConfigWithDefaults(t *testing.T) {
 			if got.ScanInterval != tt.wantScanInterval {
 				t.Errorf("ScanInterval = %v, want %v", got.ScanInterval, tt.wantScanInterval)
 			}
-			if got.Recipient != defaultFailureAlertRecipient {
-				t.Errorf("Recipient = %q, want %q", got.Recipient, defaultFailureAlertRecipient)
+			if got.Recipient != DefaultOperatorEmail {
+				t.Errorf("Recipient = %q, want %q", got.Recipient, DefaultOperatorEmail)
 			}
 			if got.CrashStuckMinutes != 30 {
 				t.Errorf("CrashStuckMinutes = %d, want 30", got.CrashStuckMinutes)

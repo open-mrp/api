@@ -45,9 +45,9 @@ const (
 	// accountFollowupReviewTTL is how long a review link stays valid.
 	accountFollowupReviewTTL = 7 * 24 * time.Hour
 
-	defaultAccountFollowupSignature = "Dane"
+	defaultAccountFollowupSignature = "The OpenMRP team"
 
-	defaultAccountFollowupFromAddress = "Dane <dane@openmrp.ai>"
+	defaultAccountFollowupFromAddress = "OpenMRP <" + messaging.DefaultOperatorEmail + ">"
 )
 
 // defaultAccountFollowupExcludedDomains are registrant domains that never get a follow-up: the team's own, and the domains tests register with. Other domains to exclude (partners, existing customers) belong in ACCOUNT_FOLLOWUP_EXCLUDED_DOMAINS, not here.
@@ -80,10 +80,10 @@ type AccountFollowupSvcConfig struct {
 	// ExcludedDomains (optional; default: the team's and test domains) are registrant email domains that are skipped.
 	ExcludedDomains []string
 
-	// Signature (optional; default: "Dane") closes every follow-up.
+	// Signature (optional; default: "The OpenMRP team") closes every follow-up.
 	Signature string
 
-	// FromAddress (optional; default: "Dane <dane@openmrp.ai>") sends every approved follow-up. It must be on a platform domain, or notification-service sends from noreply@ instead.
+	// FromAddress (optional; default: "OpenMRP <dev@openmrp.ai>") sends every approved follow-up. It must be on a platform domain, or notification-service sends from noreply@ instead.
 	FromAddress string
 
 	// Now (optional; default: time.Now) is the clock, for tests.

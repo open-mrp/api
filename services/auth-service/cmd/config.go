@@ -9,6 +9,7 @@ import (
 	"github.com/open-mrp/api/shared/contracts"
 	"github.com/open-mrp/api/shared/crypto"
 	"github.com/open-mrp/api/shared/env"
+	"github.com/open-mrp/api/shared/messaging"
 )
 
 var (
@@ -24,6 +25,7 @@ const (
 	envDBURL                  = "DB_URL"
 	envFrontendURL            = "FRONTEND_URL"
 	envPortalURL              = "PORTAL_URL"
+	envOperatorEmail          = "OPERATOR_EMAIL"
 	envJWTSecret              = "JWT_SECRET"
 	envPepper                 = "PEPPER"
 	envRabbitMQURI            = "RABBITMQ_URI"
@@ -49,6 +51,9 @@ type config struct {
 
 	// PortalURL (optional; default: "https://portal.openmrp.ai") is the base URL of the customer portal, used in slug-scoped links sent to portal customers.
 	PortalURL string
+
+	// OperatorEmail (optional; default: messaging.DefaultOperatorEmail) receives registration-limit alerts.
+	OperatorEmail string
 
 	// JWTSecret (required) is the secret used to sign JWT tokens.
 	JWTSecret string // #nosec G117 - Struct field, not a hardcoded credential
@@ -109,6 +114,7 @@ func (c *config) withDefaults(getenv func(string) string) *config {
 		DBURL:                     env.GetEnv(envDBURL, getenv),
 		FrontendURL:               env.GetEnv(envFrontendURL, getenv),
 		PortalURL:                 cmp.Or(env.GetEnv(envPortalURL, getenv), defaultPortalURL),
+		OperatorEmail:             cmp.Or(env.GetEnv(envOperatorEmail, getenv), messaging.DefaultOperatorEmail),
 		JWTSecret:                 env.GetEnv(envJWTSecret, getenv),
 		Pepper:                    []byte(env.GetEnv(envPepper, getenv)),
 		RabbitMQURI:               cmp.Or(env.GetEnv(envRabbitMQURI, getenv), defaultRabbitMQURI),

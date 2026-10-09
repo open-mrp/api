@@ -65,12 +65,17 @@ for dir in "${DIRS[@]}"; do
 
     [ "$has_base" -eq 1 ] || continue
 
-    base_max="$(git ls-tree -r --name-only "$BASE_REF" -- "$dir" | versions_in | awk 'NF { print $1 }' | sort -n | tail -1)"
+    base_versions="$(git ls-tree -r --name-only "$BASE_REF" -- "$dir" | versions_in | awk 'NF { print $1 }' | sort -n)"
+    base_max="$(echo "$base_versions" | tail -1)"
     [ -n "$base_max" ] || continue
 
     added="$(git diff --name-only --diff-filter=AR "$BASE_REF" -- "$dir" | versions_in)"
     while read -r v file; do
         [ -n "${v:-}" ] || continue
+        # A renamed file keeps a version BASE_REF already has: goose tracks versions, not names, so it is not new.
+        if echo "$base_versions" | grep -qx "$v"; then
+            continue
+        fi
         if [ "$v" -le "$base_max" ]; then
             echo -e "${RED}[ERROR]${NC} $file is new but its version ($v) is not above the highest on $BASE_REF ($base_max). Renumber it."
             failed=1

@@ -126,6 +126,8 @@ func Run(
 		Repos:           repos,
 		Tx:              service.NewTransactionManager(dbpool, queries, payloads),
 		ReviewerEmail:   cfg.AccountFollowupReviewerEmail,
+		FromAddress:     cfg.AccountFollowupFromAddress,
+		Signature:       cfg.AccountFollowupSignature,
 		ReviewBaseURL:   cfg.AccountFollowupReviewBaseURL,
 		Drafter:         followupDrafter,
 		Delay:           cfg.AccountFollowupDelay,

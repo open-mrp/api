@@ -213,7 +213,7 @@ func Run(
 	if err != nil {
 		return fmt.Errorf("failed to open payload store: %w", err)
 	}
-	reqLogPublisher := publisher.NewRequestLogOutboxPublisher(repository.NewOutboxRepo(queries), coreClient.Client, payloads, cfg.FrontendURL, cfg.PlatformMode)
+	reqLogPublisher := publisher.NewRequestLogOutboxPublisher(repository.NewOutboxRepo(queries), coreClient.Client, payloads, cfg.FrontendURL, cfg.OperatorEmail, cfg.PlatformMode)
 
 	// Initialize the main router.
 	mainBaseCfg := router.BuildBaseConfig(cfg.PlatformMode, "main ", authClient, coreClient, billingClient, platformClient, agentClient, notificationClient, reqLogPublisher, stdout, cfg.TrustedProxyHops)

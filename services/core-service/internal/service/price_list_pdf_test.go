@@ -26,9 +26,9 @@ func testSection(descriptions ...string) (priceListLine, priceListSection) {
 			Prices:      []string{"$18.00"},
 		})
 	}
-	line := priceListLine{ProductLineName: "Couture", BaseUnitName: "Pair"}
+	line := priceListLine{ProductLineName: "Classic", BaseUnitName: "Pair"}
 	return line, priceListSection{
-		Heading: "15-20 mmHg",
+		Heading: "Lightweight",
 		Columns: []string{"Color", "Length"},
 		Tiers:   []priceListTier{{Label: "1+", Quantity: "1"}},
 		Rows:    rows,
@@ -59,10 +59,10 @@ func testDocument(rowCount int) priceListDocument {
 		ShippingTerm: "F.O.B. Springfield, IL 62701",
 		Lines: []priceListLine{{
 			ProductLineID:   "pl_1",
-			ProductLineName: "Couture",
+			ProductLineName: "Classic",
 			BaseUnitName:    "Pair",
 			Sections: []priceListSection{{
-				Heading: "15-20 mmHg · Dress Socks",
+				Heading: "Lightweight · Dress Socks",
 				Columns: []string{"Color", "Length"},
 				Tiers:   []priceListTier{{Label: "1+", Quantity: "1"}},
 				Rows:    rows,
@@ -118,7 +118,7 @@ func TestBuildTable_ColumnsSpanTheContentWidth(t *testing.T) {
 
 // A description too long for its column has to wrap and take its row with it; truncating it is what hid the product from the reader.
 func TestBuildTable_LongDescriptionWrapsAndGrowsItsRow(t *testing.T) {
-	long := "Essence 15-20 mmHg Closed Toe Thigh Length with Silicone Top Band, Silky Nude, Size A, Regular Length"
+	long := "Classic Crew Sock with Cushioned Sole and Reinforced Heel and Toe, Charcoal Heather, Size A, Regular Length"
 	r := testRenderer()
 	line, section := testSection("Short", long)
 	table := r.buildTable(line, section)
@@ -127,7 +127,7 @@ func TestBuildTable_LongDescriptionWrapsAndGrowsItsRow(t *testing.T) {
 	if lines := len(table.Cells[1][info].Lines); lines < 2 {
 		t.Fatalf("long description wrapped to %d lines, want at least 2", lines)
 	}
-	if !strings.HasPrefix(table.Cells[1][info].Lines[0], "Essence") {
+	if !strings.HasPrefix(table.Cells[1][info].Lines[0], "Classic") {
 		t.Errorf("first line = %q, want the description from its start", table.Cells[1][info].Lines[0])
 	}
 	if table.Heights[1] <= table.Heights[0] {

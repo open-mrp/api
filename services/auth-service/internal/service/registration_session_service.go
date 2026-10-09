@@ -1,6 +1,7 @@
 package service
 
 import (
+	"cmp"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -30,6 +31,7 @@ type registrationSessionSvcImpl struct {
 	billingClient         domain.AuthBillingClient
 	coreClient            domain.AuthCoreClient
 	frontendURL           string
+	operatorEmail         string
 }
 
 type RegistrationSessionSvcConfig struct {
@@ -53,6 +55,9 @@ type RegistrationSessionSvcConfig struct {
 
 	// FrontendURL (optional; default: "") is the dashboard base URL used in registration emails and redirects. Not validated at construction.
 	FrontendURL string
+
+	// OperatorEmail (optional; default: messaging.DefaultOperatorEmail) receives registration-limit alerts.
+	OperatorEmail string
 }
 
 func (c *RegistrationSessionSvcConfig) validate() error {
@@ -81,6 +86,7 @@ func NewRegistrationSessionSvc(config *RegistrationSessionSvcConfig) domain.Regi
 		billingClient:         config.BillingClient,
 		coreClient:            config.CoreClient,
 		frontendURL:           config.FrontendURL,
+		operatorEmail:         cmp.Or(config.OperatorEmail, messaging.DefaultOperatorEmail),
 	}
 }
 
@@ -125,6 +131,7 @@ func (s *registrationSessionSvcImpl) withTx(ctx context.Context, fn func(context
 			billingClient:         s.billingClient,
 			coreClient:            s.coreClient,
 			frontendURL:           s.frontendURL,
+			operatorEmail:         s.operatorEmail,
 		}
 		return fn(txCtx, txSvc)
 	})
@@ -699,7 +706,7 @@ func (s *registrationSessionSvcImpl) handleRegistrationLimitHit(ctx context.Cont
 	// Best-effort: send admin alert email
 	publishCtx := event.WithRepos(ctx, s.repos)
 	if emailErr := s.notificationPublisher.PublishSendEmail(publishCtx, messaging.EmailSendData{
-		To:         []string{"dev@augno.com"},
+		To:         []string{s.operatorEmail},
 		Subject:    fmt.Sprintf("[Registration Limit] %s plan at capacity", session.PlanCode),
 		TemplateID: constants.EmailTemplateRegistrationLimitAlert,
 		Params: map[string]any{

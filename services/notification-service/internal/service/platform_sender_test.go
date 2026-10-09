@@ -6,13 +6,13 @@ import "testing"
 func TestIsPlatformSender(t *testing.T) {
 	t.Parallel()
 	cases := map[string]bool{
-		"dane@openmrp.ai":                  true,
-		"Dane Albaugh <dane@openmrp.ai>":   true,
-		"support@AUGNO.com":                true,
-		"sales@tenant-example.com":         false,
-		"dane@openmrp.ai.evil-example.com": false,
-		"not an address":                   false,
-		"":                                 false,
+		"dev@openmrp.ai":                  true,
+		"OpenMRP Dev <dev@openmrp.ai>":    true,
+		"support@AUGNO.com":               true,
+		"sales@tenant-example.com":        false,
+		"dev@openmrp.ai.evil-example.com": false,
+		"not an address":                  false,
+		"":                                false,
 	}
 	for from, want := range cases {
 		from := from

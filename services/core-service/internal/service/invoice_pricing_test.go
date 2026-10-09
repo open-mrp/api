@@ -24,7 +24,7 @@ import (
 func cartonInvoice() (*domain.Invoice, []*domain.InvoiceLine) {
 	invoice := &domain.Invoice{
 		ID:         "inv_1",
-		Number:     "23960",
+		Number:     "10042",
 		CustomerID: "acct_customer",
 		CreatedAt:  time.Date(2026, 9, 8, 17, 39, 0, 0, time.UTC),
 	}
@@ -32,8 +32,8 @@ func cartonInvoice() (*domain.Invoice, []*domain.InvoiceLine) {
 		{
 			ID:                   "il_1",
 			OrderLineItemNumber:  poPtr(int32(1)),
-			OrderLineItemSKU:     poPtr("LTD3612SN"),
-			OrderLineDescription: poPtr("20-30 mmHg, Full Length Thigh, Open Toe, Silky Nude, Size 2"),
+			OrderLineItemSKU:     poPtr("SOCK-CREW-CHR-L"),
+			OrderLineDescription: poPtr("Crew Sock, Cushioned Sole, Ribbed Cuff, Charcoal, Size Large"),
 			QuantityValue:        "3",
 			QuantityUnitID:       "unit_carton",
 			QuantityUnitName:     "Carton (12 pr)",
@@ -85,14 +85,14 @@ func TestGatherInvoiceDoc_ConvertsQuantitiesAndReadsTheCustomerPhone(t *testing.
 	ctrl := gomock.NewController(t)
 	repos := invoiceDocRepos(ctrl)
 	repos.customers.EXPECT().Get(gomock.Any(), "acct_seller", "acct_customer", gomock.Nil()).
-		Return(&domain.Customer{Phone: poPtr("832-677-6212")}, nil)
+		Return(&domain.Customer{Phone: poPtr("614-555-0142")}, nil)
 
 	invoice, lines := cartonInvoice()
 	doc, apiErr := gatherInvoiceDoc(context.Background(), repos.factory, "acct_seller", invoice, lines)
 
 	require.Nil(t, apiErr)
 	require.Equal(t, "$810.00", doc.OrderTotal)
-	require.Equal(t, "832-677-6212", doc.Header.ContactPhone)
+	require.Equal(t, "614-555-0142", doc.Header.ContactPhone)
 	// The seller is in New York, so the 17:39 UTC ship reads as the afternoon it was.
 	require.Equal(t, "09/08/2026 01:39 PM", doc.Header.OrderDateLong)
 }
@@ -150,14 +150,14 @@ func TestInvoicePDFBillToContactsAndEncoding(t *testing.T) {
 	invoice, lines, order := invoiceFixture()
 	lines[0].OrderLineItemSKU = poPtr("SOCK-CREW-BLACK-LARGE-EXTENDED-CALF-0000000000000000000000000000000000001")
 	doc := buildInvoiceDoc(invoice, lines, order, &domain.Account{Name: "Acme Company"}, nil, nil,
-		[]string{"AP@TexasEva.com"}, invoiceDocLookups{CustomerPhone: "832-677-6212 (AP & Purchasing)"})
+		[]string{"AP@Northwind.example"}, invoiceDocLookups{CustomerPhone: "614-555-0142 (AP & Purchasing)"})
 
 	out, err := buildInvoicePDF(doc)
 	require.NoError(t, err)
 
 	runs := pdfText(t, out)
-	require.True(t, pdfContains(runs, "ap@texaseva.com"), "emails are lowercased\n%s", pdfJoined(runs))
-	require.True(t, pdfContains(runs, "832-677-6212 (AP & Purchasing)"), "the customer phone follows the emails\n%s", pdfJoined(runs))
+	require.True(t, pdfContains(runs, "ap@northwind.example"), "emails are lowercased\n%s", pdfJoined(runs))
+	require.True(t, pdfContains(runs, "614-555-0142 (AP & Purchasing)"), "the customer phone follows the emails\n%s", pdfJoined(runs))
 	require.Contains(t, pdfJoined(runs), "…", "an overlong SKU is cut with an ellipsis")
 	require.NotContains(t, pdfJoined(runs), "â€", "no cp1252 mojibake")
 }
@@ -179,9 +179,9 @@ func invoiceDocRepos(ctrl *gomock.Controller) invoiceDocRepoMocks {
 	accounts.EXPECT().GetByID(gomock.Any(), gomock.Any()).Return(&domain.Account{Name: "Acme Company"}, nil).AnyTimes()
 	orders := repositorymock.NewMockSalesOrderRepo(ctrl)
 	orders.EXPECT().GetAccountOriginAddress(gomock.Any(), gomock.Any()).
-		Return(&domain.ShippingAddress{Street1: "601 Forum Parkway", City: "Rural Hall", State: "NC", Zip: "27045", Timezone: poPtr("America/New_York")}, nil).AnyTimes()
+		Return(&domain.ShippingAddress{Street1: "100 Industrial Blvd", City: "Albany", State: "NY", Zip: "12207", Timezone: poPtr("America/New_York")}, nil).AnyTimes()
 	invoices := repositorymock.NewMockInvoiceRepo(ctrl)
-	invoices.EXPECT().GetEmailRecipients(gomock.Any(), gomock.Any(), gomock.Any()).Return([]string{"jamie@texaseva.com"}, nil).AnyTimes()
+	invoices.EXPECT().GetEmailRecipients(gomock.Any(), gomock.Any(), gomock.Any()).Return([]string{"jamie@northwind.example"}, nil).AnyTimes()
 
 	m.factory.EXPECT().NewAccountRepo().Return(accounts).AnyTimes()
 	m.factory.EXPECT().NewSalesOrderRepo().Return(orders).AnyTimes()

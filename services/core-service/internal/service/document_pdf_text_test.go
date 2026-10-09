@@ -295,7 +295,7 @@ func assertRenders(t *testing.T, build func() ([]byte, error)) {
 func TestTableColumnsHoldOrdinaryContent(t *testing.T) {
 	t.Parallel()
 
-	desc := "20-30 mmHg, Full Length Thigh, Open Toe, Silky Nude, Size 2"
+	desc := "Crew Sock, Cushioned Sole, Ribbed Cuff, Charcoal, Size Large"
 	tables := map[string]pdfTable{
 		"order summary": {
 			Columns: []pdfColumn{{Title: "Line Item"}, {Title: "SKU", Wrap: true}, {Title: "Description", Wrap: true}, {Title: "Price"}, {Title: "Qty"}, {Title: "Total"}},

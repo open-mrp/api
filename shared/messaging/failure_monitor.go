@@ -16,8 +16,9 @@ import (
 	"github.com/open-mrp/api/shared/lease"
 )
 
-// defaultFailureAlertRecipient mirrors the 5xx error alert recipient so message-processing failures land in the same inbox.
-const defaultFailureAlertRecipient = "dev@augno.com"
+// DefaultOperatorEmail is where operator-facing alerts go when a service is not configured with its own
+// inbox: 5xx and message-failure alerts, plan changes, new registrations.
+const DefaultOperatorEmail = "dev@openmrp.ai"
 
 // maxFailureErrorLen caps how much of a row's last_error is embedded in the alert email so a single verbose stack trace cannot bloat the message.
 const maxFailureErrorLen = 500
@@ -72,7 +73,7 @@ type FailureMonitorConfig struct {
 	// PlatformMode (optional; default: "") suppresses alert emails in development mode and shortens the default ScanInterval to 1m in test mode.
 	PlatformMode constants.PlatformMode
 
-	// Recipient (optional; default: dev@augno.com) is the email address alerts are sent to.
+	// Recipient (optional; default: DefaultOperatorEmail) is the email address alerts are sent to.
 	Recipient string
 
 	// ScanInterval (optional; default: 5m, or 1m in test) controls how frequently the monitor scans for new failures.
@@ -106,7 +107,7 @@ func (c *FailureMonitorConfig) WithDefaults() *FailureMonitorConfig {
 	return &FailureMonitorConfig{
 		ServiceName:       c.ServiceName,
 		PlatformMode:      c.PlatformMode,
-		Recipient:         cmp.Or(c.Recipient, defaultFailureAlertRecipient),
+		Recipient:         cmp.Or(c.Recipient, DefaultOperatorEmail),
 		ScanInterval:      scanInterval,
 		CrashStuckMinutes: cmp.Or(c.CrashStuckMinutes, 30),
 		BatchSize:         int32(cmp.Or(int(c.BatchSize), 100)), // #nosec G115 - small config value

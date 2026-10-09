@@ -41,6 +41,7 @@ Everything committed here is world-readable: code, comments, tests, fixtures, mi
 
 - Describe a production incident by its shape ("an item stocked by the carton of eight"), not by whose data it was.
 - Test fixtures use invented IDs and names (`ac_cost`, `itm_boxed`). Numbers reproduced from production are fine only when they identify nothing on their own.
+- Commit messages and PR text never describe the production database: no table sizes or row counts, tenant or customer counts, data distributions, query timings, or findings from querying prod. Say what changed and why; keep prod evidence out of the repo.
 - A fix aimed at one tenant's rows does not belong in a migration. Put the detection logic in a command that finds the rows at run time from flags (`--account`), and supply the identifiers only when running it.
 
 ## Breaking Changes Require a New API Version (non-negotiable)

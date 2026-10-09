@@ -1,5 +1,12 @@
 # Changelog
 
+## [4.5.2](https://github.com/open-mrp/api/compare/v4.5.1...v4.5.2) (2026-10-09)
+
+
+### Documentation
+
+* plan the migration onto apikit at forge.1 ([7c610d2](https://github.com/open-mrp/api/commit/7c610d2eade1c89afe38843937d7b9aafdfe3108))
+
 ## [4.5.1](https://github.com/open-mrp/api/compare/v4.5.0...v4.5.1) (2026-10-09)
 
 

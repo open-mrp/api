@@ -213,7 +213,7 @@ func (r *supplierRepoImpl) Create(ctx context.Context, accountID, relationID str
 		DefaultBillingAddressID:  billAddr,
 		DefaultShippingAddressID: shipAddr,
 	})
-	if apiErr := db.MapSQLError(err); apiErr != nil {
+	if apiErr := db.MapSQLErrorWithDuplicateKeys(err, supplierNumberDuplicateKeyMapping); apiErr != nil {
 		return nil, tracing.Trace(span, apiErr)
 	}
 
@@ -234,7 +234,7 @@ func (r *supplierRepoImpl) Update(ctx context.Context, params domain.UpdateSuppl
 		OwnerAccountID:           params.OwnerAccountID,
 		CounterpartyAccountID:    params.SupplierID,
 	})
-	if apiErr := db.MapSQLError(err); apiErr != nil {
+	if apiErr := db.MapSQLErrorWithDuplicateKeys(err, supplierNumberDuplicateKeyMapping); apiErr != nil {
 		return nil, tracing.Trace(span, apiErr)
 	}
 

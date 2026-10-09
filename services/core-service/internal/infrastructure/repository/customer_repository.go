@@ -1030,7 +1030,7 @@ func (r *customerRepoImpl) Create(ctx context.Context, accountID, relationID, br
 		ReceiveCalendarID:        toNullString(params.ReceiveCalendarID),
 		FulfillmentPolicyCode:    fulfillmentPolicyToNullString(params.FulfillmentPolicy),
 	})
-	if apiErr := db.MapSQLError(err); apiErr != nil {
+	if apiErr := db.MapSQLErrorWithDuplicateKeys(err, customerNumberDuplicateKeyMapping); apiErr != nil {
 		return nil, tracing.Trace(span, apiErr)
 	}
 
@@ -1077,7 +1077,7 @@ func (r *customerRepoImpl) Update(ctx context.Context, relationID string, params
 		DefaultShippingAddressID: field.StringToNullString(params.ShipToAddressID),
 		CreditLimitID:            stringToNullString(params.CreditLimitID),
 	})
-	if apiErr := db.MapSQLError(err); apiErr != nil {
+	if apiErr := db.MapSQLErrorWithDuplicateKeys(err, customerNumberDuplicateKeyMapping); apiErr != nil {
 		return tracing.Trace(span, apiErr)
 	}
 

@@ -198,6 +198,10 @@ func (s *roleSvcImpl) CreateRole(ctx context.Context, params domain.CreateRolePa
 		return cached.Data, cached.Error
 
 	case domain.RecoveryPointStarted:
+		if apiErr := checkPermissionsGrantable(identity, rolePermissionCodes(params.Permissions)); apiErr != nil {
+			return nil, meds.Idempotency.CacheErrorResponse(ctx, idempotencyKey.TypeID, apiErr)
+		}
+
 		var result *domain.RoleWithPermissions
 		apiErr = s.withTx(ctx, func(txCtx context.Context, txSvc *roleSvcImpl) *apierror.APIError {
 			txRoleRepo := txSvc.repos.NewRoleRepo()
@@ -318,6 +322,14 @@ func (s *roleSvcImpl) UpdateRole(ctx context.Context, params domain.UpdateRolePa
 			oldPermissions, apiErr := txRolePermRepo.ListByRoleID(txCtx, params.RoleID)
 			if apiErr != nil {
 				return apiErr
+			}
+			if old.RoleType == string(constants.RoleTypeAdmin) && !identity.IsAdmin() {
+				return apierror.NewAuthorizationError("This is an admin role; only an admin can change it.")
+			}
+			if params.Permissions != nil {
+				if apiErr := checkPermissionsGrantable(identity, addedPermissionCodes(oldPermissions, *params.Permissions)); apiErr != nil {
+					return apiErr
+				}
 			}
 
 			if params.Name != nil {

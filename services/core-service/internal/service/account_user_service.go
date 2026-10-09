@@ -356,6 +356,11 @@ func (s *accountUserSvcImpl) CreateAccountUser(ctx context.Context, params domai
 					}
 					params.RoleID = &salesRepRole.ID
 				}
+				if !identity.IsExternalTarget() {
+					if apiErr := checkRoleAssignable(txCtx, identity, txSvc.repos.NewRolePermissionRepo(), *params.RoleID, providedRole.RoleType, false); apiErr != nil {
+						return apiErr
+					}
+				}
 			}
 
 			// Try to find existing user by email or username.
@@ -699,6 +704,12 @@ func (s *accountUserSvcImpl) UpdateAccountUser(ctx context.Context, params domai
 			if old.RoleType != nil {
 				roleType = *old.RoleType
 			}
+			roleChanges := params.RoleID.IsSet() && roleIDOrEmpty(old.RoleID) != roleIDOrEmpty(roleID)
+			if roleChanges && !identity.IsExternalTarget() && old.RoleID != nil && *old.RoleID != "" {
+				if apiErr := txSvc.checkCurrentRoleChangeable(txCtx, identity, *old.RoleID, params.AccountID); apiErr != nil {
+					return apiErr
+				}
+			}
 			if params.RoleID.IsSet() {
 				if roleID != nil && *roleID != "" {
 					resolvedRole, apiErr := txSvc.repos.NewRoleRepo().Get(txCtx, *roleID, params.AccountID)
@@ -706,6 +717,11 @@ func (s *accountUserSvcImpl) UpdateAccountUser(ctx context.Context, params domai
 						return apiErr
 					}
 					roleType = resolvedRole.RoleType
+					if roleChanges && !identity.IsExternalTarget() {
+						if apiErr := checkRoleAssignable(txCtx, identity, txSvc.repos.NewRolePermissionRepo(), resolvedRole.ID, resolvedRole.RoleType, false); apiErr != nil {
+							return apiErr
+						}
+					}
 				} else {
 					roleType = ""
 				}

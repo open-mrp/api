@@ -858,3 +858,108 @@ func TestAccountUsers_CommissionEligibleFilterIncludesSalesRepRole(t *testing.T)
 	assertListContainsID(t, accountUsersPath, url.Values{"is_commission_eligible": {"true"}}, SeedSalesRepStaleFlagAccountUserID)
 	assert.Nil(t, listFindByField(t, accountUsersPath, url.Values{"is_commission_eligible": {"false"}}, "id", SeedSalesRepStaleFlagAccountUserID))
 }
+
+// --- Assigning roles ---
+
+// A member acts with their role, so a non-admin may only assign a role inside their own grant, and only change the role of a member whose current role is inside it too.
+
+func accountUsersRole(t *testing.T, perms ...string) string {
+	t.Helper()
+	return jsonField(createAndCleanup(t, rolesPath, map[string]any{"name": uniqueName("e2e-assign-role"), "permissions": perms}), "id")
+}
+
+func accountUsersCreateAs(t *testing.T, c *Client, roleID string) (int, []byte) {
+	t.Helper()
+	name := uniqueName("e2e-assign")
+	status, body, err := c.Post(accountUsersPath, map[string]any{"name": name, "email": name + "@e2e-test.openmrp.ai", "role_id": roleID}, newIdempotencyKey())
+	require.NoError(t, err)
+	if status == 201 {
+		id := jsonField(parseJSON(body), "id")
+		t.Cleanup(func() { removeAccountUser(id) })
+	}
+	return status, body
+}
+
+func accountUsersMember(t *testing.T, roleID string) string {
+	t.Helper()
+	status, body := accountUsersCreateAs(t, apiClient, roleID)
+	requireStatus(t, 201, status, body)
+	return jsonField(parseJSON(body), "id")
+}
+
+func accountUsersRoleOf(t *testing.T, accountUserID string) string {
+	t.Helper()
+	status, body, err := apiClient.GetListRaw(accountUsersPath+"/"+accountUserID, url.Values{"include": {"role"}})
+	require.NoError(t, err)
+	requireStatus(t, 200, status, body)
+	return jsonField(jsonObject(parseJSON(body), "role"), "id")
+}
+
+func accountUsersRequireRoleForbidden(t *testing.T, status int, body []byte, want string) {
+	t.Helper()
+	requireStatus(t, 403, status, body)
+	errObj := requireErrorResponse(t, body, "insufficient_permissions", "invalid_request_error")
+	assertErrorParam(t, errObj, "role_id")
+	assert.Contains(t, errObj["message"], want)
+}
+
+var accountUsersAssignerPerms = []string{"team:create", "team:read", "team:update", "products:read"}
+
+func TestAccountUsers_NonAdminCannotAssignAWiderRole(t *testing.T) {
+	t.Parallel()
+	assigner := customRoleClient(t, accountUsersAssignerPerms...)
+
+	status, body := accountUsersCreateAs(t, assigner, accountUsersRole(t, "products:read", "products:update"))
+	accountUsersRequireRoleForbidden(t, status, body, "products:update")
+
+	status, body = accountUsersCreateAs(t, assigner, SeedAdminRoleID)
+	accountUsersRequireRoleForbidden(t, status, body, "admin role")
+
+	member := accountUsersMember(t, accountUsersRole(t, "products:read"))
+	status, body, err := assigner.Patch(accountUsersPath+"/"+member, map[string]any{"role_id": SeedAdminRoleID}, newIdempotencyKey())
+	require.NoError(t, err)
+	accountUsersRequireRoleForbidden(t, status, body, "admin role")
+	status, body, err = assigner.Patch(accountUsersPath+"/"+member, map[string]any{"role_id": accountUsersRole(t, "products:read", "team:delete")}, newIdempotencyKey())
+	require.NoError(t, err)
+	accountUsersRequireRoleForbidden(t, status, body, "team:delete")
+}
+
+func TestAccountUsers_NonAdminCanAssignARoleInsideTheirGrant(t *testing.T) {
+	t.Parallel()
+	assigner := customRoleClient(t, accountUsersAssignerPerms...)
+	subset := accountUsersRole(t, "products:read")
+
+	status, body := accountUsersCreateAs(t, assigner, subset)
+	requireStatus(t, 201, status, body)
+
+	member := accountUsersMember(t, accountUsersRole(t, "team:read"))
+	status, body, err := assigner.Patch(accountUsersPath+"/"+member, map[string]any{"role_id": subset}, newIdempotencyKey())
+	require.NoError(t, err)
+	requireStatus(t, 200, status, body)
+	assert.Equal(t, subset, accountUsersRoleOf(t, member))
+}
+
+func TestAccountUsers_NonAdminCannotChangeTheRoleOfAWiderMember(t *testing.T) {
+	t.Parallel()
+	assigner := customRoleClient(t, accountUsersAssignerPerms...)
+	subset := accountUsersRole(t, "products:read")
+
+	for _, wideRole := range []string{SeedAdminRoleID, accountUsersRole(t, "products:read", "roles:update")} {
+		member := accountUsersMember(t, wideRole)
+		status, body, err := assigner.Patch(accountUsersPath+"/"+member, map[string]any{"role_id": subset}, newIdempotencyKey())
+		require.NoError(t, err)
+		accountUsersRequireRoleForbidden(t, status, body, "This member's current role")
+		assert.Equal(t, wideRole, accountUsersRoleOf(t, member), "the member keeps their role")
+	}
+}
+
+func TestAccountUsers_AdminCanAssignAnyRole(t *testing.T) {
+	t.Parallel()
+	wide := accountUsersRole(t, "products:read", "products:update", "roles:update")
+	member := accountUsersMember(t, wide)
+
+	status, body, err := apiClient.Patch(accountUsersPath+"/"+member, map[string]any{"role_id": SeedAdminRoleID}, newIdempotencyKey())
+	require.NoError(t, err)
+	requireStatus(t, 200, status, body)
+	assert.Equal(t, SeedAdminRoleID, accountUsersRoleOf(t, member))
+}

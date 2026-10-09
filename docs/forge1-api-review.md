@@ -1248,6 +1248,7 @@ These changes supersede the earlier sections wherever they conflict. Each one wo
   - `param` names the parameter or field the error is about, or is null. `errors` lists every field failure on a 422, and `param` is the first of them; `errors` is empty otherwise.
   - `is_transient` stays (a documented exception to the no-booleans rule).
   - Bulk rows and job results use the same error object instead of a string.
+  - `request_log_url` is removed (the dashboard does not read it). `limit_exceeded` keeps its `quota` member, registered with apikit as an OpenMRP extension.
 - [ ] **X9 Applications link any credit to any debit:** `application { source: { type: payment | credit_note, id }, target: { type: invoice | refund, id }, amount }`. Replaces the fixed `invoice` field.
 - [ ] **X10 Contract rules** (in the conventions doc):
   - **Decimal scale:** document totals 2 places; unit prices up to 6; Quantity values up to 6.

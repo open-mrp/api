@@ -175,7 +175,7 @@ func (s *agentDefSvcImpl) CreateCustomAgent(ctx context.Context, params domain.C
 					apierror.NewValidationErrorWithParam("Tool not found: "+t.ToolSlug, "tools"))
 			}
 		}
-		if apiErr := validateEndpointToolSlugs(params.ConfigJSON); apiErr != nil {
+		if apiErr := validateAgentConfig(params.ConfigJSON); apiErr != nil {
 			return nil, meds.Idempotency.CacheErrorResponse(ctx, idempotencyKey.TypeID, apiErr)
 		}
 
@@ -347,7 +347,7 @@ func (s *agentDefSvcImpl) UpdateCustomAgent(ctx context.Context, params domain.U
 		}
 
 		if params.ConfigJSON != nil {
-			if apiErr := validateEndpointToolSlugs(*params.ConfigJSON); apiErr != nil {
+			if apiErr := validateAgentConfig(*params.ConfigJSON); apiErr != nil {
 				return nil, meds.Idempotency.CacheErrorResponse(ctx, idempotencyKey.TypeID, apiErr)
 			}
 		}
@@ -1945,8 +1945,6 @@ func (s *agentDefSvcImpl) RetryRun(ctx context.Context, params domain.RetryRunPa
 	}
 }
 
-// validateEndpointToolSlugs rejects any endpoint_tool_slugs (or endpoint_tool_review key) entry in the agent config JSON that is not a known endpoint-tool. The wildcard
-// "*" (grant the whole catalog) is always allowed in the slug list. An empty/absent list or review map is valid.
 // mergeConfigJSON overlays the keys present in patch onto stored, so a partial config update leaves untouched settings alone. Both sides are JSON objects; a null or unparseable stored config is treated as empty so the patch still applies.
 func mergeConfigJSON(stored, patch []byte) ([]byte, error) {
 	merged := map[string]any{}
@@ -1967,16 +1965,22 @@ func mergeConfigJSON(stored, patch []byte) ([]byte, error) {
 	return json.Marshal(merged)
 }
 
-func validateEndpointToolSlugs(configJSON string) *apierror.APIError {
+// validateAgentConfig rejects unknown endpoint_tool_slugs or endpoint_tool_review keys ("*" grants the whole
+// catalog) and a max_steps outside 1..maxStepsCeiling. Absent fields are valid.
+func validateAgentConfig(configJSON string) *apierror.APIError {
 	if configJSON == "" {
 		return nil
 	}
 	var cfg struct {
 		EndpointToolSlugs  []string        `json:"endpoint_tool_slugs"`
 		EndpointToolReview map[string]bool `json:"endpoint_tool_review"`
+		MaxSteps           *int            `json:"max_steps"`
 	}
 	if err := json.Unmarshal([]byte(configJSON), &cfg); err != nil {
 		return apierror.NewValidationErrorWithParam("Invalid agent config.", "config")
+	}
+	if cfg.MaxSteps != nil && (*cfg.MaxSteps < 1 || *cfg.MaxSteps > maxStepsCeiling) {
+		return apierror.NewValidationErrorWithParam(fmt.Sprintf("max_steps must be between 1 and %d.", maxStepsCeiling), "config.max_steps")
 	}
 	for _, slug := range cfg.EndpointToolSlugs {
 		if slug == "*" {

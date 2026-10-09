@@ -1,5 +1,22 @@
 # Changelog
 
+## [4.5.1](https://github.com/open-mrp/api/compare/v4.5.0...v4.5.1) (2026-10-09)
+
+
+### Bug Fixes
+
+* **db:** renumber request_log body drop migration to 00078 ([#307](https://github.com/open-mrp/api/issues/307)) ([8ce549b](https://github.com/open-mrp/api/commit/8ce549b7d2f60283395c183d9cc052c522330d45))
+
+
+### Performance Improvements
+
+* **storage:** drop request_log body columns ([#295](https://github.com/open-mrp/api/issues/295)) ([4a0fa52](https://github.com/open-mrp/api/commit/4a0fa52971d551d38af05f97e85edf048aaab499))
+
+
+### Documentation
+
+* name background work async_job in forge.1 ([9cd07dc](https://github.com/open-mrp/api/commit/9cd07dc85d6402b049751d7740bfa483781c8cbc))
+
 ## [4.5.0](https://github.com/open-mrp/api/compare/v4.4.1...v4.5.0) (2026-10-09)
 
 

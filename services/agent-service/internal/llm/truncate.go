@@ -1,7 +1,9 @@
 package llm
 
 import (
+	"encoding/json"
 	"fmt"
+	"slices"
 
 	"github.com/open-mrp/api/shared/constants"
 )
@@ -224,15 +226,18 @@ func capToolResults(messages []Message) {
 	}
 }
 
+// capToolInputs shrinks oversized tool_use inputs to a still-valid JSON object, since the API rejects malformed input.
 func capToolInputs(messages []Message) {
 	for i := range messages {
 		for j := range messages[i].ToolUse {
 			orig := string(messages[i].ToolUse[j].Input)
-			if len(orig) > maxToolInputChars {
-				messages[i].ToolUse[j].Input = []byte(
-					orig[:maxToolInputChars] +
-						fmt.Sprintf("... [truncated: %d chars total]", len(orig)))
+			if len(orig) <= maxToolInputChars {
+				continue
 			}
+			capped, _ := json.Marshal(map[string]string{
+				"truncated_input": orig[:maxToolInputChars] + fmt.Sprintf("... [truncated: %d chars total]", len(orig)),
+			})
+			messages[i].ToolUse[j].Input = capped
 		}
 	}
 }
@@ -247,7 +252,7 @@ func dropOldNonUserMessages(messages []Message, budget int) []Message {
 	keepTail := min(4, len(messages)-1)
 	protected := len(messages) - keepTail
 
-	// Mark non-user messages in the middle for removal, oldest first.
+	// Mark non-user messages in the middle for removal, oldest first, a whole tool exchange at a time.
 	drop := make([]bool, len(messages))
 	total := EstimateAllMessages(messages)
 
@@ -256,11 +261,86 @@ func dropOldNonUserMessages(messages []Message, budget int) []Message {
 			// Pure user message — skip (preserve user intent).
 			continue
 		}
-		total -= estimateMessageTokens(messages[i])
-		drop[i] = true
+		end := toolExchangeEnd(messages, i)
+		if end >= protected {
+			break
+		}
+		for j := i; j <= end; j++ {
+			total -= estimateMessageTokens(messages[j])
+			drop[j] = true
+		}
+		i = end
 	}
 
-	return collectMessages(messages, drop)
+	return RepairToolPairs(collectMessages(messages, drop))
+}
+
+// toolExchangeEnd returns the index of the last message belonging to the exchange starting at i: an assistant
+// tool_use message runs through the tool-result messages answering it.
+func toolExchangeEnd(messages []Message, i int) int {
+	if messages[i].Role != "assistant" || len(messages[i].ToolUse) == 0 {
+		return i
+	}
+	end := i
+	for end+1 < len(messages) && messages[end+1].Role == "user" && len(messages[end+1].ToolResults) > 0 {
+		end++
+	}
+	return end
+}
+
+// CompactedHistory replaces messages with summary followed by the latest exchange — the trailing user messages
+// plus, when they answer a tool call, the assistant turn that made it — so no tool_result loses its tool_use.
+func CompactedHistory(summary Message, messages []Message) []Message {
+	start := len(messages)
+	for start > 0 && messages[start-1].Role == "user" {
+		start--
+	}
+	if start > 0 && start < len(messages) && messages[start-1].Role == "assistant" && len(messages[start-1].ToolUse) > 0 {
+		start--
+	}
+	return RepairToolPairs(append([]Message{summary}, messages[start:]...))
+}
+
+// RepairToolPairs drops tool_result blocks with no matching tool_use in the preceding assistant turn, and
+// tool_use blocks left unanswered before the next assistant turn; the Messages API rejects either. A trailing
+// assistant tool_use is kept, since its results are still to come. Messages left empty are removed.
+func RepairToolPairs(messages []Message) []Message {
+	out := CopyMessages(messages)
+	lastAssistant := -1
+	pending := map[string]bool{}
+	stripUnanswered := func() {
+		if lastAssistant < 0 || len(pending) == 0 {
+			return
+		}
+		out[lastAssistant].ToolUse = slices.DeleteFunc(out[lastAssistant].ToolUse, func(tu ToolUseBlock) bool {
+			return pending[tu.ID]
+		})
+	}
+	for i := range out {
+		switch out[i].Role {
+		case "assistant":
+			stripUnanswered()
+			lastAssistant = i
+			pending = make(map[string]bool, len(out[i].ToolUse))
+			for _, tu := range out[i].ToolUse {
+				pending[tu.ID] = true
+			}
+		case "user":
+			out[i].ToolResults = slices.DeleteFunc(out[i].ToolResults, func(tr ToolResultBlock) bool {
+				if !pending[tr.ToolUseID] {
+					return true
+				}
+				delete(pending, tr.ToolUseID)
+				return false
+			})
+		}
+	}
+	if lastAssistant >= 0 && lastAssistant < len(out)-1 {
+		stripUnanswered()
+	}
+	return slices.DeleteFunc(out, func(m Message) bool {
+		return m.Content == "" && len(m.ToolUse) == 0 && len(m.ToolResults) == 0
+	})
 }
 
 // dropOldMessages drops messages from the middle of the conversation as a last resort, keeping the first message and as many recent messages as fit.
@@ -285,6 +365,9 @@ func dropOldMessages(messages []Message, budget int) []Message {
 			remaining -= t
 			result = append([]Message{messages[i]}, result...)
 		}
+		if repaired := RepairToolPairs(result); len(repaired) > 0 {
+			return repaired
+		}
 		return result
 	}
 
@@ -307,7 +390,7 @@ func dropOldMessages(messages []Message, budget int) []Message {
 		Content: truncationPlaceholder,
 	})
 	result = append(result, recentMessages...)
-	return result
+	return RepairToolPairs(result)
 }
 
 func EstimateAllMessages(messages []Message) int {

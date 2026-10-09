@@ -67,6 +67,7 @@ func (p *GatewayProvider) CompleteWithTools(ctx context.Context, req *ToolReques
 		Model:           gatewayModel,
 		Messages:        convertMessagesToGateway(req.System, req.Messages),
 		Tools:           convertToolsToGateway(req.Tools),
+		ToolChoice:      gatewayToolChoice(req),
 		ReasoningEffort: req.ReasoningEffort,
 	}
 	maxTokens := req.MaxTokens
@@ -151,6 +152,15 @@ type gatewayRequest struct {
 	ReasoningEffort string                `json:"reasoning_effort,omitempty"`
 	Stream          bool                  `json:"stream,omitempty"`
 	StreamOptions   *gatewayStreamOptions `json:"stream_options,omitempty"`
+	ToolChoice      string                `json:"tool_choice,omitempty"`
+}
+
+// gatewayToolChoice maps a ToolChoice onto the OpenAI-compatible field; "none" needs tools present to mean anything.
+func gatewayToolChoice(req *ToolRequest) string {
+	if req.ToolChoice == ToolChoiceNone && len(req.Tools) > 0 {
+		return "none"
+	}
+	return ""
 }
 
 type gatewayMessage struct {
@@ -254,6 +264,7 @@ func (p *GatewayProvider) StreamCompleteWithTools(ctx context.Context, req *Tool
 		Model:           gatewayModel,
 		Messages:        convertMessagesToGateway(req.System, req.Messages),
 		Tools:           convertToolsToGateway(req.Tools),
+		ToolChoice:      gatewayToolChoice(req),
 		ReasoningEffort: req.ReasoningEffort,
 		Stream:          true,
 		StreamOptions:   &gatewayStreamOptions{IncludeUsage: true},
@@ -485,15 +496,16 @@ func convertSingleMessageToGateway(m Message) []gatewayMessage {
 
 	switch m.Role {
 	case "user":
-		if m.Content != "" {
-			msgs = append(msgs, gatewayMessage{Role: "user", Content: m.Content})
-		}
+		// Tool messages must directly follow the assistant message that called them.
 		for _, tr := range m.ToolResults {
 			msgs = append(msgs, gatewayMessage{
 				Role:       "tool",
 				Content:    tr.Content,
 				ToolCallID: tr.ToolUseID,
 			})
+		}
+		if m.Content != "" {
+			msgs = append(msgs, gatewayMessage{Role: "user", Content: m.Content})
 		}
 	case "assistant":
 		if m.Content != "" && len(m.ToolUse) == 0 {

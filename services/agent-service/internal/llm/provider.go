@@ -63,12 +63,22 @@ type ToolDefinition struct {
 	InputSchema json.RawMessage `json:"input_schema"`
 }
 
+// ToolChoice constrains whether the model may call tools on a request.
+type ToolChoice string
+
+const (
+	ToolChoiceAuto ToolChoice = ""
+	// ToolChoiceNone forbids new tool calls while keeping the definitions the history's tool_use blocks reference.
+	ToolChoiceNone ToolChoice = "none"
+)
+
 // ToolRequest is the input to a provider's CompleteWithTools call.
 type ToolRequest struct {
 	Model       string
 	System      string
 	Messages    []Message
 	Tools       []ToolDefinition
+	ToolChoice  ToolChoice
 	MaxTokens   int
 	Temperature float64
 	// EnableReasoning turns on the provider's reasoning output — adaptive thinking on the native Anthropic path. Chat runs set it so the live thinking panel has content; other runs leave it off to avoid the extra thinking-token cost.
@@ -79,12 +89,16 @@ type ToolRequest struct {
 
 // ToolResponse is the normalized output from a provider.
 type ToolResponse struct {
-	Content      string
-	Thinking     []ThinkingBlock // native reasoning blocks (Anthropic); empty for the OpenAI-compat path
-	ToolCalls    []ToolCall
+	Content   string
+	Thinking  []ThinkingBlock // native reasoning blocks (Anthropic); empty for the OpenAI-compat path
+	ToolCalls []ToolCall
+	// InputTokens counts the whole prompt, cached or not, so spend estimates stay conservative.
 	InputTokens  int
 	OutputTokens int
-	StopReason   string // "end_turn", "tool_use", "max_tokens"
+	// CacheReadInputTokens and CacheCreationInputTokens are the parts of InputTokens read from or written to the prompt cache.
+	CacheReadInputTokens     int
+	CacheCreationInputTokens int
+	StopReason               string // "end_turn", "tool_use", "max_tokens"
 }
 
 // ToolCall represents a single tool invocation from the LLM.

@@ -31,6 +31,7 @@ func (e *GetFrequentlyOrderedProductsEndpoint) Materialize() *apiendpoint.APIEnd
 		Route:                   "/v1/sales/customers/{id}/frequently-ordered-products",
 		SuccessStatusCode:       http.StatusOK,
 		Public:                  false,
+		AgentTool:               true,
 		Preview:                 true,
 		RequiredPermissions:     []types.Permission{{Domain: types.PermissionDomainItems, Action: types.ActionRead}},
 		CounterpartyPermissions: apiendpoint.Counterparties(types.ActionRead),

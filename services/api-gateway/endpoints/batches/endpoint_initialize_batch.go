@@ -59,6 +59,7 @@ func (e *InitializeBatchEndpoint) Materialize() *apiendpoint.APIEndpoint[*Initia
 		Route:               "/v1/operations/batches/actions/initialize",
 		SuccessStatusCode:   http.StatusCreated,
 		Public:              false,
+		AgentTool:           true,
 		Preview:             true,
 		RequiredPermissions: []types.Permission{{Domain: types.PermissionDomainBatches, Action: types.ActionCreate}},
 		ObjectType:          constants.ObjectTypeBatch,

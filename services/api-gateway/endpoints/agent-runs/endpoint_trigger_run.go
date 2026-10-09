@@ -41,15 +41,17 @@ type TriggerRunEndpoint struct{}
 
 func (e *TriggerRunEndpoint) Materialize() *apiendpoint.APIEndpoint[*TriggerRunRequest, *apiresource.AgentRun] {
 	return (&apiendpoint.APIEndpoint[*TriggerRunRequest, *apiresource.AgentRun]{
-		Title:               "Trigger Agent Run",
-		Method:              http.MethodPost,
-		Route:               "/v1/ai/runs",
-		ContentType:         "application/json",
-		SuccessStatusCode:   http.StatusCreated,
-		Public:              true,
-		Preview:             true,
-		ObjectType:          constants.ObjectTypeAgentRun,
-		RequiredPermissions: []types.Permission{{Domain: types.PermissionDomainAgentRuns, Action: types.ActionCreate}},
+		Title:                  "Trigger Agent Run",
+		Method:                 http.MethodPost,
+		Route:                  "/v1/ai/runs",
+		ContentType:            "application/json",
+		SuccessStatusCode:      http.StatusCreated,
+		Public:                 true,
+		AgentTool:              true,
+		Preview:                true,
+		ObjectType:             constants.ObjectTypeAgentRun,
+		RequiredPermissions:    []types.Permission{{Domain: types.PermissionDomainAgentRuns, Action: types.ActionCreate}, {Domain: types.PermissionDomainAgents, Action: types.ActionRead}, {Domain: types.PermissionDomainAgentRuns, Action: types.ActionRead}},
+		RequiresAllPermissions: true,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *TriggerRunRequest) (*apiresource.AgentRun, *apierror.APIError) {
 			return svc.(AgentRunSvc).TriggerAgentRun
 		},

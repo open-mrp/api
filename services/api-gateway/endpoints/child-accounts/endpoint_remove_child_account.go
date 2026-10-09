@@ -29,6 +29,7 @@ func (e *RemoveChildAccountEndpoint) Materialize() *apiendpoint.APIEndpoint[*Rem
 		ContentType:       "application/json",
 		SuccessStatusCode: http.StatusOK,
 		Public:            false,
+		AgentTool:         true,
 		Preview:           true,
 		RequiredPermissions: []types.Permission{
 			{Domain: types.PermissionDomainCustomers, Action: types.ActionUpdate},

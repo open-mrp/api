@@ -44,6 +44,7 @@ func (e *ClearSupportRouteEndpoint) Materialize() *apiendpoint.APIEndpoint[*Clea
 		Route:               "/v1/messaging/support-routes/actions/clear",
 		SuccessStatusCode:   http.StatusOK,
 		Public:              false,
+		AgentTool:           true,
 		Preview:             true,
 		ObjectType:          constants.ObjectTypeSupportRoute,
 		RequiredPermissions: []types.Permission{{Domain: types.PermissionDomainMessaging, Action: types.ActionUpdate}},

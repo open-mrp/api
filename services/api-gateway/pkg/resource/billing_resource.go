@@ -37,6 +37,8 @@ type AccountUsageResponse struct {
 	// Status of the account's billing subscription.
 	Subscription *SubscriptionInfo `json:"subscription"`
 	// Estimated agent LLM spending for the current billing month, and the cap it is measured against.
+	//
+	// Null unless the caller holds `billing:read`.
 	AgentSpend *AgentSpendInfo `json:"agent_spend"`
 	// Display name of the plan the account is actually billed on, resolved live from Stripe (e.g. `Founder`).
 	//

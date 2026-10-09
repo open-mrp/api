@@ -74,6 +74,7 @@ func (e *UpdateAccountEndpoint) Materialize() *apiendpoint.APIEndpoint[*UpdateAc
 		ContentType:         "application/json",
 		SuccessStatusCode:   http.StatusOK,
 		Public:              false,
+		AgentTool:           true,
 		Preview:             true,
 		ObjectType:          constants.ObjectTypeAccount,
 		RequiredPermissions: []types.Permission{{Domain: types.PermissionDomainAccount, Action: types.ActionUpdate}},

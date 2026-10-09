@@ -30,6 +30,7 @@ func (e *RetrieveProductionEndpoint) Materialize() *apiendpoint.APIEndpoint[*Ret
 		Route:               "/v1/operations/production-steps/{production_step_id}/productions/{id}",
 		SuccessStatusCode:   http.StatusOK,
 		Public:              false,
+		AgentTool:           true,
 		Preview:             true,
 		RequiredPermissions: []types.Permission{{Domain: types.PermissionDomainProductionSteps, Action: types.ActionRead}},
 		ObjectType:          constants.ObjectTypeProduction,

@@ -29,6 +29,7 @@ func (e *DeleteCustomerProductLineAccessEndpoint) Materialize() *apiendpoint.API
 		Route:             "/v1/sales/product-line-access/customers/{customer_id}",
 		SuccessStatusCode: http.StatusOK,
 		Public:            false,
+		AgentTool:         true,
 		Preview:           true,
 		RequiredPermissions: []types.Permission{
 			{Domain: types.PermissionDomainProductLineAccess, Action: types.ActionDelete},

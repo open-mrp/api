@@ -30,9 +30,10 @@ func (e *CreateNewHubspotCompanyReviewEndpoint) Materialize() *apiendpoint.APIEn
 		Route:               "/v1/settings/integrations/hubspot/sync/{id}/company-reviews/{review_id}",
 		SuccessStatusCode:   http.StatusOK,
 		Public:              false,
+		AgentTool:           true,
 		Preview:             true,
 		ObjectType:          constants.ObjectTypeHubspotCompanyReview,
-		RequiredPermissions: []types.Permission{{Domain: types.PermissionDomainIntegrations, Action: types.ActionCreate}},
+		RequiredPermissions: []types.Permission{{Domain: types.PermissionDomainIntegrations, Action: types.ActionUpdate}},
 		ServiceHandler: func(svc any) func(ctx context.Context, req *CreateNewHubspotCompanyReviewRequest) (*apiresource.HubspotCompanyReview, *apierror.APIError) {
 			return svc.(HubspotSyncSvc).CreateNewCompanyReview
 		},

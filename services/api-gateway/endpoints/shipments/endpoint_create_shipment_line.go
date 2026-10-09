@@ -46,6 +46,7 @@ func (e *CreateShipmentLineEndpoint) Materialize() *apiendpoint.APIEndpoint[*Cre
 		ContentType:         "application/json",
 		SuccessStatusCode:   http.StatusCreated,
 		Public:              false,
+		AgentTool:           true,
 		Preview:             true,
 		RequiredPermissions: []types.Permission{{Domain: types.PermissionDomainShipments, Action: types.ActionCreate}},
 		ServiceHandler: func(svc any) func(ctx context.Context, req *CreateShipmentLineRequest) (*apiresource.ShipmentLine, *apierror.APIError) {

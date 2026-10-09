@@ -30,6 +30,7 @@ func (e *GetBatchFlowEndpoint) Materialize() *apiendpoint.APIEndpoint[*GetBatchF
 		Route:               "/v1/operations/batches/{id}/flow",
 		SuccessStatusCode:   http.StatusOK,
 		Public:              false,
+		AgentTool:           true,
 		Preview:             true,
 		RequiredPermissions: []types.Permission{{Domain: types.PermissionDomainBatches, Action: types.ActionRead}},
 		ObjectType:          constants.ObjectTypeBatchFlowNode,

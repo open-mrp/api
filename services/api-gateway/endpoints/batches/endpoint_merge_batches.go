@@ -47,6 +47,7 @@ func (e *MergeBatchesEndpoint) Materialize() *apiendpoint.APIEndpoint[*MergeBatc
 		Route:               "/v1/operations/batches/actions/merge",
 		SuccessStatusCode:   http.StatusCreated,
 		Public:              false,
+		AgentTool:           true,
 		Preview:             true,
 		RequiredPermissions: []types.Permission{{Domain: types.PermissionDomainBatches, Action: types.ActionCreate}},
 		ObjectType:          constants.ObjectTypeBatch,

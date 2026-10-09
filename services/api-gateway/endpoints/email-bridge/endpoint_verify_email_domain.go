@@ -30,6 +30,7 @@ func (e *VerifyEmailDomainEndpoint) Materialize() *apiendpoint.APIEndpoint[*Veri
 		Route:               "/v1/messaging/email-domains/{id}/actions/verify",
 		SuccessStatusCode:   http.StatusOK,
 		Public:              true,
+		AgentTool:           true,
 		Preview:             true,
 		ObjectType:          constants.ObjectTypeEmailDomain,
 		RequiredPermissions: []types.Permission{{Domain: types.PermissionDomainMessaging, Action: types.ActionUpdate}},

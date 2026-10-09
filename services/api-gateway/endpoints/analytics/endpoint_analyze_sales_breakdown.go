@@ -41,6 +41,7 @@ func (e *AnalyzeSalesBreakdownEndpoint) Materialize() *apiendpoint.APIEndpoint[*
 		ContentType:         "application/json",
 		SuccessStatusCode:   http.StatusOK,
 		Public:              false,
+		AgentTool:           true,
 		Preview:             true,
 		ReadOnly:            true,
 		RequiredPermissions: []types.Permission{{Domain: types.PermissionDomainInvoices, Action: types.ActionRead}},

@@ -176,10 +176,11 @@ func TestForkDeadChatRun(t *testing.T) {
 
 			s := &agentDefSvcImpl{repos: factory, txManager: fakeTxManager{f: factory}}
 			continued, apiErr := s.continueChatRun(context.Background(), domain.ChatRunInput{
-				AccountID:        acct,
-				ContinueRunID:    deadID,
-				Message:          reply,
-				TriggerMessageID: triggerID,
+				AccountID:         acct,
+				AgentDefinitionID: defID,
+				ContinueRunID:     deadID,
+				Message:           reply,
+				TriggerMessageID:  triggerID,
 			})
 			if apiErr != nil {
 				t.Fatalf("continueChatRun error: %v", apiErr)

@@ -78,19 +78,25 @@ func (q *Queries) FindRoleByTypeCode(ctx context.Context, arg FindRoleByTypeCode
 }
 
 const getRoleByID = `-- name: GetRoleByID :one
-SELECT id, name, role_type_code FROM role WHERE id = ?
+SELECT id, name, role_type_code, account_id FROM role WHERE id = ?
 `
 
 type GetRoleByIDRow struct {
 	ID           string
 	Name         string
 	RoleTypeCode string
+	AccountID    sql.NullString
 }
 
 func (q *Queries) GetRoleByID(ctx context.Context, id string) (GetRoleByIDRow, error) {
 	row := q.db.QueryRowContext(ctx, getRoleByID, id)
 	var i GetRoleByIDRow
-	err := row.Scan(&i.ID, &i.Name, &i.RoleTypeCode)
+	err := row.Scan(
+		&i.ID,
+		&i.Name,
+		&i.RoleTypeCode,
+		&i.AccountID,
+	)
 	return i, err
 }
 

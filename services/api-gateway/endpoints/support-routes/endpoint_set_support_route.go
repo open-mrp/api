@@ -48,6 +48,7 @@ func (e *SetSupportRouteEndpoint) Materialize() *apiendpoint.APIEndpoint[*SetSup
 		Route:               "/v1/messaging/support-routes/actions/set",
 		SuccessStatusCode:   http.StatusOK,
 		Public:              false,
+		AgentTool:           true,
 		Preview:             true,
 		ObjectType:          constants.ObjectTypeSupportRoute,
 		RequiredPermissions: []types.Permission{{Domain: types.PermissionDomainMessaging, Action: types.ActionUpdate}},

@@ -59,6 +59,7 @@ func (e *ContinueRunEndpoint) Materialize() *apiendpoint.APIEndpoint[*ContinueRu
 		Route:               "/v1/ai/runs/{id}/actions/continue",
 		SuccessStatusCode:   http.StatusOK,
 		Public:              true,
+		AgentTool:           true,
 		Preview:             true,
 		ObjectType:          constants.ObjectTypeAgentRun,
 		RequiredPermissions: []types.Permission{{Domain: types.PermissionDomainAgentRuns, Action: types.ActionUpdate}},

@@ -86,6 +86,10 @@ INSERT IGNORE INTO permission (id, code, name, permission_group_code, created_at
 INSERT IGNORE INTO permission (id, code, name, permission_group_code, description, created_at, updated_at) VALUES
     ('costs', 'costs', 'Costs', 'pricing', 'See costs and margins: item unit costs, order line costs, costing and margin reports. Only read applies.', NOW(), NOW());
 
+-- Mirrors data migration 00016_add_billing_permission.
+INSERT IGNORE INTO permission (id, code, name, permission_group_code, description, created_at, updated_at) VALUES
+    ('billing', 'billing', 'Billing', 'admin', 'See agent spend and the monthly agent spending cap; update sets the cap.', NOW(), NOW());
+
 -- Roles
 INSERT IGNORE INTO role (id, name, role_type_code, account_id, created_at, updated_at) VALUES
     ('rl_mtg88e6u6fbu', 'Admin', 'admin', NULL, NOW(), NOW()),
@@ -168,7 +172,8 @@ INSERT IGNORE INTO role_permission (id, role_id, permission_code, `create`, `rea
     ('rlpm_01seedadm_agentr0', 'rl_mtg88e6u6fbu', 'agent_runs', 1, 1, 1, 1, NOW(), NOW()),
     ('rlpm_01seedadm_agentm0', 'rl_mtg88e6u6fbu', 'agent_memories', 1, 1, 1, 1, NOW(), NOW()),
     ('rlpm_01seedadm_alerts0', 'rl_mtg88e6u6fbu', 'alerts', 1, 1, 1, 1, NOW(), NOW()),
-    ('rlpm_01seedadm_costs00', 'rl_mtg88e6u6fbu', 'costs', 1, 1, 1, 1, NOW(), NOW());
+    ('rlpm_01seedadm_costs00', 'rl_mtg88e6u6fbu', 'costs', 1, 1, 1, 1, NOW(), NOW()),
+    ('rlpm_01seedadm_billng0', 'rl_mtg88e6u6fbu', 'billing', 1, 1, 1, 1, NOW(), NOW());
 
 -- Sales Rep role permissions (sales_orders + receive/manage own notifications). jobs:read is the baseline every non-admin role needs to poll the 202 of any async operation; updatePermissions.ts grants it the same way in deployed databases.
 INSERT IGNORE INTO role_permission (id, role_id, permission_code, `create`, `read`, `update`, `delete`, created_at, updated_at) VALUES

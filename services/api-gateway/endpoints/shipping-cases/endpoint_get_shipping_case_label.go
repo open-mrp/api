@@ -29,6 +29,7 @@ func (e *GetShippingCaseLabelEndpoint) Materialize() *apiendpoint.APIEndpoint[*G
 		Route:             "/v1/operations/shipping-cases/{id}/label",
 		SuccessStatusCode: http.StatusOK,
 		Public:            false,
+		AgentTool:         true,
 		Preview:           true,
 		// GetShippingCaseLabel enforces shipments:read in the service (shipping cases
 		// are a facet of shipments). Declared here to match that enforcement.

@@ -1,5 +1,5 @@
 -- name: GetRoleByID :one
-SELECT id, name, role_type_code FROM role WHERE id = ?;
+SELECT id, name, role_type_code, account_id FROM role WHERE id = ?;
 
 -- name: GetRolesByIDs :many
 SELECT id, name, role_type_code FROM role WHERE id IN (sqlc.slice('ids'));

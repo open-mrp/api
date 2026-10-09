@@ -1374,6 +1374,8 @@ func (s *conversationSvcImpl) dispatchAgents(ctx context.Context, f domain.RepoF
 	// Recent thread context, built once on the first firing agent (most messages trigger nothing).
 	var history []chatHistoryEntry
 	historyBuilt := false
+	var senderUserID string
+	senderResolved := false
 	for _, p := range participants {
 		if p.ParticipantType != string(constants.ParticipantTypeAgent) || p.Membership != string(constants.ParticipantMembershipActive) {
 			continue
@@ -1399,6 +1401,16 @@ func (s *conversationSvcImpl) dispatchAgents(ctx context.Context, f domain.RepoF
 			history = s.buildChatHistory(ctx, conversationID, accountID, msg.Sequence)
 			historyBuilt = true
 		}
+		if !senderResolved {
+			uid, ok, apiErr := s.chatSenderUserID(ctx, f, accountID, senderParticipantType, senderAcus)
+			if apiErr != nil {
+				return apiErr
+			}
+			if !ok {
+				return nil
+			}
+			senderUserID, senderResolved = uid, true
+		}
 		hist := chatHistoryForAgent(history, *p.AgentConfigID)
 		// The agent's reply threads under the message that triggered this turn: a continuation threads under the user's reply (keeping the thread growing), and a fresh directed trigger (mention or keyword) threads under that message. An "always" agent answers every message, so threading each fresh reply would be noise — it replies inline instead.
 		triggerMessageID := ""
@@ -1416,14 +1428,29 @@ func (s *conversationSvcImpl) dispatchAgents(ctx context.Context, f domain.RepoF
 			Message:           agentMessage,
 			History:           hist,
 			ContinueRunID:     continueRunID,
+			SenderUserID:      senderUserID,
 		}); apiErr != nil {
 			return apiErr
 		}
 		// Show "<agent> is typing" to conversation subscribers while the run produces its reply.
 		s.emitAgentTyping(ctx, conversationID, accountID, *p.AgentConfigID)
 	}
-	_ = senderAcus
 	return nil
+}
+
+// chatSenderUserID resolves the member a woken agent is checked against: agent-service refuses the run when the agent's role is wider than theirs. Customers and inbound email have no member, so they return "". ok is false when a member sent the message but is no longer in the account, so no agent may be woken for them.
+func (s *conversationSvcImpl) chatSenderUserID(ctx context.Context, f domain.RepoFactory, accountID, senderParticipantType, senderAcus string) (userID string, ok bool, apiErr *apierror.APIError) {
+	if senderParticipantType != string(constants.ParticipantTypeUser) || senderAcus == "" {
+		return "", true, nil
+	}
+	userID, apiErr = f.NewNotificationRepo().ResolveUserIDInAccount(ctx, senderAcus, accountID)
+	if apiErr != nil {
+		if apiErr.Code == apierror.ErrorCodeResourceNotFound {
+			return "", false, nil
+		}
+		return "", false, apiErr
+	}
+	return userID, true, nil
 }
 
 // replyTargetAgent inspects a message's reply target: if it replies to a message authored by an agent, it returns that agent's config id and the run that produced the replied-to message, so a direct reply continues that run. Returns empty strings when the message isn't a reply to an agent.

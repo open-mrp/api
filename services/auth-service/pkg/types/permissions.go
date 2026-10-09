@@ -1,5 +1,7 @@
 package types
 
+import "sort"
+
 type PermissionDomain string
 
 const (
@@ -78,7 +80,8 @@ const (
 	PermissionDomainJobs                          PermissionDomain = "jobs"
 	PermissionDomainMessaging                     PermissionDomain = "messaging"
 	// Only read is meaningful: it decides whether an internal caller sees cost and margin figures. Portal actors never do.
-	PermissionDomainCosts PermissionDomain = "costs"
+	PermissionDomainCosts   PermissionDomain = "costs"
+	PermissionDomainBilling PermissionDomain = "billing"
 )
 
 type Action string
@@ -182,6 +185,7 @@ func AllPermissionDomains() []PermissionDomain {
 		PermissionDomainJobs,
 		PermissionDomainMessaging,
 		PermissionDomainCosts,
+		PermissionDomainBilling,
 	}
 }
 
@@ -193,4 +197,16 @@ func (d PermissionDomain) IsValid() bool {
 		}
 	}
 	return false
+}
+
+// PermissionsNotHeld returns, sorted, the permissions granted that held lacks. A role or agent can act with every permission it grants, so a non-admin may hand one out, or drive one, only when this is empty.
+func PermissionsNotHeld(held, granted map[string]bool) []string {
+	var missing []string
+	for perm, ok := range granted {
+		if ok && !held[perm] {
+			missing = append(missing, perm)
+		}
+	}
+	sort.Strings(missing)
+	return missing
 }

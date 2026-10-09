@@ -28,6 +28,7 @@ func (e *RetrieveRegistrationFlowEndpoint) Materialize() *apiendpoint.APIEndpoin
 		ContentType:       "application/json",
 		SuccessStatusCode: http.StatusOK,
 		Public:            false,
+		AgentTool:         true,
 		Preview:           true,
 		RequiredPermissions: []types.Permission{
 			{Domain: types.PermissionDomainAccount, Action: types.ActionRead},

@@ -158,6 +158,8 @@ type CreateAgentRequest struct {
 	// ID of the role that defines the permissions the agent operates with.
 	//
 	// Every API call the agent makes is authorized against this role, so it bounds what the agent can see and change. An agent created without a role cannot execute — its runs fail immediately — so attach one before triggering it.
+	//
+	// Unless you are an admin, the role may grant only permissions you hold yourself and may not be an admin role; otherwise the request fails with a `403` on `role_id`.
 	RoleID field.Optional[string] `json:"role_id,omitzero" validate:"omitempty,max=191"`
 }
 
@@ -189,6 +191,7 @@ func (e *CreateAgentEndpoint) Materialize() *apiendpoint.APIEndpoint[*CreateAgen
 		ContentType:         "application/json",
 		SuccessStatusCode:   http.StatusCreated,
 		Public:              true,
+		AgentTool:           true,
 		Preview:             true,
 		ObjectType:          constants.ObjectTypeAgentDefinition,
 		RequiredPermissions: []types.Permission{{Domain: types.PermissionDomainAgents, Action: types.ActionCreate}},

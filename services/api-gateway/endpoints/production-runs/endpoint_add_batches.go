@@ -80,6 +80,7 @@ func (e *AddBatchesToProductionRunEndpoint) Materialize() *apiendpoint.APIEndpoi
 		Route:             "/v1/operations/production-runs/{id}/batches",
 		SuccessStatusCode: http.StatusCreated,
 		Public:            false,
+		AgentTool:         true,
 		Preview:           true,
 		RequiredPermissions: []types.Permission{
 			{Domain: types.PermissionDomainProductionRuns, Action: types.ActionUpdate},

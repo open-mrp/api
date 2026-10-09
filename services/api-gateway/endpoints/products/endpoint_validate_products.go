@@ -42,6 +42,7 @@ func (e *ValidateProductsEndpoint) Materialize() *apiendpoint.APIEndpoint[*Valid
 		SuccessStatusCode:   http.StatusOK,
 		ObjectType:          constants.ObjectTypeProduct,
 		Public:              false,
+		AgentTool:           true,
 		Preview:             true,
 		RequiredPermissions: []types.Permission{{Domain: types.PermissionDomainItems, Action: types.ActionRead}, {Domain: types.PermissionDomainCustomers, Action: types.ActionRead}, {Domain: types.PermissionDomainSuppliers, Action: types.ActionRead}},
 		Extras:              apiendpoint.APIEndpointExtras{HideFromRequestLog: true},

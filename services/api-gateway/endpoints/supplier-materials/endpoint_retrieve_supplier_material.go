@@ -32,6 +32,7 @@ func (e *RetrieveSupplierMaterialEndpoint) Materialize() *apiendpoint.APIEndpoin
 		Route:             "/v1/operations/suppliers/{supplier_id}/materials/{id}",
 		SuccessStatusCode: http.StatusOK,
 		Public:            false,
+		AgentTool:         true,
 		Preview:           true,
 		ObjectType:        constants.ObjectTypeSupplierMaterial,
 		RequiredPermissions: []types.Permission{

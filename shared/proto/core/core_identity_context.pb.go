@@ -907,10 +907,12 @@ func (x *GetRoleInfoRequest) GetRoleId() string {
 }
 
 type GetRoleInfoResponse struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	RoleId        string                 `protobuf:"bytes,1,opt,name=role_id,json=roleId,proto3" json:"role_id,omitempty"`
-	Name          string                 `protobuf:"bytes,2,opt,name=name,proto3" json:"name,omitempty"`
-	RoleTypeCode  string                 `protobuf:"bytes,3,opt,name=role_type_code,json=roleTypeCode,proto3" json:"role_type_code,omitempty"`
+	state        protoimpl.MessageState `protogen:"open.v1"`
+	RoleId       string                 `protobuf:"bytes,1,opt,name=role_id,json=roleId,proto3" json:"role_id,omitempty"`
+	Name         string                 `protobuf:"bytes,2,opt,name=name,proto3" json:"name,omitempty"`
+	RoleTypeCode string                 `protobuf:"bytes,3,opt,name=role_type_code,json=roleTypeCode,proto3" json:"role_type_code,omitempty"`
+	// Unset for a global role, which every account may use.
+	AccountId     *string `protobuf:"bytes,4,opt,name=account_id,json=accountId,proto3,oneof" json:"account_id,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -962,6 +964,13 @@ func (x *GetRoleInfoResponse) GetName() string {
 func (x *GetRoleInfoResponse) GetRoleTypeCode() string {
 	if x != nil {
 		return x.RoleTypeCode
+	}
+	return ""
+}
+
+func (x *GetRoleInfoResponse) GetAccountId() string {
+	if x != nil && x.AccountId != nil {
+		return *x.AccountId
 	}
 	return ""
 }
@@ -11343,11 +11352,14 @@ const file_core_core_identity_context_proto_rawDesc = "" +
 	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
 	"\x05value\x18\x02 \x01(\bR\x05value:\x028\x01\"-\n" +
 	"\x12GetRoleInfoRequest\x12\x17\n" +
-	"\arole_id\x18\x01 \x01(\tR\x06roleId\"h\n" +
+	"\arole_id\x18\x01 \x01(\tR\x06roleId\"\x9b\x01\n" +
 	"\x13GetRoleInfoResponse\x12\x17\n" +
 	"\arole_id\x18\x01 \x01(\tR\x06roleId\x12\x12\n" +
 	"\x04name\x18\x02 \x01(\tR\x04name\x12$\n" +
-	"\x0erole_type_code\x18\x03 \x01(\tR\froleTypeCode\"D\n" +
+	"\x0erole_type_code\x18\x03 \x01(\tR\froleTypeCode\x12\"\n" +
+	"\n" +
+	"account_id\x18\x04 \x01(\tH\x00R\taccountId\x88\x01\x01B\r\n" +
+	"\v_account_id\"D\n" +
 	"\x1aMarkAccountUserUsedRequest\x12&\n" +
 	"\x0faccount_user_id\x18\x01 \x01(\tR\raccountUserId\"=\n" +
 	"\"ListUserAccountAffiliationsRequest\x12\x17\n" +
@@ -12850,6 +12862,7 @@ func file_core_core_identity_context_proto_init() {
 		(*GetAccountRelationRequest_ApiKeyId)(nil),
 	}
 	file_core_core_identity_context_proto_msgTypes[8].OneofWrappers = []any{}
+	file_core_core_identity_context_proto_msgTypes[13].OneofWrappers = []any{}
 	file_core_core_identity_context_proto_msgTypes[16].OneofWrappers = []any{}
 	file_core_core_identity_context_proto_msgTypes[17].OneofWrappers = []any{}
 	file_core_core_identity_context_proto_msgTypes[18].OneofWrappers = []any{}

@@ -39,7 +39,7 @@ type agentToolDescriptor struct {
 	ReadOnly bool
 }
 
-// generateAgentTools collects every endpoint that is public or flagged AgentTool, builds a self-contained input schema per endpoint, and writes the Go catalog (no DB seed).
+// generateAgentTools collects every endpoint flagged AgentTool, builds a self-contained input schema per endpoint, and writes the Go catalog (no DB seed).
 func generateAgentTools(groups []apiendpoint.APIEndpointGroup) error {
 	descriptors := collectAgentToolDescriptors(groups)
 	logInfof("Found %d agent-tool endpoints", len(descriptors))

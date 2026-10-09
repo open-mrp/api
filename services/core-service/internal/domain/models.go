@@ -88,6 +88,8 @@ type RoleInfo struct {
 	ID       string
 	Name     string
 	RoleType string
+	// AccountID is nil for a global role.
+	AccountID *string
 }
 
 type ProductInfo struct {

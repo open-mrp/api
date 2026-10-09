@@ -174,6 +174,8 @@ type ChatRunInput struct {
 	History []ChatHistoryMessage
 	// ContinueRunID, when set, is an existing run to continue (the user replied to that run's message) rather than starting a new one. Falls back to a new run if it isn't continuable.
 	ContinueRunID string
+	// SenderUserID is the account member whose message wakes the agent; empty when no member sent it.
+	SenderUserID string
 }
 
 // ChatHistoryMessage is one prior conversation turn for a chat-triggered run. Role is "assistant" for this agent's own earlier replies, "user" for everyone else; Name is the sender's display name when known (people), empty for agents. AgentConfigID is set when a different agent authored the turn — its Name is resolved from the agent definition when the run is created.

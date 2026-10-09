@@ -29,6 +29,7 @@ func (e *ExportOpenOrderLinesEndpoint) Materialize() *apiendpoint.APIEndpoint[*E
 		Route:               "/v1/core/analytics/open-order-lines/actions/export",
 		SuccessStatusCode:   http.StatusAccepted,
 		Public:              false,
+		AgentTool:           true,
 		Preview:             true,
 		ObjectType:          constants.ObjectTypeJob,
 		RequiredPermissions: []types.Permission{{Domain: types.PermissionDomainSalesOrders, Action: types.ActionRead}},

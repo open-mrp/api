@@ -44,6 +44,7 @@ func (e *ConnectProductionStepsEndpoint) Materialize() *apiendpoint.APIEndpoint[
 		Route:               "/v1/operations/scanning-stations/{id}/production-steps",
 		SuccessStatusCode:   http.StatusOK,
 		Public:              false,
+		AgentTool:           true,
 		Preview:             true,
 		RequiredPermissions: []types.Permission{{Domain: types.PermissionDomainScanningStations, Action: types.ActionUpdate}},
 		ServiceHandler: func(svc any) func(ctx context.Context, req *ConnectProductionStepsRequest) (*apiresource.EmptyResource, *apierror.APIError) {

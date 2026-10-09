@@ -28,6 +28,7 @@ func (e *RetrieveShippingCaseEndpoint) Materialize() *apiendpoint.APIEndpoint[*R
 		Route:             "/v1/operations/shipping-cases/{id}",
 		SuccessStatusCode: http.StatusOK,
 		Public:            false,
+		AgentTool:         true,
 		Preview:           true,
 		// GetShippingCase enforces shipments:read in the service (shipping cases are
 		// a facet of shipments). Declared here to match that enforcement.

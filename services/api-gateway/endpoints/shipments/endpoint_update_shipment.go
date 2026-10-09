@@ -54,6 +54,7 @@ func (e *UpdateShipmentEndpoint) Materialize() *apiendpoint.APIEndpoint[*UpdateS
 		ContentType:         "application/json",
 		SuccessStatusCode:   http.StatusOK,
 		Public:              false,
+		AgentTool:           true,
 		Preview:             true,
 		RequiredPermissions: []types.Permission{{Domain: types.PermissionDomainShipments, Action: types.ActionUpdate}},
 		ObjectType:          constants.ObjectTypeShipment,

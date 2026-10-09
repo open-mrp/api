@@ -397,9 +397,11 @@ func accountUsageFromProto(resp *pb.GetAccountUsageResponse) *apiresource.Accoun
 		}
 	}
 
-	result.AgentSpend = &apiresource.AgentSpendInfo{
-		Object:              constants.ObjectTypeAgentSpendInfo,
-		EstimatedSpendCents: resp.EstimatedAgentSpendCents,
+	if resp.EstimatedAgentSpendCents != nil {
+		result.AgentSpend = &apiresource.AgentSpendInfo{
+			Object:              constants.ObjectTypeAgentSpendInfo,
+			EstimatedSpendCents: *resp.EstimatedAgentSpendCents,
+		}
 	}
 
 	result.PlanName = resp.PlanName

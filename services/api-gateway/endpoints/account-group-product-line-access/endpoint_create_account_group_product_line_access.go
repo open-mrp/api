@@ -46,6 +46,7 @@ func (e *CreateAccountGroupProductLineAccessEndpoint) Materialize() *apiendpoint
 		Route:             "/v1/sales/product-line-access/account-groups",
 		SuccessStatusCode: http.StatusCreated,
 		Public:            false,
+		AgentTool:         true,
 		Preview:           true,
 		ObjectType:        constants.ObjectTypeAccountGroupProductLineAccess,
 		RequiredPermissions: []types.Permission{

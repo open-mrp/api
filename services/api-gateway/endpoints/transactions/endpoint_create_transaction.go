@@ -74,6 +74,7 @@ func (e *CreateTransactionEndpoint) Materialize() *apiendpoint.APIEndpoint[*Crea
 		Route:             "/v1/finance/transactions",
 		SuccessStatusCode: http.StatusCreated,
 		Public:            false,
+		AgentTool:         true,
 		Preview:           true,
 		RequiredPermissions: []types.Permission{
 			{Domain: types.PermissionDomainTransactions, Action: types.ActionCreate},

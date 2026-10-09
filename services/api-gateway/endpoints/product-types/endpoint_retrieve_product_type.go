@@ -28,6 +28,7 @@ func (e *RetrieveProductTypeEndpoint) Materialize() *apiendpoint.APIEndpoint[*Re
 		ContentType:         "application/json",
 		SuccessStatusCode:   http.StatusOK,
 		Public:              false,
+		AgentTool:           true,
 		Preview:             true,
 		RequiredPermissions: []types.Permission{{Domain: types.PermissionDomainProductTypes, Action: types.ActionRead}},
 		ObjectType:          constants.ObjectTypeProductType,

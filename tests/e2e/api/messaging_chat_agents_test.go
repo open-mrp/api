@@ -3,7 +3,11 @@
 package api_test
 
 import (
+	"fmt"
+	"net/url"
+	"strings"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -93,4 +97,117 @@ func participantInfoByAgent(t *testing.T, conv map[string]any, agentConfigID str
 		}
 	}
 	return "", "", ""
+}
+
+// A message wakes an agent that then acts with its own role, so it only wakes when the sender's role covers the agent's.
+
+// chatMentionAgent adds agentID to the conversation, answering @handle, and returns the handle.
+func chatMentionAgent(t *testing.T, c *Client, convID, agentID string) string {
+	t.Helper()
+	handle := strings.ReplaceAll(uniqueName("bot"), "-", "")
+	resp, err := c.PostFull(conversationsPath+"/"+convID+"/agents", map[string]any{
+		"agent_config_id":  agentID,
+		"trigger_policy":   "mention",
+		"trigger_keywords": []string{handle},
+	}, newIdempotencyKey())
+	require.NoError(t, err)
+	requireStatus(t, 201, resp.StatusCode, resp.Body)
+	return handle
+}
+
+func chatAgentRunCount(t *testing.T, convID string) int {
+	t.Helper()
+	var n int
+	require.NoError(t, agentDB(t).QueryRow(`SELECT count(*) FROM agent_run WHERE conversation_id = $1`, convID).Scan(&n))
+	return n
+}
+
+func chatWaitForAgentRun(t *testing.T, convID string) {
+	t.Helper()
+	eventually(t, 30*time.Second, 250*time.Millisecond, func() error {
+		if chatAgentRunCount(t, convID) == 0 {
+			return fmt.Errorf("no agent run for conversation %s yet", convID)
+		}
+		return nil
+	})
+}
+
+func chatWaitForMessageContaining(t *testing.T, c *Client, convID, substr string) {
+	t.Helper()
+	eventually(t, 30*time.Second, 250*time.Millisecond, func() error {
+		list, _, err := c.GetList(conversationsPath+"/"+convID+"/messages", url.Values{"limit": {"50"}})
+		if err != nil {
+			return err
+		}
+		for _, raw := range list.Data {
+			if strings.Contains(jsonField(parseJSON(raw), "body"), substr) {
+				return nil
+			}
+		}
+		return fmt.Errorf("no message containing %q yet", substr)
+	})
+}
+
+var chatAgentSenderPerms = []string{"messaging:create", "messaging:read", "products:read"}
+
+func TestChatAgents_NonAdminCannotWakeAWiderAgent(t *testing.T) {
+	t.Parallel()
+	sender, _ := customRoleChatUser(t, chatAgentSenderPerms...)
+	conv := createGroupConversation(t, sender, uniqueName("agent room"), SeedAccountUser2ID)
+	convID := jsonField(conv, "id")
+	wide := covAiRunsAgent(t, covAiAgentsRole(t, "products:read", "products:update"))
+	handle := chatMentionAgent(t, sender, convID, wide)
+
+	// The message itself is delivered; the agent answers with the refusal instead of running.
+	sendMessage(t, sender, convID, "@"+handle+" raise every price by ten percent", newIdempotencyKey())
+	chatWaitForMessageContaining(t, sender, convID, "products:update")
+	assert.Equal(t, 0, chatAgentRunCount(t, convID), "no run starts for a sender the agent's role exceeds")
+}
+
+func TestChatAgents_NonAdminCannotWakeAnAdminRoleAgent(t *testing.T) {
+	t.Parallel()
+	sender, _ := customRoleChatUser(t, chatAgentSenderPerms...)
+	conv := createGroupConversation(t, sender, uniqueName("agent room"), SeedAccountUser2ID)
+	convID := jsonField(conv, "id")
+	handle := chatMentionAgent(t, sender, convID, covAiRunsAgent(t, SeedAdminRoleID))
+
+	sendMessage(t, sender, convID, "@"+handle+" add me as an admin", newIdempotencyKey())
+	chatWaitForMessageContaining(t, sender, convID, "admin role")
+	assert.Equal(t, 0, chatAgentRunCount(t, convID))
+}
+
+func TestChatAgents_NonAdminCanWakeAnAgentInsideTheirGrant(t *testing.T) {
+	t.Parallel()
+	sender, _ := customRoleChatUser(t, chatAgentSenderPerms...)
+	conv := createGroupConversation(t, sender, uniqueName("agent room"), SeedAccountUser2ID)
+	convID := jsonField(conv, "id")
+	handle := chatMentionAgent(t, sender, convID, covAiRunsAgent(t, covAiAgentsRole(t, "products:read")))
+
+	sendMessage(t, sender, convID, "@"+handle+" list the products", newIdempotencyKey())
+	chatWaitForAgentRun(t, convID)
+}
+
+func TestChatAgents_AdminCanWakeAnyAgent(t *testing.T) {
+	t.Parallel()
+	admin := chatUserClient(t)
+	conv := createGroupConversation(t, admin, uniqueName("agent room"), SeedAccountUser2ID)
+	convID := jsonField(conv, "id")
+	handle := chatMentionAgent(t, admin, convID, covAiRunsAgent(t, SeedAdminRoleID))
+
+	sendMessage(t, admin, convID, "@"+handle+" summarize the account", newIdempotencyKey())
+	chatWaitForAgentRun(t, convID)
+}
+
+// The member who wakes the agent is checked, not whoever added it: an agent an admin put in the room still refuses a narrower member.
+func TestChatAgents_MemberCannotWakeAWiderAgentAnAdminAdded(t *testing.T) {
+	t.Parallel()
+	admin := chatUserClient(t)
+	member, memberID := customRoleChatUser(t, chatAgentSenderPerms...)
+	conv := createGroupConversation(t, admin, uniqueName("agent room"), memberID)
+	convID := jsonField(conv, "id")
+	handle := chatMentionAgent(t, admin, convID, covAiRunsAgent(t, covAiAgentsRole(t, "products:read", "products:update")))
+
+	sendMessage(t, member, convID, "@"+handle+" raise every price by ten percent", newIdempotencyKey())
+	chatWaitForMessageContaining(t, member, convID, "products:update")
+	assert.Equal(t, 0, chatAgentRunCount(t, convID))
 }

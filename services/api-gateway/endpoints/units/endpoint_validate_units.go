@@ -40,6 +40,7 @@ func (e *ValidateUnitsEndpoint) Materialize() *apiendpoint.APIEndpoint[*Validate
 		ContentType:       "application/json",
 		SuccessStatusCode: http.StatusOK,
 		Public:            false,
+		AgentTool:         true,
 		Preview:           true,
 		RequiredPermissions: []types.Permission{
 			{Domain: types.PermissionDomainUnits, Action: types.ActionRead},

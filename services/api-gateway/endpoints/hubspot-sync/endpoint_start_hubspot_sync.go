@@ -45,6 +45,7 @@ func (e *StartHubspotSyncEndpoint) Materialize() *apiendpoint.APIEndpoint[*Start
 		Route:               "/v1/settings/integrations/hubspot/sync",
 		SuccessStatusCode:   http.StatusCreated,
 		Public:              false,
+		AgentTool:           true,
 		Preview:             true,
 		ObjectType:          constants.ObjectTypeHubspotSyncJob,
 		RequiredPermissions: []types.Permission{{Domain: types.PermissionDomainIntegrations, Action: types.ActionUpdate}},

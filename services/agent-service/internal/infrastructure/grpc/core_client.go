@@ -85,3 +85,44 @@ func (c *AgentCoreClient) GetRolePermissions(ctx context.Context, roleID string)
 
 	return resp.Permissions, nil
 }
+
+func (c *AgentCoreClient) GetRoleInfo(ctx context.Context, roleID string) (*domain.RoleInfo, error) {
+	ctx = prepareCtx(ctx)
+
+	resp, apiErr := rpc.CallRPC(ctx, coreClientTracer, "core_client.get_role_info", coreServiceName,
+		func(ctx context.Context, opts ...grpclib.CallOption) (*pb.GetRoleInfoResponse, error) {
+			return c.client.GetRoleInfo(ctx, &pb.GetRoleInfoRequest{
+				RoleId: roleID,
+			}, opts...)
+		})
+	if apiErr != nil {
+		return nil, apiErr
+	}
+
+	return &domain.RoleInfo{
+		ID:        resp.RoleId,
+		RoleType:  resp.RoleTypeCode,
+		AccountID: resp.AccountId,
+	}, nil
+}
+
+func (c *AgentCoreClient) GetUserAccess(ctx context.Context, userID, accountID string) (*domain.UserAccess, error) {
+	ctx = prepareCtx(ctx)
+	resp, apiErr := rpc.CallRPC(ctx, coreClientTracer, "core_client.get_user_account_access", coreServiceName,
+		func(ctx context.Context, opts ...grpclib.CallOption) (*pb.GetUserAccountAccessResponse, error) {
+			return c.client.GetUserAccountAccess(ctx, &pb.GetUserAccountAccessRequest{
+				UserId:    userID,
+				AccountId: accountID,
+			}, opts...)
+		})
+	if apiErr != nil {
+		return nil, apiErr
+	}
+	if !resp.HasAccess || resp.Access == nil {
+		return nil, nil
+	}
+	return &domain.UserAccess{
+		RoleType:    resp.Access.GetRoleTypeCode(),
+		Permissions: resp.Access.Permissions,
+	}, nil
+}

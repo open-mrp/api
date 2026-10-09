@@ -43,6 +43,7 @@ func (e *UpdateSysPropertyEndpoint) Materialize() *apiendpoint.APIEndpoint[*Upda
 		Route:             "/v1/settings/properties/{id}",
 		SuccessStatusCode: http.StatusOK,
 		Public:            false,
+		AgentTool:         true,
 		Preview:           true,
 		ObjectType:        constants.ObjectTypeSysProperty,
 		RequiredPermissions: []types.Permission{

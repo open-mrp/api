@@ -419,6 +419,7 @@ func (h *gRPCHandler) GetRoleInfo(ctx context.Context, req *pb.GetRoleInfoReques
 		RoleId:       role.ID,
 		Name:         role.Name,
 		RoleTypeCode: role.RoleType,
+		AccountId:    role.AccountID,
 	}, nil
 }
 

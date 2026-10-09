@@ -46,6 +46,7 @@ func (e *CreateProductTypeEndpoint) Materialize() *apiendpoint.APIEndpoint[*Crea
 		Route:               "/v1/catalog/product-types",
 		SuccessStatusCode:   http.StatusCreated,
 		Public:              false,
+		AgentTool:           true,
 		Preview:             true,
 		RequiredPermissions: []types.Permission{{Domain: types.PermissionDomainProductTypes, Action: types.ActionCreate}},
 		ObjectType:          constants.ObjectTypeProductType,

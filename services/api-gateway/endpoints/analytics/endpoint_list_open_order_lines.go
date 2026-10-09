@@ -29,6 +29,7 @@ func (e *ListOpenOrderLinesEndpoint) Materialize() *apiendpoint.APIEndpoint[*Lis
 		Route:               "/v1/core/analytics/open-orders/{id}/lines",
 		SuccessStatusCode:   http.StatusOK,
 		Public:              false,
+		AgentTool:           true,
 		Preview:             true,
 		ObjectType:          constants.ObjectTypeOpenOrderLine,
 		RequiredPermissions: []types.Permission{{Domain: types.PermissionDomainSalesOrders, Action: types.ActionRead}},

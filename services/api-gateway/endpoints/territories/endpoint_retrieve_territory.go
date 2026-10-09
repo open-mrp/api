@@ -32,6 +32,7 @@ func (e *RetrieveTerritoryEndpoint) Materialize() *apiendpoint.APIEndpoint[*Retr
 		ContentType:         "application/json",
 		SuccessStatusCode:   http.StatusOK,
 		Public:              false,
+		AgentTool:           true,
 		Preview:             true,
 		ObjectType:          constants.ObjectTypeTerritory,
 		RequiredPermissions: []types.Permission{{Domain: types.PermissionDomainTerritories, Action: types.ActionRead}},

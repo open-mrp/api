@@ -4,11 +4,10 @@ import (
 	"context"
 	"net/http"
 
-	"github.com/open-mrp/api/services/auth-service/pkg/types"
-
 	apiendpoint "github.com/open-mrp/api/services/api-gateway/pkg/endpoint"
 	apiexample "github.com/open-mrp/api/services/api-gateway/pkg/example"
 	apiresource "github.com/open-mrp/api/services/api-gateway/pkg/resource"
+	"github.com/open-mrp/api/services/auth-service/pkg/types"
 	apierror "github.com/open-mrp/api/shared/errors"
 )
 
@@ -39,6 +38,7 @@ func (e *BulkDeleteSuppliersEndpoint) Materialize() *apiendpoint.APIEndpoint[*Bu
 		ContentType:       "application/json",
 		SuccessStatusCode: http.StatusOK,
 		Public:            false,
+		AgentTool:         true,
 		Preview:           true,
 		RequiredPermissions: []types.Permission{
 			{Domain: types.PermissionDomainSuppliers, Action: types.ActionDelete},

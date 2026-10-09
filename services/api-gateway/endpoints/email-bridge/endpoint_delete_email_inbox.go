@@ -30,6 +30,7 @@ func (e *DeleteEmailInboxEndpoint) Materialize() *apiendpoint.APIEndpoint[*Delet
 		Route:               "/v1/messaging/email-inboxes/{id}",
 		SuccessStatusCode:   http.StatusOK,
 		Public:              true,
+		AgentTool:           true,
 		Preview:             true,
 		ObjectType:          constants.ObjectTypeEmailInbox,
 		RequiredPermissions: []types.Permission{{Domain: types.PermissionDomainMessaging, Action: types.ActionDelete}},

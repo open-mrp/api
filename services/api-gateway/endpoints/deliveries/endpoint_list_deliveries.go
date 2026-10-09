@@ -41,6 +41,7 @@ func (e *ListDeliveriesEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListDel
 		Route:             "/v1/operations/deliveries",
 		SuccessStatusCode: http.StatusOK,
 		Public:            false,
+		AgentTool:         true,
 		Preview:           true,
 		ObjectType:        constants.ObjectTypeDelivery,
 		RequiredPermissions: []types.Permission{

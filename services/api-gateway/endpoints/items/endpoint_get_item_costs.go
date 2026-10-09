@@ -31,6 +31,7 @@ func (e *GetItemCostsEndpoint) Materialize() *apiendpoint.APIEndpoint[*GetItemCo
 		Route:               "/v1/catalog/items/{id}/costs",
 		SuccessStatusCode:   http.StatusOK,
 		Public:              false,
+		AgentTool:           true,
 		Preview:             true,
 		RequiredPermissions: []types.Permission{{Domain: types.PermissionDomainCosts, Action: types.ActionRead}},
 		ServiceHandler: func(svc any) func(ctx context.Context, req *GetItemCostsRequest) (*apiresource.ItemCosts, *apierror.APIError) {

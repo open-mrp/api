@@ -30,6 +30,7 @@ func (e *ListShipmentLinesEndpoint) Materialize() *apiendpoint.APIEndpoint[*List
 		Route:                   "/v1/operations/shipments/{shipment_id}/lines",
 		SuccessStatusCode:       http.StatusOK,
 		Public:                  false,
+		AgentTool:               true,
 		Preview:                 true,
 		RequiredPermissions:     []types.Permission{{Domain: types.PermissionDomainShipments, Action: types.ActionRead}},
 		CounterpartyPermissions: apiendpoint.Counterparties(types.ActionRead),

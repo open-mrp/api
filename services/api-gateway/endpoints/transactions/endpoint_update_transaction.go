@@ -82,6 +82,7 @@ func (e *UpdateTransactionEndpoint) Materialize() *apiendpoint.APIEndpoint[*Upda
 		Route:             "/v1/finance/transactions/{id}",
 		SuccessStatusCode: http.StatusOK,
 		Public:            false,
+		AgentTool:         true,
 		Preview:           true,
 		RequiredPermissions: []types.Permission{
 			{Domain: types.PermissionDomainTransactions, Action: types.ActionUpdate},

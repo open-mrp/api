@@ -30,6 +30,7 @@ func (e *RedactConversationEndpoint) Materialize() *apiendpoint.APIEndpoint[*Red
 		Route:               "/v1/messaging/conversations/{id}/actions/redact",
 		SuccessStatusCode:   http.StatusOK,
 		Public:              true,
+		AgentTool:           true,
 		Preview:             true,
 		ObjectType:          constants.ObjectTypeConversation,
 		IncludeConfig:       conversationIncludeConfig(),

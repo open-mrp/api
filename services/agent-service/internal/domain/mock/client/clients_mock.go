@@ -149,6 +149,21 @@ func (mr *MockCoreClientMockRecorder) GetAccountContext(ctx, accountID any) *gom
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetAccountContext", reflect.TypeOf((*MockCoreClient)(nil).GetAccountContext), ctx, accountID)
 }
 
+// GetRoleInfo mocks base method.
+func (m *MockCoreClient) GetRoleInfo(ctx context.Context, roleID string) (*domain.RoleInfo, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetRoleInfo", ctx, roleID)
+	ret0, _ := ret[0].(*domain.RoleInfo)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetRoleInfo indicates an expected call of GetRoleInfo.
+func (mr *MockCoreClientMockRecorder) GetRoleInfo(ctx, roleID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetRoleInfo", reflect.TypeOf((*MockCoreClient)(nil).GetRoleInfo), ctx, roleID)
+}
+
 // GetRolePermissions mocks base method.
 func (m *MockCoreClient) GetRolePermissions(ctx context.Context, roleID string) (map[string]bool, error) {
 	m.ctrl.T.Helper()
@@ -162,6 +177,21 @@ func (m *MockCoreClient) GetRolePermissions(ctx context.Context, roleID string) 
 func (mr *MockCoreClientMockRecorder) GetRolePermissions(ctx, roleID any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetRolePermissions", reflect.TypeOf((*MockCoreClient)(nil).GetRolePermissions), ctx, roleID)
+}
+
+// GetUserAccess mocks base method.
+func (m *MockCoreClient) GetUserAccess(ctx context.Context, userID, accountID string) (*domain.UserAccess, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetUserAccess", ctx, userID, accountID)
+	ret0, _ := ret[0].(*domain.UserAccess)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetUserAccess indicates an expected call of GetUserAccess.
+func (mr *MockCoreClientMockRecorder) GetUserAccess(ctx, userID, accountID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetUserAccess", reflect.TypeOf((*MockCoreClient)(nil).GetUserAccess), ctx, userID, accountID)
 }
 
 // MockBillingCustomerResolver is a mock of BillingCustomerResolver interface.

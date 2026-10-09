@@ -30,6 +30,7 @@ func (e *RetrieveAgentEndpoint) Materialize() *apiendpoint.APIEndpoint[*Retrieve
 		Route:               "/v1/ai/agents/{id}",
 		SuccessStatusCode:   http.StatusOK,
 		Public:              true,
+		AgentTool:           true,
 		Preview:             true,
 		ObjectType:          constants.ObjectTypeAgentDefinition,
 		RequiredPermissions: []types.Permission{{Domain: types.PermissionDomainAgents, Action: types.ActionRead}},

@@ -33,6 +33,7 @@ func (e *AnalyzeOpenOrdersBreakdownEndpoint) Materialize() *apiendpoint.APIEndpo
 		ContentType:         "application/json",
 		SuccessStatusCode:   http.StatusOK,
 		Public:              false,
+		AgentTool:           true,
 		Preview:             true,
 		ReadOnly:            true,
 		ObjectType:          constants.ObjectTypeOpenOrderProduct,

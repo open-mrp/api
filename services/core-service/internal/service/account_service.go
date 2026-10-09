@@ -782,6 +782,9 @@ func (s *accountSvcImpl) UpdateAgentSpendingCap(ctx context.Context, capCents *i
 	if apiErr := identity.CheckIsInternalActor(); apiErr != nil {
 		return nil, tracing.Trace(span, apiErr)
 	}
+	if apiErr := identity.CheckHasPermission(types.PermissionDomainBilling, types.ActionUpdate); apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
 
 	accountID := identity.Target.AccountID
 

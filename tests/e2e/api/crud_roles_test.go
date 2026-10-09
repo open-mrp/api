@@ -680,3 +680,104 @@ func TestRoles_CreateDuplicate_ErrorShape(t *testing.T) {
 
 	requireErrorResponse(t, body2, "resource_conflict", "invalid_request_error")
 }
+
+// --- Granting permissions ---
+
+// A role's holders act with every permission it grants, so a non-admin may only create a role, or add to one, with permissions they already hold.
+
+func rolesCreateAs(t *testing.T, c *Client, perms ...string) (int, []byte) {
+	t.Helper()
+	status, body, err := c.Post(rolesPath, map[string]any{"name": uniqueName("e2e-grant-role"), "permissions": perms}, newIdempotencyKey())
+	require.NoError(t, err)
+	if status == 201 {
+		id := jsonField(parseJSON(body), "id")
+		t.Cleanup(func() { _, _, _ = apiClient.Delete(rolesPath + "/" + id) })
+	}
+	return status, body
+}
+
+func rolesRequireGrantForbidden(t *testing.T, status int, body []byte, param, want string) map[string]any {
+	t.Helper()
+	requireStatus(t, 403, status, body)
+	errObj := requireErrorResponse(t, body, "insufficient_permissions", "invalid_request_error")
+	if param != "" {
+		assertErrorParam(t, errObj, param)
+	}
+	assert.Contains(t, errObj["message"], want)
+	return errObj
+}
+
+func rolesPermissionCodes(t *testing.T, roleID string) []string {
+	t.Helper()
+	status, body, err := apiClient.GetListRaw(rolesPath+"/"+roleID, url.Values{"include[]": {"permissions"}})
+	require.NoError(t, err)
+	requireStatus(t, 200, status, body)
+	perms, _ := parseJSON(body)["permissions"].([]any)
+	codes := make([]string, 0, len(perms))
+	for _, p := range perms {
+		if s, ok := p.(string); ok {
+			codes = append(codes, s)
+		}
+	}
+	return codes
+}
+
+func TestRoles_NonAdminCannotCreateARoleWiderThanTheirOwn(t *testing.T) {
+	t.Parallel()
+	creator := customRoleClient(t, "roles:create", "roles:read", "products:read")
+
+	status, body := rolesCreateAs(t, creator, "products:read", "products:update", "team:create")
+	errObj := rolesRequireGrantForbidden(t, status, body, "permissions", "products:update, team:create")
+	assert.NotContains(t, errObj["message"], "products:read", "only the permissions the caller lacks are named")
+}
+
+func TestRoles_NonAdminCanCreateARoleInsideTheirGrant(t *testing.T) {
+	t.Parallel()
+	creator := customRoleClient(t, "roles:create", "roles:read", "products:read", "products:update")
+
+	status, body := rolesCreateAs(t, creator, "products:read")
+	requireStatus(t, 201, status, body)
+}
+
+func TestRoles_NonAdminCannotWidenARoleIncludingTheirOwn(t *testing.T) {
+	t.Parallel()
+	ownRole := createAndCleanup(t, rolesPath, map[string]any{"name": uniqueName("e2e-grant-own"), "permissions": []string{"roles:update", "roles:read", "products:read"}})
+	ownRoleID := jsonField(ownRole, "id")
+	editor := roleScopedClient(t, ownRoleID)
+
+	status, body, err := editor.Patch(rolesPath+"/"+ownRoleID, map[string]any{"permissions": []string{"roles:update", "roles:read", "products:read", "products:update"}}, newIdempotencyKey())
+	require.NoError(t, err)
+	rolesRequireGrantForbidden(t, status, body, "permissions", "products:update")
+	assert.NotContains(t, rolesPermissionCodes(t, ownRoleID), "products:update", "the caller's own role is unchanged")
+
+	other := createAndCleanup(t, rolesPath, map[string]any{"name": uniqueName("e2e-grant-other"), "permissions": []string{"products:read"}})
+	status, body, err = editor.Patch(rolesPath+"/"+jsonField(other, "id"), map[string]any{"permissions": []string{"products:read", "team:update"}}, newIdempotencyKey())
+	require.NoError(t, err)
+	rolesRequireGrantForbidden(t, status, body, "permissions", "team:update")
+}
+
+func TestRoles_NonAdminCanNarrowARoleWiderThanTheirOwn(t *testing.T) {
+	t.Parallel()
+	editor := customRoleClient(t, "roles:update", "roles:read", "products:read")
+	wide := createAndCleanup(t, rolesPath, map[string]any{"name": uniqueName("e2e-grant-wide"), "permissions": []string{"products:read", "products:update", "team:update"}})
+	wideID := jsonField(wide, "id")
+
+	// Keeping permissions the caller lacks is not granting them; only additions are checked.
+	status, body, err := editor.Patch(rolesPath+"/"+wideID, map[string]any{"permissions": []string{"products:read", "team:update"}}, newIdempotencyKey())
+	require.NoError(t, err)
+	requireStatus(t, 200, status, body)
+	codes := rolesPermissionCodes(t, wideID)
+	assert.NotContains(t, codes, "products:update")
+	assert.Contains(t, codes, "team:update")
+}
+
+func TestRoles_AdminCanGrantAnyPermission(t *testing.T) {
+	t.Parallel()
+	status, body := rolesCreateAs(t, apiClient, "products:read", "products:update", "team:update", "roles:update")
+	requireStatus(t, 201, status, body)
+	id := jsonField(parseJSON(body), "id")
+
+	status, body, err := apiClient.Patch(rolesPath+"/"+id, map[string]any{"permissions": []string{"products:read", "products:update", "team:update", "roles:update", "agents:delete"}}, newIdempotencyKey())
+	require.NoError(t, err)
+	requireStatus(t, 200, status, body)
+}

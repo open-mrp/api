@@ -48,6 +48,7 @@ func (e *AnalyzeRealizedMarginsEndpoint) Materialize() *apiendpoint.APIEndpoint[
 		ContentType:       "application/json",
 		SuccessStatusCode: http.StatusOK,
 		Public:            false,
+		AgentTool:         true,
 		Preview:           true,
 		// Invoiced revenue per customer is exactly what Analyze Sales gates behind invoices:read, and this endpoint reads the same rows. Permissions are any-of, so listing discounts:read alongside it would let a discount reader see invoiced revenue they cannot read directly.
 		RequiredPermissions: []types.Permission{{Domain: types.PermissionDomainCosts, Action: types.ActionRead}},

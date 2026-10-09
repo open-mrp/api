@@ -43,7 +43,7 @@ service CoreService {
   // Returns the full permission set for a role (used for API key resolution).
   rpc GetRolePermissions(GetRolePermissionsRequest) returns (GetRolePermissionsResponse);
 
-  // Returns a role's name and type code.
+  // Returns a role's name, type code, and owning account.
   rpc GetRoleInfo(GetRoleInfoRequest) returns (GetRoleInfoResponse);
 
   // Checks cross-account business relationship (customer/supplier) during credential validation.

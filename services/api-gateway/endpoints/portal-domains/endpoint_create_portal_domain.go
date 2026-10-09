@@ -41,6 +41,7 @@ func (e *CreatePortalDomainEndpoint) Materialize() *apiendpoint.APIEndpoint[*Cre
 		Route:               "/v1/settings/portal-domains",
 		SuccessStatusCode:   http.StatusCreated,
 		Public:              true,
+		AgentTool:           true,
 		Preview:             true,
 		ObjectType:          constants.ObjectTypePortalDomain,
 		RequiredPermissions: []types.Permission{{Domain: types.PermissionDomainAccount, Action: types.ActionUpdate}},

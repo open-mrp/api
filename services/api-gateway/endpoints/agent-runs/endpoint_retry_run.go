@@ -32,6 +32,7 @@ func (e *RetryRunEndpoint) Materialize() *apiendpoint.APIEndpoint[*RetryRunReque
 		Route:               "/v1/ai/runs/{id}/actions/retry",
 		SuccessStatusCode:   http.StatusOK,
 		Public:              true,
+		AgentTool:           true,
 		Preview:             true,
 		ObjectType:          constants.ObjectTypeAgentRun,
 		RequiredPermissions: []types.Permission{{Domain: types.PermissionDomainAgentRuns, Action: types.ActionUpdate}},

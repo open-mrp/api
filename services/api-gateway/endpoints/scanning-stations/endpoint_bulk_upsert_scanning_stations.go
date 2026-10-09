@@ -8,6 +8,7 @@ import (
 	apiexample "github.com/open-mrp/api/services/api-gateway/pkg/example"
 	apirequest "github.com/open-mrp/api/services/api-gateway/pkg/request"
 	apiresource "github.com/open-mrp/api/services/api-gateway/pkg/resource"
+	"github.com/open-mrp/api/services/auth-service/pkg/types"
 	"github.com/open-mrp/api/shared/constants"
 	apierror "github.com/open-mrp/api/shared/errors"
 	"github.com/open-mrp/api/shared/field"
@@ -82,14 +83,17 @@ type BulkUpsertScanningStationsEndpoint struct{}
 
 func (e *BulkUpsertScanningStationsEndpoint) Materialize() *apiendpoint.APIEndpoint[*BulkUpsertScanningStationsRequest, *apiresource.Job] {
 	return (&apiendpoint.APIEndpoint[*BulkUpsertScanningStationsRequest, *apiresource.Job]{
-		Title:             "Bulk Upsert Scanning Stations",
-		Method:            http.MethodPost,
-		ContentType:       "application/json",
-		Route:             "/v1/operations/scanning-stations/actions/bulk-upsert",
-		SuccessStatusCode: http.StatusAccepted,
-		Public:            false,
-		Preview:           true,
-		ObjectType:        constants.ObjectTypeJob,
+		Title:                  "Bulk Upsert Scanning Stations",
+		Method:                 http.MethodPost,
+		ContentType:            "application/json",
+		Route:                  "/v1/operations/scanning-stations/actions/bulk-upsert",
+		SuccessStatusCode:      http.StatusAccepted,
+		Public:                 false,
+		AgentTool:              true,
+		RequiredPermissions:    []types.Permission{{Domain: types.PermissionDomainScanningStations, Action: types.ActionCreate}, {Domain: types.PermissionDomainScanningStations, Action: types.ActionUpdate}},
+		RequiresAllPermissions: true,
+		Preview:                true,
+		ObjectType:             constants.ObjectTypeJob,
 		IncludeConfig: apiendpoint.IncludesFor(apiendpoint.IncludesParams{
 			ObjectType: constants.ObjectTypeJob,
 			Fields:     []string{"created_by", "created_by.role"},

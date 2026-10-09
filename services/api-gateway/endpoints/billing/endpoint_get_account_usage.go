@@ -15,6 +15,8 @@ import (
 //
 // Seats and sandboxes are current totals, while invoices and batches are counted from the start of the current billing period. The plan name and base fee come from the pricing plan configured in Stripe, so they can differ from the name and price the same plan advertises on the pricing page.
 //
+// `agent_spend` is `null` unless the caller holds `billing:read`.
+//
 // Customer and supplier portal users are refused with `403`: the usage is the seller's own.
 type GetAccountUsageEndpoint struct{}
 
@@ -26,6 +28,7 @@ func (e *GetAccountUsageEndpoint) Materialize() *apiendpoint.APIEndpoint[*apires
 		Route:             "/v1/billing/accounts/usage",
 		SuccessStatusCode: http.StatusOK,
 		Public:            false,
+		AgentTool:         true,
 		Preview:           true,
 		// Account-scoped read; mirrors retrieve_account's account:read (self:read) gate.
 		RequiredPermissions: []types.Permission{{Domain: types.PermissionDomainAccount, Action: types.ActionRead}},

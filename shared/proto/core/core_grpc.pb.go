@@ -457,7 +457,7 @@ type CoreServiceClient interface {
 	GetUserAccountAccess(ctx context.Context, in *GetUserAccountAccessRequest, opts ...grpc.CallOption) (*GetUserAccountAccessResponse, error)
 	// Returns the full permission set for a role (used for API key resolution).
 	GetRolePermissions(ctx context.Context, in *GetRolePermissionsRequest, opts ...grpc.CallOption) (*GetRolePermissionsResponse, error)
-	// Returns a role's name and type code.
+	// Returns a role's name, type code, and owning account.
 	GetRoleInfo(ctx context.Context, in *GetRoleInfoRequest, opts ...grpc.CallOption) (*GetRoleInfoResponse, error)
 	// Checks cross-account business relationship (customer/supplier) during credential validation.
 	GetAccountRelation(ctx context.Context, in *GetAccountRelationRequest, opts ...grpc.CallOption) (*GetAccountRelationResponse, error)
@@ -5239,7 +5239,7 @@ type CoreServiceServer interface {
 	GetUserAccountAccess(context.Context, *GetUserAccountAccessRequest) (*GetUserAccountAccessResponse, error)
 	// Returns the full permission set for a role (used for API key resolution).
 	GetRolePermissions(context.Context, *GetRolePermissionsRequest) (*GetRolePermissionsResponse, error)
-	// Returns a role's name and type code.
+	// Returns a role's name, type code, and owning account.
 	GetRoleInfo(context.Context, *GetRoleInfoRequest) (*GetRoleInfoResponse, error)
 	// Checks cross-account business relationship (customer/supplier) during credential validation.
 	GetAccountRelation(context.Context, *GetAccountRelationRequest) (*GetAccountRelationResponse, error)

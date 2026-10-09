@@ -848,7 +848,7 @@ type GetAccountUsageResponse struct {
 	Sandboxes                *UsageItem             `protobuf:"bytes,4,opt,name=sandboxes,proto3" json:"sandboxes,omitempty"`
 	Subscription             *SubscriptionInfo      `protobuf:"bytes,5,opt,name=subscription,proto3,oneof" json:"subscription,omitempty"`
 	AgentTokens              *UsageItem             `protobuf:"bytes,6,opt,name=agent_tokens,json=agentTokens,proto3" json:"agent_tokens,omitempty"`
-	EstimatedAgentSpendCents int64                  `protobuf:"varint,8,opt,name=estimated_agent_spend_cents,json=estimatedAgentSpendCents,proto3" json:"estimated_agent_spend_cents,omitempty"`
+	EstimatedAgentSpendCents *int64                 `protobuf:"varint,8,opt,name=estimated_agent_spend_cents,json=estimatedAgentSpendCents,proto3,oneof" json:"estimated_agent_spend_cents,omitempty"`
 	// Plan display name resolved live from Stripe (e.g. the pricing plan's display_name). Empty when the account has no Stripe pricing plan.
 	PlanName string `protobuf:"bytes,9,opt,name=plan_name,json=planName,proto3" json:"plan_name,omitempty"`
 	// Flat base fee in cents charged per base_fee_interval, resolved from the pricing plan's license fee component. 0 when the plan has no base fee (e.g. per-seat pricing).
@@ -932,8 +932,8 @@ func (x *GetAccountUsageResponse) GetAgentTokens() *UsageItem {
 }
 
 func (x *GetAccountUsageResponse) GetEstimatedAgentSpendCents() int64 {
-	if x != nil {
-		return x.EstimatedAgentSpendCents
+	if x != nil && x.EstimatedAgentSpendCents != nil {
+		return *x.EstimatedAgentSpendCents
 	}
 	return 0
 }
@@ -2265,20 +2265,21 @@ const file_billing_billing_proto_rawDesc = "" +
 	"\x10servicing_status\x18\x01 \x01(\tR\x0fservicingStatus\x12+\n" +
 	"\x11collection_status\x18\x02 \x01(\tR\x10collectionStatus\x12M\n" +
 	"\x12current_period_end\x18\x03 \x01(\v2\x1a.google.protobuf.TimestampH\x00R\x10currentPeriodEnd\x88\x01\x01B\x15\n" +
-	"\x13_current_period_end\"\xa7\x04\n" +
+	"\x13_current_period_end\"\xcc\x04\n" +
 	"\x17GetAccountUsageResponse\x12(\n" +
 	"\x05seats\x18\x01 \x01(\v2\x12.billing.UsageItemR\x05seats\x12.\n" +
 	"\binvoices\x18\x02 \x01(\v2\x12.billing.UsageItemR\binvoices\x12,\n" +
 	"\abatches\x18\x03 \x01(\v2\x12.billing.UsageItemR\abatches\x120\n" +
 	"\tsandboxes\x18\x04 \x01(\v2\x12.billing.UsageItemR\tsandboxes\x12B\n" +
 	"\fsubscription\x18\x05 \x01(\v2\x19.billing.SubscriptionInfoH\x00R\fsubscription\x88\x01\x01\x125\n" +
-	"\fagent_tokens\x18\x06 \x01(\v2\x12.billing.UsageItemR\vagentTokens\x12=\n" +
-	"\x1bestimated_agent_spend_cents\x18\b \x01(\x03R\x18estimatedAgentSpendCents\x12\x1b\n" +
+	"\fagent_tokens\x18\x06 \x01(\v2\x12.billing.UsageItemR\vagentTokens\x12B\n" +
+	"\x1bestimated_agent_spend_cents\x18\b \x01(\x03H\x01R\x18estimatedAgentSpendCents\x88\x01\x01\x12\x1b\n" +
 	"\tplan_name\x18\t \x01(\tR\bplanName\x12$\n" +
 	"\x0ebase_fee_cents\x18\n" +
 	" \x01(\x03R\fbaseFeeCents\x12*\n" +
 	"\x11base_fee_interval\x18\v \x01(\tR\x0fbaseFeeIntervalB\x0f\n" +
-	"\r_subscriptionJ\x04\b\a\x10\bR\x12agent_token_detail\"#\n" +
+	"\r_subscriptionB\x1e\n" +
+	"\x1c_estimated_agent_spend_centsJ\x04\b\a\x10\bR\x12agent_token_detail\"#\n" +
 	"!CreateBillingPortalSessionRequest\"6\n" +
 	"\"CreateBillingPortalSessionResponse\x12\x10\n" +
 	"\x03url\x18\x01 \x01(\tR\x03url\"3\n" +

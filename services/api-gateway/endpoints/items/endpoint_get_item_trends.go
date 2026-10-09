@@ -36,6 +36,7 @@ func (e *GetItemTrendsEndpoint) Materialize() *apiendpoint.APIEndpoint[*GetItemT
 		Route:               "/v1/catalog/items/{id}/trends",
 		SuccessStatusCode:   http.StatusOK,
 		Public:              false,
+		AgentTool:           true,
 		Preview:             true,
 		RequiredPermissions: []types.Permission{{Domain: types.PermissionDomainItems, Action: types.ActionRead}},
 		ServiceHandler: func(svc any) func(ctx context.Context, req *GetItemTrendsRequest) (*apiresource.ItemTrends, *apierror.APIError) {

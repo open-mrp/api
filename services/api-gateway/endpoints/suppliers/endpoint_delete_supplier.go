@@ -4,10 +4,9 @@ import (
 	"context"
 	"net/http"
 
-	"github.com/open-mrp/api/services/auth-service/pkg/types"
-
 	apiendpoint "github.com/open-mrp/api/services/api-gateway/pkg/endpoint"
 	apiresource "github.com/open-mrp/api/services/api-gateway/pkg/resource"
+	"github.com/open-mrp/api/services/auth-service/pkg/types"
 	"github.com/open-mrp/api/shared/constants"
 	apierror "github.com/open-mrp/api/shared/errors"
 )
@@ -31,6 +30,7 @@ func (e *DeleteSupplierEndpoint) Materialize() *apiendpoint.APIEndpoint[*DeleteS
 		Route:             "/v1/operations/suppliers/{id}",
 		SuccessStatusCode: http.StatusOK,
 		Public:            false,
+		AgentTool:         true,
 		Preview:           true,
 		ObjectType:        constants.ObjectTypeSupplier,
 		// Single delete checks suppliers:update downstream (Dashboard convention), not suppliers:delete.

@@ -27,6 +27,7 @@ func (e *DeleteRegistrationFlowEndpoint) Materialize() *apiendpoint.APIEndpoint[
 		ContentType:       "application/json",
 		SuccessStatusCode: http.StatusOK,
 		Public:            false,
+		AgentTool:         true,
 		Preview:           true,
 		RequiredPermissions: []types.Permission{
 			{Domain: types.PermissionDomainAccount, Action: types.ActionUpdate},

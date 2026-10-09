@@ -66,6 +66,7 @@ func (e *RegenerateProductionScheduleEndpoint) Materialize() *apiendpoint.APIEnd
 		Route:             "/v1/operations/production-schedules/{id}/actions/regenerate",
 		SuccessStatusCode: http.StatusOK,
 		Public:            true,
+		AgentTool:         true,
 		Preview:           true,
 		ObjectType:        constants.ObjectTypeProductionSchedule,
 		RequiredPermissions: []types.Permission{

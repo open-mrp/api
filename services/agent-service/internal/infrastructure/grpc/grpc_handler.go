@@ -600,6 +600,33 @@ func sqlcRunToProto(run *sqlc.AgentRun) *pb.AgentRunInfo {
 	}
 }
 
+var tokenCountKeys = []string{"input_tokens", "output_tokens", "input_tokens_before", "tokens_freed"}
+
+func withoutTokenCounts(metadata []byte) []byte {
+	if len(metadata) == 0 {
+		return metadata
+	}
+	var fields map[string]json.RawMessage
+	if err := json.Unmarshal(metadata, &fields); err != nil {
+		return metadata
+	}
+	stripped := false
+	for _, k := range tokenCountKeys {
+		if _, ok := fields[k]; ok {
+			delete(fields, k)
+			stripped = true
+		}
+	}
+	if !stripped {
+		return metadata
+	}
+	out, err := json.Marshal(fields)
+	if err != nil {
+		return metadata
+	}
+	return out
+}
+
 func sqlcEventToProto(event *sqlc.AgentRunEvent) *pb.AgentRunStepInfo {
 	return &pb.AgentRunStepInfo{
 		Id:            event.ID,
@@ -610,7 +637,7 @@ func sqlcEventToProto(event *sqlc.AgentRunEvent) *pb.AgentRunStepInfo {
 		Sequence:      event.Sequence,
 		DurationMs:    event.DurationMs.Int32,
 		AgentActionId: formatPgText(event.AgentActionID),
-		MetadataJson:  string(event.Metadata),
+		MetadataJson:  string(withoutTokenCounts(event.Metadata)),
 		CreatedAt:     formatPgTimestamp(event.CreatedAt),
 		ActorId:       formatPgText(event.ActorID),
 		ActorType:     formatPgText(event.ActorType),

@@ -8,6 +8,7 @@ import (
 	apiexample "github.com/open-mrp/api/services/api-gateway/pkg/example"
 	apirequest "github.com/open-mrp/api/services/api-gateway/pkg/request"
 	apiresource "github.com/open-mrp/api/services/api-gateway/pkg/resource"
+	"github.com/open-mrp/api/services/auth-service/pkg/types"
 	"github.com/open-mrp/api/shared/constants"
 	apierror "github.com/open-mrp/api/shared/errors"
 )
@@ -58,14 +59,17 @@ type BulkUpsertProductLinesEndpoint struct{}
 
 func (e *BulkUpsertProductLinesEndpoint) Materialize() *apiendpoint.APIEndpoint[*BulkUpsertProductLinesRequest, *apiresource.Job] {
 	return (&apiendpoint.APIEndpoint[*BulkUpsertProductLinesRequest, *apiresource.Job]{
-		Title:             "Bulk Upsert Product Lines",
-		Method:            http.MethodPost,
-		ContentType:       "application/json",
-		Route:             "/v1/catalog/product-lines/actions/bulk-upsert",
-		SuccessStatusCode: http.StatusAccepted,
-		Public:            true,
-		Preview:           true,
-		ObjectType:        constants.ObjectTypeJob,
+		Title:                  "Bulk Upsert Product Lines",
+		Method:                 http.MethodPost,
+		ContentType:            "application/json",
+		Route:                  "/v1/catalog/product-lines/actions/bulk-upsert",
+		SuccessStatusCode:      http.StatusAccepted,
+		Public:                 true,
+		AgentTool:              true,
+		RequiredPermissions:    []types.Permission{{Domain: types.PermissionDomainProductLines, Action: types.ActionCreate}, {Domain: types.PermissionDomainProductLines, Action: types.ActionUpdate}},
+		RequiresAllPermissions: true,
+		Preview:                true,
+		ObjectType:             constants.ObjectTypeJob,
 		IncludeConfig: apiendpoint.IncludesFor(apiendpoint.IncludesParams{
 			ObjectType: constants.ObjectTypeJob,
 			Fields:     []string{"created_by", "created_by.role"},

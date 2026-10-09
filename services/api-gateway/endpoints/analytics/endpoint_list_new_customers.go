@@ -38,6 +38,7 @@ func (e *ListNewCustomersEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListN
 		ContentType:         "application/json",
 		SuccessStatusCode:   http.StatusOK,
 		Public:              false,
+		AgentTool:           true,
 		Preview:             true,
 		ReadOnly:            true,
 		RequiredPermissions: []types.Permission{{Domain: types.PermissionDomainCustomers, Action: types.ActionRead}},

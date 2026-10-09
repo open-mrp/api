@@ -74,6 +74,7 @@ func (e *UpdateTerritoryEndpoint) Materialize() *apiendpoint.APIEndpoint[*Update
 		ContentType:         "application/json",
 		SuccessStatusCode:   http.StatusOK,
 		Public:              false,
+		AgentTool:           true,
 		Preview:             true,
 		ObjectType:          constants.ObjectTypeTerritory,
 		RequiredPermissions: []types.Permission{{Domain: types.PermissionDomainTerritories, Action: types.ActionUpdate}},

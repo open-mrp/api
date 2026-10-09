@@ -29,6 +29,7 @@ func (e *DeleteAccountGroupProductLineAccessEndpoint) Materialize() *apiendpoint
 		Route:             "/v1/sales/product-line-access/account-groups/{account_group_id}",
 		SuccessStatusCode: http.StatusOK,
 		Public:            false,
+		AgentTool:         true,
 		Preview:           true,
 		RequiredPermissions: []types.Permission{
 			{Domain: types.PermissionDomainProductLineAccess, Action: types.ActionDelete},

@@ -38,6 +38,7 @@ func (e *BulkDeletePurchaseOrdersEndpoint) Materialize() *apiendpoint.APIEndpoin
 		Route:             "/v1/operations/purchase-orders/actions/bulk-delete",
 		SuccessStatusCode: http.StatusOK,
 		Public:            false,
+		AgentTool:         true,
 		Preview:           true,
 		RequiredPermissions: []types.Permission{
 			{Domain: types.PermissionDomainPurchaseOrders, Action: types.ActionDelete},

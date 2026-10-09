@@ -8,6 +8,7 @@ import (
 	apiexample "github.com/open-mrp/api/services/api-gateway/pkg/example"
 	apirequest "github.com/open-mrp/api/services/api-gateway/pkg/request"
 	apiresource "github.com/open-mrp/api/services/api-gateway/pkg/resource"
+	"github.com/open-mrp/api/services/auth-service/pkg/types"
 	"github.com/open-mrp/api/shared/constants"
 	apierror "github.com/open-mrp/api/shared/errors"
 	"github.com/open-mrp/api/shared/field"
@@ -88,14 +89,16 @@ type BulkCreateProductionRunsEndpoint struct{}
 
 func (e *BulkCreateProductionRunsEndpoint) Materialize() *apiendpoint.APIEndpoint[*BulkCreateProductionRunsRequest, *apiresource.Job] {
 	return (&apiendpoint.APIEndpoint[*BulkCreateProductionRunsRequest, *apiresource.Job]{
-		Title:             "Bulk Create Production Runs",
-		Method:            http.MethodPost,
-		ContentType:       "application/json",
-		Route:             "/v1/operations/production-runs/actions/bulk-create",
-		SuccessStatusCode: http.StatusAccepted,
-		Public:            false,
-		Preview:           true,
-		ObjectType:        constants.ObjectTypeJob,
+		Title:               "Bulk Create Production Runs",
+		Method:              http.MethodPost,
+		ContentType:         "application/json",
+		Route:               "/v1/operations/production-runs/actions/bulk-create",
+		SuccessStatusCode:   http.StatusAccepted,
+		Public:              false,
+		AgentTool:           true,
+		RequiredPermissions: []types.Permission{{Domain: types.PermissionDomainProductionRuns, Action: types.ActionCreate}},
+		Preview:             true,
+		ObjectType:          constants.ObjectTypeJob,
 		IncludeConfig: apiendpoint.IncludesFor(apiendpoint.IncludesParams{
 			ObjectType: constants.ObjectTypeJob,
 			Fields:     []string{"created_by", "created_by.role"},

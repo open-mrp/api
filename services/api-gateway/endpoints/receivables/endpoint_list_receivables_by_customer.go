@@ -36,6 +36,7 @@ func (e *ListReceivablesByCustomerEndpoint) Materialize() *apiendpoint.APIEndpoi
 		Route:             "/v1/finance/receivables/accounts/{account_id}",
 		SuccessStatusCode: http.StatusOK,
 		Public:            false,
+		AgentTool:         true,
 		Preview:           true,
 		ObjectType:        constants.ObjectTypeReceivableEntry,
 		RequiredPermissions: []types.Permission{

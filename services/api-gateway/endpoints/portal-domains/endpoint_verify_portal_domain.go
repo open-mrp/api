@@ -30,6 +30,7 @@ func (e *VerifyPortalDomainEndpoint) Materialize() *apiendpoint.APIEndpoint[*Ver
 		Route:               "/v1/settings/portal-domains/{id}/actions/verify",
 		SuccessStatusCode:   http.StatusOK,
 		Public:              true,
+		AgentTool:           true,
 		Preview:             true,
 		ObjectType:          constants.ObjectTypePortalDomain,
 		RequiredPermissions: []types.Permission{{Domain: types.PermissionDomainAccount, Action: types.ActionUpdate}},

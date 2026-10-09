@@ -51,6 +51,7 @@ func (e *ListHubspotSyncRecordsEndpoint) Materialize() *apiendpoint.APIEndpoint[
 		Route:               "/v1/settings/integrations/hubspot/sync/records",
 		SuccessStatusCode:   http.StatusOK,
 		Public:              false,
+		AgentTool:           true,
 		Preview:             true,
 		ObjectType:          constants.ObjectTypeHubspotSyncRecord,
 		RequiredPermissions: []types.Permission{{Domain: types.PermissionDomainIntegrations, Action: types.ActionRead}},

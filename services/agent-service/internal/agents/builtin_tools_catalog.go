@@ -43,9 +43,37 @@ var BuiltinTools = []BuiltinToolDescriptor{
 		Slug:        constants.ToolReadDoc,
 		DisplayName: "Read Doc",
 		Description: "Read the content of an OpenMRP documentation page. " +
-			"To find the right page, first fetch https://docs.openmrp.ai/llms.txt which lists all available pages with descriptions. " +
-			"Then call this tool again with the URL of the page you want to read.",
-		InputSchema: `{"type":"object","properties":{"url":{"type":"string","description":"The full URL of the documentation page to read (must be from docs.openmrp.ai). Start with https://docs.openmrp.ai/llms.txt to discover available pages."}},"required":["url"]}`,
+			"To find the right page, use search_docs if you have it; otherwise read https://docs.openmrp.ai/llms.txt, which lists the pages with descriptions. " +
+			"Then call this tool with the URL of the page you want to read.",
+		InputSchema: `{"type":"object","properties":{"url":{"type":"string","description":"The full URL of the documentation page to read (must be from docs.openmrp.ai)."}},"required":["url"]}`,
+		Group:       builtinGroupKnowledge,
+	},
+	{
+		Slug:        constants.ToolSearchDocs,
+		DisplayName: "Search Docs",
+		Description: "Search the OpenMRP documentation, including guides and the API reference, for pages about a topic. Returns matching page titles, sections, descriptions, and URLs to read with read_doc.",
+		InputSchema: `{"type":"object","properties":{"query":{"type":"string","description":"Keywords for what you want to learn, e.g. \"purchase order receiving\" or \"pagination\"."}},"required":["query"]}`,
+		Group:       builtinGroupKnowledge,
+	},
+	{
+		Slug:        constants.ToolDescribeApiOperation,
+		DisplayName: "Describe API Operation",
+		Description: "Show the exact contract of one of your API operations: its route, required permissions, every parameter with where it goes and whether it is required, the valid include values, and the full input schema. Use it before calling an operation whose parameters or include keys you are unsure of, instead of guessing. Takes the operation's slug as returned by search_api_tools.",
+		InputSchema: `{"type":"object","properties":{"slug":{"type":"string","description":"The operation's slug, e.g. \"list_customers\"."}},"required":["slug"]}`,
+		Group:       builtinGroupKnowledge,
+	},
+	{
+		Slug:        constants.ToolSearchSource,
+		DisplayName: "Search Source Code",
+		Description: "Search the platform's public source code, pinned to the deployed version, with a regular expression (RE2; all-lowercase queries match case-insensitively). Covers Go, SQL, proto, and Markdown files, excluding tests and generated code. Returns path:line matches. Use it only to understand how an operation you already have behaves.",
+		InputSchema: `{"type":"object","properties":{"query":{"type":"string","description":"Regular expression to search for, e.g. \"func .*CreateSalesOrder\" or \"credit_limit\"."},"path_glob":{"type":"string","description":"Optional path filter; * matches within a directory and ** across directories, e.g. \"services/core-service/**/*.go\"."},"max_results":{"type":"integer","minimum":1,"maximum":20,"description":"Maximum matches to return (default 10, at most 20)."}},"required":["query"]}`,
+		Group:       builtinGroupKnowledge,
+	},
+	{
+		Slug:        constants.ToolReadSource,
+		DisplayName: "Read Source Code",
+		Description: "Read lines of a file from the platform's public source code, pinned to the deployed version. Use paths returned by search_source.",
+		InputSchema: `{"type":"object","properties":{"path":{"type":"string","description":"File path relative to the repository root, e.g. \"services/core-service/internal/service/sales_order_service.go\"."},"offset":{"type":"integer","minimum":1,"description":"First line to read, 1-based (default 1)."},"limit":{"type":"integer","minimum":1,"maximum":400,"description":"Number of lines to read (default 200, at most 400)."}},"required":["path"]}`,
 		Group:       builtinGroupKnowledge,
 	},
 	{

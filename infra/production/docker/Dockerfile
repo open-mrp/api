@@ -8,6 +8,8 @@ FROM --platform=$BUILDPLATFORM golang:1.27 AS builder
 ARG SERVICE_NAME
 ARG TARGETOS
 ARG TARGETARCH
+# RELEASE_VERSION is the release tag (e.g. v4.6.0); agent-service pins its source-code tools to it.
+ARG RELEASE_VERSION=""
 WORKDIR /app
 
 # Cache dependencies using BuildKit cache mount
@@ -22,7 +24,9 @@ COPY services/ ./services/
 # Build the service binary with build cache
 WORKDIR /app/services/${SERVICE_NAME}/cmd
 RUN --mount=type=cache,target=/root/.cache/go-build \
-    CGO_ENABLED=0 GOOS=${TARGETOS:-linux} GOARCH=${TARGETARCH} go build -o /app/main .
+    CGO_ENABLED=0 GOOS=${TARGETOS:-linux} GOARCH=${TARGETARCH} go build \
+      -ldflags "-X github.com/open-mrp/api/shared/buildinfo.Release=${RELEASE_VERSION}" \
+      -o /app/main .
 
 # --- Final Stage ---
 FROM alpine:latest

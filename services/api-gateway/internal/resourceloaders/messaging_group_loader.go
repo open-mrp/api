@@ -6,6 +6,7 @@ import (
 	"github.com/open-mrp/api/services/api-gateway/internal/domain"
 	grpcutil "github.com/open-mrp/api/services/api-gateway/internal/grpc"
 	apiresource "github.com/open-mrp/api/services/api-gateway/pkg/resource"
+	"github.com/open-mrp/api/services/api-gateway/pkg/resourcekit"
 	pb "github.com/open-mrp/api/shared/proto/notification"
 	"github.com/open-mrp/api/shared/tracing"
 	"google.golang.org/grpc"
@@ -25,6 +26,7 @@ func HydrateMessagingGroups(ctx context.Context, groups []*apiresource.Messaging
 	if len(groups) == 0 {
 		return
 	}
+	embedCtx := resourcekit.WithIncludeReads(ctx)
 	loaded := make(map[string]*pb.MessagingGroupInfo)
 	for _, g := range groups {
 		if g == nil || g.ID == "" {
@@ -33,7 +35,7 @@ func HydrateMessagingGroups(ctx context.Context, groups []*apiresource.Messaging
 		if _, ok := loaded[g.ID]; ok {
 			continue
 		}
-		info, apiErr := grpcutil.CallRPC(ctx, messagingGroupLoaderTracer, "loader.messaging_groups.get", domain.ServiceName,
+		info, apiErr := grpcutil.CallRPC(embedCtx, messagingGroupLoaderTracer, "loader.messaging_groups.get", domain.ServiceName,
 			func(ctx context.Context, opts ...grpc.CallOption) (*pb.MessagingGroupInfo, error) {
 				return chatClient.GetMessagingGroup(ctx, &pb.GetMessagingGroupRequest{GroupId: g.ID}, opts...)
 			})

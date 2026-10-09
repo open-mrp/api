@@ -4,6 +4,7 @@ import (
 	"context"
 	"strings"
 
+	"github.com/open-mrp/api/services/auth-service/pkg/types"
 	"github.com/open-mrp/api/services/notification-service/internal/domain"
 	"github.com/open-mrp/api/shared/appctx"
 	"github.com/open-mrp/api/shared/audit"
@@ -22,7 +23,7 @@ func (s *conversationSvcImpl) CreateMessagingGroup(ctx context.Context, input do
 	ctx, span := conversationSvcTracer.Start(ctx, "service.messaging_group.create")
 	defer span.End()
 
-	_, callerAcus, accountID, apiErr := s.caller(ctx)
+	callerAcus, accountID, apiErr := s.messagingGroupCaller(ctx, types.ActionCreate)
 	if apiErr != nil {
 		return nil, tracing.Trace(span, apiErr)
 	}
@@ -106,7 +107,7 @@ func (s *conversationSvcImpl) ListMessagingGroups(ctx context.Context) ([]*domai
 	ctx, span := conversationSvcTracer.Start(ctx, "service.messaging_group.list")
 	defer span.End()
 
-	_, _, accountID, apiErr := s.caller(ctx)
+	_, accountID, apiErr := s.messagingGroupCaller(ctx, types.ActionRead)
 	if apiErr != nil {
 		return nil, tracing.Trace(span, apiErr)
 	}
@@ -129,7 +130,7 @@ func (s *conversationSvcImpl) GetMessagingGroup(ctx context.Context, groupID str
 	ctx, span := conversationSvcTracer.Start(ctx, "service.messaging_group.get")
 	defer span.End()
 
-	_, _, accountID, apiErr := s.caller(ctx)
+	_, accountID, apiErr := s.messagingGroupCaller(ctx, types.ActionRead)
 	if apiErr != nil {
 		return nil, tracing.Trace(span, apiErr)
 	}
@@ -140,7 +141,7 @@ func (s *conversationSvcImpl) UpdateMessagingGroup(ctx context.Context, groupID,
 	ctx, span := conversationSvcTracer.Start(ctx, "service.messaging_group.update")
 	defer span.End()
 
-	_, _, accountID, apiErr := s.caller(ctx)
+	_, accountID, apiErr := s.messagingGroupCaller(ctx, types.ActionUpdate)
 	if apiErr != nil {
 		return nil, tracing.Trace(span, apiErr)
 	}
@@ -184,7 +185,7 @@ func (s *conversationSvcImpl) DeleteMessagingGroup(ctx context.Context, groupID 
 	ctx, span := conversationSvcTracer.Start(ctx, "service.messaging_group.delete")
 	defer span.End()
 
-	_, _, accountID, apiErr := s.caller(ctx)
+	_, accountID, apiErr := s.messagingGroupCaller(ctx, types.ActionDelete)
 	if apiErr != nil {
 		return tracing.Trace(span, apiErr)
 	}
@@ -241,7 +242,7 @@ func (s *conversationSvcImpl) AddMessagingGroupMember(ctx context.Context, input
 	ctx, span := conversationSvcTracer.Start(ctx, "service.messaging_group.add_member")
 	defer span.End()
 
-	_, _, accountID, apiErr := s.caller(ctx)
+	_, accountID, apiErr := s.messagingGroupCaller(ctx, types.ActionUpdate)
 	if apiErr != nil {
 		return nil, tracing.Trace(span, apiErr)
 	}
@@ -322,7 +323,7 @@ func (s *conversationSvcImpl) RemoveMessagingGroupMember(ctx context.Context, gr
 	ctx, span := conversationSvcTracer.Start(ctx, "service.messaging_group.remove_member")
 	defer span.End()
 
-	_, _, accountID, apiErr := s.caller(ctx)
+	_, accountID, apiErr := s.messagingGroupCaller(ctx, types.ActionUpdate)
 	if apiErr != nil {
 		return nil, tracing.Trace(span, apiErr)
 	}
@@ -356,6 +357,26 @@ func (s *conversationSvcImpl) RemoveMessagingGroupMember(ctx context.Context, gr
 		return nil, tracing.Trace(span, apiErr)
 	}
 	return s.loadMessagingGroup(ctx, groupID, accountID)
+}
+
+// messagingGroupCaller authorizes a roster operation: rosters are internal to an account, so the caller must be one of its internal actors holding the messaging permission for action.
+func (s *conversationSvcImpl) messagingGroupCaller(ctx context.Context, action types.Action) (string, string, *apierror.APIError) {
+	identity, ok := appctx.GetIdentityFromContext(ctx)
+	if !ok || identity == nil || !identity.IsActorSet() {
+		return "", "", apierror.NewAuthenticationError("Authentication is required.")
+	}
+	if action == types.ActionRead {
+		if apiErr := identity.CheckIsInternalActorForRead(); apiErr != nil {
+			return "", "", apiErr
+		}
+	} else if apiErr := identity.CheckIsInternalActor(); apiErr != nil {
+		return "", "", apiErr
+	}
+	if apiErr := identity.CheckHasPermission(types.PermissionDomainMessaging, action); apiErr != nil {
+		return "", "", apiErr
+	}
+	_, callerAcus, accountID, apiErr := s.caller(ctx)
+	return callerAcus, accountID, apiErr
 }
 
 // loadMessagingGroup fetches a roster and its members, scoped to the caller's account.

@@ -214,3 +214,57 @@ func TestMessagingGroup_AdHocGroupStillWorks(t *testing.T) {
 	assert.Equal(t, "group", jsonField(conv, "type"))
 	assert.Nil(t, conv["group"], "an ad-hoc group conversation has no roster link")
 }
+
+// --- Permissions ---
+
+// Each roster operation needs its own messaging permission: a reader can list and fetch rosters but not change them.
+func TestMessagingGroup_EachOperationNeedsItsMessagingPermission(t *testing.T) {
+	t.Parallel()
+	owner := chatUserClient(t)
+	group := createMessagingGroup(t, owner, uniqueName("perm-roster"), []string{SeedAccountUser2ID}, nil)
+	groupID := jsonField(group, "id")
+	t.Cleanup(func() { _, _ = owner.DeleteFull(messagingGroupsPath + "/" + groupID) })
+	memberID := groupMemberID(t, group, SeedAccountUser2ID)
+	require.NotEmpty(t, memberID)
+
+	reader, _ := customRoleChatUser(t, "messaging:read")
+
+	list, err := reader.GetFull(messagingGroupsPath, nil)
+	require.NoError(t, err)
+	requireStatus(t, 200, list.StatusCode, list.Body)
+	get, err := reader.GetFull(messagingGroupsPath+"/"+groupID, nil)
+	require.NoError(t, err)
+	requireStatus(t, 200, get.StatusCode, get.Body)
+
+	writes := []struct {
+		name string
+		do   func() (*Response, error)
+	}{
+		{"create", func() (*Response, error) {
+			return reader.PostFull(messagingGroupsPath, map[string]any{"name": uniqueName("perm-denied")}, newIdempotencyKey())
+		}},
+		{"update", func() (*Response, error) {
+			return reader.PatchFull(messagingGroupsPath+"/"+groupID, map[string]any{"name": uniqueName("perm-denied")}, newIdempotencyKey())
+		}},
+		{"add member", func() (*Response, error) {
+			return reader.PostFull(messagingGroupsPath+"/"+groupID+"/members", map[string]any{"member_type": "user", "account_user_id": SeedAccountUserID}, newIdempotencyKey())
+		}},
+		{"remove member", func() (*Response, error) {
+			return reader.DeleteFull(messagingGroupsPath + "/" + groupID + "/members/" + memberID)
+		}},
+		{"delete", func() (*Response, error) {
+			return reader.DeleteFull(messagingGroupsPath + "/" + groupID)
+		}},
+	}
+	for _, w := range writes {
+		resp, err := w.do()
+		require.NoError(t, err)
+		assert.Equal(t, 403, resp.StatusCode, "%s: %s", w.name, string(resp.Body))
+	}
+
+	after, err := owner.GetFull(messagingGroupsPath+"/"+groupID, nil)
+	require.NoError(t, err)
+	requireStatus(t, 200, after.StatusCode, after.Body)
+	assert.Equal(t, jsonField(group, "name"), jsonField(parseJSON(after.Body), "name"))
+	assert.Len(t, groupMemberActorIDs(t, parseJSON(after.Body)), 1)
+}

@@ -65,8 +65,8 @@ func HandleFetchURL(_ context.Context, input json.RawMessage, _ *domain.HandlerR
 	}
 	defer resp.Body.Close()
 
-	if resp.StatusCode != http.StatusOK {
-		return fmt.Sprintf("The URL returned HTTP status %d.", resp.StatusCode), nil
+	if err := fetchStatusError(resp.StatusCode); err != nil {
+		return "", err
 	}
 
 	body, err := io.ReadAll(io.LimitReader(resp.Body, maxResponseBytes))
@@ -91,4 +91,16 @@ func HandleFetchURL(_ context.Context, input json.RawMessage, _ *domain.HandlerR
 	}
 
 	return content, nil
+}
+
+// fetchStatusError fails a non-2xx fetch so the result is marked is_error; a 404 page read as success looks like
+// progress to the agent and to loop detection.
+func fetchStatusError(status int) error {
+	if status >= 200 && status < 300 {
+		return nil
+	}
+	if status == http.StatusNotFound {
+		return fmt.Errorf("fetch_url: the URL returned HTTP 404 Not Found; the page does not exist")
+	}
+	return fmt.Errorf("fetch_url: the URL returned HTTP status %d", status)
 }

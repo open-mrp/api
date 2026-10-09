@@ -4,8 +4,10 @@ package api_test
 
 import (
 	"net/url"
+	"strings"
 	"testing"
 
+	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -861,4 +863,151 @@ func TestCovAiRuns_TenantIsolation_TriggerOtherTenantsAgentDefinition(t *testing
 	requireStatus(t, 400, status, body)
 	errObj := requireErrorResponse(t, body, "validation_failed", "invalid_request_error")
 	assert.Contains(t, errObj["message"], "inactive")
+}
+
+// ──────────────────────────────────────────────
+// Driving an agent wider than the caller
+// ──────────────────────────────────────────────
+
+// A run acts with its agent's role, so a non-admin may only start or steer a run of an agent whose role is inside their own grant.
+
+func covAiRunsAgent(t *testing.T, roleID string) string {
+	t.Helper()
+	status, body := covAiAgentsCreateAs(t, apiClient, roleID)
+	requireStatus(t, 201, status, body)
+	return jsonField(parseJSON(body), "id")
+}
+
+// covAiRunsInsertRun writes a run straight into the agent database so no runner touches its status.
+func covAiRunsInsertRun(t *testing.T, agentID, status string) string {
+	t.Helper()
+	id := "agrn_e2edrive" + strings.ReplaceAll(uuid.New().String(), "-", "")[:12]
+	_, err := agentDB(t).Exec(`INSERT INTO agent_run (id, account_id, agent_definition_id, status_code, trigger_type, input, output)
+		VALUES ($1, $2, $3, $4, 'manual', '{}', '{}')`, id, SeedAccountID, agentID, status)
+	require.NoError(t, err)
+	return id
+}
+
+func covAiRunsTrigger(t *testing.T, c *Client, agentID string) (int, []byte) {
+	t.Helper()
+	status, body, err := c.Post(agentRunsPath, map[string]any{"agent_definition_id": agentID, "input": "Reprice the catalog."}, newIdempotencyKey())
+	require.NoError(t, err)
+	if status == 201 {
+		id := jsonField(parseJSON(body), "id")
+		t.Cleanup(func() { _, _, _ = apiClient.Post(agentRunsPath+"/"+id+"/actions/cancel", nil, newIdempotencyKey()) })
+	}
+	return status, body
+}
+
+func requireDriveForbidden(t *testing.T, status int, body []byte, wantInMessage string) map[string]any {
+	t.Helper()
+	requireStatus(t, 403, status, body)
+	errObj := requireErrorResponse(t, body, "insufficient_permissions", "invalid_request_error")
+	assert.Contains(t, errObj["message"], wantInMessage)
+	return errObj
+}
+
+var covAiRunsDriverPerms = []string{"agent_runs:create", "agent_runs:read", "agent_runs:update", "agents:read", "products:read"}
+
+func TestCovAiRuns_NonAdminCannotTriggerAWiderAgent(t *testing.T) {
+	t.Parallel()
+	caller := customRoleClient(t, covAiRunsDriverPerms...)
+	wide := covAiRunsAgent(t, covAiAgentsRole(t, "products:read", "products:update"))
+
+	status, body := covAiRunsTrigger(t, caller, wide)
+	errObj := requireDriveForbidden(t, status, body, "products:update")
+	assert.NotContains(t, errObj["message"], "products:read", "only the permissions the caller lacks are named")
+
+	status, body = covAiRunsTrigger(t, caller, covAiRunsAgent(t, SeedAdminRoleID))
+	requireDriveForbidden(t, status, body, "admin role")
+}
+
+func TestCovAiRuns_NonAdminCanTriggerAnAgentInsideTheirGrant(t *testing.T) {
+	t.Parallel()
+	caller := customRoleClient(t, covAiRunsDriverPerms...)
+	subset := covAiRunsAgent(t, covAiAgentsRole(t, "products:read"))
+
+	status, body := covAiRunsTrigger(t, caller, subset)
+	requireStatus(t, 201, status, body)
+	assert.Equal(t, "pending", jsonField(parseJSON(body), "status"))
+}
+
+func TestCovAiRuns_AdminCanTriggerAnyAgent(t *testing.T) {
+	t.Parallel()
+	for _, roleID := range []string{SeedAdminRoleID, covAiAgentsRole(t, "products:read", "products:update", "roles:update")} {
+		status, body := covAiRunsTrigger(t, apiClient, covAiRunsAgent(t, roleID))
+		requireStatus(t, 201, status, body)
+	}
+}
+
+func TestCovAiRuns_NonAdminCannotContinueOrRetryAWiderAgent(t *testing.T) {
+	t.Parallel()
+	caller := customRoleClient(t, covAiRunsDriverPerms...)
+	wide := covAiRunsAgent(t, covAiAgentsRole(t, "products:read", "products:update"))
+	awaiting := covAiRunsInsertRun(t, wide, "awaiting_input")
+	failed := covAiRunsInsertRun(t, wide, "failed")
+
+	status, body, err := caller.Post(agentRunsPath+"/"+awaiting+"/actions/continue", map[string]any{"message": "Go ahead."}, newIdempotencyKey())
+	require.NoError(t, err)
+	requireDriveForbidden(t, status, body, "products:update")
+
+	status, body, err = caller.Post(agentRunsPath+"/"+failed+"/actions/retry", nil, newIdempotencyKey())
+	require.NoError(t, err)
+	requireDriveForbidden(t, status, body, "products:update")
+
+	// Neither run moved.
+	for id, want := range map[string]string{awaiting: "awaiting_input", failed: "failed"} {
+		status, body, err = apiClient.GetListRaw(agentRunsPath+"/"+id, nil)
+		require.NoError(t, err)
+		requireStatus(t, 200, status, body)
+		assert.Equal(t, want, jsonField(parseJSON(body), "status"))
+	}
+
+	// The refusal comes before the run's state is considered, so a run in any state answers the same.
+	status, body, err = caller.Post(agentRunsPath+"/"+failed+"/actions/continue", map[string]any{"message": "Go ahead."}, newIdempotencyKey())
+	require.NoError(t, err)
+	requireDriveForbidden(t, status, body, "products:update")
+}
+
+func TestCovAiRuns_NonAdminCanContinueAndRetryAnAgentInsideTheirGrant(t *testing.T) {
+	t.Parallel()
+	caller := customRoleClient(t, covAiRunsDriverPerms...)
+	subset := covAiRunsAgent(t, covAiAgentsRole(t, "products:read"))
+	awaiting := covAiRunsInsertRun(t, subset, "awaiting_input")
+	failed := covAiRunsInsertRun(t, subset, "failed")
+	t.Cleanup(func() {
+		for _, id := range []string{awaiting, failed} {
+			_, _, _ = apiClient.Post(agentRunsPath+"/"+id+"/actions/cancel", nil, newIdempotencyKey())
+		}
+	})
+
+	status, body, err := caller.Post(agentRunsPath+"/"+awaiting+"/actions/continue", map[string]any{"message": "Go ahead."}, newIdempotencyKey())
+	require.NoError(t, err)
+	requireStatus(t, 200, status, body)
+	assert.Equal(t, "running", jsonField(parseJSON(body), "status"))
+
+	status, body, err = caller.Post(agentRunsPath+"/"+failed+"/actions/retry", nil, newIdempotencyKey())
+	require.NoError(t, err)
+	requireStatus(t, 200, status, body)
+	assert.Equal(t, "running", jsonField(parseJSON(body), "status"))
+}
+
+func TestCovAiRuns_AdminCanContinueAndRetryAnyAgent(t *testing.T) {
+	t.Parallel()
+	wide := covAiRunsAgent(t, SeedAdminRoleID)
+	awaiting := covAiRunsInsertRun(t, wide, "awaiting_input")
+	failed := covAiRunsInsertRun(t, wide, "failed")
+	t.Cleanup(func() {
+		for _, id := range []string{awaiting, failed} {
+			_, _, _ = apiClient.Post(agentRunsPath+"/"+id+"/actions/cancel", nil, newIdempotencyKey())
+		}
+	})
+
+	status, body, err := apiClient.Post(agentRunsPath+"/"+awaiting+"/actions/continue", map[string]any{"message": "Go ahead."}, newIdempotencyKey())
+	require.NoError(t, err)
+	requireStatus(t, 200, status, body)
+
+	status, body, err = apiClient.Post(agentRunsPath+"/"+failed+"/actions/retry", nil, newIdempotencyKey())
+	require.NoError(t, err)
+	requireStatus(t, 200, status, body)
 }

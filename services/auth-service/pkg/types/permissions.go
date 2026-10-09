@@ -1,5 +1,7 @@
 package types
 
+import "sort"
+
 type PermissionDomain string
 
 const (
@@ -195,4 +197,16 @@ func (d PermissionDomain) IsValid() bool {
 		}
 	}
 	return false
+}
+
+// PermissionsNotHeld returns, sorted, the permissions granted that held lacks. A role or agent can act with every permission it grants, so a non-admin may hand one out, or drive one, only when this is empty.
+func PermissionsNotHeld(held, granted map[string]bool) []string {
+	var missing []string
+	for perm, ok := range granted {
+		if ok && !held[perm] {
+			missing = append(missing, perm)
+		}
+	}
+	sort.Strings(missing)
+	return missing
 }

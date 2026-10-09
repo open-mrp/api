@@ -65,6 +65,7 @@ func (c *ChatRunConsumer) handleChatRun(ctx context.Context, msg amqp.Delivery) 
 		Message:           data.Message,
 		History:           history,
 		ContinueRunID:     data.ContinueRunID,
+		SenderUserID:      data.SenderUserID,
 	}); apiErr != nil {
 		span.RecordError(apiErr)
 		return apiErr

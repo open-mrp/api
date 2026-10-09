@@ -235,6 +235,8 @@ type AgentChatRunData struct {
 	History []ChatHistoryMessage `json:"history,omitempty"`
 	// ContinueRunID, when set, is the run to continue (the user replied directly to that run's message) instead of starting a new run. Empty means start a fresh run.
 	ContinueRunID string `json:"continue_run_id,omitempty"`
+	// SenderUserID is the account member whose message wakes the agent; the run is refused when the agent's role is wider than that member's. Empty when no member sent it (an inbound email or a customer), which the agent's configuration alone bounds.
+	SenderUserID string `json:"sender_user_id,omitempty"`
 }
 
 // ChatHistoryMessage is one prior turn of conversation context for a chat-triggered agent run.

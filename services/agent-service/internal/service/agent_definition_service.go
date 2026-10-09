@@ -6,7 +6,6 @@ import (
 	"errors"
 	"fmt"
 	"slices"
-	"sort"
 	"strings"
 	"time"
 
@@ -499,25 +498,22 @@ func (s *agentDefSvcImpl) UpdateCustomAgent(ctx context.Context, params domain.U
 // checkAssignableRole rejects a role wider than the caller's own grant, since an agent acts with its role's permissions.
 // existing marks the agent's current role, which may predate this check, rather than a requested one.
 func (s *agentDefSvcImpl) checkAssignableRole(ctx context.Context, identity *types.Identity, roleID string, existing bool) *apierror.APIError {
-	role, err := s.coreClient.GetRoleInfo(ctx, roleID)
-	if err != nil {
-		var apiErr *apierror.APIError
-		if errors.As(err, &apiErr) {
-			if apiErr.Code == apierror.ErrorCodeResourceNotFound {
-				if existing {
-					return nil
-				}
-				return apierror.NewValidationErrorWithParam("Role not found: "+roleID, "role_id")
-			}
-			return apiErr
+	role, apiErr := s.lookupRole(ctx, roleID)
+	if apiErr != nil {
+		return apiErr
+	}
+	if role == nil {
+		if existing {
+			return nil
 		}
-		return apierror.NewInternalError(err, "failed to resolve agent role")
+		return apierror.NewValidationErrorWithParam("Role not found: "+roleID, "role_id")
 	}
 	if !existing && role.AccountID != nil && *role.AccountID != identity.Target.AccountID {
 		return apierror.NewValidationErrorWithParam("Role not found: "+roleID, "role_id")
 	}
 
-	if identity.IsAdmin() {
+	grant := grantOf(identity)
+	if grant.admin {
 		return nil
 	}
 
@@ -528,26 +524,93 @@ func (s *agentDefSvcImpl) checkAssignableRole(ctx context.Context, identity *typ
 	if role.RoleType == string(constants.RoleTypeAdmin) {
 		return apierror.NewAuthorizationError(subject + " is an admin role; only an admin can give an agent an admin role.").WithParam("role_id")
 	}
+	missing, apiErr := s.rolePermissionsNotHeld(ctx, grant, roleID)
+	if apiErr != nil {
+		return apiErr
+	}
+	if len(missing) > 0 {
+		return apierror.NewAuthorizationError(fmt.Sprintf("%s grants permissions you do not hold: %s. An agent can only be given a role whose permissions you already have.", subject, strings.Join(missing, ", "))).WithParam("role_id")
+	}
+	return nil
+}
 
+// callerGrant is the role grant of the person assigning or driving an agent.
+type callerGrant struct {
+	admin       bool
+	permissions map[string]bool
+}
+
+func grantOf(identity *types.Identity) callerGrant {
+	if identity == nil || identity.Actor == nil {
+		return callerGrant{}
+	}
+	return callerGrant{admin: identity.IsAdmin(), permissions: identity.Actor.Permissions}
+}
+
+// checkCanDriveAgent rejects starting or steering a run of an agent whose role is wider than the caller's own grant: the run acts with the agent's role, so driving it would borrow permissions the caller lacks.
+func (s *agentDefSvcImpl) checkCanDriveAgent(ctx context.Context, grant callerGrant, agentRoleID pgtype.Text) *apierror.APIError {
+	if grant.admin || !agentRoleID.Valid || agentRoleID.String == "" {
+		return nil
+	}
+	role, apiErr := s.lookupRole(ctx, agentRoleID.String)
+	if apiErr != nil {
+		return apiErr
+	}
+	// A role that no longer exists grants the run nothing; the runner fails it.
+	if role == nil {
+		return nil
+	}
+	if role.RoleType == string(constants.RoleTypeAdmin) {
+		return apierror.NewAuthorizationError("This agent has an admin role; only an admin can run it.")
+	}
+	missing, apiErr := s.rolePermissionsNotHeld(ctx, grant, role.ID)
+	if apiErr != nil {
+		return apiErr
+	}
+	if len(missing) > 0 {
+		return apierror.NewAuthorizationError(fmt.Sprintf("This agent's role grants permissions you do not hold: %s. You can only run an agent whose role's permissions you already have.", strings.Join(missing, ", ")))
+	}
+	return nil
+}
+
+// checkCanDriveRun applies checkCanDriveAgent to the agent behind an existing run.
+func (s *agentDefSvcImpl) checkCanDriveRun(ctx context.Context, grant callerGrant, run *sqlc.AgentRun) *apierror.APIError {
+	if grant.admin {
+		return nil
+	}
+	def, apiErr := s.repos.NewAgentDefinitionRepo().GetByID(ctx, run.AgentDefinitionID)
+	if apiErr != nil {
+		return apiErr
+	}
+	return s.checkCanDriveAgent(ctx, grant, def.RoleID)
+}
+
+// lookupRole returns nil for a role that does not exist.
+func (s *agentDefSvcImpl) lookupRole(ctx context.Context, roleID string) (*domain.RoleInfo, *apierror.APIError) {
+	role, err := s.coreClient.GetRoleInfo(ctx, roleID)
+	if err != nil {
+		var apiErr *apierror.APIError
+		if errors.As(err, &apiErr) {
+			if apiErr.Code == apierror.ErrorCodeResourceNotFound {
+				return nil, nil
+			}
+			return nil, apiErr
+		}
+		return nil, apierror.NewInternalError(err, "failed to resolve agent role")
+	}
+	return role, nil
+}
+
+func (s *agentDefSvcImpl) rolePermissionsNotHeld(ctx context.Context, grant callerGrant, roleID string) ([]string, *apierror.APIError) {
 	rolePerms, err := s.coreClient.GetRolePermissions(ctx, roleID)
 	if err != nil {
 		var apiErr *apierror.APIError
 		if errors.As(err, &apiErr) {
-			return apiErr
+			return nil, apiErr
 		}
-		return apierror.NewInternalError(err, "failed to resolve agent role permissions")
+		return nil, apierror.NewInternalError(err, "failed to resolve agent role permissions")
 	}
-	var missing []string
-	for perm, granted := range rolePerms {
-		if granted && !identity.Actor.Permissions[perm] {
-			missing = append(missing, perm)
-		}
-	}
-	if len(missing) > 0 {
-		sort.Strings(missing)
-		return apierror.NewAuthorizationError(fmt.Sprintf("%s grants permissions you do not hold: %s. An agent can only be given a role whose permissions you already have.", subject, strings.Join(missing, ", "))).WithParam("role_id")
-	}
-	return nil
+	return types.PermissionsNotHeld(grant.permissions, rolePerms), nil
 }
 
 // DeleteCustomAgent soft-deletes a custom agent definition.
@@ -1104,7 +1167,8 @@ const (
 // It either resumes that run, or — when the run died — forks an heir run that inherits its work. Returns false (so CreateChatRun starts a clean run seeded with conversation history) when the run is missing, owned by another account, diverged, or still in-flight/completed and so neither resumable nor a useful base to inherit from.
 func (s *agentDefSvcImpl) continueChatRun(ctx context.Context, in domain.ChatRunInput) (bool, *apierror.APIError) {
 	run, runErr := s.repos.NewAgentRunRepo().GetByID(ctx, in.ContinueRunID)
-	if runErr != nil || run.AccountID != in.AccountID {
+	// The sender was checked against this agent, so only its own runs may be continued.
+	if runErr != nil || run.AccountID != in.AccountID || run.AgentDefinitionID != in.AgentDefinitionID {
 		return false, nil
 	}
 	// A run that took an off-conversation turn (free-text typed into the agent-run console) carries private fork context the conversation never saw. Whatever its status, never resume it or inherit its transcript here — fall through to a clean run seeded from the conversation's own history, which by construction excludes the fork.
@@ -1264,6 +1328,26 @@ func (s *agentDefSvcImpl) CreateChatRun(ctx context.Context, in domain.ChatRunIn
 		return nil
 	}
 
+	defRepo := s.repos.NewAgentDefinitionRepo()
+	configRepo := s.repos.NewAgentConfigRepo()
+
+	def, defErr := defRepo.GetByID(ctx, in.AgentDefinitionID)
+	if defErr != nil {
+		return tracing.Trace(span, defErr)
+	}
+	// A participant naming another account's custom agent wakes nothing.
+	if def.AccountID.Valid && def.AccountID.String != in.AccountID {
+		return nil
+	}
+
+	allowed, apiErr := s.chatSenderMayDrive(ctx, in, def)
+	if apiErr != nil {
+		return tracing.Trace(span, apiErr)
+	}
+	if !allowed {
+		return nil
+	}
+
 	// A reply to an agent's message continues that run instead of starting a new one. If the run is gone or no longer continuable (still running a prior turn, or terminal), fall through to a fresh run.
 	if in.ContinueRunID != "" {
 		continued, apiErr := s.continueChatRun(ctx, in)
@@ -1273,14 +1357,6 @@ func (s *agentDefSvcImpl) CreateChatRun(ctx context.Context, in domain.ChatRunIn
 		if continued {
 			return nil
 		}
-	}
-
-	defRepo := s.repos.NewAgentDefinitionRepo()
-	configRepo := s.repos.NewAgentConfigRepo()
-
-	def, defErr := defRepo.GetByID(ctx, in.AgentDefinitionID)
-	if defErr != nil {
-		return tracing.Trace(span, defErr)
 	}
 
 	// Ensure a per-account config exists (mirrors TriggerRun); the run needs a config id.
@@ -1371,6 +1447,73 @@ func (s *agentDefSvcImpl) CreateChatRun(ctx context.Context, in domain.ChatRunIn
 	return nil
 }
 
+// chatSenderMayDrive applies checkCanDriveAgent to the account member whose message wakes the agent, using their current role. A refused sender is told why in the conversation, under the message that addressed the agent.
+func (s *agentDefSvcImpl) chatSenderMayDrive(ctx context.Context, in domain.ChatRunInput, def *sqlc.AgentDefinition) (bool, *apierror.APIError) {
+	if in.SenderUserID == "" {
+		return true, nil
+	}
+	access, err := s.coreClient.GetUserAccess(ctx, in.SenderUserID, in.AccountID)
+	if err != nil {
+		var apiErr *apierror.APIError
+		if errors.As(err, &apiErr) {
+			return false, apiErr
+		}
+		return false, apierror.NewInternalError(err, "failed to resolve the sender's role")
+	}
+	var denial *apierror.APIError
+	if access == nil {
+		denial = apierror.NewAuthorizationError("You are not a member of this account, so you cannot run its agents.")
+	} else {
+		grant := callerGrant{admin: access.RoleType == string(constants.RoleTypeAdmin), permissions: access.Permissions}
+		denial = s.checkCanDriveAgent(ctx, grant, def.RoleID)
+	}
+	if denial == nil {
+		return true, nil
+	}
+	if denial.Code != apierror.ErrorCodeInsufficientPerms {
+		return false, denial
+	}
+	return false, s.postChatDenial(ctx, in, def, denial)
+}
+
+// postChatDenial answers a refused chat trigger as the agent. An agent that answers every message (no trigger message) stays silent rather than repeating the refusal on each one.
+func (s *agentDefSvcImpl) postChatDenial(ctx context.Context, in domain.ChatRunInput, def *sqlc.AgentDefinition, denial *apierror.APIError) *apierror.APIError {
+	if in.TriggerMessageID == "" {
+		return nil
+	}
+	payload, err := json.Marshal(messaging.AgentReplyData{
+		AccountID:        in.AccountID,
+		ConversationID:   in.ConversationID,
+		AgentConfigID:    def.ID,
+		AgentName:        def.Name,
+		Body:             denial.PublicMessage,
+		ClientMessageID:  "agentdenied:" + in.TriggerMessageID + ":" + def.ID,
+		ReplyToMessageID: in.TriggerMessageID,
+		Failed:           true,
+		ErrorCode:        string(denial.Code),
+	})
+	if err != nil {
+		return apierror.NewInternalError(err, "Failed to marshal agent chat denial.")
+	}
+	length := id.IDLength22
+	msgID, genErr := id.GenID(id.MessageIDPrefix, &length)
+	if genErr != nil {
+		return genErr
+	}
+	if _, outboxErr := s.repos.NewOutboxRepo().Create(ctx, messaging.OutboxMessageInput{
+		MessageID:   msgID,
+		ServiceName: domain.ServiceName,
+		MessageType: string(contracts.NotificationCmdAgentReply),
+		Destination: messaging.ApplicationExchange,
+		RoutingKey:  string(contracts.NotificationCmdAgentReply),
+		Payload:     contracts.AmqpMessage{Data: payload, MessageID: msgID},
+		MaxAttempts: 3,
+	}); outboxErr != nil {
+		return apierror.NewInternalError(outboxErr, "Failed to enqueue agent chat denial.")
+	}
+	return nil
+}
+
 // resolveHistoryAgentNames fills in the display Name for chat-history turns authored by other agents.
 // notif-service carries those turns' agent-definition ids (it can't resolve agent names — definitions live here), so each is looked up by id (deduped; the window holds only a handful of distinct agents) and stamped with the agent's name, falling back to a generic label when unresolvable.
 func (s *agentDefSvcImpl) resolveHistoryAgentNames(ctx context.Context, defRepo domain.AgentDefinitionRepo, history []domain.ChatHistoryMessage) {
@@ -1454,6 +1597,9 @@ func (s *agentDefSvcImpl) TriggerRun(ctx context.Context, params domain.TriggerR
 		if defErr != nil {
 			return "", meds.Idempotency.CacheErrorResponse(ctx, idempotencyKey.TypeID,
 				apierror.NewResourceNotFoundError("Agent definition not found: "+params.AgentDefinitionCode))
+		}
+		if apiErr := s.checkCanDriveAgent(ctx, grantOf(identity), def.RoleID); apiErr != nil {
+			return "", meds.Idempotency.CacheErrorResponse(ctx, idempotencyKey.TypeID, apiErr)
 		}
 
 		config, cfgErr := configRepo.GetByAccountAndDefinition(ctx, accountID, def.ID)
@@ -1766,6 +1912,9 @@ func (s *agentDefSvcImpl) ContinueRun(ctx context.Context, params domain.Continu
 			return "", meds.Idempotency.CacheErrorResponse(ctx, idempotencyKey.TypeID,
 				apierror.NewResourceNotFoundError("Agent run not found."))
 		}
+		if apiErr := s.checkCanDriveRun(ctx, grantOf(identity), run); apiErr != nil {
+			return "", meds.Idempotency.CacheErrorResponse(ctx, idempotencyKey.TypeID, apiErr)
+		}
 		if run.StatusCode != domain.RunStatusAwaitingInput && run.StatusCode != domain.RunStatusAwaitingApproval {
 			return "", meds.Idempotency.CacheErrorResponse(ctx, idempotencyKey.TypeID,
 				apierror.NewValidationError(fmt.Sprintf("Run is not awaiting input or approval (status: %s).", run.StatusCode)))
@@ -1939,6 +2088,9 @@ func (s *agentDefSvcImpl) RetryRun(ctx context.Context, params domain.RetryRunPa
 		if runErr != nil || run.AccountID != accountID {
 			return "", meds.Idempotency.CacheErrorResponse(ctx, idempotencyKey.TypeID,
 				apierror.NewResourceNotFoundError("Agent run not found."))
+		}
+		if apiErr := s.checkCanDriveRun(ctx, grantOf(identity), run); apiErr != nil {
+			return "", meds.Idempotency.CacheErrorResponse(ctx, idempotencyKey.TypeID, apiErr)
 		}
 		if run.StatusCode != domain.RunStatusFailed {
 			return "", meds.Idempotency.CacheErrorResponse(ctx, idempotencyKey.TypeID,

@@ -105,3 +105,24 @@ func (c *AgentCoreClient) GetRoleInfo(ctx context.Context, roleID string) (*doma
 		AccountID: resp.AccountId,
 	}, nil
 }
+
+func (c *AgentCoreClient) GetUserAccess(ctx context.Context, userID, accountID string) (*domain.UserAccess, error) {
+	ctx = prepareCtx(ctx)
+	resp, apiErr := rpc.CallRPC(ctx, coreClientTracer, "core_client.get_user_account_access", coreServiceName,
+		func(ctx context.Context, opts ...grpclib.CallOption) (*pb.GetUserAccountAccessResponse, error) {
+			return c.client.GetUserAccountAccess(ctx, &pb.GetUserAccountAccessRequest{
+				UserId:    userID,
+				AccountId: accountID,
+			}, opts...)
+		})
+	if apiErr != nil {
+		return nil, apiErr
+	}
+	if !resp.HasAccess || resp.Access == nil {
+		return nil, nil
+	}
+	return &domain.UserAccess{
+		RoleType:    resp.Access.GetRoleTypeCode(),
+		Permissions: resp.Access.Permissions,
+	}, nil
+}

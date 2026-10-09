@@ -179,6 +179,21 @@ func (mr *MockCoreClientMockRecorder) GetRolePermissions(ctx, roleID any) *gomoc
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetRolePermissions", reflect.TypeOf((*MockCoreClient)(nil).GetRolePermissions), ctx, roleID)
 }
 
+// GetUserAccess mocks base method.
+func (m *MockCoreClient) GetUserAccess(ctx context.Context, userID, accountID string) (*domain.UserAccess, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetUserAccess", ctx, userID, accountID)
+	ret0, _ := ret[0].(*domain.UserAccess)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetUserAccess indicates an expected call of GetUserAccess.
+func (mr *MockCoreClientMockRecorder) GetUserAccess(ctx, userID, accountID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetUserAccess", reflect.TypeOf((*MockCoreClient)(nil).GetUserAccess), ctx, userID, accountID)
+}
+
 // MockBillingCustomerResolver is a mock of BillingCustomerResolver interface.
 type MockBillingCustomerResolver struct {
 	ctrl     *gomock.Controller

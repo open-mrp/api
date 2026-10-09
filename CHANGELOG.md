@@ -1,5 +1,12 @@
 # Changelog
 
+## [4.7.3](https://github.com/open-mrp/api/compare/v4.7.2...v4.7.3) (2026-10-09)
+
+
+### Bug Fixes
+
+* agent replies cut off by reasoning; reply_to sender names blank ([#320](https://github.com/open-mrp/api/issues/320)) ([154c37e](https://github.com/open-mrp/api/commit/154c37e5fd599717b6507491a5dbcb4f2d9e6fe7))
+
 ## [4.7.2](https://github.com/open-mrp/api/compare/v4.7.1...v4.7.2) (2026-10-09)
 
 

@@ -157,6 +157,24 @@ func thinkingConfigFor(model string, maxTokens int) anthropic.ThinkingConfigPara
 	return anthropic.ThinkingConfigParamOfEnabled(int64(budget))
 }
 
+// reasoningMaxOutputTokens leaves room for both reasoning and a long answer: thinking counts against max_tokens, so at the 4096 default a long reasoning pass truncates the reply mid-sentence.
+const reasoningMaxOutputTokens = 16000
+
+// MaxOutputTokens is the max_tokens for one turn. Only Claude 4+ with reasoning gets the larger cap; older fallbacks reject anything above their (4k–8k) output limit.
+func MaxOutputTokens(model string, reasoning bool) int {
+	if !reasoning || !strings.HasPrefix(model, "claude-") {
+		return 4096
+	}
+	idx := strings.LastIndex(model, "-")
+	if idx < 0 || idx+1 >= len(model) {
+		return 4096
+	}
+	if major, _ := parseModelVersion(model[idx+1:]); major < 4 {
+		return 4096
+	}
+	return reasoningMaxOutputTokens
+}
+
 // supportsAdaptiveThinking reports whether a model id (e.g. "claude-sonnet-4.6") is generation 4.6 or newer, where adaptive thinking is the only accepted thinking mode.
 func supportsAdaptiveThinking(model string) bool {
 	idx := strings.LastIndex(model, "-")

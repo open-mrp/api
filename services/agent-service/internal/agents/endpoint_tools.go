@@ -106,12 +106,40 @@ func AllowedToolGroups(allowed map[string]bool) []string {
 	return groups
 }
 
-// SearchEndpointTools returns up to limit catalog tools matching query, restricted to the allowed set. Matching is simple term overlap against each tool's slug and description.
+// SearchEndpointTools returns up to limit allowed catalog tools that strongly match query (see rankEndpointTools).
+// An empty query browses the allowed tools alphabetically.
 func SearchEndpointTools(query string, allowed map[string]bool, limit int) []EndpointToolDescriptor {
+	strong, _ := rankEndpointTools(query, allowed)
+	return strong[:min(limit, len(strong))]
+}
+
+// strongMatchScore is the per-term score of a match on what an operation is — its slug or display name — rather
+// than an incidental mention in its description or route.
+const strongMatchScore = 6
+
+// genericSearchTerms are verbs and filler that name no particular subject: "list" alone matches every list_*
+// operation, so a match on these terms alone does not mean the operation was found.
+var genericSearchTerms = map[string]bool{
+	"list": true, "get": true, "retrieve": true, "create": true, "update": true, "delete": true, "remove": true,
+	"add": true, "set": true, "search": true, "find": true, "show": true, "view": true, "fetch": true, "edit": true,
+	"change": true, "make": true, "all": true, "new": true, "the": true, "an": true, "for": true, "of": true,
+	"to": true, "in": true, "on": true, "by": true, "with": true, "and": true, "or": true, "my": true, "me": true,
+	"how": true, "do": true, "does": true, "what": true, "which": true, "is": true, "are": true, "can": true,
+	"from": true, "into": true, "api": true, "endpoint": true, "operation": true, "tool": true, "data": true,
+}
+
+// rankEndpointTools splits the allowed tools matching query into strong matches — a subject term of the query
+// names the operation — and weak ones that only share a verb or a word of prose, each sorted best first.
+func rankEndpointTools(query string, allowed map[string]bool) (strong, weak []EndpointToolDescriptor) {
 	terms := tokenize(query)
+	subjectTerms := slices.DeleteFunc(slices.Clone(terms), func(t string) bool { return genericSearchTerms[t] })
+	if len(subjectTerms) == 0 {
+		subjectTerms = terms
+	}
 	type scored struct {
 		d       EndpointToolDescriptor
 		score   int
+		strong  bool
 		unnamed int
 	}
 	var matches []scored
@@ -119,12 +147,19 @@ func SearchEndpointTools(query string, allowed map[string]bool, limit int) []End
 		if !allowed[d.Slug] {
 			continue
 		}
-		score := scoreTool(d, terms)
-		// With no query terms, surface allowed tools alphabetically (score 0). With terms, a tool that matches none is dropped.
-		if len(terms) > 0 && score == 0 {
+		scores := termScores(d, terms)
+		total := 0
+		strong := len(terms) == 0
+		for i, s := range scores {
+			total += s
+			if s >= strongMatchScore && slices.Contains(subjectTerms, terms[i]) {
+				strong = true
+			}
+		}
+		if len(terms) > 0 && total == 0 {
 			continue
 		}
-		matches = append(matches, scored{d: d, score: score, unnamed: unnamedSegments(d, terms)})
+		matches = append(matches, scored{d: d, score: total, strong: strong, unnamed: unnamedSegments(d, terms)})
 	}
 	sort.SliceStable(matches, func(i, j int) bool {
 		if matches[i].score != matches[j].score {
@@ -135,24 +170,21 @@ func SearchEndpointTools(query string, allowed map[string]bool, limit int) []End
 		}
 		return matches[i].d.Slug < matches[j].d.Slug
 	})
-	out := make([]EndpointToolDescriptor, 0, limit)
 	for _, m := range matches {
-		if len(out) >= limit {
-			break
+		if m.strong {
+			strong = append(strong, m.d)
+		} else {
+			weak = append(weak, m.d)
 		}
-		out = append(out, m.d)
 	}
-	return out
+	return strong, weak
 }
 
-// scoreTool ranks a tool against the query terms, weighting WHERE each term matches: a match on the slug or display name — what the operation actually IS — counts far more than an incidental mention in the prose description or route. Without this weighting a search like "create a customer" ties create_customer with any endpoint whose description merely mentions customers (e.g. create_carrier), and the alphabetical tie-break then surfaces the wrong tool. A term matching a whole slug segment
+// termScores ranks a tool against each query term, weighting WHERE the term matches: a match on the slug or display name — what the operation actually IS — counts far more than an incidental mention in the prose description or route. Without this weighting a search like "create a customer" ties create_customer with any endpoint whose description merely mentions customers (e.g. create_carrier), and the alphabetical tie-break then surfaces the wrong tool. A term matching a whole slug segment
 // (the strongest intent signal) outscores a mere substring (e.g. singular/plural).
 //
-// When a term matches nothing exactly it falls back to a fuzzy (typo-tolerant) match against the slug segments and display-name words, so a misspelled query like "create custmer" or "updaet customer" still finds the right tool. Fuzzy matches always score below their exact equivalents, so a real match wins whenever one exists. Returns the summed best-field score across all terms; 0 means no term matched anywhere, even fuzzily.
-func scoreTool(d EndpointToolDescriptor, terms []string) int {
-	if len(terms) == 0 {
-		return 0
-	}
+// When a term matches nothing exactly it falls back to a fuzzy (typo-tolerant) match against the slug segments and display-name words, so a misspelled query like "create custmer" or "updaet customer" still finds the right tool. Fuzzy matches always score below their exact equivalents, so a real match wins whenever one exists. A 0 means the term matched nowhere, even fuzzily.
+func termScores(d EndpointToolDescriptor, terms []string) []int {
 	slug := strings.ToLower(d.Slug)
 	slugSegments := strings.Split(slug, "_")
 	name := strings.ToLower(d.DisplayName)
@@ -160,8 +192,8 @@ func scoreTool(d EndpointToolDescriptor, terms []string) int {
 	desc := strings.ToLower(d.Description)
 	route := strings.ToLower(d.RouteTemplate)
 
-	total := 0
-	for _, t := range terms {
+	scores := make([]int, len(terms))
+	for i, t := range terms {
 		best := 0
 		switch {
 		case containsSegment(slugSegments, t):
@@ -182,9 +214,9 @@ func scoreTool(d EndpointToolDescriptor, terms []string) int {
 				best = max(best, 4)
 			}
 		}
-		total += best
+		scores[i] = best
 	}
-	return total
+	return scores
 }
 
 func containsSegment(segments []string, term string) bool {
@@ -217,7 +249,12 @@ func tokenize(s string) []string {
 	return terms
 }
 
-// HandleSearchAPITools searches the agent's granted endpoint-tools and records the matches as revealed so the runner makes them callable.
+// closestToolLimit caps the near misses listed when a search finds no operation.
+const closestToolLimit = 3
+
+// HandleSearchAPITools searches the agent's granted endpoint-tools and records strong matches as revealed so the
+// runner makes them callable. With no strong match it says so outright, naming the near misses without revealing
+// them, so the agent reports the gap instead of searching on.
 func HandleSearchAPITools(_ context.Context, input json.RawMessage, runCtx *domain.HandlerRunContext) (string, error) {
 	var params struct {
 		Query string `json:"query"`
@@ -228,11 +265,23 @@ func HandleSearchAPITools(_ context.Context, input json.RawMessage, runCtx *doma
 		}
 	}
 
-	matches := SearchEndpointTools(params.Query, runCtx.AllowedEndpointToolSlugs, searchResultLimit)
-	if len(matches) == 0 {
-		return "No API tools matched your query.", nil
+	strong, weak := rankEndpointTools(params.Query, runCtx.AllowedEndpointToolSlugs)
+	if len(strong) == 0 {
+		var b strings.Builder
+		fmt.Fprintf(&b, "No operation matches %q.", params.Query)
+		if len(weak) > 0 {
+			b.WriteString(" Closest, not made callable:\n")
+			for _, m := range weak[:min(closestToolLimit, len(weak))] {
+				fmt.Fprintf(&b, "- %s — %s\n", m.Slug, firstLine(m.Description))
+			}
+		} else {
+			b.WriteString("\n")
+		}
+		b.WriteString("Your toolset has no operation for this. Unless one of the above is what you need, stop searching and tell the user which operation or data you don't have access to.")
+		return b.String(), nil
 	}
 
+	matches := strong[:min(searchResultLimit, len(strong))]
 	if runCtx.RevealedToolSlugs == nil {
 		runCtx.RevealedToolSlugs = make(map[string]bool, len(matches))
 	}

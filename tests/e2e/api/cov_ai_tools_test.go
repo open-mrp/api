@@ -173,23 +173,36 @@ func TestCovAiTools_ToolsBuiltInToolCanBeMutating(t *testing.T) {
 // AvailableTool — q search
 // ──────────────────────────────────────────────
 
-// TestCovAiTools_ToolsSearchQCaseInsensitiveSubstring confirms q performs a
-// case-insensitive substring match against tool DisplayName, pinning the
-// exact closed result set for "customer".
+// TestCovAiTools_ToolsSearchQCaseInsensitiveSubstring confirms q is a case-insensitive substring match on a tool's name or its group's name. The expected set is derived from the catalog itself, so flagging another endpoint as an agent tool does not change what the test asserts.
 func TestCovAiTools_ToolsSearchQCaseInsensitiveSubstring(t *testing.T) {
 	t.Parallel()
 
-	expectedSlugs := []string{
-		"create_customer", "delete_customer",
-		"list_customers", "merge_customers", "retrieve_customer",
-		"retrieve_customer_lead_time", "update_customer",
+	status, body, err := apiClient.GetListRaw(toolGroupsPath, url.Values{"include": {"tools"}, "limit": {"1000"}})
+	require.NoError(t, err)
+	requireStatus(t, 200, status, body)
+	var groups struct {
+		Data []json.RawMessage `json:"data"`
 	}
+	require.NoError(t, json.Unmarshal(body, &groups))
+
+	var expectedSlugs []string
+	for _, raw := range groups.Data {
+		group := parseJSON(raw)
+		groupMatches := strings.Contains(strings.ToLower(jsonField(group, "name")), "customer")
+		for _, rawTool := range jsonListData(group, "tools") {
+			tool := rawTool.(map[string]any)
+			if groupMatches || strings.Contains(strings.ToLower(jsonField(tool, "name")), "customer") {
+				expectedSlugs = append(expectedSlugs, jsonField(tool, "slug"))
+			}
+		}
+	}
+	require.Subset(t, expectedSlugs, []string{"create_customer", "list_customers", "retrieve_customer", "update_customer"})
+	require.NotContains(t, expectedSlugs, "send_email")
 
 	for _, q := range []string{"customer", "CUSTOMER", "CuStOmEr"} {
-		list, status, err := apiClient.GetList(aiToolsPath, url.Values{"q": {q}})
+		list, status, err := apiClient.GetList(aiToolsPath, url.Values{"q": {q}, "limit": {"1000"}})
 		require.NoError(t, err)
 		require.Equal(t, 200, status)
-		require.Len(t, list.Data, len(expectedSlugs), "q=%q", q)
 
 		var got []string
 		for _, raw := range list.Data {

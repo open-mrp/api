@@ -61,15 +61,15 @@ func TestAgentRuns_IncludeActions(t *testing.T) {
 
 func TestAgentRuns_IncludeDefinition(t *testing.T) {
 	t.Parallel()
-	id := firstAgentRunID(t)
 
-	status, body, err := apiClient.GetListRaw(agentRunsPath+"/"+id, url.Values{"include": {"definition"}})
+	status, body, err := apiClient.GetListRaw(agentRunsPath+"/"+SeedAgentRunID, url.Values{"include": {"definition"}})
 	require.NoError(t, err)
 	requireStatus(t, 200, status, body)
 
 	def := jsonObject(parseJSON(body), "definition")
 	require.NotNil(t, def, "definition should be present with ?include=definition")
 	assert.Equal(t, "agent_definition", jsonField(def, "object"))
+	assert.Equal(t, SeedAgentDefinitionID, jsonField(def, "id"))
 }
 
 func TestAgentRuns_IncludeSteps(t *testing.T) {

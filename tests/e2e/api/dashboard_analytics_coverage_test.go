@@ -587,6 +587,14 @@ func TestDashAnalytics_DemandForecastHistoryAndHorizonFollowTheRequest(t *testin
 
 func TestDashAnalytics_ProductionReportsShowTenantBNoneOfTheSellersPlant(t *testing.T) {
 	t.Parallel()
+	lockPublishing(t)
+	schedule := ownedSchedule(t, uniqueName("e2e-dashan-oee"))
+	scheduleID := jsonField(schedule, "id")
+	addLine(t, scheduleID, map[string]any{"week_index": 0, "quantity": 500})
+	status, body, err := apiClient.Put(schedulePath(scheduleID)+"/actions/publish", map[string]any{})
+	require.NoError(t, err)
+	requireStatus(t, 200, status, body)
+
 	start, end := oeeSeededWindow(t, 24*time.Hour)
 	window := map[string]any{"starts_at": rfc3339(start), "ends_at": rfc3339(end)}
 	scoped := dashAnalyticsWith(window, map[string]any{"department_ids": []string{SeedDepartmentID}})
@@ -609,7 +617,8 @@ func TestDashAnalytics_ProductionReportsShowTenantBNoneOfTheSellersPlant(t *test
 			}
 			return sum
 		}
-		require.Positive(t, goodUnits(analyzeOeeTrend(t, scoped)), "precondition: the seed department produced in the window")
+		seller := analyzeOeeTrend(t, scoped)
+		require.Positive(t, goodUnits(seller), "precondition: the seed department produced in the window: %v", seller)
 		got := mustPutAnalytics(t, tenantB, analyticsOeeTrendPath, nil, scoped)
 		assert.Zero(t, goodUnits(got))
 		for _, raw := range jsonListData(got, "periods") {

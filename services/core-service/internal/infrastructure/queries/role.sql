@@ -14,6 +14,7 @@ AND (account_id = sqlc.arg('account_id') OR account_id IS NULL);
 SELECT id, name, role_type_code
 FROM role
 WHERE role_type_code = ? AND (account_id = ? OR account_id IS NULL)
+ORDER BY account_id IS NULL, created_at, id
 LIMIT 1;
 
 -- name: GetRoleByIDAndAccount :one

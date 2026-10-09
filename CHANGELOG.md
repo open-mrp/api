@@ -1,5 +1,12 @@
 # Changelog
 
+## [4.7.1](https://github.com/open-mrp/api/compare/v4.7.0...v4.7.1) (2026-10-09)
+
+
+### Bug Fixes
+
+* **docs:** update documentation URLs to reflect new domain ([5fe41f9](https://github.com/open-mrp/api/commit/5fe41f9d722803903487199d1d7eb92f8761012e))
+
 ## [4.7.0](https://github.com/open-mrp/api/compare/v4.6.0...v4.7.0) (2026-10-09)
 
 

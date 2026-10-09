@@ -21,7 +21,7 @@ import (
 // registration tests look it up by.
 
 // freshAccountSlots bounds how many accounts the package holds open at once. Self-serve registration on
-// the free plan closes once ten active accounts are on it, and a test's account is only shut down at
+// the free plan closes once 1000 active accounts are on it, and a test's account is only shut down at
 // cleanup, so an unbounded parallel run could lock out TestRegistration_FullJourney.
 var freshAccountSlots = make(chan struct{}, 3)
 

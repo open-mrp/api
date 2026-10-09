@@ -1,5 +1,12 @@
 # Changelog
 
+## [4.6.0](https://github.com/open-mrp/api/compare/v4.5.2...v4.6.0) (2026-10-09)
+
+
+### Features
+
+* **registration:** raise free plan registration cap to 1000 ([#310](https://github.com/open-mrp/api/issues/310)) ([1bc0fa4](https://github.com/open-mrp/api/commit/1bc0fa4d00a835940599d79a0b9cd648e9a991b7))
+
 ## [4.5.2](https://github.com/open-mrp/api/compare/v4.5.1...v4.5.2) (2026-10-09)
 
 

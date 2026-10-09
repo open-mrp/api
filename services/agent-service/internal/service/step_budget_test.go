@@ -167,12 +167,12 @@ func TestResolveMaxSteps(t *testing.T) {
 func TestValidateAgentConfig_MaxSteps(t *testing.T) {
 	t.Parallel()
 	for _, cfg := range []string{`{}`, `{"max_steps":1}`, `{"max_steps":60}`, `{"max_steps":null}`} {
-		if err := validateAgentConfig(cfg); err != nil {
+		if err := validateAgentConfig(cfg, nil); err != nil {
 			t.Errorf("%s should be valid, got %v", cfg, err)
 		}
 	}
 	for _, cfg := range []string{`{"max_steps":0}`, `{"max_steps":61}`, `{"max_steps":-3}`, `{"max_steps":"ten"}`} {
-		if err := validateAgentConfig(cfg); err == nil {
+		if err := validateAgentConfig(cfg, nil); err == nil {
 			t.Errorf("%s should be rejected", cfg)
 		}
 	}

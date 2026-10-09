@@ -185,7 +185,7 @@ func (s *agentDefSvcImpl) CreateCustomAgent(ctx context.Context, params domain.C
 					apierror.NewValidationErrorWithParam("Tool not found: "+t.ToolSlug, "tools"))
 			}
 		}
-		if apiErr := validateAgentConfig(params.ConfigJSON); apiErr != nil {
+		if apiErr := validateAgentConfig(params.ConfigJSON, nil); apiErr != nil {
 			return nil, meds.Idempotency.CacheErrorResponse(ctx, idempotencyKey.TypeID, apiErr)
 		}
 		if params.RoleID != "" {
@@ -352,9 +352,23 @@ func (s *agentDefSvcImpl) UpdateCustomAgent(ctx context.Context, params domain.U
 				apierror.NewAuthorizationError("Agent definition does not belong to this account."))
 		}
 
+		var tools []domain.ToolLinkParams
 		if params.ToolsProvided {
+			linked, apiErr := s.repos.NewAgentDefinitionToolRepo().ListByAgentDefinitionID(ctx, params.AgentDefinitionID)
+			if apiErr != nil {
+				return nil, meds.Idempotency.CacheErrorResponse(ctx, idempotencyKey.TypeID, apiErr)
+			}
+			alreadyLinked := make(map[string]bool, len(linked))
+			for _, l := range linked {
+				alreadyLinked[l.ToolSlug] = true
+			}
+			tools = make([]domain.ToolLinkParams, 0, len(params.Tools))
 			for _, t := range params.Tools {
-				if _, ok := agents.LookupBuiltinTool(t.ToolSlug); !ok {
+				if _, ok := agents.LookupBuiltinTool(t.ToolSlug); ok {
+					tools = append(tools, t)
+					continue
+				}
+				if !alreadyLinked[t.ToolSlug] {
 					return nil, meds.Idempotency.CacheErrorResponse(ctx, idempotencyKey.TypeID,
 						apierror.NewValidationErrorWithParam("Tool not found: "+t.ToolSlug, "tools"))
 				}
@@ -362,7 +376,7 @@ func (s *agentDefSvcImpl) UpdateCustomAgent(ctx context.Context, params domain.U
 		}
 
 		if params.ConfigJSON != nil {
-			if apiErr := validateAgentConfig(*params.ConfigJSON); apiErr != nil {
+			if apiErr := validateAgentConfig(*params.ConfigJSON, def.Config); apiErr != nil {
 				return nil, meds.Idempotency.CacheErrorResponse(ctx, idempotencyKey.TypeID, apiErr)
 			}
 		}
@@ -410,7 +424,11 @@ func (s *agentDefSvcImpl) UpdateCustomAgent(ctx context.Context, params domain.U
 				if err != nil {
 					return apierror.NewInternalError(err, "failed to merge agent config")
 				}
-				configBytes = merged
+				pruned, err := pruneUnknownEndpointTools(merged)
+				if err != nil {
+					return apierror.NewInternalError(err, "failed to prune agent config")
+				}
+				configBytes = pruned
 			}
 
 			// An empty description is stored as NULL, never "" (matches the create path's PgText behavior).
@@ -441,7 +459,7 @@ func (s *agentDefSvcImpl) UpdateCustomAgent(ctx context.Context, params domain.U
 					return deleteErr
 				}
 
-				for _, t := range params.Tools {
+				for _, t := range tools {
 					linkID, linkGenErr := id.GenID(id.AgentDefinitionToolIDPrefix, nil)
 					if linkGenErr != nil {
 						return linkGenErr
@@ -2200,25 +2218,32 @@ func mergeConfigJSON(stored, patch []byte) ([]byte, error) {
 	return json.Marshal(merged)
 }
 
-// validateAgentConfig rejects unknown endpoint_tool_slugs or endpoint_tool_review keys ("*" grants the whole
-// catalog) and a max_steps outside 1..maxStepsCeiling. Absent fields are valid.
-func validateAgentConfig(configJSON string) *apierror.APIError {
+// validateAgentConfig rejects unknown endpoint_tool_slugs or endpoint_tool_review keys ("*" grants the whole catalog) and a max_steps outside 1..maxStepsCeiling. Absent fields are valid. A slug already granted in stored is tolerated even when the catalog no longer carries it, since the caller is only sending back what it was given; pruneUnknownEndpointTools drops it on save.
+func validateAgentConfig(configJSON string, stored []byte) *apierror.APIError {
 	if configJSON == "" {
 		return nil
 	}
-	var cfg struct {
-		EndpointToolSlugs  []string        `json:"endpoint_tool_slugs"`
-		EndpointToolReview map[string]bool `json:"endpoint_tool_review"`
-		MaxSteps           *int            `json:"max_steps"`
-	}
+	var cfg agentToolGrants
 	if err := json.Unmarshal([]byte(configJSON), &cfg); err != nil {
 		return apierror.NewValidationErrorWithParam("Invalid agent config.", "config")
 	}
 	if cfg.MaxSteps != nil && (*cfg.MaxSteps < 1 || *cfg.MaxSteps > maxStepsCeiling) {
 		return apierror.NewValidationErrorWithParam(fmt.Sprintf("max_steps must be between 1 and %d.", maxStepsCeiling), "config.max_steps")
 	}
+	granted := map[string]bool{}
+	if len(stored) > 0 {
+		var prev agentToolGrants
+		if err := json.Unmarshal(stored, &prev); err == nil {
+			for _, slug := range prev.EndpointToolSlugs {
+				granted[slug] = true
+			}
+			for slug := range prev.EndpointToolReview {
+				granted[slug] = true
+			}
+		}
+	}
 	for _, slug := range cfg.EndpointToolSlugs {
-		if slug == "*" {
+		if slug == "*" || granted[slug] {
 			continue
 		}
 		if _, ok := agents.LookupEndpointTool(slug); !ok {
@@ -2226,11 +2251,48 @@ func validateAgentConfig(configJSON string) *apierror.APIError {
 		}
 	}
 	for slug := range cfg.EndpointToolReview {
+		if granted[slug] {
+			continue
+		}
 		if _, ok := agents.LookupEndpointTool(slug); !ok {
 			return apierror.NewValidationErrorWithParam("Tool not found: "+slug, "tools")
 		}
 	}
 	return nil
+}
+
+type agentToolGrants struct {
+	EndpointToolSlugs  []string        `json:"endpoint_tool_slugs"`
+	EndpointToolReview map[string]bool `json:"endpoint_tool_review"`
+	MaxSteps           *int            `json:"max_steps"`
+}
+
+func pruneUnknownEndpointTools(configJSON []byte) ([]byte, error) {
+	cfg := map[string]any{}
+	if err := json.Unmarshal(configJSON, &cfg); err != nil {
+		return nil, err
+	}
+	if slugs, ok := cfg["endpoint_tool_slugs"].([]any); ok {
+		kept := make([]any, 0, len(slugs))
+		for _, v := range slugs {
+			slug, isString := v.(string)
+			if !isString {
+				continue
+			}
+			if _, known := agents.LookupEndpointTool(slug); known || slug == "*" {
+				kept = append(kept, slug)
+			}
+		}
+		cfg["endpoint_tool_slugs"] = kept
+	}
+	if review, ok := cfg["endpoint_tool_review"].(map[string]any); ok {
+		for slug := range review {
+			if _, known := agents.LookupEndpointTool(slug); !known {
+				delete(review, slug)
+			}
+		}
+	}
+	return json.Marshal(cfg)
 }
 
 // CreateAgentMemory creates a new agent memory record, with idempotency support.

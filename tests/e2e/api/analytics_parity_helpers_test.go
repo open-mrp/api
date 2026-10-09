@@ -189,7 +189,7 @@ func listRows(t *testing.T, list map[string]any) []map[string]any {
 }
 
 // paritySalesRep is a user signed in to the seed account under a sales-rep role of its own, holding exactly perms
-// (permission codes, read only). Role assignment has no API: an operator grants it in SQL, as this does.
+// (permission codes, read only). Role assignment has no API: an operator grants it in SQL, as this does. Adding a member under a sales-rep role assigns the account's own sales-rep role, so the test role is set by an update afterwards.
 func paritySalesRep(t *testing.T, perms ...string) (client *Client, accountUserID string) {
 	t.Helper()
 	db := authDB(t)
@@ -215,6 +215,10 @@ func paritySalesRep(t *testing.T, perms ...string) (client *Client, accountUserI
 		_, _ = db.Exec("DELETE FROM role_permission WHERE role_id = ?", roleID)
 		_, _ = db.Exec("DELETE FROM role WHERE id = ?", roleID)
 	})
+	status, body, err = apiClient.Patch(accountUsersPath+"/"+accountUserID+"?include=role", map[string]any{"role_id": roleID}, newIdempotencyKey())
+	require.NoError(t, err)
+	requireStatus(t, 200, status, body)
+	require.Equal(t, roleID, jsonField(jsonObject(parseJSON(body), "role"), "id"))
 	return loginAsUser(t, email, covAuthUsersPassword, SeedAccountID), accountUserID
 }
 

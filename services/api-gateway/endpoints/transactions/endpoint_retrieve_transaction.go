@@ -30,6 +30,7 @@ func (e *RetrieveTransactionEndpoint) Materialize() *apiendpoint.APIEndpoint[*Re
 		Route:             "/v1/finance/transactions/{id}",
 		SuccessStatusCode: http.StatusOK,
 		Public:            false,
+		AgentTool:         true,
 		Preview:           true,
 		RequiredPermissions: []types.Permission{
 			{Domain: types.PermissionDomainTransactions, Action: types.ActionRead},

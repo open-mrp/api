@@ -67,6 +67,7 @@ func (e *UpdateConsumptionEndpoint) Materialize() *apiendpoint.APIEndpoint[*Upda
 		ContentType:       "application/json",
 		SuccessStatusCode: http.StatusOK,
 		Public:            false,
+		AgentTool:         true,
 		Preview:           true,
 		ObjectType:        constants.ObjectTypeConsumption,
 		RequiredPermissions: []types.Permission{

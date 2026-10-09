@@ -50,6 +50,7 @@ func (e *UpdateSupplierMaterialEndpoint) Materialize() *apiendpoint.APIEndpoint[
 		Route:             "/v1/operations/suppliers/{supplier_id}/materials/{id}",
 		SuccessStatusCode: http.StatusOK,
 		Public:            false,
+		AgentTool:         true,
 		Preview:           true,
 		RequiredPermissions: []types.Permission{
 			{Domain: types.PermissionDomainSuppliers, Action: types.ActionUpdate},

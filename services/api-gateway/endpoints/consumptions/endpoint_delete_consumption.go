@@ -32,6 +32,7 @@ func (e *DeleteConsumptionEndpoint) Materialize() *apiendpoint.APIEndpoint[*Dele
 		ContentType:       "application/json",
 		SuccessStatusCode: http.StatusOK,
 		Public:            false,
+		AgentTool:         true,
 		Preview:           true,
 		ObjectType:        constants.ObjectTypeConsumption,
 		RequiredPermissions: []types.Permission{

@@ -30,6 +30,7 @@ func (e *RetrieveConsumptionEndpoint) Materialize() *apiendpoint.APIEndpoint[*Re
 		ContentType:       "application/json",
 		SuccessStatusCode: http.StatusOK,
 		Public:            false,
+		AgentTool:         true,
 		Preview:           true,
 		ObjectType:        constants.ObjectTypeConsumption,
 		RequiredPermissions: []types.Permission{

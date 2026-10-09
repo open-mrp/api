@@ -31,6 +31,7 @@ func (e *DeleteShipmentLineEndpoint) Materialize() *apiendpoint.APIEndpoint[*Del
 		ContentType:         "application/json",
 		SuccessStatusCode:   http.StatusOK,
 		Public:              false,
+		AgentTool:           true,
 		Preview:             true,
 		RequiredPermissions: []types.Permission{{Domain: types.PermissionDomainShipments, Action: types.ActionDelete}},
 		ServiceHandler: func(svc any) func(ctx context.Context, req *DeleteShipmentLineRequest) (*apiresource.EmptyResource, *apierror.APIError) {

@@ -38,6 +38,7 @@ func (e *BulkDeleteBatchesEndpoint) Materialize() *apiendpoint.APIEndpoint[*Dele
 		Route:               "/v1/operations/batches/actions/bulk-delete",
 		SuccessStatusCode:   http.StatusOK,
 		Public:              false,
+		AgentTool:           true,
 		Preview:             true,
 		RequiredPermissions: []types.Permission{{Domain: types.PermissionDomainBatches, Action: types.ActionDelete}},
 		ServiceHandler: func(svc any) func(ctx context.Context, req *DeleteManyBatchesRequest) (*apiresource.EmptyResource, *apierror.APIError) {

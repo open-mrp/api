@@ -141,6 +141,7 @@ func (e *CreateProductionStepEndpoint) Materialize() *apiendpoint.APIEndpoint[*C
 		Route:               "/v1/operations/production-steps",
 		SuccessStatusCode:   http.StatusCreated,
 		Public:              false,
+		AgentTool:           true,
 		Preview:             true,
 		RequiredPermissions: []types.Permission{{Domain: types.PermissionDomainProductionSteps, Action: types.ActionCreate}},
 		ObjectType:          constants.ObjectTypeProductionStep,

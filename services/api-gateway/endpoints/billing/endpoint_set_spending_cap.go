@@ -7,6 +7,7 @@ import (
 	apiendpoint "github.com/open-mrp/api/services/api-gateway/pkg/endpoint"
 	apiexample "github.com/open-mrp/api/services/api-gateway/pkg/example"
 	apiresource "github.com/open-mrp/api/services/api-gateway/pkg/resource"
+	"github.com/open-mrp/api/services/auth-service/pkg/types"
 	"github.com/open-mrp/api/shared/constants"
 	apierror "github.com/open-mrp/api/shared/errors"
 	"github.com/open-mrp/api/shared/field"
@@ -31,18 +32,22 @@ func (*SetSpendingCapRequest) SchemaExample() any {
 // Sets or removes the monthly agent spending cap for the account.
 //
 // When estimated agent spend reaches the cap, new agent runs are blocked and in-progress runs are stopped until the cap is raised, removed, or the next billing month begins.
+//
+// Requires `billing:update`.
 type SetSpendingCapEndpoint struct{}
 
 func (e *SetSpendingCapEndpoint) Materialize() *apiendpoint.APIEndpoint[*SetSpendingCapRequest, *apiresource.SpendingCapResponse] {
 	return (&apiendpoint.APIEndpoint[*SetSpendingCapRequest, *apiresource.SpendingCapResponse]{
-		Title:             "Set Spending Cap",
-		Method:            http.MethodPut,
-		Route:             "/v1/billing/spending-cap",
-		ContentType:       "application/json",
-		SuccessStatusCode: http.StatusOK,
-		Public:            false,
-		Preview:           true,
-		ObjectType:        constants.ObjectTypeSpendingCapResponse,
+		Title:               "Set Spending Cap",
+		Method:              http.MethodPut,
+		Route:               "/v1/billing/spending-cap",
+		ContentType:         "application/json",
+		SuccessStatusCode:   http.StatusOK,
+		Public:              false,
+		AgentTool:           true,
+		Preview:             true,
+		ObjectType:          constants.ObjectTypeSpendingCapResponse,
+		RequiredPermissions: []types.Permission{{Domain: types.PermissionDomainBilling, Action: types.ActionUpdate}},
 		ServiceHandler: func(svc any) func(ctx context.Context, req *SetSpendingCapRequest) (*apiresource.SpendingCapResponse, *apierror.APIError) {
 			return svc.(BillingSvc).SetSpendingCap
 		},

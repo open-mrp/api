@@ -33,6 +33,7 @@ func (e *RetrieveAddressDetailsEndpoint) Materialize() *apiendpoint.APIEndpoint[
 		Route:             "/v1/core/addresses/details/{id}",
 		SuccessStatusCode: http.StatusOK,
 		Public:            false,
+		AgentTool:         true,
 		Preview:           true,
 		ObjectType:        constants.ObjectTypeAddressDetailsResult,
 		Extras:            apiendpoint.APIEndpointExtras{HideFromRequestLog: true},

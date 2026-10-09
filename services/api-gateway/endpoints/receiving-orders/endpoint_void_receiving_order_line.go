@@ -34,6 +34,7 @@ func (e *VoidReceivingOrderLineEndpoint) Materialize() *apiendpoint.APIEndpoint[
 		Route:             "/v1/operations/receiving-orders/{receiving_order_id}/lines/{id}/actions/void",
 		SuccessStatusCode: http.StatusOK,
 		Public:            false,
+		AgentTool:         true,
 		Preview:           true,
 		RequiredPermissions: []types.Permission{
 			{Domain: types.PermissionDomainReceivingOrders, Action: types.ActionUpdate},

@@ -42,6 +42,7 @@ func (e *AnalyzeDeliveriesEndpoint) Materialize() *apiendpoint.APIEndpoint[*Anal
 		ContentType:         "application/json",
 		SuccessStatusCode:   http.StatusOK,
 		Public:              false,
+		AgentTool:           true,
 		Preview:             true,
 		RequiredPermissions: []types.Permission{{Domain: types.PermissionDomainInvoices, Action: types.ActionRead}},
 		ServiceHandler: func(svc any) func(ctx context.Context, req *AnalyzeDeliveriesRequest) (*apiresource.AnalyzeDeliveriesResponse, *apierror.APIError) {

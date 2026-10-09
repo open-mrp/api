@@ -34,6 +34,7 @@ func (e *PublishProductionScheduleEndpoint) Materialize() *apiendpoint.APIEndpoi
 		Route:             "/v1/operations/production-schedules/{id}/actions/publish",
 		SuccessStatusCode: http.StatusOK,
 		Public:            true,
+		AgentTool:         true,
 		Preview:           true,
 		ObjectType:        constants.ObjectTypeProductionSchedule,
 		RequiredPermissions: []types.Permission{

@@ -49,6 +49,7 @@ func (e *ListTransactionsEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListT
 		Route:             "/v1/finance/transactions",
 		SuccessStatusCode: http.StatusOK,
 		Public:            false,
+		AgentTool:         true,
 		Preview:           true,
 		RequiredPermissions: []types.Permission{
 			{Domain: types.PermissionDomainTransactions, Action: types.ActionRead},

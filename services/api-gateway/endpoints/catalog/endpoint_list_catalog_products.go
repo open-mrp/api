@@ -33,6 +33,7 @@ func (e *ListCatalogProductsEndpoint) Materialize() *apiendpoint.APIEndpoint[*Li
 		ContentType:             "application/json",
 		SuccessStatusCode:       http.StatusOK,
 		Public:                  false,
+		AgentTool:               true,
 		Preview:                 true,
 		RequiredPermissions:     []types.Permission{{Domain: types.PermissionDomainProducts, Action: types.ActionRead}},
 		CounterpartyPermissions: apiendpoint.Counterparties(types.ActionRead),

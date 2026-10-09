@@ -80,6 +80,7 @@ func (e *ExportCustomersEndpoint) Materialize() *apiendpoint.APIEndpoint[*Export
 		Route:               "/v1/sales/customers/actions/export",
 		SuccessStatusCode:   http.StatusAccepted,
 		Public:              false,
+		AgentTool:           true,
 		Preview:             true,
 		ObjectType:          constants.ObjectTypeJob,
 		RequiredPermissions: []types.Permission{{Domain: types.PermissionDomainCustomers, Action: types.ActionRead}},

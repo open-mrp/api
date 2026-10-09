@@ -540,11 +540,7 @@ func (s *runnerSvc) emitThinkingStep(ctx context.Context, runID, accountID strin
 		return
 	}
 	iterDurationMs := safeconv.Int64ToInt32(time.Since(iterStart).Milliseconds())
-	thinkingMeta, _ := json.Marshal(map[string]any{
-		"input_tokens":  resp.InputTokens,
-		"output_tokens": resp.OutputTokens,
-	})
-	s.emitEvent(ctx, runID, accountID, seq, "thinking", "Reasoning", &reasoning, &iterDurationMs, nil, thinkingMeta)
+	s.emitEvent(ctx, runID, accountID, seq, "thinking", "Reasoning", &reasoning, &iterDurationMs, nil, nil)
 }
 
 // concatThinking joins a response's reasoning blocks into a single string.
@@ -1425,19 +1421,11 @@ func (s *runnerSvc) runAgentLoop(
 					lastMsg := messages[len(messages)-1]
 					messages = []llm.Message{*summary, lastMsg}
 
-					compactMeta, _ := json.Marshal(map[string]any{
-						"input_tokens_before": resp.InputTokens,
-						"tokens_freed":        freed,
-						"compaction_type":     "llm_summary",
-					})
+					compactMeta, _ := json.Marshal(map[string]any{"compaction_type": "llm_summary"})
 					s.emitEvent(ctx, run.ID, accountID, seq, "compaction", "Context compacted via summarization", nil, nil, nil, compactMeta)
 				}
 			} else if freed > 0 {
-				compactMeta, _ := json.Marshal(map[string]any{
-					"input_tokens_before": resp.InputTokens,
-					"tokens_freed":        freed,
-					"compaction_type":     "prune",
-				})
+				compactMeta, _ := json.Marshal(map[string]any{"compaction_type": "prune"})
 				s.emitEvent(ctx, run.ID, accountID, seq, "compaction", "Context compacted via pruning", nil, nil, nil, compactMeta)
 			}
 		}

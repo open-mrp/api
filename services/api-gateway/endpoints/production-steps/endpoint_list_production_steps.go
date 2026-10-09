@@ -44,6 +44,7 @@ func (e *ListProductionStepsEndpoint) Materialize() *apiendpoint.APIEndpoint[*Li
 		Route:               "/v1/operations/production-steps",
 		SuccessStatusCode:   http.StatusOK,
 		Public:              false,
+		AgentTool:           true,
 		Preview:             true,
 		RequiredPermissions: []types.Permission{{Domain: types.PermissionDomainProductionSteps, Action: types.ActionRead}},
 		ObjectType:          constants.ObjectTypeProductionStep,

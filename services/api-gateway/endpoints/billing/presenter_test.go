@@ -67,7 +67,7 @@ func TestAccountUsagePresenter(t *testing.T) {
 			ServicingStatus:  "active",
 			CollectionStatus: "current",
 		},
-		EstimatedAgentSpendCents: 4500,
+		EstimatedAgentSpendCents: new(int64(4500)),
 		PlanName:                 "Founder",
 		BaseFeeCents:             100,
 		BaseFeeInterval:          "month",

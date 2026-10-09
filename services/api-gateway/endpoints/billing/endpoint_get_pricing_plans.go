@@ -23,6 +23,7 @@ func (e *GetPricingPlansEndpoint) Materialize() *apiendpoint.APIEndpoint[*apires
 		Route:             "/v1/billing/plans",
 		SuccessStatusCode: http.StatusOK,
 		Public:            false,
+		AgentTool:         true,
 		Preview:           true,
 		ObjectType:        constants.ObjectTypePricingPlan,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *apiresource.PaginationRequest) (*apiresource.List[apiresource.PricingPlan], *apierror.APIError) {

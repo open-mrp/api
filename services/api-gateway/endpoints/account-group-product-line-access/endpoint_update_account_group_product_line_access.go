@@ -46,6 +46,7 @@ func (e *UpdateAccountGroupProductLineAccessEndpoint) Materialize() *apiendpoint
 		Route:             "/v1/sales/product-line-access/account-groups/{account_group_id}",
 		SuccessStatusCode: http.StatusOK,
 		Public:            false,
+		AgentTool:         true,
 		Preview:           true,
 		ObjectType:        constants.ObjectTypeAccountGroupProductLineAccess,
 		RequiredPermissions: []types.Permission{

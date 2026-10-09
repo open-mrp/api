@@ -53,7 +53,7 @@ type AccountUsage struct {
 	Batches                  UsageItem
 	Sandboxes                UsageItem
 	Subscription             *SubscriptionInfoResult
-	EstimatedAgentSpendCents int64
+	EstimatedAgentSpendCents *int64
 	// PlanName is the pricing plan's display name resolved live from Stripe; empty when the account has no Stripe pricing plan.
 	PlanName string
 	// BaseFeeCents is the flat base fee charged per BaseFeeInterval, resolved from the plan's license fee component; 0 when the plan has no base fee.

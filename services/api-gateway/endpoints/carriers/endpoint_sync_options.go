@@ -30,6 +30,7 @@ func (e *SyncOptionsEndpoint) Materialize() *apiendpoint.APIEndpoint[*SyncOption
 		Route:               "/v1/operations/carriers/{id}/actions/sync-options",
 		SuccessStatusCode:   http.StatusOK,
 		Public:              false,
+		AgentTool:           true,
 		Preview:             true,
 		RequiredPermissions: []types.Permission{{Domain: types.PermissionDomainCarriers, Action: types.ActionUpdate}},
 		ObjectType:          constants.ObjectTypeCarrier,

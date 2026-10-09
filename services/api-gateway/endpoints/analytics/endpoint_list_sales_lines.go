@@ -38,6 +38,7 @@ func (e *ListSalesLinesEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListSal
 		ContentType:         "application/json",
 		SuccessStatusCode:   http.StatusOK,
 		Public:              false,
+		AgentTool:           true,
 		Preview:             true,
 		ReadOnly:            true,
 		RequiredPermissions: []types.Permission{{Domain: types.PermissionDomainInvoices, Action: types.ActionRead}},

@@ -46,6 +46,7 @@ func (e *UpdateCustomerProductLineAccessEndpoint) Materialize() *apiendpoint.API
 		Route:             "/v1/sales/product-line-access/customers/{customer_id}",
 		SuccessStatusCode: http.StatusOK,
 		Public:            false,
+		AgentTool:         true,
 		Preview:           true,
 		ObjectType:        constants.ObjectTypeCustomerProductLineAccess,
 		RequiredPermissions: []types.Permission{

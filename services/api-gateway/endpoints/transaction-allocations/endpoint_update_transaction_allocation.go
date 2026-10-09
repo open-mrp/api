@@ -48,6 +48,7 @@ func (e *UpdateTransactionAllocationEndpoint) Materialize() *apiendpoint.APIEndp
 		Route:             "/v1/finance/transaction-allocations/{id}",
 		SuccessStatusCode: http.StatusOK,
 		Public:            false,
+		AgentTool:         true,
 		Preview:           true,
 		RequiredPermissions: []types.Permission{
 			{Domain: types.PermissionDomainSettlements, Action: types.ActionUpdate},

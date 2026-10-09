@@ -47,6 +47,7 @@ func (e *AnalyzeProductionCostsEndpoint) Materialize() *apiendpoint.APIEndpoint[
 		ContentType:         "application/json",
 		SuccessStatusCode:   http.StatusOK,
 		Public:              false,
+		AgentTool:           true,
 		ReadOnly:            true,
 		Preview:             true,
 		ObjectType:          constants.ObjectTypeAnalyzeProductionCostsResponse,

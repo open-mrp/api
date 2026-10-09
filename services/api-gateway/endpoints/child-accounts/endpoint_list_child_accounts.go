@@ -29,6 +29,7 @@ func (e *ListChildAccountsEndpoint) Materialize() *apiendpoint.APIEndpoint[*List
 		Route:             "/v1/identity/child-accounts",
 		SuccessStatusCode: http.StatusOK,
 		Public:            false,
+		AgentTool:         true,
 		Preview:           true,
 		ObjectType:        constants.ObjectTypeChildAccount,
 		RequiredPermissions: []types.Permission{

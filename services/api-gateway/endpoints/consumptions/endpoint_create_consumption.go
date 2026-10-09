@@ -61,6 +61,7 @@ func (e *CreateConsumptionEndpoint) Materialize() *apiendpoint.APIEndpoint[*Crea
 		Route:             "/v1/operations/production-steps/{production_step_id}/consumptions",
 		SuccessStatusCode: http.StatusCreated,
 		Public:            false,
+		AgentTool:         true,
 		Preview:           true,
 		ObjectType:        constants.ObjectTypeConsumption,
 		RequiredPermissions: []types.Permission{

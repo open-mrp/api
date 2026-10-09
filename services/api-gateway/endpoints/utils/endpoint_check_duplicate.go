@@ -53,6 +53,7 @@ func (e *CheckDuplicateEndpoint) Materialize() *apiendpoint.APIEndpoint[*CheckDu
 		ContentType:       "application/json",
 		SuccessStatusCode: http.StatusOK,
 		Public:            false,
+		AgentTool:         true,
 		Preview:           true,
 		RequiredPermissions: []types.Permission{
 			{Domain: types.PermissionDomainInvoices, Action: types.ActionRead},

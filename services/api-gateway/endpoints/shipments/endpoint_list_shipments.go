@@ -51,6 +51,7 @@ func (e *ListShipmentsEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListShip
 		Route:               "/v1/operations/shipments",
 		SuccessStatusCode:   http.StatusOK,
 		Public:              false,
+		AgentTool:           true,
 		Preview:             true,
 		RequiredPermissions: []types.Permission{{Domain: types.PermissionDomainShipments, Action: types.ActionRead}},
 		ServiceHandler: func(svc any) func(ctx context.Context, req *ListShipmentsRequest) (*apiresource.List[apiresource.Shipment], *apierror.APIError) {

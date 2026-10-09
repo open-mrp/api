@@ -44,6 +44,7 @@ func (e *EmailReceivablesForCustomerEndpoint) Materialize() *apiendpoint.APIEndp
 		ContentType:       "application/json",
 		SuccessStatusCode: http.StatusAccepted,
 		Public:            false,
+		AgentTool:         true,
 		Preview:           true,
 		RequiredPermissions: []types.Permission{
 			{Domain: types.PermissionDomainCustomers, Action: types.ActionRead},

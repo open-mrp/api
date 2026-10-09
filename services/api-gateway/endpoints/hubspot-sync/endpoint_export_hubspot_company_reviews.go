@@ -39,6 +39,7 @@ func (e *ExportHubspotCompanyReviewsEndpoint) Materialize() *apiendpoint.APIEndp
 		Route:             "/v1/settings/integrations/hubspot/sync/{id}/company-reviews/actions/export",
 		SuccessStatusCode: http.StatusAccepted,
 		Public:            false,
+		AgentTool:         true,
 		Preview:           true,
 		ObjectType:        constants.ObjectTypeJob,
 		IncludeConfig: apiendpoint.IncludesFor(apiendpoint.IncludesParams{

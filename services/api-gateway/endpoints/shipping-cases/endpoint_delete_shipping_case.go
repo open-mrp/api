@@ -29,6 +29,7 @@ func (e *DeleteShippingCaseEndpoint) Materialize() *apiendpoint.APIEndpoint[*Del
 		ContentType:       "application/json",
 		SuccessStatusCode: http.StatusOK,
 		Public:            false,
+		AgentTool:         true,
 		Preview:           true,
 		// DeleteShippingCase enforces shipments:delete in the service (shipping cases
 		// are a facet of shipments). Declared here to match that enforcement.

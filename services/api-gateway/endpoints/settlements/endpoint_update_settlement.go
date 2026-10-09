@@ -53,6 +53,7 @@ func (e *UpdateSettlementEndpoint) Materialize() *apiendpoint.APIEndpoint[*Updat
 		Route:               "/v1/finance/settlements/{id}",
 		SuccessStatusCode:   http.StatusOK,
 		Public:              false,
+		AgentTool:           true,
 		Preview:             true,
 		RequiredPermissions: []types.Permission{{Domain: types.PermissionDomainSettlements, Action: types.ActionUpdate}},
 		ObjectType:          constants.ObjectTypeSettlement,

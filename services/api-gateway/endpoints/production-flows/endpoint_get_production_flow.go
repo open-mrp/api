@@ -30,6 +30,7 @@ func (e *GetProductionFlowEndpoint) Materialize() *apiendpoint.APIEndpoint[*GetP
 		ContentType:       "application/json",
 		SuccessStatusCode: http.StatusOK,
 		Public:            false,
+		AgentTool:         true,
 		Preview:           true,
 		ObjectType:        constants.ObjectTypeProductionFlow,
 		RequiredPermissions: []types.Permission{

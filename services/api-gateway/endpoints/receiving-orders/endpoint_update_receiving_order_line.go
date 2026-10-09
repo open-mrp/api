@@ -49,6 +49,7 @@ func (e *UpdateReceivingOrderLineEndpoint) Materialize() *apiendpoint.APIEndpoin
 		ContentType:       "application/json",
 		SuccessStatusCode: http.StatusOK,
 		Public:            false,
+		AgentTool:         true,
 		Preview:           true,
 		RequiredPermissions: []types.Permission{
 			{Domain: types.PermissionDomainReceivingOrders, Action: types.ActionUpdate},

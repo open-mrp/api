@@ -29,6 +29,7 @@ func (e *GetOAuthStatusEndpoint) Materialize() *apiendpoint.APIEndpoint[*GetOAut
 		Route:               "/v1/operations/carriers/{id}/oauth-status",
 		SuccessStatusCode:   http.StatusOK,
 		Public:              false,
+		AgentTool:           true,
 		Preview:             true,
 		RequiredPermissions: []types.Permission{{Domain: types.PermissionDomainCarriers, Action: types.ActionRead}},
 		Extras:              apiendpoint.APIEndpointExtras{HideFromRequestLog: true},

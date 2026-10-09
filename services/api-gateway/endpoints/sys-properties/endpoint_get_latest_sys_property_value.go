@@ -39,6 +39,7 @@ func (e *GetLatestSysPropertyValueEndpoint) Materialize() *apiendpoint.APIEndpoi
 		Route:             "/v1/settings/properties/{type_code}/latest-value",
 		SuccessStatusCode: http.StatusOK,
 		Public:            false,
+		AgentTool:         true,
 		Preview:           true,
 		RequiredPermissions: []types.Permission{
 			{Domain: types.PermissionDomainSystemProperties, Action: types.ActionUpdate},

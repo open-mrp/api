@@ -30,6 +30,7 @@ func (e *RetrieveSettlementEndpoint) Materialize() *apiendpoint.APIEndpoint[*Ret
 		Route:               "/v1/finance/settlements/{id}",
 		SuccessStatusCode:   http.StatusOK,
 		Public:              false,
+		AgentTool:           true,
 		Preview:             true,
 		RequiredPermissions: []types.Permission{{Domain: types.PermissionDomainSettlements, Action: types.ActionRead}},
 		ObjectType:          constants.ObjectTypeSettlement,

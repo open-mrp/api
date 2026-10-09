@@ -28,6 +28,7 @@ func (e *RetrieveReceivingOrderEndpoint) Materialize() *apiendpoint.APIEndpoint[
 		Route:             "/v1/operations/receiving-orders/{id}",
 		SuccessStatusCode: http.StatusOK,
 		Public:            false,
+		AgentTool:         true,
 		Preview:           true,
 		RequiredPermissions: []types.Permission{
 			{Domain: types.PermissionDomainReceivingOrders, Action: types.ActionRead},

@@ -32,6 +32,7 @@ func (e *AddChildAccountEndpoint) Materialize() *apiendpoint.APIEndpoint[*AddChi
 		Route:             "/v1/identity/child-accounts/{child_account_id}",
 		SuccessStatusCode: http.StatusOK,
 		Public:            false,
+		AgentTool:         true,
 		Preview:           true,
 		ObjectType:        constants.ObjectTypeChildAccount,
 		RequiredPermissions: []types.Permission{

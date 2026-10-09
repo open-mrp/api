@@ -43,6 +43,7 @@ func (e *CreateEmailDomainEndpoint) Materialize() *apiendpoint.APIEndpoint[*Crea
 		Route:               "/v1/messaging/email-domains",
 		SuccessStatusCode:   http.StatusCreated,
 		Public:              true,
+		AgentTool:           true,
 		Preview:             true,
 		ObjectType:          constants.ObjectTypeEmailDomain,
 		RequiredPermissions: []types.Permission{{Domain: types.PermissionDomainMessaging, Action: types.ActionCreate}},

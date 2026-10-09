@@ -27,6 +27,7 @@ func (e *ListPurchaseOrderStatusesEndpoint) Materialize() *apiendpoint.APIEndpoi
 		Route:             "/v1/operations/purchase-orders/statuses",
 		SuccessStatusCode: http.StatusOK,
 		Public:            false,
+		AgentTool:         true,
 		Preview:           true,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *ListPurchaseOrderStatusesRequest) (*apiresource.List[apiresource.SalesOrderStatus], *apierror.APIError) {
 			return svc.(PurchaseOrderSvc).ListPurchaseOrderStatuses

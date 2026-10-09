@@ -8,6 +8,7 @@ import (
 	apiendpoint "github.com/open-mrp/api/services/api-gateway/pkg/endpoint"
 	apiexample "github.com/open-mrp/api/services/api-gateway/pkg/example"
 	apiresource "github.com/open-mrp/api/services/api-gateway/pkg/resource"
+	"github.com/open-mrp/api/services/auth-service/pkg/types"
 	"github.com/open-mrp/api/shared/constants"
 	apierror "github.com/open-mrp/api/shared/errors"
 )
@@ -37,14 +38,17 @@ type ExportPartsEndpoint struct{}
 
 func (e *ExportPartsEndpoint) Materialize() *apiendpoint.APIEndpoint[*ExportPartsRequest, *apiresource.Job] {
 	return (&apiendpoint.APIEndpoint[*ExportPartsRequest, *apiresource.Job]{
-		Title:             "Export Parts",
-		Method:            http.MethodPost,
-		ContentType:       "application/json",
-		Route:             "/v1/catalog/parts/actions/export",
-		SuccessStatusCode: http.StatusAccepted,
-		Public:            false,
-		Preview:           true,
-		ObjectType:        constants.ObjectTypeJob,
+		Title:                   "Export Parts",
+		Method:                  http.MethodPost,
+		ContentType:             "application/json",
+		Route:                   "/v1/catalog/parts/actions/export",
+		SuccessStatusCode:       http.StatusAccepted,
+		Public:                  false,
+		AgentTool:               true,
+		RequiredPermissions:     []types.Permission{{Domain: types.PermissionDomainParts, Action: types.ActionRead}},
+		CounterpartyPermissions: apiendpoint.Counterparties(types.ActionRead),
+		Preview:                 true,
+		ObjectType:              constants.ObjectTypeJob,
 		IncludeConfig: apiendpoint.IncludesFor(apiendpoint.IncludesParams{
 			ObjectType: constants.ObjectTypeJob,
 			Fields:     []string{"created_by", "created_by.role"},

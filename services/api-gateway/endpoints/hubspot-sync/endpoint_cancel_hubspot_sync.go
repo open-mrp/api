@@ -30,6 +30,7 @@ func (e *CancelHubspotSyncEndpoint) Materialize() *apiendpoint.APIEndpoint[*Canc
 		Route:               "/v1/settings/integrations/hubspot/sync/{id}/actions/cancel",
 		SuccessStatusCode:   http.StatusOK,
 		Public:              false,
+		AgentTool:           true,
 		Preview:             true,
 		ObjectType:          constants.ObjectTypeHubspotSyncJob,
 		RequiredPermissions: []types.Permission{{Domain: types.PermissionDomainIntegrations, Action: types.ActionUpdate}},

@@ -82,6 +82,7 @@ func (e *SplitBatchEndpoint) Materialize() *apiendpoint.APIEndpoint[*SplitBatchR
 		Route:               "/v1/operations/batches/actions/split",
 		SuccessStatusCode:   http.StatusCreated,
 		Public:              false,
+		AgentTool:           true,
 		Preview:             true,
 		RequiredPermissions: []types.Permission{{Domain: types.PermissionDomainBatches, Action: types.ActionCreate}},
 		ObjectType:          constants.ObjectTypeBatch,

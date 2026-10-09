@@ -30,6 +30,7 @@ func (e *ListNotificationRecipientsEndpoint) Materialize() *apiendpoint.APIEndpo
 		Route:                   "/v1/sales/customers/{id}/notification-recipients",
 		SuccessStatusCode:       http.StatusOK,
 		Public:                  false,
+		AgentTool:               true,
 		Preview:                 true,
 		RequiredPermissions:     []types.Permission{{Domain: types.PermissionDomainCustomers, Action: types.ActionRead}},
 		CounterpartyPermissions: apiendpoint.Counterparties(types.ActionRead),

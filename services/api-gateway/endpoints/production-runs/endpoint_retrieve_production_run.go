@@ -30,6 +30,7 @@ func (e *RetrieveProductionRunEndpoint) Materialize() *apiendpoint.APIEndpoint[*
 		Route:             "/v1/operations/production-runs/{id}",
 		SuccessStatusCode: http.StatusOK,
 		Public:            false,
+		AgentTool:         true,
 		Preview:           true,
 		ObjectType:        constants.ObjectTypeProductionRun,
 		RequiredPermissions: []types.Permission{

@@ -158,7 +158,7 @@ message GetAccountUsageResponse {
   UsageItem agent_tokens = 6;
   reserved 7; // was agent_token_detail; token counts are never surfaced
   reserved "agent_token_detail";
-  int64 estimated_agent_spend_cents = 8;
+  optional int64 estimated_agent_spend_cents = 8;
   // Plan display name resolved live from Stripe (e.g. the pricing plan's display_name). Empty when the account has no Stripe pricing plan.
   string plan_name = 9;
   // Flat base fee in cents charged per base_fee_interval, resolved from the pricing plan's license fee component. 0 when the plan has no base fee (e.g. per-seat pricing).

@@ -15,20 +15,20 @@ import (
 //
 // The cap limits estimated agent LLM spend within a billing month; Get Account Usage reports how much of it has been spent so far.
 //
-// Customer and supplier portal users are refused with `403`.
+// Requires `billing:read`. Customer and supplier portal users are refused with `403`.
 type GetSpendingCapEndpoint struct{}
 
 func (e *GetSpendingCapEndpoint) Materialize() *apiendpoint.APIEndpoint[*apiresource.EmptyResource, *apiresource.SpendingCapResponse] {
 	return (&apiendpoint.APIEndpoint[*apiresource.EmptyResource, *apiresource.SpendingCapResponse]{
-		Title:             "Get Spending Cap",
-		Method:            http.MethodGet,
-		ContentType:       "application/json",
-		Route:             "/v1/billing/spending-cap",
-		SuccessStatusCode: http.StatusOK,
-		Public:            false,
-		Preview:           true,
-		// Account-scoped read; mirrors retrieve_account's account:read (self:read) gate.
-		RequiredPermissions: []types.Permission{{Domain: types.PermissionDomainAccount, Action: types.ActionRead}},
+		Title:               "Get Spending Cap",
+		Method:              http.MethodGet,
+		ContentType:         "application/json",
+		Route:               "/v1/billing/spending-cap",
+		SuccessStatusCode:   http.StatusOK,
+		Public:              false,
+		AgentTool:           true,
+		Preview:             true,
+		RequiredPermissions: []types.Permission{{Domain: types.PermissionDomainBilling, Action: types.ActionRead}},
 		ObjectType:          constants.ObjectTypeSpendingCapResponse,
 		Extras:              apiendpoint.APIEndpointExtras{HideFromRequestLog: true},
 		ServiceHandler: func(svc any) func(ctx context.Context, req *apiresource.EmptyResource) (*apiresource.SpendingCapResponse, *apierror.APIError) {

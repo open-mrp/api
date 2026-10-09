@@ -33,6 +33,7 @@ func (e *ListRunsEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListRunsReque
 		Route:               "/v1/ai/runs",
 		SuccessStatusCode:   http.StatusOK,
 		Public:              true,
+		AgentTool:           true,
 		Preview:             true,
 		ObjectType:          constants.ObjectTypeAgentRun,
 		RequiredPermissions: []types.Permission{{Domain: types.PermissionDomainAgentRuns, Action: types.ActionRead}},

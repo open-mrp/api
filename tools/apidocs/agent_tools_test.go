@@ -2,9 +2,14 @@ package main
 
 import (
 	"encoding/json"
+	"net/http"
+	"reflect"
 	"slices"
 	"strings"
 	"testing"
+
+	apiresource "github.com/open-mrp/api/services/api-gateway/pkg/resource"
+	"github.com/open-mrp/api/services/auth-service/pkg/types"
 )
 
 func findDescriptor(t *testing.T, descriptors []agentToolDescriptor, slug string) agentToolDescriptor {
@@ -199,15 +204,29 @@ func TestAgentToolNullableFieldsUseTypeUnion(t *testing.T) {
 	}
 }
 
-// TestAgentToolsNeverRequireOnlyCostsRead keeps every report that is nothing but cost out of the agent-tool catalog: no agent may hold costs:read, so the tool could only ever fail.
-func TestAgentToolsNeverRequireOnlyCostsRead(t *testing.T) {
+// TestAgentSpendNeedsBillingPermission keeps the account's agent spending behind billing, which no role holds until an admin grants it, so an agent reading costs never also learns the AI spend. Cost data itself follows the agent role's costs:read, as it does for users.
+func TestAgentSpendNeedsBillingPermission(t *testing.T) {
 	t.Parallel()
 
+	spendCap := reflect.TypeFor[*apiresource.SpendingCapResponse]()
+	found := 0
 	for _, group := range buildAllGroups() {
 		for _, ep := range group.Endpoints {
-			if ep.IsAgentTool() && requiresOnlyCostsRead(ep) {
-				t.Errorf("%s %s is an agent tool but requires costs:read alone, which no agent holds; drop AgentTool", ep.GetMethod(), ep.GetRoute())
+			if ep.GetResponseType() != spendCap {
+				continue
+			}
+			found++
+			want := types.Permission{Domain: types.PermissionDomainBilling, Action: types.ActionRead}
+			if ep.GetMethod() != http.MethodGet {
+				want.Action = types.ActionUpdate
+			}
+			perms, _ := reflect.ValueOf(ep).Elem().FieldByName("RequiredPermissions").Interface().(types.AnyOfPermissions)
+			if len(perms) != 1 || perms[0] != want {
+				t.Errorf("%s %s returns the agent spending cap but declares %v; want exactly %s", ep.GetMethod(), ep.GetRoute(), perms, want)
 			}
 		}
+	}
+	if found < 2 {
+		t.Fatalf("found %d spending-cap endpoints, want the get and the set", found)
 	}
 }

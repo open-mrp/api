@@ -29,6 +29,7 @@ func (e *DeleteTransactionAllocationEndpoint) Materialize() *apiendpoint.APIEndp
 		ContentType:       "application/json",
 		SuccessStatusCode: http.StatusOK,
 		Public:            false,
+		AgentTool:         true,
 		Preview:           true,
 		RequiredPermissions: []types.Permission{
 			{Domain: types.PermissionDomainSettlements, Action: types.ActionDelete},

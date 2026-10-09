@@ -39,6 +39,7 @@ func (e *GenPackListEndpoint) Materialize() *apiendpoint.APIEndpoint[*GenPackLis
 		Route:             "/v1/core/records/actions/generate-pack-list",
 		SuccessStatusCode: http.StatusOK,
 		Public:            false,
+		AgentTool:         true,
 		Preview:           true,
 		Extras:            apiendpoint.APIEndpointExtras{HideFromRequestLog: true},
 		ObjectType:        constants.ObjectTypePackList,

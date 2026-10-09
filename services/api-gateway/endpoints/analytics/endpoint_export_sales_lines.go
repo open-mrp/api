@@ -35,6 +35,7 @@ func (e *ExportSalesLinesEndpoint) Materialize() *apiendpoint.APIEndpoint[*Expor
 		Route:               "/v1/core/analytics/sales-lines/actions/export",
 		SuccessStatusCode:   http.StatusAccepted,
 		Public:              false,
+		AgentTool:           true,
 		Preview:             true,
 		ObjectType:          constants.ObjectTypeJob,
 		RequiredPermissions: []types.Permission{{Domain: types.PermissionDomainInvoices, Action: types.ActionRead}},

@@ -10,6 +10,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/open-mrp/api/services/auth-service/pkg/types"
 	"github.com/open-mrp/api/services/billing-service/internal/domain"
 	"github.com/open-mrp/api/shared/appctx"
 	"github.com/open-mrp/api/shared/constants"
@@ -222,7 +223,9 @@ func (s *billingSvcImpl) GetAccountUsage(ctx context.Context, accountID string) 
 	usage.Batches = domain.UsageItem{Current: batchCount, Limit: limitMap[string(constants.AccountPlanLimitBatchesMaximum)]}
 
 	spend, plan := s.currentAgentSpend(ctx, accountID, periodStart)
-	usage.EstimatedAgentSpendCents = spend
+	if identity, ok := appctx.GetIdentityFromContext(ctx); ok && identity != nil && identity.CheckHasPermission(types.PermissionDomainBilling, types.ActionRead) == nil {
+		usage.EstimatedAgentSpendCents = &spend
+	}
 	// Surface the plan name and base fee the customer is actually billed, from the same resolved Stripe plan.
 	if plan != nil {
 		usage.PlanName = plan.DisplayName

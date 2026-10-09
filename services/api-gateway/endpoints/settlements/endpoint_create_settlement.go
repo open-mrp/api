@@ -90,6 +90,7 @@ func (e *CreateSettlementEndpoint) Materialize() *apiendpoint.APIEndpoint[*Creat
 		Route:               "/v1/finance/settlements",
 		SuccessStatusCode:   http.StatusCreated,
 		Public:              false,
+		AgentTool:           true,
 		Preview:             true,
 		RequiredPermissions: []types.Permission{{Domain: types.PermissionDomainSettlements, Action: types.ActionCreate}},
 		ObjectType:          constants.ObjectTypeSettlement,

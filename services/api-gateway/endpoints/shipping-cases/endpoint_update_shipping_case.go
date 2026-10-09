@@ -55,6 +55,7 @@ func (e *UpdateShippingCaseEndpoint) Materialize() *apiendpoint.APIEndpoint[*Upd
 		Route:             "/v1/operations/shipping-cases/{id}",
 		SuccessStatusCode: http.StatusOK,
 		Public:            false,
+		AgentTool:         true,
 		Preview:           true,
 		// UpdateShippingCase enforces shipments:update in the service (shipping cases
 		// are a facet of shipments). Declared here to match that enforcement.

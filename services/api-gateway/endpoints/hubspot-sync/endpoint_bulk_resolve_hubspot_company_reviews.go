@@ -59,6 +59,7 @@ func (e *BulkResolveHubspotCompanyReviewsEndpoint) Materialize() *apiendpoint.AP
 		Route:             "/v1/settings/integrations/hubspot/sync/{id}/company-reviews/actions/bulk-resolve",
 		SuccessStatusCode: http.StatusAccepted,
 		Public:            false,
+		AgentTool:         true,
 		Preview:           true,
 		ObjectType:        constants.ObjectTypeJob,
 		IncludeConfig: apiendpoint.IncludesFor(apiendpoint.IncludesParams{

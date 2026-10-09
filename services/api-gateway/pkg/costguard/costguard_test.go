@@ -341,7 +341,8 @@ func TestRedact_InternalFieldsReachOnlyTheSellersOwnActors(t *testing.T) {
 		{"internal without costs:read", internalIdentity(constants.RoleTypeCustom, "production_runs:read"), true, false},
 		{"internal with costs:read", internalIdentity(constants.RoleTypeCustom, "costs:read"), true, true},
 		{"admin", internalIdentity(constants.RoleTypeAdmin), true, true},
-		{"agent whose role grants costs:read", agentIdentity("costs:read", "production_runs:read"), true, false},
+		{"agent whose role grants costs:read", agentIdentity("costs:read", "production_runs:read"), true, true},
+		{"agent whose role does not", agentIdentity("production_runs:read"), true, false},
 		{"customer portal actor", relationIdentity(types.IdentityRelationTypeCustomer), false, false},
 		{"supplier portal actor whose own role grants costs:read", relationIdentity(types.IdentityRelationTypeSupplier, "costs:read"), false, false},
 		{"unauthenticated", types.GetUnauthenticatedIdentity(ptr("ac_seller")), false, false},
@@ -428,7 +429,8 @@ func TestRedact_CostKeysFollowCostsRead(t *testing.T) {
 	}{
 		{"internal with costs:read", internalIdentity(constants.RoleTypeCustom, "costs:read"), true},
 		{"internal without costs:read", internalIdentity(constants.RoleTypeCustom, "production_schedules:read"), false},
-		{"agent whose role grants costs:read", agentIdentity("costs:read"), false},
+		{"agent whose role grants costs:read", agentIdentity("costs:read"), true},
+		{"agent whose role does not", agentIdentity("production_schedules:read"), false},
 		{"customer portal actor", relationIdentity(types.IdentityRelationTypeCustomer), false},
 	} {
 		t.Run(tt.name, func(t *testing.T) {

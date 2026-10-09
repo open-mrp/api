@@ -35,6 +35,7 @@ func (e *ListOpenCreditsEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListOp
 		Route:             "/v1/finance/open-credits",
 		SuccessStatusCode: http.StatusOK,
 		Public:            false,
+		AgentTool:         true,
 		Preview:           true,
 		RequiredPermissions: []types.Permission{
 			{Domain: types.PermissionDomainSettlements, Action: types.ActionRead},

@@ -90,6 +90,19 @@ func testUserActorCtx() context.Context {
 	})
 }
 
+func testInternalActorCtx(perms ...string) context.Context {
+	accountID := "acct_paid"
+	granted := map[string]bool{}
+	for _, p := range perms {
+		granted[p] = true
+	}
+	return appctx.WithIdentity(context.Background(), &authtypes.Identity{
+		Type:   authtypes.IdentityActorTypeUser,
+		Target: &authtypes.IdentityTarget{AccountID: accountID},
+		Actor:  &authtypes.IdentityActor{ID: "usr_1", RelationType: authtypes.IdentityRelationTypeInternal, AccountID: &accountID, Permissions: granted},
+	})
+}
+
 // testAPIKeyActorCtx carries an API-key actor, which names no person.
 func testAPIKeyActorCtx() context.Context {
 	return appctx.WithIdentity(context.Background(), &authtypes.Identity{
@@ -637,14 +650,14 @@ func (s *BillingSvcTestSuite) TestGetAccountUsage_HappyPath() {
 	// Agent spend resolves the plan's rate card from its Stripe pricing plan; with no pricing plan the spend is 0 without any Stripe call.
 	s.accountUsageRepo.EXPECT().GetAccountStripePricingPlanID(anyCtx, accountID).Return(nil, nil)
 
-	usage, apiErr := s.billingSvc.GetAccountUsage(context.Background(), accountID)
+	usage, apiErr := s.billingSvc.GetAccountUsage(testInternalActorCtx("billing:read"), accountID)
 	s.Nil(apiErr)
 	s.Equal(3, usage.Seats.Current)
 	s.Equal(10, *usage.Seats.Limit)
 	s.Equal(1, usage.Sandboxes.Current)
 	s.NotNil(usage.Subscription)
 	s.Equal("active", usage.Subscription.ServicingStatus)
-	s.Equal(int64(0), usage.EstimatedAgentSpendCents)
+	s.Equal(new(int64(0)), usage.EstimatedAgentSpendCents)
 }
 
 func (s *BillingSvcTestSuite) TestGetAccountUsage_FreePlanNoSubscription() {
@@ -661,10 +674,10 @@ func (s *BillingSvcTestSuite) TestGetAccountUsage_FreePlanNoSubscription() {
 	// Free plan has no Stripe pricing plan, so agent spend is 0 without a Stripe call.
 	s.accountUsageRepo.EXPECT().GetAccountStripePricingPlanID(anyCtx, accountID).Return(nil, nil)
 
-	usage, apiErr := s.billingSvc.GetAccountUsage(context.Background(), accountID)
+	usage, apiErr := s.billingSvc.GetAccountUsage(testInternalActorCtx("billing:read"), accountID)
 	s.Nil(apiErr)
 	s.Nil(usage.Subscription)
-	s.Equal(int64(0), usage.EstimatedAgentSpendCents)
+	s.Equal(new(int64(0)), usage.EstimatedAgentSpendCents)
 }
 
 func (s *BillingSvcTestSuite) TestGetAccountUsage_AgentSpendFromRateCard() {
@@ -695,9 +708,44 @@ func (s *BillingSvcTestSuite) TestGetAccountUsage_AgentSpendFromRateCard() {
 	s.accountUsageRepo.EXPECT().GetStripeCustomerIDByAccountID(anyCtx, accountID).Return(new("cus_paid"), nil)
 	s.stripeClient.EXPECT().GetAgentTokenSpendCents(anyCtx, "cus_paid", "rcd_pro", gomock.Any()).Return(int64(4231), nil)
 
-	usage, apiErr := s.billingSvc.GetAccountUsage(context.Background(), accountID)
+	usage, apiErr := s.billingSvc.GetAccountUsage(testInternalActorCtx("billing:read"), accountID)
 	s.Nil(apiErr)
-	s.Equal(int64(4231), usage.EstimatedAgentSpendCents)
+	s.Equal(new(int64(4231)), usage.EstimatedAgentSpendCents)
+	s.Equal("Founder", usage.PlanName)
+	s.Equal(int64(100), usage.BaseFeeCents)
+	s.Equal("month", usage.BaseFeeInterval)
+}
+
+func (s *BillingSvcTestSuite) TestGetAccountUsage_AgentSpendWithheldWithoutBillingRead() {
+	accountID := "acct_withheld"
+	now := time.Now().UTC()
+	periodEnd := now.Add(30 * 24 * time.Hour)
+
+	s.accountUsageRepo.EXPECT().GetLimitsByAccountID(anyCtx, accountID).Return([]domain.PlanLimit{
+		{Key: "seats_maximum", Value: new(10)},
+	}, nil)
+	s.accountUsageRepo.EXPECT().CountUsersByAccountID(anyCtx, accountID).Return(3, nil)
+	s.accountUsageRepo.EXPECT().CountSandboxesByAccountID(anyCtx, accountID).Return(1, nil)
+
+	servicingStatus := "active"
+	s.accountUsageRepo.EXPECT().GetAccountSubscriptionInfo(anyCtx, accountID).Return(&domain.AccountSubscriptionInfo{
+		ServicingStatus:              &servicingStatus,
+		SubscriptionCurrentPeriodEnd: &periodEnd,
+	}, nil)
+	s.accountUsageRepo.EXPECT().CountInvoicesByAccountID(anyCtx, accountID, gomock.Any()).Return(0, nil)
+	s.accountUsageRepo.EXPECT().CountBatchesByAccountID(anyCtx, accountID, gomock.Any()).Return(0, nil)
+
+	s.accountUsageRepo.EXPECT().GetAccountStripePricingPlanID(anyCtx, accountID).Return(new("spp_withheld"), nil)
+	s.stripeClient.EXPECT().GetPricingPlan(anyCtx, "spp_withheld").Return(&domain.StripePricingPlan{
+		ID: "spp_withheld", LiveVersion: "v1", RateCardID: "rcd_pro",
+		DisplayName: "Founder", BaseFeeCents: 100, BaseFeeInterval: "month",
+	}, nil)
+	s.accountUsageRepo.EXPECT().GetStripeCustomerIDByAccountID(anyCtx, accountID).Return(new("cus_withheld"), nil)
+	s.stripeClient.EXPECT().GetAgentTokenSpendCents(anyCtx, "cus_withheld", "rcd_pro", gomock.Any()).Return(int64(4231), nil)
+
+	usage, apiErr := s.billingSvc.GetAccountUsage(testInternalActorCtx("self:read", "costs:read"), accountID)
+	s.Nil(apiErr)
+	s.Nil(usage.EstimatedAgentSpendCents)
 	s.Equal("Founder", usage.PlanName)
 	s.Equal(int64(100), usage.BaseFeeCents)
 	s.Equal("month", usage.BaseFeeInterval)

@@ -46,6 +46,7 @@ func (e *CreateRegistrationFlowEndpoint) Materialize() *apiendpoint.APIEndpoint[
 		Route:             "/v1/sales/registration-flows",
 		SuccessStatusCode: http.StatusCreated,
 		Public:            false,
+		AgentTool:         true,
 		Preview:           true,
 		RequiredPermissions: []types.Permission{
 			{Domain: types.PermissionDomainAccount, Action: types.ActionUpdate},

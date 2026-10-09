@@ -47,6 +47,7 @@ func (e *MoveBatchesEndpoint) Materialize() *apiendpoint.APIEndpoint[*MoveBatche
 		Route:               "/v1/operations/batches/actions/move",
 		SuccessStatusCode:   http.StatusCreated,
 		Public:              false,
+		AgentTool:           true,
 		Preview:             true,
 		RequiredPermissions: []types.Permission{{Domain: types.PermissionDomainBatches, Action: types.ActionCreate}},
 		ObjectType:          constants.ObjectTypeBatch,

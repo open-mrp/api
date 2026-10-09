@@ -37,6 +37,7 @@ func (e *ListBatchesByProductionRunEndpoint) Materialize() *apiendpoint.APIEndpo
 		Route:             "/v1/operations/production-runs/{id}/batches",
 		SuccessStatusCode: http.StatusOK,
 		Public:            false,
+		AgentTool:         true,
 		Preview:           true,
 		RequiredPermissions: []types.Permission{
 			{Domain: types.PermissionDomainProductionRuns, Action: types.ActionRead},

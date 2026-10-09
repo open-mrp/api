@@ -33,6 +33,7 @@ func (e *ListCustomerInvoicesEndpoint) Materialize() *apiendpoint.APIEndpoint[*L
 		Route:             "/v1/finance/accounts/{account_id}/invoices",
 		SuccessStatusCode: http.StatusOK,
 		Public:            false,
+		AgentTool:         true,
 		Preview:           true,
 		ObjectType:        constants.ObjectTypeInvoiceForPayment,
 		RequiredPermissions: []types.Permission{

@@ -43,6 +43,7 @@ func (e *ConnectStepsEndpoint) Materialize() *apiendpoint.APIEndpoint[*ConnectSt
 		ContentType:       "application/json",
 		SuccessStatusCode: http.StatusOK,
 		Public:            false,
+		AgentTool:         true,
 		Preview:           true,
 		RequiredPermissions: []types.Permission{
 			{Domain: types.PermissionDomainProductionSteps, Action: types.ActionUpdate},

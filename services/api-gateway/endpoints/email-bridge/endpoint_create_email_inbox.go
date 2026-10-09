@@ -73,6 +73,7 @@ func (e *CreateEmailInboxEndpoint) Materialize() *apiendpoint.APIEndpoint[*Creat
 		Route:               "/v1/messaging/email-inboxes",
 		SuccessStatusCode:   http.StatusCreated,
 		Public:              true,
+		AgentTool:           true,
 		Preview:             true,
 		ObjectType:          constants.ObjectTypeEmailInbox,
 		IncludeConfig:       emailInboxIncludeConfig(),

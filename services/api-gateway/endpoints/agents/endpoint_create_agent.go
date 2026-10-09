@@ -185,6 +185,7 @@ func (e *CreateAgentEndpoint) Materialize() *apiendpoint.APIEndpoint[*CreateAgen
 		ContentType:         "application/json",
 		SuccessStatusCode:   http.StatusCreated,
 		Public:              true,
+		AgentTool:           true,
 		Preview:             true,
 		ObjectType:          constants.ObjectTypeAgentDefinition,
 		RequiredPermissions: []types.Permission{{Domain: types.PermissionDomainAgents, Action: types.ActionCreate}},

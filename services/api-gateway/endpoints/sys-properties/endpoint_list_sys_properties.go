@@ -29,6 +29,7 @@ func (e *ListSysPropertiesEndpoint) Materialize() *apiendpoint.APIEndpoint[*List
 		Route:             "/v1/settings/properties",
 		SuccessStatusCode: http.StatusOK,
 		Public:            false,
+		AgentTool:         true,
 		Preview:           true,
 		ObjectType:        constants.ObjectTypeSysProperty,
 		RequiredPermissions: []types.Permission{

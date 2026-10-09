@@ -29,6 +29,7 @@ func (e *DeleteSalesOrderEndpoint) Materialize() *apiendpoint.APIEndpoint[*Delet
 		Route:             "/v1/sales/sales-orders/{id}",
 		SuccessStatusCode: http.StatusOK,
 		Public:            true,
+		AgentTool:         true,
 		Preview:           true,
 		RequiredPermissions: []types.Permission{
 			{Domain: types.PermissionDomainSalesOrders, Action: types.ActionDelete},

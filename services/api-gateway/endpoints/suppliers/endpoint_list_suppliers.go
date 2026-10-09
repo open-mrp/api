@@ -39,6 +39,7 @@ func (e *ListSuppliersEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListSupp
 		Route:             "/v1/operations/suppliers",
 		SuccessStatusCode: http.StatusOK,
 		Public:            false,
+		AgentTool:         true,
 		Preview:           true,
 		ObjectType:        constants.ObjectTypeSupplier,
 		RequiredPermissions: []types.Permission{

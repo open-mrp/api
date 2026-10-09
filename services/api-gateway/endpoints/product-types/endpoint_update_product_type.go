@@ -49,6 +49,7 @@ func (e *UpdateProductTypeEndpoint) Materialize() *apiendpoint.APIEndpoint[*Upda
 		ContentType:         "application/json",
 		SuccessStatusCode:   http.StatusOK,
 		Public:              false,
+		AgentTool:           true,
 		Preview:             true,
 		RequiredPermissions: []types.Permission{{Domain: types.PermissionDomainProductTypes, Action: types.ActionUpdate}},
 		ObjectType:          constants.ObjectTypeProductType,

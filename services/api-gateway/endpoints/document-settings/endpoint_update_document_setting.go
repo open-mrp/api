@@ -63,6 +63,7 @@ func (e *UpdateDocumentSettingEndpoint) Materialize() *apiendpoint.APIEndpoint[*
 		ContentType:         "application/json",
 		SuccessStatusCode:   http.StatusOK,
 		Public:              false,
+		AgentTool:           true,
 		Preview:             true,
 		ObjectType:          constants.ObjectTypeDocumentSetting,
 		RequiredPermissions: []types.Permission{{Domain: types.PermissionDomainAccount, Action: types.ActionUpdate}},

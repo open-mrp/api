@@ -31,6 +31,7 @@ func (e *ListBatchesByScanningStationEndpoint) Materialize() *apiendpoint.APIEnd
 		Route:             "/v1/operations/scanning-stations/{id}/batches",
 		SuccessStatusCode: http.StatusOK,
 		Public:            false,
+		AgentTool:         true,
 		Preview:           true,
 		RequiredPermissions: []types.Permission{
 			{Domain: types.PermissionDomainBatches, Action: types.ActionRead},

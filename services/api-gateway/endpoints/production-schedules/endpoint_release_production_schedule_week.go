@@ -63,6 +63,7 @@ func (e *ReleaseProductionScheduleWeekEndpoint) Materialize() *apiendpoint.APIEn
 		Route:               "/v1/operations/production-schedules/{id}/actions/release-week",
 		SuccessStatusCode:   http.StatusCreated,
 		Public:              true,
+		AgentTool:           true,
 		Preview:             true,
 		ObjectType:          constants.ObjectTypeProductionScheduleWeekRelease,
 		RequiredPermissions: []types.Permission{{Domain: types.PermissionDomainProductionSchedules, Action: types.ActionUpdate}},

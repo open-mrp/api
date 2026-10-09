@@ -41,6 +41,7 @@ func (e *GetPossibleInitStepsEndpoint) Materialize() *apiendpoint.APIEndpoint[*G
 		Route:               "/v1/operations/batches/{id}/init-steps",
 		SuccessStatusCode:   http.StatusOK,
 		Public:              false,
+		AgentTool:           true,
 		Preview:             true,
 		ReadOnly:            true,
 		RequiredPermissions: []types.Permission{{Domain: types.PermissionDomainBatches, Action: types.ActionRead}},

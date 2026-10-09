@@ -93,8 +93,8 @@ func TestAgentDefinitions_CreateRoundTripsEndpointToolSlugs(t *testing.T) {
 		"endpoint_tool_slugs round-trips through the agent config")
 }
 
-// No agent may read costs, whatever its role grants, so a tool that needs costs:read alone could only ever fail and is never offered.
-func TestAgentTools_CatalogOffersNoCostOnlyTool(t *testing.T) {
+// An agent reads costs when its role grants costs:read, so the cost reports are offered as tools; the agent spending cap stays behind billing.
+func TestAgentTools_CatalogOffersCostReportsAndGatesAgentSpend(t *testing.T) {
 	t.Parallel()
 
 	list, code, err := apiClient.GetList(aiToolsPath, url.Values{"limit": {"1000"}})
@@ -102,18 +102,17 @@ func TestAgentTools_CatalogOffersNoCostOnlyTool(t *testing.T) {
 	require.Equal(t, 200, code)
 	require.NotEmpty(t, list.Data)
 
+	perms := map[string][]any{}
 	for _, raw := range list.Data {
 		tool := parseJSON(raw)
-		perms, _ := tool["required_permissions"].([]any)
-		if len(perms) == 0 {
-			continue
-		}
-		onlyCosts := true
-		for _, p := range perms {
-			if p != "costs:read" {
-				onlyCosts = false
-			}
-		}
-		assert.False(t, onlyCosts, "%s requires costs:read alone, which no agent holds", jsonField(tool, "slug"))
+		p, _ := tool["required_permissions"].([]any)
+		perms[jsonField(tool, "slug")] = p
 	}
+
+	for _, slug := range []string{"analyze_production_costs", "analyze_customer_pricing", "analyze_realized_margins", "get_item_costs"} {
+		require.Contains(t, perms, slug, "%s is offered as a tool", slug)
+		assert.Contains(t, perms[slug], any("costs:read"), "%s requires costs:read", slug)
+	}
+	assert.Equal(t, []any{"billing:read"}, perms["get_spending_cap"])
+	assert.Equal(t, []any{"billing:update"}, perms["set_spending_cap"])
 }

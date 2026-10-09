@@ -39,6 +39,7 @@ func (e *ListSettlementsEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListSe
 		Route:               "/v1/finance/settlements",
 		SuccessStatusCode:   http.StatusOK,
 		Public:              false,
+		AgentTool:           true,
 		Preview:             true,
 		RequiredPermissions: []types.Permission{{Domain: types.PermissionDomainSettlements, Action: types.ActionRead}},
 		ObjectType:          constants.ObjectTypeSettlementSummary,

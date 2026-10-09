@@ -60,10 +60,12 @@ func (e *UpdateQuantityEndpoint) Materialize() *apiendpoint.APIEndpoint[*UpdateQ
 		ContentType:       "application/json",
 		SuccessStatusCode: http.StatusOK,
 		Public:            false,
+		AgentTool:         true,
 		Preview:           true,
 		RequiredPermissions: []types.Permission{
 			{Domain: types.PermissionDomainItems, Action: types.ActionUpdate},
 			{Domain: types.PermissionDomainProductionSteps, Action: types.ActionUpdate},
+			{Domain: types.PermissionDomainDepartments, Action: types.ActionUpdate},
 		},
 		ObjectType: constants.ObjectTypeQuantity,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *UpdateQuantityRequest) (*apiresource.Quantity, *apierror.APIError) {

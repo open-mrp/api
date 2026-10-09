@@ -34,6 +34,7 @@ func (e *CreatePurchaseOrderLineEndpoint) Materialize() *apiendpoint.APIEndpoint
 		Route:                   "/v1/operations/purchase-orders/{id}/lines",
 		SuccessStatusCode:       http.StatusCreated,
 		Public:                  false,
+		AgentTool:               true,
 		Preview:                 true,
 		RequiredPermissions:     []types.Permission{{Domain: types.PermissionDomainPurchaseOrders, Action: types.ActionUpdate}},
 		CounterpartyPermissions: apiendpoint.CounterpartyPermissions{Supplier: types.Permission{Domain: types.PermissionDomainSuppliers, Action: types.ActionUpdate}},

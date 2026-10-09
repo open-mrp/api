@@ -41,6 +41,7 @@ func (e *GetPossibleNextStepsEndpoint) Materialize() *apiendpoint.APIEndpoint[*G
 		Route:               "/v1/operations/batches/{id}/next-steps",
 		SuccessStatusCode:   http.StatusOK,
 		Public:              false,
+		AgentTool:           true,
 		Preview:             true,
 		ReadOnly:            true,
 		RequiredPermissions: []types.Permission{{Domain: types.PermissionDomainBatches, Action: types.ActionRead}},

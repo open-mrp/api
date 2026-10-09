@@ -39,6 +39,7 @@ func (e *CloseBatchEndpoint) Materialize() *apiendpoint.APIEndpoint[*CloseBatchR
 		Route:               "/v1/operations/batches/actions/close",
 		SuccessStatusCode:   http.StatusOK,
 		Public:              false,
+		AgentTool:           true,
 		Preview:             true,
 		RequiredPermissions: []types.Permission{{Domain: types.PermissionDomainBatches, Action: types.ActionDelete}},
 		ObjectType:          constants.ObjectTypeBatch,

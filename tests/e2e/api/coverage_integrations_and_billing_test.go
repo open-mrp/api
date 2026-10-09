@@ -70,6 +70,38 @@ func TestBilling_SpendingCapIsReadable(t *testing.T) {
 	assert.Contains(t, parseJSON(body), "cap_cents", "the cap must be reported even when unset: %s", string(body))
 }
 
+// What the account spends on agents is shown only to a role holding billing; the rest of the usage stays readable with account:read.
+func TestBilling_AgentSpendNeedsBillingPermission(t *testing.T) {
+	t.Parallel()
+
+	without := customRoleClient(t, "self:read", "costs:read")
+	status, body, err := without.GetListRaw(billingPath+"/accounts/usage", nil)
+	require.NoError(t, err)
+	requireStatus(t, 200, status, body)
+	usage := parseJSON(body)
+	assert.Contains(t, usage, "agent_spend")
+	assert.Nil(t, usage["agent_spend"], "agent spend is withheld without billing:read: %s", string(body))
+	assert.NotNil(t, jsonObject(usage, "seats"), "the rest of the usage stays readable: %s", string(body))
+
+	status, body, err = without.GetListRaw(billingPath+"/spending-cap", nil)
+	require.NoError(t, err)
+	assert.Equal(t, 403, status, "the cap needs billing:read: %s", string(body))
+
+	status, body, err = without.PutRaw(billingPath+"/spending-cap", nil, map[string]any{"cap_cents": 100})
+	require.NoError(t, err)
+	assert.Equal(t, 403, status, "setting the cap needs billing:update: %s", string(body))
+
+	with := customRoleClient(t, "self:read", "billing:read")
+	status, body, err = with.GetListRaw(billingPath+"/accounts/usage", nil)
+	require.NoError(t, err)
+	requireStatus(t, 200, status, body)
+	assert.NotNil(t, jsonObject(parseJSON(body), "agent_spend"), "billing:read sees agent spend: %s", string(body))
+
+	status, body, err = with.GetListRaw(billingPath+"/spending-cap", nil)
+	require.NoError(t, err)
+	requireStatus(t, 200, status, body)
+}
+
 func TestBilling_PortalSessionReturnsALink(t *testing.T) {
 	t.Parallel()
 

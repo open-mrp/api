@@ -30,6 +30,7 @@ func (e *DeleteTransactionEndpoint) Materialize() *apiendpoint.APIEndpoint[*Dele
 		Route:             "/v1/finance/transactions/{id}",
 		SuccessStatusCode: http.StatusOK,
 		Public:            false,
+		AgentTool:         true,
 		Preview:           true,
 		RequiredPermissions: []types.Permission{
 			{Domain: types.PermissionDomainTransactions, Action: types.ActionDelete},

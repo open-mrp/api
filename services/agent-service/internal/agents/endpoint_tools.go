@@ -30,7 +30,7 @@ type EndpointToolParam struct {
 	Array bool
 }
 
-// EndpointToolDescriptor is the generated description of an api-gateway endpoint exposed as an agent tool. The catalog of these (EndpointTools) is code-generated from endpoints that are public or flagged AgentTool=true; see `make gen-agent-tools`. These tools are offered to every agent in addition to its explicitly-linked hand-crafted tools — adding one needs no database migration, only a regenerate.
+// EndpointToolDescriptor is the generated description of an api-gateway endpoint exposed as an agent tool. The catalog of these (EndpointTools) is code-generated from endpoints flagged AgentTool=true, public or not; see `make gen-agent-tools`. These tools are offered to every agent in addition to its explicitly-linked hand-crafted tools — adding one needs no database migration, only a regenerate.
 type EndpointToolDescriptor struct {
 	Slug          string
 	DisplayName   string

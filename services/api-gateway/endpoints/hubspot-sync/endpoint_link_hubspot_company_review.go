@@ -41,6 +41,7 @@ func (e *LinkHubspotCompanyReviewEndpoint) Materialize() *apiendpoint.APIEndpoin
 		Route:               "/v1/settings/integrations/hubspot/sync/{id}/company-reviews/{review_id}/actions/link",
 		SuccessStatusCode:   http.StatusOK,
 		Public:              false,
+		AgentTool:           true,
 		Preview:             true,
 		ObjectType:          constants.ObjectTypeHubspotCompanyReview,
 		RequiredPermissions: []types.Permission{{Domain: types.PermissionDomainIntegrations, Action: types.ActionUpdate}},

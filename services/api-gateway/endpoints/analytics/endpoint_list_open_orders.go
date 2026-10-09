@@ -33,6 +33,7 @@ func (e *ListOpenOrdersEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListOpe
 		ContentType:         "application/json",
 		SuccessStatusCode:   http.StatusOK,
 		Public:              false,
+		AgentTool:           true,
 		Preview:             true,
 		ReadOnly:            true,
 		ObjectType:          constants.ObjectTypeOpenOrder,

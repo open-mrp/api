@@ -78,7 +78,8 @@ func TestExecute_clearsCostFieldsForCallersWithoutCostsRead(t *testing.T) {
 		{"internal without costs:read", costIdentity(types.IdentityRelationTypeInternal, constants.RoleTypeCustom, "items:read"), hidden},
 		{"customer portal actor carrying costs:read", costIdentity(types.IdentityRelationTypeCustomer, "", "costs:read"), hidden},
 		{"supplier portal actor carrying costs:read", costIdentity(types.IdentityRelationTypeSupplier, "", "costs:read"), hidden},
-		{"agent whose role grants costs:read", agentCostIdentity("costs:read", "items:read"), hidden},
+		{"agent whose role grants costs:read", agentCostIdentity("costs:read", "items:read"), shown},
+		{"agent whose role does not", agentCostIdentity("items:read"), hidden},
 		{"no identity", nil, hidden},
 	}
 	for _, tt := range tests {
@@ -122,8 +123,8 @@ func TestExecute_costFieldsAreSensitiveInTheRequestLog(t *testing.T) {
 	assert.Equal(t, map[string]bool{"unit_cost": true, "lines.unit_cost": true}, rl.SensitiveResponseFields)
 }
 
-// An agent's tool results are kept on its run, which any member of the account can read, so a report that is nothing but cost is refused to every agent, whatever its role grants.
-func TestExecute_refusesAgentsACostOnlyEndpoint(t *testing.T) {
+// An agent reads a cost-only report exactly as a user with the same role would: its role's costs:read decides.
+func TestExecute_costOnlyEndpointFollowsTheAgentsRole(t *testing.T) {
 	t.Parallel()
 
 	ep := &APIEndpoint[*stubRequest, *stubCostResponse]{
@@ -144,12 +145,8 @@ func TestExecute_refusesAgentsACostOnlyEndpoint(t *testing.T) {
 		identity *types.Identity
 		want     int
 	}{
-		{"agent whose role grants costs:read", agentCostIdentity("costs:read"), http.StatusForbidden},
-		{"agent carrying an admin role type", func() *types.Identity {
-			identity := costIdentity(types.IdentityRelationTypeInternal, constants.RoleTypeAdmin, "costs:read")
-			identity.Type = types.IdentityActorTypeAgent
-			return identity
-		}(), http.StatusForbidden},
+		{"agent whose role grants costs:read", agentCostIdentity("costs:read"), http.StatusOK},
+		{"agent whose role does not", agentCostIdentity("items:read"), http.StatusForbidden},
 		{"user whose role grants costs:read", costIdentity(types.IdentityRelationTypeInternal, constants.RoleTypeCustom, "costs:read"), http.StatusOK},
 	}
 	for _, tt := range tests {
@@ -162,9 +159,6 @@ func TestExecute_refusesAgentsACostOnlyEndpoint(t *testing.T) {
 			ep.Execute(w, r)
 
 			require.Equal(t, tt.want, w.Code, w.Body.String())
-			if tt.want == http.StatusForbidden {
-				assert.Contains(t, w.Body.String(), "agents never receive cost")
-			}
 		})
 	}
 }
@@ -208,7 +202,8 @@ func TestExecute_clearsInternalFieldsForPortalActors(t *testing.T) {
 	}{
 		{"admin", costIdentity(types.IdentityRelationTypeInternal, constants.RoleTypeAdmin), all},
 		{"internal without costs:read", costIdentity(types.IdentityRelationTypeInternal, constants.RoleTypeCustom, "production_runs:read"), noCost},
-		{"agent whose role grants costs:read", agentCostIdentity("costs:read", "production_runs:read"), noCost},
+		{"agent whose role grants costs:read", agentCostIdentity("costs:read", "production_runs:read"), all},
+		{"agent whose role does not", agentCostIdentity("production_runs:read"), noCost},
 		{"customer portal actor", costIdentity(types.IdentityRelationTypeCustomer, ""), portal},
 		{"supplier portal actor carrying costs:read", costIdentity(types.IdentityRelationTypeSupplier, "", "costs:read"), portal},
 		{"no identity", nil, portal},

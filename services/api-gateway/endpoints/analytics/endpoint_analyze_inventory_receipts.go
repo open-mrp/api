@@ -27,14 +27,16 @@ type AnalyzeInventoryReceiptsEndpoint struct{}
 
 func (e *AnalyzeInventoryReceiptsEndpoint) Materialize() *apiendpoint.APIEndpoint[*AnalyzeInventoryReceiptsRequest, *apiresource.AnalyzeInventoryReceiptsResponse] {
 	return (&apiendpoint.APIEndpoint[*AnalyzeInventoryReceiptsRequest, *apiresource.AnalyzeInventoryReceiptsResponse]{
-		Title:               "Analyze Inventory Receipts",
-		Method:              http.MethodPut,
-		Route:               "/v1/core/analytics/inventory-receipts",
-		ContentType:         "application/json",
-		SuccessStatusCode:   http.StatusOK,
-		Public:              false,
-		Preview:             true,
-		RequiredPermissions: []types.Permission{{Domain: types.PermissionDomainMaterials, Action: types.ActionRead}},
+		Title:                   "Analyze Inventory Receipts",
+		Method:                  http.MethodPut,
+		Route:                   "/v1/core/analytics/inventory-receipts",
+		ContentType:             "application/json",
+		SuccessStatusCode:       http.StatusOK,
+		Public:                  false,
+		AgentTool:               true,
+		CounterpartyPermissions: apiendpoint.Counterparties(types.ActionRead),
+		Preview:                 true,
+		RequiredPermissions:     []types.Permission{{Domain: types.PermissionDomainMaterials, Action: types.ActionRead}},
 		ServiceHandler: func(svc any) func(ctx context.Context, req *AnalyzeInventoryReceiptsRequest) (*apiresource.AnalyzeInventoryReceiptsResponse, *apierror.APIError) {
 			return svc.(AnalyticsSvc).AnalyzeInventoryReceipts
 		},

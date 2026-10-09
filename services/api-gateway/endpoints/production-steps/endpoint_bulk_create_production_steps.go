@@ -116,6 +116,7 @@ func (e *BulkCreateProductionStepsEndpoint) Materialize() *apiendpoint.APIEndpoi
 		ContentType:         "application/json",
 		SuccessStatusCode:   http.StatusCreated,
 		Public:              false,
+		AgentTool:           true,
 		Preview:             true,
 		RequiredPermissions: []types.Permission{{Domain: types.PermissionDomainProductionSteps, Action: types.ActionCreate}},
 		ServiceHandler: func(svc any) func(ctx context.Context, req *BulkCreateProductionStepsRequest) (*apiresource.BulkCreateProductionStepsResponse, *apierror.APIError) {

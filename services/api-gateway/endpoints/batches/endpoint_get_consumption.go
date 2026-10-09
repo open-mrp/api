@@ -62,6 +62,7 @@ func (e *GetScanningStationConsumptionEndpoint) Materialize() *apiendpoint.APIEn
 		Route:               "/v1/operations/scanning-stations/{id}/consumptions",
 		SuccessStatusCode:   http.StatusOK,
 		Public:              false,
+		AgentTool:           true,
 		Preview:             true,
 		RequiredPermissions: []types.Permission{{Domain: types.PermissionDomainBatches, Action: types.ActionRead}},
 		ServiceHandler: func(svc any) func(ctx context.Context, req *GetScanningStationConsumptionRequest) (*apiresource.List[apiresource.ScanningConsumption], *apierror.APIError) {

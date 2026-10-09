@@ -29,6 +29,7 @@ func (e *ListProductTypesEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListP
 		Route:               "/v1/catalog/product-types",
 		SuccessStatusCode:   http.StatusOK,
 		Public:              false,
+		AgentTool:           true,
 		Preview:             true,
 		RequiredPermissions: []types.Permission{{Domain: types.PermissionDomainProductTypes, Action: types.ActionRead}},
 		ObjectType:          constants.ObjectTypeProductType,

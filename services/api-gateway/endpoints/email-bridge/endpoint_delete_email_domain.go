@@ -30,6 +30,7 @@ func (e *DeleteEmailDomainEndpoint) Materialize() *apiendpoint.APIEndpoint[*Dele
 		Route:               "/v1/messaging/email-domains/{id}",
 		SuccessStatusCode:   http.StatusOK,
 		Public:              true,
+		AgentTool:           true,
 		Preview:             true,
 		ObjectType:          constants.ObjectTypeEmailDomain,
 		RequiredPermissions: []types.Permission{{Domain: types.PermissionDomainMessaging, Action: types.ActionDelete}},

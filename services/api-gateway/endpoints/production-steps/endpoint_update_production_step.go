@@ -61,6 +61,7 @@ func (e *UpdateProductionStepEndpoint) Materialize() *apiendpoint.APIEndpoint[*U
 		Route:               "/v1/operations/production-steps/{id}",
 		SuccessStatusCode:   http.StatusOK,
 		Public:              false,
+		AgentTool:           true,
 		Preview:             true,
 		RequiredPermissions: []types.Permission{{Domain: types.PermissionDomainProductionSteps, Action: types.ActionUpdate}},
 		ObjectType:          constants.ObjectTypeProductionStep,

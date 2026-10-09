@@ -78,7 +78,8 @@ const (
 	PermissionDomainJobs                          PermissionDomain = "jobs"
 	PermissionDomainMessaging                     PermissionDomain = "messaging"
 	// Only read is meaningful: it decides whether an internal caller sees cost and margin figures. Portal actors never do.
-	PermissionDomainCosts PermissionDomain = "costs"
+	PermissionDomainCosts   PermissionDomain = "costs"
+	PermissionDomainBilling PermissionDomain = "billing"
 )
 
 type Action string
@@ -182,6 +183,7 @@ func AllPermissionDomains() []PermissionDomain {
 		PermissionDomainJobs,
 		PermissionDomainMessaging,
 		PermissionDomainCosts,
+		PermissionDomainBilling,
 	}
 }
 

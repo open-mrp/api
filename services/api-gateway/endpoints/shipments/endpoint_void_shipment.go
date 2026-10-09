@@ -32,6 +32,7 @@ func (e *VoidShipmentEndpoint) Materialize() *apiendpoint.APIEndpoint[*VoidShipm
 		ContentType:         "application/json",
 		SuccessStatusCode:   http.StatusOK,
 		Public:              false,
+		AgentTool:           true,
 		Preview:             true,
 		RequiredPermissions: []types.Permission{{Domain: types.PermissionDomainShipments, Action: types.ActionUpdate}},
 		ObjectType:          constants.ObjectTypeShipment,

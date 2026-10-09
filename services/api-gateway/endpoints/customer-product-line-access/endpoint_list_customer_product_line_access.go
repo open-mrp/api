@@ -29,6 +29,7 @@ func (e *ListCustomerProductLineAccessEndpoint) Materialize() *apiendpoint.APIEn
 		Route:             "/v1/sales/product-line-access/customers",
 		SuccessStatusCode: http.StatusOK,
 		Public:            false,
+		AgentTool:         true,
 		Preview:           true,
 		ObjectType:        constants.ObjectTypeCustomerProductLineAccess,
 		RequiredPermissions: []types.Permission{

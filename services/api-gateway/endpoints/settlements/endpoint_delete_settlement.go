@@ -34,6 +34,7 @@ func (e *DeleteSettlementEndpoint) Materialize() *apiendpoint.APIEndpoint[*Delet
 		Route:               "/v1/finance/settlements/{id}",
 		SuccessStatusCode:   http.StatusOK,
 		Public:              false,
+		AgentTool:           true,
 		Preview:             true,
 		RequiredPermissions: []types.Permission{{Domain: types.PermissionDomainSettlements, Action: types.ActionDelete}},
 		ObjectType:          constants.ObjectTypeSettlement,

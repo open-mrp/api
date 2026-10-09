@@ -174,15 +174,6 @@ func TestDocumentSettings_NullClearsFields(t *testing.T) {
 	assert.Equal(t, "Rev. A", jsonField(control, "revision"))
 }
 
-func TestDocumentSettings_EmptyUpdateSavesType(t *testing.T) {
-	t.Parallel()
-	acct := registerE2EAccount(t)
-
-	got := patchDocumentSetting(t, acct.owner, "price_list", map[string]any{})
-	assertIDFormat(t, jsonField(got, "id"), id.DocumentSettingIDPrefix)
-	assertNilField(t, got, "footer_text")
-	assertNilField(t, jsonObject(got, "document_control"), "process_owner")
-}
 
 // --- Idempotency ---
 
@@ -218,6 +209,12 @@ func TestDocumentSettings_Validation(t *testing.T) {
 
 	t.Run("unknown document type on update", func(t *testing.T) {
 		status, body, err := apiClient.Patch(documentSettingsPath+"/letterhead", map[string]any{"footer_text": "x"}, newIdempotencyKey())
+		require.NoError(t, err)
+		requireStatus(t, 400, status, body)
+	})
+
+	t.Run("empty body", func(t *testing.T) {
+		status, body, err := apiClient.Patch(documentSettingsPath+"/invoice", map[string]any{}, newIdempotencyKey())
 		require.NoError(t, err)
 		requireStatus(t, 400, status, body)
 	})

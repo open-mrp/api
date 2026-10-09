@@ -11,7 +11,12 @@ import (
 	"github.com/open-mrp/api/shared/constants"
 	apierror "github.com/open-mrp/api/shared/errors"
 	"github.com/open-mrp/api/shared/field"
+	"github.com/open-mrp/api/shared/validate"
 )
+
+func init() {
+	validate.RegisterWrappedTypes(field.Optional[DocumentControlInput]{})
+}
 
 // Request to partially update the account's settings for one document type.
 type UpdateDocumentSettingRequest struct {

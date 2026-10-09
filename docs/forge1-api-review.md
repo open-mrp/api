@@ -1244,8 +1244,8 @@ These changes supersede the earlier sections wherever they conflict. Each one wo
   - `POST …/actions/cancel` closes the unfulfilled remainder and keeps history. Delete stays for untouched drafts.
   - A `quote` resource is additive later.
 - [ ] **X7 Outbound webhooks: not part of forge.1.** Deferred. When they're designed, event types and payloads follow the API version of the subscribing endpoint.
-- [ ] **X8 Error object:** `{ type, code, message, is_transient, errors: [{ param, code, message }] }`.
-  - `errors` lists every field failure on a 422, and is empty otherwise. There is no top-level `param`.
+- [ ] **X8 Error object:** `{ type, code, message, param, is_transient, errors: [{ param, code, message }] }`.
+  - `param` names the parameter or field the error is about, or is null. `errors` lists every field failure on a 422, and `param` is the first of them; `errors` is empty otherwise.
   - `is_transient` stays (a documented exception to the no-booleans rule).
   - Bulk rows and job results use the same error object instead of a string.
 - [ ] **X9 Applications link any credit to any debit:** `application { source: { type: payment | credit_note, id }, target: { type: invoice | refund, id }, amount }`. Replaces the fixed `invoice` field.
@@ -1411,7 +1411,7 @@ Docstrings
 
 The generic API framework moves to a new repo, `github.com/open-mrp/apikit`, so other APIs can use it. The kit is built to the forge.1 contract from the start, and this repo adopts it in one migration when forge.1 ships, not package by package before. Nearly every kit package returns the kit's forge.1 `APIError`, so a partial adoption would leave two error types in flight. Until then, `api` keeps its own `shared/errors` and the current preview behaviour, with no compatibility transformers for older previews. The first consumer is a new small API, a single HTTP binary.
 
-The cross-cutting framework changes in this review are implemented once in the kit: the error object (X8, G5: no `hint`, no top-level `param`), `rate_limited` and the idempotency and rate-limit rules (X10), the deleted stub, page size and `page_info`, and `Deprecation` / `Sunset` headers.
+The cross-cutting framework changes in this review are implemented once in the kit: the error object (X8, G5: no `hint`), `rate_limited` and the idempotency and rate-limit rules (X10), the deleted stub, page size and `page_info`, and `Deprecation` / `Sunset` headers.
 
 - [ ] **Kit contents:**
   - Utilities: `field`, `validate`, `pagination`, `crypto`, `id` generator, `retry`, `cache`, `redact`, `safeconv`, `ptrutil`, `timeutil` (with the `_on` date type) and `fuzzy`.

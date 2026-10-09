@@ -23,7 +23,7 @@ Adding later is non-breaking; removing is breaking forever. Related objects are 
 - **Fixed platform enums are fields**, not resources (no list endpoint/ID/owner); reference by code. A later resource keeps `code` as its identifier.
 - **Enums, not booleans** in responses (`service_level_scope: all | selected`, not `all_service_levels: bool`). An enum can grow; a boolean needs a new field. Only exceptions: `has_next_page`/`has_previous_page`, delete stub `deleted: true`, error `is_transient`.
 - **Dates**: instants are `_at` (RFC 3339 UTC); business days are `_on` (`YYYY-MM-DD`, account timezone). Lead times are time Quantities in business days (no `_days` ints). Per-run effort (`setup_time`) is a Quantity; per-unit effort is a Rate.
-- **Collisions**: `lot` = traceability lot only; sizes are `lot_size`. `job` = work for one item (with `demand[]`); `work_order` = a release of jobs; `batch` = WIP scan unit (merges/splits). Pegging is the plan; traceability is lot/batch genealogy. Movement `type` = business event (`receipt | shipment | consumption | output | transfer | adjustment | reconciliation | return`), never the channel.
+- **Collisions**: `lot` = traceability lot only; sizes are `lot_size`. `job` = work for one item (with `demand[]`); `async_job` = background work a 202 returns; `work_order` = a release of jobs; `batch` = WIP scan unit (merges/splits). Pegging is the plan; traceability is lot/batch genealogy. Movement `type` = business event (`receipt | shipment | consumption | output | transfer | adjustment | reconciliation | return`), never the channel.
 - **Contract limits**: totals 2 dp, unit prices/quantities ≤ 6 dp; prices tax-exclusive; one currency per document (`currency` field); metadata ≤ 50 keys / 40-char keys / 500-char values on documented resources only; Idempotency-Key on POST (≤ 255 chars, 24 h, mismatch 422 `idempotency_key_reused`, in flight 409); IDs opaque ≤ 64 chars.
 - **Errors**: `{type, code, message, param, is_transient, errors: [{param, code, message}], doc_url}`; `param` is the offending parameter or null, and on a 422 the first of `errors`, which lists every failing field; every public code has a docs page; bulk rows and jobs use the same object.
 - **Agents are callers**: public endpoints become MCP tools and docs pages automatically, so docstrings must let an agent act unaided. API keys carry `client` (shown in `actor`) and optional `expires_at`.
@@ -63,7 +63,7 @@ Adding later is non-breaking; removing is breaking forever. Related objects are 
 ## Actions
 
 - `POST .../actions/{verb}`: collection-level for bulk, resource-level for single-record operations.
-- Work that can ever exceed the latency budget always returns 202 + job, never sometimes.
+- Work that can ever exceed the latency budget always returns 202 + `async_job` (`job` is the manufacturing job), never sometimes.
 - Ambiguous intent → required `mode` enum (`convert | relabel`), never a guess.
 
 ## Routes and documents

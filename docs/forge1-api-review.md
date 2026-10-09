@@ -196,7 +196,7 @@ Docstrings
 | Retrieve | Retrieves a unit. ¶ Works for your account's units and for system units. |
 | Update | Updates a unit. ¶ Only fields you send are changed. System units can't be updated, and `dimension` can't change after creation. |
 | Delete | Deletes a unit. ¶ Only units your account created can be deleted, and only while no quantity, rate or price is recorded in it and no unit group uses it as its base unit. To stop offering a unit that is in use, remove it from its unit groups. |
-| Bulk upsert | Creates or updates units in bulk. ¶ Each row is matched to an existing unit by `abbreviation` (case-insensitive). Unmatched rows create new units. The work runs in the background; the response is a job to poll. |
+| Bulk upsert | Creates or updates units in bulk. ¶ Each row is matched to an existing unit by `abbreviation` (case-insensitive). Unmatched rows create new units. The work runs in the background; the response is an async job to poll. |
 | `name` | Display name, such as `Kilogram`. ¶ Unique (case-insensitive) among your account's units and the system units. |
 | `abbreviation` | Short label, such as `kg`. ¶ Unique (case-insensitive) among your account's units and the system units. |
 | `dimension` | What the unit measures. ¶ Values convert only between units of the same dimension. `quantity` is for countable things, such as each, pair or case. |
@@ -232,7 +232,7 @@ Items (materials, parts, products, generic items)
 
 New endpoints
 - [ ] `POST /v1/catalog/items/actions/set-order-units` — `{ filter: { item_ids | product_line_ids | category_ids | attribute filters }, order_units, default_order_unit_id }` → 202 job. Replaces both on every matching item.
-- [ ] `POST /v1/catalog/items/{id}/actions/change-stocking-unit` — `{ stocking_unit_id, mode: convert | relabel }` → **always 202 job** (some items restate 100K+ rows). `convert`: same dimension only; restates levels, lots, rates by ratio. `relabel`: numbers kept, any dimension; order units of another dimension are removed and reported in the job result. One audit event on the item, mode in metadata.
+- [ ] `POST /v1/catalog/items/{id}/actions/change-stocking-unit` — `{ stocking_unit_id, mode: convert | relabel }` → **always 202 + async job** (some items restate 100K+ rows). `convert`: same dimension only; restates levels, lots, rates by ratio. `relabel`: numbers kept, any dimension; order units of another dimension are removed and reported in the async job result. One audit event on the item, mode in metadata.
 
 Later, additive
 - Supplier-specific order units (`supplier_material.order_units`).
@@ -254,8 +254,8 @@ Docstrings
 | `order_units[].portal_visibility` | Whether customers can see and pick this unit in the customer portal. ¶ `hidden` units can still be used on orders your team enters. |
 | `order_units[].discount` | Discount applied to the line's default price when the item is ordered in this unit, such as a lower per-pair price for a 12-pair pack. ¶ `null` when there is none. |
 | `discount.type` | How the discount is expressed. ¶ `percent_off`: `percent_off` percent off the converted price. `amount_off`: `amount_off` subtracted from the converted price. |
-| Set Order Units | Sets orderable units on many items at once. ¶ Replaces `order_units` and `default_order_unit` on every item matching the filter. The work runs in the background; the response is a job to poll. |
-| Change Stocking Unit | Changes the unit an item is stocked in. ¶ `convert` restates inventory, lots and costs into the new unit of the same dimension. `relabel` keeps the numbers and only changes the unit, to fix one entered in error. The work runs in the background; the response is a job to poll. |
+| Set Order Units | Sets orderable units on many items at once. ¶ Replaces `order_units` and `default_order_unit` on every item matching the filter. The work runs in the background; the response is an async job to poll. |
+| Change Stocking Unit | Changes the unit an item is stocked in. ¶ `convert` restates inventory, lots and costs into the new unit of the same dimension. `relabel` keeps the numbers and only changes the unit, to fix one entered in error. The work runs in the background; the response is an async job to poll. |
 
 ## Carriers & service levels — `/v1/operations/carriers` ✅ finalized
 
@@ -341,7 +341,7 @@ Docstrings
 | Retrieve | Retrieves an item category. ¶ Works for your account's categories and for system categories. |
 | Update | Updates an item category. ¶ Only fields you send are changed. `type` can't change after creation, and system categories can't be updated. |
 | Delete | Deletes an item category. ¶ Only categories your account created can be deleted, and only while no item or price-list rule uses them. Move a category's items to another category before deleting it. |
-| Bulk upsert | Creates or updates item categories in bulk. ¶ Rows are matched to existing categories by `name` (case-insensitive). `property_names` attaches properties by name, creating any that don't exist, and never removes a property already attached. The work runs in the background; the response is a job to poll. |
+| Bulk upsert | Creates or updates item categories in bulk. ¶ Rows are matched to existing categories by `name` (case-insensitive). `property_names` attaches properties by name, creating any that don't exist, and never removes a property already attached. The work runs in the background; the response is an async job to poll. |
 | `name` | Display name, such as `Fasteners`. ¶ Unique (case-insensitive) among your account's categories. |
 | `type` | What kind of items the category holds. ¶ `material`: materials. `product`: products and parts. An item can only be in a category of its own kind. Can't change after creation. |
 | `properties` | Properties the category's items vary by, such as `Color` or `Size`. ¶ Also shown in the customer catalog. Returns the first 10. When there are more, `page_info.next_page_url` fetches the rest. |
@@ -377,7 +377,7 @@ Docstrings
 | Create property | Creates a property. ¶ It starts with no attributes; add them with Create Attribute. |
 | Retrieve / Update property | Retrieves a property. / Updates a property. ¶ Only fields you send are changed. |
 | Delete property | Deletes a property and its attributes. ¶ Only while no item category, item or price-list rule uses it or any of its attributes. |
-| Bulk upsert | Creates or updates properties and their attributes in bulk. ¶ Rows are matched to existing properties by `name` (case-insensitive). Attributes are added by value and appended in order. Existing attributes are never changed or removed. The work runs in the background; the response is a job to poll. |
+| Bulk upsert | Creates or updates properties and their attributes in bulk. ¶ Rows are matched to existing properties by `name` (case-insensitive). Attributes are added by value and appended in order. Existing attributes are never changed or removed. The work runs in the background; the response is an async job to poll. |
 | List attributes | Returns a list of a property's attributes. ¶ Sorted by `sort_order`, first to last. |
 | · `q` / `statuses` | Case-insensitive substring match on `value`. / Only return attributes with one of these statuses. |
 | Create attribute | Adds an attribute to a property. ¶ Attributes after the chosen `sort_order` shift down by one. |
@@ -466,7 +466,7 @@ List
 - [ ] Keep `types[]`, `category_ids[]`, `attribute_ids[]`, `product_line_ids[]`, `customer_ids[]` (the latter two match sellable items only). `portal_visibility` → `portal_visibilities[]`; `supplier_id` → `supplier_ids[]`; new `statuses[]`; `starts_at`/`ends_at` → `created_after`/`created_before`. `subassembly_filter` kept for now (revisit with production flows).
 
 Bulk upsert
-- [ ] One `POST /items/actions/bulk-upsert` replaces the three per-type ones: rows carry `type`, matched by `sku`, same fields as create (sections by type); attributes resolve by `(property, value)`. Async 202 + job.
+- [ ] One `POST /items/actions/bulk-upsert` replaces the three per-type ones: rows carry `type`, matched by `sku`, same fields as create (sections by type); attributes resolve by `(property, value)`. Async 202 + async job.
 
 Deferred to the inventory review
 - `GET/PATCH /items/{id}/inventory`, `GET /items/{id}/lot-default`, `POST /items/actions/bulk-reconcile`. Decided now: one vocabulary, `operation: adjust | reconcile` (bulk's `reconcile_type: addition | force` → `operation: adjust | reconcile`).
@@ -523,7 +523,7 @@ List
 - [ ] `status_codes` → `standings[]`; new `statuses[]`; `customer_group_ids` → `group_ids[]`; `pricing_group_ids` → `price_list_ids[]`; `commission_status_codes` → `commission_policies[]`; `freight_status_codes` → `freight_policies[]`; `parent_account_status` → `relationship_types[]`; `starts_at`/`ends_at` → `created_after`/`created_before`. Keep `sales_rep_ids`, `shipping_term_ids`, `payment_term_ids`, `carrier_ids`, `service_level_ids`, `city`, `state`, `postal_code` (document: match any of the customer's addresses).
 
 Merge
-- [ ] Returns 202 + job (today sync 200); the target customer is in the job result.
+- [ ] Returns 202 + async job (today sync 200); the target customer is in the async job result.
 
 Delete
 - [ ] 409 `resource_in_use` (today `resource_conflict`) when sales orders, invoices, shipments or child customers reference it (the customer's own price list is deleted with it); returns the stub.
@@ -1038,7 +1038,7 @@ Email logs (public)
 - [ ] Add `related` (the invoice, order acknowledgment, statement, … it carried). Filters `send_statuses[]`, `created_after` / `created_before`, `related_ids[]`.
 
 Jobs (public)
-- [ ] `POST /jobs/{id}/cancel` → `POST /jobs/{id}/actions/cancel`. New `GET /jobs` (`types[]`, `statuses[]`).
+- [ ] Async jobs move to `/v1/core/async-jobs` (X11): `POST /jobs/{id}/cancel` → `POST /v1/core/async-jobs/{id}/actions/cancel`. New `GET /v1/core/async-jobs` (`types[]`, `statuses[]`).
 
 Sandboxes (public)
 - [ ] Kept; gain `seed: empty | sample_factory` (G4).
@@ -1247,7 +1247,7 @@ These changes supersede the earlier sections wherever they conflict. Each one wo
 - [ ] **X8 Error object:** `{ type, code, message, param, is_transient, errors: [{ param, code, message }] }`.
   - `param` names the parameter or field the error is about, or is null. `errors` lists every field failure on a 422, and `param` is the first of them; `errors` is empty otherwise.
   - `is_transient` stays (a documented exception to the no-booleans rule).
-  - Bulk rows and job results use the same error object instead of a string.
+  - Bulk rows and async job results use the same error object instead of a string.
   - `request_log_url` is removed (the dashboard does not read it). `limit_exceeded` keeps its `quota` member, registered with apikit as an OpenMRP extension.
 - [ ] **X9 Applications link any credit to any debit:** `application { source: { type: payment | credit_note, id }, target: { type: invoice | refund, id }, amount }`. Replaces the fixed `invoice` field.
 - [ ] **X10 Contract rules** (in the conventions doc):
@@ -1259,6 +1259,7 @@ These changes supersede the earlier sections wherever they conflict. Each one wo
   - **IDs:** opaque, ≤ 64 characters.
   - **Rate limits:** document the `RateLimit-*` headers and 429 `rate_limited`.
   - **Deprecation:** each stable version is supported at least 24 months after its successor ships, with `Deprecation` / `Sunset` headers.
+- [ ] **X11 Background work is an `async_job`.** `job` is the manufacturing job (P1), so the object a long-running action returns is `async_job`: 202 with `Location` pointing at `/v1/core/async-jobs/{id}`. Shape `{ id, object: "async_job", type, resource_type, status: queued | running | completed | failed | canceled, results (List of `async_job_result { index, status: created | updated | failed, resource, sub_resources, error }`), error, started_at, completed_at, failed_at, canceled_at, created_at, updated_at }` plus OpenMRP's `created_by` and `export`. Today's `created` / `started` / `cancelled` become `queued` / `running` / `canceled`. The shape is `object.AsyncJob` in apikit.
 - [ ] **Y1** `item.default_manufacturing_method` (expandable) names the method used for new production. "One active method per item" is no longer the contract, so alternates are additive.
 - [ ] **Y2** Methods gain `output_quantity` (Quantity, default 1 stocking unit). Material quantities are per that much output.
 - [ ] **Y3** Order and invoice lines gain a nullable `discount` (Discount shape). `amount = quantity × unit_price − discount`.
@@ -1490,7 +1491,7 @@ Customers
 - Response renames: `type` → `group`, `contact_info` → `contact`, `freight_preferences` dissolved (`freight_policy` top-level, carrier/service level under `defaults`, billing under `carrier_billing`), `parent_account`/`child_accounts` → `parent_customer`/`child_customers`, addresses under `defaults`, `receive_calendar_id` → `receive_calendar`.
 - `credit_limit` is Money.
 - **`notification_preferences` removed.** `src/app/_lib/api/client/customer.api.ts:293,356,406` maps `notification_preferences.accepts_invoice_emails` → `acceptsInvoiceEmails` (and requests the include). Replace with the customer's `notification_recipients` (Messaging M2). Invoices also drop `accepts_invoice_emails`, used to disable "send invoice email" (`InvoiceTableRow.tsx:129`, `invoice.api.ts:172,219`); the button checks the customer's invoice recipients instead so it keeps working.
-- Merge returns a job: poll it, then read the target customer.
+- Merge returns an async job: poll it, then read the target customer.
 - List filter renames: `standings[]`, `statuses[]`, `group_ids[]`, `price_list_ids[]`, `commission_policies[]`, `freight_policies[]`, `relationship_types[]`, `created_after`/`created_before`. `q` no longer matches notes or support email.
 
 Account groups & lookups

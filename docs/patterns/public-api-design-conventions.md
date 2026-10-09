@@ -47,7 +47,7 @@ The only exceptions are protocol fields that can never gain a third value: `page
 
 - `lot` is a traceability lot only. A quantity made or bought together is a `lot_size`.
 - A `batch` is a production work-in-progress unit (batch scanning), not a lot. Batches merge and split; their genealogy is a graph.
-- A `job` is the work to make one item (method copy, `demand[]` saying what it's for). A `work_order` releases many jobs for a period. Planning stages, cadences and queues are configuration and never change these shapes.
+- A `job` is the work to make one item (method copy, `demand[]` saying what it's for). An `async_job` is background work a long-running action returns with 202. A `work_order` releases many jobs for a period. Planning stages, cadences and queues are configuration and never change these shapes.
 - Pegging (`demand[]`) is the plan. Traceability follows lots and batch genealogy, which record what physically happened.
 - An inventory movement's `type` is the business event (`receipt`, `shipment`, `consumption`, `output`, `transfer`, `adjustment`, `reconciliation`, `return`), never the channel. The channel is the `actor` (`device` for a scan).
 
@@ -207,7 +207,7 @@ An area still being designed ships internal: its routes are `Public: false`, and
 ## Actions and jobs
 
 - Non-CRUD operations are `POST .../actions/{verb}`: on the collection for bulk work (`/items/actions/set-order-units`), on the resource for single-record operations (`/items/{id}/actions/change-stocking-unit`).
-- An action whose work can ever exceed the latency budget **always** returns 202 with a job, even when a given call would be fast. A response shape that depends on data size is two contracts.
+- An action whose work can ever exceed the latency budget **always** returns 202 with an `async_job`, even when a given call would be fast. A response shape that depends on data size is two contracts.
 - When one request could mean two different things, make the caller say which with a `mode` enum rather than guessing (e.g. `convert` vs `relabel`).
 
 ## Lists

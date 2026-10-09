@@ -58,7 +58,16 @@ type PostReplyDraftRequest struct {
 // CoreClient provides access to core-service via gRPC.
 type CoreClient interface {
 	GetRolePermissions(ctx context.Context, roleID string) (map[string]bool, error)
+	GetRoleInfo(ctx context.Context, roleID string) (*RoleInfo, error)
 	GetAccountContext(ctx context.Context, accountID string) (*AccountContext, error)
+}
+
+// RoleInfo identifies a role's type and owning account.
+type RoleInfo struct {
+	ID       string
+	RoleType string
+	// AccountID is nil for a global role.
+	AccountID *string
 }
 
 // AccountContext holds billing-relevant metadata for an account.

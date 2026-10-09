@@ -85,3 +85,23 @@ func (c *AgentCoreClient) GetRolePermissions(ctx context.Context, roleID string)
 
 	return resp.Permissions, nil
 }
+
+func (c *AgentCoreClient) GetRoleInfo(ctx context.Context, roleID string) (*domain.RoleInfo, error) {
+	ctx = prepareCtx(ctx)
+
+	resp, apiErr := rpc.CallRPC(ctx, coreClientTracer, "core_client.get_role_info", coreServiceName,
+		func(ctx context.Context, opts ...grpclib.CallOption) (*pb.GetRoleInfoResponse, error) {
+			return c.client.GetRoleInfo(ctx, &pb.GetRoleInfoRequest{
+				RoleId: roleID,
+			}, opts...)
+		})
+	if apiErr != nil {
+		return nil, apiErr
+	}
+
+	return &domain.RoleInfo{
+		ID:        resp.RoleId,
+		RoleType:  resp.RoleTypeCode,
+		AccountID: resp.AccountId,
+	}, nil
+}

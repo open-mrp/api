@@ -3,8 +3,10 @@ package service
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"slices"
+	"sort"
 	"strings"
 	"time"
 
@@ -59,6 +61,7 @@ type agentDefSvcImpl struct {
 	txManager       TransactionManager
 	mediatorFactory domain.MediatorFactory
 	planGate        PlanGate
+	coreClient      domain.CoreClient
 }
 
 type AgentDefinitionSvcConfig struct {
@@ -70,6 +73,9 @@ type AgentDefinitionSvcConfig struct {
 
 	// TxManager (required) wraps multi-step operations in database transactions.
 	TxManager TransactionManager
+
+	// CoreClient (required) resolves the roles attached to agents.
+	CoreClient domain.CoreClient
 
 	// PlanGate (optional; default: nil) checks whether an account's plan allows agents. When nil, plan gating is skipped and all accounts are allowed.
 	PlanGate PlanGate
@@ -92,6 +98,9 @@ func (c *AgentDefinitionSvcConfig) validate() error {
 	if c.TxManager == nil {
 		return fmt.Errorf("agent definition service: tx manager is required")
 	}
+	if c.CoreClient == nil {
+		return fmt.Errorf("agent definition service: core client is required")
+	}
 	return nil
 }
 
@@ -106,6 +115,7 @@ func NewAgentDefinitionSvc(config *AgentDefinitionSvcConfig) domain.AgentDefinit
 		mediatorFactory: config.MediatorFactory,
 		txManager:       config.TxManager,
 		planGate:        config.PlanGate,
+		coreClient:      config.CoreClient,
 	}
 }
 
@@ -120,6 +130,7 @@ func (s *agentDefSvcImpl) withTx(ctx context.Context, fn func(context.Context, *
 			mediatorFactory: s.mediatorFactory,
 			txManager:       s.txManager,
 			planGate:        s.planGate,
+			coreClient:      s.coreClient,
 		}
 		return fn(txCtx, txSvc)
 	})
@@ -128,7 +139,7 @@ func (s *agentDefSvcImpl) withTx(ctx context.Context, fn func(context.Context, *
 // CreateCustomAgent creates a new custom agent definition with its associated tool links, with idempotency support.
 //
 // 1. Extract the caller's identity and upsert an idempotency key; if already finished, return the cached response.
-// 2. Validate that all referenced tool definitions exist.
+// 2. Validate that all referenced tool definitions exist and that the caller may attach the requested role.
 // 3. Generate a unique agent definition ID.
 // 4. Insert the agent definition record with config, category, trigger type, and role.
 // 5. Create agent-definition-tool links for each tool in the params.
@@ -177,6 +188,11 @@ func (s *agentDefSvcImpl) CreateCustomAgent(ctx context.Context, params domain.C
 		}
 		if apiErr := validateEndpointToolSlugs(params.ConfigJSON); apiErr != nil {
 			return nil, meds.Idempotency.CacheErrorResponse(ctx, idempotencyKey.TypeID, apiErr)
+		}
+		if params.RoleID != "" {
+			if apiErr := s.checkAssignableRole(ctx, identity, params.RoleID, false); apiErr != nil {
+				return nil, meds.Idempotency.CacheErrorResponse(ctx, idempotencyKey.TypeID, apiErr)
+			}
 		}
 
 		defID, genErr := id.GenID(id.AgentDefinitionIDPrefix, nil)
@@ -281,7 +297,7 @@ func (s *agentDefSvcImpl) CreateCustomAgent(ctx context.Context, params domain.C
 //
 // 1. Extract the caller's identity and upsert an idempotency key; if already finished, return the cached response.
 // 2. Verify the agent definition exists, is custom (not system), and belongs to the caller's account.
-// 3. Validate that all referenced tool definitions exist.
+// 3. Validate that all referenced tool definitions exist and that the caller may hold the role the agent ends up with.
 // 4. Update the agent definition's fields (name, slug, description, category, trigger, config, role).
 // 5. Delete all existing tool links and re-create them from the params.
 // 6. Build and cache the result, then return the updated agent definition.
@@ -348,6 +364,19 @@ func (s *agentDefSvcImpl) UpdateCustomAgent(ctx context.Context, params domain.U
 
 		if params.ConfigJSON != nil {
 			if apiErr := validateEndpointToolSlugs(*params.ConfigJSON); apiErr != nil {
+				return nil, meds.Idempotency.CacheErrorResponse(ctx, idempotencyKey.TypeID, apiErr)
+			}
+		}
+
+		// Editing an agent steers what its role can do, so the caller must cover the role it keeps, not only a new one.
+		switch {
+		case params.ClearRoleID:
+		case params.RoleID != nil && *params.RoleID != "":
+			if apiErr := s.checkAssignableRole(ctx, identity, *params.RoleID, false); apiErr != nil {
+				return nil, meds.Idempotency.CacheErrorResponse(ctx, idempotencyKey.TypeID, apiErr)
+			}
+		case params.RoleID == nil && def.RoleID.Valid && def.RoleID.String != "":
+			if apiErr := s.checkAssignableRole(ctx, identity, def.RoleID.String, true); apiErr != nil {
 				return nil, meds.Idempotency.CacheErrorResponse(ctx, idempotencyKey.TypeID, apiErr)
 			}
 		}
@@ -465,6 +494,60 @@ func (s *agentDefSvcImpl) UpdateCustomAgent(ctx context.Context, params domain.U
 	default:
 		return nil, tracing.Trace(span, apierror.NewInvariantViolationError("Unexpected recovery point: "+idempotencyKey.RecoveryPoint))
 	}
+}
+
+// checkAssignableRole rejects a role wider than the caller's own grant, since an agent acts with its role's permissions.
+// existing marks the agent's current role, which may predate this check, rather than a requested one.
+func (s *agentDefSvcImpl) checkAssignableRole(ctx context.Context, identity *types.Identity, roleID string, existing bool) *apierror.APIError {
+	role, err := s.coreClient.GetRoleInfo(ctx, roleID)
+	if err != nil {
+		var apiErr *apierror.APIError
+		if errors.As(err, &apiErr) {
+			if apiErr.Code == apierror.ErrorCodeResourceNotFound {
+				if existing {
+					return nil
+				}
+				return apierror.NewValidationErrorWithParam("Role not found: "+roleID, "role_id")
+			}
+			return apiErr
+		}
+		return apierror.NewInternalError(err, "failed to resolve agent role")
+	}
+	if !existing && role.AccountID != nil && *role.AccountID != identity.Target.AccountID {
+		return apierror.NewValidationErrorWithParam("Role not found: "+roleID, "role_id")
+	}
+
+	if identity.IsAdmin() {
+		return nil
+	}
+
+	subject := "The requested role"
+	if existing {
+		subject = "This agent's role"
+	}
+	if role.RoleType == string(constants.RoleTypeAdmin) {
+		return apierror.NewAuthorizationError(subject + " is an admin role; only an admin can give an agent an admin role.").WithParam("role_id")
+	}
+
+	rolePerms, err := s.coreClient.GetRolePermissions(ctx, roleID)
+	if err != nil {
+		var apiErr *apierror.APIError
+		if errors.As(err, &apiErr) {
+			return apiErr
+		}
+		return apierror.NewInternalError(err, "failed to resolve agent role permissions")
+	}
+	var missing []string
+	for perm, granted := range rolePerms {
+		if granted && !identity.Actor.Permissions[perm] {
+			missing = append(missing, perm)
+		}
+	}
+	if len(missing) > 0 {
+		sort.Strings(missing)
+		return apierror.NewAuthorizationError(fmt.Sprintf("%s grants permissions you do not hold: %s. An agent can only be given a role whose permissions you already have.", subject, strings.Join(missing, ", "))).WithParam("role_id")
+	}
+	return nil
 }
 
 // DeleteCustomAgent soft-deletes a custom agent definition.

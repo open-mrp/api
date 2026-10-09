@@ -706,27 +706,16 @@ func TestCovAiAgents_CreateValidation_UnknownEndpointToolSlug(t *testing.T) {
 	assert.Contains(t, errObj["message"], "not_a_real_endpoint_tool")
 }
 
-// TestCovAiAgents_CreateRoleIDNonexistentSilentlyAccepted pins down the
-// role_id has no FK validation in
-// agent-service, so a nonexistent role_id is silently accepted at create
-// time (201) and only surfaces as role:null when later fetched with
-// ?include=role.
-func TestCovAiAgents_CreateRoleIDNonexistentSilentlyAccepted(t *testing.T) {
+// A role that does not exist in the account cannot be attached.
+func TestCovAiAgents_CreateRoleIDNonexistentRejected(t *testing.T) {
 	t.Parallel()
 	body := covAiAgentsMinimalCreateBody("vrole")
 	body["role_id"] = "rl_doesnotexist_e2e"
 	status, respBody, err := apiClient.Post(covAiAgentsPath, body, newIdempotencyKey())
 	require.NoError(t, err)
-	requireStatus(t, 201, status, respBody)
-	got := parseJSON(respBody)
-	id := jsonField(got, "id")
-	require.NotEmpty(t, id)
-	defer apiClient.Delete(covAiAgentsPath + "/" + id)
-
-	getStatus, getBody, err := apiClient.GetListRaw(covAiAgentsPath+"/"+id, url.Values{"include": {"role"}})
-	require.NoError(t, err)
-	requireStatus(t, 200, getStatus, getBody)
-	assertNilField(t, parseJSON(getBody), "role")
+	requireStatus(t, 400, status, respBody)
+	errObj := requireErrorResponse(t, respBody, "validation_failed", "invalid_request_error")
+	assertErrorParam(t, errObj, "role_id")
 }
 
 func TestCovAiAgents_CreateUnknownJSONFieldRejected(t *testing.T) {
@@ -1046,4 +1035,124 @@ func TestCovAiAgents_StatusActionNaturalIdempotency(t *testing.T) {
 
 	assert.Equal(t, "inactive", jsonField(parseJSON(body1), "status"))
 	assert.Equal(t, "inactive", jsonField(parseJSON(body2), "status"))
+}
+
+// ──────────────────────────────────────────────
+// Role assignment
+// ──────────────────────────────────────────────
+
+// An agent acts with its role's permissions, so a non-admin may only give it a role inside their own grant.
+
+func covAiAgentsCreateAs(t *testing.T, c *Client, roleID string) (int, []byte) {
+	t.Helper()
+	body := covAiAgentsMinimalCreateBody("role")
+	body["role_id"] = roleID
+	status, respBody, err := c.Post(covAiAgentsPath+"?include=role", body, newIdempotencyKey())
+	require.NoError(t, err)
+	if status == 201 {
+		id := jsonField(parseJSON(respBody), "id")
+		t.Cleanup(func() { _, _, _ = apiClient.Delete(covAiAgentsPath + "/" + id) })
+	}
+	return status, respBody
+}
+
+func covAiAgentsRole(t *testing.T, perms ...string) string {
+	t.Helper()
+	role := createAndCleanup(t, "/v1/identity/roles", map[string]any{"name": uniqueName("e2e-agent-role"), "permissions": perms})
+	return jsonField(role, "id")
+}
+
+func covAiAgentsRoleID(t *testing.T, body []byte) string {
+	t.Helper()
+	role := jsonObject(parseJSON(body), "role")
+	require.NotNil(t, role, "role is included")
+	return jsonField(role, "id")
+}
+
+func requireRoleIDForbidden(t *testing.T, status int, body []byte) map[string]any {
+	t.Helper()
+	requireStatus(t, 403, status, body)
+	errObj := requireErrorResponse(t, body, "insufficient_permissions", "invalid_request_error")
+	assertErrorParam(t, errObj, "role_id")
+	return errObj
+}
+
+func TestCovAiAgents_NonAdminCannotAttachTheAdminRole(t *testing.T) {
+	t.Parallel()
+	creator := customRoleClient(t, "agents:create", "agents:read", "products:read")
+
+	status, body := covAiAgentsCreateAs(t, creator, SeedAdminRoleID)
+	errObj := requireRoleIDForbidden(t, status, body)
+	assert.Contains(t, errObj["message"], "admin role")
+}
+
+func TestCovAiAgents_NonAdminCannotAttachAWiderRole(t *testing.T) {
+	t.Parallel()
+	creator := customRoleClient(t, "agents:create", "agents:read", "products:read")
+	wider := covAiAgentsRole(t, "products:read", "products:update")
+
+	status, body := covAiAgentsCreateAs(t, creator, wider)
+	errObj := requireRoleIDForbidden(t, status, body)
+	assert.Contains(t, errObj["message"], "products:update")
+	assert.NotContains(t, errObj["message"], "products:read", "only the permissions the caller lacks are named")
+}
+
+func TestCovAiAgents_NonAdminCanAttachARoleInsideTheirGrant(t *testing.T) {
+	t.Parallel()
+	creator := customRoleClient(t, "agents:create", "agents:read", "products:read", "products:update")
+	subset := covAiAgentsRole(t, "products:read")
+
+	status, body := covAiAgentsCreateAs(t, creator, subset)
+	requireStatus(t, 201, status, body)
+	assert.Equal(t, subset, covAiAgentsRoleID(t, body))
+}
+
+func TestCovAiAgents_AdminCanAttachAnyRole(t *testing.T) {
+	t.Parallel()
+	wide := covAiAgentsRole(t, "products:read", "products:update", "roles:update", "agents:delete")
+
+	for _, roleID := range []string{SeedAdminRoleID, wide} {
+		status, body := covAiAgentsCreateAs(t, apiClient, roleID)
+		requireStatus(t, 201, status, body)
+		assert.Equal(t, roleID, covAiAgentsRoleID(t, body))
+	}
+}
+
+func TestCovAiAgents_NonAdminCannotWidenOrSteerAWiderAgent(t *testing.T) {
+	t.Parallel()
+	editor := customRoleClient(t, "agents:update", "agents:read", "products:read")
+	narrow := covAiAgentsRole(t, "products:read")
+	wider := covAiAgentsRole(t, "products:read", "products:update")
+
+	status, body := covAiAgentsCreateAs(t, apiClient, narrow)
+	requireStatus(t, 201, status, body)
+	narrowAgent := jsonField(parseJSON(body), "id")
+
+	status, body, err := editor.Patch(covAiAgentsPath+"/"+narrowAgent, map[string]any{"role_id": wider}, newIdempotencyKey())
+	require.NoError(t, err)
+	requireRoleIDForbidden(t, status, body)
+	status, body, err = editor.Patch(covAiAgentsPath+"/"+narrowAgent, map[string]any{"role_id": SeedAdminRoleID}, newIdempotencyKey())
+	require.NoError(t, err)
+	requireRoleIDForbidden(t, status, body)
+
+	// The role is unchanged, and editing the agent inside the editor's grant still works.
+	status, body, err = editor.Patch(covAiAgentsPath+"/"+narrowAgent+"?include=role", map[string]any{"name": uniqueName("cov-aiag-renamed")}, newIdempotencyKey())
+	require.NoError(t, err)
+	requireStatus(t, 200, status, body)
+	assert.Equal(t, narrow, covAiAgentsRoleID(t, body))
+
+	// An agent an admin gave a wider role cannot be re-pointed by the editor, but its role can be detached.
+	status, body = covAiAgentsCreateAs(t, apiClient, wider)
+	requireStatus(t, 201, status, body)
+	widerAgent := jsonField(parseJSON(body), "id")
+
+	status, body, err = editor.Patch(covAiAgentsPath+"/"+widerAgent, map[string]any{"name": uniqueName("cov-aiag-steered")}, newIdempotencyKey())
+	require.NoError(t, err)
+	errObj := requireRoleIDForbidden(t, status, body)
+	assert.Contains(t, errObj["message"], "This agent's role")
+
+	status, body, err = editor.Patch(covAiAgentsPath+"/"+widerAgent+"?include=role", map[string]any{"role_id": nil}, newIdempotencyKey())
+	require.NoError(t, err)
+	requireStatus(t, 200, status, body)
+	assertNilField(t, parseJSON(body), "role")
 }

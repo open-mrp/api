@@ -214,6 +214,7 @@ func Run(
 		MediatorFactory: mediatorFactory,
 		TxManager:       txManager,
 		PlanGate:        planGate,
+		CoreClient:      coreClient,
 	})
 
 	// Chat-run consumer: notification-service signals an agent participant's trigger fired.

@@ -99,6 +99,8 @@ message GetRoleInfoResponse {
   string role_id = 1;
   string name = 2;
   string role_type_code = 3;
+  // Unset for a global role, which every account may use.
+  optional string account_id = 4;
 }
 message MarkAccountUserUsedRequest {
   string account_user_id = 1;

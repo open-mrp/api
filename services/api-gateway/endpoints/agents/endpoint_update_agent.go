@@ -42,6 +42,8 @@ type UpdateAgentRequest struct {
 	// ID of the role that defines the permissions the agent operates with.
 	//
 	// Send `null` to detach the role; omit to leave it unchanged. An agent with no role cannot execute, so detaching the role makes its runs fail immediately.
+	//
+	// Unless you are an admin, the role the agent ends up with — the one you send, or its current role when you omit this — may grant only permissions you hold yourself and may not be an admin role; otherwise the request fails with a `403` on `role_id`.
 	RoleID field.Clearable[string] `json:"role_id,omitzero" validate:"omitempty"`
 }
 

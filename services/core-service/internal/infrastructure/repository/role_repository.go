@@ -81,10 +81,15 @@ func (r *roleRepoImpl) GetByID(ctx context.Context, roleID string) (*domain.Role
 		return nil, tracing.Trace(span, apiErr)
 	}
 
+	var acctID *string
+	if row.AccountID.Valid {
+		acctID = &row.AccountID.String
+	}
 	return &domain.RoleInfo{
-		ID:       row.ID,
-		Name:     row.Name,
-		RoleType: row.RoleTypeCode,
+		ID:        row.ID,
+		Name:      row.Name,
+		RoleType:  row.RoleTypeCode,
+		AccountID: acctID,
 	}, nil
 }
 

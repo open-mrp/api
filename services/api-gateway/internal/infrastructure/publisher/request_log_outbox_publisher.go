@@ -1,6 +1,7 @@
 package publisher
 
 import (
+	"cmp"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -31,21 +32,23 @@ type accountNameResolver interface {
 }
 
 type requestLogOutboxPublisher struct {
-	outboxRepo   messaging.OutboxRepo
-	coreClient   accountNameResolver
-	payloads     *blobstore.Store
-	frontendURL  string
-	platformMode constants.PlatformMode
+	outboxRepo    messaging.OutboxRepo
+	coreClient    accountNameResolver
+	payloads      *blobstore.Store
+	frontendURL   string
+	operatorEmail string
+	platformMode  constants.PlatformMode
 }
 
-// NewRequestLogOutboxPublisher builds the publisher. A nil payloads store keeps every log's bodies inline on the outbox message.
-func NewRequestLogOutboxPublisher(outboxRepo messaging.OutboxRepo, coreClient accountNameResolver, payloads *blobstore.Store, frontendURL string, platformMode constants.PlatformMode) domain.RequestLogPublisher {
+// NewRequestLogOutboxPublisher builds the publisher. A nil payloads store keeps every log's bodies inline on the outbox message. An empty operatorEmail sends 5xx alerts to messaging.DefaultOperatorEmail.
+func NewRequestLogOutboxPublisher(outboxRepo messaging.OutboxRepo, coreClient accountNameResolver, payloads *blobstore.Store, frontendURL, operatorEmail string, platformMode constants.PlatformMode) domain.RequestLogPublisher {
 	return &requestLogOutboxPublisher{
-		outboxRepo:   outboxRepo,
-		coreClient:   coreClient,
-		payloads:     payloads,
-		frontendURL:  frontendURL,
-		platformMode: platformMode,
+		outboxRepo:    outboxRepo,
+		coreClient:    coreClient,
+		payloads:      payloads,
+		frontendURL:   frontendURL,
+		operatorEmail: cmp.Or(operatorEmail, messaging.DefaultOperatorEmail),
+		platformMode:  platformMode,
 	}
 }
 
@@ -228,7 +231,7 @@ func (p *requestLogOutboxPublisher) publishErrorAlert(rl *appctx.RequestLog, act
 	}
 
 	emailData := messaging.EmailSendData{
-		To:         []string{"dev@augno.com"},
+		To:         []string{p.operatorEmail},
 		Subject:    fmt.Sprintf("[%d Alert] %s %s", rl.StatusCode, rl.Method, rl.Path),
 		TemplateID: constants.EmailTemplateInternalErrorAlert,
 		Params:     params,

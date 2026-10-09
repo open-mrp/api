@@ -52,7 +52,7 @@ func TestAccountFollowupApproveSendsReviewedText(t *testing.T) {
 	require.Equal(t, "edited subject", email.Subject)
 	require.Equal(t, constants.EmailTemplateAccountFollowup, email.TemplateID)
 	require.Equal(t, "Hi Sam,\n\nedited body", email.Params["Body"])
-	require.Equal(t, "Dane <dane@openmrp.ai>", *email.From)
+	require.Equal(t, "OpenMRP <dev@openmrp.ai>", *email.From)
 	require.Equal(t, []string{"reviewer@example.com"}, email.Bcc)
 	require.Nil(t, email.AccountID)
 	require.Equal(t, []string{"reviewer@example.com"}, email.ThreadNote.To)

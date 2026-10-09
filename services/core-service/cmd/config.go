@@ -10,6 +10,7 @@ import (
 	"github.com/open-mrp/api/shared/constants"
 	"github.com/open-mrp/api/shared/contracts"
 	"github.com/open-mrp/api/shared/env"
+	"github.com/open-mrp/api/shared/messaging"
 )
 
 var (
@@ -38,6 +39,7 @@ const (
 	envPayloadsBucket             = "PAYLOADS_BUCKET"
 	envFrontendURL                = "FRONTEND_URL"
 	envPortalURL                  = "PORTAL_URL"
+	envOperatorEmail              = "OPERATOR_EMAIL"
 	envAuthServiceURL             = "AUTH_SERVICE_URL"
 	envVercelAPIToken             = "VERCEL_API_TOKEN" // #nosec G101 - Env var name, not a credential
 	envVercelProjectID            = "VERCEL_PROJECT_ID"
@@ -114,6 +116,8 @@ type config struct {
 
 	// PortalURL (optional; default: "https://portal.openmrp.ai") is the base URL of the customer portal; links for a merchant without a verified custom domain go to {PortalURL}/{slug}.
 	PortalURL string
+	// OperatorEmail (optional; default: messaging.DefaultOperatorEmail) receives operator alerts and marketing-site demo requests.
+	OperatorEmail string
 
 	// AuthServiceURL (required) is the gRPC address of auth-service.
 	AuthServiceURL string
@@ -170,6 +174,7 @@ func (c *config) withDefaults(getenv func(string) string) *config {
 		PayloadsBucket:             env.GetEnv(envPayloadsBucket, getenv),
 		FrontendURL:                env.GetEnv(envFrontendURL, getenv),
 		PortalURL:                  cmp.Or(env.GetEnv(envPortalURL, getenv), defaultPortalURL),
+		OperatorEmail:              cmp.Or(env.GetEnv(envOperatorEmail, getenv), messaging.DefaultOperatorEmail),
 		AuthServiceURL:             env.GetEnv(envAuthServiceURL, getenv),
 		VercelAPIToken:             env.GetEnv(envVercelAPIToken, getenv),
 		VercelProjectID:            env.GetEnv(envVercelProjectID, getenv),

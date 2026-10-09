@@ -82,7 +82,7 @@ func TestPublisher_OffloadsPayloadToObjectStore(t *testing.T) {
 	t.Parallel()
 	repo := newCapturingOutboxRepo()
 	objects := &recordingObjects{objects: map[string][]byte{}}
-	pub := NewRequestLogOutboxPublisher(repo, nil, newPayloadStore(t, objects), "", constants.PlatformModeProduction)
+	pub := NewRequestLogOutboxPublisher(repo, nil, newPayloadStore(t, objects), "", "", constants.PlatformModeProduction)
 
 	if err := pub.Create(context.Background(), bodiedRequestLog("rlog_offload")); err != nil {
 		t.Fatalf("Create: %v", err)
@@ -124,7 +124,7 @@ func TestPublisher_KeepsPayloadInlineWhenUploadFails(t *testing.T) {
 	t.Parallel()
 	repo := newCapturingOutboxRepo()
 	objects := &recordingObjects{fail: true, objects: map[string][]byte{}}
-	pub := NewRequestLogOutboxPublisher(repo, nil, newPayloadStore(t, objects), "", constants.PlatformModeProduction)
+	pub := NewRequestLogOutboxPublisher(repo, nil, newPayloadStore(t, objects), "", "", constants.PlatformModeProduction)
 
 	if err := pub.Create(context.Background(), bodiedRequestLog("rlog_inline")); err != nil {
 		t.Fatalf("Create: %v", err)
@@ -143,7 +143,7 @@ func TestPublisher_SkipsUploadWithoutPayload(t *testing.T) {
 	t.Parallel()
 	repo := newCapturingOutboxRepo()
 	objects := &recordingObjects{objects: map[string][]byte{}}
-	pub := NewRequestLogOutboxPublisher(repo, nil, newPayloadStore(t, objects), "", constants.PlatformModeProduction)
+	pub := NewRequestLogOutboxPublisher(repo, nil, newPayloadStore(t, objects), "", "", constants.PlatformModeProduction)
 
 	rl := &appctx.RequestLog{ID: "rlog_empty", Method: "GET", Path: "/v1/ping", StatusCode: 200, OccurredAt: time.Now().UTC()}
 	if err := pub.Create(context.Background(), rl); err != nil {

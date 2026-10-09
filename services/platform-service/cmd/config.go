@@ -10,6 +10,7 @@ import (
 	"github.com/open-mrp/api/shared/constants"
 	"github.com/open-mrp/api/shared/contracts"
 	"github.com/open-mrp/api/shared/env"
+	"github.com/open-mrp/api/shared/messaging"
 )
 
 var (
@@ -29,12 +30,14 @@ const (
 	envStripeSecretKey                = "STRIPE_SECRET_KEY"
 	envAccountFollowupEnabled         = "ACCOUNT_FOLLOWUP_ENABLED"
 	envAccountFollowupReviewerEmail   = "ACCOUNT_FOLLOWUP_REVIEWER_EMAIL"
+	envAccountFollowupFromAddress     = "ACCOUNT_FOLLOWUP_FROM_ADDRESS"
+	envAccountFollowupSignature       = "ACCOUNT_FOLLOWUP_SIGNATURE"
 	envAccountFollowupReviewBaseURL   = "ACCOUNT_FOLLOWUP_REVIEW_BASE_URL"
 	envAccountFollowupModel           = "ACCOUNT_FOLLOWUP_MODEL"
 	envAccountFollowupDelay           = "ACCOUNT_FOLLOWUP_DELAY"
 	envAccountFollowupPollInterval    = "ACCOUNT_FOLLOWUP_POLL_INTERVAL"
 	envAccountFollowupExcludedDomains = "ACCOUNT_FOLLOWUP_EXCLUDED_DOMAINS"
-	defaultAccountFollowupReviewer    = "dane@openmrp.ai"
+	defaultAccountFollowupReviewer    = messaging.DefaultOperatorEmail
 	defaultAccountFollowupReviewURL   = "https://api.openmrp.ai/account-followups/review"
 	defaultAccountFollowupModel       = "claude-haiku-4.5"
 	defaultAWSRegion                  = "us-east-2"
@@ -70,8 +73,14 @@ type config struct {
 	// StripeSecretKey (required when AccountFollowupEnabled) authenticates follow-up drafting to the Stripe AI Gateway.
 	StripeSecretKey string
 
-	// AccountFollowupReviewerEmail (optional; default: "dane@openmrp.ai") receives every draft for approval.
+	// AccountFollowupReviewerEmail (optional; default: messaging.DefaultOperatorEmail) receives every draft for approval.
 	AccountFollowupReviewerEmail string
+
+	// AccountFollowupFromAddress (optional; default: the follow-up service's default) sends every approved follow-up.
+	AccountFollowupFromAddress string
+
+	// AccountFollowupSignature (optional; default: the follow-up service's default) closes every follow-up.
+	AccountFollowupSignature string
 
 	// AccountFollowupReviewBaseURL (optional; default: "https://api.openmrp.ai/account-followups/review") is the review page linked from each review email.
 	AccountFollowupReviewBaseURL string
@@ -127,6 +136,8 @@ func (c *config) withDefaults(getenv func(string) string) *config {
 		AccountFollowupEnabled:         followupEnabled,
 		StripeSecretKey:                env.GetEnv(envStripeSecretKey, getenv),
 		AccountFollowupReviewerEmail:   cmp.Or(env.GetEnv(envAccountFollowupReviewerEmail, getenv), defaultAccountFollowupReviewer),
+		AccountFollowupFromAddress:     env.GetEnv(envAccountFollowupFromAddress, getenv),
+		AccountFollowupSignature:       env.GetEnv(envAccountFollowupSignature, getenv),
 		AccountFollowupReviewBaseURL:   cmp.Or(env.GetEnv(envAccountFollowupReviewBaseURL, getenv), defaultAccountFollowupReviewURL),
 		AccountFollowupModel:           cmp.Or(env.GetEnv(envAccountFollowupModel, getenv), defaultAccountFollowupModel),
 		AccountFollowupDelay:           followupDelay,

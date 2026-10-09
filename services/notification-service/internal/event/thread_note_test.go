@@ -32,16 +32,16 @@ func (discardBroker) PublishMessage(context.Context, string, string, contracts.A
 func followupDelivery(t *testing.T) amqp091.Delivery {
 	t.Helper()
 
-	from := "Dane <dane@openmrp.ai>"
+	from := "OpenMRP <dev@openmrp.ai>"
 	payload := messaging.EmailSendData{
 		To:         []string{"registrant@example.com"},
 		Subject:    "Thanks for trying OpenMRP",
 		TemplateID: constants.EmailTemplateAccountFollowup,
 		Params:     map[string]any{"Body": "hi"},
 		From:       &from,
-		Bcc:        []string{"dane@openmrp.ai"},
+		Bcc:        []string{"dev@openmrp.ai"},
 		ThreadNote: &messaging.EmailThreadNote{
-			To:         []string{"dane@openmrp.ai"},
+			To:         []string{"dev@openmrp.ai"},
 			TemplateID: constants.EmailTemplateAccountFollowupContext,
 		},
 	}
@@ -74,10 +74,10 @@ func TestHandleSendEmailThreadsNoteUnderSentEmail(t *testing.T) {
 
 	parent, note := sends[0], sends[1]
 	require.True(t, parent.PlainText)
-	require.Equal(t, []string{"dane@openmrp.ai"}, parent.Bcc)
-	require.Equal(t, "Dane <dane@openmrp.ai>", *parent.From)
+	require.Equal(t, []string{"dev@openmrp.ai"}, parent.Bcc)
+	require.Equal(t, "OpenMRP <dev@openmrp.ai>", *parent.From)
 
-	require.Equal(t, []string{"dane@openmrp.ai"}, note.To)
+	require.Equal(t, []string{"dev@openmrp.ai"}, note.To)
 	require.Equal(t, "Re: Thanks for trying OpenMRP", note.Subject)
 	require.Equal(t, parentID, *note.InReplyToSESMessageID)
 	require.False(t, note.PlainText)

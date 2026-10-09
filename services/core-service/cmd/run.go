@@ -177,6 +177,7 @@ func Run(
 		S3Client:            s3Store,
 		AccountPhotosBucket: cfg.AccountPhotosBucket,
 		AssetCDNBaseURL:     cfg.AssetCDNBaseURL,
+		OperatorEmail:       cfg.OperatorEmail,
 	})
 	sandboxSvc := service.NewSandboxSvc(&service.SandboxSvcConfig{
 		Repos:           repoFactory,
@@ -686,6 +687,7 @@ func Run(
 		NotificationPublisher: notificationPublisher,
 		PortalURL:             cfg.PortalURL,
 		Branding:              brandingAssets,
+		OperatorEmail:         cfg.OperatorEmail,
 	})
 
 	locationSvc := service.NewLocationSvc(&service.LocationSvcConfig{

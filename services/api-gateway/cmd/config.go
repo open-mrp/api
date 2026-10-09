@@ -8,6 +8,7 @@ import (
 	constants "github.com/open-mrp/api/shared/constants"
 	"github.com/open-mrp/api/shared/contracts"
 	"github.com/open-mrp/api/shared/env"
+	"github.com/open-mrp/api/shared/messaging"
 )
 
 var (
@@ -38,6 +39,7 @@ const (
 	envDBURL                  = "DB_URL"
 	envRabbitMQURI            = "RABBITMQ_URI"
 	envFrontendURL            = "FRONTEND_URL"
+	envOperatorEmail          = "OPERATOR_EMAIL"
 	envTrustedProxyHops       = "TRUSTED_PROXY_HOPS"
 	envWSTicketSecret         = "WS_TICKET_SECRET" // #nosec G101 - Env var name, not a credential
 	envAWSRegion              = "AWS_REGION"
@@ -88,6 +90,9 @@ type config struct {
 	// FrontendURL (optional; default: "") is the base URL of the frontend application, used to build
 	// request log links in error responses. When empty, request_log_url will be null.
 	FrontendURL string
+
+	// OperatorEmail (optional; default: messaging.DefaultOperatorEmail) receives 5xx alerts.
+	OperatorEmail string
 
 	// TrustedProxyHops (optional; default: 0) specifies how many reverse-proxy
 	// hops sit in front of this service. Each trusted proxy is expected to
@@ -146,6 +151,7 @@ func (c *config) withDefaults(getenv func(string) string) *config {
 		DBURI:                  env.GetEnv(envDBURL, getenv),
 		RabbitMQURI:            cmp.Or(env.GetEnv(envRabbitMQURI, getenv), defaultRabbitMQURI),
 		FrontendURL:            env.GetEnv(envFrontendURL, getenv),
+		OperatorEmail:          cmp.Or(env.GetEnv(envOperatorEmail, getenv), messaging.DefaultOperatorEmail),
 		TrustedProxyHops:       trustedProxyHops,
 		AWSRegion:              cmp.Or(env.GetEnv(envAWSRegion, getenv), defaultAWSRegion),
 		PayloadsBucket:         env.GetEnv(envPayloadsBucket, getenv),

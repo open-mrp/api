@@ -181,7 +181,7 @@ type EmailSendData struct {
 	AttachmentFilename *string `json:"attachment_filename,omitempty"`
 	// AttachmentContentType is the MIME content type for the attachment.
 	AttachmentContentType *string `json:"attachment_content_type,omitempty"`
-	// From sends the email as this platform address (e.g. "Dane <dane@openmrp.ai>") instead of the default noreply@ sender. Only addresses on a platform domain are honored; anything else falls back to the default so a payload can never send as a tenant's domain.
+	// From sends the email as this platform address (e.g. "OpenMRP <dev@openmrp.ai>") instead of the default noreply@ sender. Only addresses on a platform domain are honored; anything else falls back to the default so a payload can never send as a tenant's domain.
 	From *string `json:"from,omitempty"`
 	// Bcc receives a copy without appearing in the headers.
 	Bcc []string `json:"bcc,omitempty"`

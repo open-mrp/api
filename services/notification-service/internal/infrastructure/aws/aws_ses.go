@@ -11,6 +11,7 @@ import (
 	"github.com/open-mrp/api/services/notification-service/internal/domain"
 	"github.com/open-mrp/api/shared/constants"
 	apierror "github.com/open-mrp/api/shared/errors"
+	"github.com/open-mrp/api/shared/messaging"
 	"github.com/open-mrp/api/shared/tracing"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
@@ -25,7 +26,7 @@ var sesEmailSenderTracer = tracing.GetTracer("notification-service.aws.ses")
 
 const (
 	EmailSenderSource     = "noreply@augno.com"
-	EmailTestingRecipient = "dev@augno.com"
+	EmailTestingRecipient = messaging.DefaultOperatorEmail
 )
 
 func NewSESEmailSender(ctx context.Context, platformMode constants.PlatformMode, region string) (domain.EmailSender, *apierror.APIError) {

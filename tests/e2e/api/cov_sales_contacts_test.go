@@ -39,7 +39,7 @@ import (
 // require a new DB seed row, which is out of scope for this file (hard
 // rule: write only to this file). The positive-customer-match case is
 // covered instead using the pre-existing seeded account_user
-// acus_01seedcustuser00000 (email dev@augno.com) on SeedCustomerAccountID,
+// acus_01seedcustuser00000 (email dev+customer@openmrp.ai) on SeedCustomerAccountID,
 // which requires no new seed data.
 // ──────────────────────────────────────────────
 
@@ -49,7 +49,7 @@ import (
 const covSalesContactsCustomerAccountUserID = "acus_01seedcustuser00000"
 
 // covSalesContactsCustomerEmail is the email on the seeded customer account_user above.
-const covSalesContactsCustomerEmail = "dev@augno.com"
+const covSalesContactsCustomerEmail = "dev+customer@openmrp.ai"
 
 // A real positive `relationship:"customer"` match, rather than the filter-exclusion of a self match the rest of the suite covers.
 //

@@ -54,7 +54,7 @@ func priceListExportProduct(id, sku, description, size string) *domain.ProductFu
 			Description: &description,
 			Attributes:  []*domain.ItemAttribute{{PropertyID: "prop_size", Value: size, Order: 1}},
 		},
-		ProductLine: &domain.ProductLineFull{ID: lineID, Name: "Couture", UnitGroupID: "ungr_1"},
+		ProductLine: &domain.ProductLineFull{ID: lineID, Name: "Classic", UnitGroupID: "ungr_1"},
 	}
 }
 
@@ -62,8 +62,8 @@ func priceListExportProduct(id, sku, description, size string) *domain.ProductFu
 func TestBuildPriceListDocument_ResolvesTheUnitsTheProductExportLeavesOff(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	products := []*domain.ProductFull{
-		priceListExportProduct("prod_1", "820104", "Essence 15-20 mmHg Closed Toe Thigh", "A"),
-		priceListExportProduct("prod_2", "820204", "Essence 15-20 mmHg Closed Toe Thigh", "B"),
+		priceListExportProduct("prod_1", "SK-1001", "Classic Crew Sock", "A"),
+		priceListExportProduct("prod_2", "SK-1002", "Classic Crew Sock", "B"),
 	}
 
 	customerRepo := repositorymock.NewMockCustomerRepo(ctrl)

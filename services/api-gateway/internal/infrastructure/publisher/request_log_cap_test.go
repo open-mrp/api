@@ -27,7 +27,7 @@ func TestPublisher_CapsBodiesKeptOnTheMessage(t *testing.T) {
 	t.Parallel()
 	repo := newCapturingOutboxRepo()
 	objects := &recordingObjects{fail: true, objects: map[string][]byte{}}
-	pub := NewRequestLogOutboxPublisher(repo, nil, newPayloadStore(t, objects), "", constants.PlatformModeDevelopment)
+	pub := NewRequestLogOutboxPublisher(repo, nil, newPayloadStore(t, objects), "", "", constants.PlatformModeDevelopment)
 
 	rl := bodiedRequestLog("rlog_capped")
 	large := `"` + strings.Repeat("x", appctx.MaxMessageBodyBytes) + `"`
@@ -52,7 +52,7 @@ func TestPublisher_StoresLargeBodiesWhole(t *testing.T) {
 	repo := newCapturingOutboxRepo()
 	objects := &recordingObjects{objects: map[string][]byte{}}
 	store := newPayloadStore(t, objects)
-	pub := NewRequestLogOutboxPublisher(repo, nil, store, "", constants.PlatformModeDevelopment)
+	pub := NewRequestLogOutboxPublisher(repo, nil, store, "", "", constants.PlatformModeDevelopment)
 
 	rl := bodiedRequestLog("rlog_large")
 	large := `"` + strings.Repeat("x", appctx.MaxMessageBodyBytes*4) + `"`

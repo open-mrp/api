@@ -2,6 +2,7 @@ package service
 
 import (
 	"bytes"
+	"cmp"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -45,6 +46,7 @@ type accountSvcImpl struct {
 	s3Client            s3client.ObjectStore
 	accountPhotosBucket string
 	assetCDNBaseURL     string
+	operatorEmail       string
 }
 
 type AccountSvcConfig struct {
@@ -65,6 +67,9 @@ type AccountSvcConfig struct {
 
 	// AssetCDNBaseURL (optional; default: "") is the public CDN origin that fronts the account photos bucket (e.g. "https://cdn.augno.com"). When set, branding logo/favicon keys are handed out as stable "<base>/<key>" URLs instead of presigned ones, so they survive the browser favicon cache that keeps a URL in play long past any signature. Empty (dev/e2e) falls back to presigning.
 	AssetCDNBaseURL string
+
+	// OperatorEmail (optional; default: messaging.DefaultOperatorEmail) receives plan-change and new-registration alerts.
+	OperatorEmail string
 }
 
 func (c *AccountSvcConfig) validate() error {
@@ -101,6 +106,7 @@ func NewAccountSvc(config *AccountSvcConfig) domain.AccountSvc {
 		s3Client:            config.S3Client,
 		accountPhotosBucket: config.AccountPhotosBucket,
 		assetCDNBaseURL:     config.AssetCDNBaseURL,
+		operatorEmail:       cmp.Or(config.OperatorEmail, messaging.DefaultOperatorEmail),
 	}
 }
 
@@ -399,7 +405,7 @@ func hasAuditableCaller(ctx context.Context) bool {
 // publishPlanChangeAlert sends a best-effort admin email when an account's plan changes.
 func (s *accountSvcImpl) publishPlanChangeAlert(ctx context.Context, accountID, oldPlan, newPlan string) {
 	emailData := messaging.EmailSendData{
-		To:         []string{"dev@augno.com"},
+		To:         []string{s.operatorEmail},
 		Subject:    fmt.Sprintf("[Plan Change] %s → %s", oldPlan, newPlan),
 		TemplateID: constants.EmailTemplatePlanChangeAlert,
 		Params: map[string]any{
@@ -666,7 +672,7 @@ func (s *accountSvcImpl) CompleteRegistration(ctx context.Context, input domain.
 
 		// 7. Enqueue admin notification for the new registration
 		emailData := messaging.EmailSendData{
-			To:         []string{"dev@augno.com"},
+			To:         []string{s.operatorEmail},
 			Subject:    fmt.Sprintf("[New Registration] %s", input.AccountData.AccountName),
 			TemplateID: constants.EmailTemplateNewRegistrationAlert,
 			Params: map[string]any{
@@ -753,6 +759,7 @@ func (s *accountSvcImpl) withTx(ctx context.Context, fn func(context.Context, *a
 			s3Client:            s.s3Client,
 			accountPhotosBucket: s.accountPhotosBucket,
 			assetCDNBaseURL:     s.assetCDNBaseURL,
+			operatorEmail:       s.operatorEmail,
 		}
 		return fn(txCtx, txSvc)
 	})

@@ -140,6 +140,7 @@ func Run(
 
 	registrationSessionConfig := service.BuildRegistrationSessionSvcConfig(queries, cfg.JWTSecret, cfg.Pepper, cfg.FrontendURL, cfg.PortalURL, coreClient, billingClient)
 	registrationSessionConfig.TxManager = txManager
+	registrationSessionConfig.OperatorEmail = cfg.OperatorEmail
 	registrationSessionSvc := service.NewRegistrationSessionSvc(registrationSessionConfig)
 
 	server, err := contracts.NewGRPCServer(domain.ServiceName, nil, nil)

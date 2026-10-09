@@ -174,7 +174,6 @@ func TestDocumentSettings_NullClearsFields(t *testing.T) {
 	assert.Equal(t, "Rev. A", jsonField(control, "revision"))
 }
 
-
 // --- Idempotency ---
 
 func TestDocumentSettings_UpdateIdempotency(t *testing.T) {

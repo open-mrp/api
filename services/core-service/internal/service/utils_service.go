@@ -1,6 +1,7 @@
 package service
 
 import (
+	"cmp"
 	"context"
 	"fmt"
 	"strings"
@@ -30,6 +31,7 @@ type utilsSvcImpl struct {
 	notificationPublisher domain.NotificationPublisher
 	portalURL             string
 	branding              BrandingAssets
+	operatorEmail         string
 }
 
 // UtilsSvcConfig holds the dependencies for the utils service.
@@ -48,6 +50,9 @@ type UtilsSvcConfig struct {
 
 	// PortalURL (optional; default: "") is the customer portal base URL used in links when the merchant has no verified custom domain. It is not validated at construction.
 	PortalURL string
+
+	// OperatorEmail (optional; default: messaging.DefaultOperatorEmail) receives operator alerts and marketing-site demo requests.
+	OperatorEmail string
 
 	// Branding (optional) resolves the merchant logo for the acknowledgement email and PDF letterhead. Omitted, both fall back to a text-only letterhead.
 	Branding BrandingAssets
@@ -82,6 +87,7 @@ func NewUtilsSvc(config *UtilsSvcConfig) domain.UtilsSvc {
 		notificationPublisher: config.NotificationPublisher,
 		portalURL:             config.PortalURL,
 		branding:              config.Branding,
+		operatorEmail:         cmp.Or(config.OperatorEmail, messaging.DefaultOperatorEmail),
 	}
 }
 
@@ -98,6 +104,7 @@ func (s *utilsSvcImpl) withTx(ctx context.Context, fn func(context.Context, *uti
 			notificationPublisher: s.notificationPublisher,
 			portalURL:             s.portalURL,
 			branding:              s.branding,
+			operatorEmail:         s.operatorEmail,
 		}
 		return fn(txCtx, txSvc)
 	})
@@ -425,13 +432,6 @@ func (s *utilsSvcImpl) emailPurchaseOrder(ctx context.Context, span trace.Span, 
 	return nil
 }
 
-const (
-	// demoRequestRecipient is where marketing-site demo requests land.
-	demoRequestRecipient = "dane@augno.com"
-	// internalAlertRecipient is where operator-facing notices go, matching the registration alert.
-	internalAlertRecipient = "dev@augno.com"
-)
-
 // RequestDemo is intentionally anonymous for public OpenAPI; POST uses idempotency keys.
 func (s *utilsSvcImpl) RequestDemo(ctx context.Context, params domain.RequestDemoParams) *apierror.APIError {
 	ctx, span := utilsSvcTracer.Start(ctx, "service.utils.request_demo")
@@ -446,7 +446,7 @@ func (s *utilsSvcImpl) RequestDemo(ctx context.Context, params domain.RequestDem
 	// The log line alone lost every demo request that arrived at this endpoint rather than the
 	// dashboard's, which is the whole point of the lead form.
 	emailData := messaging.EmailSendData{
-		To:         []string{demoRequestRecipient},
+		To:         []string{s.operatorEmail},
 		Subject:    "Demo Request",
 		TemplateID: constants.EmailTemplateDemoRequest,
 		Params: map[string]any{
@@ -494,7 +494,7 @@ func (s *utilsSvcImpl) SubmitFeedback(ctx context.Context, params domain.SubmitF
 
 	accountID := identity.Target.AccountID
 	emailData := messaging.EmailSendData{
-		To:         []string{internalAlertRecipient},
+		To:         []string{s.operatorEmail},
 		Subject:    "Dashboard Feedback",
 		TemplateID: constants.EmailTemplateDashboardFeedback,
 		Params: map[string]any{

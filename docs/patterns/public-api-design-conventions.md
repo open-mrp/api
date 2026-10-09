@@ -64,7 +64,7 @@ The only exceptions are protocol fields that can never gain a third value: `page
 
 ### Errors
 
-`{ type, code, message, param, is_transient, errors: [{ param, code, message }], hint, doc_url }`. A 422 lists every failing field in `errors`, and `param` is the first of them. `hint` is a short remediation an agent can act on, and `doc_url` is the stable docs page for `code`. Every public error code has both. Bulk rows and job results carry this same object, never a string.
+`{ type, code, message, is_transient, errors: [{ param, code, message }], doc_url }`. A 422 lists every failing field in `errors`; other errors return it empty. There is no top-level `param`. `doc_url` is the stable docs page for `code`, and every public error code has one. Bulk rows and job results carry this same object, never a string.
 
 ### Agents are first-class callers
 

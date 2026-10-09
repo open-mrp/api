@@ -1244,8 +1244,8 @@ These changes supersede the earlier sections wherever they conflict. Each one wo
   - `POST …/actions/cancel` closes the unfulfilled remainder and keeps history. Delete stays for untouched drafts.
   - A `quote` resource is additive later.
 - [ ] **X7 Outbound webhooks: not part of forge.1.** Deferred. When they're designed, event types and payloads follow the API version of the subscribing endpoint.
-- [ ] **X8 Error object:** `{ type, code, message, param, is_transient, errors: [{ param, code, message }] }`.
-  - `errors` lists every field failure on a 422; `param` is the first.
+- [ ] **X8 Error object:** `{ type, code, message, is_transient, errors: [{ param, code, message }] }`.
+  - `errors` lists every field failure on a 422, and is empty otherwise. There is no top-level `param`.
   - `is_transient` stays (a documented exception to the no-booleans rule).
   - Bulk rows and job results use the same error object instead of a string.
 - [ ] **X9 Applications link any credit to any debit:** `application { source: { type: payment | credit_note, id }, target: { type: invoice | refund, id }, amount }`. Replaces the fixed `invoice` field.
@@ -1354,7 +1354,7 @@ Goal: an agent goes from nothing to a working, safe API key in one call, and a h
 - [ ] **G1 One-call sign-up into a sandbox.** `POST /v1/auth/agent-sign-ups` (no auth; public) `{ human_email?, company_name?, source?, referrer? }` → 201 `{ object: "agent_sign_up", account, api_key (secret, shown once), status: unverified, sandbox: true, expires_at }`.
   - Creates a free **sandbox account** seeded with `sample_factory` (G4).
   - **Keys expire on their own.** A sign-up key has `expires_at` (30 days). Verifying extends nothing: the human's claim (G2) issues long-lived keys.
-  - **Unverified:** everything works inside the sandbox, but nothing leaves it (customer and supplier email, live integrations, invites, going live). Those return 403 `verification_required` with a `hint`.
+  - **Unverified:** everything works inside the sandbox, but nothing leaves it (customer and supplier email, live integrations, invites, going live). Those return 403 `verification_required`.
   - `human_email` is optional.
     - **With it:** a 6-digit code goes to the human. `POST /v1/auth/agent-sign-ups/actions/verify { code }` (authorized by the key) unlocks the sandbox's outbound features. Signing up again with the same email while unverified resends the code and rotates the key.
     - **Without it:** the key can't be recovered, and the sandbox is deleted when the key expires.
@@ -1366,7 +1366,7 @@ Goal: an agent goes from nothing to a working, safe API key in one call, and a h
   - Sign-up and verify are tools too.
   - Permissions are the key's or grant's role.
 - [ ] **G4 Seeded sandboxes.** `POST /v1/core/sandboxes { seed: empty | sample_factory }` (default `empty`). The sample factory has customers, suppliers, items with methods, open orders, inventory with lots and a work order in progress.
-- [ ] **G5 Errors say how to fix them.** The error object (X8) gains `hint` (a short remediation an agent can act on) and `doc_url` (a stable page per `code`). Every public error code gets a hint and a docs page before release.
+- [ ] **G5 Errors link to their docs.** The error object (X8) gains `doc_url` (a stable page per `code`). Every public error code gets a docs page before release.
 - [ ] **G6 Docs for agents** (public-docs; the API reference is generated from public endpoints, so these routes document themselves):
   - `llms.txt` and `llms-full.txt`, and every page available as `.md`.
   - An agent quickstart: sign up → create an order → issue → ship, in curl, SDK and MCP.
@@ -1544,7 +1544,6 @@ Agent experience (G1–G7)
 - API key screens show `client` and `expires_at`; audit/activity shows the API key's client ("API key · Claude Code").
 - New claim page: a human claims an agent-created sandbox, signs in, sets up billing and goes live.
 - Sandbox creation offers a sample-factory seed.
-- Error toasts can show `hint`.
 
 Authentication & permissions
 - Login is passwordless: passkeys (primary), email link/code, second factor (passkey or TOTP) with recovery codes; 2FA required by default for new accounts. Remove password login, reset and scanner-password screens.

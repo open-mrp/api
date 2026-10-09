@@ -171,3 +171,25 @@ func TestMapAnthropicStopReason(t *testing.T) {
 		}
 	}
 }
+
+func TestMaxOutputTokens(t *testing.T) {
+	t.Parallel()
+	cases := []struct {
+		model     string
+		reasoning bool
+		want      int
+	}{
+		{"claude-sonnet-4.6", true, reasoningMaxOutputTokens},
+		{"claude-haiku-4.5", true, reasoningMaxOutputTokens},
+		{"claude-sonnet-4", true, reasoningMaxOutputTokens},
+		{"claude-sonnet-4.6", false, 4096},
+		{"claude-3.5-sonnet", true, 4096},
+		{"gpt-5.5", true, 4096},
+		{"gpt-3.5-turbo", true, 4096},
+	}
+	for _, c := range cases {
+		if got := MaxOutputTokens(c.model, c.reasoning); got != c.want {
+			t.Errorf("MaxOutputTokens(%q, %v) = %d, want %d", c.model, c.reasoning, got, c.want)
+		}
+	}
+}

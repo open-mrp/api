@@ -36,6 +36,43 @@ func TestChat_ReplyToThreadsMessages(t *testing.T) {
 	assert.Equal(t, parentID, jsonField(replyTo, "id"), "reply_to points at the parent message")
 }
 
+// The parent is both a list item and the reply's reply_to target; both copies must carry the sender's name.
+func TestChat_ReplyToSenderNamesHydratedInList(t *testing.T) {
+	t.Parallel()
+	user := chatUserClient(t)
+	convID := jsonField(createDM(t, user, SeedAccountUser2ID), "id")
+
+	parent := sendMessage(t, user, convID, uniqueName("parent"), newIdempotencyKey())
+	parentID := jsonField(parent, "id")
+	resp, err := user.PostFull(conversationsPath+"/"+convID+"/messages", map[string]any{
+		"body":                uniqueName("reply"),
+		"client_message_id":   newIdempotencyKey(),
+		"reply_to_message_id": parentID,
+	}, newIdempotencyKey())
+	require.NoError(t, err)
+	requireStatus(t, 201, resp.StatusCode, resp.Body)
+	replyID := jsonField(parseJSON(resp.Body), "id")
+
+	resp, err = user.GetFull(conversationsPath+"/"+convID+"/messages", url.Values{"include": {"sender", "author", "reply_to", "reply_to.sender", "reply_to.author"}})
+	require.NoError(t, err)
+	requireStatus(t, 200, resp.StatusCode, resp.Body)
+
+	byID := map[string]map[string]any{}
+	for _, m := range jsonArray(parseJSON(resp.Body), "data") {
+		msg := m.(map[string]any)
+		byID[jsonField(msg, "id")] = msg
+	}
+	require.Contains(t, byID, parentID)
+	require.Contains(t, byID, replyID)
+
+	assert.NotEmpty(t, jsonField(jsonObject(byID[parentID], "sender"), "name"), "the parent's own sender keeps its name")
+	assert.NotEmpty(t, jsonField(jsonObject(byID[parentID], "author"), "name"), "the parent's own author keeps its name")
+	replyTo := jsonObject(byID[replyID], "reply_to")
+	require.NotNil(t, replyTo)
+	assert.NotEmpty(t, jsonField(jsonObject(replyTo, "sender"), "name"), "reply_to.sender carries a name")
+	assert.NotEmpty(t, jsonField(jsonObject(replyTo, "author"), "name"), "reply_to.author carries a name")
+}
+
 func TestChat_LinkResourceOnMessage(t *testing.T) {
 	t.Parallel()
 	user := chatUserClient(t)

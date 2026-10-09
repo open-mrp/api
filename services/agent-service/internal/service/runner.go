@@ -1134,7 +1134,7 @@ func (s *runnerSvc) runAgentLoop(
 					System:      systemPrompt,
 					Messages:    truncatedMessages,
 					Tools:       toolDefs,
-					MaxTokens:   4096,
+					MaxTokens:   llm.MaxOutputTokens(modelName, isChatRun(run)),
 					Temperature: temperature,
 				}
 				// Chat runs stream their reasoning into the conversation's live thinking panel, so turn on the provider's native reasoning. Only the native Anthropic path returns reasoning (adaptive/extended thinking with signatures); OpenAI-compatible /chat/completions doesn't surface chain-of-thought, and reasoning_effort 400s non-reasoning models there — so we leave ReasoningEffort unset and let non-Anthropic fallbacks degrade to no live reasoning.
@@ -1194,6 +1194,7 @@ func (s *runnerSvc) runAgentLoop(
 		if resp.StopReason != "tool_use" || len(resp.ToolCalls) == 0 {
 			// Record the final turn's reasoning before the answer (it already streamed live), so the timeline reads reasoning → answer.
 			s.emitThinkingStep(ctx, run.ID, accountID, seq, resp, iterStart)
+			resp.Content = s.flagTruncatedAnswer(ctx, run.ID, accountID, seq, resp)
 
 			// Emit assistant_message event (the user-facing answer is the final turn's text)
 			if resp.Content != "" {
@@ -1555,7 +1556,7 @@ func (s *runnerSvc) wrapUpTurn(ctx context.Context, run *sqlc.AgentRun, accountI
 		Messages:    llm.TruncateMessages(systemPrompt, wrapMessages, toolDefs, modelName),
 		Tools:       toolDefs,
 		ToolChoice:  llm.ToolChoiceNone,
-		MaxTokens:   4096,
+		MaxTokens:   llm.MaxOutputTokens(modelName, isChatRun(run)),
 		Temperature: temperature,
 	}
 	if isChatRun(run) {
@@ -1567,12 +1568,25 @@ func (s *runnerSvc) wrapUpTurn(ctx context.Context, run *sqlc.AgentRun, accountI
 		return wrapUpFallback, nil
 	}
 	s.emitThinkingStep(ctx, run.ID, accountID, seq, resp, iterStart)
-	answer := strings.TrimSpace(resp.Content)
+	answer := strings.TrimSpace(s.flagTruncatedAnswer(ctx, run.ID, accountID, seq, resp))
 	if answer == "" {
 		return wrapUpFallback, resp
 	}
 	s.emitEvent(ctx, run.ID, accountID, seq, "assistant_message", "Assistant response", &answer, nil, nil, nil)
 	return answer, resp
+}
+
+// truncatedAnswerNotice tells the reader the answer stopped at the output limit, so a cut-off table or sentence isn't mistaken for a complete one.
+const truncatedAnswerNotice = "_(This response hit the output length limit and was cut off. Ask me to continue.)_"
+
+// flagTruncatedAnswer returns the turn's text, with truncatedAnswerNotice appended and an output_truncated event recorded when the provider stopped at max_tokens.
+func (s *runnerSvc) flagTruncatedAnswer(ctx context.Context, runID, accountID string, seq *int, resp *llm.ToolResponse) string {
+	if resp.StopReason != "max_tokens" || strings.TrimSpace(resp.Content) == "" {
+		return resp.Content
+	}
+	meta, _ := json.Marshal(map[string]any{"output_tokens": resp.OutputTokens})
+	s.emitEvent(ctx, runID, accountID, seq, "output_truncated", "Response hit the output limit", nil, nil, nil, meta)
+	return strings.TrimRight(resp.Content, " \n") + "\n\n" + truncatedAnswerNotice
 }
 
 // loopNudge returns guidance to append to an iteration's tool results: a steer when the agent has stopped making

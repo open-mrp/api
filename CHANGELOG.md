@@ -1,5 +1,23 @@
 # Changelog
 
+## [4.7.0](https://github.com/open-mrp/api/compare/v4.6.0...v4.7.0) (2026-10-09)
+
+
+### Features
+
+* **agents:** expose most gateway endpoints as agent tools ([#315](https://github.com/open-mrp/api/issues/315)) ([b445a39](https://github.com/open-mrp/api/commit/b445a3943e2305833461872e3895b693c167251f))
+* **agents:** step budget with graceful wrap-up, loop detection, search no-match, prompt caching, knowledge tools ([#316](https://github.com/open-mrp/api/issues/316)) ([622facb](https://github.com/open-mrp/api/commit/622facb2a6d1696c9dddcfd63ecbf598b3d4f23c))
+
+
+### Bug Fixes
+
+* make duplicate customer numbers impossible ([#312](https://github.com/open-mrp/api/issues/312)) ([092eaab](https://github.com/open-mrp/api/commit/092eaab4e01db474921a4ccf9948a28203375ea8))
+
+
+### Documentation
+
+* keep production database details out of commits and PRs ([#313](https://github.com/open-mrp/api/issues/313)) ([fd3d81d](https://github.com/open-mrp/api/commit/fd3d81d26ac203a70de20199405b0b7ea7e25e72))
+
 ## [4.6.0](https://github.com/open-mrp/api/compare/v4.5.2...v4.6.0) (2026-10-09)
 
 

@@ -8,6 +8,14 @@ const (
 	ToolCreateArtifact Tool = "create_artifact"
 	// ToolReadDoc reads OpenMRP documentation pages.
 	ToolReadDoc Tool = "read_doc"
+	// ToolSearchDocs searches the OpenMRP documentation index for pages matching a query.
+	ToolSearchDocs Tool = "search_docs"
+	// ToolDescribeApiOperation returns the input schema, includes, permissions, and route of an API operation.
+	ToolDescribeApiOperation Tool = "describe_api_operation"
+	// ToolSearchSource searches the platform's public source code at the deployed version.
+	ToolSearchSource Tool = "search_source"
+	// ToolReadSource reads a file of the platform's public source code at the deployed version.
+	ToolReadSource Tool = "read_source"
 	// ToolFetchUrl fetches content from a public URL.
 	ToolFetchUrl Tool = "fetch_url"
 	// ToolSendEmail sends an email reply through the conversation's bound inbox (gated by human review).
@@ -20,7 +28,8 @@ const (
 
 func (s Tool) IsValid() bool {
 	switch s {
-	case ToolCreateArtifact, ToolReadDoc, ToolFetchUrl, ToolSendEmail, ToolDraftReply:
+	case ToolCreateArtifact, ToolReadDoc, ToolSearchDocs, ToolDescribeApiOperation, ToolSearchSource, ToolReadSource,
+		ToolFetchUrl, ToolSendEmail, ToolDraftReply:
 		return true
 	default:
 		return false
@@ -31,6 +40,10 @@ func (s Tool) EnumValues() []string {
 	return []string{
 		string(ToolCreateArtifact),
 		string(ToolReadDoc),
+		string(ToolSearchDocs),
+		string(ToolDescribeApiOperation),
+		string(ToolSearchSource),
+		string(ToolReadSource),
 		string(ToolFetchUrl),
 		string(ToolSendEmail),
 		string(ToolDraftReply),

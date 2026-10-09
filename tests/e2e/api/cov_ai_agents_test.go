@@ -124,6 +124,7 @@ func TestCovAiAgents_CreateAndUpdateAllFields(t *testing.T) {
 			},
 			"endpoint_tool_slugs":  []string{"create_account_group"},
 			"endpoint_tool_review": map[string]any{"create_account_group": true},
+			"max_steps":            25,
 		},
 		"tools": []map[string]any{
 			{"tool": "read_doc", "sort_order": 1, "require_review": true},
@@ -173,6 +174,7 @@ func TestCovAiAgents_CreateAndUpdateAllFields(t *testing.T) {
 	review, ok := config["endpoint_tool_review"].(map[string]any)
 	require.True(t, ok, "endpoint_tool_review should be a map")
 	assert.Equal(t, true, review["create_account_group"])
+	assert.Equal(t, "25", jsonField(config, "max_steps"))
 
 	triggerConfig := jsonObject(config, "trigger_config")
 	require.NotNil(t, triggerConfig, "trigger_config should be present")
@@ -278,6 +280,7 @@ func TestCovAiAgents_OmittedFields(t *testing.T) {
 		assertNilField(t, config, "trigger_config")
 		assertNilField(t, config, "endpoint_tool_slugs")
 		assertNilField(t, config, "endpoint_tool_review")
+		assertNilField(t, config, "max_steps")
 
 		toolsEnv := jsonObject(withInclude, "tools")
 		require.NotNil(t, toolsEnv, "tools key present with ?include=tools even when empty")
@@ -681,6 +684,20 @@ func TestCovAiAgents_CreateValidation_TemperatureOutOfRange(t *testing.T) {
 	})
 }
 
+func TestCovAiAgents_CreateValidation_MaxStepsOutOfRange(t *testing.T) {
+	t.Parallel()
+
+	for name, maxSteps := range map[string]int{"too_high": 61, "zero": 0, "negative": -1} {
+		t.Run(name, func(t *testing.T) {
+			body := covAiAgentsMinimalCreateBody("vms_" + name)
+			body["config"] = map[string]any{"max_steps": maxSteps}
+			status, respBody, err := apiClient.Post(covAiAgentsPath, body, newIdempotencyKey())
+			require.NoError(t, err)
+			assert.Equal(t, 400, status, "max_steps=%d should 400, got %d: %s", maxSteps, status, string(respBody))
+		})
+	}
+}
+
 func TestCovAiAgents_CreateValidation_UnknownBuiltinToolSlug(t *testing.T) {
 	t.Parallel()
 	body := covAiAgentsMinimalCreateBody("vut")
@@ -867,6 +884,7 @@ func TestCovAiAgents_PatchConfigMergesWithStored(t *testing.T) {
 		},
 		"endpoint_tool_slugs":  []string{"create_account_group"},
 		"endpoint_tool_review": map[string]any{"create_account_group": true},
+		"max_steps":            25,
 	}
 	status, body, err := apiClient.Post(covAiAgentsPath+"?include=config", createBody, newIdempotencyKey())
 	require.NoError(t, err)
@@ -896,6 +914,7 @@ func TestCovAiAgents_PatchConfigMergesWithStored(t *testing.T) {
 	assert.Equal(t, "0 * * * *", jsonField(jsonObject(config, "trigger_config"), "cron_schedule"))
 	assert.NotNil(t, config["endpoint_tool_slugs"], "an omitted field keeps its stored value")
 	assert.NotNil(t, config["endpoint_tool_review"], "an omitted field keeps its stored value")
+	assert.Equal(t, "25", jsonField(config, "max_steps"), "an omitted field keeps its stored value")
 }
 
 // TestCovAiAgents_PatchToolsOmittedPreservesExistingTools confirms that

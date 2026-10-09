@@ -29,8 +29,6 @@ import (
 	"github.com/open-mrp/api/shared/tracing"
 )
 
-const maxToolLoopIterations = 20
-
 // llmCallTimeout bounds a single LLM turn (streaming or not) as a backstop against a connection that stalls without a clean close — e.g. a streaming response silently severed by an egress NAT/firewall, where the read would otherwise block forever and pin the run in "running". The gateway streaming path has a tighter idle watchdog (streamIdleTimeout); this is the absolute ceiling for the whole attempt. One turn caps at 4096 output tokens, so minutes is generous.
 const llmCallTimeout = 5 * time.Minute
 
@@ -48,6 +46,8 @@ type agentConfig struct {
 	EndpointToolSlugs []string `json:"endpoint_tool_slugs"`
 	// EndpointToolReview is the per-agent override of which granted endpoint-tools require human approval before they execute, keyed by endpoint-tool slug. A true value gates the tool (the run pauses in awaiting_approval when the agent calls it); absent or false means no review, matching the default-off behavior of linked built-in tools. Stored alongside EndpointToolSlugs in the agent_definition.config JSON, so it needs no migration.
 	EndpointToolReview map[string]bool `json:"endpoint_tool_review"`
+	// MaxSteps overrides the per-turn LLM-call budget (1..maxStepsCeiling); zero uses the trigger's default.
+	MaxSteps int `json:"max_steps"`
 }
 
 type RunnerConfig struct {
@@ -397,7 +397,8 @@ func (s *runnerSvc) ExecuteRun(ctx context.Context, runID, configID, accountID, 
 	}
 
 	// Execute the agent
-	result, err := s.executeAgent(ctx, run, config, def, accountID, agentIdentity, agentCfg.SystemPrompt, modelChain, toolDefs, temperature, requireReviewBySlug, allowedEndpointTools, bc)
+	maxSteps := resolveMaxSteps(agentCfg.MaxSteps, triggerType)
+	result, err := s.executeAgent(ctx, run, config, def, accountID, agentIdentity, agentCfg.SystemPrompt, modelChain, toolDefs, temperature, requireReviewBySlug, allowedEndpointTools, maxSteps, bc)
 	if err != nil {
 		// Transient, side-effect-free failures are re-enqueued with backoff instead of surfaced as a terminal failure.
 		if s.maybeAutoRetry(ctx, runRepo, run, err) {
@@ -684,11 +685,21 @@ func toolDiscoveryPreamble(allowedEndpointTools map[string]bool) string {
 	if len(groups) == 0 {
 		return ""
 	}
-	return "You can look up data and take actions through tools. Beyond the tools already listed for you, you have access to API operations across these areas: " + strings.Join(groups, ", ") + ". Those specific operations are NOT all shown to you up front — call the search_api_tools tool with a plain-language description of what you need (for example \"list open sales orders\" or \"create a customer\") to find the matching operation and make it callable, then call it. Whenever a task needs data or an action you don't already have a tool for, search for it before telling the user you can't do it. When a record's related objects (like parent_account, owner, addresses, or type) come back as null, they simply weren't expanded — call the same tool again with its `include` parameter set to the field keys you need to get those full objects. Always expand to get authoritative related data rather than guessing relationships from names or numbers. Don't use emojis in your responses."
+	return "You can look up data and take actions through tools. Beyond the tools already listed for you, you have access to API operations across these areas: " + strings.Join(groups, ", ") + ". Those specific operations are NOT all shown to you up front — call the search_api_tools tool with a plain-language description of what you need (for example \"list open sales orders\" or \"create a customer\") to find the matching operation and make it callable, then call it. When a task needs data or an action you don't already have a tool for, search for it before telling the user you can't do it — but search only matches what you were granted. If search_api_tools says no operation matches, or about three searches with different wording find nothing, stop searching and tell the user plainly which operation or data you don't have. When a record's related objects (like parent_account, owner, addresses, or type) come back as null, they simply weren't expanded — call the same tool again with its `include` parameter set to the field keys you need to get those full objects. Always expand to get authoritative related data rather than guessing relationships from names or numbers. Don't use emojis in your responses."
+}
+
+// sourceToolsPreamble scopes the source-code tools to explaining behavior the agent's own tools already expose.
+const sourceToolsPreamble = "You can read the platform's source code with search_source and read_source, pinned to the deployed version. Use it only to understand how an operation you already have behaves — validation rules, defaults, side effects. Never use it to invent endpoints, parameters, or operations; you can only act through the tools you are given."
+
+func hasTool(toolDefs []llm.ToolDefinition, name string) bool {
+	return slices.ContainsFunc(toolDefs, func(td llm.ToolDefinition) bool { return td.Name == name })
 }
 
 // augmentSystemPrompt prepends cross-cutting guidance to the agent's configured prompt — tool discovery for every run, plus the resource-link convention for chat runs. Applied on each turn (including continuations), since the prompt is rebuilt and re-sent on every model call.
-func (s *runnerSvc) augmentSystemPrompt(systemPrompt string, run *sqlc.AgentRun, allowedEndpointTools map[string]bool) string {
+func (s *runnerSvc) augmentSystemPrompt(systemPrompt string, run *sqlc.AgentRun, allowedEndpointTools map[string]bool, toolDefs []llm.ToolDefinition) string {
+	if hasTool(toolDefs, string(constants.ToolSearchSource)) || hasTool(toolDefs, string(constants.ToolReadSource)) {
+		systemPrompt = sourceToolsPreamble + "\n\n" + systemPrompt
+	}
 	if tp := toolDiscoveryPreamble(allowedEndpointTools); tp != "" {
 		systemPrompt = tp + "\n\n" + systemPrompt
 	}
@@ -715,6 +726,7 @@ func (s *runnerSvc) executeAgent(
 	temperature float64,
 	requireReviewBySlug map[string]bool,
 	allowedEndpointTools map[string]bool,
+	maxSteps int,
 	bc *billingContext,
 ) (*domain.RunResult, error) {
 	seq := 0
@@ -738,7 +750,7 @@ func (s *runnerSvc) executeAgent(
 	}
 
 	// Prepend cross-cutting guidance (tool discovery; resource links for chat runs).
-	systemPrompt = s.augmentSystemPrompt(systemPrompt, run, allowedEndpointTools)
+	systemPrompt = s.augmentSystemPrompt(systemPrompt, run, allowedEndpointTools, toolDefs)
 
 	// Build initial messages from run input
 	var inputText string
@@ -806,6 +818,7 @@ func (s *runnerSvc) executeAgent(
 		OneTimeApprovedSlugs:     make(map[string]bool),
 		AllowedEndpointToolSlugs: allowedEndpointTools,
 		RevealedToolSlugs:        make(map[string]bool),
+		MaxSteps:                 maxSteps,
 	}
 
 	return s.runAgentLoop(ctx, run, accountID, identity, systemPrompt, modelChain, toolDefs, temperature, messages, &seq, runCtx, bc.spendingCapCents, bc.currentSpendCents, bc.tokenRates)
@@ -1047,7 +1060,7 @@ func (s *runnerSvc) runAgentLoop(
 	modelName := modelChain[modelIdx]
 	providerName := inferProvider(modelName)
 
-	var totalInputTokens, totalOutputTokens int
+	var totalInputTokens, totalOutputTokens, totalCacheReadTokens, totalCacheWriteTokens int
 	var runSpendCents int64
 	startTime := time.Now()
 	doomDetector := &doomLoopDetector{}
@@ -1060,7 +1073,13 @@ func (s *runnerSvc) runAgentLoop(
 		JitterFraction: 0.1,
 	}).WithDefaults()
 
-	for range maxToolLoopIterations {
+	maxSteps := runCtx.MaxSteps
+	if maxSteps <= 0 {
+		maxSteps = defaultInteractiveMaxSteps
+	}
+	stopReason := wrapUpMaxSteps
+
+	for step := range maxSteps {
 		iterStart := time.Now()
 
 		// Cooperative cancellation: stop before spending another (potentially expensive) model call if the run was cancelled out-of-band.
@@ -1081,13 +1100,12 @@ func (s *runnerSvc) runAgentLoop(
 
 			if llm.NeedsProactiveCompaction(systemPrompt, messages, toolDefs, modelName) {
 				compactProvider, compactModel := s.compactionTarget(provider, modelName)
-				summary, compactErr := compactMessages(ctx, compactProvider, compactModel, systemPrompt, messages)
+				summary, compactErr := compactMessages(ctx, compactProvider, compactModel, systemPrompt, messages, toolDefs)
 				if compactErr != nil {
 					slog.Error("Proactive compaction failed, falling back to truncation",
 						"run_id", run.ID, "error", compactErr)
 				} else {
-					lastMsg := messages[len(messages)-1]
-					messages = []llm.Message{*summary, lastMsg}
+					messages = llm.CompactedHistory(*summary, messages)
 
 					compactMeta, _ := json.Marshal(map[string]any{
 						"tokens_freed":    freed,
@@ -1161,6 +1179,8 @@ func (s *runnerSvc) runAgentLoop(
 
 		totalInputTokens += resp.InputTokens
 		totalOutputTokens += resp.OutputTokens
+		totalCacheReadTokens += resp.CacheReadInputTokens
+		totalCacheWriteTokens += resp.CacheCreationInputTokens
 
 		// Accumulate estimated cost for this iteration and check spending cap. Price at the plan's marked-up rate-card rates (what Stripe bills) so the cap matches the customer's real bill; fall back to base pricing only when a rate for this model is unavailable.
 		iterCostCents, ok := llm.MarkedUpTokenCostCents(resp.InputTokens, resp.OutputTokens, llm.GatewayModelName(modelName), tokenRates)
@@ -1187,10 +1207,12 @@ func (s *runnerSvc) runAgentLoop(
 			// Emit completion event
 			durationMs := safeconv.Int64ToInt32(time.Since(startTime).Milliseconds())
 			completionMeta, _ := json.Marshal(map[string]any{
-				"actionsExecuted":   len(runCtx.Actions),
-				"totalDurationMs":   durationMs,
-				"totalInputTokens":  totalInputTokens,
-				"totalOutputTokens": totalOutputTokens,
+				"actionsExecuted":       len(runCtx.Actions),
+				"totalDurationMs":       durationMs,
+				"totalInputTokens":      totalInputTokens,
+				"totalOutputTokens":     totalOutputTokens,
+				"totalCacheReadTokens":  totalCacheReadTokens,
+				"totalCacheWriteTokens": totalCacheWriteTokens,
 			})
 			s.emitEvent(ctx, run.ID, accountID, seq, "completion", "Run completed", nil, &durationMs, nil, completionMeta)
 
@@ -1229,6 +1251,7 @@ func (s *runnerSvc) runAgentLoop(
 
 		toolResultMsg := llm.Message{Role: "user"}
 		toolsBlocked := false
+		progressed := false
 		for _, tc := range resp.ToolCalls {
 			// Cooperative cancellation between tool calls: a cancel that lands mid-batch stops runaway tool use at the next tool boundary instead of draining the whole batch. Checked before the tool_call event is emitted so no half-recorded call is left in the timeline.
 			if s.runCancelled(ctx, run.ID) {
@@ -1303,7 +1326,7 @@ func (s *runnerSvc) runAgentLoop(
 
 			// Doom loop detection: check if this tool+input has been called identically too many times.
 			if doomDetector.Record(tc.Name, tc.Input) {
-				doomMsg := fmt.Sprintf("Called %s 3 times with identical input. Try a different approach or parameters.", tc.Name)
+				doomMsg := fmt.Sprintf("You have already called %s with this same input %d times. Repeating it will not give a different answer — use what you have, try a different approach, or tell the user what is missing.", tc.Name, doomLoopThreshold-1)
 				slog.Warn("Doom loop detected",
 					"run_id", run.ID, "tool", tc.Name)
 
@@ -1374,6 +1397,7 @@ func (s *runnerSvc) runAgentLoop(
 					ToolUseID: tc.ID,
 					Content:   truncResult.Content,
 				})
+				progressed = progressed || madeProgress(tc.Name)
 
 				// Record action for every successful tool call
 				outputJSON, _ := json.Marshal(map[string]string{"result": truncResult.Content})
@@ -1386,6 +1410,8 @@ func (s *runnerSvc) runAgentLoop(
 				})
 			}
 		}
+		verdict := doomDetector.EndIteration(progressed)
+		toolResultMsg.Content = s.loopNudge(ctx, run.ID, accountID, seq, verdict, step+1, maxSteps)
 		messages = append(messages, toolResultMsg)
 
 		// Reveal: make endpoint-tools surfaced by search_api_tools this turn callable on the next turn by adding them to the live tool list. Only reveal tools the agent is actually granted (defense in depth — the search handler already scopes to the grant).
@@ -1416,14 +1442,12 @@ func (s *runnerSvc) runAgentLoop(
 			// If pruning wasn't enough, trigger LLM-based summarization.
 			if llm.EstimateAllMessages(messages) >= (resp.InputTokens - compactionBuffer) {
 				compactProvider, compactModel := s.compactionTarget(provider, modelName)
-				summary, compactErr := compactMessages(ctx, compactProvider, compactModel, systemPrompt, messages)
+				summary, compactErr := compactMessages(ctx, compactProvider, compactModel, systemPrompt, messages, toolDefs)
 				if compactErr != nil {
 					slog.Error("Context compaction failed, falling back to truncation",
 						"run_id", run.ID, "error", compactErr)
 				} else {
-					// Replace all messages with summary + most recent user message.
-					lastMsg := messages[len(messages)-1]
-					messages = []llm.Message{*summary, lastMsg}
+					messages = llm.CompactedHistory(*summary, messages)
 
 					compactMeta, _ := json.Marshal(map[string]any{
 						"input_tokens_before": resp.InputTokens,
@@ -1483,20 +1507,41 @@ func (s *runnerSvc) runAgentLoop(
 			}, nil
 		}
 
+		if verdict == loopWrapUp {
+			stopReason = wrapUpNoProgress
+			break
+		}
 	}
 
-	// Max iterations reached - emit completion event
+	modelName = modelChain[modelIdx]
+	providerName = inferProvider(modelName)
+	answer, wrapResp := s.wrapUpTurn(ctx, run, accountID, seq, s.llmProviders[providerName], modelName, systemPrompt, toolDefs, temperature, messages, stopReason, retryCfg)
+	if wrapResp != nil {
+		totalInputTokens += wrapResp.InputTokens
+		totalOutputTokens += wrapResp.OutputTokens
+		totalCacheReadTokens += wrapResp.CacheReadInputTokens
+		totalCacheWriteTokens += wrapResp.CacheCreationInputTokens
+	}
+
 	durationMs := safeconv.Int64ToInt32(time.Since(startTime).Milliseconds())
 	completionMeta, _ := json.Marshal(map[string]any{
-		"actionsExecuted":   len(runCtx.Actions),
-		"totalDurationMs":   durationMs,
-		"maxIterationsHit":  true,
-		"totalInputTokens":  totalInputTokens,
-		"totalOutputTokens": totalOutputTokens,
+		"actionsExecuted":       len(runCtx.Actions),
+		"totalDurationMs":       durationMs,
+		"maxIterationsHit":      stopReason == wrapUpMaxSteps,
+		"noProgressStop":        stopReason == wrapUpNoProgress,
+		"maxSteps":              maxSteps,
+		"totalInputTokens":      totalInputTokens,
+		"totalOutputTokens":     totalOutputTokens,
+		"totalCacheReadTokens":  totalCacheReadTokens,
+		"totalCacheWriteTokens": totalCacheWriteTokens,
 	})
-	s.emitEvent(ctx, run.ID, accountID, seq, "completion", "Run completed (max iterations)", nil, &durationMs, nil, completionMeta)
+	title := "Run completed (max steps)"
+	if stopReason == wrapUpNoProgress {
+		title = "Run completed (stopped: no progress)"
+	}
+	s.emitEvent(ctx, run.ID, accountID, seq, "completion", title, nil, &durationMs, nil, completionMeta)
 
-	outputJSON, _ := json.Marshal(map[string]string{"response": "Max tool loop iterations reached"})
+	outputJSON, _ := json.Marshal(map[string]string{"response": answer})
 	return &domain.RunResult{
 		Output:       outputJSON,
 		Actions:      runCtx.Actions,
@@ -1506,6 +1551,55 @@ func (s *runnerSvc) runAgentLoop(
 		LLMProvider:  providerName,
 		LLMModel:     modelName,
 	}, nil
+}
+
+// wrapUpTurn makes one tools-disabled call asking the agent to summarize what it did and what is missing, so a turn
+// that ran out of steps still ends with a useful answer. Returns the answer and the response (nil on failure).
+func (s *runnerSvc) wrapUpTurn(ctx context.Context, run *sqlc.AgentRun, accountID string, seq *int, provider llm.LLMProvider, modelName, systemPrompt string, toolDefs []llm.ToolDefinition, temperature float64, messages []llm.Message, reason wrapUpReason, retryCfg *retry.Config) (string, *llm.ToolResponse) {
+	if provider == nil {
+		return wrapUpFallback, nil
+	}
+	iterStart := time.Now()
+	wrapMessages := append(llm.CopyMessages(messages), llm.Message{Role: "user", Content: wrapUpPrompt(reason)})
+	req := &llm.ToolRequest{
+		Model:       modelName,
+		System:      systemPrompt,
+		Messages:    llm.TruncateMessages(systemPrompt, wrapMessages, toolDefs, modelName),
+		Tools:       toolDefs,
+		ToolChoice:  llm.ToolChoiceNone,
+		MaxTokens:   4096,
+		Temperature: temperature,
+	}
+	if isChatRun(run) {
+		req.EnableReasoning = true
+	}
+	resp, err := s.completeWithRetry(ctx, run.ID, accountID, seq, provider, req, retryCfg)
+	if err != nil {
+		slog.Warn("Wrap-up call failed", "run_id", run.ID, "error", err)
+		return wrapUpFallback, nil
+	}
+	s.emitThinkingStep(ctx, run.ID, accountID, seq, resp, iterStart)
+	answer := strings.TrimSpace(resp.Content)
+	if answer == "" {
+		return wrapUpFallback, resp
+	}
+	s.emitEvent(ctx, run.ID, accountID, seq, "assistant_message", "Assistant response", &answer, nil, nil, nil)
+	return answer, resp
+}
+
+// loopNudge returns guidance to append to an iteration's tool results: a steer when the agent has stopped making
+// progress, or a reminder once the step budget is mostly spent. Empty when the agent should simply continue.
+func (s *runnerSvc) loopNudge(ctx context.Context, runID, accountID string, seq *int, verdict loopVerdict, stepsUsed, maxSteps int) string {
+	var notes []string
+	if verdict == loopSteer {
+		meta, _ := json.Marshal(map[string]any{"no_progress": true})
+		s.emitEvent(ctx, runID, accountID, seq, "doom_loop_detected", "No progress detected", new(noProgressSteeringPrompt), nil, nil, meta)
+		notes = append(notes, noProgressSteeringPrompt)
+	}
+	if stepsUsed == stepsReminderAt(maxSteps) {
+		notes = append(notes, stepsRemainingPrompt(maxSteps-stepsUsed))
+	}
+	return strings.Join(notes, "\n\n")
 }
 
 // runResumedLoop finishes a resumed turn: it first executes any approved-but-blocked tool calls directly (so an approval actually performs its write instead of depending on the model to re-issue the call — see resumeApprovedBlockedCalls) and then runs the agent loop over the reconstructed transcript. ContinueRun's resume tail is exactly this call; keeping the two steps together in one method means the "execute on approval, then continue" contract is exercised end to end in tests rather than only wired inline.
@@ -1839,7 +1933,7 @@ func (s *runnerSvc) ContinueRun(ctx context.Context, runID, accountID, message s
 	}
 
 	// Prepend cross-cutting guidance (tool discovery; resource links for chat runs), same as the first turn, so a continued run keeps it.
-	systemPrompt = s.augmentSystemPrompt(systemPrompt, run, allowedEndpointTools)
+	systemPrompt = s.augmentSystemPrompt(systemPrompt, run, allowedEndpointTools, toolDefs)
 
 	// Get max sequence
 	maxSeq, seqErr := eventRepo.GetMaxSequence(ctx, runID)
@@ -1885,6 +1979,7 @@ func (s *runnerSvc) ContinueRun(ctx context.Context, runID, accountID, message s
 		RejectedKeys:             rejectedKeysActive,
 		AllowedEndpointToolSlugs: allowedEndpointTools,
 		RevealedToolSlugs:        make(map[string]bool),
+		MaxSteps:                 resolveMaxSteps(agentCfg.MaxSteps, run.TriggerType),
 	}
 
 	// On resume the per-turn tool-exposure state is gone, so rebuild the live endpoint-tool list before the loop runs.

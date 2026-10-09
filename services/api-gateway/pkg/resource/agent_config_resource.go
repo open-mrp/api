@@ -41,6 +41,10 @@ type AgentDefinitionConfig struct {
 	//
 	// When an entry is `true`, the run pauses in `awaiting_approval` each time the agent calls that endpoint-tool until it is approved via the Continue Agent Run endpoint. Slugs absent from the map do not require review.
 	EndpointToolReview map[string]bool `json:"endpoint_tool_review"`
+	// Maximum model calls the agent may make in one turn before it must stop and summarize.
+	//
+	// When the limit is reached, tools are disabled and the agent answers with what it accomplished, what remains, and what it is missing. `null` means the default: 30 for chat and manual runs, 40 for scheduled and event-driven runs.
+	MaxSteps *int `json:"max_steps"`
 }
 
 // Trigger-type-specific configuration.
@@ -79,6 +83,7 @@ var SampleAgentDefinitionConfig = AgentDefinitionConfig{
 	TriggerConfig:      SampleTriggerConfig,
 	EndpointToolSlugs:  []string{"create_account_group"},
 	EndpointToolReview: map[string]bool{"create_account_group": true},
+	MaxSteps:           new(30),
 }
 
 func (*AgentDefinitionConfig) SchemaExample() any {

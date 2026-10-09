@@ -98,6 +98,10 @@ type ConfigInput struct {
 	//
 	// Set a slug to `true` to require human approval before the agent may execute that endpoint-tool; the run pauses in `awaiting_approval` until approved via the Continue Agent Run endpoint. Slugs omitted from the map do not require review.
 	EndpointToolReview field.Optional[map[string]bool] `json:"endpoint_tool_review,omitzero"`
+	// Maximum model calls the agent may make in one turn before it must stop and summarize, from 1 to 60.
+	//
+	// When the limit is reached, tools are disabled and the agent answers with what it accomplished, what remains, and what it is missing. Omit to use the default: 30 for chat and manual runs, 40 for scheduled and event-driven runs.
+	MaxSteps field.Optional[int] `json:"max_steps,omitzero" validate:"omitempty,min=1,max=60"`
 }
 
 var sampleConfigInput = &ConfigInput{

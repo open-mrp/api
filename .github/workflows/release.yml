@@ -357,6 +357,7 @@ jobs:
           platforms: linux/amd64,linux/arm64
           build-args: |
             SERVICE_NAME=${{ matrix.service }}
+            RELEASE_VERSION=${{ needs.release-please.outputs.tag_name }}
           tags: |
             ${{ steps.login-ecr.outputs.registry }}/augno/${{ matrix.service }}:${{ needs.release-please.outputs.tag_name }}
             ${{ steps.login-ecr.outputs.registry }}/augno/${{ matrix.service }}:latest

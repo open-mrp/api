@@ -85,16 +85,17 @@ func pruneOldToolResults(messages []llm.Message) int {
 }
 
 // compactMessages calls the LLM to produce a conversation summary, returning a synthetic user message containing the summary.
+// tools is the run's tool list: the API only accepts the history's tool_use blocks alongside their definitions.
 func compactMessages(
 	ctx context.Context,
 	provider llm.LLMProvider,
 	model string,
 	systemPrompt string,
 	messages []llm.Message,
+	tools []llm.ToolDefinition,
 ) (*llm.Message, error) {
 	// Build the compaction request: full history + compaction instruction.
-	compactionMessages := make([]llm.Message, len(messages))
-	copy(compactionMessages, messages)
+	compactionMessages := llm.CopyMessages(messages)
 
 	// Strip large tool results from the compaction input to save tokens.
 	for i := range compactionMessages {
@@ -116,10 +117,12 @@ func compactMessages(
 	})
 
 	resp, err := provider.CompleteWithTools(ctx, &llm.ToolRequest{
-		Model:     model,
-		System:    systemPrompt,
-		Messages:  compactionMessages,
-		MaxTokens: 4096,
+		Model:      model,
+		System:     systemPrompt,
+		Messages:   compactionMessages,
+		Tools:      tools,
+		ToolChoice: llm.ToolChoiceNone,
+		MaxTokens:  4096,
 	})
 	if err != nil {
 		return nil, fmt.Errorf("compaction LLM call failed: %w", err)

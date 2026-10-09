@@ -86,6 +86,9 @@ type HandlerRunContext struct {
 	AllowedEndpointToolSlugs map[string]bool
 	// RevealedToolSlugs accumulates endpoint-tool slugs surfaced via search_api_tools during this run. The runner reads it to add those tools to the live tool list.
 	RevealedToolSlugs map[string]bool
+
+	// MaxSteps caps the LLM calls in one turn before the runner forces a text-only wrap-up; zero uses the interactive default.
+	MaxSteps int
 }
 
 // ToolHandlerFunc is the signature for a single tool's execution handler.

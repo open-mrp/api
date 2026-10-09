@@ -112,8 +112,32 @@ func (p *AnthropicMessagesProvider) buildParams(req *ToolRequest) anthropic.Mess
 	}
 	if tools := convertToolsToAnthropic(req.Tools); len(tools) > 0 {
 		params.Tools = tools
+		if req.ToolChoice == ToolChoiceNone {
+			params.ToolChoice = anthropic.ToolChoiceUnionParam{OfNone: &anthropic.ToolChoiceNoneParam{}}
+		}
 	}
+	applyCacheBreakpoints(&params)
 	return params
+}
+
+// applyCacheBreakpoints marks the tools, system prompt, and newest message as cache prefixes (3 of the API's 4).
+// Each loop turn resends the previous prompt plus one exchange, so the message breakpoint serves it from cache;
+// the tool and system breakpoints let runs of the same agent share the stable head.
+func applyCacheBreakpoints(params *anthropic.MessageNewParams) {
+	if n := len(params.Tools); n > 0 && params.Tools[n-1].OfTool != nil {
+		params.Tools[n-1].OfTool.CacheControl = anthropic.NewCacheControlEphemeralParam()
+	}
+	if n := len(params.System); n > 0 {
+		params.System[n-1].CacheControl = anthropic.NewCacheControlEphemeralParam()
+	}
+	if n := len(params.Messages); n > 0 {
+		content := params.Messages[n-1].Content
+		if m := len(content); m > 0 {
+			if cc := content[m-1].GetCacheControl(); cc != nil {
+				*cc = anthropic.NewCacheControlEphemeralParam()
+			}
+		}
+	}
 }
 
 // thinkingConfigFor selects the thinking API by model generation. The Stripe gateway serves Claude via Vertex, where 4.6+ models take adaptive thinking (and reject budget_tokens) while 4.0–4.5 models take the legacy enabled+budget_tokens form. Both stream thinking blocks with signatures, so reasoning and cross-turn replay work either way.
@@ -197,43 +221,64 @@ func anthropicInputSchema(raw json.RawMessage) anthropic.ToolInputSchemaParam {
 	return schema
 }
 
+// convertMessagesToAnthropic maps our transcript onto alternating Messages API turns. Consecutive same-role
+// messages (an injected reminder after tool results, a truncation placeholder) merge into one turn, and the
+// blocks the API requires first — tool_result in a user turn, thinking in an assistant turn — lead it.
 func convertMessagesToAnthropic(messages []Message) []anthropic.MessageParam {
-	out := make([]anthropic.MessageParam, 0, len(messages))
+	type turn struct {
+		role    string
+		leading []anthropic.ContentBlockParamUnion
+		rest    []anthropic.ContentBlockParamUnion
+	}
+	var turns []*turn
 	for _, m := range messages {
+		var leading, rest []anthropic.ContentBlockParamUnion
 		switch m.Role {
 		case "user":
-			var blocks []anthropic.ContentBlockParamUnion
-			if m.Content != "" {
-				blocks = append(blocks, anthropic.NewTextBlock(m.Content))
-			}
 			for _, tr := range m.ToolResults {
-				blocks = append(blocks, anthropic.NewToolResultBlock(tr.ToolUseID, tr.Content, tr.IsError))
+				leading = append(leading, anthropic.NewToolResultBlock(tr.ToolUseID, tr.Content, tr.IsError))
 			}
-			if len(blocks) > 0 {
-				out = append(out, anthropic.NewUserMessage(blocks...))
+			if m.Content != "" {
+				rest = append(rest, anthropic.NewTextBlock(m.Content))
 			}
 		case "assistant":
-			var blocks []anthropic.ContentBlockParamUnion
-			// Thinking blocks must come first and be replayed unmodified (with signature) so the model can continue a turn after tool_use under interleaved thinking. Blocks without a signature (e.g. from the OpenAI-compat path) are skipped — the API rejects unsigned ones.
+			// The API rejects unsigned thinking blocks (e.g. from the OpenAI-compat path), so only signed ones replay.
 			for _, tb := range m.Thinking {
-				if tb.Signature == "" {
-					continue
+				if tb.Signature != "" {
+					leading = append(leading, anthropic.NewThinkingBlock(tb.Signature, tb.Text))
 				}
-				blocks = append(blocks, anthropic.NewThinkingBlock(tb.Signature, tb.Text))
 			}
 			if m.Content != "" {
-				blocks = append(blocks, anthropic.NewTextBlock(m.Content))
+				rest = append(rest, anthropic.NewTextBlock(m.Content))
 			}
 			for _, tu := range m.ToolUse {
-				blocks = append(blocks, anthropic.ContentBlockParamUnion{OfToolUse: &anthropic.ToolUseBlockParam{
+				rest = append(rest, anthropic.ContentBlockParamUnion{OfToolUse: &anthropic.ToolUseBlockParam{
 					ID:    tu.ID,
 					Name:  tu.Name,
 					Input: json.RawMessage(normalizeToolInput(tu.Input)),
 				}})
 			}
-			if len(blocks) > 0 {
-				out = append(out, anthropic.NewAssistantMessage(blocks...))
-			}
+		default:
+			continue
+		}
+		if len(leading) == 0 && len(rest) == 0 {
+			continue
+		}
+		if n := len(turns); n > 0 && turns[n-1].role == m.Role {
+			turns[n-1].leading = append(turns[n-1].leading, leading...)
+			turns[n-1].rest = append(turns[n-1].rest, rest...)
+			continue
+		}
+		turns = append(turns, &turn{role: m.Role, leading: leading, rest: rest})
+	}
+
+	out := make([]anthropic.MessageParam, 0, len(turns))
+	for _, t := range turns {
+		blocks := append(t.leading, t.rest...)
+		if t.role == "user" {
+			out = append(out, anthropic.NewUserMessage(blocks...))
+		} else {
+			out = append(out, anthropic.NewAssistantMessage(blocks...))
 		}
 	}
 	return out
@@ -241,10 +286,14 @@ func convertMessagesToAnthropic(messages []Message) []anthropic.MessageParam {
 
 // toolResponseFromMessage normalizes a completed native Message into the provider-agnostic ToolResponse, splitting native thinking blocks (reasoning, with signatures for replay) from the user-facing text and tool calls.
 func toolResponseFromMessage(msg *anthropic.Message) *ToolResponse {
+	cacheRead := int(msg.Usage.CacheReadInputTokens)
+	cacheWrite := int(msg.Usage.CacheCreationInputTokens)
 	resp := &ToolResponse{
-		InputTokens:  int(msg.Usage.InputTokens),
-		OutputTokens: int(msg.Usage.OutputTokens),
-		StopReason:   mapAnthropicStopReason(string(msg.StopReason)),
+		InputTokens:              int(msg.Usage.InputTokens) + cacheRead + cacheWrite,
+		OutputTokens:             int(msg.Usage.OutputTokens),
+		CacheReadInputTokens:     cacheRead,
+		CacheCreationInputTokens: cacheWrite,
+		StopReason:               mapAnthropicStopReason(string(msg.StopReason)),
 	}
 	var content strings.Builder
 	for _, block := range msg.Content {

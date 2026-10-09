@@ -758,6 +758,18 @@ type DocApiKey struct {
 	UpdatedAt       time.Time
 }
 
+type DocumentSetting struct {
+	ID             string
+	AccountID      string
+	DocumentType   string
+	ProcessOwner   sql.NullString
+	DocumentNumber sql.NullString
+	Revision       sql.NullString
+	FooterText     sql.NullString
+	CreatedAt      time.Time
+	UpdatedAt      time.Time
+}
+
 type EmailDomain struct {
 	ID             string
 	AccountID      string

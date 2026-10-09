@@ -491,6 +491,14 @@ func (r *router) InitEndpointGroups(config MainRouterConfig) {
 		registry.RegisterGroup(scheduleSettingsGroup.APIEndpointGroup)
 	}
 
+	// Document Settings
+	documentSettingsGroup := (&httpgroup.DocumentSettingsEndpointGroup{}).Materialize(&httpgroup.DocumentSettingsEndpointGroupConfig{
+		CoreClient: config.CoreClient,
+	})
+	if documentSettingsGroup != nil {
+		registry.RegisterGroup(documentSettingsGroup.APIEndpointGroup)
+	}
+
 	// Operating Calendars
 	operatingCalendarsGroup := (&httpgroup.OperatingCalendarsEndpointGroup{}).Materialize(&httpgroup.OperatingCalendarsEndpointGroupConfig{
 		CoreClient: config.CoreClient,

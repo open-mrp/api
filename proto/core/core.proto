@@ -19,6 +19,7 @@ import public "core/core_consumption.proto";
 import public "core/core_users_territories.proto";
 import public "core/core_invoices.proto";
 import public "core/core_lookups.proto";
+import public "core/core_document_settings.proto";
 
 option go_package = "shared/proto/core;core";
 
@@ -911,4 +912,12 @@ service CoreService {
   rpc UpdateTerritory(UpdateTerritoryRequest) returns (UpdateTerritoryResponse);
   rpc DeleteTerritory(DeleteTerritoryRequest) returns (google.protobuf.Empty);
   rpc BatchGetTerritoriesByIDs(BatchGetTerritoriesByIDsRequest) returns (BatchGetTerritoriesByIDsResponse);
+
+  // Document settings
+
+  // Returns the caller's account's setting for every document type.
+  rpc ListDocumentSettings(ListDocumentSettingsRequest) returns (ListDocumentSettingsResponse);
+  rpc GetDocumentSetting(GetDocumentSettingRequest) returns (GetDocumentSettingResponse);
+  // Saves the account's setting for one document type, creating it on the first save.
+  rpc UpdateDocumentSetting(UpdateDocumentSettingRequest) returns (UpdateDocumentSettingResponse);
 }

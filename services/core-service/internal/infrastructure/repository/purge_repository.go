@@ -28,6 +28,7 @@ var purgeTargets = []tableColumn{
 	{"account_relation", "counterparty_account_id"},
 	{"account_user", "account_id"},
 	{"api_key", "owner_account_id"},
+	{"document_setting", "account_id"},
 	{"attribute", "account_id"},
 	{"batch", "account_id"},
 	{"carrier", "account_id"},

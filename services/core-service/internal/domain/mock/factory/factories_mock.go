@@ -377,6 +377,20 @@ func (mr *MockRepoFactoryMockRecorder) NewDepartmentRepo() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "NewDepartmentRepo", reflect.TypeOf((*MockRepoFactory)(nil).NewDepartmentRepo))
 }
 
+// NewDocumentSettingRepo mocks base method.
+func (m *MockRepoFactory) NewDocumentSettingRepo() domain.DocumentSettingRepo {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "NewDocumentSettingRepo")
+	ret0, _ := ret[0].(domain.DocumentSettingRepo)
+	return ret0
+}
+
+// NewDocumentSettingRepo indicates an expected call of NewDocumentSettingRepo.
+func (mr *MockRepoFactoryMockRecorder) NewDocumentSettingRepo() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "NewDocumentSettingRepo", reflect.TypeOf((*MockRepoFactory)(nil).NewDocumentSettingRepo))
+}
+
 // NewEmailLogRepo mocks base method.
 func (m *MockRepoFactory) NewEmailLogRepo() domain.EmailLogRepo {
 	m.ctrl.T.Helper()

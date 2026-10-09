@@ -1715,6 +1715,13 @@ type TenancySvc interface {
 	ListCustomerAccountsForUser(ctx context.Context, userID, vendorAccountID string) ([]CustomerAccountSummary, *apierror.APIError)
 }
 
+type DocumentSettingSvc interface {
+	// ListDocumentSettings returns the caller's account's setting for every document type, in declaration order.
+	ListDocumentSettings(ctx context.Context) ([]*DocumentSetting, *apierror.APIError)
+	GetDocumentSetting(ctx context.Context, documentType constants.DocumentType) (*DocumentSetting, *apierror.APIError)
+	UpdateDocumentSetting(ctx context.Context, params UpdateDocumentSettingParams) (*DocumentSetting, *apierror.APIError)
+}
+
 type TerritorySvc interface {
 	ListTerritories(ctx context.Context, params ListTerritoriesParams) (*ListTerritoriesResult, *apierror.APIError)
 	GetTerritory(ctx context.Context, params GetTerritoryParams) (*Territory, *apierror.APIError)

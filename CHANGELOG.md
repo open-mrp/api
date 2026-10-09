@@ -1,5 +1,12 @@
 # Changelog
 
+## [4.7.2](https://github.com/open-mrp/api/compare/v4.7.1...v4.7.2) (2026-10-09)
+
+
+### Bug Fixes
+
+* removed agent tools no longer block saves; e2e fixes ([#318](https://github.com/open-mrp/api/issues/318)) ([2702dbd](https://github.com/open-mrp/api/commit/2702dbd5739359d7da20a7b05e764bb74c0a4b09))
+
 ## [4.7.1](https://github.com/open-mrp/api/compare/v4.7.0...v4.7.1) (2026-10-09)
 
 

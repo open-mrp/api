@@ -521,6 +521,7 @@ var pathParamSeeds = map[string]string{
 	"receiving_order_id": SeedReceivingOrderID,
 	"target_id":          SeedSalesTargetID,
 	"review_id":          SeedHubspotCompanyReviewID,
+	"document_type":      "price_list",
 	// session_id is excluded from test discovery (excludedPaths in spec.go)
 }
 

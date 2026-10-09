@@ -1,5 +1,12 @@
 # Changelog
 
+## [4.4.1](https://github.com/open-mrp/api/compare/v4.4.0...v4.4.1) (2026-10-09)
+
+
+### Bug Fixes
+
+* **agent-service:** size the Postgres pool to agent-db's connection limit ([#301](https://github.com/open-mrp/api/issues/301)) ([4579ccc](https://github.com/open-mrp/api/commit/4579cccf9cf88e6adef51d1c239dd9e23a6782d2))
+
 ## [4.4.0](https://github.com/open-mrp/api/compare/v4.3.1...v4.4.0) (2026-10-08)
 
 

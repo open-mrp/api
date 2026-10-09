@@ -25,6 +25,7 @@ func unmarshalConfig(configJSON string) *apiresource.AgentDefinitionConfig {
 		TriggerConfig      *apiresource.TriggerConfig `json:"trigger_config"`
 		EndpointToolSlugs  []string                   `json:"endpoint_tool_slugs"`
 		EndpointToolReview map[string]bool            `json:"endpoint_tool_review"`
+		MaxSteps           *int                       `json:"max_steps"`
 	}
 	_ = json.Unmarshal([]byte(configJSON), &wire)
 	cfg := &apiresource.AgentDefinitionConfig{
@@ -34,6 +35,7 @@ func unmarshalConfig(configJSON string) *apiresource.AgentDefinitionConfig {
 		TriggerConfig:      wire.TriggerConfig,
 		EndpointToolSlugs:  wire.EndpointToolSlugs,
 		EndpointToolReview: wire.EndpointToolReview,
+		MaxSteps:           wire.MaxSteps,
 	}
 	if wire.Tier != nil {
 		t := constants.ModelTier(*wire.Tier)

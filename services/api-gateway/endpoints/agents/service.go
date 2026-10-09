@@ -70,6 +70,7 @@ type wireConfig struct {
 	TriggerConfig      *wireTriggerConfig `json:"trigger_config,omitempty"`
 	EndpointToolSlugs  []string           `json:"endpoint_tool_slugs,omitempty"`
 	EndpointToolReview map[string]bool    `json:"endpoint_tool_review,omitempty"`
+	MaxSteps           *int               `json:"max_steps,omitempty"`
 }
 
 func marshalConfig(cfg ConfigInput) (string, error) {
@@ -77,6 +78,7 @@ func marshalConfig(cfg ConfigInput) (string, error) {
 		SystemPrompt:      cfg.SystemPrompt.Ptr(),
 		Temperature:       cfg.Temperature.Ptr(),
 		EndpointToolSlugs: cfg.EndpointToolSlugs,
+		MaxSteps:          cfg.MaxSteps.Ptr(),
 	}
 	if review, ok := cfg.EndpointToolReview.Value(); ok {
 		wire.EndpointToolReview = review

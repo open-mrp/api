@@ -1,5 +1,12 @@
 # Changelog
 
+## [4.7.4](https://github.com/open-mrp/api/compare/v4.7.3...v4.7.4) (2026-10-10)
+
+
+### Code Refactoring
+
+* update pagination and response conventions in API documentation ([fc58d7c](https://github.com/open-mrp/api/commit/fc58d7c5d26c0bcf05797577f5386f2fa578b8fd))
+
 ## [4.7.3](https://github.com/open-mrp/api/compare/v4.7.2...v4.7.3) (2026-10-09)
 
 

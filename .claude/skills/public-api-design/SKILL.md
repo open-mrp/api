@@ -21,7 +21,7 @@ Adding later is non-breaking; removing is breaking forever. Related objects are 
 - **Request mirrors response**: same names and nesting both ways; related objects go in as `<field>_id`; PATCH merges section fields. Own-data sections are always populated, no `object`.
 - **Inherited defaults** live in `defaults` at every level with the same names; `null` = inherit.
 - **Fixed platform enums are fields**, not resources (no list endpoint/ID/owner); reference by code. A later resource keeps `code` as its identifier.
-- **Enums, not booleans** in responses (`service_level_scope: all | selected`, not `all_service_levels: bool`). An enum can grow; a boolean needs a new field. Only exceptions: `has_next_page`/`has_previous_page`, delete stub `deleted: true`, error `is_transient`.
+- **Enums, not booleans** in responses (`service_level_scope: all | selected`, not `all_service_levels: bool`). An enum can grow; a boolean needs a new field. Only exceptions: delete stub `deleted: true`, error `is_transient`. `page_info` has no booleans; another page exists when `next_page_url` or `previous_page_url` is present.
 - **Dates**: instants are `_at` (RFC 3339 UTC); business days are `_on` (`YYYY-MM-DD`, account timezone). Lead times are time Quantities in business days (no `_days` ints). Per-run effort (`setup_time`) is a Quantity; per-unit effort is a Rate.
 - **Collisions**: `lot` = traceability lot only; sizes are `lot_size`. `job` = work for one item (with `demand[]`); `async_job` = background work a 202 returns; `work_order` = a release of jobs; `batch` = WIP scan unit (merges/splits). Pegging is the plan; traceability is lot/batch genealogy. Movement `type` = business event (`receipt | shipment | consumption | output | transfer | adjustment | reconciliation | return`), never the channel.
 - **Contract limits**: totals 2 dp, unit prices/quantities ≤ 6 dp; prices tax-exclusive; one currency per document (`currency` field); metadata ≤ 50 keys / 40-char keys / 500-char values on documented resources only; Idempotency-Key on POST (≤ 255 chars, 24 h, mismatch 422 `idempotency_key_reused`, in flight 409); IDs opaque ≤ 64 chars.
@@ -83,7 +83,7 @@ Adding later is non-breaking; removing is breaking forever. Related objects are 
 
 ## Lists
 
-- `limit` default 25, max 100. Keyset `(created_at, id)` newest first unless decided otherwise.
+- `limit` default 25, max 100. Keyset `(created_at, id)` newest first unless decided otherwise. `page_info` is the page URLs only; another page exists when `next_page_url` or `previous_page_url` is present.
 - `q` only when needed. Its docstring names the exact columns and match mode. It covers own-table columns only. Related-resource narrowing uses `*_ids[]`.
 - Match mode: small per-tenant tables use `LIKE '%q%'` with tenant scope. Codes/SKUs use prefix `LIKE 'q%'` on an index. Large free text uses ngram FULLTEXT. Never use the default word FULLTEXT parser for name search; drop unused FULLTEXT indexes.
 - Embedded expandable lists return the first 10; `page_info.next_page_url` points at the sub-resource list. Never cap silently.

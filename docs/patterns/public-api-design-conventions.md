@@ -34,7 +34,7 @@ Response fields use an enum for any state or mode, never a boolean. A boolean ca
 
 Example: shipping terms use `free_shipping.service_level_scope: all | selected`, not `all_service_levels: true | false`. A later `all_except` is one more value.
 
-The only exceptions are protocol fields that can never gain a third value: `page_info.has_next_page` / `has_previous_page`, the delete stub's `deleted: true`, and the error object's `is_transient`.
+The only exceptions are protocol fields that can never gain a third value: the delete stub's `deleted: true`, and the error object's `is_transient`. `page_info` carries no booleans; another page exists when `next_page_url` or `previous_page_url` is present.
 
 ### Dates, instants and durations
 
@@ -216,6 +216,7 @@ An area still being designed ships internal: its routes are `Public: false`, and
 
 - `limit` defaults to **25** and maxes at **100**. Large pages with includes are the most likely way a list misses the 50 ms worst case. Raising the max later is additive, lowering it is breaking.
 - Keyset pagination on `(created_at, id)`, newest first, unless the resource review decides otherwise. The list docstring states the sort order.
+- `page_info` is `next_page_url` and `previous_page_url` only. Another page exists when that URL is present. There is no `has_next_page` or `has_previous_page`.
 
 ### Search (`q`)
 
@@ -234,7 +235,7 @@ An area still being designed ships internal: its routes are `Public: false`, and
 
 ### Embedded lists
 
-An expandable list inside a resource (`carrier.service_levels`, `item.order_units`) returns its first 10 items when expanded. If more exist, `page_info.has_next_page` is `true` and `page_info.next_page_url` points at the sub-resource list endpoint. Never cap silently.
+An expandable list inside a resource (`carrier.service_levels`, `item.order_units`) returns its first 10 items when expanded. If more exist, `page_info.next_page_url` points at the sub-resource list endpoint. Never cap silently.
 
 ### Filters
 

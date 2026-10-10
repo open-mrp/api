@@ -184,7 +184,7 @@ These ship as part of forge.1. The dashboard, the SDKs and the e2e suite must ex
   - A malformed body (bad JSON, unreadable) is a 400 `parameter_invalid`, not `validation_failed`.
   - Reusing an idempotency key with a different request is a 422 `idempotency_key_reused`.
   - `rate_limit_exceeded` becomes `rate_limited`.
-- **Lists.** `page_info.has_prev_page` becomes `has_previous_page`; `limit` is 25 by default and at most 100; `q` exists only where an endpoint documents it.
+- **Lists.** `page_info.has_next_page` and `has_prev_page` are removed; another page exists when `next_page_url` or `previous_page_url` is present. `limit` is 25 by default and at most 100; `q` exists only where an endpoint documents it.
 - **Background work.** `/v1/core/jobs` becomes `/v1/core/async-jobs`; `object: "job"` becomes `"async_job"`; statuses and `job_result` change as X11 says.
 - **Headers.** Responses to a deprecated version carry `Deprecation` and `Sunset`.
 

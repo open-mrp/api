@@ -20,6 +20,7 @@ Finalizing a resource in this review also means clearing `Preview: true` on all 
 These came out of a single resource review but apply everywhere. Implement once in the framework where possible, then sweep. The framework is `apikit` (see Shared API kit below).
 
 - [ ] **Page size: default 25, max 100.** `apiresource.PaginationRequest.Limit` is `default:"100" validate:"min=1,max=1000"` → `default:"25" validate:"min=1,max=100"`. Audit dashboard callers that pass `limit` > 100 (dropdowns, exports) before shipping; they must paginate. (Payment terms review.)
+- [ ] **Drop `page_info` booleans.** Remove `has_next_page` and `has_prev_page`. Another page exists exactly when `next_page_url` or `previous_page_url` is present; the booleans repeat that.
 - [ ] **Delete returns a deleted stub.** Replace `*apiresource.EmptyResource` on every DELETE with a `DeletedResource` `{ "id", "object", "deleted": true }` where `object` is the deleted resource's object type. 200 status. Replayed delete stays 410. (Payment terms review.)
 - [ ] **Delete is blocked while referenced.** Deleting a resource that other records still reference returns 409 with a new error code `resource_in_use`; the message points to archiving. Each resource's review lists the references to probe. (Payment terms review.)
 - [ ] **No soft delete by default.** Delete is a hard delete guarded by `resource_in_use`; no new `deleted_at` columns. Existing soft deletes (`carrier`, `item`, `message`, `message_attachment`, `operating_calendar`) move to hard delete unless that resource's review justifies keeping it. `deleted_record` (tombstone for 410 replays) is not soft delete and stays. (Product lines review.)
@@ -34,7 +35,7 @@ These came out of a single resource review but apply everywhere. Implement once 
 - [ ] **Money is its own type.** Monetary amounts are `Money` = `{ "amount": "decimal string", "currency": "usd" }` (ISO 4217, lowercase), never a `Quantity` in a currency unit. Price-type rates (currency per unit) become `{ amount, currency, per_unit }`. Requests take the same shape (`currency` code, not a unit ID). Only `usd` is accepted at forge.1 (other codes → 422 `currency_not_supported`); more currencies are additive later. **Refactor the tables, don't translate at the gateway**: money columns (`*_amount decimal`, `*_currency char(3)`) live on the owning row instead of `quantity`/`rate` rows in a currency unit. Prod (2026-10-07): the only currency units are 1 system + 29 per-account copies of "Dollar" (`$`, ratio 1); 1,272,946 `rate` rows have a currency numerator (none as denominator) and 473,911 `quantity` rows are in a currency unit. All map to `usd`. Data migration per owning table, then drop currency units and the `currency` dimension. `shared/pricing` and the `pricing_*_ratio_*` columns move to money columns. (Shipping terms + units reviews.)
 - [ ] **Drop `display_value`** from every value shape; clients format. (Units review.)
 - [ ] **`object` is for resources only.** Every resource has `object`; value shapes don't; any field that can hold more than one shape carries a discriminator (`type`). (Unit groups review.)
-- [ ] **Embedded expandable lists page.** When expanded, an embedded list returns its first 10 items; if more exist, `page_info.has_next_page` is `true` and `next_page_url` points at the sub-resource list endpoint. No silent caps. (Carriers review.)
+- [ ] **Embedded expandable lists page.** When expanded, an embedded list returns its first 10 items; if more exist, `page_info.next_page_url` points at the sub-resource list endpoint. No silent caps. (Carriers review.)
 - [ ] **Defaults are a field on the parent** (`default_service_level`, `default_order_unit`), never an `is_default` flag on children. (Carriers review.)
 - [ ] **Created-date filters are `created_after` / `created_before`** on every list (replacing `starts_at`/`ends_at` where they mean "created between"). `starts_at`/`ends_at` stay only for analytics/reporting periods. (Items review.)
 - [ ] **Request mirrors response.** Same field names and nesting in both directions; a related object is written as `<field>_id` where the response returns the object; PATCH merges section fields individually. (Customers review.)
@@ -1436,6 +1437,7 @@ Everything the dashboard must change when it moves to the forge.1 version, group
 
 All resources
 - `limit` max 100 (was 1000). Any call with `limit` > 100 must paginate (dropdowns, pickers, exports).
+- `page_info.has_next_page` and `has_prev_page` are removed. Another page exists when `next_page_url` or `previous_page_url` is present.
 - DELETE responses are `{id, object, deleted: true}` (was `{}`).
 - Status value `inactive` → `archived` everywhere, except integrations, agents and account users (`disabled`).
 - Deleting an in-use resource fails with 409 `resource_in_use` (was allowed for payment and shipping terms; was `resource_conflict` for units). Surface the archive path in the UI.

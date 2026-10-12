@@ -359,7 +359,7 @@ func (r *invoiceRepoImpl) listCustomerInvoicePage(ctx context.Context, params do
 	if err != nil {
 		return nil, err
 	}
-	walk, err := r.unpaidFewerThanOrders(ctx, params.AccountID, buyers)
+	walk, err := unpaidFewerThanOrders(ctx, r.queries.DB(), params.AccountID, buyers)
 	if err != nil {
 		return nil, err
 	}
@@ -382,8 +382,7 @@ func (r *invoiceRepoImpl) listCustomerInvoicePage(ctx context.Context, params do
 
 // unpaidFewerThanOrders reports whether the account has fewer unpaid invoices than the buyers have
 // orders. Both are counted off covering keys and each count stops at the other's bound.
-func (r *invoiceRepoImpl) unpaidFewerThanOrders(ctx context.Context, accountID string, buyers []string) (bool, error) {
-	q := r.queries.DB()
+func unpaidFewerThanOrders(ctx context.Context, q sqlc.DBTX, accountID string, buyers []string) (bool, error) {
 	var unpaid int
 	if err := q.QueryRowContext(ctx, `SELECT COUNT(*) FROM (
     SELECT 1 FROM invoice ui FORCE INDEX (`+invoicePaidIndex+`) WHERE ui.account_id = ? AND ui.is_paid_in_full = false LIMIT ?) probe`,

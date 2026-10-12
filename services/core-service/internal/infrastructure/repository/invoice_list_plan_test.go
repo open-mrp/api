@@ -141,17 +141,20 @@ func invoiceUnorderedFloor(t *testing.T, db *sql.DB, p domain.ListInvoicesParams
 	return planLeastCount(t, db, counts, args)
 }
 
-// customerInvoiceFloor is how many payable invoices the customer and its children have: the customer
-// is a property of the invoice's order, which no invoice key reads in list order (invoiceUnorderedFloor).
+// customerInvoiceFloor is the fewer of the account's unpaid invoices and the customer's and its
+// children's orders: the customer is a property of the invoice's order, which no invoice key reads in
+// list order (invoiceUnorderedFloor), so the best a plan can do is read one of those sets whole.
 func customerInvoiceFloor(t *testing.T, db *sql.DB, p domain.ListCustomerInvoicesParams) float64 {
 	t.Helper()
-	return planLeastCount(t, db, []string{`(SELECT COUNT(*) FROM invoice inv JOIN sales_order so ON so.id = inv.sales_order_id
-		WHERE inv.account_id = ? AND inv.is_paid_in_full = false AND so.buyer_account_id IN (
-			SELECT ar.counterparty_account_id FROM account_relation ar
+	buyers := `SELECT ar.counterparty_account_id FROM account_relation ar
 			LEFT JOIN account_relation par ON par.id = ar.parent_account_relation_id
 			WHERE ar.owner_account_id = ? AND ar.account_relation_role_code = 'customer'
-			AND (ar.counterparty_account_id = ? OR par.counterparty_account_id = ?)))`},
-		[]any{p.AccountID, p.AccountID, p.CustomerAccountID, p.CustomerAccountID})
+			AND (ar.counterparty_account_id = ? OR par.counterparty_account_id = ?)`
+	return planLeastCount(t, db, []string{
+		`(SELECT COUNT(*) FROM invoice inv WHERE inv.account_id = ? AND inv.is_paid_in_full = false)`,
+		`(SELECT COUNT(*) FROM invoice inv JOIN sales_order so ON so.id = inv.sales_order_id
+		WHERE inv.account_id = ? AND so.buyer_account_id IN (` + buyers + `))`,
+	}, []any{p.AccountID, p.AccountID, p.AccountID, p.CustomerAccountID, p.CustomerAccountID})
 }
 
 // TestInvoiceList_ReadsAboutAPage holds every filter combination ListInvoices accepts to reading about

@@ -346,12 +346,20 @@ JOIN geolocation geo ON geo.id = addr.geolocation_id`,
 	return page.ids(ctx, r.queries.DB(), cursor, params.Limit+1)
 }
 
+// customerUnpaidWalkCap is the most unpaid invoices an account may have for a customer's page to be read
+// by walking them all in order; past it, reading the customer's orders is bounded where the walk is not.
+const customerUnpaidWalkCap = 2000
+
 // listCustomerInvoicePage chooses one page of a customer's payable invoices and returns its ids in page
-// order. They are read from the customer's orders: an account's unpaid invoices are few, but walking
-// them in order still reads every other customer's.
+// order. It reads whichever is fewer: the account's unpaid invoices, walked in list order and filtered
+// to the customer, or every order the customer has placed, each looked up for its invoices.
 func (r *invoiceRepoImpl) listCustomerInvoicePage(ctx context.Context, params domain.ListCustomerInvoicesParams, cursor *pagination.StringCursor) ([]string, error) {
 	// A parent settles for its children, so their invoices are payable here too.
 	buyers, err := r.customerAndChildren(ctx, params.AccountID, params.CustomerAccountID)
+	if err != nil {
+		return nil, err
+	}
+	walk, err := r.unpaidFewerThanOrders(ctx, params.AccountID, buyers)
 	if err != nil {
 		return nil, err
 	}
@@ -364,8 +372,34 @@ func (r *invoiceRepoImpl) listCustomerInvoicePage(ctx context.Context, params do
 		f.add("(inv.number LIKE ? OR so.number LIKE ? OR so.customer_po_number LIKE ?)", search.String, search.String, search.String)
 	}
 	page := &invoicePage{f: f, joins: invoicePageJoins, joined: []string{"so", "ar", "buyer"}}
-	page.drive("SELECT so2.id FROM sales_order so2 WHERE so2.buyer_account_id IN ("+placeholders(len(buyers))+")", stringArgs(buyers)...)
+	if walk {
+		page.indexes = []string{invoicePaidIndex}
+	} else {
+		page.drive("SELECT so2.id FROM sales_order so2 WHERE so2.buyer_account_id IN ("+placeholders(len(buyers))+")", stringArgs(buyers)...)
+	}
 	return page.ids(ctx, r.queries.DB(), cursor, params.Limit+1)
+}
+
+// unpaidFewerThanOrders reports whether the account has fewer unpaid invoices than the buyers have
+// orders. Both are counted off covering keys and each count stops at the other's bound.
+func (r *invoiceRepoImpl) unpaidFewerThanOrders(ctx context.Context, accountID string, buyers []string) (bool, error) {
+	q := r.queries.DB()
+	var unpaid int
+	if err := q.QueryRowContext(ctx, `SELECT COUNT(*) FROM (
+    SELECT 1 FROM invoice ui FORCE INDEX (`+invoicePaidIndex+`) WHERE ui.account_id = ? AND ui.is_paid_in_full = false LIMIT ?) probe`,
+		accountID, customerUnpaidWalkCap+1).Scan(&unpaid); err != nil {
+		return false, err
+	}
+	if unpaid > customerUnpaidWalkCap {
+		return false, nil
+	}
+	var orders int
+	if err := q.QueryRowContext(ctx, `SELECT COUNT(*) FROM (
+    SELECT 1 FROM sales_order so2 FORCE INDEX (sales_order_buyer_account_id_idx) WHERE so2.buyer_account_id IN (`+placeholders(len(buyers))+`) LIMIT ?) probe`,
+		append(stringArgs(buyers), unpaid+1)...).Scan(&orders); err != nil {
+		return false, err
+	}
+	return unpaid < orders, nil
 }
 
 // customerAndChildren is the customer and every customer of the account whose relation names the

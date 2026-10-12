@@ -15,6 +15,7 @@ const (
 	RateLimitRemainingHeader = "RateLimit-Remaining"
 	RateLimitResetHeader     = "RateLimit-Reset"
 	LocationHeader           = "Location"
+	ContentDispositionHeader = "Content-Disposition"
 
 	// InternalIdentityHeader carries a JSON-serialized agent identity on the internal listener. It is trusted ONLY when InternalServiceTokenHeader matches the configured secret. The edge/ingress must strip any X-OpenMRP-Internal-* headers from external traffic.
 	InternalIdentityHeader = "X-OpenMRP-Internal-Identity"

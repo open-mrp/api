@@ -1008,6 +1008,25 @@ type SalesFactRepo interface {
 	SaveRollupSync(ctx context.Context, sync SalesRollupSync) *apierror.APIError
 }
 
+// OpenOrderSnapshotRepo maintains the open-order snapshot the order-book reports read: every issued sales
+// order, its lines, and the invoice lines billing them, copied from their source tables.
+type OpenOrderSnapshotRepo interface {
+	// RefreshOrders brings the given orders' snapshot rows in line with their source tables: an issued
+	// sales order is copied, any other order (or one that no longer exists) is removed. Returns how many
+	// rows it wrote or deleted.
+	RefreshOrders(ctx context.Context, orderIDs []string) (int, *apierror.APIError)
+	// ListIssuedOrderIDsAfter pages every account's issued sales orders in id order.
+	ListIssuedOrderIDsAfter(ctx context.Context, afterID string, limit int32) ([]string, *apierror.APIError)
+	// ListSnapshotOrderIDsAfter pages the orders the snapshot holds in id order.
+	ListSnapshotOrderIDsAfter(ctx context.Context, afterID string, limit int32) ([]string, *apierror.APIError)
+	// FilterNotIssued returns the subset of orderIDs that are no longer issued sales orders.
+	FilterNotIssued(ctx context.Context, orderIDs []string) ([]string, *apierror.APIError)
+	// ResolveOrders returns the orders whose snapshot rows a dirty mark's scopes can change.
+	ResolveOrders(ctx context.Context, scope SalesFactScope, scopeIDs []string) ([]string, *apierror.APIError)
+	GetSync(ctx context.Context) (*OpenOrderSnapshotSync, *apierror.APIError)
+	SaveSync(ctx context.Context, sync OpenOrderSnapshotSync) *apierror.APIError
+}
+
 // SalesReportRepo reads sales analytics from sales_line_fact.
 type SalesReportRepo interface {
 	// FactsReady reports whether the backfill of sales_line_fact has completed; until then its reports would undercount.

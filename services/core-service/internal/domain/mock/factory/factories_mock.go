@@ -643,6 +643,20 @@ func (mr *MockRepoFactoryMockRecorder) NewMaterialRepo() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "NewMaterialRepo", reflect.TypeOf((*MockRepoFactory)(nil).NewMaterialRepo))
 }
 
+// NewOpenOrderSnapshotRepo mocks base method.
+func (m *MockRepoFactory) NewOpenOrderSnapshotRepo() domain.OpenOrderSnapshotRepo {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "NewOpenOrderSnapshotRepo")
+	ret0, _ := ret[0].(domain.OpenOrderSnapshotRepo)
+	return ret0
+}
+
+// NewOpenOrderSnapshotRepo indicates an expected call of NewOpenOrderSnapshotRepo.
+func (mr *MockRepoFactoryMockRecorder) NewOpenOrderSnapshotRepo() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "NewOpenOrderSnapshotRepo", reflect.TypeOf((*MockRepoFactory)(nil).NewOpenOrderSnapshotRepo))
+}
+
 // NewOperatingCalendarRepo mocks base method.
 func (m *MockRepoFactory) NewOperatingCalendarRepo() domain.OperatingCalendarRepo {
 	m.ctrl.T.Helper()

@@ -179,7 +179,7 @@ func (r *pickRepoImpl) listQuery(ctx context.Context, params domain.ListPicksPar
 	q := pickListQuery{
 		AccountID:      params.AccountID,
 		SortByShipBy:   params.Sort != constants.PickSortCreatedAt,
-		Search:         newPickSearch(params.Query),
+		Search:         newPickSearch(params.Query, params.QueryMatch),
 		Status:         params.Status,
 		ProductLineIDs: params.ProductLineIDs,
 		StartDate:      parseDateFilter(params.StartDate),
@@ -356,6 +356,7 @@ func (r *pickRepoImpl) phraseMatches(ctx context.Context, q pickListQuery) ([]pi
 	return matches, nil
 }
 
+// countProductLineLines counts the order lines for the product lines, stopping at pickProductLineScanCap.
 func (r *pickRepoImpl) countProductLineLines(ctx context.Context, productLineIDs []string) (int, *apierror.APIError) {
 	query, args := buildPickProductLineCountQuery(productLineIDs)
 	var count int

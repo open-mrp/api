@@ -2,6 +2,15 @@
 
 Changes to the public API, by the `OpenMRP-Version` that introduces them. A client pinned to an older supported version keeps the shape described for that version; see [API versioning](patterns/api-versioning-patterns.md).
 
+## 1.0.forge-preview.9
+
+### Breaking changes
+
+- **Pick search matches the start of the pick and PO numbers.** On `GET /v1/operations/picks`, a `q` of three or more characters now matches the start of the pick number and of the customer PO number, ignoring case. It no longer matches the middle of them: a search for `2410` finds pick `24109`; one for `4109` no longer does. A `q` of three or more characters still matches anywhere in the customer's name and customer number, and a `q` of one or two characters still matches the start of the pick number only.
+  - New query parameter `q_match`: `prefix` (the default) or `contains`. `contains` keeps the previous matching, anywhere in the pick and PO numbers, and is slower on accounts with many picks.
+  - Older versions: a list pinned to 1.0.forge-preview.8 or earlier that sends `q` without `q_match` is searched with `contains`, as before.
+  - Migration: nothing to change for searches by the start of a number. To keep matching the middle of a pick or PO number, send `q_match=contains`.
+
 ## 1.0.forge-preview.8
 
 ### Breaking changes

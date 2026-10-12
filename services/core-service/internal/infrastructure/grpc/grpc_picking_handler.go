@@ -176,7 +176,8 @@ func (h *pickingGRPCHandler) ListPicks(ctx context.Context, req *pb.ListPicksReq
 	}
 
 	params := domain.ListPicksParams{
-		Limit: req.Limit,
+		Limit:      req.Limit,
+		QueryMatch: constants.PickSearchMatch(req.GetQueryMatch()),
 	}
 
 	if req.Cursor != nil {

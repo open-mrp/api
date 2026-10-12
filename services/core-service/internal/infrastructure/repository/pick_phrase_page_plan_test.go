@@ -47,61 +47,65 @@ func TestPickPhrasePage_MatchesTheSQLPage(t *testing.T) {
 		}},
 	}
 
+	matches := []constants.PickSearchMatch{constants.PickSearchMatchPrefix, constants.PickSearchMatchContains}
+
 	inMemory := 0
 	for _, term := range terms {
-		for _, sort := range sorts {
-			for _, filter := range filters {
-				t.Run(term+"/"+sort.name+"/"+filter.name, func(t *testing.T) {
-					params := domain.ListPicksParams{AccountID: planFulAccount, Limit: 40, Query: str(term)}
-					sort.apply(&params)
-					filter.apply(&params)
+		for _, match := range matches {
+			for _, sort := range sorts {
+				for _, filter := range filters {
+					t.Run(term+"/"+string(match)+"/"+sort.name+"/"+filter.name, func(t *testing.T) {
+						params := domain.ListPicksParams{AccountID: planFulAccount, Limit: 40, Query: str(term), QueryMatch: match}
+						sort.apply(&params)
+						filter.apply(&params)
 
-					// Forward three pages, then back one, each cursor taken from the page just read.
-					directions := []pagination.Direction{"", pagination.DirectionForward, pagination.DirectionForward, pagination.DirectionBackward}
-					var last, first string
-					for step, dir := range directions {
-						if dir != "" {
-							anchor := last
-							if dir == pagination.DirectionBackward {
-								anchor = first
+						// Forward three pages, then back one, each cursor taken from the page just read.
+						directions := []pagination.Direction{"", pagination.DirectionForward, pagination.DirectionForward, pagination.DirectionBackward}
+						var last, first string
+						for step, dir := range directions {
+							if dir != "" {
+								anchor := last
+								if dir == pagination.DirectionBackward {
+									anchor = first
+								}
+								if anchor == "" {
+									return
+								}
+								var at, shipBy time.Time
+								require.NoError(t, db.QueryRow("SELECT created_at, ship_by_sort_date FROM pick WHERE id = ?", anchor).Scan(&at, &shipBy))
+								if params.Sort != constants.PickSortCreatedAt {
+									at = shipBy
+								}
+								c := pagination.EncodeStringCursor(pagination.StringCursor{OccurredAt: at, ID: anchor, Direction: dir})
+								params.Cursor = &c
 							}
-							if anchor == "" {
+
+							q, _, apiErr := repo.listQuery(ctx, params)
+							require.Nil(t, apiErr)
+							if q.PhraseMatches == nil {
 								return
 							}
-							var at, shipBy time.Time
-							require.NoError(t, db.QueryRow("SELECT created_at, ship_by_sort_date FROM pick WHERE id = ?", anchor).Scan(&at, &shipBy))
-							if params.Sort != constants.PickSortCreatedAt {
-								at = shipBy
+							inMemory++
+							got := q.phrasePage()
+							q.PhraseMatches = nil
+							want, apiErr := repo.listIDs(ctx, q)
+							require.Nil(t, apiErr)
+							if want == nil {
+								want = []string{}
 							}
-							c := pagination.EncodeStringCursor(pagination.StringCursor{OccurredAt: at, ID: anchor, Direction: dir})
-							params.Cursor = &c
-						}
+							require.Equal(t, want, got, "page %d", step)
 
-						q, _, apiErr := repo.listQuery(ctx, params)
-						require.Nil(t, apiErr)
-						if q.PhraseMatches == nil {
-							return
+							if len(got) == 0 {
+								return
+							}
+							ids := got[:min(len(got), int(params.Limit))]
+							if dir == pagination.DirectionBackward {
+								return
+							}
+							first, last = ids[0], ids[len(ids)-1]
 						}
-						inMemory++
-						got := q.phrasePage()
-						q.PhraseMatches = nil
-						want, apiErr := repo.listIDs(ctx, q)
-						require.Nil(t, apiErr)
-						if want == nil {
-							want = []string{}
-						}
-						require.Equal(t, want, got, "page %d", step)
-
-						if len(got) == 0 {
-							return
-						}
-						ids := got[:min(len(got), int(params.Limit))]
-						if dir == pagination.DirectionBackward {
-							return
-						}
-						first, last = ids[0], ids[len(ids)-1]
-					}
-				})
+					})
+				}
 			}
 		}
 	}

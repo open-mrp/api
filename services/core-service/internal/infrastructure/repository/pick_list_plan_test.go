@@ -57,6 +57,16 @@ func pickPlanDims() []planDim[domain.ListPicksParams] {
 			{"prefix(none)", func(p *domain.ListPicksParams) { p.Query = str("9") }},
 			{"phrase(one)", func(p *domain.ListPicksParams) { p.Query = str("12345") }},
 			{"phrase(every)", func(p *domain.ListPicksParams) { p.Query = str("Customer") }},
+			{"phrase(po-every)", func(p *domain.ListPicksParams) { p.Query = str("PO-3") }},
+			{"contains(one)", func(p *domain.ListPicksParams) {
+				p.Query, p.QueryMatch = str("12345"), constants.PickSearchMatchContains
+			}},
+			{"contains(every)", func(p *domain.ListPicksParams) {
+				p.Query, p.QueryMatch = str("Customer"), constants.PickSearchMatchContains
+			}},
+			{"contains(numbers)", func(p *domain.ListPicksParams) {
+				p.Query, p.QueryMatch = str("234"), constants.PickSearchMatchContains
+			}},
 		}},
 		{"created", []planValue[domain.ListPicksParams]{
 			{"last30d", func(p *domain.ListPicksParams) { p.StartDate = day(recent.Add(-30 * 24 * time.Hour)) }},
@@ -133,12 +143,12 @@ func pickUnorderedFloor(t *testing.T, db *sql.DB, p domain.ListPicksParams) floa
 	if len(p.ProductLineIDs) > 0 {
 		count("p.id IN ("+pickProductLineMatches(len(p.ProductLineIDs))+")", stringArgs(p.ProductLineIDs)...)
 	}
-	switch search := newPickSearch(p.Query); {
+	switch search := newPickSearch(p.Query, p.QueryMatch); {
 	case search.NumberPrefix != "":
 		count("p.number LIKE ?", search.NumberPrefix)
 	case search.hasPhrase():
-		count("p.id IN (SELECT id FROM ("+pickPhraseMatches(search.Phrase)+") matched)",
-			pickListQuery{AccountID: p.AccountID, Search: search}.appendPhraseArgs(nil)...)
+		matches, args := joinPickArms(pickPhraseArms(pickListQuery{AccountID: p.AccountID, Search: search}, false), " UNION ")
+		count("p.id IN (SELECT id FROM ("+matches+") matched)", args...)
 	}
 	if p.Sort != constants.PickSortCreatedAt && (p.StartDate != nil || p.EndDate != nil) {
 		where, args := []string{"TRUE"}, []any{}

@@ -341,7 +341,7 @@ func TestVitessSmoke(t *testing.T) {
 		for i := 0; len(manyCustomers) <= pickBuyerMergeMax; i++ {
 			manyCustomers = append(manyCustomers, fmt.Sprintf("ac_smoke_%03d", i))
 		}
-		prefix, phrase := "PI", "ICK-00"
+		prefix, phrase, longPrefix := "PI", "ICK-00", "PICK-0"
 		start, end := "2000-01-01", "2100-01-01"
 		cases := map[string]domain.ListPicksParams{
 			"default ship-by":        {AccountID: account, Limit: 50},
@@ -360,6 +360,10 @@ func TestVitessSmoke(t *testing.T) {
 			"number prefix":          {AccountID: account, Limit: 50, Query: &prefix},
 			"phrase":                 {AccountID: account, Limit: 50, Query: &phrase},
 			"phrase + filters":       {AccountID: account, Limit: 50, Query: &phrase, Status: &closed, CustomerIDs: buyers, CustomerGroupIDs: groups, ProductLineIDs: productLines},
+			"long prefix":            {AccountID: account, Limit: 50, Query: &longPrefix},
+			"contains":               {AccountID: account, Limit: 50, Query: &phrase, QueryMatch: constants.PickSearchMatchContains},
+			"contains + filters": {AccountID: account, Limit: 50, Query: &phrase, QueryMatch: constants.PickSearchMatchContains,
+				Status: &closed, CustomerIDs: buyers, CustomerGroupIDs: groups, ProductLineIDs: productLines},
 		}
 		for name, params := range cases {
 			result, apiErr := repo.List(ctx, params)

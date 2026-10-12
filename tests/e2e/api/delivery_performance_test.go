@@ -517,6 +517,7 @@ func TestDeliveryPerformance_CustomerFilterMeasuresThatCustomer(t *testing.T) {
 
 	body := deliveryWindow()
 	body["customer_ids"] = []string{customerID}
+	awaitDeliveryCommitted(t, body, 1)
 	overall, ok := analyzeDelivery(t, body)["overall"].(map[string]any)
 	require.True(t, ok)
 	committed, _ := overall["committed_order_count"].(float64)
@@ -527,6 +528,19 @@ func TestDeliveryPerformance_CustomerFilterMeasuresThatCustomer(t *testing.T) {
 	require.True(t, ok)
 	committed, _ = overall["committed_order_count"].(float64)
 	assert.Equal(t, float64(0), committed, "filters combine: the customer's order has no such rep")
+}
+
+// awaitDeliveryCommitted polls until delivery performance for body measures want committed orders: the
+// report reads facts refreshed a few seconds after each write.
+func awaitDeliveryCommitted(t *testing.T, body map[string]any, want int) {
+	t.Helper()
+	eventually(t, 45*time.Second, time.Second, func() error {
+		committed, _ := jsonObject(analyzeDelivery(t, body), "overall")["committed_order_count"].(float64)
+		if int(committed) != want {
+			return fmt.Errorf("delivery performance measures %v committed orders", committed)
+		}
+		return nil
+	})
 }
 
 // An unknown id is a filter matching nothing, not an error — and it must narrow the excluded count too, or a filtered rate would sit beside an account-wide exclusion.

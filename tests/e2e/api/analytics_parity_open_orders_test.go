@@ -3,8 +3,10 @@
 package api_test
 
 import (
+	"fmt"
 	"net/url"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -46,7 +48,22 @@ func seedOpenOrderBook(t *testing.T) openOrderBook {
 	require.NotEmpty(t, jsonField(readOrder(t, jsonField(book.done, "id")), "completed_at"), "a fully shipped order is completed")
 
 	book.estimate = createParityEstimate(t, customerID, parityLine(parityProductSCK004, "7", SeedUnitID, "1.00"))
+	awaitOpenOrders(t, book.filter(nil), "77.25", "8")
 	return book
+}
+
+// awaitOpenOrders polls until the open-orders summary for body counts ordered and invoiced (invoiced ""
+// is not checked): the reports read a snapshot refreshed a few seconds after each write.
+func awaitOpenOrders(t *testing.T, body map[string]any, ordered, invoiced string) {
+	t.Helper()
+	eventually(t, 45*time.Second, time.Second, func() error {
+		summary := mustPutAnalytics(t, apiClient, openOrdersSummaryPath, nil, body)
+		gotOrdered, gotInvoiced := computedValue(t, summary, "ordered"), computedValue(t, summary, "invoiced")
+		if gotOrdered != ordered || (invoiced != "" && gotInvoiced != invoiced) {
+			return fmt.Errorf("open orders show %s ordered, %s invoiced", gotOrdered, gotInvoiced)
+		}
+		return nil
+	})
 }
 
 func (b openOrderBook) filter(extra map[string]any) map[string]any {
@@ -330,6 +347,7 @@ func TestAnalyticsParityOpenOrders_CustomerFilterIncludesChildAccountsAndGroupsN
 	child := parityCustomer(t, group)
 	makeChildCustomer(t, parent, child)
 	issueParityOrder(t, child, "", parityLine(SeedProductID, "3", SeedUnitID, "2.00")) // 6 ea x $1 = $6
+	awaitOpenOrders(t, map[string]any{"customer_ids": []string{child}}, "6", "")
 
 	for name, body := range map[string]map[string]any{
 		"the parent":           {"customer_ids": []string{parent}},
@@ -386,6 +404,7 @@ func TestAnalyticsParityOpenOrders_SalesRepsSeeOnlyTheirOwnOrders(t *testing.T) 
 	mine := issueParityOrder(t, customer, repID, parityLine(SeedProductID, "2", SeedUnitID, "2.00"))      // $4
 	theirs := issueParityOrder(t, customer, "", parityLine(parityProductSCK002, "3", SeedUnitID, "2.00")) // $6
 	body := map[string]any{"customer_ids": []string{customer}}
+	awaitOpenOrders(t, body, "10", "")
 
 	admin := mustPutAnalytics(t, apiClient, openOrdersSummaryPath, nil, body)
 	assert.Equal(t, "10", computedValue(t, admin, "ordered"))

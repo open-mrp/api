@@ -436,7 +436,7 @@ func TestDashAnalytics_OpenOrderReportsShowTenantBNoneOfTheSellersBook(t *testin
 	body := map[string]any{"customer_ids": []string{customer}}
 	tenantB := getTenantBClient()
 
-	assert.Equal(t, "6", computedValue(t, mustPutAnalytics(t, apiClient, openOrdersSummaryPath, nil, body), "ordered"), "precondition: the seller sees its order")
+	awaitOpenOrders(t, body, "6", "") // precondition: the seller sees its order
 	status, _, raw := openOrderLines(t, apiClient, orderID)
 	requireStatus(t, 200, status, raw)
 
@@ -750,6 +750,7 @@ func TestDashAnalytics_DeliveryPerformanceGroupAndProductLineFilters(t *testing.
 	order := issueOrderForCustomer(t, customer, nil)
 	require.NotEmpty(t, shipByDate(t, order), "the order must carry a commitment to be measured")
 	mine := []string{customer}
+	awaitDeliveryCommitted(t, dashAnalyticsWith(deliveryWindow(), map[string]any{"customer_ids": mine}), 1)
 
 	for name, tc := range map[string]struct {
 		extra     map[string]any

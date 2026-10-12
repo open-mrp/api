@@ -1,5 +1,12 @@
 # Changelog
 
+## [4.8.1](https://github.com/open-mrp/api/compare/v4.8.0...v4.8.1) (2026-10-12)
+
+
+### Bug Fixes
+
+* **api-gateway:** expose Retry-After and Idempotent-Replayed to browser clients ([#326](https://github.com/open-mrp/api/issues/326)) ([3eb0f46](https://github.com/open-mrp/api/commit/3eb0f46ab81cde23bc3383d9bfa900904fe08788))
+
 ## [4.8.0](https://github.com/open-mrp/api/compare/v4.7.4...v4.8.0) (2026-10-12)
 
 

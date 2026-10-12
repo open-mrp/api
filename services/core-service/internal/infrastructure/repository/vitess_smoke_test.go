@@ -693,6 +693,50 @@ func TestVitessSmoke(t *testing.T) {
 		}
 	})
 
+	// The delivery facts: maintenance, then the same delivery reads answered from them.
+	t.Run("delivery facts", func(t *testing.T) {
+		facts := NewDeliveryFactRepo(q)
+		orders := ids("SELECT id FROM sales_order")
+		computed, apiErr := facts.ComputeFacts(ctx, orders)
+		checkAPI("ComputeFacts", apiErr)
+		checkAPI("WriteFacts", facts.WriteFacts(ctx, computed, nil))
+		stored, apiErr := facts.GetFacts(ctx, orders)
+		checkAPI("GetFacts", apiErr)
+		checkAPI("WriteFacts deletes", facts.WriteFacts(ctx, nil, stored[:min(1, len(stored))]))
+		checkAPI("WriteFacts upserts", facts.WriteFacts(ctx, stored, nil))
+		_, apiErr = facts.ListSalesOrderIDsAfter(ctx, "", 10)
+		checkAPI("ListSalesOrderIDsAfter", apiErr)
+		_, apiErr = facts.ListFactSalesOrderIDsAfter(ctx, "", 10)
+		checkAPI("ListFactSalesOrderIDsAfter", apiErr)
+		_, apiErr = facts.FilterExistingSalesOrderIDs(ctx, orders)
+		checkAPI("FilterExistingSalesOrderIDs", apiErr)
+		for _, scope := range []domain.DeliveryFactScope{domain.DeliveryFactScopeSalesOrderLine, domain.DeliveryFactScopePick,
+			domain.DeliveryFactScopePickLine, domain.DeliveryFactScopeQuantity, domain.DeliveryFactScopeProduct} {
+			_, apiErr = facts.ResolveSalesOrderIDs(ctx, scope, []string{"smoke_a", "smoke_b"}, 10)
+			checkAPI("ResolveSalesOrderIDs "+string(scope), apiErr)
+		}
+		checkAPI("MarkDirty", facts.MarkDirty(ctx, domain.DeliveryFactScopeSalesOrder, "or_smoke", account))
+		checkAPI("MarkSalesOrdersDirty", facts.MarkSalesOrdersDirty(ctx, account, []string{"or_smoke_1", "or_smoke_2"}))
+		marks, apiErr := facts.ListDirty(ctx, 10)
+		checkAPI("ListDirty", apiErr)
+		checkAPI("ClearDirty", facts.ClearDirty(ctx, marks))
+		now := time.Now().UTC()
+		checkAPI("SaveSync", facts.SaveSync(ctx, domain.DeliveryFactSync{PassStartedAt: &now, LastCompletedAt: &now}))
+		checkAPI("RestartReconcile", facts.RestartReconcile(ctx))
+		_, apiErr = facts.GetSync(ctx)
+		checkAPI("GetSync", apiErr)
+
+		schedule := NewProductionScheduleInputRepo(q)
+		from, to := time.Date(2000, 1, 1, 0, 0, 0, 0, time.UTC), time.Now().UTC().AddDate(1, 0, 0)
+		for _, f := range []domain.DeliveryFilters{
+			{},
+			{CustomerIDs: buyers, CustomerGroupIDs: groups, ProductLineIDs: productLines, SalesRepIDs: []string{"acus_none"}},
+		} {
+			_, apiErr := schedule.ListDeliveryOutcomes(ctx, account, from, to, f)
+			checkAPI("ListDeliveryOutcomes from facts", apiErr)
+		}
+	})
+
 	t.Run("sales facts and reports", func(t *testing.T) {
 		facts := NewSalesFactRepo(q)
 		invoices := ids("SELECT id FROM invoice")

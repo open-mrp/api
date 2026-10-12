@@ -7,11 +7,11 @@ type NotificationPreference struct {
 	ID            string
 	AccountID     string
 	AccountUserID string
-	Category      string
-	InAppEnabled  bool
-	EmailEnabled  bool
-	PushEnabled   bool
-	Digest        string
+	Category      string `audit:"category"`
+	InAppEnabled  bool   `audit:"in_app_enabled"`
+	EmailEnabled  bool   `audit:"email_enabled"`
+	PushEnabled   bool   `audit:"push_enabled"`
+	Digest        string `audit:"digest"`
 	CreatedAt     time.Time
 	UpdatedAt     time.Time
 }

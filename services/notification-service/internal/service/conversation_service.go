@@ -1068,6 +1068,7 @@ func (s *conversationSvcImpl) SendMessage(ctx context.Context, input domain.Send
 			LinkResourceType:    input.LinkResourceType,
 			LinkResourceID:      input.LinkResourceID,
 			ReplyToMessageID:    input.ReplyToMessageID,
+			Status:              string(constants.MessageStatusSent),
 			CreatedAt:           now,
 
 			MentionAccountUserIDs: input.MentionAccountUserIDs,
@@ -1097,6 +1098,9 @@ func (s *conversationSvcImpl) SendMessage(ctx context.Context, input domain.Send
 
 		if advErr := convRepo.AdvanceAfterMessage(txCtx, input.ConversationID, messageID, now); advErr != nil {
 			return advErr
+		}
+		if auditErr := publishChatMessageCreated(txCtx, f, msg); auditErr != nil {
+			return auditErr
 		}
 		// The author has implicitly read their own message (cursor advance by participant id works for both internal account_user and customer participants).
 		if curErr := f.NewParticipantRepo().AdvanceReadCursorByID(txCtx, part.ID, messageID, seq); curErr != nil {
@@ -2280,6 +2284,9 @@ func (s *conversationSvcImpl) ScheduleMessage(ctx context.Context, input domain.
 				return lErr
 			}
 			result = loaded
+			if apiErr := publishMessageAudit(txCtx, f, constants.AuditActionCreate, constants.ObjectTypeScheduledMessage, nil, loaded, nil); apiErr != nil {
+				return apiErr
+			}
 			return cacheSuccessResponse(txCtx, f, idemKey.TypeID, result)
 		})
 		if apiErr != nil {
@@ -2316,20 +2323,35 @@ func (s *conversationSvcImpl) CancelScheduledMessage(ctx context.Context, schedu
 	if apiErr != nil {
 		return nil, tracing.Trace(span, apiErr)
 	}
-	repo := s.repoFactory.NewMessageRepo()
-	canceled, apiErr := repo.CancelScheduled(ctx, scheduledID, accountID, callerAcus)
+	var result *domain.Message
+	apiErr = s.txManager.WithTx(ctx, func(txCtx context.Context, f domain.RepoFactory) *apierror.APIError {
+		repo := f.NewMessageRepo()
+		canceled, apiErr := repo.CancelScheduled(txCtx, scheduledID, accountID, callerAcus)
+		if apiErr != nil {
+			return apiErr
+		}
+		if !canceled {
+			// Either it does not exist / isn't the caller's, or it is no longer scheduled.
+			existing, getErr := repo.GetByID(txCtx, scheduledID, accountID)
+			if getErr != nil {
+				return apierror.NewResourceNotFoundError("Scheduled message not found.")
+			}
+			return apierror.NewValidationError("This scheduled message can no longer be canceled (status: " + existing.Status + ").")
+		}
+		after, apiErr := repo.GetByID(txCtx, scheduledID, accountID)
+		if apiErr != nil {
+			return apiErr
+		}
+		result = after
+		// The cancel is guarded on status='scheduled', so the pre-image differs only in status.
+		before := *after
+		before.Status = string(constants.MessageStatusScheduled)
+		return publishMessageAudit(txCtx, f, constants.AuditActionUpdate, constants.ObjectTypeScheduledMessage, &before, after, nil)
+	})
 	if apiErr != nil {
 		return nil, tracing.Trace(span, apiErr)
 	}
-	if !canceled {
-		// Either it does not exist / isn't the caller's, or it is no longer scheduled.
-		existing, getErr := repo.GetByID(ctx, scheduledID, accountID)
-		if getErr != nil {
-			return nil, tracing.Trace(span, apierror.NewResourceNotFoundError("Scheduled message not found."))
-		}
-		return nil, tracing.Trace(span, apierror.NewValidationError("This scheduled message can no longer be canceled (status: "+existing.Status+")."))
-	}
-	return repo.GetByID(ctx, scheduledID, accountID)
+	return result, nil
 }
 
 // RescheduleMessage moves a scheduled message the caller created to a new send time, replacing its body when one is given. The message stays the single row the worker promotes, so the old time no longer fires and it is sent once, at the new time.
@@ -2367,6 +2389,8 @@ func (s *conversationSvcImpl) RescheduleMessage(ctx context.Context, input domai
 		var result *domain.Message
 		apiErr = s.txManager.WithTx(ctx, func(txCtx context.Context, f domain.RepoFactory) *apierror.APIError {
 			repo := f.NewMessageRepo()
+			// Read ahead for the audit pre-image; a missing row is reported by rescheduleRefusal instead.
+			before, beforeErr := repo.GetByID(txCtx, input.ID, accountID)
 			moved, apiErr := repo.Reschedule(txCtx, input.ID, accountID, callerAcus, input.ScheduledFor, input.Body, preview)
 			if apiErr != nil {
 				return apiErr
@@ -2374,11 +2398,17 @@ func (s *conversationSvcImpl) RescheduleMessage(ctx context.Context, input domai
 			if !moved {
 				return rescheduleRefusal(txCtx, f, input.ID, accountID, callerAcus)
 			}
+			if beforeErr != nil {
+				return beforeErr
+			}
 			loaded, apiErr := repo.GetByID(txCtx, input.ID, accountID)
 			if apiErr != nil {
 				return apiErr
 			}
 			result = loaded
+			if apiErr := publishMessageAudit(txCtx, f, constants.AuditActionUpdate, constants.ObjectTypeScheduledMessage, before, loaded, editedContentMetadata(before, loaded)); apiErr != nil {
+				return apiErr
+			}
 			return cacheSuccessResponse(txCtx, f, idemKey.TypeID, result)
 		})
 		if apiErr != nil {
@@ -3434,7 +3464,13 @@ func (s *conversationSvcImpl) Hide(ctx context.Context, conversationID string) *
 	if part.Role == string(constants.ParticipantRoleOwner) {
 		return tracing.Trace(span, apierror.NewAuthorizationError("The owner cannot hide a conversation."))
 	}
-	if apiErr := s.repoFactory.NewParticipantRepo().Hide(ctx, conversationID, callerAcus); apiErr != nil {
+	apiErr = s.txManager.WithTx(ctx, func(txCtx context.Context, f domain.RepoFactory) *apierror.APIError {
+		if apiErr := f.NewParticipantRepo().Hide(txCtx, conversationID, callerAcus); apiErr != nil {
+			return apiErr
+		}
+		return publishParticipantStateChange(txCtx, f, part)
+	})
+	if apiErr != nil {
 		return tracing.Trace(span, apiErr)
 	}
 	return nil
@@ -3444,11 +3480,17 @@ func (s *conversationSvcImpl) Unhide(ctx context.Context, conversationID string)
 	ctx, span := conversationSvcTracer.Start(ctx, "service.conversation.unhide")
 	defer span.End()
 
-	callerAcus, _, _, apiErr := s.requireParticipant(ctx, conversationID)
+	callerAcus, _, part, apiErr := s.requireParticipant(ctx, conversationID)
 	if apiErr != nil {
 		return tracing.Trace(span, apiErr)
 	}
-	if apiErr := s.repoFactory.NewParticipantRepo().Unhide(ctx, conversationID, callerAcus); apiErr != nil {
+	apiErr = s.txManager.WithTx(ctx, func(txCtx context.Context, f domain.RepoFactory) *apierror.APIError {
+		if apiErr := f.NewParticipantRepo().Unhide(txCtx, conversationID, callerAcus); apiErr != nil {
+			return apiErr
+		}
+		return publishParticipantStateChange(txCtx, f, part)
+	})
+	if apiErr != nil {
 		return tracing.Trace(span, apiErr)
 	}
 	return nil
@@ -3458,14 +3500,49 @@ func (s *conversationSvcImpl) SetMute(ctx context.Context, conversationID string
 	ctx, span := conversationSvcTracer.Start(ctx, "service.conversation.set_mute")
 	defer span.End()
 
-	callerAcus, accountID, _, apiErr := s.requireParticipant(ctx, conversationID)
+	callerAcus, accountID, part, apiErr := s.requireParticipant(ctx, conversationID)
 	if apiErr != nil {
 		return nil, tracing.Trace(span, apiErr)
 	}
-	if apiErr := s.repoFactory.NewParticipantRepo().SetMute(ctx, conversationID, callerAcus, muted, mutedUntil); apiErr != nil {
+	apiErr = s.txManager.WithTx(ctx, func(txCtx context.Context, f domain.RepoFactory) *apierror.APIError {
+		if apiErr := f.NewParticipantRepo().SetMute(txCtx, conversationID, callerAcus, muted, mutedUntil); apiErr != nil {
+			return apiErr
+		}
+		return publishParticipantStateChange(txCtx, f, part)
+	})
+	if apiErr != nil {
 		return nil, tracing.Trace(span, apiErr)
 	}
 	return s.loadConversation(ctx, conversationID, callerAcus, accountID)
+}
+
+// publishParticipantStateChange records a change to a participant's own view of a conversation. hidden_at and muted_until are untagged so membership events omit them, and are diffed here instead.
+func publishParticipantStateChange(ctx context.Context, f domain.RepoFactory, before *domain.ConversationParticipant) *apierror.APIError {
+	after, apiErr := f.NewParticipantRepo().GetByID(ctx, before.ID, before.ConversationID)
+	if apiErr != nil {
+		return apiErr
+	}
+	changes := audit.ComputeChanges(before, after)
+	if !timePtrEqual(before.HiddenAt, after.HiddenAt) {
+		changes = append(changes, audit.NewFieldChange("hidden_at", before.HiddenAt, after.HiddenAt))
+	}
+	if !timePtrEqual(before.MutedUntil, after.MutedUntil) {
+		changes = append(changes, audit.NewFieldChange("muted_until", before.MutedUntil, after.MutedUntil))
+	}
+	return audit.NewPublisher().Publish(ctx, f.NewOutboxRepo(), audit.EventData{
+		ServiceName:  domain.ServiceName,
+		Action:       constants.AuditActionUpdate,
+		ResourceType: constants.ObjectTypeConversationParticipant,
+		ResourceID:   before.ID,
+		Changes:      changes,
+	})
+}
+
+func timePtrEqual(a, b *time.Time) bool {
+	if a == nil || b == nil {
+		return a == b
+	}
+	return a.Equal(*b)
 }
 
 func (s *conversationSvcImpl) Block(ctx context.Context, blockedAccountUserID string) (*domain.MessageBlock, *apierror.APIError) {

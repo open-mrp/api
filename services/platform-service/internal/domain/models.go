@@ -178,6 +178,14 @@ type ResourceCreator struct {
 	Actor      *AuditActor
 }
 
+// ResourceCreateEvent is a resource's `create` audit event: who created it, in which request, and its audited fields at creation.
+type ResourceCreateEvent struct {
+	ActorID      string
+	IdentityType string
+	RequestID    *string
+	Changes      []AuditFieldChange
+}
+
 // AuditEvent represents a single immutable audit event record.
 // It maps 1:1 with the `audit_event` table for storage.
 type AuditEvent struct {

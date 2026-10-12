@@ -34,7 +34,9 @@ func (r *purchaseOrderLineRepoImpl) Get(ctx context.Context, salesOrderLineID, s
 		return nil, tracing.Trace(span, apiErr)
 	}
 
-	return mapPurchaseOrderLineRow(row), nil
+	line := mapPurchaseOrderLineRow(row)
+	line.SalesOrderID = salesOrderID
+	return line, nil
 }
 
 func (r *purchaseOrderLineRepoImpl) Create(ctx context.Context, lineID string, params domain.CreatePurchaseOrderLineParams) (*domain.PurchaseOrderLine, *apierror.APIError) {

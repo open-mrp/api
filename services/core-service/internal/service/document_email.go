@@ -151,7 +151,7 @@ func (s *utilsSvcImpl) SendInvoiceEmail(ctx context.Context, params domain.SendI
 			return nil
 		}
 		return s.withTx(ctx, func(txCtx context.Context, txSvc *utilsSvcImpl) *apierror.APIError {
-			return txSvc.repos.NewInvoiceRepo().MarkEmailSent(txCtx, params.AccountID, params.InvoiceID)
+			return markInvoiceEmailSent(txCtx, txSvc.repos, params.AccountID, params.InvoiceID)
 		})
 	}
 
@@ -181,7 +181,7 @@ func (s *utilsSvcImpl) SendInvoiceEmail(ctx context.Context, params domain.SendI
 
 		// Only the customer copy flags the invoice sent — the flag records whether the customer
 		// received it, and the rep copy is an internal notification.
-		return txSvc.repos.NewInvoiceRepo().MarkEmailSent(txCtx, params.AccountID, params.InvoiceID)
+		return markInvoiceEmailSent(txCtx, txSvc.repos, params.AccountID, params.InvoiceID)
 	})
 }
 
@@ -206,7 +206,7 @@ func (s *utilsSvcImpl) SendSalesOrderAcknowledgement(ctx context.Context, params
 		if apiErr := txSvc.notificationPublisher.PublishSendEmail(txCtx, *emailData); apiErr != nil {
 			return apiErr
 		}
-		return txSvc.repos.NewSalesOrderRepo().MarkAcknowledgementSent(txCtx, params.AccountID, params.SalesOrderID)
+		return markSalesOrderAcknowledgementSent(txCtx, txSvc.repos, params.AccountID, params.SalesOrderID)
 	})
 }
 
@@ -229,7 +229,7 @@ func (s *utilsSvcImpl) SendPurchaseOrderSubmission(ctx context.Context, params d
 		if apiErr := txSvc.notificationPublisher.PublishSendEmail(txCtx, *emailData); apiErr != nil {
 			return apiErr
 		}
-		return txSvc.repos.NewPurchaseOrderRepo().MarkSubmissionSent(txCtx, params.AccountID, params.PurchaseOrderID)
+		return markPurchaseOrderSubmissionSent(txCtx, txSvc.repos, params.AccountID, params.PurchaseOrderID)
 	})
 }
 

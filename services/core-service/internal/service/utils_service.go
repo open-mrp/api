@@ -325,7 +325,7 @@ func (s *utilsSvcImpl) emailInvoice(ctx context.Context, span trace.Span, invoic
 			}
 		}
 
-		if apiErr := txSvc.repos.NewInvoiceRepo().MarkEmailSent(txCtx, accountID, invoiceID); apiErr != nil {
+		if apiErr := markInvoiceEmailSent(txCtx, txSvc.repos, accountID, invoiceID); apiErr != nil {
 			return apiErr
 		}
 
@@ -371,7 +371,7 @@ func (s *utilsSvcImpl) emailSalesOrder(ctx context.Context, span trace.Span, sal
 			return apiErr
 		}
 
-		if apiErr := txSvc.repos.NewSalesOrderRepo().MarkAcknowledgementSent(txCtx, accountID, salesOrderID); apiErr != nil {
+		if apiErr := markSalesOrderAcknowledgementSent(txCtx, txSvc.repos, accountID, salesOrderID); apiErr != nil {
 			return apiErr
 		}
 
@@ -418,7 +418,7 @@ func (s *utilsSvcImpl) emailPurchaseOrder(ctx context.Context, span trace.Span, 
 			return apiErr
 		}
 
-		if apiErr := txSvc.repos.NewPurchaseOrderRepo().MarkSubmissionSent(txCtx, accountID, purchaseOrderID); apiErr != nil {
+		if apiErr := markPurchaseOrderSubmissionSent(txCtx, txSvc.repos, accountID, purchaseOrderID); apiErr != nil {
 			return apiErr
 		}
 

@@ -14,6 +14,7 @@ import (
 	publishermock "github.com/open-mrp/api/services/core-service/internal/domain/mock/publisher"
 	repositorymock "github.com/open-mrp/api/services/core-service/internal/domain/mock/repository"
 	"github.com/open-mrp/api/shared/appctx"
+	"github.com/open-mrp/api/shared/audit"
 	"github.com/open-mrp/api/shared/constants"
 	"github.com/open-mrp/api/shared/contracts"
 	"github.com/open-mrp/api/shared/crypto"
@@ -84,6 +85,7 @@ type SalesOrderSvcTestSuite struct {
 	mediatorFactory *factorymock.MockMediatorFactory
 	idempotencyMed  *mediatormock.MockIdempotencyMed
 	readAccessMed   *mediatormock.MockReadAccessMed
+	paymentFlagsMed *mediatormock.MockPaymentFlagsMed
 
 	ctrl          *gomock.Controller
 	encryptionKey []byte
@@ -174,10 +176,12 @@ func (suite *SalesOrderSvcTestSuite) SetupTest() {
 
 	suite.idempotencyMed = mediatormock.NewMockIdempotencyMed(suite.ctrl)
 	suite.readAccessMed = mediatormock.NewMockReadAccessMed(suite.ctrl)
+	suite.paymentFlagsMed = mediatormock.NewMockPaymentFlagsMed(suite.ctrl)
 	suite.mediatorFactory = factorymock.NewMockMediatorFactory(suite.ctrl)
 	suite.mediatorFactory.EXPECT().Build(gomock.Any()).Return(domain.Mediators{
-		Idempotency: suite.idempotencyMed,
-		ReadAccess:  suite.readAccessMed,
+		Idempotency:  suite.idempotencyMed,
+		ReadAccess:   suite.readAccessMed,
+		PaymentFlags: suite.paymentFlagsMed,
 	}).AnyTimes()
 
 	// Deterministic 32-byte key so the Checkout test can round-trip encrypted creds.
@@ -772,6 +776,10 @@ func (suite *SalesOrderSvcTestSuite) expectCreateOrderHappyRepoChain(accountID s
 		DoAndReturn(func(_ context.Context, _, id string) (*domain.SalesOrder, *apierror.APIError) {
 			return &domain.SalesOrder{ID: id, Number: "1001"}, nil
 		}).Times(1)
+
+	// Every line the create wrote is audited on its own.
+	suite.orderRepo.EXPECT().GetLines(gomock.Any(), gomock.Any()).
+		Return([]*domain.SalesOrderLine{{ID: "orln_product"}, {ID: "orln_ship"}}, nil).Times(1)
 }
 
 func (suite *SalesOrderSvcTestSuite) TestCreateSalesOrder_Success_SynthesizesShippingLineAtZero() {
@@ -786,6 +794,17 @@ func (suite *SalesOrderSvcTestSuite) TestCreateSalesOrder_Success_SynthesizesShi
 	suite.Nil(apiErr)
 	suite.NotNil(result)
 	suite.Equal("1001", result.Number)
+
+	var lineCreates []string
+	for _, msg := range suite.outbox.published(contracts.PlatformEventAuditLogged) {
+		var evt audit.PublishedEvent
+		suite.Require().NoError(json.Unmarshal(msg.Payload.Data, &evt))
+		if evt.ResourceType == constants.ObjectTypeSalesOrderLine && evt.Action == constants.AuditActionCreate {
+			suite.Equal(result.ID, evt.RootResourceID)
+			lineCreates = append(lineCreates, evt.ResourceID)
+		}
+	}
+	suite.ElementsMatch([]string{"orln_product", "orln_ship"}, lineCreates, "each line written with the order is audited")
 }
 
 func (suite *SalesOrderSvcTestSuite) TestCreateSalesOrder_RejectsNonInternalActor() {
@@ -1020,6 +1039,7 @@ func (suite *SalesOrderSvcTestSuite) TestCreateSalesOrder_SalesRepResolvedFromCu
 	suite.lineRepo.EXPECT().Create(gomock.Any(), gomock.Any(), gomock.Any()).Return(&domain.SalesOrderLine{}, nil).Times(1)
 	suite.orderRepo.EXPECT().Get(gomock.Any(), "ac_test", gomock.Any()).
 		Return(&domain.SalesOrder{ID: "or_new", Number: "1001"}, nil).Times(1)
+	suite.orderRepo.EXPECT().GetLines(gomock.Any(), gomock.Any()).Return(nil, nil).Times(1)
 
 	suite.expectCacheSuccess()
 
@@ -1059,6 +1079,7 @@ func (suite *SalesOrderSvcTestSuite) TestCreateSalesOrder_AppliesCustomerDefault
 	suite.lineRepo.EXPECT().Create(gomock.Any(), gomock.Any(), gomock.Any()).Return(&domain.SalesOrderLine{}, nil).Times(1)
 	suite.orderRepo.EXPECT().Get(gomock.Any(), "ac_test", gomock.Any()).
 		Return(&domain.SalesOrder{ID: "or_new", Number: "1001"}, nil).Times(1)
+	suite.orderRepo.EXPECT().GetLines(gomock.Any(), gomock.Any()).Return(nil, nil).Times(1)
 	suite.expectCacheSuccess()
 
 	// Omit every field that has a customer default so the create path must fall back to the customer relation.
@@ -1100,6 +1121,7 @@ func (suite *SalesOrderSvcTestSuite) TestCreateSalesOrder_RequestValuesOverrideC
 	suite.lineRepo.EXPECT().Create(gomock.Any(), gomock.Any(), gomock.Any()).Return(&domain.SalesOrderLine{}, nil).Times(1)
 	suite.orderRepo.EXPECT().Get(gomock.Any(), "ac_test", gomock.Any()).
 		Return(&domain.SalesOrder{ID: "or_new", Number: "1001"}, nil).Times(1)
+	suite.orderRepo.EXPECT().GetLines(gomock.Any(), gomock.Any()).Return(nil, nil).Times(1)
 	suite.expectCacheSuccess()
 
 	params := baseCreateOrderParams()
@@ -1756,6 +1778,12 @@ func (suite *SalesOrderSvcTestSuite) TestChangeStatus_Unissue_ReleasesInventory(
 	issuedAt := time.Now()
 	suite.orderRepo.EXPECT().Get(gomock.Any(), "ac_test", "or_1").
 		Return(&domain.SalesOrder{ID: "or_1", SalesOrderStatusCode: "issued", IssuedAt: &issuedAt}, nil).Times(1)
+
+	// The pick and its lines are read first, so their deletes can be audited.
+	pickID := "pk_1"
+	suite.orderRepo.EXPECT().GetPickID(gomock.Any(), "or_1").Return(&pickID, nil).Times(1)
+	suite.pickRepo.EXPECT().Get(gomock.Any(), "ac_test", pickID).Return(&domain.Pick{ID: pickID, SalesOrderID: "or_1"}, nil).Times(1)
+	suite.pickRepo.EXPECT().GetLines(gomock.Any(), pickID).Return([]*domain.PickLine{{ID: "pl_1", PickID: pickID}}, nil).Times(1)
 
 	// Full release chain: pick quantities → pick lines → pick → allocations → reserved issues.
 	suite.orderRepo.EXPECT().DeleteQuantitiesByPickLines(gomock.Any(), "or_1").Return(nil).Times(1)

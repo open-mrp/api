@@ -83,6 +83,12 @@ UPDATE account_user
 SET status_code = 'active', updated_at = NOW(3)
 WHERE account_id = ? AND user_id = ? AND status_code = 'disabled';
 
+-- name: ListAccountUserSeatStatusesForUpdate :many
+SELECT id, status_code
+FROM account_user
+WHERE account_id = ? AND status_code IN ('active', 'disabled')
+FOR UPDATE;
+
 -- name: ListAccountUsersForwardBase :many
 SELECT
     au.id,

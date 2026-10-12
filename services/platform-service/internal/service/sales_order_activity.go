@@ -7,6 +7,7 @@ import (
 	"strings"
 	"time"
 
+	authtypes "github.com/open-mrp/api/services/auth-service/pkg/types"
 	"github.com/open-mrp/api/services/platform-service/internal/domain"
 	"github.com/open-mrp/api/shared/appctx"
 	"github.com/open-mrp/api/shared/constants"
@@ -17,47 +18,108 @@ import (
 	"github.com/open-mrp/api/shared/tracing"
 )
 
-// Sales-order activity notifications: every user who creates or edits a sales order — or any record rooted at it (lines, shipments, invoices, picks) — implicitly follows the order, and is notified of each subsequent change made by anyone else. The audit trail doubles as the follower registry: a user's own audit events mark them a follower for everything that comes after, so nobody is notified of actions that preceded their first touch, and the creator hears about every edit from the moment the order exists.
-
-// notifySalesOrderFollowers fans a bell notification out to the order's followers (prior user actors on the order's audit trail, minus the current actor) after a sales-order-related audit event is persisted. Non-order events no-op.
+// Sales-order activity notifications tell an order's owner — its sales rep, or the user who created it
+// when no rep is set — about milestones other people reach on it:
 //
-// The audit consumer runs concurrently, so two near-simultaneous first edits by different users can each miss the other's just-persisted follower registration — accepted: neither was a follower when the other's change was made, and both follow from then on.
-func (s *auditEventSvcImpl) notifySalesOrderFollowers(ctx context.Context, event *domain.AuditEvent) *apierror.APIError {
+//   - the order is issued (including created already issued), fulfilled, shipped, or moved back a status;
+//   - the order is deleted;
+//   - its promised date or ship-by date changes;
+//   - while it is issued, a line is added or removed, or a line's quantity or product changes.
+//
+// Everything else stays quiet: estimate-stage edits, notes, prices and costs, contacts, sent flags, picks,
+// shipping cases, shipment and invoice bookkeeping, freight write-backs and payments. A system actor
+// (`system:*`) reports a status, shipment or deletion milestone but not date or line changes, which it only
+// makes as a cascade of something else. The owner is never told about their own change, and system actors
+// and agents are never owners.
+//
+// The audit trail is the only record platform-service has of the order, so owner and status are read from
+// it: the latest recorded sales_rep_id and sales_order_status_code, and the create event's actor.
+
+// orderActivityKind classifies an audit event against the milestone policy.
+type orderActivityKind int
+
+const (
+	orderActivityNone orderActivityKind = iota
+	// orderActivityMilestone alerts regardless of the order's status.
+	orderActivityMilestone
+	// orderActivityLineChange alerts only while the order is issued.
+	orderActivityLineChange
+)
+
+// orderMilestoneFields are order fields whose change is a milestone for a person (not a system actor).
+var orderMilestoneFields = map[string]bool{
+	"promised_at":  true,
+	"ship_by_date": true,
+}
+
+// orderLineMilestoneFields are line fields that change what the customer gets.
+var orderLineMilestoneFields = map[string]bool{
+	"quantity_value":   true,
+	"quantity_unit_id": true,
+	"product_id":       true,
+	"item_id":          true,
+}
+
+// notifySalesOrderOwner fans a bell notification out to the order's owner when a sales-order-related
+// audit event is a milestone under the policy above. Non-order events and non-milestones no-op.
+func (s *auditEventSvcImpl) notifySalesOrderOwner(ctx context.Context, event *domain.AuditEvent) *apierror.APIError {
 	orderID := salesOrderIDForEvent(event)
 	if orderID == "" || event.AccountID == "" {
 		return nil
 	}
+	kind := classifyOrderActivity(event)
+	if kind == orderActivityNone {
+		return nil
+	}
 
-	ctx, span := auditEventSvcTracer.Start(ctx, "service.audit_event.notify_sales_order_followers")
+	ctx, span := auditEventSvcTracer.Start(ctx, "service.audit_event.notify_sales_order_owner")
 	defer span.End()
 
-	followers, apiErr := s.auditEventRepo.ListResourceUserActorIDs(ctx, event.AccountID, constants.ObjectTypeSalesOrder, orderID)
+	created, apiErr := s.auditEventRepo.GetResourceCreateEvent(ctx, event.AccountID, constants.ObjectTypeSalesOrder, orderID)
 	if apiErr != nil {
 		return tracing.Trace(span, apiErr)
 	}
 
-	recipients := make([]string, 0, len(followers))
-	for _, followerID := range followers {
-		if followerID != event.ActorID {
-			recipients = append(recipients, followerID)
+	if kind == orderActivityLineChange {
+		// Lines written by the request that created the order are part of creating it.
+		if created != nil && sameRequest(created.RequestID, event.RequestID) {
+			return nil
+		}
+		status, _, apiErr := s.auditEventRepo.GetLatestResourceFieldValue(ctx, event.AccountID, constants.ObjectTypeSalesOrder, orderID, "sales_order_status_code")
+		if apiErr != nil {
+			return tracing.Trace(span, apiErr)
+		}
+		if !isLiveOrderStatus(decodeString(status)) {
+			return nil
 		}
 	}
-	if len(recipients) == 0 {
+
+	ownerID, apiErr := s.salesOrderOwnerUserID(ctx, event.AccountID, orderID, created)
+	if apiErr != nil {
+		return tracing.Trace(span, apiErr)
+	}
+	if ownerID == "" || ownerID == event.ActorID {
 		return nil
+	}
+
+	var orderNumber string
+	if created != nil {
+		orderNumber = decodeString(changeValues(created.Changes, false)["number"])
 	}
 
 	data := messaging.AlertFanoutData{
 		AccountID:        event.AccountID,
 		Category:         string(constants.NotificationCategoryOrderUpdated),
 		Kind:             "alert",
-		Title:            salesOrderActivityTitle(event, s.salesOrderNumber(ctx, event.AccountID, orderID)),
+		Title:            salesOrderActivityTitle(event, orderNumber),
 		Body:             s.salesOrderActivityBody(ctx, event),
 		LinkResourceType: string(constants.ObjectTypeSalesOrder),
 		LinkResourceID:   orderID,
 		Priority:         string(constants.NotificationPriorityNormal),
 		SenderType:       string(constants.NotificationSenderTypeSystem),
-		RecipientUserIDs: recipients,
+		RecipientUserIDs: []string{ownerID},
 		DedupeKey:        salesOrderActivityDedupeKey(orderID),
+		CoalesceQuietly:  true,
 	}
 
 	dataJSON, err := json.Marshal(data)
@@ -92,6 +154,84 @@ func (s *auditEventSvcImpl) notifySalesOrderFollowers(ctx context.Context, event
 	return nil
 }
 
+// classifyOrderActivity applies the milestone policy to one event without touching the database; line
+// changes still depend on the order's current status.
+func classifyOrderActivity(event *domain.AuditEvent) orderActivityKind {
+	system := isSystemActorEvent(event)
+
+	switch event.ResourceType {
+	case constants.ObjectTypeSalesOrder:
+		switch event.Action {
+		case constants.AuditActionDelete:
+			return orderActivityMilestone
+		case constants.AuditActionCreate:
+			if isLiveOrderStatus(decodeString(changeValues(event.Changes, false)["sales_order_status_code"])) {
+				return orderActivityMilestone
+			}
+			return orderActivityNone
+		}
+		for _, change := range event.Changes {
+			if change.Field == "sales_order_status_code" || change.Field == "first_ship_at" {
+				return orderActivityMilestone
+			}
+			if !system && orderMilestoneFields[change.Field] {
+				return orderActivityMilestone
+			}
+		}
+	case constants.ObjectTypeSalesOrderLine:
+		if system {
+			return orderActivityNone
+		}
+		if event.Action == constants.AuditActionCreate || event.Action == constants.AuditActionDelete {
+			return orderActivityLineChange
+		}
+		for _, change := range event.Changes {
+			if orderLineMilestoneFields[change.Field] {
+				return orderActivityLineChange
+			}
+		}
+	}
+	return orderActivityNone
+}
+
+// isLiveOrderStatus reports whether the order has been issued (fulfilled orders were issued first).
+func isLiveOrderStatus(status string) bool {
+	switch constants.SalesOrderStatusCode(status) {
+	case constants.SalesOrderStatusCodeIssued, constants.SalesOrderStatusCodeFulfilled:
+		return true
+	}
+	return false
+}
+
+func isSystemActorEvent(event *domain.AuditEvent) bool {
+	if event.IdentityType == string(authtypes.IdentityActorTypeSystem) {
+		return true
+	}
+	_, ok := constants.ParseSystemActorID(event.ActorID)
+	return ok
+}
+
+func sameRequest(a, b *string) bool {
+	return a != nil && b != nil && *a != "" && *a == *b
+}
+
+// salesOrderOwnerUserID resolves the user who owns the order: its current sales rep (an account_user),
+// or the user who created it when no rep is set. Empty when neither resolves to a user — a rep whose
+// membership is gone, or an order created by an API key, agent or system actor.
+func (s *auditEventSvcImpl) salesOrderOwnerUserID(ctx context.Context, accountID, orderID string, created *domain.ResourceCreateEvent) (string, *apierror.APIError) {
+	rep, _, apiErr := s.auditEventRepo.GetLatestResourceFieldValue(ctx, accountID, constants.ObjectTypeSalesOrder, orderID, "sales_rep_id")
+	if apiErr != nil {
+		return "", apiErr
+	}
+	if repID := decodeString(rep); repID != "" {
+		return s.auditEventRepo.GetAccountUserUserID(ctx, accountID, repID)
+	}
+	if created == nil || created.IdentityType != string(authtypes.IdentityActorTypeUser) {
+		return "", nil
+	}
+	return created.ActorID, nil
+}
+
 // salesOrderIDForEvent resolves the sales order an audit event belongs to — the resource itself, or the root of the record tree for child resources. Empty when the event is unrelated to a sales order.
 func salesOrderIDForEvent(event *domain.AuditEvent) string {
 	if event.ResourceType == constants.ObjectTypeSalesOrder {
@@ -103,7 +243,7 @@ func salesOrderIDForEvent(event *domain.AuditEvent) string {
 	return ""
 }
 
-// salesOrderActivityMessageID keys the fan-out to one notification per (order, originating request): a single API call may emit several audit events against the same order (the header plus each line row), and the outbox's unique message_id collapses the extras, so followers get one notification per edit rather than one per row. Events with no request id fall back to the audit event id (one per event). Determinism also makes retries and redeliveries idempotent end-to-end — the notification-service derives per-recipient notification ids from this id.
+// salesOrderActivityMessageID keys the fan-out to one notification per (order, originating request): a single API call may emit several audit events against the same order (the header plus each line row), and the outbox's unique message_id collapses the extras, so the owner gets one notification per edit rather than one per row. Events with no request id fall back to the audit event id (one per event). Determinism also makes retries and redeliveries idempotent end-to-end — the notification-service derives per-recipient notification ids from this id.
 func salesOrderActivityMessageID(event *domain.AuditEvent, orderID string) string {
 	if event.RequestID != nil && *event.RequestID != "" {
 		return "msg_ordact_" + *event.RequestID + "_" + orderID
@@ -111,20 +251,14 @@ func salesOrderActivityMessageID(event *domain.AuditEvent, orderID string) strin
 	return "msg_ordact_" + event.ID
 }
 
-// salesOrderActivityDedupeKey collapses a day's activity on one order into a single rolling bell row per
-// follower. notification-service coalesces every fan-out that shares this key (per recipient) onto one
-// notification: the first change of the day inserts it and raises a realtime alert, and each later change
-// refreshes the row silently and re-marks it unread (see messaging.AlertFanoutData.DedupeKey). A follower
-// who dismisses the row mutes the order for the rest of the day. The day is bucketed in UTC — a business
-// working across UTC midnight rolls onto a fresh row — which is coarse but avoids a per-event account
-// timezone lookup on this hot path; revisit with the account's timezone if the boundary proves noticeable.
+// salesOrderActivityDedupeKey collapses a day's milestones on one order into a single bell row for the
+// owner. notification-service coalesces every fan-out sharing this key onto one notification: the first
+// milestone of the day inserts it and raises a realtime alert, and later ones refresh its title, body and
+// change count without alerting or re-marking it unread (CoalesceQuietly). An owner who dismisses the row
+// mutes the order for the rest of the day. The day is bucketed in UTC, which avoids an account timezone
+// lookup on this hot path; an account working across UTC midnight gets a second row that day.
 func salesOrderActivityDedupeKey(orderID string) string {
 	return "ordact_" + orderID + "_" + time.Now().UTC().Format("20060102")
-}
-
-// salesOrderNumber recovers the order's human-facing number from its create audit event's field snapshot. Best-effort: platform-service has no core-service client, and an order that predates auditing simply yields "".
-func (s *auditEventSvcImpl) salesOrderNumber(ctx context.Context, accountID, orderID string) string {
-	return decodeString(s.resourceCreateValues(ctx, accountID, constants.ObjectTypeSalesOrder, orderID)["number"])
 }
 
 // resourceCreateValues returns a field → value map from the resource's create audit event snapshot (its audited fields at creation). Best-effort: an empty map when no create event is on record.
@@ -152,6 +286,8 @@ func (s *auditEventSvcImpl) salesOrderActivityBody(ctx context.Context, event *d
 	actorName := "Someone"
 	if identity, ok := appctx.GetIdentityFromContext(ctx); ok && identity != nil && identity.Actor != nil && identity.Actor.Name != nil && *identity.Actor.Name != "" {
 		actorName = *identity.Actor.Name
+	} else if name := systemActorName(event.ActorID); name != "" {
+		actorName = name
 	}
 
 	var action string
@@ -167,17 +303,51 @@ func (s *auditEventSvcImpl) salesOrderActivityBody(ctx context.Context, event *d
 	return actorName + " " + action + "."
 }
 
+// systemActorName names a background process as the subject of a sentence ("Stripe marked the order fulfilled."), or "" for any other actor.
+func systemActorName(actorID string) string {
+	actor, ok := constants.ParseSystemActorID(actorID)
+	if !ok {
+		return ""
+	}
+	switch actor {
+	case constants.SystemActorStripe:
+		return "Stripe"
+	case constants.SystemActorScheduler:
+		return "The scheduler"
+	case constants.SystemActorEmailIngest:
+		return "Inbound email"
+	}
+	return ""
+}
+
 // describeOrderEvent phrases a change to the order record itself. Update diffs are translated field by field into verb phrases ("issued the order", "changed the promised date to Jan 5, 2026"); derivative timestamp companions of a status change are skipped so "issued the order" isn't drowned in bookkeeping.
 func describeOrderEvent(event *domain.AuditEvent) string {
 	switch event.Action {
 	case constants.AuditActionCreate:
+		switch constants.SalesOrderStatusCode(decodeString(changeValues(event.Changes, false)["sales_order_status_code"])) {
+		case constants.SalesOrderStatusCodeIssued:
+			return "created and issued the order"
+		case constants.SalesOrderStatusCodeFulfilled:
+			return "created the order as fulfilled"
+		}
 		return "created the order"
 	case constants.AuditActionDelete:
 		return "deleted the order"
 	}
 
+	statusChanged := false
+	for _, change := range event.Changes {
+		if change.Field == "sales_order_status_code" {
+			statusChanged = true
+		}
+	}
+
 	phrases := make([]string, 0, len(event.Changes))
 	for _, change := range event.Changes {
+		// A shipment that also moves the status is told by the status phrase.
+		if change.Field == "first_ship_at" && statusChanged {
+			continue
+		}
 		if phrase := orderChangePhrase(change); phrase != "" {
 			phrases = append(phrases, phrase)
 		}
@@ -205,8 +375,13 @@ func orderChangePhrase(change domain.AuditFieldChange) string {
 			return "changed the status to " + humanizeToken(newValue)
 		}
 	// Derivative timestamps that accompany a status transition — the status phrase already tells the story.
-	case "issued_at", "completed_at", "expired_at", "first_ship_at":
+	case "issued_at", "completed_at", "expired_at":
 		return ""
+	case "first_ship_at":
+		if string(change.NewValue) == "null" || len(change.NewValue) == 0 {
+			return "marked the order unshipped"
+		}
+		return "shipped the order"
 	case "is_acknowledgment_sent":
 		if string(change.NewValue) == "true" {
 			return "sent the order acknowledgement"

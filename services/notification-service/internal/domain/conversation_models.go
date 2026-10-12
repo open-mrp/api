@@ -55,6 +55,7 @@ type ConversationParticipant struct {
 	LastReadMessageID *string
 	LastReadAt        *time.Time
 	HiddenAt          *time.Time
+	MutedUntil        *time.Time
 	JoinedAt          time.Time
 	CreatedAt         time.Time
 	UpdatedAt         time.Time
@@ -89,7 +90,7 @@ type AddAgentParticipantInput struct {
 // Message is a single message row. SenderAccountUserID is resolved (not persisted) from the sender participant for presentation.
 type Message struct {
 	ID             string
-	ConversationID string
+	ConversationID string `audit:"conversation_id"`
 	AccountID      string
 	// Sequence is the per-conversation timeline position. It is 0 (unassigned) for unsent rows
 	// (status draft/scheduled), which hold a NULL sequence in the DB until promoted to "sent".
@@ -98,23 +99,24 @@ type Message struct {
 	// Status is the lifecycle state: "sent" (timeline), "scheduled" (future delivery), "draft"
 	// (customer-reply draft), or a terminal "canceled"/"rejected"/"failed"/"superseded". Only "sent"
 	// rows appear in the conversation timeline. See constants.MessageStatus.
-	Status string
+	Status string `audit:"status"`
 	// Visibility is the message's audience inside the conversation: "internal" (team-only note),
 	// "external" (sent to/from an external party), or "system" (event shown to both). Customer read paths hard-filter to external+system so an internal note is never serialized into a customer payload.
-	Visibility          string
-	SenderParticipantID *string
+	Visibility          string  `audit:"visibility"`
+	SenderParticipantID *string `audit:"sender_participant_id"`
 	ClientMessageID     *string
-	Body                *string
+	// Body and Subject stay out of audit diffs: redaction clears them, and an audit copy would outlive it.
+	Body *string
 	// Subject is the customer-reply draft email subject (email channel); nil for ordinary messages.
 	Subject *string
 	// Channel is how the message was delivered (or, for a draft, how it will be on approve): "message" | "email".
-	Channel *string
+	Channel *string `audit:"channel"`
 	// SourceThreadMessageID is the internal thread message a draft was composed from (draft provenance).
 	SourceThreadMessageID *string
 	// ApprovedByAccountUserID is the account_user who approved a draft on send.
-	ApprovedByAccountUserID *string
+	ApprovedByAccountUserID *string `audit:"approved_by_account_user_id"`
 	// ScheduledFor is the future delivery time for a status=scheduled message (UTC); nil otherwise.
-	ScheduledFor *time.Time
+	ScheduledFor *time.Time `audit:"scheduled_for"`
 	// ScheduledAttempts / LastError / LockedAt / LockOwner are scheduler bookkeeping for status=scheduled rows.
 	ScheduledAttempts int32
 	LastError         *string

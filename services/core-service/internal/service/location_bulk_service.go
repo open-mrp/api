@@ -291,7 +291,7 @@ func writeBulkUpsertLocations(txCtx context.Context, txRepos domain.RepoFactory,
 				if !ok {
 					return apierror.NewValidationError("Parent location was not created in this batch.")
 				}
-				if apiErr := txRepo.LinkParent(spCtx, accountID, thisID, parentID); apiErr != nil {
+				if apiErr := linkLocationParentInTx(spCtx, txRepos, accountID, thisID, parentID); apiErr != nil {
 					return apiErr
 				}
 			}
@@ -300,7 +300,7 @@ func writeBulkUpsertLocations(txCtx context.Context, txRepos domain.RepoFactory,
 				if !ok {
 					return apierror.NewValidationError("Child location was not created in this batch.")
 				}
-				if apiErr := txRepo.LinkParent(spCtx, accountID, childID, thisID); apiErr != nil {
+				if apiErr := linkLocationParentInTx(spCtx, txRepos, accountID, childID, thisID); apiErr != nil {
 					return apiErr
 				}
 			}
@@ -320,6 +320,29 @@ func writeBulkUpsertLocations(txCtx context.Context, txRepos domain.RepoFactory,
 	}
 
 	return BulkWriteResult{Results: results, Errors: rowErrors, WrittenIDs: resultIDs(results)}, nil
+}
+
+// linkLocationParentInTx sets a location's parent, audited on the child as a parent_id change.
+func linkLocationParentInTx(ctx context.Context, txRepos domain.RepoFactory, accountID, childID, parentID string) *apierror.APIError {
+	repo := txRepos.NewLocationRepo()
+	before, apiErr := repo.Get(ctx, domain.GetLocationParams{AccountID: accountID, LocationID: childID})
+	if apiErr != nil {
+		return apiErr
+	}
+	if apiErr := repo.LinkParent(ctx, accountID, childID, parentID); apiErr != nil {
+		return apiErr
+	}
+	after, apiErr := repo.Get(ctx, domain.GetLocationParams{AccountID: accountID, LocationID: childID})
+	if apiErr != nil {
+		return apiErr
+	}
+	return audit.NewPublisher().Publish(ctx, txRepos.NewOutboxRepo(), audit.EventData{
+		ServiceName:  domain.ServiceName,
+		Action:       constants.AuditActionUpdate,
+		ResourceType: constants.ObjectTypeLocation,
+		ResourceID:   childID,
+		Changes:      audit.ComputeChanges(before, after),
+	})
 }
 
 // bulkUpsertSpec wires locations into the async bulk engine.

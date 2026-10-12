@@ -168,7 +168,7 @@ func Run(
 	service.SetAccountMarketingBlurbs(blurbs)
 
 	jobSvcFactory := service.NewJobSvcFactory()
-	jobSvc := jobSvcFactory.Build(repoFactory)
+	jobSvc := service.NewJobSvc(&service.JobSvcConfig{Repos: repoFactory, TxManager: txManager})
 
 	accountSvc := service.NewAccountSvc(&service.AccountSvcConfig{
 		RepoFactory:         repoFactory,
@@ -653,7 +653,8 @@ func Run(
 	})
 
 	operatingCalendarSvc := service.NewOperatingCalendarSvc(&service.OperatingCalendarSvcConfig{
-		Repos: repoFactory,
+		Repos:     repoFactory,
+		TxManager: txManager,
 	})
 
 	machineDowntimeSvc := service.NewMachineDowntimeSvc(&service.MachineDowntimeSvcConfig{
@@ -961,7 +962,7 @@ func Run(
 	}
 	defer burnRateSweeper.Stop()
 
-	salesOrderShippingUpdatedConsumer := event.NewSalesOrderShippingUpdatedConsumer(rabbitmq, inboxRepo, repoFactory, salesOrderSvc)
+	salesOrderShippingUpdatedConsumer := event.NewSalesOrderShippingUpdatedConsumer(rabbitmq, inboxRepo, repoFactory, txManager, salesOrderSvc)
 	if err := salesOrderShippingUpdatedConsumer.Listen(ctx); err != nil {
 		return err
 	}

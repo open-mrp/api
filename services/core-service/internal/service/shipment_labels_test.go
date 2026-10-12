@@ -420,6 +420,11 @@ func (h *labelHarness) expectRecordedPurchase(result *domain.LabelResult) {
 	h.shippoClient.EXPECT().CreateTransactionInstantLabel(gomock.Any(), gomock.Any()).Return(result, nil)
 
 	pkg := result.Packages[0]
+	// Read before and after the writes for the cases' audit diff; the mock leaves them unchanged.
+	h.caseRepo.EXPECT().ListByShipment(gomock.Any(), testLabelShipmentID).
+		Return([]*domain.ShippingCase{weighedCase()}, nil).AnyTimes()
+	h.orderLineRepo.EXPECT().Get(gomock.Any(), "sol_freight").
+		Return(&domain.SalesOrderLine{ID: "sol_freight"}, nil).AnyTimes()
 	h.caseRepo.EXPECT().
 		UpdateWithShipmentInfo(gomock.Any(), testLabelCaseID, pkg.TrackingNumber, pkg.ShippoTransactionID, pkg.LabelURL).
 		Return(nil)
@@ -435,7 +440,7 @@ func (h *labelHarness) expectRecordedPurchase(result *domain.LabelResult) {
 		h.orderRepo.EXPECT().GetLines(gomock.Any(), testLabelOrderID).Return([]*domain.SalesOrderLine{
 			{ID: "sol_freight", ProductTypeCode: strPtr("shipping")},
 		}, nil)
-		h.orderLineRepo.EXPECT().Update(gomock.Any(), gomock.Any()).Return(nil, nil)
+		h.orderLineRepo.EXPECT().Update(gomock.Any(), gomock.Any()).Return(&domain.SalesOrderLine{ID: "sol_freight"}, nil)
 
 		h.idempotencyRepo.EXPECT().
 			AdvanceRecoveryPoint(gomock.Any(), "idk_test", domain.RecoveryPointShipLabelsCreated).
@@ -508,7 +513,7 @@ func TestBuyShipmentLabels_WritesBackNegotiatedRate(t *testing.T) {
 			assert.Equal(t, "unt_usd", *params.UnitCostNumeratorUnitID)
 			require.NotNil(t, params.UnitCostDenominatorUnitID)
 			assert.Equal(t, "unt_each", *params.UnitCostDenominatorUnitID)
-			return nil, nil
+			return &domain.SalesOrderLine{ID: "sol_freight"}, nil
 		})
 
 	h.idempotencyRepo.EXPECT().
@@ -526,6 +531,8 @@ func TestBuyShipmentLabels_UnrecordablePurchaseIsNotRetried(t *testing.T) {
 	h.shippoClient.EXPECT().CreateTransactionInstantLabel(gomock.Any(), gomock.Any()).Return(&domain.LabelResult{
 		Packages: []domain.LabelPackage{{TrackingNumber: "1Z-CASE-1", ShippoTransactionID: "txn_1"}},
 	}, nil)
+	h.caseRepo.EXPECT().ListByShipment(gomock.Any(), testLabelShipmentID).
+		Return([]*domain.ShippingCase{weighedCase()}, nil).AnyTimes()
 	// The database keeps failing: each attempt rolls back at its first write.
 	h.caseRepo.EXPECT().UpdateWithShipmentInfo(gomock.Any(), testLabelCaseID, gomock.Any(), "txn_1", gomock.Any()).
 		Return(apierror.NewInternalError(nil, "connection reset")).Times(recordLabelAttempts)

@@ -781,6 +781,21 @@ func (mr *MockAccountUserRepoMockRecorder) List(ctx, params any) *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "List", reflect.TypeOf((*MockAccountUserRepo)(nil).List), ctx, params)
 }
 
+// LockSeatStatuses mocks base method.
+func (m *MockAccountUserRepo) LockSeatStatuses(ctx context.Context, accountID string) (map[string]constants.AccountUserStatus, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "LockSeatStatuses", ctx, accountID)
+	ret0, _ := ret[0].(map[string]constants.AccountUserStatus)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
+}
+
+// LockSeatStatuses indicates an expected call of LockSeatStatuses.
+func (mr *MockAccountUserRepoMockRecorder) LockSeatStatuses(ctx, accountID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "LockSeatStatuses", reflect.TypeOf((*MockAccountUserRepo)(nil).LockSeatStatuses), ctx, accountID)
+}
+
 // MarkUsedByAccountAndUser mocks base method.
 func (m *MockAccountUserRepo) MarkUsedByAccountAndUser(ctx context.Context, accountID, userID string) *apierror.APIError {
 	m.ctrl.T.Helper()
@@ -18481,6 +18496,21 @@ func (mr *MockTransactionRepoMockRecorder) ListByCustomer(ctx, params any) *gomo
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListByCustomer", reflect.TypeOf((*MockTransactionRepo)(nil).ListByCustomer), ctx, params)
 }
 
+// LockIDsByStripePaymentIDs mocks base method.
+func (m *MockTransactionRepo) LockIDsByStripePaymentIDs(ctx context.Context, accountID string, stripePaymentIDs []string) ([]string, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "LockIDsByStripePaymentIDs", ctx, accountID, stripePaymentIDs)
+	ret0, _ := ret[0].([]string)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
+}
+
+// LockIDsByStripePaymentIDs indicates an expected call of LockIDsByStripePaymentIDs.
+func (mr *MockTransactionRepoMockRecorder) LockIDsByStripePaymentIDs(ctx, accountID, stripePaymentIDs any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "LockIDsByStripePaymentIDs", reflect.TypeOf((*MockTransactionRepo)(nil).LockIDsByStripePaymentIDs), ctx, accountID, stripePaymentIDs)
+}
+
 // ResolveResponsibleUserID mocks base method.
 func (m *MockTransactionRepo) ResolveResponsibleUserID(ctx context.Context, accountID, userOrAccountUserID string) (string, bool, *apierror.APIError) {
 	m.ctrl.T.Helper()
@@ -19026,6 +19056,21 @@ func (m *MockOrderPaymentIntentRepo) FindByPaymentIntentID(ctx context.Context, 
 func (mr *MockOrderPaymentIntentRepoMockRecorder) FindByPaymentIntentID(ctx, paymentIntentID any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "FindByPaymentIntentID", reflect.TypeOf((*MockOrderPaymentIntentRepo)(nil).FindByPaymentIntentID), ctx, paymentIntentID)
+}
+
+// GetOrderAccountID mocks base method.
+func (m *MockOrderPaymentIntentRepo) GetOrderAccountID(ctx context.Context, salesOrderID string) (string, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetOrderAccountID", ctx, salesOrderID)
+	ret0, _ := ret[0].(string)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
+}
+
+// GetOrderAccountID indicates an expected call of GetOrderAccountID.
+func (mr *MockOrderPaymentIntentRepoMockRecorder) GetOrderAccountID(ctx, salesOrderID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetOrderAccountID", reflect.TypeOf((*MockOrderPaymentIntentRepo)(nil).GetOrderAccountID), ctx, salesOrderID)
 }
 
 // MockShipmentRepo is a mock of ShipmentRepo interface.

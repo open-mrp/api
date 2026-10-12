@@ -35,6 +35,26 @@ ON DUPLICATE KEY UPDATE
         COALESCE(CAST(JSON_UNQUOTE(JSON_EXTRACT(metadata, '$.change_count')) AS UNSIGNED), 1) + 1
     );
 
+-- name: UpsertCoalescedNotificationQuietly :execrows
+-- UpsertCoalescedNotification without the resurfacing: on conflict the row takes the latest title/body
+-- and bumps change_count but keeps its seen/read/dismissed state, so a window alerts its recipient once.
+INSERT INTO notification (
+    id, account_id, recipient_account_user_id, category,
+    source_message_id, conversation_id, title, body,
+    template_key, template_params, link_resource_type, link_resource_id,
+    sender_type, sender_id, sender_name,
+    priority, seen_at, read_at, dismissed_at, metadata, created_at, updated_at
+) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(3), NOW(3))
+ON DUPLICATE KEY UPDATE
+    title = VALUES(title),
+    body = VALUES(body),
+    updated_at = NOW(3),
+    metadata = JSON_SET(
+        COALESCE(metadata, JSON_OBJECT()),
+        '$.change_count',
+        COALESCE(CAST(JSON_UNQUOTE(JSON_EXTRACT(metadata, '$.change_count')) AS UNSIGNED), 1) + 1
+    );
+
 -- name: GetNotificationByID :one
 SELECT * FROM notification
 WHERE id = ? AND recipient_account_user_id = ?;

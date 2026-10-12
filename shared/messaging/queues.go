@@ -471,10 +471,13 @@ type AlertFanoutData struct {
 	// DedupeKey coalesces fan-out: when set, all events sharing this key fold onto one rolling bell row
 	// per recipient (row id seeded from the key) instead of one row per event. The first event inserts the
 	// row and raises a realtime alert; later events refresh it, bump a change_count, and re-mark it unread
-	// without alerting. Producers scope the key to the desired window (e.g. "ordact_<order>_<yyyymmdd>" for
-	// one row per order per day). Empty means one distinct row per event (the default).
-	DedupeKey string          `json:"dedupe_key,omitempty"`
-	Metadata  json.RawMessage `json:"metadata,omitempty"`
+	// (unless CoalesceQuietly) without alerting. Producers scope the key to the desired window (e.g.
+	// "ordact_<order>_<yyyymmdd>" for one row per order per day). Empty means one distinct row per event.
+	DedupeKey string `json:"dedupe_key,omitempty"`
+	// CoalesceQuietly, with a DedupeKey, makes later events refresh the row without re-marking it
+	// unread, so the recipient is told once per window and a row they've read stays read.
+	CoalesceQuietly bool            `json:"coalesce_quietly,omitempty"`
+	Metadata        json.RawMessage `json:"metadata,omitempty"`
 }
 
 // RealtimeDeliveryData is the payload for NotificationEventDeliveredQueue messages. notification-service emits it; every api-gateway instance consumes it and fans it out to the matching Hub topic (user:<account_user_id> for the bell, conv:<conversation_id> for live chat). Best-effort: the persisted rows remain the source of truth.

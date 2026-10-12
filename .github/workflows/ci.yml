@@ -200,6 +200,28 @@ jobs:
       - name: Run transaction audit
         run: make tx-audit
 
+  audit-gaps:
+    name: Audit Event Gaps
+    needs: [changes]
+    if: needs.changes.outputs.go == 'true'
+    runs-on: ubuntu-latest
+    env:
+      GOTOOLCHAIN: local
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Set up Go
+        uses: actions/setup-go@v7
+        with:
+          go-version-file: go.mod
+          cache-dependency-path: |
+            go.sum
+            tools/go.sum
+
+      # Static call-graph check: a gRPC handler that reaches a sqlc write must also reach audit.Publisher.Publish, or be listed with its reason in tools/auditgap/allowlist.txt.
+      - name: Check gRPC handlers for unaudited writes
+        run: make audit-gaps
+
   vtparse:
     name: Vitess Parse Check
     needs: [changes]

@@ -72,6 +72,8 @@ type AccountUserRepo interface {
 	EnsureActive(ctx context.Context, accountID, userID string) *apierror.APIError
 	CountActive(ctx context.Context, accountID string) (int64, *apierror.APIError)
 	ReactivateUsers(ctx context.Context, accountID string, limit int32) (int64, *apierror.APIError)
+	// LockSeatStatuses returns the status of each of the account's active and disabled users by account_user id, locking those rows for the rest of the transaction.
+	LockSeatStatuses(ctx context.Context, accountID string) (map[string]constants.AccountUserStatus, *apierror.APIError)
 	List(ctx context.Context, params ListAccountUsersParams) (*ListAccountUsersResult, *apierror.APIError)
 	GetDetail(ctx context.Context, accountID, userID string, includes []string) (*AccountUserDetail, *apierror.APIError)
 	GetDetailByAccountAndID(ctx context.Context, accountID, accountUserID string, includes []string) (*AccountUserDetail, *apierror.APIError)
@@ -1753,6 +1755,8 @@ type TransactionRepo interface {
 	FindByStripePaymentID(ctx context.Context, stripePaymentID string) (*TransactionRecord, *apierror.APIError)
 	// UpdateFundsReceivedByStripePaymentIDs stamps funds_received_at on every transaction of the account whose stripe_payment_id is in the given set (called when a Stripe payout lands).
 	UpdateFundsReceivedByStripePaymentIDs(ctx context.Context, accountID string, stripePaymentIDs []string, fundsReceivedAt time.Time) *apierror.APIError
+	// LockIDsByStripePaymentIDs returns the ids of the account's transactions linked to any of the given Stripe payment intents, locking them for the rest of the transaction.
+	LockIDsByStripePaymentIDs(ctx context.Context, accountID string, stripePaymentIDs []string) ([]string, *apierror.APIError)
 	UpdateNote(ctx context.Context, txID, note string) *apierror.APIError
 	Delete(ctx context.Context, txID string) *apierror.APIError
 	DeleteAllocations(ctx context.Context, transactionID string) *apierror.APIError
@@ -1819,6 +1823,8 @@ type OrderPaymentIntentRepo interface {
 	Create(ctx context.Context, id, paymentIntentID, salesOrderID string) *apierror.APIError
 	FindByPaymentIntentID(ctx context.Context, paymentIntentID string) (*OrderPaymentIntent, *apierror.APIError)
 	Delete(ctx context.Context, id string) *apierror.APIError
+	// GetOrderAccountID returns the account that owns the sales order, which a Stripe payment names only by order.
+	GetOrderAccountID(ctx context.Context, salesOrderID string) (string, *apierror.APIError)
 }
 
 type ShipmentRepo interface {

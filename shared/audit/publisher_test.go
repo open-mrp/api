@@ -421,3 +421,31 @@ func TestPublish_surfacesOutboxFailure(t *testing.T) {
 		t.Errorf("error should wrap the repo failure, got %q", apiErr.Error())
 	}
 }
+
+// A background write has no caller, so it publishes under a system identity naming the process.
+// The identity travels with the message for platform-service to record as the actor.
+func TestPublish_systemIdentityIsCarriedAsTheActor(t *testing.T) {
+	t.Parallel()
+
+	ctx := appctx.WithSystemIdentity(context.Background(), constants.SystemActorStripe, "acct_1")
+	msg := publishOnce(t, ctx, sampleEvent())
+
+	identity := msg.Payload.Identity
+	if !identity.IsSystem() {
+		t.Fatalf("Payload.Identity: got %+v want a system identity", identity)
+	}
+	if identity.Actor == nil || identity.Actor.ID != constants.SystemActorStripe.ActorID() {
+		t.Errorf("actor: got %+v want %s", identity.Actor, constants.SystemActorStripe.ActorID())
+	}
+	if identity.Target == nil || identity.Target.AccountID != "acct_1" {
+		t.Errorf("target: got %+v want acct_1", identity.Target)
+	}
+	// No request caused the write, so nothing request-scoped may be invented for it.
+	if msg.Payload.RequestID != "" {
+		t.Errorf("RequestID: got %q want empty", msg.Payload.RequestID)
+	}
+	payload := decodePayload(t, msg)
+	if payload.SourceIP != nil || payload.IdempotencyKeyID != nil {
+		t.Errorf("request fields: got source_ip=%v idempotency_key_id=%v want nil", payload.SourceIP, payload.IdempotencyKeyID)
+	}
+}

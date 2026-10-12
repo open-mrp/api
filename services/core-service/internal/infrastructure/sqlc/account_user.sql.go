@@ -866,6 +866,41 @@ func (q *Queries) InsertAccountUser(ctx context.Context, arg InsertAccountUserPa
 	return err
 }
 
+const listAccountUserSeatStatusesForUpdate = `-- name: ListAccountUserSeatStatusesForUpdate :many
+SELECT id, status_code
+FROM account_user
+WHERE account_id = ? AND status_code IN ('active', 'disabled')
+FOR UPDATE
+`
+
+type ListAccountUserSeatStatusesForUpdateRow struct {
+	ID         string
+	StatusCode string
+}
+
+func (q *Queries) ListAccountUserSeatStatusesForUpdate(ctx context.Context, accountID string) ([]ListAccountUserSeatStatusesForUpdateRow, error) {
+	rows, err := q.db.QueryContext(ctx, listAccountUserSeatStatusesForUpdate, accountID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []ListAccountUserSeatStatusesForUpdateRow
+	for rows.Next() {
+		var i ListAccountUserSeatStatusesForUpdateRow
+		if err := rows.Scan(&i.ID, &i.StatusCode); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const listAccountUsersBackward = `-- name: ListAccountUsersBackward :many
 SELECT
     au.id,

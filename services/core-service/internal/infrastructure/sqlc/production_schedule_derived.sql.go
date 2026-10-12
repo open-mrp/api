@@ -274,6 +274,7 @@ SELECT
     rs.scope_code,
     rs.scope_ref_id,
     rs.is_excluded,
+    rs.lead_time_weeks,
     rs.lead_time_offset_weeks
 FROM production_schedule_resource_setting rs
 WHERE rs.account_id = ?
@@ -284,6 +285,7 @@ type ListProductionScheduleResourceSettingsRow struct {
 	ScopeCode           string
 	ScopeRefID          string
 	IsExcluded          bool
+	LeadTimeWeeks       sql.NullString
 	LeadTimeOffsetWeeks string
 }
 
@@ -302,6 +304,7 @@ func (q *Queries) ListProductionScheduleResourceSettings(ctx context.Context, ac
 			&i.ScopeCode,
 			&i.ScopeRefID,
 			&i.IsExcluded,
+			&i.LeadTimeWeeks,
 			&i.LeadTimeOffsetWeeks,
 		); err != nil {
 			return nil, err

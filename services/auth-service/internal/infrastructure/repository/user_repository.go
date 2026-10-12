@@ -93,3 +93,17 @@ func (r *userRepoImpl) UpdatePassword(ctx context.Context, userID string, hashed
 
 	return nil
 }
+
+func (r *userRepoImpl) FindLastUsedAccountID(ctx context.Context, userID string) (*string, *apierror.APIError) {
+	ctx, span := userRepoTracer.Start(ctx, "repository.user.find_last_used_account_id")
+	defer span.End()
+
+	accountID, err := r.db.FindLastUsedAccountID(ctx, userID)
+	if apiErr := db.MapSQLError(err); apiErr != nil {
+		if apierror.IsNotFound(apiErr) {
+			return nil, nil
+		}
+		return nil, tracing.Trace(span, apiErr)
+	}
+	return &accountID, nil
+}

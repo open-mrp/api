@@ -32,6 +32,7 @@ func TestEmailRecord_InvoiceIsAttributedToItsSender(t *testing.T) {
 	repos.EXPECT().NewInvoiceRepo().Return(invoices).AnyTimes()
 	repos.EXPECT().NewSalesOrderRepo().Return(orders).AnyTimes()
 	repos.EXPECT().NewCustomerRepo().Return(customers).AnyTimes()
+	repos.EXPECT().NewOutboxRepo().Return(&stubOutboxRepo{}).AnyTimes()
 	idempotency := mediatormock.NewMockIdempotencyMed(ctrl)
 	meds := factorymock.NewMockMediatorFactory(ctrl)
 	meds.EXPECT().Build(gomock.Any()).Return(domain.Mediators{Idempotency: idempotency}).AnyTimes()

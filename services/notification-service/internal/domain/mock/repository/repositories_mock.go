@@ -922,18 +922,18 @@ func (mr *MockNotificationRepoMockRecorder) ResolveUserIDInAccount(ctx, accountU
 }
 
 // UpsertCoalesced mocks base method.
-func (m *MockNotificationRepo) UpsertCoalesced(ctx context.Context, notifications []*domain.Notification) ([]*domain.Notification, *apierror.APIError) {
+func (m *MockNotificationRepo) UpsertCoalesced(ctx context.Context, notifications []*domain.Notification, resurface bool) ([]*domain.Notification, *apierror.APIError) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "UpsertCoalesced", ctx, notifications)
+	ret := m.ctrl.Call(m, "UpsertCoalesced", ctx, notifications, resurface)
 	ret0, _ := ret[0].([]*domain.Notification)
 	ret1, _ := ret[1].(*apierror.APIError)
 	return ret0, ret1
 }
 
 // UpsertCoalesced indicates an expected call of UpsertCoalesced.
-func (mr *MockNotificationRepoMockRecorder) UpsertCoalesced(ctx, notifications any) *gomock.Call {
+func (mr *MockNotificationRepoMockRecorder) UpsertCoalesced(ctx, notifications, resurface any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpsertCoalesced", reflect.TypeOf((*MockNotificationRepo)(nil).UpsertCoalesced), ctx, notifications)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpsertCoalesced", reflect.TypeOf((*MockNotificationRepo)(nil).UpsertCoalesced), ctx, notifications, resurface)
 }
 
 // MockAnnouncementRepo is a mock of AnnouncementRepo interface.

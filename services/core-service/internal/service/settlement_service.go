@@ -254,6 +254,11 @@ func (s *settlementSvcImpl) CreateSettlement(ctx context.Context, params domain.
 				return apiErr
 			}
 			created.Allocations = allocations
+			for _, alloc := range allocations {
+				if apiErr := publishSettlementChild(txCtx, txSvc.repos, constants.AuditActionCreate, constants.ObjectTypeTransactionAllocation, alloc.ID, settlementID, audit.ComputeChanges(nil, alloc)); apiErr != nil {
+					return apiErr
+				}
+			}
 
 			result = created
 
@@ -444,15 +449,47 @@ func (s *settlementSvcImpl) DeleteSettlement(ctx context.Context, params domain.
 	apiErr = s.withTx(ctx, func(txCtx context.Context, txSvc *settlementSvcImpl) *apierror.APIError {
 		txRepo := txSvc.repos.NewSettlementRepo()
 
+		// Which of these the delete below takes is decided in SQL, so each is read before and looked for after.
+		txnRepo := txSvc.repos.NewTransactionRepo()
+		candidates := make([]*domain.Transaction, 0, len(transactionIDs))
+		for _, transactionID := range transactionIDs {
+			t, apiErr := txnRepo.Get(txCtx, params.AccountID, transactionID)
+			if apierror.IsNotFound(apiErr) {
+				continue
+			}
+			if apiErr != nil {
+				return apiErr
+			}
+			candidates = append(candidates, t)
+		}
+
 		// The transactions it recorded itself, and adjustments only it drew on, would otherwise
 		// outlive it with their funds received and reappear as open credits.
 		if apiErr := txRepo.DeleteSettlementOwnedTransactions(txCtx, params.AccountID, params.SettlementID); apiErr != nil {
 			return apiErr
 		}
 
+		for _, t := range candidates {
+			_, apiErr := txnRepo.Get(txCtx, params.AccountID, t.ID)
+			if apiErr == nil {
+				continue
+			}
+			if !apierror.IsNotFound(apiErr) {
+				return apiErr
+			}
+			if apiErr := publishSettlementChild(txCtx, txSvc.repos, constants.AuditActionDelete, constants.ObjectTypeTransaction, t.ID, settlement.ID, audit.ComputeChanges(t, (*domain.Transaction)(nil))); apiErr != nil {
+				return apiErr
+			}
+		}
+
 		// Delete allocations (quantities + allocation records)
 		if _, apiErr := txRepo.DeleteAllocations(txCtx, params.SettlementID); apiErr != nil {
 			return apiErr
+		}
+		for _, alloc := range settlement.Allocations {
+			if apiErr := publishSettlementChild(txCtx, txSvc.repos, constants.AuditActionDelete, constants.ObjectTypeTransactionAllocation, alloc.ID, settlement.ID, audit.ComputeChanges(alloc, (*domain.TransactionAllocation)(nil))); apiErr != nil {
+				return apiErr
+			}
 		}
 
 		if apiErr := txSvc.repos.NewDeletedRecordRepo().CreateInAccount(txCtx, constants.DeletedRecordResourceTypeSettlement, settlement.ID, params.AccountID, settlement); apiErr != nil {
@@ -549,6 +586,15 @@ func (s *settlementSvcImpl) createSettlementTransactions(ctx context.Context, se
 	if apiErr := s.repos.NewSettlementRepo().MarkTransactionsCreatedBySettlement(ctx, params.AccountID, settlementID, created); apiErr != nil {
 		return apiErr
 	}
+	for _, txID := range created {
+		t, apiErr := txRepo.Get(ctx, params.AccountID, txID)
+		if apiErr != nil {
+			return apiErr
+		}
+		if apiErr := publishSettlementChild(ctx, s.repos, constants.AuditActionCreate, constants.ObjectTypeTransaction, txID, settlementID, audit.ComputeChanges(nil, t)); apiErr != nil {
+			return apiErr
+		}
+	}
 
 	for i := range params.Allocations {
 		if key := params.Allocations[i].TransactionKey; key != "" {
@@ -557,4 +603,17 @@ func (s *settlementSvcImpl) createSettlementTransactions(ctx context.Context, se
 		}
 	}
 	return nil
+}
+
+// publishSettlementChild records a transaction or allocation the settlement wrote or removed with itself.
+func publishSettlementChild(ctx context.Context, repos domain.RepoFactory, action constants.AuditAction, resourceType constants.ObjectType, resourceID, settlementID string, changes []audit.FieldChange) *apierror.APIError {
+	return audit.NewPublisher().Publish(ctx, repos.NewOutboxRepo(), audit.EventData{
+		ServiceName:      domain.ServiceName,
+		Action:           action,
+		ResourceType:     resourceType,
+		ResourceID:       resourceID,
+		RootResourceType: constants.ObjectTypeSettlement,
+		RootResourceID:   settlementID,
+		Changes:          changes,
+	})
 }

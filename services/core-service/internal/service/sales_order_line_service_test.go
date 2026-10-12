@@ -63,6 +63,12 @@ func (suite *SalesOrderLineSvcTestSuite) SetupTest() {
 	suite.reservationRepo.EXPECT().ListReservedItemIDsForOrders(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil, nil).AnyTimes()
 	suite.reservationRepo.EXPECT().LockItemForLedger(gomock.Any(), gomock.Any()).Return(nil).AnyTimes()
 	suite.repoFactory.EXPECT().NewOutboxRepo().Return(&stubOutboxRepo{}).AnyTimes()
+	// The pick and its lines are read around a reconcile for their audit events; tests assert the writes, not these reads.
+	suite.pickRepo.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any()).
+		DoAndReturn(func(_ context.Context, _, pickID string) (*domain.Pick, *apierror.APIError) {
+			return &domain.Pick{ID: pickID, SalesOrderID: "or_test"}, nil
+		}).AnyTimes()
+	suite.pickRepo.EXPECT().GetLines(gomock.Any(), gomock.Any()).Return(nil, nil).AnyTimes()
 
 	suite.idempotencyMed = mediatormock.NewMockIdempotencyMed(suite.ctrl)
 	suite.editAccessMed = mediatormock.NewMockEditAccessMed(suite.ctrl)

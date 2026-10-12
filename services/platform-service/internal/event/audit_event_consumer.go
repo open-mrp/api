@@ -77,6 +77,12 @@ func (c *AuditEventConsumer) handleMessage(ctx context.Context, msg amqp091.Deli
 	if identity.Actor == nil {
 		return tracing.Trace(span, apierror.NewInvariantViolationError("Identity actor not found in context."))
 	}
+	// A system actor is shown to merchants by its ID, so only a process OpenMRP names may be recorded as one.
+	if identity.IsSystem() {
+		if _, ok := constants.ParseSystemActorID(identity.Actor.ID); !ok {
+			return tracing.Trace(span, apierror.NewInvariantViolationError("System identity names an unknown process: "+identity.Actor.ID))
+		}
+	}
 
 	var metadataRaw json.RawMessage
 	if payload.Metadata != nil {

@@ -3,6 +3,7 @@
 package api_test
 
 import (
+	"fmt"
 	"net/url"
 	"strings"
 	"testing"
@@ -74,14 +75,6 @@ func softDeleteItem(t *testing.T, itemID string) {
 	_, err := authDB(t).Exec("UPDATE item SET deleted_at = NOW(3) WHERE id = ?", itemID)
 	require.NoError(t, err)
 	t.Cleanup(func() { _, _ = authDB(t).Exec("UPDATE item SET deleted_at = NULL WHERE id = ?", itemID) })
-}
-
-func supplierMaterialRowID(t *testing.T, supplierID, materialID string) string {
-	t.Helper()
-	var id string
-	require.NoError(t, authDB(t).QueryRow(
-		"SELECT id FROM supplier_material WHERE supplier_account_id = ? AND material_id = ?", supplierID, materialID).Scan(&id))
-	return id
 }
 
 func listedSupplierIDs(t *testing.T, client *Client, params url.Values) []string {
@@ -772,24 +765,56 @@ func TestSupplierMaterialParity_DeletedItemLeavesTheLinkUnreachable(t *testing.T
 func TestSupplierMaterialParity_IsAudited(t *testing.T) {
 	t.Parallel()
 	supplierID := jsonField(paritySupplier(t, map[string]any{"name": uniqueName("e2e-supmat-audit"), "number": uniqueName("SUP")}), "id")
+	otherSupplierID := jsonField(paritySupplier(t, map[string]any{"name": uniqueName("e2e-supmat-audit-b"), "number": uniqueName("SUP")}), "id")
 	materialID, _ := parityMaterial(t)
 	partNumber := uniqueName("PN")
-	linkSupplierMaterial(t, supplierID, materialID, map[string]any{"supplier_part_number": partNumber})
-	rowID := supplierMaterialRowID(t, supplierID, materialID)
+	link := linkSupplierMaterial(t, supplierID, materialID, map[string]any{"supplier_part_number": partNumber})
+	require.Equal(t, materialID, jsonField(link, "id"))
 	path := supplierMaterialsOf(supplierID) + "/" + materialID
 
-	created, ok := changeForField(jsonListData(expectAuditEventWithChanges(t, rowID, "supplier_material", "create"), "changes"), "supplier_part_number")
+	created, ok := changeForField(jsonListData(expectAuditEventWithChanges(t, materialID, "supplier_material", "create"), "changes"), "supplier_part_number")
 	require.True(t, ok)
 	assert.Equal(t, partNumber, jsonField(created, "new_value"))
 
+	linkSupplierMaterial(t, otherSupplierID, materialID, nil)
+	expectSupplierMaterialRootedEvents(t, otherSupplierID, materialID, 1)
+	expectSupplierMaterialRootedEvents(t, supplierID, materialID, 1)
+
 	status, _, body := patchSupplier(t, path, map[string]any{"supplier_part_number": partNumber + "-B"})
 	requireStatus(t, 200, status, body)
-	updated, ok := changeForField(jsonListData(expectAuditEventWithChanges(t, rowID, "supplier_material", "update"), "changes"), "supplier_part_number")
+	updated, ok := changeForField(jsonListData(expectAuditEventWithChanges(t, materialID, "supplier_material", "update"), "changes"), "supplier_part_number")
 	require.True(t, ok)
 	assert.Equal(t, partNumber+"-B", jsonField(updated, "new_value"))
+	expectSupplierMaterialRootedEvents(t, supplierID, materialID, 2)
+	expectSupplierMaterialRootedEvents(t, otherSupplierID, materialID, 1)
 
 	status, body, err := apiClient.Delete(path)
 	require.NoError(t, err)
 	requireStatus(t, 200, status, body)
-	expectAuditEventWithChanges(t, rowID, "supplier_material", "delete")
+	expectAuditEventWithChanges(t, materialID, "supplier_material", "delete")
+	expectSupplierMaterialRootedEvents(t, supplierID, materialID, 3)
+}
+
+// expectSupplierMaterialRootedEvents polls until the supplier's history holds want events for the material's link.
+func expectSupplierMaterialRootedEvents(t *testing.T, supplierID, materialID string, want int) {
+	t.Helper()
+	eventually(t, e2eAsyncWaitTimeout, e2eAsyncPollInterval, func() error {
+		status, body, err := apiClient.GetListRaw(auditEventsPath, url.Values{
+			"root_resource_type": {"supplier"},
+			"root_resource_id":   {supplierID},
+			"resource_types":     {"supplier_material"},
+			"resource_ids":       {materialID},
+			"limit":              {"100"},
+		})
+		if err != nil {
+			return err
+		}
+		if status != 200 {
+			return fmt.Errorf("audit events: %d %s", status, body)
+		}
+		if got := len(jsonArray(parseJSON(body), "data")); got != want {
+			return fmt.Errorf("supplier %s has %d supplier_material events for %s, want %d", supplierID, got, materialID, want)
+		}
+		return nil
+	})
 }

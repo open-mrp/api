@@ -277,7 +277,14 @@ func (s *receivingOrderSvcImpl) StockReceivingOrder(ctx context.Context, params 
 					if apiErr != nil {
 						return apiErr
 					}
+					orderBefore, apiErr := txSvc.repos.NewPurchaseOrderRepo().Get(txCtx, params.AccountID, purchaseOrderID)
+					if apiErr != nil {
+						return apiErr
+					}
 					if apiErr := txRepo.MarkPurchaseOrderFulfilled(txCtx, purchaseOrderID, params.AccountID); apiErr != nil {
+						return apiErr
+					}
+					if apiErr := publishPurchaseOrderChanges(txCtx, txSvc.repos, params.AccountID, orderBefore); apiErr != nil {
 						return apiErr
 					}
 				}

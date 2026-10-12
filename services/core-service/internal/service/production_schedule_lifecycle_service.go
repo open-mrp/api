@@ -829,7 +829,7 @@ func (s *productionScheduleSvcImpl) publishSchedule(ctx context.Context, account
 			return apiErr
 		}
 		for _, oldID := range supersededIDs {
-			if apiErr := repo.Supersede(txCtx, accountID, oldID, scheduleID); apiErr != nil {
+			if apiErr := txSvc.supersedeSchedule(txCtx, accountID, oldID, scheduleID); apiErr != nil {
 				return apiErr
 			}
 		}
@@ -856,6 +856,29 @@ func (s *productionScheduleSvcImpl) publishSchedule(ctx context.Context, account
 	}
 
 	return result, nil
+}
+
+// supersedeSchedule points a published schedule at its replacement, audited on the superseded schedule.
+func (s *productionScheduleSvcImpl) supersedeSchedule(txCtx context.Context, accountID, oldID, replacementID string) *apierror.APIError {
+	repo := s.repos.NewProductionScheduleRepo()
+	before, apiErr := repo.Get(txCtx, domain.GetProductionScheduleParams{AccountID: accountID, ScheduleID: oldID})
+	if apiErr != nil {
+		return apiErr
+	}
+	if apiErr := repo.Supersede(txCtx, accountID, oldID, replacementID); apiErr != nil {
+		return apiErr
+	}
+	after, apiErr := repo.Get(txCtx, domain.GetProductionScheduleParams{AccountID: accountID, ScheduleID: oldID})
+	if apiErr != nil {
+		return apiErr
+	}
+	return audit.NewPublisher().Publish(txCtx, s.repos.NewOutboxRepo(), audit.EventData{
+		ServiceName:  domain.ServiceName,
+		Action:       constants.AuditActionUpdate,
+		ResourceType: constants.ObjectTypeProductionSchedule,
+		ResourceID:   oldID,
+		Changes:      audit.ComputeChanges(before, after),
+	})
 }
 
 // ArchiveProductionSchedule retires a version without deleting its history.

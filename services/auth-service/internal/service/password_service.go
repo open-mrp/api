@@ -9,6 +9,7 @@ import (
 	"github.com/open-mrp/api/services/auth-service/internal/infrastructure/repository"
 	"github.com/open-mrp/api/services/auth-service/internal/infrastructure/sqlc"
 	"github.com/open-mrp/api/services/auth-service/internal/mediator"
+	"github.com/open-mrp/api/services/auth-service/pkg/types"
 	"github.com/open-mrp/api/shared/appctx"
 	"github.com/open-mrp/api/shared/audit"
 	"github.com/open-mrp/api/shared/constants"
@@ -205,6 +206,10 @@ func (s *passwordSvcImpl) ResetPassword(ctx context.Context, token, newPassword 
 				return err
 			}
 
+			if apiErr := publishPasswordResetAudit(txCtx, svc.repos, user.ID); apiErr != nil {
+				return apiErr
+			}
+
 			refreshTokenModel, err := txMeds.RefreshToken.Create(txCtx, user.ID, nil)
 			if err != nil {
 				return err
@@ -308,4 +313,25 @@ func (s *passwordSvcImpl) UpdatePassword(ctx context.Context, oldPassword, newPa
 	default:
 		return tracing.Trace(span, apierror.NewInvariantViolationError("Unexpected recovery point: "+idempotencyKey.RecoveryPoint.String()))
 	}
+}
+
+// publishPasswordResetAudit records a reset as the user's own doing. The caller is unauthenticated but the
+// reset token proves who they are; the event goes to the account they last used, and a user with none has nowhere to record it.
+func publishPasswordResetAudit(ctx context.Context, repos domain.RepoFactory, userID string) *apierror.APIError {
+	accountID, apiErr := repos.NewUserRepo().FindLastUsedAccountID(ctx, userID)
+	if apiErr != nil || accountID == nil {
+		return apiErr
+	}
+	auditCtx := appctx.WithIdentity(ctx, &types.Identity{
+		Type:   types.IdentityActorTypeUser,
+		Actor:  &types.IdentityActor{RelationType: types.IdentityRelationTypeUnassigned, ID: userID},
+		Target: &types.IdentityTarget{AccountID: *accountID},
+	})
+	return audit.NewPublisher().Publish(auditCtx, repos.NewOutboxRepo(), audit.EventData{
+		ServiceName:  domain.ServiceName,
+		Action:       constants.AuditActionUpdate,
+		ResourceType: constants.ObjectTypeUser,
+		ResourceID:   userID,
+		Metadata:     map[string]any{"password_rotated": true, "reason": "password_reset"},
+	})
 }

@@ -440,3 +440,76 @@ func (q *Queries) UpsertCoalescedNotification(ctx context.Context, arg UpsertCoa
 	}
 	return result.RowsAffected()
 }
+
+const upsertCoalescedNotificationQuietly = `-- name: UpsertCoalescedNotificationQuietly :execrows
+INSERT INTO notification (
+    id, account_id, recipient_account_user_id, category,
+    source_message_id, conversation_id, title, body,
+    template_key, template_params, link_resource_type, link_resource_id,
+    sender_type, sender_id, sender_name,
+    priority, seen_at, read_at, dismissed_at, metadata, created_at, updated_at
+) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(3), NOW(3))
+ON DUPLICATE KEY UPDATE
+    title = VALUES(title),
+    body = VALUES(body),
+    updated_at = NOW(3),
+    metadata = JSON_SET(
+        COALESCE(metadata, JSON_OBJECT()),
+        '$.change_count',
+        COALESCE(CAST(JSON_UNQUOTE(JSON_EXTRACT(metadata, '$.change_count')) AS UNSIGNED), 1) + 1
+    )
+`
+
+type UpsertCoalescedNotificationQuietlyParams struct {
+	ID                     string
+	AccountID              string
+	RecipientAccountUserID string
+	Category               string
+	SourceMessageID        sql.NullString
+	ConversationID         sql.NullString
+	Title                  string
+	Body                   sql.NullString
+	TemplateKey            sql.NullString
+	TemplateParams         db.NullableRawMessage
+	LinkResourceType       sql.NullString
+	LinkResourceID         sql.NullString
+	SenderType             sql.NullString
+	SenderID               sql.NullString
+	SenderName             sql.NullString
+	Priority               string
+	SeenAt                 sql.NullTime
+	ReadAt                 sql.NullTime
+	DismissedAt            sql.NullTime
+	Metadata               db.NullableRawMessage
+}
+
+// UpsertCoalescedNotification without the resurfacing: on conflict the row takes the latest title/body
+// and bumps change_count but keeps its seen/read/dismissed state, so a window alerts its recipient once.
+func (q *Queries) UpsertCoalescedNotificationQuietly(ctx context.Context, arg UpsertCoalescedNotificationQuietlyParams) (int64, error) {
+	result, err := q.db.ExecContext(ctx, upsertCoalescedNotificationQuietly,
+		arg.ID,
+		arg.AccountID,
+		arg.RecipientAccountUserID,
+		arg.Category,
+		arg.SourceMessageID,
+		arg.ConversationID,
+		arg.Title,
+		arg.Body,
+		arg.TemplateKey,
+		arg.TemplateParams,
+		arg.LinkResourceType,
+		arg.LinkResourceID,
+		arg.SenderType,
+		arg.SenderID,
+		arg.SenderName,
+		arg.Priority,
+		arg.SeenAt,
+		arg.ReadAt,
+		arg.DismissedAt,
+		arg.Metadata,
+	)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected()
+}

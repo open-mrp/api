@@ -188,6 +188,54 @@ func (q *Queries) InsertTransactionQuantity(ctx context.Context, arg InsertTrans
 	return err
 }
 
+const listTransactionIDsByStripePaymentIDs = `-- name: ListTransactionIDsByStripePaymentIDs :many
+SELECT id
+FROM transaction
+WHERE account_id = ?
+  AND stripe_payment_id IN (/*SLICE:stripe_payment_ids*/?)
+ORDER BY id
+FOR UPDATE
+`
+
+type ListTransactionIDsByStripePaymentIDsParams struct {
+	AccountID        string
+	StripePaymentIds []sql.NullString
+}
+
+func (q *Queries) ListTransactionIDsByStripePaymentIDs(ctx context.Context, arg ListTransactionIDsByStripePaymentIDsParams) ([]string, error) {
+	query := listTransactionIDsByStripePaymentIDs
+	var queryParams []interface{}
+	queryParams = append(queryParams, arg.AccountID)
+	if len(arg.StripePaymentIds) > 0 {
+		for _, v := range arg.StripePaymentIds {
+			queryParams = append(queryParams, v)
+		}
+		query = strings.Replace(query, "/*SLICE:stripe_payment_ids*/?", strings.Repeat(",?", len(arg.StripePaymentIds))[1:], 1)
+	} else {
+		query = strings.Replace(query, "/*SLICE:stripe_payment_ids*/?", "NULL", 1)
+	}
+	rows, err := q.db.QueryContext(ctx, query, queryParams...)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []string
+	for rows.Next() {
+		var id string
+		if err := rows.Scan(&id); err != nil {
+			return nil, err
+		}
+		items = append(items, id)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const resolveResponsibleUserID = `-- name: ResolveResponsibleUserID :one
 SELECT au.id, (au.status_code = 'active' OR au.status_code IS NULL) AS is_active
 FROM account_user au

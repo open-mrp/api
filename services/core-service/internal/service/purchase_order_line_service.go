@@ -174,6 +174,13 @@ func (s *purchaseOrderLineSvcImpl) CreatePurchaseOrderLine(ctx context.Context, 
 				if apiErr := txReceivingRepo.CreateLine(txCtx, receivingLineID, *receivingOrderID, qtyID, lineID); apiErr != nil {
 					return apiErr
 				}
+				receivingLine, apiErr := txReceivingRepo.GetLine(txCtx, receivingLineID)
+				if apiErr != nil {
+					return apiErr
+				}
+				if apiErr := publishReceivingOrderLine(txCtx, txSvc.repos, constants.AuditActionCreate, params.SalesOrderID, nil, receivingLine); apiErr != nil {
+					return apiErr
+				}
 			}
 
 			// Ensure supplier material link if item_id is set
@@ -185,15 +192,7 @@ func (s *purchaseOrderLineSvcImpl) CreatePurchaseOrderLine(ctx context.Context, 
 
 			result = created
 
-			changes := audit.ComputeChanges(nil, created)
-
-			if apiErr := audit.NewPublisher().Publish(txCtx, txSvc.repos.NewOutboxRepo(), audit.EventData{
-				ServiceName:  domain.ServiceName,
-				Action:       constants.AuditActionCreate,
-				ResourceType: constants.ObjectTypePurchaseOrderLine,
-				ResourceID:   created.ID,
-				Changes:      changes,
-			}); apiErr != nil {
+			if apiErr := audit.NewPublisher().Publish(txCtx, txSvc.repos.NewOutboxRepo(), purchaseOrderLineAuditEvent(constants.AuditActionCreate, created, audit.ComputeChanges(nil, created))); apiErr != nil {
 				return apiErr
 			}
 
@@ -304,7 +303,14 @@ func (s *purchaseOrderLineSvcImpl) UpdatePurchaseOrderLine(ctx context.Context, 
 				return apiErr
 			}
 			if receivingOrderID != nil {
+				linesBefore, apiErr := txReceivingRepo.ListLines(txCtx, *receivingOrderID)
+				if apiErr != nil {
+					return apiErr
+				}
 				if apiErr := txReceivingRepo.CreateLineForRemainingQuantity(txCtx, *receivingOrderID, params.PurchaseOrderLineID, params.AccountID); apiErr != nil {
+					return apiErr
+				}
+				if apiErr := publishReceivingOrderLinesCreated(txCtx, txSvc.repos, *receivingOrderID, params.SalesOrderID, linesBefore); apiErr != nil {
 					return apiErr
 				}
 			}
@@ -322,15 +328,7 @@ func (s *purchaseOrderLineSvcImpl) UpdatePurchaseOrderLine(ctx context.Context, 
 
 			result = updated
 
-			changes := audit.ComputeChanges(old, updated)
-
-			if apiErr := audit.NewPublisher().Publish(txCtx, txSvc.repos.NewOutboxRepo(), audit.EventData{
-				ServiceName:  domain.ServiceName,
-				Action:       constants.AuditActionUpdate,
-				ResourceType: constants.ObjectTypePurchaseOrderLine,
-				ResourceID:   updated.ID,
-				Changes:      changes,
-			}); apiErr != nil {
+			if apiErr := audit.NewPublisher().Publish(txCtx, txSvc.repos.NewOutboxRepo(), purchaseOrderLineAuditEvent(constants.AuditActionUpdate, updated, audit.ComputeChanges(old, updated))); apiErr != nil {
 				return apiErr
 			}
 
@@ -413,9 +411,31 @@ func (s *purchaseOrderLineSvcImpl) DeletePurchaseOrderLine(ctx context.Context, 
 		txReceivingRepo := txSvc.repos.NewReceivingOrderRepo()
 		txLineRepo := txSvc.repos.NewPurchaseOrderLineRepo()
 
+		var receivingLines []*domain.ReceivingOrderLine
+		receivingOrderID, apiErr := txReceivingRepo.GetByOrderID(txCtx, params.SalesOrderID)
+		if apiErr != nil {
+			return apiErr
+		}
+		if receivingOrderID != nil {
+			lines, apiErr := txReceivingRepo.ListLines(txCtx, *receivingOrderID)
+			if apiErr != nil {
+				return apiErr
+			}
+			for _, l := range lines {
+				if l.OrderLineID == params.PurchaseOrderLineID {
+					receivingLines = append(receivingLines, l)
+				}
+			}
+		}
+
 		// Delete receiving order lines associated with this PO line first
 		if apiErr := txReceivingRepo.DeleteLinesByOrderLineID(txCtx, params.PurchaseOrderLineID); apiErr != nil {
 			return apiErr
+		}
+		for _, l := range receivingLines {
+			if apiErr := publishReceivingOrderLine(txCtx, txSvc.repos, constants.AuditActionDelete, params.SalesOrderID, l, nil); apiErr != nil {
+				return apiErr
+			}
 		}
 
 		if apiErr := txSvc.repos.NewDeletedRecordRepo().CreateInAccount(txCtx, constants.DeletedRecordResourceTypePurchaseOrderLine, line.ID, params.AccountID, line); apiErr != nil {
@@ -426,15 +446,7 @@ func (s *purchaseOrderLineSvcImpl) DeletePurchaseOrderLine(ctx context.Context, 
 			return apiErr
 		}
 
-		changes := audit.ComputeChanges(line, (*domain.PurchaseOrderLine)(nil))
-
-		if apiErr := audit.NewPublisher().Publish(txCtx, txSvc.repos.NewOutboxRepo(), audit.EventData{
-			ServiceName:  domain.ServiceName,
-			Action:       constants.AuditActionDelete,
-			ResourceType: constants.ObjectTypePurchaseOrderLine,
-			ResourceID:   line.ID,
-			Changes:      changes,
-		}); apiErr != nil {
+		if apiErr := audit.NewPublisher().Publish(txCtx, txSvc.repos.NewOutboxRepo(), purchaseOrderLineAuditEvent(constants.AuditActionDelete, line, audit.ComputeChanges(line, (*domain.PurchaseOrderLine)(nil)))); apiErr != nil {
 			return apiErr
 		}
 
@@ -451,4 +463,16 @@ func checkPurchaseOrderLineWritePermission(identity *types.Identity) *apierror.A
 		return identity.CheckHasPermission(types.PermissionDomainSuppliers, types.ActionUpdate)
 	}
 	return identity.CheckHasPermission(types.PermissionDomainPurchaseOrders, types.ActionUpdate)
+}
+
+func purchaseOrderLineAuditEvent(action constants.AuditAction, line *domain.PurchaseOrderLine, changes []audit.FieldChange) audit.EventData {
+	return audit.EventData{
+		ServiceName:      domain.ServiceName,
+		Action:           action,
+		ResourceType:     constants.ObjectTypePurchaseOrderLine,
+		ResourceID:       line.ID,
+		RootResourceType: constants.ObjectTypePurchaseOrder,
+		RootResourceID:   line.SalesOrderID,
+		Changes:          changes,
+	}
 }

@@ -9,6 +9,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/open-mrp/api/shared/appctx"
 	"github.com/open-mrp/api/shared/constants"
 	apierror "github.com/open-mrp/api/shared/errors"
 )
@@ -130,7 +131,7 @@ func (c *StripeWebhookConsumer) handleServicingActivated(ctx context.Context, ev
 	log.Printf("[stripe_webhook] Pricing plan subscription servicing activated for account %s", accountID)
 
 	return apiErrToErr(c.coreClient.UpdateAccountSubscription(
-		ctx, eventID, accountID, nil, "", nil, nil, nil, nil, nil, &sub.ID, &servicingStatus, nil,
+		asStripe(ctx, accountID), eventID, accountID, nil, "", nil, nil, nil, nil, nil, &sub.ID, &servicingStatus, nil,
 	))
 }
 
@@ -150,7 +151,7 @@ func (c *StripeWebhookConsumer) handleServicingCanceled(ctx context.Context, eve
 	log.Printf("[stripe_webhook] Pricing plan subscription servicing canceled for account %s, marking status (plan retained until period end)", accountID)
 
 	return apiErrToErr(c.coreClient.UpdateAccountSubscription(
-		ctx, eventID, accountID, nil, planCode, nil, nil, nil, nil, nil, nil, &servicingStatus, nil,
+		asStripe(ctx, accountID), eventID, accountID, nil, planCode, nil, nil, nil, nil, nil, nil, &servicingStatus, nil,
 	))
 }
 
@@ -169,7 +170,7 @@ func (c *StripeWebhookConsumer) handleCollectionPaused(ctx context.Context, even
 	log.Printf("[stripe_webhook] Collection paused for account %s", accountID)
 
 	return apiErrToErr(c.coreClient.UpdateAccountSubscription(
-		ctx, eventID, accountID, nil, planCode, nil, nil, nil, nil, nil, nil, nil, &collectionStatus,
+		asStripe(ctx, accountID), eventID, accountID, nil, planCode, nil, nil, nil, nil, nil, nil, nil, &collectionStatus,
 	))
 }
 
@@ -188,7 +189,7 @@ func (c *StripeWebhookConsumer) handleCollectionCurrent(ctx context.Context, eve
 	log.Printf("[stripe_webhook] Collection current for account %s", accountID)
 
 	return apiErrToErr(c.coreClient.UpdateAccountSubscription(
-		ctx, eventID, accountID, nil, planCode, nil, nil, nil, nil, nil, nil, nil, &collectionStatus,
+		asStripe(ctx, accountID), eventID, accountID, nil, planCode, nil, nil, nil, nil, nil, nil, nil, &collectionStatus,
 	))
 }
 
@@ -207,7 +208,7 @@ func (c *StripeWebhookConsumer) handleCadenceErrored(ctx context.Context, eventI
 	log.Printf("[stripe_webhook] Billing cadence errored for account %s, setting status to past_due", accountID)
 
 	return apiErrToErr(c.coreClient.UpdateAccountSubscription(
-		ctx, eventID, accountID, &status, planCode, nil, nil, nil, nil, nil, nil, nil, nil,
+		asStripe(ctx, accountID), eventID, accountID, &status, planCode, nil, nil, nil, nil, nil, nil, nil, nil,
 	))
 }
 
@@ -226,7 +227,7 @@ func (c *StripeWebhookConsumer) handleServicingPaused(ctx context.Context, event
 	log.Printf("[stripe_webhook] Pricing plan subscription servicing paused for account %s", accountID)
 
 	return apiErrToErr(c.coreClient.UpdateAccountSubscription(
-		ctx, eventID, accountID, nil, planCode, nil, nil, nil, nil, nil, nil, &servicingStatus, nil,
+		asStripe(ctx, accountID), eventID, accountID, nil, planCode, nil, nil, nil, nil, nil, nil, &servicingStatus, nil,
 	))
 }
 
@@ -245,7 +246,7 @@ func (c *StripeWebhookConsumer) handleCollectionAwaitingCustomerAction(ctx conte
 	log.Printf("[stripe_webhook] Collection awaiting customer action for account %s", accountID)
 
 	if err := apiErrToErr(c.coreClient.UpdateAccountSubscription(
-		ctx, eventID, accountID, nil, planCode, nil, nil, nil, nil, nil, nil, nil, &collectionStatus,
+		asStripe(ctx, accountID), eventID, accountID, nil, planCode, nil, nil, nil, nil, nil, nil, nil, &collectionStatus,
 	)); err != nil {
 		return err
 	}
@@ -277,7 +278,7 @@ func (c *StripeWebhookConsumer) handleCadenceBilled(ctx context.Context, eventID
 	log.Printf("[stripe_webhook] Billing cadence billed for account %s", accountID)
 
 	return apiErrToErr(c.coreClient.UpdateAccountSubscription(
-		ctx, eventID, accountID, nil, planCode, nil, cadence.BilledTo, nil, nil, nil, nil, nil, nil,
+		asStripe(ctx, accountID), eventID, accountID, nil, planCode, nil, cadence.BilledTo, nil, nil, nil, nil, nil, nil,
 	))
 }
 
@@ -296,8 +297,13 @@ func (c *StripeWebhookConsumer) handleCadenceCanceled(ctx context.Context, event
 	log.Printf("[stripe_webhook] Billing cadence canceled for account %s, setting status to canceled", accountID)
 
 	return apiErrToErr(c.coreClient.UpdateAccountSubscription(
-		ctx, eventID, accountID, &status, planCode, nil, nil, nil, nil, nil, nil, nil, nil,
+		asStripe(ctx, accountID), eventID, accountID, &status, planCode, nil, nil, nil, nil, nil, nil, nil, nil,
 	))
+}
+
+// asStripe attributes what a webhook changes on the account to Stripe, which reported it.
+func asStripe(ctx context.Context, accountID string) context.Context {
+	return appctx.WithSystemIdentity(ctx, constants.SystemActorStripe, accountID)
 }
 
 func apiErrToErr(apiErr *apierror.APIError) error {

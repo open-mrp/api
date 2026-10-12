@@ -1164,6 +1164,14 @@ func (suite *LocationSvcTestSuite) TestResolveBulkUpsertLocations_IntraBatchRefe
 // created/updated ids (from results) and per-row failures (from errors). apiErr is non-nil
 // only for a pre-loop infrastructure failure (the bulk read); a row that fails its own
 // upsert or link is recorded in rowErrs, not returned as apiErr.
+// expectLinkAuditReads allows the child reads a parent link makes for its audit diff: before and after a successful link, before only for a failed one.
+func (suite *LocationSvcTestSuite) expectLinkAuditReads(n int) {
+	suite.locationRepo.EXPECT().
+		Get(gomock.Any(), gomock.Any()).
+		Return(&domain.Location{}, nil).
+		Times(n)
+}
+
 func (suite *LocationSvcTestSuite) writeLocations(rows ...domain.ResolvedUpsertLocationRow) (created, updated []string, rowErrs []apierror.RowError, apiErr *apierror.APIError) {
 	res, apiErr := writeBulkUpsertLocations(internalLocationCtx("ac_loc1"), suite.repoFactory, passthroughSavepoint{}, "ac_loc1", rows)
 	if apiErr != nil {
@@ -1271,6 +1279,7 @@ func (suite *LocationSvcTestSuite) TestWriteBulkUpsertLocations_ParentLinkApplie
 			return &domain.Location{ID: locID, Name: "Shelf"}, nil
 		}).
 		Times(1)
+	suite.expectLinkAuditReads(2)
 	// LinkParent is called with the created id as child and the resolved parent id.
 	suite.locationRepo.EXPECT().
 		LinkParent(gomock.Any(), "ac_loc1", gomock.Any(), "loc_parent_p2").
@@ -1300,6 +1309,13 @@ func (suite *LocationSvcTestSuite) TestWriteBulkUpsertLocations_ChildLinksApplie
 			return &domain.Location{ID: locID, Name: "Aisle"}, nil
 		}).
 		Times(1)
+	// Each child is read around its link for the audit diff.
+	for _, childID := range []string{"loc_child_a", "loc_child_b"} {
+		suite.locationRepo.EXPECT().
+			Get(gomock.Any(), domain.GetLocationParams{AccountID: "ac_loc1", LocationID: childID}).
+			Return(&domain.Location{ID: childID}, nil).
+			Times(2)
+	}
 	// LinkParent is called for each child id (child → this location as parent).
 	suite.locationRepo.EXPECT().
 		LinkParent(gomock.Any(), "ac_loc1", "loc_child_a", gomock.Any()).
@@ -1335,6 +1351,7 @@ func (suite *LocationSvcTestSuite) TestWriteBulkUpsertLocations_LinkFailureRecor
 			return &domain.Location{ID: locID, Name: "Bin"}, nil
 		}).
 		Times(1)
+	suite.expectLinkAuditReads(1)
 	suite.locationRepo.EXPECT().
 		LinkParent(gomock.Any(), "ac_loc1", gomock.Any(), "loc_parent_err").
 		Return(apierror.NewInternalError(errors.New("db"), "link failed")).
@@ -1423,6 +1440,7 @@ func (suite *LocationSvcTestSuite) TestWriteBulkUpsertLocations_PartialSuccess()
 			return &domain.Location{ID: locID, Name: params.Name}, nil
 		}).
 		Times(2)
+	suite.expectLinkAuditReads(1)
 	// The bad row's parent link fails.
 	suite.locationRepo.EXPECT().
 		LinkParent(gomock.Any(), "ac_loc1", gomock.Any(), "loc_bad_parent").
@@ -1457,6 +1475,7 @@ func (suite *LocationSvcTestSuite) TestWriteBulkUpsertLocations_IntraBatchParent
 			return &domain.Location{ID: locID, Name: params.Name}, nil
 		}).
 		Times(2)
+	suite.expectLinkAuditReads(2)
 	var linkChild, linkParent string
 	suite.locationRepo.EXPECT().
 		LinkParent(gomock.Any(), "ac_loc1", gomock.Any(), gomock.Any()).

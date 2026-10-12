@@ -697,12 +697,22 @@ func resolvePropertyAttributesInTx(txCtx context.Context, repos domain.RepoFacto
 				return nil, nil, apiErr
 			}
 			attrCountByProp[prop.ID]++
-			if _, apiErr := repos.NewAttributeRepo().Create(txCtx, newAttrID, domain.CreateAttributeParams{
+			created, apiErr := repos.NewAttributeRepo().Create(txCtx, newAttrID, domain.CreateAttributeParams{
 				Value:      pair.value,
 				PropertyID: prop.ID,
 				AccountID:  accountID,
 				ColorCode:  attributeColorFor(pair.name, pair.value),
 				SortOrder:  attrCountByProp[prop.ID],
+			})
+			if apiErr != nil {
+				return nil, nil, apiErr
+			}
+			if apiErr := audit.NewPublisher().Publish(txCtx, repos.NewOutboxRepo(), audit.EventData{
+				ServiceName:  domain.ServiceName,
+				Action:       constants.AuditActionCreate,
+				ResourceType: constants.ObjectTypeAttribute,
+				ResourceID:   created.ID,
+				Changes:      audit.ComputeChanges(nil, created),
 			}); apiErr != nil {
 				return nil, nil, apiErr
 			}

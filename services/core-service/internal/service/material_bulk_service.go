@@ -119,6 +119,10 @@ func (s *materialSvcImpl) writeBulkUpsertMaterials(txCtx context.Context, txRepo
 			attrIDs := attributeIDsForProperties(row.Properties, attrResolver)
 
 			if old := bySKU[row.SKU]; old != nil {
+				// Precedes the attribute link, which rejects an attribute whose property the category does not carry yet.
+				if apiErr := linkRowPropertiesToCategoryInTx(spCtx, txRepos, old.CategoryID, row.Properties, propIDByName); apiErr != nil {
+					return apiErr
+				}
 				if _, apiErr := txSvc.updateMaterialInTx(spCtx, domain.UpdateMaterialParams{
 					AccountID:         accountID,
 					MaterialID:        old.MaterialID,
@@ -128,17 +132,12 @@ func (s *materialSvcImpl) writeBulkUpsertMaterials(txCtx context.Context, txRepo
 					UpdateNotes:       row.Notes != nil,
 					OrderPoint:        row.OrderPoint,
 					LeadTime:          row.LeadTime,
+				}, func(ctx context.Context) *apierror.APIError {
+					if apiErr := applyItemRatesPublishingCostInTx(ctx, txRepos, accountID, old.ItemID, old.UnitValueRateID, old.UnitCostRateID, row.UnitPrice, row.UnitCost); apiErr != nil {
+						return apiErr
+					}
+					return attachItemAttributesInTx(ctx, txRepos, accountID, old.CategoryID, old.ItemID, attrIDs)
 				}); apiErr != nil {
-					return apiErr
-				}
-				if apiErr := applyItemRatesInTx(spCtx, txRepos, old.UnitValueRateID, old.UnitCostRateID, row.UnitPrice, row.UnitCost); apiErr != nil {
-					return apiErr
-				}
-				// Precedes the attribute link, which rejects an attribute whose property the category does not carry yet.
-				if apiErr := linkRowPropertiesToCategoryInTx(spCtx, txRepos, old.CategoryID, row.Properties, propIDByName); apiErr != nil {
-					return apiErr
-				}
-				if apiErr := attachItemAttributesInTx(spCtx, txRepos, accountID, old.CategoryID, old.ItemID, attrIDs); apiErr != nil {
 					return apiErr
 				}
 				upsertedID = old.MaterialID

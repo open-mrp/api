@@ -1,6 +1,7 @@
 -- name: GetSalesOrderLine :one
 SELECT
     sol.id,
+    sol.sales_order_id,
     sol.line_item_number,
     sol.product_sku,
     sol.product_description,

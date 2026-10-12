@@ -6,7 +6,9 @@ import (
 	"testing"
 	"time"
 
+	"github.com/open-mrp/api/services/auth-service/pkg/types"
 	"github.com/open-mrp/api/services/core-service/internal/domain"
+	"github.com/open-mrp/api/shared/audit"
 	"github.com/open-mrp/api/shared/constants"
 	"github.com/open-mrp/api/shared/contracts"
 	"github.com/open-mrp/api/shared/crypto"
@@ -59,6 +61,51 @@ func webhookPaymentIntent(orderID, customerID string) *domain.StripePaymentInten
 		PaymentMethodTypes: []string{"card"},
 		Metadata:           metadata,
 	}
+}
+
+// stripeAudit is an audit event the Stripe paths published, with the identity it is attributed to.
+type stripeAudit struct {
+	identity *types.Identity
+	event    audit.PublishedEvent
+}
+
+// requireStripeAudits asserts the published audit events are exactly want, each written as
+// "resource_type action resource_id", and that every one is attributed to Stripe acting on ac_test.
+func (suite *SalesOrderSvcTestSuite) requireStripeAudits(want ...string) []stripeAudit {
+	var got []string
+	var audits []stripeAudit
+	for _, msg := range suite.outbox.published(contracts.PlatformEventAuditLogged) {
+		var event audit.PublishedEvent
+		suite.Require().NoError(json.Unmarshal(msg.Payload.Data, &event))
+		identity := msg.Payload.Identity
+		suite.Require().True(identity.IsSystem(), "a Stripe-driven write must be attributed to the system, got %+v", identity)
+		suite.Equal(constants.SystemActorStripe.ActorID(), identity.Actor.ID)
+		suite.Equal("ac_test", identity.Target.AccountID)
+		got = append(got, string(event.ResourceType)+" "+string(event.Action)+" "+event.ResourceID)
+		audits = append(audits, stripeAudit{identity: identity, event: event})
+	}
+	suite.ElementsMatch(want, got)
+	return audits
+}
+
+// expectOrderPaymentIntents stubs the order's linked payment intents read before and after a link change.
+func (suite *SalesOrderSvcTestSuite) expectOrderPaymentIntents(orderID string, before, after []string) {
+	suite.orderRepo.EXPECT().GetPaymentIntentIDs(gomock.Any(), "ac_test", []string{orderID}).
+		Return(map[string][]string{orderID: before}, nil).Times(1)
+	suite.orderRepo.EXPECT().GetPaymentIntentIDs(gomock.Any(), "ac_test", []string{orderID}).
+		Return(map[string][]string{orderID: after}, nil).Times(1)
+}
+
+// expectStripeTransaction stubs the lookup of the recorded transaction tr_1 and its allocations.
+func (suite *SalesOrderSvcTestSuite) expectStripeTransaction(existing *domain.Transaction, allocations []*domain.TransactionAllocation) {
+	suite.transactionRepo.EXPECT().FindByStripePaymentID(gomock.Any(), "pi_test").
+		Return(&domain.TransactionRecord{ID: "tr_1", Number: "1001", AmountID: "qt_1"}, nil).Times(1)
+	suite.transactionRepo.EXPECT().Get(gomock.Any(), "ac_test", "tr_1").Return(existing, nil).Times(1)
+	suite.transactionRepo.EXPECT().GetAllocations(gomock.Any(), "tr_1").Return(allocations, nil).Times(1)
+}
+
+func stripeTransactionFixture(note string) *domain.Transaction {
+	return &domain.Transaction{ID: "tr_1", Number: "1001", AmountID: "qt_1", AmountValue: "20", Note: &note, StripePaymentID: new("pi_test")}
 }
 
 // --- Plumbing ---
@@ -129,6 +176,7 @@ func (suite *SalesOrderSvcTestSuite) TestAccountWebhook_Succeeded_LinksPaymentAn
 	// Order link: not yet linked, so a link row is created.
 	suite.opiRepo.EXPECT().FindByPaymentIntentID(gomock.Any(), "pi_test").Return(nil, nil).Times(1)
 	suite.opiRepo.EXPECT().Create(gomock.Any(), gomock.Any(), "pi_test", "or_1").Return(nil).Times(1)
+	suite.expectOrderPaymentIntents("or_1", nil, []string{"pi_test"})
 
 	// Receivables transaction: none recorded yet, so one is created with the legacy shape.
 	suite.transactionRepo.EXPECT().FindByStripePaymentID(gomock.Any(), "pi_test").Return(nil, nil).Times(1)
@@ -145,8 +193,24 @@ func (suite *SalesOrderSvcTestSuite) TestAccountWebhook_Succeeded_LinksPaymentAn
 			suite.Equal("Payment captured by Stripe", *note)
 			return nil
 		}).Times(1)
+	suite.transactionRepo.EXPECT().Get(gomock.Any(), "ac_test", gomock.Any()).
+		DoAndReturn(func(_ context.Context, _, txID string) (*domain.Transaction, *apierror.APIError) {
+			return &domain.Transaction{ID: txID, Number: "1001", AmountValue: "20"}, nil
+		}).Times(1)
 
 	suite.Nil(suite.svc.ProcessAccountStripeWebhook(context.Background(), "ac_test", []byte("{}"), "sig_test"))
+
+	audits := suite.outbox.published(contracts.PlatformEventAuditLogged)
+	suite.Require().Len(audits, 2)
+	var created audit.PublishedEvent
+	suite.Require().NoError(json.Unmarshal(audits[1].Payload.Data, &created))
+	suite.requireStripeAudits("sales_order update or_1", "transaction create "+created.ResourceID)
+	var linked audit.PublishedEvent
+	suite.Require().NoError(json.Unmarshal(audits[0].Payload.Data, &linked))
+	suite.Require().Len(linked.Changes, 1)
+	suite.Equal("payment_intent_ids", linked.Changes[0].Field)
+	suite.JSONEq(`[]`, string(linked.Changes[0].OldValue))
+	suite.JSONEq(`["pi_test"]`, string(linked.Changes[0].NewValue))
 }
 
 func (suite *SalesOrderSvcTestSuite) TestAccountWebhook_Succeeded_NoOrderMetadataAcked() {
@@ -190,7 +254,7 @@ func (suite *SalesOrderSvcTestSuite) TestAccountWebhook_Succeeded_RedeliveryBack
 	suite.orderRepo.EXPECT().Get(gomock.Any(), "ac_test", "or_1").
 		Return(&domain.SalesOrder{ID: "or_1", BuyerAccountID: "ac_buyer"}, nil).Times(1)
 
-	// Already linked: RecordOrderPayment skips, but the transaction is still recorded if
+	// Already linked: the link is skipped, but the transaction is still recorded if
 	// missing (covers events replayed after the transaction path shipped).
 	suite.opiRepo.EXPECT().FindByPaymentIntentID(gomock.Any(), "pi_test").
 		Return(&domain.OrderPaymentIntent{ID: "orpyie_1", PaymentIntentID: "pi_test", SalesOrderID: "or_1"}, nil).Times(1)
@@ -201,8 +265,11 @@ func (suite *SalesOrderSvcTestSuite) TestAccountWebhook_Succeeded_RedeliveryBack
 	suite.transactionRepo.EXPECT().
 		Create(gomock.Any(), gomock.Any(), "1002", string(constants.TransactionTypePayment), "ac_test", "ac_buyer", gomock.Any(), gomock.Any(), gomock.Nil(), gomock.Nil(), gomock.Any(), "20", "un_dollar", gomock.Nil(), gomock.Nil()).
 		Return(nil).Times(1)
+	suite.transactionRepo.EXPECT().Get(gomock.Any(), "ac_test", gomock.Any()).
+		Return(&domain.Transaction{ID: "tr_new"}, nil).Times(1)
 
 	suite.Nil(suite.svc.ProcessAccountStripeWebhook(context.Background(), "ac_test", []byte("{}"), "sig_test"))
+	suite.requireStripeAudits("transaction create tr_new")
 }
 
 func (suite *SalesOrderSvcTestSuite) TestAccountWebhook_Succeeded_FullRedeliveryIsIdempotent() {
@@ -219,6 +286,7 @@ func (suite *SalesOrderSvcTestSuite) TestAccountWebhook_Succeeded_FullRedelivery
 		Return(&domain.TransactionRecord{ID: "tr_1", Number: "1001", AmountID: "qt_1"}, nil).Times(1)
 
 	suite.Nil(suite.svc.ProcessAccountStripeWebhook(context.Background(), "ac_test", []byte("{}"), "sig_test"))
+	suite.requireStripeAudits()
 }
 
 func (suite *SalesOrderSvcTestSuite) TestAccountWebhook_Succeeded_CustomerMismatchLinksWithoutTransaction() {
@@ -232,8 +300,10 @@ func (suite *SalesOrderSvcTestSuite) TestAccountWebhook_Succeeded_CustomerMismat
 		Return(&domain.SalesOrder{ID: "or_1", BuyerAccountID: "ac_buyer"}, nil).Times(1)
 	suite.opiRepo.EXPECT().FindByPaymentIntentID(gomock.Any(), "pi_test").Return(nil, nil).Times(1)
 	suite.opiRepo.EXPECT().Create(gomock.Any(), gomock.Any(), "pi_test", "or_1").Return(nil).Times(1)
+	suite.expectOrderPaymentIntents("or_1", nil, []string{"pi_test"})
 
 	suite.Nil(suite.svc.ProcessAccountStripeWebhook(context.Background(), "ac_test", []byte("{}"), "sig_test"))
+	suite.requireStripeAudits("sales_order update or_1")
 }
 
 func (suite *SalesOrderSvcTestSuite) TestAccountWebhook_Succeeded_NoCustomerMetadataLinksWithoutTransaction() {
@@ -244,6 +314,7 @@ func (suite *SalesOrderSvcTestSuite) TestAccountWebhook_Succeeded_NoCustomerMeta
 		Return(&domain.SalesOrder{ID: "or_1", BuyerAccountID: "ac_buyer"}, nil).Times(1)
 	suite.opiRepo.EXPECT().FindByPaymentIntentID(gomock.Any(), "pi_test").Return(nil, nil).Times(1)
 	suite.opiRepo.EXPECT().Create(gomock.Any(), gomock.Any(), "pi_test", "or_1").Return(nil).Times(1)
+	suite.expectOrderPaymentIntents("or_1", []string{"pi_earlier"}, []string{"pi_earlier", "pi_test"})
 
 	suite.Nil(suite.svc.ProcessAccountStripeWebhook(context.Background(), "ac_test", []byte("{}"), "sig_test"))
 }
@@ -256,6 +327,7 @@ func (suite *SalesOrderSvcTestSuite) TestAccountWebhook_Succeeded_TransactionCre
 		Return(&domain.SalesOrder{ID: "or_1", BuyerAccountID: "ac_buyer"}, nil).Times(1)
 	suite.opiRepo.EXPECT().FindByPaymentIntentID(gomock.Any(), "pi_test").Return(nil, nil).Times(1)
 	suite.opiRepo.EXPECT().Create(gomock.Any(), gomock.Any(), "pi_test", "or_1").Return(nil).Times(1)
+	suite.expectOrderPaymentIntents("or_1", nil, []string{"pi_test"})
 	suite.transactionRepo.EXPECT().FindByStripePaymentID(gomock.Any(), "pi_test").Return(nil, nil).Times(1)
 	suite.transactionRepo.EXPECT().FetchAndIncrementTransactionNumber(gomock.Any(), "ac_test").
 		Return("", apierror.NewInternalError(nil, "lock timeout")).Times(1)
@@ -271,17 +343,44 @@ func (suite *SalesOrderSvcTestSuite) TestAccountWebhook_PaymentFailed_MarksTrans
 	suite.expectStripeWebhookCreds("ac_test")
 	suite.expectWebhookEvent(&domain.StripeWebhookEvent{ID: "evt_1", Type: "payment_intent.payment_failed"}, webhookPaymentIntent("or_1", "ac_buyer"))
 
-	suite.transactionRepo.EXPECT().FindByStripePaymentID(gomock.Any(), "pi_test").
-		Return(&domain.TransactionRecord{ID: "tr_1", Number: "1001", AmountID: "qt_1"}, nil).Times(1)
+	suite.expectStripeTransaction(stripeTransactionFixture("Payment captured by Stripe"), []*domain.TransactionAllocation{{ID: "ta_1", TransactionID: "tr_1", InvoiceID: "in_1", AmountValue: "20"}})
 	// The transaction survives (with a failure note) but its allocations and the order
 	// link are unwound — mirroring the legacy webhook exactly.
 	suite.transactionRepo.EXPECT().UpdateNote(gomock.Any(), "tr_1", "Payment failed in Stripe").Return(nil).Times(1)
 	suite.transactionRepo.EXPECT().DeleteAllocations(gomock.Any(), "tr_1").Return(nil).Times(1)
+	suite.transactionRepo.EXPECT().Get(gomock.Any(), "ac_test", "tr_1").Return(stripeTransactionFixture("Payment failed in Stripe"), nil).Times(1)
+	suite.deletedRecordRepo.EXPECT().
+		CreateInAccount(gomock.Any(), constants.DeletedRecordResourceTypeTransactionAllocation, "ta_1", "ac_test", gomock.Any()).Return(nil).Times(1)
+	suite.paymentFlagsMed.EXPECT().Enqueue(gomock.Any(), "ac_test", []string{"tr_1"}, []string{"in_1"}).Return(nil).Times(1)
 	suite.opiRepo.EXPECT().FindByPaymentIntentID(gomock.Any(), "pi_test").
 		Return(&domain.OrderPaymentIntent{ID: "orpyie_1", PaymentIntentID: "pi_test", SalesOrderID: "or_1"}, nil).Times(1)
+	suite.expectOrderPaymentIntents("or_1", []string{"pi_test"}, nil)
 	suite.opiRepo.EXPECT().Delete(gomock.Any(), "orpyie_1").Return(nil).Times(1)
 
 	suite.Nil(suite.svc.ProcessAccountStripeWebhook(context.Background(), "ac_test", []byte("{}"), "sig_test"))
+
+	audits := suite.requireStripeAudits("transaction update tr_1", "transaction_allocation delete ta_1", "sales_order update or_1")
+	for _, a := range audits {
+		if a.event.ResourceType == constants.ObjectTypeTransaction {
+			suite.Require().Len(a.event.Changes, 1)
+			suite.Equal("note", a.event.Changes[0].Field)
+			suite.JSONEq(`"Payment failed in Stripe"`, string(a.event.Changes[0].NewValue))
+		}
+	}
+}
+
+// A transaction the payment intent points at in another account is left alone: the event can only speak for its own account.
+func (suite *SalesOrderSvcTestSuite) TestAccountWebhook_PaymentFailed_OtherAccountsTransactionIsSkipped() {
+	suite.expectStripeWebhookCreds("ac_test")
+	suite.expectWebhookEvent(&domain.StripeWebhookEvent{ID: "evt_1", Type: "payment_intent.payment_failed"}, webhookPaymentIntent("or_1", "ac_buyer"))
+
+	suite.transactionRepo.EXPECT().FindByStripePaymentID(gomock.Any(), "pi_test").
+		Return(&domain.TransactionRecord{ID: "tr_1", Number: "1001", AmountID: "qt_1"}, nil).Times(1)
+	suite.transactionRepo.EXPECT().Get(gomock.Any(), "ac_test", "tr_1").
+		Return(nil, apierror.NewResourceNotFoundError("Transaction not found.")).Times(1)
+
+	suite.Nil(suite.svc.ProcessAccountStripeWebhook(context.Background(), "ac_test", []byte("{}"), "sig_test"))
+	suite.requireStripeAudits()
 }
 
 func (suite *SalesOrderSvcTestSuite) TestAccountWebhook_PaymentFailed_NoTransactionIsNoop() {
@@ -299,13 +398,15 @@ func (suite *SalesOrderSvcTestSuite) TestAccountWebhook_PaymentFailed_NoLinkStil
 	suite.expectStripeWebhookCreds("ac_test")
 	suite.expectWebhookEvent(&domain.StripeWebhookEvent{ID: "evt_1", Type: "payment_intent.payment_failed"}, webhookPaymentIntent("or_1", "ac_buyer"))
 
-	suite.transactionRepo.EXPECT().FindByStripePaymentID(gomock.Any(), "pi_test").
-		Return(&domain.TransactionRecord{ID: "tr_1", Number: "1001", AmountID: "qt_1"}, nil).Times(1)
+	suite.expectStripeTransaction(stripeTransactionFixture("Payment captured by Stripe"), nil)
 	suite.transactionRepo.EXPECT().UpdateNote(gomock.Any(), "tr_1", "Payment failed in Stripe").Return(nil).Times(1)
 	suite.transactionRepo.EXPECT().DeleteAllocations(gomock.Any(), "tr_1").Return(nil).Times(1)
+	suite.transactionRepo.EXPECT().Get(gomock.Any(), "ac_test", "tr_1").Return(stripeTransactionFixture("Payment failed in Stripe"), nil).Times(1)
+	suite.paymentFlagsMed.EXPECT().Enqueue(gomock.Any(), "ac_test", []string{"tr_1"}, []string{}).Return(nil).Times(1)
 	suite.opiRepo.EXPECT().FindByPaymentIntentID(gomock.Any(), "pi_test").Return(nil, nil).Times(1)
 
 	suite.Nil(suite.svc.ProcessAccountStripeWebhook(context.Background(), "ac_test", []byte("{}"), "sig_test"))
+	suite.requireStripeAudits("transaction update tr_1")
 }
 
 // --- payment_intent.canceled ---
@@ -314,18 +415,24 @@ func (suite *SalesOrderSvcTestSuite) TestAccountWebhook_Canceled_DeletesTransact
 	suite.expectStripeWebhookCreds("ac_test")
 	suite.expectWebhookEvent(&domain.StripeWebhookEvent{ID: "evt_1", Type: "payment_intent.canceled"}, webhookPaymentIntent("or_1", "ac_buyer"))
 
-	suite.transactionRepo.EXPECT().FindByStripePaymentID(gomock.Any(), "pi_test").
-		Return(&domain.TransactionRecord{ID: "tr_1", Number: "1001", AmountID: "qt_1"}, nil).Times(1)
+	suite.expectStripeTransaction(stripeTransactionFixture("Payment captured by Stripe"), []*domain.TransactionAllocation{{ID: "ta_1", TransactionID: "tr_1", InvoiceID: "in_1", AmountValue: "20"}})
 	// Unlike a failure, a cancellation removes the transaction entirely: allocations
 	// first (FK), then the transaction, then its amount quantity, then the order link.
+	suite.deletedRecordRepo.EXPECT().
+		CreateInAccount(gomock.Any(), constants.DeletedRecordResourceTypeTransaction, "tr_1", "ac_test", gomock.Any()).Return(nil).Times(1)
+	suite.deletedRecordRepo.EXPECT().
+		CreateInAccount(gomock.Any(), constants.DeletedRecordResourceTypeTransactionAllocation, "ta_1", "ac_test", gomock.Any()).Return(nil).Times(1)
+	suite.paymentFlagsMed.EXPECT().Enqueue(gomock.Any(), "ac_test", []string{"tr_1"}, []string{"in_1"}).Return(nil).Times(1)
 	deleteAllocations := suite.transactionRepo.EXPECT().DeleteAllocations(gomock.Any(), "tr_1").Return(nil).Times(1)
 	deleteTx := suite.transactionRepo.EXPECT().Delete(gomock.Any(), "tr_1").Return(nil).Times(1).After(deleteAllocations)
 	suite.transactionRepo.EXPECT().DeleteQuantity(gomock.Any(), "qt_1").Return(nil).Times(1).After(deleteTx)
 	suite.opiRepo.EXPECT().FindByPaymentIntentID(gomock.Any(), "pi_test").
 		Return(&domain.OrderPaymentIntent{ID: "orpyie_1", PaymentIntentID: "pi_test", SalesOrderID: "or_1"}, nil).Times(1)
+	suite.expectOrderPaymentIntents("or_1", []string{"pi_test"}, nil)
 	suite.opiRepo.EXPECT().Delete(gomock.Any(), "orpyie_1").Return(nil).Times(1)
 
 	suite.Nil(suite.svc.ProcessAccountStripeWebhook(context.Background(), "ac_test", []byte("{}"), "sig_test"))
+	suite.requireStripeAudits("transaction_allocation delete ta_1", "transaction delete tr_1", "sales_order update or_1")
 }
 
 func (suite *SalesOrderSvcTestSuite) TestAccountWebhook_Canceled_NoTransactionIsNoop() {
@@ -364,11 +471,68 @@ func (suite *SalesOrderSvcTestSuite) TestReconcileAccountStripePayout_StampsFund
 
 	suite.checkoutClient.EXPECT().ListPayoutPaymentIntentIDs(gomock.Any(), "po_test").
 		Return([]string{"pi_a", "pi_b"}, nil).Times(1)
+	suite.transactionRepo.EXPECT().LockIDsByStripePaymentIDs(gomock.Any(), "ac_test", []string{"pi_a", "pi_b"}).
+		Return([]string{"tr_a", "tr_b"}, nil).Times(1)
+	landed := time.Unix(arrival, 0)
+	suite.transactionRepo.EXPECT().GetByIDs(gomock.Any(), "ac_test", []string{"tr_a", "tr_b"}).
+		Return([]*domain.Transaction{{ID: "tr_a"}, {ID: "tr_b", FundsReceivedAt: &landed}}, nil).Times(1)
 	suite.transactionRepo.EXPECT().
-		UpdateFundsReceivedByStripePaymentIDs(gomock.Any(), "ac_test", []string{"pi_a", "pi_b"}, time.Unix(arrival, 0)).
+		UpdateFundsReceivedByStripePaymentIDs(gomock.Any(), "ac_test", []string{"pi_a", "pi_b"}, landed).
 		Return(nil).Times(1)
+	suite.transactionRepo.EXPECT().GetByIDs(gomock.Any(), "ac_test", []string{"tr_a", "tr_b"}).
+		Return([]*domain.Transaction{{ID: "tr_a", FundsReceivedAt: &landed}, {ID: "tr_b", FundsReceivedAt: &landed}}, nil).Times(1)
 
 	suite.Nil(suite.svc.ReconcileAccountStripePayout(context.Background(), "ac_test", rawPayout))
+
+	// tr_b already carried this payout's date (a redelivery), so only tr_a changed.
+	audits := suite.requireStripeAudits("transaction update tr_a")
+	suite.Require().Len(audits[0].event.Changes, 1)
+	suite.Equal("funds_received_at", audits[0].event.Changes[0].Field)
+}
+
+func (suite *SalesOrderSvcTestSuite) TestReconcileAccountStripePayout_NoRecordedTransactionsIsNoop() {
+	suite.expectStripeWebhookCreds("ac_test")
+	rawPayout, _ := json.Marshal(map[string]any{"id": "po_test", "arrival_date": 1783500000})
+
+	suite.checkoutClient.EXPECT().ListPayoutPaymentIntentIDs(gomock.Any(), "po_test").
+		Return([]string{"pi_elsewhere"}, nil).Times(1)
+	suite.transactionRepo.EXPECT().LockIDsByStripePaymentIDs(gomock.Any(), "ac_test", []string{"pi_elsewhere"}).
+		Return(nil, nil).Times(1)
+
+	suite.Nil(suite.svc.ReconcileAccountStripePayout(context.Background(), "ac_test", rawPayout))
+	suite.requireStripeAudits()
+}
+
+// --- RecordOrderPayment (platform checkout webhook, via billing-service) ---
+
+// The platform webhook names only the order, so the order's own account is the one the link is audited on.
+func (suite *SalesOrderSvcTestSuite) TestRecordOrderPayment_LinksAndAuditsOnTheOrdersAccount() {
+	suite.opiRepo.EXPECT().GetOrderAccountID(gomock.Any(), "or_1").Return("ac_test", nil).Times(1)
+	suite.opiRepo.EXPECT().FindByPaymentIntentID(gomock.Any(), "pi_test").Return(nil, nil).Times(1)
+	suite.opiRepo.EXPECT().Create(gomock.Any(), gomock.Any(), "pi_test", "or_1").Return(nil).Times(1)
+	suite.expectOrderPaymentIntents("or_1", nil, []string{"pi_test"})
+
+	suite.Nil(suite.svc.RecordOrderPayment(context.Background(), "or_1", "pi_test"))
+	suite.requireStripeAudits("sales_order update or_1")
+}
+
+func (suite *SalesOrderSvcTestSuite) TestRecordOrderPayment_AlreadyLinkedWritesNothing() {
+	suite.opiRepo.EXPECT().GetOrderAccountID(gomock.Any(), "or_1").Return("ac_test", nil).Times(1)
+	suite.opiRepo.EXPECT().FindByPaymentIntentID(gomock.Any(), "pi_test").
+		Return(&domain.OrderPaymentIntent{ID: "orpyie_1", PaymentIntentID: "pi_test", SalesOrderID: "or_1"}, nil).Times(1)
+
+	suite.Nil(suite.svc.RecordOrderPayment(context.Background(), "or_1", "pi_test"))
+	suite.requireStripeAudits()
+}
+
+func (suite *SalesOrderSvcTestSuite) TestRecordOrderPayment_UnknownOrderIsNotFound() {
+	suite.opiRepo.EXPECT().GetOrderAccountID(gomock.Any(), "or_missing").
+		Return("", apierror.NewResourceNotFoundError("Sales order not found.")).Times(1)
+
+	apiErr := suite.svc.RecordOrderPayment(context.Background(), "or_missing", "pi_test")
+	suite.Require().NotNil(apiErr)
+	suite.Equal(apierror.ErrorCodeResourceNotFound, apiErr.Code)
+	suite.requireStripeAudits()
 }
 
 func (suite *SalesOrderSvcTestSuite) TestReconcileAccountStripePayout_NoFundedPaymentsIsNoop() {

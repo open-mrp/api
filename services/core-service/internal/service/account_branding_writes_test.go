@@ -8,6 +8,7 @@ import (
 
 	"github.com/open-mrp/api/services/auth-service/pkg/types"
 	"github.com/open-mrp/api/services/core-service/internal/domain"
+	factorymock "github.com/open-mrp/api/services/core-service/internal/domain/mock/factory"
 	repositorymock "github.com/open-mrp/api/services/core-service/internal/domain/mock/repository"
 	"github.com/open-mrp/api/shared/appctx"
 	"github.com/open-mrp/api/shared/audit"
@@ -140,25 +141,39 @@ func TestAccountSvc_BrandingUploadsStoreOnlyImages(t *testing.T) {
 			accountRepo := repositorymock.NewMockAccountRepo(ctrl)
 			accountRepo.EXPECT().UpdateBrandingLogoURL(gomock.Any(), accountID, tc.key).Return(nil).AnyTimes()
 			accountRepo.EXPECT().UpdateBrandingFaviconURL(gomock.Any(), accountID, tc.key).Return(nil).AnyTimes()
+			accountRepo.EXPECT().GetByID(gomock.Any(), accountID).Return(&domain.Account{ID: accountID}, nil).AnyTimes()
+			outbox := &subscriptionOutboxRepo{}
+			repos := factorymock.NewMockRepoFactory(ctrl)
+			repos.EXPECT().NewAccountRepo().Return(accountRepo).AnyTimes()
+			repos.EXPECT().NewAccountUserRepo().Return(repositorymock.NewMockAccountUserRepo(ctrl)).AnyTimes()
+			repos.EXPECT().NewAccountRelationRepo().Return(repositorymock.NewMockAccountRelationRepo(ctrl)).AnyTimes()
+			repos.EXPECT().NewRolePermissionRepo().Return(repositorymock.NewMockRolePermissionRepo(ctrl)).AnyTimes()
+			repos.EXPECT().NewRoleRepo().Return(repositorymock.NewMockRoleRepo(ctrl)).AnyTimes()
+			repos.EXPECT().NewOutboxRepo().Return(outbox).AnyTimes()
 			store := &recordingStore{}
-			svc := &accountSvcImpl{accountRepo: accountRepo, s3Client: store, accountPhotosBucket: "account-photos"}
+			svc := &accountSvcImpl{accountRepo: accountRepo, repos: repos, txManager: &stubTxManager{factory: repos}, s3Client: store, accountPhotosBucket: "account-photos"}
 
 			for name, body := range tc.refuse {
 				if apiErr := tc.upload(svc, body); apiErr == nil || apierror.GetHTTPStatusCode(apiErr.Code) != 400 {
 					t.Errorf("%s: got %v, want a 400", name, apiErr)
 				}
 			}
-			if len(store.uploads) != 0 {
-				t.Fatalf("refused uploads must store nothing, got %v", store.uploads)
+			if len(store.uploads) != 0 || len(outbox.created) != 0 {
+				t.Fatalf("refused uploads must store and audit nothing, got %v and %d events", store.uploads, len(outbox.created))
 			}
 
 			for contentType, body := range tc.accept {
 				store.uploads = nil
+				outbox.created = nil
 				if apiErr := tc.upload(svc, body); apiErr != nil {
 					t.Fatalf("%s: %v", contentType, apiErr)
 				}
 				if want := tc.key + " " + contentType; len(store.uploads) != 1 || store.uploads[0] != want {
 					t.Errorf("uploads = %v, want [%s]", store.uploads, want)
+				}
+				// The stub account's branding never changes, so this is the re-upload case: no diff, still one event.
+				if len(outbox.created) != 1 {
+					t.Errorf("%s: a stored upload must publish one audit event, got %d", contentType, len(outbox.created))
 				}
 			}
 		})

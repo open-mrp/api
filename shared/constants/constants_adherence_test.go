@@ -142,6 +142,7 @@ var typeRegistry = map[string]any{
 
 	"AccountPlanLimitKey":             AccountPlanLimitKey(""),
 	"ActorType":                       ActorType(""),
+	"SystemActor":                     SystemActor(""),
 	"RecordType":                      RecordType(""),
 	"HTTPMethod":                      HTTPMethod(""),
 	"CommissionPolicy":                CommissionPolicy(""),

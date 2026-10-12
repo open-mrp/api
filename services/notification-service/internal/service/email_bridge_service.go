@@ -7,6 +7,8 @@ import (
 
 	"github.com/open-mrp/api/services/notification-service/internal/domain"
 	"github.com/open-mrp/api/shared/appctx"
+	"github.com/open-mrp/api/shared/audit"
+	"github.com/open-mrp/api/shared/constants"
 	apierror "github.com/open-mrp/api/shared/errors"
 	"github.com/open-mrp/api/shared/id"
 	"github.com/open-mrp/api/shared/tracing"
@@ -16,12 +18,23 @@ var emailBridgeSvcTracer = tracing.GetTracer("notification-service.email_bridge_
 
 type emailBridgeSvcImpl struct {
 	repoFactory      domain.RepoFactory
+	txManager        TransactionManager
 	identityProvider domain.EmailIdentityProvider
 }
 
-// NewEmailBridgeSvc constructs the email-bridge service from a repo factory and the SES identity provider.
-func NewEmailBridgeSvc(repoFactory domain.RepoFactory, identityProvider domain.EmailIdentityProvider) domain.EmailBridgeSvc {
-	return &emailBridgeSvcImpl{repoFactory: repoFactory, identityProvider: identityProvider}
+// NewEmailBridgeSvc constructs the email-bridge service from a repo factory, a transaction manager and the SES identity provider.
+func NewEmailBridgeSvc(repoFactory domain.RepoFactory, txManager TransactionManager, identityProvider domain.EmailIdentityProvider) domain.EmailBridgeSvc {
+	return &emailBridgeSvcImpl{repoFactory: repoFactory, txManager: txManager, identityProvider: identityProvider}
+}
+
+func publishEmailBridgeAudit(ctx context.Context, f domain.RepoFactory, action constants.AuditAction, resourceType constants.ObjectType, resourceID string, changes []audit.FieldChange) *apierror.APIError {
+	return audit.NewPublisher().Publish(ctx, f.NewOutboxRepo(), audit.EventData{
+		ServiceName:  domain.ServiceName,
+		Action:       action,
+		ResourceType: resourceType,
+		ResourceID:   resourceID,
+		Changes:      changes,
+	})
 }
 
 // accountID resolves the caller's acting account from the request identity, and is the sole authorization point for every email-bridge operation: registering and verifying domains, provisioning inboxes, and choosing the address customer-facing mail is sent from.
@@ -51,10 +64,10 @@ func (s *emailBridgeSvcImpl) readAccountID(ctx context.Context) (string, *apierr
 	return s.accountID(ctx)
 }
 
-// ensureMailFromDomain points the identity's envelope Return-Path at a subdomain the customer controls and records which subdomain was chosen. DKIM alone leaves the Return-Path on amazonses.com, and mail clients annotate a sender whose Return-Path domain does not match its From domain — so without this a merchant's mail arrives as "orders@theirdomain.com via amazonses.com" however well it is signed.
+// ensureMailFromDomain points the identity's envelope Return-Path at a subdomain the customer controls. DKIM alone leaves the Return-Path on amazonses.com, and mail clients annotate a sender whose Return-Path domain does not match its From domain — so without this a merchant's mail arrives as "orders@theirdomain.com via amazonses.com" however well it is signed.
 //
-// A no-op once one is configured. The SES call is best-effort: SES falls back to the default Return-Path until the customer publishes the records, so a failure here costs the annotation rather than the domain. Both CreateDomain and VerifyDomain route through here, so a domain that missed it — registered before this existed, or failed at creation — is repaired by verifying again. Failing to persist the result is NOT swallowed: that would leave SES and the database disagreeing about which subdomain the customer has to publish.
-func (s *emailBridgeSvcImpl) ensureMailFromDomain(ctx context.Context, domainID, accountID, domainName string, existing *string) *apierror.APIError {
+// It returns the subdomain the caller must record, or nil when one is already configured or SES refused. The SES call is best-effort: SES falls back to the default Return-Path until the customer publishes the records, so a failure here costs the annotation rather than the domain. Both CreateDomain and VerifyDomain route through here, so a domain that missed it — registered before this existed, or failed at creation — is repaired by verifying again. Callers must not swallow a failure to record it: that would leave SES and the database disagreeing about which subdomain the customer has to publish.
+func (s *emailBridgeSvcImpl) ensureMailFromDomain(ctx context.Context, domainName string, existing *string) *string {
 	if existing != nil && *existing != "" {
 		return nil
 	}
@@ -62,7 +75,7 @@ func (s *emailBridgeSvcImpl) ensureMailFromDomain(ctx context.Context, domainID,
 	if apiErr != nil {
 		return nil
 	}
-	return s.repoFactory.NewEmailDomainRepo().SetMailFromDomain(ctx, domainID, accountID, records.Subdomain)
+	return &records.Subdomain
 }
 
 // reloadDomain re-reads a domain and renders its DNS records. Verify writes to the row before returning it (marking it verified, configuring MAIL FROM), so the copy read at the top of the call is already stale.
@@ -104,23 +117,33 @@ func (s *emailBridgeSvcImpl) CreateDomain(ctx context.Context, domainName string
 	if apiErr != nil {
 		return nil, tracing.Trace(span, apiErr)
 	}
+	mailFrom := s.ensureMailFromDomain(ctx, domainName, nil)
 
 	domainID, apiErr := id.GenID(id.EmailDomainIDPrefix, nil)
 	if apiErr != nil {
 		return nil, tracing.Trace(span, apiErr)
 	}
-	if apiErr := s.repoFactory.NewEmailDomainRepo().Create(ctx, domainID, accountID, &domain.CreateEmailDomainInput{
-		Domain:     domainName,
-		DkimTokens: dkimTokens,
-	}); apiErr != nil {
-		return nil, tracing.Trace(span, apiErr)
-	}
-
-	if apiErr := s.ensureMailFromDomain(ctx, domainID, accountID, domainName, nil); apiErr != nil {
-		return nil, tracing.Trace(span, apiErr)
-	}
-
-	dom, apiErr := s.repoFactory.NewEmailDomainRepo().GetByID(ctx, domainID, accountID)
+	var dom *domain.EmailDomain
+	apiErr = s.txManager.WithTx(ctx, func(txCtx context.Context, f domain.RepoFactory) *apierror.APIError {
+		repo := f.NewEmailDomainRepo()
+		if apiErr := repo.Create(txCtx, domainID, accountID, &domain.CreateEmailDomainInput{
+			Domain:     domainName,
+			DkimTokens: dkimTokens,
+		}); apiErr != nil {
+			return apiErr
+		}
+		if mailFrom != nil {
+			if apiErr := repo.SetMailFromDomain(txCtx, domainID, accountID, *mailFrom); apiErr != nil {
+				return apiErr
+			}
+		}
+		created, apiErr := repo.GetByID(txCtx, domainID, accountID)
+		if apiErr != nil {
+			return apiErr
+		}
+		dom = created
+		return publishEmailBridgeAudit(txCtx, f, constants.AuditActionCreate, constants.ObjectTypeEmailDomain, domainID, audit.ComputeChanges(nil, created))
+	})
 	if apiErr != nil {
 		return nil, tracing.Trace(span, apiErr)
 	}
@@ -172,24 +195,43 @@ func (s *emailBridgeSvcImpl) VerifyDomain(ctx context.Context, domainID string) 
 	// Verify doubles as the repair path for the best-effort MAIL FROM setup in CreateDomain: a domain
 	// registered before custom MAIL FROM existed, or one whose SES call failed at creation, would
 	// otherwise keep the amazonses.com Return-Path forever with no way to fix it through the API.
-	if apiErr := s.ensureMailFromDomain(ctx, domainID, accountID, dom.Domain, dom.MailFromDomain); apiErr != nil {
-		return nil, tracing.Trace(span, apiErr)
-	}
+	mailFrom := s.ensureMailFromDomain(ctx, dom.Domain, dom.MailFromDomain)
 
-	if dom.Status == domain.EmailDomainStatusVerified {
+	markVerified := false
+	if dom.Status != domain.EmailDomainStatusVerified {
+		markVerified, apiErr = s.identityProvider.DomainVerified(ctx, dom.Domain)
+		if apiErr != nil {
+			return nil, tracing.Trace(span, apiErr)
+		}
+	}
+	if mailFrom == nil && !markVerified {
 		return s.reloadDomain(ctx, domainID, accountID)
 	}
-	verified, apiErr := s.identityProvider.DomainVerified(ctx, dom.Domain)
+
+	var verifiedDom *domain.EmailDomain
+	apiErr = s.txManager.WithTx(ctx, func(txCtx context.Context, f domain.RepoFactory) *apierror.APIError {
+		repo := f.NewEmailDomainRepo()
+		if mailFrom != nil {
+			if apiErr := repo.SetMailFromDomain(txCtx, domainID, accountID, *mailFrom); apiErr != nil {
+				return apiErr
+			}
+		}
+		if markVerified {
+			if apiErr := repo.MarkVerified(txCtx, domainID, accountID); apiErr != nil {
+				return apiErr
+			}
+		}
+		after, apiErr := repo.GetByID(txCtx, domainID, accountID)
+		if apiErr != nil {
+			return apiErr
+		}
+		verifiedDom = after
+		return publishEmailBridgeAudit(txCtx, f, constants.AuditActionUpdate, constants.ObjectTypeEmailDomain, domainID, audit.ComputeChanges(dom, after))
+	})
 	if apiErr != nil {
 		return nil, tracing.Trace(span, apiErr)
 	}
-	if !verified {
-		return s.reloadDomain(ctx, domainID, accountID)
-	}
-	if apiErr := s.repoFactory.NewEmailDomainRepo().MarkVerified(ctx, domainID, accountID); apiErr != nil {
-		return nil, tracing.Trace(span, apiErr)
-	}
-	return s.reloadDomain(ctx, domainID, accountID)
+	return s.withMailFromRecords(verifiedDom), nil
 }
 
 func (s *emailBridgeSvcImpl) DeleteDomain(ctx context.Context, domainID string) *apierror.APIError {
@@ -221,19 +263,40 @@ func (s *emailBridgeSvcImpl) DeleteDomain(ctx context.Context, domainID string) 
 		return tracing.Trace(span, apiErr)
 	}
 
-	// A sender bound to this domain would otherwise survive it and resolve to an address SES no longer knows, failing every merchant send instead of falling back to the platform address.
-	if _, apiErr := s.repoFactory.NewAccountEmailSenderRepo().DeleteByDomain(ctx, domainID, accountID); apiErr != nil {
-		return tracing.Trace(span, apiErr)
-	}
-
-	deleted, apiErr := s.repoFactory.NewEmailDomainRepo().Delete(ctx, domainID, accountID)
+	apiErr = s.txManager.WithTx(ctx, func(txCtx context.Context, f domain.RepoFactory) *apierror.APIError {
+		if apiErr := deleteDomainSender(txCtx, f, domainID, accountID); apiErr != nil {
+			return apiErr
+		}
+		deleted, apiErr := f.NewEmailDomainRepo().Delete(txCtx, domainID, accountID)
+		if apiErr != nil {
+			return apiErr
+		}
+		if !deleted {
+			return apierror.NewResourceNotFoundError("Email domain not found.")
+		}
+		return publishEmailBridgeAudit(txCtx, f, constants.AuditActionDelete, constants.ObjectTypeEmailDomain, domainID, audit.ComputeChanges(dom, (*domain.EmailDomain)(nil)))
+	})
 	if apiErr != nil {
 		return tracing.Trace(span, apiErr)
 	}
-	if !deleted {
-		return tracing.Trace(span, apierror.NewResourceNotFoundError("Email domain not found."))
-	}
 	return nil
+}
+
+// deleteDomainSender removes the account's sender when it is bound to the domain being deleted. Left in place it would resolve to an address SES no longer knows, failing every merchant send instead of falling back to the platform address.
+func deleteDomainSender(ctx context.Context, f domain.RepoFactory, domainID, accountID string) *apierror.APIError {
+	senderRepo := f.NewAccountEmailSenderRepo()
+	sender, apiErr := senderRepo.GetByAccount(ctx, accountID)
+	if apiErr != nil {
+		return apiErr
+	}
+	deleted, apiErr := senderRepo.DeleteByDomain(ctx, domainID, accountID)
+	if apiErr != nil {
+		return apiErr
+	}
+	if !deleted || sender == nil || sender.EmailDomainID != domainID {
+		return nil
+	}
+	return publishEmailBridgeAudit(ctx, f, constants.AuditActionDelete, constants.ObjectTypeEmailSender, sender.ID, audit.ComputeChanges(sender, (*domain.AccountEmailSender)(nil)))
 }
 
 func (s *emailBridgeSvcImpl) CreateInbox(ctx context.Context, input domain.CreateEmailInboxInput) (*domain.EmailInbox, *apierror.APIError) {
@@ -272,10 +335,23 @@ func (s *emailBridgeSvcImpl) CreateInbox(ctx context.Context, input domain.Creat
 	if apiErr != nil {
 		return nil, tracing.Trace(span, apiErr)
 	}
-	if apiErr := s.repoFactory.NewEmailInboxRepo().Create(ctx, inboxID, accountID, &input); apiErr != nil {
+	var inbox *domain.EmailInbox
+	apiErr = s.txManager.WithTx(ctx, func(txCtx context.Context, f domain.RepoFactory) *apierror.APIError {
+		repo := f.NewEmailInboxRepo()
+		if apiErr := repo.Create(txCtx, inboxID, accountID, &input); apiErr != nil {
+			return apiErr
+		}
+		created, apiErr := repo.GetByID(txCtx, inboxID, accountID)
+		if apiErr != nil {
+			return apiErr
+		}
+		inbox = created
+		return publishEmailBridgeAudit(txCtx, f, constants.AuditActionCreate, constants.ObjectTypeEmailInbox, inboxID, audit.ComputeChanges(nil, created))
+	})
+	if apiErr != nil {
 		return nil, tracing.Trace(span, apiErr)
 	}
-	return s.repoFactory.NewEmailInboxRepo().GetByID(ctx, inboxID, accountID)
+	return inbox, nil
 }
 
 func (s *emailBridgeSvcImpl) ListInboxes(ctx context.Context) ([]*domain.EmailInbox, *apierror.APIError) {
@@ -314,10 +390,27 @@ func (s *emailBridgeSvcImpl) UpdateInbox(ctx context.Context, inboxID string, in
 	if apiErr := s.validateInboxGroup(ctx, accountID, input.GroupID); apiErr != nil {
 		return nil, tracing.Trace(span, apiErr)
 	}
-	if apiErr := s.repoFactory.NewEmailInboxRepo().Update(ctx, inboxID, accountID, &input); apiErr != nil {
+	var inbox *domain.EmailInbox
+	apiErr = s.txManager.WithTx(ctx, func(txCtx context.Context, f domain.RepoFactory) *apierror.APIError {
+		repo := f.NewEmailInboxRepo()
+		before, apiErr := repo.GetByID(txCtx, inboxID, accountID)
+		if apiErr != nil {
+			return apiErr
+		}
+		if apiErr := repo.Update(txCtx, inboxID, accountID, &input); apiErr != nil {
+			return apiErr
+		}
+		after, apiErr := repo.GetByID(txCtx, inboxID, accountID)
+		if apiErr != nil {
+			return apiErr
+		}
+		inbox = after
+		return publishEmailBridgeAudit(txCtx, f, constants.AuditActionUpdate, constants.ObjectTypeEmailInbox, inboxID, audit.ComputeChanges(before, after))
+	})
+	if apiErr != nil {
 		return nil, tracing.Trace(span, apiErr)
 	}
-	return s.repoFactory.NewEmailInboxRepo().GetByID(ctx, inboxID, accountID)
+	return inbox, nil
 }
 
 // validateInboxGroup ensures a group_id set on an inbox names a roster the caller's account owns, so a new
@@ -343,12 +436,26 @@ func (s *emailBridgeSvcImpl) DeleteInbox(ctx context.Context, inboxID string) *a
 	if apiErr != nil {
 		return tracing.Trace(span, apiErr)
 	}
-	deleted, apiErr := s.repoFactory.NewEmailInboxRepo().Delete(ctx, inboxID, accountID)
+	apiErr = s.txManager.WithTx(ctx, func(txCtx context.Context, f domain.RepoFactory) *apierror.APIError {
+		repo := f.NewEmailInboxRepo()
+		existing, apiErr := repo.GetByID(txCtx, inboxID, accountID)
+		if apiErr != nil {
+			if apiErr.Code == apierror.ErrorCodeResourceNotFound {
+				return apierror.NewResourceNotFoundError("Email inbox not found.")
+			}
+			return apiErr
+		}
+		deleted, apiErr := repo.Delete(txCtx, inboxID, accountID)
+		if apiErr != nil {
+			return apiErr
+		}
+		if !deleted {
+			return apierror.NewResourceNotFoundError("Email inbox not found.")
+		}
+		return publishEmailBridgeAudit(txCtx, f, constants.AuditActionDelete, constants.ObjectTypeEmailInbox, inboxID, audit.ComputeChanges(existing, (*domain.EmailInbox)(nil)))
+	})
 	if apiErr != nil {
 		return tracing.Trace(span, apiErr)
-	}
-	if !deleted {
-		return tracing.Trace(span, apierror.NewResourceNotFoundError("Email inbox not found."))
 	}
 	return nil
 }
@@ -415,10 +522,35 @@ func (s *emailBridgeSvcImpl) SetSender(ctx context.Context, input domain.UpsertA
 	if apiErr != nil {
 		return nil, tracing.Trace(span, apiErr)
 	}
-	if apiErr := s.repoFactory.NewAccountEmailSenderRepo().Upsert(ctx, senderID, accountID, &input); apiErr != nil {
+	var sender *domain.AccountEmailSender
+	apiErr = s.txManager.WithTx(ctx, func(txCtx context.Context, f domain.RepoFactory) *apierror.APIError {
+		repo := f.NewAccountEmailSenderRepo()
+		before, apiErr := repo.GetByAccount(txCtx, accountID)
+		if apiErr != nil {
+			return apiErr
+		}
+		if apiErr := repo.Upsert(txCtx, senderID, accountID, &input); apiErr != nil {
+			return apiErr
+		}
+		after, apiErr := repo.GetByAccount(txCtx, accountID)
+		if apiErr != nil {
+			return apiErr
+		}
+		if after == nil {
+			return apierror.NewInvariantViolationError("The email sender was not found after it was saved.")
+		}
+		sender = after
+		// The upsert keeps an existing row's id, so a replacement reads as an update of the same sender.
+		action := constants.AuditActionUpdate
+		if before == nil {
+			action = constants.AuditActionCreate
+		}
+		return publishEmailBridgeAudit(txCtx, f, action, constants.ObjectTypeEmailSender, after.ID, audit.ComputeChanges(before, after))
+	})
+	if apiErr != nil {
 		return nil, tracing.Trace(span, apiErr)
 	}
-	return s.GetSender(ctx)
+	return sender, nil
 }
 
 func (s *emailBridgeSvcImpl) DeleteSender(ctx context.Context) *apierror.APIError {
@@ -428,12 +560,23 @@ func (s *emailBridgeSvcImpl) DeleteSender(ctx context.Context) *apierror.APIErro
 	if apiErr != nil {
 		return tracing.Trace(span, apiErr)
 	}
-	deleted, apiErr := s.repoFactory.NewAccountEmailSenderRepo().Delete(ctx, accountID)
+	apiErr = s.txManager.WithTx(ctx, func(txCtx context.Context, f domain.RepoFactory) *apierror.APIError {
+		repo := f.NewAccountEmailSenderRepo()
+		existing, apiErr := repo.GetByAccount(txCtx, accountID)
+		if apiErr != nil {
+			return apiErr
+		}
+		deleted, apiErr := repo.Delete(txCtx, accountID)
+		if apiErr != nil {
+			return apiErr
+		}
+		if !deleted || existing == nil {
+			return apierror.NewResourceNotFoundError("No email sender is configured for this account.")
+		}
+		return publishEmailBridgeAudit(txCtx, f, constants.AuditActionDelete, constants.ObjectTypeEmailSender, existing.ID, audit.ComputeChanges(existing, (*domain.AccountEmailSender)(nil)))
+	})
 	if apiErr != nil {
 		return tracing.Trace(span, apiErr)
-	}
-	if !deleted {
-		return tracing.Trace(span, apierror.NewResourceNotFoundError("No email sender is configured for this account."))
 	}
 	return nil
 }

@@ -52,8 +52,8 @@ func (s *auditEventSvcImpl) SaveAuditEvent(ctx context.Context, event *domain.Au
 		return tracing.Trace(span, apiErr)
 	}
 
-	// Follower fan-out runs after the row is persisted so the acting user is registered as a follower before any later event is processed. Both steps are idempotent (duplicate-tolerant), so a retry after a partial failure completes the remainder.
-	return tracing.Trace(span, s.notifySalesOrderFollowers(ctx, event))
+	// The owner fan-out runs after the row is persisted so it reads the order's owner and status including this event. Both steps are idempotent (duplicate-tolerant), so a retry after a partial failure completes the remainder.
+	return tracing.Trace(span, s.notifySalesOrderOwner(ctx, event))
 }
 
 func (s *auditEventSvcImpl) BatchGetResourceCreators(ctx context.Context, resourceType string, resourceIDs []string) ([]domain.ResourceCreator, *apierror.APIError) {

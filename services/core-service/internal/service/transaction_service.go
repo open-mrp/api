@@ -403,8 +403,34 @@ func (s *transactionSvcImpl) DeleteTransaction(ctx context.Context, params domai
 			return apiErr
 		}
 
+		allocations, apiErr := txRepo.GetAllocations(txCtx, params.TransactionID)
+		if apiErr != nil {
+			return apiErr
+		}
+
 		// Delete allocations first
 		if apiErr := txRepo.DeleteAllocations(txCtx, params.TransactionID); apiErr != nil {
+			return apiErr
+		}
+
+		// The money is no longer applied: every invoice it paid owes it again.
+		invoiceIDs := make([]string, 0, len(allocations))
+		for _, allocation := range allocations {
+			if apiErr := txSvc.repos.NewDeletedRecordRepo().CreateInAccount(txCtx, constants.DeletedRecordResourceTypeTransactionAllocation, allocation.ID, params.AccountID, allocation); apiErr != nil {
+				return apiErr
+			}
+			if apiErr := audit.NewPublisher().Publish(txCtx, txSvc.repos.NewOutboxRepo(), audit.EventData{
+				ServiceName:  domain.ServiceName,
+				Action:       constants.AuditActionDelete,
+				ResourceType: constants.ObjectTypeTransactionAllocation,
+				ResourceID:   allocation.ID,
+				Changes:      audit.ComputeChanges(allocation, (*domain.TransactionAllocation)(nil)),
+			}); apiErr != nil {
+				return apiErr
+			}
+			invoiceIDs = append(invoiceIDs, allocation.InvoiceID)
+		}
+		if apiErr := txSvc.mediators().PaymentFlags.Enqueue(txCtx, params.AccountID, nil, invoiceIDs); apiErr != nil {
 			return apiErr
 		}
 

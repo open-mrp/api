@@ -41,7 +41,7 @@ type Shipment struct {
 	ServiceLevelIsPortalEnabled  *bool
 	ServiceLevelCreatedAt        *time.Time
 	ServiceLevelUpdatedAt        *time.Time
-	ShippingAddressID            string
+	ShippingAddressID            string `audit:"shipping_address_id"`
 	ShippingAddressName          *string
 	ShippingAddressPhone         *string
 	ShippingAddressEmail         *string

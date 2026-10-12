@@ -9,6 +9,7 @@ import (
 	"github.com/open-mrp/api/services/core-service/internal/domain"
 	"github.com/open-mrp/api/services/core-service/internal/scheduling"
 	"github.com/open-mrp/api/shared/appctx"
+	"github.com/open-mrp/api/shared/audit"
 	"github.com/open-mrp/api/shared/constants"
 	apierror "github.com/open-mrp/api/shared/errors"
 	"github.com/open-mrp/api/shared/id"
@@ -21,15 +22,63 @@ var operatingCalendarSvcTracer = tracing.GetTracer("core-service.operating_calen
 const closureListWindowYears = 1
 
 type operatingCalendarSvcImpl struct {
-	repos domain.RepoFactory
+	repos     domain.RepoFactory
+	txManager TransactionManager
 }
 
 type OperatingCalendarSvcConfig struct {
+	// Repos (required) is the repository factory.
 	Repos domain.RepoFactory
+
+	// TxManager (required) commits each write with its audit event.
+	TxManager TransactionManager
 }
 
 func NewOperatingCalendarSvc(config *OperatingCalendarSvcConfig) domain.OperatingCalendarSvc {
-	return &operatingCalendarSvcImpl{repos: config.Repos}
+	if config.Repos == nil || config.TxManager == nil {
+		panic("operating calendar service: repos and tx manager are required")
+	}
+	return &operatingCalendarSvcImpl{repos: config.Repos, txManager: config.TxManager}
+}
+
+func (s *operatingCalendarSvcImpl) withTx(ctx context.Context, fn func(context.Context, *operatingCalendarSvcImpl) *apierror.APIError) *apierror.APIError {
+	return s.txManager.WithTx(ctx, func(txCtx context.Context, f domain.RepoFactory) *apierror.APIError {
+		return fn(txCtx, &operatingCalendarSvcImpl{repos: f, txManager: s.txManager})
+	})
+}
+
+func (s *operatingCalendarSvcImpl) publish(ctx context.Context, action constants.AuditAction, resourceType constants.ObjectType, resourceID string, changes []audit.FieldChange) *apierror.APIError {
+	return audit.NewPublisher().Publish(ctx, s.repos.NewOutboxRepo(), audit.EventData{
+		ServiceName:  domain.ServiceName,
+		Action:       action,
+		ResourceType: resourceType,
+		ResourceID:   resourceID,
+		Changes:      changes,
+	})
+}
+
+// demoteOtherDefaults keeps one default per kind, auditing each calendar it demotes: losing the default changes what resolution picks for everything that relied on it.
+func (s *operatingCalendarSvcImpl) demoteOtherDefaults(ctx context.Context, accountID, kindCode, keepID string) *apierror.APIError {
+	repo := s.repos.NewOperatingCalendarRepo()
+	calendars, apiErr := repo.List(ctx, domain.ListOperatingCalendarsParams{AccountID: accountID, KindCode: &kindCode})
+	if apiErr != nil {
+		return apiErr
+	}
+	if apiErr := repo.ClearDefault(ctx, accountID, kindCode, keepID); apiErr != nil {
+		return apiErr
+	}
+	for i := range calendars {
+		before := calendars[i]
+		if !before.IsDefault || before.ID == keepID {
+			continue
+		}
+		after := before
+		after.IsDefault = false
+		if apiErr := s.publish(ctx, constants.AuditActionUpdate, constants.ObjectTypeOperatingCalendar, before.ID, audit.ComputeChanges(&before, &after)); apiErr != nil {
+			return apiErr
+		}
+	}
+	return nil
 }
 
 // actingAccount resolves the acting account and rejects a non-internal caller. Calendars are account configuration, so every path here is internal-only: a customer has no business seeing which days their supplier's plant runs.
@@ -110,18 +159,30 @@ func (s *operatingCalendarSvcImpl) CreateOperatingCalendar(ctx context.Context, 
 	}
 	params.ID = calendarID
 
-	repo := s.repos.NewOperatingCalendarRepo()
-	if apiErr := repo.Create(ctx, params); apiErr != nil {
+	var created *domain.OperatingCalendar
+	apiErr = s.withTx(ctx, func(txCtx context.Context, txSvc *operatingCalendarSvcImpl) *apierror.APIError {
+		repo := txSvc.repos.NewOperatingCalendarRepo()
+		if apiErr := repo.Create(txCtx, params); apiErr != nil {
+			return apiErr
+		}
+		// Exactly one default per kind, or resolution has two answers and picks arbitrarily.
+		if params.IsDefault {
+			if apiErr := txSvc.demoteOtherDefaults(txCtx, accountID, params.KindCode, calendarID); apiErr != nil {
+				return apiErr
+			}
+		}
+
+		calendar, apiErr := repo.Get(txCtx, accountID, calendarID)
+		if apiErr != nil {
+			return apiErr
+		}
+		created = calendar
+		return txSvc.publish(txCtx, constants.AuditActionCreate, constants.ObjectTypeOperatingCalendar, calendar.ID, audit.ComputeChanges(nil, calendar))
+	})
+	if apiErr != nil {
 		return nil, tracing.Trace(span, apiErr)
 	}
-	// Exactly one default per kind, or resolution has two answers and picks arbitrarily.
-	if params.IsDefault {
-		if apiErr := repo.ClearDefault(ctx, accountID, params.KindCode, calendarID); apiErr != nil {
-			return nil, tracing.Trace(span, apiErr)
-		}
-	}
-
-	return repo.Get(ctx, accountID, calendarID)
+	return created, nil
 }
 
 func (s *operatingCalendarSvcImpl) UpdateOperatingCalendar(ctx context.Context, params domain.UpdateOperatingCalendarParams) (*domain.OperatingCalendar, *apierror.APIError) {
@@ -137,27 +198,39 @@ func (s *operatingCalendarSvcImpl) UpdateOperatingCalendar(ctx context.Context, 
 	}
 	params.AccountID = accountID
 
-	repo := s.repos.NewOperatingCalendarRepo()
-	existing, apiErr := repo.Get(ctx, accountID, params.ID)
+	var updated *domain.OperatingCalendar
+	apiErr = s.withTx(ctx, func(txCtx context.Context, txSvc *operatingCalendarSvcImpl) *apierror.APIError {
+		repo := txSvc.repos.NewOperatingCalendarRepo()
+		existing, apiErr := repo.Get(txCtx, accountID, params.ID)
+		if apiErr != nil {
+			return apiErr
+		}
+
+		// Validated against the calendar's own kind, since the kind cannot be changed: a ship calendar that became a receive calendar would silently drop the cutoff every commitment on it depends on.
+		if apiErr := validateCalendarShape(existing.KindCode, valueOr(params.DaysOfWeek, existing.DaysOfWeek), params.CutoffAt, params.Timezone); apiErr != nil {
+			return apiErr
+		}
+
+		if apiErr := repo.Update(txCtx, params); apiErr != nil {
+			return apiErr
+		}
+		if params.IsDefault != nil && *params.IsDefault {
+			if apiErr := txSvc.demoteOtherDefaults(txCtx, accountID, existing.KindCode, params.ID); apiErr != nil {
+				return apiErr
+			}
+		}
+
+		calendar, apiErr := repo.Get(txCtx, accountID, params.ID)
+		if apiErr != nil {
+			return apiErr
+		}
+		updated = calendar
+		return txSvc.publish(txCtx, constants.AuditActionUpdate, constants.ObjectTypeOperatingCalendar, calendar.ID, audit.ComputeChanges(existing, calendar))
+	})
 	if apiErr != nil {
 		return nil, tracing.Trace(span, apiErr)
 	}
-
-	// Validated against the calendar's own kind, since the kind cannot be changed: a ship calendar that became a receive calendar would silently drop the cutoff every commitment on it depends on.
-	if apiErr := validateCalendarShape(existing.KindCode, valueOr(params.DaysOfWeek, existing.DaysOfWeek), params.CutoffAt, params.Timezone); apiErr != nil {
-		return nil, tracing.Trace(span, apiErr)
-	}
-
-	if apiErr := repo.Update(ctx, params); apiErr != nil {
-		return nil, tracing.Trace(span, apiErr)
-	}
-	if params.IsDefault != nil && *params.IsDefault {
-		if apiErr := repo.ClearDefault(ctx, accountID, existing.KindCode, params.ID); apiErr != nil {
-			return nil, tracing.Trace(span, apiErr)
-		}
-	}
-
-	return repo.Get(ctx, accountID, params.ID)
+	return updated, nil
 }
 
 // DeleteOperatingCalendar refuses while anything still points at the calendar.
@@ -175,20 +248,26 @@ func (s *operatingCalendarSvcImpl) DeleteOperatingCalendar(ctx context.Context, 
 		return tracing.Trace(span, apiErr)
 	}
 
-	repo := s.repos.NewOperatingCalendarRepo()
-	if _, apiErr := repo.Get(ctx, accountID, calendarID); apiErr != nil {
-		return tracing.Trace(span, apiErr)
-	}
+	return tracing.Trace(span, s.withTx(ctx, func(txCtx context.Context, txSvc *operatingCalendarSvcImpl) *apierror.APIError {
+		repo := txSvc.repos.NewOperatingCalendarRepo()
+		existing, apiErr := repo.Get(txCtx, accountID, calendarID)
+		if apiErr != nil {
+			return apiErr
+		}
 
-	refs, apiErr := repo.CountReferences(ctx, accountID, calendarID)
-	if apiErr != nil {
-		return tracing.Trace(span, apiErr)
-	}
-	if refs.Total() > 0 {
-		return tracing.Trace(span, apierror.NewResourceConflictError("This calendar is still in use. Point the addresses, customers, groups, or account settings that reference it somewhere else first."))
-	}
+		refs, apiErr := repo.CountReferences(txCtx, accountID, calendarID)
+		if apiErr != nil {
+			return apiErr
+		}
+		if refs.Total() > 0 {
+			return apierror.NewResourceConflictError("This calendar is still in use. Point the addresses, customers, groups, or account settings that reference it somewhere else first.")
+		}
 
-	return tracing.Trace(span, repo.Delete(ctx, accountID, calendarID))
+		if apiErr := repo.Delete(txCtx, accountID, calendarID); apiErr != nil {
+			return apiErr
+		}
+		return txSvc.publish(txCtx, constants.AuditActionDelete, constants.ObjectTypeOperatingCalendar, existing.ID, audit.ComputeChanges(existing, (*domain.OperatingCalendar)(nil)))
+	}))
 }
 
 func (s *operatingCalendarSvcImpl) ListOperatingCalendarClosures(ctx context.Context, calendarID string, from, to *time.Time) ([]domain.OperatingCalendarClosure, *apierror.APIError) {
@@ -257,18 +336,36 @@ func (s *operatingCalendarSvcImpl) CreateOperatingCalendarClosure(ctx context.Co
 	// Truncated to a day because a closure is a date, and an instant carrying a time would compare unequal to the dates every calendar walk tests against.
 	closedOn = time.Date(closedOn.Year(), closedOn.Month(), closedOn.Day(), 0, 0, 0, 0, time.UTC)
 
-	if apiErr := repo.UpsertClosures(ctx, []domain.UpsertClosureParams{{
-		ID:         closureID,
-		AccountID:  accountID,
-		CalendarID: calendarID,
-		ClosedOn:   closedOn,
-		Name:       name,
-	}}); apiErr != nil {
+	var closure *domain.OperatingCalendarClosure
+	apiErr = s.withTx(ctx, func(txCtx context.Context, txSvc *operatingCalendarSvcImpl) *apierror.APIError {
+		repo := txSvc.repos.NewOperatingCalendarRepo()
+		if apiErr := repo.UpsertClosures(txCtx, []domain.UpsertClosureParams{{
+			ID:         closureID,
+			AccountID:  accountID,
+			CalendarID: calendarID,
+			ClosedOn:   closedOn,
+			Name:       name,
+		}}); apiErr != nil {
+			return apiErr
+		}
+
+		// Read back rather than returned from the inputs: the write is an upsert, so re-closing a date that was already closed keeps the original row, and its ID and timestamps are the ones the caller should see.
+		stored, apiErr := repo.GetClosureByDate(txCtx, accountID, calendarID, closedOn)
+		if apiErr != nil {
+			return apiErr
+		}
+		closure = stored
+
+		// A date that was already closed keeps its row untouched, so only a new closure is a change.
+		if stored.ID != closureID {
+			return nil
+		}
+		return txSvc.publish(txCtx, constants.AuditActionCreate, constants.ObjectTypeOperatingCalendarClosure, stored.ID, audit.ComputeChanges(nil, stored))
+	})
+	if apiErr != nil {
 		return nil, tracing.Trace(span, apiErr)
 	}
-
-	// Read back rather than returned from the inputs: the write is an upsert, so re-closing a date that was already closed keeps the original row, and its ID and timestamps are the ones the caller should see.
-	return repo.GetClosureByDate(ctx, accountID, calendarID, closedOn)
+	return closure, nil
 }
 
 func (s *operatingCalendarSvcImpl) DeleteOperatingCalendarClosure(ctx context.Context, closureID string) *apierror.APIError {
@@ -283,11 +380,17 @@ func (s *operatingCalendarSvcImpl) DeleteOperatingCalendarClosure(ctx context.Co
 		return tracing.Trace(span, apiErr)
 	}
 
-	repo := s.repos.NewOperatingCalendarRepo()
-	if _, apiErr := repo.GetClosure(ctx, accountID, closureID); apiErr != nil {
-		return tracing.Trace(span, apiErr)
-	}
-	return tracing.Trace(span, repo.DeleteClosure(ctx, accountID, closureID))
+	return tracing.Trace(span, s.withTx(ctx, func(txCtx context.Context, txSvc *operatingCalendarSvcImpl) *apierror.APIError {
+		repo := txSvc.repos.NewOperatingCalendarRepo()
+		existing, apiErr := repo.GetClosure(txCtx, accountID, closureID)
+		if apiErr != nil {
+			return apiErr
+		}
+		if apiErr := repo.DeleteClosure(txCtx, accountID, closureID); apiErr != nil {
+			return apiErr
+		}
+		return txSvc.publish(txCtx, constants.AuditActionDelete, constants.ObjectTypeOperatingCalendarClosure, existing.ID, audit.ComputeChanges(existing, (*domain.OperatingCalendarClosure)(nil)))
+	}))
 }
 
 func validateCalendarKind(kindCode *string) *apierror.APIError {

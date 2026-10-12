@@ -339,7 +339,6 @@ func (s *purchaseOrderSvcImpl) CreatePurchaseOrder(ctx context.Context, params d
 		var result *domain.PurchaseOrder
 		apiErr = s.withTx(ctx, func(txCtx context.Context, txSvc *purchaseOrderSvcImpl) *apierror.APIError {
 			txOrderRepo := txSvc.repos.NewPurchaseOrderRepo()
-			txAddressRepo := txSvc.repos.NewAddressRepo()
 			txLineRepo := txSvc.repos.NewPurchaseOrderLineRepo()
 
 			// A chosen number is used as given; otherwise the next one in the sequence is reserved.
@@ -367,7 +366,7 @@ func (s *purchaseOrderSvcImpl) CreatePurchaseOrder(ctx context.Context, params d
 			if apiErr != nil {
 				return apiErr
 			}
-			billAddrID, shipAddrID, apiErr := createPurchaseOrderAddresses(txCtx, txAddressRepo, addressParams)
+			billAddrID, shipAddrID, apiErr := createPurchaseOrderAddresses(txCtx, txSvc.mediators().Address, addressParams)
 			if apiErr != nil {
 				return apiErr
 			}
@@ -396,7 +395,7 @@ func (s *purchaseOrderSvcImpl) CreatePurchaseOrder(ctx context.Context, params d
 				return apiErr
 			}
 
-			// Create order lines
+			createdLines := make([]*domain.PurchaseOrderLine, 0, len(params.Lines))
 			for _, lineInput := range params.Lines {
 				lineID, apiErr := id.GenID(id.OrderLineIDPrefix, nil)
 				if apiErr != nil {
@@ -420,10 +419,11 @@ func (s *purchaseOrderSvcImpl) CreatePurchaseOrder(ctx context.Context, params d
 					UnitCostDenominatorUnitID:  lineInput.UnitCostDenominatorUnitID,
 				}
 
-				_, apiErr = txLineRepo.Create(txCtx, lineID, lineParams)
+				createdLine, apiErr := txLineRepo.Create(txCtx, lineID, lineParams)
 				if apiErr != nil {
 					return apiErr
 				}
+				createdLines = append(createdLines, createdLine)
 
 				// Ensure supplier material link for lines with an item_id
 				if lineInput.ItemID != nil {
@@ -478,6 +478,11 @@ func (s *purchaseOrderSvcImpl) CreatePurchaseOrder(ctx context.Context, params d
 				Changes:      changes,
 			}); apiErr != nil {
 				return apiErr
+			}
+			for _, line := range createdLines {
+				if apiErr := audit.NewPublisher().Publish(txCtx, txSvc.repos.NewOutboxRepo(), purchaseOrderLineAuditEvent(constants.AuditActionCreate, line, audit.ComputeChanges(nil, line))); apiErr != nil {
+					return apiErr
+				}
 			}
 
 			return txSvc.mediators().Idempotency.CacheSuccessResponse(txCtx, idempotencyKey.TypeID, result)
@@ -599,7 +604,12 @@ func (s *purchaseOrderSvcImpl) UpdatePurchaseOrder(ctx context.Context, params d
 			}
 
 			// Handle contact replacement if contacts are provided
+			var contactsBefore []string
 			if params.ReplaceContacts {
+				if contactsBefore, apiErr = purchaseOrderContactUserIDs(txCtx, txRepo, params.PurchaseOrderID); apiErr != nil {
+					return apiErr
+				}
+
 				// Delete old contacts
 				if apiErr := txRepo.DeleteEmailContactsByOrder(txCtx, params.PurchaseOrderID); apiErr != nil {
 					return apiErr
@@ -643,6 +653,13 @@ func (s *purchaseOrderSvcImpl) UpdatePurchaseOrder(ctx context.Context, params d
 			_ = updated
 
 			changes := audit.ComputeChanges(old, result)
+			if params.ReplaceContacts {
+				contactsAfter, apiErr := purchaseOrderContactUserIDs(txCtx, txRepo, params.PurchaseOrderID)
+				if apiErr != nil {
+					return apiErr
+				}
+				changes = appendListChange(changes, "contact_account_user_ids", contactsBefore, contactsAfter)
+			}
 
 			if apiErr := audit.NewPublisher().Publish(txCtx, txSvc.repos.NewOutboxRepo(), audit.EventData{
 				ServiceName:  domain.ServiceName,
@@ -876,6 +893,17 @@ func (s *purchaseOrderSvcImpl) ChangePurchaseOrderStatus(ctx context.Context, pa
 				}
 			}
 
+			receivingOrder, apiErr := txReceivingRepo.Get(txCtx, params.AccountID, receivingOrderID)
+			if apiErr != nil {
+				return apiErr
+			}
+			if apiErr := publishReceivingOrder(txCtx, txSvc.repos, constants.AuditActionCreate, nil, receivingOrder); apiErr != nil {
+				return apiErr
+			}
+			if apiErr := publishReceivingOrderLinesCreated(txCtx, txSvc.repos, receivingOrderID, params.PurchaseOrderID, nil); apiErr != nil {
+				return apiErr
+			}
+
 			// Send email notification if requested. Built by the same assembler the manual resend
 			// uses, so both deliver an identical submission — line items, letterhead, PDF attachment.
 			// Flagged sent only when an email goes out, as the manual resend does: an order with no
@@ -918,12 +946,37 @@ func (s *purchaseOrderSvcImpl) ChangePurchaseOrderStatus(ctx context.Context, pa
 			txRepo := txSvc.repos.NewPurchaseOrderRepo()
 			txReceivingRepo := txSvc.repos.NewReceivingOrderRepo()
 
+			var receivingOrder *domain.ReceivingOrder
+			var receivingLines []*domain.ReceivingOrderLine
+			receivingOrderID, apiErr := txReceivingRepo.GetByOrderID(txCtx, params.PurchaseOrderID)
+			if apiErr != nil {
+				return apiErr
+			}
+			if receivingOrderID != nil {
+				if receivingOrder, apiErr = txReceivingRepo.Get(txCtx, params.AccountID, *receivingOrderID); apiErr != nil {
+					return apiErr
+				}
+				if receivingLines, apiErr = txReceivingRepo.ListLines(txCtx, *receivingOrderID); apiErr != nil {
+					return apiErr
+				}
+			}
+
 			// Delete receiving order lines and receiving order
 			if apiErr := txReceivingRepo.DeleteLinesByOrderID(txCtx, params.PurchaseOrderID); apiErr != nil {
 				return apiErr
 			}
 			if apiErr := txReceivingRepo.DeleteByOrderID(txCtx, params.PurchaseOrderID); apiErr != nil {
 				return apiErr
+			}
+			for _, line := range receivingLines {
+				if apiErr := publishReceivingOrderLine(txCtx, txSvc.repos, constants.AuditActionDelete, params.PurchaseOrderID, line, nil); apiErr != nil {
+					return apiErr
+				}
+			}
+			if receivingOrder != nil {
+				if apiErr := publishReceivingOrder(txCtx, txSvc.repos, constants.AuditActionDelete, receivingOrder, nil); apiErr != nil {
+					return apiErr
+				}
 			}
 
 			// Update status back to estimate
@@ -960,7 +1013,9 @@ func (s *purchaseOrderSvcImpl) ChangePurchaseOrderStatus(ctx context.Context, pa
 				return apiErr
 			}
 
-			if apiErr := txReceivingRepo.MarkComplete(txCtx, params.PurchaseOrderID); apiErr != nil {
+			if apiErr := setReceivingOrderCompletion(txCtx, txSvc.repos, params.AccountID, params.PurchaseOrderID, func() *apierror.APIError {
+				return txReceivingRepo.MarkComplete(txCtx, params.PurchaseOrderID)
+			}); apiErr != nil {
 				return apiErr
 			}
 
@@ -993,7 +1048,9 @@ func (s *purchaseOrderSvcImpl) ChangePurchaseOrderStatus(ctx context.Context, pa
 				return apiErr
 			}
 
-			if apiErr := txReceivingRepo.MarkIncomplete(txCtx, params.PurchaseOrderID); apiErr != nil {
+			if apiErr := setReceivingOrderCompletion(txCtx, txSvc.repos, params.AccountID, params.PurchaseOrderID, func() *apierror.APIError {
+				return txReceivingRepo.MarkIncomplete(txCtx, params.PurchaseOrderID)
+			}); apiErr != nil {
 				return apiErr
 			}
 
@@ -1067,11 +1124,13 @@ func ensureSupplierMaterialLink(ctx context.Context, repos domain.RepoFactory, a
 		return apiErr
 	}
 
-	// Find the material by item ID
+	// Only a material can have a supplier, so an item that is not one has nothing to link.
 	material, apiErr := materialRepo.GetByItemID(ctx, accountID, itemID)
-	if apiErr != nil {
-		// If material doesn't exist for this item, skip linking
+	if apierror.IsNotFound(apiErr) {
 		return nil
+	}
+	if apiErr != nil {
+		return apiErr
 	}
 
 	// Check if already linked
@@ -1089,16 +1148,22 @@ func ensureSupplierMaterialLink(ctx context.Context, repos domain.RepoFactory, a
 		return apiErr
 	}
 
-	_, _ = supplierMaterialRepo.Create(ctx, smID, domain.CreateSupplierMaterialParams{
+	created, apiErr := supplierMaterialRepo.Create(ctx, smID, domain.CreateSupplierMaterialParams{
 		OwnerAccountID:     accountID,
 		MaterialID:         material.ID,
 		SupplierAccountID:  supplierAccountID,
 		SupplierPartNumber: itemSKU,
 		IsActive:           true,
 	})
-	// Ignore errors from creation - a conflict means the link already exists, and any other error should not block the purchase order operation.
+	// A concurrent order linked it first; a refused insert leaves a MySQL transaction usable.
+	if apiErr != nil && apiErr.Code == apierror.ErrorCodeResourceExists {
+		return nil
+	}
+	if apiErr != nil {
+		return apiErr
+	}
 
-	return nil
+	return audit.NewPublisher().Publish(ctx, repos.NewOutboxRepo(), supplierMaterialAuditEvent(constants.AuditActionCreate, created, audit.ComputeChanges(nil, created)))
 }
 
 // checkPurchaseOrderAddressChoices requires the order's bill-to and ship-to, each given one way: by ID, inline, or through the flat bill_to_* / ship_to_* fields, which then need a name and a country like any new address.
@@ -1160,13 +1225,13 @@ func withSavedInlineAddresses(ctx context.Context, med domain.AddressMed, params
 
 // createPurchaseOrderAddresses returns the order's bill-to and ship-to address ids: a saved address
 // when the caller named one, otherwise a new address built from the inline fields.
-func createPurchaseOrderAddresses(ctx context.Context, repo domain.AddressRepo, params domain.CreatePurchaseOrderParams) (string, string, *apierror.APIError) {
-	billAddrID, apiErr := purchaseOrderAddress(ctx, repo, params.AccountID, params.BillToAddressID, params.BillToName,
+func createPurchaseOrderAddresses(ctx context.Context, med domain.AddressMed, params domain.CreatePurchaseOrderParams) (string, string, *apierror.APIError) {
+	billAddrID, apiErr := purchaseOrderAddress(ctx, med, params.AccountID, params.BillToAddressID, params.BillToName,
 		params.BillToStreetLine1, params.BillToStreetLine2, params.BillToLocality, params.BillToState, params.BillToPostalCode, params.BillToCountry)
 	if apiErr != nil {
 		return "", "", apiErr
 	}
-	shipAddrID, apiErr := purchaseOrderAddress(ctx, repo, params.AccountID, params.ShipToAddressID, params.ShipToName,
+	shipAddrID, apiErr := purchaseOrderAddress(ctx, med, params.AccountID, params.ShipToAddressID, params.ShipToName,
 		params.ShipToStreetLine1, params.ShipToStreetLine2, params.ShipToLocality, params.ShipToState, params.ShipToPostalCode, params.ShipToCountry)
 	if apiErr != nil {
 		return "", "", apiErr
@@ -1174,25 +1239,12 @@ func createPurchaseOrderAddresses(ctx context.Context, repo domain.AddressRepo, 
 	return billAddrID, shipAddrID, nil
 }
 
-func purchaseOrderAddress(ctx context.Context, repo domain.AddressRepo, accountID string, savedID, name, line1, line2, locality, state, postalCode, country *string) (string, *apierror.APIError) {
+func purchaseOrderAddress(ctx context.Context, med domain.AddressMed, accountID string, savedID, name, line1, line2, locality, state, postalCode, country *string) (string, *apierror.APIError) {
 	if savedID != nil {
 		return *savedID, nil
 	}
 
-	addrID, apiErr := id.GenID(id.AddressIDPrefix, nil)
-	if apiErr != nil {
-		return "", apiErr
-	}
-	geoID, apiErr := id.GenID(id.GeolocationIDPrefix, nil)
-	if apiErr != nil {
-		return "", apiErr
-	}
-	acctAddrID, apiErr := id.GenID(id.AccountAddressIDPrefix, nil)
-	if apiErr != nil {
-		return "", apiErr
-	}
-
-	if _, apiErr := repo.Create(ctx, addrID, geoID, acctAddrID, domain.CreateAddressParams{
+	created, apiErr := med.Create(ctx, domain.CreateAddressParams{
 		AccountID:   accountID,
 		Name:        ptrutil.Deref(name),
 		StreetLine1: line1,
@@ -1201,10 +1253,11 @@ func purchaseOrderAddress(ctx context.Context, repo domain.AddressRepo, accountI
 		State:       state,
 		PostalCode:  postalCode,
 		Country:     ptrutil.Deref(country),
-	}); apiErr != nil {
+	})
+	if apiErr != nil {
 		return "", apiErr
 	}
-	return addrID, nil
+	return created.ID, nil
 }
 
 // attachDeliveryLines fills each line's delivery lines when the caller included them.

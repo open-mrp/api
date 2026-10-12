@@ -10,6 +10,8 @@ import (
 	"github.com/open-mrp/api/services/core-service/internal/domain"
 	"github.com/open-mrp/api/services/core-service/internal/scheduling"
 	"github.com/open-mrp/api/shared/appctx"
+	"github.com/open-mrp/api/shared/audit"
+	"github.com/open-mrp/api/shared/constants"
 	apierror "github.com/open-mrp/api/shared/errors"
 	"github.com/open-mrp/api/shared/safeconv"
 	"github.com/open-mrp/api/shared/tracing"
@@ -422,6 +424,7 @@ func (s *productionScheduleSvcImpl) RegenerateProductionSchedule(
 		horizonStart := scheduleWeekStart(planningAsOf, effective.Settings.WeekStartDay)
 
 		keptManual := map[campaignKey]bool{}
+		var removed, discardedManual int
 		for _, line := range existing {
 			isManual := line.SourceCode == domain.ScheduleLineSourceManual
 			newWeekIndex := safeconv.IntToInt32(scheduleLineWeekIndex(line.WeekStartDate, horizonStart))
@@ -452,11 +455,13 @@ func (s *productionScheduleSvcImpl) RegenerateProductionSchedule(
 					line.WeekStartDate, nil, nil, actor); apiErr != nil {
 					return apiErr
 				}
+				discardedManual++
 			}
 
 			if apiErr := repo.DeleteLine(txCtx, accountID, line.ID); apiErr != nil {
 				return apiErr
 			}
+			removed++
 		}
 
 		// The header carries the fresh solve's own metadata: a plan whose diagnostics and settings snapshot describe the previous solve cannot explain itself.
@@ -473,7 +478,7 @@ func (s *productionScheduleSvcImpl) RegenerateProductionSchedule(
 			capped[sku] = true
 		}
 
-		return txSvc.writeSolvedPlan(txCtx, writeSolvedPlanParams{
+		if apiErr := txSvc.writeSolvedPlan(txCtx, writeSolvedPlanParams{
 			AccountID:    accountID,
 			ScheduleID:   params.ScheduleID,
 			HorizonStart: scheduleWeekStart(planningAsOf, effective.Settings.WeekStartDay),
@@ -481,6 +486,37 @@ func (s *productionScheduleSvcImpl) RegenerateProductionSchedule(
 			Starved:      starved,
 			Capped:       capped,
 			SkipKeys:     keptManual,
+		}); apiErr != nil {
+			return apiErr
+		}
+
+		after, apiErr := repo.ListLines(txCtx, domain.ListProductionScheduleLinesParams{
+			AccountID:  accountID,
+			ScheduleID: params.ScheduleID,
+		})
+		if apiErr != nil {
+			return apiErr
+		}
+		regenerated, apiErr := repo.Get(txCtx, domain.GetProductionScheduleParams{AccountID: accountID, ScheduleID: params.ScheduleID})
+		if apiErr != nil {
+			return apiErr
+		}
+		kept := len(existing) - removed
+		// Lines are re-solved in bulk, so the event carries counts rather than a per-line diff.
+		return audit.NewPublisher().Publish(txCtx, txSvc.repos.NewOutboxRepo(), audit.EventData{
+			ServiceName:  domain.ServiceName,
+			Action:       constants.AuditActionUpdate,
+			ResourceType: constants.ObjectTypeProductionSchedule,
+			ResourceID:   params.ScheduleID,
+			Changes:      audit.ComputeChanges(schedule, regenerated),
+			Metadata: map[string]any{
+				"reason":                 "regenerate",
+				"merge_mode":             mergeMode,
+				"lines_added":            len(after) - kept,
+				"lines_removed":          removed,
+				"manual_lines_kept":      kept,
+				"manual_lines_discarded": discardedManual,
+			},
 		})
 	})
 	if apiErr != nil {

@@ -41,9 +41,14 @@ func (i *Identity) IsIncludeRead() bool {
 	return i != nil && i.IncludeReads && i.IsTargetAccountSet() && (i.IsInternalActor() || i.IsRelationActor())
 }
 
-// IsAuthenticated checks that the identity exists and is not unauthenticated
+// IsAuthenticated checks that the identity exists and a caller authenticated. A system identity never did, so every check built on this one refuses it.
 func (i *Identity) IsAuthenticated() bool {
-	return i != nil && i.Type != IdentityActorTypeUnauthenticated
+	return i != nil && i.Type != IdentityActorTypeUnauthenticated && i.Type != IdentityActorTypeSystem
+}
+
+// IsSystem reports whether the identity attributes a background write to an OpenMRP process rather than to a caller.
+func (i *Identity) IsSystem() bool {
+	return i != nil && i.Type == IdentityActorTypeSystem
 }
 
 // IsActorSet checks that the identity is authenticated, has a valid actor, and has a valid actor account
@@ -192,6 +197,20 @@ func GetUnauthenticatedIdentityWithMode(targetAccountID *string, accountMode con
 		identity.Target = &IdentityTarget{AccountID: *targetAccountID}
 	}
 	return identity
+}
+
+// NewSystemIdentity attributes the writes a background process makes to targetAccountID, so they can be audited like a caller's.
+//
+// It is for attribution only. It carries no actor account, role, permission or account mode and does not count as authenticated, so it fails every authorization check. Only a service builds one, at the start of the background work; the gateway never produces one, and the auth-service protocol has no value for it.
+func NewSystemIdentity(source constants.SystemActor, targetAccountID string) *Identity {
+	return &Identity{
+		Type: IdentityActorTypeSystem,
+		Actor: &IdentityActor{
+			RelationType: IdentityRelationTypeUnassigned,
+			ID:           source.ActorID(),
+		},
+		Target: &IdentityTarget{AccountID: targetAccountID},
+	}
 }
 
 func (i *Identity) ToProto() *pb.Identity {

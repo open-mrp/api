@@ -6,7 +6,13 @@ import (
 	"log"
 
 	"github.com/open-mrp/api/services/core-service/internal/domain"
+	"github.com/open-mrp/api/services/core-service/internal/infrastructure/sqlc"
+	"github.com/open-mrp/api/shared/appctx"
+	"github.com/open-mrp/api/shared/audit"
+	"github.com/open-mrp/api/shared/constants"
 	"github.com/open-mrp/api/shared/contracts"
+	"github.com/open-mrp/api/shared/db"
+	apierror "github.com/open-mrp/api/shared/errors"
 	"github.com/open-mrp/api/shared/messaging"
 	"github.com/open-mrp/api/shared/tracing"
 
@@ -23,6 +29,7 @@ type SalesOrderShippingUpdatedConsumer struct {
 	rabbitmq      messaging.MessageBroker
 	inboxConsumer *messaging.InboxConsumer
 	repos         domain.RepoFactory
+	txManager     db.TransactionManager[*sqlc.Queries, domain.RepoFactory]
 	transitWarmer domain.TransitWarmer
 	tracer        trace.Tracer
 }
@@ -31,12 +38,14 @@ func NewSalesOrderShippingUpdatedConsumer(
 	rabbitmq messaging.MessageBroker,
 	inboxRepo messaging.InboxRepo,
 	repos domain.RepoFactory,
+	txManager db.TransactionManager[*sqlc.Queries, domain.RepoFactory],
 	transitWarmer domain.TransitWarmer,
 ) *SalesOrderShippingUpdatedConsumer {
 	return &SalesOrderShippingUpdatedConsumer{
 		rabbitmq:      rabbitmq,
 		inboxConsumer: messaging.NewInboxConsumer(inboxRepo, "core-service"),
 		repos:         repos,
+		txManager:     txManager,
 		transitWarmer: transitWarmer,
 		tracer:        tracing.GetTracer("core-service.sales_order_shipping_updated_consumer"),
 	}
@@ -90,35 +99,85 @@ func (c *SalesOrderShippingUpdatedConsumer) handleMessage(ctx context.Context, m
 		return discardIfPermanent(ctx, c.inboxConsumer, apiErr)
 	}
 
-	shipmentRepo := c.repos.NewShipmentRepo()
+	// The shipments are re-pointed on the editor's behalf, so their audit events carry the editor's identity.
+	if amqpMsg.Identity != nil {
+		ctx = appctx.WithIdentity(ctx, amqpMsg.Identity)
+	}
 
-	// The ship-to cascades on its own: legacy's updateShipToAddress re-points every shipment of the
-	// order regardless of carrier, and an order can be left without one.
-	if order.ShippingAddressID != "" {
-		if apiErr := shipmentRepo.SyncShipToForOrder(ctx, data.AccountID, data.SalesOrderID, order.ShippingAddressID); apiErr != nil {
-			log.Printf("[sales_order_shipping_updated] ship-to sync failed for order %s (account %s): %v", data.SalesOrderID, data.AccountID, apiErr)
-			return discardIfPermanent(ctx, c.inboxConsumer, apiErr)
+	apiErr = c.txManager.WithTx(ctx, func(txCtx context.Context, f domain.RepoFactory) *apierror.APIError {
+		if apiErr := syncOrderShipments(txCtx, f, data.AccountID, order); apiErr != nil {
+			return apiErr
 		}
-	}
-
-	// The carrier, service level or ship-to just moved, which is exactly what a transit lane is keyed on, so the order's old lane no longer describes it. Warming here is what keeps a lane ready for orders whose carrier is chosen after create rather than during it.
-	c.warmTransit(ctx, data.AccountID, data.SalesOrderID)
-
-	// The carrier half needs a carrier; without one there is nothing more to cascade.
-	if order.CarrierID == nil {
-		return nil
-	}
-
-	apiErr = shipmentRepo.SyncShippingForOrder(ctx, domain.SyncShipmentShippingParams{
-		AccountID:         data.AccountID,
-		SalesOrderID:      data.SalesOrderID,
-		CarrierID:         *order.CarrierID,
-		ServiceLevelID:    order.ServiceLevelID,
-		ShippingAddressID: order.ShippingAddressID,
+		return completeInboxRecord(txCtx, f)
 	})
 	if apiErr != nil {
 		log.Printf("[sales_order_shipping_updated] shipment sync failed for order %s (account %s): %v", data.SalesOrderID, data.AccountID, apiErr)
 		return discardIfPermanent(ctx, c.inboxConsumer, apiErr)
+	}
+
+	// The carrier, service level or ship-to just moved, which is exactly what a transit lane is keyed on, so the order's old lane no longer describes it. Warming here is what keeps a lane ready for orders whose carrier is chosen after create rather than during it.
+	c.warmTransit(ctx, data.AccountID, data.SalesOrderID)
+	return nil
+}
+
+// syncOrderShipments re-points the order's shipments at its shipping fields and audits each shipment that moved.
+func syncOrderShipments(ctx context.Context, repos domain.RepoFactory, accountID string, order *domain.SalesOrder) *apierror.APIError {
+	shipmentRepo := repos.NewShipmentRepo()
+
+	shipmentIDs, apiErr := repos.NewSalesOrderRepo().GetShipmentIDs(ctx, order.ID)
+	if apiErr != nil {
+		return apiErr
+	}
+	before := make([]*domain.Shipment, 0, len(shipmentIDs))
+	for _, shipmentID := range shipmentIDs {
+		shipment, apiErr := shipmentRepo.Get(ctx, domain.GetShipmentParams{AccountID: accountID, ShipmentID: shipmentID})
+		if apiErr != nil {
+			return apiErr
+		}
+		before = append(before, shipment)
+	}
+
+	// The ship-to cascades on its own: legacy's updateShipToAddress re-points every shipment of the
+	// order regardless of carrier, and an order can be left without one.
+	if order.ShippingAddressID != "" {
+		if apiErr := shipmentRepo.SyncShipToForOrder(ctx, accountID, order.ID, order.ShippingAddressID); apiErr != nil {
+			return apiErr
+		}
+	}
+
+	// The carrier half needs a carrier; without one there is nothing more to cascade.
+	if order.CarrierID != nil {
+		if apiErr := shipmentRepo.SyncShippingForOrder(ctx, domain.SyncShipmentShippingParams{
+			AccountID:         accountID,
+			SalesOrderID:      order.ID,
+			CarrierID:         *order.CarrierID,
+			ServiceLevelID:    order.ServiceLevelID,
+			ShippingAddressID: order.ShippingAddressID,
+		}); apiErr != nil {
+			return apiErr
+		}
+	}
+
+	// Without an identity (a message from before identities were carried) there is no actor to audit.
+	if _, ok := appctx.GetIdentityFromContext(ctx); !ok {
+		return nil
+	}
+	for _, old := range before {
+		updated, apiErr := shipmentRepo.Get(ctx, domain.GetShipmentParams{AccountID: accountID, ShipmentID: old.ID})
+		if apiErr != nil {
+			return apiErr
+		}
+		if apiErr := audit.NewPublisher().Publish(ctx, repos.NewOutboxRepo(), audit.EventData{
+			ServiceName:      domain.ServiceName,
+			Action:           constants.AuditActionUpdate,
+			ResourceType:     constants.ObjectTypeShipment,
+			ResourceID:       updated.ID,
+			RootResourceType: constants.ObjectTypeSalesOrder,
+			RootResourceID:   order.ID,
+			Changes:          audit.ComputeChanges(old, updated),
+		}); apiErr != nil {
+			return apiErr
+		}
 	}
 	return nil
 }

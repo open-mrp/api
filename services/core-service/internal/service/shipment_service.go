@@ -802,15 +802,16 @@ func (s *shipmentSvcImpl) markShippedAndInvoice(txCtx context.Context, shipment 
 		return nil, apiErr
 	}
 
+	casesBefore, apiErr := caseRepo.ListByShipment(txCtx, params.ShipmentID)
+	if apiErr != nil {
+		return nil, apiErr
+	}
+
 	if apiErr := caseRepo.MarkShippedByShipment(txCtx, params.ShipmentID); apiErr != nil {
 		return nil, apiErr
 	}
 
-	cases, apiErr := caseRepo.ListByShipment(txCtx, params.ShipmentID)
-	if apiErr != nil {
-		return nil, apiErr
-	}
-	for _, sc := range cases {
+	for _, sc := range casesBefore {
 		if sc.SSCC != nil {
 			continue
 		}
@@ -821,6 +822,9 @@ func (s *shipmentSvcImpl) markShippedAndInvoice(txCtx context.Context, shipment 
 		if apiErr := caseRepo.AddSscc(txCtx, sc.ID, domain.GenerateSSCC(counter)); apiErr != nil {
 			return nil, apiErr
 		}
+	}
+	if apiErr := publishShippingCaseChanges(txCtx, s.repos, params.ShipmentID, shipment.SalesOrderID, casesBefore); apiErr != nil {
+		return nil, apiErr
 	}
 
 	if labels.MasterTracking != nil {
@@ -1029,13 +1033,27 @@ func (s *shipmentSvcImpl) voidClaimed(ctx context.Context, params domain.VoidShi
 			}
 		}
 
+		orderBefore, apiErr := txSalesOrderRepo.Get(txCtx, params.AccountID, shipment.SalesOrderID)
+		if apiErr != nil {
+			return apiErr
+		}
 		// Mark the sales order as unfulfilled (reset to "issued" status, clear completed_at and first_ship_at)
 		if apiErr := txSalesOrderRepo.MarkUnfulfilled(txCtx, params.AccountID, shipment.SalesOrderID); apiErr != nil {
 			return apiErr
 		}
+		if apiErr := publishSalesOrderChanges(txCtx, txSvc.repos, params.AccountID, orderBefore); apiErr != nil {
+			return apiErr
+		}
 
+		casesBefore, apiErr := txCaseRepo.ListByShipment(txCtx, params.ShipmentID)
+		if apiErr != nil {
+			return apiErr
+		}
 		// Void shipping cases (clear tracking, labels, freight amount)
 		if apiErr := txCaseRepo.VoidByShipment(txCtx, params.ShipmentID); apiErr != nil {
+			return apiErr
+		}
+		if apiErr := publishShippingCaseChanges(txCtx, txSvc.repos, params.ShipmentID, shipment.SalesOrderID, casesBefore); apiErr != nil {
 			return apiErr
 		}
 
@@ -1846,6 +1864,10 @@ func (s *shipmentSvcImpl) createInvoiceAndStampOrderOnShip(txCtx context.Context
 	}
 
 	salesOrderRepo := s.repos.NewSalesOrderRepo()
+	orderBefore, apiErr := salesOrderRepo.Get(txCtx, shipment.AccountID, shipment.SalesOrderID)
+	if apiErr != nil {
+		return apiErr
+	}
 	if apiErr := salesOrderRepo.NoteFirstShipAt(txCtx, shipment.AccountID, shipment.SalesOrderID); apiErr != nil {
 		return apiErr
 	}
@@ -1860,6 +1882,9 @@ func (s *shipmentSvcImpl) createInvoiceAndStampOrderOnShip(txCtx context.Context
 		if apiErr := salesOrderRepo.MarkFulfilled(txCtx, shipment.AccountID, shipment.SalesOrderID); apiErr != nil {
 			return apiErr
 		}
+	}
+	if apiErr := publishSalesOrderChanges(txCtx, s.repos, shipment.AccountID, orderBefore); apiErr != nil {
+		return apiErr
 	}
 
 	// The invoice document backs both the PDF and the customer email, so assemble it once. A render
@@ -1945,7 +1970,7 @@ func (s *shipmentSvcImpl) emailCustomerInvoiceOnShip(txCtx context.Context, ship
 	if len(recipients) == 0 {
 		return nil
 	}
-	return s.repos.NewInvoiceRepo().MarkEmailSent(txCtx, accountID, invoiceID)
+	return markInvoiceEmailSent(txCtx, s.repos, accountID, invoiceID)
 }
 
 // Notifies the order's sales rep of the shipment's invoice. Never flags the invoice sent — that
@@ -2252,11 +2277,18 @@ const (
 func (s *shipmentSvcImpl) recordLabelPurchase(ctx context.Context, shipment *domain.Shipment, cases []*domain.ShippingCase, result *domain.LabelResult, idempotencyTypeID string) *apierror.APIError {
 	record := func(txCtx context.Context, txSvc *shipmentSvcImpl) *apierror.APIError {
 		caseRepo := txSvc.repos.NewShippingCaseRepo()
+		casesBefore, apiErr := caseRepo.ListByShipment(txCtx, shipment.ID)
+		if apiErr != nil {
+			return apiErr
+		}
 		for i, c := range cases {
 			pkg := result.Packages[i]
 			if apiErr := caseRepo.UpdateWithShipmentInfo(txCtx, c.ID, pkg.TrackingNumber, pkg.ShippoTransactionID, pkg.LabelURL); apiErr != nil {
 				return apiErr
 			}
+		}
+		if apiErr := publishShippingCaseChanges(txCtx, txSvc.repos, shipment.ID, shipment.SalesOrderID, casesBefore); apiErr != nil {
+			return apiErr
 		}
 		if result.MasterTrackingNumber != "" {
 			if apiErr := txSvc.repos.NewShipmentRepo().SetMasterTracking(txCtx, shipment.AccountID, shipment.ID, result.MasterTrackingNumber); apiErr != nil {
@@ -2359,7 +2391,12 @@ func (s *shipmentSvcImpl) writeBackNegotiatedRate(ctx context.Context, shipment 
 
 	// The cost rate carries the same currency-per-shipping-unit units as the line's price.
 	value := decimal.NewFromFloat(rate).Round(2).String()
-	_, apiErr = s.repos.NewSalesOrderLineRepo().Update(ctx, domain.UpdateSalesOrderLineParams{
+	lineRepo := s.repos.NewSalesOrderLineRepo()
+	before, apiErr := lineRepo.Get(ctx, shippingLine.ID)
+	if apiErr != nil {
+		return apiErr
+	}
+	updated, apiErr := lineRepo.Update(ctx, domain.UpdateSalesOrderLineParams{
 		SalesOrderLineID:          shippingLine.ID,
 		SalesOrderID:              shipment.SalesOrderID,
 		AccountID:                 shipment.AccountID,
@@ -2367,7 +2404,18 @@ func (s *shipmentSvcImpl) writeBackNegotiatedRate(ctx context.Context, shipment 
 		UnitCostNumeratorUnitID:   &shippingLine.UnitPriceNumeratorUnitID,
 		UnitCostDenominatorUnitID: &shippingLine.UnitPriceDenominatorUnitID,
 	})
-	return apiErr
+	if apiErr != nil {
+		return apiErr
+	}
+	return audit.NewPublisher().Publish(ctx, s.repos.NewOutboxRepo(), audit.EventData{
+		ServiceName:      domain.ServiceName,
+		Action:           constants.AuditActionUpdate,
+		ResourceType:     constants.ObjectTypeSalesOrderLine,
+		ResourceID:       updated.ID,
+		RootResourceType: constants.ObjectTypeSalesOrder,
+		RootResourceID:   shipment.SalesOrderID,
+		Changes:          audit.ComputeChanges(before, updated),
+	})
 }
 
 // Builds the account's Shippo client for the ship and void paths.

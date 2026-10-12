@@ -311,6 +311,56 @@ func (q *Queries) FindAuditEventByID(ctx context.Context, arg FindAuditEventByID
 	return i, err
 }
 
+const getAccountUserUserID = `-- name: GetAccountUserUserID :one
+SELECT user_id FROM account_user
+WHERE id = ?
+  AND account_id = ?
+`
+
+type GetAccountUserUserIDParams struct {
+	ID        string
+	AccountID string
+}
+
+// The user behind an account membership, scoped to the account. Primary-key lookup.
+func (q *Queries) GetAccountUserUserID(ctx context.Context, arg GetAccountUserUserIDParams) (string, error) {
+	row := q.db.QueryRowContext(ctx, getAccountUserUserID, arg.ID, arg.AccountID)
+	var user_id string
+	err := row.Scan(&user_id)
+	return user_id, err
+}
+
+const getLatestResourceFieldChanges = `-- name: GetLatestResourceFieldChanges :one
+SELECT changes FROM audit_event FORCE INDEX (audit_event_account_id_resource_id_occurred_at_type_id_idx)
+WHERE account_id = ?
+  AND resource_id = ?
+  AND resource_type = ?
+  AND action <> 'delete'
+  AND JSON_CONTAINS(changes, JSON_OBJECT('Field', CAST(? AS CHAR)))
+ORDER BY occurred_at DESC, type_id DESC
+LIMIT 1
+`
+
+type GetLatestResourceFieldChangesParams struct {
+	AccountID    string
+	ResourceID   string
+	ResourceType string
+	Field        interface{}
+}
+
+// The changes of the newest event on the resource (its create snapshot included) that recorded the field, i.e. the event holding the field's current value. A delete's snapshot records every field with a null new value, so deletes are skipped: the value is the one the resource held when it was deleted. Walks the resource's own events newest first on audit_event_account_id_resource_id_occurred_at_type_id_idx and stops at the first match, so the cost is bounded by the resource's event count — forced because audit_event_resource_idx pins the same rows but filesorts the type_id tie-break.
+func (q *Queries) GetLatestResourceFieldChanges(ctx context.Context, arg GetLatestResourceFieldChangesParams) (db.NullableRawMessage, error) {
+	row := q.db.QueryRowContext(ctx, getLatestResourceFieldChanges,
+		arg.AccountID,
+		arg.ResourceID,
+		arg.ResourceType,
+		arg.Field,
+	)
+	var changes db.NullableRawMessage
+	err := row.Scan(&changes)
+	return changes, err
+}
+
 const getResourceCreateChanges = `-- name: GetResourceCreateChanges :one
 SELECT changes FROM audit_event
 WHERE account_id = ?
@@ -335,55 +385,38 @@ func (q *Queries) GetResourceCreateChanges(ctx context.Context, arg GetResourceC
 	return changes, err
 }
 
-const listResourceUserActorIDs = `-- name: ListResourceUserActorIDs :many
-SELECT ae.actor_id FROM audit_event ae
-WHERE ae.account_id = ?
-  AND ae.identity_type = 'user'
-  AND ae.resource_type = ?
-  AND ae.resource_id = ?
-UNION
-SELECT rae.actor_id FROM audit_event rae
-WHERE rae.account_id = ?
-  AND rae.identity_type = 'user'
-  AND rae.root_resource_type = ?
-  AND rae.root_resource_id = ?
+const getResourceCreateEvent = `-- name: GetResourceCreateEvent :one
+SELECT actor_id, identity_type, request_id, changes FROM audit_event
+WHERE account_id = ?
+  AND resource_type = ?
+  AND resource_id = ?
+  AND action = 'create'
+ORDER BY occurred_at ASC
+LIMIT 1
 `
 
-type ListResourceUserActorIDsParams struct {
-	AccountID        string
-	ResourceType     string
-	ResourceID       string
-	RootResourceType sql.NullString
-	RootResourceID   sql.NullString
+type GetResourceCreateEventParams struct {
+	AccountID    string
+	ResourceType string
+	ResourceID   string
 }
 
-// Distinct user actors who have touched a resource's record tree — the resource itself or any child event whose root points at it. They form the follower set for resource-activity notifications. The UNION arms each match a dedicated composite index (account_id+resource vs the root idx).
-func (q *Queries) ListResourceUserActorIDs(ctx context.Context, arg ListResourceUserActorIDsParams) ([]string, error) {
-	rows, err := q.db.QueryContext(ctx, listResourceUserActorIDs,
-		arg.AccountID,
-		arg.ResourceType,
-		arg.ResourceID,
-		arg.AccountID,
-		arg.RootResourceType,
-		arg.RootResourceID,
+type GetResourceCreateEventRow struct {
+	ActorID      string
+	IdentityType string
+	RequestID    sql.NullString
+	Changes      db.NullableRawMessage
+}
+
+// The resource's create event: who created it, in which request, and the snapshot of its audited fields at creation. Served by audit_event_resource_idx (resource_type, resource_id, occurred_at).
+func (q *Queries) GetResourceCreateEvent(ctx context.Context, arg GetResourceCreateEventParams) (GetResourceCreateEventRow, error) {
+	row := q.db.QueryRowContext(ctx, getResourceCreateEvent, arg.AccountID, arg.ResourceType, arg.ResourceID)
+	var i GetResourceCreateEventRow
+	err := row.Scan(
+		&i.ActorID,
+		&i.IdentityType,
+		&i.RequestID,
+		&i.Changes,
 	)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	var items []string
-	for rows.Next() {
-		var actor_id string
-		if err := rows.Scan(&actor_id); err != nil {
-			return nil, err
-		}
-		items = append(items, actor_id)
-	}
-	if err := rows.Close(); err != nil {
-		return nil, err
-	}
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-	return items, nil
+	return i, err
 }

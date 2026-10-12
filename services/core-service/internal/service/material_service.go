@@ -482,7 +482,7 @@ func (s *materialSvcImpl) UpdateMaterial(ctx context.Context, params domain.Upda
 	case domain.RecoveryPointStarted:
 		var result *domain.Material
 		apiErr = s.withTx(ctx, func(txCtx context.Context, txSvc *materialSvcImpl) *apierror.APIError {
-			updated, apiErr := txSvc.updateMaterialInTx(txCtx, params)
+			updated, apiErr := txSvc.updateMaterialInTx(txCtx, params, nil)
 			if apiErr != nil {
 				return apiErr
 			}
@@ -505,7 +505,8 @@ func (s *materialSvcImpl) UpdateMaterial(ctx context.Context, params domain.Upda
 // and lead-time quantities, and unit_cost within an existing transaction, returning the
 // fresh material. Shared by UpdateMaterial (single) and BulkUpsertMaterials (batch); it
 // does not own the idempotency/permission envelope, and expects params.AccountID set.
-func (s *materialSvcImpl) updateMaterialInTx(txCtx context.Context, params domain.UpdateMaterialParams) (*domain.Material, *apierror.APIError) {
+// childWrites (optional) runs the caller's rate/attribute writes inside the audited window.
+func (s *materialSvcImpl) updateMaterialInTx(txCtx context.Context, params domain.UpdateMaterialParams, childWrites func(context.Context) *apierror.APIError) (*domain.Material, *apierror.APIError) {
 	txMaterialRepo := s.repos.NewMaterialRepo()
 	txItemRepo := s.repos.NewItemRepo()
 
@@ -538,6 +539,13 @@ func (s *materialSvcImpl) updateMaterialInTx(txCtx context.Context, params domai
 		}
 	}
 
+	var children *itemChildAudit
+	if params.UnitCost != nil || childWrites != nil {
+		if children, apiErr = snapshotItemChildren(txCtx, s.repos, params.AccountID, existing.ItemID, true); apiErr != nil {
+			return nil, apiErr
+		}
+	}
+
 	if params.UnitCost != nil {
 		txUnitRepo := s.repos.NewUnitRepo()
 		if apiErr := ValidateCostRateUnits(txCtx, txUnitRepo, params.UnitCost.NumeratorUnitID, params.UnitCost.DenominatorUnitID, "unit_cost"); apiErr != nil {
@@ -554,6 +562,12 @@ func (s *materialSvcImpl) updateMaterialInTx(txCtx context.Context, params domai
 		}
 		// Everything built from this material is now costed from a price that has moved.
 		if apiErr := event.PublishItemCostBasisChanged(txCtx, s.repos, params.AccountID, existing.ItemID, event.CostBasisUnitCostUpdated); apiErr != nil {
+			return nil, apiErr
+		}
+	}
+
+	if childWrites != nil {
+		if apiErr := childWrites(txCtx); apiErr != nil {
 			return nil, apiErr
 		}
 	}
@@ -589,6 +603,13 @@ func (s *materialSvcImpl) updateMaterialInTx(txCtx context.Context, params domai
 	}
 
 	changes := audit.ComputeChanges(existing, updated)
+	if children != nil {
+		childChanges, apiErr := children.changes(txCtx, s.repos)
+		if apiErr != nil {
+			return nil, apiErr
+		}
+		changes = append(changes, childChanges...)
+	}
 
 	if apiErr := audit.NewPublisher().Publish(txCtx, s.repos.NewOutboxRepo(), audit.EventData{
 		ServiceName:  domain.ServiceName,

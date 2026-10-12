@@ -12,6 +12,7 @@ import (
 	"github.com/open-mrp/api/services/auth-service/pkg/types"
 	"github.com/open-mrp/api/services/notification-service/internal/domain"
 	"github.com/open-mrp/api/shared/appctx"
+	"github.com/open-mrp/api/shared/audit"
 	"github.com/open-mrp/api/shared/constants"
 	"github.com/open-mrp/api/shared/contracts"
 	apierror "github.com/open-mrp/api/shared/errors"
@@ -30,11 +31,12 @@ const (
 
 type messagingSvcImpl struct {
 	repoFactory domain.RepoFactory
+	txManager   TransactionManager
 }
 
 // NewMessagingSvc constructs the in-app notification (bell) service.
-func NewMessagingSvc(repoFactory domain.RepoFactory) domain.MessagingSvc {
-	return &messagingSvcImpl{repoFactory: repoFactory}
+func NewMessagingSvc(repoFactory domain.RepoFactory, txManager TransactionManager) domain.MessagingSvc {
+	return &messagingSvcImpl{repoFactory: repoFactory, txManager: txManager}
 }
 
 // actor resolves and validates the calling identity.
@@ -237,7 +239,7 @@ func (s *messagingSvcImpl) FanOut(ctx context.Context, dedupeSeed string, data m
 	if coalesce {
 		// Coalesced fan-out refreshes one rolling row per recipient and pushes a realtime alert only for
 		// rows it freshly inserted — the first change in the window alerts, later changes accumulate silently.
-		inserted, apiErr := notifRepo.UpsertCoalesced(ctx, notifications)
+		inserted, apiErr := notifRepo.UpsertCoalesced(ctx, notifications, !data.CoalesceQuietly)
 		if apiErr != nil {
 			return tracing.Trace(span, apiErr)
 		}
@@ -606,7 +608,32 @@ func (s *messagingSvcImpl) createBroadcastAnnouncement(ctx context.Context, iden
 		PublishAt:        time.Now(),
 		CreatedBy:        &createdBy,
 	}
-	if apiErr := s.repoFactory.NewAnnouncementRepo().Create(ctx, announcementID, create); apiErr != nil {
+	apiErr = s.txManager.WithTx(ctx, func(txCtx context.Context, f domain.RepoFactory) *apierror.APIError {
+		if apiErr := f.NewAnnouncementRepo().Create(txCtx, announcementID, create); apiErr != nil {
+			return apiErr
+		}
+		created := &domain.Announcement{
+			ID:               announcementID,
+			Scope:            create.Scope,
+			AccountID:        create.AccountID,
+			Category:         create.Category,
+			TemplateKey:      create.TemplateKey,
+			Title:            create.Title,
+			Body:             create.Body,
+			LinkResourceType: create.LinkResourceType,
+			LinkResourceID:   create.LinkResourceID,
+			Priority:         create.Priority,
+			PublishAt:        create.PublishAt,
+		}
+		return audit.NewPublisher().Publish(txCtx, f.NewOutboxRepo(), audit.EventData{
+			ServiceName:  domain.ServiceName,
+			Action:       constants.AuditActionCreate,
+			ResourceType: constants.ObjectTypeAnnouncement,
+			ResourceID:   announcementID,
+			Changes:      audit.ComputeChanges(nil, created),
+		})
+	})
+	if apiErr != nil {
 		return apiErr
 	}
 
@@ -832,13 +859,40 @@ func (s *messagingSvcImpl) UpsertNotificationPreference(ctx context.Context, inp
 		return nil, tracing.Trace(span, apierror.NewParameterInvalidError("An invalid category was supplied.", "category"))
 	}
 
-	prefRepo := s.repoFactory.NewNotificationPreferenceRepo()
 	prefID, apiErr := id.GenID(id.NotificationPreferenceIDPrefix, nil)
 	if apiErr != nil {
 		return nil, tracing.Trace(span, apiErr)
 	}
-	if apiErr := prefRepo.Upsert(ctx, prefID, accountID, recipientID, &input); apiErr != nil {
+	var pref *domain.NotificationPreference
+	apiErr = s.txManager.WithTx(ctx, func(txCtx context.Context, f domain.RepoFactory) *apierror.APIError {
+		prefRepo := f.NewNotificationPreferenceRepo()
+		before, apiErr := prefRepo.GetByUserCategory(txCtx, recipientID, input.Category)
+		if apiErr != nil && apiErr.Code != apierror.ErrorCodeResourceNotFound {
+			return apiErr
+		}
+		if apiErr := prefRepo.Upsert(txCtx, prefID, accountID, recipientID, &input); apiErr != nil {
+			return apiErr
+		}
+		after, apiErr := prefRepo.GetByUserCategory(txCtx, recipientID, input.Category)
+		if apiErr != nil {
+			return apiErr
+		}
+		pref = after
+		// The upsert keeps an existing row's id, so a replacement reads as an update of the same preference.
+		action := constants.AuditActionUpdate
+		if before == nil {
+			action = constants.AuditActionCreate
+		}
+		return audit.NewPublisher().Publish(txCtx, f.NewOutboxRepo(), audit.EventData{
+			ServiceName:  domain.ServiceName,
+			Action:       action,
+			ResourceType: constants.ObjectTypeNotificationPreference,
+			ResourceID:   after.ID,
+			Changes:      audit.ComputeChanges(before, after),
+		})
+	})
+	if apiErr != nil {
 		return nil, tracing.Trace(span, apiErr)
 	}
-	return prefRepo.GetByUserCategory(ctx, recipientID, input.Category)
+	return pref, nil
 }

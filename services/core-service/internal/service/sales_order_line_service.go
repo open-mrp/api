@@ -152,7 +152,6 @@ func (s *salesOrderLineSvcImpl) CreateSalesOrderLine(ctx context.Context, params
 		apiErr = s.withTx(ctx, func(txCtx context.Context, txSvc *salesOrderLineSvcImpl) *apierror.APIError {
 			txOrderRepo := txSvc.repos.NewSalesOrderRepo()
 			txLineRepo := txSvc.repos.NewSalesOrderLineRepo()
-			txPickLineRepo := txSvc.repos.NewPickLineRepo()
 
 			scope, apiErr := ledgerlock.Acquire(txCtx, txSvc.repos.NewInventoryReservationRepo(), lockItemIDs)
 			if apiErr != nil {
@@ -198,7 +197,7 @@ func (s *salesOrderLineSvcImpl) CreateSalesOrderLine(ctx context.Context, params
 			}
 			isSaleLine := created.ProductTypeCode != nil && *created.ProductTypeCode == string(constants.ProductTypeCodeSale)
 			if pickID != nil && isSaleLine {
-				if apiErr := reconcilePickForOrderLine(txCtx, txLineRepo, txPickLineRepo, txSvc.repos.NewPickRepo(), params.AccountID, lineID, *pickID); apiErr != nil {
+				if apiErr := reconcilePickForOrderLine(txCtx, txSvc.repos, params.AccountID, params.SalesOrderID, lineID, *pickID); apiErr != nil {
 					return apiErr
 				}
 			}
@@ -390,7 +389,23 @@ func resolveCreateLinePricing(ctx context.Context, repos domain.RepoFactory, isI
 //     everything that remains is packed. This is the decrease path — e.g. a line
 //     picked+packed at 10, bumped to 15 (opening a remainder line), then dropped back
 //     to 10 drops that now-unneeded remainder line.
-func reconcilePickForOrderLine(ctx context.Context, lineRepo domain.SalesOrderLineRepo, pickLineRepo domain.PickLineRepo, pickRepo domain.PickRepo, accountID, orderLineID, pickID string) *apierror.APIError {
+func reconcilePickForOrderLine(ctx context.Context, repos domain.RepoFactory, accountID, salesOrderID, orderLineID, pickID string) *apierror.APIError {
+	pickRepo := repos.NewPickRepo()
+	pickBefore, apiErr := pickRepo.Get(ctx, accountID, pickID)
+	if apiErr != nil {
+		return apiErr
+	}
+	if apiErr := reconcilePickLines(ctx, repos, accountID, salesOrderID, orderLineID, pickID); apiErr != nil {
+		return apiErr
+	}
+	return publishPickChanges(ctx, repos, accountID, pickBefore)
+}
+
+func reconcilePickLines(ctx context.Context, repos domain.RepoFactory, accountID, salesOrderID, orderLineID, pickID string) *apierror.APIError {
+	lineRepo := repos.NewSalesOrderLineRepo()
+	pickLineRepo := repos.NewPickLineRepo()
+	pickRepo := repos.NewPickRepo()
+
 	orderedStr, packedStr, unitID, apiErr := pickLineRepo.GetOrderLinePackProgress(ctx, orderLineID)
 	if apiErr != nil {
 		return apiErr
@@ -426,6 +441,16 @@ func reconcilePickForOrderLine(ctx context.Context, lineRepo domain.SalesOrderLi
 			if apiErr := pickLineRepo.CreateForRemaining(ctx, pickLineID, quantityID, pickID, orderLineID); apiErr != nil {
 				return apiErr
 			}
+			if apiErr := audit.NewPublisher().Publish(ctx, repos.NewOutboxRepo(), audit.EventData{
+				ServiceName:      domain.ServiceName,
+				Action:           constants.AuditActionCreate,
+				ResourceType:     constants.ObjectTypePickLine,
+				ResourceID:       pickLineID,
+				RootResourceType: constants.ObjectTypeSalesOrder,
+				RootResourceID:   salesOrderID,
+			}); apiErr != nil {
+				return apiErr
+			}
 		}
 		// There is outstanding work, so the pick is not finished.
 		return pickRepo.ClearFinishedAt(ctx, accountID, pickID)
@@ -433,7 +458,16 @@ func reconcilePickForOrderLine(ctx context.Context, lineRepo domain.SalesOrderLi
 
 	// Packed already covers the order: drop any surplus open pick line, then finish the
 	// pick if every line that remains is packed.
+	_, surplus, apiErr := pickWithLines(ctx, repos, accountID, pickID, func(l *domain.PickLine) bool {
+		return l.SalesOrderLineID == orderLineID && l.PackedAt == nil
+	})
+	if apiErr != nil {
+		return apiErr
+	}
 	if apiErr := pickLineRepo.DeleteUnpackedForOrderLine(ctx, orderLineID); apiErr != nil {
+		return apiErr
+	}
+	if apiErr := publishPickLinesDeleted(ctx, repos, salesOrderID, surplus); apiErr != nil {
 		return apiErr
 	}
 	return pickRepo.MarkFinishedIfAllPacked(ctx, pickID)
@@ -587,7 +621,6 @@ func (s *salesOrderLineSvcImpl) UpdateSalesOrderLine(ctx context.Context, params
 		apiErr = s.withTx(ctx, func(txCtx context.Context, txSvc *salesOrderLineSvcImpl) *apierror.APIError {
 			txLineRepo := txSvc.repos.NewSalesOrderLineRepo()
 			txOrderRepo := txSvc.repos.NewSalesOrderRepo()
-			txPickLineRepo := txSvc.repos.NewPickLineRepo()
 
 			scope, apiErr := ledgerlock.Acquire(txCtx, txSvc.repos.NewInventoryReservationRepo(), lockItemIDs)
 			if apiErr != nil {
@@ -673,7 +706,7 @@ func (s *salesOrderLineSvcImpl) UpdateSalesOrderLine(ctx context.Context, params
 			}
 			isSaleLine := old.ProductTypeCode != nil && *old.ProductTypeCode == string(constants.ProductTypeCodeSale)
 			if pickID != nil && isSaleLine {
-				if apiErr := reconcilePickForOrderLine(txCtx, txLineRepo, txPickLineRepo, txSvc.repos.NewPickRepo(), params.AccountID, params.SalesOrderLineID, *pickID); apiErr != nil {
+				if apiErr := reconcilePickForOrderLine(txCtx, txSvc.repos, params.AccountID, params.SalesOrderID, params.SalesOrderLineID, *pickID); apiErr != nil {
 					return apiErr
 				}
 			}
@@ -814,9 +847,27 @@ func (s *salesOrderLineSvcImpl) DeleteSalesOrderLine(ctx context.Context, params
 			return apiErr
 		}
 
+		pickID, apiErr := txOrderRepo.GetPickID(txCtx, params.SalesOrderID)
+		if apiErr != nil {
+			return apiErr
+		}
+		var pick *domain.Pick
+		var linePickLines []*domain.PickLine
+		if pickID != nil {
+			pick, linePickLines, apiErr = pickWithLines(txCtx, txSvc.repos, params.AccountID, *pickID, func(l *domain.PickLine) bool {
+				return l.SalesOrderLineID == params.SalesOrderLineID
+			})
+			if apiErr != nil {
+				return apiErr
+			}
+		}
+
 		// DeleteCascade removes this line's pick lines (and their quantities) along with
 		// the line itself.
 		if apiErr := txLineRepo.DeleteCascade(txCtx, params.SalesOrderLineID); apiErr != nil {
+			return apiErr
+		}
+		if apiErr := publishPickLinesDeleted(txCtx, txSvc.repos, params.SalesOrderID, linePickLines); apiErr != nil {
 			return apiErr
 		}
 
@@ -843,10 +894,6 @@ func (s *salesOrderLineSvcImpl) DeleteSalesOrderLine(ctx context.Context, params
 		}
 
 		// Reconcile the order's pick now that this line's pick lines are gone.
-		pickID, apiErr := txOrderRepo.GetPickID(txCtx, params.SalesOrderID)
-		if apiErr != nil {
-			return apiErr
-		}
 		if pickID != nil {
 			lineCount, apiErr := txPickRepo.CountLines(txCtx, *pickID)
 			if apiErr != nil {
@@ -857,6 +904,9 @@ func (s *salesOrderLineSvcImpl) DeleteSalesOrderLine(ctx context.Context, params
 				// the empty pick and revert the order to estimate, releasing reserved
 				// inventory — the same teardown the unissue action performs.
 				if apiErr := txOrderRepo.DeletePickBySalesOrder(txCtx, params.SalesOrderID); apiErr != nil {
+					return apiErr
+				}
+				if apiErr := publishPickDeleted(txCtx, txSvc.repos, pick); apiErr != nil {
 					return apiErr
 				}
 				releasedItemIDs, apiErr := txReservationRepo.ReleaseReservedIssuesForOrder(txCtx, scope, params.AccountID, params.SalesOrderID)
@@ -887,6 +937,9 @@ func (s *salesOrderLineSvcImpl) DeleteSalesOrderLine(ctx context.Context, params
 			} else {
 				// Lines remain: finish the pick if every one that is left is packed.
 				if apiErr := txPickRepo.MarkFinishedIfAllPacked(txCtx, *pickID); apiErr != nil {
+					return apiErr
+				}
+				if apiErr := publishPickChanges(txCtx, txSvc.repos, params.AccountID, pick); apiErr != nil {
 					return apiErr
 				}
 

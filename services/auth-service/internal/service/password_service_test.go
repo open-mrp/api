@@ -8,6 +8,7 @@ import (
 	factorymock "github.com/open-mrp/api/services/auth-service/internal/domain/mock/factory"
 	mediatormock "github.com/open-mrp/api/services/auth-service/internal/domain/mock/mediator"
 	publishermock "github.com/open-mrp/api/services/auth-service/internal/domain/mock/publisher"
+	repositorymock "github.com/open-mrp/api/services/auth-service/internal/domain/mock/repository"
 	"github.com/open-mrp/api/services/auth-service/internal/testutil"
 	"github.com/open-mrp/api/services/auth-service/pkg/types"
 	"github.com/open-mrp/api/shared/appctx"
@@ -21,6 +22,7 @@ type PasswordSvcTestSuite struct {
 	suite.Suite
 	passwordSvc           domain.PasswordSvc
 	repoFactory           *factorymock.MockRepoFactory
+	userRepo              *repositorymock.MockUserRepo
 	passwordMed           *mediatormock.MockPasswordMed
 	refreshTokenMed       *mediatormock.MockRefreshTokenMed
 	userMed               *mediatormock.MockUserMed
@@ -32,7 +34,8 @@ type PasswordSvcTestSuite struct {
 func (suite *PasswordSvcTestSuite) SetupSuite() {
 	suite.ctrl = gomock.NewController(suite.T())
 	suite.repoFactory = factorymock.NewMockRepoFactory(suite.ctrl)
-	suite.repoFactory.EXPECT().NewUserRepo().Return(nil).AnyTimes()
+	suite.userRepo = repositorymock.NewMockUserRepo(suite.ctrl)
+	suite.repoFactory.EXPECT().NewUserRepo().Return(suite.userRepo).AnyTimes()
 	suite.repoFactory.EXPECT().NewRefreshTokenRepo().Return(nil).AnyTimes()
 	suite.repoFactory.EXPECT().NewAPIKeyRepo().Return(nil).AnyTimes()
 	suite.repoFactory.EXPECT().NewIdempotencyKeyRepo().Return(nil).AnyTimes()
@@ -121,6 +124,11 @@ func (suite *PasswordSvcTestSuite) TestResetPassword_Success() {
 	suite.passwordMed.EXPECT().
 		Update(gomock.Any(), user, newPassword).
 		Return(nil).
+		Times(1)
+	lastUsedAccountID := "acct_test"
+	suite.userRepo.EXPECT().
+		FindLastUsedAccountID(gomock.Any(), user.ID).
+		Return(&lastUsedAccountID, nil).
 		Times(1)
 	suite.refreshTokenMed.EXPECT().
 		Create(gomock.Any(), user.ID, nil).

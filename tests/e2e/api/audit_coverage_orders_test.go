@@ -410,6 +410,48 @@ func TestOrderCascadeAudit_PurchaseOrderContactsAndFlatAddresses(t *testing.T) {
 	assert.Empty(t, jsonArray(contacts, "new_value"))
 }
 
+// Creating a purchase order audits each of its lines under the order.
+func TestOrderCascadeAudit_PurchaseOrderCreateAuditsItsLines(t *testing.T) {
+	t.Parallel()
+
+	skus := []string{uniqueName("E2E-PO-AUD-A"), uniqueName("E2E-PO-AUD-B")}
+	created := createPurchaseOrder(t, func(b map[string]any) {
+		b["lines"] = []map[string]any{materialLineBody(skus[0]), materialLineBody(skus[1])}
+	})
+	orderID := jsonField(created, "id")
+	lineIDs := idsOf(jsonListData(retrievePurchaseOrder(t, orderID, "lines"), "lines"))
+	require.Len(t, lineIDs, 2)
+
+	eventually(t, e2eAsyncWaitTimeout, e2eAsyncPollInterval, func() error {
+		status, body, err := apiClient.GetListRaw(auditEventsPath, url.Values{
+			"root_resource_type": {"purchase_order"},
+			"root_resource_id":   {orderID},
+			"resource_types":     {"purchase_order_line"},
+			"actions":            {"create"},
+			"limit":              {"100"},
+		})
+		if err != nil {
+			return err
+		}
+		if status != 200 {
+			return fmt.Errorf("audit events: %d %s", status, body)
+		}
+		var audited []string
+		for _, item := range jsonArray(parseJSON(body), "data") {
+			audited = append(audited, jsonField(item.(map[string]any), "resource_id"))
+		}
+		slices.Sort(audited)
+		want := slices.Sorted(slices.Values(lineIDs))
+		if !slices.Equal(audited, want) {
+			return fmt.Errorf("line creates under the order: got %v, want %v", audited, want)
+		}
+		return nil
+	})
+
+	sku := expectAuditFieldChange(t, lineIDs[0], "purchase_order_line", "create", "product_sku")
+	assert.Contains(t, skus, jsonField(sku, "new_value"))
+}
+
 // Ordering a material from a supplier it is not yet linked to links it, and the link is audited.
 func TestOrderCascadeAudit_PurchaseOrderLineLinksTheSupplierMaterial(t *testing.T) {
 	t.Parallel()
@@ -428,11 +470,11 @@ func TestOrderCascadeAudit_PurchaseOrderLineLinksTheSupplierMaterial(t *testing.
 	requireStatus(t, 200, status, body)
 	links := jsonArray(parseJSON(body), "data")
 	require.Len(t, links, 1, "the order linked the material to its supplier: %s", string(body))
-	// The public id of a supplier material is its material's; audit events are keyed by the link row.
 	materialID := jsonField(links[0].(map[string]any), "id")
 	t.Cleanup(func() { _, _, _ = apiClient.Delete(supplierMaterialsPath + "/" + materialID) })
 
-	expectAuditEvent(t, supplierMaterialRowID(t, SeedSupplierAccountID, materialID), "supplier_material", "create")
+	expectAuditEvent(t, materialID, "supplier_material", "create")
+	expectSupplierMaterialRootedEvents(t, SeedSupplierAccountID, materialID, 1)
 }
 
 // --- Settlements ---

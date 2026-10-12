@@ -395,7 +395,7 @@ func (s *purchaseOrderSvcImpl) CreatePurchaseOrder(ctx context.Context, params d
 				return apiErr
 			}
 
-			// Create order lines
+			createdLines := make([]*domain.PurchaseOrderLine, 0, len(params.Lines))
 			for _, lineInput := range params.Lines {
 				lineID, apiErr := id.GenID(id.OrderLineIDPrefix, nil)
 				if apiErr != nil {
@@ -419,10 +419,11 @@ func (s *purchaseOrderSvcImpl) CreatePurchaseOrder(ctx context.Context, params d
 					UnitCostDenominatorUnitID:  lineInput.UnitCostDenominatorUnitID,
 				}
 
-				_, apiErr = txLineRepo.Create(txCtx, lineID, lineParams)
+				createdLine, apiErr := txLineRepo.Create(txCtx, lineID, lineParams)
 				if apiErr != nil {
 					return apiErr
 				}
+				createdLines = append(createdLines, createdLine)
 
 				// Ensure supplier material link for lines with an item_id
 				if lineInput.ItemID != nil {
@@ -477,6 +478,11 @@ func (s *purchaseOrderSvcImpl) CreatePurchaseOrder(ctx context.Context, params d
 				Changes:      changes,
 			}); apiErr != nil {
 				return apiErr
+			}
+			for _, line := range createdLines {
+				if apiErr := audit.NewPublisher().Publish(txCtx, txSvc.repos.NewOutboxRepo(), purchaseOrderLineAuditEvent(constants.AuditActionCreate, line, audit.ComputeChanges(nil, line))); apiErr != nil {
+					return apiErr
+				}
 			}
 
 			return txSvc.mediators().Idempotency.CacheSuccessResponse(txCtx, idempotencyKey.TypeID, result)
@@ -1157,13 +1163,7 @@ func ensureSupplierMaterialLink(ctx context.Context, repos domain.RepoFactory, a
 		return apiErr
 	}
 
-	return audit.NewPublisher().Publish(ctx, repos.NewOutboxRepo(), audit.EventData{
-		ServiceName:  domain.ServiceName,
-		Action:       constants.AuditActionCreate,
-		ResourceType: constants.ObjectTypeSupplierMaterial,
-		ResourceID:   created.ID,
-		Changes:      audit.ComputeChanges(nil, created),
-	})
+	return audit.NewPublisher().Publish(ctx, repos.NewOutboxRepo(), supplierMaterialAuditEvent(constants.AuditActionCreate, created, audit.ComputeChanges(nil, created)))
 }
 
 // checkPurchaseOrderAddressChoices requires the order's bill-to and ship-to, each given one way: by ID, inline, or through the flat bill_to_* / ship_to_* fields, which then need a name and a country like any new address.

@@ -192,15 +192,7 @@ func (s *purchaseOrderLineSvcImpl) CreatePurchaseOrderLine(ctx context.Context, 
 
 			result = created
 
-			changes := audit.ComputeChanges(nil, created)
-
-			if apiErr := audit.NewPublisher().Publish(txCtx, txSvc.repos.NewOutboxRepo(), audit.EventData{
-				ServiceName:  domain.ServiceName,
-				Action:       constants.AuditActionCreate,
-				ResourceType: constants.ObjectTypePurchaseOrderLine,
-				ResourceID:   created.ID,
-				Changes:      changes,
-			}); apiErr != nil {
+			if apiErr := audit.NewPublisher().Publish(txCtx, txSvc.repos.NewOutboxRepo(), purchaseOrderLineAuditEvent(constants.AuditActionCreate, created, audit.ComputeChanges(nil, created))); apiErr != nil {
 				return apiErr
 			}
 
@@ -336,15 +328,7 @@ func (s *purchaseOrderLineSvcImpl) UpdatePurchaseOrderLine(ctx context.Context, 
 
 			result = updated
 
-			changes := audit.ComputeChanges(old, updated)
-
-			if apiErr := audit.NewPublisher().Publish(txCtx, txSvc.repos.NewOutboxRepo(), audit.EventData{
-				ServiceName:  domain.ServiceName,
-				Action:       constants.AuditActionUpdate,
-				ResourceType: constants.ObjectTypePurchaseOrderLine,
-				ResourceID:   updated.ID,
-				Changes:      changes,
-			}); apiErr != nil {
+			if apiErr := audit.NewPublisher().Publish(txCtx, txSvc.repos.NewOutboxRepo(), purchaseOrderLineAuditEvent(constants.AuditActionUpdate, updated, audit.ComputeChanges(old, updated))); apiErr != nil {
 				return apiErr
 			}
 
@@ -462,15 +446,7 @@ func (s *purchaseOrderLineSvcImpl) DeletePurchaseOrderLine(ctx context.Context, 
 			return apiErr
 		}
 
-		changes := audit.ComputeChanges(line, (*domain.PurchaseOrderLine)(nil))
-
-		if apiErr := audit.NewPublisher().Publish(txCtx, txSvc.repos.NewOutboxRepo(), audit.EventData{
-			ServiceName:  domain.ServiceName,
-			Action:       constants.AuditActionDelete,
-			ResourceType: constants.ObjectTypePurchaseOrderLine,
-			ResourceID:   line.ID,
-			Changes:      changes,
-		}); apiErr != nil {
+		if apiErr := audit.NewPublisher().Publish(txCtx, txSvc.repos.NewOutboxRepo(), purchaseOrderLineAuditEvent(constants.AuditActionDelete, line, audit.ComputeChanges(line, (*domain.PurchaseOrderLine)(nil)))); apiErr != nil {
 			return apiErr
 		}
 
@@ -487,4 +463,16 @@ func checkPurchaseOrderLineWritePermission(identity *types.Identity) *apierror.A
 		return identity.CheckHasPermission(types.PermissionDomainSuppliers, types.ActionUpdate)
 	}
 	return identity.CheckHasPermission(types.PermissionDomainPurchaseOrders, types.ActionUpdate)
+}
+
+func purchaseOrderLineAuditEvent(action constants.AuditAction, line *domain.PurchaseOrderLine, changes []audit.FieldChange) audit.EventData {
+	return audit.EventData{
+		ServiceName:      domain.ServiceName,
+		Action:           action,
+		ResourceType:     constants.ObjectTypePurchaseOrderLine,
+		ResourceID:       line.ID,
+		RootResourceType: constants.ObjectTypePurchaseOrder,
+		RootResourceID:   line.SalesOrderID,
+		Changes:          changes,
+	}
 }

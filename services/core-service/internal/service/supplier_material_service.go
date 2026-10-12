@@ -213,15 +213,7 @@ func (s *supplierMaterialSvcImpl) CreateSupplierMaterial(ctx context.Context, pa
 			}
 			result = created
 
-			changes := audit.ComputeChanges(nil, created)
-
-			if apiErr := audit.NewPublisher().Publish(txCtx, txSvc.repos.NewOutboxRepo(), audit.EventData{
-				ServiceName:  domain.ServiceName,
-				Action:       constants.AuditActionCreate,
-				ResourceType: constants.ObjectTypeSupplierMaterial,
-				ResourceID:   created.ID,
-				Changes:      changes,
-			}); apiErr != nil {
+			if apiErr := audit.NewPublisher().Publish(txCtx, txSvc.repos.NewOutboxRepo(), supplierMaterialAuditEvent(constants.AuditActionCreate, created, audit.ComputeChanges(nil, created))); apiErr != nil {
 				return apiErr
 			}
 
@@ -297,15 +289,7 @@ func (s *supplierMaterialSvcImpl) UpdateSupplierMaterial(ctx context.Context, pa
 			}
 			result = updated
 
-			changes := audit.ComputeChanges(old, updated)
-
-			if apiErr := audit.NewPublisher().Publish(txCtx, txSvc.repos.NewOutboxRepo(), audit.EventData{
-				ServiceName:  domain.ServiceName,
-				Action:       constants.AuditActionUpdate,
-				ResourceType: constants.ObjectTypeSupplierMaterial,
-				ResourceID:   updated.ID,
-				Changes:      changes,
-			}); apiErr != nil {
+			if apiErr := audit.NewPublisher().Publish(txCtx, txSvc.repos.NewOutboxRepo(), supplierMaterialAuditEvent(constants.AuditActionUpdate, updated, audit.ComputeChanges(old, updated))); apiErr != nil {
 				return apiErr
 			}
 
@@ -363,15 +347,7 @@ func (s *supplierMaterialSvcImpl) DeleteSupplierMaterial(ctx context.Context, pa
 		}
 		result = deleted
 
-		changes := audit.ComputeChanges(entity, (*domain.SupplierMaterial)(nil))
-
-		if apiErr := audit.NewPublisher().Publish(txCtx, txSvc.repos.NewOutboxRepo(), audit.EventData{
-			ServiceName:  domain.ServiceName,
-			Action:       constants.AuditActionDelete,
-			ResourceType: constants.ObjectTypeSupplierMaterial,
-			ResourceID:   entity.ID,
-			Changes:      changes,
-		}); apiErr != nil {
+		if apiErr := audit.NewPublisher().Publish(txCtx, txSvc.repos.NewOutboxRepo(), supplierMaterialAuditEvent(constants.AuditActionDelete, entity, audit.ComputeChanges(entity, (*domain.SupplierMaterial)(nil)))); apiErr != nil {
 			return apiErr
 		}
 
@@ -392,4 +368,16 @@ func checkSupplierDescription(description *string) *apierror.APIError {
 		return apierror.NewValidationErrorWithParam("The supplier description must be at most 65,535 bytes.", "supplier_description")
 	}
 	return nil
+}
+
+func supplierMaterialAuditEvent(action constants.AuditAction, sm *domain.SupplierMaterial, changes []audit.FieldChange) audit.EventData {
+	return audit.EventData{
+		ServiceName:      domain.ServiceName,
+		Action:           action,
+		ResourceType:     constants.ObjectTypeSupplierMaterial,
+		ResourceID:       sm.MaterialID,
+		RootResourceType: constants.ObjectTypeSupplier,
+		RootResourceID:   sm.SupplierAccountID,
+		Changes:          changes,
+	}
 }

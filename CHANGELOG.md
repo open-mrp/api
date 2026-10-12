@@ -1,5 +1,12 @@
 # Changelog
 
+## [4.8.0](https://github.com/open-mrp/api/compare/v4.7.4...v4.8.0) (2026-10-12)
+
+
+### Features
+
+* audit every persisted record mutation ([#324](https://github.com/open-mrp/api/issues/324)) ([1cdedee](https://github.com/open-mrp/api/commit/1cdedeeeb69b5e233a6a507aca78ac3caa4c5218))
+
 ## [4.7.4](https://github.com/open-mrp/api/compare/v4.7.3...v4.7.4) (2026-10-10)
 
 

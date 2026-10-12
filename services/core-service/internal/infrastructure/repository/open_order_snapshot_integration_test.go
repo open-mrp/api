@@ -98,7 +98,7 @@ func syncSnapshot(t *testing.T, ctx context.Context, repo domain.OpenOrderSnapsh
 	for {
 		ids, apiErr := repo.ListIssuedOrderIDsAfter(ctx, after, 50)
 		require.Nil(t, apiErr)
-		_, apiErr = repo.RefreshOrders(ctx, ids)
+		_, _, apiErr = repo.RefreshOrders(ctx, ids)
 		require.Nil(t, apiErr)
 		if len(ids) < 50 {
 			break
@@ -109,7 +109,7 @@ func syncSnapshot(t *testing.T, ctx context.Context, repo domain.OpenOrderSnapsh
 	require.Nil(t, apiErr)
 	stale, apiErr := repo.FilterNotIssued(ctx, held)
 	require.Nil(t, apiErr)
-	_, apiErr = repo.RefreshOrders(ctx, stale)
+	_, _, apiErr = repo.RefreshOrders(ctx, stale)
 	require.Nil(t, apiErr)
 }
 
@@ -312,7 +312,7 @@ func TestOpenOrderSnapshotFollowsEdits(t *testing.T) {
 		orders, apiErr := repo.ResolveOrders(ctx, scope, []string{id})
 		require.Nil(t, apiErr)
 		require.Contains(t, orders, order+"so", "a %s mark did not resolve to its order", scope)
-		_, apiErr = repo.RefreshOrders(ctx, orders)
+		_, _, apiErr = repo.RefreshOrders(ctx, orders)
 		require.Nil(t, apiErr)
 		requireSameOrderBook(t, ctx, live, snapshot, f)
 	}
@@ -352,7 +352,8 @@ func TestOpenOrderSnapshotFollowsEdits(t *testing.T) {
 	refresh(domain.SalesFactScopeSalesOrder, order+"so")
 
 	// A refresh that changes nothing writes nothing.
-	changed, apiErr := repo.RefreshOrders(ctx, []string{order + "so"})
+	accounts, changed, apiErr := repo.RefreshOrders(ctx, []string{order + "so"})
 	require.Nil(t, apiErr)
 	require.Zero(t, changed)
+	require.Empty(t, accounts, "and names no account whose reports changed")
 }

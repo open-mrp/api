@@ -5,6 +5,7 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
+	"maps"
 	"slices"
 	"strings"
 	"sync/atomic"
@@ -117,25 +118,27 @@ FROM open_order_invoiced WHERE sales_order_id IN (%s)`,
 	}
 )
 
-func (r *openOrderSnapshotRepoImpl) RefreshOrders(ctx context.Context, orderIDs []string) (int, *apierror.APIError) {
+func (r *openOrderSnapshotRepoImpl) RefreshOrders(ctx context.Context, orderIDs []string) ([]string, int, *apierror.APIError) {
 	ctx, span := openOrderSnapshotTracer.Start(ctx, "repository.open_order_snapshot.refresh_orders")
 	defer span.End()
 
+	accounts := map[string]bool{}
 	changed := 0
 	for start := 0; start < len(orderIDs); start += openOrderRefreshBatch {
-		n, err := r.refreshBatch(ctx, orderIDs[start:min(start+openOrderRefreshBatch, len(orderIDs))])
-		if apiErr := db.MapSQLError(err); apiErr != nil {
-			return changed, tracing.Trace(span, apiErr)
-		}
+		n, err := r.refreshBatch(ctx, orderIDs[start:min(start+openOrderRefreshBatch, len(orderIDs))], accounts)
 		changed += n
+		if apiErr := db.MapSQLError(err); apiErr != nil {
+			return slices.Sorted(maps.Keys(accounts)), changed, tracing.Trace(span, apiErr)
+		}
 	}
-	return changed, nil
+	return slices.Sorted(maps.Keys(accounts)), changed, nil
 }
 
 // refreshBatch syncs one batch of orders. Orders are written before their lines, and lines before their
 // invoiced rows, so a report read in between sees an order with fewer lines rather than lines without
-// their order; deletes run in the reverse order.
-func (r *openOrderSnapshotRepoImpl) refreshBatch(ctx context.Context, orderIDs []string) (int, error) {
+// their order; deletes run in the reverse order. The account of every row written or deleted is added to
+// accounts.
+func (r *openOrderSnapshotRepoImpl) refreshBatch(ctx context.Context, orderIDs []string, accounts map[string]bool) (int, error) {
 	orders, err := r.readSource(ctx, openOrderTable, orderIDs)
 	if err != nil {
 		return 0, err
@@ -177,12 +180,14 @@ func (r *openOrderSnapshotRepoImpl) refreshBatch(ctx context.Context, orderIDs [
 			return changed, err
 		}
 		changed += len(d.upsert)
+		addSnapshotAccounts(accounts, d.upsert)
 	}
 	for _, d := range slices.Backward(diffs) {
 		if err := r.delete(ctx, d.table, d.delete); err != nil {
 			return changed, err
 		}
 		changed += len(d.delete)
+		addSnapshotAccounts(accounts, d.delete)
 	}
 	return changed, nil
 }
@@ -191,6 +196,13 @@ func (r *openOrderSnapshotRepoImpl) refreshBatch(ctx context.Context, orderIDs [
 type snapshotRow []any
 
 func (row snapshotRow) id() string { return snapshotValueString(row[0]) }
+
+// addSnapshotAccounts adds each row's account, which every snapshot table keeps second.
+func addSnapshotAccounts(accounts map[string]bool, rows []snapshotRow) {
+	for _, row := range rows {
+		accounts[snapshotValueString(row[1])] = true
+	}
+}
 
 func (r *openOrderSnapshotRepoImpl) readSource(ctx context.Context, t snapshotTable, keys []string) ([]snapshotRow, error) {
 	return r.readRows(ctx, fmt.Sprintf(t.source, placeholders(len(keys))), len(t.columns), stringArgs(keys))

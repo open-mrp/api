@@ -140,10 +140,15 @@ func (s *SalesFactRefresher) refreshOpenOrdersFor(ctx context.Context, marks []d
 	return tracing.Trace(span, apiErr)
 }
 
-// refreshOpenOrders refreshes the given orders' snapshot rows; none is no work.
+// refreshOpenOrders refreshes the given orders' snapshot rows; none is no work. The open-order reports
+// are sales reports, so the changed accounts' sales reports are dropped as after a fact refresh.
 func (s *SalesFactRefresher) refreshOpenOrders(ctx context.Context, repo domain.OpenOrderSnapshotRepo, orderIDs []string) (int, *apierror.APIError) {
 	if len(orderIDs) == 0 {
 		return 0, nil
 	}
-	return repo.RefreshOrders(ctx, orderIDs)
+	accounts, changed, apiErr := repo.RefreshOrders(ctx, orderIDs)
+	if len(accounts) > 0 {
+		s.cfg.OnFactsChanged(ctx, accounts)
+	}
+	return changed, apiErr
 }

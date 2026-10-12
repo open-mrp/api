@@ -31,7 +31,7 @@ WHERE so.owner_account_id = ? ORDER BY sol.id LIMIT 1`, seedAccountID).Scan(&ord
 	}
 	t.Cleanup(func() {
 		_, _ = pool.ExecContext(context.Background(), `UPDATE rate SET value = value - 1 WHERE id = ?`, rateID)
-		_, _ = repos.NewOpenOrderSnapshotRepo().RefreshOrders(context.Background(), []string{orderID})
+		_, _, _ = repos.NewOpenOrderSnapshotRepo().RefreshOrders(context.Background(), []string{orderID})
 	})
 
 	publish(ctx, audit.ObservedEvent{AccountID: seedAccountID, Action: constants.AuditActionUpdate, ResourceType: constants.ObjectTypeRate, ResourceID: rateID}, pod)

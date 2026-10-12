@@ -1091,6 +1091,17 @@ func TestIDPrefixes_AllPrefixesUnique(t *testing.T) {
 	}
 }
 
+func TestIDPrefixes_LongestIDFitsMaxLength(t *testing.T) {
+	t.Parallel()
+	_, prefixes := parsePrefixSource(t)
+
+	for name, value := range prefixes {
+		if n := len(value) + len("_") + int(IDLength22); n > MaxLength {
+			t.Errorf("%s yields IDs up to %d characters, past MaxLength %d", name, n, MaxLength)
+		}
+	}
+}
+
 // The hand-maintained lists in the tests above only prove uniqueness of what someone remembered to copy; this pins that the entities most at risk of a silent prefix collision are actually present in the source-derived set.
 func TestIDPrefixes_SourceSetMatchesExportedValues(t *testing.T) {
 	t.Parallel()

@@ -22,6 +22,10 @@ const (
 	charset = "0123456789abcdefghijklmnopqrstuvwxyz"
 )
 
+// MaxLength is the longest ID GenID returns for any prefix. Columns sized to it rather than
+// varchar(191) (sales_line_fact's, to fit a wide covering key) would reject a longer one.
+const MaxLength = 64
+
 // genNanoID generates a new nano ID with the given length.
 func genNanoID(length IDLength) (string, *apierror.APIError) {
 	id, err := nanoid.Generate(charset, int(length))

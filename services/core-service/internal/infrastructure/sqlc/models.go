@@ -2265,17 +2265,9 @@ type SalesFactRollup struct {
 }
 
 type SalesLineFact struct {
-	AccountID          string
 	InvoicedAt         time.Time
-	InvoiceLineID      string
-	InvoiceID          string
 	SalesOrderID       string
-	BuyerAccountID     string
-	SalesRepID         sql.NullString
-	OrderDiscountID    sql.NullString
 	ProductID          string
-	ItemID             string
-	ProductLineID      string
 	RefreshedAt        time.Time
 	QuantityBase       sql.NullString
 	TotalInvoiced      sql.NullString
@@ -2283,6 +2275,14 @@ type SalesLineFact struct {
 	OrderedAt          sql.NullTime
 	IsPriced           bool
 	SalesOrderTypeCode string
+	AccountID          string
+	InvoiceLineID      string
+	InvoiceID          string
+	BuyerAccountID     string
+	SalesRepID         sql.NullString
+	OrderDiscountID    sql.NullString
+	ItemID             string
+	ProductLineID      string
 }
 
 type SalesOrder struct {

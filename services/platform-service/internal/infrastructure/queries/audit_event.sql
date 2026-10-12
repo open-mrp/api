@@ -126,11 +126,12 @@ ORDER BY occurred_at ASC
 LIMIT 1;
 
 -- name: GetLatestResourceFieldChanges :one
--- The changes of the newest event on the resource (its create snapshot included) that recorded the field, i.e. the event holding the field's current value. Walks the resource's own events newest first on audit_event_account_id_resource_id_occurred_at_type_id_idx and stops at the first match, so the cost is bounded by the resource's event count — forced because audit_event_resource_idx pins the same rows but filesorts the type_id tie-break.
+-- The changes of the newest event on the resource (its create snapshot included) that recorded the field, i.e. the event holding the field's current value. A delete's snapshot records every field with a null new value, so deletes are skipped: the value is the one the resource held when it was deleted. Walks the resource's own events newest first on audit_event_account_id_resource_id_occurred_at_type_id_idx and stops at the first match, so the cost is bounded by the resource's event count — forced because audit_event_resource_idx pins the same rows but filesorts the type_id tie-break.
 SELECT changes FROM audit_event FORCE INDEX (audit_event_account_id_resource_id_occurred_at_type_id_idx)
 WHERE account_id = sqlc.arg('account_id')
   AND resource_id = sqlc.arg('resource_id')
   AND resource_type = sqlc.arg('resource_type')
+  AND action <> 'delete'
   AND JSON_CONTAINS(changes, JSON_OBJECT('Field', CAST(sqlc.arg('field') AS CHAR)))
 ORDER BY occurred_at DESC, type_id DESC
 LIMIT 1;

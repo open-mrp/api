@@ -160,3 +160,19 @@ func TestOrderActivity_CreatorOwnsARepLessOrder(t *testing.T) {
 
 	assert.Empty(t, orderActivityNotifs(t, formerRep, orderID), "a cleared rep no longer owns the order")
 }
+
+// A deleted order is still owned by the rep it had when it was deleted.
+func TestOrderActivity_RepIsToldTheOrderWasDeleted(t *testing.T) {
+	t.Parallel()
+	creator := notifUserClient(t)
+	rep := loginAsUser(t, seedUser2Email, seedUserPassword, SeedAccountID)
+
+	orderID, _ := createActivityOrder(t, creator, SeedAccountUser2ID)
+
+	status, body, err := apiClient.Delete(salesOrdersPath + "/" + orderID)
+	require.NoError(t, err)
+	requireStatus(t, 200, status, body)
+
+	waitForOrderActivity(t, rep, orderID, bodyContains("deleted the order", 1))
+	assert.Empty(t, orderActivityNotifs(t, creator, orderID), "the creator is not the owner while a rep is set")
+}

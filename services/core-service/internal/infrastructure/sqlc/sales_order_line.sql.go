@@ -226,6 +226,7 @@ func (q *Queries) GetPickLineQuantityIDsBySalesOrderLine(ctx context.Context, sa
 const getSalesOrderLine = `-- name: GetSalesOrderLine :one
 SELECT
     sol.id,
+    sol.sales_order_id,
     sol.line_item_number,
     sol.product_sku,
     sol.product_description,
@@ -303,6 +304,7 @@ WHERE sol.id = ?
 
 type GetSalesOrderLineRow struct {
 	ID                                   string
+	SalesOrderID                         string
 	LineItemNumber                       sql.NullInt32
 	ProductSku                           string
 	ProductDescription                   sql.NullString
@@ -345,6 +347,7 @@ func (q *Queries) GetSalesOrderLine(ctx context.Context, salesOrderLineID string
 	var i GetSalesOrderLineRow
 	err := row.Scan(
 		&i.ID,
+		&i.SalesOrderID,
 		&i.LineItemNumber,
 		&i.ProductSku,
 		&i.ProductDescription,

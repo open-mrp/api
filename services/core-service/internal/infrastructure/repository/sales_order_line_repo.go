@@ -631,6 +631,7 @@ func (r *salesOrderLineRepoImpl) CreateQuantity(ctx context.Context, quantityID,
 func mapSalesOrderLineRow(row sqlc.GetSalesOrderLineRow) *domain.SalesOrderLine {
 	line := &domain.SalesOrderLine{
 		ID:                              row.ID,
+		SalesOrderID:                    row.SalesOrderID,
 		ProductSKU:                      row.ProductSku,
 		QuantityID:                      row.QuantityID,
 		QuantityValue:                   row.QuantityValue,

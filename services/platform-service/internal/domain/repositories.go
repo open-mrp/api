@@ -20,10 +20,14 @@ type AuditEventRepo interface {
 	FindByID(ctx context.Context, id, targetAccountID string, includes []string) (*AuditEventRead, *apierror.APIError)
 	List(ctx context.Context, targetAccountID string, filter *ListAuditEventsFilter, includes []string) (*ListAuditEventsResult, *apierror.APIError)
 	BatchGetResourceCreators(ctx context.Context, callerAccountID, resourceType string, resourceIDs []string) ([]ResourceCreator, *apierror.APIError)
-	// ListResourceUserActorIDs returns the distinct user actors that have touched the resource's record tree (events on the resource itself or on children rooted at it). They form the follower set for resource-activity notifications.
-	ListResourceUserActorIDs(ctx context.Context, accountID string, resourceType constants.ObjectType, resourceID string) ([]string, *apierror.APIError)
 	// GetResourceCreateChanges returns the field changes recorded by the resource's create event (a snapshot of its audited fields at creation), or nil when no create event is on record.
 	GetResourceCreateChanges(ctx context.Context, accountID string, resourceType constants.ObjectType, resourceID string) ([]AuditFieldChange, *apierror.APIError)
+	// GetResourceCreateEvent returns the resource's create event, or nil when none is on record.
+	GetResourceCreateEvent(ctx context.Context, accountID string, resourceType constants.ObjectType, resourceID string) (*ResourceCreateEvent, *apierror.APIError)
+	// GetLatestResourceFieldValue returns the field's value as of the resource's newest audit event that recorded it (its create snapshot included), and false when no event recorded it.
+	GetLatestResourceFieldValue(ctx context.Context, accountID string, resourceType constants.ObjectType, resourceID, field string) (json.RawMessage, bool, *apierror.APIError)
+	// GetAccountUserUserID returns the user behind an account membership, or "" when the membership is not in the account.
+	GetAccountUserUserID(ctx context.Context, accountID, accountUserID string) (string, *apierror.APIError)
 }
 
 type UpsertAndLockResult struct {

@@ -80,24 +80,6 @@ func (r *auditEventRepoImpl) Create(ctx context.Context, event *domain.AuditEven
 	return nil
 }
 
-func (r *auditEventRepoImpl) ListResourceUserActorIDs(ctx context.Context, accountID string, resourceType constants.ObjectType, resourceID string) ([]string, *apierror.APIError) {
-	ctx, span := auditEventRepoTracer.Start(ctx, "repository.audit_event.list_resource_user_actor_ids")
-	defer span.End()
-
-	actorIDs, err := r.db.ListResourceUserActorIDs(ctx, sqlc.ListResourceUserActorIDsParams{
-		AccountID:        accountID,
-		ResourceType:     string(resourceType),
-		ResourceID:       resourceID,
-		RootResourceType: db.NullString(string(resourceType)),
-		RootResourceID:   db.NullString(resourceID),
-	})
-	if err != nil {
-		return nil, tracing.Trace(span, db.MapSQLError(err))
-	}
-
-	return actorIDs, nil
-}
-
 func (r *auditEventRepoImpl) GetResourceCreateChanges(ctx context.Context, accountID string, resourceType constants.ObjectType, resourceID string) ([]domain.AuditFieldChange, *apierror.APIError) {
 	ctx, span := auditEventRepoTracer.Start(ctx, "repository.audit_event.get_resource_create_changes")
 	defer span.End()
@@ -124,6 +106,81 @@ func (r *auditEventRepoImpl) GetResourceCreateChanges(ctx context.Context, accou
 	}
 
 	return changes, nil
+}
+
+func (r *auditEventRepoImpl) GetResourceCreateEvent(ctx context.Context, accountID string, resourceType constants.ObjectType, resourceID string) (*domain.ResourceCreateEvent, *apierror.APIError) {
+	ctx, span := auditEventRepoTracer.Start(ctx, "repository.audit_event.get_resource_create_event")
+	defer span.End()
+
+	row, err := r.db.GetResourceCreateEvent(ctx, sqlc.GetResourceCreateEventParams{
+		AccountID:    accountID,
+		ResourceType: string(resourceType),
+		ResourceID:   resourceID,
+	})
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, nil
+		}
+		return nil, tracing.Trace(span, db.MapSQLError(err))
+	}
+
+	event := &domain.ResourceCreateEvent{
+		ActorID:      row.ActorID,
+		IdentityType: row.IdentityType,
+		RequestID:    db.StringFromNullString(row.RequestID),
+	}
+	if len(row.Changes) > 0 {
+		if err := json.Unmarshal(row.Changes, &event.Changes); err != nil {
+			return nil, tracing.Trace(span, apierror.NewInternalError(err, "Failed to decode audit event changes."))
+		}
+	}
+	return event, nil
+}
+
+func (r *auditEventRepoImpl) GetLatestResourceFieldValue(ctx context.Context, accountID string, resourceType constants.ObjectType, resourceID, field string) (json.RawMessage, bool, *apierror.APIError) {
+	ctx, span := auditEventRepoTracer.Start(ctx, "repository.audit_event.get_latest_resource_field_value")
+	defer span.End()
+
+	changesRaw, err := r.db.GetLatestResourceFieldChanges(ctx, sqlc.GetLatestResourceFieldChangesParams{
+		AccountID:    accountID,
+		ResourceID:   resourceID,
+		ResourceType: string(resourceType),
+		Field:        field,
+	})
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, false, nil
+		}
+		return nil, false, tracing.Trace(span, db.MapSQLError(err))
+	}
+
+	var changes []domain.AuditFieldChange
+	if err := json.Unmarshal(changesRaw, &changes); err != nil {
+		return nil, false, tracing.Trace(span, apierror.NewInternalError(err, "Failed to decode audit event changes."))
+	}
+	for _, change := range changes {
+		if change.Field == field {
+			return change.NewValue, true, nil
+		}
+	}
+	return nil, false, nil
+}
+
+func (r *auditEventRepoImpl) GetAccountUserUserID(ctx context.Context, accountID, accountUserID string) (string, *apierror.APIError) {
+	ctx, span := auditEventRepoTracer.Start(ctx, "repository.audit_event.get_account_user_user_id")
+	defer span.End()
+
+	userID, err := r.db.GetAccountUserUserID(ctx, sqlc.GetAccountUserUserIDParams{
+		ID:        accountUserID,
+		AccountID: accountID,
+	})
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return "", nil
+		}
+		return "", tracing.Trace(span, db.MapSQLError(err))
+	}
+	return userID, nil
 }
 
 func (r *auditEventRepoImpl) FindByID(ctx context.Context, id string, callerAccountID string, includes []string) (*domain.AuditEventRead, *apierror.APIError) {

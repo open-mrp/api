@@ -105,20 +105,6 @@ VALUES (
     );
 
 
--- name: ListResourceUserActorIDs :many
--- Distinct user actors who have touched a resource's record tree — the resource itself or any child event whose root points at it. They form the follower set for resource-activity notifications. The UNION arms each match a dedicated composite index (account_id+resource vs the root idx).
-SELECT ae.actor_id FROM audit_event ae
-WHERE ae.account_id = sqlc.arg('account_id')
-  AND ae.identity_type = 'user'
-  AND ae.resource_type = sqlc.arg('resource_type')
-  AND ae.resource_id = sqlc.arg('resource_id')
-UNION
-SELECT rae.actor_id FROM audit_event rae
-WHERE rae.account_id = sqlc.arg('account_id')
-  AND rae.identity_type = 'user'
-  AND rae.root_resource_type = sqlc.arg('root_resource_type')
-  AND rae.root_resource_id = sqlc.arg('root_resource_id');
-
 -- name: GetResourceCreateChanges :one
 -- The field changes recorded when the resource was created (a full snapshot of its audited fields). Lets consumers recover display attributes (e.g. an order number) without a cross-service lookup.
 SELECT changes FROM audit_event
@@ -128,3 +114,29 @@ WHERE account_id = ?
   AND action = 'create'
 ORDER BY occurred_at ASC
 LIMIT 1;
+
+-- name: GetResourceCreateEvent :one
+-- The resource's create event: who created it, in which request, and the snapshot of its audited fields at creation. Served by audit_event_resource_idx (resource_type, resource_id, occurred_at).
+SELECT actor_id, identity_type, request_id, changes FROM audit_event
+WHERE account_id = ?
+  AND resource_type = ?
+  AND resource_id = ?
+  AND action = 'create'
+ORDER BY occurred_at ASC
+LIMIT 1;
+
+-- name: GetLatestResourceFieldChanges :one
+-- The changes of the newest event on the resource (its create snapshot included) that recorded the field, i.e. the event holding the field's current value. Walks the resource's own events newest first on audit_event_account_id_resource_id_occurred_at_type_id_idx and stops at the first match, so the cost is bounded by the resource's event count — forced because audit_event_resource_idx pins the same rows but filesorts the type_id tie-break.
+SELECT changes FROM audit_event FORCE INDEX (audit_event_account_id_resource_id_occurred_at_type_id_idx)
+WHERE account_id = sqlc.arg('account_id')
+  AND resource_id = sqlc.arg('resource_id')
+  AND resource_type = sqlc.arg('resource_type')
+  AND JSON_CONTAINS(changes, JSON_OBJECT('Field', CAST(sqlc.arg('field') AS CHAR)))
+ORDER BY occurred_at DESC, type_id DESC
+LIMIT 1;
+
+-- name: GetAccountUserUserID :one
+-- The user behind an account membership, scoped to the account. Primary-key lookup.
+SELECT user_id FROM account_user
+WHERE id = ?
+  AND account_id = ?;

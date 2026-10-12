@@ -416,8 +416,9 @@ func TestFanOut_DedupeKeyCoalescesAndAlertsOnlyInserts(t *testing.T) {
 	// A DedupeKey routes fan-out through the coalescing upsert instead of CreateBatch. The mock returns
 	// only the first recipient as "inserted" — the second already had a row from an earlier change.
 	var captured []*domain.Notification
-	notifRepo.EXPECT().UpsertCoalesced(gomock.Any(), gomock.Any()).
-		DoAndReturn(func(_ context.Context, ns []*domain.Notification) ([]*domain.Notification, *apierror.APIError) {
+	// Without CoalesceQuietly a later change resurfaces the row as unread.
+	notifRepo.EXPECT().UpsertCoalesced(gomock.Any(), gomock.Any(), true).
+		DoAndReturn(func(_ context.Context, ns []*domain.Notification, _ bool) ([]*domain.Notification, *apierror.APIError) {
 			captured = ns
 			return ns[:1], nil
 		})
@@ -443,6 +444,37 @@ func TestFanOut_DedupeKeyCoalescesAndAlertsOnlyInserts(t *testing.T) {
 		"a coalesced row seeds its change tally at 1")
 
 	require.Len(t, outbox.inputs, 1, "realtime alert fires only for the freshly inserted row (first change)")
+}
+
+func TestFanOut_CoalesceQuietlyKeepsReadState(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	notifRepo := repositorymock.NewMockNotificationRepo(ctrl)
+	outbox := &fakeOutboxRepo{}
+	svc := newSvc(t, notifRepo, outbox)
+
+	notifRepo.EXPECT().ResolveAccountUserID(gomock.Any(), "us_a", testAccountID).Return("acus_a", nil)
+	// The row already exists from an earlier change today: nothing is inserted, and the refresh must not
+	// re-mark it unread.
+	notifRepo.EXPECT().UpsertCoalesced(gomock.Any(), gomock.Len(1), false).Return(nil, nil)
+
+	data := messaging.AlertFanoutData{
+		AccountID:        testAccountID,
+		Category:         "order.updated",
+		Title:            "Sales order 1001 updated",
+		LinkResourceType: "sales_order",
+		LinkResourceID:   "so_1",
+		RecipientUserIDs: []string{"us_a"},
+		DedupeKey:        "ordact_so_1_20260903",
+		CoalesceQuietly:  true,
+	}
+	require.Nil(t, svc.FanOut(context.Background(), "msg_per_request_seed", data))
+	assert.Empty(t, outbox.inputs, "a refresh of an existing row raises no realtime alert")
+}
+
+func TestFanOut_CoalesceQuietlyIsOptInForInFlightMessages(t *testing.T) {
+	var data messaging.AlertFanoutData
+	require.NoError(t, json.Unmarshal([]byte(`{"account_id":"acct_1","category":"order.updated","kind":"alert","title":"t","dedupe_key":"k"}`), &data))
+	assert.False(t, data.CoalesceQuietly, "payloads that predate the flag keep resurfacing behaviour")
 }
 
 func TestNotifyCustomerRegistered_FansOutToSupportGroup(t *testing.T) {

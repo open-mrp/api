@@ -59,16 +59,23 @@ func (r *notificationRepoImpl) create(ctx context.Context, n *domain.Notificatio
 }
 
 // UpsertCoalesced folds each notification onto one rolling row per (dedupe key, recipient): the first
-// write in a window inserts, later writes refresh and resurface the same row (see
-// UpsertCoalescedNotification). It returns the notifications that were freshly inserted so the caller
-// raises a realtime alert only on the first event in the window.
-func (r *notificationRepoImpl) UpsertCoalesced(ctx context.Context, notifications []*domain.Notification) ([]*domain.Notification, *apierror.APIError) {
+// write in a window inserts, later writes refresh the same row — resurfacing it as unread when resurface
+// is set (see UpsertCoalescedNotification and UpsertCoalescedNotificationQuietly). It returns the
+// notifications that were freshly inserted so the caller raises a realtime alert only on the first event
+// in the window.
+func (r *notificationRepoImpl) UpsertCoalesced(ctx context.Context, notifications []*domain.Notification, resurface bool) ([]*domain.Notification, *apierror.APIError) {
 	ctx, span := notificationRepoTracer.Start(ctx, "repository.notification.upsert_coalesced")
 	defer span.End()
 
 	inserted := make([]*domain.Notification, 0, len(notifications))
 	for _, n := range notifications {
-		rows, err := r.db.UpsertCoalescedNotification(ctx, sqlc.UpsertCoalescedNotificationParams(notificationRow(n)))
+		var rows int64
+		var err error
+		if resurface {
+			rows, err = r.db.UpsertCoalescedNotification(ctx, sqlc.UpsertCoalescedNotificationParams(notificationRow(n)))
+		} else {
+			rows, err = r.db.UpsertCoalescedNotificationQuietly(ctx, sqlc.UpsertCoalescedNotificationQuietlyParams(notificationRow(n)))
+		}
 		if apiErr := db.MapSQLError(err); apiErr != nil {
 			return nil, tracing.Trace(span, apiErr)
 		}

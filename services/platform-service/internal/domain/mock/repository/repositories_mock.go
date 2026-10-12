@@ -11,6 +11,7 @@ package repositorymock
 
 import (
 	context "context"
+	json "encoding/json"
 	reflect "reflect"
 	time "time"
 
@@ -156,6 +157,37 @@ func (mr *MockAuditEventRepoMockRecorder) FindByID(ctx, id, targetAccountID, inc
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "FindByID", reflect.TypeOf((*MockAuditEventRepo)(nil).FindByID), ctx, id, targetAccountID, includes)
 }
 
+// GetAccountUserUserID mocks base method.
+func (m *MockAuditEventRepo) GetAccountUserUserID(ctx context.Context, accountID, accountUserID string) (string, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetAccountUserUserID", ctx, accountID, accountUserID)
+	ret0, _ := ret[0].(string)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
+}
+
+// GetAccountUserUserID indicates an expected call of GetAccountUserUserID.
+func (mr *MockAuditEventRepoMockRecorder) GetAccountUserUserID(ctx, accountID, accountUserID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetAccountUserUserID", reflect.TypeOf((*MockAuditEventRepo)(nil).GetAccountUserUserID), ctx, accountID, accountUserID)
+}
+
+// GetLatestResourceFieldValue mocks base method.
+func (m *MockAuditEventRepo) GetLatestResourceFieldValue(ctx context.Context, accountID string, resourceType constants.ObjectType, resourceID, field string) (json.RawMessage, bool, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetLatestResourceFieldValue", ctx, accountID, resourceType, resourceID, field)
+	ret0, _ := ret[0].(json.RawMessage)
+	ret1, _ := ret[1].(bool)
+	ret2, _ := ret[2].(*apierror.APIError)
+	return ret0, ret1, ret2
+}
+
+// GetLatestResourceFieldValue indicates an expected call of GetLatestResourceFieldValue.
+func (mr *MockAuditEventRepoMockRecorder) GetLatestResourceFieldValue(ctx, accountID, resourceType, resourceID, field any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetLatestResourceFieldValue", reflect.TypeOf((*MockAuditEventRepo)(nil).GetLatestResourceFieldValue), ctx, accountID, resourceType, resourceID, field)
+}
+
 // GetResourceCreateChanges mocks base method.
 func (m *MockAuditEventRepo) GetResourceCreateChanges(ctx context.Context, accountID string, resourceType constants.ObjectType, resourceID string) ([]domain.AuditFieldChange, *apierror.APIError) {
 	m.ctrl.T.Helper()
@@ -171,6 +203,21 @@ func (mr *MockAuditEventRepoMockRecorder) GetResourceCreateChanges(ctx, accountI
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetResourceCreateChanges", reflect.TypeOf((*MockAuditEventRepo)(nil).GetResourceCreateChanges), ctx, accountID, resourceType, resourceID)
 }
 
+// GetResourceCreateEvent mocks base method.
+func (m *MockAuditEventRepo) GetResourceCreateEvent(ctx context.Context, accountID string, resourceType constants.ObjectType, resourceID string) (*domain.ResourceCreateEvent, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetResourceCreateEvent", ctx, accountID, resourceType, resourceID)
+	ret0, _ := ret[0].(*domain.ResourceCreateEvent)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
+}
+
+// GetResourceCreateEvent indicates an expected call of GetResourceCreateEvent.
+func (mr *MockAuditEventRepoMockRecorder) GetResourceCreateEvent(ctx, accountID, resourceType, resourceID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetResourceCreateEvent", reflect.TypeOf((*MockAuditEventRepo)(nil).GetResourceCreateEvent), ctx, accountID, resourceType, resourceID)
+}
+
 // List mocks base method.
 func (m *MockAuditEventRepo) List(ctx context.Context, targetAccountID string, filter *domain.ListAuditEventsFilter, includes []string) (*domain.ListAuditEventsResult, *apierror.APIError) {
 	m.ctrl.T.Helper()
@@ -184,21 +231,6 @@ func (m *MockAuditEventRepo) List(ctx context.Context, targetAccountID string, f
 func (mr *MockAuditEventRepoMockRecorder) List(ctx, targetAccountID, filter, includes any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "List", reflect.TypeOf((*MockAuditEventRepo)(nil).List), ctx, targetAccountID, filter, includes)
-}
-
-// ListResourceUserActorIDs mocks base method.
-func (m *MockAuditEventRepo) ListResourceUserActorIDs(ctx context.Context, accountID string, resourceType constants.ObjectType, resourceID string) ([]string, *apierror.APIError) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "ListResourceUserActorIDs", ctx, accountID, resourceType, resourceID)
-	ret0, _ := ret[0].([]string)
-	ret1, _ := ret[1].(*apierror.APIError)
-	return ret0, ret1
-}
-
-// ListResourceUserActorIDs indicates an expected call of ListResourceUserActorIDs.
-func (mr *MockAuditEventRepoMockRecorder) ListResourceUserActorIDs(ctx, accountID, resourceType, resourceID any) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListResourceUserActorIDs", reflect.TypeOf((*MockAuditEventRepo)(nil).ListResourceUserActorIDs), ctx, accountID, resourceType, resourceID)
 }
 
 // MockIdempotencyKeyRepo is a mock of IdempotencyKeyRepo interface.

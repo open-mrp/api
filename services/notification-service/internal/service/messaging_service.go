@@ -239,7 +239,7 @@ func (s *messagingSvcImpl) FanOut(ctx context.Context, dedupeSeed string, data m
 	if coalesce {
 		// Coalesced fan-out refreshes one rolling row per recipient and pushes a realtime alert only for
 		// rows it freshly inserted — the first change in the window alerts, later changes accumulate silently.
-		inserted, apiErr := notifRepo.UpsertCoalesced(ctx, notifications)
+		inserted, apiErr := notifRepo.UpsertCoalesced(ctx, notifications, !data.CoalesceQuietly)
 		if apiErr != nil {
 			return tracing.Trace(span, apiErr)
 		}

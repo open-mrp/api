@@ -1,0 +1,29 @@
+# gRPC handlers that write without publishing an audit event, one per line with the reason.
+# Format: <service>/<HandlerType>.<Method>  # reason
+
+auth-service/gRPCHandler.ValidateCredential  # stamps the API key's last-used time on every authenticated request
+billing-service/billingHandler.CreateCustomer  # stores the Stripe customer id on the billing record, not a user-visible field
+billing-service/billingHandler.EnsureBillingCustomer  # stores the Stripe customer id on the billing record, not a user-visible field
+core-service/gRPCHandler.ClearAccountStripeCustomer  # billing bookkeeping after Stripe deletes the customer
+core-service/gRPCHandler.CreateOrResumePortalRegistrationSession  # pre-account portal sign-up draft, no account to audit under yet
+core-service/gRPCHandler.UpdatePortalRegistrationSession  # pre-account portal sign-up draft, no account to audit under yet
+core-service/gRPCHandler.GetLatestSysPropertyValue  # initializes or advances an internal numbering counter
+core-service/gRPCHandler.MarkAccountUserUsed  # stamps a membership's last-used time on sign-in
+core-service/gRPCHandler.SwitchAccount  # stamps a membership's last-used time when switching accounts
+notification-service/chatGRPCHandler.BatchGetConversations  # lazily seats support staff as a participant on read
+notification-service/chatGRPCHandler.BatchGetMessages  # lazily seats support staff as a participant on read
+notification-service/chatGRPCHandler.GetConversation  # lazily seats support staff as a participant on read
+notification-service/chatGRPCHandler.ListConversations  # lazily seats support staff as a participant on read
+notification-service/chatGRPCHandler.ListMessages  # lazily seats support staff as a participant on read
+notification-service/chatGRPCHandler.ListScheduledMessages  # lazily seats support staff as a participant on read
+notification-service/chatGRPCHandler.MarkConversationRead  # read cursor, plus the lazy support-staff seat
+notification-service/gRPCHandler.SendEmail  # delivery log of an outbound email, not a record mutation
+notification-service/messagingGRPCHandler.MarkAllNotificationsSeen  # per-user read state
+notification-service/messagingGRPCHandler.MarkNotificationSeen  # per-user read state
+notification-service/messagingGRPCHandler.MarkNotificationRead  # per-user read state
+notification-service/messagingGRPCHandler.MarkNotificationDismissed  # per-user read state
+notification-service/messagingGRPCHandler.MarkAnnouncementSeen  # per-user read state
+notification-service/messagingGRPCHandler.MarkAnnouncementRead  # per-user read state
+notification-service/messagingGRPCHandler.MarkAnnouncementDismissed  # per-user read state
+platform-service/accountFollowupHandler.ApproveAccountFollowup  # internal follow-up email draft approved by staff, not an account record
+platform-service/auditHandler.CreateAuditEvent  # writes the audit event itself

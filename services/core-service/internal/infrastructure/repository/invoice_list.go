@@ -2,6 +2,7 @@ package repository
 
 import (
 	"context"
+	"regexp"
 	"strings"
 
 	"github.com/open-mrp/api/services/core-service/internal/domain"
@@ -72,16 +73,60 @@ func (p *invoicePage) drive(subquery string, args ...any) {
 // ids runs the page query and returns its invoice ids in page order.
 func (p *invoicePage) ids(ctx context.Context, q sqlc.DBTX, cursor *pagination.StringCursor, limit int32) ([]string, error) {
 	orderBy := p.f.keyset(cursor, "inv.created_at", "inv.id")
+	if p.driver != "" {
+		ids, ok, err := p.drivenIDs(ctx, q, orderBy, limit)
+		if err != nil || ok {
+			return ids, err
+		}
+	}
 	hint := "JOIN_SUFFIX(" + strings.Join(p.joined, ", ") + ")"
 	from := "invoice inv FORCE INDEX (" + strings.Join(p.indexes, ", ") + ")"
 	var args []any
 	if p.driver != "" {
 		hint = "JOIN_PREFIX(drv, inv) " + hint
-		from = "(SELECT DISTINCT d.id FROM (" + p.driver + ") d) drv\nJOIN " + from + " ON inv.sales_order_id = drv.id"
+		from = p.driven(from)
 		args = append(args, p.driverArgs...)
 	}
 	query := "SELECT /*+ " + hint + " */ inv.id FROM " + from + p.joins + p.f.whereSQL() + "\nORDER BY " + orderBy + "\nLIMIT ?"
 	return selectStrings(ctx, q, query, append(append(args, p.f.args...), limit)...)
+}
+
+// driven is the driver's orders joined to invoice inv (from) by the order key.
+func (p *invoicePage) driven(from string) string {
+	return "(SELECT DISTINCT d.id FROM (" + p.driver + ") d) drv\nJOIN " + from + " ON inv.sales_order_id = drv.id"
+}
+
+// invoiceDrivenCandidateCap is the most invoices a driven page sorts before joining; past it, joining
+// each before the sort costs no more than carrying them all back to be filtered in batches.
+const invoiceDrivenCandidateCap = 5000
+
+// drivenIDs reads a driven page in two steps. The driver's invoices are read off the order key and
+// sorted under only the filters on the invoice itself; the page's joins and the rest of its filters are
+// then applied to them in list order, a growing batch at a time, until the page is full. Joined before
+// the sort, every candidate's order, customer, and address is read though few list. ok is false past
+// invoiceDrivenCandidateCap.
+func (p *invoicePage) drivenIDs(ctx context.Context, q sqlc.DBTX, orderBy string, limit int32) (ids []string, ok bool, err error) {
+	joined := regexp.MustCompile(`\b(` + strings.Join(p.joined, "|") + `)\.`)
+	own := p.f.only(func(clause string) bool { return !joined.MatchString(clause) })
+	candidates, err := selectStrings(ctx, q, "SELECT /*+ JOIN_PREFIX(drv, inv) */ inv.id FROM "+
+		p.driven("invoice inv FORCE INDEX ("+invoiceOrderIndex+")")+own.whereSQL()+"\nORDER BY "+orderBy+"\nLIMIT ?",
+		append(append(append([]any{}, p.driverArgs...), own.args...), invoiceDrivenCandidateCap+1)...)
+	if err != nil || len(candidates) > invoiceDrivenCandidateCap {
+		return nil, false, err
+	}
+	hint := "JOIN_SUFFIX(" + strings.Join(p.joined, ", ") + ")"
+	for batch := int(limit) + int(limit)/2; len(candidates) > 0 && len(ids) < int(limit); batch *= 4 {
+		next := candidates[:min(batch, len(candidates))]
+		candidates = candidates[len(next):]
+		page, err := selectStrings(ctx, q, "SELECT /*+ "+hint+" */ inv.id FROM invoice inv FORCE INDEX (PRIMARY)"+p.joins+
+			p.f.whereSQL()+"\nAND inv.id IN ("+placeholders(len(next))+")\nORDER BY "+orderBy+"\nLIMIT ?",
+			append(append(append([]any{}, p.f.args...), stringArgs(next)...), int(limit)-len(ids))...)
+		if err != nil {
+			return nil, false, err
+		}
+		ids = append(ids, page...)
+	}
+	return ids, true, nil
 }
 
 // invoiceSearchOrderCap is the most orders a search's matches may span for the page to be read from
@@ -359,7 +404,7 @@ func (r *invoiceRepoImpl) listCustomerInvoicePage(ctx context.Context, params do
 	if err != nil {
 		return nil, err
 	}
-	walk, err := r.unpaidFewerThanOrders(ctx, params.AccountID, buyers)
+	walk, err := unpaidFewerThanOrders(ctx, r.queries.DB(), params.AccountID, buyers)
 	if err != nil {
 		return nil, err
 	}
@@ -382,8 +427,7 @@ func (r *invoiceRepoImpl) listCustomerInvoicePage(ctx context.Context, params do
 
 // unpaidFewerThanOrders reports whether the account has fewer unpaid invoices than the buyers have
 // orders. Both are counted off covering keys and each count stops at the other's bound.
-func (r *invoiceRepoImpl) unpaidFewerThanOrders(ctx context.Context, accountID string, buyers []string) (bool, error) {
-	q := r.queries.DB()
+func unpaidFewerThanOrders(ctx context.Context, q sqlc.DBTX, accountID string, buyers []string) (bool, error) {
 	var unpaid int
 	if err := q.QueryRowContext(ctx, `SELECT COUNT(*) FROM (
     SELECT 1 FROM invoice ui FORCE INDEX (`+invoicePaidIndex+`) WHERE ui.account_id = ? AND ui.is_paid_in_full = false LIMIT ?) probe`,

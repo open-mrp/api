@@ -136,6 +136,12 @@ FROM (
       OR ar.notes LIKE sqlc.narg('search_query')
       OR (SELECT sab.support_email FROM account_branding sab WHERE sab.owner_account_id = ar.counterparty_account_id) LIKE sqlc.narg('search_query')
     )
+    -- A rare search's matches, found from each searched column's own key (customerSearchMatches); the
+    -- substring filter above is left for a dense one, whose matches a walk in list order meets soon.
+    AND (
+      sqlc.arg('include_account_filter') = false
+      OR ar.counterparty_account_id IN (sqlc.slice('account_ids'))
+    )
     AND (
       sqlc.arg('include_customer_group_filter') = false
       OR ar.account_group_id IN (sqlc.slice('customer_group_ids'))
@@ -363,6 +369,12 @@ FROM (
       OR ar.external_number LIKE sqlc.narg('search_query')
       OR ar.notes LIKE sqlc.narg('search_query')
       OR (SELECT sab.support_email FROM account_branding sab WHERE sab.owner_account_id = ar.counterparty_account_id) LIKE sqlc.narg('search_query')
+    )
+    -- A rare search's matches, found from each searched column's own key (customerSearchMatches); the
+    -- substring filter above is left for a dense one, whose matches a walk in list order meets soon.
+    AND (
+      sqlc.arg('include_account_filter') = false
+      OR ar.counterparty_account_id IN (sqlc.slice('account_ids'))
     )
     AND (
       sqlc.arg('include_customer_group_filter') = false
@@ -1041,26 +1053,32 @@ WHERE owner_account_id = sqlc.arg('owner_account_id')
 --
 -- Greatest-n-per-group is left to Go because neither SQL form is safe here. Vitess (PlanetScale) cannot plan ROW_NUMBER() in a server-side prepared statement ("[BUG] unrecognized prepare statement"), which the driver still falls back to for args it cannot interpolate, and vanilla MySQL in dev/e2e does not catch that. A NOT EXISTS anti-join runs the aggregate twice, which pushed long order histories past the request deadline.
 --
--- The derived table bounds the query to the customer's most recent orders, which is what makes it affordable: the join order is right either way, but cost tracks lines scanned and nothing else. The oldest account has ordered since 2014 — 4,088 orders, 14,491 lines — and aggregating all of it measured 8.7s warm and 15s cold against a 10s request deadline. Only 87 of 1,941 customer relationships have ever exceeded 400 orders, so the bound changes what the other 95% see not at all, and for the few it does affect recency is the better answer anyway: a reorder shortcut should reflect what someone buys now, not what they bought a decade ago.
+-- The derived table bounds the query to the customer's most recent orders, which is what makes it affordable: cost tracks the lines scanned, and a long order history aggregated whole runs past the request deadline. A reorder shortcut should reflect what someone buys now anyway.
 --
--- FORCE INDEX and the ORDER BY match (owner_account_id, buyer_account_id, created_at DESC, id DESC) exactly, so the bound is an index-only prefix read with no filesort. Left to itself the optimizer picked the far less selective buyer_account_id index on about a third of production executions.
+-- FORCE INDEX and the ORDER BY match (owner_account_id, buyer_account_id, created_at DESC, id DESC) exactly, so the bound is an index-only prefix read with no filesort; left to itself the optimizer can pick the far less selective buyer_account_id index.
 --
--- STRAIGHT_JOIN forces the bounded orders to lead. Materializing them into a derived table does not pin the join order on its own: production stats happen to drive from it, but the same plan on a small table drives from product instead, which is a scan filtered only by product_type_code / is_portal_ready that fans every product across its order lines before reaching the one selective predicate.
+-- STRAIGHT_JOIN forces the bounded orders to lead. Materializing them into a derived table does not pin the join order on its own: on a small table the planner drives from product instead, a scan filtered only by product_type_code / is_portal_ready that fans every product across its order lines.
 --
--- The unit the customer orders each item in is deliberately not reported. Reaching it meant joining quantity, which is five million wide rows and cost a random clustered read per surviving line: 486ms cold with it against 87ms without, four fifths of the query. The portal is the only caller and discards the unit, deriving one from the item's unit group when the customer adds the line.
+-- Lines are counted per product off the order key before product is joined, so each distinct product is read once rather than once per line.
+--
+-- The unit the customer orders each item in is deliberately not reported: reaching it means a random read of quantity per line, most of the query's cost. The portal is the only caller and discards the unit, deriving one from the item's unit group when the customer adds the line.
 SELECT STRAIGHT_JOIN
     fg.item_id AS item_id,
-    COUNT(*) AS order_count
+    CAST(SUM(pc.line_count) AS SIGNED) AS order_count
 FROM (
-    SELECT id
-    FROM sales_order FORCE INDEX (sales_order_owner_buyer_created_idx)
-    WHERE owner_account_id = sqlc.arg('owner_account_id')
-      AND buyer_account_id = sqlc.arg('buyer_account_id')
-    ORDER BY created_at DESC, id DESC
-    LIMIT 400
-) so
-JOIN sales_order_line sol ON sol.sales_order_id = so.id
-JOIN product fg ON fg.id = sol.product_id
+    SELECT STRAIGHT_JOIN sol.product_id, COUNT(*) AS line_count
+    FROM (
+        SELECT id
+        FROM sales_order FORCE INDEX (sales_order_owner_buyer_created_idx)
+        WHERE owner_account_id = sqlc.arg('owner_account_id')
+          AND buyer_account_id = sqlc.arg('buyer_account_id')
+        ORDER BY created_at DESC, id DESC
+        LIMIT 400
+    ) so
+    JOIN sales_order_line sol FORCE INDEX (sales_order_line_order_product_idx) ON sol.sales_order_id = so.id
+    GROUP BY sol.product_id
+) pc
+JOIN product fg ON fg.id = pc.product_id
 WHERE fg.product_type_code = 'sale'
   AND fg.is_portal_ready = 1
 GROUP BY fg.item_id;

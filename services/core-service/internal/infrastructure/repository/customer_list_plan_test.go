@@ -8,8 +8,11 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/stretchr/testify/require"
+
 	"github.com/open-mrp/api/services/core-service/internal/domain"
 	"github.com/open-mrp/api/services/core-service/internal/infrastructure/sqlc"
+	dbpkg "github.com/open-mrp/api/shared/db"
 	"github.com/open-mrp/api/shared/pagination"
 )
 
@@ -152,4 +155,65 @@ func TestCustomerList_ReadsAboutAPage(t *testing.T) {
 			{alias: "aa", fanout: 5}, {alias: "addr", fanout: 5}, {alias: "g", fanout: 5},
 		},
 	}.run(t)
+}
+
+// TestCustomerList_SearchMatchesEveryField pins a search, read from its matches or tested in the walk,
+// to the customers whose name, alias, number, notes, or support email contains the term, in list order
+// and across pages.
+func TestCustomerList_SearchMatchesEveryField(t *testing.T) {
+	ensureCatalogCorpus(t)
+	db := planDB(t)
+	ctx := context.Background()
+	_, err := db.ExecContext(ctx, `INSERT INTO account_branding (id, owner_account_id, support_email) VALUES ('abr_plancat_search', ?, 'only-here@plan.test')`,
+		planCatCustomerID(17))
+	require.NoError(t, err)
+	t.Cleanup(func() { _, _ = db.ExecContext(ctx, `DELETE FROM account_branding WHERE id = 'abr_plancat_search'`) })
+
+	str := func(s string) *string { return &s }
+	cases := map[string]domain.ListCustomersParams{
+		"name":           {Query: str("Customer 1234 Inc")},
+		"alias":          {Query: str("Plan Customer 0042")},
+		"number":         {Query: str("C0012")},
+		"notes":          {Query: str("notes 03")},
+		"support email":  {Query: str("only-here@")},
+		"dense":          {Query: str("Incorporated")},
+		"with filter":    {Query: str("C001"), StatusCodes: []string{"normal"}},
+		"none wildcards": {Query: str("C0_1%")},
+		"none":           {Query: str("no such customer")},
+	}
+	const limit = 25
+	for name, params := range cases {
+		t.Run(name, func(t *testing.T) {
+			params.AccountID, params.Limit = planCatAccount, limit
+			like := "%" + dbpkg.EscapeLike(*params.Query) + "%"
+			where := `ar.owner_account_id = ? AND ar.account_relation_role_code = 'customer' AND (a.name LIKE ? OR ar.alias LIKE ?
+				OR ar.external_number LIKE ? OR ar.notes LIKE ? OR ab.support_email LIKE ?)`
+			args := []any{planCatAccount, like, like, like, like, like}
+			if len(params.StatusCodes) > 0 {
+				where += " AND ar.account_status_code IN (" + placeholders(len(params.StatusCodes)) + ")"
+				args = append(args, stringArgs(params.StatusCodes)...)
+			}
+			want, err := selectStrings(ctx, db, `SELECT ar.counterparty_account_id FROM account_relation ar
+JOIN account a ON a.id = ar.counterparty_account_id
+LEFT JOIN account_branding ab ON ab.owner_account_id = ar.counterparty_account_id
+WHERE `+where+" ORDER BY ar.created_at DESC, ar.counterparty_account_id DESC LIMIT ?", append(args, 4*limit)...)
+			require.NoError(t, err)
+			require.Equal(t, strings.HasPrefix(name, "none"), len(want) == 0, "a case must match what it names")
+
+			repo := NewCustomerRepo(sqlc.New(db))
+			var got []string
+			for range 4 {
+				res, apiErr := repo.List(ctx, params)
+				require.Nil(t, apiErr)
+				for _, c := range res.Items {
+					got = append(got, c.ID)
+				}
+				if res.PageInfo.NextCursor == nil {
+					break
+				}
+				params.Cursor = res.PageInfo.NextCursor
+			}
+			require.Equal(t, want, got)
+		})
+	}
 }

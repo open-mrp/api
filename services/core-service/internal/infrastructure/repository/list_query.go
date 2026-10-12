@@ -15,11 +15,27 @@ import (
 type listFilter struct {
 	where []string
 	args  []any
+	// nargs is how many of args each clause of where takes.
+	nargs []int
 }
 
 func (f *listFilter) add(clause string, args ...any) {
 	f.where = append(f.where, clause)
 	f.args = append(f.args, args...)
+	f.nargs = append(f.nargs, len(args))
+}
+
+// only returns the clauses keep accepts, with their arguments.
+func (f *listFilter) only(keep func(clause string) bool) *listFilter {
+	kept := &listFilter{}
+	at := 0
+	for i, clause := range f.where {
+		if keep(clause) {
+			kept.add(clause, f.args[at:at+f.nargs[i]]...)
+		}
+		at += f.nargs[i]
+	}
+	return kept
 }
 
 func (f *listFilter) in(column string, values []string) {

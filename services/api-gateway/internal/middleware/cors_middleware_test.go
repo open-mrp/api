@@ -5,9 +5,11 @@ import (
 	"net/http/httptest"
 	"strings"
 	"testing"
+
+	"github.com/open-mrp/api/services/api-gateway/internal/header"
 )
 
-func TestCORSMiddlewareExposesRetryAfter(t *testing.T) {
+func TestCORSMiddlewareExposesClientResponseHeaders(t *testing.T) {
 	handler := CORSMiddleware()(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusServiceUnavailable)
 	})
@@ -21,7 +23,16 @@ func TestCORSMiddlewareExposesRetryAfter(t *testing.T) {
 	for i := range exposed {
 		exposed[i] = strings.TrimSpace(exposed[i])
 	}
-	for _, want := range []string{"Retry-After", "Content-Disposition", "Request-Id"} {
+	for _, want := range []string{
+		header.RateLimitLimitHeader,
+		header.RateLimitRemainingHeader,
+		header.RateLimitResetHeader,
+		header.RequestIDHeader,
+		header.VersionHeader,
+		header.ContentDispositionHeader,
+		header.RetryAfterHeader,
+		header.IdempotentReplayedHeader,
+	} {
 		found := false
 		for _, got := range exposed {
 			if strings.EqualFold(got, want) {

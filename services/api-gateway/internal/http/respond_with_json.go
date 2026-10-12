@@ -80,7 +80,7 @@ func RespondWithFile(ctx context.Context, w http.ResponseWriter, code int, fd *F
 		return
 	}
 	w.Header().Set(header.ContentTypeHeader, fd.ContentType)
-	w.Header().Set("Content-Disposition", "attachment; filename=\""+fd.Filename+"\"")
+	w.Header().Set(header.ContentDispositionHeader, "attachment; filename=\""+fd.Filename+"\"")
 	if v, ok := appctx.GetAPIVersionFromContext(ctx); ok {
 		w.Header().Set(header.VersionHeader, v.String())
 	} else {

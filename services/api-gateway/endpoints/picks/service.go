@@ -76,6 +76,7 @@ func (m *pickSvcImpl) ListPicks(ctx context.Context, req *ListPicksRequest) (*ap
 	if req.Query != nil {
 		pbReq.Query = req.Query
 	}
+	pbReq.QueryMatch = req.QMatch.StringPtr()
 	if req.Status != nil {
 		pbReq.Status = req.Status.StringPtr()
 	}

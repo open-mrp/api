@@ -790,8 +790,10 @@ type ListPicksRequest struct {
 	EndDate          *string                `protobuf:"bytes,10,opt,name=end_date,json=endDate,proto3,oneof" json:"end_date,omitempty"`
 	Includes         []string               `protobuf:"bytes,11,rep,name=includes,proto3" json:"includes,omitempty"`
 	Sort             string                 `protobuf:"bytes,12,opt,name=sort,proto3" json:"sort,omitempty"`
-	unknownFields    protoimpl.UnknownFields
-	sizeCache        protoimpl.SizeCache
+	// How query matches: "prefix" (the default when unset) or "contains".
+	QueryMatch    *string `protobuf:"bytes,13,opt,name=query_match,json=queryMatch,proto3,oneof" json:"query_match,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
 }
 
 func (x *ListPicksRequest) Reset() {
@@ -897,6 +899,13 @@ func (x *ListPicksRequest) GetIncludes() []string {
 func (x *ListPicksRequest) GetSort() string {
 	if x != nil {
 		return x.Sort
+	}
+	return ""
+}
+
+func (x *ListPicksRequest) GetQueryMatch() string {
+	if x != nil && x.QueryMatch != nil {
+		return *x.QueryMatch
 	}
 	return ""
 }
@@ -1857,7 +1866,7 @@ const file_core_core_picking_proto_rawDesc = "" +
 	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01B\x19\n" +
 	"\x17_order_line_descriptionB\x18\n" +
 	"\x16_order_line_product_idB\x15\n" +
-	"\x13_order_line_item_id\"\xae\x03\n" +
+	"\x13_order_line_item_id\"\xe4\x03\n" +
 	"\x10ListPicksRequest\x12\x1b\n" +
 	"\x06cursor\x18\x01 \x01(\tH\x00R\x06cursor\x88\x01\x01\x12\x14\n" +
 	"\x05limit\x18\x02 \x01(\x05R\x05limit\x12\x19\n" +
@@ -1871,12 +1880,15 @@ const file_core_core_picking_proto_rawDesc = "" +
 	"\bend_date\x18\n" +
 	" \x01(\tH\x04R\aendDate\x88\x01\x01\x12\x1a\n" +
 	"\bincludes\x18\v \x03(\tR\bincludes\x12\x12\n" +
-	"\x04sort\x18\f \x01(\tR\x04sortB\t\n" +
+	"\x04sort\x18\f \x01(\tR\x04sort\x12$\n" +
+	"\vquery_match\x18\r \x01(\tH\x05R\n" +
+	"queryMatch\x88\x01\x01B\t\n" +
 	"\a_cursorB\b\n" +
 	"\x06_queryB\t\n" +
 	"\a_statusB\r\n" +
 	"\v_start_dateB\v\n" +
-	"\t_end_dateJ\x04\b\b\x10\t\"f\n" +
+	"\t_end_dateB\x0e\n" +
+	"\f_query_matchJ\x04\b\b\x10\t\"f\n" +
 	"\x11ListPicksResponse\x12$\n" +
 	"\x05picks\x18\x01 \x03(\v2\x0e.core.PickInfoR\x05picks\x12+\n" +
 	"\tpage_info\x18\x02 \x01(\v2\x0e.core.PageInfoR\bpageInfo\"<\n" +

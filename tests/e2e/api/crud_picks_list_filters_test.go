@@ -35,22 +35,68 @@ func TestPicksList_SearchMatchesPickNumber(t *testing.T) {
 
 	assert.Contains(t, pickIDsFiltered(t, url.Values{"q": {"PICK-002"}}), seedClosedPickID,
 		"searching a full pick number should surface that pick")
-	// The ngram search matches a substring, not just a prefix or whole token: "CK-002" sits in the
-	// middle of "PICK-002".
-	assert.Contains(t, pickIDsFiltered(t, url.Values{"q": {"CK-002"}}), seedClosedPickID,
-		"searching a substring of a pick number should surface that pick")
+	assert.Contains(t, pickIDsFiltered(t, url.Values{"q": {"pick-00"}}), seedClosedPickID,
+		"searching the start of a pick number, in any case, should surface that pick")
+	// "CK-002" sits in the middle of "PICK-002": a prefix search passes it over, a contains search finds it.
+	assert.NotContains(t, pickIDsFiltered(t, url.Values{"q": {"CK-002"}}), seedClosedPickID,
+		"the default prefix search must not match the middle of a pick number")
+	assert.Contains(t, pickIDsFiltered(t, url.Values{"q": {"CK-002"}, "q_match": {"contains"}}), seedClosedPickID,
+		"a contains search should match the middle of a pick number")
+	assert.Contains(t, pickIDsFiltered(t, url.Values{"q": {"PICK-002"}, "q_match": {"prefix"}}), seedClosedPickID,
+		"prefix named explicitly is the default")
 	assert.Empty(t, pickIDsFiltered(t, url.Values{"q": {"zzz-no-such-pick-zzz"}}),
 		"a search matching nothing must return nothing")
+	assert.Empty(t, pickIDsFiltered(t, url.Values{"q": {"zzz-no-such-pick-zzz"}, "q_match": {"contains"}}),
+		"a contains search matching nothing must return nothing")
+}
+
+// q_match is an enum: an unknown mode is rejected rather than read as the default.
+func TestPicksList_UnknownSearchMatchIsRejected(t *testing.T) {
+	t.Parallel()
+
+	status, body, err := apiClient.GetListRaw(picksPath, url.Values{"q": {"PICK"}, "q_match": {"fuzzy"}})
+	require.NoError(t, err)
+	requireErrorParam(t, 400, status, body, "q_match")
+}
+
+// A customer PO number matches by its start under the default prefix search and anywhere under contains;
+// the customer's name still matches anywhere in either mode.
+func TestPicksList_SearchMatchModesOnPONumberAndCustomer(t *testing.T) {
+	t.Parallel()
+
+	customerID := leadTimeCustomer(t, "e2e-pick-match", nil, "")
+	po := uniqueName("PO-MATCH")
+	_, pickID := issuedOrderAndPick(t, customerID, map[string]any{"customer_purchase_order_number": po})
+	name := jsonField(retrieveCustomerForPickSearch(t, customerID), "name")
+	require.Greater(t, len(po), 8, "the PO number must be long enough to split")
+	require.Greater(t, len(name), 8, "the customer name must be long enough to split")
+
+	search := func(q, match string) []string {
+		params := url.Values{"q": {q}, "customer_ids": {customerID}}
+		if match != "" {
+			params.Set("q_match", match)
+		}
+		return pickIDsFiltered(t, params)
+	}
+
+	assert.Equal(t, []string{pickID}, search(po[:8], ""), "the start of the PO number matches by default")
+	assert.Equal(t, []string{pickID}, search(strings.ToLower(po[:8]), ""), "a PO prefix matches in any case")
+	assert.Empty(t, search(po[3:], ""), "the middle of the PO number does not match a prefix search")
+	assert.Equal(t, []string{pickID}, search(po[3:], "contains"), "the middle of the PO number matches a contains search")
+	assert.Equal(t, []string{pickID}, search(name[4:], ""), "the middle of the customer's name matches under prefix")
+	assert.Equal(t, []string{pickID}, search(name[4:], "contains"), "the middle of the customer's name matches under contains")
 }
 
 // The FULLTEXT index holds no token with an "i" (stopwords), so "pic" and "tio" have none to search by;
-// they still match by substring, the pick number and the customer's name respectively. Both terms match
-// every pick the suite makes for the seed customer, so the seed pick is looked for on every page, not
-// just the newest hundred.
+// they still match, the start of the pick number (anywhere in it under contains) and the middle of the
+// customer's name respectively. Both terms match every pick the suite makes for the seed customer, so
+// the seed pick is looked for on every page, not just the newest hundred.
 func TestPicksList_SearchMatchesATermTheIndexHoldsNoTokenFor(t *testing.T) {
 	t.Parallel()
 
 	assert.Contains(t, dashPicksAllIDs(t, apiClient, picksPath, url.Values{"q": {"pic"}}), seedClosedPickID,
+		`"pic" is the start of PICK-002`)
+	assert.Contains(t, dashPicksAllIDs(t, apiClient, picksPath, url.Values{"q": {"pic"}, "q_match": {"contains"}}), seedClosedPickID,
 		`"pic" is a substring of PICK-002`)
 	assert.Contains(t, dashPicksAllIDs(t, apiClient, picksPath, url.Values{"q": {"tio"}}), seedClosedPickID,
 		`"tio" is a substring of PICK-002's customer, Global Manufacturing Solutions`)
@@ -111,8 +157,8 @@ func TestPicksList_FiltersByCreatedDateWindow(t *testing.T) {
 }
 
 // A 1-2 character term is too common as a substring to page quickly, so it matches pick numbers by
-// prefix only; 3+ characters keep substring search. Scoped to a fresh customer so the result is
-// exactly one pick or none.
+// prefix only, whichever q_match is sent; 3+ characters match anywhere under contains. Scoped to a
+// fresh customer so the result is exactly one pick or none.
 func TestPicksList_ShortSearchMatchesPickNumberPrefix(t *testing.T) {
 	t.Parallel()
 
@@ -121,18 +167,24 @@ func TestPicksList_ShortSearchMatchesPickNumberPrefix(t *testing.T) {
 	number := jsonField(retrievePick(t, pickID), "number")
 	require.GreaterOrEqual(t, len(number), 4, "the pick number must be long enough to split into a prefix and a non-prefix")
 
-	search := func(q string) []string {
-		return pickIDsFiltered(t, url.Values{"q": {q}, "customer_ids": {customerID}})
+	search := func(q string, match string) []string {
+		params := url.Values{"q": {q}, "customer_ids": {customerID}}
+		if match != "" {
+			params.Set("q_match", match)
+		}
+		return pickIDsFiltered(t, params)
 	}
 
-	assert.Equal(t, []string{pickID}, search(number[:1]), "a one-character prefix of the number should match")
-	assert.Equal(t, []string{pickID}, search(number[:2]), "a two-character prefix of the number should match")
+	assert.Equal(t, []string{pickID}, search(number[:1], ""), "a one-character prefix of the number should match")
+	assert.Equal(t, []string{pickID}, search(number[:2], ""), "a two-character prefix of the number should match")
 
 	tail := number[len(number)-2:]
 	if !strings.HasPrefix(strings.ToLower(number), strings.ToLower(tail)) {
-		assert.Empty(t, search(tail), "a two-character term that is not a prefix must not match")
+		assert.Empty(t, search(tail, ""), "a two-character term that is not a prefix must not match")
+		assert.Empty(t, search(tail, "contains"), "a two-character term matches only as a prefix, even under contains")
 	}
-	assert.Equal(t, []string{pickID}, search(number[len(number)-3:]), "three characters match anywhere in the number")
+	assert.Equal(t, []string{pickID}, search(number[:3], ""), "three characters match the start of the number")
+	assert.Equal(t, []string{pickID}, search(number[len(number)-3:], "contains"), "three characters match anywhere in the number under contains")
 }
 
 // The customer filter reads the pick's own copy of its order's buyer, so a merge that moves the

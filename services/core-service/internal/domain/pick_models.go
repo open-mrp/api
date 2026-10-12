@@ -123,10 +123,12 @@ type PickLine struct {
 
 // ListPicksParams holds the parameters for listing picks.
 type ListPicksParams struct {
-	AccountID        string
-	Cursor           *string
-	Limit            int32
-	Query            *string
+	AccountID string
+	Cursor    *string
+	Limit     int32
+	Query     *string
+	// QueryMatch is how Query matches; empty means prefix.
+	QueryMatch       constants.PickSearchMatch
 	Status           *string // "open", "closed", or nil for all
 	CustomerIDs      []string
 	ProductLineIDs   []string

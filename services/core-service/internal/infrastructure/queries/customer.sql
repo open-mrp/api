@@ -136,6 +136,12 @@ FROM (
       OR ar.notes LIKE sqlc.narg('search_query')
       OR (SELECT sab.support_email FROM account_branding sab WHERE sab.owner_account_id = ar.counterparty_account_id) LIKE sqlc.narg('search_query')
     )
+    -- A rare search's matches, found from each searched column's own key (customerSearchMatches); the
+    -- substring filter above is left for a dense one, whose matches a walk in list order meets soon.
+    AND (
+      sqlc.arg('include_account_filter') = false
+      OR ar.counterparty_account_id IN (sqlc.slice('account_ids'))
+    )
     AND (
       sqlc.arg('include_customer_group_filter') = false
       OR ar.account_group_id IN (sqlc.slice('customer_group_ids'))
@@ -363,6 +369,12 @@ FROM (
       OR ar.external_number LIKE sqlc.narg('search_query')
       OR ar.notes LIKE sqlc.narg('search_query')
       OR (SELECT sab.support_email FROM account_branding sab WHERE sab.owner_account_id = ar.counterparty_account_id) LIKE sqlc.narg('search_query')
+    )
+    -- A rare search's matches, found from each searched column's own key (customerSearchMatches); the
+    -- substring filter above is left for a dense one, whose matches a walk in list order meets soon.
+    AND (
+      sqlc.arg('include_account_filter') = false
+      OR ar.counterparty_account_id IN (sqlc.slice('account_ids'))
     )
     AND (
       sqlc.arg('include_customer_group_filter') = false

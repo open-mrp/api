@@ -2207,6 +2207,12 @@ FROM (
       OR ar.notes LIKE ?
       OR (SELECT sab.support_email FROM account_branding sab WHERE sab.owner_account_id = ar.counterparty_account_id) LIKE ?
     )
+    -- A rare search's matches, found from each searched column's own key (customerSearchMatches); the
+    -- substring filter above is left for a dense one, whose matches a walk in list order meets soon.
+    AND (
+      ? = false
+      OR ar.counterparty_account_id IN (/*SLICE:account_ids*/?)
+    )
     AND (
       ? = false
       OR ar.account_group_id IN (/*SLICE:customer_group_ids*/?)
@@ -2306,6 +2312,8 @@ ORDER BY ar.created_at ASC, ar.counterparty_account_id ASC
 type ListCustomersBackwardParams struct {
 	OwnerAccountID                string
 	SearchQuery                   sql.NullString
+	IncludeAccountFilter          interface{}
+	AccountIds                    []string
 	IncludeCustomerGroupFilter    interface{}
 	CustomerGroupIds              []sql.NullString
 	IncludePricingGroupFilter     interface{}
@@ -2457,6 +2465,15 @@ func (q *Queries) ListCustomersBackward(ctx context.Context, arg ListCustomersBa
 	queryParams = append(queryParams, arg.SearchQuery)
 	queryParams = append(queryParams, arg.SearchQuery)
 	queryParams = append(queryParams, arg.SearchQuery)
+	queryParams = append(queryParams, arg.IncludeAccountFilter)
+	if len(arg.AccountIds) > 0 {
+		for _, v := range arg.AccountIds {
+			queryParams = append(queryParams, v)
+		}
+		query = strings.Replace(query, "/*SLICE:account_ids*/?", strings.Repeat(",?", len(arg.AccountIds))[1:], 1)
+	} else {
+		query = strings.Replace(query, "/*SLICE:account_ids*/?", "NULL", 1)
+	}
 	queryParams = append(queryParams, arg.IncludeCustomerGroupFilter)
 	if len(arg.CustomerGroupIds) > 0 {
 		for _, v := range arg.CustomerGroupIds {
@@ -2812,6 +2829,12 @@ FROM (
       OR ar.notes LIKE ?
       OR (SELECT sab.support_email FROM account_branding sab WHERE sab.owner_account_id = ar.counterparty_account_id) LIKE ?
     )
+    -- A rare search's matches, found from each searched column's own key (customerSearchMatches); the
+    -- substring filter above is left for a dense one, whose matches a walk in list order meets soon.
+    AND (
+      ? = false
+      OR ar.counterparty_account_id IN (/*SLICE:account_ids*/?)
+    )
     AND (
       ? = false
       OR ar.account_group_id IN (/*SLICE:customer_group_ids*/?)
@@ -2912,6 +2935,8 @@ ORDER BY ar.created_at DESC, ar.counterparty_account_id DESC
 type ListCustomersForwardParams struct {
 	OwnerAccountID                string
 	SearchQuery                   sql.NullString
+	IncludeAccountFilter          interface{}
+	AccountIds                    []string
 	IncludeCustomerGroupFilter    interface{}
 	CustomerGroupIds              []sql.NullString
 	IncludePricingGroupFilter     interface{}
@@ -3063,6 +3088,15 @@ func (q *Queries) ListCustomersForward(ctx context.Context, arg ListCustomersFor
 	queryParams = append(queryParams, arg.SearchQuery)
 	queryParams = append(queryParams, arg.SearchQuery)
 	queryParams = append(queryParams, arg.SearchQuery)
+	queryParams = append(queryParams, arg.IncludeAccountFilter)
+	if len(arg.AccountIds) > 0 {
+		for _, v := range arg.AccountIds {
+			queryParams = append(queryParams, v)
+		}
+		query = strings.Replace(query, "/*SLICE:account_ids*/?", strings.Repeat(",?", len(arg.AccountIds))[1:], 1)
+	} else {
+		query = strings.Replace(query, "/*SLICE:account_ids*/?", "NULL", 1)
+	}
 	queryParams = append(queryParams, arg.IncludeCustomerGroupFilter)
 	if len(arg.CustomerGroupIds) > 0 {
 		for _, v := range arg.CustomerGroupIds {

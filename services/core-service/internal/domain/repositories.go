@@ -2044,3 +2044,41 @@ type PortalDomainRepo interface {
 	// ResolveVerifiedHost returns the public account whose verified portal domain matches the given host, or a not-found error.
 	ResolveVerifiedHost(ctx context.Context, domainName string) (*PublicAccountBySlug, *apierror.APIError)
 }
+
+// DeliveryFactRepo maintains delivery_order_fact, the committed orders' sale lines summed per product line
+// that delivery performance reads.
+type DeliveryFactRepo interface {
+	// ComputeFacts sums the given orders' sale lines from their source tables. An order the report does
+	// not measure (not an issued or fulfilled sales order with a ship-by date) computes no rows.
+	ComputeFacts(ctx context.Context, salesOrderIDs []string) ([]DeliveryOrderFact, *apierror.APIError)
+	// GetFacts returns the stored facts of the given orders.
+	GetFacts(ctx context.Context, salesOrderIDs []string) ([]DeliveryOrderFact, *apierror.APIError)
+	// WriteFacts upserts and deletes facts by their full key. Callers pass whole orders and run it in a
+	// transaction, so a reader never sees an order half rewritten.
+	WriteFacts(ctx context.Context, upserts, deletes []DeliveryOrderFact) *apierror.APIError
+
+	// ListSalesOrderIDsAfter pages every account's sales orders in id order after afterID.
+	ListSalesOrderIDsAfter(ctx context.Context, afterID string, limit int32) ([]string, *apierror.APIError)
+	// ListFactSalesOrderIDsAfter pages the distinct orders delivery_order_fact holds, in id order.
+	ListFactSalesOrderIDsAfter(ctx context.Context, afterID string, limit int32) ([]string, *apierror.APIError)
+	// FilterExistingSalesOrderIDs returns the subset of ids that still exist in sales_order.
+	FilterExistingSalesOrderIDs(ctx context.Context, salesOrderIDs []string) ([]string, *apierror.APIError)
+	// ResolveSalesOrderIDs returns the orders whose facts depend on the given scopes, at most limit+1 of
+	// them, so a caller can tell a scope that reaches more than it should take on at once.
+	ResolveSalesOrderIDs(ctx context.Context, scope DeliveryFactScope, scopeIDs []string, limit int) ([]string, *apierror.APIError)
+
+	MarkDirty(ctx context.Context, scope DeliveryFactScope, scopeID, accountID string) *apierror.APIError
+	// MarkSalesOrdersDirty marks each order on its own, so a scope that resolved to more orders than one
+	// drain should take is worked off a batch per tick.
+	MarkSalesOrdersDirty(ctx context.Context, accountID string, salesOrderIDs []string) *apierror.APIError
+	// ListDirty returns up to limit marks, oldest first.
+	ListDirty(ctx context.Context, limit int32) ([]DeliveryFactDirtyMark, *apierror.APIError)
+	// ClearDirty deletes the marks, each only if it was not re-marked after it was read.
+	ClearDirty(ctx context.Context, marks []DeliveryFactDirtyMark) *apierror.APIError
+
+	GetSync(ctx context.Context) (*DeliveryFactSync, *apierror.APIError)
+	SaveSync(ctx context.Context, sync DeliveryFactSync) *apierror.APIError
+	// RestartReconcile starts the reconcile pass again from the first order; before the backfill has
+	// completed it does nothing, since the backfill is the first pass.
+	RestartReconcile(ctx context.Context) *apierror.APIError
+}

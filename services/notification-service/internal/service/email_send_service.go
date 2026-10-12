@@ -97,6 +97,7 @@ func (s *conversationSvcImpl) deliverInboxReply(ctx context.Context, conversatio
 			AccountID:           accountID,
 			Sequence:            seq,
 			Kind:                string(constants.MessageKindEmail),
+			Status:              string(constants.MessageStatusSent),
 			Visibility:          string(constants.MessageVisibilityExternal),
 			Channel:             new(string(constants.MessageChannelEmail)),
 			SenderParticipantID: &senderPart.ID,
@@ -112,6 +113,9 @@ func (s *conversationSvcImpl) deliverInboxReply(ctx context.Context, conversatio
 		}
 		if advErr := convRepo.AdvanceAfterMessage(txCtx, conversationID, messageID, now); advErr != nil {
 			return advErr
+		}
+		if auditErr := publishChatMessageCreated(txCtx, f, msg); auditErr != nil {
+			return auditErr
 		}
 		var sesID *string
 		if sesMessageID != nil {

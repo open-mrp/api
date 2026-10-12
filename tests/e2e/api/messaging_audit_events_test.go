@@ -3,11 +3,13 @@
 package api_test
 
 import (
+	"encoding/json"
 	"fmt"
 	"net/url"
 	"testing"
 	"time"
 
+	"github.com/open-mrp/api/shared/id"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -225,6 +227,80 @@ func TestReplyDrafts_AuditEvents(t *testing.T) {
 	assert.Equal(t, "external", jsonField(change, "new_value"))
 	_, ok := changeForField(jsonListData(approved, "changes"), "approved_by_account_user_id")
 	assert.True(t, ok, "the approval records who approved it")
+}
+
+// --- Chat messages ---
+
+func auditEventIDsForRoot(t *testing.T, c *Client, since, rootType, rootID, resourceType string) []string {
+	t.Helper()
+	status, body, err := c.GetListRaw(auditEventsPath, url.Values{
+		"root_resource_type": {rootType},
+		"root_resource_id":   {rootID},
+		"resource_types":     {resourceType},
+		"starts_at":          {since},
+		"limit":              {"100"},
+	})
+	require.NoError(t, err)
+	requireStatus(t, 200, status, body)
+	var ids []string
+	for _, item := range jsonArray(parseJSON(body), "data") {
+		if event, ok := item.(map[string]any); ok {
+			ids = append(ids, jsonField(event, "resource_id"))
+		}
+	}
+	return ids
+}
+
+// A message on a conversation about a sales order is audited under the conversation, never the order, and without its text.
+func TestChatMessages_AuditEvents(t *testing.T) {
+	t.Parallel()
+	since := auditWindowStart()
+	user := chatUserClient(t)
+
+	resp, err := user.PostFull(conversationsPath, map[string]any{
+		"type":                         "group",
+		"participant_account_user_ids": []string{SeedAccountUser2ID},
+		"topic_resource_type":          "sales_order",
+		"topic_resource_id":            SeedSalesOrderID,
+	}, newIdempotencyKey())
+	require.NoError(t, err)
+	requireStatus(t, 201, resp.StatusCode, resp.Body)
+	convID := jsonField(parseJSON(resp.Body), "id")
+
+	text := uniqueName("audited message")
+	clientMessageID := uniqueName("cmid")
+	status, body, err := user.Post(conversationsPath+"/"+convID+"/messages", map[string]any{
+		"body":               text,
+		"client_message_id":  clientMessageID,
+		"link_resource_type": "sales_order",
+		"link_resource_id":   SeedSalesOrderID,
+	}, newIdempotencyKey())
+	require.NoError(t, err)
+	requireStatus(t, 201, status, body)
+	messageID := jsonField(parseJSON(body), "id")
+	assertIDFormat(t, messageID, id.MessageIDPrefix)
+
+	created := findAuditEvent(t, apiClient, since, messageID, "chat_message", "create", changedTo("conversation_id", convID))
+	change, _ := changeForField(jsonListData(created, "changes"), "status")
+	assert.Equal(t, "sent", jsonField(change, "new_value"))
+	change, _ = changeForField(jsonListData(created, "changes"), "visibility")
+	assert.Equal(t, "internal", jsonField(change, "new_value"))
+	_, hasBody := changeForField(jsonListData(created, "changes"), "body")
+	assert.False(t, hasBody, "message content stays out of the audit trail so redaction can clear it")
+	raw, err := json.Marshal(created)
+	require.NoError(t, err)
+	assert.NotContains(t, string(raw), text)
+
+	status, body, err = user.Post(conversationsPath+"/"+convID+"/messages", map[string]any{
+		"body":              text,
+		"client_message_id": clientMessageID,
+	}, newIdempotencyKey())
+	require.NoError(t, err)
+	requireStatus(t, 201, status, body)
+	require.Equal(t, messageID, jsonField(parseJSON(body), "id"))
+
+	assert.Equal(t, []string{messageID}, auditEventIDsForRoot(t, apiClient, since, "conversation", convID, "chat_message"))
+	assert.NotContains(t, auditEventIDsForRoot(t, apiClient, since, "sales_order", SeedSalesOrderID, "chat_message"), messageID)
 }
 
 // --- Scheduled messages ---

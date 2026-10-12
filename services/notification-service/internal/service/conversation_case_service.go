@@ -426,6 +426,18 @@ func publishMessageAudit(ctx context.Context, f domain.RepoFactory, action const
 	})
 }
 
+func publishChatMessageCreated(ctx context.Context, f domain.RepoFactory, msg *domain.Message) *apierror.APIError {
+	return audit.NewPublisher().Publish(ctx, f.NewOutboxRepo(), audit.EventData{
+		ServiceName:      domain.ServiceName,
+		Action:           constants.AuditActionCreate,
+		ResourceType:     constants.ObjectTypeChatMessage,
+		ResourceID:       msg.ID,
+		RootResourceType: constants.ObjectTypeConversation,
+		RootResourceID:   msg.ConversationID,
+		Changes:          audit.ComputeChanges(nil, msg),
+	})
+}
+
 // RejectReplyDraft discards an open draft without sending.
 func (s *conversationSvcImpl) RejectReplyDraft(ctx context.Context, draftID string) (*domain.Message, *apierror.APIError) {
 	ctx, span := conversationSvcTracer.Start(ctx, "service.conversation.reject_reply_draft")

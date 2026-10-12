@@ -149,6 +149,7 @@ func (s *conversationSvcImpl) IngestInboundEmail(ctx context.Context, in domain.
 			AccountID:       accountID,
 			Sequence:        seq,
 			Kind:            string(constants.MessageKindEmail),
+			Status:          string(constants.MessageStatusSent),
 			Visibility:      string(constants.MessageVisibilityExternal),
 			Channel:         new(string(constants.MessageChannelEmail)),
 			ClientMessageID: &clientMsgID,
@@ -170,6 +171,9 @@ func (s *conversationSvcImpl) IngestInboundEmail(ctx context.Context, in domain.
 		}
 		if advErr := convRepo.AdvanceAfterMessage(txCtx, conversationID, messageID, now); advErr != nil {
 			return advErr
+		}
+		if auditErr := publishChatMessageCreated(txCtx, f, msg); auditErr != nil {
+			return auditErr
 		}
 
 		// Ledger row (unique rfc_message_id) — the authoritative dedup guard. A concurrent delivery that raced past the pre-tx check loses here; we roll back (discarding a duplicate fresh thread).

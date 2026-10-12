@@ -1068,6 +1068,7 @@ func (s *conversationSvcImpl) SendMessage(ctx context.Context, input domain.Send
 			LinkResourceType:    input.LinkResourceType,
 			LinkResourceID:      input.LinkResourceID,
 			ReplyToMessageID:    input.ReplyToMessageID,
+			Status:              string(constants.MessageStatusSent),
 			CreatedAt:           now,
 
 			MentionAccountUserIDs: input.MentionAccountUserIDs,
@@ -1097,6 +1098,9 @@ func (s *conversationSvcImpl) SendMessage(ctx context.Context, input domain.Send
 
 		if advErr := convRepo.AdvanceAfterMessage(txCtx, input.ConversationID, messageID, now); advErr != nil {
 			return advErr
+		}
+		if auditErr := publishChatMessageCreated(txCtx, f, msg); auditErr != nil {
+			return auditErr
 		}
 		// The author has implicitly read their own message (cursor advance by participant id works for both internal account_user and customer participants).
 		if curErr := f.NewParticipantRepo().AdvanceReadCursorByID(txCtx, part.ID, messageID, seq); curErr != nil {

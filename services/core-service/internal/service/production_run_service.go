@@ -730,5 +730,27 @@ func createBatchesForRun(txCtx context.Context, repos domain.RepoFactory, accoun
 			},
 		}
 	}
-	return repos.NewBatchRepo().CreateMany(txCtx, batches)
+	created, apiErr := repos.NewBatchRepo().CreateMany(txCtx, batches)
+	if apiErr != nil {
+		return nil, apiErr
+	}
+	for _, b := range created {
+		if apiErr := publishRunBatchCreated(txCtx, repos, productionRunID, b); apiErr != nil {
+			return nil, apiErr
+		}
+	}
+	return created, nil
+}
+
+// publishRunBatchCreated audits a batch planned on a run, rooted at the run so its history lists the batch.
+func publishRunBatchCreated(txCtx context.Context, repos domain.RepoFactory, productionRunID string, batch *domain.BaseBatch) *apierror.APIError {
+	return audit.NewPublisher().Publish(txCtx, repos.NewOutboxRepo(), audit.EventData{
+		ServiceName:      domain.ServiceName,
+		Action:           constants.AuditActionCreate,
+		ResourceType:     constants.ObjectTypeBatch,
+		ResourceID:       batch.ID,
+		Changes:          audit.ComputeChanges(nil, batch),
+		RootResourceType: constants.ObjectTypeProductionRun,
+		RootResourceID:   productionRunID,
+	})
 }

@@ -6,6 +6,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/open-mrp/api/shared/appctx"
+	"github.com/open-mrp/api/shared/constants"
 	apierror "github.com/open-mrp/api/shared/errors"
 
 	"github.com/stretchr/testify/assert"
@@ -494,6 +496,65 @@ func TestHandleCheckoutSessionCompleted_SkipsWhenNotPaidOrNoOrder(t *testing.T) 
 
 			err := consumer.handleCheckoutSessionCompleted(ctx, "evt_skip", rawObject)
 			require.NoError(t, err)
+		})
+	}
+}
+
+// Every subscription change a webhook makes reaches core attributed to Stripe acting on the
+// account it resolved, so core can audit it.
+func TestSubscriptionWebhooks_ActAsStripeOnTheResolvedAccount(t *testing.T) {
+	t.Parallel()
+	billedTo := time.Date(2026, 10, 1, 0, 0, 0, 0, time.UTC)
+	sub, _ := json.Marshal(v2PricingPlanSubscriptionObject{ID: "pps_1", Customer: "cus_123"})
+	cadence, _ := json.Marshal(v2CadenceObject{ID: "bc_1", Customer: "cus_123", BilledTo: &billedTo})
+
+	handlers := map[string]func(c *StripeWebhookConsumer) error{
+		"servicing_activated": func(c *StripeWebhookConsumer) error {
+			return c.handleServicingActivated(context.Background(), "evt", sub)
+		},
+		"servicing_canceled": func(c *StripeWebhookConsumer) error {
+			return c.handleServicingCanceled(context.Background(), "evt", sub)
+		},
+		"servicing_paused": func(c *StripeWebhookConsumer) error { return c.handleServicingPaused(context.Background(), "evt", sub) },
+		"collection_paused": func(c *StripeWebhookConsumer) error {
+			return c.handleCollectionPaused(context.Background(), "evt", sub)
+		},
+		"collection_current": func(c *StripeWebhookConsumer) error {
+			return c.handleCollectionCurrent(context.Background(), "evt", sub)
+		},
+		"collection_awaiting": func(c *StripeWebhookConsumer) error {
+			return c.handleCollectionAwaitingCustomerAction(context.Background(), "evt", sub)
+		},
+		"cadence_errored": func(c *StripeWebhookConsumer) error {
+			return c.handleCadenceErrored(context.Background(), "evt", cadence)
+		},
+		"cadence_billed": func(c *StripeWebhookConsumer) error {
+			return c.handleCadenceBilled(context.Background(), "evt", cadence)
+		},
+		"cadence_canceled": func(c *StripeWebhookConsumer) error {
+			return c.handleCadenceCanceled(context.Background(), "evt", cadence)
+		},
+	}
+	for name, handle := range handlers {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+			called := false
+			client := &stubCoreClient{
+				getAccountByStripeCustomerID: func(context.Context, string) (string, string, *apierror.APIError) {
+					return "acct_1", "pro", nil
+				},
+				updateAccountSubscription: func(ctx context.Context, _, _ string, _ *string, _ string, _ *string, _ *time.Time, _ *string, _ *string, _ *string, _ *string, _ *string, _ *string) *apierror.APIError {
+					called = true
+					identity, ok := appctx.GetIdentityFromContext(ctx)
+					require.True(t, ok)
+					assert.True(t, identity.IsSystem())
+					assert.Equal(t, constants.SystemActorStripe.ActorID(), identity.Actor.ID)
+					assert.Equal(t, "acct_1", identity.Target.AccountID)
+					return nil
+				},
+			}
+			require.NoError(t, handle(newTestConsumerFull(client, &stubNotificationClient{}, &stubAccountUsageRepo{})))
+			assert.True(t, called)
 		})
 	}
 }

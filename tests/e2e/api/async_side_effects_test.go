@@ -7,6 +7,7 @@ import (
 	"net/url"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -78,6 +79,50 @@ func expectAuditEventWithChanges(t *testing.T, resourceID, resourceType, action 
 		return fmt.Errorf("no %s audit event yet for %s %s", action, resourceType, resourceID)
 	})
 
+	return matched
+}
+
+// expectAuditEventsWithMetadata polls until at least n events on the resource carry the metadata flag and occurred at or after since, and returns them newest first.
+func expectAuditEventsWithMetadata(t *testing.T, resourceID, resourceType, action, flag string, since time.Time, n int) []map[string]any {
+	t.Helper()
+
+	var matched []map[string]any
+	eventually(t, e2eAsyncWaitTimeout, e2eAsyncPollInterval, func() error {
+		status, body, err := apiClient.GetListRaw(auditEventsPath, url.Values{
+			"resource_ids":   {resourceID},
+			"resource_types": {resourceType},
+			"actions":        {action},
+			"include":        {"changes,metadata"},
+			"limit":          {"100"},
+		})
+		if err != nil {
+			return err
+		}
+		if status != 200 {
+			return fmt.Errorf("unexpected status %d while querying audit events", status)
+		}
+
+		matched = nil
+		for _, item := range jsonArray(parseJSON(body), "data") {
+			event, ok := item.(map[string]any)
+			if !ok {
+				continue
+			}
+			metadata, _ := event["metadata"].(map[string]any)
+			if metadata[flag] != true {
+				continue
+			}
+			occurredAt, err := time.Parse(time.RFC3339Nano, jsonField(event, "occurred_at"))
+			if err != nil || occurredAt.Before(since) {
+				continue
+			}
+			matched = append(matched, event)
+		}
+		if len(matched) < n {
+			return fmt.Errorf("%d of %d %s audit events flagged %s on %s %s", len(matched), n, action, flag, resourceType, resourceID)
+		}
+		return nil
+	})
 	return matched
 }
 
@@ -1212,4 +1257,234 @@ func TestOrderDiscounts_AuditEvents(t *testing.T) {
 	nameDelete, ok := changeForField(jsonListData(deletedEvent, "changes"), "name")
 	require.True(t, ok, "delete audit event should record the name that was removed")
 	assert.Equal(t, name, jsonField(nameDelete, "old_value"))
+}
+
+// ── Operating Calendars ────────────────────────
+
+func TestOperatingCalendars_AuditEvents(t *testing.T) {
+	t.Parallel()
+	calendarID := createCalendar(t, "ship", "1111000", nil)
+
+	createdEvent := expectAuditEventWithChanges(t, calendarID, "operating_calendar", "create")
+	daysCreate, ok := changeForField(jsonListData(createdEvent, "changes"), "days_of_week")
+	require.True(t, ok, "create audit event should record the day mask")
+	assertNilField(t, daysCreate, "old_value")
+	assert.Equal(t, "1111000", jsonField(daysCreate, "new_value"))
+
+	status, body, err := apiClient.Patch(operatingCalendarsPath+"/"+calendarID, map[string]any{"days_of_week": "1111100"}, newIdempotencyKey())
+	require.NoError(t, err)
+	requireStatus(t, 200, status, body)
+
+	updatedEvent := expectAuditEventWithChanges(t, calendarID, "operating_calendar", "update")
+	daysUpdate, ok := changeForField(jsonListData(updatedEvent, "changes"), "days_of_week")
+	require.True(t, ok, "update audit event should record the day mask change")
+	assert.Equal(t, "1111000", jsonField(daysUpdate, "old_value"))
+	assert.Equal(t, "1111100", jsonField(daysUpdate, "new_value"))
+
+	closuresPath := operatingCalendarsPath + "/" + calendarID + "/closures"
+	closedOn := time.Now().UTC().AddDate(0, 4, 0).Format("2006-01-02") + "T00:00:00Z"
+	status, body, err = apiClient.Post(closuresPath, map[string]any{"closed_on": closedOn, "name": "E2E audit shutdown"}, newIdempotencyKey())
+	require.NoError(t, err)
+	requireStatus(t, 201, status, body)
+	closureID := jsonField(parseJSON(body), "id")
+
+	closureCreated := expectAuditEventWithChanges(t, closureID, "operating_calendar_closure", "create")
+	calendarRef, ok := changeForField(jsonListData(closureCreated, "changes"), "operating_calendar_id")
+	require.True(t, ok, "closure create audit event should record its calendar")
+	assert.Equal(t, calendarID, jsonField(calendarRef, "new_value"))
+
+	status, body, err = apiClient.Delete(closuresPath + "/" + closureID)
+	require.NoError(t, err)
+	requireStatus(t, 204, status, body)
+
+	closureDeleted := expectAuditEventWithChanges(t, closureID, "operating_calendar_closure", "delete")
+	closureName, ok := changeForField(jsonListData(closureDeleted, "changes"), "name")
+	require.True(t, ok, "closure delete audit event should record the name that was removed")
+	assert.Equal(t, "E2E audit shutdown", jsonField(closureName, "old_value"))
+	assertNilField(t, closureName, "new_value")
+
+	status, body, err = apiClient.Delete(operatingCalendarsPath + "/" + calendarID)
+	require.NoError(t, err)
+	requireStatus(t, 204, status, body)
+
+	deletedEvent := expectAuditEventWithChanges(t, calendarID, "operating_calendar", "delete")
+	daysDelete, ok := changeForField(jsonListData(deletedEvent, "changes"), "days_of_week")
+	require.True(t, ok, "delete audit event should record the day mask that was removed")
+	assert.Equal(t, "1111100", jsonField(daysDelete, "old_value"))
+	assertNilField(t, daysDelete, "new_value")
+}
+
+// ── Production Schedule Settings ───────────────
+
+func TestProductionScheduleItemSettings_AuditEvents(t *testing.T) {
+	t.Parallel()
+	itemID := createSellableItem(t, uniqueName("e2e-item-setting-audit"))
+	t.Cleanup(func() { _, _, _ = apiClient.Delete(itemSettingsPath + "/" + itemID) })
+
+	status, body, err := apiClient.Put(itemSettingsPath+"/"+itemID, map[string]any{
+		"participation_status": "included",
+		"lot_multiple_units":   12,
+	})
+	require.NoError(t, err)
+	requireStatus(t, 200, status, body)
+	settingID := jsonField(parseJSON(body), "id")
+	require.NotEmpty(t, settingID)
+
+	createdEvent := expectAuditEventWithChanges(t, settingID, "production_schedule_item_setting", "create")
+	itemCreate, ok := changeForField(jsonListData(createdEvent, "changes"), "item_id")
+	require.True(t, ok, "create audit event should record the item")
+	assert.Equal(t, itemID, jsonField(itemCreate, "new_value"))
+
+	// The second write replaces the first, so it is an update on the same setting rather than another create.
+	status, body, err = apiClient.Put(itemSettingsPath+"/"+itemID, map[string]any{
+		"participation_status": "included",
+		"lot_multiple_units":   24,
+	})
+	require.NoError(t, err)
+	requireStatus(t, 200, status, body)
+	assert.Equal(t, settingID, jsonField(parseJSON(body), "id"))
+
+	updatedEvent := expectAuditEventWithChanges(t, settingID, "production_schedule_item_setting", "update")
+	lotUpdate, ok := changeForField(jsonListData(updatedEvent, "changes"), "lot_multiple_units")
+	require.True(t, ok, "update audit event should record the lot change")
+	assert.Equal(t, "12", jsonField(lotUpdate, "old_value"))
+	assert.Equal(t, "24", jsonField(lotUpdate, "new_value"))
+
+	status, body, err = apiClient.Delete(itemSettingsPath + "/" + itemID)
+	require.NoError(t, err)
+	requireStatus(t, 200, status, body)
+
+	deletedEvent := expectAuditEventWithChanges(t, settingID, "production_schedule_item_setting", "delete")
+	lotDelete, ok := changeForField(jsonListData(deletedEvent, "changes"), "lot_multiple_units")
+	require.True(t, ok, "delete audit event should record the lot that was removed")
+	assert.Equal(t, "24", jsonField(lotDelete, "old_value"))
+	assertNilField(t, lotDelete, "new_value")
+}
+
+func TestProductionScheduleResourceSettings_AuditEvents(t *testing.T) {
+	t.Parallel()
+	departmentID := jsonField(createAndCleanup(t, departmentsPath, map[string]any{"name": uniqueName("e2e-resource-setting-audit")}), "id")
+	resourceSettingsPath := "/v1/operations/production-schedule-settings/resources"
+
+	status, body, err := apiClient.Put(resourceSettingsPath, map[string]any{
+		"scope_type":             "department",
+		"scope_ref_id":           departmentID,
+		"participation_status":   "included",
+		"lead_time_offset_weeks": 1,
+	})
+	require.NoError(t, err)
+	requireStatus(t, 200, status, body)
+	settingID := jsonField(parseJSON(body), "id")
+	require.NotEmpty(t, settingID)
+	t.Cleanup(func() { _, _, _ = apiClient.Delete(resourceSettingsPath + "/" + settingID) })
+
+	createdEvent := expectAuditEventWithChanges(t, settingID, "production_schedule_resource_setting", "create")
+	scopeCreate, ok := changeForField(jsonListData(createdEvent, "changes"), "scope_ref_id")
+	require.True(t, ok, "create audit event should record the resource")
+	assert.Equal(t, departmentID, jsonField(scopeCreate, "new_value"))
+
+	status, body, err = apiClient.Put(resourceSettingsPath, map[string]any{
+		"scope_type":             "department",
+		"scope_ref_id":           departmentID,
+		"participation_status":   "included",
+		"lead_time_weeks":        3,
+		"lead_time_offset_weeks": 2,
+	})
+	require.NoError(t, err)
+	requireStatus(t, 200, status, body)
+	assert.Equal(t, settingID, jsonField(parseJSON(body), "id"))
+	assert.Equal(t, "3", jsonField(parseJSON(body), "lead_time_weeks"), "the stored lead time is what comes back")
+
+	updatedEvent := expectAuditEventWithChanges(t, settingID, "production_schedule_resource_setting", "update")
+	changes := jsonListData(updatedEvent, "changes")
+	offsetUpdate, ok := changeForField(changes, "lead_time_offset_weeks")
+	require.True(t, ok, "update audit event should record the offset change")
+	assert.Equal(t, "1", jsonField(offsetUpdate, "old_value"))
+	assert.Equal(t, "2", jsonField(offsetUpdate, "new_value"))
+	leadTimeUpdate, ok := changeForField(changes, "lead_time_weeks")
+	require.True(t, ok, "update audit event should record the lead time being set")
+	assertNilField(t, leadTimeUpdate, "old_value")
+	assert.Equal(t, "3", jsonField(leadTimeUpdate, "new_value"))
+
+	status, body, err = apiClient.Delete(resourceSettingsPath + "/" + settingID)
+	require.NoError(t, err)
+	requireStatus(t, 200, status, body)
+
+	deletedEvent := expectAuditEventWithChanges(t, settingID, "production_schedule_resource_setting", "delete")
+	scopeDelete, ok := changeForField(jsonListData(deletedEvent, "changes"), "scope_ref_id")
+	require.True(t, ok, "delete audit event should record the resource it applied to")
+	assert.Equal(t, departmentID, jsonField(scopeDelete, "old_value"))
+	assertNilField(t, scopeDelete, "new_value")
+}
+
+// Applying a recommendation writes an item setting, and that write is audited like any other.
+func TestFulfillmentRecommendations_ApplyIsAudited(t *testing.T) {
+	t.Parallel()
+	itemID := createSellableItem(t, uniqueName("e2e-recommend-audit"))
+	t.Cleanup(func() { _, _, _ = apiClient.Delete(itemSettingsPath + "/" + itemID) })
+
+	rec := findRecommendation(t, itemID)
+	require.NotNil(t, rec, "a newly created sellable item should be classified")
+	recommended := jsonField(rec, "recommended_policy")
+
+	status, body, err := apiClient.Post(recommendationsApplyPath, map[string]any{"item_ids": []string{itemID}}, newIdempotencyKey())
+	require.NoError(t, err)
+	requireStatus(t, 200, status, body)
+
+	status, body, err = apiClient.GetListRaw(itemSettingsPath+"/"+itemID, nil)
+	require.NoError(t, err)
+	requireStatus(t, 200, status, body)
+	settingID := jsonField(parseJSON(body), "id")
+
+	createdEvent := expectAuditEventWithChanges(t, settingID, "production_schedule_item_setting", "create")
+	policy, ok := changeForField(jsonListData(createdEvent, "changes"), "fulfillment_policy_code")
+	require.True(t, ok, "applying should audit the policy it wrote")
+	assertNilField(t, policy, "old_value")
+	assert.Equal(t, recommended, jsonField(policy, "new_value"))
+}
+
+// ── Branding and photo uploads ─────────────────
+
+// The stored asset key is the same on every upload, so each upload is recorded by its metadata flag rather than by a diff.
+func TestAccountBrandingUploads_AuditEvents(t *testing.T) {
+	t.Parallel()
+
+	for _, tc := range []struct{ route, flag string }{
+		{"photo", "logo_uploaded"},
+		{"favicon", "favicon_uploaded"},
+	} {
+		t.Run(tc.route, func(t *testing.T) {
+			t.Parallel()
+			since := time.Now().Add(-5 * time.Second)
+
+			status, body, err := apiClient.PutBytes("/v1/identity/accounts/"+SeedAccountID+"/"+tc.route, "image/png", onePixelPNG(t))
+			require.NoError(t, err)
+			requireStatus(t, 200, status, body)
+
+			expectAuditEventsWithMetadata(t, SeedAccountID, "account", "update", tc.flag, since, 1)
+		})
+	}
+}
+
+func TestUserPhoto_AuditEvents(t *testing.T) {
+	t.Parallel()
+	u := newSeedAccountUser(t, SeedAdminRoleID)
+	since := time.Now().Add(-5 * time.Second)
+
+	status, body, err := apiClient.PutBytes(u.path()+"/photo", "image/png", onePixelPNG(t))
+	require.NoError(t, err)
+	requireStatus(t, 200, status, body)
+
+	first := expectAuditEventsWithMetadata(t, u.id, "user", "update", "photo_uploaded", since, 1)
+	imageURL, ok := changeForField(jsonListData(first[0], "changes"), "image_url")
+	require.True(t, ok, "the first upload should record the image path being set")
+	assertNilField(t, imageURL, "old_value")
+	assert.Equal(t, "/v1/core/users/"+u.id+"/photo", jsonField(imageURL, "new_value"))
+
+	// A replacement photo changes no stored field, and is still recorded.
+	status, body, err = apiClient.PutBytes(u.path()+"/photo", "image/png", onePixelPNG(t))
+	require.NoError(t, err)
+	requireStatus(t, 200, status, body)
+
+	expectAuditEventsWithMetadata(t, u.id, "user", "update", "photo_uploaded", since, 2)
 }

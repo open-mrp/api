@@ -2,12 +2,17 @@ package service
 
 import (
 	"context"
+	"encoding/json"
 	"testing"
 
 	"github.com/open-mrp/api/services/notification-service/internal/domain"
 	factorymock "github.com/open-mrp/api/services/notification-service/internal/domain/mock/factory"
 	repositorymock "github.com/open-mrp/api/services/notification-service/internal/domain/mock/repository"
+	"github.com/open-mrp/api/shared/appctx"
+	"github.com/open-mrp/api/shared/audit"
+	"github.com/open-mrp/api/shared/constants"
 	apierror "github.com/open-mrp/api/shared/errors"
+	"github.com/open-mrp/api/shared/messaging"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -73,6 +78,10 @@ func TestCreateEmailThreadConversation_SeatsGroupMembersDeduped(t *testing.T) {
 	convRepo.EXPECT().Create(gomock.Any(), gomock.Any(), gomock.Any(), "ac_1").Return(nil)
 	convRepo.EXPECT().BindInbox(gomock.Any(), gomock.Any(), "ac_1", "emix_1", "cust@out.com").Return(nil)
 	convRepo.EXPECT().SetWorkflowStatus(gomock.Any(), gomock.Any(), "ac_1", gomock.Any()).Return(nil)
+	convRepo.EXPECT().GetByID(gomock.Any(), gomock.Any(), "ac_1").DoAndReturn(
+		func(_ context.Context, id, _ string) (*domain.Conversation, *apierror.APIError) {
+			return &domain.Conversation{ID: id}, nil
+		})
 
 	partRepo := repositorymock.NewMockParticipantRepo(ctrl)
 	var seatedUsers []string
@@ -89,6 +98,11 @@ func TestCreateEmailThreadConversation_SeatsGroupMembersDeduped(t *testing.T) {
 			return nil
 		}).AnyTimes()
 
+	partRepo.EXPECT().GetByID(gomock.Any(), gomock.Any(), gomock.Any()).DoAndReturn(
+		func(_ context.Context, id, conversationID string) (*domain.ConversationParticipant, *apierror.APIError) {
+			return &domain.ConversationParticipant{ID: id, ConversationID: conversationID}, nil
+		}).Times(4)
+
 	groupRepo := repositorymock.NewMockMessagingGroupRepo(ctrl)
 	// The roster carries two humans and two agents — one of which duplicates the inbox's own triage agent.
 	groupRepo.EXPECT().ListMembers(gomock.Any(), "mggp_1").Return([]*domain.MessagingGroupMember{
@@ -102,6 +116,8 @@ func TestCreateEmailThreadConversation_SeatsGroupMembersDeduped(t *testing.T) {
 	factory.EXPECT().NewConversationRepo().Return(convRepo).AnyTimes()
 	factory.EXPECT().NewParticipantRepo().Return(partRepo).AnyTimes()
 	factory.EXPECT().NewMessagingGroupRepo().Return(groupRepo).AnyTimes()
+	outbox := &ingestOutboxRepo{}
+	factory.EXPECT().NewOutboxRepo().Return(outbox).AnyTimes()
 
 	svc := &conversationSvcImpl{}
 	inbox := &domain.EmailInbox{
@@ -112,7 +128,8 @@ func TestCreateEmailThreadConversation_SeatsGroupMembersDeduped(t *testing.T) {
 		AgentConfigID: new("agdf_inbox"),
 		GroupID:       new("mggp_1"),
 	}
-	convID, apiErr := svc.createEmailThreadConversation(context.Background(), factory, inbox, domain.IngestInboundEmailInput{
+	ctx := appctx.WithSystemIdentity(context.Background(), constants.SystemActorEmailIngest, "ac_1")
+	convID, apiErr := svc.createEmailThreadConversation(ctx, factory, inbox, domain.IngestInboundEmailInput{
 		From:    "cust@out.com",
 		Subject: "Help",
 	})
@@ -123,6 +140,31 @@ func TestCreateEmailThreadConversation_SeatsGroupMembersDeduped(t *testing.T) {
 	// plus the roster's extra agent — three participants for four member rows + the inbox agent.
 	assert.ElementsMatch(t, []string{"acus_1", "acus_2"}, seatedUsers)
 	assert.ElementsMatch(t, []string{"agdf_inbox", "agdf_extra"}, seatedAgents)
+
+	// The thread and each seat are audited like a hand-made conversation, attributed to email ingest.
+	var audited []string
+	for _, msg := range outbox.created {
+		var event audit.PublishedEvent
+		require.NoError(t, json.Unmarshal(msg.Payload.Data, &event))
+		audited = append(audited, string(event.ResourceType)+" "+string(event.Action))
+		require.True(t, msg.Payload.Identity.IsSystem())
+		assert.Equal(t, "system:email_ingest", msg.Payload.Identity.Actor.ID)
+		assert.Equal(t, "ac_1", msg.Payload.Identity.Target.AccountID)
+	}
+	assert.Equal(t, []string{
+		"conversation create",
+		"conversation_participant create", "conversation_participant create",
+		"conversation_participant create", "conversation_participant create",
+	}, audited)
+}
+
+type ingestOutboxRepo struct {
+	created []messaging.OutboxMessageInput
+}
+
+func (r *ingestOutboxRepo) Create(_ context.Context, in messaging.OutboxMessageInput) (int64, error) {
+	r.created = append(r.created, in)
+	return int64(len(r.created)), nil
 }
 
 func TestExternalSenderMetadata_RoundTrip(t *testing.T) {

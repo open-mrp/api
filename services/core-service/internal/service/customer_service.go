@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"slices"
 	"strconv"
+	"strings"
 
 	"github.com/open-mrp/api/services/auth-service/pkg/types"
 	"github.com/open-mrp/api/services/core-service/internal/domain"
@@ -1004,6 +1005,10 @@ func (s *customerSvcImpl) UpdateCustomerNotificationRecipients(ctx context.Conte
 
 	apiErr = s.withTx(ctx, func(txCtx context.Context, txSvc *customerSvcImpl) *apierror.APIError {
 		relationRepo := txSvc.repos.NewAccountRelationRepo()
+		before, apiErr := relationRepo.ListNotificationRecipients(txCtx, relationID)
+		if apiErr != nil {
+			return apiErr
+		}
 		// Replace the managed set: drop existing invoice/acknowledgement prefs for the relation, then insert the requested set. PO-submission prefs are left untouched.
 		if apiErr := relationRepo.DeleteNotificationPreferencesByTypes(txCtx, relationID, managedOrderNotificationTypeCodes); apiErr != nil {
 			return apiErr
@@ -1025,7 +1030,22 @@ func (s *customerSvcImpl) UpdateCustomerNotificationRecipients(ctx context.Conte
 				}
 			}
 		}
-		return nil
+
+		after, apiErr := relationRepo.ListNotificationRecipients(txCtx, relationID)
+		if apiErr != nil {
+			return apiErr
+		}
+		var changes []audit.FieldChange
+		if old, updated := managedRecipientsAuditValue(before), managedRecipientsAuditValue(after); !slices.EqualFunc(old, updated, managedRecipientAuditValue.equal) {
+			changes = append(changes, audit.NewFieldChange("notification_recipients", old, updated))
+		}
+		return audit.NewPublisher().Publish(txCtx, txSvc.repos.NewOutboxRepo(), audit.EventData{
+			ServiceName:  domain.ServiceName,
+			Action:       constants.AuditActionUpdate,
+			ResourceType: constants.ObjectTypeCustomer,
+			ResourceID:   params.CustomerAccountID,
+			Changes:      changes,
+		})
 	})
 	if apiErr != nil {
 		return nil, tracing.Trace(span, apiErr)
@@ -1487,4 +1507,31 @@ func enqueueStripeCustomerSync(ctx context.Context, repos domain.RepoFactory, ow
 	}
 
 	return nil
+}
+
+// managedRecipientAuditValue is one default order recipient as a customer's audit diff shows it.
+type managedRecipientAuditValue struct {
+	AccountUserID         string   `json:"account_user_id"`
+	NotificationTypeCodes []string `json:"notification_type_codes"`
+}
+
+func (a managedRecipientAuditValue) equal(b managedRecipientAuditValue) bool {
+	return a.AccountUserID == b.AccountUserID && slices.Equal(a.NotificationTypeCodes, b.NotificationTypeCodes)
+}
+
+// managedRecipientsAuditValue keeps the managed order types of each recipient, sorted so the diff ignores row order.
+func managedRecipientsAuditValue(refs []domain.NotificationRecipientRef) []managedRecipientAuditValue {
+	out := []managedRecipientAuditValue{}
+	for _, ref := range refs {
+		codes := slices.DeleteFunc(slices.Clone(ref.NotificationTypeCodes), func(code string) bool {
+			return !slices.Contains(managedOrderNotificationTypeCodes, code)
+		})
+		if len(codes) == 0 {
+			continue
+		}
+		slices.Sort(codes)
+		out = append(out, managedRecipientAuditValue{AccountUserID: ref.AccountUserID, NotificationTypeCodes: codes})
+	}
+	slices.SortFunc(out, func(a, b managedRecipientAuditValue) int { return strings.Compare(a.AccountUserID, b.AccountUserID) })
+	return out
 }

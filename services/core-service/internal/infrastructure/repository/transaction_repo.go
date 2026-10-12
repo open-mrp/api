@@ -118,6 +118,28 @@ func (r *transactionRepoImpl) UpdateFundsReceivedByStripePaymentIDs(ctx context.
 	return nil
 }
 
+func (r *transactionRepoImpl) LockIDsByStripePaymentIDs(ctx context.Context, accountID string, stripePaymentIDs []string) ([]string, *apierror.APIError) {
+	ctx, span := transactionRepoTracer.Start(ctx, "repository.transaction.lock_ids_by_stripe_payment_ids")
+	defer span.End()
+
+	if len(stripePaymentIDs) == 0 {
+		return nil, nil
+	}
+
+	paymentIDs := make([]gosql.NullString, len(stripePaymentIDs))
+	for i, id := range stripePaymentIDs {
+		paymentIDs[i] = gosql.NullString{String: id, Valid: true}
+	}
+	ids, err := r.queries.ListTransactionIDsByStripePaymentIDs(ctx, sqlc.ListTransactionIDsByStripePaymentIDsParams{
+		AccountID:        accountID,
+		StripePaymentIds: paymentIDs,
+	})
+	if apiErr := db.MapSQLError(err); apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
+	return ids, nil
+}
+
 func (r *transactionRepoImpl) UpdateNote(ctx context.Context, txID, note string) *apierror.APIError {
 	ctx, span := transactionRepoTracer.Start(ctx, "repository.transaction.update_note")
 	defer span.End()

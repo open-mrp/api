@@ -13,6 +13,7 @@ import (
 	"github.com/open-mrp/api/services/core-service/internal/domain"
 	"github.com/open-mrp/api/services/core-service/internal/scheduling"
 	"github.com/open-mrp/api/shared/appctx"
+	"github.com/open-mrp/api/shared/audit"
 	"github.com/open-mrp/api/shared/constants"
 	apierror "github.com/open-mrp/api/shared/errors"
 	"github.com/open-mrp/api/shared/id"
@@ -1629,6 +1630,19 @@ func (s *productionScheduleSvcImpl) persistPlan(ctx context.Context, params pers
 			return apiErr
 		}
 		stored = got
+
+		// A cadence fill writes into a row created when the run was queued, so only a fresh header is a create.
+		if params.ExistingScheduleID == "" {
+			if apiErr := audit.NewPublisher().Publish(txCtx, txSvc.repos.NewOutboxRepo(), audit.EventData{
+				ServiceName:  domain.ServiceName,
+				Action:       constants.AuditActionCreate,
+				ResourceType: constants.ObjectTypeProductionSchedule,
+				ResourceID:   stored.ID,
+				Changes:      audit.ComputeChanges(nil, stored),
+			}); apiErr != nil {
+				return apiErr
+			}
+		}
 
 		if params.CacheResponse != nil {
 			return params.CacheResponse(txCtx, txSvc, stored)

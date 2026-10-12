@@ -111,7 +111,7 @@ func Run(
 		return apiErr
 	}
 	notificationSvc := service.NewNotificationSvc(notificationConfig)
-	messagingSvc := service.NewMessagingSvc(repoFactory)
+	messagingSvc := service.NewMessagingSvc(repoFactory, txManager)
 
 	var objectStore s3client.ObjectStore
 	if cfg.PlatformMode.IsTest() {
@@ -137,7 +137,7 @@ func Run(
 			return apiErr
 		}
 	}
-	emailBridgeSvc := service.NewEmailBridgeSvc(repoFactory, emailIdentityProvider)
+	emailBridgeSvc := service.NewEmailBridgeSvc(repoFactory, txManager, emailIdentityProvider)
 
 	inboxRepo := repository.NewInboxRepo(queries)
 	inboxPurgerRepo := repository.NewInboxPurgerRepo(queries)

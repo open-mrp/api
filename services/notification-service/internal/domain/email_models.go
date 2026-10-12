@@ -22,15 +22,15 @@ const (
 type EmailDomain struct {
 	ID         string
 	AccountID  string
-	Domain     string
-	Status     string
-	DkimTokens []string
+	Domain     string   `audit:"domain"`
+	Status     string   `audit:"status"`
+	DkimTokens []string `audit:"dkim_tokens"`
 	// MailFromDomain is the subdomain SES was told to use as the envelope Return-Path (e.g. mail.example.com). Without it the Return-Path stays on amazonses.com, which does not align with the From domain, so mail clients annotate the sender with "via amazonses.com" even though DKIM passes. Nil for domains registered before custom MAIL FROM was configured.
-	MailFromDomain *string
+	MailFromDomain *string `audit:"mail_from_domain"`
 	// MailFromMXRecord and MailFromSPFRecord are the records the customer publishes on MailFromDomain. Rendered on read rather than stored: they are a function of the SES region, and a stored copy would go stale if the region ever moved. Empty when MailFromDomain is unset.
 	MailFromMXRecord  string
 	MailFromSPFRecord string
-	VerifiedAt        *time.Time
+	VerifiedAt        *time.Time `audit:"verified_at"`
 	CreatedAt         time.Time
 	UpdatedAt         time.Time
 }
@@ -47,10 +47,10 @@ func MailFromSubdomain(domainName string) string {
 type AccountEmailSender struct {
 	ID             string
 	AccountID      string
-	EmailDomainID  string
-	LocalPart      string
-	FromName       *string
-	ReplyTo        *string
+	EmailDomainID  string  `audit:"email_domain_id"`
+	LocalPart      string  `audit:"local_part"`
+	FromName       *string `audit:"from_name"`
+	ReplyTo        *string `audit:"reply_to"`
 	Domain         string
 	DomainStatus   string
 	MailFromDomain *string
@@ -89,15 +89,15 @@ type UpsertAccountEmailSenderInput struct {
 type EmailInbox struct {
 	ID                   string
 	AccountID            string
-	EmailDomainID        string
-	Address              string
-	FromName             *string
-	Status               string
-	AgentConfigID        *string
-	AgentTriggerPolicy   *string
-	AgentTriggerKeywords []string
+	EmailDomainID        string   `audit:"email_domain_id"`
+	Address              string   `audit:"address"`
+	FromName             *string  `audit:"from_name"`
+	Status               string   `audit:"status"`
+	AgentConfigID        *string  `audit:"agent_config_id"`
+	AgentTriggerPolicy   *string  `audit:"agent_trigger_policy"`
+	AgentTriggerKeywords []string `audit:"agent_trigger_keywords"`
 	// GroupID is the reusable roster (messaging_group) whose members are seated as participants on each new email thread this inbox opens. Nil = no team seeded (only the bound agent, if any).
-	GroupID   *string
+	GroupID   *string `audit:"group_id"`
 	CreatedAt time.Time
 	UpdatedAt time.Time
 }

@@ -179,11 +179,18 @@ func (suite *ItemCategorySvcTestSuite) TestWriteBulkUpsertItemCategories_AttachE
 		Get(gomock.Any(), gomock.Any()).
 		Return(sampleCategory("ic_001", "Steel", "ug_001"), nil).AnyTimes()
 
-	// UpsertProperty called once per requested property.
-	suite.icRepo.EXPECT().
-		UpsertProperty(gomock.Any(), "ic_001", "prop_001").Return(nil).Times(1)
-	suite.icRepo.EXPECT().
-		UpsertProperty(gomock.Any(), "ic_001", "prop_002").Return(nil).Times(1)
+	// UpsertProperty called once per requested property, with the property list read around it for the audit diff.
+	gomock.InOrder(
+		suite.icRepo.EXPECT().GetProperties(gomock.Any(), "ic_001").Return(nil, nil),
+		suite.icRepo.EXPECT().
+			UpsertProperty(gomock.Any(), "ic_001", "prop_001").Return(nil).Times(1),
+		suite.icRepo.EXPECT().
+			UpsertProperty(gomock.Any(), "ic_001", "prop_002").Return(nil).Times(1),
+		suite.icRepo.EXPECT().GetProperties(gomock.Any(), "ic_001").Return([]*domain.ItemCategoryProperty{
+			{ID: "prop_001", Name: "Color"},
+			{ID: "prop_002", Name: "Material"},
+		}, nil),
+	)
 
 	created, _, rowErrs, err := suite.writeItemCategories(
 		domain.ResolvedUpsertItemCategoryRow{
@@ -200,6 +207,8 @@ func (suite *ItemCategorySvcTestSuite) TestWriteBulkUpsertItemCategories_AttachE
 }
 
 func (suite *ItemCategorySvcTestSuite) TestWriteBulkUpsertItemCategories_CreateMissingProperty() {
+	suite.icRepo.EXPECT().GetProperties(gomock.Any(), gomock.Any()).Return(nil, nil).AnyTimes()
+
 	suite.icRepo.EXPECT().
 		FindByNames(gomock.Any(), "ac_test123", gomock.Any()).
 		Return(nil, nil).Times(1)
@@ -243,6 +252,8 @@ func (suite *ItemCategorySvcTestSuite) TestWriteBulkUpsertItemCategories_CreateM
 }
 
 func (suite *ItemCategorySvcTestSuite) TestWriteBulkUpsertItemCategories_MixedExistingAndNewProperties() {
+	suite.icRepo.EXPECT().GetProperties(gomock.Any(), gomock.Any()).Return(nil, nil).AnyTimes()
+
 	suite.icRepo.EXPECT().
 		FindByNames(gomock.Any(), "ac_test123", gomock.Any()).
 		Return(nil, nil).Times(1)
@@ -287,6 +298,8 @@ func (suite *ItemCategorySvcTestSuite) TestWriteBulkUpsertItemCategories_MixedEx
 }
 
 func (suite *ItemCategorySvcTestSuite) TestWriteBulkUpsertItemCategories_DeduplicatesPropertyNames() {
+	suite.icRepo.EXPECT().GetProperties(gomock.Any(), gomock.Any()).Return(nil, nil).AnyTimes()
+
 	suite.icRepo.EXPECT().
 		FindByNames(gomock.Any(), "ac_test123", gomock.Any()).
 		Return(nil, nil).Times(1)
@@ -330,6 +343,8 @@ func (suite *ItemCategorySvcTestSuite) TestWriteBulkUpsertItemCategories_Dedupli
 }
 
 func (suite *ItemCategorySvcTestSuite) TestWriteBulkUpsertItemCategories_UpdateCategoryAttachesProperties() {
+	suite.icRepo.EXPECT().GetProperties(gomock.Any(), gomock.Any()).Return(nil, nil).AnyTimes()
+
 	acctID := "ac_test123"
 	existing := sampleCategory("ic_existing", "Steel", "ug_001")
 
@@ -409,6 +424,8 @@ func (suite *ItemCategorySvcTestSuite) TestWriteBulkUpsertItemCategories_Propert
 }
 
 func (suite *ItemCategorySvcTestSuite) TestWriteBulkUpsertItemCategories_PropertyCreateError() {
+	suite.icRepo.EXPECT().GetProperties(gomock.Any(), gomock.Any()).Return(nil, nil).AnyTimes()
+
 	suite.icRepo.EXPECT().
 		FindByNames(gomock.Any(), "ac_test123", gomock.Any()).
 		Return(nil, nil).Times(1)
@@ -440,6 +457,8 @@ func (suite *ItemCategorySvcTestSuite) TestWriteBulkUpsertItemCategories_Propert
 
 // A failure inside the row's savepoint drops only that row — the batch still completes.
 func (suite *ItemCategorySvcTestSuite) TestWriteBulkUpsertItemCategories_UpsertPropertyErrorIsRowScoped() {
+	suite.icRepo.EXPECT().GetProperties(gomock.Any(), gomock.Any()).Return(nil, nil).AnyTimes()
+
 	suite.icRepo.EXPECT().
 		FindByNames(gomock.Any(), "ac_test123", gomock.Any()).
 		Return(nil, nil).Times(1)

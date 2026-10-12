@@ -2,11 +2,11 @@ package apiresource
 
 import (
 	"fmt"
-	"math/big"
 	"strings"
 
 	apiexample "github.com/open-mrp/api/services/api-gateway/pkg/example"
 	"github.com/open-mrp/api/shared/constants"
+	"github.com/open-mrp/api/shared/decimalfmt"
 )
 
 const SampleQuantityID = "qty_8hnxbigf0bod"
@@ -53,21 +53,7 @@ func NormalizeMonetaryQuantityValue(value string) string {
 
 // NormalizeRateValue returns a canonical decimal string for API rate values. It trims database fixed-point padding while preserving at least two fractional digits when the source value is fractional.
 func NormalizeRateValue(value string) string {
-	normalized := normalizeDecimalString(value, false)
-	if !strings.Contains(value, ".") {
-		return normalized
-	}
-	parts := strings.SplitN(normalized, ".", 2)
-	if len(parts) == 1 {
-		return normalized + ".00"
-	}
-	if len(parts[1]) == 0 {
-		return normalized + "00"
-	}
-	if len(parts[1]) == 1 {
-		return normalized + "0"
-	}
-	return normalized
+	return decimalfmt.Rate(value)
 }
 
 // FormatDisplayValue formats a decimal value string with a unit abbreviation. For currency units, the abbreviation is placed before the value (e.g. "$1,234.56"). For other units, the abbreviation is placed after the value (e.g. "100 kg").
@@ -80,52 +66,7 @@ func FormatDisplayValue(value, unitAbbreviation, unitType string) string {
 }
 
 func normalizeDecimalString(value string, isCurrency bool) string {
-	if value == "" {
-		return "0"
-	}
-
-	parts := strings.SplitN(value, ".", 2)
-	intPart := parts[0]
-	decPart := ""
-	if len(parts) == 2 {
-		decPart = parts[1]
-	}
-
-	negative := false
-	if strings.HasPrefix(intPart, "-") {
-		negative = true
-		intPart = intPart[1:]
-	}
-
-	n := new(big.Int)
-	if _, ok := n.SetString(intPart, 10); !ok {
-		intPart = "0"
-	} else {
-		intPart = n.String()
-	}
-
-	if isCurrency {
-		if len(decPart) >= 2 {
-			decPart = decPart[:2]
-		} else {
-			decPart = (decPart + "00")[:2]
-		}
-	} else {
-		decPart = strings.TrimRight(decPart, "0")
-	}
-
-	var result string
-	if decPart != "" {
-		result = intPart + "." + decPart
-	} else {
-		result = intPart
-	}
-
-	if negative {
-		result = "-" + result
-	}
-
-	return result
+	return decimalfmt.Normalize(value, isCurrency)
 }
 
 // formatDecimal formats a decimal string with comma separators. For currency, always shows 2 decimal places. For other types, trims trailing zeros.

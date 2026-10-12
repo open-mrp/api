@@ -197,7 +197,8 @@ func stashAuditEventMeta(ctx context.Context, meta *resourcekit.LoadMeta, ev *pb
 	}
 
 	var actor *apiresource.Actor
-	if ev.Actor != nil {
+	// Background processes (Stripe webhooks, the scheduler, inbound mail) are recorded as system actors, which have no public actor type.
+	if ev.Actor != nil && constants.ActorType(ev.Actor.ActorType).IsValid() {
 		var name *string
 		if ev.Actor.Name != nil && *ev.Actor.Name != "" {
 			n := *ev.Actor.Name

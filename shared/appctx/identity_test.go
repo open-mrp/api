@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"github.com/open-mrp/api/services/auth-service/pkg/types"
+	"github.com/open-mrp/api/shared/constants"
 )
 
 func TestGetIdentityFromContext_Absent(t *testing.T) {
@@ -54,5 +55,21 @@ func TestGetIdentityFromContext_WrongStoredType(t *testing.T) {
 
 	if identity, ok := GetIdentityFromContext(ctx); ok || identity != nil {
 		t.Errorf("expected a non-pointer identity value to be ignored, got (%+v, %v)", identity, ok)
+	}
+}
+
+func TestWithSystemIdentity_ReplacesTheCallerIdentity(t *testing.T) {
+	t.Parallel()
+	parent := WithIdentity(context.Background(), &types.Identity{Type: types.IdentityActorTypeUser})
+
+	identity, ok := GetIdentityFromContext(WithSystemIdentity(parent, constants.SystemActorScheduler, "ac_1"))
+	if !ok || !identity.IsSystem() {
+		t.Fatalf("expected a system identity, got %+v", identity)
+	}
+	if identity.Actor.ID != "system:scheduler" || identity.Target.AccountID != "ac_1" {
+		t.Errorf("expected system:scheduler acting on ac_1, got actor=%+v target=%+v", identity.Actor, identity.Target)
+	}
+	if identity.IsAuthenticated() {
+		t.Error("a system identity must not count as authenticated")
 	}
 }

@@ -7,8 +7,10 @@ import (
 	"encoding/json"
 	"fmt"
 	"log/slog"
+	"maps"
 	"math"
 	"reflect"
+	"slices"
 	"strings"
 	"time"
 
@@ -370,8 +372,8 @@ func (s *accountSvcImpl) UpdateAccountSubscription(ctx context.Context, accountI
 			changes = append(changes, audit.NewFieldChange("collection_status", nil, *collectionStatus))
 		}
 
-		// Stripe webhooks change billing state with no caller to attribute it to, so those changes are saved unaudited rather than rolled back.
-		if len(changes) > 0 && hasAuditableCaller(txCtx) {
+		// A Stripe webhook arrives under a system identity, so its changes are attributed to Stripe like a caller's are to the caller.
+		if len(changes) > 0 {
 			if apiErr := audit.NewPublisher().Publish(txCtx, txSvc.repos.NewOutboxRepo(), audit.EventData{
 				ServiceName:  domain.ServiceName,
 				Action:       constants.AuditActionUpdate,
@@ -394,12 +396,6 @@ func (s *accountSvcImpl) UpdateAccountSubscription(ctx context.Context, accountI
 	}
 
 	return nil
-}
-
-// hasAuditableCaller reports whether ctx carries a caller an audit event can be attributed to.
-func hasAuditableCaller(ctx context.Context) bool {
-	identity, ok := appctx.GetIdentityFromContext(ctx)
-	return ok && identity.IsTargetAccountSet() && identity.Actor != nil
 }
 
 // publishPlanChangeAlert sends a best-effort admin email when an account's plan changes.
@@ -433,32 +429,57 @@ func (s *accountSvcImpl) publishPlanChangeAlert(ctx context.Context, accountID, 
 	}
 }
 
-// adjustAccountSeats reconciles active users with the new plan's seat limit.
-// On downgrade: deactivates excess users (keeps the requesting user or admin).
+// adjustAccountSeats reconciles active users with the new plan's seat limit, auditing every account user whose status it changes.
+// On downgrade: deactivates excess users (keeps the requesting user).
 // On upgrade: reactivates disabled users up to the new seat limit.
-// Failures are logged but not propagated — the subscription update already succeeded.
+// It runs in its own transaction after the subscription update: a failure is logged but not propagated, since the subscription change already stands.
 func (s *accountSvcImpl) adjustAccountSeats(ctx context.Context, accountID, planCode string) {
 	slog.InfoContext(ctx, "[seat-adjust] starting",
 		"account_id", accountID, "plan_code", planCode)
 
+	apiErr := s.withTx(ctx, func(txCtx context.Context, txSvc *accountSvcImpl) *apierror.APIError {
+		before, apiErr := txSvc.accountUserRepo.LockSeatStatuses(txCtx, accountID)
+		if apiErr != nil {
+			return apiErr
+		}
+		if apiErr := txSvc.reconcileSeats(txCtx, accountID, planCode); apiErr != nil {
+			return apiErr
+		}
+		after, apiErr := txSvc.accountUserRepo.LockSeatStatuses(txCtx, accountID)
+		if apiErr != nil {
+			return apiErr
+		}
+		return txSvc.publishSeatChanges(txCtx, planCode, before, after)
+	})
+	if apiErr != nil {
+		slog.WarnContext(ctx, "[seat-adjust] failed",
+			"account_id", accountID, "plan_code", planCode, "error", apiErr.PublicMessage)
+	}
+}
+
+// reconcileSeats deactivates or reactivates the account's users to fit the plan's seat limit.
+func (s *accountSvcImpl) reconcileSeats(ctx context.Context, accountID, planCode string) *apierror.APIError {
 	seatLimit, apiErr := s.accountRepo.GetSeatLimitByPlanCode(ctx, planCode)
 	if apiErr != nil {
-		slog.WarnContext(ctx, "[seat-adjust] failed to get seat limit",
-			"account_id", accountID, "plan_code", planCode, "error", apiErr.PublicMessage)
-		return
+		return apiErr
 	}
 
 	// nil means unlimited seats — reactivate any previously disabled users
 	if seatLimit == nil {
-		s.reactivateAllDisabledUsers(ctx, accountID)
-		return
+		reactivated, apiErr := s.accountUserRepo.ReactivateUsers(ctx, accountID, math.MaxInt32)
+		if apiErr != nil {
+			return apiErr
+		}
+		if reactivated > 0 {
+			slog.InfoContext(ctx, "Reactivated all disabled users on plan upgrade",
+				"account_id", accountID, "reactivated_count", reactivated)
+		}
+		return nil
 	}
 
 	activeCount, apiErr := s.accountUserRepo.CountActive(ctx, accountID)
 	if apiErr != nil {
-		slog.WarnContext(ctx, "[seat-adjust] failed to count active users",
-			"account_id", accountID, "error", apiErr.PublicMessage)
-		return
+		return apiErr
 	}
 
 	limit := int64(*seatLimit)
@@ -467,72 +488,73 @@ func (s *accountSvcImpl) adjustAccountSeats(ctx context.Context, accountID, plan
 		"account_id", accountID, "active_count", activeCount, "seat_limit", limit)
 
 	if activeCount > limit {
-		// Downgrade: we must know which user to protect. Without identity (e.g. webhook-triggered) we cannot safely choose, so skip deactivation. The user-initiated path (SwitchPlan/ConfirmPlanSwitch) carries identity and will handle deactivation correctly.
+		// Downgrade: we must know which user to protect. A Stripe webhook acts for nobody, so it cannot safely choose and skips deactivation. The user-initiated path (SwitchPlan/ConfirmPlanSwitch) carries the user and handles deactivation.
 		identity, ok := appctx.GetIdentityFromContext(ctx)
-		if !ok || identity == nil || identity.Actor == nil {
-			slog.WarnContext(ctx, "[seat-adjust] skipping deactivation — no identity in context (webhook path)",
+		if !ok || identity == nil || identity.Actor == nil || identity.IsSystem() {
+			slog.WarnContext(ctx, "[seat-adjust] skipping deactivation — no user to keep active (webhook path)",
 				"account_id", accountID, "active_count", activeCount, "seat_limit", limit)
-			return
+			return nil
 		}
 
 		excess := int32(min(activeCount-limit, math.MaxInt32)) // #nosec G115 -- capped at MaxInt32
-		s.deactivateExcessUsers(ctx, accountID, identity.Actor.ID, excess)
-	} else if activeCount < limit {
-		// Upgrade: reactivate disabled users up to the limit
+		return s.deactivateExcessUsers(ctx, accountID, identity.Actor.ID, excess)
+	}
+	if activeCount < limit {
 		slotsAvailable := int32(min(limit-activeCount, math.MaxInt32)) // #nosec G115 -- capped at MaxInt32
 		reactivated, apiErr := s.accountUserRepo.ReactivateUsers(ctx, accountID, slotsAvailable)
 		if apiErr != nil {
-			slog.WarnContext(ctx, "[seat-adjust] failed to reactivate users",
-				"account_id", accountID, "error", apiErr.PublicMessage)
-			return
+			return apiErr
 		}
 		if reactivated > 0 {
 			slog.InfoContext(ctx, "[seat-adjust] reactivated users on upgrade",
 				"account_id", accountID, "reactivated_count", reactivated, "seat_limit", limit)
 		}
 	}
+	return nil
 }
 
-// reactivateAllDisabledUsers reactivates all disabled users when the plan has no seat limit.
-func (s *accountSvcImpl) reactivateAllDisabledUsers(ctx context.Context, accountID string) {
-	// Use a large number to effectively reactivate all disabled users
-	reactivated, apiErr := s.accountUserRepo.ReactivateUsers(ctx, accountID, 2147483647)
-	if apiErr != nil {
-		slog.WarnContext(ctx, "Failed to reactivate users on plan upgrade",
-			"account_id", accountID, "error", apiErr.PublicMessage)
-		return
-	}
-	if reactivated > 0 {
-		slog.InfoContext(ctx, "Reactivated all disabled users on plan upgrade",
-			"account_id", accountID, "reactivated_count", reactivated)
-	}
-}
-
-// deactivateExcessUsers disables `excess` account users, protecting the requesting user (or admin fallback) from deactivation. Least-recently-used users are removed first. As a safety net, the keep user is explicitly re-activated after deactivation in case the SQL exclusion didn't match (e.g. identity propagation edge cases).
-func (s *accountSvcImpl) deactivateExcessUsers(ctx context.Context, accountID, keepUserID string, excess int32) {
+// deactivateExcessUsers disables `excess` account users, protecting the requesting user from deactivation. Least-recently-used users are removed first. As a safety net, the keep user is explicitly re-activated after deactivation in case the SQL exclusion didn't match (e.g. identity propagation edge cases).
+func (s *accountSvcImpl) deactivateExcessUsers(ctx context.Context, accountID, keepUserID string, excess int32) *apierror.APIError {
 	slog.InfoContext(ctx, "[seat-adjust] deactivating excess users",
 		"account_id", accountID, "keep_user_id", keepUserID, "excess", excess)
 
 	deactivated, apiErr := s.accountUserRepo.DeactivateExcept(ctx, accountID, keepUserID, excess)
 	if apiErr != nil {
-		slog.WarnContext(ctx, "[seat-adjust] DeactivateExcept failed",
-			"account_id", accountID, "keep_user_id", keepUserID, "error", apiErr.PublicMessage)
-		return
+		return apiErr
 	}
 
 	slog.InfoContext(ctx, "[seat-adjust] DeactivateExcept result",
 		"account_id", accountID, "keep_user_id", keepUserID, "rows_affected", deactivated)
 
-	// Safety net: ensure the keep user is active regardless of what the bulk deactivation did.
-	if apiErr := s.accountUserRepo.EnsureActive(ctx, accountID, keepUserID); apiErr != nil {
-		slog.WarnContext(ctx, "[seat-adjust] EnsureActive failed",
-			"account_id", accountID, "keep_user_id", keepUserID, "error", apiErr.PublicMessage)
+	return s.accountUserRepo.EnsureActive(ctx, accountID, keepUserID)
+}
+
+// publishSeatChanges audits each account user whose status the seat reconciliation changed. The metadata names the plan, since the user's own record carries no trace of why it changed.
+func (s *accountSvcImpl) publishSeatChanges(ctx context.Context, planCode string, before, after map[string]constants.AccountUserStatus) *apierror.APIError {
+	for _, accountUserID := range slices.Sorted(maps.Keys(after)) {
+		old, ok := before[accountUserID]
+		if !ok || old == after[accountUserID] {
+			continue
+		}
+		if apiErr := audit.NewPublisher().Publish(ctx, s.repos.NewOutboxRepo(), audit.EventData{
+			ServiceName:  domain.ServiceName,
+			Action:       constants.AuditActionUpdate,
+			ResourceType: constants.ObjectTypeAccountUser,
+			ResourceID:   accountUserID,
+			Changes:      []audit.FieldChange{audit.NewFieldChange("status_code", old, after[accountUserID])},
+			Metadata:     map[string]any{"reason": "plan_seat_limit", "plan_code": planCode},
+		}); apiErr != nil {
+			return apiErr
+		}
 	}
+	return nil
 }
 
 // ClearAccountStripeCustomer removes the Stripe customer ID from an account record.
 //
 // 1. Clear the Stripe customer reference in the account repository.
+//
+// Not audited: the Stripe customer reference is billing bookkeeping that no API resource exposes.
 func (s *accountSvcImpl) ClearAccountStripeCustomer(ctx context.Context, accountID string) *apierror.APIError {
 	ctx, span := accountSvcTracer.Start(ctx, "service.account.clear_account_stripe_customer")
 	defer span.End()
@@ -1232,11 +1254,34 @@ func (s *accountSvcImpl) UploadAccountPhoto(ctx context.Context, accountID strin
 		return tracing.Trace(span, apiErr)
 	}
 
-	if apiErr := s.accountRepo.UpdateBrandingLogoURL(ctx, accountID, s3Key); apiErr != nil {
-		return tracing.Trace(span, apiErr)
-	}
+	return tracing.Trace(span, s.withTx(ctx, func(txCtx context.Context, txSvc *accountSvcImpl) *apierror.APIError {
+		return txSvc.pointBrandingAt(txCtx, accountID, "logo_uploaded", func(repo domain.AccountRepo) *apierror.APIError {
+			return repo.UpdateBrandingLogoURL(txCtx, accountID, s3Key)
+		})
+	}))
+}
 
-	return nil
+// pointBrandingAt runs a branding asset write and audits it on the account. The asset key never changes between uploads, so the metadata flag is what records a replaced image.
+func (s *accountSvcImpl) pointBrandingAt(ctx context.Context, accountID, uploadedFlag string, write func(domain.AccountRepo) *apierror.APIError) *apierror.APIError {
+	old, apiErr := s.accountRepo.GetByID(ctx, accountID)
+	if apiErr != nil {
+		return apiErr
+	}
+	if apiErr := write(s.accountRepo); apiErr != nil {
+		return apiErr
+	}
+	updated, apiErr := s.accountRepo.GetByID(ctx, accountID)
+	if apiErr != nil {
+		return apiErr
+	}
+	return audit.NewPublisher().Publish(ctx, s.repos.NewOutboxRepo(), audit.EventData{
+		ServiceName:  domain.ServiceName,
+		Action:       constants.AuditActionUpdate,
+		ResourceType: constants.ObjectTypeAccount,
+		ResourceID:   accountID,
+		Changes:      accountChanges(old, updated),
+		Metadata:     map[string]any{uploadedFlag: true},
+	})
 }
 
 // GetAccountLogoURL returns a presigned S3 URL for the account's logo.
@@ -1305,11 +1350,11 @@ func (s *accountSvcImpl) UploadAccountFavicon(ctx context.Context, accountID str
 		return tracing.Trace(span, apiErr)
 	}
 
-	if apiErr := s.accountRepo.UpdateBrandingFaviconURL(ctx, accountID, s3Key); apiErr != nil {
-		return tracing.Trace(span, apiErr)
-	}
-
-	return nil
+	return tracing.Trace(span, s.withTx(ctx, func(txCtx context.Context, txSvc *accountSvcImpl) *apierror.APIError {
+		return txSvc.pointBrandingAt(txCtx, accountID, "favicon_uploaded", func(repo domain.AccountRepo) *apierror.APIError {
+			return repo.UpdateBrandingFaviconURL(txCtx, accountID, s3Key)
+		})
+	}))
 }
 
 // GetAccountFaviconURL returns a presigned S3 URL for the account's customer-portal favicon.

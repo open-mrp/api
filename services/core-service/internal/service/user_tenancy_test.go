@@ -123,11 +123,14 @@ func TestUserSvc_UploadUserPhotoStoresOnlyImages(t *testing.T) {
 	t.Parallel()
 	ctrl := gomock.NewController(t)
 	userRepo := repositorymock.NewMockUserRepo(ctrl)
+	userRepo.EXPECT().FindByID(gomock.Any(), tenancyActorID).Return(&domain.UserRecord{ID: tenancyActorID}, nil).AnyTimes()
 	userRepo.EXPECT().UpdateImageURL(gomock.Any(), tenancyActorID, gomock.Any()).Return(nil)
+	outbox := &subscriptionOutboxRepo{}
 	repos := factorymock.NewMockRepoFactory(ctrl)
 	repos.EXPECT().NewUserRepo().Return(userRepo).AnyTimes()
+	repos.EXPECT().NewOutboxRepo().Return(outbox).AnyTimes()
 	store := &recordingStore{}
-	svc := &userSvcImpl{repos: repos, s3Client: store, userPhotosBucket: "user-photos"}
+	svc := &userSvcImpl{repos: repos, s3Client: store, userPhotosBucket: "user-photos", txManager: &stubTxManager{factory: repos}}
 
 	for name, body := range map[string][]byte{"html": []byte("<html><script>alert(1)</script></html>"), "empty": nil} {
 		if apiErr := svc.UploadUserPhoto(teamAdminCtx(), tenancyActorID, body); apiErr == nil || apierror.GetHTTPStatusCode(apiErr.Code) != 400 {
@@ -143,5 +146,9 @@ func TestUserSvc_UploadUserPhotoStoresOnlyImages(t *testing.T) {
 	}
 	if want := tenancyAccountID + "/" + tenancyActorID + ".png image/png"; len(store.uploads) != 1 || store.uploads[0] != want {
 		t.Errorf("uploads = %v, want [%s]", store.uploads, want)
+	}
+	// The image path is the same before and after a re-upload, so the event must survive an empty diff.
+	if len(outbox.created) != 1 {
+		t.Errorf("a stored photo must publish one audit event, got %d", len(outbox.created))
 	}
 }

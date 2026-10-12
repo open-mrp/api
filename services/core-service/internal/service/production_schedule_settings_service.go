@@ -9,6 +9,7 @@ import (
 	"github.com/open-mrp/api/shared/constants"
 	apierror "github.com/open-mrp/api/shared/errors"
 	"github.com/open-mrp/api/shared/id"
+	"github.com/open-mrp/api/shared/messaging"
 	"github.com/open-mrp/api/shared/tracing"
 	"github.com/robfig/cron/v3"
 )
@@ -166,21 +167,71 @@ func (s *productionScheduleSvcImpl) UpsertResourceSetting(ctx context.Context, p
 	}
 
 	params.AccountID = identity.Target.AccountID
-	repo := s.repos.NewProductionScheduleRepo()
-	if apiErr := repo.UpsertResourceSetting(ctx, settingID, params); apiErr != nil {
-		return nil, tracing.Trace(span, apiErr)
+	sameScope := func(setting *domain.ProductionScheduleResourceSetting) bool {
+		return setting.ScopeCode == params.ScopeCode && setting.ScopeRefID == params.ScopeRefID
 	}
 
-	settings, apiErr := repo.ListResourceSettings(ctx, params.AccountID)
+	var result *domain.ProductionScheduleResourceSetting
+	apiErr = s.withTx(ctx, func(txCtx context.Context, txSvc *productionScheduleSvcImpl) *apierror.APIError {
+		before, apiErr := txSvc.findResourceSetting(txCtx, params.AccountID, sameScope)
+		if apiErr != nil {
+			return apiErr
+		}
+		if apiErr := txSvc.repos.NewProductionScheduleRepo().UpsertResourceSetting(txCtx, settingID, params); apiErr != nil {
+			return apiErr
+		}
+		after, apiErr := txSvc.findResourceSetting(txCtx, params.AccountID, sameScope)
+		if apiErr != nil {
+			return apiErr
+		}
+		if after == nil {
+			return apierror.NewInternalError(nil, "Resource setting was not stored.")
+		}
+		result = after
+		return publishSettingUpsert(txCtx, txSvc.repos.NewOutboxRepo(), constants.ObjectTypeProductionScheduleResourceSetting, after.ID, before, after)
+	})
 	if apiErr != nil {
 		return nil, tracing.Trace(span, apiErr)
 	}
+	return result, nil
+}
+
+func (s *productionScheduleSvcImpl) findResourceSetting(ctx context.Context, accountID string, match func(*domain.ProductionScheduleResourceSetting) bool) (*domain.ProductionScheduleResourceSetting, *apierror.APIError) {
+	settings, apiErr := s.repos.NewProductionScheduleRepo().ListResourceSettings(ctx, accountID)
+	if apiErr != nil {
+		return nil, apiErr
+	}
 	for _, setting := range settings {
-		if setting.ScopeCode == params.ScopeCode && setting.ScopeRefID == params.ScopeRefID {
+		if match(setting) {
 			return setting, nil
 		}
 	}
-	return nil, tracing.Trace(span, apierror.NewInternalError(nil, "Resource setting was not stored."))
+	return nil, nil
+}
+
+// publishSettingUpsert audits an upsert as a create when nothing was stored before, otherwise as an update carrying the diff.
+func publishSettingUpsert[T any](ctx context.Context, outbox messaging.OutboxRepo, resourceType constants.ObjectType, resourceID string, before, after *T) *apierror.APIError {
+	action := constants.AuditActionUpdate
+	if before == nil {
+		action = constants.AuditActionCreate
+	}
+	return audit.NewPublisher().Publish(ctx, outbox, audit.EventData{
+		ServiceName:  domain.ServiceName,
+		Action:       action,
+		ResourceType: resourceType,
+		ResourceID:   resourceID,
+		Changes:      audit.ComputeChanges(before, after),
+	})
+}
+
+func publishSettingDelete[T any](ctx context.Context, outbox messaging.OutboxRepo, resourceType constants.ObjectType, resourceID string, before *T) *apierror.APIError {
+	return audit.NewPublisher().Publish(ctx, outbox, audit.EventData{
+		ServiceName:  domain.ServiceName,
+		Action:       constants.AuditActionDelete,
+		ResourceType: resourceType,
+		ResourceID:   resourceID,
+		Changes:      audit.ComputeChanges(before, (*T)(nil)),
+	})
 }
 
 // DeleteResourceSetting removes one per-resource override.
@@ -193,7 +244,23 @@ func (s *productionScheduleSvcImpl) DeleteResourceSetting(ctx context.Context, s
 		return tracing.Trace(span, apiErr)
 	}
 
-	return s.repos.NewProductionScheduleRepo().DeleteResourceSetting(ctx, identity.Target.AccountID, settingID)
+	accountID := identity.Target.AccountID
+
+	return tracing.Trace(span, s.withTx(ctx, func(txCtx context.Context, txSvc *productionScheduleSvcImpl) *apierror.APIError {
+		before, apiErr := txSvc.findResourceSetting(txCtx, accountID, func(setting *domain.ProductionScheduleResourceSetting) bool {
+			return setting.ID == settingID
+		})
+		if apiErr != nil {
+			return apiErr
+		}
+		if before == nil {
+			return apierror.NewResourceNotFoundError("Production schedule resource setting not found.")
+		}
+		if apiErr := txSvc.repos.NewProductionScheduleRepo().DeleteResourceSetting(txCtx, accountID, settingID); apiErr != nil {
+			return apiErr
+		}
+		return publishSettingDelete(txCtx, txSvc.repos.NewOutboxRepo(), constants.ObjectTypeProductionScheduleResourceSetting, before.ID, before)
+	}))
 }
 
 // ListItemSettings returns every per-item planning override in the account.
@@ -264,19 +331,40 @@ func (s *productionScheduleSvcImpl) UpsertItemSetting(ctx context.Context, param
 		return nil, tracing.Trace(span, apierror.NewValidationErrorWithParam("Item not found.", "item_id"))
 	}
 
-	repo := s.repos.NewProductionScheduleRepo()
-	if apiErr := repo.UpsertItemSetting(ctx, params); apiErr != nil {
-		return nil, tracing.Trace(span, apiErr)
-	}
-
-	setting, apiErr := repo.GetItemSetting(ctx, params.AccountID, params.ItemID)
+	var setting *domain.ProductionScheduleItemPlanningSetting
+	apiErr = s.withTx(ctx, func(txCtx context.Context, txSvc *productionScheduleSvcImpl) *apierror.APIError {
+		stored, apiErr := txSvc.writeItemSetting(txCtx, params)
+		setting = stored
+		return apiErr
+	})
 	if apiErr != nil {
 		return nil, tracing.Trace(span, apiErr)
 	}
-	if setting == nil {
-		return nil, tracing.Trace(span, apierror.NewInvariantViolationError("The item setting vanished immediately after being written."))
-	}
 	return setting, nil
+}
+
+// writeItemSetting upserts one item's override and audits the write; callers validate params and own the transaction.
+func (s *productionScheduleSvcImpl) writeItemSetting(ctx context.Context, params domain.UpsertItemSettingParams) (*domain.ProductionScheduleItemPlanningSetting, *apierror.APIError) {
+	repo := s.repos.NewProductionScheduleRepo()
+	before, apiErr := repo.GetItemSetting(ctx, params.AccountID, params.ItemID)
+	if apiErr != nil {
+		return nil, apiErr
+	}
+	if apiErr := repo.UpsertItemSetting(ctx, params); apiErr != nil {
+		return nil, apiErr
+	}
+
+	after, apiErr := repo.GetItemSetting(ctx, params.AccountID, params.ItemID)
+	if apiErr != nil {
+		return nil, apiErr
+	}
+	if after == nil {
+		return nil, apierror.NewInvariantViolationError("The item setting vanished immediately after being written.")
+	}
+	if apiErr := publishSettingUpsert(ctx, s.repos.NewOutboxRepo(), constants.ObjectTypeProductionScheduleItemSetting, after.ID, before, after); apiErr != nil {
+		return nil, apiErr
+	}
+	return after, nil
 }
 
 // DeleteItemSetting removes one item's override, returning it to the defaults.
@@ -289,13 +377,25 @@ func (s *productionScheduleSvcImpl) DeleteItemSetting(ctx context.Context, itemI
 		return tracing.Trace(span, apiErr)
 	}
 
-	// A delete that matched nothing is a 404: telling a caller their override is gone when it never existed hides a mistyped id.
-	deleted, apiErr := s.repos.NewProductionScheduleRepo().DeleteItemSetting(ctx, identity.Target.AccountID, itemID)
-	if apiErr != nil {
-		return tracing.Trace(span, apiErr)
-	}
-	if !deleted {
-		return tracing.Trace(span, apierror.NewResourceNotFoundError("This item has no planning override."))
-	}
-	return nil
+	accountID := identity.Target.AccountID
+
+	return tracing.Trace(span, s.withTx(ctx, func(txCtx context.Context, txSvc *productionScheduleSvcImpl) *apierror.APIError {
+		repo := txSvc.repos.NewProductionScheduleRepo()
+		before, apiErr := repo.GetItemSetting(txCtx, accountID, itemID)
+		if apiErr != nil {
+			return apiErr
+		}
+		// A delete that matched nothing is a 404: telling a caller their override is gone when it never existed hides a mistyped id.
+		if before == nil {
+			return apierror.NewResourceNotFoundError("This item has no planning override.")
+		}
+		deleted, apiErr := repo.DeleteItemSetting(txCtx, accountID, itemID)
+		if apiErr != nil {
+			return apiErr
+		}
+		if !deleted {
+			return apierror.NewResourceNotFoundError("This item has no planning override.")
+		}
+		return publishSettingDelete(txCtx, txSvc.repos.NewOutboxRepo(), constants.ObjectTypeProductionScheduleItemSetting, before.ID, before)
+	}))
 }

@@ -84,18 +84,18 @@ type UnreadSummary struct {
 // Announcement is a broadcast notification stored once (platform- or account-scoped) with per-user read state tracked separately in announcement_receipt. The Seen/Read/Dismissed fields are the caller-specific receipt state, joined in at read time.
 type Announcement struct {
 	ID               string
-	Scope            string
+	Scope            string `audit:"scope"`
 	AccountID        *string
-	Category         string
-	TemplateKey      *string
+	Category         string  `audit:"category"`
+	TemplateKey      *string `audit:"template_key"`
 	TemplateParams   json.RawMessage
-	Title            string
-	Body             *string
-	LinkResourceType *string
-	LinkResourceID   *string
-	Priority         string
-	PublishAt        time.Time
-	ExpiresAt        *time.Time
+	Title            string     `audit:"title"`
+	Body             *string    `audit:"body"`
+	LinkResourceType *string    `audit:"link_resource_type"`
+	LinkResourceID   *string    `audit:"link_resource_id"`
+	Priority         string     `audit:"priority"`
+	PublishAt        time.Time  `audit:"publish_at"`
+	ExpiresAt        *time.Time `audit:"expires_at"`
 	CreatedBy        *string
 	CreatedAt        time.Time
 	UpdatedAt        time.Time

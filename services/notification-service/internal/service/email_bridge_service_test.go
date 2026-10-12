@@ -2,6 +2,7 @@ package service
 
 import (
 	"context"
+	"encoding/json"
 	"testing"
 
 	"github.com/open-mrp/api/services/auth-service/pkg/types"
@@ -9,6 +10,8 @@ import (
 	factorymock "github.com/open-mrp/api/services/notification-service/internal/domain/mock/factory"
 	repositorymock "github.com/open-mrp/api/services/notification-service/internal/domain/mock/repository"
 	"github.com/open-mrp/api/shared/appctx"
+	"github.com/open-mrp/api/shared/constants"
+	"github.com/open-mrp/api/shared/contracts"
 	apierror "github.com/open-mrp/api/shared/errors"
 
 	"github.com/stretchr/testify/assert"
@@ -124,12 +127,14 @@ func newEmailBridgeSvc(t *testing.T, domainRepo *repositorymock.MockEmailDomainR
 	}
 	// CreateDomain records the MAIL FROM subdomain, and DeleteDomain clears any sender bound to the domain; both are incidental to what these tests assert.
 	senderRepo := repositorymock.NewMockAccountEmailSenderRepo(ctrl)
+	senderRepo.EXPECT().GetByAccount(gomock.Any(), gomock.Any()).Return(nil, nil).AnyTimes()
 	senderRepo.EXPECT().DeleteByDomain(gomock.Any(), gomock.Any(), gomock.Any()).Return(false, nil).AnyTimes()
 	factory.EXPECT().NewAccountEmailSenderRepo().Return(senderRepo).AnyTimes()
+	factory.EXPECT().NewOutboxRepo().Return(&fakeOutboxRepo{}).AnyTimes()
 	if domainRepo != nil {
 		domainRepo.EXPECT().SetMailFromDomain(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil).AnyTimes()
 	}
-	return &emailBridgeSvcImpl{repoFactory: factory, identityProvider: provider}
+	return &emailBridgeSvcImpl{repoFactory: factory, txManager: passthroughTx{f: factory}, identityProvider: provider}
 }
 
 func TestCreateInbox_RejectsAddressOffDomain(t *testing.T) {
@@ -241,6 +246,7 @@ func TestVerifyDomain_ConfiguresMissingMailFrom(t *testing.T) {
 
 	svc := newEmailBridgeSvc(t, nil, nil, &stubIdentityProvider{verified: true})
 	svc.repoFactory = repoFactoryWithDomainRepo(t, ctrl, domainRepo)
+	svc.txManager = passthroughTx{f: svc.repoFactory}
 
 	_, apiErr := svc.VerifyDomain(emailBridgeCtx(), "emdn_1")
 	require.Nil(t, apiErr)
@@ -258,6 +264,7 @@ func TestVerifyDomain_LeavesConfiguredMailFromAlone(t *testing.T) {
 
 	svc := newEmailBridgeSvc(t, nil, nil, &stubIdentityProvider{verified: true})
 	svc.repoFactory = repoFactoryWithDomainRepo(t, ctrl, domainRepo)
+	svc.txManager = passthroughTx{f: svc.repoFactory}
 
 	_, apiErr := svc.VerifyDomain(emailBridgeCtx(), "emdn_1")
 	require.Nil(t, apiErr)
@@ -271,5 +278,69 @@ func repoFactoryWithDomainRepo(t *testing.T, ctrl *gomock.Controller, domainRepo
 	senderRepo := repositorymock.NewMockAccountEmailSenderRepo(ctrl)
 	senderRepo.EXPECT().DeleteByDomain(gomock.Any(), gomock.Any(), gomock.Any()).Return(false, nil).AnyTimes()
 	factory.EXPECT().NewAccountEmailSenderRepo().Return(senderRepo).AnyTimes()
+	factory.EXPECT().NewOutboxRepo().Return(&fakeOutboxRepo{}).AnyTimes()
 	return factory
+}
+
+// The sender is an upsert, so the first save is the sender's creation and a later one replaces the same row.
+func TestSetSender_AuditsCreateThenUpdate(t *testing.T) {
+	cases := []struct {
+		name       string
+		existing   *domain.AccountEmailSender
+		wantAction constants.AuditAction
+	}{
+		{"no sender yet", nil, constants.AuditActionCreate},
+		{"replacing a sender", &domain.AccountEmailSender{ID: "emsn_1", EmailDomainID: "emdn_1", LocalPart: "billing"}, constants.AuditActionUpdate},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			ctrl := gomock.NewController(t)
+			domainRepo := repositorymock.NewMockEmailDomainRepo(ctrl)
+			domainRepo.EXPECT().GetByID(gomock.Any(), "emdn_1", ebTestAccountID).Return(&domain.EmailDomain{
+				ID: "emdn_1", Domain: "theirco.com", Status: domain.EmailDomainStatusVerified,
+			}, nil)
+			saved := &domain.AccountEmailSender{ID: "emsn_1", EmailDomainID: "emdn_1", LocalPart: "orders", Domain: "theirco.com"}
+			senderRepo := repositorymock.NewMockAccountEmailSenderRepo(ctrl)
+			gomock.InOrder(
+				senderRepo.EXPECT().GetByAccount(gomock.Any(), ebTestAccountID).Return(tc.existing, nil),
+				senderRepo.EXPECT().Upsert(gomock.Any(), gomock.Any(), ebTestAccountID, gomock.Any()).Return(nil),
+				senderRepo.EXPECT().GetByAccount(gomock.Any(), ebTestAccountID).Return(saved, nil),
+			)
+			outbox := &fakeOutboxRepo{}
+			factory := factorymock.NewMockRepoFactory(ctrl)
+			factory.EXPECT().NewEmailDomainRepo().Return(domainRepo).AnyTimes()
+			factory.EXPECT().NewAccountEmailSenderRepo().Return(senderRepo).AnyTimes()
+			factory.EXPECT().NewOutboxRepo().Return(outbox).AnyTimes()
+			svc := &emailBridgeSvcImpl{repoFactory: factory, txManager: passthroughTx{f: factory}, identityProvider: &stubIdentityProvider{}}
+
+			_, apiErr := svc.SetSender(emailBridgeCtx(), domain.UpsertAccountEmailSenderInput{EmailDomainID: "emdn_1", LocalPart: "orders"})
+			require.Nil(t, apiErr)
+
+			event := onlyAuditEvent(t, outbox)
+			assert.Equal(t, string(tc.wantAction), event.Action)
+			assert.Equal(t, string(constants.ObjectTypeEmailSender), event.ResourceType)
+			assert.Equal(t, "emsn_1", event.ResourceID)
+		})
+	}
+}
+
+type auditEventPayload struct {
+	Action       string `json:"action"`
+	ResourceType string `json:"resource_type"`
+	ResourceID   string `json:"resource_id"`
+}
+
+func onlyAuditEvent(t *testing.T, outbox *fakeOutboxRepo) auditEventPayload {
+	t.Helper()
+	var events []auditEventPayload
+	for _, in := range outbox.inputs {
+		if in.MessageType != string(contracts.PlatformEventAuditLogged) {
+			continue
+		}
+		var event auditEventPayload
+		require.NoError(t, json.Unmarshal(in.Payload.Data, &event))
+		events = append(events, event)
+	}
+	require.Len(t, events, 1)
+	return events[0]
 }

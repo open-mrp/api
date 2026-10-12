@@ -414,7 +414,7 @@ func (s *partSvcImpl) UpdatePart(ctx context.Context, params domain.UpdatePartPa
 	case domain.RecoveryPointStarted:
 		var result *domain.Part
 		apiErr = s.withTx(ctx, func(txCtx context.Context, txSvc *partSvcImpl) *apierror.APIError {
-			updated, apiErr := txSvc.updatePartInTx(txCtx, params)
+			updated, apiErr := txSvc.updatePartInTx(txCtx, params, nil)
 			if apiErr != nil {
 				return apiErr
 			}
@@ -436,7 +436,8 @@ func (s *partSvcImpl) UpdatePart(ctx context.Context, params domain.UpdatePartPa
 // updatePartInTx updates a part's category and item fields (sku, description, notes)
 // within an existing transaction and returns the fresh part. Shared by UpdatePart (single) and
 // BulkUpsertParts (batch); it does not own the idempotency/permission envelope.
-func (s *partSvcImpl) updatePartInTx(txCtx context.Context, params domain.UpdatePartParams) (*domain.Part, *apierror.APIError) {
+// childWrites (optional) runs the caller's rate/attribute writes inside the audited window.
+func (s *partSvcImpl) updatePartInTx(txCtx context.Context, params domain.UpdatePartParams, childWrites func(context.Context) *apierror.APIError) (*domain.Part, *apierror.APIError) {
 	txPartRepo := s.repos.NewPartRepo()
 
 	// Fetch the part before update for audit diff (same includes as the
@@ -474,6 +475,17 @@ func (s *partSvcImpl) updatePartInTx(txCtx context.Context, params domain.Update
 		params.Notes = params.Notes.BackfillUnsetPtr(old.Item.Notes)
 	}
 
+	var children *itemChildAudit
+	if childWrites != nil {
+		children, apiErr = snapshotItemChildren(txCtx, s.repos, params.AccountID, old.ItemID, true)
+		if apiErr != nil {
+			return nil, apiErr
+		}
+		if apiErr := childWrites(txCtx); apiErr != nil {
+			return nil, apiErr
+		}
+	}
+
 	if apiErr := txPartRepo.UpdateItem(txCtx, domain.PartUpdateItemParams{
 		AccountID:   params.AccountID,
 		ItemID:      old.ItemID,
@@ -496,6 +508,13 @@ func (s *partSvcImpl) updatePartInTx(txCtx context.Context, params domain.Update
 	}
 
 	changes := audit.ComputeChanges(old.Item, updated.Item)
+	if children != nil {
+		childChanges, apiErr := children.changes(txCtx, s.repos)
+		if apiErr != nil {
+			return nil, apiErr
+		}
+		changes = append(changes, childChanges...)
+	}
 	if apiErr := audit.NewPublisher().Publish(txCtx, s.repos.NewOutboxRepo(), audit.EventData{
 		ServiceName:  domain.ServiceName,
 		Action:       constants.AuditActionUpdate,

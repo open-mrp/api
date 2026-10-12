@@ -1780,6 +1780,11 @@ func (s *itemSvcImpl) bulkUpsertExistingItemInTx(txCtx context.Context, accountI
 		txSvc := s
 		txItemRepo := txSvc.repos.NewItemRepo()
 
+		before, apiErr := txItemRepo.Get(txCtx, domain.GetItemParams{AccountID: accountID, ItemID: itemID, Includes: itemAuditIncludes(nil)})
+		if apiErr != nil {
+			return apiErr
+		}
+
 		// Description / notes / sku are handled via the generic item update.
 		updateDesc := input.Description != nil
 		if apiErr := txItemRepo.Update(txCtx, domain.UpdateItemParams{
@@ -1832,15 +1837,8 @@ func (s *itemSvcImpl) bulkUpsertExistingItemInTx(txCtx context.Context, accountI
 
 		// Move the product to the new product line when supplied. Only applies to product-type bulk uploads; materials/parts don't have a product line.
 		if input.ProductLineID != nil && *input.ProductLineID != "" {
-			if _, apiErr := txSvc.repos.NewProductRepo().ChangeProductLine(txCtx, domain.ChangeProductProductLineParams{
-				AccountID:     accountID,
-				ProductID:     itemID,
-				ProductLineID: *input.ProductLineID,
-			}); apiErr != nil {
-				// Non-product items don't have a product-line row; ignore not-found here.
-				if !apierror.IsNotFound(apiErr) {
-					return apiErr
-				}
+			if apiErr := txSvc.changeBulkItemProductLineInTx(txCtx, accountID, before.SKU, *input.ProductLineID); apiErr != nil {
+				return apiErr
 			}
 		}
 
@@ -1866,8 +1864,52 @@ func (s *itemSvcImpl) bulkUpsertExistingItemInTx(txCtx context.Context, accountI
 			}
 		}
 
+		after, apiErr := txItemRepo.Get(txCtx, domain.GetItemParams{AccountID: accountID, ItemID: itemID, Includes: itemAuditIncludes(nil)})
+		if apiErr != nil {
+			return apiErr
+		}
+		return audit.NewPublisher().Publish(txCtx, txSvc.repos.NewOutboxRepo(), audit.EventData{
+			ServiceName:  domain.ServiceName,
+			Action:       constants.AuditActionUpdate,
+			ResourceType: constants.ObjectTypeItem,
+			ResourceID:   itemID,
+			Changes:      audit.ComputeChanges(before, after),
+		})
+	}
+}
+
+// changeBulkItemProductLineInTx moves the product behind a bulk-upserted SKU to productLineID,
+// auditing it on the product as the Change Product Line endpoint does. A SKU with no product is skipped.
+func (s *itemSvcImpl) changeBulkItemProductLineInTx(txCtx context.Context, accountID, sku, productLineID string) *apierror.APIError {
+	productRepo := s.repos.NewProductRepo()
+	matches, apiErr := productRepo.FindBySKUs(txCtx, accountID, []string{sku})
+	if apiErr != nil {
+		return apiErr
+	}
+	if len(matches) == 0 {
 		return nil
 	}
+	productID := matches[0].ProductID
+
+	old, apiErr := productRepo.Get(txCtx, domain.GetProductFullParams{AccountID: accountID, ProductID: productID})
+	if apiErr != nil {
+		return apiErr
+	}
+	updated, apiErr := productRepo.ChangeProductLine(txCtx, domain.ChangeProductProductLineParams{
+		AccountID:     accountID,
+		ProductID:     productID,
+		ProductLineID: productLineID,
+	})
+	if apiErr != nil {
+		return apiErr
+	}
+	return audit.NewPublisher().Publish(txCtx, s.repos.NewOutboxRepo(), audit.EventData{
+		ServiceName:  domain.ServiceName,
+		Action:       constants.AuditActionUpdate,
+		ResourceType: constants.ObjectTypeProduct,
+		ResourceID:   productID,
+		Changes:      audit.ComputeChanges(old, updated),
+	})
 }
 
 // bulkCreateSingleItem creates a single item within a bulk operation.

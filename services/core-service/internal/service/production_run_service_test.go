@@ -739,6 +739,16 @@ func (suite *ProductionRunBulkCreateTestSuite) TestExecuteBulkCreateProductionRu
 				call.Return(nil)
 			}
 		}},
+		{"read batch for audit", func(event bulkCreateEventFixture, failing bool) {
+			call := suite.batchRepo.EXPECT().
+				Find(gomock.Any(), event.AccountID, event.Runs[0].Batches[0].BatchID).
+				Times(1)
+			if failing {
+				call.Return(nil, writeErr)
+			} else {
+				call.Return(&domain.Batch{ID: event.Runs[0].Batches[0].BatchID}, nil)
+			}
+		}},
 	}
 
 	// executeCapturing runs the single-run event and returns what the job was completed
@@ -820,6 +830,10 @@ func (suite *ProductionRunBulkCreateTestSuite) expectRunWritesSucceed(event bulk
 	suite.productionRunRepo.EXPECT().
 		SetBatchProductionRunID(gomock.Any(), event.AccountID, run.Batches[0].BatchID, run.ProductionRunID).
 		Return(nil).
+		Times(1)
+	suite.batchRepo.EXPECT().
+		Find(gomock.Any(), event.AccountID, run.Batches[0].BatchID).
+		Return(&domain.Batch{ID: run.Batches[0].BatchID}, nil).
 		Times(1)
 }
 
@@ -1050,6 +1064,10 @@ func (suite *ProductionRunBulkCreateTestSuite) TestExecuteBulkCreateProductionRu
 			suite.productionRunRepo.EXPECT().
 				SetBatchProductionRunID(gomock.Any(), event.AccountID, batch.BatchID, run.ProductionRunID).
 				Return(nil).
+				Times(1)
+			suite.batchRepo.EXPECT().
+				Find(gomock.Any(), event.AccountID, batch.BatchID).
+				Return(&domain.Batch{ID: batch.BatchID}, nil).
 				Times(1)
 		}
 	}

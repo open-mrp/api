@@ -568,7 +568,7 @@ func (s *productSvcImpl) UpdateProduct(ctx context.Context, params domain.Update
 	case domain.RecoveryPointStarted:
 		var result *domain.ProductFull
 		apiErr = s.withTx(ctx, func(txCtx context.Context, txSvc *productSvcImpl) *apierror.APIError {
-			updated, apiErr := txSvc.updateProductInTx(txCtx, params)
+			updated, apiErr := txSvc.updateProductInTx(txCtx, params, nil)
 			if apiErr != nil {
 				return apiErr
 			}
@@ -591,7 +591,8 @@ func (s *productSvcImpl) UpdateProduct(ctx context.Context, params domain.Update
 // readiness, and unit_price within an existing transaction, returning the fresh
 // product. Shared by UpdateProduct (single) and BulkUpsertProducts (batch); it does
 // not own the idempotency/permission envelope, and expects params.AccountID set.
-func (s *productSvcImpl) updateProductInTx(txCtx context.Context, params domain.UpdateProductParams) (*domain.ProductFull, *apierror.APIError) {
+// childWrites (optional) runs the caller's rate/attribute writes inside the audited window.
+func (s *productSvcImpl) updateProductInTx(txCtx context.Context, params domain.UpdateProductParams, childWrites func(context.Context) *apierror.APIError) (*domain.ProductFull, *apierror.APIError) {
 	txProductRepo := s.repos.NewProductRepo()
 	txItemRepo := s.repos.NewItemRepo()
 
@@ -639,6 +640,13 @@ func (s *productSvcImpl) updateProductInTx(txCtx context.Context, params domain.
 
 	txUnitRepo := s.repos.NewUnitRepo()
 
+	var children *itemChildAudit
+	if params.UnitPrice != nil || childWrites != nil {
+		if children, apiErr = snapshotItemChildren(txCtx, s.repos, params.AccountID, old.ItemID, true); apiErr != nil {
+			return nil, apiErr
+		}
+	}
+
 	if params.UnitPrice != nil {
 		if apiErr := ValidateCostRateUnits(txCtx, txUnitRepo, params.UnitPrice.NumeratorUnitID, params.UnitPrice.DenominatorUnitID, "unit_price"); apiErr != nil {
 			return nil, apiErr
@@ -647,6 +655,12 @@ func (s *productSvcImpl) updateProductInTx(txCtx context.Context, params domain.
 			return nil, apierror.NewInvariantViolationError("Product item or unit value rate is missing.")
 		}
 		if apiErr := txItemRepo.UpdateRate(txCtx, old.Item.UnitValueID, *params.UnitPrice); apiErr != nil {
+			return nil, apiErr
+		}
+	}
+
+	if childWrites != nil {
+		if apiErr := childWrites(txCtx); apiErr != nil {
 			return nil, apiErr
 		}
 	}
@@ -661,6 +675,13 @@ func (s *productSvcImpl) updateProductInTx(txCtx context.Context, params domain.
 	// Item-level fields (sku, description, notes) live on the joined
 	// item row; diff them the same way part updates do.
 	changes = append(changes, audit.ComputeChanges(old.Item, updated.Item)...)
+	if children != nil {
+		childChanges, apiErr := children.changes(txCtx, s.repos)
+		if apiErr != nil {
+			return nil, apiErr
+		}
+		changes = append(changes, childChanges...)
+	}
 
 	if apiErr := audit.NewPublisher().Publish(txCtx, s.repos.NewOutboxRepo(), audit.EventData{
 		ServiceName:  domain.ServiceName,

@@ -721,6 +721,7 @@ func participantFromRow(row sqlc.ConversationParticipant) *domain.ConversationPa
 		CreatedAt:            row.CreatedAt,
 		UpdatedAt:            row.UpdatedAt,
 		HiddenAt:             db.TimeFromNullTime(row.HiddenAt),
+		MutedUntil:           db.TimeFromNullTime(row.MutedUntil),
 		AgentTriggerPolicy:   db.StringFromNullString(row.AgentTriggerPolicy),
 		AgentTriggerKeywords: decodeKeywords(row.AgentTriggerKeywords),
 		RelationAccountID:    db.StringFromNullString(row.RelationAccountID),

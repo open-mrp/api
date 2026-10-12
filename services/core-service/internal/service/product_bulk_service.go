@@ -139,23 +139,22 @@ func (s *productSvcImpl) writeBulkUpsertProducts(txCtx context.Context, txRepos 
 			attrIDs := attributeIDsForProperties(row.Properties, attrResolver)
 
 			if old := bySKU[row.SKU]; old != nil {
+				// Precedes the attribute link, which rejects an attribute whose property the category does not carry yet.
+				if apiErr := linkRowPropertiesToCategoryInTx(spCtx, txRepos, old.CategoryID, row.Properties, propIDByName); apiErr != nil {
+					return apiErr
+				}
 				if _, apiErr := txSvc.updateProductInTx(spCtx, domain.UpdateProductParams{
 					AccountID:     accountID,
 					ProductID:     old.ProductID,
 					Description:   clearableFromPtr(row.Description),
 					Notes:         clearableFromPtr(row.Notes),
 					IsPortalReady: row.IsPortalReady,
+				}, func(ctx context.Context) *apierror.APIError {
+					if apiErr := applyItemRatesInTx(ctx, txRepos, old.UnitValueRateID, old.UnitCostRateID, row.UnitPrice, row.UnitCost); apiErr != nil {
+						return apiErr
+					}
+					return attachItemAttributesInTx(ctx, txRepos, accountID, old.CategoryID, old.ItemID, attrIDs)
 				}); apiErr != nil {
-					return apiErr
-				}
-				if apiErr := applyItemRatesInTx(spCtx, txRepos, old.UnitValueRateID, old.UnitCostRateID, row.UnitPrice, row.UnitCost); apiErr != nil {
-					return apiErr
-				}
-				// Precedes the attribute link, which rejects an attribute whose property the category does not carry yet.
-				if apiErr := linkRowPropertiesToCategoryInTx(spCtx, txRepos, old.CategoryID, row.Properties, propIDByName); apiErr != nil {
-					return apiErr
-				}
-				if apiErr := attachItemAttributesInTx(spCtx, txRepos, accountID, old.CategoryID, old.ItemID, attrIDs); apiErr != nil {
 					return apiErr
 				}
 				upsertedID = old.ProductID

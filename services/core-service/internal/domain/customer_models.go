@@ -29,8 +29,8 @@ type Customer struct {
 	CarrierBillingType                 *constants.CarrierBillingType `audit:"carrier_billing_type"`
 	CarrierBillingAccount              *string                       `audit:"carrier_billing_account"`
 	CreditLimitID                      *string                       `audit:"credit_limit_id"`
-	CreditLimitValue                   *string
-	CreditLimitUnitID                  *string
+	CreditLimitValue                   *string                       `audit:"credit_limit_value"`
+	CreditLimitUnitID                  *string                       `audit:"credit_limit_unit_id"`
 	CreditLimitUnitAbbreviation        *string
 	CreditLimitUnitName                *string
 	CreditLimitUnitType                *string

@@ -118,8 +118,8 @@ func linkRowPropertiesToCategoryInTx(txCtx context.Context, repos domain.RepoFac
 	if categoryID == "" || len(properties) == 0 {
 		return nil
 	}
-	catRepo := repos.NewItemCategoryRepo()
 	seen := make(map[string]struct{}, len(properties))
+	propIDs := make([]string, 0, len(properties))
 	for _, p := range properties {
 		if p.Name == "" {
 			continue
@@ -132,11 +132,38 @@ func linkRowPropertiesToCategoryInTx(txCtx context.Context, repos domain.RepoFac
 			continue
 		}
 		seen[propID] = struct{}{}
+		propIDs = append(propIDs, propID)
+	}
+	return upsertCategoryPropertiesInTx(txCtx, repos, categoryID, propIDs)
+}
+
+// upsertCategoryPropertiesInTx links each property to the category (idempotent) and audits
+// the category's property list when it grew.
+func upsertCategoryPropertiesInTx(txCtx context.Context, repos domain.RepoFactory, categoryID string, propertyIDs []string) *apierror.APIError {
+	if len(propertyIDs) == 0 {
+		return nil
+	}
+	catRepo := repos.NewItemCategoryRepo()
+	before, apiErr := catRepo.GetProperties(txCtx, categoryID)
+	if apiErr != nil {
+		return apiErr
+	}
+	for _, propID := range propertyIDs {
 		if apiErr := catRepo.UpsertProperty(txCtx, categoryID, propID); apiErr != nil {
 			return apiErr
 		}
 	}
-	return nil
+	after, apiErr := catRepo.GetProperties(txCtx, categoryID)
+	if apiErr != nil {
+		return apiErr
+	}
+	return audit.NewPublisher().Publish(txCtx, repos.NewOutboxRepo(), audit.EventData{
+		ServiceName:  domain.ServiceName,
+		Action:       constants.AuditActionUpdate,
+		ResourceType: constants.ObjectTypeItemCategory,
+		ResourceID:   categoryID,
+		Changes:      audit.ComputeChanges(&domain.ItemCategoryFull{Properties: before}, &domain.ItemCategoryFull{Properties: after}, "Properties"),
+	})
 }
 
 // bulkCategoryRow pairs a bulk-upsert row index with the category it will be created

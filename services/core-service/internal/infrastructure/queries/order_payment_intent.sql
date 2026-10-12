@@ -18,3 +18,8 @@ JOIN sales_order so ON so.id = opi.sales_order_id
 WHERE opi.sales_order_id IN (sqlc.slice('sales_order_ids'))
   AND so.owner_account_id = sqlc.arg('account_id')
 ORDER BY opi.created_at ASC;
+
+-- name: GetSalesOrderOwnerAccountID :one
+SELECT owner_account_id
+FROM sales_order
+WHERE id = sqlc.arg('sales_order_id');

@@ -72,7 +72,7 @@ func newSvc(t *testing.T, notifRepo domain.NotificationRepo, outboxRepo messagin
 	if outboxRepo != nil {
 		factory.EXPECT().NewOutboxRepo().Return(outboxRepo).AnyTimes()
 	}
-	return NewMessagingSvc(factory)
+	return NewMessagingSvc(factory, passthroughTx{f: factory})
 }
 
 // ── Cursor encode/decode ───────────────────────────────────────────
@@ -231,7 +231,7 @@ func TestSendNotification_Validation(t *testing.T) {
 				return nil
 			})
 
-		svc := NewMessagingSvc(factory)
+		svc := NewMessagingSvc(factory, passthroughTx{f: factory})
 		enqueued, apiErr := svc.SendNotification(ctx, domain.SendNotificationInput{Category: "system.broadcast", Title: "hi", TargetType: "account", TargetID: testAccountID})
 		require.Nil(t, apiErr)
 		assert.Equal(t, int64(1), enqueued)
@@ -271,15 +271,16 @@ func TestSendNotification_BroadcastEmitsAnnouncementRealtime(t *testing.T) {
 	factory.EXPECT().NewOutboxRepo().Return(outbox).AnyTimes()
 	announceRepo.EXPECT().Create(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
 
-	svc := NewMessagingSvc(factory)
+	svc := NewMessagingSvc(factory, passthroughTx{f: factory})
 	_, apiErr := svc.SendNotification(identityCtx("alerts:create"), domain.SendNotificationInput{
 		Category: "system.broadcast", Title: "hi", TargetType: "account", TargetID: testAccountID,
 	})
 	require.Nil(t, apiErr)
 
-	require.Len(t, outbox.inputs, 1, "a broadcast emits one announcement.created realtime event")
+	require.Len(t, outbox.inputs, 2, "a broadcast emits its audit event and one announcement.created realtime event")
+	assert.Equal(t, string(contracts.PlatformEventAuditLogged), outbox.inputs[0].MessageType)
 	var rt messaging.RealtimeDeliveryData
-	require.NoError(t, json.Unmarshal(outbox.inputs[0].Payload.Data, &rt))
+	require.NoError(t, json.Unmarshal(outbox.inputs[1].Payload.Data, &rt))
 	assert.Equal(t, "announcement.created", rt.Event)
 	assert.Equal(t, testAccountID, rt.AccountID)
 	assert.NotEmpty(t, rt.AnnouncementID, "the event carries the announcement id for the account topic")
@@ -456,7 +457,7 @@ func TestNotifyCustomerRegistered_FansOutToSupportGroup(t *testing.T) {
 	factory.EXPECT().NewOutboxRepo().Return(outbox).AnyTimes()
 	factory.EXPECT().NewSupportRouteRepo().Return(supportRepo).AnyTimes()
 	factory.EXPECT().NewParticipantRepo().Return(participantRepo).AnyTimes()
-	svc := NewMessagingSvc(factory)
+	svc := NewMessagingSvc(factory, passthroughTx{f: factory})
 
 	// The account's support route points at a group conversation; its active human participants are the recipients.
 	supportRepo.EXPECT().Resolve(gomock.Any(), "acc_seller", "acc_customer").
@@ -509,7 +510,7 @@ func TestNotifyCustomerRegistered_NoRouteIsNoOp(t *testing.T) {
 	factory.EXPECT().NewNotificationRepo().Return(notifRepo).AnyTimes()
 	factory.EXPECT().NewOutboxRepo().Return(outbox).AnyTimes()
 	factory.EXPECT().NewSupportRouteRepo().Return(supportRepo).AnyTimes()
-	svc := NewMessagingSvc(factory)
+	svc := NewMessagingSvc(factory, passthroughTx{f: factory})
 
 	// No support route configured for the account → no recipients → no notification rows written.
 	supportRepo.EXPECT().Resolve(gomock.Any(), "acc_seller", "acc_customer").Return(nil, nil)
@@ -646,7 +647,7 @@ func newSvcWithRepos(t *testing.T, notifRepo domain.NotificationRepo, announceRe
 		factory.EXPECT().NewAnnouncementRepo().Return(announceRepo).AnyTimes()
 	}
 	factory.EXPECT().NewOutboxRepo().Return(&fakeOutboxRepo{}).AnyTimes()
-	return NewMessagingSvc(factory)
+	return NewMessagingSvc(factory, passthroughTx{f: factory})
 }
 
 func TestGetUnreadCount_IncludesAnnouncements(t *testing.T) {
@@ -736,4 +737,48 @@ func TestMarkAnnouncementSeen_VisibilityCheckedThenReturnsUpdated(t *testing.T) 
 	a, apiErr := svc.MarkAnnouncementSeen(ctx, "an_1")
 	require.Nil(t, apiErr)
 	assert.Equal(t, "an_1", a.ID)
+}
+
+// A preference is an upsert keyed on (account_user, category): the first save creates it, a later one updates the same row.
+func TestUpsertNotificationPreference_AuditsCreateThenUpdate(t *testing.T) {
+	cases := []struct {
+		name       string
+		existing   *domain.NotificationPreference
+		wantAction constants.AuditAction
+	}{
+		{"no preference yet", nil, constants.AuditActionCreate},
+		{"changing a preference", &domain.NotificationPreference{ID: "ntpf_1", Category: "chat.message", InAppEnabled: true, Digest: "instant"}, constants.AuditActionUpdate},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			ctrl := gomock.NewController(t)
+			notifRepo := repositorymock.NewMockNotificationRepo(ctrl)
+			notifRepo.EXPECT().ResolveAccountUserID(gomock.Any(), testUserID, testAccountID).Return(testRecipient, nil)
+			saved := &domain.NotificationPreference{ID: "ntpf_1", Category: "chat.message", EmailEnabled: true, Digest: "instant"}
+			prefRepo := repositorymock.NewMockNotificationPreferenceRepo(ctrl)
+			var existingErr *apierror.APIError
+			if tc.existing == nil {
+				existingErr = apierror.NewResourceNotFoundError("not found")
+			}
+			gomock.InOrder(
+				prefRepo.EXPECT().GetByUserCategory(gomock.Any(), testRecipient, "chat.message").Return(tc.existing, existingErr),
+				prefRepo.EXPECT().Upsert(gomock.Any(), gomock.Any(), testAccountID, testRecipient, gomock.Any()).Return(nil),
+				prefRepo.EXPECT().GetByUserCategory(gomock.Any(), testRecipient, "chat.message").Return(saved, nil),
+			)
+			outbox := &fakeOutboxRepo{}
+			factory := factorymock.NewMockRepoFactory(ctrl)
+			factory.EXPECT().NewNotificationRepo().Return(notifRepo).AnyTimes()
+			factory.EXPECT().NewNotificationPreferenceRepo().Return(prefRepo).AnyTimes()
+			factory.EXPECT().NewOutboxRepo().Return(outbox).AnyTimes()
+			svc := NewMessagingSvc(factory, passthroughTx{f: factory})
+
+			_, apiErr := svc.UpsertNotificationPreference(identityCtx(), domain.UpsertNotificationPreferenceInput{Category: "chat.message", EmailEnabled: true})
+			require.Nil(t, apiErr)
+
+			event := onlyAuditEvent(t, outbox)
+			assert.Equal(t, string(tc.wantAction), event.Action)
+			assert.Equal(t, string(constants.ObjectTypeNotificationPreference), event.ResourceType)
+			assert.Equal(t, "ntpf_1", event.ResourceID)
+		})
+	}
 }

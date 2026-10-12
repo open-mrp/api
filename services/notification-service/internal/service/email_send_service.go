@@ -210,7 +210,7 @@ func (s *conversationSvcImpl) PostReplyDraft(ctx context.Context, in domain.Post
 			return lErr
 		}
 		result = loaded
-		return nil
+		return publishMessageAudit(txCtx, f, constants.AuditActionCreate, constants.ObjectTypeReplyDraft, nil, loaded, nil)
 	}); apiErr != nil {
 		return nil, tracing.Trace(span, apiErr)
 	}

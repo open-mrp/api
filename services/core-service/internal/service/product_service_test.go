@@ -58,6 +58,7 @@ type ProductSvcTestSuite struct {
 	attributeRepo       *repositorymock.MockAttributeRepo
 	itemCategoryRepo    *repositorymock.MockItemCategoryRepo
 	unitRepo            *repositorymock.MockUnitRepo
+	rateRepo            *repositorymock.MockRateRepo
 	repoFactory         *factorymock.MockRepoFactory
 	mediatorFactory     *factorymock.MockMediatorFactory
 	idempotencyMed      *mediatormock.MockIdempotencyMed
@@ -76,6 +77,7 @@ func (s *ProductSvcTestSuite) SetupSuite() {
 	s.attributeRepo = repositorymock.NewMockAttributeRepo(s.ctrl)
 	s.itemCategoryRepo = repositorymock.NewMockItemCategoryRepo(s.ctrl)
 	s.unitRepo = repositorymock.NewMockUnitRepo(s.ctrl)
+	s.rateRepo = repositorymock.NewMockRateRepo(s.ctrl)
 
 	s.repoFactory = factorymock.NewMockRepoFactory(s.ctrl)
 	s.repoFactory.EXPECT().NewProductRepo().Return(s.productRepo).AnyTimes()
@@ -87,6 +89,7 @@ func (s *ProductSvcTestSuite) SetupSuite() {
 	s.repoFactory.EXPECT().NewAttributeRepo().Return(s.attributeRepo).AnyTimes()
 	s.repoFactory.EXPECT().NewItemCategoryRepo().Return(s.itemCategoryRepo).AnyTimes()
 	s.repoFactory.EXPECT().NewUnitRepo().Return(s.unitRepo).AnyTimes()
+	s.repoFactory.EXPECT().NewRateRepo().Return(s.rateRepo).AnyTimes()
 	s.repoFactory.EXPECT().NewOutboxRepo().Return(&productStubOutboxRepo{}).AnyTimes()
 
 	s.idempotencyMed = mediatormock.NewMockIdempotencyMed(s.ctrl)
@@ -882,10 +885,21 @@ func (s *ProductSvcTestSuite) TestUpdateProduct_UnitPrice_UpdatesRate() {
 		Times(1)
 
 	rateParams := domain.CreateRateParams{Value: "9.99", NumeratorUnitID: "un_usd", DenominatorUnitID: "un_each"}
+	// The item's rates and attributes are read around the write so the audit diff can see them.
 	s.itemRepo.EXPECT().
-		UpdateRate(gomock.Any(), "rate_uv", rateParams).
-		Return(nil).
-		Times(1)
+		Get(gomock.Any(), domain.GetItemParams{AccountID: "ac_test123", ItemID: "it_1", Includes: []string{"attributes"}}).
+		Return(s.existingProductWithRateIDs("it_1", "SKU").Item, nil).
+		Times(2)
+	gomock.InOrder(
+		s.rateRepo.EXPECT().Get(gomock.Any(), "rate_uv").
+			Return(&domain.Rate{ID: "rate_uv", Value: "5.00", NumeratorUnitID: "un_usd", DenominatorUnitID: "un_each"}, nil),
+		s.itemRepo.EXPECT().
+			UpdateRate(gomock.Any(), "rate_uv", rateParams).
+			Return(nil).
+			Times(1),
+		s.rateRepo.EXPECT().Get(gomock.Any(), "rate_uv").
+			Return(&domain.Rate{ID: "rate_uv", Value: "9.99", NumeratorUnitID: "un_usd", DenominatorUnitID: "un_each"}, nil),
+	)
 
 	s.productRepo.EXPECT().
 		Update(gomock.Any(), gomock.AssignableToTypeOf(domain.UpdateProductParams{})).

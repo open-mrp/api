@@ -72,6 +72,7 @@ SELECT
     rs.scope_code,
     rs.scope_ref_id,
     rs.is_excluded,
+    rs.lead_time_weeks,
     rs.lead_time_offset_weeks
 FROM production_schedule_resource_setting rs
 WHERE rs.account_id = sqlc.arg('account_id');

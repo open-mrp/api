@@ -332,6 +332,9 @@ func (s *conversationSvcImpl) CreateReplyDraft(ctx context.Context, input domain
 				return lErr
 			}
 			result = loaded
+			if apiErr := publishMessageAudit(txCtx, f, constants.AuditActionCreate, constants.ObjectTypeReplyDraft, nil, loaded, nil); apiErr != nil {
+				return apiErr
+			}
 			return cacheSuccessResponse(txCtx, f, idemKey.TypeID, result)
 		})
 		if apiErr != nil {
@@ -369,19 +372,58 @@ func (s *conversationSvcImpl) UpdateReplyDraft(ctx context.Context, draftID, bod
 	if apiErr != nil {
 		return nil, tracing.Trace(span, apiErr)
 	}
-	repo := s.repoFactory.NewMessageRepo()
-	draft, apiErr := repo.GetByID(ctx, draftID, accountID)
+	preview := strPtrIfNotEmpty(messagePreview(&body, 0, false))
+	var result *domain.Message
+	apiErr = s.txManager.WithTx(ctx, func(txCtx context.Context, f domain.RepoFactory) *apierror.APIError {
+		repo := f.NewMessageRepo()
+		draft, apiErr := repo.GetByID(txCtx, draftID, accountID)
+		if apiErr != nil {
+			return apiErr
+		}
+		if draft.Status != string(constants.MessageStatusDraft) {
+			return apierror.NewResourceConflictError("This draft can no longer be edited.")
+		}
+		if apiErr := repo.UpdateDraftContent(txCtx, draftID, accountID, body, subject, preview); apiErr != nil {
+			return apiErr
+		}
+		after, apiErr := repo.GetByID(txCtx, draftID, accountID)
+		if apiErr != nil {
+			return apiErr
+		}
+		result = after
+		return publishMessageAudit(txCtx, f, constants.AuditActionUpdate, constants.ObjectTypeReplyDraft, draft, after, editedContentMetadata(draft, after))
+	})
 	if apiErr != nil {
 		return nil, tracing.Trace(span, apiErr)
 	}
-	if draft.Status != string(constants.MessageStatusDraft) {
-		return nil, tracing.Trace(span, apierror.NewResourceConflictError("This draft can no longer be edited."))
+	return result, nil
+}
+
+// editedContentMetadata names the content fields an edit changed. Their values stay out of the audit trail (see domain.Message), so the event records that they changed rather than what to.
+func editedContentMetadata(before, after *domain.Message) map[string]any {
+	var edited []string
+	if ptrutil.Deref(before.Body) != ptrutil.Deref(after.Body) {
+		edited = append(edited, "body")
 	}
-	preview := strPtrIfNotEmpty(messagePreview(&body, 0, false))
-	if apiErr := repo.UpdateDraftContent(ctx, draftID, accountID, body, subject, preview); apiErr != nil {
-		return nil, tracing.Trace(span, apiErr)
+	if ptrutil.Deref(before.Subject) != ptrutil.Deref(after.Subject) {
+		edited = append(edited, "subject")
 	}
-	return repo.GetByID(ctx, draftID, accountID)
+	if len(edited) == 0 {
+		return nil
+	}
+	return map[string]any{"edited_fields": edited}
+}
+
+// publishMessageAudit records a change to a message-backed resource (a reply draft or scheduled message). before is nil on create.
+func publishMessageAudit(ctx context.Context, f domain.RepoFactory, action constants.AuditAction, resourceType constants.ObjectType, before, after *domain.Message, metadata map[string]any) *apierror.APIError {
+	return audit.NewPublisher().Publish(ctx, f.NewOutboxRepo(), audit.EventData{
+		ServiceName:  domain.ServiceName,
+		Action:       action,
+		ResourceType: resourceType,
+		ResourceID:   after.ID,
+		Changes:      audit.ComputeChanges(before, after),
+		Metadata:     metadata,
+	})
 }
 
 // RejectReplyDraft discards an open draft without sending.
@@ -393,15 +435,26 @@ func (s *conversationSvcImpl) RejectReplyDraft(ctx context.Context, draftID stri
 	if apiErr != nil {
 		return nil, tracing.Trace(span, apiErr)
 	}
-	repo := s.repoFactory.NewMessageRepo()
-	applied, apiErr := repo.SetDraftStatus(ctx, draftID, accountID, string(constants.MessageStatusRejected))
-	if apiErr != nil {
-		return nil, tracing.Trace(span, apiErr)
-	}
-	if !applied {
-		return nil, tracing.Trace(span, apierror.NewResourceConflictError("This draft is no longer open."))
-	}
-	draft, apiErr := repo.GetByID(ctx, draftID, accountID)
+	var draft *domain.Message
+	apiErr = s.txManager.WithTx(ctx, func(txCtx context.Context, f domain.RepoFactory) *apierror.APIError {
+		repo := f.NewMessageRepo()
+		applied, apiErr := repo.SetDraftStatus(txCtx, draftID, accountID, string(constants.MessageStatusRejected))
+		if apiErr != nil {
+			return apiErr
+		}
+		if !applied {
+			return apierror.NewResourceConflictError("This draft is no longer open.")
+		}
+		after, apiErr := repo.GetByID(txCtx, draftID, accountID)
+		if apiErr != nil {
+			return apiErr
+		}
+		draft = after
+		// The status write is guarded on status='draft', so the pre-image differs only in status.
+		before := *after
+		before.Status = string(constants.MessageStatusDraft)
+		return publishMessageAudit(txCtx, f, constants.AuditActionUpdate, constants.ObjectTypeReplyDraft, &before, after, nil)
+	})
 	if apiErr != nil {
 		return nil, tracing.Trace(span, apiErr)
 	}
@@ -471,6 +524,9 @@ func (s *conversationSvcImpl) promoteDraftViaPortal(ctx context.Context, draft *
 		if !applied {
 			// A concurrent approve already sent it; idempotent no-op.
 			return nil
+		}
+		if apiErr := publishDraftApproval(txCtx, f, draft); apiErr != nil {
+			return apiErr
 		}
 		now := time.Now()
 		draft.Sequence = seq
@@ -554,6 +610,9 @@ func (s *conversationSvcImpl) promoteDraftViaEmail(ctx context.Context, draft *d
 			// possible duplicate, guarded by the draft-state compare-and-set on the winning approve).
 			return nil
 		}
+		if apiErr := publishDraftApproval(txCtx, f, draft); apiErr != nil {
+			return apiErr
+		}
 		now := time.Now()
 		draft.Sequence = seq
 		draft.Status = string(constants.MessageStatusSent)
@@ -584,6 +643,15 @@ func (s *conversationSvcImpl) promoteDraftViaEmail(ctx context.Context, draft *d
 		return apiErr
 	}
 	return nil
+}
+
+// publishDraftApproval records a draft's promotion to a sent message. before is the draft as read ahead of the promote.
+func publishDraftApproval(ctx context.Context, f domain.RepoFactory, before *domain.Message) *apierror.APIError {
+	after, apiErr := f.NewMessageRepo().GetByID(ctx, before.ID, before.AccountID)
+	if apiErr != nil {
+		return apiErr
+	}
+	return publishMessageAudit(ctx, f, constants.AuditActionUpdate, constants.ObjectTypeReplyDraft, before, after, nil)
 }
 
 // requireCustomerCase loads a conversation for an account-level admin and asserts it is an external
@@ -621,7 +689,30 @@ func (s *conversationSvcImpl) requireCaseAdmin(ctx context.Context, conversation
 // autoSetCaseWorkflow best-effort moves an external case into a triage lane in response to activity (a staff reply → waiting on customer, a draft → needs approval, …). It never fails the triggering action:
 // a status-write hiccup must not block the message, reply, or draft that caused it.
 func (s *conversationSvcImpl) autoSetCaseWorkflow(ctx context.Context, conversationID, accountID string, status constants.ConversationWorkflowStatus) {
-	if apiErr := s.repoFactory.NewConversationRepo().SetWorkflowStatus(ctx, conversationID, accountID, string(status)); apiErr != nil {
+	apiErr := s.txManager.WithTx(ctx, func(txCtx context.Context, f domain.RepoFactory) *apierror.APIError {
+		convRepo := f.NewConversationRepo()
+		before, apiErr := convRepo.GetByID(txCtx, conversationID, accountID)
+		if apiErr != nil {
+			return apiErr
+		}
+		if apiErr := convRepo.SetWorkflowStatus(txCtx, conversationID, accountID, string(status)); apiErr != nil {
+			return apiErr
+		}
+		// Inbound email advances the lane with no request identity, so there is no actor to attribute it to.
+		if identity, ok := appctx.GetIdentityFromContext(txCtx); !ok || identity == nil || !identity.IsTargetAccountSet() {
+			return nil
+		}
+		after := *before
+		after.WorkflowStatus = new(string(status))
+		return audit.NewPublisher().Publish(txCtx, f.NewOutboxRepo(), audit.EventData{
+			ServiceName:  domain.ServiceName,
+			Action:       constants.AuditActionUpdate,
+			ResourceType: constants.ObjectTypeConversation,
+			ResourceID:   conversationID,
+			Changes:      audit.ComputeChanges(before, &after),
+		})
+	})
+	if apiErr != nil {
 		slog.WarnContext(ctx, "auto case workflow advance failed", "conversation_id", conversationID, "status", string(status), "error", apiErr)
 	}
 }

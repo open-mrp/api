@@ -54,6 +54,7 @@ func newRescheduleHarness(t *testing.T) *rescheduleHarness {
 	factory.EXPECT().NewIdempotencyKeyRepo().Return(idemRepo).AnyTimes()
 	factory.EXPECT().NewMessageRepo().Return(h.messages).AnyTimes()
 	factory.EXPECT().NewParticipantRepo().Return(h.participants).AnyTimes()
+	factory.EXPECT().NewOutboxRepo().Return(&fakeOutboxRepo{}).AnyTimes()
 	h.svc = NewConversationSvc(factory, passthroughTx{f: factory}, nil, "", nil, nil, "")
 	return h
 }
@@ -68,8 +69,11 @@ func TestRescheduleMessage_MovesTheCallersScheduledMessage(t *testing.T) {
 	at := time.Now().Add(2 * time.Hour)
 	body := "moved to the afternoon"
 	moved := &domain.Message{ID: "mg_sched", Status: string(constants.MessageStatusScheduled), Body: &body, ScheduledFor: &at}
+	was := time.Now().Add(time.Hour)
+	original := &domain.Message{ID: "mg_sched", Status: string(constants.MessageStatusScheduled), ScheduledFor: &was}
 
 	gomock.InOrder(
+		h.messages.EXPECT().GetByID(gomock.Any(), "mg_sched", testAccountID).Return(original, nil),
 		h.messages.EXPECT().Reschedule(gomock.Any(), "mg_sched", testAccountID, reschedulerAcus, at, &body, gomock.Any()).
 			DoAndReturn(func(_ context.Context, _, _, _ string, _ time.Time, _, preview *string) (bool, *apierror.APIError) {
 				require.NotNil(t, preview)
@@ -109,7 +113,8 @@ func TestRescheduleMessage_RefusesWhatItCannotMove(t *testing.T) {
 			t.Parallel()
 			h := newRescheduleHarness(t)
 			h.messages.EXPECT().Reschedule(gomock.Any(), "mg_x", testAccountID, reschedulerAcus, gomock.Any(), nil, nil).Return(false, nil)
-			h.messages.EXPECT().GetByID(gomock.Any(), "mg_x", testAccountID).Return(tt.message, tt.getErr)
+			// Read once ahead of the move for the audit pre-image, and again to explain the refusal.
+			h.messages.EXPECT().GetByID(gomock.Any(), "mg_x", testAccountID).Return(tt.message, tt.getErr).Times(2)
 			if tt.sender != nil {
 				h.participants.EXPECT().GetByID(gomock.Any(), senderPID, "cv_x").Return(&domain.ConversationParticipant{ID: senderPID, AccountUserID: tt.sender}, nil)
 			}

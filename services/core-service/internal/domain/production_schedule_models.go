@@ -394,7 +394,7 @@ type ProductionSchedule struct {
 	GeneratedByID  *string
 	PublishedByID  *string
 	PublishedAt    *time.Time
-	SupersededByID *string
+	SupersededByID *string `audit:"superseded_by_id"`
 
 	CreatedAt time.Time
 	UpdatedAt time.Time

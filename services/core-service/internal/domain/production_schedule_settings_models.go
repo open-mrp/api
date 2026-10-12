@@ -74,13 +74,13 @@ type UpdateProductionScheduleSettingsParams struct {
 
 // ProductionScheduleResourceSetting overrides planning behavior for one machine, department or production step.
 type ProductionScheduleResourceSetting struct {
-	ID                  string
-	AccountID           string
-	ScopeCode           string
-	ScopeRefID          string
-	IsExcluded          bool
-	LeadTimeWeeks       *float64
-	LeadTimeOffsetWeeks float64
+	ID                  string   `audit:"id"`
+	AccountID           string   `audit:"account_id"`
+	ScopeCode           string   `audit:"scope_code"`
+	ScopeRefID          string   `audit:"scope_ref_id"`
+	IsExcluded          bool     `audit:"is_excluded"`
+	LeadTimeWeeks       *float64 `audit:"lead_time_weeks"`
+	LeadTimeOffsetWeeks float64  `audit:"lead_time_offset_weeks"`
 	CreatedAt           time.Time
 	UpdatedAt           time.Time
 }
@@ -98,16 +98,16 @@ type UpsertResourceSettingParams struct {
 //
 // Distinct from ProductionScheduleItemSetting, which is the solver's narrower view of the same row: the solve needs the values, the API needs the identity and timestamps too.
 type ProductionScheduleItemPlanningSetting struct {
-	ID        string
-	AccountID string
-	ItemID    string
+	ID        string `audit:"id"`
+	AccountID string `audit:"account_id"`
+	ItemID    string `audit:"item_id"`
 	SKU       string
 
-	IsExcluded bool
+	IsExcluded bool `audit:"is_excluded"`
 	// LotMultipleUnits overrides the lot this item is made in; nil leaves the lot chain alone.
-	LotMultipleUnits *float64
+	LotMultipleUnits *float64 `audit:"lot_multiple_units"`
 	// FulfillmentPolicyCode overrides how this item is produced; nil falls through to its product line, then the account default.
-	FulfillmentPolicyCode *string
+	FulfillmentPolicyCode *string `audit:"fulfillment_policy_code"`
 
 	CreatedAt time.Time
 	UpdatedAt time.Time

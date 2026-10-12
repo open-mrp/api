@@ -5,6 +5,9 @@ import (
 
 	"github.com/open-mrp/api/services/core-service/internal/domain"
 	"github.com/open-mrp/api/services/core-service/internal/event"
+	"github.com/open-mrp/api/shared/appctx"
+	"github.com/open-mrp/api/shared/audit"
+	"github.com/open-mrp/api/shared/constants"
 	apierror "github.com/open-mrp/api/shared/errors"
 	"github.com/open-mrp/api/shared/id"
 	"github.com/open-mrp/api/shared/safeconv"
@@ -14,9 +17,12 @@ import (
 // EnqueueScheduledGeneration reserves a version and queues the solve, in one transaction.
 //
 // The placeholder row and the message that will fill it in commit together. Publishing first would let a message escape a transaction that then rolled back, and the consumer would solve into a row that does not exist; creating the row first without the message would leave a version stuck in `generating` with nothing coming to finish it.
+//
+// No one asked for the version, so it is created under the scheduler's system identity, which the version's audit trail names.
 func (s *productionScheduleSvcImpl) EnqueueScheduledGeneration(ctx context.Context, params domain.EnqueueGenerationParams) *apierror.APIError {
 	ctx, span := productionScheduleSvcTracer.Start(ctx, "service.production_schedule.enqueue_scheduled_generation")
 	defer span.End()
+	ctx = appctx.WithSystemIdentity(ctx, constants.SystemActorScheduler, params.AccountID)
 
 	scheduleID, apiErr := id.GenID(id.ProductionScheduleIDPrefix, nil)
 	if apiErr != nil {
@@ -53,6 +59,20 @@ func (s *productionScheduleSvcImpl) EnqueueScheduledGeneration(ctx context.Conte
 			return apiErr
 		}
 
+		created, apiErr := repo.Get(txCtx, domain.GetProductionScheduleParams{AccountID: params.AccountID, ScheduleID: scheduleID})
+		if apiErr != nil {
+			return apiErr
+		}
+		if apiErr := audit.NewPublisher().Publish(txCtx, txSvc.repos.NewOutboxRepo(), audit.EventData{
+			ServiceName:  domain.ServiceName,
+			Action:       constants.AuditActionCreate,
+			ResourceType: constants.ObjectTypeProductionSchedule,
+			ResourceID:   scheduleID,
+			Changes:      audit.ComputeChanges(nil, created),
+		}); apiErr != nil {
+			return apiErr
+		}
+
 		// The outbox publisher reads the repo factory from the context, so the transaction's factory has to be attached or the write lands outside it.
 		outboxCtx := event.WithRepos(txCtx, txSvc.repos)
 		return txSvc.enqueuer.EnqueueGeneration(outboxCtx, domain.EnqueueGenerationParams{
@@ -71,10 +91,11 @@ func (s *productionScheduleSvcImpl) EnqueueScheduledGeneration(ctx context.Conte
 
 // RunScheduledGeneration solves into a row already created in `generating`.
 //
-// Called by the queue consumer, out of band from the cadence tick. A failure marks the version `failed` with the reason rather than leaving it in `generating`, so a merchant sees that the cadence ran and what went wrong instead of a silent gap.
+// Called by the queue consumer, out of band from the cadence tick. A failure marks the version `failed` with the reason rather than leaving it in `generating`, so a merchant sees that the cadence ran and what went wrong instead of a silent gap. What the run writes is attributed to the scheduler's system identity.
 func (s *productionScheduleSvcImpl) RunScheduledGeneration(ctx context.Context, params domain.RunScheduledGenerationParams) *apierror.APIError {
 	ctx, span := productionScheduleSvcTracer.Start(ctx, "service.production_schedule.run_scheduled_generation")
 	defer span.End()
+	ctx = appctx.WithSystemIdentity(ctx, constants.SystemActorScheduler, params.AccountID)
 
 	repo := s.repos.NewProductionScheduleRepo()
 
@@ -98,14 +119,14 @@ func (s *productionScheduleSvcImpl) RunScheduledGeneration(ctx context.Context, 
 		ExistingScheduleID: params.ScheduleID,
 	}); apiErr != nil {
 		// Best effort: if the status write also fails the reaper eventually catches it.
-		if failErr := repo.FailGeneration(ctx, params.AccountID, params.ScheduleID, apiErr.PublicMessage); failErr != nil {
+		if failErr := s.failScheduledGeneration(ctx, params.AccountID, params.ScheduleID, apiErr.PublicMessage); failErr != nil {
 			return tracing.Trace(span, failErr)
 		}
 		return tracing.Trace(span, apiErr)
 	}
 
 	if params.AutoPublish {
-		// The consumer's context carries no identity, so this goes through the identity-free publish core with the trusted account ID from the outbox message. A nil publishedByID matches a cadence run, which has no human actor.
+		// A cadence run has no caller to authorize, so this goes through the identity-free publish core with the trusted account ID from the outbox message. A nil publishedByID matches a cadence run, which has no human actor.
 		if _, publishErr := s.publishSchedule(ctx, params.AccountID, params.ScheduleID, nil); publishErr != nil {
 			// The plan solved; only the publish failed. The draft stays so a planner can publish by hand rather than losing the whole run.
 			return tracing.Trace(span, publishErr)
@@ -113,4 +134,31 @@ func (s *productionScheduleSvcImpl) RunScheduledGeneration(ctx context.Context, 
 	}
 
 	return nil
+}
+
+// failScheduledGeneration marks a queued version `failed` with the reason, and audits the change.
+func (s *productionScheduleSvcImpl) failScheduledGeneration(ctx context.Context, accountID, scheduleID, reason string) *apierror.APIError {
+	return s.withTx(ctx, func(txCtx context.Context, txSvc *productionScheduleSvcImpl) *apierror.APIError {
+		repo := txSvc.repos.NewProductionScheduleRepo()
+		params := domain.GetProductionScheduleParams{AccountID: accountID, ScheduleID: scheduleID}
+		before, apiErr := repo.Get(txCtx, params)
+		if apiErr != nil {
+			return apiErr
+		}
+		if apiErr := repo.FailGeneration(txCtx, accountID, scheduleID, reason); apiErr != nil {
+			return apiErr
+		}
+		after, apiErr := repo.Get(txCtx, params)
+		if apiErr != nil {
+			return apiErr
+		}
+		return audit.NewPublisher().Publish(txCtx, txSvc.repos.NewOutboxRepo(), audit.EventData{
+			ServiceName:  domain.ServiceName,
+			Action:       constants.AuditActionUpdate,
+			ResourceType: constants.ObjectTypeProductionSchedule,
+			ResourceID:   scheduleID,
+			Changes:      audit.ComputeChanges(before, after),
+			Metadata:     map[string]any{"failure_reason": reason},
+		})
+	})
 }

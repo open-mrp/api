@@ -173,6 +173,22 @@ func (r *accountUserRepoImpl) EnsureActive(ctx context.Context, accountID, userI
 	return nil
 }
 
+func (r *accountUserRepoImpl) LockSeatStatuses(ctx context.Context, accountID string) (map[string]constants.AccountUserStatus, *apierror.APIError) {
+	ctx, span := accountUserRepoTracer.Start(ctx, "repository.account_user.lock_seat_statuses")
+	defer span.End()
+
+	rows, err := r.queries.ListAccountUserSeatStatusesForUpdate(ctx, accountID)
+	if apiErr := db.MapSQLError(err); apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
+
+	statuses := make(map[string]constants.AccountUserStatus, len(rows))
+	for _, row := range rows {
+		statuses[row.ID] = constants.AccountUserStatus(row.StatusCode)
+	}
+	return statuses, nil
+}
+
 func (r *accountUserRepoImpl) CountActive(ctx context.Context, accountID string) (int64, *apierror.APIError) {
 	ctx, span := accountUserRepoTracer.Start(ctx, "repository.account_user.count_active")
 	defer span.End()

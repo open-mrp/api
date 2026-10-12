@@ -459,6 +459,10 @@ func (s *registrationFlowSvcImpl) registerExistingCustomer(
 			return apiErr
 		}
 
+		if apiErr := publishRegistrationAudit(txCtx, txSvc.repos, ownerAccountID, customerAccountID, accountUserID, false); apiErr != nil {
+			return apiErr
+		}
+
 		// Notify the seller's customer-service group that a buyer joined an existing customer account. Emitted in-tx so it commits atomically with the registration.
 		if apiErr := event.NewCustomerRegisteredPublisher().Publish(txCtx, txSvc.repos.NewOutboxRepo(), messaging.CustomerRegisteredData{
 			SellerAccountID:    ownerAccountID,
@@ -596,6 +600,10 @@ func (s *registrationFlowSvcImpl) registerNewCustomer(
 			return apiErr
 		}
 
+		if apiErr := publishRegistrationAudit(txCtx, txSvc.repos, ownerAccountID, customerAccountID, accountUserID, true); apiErr != nil {
+			return apiErr
+		}
+
 		// Notify the seller's customer-service group that a new customer registered on the portal. Emitted in-tx so it commits atomically with the registration.
 		if apiErr := event.NewCustomerRegisteredPublisher().Publish(txCtx, txSvc.repos.NewOutboxRepo(), messaging.CustomerRegisteredData{
 			SellerAccountID:   ownerAccountID,
@@ -615,4 +623,50 @@ func (s *registrationFlowSvcImpl) registerNewCustomer(
 	}
 
 	return nil
+}
+
+// publishRegistrationAudit records a self-registration in the seller's audit log as the registrant's doing:
+// the customer when one was created, and the registrant's account user under it.
+func publishRegistrationAudit(txCtx context.Context, repos domain.RepoFactory, ownerAccountID, customerAccountID, accountUserID string, customerCreated bool) *apierror.APIError {
+	identity, ok := appctx.GetIdentityFromContext(txCtx)
+	if !ok || identity == nil {
+		return apierror.NewInvariantViolationError("Identity not found in context.")
+	}
+	// The registrant targets no account of their own yet. This copy only scopes the events to the seller; nothing authorizes against it.
+	scoped := *identity
+	scoped.Target = &types.IdentityTarget{AccountID: ownerAccountID}
+	auditCtx := appctx.WithIdentity(txCtx, &scoped)
+	publisher := audit.NewPublisher()
+
+	if customerCreated {
+		customer, apiErr := repos.NewCustomerRepo().Get(txCtx, ownerAccountID, customerAccountID, customerAuditIncludes(nil))
+		if apiErr != nil {
+			return apiErr
+		}
+		if apiErr := publisher.Publish(auditCtx, repos.NewOutboxRepo(), audit.EventData{
+			ServiceName:  domain.ServiceName,
+			Action:       constants.AuditActionCreate,
+			ResourceType: constants.ObjectTypeCustomer,
+			ResourceID:   customer.ID,
+			Changes:      audit.ComputeChanges(nil, customer),
+			Metadata:     map[string]any{"source": "registration"},
+		}); apiErr != nil {
+			return apiErr
+		}
+	}
+
+	accountUser, apiErr := repos.NewAccountUserRepo().GetDetailByAccountAndID(txCtx, customerAccountID, accountUserID, nil)
+	if apiErr != nil {
+		return apiErr
+	}
+	return publisher.Publish(auditCtx, repos.NewOutboxRepo(), audit.EventData{
+		ServiceName:      domain.ServiceName,
+		Action:           constants.AuditActionCreate,
+		ResourceType:     constants.ObjectTypeAccountUser,
+		ResourceID:       accountUser.ID,
+		Changes:          audit.ComputeChanges(nil, accountUser),
+		RootResourceType: constants.ObjectTypeCustomer,
+		RootResourceID:   customerAccountID,
+		Metadata:         map[string]any{"source": "registration"},
+	})
 }

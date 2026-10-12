@@ -680,12 +680,25 @@ func (s *salesOrderSvcImpl) CreateSalesOrder(ctx context.Context, params domain.
 				return apiErr
 			}
 
+			lines, apiErr := txOrderRepo.GetLines(txCtx, orderID)
+			if apiErr != nil {
+				return apiErr
+			}
 			if includesSalesOrderLines(params.Includes) {
-				lines, apiErr := txOrderRepo.GetLines(txCtx, orderID)
-				if apiErr != nil {
+				order.Lines = lines
+			}
+			for _, line := range lines {
+				if apiErr := audit.NewPublisher().Publish(txCtx, txSvc.repos.NewOutboxRepo(), audit.EventData{
+					ServiceName:      domain.ServiceName,
+					Action:           constants.AuditActionCreate,
+					ResourceType:     constants.ObjectTypeSalesOrderLine,
+					ResourceID:       line.ID,
+					RootResourceType: constants.ObjectTypeSalesOrder,
+					RootResourceID:   orderID,
+					Changes:          audit.ComputeChanges(nil, line),
+				}); apiErr != nil {
 					return apiErr
 				}
-				order.Lines = lines
 			}
 
 			if includesSalesOrderContacts(params.Includes) {
@@ -916,6 +929,14 @@ func (s *salesOrderSvcImpl) UpdateSalesOrder(ctx context.Context, params domain.
 				result = updated
 			}
 
+			replacingContacts := params.AcknowledgementEmailContacts != nil || params.InvoiceEmailContacts != nil
+			var contactsBefore *domain.SalesOrderContacts
+			if replacingContacts {
+				if contactsBefore, apiErr = salesOrderContacts(txCtx, txRepo, params.SalesOrderID); apiErr != nil {
+					return apiErr
+				}
+			}
+
 			// Replace email contacts when the caller supplied lists (nil = leave alone)
 			if params.AcknowledgementEmailContacts != nil {
 				if apiErr := replaceOrderEmailContacts(txCtx, txRepo, params.SalesOrderID, *params.AcknowledgementEmailContacts, string(constants.AccountRelationNotificationTypeOrderAcknowledgement)); apiErr != nil {
@@ -943,6 +964,14 @@ func (s *salesOrderSvcImpl) UpdateSalesOrder(ctx context.Context, params domain.
 			}
 
 			changes := audit.ComputeChanges(existing, updated)
+			if replacingContacts {
+				contactsAfter, apiErr := salesOrderContacts(txCtx, txRepo, params.SalesOrderID)
+				if apiErr != nil {
+					return apiErr
+				}
+				changes = appendListChange(changes, "acknowledgement_email_contacts", contactsBefore.AcknowledgementEmails, contactsAfter.AcknowledgementEmails)
+				changes = appendListChange(changes, "invoice_email_contacts", contactsBefore.InvoiceEmails, contactsAfter.InvoiceEmails)
+			}
 
 			if apiErr := audit.NewPublisher().Publish(txCtx, txSvc.repos.NewOutboxRepo(), audit.EventData{
 				ServiceName:      domain.ServiceName,
@@ -1391,6 +1420,11 @@ func (s *salesOrderSvcImpl) ChangeSalesOrderStatus(ctx context.Context, params d
 				return apiErr
 			}
 
+			pick, pickLines, apiErr := orderPickLines(txCtx, txSvc.repos, params.AccountID, params.SalesOrderID, func(*domain.PickLine) bool { return true })
+			if apiErr != nil {
+				return apiErr
+			}
+
 			// Delete pick lines and pick (quantities cleaned up too)
 			if apiErr := txRepo.DeleteQuantitiesByPickLines(txCtx, params.SalesOrderID); apiErr != nil {
 				return apiErr
@@ -1400,6 +1434,14 @@ func (s *salesOrderSvcImpl) ChangeSalesOrderStatus(ctx context.Context, params d
 			}
 			if apiErr := txRepo.DeletePickBySalesOrder(txCtx, params.SalesOrderID); apiErr != nil {
 				return apiErr
+			}
+			if apiErr := publishPickLinesDeleted(txCtx, txSvc.repos, params.SalesOrderID, pickLines); apiErr != nil {
+				return apiErr
+			}
+			if pick != nil {
+				if apiErr := publishPickDeleted(txCtx, txSvc.repos, pick); apiErr != nil {
+					return apiErr
+				}
 			}
 
 			// Release reserved inventory: the allocations covering it, the receipts those allocations were holding down, and the issues themselves.
@@ -1768,7 +1810,7 @@ func findOrAddFreightLine(ctx context.Context, repos domain.RepoFactory, account
 
 	// The line is added to carry a cost the carrier already charged, so its price starts at zero —
 	// matching legacy addShippingToOrder, which never estimates a rate here.
-	return repos.NewSalesOrderLineRepo().Create(ctx, lineID, domain.CreateSalesOrderLineParams{
+	line, apiErr := repos.NewSalesOrderLineRepo().Create(ctx, lineID, domain.CreateSalesOrderLineParams{
 		SalesOrderID:               salesOrderID,
 		AccountID:                  accountID,
 		ProductID:                  shippingProduct.ProductID,
@@ -1780,6 +1822,21 @@ func findOrAddFreightLine(ctx context.Context, repos domain.RepoFactory, account
 		UnitPriceNumeratorUnitID:   currencyUnitID,
 		UnitPriceDenominatorUnitID: shippingProduct.QuantityUnitID,
 	})
+	if apiErr != nil {
+		return nil, apiErr
+	}
+	if apiErr := audit.NewPublisher().Publish(ctx, repos.NewOutboxRepo(), audit.EventData{
+		ServiceName:      domain.ServiceName,
+		Action:           constants.AuditActionCreate,
+		ResourceType:     constants.ObjectTypeSalesOrderLine,
+		ResourceID:       line.ID,
+		RootResourceType: constants.ObjectTypeSalesOrder,
+		RootResourceID:   salesOrderID,
+		Changes:          audit.ComputeChanges(nil, line),
+	}); apiErr != nil {
+		return nil, apiErr
+	}
+	return line, nil
 }
 
 // estimateFreightForOrder re-estimates an existing order's freight (shipping) charge from its CURRENT persisted ship-to, carrier, service level, and lines, using the same freight-exemption / flat-rate / minimum-order / live-Shippo cascade as the create path. Returns the rate rounded to cents (matching Dashboard's update path). Read-only: it does not mutate the order — the caller (the quote-freight endpoint) returns it for the user to review and approve. Runs on the outer receiver so the live Shippo call stays out of any write transaction.
@@ -3161,30 +3218,79 @@ func (s *salesOrderSvcImpl) resolveCustomerCheckoutOrder(ctx context.Context, ac
 	return order, amountCents, nil
 }
 
+// RecordOrderPayment links a Stripe payment intent to the sales order it paid, which is what makes the order read as paid. Only Stripe reports a payment, so the link is attributed to it whichever service relays it.
 func (s *salesOrderSvcImpl) RecordOrderPayment(ctx context.Context, salesOrderID, paymentIntentID string) *apierror.APIError {
 	ctx, span := salesOrderSvcTracer.Start(ctx, "service.sales_order.record_order_payment")
 	defer span.End()
 
-	repo := s.repos.NewOrderPaymentIntentRepo()
-
-	// Idempotent: a Stripe webhook can be retried, so skip if this payment intent is already linked to an order.
-	existing, apiErr := repo.FindByPaymentIntentID(ctx, paymentIntentID)
+	accountID, apiErr := s.repos.NewOrderPaymentIntentRepo().GetOrderAccountID(ctx, salesOrderID)
 	if apiErr != nil {
 		return tracing.Trace(span, apiErr)
+	}
+	ctx = appctx.WithSystemIdentity(ctx, constants.SystemActorStripe, accountID)
+
+	return tracing.Trace(span, s.withTx(ctx, func(txCtx context.Context, txSvc *salesOrderSvcImpl) *apierror.APIError {
+		return txSvc.linkOrderPayment(txCtx, accountID, salesOrderID, paymentIntentID)
+	}))
+}
+
+// linkOrderPayment links the payment intent to the account's order and audits the order's new set of payment intents. Idempotent: a Stripe webhook can be retried, so an intent already linked to an order is left alone.
+func (s *salesOrderSvcImpl) linkOrderPayment(ctx context.Context, accountID, salesOrderID, paymentIntentID string) *apierror.APIError {
+	repo := s.repos.NewOrderPaymentIntentRepo()
+
+	existing, apiErr := repo.FindByPaymentIntentID(ctx, paymentIntentID)
+	if apiErr != nil {
+		return apiErr
 	}
 	if existing != nil {
 		return nil
 	}
 
-	opiID, apiErr := id.GenID(id.OrderPaymentIntentIDPrefix, nil)
+	before, apiErr := s.orderPaymentIntentIDs(ctx, accountID, salesOrderID)
 	if apiErr != nil {
-		return tracing.Trace(span, apiErr)
+		return apiErr
 	}
 
-	if apiErr := repo.Create(ctx, opiID, paymentIntentID, salesOrderID); apiErr != nil {
-		return tracing.Trace(span, apiErr)
+	opiID, apiErr := id.GenID(id.OrderPaymentIntentIDPrefix, nil)
+	if apiErr != nil {
+		return apiErr
 	}
-	return nil
+	if apiErr := repo.Create(ctx, opiID, paymentIntentID, salesOrderID); apiErr != nil {
+		return apiErr
+	}
+	return s.publishOrderPaymentIntents(ctx, accountID, salesOrderID, before)
+}
+
+// orderPaymentIntentIDs returns the Stripe payment intents linked to the account's order, as the order's `payment_intent_ids` shows them.
+func (s *salesOrderSvcImpl) orderPaymentIntentIDs(ctx context.Context, accountID, salesOrderID string) ([]string, *apierror.APIError) {
+	byOrder, apiErr := s.repos.NewSalesOrderRepo().GetPaymentIntentIDs(ctx, accountID, []string{salesOrderID})
+	if apiErr != nil {
+		return nil, apiErr
+	}
+	if ids := byOrder[salesOrderID]; ids != nil {
+		return ids, nil
+	}
+	return []string{}, nil
+}
+
+// publishOrderPaymentIntents audits a change to the payment intents linked to an order, given the set before it.
+func (s *salesOrderSvcImpl) publishOrderPaymentIntents(ctx context.Context, accountID, salesOrderID string, before []string) *apierror.APIError {
+	after, apiErr := s.orderPaymentIntentIDs(ctx, accountID, salesOrderID)
+	if apiErr != nil {
+		return apiErr
+	}
+	if slices.Equal(before, after) {
+		return nil
+	}
+	return audit.NewPublisher().Publish(ctx, s.repos.NewOutboxRepo(), audit.EventData{
+		ServiceName:      domain.ServiceName,
+		Action:           constants.AuditActionUpdate,
+		ResourceType:     constants.ObjectTypeSalesOrder,
+		ResourceID:       salesOrderID,
+		RootResourceType: constants.ObjectTypeSalesOrder,
+		RootResourceID:   salesOrderID,
+		Changes:          []audit.FieldChange{audit.NewFieldChange("payment_intent_ids", before, after)},
+	})
 }
 
 func (s *salesOrderSvcImpl) ProcessAccountStripeWebhook(ctx context.Context, accountID string, rawPayload []byte, signature string) *apierror.APIError {
@@ -3204,6 +3310,8 @@ func (s *salesOrderSvcImpl) ProcessAccountStripeWebhook(ctx context.Context, acc
 	if apiErr != nil {
 		return tracing.Trace(span, apiErr)
 	}
+	// The event is verified as the account's own Stripe reporting it, so what it changes is attributed to Stripe.
+	ctx = appctx.WithSystemIdentity(ctx, constants.SystemActorStripe, accountID)
 
 	// Event coverage mirrors the retired legacy webhook: succeeded links the payment and records the receivables transaction, failed/canceled roll that back, and payout.paid stamps when funds actually land. Anything else is acknowledged without action.
 	switch event.Type {
@@ -3216,12 +3324,12 @@ func (s *salesOrderSvcImpl) ProcessAccountStripeWebhook(ctx context.Context, acc
 		if paymentIntent == nil || paymentIntent.ID == "" {
 			return nil
 		}
-		return tracing.Trace(span, s.handleAccountPaymentIntentFailed(ctx, paymentIntent.ID))
+		return tracing.Trace(span, s.handleAccountPaymentIntentFailed(ctx, accountID, paymentIntent.ID))
 	case "payment_intent.canceled":
 		if paymentIntent == nil || paymentIntent.ID == "" {
 			return nil
 		}
-		return tracing.Trace(span, s.handleAccountPaymentIntentCanceled(ctx, paymentIntent.ID))
+		return tracing.Trace(span, s.handleAccountPaymentIntentCanceled(ctx, accountID, paymentIntent.ID))
 	case "payout.paid":
 		return tracing.Trace(span, s.enqueueAccountPayoutPaid(ctx, accountID, event))
 	default:
@@ -3282,6 +3390,7 @@ func (s *salesOrderSvcImpl) ReconcileAccountStripePayout(ctx context.Context, ac
 	if apiErr != nil {
 		return tracing.Trace(span, apiErr)
 	}
+	ctx = appctx.WithSystemIdentity(ctx, constants.SystemActorStripe, accountID)
 	return tracing.Trace(span, s.handleAccountPayoutPaid(ctx, accountID, s.checkoutClientFactory.Build(stripeCreds.PrivateKey), event))
 }
 
@@ -3312,7 +3421,7 @@ func (s *salesOrderSvcImpl) handleAccountPaymentIntentSucceeded(ctx context.Cont
 	}
 
 	return s.withTx(ctx, func(txCtx context.Context, txSvc *salesOrderSvcImpl) *apierror.APIError {
-		if apiErr := txSvc.RecordOrderPayment(txCtx, orderID, paymentIntent.ID); apiErr != nil {
+		if apiErr := txSvc.linkOrderPayment(txCtx, accountID, orderID, paymentIntent.ID); apiErr != nil {
 			return apiErr
 		}
 
@@ -3346,55 +3455,131 @@ func (s *salesOrderSvcImpl) handleAccountPaymentIntentSucceeded(ctx context.Cont
 
 		amount := decimal.NewFromInt(paymentIntent.Amount).Div(decimal.NewFromInt(100)).String()
 		note := "Payment captured by Stripe"
-		return txRepo.Create(txCtx, txID, number, string(constants.TransactionTypePayment), accountID, customerID, &paymentIntent.ID, stripeTransactionMethodCode(paymentIntent.PaymentMethodTypes), nil, nil, &note, amount, dollarUnitID, nil, nil)
+		if apiErr := txRepo.Create(txCtx, txID, number, string(constants.TransactionTypePayment), accountID, customerID, &paymentIntent.ID, stripeTransactionMethodCode(paymentIntent.PaymentMethodTypes), nil, nil, &note, amount, dollarUnitID, nil, nil); apiErr != nil {
+			return apiErr
+		}
+		created, apiErr := txRepo.Get(txCtx, accountID, txID)
+		if apiErr != nil {
+			return apiErr
+		}
+		return audit.NewPublisher().Publish(txCtx, txSvc.repos.NewOutboxRepo(), audit.EventData{
+			ServiceName:  domain.ServiceName,
+			Action:       constants.AuditActionCreate,
+			ResourceType: constants.ObjectTypeTransaction,
+			ResourceID:   created.ID,
+			Changes:      audit.ComputeChanges(nil, created),
+		})
 	})
 }
 
 // handleAccountPaymentIntentFailed marks the recorded transaction as failed and unwinds its allocations and the order link. Mirrors the legacy webhook: a payment intent with no recorded transaction is a no-op.
-func (s *salesOrderSvcImpl) handleAccountPaymentIntentFailed(ctx context.Context, paymentIntentID string) *apierror.APIError {
+func (s *salesOrderSvcImpl) handleAccountPaymentIntentFailed(ctx context.Context, accountID, paymentIntentID string) *apierror.APIError {
 	return s.withTx(ctx, func(txCtx context.Context, txSvc *salesOrderSvcImpl) *apierror.APIError {
 		txRepo := txSvc.repos.NewTransactionRepo()
-		record, apiErr := txRepo.FindByStripePaymentID(txCtx, paymentIntentID)
+		existing, allocations, apiErr := txSvc.stripeTransaction(txCtx, accountID, paymentIntentID)
+		if apiErr != nil || existing == nil {
+			return apiErr
+		}
+
+		if apiErr := txRepo.UpdateNote(txCtx, existing.ID, "Payment failed in Stripe"); apiErr != nil {
+			return apiErr
+		}
+		if apiErr := txRepo.DeleteAllocations(txCtx, existing.ID); apiErr != nil {
+			return apiErr
+		}
+		updated, apiErr := txRepo.Get(txCtx, accountID, existing.ID)
 		if apiErr != nil {
 			return apiErr
 		}
-		if record == nil {
-			return nil
-		}
-
-		if apiErr := txRepo.UpdateNote(txCtx, record.ID, "Payment failed in Stripe"); apiErr != nil {
+		if apiErr := audit.NewPublisher().Publish(txCtx, txSvc.repos.NewOutboxRepo(), audit.EventData{
+			ServiceName:  domain.ServiceName,
+			Action:       constants.AuditActionUpdate,
+			ResourceType: constants.ObjectTypeTransaction,
+			ResourceID:   existing.ID,
+			Changes:      audit.ComputeChanges(existing, updated),
+		}); apiErr != nil {
 			return apiErr
 		}
-		if apiErr := txRepo.DeleteAllocations(txCtx, record.ID); apiErr != nil {
+		if apiErr := txSvc.publishAllocationsDeleted(txCtx, allocations); apiErr != nil {
 			return apiErr
 		}
-		return txSvc.unlinkOrderPaymentIntent(txCtx, paymentIntentID)
+		return txSvc.unlinkOrderPaymentIntent(txCtx, accountID, paymentIntentID)
 	})
 }
 
 // handleAccountPaymentIntentCanceled deletes the recorded transaction entirely along with its allocations, amount, and the order link. Mirrors the legacy webhook: a payment intent with no recorded transaction is a no-op.
-func (s *salesOrderSvcImpl) handleAccountPaymentIntentCanceled(ctx context.Context, paymentIntentID string) *apierror.APIError {
+func (s *salesOrderSvcImpl) handleAccountPaymentIntentCanceled(ctx context.Context, accountID, paymentIntentID string) *apierror.APIError {
 	return s.withTx(ctx, func(txCtx context.Context, txSvc *salesOrderSvcImpl) *apierror.APIError {
 		txRepo := txSvc.repos.NewTransactionRepo()
-		record, apiErr := txRepo.FindByStripePaymentID(txCtx, paymentIntentID)
-		if apiErr != nil {
+		existing, allocations, apiErr := txSvc.stripeTransaction(txCtx, accountID, paymentIntentID)
+		if apiErr != nil || existing == nil {
 			return apiErr
-		}
-		if record == nil {
-			return nil
 		}
 
-		if apiErr := txRepo.DeleteAllocations(txCtx, record.ID); apiErr != nil {
+		if apiErr := txRepo.DeleteAllocations(txCtx, existing.ID); apiErr != nil {
 			return apiErr
 		}
-		if apiErr := txRepo.Delete(txCtx, record.ID); apiErr != nil {
+		if apiErr := txRepo.Delete(txCtx, existing.ID); apiErr != nil {
 			return apiErr
 		}
-		if apiErr := txRepo.DeleteQuantity(txCtx, record.AmountID); apiErr != nil {
+		if apiErr := txRepo.DeleteQuantity(txCtx, existing.AmountID); apiErr != nil {
 			return apiErr
 		}
-		return txSvc.unlinkOrderPaymentIntent(txCtx, paymentIntentID)
+		if apiErr := txSvc.publishAllocationsDeleted(txCtx, allocations); apiErr != nil {
+			return apiErr
+		}
+		if apiErr := audit.NewPublisher().Publish(txCtx, txSvc.repos.NewOutboxRepo(), audit.EventData{
+			ServiceName:  domain.ServiceName,
+			Action:       constants.AuditActionDelete,
+			ResourceType: constants.ObjectTypeTransaction,
+			ResourceID:   existing.ID,
+			Changes:      audit.ComputeChanges(existing, (*domain.Transaction)(nil)),
+		}); apiErr != nil {
+			return apiErr
+		}
+		return txSvc.unlinkOrderPaymentIntent(txCtx, accountID, paymentIntentID)
 	})
+}
+
+// stripeTransaction loads the account's transaction recorded for a Stripe payment intent, with its allocations, or nil when none was recorded.
+func (s *salesOrderSvcImpl) stripeTransaction(ctx context.Context, accountID, paymentIntentID string) (*domain.Transaction, []*domain.TransactionAllocation, *apierror.APIError) {
+	txRepo := s.repos.NewTransactionRepo()
+	record, apiErr := txRepo.FindByStripePaymentID(ctx, paymentIntentID)
+	if apiErr != nil || record == nil {
+		return nil, nil, apiErr
+	}
+	existing, apiErr := txRepo.Get(ctx, accountID, record.ID)
+	if apiErr != nil {
+		if apiErr.Code == apierror.ErrorCodeResourceNotFound {
+			slog.WarnContext(ctx, "account stripe webhook references another account's transaction, skipping",
+				"account_id", accountID,
+				"payment_intent_id", paymentIntentID,
+			)
+			return nil, nil, nil
+		}
+		return nil, nil, apiErr
+	}
+	allocations, apiErr := txRepo.GetAllocations(ctx, existing.ID)
+	if apiErr != nil {
+		return nil, nil, apiErr
+	}
+	return existing, allocations, nil
+}
+
+// publishAllocationsDeleted audits the deletion of each of a transaction's allocations.
+func (s *salesOrderSvcImpl) publishAllocationsDeleted(ctx context.Context, allocations []*domain.TransactionAllocation) *apierror.APIError {
+	for _, allocation := range allocations {
+		if apiErr := audit.NewPublisher().Publish(ctx, s.repos.NewOutboxRepo(), audit.EventData{
+			ServiceName:  domain.ServiceName,
+			Action:       constants.AuditActionDelete,
+			ResourceType: constants.ObjectTypeTransactionAllocation,
+			ResourceID:   allocation.ID,
+			Changes:      audit.ComputeChanges(allocation, (*domain.TransactionAllocation)(nil)),
+		}); apiErr != nil {
+			return apiErr
+		}
+	}
+	return nil
 }
 
 // handleAccountPayoutPaid stamps funds_received_at on every transaction funded by the payout, resolved by walking the payout's balance transactions in Stripe.
@@ -3416,11 +3601,49 @@ func (s *salesOrderSvcImpl) handleAccountPayoutPaid(ctx context.Context, account
 		return nil
 	}
 
-	return s.repos.NewTransactionRepo().UpdateFundsReceivedByStripePaymentIDs(ctx, accountID, ids, time.Unix(payout.ArrivalDate, 0))
+	return s.withTx(ctx, func(txCtx context.Context, txSvc *salesOrderSvcImpl) *apierror.APIError {
+		txRepo := txSvc.repos.NewTransactionRepo()
+		transactionIDs, apiErr := txRepo.LockIDsByStripePaymentIDs(txCtx, accountID, ids)
+		if apiErr != nil || len(transactionIDs) == 0 {
+			return apiErr
+		}
+		before, apiErr := txRepo.GetByIDs(txCtx, accountID, transactionIDs)
+		if apiErr != nil {
+			return apiErr
+		}
+		if apiErr := txRepo.UpdateFundsReceivedByStripePaymentIDs(txCtx, accountID, ids, time.Unix(payout.ArrivalDate, 0)); apiErr != nil {
+			return apiErr
+		}
+		after, apiErr := txRepo.GetByIDs(txCtx, accountID, transactionIDs)
+		if apiErr != nil {
+			return apiErr
+		}
+		priorByID := make(map[string]*domain.Transaction, len(before))
+		for _, t := range before {
+			priorByID[t.ID] = t
+		}
+		for _, updated := range after {
+			prior, ok := priorByID[updated.ID]
+			if !ok {
+				continue
+			}
+			// A redelivered payout restamps the same date, which the publisher drops as a no-op.
+			if apiErr := audit.NewPublisher().Publish(txCtx, txSvc.repos.NewOutboxRepo(), audit.EventData{
+				ServiceName:  domain.ServiceName,
+				Action:       constants.AuditActionUpdate,
+				ResourceType: constants.ObjectTypeTransaction,
+				ResourceID:   updated.ID,
+				Changes:      audit.ComputeChanges(prior, updated),
+			}); apiErr != nil {
+				return apiErr
+			}
+		}
+		return nil
+	})
 }
 
-// unlinkOrderPaymentIntent removes the order↔payment-intent link if one exists.
-func (s *salesOrderSvcImpl) unlinkOrderPaymentIntent(ctx context.Context, paymentIntentID string) *apierror.APIError {
+// unlinkOrderPaymentIntent removes the order↔payment-intent link if one exists, and audits the account's order losing it.
+func (s *salesOrderSvcImpl) unlinkOrderPaymentIntent(ctx context.Context, accountID, paymentIntentID string) *apierror.APIError {
 	opiRepo := s.repos.NewOrderPaymentIntentRepo()
 	link, apiErr := opiRepo.FindByPaymentIntentID(ctx, paymentIntentID)
 	if apiErr != nil {
@@ -3429,7 +3652,14 @@ func (s *salesOrderSvcImpl) unlinkOrderPaymentIntent(ctx context.Context, paymen
 	if link == nil {
 		return nil
 	}
-	return opiRepo.Delete(ctx, link.ID)
+	before, apiErr := s.orderPaymentIntentIDs(ctx, accountID, link.SalesOrderID)
+	if apiErr != nil {
+		return apiErr
+	}
+	if apiErr := opiRepo.Delete(ctx, link.ID); apiErr != nil {
+		return apiErr
+	}
+	return s.publishOrderPaymentIntents(ctx, accountID, link.SalesOrderID, before)
 }
 
 // stripeTransactionMethodCode maps Stripe payment method types to the internal transaction method code, mirroring the legacy webhook's mapping and precedence: card, then US bank account, then Link (which reads as credit card).

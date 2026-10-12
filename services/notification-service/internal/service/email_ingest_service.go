@@ -9,6 +9,8 @@ import (
 	"time"
 
 	"github.com/open-mrp/api/services/notification-service/internal/domain"
+	"github.com/open-mrp/api/shared/appctx"
+	"github.com/open-mrp/api/shared/audit"
 	"github.com/open-mrp/api/shared/constants"
 	apierror "github.com/open-mrp/api/shared/errors"
 	"github.com/open-mrp/api/shared/id"
@@ -66,7 +68,7 @@ func externalSenderLabel(name, address string) string {
 }
 
 // IngestInboundEmail threads a parsed inbound email into the conversation bound to its inbox, records it in the email_message ledger for at-least-once dedup, and dispatches it to the inbox's agent.
-// It is a system operation (no caller identity): the account is taken from the resolved inbox.
+// It is a system operation (no caller identity): the account is taken from the resolved inbox, and what it writes is attributed to the email-ingest system identity.
 func (s *conversationSvcImpl) IngestInboundEmail(ctx context.Context, in domain.IngestInboundEmailInput) *apierror.APIError {
 	ctx, span := conversationSvcTracer.Start(ctx, "service.conversation.ingest_inbound_email")
 	defer span.End()
@@ -91,6 +93,7 @@ func (s *conversationSvcImpl) IngestInboundEmail(ctx context.Context, in domain.
 		return nil
 	}
 	accountID := inbox.AccountID
+	ctx = appctx.WithSystemIdentity(ctx, constants.SystemActorEmailIngest, accountID)
 
 	// Redelivery dedup: if this rfc Message-ID is already recorded, ack and skip.
 	if _, apiErr := s.repoFactory.NewEmailMessageRepo().GetByRfcID(ctx, in.RfcMessageID); apiErr == nil {
@@ -285,6 +288,19 @@ func (s *conversationSvcImpl) createEmailThreadConversation(txCtx context.Contex
 	if wfErr := f.NewConversationRepo().SetWorkflowStatus(txCtx, conversationID, inbox.AccountID, string(constants.ConversationWorkflowStatusNew)); wfErr != nil {
 		return "", wfErr
 	}
+	created, getErr := f.NewConversationRepo().GetByID(txCtx, conversationID, inbox.AccountID)
+	if getErr != nil {
+		return "", getErr
+	}
+	if pubErr := audit.NewPublisher().Publish(txCtx, f.NewOutboxRepo(), audit.EventData{
+		ServiceName:  domain.ServiceName,
+		Action:       constants.AuditActionCreate,
+		ResourceType: constants.ObjectTypeConversation,
+		ResourceID:   conversationID,
+		Changes:      audit.ComputeChanges(nil, created),
+	}); pubErr != nil {
+		return "", pubErr
+	}
 
 	partRepo := f.NewParticipantRepo()
 	seenAgents := map[string]bool{}
@@ -297,12 +313,15 @@ func (s *conversationSvcImpl) createEmailThreadConversation(txCtx context.Contex
 		if pgenErr != nil {
 			return pgenErr
 		}
-		return partRepo.CreateAgent(txCtx, pid, inbox.AccountID, &domain.AddAgentParticipantInput{
+		if cErr := partRepo.CreateAgent(txCtx, pid, inbox.AccountID, &domain.AddAgentParticipantInput{
 			ConversationID:  conversationID,
 			AgentConfigID:   agentConfigID,
 			TriggerPolicy:   policy,
 			TriggerKeywords: keywords,
-		})
+		}); cErr != nil {
+			return cErr
+		}
+		return publishParticipantAdded(txCtx, f, partRepo, pid, conversationID)
 	}
 
 	// Seat the inbox's triage agent first. Email has no @mention, so the inbox's policy (default "always") decides whether every inbound message triggers a run.
@@ -348,6 +367,9 @@ func (s *conversationSvcImpl) createEmailThreadConversation(txCtx context.Contex
 				}); cErr != nil {
 					return "", cErr
 				}
+				if pubErr := publishParticipantAdded(txCtx, f, partRepo, pid, conversationID); pubErr != nil {
+					return "", pubErr
+				}
 			case domain.MessagingGroupMemberTypeAgent:
 				if gm.AgentConfigID == nil {
 					continue
@@ -359,6 +381,21 @@ func (s *conversationSvcImpl) createEmailThreadConversation(txCtx context.Contex
 		}
 	}
 	return conversationID, nil
+}
+
+// publishParticipantAdded audits a participant seated on a new email thread, as AddParticipant does for one added by hand.
+func publishParticipantAdded(ctx context.Context, f domain.RepoFactory, partRepo domain.ParticipantRepo, participantID, conversationID string) *apierror.APIError {
+	added, apiErr := partRepo.GetByID(ctx, participantID, conversationID)
+	if apiErr != nil {
+		return apiErr
+	}
+	return audit.NewPublisher().Publish(ctx, f.NewOutboxRepo(), audit.EventData{
+		ServiceName:  domain.ServiceName,
+		Action:       constants.AuditActionCreate,
+		ResourceType: constants.ObjectTypeConversationParticipant,
+		ResourceID:   participantID,
+		Changes:      audit.ComputeChanges(nil, added),
+	})
 }
 
 // threadCandidates collects the rfc Message-IDs an inbound mail references (In-Reply-To first, then

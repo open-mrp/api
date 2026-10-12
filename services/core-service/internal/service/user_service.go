@@ -334,12 +334,29 @@ func (s *userSvcImpl) UploadUserPhoto(ctx context.Context, userID string, file [
 	}
 
 	imageURL := "/v1/core/users/" + userID + "/photo"
-	userRepo := s.repos.NewUserRepo()
-	if apiErr := userRepo.UpdateImageURL(ctx, userID, &imageURL); apiErr != nil {
-		return tracing.Trace(span, apiErr)
-	}
-
-	return nil
+	return tracing.Trace(span, s.withTx(ctx, func(txCtx context.Context, txSvc *userSvcImpl) *apierror.APIError {
+		userRepo := txSvc.repos.NewUserRepo()
+		old, apiErr := userRepo.FindByID(txCtx, userID)
+		if apiErr != nil {
+			return apiErr
+		}
+		if apiErr := userRepo.UpdateImageURL(txCtx, userID, &imageURL); apiErr != nil {
+			return apiErr
+		}
+		updated, apiErr := userRepo.FindByID(txCtx, userID)
+		if apiErr != nil {
+			return apiErr
+		}
+		// The image path never changes between uploads, so the metadata flag is what records a replaced photo.
+		return audit.NewPublisher().Publish(txCtx, txSvc.repos.NewOutboxRepo(), audit.EventData{
+			ServiceName:  domain.ServiceName,
+			Action:       constants.AuditActionUpdate,
+			ResourceType: constants.ObjectTypeUser,
+			ResourceID:   userID,
+			Changes:      audit.ComputeChanges(old, updated),
+			Metadata:     map[string]any{"photo_uploaded": true},
+		})
+	}))
 }
 
 // userPhotoKey is where a user's photo lives: {account}/{user}.png under the account the request

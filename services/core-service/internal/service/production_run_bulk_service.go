@@ -473,6 +473,13 @@ func writeBulkCreateProductionRuns(txCtx context.Context, txRepos domain.RepoFac
 				if apiErr := prRepo.SetBatchProductionRunID(txCtx, accountID, b.BatchID, run.ProductionRunID); apiErr != nil {
 					return apiErr
 				}
+				batch, apiErr := batchRepo.Find(txCtx, accountID, b.BatchID)
+				if apiErr != nil {
+					return apiErr
+				}
+				if apiErr := publishRunBatchCreated(txCtx, txRepos, run.ProductionRunID, baseBatchOf(batch)); apiErr != nil {
+					return apiErr
+				}
 
 				batchIDs = append(batchIDs, b.BatchID)
 			}

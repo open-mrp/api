@@ -25,10 +25,10 @@ type Job struct {
 	// Error is the failure that sank the job as a whole. A row that failed carries its
 	// own on its RowResult instead.
 	Error       *apierror.ResponseError
-	StartedAt   *time.Time
-	CompletedAt *time.Time
-	FailedAt    *time.Time
-	CancelledAt *time.Time
+	StartedAt   *time.Time `audit:"started_at"`
+	CompletedAt *time.Time `audit:"completed_at"`
+	FailedAt    *time.Time `audit:"failed_at"`
+	CancelledAt *time.Time `audit:"cancelled_at"`
 	CreatedAt   time.Time
 	UpdatedAt   time.Time
 }

@@ -123,6 +123,39 @@ func (s *AuditEventConsumerTestSuite) TestHandleMessage_Success() {
 	s.NoError(err)
 }
 
+// A background write publishes under a system identity: no actor account and no request. It is
+// stored with the process as the actor so the event is readable as "Stripe did this".
+func (s *AuditEventConsumerTestSuite) TestHandleMessage_SystemActor() {
+	identity := types.NewSystemIdentity(constants.SystemActorStripe, "acct_1")
+	msg := makeAuditAMQPMessage(s.T(), identity, validAuditPayload(), "")
+
+	s.auditSvc.EXPECT().
+		SaveAuditEvent(gomock.Any(), gomock.Any()).
+		DoAndReturn(func(_ context.Context, event *domain.AuditEvent) *apierror.APIError {
+			s.Equal("system:stripe", event.ActorID)
+			s.Equal(string(types.IdentityActorTypeSystem), event.IdentityType)
+			s.Equal(string(types.IdentityRelationTypeUnassigned), event.ActorType)
+			s.Equal("acct_1", event.AccountID)
+			s.Require().NotNil(event.TargetAccountID)
+			s.Equal("acct_1", *event.TargetAccountID)
+			s.Nil(event.RequestID)
+			return nil
+		}).Times(1)
+
+	s.NoError(s.consumer.handleMessage(context.Background(), msg))
+}
+
+// Only processes OpenMRP names may appear as a system actor; anything else is a bug upstream.
+func (s *AuditEventConsumerTestSuite) TestHandleMessage_UnknownSystemActorRejected() {
+	identity := types.NewSystemIdentity(constants.SystemActorStripe, "acct_1")
+	identity.Actor.ID = "system:somebody"
+	msg := makeAuditAMQPMessage(s.T(), identity, validAuditPayload(), "")
+
+	s.auditSvc.EXPECT().SaveAuditEvent(gomock.Any(), gomock.Any()).Times(0)
+
+	s.Error(s.consumer.handleMessage(context.Background(), msg))
+}
+
 func (s *AuditEventConsumerTestSuite) TestHandleMessage_InvalidJSON() {
 	msg := amqp.Delivery{Body: []byte("not json")}
 

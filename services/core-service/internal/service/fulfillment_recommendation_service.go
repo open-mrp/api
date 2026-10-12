@@ -286,7 +286,8 @@ func (s *productionScheduleSvcImpl) ApplyFulfillmentRecommendations(ctx context.
 	ctx, span := productionScheduleSvcTracer.Start(ctx, "service.production_schedule.apply_fulfillment_recommendations")
 	defer span.End()
 
-	if _, apiErr := s.writeIdentity(ctx, types.ActionUpdate); apiErr != nil {
+	identity, apiErr := s.writeIdentity(ctx, types.ActionUpdate)
+	if apiErr != nil {
 		return nil, tracing.Trace(span, apiErr)
 	}
 	if len(itemIDs) == 0 {
@@ -309,15 +310,25 @@ func (s *productionScheduleSvcImpl) ApplyFulfillmentRecommendations(ctx context.
 		if !ok {
 			return nil, tracing.Trace(span, apierror.NewValidationErrorWithParam("No recommendation exists for item "+itemID+".", "item_ids"))
 		}
-
-		policy := rec.RecommendedPolicy
-		if _, apiErr := s.UpsertItemSetting(ctx, domain.UpsertItemSettingParams{
-			ItemID:                itemID,
-			FulfillmentPolicyCode: &policy,
-		}); apiErr != nil {
-			return nil, tracing.Trace(span, apiErr)
-		}
 		applied = append(applied, rec)
+	}
+
+	// One transaction, so a failure part-way leaves no item half-adopted; each write still audits as its own setting.
+	apiErr = s.withTx(ctx, func(txCtx context.Context, txSvc *productionScheduleSvcImpl) *apierror.APIError {
+		for _, rec := range applied {
+			policy := rec.RecommendedPolicy
+			if _, apiErr := txSvc.writeItemSetting(txCtx, domain.UpsertItemSettingParams{
+				AccountID:             identity.Target.AccountID,
+				ItemID:                rec.ItemID,
+				FulfillmentPolicyCode: &policy,
+			}); apiErr != nil {
+				return apiErr
+			}
+		}
+		return nil
+	})
+	if apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
 	}
 
 	return applied, nil

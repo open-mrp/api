@@ -193,6 +193,10 @@ func (r *productionScheduleRepoImpl) ListResourceSettings(ctx context.Context, a
 			IsExcluded:          row.IsExcluded,
 			LeadTimeOffsetWeeks: decimalToFloat64(row.LeadTimeOffsetWeeks),
 		}
+		if row.LeadTimeWeeks.Valid {
+			v := decimalToFloat64(row.LeadTimeWeeks.String)
+			setting.LeadTimeWeeks = &v
+		}
 		out[i] = setting
 	}
 	return out, nil

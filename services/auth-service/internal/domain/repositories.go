@@ -51,6 +51,8 @@ type UserRepo interface {
 	Find(ctx context.Context, identifier string) (*types.User, *apierror.APIError)
 	Create(ctx context.Context, userID, email, name, hashedPassword string) (*types.User, *apierror.APIError)
 	UpdatePassword(ctx context.Context, userID string, hashedPassword string) *apierror.APIError
+	// FindLastUsedAccountID returns the active account the user last used, or nil when they belong to none.
+	FindLastUsedAccountID(ctx context.Context, userID string) (*string, *apierror.APIError)
 }
 
 type DocAPIKeyRepo interface {

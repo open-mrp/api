@@ -317,6 +317,21 @@ func (mr *MockUserRepoMockRecorder) Find(ctx, identifier any) *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Find", reflect.TypeOf((*MockUserRepo)(nil).Find), ctx, identifier)
 }
 
+// FindLastUsedAccountID mocks base method.
+func (m *MockUserRepo) FindLastUsedAccountID(ctx context.Context, userID string) (*string, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "FindLastUsedAccountID", ctx, userID)
+	ret0, _ := ret[0].(*string)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
+}
+
+// FindLastUsedAccountID indicates an expected call of FindLastUsedAccountID.
+func (mr *MockUserRepoMockRecorder) FindLastUsedAccountID(ctx, userID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "FindLastUsedAccountID", reflect.TypeOf((*MockUserRepo)(nil).FindLastUsedAccountID), ctx, userID)
+}
+
 // UpdatePassword mocks base method.
 func (m *MockUserRepo) UpdatePassword(ctx context.Context, userID, hashedPassword string) *apierror.APIError {
 	m.ctrl.T.Helper()

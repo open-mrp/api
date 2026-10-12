@@ -876,6 +876,15 @@ func (s *carrierSvcImpl) SyncOptions(ctx context.Context, carrierID string) (*do
 					if apiErr := optionRepo.Delete(txCtx, accountID, opt.ID); apiErr != nil {
 						return apiErr
 					}
+					if apiErr := audit.NewPublisher().Publish(txCtx, txSvc.repos.NewOutboxRepo(), audit.EventData{
+						ServiceName:  domain.ServiceName,
+						Action:       constants.AuditActionDelete,
+						ResourceType: constants.ObjectTypeServiceLevel,
+						ResourceID:   opt.ID,
+						Changes:      audit.ComputeChanges(opt, (*domain.ServiceLevel)(nil)),
+					}); apiErr != nil {
+						return apiErr
+					}
 				}
 			}
 
@@ -887,7 +896,7 @@ func (s *carrierSvcImpl) SyncOptions(ctx context.Context, carrierID string) (*do
 						return apiErr
 					}
 					t := token
-					_, apiErr = optionRepo.Create(txCtx, optionID, domain.CreateServiceLevelParams{
+					created, apiErr := optionRepo.Create(txCtx, optionID, domain.CreateServiceLevelParams{
 						AccountID:         accountID,
 						CarrierID:         carrierID,
 						Name:              level.Name,
@@ -897,6 +906,15 @@ func (s *carrierSvcImpl) SyncOptions(ctx context.Context, carrierID string) (*do
 						IsDefault:         false,
 					})
 					if apiErr != nil {
+						return apiErr
+					}
+					if apiErr := audit.NewPublisher().Publish(txCtx, txSvc.repos.NewOutboxRepo(), audit.EventData{
+						ServiceName:  domain.ServiceName,
+						Action:       constants.AuditActionCreate,
+						ResourceType: constants.ObjectTypeServiceLevel,
+						ResourceID:   created.ID,
+						Changes:      audit.ComputeChanges(nil, created),
+					}); apiErr != nil {
 						return apiErr
 					}
 				}

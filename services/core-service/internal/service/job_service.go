@@ -27,14 +27,16 @@ var jobSvcTracer = tracing.GetTracer("core-service.job_service")
 const maxRowResults = 100
 
 type jobSvcImpl struct {
-	repos domain.RepoFactory
+	repos     domain.RepoFactory
+	txManager TransactionManager
 }
 
 type JobSvcConfig struct {
-	// Repos (required) is the repository factory. It is the only dependency: the
-	// job service opens no transaction of its own, so it acts inside whichever one
-	// this factory belongs to.
+	// Repos (required) is the repository factory. Worker transitions open no
+	// transaction of their own, so they act inside whichever one this factory belongs to.
 	Repos domain.RepoFactory
+	// TxManager (optional; default: CancelJob writes through Repos) commits a client's cancel with its audit event.
+	TxManager TransactionManager
 }
 
 func (c *JobSvcConfig) validate() error {
@@ -49,7 +51,7 @@ func NewJobSvc(config *JobSvcConfig) domain.JobSvc {
 		panic(err)
 	}
 
-	return &jobSvcImpl{repos: config.Repos}
+	return &jobSvcImpl{repos: config.Repos, txManager: config.TxManager}
 }
 
 type jobSvcFactoryImpl struct{}
@@ -408,10 +410,23 @@ func (s *jobSvcImpl) CancelJob(ctx context.Context, params domain.CancelJobParam
 		return nil, tracing.Trace(span, apiErr)
 	}
 
-	return s.UpdateJob(ctx, domain.UpdateJobServiceParams{
+	cancel := domain.UpdateJobServiceParams{
 		JobID:  params.JobID,
 		Status: constants.JobStatusCancelled,
+	}
+	if s.txManager == nil {
+		return s.UpdateJob(ctx, cancel)
+	}
+	var cancelled *domain.Job
+	apiErr := s.txManager.WithTx(ctx, func(txCtx context.Context, f domain.RepoFactory) *apierror.APIError {
+		var apiErr *apierror.APIError
+		cancelled, apiErr = NewJobSvc(&JobSvcConfig{Repos: f}).UpdateJob(txCtx, cancel)
+		return apiErr
 	})
+	if apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
+	return cancelled, nil
 }
 
 // checkJobReadPermission checks the appropriate read permission based on the identity context.

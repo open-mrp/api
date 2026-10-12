@@ -133,14 +133,14 @@ func writeBulkUpsertItemCategories(txCtx context.Context, txRepos domain.RepoFac
 			if apiErr != nil {
 				return apiErr
 			}
+			propIDs := make([]string, 0, len(row.PropertyNames))
 			for _, propName := range row.PropertyNames {
-				prop, ok := propertyByName[strings.ToLower(propName)]
-				if !ok {
-					continue
+				if prop, ok := propertyByName[strings.ToLower(propName)]; ok {
+					propIDs = append(propIDs, prop.ID)
 				}
-				if apiErr := icRepo.UpsertProperty(spCtx, id, prop.ID); apiErr != nil {
-					return apiErr
-				}
+			}
+			if apiErr := upsertCategoryPropertiesInTx(spCtx, txRepos, id, propIDs); apiErr != nil {
+				return apiErr
 			}
 			upsertedID = id
 			isCreate = old == nil

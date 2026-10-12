@@ -316,12 +316,20 @@ func (s *productionScheduleSvcImpl) ApplyFulfillmentRecommendations(ctx context.
 	// One transaction, so a failure part-way leaves no item half-adopted; each write still audits as its own setting.
 	apiErr = s.withTx(ctx, func(txCtx context.Context, txSvc *productionScheduleSvcImpl) *apierror.APIError {
 		for _, rec := range applied {
-			policy := rec.RecommendedPolicy
-			if _, apiErr := txSvc.writeItemSetting(txCtx, domain.UpsertItemSettingParams{
+			params := domain.UpsertItemSettingParams{
 				AccountID:             identity.Target.AccountID,
 				ItemID:                rec.ItemID,
-				FulfillmentPolicyCode: &policy,
-			}); apiErr != nil {
+				FulfillmentPolicyCode: &rec.RecommendedPolicy,
+			}
+			existing, apiErr := txSvc.repos.NewProductionScheduleRepo().GetItemSetting(txCtx, params.AccountID, rec.ItemID)
+			if apiErr != nil {
+				return apiErr
+			}
+			if existing != nil {
+				params.IsExcluded = existing.IsExcluded
+				params.LotMultipleUnits = existing.LotMultipleUnits
+			}
+			if _, apiErr := txSvc.writeItemSetting(txCtx, params); apiErr != nil {
 				return apiErr
 			}
 		}

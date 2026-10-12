@@ -178,6 +178,36 @@ func TestFulfillmentRecommendations_ApplyWritesTheOverride(t *testing.T) {
 		"once applied, the recommendation should no longer be a change")
 }
 
+// Applying changes only the policy: an item kept out of planning stays out, and its lot multiple survives.
+func TestFulfillmentRecommendations_ApplyKeepsTheRestOfTheOverride(t *testing.T) {
+	t.Parallel()
+
+	itemID := createSellableItem(t, uniqueName("e2e-recommend-keep"))
+	status, body, err := apiClient.Put(itemSettingsPath+"/"+itemID, map[string]any{
+		"participation_status": "excluded",
+		"lot_multiple_units":   12,
+	})
+	require.NoError(t, err)
+	requireStatus(t, 200, status, body)
+	t.Cleanup(func() { _, _, _ = apiClient.Delete(itemSettingsPath + "/" + itemID) })
+
+	rec := findRecommendation(t, itemID)
+	require.NotNil(t, rec, "an excluded item is still classified")
+	recommended := jsonField(rec, "recommended_policy")
+
+	status, body, err = apiClient.Post(recommendationsApplyPath, map[string]any{"item_ids": []string{itemID}}, newIdempotencyKey())
+	require.NoError(t, err)
+	requireStatus(t, 200, status, body)
+
+	status, body, err = apiClient.GetListRaw(itemSettingsPath+"/"+itemID, nil)
+	require.NoError(t, err)
+	requireStatus(t, 200, status, body)
+	setting := parseJSON(body)
+	assert.Equal(t, recommended, jsonField(setting, "fulfillment_policy"))
+	assert.Equal(t, "excluded", jsonField(setting, "participation_status"))
+	assert.Equal(t, "12", jsonField(setting, "lot_multiple_units"))
+}
+
 func TestFulfillmentRecommendations_ApplyValidatesItsInput(t *testing.T) {
 	t.Parallel()
 

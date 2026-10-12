@@ -133,7 +133,7 @@ func (s *materialSvcImpl) writeBulkUpsertMaterials(txCtx context.Context, txRepo
 					OrderPoint:        row.OrderPoint,
 					LeadTime:          row.LeadTime,
 				}, func(ctx context.Context) *apierror.APIError {
-					if apiErr := applyItemRatesInTx(ctx, txRepos, old.UnitValueRateID, old.UnitCostRateID, row.UnitPrice, row.UnitCost); apiErr != nil {
+					if apiErr := applyItemRatesPublishingCostInTx(ctx, txRepos, accountID, old.ItemID, old.UnitValueRateID, old.UnitCostRateID, row.UnitPrice, row.UnitCost); apiErr != nil {
 						return apiErr
 					}
 					return attachItemAttributesInTx(ctx, txRepos, accountID, old.CategoryID, old.ItemID, attrIDs)

@@ -343,12 +343,15 @@ func (suite *SalesOrderSvcTestSuite) TestAccountWebhook_PaymentFailed_MarksTrans
 	suite.expectStripeWebhookCreds("ac_test")
 	suite.expectWebhookEvent(&domain.StripeWebhookEvent{ID: "evt_1", Type: "payment_intent.payment_failed"}, webhookPaymentIntent("or_1", "ac_buyer"))
 
-	suite.expectStripeTransaction(stripeTransactionFixture("Payment captured by Stripe"), []*domain.TransactionAllocation{{ID: "ta_1", TransactionID: "tr_1", AmountValue: "20"}})
+	suite.expectStripeTransaction(stripeTransactionFixture("Payment captured by Stripe"), []*domain.TransactionAllocation{{ID: "ta_1", TransactionID: "tr_1", InvoiceID: "in_1", AmountValue: "20"}})
 	// The transaction survives (with a failure note) but its allocations and the order
 	// link are unwound — mirroring the legacy webhook exactly.
 	suite.transactionRepo.EXPECT().UpdateNote(gomock.Any(), "tr_1", "Payment failed in Stripe").Return(nil).Times(1)
 	suite.transactionRepo.EXPECT().DeleteAllocations(gomock.Any(), "tr_1").Return(nil).Times(1)
 	suite.transactionRepo.EXPECT().Get(gomock.Any(), "ac_test", "tr_1").Return(stripeTransactionFixture("Payment failed in Stripe"), nil).Times(1)
+	suite.deletedRecordRepo.EXPECT().
+		CreateInAccount(gomock.Any(), constants.DeletedRecordResourceTypeTransactionAllocation, "ta_1", "ac_test", gomock.Any()).Return(nil).Times(1)
+	suite.paymentFlagsMed.EXPECT().Enqueue(gomock.Any(), "ac_test", []string{"tr_1"}, []string{"in_1"}).Return(nil).Times(1)
 	suite.opiRepo.EXPECT().FindByPaymentIntentID(gomock.Any(), "pi_test").
 		Return(&domain.OrderPaymentIntent{ID: "orpyie_1", PaymentIntentID: "pi_test", SalesOrderID: "or_1"}, nil).Times(1)
 	suite.expectOrderPaymentIntents("or_1", []string{"pi_test"}, nil)
@@ -399,6 +402,7 @@ func (suite *SalesOrderSvcTestSuite) TestAccountWebhook_PaymentFailed_NoLinkStil
 	suite.transactionRepo.EXPECT().UpdateNote(gomock.Any(), "tr_1", "Payment failed in Stripe").Return(nil).Times(1)
 	suite.transactionRepo.EXPECT().DeleteAllocations(gomock.Any(), "tr_1").Return(nil).Times(1)
 	suite.transactionRepo.EXPECT().Get(gomock.Any(), "ac_test", "tr_1").Return(stripeTransactionFixture("Payment failed in Stripe"), nil).Times(1)
+	suite.paymentFlagsMed.EXPECT().Enqueue(gomock.Any(), "ac_test", []string{"tr_1"}, []string{}).Return(nil).Times(1)
 	suite.opiRepo.EXPECT().FindByPaymentIntentID(gomock.Any(), "pi_test").Return(nil, nil).Times(1)
 
 	suite.Nil(suite.svc.ProcessAccountStripeWebhook(context.Background(), "ac_test", []byte("{}"), "sig_test"))
@@ -411,9 +415,14 @@ func (suite *SalesOrderSvcTestSuite) TestAccountWebhook_Canceled_DeletesTransact
 	suite.expectStripeWebhookCreds("ac_test")
 	suite.expectWebhookEvent(&domain.StripeWebhookEvent{ID: "evt_1", Type: "payment_intent.canceled"}, webhookPaymentIntent("or_1", "ac_buyer"))
 
-	suite.expectStripeTransaction(stripeTransactionFixture("Payment captured by Stripe"), []*domain.TransactionAllocation{{ID: "ta_1", TransactionID: "tr_1", AmountValue: "20"}})
+	suite.expectStripeTransaction(stripeTransactionFixture("Payment captured by Stripe"), []*domain.TransactionAllocation{{ID: "ta_1", TransactionID: "tr_1", InvoiceID: "in_1", AmountValue: "20"}})
 	// Unlike a failure, a cancellation removes the transaction entirely: allocations
 	// first (FK), then the transaction, then its amount quantity, then the order link.
+	suite.deletedRecordRepo.EXPECT().
+		CreateInAccount(gomock.Any(), constants.DeletedRecordResourceTypeTransaction, "tr_1", "ac_test", gomock.Any()).Return(nil).Times(1)
+	suite.deletedRecordRepo.EXPECT().
+		CreateInAccount(gomock.Any(), constants.DeletedRecordResourceTypeTransactionAllocation, "ta_1", "ac_test", gomock.Any()).Return(nil).Times(1)
+	suite.paymentFlagsMed.EXPECT().Enqueue(gomock.Any(), "ac_test", []string{"tr_1"}, []string{"in_1"}).Return(nil).Times(1)
 	deleteAllocations := suite.transactionRepo.EXPECT().DeleteAllocations(gomock.Any(), "tr_1").Return(nil).Times(1)
 	deleteTx := suite.transactionRepo.EXPECT().Delete(gomock.Any(), "tr_1").Return(nil).Times(1).After(deleteAllocations)
 	suite.transactionRepo.EXPECT().DeleteQuantity(gomock.Any(), "qt_1").Return(nil).Times(1).After(deleteTx)

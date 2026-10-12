@@ -85,6 +85,7 @@ type SalesOrderSvcTestSuite struct {
 	mediatorFactory *factorymock.MockMediatorFactory
 	idempotencyMed  *mediatormock.MockIdempotencyMed
 	readAccessMed   *mediatormock.MockReadAccessMed
+	paymentFlagsMed *mediatormock.MockPaymentFlagsMed
 
 	ctrl          *gomock.Controller
 	encryptionKey []byte
@@ -175,10 +176,12 @@ func (suite *SalesOrderSvcTestSuite) SetupTest() {
 
 	suite.idempotencyMed = mediatormock.NewMockIdempotencyMed(suite.ctrl)
 	suite.readAccessMed = mediatormock.NewMockReadAccessMed(suite.ctrl)
+	suite.paymentFlagsMed = mediatormock.NewMockPaymentFlagsMed(suite.ctrl)
 	suite.mediatorFactory = factorymock.NewMockMediatorFactory(suite.ctrl)
 	suite.mediatorFactory.EXPECT().Build(gomock.Any()).Return(domain.Mediators{
-		Idempotency: suite.idempotencyMed,
-		ReadAccess:  suite.readAccessMed,
+		Idempotency:  suite.idempotencyMed,
+		ReadAccess:   suite.readAccessMed,
+		PaymentFlags: suite.paymentFlagsMed,
 	}).AnyTimes()
 
 	// Deterministic 32-byte key so the Checkout test can round-trip encrypted creds.

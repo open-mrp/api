@@ -3500,7 +3500,7 @@ func (s *salesOrderSvcImpl) handleAccountPaymentIntentFailed(ctx context.Context
 		}); apiErr != nil {
 			return apiErr
 		}
-		if apiErr := txSvc.publishAllocationsDeleted(txCtx, allocations); apiErr != nil {
+		if apiErr := txSvc.releaseAllocations(txCtx, accountID, existing.ID, allocations); apiErr != nil {
 			return apiErr
 		}
 		return txSvc.unlinkOrderPaymentIntent(txCtx, accountID, paymentIntentID)
@@ -3516,6 +3516,9 @@ func (s *salesOrderSvcImpl) handleAccountPaymentIntentCanceled(ctx context.Conte
 			return apiErr
 		}
 
+		if apiErr := txSvc.repos.NewDeletedRecordRepo().CreateInAccount(txCtx, constants.DeletedRecordResourceTypeTransaction, existing.ID, accountID, existing); apiErr != nil {
+			return apiErr
+		}
 		if apiErr := txRepo.DeleteAllocations(txCtx, existing.ID); apiErr != nil {
 			return apiErr
 		}
@@ -3525,7 +3528,7 @@ func (s *salesOrderSvcImpl) handleAccountPaymentIntentCanceled(ctx context.Conte
 		if apiErr := txRepo.DeleteQuantity(txCtx, existing.AmountID); apiErr != nil {
 			return apiErr
 		}
-		if apiErr := txSvc.publishAllocationsDeleted(txCtx, allocations); apiErr != nil {
+		if apiErr := txSvc.releaseAllocations(txCtx, accountID, existing.ID, allocations); apiErr != nil {
 			return apiErr
 		}
 		if apiErr := audit.NewPublisher().Publish(txCtx, txSvc.repos.NewOutboxRepo(), audit.EventData{
@@ -3566,9 +3569,12 @@ func (s *salesOrderSvcImpl) stripeTransaction(ctx context.Context, accountID, pa
 	return existing, allocations, nil
 }
 
-// publishAllocationsDeleted audits the deletion of each of a transaction's allocations.
-func (s *salesOrderSvcImpl) publishAllocationsDeleted(ctx context.Context, allocations []*domain.TransactionAllocation) *apierror.APIError {
+func (s *salesOrderSvcImpl) releaseAllocations(ctx context.Context, accountID, transactionID string, allocations []*domain.TransactionAllocation) *apierror.APIError {
+	invoiceIDs := make([]string, 0, len(allocations))
 	for _, allocation := range allocations {
+		if apiErr := s.repos.NewDeletedRecordRepo().CreateInAccount(ctx, constants.DeletedRecordResourceTypeTransactionAllocation, allocation.ID, accountID, allocation); apiErr != nil {
+			return apiErr
+		}
 		if apiErr := audit.NewPublisher().Publish(ctx, s.repos.NewOutboxRepo(), audit.EventData{
 			ServiceName:  domain.ServiceName,
 			Action:       constants.AuditActionDelete,
@@ -3578,8 +3584,9 @@ func (s *salesOrderSvcImpl) publishAllocationsDeleted(ctx context.Context, alloc
 		}); apiErr != nil {
 			return apiErr
 		}
+		invoiceIDs = append(invoiceIDs, allocation.InvoiceID)
 	}
-	return nil
+	return s.mediators().PaymentFlags.Enqueue(ctx, accountID, []string{transactionID}, invoiceIDs)
 }
 
 // handleAccountPayoutPaid stamps funds_received_at on every transaction funded by the payout, resolved by walking the payout's balance transactions in Stripe.

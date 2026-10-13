@@ -29,21 +29,13 @@ while [[ $# -gt 0 ]]; do
 done
 
 git fetch --force --tags --quiet origin 2>/dev/null || true
-PREVIOUS_TAG="$(git tag --list 'v*' --sort=-v:refname --merged "$BASE_REF" | head -1 || true)"
+source "$SCRIPT_DIR/release-migration-changes.sh"
+PREVIOUS_TAG="$(release_previous_tag "$BASE_REF")"
 
-changed_in() {
-    local dir="$1"
-    if [ -z "$PREVIOUS_TAG" ]; then
-        git ls-tree -r --name-only "$BASE_REF" -- "$dir" 2>/dev/null | grep '\.sql$' || true
-    else
-        git diff --name-only "$PREVIOUS_TAG" "$BASE_REF" -- "$dir" 2>/dev/null | grep '\.sql$' || true
-    fi
-}
-
-CORE_SCHEMA="$(changed_in shared/db/migrations)"
-CORE_DATA="$(changed_in shared/db/data-migrations)"
-AGENT_SCHEMA="$(changed_in services/agent-service/db/migrations)"
-AGENT_DATA="$(changed_in services/agent-service/db/data-migrations)"
+CORE_SCHEMA="$(release_new_migrations "$PREVIOUS_TAG" "$BASE_REF" shared/db/migrations)"
+CORE_DATA="$(release_new_migrations "$PREVIOUS_TAG" "$BASE_REF" shared/db/data-migrations)"
+AGENT_SCHEMA="$(release_new_migrations "$PREVIOUS_TAG" "$BASE_REF" services/agent-service/db/migrations)"
+AGENT_DATA="$(release_new_migrations "$PREVIOUS_TAG" "$BASE_REF" services/agent-service/db/data-migrations)"
 
 if [ -z "$CORE_SCHEMA$CORE_DATA$AGENT_SCHEMA$AGENT_DATA" ]; then
     if [ "$FORMAT" = "markdown" ]; then

@@ -22,6 +22,12 @@
 #   PS_MAX_TABLES_PER_DEPLOY_REQUEST
 #                     most tables one deploy request may change (default 10, PlanetScale's limit)
 #
+# Reruns are cheap when nothing changed. A release PR is rebuilt on every push to main, but the
+# deploy request is only recut when the release's new migrations (or the tag they are measured from)
+# differ from what the open deploy request was cut from; its notes carry that fingerprint. Deploy
+# requests and branches an earlier run left for a version this release PR no longer carries (a feat
+# landing bumps 4.6.1 to 4.7.0) are closed and deleted.
+#
 # A release that changes more tables than one deploy request allows is split: the migrations are still
 # applied once to the release branch, then `schemasplit` diffs that branch against prod and packs the
 # per-table DDL into parts of at most PS_MAX_TABLES_PER_DEPLOY_REQUEST tables. Each part gets its own
@@ -94,25 +100,32 @@ info "Release $RELEASE_VERSION -> PlanetScale branch $BRANCH"
 # against the commit being released, not the PR's own diff.
 git fetch --force --tags --quiet origin 2>/dev/null || true
 
-PREVIOUS_TAG="$(git tag --list 'v*' --sort=-v:refname --merged "$BASE_REF" | head -1 || true)"
+source "$SCRIPT_DIR/release-migration-changes.sh"
+PREVIOUS_TAG="$(release_previous_tag "$BASE_REF")"
 
 if [ -z "$PREVIOUS_TAG" ]; then
     warn "No previous release tag found; treating every migration as new."
-    CHANGED="$(git ls-tree -r --name-only "$BASE_REF" -- "$MIGRATIONS_DIR" || true)"
 else
     info "Comparing $MIGRATIONS_DIR between $PREVIOUS_TAG and $BASE_REF"
-    CHANGED="$(git diff --name-only "$PREVIOUS_TAG" "$BASE_REF" -- "$MIGRATIONS_DIR" || true)"
 fi
 
-if [ -z "$CHANGED" ]; then
-    info "No migration changes in this release. Nothing to deploy."
-    emit has_migrations false
-    exit 0
-fi
+NEW_MIGRATIONS="$(release_new_migrations "$PREVIOUS_TAG" "$BASE_REF" "$MIGRATIONS_DIR")"
 
-info "Migrations in this release:"
-echo "$CHANGED" | sed 's/^/  /'
-emit has_migrations true
+if [ -n "$PREVIOUS_TAG" ]; then
+    EDITED="$(git diff --name-only "$PREVIOUS_TAG" "$BASE_REF" -- "$MIGRATIONS_DIR" | grep -vxF "${NEW_MIGRATIONS:-//none//}" || true)"
+    if [ -n "$EDITED" ]; then
+        warn "Changed since $PREVIOUS_TAG but already shipped; goose will not re-run them, so they are ignored:"
+        echo "$EDITED" | sed 's/^/  /'
+    fi
+fi
+# shellcheck disable=SC2086 # one path per word; migration file names have no spaces
+FINGERPRINT="$(release_migrations_fingerprint "$PREVIOUS_TAG" "$BASE_REF" $NEW_MIGRATIONS)"
+FINGERPRINT_MARKER="[release-migrations sha=$FINGERPRINT]"
+
+if [ -n "$NEW_MIGRATIONS" ]; then
+    info "Migrations in this release (fingerprint $FINGERPRINT):"
+    echo "$NEW_MIGRATIONS" | sed 's/^/  /'
+fi
 
 # --- Migrations already live in prod ---
 
@@ -145,6 +158,10 @@ fi
 
 pscale_cmd() {
     pscale "$@" --org "$PS_ORG"
+}
+
+dr_field() {
+    echo "$1" | jq -r "$2 // empty" 2>/dev/null || true
 }
 
 # The deploy request JSON for a branch name, or nothing when it has none. `show` resolves a branch name
@@ -184,11 +201,7 @@ done
 
 # --- Clear out earlier runs ---
 
-# Branches are recreated rather than reused. A release PR is rebuilt every time a commit lands on main,
-# and a branch left over from an earlier run may have had a since-edited migration applied to it. Cutting
-# fresh from prod means each deploy request diff describes exactly the migrations in this release. An
-# earlier run may also have split differently, so every part branch it left goes too; closing their
-# deploy requests is what tells the deploy step they were superseded.
+# Closing a deploy request is what tells the deploy step it was superseded.
 retire_branch() {
     local name="$1" open
 
@@ -204,17 +217,119 @@ retire_branch() {
     fi
 }
 
-retire_branch "$BRANCH"
+retire_release() {
+    local base="$1" part name
+    retire_branch "$base"
+    part=1
+    while [ "$part" -le 50 ]; do
+        name="$(planetscale_release_part_branch "$base" "$part")"
+        if [ -z "$(dr_json "$name")" ] && ! pscale_cmd branch show "$PS_DATABASE" "$name" >/dev/null 2>&1; then
+            break
+        fi
+        retire_branch "$name"
+        part=$((part + 1))
+    done
+}
 
-part=1
-while [ "$part" -le 50 ]; do
-    name="$(planetscale_release_part_branch "$BRANCH" "$part")"
-    if [ -z "$(dr_json "$name")" ] && ! pscale_cmd branch show "$PS_DATABASE" "$name" >/dev/null 2>&1; then
-        break
-    fi
-    retire_branch "$name"
-    part=$((part + 1))
+# The release PR's version moves as commits land (a fix after a feat keeps it, a feat after a fix bumps
+# it), and each version gets its own branch name, so the previous version's deploy request would stay
+# open forever. Anything on a release branch for a version that is neither this one nor already tagged
+# belongs to a release PR that no longer exists. Tagged versions are left alone: their deploy step owns
+# them, including a manual resume of the latest release.
+RELEASED_BRANCHES="$(git tag --list 'v*' | while IFS= read -r tag; do planetscale_release_branch "$tag" 2>/dev/null || true; done)"
+
+release_base_of() {
+    echo "$1" | sed -E 's/-p[0-9]+$//'
+}
+
+is_stale_release_branch() {
+    local base
+    case "$1" in release-[0-9]*) ;; *) return 1 ;; esac
+    base="$(release_base_of "$1")"
+    [ "$base" != "$BRANCH" ] || return 1
+    ! echo "$RELEASED_BRANCHES" | grep -qxF "$base"
+}
+
+STALE="$(
+    {
+        pscale_cmd deploy-request list "$PS_DATABASE" --format json 2>/dev/null |
+            jq -r '.[]? | select(.state == "open") | .branch // empty' 2>/dev/null || true
+        pscale_cmd branch list "$PS_DATABASE" --format json 2>/dev/null |
+            jq -r '.[]? | .name // empty' 2>/dev/null || true
+    } | while IFS= read -r name; do
+        if [ -n "$name" ] && is_stale_release_branch "$name"; then release_base_of "$name"; fi
+    done | sort -u
+)"
+for base in $STALE; do
+    info "Retiring $base: its version is no longer the one this release PR carries."
+    retire_release "$base"
 done
+
+if [ -z "$NEW_MIGRATIONS" ]; then
+    # A migration an earlier run prepared may since have been reverted on main.
+    retire_release "$BRANCH"
+    info "No new migrations in this release. Nothing to deploy."
+    emit has_migrations false
+    exit 0
+fi
+
+emit has_migrations true
+
+# --- Already prepared? ---
+
+# Most pushes to main while a release PR is open change no migrations. If every deploy request this
+# release has is still open and was cut from the same fingerprint, a recut would produce the same diff.
+# no_changes is not reusable: these migrations do change the schema, so that diff is wrong (#256).
+open_from_fingerprint() {
+    [ "$(dr_field "$1" '.state')" = "open" ] || return 1
+    case "$(dr_field "$1" '.deployment_state // .deployment.state')" in
+        pending|ready) ;;
+        *) return 1 ;;
+    esac
+    dr_field "$1" '.notes' | grep -qF "$FINGERPRINT_MARKER"
+}
+
+reuse_open_deploy_requests() {
+    local json count number url list="" part part_json plan_id
+
+    json="$(dr_json "$FIRST_PART_BRANCH")"
+    if [ -n "$json" ] && [ "$(dr_field "$json" '.state')" = "open" ]; then
+        read -r plan_id _ count <<<"$(planetscale_parse_plan_marker "$(dr_field "$json" '.notes')") "
+        [ -n "${plan_id:-}" ] && [ -n "${count:-}" ] || return 1
+        for part in $(seq 1 "$count"); do
+            part_json="$(dr_json "$(planetscale_release_part_branch "$BRANCH" "$part")")"
+            open_from_fingerprint "$part_json" || return 1
+            [ "$(planetscale_parse_plan_marker "$(dr_field "$part_json" '.notes')")" = "$plan_id $part $count" ] || return 1
+            number="$(dr_field "$part_json" '.number')"
+            [ "$part" -eq 1 ] && FIRST_NUMBER="$number"
+            url="https://app.planetscale.com/$PS_ORG/$PS_DATABASE/deploy-requests/$number"
+            list="${list}- [#${number}](${url}) on \`$(planetscale_release_part_branch "$BRANCH" "$part")\` — part $part of $count"$'\n'
+        done
+    else
+        json="$(dr_json "$BRANCH")"
+        open_from_fingerprint "$json" || return 1
+        count=1
+        FIRST_NUMBER="$(dr_field "$json" '.number')"
+        url="https://app.planetscale.com/$PS_ORG/$PS_DATABASE/deploy-requests/$FIRST_NUMBER"
+        list="- [#${FIRST_NUMBER}](${url}) on \`$BRANCH\`"$'\n'
+    fi
+
+    info "Deploy request #$FIRST_NUMBER already carries these migrations (fingerprint $FINGERPRINT). Leaving it as it is."
+    emit deploy_request "$FIRST_NUMBER"
+    emit deploy_request_url "https://app.planetscale.com/$PS_ORG/$PS_DATABASE/deploy-requests/$FIRST_NUMBER"
+    emit deploy_request_count "$count"
+    emit_multiline deploy_requests_md "$list"
+}
+
+if reuse_open_deploy_requests; then
+    exit 0
+fi
+
+# Branches are recreated rather than reused: a branch left over from an earlier run may have had a
+# since-edited migration applied to it. Cutting fresh from prod means each deploy request diff describes
+# exactly the migrations in this release. An earlier run may also have split differently, so every part
+# branch it left goes too.
+retire_release "$BRANCH"
 
 # --- Apply migrations ---
 
@@ -316,7 +431,7 @@ open_deploy_request() {
 if [ "$PART_COUNT" -le 1 ]; then
     info "Creating deploy request into $PS_PROD_BRANCH..."
     open_deploy_request "$BRANCH" \
-        "Automated: schema for release $RELEASE_VERSION. Deployed when the release PR merges." ""
+        "Automated: schema for release $RELEASE_VERSION. Deployed when the release PR merges. $FINGERPRINT_MARKER" ""
 else
     info "Release changes more than $PS_MAX_TABLES_PER_DEPLOY_REQUEST tables; opening $PART_COUNT deploy requests."
 
@@ -334,12 +449,36 @@ else
         run_on_branch "$part_branch" "$SCRIPT_DIR/planetscale-apply-schema-part.sh"
 
         open_deploy_request "$part_branch" \
-            "Automated: schema for release $RELEASE_VERSION, part $part of $PART_COUNT ($tables). Deployed in order when the release PR merges. $(planetscale_plan_marker "$PLAN_ID" "$part" "$PART_COUNT")" \
+            "Automated: schema for release $RELEASE_VERSION, part $part of $PART_COUNT ($tables). Deployed in order when the release PR merges. $(planetscale_plan_marker "$PLAN_ID" "$part" "$PART_COUNT") $FINGERPRINT_MARKER" \
             " — part $part of $PART_COUNT: $tables"
     done
 
     # The parts carry everything; the full branch only existed to compute them.
     pscale_cmd branch delete "$PS_DATABASE" "$BRANCH" --force
+fi
+
+# The deploy step passes a no_changes deploy request as "nothing to deploy", so one that wrongly reads
+# no_changes would roll the release out without its schema. #256 did, with 00079 applied to its branch.
+# schemasplit's diff of the same branch says whether there really is nothing; wait for PlanetScale's.
+if [ "$CAN_SPLIT" = true ] && [ -f "$WORK_DIR/plan/plan.json" ] && [ "$(jq '.tables' "$WORK_DIR/plan/plan.json")" -gt 0 ]; then
+    for number in "${DR_NUMBERS[@]}"; do
+        deadline=$(( $(date +%s) + 300 ))
+        while :; do
+            state="$(dr_field "$(dr_json "$number")" '.deployment_state // .deployment.state')"
+            case "$state" in ""|pending) ;; *) break ;; esac
+            if [ "$(date +%s)" -ge "$deadline" ]; then
+                warn "PlanetScale is still computing the diff for #$number; not waiting longer."
+                break
+            fi
+            sleep 5
+        done
+        if [ "$state" = "no_changes" ]; then
+            error "Deploy request #$number reports no schema changes, but this release changes $(jq '.tables' "$WORK_DIR/plan/plan.json") table(s)."
+            error "Deploying it would ship nothing. Re-run this job to cut it again."
+            pscale_cmd deploy-request close "$PS_DATABASE" "$number" >/dev/null || true
+            exit 1
+        fi
+    done
 fi
 
 FIRST_NUMBER="${DR_NUMBERS[0]}"

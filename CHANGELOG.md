@@ -1,5 +1,12 @@
 # Changelog
 
+## [4.8.2](https://github.com/open-mrp/api/compare/v4.8.1...v4.8.2) (2026-10-13)
+
+
+### Performance Improvements
+
+* cut tail latency of customer-facing lists and reports ([#328](https://github.com/open-mrp/api/issues/328)) ([fd8ef05](https://github.com/open-mrp/api/commit/fd8ef0514f8fc4a24739abe674e2c01866d7388f))
+
 ## [4.8.1](https://github.com/open-mrp/api/compare/v4.8.0...v4.8.1) (2026-10-12)
 
 

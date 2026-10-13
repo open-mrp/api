@@ -687,13 +687,6 @@ type Delivery struct {
 	UpdatedAt          time.Time
 }
 
-type DeliveryFactDirty struct {
-	ScopeType string
-	ScopeID   string
-	AccountID string
-	MarkedAt  time.Time
-}
-
 type DeliveryLine struct {
 	ID                   string
 	DeliveryID           string
@@ -706,25 +699,6 @@ type DeliveryLine struct {
 	LotID                sql.NullString
 	CreatedAt            time.Time
 	UpdatedAt            time.Time
-}
-
-type DeliveryOrderFact struct {
-	OwnerAccountID       string
-	ShipByDate           time.Time
-	SalesOrderID         string
-	ProductLineKey       string
-	SalesOrderNumber     string
-	BuyerAccountID       string
-	SalesRepID           sql.NullString
-	SalesOrderStatusCode string
-	IssuedAt             sql.NullTime
-	FirstShipAt          sql.NullTime
-	CompletedAt          sql.NullTime
-	LeadTimeDays         sql.NullInt32
-	LeadTimeSourceCode   sql.NullString
-	QuantityOrdered      string
-	QuantityPacked       string
-	RefreshedAt          time.Time
 }
 
 type DeliveryStatus struct {
@@ -1484,52 +1458,6 @@ type OnboardingStatus struct {
 	Code      string
 	CreatedAt time.Time
 	UpdatedAt time.Time
-}
-
-type OpenOrder struct {
-	OwnerAccountID       string
-	ID                   string
-	SalesOrderTypeCode   string
-	SalesOrderStatusCode string
-	Number               string
-	BuyerAccountID       string
-	SalesRepID           sql.NullString
-	OrderDiscountID      sql.NullString
-	ShippingAddressID    string
-	CustomerPoNumber     sql.NullString
-	IssuedAt             sql.NullTime
-	CompletedAt          sql.NullTime
-	FirstShipAt          sql.NullTime
-	PromisedAt           sql.NullTime
-}
-
-type OpenOrderInvoiced struct {
-	AccountID        string
-	SalesOrderLineID string
-	ID               string
-	SalesOrderID     string
-	InvoiceID        string
-	QuantityID       string
-	QuantityValue    string
-	QuantityUnitID   string
-}
-
-type OpenOrderLine struct {
-	AccountID              string
-	SalesOrderID           string
-	ID                     string
-	ProductID              sql.NullString
-	QuantityID             string
-	QuantityValue          sql.NullString
-	QuantityUnitID         sql.NullString
-	UnitPriceID            string
-	PriceValue             sql.NullString
-	PriceNumeratorUnitID   sql.NullString
-	PriceDenominatorUnitID sql.NullString
-	UnitCostID             sql.NullString
-	CostValue              sql.NullString
-	CostNumeratorUnitID    sql.NullString
-	CostDenominatorUnitID  sql.NullString
 }
 
 type OperatingCalendar struct {
@@ -2371,7 +2299,6 @@ type SalesSync struct {
 	PassStartedAt        sql.NullTime
 	LastCompletedAt      sql.NullTime
 	UpdatedAt            time.Time
-	CursorSalesOrderID   sql.NullString
 }
 
 type SandboxAccount struct {

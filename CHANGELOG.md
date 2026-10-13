@@ -1,5 +1,12 @@
 # Changelog
 
+## [4.10.1](https://github.com/open-mrp/api/compare/v4.10.0...v4.10.1) (2026-10-13)
+
+
+### Code Refactoring
+
+* optimize deletion of shipment line quantities ([#335](https://github.com/open-mrp/api/issues/335)) ([b4e35f9](https://github.com/open-mrp/api/commit/b4e35f9cfde2112aae2546ce593b8e0e4b3b7e77))
+
 ## [4.10.0](https://github.com/open-mrp/api/compare/v4.9.0...v4.10.0) (2026-10-13)
 
 

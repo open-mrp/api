@@ -105,15 +105,13 @@ func TestShipmentsAdmin_TrackingOverrideReroutesAShippedShipment(t *testing.T) {
 		restoreShipmentRouting(t, originalCarrier, originalServiceLevel)
 	}()
 
-	status, body, err := apiClient.Post(shipmentsPath+"/"+sbShipmentID+"/actions/ship",
-		map[string]any{"email_customer": false}, newIdempotencyKey())
-	require.NoError(t, err)
+	status, body := acceptShipAndAwait(t, sbShipmentID, false)
 	requireStatus(t, 200, status, body)
 
 	target := otherCarrierID(t, originalCarrier)
 
 	// The ordinary update refuses to re-route a shipment that has already left.
-	status, body, err = apiClient.Patch(shipmentsPath+"/"+sbShipmentID,
+	status, body, err := apiClient.Patch(shipmentsPath+"/"+sbShipmentID,
 		map[string]any{"carrier_id": target}, newIdempotencyKey())
 	require.NoError(t, err)
 	requireStatus(t, 409, status, body)
@@ -163,12 +161,10 @@ func TestShippingCasesAdmin_TrackingOverrideOnAShippedCase(t *testing.T) {
 	require.NotEmpty(t, caseIDs, "fixture must be cased")
 	caseID := caseIDs[0]
 
-	status, body, err := apiClient.Post(shipmentsPath+"/"+sbShipmentID+"/actions/ship",
-		map[string]any{"email_customer": false}, newIdempotencyKey())
-	require.NoError(t, err)
+	status, body := acceptShipAndAwait(t, sbShipmentID, false)
 	requireStatus(t, 200, status, body)
 
-	status, body, err = apiClient.Post(shippingCasesPath+"/"+caseID+adminUpdateTrackingAction,
+	status, body, err := apiClient.Post(shippingCasesPath+"/"+caseID+adminUpdateTrackingAction,
 		map[string]any{"tracking_number": "1Z-CASE-FIX"}, newIdempotencyKey())
 	require.NoError(t, err)
 	requireStatus(t, 200, status, body)

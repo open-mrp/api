@@ -68,6 +68,13 @@ type SolverInput struct {
 	FinishingStepByItem map[string]FinishingStep
 	// FinishingLotByItem is the lot each finished good is made in. Absent means the SKU is planned unlotted.
 	FinishingLotByItem map[string]LotDefault
+
+	// ConfiguredEligibility maps each constraint item to the machines configured to run it. When non-nil (including empty), it replaces scan-derived SKU discovery and affinity.
+	ConfiguredEligibility map[string]map[string]bool
+	// ConfiguredItemSKU names each configured item for seeded measurements that have no batch history.
+	ConfiguredItemSKU map[string]string
+	// ConfiguredSecondsPerUnit supplies run rates for configured items that MeasureItems could not price from the demand-window batches.
+	ConfiguredSecondsPerUnit map[string]float64
 }
 
 // FinishingStep is where a finished good is made, as the second stage's history records it.
@@ -121,9 +128,11 @@ type Diagnostics struct {
 	// AtRiskOrders are commitments this plan does not cover in time. This is the most actionable thing the solver produces: everything else describes what the plan does, and this says which promises it breaks.
 	AtRiskOrders []AtRiskOrder `json:"at_risk_orders"`
 
-	// ConstraintMachineCount is how many machines the constraint department contributed, and MeasuredBatchCount how much production history was found on them. A plan with machines but no history is empty for a reason a planner can act on — nothing has been scanned in the demand window — and saying so beats an empty grid.
+	// ConstraintMachineCount is how many machines the constraint department contributed, and MeasuredBatchCount how much production history was found on them for run rates.
 	ConstraintMachineCount int `json:"constraint_machine_count"`
 	MeasuredBatchCount     int `json:"measured_batch_count"`
+	// ConfiguredItemCount is how many distinct SKUs the participating machines are configured to run. Zero with machines present means the plan is empty because runnable SKUs have not been set up yet.
+	ConfiguredItemCount int `json:"configured_item_count"`
 	// MachinesWithoutStep have no production step, so their campaigns derive no downstream department work.
 	MachinesWithoutStep int `json:"machines_without_step"`
 
@@ -166,6 +175,7 @@ func Solve(in SolverInput) SolverOutput {
 
 	out.Diagnostics.ConstraintMachineCount = len(in.Machines)
 	out.Diagnostics.MeasuredBatchCount = len(in.Batches)
+	out.Diagnostics.ConfiguredItemCount = len(in.ConfiguredEligibility)
 	out.Diagnostics.MachinesWithoutStep = in.MachinesWithoutStep
 
 	// The order book is dated and pooled before anything is measured, so both the policy pass and the sweep see the same requirements.
@@ -173,7 +183,12 @@ func Solve(in SolverInput) SolverOutput {
 	out.Diagnostics.FirmDemandUnits = firm.TotalUnits
 	out.Diagnostics.UndatedFirmOrderCount = firm.UndatedCount
 
-	measurements := MeasureItems(in.Batches)
+	measurements := ApplyConfiguredEligibility(
+		MeasureItems(in.Batches),
+		in.ConfiguredEligibility,
+		in.ConfiguredItemSKU,
+		in.ConfiguredSecondsPerUnit,
+	)
 
 	averageAdded := AverageInputsAdded(in.Batches, in.StepInputs)
 	changeover := CalibrateChangeover(

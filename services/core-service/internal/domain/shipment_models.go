@@ -165,7 +165,12 @@ type ShipShipmentParams struct {
 	AccountID     string
 	ShipmentID    string
 	EmailCustomer bool
-	Includes      []string
+}
+
+// Records what a ship was accepted to do. Stored on the job, so it carries only resolved ids.
+type ShipShipmentJob struct {
+	ShipmentID    string
+	EmailCustomer bool
 }
 
 // VoidShipmentParams holds the parameters for voiding a shipment.

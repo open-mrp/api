@@ -702,6 +702,21 @@ func extractValidateProductsRoots(root map[string]any) []map[string]any {
 
 // includesPutScenarioByOperationID maps OpenAPI operationId values to seeded PUT flows.
 var includesPutScenarioByOperationID = map[string]putIncludeScenario{
+	"replace-machine-items": {
+		pathValues: map[string]string{"id": SeedIncludePutMachineItemsMachineID},
+		buildBody: func(_ string) map[string]any {
+			return map[string]any{"item_ids": []any{SeedItemID}}
+		},
+		extractTargets: func(root map[string]any) []map[string]any {
+			var out []map[string]any
+			for _, raw := range jsonArray(root, "data") {
+				if row, ok := raw.(map[string]any); ok && jsonField(row, "object") == "item" {
+					out = append(out, row)
+				}
+			}
+			return out
+		},
+	},
 	"validate-products": {
 		buildBody:      validateProductsPutBody,
 		extractTargets: extractValidateProductsRoots,

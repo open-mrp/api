@@ -62,6 +62,26 @@
    "value": 4480
   },
   {
+   "index": "sales_line_fact_buyer_cover_idx",
+   "stat": "n_diff_pfx01",
+   "value": 0
+  },
+  {
+   "index": "sales_line_fact_buyer_cover_idx",
+   "stat": "n_diff_pfx02",
+   "value": 3531
+  },
+  {
+   "index": "sales_line_fact_buyer_cover_idx",
+   "stat": "n_diff_pfx03",
+   "value": 107717
+  },
+  {
+   "index": "sales_line_fact_buyer_cover_idx",
+   "stat": "n_diff_pfx04",
+   "value": 487110
+  },
+  {
    "index": "sales_line_fact_invoice_idx",
    "stat": "n_diff_pfx01",
    "value": 131406

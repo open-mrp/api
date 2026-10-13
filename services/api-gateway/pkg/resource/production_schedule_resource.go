@@ -146,10 +146,12 @@ type ScheduleDiagnostics struct {
 	ExcludedItemCount int32 `json:"excluded_item_count"`
 	// Machines the constraint department contributed to this solve.
 	ConstraintMachineCount int32 `json:"constraint_machine_count"`
-	// Batches found on those machines in the demand window.
-	//
-	// Zero means nothing has been scanned there, which is why a plan can be empty even with machines configured.
+	// Batches found on those machines in the demand window, used for run rates and costs.
 	MeasuredBatchCount int32 `json:"measured_batch_count"`
+	// Distinct SKUs the participating machines are configured to run.
+	//
+	// Zero with machines present means the plan is empty because runnable SKUs have not been set up yet.
+	ConfiguredItemCount int32 `json:"configured_item_count"`
 	// Machines in the constraint department with no production step.
 	//
 	// Their campaigns derive no downstream department work.
@@ -347,6 +349,7 @@ var sampleScheduleDiagnostics = ScheduleDiagnostics{
 	ExcludedItemCount:      4,
 	ConstraintMachineCount: 6,
 	MeasuredBatchCount:     1240,
+	ConfiguredItemCount:    18,
 	MachinesWithoutStep:    1,
 	ChangeoverSlopeMinutes: 2.5,
 	AverageInputsAdded:     3.2,

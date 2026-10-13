@@ -258,6 +258,7 @@ var typeRegistry = map[string]any{
 	"ModelTier":                       ModelTier(""),
 	"PriorityCode":                    PriorityCode(""),
 	"PickSort":                        PickSort(""),
+	"PickSearchMatch":                 PickSearchMatch(""),
 	"PaymentTermStatus":               PaymentTermStatus(""),
 	"OwnerType":                       OwnerType(""),
 	"CreatedByRelation":               CreatedByRelation(""),

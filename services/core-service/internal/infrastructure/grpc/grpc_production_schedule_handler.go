@@ -129,6 +129,7 @@ func (h *productionScheduleGRPCHandler) PreviewProductionSchedule(ctx context.Co
 			ExcludedItemCount:      safeconv.IntToInt32(out.Diagnostics.ExcludedItemCount),
 			ConstraintMachineCount: safeconv.IntToInt32(out.Diagnostics.ConstraintMachineCount),
 			MeasuredBatchCount:     safeconv.IntToInt32(out.Diagnostics.MeasuredBatchCount),
+			ConfiguredItemCount:    safeconv.IntToInt32(out.Diagnostics.ConfiguredItemCount),
 			MachinesWithoutStep:    safeconv.IntToInt32(out.Diagnostics.MachinesWithoutStep),
 			ChangeoverSlopeMinutes: out.Diagnostics.ChangeoverSlopeMinutes,
 			AverageInputsAdded:     out.Diagnostics.AverageInputsAdded,

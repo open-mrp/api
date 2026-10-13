@@ -362,7 +362,25 @@ func (s *productionScheduleSvcImpl) loadSolverInput(
 	}
 	in.MachinesWithoutStep = machinesWithoutStep
 
-	// 2. Batch history over the demand window: run rates, costs, affinity, lead times.
+	// 2. Configured runnable SKUs: discovery and eligibility come from machine_item, not scan history.
+	configuredRows, apiErr := s.repos.NewMachineRepo().ListItemsByMachineIDs(ctx, params.AccountID, machineIDs)
+	if apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
+	constraintItemIDs := map[string]bool{}
+	in.ConfiguredEligibility = map[string]map[string]bool{}
+	in.ConfiguredItemSKU = map[string]string{}
+	in.ConfiguredSecondsPerUnit = map[string]float64{}
+	for _, row := range configuredRows {
+		constraintItemIDs[row.ItemID] = true
+		if in.ConfiguredEligibility[row.ItemID] == nil {
+			in.ConfiguredEligibility[row.ItemID] = map[string]bool{}
+		}
+		in.ConfiguredEligibility[row.ItemID][row.MachineID] = true
+		in.ConfiguredItemSKU[row.ItemID] = row.SKU
+	}
+
+	// 3. Batch history over the demand window: run rates, costs, and lead times only.
 	windowStart := params.PlanningAsOf.AddDate(0, -params.DemandWindowMonths, 0)
 	batchRows, apiErr := repo.GetConstraintBatchMeasurements(ctx, domain.GetConstraintBatchMeasurementsParams{
 		AccountID:              params.AccountID,
@@ -375,13 +393,17 @@ func (s *productionScheduleSvcImpl) loadSolverInput(
 		return nil, tracing.Trace(span, apiErr)
 	}
 
-	constraintItemIDs := map[string]bool{}
 	stepIDs := map[string]bool{}
 	// The unit each item is actually scanned in, which is what the account-wide lot fallback counts in when no product line supplies one.
 	unitByItem := map[string]string{}
 	// The scan unit's ratio to its base unit. Every quantity the solver sees is expressed in the item's scan unit: run rates, lot sizes and costs are all denominated in it (a 60-unit doff is 60 pairs, labor time is per pair), so leaving demand or stock in base units would double every pair-counted number.
 	nativeRatioByItem := map[string]float64{}
+	measuredItems := map[string]bool{}
 	for _, row := range batchRows {
+		if !constraintItemIDs[row.Measurement.ItemID] {
+			continue
+		}
+		measuredItems[row.Measurement.ItemID] = true
 		if row.QuantityUnitID != nil && *row.QuantityUnitID != "" {
 			unitByItem[row.Measurement.ItemID] = *row.QuantityUnitID
 			if row.QuantityUnitRatio > 0 {
@@ -392,7 +414,6 @@ func (s *productionScheduleSvcImpl) loadSolverInput(
 			stepIDs[*row.ProductionStepID] = true
 		}
 		in.Batches = append(in.Batches, row.Measurement)
-		constraintItemIDs[row.Measurement.ItemID] = true
 	}
 	nativeRatioOf := func(itemID string) float64 {
 		if ratio, ok := nativeRatioByItem[itemID]; ok && ratio > 0 {
@@ -408,10 +429,43 @@ func (s *productionScheduleSvcImpl) loadSolverInput(
 	}
 
 	if len(constraintItemIDs) == 0 {
-		return in, nil // nothing produced in the window; an empty plan is the honest answer
+		return in, nil
 	}
 
-	// 3. Input BOM per step, for the changeover model.
+	for itemID := range constraintItemIDs {
+		if measuredItems[itemID] {
+			continue
+		}
+		var preferredMachine string
+		for machineID := range in.ConfiguredEligibility[itemID] {
+			preferredMachine = machineID
+			break
+		}
+		seconds, apiErr := s.measuredSecondsPerUnit(ctx, params.AccountID, itemID, preferredMachine)
+		if apiErr != nil {
+			return nil, tracing.Trace(span, apiErr)
+		}
+		if seconds <= 0 && preferredMachine != "" {
+			machine, apiErr := s.repos.NewMachineRepo().Get(ctx, domain.GetMachineParams{
+				AccountID: params.AccountID,
+				MachineID: preferredMachine,
+			})
+			if apiErr != nil && !apierror.IsNotFound(apiErr) {
+				return nil, tracing.Trace(span, apiErr)
+			}
+			if machine != nil && machine.ProductionStepID != nil && *machine.ProductionStepID != "" {
+				seconds, apiErr = s.stepSecondsPerUnit(ctx, params.AccountID, *machine.ProductionStepID)
+				if apiErr != nil {
+					return nil, tracing.Trace(span, apiErr)
+				}
+			}
+		}
+		if seconds > 0 {
+			in.ConfiguredSecondsPerUnit[itemID] = seconds
+		}
+	}
+
+	// 4. Input BOM per step, for the changeover model.
 	if len(stepIDs) > 0 {
 		consumptionRows, apiErr := repo.GetStepConsumptionItems(ctx, scheduleSortedKeys(stepIDs))
 		if apiErr != nil {

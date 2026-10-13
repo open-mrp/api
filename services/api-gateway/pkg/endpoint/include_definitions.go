@@ -537,6 +537,13 @@ func init() {
 	})
 
 	RegisterIncludes(&ObjectIncludes{
+		ObjectType: constants.ObjectTypeMachineItemScanSuggestion,
+		Fields: []IncludeFieldDef{
+			{Key: "item", ObjectType: constants.ObjectTypeItem},
+		},
+	})
+
+	RegisterIncludes(&ObjectIncludes{
 		ObjectType: constants.ObjectTypeMachineDowntimeEvent,
 		Fields: []IncludeFieldDef{
 			{Key: "machine", ObjectType: constants.ObjectTypeMachine},

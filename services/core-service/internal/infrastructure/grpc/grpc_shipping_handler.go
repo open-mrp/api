@@ -518,7 +518,7 @@ func (h *shippingGRPCHandler) DeleteShipment(ctx context.Context, req *pb.Delete
 	return &emptypb.Empty{}, nil
 }
 
-// ShipShipment marks a shipment as shipped.
+// ShipShipment accepts a ship and returns the job that will mark the shipment as shipped.
 func (h *shippingGRPCHandler) ShipShipment(ctx context.Context, req *pb.ShipShipmentRequest) (*pb.ShipShipmentResponse, error) {
 	if req == nil {
 		return nil, contracts.NewMissingGRPCRequestDataError()
@@ -530,16 +530,15 @@ func (h *shippingGRPCHandler) ShipShipment(ctx context.Context, req *pb.ShipShip
 	params := domain.ShipShipmentParams{
 		ShipmentID:    req.Id,
 		EmailCustomer: req.EmailCustomer,
-		Includes:      req.Includes,
 	}
 
-	shipment, apiErr := h.shipmentSvc.ShipShipment(ctx, params)
+	job, apiErr := h.shipmentSvc.ShipShipment(ctx, params)
 	if apiErr != nil {
 		return nil, contracts.ConvertAPIErrorToGRPC(apiErr)
 	}
 
 	return &pb.ShipShipmentResponse{
-		Shipment: shipmentToProto(shipment),
+		Job: jobToProto(job),
 	}, nil
 }
 

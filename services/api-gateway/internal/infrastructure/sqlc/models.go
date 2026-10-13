@@ -1093,6 +1093,8 @@ type InvoiceLine struct {
 	SalesOrderLineID string
 	CreatedAt        time.Time
 	UpdatedAt        time.Time
+	QuantityValue    sql.NullString
+	QuantityUnitID   sql.NullString
 }
 
 type Item struct {
@@ -1254,6 +1256,14 @@ type MachineDowntimeReason struct {
 	OeeBucket string
 	IsPlanned bool
 	SortOrder int32
+	CreatedAt time.Time
+	UpdatedAt time.Time
+}
+
+type MachineItem struct {
+	AccountID string
+	MachineID string
+	ItemID    string
 	CreatedAt time.Time
 	UpdatedAt time.Time
 }
@@ -1579,6 +1589,8 @@ type PickLine struct {
 	CreatedAt        time.Time
 	UpdatedAt        time.Time
 	PackedAt         sql.NullTime
+	QuantityValue    sql.NullString
+	QuantityUnitID   sql.NullString
 }
 
 type PortalDomain struct {
@@ -2193,17 +2205,9 @@ type SalesFactRollup struct {
 }
 
 type SalesLineFact struct {
-	AccountID          string
 	InvoicedAt         time.Time
-	InvoiceLineID      string
-	InvoiceID          string
 	SalesOrderID       string
-	BuyerAccountID     string
-	SalesRepID         sql.NullString
-	OrderDiscountID    sql.NullString
 	ProductID          string
-	ItemID             string
-	ProductLineID      string
 	RefreshedAt        time.Time
 	QuantityBase       sql.NullString
 	TotalInvoiced      sql.NullString
@@ -2211,6 +2215,14 @@ type SalesLineFact struct {
 	OrderedAt          sql.NullTime
 	IsPriced           bool
 	SalesOrderTypeCode string
+	AccountID          string
+	InvoiceLineID      string
+	InvoiceID          string
+	BuyerAccountID     string
+	SalesRepID         sql.NullString
+	OrderDiscountID    sql.NullString
+	ItemID             string
+	ProductLineID      string
 }
 
 type SalesOrder struct {
@@ -2257,19 +2269,27 @@ type SalesOrder struct {
 }
 
 type SalesOrderLine struct {
-	ID                 string
-	ProductSku         string
-	ProductDescription sql.NullString
-	LineItemNumber     sql.NullInt32
-	ProductID          sql.NullString
-	ItemID             sql.NullString
-	SalesOrderID       string
-	QuantityID         string
-	UnitPriceID        string
-	UnitCostID         sql.NullString
-	CreatedAt          time.Time
-	UpdatedAt          time.Time
-	Metadata           json.RawMessage
+	ID                         string
+	ProductSku                 string
+	ProductDescription         sql.NullString
+	LineItemNumber             sql.NullInt32
+	ProductID                  sql.NullString
+	ItemID                     sql.NullString
+	SalesOrderID               string
+	QuantityID                 string
+	UnitPriceID                string
+	UnitCostID                 sql.NullString
+	CreatedAt                  time.Time
+	UpdatedAt                  time.Time
+	Metadata                   json.RawMessage
+	QuantityValue              sql.NullString
+	QuantityUnitID             sql.NullString
+	UnitPriceValue             sql.NullString
+	UnitPriceNumeratorUnitID   sql.NullString
+	UnitPriceDenominatorUnitID sql.NullString
+	UnitCostValue              sql.NullString
+	UnitCostNumeratorUnitID    sql.NullString
+	UnitCostDenominatorUnitID  sql.NullString
 }
 
 type SalesOrderStatus struct {

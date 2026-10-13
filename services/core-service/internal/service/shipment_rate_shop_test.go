@@ -21,7 +21,7 @@ func TestShipmentSvc_RateShopReturnsTheCarriersAndServiceLevelsItsOptionsName(t 
 	repos.EXPECT().NewCarrierRepo().Return(carrierRepo).AnyTimes()
 	meds := factorymock.NewMockMediatorFactory(ctrl)
 	meds.EXPECT().Build(gomock.Any()).Return(domain.Mediators{}).AnyTimes()
-	svc := NewShipmentSvc(&ShipmentSvcConfig{Repos: repos, MediatorFactory: meds, TxManager: &stubTxManager{factory: repos}, DispatchLeases: newMemLeases()})
+	svc := NewShipmentSvc(&ShipmentSvcConfig{Repos: repos, MediatorFactory: meds, JobSvcFactory: NewJobSvcFactory(), TxManager: &stubTxManager{factory: repos}, DispatchLeases: newMemLeases()})
 
 	ground := &domain.ServiceLevel{ID: "crop_ground", Name: "Ground", CarrierID: "cr_truck"}
 	express := &domain.ServiceLevel{ID: "crop_express", Name: "Express", CarrierID: "cr_truck"}

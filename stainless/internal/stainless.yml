@@ -53,7 +53,7 @@ client_settings:
   # info.version by `make stainless` (see tools/apidocs/stainless.go).
   default_headers:
     OpenMRP-Version:
-      value: "1.0.forge-preview.8"
+      value: "1.0.forge-preview.9"
       version_header: true
   bearer_token_refresh:
     method: PUT
@@ -2017,6 +2017,20 @@ resources:
               bulk_upsert_machines_request: '#/components/schemas/BulkUpsertMachinesRequest'
               export_machines_request: '#/components/schemas/ExportMachinesRequest'
               upsert_machine_input: '#/components/schemas/UpsertMachineInput'
+          items:
+            methods:
+              list: get /v1/operations/machines/{id}/items
+              update: put /v1/operations/machines/{id}/items
+            subresources:
+              actions:
+                methods:
+                  suggest_from_scans: post /v1/operations/machines/{id}/items/actions/suggest-from-scans
+                models:
+                  list_machine_item_scan_suggestion: '#/components/schemas/List_MachineItemScanSuggestion'
+                  machine_item_scan_suggestion: '#/components/schemas/MachineItemScanSuggestion'
+                  suggest_machine_items_from_scans_request: '#/components/schemas/SuggestMachineItemsFromScansRequest'
+            models:
+              replace_machine_items_request: '#/components/schemas/ReplaceMachineItemsRequest'
         models:
           create_machine_request: '#/components/schemas/CreateMachineRequest'
           update_machine_request: '#/components/schemas/UpdateMachineRequest'

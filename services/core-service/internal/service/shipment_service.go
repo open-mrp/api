@@ -28,6 +28,7 @@ import (
 	"github.com/open-mrp/api/shared/audit"
 	s3client "github.com/open-mrp/api/shared/cloud/s3"
 	"github.com/open-mrp/api/shared/constants"
+	"github.com/open-mrp/api/shared/contracts"
 	"github.com/open-mrp/api/shared/crypto"
 	apierror "github.com/open-mrp/api/shared/errors"
 	"github.com/open-mrp/api/shared/field"
@@ -59,6 +60,7 @@ var shipmentSvcTracer = tracing.GetTracer("core-service.shipment_service")
 type shipmentSvcImpl struct {
 	repos                domain.RepoFactory
 	mediatorFactory      domain.MediatorFactory
+	jobSvcFactory        domain.JobSvcFactory
 	txManager            TransactionManager
 	shippoFactory        domain.ShippoClientFactory
 	encryptionKey        []byte
@@ -77,6 +79,9 @@ type ShipmentSvcConfig struct {
 
 	// MediatorFactory (required) builds the mediators used by this service.
 	MediatorFactory domain.MediatorFactory
+
+	// JobSvcFactory (required) builds the job service the async ship records on.
+	JobSvcFactory domain.JobSvcFactory
 
 	// TxManager (required) wraps multi-step operations in database transactions.
 	TxManager TransactionManager
@@ -120,6 +125,9 @@ func (c *ShipmentSvcConfig) validate() error {
 	if c.MediatorFactory == nil {
 		return fmt.Errorf("shipment service: mediator factory is required")
 	}
+	if c.JobSvcFactory == nil {
+		return fmt.Errorf("shipment service: job service factory is required")
+	}
 	if c.TxManager == nil {
 		return fmt.Errorf("shipment service: tx manager is required")
 	}
@@ -137,6 +145,7 @@ func NewShipmentSvc(config *ShipmentSvcConfig) domain.ShipmentSvc {
 	return &shipmentSvcImpl{
 		repos:                config.Repos,
 		mediatorFactory:      config.MediatorFactory,
+		jobSvcFactory:        config.JobSvcFactory,
 		txManager:            config.TxManager,
 		shippoFactory:        config.ShippoFactory,
 		encryptionKey:        config.EncryptionKey,
@@ -159,6 +168,7 @@ func (s *shipmentSvcImpl) withTx(ctx context.Context, fn func(context.Context, *
 		txSvc := &shipmentSvcImpl{
 			repos:                f,
 			mediatorFactory:      s.mediatorFactory,
+			jobSvcFactory:        s.jobSvcFactory,
 			txManager:            s.txManager,
 			shippoFactory:        s.shippoFactory,
 			encryptionKey:        s.encryptionKey,
@@ -167,6 +177,7 @@ func (s *shipmentSvcImpl) withTx(ctx context.Context, fn func(context.Context, *
 			s3Client:             s.s3Client,
 			shippingLabelsBucket: s.shippingLabelsBucket,
 			portalURL:            s.portalURL,
+			branding:             s.branding,
 			dispatchLeases:       s.dispatchLeases,
 		}
 		return fn(txCtx, txSvc)
@@ -669,7 +680,8 @@ func (s *shipmentSvcImpl) DeleteShipment(ctx context.Context, params domain.Dele
 	})
 }
 
-func (s *shipmentSvcImpl) ShipShipment(ctx context.Context, params domain.ShipShipmentParams) (*domain.Shipment, *apierror.APIError) {
+// Accepts a ship and returns the job that will buy labels, mark it shipped, and raise its invoice.
+func (s *shipmentSvcImpl) ShipShipment(ctx context.Context, params domain.ShipShipmentParams) (*domain.Job, *apierror.APIError) {
 	ctx, span := shipmentSvcTracer.Start(ctx, "service.shipment.ship")
 	defer span.End()
 
@@ -684,11 +696,12 @@ func (s *shipmentSvcImpl) ShipShipment(ctx context.Context, params domain.ShipSh
 	if apiErr := identity.CheckHasPermission(types.PermissionDomainShipments, types.ActionUpdate); apiErr != nil {
 		return nil, tracing.Trace(span, apiErr)
 	}
-
+	if !identity.IsTargetAccountSet() {
+		return nil, tracing.Trace(span, apierror.NewAuthenticationError("The OpenMRP-Account-ID header is required."))
+	}
 	params.AccountID = identity.Target.AccountID
 
 	meds := s.mediators()
-
 	idempotencyKey, apiErr := meds.Idempotency.UpsertIdempotencyKey(ctx, identity)
 	if apiErr != nil {
 		return nil, apiErr
@@ -696,78 +709,173 @@ func (s *shipmentSvcImpl) ShipShipment(ctx context.Context, params domain.ShipSh
 
 	switch domain.RecoveryPoint(idempotencyKey.RecoveryPoint) {
 	case domain.RecoveryPointFinished:
-		cached, err := idempotency.UnmarshalCachedResponse[domain.Shipment](ctx, idempotencyKey.ResponseCode, idempotencyKey.ResponseBody)
+		cached, err := idempotency.UnmarshalCachedResponse[domain.Job](ctx, idempotencyKey.ResponseCode, idempotencyKey.ResponseBody)
 		if err != nil {
 			return nil, tracing.Trace(span, apierror.NewInternalError(err, "Issue unmarshalling cached response."))
 		}
 		return cached.Data, cached.Error
 
-	case domain.RecoveryPointStarted, domain.RecoveryPointShipLabelsCreated:
-		// Held across the label purchase and the atomic phase, so a second ship of this shipment —
-		// another request, or this one replayed while it is still running — conflicts instead of buying again.
-		release, apiErr := s.claimDispatch(ctx, params.ShipmentID)
+	case domain.RecoveryPointStarted:
+		shipment, apiErr := s.repos.NewShipmentRepo().Get(ctx, domain.GetShipmentParams{
+			AccountID:  params.AccountID,
+			ShipmentID: params.ShipmentID,
+		})
 		if apiErr != nil {
 			return nil, tracing.Trace(span, apiErr)
 		}
-		defer release()
+		if shipment.StatusCode == string(constants.ShipmentStatusShipped) {
+			return nil, tracing.Trace(span, apierror.NewConflictErrorWithParam("Shipment has already been shipped.", "id"))
+		}
+		if apiErr := enforceInvoicesPerPeriodLimit(ctx, s.repos, params.AccountID); apiErr != nil {
+			return nil, tracing.Trace(span, apiErr)
+		}
+		if apiErr := checkInvoiceNumberFree(ctx, s.repos, shipment); apiErr != nil {
+			return nil, tracing.Trace(span, apiErr)
+		}
 
-		result, apiErr := s.shipClaimed(ctx, identity, params, idempotencyKey)
-		if apiErr != nil {
-			return nil, tracing.Trace(span, apiErr)
+		jobItems, err := json.Marshal(domain.ShipShipmentJob{
+			ShipmentID:    params.ShipmentID,
+			EmailCustomer: params.EmailCustomer,
+		})
+		if err != nil {
+			return nil, tracing.Trace(span, apierror.NewInternalError(err, "Failed to marshal ship payload."))
 		}
-		return result, nil
+
+		createdByID := jobCreatedByID(ctx, s.repos, params.AccountID, identity)
+
+		var raisedJob *domain.Job
+		apiErr = s.txManager.WithTx(ctx, func(txCtx context.Context, txRepos domain.RepoFactory) *apierror.APIError {
+			job, apiErr := s.jobSvcFactory.Build(txRepos).CreateJob(txCtx, domain.CreateJobServiceParams{
+				JobItems:     jobItems,
+				Type:         constants.JobTypeShipShipment,
+				ResourceType: constants.ObjectTypeShipment,
+				CreatedByID:  createdByID,
+			})
+			if apiErr != nil {
+				return apiErr
+			}
+			raisedJob = job
+
+			payloadJSON, err := json.Marshal(domain.BulkOperationJobEvent{JobID: job.ID})
+			if err != nil {
+				return apierror.NewInternalError(err, "Failed to marshal ship job event.")
+			}
+			msg := contracts.AmqpMessage{Data: payloadJSON, Identity: identity}
+			if requestID, ok := appctx.GetRequestID(txCtx); ok {
+				msg.RequestID = requestID
+			}
+			if _, err := txRepos.NewOutboxRepo().Create(txCtx, messaging.OutboxMessageInput{
+				ServiceName: domain.ServiceName,
+				MessageType: string(messaging.ShipShipment.RoutingKey()),
+				Destination: messaging.ApplicationExchange,
+				RoutingKey:  string(messaging.ShipShipment.RoutingKey()),
+				Payload:     msg,
+			}); err != nil {
+				return apierror.NewInternalError(err, "Failed to create ship outbox message.")
+			}
+
+			return s.mediatorFactory.Build(txRepos).Idempotency.CacheSuccessResponse(txCtx, idempotencyKey.TypeID, raisedJob)
+		})
+		if apiErr != nil {
+			return nil, meds.Idempotency.CacheErrorResponse(ctx, idempotencyKey.TypeID, apiErr)
+		}
+
+		return raisedJob, nil
 
 	default:
 		return nil, tracing.Trace(span, apierror.NewInvariantViolationError("Unexpected recovery point: "+idempotencyKey.RecoveryPoint))
 	}
 }
 
-// Ships a claimed shipment: checks, then the label purchase, then one transaction that ships and
-// invoices it. Failures before anything is bought stay uncached, so a fixed request can reuse its key.
-func (s *shipmentSvcImpl) shipClaimed(ctx context.Context, identity *types.Identity, params domain.ShipShipmentParams, idempotencyKey *domain.IdempotencyKey) (*domain.Shipment, *apierror.APIError) {
-	meds := s.mediators()
-	labelsBought := domain.RecoveryPoint(idempotencyKey.RecoveryPoint) == domain.RecoveryPointShipLabelsCreated
+// Runs an accepted ship and settles the job. The inbox de-dupes redeliveries; the terminal guard
+// covers a replay that outlives its record. Labels already recorded on the cases are reused.
+func (s *shipmentSvcImpl) ExecuteShipShipment(ctx context.Context, event domain.BulkOperationJobEvent) *apierror.APIError {
+	ctx, span := shipmentSvcTracer.Start(ctx, "service.shipment.ship.execute")
+	defer span.End()
 
+	if event.JobID == "" {
+		return tracing.Trace(span, apierror.NewValidationError("Ship job event is missing a job."))
+	}
+
+	identity, ok := appctx.GetIdentityFromContext(ctx)
+	if !ok || identity == nil {
+		return tracing.Trace(span, apierror.NewInvariantViolationError("Identity not found in context."))
+	}
+	accountID := identity.Target.AccountID
+
+	jobs := s.jobSvcFactory.Build(s.repos)
+	job, apiErr := jobs.GetJobForExecution(ctx, event.JobID)
+	if apiErr != nil {
+		return tracing.Trace(span, apiErr)
+	}
+	if job.IsTerminal() {
+		return nil
+	}
+
+	var payload domain.ShipShipmentJob
+	if err := json.Unmarshal(job.JobItems, &payload); err != nil {
+		apiErr := apierror.NewInternalError(err, "Job items are not a ship payload.")
+		jobs.FailJob(ctx, domain.FailJobParams{JobID: job.ID, ApiErr: apiErr})
+		return tracing.Trace(span, apiErr)
+	}
+
+	if _, apiErr := jobs.StartJob(ctx, domain.StartJobParams{JobID: job.ID}); apiErr != nil {
+		return tracing.Trace(span, apiErr)
+	}
+
+	release, apiErr := s.claimDispatch(ctx, payload.ShipmentID)
+	if apiErr != nil {
+		jobs.FailJob(ctx, domain.FailJobParams{JobID: job.ID, ApiErr: apiErr})
+		return tracing.Trace(span, apiErr)
+	}
+	defer release()
+
+	params := domain.ShipShipmentParams{
+		AccountID:     accountID,
+		ShipmentID:    payload.ShipmentID,
+		EmailCustomer: payload.EmailCustomer,
+	}
+
+	if apiErr := s.shipClaimed(ctx, identity, params, job.ID); apiErr != nil {
+		jobs.FailJob(ctx, domain.FailJobParams{JobID: job.ID, ApiErr: apiErr})
+		return tracing.Trace(span, apiErr)
+	}
+
+	return nil
+}
+
+// Ships a claimed shipment: checks, then the label purchase, then one transaction that ships,
+// invoices it, and settles the job. Labels already on the cases are reused so a retried execute
+// never buys twice.
+func (s *shipmentSvcImpl) shipClaimed(ctx context.Context, identity *types.Identity, params domain.ShipShipmentParams, jobID string) *apierror.APIError {
 	shipment, apiErr := s.repos.NewShipmentRepo().Get(ctx, domain.GetShipmentParams{
 		AccountID:  params.AccountID,
 		ShipmentID: params.ShipmentID,
 	})
 	if apiErr != nil {
-		return nil, apiErr
+		return apiErr
 	}
 	if shipment.StatusCode == string(constants.ShipmentStatusShipped) {
-		return nil, apierror.NewConflictErrorWithParam("Shipment has already been shipped.", "id")
-	}
-
-	// Ship creates the invoice, so enforce the per-billing-period invoice limit here — matching
-	// legacy's canCreateInvoice on ship. A ship resuming past its purchase already passed it.
-	if !labelsBought {
-		if apiErr := enforceInvoicesPerPeriodLimit(ctx, s.repos, params.AccountID); apiErr != nil {
-			return nil, apiErr
-		}
+		return apierror.NewConflictErrorWithParam("Shipment has already been shipped.", "id")
 	}
 
 	shippedByID, apiErr := s.resolveShippedByID(ctx, identity, params.AccountID)
 	if apiErr != nil {
-		return nil, apiErr
+		return apiErr
 	}
 
 	if apiErr := checkInvoiceNumberFree(ctx, s.repos, shipment); apiErr != nil {
-		return nil, apiErr
+		return apiErr
 	}
 
-	labels := shipLabels{CostRecorded: labelsBought}
-	if !labelsBought {
-		purchase, planned, apiErr := s.planShipmentLabels(ctx, shipment)
+	purchase, labels, apiErr := s.planShipmentLabels(ctx, shipment)
+	if apiErr != nil {
+		return apiErr
+	}
+	if purchase != nil {
+		labels, apiErr = s.buyShipmentLabels(ctx, shipment, purchase, "")
 		if apiErr != nil {
-			return nil, apiErr
-		}
-		labels = planned
-		if purchase != nil {
-			labels, apiErr = s.buyShipmentLabels(ctx, shipment, purchase, idempotencyKey.TypeID)
-			if apiErr != nil {
-				return nil, meds.Idempotency.CacheErrorResponse(ctx, idempotencyKey.TypeID, apiErr)
-			}
+			return apiErr
 		}
 	}
 
@@ -775,20 +883,23 @@ func (s *shipmentSvcImpl) shipClaimed(ctx context.Context, identity *types.Ident
 	// a stalled logo host would hold the ship's row locks for the length of the request.
 	letterheadLogo := fetchAccountLogo(ctx, s.repos, s.branding, params.AccountID)
 
-	var result *domain.Shipment
-	apiErr = s.withTx(ctx, func(txCtx context.Context, txSvc *shipmentSvcImpl) *apierror.APIError {
-		var apiErr *apierror.APIError
-		result, apiErr = txSvc.markShippedAndInvoice(txCtx, shipment, shippedByID, labels, params, letterheadLogo)
+	return s.withTx(ctx, func(txCtx context.Context, txSvc *shipmentSvcImpl) *apierror.APIError {
+		result, apiErr := txSvc.markShippedAndInvoice(txCtx, shipment, shippedByID, labels, params, letterheadLogo)
 		if apiErr != nil {
 			return apiErr
 		}
-		return txSvc.mediators().Idempotency.CacheSuccessResponse(txCtx, idempotencyKey.TypeID, result)
+		shipmentNumber := result.Number
+		return s.jobSvcFactory.Build(txSvc.repos).CompleteJob(txCtx, domain.CompleteJobParams{
+			JobID: jobID,
+			Results: []domain.RowResult{{
+				Index:        0,
+				Status:       constants.JobResultStatusUpdated,
+				ResourceType: constants.ObjectTypeShipment,
+				ID:           result.ID,
+				Name:         &shipmentNumber,
+			}},
+		})
 	})
-	if apiErr != nil {
-		return nil, meds.Idempotency.CacheErrorResponse(ctx, idempotencyKey.TypeID, apiErr)
-	}
-
-	return result, nil
 }
 
 // The ship's atomic phase: the shipped stamp, case SSCCs, tracking, invoice and freight cost commit
@@ -850,21 +961,6 @@ func (s *shipmentSvcImpl) markShippedAndInvoice(txCtx context.Context, shipment 
 	})
 	if apiErr != nil {
 		return nil, apiErr
-	}
-
-	if slices.Contains(params.Includes, "lines") {
-		lines, apiErr := s.repos.NewShipmentLineRepo().ListByShipment(txCtx, params.ShipmentID)
-		if apiErr != nil {
-			return nil, apiErr
-		}
-		updated.Lines = lines
-	}
-	if slices.Contains(params.Includes, "shipping_cases") {
-		cases, apiErr := caseRepo.ListByShipment(txCtx, params.ShipmentID)
-		if apiErr != nil {
-			return nil, apiErr
-		}
-		updated.ShippingCases = cases
 	}
 
 	if apiErr := audit.NewPublisher().Publish(txCtx, s.repos.NewOutboxRepo(), audit.EventData{
@@ -2297,6 +2393,10 @@ func (s *shipmentSvcImpl) recordLabelPurchase(ctx context.Context, shipment *dom
 		}
 		if apiErr := txSvc.writeBackNegotiatedRate(txCtx, shipment, result.NegotiatedRate); apiErr != nil {
 			return apiErr
+		}
+		// Async ship records labels on the cases only; the accept idempotency key is already finished.
+		if idempotencyTypeID == "" {
+			return nil
 		}
 		return txSvc.repos.NewIdempotencyKeyRepo().AdvanceRecoveryPoint(txCtx, idempotencyTypeID, domain.RecoveryPointShipLabelsCreated)
 	}

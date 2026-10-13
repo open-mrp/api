@@ -204,6 +204,7 @@ func previewFromProto(resp *pb.PreviewProductionScheduleResponse) *apiresource.P
 		diagnostics.ExcludedItemCount = d.ExcludedItemCount
 		diagnostics.ConstraintMachineCount = d.ConstraintMachineCount
 		diagnostics.MeasuredBatchCount = d.MeasuredBatchCount
+		diagnostics.ConfiguredItemCount = d.ConfiguredItemCount
 		diagnostics.MachinesWithoutStep = d.MachinesWithoutStep
 		diagnostics.ChangeoverSlopeMinutes = d.ChangeoverSlopeMinutes
 		diagnostics.AverageInputsAdded = d.AverageInputsAdded
@@ -552,6 +553,7 @@ var scheduleDiagnosticsKeyAliases = map[string]string{
 	"ExcludedItemCount":      "excluded_item_count",
 	"ConstraintMachineCount": "constraint_machine_count",
 	"MeasuredBatchCount":     "measured_batch_count",
+	"ConfiguredItemCount":    "configured_item_count",
 	"MachinesWithoutStep":    "machines_without_step",
 	"ChangeoverSlopeMinutes": "changeover_slope_minutes",
 	"AverageInputsAdded":     "average_inputs_added",

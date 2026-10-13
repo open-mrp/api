@@ -390,6 +390,10 @@ func (s *machineSvcImpl) DeleteMachine(ctx context.Context, machineID string) *a
 			return apiErr
 		}
 
+		if apiErr := txSvc.repos.NewMachineRepo().DeleteItems(txCtx, accountID, machineID); apiErr != nil {
+			return apiErr
+		}
+
 		if apiErr := txSvc.repos.NewMachineRepo().Delete(txCtx, domain.DeleteMachineParams{
 			AccountID: accountID,
 			MachineID: machineID,

@@ -511,8 +511,11 @@ func TestDashShipments_ShipReplayShipsOnce(t *testing.T) {
 	key := newIdempotencyKey()
 	shipBody := map[string]any{"email_customer": false}
 	first := dashShipmentsAction(t, shipmentID, "ship", shipBody, key)
-	requireStatus(t, 200, first.StatusCode, first.Body)
-	assert.Equal(t, stubPurchaseTracking(1, shipmentID), jsonField(parseJSON(first.Body), "master_tracking_number"))
+	requireStatus(t, 202, first.StatusCode, first.Body)
+	require.Equal(t, "job", jsonField(parseJSON(first.Body), "object"))
+	job := pollJobUntilTerminal(t, jsonField(parseJSON(first.Body), "id"))
+	require.Equal(t, "completed", jsonField(job, "status"), "the ship job should complete: %v", job)
+	assert.Equal(t, stubPurchaseTracking(1, shipmentID), jsonField(readShipment(t, shipmentID), "master_tracking_number"))
 	dashShipmentsAssertIssued(t, orderID, 2, "shipping issues the reserved pairs")
 
 	replay := dashShipmentsAction(t, shipmentID, "ship", shipBody, key)
@@ -536,8 +539,10 @@ func TestDashShipments_ShipReplayShipsOnce(t *testing.T) {
 
 	// The next real ship is only the shipment's second purchase, so no replay reached the carrier.
 	again := dashShipmentsAction(t, shipmentID, "ship", shipBody, newIdempotencyKey())
-	requireStatus(t, 200, again.StatusCode, again.Body)
-	assert.Equal(t, stubPurchaseTracking(2, shipmentID), jsonField(parseJSON(again.Body), "master_tracking_number"))
+	requireStatus(t, 202, again.StatusCode, again.Body)
+	againJob := pollJobUntilTerminal(t, jsonField(parseJSON(again.Body), "id"))
+	require.Equal(t, "completed", jsonField(againJob, "status"), "the second ship job should complete: %v", againJob)
+	assert.Equal(t, stubPurchaseTracking(2, shipmentID), jsonField(readShipment(t, shipmentID), "master_tracking_number"))
 }
 
 func TestDashShipments_ShipRejectsANonBooleanEmailFlag(t *testing.T) {
@@ -562,7 +567,8 @@ func TestDashShipments_VoidReplayUnwindsOnce(t *testing.T) {
 	shipBody := map[string]any{"email_customer": false}
 
 	shipped := dashShipmentsAction(t, shipmentID, "ship", shipBody, newIdempotencyKey())
-	requireStatus(t, 200, shipped.StatusCode, shipped.Body)
+	requireStatus(t, 202, shipped.StatusCode, shipped.Body)
+	require.Equal(t, "completed", jsonField(pollJobUntilTerminal(t, jsonField(parseJSON(shipped.Body), "id")), "status"))
 
 	voidKey := newIdempotencyKey()
 	first := dashShipmentsAction(t, shipmentID, "void", nil, voidKey)
@@ -573,9 +579,10 @@ func TestDashShipments_VoidReplayUnwindsOnce(t *testing.T) {
 	}
 
 	reshipped := dashShipmentsAction(t, shipmentID, "ship", shipBody, newIdempotencyKey())
-	requireStatus(t, 200, reshipped.StatusCode, reshipped.Body)
+	requireStatus(t, 202, reshipped.StatusCode, reshipped.Body)
+	require.Equal(t, "completed", jsonField(pollJobUntilTerminal(t, jsonField(parseJSON(reshipped.Body), "id")), "status"))
 	secondPurchase := stubPurchaseTracking(2, shipmentID)
-	require.Equal(t, secondPurchase, jsonField(parseJSON(reshipped.Body), "master_tracking_number"))
+	require.Equal(t, secondPurchase, jsonField(readShipment(t, shipmentID), "master_tracking_number"))
 
 	replay := dashShipmentsAction(t, shipmentID, "void", nil, voidKey)
 	dashShipmentsAssertReplay(t, first, replay)

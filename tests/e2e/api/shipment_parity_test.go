@@ -3,7 +3,9 @@
 package api_test
 
 import (
+	"encoding/json"
 	"fmt"
+	"net/http"
 	"strings"
 	"sync"
 	"testing"
@@ -58,12 +60,57 @@ func weighShipmentCases(t *testing.T, shipmentID, weight string) {
 	}
 }
 
+// Posts a ship and, on 202, waits for the job. A completed job returns 200 with the shipped
+// shipment body so callers can assert tracking and status the way the sync path used to. A failed
+// job returns the error's HTTP status and the job's error object. Synchronous accept rejections
+// (already shipped, duplicate invoice number) are returned as-is.
 func shipParity(t *testing.T, shipmentID string) (int, []byte) {
 	t.Helper()
-	status, body, err := apiClient.Post(shipmentsPath+"/"+shipmentID+"/actions/ship", map[string]any{"email_customer": false}, newIdempotencyKey())
+	return acceptShipAndAwait(t, shipmentID, false)
+}
+
+// acceptShipAndAwait posts ship with the given email_customer flag and settles the async job.
+func acceptShipAndAwait(t *testing.T, shipmentID string, emailCustomer bool) (int, []byte) {
+	t.Helper()
+	status, body, err := apiClient.Post(shipmentsPath+"/"+shipmentID+"/actions/ship",
+		map[string]any{"email_customer": emailCustomer}, newIdempotencyKey())
 	require.NoError(t, err)
 	require.Less(t, status, 500, "ship must not 5xx: %s", string(body))
-	return status, body
+	if status != http.StatusAccepted {
+		return status, body
+	}
+
+	jobID := jsonField(parseJSON(body), "id")
+	require.NotEmpty(t, jobID, "202 must name the job to poll: %s", string(body))
+	job := pollJobUntilTerminal(t, jobID)
+	switch jsonField(job, "status") {
+	case "completed":
+		getStatus, getBody, getErr := apiClient.GetListRaw(shipmentsPath+"/"+shipmentID, nil)
+		require.NoError(t, getErr)
+		requireStatus(t, 200, getStatus, getBody)
+		return 200, getBody
+	case "failed":
+		errObj := jsonObject(job, "error")
+		require.NotNil(t, errObj, "failed ship job must carry an error: %v", job)
+		raw, marshalErr := json.Marshal(errObj)
+		require.NoError(t, marshalErr)
+		code := jsonField(errObj, "code")
+		return shipJobErrorStatus(code), raw
+	default:
+		t.Fatalf("unexpected ship job status %q: %v", jsonField(job, "status"), job)
+		return 0, nil
+	}
+}
+
+func shipJobErrorStatus(code string) int {
+	switch code {
+	case "resource_conflict", "conflict":
+		return http.StatusConflict
+	case "validation_failed", "invalid_request_error", "invalid_format":
+		return http.StatusBadRequest
+	default:
+		return http.StatusBadRequest
+	}
 }
 
 func voidParity(t *testing.T, shipmentID string) (int, []byte) {
@@ -110,25 +157,34 @@ func linkedInvoiceID(t *testing.T, shipmentID string) string {
 
 // --- label purchases ---
 
-// Two ships of one shipment at once: one ships it, the other conflicts, and only one label purchase
-// and one invoice come of it.
+// Two ships of one shipment at once: both are accepted as jobs, one completes and the other fails,
+// and only one label purchase and one invoice come of it.
 func TestShipmentParity_ConcurrentShipsBuyOnceAndInvoiceOnce(t *testing.T) {
 	t.Parallel()
 
 	shipmentID := labelShipment(t, zipStubLabels)
 	number := jsonField(readShipment(t, shipmentID), "number")
 
-	statuses := make([]int, 2)
+	jobIDs := make([]string, 2)
 	var wg sync.WaitGroup
-	for i := range statuses {
+	for i := range jobIDs {
 		wg.Go(func() {
-			status, _, err := apiClient.Post(shipmentsPath+"/"+shipmentID+"/actions/ship", map[string]any{"email_customer": false}, newIdempotencyKey())
+			status, body, err := apiClient.Post(shipmentsPath+"/"+shipmentID+"/actions/ship",
+				map[string]any{"email_customer": false}, newIdempotencyKey())
 			assert.NoError(t, err)
-			statuses[i] = status
+			assert.Equal(t, http.StatusAccepted, status, "accept is enqueue-only: %s", string(body))
+			jobIDs[i] = jsonField(parseJSON(body), "id")
 		})
 	}
 	wg.Wait()
-	assert.ElementsMatch(t, []int{200, 409}, statuses, "exactly one ship wins; the other conflicts")
+
+	outcomes := make([]string, 0, 2)
+	for _, jobID := range jobIDs {
+		require.NotEmpty(t, jobID)
+		job := pollJobUntilTerminal(t, jobID)
+		outcomes = append(outcomes, jsonField(job, "status"))
+	}
+	assert.ElementsMatch(t, []string{"completed", "failed"}, outcomes, "exactly one ship job wins; the other fails")
 
 	shipped := readShipment(t, shipmentID)
 	assert.Equal(t, "shipped", jsonField(shipped, "status"))

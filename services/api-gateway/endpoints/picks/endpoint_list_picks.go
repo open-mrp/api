@@ -31,11 +31,18 @@ type ListPicksRequest struct {
 	EndDate *string `query:"ends_at" validate:"omitempty,date_filter"`
 	// Orders the results: `ship_by_date` puts the soonest delivery commitment first, with picks whose order has no ship-by date last; `created_at` puts the newest pick first.
 	Sort *constants.PickSort `query:"sort" default:"ship_by_date"`
+	// How `q` is matched against the pick number and the customer PO number. Defaults to `prefix`.
+	//
+	// - `prefix`: `q` matches the start of the pick number and of the customer PO number.
+	// - `contains`: `q` matches anywhere in the pick number and the customer PO number. Slower on accounts with many picks.
+	//
+	// A `q` of one or two characters matches the start of the pick number only, whichever mode is sent.
+	QMatch *constants.PickSearchMatch `query:"q_match"`
 }
 
 // Returns a paginated list of picks, soonest ship-by date first.
 //
-// The `q` search term matches the pick number (which is the order number) and the customer PO number. To narrow by customer, use `customer_ids` rather than searching for a customer name.
+// The `q` search term matches the start of the pick number (which is the order number) and of the customer PO number, ignoring case; send `q_match=contains` to match anywhere in them. A term of three or more characters also matches anywhere in the customer's name and customer number. To narrow by customer, use `customer_ids` rather than searching for a customer name.
 type ListPicksEndpoint struct{}
 
 func (e *ListPicksEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListPicksRequest, *apiresource.List[apiresource.Pick]] {

@@ -127,17 +127,25 @@ func (r *salesOrderLineRepoImpl) Create(ctx context.Context, lineID string, para
 
 	// Create the sales order line
 	err = r.queries.CreateSalesOrderLine(ctx, sqlc.CreateSalesOrderLineParams{
-		ID:                 lineID,
-		ProductSku:         params.ProductSKU,
-		ProductDescription: toNullString(params.ProductDescription),
-		LineItemNumber:     gosql.NullInt32{Int32: lineItemNumber, Valid: true},
-		ProductID:          gosql.NullString{String: params.ProductID, Valid: params.ProductID != ""},
-		ItemID:             toNullString(params.ItemID),
-		SalesOrderID:       params.SalesOrderID,
-		QuantityID:         quantityID,
-		UnitPriceID:        unitPriceID,
-		UnitCostID:         unitCostID,
-		Metadata:           metadata.Encode(params.Metadata),
+		ID:                         lineID,
+		ProductSku:                 params.ProductSKU,
+		ProductDescription:         toNullString(params.ProductDescription),
+		LineItemNumber:             gosql.NullInt32{Int32: lineItemNumber, Valid: true},
+		ProductID:                  gosql.NullString{String: params.ProductID, Valid: params.ProductID != ""},
+		ItemID:                     toNullString(params.ItemID),
+		SalesOrderID:               params.SalesOrderID,
+		QuantityID:                 quantityID,
+		UnitPriceID:                unitPriceID,
+		UnitCostID:                 unitCostID,
+		Metadata:                   metadata.Encode(params.Metadata),
+		QuantityValue:              gosql.NullString{String: params.QuantityValue, Valid: true},
+		QuantityUnitID:             gosql.NullString{String: params.QuantityUnitID, Valid: true},
+		UnitPriceValue:             gosql.NullString{String: params.UnitPriceValue, Valid: true},
+		UnitPriceNumeratorUnitID:   gosql.NullString{String: params.UnitPriceNumeratorUnitID, Valid: true},
+		UnitPriceDenominatorUnitID: gosql.NullString{String: params.UnitPriceDenominatorUnitID, Valid: true},
+		UnitCostValue:              costCopy(unitCostID.Valid, params.UnitCostValue),
+		UnitCostNumeratorUnitID:    costCopy(unitCostID.Valid, params.UnitCostNumeratorUnitID),
+		UnitCostDenominatorUnitID:  costCopy(unitCostID.Valid, params.UnitCostDenominatorUnitID),
 	})
 	if apiErr := db.MapSQLError(err); apiErr != nil {
 		return nil, tracing.Trace(span, apiErr)
@@ -145,6 +153,15 @@ func (r *salesOrderLineRepoImpl) Create(ctx context.Context, lineID string, para
 
 	// Re-fetch the created line
 	return r.Get(ctx, lineID)
+}
+
+// costCopy is a unit cost field's copy on a new line: the value its cost rate was created with, or NULL
+// when the line has no cost rate.
+func costCopy(hasCost bool, v *string) gosql.NullString {
+	if !hasCost || v == nil {
+		return gosql.NullString{}
+	}
+	return gosql.NullString{String: *v, Valid: true}
 }
 
 func (r *salesOrderLineRepoImpl) CreateMany(ctx context.Context, params []domain.CreateSalesOrderLineParams) *apierror.APIError {
@@ -158,7 +175,7 @@ func (r *salesOrderLineRepoImpl) CreateMany(ctx context.Context, params []domain
 	const (
 		quantityTuple = "(?, ?, ?, NOW(3), NOW(3))"
 		rateTuple     = "(?, ?, ?, ?, NOW(3), NOW(3))"
-		lineTuple     = "(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(3), NOW(3))"
+		lineTuple     = "(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(3), NOW(3))"
 	)
 
 	quantityTuples := make([]string, 0, len(params))
@@ -166,7 +183,7 @@ func (r *salesOrderLineRepoImpl) CreateMany(ctx context.Context, params []domain
 	rateTuples := make([]string, 0, len(params)*2)
 	rateArgs := make([]any, 0, len(params)*2*4)
 	lineTuples := make([]string, 0, len(params))
-	lineArgs := make([]any, 0, len(params)*11)
+	lineArgs := make([]any, 0, len(params)*19)
 
 	for i, p := range params {
 		quantityID, apiErr := id.GenID(id.QuantityIDPrefix, nil)
@@ -215,6 +232,10 @@ func (r *salesOrderLineRepoImpl) CreateMany(ctx context.Context, params []domain
 			unitPriceID,
 			unitCostID,
 			metadata.Encode(p.Metadata),
+			p.QuantityValue, p.QuantityUnitID,
+			p.UnitPriceValue, p.UnitPriceNumeratorUnitID, p.UnitPriceDenominatorUnitID,
+			costCopy(unitCostID.Valid, p.UnitCostValue), costCopy(unitCostID.Valid, p.UnitCostNumeratorUnitID),
+			costCopy(unitCostID.Valid, p.UnitCostDenominatorUnitID),
 		)
 	}
 
@@ -232,7 +253,9 @@ func (r *salesOrderLineRepoImpl) CreateMany(ctx context.Context, params []domain
 		return tracing.Trace(span, apiErr)
 	}
 
-	lineSQL := "INSERT INTO sales_order_line (id, product_sku, product_description, line_item_number, product_id, item_id, sales_order_id, quantity_id, unit_price_id, unit_cost_id, metadata, created_at, updated_at) VALUES " + strings.Join(lineTuples, ", ")
+	lineSQL := "INSERT INTO sales_order_line (id, product_sku, product_description, line_item_number, product_id, item_id, sales_order_id, quantity_id, unit_price_id, unit_cost_id, metadata, " +
+		"quantity_value, quantity_unit_id, unit_price_value, unit_price_numerator_unit_id, unit_price_denominator_unit_id, unit_cost_value, unit_cost_numerator_unit_id, unit_cost_denominator_unit_id, " +
+		"created_at, updated_at) VALUES " + strings.Join(lineTuples, ", ")
 	_, err = dbtx.ExecContext(ctx, lineSQL, lineArgs...)
 	if apiErr := db.MapSQLError(err); apiErr != nil {
 		return tracing.Trace(span, apiErr)
@@ -385,6 +408,10 @@ func (r *salesOrderLineRepoImpl) Update(ctx context.Context, params domain.Updat
 		}
 	}
 
+	if apiErr := db.MapSQLError(syncOrderLineCopies(ctx, r.queries.DB(), params.SalesOrderLineID)); apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
+
 	// Re-fetch the updated line
 	return r.Get(ctx, params.SalesOrderLineID)
 }
@@ -429,6 +456,9 @@ func (r *salesOrderLineRepoImpl) syncFulfillmentQuantityRows(
 			continue
 		}
 		if apiErr := db.MapSQLError(touch(ctx, quantityID)); apiErr != nil {
+			return apiErr
+		}
+		if apiErr := db.MapSQLError(syncFulfillmentCopiesByQuantity(ctx, r.queries.DB(), quantityID)); apiErr != nil {
 			return apiErr
 		}
 	}

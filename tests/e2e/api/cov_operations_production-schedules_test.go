@@ -218,6 +218,13 @@ func TestProductionSchedules_GenerateAndRead(t *testing.T) {
 	assert.NotNil(t, created["settings_snapshot"], "settings must be snapshotted onto the version")
 	assert.NotNil(t, created["diagnostics"], "diagnostics must be snapshotted onto the version")
 
+	diagnostics := jsonObject(created, "diagnostics")
+	require.NotNil(t, diagnostics)
+	configuredCount, ok := diagnostics["configured_item_count"].(float64)
+	require.True(t, ok, "diagnostics.configured_item_count must be present")
+	assert.Greater(t, configuredCount, float64(0),
+		"seed machine_item rows must discover constraint SKUs without relying on scan-only discovery")
+
 	settings := jsonObject(created, "settings_snapshot")
 	require.NotNil(t, settings, "settings_snapshot must decode to an object, not an escaped string")
 	assert.NotEmpty(t, settings, "the snapshot must actually contain the assumptions used")

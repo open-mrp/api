@@ -7,6 +7,7 @@ import (
 	"time"
 	"unicode/utf8"
 
+	"github.com/open-mrp/api/shared/constants"
 	"github.com/open-mrp/api/shared/db"
 	"github.com/open-mrp/api/shared/pagination"
 )
@@ -26,7 +27,13 @@ const (
 	// The open variants lead with finished_at after the buyer, for the same reason as the account ones.
 	pickBuyerOpenShipByIndex  = "pick_account_buyer_finished_ship_by_idx"
 	pickBuyerOpenCreatedIndex = "pick_account_buyer_finished_created_idx"
-	pickAccountNumberIndex    = "pick_account_number_idx"
+	// pickAccountNumberIndex holds every column a search's matches are paged on after the number, so a
+	// number range is read off the key alone.
+	pickAccountNumberIndex = "pick_account_number_page_idx"
+	// pickOrderPONumberIndex is the order's PO number after its owner, so a PO prefix is one range.
+	pickOrderPONumberIndex = "sales_order_owner_customer_po_number_idx"
+	// pickSalesOrderPageIndex finds an order's pick with every column a search's matches are paged on.
+	pickSalesOrderPageIndex = "pick_sales_order_page_idx"
 )
 
 // Shorter terms are too common as substrings to page quickly ("22" is in ~9k of the largest
@@ -34,25 +41,33 @@ const (
 const pickSubstringSearchMinRunes = 3
 
 type pickSearch struct {
-	// NumberPrefix is a LIKE pattern anchored at the start of the pick number.
+	// NumberPrefix is a LIKE pattern anchored at the start of the pick number, for a term too short for
+	// any other field.
 	NumberPrefix string
-	// Phrase is matched as a substring of the pick number, the order's PO number, and the customer's
-	// name and number.
+	// Phrase is matched as a substring of the customer's name and number, and of the pick and PO
+	// numbers unless Prefix is set.
 	Phrase db.NgramSubstring
+	// Prefix, when set, is a LIKE pattern anchored at the start of the pick and PO numbers, matched there
+	// in place of Phrase.
+	Prefix string
 }
 
 func (s pickSearch) hasPhrase() bool {
 	return s.Phrase.Like != ""
 }
 
-func newPickSearch(q *string) pickSearch {
+func newPickSearch(q *string, match constants.PickSearchMatch) pickSearch {
 	if q == nil || *q == "" {
 		return pickSearch{}
 	}
 	if utf8.RuneCountInString(*q) < pickSubstringSearchMinRunes {
 		return pickSearch{NumberPrefix: db.EscapeLike(*q) + "%"}
 	}
-	return pickSearch{Phrase: db.NewNgramSubstring(*q)}
+	s := pickSearch{Phrase: db.NewNgramSubstring(*q)}
+	if match != constants.PickSearchMatchContains {
+		s.Prefix = db.EscapeLike(*q) + "%"
+	}
+	return s
 }
 
 type pickListQuery struct {
@@ -188,9 +203,11 @@ func buildPickListQuery(q pickListQuery) (string, []any) {
 		b.WriteString(" AND p.id IN (" + iclPlaceholders(len(q.PhraseIDs)) + ")")
 		args = append(args, stringArgs(q.PhraseIDs)...)
 	case q.Search.hasPhrase():
-		// Too many to read up front, so the phrase's matches are collected once and probed per row.
-		b.WriteString(" AND p.id IN (SELECT id FROM (" + pickPhraseMatches(q.Search.Phrase) + ") phrased)")
-		args = q.appendPhraseArgs(args)
+		// Too many to read up front, so each pick walked is tested on its own columns: the orders and
+		// customers the search matches are few, and collected once each.
+		clause, searchArgs := q.searchResidual()
+		b.WriteString(" AND " + clause)
+		args = append(args, searchArgs...)
 	}
 	if len(q.BuyerIDs) > 0 {
 		b.WriteString(" AND p.buyer_account_id IN (" + iclPlaceholders(len(q.BuyerIDs)) + ")")
@@ -218,14 +235,6 @@ const pickBuyerMergeMax = 50
 func (q pickListQuery) mergesBuyers() bool {
 	return !q.Search.hasPhrase() && !q.DriveFromProductLines && !q.DriveFromBuyers && !q.DriveFromNumberPrefix &&
 		len(q.BuyerIDs) >= 2 && len(q.BuyerIDs) <= pickBuyerMergeMax
-}
-
-func (q pickListQuery) appendPhraseArgs(args []any) []any {
-	for range pickPhraseArmCount {
-		args = append(args, q.AccountID)
-		args = append(args, q.Search.Phrase.Args()...)
-	}
-	return args
 }
 
 // buildPickListMerge pages each customer's picks from the buyer index in list order and merges the
@@ -322,44 +331,93 @@ func (q pickListQuery) cursorComparison() string {
 	return "<"
 }
 
-const pickPhraseArmCount = 4
+// pickArm is one SELECT of a search's matches and its bind args.
+type pickArm struct {
+	sql  string
+	args []any
+}
 
-// pickPhraseArms each select the account's pick ids whose number, PO number, customer name or
-// customer number contains the phrase. Each arm is its own MATCH because an OR of MATCH across joined
-// tables cannot use any of the FULLTEXT indexes. Placeholders per arm: account id, then the phrase's.
+// pickPhraseArms each select the account's picks whose number, PO number, customer name or customer
+// number the search matches. Each is its own read because an OR across joined tables cannot use any
+// of their keys. A prefix is a range on the number key and on the owner's PO key; a phrase is a MATCH
+// on each column's FULLTEXT index.
 //
 // With pagesInMemory, every arm also selects pickPhraseMatch's columns. The customer arms otherwise
 // read only a buyer key, so they force the one that covers those columns: MySQL picks a key that
 // does not when the select list grows, and reads every pick of the customer.
-func pickPhraseArms(phrase db.NgramSubstring, q pickListQuery, pagesInMemory bool) []string {
-	numberIndex := ""
-	if !phrase.Indexed() {
-		// The account's number key covers a LIKE, where MySQL would read every pick's row.
-		numberIndex = " FORCE INDEX (" + pickAccountNumberIndex + ")"
-	}
+func pickPhraseArms(q pickListQuery, pagesInMemory bool) []pickArm {
+	s, account := q.Search, q.AccountID
 	columns, buyerIndex := "pk.id", ""
 	if pagesInMemory {
 		columns = "pk.id, pk.buyer_account_id, pk.finished_at, " + strings.Replace(q.sortColumn(), "p.", "pk.", 1)
 		buyerIndex = " FORCE INDEX (" + q.phraseBuyerIndex() + ")"
 	}
-	return []string{
-		`SELECT ` + columns + ` FROM pick pk` + numberIndex +
-			` WHERE pk.account_id = ? AND ` + phrase.Where("pk.number"),
-		`SELECT ` + columns + ` FROM sales_order pso JOIN pick pk ON pk.sales_order_id = pso.id` +
-			` WHERE pk.account_id = ? AND ` + phrase.Where("pso.customer_po_number"),
-		`SELECT ` + columns + ` FROM account nba` +
+	var number, po pickArm
+	if s.Prefix != "" {
+		number = pickArm{`SELECT ` + columns + ` FROM pick pk FORCE INDEX (` + pickAccountNumberIndex + `)` +
+			` WHERE pk.account_id = ? AND pk.number LIKE ?`, []any{account, s.Prefix}}
+		po = pickArm{`SELECT STRAIGHT_JOIN ` + columns + ` FROM sales_order pso FORCE INDEX (` + pickOrderPONumberIndex + `)` +
+			` JOIN pick pk FORCE INDEX (` + pickSalesOrderPageIndex + `) ON pk.sales_order_id = pso.id` +
+			` WHERE pso.owner_account_id = ? AND pso.customer_po_number LIKE ? AND pk.account_id = ?`, []any{account, s.Prefix, account}}
+	} else {
+		numberIndex := ""
+		if !s.Phrase.Indexed() {
+			// The account's number key covers a LIKE, where MySQL would read every pick's row.
+			numberIndex = " FORCE INDEX (" + pickAccountNumberIndex + ")"
+		}
+		number = pickArm{`SELECT ` + columns + ` FROM pick pk` + numberIndex +
+			` WHERE pk.account_id = ? AND ` + s.Phrase.Where("pk.number"), append([]any{account}, s.Phrase.Args()...)}
+		po = pickArm{`SELECT ` + columns + ` FROM sales_order pso JOIN pick pk ON pk.sales_order_id = pso.id` +
+			` WHERE pk.account_id = ? AND ` + s.Phrase.Where("pso.customer_po_number"), append([]any{account}, s.Phrase.Args()...)}
+	}
+	return []pickArm{
+		number,
+		po,
+		{`SELECT ` + columns + ` FROM account nba` +
 			` JOIN account_relation nar ON nar.owner_account_id = ? AND nar.counterparty_account_id = nba.id` +
 			` JOIN pick pk` + buyerIndex + ` ON pk.account_id = nar.owner_account_id AND pk.buyer_account_id = nba.id` +
-			` WHERE ` + phrase.Where("nba.name"),
-		`SELECT ` + columns + ` FROM account_relation rar` +
+			` WHERE ` + s.Phrase.Where("nba.name"), append([]any{account}, s.Phrase.Args()...)},
+		{`SELECT ` + columns + ` FROM account_relation rar` +
 			` JOIN pick pk` + buyerIndex + ` ON pk.account_id = rar.owner_account_id AND pk.buyer_account_id = rar.counterparty_account_id` +
-			` WHERE rar.owner_account_id = ? AND ` + phrase.Where("rar.external_number"),
+			` WHERE rar.owner_account_id = ? AND ` + s.Phrase.Where("rar.external_number"), append([]any{account}, s.Phrase.Args()...)},
 	}
 }
 
-// pickPhraseMatches is the set of picks the phrase matches.
-func pickPhraseMatches(phrase db.NgramSubstring) string {
-	return strings.Join(pickPhraseArms(phrase, pickListQuery{}, false), " UNION ")
+// joinPickArms joins arms with sep, each parenthesized, and their args in order.
+func joinPickArms(arms []pickArm, sep string) (string, []any) {
+	parts := make([]string, len(arms))
+	var args []any
+	for i, arm := range arms {
+		parts[i] = "(" + arm.sql + ")"
+		args = append(args, arm.args...)
+	}
+	return strings.Join(parts, sep), args
+}
+
+// searchResidual is the search as a test of one pick's own columns: its number, and whether its order
+// and its customer are among those the search matches. Each set is read once, as a derived table:
+// orders by their PO number and customers by name and number, never the picks themselves.
+func (q pickListQuery) searchResidual() (string, []any) {
+	s, account := q.Search, q.AccountID
+	numberArg := s.Phrase.Like
+	orders := `SELECT pso.id FROM sales_order pso WHERE pso.owner_account_id = ? AND ` + s.Phrase.Where("pso.customer_po_number")
+	orderArgs := append([]any{account}, s.Phrase.Args()...)
+	if s.Prefix != "" {
+		numberArg = s.Prefix
+		orders = `SELECT pso.id FROM sales_order pso FORCE INDEX (` + pickOrderPONumberIndex + `)` +
+			` WHERE pso.owner_account_id = ? AND pso.customer_po_number LIKE ?`
+		orderArgs = []any{account, s.Prefix}
+	}
+	customers := `SELECT nar.counterparty_account_id AS id FROM account nba` +
+		` JOIN account_relation nar ON nar.owner_account_id = ? AND nar.counterparty_account_id = nba.id` +
+		` WHERE ` + s.Phrase.Where("nba.name") +
+		` UNION SELECT rar.counterparty_account_id FROM account_relation rar` +
+		` WHERE rar.owner_account_id = ? AND ` + s.Phrase.Where("rar.external_number")
+	args := append([]any{numberArg}, orderArgs...)
+	args = append(append(args, account), s.Phrase.Args()...)
+	args = append(append(args, account), s.Phrase.Args()...)
+	return "(p.number LIKE ? OR p.sales_order_id IN (SELECT id FROM (" + orders + ") searched_orders)" +
+		" OR p.buyer_account_id IN (SELECT id FROM (" + customers + ") searched_customers))", args
 }
 
 // phraseBuyerIndex is the buyer key that holds every column a phrase page reads.
@@ -455,9 +513,8 @@ const pickPhraseScanCap = 2000
 // set that fits from one that does not. UNION ALL streams and stops at the limit, where UNION would
 // collect every match to deduplicate first; a pick matching several arms is deduplicated by the caller.
 func buildPickPhraseIDsQuery(q pickListQuery) (string, []any) {
-	args := q.appendPhraseArgs(make([]any, 0, 13))
-	args = append(args, pickPhraseScanCap+1)
-	return "(" + strings.Join(pickPhraseArms(q.Search.Phrase, q, q.phrasePagesInMemory()), ") UNION ALL (") + ") LIMIT ?", args
+	query, args := joinPickArms(pickPhraseArms(q, q.phrasePagesInMemory()), " UNION ALL ")
+	return query + " LIMIT ?", append(args, pickPhraseScanCap+1)
 }
 
 // buildPickPrefixCountQuery counts the account's picks whose number matches the LIKE prefix, stopping
@@ -486,14 +543,18 @@ func pickProductLineMatches(n int) string {
 // the largest account's 123k picks walked the other way read them all.
 const pickProductLineScanCap = 2000
 
-// buildPickProductLineCountQuery counts the product lines' pick lines, stopping at
-// pickProductLineScanCap. Lines bound their picks from above, and counting them stops at the cap where
-// collecting distinct picks would read every match first.
+// buildPickProductLineCountQuery counts the order lines for the product lines' products, stopping at
+// pickProductLineScanCap. A pick line is for one order line, so the order lines stand in for the pick
+// lines that bound the picks, and both keys it reads cover it: counting the pick lines themselves looks
+// each order line up in the pick line key, one scattered read per line. Counting stops at the cap
+// where collecting distinct picks would read every match first.
 func buildPickProductLineCountQuery(productLineIDs []string) (string, []any) {
 	args := make([]any, 0, len(productLineIDs)+1)
 	args = append(args, stringArgs(productLineIDs)...)
 	args = append(args, pickProductLineScanCap)
-	return "SELECT COUNT(*) FROM (SELECT 1 FROM " + pickProductLineLines(len(productLineIDs)) + " LIMIT ?) capped", args
+	return "SELECT COUNT(*) FROM (SELECT STRAIGHT_JOIN 1 FROM product prod FORCE INDEX (product_product_line_id_idx)" +
+		" JOIN sales_order_line sol FORCE INDEX (sales_order_line_product_id_idx) ON sol.product_id = prod.id" +
+		" WHERE prod.product_line_id IN (" + iclPlaceholders(len(productLineIDs)) + ") LIMIT ?) capped", args
 }
 
 // pickBuyerScanCap is the most picks a customer set too large to merge may have and still be read

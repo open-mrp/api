@@ -981,6 +981,426 @@ func (x *BatchGetMachinesByIDsResponse) GetMachines() []*MachineInfo {
 	return nil
 }
 
+type MachineItemInfo struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	ItemId        string                 `protobuf:"bytes,1,opt,name=item_id,json=itemId,proto3" json:"item_id,omitempty"`
+	Sku           string                 `protobuf:"bytes,2,opt,name=sku,proto3" json:"sku,omitempty"`
+	Description   *string                `protobuf:"bytes,3,opt,name=description,proto3,oneof" json:"description,omitempty"`
+	CreatedAt     *timestamppb.Timestamp `protobuf:"bytes,4,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
+	UpdatedAt     *timestamppb.Timestamp `protobuf:"bytes,5,opt,name=updated_at,json=updatedAt,proto3" json:"updated_at,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *MachineItemInfo) Reset() {
+	*x = MachineItemInfo{}
+	mi := &file_core_core_fulfillment_proto_msgTypes[17]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *MachineItemInfo) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*MachineItemInfo) ProtoMessage() {}
+
+func (x *MachineItemInfo) ProtoReflect() protoreflect.Message {
+	mi := &file_core_core_fulfillment_proto_msgTypes[17]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use MachineItemInfo.ProtoReflect.Descriptor instead.
+func (*MachineItemInfo) Descriptor() ([]byte, []int) {
+	return file_core_core_fulfillment_proto_rawDescGZIP(), []int{17}
+}
+
+func (x *MachineItemInfo) GetItemId() string {
+	if x != nil {
+		return x.ItemId
+	}
+	return ""
+}
+
+func (x *MachineItemInfo) GetSku() string {
+	if x != nil {
+		return x.Sku
+	}
+	return ""
+}
+
+func (x *MachineItemInfo) GetDescription() string {
+	if x != nil && x.Description != nil {
+		return *x.Description
+	}
+	return ""
+}
+
+func (x *MachineItemInfo) GetCreatedAt() *timestamppb.Timestamp {
+	if x != nil {
+		return x.CreatedAt
+	}
+	return nil
+}
+
+func (x *MachineItemInfo) GetUpdatedAt() *timestamppb.Timestamp {
+	if x != nil {
+		return x.UpdatedAt
+	}
+	return nil
+}
+
+type ListMachineItemsRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	MachineId     string                 `protobuf:"bytes,1,opt,name=machine_id,json=machineId,proto3" json:"machine_id,omitempty"`
+	Cursor        *string                `protobuf:"bytes,2,opt,name=cursor,proto3,oneof" json:"cursor,omitempty"`
+	Limit         int32                  `protobuf:"varint,3,opt,name=limit,proto3" json:"limit,omitempty"`
+	Query         *string                `protobuf:"bytes,4,opt,name=query,proto3,oneof" json:"query,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ListMachineItemsRequest) Reset() {
+	*x = ListMachineItemsRequest{}
+	mi := &file_core_core_fulfillment_proto_msgTypes[18]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ListMachineItemsRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ListMachineItemsRequest) ProtoMessage() {}
+
+func (x *ListMachineItemsRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_core_core_fulfillment_proto_msgTypes[18]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ListMachineItemsRequest.ProtoReflect.Descriptor instead.
+func (*ListMachineItemsRequest) Descriptor() ([]byte, []int) {
+	return file_core_core_fulfillment_proto_rawDescGZIP(), []int{18}
+}
+
+func (x *ListMachineItemsRequest) GetMachineId() string {
+	if x != nil {
+		return x.MachineId
+	}
+	return ""
+}
+
+func (x *ListMachineItemsRequest) GetCursor() string {
+	if x != nil && x.Cursor != nil {
+		return *x.Cursor
+	}
+	return ""
+}
+
+func (x *ListMachineItemsRequest) GetLimit() int32 {
+	if x != nil {
+		return x.Limit
+	}
+	return 0
+}
+
+func (x *ListMachineItemsRequest) GetQuery() string {
+	if x != nil && x.Query != nil {
+		return *x.Query
+	}
+	return ""
+}
+
+type ListMachineItemsResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Items         []*MachineItemInfo     `protobuf:"bytes,1,rep,name=items,proto3" json:"items,omitempty"`
+	PageInfo      *PageInfo              `protobuf:"bytes,2,opt,name=page_info,json=pageInfo,proto3" json:"page_info,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ListMachineItemsResponse) Reset() {
+	*x = ListMachineItemsResponse{}
+	mi := &file_core_core_fulfillment_proto_msgTypes[19]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ListMachineItemsResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ListMachineItemsResponse) ProtoMessage() {}
+
+func (x *ListMachineItemsResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_core_core_fulfillment_proto_msgTypes[19]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ListMachineItemsResponse.ProtoReflect.Descriptor instead.
+func (*ListMachineItemsResponse) Descriptor() ([]byte, []int) {
+	return file_core_core_fulfillment_proto_rawDescGZIP(), []int{19}
+}
+
+func (x *ListMachineItemsResponse) GetItems() []*MachineItemInfo {
+	if x != nil {
+		return x.Items
+	}
+	return nil
+}
+
+func (x *ListMachineItemsResponse) GetPageInfo() *PageInfo {
+	if x != nil {
+		return x.PageInfo
+	}
+	return nil
+}
+
+type ReplaceMachineItemsRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	MachineId     string                 `protobuf:"bytes,1,opt,name=machine_id,json=machineId,proto3" json:"machine_id,omitempty"`
+	ItemIds       []string               `protobuf:"bytes,2,rep,name=item_ids,json=itemIds,proto3" json:"item_ids,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ReplaceMachineItemsRequest) Reset() {
+	*x = ReplaceMachineItemsRequest{}
+	mi := &file_core_core_fulfillment_proto_msgTypes[20]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ReplaceMachineItemsRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ReplaceMachineItemsRequest) ProtoMessage() {}
+
+func (x *ReplaceMachineItemsRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_core_core_fulfillment_proto_msgTypes[20]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ReplaceMachineItemsRequest.ProtoReflect.Descriptor instead.
+func (*ReplaceMachineItemsRequest) Descriptor() ([]byte, []int) {
+	return file_core_core_fulfillment_proto_rawDescGZIP(), []int{20}
+}
+
+func (x *ReplaceMachineItemsRequest) GetMachineId() string {
+	if x != nil {
+		return x.MachineId
+	}
+	return ""
+}
+
+func (x *ReplaceMachineItemsRequest) GetItemIds() []string {
+	if x != nil {
+		return x.ItemIds
+	}
+	return nil
+}
+
+type MachineItemScanSuggestionInfo struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	ItemId        string                 `protobuf:"bytes,1,opt,name=item_id,json=itemId,proto3" json:"item_id,omitempty"`
+	Sku           string                 `protobuf:"bytes,2,opt,name=sku,proto3" json:"sku,omitempty"`
+	Description   *string                `protobuf:"bytes,3,opt,name=description,proto3,oneof" json:"description,omitempty"`
+	LastScannedAt *timestamppb.Timestamp `protobuf:"bytes,4,opt,name=last_scanned_at,json=lastScannedAt,proto3" json:"last_scanned_at,omitempty"`
+	BatchCount    int64                  `protobuf:"varint,5,opt,name=batch_count,json=batchCount,proto3" json:"batch_count,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *MachineItemScanSuggestionInfo) Reset() {
+	*x = MachineItemScanSuggestionInfo{}
+	mi := &file_core_core_fulfillment_proto_msgTypes[21]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *MachineItemScanSuggestionInfo) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*MachineItemScanSuggestionInfo) ProtoMessage() {}
+
+func (x *MachineItemScanSuggestionInfo) ProtoReflect() protoreflect.Message {
+	mi := &file_core_core_fulfillment_proto_msgTypes[21]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use MachineItemScanSuggestionInfo.ProtoReflect.Descriptor instead.
+func (*MachineItemScanSuggestionInfo) Descriptor() ([]byte, []int) {
+	return file_core_core_fulfillment_proto_rawDescGZIP(), []int{21}
+}
+
+func (x *MachineItemScanSuggestionInfo) GetItemId() string {
+	if x != nil {
+		return x.ItemId
+	}
+	return ""
+}
+
+func (x *MachineItemScanSuggestionInfo) GetSku() string {
+	if x != nil {
+		return x.Sku
+	}
+	return ""
+}
+
+func (x *MachineItemScanSuggestionInfo) GetDescription() string {
+	if x != nil && x.Description != nil {
+		return *x.Description
+	}
+	return ""
+}
+
+func (x *MachineItemScanSuggestionInfo) GetLastScannedAt() *timestamppb.Timestamp {
+	if x != nil {
+		return x.LastScannedAt
+	}
+	return nil
+}
+
+func (x *MachineItemScanSuggestionInfo) GetBatchCount() int64 {
+	if x != nil {
+		return x.BatchCount
+	}
+	return 0
+}
+
+type SuggestMachineItemsFromScansRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	MachineId     string                 `protobuf:"bytes,1,opt,name=machine_id,json=machineId,proto3" json:"machine_id,omitempty"`
+	WindowMonths  *int32                 `protobuf:"varint,2,opt,name=window_months,json=windowMonths,proto3,oneof" json:"window_months,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *SuggestMachineItemsFromScansRequest) Reset() {
+	*x = SuggestMachineItemsFromScansRequest{}
+	mi := &file_core_core_fulfillment_proto_msgTypes[22]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *SuggestMachineItemsFromScansRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*SuggestMachineItemsFromScansRequest) ProtoMessage() {}
+
+func (x *SuggestMachineItemsFromScansRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_core_core_fulfillment_proto_msgTypes[22]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use SuggestMachineItemsFromScansRequest.ProtoReflect.Descriptor instead.
+func (*SuggestMachineItemsFromScansRequest) Descriptor() ([]byte, []int) {
+	return file_core_core_fulfillment_proto_rawDescGZIP(), []int{22}
+}
+
+func (x *SuggestMachineItemsFromScansRequest) GetMachineId() string {
+	if x != nil {
+		return x.MachineId
+	}
+	return ""
+}
+
+func (x *SuggestMachineItemsFromScansRequest) GetWindowMonths() int32 {
+	if x != nil && x.WindowMonths != nil {
+		return *x.WindowMonths
+	}
+	return 0
+}
+
+type SuggestMachineItemsFromScansResponse struct {
+	state         protoimpl.MessageState           `protogen:"open.v1"`
+	Suggestions   []*MachineItemScanSuggestionInfo `protobuf:"bytes,1,rep,name=suggestions,proto3" json:"suggestions,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *SuggestMachineItemsFromScansResponse) Reset() {
+	*x = SuggestMachineItemsFromScansResponse{}
+	mi := &file_core_core_fulfillment_proto_msgTypes[23]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *SuggestMachineItemsFromScansResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*SuggestMachineItemsFromScansResponse) ProtoMessage() {}
+
+func (x *SuggestMachineItemsFromScansResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_core_core_fulfillment_proto_msgTypes[23]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use SuggestMachineItemsFromScansResponse.ProtoReflect.Descriptor instead.
+func (*SuggestMachineItemsFromScansResponse) Descriptor() ([]byte, []int) {
+	return file_core_core_fulfillment_proto_rawDescGZIP(), []int{23}
+}
+
+func (x *SuggestMachineItemsFromScansResponse) GetSuggestions() []*MachineItemScanSuggestionInfo {
+	if x != nil {
+		return x.Suggestions
+	}
+	return nil
+}
+
 type ListMachineStatusRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	AsOf          *timestamppb.Timestamp `protobuf:"bytes,1,opt,name=as_of,json=asOf,proto3,oneof" json:"as_of,omitempty"`
@@ -991,7 +1411,7 @@ type ListMachineStatusRequest struct {
 
 func (x *ListMachineStatusRequest) Reset() {
 	*x = ListMachineStatusRequest{}
-	mi := &file_core_core_fulfillment_proto_msgTypes[17]
+	mi := &file_core_core_fulfillment_proto_msgTypes[24]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1003,7 +1423,7 @@ func (x *ListMachineStatusRequest) String() string {
 func (*ListMachineStatusRequest) ProtoMessage() {}
 
 func (x *ListMachineStatusRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_fulfillment_proto_msgTypes[17]
+	mi := &file_core_core_fulfillment_proto_msgTypes[24]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1016,7 +1436,7 @@ func (x *ListMachineStatusRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListMachineStatusRequest.ProtoReflect.Descriptor instead.
 func (*ListMachineStatusRequest) Descriptor() ([]byte, []int) {
-	return file_core_core_fulfillment_proto_rawDescGZIP(), []int{17}
+	return file_core_core_fulfillment_proto_rawDescGZIP(), []int{24}
 }
 
 func (x *ListMachineStatusRequest) GetAsOf() *timestamppb.Timestamp {
@@ -1056,7 +1476,7 @@ type MachineCampaignInfo struct {
 
 func (x *MachineCampaignInfo) Reset() {
 	*x = MachineCampaignInfo{}
-	mi := &file_core_core_fulfillment_proto_msgTypes[18]
+	mi := &file_core_core_fulfillment_proto_msgTypes[25]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1068,7 +1488,7 @@ func (x *MachineCampaignInfo) String() string {
 func (*MachineCampaignInfo) ProtoMessage() {}
 
 func (x *MachineCampaignInfo) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_fulfillment_proto_msgTypes[18]
+	mi := &file_core_core_fulfillment_proto_msgTypes[25]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1081,7 +1501,7 @@ func (x *MachineCampaignInfo) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use MachineCampaignInfo.ProtoReflect.Descriptor instead.
 func (*MachineCampaignInfo) Descriptor() ([]byte, []int) {
-	return file_core_core_fulfillment_proto_rawDescGZIP(), []int{18}
+	return file_core_core_fulfillment_proto_rawDescGZIP(), []int{25}
 }
 
 func (x *MachineCampaignInfo) GetProductionScheduleLineId() string {
@@ -1196,7 +1616,7 @@ type MachineDowntimeSummaryInfo struct {
 
 func (x *MachineDowntimeSummaryInfo) Reset() {
 	*x = MachineDowntimeSummaryInfo{}
-	mi := &file_core_core_fulfillment_proto_msgTypes[19]
+	mi := &file_core_core_fulfillment_proto_msgTypes[26]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1208,7 +1628,7 @@ func (x *MachineDowntimeSummaryInfo) String() string {
 func (*MachineDowntimeSummaryInfo) ProtoMessage() {}
 
 func (x *MachineDowntimeSummaryInfo) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_fulfillment_proto_msgTypes[19]
+	mi := &file_core_core_fulfillment_proto_msgTypes[26]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1221,7 +1641,7 @@ func (x *MachineDowntimeSummaryInfo) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use MachineDowntimeSummaryInfo.ProtoReflect.Descriptor instead.
 func (*MachineDowntimeSummaryInfo) Descriptor() ([]byte, []int) {
-	return file_core_core_fulfillment_proto_rawDescGZIP(), []int{19}
+	return file_core_core_fulfillment_proto_rawDescGZIP(), []int{26}
 }
 
 func (x *MachineDowntimeSummaryInfo) GetEventId() string {
@@ -1286,7 +1706,7 @@ type MachineStatusInfo struct {
 
 func (x *MachineStatusInfo) Reset() {
 	*x = MachineStatusInfo{}
-	mi := &file_core_core_fulfillment_proto_msgTypes[20]
+	mi := &file_core_core_fulfillment_proto_msgTypes[27]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1298,7 +1718,7 @@ func (x *MachineStatusInfo) String() string {
 func (*MachineStatusInfo) ProtoMessage() {}
 
 func (x *MachineStatusInfo) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_fulfillment_proto_msgTypes[20]
+	mi := &file_core_core_fulfillment_proto_msgTypes[27]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1311,7 +1731,7 @@ func (x *MachineStatusInfo) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use MachineStatusInfo.ProtoReflect.Descriptor instead.
 func (*MachineStatusInfo) Descriptor() ([]byte, []int) {
-	return file_core_core_fulfillment_proto_rawDescGZIP(), []int{20}
+	return file_core_core_fulfillment_proto_rawDescGZIP(), []int{27}
 }
 
 func (x *MachineStatusInfo) GetMachineId() string {
@@ -1409,7 +1829,7 @@ type ListMachineStatusResponse struct {
 
 func (x *ListMachineStatusResponse) Reset() {
 	*x = ListMachineStatusResponse{}
-	mi := &file_core_core_fulfillment_proto_msgTypes[21]
+	mi := &file_core_core_fulfillment_proto_msgTypes[28]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1421,7 +1841,7 @@ func (x *ListMachineStatusResponse) String() string {
 func (*ListMachineStatusResponse) ProtoMessage() {}
 
 func (x *ListMachineStatusResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_fulfillment_proto_msgTypes[21]
+	mi := &file_core_core_fulfillment_proto_msgTypes[28]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1434,7 +1854,7 @@ func (x *ListMachineStatusResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListMachineStatusResponse.ProtoReflect.Descriptor instead.
 func (*ListMachineStatusResponse) Descriptor() ([]byte, []int) {
-	return file_core_core_fulfillment_proto_rawDescGZIP(), []int{21}
+	return file_core_core_fulfillment_proto_rawDescGZIP(), []int{28}
 }
 
 func (x *ListMachineStatusResponse) GetProductionScheduleId() string {
@@ -1539,7 +1959,46 @@ const file_core_core_fulfillment_proto_rawDesc = "" +
 	"\x1cBatchGetMachinesByIDsRequest\x12\x10\n" +
 	"\x03ids\x18\x01 \x03(\tR\x03ids\"N\n" +
 	"\x1dBatchGetMachinesByIDsResponse\x12-\n" +
-	"\bmachines\x18\x01 \x03(\v2\x11.core.MachineInfoR\bmachines\"\x81\x01\n" +
+	"\bmachines\x18\x01 \x03(\v2\x11.core.MachineInfoR\bmachines\"\xe9\x01\n" +
+	"\x0fMachineItemInfo\x12\x17\n" +
+	"\aitem_id\x18\x01 \x01(\tR\x06itemId\x12\x10\n" +
+	"\x03sku\x18\x02 \x01(\tR\x03sku\x12%\n" +
+	"\vdescription\x18\x03 \x01(\tH\x00R\vdescription\x88\x01\x01\x129\n" +
+	"\n" +
+	"created_at\x18\x04 \x01(\v2\x1a.google.protobuf.TimestampR\tcreatedAt\x129\n" +
+	"\n" +
+	"updated_at\x18\x05 \x01(\v2\x1a.google.protobuf.TimestampR\tupdatedAtB\x0e\n" +
+	"\f_description\"\x9b\x01\n" +
+	"\x17ListMachineItemsRequest\x12\x1d\n" +
+	"\n" +
+	"machine_id\x18\x01 \x01(\tR\tmachineId\x12\x1b\n" +
+	"\x06cursor\x18\x02 \x01(\tH\x00R\x06cursor\x88\x01\x01\x12\x14\n" +
+	"\x05limit\x18\x03 \x01(\x05R\x05limit\x12\x19\n" +
+	"\x05query\x18\x04 \x01(\tH\x01R\x05query\x88\x01\x01B\t\n" +
+	"\a_cursorB\b\n" +
+	"\x06_query\"t\n" +
+	"\x18ListMachineItemsResponse\x12+\n" +
+	"\x05items\x18\x01 \x03(\v2\x15.core.MachineItemInfoR\x05items\x12+\n" +
+	"\tpage_info\x18\x02 \x01(\v2\x0e.core.PageInfoR\bpageInfo\"V\n" +
+	"\x1aReplaceMachineItemsRequest\x12\x1d\n" +
+	"\n" +
+	"machine_id\x18\x01 \x01(\tR\tmachineId\x12\x19\n" +
+	"\bitem_ids\x18\x02 \x03(\tR\aitemIds\"\xe6\x01\n" +
+	"\x1dMachineItemScanSuggestionInfo\x12\x17\n" +
+	"\aitem_id\x18\x01 \x01(\tR\x06itemId\x12\x10\n" +
+	"\x03sku\x18\x02 \x01(\tR\x03sku\x12%\n" +
+	"\vdescription\x18\x03 \x01(\tH\x00R\vdescription\x88\x01\x01\x12B\n" +
+	"\x0flast_scanned_at\x18\x04 \x01(\v2\x1a.google.protobuf.TimestampR\rlastScannedAt\x12\x1f\n" +
+	"\vbatch_count\x18\x05 \x01(\x03R\n" +
+	"batchCountB\x0e\n" +
+	"\f_description\"\x80\x01\n" +
+	"#SuggestMachineItemsFromScansRequest\x12\x1d\n" +
+	"\n" +
+	"machine_id\x18\x01 \x01(\tR\tmachineId\x12(\n" +
+	"\rwindow_months\x18\x02 \x01(\x05H\x00R\fwindowMonths\x88\x01\x01B\x10\n" +
+	"\x0e_window_months\"m\n" +
+	"$SuggestMachineItemsFromScansResponse\x12E\n" +
+	"\vsuggestions\x18\x01 \x03(\v2#.core.MachineItemScanSuggestionInfoR\vsuggestions\"\x81\x01\n" +
 	"\x18ListMachineStatusRequest\x124\n" +
 	"\x05as_of\x18\x01 \x01(\v2\x1a.google.protobuf.TimestampH\x00R\x04asOf\x88\x01\x01\x12%\n" +
 	"\x0edepartment_ids\x18\x02 \x03(\tR\rdepartmentIdsB\b\n" +
@@ -1601,7 +2060,7 @@ const file_core_core_fulfillment_proto_rawDesc = "" +
 	"\x16production_schedule_id\x18\x01 \x01(\tH\x00R\x14productionScheduleId\x88\x01\x01\x12B\n" +
 	"\x0fweek_start_date\x18\x02 \x01(\v2\x1a.google.protobuf.TimestampR\rweekStartDate\x123\n" +
 	"\bmachines\x18\x03 \x03(\v2\x17.core.MachineStatusInfoR\bmachinesB\x19\n" +
-	"\x17_production_schedule_id2\xd7\x05\n" +
+	"\x17_production_schedule_id2\xfa\a\n" +
 	"\x16CoreFulfillmentService\x12E\n" +
 	"\fListMachines\x12\x19.core.ListMachinesRequest\x1a\x1a.core.ListMachinesResponse\x12K\n" +
 	"\x0eExportMachines\x12\x1b.core.ExportMachinesRequest\x1a\x1c.core.ExportMachinesResponse\x12?\n" +
@@ -1612,7 +2071,10 @@ const file_core_core_fulfillment_proto_rawDesc = "" +
 	"\rUpdateMachine\x12\x1a.core.UpdateMachineRequest\x1a\x1b.core.UpdateMachineResponse\x12W\n" +
 	"\x12BulkUpsertMachines\x12\x1f.core.BulkUpsertMachinesRequest\x1a .core.BulkUpsertMachinesResponse\x12C\n" +
 	"\rDeleteMachine\x12\x1a.core.DeleteMachineRequest\x1a\x16.google.protobuf.Empty\x12`\n" +
-	"\x15BatchGetMachinesByIDs\x12\".core.BatchGetMachinesByIDsRequest\x1a#.core.BatchGetMachinesByIDsResponseB\x18Z\x16shared/proto/core;coreb\x06proto3"
+	"\x15BatchGetMachinesByIDs\x12\".core.BatchGetMachinesByIDsRequest\x1a#.core.BatchGetMachinesByIDsResponse\x12Q\n" +
+	"\x10ListMachineItems\x12\x1d.core.ListMachineItemsRequest\x1a\x1e.core.ListMachineItemsResponse\x12W\n" +
+	"\x13ReplaceMachineItems\x12 .core.ReplaceMachineItemsRequest\x1a\x1e.core.ListMachineItemsResponse\x12u\n" +
+	"\x1cSuggestMachineItemsFromScans\x12).core.SuggestMachineItemsFromScansRequest\x1a*.core.SuggestMachineItemsFromScansResponseB\x18Z\x16shared/proto/core;coreb\x06proto3"
 
 var (
 	file_core_core_fulfillment_proto_rawDescOnce sync.Once
@@ -1626,84 +2088,103 @@ func file_core_core_fulfillment_proto_rawDescGZIP() []byte {
 	return file_core_core_fulfillment_proto_rawDescData
 }
 
-var file_core_core_fulfillment_proto_msgTypes = make([]protoimpl.MessageInfo, 22)
+var file_core_core_fulfillment_proto_msgTypes = make([]protoimpl.MessageInfo, 29)
 var file_core_core_fulfillment_proto_goTypes = []any{
-	(*MachineInfo)(nil),                   // 0: core.MachineInfo
-	(*ListMachinesRequest)(nil),           // 1: core.ListMachinesRequest
-	(*ListMachinesResponse)(nil),          // 2: core.ListMachinesResponse
-	(*ExportMachinesRequest)(nil),         // 3: core.ExportMachinesRequest
-	(*ExportMachinesResponse)(nil),        // 4: core.ExportMachinesResponse
-	(*GetMachineRequest)(nil),             // 5: core.GetMachineRequest
-	(*GetMachineResponse)(nil),            // 6: core.GetMachineResponse
-	(*CreateMachineRequest)(nil),          // 7: core.CreateMachineRequest
-	(*CreateMachineResponse)(nil),         // 8: core.CreateMachineResponse
-	(*UpdateMachineRequest)(nil),          // 9: core.UpdateMachineRequest
-	(*UpdateMachineResponse)(nil),         // 10: core.UpdateMachineResponse
-	(*DeleteMachineRequest)(nil),          // 11: core.DeleteMachineRequest
-	(*UpsertMachineInput)(nil),            // 12: core.UpsertMachineInput
-	(*BulkUpsertMachinesRequest)(nil),     // 13: core.BulkUpsertMachinesRequest
-	(*BulkUpsertMachinesResponse)(nil),    // 14: core.BulkUpsertMachinesResponse
-	(*BatchGetMachinesByIDsRequest)(nil),  // 15: core.BatchGetMachinesByIDsRequest
-	(*BatchGetMachinesByIDsResponse)(nil), // 16: core.BatchGetMachinesByIDsResponse
-	(*ListMachineStatusRequest)(nil),      // 17: core.ListMachineStatusRequest
-	(*MachineCampaignInfo)(nil),           // 18: core.MachineCampaignInfo
-	(*MachineDowntimeSummaryInfo)(nil),    // 19: core.MachineDowntimeSummaryInfo
-	(*MachineStatusInfo)(nil),             // 20: core.MachineStatusInfo
-	(*ListMachineStatusResponse)(nil),     // 21: core.ListMachineStatusResponse
-	(*timestamppb.Timestamp)(nil),         // 22: google.protobuf.Timestamp
-	(*PageInfo)(nil),                      // 23: core.PageInfo
-	(*JobInfo)(nil),                       // 24: core.JobInfo
-	(*StringPatch)(nil),                   // 25: core.StringPatch
-	(*ObjectIdentifier)(nil),              // 26: core.ObjectIdentifier
-	(*emptypb.Empty)(nil),                 // 27: google.protobuf.Empty
+	(*MachineInfo)(nil),                          // 0: core.MachineInfo
+	(*ListMachinesRequest)(nil),                  // 1: core.ListMachinesRequest
+	(*ListMachinesResponse)(nil),                 // 2: core.ListMachinesResponse
+	(*ExportMachinesRequest)(nil),                // 3: core.ExportMachinesRequest
+	(*ExportMachinesResponse)(nil),               // 4: core.ExportMachinesResponse
+	(*GetMachineRequest)(nil),                    // 5: core.GetMachineRequest
+	(*GetMachineResponse)(nil),                   // 6: core.GetMachineResponse
+	(*CreateMachineRequest)(nil),                 // 7: core.CreateMachineRequest
+	(*CreateMachineResponse)(nil),                // 8: core.CreateMachineResponse
+	(*UpdateMachineRequest)(nil),                 // 9: core.UpdateMachineRequest
+	(*UpdateMachineResponse)(nil),                // 10: core.UpdateMachineResponse
+	(*DeleteMachineRequest)(nil),                 // 11: core.DeleteMachineRequest
+	(*UpsertMachineInput)(nil),                   // 12: core.UpsertMachineInput
+	(*BulkUpsertMachinesRequest)(nil),            // 13: core.BulkUpsertMachinesRequest
+	(*BulkUpsertMachinesResponse)(nil),           // 14: core.BulkUpsertMachinesResponse
+	(*BatchGetMachinesByIDsRequest)(nil),         // 15: core.BatchGetMachinesByIDsRequest
+	(*BatchGetMachinesByIDsResponse)(nil),        // 16: core.BatchGetMachinesByIDsResponse
+	(*MachineItemInfo)(nil),                      // 17: core.MachineItemInfo
+	(*ListMachineItemsRequest)(nil),              // 18: core.ListMachineItemsRequest
+	(*ListMachineItemsResponse)(nil),             // 19: core.ListMachineItemsResponse
+	(*ReplaceMachineItemsRequest)(nil),           // 20: core.ReplaceMachineItemsRequest
+	(*MachineItemScanSuggestionInfo)(nil),        // 21: core.MachineItemScanSuggestionInfo
+	(*SuggestMachineItemsFromScansRequest)(nil),  // 22: core.SuggestMachineItemsFromScansRequest
+	(*SuggestMachineItemsFromScansResponse)(nil), // 23: core.SuggestMachineItemsFromScansResponse
+	(*ListMachineStatusRequest)(nil),             // 24: core.ListMachineStatusRequest
+	(*MachineCampaignInfo)(nil),                  // 25: core.MachineCampaignInfo
+	(*MachineDowntimeSummaryInfo)(nil),           // 26: core.MachineDowntimeSummaryInfo
+	(*MachineStatusInfo)(nil),                    // 27: core.MachineStatusInfo
+	(*ListMachineStatusResponse)(nil),            // 28: core.ListMachineStatusResponse
+	(*timestamppb.Timestamp)(nil),                // 29: google.protobuf.Timestamp
+	(*PageInfo)(nil),                             // 30: core.PageInfo
+	(*JobInfo)(nil),                              // 31: core.JobInfo
+	(*StringPatch)(nil),                          // 32: core.StringPatch
+	(*ObjectIdentifier)(nil),                     // 33: core.ObjectIdentifier
+	(*emptypb.Empty)(nil),                        // 34: google.protobuf.Empty
 }
 var file_core_core_fulfillment_proto_depIdxs = []int32{
-	22, // 0: core.MachineInfo.created_at:type_name -> google.protobuf.Timestamp
-	22, // 1: core.MachineInfo.updated_at:type_name -> google.protobuf.Timestamp
-	22, // 2: core.MachineInfo.department_created_at:type_name -> google.protobuf.Timestamp
-	22, // 3: core.MachineInfo.department_updated_at:type_name -> google.protobuf.Timestamp
+	29, // 0: core.MachineInfo.created_at:type_name -> google.protobuf.Timestamp
+	29, // 1: core.MachineInfo.updated_at:type_name -> google.protobuf.Timestamp
+	29, // 2: core.MachineInfo.department_created_at:type_name -> google.protobuf.Timestamp
+	29, // 3: core.MachineInfo.department_updated_at:type_name -> google.protobuf.Timestamp
 	0,  // 4: core.ListMachinesResponse.machines:type_name -> core.MachineInfo
-	23, // 5: core.ListMachinesResponse.page_info:type_name -> core.PageInfo
-	24, // 6: core.ExportMachinesResponse.job:type_name -> core.JobInfo
+	30, // 5: core.ListMachinesResponse.page_info:type_name -> core.PageInfo
+	31, // 6: core.ExportMachinesResponse.job:type_name -> core.JobInfo
 	0,  // 7: core.GetMachineResponse.machine:type_name -> core.MachineInfo
 	0,  // 8: core.CreateMachineResponse.machine:type_name -> core.MachineInfo
-	25, // 9: core.UpdateMachineRequest.notes:type_name -> core.StringPatch
+	32, // 9: core.UpdateMachineRequest.notes:type_name -> core.StringPatch
 	0,  // 10: core.UpdateMachineResponse.machine:type_name -> core.MachineInfo
-	26, // 11: core.UpsertMachineInput.department:type_name -> core.ObjectIdentifier
+	33, // 11: core.UpsertMachineInput.department:type_name -> core.ObjectIdentifier
 	12, // 12: core.BulkUpsertMachinesRequest.machines:type_name -> core.UpsertMachineInput
-	24, // 13: core.BulkUpsertMachinesResponse.job:type_name -> core.JobInfo
+	31, // 13: core.BulkUpsertMachinesResponse.job:type_name -> core.JobInfo
 	0,  // 14: core.BatchGetMachinesByIDsResponse.machines:type_name -> core.MachineInfo
-	22, // 15: core.ListMachineStatusRequest.as_of:type_name -> google.protobuf.Timestamp
-	22, // 16: core.MachineCampaignInfo.week_start_date:type_name -> google.protobuf.Timestamp
-	22, // 17: core.MachineDowntimeSummaryInfo.started_at:type_name -> google.protobuf.Timestamp
-	19, // 18: core.MachineStatusInfo.downtime:type_name -> core.MachineDowntimeSummaryInfo
-	18, // 19: core.MachineStatusInfo.current:type_name -> core.MachineCampaignInfo
-	18, // 20: core.MachineStatusInfo.next:type_name -> core.MachineCampaignInfo
-	22, // 21: core.ListMachineStatusResponse.week_start_date:type_name -> google.protobuf.Timestamp
-	20, // 22: core.ListMachineStatusResponse.machines:type_name -> core.MachineStatusInfo
-	1,  // 23: core.CoreFulfillmentService.ListMachines:input_type -> core.ListMachinesRequest
-	3,  // 24: core.CoreFulfillmentService.ExportMachines:input_type -> core.ExportMachinesRequest
-	5,  // 25: core.CoreFulfillmentService.GetMachine:input_type -> core.GetMachineRequest
-	17, // 26: core.CoreFulfillmentService.ListMachineStatus:input_type -> core.ListMachineStatusRequest
-	7,  // 27: core.CoreFulfillmentService.CreateMachine:input_type -> core.CreateMachineRequest
-	9,  // 28: core.CoreFulfillmentService.UpdateMachine:input_type -> core.UpdateMachineRequest
-	13, // 29: core.CoreFulfillmentService.BulkUpsertMachines:input_type -> core.BulkUpsertMachinesRequest
-	11, // 30: core.CoreFulfillmentService.DeleteMachine:input_type -> core.DeleteMachineRequest
-	15, // 31: core.CoreFulfillmentService.BatchGetMachinesByIDs:input_type -> core.BatchGetMachinesByIDsRequest
-	2,  // 32: core.CoreFulfillmentService.ListMachines:output_type -> core.ListMachinesResponse
-	4,  // 33: core.CoreFulfillmentService.ExportMachines:output_type -> core.ExportMachinesResponse
-	6,  // 34: core.CoreFulfillmentService.GetMachine:output_type -> core.GetMachineResponse
-	21, // 35: core.CoreFulfillmentService.ListMachineStatus:output_type -> core.ListMachineStatusResponse
-	8,  // 36: core.CoreFulfillmentService.CreateMachine:output_type -> core.CreateMachineResponse
-	10, // 37: core.CoreFulfillmentService.UpdateMachine:output_type -> core.UpdateMachineResponse
-	14, // 38: core.CoreFulfillmentService.BulkUpsertMachines:output_type -> core.BulkUpsertMachinesResponse
-	27, // 39: core.CoreFulfillmentService.DeleteMachine:output_type -> google.protobuf.Empty
-	16, // 40: core.CoreFulfillmentService.BatchGetMachinesByIDs:output_type -> core.BatchGetMachinesByIDsResponse
-	32, // [32:41] is the sub-list for method output_type
-	23, // [23:32] is the sub-list for method input_type
-	23, // [23:23] is the sub-list for extension type_name
-	23, // [23:23] is the sub-list for extension extendee
-	0,  // [0:23] is the sub-list for field type_name
+	29, // 15: core.MachineItemInfo.created_at:type_name -> google.protobuf.Timestamp
+	29, // 16: core.MachineItemInfo.updated_at:type_name -> google.protobuf.Timestamp
+	17, // 17: core.ListMachineItemsResponse.items:type_name -> core.MachineItemInfo
+	30, // 18: core.ListMachineItemsResponse.page_info:type_name -> core.PageInfo
+	29, // 19: core.MachineItemScanSuggestionInfo.last_scanned_at:type_name -> google.protobuf.Timestamp
+	21, // 20: core.SuggestMachineItemsFromScansResponse.suggestions:type_name -> core.MachineItemScanSuggestionInfo
+	29, // 21: core.ListMachineStatusRequest.as_of:type_name -> google.protobuf.Timestamp
+	29, // 22: core.MachineCampaignInfo.week_start_date:type_name -> google.protobuf.Timestamp
+	29, // 23: core.MachineDowntimeSummaryInfo.started_at:type_name -> google.protobuf.Timestamp
+	26, // 24: core.MachineStatusInfo.downtime:type_name -> core.MachineDowntimeSummaryInfo
+	25, // 25: core.MachineStatusInfo.current:type_name -> core.MachineCampaignInfo
+	25, // 26: core.MachineStatusInfo.next:type_name -> core.MachineCampaignInfo
+	29, // 27: core.ListMachineStatusResponse.week_start_date:type_name -> google.protobuf.Timestamp
+	27, // 28: core.ListMachineStatusResponse.machines:type_name -> core.MachineStatusInfo
+	1,  // 29: core.CoreFulfillmentService.ListMachines:input_type -> core.ListMachinesRequest
+	3,  // 30: core.CoreFulfillmentService.ExportMachines:input_type -> core.ExportMachinesRequest
+	5,  // 31: core.CoreFulfillmentService.GetMachine:input_type -> core.GetMachineRequest
+	24, // 32: core.CoreFulfillmentService.ListMachineStatus:input_type -> core.ListMachineStatusRequest
+	7,  // 33: core.CoreFulfillmentService.CreateMachine:input_type -> core.CreateMachineRequest
+	9,  // 34: core.CoreFulfillmentService.UpdateMachine:input_type -> core.UpdateMachineRequest
+	13, // 35: core.CoreFulfillmentService.BulkUpsertMachines:input_type -> core.BulkUpsertMachinesRequest
+	11, // 36: core.CoreFulfillmentService.DeleteMachine:input_type -> core.DeleteMachineRequest
+	15, // 37: core.CoreFulfillmentService.BatchGetMachinesByIDs:input_type -> core.BatchGetMachinesByIDsRequest
+	18, // 38: core.CoreFulfillmentService.ListMachineItems:input_type -> core.ListMachineItemsRequest
+	20, // 39: core.CoreFulfillmentService.ReplaceMachineItems:input_type -> core.ReplaceMachineItemsRequest
+	22, // 40: core.CoreFulfillmentService.SuggestMachineItemsFromScans:input_type -> core.SuggestMachineItemsFromScansRequest
+	2,  // 41: core.CoreFulfillmentService.ListMachines:output_type -> core.ListMachinesResponse
+	4,  // 42: core.CoreFulfillmentService.ExportMachines:output_type -> core.ExportMachinesResponse
+	6,  // 43: core.CoreFulfillmentService.GetMachine:output_type -> core.GetMachineResponse
+	28, // 44: core.CoreFulfillmentService.ListMachineStatus:output_type -> core.ListMachineStatusResponse
+	8,  // 45: core.CoreFulfillmentService.CreateMachine:output_type -> core.CreateMachineResponse
+	10, // 46: core.CoreFulfillmentService.UpdateMachine:output_type -> core.UpdateMachineResponse
+	14, // 47: core.CoreFulfillmentService.BulkUpsertMachines:output_type -> core.BulkUpsertMachinesResponse
+	34, // 48: core.CoreFulfillmentService.DeleteMachine:output_type -> google.protobuf.Empty
+	16, // 49: core.CoreFulfillmentService.BatchGetMachinesByIDs:output_type -> core.BatchGetMachinesByIDsResponse
+	19, // 50: core.CoreFulfillmentService.ListMachineItems:output_type -> core.ListMachineItemsResponse
+	19, // 51: core.CoreFulfillmentService.ReplaceMachineItems:output_type -> core.ListMachineItemsResponse
+	23, // 52: core.CoreFulfillmentService.SuggestMachineItemsFromScans:output_type -> core.SuggestMachineItemsFromScansResponse
+	41, // [41:53] is the sub-list for method output_type
+	29, // [29:41] is the sub-list for method input_type
+	29, // [29:29] is the sub-list for extension type_name
+	29, // [29:29] is the sub-list for extension extendee
+	0,  // [0:29] is the sub-list for field type_name
 }
 
 func init() { file_core_core_fulfillment_proto_init() }
@@ -1723,16 +2204,20 @@ func file_core_core_fulfillment_proto_init() {
 	file_core_core_fulfillment_proto_msgTypes[12].OneofWrappers = []any{}
 	file_core_core_fulfillment_proto_msgTypes[17].OneofWrappers = []any{}
 	file_core_core_fulfillment_proto_msgTypes[18].OneofWrappers = []any{}
-	file_core_core_fulfillment_proto_msgTypes[19].OneofWrappers = []any{}
-	file_core_core_fulfillment_proto_msgTypes[20].OneofWrappers = []any{}
 	file_core_core_fulfillment_proto_msgTypes[21].OneofWrappers = []any{}
+	file_core_core_fulfillment_proto_msgTypes[22].OneofWrappers = []any{}
+	file_core_core_fulfillment_proto_msgTypes[24].OneofWrappers = []any{}
+	file_core_core_fulfillment_proto_msgTypes[25].OneofWrappers = []any{}
+	file_core_core_fulfillment_proto_msgTypes[26].OneofWrappers = []any{}
+	file_core_core_fulfillment_proto_msgTypes[27].OneofWrappers = []any{}
+	file_core_core_fulfillment_proto_msgTypes[28].OneofWrappers = []any{}
 	type x struct{}
 	out := protoimpl.TypeBuilder{
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_core_core_fulfillment_proto_rawDesc), len(file_core_core_fulfillment_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   22,
+			NumMessages:   29,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

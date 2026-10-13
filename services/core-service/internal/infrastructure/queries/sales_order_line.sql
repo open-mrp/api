@@ -77,16 +77,23 @@ LEFT JOIN product p ON p.id = sol.product_id
 WHERE sol.id = sqlc.arg('sales_order_line_id');
 
 -- name: CreateSalesOrderLine :exec
+-- The copies hold the values the line's quantity, price and cost rows were just created with.
 INSERT INTO sales_order_line (
     id, product_sku, product_description,
     line_item_number, product_id, item_id, sales_order_id,
     quantity_id, unit_price_id, unit_cost_id, metadata,
+    quantity_value, quantity_unit_id,
+    unit_price_value, unit_price_numerator_unit_id, unit_price_denominator_unit_id,
+    unit_cost_value, unit_cost_numerator_unit_id, unit_cost_denominator_unit_id,
     created_at, updated_at
 ) VALUES (
     sqlc.arg('id'), sqlc.arg('product_sku'), sqlc.narg('product_description'),
     sqlc.arg('line_item_number'),
     sqlc.narg('product_id'), sqlc.narg('item_id'), sqlc.arg('sales_order_id'),
     sqlc.arg('quantity_id'), sqlc.arg('unit_price_id'), sqlc.narg('unit_cost_id'), sqlc.narg('metadata'),
+    sqlc.arg('quantity_value'), sqlc.arg('quantity_unit_id'),
+    sqlc.arg('unit_price_value'), sqlc.arg('unit_price_numerator_unit_id'), sqlc.arg('unit_price_denominator_unit_id'),
+    sqlc.narg('unit_cost_value'), sqlc.narg('unit_cost_numerator_unit_id'), sqlc.narg('unit_cost_denominator_unit_id'),
     NOW(3), NOW(3)
 );
 

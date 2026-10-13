@@ -48,6 +48,7 @@ func (suite *ShipmentSvcGetTestSuite) SetupTest() {
 	suite.svc = NewShipmentSvc(&ShipmentSvcConfig{
 		Repos:           suite.repoFactory,
 		MediatorFactory: suite.mediatorFactory,
+		JobSvcFactory:   NewJobSvcFactory(),
 		TxManager:       &stubTxManager{factory: suite.repoFactory},
 		DispatchLeases:  newMemLeases(),
 	})

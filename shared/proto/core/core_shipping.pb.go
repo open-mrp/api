@@ -1915,7 +1915,6 @@ type ShipShipmentRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
 	EmailCustomer bool                   `protobuf:"varint,2,opt,name=email_customer,json=emailCustomer,proto3" json:"email_customer,omitempty"`
-	Includes      []string               `protobuf:"bytes,3,rep,name=includes,proto3" json:"includes,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -1964,16 +1963,9 @@ func (x *ShipShipmentRequest) GetEmailCustomer() bool {
 	return false
 }
 
-func (x *ShipShipmentRequest) GetIncludes() []string {
-	if x != nil {
-		return x.Includes
-	}
-	return nil
-}
-
 type ShipShipmentResponse struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
-	Shipment      *ShipmentInfo          `protobuf:"bytes,1,opt,name=shipment,proto3" json:"shipment,omitempty"`
+	Job           *JobInfo               `protobuf:"bytes,1,opt,name=job,proto3" json:"job,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -2008,9 +2000,9 @@ func (*ShipShipmentResponse) Descriptor() ([]byte, []int) {
 	return file_core_core_shipping_proto_rawDescGZIP(), []int{16}
 }
 
-func (x *ShipShipmentResponse) GetShipment() *ShipmentInfo {
+func (x *ShipShipmentResponse) GetJob() *JobInfo {
 	if x != nil {
-		return x.Shipment
+		return x.Job
 	}
 	return nil
 }
@@ -2912,7 +2904,7 @@ var File_core_core_shipping_proto protoreflect.FileDescriptor
 
 const file_core_core_shipping_proto_rawDesc = "" +
 	"\n" +
-	"\x18core/core_shipping.proto\x12\x04core\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\x1bgoogle/protobuf/empty.proto\x1a\x0fcore/core.proto\x1a\x15core/core_patch.proto\"\xcc)\n" +
+	"\x18core/core_shipping.proto\x12\x04core\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\x1bgoogle/protobuf/empty.proto\x1a\x0fcore/core.proto\x1a\x15core/core_patch.proto\x1a\x15core/core_async.proto\"\xcc)\n" +
 	"\fShipmentInfo\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x16\n" +
 	"\x06number\x18\x02 \x01(\tR\x06number\x12\x17\n" +
@@ -3205,13 +3197,12 @@ const file_core_core_shipping_proto_rawDesc = "" +
 	"#AdminUpdateShipmentTrackingResponse\x12.\n" +
 	"\bshipment\x18\x01 \x01(\v2\x12.core.ShipmentInfoR\bshipment\"'\n" +
 	"\x15DeleteShipmentRequest\x12\x0e\n" +
-	"\x02id\x18\x01 \x01(\tR\x02id\"h\n" +
+	"\x02id\x18\x01 \x01(\tR\x02id\"L\n" +
 	"\x13ShipShipmentRequest\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12%\n" +
-	"\x0eemail_customer\x18\x02 \x01(\bR\remailCustomer\x12\x1a\n" +
-	"\bincludes\x18\x03 \x03(\tR\bincludes\"F\n" +
-	"\x14ShipShipmentResponse\x12.\n" +
-	"\bshipment\x18\x01 \x01(\v2\x12.core.ShipmentInfoR\bshipment\"%\n" +
+	"\x0eemail_customer\x18\x02 \x01(\bR\remailCustomer\"7\n" +
+	"\x14ShipShipmentResponse\x12\x1f\n" +
+	"\x03job\x18\x01 \x01(\v2\r.core.JobInfoR\x03job\"%\n" +
 	"\x13VoidShipmentRequest\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\"F\n" +
 	"\x14VoidShipmentResponse\x12.\n" +
@@ -3357,9 +3348,10 @@ var file_core_core_shipping_proto_goTypes = []any{
 	(*timestamppb.Timestamp)(nil),               // 33: google.protobuf.Timestamp
 	(*PageInfo)(nil),                            // 34: core.PageInfo
 	(*StringPatch)(nil),                         // 35: core.StringPatch
-	(*CarrierInfo)(nil),                         // 36: core.CarrierInfo
-	(*ServiceLevelInfo)(nil),                    // 37: core.ServiceLevelInfo
-	(*emptypb.Empty)(nil),                       // 38: google.protobuf.Empty
+	(*JobInfo)(nil),                             // 36: core.JobInfo
+	(*CarrierInfo)(nil),                         // 37: core.CarrierInfo
+	(*ServiceLevelInfo)(nil),                    // 38: core.ServiceLevelInfo
+	(*emptypb.Empty)(nil),                       // 39: google.protobuf.Empty
 }
 var file_core_core_shipping_proto_depIdxs = []int32{
 	33, // 0: core.ShipmentInfo.shipped_at:type_name -> google.protobuf.Timestamp
@@ -3398,7 +3390,7 @@ var file_core_core_shipping_proto_depIdxs = []int32{
 	0,  // 33: core.UpdateShipmentResponse.shipment:type_name -> core.ShipmentInfo
 	35, // 34: core.AdminUpdateShipmentTrackingRequest.service_level_id:type_name -> core.StringPatch
 	0,  // 35: core.AdminUpdateShipmentTrackingResponse.shipment:type_name -> core.ShipmentInfo
-	0,  // 36: core.ShipShipmentResponse.shipment:type_name -> core.ShipmentInfo
+	36, // 36: core.ShipShipmentResponse.job:type_name -> core.JobInfo
 	0,  // 37: core.VoidShipmentResponse.shipment:type_name -> core.ShipmentInfo
 	4,  // 38: core.EstimateRateRequest.from:type_name -> core.AddressInput
 	4,  // 39: core.EstimateRateRequest.to:type_name -> core.AddressInput
@@ -3407,8 +3399,8 @@ var file_core_core_shipping_proto_depIdxs = []int32{
 	4,  // 42: core.RateShopRequest.to:type_name -> core.AddressInput
 	3,  // 43: core.RateShopRequest.parcels:type_name -> core.ParcelInfo
 	5,  // 44: core.RateShopResponse.options:type_name -> core.RateShopOptionInfo
-	36, // 45: core.RateShopResponse.carriers:type_name -> core.CarrierInfo
-	37, // 46: core.RateShopResponse.service_levels:type_name -> core.ServiceLevelInfo
+	37, // 45: core.RateShopResponse.carriers:type_name -> core.CarrierInfo
+	38, // 46: core.RateShopResponse.service_levels:type_name -> core.ServiceLevelInfo
 	1,  // 47: core.ListShipmentLinesResponse.shipment_lines:type_name -> core.ShipmentLineInfo
 	34, // 48: core.ListShipmentLinesResponse.page_info:type_name -> core.PageInfo
 	1,  // 49: core.GetShipmentLineResponse.shipment_line:type_name -> core.ShipmentLineInfo
@@ -3432,7 +3424,7 @@ var file_core_core_shipping_proto_depIdxs = []int32{
 	9,  // 67: core.CoreShippingService.GetShipment:output_type -> core.GetShipmentResponse
 	11, // 68: core.CoreShippingService.UpdateShipment:output_type -> core.UpdateShipmentResponse
 	13, // 69: core.CoreShippingService.AdminUpdateShipmentTracking:output_type -> core.AdminUpdateShipmentTrackingResponse
-	38, // 70: core.CoreShippingService.DeleteShipment:output_type -> google.protobuf.Empty
+	39, // 70: core.CoreShippingService.DeleteShipment:output_type -> google.protobuf.Empty
 	16, // 71: core.CoreShippingService.ShipShipment:output_type -> core.ShipShipmentResponse
 	18, // 72: core.CoreShippingService.VoidShipment:output_type -> core.VoidShipmentResponse
 	20, // 73: core.CoreShippingService.EstimateRate:output_type -> core.EstimateRateResponse
@@ -3441,7 +3433,7 @@ var file_core_core_shipping_proto_depIdxs = []int32{
 	26, // 76: core.CoreShippingService.GetShipmentLine:output_type -> core.GetShipmentLineResponse
 	28, // 77: core.CoreShippingService.CreateShipmentLine:output_type -> core.CreateShipmentLineResponse
 	30, // 78: core.CoreShippingService.UpdateShipmentLine:output_type -> core.UpdateShipmentLineResponse
-	38, // 79: core.CoreShippingService.DeleteShipmentLine:output_type -> google.protobuf.Empty
+	39, // 79: core.CoreShippingService.DeleteShipmentLine:output_type -> google.protobuf.Empty
 	66, // [66:80] is the sub-list for method output_type
 	52, // [52:66] is the sub-list for method input_type
 	52, // [52:52] is the sub-list for extension type_name
@@ -3456,6 +3448,7 @@ func file_core_core_shipping_proto_init() {
 	}
 	file_core_core_proto_init()
 	file_core_core_patch_proto_init()
+	file_core_core_async_proto_init()
 	file_core_core_shipping_proto_msgTypes[0].OneofWrappers = []any{}
 	file_core_core_shipping_proto_msgTypes[1].OneofWrappers = []any{}
 	file_core_core_shipping_proto_msgTypes[2].OneofWrappers = []any{}

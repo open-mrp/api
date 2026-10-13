@@ -212,6 +212,96 @@ func (h *fulfillmentGRPCHandler) BatchGetMachinesByIDs(ctx context.Context, req 
 	}, nil
 }
 
+func machineItemToProto(item *domain.MachineItem) *pb.MachineItemInfo {
+	if item == nil {
+		return nil
+	}
+	return &pb.MachineItemInfo{
+		ItemId:      item.ItemID,
+		Sku:         item.SKU,
+		Description: item.Description,
+		CreatedAt:   timestamppb.New(item.CreatedAt),
+		UpdatedAt:   timestamppb.New(item.UpdatedAt),
+	}
+}
+
+func (h *fulfillmentGRPCHandler) ListMachineItems(ctx context.Context, req *pb.ListMachineItemsRequest) (*pb.ListMachineItemsResponse, error) {
+	if req == nil {
+		return nil, contracts.NewMissingGRPCRequestDataError()
+	}
+
+	result, apiErr := h.machineSvc.ListMachineItems(ctx, domain.ListMachineItemsParams{
+		MachineID: req.MachineId,
+		Cursor:    req.Cursor,
+		Limit:     req.Limit,
+		Query:     req.Query,
+	})
+	if apiErr != nil {
+		return nil, contracts.ConvertAPIErrorToGRPC(apiErr)
+	}
+
+	items := make([]*pb.MachineItemInfo, len(result.Items))
+	for i, item := range result.Items {
+		items[i] = machineItemToProto(item)
+	}
+
+	return &pb.ListMachineItemsResponse{
+		Items:    items,
+		PageInfo: pageInfoToProto(result.PageInfo),
+	}, nil
+}
+
+func (h *fulfillmentGRPCHandler) ReplaceMachineItems(ctx context.Context, req *pb.ReplaceMachineItemsRequest) (*pb.ListMachineItemsResponse, error) {
+	if req == nil {
+		return nil, contracts.NewMissingGRPCRequestDataError()
+	}
+
+	ctx, finalizeIdempotency := contracts.WithIdempotencyTracking(ctx)
+	defer finalizeIdempotency()
+
+	result, apiErr := h.machineSvc.ReplaceMachineItems(ctx, domain.ReplaceMachineItemsParams{
+		MachineID: req.MachineId,
+		ItemIDs:   req.ItemIds,
+	})
+	if apiErr != nil {
+		return nil, contracts.ConvertAPIErrorToGRPC(apiErr)
+	}
+
+	items := make([]*pb.MachineItemInfo, len(result.Items))
+	for i, item := range result.Items {
+		items[i] = machineItemToProto(item)
+	}
+
+	return &pb.ListMachineItemsResponse{
+		Items:    items,
+		PageInfo: pageInfoToProto(result.PageInfo),
+	}, nil
+}
+
+func (h *fulfillmentGRPCHandler) SuggestMachineItemsFromScans(ctx context.Context, req *pb.SuggestMachineItemsFromScansRequest) (*pb.SuggestMachineItemsFromScansResponse, error) {
+	if req == nil {
+		return nil, contracts.NewMissingGRPCRequestDataError()
+	}
+
+	suggestions, apiErr := h.machineSvc.SuggestMachineItemsFromScans(ctx, req.MachineId, req.WindowMonths)
+	if apiErr != nil {
+		return nil, contracts.ConvertAPIErrorToGRPC(apiErr)
+	}
+
+	protos := make([]*pb.MachineItemScanSuggestionInfo, len(suggestions))
+	for i, s := range suggestions {
+		protos[i] = &pb.MachineItemScanSuggestionInfo{
+			ItemId:        s.ItemID,
+			Sku:           s.SKU,
+			Description:   s.Description,
+			LastScannedAt: timestamppb.New(s.LastScannedAt),
+			BatchCount:    s.BatchCount,
+		}
+	}
+
+	return &pb.SuggestMachineItemsFromScansResponse{Suggestions: protos}, nil
+}
+
 func machineCampaignToProto(c *domain.MachineCampaign) *pb.MachineCampaignInfo {
 	if c == nil {
 		return nil

@@ -20,6 +20,15 @@ type APIVersion struct {
 
 // Defined API versions (newest to oldest)
 var (
+	V1_0_Forge_Preview9 = APIVersion{
+		Version:   "1.0.forge-preview.9",
+		Minor:     1,
+		Patch:     0,
+		Codename:  "forge",
+		Preview:   9,
+		IsPreview: true,
+	}
+
 	V1_0_Forge_Preview8 = APIVersion{
 		Version:   "1.0.forge-preview.8",
 		Minor:     1,
@@ -93,10 +102,10 @@ var (
 	}
 
 	// Latest is the current/default API version
-	Latest = V1_0_Forge_Preview8
+	Latest = V1_0_Forge_Preview9
 
 	// Supported lists all supported API versions
-	Supported = []APIVersion{V1_0_Forge_Preview8, V1_0_Forge_Preview7, V1_0_Forge_Preview6, V1_0_Forge_Preview5, V1_0_Forge_Preview4, V1_0_Forge_Preview3, V1_0_Forge_Preview2, V1_0_Forge_Preview1}
+	Supported = []APIVersion{V1_0_Forge_Preview9, V1_0_Forge_Preview8, V1_0_Forge_Preview7, V1_0_Forge_Preview6, V1_0_Forge_Preview5, V1_0_Forge_Preview4, V1_0_Forge_Preview3, V1_0_Forge_Preview2, V1_0_Forge_Preview1}
 )
 
 // Regex patterns for version formats

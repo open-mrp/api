@@ -406,6 +406,20 @@ func (r *customerRepoImpl) List(ctx context.Context, params domain.ListCustomers
 	if params.Query != nil && *params.Query != "" {
 		searchQuery = gosql.NullString{String: "%" + db.EscapeLike(*params.Query) + "%", Valid: true}
 	}
+	var searchMatches []string
+	searchByMatches := false
+	if searchQuery.Valid {
+		matches, ok, err := customerSearchMatches(ctx, r.queries.DB(), params.AccountID, searchQuery.String)
+		if apiErr := db.MapSQLError(err); apiErr != nil {
+			return nil, tracing.Trace(span, apiErr)
+		}
+		if ok && len(matches) == 0 {
+			return &domain.ListCustomersResult{Items: []*domain.Customer{}, PageInfo: pagination.PageInfo{}}, nil
+		}
+		if ok {
+			searchMatches, searchByMatches, searchQuery = matches, true, gosql.NullString{}
+		}
+	}
 
 	// Build filter flags and slices.
 	includeCustomerGroupFilter := len(params.CustomerGroupIDs) > 0
@@ -450,6 +464,8 @@ func (r *customerRepoImpl) List(ctx context.Context, params domain.ListCustomers
 			rows, err := r.queries.ListCustomersBackward(ctx, sqlc.ListCustomersBackwardParams{
 				OwnerAccountID:                params.AccountID,
 				SearchQuery:                   searchQuery,
+				IncludeAccountFilter:          searchByMatches,
+				AccountIds:                    ensureStringSlice(searchMatches),
 				IncludeCustomerGroupFilter:    includeCustomerGroupFilter,
 				CustomerGroupIds:              ensureNullStringSlice(params.CustomerGroupIDs),
 				IncludePricingGroupFilter:     includePricingGroupFilter,
@@ -501,6 +517,8 @@ func (r *customerRepoImpl) List(ctx context.Context, params domain.ListCustomers
 		rows, err := r.queries.ListCustomersForward(ctx, sqlc.ListCustomersForwardParams{
 			OwnerAccountID:                params.AccountID,
 			SearchQuery:                   searchQuery,
+			IncludeAccountFilter:          searchByMatches,
+			AccountIds:                    ensureStringSlice(searchMatches),
 			IncludeCustomerGroupFilter:    includeCustomerGroupFilter,
 			CustomerGroupIds:              ensureNullStringSlice(params.CustomerGroupIDs),
 			IncludePricingGroupFilter:     includePricingGroupFilter,
@@ -552,6 +570,8 @@ func (r *customerRepoImpl) List(ctx context.Context, params domain.ListCustomers
 	rows, err := r.queries.ListCustomersForward(ctx, sqlc.ListCustomersForwardParams{
 		OwnerAccountID:                params.AccountID,
 		SearchQuery:                   searchQuery,
+		IncludeAccountFilter:          searchByMatches,
+		AccountIds:                    ensureStringSlice(searchMatches),
 		IncludeCustomerGroupFilter:    includeCustomerGroupFilter,
 		CustomerGroupIds:              ensureNullStringSlice(params.CustomerGroupIDs),
 		IncludePricingGroupFilter:     includePricingGroupFilter,

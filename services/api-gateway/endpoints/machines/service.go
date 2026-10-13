@@ -10,6 +10,8 @@ import (
 	"github.com/open-mrp/api/services/api-gateway/internal/resourceloaders"
 	apirequest "github.com/open-mrp/api/services/api-gateway/pkg/request"
 	apiresource "github.com/open-mrp/api/services/api-gateway/pkg/resource"
+	"github.com/open-mrp/api/services/api-gateway/pkg/resourcekit"
+	"github.com/open-mrp/api/shared/constants"
 	apierror "github.com/open-mrp/api/shared/errors"
 	"github.com/open-mrp/api/shared/field"
 	pb "github.com/open-mrp/api/shared/proto/core"
@@ -26,6 +28,9 @@ type MachineSvc interface {
 	UpdateMachine(ctx context.Context, req *UpdateMachineRequest) (*apiresource.Machine, *apierror.APIError)
 	BulkUpsertMachines(ctx context.Context, req *BulkUpsertMachinesRequest) (*apiresource.Job, *apierror.APIError)
 	DeleteMachine(ctx context.Context, req *DeleteMachineRequest) (*apiresource.EmptyResource, *apierror.APIError)
+	ListMachineItems(ctx context.Context, req *ListMachineItemsRequest) (*apiresource.List[apiresource.Item], *apierror.APIError)
+	ReplaceMachineItems(ctx context.Context, req *ReplaceMachineItemsRequest) (*apiresource.List[apiresource.Item], *apierror.APIError)
+	SuggestMachineItemsFromScans(ctx context.Context, req *SuggestMachineItemsFromScansRequest) (*apiresource.List[apiresource.MachineItemScanSuggestion], *apierror.APIError)
 }
 
 type MachineSvcConfig struct {
@@ -197,4 +202,95 @@ func (m *machineSvcImpl) DeleteMachine(ctx context.Context, req *DeleteMachineRe
 	}
 
 	return &apiresource.EmptyResource{}, nil
+}
+
+func loadItemsByIDs(ctx context.Context, ids []string) ([]apiresource.Item, *apierror.APIError) {
+	if len(ids) == 0 {
+		return []apiresource.Item{}, nil
+	}
+	loaded, apiErr := resourceloaders.LoadItems(ctx, ids)
+	if apiErr != nil {
+		return nil, apiErr
+	}
+	items := make([]apiresource.Item, 0, len(ids))
+	for _, id := range ids {
+		if v, ok := loaded[id]; ok {
+			items = append(items, *v.(*apiresource.Item))
+		}
+	}
+	return items, nil
+}
+
+func (m *machineSvcImpl) ListMachineItems(ctx context.Context, req *ListMachineItemsRequest) (*apiresource.List[apiresource.Item], *apierror.APIError) {
+	resp, apiErr := grpcutil.CallRPC(ctx, machineSvcTracer, "service.machines.list_items", domain.ServiceName,
+		func(ctx context.Context, opts ...grpc.CallOption) (*pb.ListMachineItemsResponse, error) {
+			return m.coreClient.ListMachineItems(ctx, &pb.ListMachineItemsRequest{
+				MachineId: req.MachineID,
+				Cursor:    req.Cursor,
+				Limit:     req.Limit,
+				Query:     req.Query,
+			}, opts...)
+		})
+	if apiErr != nil {
+		return nil, apiErr
+	}
+
+	ids := make([]string, len(resp.Items))
+	for i, item := range resp.Items {
+		ids[i] = item.ItemId
+	}
+	items, apiErr := loadItemsByIDs(ctx, ids)
+	if apiErr != nil {
+		return nil, apiErr
+	}
+	return apiresource.NewList(items, grpcutil.MapProtoPageInfo(ctx, resp.PageInfo)), nil
+}
+
+func (m *machineSvcImpl) ReplaceMachineItems(ctx context.Context, req *ReplaceMachineItemsRequest) (*apiresource.List[apiresource.Item], *apierror.APIError) {
+	resp, apiErr := grpcutil.CallRPC(ctx, machineSvcTracer, "service.machines.replace_items", domain.ServiceName,
+		func(ctx context.Context, opts ...grpc.CallOption) (*pb.ListMachineItemsResponse, error) {
+			return m.coreClient.ReplaceMachineItems(ctx, &pb.ReplaceMachineItemsRequest{
+				MachineId: req.MachineID,
+				ItemIds:   req.ItemIDs,
+			}, opts...)
+		})
+	if apiErr != nil {
+		return nil, apiErr
+	}
+
+	ids := make([]string, len(resp.Items))
+	for i, item := range resp.Items {
+		ids[i] = item.ItemId
+	}
+	items, apiErr := loadItemsByIDs(ctx, ids)
+	if apiErr != nil {
+		return nil, apiErr
+	}
+	return apiresource.NewList(items, grpcutil.MapProtoPageInfo(ctx, resp.PageInfo)), nil
+}
+
+func (m *machineSvcImpl) SuggestMachineItemsFromScans(ctx context.Context, req *SuggestMachineItemsFromScansRequest) (*apiresource.List[apiresource.MachineItemScanSuggestion], *apierror.APIError) {
+	resp, apiErr := grpcutil.CallRPC(ctx, machineSvcTracer, "service.machines.suggest_items_from_scans", domain.ServiceName,
+		func(ctx context.Context, opts ...grpc.CallOption) (*pb.SuggestMachineItemsFromScansResponse, error) {
+			return m.coreClient.SuggestMachineItemsFromScans(ctx, &pb.SuggestMachineItemsFromScansRequest{
+				MachineId:    req.MachineID,
+				WindowMonths: req.WindowMonths.Ptr(),
+			}, opts...)
+		})
+	if apiErr != nil {
+		return nil, apiErr
+	}
+
+	suggestions := make([]apiresource.MachineItemScanSuggestion, 0, len(resp.Suggestions))
+	for _, s := range resp.Suggestions {
+		row := apiresource.MachineItemScanSuggestion{
+			ID:            s.ItemId,
+			Object:        constants.ObjectTypeMachineItemScanSuggestion,
+			LastScannedAt: s.LastScannedAt.AsTime(),
+			BatchCount:    s.BatchCount,
+		}
+		resourcekit.GetLoadMeta(ctx).Set(constants.ObjectTypeMachineItemScanSuggestion, s.ItemId, "item_id", s.ItemId)
+		suggestions = append(suggestions, row)
+	}
+	return apiresource.NewList(suggestions, apiresource.PageInfo{}), nil
 }

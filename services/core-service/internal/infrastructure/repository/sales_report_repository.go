@@ -64,6 +64,15 @@ type salesFactQuery struct {
 	filters []factFilter
 }
 
+// The buyer keys. The cover key carries every column a total or breakdown reads, so a report filtered
+// to customers alone is an index range with no lookups into the date-clustered rows. Beside another
+// filter the narrow key is offered instead: the planner should read whichever filter's range is
+// shorter, and the cover key, needing no lookups, wins on cost even when its range is far longer.
+const (
+	salesFactBuyerIndex      = "sales_line_fact_buyer_idx"
+	salesFactBuyerCoverIndex = "sales_line_fact_buyer_cover_idx"
+)
+
 // factFilter is one entity filter on sales_line_fact: the lines whose column is one of ids.
 type factFilter struct {
 	column, key string
@@ -162,9 +171,13 @@ func (r *salesReportRepoImpl) newSalesFactQuery(ctx context.Context, f domain.Sa
 	}
 	q.buyers, q.buyersFiltered = buyers, filtered
 
+	buyerKey := salesFactBuyerIndex
+	if !q.entityFiltered {
+		buyerKey = salesFactBuyerCoverIndex
+	}
 	// Ordered from the usually narrowest filter, which the invoice page prefers among equals.
 	for _, ff := range []factFilter{
-		{"f.buyer_account_id", "sales_line_fact_buyer_idx", buyers},
+		{"f.buyer_account_id", buyerKey, buyers},
 		{"f.item_id", "sales_line_fact_item_idx", f.ItemIDs},
 		{"f.sales_rep_id", "sales_line_fact_sales_rep_idx", f.SalesRepIDs},
 		{"f.product_line_id", "sales_line_fact_product_line_idx", f.ProductLineIDs},
@@ -961,7 +974,7 @@ func salesLineIndexHint(f domain.SalesReportFilter, buyers []string, buyersFilte
 		key    string
 		values int
 	}{
-		{"sales_line_fact_buyer_idx", buyerValues},
+		{salesFactBuyerIndex, buyerValues},
 		{"sales_line_fact_sales_rep_idx", len(f.SalesRepIDs)},
 		{"sales_line_fact_item_idx", len(f.ItemIDs)},
 		{"sales_line_fact_account_product_line_idx", len(f.ProductLineIDs)},
@@ -1000,7 +1013,7 @@ func salesLinePageQuery(q *salesFactQuery, f domain.SalesReportFilter, cursor *p
 				where += " AND " + seek
 				args = append(args, seekArgs...)
 			}
-			branches[i] = "(SELECT f.* FROM sales_line_fact f FORCE INDEX (sales_line_fact_buyer_idx) WHERE " + where +
+			branches[i] = "(SELECT f.* FROM sales_line_fact f FORCE INDEX (" + salesFactBuyerIndex + ") WHERE " + where +
 				" ORDER BY " + orderBy("f") + " LIMIT ?)"
 			args = append(args, limit)
 		}

@@ -3701,6 +3701,8 @@ type ScheduleDiagnosticsProto struct {
 	ConstraintMachineCount int32 `protobuf:"varint,9,opt,name=constraint_machine_count,json=constraintMachineCount,proto3" json:"constraint_machine_count,omitempty"`
 	MeasuredBatchCount     int32 `protobuf:"varint,10,opt,name=measured_batch_count,json=measuredBatchCount,proto3" json:"measured_batch_count,omitempty"`
 	MachinesWithoutStep    int32 `protobuf:"varint,11,opt,name=machines_without_step,json=machinesWithoutStep,proto3" json:"machines_without_step,omitempty"`
+	// Distinct SKUs the participating machines are configured to run.
+	ConfiguredItemCount int32 `protobuf:"varint,19,opt,name=configured_item_count,json=configuredItemCount,proto3" json:"configured_item_count,omitempty"`
 	// The order book this plan owes, and the commitments it does not meet.
 	FirmDemandUnits       float64                     `protobuf:"fixed64,12,opt,name=firm_demand_units,json=firmDemandUnits,proto3" json:"firm_demand_units,omitempty"`
 	UndatedFirmOrderCount int32                       `protobuf:"varint,13,opt,name=undated_firm_order_count,json=undatedFirmOrderCount,proto3" json:"undated_firm_order_count,omitempty"`
@@ -3818,6 +3820,13 @@ func (x *ScheduleDiagnosticsProto) GetMeasuredBatchCount() int32 {
 func (x *ScheduleDiagnosticsProto) GetMachinesWithoutStep() int32 {
 	if x != nil {
 		return x.MachinesWithoutStep
+	}
+	return 0
+}
+
+func (x *ScheduleDiagnosticsProto) GetConfiguredItemCount() int32 {
+	if x != nil {
+		return x.ConfiguredItemCount
 	}
 	return 0
 }
@@ -8194,7 +8203,7 @@ const file_core_core_production_schedule_proto_rawDesc = "" +
 	"\x05after\x18\x05 \x01(\x01R\x05after\x12\x1b\n" +
 	"\ttype_code\x18\x06 \x01(\tR\btypeCode\x12\x1f\n" +
 	"\vreason_code\x18\a \x01(\tR\n" +
-	"reasonCode\"\x90\b\n" +
+	"reasonCode\"\xc4\b\n" +
 	"\x18ScheduleDiagnosticsProto\x12&\n" +
 	"\x0feoq_capped_skus\x18\x01 \x03(\tR\reoqCappedSkus\x12-\n" +
 	"\x12unschedulable_skus\x18\x02 \x03(\tR\x11unschedulableSkus\x122\n" +
@@ -8207,7 +8216,8 @@ const file_core_core_production_schedule_proto_rawDesc = "" +
 	"\x18constraint_machine_count\x18\t \x01(\x05R\x16constraintMachineCount\x120\n" +
 	"\x14measured_batch_count\x18\n" +
 	" \x01(\x05R\x12measuredBatchCount\x122\n" +
-	"\x15machines_without_step\x18\v \x01(\x05R\x13machinesWithoutStep\x12*\n" +
+	"\x15machines_without_step\x18\v \x01(\x05R\x13machinesWithoutStep\x122\n" +
+	"\x15configured_item_count\x18\x13 \x01(\x05R\x13configuredItemCount\x12*\n" +
 	"\x11firm_demand_units\x18\f \x01(\x01R\x0ffirmDemandUnits\x127\n" +
 	"\x18undated_firm_order_count\x18\r \x01(\x05R\x15undatedFirmOrderCount\x12D\n" +
 	"\x0eat_risk_orders\x18\x0e \x03(\v2\x1e.core.ScheduleAtRiskOrderProtoR\fatRiskOrders\x126\n" +

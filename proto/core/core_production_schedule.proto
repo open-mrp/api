@@ -568,6 +568,8 @@ message ScheduleDiagnosticsProto {
   int32 constraint_machine_count = 9;
   int32 measured_batch_count = 10;
   int32 machines_without_step = 11;
+  // Distinct SKUs the participating machines are configured to run.
+  int32 configured_item_count = 19;
   // The order book this plan owes, and the commitments it does not meet.
   double firm_demand_units = 12;
   int32 undated_firm_order_count = 13;

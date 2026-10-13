@@ -8,6 +8,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/open-mrp/api/shared/constants"
 	"github.com/open-mrp/api/shared/db"
 	"github.com/open-mrp/api/shared/pagination"
 )
@@ -115,22 +116,28 @@ func TestBuildPickListQuery_KeysetMatchesSortDirection(t *testing.T) {
 func TestNewPickSearch(t *testing.T) {
 	t.Parallel()
 
+	phrase := db.NgramSubstring{Tokens: "+23 +35", Like: "%235%"}
 	for _, tc := range []struct {
-		name string
-		q    *string
-		want pickSearch
+		name  string
+		q     *string
+		match constants.PickSearchMatch
+		want  pickSearch
 	}{
-		{"absent", nil, pickSearch{}},
-		{"empty", new(""), pickSearch{}},
-		{"one character is a number prefix", new("2"), pickSearch{NumberPrefix: "2%"}},
-		{"two characters are a number prefix", new("22"), pickSearch{NumberPrefix: "22%"}},
-		{"a prefix escapes LIKE wildcards", new("_%"), pickSearch{NumberPrefix: `\_\%%`}},
-		{"three characters are a substring phrase", new("235"), pickSearch{Phrase: db.NgramSubstring{Tokens: "+23 +35", Like: "%235%"}}},
-		{"characters are counted, not bytes", new("ñé"), pickSearch{NumberPrefix: "ñé%"}},
+		{"absent", nil, "", pickSearch{}},
+		{"empty", new(""), "", pickSearch{}},
+		{"one character is a number prefix", new("2"), "", pickSearch{NumberPrefix: "2%"}},
+		{"two characters are a number prefix", new("22"), "", pickSearch{NumberPrefix: "22%"}},
+		{"two characters are a number prefix under contains", new("22"), constants.PickSearchMatchContains, pickSearch{NumberPrefix: "22%"}},
+		{"a prefix escapes LIKE wildcards", new("_%"), "", pickSearch{NumberPrefix: `\_\%%`}},
+		{"three characters match the numbers' start by default", new("235"), "", pickSearch{Phrase: phrase, Prefix: "235%"}},
+		{"prefix is the default named", new("235"), constants.PickSearchMatchPrefix, pickSearch{Phrase: phrase, Prefix: "235%"}},
+		{"contains matches anywhere", new("235"), constants.PickSearchMatchContains, pickSearch{Phrase: phrase}},
+		{"a longer prefix escapes LIKE wildcards", new("2_5"), "", pickSearch{Phrase: db.NewNgramSubstring("2_5"), Prefix: `2\_5%`}},
+		{"characters are counted, not bytes", new("ñé"), "", pickSearch{NumberPrefix: "ñé%"}},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
-			if got := newPickSearch(tc.q); got != tc.want {
+			if got := newPickSearch(tc.q, tc.match); got != tc.want {
 				t.Errorf("newPickSearch = %+v, want %+v", got, tc.want)
 			}
 		})
@@ -153,12 +160,12 @@ func TestBuildPickListQuery_ArgsBindInPlaceholderOrder(t *testing.T) {
 	t.Run("phrase with too many matches to read up front", func(t *testing.T) {
 		t.Parallel()
 		q := base
-		q.Search = newPickSearch(new("235"))
+		q.Search = newPickSearch(new("235"), constants.PickSearchMatchContains)
 		query, args := buildPickListQuery(q)
 
 		want := []any{
 			"ac_1",
-			"ac_1", "+23 +35", "%235%", "ac_1", "+23 +35", "%235%", "ac_1", "+23 +35", "%235%", "ac_1", "+23 +35", "%235%",
+			"%235%", "ac_1", "+23 +35", "%235%", "ac_1", "+23 +35", "%235%", "ac_1", "+23 +35", "%235%",
 			"ac_c1", "ac_c2", "pl_1", start.Time, end.Time, int32(51),
 		}
 		if !reflect.DeepEqual(args, want) {
@@ -167,15 +174,40 @@ func TestBuildPickListQuery_ArgsBindInPlaceholderOrder(t *testing.T) {
 		if got := strings.Count(query, "?"); got != len(args) {
 			t.Errorf("%d placeholders but %d args", got, len(args))
 		}
-		if !strings.Contains(query, "AND p.id IN (SELECT id FROM (") {
-			t.Errorf("a common phrase is not a residual:\n%s", query)
+		if !strings.Contains(query, "AND (p.number LIKE ? OR p.sales_order_id IN (SELECT id FROM (") {
+			t.Errorf("a common phrase is not a residual on the pick's own columns:\n%s", query)
+		}
+		if strings.Contains(query, "JOIN pick pk") {
+			t.Errorf("a common phrase collects its matching picks again:\n%s", query)
+		}
+	})
+
+	t.Run("prefix with too many matches to read up front", func(t *testing.T) {
+		t.Parallel()
+		q := base
+		q.Search = newPickSearch(new("235"), "")
+		query, args := buildPickListQuery(q)
+
+		want := []any{
+			"ac_1",
+			"235%", "ac_1", "235%", "ac_1", "+23 +35", "%235%", "ac_1", "+23 +35", "%235%",
+			"ac_c1", "ac_c2", "pl_1", start.Time, end.Time, int32(51),
+		}
+		if !reflect.DeepEqual(args, want) {
+			t.Errorf("args = %v\nwant %v", args, want)
+		}
+		if got := strings.Count(query, "?"); got != len(args) {
+			t.Errorf("%d placeholders but %d args", got, len(args))
+		}
+		if !strings.Contains(query, "FROM sales_order pso FORCE INDEX ("+pickOrderPONumberIndex+") WHERE pso.owner_account_id = ? AND pso.customer_po_number LIKE ?") {
+			t.Errorf("a common prefix does not read its orders off the PO key:\n%s", query)
 		}
 	})
 
 	t.Run("phrase read from its few matches", func(t *testing.T) {
 		t.Parallel()
 		q := base
-		q.Search = newPickSearch(new("235"))
+		q.Search = newPickSearch(new("235"), "")
 		q.PhraseIDs, q.DriveFromPhrase = []string{"pk_1", "pk_2"}, true
 		query, args := buildPickListQuery(q)
 
@@ -282,7 +314,7 @@ func TestPickListQuery_MergesOnlyAFewCustomersOffThePhrasePath(t *testing.T) {
 		{"one customer is a single sorted read", pickListQuery{BuyerIDs: []string{"ac_c1"}}, false},
 		{"a few customers merge", pickListQuery{BuyerIDs: []string{"ac_c1", "ac_c2"}}, true},
 		{"too many customers to merge", pickListQuery{BuyerIDs: many}, false},
-		{"a phrase search drives from its matches", pickListQuery{BuyerIDs: []string{"ac_c1", "ac_c2"}, Search: newPickSearch(new("235"))}, false},
+		{"a phrase search drives from its matches", pickListQuery{BuyerIDs: []string{"ac_c1", "ac_c2"}, Search: newPickSearch(new("235"), "")}, false},
 	} {
 		if got := tc.q.mergesBuyers(); got != tc.want {
 			t.Errorf("%s: mergesBuyers = %v, want %v", tc.name, got, tc.want)
@@ -317,17 +349,17 @@ func TestPickPhraseArms_ConfirmEveryMatchWithLike(t *testing.T) {
 		wantMatches int
 		wantHint    bool
 	}{
-		{term: "235", wantMatches: pickPhraseArmCount},
+		{term: "235", wantMatches: 4},
 		{term: "aia", wantMatches: 0, wantHint: true},
 	} {
 		t.Run(tc.term, func(t *testing.T) {
 			t.Parallel()
-			query, args := buildPickPhraseIDsQuery(pickListQuery{AccountID: "ac_1", Search: newPickSearch(new(tc.term))})
+			query, args := buildPickPhraseIDsQuery(pickListQuery{AccountID: "ac_1", Search: newPickSearch(new(tc.term), constants.PickSearchMatchContains)})
 
 			if got := strings.Count(query, "MATCH("); got != tc.wantMatches {
 				t.Errorf("%d MATCH predicates, want %d:\n%s", got, tc.wantMatches, query)
 			}
-			if got := strings.Count(query, " LIKE ?"); got != pickPhraseArmCount {
+			if got := strings.Count(query, " LIKE ?"); got != 4 {
 				t.Errorf("%d LIKE predicates, want one per arm:\n%s", got, query)
 			}
 			if got := strings.Contains(query, "FORCE INDEX ("+pickAccountNumberIndex+")"); got != tc.wantHint {
@@ -337,6 +369,34 @@ func TestPickPhraseArms_ConfirmEveryMatchWithLike(t *testing.T) {
 				t.Errorf("%d placeholders but %d args", got, len(args))
 			}
 		})
+	}
+}
+
+// A prefix reads the pick and PO numbers as ranges on their keys, not through the FULLTEXT indexes,
+// which hand back every tenant's numbers holding the term anywhere. The customer arms still match a
+// phrase.
+func TestPickPhraseArms_PrefixReadsTheNumberKeys(t *testing.T) {
+	t.Parallel()
+
+	query, args := buildPickPhraseIDsQuery(pickListQuery{AccountID: "ac_1", Search: newPickSearch(new("235"), "")})
+	for _, want := range []string{
+		"FROM pick pk FORCE INDEX (" + pickAccountNumberIndex + ") WHERE pk.account_id = ? AND pk.number LIKE ?",
+		"FROM sales_order pso FORCE INDEX (" + pickOrderPONumberIndex + ") JOIN pick pk FORCE INDEX (" + pickSalesOrderPageIndex + ") ON pk.sales_order_id = pso.id" +
+			" WHERE pso.owner_account_id = ? AND pso.customer_po_number LIKE ? AND pk.account_id = ?",
+	} {
+		if !strings.Contains(query, want) {
+			t.Errorf("query lacks %q:\n%s", want, query)
+		}
+	}
+	if got := strings.Count(query, "MATCH("); got != 2 {
+		t.Errorf("%d MATCH predicates, want the two customer arms':\n%s", got, query)
+	}
+	want := []any{"ac_1", "235%", "ac_1", "235%", "ac_1", "ac_1", "+23 +35", "%235%", "ac_1", "+23 +35", "%235%", pickPhraseScanCap + 1}
+	if !reflect.DeepEqual(args, want) {
+		t.Errorf("args = %v\nwant %v", args, want)
+	}
+	if got := strings.Count(query, "?"); got != len(args) {
+		t.Errorf("%d placeholders but %d args", got, len(args))
 	}
 }
 
@@ -361,11 +421,11 @@ func TestPickPhraseArms_ReadThePageColumnsFromACoveringKey(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 			q := tc.q
-			q.AccountID, q.Search = "ac_1", newPickSearch(new("235"))
+			q.AccountID, q.Search = "ac_1", newPickSearch(new("235"), constants.PickSearchMatchContains)
 			query, args := buildPickPhraseIDsQuery(q)
 
 			if tc.wantCols == "" {
-				if q.phrasePagesInMemory() || strings.Count(query, "SELECT pk.id FROM") != pickPhraseArmCount {
+				if q.phrasePagesInMemory() || strings.Count(query, "SELECT pk.id FROM") != 4 {
 					t.Errorf("arms read more than ids for a page read in SQL:\n%s", query)
 				}
 				return
@@ -373,7 +433,7 @@ func TestPickPhraseArms_ReadThePageColumnsFromACoveringKey(t *testing.T) {
 			if !q.phrasePagesInMemory() {
 				t.Fatalf("page is not computed in memory")
 			}
-			if got := strings.Count(query, "pk.buyer_account_id, pk.finished_at, "+tc.wantCols); got != pickPhraseArmCount {
+			if got := strings.Count(query, "pk.buyer_account_id, pk.finished_at, "+tc.wantCols); got != 4 {
 				t.Errorf("%d arms read the page columns, want every arm:\n%s", got, query)
 			}
 			if got := strings.Count(query, "JOIN pick pk FORCE INDEX ("+tc.wantIndex+")"); got != 2 {
@@ -449,7 +509,7 @@ func TestPickPhrasePage_FiltersSortsAndPages(t *testing.T) {
 func TestPickFilterSizing_StopsAtTheCap(t *testing.T) {
 	t.Parallel()
 
-	query, args := buildPickPhraseIDsQuery(pickListQuery{AccountID: "ac_1", Search: newPickSearch(new("235"))})
+	query, args := buildPickPhraseIDsQuery(pickListQuery{AccountID: "ac_1", Search: newPickSearch(new("235"), "")})
 	if strings.Contains(query, " UNION SELECT") || !strings.HasSuffix(query, ") LIMIT ?") {
 		t.Errorf("phrase read does not stream to a limit:\n%s", query)
 	}
@@ -480,6 +540,7 @@ func TestPickListIndexes_AreDeclaredInMigrations(t *testing.T) {
 	for _, index := range []string{
 		pickShipByIndex, pickOpenShipByIndex, pickCreatedIndex, pickOpenCreatedIndex,
 		pickBuyerShipByIndex, pickBuyerCreatedIndex, pickBuyerOpenShipByIndex, pickBuyerOpenCreatedIndex, pickAccountNumberIndex,
+		pickOrderPONumberIndex, pickSalesOrderPageIndex,
 	} {
 		if !strings.Contains(schema, index) {
 			t.Errorf("%s is FORCE INDEX'd by the pick list but no migration creates it", index)

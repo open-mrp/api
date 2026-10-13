@@ -31,6 +31,7 @@ import (
 	s3client "github.com/open-mrp/api/shared/cloud/s3"
 	"github.com/open-mrp/api/shared/contracts"
 	dbpkg "github.com/open-mrp/api/shared/db"
+	"github.com/open-mrp/api/shared/db/backfill"
 	"github.com/open-mrp/api/shared/lease"
 	"github.com/open-mrp/api/shared/messaging"
 	"github.com/open-mrp/api/shared/pagination"
@@ -46,6 +47,9 @@ const reportMaxOpenConnections = 10
 // of running on (and piling up with retries) on the replica. Export pages run without a request
 // deadline and are small, so the cap is generous.
 const reportMaxQueryTime = 30 * time.Second
+
+// backfillRetryInterval is how often a pod tries to take up an unfinished backfill.
+const backfillRetryInterval = 5 * time.Minute
 
 func Run(
 	ctx context.Context,
@@ -742,6 +746,7 @@ func Run(
 	shipmentSvc := service.NewShipmentSvc(&service.ShipmentSvcConfig{
 		Repos:                repoFactory,
 		MediatorFactory:      mediatorFactory,
+		JobSvcFactory:        jobSvcFactory,
 		TxManager:            txManager,
 		ShippoFactory:        shippoFactory,
 		EncryptionKey:        integrationEncryptionKey,
@@ -846,6 +851,7 @@ func Run(
 		event.NewBulkOperationConsumer(rabbitmq, inboxRepo, messaging.BulkUpsertProperties, propertySvc.ExecuteBulkUpsertProperties),
 		event.NewBulkOperationConsumer(rabbitmq, inboxRepo, messaging.BulkResolveHubspotCompanyReviews, hubspotSyncSvc.ExecuteBulkResolveReviews),
 		event.NewBulkOperationConsumer(rabbitmq, inboxRepo, messaging.PackPick, pickSvc.ExecutePackPick),
+		event.NewBulkOperationConsumer(rabbitmq, inboxRepo, messaging.ShipShipment, shipmentSvc.ExecuteShipShipment),
 	}
 	for _, bulkConsumer := range bulkConsumers {
 		if err := bulkConsumer.Listen(ctx); err != nil {
@@ -943,6 +949,19 @@ func Run(
 		return err
 	}
 	defer salesFactRefresher.Stop()
+
+	// Order, invoice and pick lines carry copies of their quantities and rates, kept by every write. This
+	// fills the lines written before the copies existed, on one pod at a time and paced, after the
+	// deploy; reports read the copies once it has finished.
+	lineCopyBackfill, err := backfill.New(&backfill.Config{
+		Name:     repository.LineCopyBackfillName,
+		Batch:    repository.NewLineCopyBackfill(sqlc.New(reportDB), queries).Batch,
+		Progress: repository.NewBackfillProgressRepo(queries),
+	})
+	if err != nil {
+		return err
+	}
+	go lineCopyBackfill.Keep(ctx, leaseSvc, backfillRetryInterval)
 	if err := audit.Subscribe(ctx, rabbitmq, audit.SubscribeConfig{
 		QueueBaseName: messaging.CoreEventSalesFactQueue,
 		OnEvent:       service.NewSalesFactMarker(repoFactory, salesFactRefresher.Wake).HandleAuditEvent,

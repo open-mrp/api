@@ -61,6 +61,7 @@ const (
 	SeedIncludePutChangeCategoryItemID      = "it_01seed_putinc_chgcat00"
 	SeedIncludePutAddAttributeItemID        = "it_01seed_putinc_attradd0"
 	SeedIncludePutChangeProductLineSaleID   = "pd_01seed_putinc_chprdln0"
+	SeedIncludePutMachineItemsMachineID     = "mc_01seed_putinc_items0"
 	SeedIncludePutChangeProductLineItemID   = "it_01seed_putinc_chprdln_it"
 	SeedIncludePutEstimateSalesOrderID      = "or_01k0a8bs2yfhev5begay245wez"
 	SeedIncludePutEstimatePurchaseOrderID   = "or_01seed_putinc_po_es00"

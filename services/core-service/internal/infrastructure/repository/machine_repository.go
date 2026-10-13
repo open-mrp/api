@@ -484,32 +484,6 @@ func (r *machineRepoImpl) FindByNames(ctx context.Context, accountID string, nam
 	return machines, nil
 }
 
-func mapMachineItemForwardRow(row sqlc.ListMachineItemsForwardRow) *domain.MachineItem {
-	item := &domain.MachineItem{
-		ItemID:    row.ItemID,
-		SKU:       row.Sku,
-		CreatedAt: row.CreatedAt,
-		UpdatedAt: row.UpdatedAt,
-	}
-	if row.Description.Valid {
-		item.Description = &row.Description.String
-	}
-	return item
-}
-
-func mapMachineItemBackwardRow(row sqlc.ListMachineItemsBackwardRow) *domain.MachineItem {
-	item := &domain.MachineItem{
-		ItemID:    row.ItemID,
-		SKU:       row.Sku,
-		CreatedAt: row.CreatedAt,
-		UpdatedAt: row.UpdatedAt,
-	}
-	if row.Description.Valid {
-		item.Description = &row.Description.String
-	}
-	return item
-}
-
 func machineItemCreatedAt(m *domain.MachineItem) time.Time { return m.CreatedAt }
 func machineItemID(m *domain.MachineItem) string           { return m.ItemID }
 
@@ -523,61 +497,21 @@ func (r *machineRepoImpl) ListItems(ctx context.Context, params domain.ListMachi
 		return &domain.ListMachineItemsResult{Items: result, PageInfo: pageInfo}
 	}
 
-	if params.Cursor == nil {
-		rows, err := r.queries.ListMachineItemsForward(ctx, sqlc.ListMachineItemsForwardParams{
-			Limit:       params.Limit + 1,
-			AccountID:   params.AccountID,
-			MachineID:   params.MachineID,
-			SearchQuery: search,
-		})
-		if apiErr := db.MapSQLError(err); apiErr != nil {
-			return nil, tracing.Trace(span, apiErr)
+	var cur *pagination.StringCursor
+	if params.Cursor != nil {
+		decoded, err := pagination.DecodeStringCursor(*params.Cursor)
+		if err != nil {
+			return nil, tracing.Trace(span, apierror.NewValidationErrorWithParam("Invalid pagination cursor.", "cursor"))
 		}
-		items := make([]*domain.MachineItem, len(rows))
-		for i, row := range rows {
-			items[i] = mapMachineItemForwardRow(row)
-		}
-		return page(items, nil), nil
+		cur = &decoded
 	}
-
-	cur, err := pagination.DecodeStringCursor(*params.Cursor)
-	if err != nil {
-		return nil, tracing.Trace(span, apierror.NewValidationErrorWithParam("Invalid pagination cursor.", "cursor"))
-	}
-
-	if cur.Direction == pagination.DirectionBackward {
-		rows, err := r.queries.ListMachineItemsBackward(ctx, sqlc.ListMachineItemsBackwardParams{
-			Limit:           params.Limit + 1,
-			AccountID:       params.AccountID,
-			MachineID:       params.MachineID,
-			SearchQuery:     search,
-			CursorCreatedAt: cur.OccurredAt,
-			CursorID:        cur.ID,
-		})
-		if apiErr := db.MapSQLError(err); apiErr != nil {
-			return nil, tracing.Trace(span, apiErr)
-		}
-		items := make([]*domain.MachineItem, len(rows))
-		for i, row := range rows {
-			items[i] = mapMachineItemBackwardRow(row)
-		}
-		return page(items, &cur.Direction), nil
-	}
-
-	rows, err := r.queries.ListMachineItemsForward(ctx, sqlc.ListMachineItemsForwardParams{
-		Limit:           params.Limit + 1,
-		AccountID:       params.AccountID,
-		MachineID:       params.MachineID,
-		SearchQuery:     search,
-		CursorCreatedAt: gosql.NullTime{Time: cur.OccurredAt, Valid: true},
-		CursorID:        gosql.NullString{String: cur.ID, Valid: true},
-	})
+	query, args := buildMachineItemListQuery(params, search, cur, params.Limit+1)
+	items, err := r.listMachineItemPage(ctx, query, args)
 	if apiErr := db.MapSQLError(err); apiErr != nil {
 		return nil, tracing.Trace(span, apiErr)
 	}
-	items := make([]*domain.MachineItem, len(rows))
-	for i, row := range rows {
-		items[i] = mapMachineItemForwardRow(row)
+	if cur == nil {
+		return page(items, nil), nil
 	}
 	return page(items, &cur.Direction), nil
 }

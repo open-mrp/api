@@ -11,6 +11,8 @@ import (
 func init() {
 	resourcekit.Register(&resourcekit.Definition{
 		ObjectType: constants.ObjectTypeMachineItemScanSuggestion,
+		// A suggestion is computed by its endpoint, never fetched by id.
+		Load: stubLoader,
 		Subs: []resourcekit.SubField{
 			{
 				Key:         "item",

@@ -2002,3 +2002,7 @@ INSERT IGNORE INTO account_relation (id, owner_account_id, counterparty_account_
 INSERT IGNORE INTO account_relation_product_line (id, account_relation_id, product_line_id, created_at, updated_at) VALUES
     ('acrepdln_01e2eltprt3', 'acre_01e2eltparent003', 'pdln_01k0a735ype5e8nrhv1n5dhq1q', NOW(), NOW()),
     ('acrepdln_01e2eltchd5', 'acre_01e2eltchild0005', 'pdln_01k0a735ype5e8nrhv1n5dhq1q', NOW(), NOW());
+
+-- Machine whose item set only the PUT include coverage replaces, so no schedule test sees it change.
+INSERT IGNORE INTO machine (id, account_id, name, serial_number, department_id, created_at, updated_at) VALUES
+    ('mc_01seed_putinc_items0', 'ac_01k0a5smf9ekb8rqg12555zjqa', 'PUT Include Items Machine', 'PUTINC-ITEMS', 'dp_01k0a5r01yfx3sj1vy9qgv3dc0', NOW(), NOW());

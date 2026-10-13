@@ -9,7 +9,6 @@ import (
 	"context"
 	"database/sql"
 	"strings"
-	"time"
 )
 
 const countMachineItemsForMachines = `-- name: CountMachineItemsForMachines :one
@@ -82,87 +81,6 @@ func (q *Queries) InsertMachineItem(ctx context.Context, arg InsertMachineItemPa
 	return err
 }
 
-const listMachineItemsBackward = `-- name: ListMachineItemsBackward :many
-SELECT
-    i.id AS item_id,
-    i.sku,
-    i.description,
-    mi.created_at,
-    mi.updated_at
-FROM machine_item mi
-JOIN item i ON i.id = mi.item_id AND i.account_id = mi.account_id
-WHERE mi.account_id = ?
-AND mi.machine_id = ?
-AND i.deleted_at IS NULL
-AND (
-    ? IS NULL
-    OR i.sku LIKE ?
-    OR i.description LIKE ?
-)
-AND (
-    mi.created_at > ?
-    OR (mi.created_at = ? AND i.id > ?)
-)
-ORDER BY mi.created_at ASC, i.id ASC
-LIMIT ?
-`
-
-type ListMachineItemsBackwardParams struct {
-	AccountID       string
-	MachineID       string
-	SearchQuery     sql.NullString
-	CursorCreatedAt time.Time
-	CursorID        string
-	Limit           int32
-}
-
-type ListMachineItemsBackwardRow struct {
-	ItemID      string
-	Sku         string
-	Description sql.NullString
-	CreatedAt   time.Time
-	UpdatedAt   time.Time
-}
-
-func (q *Queries) ListMachineItemsBackward(ctx context.Context, arg ListMachineItemsBackwardParams) ([]ListMachineItemsBackwardRow, error) {
-	rows, err := q.db.QueryContext(ctx, listMachineItemsBackward,
-		arg.AccountID,
-		arg.MachineID,
-		arg.SearchQuery,
-		arg.SearchQuery,
-		arg.SearchQuery,
-		arg.CursorCreatedAt,
-		arg.CursorCreatedAt,
-		arg.CursorID,
-		arg.Limit,
-	)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	var items []ListMachineItemsBackwardRow
-	for rows.Next() {
-		var i ListMachineItemsBackwardRow
-		if err := rows.Scan(
-			&i.ItemID,
-			&i.Sku,
-			&i.Description,
-			&i.CreatedAt,
-			&i.UpdatedAt,
-		); err != nil {
-			return nil, err
-		}
-		items = append(items, i)
-	}
-	if err := rows.Close(); err != nil {
-		return nil, err
-	}
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-	return items, nil
-}
-
 const listMachineItemsByMachineIDs = `-- name: ListMachineItemsByMachineIDs :many
 SELECT
     mi.machine_id,
@@ -208,89 +126,6 @@ func (q *Queries) ListMachineItemsByMachineIDs(ctx context.Context, arg ListMach
 	for rows.Next() {
 		var i ListMachineItemsByMachineIDsRow
 		if err := rows.Scan(&i.MachineID, &i.ItemID, &i.Sku); err != nil {
-			return nil, err
-		}
-		items = append(items, i)
-	}
-	if err := rows.Close(); err != nil {
-		return nil, err
-	}
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-	return items, nil
-}
-
-const listMachineItemsForward = `-- name: ListMachineItemsForward :many
-SELECT
-    i.id AS item_id,
-    i.sku,
-    i.description,
-    mi.created_at,
-    mi.updated_at
-FROM machine_item mi
-JOIN item i ON i.id = mi.item_id AND i.account_id = mi.account_id
-WHERE mi.account_id = ?
-AND mi.machine_id = ?
-AND i.deleted_at IS NULL
-AND (
-    ? IS NULL
-    OR i.sku LIKE ?
-    OR i.description LIKE ?
-)
-AND (
-    ? IS NULL
-    OR mi.created_at < ?
-    OR (mi.created_at = ? AND i.id < ?)
-)
-ORDER BY mi.created_at DESC, i.id DESC
-LIMIT ?
-`
-
-type ListMachineItemsForwardParams struct {
-	AccountID       string
-	MachineID       string
-	SearchQuery     sql.NullString
-	CursorCreatedAt sql.NullTime
-	CursorID        sql.NullString
-	Limit           int32
-}
-
-type ListMachineItemsForwardRow struct {
-	ItemID      string
-	Sku         string
-	Description sql.NullString
-	CreatedAt   time.Time
-	UpdatedAt   time.Time
-}
-
-func (q *Queries) ListMachineItemsForward(ctx context.Context, arg ListMachineItemsForwardParams) ([]ListMachineItemsForwardRow, error) {
-	rows, err := q.db.QueryContext(ctx, listMachineItemsForward,
-		arg.AccountID,
-		arg.MachineID,
-		arg.SearchQuery,
-		arg.SearchQuery,
-		arg.SearchQuery,
-		arg.CursorCreatedAt,
-		arg.CursorCreatedAt,
-		arg.CursorCreatedAt,
-		arg.CursorID,
-		arg.Limit,
-	)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	var items []ListMachineItemsForwardRow
-	for rows.Next() {
-		var i ListMachineItemsForwardRow
-		if err := rows.Scan(
-			&i.ItemID,
-			&i.Sku,
-			&i.Description,
-			&i.CreatedAt,
-			&i.UpdatedAt,
-		); err != nil {
 			return nil, err
 		}
 		items = append(items, i)

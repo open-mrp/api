@@ -11,12 +11,34 @@ import (
 	"strings"
 )
 
+const batchHasScanReceipt = `-- name: BatchHasScanReceipt :one
+SELECT EXISTS (
+    SELECT 1 FROM inventory_receipt ir
+    WHERE ir.batch_id = ?
+    AND (ir.owner_account_id = ? OR ir.holder_account_id = ?)
+) AS has_receipt
+`
+
+type BatchHasScanReceiptParams struct {
+	BatchID   sql.NullString
+	AccountID string
+}
+
+func (q *Queries) BatchHasScanReceipt(ctx context.Context, arg BatchHasScanReceiptParams) (bool, error) {
+	row := q.db.QueryRowContext(ctx, batchHasScanReceipt, arg.BatchID, arg.AccountID, arg.AccountID)
+	var has_receipt bool
+	err := row.Scan(&has_receipt)
+	return has_receipt, err
+}
+
 const countAllocatedReceiptsForBatch = `-- name: CountAllocatedReceiptsForBatch :one
 SELECT COUNT(*)
 FROM inventory_receipt ir
 JOIN inventory_allocation ia ON ia.inventory_receipt_id = ir.id
+JOIN inventory_issue ii ON ii.id = ia.inventory_issue_id
 WHERE ir.batch_id = ?
 AND (ir.owner_account_id = ? OR ir.holder_account_id = ?)
+AND NOT (ii.batch_id <=> ir.batch_id)
 `
 
 type CountAllocatedReceiptsForBatchParams struct {
@@ -26,7 +48,8 @@ type CountAllocatedReceiptsForBatchParams struct {
 
 // CountAllocatedReceiptsForBatch counts how many of the batch's produced receipts have already been
 // drawn against. A non-zero count means the output left the building and the scan can no longer be
-// undone.
+// undone. A draw by the batch's own issue goes with the undo: a split that recounts its source
+// receives the shortfall and consumes it in the same scan.
 func (q *Queries) CountAllocatedReceiptsForBatch(ctx context.Context, arg CountAllocatedReceiptsForBatchParams) (int64, error) {
 	row := q.db.QueryRowContext(ctx, countAllocatedReceiptsForBatch, arg.BatchID, arg.AccountID, arg.AccountID)
 	var count int64
@@ -345,7 +368,11 @@ SELECT
     ir.unit_cost_id,
     q.value AS quantity_value,
     q.unit_id,
-    (SELECT COUNT(*) FROM inventory_allocation ia WHERE ia.inventory_receipt_id = ir.id) AS allocation_count
+    (
+        SELECT COUNT(*) FROM inventory_allocation ia
+        JOIN inventory_issue ii ON ii.id = ia.inventory_issue_id
+        WHERE ia.inventory_receipt_id = ir.id AND NOT (ii.batch_id <=> ir.batch_id)
+    ) AS allocation_count
 FROM inventory_receipt ir
 JOIN quantity q ON q.id = ir.quantity_id
 WHERE ir.batch_id = ?

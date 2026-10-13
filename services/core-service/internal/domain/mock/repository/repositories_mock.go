@@ -6207,11 +6207,12 @@ func (mr *MockBatchRepoMockRecorder) Close(ctx, accountID, batchID any) *gomock.
 }
 
 // CloseIfFullyUsed mocks base method.
-func (m *MockBatchRepo) CloseIfFullyUsed(ctx context.Context, accountID string, batch domain.BaseBatch, producedUnit domain.LightUnit, productionStepID string) *apierror.APIError {
+func (m *MockBatchRepo) CloseIfFullyUsed(ctx context.Context, accountID string, batch domain.BaseBatch, producedUnit domain.LightUnit, productionStepID string) (bool, *apierror.APIError) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "CloseIfFullyUsed", ctx, accountID, batch, producedUnit, productionStepID)
-	ret0, _ := ret[0].(*apierror.APIError)
-	return ret0
+	ret0, _ := ret[0].(bool)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
 }
 
 // CloseIfFullyUsed indicates an expected call of CloseIfFullyUsed.
@@ -6335,6 +6336,21 @@ func (mr *MockBatchRepoMockRecorder) Create(ctx, id, params any) *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Create", reflect.TypeOf((*MockBatchRepo)(nil).Create), ctx, id, params)
 }
 
+// CreateCountAdjustment mocks base method.
+func (m *MockBatchRepo) CreateCountAdjustment(ctx context.Context, params domain.CreateBatchCountAdjustmentParams) (*domain.BatchCountAdjustment, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "CreateCountAdjustment", ctx, params)
+	ret0, _ := ret[0].(*domain.BatchCountAdjustment)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
+}
+
+// CreateCountAdjustment indicates an expected call of CreateCountAdjustment.
+func (mr *MockBatchRepoMockRecorder) CreateCountAdjustment(ctx, params any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateCountAdjustment", reflect.TypeOf((*MockBatchRepo)(nil).CreateCountAdjustment), ctx, params)
+}
+
 // CreateMany mocks base method.
 func (m *MockBatchRepo) CreateMany(ctx context.Context, batches []domain.NewBatch) ([]*domain.BaseBatch, *apierror.APIError) {
 	m.ctrl.T.Helper()
@@ -6437,6 +6453,21 @@ func (m *MockBatchRepo) FindByScanningStation(ctx context.Context, params domain
 func (mr *MockBatchRepoMockRecorder) FindByScanningStation(ctx, params any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "FindByScanningStation", reflect.TypeOf((*MockBatchRepo)(nil).FindByScanningStation), ctx, params)
+}
+
+// FindCountAdjustmentsByClosingBatch mocks base method.
+func (m *MockBatchRepo) FindCountAdjustmentsByClosingBatch(ctx context.Context, accountID, closingBatchID string) ([]domain.BatchCountAdjustment, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "FindCountAdjustmentsByClosingBatch", ctx, accountID, closingBatchID)
+	ret0, _ := ret[0].([]domain.BatchCountAdjustment)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
+}
+
+// FindCountAdjustmentsByClosingBatch indicates an expected call of FindCountAdjustmentsByClosingBatch.
+func (mr *MockBatchRepoMockRecorder) FindCountAdjustmentsByClosingBatch(ctx, accountID, closingBatchID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "FindCountAdjustmentsByClosingBatch", reflect.TypeOf((*MockBatchRepo)(nil).FindCountAdjustmentsByClosingBatch), ctx, accountID, closingBatchID)
 }
 
 // FindFurthestRightBatchInFlow mocks base method.
@@ -6559,6 +6590,21 @@ func (mr *MockBatchRepoMockRecorder) FindPossibleNextSteps(ctx, accountID, scann
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "FindPossibleNextSteps", reflect.TypeOf((*MockBatchRepo)(nil).FindPossibleNextSteps), ctx, accountID, scanningStationID, batchID)
 }
 
+// HasScanReceipt mocks base method.
+func (m *MockBatchRepo) HasScanReceipt(ctx context.Context, accountID, batchID string) (bool, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "HasScanReceipt", ctx, accountID, batchID)
+	ret0, _ := ret[0].(bool)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
+}
+
+// HasScanReceipt indicates an expected call of HasScanReceipt.
+func (mr *MockBatchRepoMockRecorder) HasScanReceipt(ctx, accountID, batchID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "HasScanReceipt", reflect.TypeOf((*MockBatchRepo)(nil).HasScanReceipt), ctx, accountID, batchID)
+}
+
 // LockScan mocks base method.
 func (m *MockBatchRepo) LockScan(ctx context.Context, accountID, batchID string) (*time.Time, bool, *apierror.APIError) {
 	m.ctrl.T.Helper()
@@ -6644,6 +6690,37 @@ func (m *MockBatchRepo) ReopenIfNotFullyUsed(ctx context.Context, accountID stri
 func (mr *MockBatchRepoMockRecorder) ReopenIfNotFullyUsed(ctx, accountID, batch, producedUnit, productionStepID any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ReopenIfNotFullyUsed", reflect.TypeOf((*MockBatchRepo)(nil).ReopenIfNotFullyUsed), ctx, accountID, batch, producedUnit, productionStepID)
+}
+
+// RevertCountAdjustmentsByClosingBatch mocks base method.
+func (m *MockBatchRepo) RevertCountAdjustmentsByClosingBatch(ctx context.Context, accountID, closingBatchID string) ([]domain.BatchCountAdjustment, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "RevertCountAdjustmentsByClosingBatch", ctx, accountID, closingBatchID)
+	ret0, _ := ret[0].([]domain.BatchCountAdjustment)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
+}
+
+// RevertCountAdjustmentsByClosingBatch indicates an expected call of RevertCountAdjustmentsByClosingBatch.
+func (mr *MockBatchRepoMockRecorder) RevertCountAdjustmentsByClosingBatch(ctx, accountID, closingBatchID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RevertCountAdjustmentsByClosingBatch", reflect.TypeOf((*MockBatchRepo)(nil).RevertCountAdjustmentsByClosingBatch), ctx, accountID, closingBatchID)
+}
+
+// SplitTally mocks base method.
+func (m *MockBatchRepo) SplitTally(ctx context.Context, accountID string, batch domain.BaseBatch, producedUnit domain.LightUnit, productionStepID string) (decimal.Decimal, decimal.Decimal, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "SplitTally", ctx, accountID, batch, producedUnit, productionStepID)
+	ret0, _ := ret[0].(decimal.Decimal)
+	ret1, _ := ret[1].(decimal.Decimal)
+	ret2, _ := ret[2].(*apierror.APIError)
+	return ret0, ret1, ret2
+}
+
+// SplitTally indicates an expected call of SplitTally.
+func (mr *MockBatchRepoMockRecorder) SplitTally(ctx, accountID, batch, producedUnit, productionStepID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SplitTally", reflect.TypeOf((*MockBatchRepo)(nil).SplitTally), ctx, accountID, batch, producedUnit, productionStepID)
 }
 
 // Unscan mocks base method.

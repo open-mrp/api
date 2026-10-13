@@ -70,6 +70,10 @@ type BatchScannedConsumerTestSuite struct {
 	moveUnits      map[string]string
 	// allocatedItems records, in order, the items whose open-issue allocation the scan enqueued.
 	allocatedItems []string
+	// moveTags records the batch each item's movements were tagged with.
+	moveTags map[string]string
+	// recounts is what the scanned batch recounted when it closed its source; none unless a test says so.
+	recounts []domain.BatchCountAdjustment
 }
 
 func (s *BatchScannedConsumerTestSuite) SetupTest() {
@@ -77,6 +81,8 @@ func (s *BatchScannedConsumerTestSuite) SetupTest() {
 	s.inventoryMoves = map[string]decimal.Decimal{}
 	s.moveUnits = map[string]string{}
 	s.allocatedItems = nil
+	s.moveTags = map[string]string{}
+	s.recounts = nil
 
 	s.stepQueryRepo = repositorymock.NewMockProductionStepQueryRepo(s.ctrl)
 	s.unitConvRepo = repositorymock.NewMockUnitConversionRepo(s.ctrl)
@@ -94,7 +100,14 @@ func (s *BatchScannedConsumerTestSuite) SetupTest() {
 			}
 			s.inventoryMoves[p.ItemID] = prev.Add(p.Measure)
 			s.moveUnits[p.ItemID] = p.UnitID
+			if p.BatchID != nil {
+				s.moveTags[p.ItemID] = *p.BatchID
+			}
 			return nil
+		}).AnyTimes()
+	s.batchRepo.EXPECT().FindCountAdjustmentsByClosingBatch(gomock.Any(), scanAccountID, scanBatchID).
+		DoAndReturn(func(context.Context, string, string) ([]domain.BatchCountAdjustment, *apierror.APIError) {
+			return s.recounts, nil
 		}).AnyTimes()
 
 	// The scan writes an audit trail; these keep it quiet rather than making it the subject of these tests.
@@ -657,4 +670,137 @@ func (s *BatchScannedConsumerTestSuite) TestOffersProducedItemWithNoConsumptions
 
 	s.Require().Nil(err)
 	s.Equal([]string{scanProducedID}, s.allocatedItems)
+}
+
+// ─── split recounts ────────────────────────────────────────────────────────
+
+const (
+	recountSourceID     = "bt_src"
+	recountSourceStepID = "ps_tube_631"
+	recountTubeID       = "it_tube_631"
+)
+
+// expectRecountedSource makes the scanned split one that closed bt_src, a tube batch recorded as
+// `previous` pairs that its splits counted as `counted`. The tube step makes 12 pr from 4 lbs of yarn.
+func (s *BatchScannedConsumerTestSuite) expectRecountedSource(previous, counted string, scannedIntoInventory bool) {
+	s.recounts = []domain.BatchCountAdjustment{{
+		ID:              "btaj_1",
+		BatchID:         recountSourceID,
+		ClosingBatchID:  scanBatchID,
+		PreviousMeasure: decimal.RequireFromString(previous),
+		CountedMeasure:  decimal.RequireFromString(counted),
+		UnitID:          unitPair,
+	}}
+	s.batchRepo.EXPECT().Find(gomock.Any(), scanAccountID, recountSourceID).Return(&domain.Batch{
+		ID:             recountSourceID,
+		Item:           domain.LightItem{ID: recountTubeID},
+		Quantity:       qty(counted, unitPair),
+		ProductionStep: &domain.LightProductionStep{ID: recountSourceStepID},
+	}, nil).AnyTimes()
+	s.stepQueryRepo.EXPECT().Find(gomock.Any(), scanAccountID, recountSourceStepID).Return(&domain.ProductionStepDetail{
+		ID: recountSourceStepID,
+		Production: domain.StepProduction{
+			ProducedItem: domain.LightItem{ID: recountTubeID},
+			Quantity:     qty("12", unitPair),
+		},
+		Consumptions: []domain.StepConsumption{consumes(scanYarnID, "4", unitPound)},
+	}, nil).AnyTimes()
+	s.batchRepo.EXPECT().HasScanReceipt(gomock.Any(), scanAccountID, recountSourceID).Return(scannedIntoInventory, nil).AnyTimes()
+}
+
+// A tube batch recorded as 60 pr that split into 65 made 5 more: they are received, and the yarn the
+// tube step burns for them is consumed, under the split's tag so undoing the split reverses them.
+func (s *BatchScannedConsumerTestSuite) TestOverCountReceivesAndConsumesTheDifference() {
+	s.stepQueryRepo.EXPECT().Find(gomock.Any(), scanAccountID, scanStepID).Return(step("12", unitPair), nil)
+	s.expectConversion("10", "10")
+	s.expectConversion("5", "5")
+	s.expectBuiltToStock()
+	s.batchRepo.EXPECT().FindLineageShortfall(gomock.Any(), recountSourceID).Return(&domain.LineageShortfall{}, nil)
+	s.expectRecountedSource("60", "65", true)
+
+	err := s.consumer.applyInventory(context.Background(), nil, scanAccountID, scanEvent("10", unitPair))
+
+	s.Require().Nil(err)
+	s.True(decimal.RequireFromString("5").Equal(s.moved(recountTubeID)),
+		"expected 5 tube pairs received, got %s", s.moved(recountTubeID))
+	s.True(decimal.RequireFromString("-5").Mul(decimal.NewFromInt(4)).DivRound(decimal.NewFromInt(12), ledgerScale).Equal(s.moved(scanYarnID)),
+		"expected 5/12 of 4 lbs of yarn consumed, got %s", s.moved(scanYarnID))
+	s.Equal(scanBatchID, s.moveTags[recountTubeID], "the true-up carries the split's tag")
+	s.Equal(scanBatchID, s.moveTags[scanYarnID])
+	s.True(decimal.RequireFromString("10").Equal(s.moved(scanProducedID)), "the split's own scan still applies")
+}
+
+// A tube batch recorded as 60 pr closed after 55 made 5 fewer: they come back out of inventory and
+// the yarn the tube step was charged for them returns to open stock.
+func (s *BatchScannedConsumerTestSuite) TestUnderCountTakesBackAndReleasesTheDifference() {
+	s.stepQueryRepo.EXPECT().Find(gomock.Any(), scanAccountID, scanStepID).Return(step("12", unitPair), nil)
+	s.expectConversion("25", "25")
+	s.expectConversion("5", "5")
+	s.expectBuiltToStock()
+	s.expectRecountedSource("60", "55", true)
+
+	err := s.consumer.applyInventory(context.Background(), nil, scanAccountID, scanEvent("25", unitPair))
+
+	s.Require().Nil(err)
+	s.True(decimal.RequireFromString("-5").Equal(s.moved(recountTubeID)),
+		"expected 5 tube pairs taken back, got %s", s.moved(recountTubeID))
+	s.True(decimal.RequireFromString("5").Mul(decimal.NewFromInt(4)).DivRound(decimal.NewFromInt(12), ledgerScale).Equal(s.moved(scanYarnID)),
+		"expected 5/12 of 4 lbs of yarn returned, got %s", s.moved(scanYarnID))
+}
+
+// An over-count against an order draws the extra material from the order's reservation first, tagged
+// with the split.
+func (s *BatchScannedConsumerTestSuite) TestOverCountDrawsFromTheSourceOrdersReservation() {
+	s.stepQueryRepo.EXPECT().Find(gomock.Any(), scanAccountID, scanStepID).Return(step("12", unitPair), nil)
+	s.expectConversion("10", "10")
+	s.expectConversion("12", "12")
+	s.expectBuiltToStock()
+	s.batchRepo.EXPECT().FindLineageShortfall(gomock.Any(), recountSourceID).
+		Return(&domain.LineageShortfall{ProductionRunID: scanRunID}, nil)
+	s.orderQueryRepo.EXPECT().FindIDByProductionRun(gomock.Any(), scanAccountID, scanRunID).Return(ptr(scanOrderID), nil)
+	s.expectRecountedSource("60", "72", true)
+	s.reservationRepo.EXPECT().AllocateReservationsForConsumption(gomock.Any(), gomock.Any(), gomock.Any()).
+		DoAndReturn(func(_ context.Context, _ *ledgerlock.Scope, p domain.ConsumptionAllocationParams) (*domain.ConsumptionAllocationResult, *apierror.APIError) {
+			s.Equal(scanOrderID, p.OrderID)
+			s.Equal(scanBatchID, p.ProducedBatchID)
+			s.True(decimal.RequireFromString("4").Equal(p.Measure), "12 more pairs is one more run of the tube step")
+			return &domain.ConsumptionAllocationResult{RemainingMeasure: decimal.Zero, RemainingUnitID: unitPound}, nil
+		})
+
+	err := s.consumer.applyInventory(context.Background(), nil, scanAccountID, scanEvent("10", unitPair))
+
+	s.Require().Nil(err)
+	s.True(decimal.RequireFromString("12").Equal(s.moved(recountTubeID)))
+}
+
+// A source scanned without its materials put nothing into inventory, so its recount moves nothing.
+func (s *BatchScannedConsumerTestSuite) TestRecountOfSourceScannedWithoutMaterialsMovesNothing() {
+	s.stepQueryRepo.EXPECT().Find(gomock.Any(), scanAccountID, scanStepID).Return(step("12", unitPair), nil)
+	s.expectConversion("10", "10")
+	s.expectBuiltToStock()
+	s.expectRecountedSource("60", "65", false)
+
+	err := s.consumer.applyInventory(context.Background(), nil, scanAccountID, scanEvent("10", unitPair))
+
+	s.Require().Nil(err)
+	_, touched := s.inventoryMoves[recountTubeID]
+	s.False(touched)
+	_, touched = s.inventoryMoves[scanYarnID]
+	s.False(touched)
+}
+
+// The recounted source's items are offered to open issues alongside the split's own.
+func (s *BatchScannedConsumerTestSuite) TestRecountOffersSourceItemsToOpenIssues() {
+	s.stepQueryRepo.EXPECT().Find(gomock.Any(), scanAccountID, scanStepID).Return(step("12", unitPair), nil)
+	s.expectConversion("10", "10")
+	s.expectConversion("5", "5")
+	s.expectBuiltToStock()
+	s.batchRepo.EXPECT().FindLineageShortfall(gomock.Any(), recountSourceID).Return(&domain.LineageShortfall{}, nil)
+	s.expectRecountedSource("60", "65", true)
+
+	err := s.consumer.applyInventory(context.Background(), nil, scanAccountID, scanEvent("10", unitPair))
+
+	s.Require().Nil(err)
+	s.Contains(s.allocatedItems, recountTubeID)
+	s.Contains(s.allocatedItems, scanYarnID)
 }

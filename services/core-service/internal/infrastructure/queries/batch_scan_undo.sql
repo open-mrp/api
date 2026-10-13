@@ -12,13 +12,16 @@ SELECT COUNT(*) FROM _batch_flow WHERE B = sqlc.arg('batch_id');
 
 -- CountAllocatedReceiptsForBatch counts how many of the batch's produced receipts have already been
 -- drawn against. A non-zero count means the output left the building and the scan can no longer be
--- undone.
+-- undone. A draw by the batch's own issue goes with the undo: a split that recounts its source
+-- receives the shortfall and consumes it in the same scan.
 -- name: CountAllocatedReceiptsForBatch :one
 SELECT COUNT(*)
 FROM inventory_receipt ir
 JOIN inventory_allocation ia ON ia.inventory_receipt_id = ir.id
+JOIN inventory_issue ii ON ii.id = ia.inventory_issue_id
 WHERE ir.batch_id = sqlc.arg('batch_id')
-AND (ir.owner_account_id = sqlc.arg('account_id') OR ir.holder_account_id = sqlc.arg('account_id'));
+AND (ir.owner_account_id = sqlc.arg('account_id') OR ir.holder_account_id = sqlc.arg('account_id'))
+AND NOT (ii.batch_id <=> ir.batch_id);
 
 -- name: FindReceiptsForBatchReversal :many
 SELECT
@@ -28,7 +31,11 @@ SELECT
     ir.unit_cost_id,
     q.value AS quantity_value,
     q.unit_id,
-    (SELECT COUNT(*) FROM inventory_allocation ia WHERE ia.inventory_receipt_id = ir.id) AS allocation_count
+    (
+        SELECT COUNT(*) FROM inventory_allocation ia
+        JOIN inventory_issue ii ON ii.id = ia.inventory_issue_id
+        WHERE ia.inventory_receipt_id = ir.id AND NOT (ii.batch_id <=> ir.batch_id)
+    ) AS allocation_count
 FROM inventory_receipt ir
 JOIN quantity q ON q.id = ir.quantity_id
 WHERE ir.batch_id = sqlc.arg('batch_id')
@@ -186,3 +193,10 @@ SELECT DISTINCT item_id FROM (
 SELECT scanned_at FROM batch
 WHERE id = sqlc.arg('id') AND account_id = sqlc.arg('account_id')
 FOR UPDATE;
+
+-- name: BatchHasScanReceipt :one
+SELECT EXISTS (
+    SELECT 1 FROM inventory_receipt ir
+    WHERE ir.batch_id = sqlc.arg('batch_id')
+    AND (ir.owner_account_id = sqlc.arg('account_id') OR ir.holder_account_id = sqlc.arg('account_id'))
+) AS has_receipt;

@@ -1260,6 +1260,14 @@ type MachineDowntimeReason struct {
 	UpdatedAt time.Time
 }
 
+type MachineItem struct {
+	AccountID string
+	MachineID string
+	ItemID    string
+	CreatedAt time.Time
+	UpdatedAt time.Time
+}
+
 type Material struct {
 	ID           string
 	CreatedAt    time.Time

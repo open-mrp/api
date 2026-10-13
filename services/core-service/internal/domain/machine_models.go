@@ -84,6 +84,57 @@ type BulkUpsertMachinesParams struct {
 	Machines []UpsertMachineParams
 }
 
+// MachineItem is one item a machine is configured to run.
+type MachineItem struct {
+	ItemID      string
+	SKU         string
+	Description *string
+	CreatedAt   time.Time
+	UpdatedAt   time.Time
+}
+
+type ListMachineItemsParams struct {
+	AccountID string
+	MachineID string
+	Cursor    *string
+	Limit     int32
+	Query     *string
+}
+
+type ListMachineItemsResult struct {
+	Items    []*MachineItem
+	PageInfo pagination.PageInfo
+}
+
+type ReplaceMachineItemsParams struct {
+	AccountID string
+	MachineID string
+	ItemIDs   []string
+}
+
+// MachineItemByMachine is a configured machine↔item row for the production schedule solver.
+type MachineItemByMachine struct {
+	MachineID string
+	ItemID    string
+	SKU       string
+}
+
+// MachineItemScanSuggestion is a scan-history candidate for curating a machine's runnable items. Suggest never writes.
+type MachineItemScanSuggestion struct {
+	ItemID        string
+	SKU           string
+	Description   *string
+	LastScannedAt time.Time
+	BatchCount    int64
+}
+
+type SuggestMachineItemsFromScansParams struct {
+	AccountID   string
+	MachineID   string
+	WindowStart time.Time
+	WindowEnd   time.Time
+}
+
 // ResolvedUpsertMachineRow is a machine upsert row with its department reference resolved to
 // an id. No JSON tags: the engine round-trips job_items against this type, an internal column.
 type ResolvedUpsertMachineRow struct {

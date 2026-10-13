@@ -117,8 +117,7 @@ func shipPick(t *testing.T, pickID string) {
 	shipments := jsonArray(parseJSON(listBody), "data")
 	require.NotEmpty(t, shipments)
 	shipmentID := jsonField(shipments[0].(map[string]any), "id")
-	shipStatus, shipBody, err := apiClient.Post(shipmentsPath+"/"+shipmentID+"/actions/ship", map[string]any{}, newIdempotencyKey())
-	require.NoError(t, err)
+	shipStatus, shipBody := acceptShipAndAwait(t, shipmentID, false)
 	requireStatus(t, 200, shipStatus, shipBody)
 	t.Cleanup(func() {
 		_, _, _ = apiClient.Post(shipmentsPath+"/"+shipmentID+"/actions/void", map[string]any{}, newIdempotencyKey())

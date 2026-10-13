@@ -55,9 +55,7 @@ func TestShipments_ShipThenVoidReturnsItToPacked(t *testing.T) {
 
 	shipmentID := jsonField(packedShipment(t), "id")
 
-	status, body, err := apiClient.Post(shipmentsPath+"/"+shipmentID+"/actions/ship", map[string]any{}, newIdempotencyKey())
-	require.NoError(t, err)
-	require.Less(t, status, 500, "ship must not 5xx: %s", string(body))
+	status, body := acceptShipAndAwait(t, shipmentID, false)
 	requireStatus(t, 200, status, body)
 
 	shipped := parseJSON(body)
@@ -81,8 +79,7 @@ func TestShipments_ShippingTwiceIsRefused(t *testing.T) {
 
 	shipmentID := jsonField(packedShipment(t), "id")
 
-	first, firstBody, err := apiClient.Post(shipmentsPath+"/"+shipmentID+"/actions/ship", map[string]any{}, newIdempotencyKey())
-	require.NoError(t, err)
+	first, firstBody := acceptShipAndAwait(t, shipmentID, false)
 	requireStatus(t, 200, first, firstBody)
 
 	second, secondBody, err := apiClient.Post(shipmentsPath+"/"+shipmentID+"/actions/ship", map[string]any{}, newIdempotencyKey())

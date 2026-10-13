@@ -46,7 +46,7 @@ type ItemMeasurement struct {
 	LotCount int
 	Quantity float64
 
-	// EligibleMachineID is the set of machines that have actually run this item. Empty means unconstrained.
+	// EligibleMachineID is the set of machines that may run this item. When ConfiguredEligibility is set on SolverInput, that map replaces scan-derived affinity; empty means unconstrained only when configuration is not in use.
 	EligibleMachineID map[string]bool
 
 	// MeasuredLeadTimeWeeks is the mean observed run-open to scan time. Zero when no usable samples existed, in which case the settings default applies.
@@ -168,6 +168,63 @@ func MeasureItems(batches []BatchMeasurement) []ItemMeasurement {
 	}
 
 	sort.SliceStable(out, func(i, j int) bool { return out[i].SKU < out[j].SKU })
+	return out
+}
+
+// ApplyConfiguredEligibility replaces scan-derived affinity with the configured machine↔item set and seeds configured items that have no batch history.
+//
+// rates supplies seconds-per-unit for seeded items that were priced outside MeasureItems (step labor time or unbounded scan history). Items still without a rate stay at zero and surface as ItemsWithoutRunRate in Solve.
+func ApplyConfiguredEligibility(
+	measurements []ItemMeasurement,
+	eligibility map[string]map[string]bool,
+	skus map[string]string,
+	rates map[string]float64,
+) []ItemMeasurement {
+	if eligibility == nil {
+		return measurements
+	}
+
+	byItem := make(map[string]ItemMeasurement, len(measurements))
+	for _, m := range measurements {
+		if _, ok := eligibility[m.ItemID]; !ok {
+			continue
+		}
+		m.EligibleMachineID = copyStringSet(eligibility[m.ItemID])
+		byItem[m.ItemID] = m
+	}
+
+	for itemID, machines := range eligibility {
+		if _, ok := byItem[itemID]; ok {
+			continue
+		}
+		m := ItemMeasurement{
+			ItemID:            itemID,
+			SKU:               skus[itemID],
+			EligibleMachineID: copyStringSet(machines),
+			SecondsPerUnit:    rates[itemID],
+		}
+		byItem[itemID] = m
+	}
+
+	out := make([]ItemMeasurement, 0, len(byItem))
+	for _, m := range byItem {
+		if m.SecondsPerUnit <= 0 && rates[m.ItemID] > 0 {
+			m.SecondsPerUnit = rates[m.ItemID]
+		}
+		out = append(out, m)
+	}
+	sort.SliceStable(out, func(i, j int) bool { return out[i].SKU < out[j].SKU })
+	return out
+}
+
+func copyStringSet(in map[string]bool) map[string]bool {
+	if len(in) == 0 {
+		return map[string]bool{}
+	}
+	out := make(map[string]bool, len(in))
+	for k, v := range in {
+		out[k] = v
+	}
 	return out
 }
 

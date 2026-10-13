@@ -59,8 +59,9 @@ type config struct {
 	// without AWS) the consumer is skipped.
 	InboundEmailBucket string
 
-	// InboundEmailQueueURL (optional) is the SQS queue URL carrying S3 object-created events for
-	// inbound emails. Pairs with InboundEmailBucket to enable the inbound-email consumer.
+	// InboundEmailQueueURL (optional) is the SQS queue URL or queue name carrying S3 object-created
+	// events for inbound emails. A bare name is resolved via GetQueueUrl. Pairs with
+	// InboundEmailBucket to enable the inbound-email consumer.
 	InboundEmailQueueURL string
 
 	// InboundEmailRegion (optional; default: "us-east-1") is the region of the inbound-email bucket +

@@ -11319,6 +11319,21 @@ func (m *MockMachineRepo) EXPECT() *MockMachineRepoMockRecorder {
 	return m.recorder
 }
 
+// CountItemsForMachines mocks base method.
+func (m *MockMachineRepo) CountItemsForMachines(ctx context.Context, accountID string, machineIDs []string) (int64, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "CountItemsForMachines", ctx, accountID, machineIDs)
+	ret0, _ := ret[0].(int64)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
+}
+
+// CountItemsForMachines indicates an expected call of CountItemsForMachines.
+func (mr *MockMachineRepoMockRecorder) CountItemsForMachines(ctx, accountID, machineIDs any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CountItemsForMachines", reflect.TypeOf((*MockMachineRepo)(nil).CountItemsForMachines), ctx, accountID, machineIDs)
+}
+
 // Create mocks base method.
 func (m *MockMachineRepo) Create(ctx context.Context, id string, params domain.CreateMachineParams) (*domain.Machine, *apierror.APIError) {
 	m.ctrl.T.Helper()
@@ -11346,6 +11361,20 @@ func (m *MockMachineRepo) Delete(ctx context.Context, params domain.DeleteMachin
 func (mr *MockMachineRepoMockRecorder) Delete(ctx, params any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Delete", reflect.TypeOf((*MockMachineRepo)(nil).Delete), ctx, params)
+}
+
+// DeleteItems mocks base method.
+func (m *MockMachineRepo) DeleteItems(ctx context.Context, accountID, machineID string) *apierror.APIError {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "DeleteItems", ctx, accountID, machineID)
+	ret0, _ := ret[0].(*apierror.APIError)
+	return ret0
+}
+
+// DeleteItems indicates an expected call of DeleteItems.
+func (mr *MockMachineRepoMockRecorder) DeleteItems(ctx, accountID, machineID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteItems", reflect.TypeOf((*MockMachineRepo)(nil).DeleteItems), ctx, accountID, machineID)
 }
 
 // ExistsByName mocks base method.
@@ -11468,6 +11497,50 @@ func (mr *MockMachineRepoMockRecorder) List(ctx, params any) *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "List", reflect.TypeOf((*MockMachineRepo)(nil).List), ctx, params)
 }
 
+// ListItems mocks base method.
+func (m *MockMachineRepo) ListItems(ctx context.Context, params domain.ListMachineItemsParams) (*domain.ListMachineItemsResult, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ListItems", ctx, params)
+	ret0, _ := ret[0].(*domain.ListMachineItemsResult)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
+}
+
+// ListItems indicates an expected call of ListItems.
+func (mr *MockMachineRepoMockRecorder) ListItems(ctx, params any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListItems", reflect.TypeOf((*MockMachineRepo)(nil).ListItems), ctx, params)
+}
+
+// ListItemsByMachineIDs mocks base method.
+func (m *MockMachineRepo) ListItemsByMachineIDs(ctx context.Context, accountID string, machineIDs []string) ([]domain.MachineItemByMachine, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ListItemsByMachineIDs", ctx, accountID, machineIDs)
+	ret0, _ := ret[0].([]domain.MachineItemByMachine)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
+}
+
+// ListItemsByMachineIDs indicates an expected call of ListItemsByMachineIDs.
+func (mr *MockMachineRepoMockRecorder) ListItemsByMachineIDs(ctx, accountID, machineIDs any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListItemsByMachineIDs", reflect.TypeOf((*MockMachineRepo)(nil).ListItemsByMachineIDs), ctx, accountID, machineIDs)
+}
+
+// ReplaceItems mocks base method.
+func (m *MockMachineRepo) ReplaceItems(ctx context.Context, accountID, machineID string, itemIDs []string) *apierror.APIError {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ReplaceItems", ctx, accountID, machineID, itemIDs)
+	ret0, _ := ret[0].(*apierror.APIError)
+	return ret0
+}
+
+// ReplaceItems indicates an expected call of ReplaceItems.
+func (mr *MockMachineRepoMockRecorder) ReplaceItems(ctx, accountID, machineID, itemIDs any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ReplaceItems", reflect.TypeOf((*MockMachineRepo)(nil).ReplaceItems), ctx, accountID, machineID, itemIDs)
+}
+
 // SetProductionStep mocks base method.
 func (m *MockMachineRepo) SetProductionStep(ctx context.Context, accountID string, ids []string, productionStepID *string) *apierror.APIError {
 	m.ctrl.T.Helper()
@@ -11480,6 +11553,21 @@ func (m *MockMachineRepo) SetProductionStep(ctx context.Context, accountID strin
 func (mr *MockMachineRepoMockRecorder) SetProductionStep(ctx, accountID, ids, productionStepID any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SetProductionStep", reflect.TypeOf((*MockMachineRepo)(nil).SetProductionStep), ctx, accountID, ids, productionStepID)
+}
+
+// SuggestItemsFromScans mocks base method.
+func (m *MockMachineRepo) SuggestItemsFromScans(ctx context.Context, params domain.SuggestMachineItemsFromScansParams) ([]*domain.MachineItemScanSuggestion, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "SuggestItemsFromScans", ctx, params)
+	ret0, _ := ret[0].([]*domain.MachineItemScanSuggestion)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
+}
+
+// SuggestItemsFromScans indicates an expected call of SuggestItemsFromScans.
+func (mr *MockMachineRepoMockRecorder) SuggestItemsFromScans(ctx, params any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SuggestItemsFromScans", reflect.TypeOf((*MockMachineRepo)(nil).SuggestItemsFromScans), ctx, params)
 }
 
 // Update mocks base method.

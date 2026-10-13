@@ -1090,6 +1090,14 @@ type MachineRepo interface {
 	// FindBySerialNumbers resolves existing machines by serial number
 	// (case-insensitive) in one query.
 	FindBySerialNumbers(ctx context.Context, accountID string, serialNumbers []string) ([]*Machine, *apierror.APIError)
+
+	ListItems(ctx context.Context, params ListMachineItemsParams) (*ListMachineItemsResult, *apierror.APIError)
+	// ReplaceItems deletes the machine's configured items and inserts itemIDs. Call inside a transaction.
+	ReplaceItems(ctx context.Context, accountID, machineID string, itemIDs []string) *apierror.APIError
+	DeleteItems(ctx context.Context, accountID, machineID string) *apierror.APIError
+	ListItemsByMachineIDs(ctx context.Context, accountID string, machineIDs []string) ([]MachineItemByMachine, *apierror.APIError)
+	CountItemsForMachines(ctx context.Context, accountID string, machineIDs []string) (int64, *apierror.APIError)
+	SuggestItemsFromScans(ctx context.Context, params SuggestMachineItemsFromScansParams) ([]*MachineItemScanSuggestion, *apierror.APIError)
 }
 
 type ProductionScheduleRepo interface {

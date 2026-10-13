@@ -2,6 +2,7 @@ package service
 
 import (
 	"context"
+	"encoding/json"
 	"net/http"
 	"net/http/httptest"
 	"sync"
@@ -14,7 +15,9 @@ import (
 	factorymock "github.com/open-mrp/api/services/core-service/internal/domain/mock/factory"
 	mediatormock "github.com/open-mrp/api/services/core-service/internal/domain/mock/mediator"
 	repositorymock "github.com/open-mrp/api/services/core-service/internal/domain/mock/repository"
+	servicemock "github.com/open-mrp/api/services/core-service/internal/domain/mock/service"
 	"github.com/open-mrp/api/shared/appctx"
+	"github.com/open-mrp/api/shared/constants"
 	apierror "github.com/open-mrp/api/shared/errors"
 
 	"github.com/stretchr/testify/assert"
@@ -716,6 +719,7 @@ func (h *labelHarness) shipService(ctrl *gomock.Controller) (domain.ShipmentSvc,
 	return NewShipmentSvc(&ShipmentSvcConfig{
 		Repos:           h.repoFactory,
 		MediatorFactory: mediatorFactory,
+		JobSvcFactory:   NewJobSvcFactory(),
 		TxManager:       &stubTxManager{factory: h.repoFactory},
 		ShippoFactory:   h.svc.shippoFactory,
 		EncryptionKey:   testEncryptionKey(),
@@ -723,36 +727,67 @@ func (h *labelHarness) shipService(ctrl *gomock.Controller) (domain.ShipmentSvc,
 	}), idempotencyMed
 }
 
-// Proves a ship retried after a successful purchase resumes past it: the carrier, credential and
-// Shippo mocks carry no expectations, so any second purchase attempt fails the test.
-func TestShipShipment_ResumesAfterLabelsCreatedWithoutRebuying(t *testing.T) {
+// Builds a ship executor with a mocked job service so execute-phase tests can drive Start/Fail/Complete.
+func (h *labelHarness) shipExecuteService(ctrl *gomock.Controller) (domain.ShipmentSvc, *servicemock.MockJobSvc) {
+	jobSvc := servicemock.NewMockJobSvc(ctrl)
+	jobFactory := factorymock.NewMockJobSvcFactory(ctrl)
+	jobFactory.EXPECT().Build(gomock.Any()).Return(jobSvc).AnyTimes()
+	mediatorFactory := factorymock.NewMockMediatorFactory(ctrl)
+	mediatorFactory.EXPECT().Build(gomock.Any()).Return(domain.Mediators{}).AnyTimes()
+
+	return NewShipmentSvc(&ShipmentSvcConfig{
+		Repos:           h.repoFactory,
+		MediatorFactory: mediatorFactory,
+		JobSvcFactory:   jobFactory,
+		TxManager:       &stubTxManager{factory: h.repoFactory},
+		ShippoFactory:   h.svc.shippoFactory,
+		EncryptionKey:   testEncryptionKey(),
+		DispatchLeases:  h.leases,
+	}), jobSvc
+}
+
+func shipJobItems(t *testing.T, shipmentID string) json.RawMessage {
+	t.Helper()
+	items, err := json.Marshal(domain.ShipShipmentJob{ShipmentID: shipmentID})
+	require.NoError(t, err)
+	return items
+}
+
+// Proves a ship retried after labels were recorded on the cases resumes past the purchase: the
+// carrier, credential and Shippo mocks carry no expectations, so any second purchase fails the test.
+func TestExecuteShipShipment_ResumesAfterLabelsRecordedWithoutRebuying(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	h := newLabelHarness(t, ctrl)
-	svc, idempotencyMed := h.shipService(ctrl)
+	svc, jobSvc := h.shipExecuteService(ctrl)
 
-	idempotencyMed.EXPECT().UpsertIdempotencyKey(gomock.Any(), gomock.Any()).Return(&domain.IdempotencyKey{
-		TypeID:        "idk_test",
-		RecoveryPoint: string(domain.RecoveryPointShipLabelsCreated),
-	}, nil)
+	txn := "txn_already"
+	tracking := "1Z-ALREADY"
+	h.shipment.MasterTrackingNumber = &tracking
+	job := &domain.Job{ID: "job_resume", Type: constants.JobTypeShipShipment, JobItems: shipJobItems(t, testLabelShipmentID)}
+	jobSvc.EXPECT().GetJobForExecution(gomock.Any(), "job_resume").Return(job, nil)
+	jobSvc.EXPECT().StartJob(gomock.Any(), domain.StartJobParams{JobID: "job_resume"}).Return(time.Now(), nil)
 
+	h.expectAccountContext(false)
+	h.expectShippoCarrier()
+	h.expectCases(&domain.ShippingCase{
+		ID: testLabelCaseID, Number: testLabelCaseNumber,
+		ShippoTransactionID: &txn, TrackingNumber: &tracking,
+	})
 	h.shipmentRepo.EXPECT().Get(gomock.Any(), gomock.Any()).Return(h.shipment, nil)
 	h.invoiceRepo.EXPECT().IsDuplicateNumber(gomock.Any(), testLabelAccountID, h.shipment.Number).Return(false, nil)
-	// The letterhead logo is fetched before the transaction opens; this account has none.
 	h.accountRepo.EXPECT().GetByID(gomock.Any(), gomock.Any()).Return(nil, nil).AnyTimes()
 
-	// Stop the atomic phase at its first write; reaching it at all proves the purchase was skipped.
 	stopped := apierror.NewInternalError(nil, "stop after entering the atomic phase")
 	h.shipmentRepo.EXPECT().MarkShipped(gomock.Any(), testLabelAccountID, testLabelShipmentID, "acu_test").Return(stopped)
-	idempotencyMed.EXPECT().CacheErrorResponse(gomock.Any(), "idk_test", stopped).Return(stopped)
+	jobSvc.EXPECT().FailJob(gomock.Any(), gomock.Any())
 
-	_, apiErr := svc.ShipShipment(shipmentShipCtx(testLabelAccountID), domain.ShipShipmentParams{ShipmentID: testLabelShipmentID})
+	apiErr := svc.ExecuteShipShipment(shipmentShipCtx(testLabelAccountID), domain.BulkOperationJobEvent{JobID: "job_resume"})
 	require.NotNil(t, apiErr)
 	assert.False(t, h.leases.held("shipment-dispatch:"+testLabelShipmentID), "the claim is released when the ship ends")
 }
 
-// A duplicate invoice number would fail the ship's transaction after the labels were already paid
-// for, so it is refused before the carrier is ever called, and left uncached so it can be fixed.
-func TestShipShipment_DuplicateInvoiceNumberIsRefusedBeforeBuying(t *testing.T) {
+// A duplicate invoice number would fail after labels were paid for, so accept refuses it before a job is raised.
+func TestShipShipment_DuplicateInvoiceNumberIsRefusedBeforeEnqueue(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	h := newLabelHarness(t, ctrl)
 	svc, idempotencyMed := h.shipService(ctrl)
@@ -771,24 +806,22 @@ func TestShipShipment_DuplicateInvoiceNumberIsRefusedBeforeBuying(t *testing.T) 
 	assert.Equal(t, apierror.ErrorCodeResourceConflict, apiErr.Code)
 }
 
-// Two ships of one shipment at once: the first holds the claim while it buys, so the second is
+// Two executes of one shipment at once: the first holds the claim while it buys, so the second is
 // refused without reaching the carrier, and the carrier is called exactly once.
-func TestShipShipment_ConcurrentShipIsRefusedWhileTheFirstBuys(t *testing.T) {
+func TestExecuteShipShipment_ConcurrentShipIsRefusedWhileTheFirstBuys(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	h := newLabelHarness(t, ctrl)
-	svc, idempotencyMed := h.shipService(ctrl)
+	svc, jobSvc := h.shipExecuteService(ctrl)
 
-	idempotencyMed.EXPECT().UpsertIdempotencyKey(gomock.Any(), gomock.Any()).Return(&domain.IdempotencyKey{
-		TypeID:        "idk_first",
-		RecoveryPoint: string(domain.RecoveryPointStarted),
-	}, nil)
-	idempotencyMed.EXPECT().UpsertIdempotencyKey(gomock.Any(), gomock.Any()).Return(&domain.IdempotencyKey{
-		TypeID:        "idk_second",
-		RecoveryPoint: string(domain.RecoveryPointStarted),
-	}, nil)
+	jobA := &domain.Job{ID: "job_a", Type: constants.JobTypeShipShipment, JobItems: shipJobItems(t, testLabelShipmentID)}
+	jobB := &domain.Job{ID: "job_b", Type: constants.JobTypeShipShipment, JobItems: shipJobItems(t, testLabelShipmentID)}
+	jobSvc.EXPECT().GetJobForExecution(gomock.Any(), "job_a").Return(jobA, nil)
+	jobSvc.EXPECT().GetJobForExecution(gomock.Any(), "job_b").Return(jobB, nil)
+	jobSvc.EXPECT().StartJob(gomock.Any(), domain.StartJobParams{JobID: "job_a"}).Return(time.Now(), nil)
+	jobSvc.EXPECT().StartJob(gomock.Any(), domain.StartJobParams{JobID: "job_b"}).Return(time.Now(), nil)
+	jobSvc.EXPECT().FailJob(gomock.Any(), gomock.Any()).AnyTimes()
 
 	h.shipmentRepo.EXPECT().Get(gomock.Any(), gomock.Any()).Return(h.shipment, nil)
-	h.accountRepo.EXPECT().GetPlanIDAndPeriodEnd(gomock.Any(), testLabelAccountID).Return(nil, nil, nil)
 	h.invoiceRepo.EXPECT().IsDuplicateNumber(gomock.Any(), testLabelAccountID, h.shipment.Number).Return(false, nil)
 	h.expectPlannablePurchase()
 
@@ -801,17 +834,16 @@ func TestShipShipment_ConcurrentShipIsRefusedWhileTheFirstBuys(t *testing.T) {
 			<-finish
 			return nil, carrierRefusal
 		}).Times(1)
-	idempotencyMed.EXPECT().CacheErrorResponse(gomock.Any(), "idk_first", carrierRefusal).Return(carrierRefusal)
 
 	var firstErr *apierror.APIError
 	done := make(chan struct{})
 	go func() {
 		defer close(done)
-		_, firstErr = svc.ShipShipment(shipmentShipCtx(testLabelAccountID), domain.ShipShipmentParams{ShipmentID: testLabelShipmentID})
+		firstErr = svc.ExecuteShipShipment(shipmentShipCtx(testLabelAccountID), domain.BulkOperationJobEvent{JobID: "job_a"})
 	}()
 
 	<-buying
-	_, secondErr := svc.ShipShipment(shipmentShipCtx(testLabelAccountID), domain.ShipShipmentParams{ShipmentID: testLabelShipmentID})
+	secondErr := svc.ExecuteShipShipment(shipmentShipCtx(testLabelAccountID), domain.BulkOperationJobEvent{JobID: "job_b"})
 	require.NotNil(t, secondErr)
 	assert.Equal(t, apierror.ErrorCodeResourceConflict, secondErr.Code)
 

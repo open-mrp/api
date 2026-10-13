@@ -483,3 +483,210 @@ func (r *machineRepoImpl) FindByNames(ctx context.Context, accountID string, nam
 	}
 	return machines, nil
 }
+
+func mapMachineItemForwardRow(row sqlc.ListMachineItemsForwardRow) *domain.MachineItem {
+	item := &domain.MachineItem{
+		ItemID:    row.ItemID,
+		SKU:       row.Sku,
+		CreatedAt: row.CreatedAt,
+		UpdatedAt: row.UpdatedAt,
+	}
+	if row.Description.Valid {
+		item.Description = &row.Description.String
+	}
+	return item
+}
+
+func mapMachineItemBackwardRow(row sqlc.ListMachineItemsBackwardRow) *domain.MachineItem {
+	item := &domain.MachineItem{
+		ItemID:    row.ItemID,
+		SKU:       row.Sku,
+		CreatedAt: row.CreatedAt,
+		UpdatedAt: row.UpdatedAt,
+	}
+	if row.Description.Valid {
+		item.Description = &row.Description.String
+	}
+	return item
+}
+
+func machineItemCreatedAt(m *domain.MachineItem) time.Time { return m.CreatedAt }
+func machineItemID(m *domain.MachineItem) string           { return m.ItemID }
+
+func (r *machineRepoImpl) ListItems(ctx context.Context, params domain.ListMachineItemsParams) (*domain.ListMachineItemsResult, *apierror.APIError) {
+	ctx, span := machineRepoTracer.Start(ctx, "repository.machine.list_items")
+	defer span.End()
+
+	search := machBuildSearchParams(params.Query)
+	page := func(items []*domain.MachineItem, cursorDir *pagination.Direction) *domain.ListMachineItemsResult {
+		result, pageInfo := pagination.BuildPageString(items, params.Limit, cursorDir, machineItemCreatedAt, machineItemID)
+		return &domain.ListMachineItemsResult{Items: result, PageInfo: pageInfo}
+	}
+
+	if params.Cursor == nil {
+		rows, err := r.queries.ListMachineItemsForward(ctx, sqlc.ListMachineItemsForwardParams{
+			Limit:       params.Limit + 1,
+			AccountID:   params.AccountID,
+			MachineID:   params.MachineID,
+			SearchQuery: search,
+		})
+		if apiErr := db.MapSQLError(err); apiErr != nil {
+			return nil, tracing.Trace(span, apiErr)
+		}
+		items := make([]*domain.MachineItem, len(rows))
+		for i, row := range rows {
+			items[i] = mapMachineItemForwardRow(row)
+		}
+		return page(items, nil), nil
+	}
+
+	cur, err := pagination.DecodeStringCursor(*params.Cursor)
+	if err != nil {
+		return nil, tracing.Trace(span, apierror.NewValidationErrorWithParam("Invalid pagination cursor.", "cursor"))
+	}
+
+	if cur.Direction == pagination.DirectionBackward {
+		rows, err := r.queries.ListMachineItemsBackward(ctx, sqlc.ListMachineItemsBackwardParams{
+			Limit:           params.Limit + 1,
+			AccountID:       params.AccountID,
+			MachineID:       params.MachineID,
+			SearchQuery:     search,
+			CursorCreatedAt: cur.OccurredAt,
+			CursorID:        cur.ID,
+		})
+		if apiErr := db.MapSQLError(err); apiErr != nil {
+			return nil, tracing.Trace(span, apiErr)
+		}
+		items := make([]*domain.MachineItem, len(rows))
+		for i, row := range rows {
+			items[i] = mapMachineItemBackwardRow(row)
+		}
+		return page(items, &cur.Direction), nil
+	}
+
+	rows, err := r.queries.ListMachineItemsForward(ctx, sqlc.ListMachineItemsForwardParams{
+		Limit:           params.Limit + 1,
+		AccountID:       params.AccountID,
+		MachineID:       params.MachineID,
+		SearchQuery:     search,
+		CursorCreatedAt: gosql.NullTime{Time: cur.OccurredAt, Valid: true},
+		CursorID:        gosql.NullString{String: cur.ID, Valid: true},
+	})
+	if apiErr := db.MapSQLError(err); apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
+	items := make([]*domain.MachineItem, len(rows))
+	for i, row := range rows {
+		items[i] = mapMachineItemForwardRow(row)
+	}
+	return page(items, &cur.Direction), nil
+}
+
+func (r *machineRepoImpl) ReplaceItems(ctx context.Context, accountID, machineID string, itemIDs []string) *apierror.APIError {
+	ctx, span := machineRepoTracer.Start(ctx, "repository.machine.replace_items")
+	defer span.End()
+
+	if apiErr := r.DeleteItems(ctx, accountID, machineID); apiErr != nil {
+		return apiErr
+	}
+	for _, itemID := range itemIDs {
+		if err := r.queries.InsertMachineItem(ctx, sqlc.InsertMachineItemParams{
+			AccountID: accountID,
+			MachineID: machineID,
+			ItemID:    itemID,
+		}); err != nil {
+			return tracing.Trace(span, db.MapSQLError(err))
+		}
+	}
+	return nil
+}
+
+func (r *machineRepoImpl) DeleteItems(ctx context.Context, accountID, machineID string) *apierror.APIError {
+	ctx, span := machineRepoTracer.Start(ctx, "repository.machine.delete_items")
+	defer span.End()
+
+	if err := r.queries.DeleteMachineItems(ctx, sqlc.DeleteMachineItemsParams{
+		AccountID: accountID,
+		MachineID: machineID,
+	}); err != nil {
+		return tracing.Trace(span, db.MapSQLError(err))
+	}
+	return nil
+}
+
+func (r *machineRepoImpl) ListItemsByMachineIDs(ctx context.Context, accountID string, machineIDs []string) ([]domain.MachineItemByMachine, *apierror.APIError) {
+	ctx, span := machineRepoTracer.Start(ctx, "repository.machine.list_items_by_machine_ids")
+	defer span.End()
+
+	if len(machineIDs) == 0 {
+		return nil, nil
+	}
+
+	rows, err := r.queries.ListMachineItemsByMachineIDs(ctx, sqlc.ListMachineItemsByMachineIDsParams{
+		AccountID:  accountID,
+		MachineIds: machineIDs,
+	})
+	if apiErr := db.MapSQLError(err); apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
+
+	out := make([]domain.MachineItemByMachine, len(rows))
+	for i, row := range rows {
+		out[i] = domain.MachineItemByMachine{
+			MachineID: row.MachineID,
+			ItemID:    row.ItemID,
+			SKU:       row.Sku,
+		}
+	}
+	return out, nil
+}
+
+func (r *machineRepoImpl) CountItemsForMachines(ctx context.Context, accountID string, machineIDs []string) (int64, *apierror.APIError) {
+	ctx, span := machineRepoTracer.Start(ctx, "repository.machine.count_items_for_machines")
+	defer span.End()
+
+	if len(machineIDs) == 0 {
+		return 0, nil
+	}
+
+	count, err := r.queries.CountMachineItemsForMachines(ctx, sqlc.CountMachineItemsForMachinesParams{
+		AccountID:  accountID,
+		MachineIds: machineIDs,
+	})
+	if apiErr := db.MapSQLError(err); apiErr != nil {
+		return 0, tracing.Trace(span, apiErr)
+	}
+	return count, nil
+}
+
+func (r *machineRepoImpl) SuggestItemsFromScans(ctx context.Context, params domain.SuggestMachineItemsFromScansParams) ([]*domain.MachineItemScanSuggestion, *apierror.APIError) {
+	ctx, span := machineRepoTracer.Start(ctx, "repository.machine.suggest_items_from_scans")
+	defer span.End()
+
+	rows, err := r.queries.SuggestMachineItemsFromScans(ctx, sqlc.SuggestMachineItemsFromScansParams{
+		AccountID:   params.AccountID,
+		MachineID:   params.MachineID,
+		WindowStart: gosql.NullTime{Time: params.WindowStart, Valid: true},
+		WindowEnd:   gosql.NullTime{Time: params.WindowEnd, Valid: true},
+	})
+	if apiErr := db.MapSQLError(err); apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
+
+	out := make([]*domain.MachineItemScanSuggestion, len(rows))
+	for i, row := range rows {
+		s := &domain.MachineItemScanSuggestion{
+			ItemID:     row.ItemID,
+			SKU:        row.Sku,
+			BatchCount: row.BatchCount,
+		}
+		if t, ok := row.LastScannedAt.(time.Time); ok {
+			s.LastScannedAt = t
+		}
+		if row.Description.Valid {
+			s.Description = &row.Description.String
+		}
+		out[i] = s
+	}
+	return out, nil
+}

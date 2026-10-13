@@ -13,13 +13,13 @@ data:
     SHIPPING_LABELS_BUCKET: "augno-shipping-labels-dev-us-east-2"
     EXPORTS_BUCKET: "augno-exports-dev-us-east-2"
     CHAT_BUCKET: "augno-chat-attachments-dev-us-east-2"
-    # Inbound email bridge (dev). Pinned to us-east-1 (SES receiving region). Fill AWS_ACCOUNT_ID in
-    # locally — scripts/dev-email-bridge-setup.sh prints the full queue URL. Leave the placeholder in
-    # anything you commit: this file is public and an account id is what an attacker enumerates roles
-    # with. Only the inbound-email consumer reads it, so the rest of the stack runs without it.
+    # Inbound email bridge (dev). Resources + DNS in open-mrp/infra email_inbound_dev.tf; seeded
+    # inbox in shared/db/seed/dev/0002_email_bridge.sql (support@mail.dev.openmrp.ai). Queue value
+    # is the queue name — notification-service resolves it via GetQueueUrl (no account id in-repo).
     INBOUND_EMAIL_BUCKET: "augno-notification-inbound-email-dev"
-    INBOUND_EMAIL_QUEUE_URL: "https://sqs.us-east-1.amazonaws.com/AWS_ACCOUNT_ID/augno-notification-inbound-email-dev"
+    INBOUND_EMAIL_QUEUE_URL: "augno-notification-inbound-email-dev"
     INBOUND_EMAIL_REGION: "us-east-1"
+    INBOUND_EMAIL_DOMAIN: "mail.dev.openmrp.ai"
     AUTH_SERVICE_URL: "auth-service:9092"
     CORE_SERVICE_URL: "core-service:9092"
     NOTIFICATION_SERVICE_URL: "notification-service:9092"

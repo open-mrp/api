@@ -60,9 +60,7 @@ func TestShipmentsBehavioral_ShipMarksShippedAndAssignsSSCC(t *testing.T) {
 	require.Equal(t, "packed", before["status"], "fixture must start packed")
 	require.Equal(t, true, before["is_ready_to_ship"], "fixture must be shippable: cased and weighed")
 
-	status, body, err := apiClient.Post(shipmentsPath+"/"+sbShipmentID+"/actions/ship",
-		map[string]any{"email_customer": false}, newIdempotencyKey())
-	require.NoError(t, err)
+	status, body := acceptShipAndAwait(t, sbShipmentID, false)
 	requireStatus(t, 200, status, body)
 
 	shipped := parseJSON(body)
@@ -85,12 +83,10 @@ func TestShipmentsBehavioral_ShipTwiceConflicts(t *testing.T) {
 	// Not parallel: ships SHP-SB-001, which other tests read as packed, and voids it back.
 	defer restoreShipmentSB(t)
 
-	status, body, err := apiClient.Post(shipmentsPath+"/"+sbShipmentID+"/actions/ship",
-		map[string]any{"email_customer": false}, newIdempotencyKey())
-	require.NoError(t, err)
+	status, body := acceptShipAndAwait(t, sbShipmentID, false)
 	requireStatus(t, 200, status, body)
 
-	status, body, err = apiClient.Post(shipmentsPath+"/"+sbShipmentID+"/actions/ship",
+	status, body, err := apiClient.Post(shipmentsPath+"/"+sbShipmentID+"/actions/ship",
 		map[string]any{"email_customer": false}, newIdempotencyKey())
 	require.NoError(t, err)
 	requireStatus(t, 409, status, body)
@@ -100,12 +96,10 @@ func TestShipmentsBehavioral_VoidReturnsToPackedAndClearsCases(t *testing.T) {
 	// Not parallel: ships SHP-SB-001, which other tests read as packed, and voids it back.
 	defer restoreShipmentSB(t)
 
-	status, body, err := apiClient.Post(shipmentsPath+"/"+sbShipmentID+"/actions/ship",
-		map[string]any{"email_customer": false}, newIdempotencyKey())
-	require.NoError(t, err)
+	status, body := acceptShipAndAwait(t, sbShipmentID, false)
 	requireStatus(t, 200, status, body)
 
-	status, body, err = apiClient.Post(shipmentsPath+"/"+sbShipmentID+"/actions/void", nil, newIdempotencyKey())
+	status, body, err := apiClient.Post(shipmentsPath+"/"+sbShipmentID+"/actions/void", nil, newIdempotencyKey())
 	require.NoError(t, err)
 	requireStatus(t, 200, status, body)
 
@@ -205,13 +199,11 @@ func TestShipmentsBehavioral_ShippedShipmentCannotBeRerouted(t *testing.T) {
 	// Not parallel: ships SHP-SB-001, which other tests read as packed, and voids it back.
 	defer restoreShipmentSB(t)
 
-	status, body, err := apiClient.Post(shipmentsPath+"/"+sbShipmentID+"/actions/ship",
-		map[string]any{"email_customer": false}, newIdempotencyKey())
-	require.NoError(t, err)
+	status, body := acceptShipAndAwait(t, sbShipmentID, false)
 	requireStatus(t, 200, status, body)
 
 	// Correcting the tracking number after dispatch is legitimate.
-	status, body, err = apiClient.Patch(shipmentsPath+"/"+sbShipmentID,
+	status, body, err := apiClient.Patch(shipmentsPath+"/"+sbShipmentID,
 		map[string]any{"master_tracking_number": "1Z-CORRECTED"}, newIdempotencyKey())
 	require.NoError(t, err)
 	requireStatus(t, 200, status, body)
@@ -400,9 +392,7 @@ func TestShipmentsBehavioral_ShipCreatesInvoiceForShippedGoods(t *testing.T) {
 	// Not parallel: ships SHP-SB-001, which other tests read as packed, and voids it back.
 	defer restoreShipmentSB(t)
 
-	status, body, err := apiClient.Post(shipmentsPath+"/"+sbShipmentID+"/actions/ship",
-		map[string]any{"email_customer": false}, newIdempotencyKey())
-	require.NoError(t, err)
+	status, body := acceptShipAndAwait(t, sbShipmentID, false)
 	requireStatus(t, 200, status, body)
 
 	// The invoice is linked to the shipment and numbered after it.
@@ -427,9 +417,7 @@ func TestShipmentsBehavioral_ShippingWholeOrderFulfillsBillsFreightAndEmails(t *
 	orderID, _, shipmentID := packedOrder(t, body)
 	require.Equal(t, "issued", readOrderStatus(t, orderID), "a packed order has not shipped yet")
 
-	status, respBody, err := apiClient.Post(shipmentsPath+"/"+shipmentID+"/actions/ship",
-		map[string]any{"email_customer": true}, newIdempotencyKey())
-	require.NoError(t, err)
+	status, respBody := acceptShipAndAwait(t, shipmentID, true)
 	requireStatus(t, 200, status, respBody)
 
 	shipment := readShipment(t, shipmentID, "related.invoice")
@@ -438,7 +426,7 @@ func TestShipmentsBehavioral_ShippingWholeOrderFulfillsBillsFreightAndEmails(t *
 	invoiceID := jsonField(linked, "id")
 
 	// The invoice bills the shipped sale line AND the non-shipping freight line.
-	status, respBody, err = apiClient.GetListRaw(invoicesPath+"/"+invoiceID, url.Values{"include": {"lines"}})
+	status, respBody, err := apiClient.GetListRaw(invoicesPath+"/"+invoiceID, url.Values{"include": {"lines"}})
 	require.NoError(t, err)
 	requireStatus(t, 200, status, respBody)
 	invoice := parseJSON(respBody)
@@ -457,13 +445,11 @@ func TestShipmentsBehavioral_ShipWithoutEmailDoesNotSendInvoice(t *testing.T) {
 	// Not parallel: ships SHP-SB-001, which other tests read as packed, and voids it back.
 	defer restoreShipmentSB(t)
 
-	status, body, err := apiClient.Post(shipmentsPath+"/"+sbShipmentID+"/actions/ship",
-		map[string]any{"email_customer": false}, newIdempotencyKey())
-	require.NoError(t, err)
+	status, body := acceptShipAndAwait(t, sbShipmentID, false)
 	requireStatus(t, 200, status, body)
 
 	invoiceID := jsonField(jsonObject(jsonObject(readShipment(t, sbShipmentID, "related.invoice"), "related"), "invoice"), "id")
-	status, body, err = apiClient.GetListRaw(invoicesPath+"/"+invoiceID, nil)
+	status, body, err := apiClient.GetListRaw(invoicesPath+"/"+invoiceID, nil)
 	require.NoError(t, err)
 	requireStatus(t, 200, status, body)
 	assert.Equal(t, false, parseJSON(body)["has_been_sent"],
@@ -474,13 +460,11 @@ func TestShipmentsBehavioral_VoidDeletesTheInvoiceAndReopensTheOrder(t *testing.
 	// Not parallel: ships SHP-SB-001, which other tests read as packed, and voids it back.
 	defer restoreShipmentSB(t)
 
-	status, body, err := apiClient.Post(shipmentsPath+"/"+sbShipmentID+"/actions/ship",
-		map[string]any{"email_customer": false}, newIdempotencyKey())
-	require.NoError(t, err)
+	status, body := acceptShipAndAwait(t, sbShipmentID, false)
 	requireStatus(t, 200, status, body)
 	invoiceID := jsonField(jsonObject(jsonObject(readShipment(t, sbShipmentID, "related.invoice"), "related"), "invoice"), "id")
 
-	status, body, err = apiClient.Post(shipmentsPath+"/"+sbShipmentID+"/actions/void", nil, newIdempotencyKey())
+	status, body, err := apiClient.Post(shipmentsPath+"/"+sbShipmentID+"/actions/void", nil, newIdempotencyKey())
 	require.NoError(t, err)
 	requireStatus(t, 200, status, body)
 

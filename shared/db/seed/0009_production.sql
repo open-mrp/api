@@ -167,6 +167,10 @@ UPDATE production_step SET scanning_station_id = 'sgsn_01k0a8201zfter9hb618v43j9
 
 UPDATE machine SET production_step_id = 'prs_01k0a51qxceydax5036pegvzzy' WHERE id = 'mc_01k0a52fb6eqhtbx9hdxj3vvnh' AND (production_step_id IS NULL OR production_step_id = '');
 
+INSERT IGNORE INTO machine_item (account_id, machine_id, item_id, created_at, updated_at) VALUES
+    ('ac_01k0a5smf9ekb8rqg12555zjqa', 'mc_01k0a52fb6eqhtbx9hdxj3vvnh', 'it_01seedlknitem000000', NOW(3), NOW(3)),
+    ('ac_01k0a5smf9ekb8rqg12555zjqa', 'mc_01k0a52fb6eqhtbx9hdxj3vvnh', 'it_01seedsknitem000000', NOW(3), NOW(3));
+
 -- Sew Large Sock: machine on the sewing department so GET /production-steps/{id} includes
 -- (machines + in_steps) can be exercised against the same seeded step as graph mid-nodes.
 INSERT IGNORE INTO machine (id, account_id, name, serial_number, department_id, production_step_id, created_at, updated_at) VALUES

@@ -1343,6 +1343,15 @@ INSERT IGNORE INTO _batches_machines (A, B) VALUES
     ('bt_01seedbatch2_0000000', 'mc_01k0a52fb6eqhtbx9hdxj3vvnh');
 
 -- ============================================================
+-- MACHINE RUNNABLE SKUS (production schedule discovery)
+-- ============================================================
+-- Schedule generation discovers constraint SKUs from machine_item, not scan history.
+-- These rows match the seeded knit batches on the constraint machine so e2e plans stay non-empty.
+INSERT IGNORE INTO machine_item (account_id, machine_id, item_id, created_at, updated_at) VALUES
+    ('ac_01k0a5smf9ekb8rqg12555zjqa', 'mc_01k0a52fb6eqhtbx9hdxj3vvnh', 'it_01seedlknitem000000', NOW(3), NOW(3)),
+    ('ac_01k0a5smf9ekb8rqg12555zjqa', 'mc_01k0a52fb6eqhtbx9hdxj3vvnh', 'it_01seedsknitem000000', NOW(3), NOW(3));
+
+-- ============================================================
 -- BATCH GENEALOGY (so knit demand can be pooled from finished goods)
 -- ============================================================
 -- The solver pools a constraint item's demand from the finished goods it becomes,

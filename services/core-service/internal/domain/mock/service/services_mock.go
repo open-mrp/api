@@ -5325,6 +5325,21 @@ func (mr *MockMachineSvcMockRecorder) GetMachine(ctx, machineID any) *gomock.Cal
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetMachine", reflect.TypeOf((*MockMachineSvc)(nil).GetMachine), ctx, machineID)
 }
 
+// ListMachineItems mocks base method.
+func (m *MockMachineSvc) ListMachineItems(ctx context.Context, params domain.ListMachineItemsParams) (*domain.ListMachineItemsResult, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ListMachineItems", ctx, params)
+	ret0, _ := ret[0].(*domain.ListMachineItemsResult)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
+}
+
+// ListMachineItems indicates an expected call of ListMachineItems.
+func (mr *MockMachineSvcMockRecorder) ListMachineItems(ctx, params any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListMachineItems", reflect.TypeOf((*MockMachineSvc)(nil).ListMachineItems), ctx, params)
+}
+
 // ListMachines mocks base method.
 func (m *MockMachineSvc) ListMachines(ctx context.Context, params domain.ListMachinesParams) (*domain.ListMachinesResult, *apierror.APIError) {
 	m.ctrl.T.Helper()
@@ -5338,6 +5353,36 @@ func (m *MockMachineSvc) ListMachines(ctx context.Context, params domain.ListMac
 func (mr *MockMachineSvcMockRecorder) ListMachines(ctx, params any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListMachines", reflect.TypeOf((*MockMachineSvc)(nil).ListMachines), ctx, params)
+}
+
+// ReplaceMachineItems mocks base method.
+func (m *MockMachineSvc) ReplaceMachineItems(ctx context.Context, params domain.ReplaceMachineItemsParams) (*domain.ListMachineItemsResult, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ReplaceMachineItems", ctx, params)
+	ret0, _ := ret[0].(*domain.ListMachineItemsResult)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
+}
+
+// ReplaceMachineItems indicates an expected call of ReplaceMachineItems.
+func (mr *MockMachineSvcMockRecorder) ReplaceMachineItems(ctx, params any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ReplaceMachineItems", reflect.TypeOf((*MockMachineSvc)(nil).ReplaceMachineItems), ctx, params)
+}
+
+// SuggestMachineItemsFromScans mocks base method.
+func (m *MockMachineSvc) SuggestMachineItemsFromScans(ctx context.Context, machineID string, windowMonths *int32) ([]*domain.MachineItemScanSuggestion, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "SuggestMachineItemsFromScans", ctx, machineID, windowMonths)
+	ret0, _ := ret[0].([]*domain.MachineItemScanSuggestion)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
+}
+
+// SuggestMachineItemsFromScans indicates an expected call of SuggestMachineItemsFromScans.
+func (mr *MockMachineSvcMockRecorder) SuggestMachineItemsFromScans(ctx, machineID, windowMonths any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SuggestMachineItemsFromScans", reflect.TypeOf((*MockMachineSvc)(nil).SuggestMachineItemsFromScans), ctx, machineID, windowMonths)
 }
 
 // UpdateMachine mocks base method.
@@ -10726,6 +10771,20 @@ func (mr *MockShipmentSvcMockRecorder) EstimateRate(ctx, params any) *gomock.Cal
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "EstimateRate", reflect.TypeOf((*MockShipmentSvc)(nil).EstimateRate), ctx, params)
 }
 
+// ExecuteShipShipment mocks base method.
+func (m *MockShipmentSvc) ExecuteShipShipment(ctx context.Context, event domain.BulkOperationJobEvent) *apierror.APIError {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ExecuteShipShipment", ctx, event)
+	ret0, _ := ret[0].(*apierror.APIError)
+	return ret0
+}
+
+// ExecuteShipShipment indicates an expected call of ExecuteShipShipment.
+func (mr *MockShipmentSvcMockRecorder) ExecuteShipShipment(ctx, event any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ExecuteShipShipment", reflect.TypeOf((*MockShipmentSvc)(nil).ExecuteShipShipment), ctx, event)
+}
+
 // GetShipment mocks base method.
 func (m *MockShipmentSvc) GetShipment(ctx context.Context, params domain.GetShipmentParams) (*domain.Shipment, *apierror.APIError) {
 	m.ctrl.T.Helper()
@@ -10772,10 +10831,10 @@ func (mr *MockShipmentSvcMockRecorder) RateShop(ctx, params any) *gomock.Call {
 }
 
 // ShipShipment mocks base method.
-func (m *MockShipmentSvc) ShipShipment(ctx context.Context, params domain.ShipShipmentParams) (*domain.Shipment, *apierror.APIError) {
+func (m *MockShipmentSvc) ShipShipment(ctx context.Context, params domain.ShipShipmentParams) (*domain.Job, *apierror.APIError) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "ShipShipment", ctx, params)
-	ret0, _ := ret[0].(*domain.Shipment)
+	ret0, _ := ret[0].(*domain.Job)
 	ret1, _ := ret[1].(*apierror.APIError)
 	return ret0, ret1
 }

@@ -967,6 +967,13 @@ type MachineSvc interface {
 
 	// BatchGetMachinesByIDs returns machines by their IDs for include resolution.
 	BatchGetMachinesByIDs(ctx context.Context, ids []string) ([]*Machine, *apierror.APIError)
+
+	// ListMachineItems returns the items a machine is configured to run.
+	ListMachineItems(ctx context.Context, params ListMachineItemsParams) (*ListMachineItemsResult, *apierror.APIError)
+	// ReplaceMachineItems replaces the full set of items a machine is configured to run.
+	ReplaceMachineItems(ctx context.Context, params ReplaceMachineItemsParams) (*ListMachineItemsResult, *apierror.APIError)
+	// SuggestMachineItemsFromScans returns scan-history candidates without writing.
+	SuggestMachineItemsFromScans(ctx context.Context, machineID string, windowMonths *int32) ([]*MachineItemScanSuggestion, *apierror.APIError)
 }
 
 type ProductionScheduleSvc interface {
@@ -1747,7 +1754,10 @@ type ShipmentSvc interface {
 	// AdminUpdateShipmentTracking corrects the tracking and routing of a shipment that has already shipped.
 	AdminUpdateShipmentTracking(ctx context.Context, params AdminUpdateShipmentTrackingParams) (*Shipment, *apierror.APIError)
 	DeleteShipment(ctx context.Context, params DeleteShipmentParams) *apierror.APIError
-	ShipShipment(ctx context.Context, params ShipShipmentParams) (*Shipment, *apierror.APIError)
+	// ShipShipment accepts a ship and returns the job tracking it; labels, inventory and the invoice are done by ExecuteShipShipment.
+	ShipShipment(ctx context.Context, params ShipShipmentParams) (*Job, *apierror.APIError)
+	// ExecuteShipShipment runs an accepted ship: buys labels, marks the shipment shipped, and raises its invoice.
+	ExecuteShipShipment(ctx context.Context, event BulkOperationJobEvent) *apierror.APIError
 	VoidShipment(ctx context.Context, params VoidShipmentParams) (*Shipment, *apierror.APIError)
 	EstimateRate(ctx context.Context, params EstimateRateParams) (float64, *apierror.APIError)
 	RateShop(ctx context.Context, params RateShopParams) (*RateShopResult, *apierror.APIError)

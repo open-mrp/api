@@ -24,15 +24,18 @@ import (
 const _ = grpc.SupportPackageIsVersion9
 
 const (
-	CoreFulfillmentService_ListMachines_FullMethodName          = "/core.CoreFulfillmentService/ListMachines"
-	CoreFulfillmentService_ExportMachines_FullMethodName        = "/core.CoreFulfillmentService/ExportMachines"
-	CoreFulfillmentService_GetMachine_FullMethodName            = "/core.CoreFulfillmentService/GetMachine"
-	CoreFulfillmentService_ListMachineStatus_FullMethodName     = "/core.CoreFulfillmentService/ListMachineStatus"
-	CoreFulfillmentService_CreateMachine_FullMethodName         = "/core.CoreFulfillmentService/CreateMachine"
-	CoreFulfillmentService_UpdateMachine_FullMethodName         = "/core.CoreFulfillmentService/UpdateMachine"
-	CoreFulfillmentService_BulkUpsertMachines_FullMethodName    = "/core.CoreFulfillmentService/BulkUpsertMachines"
-	CoreFulfillmentService_DeleteMachine_FullMethodName         = "/core.CoreFulfillmentService/DeleteMachine"
-	CoreFulfillmentService_BatchGetMachinesByIDs_FullMethodName = "/core.CoreFulfillmentService/BatchGetMachinesByIDs"
+	CoreFulfillmentService_ListMachines_FullMethodName                 = "/core.CoreFulfillmentService/ListMachines"
+	CoreFulfillmentService_ExportMachines_FullMethodName               = "/core.CoreFulfillmentService/ExportMachines"
+	CoreFulfillmentService_GetMachine_FullMethodName                   = "/core.CoreFulfillmentService/GetMachine"
+	CoreFulfillmentService_ListMachineStatus_FullMethodName            = "/core.CoreFulfillmentService/ListMachineStatus"
+	CoreFulfillmentService_CreateMachine_FullMethodName                = "/core.CoreFulfillmentService/CreateMachine"
+	CoreFulfillmentService_UpdateMachine_FullMethodName                = "/core.CoreFulfillmentService/UpdateMachine"
+	CoreFulfillmentService_BulkUpsertMachines_FullMethodName           = "/core.CoreFulfillmentService/BulkUpsertMachines"
+	CoreFulfillmentService_DeleteMachine_FullMethodName                = "/core.CoreFulfillmentService/DeleteMachine"
+	CoreFulfillmentService_BatchGetMachinesByIDs_FullMethodName        = "/core.CoreFulfillmentService/BatchGetMachinesByIDs"
+	CoreFulfillmentService_ListMachineItems_FullMethodName             = "/core.CoreFulfillmentService/ListMachineItems"
+	CoreFulfillmentService_ReplaceMachineItems_FullMethodName          = "/core.CoreFulfillmentService/ReplaceMachineItems"
+	CoreFulfillmentService_SuggestMachineItemsFromScans_FullMethodName = "/core.CoreFulfillmentService/SuggestMachineItemsFromScans"
 )
 
 // CoreFulfillmentServiceClient is the client API for CoreFulfillmentService service.
@@ -57,6 +60,12 @@ type CoreFulfillmentServiceClient interface {
 	DeleteMachine(ctx context.Context, in *DeleteMachineRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
 	// BatchGetMachinesByIDs returns machines by their IDs for include resolution.
 	BatchGetMachinesByIDs(ctx context.Context, in *BatchGetMachinesByIDsRequest, opts ...grpc.CallOption) (*BatchGetMachinesByIDsResponse, error)
+	// ListMachineItems returns the items a machine is configured to run.
+	ListMachineItems(ctx context.Context, in *ListMachineItemsRequest, opts ...grpc.CallOption) (*ListMachineItemsResponse, error)
+	// ReplaceMachineItems replaces the full set of items a machine is configured to run.
+	ReplaceMachineItems(ctx context.Context, in *ReplaceMachineItemsRequest, opts ...grpc.CallOption) (*ListMachineItemsResponse, error)
+	// SuggestMachineItemsFromScans returns scan-history candidates without writing.
+	SuggestMachineItemsFromScans(ctx context.Context, in *SuggestMachineItemsFromScansRequest, opts ...grpc.CallOption) (*SuggestMachineItemsFromScansResponse, error)
 }
 
 type coreFulfillmentServiceClient struct {
@@ -157,6 +166,36 @@ func (c *coreFulfillmentServiceClient) BatchGetMachinesByIDs(ctx context.Context
 	return out, nil
 }
 
+func (c *coreFulfillmentServiceClient) ListMachineItems(ctx context.Context, in *ListMachineItemsRequest, opts ...grpc.CallOption) (*ListMachineItemsResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ListMachineItemsResponse)
+	err := c.cc.Invoke(ctx, CoreFulfillmentService_ListMachineItems_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *coreFulfillmentServiceClient) ReplaceMachineItems(ctx context.Context, in *ReplaceMachineItemsRequest, opts ...grpc.CallOption) (*ListMachineItemsResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ListMachineItemsResponse)
+	err := c.cc.Invoke(ctx, CoreFulfillmentService_ReplaceMachineItems_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *coreFulfillmentServiceClient) SuggestMachineItemsFromScans(ctx context.Context, in *SuggestMachineItemsFromScansRequest, opts ...grpc.CallOption) (*SuggestMachineItemsFromScansResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(SuggestMachineItemsFromScansResponse)
+	err := c.cc.Invoke(ctx, CoreFulfillmentService_SuggestMachineItemsFromScans_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // CoreFulfillmentServiceServer is the server API for CoreFulfillmentService service.
 // All implementations must embed UnimplementedCoreFulfillmentServiceServer
 // for forward compatibility.
@@ -179,6 +218,12 @@ type CoreFulfillmentServiceServer interface {
 	DeleteMachine(context.Context, *DeleteMachineRequest) (*emptypb.Empty, error)
 	// BatchGetMachinesByIDs returns machines by their IDs for include resolution.
 	BatchGetMachinesByIDs(context.Context, *BatchGetMachinesByIDsRequest) (*BatchGetMachinesByIDsResponse, error)
+	// ListMachineItems returns the items a machine is configured to run.
+	ListMachineItems(context.Context, *ListMachineItemsRequest) (*ListMachineItemsResponse, error)
+	// ReplaceMachineItems replaces the full set of items a machine is configured to run.
+	ReplaceMachineItems(context.Context, *ReplaceMachineItemsRequest) (*ListMachineItemsResponse, error)
+	// SuggestMachineItemsFromScans returns scan-history candidates without writing.
+	SuggestMachineItemsFromScans(context.Context, *SuggestMachineItemsFromScansRequest) (*SuggestMachineItemsFromScansResponse, error)
 	mustEmbedUnimplementedCoreFulfillmentServiceServer()
 }
 
@@ -215,6 +260,15 @@ func (UnimplementedCoreFulfillmentServiceServer) DeleteMachine(context.Context, 
 }
 func (UnimplementedCoreFulfillmentServiceServer) BatchGetMachinesByIDs(context.Context, *BatchGetMachinesByIDsRequest) (*BatchGetMachinesByIDsResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method BatchGetMachinesByIDs not implemented")
+}
+func (UnimplementedCoreFulfillmentServiceServer) ListMachineItems(context.Context, *ListMachineItemsRequest) (*ListMachineItemsResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method ListMachineItems not implemented")
+}
+func (UnimplementedCoreFulfillmentServiceServer) ReplaceMachineItems(context.Context, *ReplaceMachineItemsRequest) (*ListMachineItemsResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method ReplaceMachineItems not implemented")
+}
+func (UnimplementedCoreFulfillmentServiceServer) SuggestMachineItemsFromScans(context.Context, *SuggestMachineItemsFromScansRequest) (*SuggestMachineItemsFromScansResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method SuggestMachineItemsFromScans not implemented")
 }
 func (UnimplementedCoreFulfillmentServiceServer) mustEmbedUnimplementedCoreFulfillmentServiceServer() {
 }
@@ -400,6 +454,60 @@ func _CoreFulfillmentService_BatchGetMachinesByIDs_Handler(srv interface{}, ctx 
 	return interceptor(ctx, in, info, handler)
 }
 
+func _CoreFulfillmentService_ListMachineItems_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ListMachineItemsRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(CoreFulfillmentServiceServer).ListMachineItems(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: CoreFulfillmentService_ListMachineItems_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(CoreFulfillmentServiceServer).ListMachineItems(ctx, req.(*ListMachineItemsRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _CoreFulfillmentService_ReplaceMachineItems_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ReplaceMachineItemsRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(CoreFulfillmentServiceServer).ReplaceMachineItems(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: CoreFulfillmentService_ReplaceMachineItems_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(CoreFulfillmentServiceServer).ReplaceMachineItems(ctx, req.(*ReplaceMachineItemsRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _CoreFulfillmentService_SuggestMachineItemsFromScans_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(SuggestMachineItemsFromScansRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(CoreFulfillmentServiceServer).SuggestMachineItemsFromScans(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: CoreFulfillmentService_SuggestMachineItemsFromScans_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(CoreFulfillmentServiceServer).SuggestMachineItemsFromScans(ctx, req.(*SuggestMachineItemsFromScansRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // CoreFulfillmentService_ServiceDesc is the grpc.ServiceDesc for CoreFulfillmentService service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -442,6 +550,18 @@ var CoreFulfillmentService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "BatchGetMachinesByIDs",
 			Handler:    _CoreFulfillmentService_BatchGetMachinesByIDs_Handler,
+		},
+		{
+			MethodName: "ListMachineItems",
+			Handler:    _CoreFulfillmentService_ListMachineItems_Handler,
+		},
+		{
+			MethodName: "ReplaceMachineItems",
+			Handler:    _CoreFulfillmentService_ReplaceMachineItems_Handler,
+		},
+		{
+			MethodName: "SuggestMachineItemsFromScans",
+			Handler:    _CoreFulfillmentService_SuggestMachineItemsFromScans_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

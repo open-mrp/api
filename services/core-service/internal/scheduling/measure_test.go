@@ -386,3 +386,117 @@ func TestSolve_Deterministic(t *testing.T) {
 		}
 	}
 }
+
+func TestApplyConfiguredEligibility_ReplacesAffinityAndSeedsMissing(t *testing.T) {
+	t.Parallel()
+
+	measured := []ItemMeasurement{
+		{
+			ItemID:            "it_A",
+			SKU:               "A",
+			SecondsPerUnit:    10,
+			EligibleMachineID: map[string]bool{"mc_old": true},
+		},
+		{
+			ItemID:            "it_extra",
+			SKU:               "X",
+			SecondsPerUnit:    5,
+			EligibleMachineID: map[string]bool{"mc_1": true},
+		},
+	}
+	eligibility := map[string]map[string]bool{
+		"it_A": {"mc_1": true, "mc_2": true},
+		"it_B": {"mc_1": true},
+	}
+	skus := map[string]string{"it_A": "A", "it_B": "B"}
+	rates := map[string]float64{"it_B": 12}
+
+	got := ApplyConfiguredEligibility(measured, eligibility, skus, rates)
+	if len(got) != 2 {
+		t.Fatalf("len = %d, want 2", len(got))
+	}
+	if got[0].ItemID != "it_A" || got[1].ItemID != "it_B" {
+		t.Fatalf("order/ids = %v %v, want A then B", got[0].ItemID, got[1].ItemID)
+	}
+	wantElig := map[string]bool{"mc_1": true, "mc_2": true}
+	if !reflect.DeepEqual(got[0].EligibleMachineID, wantElig) {
+		t.Errorf("A eligibility = %v, want %v", got[0].EligibleMachineID, wantElig)
+	}
+	if got[1].SecondsPerUnit != 12 {
+		t.Errorf("B rate = %v, want 12", got[1].SecondsPerUnit)
+	}
+}
+
+func TestApplyConfiguredEligibility_EmptyConfigYieldsEmpty(t *testing.T) {
+	t.Parallel()
+
+	measured := []ItemMeasurement{{ItemID: "it_A", SKU: "A", SecondsPerUnit: 10, EligibleMachineID: map[string]bool{"mc_1": true}}}
+	got := ApplyConfiguredEligibility(measured, map[string]map[string]bool{}, nil, nil)
+	if len(got) != 0 {
+		t.Fatalf("len = %d, want 0", len(got))
+	}
+}
+
+func TestSolve_ConfiguredEligibilityWithoutBatches(t *testing.T) {
+	t.Parallel()
+
+	settings := DefaultSettings()
+	settings.HorizonWeeks = 4
+
+	in := SolverInput{
+		PlanningAsOf: time.Date(2026, time.June, 15, 0, 0, 0, 0, time.UTC),
+		Settings:     settings,
+		Machines:     []Machine{{ID: "mc_1", Name: "1"}},
+		Batches:      nil,
+		ConfiguredEligibility: map[string]map[string]bool{
+			"it_A": {"mc_1": true},
+		},
+		ConfiguredItemSKU:        map[string]string{"it_A": "A"},
+		ConfiguredSecondsPerUnit: map[string]float64{"it_A": 30},
+		MonthlyByItem:            map[string][]MonthlyDemand{"it_A": series(2026, time.May, 24, 500)},
+		OnHandByItem:             map[string]float64{"it_A": 0},
+		DemandBasisCode:          DemandBasisTrailing12,
+	}
+
+	got := Solve(in)
+	if got.Diagnostics.ConfiguredItemCount != 1 {
+		t.Errorf("configured_item_count = %d, want 1", got.Diagnostics.ConfiguredItemCount)
+	}
+	if got.Diagnostics.MeasuredBatchCount != 0 {
+		t.Errorf("measured_batch_count = %d, want 0", got.Diagnostics.MeasuredBatchCount)
+	}
+	if len(got.Campaigns) == 0 {
+		t.Fatal("configured SKU with a step-derived rate and demand must schedule without recent scans")
+	}
+	for _, c := range got.Campaigns {
+		if c.MachineID != "mc_1" {
+			t.Errorf("campaign machine = %q, want mc_1", c.MachineID)
+		}
+	}
+}
+
+func TestSolve_EmptyConfiguredEligibilityYieldsEmptyPlan(t *testing.T) {
+	t.Parallel()
+
+	in := SolverInput{
+		PlanningAsOf: time.Date(2026, time.June, 15, 0, 0, 0, 0, time.UTC),
+		Settings:     DefaultSettings(),
+		Machines:     []Machine{{ID: "mc_1", Name: "1"}},
+		Batches: []BatchMeasurement{
+			{BatchID: "bt_1", ItemID: "it_A", SKU: "A", ScannedAt: at(1), Quantity: 60,
+				MachineID: "mc_1", ProductionStepID: "prs_A", UnitCost: 4,
+				LaborTimeValue: 10, LaborTime: LaborTimeConversion{TimeRatioNumerator: 1, TimeRatioDenominator: 60, QuantityRatioNumerator: 1, QuantityRatioDenominator: 1}},
+		},
+		ConfiguredEligibility: map[string]map[string]bool{},
+		MonthlyByItem:         map[string][]MonthlyDemand{"it_A": series(2026, time.May, 12, 100)},
+		DemandBasisCode:       DemandBasisTrailing12,
+	}
+
+	got := Solve(in)
+	if got.Diagnostics.ConfiguredItemCount != 0 {
+		t.Errorf("configured_item_count = %d, want 0", got.Diagnostics.ConfiguredItemCount)
+	}
+	if len(got.Campaigns) != 0 {
+		t.Error("scans must not discover SKUs when machine_item is empty")
+	}
+}

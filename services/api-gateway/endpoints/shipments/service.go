@@ -6,6 +6,7 @@ import (
 	"strconv"
 	"time"
 
+	jobep "github.com/open-mrp/api/services/api-gateway/endpoints/jobs"
 	"github.com/open-mrp/api/services/api-gateway/internal/domain"
 	grpcutil "github.com/open-mrp/api/services/api-gateway/internal/grpc"
 	"github.com/open-mrp/api/services/api-gateway/internal/resourceloaders"
@@ -28,7 +29,7 @@ type ShipmentSvc interface {
 	UpdateShipment(ctx context.Context, req *UpdateShipmentRequest) (*apiresource.Shipment, *apierror.APIError)
 	AdminUpdateShipmentTracking(ctx context.Context, req *AdminUpdateShipmentTrackingRequest) (*apiresource.Shipment, *apierror.APIError)
 	DeleteShipment(ctx context.Context, req *DeleteShipmentRequest) (*apiresource.EmptyResource, *apierror.APIError)
-	ShipShipment(ctx context.Context, req *ShipShipmentRequest) (*apiresource.Shipment, *apierror.APIError)
+	ShipShipment(ctx context.Context, req *ShipShipmentRequest) (*apiresource.Job, *apierror.APIError)
 	VoidShipment(ctx context.Context, req *VoidShipmentRequest) (*apiresource.Shipment, *apierror.APIError)
 	EstimateRate(ctx context.Context, req *EstimateRateRequest) (*apiresource.EstimateRateResult, *apierror.APIError)
 	RateShop(ctx context.Context, req *RateShopRequest) (*apiresource.RateShopResult, *apierror.APIError)
@@ -50,8 +51,8 @@ type shipmentSvcImpl struct {
 
 var shipmentSvcTracer = tracing.GetTracer("api-gateway.endpoints.shipments.service")
 
-// labelOperationTimeout covers ship and void, which buy or refund a carrier label per case. It sits
-// under the server's write timeout so the caller gets the API's own timeout error, not a dropped response.
+// labelOperationTimeout covers void, which refunds a carrier label per case. It sits under the
+// server's write timeout so the caller gets the API's own timeout error, not a dropped response.
 const labelOperationTimeout = 25 * time.Second
 
 var shipmentIncludes = []string{"lines", "shipping_cases", "sales_order", "customer", "freight", "shipping_address", "shipped_by", "invoice", "pick"}
@@ -198,25 +199,22 @@ func (m *shipmentSvcImpl) DeleteShipment(ctx context.Context, req *DeleteShipmen
 	return &apiresource.EmptyResource{}, nil
 }
 
-func (m *shipmentSvcImpl) ShipShipment(ctx context.Context, req *ShipShipmentRequest) (*apiresource.Shipment, *apierror.APIError) {
+func (m *shipmentSvcImpl) ShipShipment(ctx context.Context, req *ShipShipmentRequest) (*apiresource.Job, *apierror.APIError) {
 	pbReq := &pb.ShipShipmentRequest{
 		Id:            req.ShipmentID,
 		EmailCustomer: req.EmailCustomer,
-		Includes:      resourcekit.FilterIncludes(ctx, shipmentIncludes...),
 	}
 
 	resp, apiErr := grpcutil.CallRPC(ctx, shipmentSvcTracer, "service.shipments.ship", domain.ServiceName,
 		func(ctx context.Context, opts ...grpc.CallOption) (*pb.ShipShipmentResponse, error) {
 			return m.coreClient.ShipShipment(ctx, pbReq, opts...)
-		}, grpcutil.WithTimeout(labelOperationTimeout))
+		})
 
 	if apiErr != nil {
 		return nil, apiErr
 	}
 
-	result := shipmentFromProto(resp.Shipment)
-	stashShipmentMeta(ctx, resp.Shipment, &result)
-	return &result, nil
+	return jobep.JobFromProto(resp.GetJob()), nil
 }
 
 func (m *shipmentSvcImpl) VoidShipment(ctx context.Context, req *VoidShipmentRequest) (*apiresource.Shipment, *apierror.APIError) {

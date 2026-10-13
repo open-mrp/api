@@ -746,6 +746,7 @@ func Run(
 	shipmentSvc := service.NewShipmentSvc(&service.ShipmentSvcConfig{
 		Repos:                repoFactory,
 		MediatorFactory:      mediatorFactory,
+		JobSvcFactory:        jobSvcFactory,
 		TxManager:            txManager,
 		ShippoFactory:        shippoFactory,
 		EncryptionKey:        integrationEncryptionKey,
@@ -850,6 +851,7 @@ func Run(
 		event.NewBulkOperationConsumer(rabbitmq, inboxRepo, messaging.BulkUpsertProperties, propertySvc.ExecuteBulkUpsertProperties),
 		event.NewBulkOperationConsumer(rabbitmq, inboxRepo, messaging.BulkResolveHubspotCompanyReviews, hubspotSyncSvc.ExecuteBulkResolveReviews),
 		event.NewBulkOperationConsumer(rabbitmq, inboxRepo, messaging.PackPick, pickSvc.ExecutePackPick),
+		event.NewBulkOperationConsumer(rabbitmq, inboxRepo, messaging.ShipShipment, shipmentSvc.ExecuteShipShipment),
 	}
 	for _, bulkConsumer := range bulkConsumers {
 		if err := bulkConsumer.Listen(ctx); err != nil {

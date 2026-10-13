@@ -139,7 +139,7 @@ func (h *inclHarness) shipments() (domain.ShipmentSvc, domain.ShipmentLineSvc, *
 	lineRepo := repositorymock.NewMockShipmentLineRepo(h.ctrl)
 	h.repos.EXPECT().NewShipmentRepo().Return(shipmentRepo).AnyTimes()
 	h.repos.EXPECT().NewShipmentLineRepo().Return(lineRepo).AnyTimes()
-	shipments := NewShipmentSvc(&ShipmentSvcConfig{Repos: h.repos, MediatorFactory: h.meds, TxManager: &stubTxManager{factory: h.repos}, DispatchLeases: newMemLeases()})
+	shipments := NewShipmentSvc(&ShipmentSvcConfig{Repos: h.repos, MediatorFactory: h.meds, JobSvcFactory: NewJobSvcFactory(), TxManager: &stubTxManager{factory: h.repos}, DispatchLeases: newMemLeases()})
 	lines := NewShipmentLineSvc(&ShipmentLineSvcConfig{Repos: h.repos, MediatorFactory: h.meds, TxManager: &stubTxManager{factory: h.repos}})
 	return shipments, lines, shipmentRepo, lineRepo
 }

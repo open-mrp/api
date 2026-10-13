@@ -81,6 +81,11 @@ spec:
                 configMapKeyRef:
                   key: INBOUND_EMAIL_REGION
                   name: app-config
+            - name: INBOUND_EMAIL_DOMAIN
+              valueFrom:
+                configMapKeyRef:
+                  key: INBOUND_EMAIL_DOMAIN
+                  name: app-config
             - name: AWS_ACCESS_KEY_ID
               valueFrom:
                 secretKeyRef:

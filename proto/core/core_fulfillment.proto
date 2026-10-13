@@ -40,6 +40,15 @@ service CoreFulfillmentService {
 
   // BatchGetMachinesByIDs returns machines by their IDs for include resolution.
   rpc BatchGetMachinesByIDs(BatchGetMachinesByIDsRequest) returns (BatchGetMachinesByIDsResponse);
+
+  // ListMachineItems returns the items a machine is configured to run.
+  rpc ListMachineItems(ListMachineItemsRequest) returns (ListMachineItemsResponse);
+
+  // ReplaceMachineItems replaces the full set of items a machine is configured to run.
+  rpc ReplaceMachineItems(ReplaceMachineItemsRequest) returns (ListMachineItemsResponse);
+
+  // SuggestMachineItemsFromScans returns scan-history candidates without writing.
+  rpc SuggestMachineItemsFromScans(SuggestMachineItemsFromScansRequest) returns (SuggestMachineItemsFromScansResponse);
 }
 
 // MachineInfo represents a machine resource returned by the core-service.
@@ -138,6 +147,48 @@ message BatchGetMachinesByIDsRequest {
 
 message BatchGetMachinesByIDsResponse {
   repeated MachineInfo machines = 1;
+}
+
+message MachineItemInfo {
+  string item_id = 1;
+  string sku = 2;
+  optional string description = 3;
+  google.protobuf.Timestamp created_at = 4;
+  google.protobuf.Timestamp updated_at = 5;
+}
+
+message ListMachineItemsRequest {
+  string machine_id = 1;
+  optional string cursor = 2;
+  int32 limit = 3;
+  optional string query = 4;
+}
+
+message ListMachineItemsResponse {
+  repeated MachineItemInfo items = 1;
+  PageInfo page_info = 2;
+}
+
+message ReplaceMachineItemsRequest {
+  string machine_id = 1;
+  repeated string item_ids = 2;
+}
+
+message MachineItemScanSuggestionInfo {
+  string item_id = 1;
+  string sku = 2;
+  optional string description = 3;
+  google.protobuf.Timestamp last_scanned_at = 4;
+  int64 batch_count = 5;
+}
+
+message SuggestMachineItemsFromScansRequest {
+  string machine_id = 1;
+  optional int32 window_months = 2;
+}
+
+message SuggestMachineItemsFromScansResponse {
+  repeated MachineItemScanSuggestionInfo suggestions = 1;
 }
 
 

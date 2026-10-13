@@ -1,5 +1,12 @@
 # Changelog
 
+## [4.10.0](https://github.com/open-mrp/api/compare/v4.9.0...v4.10.0) (2026-10-13)
+
+
+### Features
+
+* recount a split batch's source when the split closes it ([#333](https://github.com/open-mrp/api/issues/333)) ([c13ef02](https://github.com/open-mrp/api/commit/c13ef02611eb5f7f4236f920d54438fe1ff0ad52))
+
 ## [4.9.0](https://github.com/open-mrp/api/compare/v4.8.2...v4.9.0) (2026-10-13)
 
 

@@ -950,26 +950,6 @@ func Run(
 		return err
 	}
 
-	// delivery_order_fact sums committed orders' lines for delivery performance. Audit events mark what
-	// changed and wake the refresher (one pod, under a lease); a nightly reconcile corrects anything a mark
-	// missed, and its first pass is the backfill.
-	deliveryFactRefresher := service.NewDeliveryFactRefresher(&service.DeliveryFactRefresherConfig{
-		Repos:          repoFactory,
-		TxManager:      txManager,
-		Lease:          leaseSvc,
-		OnFactsChanged: analyticsCache.InvalidateDelivery,
-	})
-	if err := deliveryFactRefresher.Start(ctx); err != nil {
-		return err
-	}
-	defer deliveryFactRefresher.Stop()
-	if err := audit.Subscribe(ctx, rabbitmq, audit.SubscribeConfig{
-		QueueBaseName: messaging.CoreEventDeliveryFactQueue,
-		OnEvent:       service.NewDeliveryFactMarker(repoFactory, deliveryFactRefresher.Wake).HandleAuditEvent,
-	}); err != nil {
-		return err
-	}
-
 	// Backstop for burn rate: the write path recomputes on consumption, but an item nobody consumes
 	// would keep a stale rate forever. This sweeps the stalest items in bounded batches so idle items
 	// stay reasonably fresh without a herd of recomputes.

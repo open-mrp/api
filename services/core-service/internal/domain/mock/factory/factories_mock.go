@@ -335,20 +335,6 @@ func (mr *MockRepoFactoryMockRecorder) NewDeletedRecordRepo() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "NewDeletedRecordRepo", reflect.TypeOf((*MockRepoFactory)(nil).NewDeletedRecordRepo))
 }
 
-// NewDeliveryFactRepo mocks base method.
-func (m *MockRepoFactory) NewDeliveryFactRepo() domain.DeliveryFactRepo {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "NewDeliveryFactRepo")
-	ret0, _ := ret[0].(domain.DeliveryFactRepo)
-	return ret0
-}
-
-// NewDeliveryFactRepo indicates an expected call of NewDeliveryFactRepo.
-func (mr *MockRepoFactoryMockRecorder) NewDeliveryFactRepo() *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "NewDeliveryFactRepo", reflect.TypeOf((*MockRepoFactory)(nil).NewDeliveryFactRepo))
-}
-
 // NewDeliveryRepo mocks base method.
 func (m *MockRepoFactory) NewDeliveryRepo() domain.DeliveryRepo {
 	m.ctrl.T.Helper()

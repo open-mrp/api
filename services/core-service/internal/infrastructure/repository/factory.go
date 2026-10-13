@@ -455,10 +455,6 @@ func (r *repoFactoryImpl) NewOpenOrderSnapshotRepo() domain.OpenOrderSnapshotRep
 	return NewOpenOrderSnapshotRepo(r.queries)
 }
 
-func (r *repoFactoryImpl) NewDeliveryFactRepo() domain.DeliveryFactRepo {
-	return NewDeliveryFactRepo(r.queries)
-}
-
 func (r *repoFactoryImpl) NewSalesReportRepo() domain.SalesReportRepo {
 	return NewSalesReportRepo(r.queries)
 }

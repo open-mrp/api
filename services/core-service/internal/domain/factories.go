@@ -95,7 +95,6 @@ type RepoFactory interface {
 	NewAnalyticsRepo() AnalyticsRepo
 	NewSalesFactRepo() SalesFactRepo
 	NewOpenOrderSnapshotRepo() OpenOrderSnapshotRepo
-	NewDeliveryFactRepo() DeliveryFactRepo
 	NewSalesReportRepo() SalesReportRepo
 	NewCatalogRepo() CatalogRepo
 	NewRegistrationFlowRepo() RegistrationFlowRepo

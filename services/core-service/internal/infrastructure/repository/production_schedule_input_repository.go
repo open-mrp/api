@@ -3,8 +3,6 @@ package repository
 import (
 	"context"
 	gosql "database/sql"
-	"slices"
-	"strings"
 	"time"
 
 	"github.com/open-mrp/api/services/core-service/internal/domain"
@@ -948,26 +946,6 @@ func (r *productionScheduleInputRepoImpl) ListDeliveryOutcomes(ctx context.Conte
 		return []scheduling.DeliveryOutcome{}, nil
 	}
 
-	ready, err := r.deliveryFactsReady(ctx)
-	if apiErr := db.MapSQLError(err); apiErr != nil {
-		return nil, tracing.Trace(span, apiErr)
-	}
-	if ready {
-		outcomes, err := r.listDeliveryOutcomesFromFacts(ctx, accountID, start, end, args)
-		if apiErr := db.MapSQLError(err); apiErr != nil {
-			return nil, tracing.Trace(span, apiErr)
-		}
-		return outcomes, nil
-	}
-	return r.listDeliveryOutcomesLive(ctx, accountID, start, end, args)
-}
-
-// listDeliveryOutcomesLive reads the window from the order, line, quantity and pick tables, for before
-// delivery_order_fact has been filled.
-func (r *productionScheduleInputRepoImpl) listDeliveryOutcomesLive(ctx context.Context, accountID string, start, end time.Time, args deliveryFilterArgs) ([]scheduling.DeliveryOutcome, *apierror.APIError) {
-	ctx, span := scheduleInputRepoTracer.Start(ctx, "repository.production_schedule_input.list_delivery_outcomes_live")
-	defer span.End()
-
 	rows, err := r.queries.ListDeliveryPerformanceOrders(ctx, sqlc.ListDeliveryPerformanceOrdersParams{
 		AccountID:                accountID,
 		WindowStart:              gosql.NullTime{Time: start, Valid: true},
@@ -1004,10 +982,6 @@ func (r *productionScheduleInputRepoImpl) listDeliveryOutcomesLive(ctx context.C
 			ID:   nullSQLString(row.ProductLineID),
 			Name: row.ProductLineName,
 		})
-	}
-	// In id order, as the facts list them, so either source gives the same answer.
-	for _, lines := range productLines {
-		slices.SortFunc(lines, func(a, b scheduling.ProductLineRef) int { return strings.Compare(a.ID, b.ID) })
 	}
 
 	out := make([]scheduling.DeliveryOutcome, 0, len(rows))

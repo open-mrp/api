@@ -24,6 +24,8 @@ type SolverInput struct {
 	// OnHandByItem is echelon stock — the constraint item plus everything downstream of it — which is what the build decision is made against. GreigeOnHandByItem is the constraint stage on its own, which the echelon total cannot be decomposed back into once summed.
 	OnHandByItem       map[string]float64
 	GreigeOnHandByItem map[string]float64
+	// CommittedStockByItem is the part of each echelon that has passed a branch point and can only become some of the family's finished goods. It is already inside OnHandByItem; listing it separately is what stops a surplus in one colorway from reading as cover for another. Empty means every unit of the echelon is treated as able to become anything.
+	CommittedStockByItem map[string][]CommittedStock
 
 	// MachinesWithoutStep is how many machines in the constraint department have no production step, and therefore derive no downstream work.
 	MachinesWithoutStep int
@@ -284,12 +286,16 @@ func Solve(in SolverInput) SolverOutput {
 
 		policy.UnitID = lotUnitID
 		policies = append(policies, policy)
+		committed := in.CommittedStockByItem[m.ItemID]
 		levelingItems = append(levelingItems, LevelingItem{
 			Policy:            policy,
 			EligibleMachineID: m.EligibleMachineID,
 			LotUnits:          lotUnits,
 			LotUnitID:         lotUnitID,
 			FirmByWeek:        firm.ByItemWeek[m.ItemID],
+			Committed:         committed,
+			FinishedDemand: buildFinishedDemand(m.ItemID, policy, committed,
+				in.MonthlyByItem[m.ItemID], in.DownstreamByItem[m.ItemID], firm, in.Settings.HorizonWeeks),
 		})
 	}
 
@@ -318,7 +324,7 @@ func Solve(in SolverInput) SolverOutput {
 	}
 
 	// Which campaign serves which order, and what nothing serves. The at-risk report is read off the same walk rather than derived separately: two calculations of "is this order covered" would eventually disagree, and the one on the plan grid is the one a planner would believe.
-	allocation := AllocateCampaignsToOrders(leveled.Campaigns, firm, in.OnHandByItem)
+	allocation := AllocateCampaignsToOrders(leveled.Campaigns, firm, in.OnHandByItem, in.CommittedStockByItem)
 	out.Allocations = allocation.Allocations
 	out.Diagnostics.AtRiskOrders = findAtRiskOrders(firm, allocation, skuByItem)
 

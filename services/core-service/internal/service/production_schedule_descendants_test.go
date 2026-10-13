@@ -6,6 +6,7 @@ import (
 
 	"github.com/open-mrp/api/services/core-service/internal/domain"
 	repositorymock "github.com/open-mrp/api/services/core-service/internal/domain/mock/repository"
+	"github.com/open-mrp/api/services/core-service/internal/scheduling"
 	apierror "github.com/open-mrp/api/shared/errors"
 
 	"github.com/stretchr/testify/assert"
@@ -32,7 +33,7 @@ func walkFromEdges(t *testing.T, edges map[string][]string, roots []string, maxD
 		}).AnyTimes()
 
 	svc := &productionScheduleSvcImpl{}
-	got, apiErr := svc.walkDescendants(context.Background(), repo, "acct", roots, maxDepth)
+	got, _, apiErr := svc.walkDescendants(context.Background(), repo, "acct", roots, maxDepth)
 	assert.Nil(t, apiErr)
 	return got
 }
@@ -122,4 +123,123 @@ func TestWalkDescendants_StopsAtMaxDepth(t *testing.T) {
 
 	assert.Equal(t, []string{"b", "c"}, got["a"],
 		"a depth of 2 reaches two levels down and no further")
+}
+
+// The walk also returns the edges inside each echelon, which is what locates the branch point. An edge
+// into another constraint item's echelon is not part of this family's routing.
+func TestWalkDescendants_ReturnsEdgesWithinEachEchelon(t *testing.T) {
+	t.Parallel()
+
+	ctrl := gomock.NewController(t)
+	repo := repositorymock.NewMockProductionScheduleInputRepo(ctrl)
+	edges := map[string][]string{
+		"greige":     {"dyed_blue", "dyed_black"},
+		"dyed_blue":  {"blue"},
+		"dyed_black": {"black", "sub"},
+		"sub":        {"sub_packed"},
+	}
+	repo.EXPECT().GetProductionFlowChildrenByItem(gomock.Any(), "acct", gomock.Any()).
+		DoAndReturn(func(_ context.Context, _ string, parents []string) ([]domain.ProductionFlowChildRow, *apierror.APIError) {
+			var out []domain.ProductionFlowChildRow
+			for _, p := range parents {
+				for _, c := range edges[p] {
+					out = append(out, domain.ProductionFlowChildRow{ParentItemID: p, ChildItemID: c})
+				}
+			}
+			return out, nil
+		}).AnyTimes()
+
+	svc := &productionScheduleSvcImpl{}
+	_, children, apiErr := svc.walkDescendants(context.Background(), repo, "acct", []string{"greige", "sub"}, 10)
+	assert.Nil(t, apiErr)
+
+	assert.Equal(t, map[string][]string{
+		"greige":     {"dyed_black", "dyed_blue"},
+		"dyed_blue":  {"blue"},
+		"dyed_black": {"black"},
+		"sub":        {"sub_packed"},
+	}, children, "the edge into sub belongs to sub's own echelon, not greige's")
+}
+
+func identityRatio(string) float64 { return 1 }
+
+// Undyed stock can still become any colorway and stays fungible; dyed and packed stock has passed the
+// branch and is committed to the colorway it can still become.
+func TestCommittedStockByItem_SplitsStockPastTheBranchPoint(t *testing.T) {
+	t.Parallel()
+
+	// greige -> boarded -> dyed_black -> black
+	//                   -> dyed_blue  -> blue
+	descendants := map[string][]string{"greige": {"black", "blue", "boarded", "dyed_black", "dyed_blue"}}
+	children := map[string][]string{
+		"greige":     {"boarded"},
+		"boarded":    {"dyed_black", "dyed_blue"},
+		"dyed_black": {"black"},
+		"dyed_blue":  {"blue"},
+	}
+	sellable := map[string]bool{"black": true, "blue": true}
+	onHand := map[string]float64{
+		"greige":     50,
+		"boarded":    80,
+		"dyed_black": 300,
+		"black":      300,
+		"dyed_blue":  0,  // nothing there: nothing to split out
+		"blue":       -5, // drawn negative: keeps netting against the family as before
+	}
+
+	got := committedStockByItem([]string{"greige"}, descendants, children, sellable, onHand, identityRatio)
+
+	assert.Equal(t, map[string][]scheduling.CommittedStock{"greige": {
+		{ItemID: "black", OnHand: 300, FinishedItemIDs: []string{"black"}},
+		{ItemID: "dyed_black", OnHand: 300, FinishedItemIDs: []string{"black"}},
+	}}, got, "boarded can still become either colorway, so only the dyed and packed black is committed")
+}
+
+// Committed stock is expressed in the constraint item's unit, the same as the echelon it is part of.
+func TestCommittedStockByItem_UsesTheConstraintItemsUnit(t *testing.T) {
+	t.Parallel()
+
+	descendants := map[string][]string{"greige": {"black", "blue"}}
+	children := map[string][]string{"greige": {"black", "blue"}}
+	sellable := map[string]bool{"black": true, "blue": true}
+	onHand := map[string]float64{"black": 600} // eaches
+
+	got := committedStockByItem([]string{"greige"}, descendants, children, sellable, onHand,
+		func(string) float64 { return 2 }) // greige counted in pairs
+
+	assert.Equal(t, []scheduling.CommittedStock{
+		{ItemID: "black", OnHand: 300, FinishedItemIDs: []string{"black"}},
+	}, got["greige"])
+}
+
+// A family with a single finished good has no branch, so nothing in it is committed.
+func TestCommittedStockByItem_SingleFinishedGoodHasNoBranch(t *testing.T) {
+	t.Parallel()
+
+	descendants := map[string][]string{"greige": {"dyed", "packed"}}
+	children := map[string][]string{"greige": {"dyed"}, "dyed": {"packed"}}
+	sellable := map[string]bool{"packed": true}
+	onHand := map[string]float64{"dyed": 100, "packed": 100}
+
+	got := committedStockByItem([]string{"greige"}, descendants, children, sellable, onHand, identityRatio)
+	assert.Empty(t, got)
+}
+
+// A routing loop must not recurse forever while working out what a stage can become.
+func TestCommittedStockByItem_IsCycleSafe(t *testing.T) {
+	t.Parallel()
+
+	descendants := map[string][]string{"greige": {"black", "blue", "dyed_black", "rework"}}
+	children := map[string][]string{
+		"greige":     {"dyed_black", "blue"},
+		"dyed_black": {"black", "rework"},
+		"rework":     {"dyed_black"},
+	}
+	sellable := map[string]bool{"black": true, "blue": true}
+	onHand := map[string]float64{"rework": 10}
+
+	got := committedStockByItem([]string{"greige"}, descendants, children, sellable, onHand, identityRatio)
+	assert.Equal(t, []scheduling.CommittedStock{
+		{ItemID: "rework", OnHand: 10, FinishedItemIDs: []string{"black"}},
+	}, got["greige"])
 }

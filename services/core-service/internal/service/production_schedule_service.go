@@ -482,7 +482,7 @@ func (s *productionScheduleSvcImpl) loadSolverInput(
 	itemIDs := scheduleSortedKeys(constraintItemIDs)
 
 	// 4. Walk the production-flow graph forward to every downstream stage each constraint item becomes.
-	descendantItemsByItem, apiErr := s.walkDescendants(ctx, repo, params.AccountID, itemIDs, params.Settings.MaxFlowDepthOrDefault())
+	descendantItemsByItem, flowChildren, apiErr := s.walkDescendants(ctx, repo, params.AccountID, itemIDs, params.Settings.MaxFlowDepthOrDefault())
 	if apiErr != nil {
 		return nil, tracing.Trace(span, apiErr)
 	}
@@ -514,7 +514,7 @@ func (s *productionScheduleSvcImpl) loadSolverInput(
 	}
 
 	// 6. Pool finished-goods order demand back onto the constraint item.
-	if apiErr := s.loadDemand(ctx, repo, params, itemIDs, descendantItemsByItem, onHandByItem, nativeRatioOf, in); apiErr != nil {
+	if apiErr := s.loadDemand(ctx, repo, params, itemIDs, descendantItemsByItem, flowChildren, onHandByItem, nativeRatioOf, in); apiErr != nil {
 		return nil, tracing.Trace(span, apiErr)
 	}
 
@@ -737,7 +737,7 @@ func (s *productionScheduleSvcImpl) loadLotResolutionInput(
 	return lotInput, nil
 }
 
-// walkDescendants follows the production-flow graph forward, one level at a time with the whole frontier batched into each query. Returns the downstream stage item ids reachable from each constraint item.
+// walkDescendants follows the production-flow graph forward, one level at a time with the whole frontier batched into each query. Returns the downstream stage item ids reachable from each constraint item, and the routing edges between items of the same echelon, which is what says where a family branches.
 //
 // The routing graph, not batch genealogy, is what defines the echelon: a step consumes greige and produces sewn, sewn is consumed and washed produced, and so on down to the packed finished good. Every one of those stages holds stock that will become a finished good, so it has to count against the decision to build more. Genealogy could not see it — its edges (_batch_flow) are written only when the floor links batches through move/split/merge, so a plant that scans each stage as its own batch produced no edges and the walk collapsed to the constraint item alone.
 //
@@ -748,7 +748,7 @@ func (s *productionScheduleSvcImpl) walkDescendants(
 	accountID string,
 	itemIDs []string,
 	maxDepth int,
-) (map[string][]string, *apierror.APIError) {
+) (map[string][]string, map[string][]string, *apierror.APIError) {
 	// Item -> the constraint item whose echelon it belongs to. Also the visited set: an item present here has been reached and must not be expanded again. Each constraint item roots itself.
 	rootByItem := make(map[string]string, len(itemIDs))
 	frontier := make([]string, 0, len(itemIDs))
@@ -761,13 +761,14 @@ func (s *productionScheduleSvcImpl) walkDescendants(
 	}
 
 	descendants := map[string]map[string]bool{}
+	edges := map[string]map[string]bool{}
 
 	for depth := 0; depth < maxDepth && len(frontier) > 0; depth++ {
 		sort.Strings(frontier)
 
 		childRows, apiErr := repo.GetProductionFlowChildrenByItem(ctx, accountID, frontier)
 		if apiErr != nil {
-			return nil, apiErr
+			return nil, nil, apiErr
 		}
 
 		next := make([]string, 0, len(childRows))
@@ -776,6 +777,10 @@ func (s *productionScheduleSvcImpl) walkDescendants(
 			if !ok {
 				continue
 			}
+			if edges[row.ParentItemID] == nil {
+				edges[row.ParentItemID] = map[string]bool{}
+			}
+			edges[row.ParentItemID][row.ChildItemID] = true
 			if _, seen := rootByItem[row.ChildItemID]; seen {
 				continue // already reached by another path, or a constraint item in its own right; first-wins
 			}
@@ -794,7 +799,87 @@ func (s *productionScheduleSvcImpl) walkDescendants(
 	for rootItemID, items := range descendants {
 		out[rootItemID] = scheduleSortedKeys(items)
 	}
-	return out, nil
+
+	// An edge into another echelon is not a branch of this one: the stage it reaches was attributed elsewhere.
+	children := make(map[string][]string, len(edges))
+	for parentItemID, childSet := range edges {
+		for childItemID := range childSet {
+			if rootByItem[childItemID] == rootByItem[parentItemID] && childItemID != rootByItem[parentItemID] {
+				children[parentItemID] = append(children[parentItemID], childItemID)
+			}
+		}
+		sort.Strings(children[parentItemID])
+	}
+	return out, children, nil
+}
+
+// committedStockByItem splits out the downstream stock that has passed a branch point in its family's routing.
+//
+// A stage is committed when the finished goods it can still become are fewer than the family's: dyed black can only become black socks, while knitted-but-undyed stock can become any colorway and stays fungible. Committed stock still counts in the echelon; the solver just will not let it answer for demand on finished goods it cannot become. Only positive stock is split out, so a stage drawn negative keeps netting against the family as it always has.
+func committedStockByItem(
+	itemIDs []string,
+	descendantItemsByItem map[string][]string,
+	children map[string][]string,
+	sellable map[string]bool,
+	onHandByItem map[string]float64,
+	nativeRatioOf func(itemID string) float64,
+) map[string][]scheduling.CommittedStock {
+	out := map[string][]scheduling.CommittedStock{}
+
+	for _, constraintItemID := range itemIDs {
+		var finishedCount int
+		for _, id := range descendantItemsByItem[constraintItemID] {
+			if sellable[id] {
+				finishedCount++
+			}
+		}
+		if finishedCount == 0 {
+			continue
+		}
+
+		reach := map[string]map[string]bool{}
+		var finishedFrom func(itemID string, visiting map[string]bool) map[string]bool
+		finishedFrom = func(itemID string, visiting map[string]bool) map[string]bool {
+			if cached, ok := reach[itemID]; ok {
+				return cached
+			}
+			set := map[string]bool{}
+			if sellable[itemID] {
+				set[itemID] = true
+			}
+			// A routing loop is cut where it closes; the stage still reaches everything on the way round.
+			visiting[itemID] = true
+			for _, child := range children[itemID] {
+				if visiting[child] {
+					continue
+				}
+				for id := range finishedFrom(child, visiting) {
+					set[id] = true
+				}
+			}
+			delete(visiting, itemID)
+			reach[itemID] = set
+			return set
+		}
+
+		ratio := nativeRatioOf(constraintItemID)
+		for _, itemID := range descendantItemsByItem[constraintItemID] {
+			onHand := onHandByItem[itemID] / ratio
+			if onHand <= 0 {
+				continue
+			}
+			finished := finishedFrom(itemID, map[string]bool{})
+			if len(finished) == finishedCount {
+				continue
+			}
+			out[constraintItemID] = append(out[constraintItemID], scheduling.CommittedStock{
+				ItemID:          itemID,
+				OnHand:          onHand,
+				FinishedItemIDs: scheduleSortedKeys(finished),
+			})
+		}
+	}
+	return out
 }
 
 // loadDemand pools finished-goods order demand back onto the constraint item that produces it, keeping the per-finished-good detail so the two safety-stock echelons can be computed separately.
@@ -804,6 +889,7 @@ func (s *productionScheduleSvcImpl) loadDemand(
 	params domain.LoadSolverInputParams,
 	itemIDs []string,
 	descendantItemsByItem map[string][]string,
+	flowChildren map[string][]string,
 	onHandByItem map[string]float64,
 	nativeRatioOf func(itemID string) float64,
 	in *scheduling.SolverInput,
@@ -825,9 +911,11 @@ func (s *productionScheduleSvcImpl) loadDemand(
 	itemByProduct := map[string]string{}
 	skuByItem := map[string]string{}
 	productLineByItem := map[string]string{}
+	sellable := map[string]bool{}
 	productIDs := make([]string, 0, len(productRows))
 	for _, row := range productRows {
 		itemByProduct[row.ProductID] = row.ItemID
+		sellable[row.ItemID] = true
 		skuByItem[row.ItemID] = row.SKU
 		if row.ProductLineID != nil {
 			productLineByItem[row.ItemID] = *row.ProductLineID
@@ -837,6 +925,9 @@ func (s *productionScheduleSvcImpl) loadDemand(
 	if len(productIDs) == 0 {
 		return nil
 	}
+
+	// Which finished goods each downstream stage can still become is a fact about the routing and the catalog, not about demand, so it is settled before any history is read.
+	in.CommittedStockByItem = committedStockByItem(itemIDs, descendantItemsByItem, flowChildren, sellable, onHandByItem, nativeRatioOf)
 
 	windowStart := params.PlanningAsOf.AddDate(0, -params.ForecastHistoryMonths, 0)
 	demandRows, apiErr := repo.GetPooledOrderDemandByProduct(ctx, domain.GetPooledOrderDemandParams{

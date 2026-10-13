@@ -21,7 +21,7 @@ func TestVersionCompat_Preview8PickSearchMatchesAnywhere(t *testing.T) {
 	po := uniqueName("PO-COMPAT")
 	_, pickID := issuedOrderAndPick(t, customerID, map[string]any{"customer_purchase_order_number": po})
 	number := jsonField(retrievePick(t, pickID), "number")
-	require.GreaterOrEqual(t, len(number), 4, "the pick number must leave a searchable tail once its first character is dropped")
+	require.Greater(t, len(number), 4, "the pick number must be long enough to split")
 
 	for what, q := range map[string]string{
 		"middle of the PO number":   po[3:],

@@ -487,14 +487,8 @@ func TestSalesAnalytics_LegacyEntriesFilterByCustomer(t *testing.T) {
 		"customer_ids": []string{sale.customerID}, "customer_group_ids": []string{"ag_definitely_not_a_real_group"}})),
 		"a customer filter and a group the customer is not in admit no buyer")
 
-	// Open-order entries read a snapshot refreshed a few seconds after the order is issued.
-	var orders []any
-	eventually(t, 45*time.Second, time.Second, func() error {
-		if orders = entries("/v1/core/analytics/orders", map[string]any{"customer_ids": []string{openCustomer}}); len(orders) == 0 {
-			return fmt.Errorf("the customer's open order is not listed yet")
-		}
-		return nil
-	})
+	orders := entries("/v1/core/analytics/orders", map[string]any{"customer_ids": []string{openCustomer}})
+	require.NotEmpty(t, orders, "the customer's open order is listed")
 	for _, o := range orders {
 		assert.Equal(t, openCustomer, jsonField(o.(map[string]any), "customer_id"))
 	}

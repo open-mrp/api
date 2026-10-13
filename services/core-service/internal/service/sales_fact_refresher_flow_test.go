@@ -22,7 +22,6 @@ func newMockRefresher(t *testing.T) (*SalesFactRefresher, *repositorymock.MockSa
 	repo := repositorymock.NewMockSalesFactRepo(ctrl)
 	factory := factorymock.NewMockRepoFactory(ctrl)
 	factory.EXPECT().NewSalesFactRepo().Return(repo).AnyTimes()
-	factory.EXPECT().NewOpenOrderSnapshotRepo().Return(idleOpenOrderSnapshotRepo(ctrl)).AnyTimes()
 	// Unknown line counts pack invoices by salesFactComputeBatch alone.
 	repo.EXPECT().CountInvoiceLines(gomock.Any(), gomock.Any()).Return(nil, nil).AnyTimes()
 	var invalidated [][]string

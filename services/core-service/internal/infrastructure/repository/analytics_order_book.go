@@ -20,52 +20,23 @@ import (
 
 // The order-book reports (order data, open orders) price and count each sale line exactly as the dashboard's analytics did: quantities in the item's base unit, money as the line's quantity in its dimension's base unit times the price per that unit, unrounded.
 const (
-	obQtyInvoicedNorm = "COALESCE(inv.qty_inv_norm, 0)"
-	obBaseOffset      = "(bu_unit.offset_numerator / bu_unit.offset_denominator)"
-	obBaseRatio       = "NULLIF((bu_unit.ratio_numerator / bu_unit.ratio_denominator), 0)"
-	obQtyInvoiced     = "((" + obQtyInvoicedNorm + " - " + obBaseOffset + ") / " + obBaseRatio + ")"
+	obQtyOrderedNorm   = "((q_ord.value * (u_ord.ratio_numerator / u_ord.ratio_denominator)) + (u_ord.offset_numerator / u_ord.offset_denominator))"
+	obQtyInvoicedNorm  = "COALESCE(inv.qty_inv_norm, 0)"
+	obBaseOffset       = "(bu_unit.offset_numerator / bu_unit.offset_denominator)"
+	obBaseRatio        = "NULLIF((bu_unit.ratio_numerator / bu_unit.ratio_denominator), 0)"
+	obQtyOrdered       = "((" + obQtyOrderedNorm + " - " + obBaseOffset + ") / " + obBaseRatio + ")"
+	obQtyInvoiced      = "((" + obQtyInvoicedNorm + " - " + obBaseOffset + ") / " + obBaseRatio + ")"
+	obQtyBackOrdered   = "(" + obQtyOrdered + " - " + obQtyInvoiced + ")"
+	obPricePerBase     = "(((r_price.value * (u_price_num.ratio_numerator / u_price_num.ratio_denominator)) + (u_price_num.offset_numerator / u_price_num.offset_denominator)) / NULLIF(((u_price_den.ratio_numerator / u_price_den.ratio_denominator) + (u_price_den.offset_numerator / u_price_den.offset_denominator)), 0))"
+	obCostPerBase      = "(((COALESCE(r_cost.value, 0) * (COALESCE(u_cost_num.ratio_numerator, 1) / COALESCE(u_cost_num.ratio_denominator, 1))) + (COALESCE(u_cost_num.offset_numerator, 0) / COALESCE(u_cost_num.offset_denominator, 1))) / NULLIF(((COALESCE(u_cost_den.ratio_numerator, 1) / COALESCE(u_cost_den.ratio_denominator, 1)) + (COALESCE(u_cost_den.offset_numerator, 0) / COALESCE(u_cost_den.offset_denominator, 1))), 0))"
+	obTotalOrdered     = "(" + obQtyOrderedNorm + " * " + obPricePerBase + ")"
+	obTotalInvoiced    = "(" + obQtyInvoicedNorm + " * " + obPricePerBase + ")"
+	obTotalBackOrdered = "((" + obQtyOrderedNorm + " - " + obQtyInvoicedNorm + ") * " + obPricePerBase + ")"
+	obTotalCost        = "(" + obQtyInvoicedNorm + " * " + obCostPerBase + ")"
 )
-
-// obValues are the columns holding a line's raw quantity, unit price and unit cost values: the source rows
-// when read live, the line's own copies in the snapshot. Every other input, the units, is joined by the same aliases either way.
-type obValues struct{ qty, price, cost string }
-
-var (
-	obLiveValues     = obValues{qty: "q_ord.value", price: "r_price.value", cost: "r_cost.value"}
-	obSnapshotValues = obValues{qty: "sol.quantity_value", price: "sol.price_value", cost: "sol.cost_value"}
-
-	// obLive are the expressions over the source tables, for the reports that only read them.
-	obLive = newObExprs(obLiveValues)
-)
-
-// obExprs are the order-book expressions over one set of value columns.
-type obExprs struct {
-	qtyOrdered, qtyBackOrdered, pricePerBase                 string
-	totalOrdered, totalInvoiced, totalBackOrdered, totalCost string
-}
-
-func newObExprs(v obValues) obExprs {
-	qtyOrderedNorm := "((" + v.qty + " * (u_ord.ratio_numerator / u_ord.ratio_denominator)) + (u_ord.offset_numerator / u_ord.offset_denominator))"
-	qtyOrdered := "((" + qtyOrderedNorm + " - " + obBaseOffset + ") / " + obBaseRatio + ")"
-	pricePerBase := "(((" + v.price + " * (u_price_num.ratio_numerator / u_price_num.ratio_denominator)) + (u_price_num.offset_numerator / u_price_num.offset_denominator)) / NULLIF(((u_price_den.ratio_numerator / u_price_den.ratio_denominator) + (u_price_den.offset_numerator / u_price_den.offset_denominator)), 0))"
-	costPerBase := "(((COALESCE(" + v.cost + ", 0) * (COALESCE(u_cost_num.ratio_numerator, 1) / COALESCE(u_cost_num.ratio_denominator, 1))) + (COALESCE(u_cost_num.offset_numerator, 0) / COALESCE(u_cost_num.offset_denominator, 1))) / NULLIF(((COALESCE(u_cost_den.ratio_numerator, 1) / COALESCE(u_cost_den.ratio_denominator, 1)) + (COALESCE(u_cost_den.offset_numerator, 0) / COALESCE(u_cost_den.offset_denominator, 1))), 0))"
-	return obExprs{
-		qtyOrdered:       qtyOrdered,
-		qtyBackOrdered:   "(" + qtyOrdered + " - " + obQtyInvoiced + ")",
-		pricePerBase:     pricePerBase,
-		totalOrdered:     "(" + qtyOrderedNorm + " * " + pricePerBase + ")",
-		totalInvoiced:    "(" + obQtyInvoicedNorm + " * " + pricePerBase + ")",
-		totalBackOrdered: "((" + qtyOrderedNorm + " - " + obQtyInvoicedNorm + ") * " + pricePerBase + ")",
-		totalCost:        "(" + obQtyInvoicedNorm + " * " + costPerBase + ")",
-	}
-}
 
 // orderBookScope is the sale lines of an account's issued sales orders that one order-book report reads. Only the filters set emit a predicate.
 type orderBookScope struct {
-	// snapshot reads the open-order snapshot in place of the source tables. Its open_order and
-	// open_order_line take the aliases so and sol, under the same column names, so every predicate and
-	// select list reads either.
-	snapshot  bool
 	accountID string
 	// anyStatus reads estimates and fulfilled orders too, not only issued ones.
 	anyStatus bool
@@ -130,9 +101,6 @@ func (s orderBookScope) linePredicates() ([]string, []any) {
 //
 // The invoiced quantities are totalled in a derived table the outer filters cannot reach, so it is held to the same orders; left alone it groups every invoice line in the database.
 func (s orderBookScope) fromWhere(extraJoins string) (string, []any) {
-	if s.snapshot {
-		return s.snapshotFromWhere(extraJoins)
-	}
 	invPreds, invArgs := s.orderPredicates("inv_so")
 	orderPreds, orderArgs := s.orderPredicates("so")
 	linePreds, lineArgs := s.linePredicates()
@@ -168,56 +136,6 @@ WHERE ` + strings.Join(append(orderPreds, linePreds...), " AND ")
 
 	args := append(append(invArgs, orderArgs...), lineArgs...)
 	return from, args
-}
-
-// snapshotFromWhere is fromWhere over the snapshot. Its invoiced quantities are the account's few open
-// lines' invoice lines, totalled the same way.
-func (s orderBookScope) snapshotFromWhere(extraJoins string) (string, []any) {
-	orderPreds, orderArgs := s.orderPredicates("so")
-	linePreds, lineArgs := s.linePredicates()
-
-	from := `FROM open_order so
-JOIN open_order_line sol ON sol.account_id = so.owner_account_id AND sol.sales_order_id = so.id
-JOIN product fg FORCE INDEX (PRIMARY) ON fg.id = sol.product_id
-LEFT JOIN item pb ON pb.id = fg.item_id
-LEFT JOIN item_category ic ON ic.id = pb.item_category_id
-LEFT JOIN unit_group ug ON ug.id = ic.unit_group_id
-LEFT JOIN unit bu_unit ON bu_unit.id = ug.base_unit_id
-LEFT JOIN unit u_ord ON u_ord.id = sol.quantity_unit_id
-LEFT JOIN unit u_price_num ON u_price_num.id = sol.price_numerator_unit_id
-LEFT JOIN unit u_price_den ON u_price_den.id = sol.price_denominator_unit_id
-LEFT JOIN (
-    SELECT il.sales_order_line_id AS line_id,
-        SUM((il.quantity_value * (u_in.ratio_numerator / u_in.ratio_denominator)) + (u_in.offset_numerator / u_in.offset_denominator)) AS qty_inv_norm
-    FROM open_order_invoiced il
-    JOIN unit u_in ON u_in.id = il.quantity_unit_id
-    WHERE il.account_id = ?
-    GROUP BY il.sales_order_line_id
-) inv ON inv.line_id = sol.id
-` + extraJoins + `
-WHERE ` + strings.Join(append(orderPreds, linePreds...), " AND ")
-
-	args := append(append([]any{s.accountID}, orderArgs...), lineArgs...)
-	return from, args
-}
-
-// exprs are the order-book expressions over the values this scope reads.
-func (s orderBookScope) exprs() obExprs {
-	if s.snapshot {
-		return newObExprs(obSnapshotValues)
-	}
-	return newObExprs(obLiveValues)
-}
-
-// costJoins are the joins the cost expression's units come from.
-func (s orderBookScope) costJoins() string {
-	if s.snapshot {
-		return `LEFT JOIN unit u_cost_num ON u_cost_num.id = sol.cost_numerator_unit_id
-LEFT JOIN unit u_cost_den ON u_cost_den.id = sol.cost_denominator_unit_id`
-	}
-	return `LEFT JOIN rate r_cost ON r_cost.id = sol.unit_cost_id
-LEFT JOIN unit u_cost_num ON u_cost_num.id = r_cost.numerator_unit_id
-LEFT JOIN unit u_cost_den ON u_cost_den.id = r_cost.denominator_unit_id`
 }
 
 func (s orderBookScope) orderIndexHint() string {
@@ -299,7 +217,6 @@ func (r *analyticsRepoImpl) newOrderBookScope(ctx context.Context, f domain.Open
 		return orderBookScope{}, false, apiErr
 	}
 	scope = orderBookScope{
-		snapshot:       r.orderBook != orderBookLive && snapshotReady(ctx, r.queries),
 		accountID:      f.AccountID,
 		openOnly:       openOnly,
 		buyers:         buyers,
@@ -310,10 +227,6 @@ func (r *analyticsRepoImpl) newOrderBookScope(ctx context.Context, f domain.Open
 	}
 	if filtered && len(buyers) == 0 {
 		return scope, true, nil
-	}
-	// The snapshot holds only issued orders, an account's on a few pages, so it has no key to choose.
-	if scope.snapshot {
-		return scope, false, nil
 	}
 	if scope.orderIndex, apiErr = r.cheapestOrderKey(ctx, scope.orderKeys()); apiErr != nil {
 		return orderBookScope{}, false, apiErr
@@ -333,24 +246,25 @@ LEFT JOIN address shipping_address ON shipping_address.id = so.shipping_address_
 LEFT JOIN geolocation shipping_geolocation ON shipping_geolocation.id = shipping_address.geolocation_id
 LEFT JOIN account_user ou ON ou.id = so.sales_rep_id
 LEFT JOIN ` + "`user`" + ` bu ON bu.id = ou.user_id
-LEFT JOIN order_discount od ON od.id = so.order_discount_id`
+LEFT JOIN order_discount od ON od.id = so.order_discount_id
+LEFT JOIN rate r_cost ON r_cost.id = sol.unit_cost_id
+LEFT JOIN unit u_cost_num ON u_cost_num.id = r_cost.numerator_unit_id
+LEFT JOIN unit u_cost_den ON u_cost_den.id = r_cost.denominator_unit_id`
 
 // orderEntryColumns is an order entry's select list. Nothing invoiced yet leaves the per-unit price, cost and profit undefined (x / 0): they read 0, as the dashboard's rows did.
-func orderEntryColumns(e obExprs) string {
-	return strings.Join([]string{
-		"sol.id", "so.issued_at", "so.completed_at", "so.first_ship_at", "so.promised_at", "so.customer_po_number", "so.number", "so.id",
-		"so.sales_rep_id", "bu.username", "so.buyer_account_id", "parent_ar.counterparty_account_id", "buyer.name", "ar.external_number",
-		"buyer.created_at", "ar.account_group_id", "ag.name", "fg.product_line_id", "fg.product_type_code", "pb.id", "pb.sku", "pb.description",
-		"ic.name", "pl.name",
-		obDecimal(e.qtyOrdered), obDecimal(obQtyInvoiced), obDecimal(e.qtyBackOrdered), "bu_unit.abbreviation",
-		obDecimal(e.totalOrdered), obDecimal(e.totalInvoiced), obDecimal(e.totalBackOrdered), obDecimal(e.totalCost),
-		obDecimal(e.totalInvoiced + " - " + e.totalCost),
-		"COALESCE(" + obDecimal(e.totalInvoiced+" / NULLIF("+obQtyInvoiced+", 0)") + ", 0)",
-		"COALESCE(" + obDecimal(e.totalCost+" / NULLIF("+obQtyInvoiced+", 0)") + ", 0)",
-		"COALESCE(" + obDecimal("("+e.totalInvoiced+" - "+e.totalCost+") / NULLIF("+obQtyInvoiced+", 0)") + ", 0)",
-		"shipping_geolocation.state", "shipping_geolocation.locality", "shipping_geolocation.postal_code", "shipping_geolocation.country", "od.code",
-	}, ",\n    ")
-}
+var orderEntryColumns = strings.Join([]string{
+	"sol.id", "so.issued_at", "so.completed_at", "so.first_ship_at", "so.promised_at", "so.customer_po_number", "so.number", "so.id",
+	"so.sales_rep_id", "bu.username", "so.buyer_account_id", "parent_ar.counterparty_account_id", "buyer.name", "ar.external_number",
+	"buyer.created_at", "ar.account_group_id", "ag.name", "fg.product_line_id", "fg.product_type_code", "pb.id", "pb.sku", "pb.description",
+	"ic.name", "pl.name",
+	obDecimal(obQtyOrdered), obDecimal(obQtyInvoiced), obDecimal(obQtyBackOrdered), "bu_unit.abbreviation",
+	obDecimal(obTotalOrdered), obDecimal(obTotalInvoiced), obDecimal(obTotalBackOrdered), obDecimal(obTotalCost),
+	obDecimal(obTotalInvoiced + " - " + obTotalCost),
+	"COALESCE(" + obDecimal(obTotalInvoiced+" / NULLIF("+obQtyInvoiced+", 0)") + ", 0)",
+	"COALESCE(" + obDecimal(obTotalCost+" / NULLIF("+obQtyInvoiced+", 0)") + ", 0)",
+	"COALESCE(" + obDecimal("("+obTotalInvoiced+" - "+obTotalCost+") / NULLIF("+obQtyInvoiced+", 0)") + ", 0)",
+	"shipping_geolocation.state", "shipping_geolocation.locality", "shipping_geolocation.postal_code", "shipping_geolocation.country", "od.code",
+}, ",\n    ")
 
 func obDecimal(expr string) string {
 	return "CAST(" + expr + " AS DECIMAL(65,30))"
@@ -358,8 +272,8 @@ func obDecimal(expr string) string {
 
 // orderEntriesQuery reads every scoped line, oldest order first.
 func orderEntriesQuery(s orderBookScope, limit int) (string, []any) {
-	from, args := s.fromWhere(orderEntryJoins + "\n" + s.costJoins())
-	query := "SELECT STRAIGHT_JOIN\n    " + orderEntryColumns(s.exprs()) + "\n" + from + "\nORDER BY so.issued_at ASC, so.id ASC, sol.id ASC"
+	from, args := s.fromWhere(orderEntryJoins)
+	query := "SELECT STRAIGHT_JOIN\n    " + orderEntryColumns + "\n" + from + "\nORDER BY so.issued_at ASC, so.id ASC, sol.id ASC"
 	if limit > 0 {
 		query += " LIMIT ?"
 		args = append(args, limit)
@@ -464,13 +378,12 @@ func (r *analyticsRepoImpl) queryOrderEntries(ctx context.Context, scope orderBo
 
 func openOrdersSummaryQuery(s orderBookScope) (string, []any) {
 	from, args := s.fromWhere("")
-	e := s.exprs()
 	return fmt.Sprintf(`SELECT STRAIGHT_JOIN
     %s,
     %s,
     %s
-%s`, obDecimal("COALESCE(SUM("+e.totalOrdered+"), 0)"), obDecimal("COALESCE(SUM("+e.totalBackOrdered+"), 0)"),
-		obDecimal("COALESCE(SUM("+e.totalInvoiced+"), 0)"), from), args
+%s`, obDecimal("COALESCE(SUM("+obTotalOrdered+"), 0)"), obDecimal("COALESCE(SUM("+obTotalBackOrdered+"), 0)"),
+		obDecimal("COALESCE(SUM("+obTotalInvoiced+"), 0)"), from), args
 }
 
 func (r *analyticsRepoImpl) GetOpenOrdersSummary(ctx context.Context, f domain.OpenOrderFilter) (*domain.OpenOrdersSummary, *apierror.APIError) {
@@ -495,7 +408,6 @@ func (r *analyticsRepoImpl) GetOpenOrdersSummary(ctx context.Context, f domain.O
 // openOrderProductsQuery totals the open lines per item and pages the items with any quantity ordered, most back-ordered first, then by item. A page is a keyset over that ranking compared as exact decimals; a backward page reads it in reverse.
 func openOrderProductsQuery(s orderBookScope, cur *pagination.ValueCursor, limit int32) (string, []any) {
 	from, args := s.fromWhere("")
-	e := s.exprs()
 	having := "g.qty_ordered > 0"
 	order := "g.qty_back_ordered DESC, g.item_id ASC"
 	if cur != nil {
@@ -521,7 +433,7 @@ GROUP BY pb.id, pb.sku, pb.description, bu_unit.id
 ) g
 WHERE %s
 ORDER BY %s
-LIMIT ?`, obDecimal("COALESCE(SUM("+e.qtyOrdered+"), 0)"), obDecimal("COALESCE(SUM("+e.qtyBackOrdered+"), 0)"),
+LIMIT ?`, obDecimal("COALESCE(SUM("+obQtyOrdered+"), 0)"), obDecimal("COALESCE(SUM("+obQtyBackOrdered+"), 0)"),
 		obDecimal("COALESCE(SUM("+obQtyInvoiced+"), 0)"), from, having, order)
 	return query, append(args, limit+1)
 }
@@ -606,9 +518,6 @@ func valueKeysetPage[T any](rows []T, ranks []string, limit int32, cur *paginati
 
 // openOrderPageQuery picks one page of open orders, newest issue first, from the orders alone: an order is open for the report while it has a sale line the line filters count.
 func openOrderPageQuery(s orderBookScope, cur *pagination.StringCursor, limit int32) (string, []any) {
-	if s.snapshot {
-		return snapshotOpenOrderPageQuery(s, cur, limit)
-	}
 	preds, args := s.orderPredicates("so")
 	linePreds, lineArgs := s.linePredicates()
 	preds = append(preds, "EXISTS (SELECT 1 FROM sales_order_line sol JOIN product fg ON fg.id = sol.product_id WHERE sol.sales_order_id = so.id AND "+strings.Join(linePreds, " AND ")+")")
@@ -623,24 +532,6 @@ func openOrderPageQuery(s orderBookScope, cur *pagination.StringCursor, limit in
 	return query, append(args, limit+1)
 }
 
-// snapshotOpenOrderPageQuery is openOrderPageQuery over the snapshot. The account's open lines are few, so
-// they are read whole from the orders and grouped; as a semijoin the planner drives from every sale product.
-func snapshotOpenOrderPageQuery(s orderBookScope, cur *pagination.StringCursor, limit int32) (string, []any) {
-	preds, args := s.orderPredicates("so")
-	seek, seekArgs, order := keysetPredicate(cur, "so.issued_at", "so.id")
-	if seek != "" {
-		preds = append(preds, seek)
-		args = append(args, seekArgs...)
-	}
-	linePreds, lineArgs := s.linePredicates()
-	query := `SELECT STRAIGHT_JOIN so.id FROM open_order so
-JOIN open_order_line sol ON sol.account_id = so.owner_account_id AND sol.sales_order_id = so.id
-JOIN product fg FORCE INDEX (PRIMARY) ON fg.id = sol.product_id
-WHERE ` + strings.Join(append(preds, linePreds...), " AND ") +
-		fmt.Sprintf("\nGROUP BY so.id, so.issued_at ORDER BY so.issued_at %[1]s, so.id %[1]s LIMIT ?", order)
-	return query, append(append(args, lineArgs...), limit+1)
-}
-
 // openOrderTotalsQuery totals the counted lines of the given orders.
 func openOrderTotalsQuery(s orderBookScope) (string, []any) {
 	from, args := s.fromWhere(`LEFT JOIN account buyer ON buyer.id = so.buyer_account_id
@@ -651,7 +542,7 @@ LEFT JOIN geolocation shipping_geolocation ON shipping_geolocation.id = shipping
     so.id, so.number, so.sales_order_status_code, so.issued_at, so.buyer_account_id, buyer.name, ar.external_number,
     shipping_geolocation.state, shipping_geolocation.country,
     COUNT(DISTINCT sol.id),
-    ` + obDecimal("COALESCE(SUM("+s.exprs().totalOrdered+"), 0)") + `
+    ` + obDecimal("COALESCE(SUM("+obTotalOrdered+"), 0)") + `
 ` + from + `
 GROUP BY so.id, so.number, so.sales_order_status_code, so.issued_at, so.buyer_account_id, buyer.name, ar.external_number,
     shipping_geolocation.state, shipping_geolocation.country`, args
@@ -728,14 +619,13 @@ func (r *analyticsRepoImpl) ListOpenOrders(ctx context.Context, params domain.Li
 // openOrderLinesQuery reads one order's sale lines, by SKU. The unit price is per the base unit of its denominator's dimension.
 func openOrderLinesQuery(s orderBookScope) (string, []any) {
 	from, args := s.fromWhere("")
-	e := s.exprs()
 	return `SELECT STRAIGHT_JOIN
     sol.id, pb.id, pb.sku, pb.description, bu_unit.id,
-    ` + obDecimal(e.pricePerBase) + `,
+    ` + obDecimal(obPricePerBase) + `,
     u_price_num.id, u_price_num.abbreviation, u_price_den.unit_dimension_code,
-    ` + obDecimal(e.qtyBackOrdered) + `,
+    ` + obDecimal(obQtyBackOrdered) + `,
     ` + obDecimal(obQtyInvoiced) + `,
-    ` + obDecimal(e.totalOrdered) + `
+    ` + obDecimal(obTotalOrdered) + `
 ` + from + `
 ORDER BY pb.sku ASC, sol.id ASC`, args
 }

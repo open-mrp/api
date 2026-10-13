@@ -22,22 +22,10 @@ var analyticsRepoTracer = tracing.GetTracer("core-service.infrastructure.reposit
 
 type analyticsRepoImpl struct {
 	queries *sqlc.Queries
-	// orderBook selects where the order-book reports read.
-	orderBook orderBookMode
 }
 
-// orderBookMode selects where the order-book reports read.
-type orderBookMode int
-
-const (
-	// orderBookAuto reads the open-order snapshot once its first pass has completed, the source tables until then.
-	orderBookAuto orderBookMode = iota
-	// orderBookLive always reads the source tables; tests compare it against the snapshot.
-	orderBookLive
-)
-
 func NewAnalyticsRepo(queries *sqlc.Queries) domain.AnalyticsRepo {
-	return &analyticsRepoImpl{queries: queries, orderBook: orderBookAuto}
+	return &analyticsRepoImpl{queries: queries}
 }
 
 func toRequiredNullTime(t time.Time) sql.NullTime {
@@ -678,7 +666,7 @@ func quarterlyOrdersQuery(orderIndex, accountID string, issuedFrom time.Time, bu
 	query := `SELECT STRAIGHT_JOIN
     YEAR(so.issued_at) AS order_year,
     QUARTER(so.issued_at) AS order_quarter,
-    ` + obDecimal("SUM("+obLive.totalOrdered+")") + ` AS total
+    ` + obDecimal("SUM("+obTotalOrdered+")") + ` AS total
 FROM sales_order so FORCE INDEX (` + orderIndex + `)
 JOIN sales_order_line sol ON sol.sales_order_id = so.id
 JOIN product fg ON fg.id = sol.product_id

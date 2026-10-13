@@ -160,9 +160,6 @@ type SalesFactRefresher struct {
 
 	lastRecent time.Time
 
-	// openOrders is the open-order snapshot pass's progress (open_order_snapshot.go).
-	openOrders openOrderPass
-
 	// backlog is set during a Tick by any step that left work for a later run.
 	backlog bool
 
@@ -285,10 +282,6 @@ func (s *SalesFactRefresher) Tick(ctx context.Context) bool {
 		s.backlog = true
 		slog.ErrorContext(ctx, "Sales fact refresher: buyer summary sweep failed", "error", apiErr)
 	}
-	if apiErr := s.syncOpenOrders(ctx); apiErr != nil {
-		s.backlog = true
-		slog.ErrorContext(ctx, "Sales fact refresher: open-order pass failed", "error", apiErr)
-	}
 	return s.backlog
 }
 
@@ -307,9 +300,6 @@ func (s *SalesFactRefresher) drainDirty(ctx context.Context) *apierror.APIError 
 	}
 	if len(marks) == salesFactInvoiceBatch {
 		s.backlog = true
-	}
-	if apiErr := s.refreshOpenOrdersFor(ctx, marks); apiErr != nil {
-		return tracing.Trace(span, apiErr)
 	}
 
 	type scopeKey struct {

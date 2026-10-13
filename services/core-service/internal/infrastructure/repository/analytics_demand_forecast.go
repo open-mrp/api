@@ -49,8 +49,8 @@ func demandForecastDemandQuery(params domain.GetDemandForecastWindowParams) (str
     COALESCE(u_price_num.abbreviation, '$'),
     YEAR(so.created_at) AS demand_year,
     MONTH(so.created_at) AS demand_month,
-    ` + obDecimal("SUM("+obLive.qtyOrdered+")") + `,
-    ` + obDecimal("SUM("+obLive.totalOrdered+")") + `
+    ` + obDecimal("SUM("+obQtyOrdered+")") + `,
+    ` + obDecimal("SUM("+obTotalOrdered+")") + `
 FROM sales_order so FORCE INDEX (sales_order_owner_type_created_idx)
 JOIN sales_order_line sol ON sol.sales_order_id = so.id
 JOIN product fg ON fg.id = sol.product_id
@@ -121,7 +121,7 @@ func demandForecastRevenueQuery(params domain.GetDemandForecastWindowParams) (st
     pb.id,
     YEAR(inv.created_at) AS revenue_year,
     MONTH(inv.created_at) AS revenue_month,
-    ` + obDecimal("SUM("+invoicedNorm+" * "+obLive.pricePerBase+")") + `
+    ` + obDecimal("SUM("+invoicedNorm+" * "+obPricePerBase+")") + `
 FROM invoice inv FORCE INDEX (invoice_account_created_idx)
 JOIN invoice_line il ON il.invoice_id = inv.id
 JOIN sales_order_line sol ON sol.id = il.sales_order_line_id

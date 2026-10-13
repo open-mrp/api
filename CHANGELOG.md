@@ -1,5 +1,12 @@
 # Changelog
 
+## [4.9.0](https://github.com/open-mrp/api/compare/v4.8.2...v4.9.0) (2026-10-13)
+
+
+### Features
+
+* Introduce committed stock handling in scheduling solver ([#330](https://github.com/open-mrp/api/issues/330)) ([84d5381](https://github.com/open-mrp/api/commit/84d538160037a943bccfacc11ceeac359cb3de5b))
+
 ## [4.8.2](https://github.com/open-mrp/api/compare/v4.8.1...v4.8.2) (2026-10-13)
 
 

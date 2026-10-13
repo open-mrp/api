@@ -1012,9 +1012,9 @@ type SalesFactRepo interface {
 // order, its lines, and the invoice lines billing them, copied from their source tables.
 type OpenOrderSnapshotRepo interface {
 	// RefreshOrders brings the given orders' snapshot rows in line with their source tables: an issued
-	// sales order is copied, any other order (or one that no longer exists) is removed. Returns the
-	// accounts whose rows changed and how many rows it wrote or deleted.
-	RefreshOrders(ctx context.Context, orderIDs []string) (accountIDs []string, changed int, apiErr *apierror.APIError)
+	// sales order is copied, any other order (or one that no longer exists) is removed. Returns how many
+	// rows it wrote or deleted.
+	RefreshOrders(ctx context.Context, orderIDs []string) (int, *apierror.APIError)
 	// ListIssuedOrderIDsAfter pages every account's issued sales orders in id order.
 	ListIssuedOrderIDsAfter(ctx context.Context, afterID string, limit int32) ([]string, *apierror.APIError)
 	// ListSnapshotOrderIDsAfter pages the orders the snapshot holds in id order.

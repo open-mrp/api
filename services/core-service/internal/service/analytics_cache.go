@@ -23,8 +23,7 @@ const (
 	// defaultSalesSettleWindow bounds how far the report replica may trail the primary after facts change.
 	defaultSalesSettleWindow = 30 * time.Second
 
-	salesSettlingKeyPrefix    = "core.analytics.sales_settling:"
-	deliverySettlingKeyPrefix = "core.analytics.delivery_settling:"
+	salesSettlingKeyPrefix = "core.analytics.sales_settling:"
 
 	// analyticsLoadLeaseWait lets a burst of identical report requests across replicas run the aggregate once; a replica waits this long for another's result before computing its own.
 	analyticsLoadLeaseWait = 15 * time.Second
@@ -95,8 +94,8 @@ type AnalyticsCacheConfig struct {
 	// ClosedTTL (optional; default: 15m) is the lifetime of a report whose window ended before yesterday; edits made without an audit event surface within it.
 	ClosedTTL time.Duration
 
-	// SalesSettleWindow (optional; default: 30s) is how long after an account's sales or delivery facts
-	// change its reports from them are computed without being cached. Reports read a replica; one computed before the
+	// SalesSettleWindow (optional; default: 30s) is how long after an account's sales facts change its
+	// sales reports are computed without being cached. Reports read a replica; one computed before the
 	// replica caught up is served once rather than cached for its TTL.
 	SalesSettleWindow time.Duration
 
@@ -248,18 +247,12 @@ func (c *AnalyticsCache) InvalidateSales(ctx context.Context, accountIDs []strin
 	if err := cache.Invalidate(ctx, c.cfg.Store, scopes...); err != nil {
 		slog.WarnContext(ctx, "analytics cache: sales invalidation failed; entries expire by TTL", "accounts", len(accountIDs), "error", err)
 	}
-	c.markSettling(ctx, salesSettlingKeyPrefix, accountIDs)
-}
-
-// markSettling records that the accounts' facts under prefix just changed, so their reports go uncached
-// for the settle window.
-func (c *AnalyticsCache) markSettling(ctx context.Context, prefix string, accountIDs []string) {
 	if c.cfg.Store == nil {
 		return
 	}
 	for _, id := range accountIDs {
-		if err := c.cfg.Store.Set(ctx, prefix+id, []byte{1}, c.cfg.SalesSettleWindow); err != nil {
-			slog.WarnContext(ctx, "analytics cache: marking reports as settling failed", "key", prefix, "account_id", id, "error", err)
+		if err := c.cfg.Store.Set(ctx, salesSettlingKeyPrefix+id, []byte{1}, c.cfg.SalesSettleWindow); err != nil {
+			slog.WarnContext(ctx, "analytics cache: marking sales as settling failed", "account_id", id, "error", err)
 		}
 	}
 }
@@ -268,19 +261,10 @@ func (c *AnalyticsCache) markSettling(ctx context.Context, prefix string, accoun
 // report replica may still be catching up. A failed lookup reads as settling: serving a report uncached
 // costs a query, caching a stale one costs a TTL of wrong numbers.
 func (c *AnalyticsCache) salesSettling(ctx context.Context, accountID string) bool {
-	return c.settling(ctx, salesSettlingKeyPrefix, accountID)
-}
-
-// deliverySettling is salesSettling for the delivery facts.
-func (c *AnalyticsCache) deliverySettling(ctx context.Context, accountID string) bool {
-	return c.settling(ctx, deliverySettlingKeyPrefix, accountID)
-}
-
-func (c *AnalyticsCache) settling(ctx context.Context, prefix, accountID string) bool {
 	if c == nil || c.cfg.Store == nil {
 		return false
 	}
-	_, ok, err := c.cfg.Store.Get(ctx, prefix+accountID)
+	_, ok, err := c.cfg.Store.Get(ctx, salesSettlingKeyPrefix+accountID)
 	return ok || err != nil
 }
 

@@ -42,7 +42,6 @@ func (s *analyticsSvcImpl) AnalyzeDeliveryPerformance(ctx context.Context, param
 		method:    "delivery_performance",
 		params:    params,
 		ttl:       s.reportCache().cfg.LiveTTL,
-		bypass:    s.reportCache().deliverySettling(ctx, accountID),
 	}, func(ctx context.Context) (*domain.DeliveryPerformanceResult, *apierror.APIError) {
 		return s.buildDeliveryPerformance(ctx, accountID, params)
 	})

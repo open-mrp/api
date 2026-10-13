@@ -20,5 +20,4 @@ func (c *AnalyticsCache) InvalidateDelivery(ctx context.Context, accountIDs []st
 	if err := cache.Invalidate(ctx, c.cfg.Store, scopes...); err != nil {
 		slog.WarnContext(ctx, "analytics cache: delivery invalidation failed; entries expire by TTL", "accounts", len(accountIDs), "error", err)
 	}
-	c.markSettling(ctx, deliverySettlingKeyPrefix, accountIDs)
 }

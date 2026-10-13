@@ -9,7 +9,6 @@ import (
 	"github.com/open-mrp/api/services/core-service/internal/domain"
 	factorymock "github.com/open-mrp/api/services/core-service/internal/domain/mock/factory"
 	repositorymock "github.com/open-mrp/api/services/core-service/internal/domain/mock/repository"
-	apierror "github.com/open-mrp/api/shared/errors"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/mock/gomock"
 )
@@ -18,7 +17,7 @@ import (
 func idleOpenOrderSnapshotRepo(ctrl *gomock.Controller) *repositorymock.MockOpenOrderSnapshotRepo {
 	repo := repositorymock.NewMockOpenOrderSnapshotRepo(ctrl)
 	repo.EXPECT().ResolveOrders(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil, nil).AnyTimes()
-	repo.EXPECT().RefreshOrders(gomock.Any(), gomock.Any()).Return(nil, 0, nil).AnyTimes()
+	repo.EXPECT().RefreshOrders(gomock.Any(), gomock.Any()).Return(0, nil).AnyTimes()
 	repo.EXPECT().ListIssuedOrderIDsAfter(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil, nil).AnyTimes()
 	repo.EXPECT().ListSnapshotOrderIDsAfter(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil, nil).AnyTimes()
 	repo.EXPECT().FilterNotIssued(gomock.Any(), gomock.Any()).Return(nil, nil).AnyTimes()
@@ -52,12 +51,12 @@ func TestTheOpenOrderPassCopiesEveryIssuedOrderThenRemovesTheRestAndRecordsItsCo
 	started := *now
 	gomock.InOrder(
 		repo.EXPECT().ListIssuedOrderIDsAfter(gomock.Any(), "", int32(openOrderIssuedPage)).Return(firstPage, nil),
-		repo.EXPECT().RefreshOrders(gomock.Any(), firstPage).Return(nil, 3, nil),
+		repo.EXPECT().RefreshOrders(gomock.Any(), firstPage).Return(3, nil),
 		repo.EXPECT().ListIssuedOrderIDsAfter(gomock.Any(), firstPage[len(firstPage)-1], int32(openOrderIssuedPage)).Return(lastPage, nil),
-		repo.EXPECT().RefreshOrders(gomock.Any(), lastPage).Return(nil, 0, nil),
+		repo.EXPECT().RefreshOrders(gomock.Any(), lastPage).Return(0, nil),
 		repo.EXPECT().ListSnapshotOrderIDsAfter(gomock.Any(), "", int32(openOrderStalePage)).Return(snapshot, nil),
 		repo.EXPECT().FilterNotIssued(gomock.Any(), snapshot).Return([]string{"so_gone"}, nil),
-		repo.EXPECT().RefreshOrders(gomock.Any(), []string{"so_gone"}).Return(nil, 2, nil),
+		repo.EXPECT().RefreshOrders(gomock.Any(), []string{"so_gone"}).Return(2, nil),
 		repo.EXPECT().SaveSync(gomock.Any(), domain.OpenOrderSnapshotSync{PassStartedAt: &started, LastCompletedAt: &started}).Return(nil),
 	)
 
@@ -87,9 +86,9 @@ func TestAnOpenOrderPassOverItsBudgetResumesOnTheNextTick(t *testing.T) {
 	ctx := context.Background()
 	firstPage := orderIDs("so_a", openOrderIssuedPage)
 	repo.EXPECT().ListIssuedOrderIDsAfter(gomock.Any(), "", gomock.Any()).Return(firstPage, nil)
-	repo.EXPECT().RefreshOrders(gomock.Any(), firstPage).DoAndReturn(func(context.Context, []string) ([]string, int, *apierror.APIError) {
+	repo.EXPECT().RefreshOrders(gomock.Any(), firstPage).DoAndReturn(func(context.Context, []string) (int, error) {
 		*now = now.Add(r.cfg.ReconcileBudget)
-		return nil, 0, nil
+		return 0, nil
 	})
 
 	require.Nil(t, r.syncOpenOrders(ctx))
@@ -114,10 +113,7 @@ func TestDirtyMarksRefreshTheOpenOrdersTheyResolveTo(t *testing.T) {
 	}
 	repo.EXPECT().ResolveOrders(gomock.Any(), domain.SalesFactScopeRate, []string{"rt_1", "rt_2"}).Return([]string{"so_2", "so_1"}, nil)
 	repo.EXPECT().ResolveOrders(gomock.Any(), domain.SalesFactScopeInvoice, []string{"iv_1"}).Return([]string{"so_1"}, nil)
-	repo.EXPECT().RefreshOrders(gomock.Any(), []string{"so_1", "so_2"}).Return([]string{"ac_1", "ac_2"}, 1, nil)
-	var dropped []string
-	r.cfg.OnFactsChanged = func(_ context.Context, accounts []string) { dropped = accounts }
+	repo.EXPECT().RefreshOrders(gomock.Any(), []string{"so_1", "so_2"}).Return(1, nil)
 
 	require.Nil(t, r.refreshOpenOrdersFor(context.Background(), marks))
-	require.Equal(t, []string{"ac_1", "ac_2"}, dropped, "the changed accounts' cached reports are dropped")
 }

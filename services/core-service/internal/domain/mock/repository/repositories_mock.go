@@ -10737,13 +10737,12 @@ func (mr *MockOpenOrderSnapshotRepoMockRecorder) ListSnapshotOrderIDsAfter(ctx, 
 }
 
 // RefreshOrders mocks base method.
-func (m *MockOpenOrderSnapshotRepo) RefreshOrders(ctx context.Context, orderIDs []string) ([]string, int, *apierror.APIError) {
+func (m *MockOpenOrderSnapshotRepo) RefreshOrders(ctx context.Context, orderIDs []string) (int, *apierror.APIError) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "RefreshOrders", ctx, orderIDs)
-	ret0, _ := ret[0].([]string)
-	ret1, _ := ret[1].(int)
-	ret2, _ := ret[2].(*apierror.APIError)
-	return ret0, ret1, ret2
+	ret0, _ := ret[0].(int)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
 }
 
 // RefreshOrders indicates an expected call of RefreshOrders.

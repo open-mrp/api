@@ -64,7 +64,6 @@ func (s *analyticsSvcImpl) AnalyzeOpenOrdersSummary(ctx context.Context, filter 
 		method:    "open_orders_summary",
 		params:    filter,
 		ttl:       s.reportCache().cfg.LiveTTL,
-		bypass:    s.reportCache().salesSettling(ctx, access.accountID),
 	}, func(ctx context.Context) (*domain.OpenOrdersSummary, *apierror.APIError) {
 		return s.reports().NewAnalyticsRepo().GetOpenOrdersSummary(ctx, filter)
 	})
@@ -88,7 +87,6 @@ func (s *analyticsSvcImpl) AnalyzeOpenOrderProducts(ctx context.Context, params 
 		method:    "open_order_products",
 		params:    params,
 		ttl:       s.reportCache().cfg.LiveTTL,
-		bypass:    s.reportCache().salesSettling(ctx, access.accountID),
 	}, func(ctx context.Context) (*domain.OpenOrderProductPage, *apierror.APIError) {
 		page, apiErr := s.reports().NewAnalyticsRepo().GetOpenOrderProducts(ctx, params)
 		if apiErr != nil {
@@ -157,7 +155,6 @@ func (s *analyticsSvcImpl) ListOpenOrders(ctx context.Context, params domain.Lis
 		method:    "open_orders",
 		params:    params,
 		ttl:       s.reportCache().cfg.LiveTTL,
-		bypass:    s.reportCache().salesSettling(ctx, access.accountID),
 	}, func(ctx context.Context) (*domain.OpenOrderPage, *apierror.APIError) {
 		return s.reports().NewAnalyticsRepo().ListOpenOrders(ctx, params)
 	})

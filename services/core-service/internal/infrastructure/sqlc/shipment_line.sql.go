@@ -64,12 +64,13 @@ func (q *Queries) DeleteShipmentLine(ctx context.Context, id string) error {
 }
 
 const deleteShipmentLineQuantitiesByShipment = `-- name: DeleteShipmentLineQuantitiesByShipment :exec
-DELETE FROM quantity WHERE id IN (
-    SELECT quantity_id FROM shipment_line
-    WHERE shipment_id = ?
-)
+DELETE q FROM quantity q
+JOIN shipment_line sl ON sl.quantity_id = q.id
+WHERE sl.shipment_id = ?
 `
 
+// A join, not WHERE id IN (subquery): MySQL won't semijoin the single-table DELETE form and scans
+// every quantity row instead.
 func (q *Queries) DeleteShipmentLineQuantitiesByShipment(ctx context.Context, shipmentID string) error {
 	_, err := q.db.ExecContext(ctx, deleteShipmentLineQuantitiesByShipment, shipmentID)
 	return err

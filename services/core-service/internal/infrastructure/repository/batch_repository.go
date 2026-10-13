@@ -1141,44 +1141,180 @@ func (r *batchRepoImpl) CloseIfLastStep(ctx context.Context, accountID, batchID,
 
 // CloseIfFullyUsed closes a batch once what has been split off it — firsts, seconds and waste, in
 // producedUnit — accounts for everything it is expected to make at the step, to the whole unit.
-func (r *batchRepoImpl) CloseIfFullyUsed(ctx context.Context, accountID string, batch domain.BaseBatch, producedUnit domain.LightUnit, productionStepID string) *apierror.APIError {
+func (r *batchRepoImpl) CloseIfFullyUsed(ctx context.Context, accountID string, batch domain.BaseBatch, producedUnit domain.LightUnit, productionStepID string) (bool, *apierror.APIError) {
 	ctx, span := batchRepoTracer.Start(ctx, "repository.batch.close_if_fully_used")
 	defer span.End()
 
 	remaining, apiErr := r.RemainingToSplit(ctx, accountID, batch, producedUnit, productionStepID)
 	if apiErr != nil {
-		return tracing.Trace(span, apiErr)
+		return false, tracing.Trace(span, apiErr)
 	}
-	if remaining.Round(0).LessThanOrEqual(decimal.Zero) {
-		if _, apiErr := r.Close(ctx, accountID, batch.ID); apiErr != nil {
-			return tracing.Trace(span, apiErr)
-		}
+	if remaining.Round(0).GreaterThan(decimal.Zero) {
+		return false, nil
 	}
-	return nil
+	if _, apiErr := r.Close(ctx, accountID, batch.ID); apiErr != nil {
+		return false, tracing.Trace(span, apiErr)
+	}
+	return true, nil
 }
 
 // RemainingToSplit is a batch's expected output at a step less what has already been split off it,
 // both in producedUnit.
 func (r *batchRepoImpl) RemainingToSplit(ctx context.Context, accountID string, batch domain.BaseBatch, producedUnit domain.LightUnit, productionStepID string) (decimal.Decimal, *apierror.APIError) {
-	expected, apiErr := NewProductionStepQueryRepo(r.queries).CalculateNextStepQuantities(ctx, accountID, batch.Item.ID, batch.Quantity, productionStepID)
+	expected, used, apiErr := r.SplitTally(ctx, accountID, batch, producedUnit, productionStepID)
 	if apiErr != nil {
 		return decimal.Zero, apiErr
+	}
+	return expected.Sub(used), nil
+}
+
+func (r *batchRepoImpl) SplitTally(ctx context.Context, accountID string, batch domain.BaseBatch, producedUnit domain.LightUnit, productionStepID string) (decimal.Decimal, decimal.Decimal, *apierror.APIError) {
+	expected, apiErr := NewProductionStepQueryRepo(r.queries).CalculateNextStepQuantities(ctx, accountID, batch.Item.ID, batch.Quantity, productionStepID)
+	if apiErr != nil {
+		return decimal.Zero, decimal.Zero, apiErr
 	}
 
 	outputs, apiErr := r.FindOutputBatches(ctx, accountID, batch.ID)
 	if apiErr != nil {
-		return decimal.Zero, apiErr
+		return decimal.Zero, decimal.Zero, apiErr
 	}
 
 	used, apiErr := sumOutputsInUnit(ctx, NewUnitConversionRepo(r.queries), outputs, producedUnit)
 	if apiErr != nil {
-		return decimal.Zero, apiErr
+		return decimal.Zero, decimal.Zero, apiErr
 	}
 	if producedUnit.ID != expected.ProducedUnitID {
-		return decimal.Zero, apierror.NewValidationError("Produced unit mismatch.")
+		return decimal.Zero, decimal.Zero, apierror.NewValidationError("Produced unit mismatch.")
 	}
 
-	return expected.Quantity.Sub(used), nil
+	return expected.Quantity, used, nil
+}
+
+func (r *batchRepoImpl) CreateCountAdjustment(ctx context.Context, params domain.CreateBatchCountAdjustmentParams) (*domain.BatchCountAdjustment, *apierror.APIError) {
+	ctx, span := batchRepoTracer.Start(ctx, "repository.batch.create_count_adjustment")
+	defer span.End()
+
+	adjustmentID, apiErr := id.GenID(id.BatchCountAdjustmentIDPrefix, nil)
+	if apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
+	adjustment := &domain.BatchCountAdjustment{
+		ID:              adjustmentID,
+		BatchID:         params.Batch.ID,
+		ClosingBatchID:  params.ClosingBatchID,
+		PreviousMeasure: params.Batch.Quantity.Measure,
+		CountedMeasure:  params.CountedMeasure,
+		UnitID:          params.Batch.Quantity.Unit.ID,
+	}
+
+	err := r.queries.InsertBatchCountAdjustment(ctx, sqlc.InsertBatchCountAdjustmentParams{
+		ID:             adjustment.ID,
+		AccountID:      params.AccountID,
+		BatchID:        adjustment.BatchID,
+		ClosingBatchID: adjustment.ClosingBatchID,
+		PreviousValue:  adjustment.PreviousMeasure.String(),
+		CountedValue:   adjustment.CountedMeasure.String(),
+		UnitID:         adjustment.UnitID,
+	})
+	if apiErr := db.MapSQLError(err); apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
+
+	if apiErr := r.setQuantityValue(ctx, params.Batch.Quantity.ID, adjustment.CountedMeasure); apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
+	return adjustment, nil
+}
+
+func (r *batchRepoImpl) FindCountAdjustmentsByClosingBatch(ctx context.Context, accountID, closingBatchID string) ([]domain.BatchCountAdjustment, *apierror.APIError) {
+	ctx, span := batchRepoTracer.Start(ctx, "repository.batch.find_count_adjustments_by_closing_batch")
+	defer span.End()
+
+	rows, err := r.queries.ListBatchCountAdjustmentsByClosingBatch(ctx, sqlc.ListBatchCountAdjustmentsByClosingBatchParams{
+		AccountID:      accountID,
+		ClosingBatchID: closingBatchID,
+	})
+	if apiErr := db.MapSQLError(err); apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
+
+	adjustments := make([]domain.BatchCountAdjustment, 0, len(rows))
+	for _, row := range rows {
+		previous, err := decimal.NewFromString(row.PreviousValue)
+		if err != nil {
+			return nil, tracing.Trace(span, apierror.NewInternalError(err, "Invalid previous count."))
+		}
+		counted, err := decimal.NewFromString(row.CountedValue)
+		if err != nil {
+			return nil, tracing.Trace(span, apierror.NewInternalError(err, "Invalid counted measure."))
+		}
+		adjustments = append(adjustments, domain.BatchCountAdjustment{
+			ID:              row.ID,
+			BatchID:         row.BatchID,
+			ClosingBatchID:  row.ClosingBatchID,
+			PreviousMeasure: previous,
+			CountedMeasure:  counted,
+			UnitID:          row.UnitID,
+		})
+	}
+	return adjustments, nil
+}
+
+func (r *batchRepoImpl) RevertCountAdjustmentsByClosingBatch(ctx context.Context, accountID, closingBatchID string) ([]domain.BatchCountAdjustment, *apierror.APIError) {
+	ctx, span := batchRepoTracer.Start(ctx, "repository.batch.revert_count_adjustments_by_closing_batch")
+	defer span.End()
+
+	adjustments, apiErr := r.FindCountAdjustmentsByClosingBatch(ctx, accountID, closingBatchID)
+	if apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
+	if len(adjustments) == 0 {
+		return nil, nil
+	}
+
+	for _, adjustment := range adjustments {
+		row, err := r.queries.GetBatchBase(ctx, sqlc.GetBatchBaseParams{ID: adjustment.BatchID, AccountID: accountID})
+		if errors.Is(err, gosql.ErrNoRows) {
+			continue
+		}
+		if apiErr := db.MapSQLError(err); apiErr != nil {
+			return nil, tracing.Trace(span, apiErr)
+		}
+		if apiErr := r.setQuantityValue(ctx, row.QuantityID, adjustment.PreviousMeasure); apiErr != nil {
+			return nil, tracing.Trace(span, apiErr)
+		}
+	}
+
+	err := r.queries.DeleteBatchCountAdjustmentsByClosingBatch(ctx, sqlc.DeleteBatchCountAdjustmentsByClosingBatchParams{
+		AccountID:      accountID,
+		ClosingBatchID: closingBatchID,
+	})
+	if apiErr := db.MapSQLError(err); apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
+	return adjustments, nil
+}
+
+func (r *batchRepoImpl) setQuantityValue(ctx context.Context, quantityID string, measure decimal.Decimal) *apierror.APIError {
+	err := r.queries.UpdateBatchQuantityValue(ctx, sqlc.UpdateBatchQuantityValueParams{
+		ID:    quantityID,
+		Value: measure.String(),
+	})
+	return db.MapSQLError(err)
+}
+
+func (r *batchRepoImpl) HasScanReceipt(ctx context.Context, accountID, batchID string) (bool, *apierror.APIError) {
+	ctx, span := batchRepoTracer.Start(ctx, "repository.batch.has_scan_receipt")
+	defer span.End()
+
+	has, err := r.queries.BatchHasScanReceipt(ctx, sqlc.BatchHasScanReceiptParams{
+		BatchID:   gosql.NullString{String: batchID, Valid: true},
+		AccountID: accountID,
+	})
+	if apiErr := db.MapSQLError(err); apiErr != nil {
+		return false, tracing.Trace(span, apiErr)
+	}
+	return has, nil
 }
 
 func (r *batchRepoImpl) CountDownstreamBatches(ctx context.Context, batchID string) (int64, *apierror.APIError) {

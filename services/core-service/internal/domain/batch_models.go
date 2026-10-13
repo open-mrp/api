@@ -191,6 +191,33 @@ type SplitBatchParams struct {
 	CloseBatch        bool
 }
 
+// BatchCountAdjustment is a batch's quantity corrected to the hand count its splits revealed: what was
+// split off it, once a split closed it, in place of what it was recorded as. It is kept against the
+// closing split so undoing that split can restore the quantity, and the ledger true-up it causes is
+// tagged with the same split.
+type BatchCountAdjustment struct {
+	ID             string
+	BatchID        string
+	ClosingBatchID string
+	// PreviousMeasure and CountedMeasure are in UnitID, the unit of the batch's own quantity.
+	PreviousMeasure decimal.Decimal
+	CountedMeasure  decimal.Decimal
+	UnitID          string
+}
+
+// Delta is what the count adds to the batch: negative when fewer were made than recorded.
+func (a BatchCountAdjustment) Delta() decimal.Decimal {
+	return a.CountedMeasure.Sub(a.PreviousMeasure)
+}
+
+// CreateBatchCountAdjustmentParams records a recount and moves the batch's quantity to it.
+type CreateBatchCountAdjustmentParams struct {
+	AccountID      string
+	Batch          BaseBatch
+	ClosingBatchID string
+	CountedMeasure decimal.Decimal
+}
+
 // GetConsumptionParams holds the parameters for getting scanning station consumption.
 type GetConsumptionParams struct {
 	ScanningStationID string

@@ -520,6 +520,13 @@ func (s *batchSvcImpl) undoBatch(ctx context.Context, identity *types.Identity, 
 			}
 		}
 
+		// A split that recounted its source takes the count with it; the ledger true-up goes with the
+		// rest of the scan's tagged rows. Restored first, so the reopen below measures the source as
+		// it was recorded.
+		if apiErr := txSvc.revertSplitRecounts(txCtx, accountID, batch.ID); apiErr != nil {
+			return apiErr
+		}
+
 		// With the batch gone its inputs are no longer spoken for, so any that were closed only
 		// because this batch consumed them open back up.
 		if producedUnit != nil {
@@ -551,6 +558,37 @@ func (s *batchSvcImpl) undoBatch(ctx context.Context, identity *types.Identity, 
 	}
 
 	return result, nil
+}
+
+// revertSplitRecounts puts back the quantity of every source a split recounted when it closed them.
+func (s *batchSvcImpl) revertSplitRecounts(ctx context.Context, accountID, closingBatchID string) *apierror.APIError {
+	batchRepo := s.repos.NewBatchRepo()
+	adjustments, apiErr := batchRepo.FindCountAdjustmentsByClosingBatch(ctx, accountID, closingBatchID)
+	if apiErr != nil || len(adjustments) == 0 {
+		return apiErr
+	}
+
+	befores := make([]*domain.Batch, 0, len(adjustments))
+	for _, adjustment := range adjustments {
+		before, apiErr := batchRepo.Find(ctx, accountID, adjustment.BatchID)
+		if apiErr != nil {
+			if apierror.IsNotFound(apiErr) {
+				continue
+			}
+			return apiErr
+		}
+		befores = append(befores, before)
+	}
+
+	if _, apiErr := batchRepo.RevertCountAdjustmentsByClosingBatch(ctx, accountID, closingBatchID); apiErr != nil {
+		return apiErr
+	}
+	for _, before := range befores {
+		if apiErr := publishBatchQuantityChange(ctx, s.repos, accountID, before); apiErr != nil {
+			return apiErr
+		}
+	}
+	return nil
 }
 
 // planScanUndo snapshots what the reversal will need once the batch is gone. The ledger rows keep

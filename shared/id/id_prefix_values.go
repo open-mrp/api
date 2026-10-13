@@ -224,7 +224,8 @@ var (
 	AttributeIDPrefix = composePrefix(VocAttribute)
 
 	// Batch-related prefix values
-	BatchIDPrefix = composePrefix(VocBatch)
+	BatchIDPrefix                = composePrefix(VocBatch)
+	BatchCountAdjustmentIDPrefix = composePrefix(VocBatch, VocAdjustment)
 
 	// Carrier-related prefix values
 	CarrierIDPrefix                = composePrefix(VocCarrier)

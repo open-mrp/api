@@ -428,3 +428,25 @@ ORDER BY ps.name;
 SELECT COUNT(*) FROM batch
 WHERE account_id = sqlc.arg('account_id')
 AND scanned_at >= sqlc.arg('since');
+
+-- name: UpdateBatchQuantityValue :exec
+UPDATE quantity SET value = sqlc.arg('value'), updated_at = NOW(3)
+WHERE id = sqlc.arg('id');
+
+-- name: InsertBatchCountAdjustment :exec
+INSERT INTO batch_count_adjustment (
+    id, account_id, batch_id, closing_batch_id, previous_value, counted_value, unit_id, created_at
+) VALUES (
+    sqlc.arg('id'), sqlc.arg('account_id'), sqlc.arg('batch_id'), sqlc.arg('closing_batch_id'),
+    sqlc.arg('previous_value'), sqlc.arg('counted_value'), sqlc.arg('unit_id'), NOW(3)
+);
+
+-- name: ListBatchCountAdjustmentsByClosingBatch :many
+SELECT id, batch_id, closing_batch_id, previous_value, counted_value, unit_id
+FROM batch_count_adjustment
+WHERE account_id = sqlc.arg('account_id') AND closing_batch_id = sqlc.arg('closing_batch_id')
+ORDER BY id;
+
+-- name: DeleteBatchCountAdjustmentsByClosingBatch :exec
+DELETE FROM batch_count_adjustment
+WHERE account_id = sqlc.arg('account_id') AND closing_batch_id = sqlc.arg('closing_batch_id');

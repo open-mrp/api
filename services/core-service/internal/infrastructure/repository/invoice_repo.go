@@ -578,6 +578,8 @@ func (r *invoiceRepoImpl) CreateFromShipment(ctx context.Context, params domain.
 			InvoiceID:        params.InvoiceID,
 			QuantityID:       quantityID,
 			SalesOrderLineID: line.SalesOrderLineID,
+			QuantityValue:    gosql.NullString{String: line.QuantityValue, Valid: true},
+			QuantityUnitID:   gosql.NullString{String: line.QuantityUnitID, Valid: true},
 		}); err != nil {
 			return "", tracing.Trace(span, db.MapSQLError(err))
 		}

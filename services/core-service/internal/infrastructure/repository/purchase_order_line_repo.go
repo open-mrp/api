@@ -121,6 +121,9 @@ func (r *purchaseOrderLineRepoImpl) Create(ctx context.Context, lineID string, p
 	if apiErr := db.MapSQLError(err); apiErr != nil {
 		return nil, tracing.Trace(span, apiErr)
 	}
+	if apiErr := db.MapSQLError(syncOrderLineCopies(ctx, r.queries.DB(), lineID)); apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
 
 	// Re-fetch the created line
 	return r.Get(ctx, lineID, params.SalesOrderID)
@@ -213,6 +216,10 @@ func (r *purchaseOrderLineRepoImpl) Update(ctx context.Context, params domain.Up
 				return nil, tracing.Trace(span, apiErr)
 			}
 		}
+	}
+
+	if apiErr := db.MapSQLError(syncOrderLineCopies(ctx, r.queries.DB(), params.PurchaseOrderLineID)); apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
 	}
 
 	// Re-fetch the updated line
@@ -331,6 +338,9 @@ func (r *purchaseOrderLineRepoImpl) UpdateQuantityValue(ctx context.Context, qua
 	if apiErr := db.MapSQLError(err); apiErr != nil {
 		return tracing.Trace(span, apiErr)
 	}
+	if apiErr := db.MapSQLError(syncOrderLineCopiesByQuantity(ctx, r.queries.DB(), quantityID)); apiErr != nil {
+		return tracing.Trace(span, apiErr)
+	}
 
 	return nil
 }
@@ -346,6 +356,9 @@ func (r *purchaseOrderLineRepoImpl) UpdateRateValue(ctx context.Context, rateID,
 		ID:                rateID,
 	})
 	if apiErr := db.MapSQLError(err); apiErr != nil {
+		return tracing.Trace(span, apiErr)
+	}
+	if apiErr := db.MapSQLError(syncOrderLineCopiesByRate(ctx, r.queries.DB(), rateID)); apiErr != nil {
 		return tracing.Trace(span, apiErr)
 	}
 

@@ -52,6 +52,26 @@ type orderBookScope struct {
 	itemIDs        []string
 	// orderIndex is the sales_order key the orders are read through; empty leaves it to the planner.
 	orderIndex string
+	// copies reads each line's quantity, price and cost from the copies the line carries
+	// (line_copies.go) rather than from the rows they copy.
+	copies bool
+}
+
+// fromCopies rewrites a query's reads of the quantity and rate rows to the copies the lines carry. The
+// expressions are otherwise unchanged, so the values are the same to the last digit.
+var fromCopies = strings.NewReplacer(
+	"q_ord.value", "sol.quantity_value",
+	"r_price.value", "sol.unit_price_value",
+	"r_cost.value", "sol.unit_cost_value",
+	"q_in.value", "il.quantity_value",
+)
+
+// sql finishes a query built over fromWhere for the scope's source of line values.
+func (s orderBookScope) sql(query string) string {
+	if s.copies {
+		return fromCopies.Replace(query)
+	}
+	return query
 }
 
 // orderPredicates scope the orders read through alias: the account's issued sales orders, narrowed by the order-level filters.
@@ -105,24 +125,36 @@ func (s orderBookScope) fromWhere(extraJoins string) (string, []any) {
 	orderPreds, orderArgs := s.orderPredicates("so")
 	linePreds, lineArgs := s.linePredicates()
 
+	lines, values, invoiced := `JOIN sales_order_line sol ON sol.sales_order_id = so.id`, `LEFT JOIN quantity q_ord ON q_ord.id = sol.quantity_id
+LEFT JOIN unit u_ord ON u_ord.id = q_ord.unit_id
+LEFT JOIN rate r_price ON r_price.id = sol.unit_price_id
+LEFT JOIN unit u_price_num ON u_price_num.id = r_price.numerator_unit_id
+LEFT JOIN unit u_price_den ON u_price_den.id = r_price.denominator_unit_id`, `FROM invoice_line il
+    JOIN quantity q_in ON q_in.id = il.quantity_id
+    JOIN unit u_in ON u_in.id = q_in.unit_id`
+	if s.copies {
+		// The order's lines and their invoice lines are each one range of a key carrying the copies, so
+		// neither the lines nor their quantity and rate rows are visited.
+		lines = `JOIN sales_order_line sol FORCE INDEX (sales_order_line_order_copies_idx) ON sol.sales_order_id = so.id`
+		values = `LEFT JOIN unit u_ord ON u_ord.id = sol.quantity_unit_id
+LEFT JOIN unit u_price_num ON u_price_num.id = sol.unit_price_numerator_unit_id
+LEFT JOIN unit u_price_den ON u_price_den.id = sol.unit_price_denominator_unit_id`
+		invoiced = `FROM invoice_line il FORCE INDEX (invoice_line_sol_copies_idx)
+    JOIN unit u_in ON u_in.id = il.quantity_unit_id`
+	}
+
 	from := `FROM sales_order so` + s.orderIndexHint() + `
-JOIN sales_order_line sol ON sol.sales_order_id = so.id
+` + lines + `
 JOIN product fg ON fg.id = sol.product_id
 LEFT JOIN item pb ON pb.id = fg.item_id
 LEFT JOIN item_category ic ON ic.id = pb.item_category_id
 LEFT JOIN unit_group ug ON ug.id = ic.unit_group_id
 LEFT JOIN unit bu_unit ON bu_unit.id = ug.base_unit_id
-LEFT JOIN quantity q_ord ON q_ord.id = sol.quantity_id
-LEFT JOIN unit u_ord ON u_ord.id = q_ord.unit_id
-LEFT JOIN rate r_price ON r_price.id = sol.unit_price_id
-LEFT JOIN unit u_price_num ON u_price_num.id = r_price.numerator_unit_id
-LEFT JOIN unit u_price_den ON u_price_den.id = r_price.denominator_unit_id
+` + values + `
 LEFT JOIN (
     SELECT il.sales_order_line_id AS line_id,
         SUM((q_in.value * (u_in.ratio_numerator / u_in.ratio_denominator)) + (u_in.offset_numerator / u_in.offset_denominator)) AS qty_inv_norm
-    FROM invoice_line il
-    JOIN quantity q_in ON q_in.id = il.quantity_id
-    JOIN unit u_in ON u_in.id = q_in.unit_id
+    ` + invoiced + `
     WHERE il.sales_order_line_id IN (
         SELECT inv_sol.id
         FROM sales_order inv_so
@@ -228,16 +260,36 @@ func (r *analyticsRepoImpl) newOrderBookScope(ctx context.Context, f domain.Open
 	if filtered && len(buyers) == 0 {
 		return scope, true, nil
 	}
+	if scope.copies, apiErr = r.lineCopies(ctx); apiErr != nil {
+		return orderBookScope{}, false, apiErr
+	}
 	if scope.orderIndex, apiErr = r.cheapestOrderKey(ctx, scope.orderKeys()); apiErr != nil {
 		return orderBookScope{}, false, apiErr
 	}
 	return scope, false, nil
 }
 
+// lineCopies reports whether reports may read the copies lines carry (lineCopiesComplete).
+func (r *analyticsRepoImpl) lineCopies(ctx context.Context) (bool, *apierror.APIError) {
+	ok, err := lineCopiesComplete(ctx, r.queries.DB())
+	return ok, db.MapSQLError(err)
+}
+
 // --- Order entries (order data, and the open-order-lines export) ---
 
 // orderEntryJoins are the order, customer and cost details an order entry carries beyond the shared fragment.
-const orderEntryJoins = `LEFT JOIN product_line pl ON pl.id = fg.product_line_id
+func (s orderBookScope) orderEntryJoins() string {
+	cost := `LEFT JOIN rate r_cost ON r_cost.id = sol.unit_cost_id
+LEFT JOIN unit u_cost_num ON u_cost_num.id = r_cost.numerator_unit_id
+LEFT JOIN unit u_cost_den ON u_cost_den.id = r_cost.denominator_unit_id`
+	if s.copies {
+		cost = `LEFT JOIN unit u_cost_num ON u_cost_num.id = sol.unit_cost_numerator_unit_id
+LEFT JOIN unit u_cost_den ON u_cost_den.id = sol.unit_cost_denominator_unit_id`
+	}
+	return orderEntryDetailJoins + "\n" + cost
+}
+
+const orderEntryDetailJoins = `LEFT JOIN product_line pl ON pl.id = fg.product_line_id
 LEFT JOIN account buyer ON buyer.id = so.buyer_account_id
 LEFT JOIN account_relation ar ON ar.owner_account_id = so.owner_account_id AND ar.counterparty_account_id = so.buyer_account_id AND ar.account_relation_role_code = 'customer'
 LEFT JOIN account_relation parent_ar ON parent_ar.id = ar.parent_account_relation_id AND parent_ar.owner_account_id = ar.owner_account_id
@@ -246,10 +298,7 @@ LEFT JOIN address shipping_address ON shipping_address.id = so.shipping_address_
 LEFT JOIN geolocation shipping_geolocation ON shipping_geolocation.id = shipping_address.geolocation_id
 LEFT JOIN account_user ou ON ou.id = so.sales_rep_id
 LEFT JOIN ` + "`user`" + ` bu ON bu.id = ou.user_id
-LEFT JOIN order_discount od ON od.id = so.order_discount_id
-LEFT JOIN rate r_cost ON r_cost.id = sol.unit_cost_id
-LEFT JOIN unit u_cost_num ON u_cost_num.id = r_cost.numerator_unit_id
-LEFT JOIN unit u_cost_den ON u_cost_den.id = r_cost.denominator_unit_id`
+LEFT JOIN order_discount od ON od.id = so.order_discount_id`
 
 // orderEntryColumns is an order entry's select list. Nothing invoiced yet leaves the per-unit price, cost and profit undefined (x / 0): they read 0, as the dashboard's rows did.
 var orderEntryColumns = strings.Join([]string{
@@ -272,13 +321,13 @@ func obDecimal(expr string) string {
 
 // orderEntriesQuery reads every scoped line, oldest order first.
 func orderEntriesQuery(s orderBookScope, limit int) (string, []any) {
-	from, args := s.fromWhere(orderEntryJoins)
+	from, args := s.fromWhere(s.orderEntryJoins())
 	query := "SELECT STRAIGHT_JOIN\n    " + orderEntryColumns + "\n" + from + "\nORDER BY so.issued_at ASC, so.id ASC, sol.id ASC"
 	if limit > 0 {
 		query += " LIMIT ?"
 		args = append(args, limit)
 	}
-	return query, args
+	return s.sql(query), args
 }
 
 func (r *analyticsRepoImpl) GetOrderEntries(ctx context.Context, params domain.AnalyzeOrdersParams) ([]domain.OrderEntry, *apierror.APIError) {
@@ -378,12 +427,12 @@ func (r *analyticsRepoImpl) queryOrderEntries(ctx context.Context, scope orderBo
 
 func openOrdersSummaryQuery(s orderBookScope) (string, []any) {
 	from, args := s.fromWhere("")
-	return fmt.Sprintf(`SELECT STRAIGHT_JOIN
+	return s.sql(fmt.Sprintf(`SELECT STRAIGHT_JOIN
     %s,
     %s,
     %s
 %s`, obDecimal("COALESCE(SUM("+obTotalOrdered+"), 0)"), obDecimal("COALESCE(SUM("+obTotalBackOrdered+"), 0)"),
-		obDecimal("COALESCE(SUM("+obTotalInvoiced+"), 0)"), from), args
+		obDecimal("COALESCE(SUM("+obTotalInvoiced+"), 0)"), from)), args
 }
 
 func (r *analyticsRepoImpl) GetOpenOrdersSummary(ctx context.Context, f domain.OpenOrderFilter) (*domain.OpenOrdersSummary, *apierror.APIError) {
@@ -435,7 +484,7 @@ WHERE %s
 ORDER BY %s
 LIMIT ?`, obDecimal("COALESCE(SUM("+obQtyOrdered+"), 0)"), obDecimal("COALESCE(SUM("+obQtyBackOrdered+"), 0)"),
 		obDecimal("COALESCE(SUM("+obQtyInvoiced+"), 0)"), from, having, order)
-	return query, append(args, limit+1)
+	return s.sql(query), append(args, limit+1)
 }
 
 func (r *analyticsRepoImpl) GetOpenOrderProducts(ctx context.Context, params domain.AnalyzeOpenOrderProductsParams) (*domain.OpenOrderProductPage, *apierror.APIError) {
@@ -538,14 +587,14 @@ func openOrderTotalsQuery(s orderBookScope) (string, []any) {
 LEFT JOIN account_relation ar ON ar.owner_account_id = so.owner_account_id AND ar.counterparty_account_id = so.buyer_account_id AND ar.account_relation_role_code = 'customer'
 LEFT JOIN address shipping_address ON shipping_address.id = so.shipping_address_id
 LEFT JOIN geolocation shipping_geolocation ON shipping_geolocation.id = shipping_address.geolocation_id`)
-	return `SELECT STRAIGHT_JOIN
+	return s.sql(`SELECT STRAIGHT_JOIN
     so.id, so.number, so.sales_order_status_code, so.issued_at, so.buyer_account_id, buyer.name, ar.external_number,
     shipping_geolocation.state, shipping_geolocation.country,
     COUNT(DISTINCT sol.id),
     ` + obDecimal("COALESCE(SUM("+obTotalOrdered+"), 0)") + `
 ` + from + `
 GROUP BY so.id, so.number, so.sales_order_status_code, so.issued_at, so.buyer_account_id, buyer.name, ar.external_number,
-    shipping_geolocation.state, shipping_geolocation.country`, args
+    shipping_geolocation.state, shipping_geolocation.country`), args
 }
 
 func (r *analyticsRepoImpl) ListOpenOrders(ctx context.Context, params domain.ListOpenOrdersParams) (*domain.OpenOrderPage, *apierror.APIError) {
@@ -619,7 +668,7 @@ func (r *analyticsRepoImpl) ListOpenOrders(ctx context.Context, params domain.Li
 // openOrderLinesQuery reads one order's sale lines, by SKU. The unit price is per the base unit of its denominator's dimension.
 func openOrderLinesQuery(s orderBookScope) (string, []any) {
 	from, args := s.fromWhere("")
-	return `SELECT STRAIGHT_JOIN
+	return s.sql(`SELECT STRAIGHT_JOIN
     sol.id, pb.id, pb.sku, pb.description, bu_unit.id,
     ` + obDecimal(obPricePerBase) + `,
     u_price_num.id, u_price_num.abbreviation, u_price_den.unit_dimension_code,
@@ -627,7 +676,7 @@ func openOrderLinesQuery(s orderBookScope) (string, []any) {
     ` + obDecimal(obQtyInvoiced) + `,
     ` + obDecimal(obTotalOrdered) + `
 ` + from + `
-ORDER BY pb.sku ASC, sol.id ASC`, args
+ORDER BY pb.sku ASC, sol.id ASC`), args
 }
 
 // GetOpenOrderLines returns one sales order's sale lines, whether or not it is still open. found is false when the account has no such sales order, or salesRepID is set and the order is not theirs.
@@ -650,8 +699,12 @@ func (r *analyticsRepoImpl) GetOpenOrderLines(ctx context.Context, accountID, or
 		return nil, false, tracing.Trace(span, db.MapSQLError(err))
 	}
 
+	copies, apiErr := r.lineCopies(ctx)
+	if apiErr != nil {
+		return nil, true, tracing.Trace(span, apiErr)
+	}
 	// The dashboard's order detail read every sale line of the order, whatever its status.
-	query, args := openOrderLinesQuery(orderBookScope{accountID: accountID, anyStatus: true, orderIDs: []string{orderID}})
+	query, args := openOrderLinesQuery(orderBookScope{accountID: accountID, anyStatus: true, orderIDs: []string{orderID}, copies: copies})
 	rows, err := r.queries.DB().QueryContext(ctx, query, args...)
 	if err != nil {
 		return nil, true, tracing.Trace(span, db.MapSQLError(err))

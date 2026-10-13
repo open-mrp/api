@@ -94,6 +94,9 @@ func (r *pickLineRepoImpl) UpdateQuantity(ctx context.Context, pickLineID string
 	}); err != nil {
 		return tracing.Trace(span, db.MapSQLError(err))
 	}
+	if err := syncPickLineCopies(ctx, r.queries.DB(), pickLineID); err != nil {
+		return tracing.Trace(span, db.MapSQLError(err))
+	}
 
 	return nil
 }
@@ -103,6 +106,9 @@ func (r *pickLineRepoImpl) PickRemainingQuantity(ctx context.Context, pickLineID
 	defer span.End()
 
 	if err := r.queries.PickRemainingQuantityForLine(ctx, sqlc.PickRemainingQuantityForLineParams{PickLineID: pickLineID}); err != nil {
+		return tracing.Trace(span, db.MapSQLError(err))
+	}
+	if err := syncPickLineCopies(ctx, r.queries.DB(), pickLineID); err != nil {
 		return tracing.Trace(span, db.MapSQLError(err))
 	}
 
@@ -128,6 +134,9 @@ func (r *pickLineRepoImpl) VoidLine(ctx context.Context, pickLineID string) *api
 	defer span.End()
 
 	if err := r.queries.VoidPickLine(ctx, pickLineID); err != nil {
+		return tracing.Trace(span, db.MapSQLError(err))
+	}
+	if err := syncPickLineCopies(ctx, r.queries.DB(), pickLineID); err != nil {
 		return tracing.Trace(span, db.MapSQLError(err))
 	}
 
@@ -159,6 +168,9 @@ func (r *pickLineRepoImpl) CreateForRemaining(ctx context.Context, id, quantityI
 		QuantityID:       quantityID,
 		SalesOrderLineID: orderLineID,
 	}); err != nil {
+		return tracing.Trace(span, db.MapSQLError(err))
+	}
+	if err := syncPickLineCopies(ctx, r.queries.DB(), id); err != nil {
 		return tracing.Trace(span, db.MapSQLError(err))
 	}
 
@@ -281,6 +293,9 @@ func (r *pickLineRepoImpl) unpackOrderLine(ctx context.Context, orderLineID, shi
 		Value:      toNullString(&reopenedValue),
 		PickLineID: shipped.ID,
 	}); err != nil {
+		return db.MapSQLError(err)
+	}
+	if err := syncPickLineCopies(ctx, r.queries.DB(), shipped.ID); err != nil {
 		return db.MapSQLError(err)
 	}
 

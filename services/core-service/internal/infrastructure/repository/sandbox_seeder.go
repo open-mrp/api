@@ -77,6 +77,11 @@ func (r *SandboxSeeder) Seed(ctx context.Context, accountID string) error {
 		}
 	}
 
+	// The seed writes lines in plain SQL, so their copies are filled here.
+	if err := syncAccountOrderCopies(ctx, tx, accountID); err != nil {
+		return fmt.Errorf("copy seeded line quantities: %w", err)
+	}
+
 	if err := tx.Commit(); err != nil {
 		return fmt.Errorf("commit seed tx: %w", err)
 	}

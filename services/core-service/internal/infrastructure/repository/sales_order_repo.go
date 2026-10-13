@@ -1070,6 +1070,9 @@ func (r *salesOrderRepoImpl) CreatePickLine(ctx context.Context, pickLineID, pic
 	if apiErr := db.MapSQLError(err); apiErr != nil {
 		return tracing.Trace(span, apiErr)
 	}
+	if apiErr := db.MapSQLError(syncPickLineCopies(ctx, r.queries.DB(), pickLineID)); apiErr != nil {
+		return tracing.Trace(span, apiErr)
+	}
 
 	return nil
 }

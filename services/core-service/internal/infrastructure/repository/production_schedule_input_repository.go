@@ -946,7 +946,7 @@ func (r *productionScheduleInputRepoImpl) ListDeliveryOutcomes(ctx context.Conte
 		return []scheduling.DeliveryOutcome{}, nil
 	}
 
-	rows, err := r.queries.ListDeliveryPerformanceOrders(ctx, sqlc.ListDeliveryPerformanceOrdersParams{
+	orderParams := sqlc.ListDeliveryPerformanceOrdersParams{
 		AccountID:                accountID,
 		WindowStart:              gosql.NullTime{Time: start, Valid: true},
 		WindowEnd:                gosql.NullTime{Time: end, Valid: true},
@@ -956,8 +956,9 @@ func (r *productionScheduleInputRepoImpl) ListDeliveryOutcomes(ctx context.Conte
 		ProductLineIds:           args.productLineIDs,
 		IncludeBuyerFilter:       args.includeBuyer,
 		BuyerIds:                 args.buyerIDs,
-	})
-	if apiErr := db.MapSQLError(err); apiErr != nil {
+	}
+	rows, apiErr := r.deliveryOrders(ctx, orderParams, args)
+	if apiErr != nil {
 		return nil, tracing.Trace(span, apiErr)
 	}
 

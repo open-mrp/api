@@ -1093,6 +1093,8 @@ type InvoiceLine struct {
 	SalesOrderLineID string
 	CreatedAt        time.Time
 	UpdatedAt        time.Time
+	QuantityValue    sql.NullString
+	QuantityUnitID   sql.NullString
 }
 
 type Item struct {
@@ -1579,6 +1581,8 @@ type PickLine struct {
 	CreatedAt        time.Time
 	UpdatedAt        time.Time
 	PackedAt         sql.NullTime
+	QuantityValue    sql.NullString
+	QuantityUnitID   sql.NullString
 }
 
 type PortalDomain struct {
@@ -2257,19 +2261,27 @@ type SalesOrder struct {
 }
 
 type SalesOrderLine struct {
-	ID                 string
-	ProductSku         string
-	ProductDescription sql.NullString
-	LineItemNumber     sql.NullInt32
-	ProductID          sql.NullString
-	ItemID             sql.NullString
-	SalesOrderID       string
-	QuantityID         string
-	UnitPriceID        string
-	UnitCostID         sql.NullString
-	CreatedAt          time.Time
-	UpdatedAt          time.Time
-	Metadata           json.RawMessage
+	ID                         string
+	ProductSku                 string
+	ProductDescription         sql.NullString
+	LineItemNumber             sql.NullInt32
+	ProductID                  sql.NullString
+	ItemID                     sql.NullString
+	SalesOrderID               string
+	QuantityID                 string
+	UnitPriceID                string
+	UnitCostID                 sql.NullString
+	CreatedAt                  time.Time
+	UpdatedAt                  time.Time
+	Metadata                   json.RawMessage
+	QuantityValue              sql.NullString
+	QuantityUnitID             sql.NullString
+	UnitPriceValue             sql.NullString
+	UnitPriceNumeratorUnitID   sql.NullString
+	UnitPriceDenominatorUnitID sql.NullString
+	UnitCostValue              sql.NullString
+	UnitCostNumeratorUnitID    sql.NullString
+	UnitCostDenominatorUnitID  sql.NullString
 }
 
 type SalesOrderStatus struct {

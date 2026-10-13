@@ -57,8 +57,9 @@ func (q *Queries) CreateInvoice(ctx context.Context, arg CreateInvoiceParams) er
 }
 
 const createInvoiceLine = `-- name: CreateInvoiceLine :exec
-INSERT INTO invoice_line (id, invoice_id, quantity_id, sales_order_line_id, created_at, updated_at)
-VALUES (?, ?, ?, ?, NOW(3), NOW(3))
+INSERT INTO invoice_line (id, invoice_id, quantity_id, sales_order_line_id, quantity_value, quantity_unit_id, created_at, updated_at)
+VALUES (?, ?, ?, ?,
+    ?, ?, NOW(3), NOW(3))
 `
 
 type CreateInvoiceLineParams struct {
@@ -66,14 +67,19 @@ type CreateInvoiceLineParams struct {
 	InvoiceID        string
 	QuantityID       string
 	SalesOrderLineID string
+	QuantityValue    sql.NullString
+	QuantityUnitID   sql.NullString
 }
 
+// The copies hold the values the line's quantity row was just created with.
 func (q *Queries) CreateInvoiceLine(ctx context.Context, arg CreateInvoiceLineParams) error {
 	_, err := q.db.ExecContext(ctx, createInvoiceLine,
 		arg.ID,
 		arg.InvoiceID,
 		arg.QuantityID,
 		arg.SalesOrderLineID,
+		arg.QuantityValue,
+		arg.QuantityUnitID,
 	)
 	return err
 }

@@ -14,6 +14,7 @@ import (
 	"github.com/open-mrp/api/services/core-service/internal/infrastructure/sqlc"
 	"github.com/open-mrp/api/shared/constants"
 	"github.com/open-mrp/api/shared/db"
+	"github.com/open-mrp/api/shared/db/backfill"
 	apierror "github.com/open-mrp/api/shared/errors"
 	"github.com/open-mrp/api/shared/querytag"
 )
@@ -695,6 +696,50 @@ func TestVitessSmoke(t *testing.T) {
 				ProductLineIDs: p.ProductLineIDs, SalesRepIDs: p.SalesRepIDs})
 			checkAPI("GetOrderEntries", apiErr)
 		}
+	})
+
+	// Line copies: the backfill's bulk fill, the writers' sync, and the reports read from the copies through
+	// the covering keys they force.
+	t.Run("line copies", func(t *testing.T) {
+		b := NewLineCopyBackfill(q, q)
+		cursor := ""
+		for {
+			next, _, done, err := b.Batch(ctx, &backfill.Meter{}, cursor, 200)
+			check("LineCopyBackfill.Batch", err)
+			if done || err != nil {
+				break
+			}
+			cursor = next
+		}
+		lineIDs := ids("SELECT id FROM sales_order_line LIMIT 5")
+		check("syncOrderLineCopies", syncOrderLineCopies(ctx, pool, lineIDs...))
+		check("syncAccountOrderCopies", syncAccountOrderCopies(ctx, pool, account))
+		check("syncPickCopies", syncPickCopies(ctx, pool, pickIDs[0]))
+
+		prev := lineCopiesDone.Load()
+		lineCopiesDone.Store(true)
+		t.Cleanup(func() { lineCopiesDone.Store(prev) })
+		analytics := NewAnalyticsRepo(q)
+		schedule := NewProductionScheduleInputRepo(q)
+		from, to := time.Date(2000, 1, 1, 0, 0, 0, 0, time.UTC), time.Now().UTC().AddDate(1, 0, 0)
+		for _, f := range []domain.OpenOrderFilter{
+			{AccountID: account},
+			{AccountID: account, CustomerIDs: buyers, CustomerGroupIDs: groups, ProductLineIDs: productLines, SalesRepIDs: []string{"acus_none"}},
+		} {
+			_, apiErr := analytics.GetOpenOrdersSummary(ctx, f)
+			checkAPI("GetOpenOrdersSummary from copies", apiErr)
+			_, apiErr = analytics.GetOpenOrderProducts(ctx, domain.AnalyzeOpenOrderProductsParams{OpenOrderFilter: f, Limit: 10})
+			checkAPI("GetOpenOrderProducts from copies", apiErr)
+			_, apiErr = analytics.ListOpenOrders(ctx, domain.ListOpenOrdersParams{OpenOrderFilter: f, Limit: 10})
+			checkAPI("ListOpenOrders from copies", apiErr)
+			_, apiErr = analytics.GetOpenOrderLineEntries(ctx, f, 50)
+			checkAPI("GetOpenOrderLineEntries from copies", apiErr)
+			_, apiErr = schedule.ListDeliveryOutcomes(ctx, account, from, to, domain.DeliveryFilters{CustomerIDs: f.CustomerIDs,
+				CustomerGroupIDs: f.CustomerGroupIDs, ProductLineIDs: f.ProductLineIDs, SalesRepIDs: f.SalesRepIDs})
+			checkAPI("ListDeliveryOutcomes from copies", apiErr)
+		}
+		_, _, apiErr := analytics.GetOpenOrderLines(ctx, account, orderIDs[0], nil)
+		checkAPI("GetOpenOrderLines from copies", apiErr)
 	})
 
 	t.Run("sales facts and reports", func(t *testing.T) {

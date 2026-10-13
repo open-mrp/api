@@ -653,6 +653,9 @@ func (r *pickRepoImpl) VoidAllLines(ctx context.Context, pickID string) *apierro
 	if err := r.queries.VoidAllPickLines(ctx, pickID); err != nil {
 		return tracing.Trace(span, db.MapSQLError(err))
 	}
+	if err := syncPickCopies(ctx, r.queries.DB(), pickID); err != nil {
+		return tracing.Trace(span, db.MapSQLError(err))
+	}
 	return nil
 }
 
@@ -687,6 +690,9 @@ func (r *pickRepoImpl) PickAllLines(ctx context.Context, pickID string) *apierro
 	defer span.End()
 
 	if err := r.queries.PickAllLines(ctx, sqlc.PickAllLinesParams{PickID: pickID}); err != nil {
+		return tracing.Trace(span, db.MapSQLError(err))
+	}
+	if err := syncPickCopies(ctx, r.queries.DB(), pickID); err != nil {
 		return tracing.Trace(span, db.MapSQLError(err))
 	}
 	return nil

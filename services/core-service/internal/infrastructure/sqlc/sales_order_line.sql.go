@@ -55,30 +55,45 @@ INSERT INTO sales_order_line (
     id, product_sku, product_description,
     line_item_number, product_id, item_id, sales_order_id,
     quantity_id, unit_price_id, unit_cost_id, metadata,
+    quantity_value, quantity_unit_id,
+    unit_price_value, unit_price_numerator_unit_id, unit_price_denominator_unit_id,
+    unit_cost_value, unit_cost_numerator_unit_id, unit_cost_denominator_unit_id,
     created_at, updated_at
 ) VALUES (
     ?, ?, ?,
     ?,
     ?, ?, ?,
     ?, ?, ?, ?,
+    ?, ?,
+    ?, ?, ?,
+    ?, ?, ?,
     NOW(3), NOW(3)
 )
 `
 
 type CreateSalesOrderLineParams struct {
-	ID                 string
-	ProductSku         string
-	ProductDescription sql.NullString
-	LineItemNumber     sql.NullInt32
-	ProductID          sql.NullString
-	ItemID             sql.NullString
-	SalesOrderID       string
-	QuantityID         string
-	UnitPriceID        string
-	UnitCostID         sql.NullString
-	Metadata           json.RawMessage
+	ID                         string
+	ProductSku                 string
+	ProductDescription         sql.NullString
+	LineItemNumber             sql.NullInt32
+	ProductID                  sql.NullString
+	ItemID                     sql.NullString
+	SalesOrderID               string
+	QuantityID                 string
+	UnitPriceID                string
+	UnitCostID                 sql.NullString
+	Metadata                   json.RawMessage
+	QuantityValue              sql.NullString
+	QuantityUnitID             sql.NullString
+	UnitPriceValue             sql.NullString
+	UnitPriceNumeratorUnitID   sql.NullString
+	UnitPriceDenominatorUnitID sql.NullString
+	UnitCostValue              sql.NullString
+	UnitCostNumeratorUnitID    sql.NullString
+	UnitCostDenominatorUnitID  sql.NullString
 }
 
+// The copies hold the values the line's quantity, price and cost rows were just created with.
 func (q *Queries) CreateSalesOrderLine(ctx context.Context, arg CreateSalesOrderLineParams) error {
 	_, err := q.db.ExecContext(ctx, createSalesOrderLine,
 		arg.ID,
@@ -92,6 +107,14 @@ func (q *Queries) CreateSalesOrderLine(ctx context.Context, arg CreateSalesOrder
 		arg.UnitPriceID,
 		arg.UnitCostID,
 		arg.Metadata,
+		arg.QuantityValue,
+		arg.QuantityUnitID,
+		arg.UnitPriceValue,
+		arg.UnitPriceNumeratorUnitID,
+		arg.UnitPriceDenominatorUnitID,
+		arg.UnitCostValue,
+		arg.UnitCostNumeratorUnitID,
+		arg.UnitCostDenominatorUnitID,
 	)
 	return err
 }

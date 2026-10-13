@@ -402,8 +402,10 @@ INSERT INTO quantity (id, value, unit_id, created_at, updated_at)
 VALUES (sqlc.arg('id'), sqlc.arg('value'), sqlc.arg('unit_id'), NOW(3), NOW(3));
 
 -- name: CreateInvoiceLine :exec
-INSERT INTO invoice_line (id, invoice_id, quantity_id, sales_order_line_id, created_at, updated_at)
-VALUES (sqlc.arg('id'), sqlc.arg('invoice_id'), sqlc.arg('quantity_id'), sqlc.arg('sales_order_line_id'), NOW(3), NOW(3));
+-- The copies hold the values the line's quantity row was just created with.
+INSERT INTO invoice_line (id, invoice_id, quantity_id, sales_order_line_id, quantity_value, quantity_unit_id, created_at, updated_at)
+VALUES (sqlc.arg('id'), sqlc.arg('invoice_id'), sqlc.arg('quantity_id'), sqlc.arg('sales_order_line_id'),
+    sqlc.arg('quantity_value'), sqlc.arg('quantity_unit_id'), NOW(3), NOW(3));
 
 -- name: GetBillToAddressIDByOrder :one
 -- The invoice bills to the order's billing address.

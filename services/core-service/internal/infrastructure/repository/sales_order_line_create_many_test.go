@@ -78,10 +78,13 @@ func TestCreateMany_BatchesOneInsertPerTable(t *testing.T) {
 		).
 		WillReturnResult(sqlmock.NewResult(0, 3))
 
+	// Each line carries copies of the values its quantity and rate rows were created with.
 	mock.ExpectExec("INSERT INTO sales_order_line").
 		WithArgs(
 			sqlmock.AnyArg(), "SKU-1", sqlmock.AnyArg(), int32(1), "prod_1", "itm_1", orderID, sqlmock.AnyArg(), sqlmock.AnyArg(), sqlmock.AnyArg(), []byte(`{"edi_line_item_id":"00010"}`),
+			"2", each, "10", usd, each, cost, usd, each,
 			sqlmock.AnyArg(), "SKU-2", sqlmock.AnyArg(), int32(2), "prod_2", "itm_2", orderID, sqlmock.AnyArg(), sqlmock.AnyArg(), sqlmock.AnyArg(), []byte(nil),
+			"3", each, "20", usd, each, nil, nil, nil,
 		).
 		WillReturnResult(sqlmock.NewResult(0, 2))
 

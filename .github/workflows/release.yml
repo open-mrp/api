@@ -171,33 +171,50 @@ jobs:
           echo "version=$version" >> "$GITHUB_OUTPUT"
           echo "Preparing schema for release $version"
 
-      - name: Install goose, pscale and the MySQL client
+      # Most pushes add no schema migration. Those still run the script below, which only talks to the
+      # PlanetScale API (closing deploy requests a since-bumped version left behind); goose, the MySQL
+      # client and schemasplit are only needed to cut a branch.
+      - name: Detect new schema migrations
+        id: changes
+        env:
+          BASE_REF: ${{ github.sha }}
+        run: |
+          set -euo pipefail
+          source ./scripts/release-migration-changes.sh
+          new="$(release_new_migrations "$(release_previous_tag "$BASE_REF")" "$BASE_REF" shared/db/migrations)"
+          if [ -n "$new" ]; then echo "core_schema=true"; else echo "core_schema=false"; fi | tee -a "$GITHUB_OUTPUT"
+
+      - name: Install pscale
+        run: |
+          set -euo pipefail
+          mkdir -p /usr/local/bin/ci-tools
+          PSCALE_V=$(awk '/planetscale/{gsub(/^v/,"",$2); print $2}' tools/tool-versions)
+          curl -sSL "https://github.com/planetscale/cli/releases/download/v${PSCALE_V}/pscale_${PSCALE_V}_linux_amd64.tar.gz" \
+            | tar xz -C /usr/local/bin/ci-tools pscale
+          chmod +x /usr/local/bin/ci-tools/pscale
+          echo "/usr/local/bin/ci-tools" >> "$GITHUB_PATH"
+
+      - name: Install goose and the MySQL client
+        if: steps.changes.outputs.core_schema == 'true'
         run: |
           set -euo pipefail
           sudo apt-get update -qq
           sudo apt-get install -y -qq mysql-client
 
-          mkdir -p /usr/local/bin/ci-tools
-
           GOOSE_V=$(awk '/goose/{gsub(/^v/,"",$2); print $2}' tools/tool-versions)
           curl -sSL "https://github.com/pressly/goose/releases/download/v${GOOSE_V}/goose_linux_x86_64" -o /usr/local/bin/ci-tools/goose
           chmod +x /usr/local/bin/ci-tools/goose
 
-          PSCALE_V=$(awk '/planetscale/{gsub(/^v/,"",$2); print $2}' tools/tool-versions)
-          curl -sSL "https://github.com/planetscale/cli/releases/download/v${PSCALE_V}/pscale_${PSCALE_V}_linux_amd64.tar.gz" \
-            | tar xz -C /usr/local/bin/ci-tools pscale
-          chmod +x /usr/local/bin/ci-tools/pscale
-
-          echo "/usr/local/bin/ci-tools" >> "$GITHUB_PATH"
-
       # schemasplit splits a release that changes more tables than one deploy request allows.
       - name: Set up Go
+        if: steps.changes.outputs.core_schema == 'true'
         uses: actions/setup-go@v7
         with:
           go-version-file: tools/go.mod
           cache-dependency-path: tools/go.sum
 
       - name: Build schemasplit
+        if: steps.changes.outputs.core_schema == 'true'
         run: |
           set -euo pipefail
           cd tools && go build -o /usr/local/bin/ci-tools/schemasplit ./schemasplit
@@ -255,6 +272,14 @@ jobs:
             echo "Merging deploys all of the above to production before any service image rolls."
             echo "If any of it fails, the rollout is skipped."
           } > /tmp/pr-comment.md
+
+          # Every push to main reruns this; only post when the plan or its deploy requests changed.
+          marker="<!-- migration-plan $(shasum -a 256 /tmp/pr-comment.md | cut -c1-16) -->"
+          if gh pr view "$PR" --repo "${{ github.repository }}" --json comments --jq '.comments[].body' | grep -qF "$marker"; then
+            echo "The release PR already carries this migration plan."
+            exit 0
+          fi
+          echo "$marker" >> /tmp/pr-comment.md
 
           gh pr comment "$PR" --repo "${{ github.repository }}" --body-file /tmp/pr-comment.md
 
@@ -388,7 +413,9 @@ jobs:
       # release with no migrations — the common case — never opens a connection to PlanetScale. This is
       # computed here in the workflow rather than in the scripts on purpose: a manual resume of an
       # already-tagged release runs this file from the default branch while the job checks out the tag,
-      # and only a workflow-level gate is guaranteed to be the fixed one.
+      # and only a workflow-level gate is guaranteed to be the fixed one. It mirrors
+      # scripts/release-migration-changes.sh: a migration is new when its goose version is absent at the
+      # previous tag, so an edit to one already shipped (which goose would never re-run) deploys nothing.
       - name: Detect database changes in this release
         id: changes
         env:
@@ -402,14 +429,19 @@ jobs:
             echo "No previous release tag; treating every migration as new."
           fi
 
+          versions_at() {
+            git ls-tree -r --name-only "$1" -- "$2" 2>/dev/null | grep '\.sql$' \
+              | sed -E 's|.*/||; s/_.*//' | grep -E '^[0-9]+$' | sed -E 's/^0+([0-9])/\1/' | sort -u || true
+          }
+
           changed_in() {
-            local dir="$1" files
+            local dir="$1" new
             if [ -n "$previous_tag" ]; then
-              files="$(git diff --name-only "$previous_tag" HEAD -- "$dir" 2>/dev/null || true)"
+              new="$(comm -23 <(versions_at HEAD "$dir") <(versions_at "$previous_tag" "$dir"))"
             else
-              files="$(git ls-tree -r --name-only HEAD -- "$dir" 2>/dev/null || true)"
+              new="$(versions_at HEAD "$dir")"
             fi
-            if echo "$files" | grep -q '\.sql$'; then echo true; else echo false; fi
+            if [ -n "$new" ]; then echo true; else echo false; fi
           }
 
           {

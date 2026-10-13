@@ -28,6 +28,7 @@ func TestAllocate_EarliestPromiseIsServedFirst(t *testing.T) {
 			FirmRequirement{ItemID: "itm_a", SalesOrderID: "so_early", SalesOrderNumber: "1001", DueWeek: 1, Units: 100},
 		),
 		nil,
+		nil,
 	)
 
 	if len(got.Allocations) != 1 {
@@ -49,6 +50,7 @@ func TestAllocate_SupplyCannotServeAnEarlierPromise(t *testing.T) {
 		[]Campaign{{ItemID: "itm_a", MachineID: "mc_1", WeekIndex: 6, Units: 500}},
 		firmFor(FirmRequirement{ItemID: "itm_a", SalesOrderID: "so_1", SalesOrderNumber: "1001", DueWeek: 2, Units: 100}),
 		nil,
+		nil,
 	)
 
 	if len(got.Allocations) != 0 {
@@ -67,6 +69,7 @@ func TestAllocate_OnHandCoversBeforeAnyCampaign(t *testing.T) {
 		[]Campaign{{ItemID: "itm_a", MachineID: "mc_1", WeekIndex: 0, Units: 100}},
 		firmFor(FirmRequirement{ItemID: "itm_a", SalesOrderID: "so_1", SalesOrderNumber: "1001", DueWeek: 3, Units: 60}),
 		map[string]float64{"itm_a": 60},
+		nil,
 	)
 
 	if len(got.Allocations) != 0 {
@@ -90,6 +93,7 @@ func TestAllocate_ManyToMany(t *testing.T) {
 			FirmRequirement{ItemID: "itm_a", SalesOrderID: "so_1", SalesOrderNumber: "1001", DueWeek: 2, Units: 40},
 			FirmRequirement{ItemID: "itm_a", SalesOrderID: "so_2", SalesOrderNumber: "1002", DueWeek: 2, Units: 150},
 		),
+		nil,
 		nil,
 	)
 
@@ -119,6 +123,7 @@ func TestAllocate_PartialCoverageReportsBothSides(t *testing.T) {
 		[]Campaign{{ItemID: "itm_a", MachineID: "mc_1", WeekIndex: 0, Units: 30}},
 		firmFor(FirmRequirement{ItemID: "itm_a", SalesOrderID: "so_1", SalesOrderNumber: "1001", DueWeek: 2, Units: 100}),
 		nil,
+		nil,
 	)
 
 	if len(got.Uncovered) != 1 {
@@ -144,9 +149,9 @@ func TestAllocate_Deterministic(t *testing.T) {
 		FirmRequirement{ItemID: "itm_a", SalesOrderID: "so_2", SalesOrderNumber: "1002", DueWeek: 2, Units: 40},
 	)
 
-	first := AllocateCampaignsToOrders(campaigns, firm, nil)
+	first := AllocateCampaignsToOrders(campaigns, firm, nil, nil)
 	for range 50 {
-		got := AllocateCampaignsToOrders(campaigns, firm, nil)
+		got := AllocateCampaignsToOrders(campaigns, firm, nil, nil)
 		if len(got.Allocations) != len(first.Allocations) {
 			t.Fatal("allocation count changed between runs")
 		}

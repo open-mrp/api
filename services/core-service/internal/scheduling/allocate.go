@@ -34,12 +34,12 @@ type AllocationResult struct {
 
 // AllocateCampaignsToOrders decides which campaign is building which order.
 //
-// Earliest promise first, and supply consumed in the order it becomes available: stock on hand, then each campaign as it lands. A requirement can only be served by supply that exists by the week it is due — a campaign in week 6 cannot fill an order the constraint owed in week 2, and pretending otherwise is exactly how a plan reports itself achievable while the floor misses dates.
+// Earliest promise first, and supply consumed in the order it becomes available: stock on hand, then each campaign as it lands. Committed stock only serves orders for the finished goods it can still become, narrowest first; the rest of the echelon serves anything. A requirement can only be served by supply that exists by the week it is due — a campaign in week 6 cannot fill an order the constraint owed in week 2, and pretending otherwise is exactly how a plan reports itself achievable while the floor misses dates.
 //
 // What is left after the walk is what the plan does not build in time, with the amount it does build recorded alongside. A partly-covered order is not a total miss and should not read as one.
 //
 // Deterministic: both sides are sorted before the walk, so the same plan and order book always produce the same links.
-func AllocateCampaignsToOrders(campaigns []Campaign, firm FirmSchedule, onHandByItem map[string]float64) AllocationResult {
+func AllocateCampaignsToOrders(campaigns []Campaign, firm FirmSchedule, onHandByItem map[string]float64, committedByItem map[string][]CommittedStock) AllocationResult {
 	out := AllocationResult{}
 
 	requirementsByItem := map[string][]FirmRequirement{}
@@ -83,13 +83,25 @@ func AllocateCampaignsToOrders(campaigns []Campaign, firm FirmSchedule, onHandBy
 		for i, c := range supply {
 			remaining[i] = c.Units
 		}
-		onHand := onHandByItem[itemID]
+		pools := newCommittedPools(committedByItem[itemID])
+		onHand := onHandByItem[itemID] - committedTotal(pools)
 
 		for _, req := range requirements {
 			needed := req.Units
 
 			// Stock already on the floor covers the earliest promises, and carries no campaign to point at.
-			if onHand > 0 {
+			for i := range pools {
+				if needed <= 0 {
+					break
+				}
+				if pools[i].onHand <= 0 || !containsSorted(pools[i].finished, req.FinishedItemID) {
+					continue
+				}
+				used := min(pools[i].onHand, needed)
+				pools[i].onHand -= used
+				needed -= used
+			}
+			if onHand > 0 && needed > 0 {
 				used := min(onHand, needed)
 				onHand -= used
 				needed -= used

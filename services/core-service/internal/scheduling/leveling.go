@@ -71,6 +71,37 @@ type LevelingItem struct {
 	LotUnitID string
 	// FirmByWeek is the dated order book for this item, indexed by week. Nil when nothing is on order, which is the case the plan behaved as before this existed.
 	FirmByWeek []float64
+	// Committed is the part of the echelon that has branched toward particular finished goods, and FinishedDemand is those goods' own demand. Empty means the echelon is one fungible pool, which is how the plan behaved before branch points were modeled.
+	Committed      []CommittedStock
+	FinishedDemand []FinishedDemand
+}
+
+// committedCover is how much of the item's committed stock counts toward its trigger in the given week.
+//
+// Each finished good is owed the slice of the trigger that its own demand over the lead time makes up, and committed stock counts only up to what its own goods are owed. The rest is real stock in the wrong colorway: counting it would let a surplus of black hide a shortage of blue.
+func (i LevelingItem) committedCover(pools []committedPool, week int, trigger float64) float64 {
+	if len(pools) == 0 || trigger <= 0 {
+		return 0
+	}
+	end := week + i.leadTimeWeeks()
+
+	var pooled float64
+	for w := week; w <= end; w++ {
+		pooled += i.demandForWeek(w)
+	}
+	if pooled <= 0 {
+		return 0
+	}
+
+	need := make(map[string]float64, len(i.FinishedDemand))
+	for _, d := range i.FinishedDemand {
+		var own float64
+		for w := week; w <= end; w++ {
+			own += d.forWeek(w)
+		}
+		need[d.ItemID] = trigger * own / pooled
+	}
+	return coverable(pools, need)
 }
 
 // hasFirmDemand reports whether anything is on order for this item inside the horizon.
@@ -196,8 +227,11 @@ func Level(items []LevelingItem, machines []Machine, s Settings, pinned []Pinned
 	campaignUnits := make(map[string]float64, len(active))
 	campaignHours := make(map[string]float64, len(active))
 
+	// position is the uncommitted echelon: greige and any stage that can still become every finished good. Committed stock is tracked per pool beside it, because it can only serve the demand of the goods it can still become.
+	pools := make(map[string][]committedPool, len(sortedItems))
 	for _, item := range sortedItems {
-		position[item.Policy.ItemID] = item.Policy.OnHandEchelon
+		pools[item.Policy.ItemID] = newCommittedPools(item.Committed)
+		position[item.Policy.ItemID] = item.Policy.OnHandEchelon - committedTotal(pools[item.Policy.ItemID])
 		greigePosition[item.Policy.ItemID] = item.Policy.OnHandGreige
 	}
 
@@ -233,7 +267,7 @@ func Level(items []LevelingItem, machines []Machine, s Settings, pinned []Pinned
 		id := item.Policy.ItemID
 		// Short on either count is a candidate for starvation: an item whose greige buffer is dry needs building even where its echelon reads full, and if it never wins a slot the plant could not afford that buffer — which is the same capacity signal.
 		greigeDry := s.GreigeBufferEnabled && item.Policy.OnHandGreige < greigeFloor[id]
-		if item.Policy.OnHandEchelon < trigger[id] || greigeDry {
+		if position[id]+item.committedCover(pools[id], 0, trigger[id]) < trigger[id] || greigeDry {
 			starved[item.Policy.SKU] = true
 		}
 	}
@@ -284,12 +318,19 @@ func Level(items []LevelingItem, machines []Machine, s Settings, pinned []Pinned
 			}
 		}
 
+		// The position each trigger is compared against: the uncommitted echelon plus whatever committed stock its own goods are owed this week.
+		effective := make(map[string]float64, len(active))
+		for _, item := range active {
+			id := item.Policy.ItemID
+			effective[id] = position[id] + item.committedCover(pools[id], week, weekTrigger[id])
+		}
+
 		due := make([]LevelingItem, 0, len(active))
 		for _, item := range active {
 			id := item.Policy.ItemID
 			// Due on either count: the echelon has fallen below its reorder point, or the physical greige store has fallen below its own floor even though the family reads covered. The second is what keeps a buffer of undifferentiated greige in front of finishing so it can build the colorways that are actually short. The greige store is tracked even when the buffer is off (so it can be shown), and it drifts negative as demand is drawn down, so the floor check is guarded by the flag rather than by the floor being zero.
 			greigeDry := s.GreigeBufferEnabled && greigePosition[id] < greigeFloor[id]
-			if position[id] < weekTrigger[id] || greigeDry {
+			if effective[id] < weekTrigger[id] || greigeDry {
 				due = append(due, item)
 			}
 		}
@@ -300,8 +341,8 @@ func Level(items []LevelingItem, machines []Machine, s Settings, pinned []Pinned
 			if mtoI != mtoJ {
 				return mtoI
 			}
-			gapI := position[due[i].Policy.ItemID] - due[i].Policy.ReorderPoint
-			gapJ := position[due[j].Policy.ItemID] - due[j].Policy.ReorderPoint
+			gapI := effective[due[i].Policy.ItemID] - due[i].Policy.ReorderPoint
+			gapJ := effective[due[j].Policy.ItemID] - due[j].Policy.ReorderPoint
 			if gapI != gapJ {
 				return gapI < gapJ
 			}
@@ -314,7 +355,7 @@ func Level(items []LevelingItem, machines []Machine, s Settings, pinned []Pinned
 			// A make-to-order campaign is sized to what is actually short, not to an economic lot: the economic quantity exists to amortize a setup across future demand, and there is no future demand to amortize against — only the order in front of it.
 			units := campaignUnits[id]
 			if item.Policy.IsMakeToOrder() {
-				shortfall := weekTrigger[id] - position[id]
+				shortfall := weekTrigger[id] - effective[id]
 				if shortfall <= 0 {
 					continue
 				}
@@ -374,9 +415,11 @@ func Level(items []LevelingItem, machines []Machine, s Settings, pinned []Pinned
 		for _, item := range sortedItems {
 			id := item.Policy.ItemID
 			demand := item.demandForWeek(week)
-			position[id] -= demand
+			// Committed stock serves its own goods' demand first; the uncommitted echelon carries the rest.
+			served := consume(pools[id], item.FinishedDemand, week)
+			position[id] -= max(demand-served, 0)
 			greigePosition[id] -= demand
-			result.ProjectedOnHand[id][week] = position[id]
+			result.ProjectedOnHand[id][week] = position[id] + committedTotal(pools[id])
 			result.ProjectedGreigeOnHand[id][week] = greigePosition[id]
 		}
 	}

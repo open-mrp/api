@@ -825,8 +825,11 @@ func TestDashCustomers_RegisteringAsAnExistingCustomer(t *testing.T) {
 	t.Parallel()
 	person, _ := dashCustomersNewPerson(t)
 	number := searchToken("e2edcreg")
-	customerID := dashCustomersNew(t, "e2e-dc-reg-existing", map[string]any{"number": number})
-	body := map[string]any{"account_slug": SeedAccountSlug, "is_existing_customer": true, "customer_number": number}
+	customerID := dashCustomersNew(t, "e2e-dc-reg-existing", map[string]any{
+		"number":          number,
+		"bill_to_address": map[string]any{"name": "Billing", "street_line_1": "1 Main St", "locality": "Springfield", "state": "IL", "postal_code": "62701", "country": "US"},
+	})
+	body := map[string]any{"account_slug": SeedAccountSlug, "is_existing_customer": true, "customer_number": number, "lookup_postal_code": "62701"}
 
 	status, resp, err := person.Post(dashCustomersRegistrationPath, body, newIdempotencyKey())
 	require.NoError(t, err)
@@ -839,8 +842,8 @@ func TestDashCustomers_RegisteringAsAnExistingCustomer(t *testing.T) {
 	assert.Equal(t, []string{customerID}, dashCustomersVendorAccounts(t, person), "registering twice links once")
 
 	for name, b := range map[string]map[string]any{
-		"an unknown number": {"account_slug": SeedAccountSlug, "is_existing_customer": true, "customer_number": searchToken("e2edcnone")},
-		"an unknown seller": {"account_slug": searchToken("e2edcnoslug"), "is_existing_customer": true, "customer_number": number},
+		"an unknown number": {"account_slug": SeedAccountSlug, "is_existing_customer": true, "customer_number": searchToken("e2edcnone"), "lookup_postal_code": "62701"},
+		"an unknown seller": {"account_slug": searchToken("e2edcnoslug"), "is_existing_customer": true, "customer_number": number, "lookup_postal_code": "62701"},
 	} {
 		status, resp, err := person.Post(dashCustomersRegistrationPath, b, newIdempotencyKey())
 		require.NoError(t, err)

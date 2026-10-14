@@ -11,7 +11,7 @@ replace github.com/open-mrp/api => ../
 require (
 	github.com/go-sql-driver/mysql v1.10.1
 	github.com/open-mrp/api v1.1.6
-	github.com/open-mrp/apikit v0.2.0
+	github.com/open-mrp/apikit v0.3.0
 	github.com/stretchr/testify v1.12.1
 	golang.org/x/tools v0.51.0
 	gopkg.in/yaml.v3 v3.0.1

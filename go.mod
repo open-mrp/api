@@ -19,7 +19,7 @@ require (
 	github.com/golang-jwt/jwt/v5 v5.3.1
 	github.com/google/uuid v1.6.0
 	github.com/jackc/pgx/v5 v5.11.0
-	github.com/open-mrp/apikit v0.2.0
+	github.com/open-mrp/apikit v0.3.0
 	github.com/rabbitmq/amqp091-go v1.15.0
 	github.com/robfig/cron/v3 v3.0.1
 	github.com/shopspring/decimal v1.5.0

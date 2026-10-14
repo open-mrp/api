@@ -144,6 +144,7 @@ var typeRegistry = map[string]any{
 	"ActorType":                       ActorType(""),
 	"SystemActor":                     SystemActor(""),
 	"RecordType":                      RecordType(""),
+	"PortalRegistrationLookupType":    PortalRegistrationLookupType(""),
 	"HTTPMethod":                      HTTPMethod(""),
 	"CommissionPolicy":                CommissionPolicy(""),
 	"AccountRelationNotificationType": AccountRelationNotificationType(""),

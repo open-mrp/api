@@ -50,10 +50,10 @@ client_settings:
   # stlc fork does not honor the upstream `send_openapi_info_version_as_header`
   # key, so we emit it as a default header instead. `version_header: true` marks
   # it as the API-version header; `value` is kept in sync with the spec's
-  # info.version by `make stainless` (see tools/apidocs/stainless.go).
+  # info.version by `make stainless` (see apikit openapi.WriteStainlessConfig).
   default_headers:
     OpenMRP-Version:
-      value: "1.0.forge-preview.9"
+      value: "1.0.forge"
       version_header: true
   bearer_token_refresh:
     method: PUT
@@ -144,6 +144,7 @@ resources:
           api_key: '#/components/schemas/APIKey'
           create_api_key_request: '#/components/schemas/CreateAPIKeyRequest'
           created_api_key: '#/components/schemas/CreatedAPIKey'
+          deleted: '#/components/schemas/Deleted'
           geolocation: '#/components/schemas/Geolocation'
           list_api_key: '#/components/schemas/List_APIKey'
           owner: '#/components/schemas/Owner'
@@ -353,7 +354,7 @@ resources:
           audit_field_change: '#/components/schemas/AuditFieldChange'
           list_audit_event: '#/components/schemas/List_AuditEvent'
           list_audit_field_change: '#/components/schemas/List_AuditFieldChange'
-          list_object_type: '#/components/schemas/List_ObjectType'
+          list_type: '#/components/schemas/List_Type'
       addresses:
         methods:
           retrieve_suggestions: get /v1/core/addresses/suggestions
@@ -377,17 +378,21 @@ resources:
         models:
           email_log: '#/components/schemas/EmailLog'
           list_email_log: '#/components/schemas/List_EmailLog'
-      jobs:
+      async_jobs:
         methods:
-          retrieve: get /v1/core/jobs/{id}
-          cancel: post /v1/core/jobs/{id}/cancel
+          retrieve: get /v1/core/async-jobs/{id}
+        subresources:
+          actions:
+            methods:
+              cancel: post /v1/core/async-jobs/{id}/actions/cancel
         models:
-          job: '#/components/schemas/Job'
-          job_export: '#/components/schemas/JobExport'
-          job_result: '#/components/schemas/JobResult'
-          list_job_result: '#/components/schemas/List_JobResult'
-          quota_info: '#/components/schemas/QuotaInfo'
-          response_error: '#/components/schemas/ResponseError'
+          async_job: '#/components/schemas/AsyncJob'
+          async_job_entity: '#/components/schemas/AsyncJob_Entity'
+          async_job_export: '#/components/schemas/AsyncJobExport'
+          async_job_result_entity: '#/components/schemas/AsyncJobResult_Entity'
+          error_object: '#/components/schemas/ErrorObject'
+          field_error_object: '#/components/schemas/FieldErrorObject'
+          list_async_job_result_entity: '#/components/schemas/List_AsyncJobResult_Entity'
       analytics:
         methods:
           update_sales: put /v1/core/analytics/sales

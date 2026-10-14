@@ -30,6 +30,7 @@ func (e *DeleteMessagingGroupEndpoint) Materialize() *apiendpoint.APIEndpoint[*D
 		Method:            http.MethodDelete,
 		Route:             "/v1/messaging/groups/{id}",
 		SuccessStatusCode: http.StatusOK,
+		ObjectType:        constants.ObjectTypeMessagingGroup,
 		Public:            true,
 		Preview:           true,
 		Auth:              authz.Policy{Permissions: []types.Permission{{Domain: types.PermissionDomainMessaging, Action: types.ActionDelete}}},

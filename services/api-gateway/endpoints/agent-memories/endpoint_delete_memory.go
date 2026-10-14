@@ -31,6 +31,7 @@ func (e *DeleteMemoryEndpoint) Materialize() *apiendpoint.APIEndpoint[*DeleteMem
 		Route:             "/v1/ai/memories/{id}",
 		ContentType:       "application/json",
 		SuccessStatusCode: http.StatusOK,
+		ObjectType:        constants.ObjectTypeAgentMemory,
 		Public:            true,
 		AgentTool:         true,
 		Preview:           true,

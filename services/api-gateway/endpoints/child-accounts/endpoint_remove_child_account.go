@@ -31,6 +31,7 @@ func (e *RemoveChildAccountEndpoint) Materialize() *apiendpoint.APIEndpoint[*Rem
 		Route:             "/v1/identity/child-accounts/{child_account_id}",
 		ContentType:       "application/json",
 		SuccessStatusCode: http.StatusOK,
+		ObjectType:        constants.ObjectTypeChildAccount,
 		Public:            false,
 		AgentTool:         true,
 		Preview:           true,

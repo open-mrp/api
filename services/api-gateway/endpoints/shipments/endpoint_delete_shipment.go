@@ -31,6 +31,7 @@ func (e *DeleteShipmentEndpoint) Materialize() *apiendpoint.APIEndpoint[*DeleteS
 		Route:             "/v1/operations/shipments/{id}",
 		ContentType:       "application/json",
 		SuccessStatusCode: http.StatusOK,
+		ObjectType:        constants.ObjectTypeShipment,
 		Public:            false,
 		AgentTool:         true,
 		Preview:           true,

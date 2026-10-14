@@ -31,6 +31,7 @@ func (e *DeleteScanningStationEndpoint) Materialize() *apiendpoint.APIEndpoint[*
 		ContentType:       "application/json",
 		Route:             "/v1/operations/scanning-stations/{id}",
 		SuccessStatusCode: http.StatusOK,
+		ObjectType:        constants.ObjectTypeScanningStation,
 		Public:            true,
 		AgentTool:         true,
 		Auth:              authz.Policy{Permissions: []types.Permission{{Domain: types.PermissionDomainScanningStations, Action: types.ActionDelete}}},

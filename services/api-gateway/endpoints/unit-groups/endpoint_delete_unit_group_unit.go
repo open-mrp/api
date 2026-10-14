@@ -33,6 +33,7 @@ func (e *DeleteUnitGroupUnitEndpoint) Materialize() *apiendpoint.APIEndpoint[*De
 		Route:             "/v1/catalog/unit-groups/{unit_group_id}/units/{id}",
 		ContentType:       "application/json",
 		SuccessStatusCode: http.StatusOK,
+		ObjectType:        constants.ObjectTypeUnitGroupUnit,
 		Public:            true,
 		AgentTool:         true,
 		Auth:              authz.Policy{Permissions: []types.Permission{{Domain: types.PermissionDomainUnitGroups, Action: types.ActionDelete}}},

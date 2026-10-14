@@ -153,7 +153,7 @@ func parseEndpointDecls(t *testing.T, root string, domains, actions map[string]s
 	t.Helper()
 	handlerRe := regexp.MustCompile(`svc\.\([A-Za-z]+\)\.([A-Za-z0-9_]+)`)
 	permRe := regexp.MustCompile(`\{(?:Domain: )?types\.PermissionDomain([A-Za-z]+), (?:Action: )?types\.Action([A-Za-z]+)\}`)
-	counterpartiesRe := regexp.MustCompile(`apiendpoint\.Counterparties\(types\.Action([A-Za-z]+)\)`)
+	counterpartiesRe := regexp.MustCompile(`authz\.Counterparties\(types\.Action([A-Za-z]+)\)`)
 	var out []endpointDecl
 	_ = filepath.WalkDir(filepath.Join(root, "services/api-gateway/endpoints"), func(path string, d os.DirEntry, err error) error {
 		if err != nil || d.IsDir() || !strings.HasSuffix(path, ".go") || strings.HasSuffix(path, "_test.go") {
@@ -168,7 +168,7 @@ func parseEndpointDecls(t *testing.T, root string, domains, actions map[string]s
 			slug:      strings.TrimPrefix(strings.TrimSuffix(filepath.Base(path), ".go"), "endpoint_"),
 			folder:    filepath.Base(filepath.Dir(path)),
 			perms:     map[string]bool{},
-			roleAdmin: regexp.MustCompile(`RequiredRoleType:\s*constants\.RoleTypeAdmin`).MatchString(src),
+			roleAdmin: regexp.MustCompile(`RoleType:\s*constants\.RoleTypeAdmin`).MatchString(src),
 		}
 		if m := handlerRe.FindStringSubmatch(src); m != nil {
 			e.handler = m[1]

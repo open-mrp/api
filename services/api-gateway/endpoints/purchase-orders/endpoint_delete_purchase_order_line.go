@@ -33,6 +33,7 @@ func (e *DeletePurchaseOrderLineEndpoint) Materialize() *apiendpoint.APIEndpoint
 		ContentType:       "application/json",
 		Route:             "/v1/operations/purchase-orders/{id}/lines/{line_id}",
 		SuccessStatusCode: http.StatusOK,
+		ObjectType:        constants.ObjectTypePurchaseOrderLine,
 		Public:            false,
 		AgentTool:         true,
 		Preview:           true,

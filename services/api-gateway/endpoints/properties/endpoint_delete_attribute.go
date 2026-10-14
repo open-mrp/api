@@ -33,6 +33,7 @@ func (e *DeleteAttributeEndpoint) Materialize() *apiendpoint.APIEndpoint[*Delete
 		Route:             CatalogPropertyAttributeRoute,
 		ContentType:       "application/json",
 		SuccessStatusCode: http.StatusOK,
+		ObjectType:        constants.ObjectTypeAttribute,
 		Public:            true,
 		AgentTool:         true,
 		Auth:              authz.Policy{Permissions: []types.Permission{{Domain: types.PermissionDomainProperties, Action: types.ActionDelete}}},

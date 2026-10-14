@@ -33,6 +33,7 @@ func (e *RemoveAgentParticipantEndpoint) Materialize() *apiendpoint.APIEndpoint[
 		ContentType:       "application/json",
 		Route:             "/v1/messaging/conversations/{id}/agents/{pid}",
 		SuccessStatusCode: http.StatusOK,
+		ObjectType:        constants.ObjectTypeConversationParticipant,
 		Public:            false,
 		Preview:           true,
 		Auth:              authz.Policy{Permissions: []types.Permission{{Domain: types.PermissionDomainMessaging, Action: types.ActionDelete}}},

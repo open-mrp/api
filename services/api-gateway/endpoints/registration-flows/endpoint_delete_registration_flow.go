@@ -29,6 +29,7 @@ func (e *DeleteRegistrationFlowEndpoint) Materialize() *apiendpoint.APIEndpoint[
 		Route:             "/v1/sales/registration-flows/{id}",
 		ContentType:       "application/json",
 		SuccessStatusCode: http.StatusOK,
+		ObjectType:        constants.ObjectTypeRegistrationFlow,
 		Public:            false,
 		AgentTool:         true,
 		Preview:           true,

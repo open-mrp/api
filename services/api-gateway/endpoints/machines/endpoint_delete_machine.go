@@ -31,6 +31,7 @@ func (e *DeleteMachineEndpoint) Materialize() *apiendpoint.APIEndpoint[*DeleteMa
 		ContentType:       "application/json",
 		Route:             "/v1/operations/machines/{id}",
 		SuccessStatusCode: http.StatusOK,
+		ObjectType:        constants.ObjectTypeMachine,
 		Public:            true,
 		AgentTool:         true,
 		Preview:           true,

@@ -31,6 +31,7 @@ func (e *RemoveConversationLinkEndpoint) Materialize() *apiendpoint.APIEndpoint[
 		ContentType:       "application/json",
 		Route:             "/v1/messaging/conversations/{id}/links/{link_id}",
 		SuccessStatusCode: http.StatusOK,
+		ObjectType:        constants.ObjectTypeConversationLink,
 		Public:            true,
 		AgentTool:         true,
 		Preview:           true,

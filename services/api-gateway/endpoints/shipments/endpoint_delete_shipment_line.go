@@ -33,6 +33,7 @@ func (e *DeleteShipmentLineEndpoint) Materialize() *apiendpoint.APIEndpoint[*Del
 		Route:             "/v1/operations/shipments/{shipment_id}/lines/{id}",
 		ContentType:       "application/json",
 		SuccessStatusCode: http.StatusOK,
+		ObjectType:        constants.ObjectTypeShipmentLine,
 		Public:            false,
 		AgentTool:         true,
 		Preview:           true,

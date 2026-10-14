@@ -7,11 +7,13 @@ import (
 	"sort"
 	"testing"
 
-	"github.com/open-mrp/api/services/api-gateway/pkg/costguard"
+	apiendpoint "github.com/open-mrp/apikit/endpoint"
+
+	"github.com/open-mrp/api/services/api-gateway/pkg/costdata"
 	"github.com/open-mrp/api/services/auth-service/pkg/types"
 )
 
-// costFieldAllowlist names fields costguard.IsCostName matches that are not the seller's cost data, keyed by "<Go type>.<Go field>".
+// costFieldAllowlist names fields costdata.IsCostName matches that are not the seller's cost data, keyed by "<Go type>.<Go field>".
 var costFieldAllowlist = map[string]string{
 	"analyticsep.AnalyzeCustomerPricingRequest.TargetGrossMargin": "a threshold the caller supplies, not a recorded cost",
 	"analyticsep.AnalyzeRealizedMarginsRequest.TargetGrossMargin": "a threshold the caller supplies, not a recorded cost",
@@ -46,19 +48,19 @@ func TestEndpointCostFieldsAreMarked(t *testing.T) {
 				found++
 				switch {
 				case site.unreachable != "":
-					t.Errorf("%s: %s is cost data but %s, so costguard cannot clear it", where, site.field, site.unreachable)
+					t.Errorf("%s: %s is cost data but %s, so sensitive.Redact cannot clear it", where, site.field, site.unreachable)
 				case site.keyed && site.typ != reflect.TypeFor[map[string]any]():
-					t.Errorf("%s: %s is tagged sensitive:\"cost_keys\" but is a %s; costguard clears cost-named keys only in a map[string]any", where, site.field, site.typ)
+					t.Errorf("%s: %s is tagged sensitive:\"cost_keys\" but is a %s; sensitive.Redact clears cost-named keys only in a map[string]any", where, site.field, site.typ)
 				case !site.tagged:
 					t.Errorf("%s: %s (json %q) reads as cost or margin data but is not tagged sensitive:\"cost\"; tag it, or add it to costFieldAllowlist with the reason it is not", where, site.field, site.path)
 				case site.response && !nullableKind(site.kind):
 					t.Errorf("%s: %s is tagged sensitive:\"cost\" but is a %s, which serializes as a zero rather than null once cleared; make it a pointer", where, site.field, site.kind)
 				}
 			}
-			if typ := ep.GetResponseType(); typ != nil && hasTaggedResponseSite(typ) && !costguard.HasCostFields(typ) {
+			if typ := ep.GetResponseType(); typ != nil && hasTaggedResponseSite(typ) && !costdata.HasCostFields(typ) {
 				t.Errorf("%s: its response carries a sensitive:\"cost\" field that costguard's plan does not reach", where)
 			}
-			if typ := ep.GetResponseType(); typ != nil && hasInternalSite(typ) && !costguard.HasInternalFields(typ) {
+			if typ := ep.GetResponseType(); typ != nil && hasInternalSite(typ) && !costdata.HasInternalFields(typ) {
 				t.Errorf("%s: its response carries a sensitive:\"internal\" field that costguard's plan does not reach", where)
 			}
 		}
@@ -76,23 +78,19 @@ func checkInternalSite(t *testing.T, where string, site costSite) {
 	t.Helper()
 	switch {
 	case site.unreachable != "":
-		t.Errorf("%s: %s is tagged sensitive:\"internal\" but %s, so costguard cannot clear it", where, site.field, site.unreachable)
+		t.Errorf("%s: %s is tagged sensitive:\"internal\" but %s, so sensitive.Redact cannot clear it", where, site.field, site.unreachable)
 	case !nullableKind(site.kind):
 		t.Errorf("%s: %s is tagged sensitive:\"internal\" but is a %s, which serializes as a zero rather than null once cleared; make it a pointer", where, site.field, site.kind)
 	}
 }
 
-func requiresOnlyCostsRead(ep any) bool {
-	spec := reflect.ValueOf(ep)
-	if spec.Kind() == reflect.Pointer {
-		spec = spec.Elem()
-	}
-	perms, ok := spec.FieldByName("RequiredPermissions").Interface().(types.AnyOfPermissions)
-	if !ok || len(perms) == 0 {
+func requiresOnlyCostsRead(ep apiendpoint.APIEndpointer) bool {
+	p, ok := endpointPolicy(ep)
+	if !ok || len(p.Permissions) == 0 {
 		return false
 	}
-	return !slices.ContainsFunc(perms, func(p types.Permission) bool {
-		return p != types.Permission{Domain: types.PermissionDomainCosts, Action: types.ActionRead}
+	return !slices.ContainsFunc(p.Permissions, func(perm types.Permission) bool {
+		return perm != types.Permission{Domain: types.PermissionDomainCosts, Action: types.ActionRead}
 	})
 }
 
@@ -145,15 +143,15 @@ func walkCostSites(typ reflect.Type, prefix, unreachable string, visited map[ref
 
 		path := joinPath(prefix, name)
 		field := fmt.Sprintf("%s.%s", typ, sf.Name)
-		if costguard.IsInternalField(sf) {
+		if costdata.IsInternalField(sf) {
 			*out = append(*out, costSite{path: path, field: field, kind: sf.Type.Kind(), internal: true, unreachable: unreachable})
 		}
-		if costguard.IsCostKeysField(sf) {
+		if costdata.IsCostKeysField(sf) {
 			*out = append(*out, costSite{path: path, field: field, kind: sf.Type.Kind(), typ: sf.Type, tagged: true, keyed: true, unreachable: unreachable})
 			continue
 		}
-		tagged := costguard.IsCostField(sf)
-		if tagged || costguard.IsCostName(name) {
+		tagged := costdata.IsCostField(sf)
+		if tagged || costdata.IsCostName(name) {
 			if _, allowed := costFieldAllowlist[field]; !allowed || tagged {
 				*out = append(*out, costSite{path: path, field: field, kind: sf.Type.Kind(), tagged: tagged, unreachable: unreachable})
 			}
@@ -238,7 +236,7 @@ func TestCostSites_flagsUnmarkedAndUnclearable(t *testing.T) {
 	if got["margin"].unreachable == "" {
 		t.Errorf("a cost field promoted from an unexported embedded struct must be reported as unreachable")
 	}
-	if !costguard.IsCostName("weighted_average_unit_cost") || costguard.IsCostName("unit_value") || costguard.IsCostName("costume") {
+	if !costdata.IsCostName("weighted_average_unit_cost") || costdata.IsCostName("unit_value") || costdata.IsCostName("costume") {
 		t.Errorf("IsCostName must match whole tokens only")
 	}
 }

@@ -33,6 +33,7 @@ func (e *DeleteServiceLevelEndpoint) Materialize() *apiendpoint.APIEndpoint[*Del
 		Route:             "/v1/operations/carriers/{carrier_id}/service-levels/{id}",
 		ContentType:       "application/json",
 		SuccessStatusCode: http.StatusOK,
+		ObjectType:        constants.ObjectTypeServiceLevel,
 		Public:            true,
 		AgentTool:         true,
 		Auth:              authz.Policy{Permissions: []types.Permission{{Domain: types.PermissionDomainCarriers, Action: types.ActionDelete}}},

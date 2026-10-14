@@ -1,11 +1,11 @@
 package main
 
 import (
-	"reflect"
 	"strings"
 
+	"github.com/open-mrp/apikit/openapi"
+
 	apiresource "github.com/open-mrp/api/services/api-gateway/pkg/resource"
-	"github.com/open-mrp/api/shared/contracts"
 )
 
 // routeSegmentToSampleID maps the route path segment immediately before a generic {id} parameter to a documentation sample ID from apiresource.
@@ -15,7 +15,7 @@ var routeSegmentToSampleID = map[string]string{
 	"production-schedules":         apiresource.SampleProductionScheduleID,
 	"announcements":                apiresource.SampleAnnouncementID,
 	"notifications":                apiresource.SampleNotificationID,
-	"jobs":                         apiresource.SampleAsyncJobID,
+	"async-jobs":                   apiresource.SampleAsyncJobID,
 	"units":                        apiresource.SampleUnitID,
 	"unit-groups":                  apiresource.SampleUnitGroupID,
 	"properties":                   apiresource.SamplePropertyID,
@@ -181,77 +181,6 @@ var fieldNameSampleIDs = map[string]string{
 	"ID":                 "", // resolved from route segment when path param is "id"
 }
 
-func pathParameterExample(reqType reflect.Type, field reflect.StructField, pathParamName, route string, paramSchema Schema) any {
-	if v := pathValueFromSchemaExample(reqType, field); v != nil {
-		return v
-	}
-	if v := sampleIDFromFieldName(field.Name); v != "" {
-		return v
-	}
-	if v := sampleIDFromPathParam(pathParamName, route); v != "" {
-		return v
-	}
-	return parameterExample(paramSchema)
-}
-
-func pathValueFromSchemaExample(reqType reflect.Type, field reflect.StructField) any {
-	ptrType := reflect.PointerTo(reqType)
-	if !ptrType.Implements(reflect.TypeFor[contracts.DocumentedType]()) {
-		return nil
-	}
-
-	example := reflect.New(reqType).Interface().(contracts.DocumentedType).SchemaExample()
-	if example == nil {
-		return nil
-	}
-
-	v := reflect.ValueOf(example)
-	for v.Kind() == reflect.Pointer {
-		if v.IsNil() {
-			return nil
-		}
-		v = v.Elem()
-	}
-
-	if v.Kind() == reflect.Struct {
-		fv := v.FieldByName(field.Name)
-		if fv.IsValid() && fv.Kind() == reflect.String && fv.String() != "" {
-			return fv.String()
-		}
-		return nil
-	}
-
-	m, ok := example.(map[string]any)
-	if !ok {
-		return nil
-	}
-	if val, ok := m[field.Name]; ok {
-		return normalizePathExampleValue(val)
-	}
-	if jsonTag := field.Tag.Get("json"); jsonTag != "" {
-		key := strings.Split(jsonTag, ",")[0]
-		if key != "" && key != "-" {
-			if val, ok := m[key]; ok {
-				return normalizePathExampleValue(val)
-			}
-		}
-	}
-	return nil
-}
-
-func normalizePathExampleValue(val any) any {
-	if val == nil {
-		return nil
-	}
-	if s, ok := val.(string); ok {
-		if s == "" {
-			return nil
-		}
-		return s
-	}
-	return val
-}
-
 func sampleIDFromFieldName(fieldName string) string {
 	if v, ok := fieldNameSampleIDs[fieldName]; ok {
 		return v
@@ -270,21 +199,9 @@ func sampleIDFromPathParam(pathParamName, route string) string {
 	if strings.HasPrefix(route, "/v1/settings/properties/") {
 		return apiresource.SampleSysPropertyID
 	}
-	segment := routeSegmentBeforeParam(route, "{id}")
+	segment := openapi.RouteSegmentBefore(route, "{id}")
 	if segment == "" {
 		return ""
 	}
 	return routeSegmentToSampleID[segment]
-}
-
-func routeSegmentBeforeParam(route, param string) string {
-	idx := strings.Index(route, param)
-	if idx <= 0 {
-		return ""
-	}
-	prefix := strings.TrimSuffix(route[:idx], "/")
-	if i := strings.LastIndex(prefix, "/"); i >= 0 {
-		return prefix[i+1:]
-	}
-	return prefix
 }

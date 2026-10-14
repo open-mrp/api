@@ -31,6 +31,7 @@ func (e *DeleteShippingTermEndpoint) Materialize() *apiendpoint.APIEndpoint[*Del
 		Route:             "/v1/operations/shipping-terms/{id}",
 		ContentType:       "application/json",
 		SuccessStatusCode: http.StatusOK,
+		ObjectType:        constants.ObjectTypeShippingTerm,
 		Public:            true,
 		AgentTool:         true,
 		Auth:              authz.Policy{Permissions: []types.Permission{{Domain: types.PermissionDomainShippingTerms, Action: types.ActionDelete}}},

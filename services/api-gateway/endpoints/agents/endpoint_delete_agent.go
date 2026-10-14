@@ -31,6 +31,7 @@ func (e *DeleteAgentEndpoint) Materialize() *apiendpoint.APIEndpoint[*DeleteAgen
 		Route:             "/v1/ai/agents/{id}",
 		ContentType:       "application/json",
 		SuccessStatusCode: http.StatusOK,
+		ObjectType:        constants.ObjectTypeAgentDefinition,
 		Public:            true,
 		AgentTool:         true,
 		Preview:           true,

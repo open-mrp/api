@@ -35,6 +35,7 @@ func (e *DeleteTerritoryEndpoint) Materialize() *apiendpoint.APIEndpoint[*Delete
 		Route:             "/v1/sales/accounts/{account_id}/territories/{id}",
 		ContentType:       "application/json",
 		SuccessStatusCode: http.StatusOK,
+		ObjectType:        constants.ObjectTypeTerritory,
 		Public:            false,
 		AgentTool:         true,
 		Preview:           true,

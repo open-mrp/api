@@ -31,6 +31,7 @@ func (e *DeletePaymentTermEndpoint) Materialize() *apiendpoint.APIEndpoint[*Dele
 		Route:             "/v1/finance/payment-terms/{id}",
 		ContentType:       "application/json",
 		SuccessStatusCode: http.StatusOK,
+		ObjectType:        constants.ObjectTypePaymentTerm,
 		Public:            true,
 		AgentTool:         true,
 		Auth:              authz.Policy{Permissions: []types.Permission{{Domain: types.PermissionDomainPaymentTerms, Action: types.ActionDelete}}},

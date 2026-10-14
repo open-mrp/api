@@ -6,6 +6,8 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/open-mrp/apikit/openapi"
+
 	"github.com/open-mrp/apikit/version"
 	"github.com/stretchr/testify/require"
 )
@@ -36,7 +38,7 @@ func TestSampleDataCompleteness(t *testing.T) {
 		{"internal", false},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
-			doc, err := buildOpenAPIDocument(groups, tc.publicOnly, nil, version.Latest().Version)
+			doc, err := openapi.Build(specConfig(groups, tc.publicOnly, nil, version.Latest().Version))
 			require.NoError(t, err)
 
 			paths, ok := doc["paths"].(map[string]any)

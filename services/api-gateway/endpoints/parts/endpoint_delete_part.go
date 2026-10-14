@@ -31,6 +31,7 @@ func (e *DeletePartEndpoint) Materialize() *apiendpoint.APIEndpoint[*DeletePartR
 		ContentType:       "application/json",
 		Route:             "/v1/catalog/parts/{id}",
 		SuccessStatusCode: http.StatusOK,
+		ObjectType:        constants.ObjectTypePart,
 		Public:            true,
 		AgentTool:         true,
 		Auth:              authz.Policy{Permissions: []types.Permission{{Domain: types.PermissionDomainParts, Action: types.ActionDelete}}, Counterparty: authz.Counterparties(types.ActionUpdate)},

@@ -31,6 +31,7 @@ func (e *DeleteSandboxEndpoint) Materialize() *apiendpoint.APIEndpoint[*DeleteSa
 		Route:             "/v1/core/sandboxes/{id}",
 		ContentType:       "application/json",
 		SuccessStatusCode: http.StatusAccepted,
+		ObjectType:        constants.ObjectTypeSandbox,
 		Public:            true,
 		AgentTool:         true,
 		Auth:              authz.Policy{Permissions: []types.Permission{{Domain: types.PermissionDomainSandbox, Action: types.ActionDelete}}},

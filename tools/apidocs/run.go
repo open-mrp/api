@@ -11,6 +11,8 @@ import (
 	"os"
 	"time"
 
+	"github.com/open-mrp/apikit/openapi"
+
 	"github.com/open-mrp/apikit/version"
 )
 
@@ -65,7 +67,7 @@ func Run(
 	ver := version.Latest().Version
 	logInfof("Generating OpenAPI spec for %s (version %s)...", *name, ver)
 
-	var transforms []Transform
+	var transforms []openapi.Transform
 	if *transformsPath != "" {
 		if _, err := os.Stat(*transformsPath); err == nil {
 			b, err := os.ReadFile(*transformsPath)
@@ -87,29 +89,39 @@ func Run(
 		return generateHTTPieWorkspace(groups, "httpie/httpie-space.json")
 	}
 
+	public := specConfig(groups, true, transforms, ver)
+	internal := specConfig(groups, false, transforms, ver)
+
 	if *agentToolsMode {
-		return generateAgentTools(groups)
+		return generateAgentTools(internal)
 	}
 
 	if !*onlyStainless {
 		start := time.Now()
-		if err := generate(groups, "specs/public_openapi_spec.json", true, transforms, ver); err != nil {
-			return err
-		}
-		if err := generate(groups, "specs/internal_openapi_spec.json", false, transforms, ver); err != nil {
-			return err
+		for path, cfg := range map[string]openapi.Config{
+			"specs/public_openapi_spec.json":   public,
+			"specs/internal_openapi_spec.json": internal,
+		} {
+			if err := openapi.WriteFile(cfg, path); err != nil {
+				return fmt.Errorf("generating spec %s: %w", path, err)
+			}
 		}
 		logInfof("OpenAPI spec generation completed in %s", time.Since(start).Round(time.Millisecond))
 	}
 
 	if !*skipStainless {
-		if err := generateStainlessConfigs(groups, ver); err != nil {
-			return err
+		for path, cfg := range map[string]openapi.Config{
+			"stainless/public/stainless.yml":   public,
+			"stainless/internal/stainless.yml": internal,
+		} {
+			if err := openapi.WriteStainlessConfig(cfg, path); err != nil {
+				return fmt.Errorf("generating Stainless config %s: %w", path, err)
+			}
 		}
 	}
 
 	if *withAgentTools {
-		if err := generateAgentTools(groups); err != nil {
+		if err := generateAgentTools(internal); err != nil {
 			return err
 		}
 	}

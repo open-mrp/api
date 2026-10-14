@@ -30,6 +30,7 @@ func (e *RevokeAPIKeyEndpoint) Materialize() *apiendpoint.APIEndpoint[*RevokeAPI
 		Route:             "/v1/auth/api-keys/{id}",
 		ContentType:       "application/json",
 		SuccessStatusCode: http.StatusOK,
+		ObjectType:        constants.ObjectTypeAPIKey,
 		Public:            true,
 		AgentTool:         true,
 		Auth:              authz.Policy{RoleType: constants.RoleTypeAdmin},

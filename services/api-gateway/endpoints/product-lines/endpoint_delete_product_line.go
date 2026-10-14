@@ -31,6 +31,7 @@ func (e *DeleteProductLineEndpoint) Materialize() *apiendpoint.APIEndpoint[*Dele
 		Route:             "/v1/catalog/product-lines/{id}",
 		ContentType:       "application/json",
 		SuccessStatusCode: http.StatusOK,
+		ObjectType:        constants.ObjectTypeProductLine,
 		Public:            true,
 		AgentTool:         true,
 		Auth:              authz.Policy{Permissions: []types.Permission{{Domain: types.PermissionDomainProductLines, Action: types.ActionDelete}}},

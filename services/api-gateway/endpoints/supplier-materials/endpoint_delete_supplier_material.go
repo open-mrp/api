@@ -35,6 +35,7 @@ func (e *DeleteSupplierMaterialEndpoint) Materialize() *apiendpoint.APIEndpoint[
 		ContentType:       "application/json",
 		Route:             "/v1/operations/suppliers/{supplier_id}/materials/{id}",
 		SuccessStatusCode: http.StatusOK,
+		ObjectType:        constants.ObjectTypeSupplierMaterial,
 		Public:            false,
 		AgentTool:         true,
 		Preview:           true,

@@ -31,6 +31,7 @@ func (e *DeleteMaterialEndpoint) Materialize() *apiendpoint.APIEndpoint[*DeleteM
 		ContentType:       "application/json",
 		Route:             "/v1/catalog/materials/{id}",
 		SuccessStatusCode: http.StatusOK,
+		ObjectType:        constants.ObjectTypeMaterial,
 		Public:            true,
 		AgentTool:         true,
 		Auth:              authz.Policy{Permissions: []types.Permission{{Domain: types.PermissionDomainMaterials, Action: types.ActionDelete}}, Counterparty: authz.Counterparties(types.ActionUpdate)},

@@ -32,6 +32,7 @@ func (e *DeleteOperatingCalendarClosureEndpoint) Materialize() *apiendpoint.APIE
 		Method:            http.MethodDelete,
 		Route:             "/v1/operations/operating-calendars/{id}/closures/{closure_id}",
 		SuccessStatusCode: http.StatusNoContent,
+		ObjectType:        constants.ObjectTypeOperatingCalendarClosure,
 		Public:            true,
 		AgentTool:         true,
 		Preview:           true,

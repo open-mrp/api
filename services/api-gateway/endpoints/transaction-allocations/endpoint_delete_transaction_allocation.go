@@ -31,6 +31,7 @@ func (e *DeleteTransactionAllocationEndpoint) Materialize() *apiendpoint.APIEndp
 		Route:             "/v1/finance/transaction-allocations/{id}",
 		ContentType:       "application/json",
 		SuccessStatusCode: http.StatusOK,
+		ObjectType:        constants.ObjectTypeTransactionAllocation,
 		Public:            false,
 		AgentTool:         true,
 		Preview:           true,

@@ -31,6 +31,7 @@ func (e *DeleteProductionRunEndpoint) Materialize() *apiendpoint.APIEndpoint[*De
 		ContentType:       "application/json",
 		Route:             "/v1/operations/production-runs/{id}",
 		SuccessStatusCode: http.StatusOK,
+		ObjectType:        constants.ObjectTypeProductionRun,
 		Public:            false,
 		AgentTool:         true,
 		Preview:           true,

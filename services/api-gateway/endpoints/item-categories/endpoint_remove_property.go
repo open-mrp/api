@@ -33,6 +33,7 @@ func (e *RemoveItemCategoryPropertyEndpoint) Materialize() *apiendpoint.APIEndpo
 		Route:             "/v1/catalog/item-categories/{id}/properties/{property_id}",
 		ContentType:       "application/json",
 		SuccessStatusCode: http.StatusOK,
+		ObjectType:        constants.ObjectTypeProperty,
 		Public:            true,
 		AgentTool:         true,
 		Auth:              authz.Policy{Permissions: []types.Permission{{Domain: types.PermissionDomainCategories, Action: types.ActionUpdate}}},

@@ -31,6 +31,7 @@ func (e *DeleteSalesOrderEndpoint) Materialize() *apiendpoint.APIEndpoint[*Delet
 		ContentType:       "application/json",
 		Route:             "/v1/sales/sales-orders/{id}",
 		SuccessStatusCode: http.StatusOK,
+		ObjectType:        constants.ObjectTypeSalesOrder,
 		Public:            true,
 		AgentTool:         true,
 		Preview:           true,

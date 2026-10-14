@@ -31,6 +31,7 @@ func (e *DeleteDepartmentEndpoint) Materialize() *apiendpoint.APIEndpoint[*Delet
 		ContentType:       "application/json",
 		Route:             "/v1/operations/departments/{id}",
 		SuccessStatusCode: http.StatusOK,
+		ObjectType:        constants.ObjectTypeDepartment,
 		Public:            true,
 		AgentTool:         true,
 		Preview:           true,

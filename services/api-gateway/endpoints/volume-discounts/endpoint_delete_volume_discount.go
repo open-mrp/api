@@ -33,6 +33,7 @@ func (e *DeleteVolumeDiscountEndpoint) Materialize() *apiendpoint.APIEndpoint[*D
 		Route:             "/v1/sales/volume-discounts/{id}",
 		ContentType:       "application/json",
 		SuccessStatusCode: http.StatusOK,
+		ObjectType:        constants.ObjectTypeVolumeDiscount,
 		Public:            true,
 		AgentTool:         true,
 		Preview:           true,

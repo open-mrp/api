@@ -33,6 +33,7 @@ func (e *DeleteAccountGroupEndpoint) Materialize() *apiendpoint.APIEndpoint[*Del
 		Route:             "/v1/sales/account-groups/{id}",
 		ContentType:       "application/json",
 		SuccessStatusCode: http.StatusOK,
+		ObjectType:        constants.ObjectTypeAccountGroup,
 		Public:            true,
 		AgentTool:         true,
 		Auth:              authz.Policy{Permissions: []types.Permission{{Domain: types.PermissionDomainCustomerGroups, Action: types.ActionDelete}}},

@@ -313,7 +313,7 @@ no-binaries: ## Check that no compiled binary or oversized file is tracked in gi
 
 tx-audit: ## Check that database transaction callbacks are safe to re-run after a deadlock
 	@echo "Auditing transaction callbacks..."
-	@cd tools && GOTOOLCHAIN=go1.27.0 go run ./txaudit --root ..
+	@cd tools && GOTOOLCHAIN=go1.27.0 go run github.com/open-mrp/apikit/cmd/txaudit -root .. -database publisher -external stripeClient,shippoClient,hubspotClient,vercelClient,mapsClient,notificationClient,billingClient,coreClient,authClient,platformClient,agentClient,addressValidator,portalDomainProvider,checkoutClient
 
 audit-gaps: ## Check that every gRPC handler that writes a record publishes an audit event (or is allowlisted)
 	@echo "Checking gRPC handlers for unaudited writes..."

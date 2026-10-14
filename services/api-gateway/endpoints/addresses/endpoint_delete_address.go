@@ -31,6 +31,7 @@ func (e *DeleteAddressEndpoint) Materialize() *apiendpoint.APIEndpoint[*DeleteAd
 		Route:             "/v1/sales/addresses/{id}",
 		ContentType:       "application/json",
 		SuccessStatusCode: http.StatusOK,
+		ObjectType:        constants.ObjectTypeAddress,
 		Public:            true,
 		AgentTool:         true,
 		Auth:              authz.Policy{Permissions: []types.Permission{{Domain: types.PermissionDomainAddresses, Action: types.ActionDelete}}, Counterparty: authz.Counterparties(types.ActionUpdate)},

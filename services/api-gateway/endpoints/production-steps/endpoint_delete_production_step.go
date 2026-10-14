@@ -31,6 +31,7 @@ func (e *DeleteProductionStepEndpoint) Materialize() *apiendpoint.APIEndpoint[*D
 		Route:             "/v1/operations/production-steps/{id}",
 		ContentType:       "application/json",
 		SuccessStatusCode: http.StatusOK,
+		ObjectType:        constants.ObjectTypeProductionStep,
 		Public:            false,
 		AgentTool:         true,
 		Preview:           true,

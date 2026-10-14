@@ -31,6 +31,7 @@ func (e *DeleteCustomerEndpoint) Materialize() *apiendpoint.APIEndpoint[*DeleteC
 		ContentType:       "application/json",
 		Route:             "/v1/sales/customers/{id}",
 		SuccessStatusCode: http.StatusOK,
+		ObjectType:        constants.ObjectTypeCustomer,
 		Public:            true,
 		AgentTool:         true,
 		Auth:              authz.Policy{Permissions: []types.Permission{{Domain: types.PermissionDomainCustomers, Action: types.ActionDelete}}},

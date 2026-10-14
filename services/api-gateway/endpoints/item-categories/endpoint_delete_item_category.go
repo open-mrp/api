@@ -31,6 +31,7 @@ func (e *DeleteItemCategoryEndpoint) Materialize() *apiendpoint.APIEndpoint[*Del
 		Route:             "/v1/catalog/item-categories/{id}",
 		ContentType:       "application/json",
 		SuccessStatusCode: http.StatusOK,
+		ObjectType:        constants.ObjectTypeItemCategory,
 		Public:            true,
 		AgentTool:         true,
 		Auth:              authz.Policy{Permissions: []types.Permission{{Domain: types.PermissionDomainCategories, Action: types.ActionDelete}}},

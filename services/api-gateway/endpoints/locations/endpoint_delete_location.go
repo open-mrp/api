@@ -31,6 +31,7 @@ func (e *DeleteLocationEndpoint) Materialize() *apiendpoint.APIEndpoint[*DeleteL
 		ContentType:       "application/json",
 		Route:             "/v1/operations/locations/{id}",
 		SuccessStatusCode: http.StatusOK,
+		ObjectType:        constants.ObjectTypeLocation,
 		Public:            true,
 		AgentTool:         true,
 		Auth:              authz.Policy{Permissions: []types.Permission{{Domain: types.PermissionDomainLocations, Action: types.ActionDelete}}},

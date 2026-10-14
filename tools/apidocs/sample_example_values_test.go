@@ -7,6 +7,8 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/open-mrp/apikit/openapi"
+
 	"github.com/open-mrp/apikit/version"
 	"github.com/stretchr/testify/require"
 )
@@ -27,7 +29,7 @@ func TestSampleExampleValues(t *testing.T) {
 		{"internal", false},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
-			built, err := buildOpenAPIDocument(groups, tc.publicOnly, nil, version.Latest().Version)
+			built, err := openapi.Build(specConfig(groups, tc.publicOnly, nil, version.Latest().Version))
 			require.NoError(t, err)
 
 			// The document is assembled from ordered maps; one JSON round-trip

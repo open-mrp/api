@@ -142,7 +142,6 @@ func assertEmailDNSRecords(t *testing.T, dom map[string]any, domain string) {
 	assert.Positive(t, cnames, "each DKIM signing key is a CNAME")
 }
 
-
 // TestCovMessagingEmailDomains_CreateAllFields is the "assert every response
 // field" test required by the pattern doc. There is no update leg for this
 // resource (immutable after create — see file header), so this only covers

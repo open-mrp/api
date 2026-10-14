@@ -14,29 +14,32 @@ import (
 	"github.com/open-mrp/apikit/field"
 )
 
-// Request to partially update an item category.
+// Request to update an item category.
 type UpdateItemCategoryRequest struct {
 	// Item category ID.
 	ItemCategoryID string `path:"id" validate:"required"`
-	// Display name of the item category.
+	// Display name, such as `Fasteners`.
+	//
+	// Unique (case-insensitive) among your account's categories.
 	Name field.Optional[string] `json:"name,omitzero" validate:"omitempty,max=255"`
-	// Free-form notes about the item category.
-	Notes field.Optional[string] `json:"notes,omitzero"`
+	// Properties the category's items vary by. On update, replaces the whole list.
+	//
+	// Property names must be unique within the category.
+	PropertyIDs field.Optional[[]string] `json:"property_ids,omitzero" validate:"omitempty,max=100"`
 }
 
-var sampleUpdateItemCategoryNotes = "Covers passive and active components; excludes assemblies."
 var sampleUpdateItemCategoryRequest = &UpdateItemCategoryRequest{
-	Name:  field.Some("Electronic Components"),
-	Notes: field.Some(sampleUpdateItemCategoryNotes),
+	Name:        field.Some("Electronic Components"),
+	PropertyIDs: field.Some([]string{apiresource.SamplePropertyID}),
 }
 
 func (*UpdateItemCategoryRequest) SchemaExample() any {
 	return apiexample.ValidateAndMarshalToMap(sampleUpdateItemCategoryRequest)
 }
 
-// Updates the name or notes of an item category owned by your account.
+// Updates an item category.
 //
-// Only the fields present in the request body are changed. A category's type is fixed at creation, and its unit group is changed through the Change Item Category Unit Group endpoint. System-owned categories cannot be updated.
+// Only fields you send are changed. `type` can't change after creation, and system categories can't be updated.
 type UpdateItemCategoryEndpoint struct{}
 
 func (e *UpdateItemCategoryEndpoint) Materialize() *apiendpoint.APIEndpoint[*UpdateItemCategoryRequest, *apiresource.ItemCategory] {
@@ -49,14 +52,10 @@ func (e *UpdateItemCategoryEndpoint) Materialize() *apiendpoint.APIEndpoint[*Upd
 		Public:            true,
 		AgentTool:         true,
 		Auth:              authz.Policy{Permissions: []types.Permission{{Domain: types.PermissionDomainCategories, Action: types.ActionUpdate}}},
-		Preview:           true,
 		ObjectType:        constants.ObjectTypeItemCategory,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *UpdateItemCategoryRequest) (*apiresource.ItemCategory, *apierror.APIError) {
 			return svc.(ItemCategorySvc).UpdateItemCategory
 		},
-		IncludeConfig: apiendpoint.IncludesFor(apiendpoint.IncludesParams{
-			ObjectType: constants.ObjectTypeItemCategory,
-			Fields:     []string{"owner", "owner.account", "properties", "unit_group", "unit_group.base_unit", "unit_group.associated_units", "unit_group.associated_units.unit"},
-		}),
+		IncludeConfig: itemCategoryIncludes(),
 	})
 }

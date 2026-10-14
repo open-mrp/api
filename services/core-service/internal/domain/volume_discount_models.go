@@ -65,6 +65,7 @@ type VolumeDiscountAttribute struct {
 	PropertyID string
 	CreatedAt  time.Time
 	UpdatedAt  time.Time
+	IsActive   bool
 }
 
 type VolumeDiscountUnit struct {

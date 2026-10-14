@@ -20,16 +20,18 @@ type UpdateAttributeRequest struct {
 	PropertyID string `path:"property_id" validate:"required"`
 	// Attribute ID.
 	AttributeID string `path:"id" validate:"required"`
-	// The selectable value this attribute represents, such as `Red`.
+	// The value, such as `Large`.
 	//
-	// Must be non-blank and unique across all attributes in the account, not just within the property.
-	Value field.Optional[string] `json:"value,omitzero"`
-	// Swatch color used to display this attribute in the UI.
+	// Unique (case-insensitive) within its property. A new value shows everywhere the attribute is assigned.
+	Value field.Optional[string] `json:"value,omitzero" validate:"omitempty,max=255"`
+	// Swatch color shown for the attribute.
 	ColorCode field.Optional[constants.Color] `json:"color,omitzero"`
-	// New position of this attribute relative to its siblings within the property, starting at `1`.
+	// Position within the property, starting at `1`.
 	//
-	// Must be at most the property's current attribute count; the attributes between the old and new positions shift to make room.
+	// At most the property's attribute count; the attributes between the old and new positions shift to make room.
 	SortOrder field.Optional[int32] `json:"sort_order,omitzero" validate:"omitempty,min=1"`
+	// `active` or `archived`. Archived attributes stay on the items that have them but can't be newly assigned.
+	Status field.Optional[constants.ArchiveStatus] `json:"status,omitzero"`
 }
 
 var sampleUpdateAttributeRequest = &UpdateAttributeRequest{
@@ -42,9 +44,9 @@ func (*UpdateAttributeRequest) SchemaExample() any {
 	return apiexample.ValidateAndMarshalToMap(sampleUpdateAttributeRequest)
 }
 
-// Partially updates an attribute.
+// Updates an attribute.
 //
-// Items reference attributes by ID, so changing the value renames the attribute everywhere it is already assigned.
+// Only fields you send are changed. A new `value` shows everywhere the attribute is assigned.
 type UpdateAttributeEndpoint struct{}
 
 func (e *UpdateAttributeEndpoint) Materialize() *apiendpoint.APIEndpoint[*UpdateAttributeRequest, *apiresource.Attribute] {
@@ -57,8 +59,11 @@ func (e *UpdateAttributeEndpoint) Materialize() *apiendpoint.APIEndpoint[*Update
 		Public:            true,
 		AgentTool:         true,
 		Auth:              authz.Policy{Permissions: []types.Permission{{Domain: types.PermissionDomainProperties, Action: types.ActionUpdate}}},
-		Preview:           true,
 		ObjectType:        constants.ObjectTypeAttribute,
+		IncludeConfig: apiendpoint.IncludesFor(apiendpoint.IncludesParams{
+			ObjectType: constants.ObjectTypeAttribute,
+			Fields:     []string{"property"},
+		}),
 		ServiceHandler: func(svc any) func(ctx context.Context, req *UpdateAttributeRequest) (*apiresource.Attribute, *apierror.APIError) {
 			return svc.(PropertySvc).UpdateAttribute
 		},

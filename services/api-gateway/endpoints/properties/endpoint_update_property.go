@@ -18,9 +18,9 @@ import (
 type UpdatePropertyRequest struct {
 	// Property ID.
 	PropertyID string `path:"id" validate:"required"`
-	// Display name of the property, such as `Color` or `Size`.
+	// Display name, such as `Size`.
 	//
-	// Must be unique within your account.
+	// Unique (case-insensitive) among your account's properties.
 	Name field.Optional[string] `json:"name,omitzero" validate:"omitempty,max=255"`
 }
 
@@ -32,7 +32,9 @@ func (*UpdatePropertyRequest) SchemaExample() any {
 	return apiexample.ValidateAndMarshalToMap(sampleUpdatePropertyRequest)
 }
 
-// Partially updates a property.
+// Updates a property.
+//
+// Only fields you send are changed.
 type UpdatePropertyEndpoint struct{}
 
 func (e *UpdatePropertyEndpoint) Materialize() *apiendpoint.APIEndpoint[*UpdatePropertyRequest, *apiresource.Property] {
@@ -45,7 +47,6 @@ func (e *UpdatePropertyEndpoint) Materialize() *apiendpoint.APIEndpoint[*UpdateP
 		Public:            true,
 		AgentTool:         true,
 		Auth:              authz.Policy{Permissions: []types.Permission{{Domain: types.PermissionDomainProperties, Action: types.ActionUpdate}}},
-		Preview:           true,
 		ObjectType:        constants.ObjectTypeProperty,
 		IncludeConfig: apiendpoint.IncludesFor(apiendpoint.IncludesParams{
 			ObjectType: constants.ObjectTypeProperty,

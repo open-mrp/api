@@ -1107,9 +1107,9 @@ func (s *itemSvcImpl) RemoveItemAttribute(ctx context.Context, itemID, attribute
 func categoryTypeMatchesItem(itemTypeCode, categoryTypeCode string) bool {
 	switch constants.ItemTypeCode(itemTypeCode) {
 	case constants.ItemTypeCodeMaterial:
-		return categoryTypeCode == string(constants.ItemCategoryTypeMaterial)
+		return categoryTypeCode == constants.ItemCategoryTypeMaterial.Code()
 	case constants.ItemTypeCodeProduct, constants.ItemTypeCodePart:
-		return categoryTypeCode == string(constants.ItemCategoryTypeProduct)
+		return categoryTypeCode == constants.ItemCategoryTypeProduct.Code()
 	default:
 		return false
 	}

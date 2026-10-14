@@ -114,7 +114,7 @@ func TestGetItem_EmbedsTheCategoryAndAttributePropertiesReadWithTheItem(t *testi
 	}
 	svc := NewItemSvc(&ItemSvcConfig{CoreClient: core})
 	ctx := include.WithLoadMeta(context.Background())
-	ctx = include.WithRequestedIncludes(ctx, []string{"category", "category.properties", "attributes"})
+	ctx = include.WithRequestedIncludes(ctx, []string{"category", "category.properties", "attributes", "attributes.property"})
 
 	item, apiErr := svc.GetItem(ctx, &RetrieveItemRequest{ItemID: "itm_1"})
 	if apiErr != nil {
@@ -125,7 +125,7 @@ func TestGetItem_EmbedsTheCategoryAndAttributePropertiesReadWithTheItem(t *testi
 	}
 
 	tree := include.NewIncludeTree()
-	for _, key := range []string{"category", "category.properties", "attributes"} {
+	for _, key := range []string{"category", "category.properties", "attributes", "attributes.property"} {
 		tree.Add(key)
 	}
 	if apiErr := include.ResolveIncludes(ctx, []any{item}, constants.ObjectTypeItem, tree); apiErr != nil {
@@ -139,5 +139,39 @@ func TestGetItem_EmbedsTheCategoryAndAttributePropertiesReadWithTheItem(t *testi
 	}
 	if item.Attributes == nil || len(item.Attributes.Data) != 1 || item.Attributes.Data[0].Property == nil || item.Attributes.Data[0].Property.Name != "Color" {
 		t.Errorf("attributes = %+v", item.Attributes)
+	}
+}
+
+// An attribute's property is expandable: including only attributes leaves it null and asks core for no properties.
+func TestGetItem_AttributePropertyIsNullUnlessIncluded(t *testing.T) {
+	t.Parallel()
+	core := &fakeItemCore{
+		t: t,
+		item: &pb.ItemInfo{
+			Id:         "itm_1",
+			Attributes: []*pb.ItemAttributeInfo{{Id: "at_1", Value: "Beige", PropertyId: "pp_1", Status: "active"}},
+		},
+	}
+	svc := NewItemSvc(&ItemSvcConfig{CoreClient: core})
+	ctx := include.WithLoadMeta(context.Background())
+	ctx = include.WithRequestedIncludes(ctx, []string{"attributes"})
+
+	item, apiErr := svc.GetItem(ctx, &RetrieveItemRequest{ItemID: "itm_1"})
+	if apiErr != nil {
+		t.Fatalf("GetItem() error = %v", apiErr)
+	}
+	if core.request.GetWithAttributeProperties() {
+		t.Fatalf("core was asked for attribute properties nobody included")
+	}
+	tree := include.NewIncludeTree()
+	tree.Add("attributes")
+	if apiErr := include.ResolveIncludes(ctx, []any{item}, constants.ObjectTypeItem, tree); apiErr != nil {
+		t.Fatalf("ResolveIncludes() error = %v", apiErr)
+	}
+	if item.Attributes == nil || len(item.Attributes.Data) != 1 {
+		t.Fatalf("attributes = %+v", item.Attributes)
+	}
+	if got := item.Attributes.Data[0]; got.Property != nil || got.Status != constants.ArchiveStatusActive {
+		t.Errorf("attribute = %+v, want status active and a null property", got)
 	}
 }

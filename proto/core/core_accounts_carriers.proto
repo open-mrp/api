@@ -539,6 +539,8 @@ message ItemAttributeInfo {
   string property_id = 5;
   google.protobuf.Timestamp created_at = 6;
   google.protobuf.Timestamp updated_at = 7;
+  // active | archived
+  string status = 8;
 }
 message ItemInfo {
   string id = 1;

@@ -20,7 +20,7 @@ type RetrieveAttributeRequest struct {
 	AttributeID string `path:"id" validate:"required"`
 }
 
-// Returns an attribute by ID within a property.
+// Retrieves an attribute.
 type RetrieveAttributeEndpoint struct{}
 
 func (e *RetrieveAttributeEndpoint) Materialize() *apiendpoint.APIEndpoint[*RetrieveAttributeRequest, *apiresource.Attribute] {
@@ -33,8 +33,11 @@ func (e *RetrieveAttributeEndpoint) Materialize() *apiendpoint.APIEndpoint[*Retr
 		Public:            true,
 		AgentTool:         true,
 		Auth:              authz.Policy{Permissions: []types.Permission{{Domain: types.PermissionDomainProperties, Action: types.ActionRead}}},
-		Preview:           true,
 		ObjectType:        constants.ObjectTypeAttribute,
+		IncludeConfig: apiendpoint.IncludesFor(apiendpoint.IncludesParams{
+			ObjectType: constants.ObjectTypeAttribute,
+			Fields:     []string{"property"},
+		}),
 		ServiceHandler: func(svc any) func(ctx context.Context, req *RetrieveAttributeRequest) (*apiresource.Attribute, *apierror.APIError) {
 			return svc.(PropertySvc).GetAttribute
 		},

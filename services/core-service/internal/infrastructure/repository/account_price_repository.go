@@ -211,6 +211,7 @@ func (r *accountPriceRepoImpl) fetchCategoriesAndAttributes(ctx context.Context,
 			ID:        a.ID,
 			Value:     a.Text,
 			ColorCode: a.ColorCode,
+			IsActive:  a.IsActive,
 			CreatedAt: a.CreatedAt,
 			UpdatedAt: a.UpdatedAt,
 		}

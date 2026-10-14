@@ -18,18 +18,18 @@ import (
 type CreateAttributeRequest struct {
 	// The property to add this attribute to.
 	PropertyID string `path:"property_id" validate:"required"`
-	// The selectable value this attribute represents, such as `Red`.
+	// The value, such as `Large`.
 	//
-	// Must be unique across all attributes in the account, not just within the property. Leading and trailing whitespace is trimmed.
-	Value string `json:"value" validate:"required"`
-	// Swatch color used to display this attribute in the UI.
-	//
-	// When omitted, one of the nine named colors (everything except `default`) is assigned at random.
+	// Unique (case-insensitive) within its property. Leading and trailing whitespace is trimmed.
+	Value string `json:"value" validate:"required,max=255"`
+	// Swatch color shown for the attribute. Defaults to `default`, a neutral swatch.
 	ColorCode field.Optional[constants.Color] `json:"color,omitzero"`
-	// Position of the new attribute relative to its siblings within the property, starting at `1`.
+	// Position within the property, starting at `1`. Defaults to last.
 	//
-	// Must be at most the property's current attribute count plus one; siblings at or after this position are shifted one position later. Defaults to the last position if not provided.
+	// At most the property's attribute count plus one; attributes at or after it shift down by one.
 	SortOrder field.Optional[int32] `json:"sort_order,omitzero" validate:"omitempty,min=1"`
+	// `active` or `archived`. Defaults to `active`. Archived attributes can't be newly assigned to items.
+	Status field.Optional[constants.ArchiveStatus] `json:"status,omitzero"`
 }
 
 var (
@@ -47,9 +47,9 @@ func (*CreateAttributeRequest) SchemaExample() any {
 	return apiexample.ValidateAndMarshalToMap(sampleCreateAttributeRequest)
 }
 
-// Creates an attribute under a property.
+// Adds an attribute to a property.
 //
-// An attribute is one selectable value of the property, such as `Red` under `Color`, and can then be assigned to items. Returns a conflict error if another attribute in the account already uses the same value.
+// Attributes after the chosen `sort_order` shift down by one.
 type CreateAttributeEndpoint struct{}
 
 func (e *CreateAttributeEndpoint) Materialize() *apiendpoint.APIEndpoint[*CreateAttributeRequest, *apiresource.Attribute] {
@@ -62,8 +62,11 @@ func (e *CreateAttributeEndpoint) Materialize() *apiendpoint.APIEndpoint[*Create
 		Public:            true,
 		AgentTool:         true,
 		Auth:              authz.Policy{Permissions: []types.Permission{{Domain: types.PermissionDomainProperties, Action: types.ActionCreate}}},
-		Preview:           true,
 		ObjectType:        constants.ObjectTypeAttribute,
+		IncludeConfig: apiendpoint.IncludesFor(apiendpoint.IncludesParams{
+			ObjectType: constants.ObjectTypeAttribute,
+			Fields:     []string{"property"},
+		}),
 		ServiceHandler: func(svc any) func(ctx context.Context, req *CreateAttributeRequest) (*apiresource.Attribute, *apierror.APIError) {
 			return svc.(PropertySvc).CreateAttribute
 		},

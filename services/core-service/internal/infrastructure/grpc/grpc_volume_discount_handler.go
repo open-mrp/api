@@ -91,6 +91,7 @@ func volumeDiscountToProto(d *domain.VolumeDiscount) *pb.VolumeDiscountInfo {
 			PropertyId: attr.PropertyID,
 			CreatedAt:  attrCreatedAt,
 			UpdatedAt:  attrUpdatedAt,
+			Status:     string(constants.ArchiveStatusFromIsActive(attr.IsActive)),
 		}
 	}
 

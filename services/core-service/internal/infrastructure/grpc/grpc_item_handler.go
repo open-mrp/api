@@ -6,6 +6,7 @@ import (
 	"github.com/shopspring/decimal"
 
 	"github.com/open-mrp/api/services/core-service/internal/domain"
+	"github.com/open-mrp/api/shared/constants"
 	"github.com/open-mrp/api/shared/contracts"
 	pb "github.com/open-mrp/api/shared/proto/core"
 	apierror "github.com/open-mrp/apikit/apierror"
@@ -141,6 +142,7 @@ func itemAttributeToProto(a *domain.ItemAttribute) *pb.ItemAttributeInfo {
 		PropertyId: a.PropertyID,
 		CreatedAt:  timestamppb.New(a.CreatedAt),
 		UpdatedAt:  timestamppb.New(a.UpdatedAt),
+		Status:     string(constants.ArchiveStatusFromIsActive(a.IsActive)),
 	}
 }
 

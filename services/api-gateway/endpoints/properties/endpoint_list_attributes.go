@@ -17,17 +17,17 @@ import (
 // Request to list attributes for a property.
 type ListAttributesRequest struct {
 	object.ListRequest
-	// Free-text search term used to filter results.
-	//
-	// Which fields are matched against the term varies by endpoint.
+	// Case-insensitive substring match on `value`.
 	Query *string `query:"q" validate:"omitempty,max=500"`
+	// Only return attributes with one of these statuses. Omit to return all statuses.
+	Statuses []constants.ArchiveStatus `query:"statuses"`
 	// The property whose attributes are listed.
 	PropertyID string `path:"property_id" validate:"required"`
 }
 
-// Returns a paginated list of attributes for a property.
+// Returns a list of a property's attributes.
 //
-// Attributes come back in the order they are arranged within the property, first to last. The `q` search term is matched against the attribute value.
+// Sorted by `sort_order`, first to last.
 type ListAttributesEndpoint struct{}
 
 func (e *ListAttributesEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListAttributesRequest, *apiresource.List[apiresource.Attribute]] {
@@ -40,8 +40,11 @@ func (e *ListAttributesEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListAtt
 		Public:            true,
 		AgentTool:         true,
 		Auth:              authz.Policy{Permissions: []types.Permission{{Domain: types.PermissionDomainProperties, Action: types.ActionRead}}},
-		Preview:           true,
 		ObjectType:        constants.ObjectTypeAttribute,
+		IncludeConfig: apiendpoint.IncludesFor(apiendpoint.IncludesParams{
+			ObjectType: constants.ObjectTypeAttribute,
+			Fields:     []string{"property"},
+		}),
 		ServiceHandler: func(svc any) func(ctx context.Context, req *ListAttributesRequest) (*apiresource.List[apiresource.Attribute], *apierror.APIError) {
 			return svc.(PropertySvc).ListAttributes
 		},

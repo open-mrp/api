@@ -18,9 +18,9 @@ type RetrieveItemCategoryRequest struct {
 	ItemCategoryID string `path:"id" validate:"required"`
 }
 
-// Returns an item category by ID.
+// Retrieves an item category.
 //
-// Both account-owned categories and global system categories can be retrieved.
+// Works for your account's categories and for system categories.
 type RetrieveItemCategoryEndpoint struct{}
 
 func (e *RetrieveItemCategoryEndpoint) Materialize() *apiendpoint.APIEndpoint[*RetrieveItemCategoryRequest, *apiresource.ItemCategory] {
@@ -33,14 +33,10 @@ func (e *RetrieveItemCategoryEndpoint) Materialize() *apiendpoint.APIEndpoint[*R
 		Public:            true,
 		AgentTool:         true,
 		Auth:              authz.Policy{Permissions: []types.Permission{{Domain: types.PermissionDomainCategories, Action: types.ActionRead}}},
-		Preview:           true,
 		ObjectType:        constants.ObjectTypeItemCategory,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *RetrieveItemCategoryRequest) (*apiresource.ItemCategory, *apierror.APIError) {
 			return svc.(ItemCategorySvc).GetItemCategory
 		},
-		IncludeConfig: apiendpoint.IncludesFor(apiendpoint.IncludesParams{
-			ObjectType: constants.ObjectTypeItemCategory,
-			Fields:     []string{"owner", "owner.account", "properties", "unit_group", "unit_group.base_unit", "unit_group.associated_units", "unit_group.associated_units.unit"},
-		}),
+		IncludeConfig: itemCategoryIncludes(),
 	})
 }

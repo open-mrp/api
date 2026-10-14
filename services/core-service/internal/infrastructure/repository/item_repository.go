@@ -378,6 +378,7 @@ func loadItemAttributes(ctx context.Context, queries *sqlc.Queries, item *domain
 			ColorCode:  colorCode,
 			Order:      row.Order,
 			PropertyID: row.PropertyID,
+			IsActive:   row.IsActive,
 			CreatedAt:  row.CreatedAt,
 			UpdatedAt:  row.UpdatedAt,
 		}
@@ -421,6 +422,7 @@ func stitchItemAttributes(ctx context.Context, queries *sqlc.Queries, items []*d
 			ColorCode:  colorCode,
 			Order:      row.Order,
 			PropertyID: row.PropertyID,
+			IsActive:   row.IsActive,
 			CreatedAt:  row.CreatedAt,
 			UpdatedAt:  row.UpdatedAt,
 		})

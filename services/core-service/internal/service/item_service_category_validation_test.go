@@ -22,12 +22,12 @@ func TestCategoryTypeMatchesItem(t *testing.T) {
 		categoryType   string
 		wantCompatible bool
 	}{
-		{"material to material category", string(constants.ItemTypeCodeMaterial), string(constants.ItemCategoryTypeMaterial), true},
-		{"material to product category", string(constants.ItemTypeCodeMaterial), string(constants.ItemCategoryTypeProduct), false},
-		{"product to product category", string(constants.ItemTypeCodeProduct), string(constants.ItemCategoryTypeProduct), true},
-		{"product to material category", string(constants.ItemTypeCodeProduct), string(constants.ItemCategoryTypeMaterial), false},
-		{"part to product category", string(constants.ItemTypeCodePart), string(constants.ItemCategoryTypeProduct), true},
-		{"part to material category", string(constants.ItemTypeCodePart), string(constants.ItemCategoryTypeMaterial), false},
+		{"material to material category", string(constants.ItemTypeCodeMaterial), constants.ItemCategoryTypeMaterial.Code(), true},
+		{"material to product category", string(constants.ItemTypeCodeMaterial), constants.ItemCategoryTypeProduct.Code(), false},
+		{"product to product category", string(constants.ItemTypeCodeProduct), constants.ItemCategoryTypeProduct.Code(), true},
+		{"product to material category", string(constants.ItemTypeCodeProduct), constants.ItemCategoryTypeMaterial.Code(), false},
+		{"part to product category", string(constants.ItemTypeCodePart), constants.ItemCategoryTypeProduct.Code(), true},
+		{"part to material category", string(constants.ItemTypeCodePart), constants.ItemCategoryTypeMaterial.Code(), false},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {

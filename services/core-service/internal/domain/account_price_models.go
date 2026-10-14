@@ -70,6 +70,7 @@ type AccountPriceAttribute struct {
 	ColorCode string
 	CreatedAt time.Time
 	UpdatedAt time.Time
+	IsActive  bool
 }
 
 type ListAccountPricesParams struct {

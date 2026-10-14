@@ -5863,14 +5863,16 @@ func (x *ItemCategoryUnitGroupUnitInfo) GetUnit() *UnitInfo {
 }
 
 type ItemAttributeInfo struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
-	Value         string                 `protobuf:"bytes,2,opt,name=value,proto3" json:"value,omitempty"`
-	ColorCode     *string                `protobuf:"bytes,3,opt,name=color_code,json=colorCode,proto3,oneof" json:"color_code,omitempty"`
-	SortOrder     int32                  `protobuf:"varint,4,opt,name=sort_order,json=sortOrder,proto3" json:"sort_order,omitempty"`
-	PropertyId    string                 `protobuf:"bytes,5,opt,name=property_id,json=propertyId,proto3" json:"property_id,omitempty"`
-	CreatedAt     *timestamppb.Timestamp `protobuf:"bytes,6,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
-	UpdatedAt     *timestamppb.Timestamp `protobuf:"bytes,7,opt,name=updated_at,json=updatedAt,proto3" json:"updated_at,omitempty"`
+	state      protoimpl.MessageState `protogen:"open.v1"`
+	Id         string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	Value      string                 `protobuf:"bytes,2,opt,name=value,proto3" json:"value,omitempty"`
+	ColorCode  *string                `protobuf:"bytes,3,opt,name=color_code,json=colorCode,proto3,oneof" json:"color_code,omitempty"`
+	SortOrder  int32                  `protobuf:"varint,4,opt,name=sort_order,json=sortOrder,proto3" json:"sort_order,omitempty"`
+	PropertyId string                 `protobuf:"bytes,5,opt,name=property_id,json=propertyId,proto3" json:"property_id,omitempty"`
+	CreatedAt  *timestamppb.Timestamp `protobuf:"bytes,6,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
+	UpdatedAt  *timestamppb.Timestamp `protobuf:"bytes,7,opt,name=updated_at,json=updatedAt,proto3" json:"updated_at,omitempty"`
+	// active | archived
+	Status        string `protobuf:"bytes,8,opt,name=status,proto3" json:"status,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -5952,6 +5954,13 @@ func (x *ItemAttributeInfo) GetUpdatedAt() *timestamppb.Timestamp {
 		return x.UpdatedAt
 	}
 	return nil
+}
+
+func (x *ItemAttributeInfo) GetStatus() string {
+	if x != nil {
+		return x.Status
+	}
+	return ""
 }
 
 type ItemInfo struct {
@@ -7159,7 +7168,7 @@ const file_core_core_accounts_carriers_proto_rawDesc = "" +
 	"updated_at\x18\a \x01(\v2\x1a.google.protobuf.TimestampR\tupdatedAt\x12%\n" +
 	"\x0ediscount_fixed\x18\b \x01(\tR\rdiscountFixed\x12'\n" +
 	"\x04unit\x18\t \x01(\v2\x0e.core.UnitInfoH\x00R\x04unit\x88\x01\x01B\a\n" +
-	"\x05_unit\"\xa2\x02\n" +
+	"\x05_unit\"\xba\x02\n" +
 	"\x11ItemAttributeInfo\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x14\n" +
 	"\x05value\x18\x02 \x01(\tR\x05value\x12\"\n" +
@@ -7172,7 +7181,8 @@ const file_core_core_accounts_carriers_proto_rawDesc = "" +
 	"\n" +
 	"created_at\x18\x06 \x01(\v2\x1a.google.protobuf.TimestampR\tcreatedAt\x129\n" +
 	"\n" +
-	"updated_at\x18\a \x01(\v2\x1a.google.protobuf.TimestampR\tupdatedAtB\r\n" +
+	"updated_at\x18\a \x01(\v2\x1a.google.protobuf.TimestampR\tupdatedAt\x12\x16\n" +
+	"\x06status\x18\b \x01(\tR\x06statusB\r\n" +
 	"\v_color_code\"\xe2\x04\n" +
 	"\bItemInfo\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x10\n" +

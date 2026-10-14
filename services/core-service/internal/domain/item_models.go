@@ -104,6 +104,7 @@ type ItemAttribute struct {
 	PropertyID string
 	CreatedAt  time.Time
 	UpdatedAt  time.Time
+	IsActive   bool
 }
 
 // Rate represents a rate value (unit_value, unit_cost, or burn_rate).

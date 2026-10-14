@@ -47,7 +47,9 @@ func validateBulkUpsertItemCategoryRows(rows []domain.UpsertItemCategoryParams) 
 func resolveBulkUpsertItemCategoryRows(ctx context.Context, repos domain.RepoFactory, accountID string, rows []domain.UpsertItemCategoryParams) ([]domain.ResolvedUpsertItemCategoryRow, *apierror.APIError) {
 	ugIdentifiers := make([]*domain.ObjectIdentifier, len(rows))
 	for i := range rows {
-		ugIdentifiers[i] = &rows[i].UnitGroup
+		if rows[i].UnitGroup.ID != "" || rows[i].UnitGroup.Name != "" {
+			ugIdentifiers[i] = &rows[i].UnitGroup
+		}
 	}
 	ugRepo := repos.NewUnitGroupRepo()
 	ugIDByIdentifier, apiErr := resolveObjectIdentifiers(
@@ -94,6 +96,18 @@ func writeBulkUpsertItemCategories(txCtx context.Context, txRepos domain.RepoFac
 		key := strings.ToLower(ic.Name)
 		if current := byName[key]; current == nil || current.AccountID == nil {
 			byName[key] = ic
+		}
+	}
+
+	// A row naming no unit group keeps the matched category's, or gets the default on create.
+	for i := range rows {
+		if rows[i].UnitGroupID != "" {
+			continue
+		}
+		if old := byName[names[i]]; old != nil {
+			rows[i].UnitGroupID = old.UnitGroupID
+		} else {
+			rows[i].UnitGroupID = domain.DefaultItemCategoryUnitGroupID
 		}
 	}
 

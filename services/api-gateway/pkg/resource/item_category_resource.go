@@ -13,50 +13,40 @@ const SampleItemCategoryName = "Electronics"
 const SampleUnitGroupID = "ug_andst6m79n41"
 const SampleUnitGroupName = "Weight"
 
-// A grouping of related catalog items that defines the unit group and properties available to the items within it.
+// The physical grouping of items: their kind, the properties they vary by, and their production defaults.
 type ItemCategory struct {
 	// Item category ID.
 	ID string `json:"id" validate:"required"`
 	// Resource type identifier.
 	Object constants.ObjectType `json:"object" validate:"required,enum=item_category"`
-	// Display name of the item category.
+	// Display name, such as `Fasteners`.
+	//
+	// Unique (case-insensitive) among your account's categories.
 	Name string `json:"name" validate:"required"`
-	// Free-form notes about the item category.
+	// What kind of items the category holds.
 	//
-	// Null to customer and supplier portal users: they are your own team's notes.
-	Notes *string `json:"notes" sensitive:"internal"`
-	// What kind of items this category groups.
-	//
-	// - `material_category`: groups raw materials and components (items of type `material`).
-	// - `product_category`: groups finished products and parts (items of type `product` or `part`).
-	//
-	// An item can only be assigned to a category whose type matches the item's `type`, and the category's type is fixed at creation.
+	// `material`: materials. `product`: products and parts. An item can only be in a category of its own kind. Can't change after creation.
 	Type constants.ItemCategoryType `json:"type" validate:"required"`
-	// Provenance of the item category.
+	// Whether the category is a system category every account shares or one your account created.
 	//
-	// System-owned categories are platform-provided defaults shared across all accounts and cannot be updated or deleted; account-owned categories are custom to your account.
+	// System categories can't be updated or deleted.
 	Owner *Owner `json:"owner" expandable:"true"`
-	// Properties associated with this item category, such as `Color` or `Size`.
+	// Properties the category's items vary by, such as `Color` or `Size`.
 	//
-	// These describe the dimensions along which items in the category vary, and are also what the customer-facing catalog shows for the category. Attach and detach them with the Add Item Category Property and Remove Item Category Property endpoints.
+	// Also shown in the customer catalog. Returns the first 10. When there are more, `page_info.next_page_url` fetches the rest.
 	Properties *List[Property] `json:"properties" expandable:"true"`
-	// Unit group associated with this item category.
-	//
-	// Items in this category are measured in units belonging to this group, and can only be ordered in those units unless the item's product line defines its own unit group, which takes precedence.
-	UnitGroup *UnitGroup `json:"unit_group" expandable:"true"`
+	// Unit group the category's items are measured in, until items carry their own stocking unit.
+	UnitGroup *UnitGroup `json:"unit_group" expandable:"true" visibility:"internal"`
 	// Creation timestamp.
 	CreatedAt time.Time `json:"created_at" validate:"required"`
 	// Last updated timestamp.
 	UpdatedAt time.Time `json:"updated_at" validate:"required"`
 }
 
-var sampleItemCategoryNotes = "Components and raw materials used across the electronics assembly line."
-
 var SampleItemCategory = &ItemCategory{
 	ID:         SampleItemCategoryID,
 	Object:     constants.ObjectTypeItemCategory,
 	Name:       SampleItemCategoryName,
-	Notes:      &sampleItemCategoryNotes,
 	Type:       constants.ItemCategoryTypeMaterial,
 	Owner:      SampleOwnerSystem,
 	Properties: NewList([]Property{*SampleProperty}, PageInfo{}),

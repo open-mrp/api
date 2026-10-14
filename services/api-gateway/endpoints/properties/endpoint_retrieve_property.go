@@ -18,7 +18,7 @@ type RetrievePropertyRequest struct {
 	PropertyID string `path:"id" validate:"required"`
 }
 
-// Returns a property by ID.
+// Retrieves a property.
 type RetrievePropertyEndpoint struct{}
 
 func (e *RetrievePropertyEndpoint) Materialize() *apiendpoint.APIEndpoint[*RetrievePropertyRequest, *apiresource.Property] {
@@ -31,7 +31,6 @@ func (e *RetrievePropertyEndpoint) Materialize() *apiendpoint.APIEndpoint[*Retri
 		Public:            true,
 		AgentTool:         true,
 		Auth:              authz.Policy{Permissions: []types.Permission{{Domain: types.PermissionDomainProperties, Action: types.ActionRead}}},
-		Preview:           true,
 		ObjectType:        constants.ObjectTypeProperty,
 		IncludeConfig: apiendpoint.IncludesFor(apiendpoint.IncludesParams{
 			ObjectType: constants.ObjectTypeProperty,

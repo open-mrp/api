@@ -11,28 +11,30 @@ import (
 const SampleAttributeID = "at_rf1w295jt5ia"
 const SampleAttributeValue = "Premium"
 
-// A selectable value within a property, such as `Red` for a `Color` property.
-//
-// Attributes are assigned to items to classify them.
+// One value of a property, such as `Large` for `Size`: the shared descriptive layer items are classified and priced by.
 type Attribute struct {
 	// Attribute ID.
 	ID string `json:"id" validate:"required"`
 	// Resource type identifier.
 	Object constants.ObjectType `json:"object" validate:"required,enum=attribute"`
-	// The selectable value this attribute represents, such as `Red` for a `Color` property or `Large` for a `Size` property.
+	// The value, such as `Large`.
+	//
+	// Unique (case-insensitive) within its property.
 	Value string `json:"value" validate:"required"`
-	// Swatch color used to display this attribute in the UI.
+	// Swatch color shown for the attribute.
 	//
-	// The named colors are arbitrary display choices; `default` is a neutral fallback used when no specific swatch applies.
+	// Defaults to `default`, a neutral swatch.
 	ColorCode constants.Color `json:"color" validate:"required"`
-	// Position of this attribute relative to its siblings within the property, starting at `1`.
+	// Position within the property, starting at `1`.
 	//
-	// Positions are kept contiguous: creating, reordering, or deleting an attribute automatically shifts its siblings.
+	// Positions stay contiguous: adding, moving or deleting an attribute shifts the others.
 	SortOrder int32 `json:"sort_order"`
-	// The property this attribute belongs to.
+	// Whether the attribute can be newly assigned.
 	//
-	// Populated only when the attribute is returned under an item's or a volume discount's `attributes` list.
-	Property *Property `json:"property"`
+	// `active` attributes can be assigned to items. `archived` attributes stay on the items that have them but can't be newly assigned.
+	Status constants.ArchiveStatus `json:"status" validate:"required"`
+	// The property this attribute belongs to.
+	Property *Property `json:"property" expandable:"true"`
 	// Creation timestamp.
 	CreatedAt time.Time `json:"created_at" validate:"required"`
 	// Last update timestamp.
@@ -45,6 +47,7 @@ var SampleAttribute = &Attribute{
 	Value:     SampleAttributeValue,
 	ColorCode: constants.ColorRed,
 	SortOrder: 1,
+	Status:    constants.ArchiveStatusActive,
 	Property: &Property{
 		ID:        SamplePropertyID,
 		Object:    constants.ObjectTypeProperty,

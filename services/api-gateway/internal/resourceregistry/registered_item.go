@@ -31,7 +31,13 @@ func init() {
 			valueShapeSub(constants.ObjectTypeItem, "burn_rate", func(p any) string { return p.(*apiresource.Item).ID }, func(p, v any) {
 				p.(*apiresource.Item).BurnRate = v.(*apiresource.Rate)
 			}),
-			{Key: "attributes", Populate: populateAttributesOnItem},
+			{
+				// Read with the item; the refs let `attributes.property` resolve.
+				Key:         "attributes",
+				Target:      constants.ObjectTypeAttribute,
+				ExtractRefs: extractAttributeRefsFromItem,
+				Populate:    populateAttributesOnItem,
+			},
 		},
 	})
 }
@@ -59,4 +65,16 @@ func populateAttributesOnItem(ctx context.Context, parent any, _ map[string]any)
 		return
 	}
 	item.Attributes = v.(*apiresource.List[apiresource.Attribute])
+}
+
+func extractAttributeRefsFromItem(_ context.Context, parent any) []any {
+	item := parent.(*apiresource.Item)
+	if item.Attributes == nil {
+		return nil
+	}
+	refs := make([]any, len(item.Attributes.Data))
+	for i := range item.Attributes.Data {
+		refs[i] = &item.Attributes.Data[i]
+	}
+	return refs
 }

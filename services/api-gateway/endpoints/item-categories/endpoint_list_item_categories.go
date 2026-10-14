@@ -17,17 +17,15 @@ import (
 // Request to list item categories.
 type ListItemCategoriesRequest struct {
 	object.ListRequest
-	// Free-text search term used to filter results.
-	//
-	// Which fields are matched against the term varies by endpoint.
+	// Case-insensitive substring match on `name`.
 	Query *string `query:"q" validate:"omitempty,max=500"`
-	// Filter by item category type.
-	Type *constants.ItemCategoryType `query:"type"`
+	// Only return categories of these types.
+	Types []constants.ItemCategoryType `query:"types"`
 }
 
-// Returns a paginated list of the item categories available to the current account, newest first.
+// Returns a list of item categories.
 //
-// Both the account's own categories and the platform-provided system categories are included. The `q` search term is matched against the category name.
+// Includes the categories your account created and the system categories every account shares. Categories are sorted by creation date, newest first.
 type ListItemCategoriesEndpoint struct{}
 
 func (e *ListItemCategoriesEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListItemCategoriesRequest, *apiresource.List[apiresource.ItemCategory]] {
@@ -40,14 +38,10 @@ func (e *ListItemCategoriesEndpoint) Materialize() *apiendpoint.APIEndpoint[*Lis
 		Public:            true,
 		AgentTool:         true,
 		Auth:              authz.Policy{Permissions: []types.Permission{{Domain: types.PermissionDomainCategories, Action: types.ActionRead}}},
-		Preview:           true,
 		ObjectType:        constants.ObjectTypeItemCategory,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *ListItemCategoriesRequest) (*apiresource.List[apiresource.ItemCategory], *apierror.APIError) {
 			return svc.(ItemCategorySvc).ListItemCategories
 		},
-		IncludeConfig: apiendpoint.IncludesFor(apiendpoint.IncludesParams{
-			ObjectType: constants.ObjectTypeItemCategory,
-			Fields:     []string{"owner", "owner.account", "properties", "unit_group", "unit_group.base_unit", "unit_group.associated_units", "unit_group.associated_units.unit"},
-		}),
+		IncludeConfig: itemCategoryIncludes(),
 	})
 }

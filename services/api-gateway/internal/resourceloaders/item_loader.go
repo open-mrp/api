@@ -81,17 +81,14 @@ func ItemsFromProto(ctx context.Context, items []*pb.ItemInfo, categories []*pb.
 				Object:    constants.ObjectTypeAttribute,
 				Value:     a.Value,
 				SortOrder: a.SortOrder,
+				Status:    constants.ArchiveStatus(a.Status),
 				CreatedAt: grpcutil.TimestampToTime(a.CreatedAt),
 				UpdatedAt: grpcutil.TimestampToTime(a.UpdatedAt),
 			}
 			if a.ColorCode != nil {
 				attr.ColorCode = constants.Color(*a.ColorCode)
 			}
-			// Left nil when the property did not resolve: an attribute naming a property whose
-			// record is missing says so by omitting it, not by inventing one with a blank name.
-			if a.PropertyId != "" {
-				attr.Property = propertyMap[a.PropertyId]
-			}
+			StashAttributeProperty(ctx, a.Id, a.PropertyId, propertyMap[a.PropertyId])
 			attrs = append(attrs, attr)
 		}
 		meta.Set(constants.ObjectTypeItem, item.Id, "attributes_list",
@@ -100,13 +97,13 @@ func ItemsFromProto(ctx context.Context, items []*pb.ItemInfo, categories []*pb.
 	return out
 }
 
-// ItemEmbedsRequested reports whether some requested include reaches an item's category or its attributes, at any depth.
+// ItemEmbedsRequested reports whether some requested include reaches an item's category or its attributes' properties, at any depth.
 func ItemEmbedsRequested(ctx context.Context) (categories, attributeProperties bool) {
 	for _, include := range include.RequestedIncludes(ctx) {
 		if include == "category" || strings.HasSuffix(include, ".category") {
 			categories = true
 		}
-		if include == "attributes" || strings.HasSuffix(include, ".attributes") {
+		if include == "attributes.property" || strings.HasSuffix(include, ".attributes.property") {
 			attributeProperties = true
 		}
 	}

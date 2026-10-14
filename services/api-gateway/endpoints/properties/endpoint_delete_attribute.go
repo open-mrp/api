@@ -21,9 +21,9 @@ type DeleteAttributeRequest struct {
 	AttributeID string `path:"id" validate:"required"`
 }
 
-// Deletes an attribute from a property.
+// Deletes an attribute.
 //
-// Remaining attributes in the property are shifted so their sort orders stay contiguous.
+// Only while no item or price-list rule uses it. Archive it instead by setting `status` to `archived`. Later attributes shift up to keep `sort_order` contiguous.
 type DeleteAttributeEndpoint struct{}
 
 func (e *DeleteAttributeEndpoint) Materialize() *apiendpoint.APIEndpoint[*DeleteAttributeRequest, *object.Deleted] {
@@ -37,7 +37,6 @@ func (e *DeleteAttributeEndpoint) Materialize() *apiendpoint.APIEndpoint[*Delete
 		Public:            true,
 		AgentTool:         true,
 		Auth:              authz.Policy{Permissions: []types.Permission{{Domain: types.PermissionDomainProperties, Action: types.ActionDelete}}},
-		Preview:           true,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *DeleteAttributeRequest) (*object.Deleted, *apierror.APIError) {
 			return apiresource.Deleted(svc.(PropertySvc).DeleteAttribute, constants.ObjectTypeAttribute, "id")
 		},

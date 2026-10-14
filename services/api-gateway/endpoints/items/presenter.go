@@ -20,8 +20,7 @@ func lightItemCategoryPresenter(c *pb.ItemCategoryInfo) *apiresource.ItemCategor
 		ID:        c.Id,
 		Object:    constants.ObjectTypeItemCategory,
 		Name:      c.Name,
-		Type:      constants.ItemCategoryType(c.ItemCategoryTypeCode),
-		Notes:     c.Notes,
+		Type:      constants.ItemCategoryTypeFromCode(c.ItemCategoryTypeCode),
 		Owner:     apiresource.NewOwner(c.AccountId),
 		CreatedAt: grpcutil.TimestampToTime(c.CreatedAt),
 		UpdatedAt: grpcutil.TimestampToTime(c.UpdatedAt),
@@ -43,6 +42,7 @@ func lightAttributePresenter(a *pb.ItemAttributeInfo) *apiresource.Attribute {
 		Value:     a.Value,
 		ColorCode: colorCode,
 		SortOrder: a.SortOrder,
+		Status:    constants.ArchiveStatus(a.Status),
 		CreatedAt: grpcutil.TimestampToTime(a.CreatedAt),
 		UpdatedAt: grpcutil.TimestampToTime(a.UpdatedAt),
 	}

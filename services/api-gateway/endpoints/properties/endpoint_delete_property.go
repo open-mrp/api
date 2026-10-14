@@ -19,9 +19,9 @@ type DeletePropertyRequest struct {
 	PropertyID string `path:"id" validate:"required"`
 }
 
-// Deletes a property and every attribute defined under it.
+// Deletes a property and its attributes.
 //
-// Items previously classified by those attributes lose that classification.
+// Only while no item category, item or price-list rule uses it or any of its attributes.
 type DeletePropertyEndpoint struct{}
 
 func (e *DeletePropertyEndpoint) Materialize() *apiendpoint.APIEndpoint[*DeletePropertyRequest, *object.Deleted] {
@@ -35,7 +35,6 @@ func (e *DeletePropertyEndpoint) Materialize() *apiendpoint.APIEndpoint[*DeleteP
 		Public:            true,
 		AgentTool:         true,
 		Auth:              authz.Policy{Permissions: []types.Permission{{Domain: types.PermissionDomainProperties, Action: types.ActionDelete}}},
-		Preview:           true,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *DeletePropertyRequest) (*object.Deleted, *apierror.APIError) {
 			return apiresource.Deleted(svc.(PropertySvc).DeleteProperty, constants.ObjectTypeProperty, "id")
 		},

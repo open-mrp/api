@@ -312,6 +312,8 @@ message AccountPriceAttributeInfo {
   string color_code = 3;
   google.protobuf.Timestamp created_at = 4;
   google.protobuf.Timestamp updated_at = 5;
+  // active | archived
+  string status = 6;
 }
 message ExportPriceListRequest {
   string customer_account_id = 1;

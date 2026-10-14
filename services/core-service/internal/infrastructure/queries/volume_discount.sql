@@ -402,6 +402,7 @@ SELECT
     a.text AS name,
     a.color_code,
     a.property_id,
+    a.is_active,
     a.created_at,
     a.updated_at
 FROM `_quantity_discounts_attributes` qda
@@ -414,6 +415,7 @@ SELECT
     a.text AS name,
     a.color_code,
     a.property_id,
+    a.is_active,
     a.created_at,
     a.updated_at,
     qda.B AS quantity_discount_id

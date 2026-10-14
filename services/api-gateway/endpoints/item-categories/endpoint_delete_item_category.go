@@ -19,9 +19,9 @@ type DeleteItemCategoryRequest struct {
 	ItemCategoryID string `path:"id" validate:"required"`
 }
 
-// Deletes an item category owned by your account.
+// Deletes an item category.
 //
-// System-owned categories cannot be deleted. Deleting a category that was already deleted returns an already-deleted error rather than a not-found error.
+// Only categories your account created can be deleted, and only while no item or price-list rule uses them. Move a category's items to another category before deleting it.
 type DeleteItemCategoryEndpoint struct{}
 
 func (e *DeleteItemCategoryEndpoint) Materialize() *apiendpoint.APIEndpoint[*DeleteItemCategoryRequest, *object.Deleted] {
@@ -35,7 +35,6 @@ func (e *DeleteItemCategoryEndpoint) Materialize() *apiendpoint.APIEndpoint[*Del
 		Public:            true,
 		AgentTool:         true,
 		Auth:              authz.Policy{Permissions: []types.Permission{{Domain: types.PermissionDomainCategories, Action: types.ActionDelete}}},
-		Preview:           true,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *DeleteItemCategoryRequest) (*object.Deleted, *apierror.APIError) {
 			return apiresource.Deleted(svc.(ItemCategorySvc).DeleteItemCategory, constants.ObjectTypeItemCategory, "id")
 		},

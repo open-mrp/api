@@ -9945,6 +9945,21 @@ func (mr *MockCustomerRepoMockRecorder) ListContacts(ctx, customerAccountIDs any
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListContacts", reflect.TypeOf((*MockCustomerRepo)(nil).ListContacts), ctx, customerAccountIDs)
 }
 
+// ListMergeRetaggableOrders mocks base method.
+func (m *MockCustomerRepo) ListMergeRetaggableOrders(ctx context.Context, ownerAccountID string, sourceAccountIDs []string, salesRepID string) ([]domain.OrderSalesRep, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ListMergeRetaggableOrders", ctx, ownerAccountID, sourceAccountIDs, salesRepID)
+	ret0, _ := ret[0].([]domain.OrderSalesRep)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
+}
+
+// ListMergeRetaggableOrders indicates an expected call of ListMergeRetaggableOrders.
+func (mr *MockCustomerRepoMockRecorder) ListMergeRetaggableOrders(ctx, ownerAccountID, sourceAccountIDs, salesRepID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListMergeRetaggableOrders", reflect.TypeOf((*MockCustomerRepo)(nil).ListMergeRetaggableOrders), ctx, ownerAccountID, sourceAccountIDs, salesRepID)
+}
+
 // LockNumbers mocks base method.
 func (m *MockCustomerRepo) LockNumbers(ctx context.Context, ownerAccountID string) *apierror.APIError {
 	m.ctrl.T.Helper()
@@ -10139,6 +10154,20 @@ func (m *MockCustomerRepo) ReparentChildRelations(ctx context.Context, targetRel
 func (mr *MockCustomerRepoMockRecorder) ReparentChildRelations(ctx, targetRelationID, sourceRelationIDs any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ReparentChildRelations", reflect.TypeOf((*MockCustomerRepo)(nil).ReparentChildRelations), ctx, targetRelationID, sourceRelationIDs)
+}
+
+// SetOrdersSalesRep mocks base method.
+func (m *MockCustomerRepo) SetOrdersSalesRep(ctx context.Context, ownerAccountID, salesRepID string, orderIDs []string) *apierror.APIError {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "SetOrdersSalesRep", ctx, ownerAccountID, salesRepID, orderIDs)
+	ret0, _ := ret[0].(*apierror.APIError)
+	return ret0
+}
+
+// SetOrdersSalesRep indicates an expected call of SetOrdersSalesRep.
+func (mr *MockCustomerRepoMockRecorder) SetOrdersSalesRep(ctx, ownerAccountID, salesRepID, orderIDs any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SetOrdersSalesRep", reflect.TypeOf((*MockCustomerRepo)(nil).SetOrdersSalesRep), ctx, ownerAccountID, salesRepID, orderIDs)
 }
 
 // SetStripeCustomerID mocks base method.
@@ -19141,6 +19170,51 @@ func (mr *MockCustomerRegistrationRepoMockRecorder) FindCustomerAccountByExterna
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "FindCustomerAccountByExternalNumber", reflect.TypeOf((*MockCustomerRegistrationRepo)(nil).FindCustomerAccountByExternalNumber), ctx, ownerAccountID, externalNumber)
 }
 
+// FindCustomerAccountByInvoiceNumber mocks base method.
+func (m *MockCustomerRegistrationRepo) FindCustomerAccountByInvoiceNumber(ctx context.Context, ownerAccountID, number string) (string, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "FindCustomerAccountByInvoiceNumber", ctx, ownerAccountID, number)
+	ret0, _ := ret[0].(string)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
+}
+
+// FindCustomerAccountByInvoiceNumber indicates an expected call of FindCustomerAccountByInvoiceNumber.
+func (mr *MockCustomerRegistrationRepoMockRecorder) FindCustomerAccountByInvoiceNumber(ctx, ownerAccountID, number any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "FindCustomerAccountByInvoiceNumber", reflect.TypeOf((*MockCustomerRegistrationRepo)(nil).FindCustomerAccountByInvoiceNumber), ctx, ownerAccountID, number)
+}
+
+// FindCustomerAccountBySalesOrderNumber mocks base method.
+func (m *MockCustomerRegistrationRepo) FindCustomerAccountBySalesOrderNumber(ctx context.Context, ownerAccountID, number string) (string, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "FindCustomerAccountBySalesOrderNumber", ctx, ownerAccountID, number)
+	ret0, _ := ret[0].(string)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
+}
+
+// FindCustomerAccountBySalesOrderNumber indicates an expected call of FindCustomerAccountBySalesOrderNumber.
+func (mr *MockCustomerRegistrationRepoMockRecorder) FindCustomerAccountBySalesOrderNumber(ctx, ownerAccountID, number any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "FindCustomerAccountBySalesOrderNumber", reflect.TypeOf((*MockCustomerRegistrationRepo)(nil).FindCustomerAccountBySalesOrderNumber), ctx, ownerAccountID, number)
+}
+
+// GetCustomerDefaultPostalCodes mocks base method.
+func (m *MockCustomerRegistrationRepo) GetCustomerDefaultPostalCodes(ctx context.Context, ownerAccountID, customerAccountID string) ([]string, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetCustomerDefaultPostalCodes", ctx, ownerAccountID, customerAccountID)
+	ret0, _ := ret[0].([]string)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
+}
+
+// GetCustomerDefaultPostalCodes indicates an expected call of GetCustomerDefaultPostalCodes.
+func (mr *MockCustomerRegistrationRepoMockRecorder) GetCustomerDefaultPostalCodes(ctx, ownerAccountID, customerAccountID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetCustomerDefaultPostalCodes", reflect.TypeOf((*MockCustomerRegistrationRepo)(nil).GetCustomerDefaultPostalCodes), ctx, ownerAccountID, customerAccountID)
+}
+
 // GetUserEmailByID mocks base method.
 func (m *MockCustomerRegistrationRepo) GetUserEmailByID(ctx context.Context, userID string) (string, *apierror.APIError) {
 	m.ctrl.T.Helper()
@@ -19154,6 +19228,36 @@ func (m *MockCustomerRegistrationRepo) GetUserEmailByID(ctx context.Context, use
 func (mr *MockCustomerRegistrationRepoMockRecorder) GetUserEmailByID(ctx, userID any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetUserEmailByID", reflect.TypeOf((*MockCustomerRegistrationRepo)(nil).GetUserEmailByID), ctx, userID)
+}
+
+// ListCustomerDefaultAddressesInPostalArea mocks base method.
+func (m *MockCustomerRegistrationRepo) ListCustomerDefaultAddressesInPostalArea(ctx context.Context, ownerAccountID, postalPrefix string) ([]domain.CustomerDefaultAddresses, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ListCustomerDefaultAddressesInPostalArea", ctx, ownerAccountID, postalPrefix)
+	ret0, _ := ret[0].([]domain.CustomerDefaultAddresses)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
+}
+
+// ListCustomerDefaultAddressesInPostalArea indicates an expected call of ListCustomerDefaultAddressesInPostalArea.
+func (mr *MockCustomerRegistrationRepoMockRecorder) ListCustomerDefaultAddressesInPostalArea(ctx, ownerAccountID, postalPrefix any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListCustomerDefaultAddressesInPostalArea", reflect.TypeOf((*MockCustomerRegistrationRepo)(nil).ListCustomerDefaultAddressesInPostalArea), ctx, ownerAccountID, postalPrefix)
+}
+
+// ListCustomersWithUserEmailDomain mocks base method.
+func (m *MockCustomerRegistrationRepo) ListCustomersWithUserEmailDomain(ctx context.Context, ownerAccountID, emailDomain string) ([]domain.CustomerMatch, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ListCustomersWithUserEmailDomain", ctx, ownerAccountID, emailDomain)
+	ret0, _ := ret[0].([]domain.CustomerMatch)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
+}
+
+// ListCustomersWithUserEmailDomain indicates an expected call of ListCustomersWithUserEmailDomain.
+func (mr *MockCustomerRegistrationRepoMockRecorder) ListCustomersWithUserEmailDomain(ctx, ownerAccountID, emailDomain any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListCustomersWithUserEmailDomain", reflect.TypeOf((*MockCustomerRegistrationRepo)(nil).ListCustomersWithUserEmailDomain), ctx, ownerAccountID, emailDomain)
 }
 
 // MockOrderPaymentIntentRepo is a mock of OrderPaymentIntentRepo interface.

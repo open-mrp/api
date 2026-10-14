@@ -11,6 +11,7 @@ import (
 	"github.com/open-mrp/api/shared/constants"
 	apierror "github.com/open-mrp/api/shared/errors"
 	pb "github.com/open-mrp/api/shared/proto/core"
+	"github.com/open-mrp/api/shared/ptrutil"
 	"github.com/open-mrp/api/shared/tracing"
 	"google.golang.org/grpc"
 )
@@ -157,6 +158,9 @@ func portalRegistrationSessionDataToProto(d *PortalRegistrationSessionDataInput)
 		AddressState:      d.AddressState,
 		AddressPostalCode: d.AddressPostalCode,
 		AddressCountry:    d.AddressCountry,
+		LookupType:        string(ptrutil.Deref(d.LookupType.Ptr())),
+		LookupNumber:      ptrutil.Deref(d.LookupNumber.Ptr()),
+		LookupPostalCode:  ptrutil.Deref(d.LookupPostalCode.Ptr()),
 	}
 }
 
@@ -193,6 +197,12 @@ func portalRegistrationSessionFromProto(s *pb.PortalRegistrationSessionInfo) *ap
 			AddressState:      s.SessionData.AddressState,
 			AddressPostalCode: s.SessionData.AddressPostalCode,
 			AddressCountry:    s.SessionData.AddressCountry,
+			LookupNumber:      s.SessionData.LookupNumber,
+			LookupPostalCode:  s.SessionData.LookupPostalCode,
+		}
+		if s.SessionData.LookupType != "" {
+			lookupType := constants.PortalRegistrationLookupType(s.SessionData.LookupType)
+			out.SessionData.LookupType = &lookupType
 		}
 	}
 	if s.CompletedAt != nil {

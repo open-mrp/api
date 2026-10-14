@@ -2369,6 +2369,9 @@ func portalRegistrationSessionDataFromProto(d *pb.PortalRegistrationSessionData)
 		AddressState:      d.AddressState,
 		AddressPostalCode: d.AddressPostalCode,
 		AddressCountry:    d.AddressCountry,
+		LookupType:        d.LookupType,
+		LookupNumber:      d.LookupNumber,
+		LookupPostalCode:  d.LookupPostalCode,
 	}
 }
 
@@ -2398,6 +2401,9 @@ func portalRegistrationSessionToProto(s *domain.PortalRegistrationSession) *pb.P
 			AddressState:      s.SessionData.AddressState,
 			AddressPostalCode: s.SessionData.AddressPostalCode,
 			AddressCountry:    s.SessionData.AddressCountry,
+			LookupType:        s.SessionData.LookupType,
+			LookupNumber:      s.SessionData.LookupNumber,
+			LookupPostalCode:  s.SessionData.LookupPostalCode,
 		},
 		CreatedAt: timestamppb.New(s.CreatedAt),
 		UpdatedAt: timestamppb.New(s.UpdatedAt),

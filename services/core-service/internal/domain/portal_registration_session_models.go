@@ -22,6 +22,9 @@ type PortalRegistrationSessionData struct {
 	AddressState      string `json:"address_state,omitempty"`
 	AddressPostalCode string `json:"address_postal_code,omitempty"`
 	AddressCountry    string `json:"address_country,omitempty"`
+	LookupType        string `json:"lookup_type,omitempty"`
+	LookupNumber      string `json:"lookup_number,omitempty"`
+	LookupPostalCode  string `json:"lookup_postal_code,omitempty"`
 }
 
 // PortalRegistrationSession is a buyer's in-progress (or completed/abandoned) registration into a specific seller's customer portal.

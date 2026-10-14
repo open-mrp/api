@@ -48,6 +48,9 @@ message PortalRegistrationSessionData {
   string address_state = 11;
   string address_postal_code = 12;
   string address_country = 13;
+  string lookup_type = 14;
+  string lookup_number = 15;
+  string lookup_postal_code = 16;
 }
 
 message PortalRegistrationSessionInfo {

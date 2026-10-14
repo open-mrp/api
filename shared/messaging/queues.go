@@ -381,6 +381,16 @@ type CustomerRegisteredData struct {
 	RegistrantUserID string `json:"registrant_user_id,omitempty"`
 	// IsExistingCustomer is true when the buyer joined an existing customer account rather than creating a new one.
 	IsExistingCustomer bool `json:"is_existing_customer,omitempty"`
+	// PossibleDuplicates are existing customers the new one may duplicate, so customer service can merge them before its first order.
+	PossibleDuplicates []PossibleDuplicateCustomer `json:"possible_duplicates,omitempty"`
+}
+
+// PossibleDuplicateCustomer is an existing customer a new registration resembles, and why.
+type PossibleDuplicateCustomer struct {
+	CustomerAccountID string   `json:"customer_account_id"`
+	CustomerName      string   `json:"customer_name,omitempty"`
+	CustomerNumber    string   `json:"customer_number,omitempty"`
+	Reasons           []string `json:"reasons,omitempty"`
 }
 
 // HubspotSyncCommandData is the payload for CoreCmdHubspotSyncQueue messages (both preview and execute). It identifies the backfill job to run; the consumer dispatches on the message's routing key.

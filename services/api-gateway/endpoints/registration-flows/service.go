@@ -185,6 +185,11 @@ func (m *registrationFlowSvcImpl) RegisterCustomer(ctx context.Context, req *Reg
 		Phone:              req.Phone.Ptr(),
 		ShippingTermId:     req.ShippingTermID.Ptr(),
 		PaymentTermId:      req.PaymentTermID.Ptr(),
+		LookupNumber:       req.LookupNumber.Ptr(),
+		LookupPostalCode:   req.LookupPostalCode.Ptr(),
+	}
+	if lookupType, ok := req.LookupType.Value(); ok {
+		pbReq.LookupType = (*string)(&lookupType)
 	}
 
 	if addr, ok := req.Address.Value(); ok {

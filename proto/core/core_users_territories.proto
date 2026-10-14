@@ -199,6 +199,9 @@ message RegisterCustomerRequest {
   optional string shipping_term_id = 7;
   optional string payment_term_id = 8;
   optional RegisterCustomerAddressInput address = 9;
+  optional string lookup_type = 10;
+  optional string lookup_number = 11;
+  optional string lookup_postal_code = 12;
 }
 message RegisterCustomerResponse {}
 // DepartmentRateInfo mirrors ProductionStepRateInfo; defined locally because importing the step proto here would create an import cycle through core.proto.

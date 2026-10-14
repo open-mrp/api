@@ -4,6 +4,7 @@ import (
 	"context"
 
 	"github.com/open-mrp/api/services/core-service/internal/domain"
+	"github.com/open-mrp/api/shared/constants"
 	"github.com/open-mrp/api/shared/contracts"
 	pb "github.com/open-mrp/api/shared/proto/core"
 	"google.golang.org/protobuf/types/known/emptypb"
@@ -191,6 +192,11 @@ func (h *gRPCHandler) RegisterCustomer(ctx context.Context, req *pb.RegisterCust
 			Phone:           req.Phone,
 			ShippingTermID:  req.ShippingTermId,
 			PaymentTermID:   req.PaymentTermId,
+		},
+		Lookup: domain.ExistingCustomerLookup{
+			Type:       constants.PortalRegistrationLookupType(req.GetLookupType()),
+			Number:     req.GetLookupNumber(),
+			PostalCode: req.GetLookupPostalCode(),
 		},
 	}
 

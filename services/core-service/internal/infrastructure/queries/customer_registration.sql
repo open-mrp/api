@@ -75,3 +75,63 @@ INSERT INTO account_address (
 
 -- name: GetUserEmailByID :one
 SELECT email FROM user WHERE id = sqlc.arg('id');
+
+-- name: FindCustomerAccountBySalesOrderNumber :one
+SELECT so.buyer_account_id
+FROM sales_order so
+JOIN account_relation ar ON ar.owner_account_id = so.owner_account_id
+  AND ar.counterparty_account_id = so.buyer_account_id
+  AND ar.account_relation_role_code = 'customer'
+WHERE so.owner_account_id = sqlc.arg('owner_account_id')
+AND so.sales_order_type_code = 'sales_order'
+AND so.number = sqlc.arg('number')
+LIMIT 1;
+
+-- name: FindCustomerAccountByInvoiceNumber :one
+SELECT so.buyer_account_id
+FROM invoice i
+JOIN sales_order so ON so.id = i.sales_order_id
+JOIN account_relation ar ON ar.owner_account_id = so.owner_account_id
+  AND ar.counterparty_account_id = so.buyer_account_id
+  AND ar.account_relation_role_code = 'customer'
+WHERE i.account_id = sqlc.arg('owner_account_id')
+AND i.number = sqlc.arg('number')
+AND so.owner_account_id = sqlc.arg('owner_account_id')
+LIMIT 1;
+
+-- name: GetCustomerDefaultPostalCodes :one
+SELECT gb.postal_code AS billing_postal_code, gs.postal_code AS shipping_postal_code
+FROM account_relation ar
+LEFT JOIN address ab ON ab.id = ar.default_billing_address_id
+LEFT JOIN geolocation gb ON gb.id = ab.geolocation_id
+LEFT JOIN address ads ON ads.id = ar.default_shipping_address_id
+LEFT JOIN geolocation gs ON gs.id = ads.geolocation_id
+WHERE ar.owner_account_id = sqlc.arg('owner_account_id')
+AND ar.counterparty_account_id = sqlc.arg('customer_account_id')
+AND ar.account_relation_role_code = 'customer';
+
+-- name: ListCustomerDefaultAddressesInPostalArea :many
+-- Customers whose default billing or shipping address sits in the given five-character postal prefix.
+SELECT ar.counterparty_account_id, a.name, ar.external_number,
+       gb.street_line_1 AS billing_street_line_1, gb.postal_code AS billing_postal_code,
+       gs.street_line_1 AS shipping_street_line_1, gs.postal_code AS shipping_postal_code
+FROM account_relation ar
+JOIN account a ON a.id = ar.counterparty_account_id
+LEFT JOIN address ab ON ab.id = ar.default_billing_address_id
+LEFT JOIN geolocation gb ON gb.id = ab.geolocation_id
+LEFT JOIN address ads ON ads.id = ar.default_shipping_address_id
+LEFT JOIN geolocation gs ON gs.id = ads.geolocation_id
+WHERE ar.owner_account_id = sqlc.arg('owner_account_id')
+AND ar.account_relation_role_code = 'customer'
+AND (LEFT(gb.postal_code, 5) = sqlc.arg('postal_prefix') OR LEFT(gs.postal_code, 5) = sqlc.arg('postal_prefix'));
+
+-- name: ListCustomersWithUserEmailDomain :many
+SELECT DISTINCT ar.counterparty_account_id, a.name, ar.external_number
+FROM account_relation ar
+JOIN account a ON a.id = ar.counterparty_account_id
+JOIN account_user au ON au.account_id = ar.counterparty_account_id
+JOIN user u ON u.id = au.user_id
+WHERE ar.owner_account_id = sqlc.arg('owner_account_id')
+AND ar.account_relation_role_code = 'customer'
+AND SUBSTRING_INDEX(u.email, '@', -1) = sqlc.arg('email_domain')
+LIMIT 5;

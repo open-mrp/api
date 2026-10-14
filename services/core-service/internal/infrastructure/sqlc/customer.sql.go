@@ -3449,6 +3449,65 @@ func (q *Queries) ListCustomersPriceGroups(ctx context.Context, relationIds []st
 	return items, nil
 }
 
+const listMergeRetaggableOrders = `-- name: ListMergeRetaggableOrders :many
+SELECT so.id, so.sales_rep_id
+FROM sales_order so
+WHERE so.owner_account_id = ?
+  AND so.buyer_account_id IN (/*SLICE:source_account_ids*/?)
+  AND so.sales_order_status_code IN ('estimate', 'issued')
+  AND so.sales_rep_id IS NOT NULL
+  AND so.sales_rep_id <> ?
+  AND NOT EXISTS (SELECT 1 FROM invoice i WHERE i.sales_order_id = so.id)
+`
+
+type ListMergeRetaggableOrdersParams struct {
+	OwnerAccountID   string
+	SourceAccountIds []string
+	SalesRepID       sql.NullString
+}
+
+type ListMergeRetaggableOrdersRow struct {
+	ID         string
+	SalesRepID sql.NullString
+}
+
+// Open, uninvoiced orders of the merging customers whose rep differs from the target's default.
+// Orders without a rep are left alone: no rep means the order earns no commission.
+func (q *Queries) ListMergeRetaggableOrders(ctx context.Context, arg ListMergeRetaggableOrdersParams) ([]ListMergeRetaggableOrdersRow, error) {
+	query := listMergeRetaggableOrders
+	var queryParams []interface{}
+	queryParams = append(queryParams, arg.OwnerAccountID)
+	if len(arg.SourceAccountIds) > 0 {
+		for _, v := range arg.SourceAccountIds {
+			queryParams = append(queryParams, v)
+		}
+		query = strings.Replace(query, "/*SLICE:source_account_ids*/?", strings.Repeat(",?", len(arg.SourceAccountIds))[1:], 1)
+	} else {
+		query = strings.Replace(query, "/*SLICE:source_account_ids*/?", "NULL", 1)
+	}
+	queryParams = append(queryParams, arg.SalesRepID)
+	rows, err := q.db.QueryContext(ctx, query, queryParams...)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []ListMergeRetaggableOrdersRow
+	for rows.Next() {
+		var i ListMergeRetaggableOrdersRow
+		if err := rows.Scan(&i.ID, &i.SalesRepID); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const listPriceGroupRelationIDs = `-- name: ListPriceGroupRelationIDs :many
 SELECT DISTINCT account_relation_id
 FROM account_relation_price_group
@@ -3973,6 +4032,35 @@ func (q *Queries) SetCustomerStripeCustomerID(ctx context.Context, arg SetCustom
 		arg.OwnerAccountID,
 		arg.CounterpartyAccountID,
 	)
+	return err
+}
+
+const setSalesOrdersSalesRep = `-- name: SetSalesOrdersSalesRep :exec
+UPDATE sales_order SET sales_rep_id = ?, updated_at = NOW(3)
+WHERE owner_account_id = ?
+  AND id IN (/*SLICE:ids*/?)
+`
+
+type SetSalesOrdersSalesRepParams struct {
+	SalesRepID     sql.NullString
+	OwnerAccountID string
+	Ids            []string
+}
+
+func (q *Queries) SetSalesOrdersSalesRep(ctx context.Context, arg SetSalesOrdersSalesRepParams) error {
+	query := setSalesOrdersSalesRep
+	var queryParams []interface{}
+	queryParams = append(queryParams, arg.SalesRepID)
+	queryParams = append(queryParams, arg.OwnerAccountID)
+	if len(arg.Ids) > 0 {
+		for _, v := range arg.Ids {
+			queryParams = append(queryParams, v)
+		}
+		query = strings.Replace(query, "/*SLICE:ids*/?", strings.Repeat(",?", len(arg.Ids))[1:], 1)
+	} else {
+		query = strings.Replace(query, "/*SLICE:ids*/?", "NULL", 1)
+	}
+	_, err := q.db.ExecContext(ctx, query, queryParams...)
 	return err
 }
 

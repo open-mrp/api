@@ -326,13 +326,14 @@ func TestPortalRegistration_CompleteExistingCustomerJourney(t *testing.T) {
 	sessionID := jsonField(startPortalRegistration(t, buyer), "id")
 	sessionPath := portalRegSessionsPath + "/" + sessionID
 
-	// Existing-customer registration only needs the customer number; SeedCustomerNumber
-	// belongs to the seed customer of the seed seller.
+	// Existing-customer registration needs the customer number and the ZIP on the customer's default
+	// billing or shipping address; SeedCustomerNumber belongs to the seed customer of the seed seller.
 	status, body, err := buyer.Patch(sessionPath, map[string]any{
 		"step":                 "contact",
 		"is_existing_customer": true,
 		"session_data": map[string]any{
-			"customer_number": SeedCustomerNumber,
+			"customer_number":    SeedCustomerNumber,
+			"lookup_postal_code": seedCustomerBillingPostalCode,
 		},
 	}, newIdempotencyKey())
 	require.NoError(t, err)

@@ -914,6 +914,9 @@ type CustomerRepo interface {
 	DeletePriceGroups(ctx context.Context, relationID string) *apierror.APIError
 	GetFrequentlyOrderedProducts(ctx context.Context, ownerAccountID, customerAccountID string) ([]*FrequentlyOrderedProduct, *apierror.APIError)
 	GetRelationID(ctx context.Context, ownerAccountID, customerAccountID string) (string, *apierror.APIError)
+	// ListMergeRetaggableOrders returns the open, uninvoiced orders of the source customers whose rep is set and differs from salesRepID.
+	ListMergeRetaggableOrders(ctx context.Context, ownerAccountID string, sourceAccountIDs []string, salesRepID string) ([]OrderSalesRep, *apierror.APIError)
+	SetOrdersSalesRep(ctx context.Context, ownerAccountID, salesRepID string, orderIDs []string) *apierror.APIError
 	MergeOrders(ctx context.Context, ownerAccountID, targetAccountID string, sourceAccountIDs []string) *apierror.APIError
 	MergeInvoices(ctx context.Context, ownerAccountID, targetAccountID string, sourceAccountIDs []string) *apierror.APIError
 	MergeShipments(ctx context.Context, ownerAccountID, targetAccountID string, sourceAccountIDs []string) *apierror.APIError
@@ -1831,6 +1834,16 @@ type RegistrationFlowRepo interface {
 
 type CustomerRegistrationRepo interface {
 	FindCustomerAccountByExternalNumber(ctx context.Context, ownerAccountID, externalNumber string) (string, *apierror.APIError)
+	// FindCustomerAccountBySalesOrderNumber returns the customer that placed the seller's sales order with this number.
+	FindCustomerAccountBySalesOrderNumber(ctx context.Context, ownerAccountID, number string) (string, *apierror.APIError)
+	// FindCustomerAccountByInvoiceNumber returns the customer billed on the seller's invoice with this number.
+	FindCustomerAccountByInvoiceNumber(ctx context.Context, ownerAccountID, number string) (string, *apierror.APIError)
+	// GetCustomerDefaultPostalCodes returns the postal codes of the customer's default billing and shipping addresses.
+	GetCustomerDefaultPostalCodes(ctx context.Context, ownerAccountID, customerAccountID string) ([]string, *apierror.APIError)
+	// ListCustomerDefaultAddressesInPostalArea returns the customers whose default billing or shipping address has the five-character postal prefix.
+	ListCustomerDefaultAddressesInPostalArea(ctx context.Context, ownerAccountID, postalPrefix string) ([]CustomerDefaultAddresses, *apierror.APIError)
+	// ListCustomersWithUserEmailDomain returns up to five customers with a user whose email is at the domain.
+	ListCustomersWithUserEmailDomain(ctx context.Context, ownerAccountID, emailDomain string) ([]CustomerMatch, *apierror.APIError)
 	CreateAccountUserLink(ctx context.Context, linkID, accountID, userID string) *apierror.APIError
 	// AllocateNextCustomerNumber reserves the account's next customer number in one locked statement.
 	AllocateNextCustomerNumber(ctx context.Context, sysPropertyID, accountID string) (int64, *apierror.APIError)

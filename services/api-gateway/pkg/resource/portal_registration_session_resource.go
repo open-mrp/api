@@ -22,7 +22,7 @@ type PortalRegistrationSessionData struct {
 	CustomerName string `json:"customer_name"`
 	// The seller-assigned customer number the buyer is claiming.
 	//
-	// Only used when the buyer is joining an existing customer, where it must match a customer already on the seller's books. New customers are assigned a number automatically when the registration completes.
+	// Superseded by `lookup_number`, and read only when that is empty and `lookup_type` is `customer_number`. New customers are assigned a number automatically when the registration completes.
 	CustomerNumber string `json:"customer_number"`
 	// The chosen customer group ID.
 	CustomerGroupID string `json:"customer_group_id"`
@@ -46,6 +46,14 @@ type PortalRegistrationSessionData struct {
 	AddressPostalCode string `json:"address_postal_code"`
 	// Billing address two-letter country code.
 	AddressCountry string `json:"address_country"`
+	// Which kind of number `lookup_number` is, for a buyer joining an existing customer.
+	//
+	// Null until the buyer chooses one.
+	LookupType *constants.PortalRegistrationLookupType `json:"lookup_type"`
+	// The customer, sales order, or invoice number the buyer gave to find the customer they are joining.
+	LookupNumber string `json:"lookup_number"`
+	// The ZIP or postal code the buyer gave to confirm the customer they are joining.
+	LookupPostalCode string `json:"lookup_postal_code"`
 }
 
 // A buyer's registration into a seller's customer portal.
@@ -66,7 +74,7 @@ type PortalRegistrationSession struct {
 	UserID string `json:"user_id" validate:"required"`
 	// Whether the buyer is joining a customer the seller already has, rather than creating a new one.
 	//
-	// When true, completing the registration links the buyer to the seller's existing customer identified by `customer_number`; otherwise it creates a new customer from the rest of the session data.
+	// When true, completing the registration links the buyer to the seller's existing customer found by `lookup_type`, `lookup_number`, and `lookup_postal_code`; otherwise it creates a new customer from the rest of the session data.
 	IsExistingCustomer *bool `json:"is_existing_customer"`
 	// The step the buyer has reached.
 	//

@@ -50,6 +50,84 @@ func (q *Queries) FindCustomerAccountByExternalNumber(ctx context.Context, arg F
 	return id, err
 }
 
+const findCustomerAccountByInvoiceNumber = `-- name: FindCustomerAccountByInvoiceNumber :one
+SELECT so.buyer_account_id
+FROM invoice i
+JOIN sales_order so ON so.id = i.sales_order_id
+JOIN account_relation ar ON ar.owner_account_id = so.owner_account_id
+  AND ar.counterparty_account_id = so.buyer_account_id
+  AND ar.account_relation_role_code = 'customer'
+WHERE i.account_id = ?
+AND i.number = ?
+AND so.owner_account_id = ?
+LIMIT 1
+`
+
+type FindCustomerAccountByInvoiceNumberParams struct {
+	OwnerAccountID string
+	Number         string
+}
+
+func (q *Queries) FindCustomerAccountByInvoiceNumber(ctx context.Context, arg FindCustomerAccountByInvoiceNumberParams) (string, error) {
+	row := q.db.QueryRowContext(ctx, findCustomerAccountByInvoiceNumber, arg.OwnerAccountID, arg.Number, arg.OwnerAccountID)
+	var buyer_account_id string
+	err := row.Scan(&buyer_account_id)
+	return buyer_account_id, err
+}
+
+const findCustomerAccountBySalesOrderNumber = `-- name: FindCustomerAccountBySalesOrderNumber :one
+SELECT so.buyer_account_id
+FROM sales_order so
+JOIN account_relation ar ON ar.owner_account_id = so.owner_account_id
+  AND ar.counterparty_account_id = so.buyer_account_id
+  AND ar.account_relation_role_code = 'customer'
+WHERE so.owner_account_id = ?
+AND so.sales_order_type_code = 'sales_order'
+AND so.number = ?
+LIMIT 1
+`
+
+type FindCustomerAccountBySalesOrderNumberParams struct {
+	OwnerAccountID string
+	Number         string
+}
+
+func (q *Queries) FindCustomerAccountBySalesOrderNumber(ctx context.Context, arg FindCustomerAccountBySalesOrderNumberParams) (string, error) {
+	row := q.db.QueryRowContext(ctx, findCustomerAccountBySalesOrderNumber, arg.OwnerAccountID, arg.Number)
+	var buyer_account_id string
+	err := row.Scan(&buyer_account_id)
+	return buyer_account_id, err
+}
+
+const getCustomerDefaultPostalCodes = `-- name: GetCustomerDefaultPostalCodes :one
+SELECT gb.postal_code AS billing_postal_code, gs.postal_code AS shipping_postal_code
+FROM account_relation ar
+LEFT JOIN address ab ON ab.id = ar.default_billing_address_id
+LEFT JOIN geolocation gb ON gb.id = ab.geolocation_id
+LEFT JOIN address ads ON ads.id = ar.default_shipping_address_id
+LEFT JOIN geolocation gs ON gs.id = ads.geolocation_id
+WHERE ar.owner_account_id = ?
+AND ar.counterparty_account_id = ?
+AND ar.account_relation_role_code = 'customer'
+`
+
+type GetCustomerDefaultPostalCodesParams struct {
+	OwnerAccountID    string
+	CustomerAccountID string
+}
+
+type GetCustomerDefaultPostalCodesRow struct {
+	BillingPostalCode  sql.NullString
+	ShippingPostalCode sql.NullString
+}
+
+func (q *Queries) GetCustomerDefaultPostalCodes(ctx context.Context, arg GetCustomerDefaultPostalCodesParams) (GetCustomerDefaultPostalCodesRow, error) {
+	row := q.db.QueryRowContext(ctx, getCustomerDefaultPostalCodes, arg.OwnerAccountID, arg.CustomerAccountID)
+	var i GetCustomerDefaultPostalCodesRow
+	err := row.Scan(&i.BillingPostalCode, &i.ShippingPostalCode)
+	return i, err
+}
+
 const getUserEmailByID = `-- name: GetUserEmailByID :one
 SELECT email FROM user WHERE id = ?
 `
@@ -253,4 +331,112 @@ func (q *Queries) InsertGeolocationForCustomer(ctx context.Context, arg InsertGe
 		arg.Country,
 	)
 	return err
+}
+
+const listCustomerDefaultAddressesInPostalArea = `-- name: ListCustomerDefaultAddressesInPostalArea :many
+SELECT ar.counterparty_account_id, a.name, ar.external_number,
+       gb.street_line_1 AS billing_street_line_1, gb.postal_code AS billing_postal_code,
+       gs.street_line_1 AS shipping_street_line_1, gs.postal_code AS shipping_postal_code
+FROM account_relation ar
+JOIN account a ON a.id = ar.counterparty_account_id
+LEFT JOIN address ab ON ab.id = ar.default_billing_address_id
+LEFT JOIN geolocation gb ON gb.id = ab.geolocation_id
+LEFT JOIN address ads ON ads.id = ar.default_shipping_address_id
+LEFT JOIN geolocation gs ON gs.id = ads.geolocation_id
+WHERE ar.owner_account_id = ?
+AND ar.account_relation_role_code = 'customer'
+AND (LEFT(gb.postal_code, 5) = ? OR LEFT(gs.postal_code, 5) = ?)
+`
+
+type ListCustomerDefaultAddressesInPostalAreaParams struct {
+	OwnerAccountID string
+	PostalPrefix   sql.NullString
+}
+
+type ListCustomerDefaultAddressesInPostalAreaRow struct {
+	CounterpartyAccountID string
+	Name                  string
+	ExternalNumber        string
+	BillingStreetLine1    sql.NullString
+	BillingPostalCode     sql.NullString
+	ShippingStreetLine1   sql.NullString
+	ShippingPostalCode    sql.NullString
+}
+
+// Customers whose default billing or shipping address sits in the given five-character postal prefix.
+func (q *Queries) ListCustomerDefaultAddressesInPostalArea(ctx context.Context, arg ListCustomerDefaultAddressesInPostalAreaParams) ([]ListCustomerDefaultAddressesInPostalAreaRow, error) {
+	rows, err := q.db.QueryContext(ctx, listCustomerDefaultAddressesInPostalArea, arg.OwnerAccountID, arg.PostalPrefix, arg.PostalPrefix)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []ListCustomerDefaultAddressesInPostalAreaRow
+	for rows.Next() {
+		var i ListCustomerDefaultAddressesInPostalAreaRow
+		if err := rows.Scan(
+			&i.CounterpartyAccountID,
+			&i.Name,
+			&i.ExternalNumber,
+			&i.BillingStreetLine1,
+			&i.BillingPostalCode,
+			&i.ShippingStreetLine1,
+			&i.ShippingPostalCode,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listCustomersWithUserEmailDomain = `-- name: ListCustomersWithUserEmailDomain :many
+SELECT DISTINCT ar.counterparty_account_id, a.name, ar.external_number
+FROM account_relation ar
+JOIN account a ON a.id = ar.counterparty_account_id
+JOIN account_user au ON au.account_id = ar.counterparty_account_id
+JOIN user u ON u.id = au.user_id
+WHERE ar.owner_account_id = ?
+AND ar.account_relation_role_code = 'customer'
+AND SUBSTRING_INDEX(u.email, '@', -1) = ?
+LIMIT 5
+`
+
+type ListCustomersWithUserEmailDomainParams struct {
+	OwnerAccountID string
+	EmailDomain    sql.NullString
+}
+
+type ListCustomersWithUserEmailDomainRow struct {
+	CounterpartyAccountID string
+	Name                  string
+	ExternalNumber        string
+}
+
+func (q *Queries) ListCustomersWithUserEmailDomain(ctx context.Context, arg ListCustomersWithUserEmailDomainParams) ([]ListCustomersWithUserEmailDomainRow, error) {
+	rows, err := q.db.QueryContext(ctx, listCustomersWithUserEmailDomain, arg.OwnerAccountID, arg.EmailDomain)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []ListCustomersWithUserEmailDomainRow
+	for rows.Next() {
+		var i ListCustomersWithUserEmailDomainRow
+		if err := rows.Scan(&i.CounterpartyAccountID, &i.Name, &i.ExternalNumber); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
 }

@@ -2053,6 +2053,9 @@ type RegisterCustomerRequest struct {
 	ShippingTermId     *string                       `protobuf:"bytes,7,opt,name=shipping_term_id,json=shippingTermId,proto3,oneof" json:"shipping_term_id,omitempty"`
 	PaymentTermId      *string                       `protobuf:"bytes,8,opt,name=payment_term_id,json=paymentTermId,proto3,oneof" json:"payment_term_id,omitempty"`
 	Address            *RegisterCustomerAddressInput `protobuf:"bytes,9,opt,name=address,proto3,oneof" json:"address,omitempty"`
+	LookupType         *string                       `protobuf:"bytes,10,opt,name=lookup_type,json=lookupType,proto3,oneof" json:"lookup_type,omitempty"`
+	LookupNumber       *string                       `protobuf:"bytes,11,opt,name=lookup_number,json=lookupNumber,proto3,oneof" json:"lookup_number,omitempty"`
+	LookupPostalCode   *string                       `protobuf:"bytes,12,opt,name=lookup_postal_code,json=lookupPostalCode,proto3,oneof" json:"lookup_postal_code,omitempty"`
 	unknownFields      protoimpl.UnknownFields
 	sizeCache          protoimpl.SizeCache
 }
@@ -2148,6 +2151,27 @@ func (x *RegisterCustomerRequest) GetAddress() *RegisterCustomerAddressInput {
 		return x.Address
 	}
 	return nil
+}
+
+func (x *RegisterCustomerRequest) GetLookupType() string {
+	if x != nil && x.LookupType != nil {
+		return *x.LookupType
+	}
+	return ""
+}
+
+func (x *RegisterCustomerRequest) GetLookupNumber() string {
+	if x != nil && x.LookupNumber != nil {
+		return *x.LookupNumber
+	}
+	return ""
+}
+
+func (x *RegisterCustomerRequest) GetLookupPostalCode() string {
+	if x != nil && x.LookupPostalCode != nil {
+		return *x.LookupPostalCode
+	}
+	return ""
 }
 
 type RegisterCustomerResponse struct {
@@ -5585,7 +5609,7 @@ const file_core_core_users_territories_proto_rawDesc = "" +
 	"\acountry\x18\x06 \x01(\tR\acountry\x12\x17\n" +
 	"\x04name\x18\a \x01(\tH\x01R\x04name\x88\x01\x01B\x10\n" +
 	"\x0e_street_line_2B\a\n" +
-	"\x05_name\"\xac\x04\n" +
+	"\x05_name\"\xe8\x05\n" +
 	"\x17RegisterCustomerRequest\x12!\n" +
 	"\faccount_slug\x18\x01 \x01(\tR\vaccountSlug\x120\n" +
 	"\x14is_existing_customer\x18\x02 \x01(\bR\x12isExistingCustomer\x12,\n" +
@@ -5595,7 +5619,12 @@ const file_core_core_users_territories_proto_rawDesc = "" +
 	"\x05phone\x18\x06 \x01(\tH\x03R\x05phone\x88\x01\x01\x12-\n" +
 	"\x10shipping_term_id\x18\a \x01(\tH\x04R\x0eshippingTermId\x88\x01\x01\x12+\n" +
 	"\x0fpayment_term_id\x18\b \x01(\tH\x05R\rpaymentTermId\x88\x01\x01\x12A\n" +
-	"\aaddress\x18\t \x01(\v2\".core.RegisterCustomerAddressInputH\x06R\aaddress\x88\x01\x01B\x12\n" +
+	"\aaddress\x18\t \x01(\v2\".core.RegisterCustomerAddressInputH\x06R\aaddress\x88\x01\x01\x12$\n" +
+	"\vlookup_type\x18\n" +
+	" \x01(\tH\aR\n" +
+	"lookupType\x88\x01\x01\x12(\n" +
+	"\rlookup_number\x18\v \x01(\tH\bR\flookupNumber\x88\x01\x01\x121\n" +
+	"\x12lookup_postal_code\x18\f \x01(\tH\tR\x10lookupPostalCode\x88\x01\x01B\x12\n" +
 	"\x10_customer_numberB\x10\n" +
 	"\x0e_customer_nameB\x14\n" +
 	"\x12_customer_group_idB\b\n" +
@@ -5603,7 +5632,10 @@ const file_core_core_users_territories_proto_rawDesc = "" +
 	"\x11_shipping_term_idB\x12\n" +
 	"\x10_payment_term_idB\n" +
 	"\n" +
-	"\b_address\"\x1a\n" +
+	"\b_addressB\x0e\n" +
+	"\f_lookup_typeB\x10\n" +
+	"\x0e_lookup_numberB\x15\n" +
+	"\x13_lookup_postal_code\"\x1a\n" +
 	"\x18RegisterCustomerResponse\"\xfe\x02\n" +
 	"\x12DepartmentRateInfo\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x14\n" +

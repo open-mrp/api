@@ -28,6 +28,14 @@ type PortalRegistrationSessionDataInput struct {
 	AddressState      string `json:"address_state,omitzero"`
 	AddressPostalCode string `json:"address_postal_code,omitzero"`
 	AddressCountry    string `json:"address_country,omitzero"`
+	// Which kind of number `lookup_number` is, for a buyer joining an existing customer. Defaults to `customer_number`.
+	LookupType field.Optional[constants.PortalRegistrationLookupType] `json:"lookup_type,omitzero"`
+	// The customer, sales order, or invoice number the buyer gives to find the customer they are joining.
+	LookupNumber field.Optional[string] `json:"lookup_number,omitzero"`
+	// The ZIP or postal code on the customer's default billing or shipping address.
+	//
+	// Joining an existing customer requires it: the number alone links nobody.
+	LookupPostalCode field.Optional[string] `json:"lookup_postal_code,omitzero"`
 }
 
 // Request to save a buyer's progress on a portal registration session.
@@ -44,7 +52,7 @@ type UpdatePortalRegistrationSessionRequest struct {
 	SessionData *PortalRegistrationSessionDataInput `json:"session_data,omitzero"`
 	// Whether the buyer is joining a customer the seller already has, rather than creating a new one.
 	//
-	// This decides what completing the registration does: joining an existing customer links the buyer to the customer matching `customer_number`, while a new customer is built from the rest of the session data. Like the session data it is stored as sent, so re-send it on every update to keep the choice.
+	// This decides what completing the registration does: joining an existing customer links the buyer to the customer found by `lookup_type` and `lookup_number` whose default billing or shipping address has the ZIP `lookup_postal_code`, while a new customer is built from the rest of the session data. Like the session data it is stored as sent, so re-send it on every update to keep the choice.
 	IsExistingCustomer field.Optional[bool] `json:"is_existing_customer,omitzero"`
 }
 

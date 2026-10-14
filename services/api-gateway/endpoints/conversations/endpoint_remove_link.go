@@ -7,8 +7,10 @@ import (
 	"github.com/open-mrp/api/services/api-gateway/pkg/authz"
 	apiresource "github.com/open-mrp/api/services/api-gateway/pkg/resource"
 	"github.com/open-mrp/api/services/auth-service/pkg/types"
+	"github.com/open-mrp/api/shared/constants"
 	apierror "github.com/open-mrp/apikit/apierror"
 	apiendpoint "github.com/open-mrp/apikit/endpoint"
+	"github.com/open-mrp/apikit/object"
 )
 
 // Request to remove a business-record link from a conversation.
@@ -22,8 +24,8 @@ type RemoveConversationLinkRequest struct {
 // Removes a business-record link from a conversation.
 type RemoveConversationLinkEndpoint struct{}
 
-func (e *RemoveConversationLinkEndpoint) Materialize() *apiendpoint.APIEndpoint[*RemoveConversationLinkRequest, *apiresource.EmptyResource] {
-	return (&apiendpoint.APIEndpoint[*RemoveConversationLinkRequest, *apiresource.EmptyResource]{
+func (e *RemoveConversationLinkEndpoint) Materialize() *apiendpoint.APIEndpoint[*RemoveConversationLinkRequest, *object.Deleted] {
+	return (&apiendpoint.APIEndpoint[*RemoveConversationLinkRequest, *object.Deleted]{
 		Title:             "Unlink Record",
 		Method:            http.MethodDelete,
 		ContentType:       "application/json",
@@ -33,8 +35,8 @@ func (e *RemoveConversationLinkEndpoint) Materialize() *apiendpoint.APIEndpoint[
 		AgentTool:         true,
 		Preview:           true,
 		Auth:              authz.Policy{Permissions: []types.Permission{{Domain: types.PermissionDomainMessaging, Action: types.ActionUpdate}}},
-		ServiceHandler: func(svc any) func(ctx context.Context, req *RemoveConversationLinkRequest) (*apiresource.EmptyResource, *apierror.APIError) {
-			return svc.(ConversationSvc).RemoveConversationLink
+		ServiceHandler: func(svc any) func(ctx context.Context, req *RemoveConversationLinkRequest) (*object.Deleted, *apierror.APIError) {
+			return apiresource.Deleted(svc.(ConversationSvc).RemoveConversationLink, constants.ObjectTypeConversationLink, "link_id")
 		},
 	})
 }

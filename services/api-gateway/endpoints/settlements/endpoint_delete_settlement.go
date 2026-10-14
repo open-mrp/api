@@ -10,6 +10,7 @@ import (
 	"github.com/open-mrp/api/shared/constants"
 	apierror "github.com/open-mrp/apikit/apierror"
 	apiendpoint "github.com/open-mrp/apikit/endpoint"
+	"github.com/open-mrp/apikit/object"
 )
 
 // Request to delete a settlement.
@@ -27,8 +28,8 @@ type DeleteSettlementRequest struct {
 // Adjustment transactions referenced only by this settlement are deleted along with it.
 type DeleteSettlementEndpoint struct{}
 
-func (e *DeleteSettlementEndpoint) Materialize() *apiendpoint.APIEndpoint[*DeleteSettlementRequest, *apiresource.Settlement] {
-	return (&apiendpoint.APIEndpoint[*DeleteSettlementRequest, *apiresource.Settlement]{
+func (e *DeleteSettlementEndpoint) Materialize() *apiendpoint.APIEndpoint[*DeleteSettlementRequest, *object.Deleted] {
+	return (&apiendpoint.APIEndpoint[*DeleteSettlementRequest, *object.Deleted]{
 		Title:             "Delete Settlement",
 		Method:            http.MethodDelete,
 		ContentType:       "application/json",
@@ -39,8 +40,8 @@ func (e *DeleteSettlementEndpoint) Materialize() *apiendpoint.APIEndpoint[*Delet
 		Preview:           true,
 		Auth:              authz.Policy{Permissions: []types.Permission{{Domain: types.PermissionDomainSettlements, Action: types.ActionDelete}}},
 		ObjectType:        constants.ObjectTypeSettlement,
-		ServiceHandler: func(svc any) func(ctx context.Context, req *DeleteSettlementRequest) (*apiresource.Settlement, *apierror.APIError) {
-			return svc.(SettlementSvc).DeleteSettlement
+		ServiceHandler: func(svc any) func(ctx context.Context, req *DeleteSettlementRequest) (*object.Deleted, *apierror.APIError) {
+			return apiresource.Deleted(svc.(SettlementSvc).DeleteSettlement, constants.ObjectTypeSettlement, "id")
 		},
 	})
 }

@@ -9,6 +9,7 @@ import (
 	"github.com/open-mrp/api/shared/constants"
 	apierror "github.com/open-mrp/apikit/apierror"
 	apiendpoint "github.com/open-mrp/apikit/endpoint"
+	"github.com/open-mrp/apikit/object"
 )
 
 // Request to delete an account integration.
@@ -22,8 +23,8 @@ type DeleteAccountIntegrationRequest struct {
 // The stored credentials go with it, so any feature that relies on the provider stops working until the integration is created again. Deleting an integration that is already deleted returns an error rather than succeeding silently. To pause a provider without discarding its credentials, set the integration's status to `inactive` instead.
 type DeleteAccountIntegrationEndpoint struct{}
 
-func (e *DeleteAccountIntegrationEndpoint) Materialize() *apiendpoint.APIEndpoint[*DeleteAccountIntegrationRequest, *apiresource.AccountIntegration] {
-	return (&apiendpoint.APIEndpoint[*DeleteAccountIntegrationRequest, *apiresource.AccountIntegration]{
+func (e *DeleteAccountIntegrationEndpoint) Materialize() *apiendpoint.APIEndpoint[*DeleteAccountIntegrationRequest, *object.Deleted] {
+	return (&apiendpoint.APIEndpoint[*DeleteAccountIntegrationRequest, *object.Deleted]{
 		Title:             "Delete Account Integration",
 		Method:            http.MethodDelete,
 		Route:             "/v1/settings/integrations/{id}",
@@ -34,8 +35,8 @@ func (e *DeleteAccountIntegrationEndpoint) Materialize() *apiendpoint.APIEndpoin
 		Auth:              authz.Policy{RoleType: constants.RoleTypeAdmin},
 		Preview:           true,
 		ObjectType:        constants.ObjectTypeAccountIntegration,
-		ServiceHandler: func(svc any) func(ctx context.Context, req *DeleteAccountIntegrationRequest) (*apiresource.AccountIntegration, *apierror.APIError) {
-			return svc.(AccountIntegrationSvc).DeleteAccountIntegration
+		ServiceHandler: func(svc any) func(ctx context.Context, req *DeleteAccountIntegrationRequest) (*object.Deleted, *apierror.APIError) {
+			return apiresource.Deleted(svc.(AccountIntegrationSvc).DeleteAccountIntegration, constants.ObjectTypeAccountIntegration, "id")
 		},
 	})
 }

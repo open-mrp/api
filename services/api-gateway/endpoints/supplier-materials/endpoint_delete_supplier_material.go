@@ -7,8 +7,10 @@ import (
 	"github.com/open-mrp/api/services/api-gateway/pkg/authz"
 	apiresource "github.com/open-mrp/api/services/api-gateway/pkg/resource"
 	"github.com/open-mrp/api/services/auth-service/pkg/types"
+	"github.com/open-mrp/api/shared/constants"
 	apierror "github.com/open-mrp/apikit/apierror"
 	apiendpoint "github.com/open-mrp/apikit/endpoint"
+	"github.com/open-mrp/apikit/object"
 )
 
 // Request to delete a supplier material.
@@ -26,8 +28,8 @@ type DeleteSupplierMaterialRequest struct {
 // Returns the link as it looked immediately before deletion. Removing the link does not affect the underlying material or supplier.
 type DeleteSupplierMaterialEndpoint struct{}
 
-func (e *DeleteSupplierMaterialEndpoint) Materialize() *apiendpoint.APIEndpoint[*DeleteSupplierMaterialRequest, *apiresource.SupplierMaterial] {
-	return (&apiendpoint.APIEndpoint[*DeleteSupplierMaterialRequest, *apiresource.SupplierMaterial]{
+func (e *DeleteSupplierMaterialEndpoint) Materialize() *apiendpoint.APIEndpoint[*DeleteSupplierMaterialRequest, *object.Deleted] {
+	return (&apiendpoint.APIEndpoint[*DeleteSupplierMaterialRequest, *object.Deleted]{
 		Title:             "Delete Supplier Material",
 		Method:            http.MethodDelete,
 		ContentType:       "application/json",
@@ -39,8 +41,8 @@ func (e *DeleteSupplierMaterialEndpoint) Materialize() *apiendpoint.APIEndpoint[
 		Auth: authz.Policy{Permissions: []types.Permission{
 			{Domain: types.PermissionDomainSuppliers, Action: types.ActionUpdate},
 		}},
-		ServiceHandler: func(svc any) func(ctx context.Context, req *DeleteSupplierMaterialRequest) (*apiresource.SupplierMaterial, *apierror.APIError) {
-			return svc.(SupplierMaterialSvc).DeleteSupplierMaterial
+		ServiceHandler: func(svc any) func(ctx context.Context, req *DeleteSupplierMaterialRequest) (*object.Deleted, *apierror.APIError) {
+			return apiresource.Deleted(svc.(SupplierMaterialSvc).DeleteSupplierMaterial, constants.ObjectTypeSupplierMaterial, "id")
 		},
 	})
 }

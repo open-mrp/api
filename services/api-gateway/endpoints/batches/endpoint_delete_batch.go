@@ -10,6 +10,7 @@ import (
 	"github.com/open-mrp/api/shared/constants"
 	apierror "github.com/open-mrp/apikit/apierror"
 	apiendpoint "github.com/open-mrp/apikit/endpoint"
+	"github.com/open-mrp/apikit/object"
 )
 
 // Request to delete a batch.
@@ -23,8 +24,8 @@ type DeleteBatchRequest struct {
 // Deleting a batch also removes its links to the batches feeding into and out of it, breaking the production flow at that point, and detaches it from any machines. After deletion, the batch's production run is closed automatically once all of its batches are scanned or deleted. Deleting the same batch twice reports that it has already been deleted.
 type DeleteBatchEndpoint struct{}
 
-func (e *DeleteBatchEndpoint) Materialize() *apiendpoint.APIEndpoint[*DeleteBatchRequest, *apiresource.Batch] {
-	return (&apiendpoint.APIEndpoint[*DeleteBatchRequest, *apiresource.Batch]{
+func (e *DeleteBatchEndpoint) Materialize() *apiendpoint.APIEndpoint[*DeleteBatchRequest, *object.Deleted] {
+	return (&apiendpoint.APIEndpoint[*DeleteBatchRequest, *object.Deleted]{
 		Title:             "Delete Batch",
 		Method:            http.MethodDelete,
 		ContentType:       "application/json",
@@ -40,8 +41,8 @@ func (e *DeleteBatchEndpoint) Materialize() *apiendpoint.APIEndpoint[*DeleteBatc
 			ObjectType: constants.ObjectTypeBatch,
 			Fields:     []string{"quantity.unit", "seconds.unit", "waste.unit"},
 		}),
-		ServiceHandler: func(svc any) func(ctx context.Context, req *DeleteBatchRequest) (*apiresource.Batch, *apierror.APIError) {
-			return svc.(BatchSvc).DeleteBatch
+		ServiceHandler: func(svc any) func(ctx context.Context, req *DeleteBatchRequest) (*object.Deleted, *apierror.APIError) {
+			return apiresource.Deleted(svc.(BatchSvc).DeleteBatch, constants.ObjectTypeBatch, "id")
 		},
 	})
 }

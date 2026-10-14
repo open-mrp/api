@@ -10,6 +10,7 @@ import (
 	"github.com/open-mrp/api/shared/constants"
 	apierror "github.com/open-mrp/apikit/apierror"
 	apiendpoint "github.com/open-mrp/apikit/endpoint"
+	"github.com/open-mrp/apikit/object"
 )
 
 // Request to delete a consumption.
@@ -25,8 +26,8 @@ type DeleteConsumptionRequest struct {
 // Any production-flow connections established through this consumption are disconnected, and the remaining consumptions are re-linked. The deleted consumption is returned; deleting it again reports that it has already been deleted.
 type DeleteConsumptionEndpoint struct{}
 
-func (e *DeleteConsumptionEndpoint) Materialize() *apiendpoint.APIEndpoint[*DeleteConsumptionRequest, *apiresource.Consumption] {
-	return (&apiendpoint.APIEndpoint[*DeleteConsumptionRequest, *apiresource.Consumption]{
+func (e *DeleteConsumptionEndpoint) Materialize() *apiendpoint.APIEndpoint[*DeleteConsumptionRequest, *object.Deleted] {
+	return (&apiendpoint.APIEndpoint[*DeleteConsumptionRequest, *object.Deleted]{
 		Title:             "Delete Consumption",
 		Method:            http.MethodDelete,
 		Route:             "/v1/operations/production-steps/{production_step_id}/consumptions/{id}",
@@ -39,8 +40,8 @@ func (e *DeleteConsumptionEndpoint) Materialize() *apiendpoint.APIEndpoint[*Dele
 		Auth: authz.Policy{Permissions: []types.Permission{
 			{Domain: types.PermissionDomainProductionSteps, Action: types.ActionDelete},
 		}},
-		ServiceHandler: func(svc any) func(ctx context.Context, req *DeleteConsumptionRequest) (*apiresource.Consumption, *apierror.APIError) {
-			return svc.(ConsumptionSvc).DeleteConsumption
+		ServiceHandler: func(svc any) func(ctx context.Context, req *DeleteConsumptionRequest) (*object.Deleted, *apierror.APIError) {
+			return apiresource.Deleted(svc.(ConsumptionSvc).DeleteConsumption, constants.ObjectTypeConsumption, "id")
 		},
 		IncludeConfig: apiendpoint.IncludesFor(apiendpoint.IncludesParams{
 			ObjectType: constants.ObjectTypeConsumption,

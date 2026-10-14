@@ -7,8 +7,10 @@ import (
 	"github.com/open-mrp/api/services/api-gateway/pkg/authz"
 	apiresource "github.com/open-mrp/api/services/api-gateway/pkg/resource"
 	"github.com/open-mrp/api/services/auth-service/pkg/types"
+	"github.com/open-mrp/api/shared/constants"
 	apierror "github.com/open-mrp/apikit/apierror"
 	apiendpoint "github.com/open-mrp/apikit/endpoint"
+	"github.com/open-mrp/apikit/object"
 )
 
 // Request to remove an agent participant from a conversation.
@@ -24,8 +26,8 @@ type RemoveAgentParticipantRequest struct {
 // In an internal group conversation only an owner or admin can remove an agent; in a direct message or a customer-facing case any active participant can. The agent's earlier messages stay in the thread, and it can be added back later.
 type RemoveAgentParticipantEndpoint struct{}
 
-func (e *RemoveAgentParticipantEndpoint) Materialize() *apiendpoint.APIEndpoint[*RemoveAgentParticipantRequest, *apiresource.EmptyResource] {
-	return (&apiendpoint.APIEndpoint[*RemoveAgentParticipantRequest, *apiresource.EmptyResource]{
+func (e *RemoveAgentParticipantEndpoint) Materialize() *apiendpoint.APIEndpoint[*RemoveAgentParticipantRequest, *object.Deleted] {
+	return (&apiendpoint.APIEndpoint[*RemoveAgentParticipantRequest, *object.Deleted]{
 		Title:             "Remove Agent Participant",
 		Method:            http.MethodDelete,
 		ContentType:       "application/json",
@@ -34,8 +36,8 @@ func (e *RemoveAgentParticipantEndpoint) Materialize() *apiendpoint.APIEndpoint[
 		Public:            false,
 		Preview:           true,
 		Auth:              authz.Policy{Permissions: []types.Permission{{Domain: types.PermissionDomainMessaging, Action: types.ActionDelete}}},
-		ServiceHandler: func(svc any) func(ctx context.Context, req *RemoveAgentParticipantRequest) (*apiresource.EmptyResource, *apierror.APIError) {
-			return svc.(ParticipantSvc).RemoveAgentParticipant
+		ServiceHandler: func(svc any) func(ctx context.Context, req *RemoveAgentParticipantRequest) (*object.Deleted, *apierror.APIError) {
+			return apiresource.Deleted(svc.(ParticipantSvc).RemoveAgentParticipant, constants.ObjectTypeConversationParticipant, "pid")
 		},
 	})
 }

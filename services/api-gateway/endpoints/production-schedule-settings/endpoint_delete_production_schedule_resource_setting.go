@@ -10,6 +10,7 @@ import (
 	"github.com/open-mrp/api/shared/constants"
 	apierror "github.com/open-mrp/apikit/apierror"
 	apiendpoint "github.com/open-mrp/apikit/endpoint"
+	"github.com/open-mrp/apikit/object"
 )
 
 // Request to remove a per-resource planning override.
@@ -23,8 +24,8 @@ type DeleteResourceSettingRequest struct {
 // Deleting a machine's override puts it back into the plan alongside the rest of its department; deleting a production step's removes the lead-time offset its work was shifted by. The change takes effect on the next generated version.
 type DeleteResourceSettingEndpoint struct{}
 
-func (e *DeleteResourceSettingEndpoint) Materialize() *apiendpoint.APIEndpoint[*DeleteResourceSettingRequest, *apiresource.EmptyResource] {
-	return (&apiendpoint.APIEndpoint[*DeleteResourceSettingRequest, *apiresource.EmptyResource]{
+func (e *DeleteResourceSettingEndpoint) Materialize() *apiendpoint.APIEndpoint[*DeleteResourceSettingRequest, *object.Deleted] {
+	return (&apiendpoint.APIEndpoint[*DeleteResourceSettingRequest, *object.Deleted]{
 		Title:             "Delete Production Schedule Resource Setting",
 		Method:            http.MethodDelete,
 		ContentType:       "application/json",
@@ -37,8 +38,8 @@ func (e *DeleteResourceSettingEndpoint) Materialize() *apiendpoint.APIEndpoint[*
 		Auth: authz.Policy{Permissions: []types.Permission{
 			{Domain: types.PermissionDomainProductionSchedules, Action: types.ActionUpdate},
 		}},
-		ServiceHandler: func(svc any) func(ctx context.Context, req *DeleteResourceSettingRequest) (*apiresource.EmptyResource, *apierror.APIError) {
-			return svc.(ProductionScheduleSettingsSvc).DeleteResourceSetting
+		ServiceHandler: func(svc any) func(ctx context.Context, req *DeleteResourceSettingRequest) (*object.Deleted, *apierror.APIError) {
+			return apiresource.Deleted(svc.(ProductionScheduleSettingsSvc).DeleteResourceSetting, constants.ObjectTypeProductionScheduleResourceSetting, "id")
 		},
 	})
 }

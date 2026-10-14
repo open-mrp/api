@@ -10,6 +10,7 @@ import (
 	"github.com/open-mrp/api/shared/constants"
 	apierror "github.com/open-mrp/apikit/apierror"
 	apiendpoint "github.com/open-mrp/apikit/endpoint"
+	"github.com/open-mrp/apikit/object"
 )
 
 // Request to delete a supplier.
@@ -23,8 +24,8 @@ type DeleteSupplierRequest struct {
 // The supplier's saved addresses and any users belonging to the supplier are deleted along with it. Returns the supplier as it looked immediately before deletion, with its addresses when requested with `include`. Deleting a supplier that has already been deleted returns a `410 Gone` error rather than succeeding again.
 type DeleteSupplierEndpoint struct{}
 
-func (e *DeleteSupplierEndpoint) Materialize() *apiendpoint.APIEndpoint[*DeleteSupplierRequest, *apiresource.Supplier] {
-	return (&apiendpoint.APIEndpoint[*DeleteSupplierRequest, *apiresource.Supplier]{
+func (e *DeleteSupplierEndpoint) Materialize() *apiendpoint.APIEndpoint[*DeleteSupplierRequest, *object.Deleted] {
+	return (&apiendpoint.APIEndpoint[*DeleteSupplierRequest, *object.Deleted]{
 		Title:             "Delete Supplier",
 		Method:            http.MethodDelete,
 		ContentType:       "application/json",
@@ -38,8 +39,8 @@ func (e *DeleteSupplierEndpoint) Materialize() *apiendpoint.APIEndpoint[*DeleteS
 		Auth: authz.Policy{Permissions: []types.Permission{
 			{Domain: types.PermissionDomainSuppliers, Action: types.ActionUpdate},
 		}},
-		ServiceHandler: func(svc any) func(ctx context.Context, req *DeleteSupplierRequest) (*apiresource.Supplier, *apierror.APIError) {
-			return svc.(SupplierSvc).DeleteSupplier
+		ServiceHandler: func(svc any) func(ctx context.Context, req *DeleteSupplierRequest) (*object.Deleted, *apierror.APIError) {
+			return apiresource.Deleted(svc.(SupplierSvc).DeleteSupplier, constants.ObjectTypeSupplier, "id")
 		},
 		IncludeConfig: apiendpoint.IncludesFor(apiendpoint.IncludesParams{
 			ObjectType: constants.ObjectTypeSupplier,

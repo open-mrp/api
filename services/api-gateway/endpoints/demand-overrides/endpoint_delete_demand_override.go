@@ -10,6 +10,7 @@ import (
 	"github.com/open-mrp/api/shared/constants"
 	apierror "github.com/open-mrp/apikit/apierror"
 	apiendpoint "github.com/open-mrp/apikit/endpoint"
+	"github.com/open-mrp/apikit/object"
 )
 
 // Request to delete a demand override.
@@ -23,8 +24,8 @@ type DeleteDemandOverrideRequest struct {
 // Schedules that have already been generated are unaffected: each one records the overrides it applied, so deleting an override changes only schedules generated from now on. To stop an override applying while keeping it on file, deactivate it instead.
 type DeleteDemandOverrideEndpoint struct{}
 
-func (e *DeleteDemandOverrideEndpoint) Materialize() *apiendpoint.APIEndpoint[*DeleteDemandOverrideRequest, *apiresource.EmptyResource] {
-	return (&apiendpoint.APIEndpoint[*DeleteDemandOverrideRequest, *apiresource.EmptyResource]{
+func (e *DeleteDemandOverrideEndpoint) Materialize() *apiendpoint.APIEndpoint[*DeleteDemandOverrideRequest, *object.Deleted] {
+	return (&apiendpoint.APIEndpoint[*DeleteDemandOverrideRequest, *object.Deleted]{
 		Title:             "Delete Demand Override",
 		Method:            http.MethodDelete,
 		ContentType:       "application/json",
@@ -37,8 +38,8 @@ func (e *DeleteDemandOverrideEndpoint) Materialize() *apiendpoint.APIEndpoint[*D
 		Auth: authz.Policy{Permissions: []types.Permission{
 			{Domain: types.PermissionDomainDemandOverrides, Action: types.ActionDelete},
 		}},
-		ServiceHandler: func(svc any) func(ctx context.Context, req *DeleteDemandOverrideRequest) (*apiresource.EmptyResource, *apierror.APIError) {
-			return svc.(DemandOverridesSvc).DeleteDemandOverride
+		ServiceHandler: func(svc any) func(ctx context.Context, req *DeleteDemandOverrideRequest) (*object.Deleted, *apierror.APIError) {
+			return apiresource.Deleted(svc.(DemandOverridesSvc).DeleteDemandOverride, constants.ObjectTypeDemandOverride, "id")
 		},
 	})
 }

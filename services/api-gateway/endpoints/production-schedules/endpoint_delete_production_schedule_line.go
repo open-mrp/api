@@ -10,6 +10,7 @@ import (
 	"github.com/open-mrp/api/shared/constants"
 	apierror "github.com/open-mrp/apikit/apierror"
 	apiendpoint "github.com/open-mrp/apikit/endpoint"
+	"github.com/open-mrp/apikit/object"
 )
 
 // Request to remove a campaign from a schedule.
@@ -33,8 +34,8 @@ type DeleteProductionScheduleLineRequest struct {
 // Only a draft or a published version can be edited; a superseded or archived version is history. Removing a campaign whose week has already been released does not remove the batches it created; those live on the production run and have to be dealt with there.
 type DeleteProductionScheduleLineEndpoint struct{}
 
-func (e *DeleteProductionScheduleLineEndpoint) Materialize() *apiendpoint.APIEndpoint[*DeleteProductionScheduleLineRequest, *apiresource.EmptyResource] {
-	return (&apiendpoint.APIEndpoint[*DeleteProductionScheduleLineRequest, *apiresource.EmptyResource]{
+func (e *DeleteProductionScheduleLineEndpoint) Materialize() *apiendpoint.APIEndpoint[*DeleteProductionScheduleLineRequest, *object.Deleted] {
+	return (&apiendpoint.APIEndpoint[*DeleteProductionScheduleLineRequest, *object.Deleted]{
 		Title:             "Delete Production Schedule Line",
 		Method:            http.MethodDelete,
 		ContentType:       "application/json",
@@ -47,8 +48,8 @@ func (e *DeleteProductionScheduleLineEndpoint) Materialize() *apiendpoint.APIEnd
 		Auth: authz.Policy{Permissions: []types.Permission{
 			{Domain: types.PermissionDomainProductionSchedules, Action: types.ActionUpdate},
 		}},
-		ServiceHandler: func(svc any) func(ctx context.Context, req *DeleteProductionScheduleLineRequest) (*apiresource.EmptyResource, *apierror.APIError) {
-			return svc.(ProductionScheduleSvc).DeleteProductionScheduleLine
+		ServiceHandler: func(svc any) func(ctx context.Context, req *DeleteProductionScheduleLineRequest) (*object.Deleted, *apierror.APIError) {
+			return apiresource.Deleted(svc.(ProductionScheduleSvc).DeleteProductionScheduleLine, constants.ObjectTypeProductionScheduleLine, "line_id")
 		},
 	})
 }

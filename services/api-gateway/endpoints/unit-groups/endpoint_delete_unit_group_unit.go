@@ -7,8 +7,10 @@ import (
 	"github.com/open-mrp/api/services/api-gateway/pkg/authz"
 	apiresource "github.com/open-mrp/api/services/api-gateway/pkg/resource"
 	"github.com/open-mrp/api/services/auth-service/pkg/types"
+	"github.com/open-mrp/api/shared/constants"
 	apierror "github.com/open-mrp/apikit/apierror"
 	apiendpoint "github.com/open-mrp/apikit/endpoint"
+	"github.com/open-mrp/apikit/object"
 )
 
 // Request to remove an associated unit from a unit group.
@@ -24,8 +26,8 @@ type DeleteUnitGroupUnitRequest struct {
 // Only the association is deleted; the unit itself remains available. Associations cannot be removed from system unit groups.
 type DeleteUnitGroupUnitEndpoint struct{}
 
-func (e *DeleteUnitGroupUnitEndpoint) Materialize() *apiendpoint.APIEndpoint[*DeleteUnitGroupUnitRequest, *apiresource.EmptyResource] {
-	return (&apiendpoint.APIEndpoint[*DeleteUnitGroupUnitRequest, *apiresource.EmptyResource]{
+func (e *DeleteUnitGroupUnitEndpoint) Materialize() *apiendpoint.APIEndpoint[*DeleteUnitGroupUnitRequest, *object.Deleted] {
+	return (&apiendpoint.APIEndpoint[*DeleteUnitGroupUnitRequest, *object.Deleted]{
 		Title:             "Delete Unit Group Associated Unit",
 		Method:            http.MethodDelete,
 		Route:             "/v1/catalog/unit-groups/{unit_group_id}/units/{id}",
@@ -35,8 +37,8 @@ func (e *DeleteUnitGroupUnitEndpoint) Materialize() *apiendpoint.APIEndpoint[*De
 		AgentTool:         true,
 		Auth:              authz.Policy{Permissions: []types.Permission{{Domain: types.PermissionDomainUnitGroups, Action: types.ActionDelete}}},
 		Preview:           true,
-		ServiceHandler: func(svc any) func(ctx context.Context, req *DeleteUnitGroupUnitRequest) (*apiresource.EmptyResource, *apierror.APIError) {
-			return svc.(UnitGroupSvc).DeleteUnitGroupUnit
+		ServiceHandler: func(svc any) func(ctx context.Context, req *DeleteUnitGroupUnitRequest) (*object.Deleted, *apierror.APIError) {
+			return apiresource.Deleted(svc.(UnitGroupSvc).DeleteUnitGroupUnit, constants.ObjectTypeUnitGroupUnit, "id")
 		},
 	})
 }

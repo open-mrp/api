@@ -7,8 +7,10 @@ import (
 	"github.com/open-mrp/api/services/api-gateway/pkg/authz"
 	apiresource "github.com/open-mrp/api/services/api-gateway/pkg/resource"
 	"github.com/open-mrp/api/services/auth-service/pkg/types"
+	"github.com/open-mrp/api/shared/constants"
 	apierror "github.com/open-mrp/apikit/apierror"
 	apiendpoint "github.com/open-mrp/apikit/endpoint"
+	"github.com/open-mrp/apikit/object"
 )
 
 // Request to delete an account price.
@@ -24,8 +26,8 @@ type DeleteAccountPriceRequest struct {
 // Order lines that have already been priced keep the unit price they were given; only lines priced after the deletion revert to standard pricing.
 type DeleteAccountPriceEndpoint struct{}
 
-func (e *DeleteAccountPriceEndpoint) Materialize() *apiendpoint.APIEndpoint[*DeleteAccountPriceRequest, *apiresource.EmptyResource] {
-	return (&apiendpoint.APIEndpoint[*DeleteAccountPriceRequest, *apiresource.EmptyResource]{
+func (e *DeleteAccountPriceEndpoint) Materialize() *apiendpoint.APIEndpoint[*DeleteAccountPriceRequest, *object.Deleted] {
+	return (&apiendpoint.APIEndpoint[*DeleteAccountPriceRequest, *object.Deleted]{
 		Title:             "Delete Account Price",
 		Method:            http.MethodDelete,
 		Route:             "/v1/sales/account-prices/{id}",
@@ -37,8 +39,8 @@ func (e *DeleteAccountPriceEndpoint) Materialize() *apiendpoint.APIEndpoint[*Del
 		Auth: authz.Policy{Permissions: []types.Permission{
 			{Domain: types.PermissionDomainDiscounts, Action: types.ActionDelete},
 		}},
-		ServiceHandler: func(svc any) func(ctx context.Context, req *DeleteAccountPriceRequest) (*apiresource.EmptyResource, *apierror.APIError) {
-			return svc.(AccountPriceSvc).DeleteAccountPrice
+		ServiceHandler: func(svc any) func(ctx context.Context, req *DeleteAccountPriceRequest) (*object.Deleted, *apierror.APIError) {
+			return apiresource.Deleted(svc.(AccountPriceSvc).DeleteAccountPrice, constants.ObjectTypeAccountPrice, "id")
 		},
 	})
 }

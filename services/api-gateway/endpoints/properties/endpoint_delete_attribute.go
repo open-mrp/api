@@ -7,8 +7,10 @@ import (
 	"github.com/open-mrp/api/services/api-gateway/pkg/authz"
 	apiresource "github.com/open-mrp/api/services/api-gateway/pkg/resource"
 	"github.com/open-mrp/api/services/auth-service/pkg/types"
+	"github.com/open-mrp/api/shared/constants"
 	apierror "github.com/open-mrp/apikit/apierror"
 	apiendpoint "github.com/open-mrp/apikit/endpoint"
+	"github.com/open-mrp/apikit/object"
 )
 
 // Request to delete an attribute.
@@ -24,8 +26,8 @@ type DeleteAttributeRequest struct {
 // Remaining attributes in the property are shifted so their sort orders stay contiguous.
 type DeleteAttributeEndpoint struct{}
 
-func (e *DeleteAttributeEndpoint) Materialize() *apiendpoint.APIEndpoint[*DeleteAttributeRequest, *apiresource.EmptyResource] {
-	return (&apiendpoint.APIEndpoint[*DeleteAttributeRequest, *apiresource.EmptyResource]{
+func (e *DeleteAttributeEndpoint) Materialize() *apiendpoint.APIEndpoint[*DeleteAttributeRequest, *object.Deleted] {
+	return (&apiendpoint.APIEndpoint[*DeleteAttributeRequest, *object.Deleted]{
 		Title:             "Delete Attribute",
 		Method:            http.MethodDelete,
 		Route:             CatalogPropertyAttributeRoute,
@@ -35,8 +37,8 @@ func (e *DeleteAttributeEndpoint) Materialize() *apiendpoint.APIEndpoint[*Delete
 		AgentTool:         true,
 		Auth:              authz.Policy{Permissions: []types.Permission{{Domain: types.PermissionDomainProperties, Action: types.ActionDelete}}},
 		Preview:           true,
-		ServiceHandler: func(svc any) func(ctx context.Context, req *DeleteAttributeRequest) (*apiresource.EmptyResource, *apierror.APIError) {
-			return svc.(PropertySvc).DeleteAttribute
+		ServiceHandler: func(svc any) func(ctx context.Context, req *DeleteAttributeRequest) (*object.Deleted, *apierror.APIError) {
+			return apiresource.Deleted(svc.(PropertySvc).DeleteAttribute, constants.ObjectTypeAttribute, "id")
 		},
 	})
 }

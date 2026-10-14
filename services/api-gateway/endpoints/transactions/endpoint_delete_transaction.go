@@ -10,6 +10,7 @@ import (
 	"github.com/open-mrp/api/shared/constants"
 	apierror "github.com/open-mrp/apikit/apierror"
 	apiendpoint "github.com/open-mrp/apikit/endpoint"
+	"github.com/open-mrp/apikit/object"
 )
 
 // Request to delete a transaction.
@@ -23,8 +24,8 @@ type DeleteTransactionRequest struct {
 // Invoice payment status is not recomputed, so an invoice this transaction had paid off stays marked paid in full until the next settlement against it recalculates the flag. Deleting a transaction that was already deleted returns an already-deleted error rather than a not-found error.
 type DeleteTransactionEndpoint struct{}
 
-func (e *DeleteTransactionEndpoint) Materialize() *apiendpoint.APIEndpoint[*DeleteTransactionRequest, *apiresource.TransactionDetail] {
-	return (&apiendpoint.APIEndpoint[*DeleteTransactionRequest, *apiresource.TransactionDetail]{
+func (e *DeleteTransactionEndpoint) Materialize() *apiendpoint.APIEndpoint[*DeleteTransactionRequest, *object.Deleted] {
+	return (&apiendpoint.APIEndpoint[*DeleteTransactionRequest, *object.Deleted]{
 		Title:             "Delete Transaction",
 		Method:            http.MethodDelete,
 		ContentType:       "application/json",
@@ -36,8 +37,8 @@ func (e *DeleteTransactionEndpoint) Materialize() *apiendpoint.APIEndpoint[*Dele
 		Auth: authz.Policy{Permissions: []types.Permission{
 			{Domain: types.PermissionDomainTransactions, Action: types.ActionDelete},
 		}},
-		ServiceHandler: func(svc any) func(ctx context.Context, req *DeleteTransactionRequest) (*apiresource.TransactionDetail, *apierror.APIError) {
-			return svc.(TransactionSvc).DeleteTransaction
+		ServiceHandler: func(svc any) func(ctx context.Context, req *DeleteTransactionRequest) (*object.Deleted, *apierror.APIError) {
+			return apiresource.Deleted(svc.(TransactionSvc).DeleteTransaction, constants.ObjectTypeTransaction, "id")
 		},
 		ObjectType: constants.ObjectTypeTransaction,
 		IncludeConfig: apiendpoint.IncludesFor(apiendpoint.IncludesParams{

@@ -10,6 +10,7 @@ import (
 	"github.com/open-mrp/api/shared/constants"
 	apierror "github.com/open-mrp/apikit/apierror"
 	apiendpoint "github.com/open-mrp/apikit/endpoint"
+	"github.com/open-mrp/apikit/object"
 )
 
 // Request to delete an order discount.
@@ -25,8 +26,8 @@ type DeleteOrderDiscountRequest struct {
 // The code can no longer be redeemed, but sales orders that already used the discount keep the reduction that was applied to them; their totals are not recalculated.
 type DeleteOrderDiscountEndpoint struct{}
 
-func (e *DeleteOrderDiscountEndpoint) Materialize() *apiendpoint.APIEndpoint[*DeleteOrderDiscountRequest, *apiresource.OrderDiscount] {
-	return (&apiendpoint.APIEndpoint[*DeleteOrderDiscountRequest, *apiresource.OrderDiscount]{
+func (e *DeleteOrderDiscountEndpoint) Materialize() *apiendpoint.APIEndpoint[*DeleteOrderDiscountRequest, *object.Deleted] {
+	return (&apiendpoint.APIEndpoint[*DeleteOrderDiscountRequest, *object.Deleted]{
 		Title:             "Delete Order Discount",
 		Method:            http.MethodDelete,
 		Route:             "/v1/sales/order-discounts/{id}",
@@ -39,8 +40,8 @@ func (e *DeleteOrderDiscountEndpoint) Materialize() *apiendpoint.APIEndpoint[*De
 		Auth: authz.Policy{Permissions: []types.Permission{
 			{Domain: types.PermissionDomainDiscounts, Action: types.ActionDelete},
 		}},
-		ServiceHandler: func(svc any) func(ctx context.Context, req *DeleteOrderDiscountRequest) (*apiresource.OrderDiscount, *apierror.APIError) {
-			return svc.(OrderDiscountSvc).DeleteOrderDiscount
+		ServiceHandler: func(svc any) func(ctx context.Context, req *DeleteOrderDiscountRequest) (*object.Deleted, *apierror.APIError) {
+			return apiresource.Deleted(svc.(OrderDiscountSvc).DeleteOrderDiscount, constants.ObjectTypeOrderDiscount, "id")
 		},
 	})
 }

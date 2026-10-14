@@ -7,8 +7,10 @@ import (
 	"github.com/open-mrp/api/services/api-gateway/pkg/authz"
 	apiresource "github.com/open-mrp/api/services/api-gateway/pkg/resource"
 	"github.com/open-mrp/api/services/auth-service/pkg/types"
+	"github.com/open-mrp/api/shared/constants"
 	apierror "github.com/open-mrp/apikit/apierror"
 	apiendpoint "github.com/open-mrp/apikit/endpoint"
+	"github.com/open-mrp/apikit/object"
 )
 
 // Request to delete a reusable roster.
@@ -22,8 +24,8 @@ type DeleteMessagingGroupRequest struct {
 // Conversations already started from it are unaffected (their members were snapshotted); they simply lose the roster reference.
 type DeleteMessagingGroupEndpoint struct{}
 
-func (e *DeleteMessagingGroupEndpoint) Materialize() *apiendpoint.APIEndpoint[*DeleteMessagingGroupRequest, *apiresource.EmptyResource] {
-	return (&apiendpoint.APIEndpoint[*DeleteMessagingGroupRequest, *apiresource.EmptyResource]{
+func (e *DeleteMessagingGroupEndpoint) Materialize() *apiendpoint.APIEndpoint[*DeleteMessagingGroupRequest, *object.Deleted] {
+	return (&apiendpoint.APIEndpoint[*DeleteMessagingGroupRequest, *object.Deleted]{
 		Title:             "Delete Messaging Group",
 		Method:            http.MethodDelete,
 		Route:             "/v1/messaging/groups/{id}",
@@ -31,8 +33,8 @@ func (e *DeleteMessagingGroupEndpoint) Materialize() *apiendpoint.APIEndpoint[*D
 		Public:            true,
 		Preview:           true,
 		Auth:              authz.Policy{Permissions: []types.Permission{{Domain: types.PermissionDomainMessaging, Action: types.ActionDelete}}},
-		ServiceHandler: func(svc any) func(ctx context.Context, req *DeleteMessagingGroupRequest) (*apiresource.EmptyResource, *apierror.APIError) {
-			return svc.(MessagingGroupSvc).DeleteMessagingGroup
+		ServiceHandler: func(svc any) func(ctx context.Context, req *DeleteMessagingGroupRequest) (*object.Deleted, *apierror.APIError) {
+			return apiresource.Deleted(svc.(MessagingGroupSvc).DeleteMessagingGroup, constants.ObjectTypeMessagingGroup, "id")
 		},
 	})
 }

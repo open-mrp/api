@@ -10,6 +10,7 @@ import (
 	"github.com/open-mrp/api/shared/constants"
 	apierror "github.com/open-mrp/apikit/apierror"
 	apiendpoint "github.com/open-mrp/apikit/endpoint"
+	"github.com/open-mrp/apikit/object"
 )
 
 // Request to remove one item's planning overrides.
@@ -23,8 +24,8 @@ type DeleteItemSettingRequest struct {
 // Fails with a not-found error when the item has no overrides, rather than reporting success: a mistyped item ID would otherwise read as a change that never happened.
 type DeleteItemSettingEndpoint struct{}
 
-func (e *DeleteItemSettingEndpoint) Materialize() *apiendpoint.APIEndpoint[*DeleteItemSettingRequest, *apiresource.EmptyResource] {
-	return (&apiendpoint.APIEndpoint[*DeleteItemSettingRequest, *apiresource.EmptyResource]{
+func (e *DeleteItemSettingEndpoint) Materialize() *apiendpoint.APIEndpoint[*DeleteItemSettingRequest, *object.Deleted] {
+	return (&apiendpoint.APIEndpoint[*DeleteItemSettingRequest, *object.Deleted]{
 		Title:             "Delete Production Schedule Item Setting",
 		Method:            http.MethodDelete,
 		ContentType:       "application/json",
@@ -37,8 +38,8 @@ func (e *DeleteItemSettingEndpoint) Materialize() *apiendpoint.APIEndpoint[*Dele
 		Auth: authz.Policy{Permissions: []types.Permission{
 			{Domain: types.PermissionDomainProductionSchedules, Action: types.ActionUpdate},
 		}},
-		ServiceHandler: func(svc any) func(ctx context.Context, req *DeleteItemSettingRequest) (*apiresource.EmptyResource, *apierror.APIError) {
-			return svc.(ProductionScheduleSettingsSvc).DeleteItemSetting
+		ServiceHandler: func(svc any) func(ctx context.Context, req *DeleteItemSettingRequest) (*object.Deleted, *apierror.APIError) {
+			return apiresource.Deleted(svc.(ProductionScheduleSettingsSvc).DeleteItemSetting, constants.ObjectTypeProductionScheduleItemSetting, "item_id")
 		},
 	})
 }

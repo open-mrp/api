@@ -10,6 +10,7 @@ import (
 	"github.com/open-mrp/api/shared/constants"
 	apierror "github.com/open-mrp/apikit/apierror"
 	apiendpoint "github.com/open-mrp/apikit/endpoint"
+	"github.com/open-mrp/apikit/object"
 )
 
 // Request to delete a production schedule.
@@ -23,8 +24,8 @@ type DeleteProductionScheduleRequest struct {
 // Only drafts can be deleted. A published version is the baseline attainment is measured against, so removing it would erase the record of what was promised — archive those instead.
 type DeleteProductionScheduleEndpoint struct{}
 
-func (e *DeleteProductionScheduleEndpoint) Materialize() *apiendpoint.APIEndpoint[*DeleteProductionScheduleRequest, *apiresource.EmptyResource] {
-	return (&apiendpoint.APIEndpoint[*DeleteProductionScheduleRequest, *apiresource.EmptyResource]{
+func (e *DeleteProductionScheduleEndpoint) Materialize() *apiendpoint.APIEndpoint[*DeleteProductionScheduleRequest, *object.Deleted] {
+	return (&apiendpoint.APIEndpoint[*DeleteProductionScheduleRequest, *object.Deleted]{
 		Title:             "Delete Production Schedule",
 		Method:            http.MethodDelete,
 		ContentType:       "application/json",
@@ -37,8 +38,8 @@ func (e *DeleteProductionScheduleEndpoint) Materialize() *apiendpoint.APIEndpoin
 		Auth: authz.Policy{Permissions: []types.Permission{
 			{Domain: types.PermissionDomainProductionSchedules, Action: types.ActionDelete},
 		}},
-		ServiceHandler: func(svc any) func(ctx context.Context, req *DeleteProductionScheduleRequest) (*apiresource.EmptyResource, *apierror.APIError) {
-			return svc.(ProductionScheduleSvc).DeleteProductionSchedule
+		ServiceHandler: func(svc any) func(ctx context.Context, req *DeleteProductionScheduleRequest) (*object.Deleted, *apierror.APIError) {
+			return apiresource.Deleted(svc.(ProductionScheduleSvc).DeleteProductionSchedule, constants.ObjectTypeProductionSchedule, "id")
 		},
 	})
 }

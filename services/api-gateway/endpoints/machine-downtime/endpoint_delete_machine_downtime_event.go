@@ -10,6 +10,7 @@ import (
 	"github.com/open-mrp/api/shared/constants"
 	apierror "github.com/open-mrp/apikit/apierror"
 	apiendpoint "github.com/open-mrp/apikit/endpoint"
+	"github.com/open-mrp/apikit/object"
 )
 
 // Request to delete a machine downtime event.
@@ -23,8 +24,8 @@ type DeleteMachineDowntimeEventRequest struct {
 // Meant for a stoppage that was logged by mistake: the event is removed permanently and stops counting against the machine's availability. To correct a real stoppage, update it instead so the record of the downtime survives.
 type DeleteMachineDowntimeEventEndpoint struct{}
 
-func (e *DeleteMachineDowntimeEventEndpoint) Materialize() *apiendpoint.APIEndpoint[*DeleteMachineDowntimeEventRequest, *apiresource.EmptyResource] {
-	return (&apiendpoint.APIEndpoint[*DeleteMachineDowntimeEventRequest, *apiresource.EmptyResource]{
+func (e *DeleteMachineDowntimeEventEndpoint) Materialize() *apiendpoint.APIEndpoint[*DeleteMachineDowntimeEventRequest, *object.Deleted] {
+	return (&apiendpoint.APIEndpoint[*DeleteMachineDowntimeEventRequest, *object.Deleted]{
 		Title:             "Delete Machine Downtime Event",
 		Method:            http.MethodDelete,
 		ContentType:       "application/json",
@@ -37,8 +38,8 @@ func (e *DeleteMachineDowntimeEventEndpoint) Materialize() *apiendpoint.APIEndpo
 		Auth: authz.Policy{Permissions: []types.Permission{
 			{Domain: types.PermissionDomainMachineDowntime, Action: types.ActionDelete},
 		}},
-		ServiceHandler: func(svc any) func(ctx context.Context, req *DeleteMachineDowntimeEventRequest) (*apiresource.EmptyResource, *apierror.APIError) {
-			return svc.(MachineDowntimeSvc).DeleteDowntimeEvent
+		ServiceHandler: func(svc any) func(ctx context.Context, req *DeleteMachineDowntimeEventRequest) (*object.Deleted, *apierror.APIError) {
+			return apiresource.Deleted(svc.(MachineDowntimeSvc).DeleteDowntimeEvent, constants.ObjectTypeMachineDowntimeEvent, "id")
 		},
 	})
 }

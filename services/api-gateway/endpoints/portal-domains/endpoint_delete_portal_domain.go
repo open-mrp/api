@@ -10,6 +10,7 @@ import (
 	"github.com/open-mrp/api/shared/constants"
 	apierror "github.com/open-mrp/apikit/apierror"
 	apiendpoint "github.com/open-mrp/apikit/endpoint"
+	"github.com/open-mrp/apikit/object"
 )
 
 // Request to disconnect a portal domain.
@@ -23,8 +24,8 @@ type DeletePortalDomainRequest struct {
 // The domain is detached from the serving infrastructure and immediately stops serving the portal; buyers must go back to the account's default slug-based portal address. Because an account may only hold one custom domain, this is how you free it up to connect a different one. The DNS records you published can then be removed.
 type DeletePortalDomainEndpoint struct{}
 
-func (e *DeletePortalDomainEndpoint) Materialize() *apiendpoint.APIEndpoint[*DeletePortalDomainRequest, *apiresource.EmptyResource] {
-	return (&apiendpoint.APIEndpoint[*DeletePortalDomainRequest, *apiresource.EmptyResource]{
+func (e *DeletePortalDomainEndpoint) Materialize() *apiendpoint.APIEndpoint[*DeletePortalDomainRequest, *object.Deleted] {
+	return (&apiendpoint.APIEndpoint[*DeletePortalDomainRequest, *object.Deleted]{
 		Title:             "Delete Portal Domain",
 		Method:            http.MethodDelete,
 		ContentType:       "application/json",
@@ -35,8 +36,8 @@ func (e *DeletePortalDomainEndpoint) Materialize() *apiendpoint.APIEndpoint[*Del
 		Preview:           true,
 		ObjectType:        constants.ObjectTypePortalDomain,
 		Auth:              authz.Policy{Permissions: []types.Permission{{Domain: types.PermissionDomainAccount, Action: types.ActionUpdate}}},
-		ServiceHandler: func(svc any) func(ctx context.Context, req *DeletePortalDomainRequest) (*apiresource.EmptyResource, *apierror.APIError) {
-			return svc.(PortalDomainSvc).DeletePortalDomain
+		ServiceHandler: func(svc any) func(ctx context.Context, req *DeletePortalDomainRequest) (*object.Deleted, *apierror.APIError) {
+			return apiresource.Deleted(svc.(PortalDomainSvc).DeletePortalDomain, constants.ObjectTypePortalDomain, "id")
 		},
 	})
 }

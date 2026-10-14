@@ -170,8 +170,8 @@ func TestInputValidation_InvalidEnum_StatusCode(t *testing.T) {
 		"status": "totally_invalid_status",
 	}, newIdempotencyKey())
 	require.NoError(t, err)
-	requireStatus(t, 400, status, body)
-	requireErrorResponse(t, body, "parameter_invalid", "invalid_request_error")
+	requireStatus(t, 422, status, body)
+	requireErrorResponse(t, body, "invalid_format", "invalid_request_error")
 }
 
 func TestInputValidation_InvalidEnum_CommissionPolicy(t *testing.T) {
@@ -181,8 +181,8 @@ func TestInputValidation_InvalidEnum_CommissionPolicy(t *testing.T) {
 		"commission_policy": "not_a_real_policy",
 	}, newIdempotencyKey())
 	require.NoError(t, err)
-	requireStatus(t, 400, status, body)
-	requireErrorResponse(t, body, "parameter_invalid", "invalid_request_error")
+	requireStatus(t, 422, status, body)
+	requireErrorResponse(t, body, "invalid_format", "invalid_request_error")
 }
 
 func TestInputValidation_InvalidEnum_FreightPolicy(t *testing.T) {
@@ -192,8 +192,8 @@ func TestInputValidation_InvalidEnum_FreightPolicy(t *testing.T) {
 		"freight_policy": "invalid_freight_value",
 	}, newIdempotencyKey())
 	require.NoError(t, err)
-	requireStatus(t, 400, status, body)
-	requireErrorResponse(t, body, "parameter_invalid", "invalid_request_error")
+	requireStatus(t, 422, status, body)
+	requireErrorResponse(t, body, "invalid_format", "invalid_request_error")
 }
 
 func TestInputValidation_InvalidEnum_CarrierBillingType(t *testing.T) {
@@ -203,8 +203,8 @@ func TestInputValidation_InvalidEnum_CarrierBillingType(t *testing.T) {
 		"carrier_billing_type": "not_valid",
 	}, newIdempotencyKey())
 	require.NoError(t, err)
-	requireStatus(t, 400, status, body)
-	requireErrorResponse(t, body, "parameter_invalid", "invalid_request_error")
+	requireStatus(t, 422, status, body)
+	requireErrorResponse(t, body, "invalid_format", "invalid_request_error")
 }
 
 // ──────────────────────────────────────────────

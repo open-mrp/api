@@ -52,8 +52,8 @@ func TestCovMessagingConversations_Create_InvalidTypeEnum(t *testing.T) {
 		"participant_account_user_ids": []string{SeedAccountUser2ID},
 	}, newIdempotencyKey())
 	require.NoError(t, err)
-	requireStatus(t, 400, status, body)
-	errObj := requireErrorResponse(t, body, "parameter_invalid", "invalid_request_error")
+	requireStatus(t, 422, status, body)
+	errObj := requireErrorResponse(t, body, "invalid_format", "invalid_request_error")
 	assertErrorParam(t, errObj, "type")
 }
 
@@ -64,7 +64,7 @@ func TestCovMessagingConversations_Create_SystemTypeRejected(t *testing.T) {
 	user := chatUserClient(t)
 	status, body, err := user.Post(conversationsPath, map[string]any{"type": "system"}, newIdempotencyKey())
 	require.NoError(t, err)
-	requireStatus(t, 400, status, body)
+	requireStatus(t, 422, status, body)
 	assert.Contains(t, string(body), "Unsupported conversation type")
 }
 
@@ -78,7 +78,7 @@ func TestCovMessagingConversations_Create_DMParticipantCountValidation(t *testin
 			"participant_account_user_ids": []string{},
 		}, newIdempotencyKey())
 		require.NoError(t, err)
-		requireStatus(t, 400, status, body)
+		requireStatus(t, 422, status, body)
 	})
 
 	t.Run("two participants", func(t *testing.T) {
@@ -87,7 +87,7 @@ func TestCovMessagingConversations_Create_DMParticipantCountValidation(t *testin
 			"participant_account_user_ids": []string{SeedAccountUser2ID, SeedAdmin2AccountUserID},
 		}, newIdempotencyKey())
 		require.NoError(t, err)
-		requireStatus(t, 400, status, body)
+		requireStatus(t, 422, status, body)
 		assert.Contains(t, string(body), "exactly one other participant")
 	})
 }
@@ -150,8 +150,8 @@ func TestCovMessagingConversations_Create_InvalidTopicResourceType(t *testing.T)
 		"topic_resource_id":            "x",
 	}, newIdempotencyKey())
 	require.NoError(t, err)
-	requireStatus(t, 400, status, body)
-	errObj := requireErrorResponse(t, body, "parameter_invalid", "invalid_request_error")
+	requireStatus(t, 422, status, body)
+	errObj := requireErrorResponse(t, body, "invalid_format", "invalid_request_error")
 	assertErrorParam(t, errObj, "topic_resource_type")
 }
 
@@ -522,8 +522,8 @@ func TestCovMessagingConversations_Assign_TeamClearAndInvalidType(t *testing.T) 
 		"assignee_resource_id":   "abc123",
 	}, newIdempotencyKey())
 	require.NoError(t, err)
-	requireStatus(t, 400, invalidResp.StatusCode, invalidResp.Body)
-	invalidErr := requireErrorResponse(t, invalidResp.Body, "parameter_invalid", "invalid_request_error")
+	requireStatus(t, 422, invalidResp.StatusCode, invalidResp.Body)
+	invalidErr := requireErrorResponse(t, invalidResp.Body, "invalid_format", "invalid_request_error")
 	assertErrorParam(t, invalidErr, "assignee_resource_type")
 
 	// Leave the shared case unassigned for other tests.
@@ -543,8 +543,8 @@ func TestCovMessagingConversations_SetWorkflowStatus_InvalidEnum(t *testing.T) {
 	status, body, err := owner.Post(conversationsPath+"/"+convID+"/actions/set-status",
 		map[string]any{"workflow_status": "bogus_status"}, newIdempotencyKey())
 	require.NoError(t, err)
-	requireStatus(t, 400, status, body)
-	errObj := requireErrorResponse(t, body, "parameter_invalid", "invalid_request_error")
+	requireStatus(t, 422, status, body)
+	errObj := requireErrorResponse(t, body, "invalid_format", "invalid_request_error")
 	assertErrorParam(t, errObj, "workflow_status")
 }
 
@@ -599,8 +599,8 @@ func TestCovMessagingConversations_SetRole_InvalidEnum(t *testing.T) {
 	status, body, err := owner.Post(conversationsPath+"/"+convID+"/participants/"+pid+"/actions/set-role",
 		map[string]any{"role": "wizard"}, newIdempotencyKey())
 	require.NoError(t, err)
-	requireStatus(t, 400, status, body)
-	errObj := requireErrorResponse(t, body, "parameter_invalid", "invalid_request_error")
+	requireStatus(t, 422, status, body)
+	errObj := requireErrorResponse(t, body, "invalid_format", "invalid_request_error")
 	assertErrorParam(t, errObj, "role")
 }
 
@@ -720,8 +720,8 @@ func TestCovMessagingConversations_AddAgent_Validation(t *testing.T) {
 		status, body, err := owner.Post(conversationsPath+"/"+convID+"/agents",
 			map[string]any{"agent_config_id": SeedAgentConfigID, "trigger_policy": "bogus"}, newIdempotencyKey())
 		require.NoError(t, err)
-		requireStatus(t, 400, status, body)
-		errObj := requireErrorResponse(t, body, "parameter_invalid", "invalid_request_error")
+		requireStatus(t, 422, status, body)
+		errObj := requireErrorResponse(t, body, "invalid_format", "invalid_request_error")
 		assertErrorParam(t, errObj, "trigger_policy")
 	})
 
@@ -751,8 +751,8 @@ func TestCovMessagingConversations_AddLink_InvalidResourceType(t *testing.T) {
 	status, body, err := owner.Post(conversationsPath+"/"+convID+"/links",
 		map[string]any{"resource_type": "not_a_type", "resource_id": "x"}, newIdempotencyKey())
 	require.NoError(t, err)
-	requireStatus(t, 400, status, body)
-	errObj := requireErrorResponse(t, body, "parameter_invalid", "invalid_request_error")
+	requireStatus(t, 422, status, body)
+	errObj := requireErrorResponse(t, body, "invalid_format", "invalid_request_error")
 	assertErrorParam(t, errObj, "resource_type")
 }
 

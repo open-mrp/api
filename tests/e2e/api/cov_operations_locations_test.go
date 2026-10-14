@@ -33,9 +33,9 @@ func TestCovOperationsLocations_CreateInvalidTypeRejected(t *testing.T) {
 		"type": "not_a_real_type",
 	}, newIdempotencyKey())
 	require.NoError(t, err)
-	requireStatus(t, 400, status, body)
+	requireStatus(t, 422, status, body)
 
-	errObj := requireErrorResponse(t, body, "parameter_invalid", "invalid_request_error")
+	errObj := requireErrorResponse(t, body, "invalid_format", "invalid_request_error")
 	assertErrorParam(t, errObj, "type")
 }
 
@@ -51,9 +51,9 @@ func TestCovOperationsLocations_UpdateInvalidTypeRejected(t *testing.T) {
 		"type": "garbage_type",
 	}, newIdempotencyKey())
 	require.NoError(t, err)
-	requireStatus(t, 400, status, body)
+	requireStatus(t, 422, status, body)
 
-	errObj := requireErrorResponse(t, body, "parameter_invalid", "invalid_request_error")
+	errObj := requireErrorResponse(t, body, "invalid_format", "invalid_request_error")
 	assertErrorParam(t, errObj, "type")
 
 	// Confirm the invalid update did not silently persist.

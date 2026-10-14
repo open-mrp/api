@@ -417,7 +417,7 @@ func TestCovMessagingAnnouncements_BroadcastFieldValidation(t *testing.T) {
 		"priority": "critical",
 	}, newIdempotencyKey())
 	require.NoError(t, err)
-	requireStatus(t, 400, status, body)
+	requireStatus(t, 422, status, body)
 
 	// title omitted.
 	status, body, err = user.Post(notificationsPath, map[string]any{

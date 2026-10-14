@@ -216,5 +216,5 @@ func TestInventories_RejectsAMalformedCursor(t *testing.T) {
 	status, body, err := apiClient.GetListRaw(inventoriesPath, url.Values{"cursor": {"not-a-real-cursor"}})
 	require.NoError(t, err)
 	require.Less(t, status, 500, "a malformed cursor must not 5xx: %s", string(body))
-	assert.Equal(t, 422, status, "a malformed cursor is rejected: %s", string(body))
+	assert.Equal(t, 400, status, "a malformed cursor is rejected: %s", string(body))
 }

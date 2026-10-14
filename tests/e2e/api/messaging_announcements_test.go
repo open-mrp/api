@@ -245,7 +245,7 @@ func TestNotifications_SendTargetValidation(t *testing.T) {
 		"title":    "bad type",
 	}, newIdempotencyKey())
 	require.NoError(t, err)
-	requireStatus(t, 400, status, body)
+	requireStatus(t, 422, status, body)
 
 	// A broadcast may only target the caller's own account.
 	status, body, err = user.Post(notificationsPath, map[string]any{
@@ -254,7 +254,7 @@ func TestNotifications_SendTargetValidation(t *testing.T) {
 		"title":    "cross-account broadcast",
 	}, newIdempotencyKey())
 	require.NoError(t, err)
-	requireStatus(t, 400, status, body)
+	requireStatus(t, 422, status, body)
 }
 
 // ── Sender attribution + filters ───────────────────────────────────

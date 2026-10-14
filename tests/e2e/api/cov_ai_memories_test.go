@@ -514,7 +514,7 @@ func TestCovAiMemories_CreateValidation_CategoryInvalidEnum(t *testing.T) {
 		"content":  "Not a recognized category.",
 	}, newIdempotencyKey())
 	require.NoError(t, err)
-	requireStatus(t, 400, status, body)
+	requireStatus(t, 422, status, body)
 }
 
 func TestCovAiMemories_CreateValidation_EntityTypeTooLong(t *testing.T) {
@@ -699,7 +699,7 @@ func TestCovAiMemories_UpdateValidation_CategoryInvalidEnum(t *testing.T) {
 		"category": "insight",
 	}, newIdempotencyKey())
 	require.NoError(t, err)
-	requireStatus(t, 400, status, body)
+	requireStatus(t, 422, status, body)
 }
 
 func TestCovAiMemories_UpdateValidation_EntityTypeTooLong(t *testing.T) {

@@ -442,7 +442,7 @@ func TestCovSettingsIntegrations_ListInvalidCursor(t *testing.T) {
 	t.Parallel()
 	status, body, err := apiClient.GetListRaw(covSettingsIntegrationsPath, url.Values{"cursor": {"bogus___not_a_real_cursor"}})
 	require.NoError(t, err)
-	requireStatus(t, 422, status, body)
+	requireStatus(t, 400, status, body)
 	requireErrorResponse(t, body, "", "invalid_request_error")
 }
 
@@ -518,7 +518,7 @@ func TestCovSettingsIntegrations_CreateValidation(t *testing.T) {
 			"credentials": "{}",
 		}, newIdempotencyKey())
 		require.NoError(t, err)
-		requireStatus(t, 400, status, body)
+		requireStatus(t, 422, status, body)
 		errObj := requireErrorResponse(t, body, "", "invalid_request_error")
 		assertErrorParam(t, errObj, "provider")
 	})
@@ -684,7 +684,7 @@ func TestCovSettingsIntegrations_UpdateValidation(t *testing.T) {
 			"status": "bogus",
 		})
 		require.NoError(t, err)
-		requireStatus(t, 400, status, body)
+		requireStatus(t, 422, status, body)
 		errObj := requireErrorResponse(t, body, "", "invalid_request_error")
 		assertErrorParam(t, errObj, "status")
 	})

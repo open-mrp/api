@@ -110,8 +110,8 @@ func TestCovCoreSandboxes_CreateValidation_InvalidMode(t *testing.T) {
 	}, newIdempotencyKey())
 	require.NoError(t, err)
 	assert.True(t, status == 400 || status == 422,
-		"invalid mode value should return 400 or 422, got %d: %s", status, string(body))
-	requireErrorResponse(t, body, "parameter_invalid", "invalid_request_error")
+		"invalid mode value should return 422 or 422, got %d: %s", status, string(body))
+	requireErrorResponse(t, body, "invalid_format", "invalid_request_error")
 }
 
 // TestCovCoreSandboxes_ListPagination closes the list gap: no existing test

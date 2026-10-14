@@ -70,9 +70,9 @@ func TestCovCatalogProducts_Create_InvalidTypeEnum(t *testing.T) {
 
 	status, respBody, err := apiClient.Post(productsPath, body, newIdempotencyKey())
 	require.NoError(t, err)
-	requireStatus(t, 400, status, respBody)
+	requireStatus(t, 422, status, respBody)
 
-	errObj := requireErrorResponse(t, respBody, "parameter_invalid", "invalid_request_error")
+	errObj := requireErrorResponse(t, respBody, "invalid_format", "invalid_request_error")
 	assertErrorParam(t, errObj, "type")
 }
 
@@ -84,9 +84,9 @@ func TestCovCatalogProducts_Create_InvalidPortalVisibilityEnum(t *testing.T) {
 
 	status, respBody, err := apiClient.Post(productsPath, body, newIdempotencyKey())
 	require.NoError(t, err)
-	requireStatus(t, 400, status, respBody)
+	requireStatus(t, 422, status, respBody)
 
-	errObj := requireErrorResponse(t, respBody, "parameter_invalid", "invalid_request_error")
+	errObj := requireErrorResponse(t, respBody, "invalid_format", "invalid_request_error")
 	assertErrorParam(t, errObj, "portal_visibility")
 }
 
@@ -210,9 +210,9 @@ func TestCovCatalogProducts_Update_InvalidPortalVisibilityEnum(t *testing.T) {
 
 	status, body, err := apiClient.Patch(productsPath+"/"+id, map[string]any{"portal_visibility": "public"}, newIdempotencyKey())
 	require.NoError(t, err)
-	requireStatus(t, 400, status, body)
+	requireStatus(t, 422, status, body)
 
-	errObj := requireErrorResponse(t, body, "parameter_invalid", "invalid_request_error")
+	errObj := requireErrorResponse(t, body, "invalid_format", "invalid_request_error")
 	assertErrorParam(t, errObj, "portal_visibility")
 }
 

@@ -66,5 +66,5 @@ func TestChat_LegalHoldInvalidStatusRejected(t *testing.T) {
 	status, body, err := owner.Post(conversationsPath+"/"+convID+"/actions/set-legal-hold",
 		map[string]any{"legal_hold": "not_a_real_status"}, newIdempotencyKey())
 	require.NoError(t, err)
-	requireStatus(t, 400, status, body)
+	requireStatus(t, 422, status, body)
 }

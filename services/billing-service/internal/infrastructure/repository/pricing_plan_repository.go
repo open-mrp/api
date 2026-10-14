@@ -252,7 +252,7 @@ func (r *pricingPlanRepoImpl) ListPricingPlans(ctx context.Context, cursor *stri
 	if cursor != nil {
 		cur, err := pagination.DecodeCursor(*cursor)
 		if err != nil {
-			return nil, pagination.PageInfo{}, apierror.NewValidationError("invalid pagination cursor")
+			return nil, pagination.PageInfo{}, apierror.NewParameterInvalidError("cursor", "Invalid pagination cursor.")
 		}
 		cursorDir = &cur.Direction
 

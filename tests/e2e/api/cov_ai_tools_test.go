@@ -374,8 +374,8 @@ func TestCovAiTools_ToolsCursorInvalidRejected(t *testing.T) {
 
 	status, body, err := apiClient.GetListRaw(aiToolsPath, url.Values{"cursor": {"not_a_real_cursor_value"}})
 	require.NoError(t, err)
-	requireStatus(t, 422, status, body)
-	errObj := requireErrorResponse(t, body, "validation_failed", "invalid_request_error")
+	requireStatus(t, 400, status, body)
+	errObj := requireErrorResponse(t, body, "parameter_invalid", "invalid_request_error")
 	assert.Equal(t, "Invalid pagination cursor.", errObj["message"])
 }
 
@@ -392,8 +392,8 @@ func TestCovAiTools_ToolsCursorAcceptsCrossResourceGroupID(t *testing.T) {
 
 	status, body, err := apiClient.GetListRaw(aiToolsPath, url.Values{"cursor": {groupID}})
 	require.NoError(t, err)
-	requireStatus(t, 422, status, body)
-	errObj := requireErrorResponse(t, body, "validation_failed", "invalid_request_error")
+	requireStatus(t, 400, status, body)
+	errObj := requireErrorResponse(t, body, "parameter_invalid", "invalid_request_error")
 	assert.Equal(t, "Invalid pagination cursor.", errObj["message"])
 }
 
@@ -675,8 +675,8 @@ func TestCovAiTools_ToolGroupsCursorInvalidRejected(t *testing.T) {
 
 	status, body, err := apiClient.GetListRaw(toolGroupsPath, url.Values{"cursor": {"not_a_real_cursor_value"}})
 	require.NoError(t, err)
-	requireStatus(t, 422, status, body)
-	errObj := requireErrorResponse(t, body, "validation_failed", "invalid_request_error")
+	requireStatus(t, 400, status, body)
+	errObj := requireErrorResponse(t, body, "parameter_invalid", "invalid_request_error")
 	assert.Equal(t, "Invalid pagination cursor.", errObj["message"])
 }
 

@@ -104,12 +104,12 @@ func TestChatGroup_AddParticipantRoleValidation(t *testing.T) {
 	// Assigning owner via add is rejected.
 	ownerRole, err := owner.PostFull(addPath, map[string]any{"account_user_id": SeedAccountUser2ID, "role": "owner"}, newIdempotencyKey())
 	require.NoError(t, err)
-	requireStatus(t, 400, ownerRole.StatusCode, ownerRole.Body)
+	requireStatus(t, 422, ownerRole.StatusCode, ownerRole.Body)
 
 	// An unknown role is rejected.
 	badRole, err := owner.PostFull(addPath, map[string]any{"account_user_id": SeedAccountUser2ID, "role": "wizard"}, newIdempotencyKey())
 	require.NoError(t, err)
-	requireStatus(t, 400, badRole.StatusCode, badRole.Body)
+	requireStatus(t, 422, badRole.StatusCode, badRole.Body)
 
 	// Remove then re-add as a viewer (reactivation honors the requested role).
 	pid, _, _ := participantInfo(t, conv, SeedAccountUser2ID)

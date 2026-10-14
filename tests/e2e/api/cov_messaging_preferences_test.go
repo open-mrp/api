@@ -96,9 +96,9 @@ func TestCovMessagingPreferences_InvalidCategoryRejected(t *testing.T) {
 		"digest":         "instant",
 	})
 	require.NoError(t, err)
-	requireStatus(t, 400, resp.StatusCode, resp.Body)
+	requireStatus(t, 422, resp.StatusCode, resp.Body)
 
-	errObj := requireErrorResponse(t, resp.Body, "parameter_invalid", "invalid_request_error")
+	errObj := requireErrorResponse(t, resp.Body, "invalid_format", "invalid_request_error")
 	assertErrorParam(t, errObj, "category")
 }
 

@@ -108,18 +108,18 @@ func TestConversationCreate_ParticipantRoleRefusals(t *testing.T) {
 		code   string
 		param  string
 	}{
-		{"an unknown role", creator, group(map[string]any{"account_user_id": SeedAccountUser2ID, "role": "boss"}), http.StatusBadRequest, "parameter_invalid", "participants[0].role"},
-		{"the creator given a role", creator, group(map[string]any{"account_user_id": creatorID, "role": "admin"}), http.StatusBadRequest, "parameter_invalid", "participants[0].account_user_id"},
+		{"an unknown role", creator, group(map[string]any{"account_user_id": SeedAccountUser2ID, "role": "boss"}), http.StatusUnprocessableEntity, "validation_failed", "participants[0].role"},
+		{"the creator given a role", creator, group(map[string]any{"account_user_id": creatorID, "role": "admin"}), http.StatusUnprocessableEntity, "validation_failed", "participants[0].account_user_id"},
 		{"a member listed twice", creator, group(
 			map[string]any{"account_user_id": SeedAccountUser2ID, "role": "admin"},
 			map[string]any{"account_user_id": SeedAccountUser2ID, "role": "viewer"},
-		), http.StatusBadRequest, "parameter_invalid", "participants[1].account_user_id"},
+		), http.StatusUnprocessableEntity, "validation_failed", "participants[1].account_user_id"},
 		{"an account user that does not exist", creator, group(map[string]any{"account_user_id": "acus_01e2edoesnotexist0", "role": "admin"}), http.StatusBadRequest, "parameter_invalid", "participants[0].account_user_id"},
 		{"no role", creator, group(map[string]any{"account_user_id": SeedAccountUser2ID}), http.StatusUnprocessableEntity, "", "participants[0].role"},
 		{"roles on a direct message", creator, map[string]any{
 			"type": "direct_message", "participant_account_user_ids": []string{SeedAccountUser2ID},
 			"participants": []map[string]any{{"account_user_id": SeedAccountUser2ID, "role": "admin"}},
-		}, http.StatusBadRequest, "parameter_invalid", "participants"},
+		}, http.StatusUnprocessableEntity, "validation_failed", "participants"},
 	}
 	for _, tc := range cases {
 		status, body := createConversationAs(t, tc.client, tc.body)

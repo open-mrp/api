@@ -34,8 +34,8 @@ func TestCovCatalogProductLines_CreateInvalidCommissionPolicy(t *testing.T) {
 		"freight_policy":    "billed_freight",
 	}, newIdempotencyKey())
 	require.NoError(t, err)
-	assert.Equal(t, 400, status, "invalid commission_policy should return 400: %s", string(body))
-	errObj := requireErrorResponse(t, body, "parameter_invalid", "invalid_request_error")
+	assert.Equal(t, 422, status, "invalid commission_policy should return 422: %s", string(body))
+	errObj := requireErrorResponse(t, body, "invalid_format", "invalid_request_error")
 	assertErrorParam(t, errObj, "commission_policy")
 }
 
@@ -48,8 +48,8 @@ func TestCovCatalogProductLines_CreateInvalidFreightPolicy(t *testing.T) {
 		"freight_policy":    "bogus_policy",
 	}, newIdempotencyKey())
 	require.NoError(t, err)
-	assert.Equal(t, 400, status, "invalid freight_policy should return 400: %s", string(body))
-	errObj := requireErrorResponse(t, body, "parameter_invalid", "invalid_request_error")
+	assert.Equal(t, 422, status, "invalid freight_policy should return 422: %s", string(body))
+	errObj := requireErrorResponse(t, body, "invalid_format", "invalid_request_error")
 	assertErrorParam(t, errObj, "freight_policy")
 }
 
@@ -62,8 +62,8 @@ func TestCovCatalogProductLines_UpdateInvalidCommissionPolicy(t *testing.T) {
 		"commission_policy": "bogus_policy",
 	}, newIdempotencyKey())
 	require.NoError(t, err)
-	assert.Equal(t, 400, status, "invalid commission_policy on update should return 400: %s", string(body))
-	errObj := requireErrorResponse(t, body, "parameter_invalid", "invalid_request_error")
+	assert.Equal(t, 422, status, "invalid commission_policy on update should return 422: %s", string(body))
+	errObj := requireErrorResponse(t, body, "invalid_format", "invalid_request_error")
 	assertErrorParam(t, errObj, "commission_policy")
 }
 
@@ -76,8 +76,8 @@ func TestCovCatalogProductLines_UpdateInvalidFreightPolicy(t *testing.T) {
 		"freight_policy": "bogus_policy",
 	}, newIdempotencyKey())
 	require.NoError(t, err)
-	assert.Equal(t, 400, status, "invalid freight_policy on update should return 400: %s", string(body))
-	errObj := requireErrorResponse(t, body, "parameter_invalid", "invalid_request_error")
+	assert.Equal(t, 422, status, "invalid freight_policy on update should return 422: %s", string(body))
+	errObj := requireErrorResponse(t, body, "invalid_format", "invalid_request_error")
 	assertErrorParam(t, errObj, "freight_policy")
 }
 

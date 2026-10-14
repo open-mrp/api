@@ -2897,7 +2897,7 @@ func (s *conversationSvcImpl) requestedParticipantRoles(ctx context.Context, par
 		}
 		if _, apiErr := s.repoFactory.NewNotificationRepo().ResolveUserIDInAccount(ctx, p.AccountUserID, accountID); apiErr != nil {
 			if apiErr.Code == apierror.CodeResourceNotFound {
-				return nil, apierror.NewInvalidFormatError(param+".account_user_id", "The participant does not exist.")
+				return nil, apierror.NewParameterInvalidError(param+".account_user_id", "The participant does not exist.")
 			}
 			return nil, apiErr
 		}

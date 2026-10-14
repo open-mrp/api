@@ -166,8 +166,8 @@ func TestCovSalesAccountStatuses_InvalidCursorRejected(t *testing.T) {
 	t.Parallel()
 	status, body, err := apiClient.GetListRaw(accountStatusesPath, url.Values{"cursor": {"not-a-cursor"}})
 	require.NoError(t, err)
-	requireStatus(t, 422, status, body)
-	requireErrorResponse(t, body, "validation_failed", "invalid_request_error")
+	requireStatus(t, 400, status, body)
+	requireErrorResponse(t, body, "parameter_invalid", "invalid_request_error")
 }
 
 func TestCovSalesAccountStatuses_QueryTooLongRejected(t *testing.T) {

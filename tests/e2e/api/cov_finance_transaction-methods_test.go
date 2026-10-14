@@ -167,8 +167,8 @@ func TestCovFinanceTransactionMethods_InvalidCursor(t *testing.T) {
 
 	status, body, err := apiClient.GetListRaw(covFinanceTransactionMethodsPath, url.Values{"cursor": {"anything"}})
 	require.NoError(t, err)
-	requireStatus(t, 422, status, body)
-	errObj := requireErrorResponse(t, body, "validation_failed", "invalid_request_error")
+	requireStatus(t, 400, status, body)
+	errObj := requireErrorResponse(t, body, "parameter_invalid", "invalid_request_error")
 	assert.Equal(t, "Invalid pagination cursor.", errObj["message"])
 }
 

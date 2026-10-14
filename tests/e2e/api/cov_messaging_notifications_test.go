@@ -288,8 +288,8 @@ func TestCovMessagingNotifications_SendInvalidCategoryRejected(t *testing.T) {
 		"title":    uniqueName("e2e-cov-notif-badcat"),
 	}, newIdempotencyKey())
 	require.NoError(t, err)
-	requireStatus(t, 400, status, body)
-	errObj := requireErrorResponse(t, body, "parameter_invalid", "invalid_request_error")
+	requireStatus(t, 422, status, body)
+	errObj := requireErrorResponse(t, body, "invalid_format", "invalid_request_error")
 	assertErrorParam(t, errObj, "category")
 }
 
@@ -304,8 +304,8 @@ func TestCovMessagingNotifications_SendInvalidPriorityRejected(t *testing.T) {
 		"priority": "extreme",
 	}, newIdempotencyKey())
 	require.NoError(t, err)
-	requireStatus(t, 400, status, body)
-	errObj := requireErrorResponse(t, body, "parameter_invalid", "invalid_request_error")
+	requireStatus(t, 422, status, body)
+	errObj := requireErrorResponse(t, body, "invalid_format", "invalid_request_error")
 	assertErrorParam(t, errObj, "priority")
 }
 

@@ -447,8 +447,8 @@ func TestCovOperationsCarriers_ServiceLevel_CreateValidation_InvalidVisibility(t
 		"customer_portal_visibility": "public",
 	}, newIdempotencyKey())
 	require.NoError(t, err)
-	requireStatus(t, 400, status, body)
-	errObj := requireErrorResponse(t, body, "parameter_invalid", "invalid_request_error")
+	requireStatus(t, 422, status, body)
+	errObj := requireErrorResponse(t, body, "invalid_format", "invalid_request_error")
 	assertErrorParam(t, errObj, "customer_portal_visibility")
 }
 
@@ -528,8 +528,8 @@ func TestCovOperationsCarriers_ServiceLevel_UpdateValidation_InvalidVisibility(t
 		"customer_portal_visibility": "public",
 	}, newIdempotencyKey())
 	require.NoError(t, err)
-	requireStatus(t, 400, patchStatus, patchBody)
-	errObj := requireErrorResponse(t, patchBody, "parameter_invalid", "invalid_request_error")
+	requireStatus(t, 422, patchStatus, patchBody)
+	errObj := requireErrorResponse(t, patchBody, "invalid_format", "invalid_request_error")
 	assertErrorParam(t, errObj, "customer_portal_visibility")
 }
 
@@ -730,8 +730,8 @@ func TestCovOperationsCarriers_Carrier_CreateValidation_InvalidCodeEnum(t *testi
 		"code": "not_a_carrier",
 	}, newIdempotencyKey())
 	require.NoError(t, err)
-	requireStatus(t, 400, status, body)
-	errObj := requireErrorResponse(t, body, "parameter_invalid", "invalid_request_error")
+	requireStatus(t, 422, status, body)
+	errObj := requireErrorResponse(t, body, "invalid_format", "invalid_request_error")
 	assertErrorParam(t, errObj, "code")
 }
 
@@ -742,8 +742,8 @@ func TestCovOperationsCarriers_Carrier_CreateValidation_InvalidVisibilityEnum(t 
 		"customer_portal_visibility": "public",
 	}, newIdempotencyKey())
 	require.NoError(t, err)
-	requireStatus(t, 400, status, body)
-	errObj := requireErrorResponse(t, body, "parameter_invalid", "invalid_request_error")
+	requireStatus(t, 422, status, body)
+	errObj := requireErrorResponse(t, body, "invalid_format", "invalid_request_error")
 	assertErrorParam(t, errObj, "customer_portal_visibility")
 }
 
@@ -862,6 +862,6 @@ func TestCovOperationsCarriers_ServiceLevel_ListInvalidCursor(t *testing.T) {
 	basePath := serviceLevelsPath(SeedCarrierID)
 	status, body, err := apiClient.GetListRaw(basePath, url.Values{"cursor": {"not-a-valid-cursor"}})
 	require.NoError(t, err)
-	assert.Equal(t, 422, status, "malformed cursor should return 400, got %d: %s", status, string(body))
-	requireErrorResponse(t, body, "validation_failed", "invalid_request_error")
+	assert.Equal(t, 400, status, "malformed cursor should return 400, got %d: %s", status, string(body))
+	requireErrorResponse(t, body, "parameter_invalid", "invalid_request_error")
 }

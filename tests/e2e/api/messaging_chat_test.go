@@ -225,5 +225,5 @@ func TestChat_SendValidation(t *testing.T) {
 	status, body, err := user.Post(conversationsPath+"/"+convID+"/messages",
 		map[string]any{"body": "no client id"}, newIdempotencyKey())
 	require.NoError(t, err)
-	requireStatus(t, 400, status, body)
+	requireStatus(t, 422, status, body)
 }

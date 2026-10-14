@@ -611,8 +611,8 @@ func TestCovAiAgents_CreateValidation_TriggerTypeInvalidEnum(t *testing.T) {
 	body["trigger_type"] = "bogus_trigger"
 	status, respBody, err := apiClient.Post(covAiAgentsPath, body, newIdempotencyKey())
 	require.NoError(t, err)
-	assert.Equal(t, 400, status, "invalid trigger_type should 400, got %d: %s", status, string(respBody))
-	errObj := requireErrorResponse(t, respBody, "parameter_invalid", "invalid_request_error")
+	assert.Equal(t, 422, status, "invalid trigger_type should 422, got %d: %s", status, string(respBody))
+	errObj := requireErrorResponse(t, respBody, "invalid_format", "invalid_request_error")
 	assertErrorParam(t, errObj, "trigger_type")
 }
 
@@ -1030,8 +1030,8 @@ func TestCovAiAgents_StatusActionRejectsInvalidValue(t *testing.T) {
 
 	status, body, err := apiClient.Put(covAiAgentsPath+"/"+id+"/status", map[string]any{"status": "bogus_e2e_status"})
 	require.NoError(t, err)
-	requireStatus(t, 400, status, body)
-	errObj := requireErrorResponse(t, body, "parameter_invalid", "invalid_request_error")
+	requireStatus(t, 422, status, body)
+	errObj := requireErrorResponse(t, body, "invalid_format", "invalid_request_error")
 	assertErrorParam(t, errObj, "status")
 }
 

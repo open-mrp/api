@@ -153,12 +153,12 @@ func TestCovSalesPriorities_List_InvalidCursor(t *testing.T) {
 	t.Parallel()
 	status, body, err := apiClient.GetListRaw(prioritiesPath, url.Values{"cursor": {"not_a_real_cursor_value"}})
 	require.NoError(t, err)
-	requireStatus(t, 422, status, body)
+	requireStatus(t, 400, status, body)
 
 	got := parseJSON(body)
 	errObj := jsonObject(got, "error")
 	require.NotNil(t, errObj, "400 response should contain an error object")
-	assert.Equal(t, "validation_failed", jsonField(errObj, "code"))
+	assert.Equal(t, "parameter_invalid", jsonField(errObj, "code"))
 }
 
 // --- List: dedicated oversized q validation for this path ---

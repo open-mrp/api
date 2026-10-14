@@ -195,8 +195,8 @@ func TestCovMessagingEmailDomains_CreateValidation_NoDot(t *testing.T) {
 		"domain": "nodotdomain",
 	}, newIdempotencyKey())
 	require.NoError(t, err)
-	requireStatus(t, 400, status, body)
-	errObj := requireErrorResponse(t, body, "parameter_invalid", "invalid_request_error")
+	requireStatus(t, 422, status, body)
+	errObj := requireErrorResponse(t, body, "invalid_format", "invalid_request_error")
 	assertErrorParam(t, errObj, "domain")
 }
 
@@ -208,8 +208,8 @@ func TestCovMessagingEmailDomains_CreateValidation_ContainsSpace(t *testing.T) {
 		"domain": "has space.com",
 	}, newIdempotencyKey())
 	require.NoError(t, err)
-	requireStatus(t, 400, status, body)
-	errObj := requireErrorResponse(t, body, "parameter_invalid", "invalid_request_error")
+	requireStatus(t, 422, status, body)
+	errObj := requireErrorResponse(t, body, "invalid_format", "invalid_request_error")
 	assertErrorParam(t, errObj, "domain")
 }
 
@@ -221,8 +221,8 @@ func TestCovMessagingEmailDomains_CreateValidation_ContainsAt(t *testing.T) {
 		"domain": "has@at.com",
 	}, newIdempotencyKey())
 	require.NoError(t, err)
-	requireStatus(t, 400, status, body)
-	errObj := requireErrorResponse(t, body, "parameter_invalid", "invalid_request_error")
+	requireStatus(t, 422, status, body)
+	errObj := requireErrorResponse(t, body, "invalid_format", "invalid_request_error")
 	assertErrorParam(t, errObj, "domain")
 }
 

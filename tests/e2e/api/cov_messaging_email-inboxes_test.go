@@ -465,8 +465,8 @@ func TestCovMessagingEmailInboxes_CreateValidation_MalformedAddressNoAt(t *testi
 	body["address"] = "not-an-email"
 	status, respBody, err := apiClient.Post(covMessagingEmailInboxesPath, body, newIdempotencyKey())
 	require.NoError(t, err)
-	requireStatus(t, 400, status, respBody)
-	errObj := requireErrorResponse(t, respBody, "parameter_invalid", "invalid_request_error")
+	requireStatus(t, 422, status, respBody)
+	errObj := requireErrorResponse(t, respBody, "invalid_format", "invalid_request_error")
 	assertErrorParam(t, errObj, "address")
 }
 
@@ -476,8 +476,8 @@ func TestCovMessagingEmailInboxes_CreateValidation_EmptyDomainPart(t *testing.T)
 	body["address"] = "user@"
 	status, respBody, err := apiClient.Post(covMessagingEmailInboxesPath, body, newIdempotencyKey())
 	require.NoError(t, err)
-	requireStatus(t, 400, status, respBody)
-	errObj := requireErrorResponse(t, respBody, "parameter_invalid", "invalid_request_error")
+	requireStatus(t, 422, status, respBody)
+	errObj := requireErrorResponse(t, respBody, "invalid_format", "invalid_request_error")
 	assertErrorParam(t, errObj, "address")
 }
 
@@ -496,8 +496,8 @@ func TestCovMessagingEmailInboxes_CreateValidation_DomainMismatch(t *testing.T) 
 	body["address"] = "user@wrongdomain.com"
 	status, respBody, err := apiClient.Post(covMessagingEmailInboxesPath, body, newIdempotencyKey())
 	require.NoError(t, err)
-	requireStatus(t, 400, status, respBody)
-	errObj := requireErrorResponse(t, respBody, "parameter_invalid", "invalid_request_error")
+	requireStatus(t, 422, status, respBody)
+	errObj := requireErrorResponse(t, respBody, "invalid_format", "invalid_request_error")
 	assertErrorParam(t, errObj, "address")
 }
 
@@ -578,8 +578,8 @@ func TestCovMessagingEmailInboxes_CreateValidation_AgentTriggerPolicyRejected(t 
 	body["agent_trigger_policy"] = "bogus"
 	status, respBody, err := apiClient.Post(covMessagingEmailInboxesPath, body, newIdempotencyKey())
 	require.NoError(t, err)
-	requireStatus(t, 400, status, respBody)
-	errObj := requireErrorResponse(t, respBody, "parameter_invalid", "invalid_request_error")
+	requireStatus(t, 422, status, respBody)
+	errObj := requireErrorResponse(t, respBody, "invalid_format", "invalid_request_error")
 	assertErrorParam(t, errObj, "agent_trigger_policy")
 }
 
@@ -626,8 +626,8 @@ func TestCovMessagingEmailInboxes_UpdateValidation_InvalidStatusEnum(t *testing.
 		"status": "bogus",
 	}, newIdempotencyKey())
 	require.NoError(t, err)
-	requireStatus(t, 400, status, respBody)
-	errObj := requireErrorResponse(t, respBody, "parameter_invalid", "invalid_request_error")
+	requireStatus(t, 422, status, respBody)
+	errObj := requireErrorResponse(t, respBody, "invalid_format", "invalid_request_error")
 	assertErrorParam(t, errObj, "status")
 }
 

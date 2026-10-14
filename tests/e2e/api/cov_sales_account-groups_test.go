@@ -110,8 +110,8 @@ func TestCovSalesAccountGroups_CreateValidation_InvalidTypeEnum(t *testing.T) {
 		"type": "bogus_type",
 	}, newIdempotencyKey())
 	require.NoError(t, err)
-	requireStatus(t, 400, status, body)
-	errObj := requireErrorResponse(t, body, "parameter_invalid", "invalid_request_error")
+	requireStatus(t, 422, status, body)
+	errObj := requireErrorResponse(t, body, "invalid_format", "invalid_request_error")
 	assertErrorParam(t, errObj, "type")
 }
 
@@ -126,8 +126,8 @@ func TestCovSalesAccountGroups_CreateValidation_InvalidCommissionPolicyEnum(t *t
 		"commission_policy": "not_a_policy",
 	}, newIdempotencyKey())
 	require.NoError(t, err)
-	requireStatus(t, 400, status, body)
-	errObj := requireErrorResponse(t, body, "parameter_invalid", "invalid_request_error")
+	requireStatus(t, 422, status, body)
+	errObj := requireErrorResponse(t, body, "invalid_format", "invalid_request_error")
 	assertErrorParam(t, errObj, "commission_policy")
 }
 
@@ -142,8 +142,8 @@ func TestCovSalesAccountGroups_CreateValidation_InvalidFreightPolicyEnum(t *test
 		"freight_policy": "not_a_policy",
 	}, newIdempotencyKey())
 	require.NoError(t, err)
-	requireStatus(t, 400, status, body)
-	errObj := requireErrorResponse(t, body, "parameter_invalid", "invalid_request_error")
+	requireStatus(t, 422, status, body)
+	errObj := requireErrorResponse(t, body, "invalid_format", "invalid_request_error")
 	assertErrorParam(t, errObj, "freight_policy")
 }
 
@@ -202,8 +202,8 @@ func TestCovSalesAccountGroups_UpdateValidation_InvalidCommissionPolicyEnum(t *t
 		"commission_policy": "not_a_policy",
 	}, newIdempotencyKey())
 	require.NoError(t, err)
-	requireStatus(t, 400, status, body)
-	errObj := requireErrorResponse(t, body, "parameter_invalid", "invalid_request_error")
+	requireStatus(t, 422, status, body)
+	errObj := requireErrorResponse(t, body, "invalid_format", "invalid_request_error")
 	assertErrorParam(t, errObj, "commission_policy")
 }
 
@@ -222,8 +222,8 @@ func TestCovSalesAccountGroups_UpdateValidation_InvalidFreightPolicyEnum(t *test
 		"freight_policy": "not_a_policy",
 	}, newIdempotencyKey())
 	require.NoError(t, err)
-	requireStatus(t, 400, status, body)
-	errObj := requireErrorResponse(t, body, "parameter_invalid", "invalid_request_error")
+	requireStatus(t, 422, status, body)
+	errObj := requireErrorResponse(t, body, "invalid_format", "invalid_request_error")
 	assertErrorParam(t, errObj, "freight_policy")
 }
 
@@ -456,7 +456,8 @@ func TestCovSalesAccountGroups_ListMalformedCursor(t *testing.T) {
 	t.Parallel()
 	status, body, err := apiClient.GetListRaw(accountGroupsPath, url.Values{"cursor": {"not-a-valid-cursor"}})
 	require.NoError(t, err)
-	requireStatus(t, 422, status, body)
+	requireStatus(t, 400, status, body)
+	requireErrorResponse(t, body, "parameter_invalid", "invalid_request_error")
 }
 
 // TestCovSalesAccountGroups_ListInvalidTypeFilter asserts an invalid `type`

@@ -248,7 +248,7 @@ func TestPurchaseOrders_CreateRejectsAnUnknownPriority(t *testing.T) {
 	status, respBody, err := apiClient.Post(purchaseOrdersPath, body, newIdempotencyKey())
 	require.NoError(t, err)
 	require.Less(t, status, 500, "must reject rather than 5xx: %s", string(respBody))
-	assert.Contains(t, []int{400, 404}, status, "an unknown priority must be refused: %s", string(respBody))
+	assert.Contains(t, []int{422, 404}, status, "an unknown priority must be refused: %s", string(respBody))
 }
 
 // The quantity unit has to be one the product is measured in, on both write paths.
@@ -405,7 +405,7 @@ func TestPurchaseOrders_UnknownTransitionIsRejected(t *testing.T) {
 	orderID := jsonField(createPurchaseOrder(t, nil), "id")
 
 	status, body := changePurchaseOrderStatus(t, orderID, "teleport")
-	assert.Equal(t, 400, status, "an unknown transition must be refused: %s", string(body))
+	assert.Equal(t, 422, status, "an unknown transition must be refused: %s", string(body))
 }
 
 func TestPurchaseOrders_StatusChangeOnUnknownOrderIs404(t *testing.T) {

@@ -787,7 +787,7 @@ func TestDashInvoices_EmailRecordValidatesTheRequest(t *testing.T) {
 		{map[string]any{"type": "invoice"}, "missing_field", "id"},
 		{map[string]any{"type": "invoice", "id": ""}, "missing_field", "id"},
 		{map[string]any{"id": SeedInvoiceID}, "missing_field", "type"},
-		{map[string]any{"id": SeedInvoiceID, "type": "credit_memo"}, "parameter_invalid", "type"},
+		{map[string]any{"id": SeedInvoiceID, "type": "credit_memo"}, "invalid_format", "type"},
 		{map[string]any{"id": SeedInvoiceID, "type": 1}, "invalid_format", "type"},
 	} {
 		status, body := dashInvoicesEmailRecord(t, apiClient, tc.body, newIdempotencyKey())

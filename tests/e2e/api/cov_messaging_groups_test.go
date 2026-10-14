@@ -581,8 +581,8 @@ func TestCovMessagingGroups_AddMemberValidation(t *testing.T) {
 	t.Run("InvalidMemberType", func(t *testing.T) {
 		resp, err := owner.PostFull(membersPath, map[string]any{"member_type": "robot", "account_user_id": SeedAccountUser2ID}, newIdempotencyKey())
 		require.NoError(t, err)
-		requireStatus(t, 400, resp.StatusCode, resp.Body)
-		errObj := requireErrorResponse(t, resp.Body, "parameter_invalid", "invalid_request_error")
+		requireStatus(t, 422, resp.StatusCode, resp.Body)
+		errObj := requireErrorResponse(t, resp.Body, "invalid_format", "invalid_request_error")
 		assertErrorParam(t, errObj, "member_type")
 	})
 

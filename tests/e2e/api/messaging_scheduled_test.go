@@ -75,7 +75,7 @@ func TestScheduledMessages_PastTimeRejected(t *testing.T) {
 		"scheduled_at":      time.Now().Add(-1 * time.Hour).UTC().Format(time.RFC3339),
 	}, newIdempotencyKey())
 	require.NoError(t, err)
-	requireStatus(t, 400, resp.StatusCode, resp.Body)
+	requireStatus(t, 422, resp.StatusCode, resp.Body)
 }
 
 func TestScheduledMessages_DeliveredByWorker(t *testing.T) {

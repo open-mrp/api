@@ -346,8 +346,8 @@ func TestCovCatalogUnits_CreateInvalidTypeEnum(t *testing.T) {
 
 	status, respBody, err := apiClient.Post(unitsPath, body, newIdempotencyKey())
 	require.NoError(t, err)
-	requireStatus(t, 400, status, respBody)
-	errObj := requireErrorResponse(t, respBody, "parameter_invalid", "invalid_request_error")
+	requireStatus(t, 422, status, respBody)
+	errObj := requireErrorResponse(t, respBody, "invalid_format", "invalid_request_error")
 	assertErrorParam(t, errObj, "type")
 }
 

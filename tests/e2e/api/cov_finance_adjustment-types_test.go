@@ -299,8 +299,8 @@ func TestCovFinanceAdjustmentTypes_InvalidCursorRejected(t *testing.T) {
 	t.Parallel()
 	status, body, err := apiClient.GetListRaw(covFinanceAdjustmentTypesPath, url.Values{"cursor": {"not-a-cursor"}})
 	require.NoError(t, err)
-	assert.Equal(t, 422, status, "garbage cursor should be rejected with 400, not 500; got %d: %s", status, string(body))
-	requireErrorResponse(t, body, "validation_failed", "invalid_request_error")
+	assert.Equal(t, 400, status, "garbage cursor should be rejected with 400, not 500; got %d: %s", status, string(body))
+	requireErrorResponse(t, body, "parameter_invalid", "invalid_request_error")
 }
 
 func TestCovFinanceAdjustmentTypes_InvalidIncludeValueRejected(t *testing.T) {

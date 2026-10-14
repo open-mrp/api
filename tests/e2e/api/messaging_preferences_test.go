@@ -100,7 +100,7 @@ func TestNotificationPreferences_InvalidDigestRejected(t *testing.T) {
 		"digest":         "fortnightly",
 	})
 	require.NoError(t, err)
-	requireStatus(t, 400, resp.StatusCode, resp.Body)
+	requireStatus(t, 422, resp.StatusCode, resp.Body)
 }
 
 func TestChatBell_MessageCreatesBellNotification(t *testing.T) {

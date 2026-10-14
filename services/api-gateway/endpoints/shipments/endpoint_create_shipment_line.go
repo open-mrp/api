@@ -4,11 +4,12 @@ import (
 	"context"
 	"net/http"
 
-	apiendpoint "github.com/open-mrp/api/services/api-gateway/pkg/endpoint"
-	apiexample "github.com/open-mrp/api/services/api-gateway/pkg/example"
+	"github.com/open-mrp/api/services/api-gateway/pkg/authz"
 	apiresource "github.com/open-mrp/api/services/api-gateway/pkg/resource"
 	types "github.com/open-mrp/api/services/auth-service/pkg/types"
 	apierror "github.com/open-mrp/apikit/apierror"
+	apiendpoint "github.com/open-mrp/apikit/endpoint"
+	apiexample "github.com/open-mrp/apikit/example"
 )
 
 // Request to create a shipment line.
@@ -40,15 +41,15 @@ type CreateShipmentLineEndpoint struct{}
 
 func (e *CreateShipmentLineEndpoint) Materialize() *apiendpoint.APIEndpoint[*CreateShipmentLineRequest, *apiresource.ShipmentLine] {
 	return (&apiendpoint.APIEndpoint[*CreateShipmentLineRequest, *apiresource.ShipmentLine]{
-		Title:               "Create Shipment Line",
-		Method:              http.MethodPost,
-		Route:               "/v1/operations/shipments/{shipment_id}/lines",
-		ContentType:         "application/json",
-		SuccessStatusCode:   http.StatusCreated,
-		Public:              false,
-		AgentTool:           true,
-		Preview:             true,
-		RequiredPermissions: []types.Permission{{Domain: types.PermissionDomainShipments, Action: types.ActionCreate}},
+		Title:             "Create Shipment Line",
+		Method:            http.MethodPost,
+		Route:             "/v1/operations/shipments/{shipment_id}/lines",
+		ContentType:       "application/json",
+		SuccessStatusCode: http.StatusCreated,
+		Public:            false,
+		AgentTool:         true,
+		Preview:           true,
+		Auth:              authz.Policy{Permissions: []types.Permission{{Domain: types.PermissionDomainShipments, Action: types.ActionCreate}}},
 		ServiceHandler: func(svc any) func(ctx context.Context, req *CreateShipmentLineRequest) (*apiresource.ShipmentLine, *apierror.APIError) {
 			return svc.(ShipmentSvc).CreateShipmentLine
 		},

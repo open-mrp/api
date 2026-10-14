@@ -4,10 +4,11 @@ import (
 	"context"
 	"net/http"
 
-	apiendpoint "github.com/open-mrp/api/services/api-gateway/pkg/endpoint"
+	"github.com/open-mrp/api/services/api-gateway/pkg/authz"
 	apiresource "github.com/open-mrp/api/services/api-gateway/pkg/resource"
 	"github.com/open-mrp/api/shared/constants"
 	apierror "github.com/open-mrp/apikit/apierror"
+	apiendpoint "github.com/open-mrp/apikit/endpoint"
 )
 
 // Request to revoke an API key.
@@ -30,7 +31,7 @@ func (e *RevokeAPIKeyEndpoint) Materialize() *apiendpoint.APIEndpoint[*RevokeAPI
 		SuccessStatusCode: http.StatusOK,
 		Public:            true,
 		AgentTool:         true,
-		RequiredRoleType:  constants.RoleTypeAdmin,
+		Auth:              authz.Policy{RoleType: constants.RoleTypeAdmin},
 		Preview:           true,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *RevokeAPIKeyRequest) (*apiresource.EmptyResource, *apierror.APIError) {
 			return svc.(APIKeySvc).RevokeAPIKey

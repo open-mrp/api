@@ -2,36 +2,36 @@ package resourceregistry
 
 import (
 	"context"
+	"github.com/open-mrp/apikit/include"
 
 	"github.com/open-mrp/api/services/api-gateway/internal/resourceloaders"
 	apiresource "github.com/open-mrp/api/services/api-gateway/pkg/resource"
-	"github.com/open-mrp/api/services/api-gateway/pkg/resourcekit"
 	"github.com/open-mrp/api/shared/constants"
 )
 
 func init() {
-	resourcekit.Register(&resourcekit.Definition{
+	include.Register(&include.Definition{
 		ObjectType: constants.ObjectTypePick,
 		Load:       resourceloaders.LoadPicks,
-		Subs: []resourcekit.SubField{
+		Subs: []include.SubField{
 			{
 				Key:         "related.sales_order",
 				Target:      constants.ObjectTypeSalesOrder,
-				Cardinality: resourcekit.CardinalityOnePtr,
+				Cardinality: include.CardinalityOnePtr,
 				ExtractIDs:  extractSalesOrderIDFromPick,
 				Populate:    populateSalesOrderOnPickRelated,
 			},
 			{
 				Key:         "customer",
 				Target:      constants.ObjectTypeCustomer,
-				Cardinality: resourcekit.CardinalityOnePtr,
+				Cardinality: include.CardinalityOnePtr,
 				ExtractIDs:  extractCustomerIDFromPick,
 				Populate:    populateCustomerOnPick,
 			},
 			{
 				Key:         "created_by",
 				Target:      constants.ObjectTypeCreatedBy,
-				Cardinality: resourcekit.CardinalityOnePtr,
+				Cardinality: include.CardinalityOnePtr,
 				ExtractIDs:  extractSalesOrderIDFromPick,
 				Populate:    populateCreatedByOnPick,
 			},
@@ -39,7 +39,7 @@ func init() {
 			{
 				Key:         "related.shipments",
 				Target:      constants.ObjectTypeShipment,
-				Cardinality: resourcekit.CardinalityList,
+				Cardinality: include.CardinalityList,
 				ExtractIDs:  extractShipmentIDsFromPickRelated,
 				Populate:    populateShipmentsOnPickRelated,
 			},
@@ -52,14 +52,14 @@ func init() {
 		},
 	})
 
-	resourcekit.Register(&resourcekit.Definition{
+	include.Register(&include.Definition{
 		ObjectType: constants.ObjectTypePickLine,
 		Load:       resourceloaders.LoadPickLines,
-		Subs: []resourcekit.SubField{
+		Subs: []include.SubField{
 			{
 				Key:         "item",
 				Target:      constants.ObjectTypeItem,
-				Cardinality: resourcekit.CardinalityOnePtr,
+				Cardinality: include.CardinalityOnePtr,
 				ExtractIDs:  extractItemIDFromPickLine,
 				Populate:    populateItemOnPickLine,
 			},
@@ -77,13 +77,13 @@ func init() {
 			{
 				Key:         "quantity",
 				Target:      constants.ObjectTypeQuantity,
-				Cardinality: resourcekit.CardinalityOnePtr,
+				Cardinality: include.CardinalityOnePtr,
 				ExtractRefs: extractQuantityRefFromPickLine,
 			},
 			{
 				Key:         "ordered_quantity",
 				Target:      constants.ObjectTypeQuantity,
-				Cardinality: resourcekit.CardinalityOnePtr,
+				Cardinality: include.CardinalityOnePtr,
 				ExtractRefs: extractOrderedQuantityRefFromPickLine,
 			},
 		},
@@ -92,7 +92,7 @@ func init() {
 
 func extractSalesOrderIDFromPick(ctx context.Context, parent any) []string {
 	p := parent.(*apiresource.Pick)
-	id, _ := resourcekit.GetLoadMeta(ctx).GetString(constants.ObjectTypePick, p.ID, "sales_order_id")
+	id, _ := include.GetLoadMeta(ctx).GetString(constants.ObjectTypePick, p.ID, "sales_order_id")
 	if id == "" {
 		return nil
 	}
@@ -110,7 +110,7 @@ func ensurePickRelated(p *apiresource.Pick) *apiresource.PickRelated {
 
 func populateSalesOrderOnPickRelated(ctx context.Context, parent any, loaded map[string]any) {
 	p := parent.(*apiresource.Pick)
-	id, _ := resourcekit.GetLoadMeta(ctx).GetString(constants.ObjectTypePick, p.ID, "sales_order_id")
+	id, _ := include.GetLoadMeta(ctx).GetString(constants.ObjectTypePick, p.ID, "sales_order_id")
 	if id == "" {
 		return
 	}
@@ -129,7 +129,7 @@ func populateSalesOrderOnPickRelated(ctx context.Context, parent any, loaded map
 // The pick's creator is the creator of the order it fulfills, so the CreatedBy loader is keyed by the sales order id — the same id extractSalesOrderIDFromPick supplies for related.sales_order.
 func populateCreatedByOnPick(ctx context.Context, parent any, loaded map[string]any) {
 	p := parent.(*apiresource.Pick)
-	id, _ := resourcekit.GetLoadMeta(ctx).GetString(constants.ObjectTypePick, p.ID, "sales_order_id")
+	id, _ := include.GetLoadMeta(ctx).GetString(constants.ObjectTypePick, p.ID, "sales_order_id")
 	if id == "" {
 		return
 	}
@@ -140,7 +140,7 @@ func populateCreatedByOnPick(ctx context.Context, parent any, loaded map[string]
 
 func populateFreightOnPick(ctx context.Context, parent any, _ map[string]any) {
 	p := parent.(*apiresource.Pick)
-	v, ok := resourcekit.GetLoadMeta(ctx).Get(constants.ObjectTypePick, p.ID, "freight")
+	v, ok := include.GetLoadMeta(ctx).Get(constants.ObjectTypePick, p.ID, "freight")
 	if !ok {
 		return
 	}
@@ -149,7 +149,7 @@ func populateFreightOnPick(ctx context.Context, parent any, _ map[string]any) {
 
 func extractCustomerIDFromPick(ctx context.Context, parent any) []string {
 	p := parent.(*apiresource.Pick)
-	id, _ := resourcekit.GetLoadMeta(ctx).GetString(constants.ObjectTypePick, p.ID, "customer_id")
+	id, _ := include.GetLoadMeta(ctx).GetString(constants.ObjectTypePick, p.ID, "customer_id")
 	if id == "" {
 		return nil
 	}
@@ -158,7 +158,7 @@ func extractCustomerIDFromPick(ctx context.Context, parent any) []string {
 
 func populateCustomerOnPick(ctx context.Context, parent any, loaded map[string]any) {
 	p := parent.(*apiresource.Pick)
-	id, _ := resourcekit.GetLoadMeta(ctx).GetString(constants.ObjectTypePick, p.ID, "customer_id")
+	id, _ := include.GetLoadMeta(ctx).GetString(constants.ObjectTypePick, p.ID, "customer_id")
 	if id == "" {
 		return
 	}
@@ -181,7 +181,7 @@ func extractLineRefsFromPick(_ context.Context, parent any) []any {
 
 func populateLinesOnPick(ctx context.Context, parent any, _ map[string]any) {
 	p := parent.(*apiresource.Pick)
-	v, ok := resourcekit.GetLoadMeta(ctx).
+	v, ok := include.GetLoadMeta(ctx).
 		Get(constants.ObjectTypePick, p.ID, "lines")
 	if !ok {
 		return
@@ -216,7 +216,7 @@ func extractSalesOrderLineRefFromPickLine(_ context.Context, parent any) []any {
 
 func populateSalesOrderLineOnPickLine(ctx context.Context, parent any, _ map[string]any) {
 	p := parent.(*apiresource.PickLine)
-	v, ok := resourcekit.GetLoadMeta(ctx).
+	v, ok := include.GetLoadMeta(ctx).
 		Get(constants.ObjectTypePickLine, p.ID, "sales_order_line")
 	if !ok {
 		return
@@ -226,13 +226,13 @@ func populateSalesOrderLineOnPickLine(ctx context.Context, parent any, _ map[str
 
 func extractShipmentIDsFromPickRelated(ctx context.Context, parent any) []string {
 	p := parent.(*apiresource.Pick)
-	ids, _ := resourcekit.GetLoadMeta(ctx).GetStrings(constants.ObjectTypePick, p.ID, "related_shipment_ids")
+	ids, _ := include.GetLoadMeta(ctx).GetStrings(constants.ObjectTypePick, p.ID, "related_shipment_ids")
 	return ids
 }
 
 func populateShipmentsOnPickRelated(ctx context.Context, parent any, loaded map[string]any) {
 	p := parent.(*apiresource.Pick)
-	ids, _ := resourcekit.GetLoadMeta(ctx).GetStrings(constants.ObjectTypePick, p.ID, "related_shipment_ids")
+	ids, _ := include.GetLoadMeta(ctx).GetStrings(constants.ObjectTypePick, p.ID, "related_shipment_ids")
 	if len(ids) == 0 {
 		return
 	}
@@ -249,7 +249,7 @@ func populateShipmentsOnPickRelated(ctx context.Context, parent any, loaded map[
 		rec.Status = &status
 		// The shipment loader stashes tracking/carrier/ship-date, so a pick can preview each
 		// linked shipment without expanding the full shipment resource.
-		if m, ok := resourcekit.GetLoadMeta(ctx).Get(constants.ObjectTypeShipment, id, "record_metadata"); ok {
+		if m, ok := include.GetLoadMeta(ctx).Get(constants.ObjectTypeShipment, id, "record_metadata"); ok {
 			if meta, ok := m.(map[string]string); ok && len(meta) > 0 {
 				rec.Metadata = meta
 			}
@@ -264,7 +264,7 @@ func populateShipmentsOnPickRelated(ctx context.Context, parent any, loaded map[
 
 func extractItemIDFromPickLine(ctx context.Context, parent any) []string {
 	p := parent.(*apiresource.PickLine)
-	id, _ := resourcekit.GetLoadMeta(ctx).GetString(constants.ObjectTypePickLine, p.ID, "item_id")
+	id, _ := include.GetLoadMeta(ctx).GetString(constants.ObjectTypePickLine, p.ID, "item_id")
 	if id == "" {
 		return nil
 	}
@@ -273,7 +273,7 @@ func extractItemIDFromPickLine(ctx context.Context, parent any) []string {
 
 func populateItemOnPickLine(ctx context.Context, parent any, loaded map[string]any) {
 	p := parent.(*apiresource.PickLine)
-	id, _ := resourcekit.GetLoadMeta(ctx).GetString(constants.ObjectTypePickLine, p.ID, "item_id")
+	id, _ := include.GetLoadMeta(ctx).GetString(constants.ObjectTypePickLine, p.ID, "item_id")
 	if id == "" {
 		return
 	}

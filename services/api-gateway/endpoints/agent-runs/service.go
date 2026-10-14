@@ -3,11 +3,11 @@ package agentrunep
 import (
 	"context"
 	"fmt"
+	"github.com/open-mrp/apikit/include"
 
 	"github.com/open-mrp/api/services/api-gateway/internal/domain"
 	grpcutil "github.com/open-mrp/api/services/api-gateway/internal/grpc"
 	apiresource "github.com/open-mrp/api/services/api-gateway/pkg/resource"
-	"github.com/open-mrp/api/services/api-gateway/pkg/resourcekit"
 	"github.com/open-mrp/api/shared/constants"
 	pb "github.com/open-mrp/api/shared/proto/agent"
 	apierror "github.com/open-mrp/apikit/apierror"
@@ -57,7 +57,7 @@ func (m *agentRunSvcImpl) ListRuns(ctx context.Context, req *ListRunsRequest) (*
 	pbReq := &pb.ListRunsRequest{
 		Limit:    req.Limit,
 		Cursor:   req.Cursor,
-		Includes: resourcekit.FilterIncludes(ctx, agentRunIncludes...),
+		Includes: include.FilterIncludes(ctx, agentRunIncludes...),
 	}
 	if req.Query != nil {
 		pbReq.Query = req.Query
@@ -88,7 +88,7 @@ func (m *agentRunSvcImpl) ListRuns(ctx context.Context, req *ListRunsRequest) (*
 func (m *agentRunSvcImpl) GetRun(ctx context.Context, req *RetrieveRunRequest) (*apiresource.AgentRun, *apierror.APIError) {
 	pbReq := &pb.GetRunRequest{
 		AgentRunId: req.AgentRunID,
-		Includes:   resourcekit.FilterIncludes(ctx, agentRunIncludes...),
+		Includes:   include.FilterIncludes(ctx, agentRunIncludes...),
 	}
 
 	resp, rpcErr := grpcutil.CallRPC(ctx, runSvcTracer, "service.agent_runs.get", domain.ServiceName,

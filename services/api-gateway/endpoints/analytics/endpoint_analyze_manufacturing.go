@@ -5,10 +5,11 @@ import (
 	"net/http"
 	"time"
 
-	apiendpoint "github.com/open-mrp/api/services/api-gateway/pkg/endpoint"
+	"github.com/open-mrp/api/services/api-gateway/pkg/authz"
 	apiresource "github.com/open-mrp/api/services/api-gateway/pkg/resource"
 	"github.com/open-mrp/api/services/auth-service/pkg/types"
 	apierror "github.com/open-mrp/apikit/apierror"
+	apiendpoint "github.com/open-mrp/apikit/endpoint"
 )
 
 // AnalyzeManufacturingRequest is the request to analyze a single manufacturing metric.
@@ -28,15 +29,15 @@ type AnalyzeManufacturingEndpoint struct{}
 
 func (e *AnalyzeManufacturingEndpoint) Materialize() *apiendpoint.APIEndpoint[*AnalyzeManufacturingRequest, *apiresource.AnalyzeManufacturingResponse] {
 	return (&apiendpoint.APIEndpoint[*AnalyzeManufacturingRequest, *apiresource.AnalyzeManufacturingResponse]{
-		Title:               "Analyze Manufacturing",
-		Method:              http.MethodPut,
-		Route:               "/v1/core/analytics/manufacturing",
-		ContentType:         "application/json",
-		SuccessStatusCode:   http.StatusOK,
-		Public:              false,
-		AgentTool:           true,
-		Preview:             true,
-		RequiredPermissions: []types.Permission{{Domain: types.PermissionDomainInvoices, Action: types.ActionRead}},
+		Title:             "Analyze Manufacturing",
+		Method:            http.MethodPut,
+		Route:             "/v1/core/analytics/manufacturing",
+		ContentType:       "application/json",
+		SuccessStatusCode: http.StatusOK,
+		Public:            false,
+		AgentTool:         true,
+		Preview:           true,
+		Auth:              authz.Policy{Permissions: []types.Permission{{Domain: types.PermissionDomainInvoices, Action: types.ActionRead}}},
 		ServiceHandler: func(svc any) func(ctx context.Context, req *AnalyzeManufacturingRequest) (*apiresource.AnalyzeManufacturingResponse, *apierror.APIError) {
 			return svc.(AnalyticsSvc).AnalyzeManufacturing
 		},

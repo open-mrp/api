@@ -4,11 +4,12 @@ import (
 	"context"
 	"net/http"
 
-	apiendpoint "github.com/open-mrp/api/services/api-gateway/pkg/endpoint"
+	"github.com/open-mrp/api/services/api-gateway/pkg/authz"
 	apiresource "github.com/open-mrp/api/services/api-gateway/pkg/resource"
 	"github.com/open-mrp/api/services/auth-service/pkg/types"
 	"github.com/open-mrp/api/shared/constants"
 	apierror "github.com/open-mrp/apikit/apierror"
+	apiendpoint "github.com/open-mrp/apikit/endpoint"
 )
 
 // Request to list an account's operating calendars.
@@ -32,9 +33,9 @@ func (e *ListOperatingCalendarsEndpoint) Materialize() *apiendpoint.APIEndpoint[
 		AgentTool:         true,
 		ReadOnly:          true,
 		Preview:           true,
-		RequiredPermissions: []types.Permission{
+		Auth: authz.Policy{Permissions: []types.Permission{
 			{Domain: types.PermissionDomainProductionSchedules, Action: types.ActionRead},
-		},
+		}},
 		ServiceHandler: func(svc any) func(ctx context.Context, req *ListOperatingCalendarsRequest) (*apiresource.List[apiresource.OperatingCalendar], *apierror.APIError) {
 			return svc.(OperatingCalendarSvc).ListOperatingCalendars
 		},

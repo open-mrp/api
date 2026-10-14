@@ -4,12 +4,13 @@ import (
 	"context"
 	"net/http"
 
-	apiendpoint "github.com/open-mrp/api/services/api-gateway/pkg/endpoint"
+	"github.com/open-mrp/api/services/api-gateway/pkg/authz"
 	apirequest "github.com/open-mrp/api/services/api-gateway/pkg/request"
 	apiresource "github.com/open-mrp/api/services/api-gateway/pkg/resource"
 	"github.com/open-mrp/api/services/auth-service/pkg/types"
 	"github.com/open-mrp/api/shared/constants"
 	apierror "github.com/open-mrp/apikit/apierror"
+	apiendpoint "github.com/open-mrp/apikit/endpoint"
 )
 
 // Creates an address.
@@ -19,17 +20,16 @@ type CreateAddressEndpoint struct{}
 
 func (e *CreateAddressEndpoint) Materialize() *apiendpoint.APIEndpoint[*apirequest.AddressInput, *apiresource.Address] {
 	return (&apiendpoint.APIEndpoint[*apirequest.AddressInput, *apiresource.Address]{
-		Title:                   "Create Address",
-		Method:                  http.MethodPost,
-		ContentType:             "application/json",
-		Route:                   "/v1/sales/addresses",
-		SuccessStatusCode:       http.StatusCreated,
-		Public:                  true,
-		AgentTool:               true,
-		RequiredPermissions:     []types.Permission{{Domain: types.PermissionDomainAddresses, Action: types.ActionCreate}},
-		CounterpartyPermissions: apiendpoint.Counterparties(types.ActionUpdate),
-		Preview:                 true,
-		ObjectType:              constants.ObjectTypeAddress,
+		Title:             "Create Address",
+		Method:            http.MethodPost,
+		ContentType:       "application/json",
+		Route:             "/v1/sales/addresses",
+		SuccessStatusCode: http.StatusCreated,
+		Public:            true,
+		AgentTool:         true,
+		Auth:              authz.Policy{Permissions: []types.Permission{{Domain: types.PermissionDomainAddresses, Action: types.ActionCreate}}, Counterparty: authz.Counterparties(types.ActionUpdate)},
+		Preview:           true,
+		ObjectType:        constants.ObjectTypeAddress,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *apirequest.AddressInput) (*apiresource.Address, *apierror.APIError) {
 			return svc.(AddressSvc).CreateAddress
 		},

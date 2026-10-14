@@ -4,11 +4,12 @@ import (
 	"context"
 	"net/http"
 
-	apiendpoint "github.com/open-mrp/api/services/api-gateway/pkg/endpoint"
+	"github.com/open-mrp/api/services/api-gateway/pkg/authz"
 	apiresource "github.com/open-mrp/api/services/api-gateway/pkg/resource"
 	"github.com/open-mrp/api/services/auth-service/pkg/types"
 	"github.com/open-mrp/api/shared/constants"
 	apierror "github.com/open-mrp/apikit/apierror"
+	apiendpoint "github.com/open-mrp/apikit/endpoint"
 )
 
 // Request to list a customer's default order-notification recipients.
@@ -24,16 +25,15 @@ type ListNotificationRecipientsEndpoint struct{}
 
 func (e *ListNotificationRecipientsEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListNotificationRecipientsRequest, *apiresource.List[apiresource.OrderNotificationRecipient]] {
 	return (&apiendpoint.APIEndpoint[*ListNotificationRecipientsRequest, *apiresource.List[apiresource.OrderNotificationRecipient]]{
-		Title:                   "List Customer Notification Recipients",
-		Method:                  http.MethodGet,
-		ContentType:             "application/json",
-		Route:                   "/v1/sales/customers/{id}/notification-recipients",
-		SuccessStatusCode:       http.StatusOK,
-		Public:                  false,
-		AgentTool:               true,
-		Preview:                 true,
-		RequiredPermissions:     []types.Permission{{Domain: types.PermissionDomainCustomers, Action: types.ActionRead}},
-		CounterpartyPermissions: apiendpoint.Counterparties(types.ActionRead),
+		Title:             "List Customer Notification Recipients",
+		Method:            http.MethodGet,
+		ContentType:       "application/json",
+		Route:             "/v1/sales/customers/{id}/notification-recipients",
+		SuccessStatusCode: http.StatusOK,
+		Public:            false,
+		AgentTool:         true,
+		Preview:           true,
+		Auth:              authz.Policy{Permissions: []types.Permission{{Domain: types.PermissionDomainCustomers, Action: types.ActionRead}}, Counterparty: authz.Counterparties(types.ActionRead)},
 		ServiceHandler: func(svc any) func(ctx context.Context, req *ListNotificationRecipientsRequest) (*apiresource.List[apiresource.OrderNotificationRecipient], *apierror.APIError) {
 			return svc.(CustomerSvc).ListNotificationRecipients
 		},

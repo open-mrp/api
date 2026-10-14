@@ -1,8 +1,8 @@
 package apiresource
 
 import (
-	apiexample "github.com/open-mrp/api/services/api-gateway/pkg/example"
 	"github.com/open-mrp/api/shared/constants"
+	apiexample "github.com/open-mrp/apikit/example"
 )
 
 // CreatedBy describes who created a resource and their relationship to the account that owns it.

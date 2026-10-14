@@ -4,16 +4,23 @@ import (
 	"context"
 	"net/http"
 
-	apiendpoint "github.com/open-mrp/api/services/api-gateway/pkg/endpoint"
+	"github.com/open-mrp/apikit/object"
+
+	"github.com/open-mrp/api/services/api-gateway/pkg/authz"
 	apiresource "github.com/open-mrp/api/services/api-gateway/pkg/resource"
 	"github.com/open-mrp/api/services/auth-service/pkg/types"
 	"github.com/open-mrp/api/shared/constants"
 	apierror "github.com/open-mrp/apikit/apierror"
+	apiendpoint "github.com/open-mrp/apikit/endpoint"
 )
 
 // Request to list volume discounts.
 type ListVolumeDiscountsRequest struct {
-	apiresource.PaginationRequest
+	object.ListRequest
+	// Free-text search term used to filter results.
+	//
+	// Which fields are matched against the term varies by endpoint.
+	Query *string `query:"q" validate:"omitempty,max=500"`
 }
 
 // Returns a paginated list of volume discounts, newest first.
@@ -23,17 +30,16 @@ type ListVolumeDiscountsEndpoint struct{}
 
 func (e *ListVolumeDiscountsEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListVolumeDiscountsRequest, *apiresource.List[apiresource.VolumeDiscount]] {
 	return (&apiendpoint.APIEndpoint[*ListVolumeDiscountsRequest, *apiresource.List[apiresource.VolumeDiscount]]{
-		Title:                   "List Volume Discounts",
-		Method:                  http.MethodGet,
-		ContentType:             "application/json",
-		Route:                   "/v1/sales/volume-discounts",
-		SuccessStatusCode:       http.StatusOK,
-		Public:                  true,
-		AgentTool:               true,
-		Preview:                 true,
-		RequiredPermissions:     []types.Permission{{Domain: types.PermissionDomainDiscounts, Action: types.ActionRead}},
-		CounterpartyPermissions: apiendpoint.Counterparties(types.ActionRead),
-		ObjectType:              constants.ObjectTypeVolumeDiscount,
+		Title:             "List Volume Discounts",
+		Method:            http.MethodGet,
+		ContentType:       "application/json",
+		Route:             "/v1/sales/volume-discounts",
+		SuccessStatusCode: http.StatusOK,
+		Public:            true,
+		AgentTool:         true,
+		Preview:           true,
+		Auth:              authz.Policy{Permissions: []types.Permission{{Domain: types.PermissionDomainDiscounts, Action: types.ActionRead}}, Counterparty: authz.Counterparties(types.ActionRead)},
+		ObjectType:        constants.ObjectTypeVolumeDiscount,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *ListVolumeDiscountsRequest) (*apiresource.List[apiresource.VolumeDiscount], *apierror.APIError) {
 			return svc.(VolumeDiscountSvc).ListVolumeDiscounts
 		},

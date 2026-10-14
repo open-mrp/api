@@ -4,11 +4,12 @@ import (
 	"context"
 	"net/http"
 
-	apiendpoint "github.com/open-mrp/api/services/api-gateway/pkg/endpoint"
+	"github.com/open-mrp/api/services/api-gateway/pkg/authz"
 	apiresource "github.com/open-mrp/api/services/api-gateway/pkg/resource"
 	"github.com/open-mrp/api/services/auth-service/pkg/types"
 	"github.com/open-mrp/api/shared/constants"
 	apierror "github.com/open-mrp/apikit/apierror"
+	apiendpoint "github.com/open-mrp/apikit/endpoint"
 )
 
 // Request to retrieve the account's settings for one document type.
@@ -24,16 +25,16 @@ type RetrieveDocumentSettingEndpoint struct{}
 
 func (e *RetrieveDocumentSettingEndpoint) Materialize() *apiendpoint.APIEndpoint[*RetrieveDocumentSettingRequest, *apiresource.DocumentSetting] {
 	return (&apiendpoint.APIEndpoint[*RetrieveDocumentSettingRequest, *apiresource.DocumentSetting]{
-		Title:               "Retrieve Document Setting",
-		Method:              http.MethodGet,
-		Route:               "/v1/identity/document-settings/{document_type}",
-		ContentType:         "application/json",
-		SuccessStatusCode:   http.StatusOK,
-		Public:              false,
-		AgentTool:           true,
-		Preview:             true,
-		ObjectType:          constants.ObjectTypeDocumentSetting,
-		RequiredPermissions: []types.Permission{{Domain: types.PermissionDomainAccount, Action: types.ActionRead}},
+		Title:             "Retrieve Document Setting",
+		Method:            http.MethodGet,
+		Route:             "/v1/identity/document-settings/{document_type}",
+		ContentType:       "application/json",
+		SuccessStatusCode: http.StatusOK,
+		Public:            false,
+		AgentTool:         true,
+		Preview:           true,
+		ObjectType:        constants.ObjectTypeDocumentSetting,
+		Auth:              authz.Policy{Permissions: []types.Permission{{Domain: types.PermissionDomainAccount, Action: types.ActionRead}}},
 		ServiceHandler: func(svc any) func(ctx context.Context, req *RetrieveDocumentSettingRequest) (*apiresource.DocumentSetting, *apierror.APIError) {
 			return svc.(DocumentSettingSvc).GetDocumentSetting
 		},

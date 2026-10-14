@@ -2,22 +2,22 @@ package resourceregistry
 
 import (
 	"context"
+	"github.com/open-mrp/apikit/include"
 
 	"github.com/open-mrp/api/services/api-gateway/internal/resourceloaders"
 	apiresource "github.com/open-mrp/api/services/api-gateway/pkg/resource"
-	"github.com/open-mrp/api/services/api-gateway/pkg/resourcekit"
 	"github.com/open-mrp/api/shared/constants"
 )
 
 func init() {
-	resourcekit.Register(&resourcekit.Definition{
+	include.Register(&include.Definition{
 		ObjectType: constants.ObjectTypeProductionRun,
 		Load:       resourceloaders.LoadProductionRuns,
-		Subs: []resourcekit.SubField{
+		Subs: []include.SubField{
 			{
 				Key:         "responsible_user",
 				Target:      constants.ObjectTypeAccountUser,
-				Cardinality: resourcekit.CardinalityOnePtr,
+				Cardinality: include.CardinalityOnePtr,
 				ExtractIDs:  extractResponsibleUserIDFromProductionRun,
 				Populate:    populateResponsibleUserOnProductionRun,
 			},
@@ -38,7 +38,7 @@ func extractResponsibleUserIDFromProductionRun(ctx context.Context, parent any) 
 	if runID == "" {
 		return nil
 	}
-	id, _ := resourcekit.GetLoadMeta(ctx).
+	id, _ := include.GetLoadMeta(ctx).
 		GetString(constants.ObjectTypeProductionRun, runID, "responsible_user_id")
 	if id == "" {
 		return nil
@@ -51,7 +51,7 @@ func populateResponsibleUserOnProductionRun(ctx context.Context, parent any, loa
 	if runID == "" {
 		return
 	}
-	id, _ := resourcekit.GetLoadMeta(ctx).
+	id, _ := include.GetLoadMeta(ctx).
 		GetString(constants.ObjectTypeProductionRun, runID, "responsible_user_id")
 	if id == "" {
 		return

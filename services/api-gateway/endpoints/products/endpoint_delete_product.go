@@ -4,11 +4,12 @@ import (
 	"context"
 	"net/http"
 
-	apiendpoint "github.com/open-mrp/api/services/api-gateway/pkg/endpoint"
+	"github.com/open-mrp/api/services/api-gateway/pkg/authz"
 	apiresource "github.com/open-mrp/api/services/api-gateway/pkg/resource"
 	"github.com/open-mrp/api/services/auth-service/pkg/types"
 	"github.com/open-mrp/api/shared/constants"
 	apierror "github.com/open-mrp/apikit/apierror"
+	apiendpoint "github.com/open-mrp/apikit/endpoint"
 )
 
 // Request to delete a product.
@@ -24,16 +25,16 @@ type DeleteProductEndpoint struct{}
 
 func (e *DeleteProductEndpoint) Materialize() *apiendpoint.APIEndpoint[*DeleteProductRequest, *apiresource.Product] {
 	return (&apiendpoint.APIEndpoint[*DeleteProductRequest, *apiresource.Product]{
-		Title:               "Delete Product",
-		Method:              http.MethodDelete,
-		Route:               "/v1/catalog/products/{id}",
-		ContentType:         "application/json",
-		SuccessStatusCode:   http.StatusOK,
-		Public:              true,
-		AgentTool:           true,
-		RequiredPermissions: []types.Permission{{Domain: types.PermissionDomainItems, Action: types.ActionDelete}},
-		Preview:             true,
-		ObjectType:          constants.ObjectTypeProduct,
+		Title:             "Delete Product",
+		Method:            http.MethodDelete,
+		Route:             "/v1/catalog/products/{id}",
+		ContentType:       "application/json",
+		SuccessStatusCode: http.StatusOK,
+		Public:            true,
+		AgentTool:         true,
+		Auth:              authz.Policy{Permissions: []types.Permission{{Domain: types.PermissionDomainItems, Action: types.ActionDelete}}},
+		Preview:           true,
+		ObjectType:        constants.ObjectTypeProduct,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *DeleteProductRequest) (*apiresource.Product, *apierror.APIError) {
 			return svc.(ProductSvc).DeleteProduct
 		},

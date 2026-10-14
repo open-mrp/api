@@ -4,15 +4,21 @@ import (
 	"context"
 	"net/http"
 
-	apiendpoint "github.com/open-mrp/api/services/api-gateway/pkg/endpoint"
+	"github.com/open-mrp/apikit/object"
+
 	apiresource "github.com/open-mrp/api/services/api-gateway/pkg/resource"
 	"github.com/open-mrp/api/shared/constants"
 	apierror "github.com/open-mrp/apikit/apierror"
+	apiendpoint "github.com/open-mrp/apikit/endpoint"
 )
 
 // Request to list adjustment types.
 type ListAdjustmentTypesRequest struct {
-	apiresource.PaginationRequest
+	object.ListRequest
+	// Free-text search term used to filter results.
+	//
+	// Which fields are matched against the term varies by endpoint.
+	Query *string `query:"q" validate:"omitempty,max=500"`
 }
 
 // Returns a paginated list of the adjustment categories that can be recorded on an adjustment transaction, such as discounts, fees, and write-offs.

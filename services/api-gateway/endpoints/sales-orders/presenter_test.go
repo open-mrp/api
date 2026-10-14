@@ -2,10 +2,10 @@ package salesorderep
 
 import (
 	"context"
+	"github.com/open-mrp/apikit/include"
 	"testing"
 
 	"github.com/open-mrp/api/services/api-gateway/pkg/resource/resourcetest"
-	"github.com/open-mrp/api/services/api-gateway/pkg/resourcekit"
 	"github.com/open-mrp/api/shared/constants"
 	pb "github.com/open-mrp/api/shared/proto/core"
 	"google.golang.org/protobuf/types/known/timestamppb"
@@ -109,8 +109,8 @@ func TestStashSalesOrderLineMeta_StashesProductID(t *testing.T) {
 	}
 	line := salesOrderLineDetailFromProto(info)
 
-	ctx := resourcekit.WithLoadMeta(context.Background())
-	meta := resourcekit.GetLoadMeta(ctx)
+	ctx := include.WithLoadMeta(context.Background())
+	meta := include.GetLoadMeta(ctx)
 	stashSalesOrderLineMeta(meta, info, &line)
 
 	if v, _ := meta.GetString(constants.ObjectTypeSalesOrderLine, "sol_01abc", "product_id"); v != productID {

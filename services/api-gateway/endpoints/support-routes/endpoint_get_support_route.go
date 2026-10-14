@@ -4,11 +4,12 @@ import (
 	"context"
 	"net/http"
 
-	apiendpoint "github.com/open-mrp/api/services/api-gateway/pkg/endpoint"
+	"github.com/open-mrp/api/services/api-gateway/pkg/authz"
 	apiresource "github.com/open-mrp/api/services/api-gateway/pkg/resource"
 	"github.com/open-mrp/api/services/auth-service/pkg/types"
 	"github.com/open-mrp/api/shared/constants"
 	apierror "github.com/open-mrp/apikit/apierror"
+	apiendpoint "github.com/open-mrp/apikit/endpoint"
 )
 
 // Request to read the support route configured for one scope.
@@ -26,16 +27,16 @@ type GetSupportRouteEndpoint struct{}
 
 func (e *GetSupportRouteEndpoint) Materialize() *apiendpoint.APIEndpoint[*GetSupportRouteRequest, *apiresource.SupportRoute] {
 	return (&apiendpoint.APIEndpoint[*GetSupportRouteRequest, *apiresource.SupportRoute]{
-		Title:               "Get Support Route",
-		Method:              http.MethodGet,
-		ContentType:         "application/json",
-		Route:               "/v1/messaging/support-routes",
-		SuccessStatusCode:   http.StatusOK,
-		Public:              false,
-		AgentTool:           true,
-		Preview:             true,
-		ObjectType:          constants.ObjectTypeSupportRoute,
-		RequiredPermissions: []types.Permission{{Domain: types.PermissionDomainMessaging, Action: types.ActionRead}},
+		Title:             "Get Support Route",
+		Method:            http.MethodGet,
+		ContentType:       "application/json",
+		Route:             "/v1/messaging/support-routes",
+		SuccessStatusCode: http.StatusOK,
+		Public:            false,
+		AgentTool:         true,
+		Preview:           true,
+		ObjectType:        constants.ObjectTypeSupportRoute,
+		Auth:              authz.Policy{Permissions: []types.Permission{{Domain: types.PermissionDomainMessaging, Action: types.ActionRead}}},
 		ServiceHandler: func(svc any) func(ctx context.Context, req *GetSupportRouteRequest) (*apiresource.SupportRoute, *apierror.APIError) {
 			return svc.(SupportRouteSvc).GetSupportRoute
 		},

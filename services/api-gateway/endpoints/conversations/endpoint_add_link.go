@@ -4,12 +4,13 @@ import (
 	"context"
 	"net/http"
 
-	apiendpoint "github.com/open-mrp/api/services/api-gateway/pkg/endpoint"
-	apiexample "github.com/open-mrp/api/services/api-gateway/pkg/example"
+	"github.com/open-mrp/api/services/api-gateway/pkg/authz"
 	apiresource "github.com/open-mrp/api/services/api-gateway/pkg/resource"
 	"github.com/open-mrp/api/services/auth-service/pkg/types"
 	"github.com/open-mrp/api/shared/constants"
 	apierror "github.com/open-mrp/apikit/apierror"
+	apiendpoint "github.com/open-mrp/apikit/endpoint"
+	apiexample "github.com/open-mrp/apikit/example"
 )
 
 // Request to link a business record to a conversation.
@@ -39,17 +40,17 @@ type AddConversationLinkEndpoint struct{}
 
 func (e *AddConversationLinkEndpoint) Materialize() *apiendpoint.APIEndpoint[*AddConversationLinkRequest, *apiresource.ConversationLink] {
 	return (&apiendpoint.APIEndpoint[*AddConversationLinkRequest, *apiresource.ConversationLink]{
-		Title:               "Link Record",
-		Method:              http.MethodPost,
-		ContentType:         "application/json",
-		Route:               "/v1/messaging/conversations/{id}/links",
-		SuccessStatusCode:   http.StatusCreated,
-		Public:              true,
-		AgentTool:           true,
-		Preview:             true,
-		ObjectType:          constants.ObjectTypeConversationLink,
-		IncludeConfig:       conversationLinkIncludeConfig(),
-		RequiredPermissions: []types.Permission{{Domain: types.PermissionDomainMessaging, Action: types.ActionUpdate}},
+		Title:             "Link Record",
+		Method:            http.MethodPost,
+		ContentType:       "application/json",
+		Route:             "/v1/messaging/conversations/{id}/links",
+		SuccessStatusCode: http.StatusCreated,
+		Public:            true,
+		AgentTool:         true,
+		Preview:           true,
+		ObjectType:        constants.ObjectTypeConversationLink,
+		IncludeConfig:     conversationLinkIncludeConfig(),
+		Auth:              authz.Policy{Permissions: []types.Permission{{Domain: types.PermissionDomainMessaging, Action: types.ActionUpdate}}},
 		ServiceHandler: func(svc any) func(ctx context.Context, req *AddConversationLinkRequest) (*apiresource.ConversationLink, *apierror.APIError) {
 			return svc.(ConversationSvc).AddConversationLink
 		},

@@ -5,16 +5,23 @@ import (
 	"net/http"
 	"time"
 
-	apiendpoint "github.com/open-mrp/api/services/api-gateway/pkg/endpoint"
+	"github.com/open-mrp/apikit/object"
+
+	"github.com/open-mrp/api/services/api-gateway/pkg/authz"
 	apiresource "github.com/open-mrp/api/services/api-gateway/pkg/resource"
 	"github.com/open-mrp/api/services/auth-service/pkg/types"
 	"github.com/open-mrp/api/shared/constants"
 	apierror "github.com/open-mrp/apikit/apierror"
+	apiendpoint "github.com/open-mrp/apikit/endpoint"
 )
 
 // Request to list materials.
 type ListMaterialsRequest struct {
-	apiresource.PaginationRequest
+	object.ListRequest
+	// Free-text search term used to filter results.
+	//
+	// Which fields are matched against the term varies by endpoint.
+	Query *string `query:"q" validate:"omitempty,max=500"`
 	// Filter to materials in any of these categories.
 	CategoryIDs []string `query:"category_ids"`
 	// Filter to materials carrying any of these attributes.
@@ -32,17 +39,16 @@ type ListMaterialsEndpoint struct{}
 
 func (e *ListMaterialsEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListMaterialsRequest, *apiresource.List[apiresource.Material]] {
 	return (&apiendpoint.APIEndpoint[*ListMaterialsRequest, *apiresource.List[apiresource.Material]]{
-		Title:                   "List Materials",
-		Method:                  http.MethodGet,
-		ContentType:             "application/json",
-		Route:                   "/v1/catalog/materials",
-		SuccessStatusCode:       http.StatusOK,
-		Public:                  true,
-		AgentTool:               true,
-		RequiredPermissions:     []types.Permission{{Domain: types.PermissionDomainMaterials, Action: types.ActionRead}},
-		CounterpartyPermissions: apiendpoint.Counterparties(types.ActionRead),
-		Preview:                 true,
-		ObjectType:              constants.ObjectTypeMaterial,
+		Title:             "List Materials",
+		Method:            http.MethodGet,
+		ContentType:       "application/json",
+		Route:             "/v1/catalog/materials",
+		SuccessStatusCode: http.StatusOK,
+		Public:            true,
+		AgentTool:         true,
+		Auth:              authz.Policy{Permissions: []types.Permission{{Domain: types.PermissionDomainMaterials, Action: types.ActionRead}}, Counterparty: authz.Counterparties(types.ActionRead)},
+		Preview:           true,
+		ObjectType:        constants.ObjectTypeMaterial,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *ListMaterialsRequest) (*apiresource.List[apiresource.Material], *apierror.APIError) {
 			return svc.(MaterialSvc).ListMaterials
 		},

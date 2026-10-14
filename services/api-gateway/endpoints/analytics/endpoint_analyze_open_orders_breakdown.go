@@ -4,11 +4,12 @@ import (
 	"context"
 	"net/http"
 
-	apiendpoint "github.com/open-mrp/api/services/api-gateway/pkg/endpoint"
+	"github.com/open-mrp/api/services/api-gateway/pkg/authz"
 	apiresource "github.com/open-mrp/api/services/api-gateway/pkg/resource"
 	"github.com/open-mrp/api/services/auth-service/pkg/types"
 	"github.com/open-mrp/api/shared/constants"
 	apierror "github.com/open-mrp/apikit/apierror"
+	apiendpoint "github.com/open-mrp/apikit/endpoint"
 )
 
 // AnalyzeOpenOrdersBreakdownRequest selects the open sales orders to total by product.
@@ -27,17 +28,17 @@ type AnalyzeOpenOrdersBreakdownEndpoint struct{}
 
 func (e *AnalyzeOpenOrdersBreakdownEndpoint) Materialize() *apiendpoint.APIEndpoint[*AnalyzeOpenOrdersBreakdownRequest, *apiresource.List[apiresource.OpenOrderProduct]] {
 	return (&apiendpoint.APIEndpoint[*AnalyzeOpenOrdersBreakdownRequest, *apiresource.List[apiresource.OpenOrderProduct]]{
-		Title:               "Analyze Open Orders Breakdown",
-		Method:              http.MethodPut,
-		Route:               "/v1/core/analytics/open-orders/breakdown",
-		ContentType:         "application/json",
-		SuccessStatusCode:   http.StatusOK,
-		Public:              false,
-		AgentTool:           true,
-		Preview:             true,
-		ReadOnly:            true,
-		ObjectType:          constants.ObjectTypeOpenOrderProduct,
-		RequiredPermissions: []types.Permission{{Domain: types.PermissionDomainInvoices, Action: types.ActionRead}},
+		Title:             "Analyze Open Orders Breakdown",
+		Method:            http.MethodPut,
+		Route:             "/v1/core/analytics/open-orders/breakdown",
+		ContentType:       "application/json",
+		SuccessStatusCode: http.StatusOK,
+		Public:            false,
+		AgentTool:         true,
+		Preview:           true,
+		ReadOnly:          true,
+		ObjectType:        constants.ObjectTypeOpenOrderProduct,
+		Auth:              authz.Policy{Permissions: []types.Permission{{Domain: types.PermissionDomainInvoices, Action: types.ActionRead}}},
 		ServiceHandler: func(svc any) func(ctx context.Context, req *AnalyzeOpenOrdersBreakdownRequest) (*apiresource.List[apiresource.OpenOrderProduct], *apierror.APIError) {
 			return svc.(AnalyticsSvc).AnalyzeOpenOrdersBreakdown
 		},

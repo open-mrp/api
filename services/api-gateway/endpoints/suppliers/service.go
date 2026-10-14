@@ -3,13 +3,13 @@ package supplierep
 import (
 	"context"
 	"fmt"
+	"github.com/open-mrp/apikit/include"
 
 	"github.com/open-mrp/api/services/api-gateway/internal/domain"
 	grpcutil "github.com/open-mrp/api/services/api-gateway/internal/grpc"
 	"github.com/open-mrp/api/services/api-gateway/internal/resourceloaders"
 	apirequest "github.com/open-mrp/api/services/api-gateway/pkg/request"
 	apiresource "github.com/open-mrp/api/services/api-gateway/pkg/resource"
-	"github.com/open-mrp/api/services/api-gateway/pkg/resourcekit"
 	"github.com/open-mrp/api/shared/constants"
 	pb "github.com/open-mrp/api/shared/proto/core"
 	apierror "github.com/open-mrp/apikit/apierror"
@@ -63,7 +63,7 @@ func (s *supplierSvcImpl) ListSuppliers(ctx context.Context, req *ListSuppliersR
 		ItemIds: req.ItemIDs,
 		// The addresses are joined by the backend rather than resolved here: they belong to the
 		// supplier's account, which the account-scoped address loader cannot read.
-		Includes: resourcekit.FilterIncludes(ctx, supplierIncludes...),
+		Includes: include.FilterIncludes(ctx, supplierIncludes...),
 	}
 
 	if req.StartDate != nil {
@@ -88,7 +88,7 @@ func (s *supplierSvcImpl) ListSuppliers(ctx context.Context, req *ListSuppliersR
 func (s *supplierSvcImpl) GetSupplier(ctx context.Context, req *RetrieveSupplierRequest) (*apiresource.Supplier, *apierror.APIError) {
 	pbReq := &pb.GetSupplierRequest{
 		Id:       req.SupplierID,
-		Includes: resourcekit.FilterIncludes(ctx, supplierIncludes...),
+		Includes: include.FilterIncludes(ctx, supplierIncludes...),
 	}
 
 	resp, apiErr := grpcutil.CallRPC(ctx, supplierSvcTracer, "service.suppliers.get", domain.ServiceName,
@@ -110,7 +110,7 @@ func (s *supplierSvcImpl) CreateSupplier(ctx context.Context, req *CreateSupplie
 		Name:     req.Name,
 		Number:   req.Number,
 		Note:     req.Note.Ptr(),
-		Includes: resourcekit.FilterIncludes(ctx, supplierIncludes...),
+		Includes: include.FilterIncludes(ctx, supplierIncludes...),
 	}
 
 	if v, ok := req.BillToAddress.Value(); ok {
@@ -143,7 +143,7 @@ func (s *supplierSvcImpl) UpdateSupplier(ctx context.Context, req *UpdateSupplie
 		UpdateNote:      req.UpdateNote,
 		BillToAddressId: req.BillToAddressID.Ptr(),
 		ShipToAddressId: req.ShipToAddressID.Ptr(),
-		Includes:        resourcekit.FilterIncludes(ctx, supplierIncludes...),
+		Includes:        include.FilterIncludes(ctx, supplierIncludes...),
 	}
 
 	resp, apiErr := grpcutil.CallRPC(ctx, supplierSvcTracer, "service.suppliers.update", domain.ServiceName,
@@ -235,7 +235,7 @@ func stashSupplierMeta(ctx context.Context, s *pb.SupplierProto, d *apiresource.
 	if s == nil {
 		return
 	}
-	meta := resourcekit.GetLoadMeta(ctx)
+	meta := include.GetLoadMeta(ctx)
 	if s.BillToAddress != nil {
 		meta.Set(constants.ObjectTypeSupplier, d.ID, "bill_to_address", addressProtoToResource(s.BillToAddress))
 	}
@@ -250,7 +250,7 @@ func stashSupplierSummaryMeta(ctx context.Context, s *pb.SupplierSummaryProto) {
 	if s == nil {
 		return
 	}
-	meta := resourcekit.GetLoadMeta(ctx)
+	meta := include.GetLoadMeta(ctx)
 	if s.BillToAddressId != nil && *s.BillToAddressId != "" {
 		meta.Set(constants.ObjectTypeSupplier, s.Id, "bill_to_address_id", *s.BillToAddressId)
 	}

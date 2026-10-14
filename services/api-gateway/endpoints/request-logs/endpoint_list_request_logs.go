@@ -5,16 +5,23 @@ import (
 	"net/http"
 	"time"
 
-	apiendpoint "github.com/open-mrp/api/services/api-gateway/pkg/endpoint"
+	"github.com/open-mrp/apikit/object"
+
+	"github.com/open-mrp/api/services/api-gateway/pkg/authz"
 	apiresource "github.com/open-mrp/api/services/api-gateway/pkg/resource"
 	"github.com/open-mrp/api/services/auth-service/pkg/types"
 	"github.com/open-mrp/api/shared/constants"
 	apierror "github.com/open-mrp/apikit/apierror"
+	apiendpoint "github.com/open-mrp/apikit/endpoint"
 )
 
 // Request to list request logs.
 type ListRequestLogsRequest struct {
-	apiresource.PaginationRequest
+	object.ListRequest
+	// Free-text search term used to filter results.
+	//
+	// Which fields are matched against the term varies by endpoint.
+	Query *string `query:"q" validate:"omitempty,max=500"`
 	// Restricts results to request logs on or after this timestamp.
 	//
 	// Defaults to 24 hours before `ends_at`, or before now when `ends_at` is also omitted. Pass an earlier timestamp to search further back.
@@ -74,15 +81,15 @@ type ListRequestLogsEndpoint struct{}
 
 func (e *ListRequestLogsEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListRequestLogsRequest, *apiresource.List[apiresource.RequestLog]] {
 	return (&apiendpoint.APIEndpoint[*ListRequestLogsRequest, *apiresource.List[apiresource.RequestLog]]{
-		Title:               "List Request Logs",
-		Method:              http.MethodGet,
-		ContentType:         "application/json",
-		Route:               "/v1/core/request-logs",
-		SuccessStatusCode:   http.StatusOK,
-		Public:              true,
-		AgentTool:           true,
-		RequiredPermissions: []types.Permission{{Domain: types.PermissionDomainRequestLogs, Action: types.ActionRead}},
-		Preview:             true,
+		Title:             "List Request Logs",
+		Method:            http.MethodGet,
+		ContentType:       "application/json",
+		Route:             "/v1/core/request-logs",
+		SuccessStatusCode: http.StatusOK,
+		Public:            true,
+		AgentTool:         true,
+		Auth:              authz.Policy{Permissions: []types.Permission{{Domain: types.PermissionDomainRequestLogs, Action: types.ActionRead}}},
+		Preview:           true,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *ListRequestLogsRequest) (*apiresource.List[apiresource.RequestLog], *apierror.APIError) {
 			return svc.(RequestLogSvc).ListRequestLogs
 		},

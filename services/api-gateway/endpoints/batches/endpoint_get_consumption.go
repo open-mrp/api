@@ -4,12 +4,13 @@ import (
 	"context"
 	"net/http"
 
-	apiendpoint "github.com/open-mrp/api/services/api-gateway/pkg/endpoint"
-	apiexample "github.com/open-mrp/api/services/api-gateway/pkg/example"
+	"github.com/open-mrp/api/services/api-gateway/pkg/authz"
 	apiresource "github.com/open-mrp/api/services/api-gateway/pkg/resource"
 	"github.com/open-mrp/api/services/auth-service/pkg/types"
 	"github.com/open-mrp/api/shared/constants"
 	apierror "github.com/open-mrp/apikit/apierror"
+	apiendpoint "github.com/open-mrp/apikit/endpoint"
+	apiexample "github.com/open-mrp/apikit/example"
 	"github.com/open-mrp/apikit/field"
 )
 
@@ -56,15 +57,15 @@ type GetScanningStationConsumptionEndpoint struct{}
 
 func (e *GetScanningStationConsumptionEndpoint) Materialize() *apiendpoint.APIEndpoint[*GetScanningStationConsumptionRequest, *apiresource.List[apiresource.ScanningConsumption]] {
 	return (&apiendpoint.APIEndpoint[*GetScanningStationConsumptionRequest, *apiresource.List[apiresource.ScanningConsumption]]{
-		Title:               "Get Scanning Station Consumption",
-		Method:              http.MethodPost,
-		ContentType:         "application/json",
-		Route:               "/v1/operations/scanning-stations/{id}/consumptions",
-		SuccessStatusCode:   http.StatusOK,
-		Public:              false,
-		AgentTool:           true,
-		Preview:             true,
-		RequiredPermissions: []types.Permission{{Domain: types.PermissionDomainBatches, Action: types.ActionRead}},
+		Title:             "Get Scanning Station Consumption",
+		Method:            http.MethodPost,
+		ContentType:       "application/json",
+		Route:             "/v1/operations/scanning-stations/{id}/consumptions",
+		SuccessStatusCode: http.StatusOK,
+		Public:            false,
+		AgentTool:         true,
+		Preview:           true,
+		Auth:              authz.Policy{Permissions: []types.Permission{{Domain: types.PermissionDomainBatches, Action: types.ActionRead}}},
 		ServiceHandler: func(svc any) func(ctx context.Context, req *GetScanningStationConsumptionRequest) (*apiresource.List[apiresource.ScanningConsumption], *apierror.APIError) {
 			return svc.(BatchSvc).GetScanningStationConsumption
 		},

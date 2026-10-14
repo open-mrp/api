@@ -2,27 +2,27 @@ package resourceregistry
 
 import (
 	"context"
+	"github.com/open-mrp/apikit/include"
 
 	"github.com/open-mrp/api/services/api-gateway/internal/resourceloaders"
 	apiresource "github.com/open-mrp/api/services/api-gateway/pkg/resource"
-	"github.com/open-mrp/api/services/api-gateway/pkg/resourcekit"
 	"github.com/open-mrp/api/shared/constants"
 )
 
 func init() {
-	resourcekit.Register(&resourcekit.Definition{
+	include.Register(&include.Definition{
 		ObjectType: constants.ObjectTypeChatMessage,
 		Load:       resourceloaders.LoadMessages,
-		Subs: []resourcekit.SubField{
+		Subs: []include.SubField{
 			// sender, author, resource and attachments arrive inline on the message payload and are stashed by chatmap.StashMessageMeta — gated visibility, no extra fetch.
-			{Key: "sender", Cardinality: resourcekit.CardinalityOnePtr, Populate: populateSenderOnMessage},
-			{Key: "author", Cardinality: resourcekit.CardinalityOnePtr, Populate: populateAuthorOnMessage},
-			{Key: "resource", Cardinality: resourcekit.CardinalityOnePtr, Populate: populateResourceOnMessage},
+			{Key: "sender", Cardinality: include.CardinalityOnePtr, Populate: populateSenderOnMessage},
+			{Key: "author", Cardinality: include.CardinalityOnePtr, Populate: populateAuthorOnMessage},
+			{Key: "resource", Cardinality: include.CardinalityOnePtr, Populate: populateResourceOnMessage},
 			// attachments arrive inline (stashed whole). Populate sets the list; Target+ExtractRefs let the resolver recurse into each attachment to gate its own expandable `resource`.
 			{
 				Key:         "attachments",
 				Target:      constants.ObjectTypeMessageAttachment,
-				Cardinality: resourcekit.CardinalityList,
+				Cardinality: include.CardinalityList,
 				Populate:    populateAttachmentsOnMessage,
 				ExtractRefs: extractAttachmentRefsFromMessage,
 			},
@@ -30,14 +30,14 @@ func init() {
 			{
 				Key:         "conversation",
 				Target:      constants.ObjectTypeConversation,
-				Cardinality: resourcekit.CardinalityOnePtr,
+				Cardinality: include.CardinalityOnePtr,
 				ExtractIDs:  extractConversationIDFromMessage,
 				Populate:    populateConversationOnMessage,
 			},
 			{
 				Key:         "reply_to",
 				Target:      constants.ObjectTypeChatMessage,
-				Cardinality: resourcekit.CardinalityOnePtr,
+				Cardinality: include.CardinalityOnePtr,
 				ExtractIDs:  extractReplyToIDFromMessage,
 				Populate:    populateReplyToOnMessage,
 			},
@@ -45,7 +45,7 @@ func init() {
 			{
 				Key:         "agent_run",
 				Target:      constants.ObjectTypeAgentRun,
-				Cardinality: resourcekit.CardinalityOnePtr,
+				Cardinality: include.CardinalityOnePtr,
 				ExtractIDs:  extractAgentRunIDFromMessage,
 				Populate:    populateAgentRunOnMessage,
 			},
@@ -55,7 +55,7 @@ func init() {
 
 func populateSenderOnMessage(ctx context.Context, parent any, _ map[string]any) {
 	m := parent.(*apiresource.Message)
-	v, ok := resourcekit.GetLoadMeta(ctx).Get(constants.ObjectTypeChatMessage, m.ID, "sender")
+	v, ok := include.GetLoadMeta(ctx).Get(constants.ObjectTypeChatMessage, m.ID, "sender")
 	if !ok {
 		return
 	}
@@ -64,7 +64,7 @@ func populateSenderOnMessage(ctx context.Context, parent any, _ map[string]any) 
 
 func populateAuthorOnMessage(ctx context.Context, parent any, _ map[string]any) {
 	m := parent.(*apiresource.Message)
-	v, ok := resourcekit.GetLoadMeta(ctx).Get(constants.ObjectTypeChatMessage, m.ID, "author")
+	v, ok := include.GetLoadMeta(ctx).Get(constants.ObjectTypeChatMessage, m.ID, "author")
 	if !ok {
 		return
 	}
@@ -73,7 +73,7 @@ func populateAuthorOnMessage(ctx context.Context, parent any, _ map[string]any) 
 
 func populateResourceOnMessage(ctx context.Context, parent any, _ map[string]any) {
 	m := parent.(*apiresource.Message)
-	v, ok := resourcekit.GetLoadMeta(ctx).Get(constants.ObjectTypeChatMessage, m.ID, "resource")
+	v, ok := include.GetLoadMeta(ctx).Get(constants.ObjectTypeChatMessage, m.ID, "resource")
 	if !ok {
 		return
 	}
@@ -82,7 +82,7 @@ func populateResourceOnMessage(ctx context.Context, parent any, _ map[string]any
 
 func populateAttachmentsOnMessage(ctx context.Context, parent any, _ map[string]any) {
 	m := parent.(*apiresource.Message)
-	v, ok := resourcekit.GetLoadMeta(ctx).Get(constants.ObjectTypeChatMessage, m.ID, "attachments")
+	v, ok := include.GetLoadMeta(ctx).Get(constants.ObjectTypeChatMessage, m.ID, "attachments")
 	if !ok {
 		return
 	}
@@ -104,7 +104,7 @@ func extractAttachmentRefsFromMessage(_ context.Context, parent any) []any {
 
 func extractConversationIDFromMessage(ctx context.Context, parent any) []string {
 	m := parent.(*apiresource.Message)
-	id, _ := resourcekit.GetLoadMeta(ctx).GetString(constants.ObjectTypeChatMessage, m.ID, "conversation_id")
+	id, _ := include.GetLoadMeta(ctx).GetString(constants.ObjectTypeChatMessage, m.ID, "conversation_id")
 	if id == "" {
 		return nil
 	}
@@ -113,7 +113,7 @@ func extractConversationIDFromMessage(ctx context.Context, parent any) []string 
 
 func populateConversationOnMessage(ctx context.Context, parent any, loaded map[string]any) {
 	m := parent.(*apiresource.Message)
-	id, _ := resourcekit.GetLoadMeta(ctx).GetString(constants.ObjectTypeChatMessage, m.ID, "conversation_id")
+	id, _ := include.GetLoadMeta(ctx).GetString(constants.ObjectTypeChatMessage, m.ID, "conversation_id")
 	if id == "" {
 		return
 	}
@@ -124,7 +124,7 @@ func populateConversationOnMessage(ctx context.Context, parent any, loaded map[s
 
 func extractReplyToIDFromMessage(ctx context.Context, parent any) []string {
 	m := parent.(*apiresource.Message)
-	id, _ := resourcekit.GetLoadMeta(ctx).GetString(constants.ObjectTypeChatMessage, m.ID, "reply_to_id")
+	id, _ := include.GetLoadMeta(ctx).GetString(constants.ObjectTypeChatMessage, m.ID, "reply_to_id")
 	if id == "" {
 		return nil
 	}
@@ -133,7 +133,7 @@ func extractReplyToIDFromMessage(ctx context.Context, parent any) []string {
 
 func populateReplyToOnMessage(ctx context.Context, parent any, loaded map[string]any) {
 	m := parent.(*apiresource.Message)
-	id, _ := resourcekit.GetLoadMeta(ctx).GetString(constants.ObjectTypeChatMessage, m.ID, "reply_to_id")
+	id, _ := include.GetLoadMeta(ctx).GetString(constants.ObjectTypeChatMessage, m.ID, "reply_to_id")
 	if id == "" {
 		return
 	}
@@ -144,7 +144,7 @@ func populateReplyToOnMessage(ctx context.Context, parent any, loaded map[string
 
 func extractAgentRunIDFromMessage(ctx context.Context, parent any) []string {
 	m := parent.(*apiresource.Message)
-	id, _ := resourcekit.GetLoadMeta(ctx).GetString(constants.ObjectTypeChatMessage, m.ID, "agent_run_id")
+	id, _ := include.GetLoadMeta(ctx).GetString(constants.ObjectTypeChatMessage, m.ID, "agent_run_id")
 	if id == "" {
 		return nil
 	}
@@ -153,7 +153,7 @@ func extractAgentRunIDFromMessage(ctx context.Context, parent any) []string {
 
 func populateAgentRunOnMessage(ctx context.Context, parent any, loaded map[string]any) {
 	m := parent.(*apiresource.Message)
-	id, _ := resourcekit.GetLoadMeta(ctx).GetString(constants.ObjectTypeChatMessage, m.ID, "agent_run_id")
+	id, _ := include.GetLoadMeta(ctx).GetString(constants.ObjectTypeChatMessage, m.ID, "agent_run_id")
 	if id == "" {
 		return
 	}

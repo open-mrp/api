@@ -2,23 +2,23 @@ package resourceregistry
 
 import (
 	"context"
+	"github.com/open-mrp/apikit/include"
 
 	"github.com/open-mrp/api/services/api-gateway/internal/resourceloaders"
 	apiresource "github.com/open-mrp/api/services/api-gateway/pkg/resource"
-	"github.com/open-mrp/api/services/api-gateway/pkg/resourcekit"
 	"github.com/open-mrp/api/shared/constants"
 )
 
 func init() {
 	// Sandbox exposes a direct `owner_account` expansion (an Account) — no intermediate Owner shell. The SubField reuses the already-registered Account loader; the FK is stashed in LoadMeta by LoadSandboxes.
-	resourcekit.Register(&resourcekit.Definition{
+	include.Register(&include.Definition{
 		ObjectType: constants.ObjectTypeSandbox,
 		Load:       resourceloaders.LoadSandboxes,
-		Subs: []resourcekit.SubField{
+		Subs: []include.SubField{
 			{
 				Key:         "owner_account",
 				Target:      constants.ObjectTypeAccount,
-				Cardinality: resourcekit.CardinalityOnePtr,
+				Cardinality: include.CardinalityOnePtr,
 				ExtractIDs:  extractOwnerAccountIDFromSandbox,
 				Populate:    populateOwnerAccountOnSandbox,
 			},
@@ -28,7 +28,7 @@ func init() {
 
 func extractOwnerAccountIDFromSandbox(ctx context.Context, parent any) []string {
 	s := parent.(*apiresource.Sandbox)
-	id, _ := resourcekit.GetLoadMeta(ctx).
+	id, _ := include.GetLoadMeta(ctx).
 		GetString(constants.ObjectTypeSandbox, s.ID, "owner_account_id")
 	if id == "" {
 		return nil
@@ -38,7 +38,7 @@ func extractOwnerAccountIDFromSandbox(ctx context.Context, parent any) []string 
 
 func populateOwnerAccountOnSandbox(ctx context.Context, parent any, loaded map[string]any) {
 	s := parent.(*apiresource.Sandbox)
-	id, _ := resourcekit.GetLoadMeta(ctx).
+	id, _ := include.GetLoadMeta(ctx).
 		GetString(constants.ObjectTypeSandbox, s.ID, "owner_account_id")
 	if id == "" {
 		return

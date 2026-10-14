@@ -4,10 +4,11 @@ import (
 	"context"
 	"net/http"
 
-	apiendpoint "github.com/open-mrp/api/services/api-gateway/pkg/endpoint"
+	"github.com/open-mrp/api/services/api-gateway/pkg/authz"
 	apiresource "github.com/open-mrp/api/services/api-gateway/pkg/resource"
 	types "github.com/open-mrp/api/services/auth-service/pkg/types"
 	apierror "github.com/open-mrp/apikit/apierror"
+	apiendpoint "github.com/open-mrp/apikit/endpoint"
 )
 
 // Request to retrieve a shipment line.
@@ -25,16 +26,15 @@ type RetrieveShipmentLineEndpoint struct{}
 
 func (e *RetrieveShipmentLineEndpoint) Materialize() *apiendpoint.APIEndpoint[*RetrieveShipmentLineRequest, *apiresource.ShipmentLine] {
 	return (&apiendpoint.APIEndpoint[*RetrieveShipmentLineRequest, *apiresource.ShipmentLine]{
-		Title:                   "Retrieve Shipment Line",
-		Method:                  http.MethodGet,
-		ContentType:             "application/json",
-		Route:                   "/v1/operations/shipments/{shipment_id}/lines/{id}",
-		SuccessStatusCode:       http.StatusOK,
-		Public:                  false,
-		AgentTool:               true,
-		Preview:                 true,
-		RequiredPermissions:     []types.Permission{{Domain: types.PermissionDomainShipments, Action: types.ActionRead}},
-		CounterpartyPermissions: apiendpoint.Counterparties(types.ActionRead),
+		Title:             "Retrieve Shipment Line",
+		Method:            http.MethodGet,
+		ContentType:       "application/json",
+		Route:             "/v1/operations/shipments/{shipment_id}/lines/{id}",
+		SuccessStatusCode: http.StatusOK,
+		Public:            false,
+		AgentTool:         true,
+		Preview:           true,
+		Auth:              authz.Policy{Permissions: []types.Permission{{Domain: types.PermissionDomainShipments, Action: types.ActionRead}}, Counterparty: authz.Counterparties(types.ActionRead)},
 		ServiceHandler: func(svc any) func(ctx context.Context, req *RetrieveShipmentLineRequest) (*apiresource.ShipmentLine, *apierror.APIError) {
 			return svc.(ShipmentSvc).GetShipmentLine
 		},

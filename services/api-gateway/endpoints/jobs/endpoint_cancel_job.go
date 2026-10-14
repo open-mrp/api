@@ -4,11 +4,12 @@ import (
 	"context"
 	"net/http"
 
-	apiendpoint "github.com/open-mrp/api/services/api-gateway/pkg/endpoint"
+	"github.com/open-mrp/api/services/api-gateway/pkg/authz"
 	apiresource "github.com/open-mrp/api/services/api-gateway/pkg/resource"
 	"github.com/open-mrp/api/services/auth-service/pkg/types"
 	"github.com/open-mrp/api/shared/constants"
 	apierror "github.com/open-mrp/apikit/apierror"
+	apiendpoint "github.com/open-mrp/apikit/endpoint"
 )
 
 // Request to cancel a job.
@@ -34,7 +35,7 @@ func (e *CancelJobEndpoint) Materialize() *apiendpoint.APIEndpoint[*CancelJobReq
 		Preview:    true,
 		ObjectType: constants.ObjectTypeJob,
 		// What CancelJob enforces downstream. Undeclared, the coarse gate let every authenticated caller through to a 403 raised in the service.
-		RequiredPermissions: []types.Permission{{Domain: types.PermissionDomainJobs, Action: types.ActionDelete}},
+		Auth: authz.Policy{Permissions: []types.Permission{{Domain: types.PermissionDomainJobs, Action: types.ActionDelete}}},
 		IncludeConfig: apiendpoint.IncludesFor(apiendpoint.IncludesParams{
 			ObjectType: constants.ObjectTypeJob,
 			Fields:     []string{"created_by", "created_by.role"},

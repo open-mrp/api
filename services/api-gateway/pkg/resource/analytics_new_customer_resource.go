@@ -3,8 +3,8 @@ package apiresource
 import (
 	"time"
 
-	apiexample "github.com/open-mrp/api/services/api-gateway/pkg/example"
 	"github.com/open-mrp/api/shared/constants"
+	apiexample "github.com/open-mrp/apikit/example"
 )
 
 // NewCustomer is a customer added in a report's period that has ordered, with its first order and lifetime sales.

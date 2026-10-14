@@ -2,18 +2,18 @@ package resourceregistry
 
 import (
 	"context"
+	"github.com/open-mrp/apikit/include"
 
 	"github.com/open-mrp/api/services/api-gateway/internal/resourceloaders"
 	apiresource "github.com/open-mrp/api/services/api-gateway/pkg/resource"
-	"github.com/open-mrp/api/services/api-gateway/pkg/resourcekit"
 	"github.com/open-mrp/api/shared/constants"
 )
 
 func init() {
-	resourcekit.Register(&resourcekit.Definition{
+	include.Register(&include.Definition{
 		ObjectType: constants.ObjectTypeProductionStep,
 		Load:       resourceloaders.LoadProductionSteps,
-		Subs: []resourcekit.SubField{
+		Subs: []include.SubField{
 			// Target + ExtractRefs (not a loader) because both are already stashed by the step
 			// presenter; they exist so the resolver descends for production.produced_item and
 			// consumptions.consumed_item.
@@ -23,14 +23,14 @@ func init() {
 			{
 				Key:         "scanning_station",
 				Target:      constants.ObjectTypeScanningStation,
-				Cardinality: resourcekit.CardinalityOnePtr,
+				Cardinality: include.CardinalityOnePtr,
 				ExtractIDs:  extractScanningStationIDFromProductionStep,
 				Populate:    populateScanningStationOnProductionStep,
 			},
 			{
 				Key:         "department",
 				Target:      constants.ObjectTypeDepartment,
-				Cardinality: resourcekit.CardinalityOnePtr,
+				Cardinality: include.CardinalityOnePtr,
 				ExtractIDs:  extractDepartmentIDFromProductionStep,
 				Populate:    populateDepartmentOnProductionStep,
 			},
@@ -43,11 +43,11 @@ func init() {
 		},
 	})
 
-	resourcekit.Register(&resourcekit.Definition{
+	include.Register(&include.Definition{
 		ObjectType: constants.ObjectTypeProduction,
 		Load:       resourceloaders.LoadProductions,
-		Subs: []resourcekit.SubField{
-			{Key: "produced_item", Target: constants.ObjectTypeItem, Cardinality: resourcekit.CardinalityOnePtr, ExtractIDs: extractProducedItemIDFromProduction, Populate: populateProducedItemOnProduction},
+		Subs: []include.SubField{
+			{Key: "produced_item", Target: constants.ObjectTypeItem, Cardinality: include.CardinalityOnePtr, ExtractIDs: extractProducedItemIDFromProduction, Populate: populateProducedItemOnProduction},
 			{Key: "quantity", Target: constants.ObjectTypeQuantity, ExtractRefs: extractQuantityRefFromProduction},
 		},
 	})
@@ -55,7 +55,7 @@ func init() {
 
 func populateProductionOnProductionStep(ctx context.Context, parent any, _ map[string]any) {
 	ps := parent.(*apiresource.ProductionStep)
-	v, ok := resourcekit.GetLoadMeta(ctx).
+	v, ok := include.GetLoadMeta(ctx).
 		Get(constants.ObjectTypeProductionStep, ps.ID, "production")
 	if !ok {
 		return
@@ -65,7 +65,7 @@ func populateProductionOnProductionStep(ctx context.Context, parent any, _ map[s
 
 func populateConsumptionsOnProductionStep(ctx context.Context, parent any, _ map[string]any) {
 	ps := parent.(*apiresource.ProductionStep)
-	v, ok := resourcekit.GetLoadMeta(ctx).
+	v, ok := include.GetLoadMeta(ctx).
 		Get(constants.ObjectTypeProductionStep, ps.ID, "consumptions")
 	if !ok {
 		return
@@ -75,7 +75,7 @@ func populateConsumptionsOnProductionStep(ctx context.Context, parent any, _ map
 
 func populateMachinesOnProductionStep(ctx context.Context, parent any, _ map[string]any) {
 	ps := parent.(*apiresource.ProductionStep)
-	v, ok := resourcekit.GetLoadMeta(ctx).
+	v, ok := include.GetLoadMeta(ctx).
 		Get(constants.ObjectTypeProductionStep, ps.ID, "machines")
 	if !ok {
 		return
@@ -85,7 +85,7 @@ func populateMachinesOnProductionStep(ctx context.Context, parent any, _ map[str
 
 func extractScanningStationIDFromProductionStep(ctx context.Context, parent any) []string {
 	ps := parent.(*apiresource.ProductionStep)
-	id, _ := resourcekit.GetLoadMeta(ctx).
+	id, _ := include.GetLoadMeta(ctx).
 		GetString(constants.ObjectTypeProductionStep, ps.ID, "scanning_station_id")
 	if id == "" {
 		return nil
@@ -95,7 +95,7 @@ func extractScanningStationIDFromProductionStep(ctx context.Context, parent any)
 
 func populateScanningStationOnProductionStep(ctx context.Context, parent any, loaded map[string]any) {
 	ps := parent.(*apiresource.ProductionStep)
-	id, _ := resourcekit.GetLoadMeta(ctx).
+	id, _ := include.GetLoadMeta(ctx).
 		GetString(constants.ObjectTypeProductionStep, ps.ID, "scanning_station_id")
 	if v, ok := loaded[id]; ok {
 		ps.ScanningStation = v.(*apiresource.ScanningStation)
@@ -104,7 +104,7 @@ func populateScanningStationOnProductionStep(ctx context.Context, parent any, lo
 
 func extractDepartmentIDFromProductionStep(ctx context.Context, parent any) []string {
 	ps := parent.(*apiresource.ProductionStep)
-	id, _ := resourcekit.GetLoadMeta(ctx).
+	id, _ := include.GetLoadMeta(ctx).
 		GetString(constants.ObjectTypeProductionStep, ps.ID, "department_id")
 	if id == "" {
 		return nil
@@ -114,7 +114,7 @@ func extractDepartmentIDFromProductionStep(ctx context.Context, parent any) []st
 
 func populateDepartmentOnProductionStep(ctx context.Context, parent any, loaded map[string]any) {
 	ps := parent.(*apiresource.ProductionStep)
-	id, _ := resourcekit.GetLoadMeta(ctx).
+	id, _ := include.GetLoadMeta(ctx).
 		GetString(constants.ObjectTypeProductionStep, ps.ID, "department_id")
 	if v, ok := loaded[id]; ok {
 		ps.Department = v.(*apiresource.Department)
@@ -123,7 +123,7 @@ func populateDepartmentOnProductionStep(ctx context.Context, parent any, loaded 
 
 func populateInStepsOnProductionStep(ctx context.Context, parent any, _ map[string]any) {
 	ps := parent.(*apiresource.ProductionStep)
-	v, ok := resourcekit.GetLoadMeta(ctx).
+	v, ok := include.GetLoadMeta(ctx).
 		Get(constants.ObjectTypeProductionStep, ps.ID, "in_steps")
 	if !ok {
 		return
@@ -133,7 +133,7 @@ func populateInStepsOnProductionStep(ctx context.Context, parent any, _ map[stri
 
 func populateOutStepsOnProductionStep(ctx context.Context, parent any, _ map[string]any) {
 	ps := parent.(*apiresource.ProductionStep)
-	v, ok := resourcekit.GetLoadMeta(ctx).
+	v, ok := include.GetLoadMeta(ctx).
 		Get(constants.ObjectTypeProductionStep, ps.ID, "out_steps")
 	if !ok {
 		return
@@ -165,7 +165,7 @@ func extractConsumptionRefsFromProductionStep(_ context.Context, parent any) []a
 
 func extractProducedItemIDFromProduction(ctx context.Context, parent any) []string {
 	p := parent.(*apiresource.ProductionOutput)
-	id, _ := resourcekit.GetLoadMeta(ctx).
+	id, _ := include.GetLoadMeta(ctx).
 		GetString(constants.ObjectTypeProduction, p.ID, "produced_item_id")
 	if id == "" {
 		return nil
@@ -175,7 +175,7 @@ func extractProducedItemIDFromProduction(ctx context.Context, parent any) []stri
 
 func populateProducedItemOnProduction(ctx context.Context, parent any, loaded map[string]any) {
 	p := parent.(*apiresource.ProductionOutput)
-	id, _ := resourcekit.GetLoadMeta(ctx).
+	id, _ := include.GetLoadMeta(ctx).
 		GetString(constants.ObjectTypeProduction, p.ID, "produced_item_id")
 	if id == "" {
 		return

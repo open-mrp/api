@@ -4,11 +4,12 @@ import (
 	"context"
 	"net/http"
 
-	apiendpoint "github.com/open-mrp/api/services/api-gateway/pkg/endpoint"
+	"github.com/open-mrp/api/services/api-gateway/pkg/authz"
 	apiresource "github.com/open-mrp/api/services/api-gateway/pkg/resource"
 	"github.com/open-mrp/api/services/auth-service/pkg/types"
 	"github.com/open-mrp/api/shared/constants"
 	apierror "github.com/open-mrp/apikit/apierror"
+	apiendpoint "github.com/open-mrp/apikit/endpoint"
 )
 
 // Request to retrieve a purchase order by ID.
@@ -30,9 +31,9 @@ func (e *RetrievePurchaseOrderEndpoint) Materialize() *apiendpoint.APIEndpoint[*
 		Public:            false,
 		AgentTool:         true,
 		Preview:           true,
-		RequiredPermissions: []types.Permission{
+		Auth: authz.Policy{Permissions: []types.Permission{
 			{Domain: types.PermissionDomainPurchaseOrders, Action: types.ActionRead},
-		},
+		}},
 		ObjectType: constants.ObjectTypePurchaseOrder,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *RetrievePurchaseOrderRequest) (*apiresource.PurchaseOrder, *apierror.APIError) {
 			return svc.(PurchaseOrderSvc).GetPurchaseOrder

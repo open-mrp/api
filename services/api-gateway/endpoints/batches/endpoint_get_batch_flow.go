@@ -4,11 +4,12 @@ import (
 	"context"
 	"net/http"
 
-	apiendpoint "github.com/open-mrp/api/services/api-gateway/pkg/endpoint"
+	"github.com/open-mrp/api/services/api-gateway/pkg/authz"
 	apiresource "github.com/open-mrp/api/services/api-gateway/pkg/resource"
 	"github.com/open-mrp/api/services/auth-service/pkg/types"
 	"github.com/open-mrp/api/shared/constants"
 	apierror "github.com/open-mrp/apikit/apierror"
+	apiendpoint "github.com/open-mrp/apikit/endpoint"
 )
 
 // Request to retrieve the production flow graph for a batch.
@@ -24,16 +25,16 @@ type GetBatchFlowEndpoint struct{}
 
 func (e *GetBatchFlowEndpoint) Materialize() *apiendpoint.APIEndpoint[*GetBatchFlowRequest, *apiresource.List[apiresource.BatchFlowNode]] {
 	return (&apiendpoint.APIEndpoint[*GetBatchFlowRequest, *apiresource.List[apiresource.BatchFlowNode]]{
-		Title:               "Get Batch Flow",
-		Method:              http.MethodGet,
-		ContentType:         "application/json",
-		Route:               "/v1/operations/batches/{id}/flow",
-		SuccessStatusCode:   http.StatusOK,
-		Public:              false,
-		AgentTool:           true,
-		Preview:             true,
-		RequiredPermissions: []types.Permission{{Domain: types.PermissionDomainBatches, Action: types.ActionRead}},
-		ObjectType:          constants.ObjectTypeBatchFlowNode,
+		Title:             "Get Batch Flow",
+		Method:            http.MethodGet,
+		ContentType:       "application/json",
+		Route:             "/v1/operations/batches/{id}/flow",
+		SuccessStatusCode: http.StatusOK,
+		Public:            false,
+		AgentTool:         true,
+		Preview:           true,
+		Auth:              authz.Policy{Permissions: []types.Permission{{Domain: types.PermissionDomainBatches, Action: types.ActionRead}}},
+		ObjectType:        constants.ObjectTypeBatchFlowNode,
 		// Each node carries a whole batch, so its measures are reached through that batch.
 		IncludeConfig: apiendpoint.IncludesFor(apiendpoint.IncludesParams{
 			ObjectType: constants.ObjectTypeBatchFlowNode,

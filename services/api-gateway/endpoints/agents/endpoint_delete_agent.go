@@ -4,10 +4,11 @@ import (
 	"context"
 	"net/http"
 
-	apiendpoint "github.com/open-mrp/api/services/api-gateway/pkg/endpoint"
+	"github.com/open-mrp/api/services/api-gateway/pkg/authz"
 	apiresource "github.com/open-mrp/api/services/api-gateway/pkg/resource"
 	"github.com/open-mrp/api/services/auth-service/pkg/types"
 	apierror "github.com/open-mrp/apikit/apierror"
+	apiendpoint "github.com/open-mrp/apikit/endpoint"
 )
 
 // Request to delete a custom agent definition.
@@ -23,15 +24,15 @@ type DeleteAgentEndpoint struct{}
 
 func (e *DeleteAgentEndpoint) Materialize() *apiendpoint.APIEndpoint[*DeleteAgentRequest, *apiresource.EmptyResource] {
 	return (&apiendpoint.APIEndpoint[*DeleteAgentRequest, *apiresource.EmptyResource]{
-		Title:               "Delete Agent",
-		Method:              http.MethodDelete,
-		Route:               "/v1/ai/agents/{id}",
-		ContentType:         "application/json",
-		SuccessStatusCode:   http.StatusOK,
-		Public:              true,
-		AgentTool:           true,
-		Preview:             true,
-		RequiredPermissions: []types.Permission{{Domain: types.PermissionDomainAgents, Action: types.ActionDelete}},
+		Title:             "Delete Agent",
+		Method:            http.MethodDelete,
+		Route:             "/v1/ai/agents/{id}",
+		ContentType:       "application/json",
+		SuccessStatusCode: http.StatusOK,
+		Public:            true,
+		AgentTool:         true,
+		Preview:           true,
+		Auth:              authz.Policy{Permissions: []types.Permission{{Domain: types.PermissionDomainAgents, Action: types.ActionDelete}}},
 		ServiceHandler: func(svc any) func(ctx context.Context, req *DeleteAgentRequest) (*apiresource.EmptyResource, *apierror.APIError) {
 			return svc.(AgentSvc).DeleteAgent
 		},

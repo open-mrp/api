@@ -3,13 +3,13 @@ package machinedowntimeep
 import (
 	"context"
 	"fmt"
+	"github.com/open-mrp/apikit/include"
 
 	"github.com/open-mrp/api/services/api-gateway/internal/domain"
 	grpcutil "github.com/open-mrp/api/services/api-gateway/internal/grpc"
 	"github.com/open-mrp/api/services/api-gateway/internal/resourceloaders"
 	apirequest "github.com/open-mrp/api/services/api-gateway/pkg/request"
 	apiresource "github.com/open-mrp/api/services/api-gateway/pkg/resource"
-	"github.com/open-mrp/api/services/api-gateway/pkg/resourcekit"
 	"github.com/open-mrp/api/shared/constants"
 	"github.com/open-mrp/api/shared/fieldpb"
 	pb "github.com/open-mrp/api/shared/proto/core"
@@ -95,7 +95,7 @@ func (m *machineDowntimeSvcImpl) ListDowntimeEvents(ctx context.Context, req *Li
 		return nil, apiErr
 	}
 
-	meta := resourcekit.GetLoadMeta(ctx)
+	meta := include.GetLoadMeta(ctx)
 	events := make([]apiresource.MachineDowntimeEvent, len(resp.Events))
 	reporters := make([]*apiresource.Actor, 0, len(resp.Events))
 	for i, e := range resp.Events {
@@ -118,7 +118,7 @@ func (m *machineDowntimeSvcImpl) GetDowntimeEvent(ctx context.Context, req *Retr
 		return nil, apiErr
 	}
 
-	meta := resourcekit.GetLoadMeta(ctx)
+	meta := include.GetLoadMeta(ctx)
 	result := MachineDowntimeEventFromProto(resp.Event)
 	hydrateReporters(ctx, []*apiresource.Actor{StashMachineDowntimeEventMeta(ctx, meta, resp.Event)})
 	return &result, nil
@@ -151,7 +151,7 @@ func (m *machineDowntimeSvcImpl) CreateDowntimeEvent(ctx context.Context, req *C
 		return nil, apiErr
 	}
 
-	meta := resourcekit.GetLoadMeta(ctx)
+	meta := include.GetLoadMeta(ctx)
 	result := MachineDowntimeEventFromProto(resp.Event)
 	hydrateReporters(ctx, []*apiresource.Actor{StashMachineDowntimeEventMeta(ctx, meta, resp.Event)})
 	return &result, nil
@@ -182,7 +182,7 @@ func (m *machineDowntimeSvcImpl) UpdateDowntimeEvent(ctx context.Context, req *U
 		return nil, apiErr
 	}
 
-	meta := resourcekit.GetLoadMeta(ctx)
+	meta := include.GetLoadMeta(ctx)
 	result := MachineDowntimeEventFromProto(resp.Event)
 	hydrateReporters(ctx, []*apiresource.Actor{StashMachineDowntimeEventMeta(ctx, meta, resp.Event)})
 	return &result, nil
@@ -251,7 +251,7 @@ func MachineDowntimeEventFromProto(info *pb.MachineDowntimeEventInfo) apiresourc
 }
 
 // StashMachineDowntimeEventMeta stashes the FK ids in LoadMeta so the loaders can resolve the expandable machine, department, item and reported_by on ?include=. The reporter is stored as a bare identity-actor id, so its Actor is built from the id's prefix and preheated — LoadActors has no backing store. The built actor is returned (nil when absent) so the caller can batch-hydrate display names.
-func StashMachineDowntimeEventMeta(ctx context.Context, meta *resourcekit.LoadMeta, info *pb.MachineDowntimeEventInfo) *apiresource.Actor {
+func StashMachineDowntimeEventMeta(ctx context.Context, meta *include.LoadMeta, info *pb.MachineDowntimeEventInfo) *apiresource.Actor {
 	if info == nil {
 		return nil
 	}
@@ -267,14 +267,14 @@ func StashMachineDowntimeEventMeta(ctx context.Context, meta *resourcekit.LoadMe
 	actor := resourceloaders.ActorRefFromID(info.ReportedById)
 	if actor != nil {
 		meta.Set(constants.ObjectTypeMachineDowntimeEvent, info.Id, "reported_by_id", actor.ID)
-		resourcekit.PreheatCache(ctx, constants.ObjectTypeActor, actor.ID, actor)
+		include.PreheatCache(ctx, constants.ObjectTypeActor, actor.ID, actor)
 	}
 	return actor
 }
 
 // hydrateReporters fills the reporters' display names + handles. A no-op unless the caller expanded reported_by — the only case where the names are rendered — avoiding needless loader round-trips otherwise.
 func hydrateReporters(ctx context.Context, reporters []*apiresource.Actor) {
-	if !resourcekit.RequestedIncludeSet(ctx)["reported_by"] {
+	if !include.RequestedIncludeSet(ctx)["reported_by"] {
 		return
 	}
 	resourceloaders.HydrateIdentityActorNames(ctx, reporters)

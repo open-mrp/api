@@ -2,10 +2,10 @@ package resourceloaders
 
 import (
 	"context"
+	"github.com/open-mrp/apikit/include"
 	"strings"
 
 	apiresource "github.com/open-mrp/api/services/api-gateway/pkg/resource"
-	"github.com/open-mrp/api/services/api-gateway/pkg/resourcekit"
 	"github.com/open-mrp/api/shared/constants"
 	"github.com/open-mrp/api/shared/id"
 )
@@ -82,7 +82,7 @@ func HydrateIdentityActorNames(ctx context.Context, actors []*apiresource.Actor)
 		}
 	}
 
-	meta := resourcekit.GetLoadMeta(ctx)
+	meta := include.GetLoadMeta(ctx)
 	for _, a := range actors {
 		if a == nil {
 			continue

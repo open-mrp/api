@@ -4,12 +4,13 @@ import (
 	"context"
 	"net/http"
 
-	apiendpoint "github.com/open-mrp/api/services/api-gateway/pkg/endpoint"
+	"github.com/open-mrp/api/services/api-gateway/pkg/authz"
 	apiresource "github.com/open-mrp/api/services/api-gateway/pkg/resource"
 	"github.com/open-mrp/api/services/auth-service/pkg/types"
 	"github.com/open-mrp/api/shared/constants"
 	"github.com/open-mrp/api/shared/contracts"
 	apierror "github.com/open-mrp/apikit/apierror"
+	apiendpoint "github.com/open-mrp/apikit/endpoint"
 	"github.com/open-mrp/apikit/pagination"
 )
 
@@ -45,16 +46,16 @@ type ListHubspotSyncRecordsEndpoint struct{}
 
 func (e *ListHubspotSyncRecordsEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListHubspotSyncRecordsRequest, *apiresource.List[apiresource.HubspotSyncRecord]] {
 	return (&apiendpoint.APIEndpoint[*ListHubspotSyncRecordsRequest, *apiresource.List[apiresource.HubspotSyncRecord]]{
-		Title:               "List HubSpot Sync Records",
-		Method:              http.MethodGet,
-		ContentType:         "application/json",
-		Route:               "/v1/settings/integrations/hubspot/sync/records",
-		SuccessStatusCode:   http.StatusOK,
-		Public:              false,
-		AgentTool:           true,
-		Preview:             true,
-		ObjectType:          constants.ObjectTypeHubspotSyncRecord,
-		RequiredPermissions: []types.Permission{{Domain: types.PermissionDomainIntegrations, Action: types.ActionRead}},
+		Title:             "List HubSpot Sync Records",
+		Method:            http.MethodGet,
+		ContentType:       "application/json",
+		Route:             "/v1/settings/integrations/hubspot/sync/records",
+		SuccessStatusCode: http.StatusOK,
+		Public:            false,
+		AgentTool:         true,
+		Preview:           true,
+		ObjectType:        constants.ObjectTypeHubspotSyncRecord,
+		Auth:              authz.Policy{Permissions: []types.Permission{{Domain: types.PermissionDomainIntegrations, Action: types.ActionRead}}},
 		ServiceHandler: func(svc any) func(ctx context.Context, req *ListHubspotSyncRecordsRequest) (*apiresource.List[apiresource.HubspotSyncRecord], *apierror.APIError) {
 			return svc.(HubspotSyncSvc).ListSyncRecords
 		},

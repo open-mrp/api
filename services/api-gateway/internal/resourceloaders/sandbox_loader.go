@@ -2,11 +2,11 @@ package resourceloaders
 
 import (
 	"context"
+	"github.com/open-mrp/apikit/include"
 
 	"github.com/open-mrp/api/services/api-gateway/internal/domain"
 	grpcutil "github.com/open-mrp/api/services/api-gateway/internal/grpc"
 	apiresource "github.com/open-mrp/api/services/api-gateway/pkg/resource"
-	"github.com/open-mrp/api/services/api-gateway/pkg/resourcekit"
 	"github.com/open-mrp/api/shared/constants"
 	pb "github.com/open-mrp/api/shared/proto/core"
 	apierror "github.com/open-mrp/apikit/apierror"
@@ -28,7 +28,7 @@ func LoadSandboxes(ctx context.Context, ids []string) (map[string]any, *apierror
 	if apiErr != nil {
 		return nil, apiErr
 	}
-	meta := resourcekit.GetLoadMeta(ctx)
+	meta := include.GetLoadMeta(ctx)
 	out := make(map[string]any, len(resp.Sandboxes))
 	for _, s := range resp.Sandboxes {
 		out[s.Id] = sandboxFromProto(s)

@@ -1,228 +1,85 @@
 package router
 
 import (
-	"fmt"
+	"context"
+	"log/slog"
 	"net/http"
-	"slices"
+	"time"
 
+	"github.com/open-mrp/api/services/api-gateway/internal/domain"
+	"github.com/open-mrp/api/services/api-gateway/internal/header"
+	"github.com/open-mrp/api/shared/id"
+	"github.com/open-mrp/api/shared/omrpctx"
 	"github.com/open-mrp/apikit/appctx"
-
-	httptransport "github.com/open-mrp/api/services/api-gateway/internal/http"
-	apierror "github.com/open-mrp/apikit/apierror"
-	"github.com/open-mrp/apikit/querytag"
+	"github.com/open-mrp/apikit/middleware"
+	"github.com/open-mrp/apikit/ratelimit"
+	kitrouter "github.com/open-mrp/apikit/router"
+	"github.com/open-mrp/apikit/transport"
 )
 
+// router is one listener's routes and middleware, served behind apikit's request log.
 type router struct {
-	*http.ServeMux
-	routes      []Route
-	handlers    map[string]map[string]http.HandlerFunc
-	middlewares []func(http.HandlerFunc) http.HandlerFunc
+	*kitrouter.Router
+	handler http.Handler
 }
 
-func NewRouter() *router {
-	router := &router{
-		ServeMux:    http.NewServeMux(),
-		routes:      make([]Route, 0),
-		handlers:    make(map[string]map[string]http.HandlerFunc),
-		middlewares: make([]func(http.HandlerFunc) http.HandlerFunc, 0),
+func newRouter(cfg *BaseConfig) *router {
+	r := &router{Router: kitrouter.NewRouter()}
+	r.handler = middleware.RequestLog(middleware.RequestLogConfig{
+		Saver:            requestLogSaver{publisher: cfg.RequestLogPublisher},
+		Routes:           r.Router,
+		Logger:           slog.New(slog.NewTextHandler(cfg.LogWriter, nil)).With("listener", cfg.LogPrefix),
+		NewID:            newRequestID,
+		TrustedProxyHops: cfg.TrustedProxyHops,
+		SkipPaths:        []string{"/healthz"},
+		MaxBodyBytes:     omrpctx.MaxLoggedBodyBytes,
+	})(r.Router)
+	return r
+}
+
+// ServeHTTP serves a request through the request log and the router.
+func (r *router) ServeHTTP(w http.ResponseWriter, req *http.Request) {
+	r.handler.ServeHTTP(w, req)
+}
+
+func newRequestID() string {
+	length := id.IDLength19
+	requestID, err := id.GenID(id.RequestIDPrefix, &length)
+	if err != nil {
+		panic(err)
 	}
+	return requestID
+}
 
-	router.ServeMux.HandleFunc("/", func(w http.ResponseWriter, req *http.Request) {
-		if req.URL.Path == "/" {
-			if rootHandlers, exists := router.handlers["/"]; exists {
-				handler, methodExists := rootHandlers[req.Method]
-				if !methodExists && req.Method == http.MethodOptions {
-					for _, h := range rootHandlers {
-						handler = h
-						methodExists = true
-						break
-					}
-				}
+// requestLogSaver publishes each finished request's log to the outbox.
+type requestLogSaver struct {
+	publisher domain.RequestLogPublisher
+}
 
-				if methodExists {
-					ctx := appctx.WithRoutePattern(req.Context(), "/")
-					ctx = appctx.WithAllowedMethods(ctx, collectMethods(rootHandlers))
-					req = req.WithContext(ctx)
+func (s requestLogSaver) Save(ctx context.Context, rl *appctx.RequestLog) error {
+	return s.publisher.Create(ctx, rl)
+}
 
-					finalHandler := handler
-					for i := len(router.middlewares) - 1; i >= 0; i-- {
-						finalHandler = router.middlewares[i](finalHandler)
-					}
-					finalHandler(w, req)
-					return
-				} else {
-					httptransport.RespondWithAPIError(req.Context(), w, apierror.NewMethodNotAllowedError(fmt.Sprintf("Method %s not allowed for path %s.", req.Method, req.URL.Path)))
-					return
-				}
-			}
-		}
+// blockedIPs are client IPs refused outright.
+var blockedIPs = []string{"49.43.184.36"}
 
-		var matchedRoute *Route
-		var matchedParams map[string]string
-		var allowedMethods []string
+// corsConfig names OpenMRP's own request and response headers for browsers.
+var corsConfig = middleware.CORSConfig{
+	AllowHeaders:  []string{header.TargetAccountIDHeader, header.ActorAccountIDHeader},
+	ExposeHeaders: []string{transport.RetryAfterHeader, transport.IdempotentReplayedHeader},
+}
 
-		for i, route := range router.routes {
-			pathMatches := false
-			var params map[string]string
-
-			if route.PathPattern != nil {
-				params = extractPathParams(route.PathPattern, route.PathParams, req.URL.Path)
-				pathMatches = params != nil
-			} else {
-				pathMatches = route.Path == req.URL.Path
-			}
-
-			if pathMatches {
-				allowedMethods = append(allowedMethods, route.Method)
-				if route.Method == req.Method {
-					// Prefer the most specific match: a literal segment (e.g. /sync/current) must win over a parameterized one (/sync/{id}) regardless of registration order, otherwise a `{id}` route silently shadows a sibling static route.
-					if matchedRoute == nil || len(route.PathParams) < len(matchedRoute.PathParams) {
-						matchedRoute = &router.routes[i]
-						matchedParams = params
-					}
-				} else if req.Method == http.MethodOptions && matchedRoute == nil {
-					matchedRoute = &router.routes[i]
-					matchedParams = params
-				}
-			}
-		}
-
-		if matchedRoute != nil {
-			slices.Sort(allowedMethods)
-
-			ctx := req.Context()
-			if matchedParams != nil {
-				ctx = appctx.WithPathParams(ctx, matchedParams)
-			}
-			ctx = appctx.WithRoutePattern(ctx, matchedRoute.Path)
-			ctx = querytag.With(ctx, querytag.Route, req.Method+" "+matchedRoute.Path)
-			ctx = appctx.WithAllowedMethods(ctx, allowedMethods)
-			req = req.WithContext(ctx)
-
-			finalHandler := matchedRoute.Handler
-			for i := len(router.middlewares) - 1; i >= 0; i-- {
-				finalHandler = router.middlewares[i](finalHandler)
-			}
-			finalHandler(w, req)
-		} else if len(allowedMethods) > 0 {
-			httptransport.RespondWithAPIError(req.Context(), w, apierror.NewMethodNotAllowedError(fmt.Sprintf("Method %s not allowed for path %s.", req.Method, req.URL.Path)))
-		} else {
-			httptransport.RespondWithAPIError(req.Context(), w, apierror.NewNotFoundError(fmt.Sprintf("The requested endpoint %s %s was not found.", req.Method, req.URL.Path)))
-		}
+// rateLimit limits each client IP to limit requests a second, except in development and test, where all traffic shares one IP.
+func rateLimit(limit int, hops int) func(http.HandlerFunc) http.HandlerFunc {
+	return middleware.RateLimit(middleware.RateLimitConfig{
+		Limiter:          ratelimit.NewMemory(limit, time.Second),
+		TrustedProxyHops: hops,
+		SkipPaths:        []string{"/healthz"},
+		Skip:             isTestOrDevPlatform,
 	})
-
-	return router
 }
 
-func (r *router) AddMiddleware(middleware func(http.HandlerFunc) http.HandlerFunc) {
-	r.middlewares = append(r.middlewares, middleware)
-}
-
-func (r *router) HandleEndpoint(method, path string, handler http.HandlerFunc, isPublic bool) {
-	r.handle(method, path, handler)
-	r.routes[len(r.routes)-1].IsPublic = isPublic
-}
-
-func (r *router) handle(method, path string, handler http.HandlerFunc) {
-	pattern, paramNames := compilePathPattern(path)
-
-	route := Route{
-		Method:      method,
-		Path:        path,
-		Handler:     handler,
-		PathPattern: pattern,
-		PathParams:  paramNames,
-	}
-
-	r.routes = append(r.routes, route)
-
-	if pattern == nil {
-		if r.handlers[path] == nil {
-			r.handlers[path] = make(map[string]http.HandlerFunc)
-
-			r.ServeMux.HandleFunc(path, func(w http.ResponseWriter, req *http.Request) {
-				methodHandlers := r.handlers[path]
-
-				handler, exists := methodHandlers[req.Method]
-				if !exists && req.Method == http.MethodOptions {
-					for _, h := range methodHandlers {
-						handler = h
-						exists = true
-						break
-					}
-				}
-
-				if exists {
-					ctx := appctx.WithRoutePattern(req.Context(), path)
-					ctx = appctx.WithAllowedMethods(ctx, collectMethods(methodHandlers))
-					req = req.WithContext(ctx)
-
-					finalHandler := handler
-					for i := len(r.middlewares) - 1; i >= 0; i-- {
-						finalHandler = r.middlewares[i](finalHandler)
-					}
-					finalHandler(w, req)
-				} else {
-					httptransport.RespondWithAPIError(req.Context(), w, apierror.NewMethodNotAllowedError(fmt.Sprintf("Method %s not allowed for path %s.", req.Method, req.URL.Path)))
-				}
-			})
-		}
-
-		r.handlers[path][method] = handler
-	}
-}
-
-func (r *router) Get(path string, handler http.HandlerFunc) {
-	r.handle("GET", path, handler)
-}
-
-func (r *router) Post(path string, handler http.HandlerFunc) {
-	r.handle("POST", path, handler)
-}
-
-func (r *router) Put(path string, handler http.HandlerFunc) {
-	r.handle("PUT", path, handler)
-}
-
-func (r *router) Patch(path string, handler http.HandlerFunc) {
-	r.handle("PATCH", path, handler)
-}
-
-func (r *router) Delete(path string, handler http.HandlerFunc) {
-	r.handle("DELETE", path, handler)
-}
-
-func (r *router) RegisterWithMiddleware(method, path string, handler http.HandlerFunc, middlewares ...func(http.HandlerFunc) http.HandlerFunc) {
-	finalHandler := handler
-	for i := len(middlewares) - 1; i >= 0; i-- {
-		finalHandler = middlewares[i](finalHandler)
-	}
-
-	for i := len(r.middlewares) - 1; i >= 0; i-- {
-		finalHandler = r.middlewares[i](finalHandler)
-	}
-
-	r.handle(method, path, finalHandler)
-}
-
-func (r *router) GetRoutes() []any {
-	routes := make([]any, len(r.routes))
-	for i, route := range r.routes {
-		routes[i] = map[string]any{
-			"Method":      route.Method,
-			"Path":        route.Path,
-			"PathPattern": route.PathPattern,
-			"Public":      route.IsPublic,
-		}
-	}
-	return routes
-}
-
-func collectMethods(handlers map[string]http.HandlerFunc) []string {
-	methods := make([]string, 0, len(handlers))
-	for m := range handlers {
-		methods = append(methods, m)
-	}
-	slices.Sort(methods)
-	return methods
+func isTestOrDevPlatform(r *http.Request) bool {
+	platform, ok := omrpctx.GetPlatformFromContext(r.Context())
+	return ok && (platform.IsTest() || platform.IsDevelopment())
 }

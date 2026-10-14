@@ -2,18 +2,18 @@ package resourceregistry
 
 import (
 	"context"
+	"github.com/open-mrp/apikit/include"
 
 	"github.com/open-mrp/api/services/api-gateway/internal/resourceloaders"
 	apiresource "github.com/open-mrp/api/services/api-gateway/pkg/resource"
-	"github.com/open-mrp/api/services/api-gateway/pkg/resourcekit"
 	"github.com/open-mrp/api/shared/constants"
 )
 
 func init() {
-	resourcekit.Register(&resourcekit.Definition{
+	include.Register(&include.Definition{
 		ObjectType: constants.ObjectTypeRole,
 		Load:       resourceloaders.LoadRoles,
-		Subs: []resourcekit.SubField{
+		Subs: []include.SubField{
 			{
 				Key:      "owner",
 				Populate: populateOwnerOnRole,
@@ -21,7 +21,7 @@ func init() {
 			{
 				Key:         "owner.account",
 				Target:      constants.ObjectTypeAccount,
-				Cardinality: resourcekit.CardinalityOnePtr,
+				Cardinality: include.CardinalityOnePtr,
 				ExtractIDs:  extractOwnerAccountIDFromRole,
 				Populate:    populateOwnerAccountOnRole,
 			},
@@ -35,14 +35,14 @@ func init() {
 
 func populateOwnerOnRole(ctx context.Context, parent any, _ map[string]any) {
 	r := parent.(*apiresource.Role)
-	accountID, _ := resourcekit.GetLoadMeta(ctx).
+	accountID, _ := include.GetLoadMeta(ctx).
 		GetString(constants.ObjectTypeRole, r.ID, "owner_account_id")
 	r.Owner = buildOwnerShell(accountID)
 }
 
 func extractOwnerAccountIDFromRole(ctx context.Context, parent any) []string {
 	r := parent.(*apiresource.Role)
-	id, _ := resourcekit.GetLoadMeta(ctx).
+	id, _ := include.GetLoadMeta(ctx).
 		GetString(constants.ObjectTypeRole, r.ID, "owner_account_id")
 	if id == "" {
 		return nil
@@ -55,7 +55,7 @@ func populateOwnerAccountOnRole(ctx context.Context, parent any, loaded map[stri
 	if r.Owner == nil {
 		return
 	}
-	id, _ := resourcekit.GetLoadMeta(ctx).
+	id, _ := include.GetLoadMeta(ctx).
 		GetString(constants.ObjectTypeRole, r.ID, "owner_account_id")
 	if id == "" {
 		return
@@ -67,7 +67,7 @@ func populateOwnerAccountOnRole(ctx context.Context, parent any, loaded map[stri
 
 func populatePermissionsOnRole(ctx context.Context, parent any, _ map[string]any) {
 	r := parent.(*apiresource.Role)
-	perms, ok := resourcekit.GetLoadMeta(ctx).
+	perms, ok := include.GetLoadMeta(ctx).
 		GetStrings(constants.ObjectTypeRole, r.ID, "permissions")
 	if !ok {
 		return

@@ -4,11 +4,12 @@ import (
 	"context"
 	"net/http"
 
-	apiendpoint "github.com/open-mrp/api/services/api-gateway/pkg/endpoint"
+	"github.com/open-mrp/api/services/api-gateway/pkg/authz"
 	apiresource "github.com/open-mrp/api/services/api-gateway/pkg/resource"
 	"github.com/open-mrp/api/services/auth-service/pkg/types"
 	"github.com/open-mrp/api/shared/constants"
 	apierror "github.com/open-mrp/apikit/apierror"
+	apiendpoint "github.com/open-mrp/apikit/endpoint"
 )
 
 // Request to resolve an item's lot.
@@ -28,16 +29,16 @@ type RetrieveItemLotDefaultEndpoint struct{}
 
 func (e *RetrieveItemLotDefaultEndpoint) Materialize() *apiendpoint.APIEndpoint[*RetrieveItemLotDefaultRequest, *apiresource.ItemLotDefault] {
 	return (&apiendpoint.APIEndpoint[*RetrieveItemLotDefaultRequest, *apiresource.ItemLotDefault]{
-		Title:               "Retrieve Item Lot Default",
-		Method:              http.MethodGet,
-		ContentType:         "application/json",
-		Route:               "/v1/catalog/items/{id}/lot-default",
-		SuccessStatusCode:   http.StatusOK,
-		Public:              true,
-		AgentTool:           true,
-		RequiredPermissions: []types.Permission{{Domain: types.PermissionDomainItems, Action: types.ActionRead}},
-		Preview:             true,
-		ObjectType:          constants.ObjectTypeItemLotDefault,
+		Title:             "Retrieve Item Lot Default",
+		Method:            http.MethodGet,
+		ContentType:       "application/json",
+		Route:             "/v1/catalog/items/{id}/lot-default",
+		SuccessStatusCode: http.StatusOK,
+		Public:            true,
+		AgentTool:         true,
+		Auth:              authz.Policy{Permissions: []types.Permission{{Domain: types.PermissionDomainItems, Action: types.ActionRead}}},
+		Preview:           true,
+		ObjectType:        constants.ObjectTypeItemLotDefault,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *RetrieveItemLotDefaultRequest) (*apiresource.ItemLotDefault, *apierror.APIError) {
 			return svc.(ItemSvc).GetItemLotDefault
 		},

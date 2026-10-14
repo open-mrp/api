@@ -4,12 +4,12 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"github.com/open-mrp/apikit/include"
 
 	"github.com/open-mrp/api/services/api-gateway/internal/domain"
 	grpcutil "github.com/open-mrp/api/services/api-gateway/internal/grpc"
 	"github.com/open-mrp/api/services/api-gateway/internal/resourceloaders"
 	apiresource "github.com/open-mrp/api/services/api-gateway/pkg/resource"
-	"github.com/open-mrp/api/services/api-gateway/pkg/resourcekit"
 	"github.com/open-mrp/api/shared/constants"
 	pb "github.com/open-mrp/api/shared/proto/platform"
 	apierror "github.com/open-mrp/apikit/apierror"
@@ -89,7 +89,7 @@ func (m *requestLogSvcImpl) ListRequestLogs(ctx context.Context, req *ListReques
 		IdempotencyKey:    req.IdempotencyKey,
 		Cursor:            req.Cursor,
 		Limit:             req.Limit,
-		Includes:          resourcekit.FilterIncludes(ctx, "account", "actor", "actor.role"),
+		Includes:          include.FilterIncludes(ctx, "account", "actor", "actor.role"),
 	}
 
 	if req.StartDate != nil && !req.StartDate.IsZero() {
@@ -112,7 +112,7 @@ func (m *requestLogSvcImpl) ListRequestLogs(ctx context.Context, req *ListReques
 		return apiresource.NewList[apiresource.RequestLog](nil, apiresource.PageInfo{}), nil
 	}
 
-	meta := resourcekit.GetLoadMeta(ctx)
+	meta := include.GetLoadMeta(ctx)
 	logs := make([]apiresource.RequestLog, len(resp.RequestLogs))
 	var agentActors []*apiresource.Actor
 	for i, rl := range resp.RequestLogs {
@@ -129,7 +129,7 @@ func (m *requestLogSvcImpl) ListRequestLogs(ctx context.Context, req *ListReques
 func (m *requestLogSvcImpl) GetRequestLog(ctx context.Context, req *RetrieveRequestLogRequest) (*apiresource.RequestLog, *apierror.APIError) {
 	pbReq := &pb.GetRequestLogRequest{
 		Id:       req.ID,
-		Includes: resourcekit.FilterIncludes(ctx, "account", "actor", "actor.role", "query_params", "request_body", "response_body"),
+		Includes: include.FilterIncludes(ctx, "account", "actor", "actor.role", "query_params", "request_body", "response_body"),
 	}
 
 	resp, apiErr := grpcutil.CallRPC(ctx, requestLogSvcTracer, "service.request_logs.get", domain.ServiceName,
@@ -141,7 +141,7 @@ func (m *requestLogSvcImpl) GetRequestLog(ctx context.Context, req *RetrieveRequ
 		return nil, apiErr
 	}
 
-	meta := resourcekit.GetLoadMeta(ctx)
+	meta := include.GetLoadMeta(ctx)
 	result := requestLogFromProto(resp.RequestLog)
 	if actor := stashRequestLogMeta(ctx, meta, resp.RequestLog); actor != nil && actor.Type == constants.ActorTypeAgent {
 		hydrateAgentActors(ctx, []*apiresource.Actor{actor})
@@ -155,7 +155,7 @@ func (m *requestLogSvcImpl) GetRequestLog(ctx context.Context, req *RetrieveRequ
 // Best-effort and a no-op unless the caller expanded the actor (the only case where
 // the name is rendered), avoiding a needless agent-service round-trip otherwise.
 func hydrateAgentActors(ctx context.Context, actors []*apiresource.Actor) {
-	if len(actors) == 0 || !resourcekit.RequestedIncludeSet(ctx)["actor"] {
+	if len(actors) == 0 || !include.RequestedIncludeSet(ctx)["actor"] {
 		return
 	}
 	resourceloaders.HydrateActorNames(ctx, actors)
@@ -194,7 +194,7 @@ func requestLogFromProto(rl *pb.RequestLogInfo) apiresource.RequestLog {
 // payloads into the request-scoped resolver cache. It returns the actor it built
 // (nil when the log has none) so the caller can post-process it — e.g. resolve agent
 // display names that platform-service cannot join.
-func stashRequestLogMeta(ctx context.Context, meta *resourcekit.LoadMeta, rl *pb.RequestLogInfo) *apiresource.Actor {
+func stashRequestLogMeta(ctx context.Context, meta *include.LoadMeta, rl *pb.RequestLogInfo) *apiresource.Actor {
 	if rl == nil {
 		return nil
 	}
@@ -225,7 +225,7 @@ func stashRequestLogMeta(ctx context.Context, meta *resourcekit.LoadMeta, rl *pb
 			handle = rl.Actor.Email
 		}
 		actor = apiresource.NewActor(rl.Actor.Id, actorType, rl.Actor.Name, handle)
-		resourcekit.PreheatCache(ctx, constants.ObjectTypeActor, actor.ID, actor)
+		include.PreheatCache(ctx, constants.ObjectTypeActor, actor.ID, actor)
 		meta.Set(constants.ObjectTypeRequestLog, rl.Id, "actor_id", actor.ID)
 		if rl.Actor.RoleId != nil {
 			meta.Set(constants.ObjectTypeActor, actor.ID, "role_id", *rl.Actor.RoleId)

@@ -4,11 +4,11 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"github.com/open-mrp/apikit/include"
 
 	"github.com/open-mrp/api/services/api-gateway/internal/domain"
 	grpcutil "github.com/open-mrp/api/services/api-gateway/internal/grpc"
 	apiresource "github.com/open-mrp/api/services/api-gateway/pkg/resource"
-	"github.com/open-mrp/api/services/api-gateway/pkg/resourcekit"
 	pb "github.com/open-mrp/api/shared/proto/agent"
 	apierror "github.com/open-mrp/apikit/apierror"
 	"github.com/open-mrp/apikit/tracing"
@@ -140,7 +140,7 @@ func (m *agentSvcImpl) CreateAgent(ctx context.Context, req *CreateAgentRequest)
 		TriggerType:  string(req.TriggerType),
 		ConfigJson:   configJSON,
 		Tools:        tools,
-		Includes:     resourcekit.FilterIncludes(ctx, agentIncludes...),
+		Includes:     include.FilterIncludes(ctx, agentIncludes...),
 	}
 	if v, ok := req.Description.Value(); ok {
 		pbReq.Description = v
@@ -157,7 +157,7 @@ func (m *agentSvcImpl) CreateAgent(ctx context.Context, req *CreateAgentRequest)
 		return nil, rpcErr
 	}
 
-	meta := resourcekit.GetLoadMeta(ctx)
+	meta := include.GetLoadMeta(ctx)
 	result := AgentDefinitionPresenter(resp.Agent)
 	StashAgentDefinitionMeta(meta, resp.Agent)
 	return &result, nil
@@ -180,7 +180,7 @@ func (m *agentSvcImpl) ListAgents(ctx context.Context, req *ListAgentsRequest) (
 	}
 
 	pbReq := &pb.ListAgentDefinitionsRequest{
-		Includes:        resourcekit.FilterIncludes(ctx, agentIncludes...),
+		Includes:        include.FilterIncludes(ctx, agentIncludes...),
 		Statuses:        statuses,
 		DefinitionTypes: definitionTypes,
 		TriggerTypes:    triggerTypes,
@@ -203,7 +203,7 @@ func (m *agentSvcImpl) ListAgents(ctx context.Context, req *ListAgentsRequest) (
 func (m *agentSvcImpl) GetAgent(ctx context.Context, req *RetrieveAgentRequest) (*apiresource.AgentDefinition, *apierror.APIError) {
 	pbReq := &pb.GetAgentDefinitionRequest{
 		AgentDefinitionId: req.AgentDefinitionID,
-		Includes:          resourcekit.FilterIncludes(ctx, agentIncludes...),
+		Includes:          include.FilterIncludes(ctx, agentIncludes...),
 	}
 
 	resp, rpcErr := grpcutil.CallRPC(ctx, agentSvcTracer, "service.agents.get", domain.ServiceName,
@@ -214,7 +214,7 @@ func (m *agentSvcImpl) GetAgent(ctx context.Context, req *RetrieveAgentRequest) 
 		return nil, rpcErr
 	}
 
-	meta := resourcekit.GetLoadMeta(ctx)
+	meta := include.GetLoadMeta(ctx)
 	result := AgentDefinitionPresenter(resp.Agent)
 	StashAgentDefinitionMeta(meta, resp.Agent)
 	return &result, nil
@@ -237,7 +237,7 @@ func (m *agentSvcImpl) UpdateAgent(ctx context.Context, req *UpdateAgentRequest)
 		TriggerType:       triggerTypePtr,
 		RoleId:            req.RoleID.ValuePtr(),
 		ClearRoleId:       req.RoleID.IsClear(),
-		Includes:          resourcekit.FilterIncludes(ctx, agentIncludes...),
+		Includes:          include.FilterIncludes(ctx, agentIncludes...),
 	}
 
 	if cfg, ok := req.Config.Value(); ok {
@@ -270,7 +270,7 @@ func (m *agentSvcImpl) UpdateAgent(ctx context.Context, req *UpdateAgentRequest)
 		return nil, rpcErr
 	}
 
-	meta := resourcekit.GetLoadMeta(ctx)
+	meta := include.GetLoadMeta(ctx)
 	result := AgentDefinitionPresenter(resp.Agent)
 	StashAgentDefinitionMeta(meta, resp.Agent)
 	return &result, nil

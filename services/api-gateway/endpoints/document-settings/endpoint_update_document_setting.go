@@ -4,12 +4,13 @@ import (
 	"context"
 	"net/http"
 
-	apiendpoint "github.com/open-mrp/api/services/api-gateway/pkg/endpoint"
-	apiexample "github.com/open-mrp/api/services/api-gateway/pkg/example"
+	"github.com/open-mrp/api/services/api-gateway/pkg/authz"
 	apiresource "github.com/open-mrp/api/services/api-gateway/pkg/resource"
 	"github.com/open-mrp/api/services/auth-service/pkg/types"
 	"github.com/open-mrp/api/shared/constants"
 	apierror "github.com/open-mrp/apikit/apierror"
+	apiendpoint "github.com/open-mrp/apikit/endpoint"
+	apiexample "github.com/open-mrp/apikit/example"
 	"github.com/open-mrp/apikit/field"
 	"github.com/open-mrp/apikit/validate"
 )
@@ -57,16 +58,16 @@ type UpdateDocumentSettingEndpoint struct{}
 
 func (e *UpdateDocumentSettingEndpoint) Materialize() *apiendpoint.APIEndpoint[*UpdateDocumentSettingRequest, *apiresource.DocumentSetting] {
 	return (&apiendpoint.APIEndpoint[*UpdateDocumentSettingRequest, *apiresource.DocumentSetting]{
-		Title:               "Update Document Setting",
-		Method:              http.MethodPatch,
-		Route:               "/v1/identity/document-settings/{document_type}",
-		ContentType:         "application/json",
-		SuccessStatusCode:   http.StatusOK,
-		Public:              false,
-		AgentTool:           true,
-		Preview:             true,
-		ObjectType:          constants.ObjectTypeDocumentSetting,
-		RequiredPermissions: []types.Permission{{Domain: types.PermissionDomainAccount, Action: types.ActionUpdate}},
+		Title:             "Update Document Setting",
+		Method:            http.MethodPatch,
+		Route:             "/v1/identity/document-settings/{document_type}",
+		ContentType:       "application/json",
+		SuccessStatusCode: http.StatusOK,
+		Public:            false,
+		AgentTool:         true,
+		Preview:           true,
+		ObjectType:        constants.ObjectTypeDocumentSetting,
+		Auth:              authz.Policy{Permissions: []types.Permission{{Domain: types.PermissionDomainAccount, Action: types.ActionUpdate}}},
 		ServiceHandler: func(svc any) func(ctx context.Context, req *UpdateDocumentSettingRequest) (*apiresource.DocumentSetting, *apierror.APIError) {
 			return svc.(DocumentSettingSvc).UpdateDocumentSetting
 		},

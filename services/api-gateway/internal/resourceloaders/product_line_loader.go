@@ -2,12 +2,12 @@ package resourceloaders
 
 import (
 	"context"
+	"github.com/open-mrp/apikit/include"
 	"strconv"
 
 	"github.com/open-mrp/api/services/api-gateway/internal/domain"
 	grpcutil "github.com/open-mrp/api/services/api-gateway/internal/grpc"
 	apiresource "github.com/open-mrp/api/services/api-gateway/pkg/resource"
-	"github.com/open-mrp/api/services/api-gateway/pkg/resourcekit"
 	"github.com/open-mrp/api/shared/constants"
 	pb "github.com/open-mrp/api/shared/proto/core"
 	apierror "github.com/open-mrp/apikit/apierror"
@@ -30,7 +30,7 @@ func LoadProductLines(ctx context.Context, ids []string) (map[string]any, *apier
 	if apiErr != nil {
 		return nil, apiErr
 	}
-	meta := resourcekit.GetLoadMeta(ctx)
+	meta := include.GetLoadMeta(ctx)
 	out := make(map[string]any, len(resp.ProductLines))
 	for _, pl := range resp.ProductLines {
 		out[pl.Id] = productLineFromProto(pl)
@@ -88,7 +88,7 @@ func productLineFromProto(pl *pb.ProductLineInfo) *apiresource.ProductLine {
 	return out
 }
 
-func stashUnitGroupMeta(meta *resourcekit.LoadMeta, ug *apiresource.UnitGroup) {
+func stashUnitGroupMeta(meta *include.LoadMeta, ug *apiresource.UnitGroup) {
 	if ug.BaseUnit != nil {
 		meta.Set(constants.ObjectTypeUnitGroup, ug.ID, "base_unit_id", ug.BaseUnit.ID)
 	}

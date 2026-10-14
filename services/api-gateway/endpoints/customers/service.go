@@ -3,6 +3,7 @@ package customerep
 import (
 	"context"
 	"fmt"
+	"github.com/open-mrp/apikit/include"
 
 	jobep "github.com/open-mrp/api/services/api-gateway/endpoints/jobs"
 	"github.com/open-mrp/api/services/api-gateway/internal/domain"
@@ -10,7 +11,6 @@ import (
 	"github.com/open-mrp/api/services/api-gateway/internal/resourceloaders"
 	apirequest "github.com/open-mrp/api/services/api-gateway/pkg/request"
 	apiresource "github.com/open-mrp/api/services/api-gateway/pkg/resource"
-	"github.com/open-mrp/api/services/api-gateway/pkg/resourcekit"
 	"github.com/open-mrp/api/shared/constants"
 	"github.com/open-mrp/api/shared/fieldpb"
 	pb "github.com/open-mrp/api/shared/proto/core"
@@ -127,7 +127,7 @@ func (m *customerSvcImpl) ListCustomers(ctx context.Context, req *ListCustomersR
 		City:                  req.City,
 		State:                 req.State,
 		PostalCode:            req.PostalCode,
-		Includes:              resourcekit.FilterIncludes(ctx, customerIncludes...),
+		Includes:              include.FilterIncludes(ctx, customerIncludes...),
 	}
 
 	if req.StartDate != nil {
@@ -196,7 +196,7 @@ func (m *customerSvcImpl) ExportCustomers(ctx context.Context, req *ExportCustom
 func (m *customerSvcImpl) GetCustomer(ctx context.Context, req *RetrieveCustomerRequest) (*apiresource.Customer, *apierror.APIError) {
 	pbReq := &pb.GetCustomerRequest{
 		Id:       req.CustomerID,
-		Includes: resourcekit.FilterIncludes(ctx, customerIncludes...),
+		Includes: include.FilterIncludes(ctx, customerIncludes...),
 	}
 
 	resp, apiErr := grpcutil.CallRPC(ctx, customerSvcTracer, "service.customers.get", domain.ServiceName,
@@ -259,7 +259,7 @@ func (m *customerSvcImpl) CreateCustomer(ctx context.Context, req *CreateCustome
 		CustomerTypeGroupId:   &req.CustomerTypeGroupID,
 		CarrierBillingType:    req.CarrierBillingType.Ptr().StringPtr(),
 		CarrierBillingAccount: req.CarrierBillingAccount.Ptr(),
-		Includes:              resourcekit.FilterIncludes(ctx, customerIncludes...),
+		Includes:              include.FilterIncludes(ctx, customerIncludes...),
 	}
 
 	if cl, ok := req.CreditLimit.Value(); ok {
@@ -419,7 +419,7 @@ func (m *customerSvcImpl) UpdateNotificationRecipients(ctx context.Context, req 
 // global user loader is internal-only (portal relation actors can't use it) — clients resolve
 // names from the customer's own account-users list instead.
 func buildNotificationRecipients(ctx context.Context, protoRecipients []*pb.CustomerNotificationRecipientProto) *apiresource.List[apiresource.OrderNotificationRecipient] {
-	includeAccountUser := resourcekit.RequestedIncludeSet(ctx)["account_user"]
+	includeAccountUser := include.RequestedIncludeSet(ctx)["account_user"]
 
 	recipients := make([]apiresource.OrderNotificationRecipient, 0, len(protoRecipients))
 	for _, r := range protoRecipients {
@@ -458,7 +458,7 @@ func (m *customerSvcImpl) MergeCustomers(ctx context.Context, req *MergeCustomer
 	pbReq := &pb.MergeCustomersRequest{
 		TargetCustomerId:  req.CustomerID,
 		SourceCustomerIds: req.SourceCustomerIDs,
-		Includes:          resourcekit.FilterIncludes(ctx, customerIncludes...),
+		Includes:          include.FilterIncludes(ctx, customerIncludes...),
 	}
 
 	resp, apiErr := grpcutil.CallRPC(ctx, customerSvcTracer, "service.customers.merge", domain.ServiceName,
@@ -503,7 +503,7 @@ func (m *customerSvcImpl) UpdateCustomer(ctx context.Context, req *UpdateCustome
 		CarrierBillingType:       req.CarrierBillingType.Ptr().StringPtr(),
 		CarrierBillingAccount:    fieldpb.StringClearableToProto(req.CarrierBillingAccount),
 		HasCustomerPriceGroupIds: req.CustomerPriceGroupIDs.IsSet(),
-		Includes:                 resourcekit.FilterIncludes(ctx, customerIncludes...),
+		Includes:                 include.FilterIncludes(ctx, customerIncludes...),
 	}
 
 	pbReq.CreditLimit = apirequest.QuantityFieldToProto(req.CreditLimit)
@@ -565,7 +565,7 @@ func stashCustomerMeta(ctx context.Context, cust *apiresource.Customer, c *pb.Cu
 	if c == nil {
 		return
 	}
-	meta := resourcekit.GetLoadMeta(ctx)
+	meta := include.GetLoadMeta(ctx)
 
 	meta.Set(constants.ObjectTypeCustomer, cust.ID, "contact_info", &apiresource.CustomerContactInfo{
 		Object: constants.ObjectTypeCustomerContactInfo,
@@ -887,7 +887,7 @@ func (m *customerSvcImpl) GetCustomerLeadTime(ctx context.Context, req *Retrieve
 		Source:   constants.LeadTimeSource(resp.Source),
 	}
 	// The winning rule's id is loader-side metadata rather than a public field: the `account_group` and `parent_customer` includes resolve it into the nested resource, keyed by the customer the lead time was resolved for. Only one is ever set — whichever rule decided — so an include the source did not produce stays null.
-	meta := resourcekit.GetLoadMeta(ctx)
+	meta := include.GetLoadMeta(ctx)
 	if resp.AccountGroupId != nil && *resp.AccountGroupId != "" {
 		meta.Set(constants.ObjectTypeCustomerLeadTime, resp.CustomerId, "account_group_id", *resp.AccountGroupId)
 	}

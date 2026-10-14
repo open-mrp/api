@@ -5,10 +5,11 @@ import (
 	"net/http"
 	"time"
 
-	apiendpoint "github.com/open-mrp/api/services/api-gateway/pkg/endpoint"
+	"github.com/open-mrp/api/services/api-gateway/pkg/authz"
 	apiresource "github.com/open-mrp/api/services/api-gateway/pkg/resource"
 	"github.com/open-mrp/api/services/auth-service/pkg/types"
 	apierror "github.com/open-mrp/apikit/apierror"
+	apiendpoint "github.com/open-mrp/apikit/endpoint"
 	"github.com/open-mrp/apikit/field"
 )
 
@@ -32,16 +33,16 @@ type ListSalesLinesEndpoint struct{}
 
 func (e *ListSalesLinesEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListSalesLinesRequest, *apiresource.List[apiresource.SalesEntry]] {
 	return (&apiendpoint.APIEndpoint[*ListSalesLinesRequest, *apiresource.List[apiresource.SalesEntry]]{
-		Title:               "List Sales Lines",
-		Method:              http.MethodPut,
-		Route:               "/v1/core/analytics/sales-lines",
-		ContentType:         "application/json",
-		SuccessStatusCode:   http.StatusOK,
-		Public:              false,
-		AgentTool:           true,
-		Preview:             true,
-		ReadOnly:            true,
-		RequiredPermissions: []types.Permission{{Domain: types.PermissionDomainInvoices, Action: types.ActionRead}},
+		Title:             "List Sales Lines",
+		Method:            http.MethodPut,
+		Route:             "/v1/core/analytics/sales-lines",
+		ContentType:       "application/json",
+		SuccessStatusCode: http.StatusOK,
+		Public:            false,
+		AgentTool:         true,
+		Preview:           true,
+		ReadOnly:          true,
+		Auth:              authz.Policy{Permissions: []types.Permission{{Domain: types.PermissionDomainInvoices, Action: types.ActionRead}}},
 		ServiceHandler: func(svc any) func(ctx context.Context, req *ListSalesLinesRequest) (*apiresource.List[apiresource.SalesEntry], *apierror.APIError) {
 			return svc.(AnalyticsSvc).ListSalesLines
 		},

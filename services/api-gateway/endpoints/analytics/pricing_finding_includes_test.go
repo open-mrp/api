@@ -2,21 +2,21 @@ package analyticsep
 
 import (
 	"context"
+	"github.com/open-mrp/apikit/include"
 	"testing"
 
 	// Registers the finding definitions whose sub-fields this file exercises.
 	_ "github.com/open-mrp/api/services/api-gateway/internal/resourceregistry"
 	apiresource "github.com/open-mrp/api/services/api-gateway/pkg/resource"
-	"github.com/open-mrp/api/services/api-gateway/pkg/resourcekit"
 	"github.com/open-mrp/api/shared/constants"
 	pb "github.com/open-mrp/api/shared/proto/core"
 )
 
 // These tests close the loop between the two halves of the include system that are written in different packages and can silently drift apart: the presenter stashes foreign keys under string keys, and the registry's ExtractIDs reads them back under string keys. A typo on either side produces no error — the relation just serializes as null forever — so the round trip is asserted rather than assumed.
 
-func subFieldNamed(t *testing.T, ot constants.ObjectType, key string) resourcekit.SubField {
+func subFieldNamed(t *testing.T, ot constants.ObjectType, key string) include.SubField {
 	t.Helper()
-	def := resourcekit.Lookup(ot)
+	def := include.Lookup(ot)
 	if def == nil {
 		t.Fatalf("no resource definition registered for %s", ot)
 	}
@@ -26,12 +26,12 @@ func subFieldNamed(t *testing.T, ot constants.ObjectType, key string) resourceki
 		}
 	}
 	t.Fatalf("%s has no registered sub-field %q", ot, key)
-	return resourcekit.SubField{}
+	return include.SubField{}
 }
 
 func configuredFindingForIncludes(t *testing.T) (context.Context, *apiresource.CustomerPricingFinding) {
 	t.Helper()
-	ctx := resourcekit.WithLoadMeta(context.Background())
+	ctx := include.WithLoadMeta(context.Background())
 
 	// The sweep runs in core-service now, so the presenter is exercised against the
 	// flagged row it actually receives.
@@ -136,7 +136,7 @@ func TestPricingFindingIncludes_AttributesRoundTrip(t *testing.T) {
 
 // A unit loaded for the price attaches to every rate on the finding, so the peer median is labeled on the same basis as the price it is compared against.
 func TestPricingFindingIncludes_UnitAttachesToEveryRate(t *testing.T) {
-	ctx := resourcekit.WithLoadMeta(context.Background())
+	ctx := include.WithLoadMeta(context.Background())
 	median := "10.0000"
 	fraction := "0.2000"
 	out := presentCustomerPricing(ctx, configuredPricingResponse(&median, &fraction))
@@ -162,7 +162,7 @@ func TestPricingFindingIncludes_UnitAttachesToEveryRate(t *testing.T) {
 
 func realizedFindingForIncludes(t *testing.T) (context.Context, *apiresource.RealizedMarginFinding) {
 	t.Helper()
-	ctx := resourcekit.WithLoadMeta(context.Background())
+	ctx := include.WithLoadMeta(context.Background())
 
 	// The roll-up happens in core-service now, so the presenter is exercised against
 	// the aggregated row it actually receives.

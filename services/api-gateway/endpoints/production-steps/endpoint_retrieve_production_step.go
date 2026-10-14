@@ -4,11 +4,12 @@ import (
 	"context"
 	"net/http"
 
-	apiendpoint "github.com/open-mrp/api/services/api-gateway/pkg/endpoint"
+	"github.com/open-mrp/api/services/api-gateway/pkg/authz"
 	apiresource "github.com/open-mrp/api/services/api-gateway/pkg/resource"
 	"github.com/open-mrp/api/services/auth-service/pkg/types"
 	"github.com/open-mrp/api/shared/constants"
 	apierror "github.com/open-mrp/apikit/apierror"
+	apiendpoint "github.com/open-mrp/apikit/endpoint"
 )
 
 // Request to retrieve a production step.
@@ -22,16 +23,16 @@ type RetrieveProductionStepEndpoint struct{}
 
 func (e *RetrieveProductionStepEndpoint) Materialize() *apiendpoint.APIEndpoint[*RetrieveProductionStepRequest, *apiresource.ProductionStep] {
 	return (&apiendpoint.APIEndpoint[*RetrieveProductionStepRequest, *apiresource.ProductionStep]{
-		Title:               "Retrieve Production Step",
-		Method:              http.MethodGet,
-		ContentType:         "application/json",
-		Route:               "/v1/operations/production-steps/{id}",
-		SuccessStatusCode:   http.StatusOK,
-		Public:              false,
-		AgentTool:           true,
-		Preview:             true,
-		RequiredPermissions: []types.Permission{{Domain: types.PermissionDomainProductionSteps, Action: types.ActionRead}},
-		ObjectType:          constants.ObjectTypeProductionStep,
+		Title:             "Retrieve Production Step",
+		Method:            http.MethodGet,
+		ContentType:       "application/json",
+		Route:             "/v1/operations/production-steps/{id}",
+		SuccessStatusCode: http.StatusOK,
+		Public:            false,
+		AgentTool:         true,
+		Preview:           true,
+		Auth:              authz.Policy{Permissions: []types.Permission{{Domain: types.PermissionDomainProductionSteps, Action: types.ActionRead}}},
+		ObjectType:        constants.ObjectTypeProductionStep,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *RetrieveProductionStepRequest) (*apiresource.ProductionStep, *apierror.APIError) {
 			return svc.(ProductionStepSvc).GetProductionStep
 		},

@@ -4,13 +4,14 @@ import (
 	"context"
 	"net/http"
 
-	apiendpoint "github.com/open-mrp/api/services/api-gateway/pkg/endpoint"
-	apiexample "github.com/open-mrp/api/services/api-gateway/pkg/example"
+	"github.com/open-mrp/api/services/api-gateway/pkg/authz"
 	apirequest "github.com/open-mrp/api/services/api-gateway/pkg/request"
 	apiresource "github.com/open-mrp/api/services/api-gateway/pkg/resource"
 	"github.com/open-mrp/api/services/auth-service/pkg/types"
 	"github.com/open-mrp/api/shared/constants"
 	apierror "github.com/open-mrp/apikit/apierror"
+	apiendpoint "github.com/open-mrp/apikit/endpoint"
+	apiexample "github.com/open-mrp/apikit/example"
 	"github.com/open-mrp/apikit/field"
 )
 
@@ -63,16 +64,16 @@ type CreateProductLineEndpoint struct{}
 
 func (e *CreateProductLineEndpoint) Materialize() *apiendpoint.APIEndpoint[*CreateProductLineRequest, *apiresource.ProductLine] {
 	return (&apiendpoint.APIEndpoint[*CreateProductLineRequest, *apiresource.ProductLine]{
-		Title:               "Create Product Line",
-		Method:              http.MethodPost,
-		ContentType:         "application/json",
-		Route:               "/v1/catalog/product-lines",
-		SuccessStatusCode:   http.StatusCreated,
-		Public:              true,
-		AgentTool:           true,
-		RequiredPermissions: []types.Permission{{Domain: types.PermissionDomainProductLines, Action: types.ActionCreate}},
-		Preview:             true,
-		ObjectType:          constants.ObjectTypeProductLine,
+		Title:             "Create Product Line",
+		Method:            http.MethodPost,
+		ContentType:       "application/json",
+		Route:             "/v1/catalog/product-lines",
+		SuccessStatusCode: http.StatusCreated,
+		Public:            true,
+		AgentTool:         true,
+		Auth:              authz.Policy{Permissions: []types.Permission{{Domain: types.PermissionDomainProductLines, Action: types.ActionCreate}}},
+		Preview:           true,
+		ObjectType:        constants.ObjectTypeProductLine,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *CreateProductLineRequest) (*apiresource.ProductLine, *apierror.APIError) {
 			return svc.(ProductLineSvc).CreateProductLine
 		},

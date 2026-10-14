@@ -4,11 +4,14 @@ import (
 	"context"
 	"net/http"
 
-	apiendpoint "github.com/open-mrp/api/services/api-gateway/pkg/endpoint"
+	"github.com/open-mrp/apikit/object"
+
+	"github.com/open-mrp/api/services/api-gateway/pkg/authz"
 	apiresource "github.com/open-mrp/api/services/api-gateway/pkg/resource"
 	"github.com/open-mrp/api/services/auth-service/pkg/types"
 	"github.com/open-mrp/api/shared/constants"
 	apierror "github.com/open-mrp/apikit/apierror"
+	apiendpoint "github.com/open-mrp/apikit/endpoint"
 )
 
 // Request to list sales targets for an account user.
@@ -17,7 +20,11 @@ type ListSalesTargetsRequest struct {
 	//
 	// Must be an active account user in your account.
 	SalesRepID string `path:"id" validate:"required"`
-	apiresource.PaginationRequest
+	object.ListRequest
+	// Free-text search term used to filter results.
+	//
+	// Which fields are matched against the term varies by endpoint.
+	Query *string `query:"q" validate:"omitempty,max=500"`
 }
 
 // Returns the revenue goals set for one sales rep, most recent period first.
@@ -38,9 +45,9 @@ func (e *ListSalesTargetsEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListS
 		AgentTool:         true,
 		Preview:           true,
 		ObjectType:        constants.ObjectTypeSalesTarget,
-		RequiredPermissions: []types.Permission{
+		Auth: authz.Policy{Permissions: []types.Permission{
 			{Domain: types.PermissionDomainSalesTargets, Action: types.ActionRead},
-		},
+		}},
 		ServiceHandler: func(svc any) func(ctx context.Context, req *ListSalesTargetsRequest) (*apiresource.List[apiresource.SalesTarget], *apierror.APIError) {
 			return svc.(SalesTargetSvc).ListSalesTargets
 		},

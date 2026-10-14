@@ -5,10 +5,11 @@ import (
 	"net/http"
 	"time"
 
-	apiendpoint "github.com/open-mrp/api/services/api-gateway/pkg/endpoint"
+	"github.com/open-mrp/api/services/api-gateway/pkg/authz"
 	apiresource "github.com/open-mrp/api/services/api-gateway/pkg/resource"
 	"github.com/open-mrp/api/services/auth-service/pkg/types"
 	apierror "github.com/open-mrp/apikit/apierror"
+	apiendpoint "github.com/open-mrp/apikit/endpoint"
 )
 
 // AnalyzeOeeRequest is the request to analyze Overall Equipment Effectiveness (OEE).
@@ -38,16 +39,16 @@ type AnalyzeOeeEndpoint struct{}
 
 func (e *AnalyzeOeeEndpoint) Materialize() *apiendpoint.APIEndpoint[*AnalyzeOeeRequest, *apiresource.AnalyzeOeeResponse] {
 	return (&apiendpoint.APIEndpoint[*AnalyzeOeeRequest, *apiresource.AnalyzeOeeResponse]{
-		Title:               "Analyze OEE",
-		Method:              http.MethodPut,
-		Route:               "/v1/core/analytics/oee",
-		ContentType:         "application/json",
-		SuccessStatusCode:   http.StatusOK,
-		Public:              true,
-		AgentTool:           true,
-		ReadOnly:            true,
-		Preview:             true,
-		RequiredPermissions: []types.Permission{{Domain: types.PermissionDomainMachineDowntime, Action: types.ActionRead}},
+		Title:             "Analyze OEE",
+		Method:            http.MethodPut,
+		Route:             "/v1/core/analytics/oee",
+		ContentType:       "application/json",
+		SuccessStatusCode: http.StatusOK,
+		Public:            true,
+		AgentTool:         true,
+		ReadOnly:          true,
+		Preview:           true,
+		Auth:              authz.Policy{Permissions: []types.Permission{{Domain: types.PermissionDomainMachineDowntime, Action: types.ActionRead}}},
 		ServiceHandler: func(svc any) func(ctx context.Context, req *AnalyzeOeeRequest) (*apiresource.AnalyzeOeeResponse, *apierror.APIError) {
 			return svc.(AnalyticsSvc).AnalyzeOee
 		},

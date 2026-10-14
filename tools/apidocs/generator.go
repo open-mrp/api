@@ -12,10 +12,10 @@ import (
 	"slices"
 	"strings"
 
-	apiendpoint "github.com/open-mrp/api/services/api-gateway/pkg/endpoint"
 	"github.com/open-mrp/api/shared/constants"
 	"github.com/open-mrp/api/shared/contracts"
 	apierror "github.com/open-mrp/apikit/apierror"
+	apiendpoint "github.com/open-mrp/apikit/endpoint"
 	"github.com/open-mrp/apikit/field"
 )
 

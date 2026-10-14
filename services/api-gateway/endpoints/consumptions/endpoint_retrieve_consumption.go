@@ -4,11 +4,12 @@ import (
 	"context"
 	"net/http"
 
-	apiendpoint "github.com/open-mrp/api/services/api-gateway/pkg/endpoint"
+	"github.com/open-mrp/api/services/api-gateway/pkg/authz"
 	apiresource "github.com/open-mrp/api/services/api-gateway/pkg/resource"
 	"github.com/open-mrp/api/services/auth-service/pkg/types"
 	"github.com/open-mrp/api/shared/constants"
 	apierror "github.com/open-mrp/apikit/apierror"
+	apiendpoint "github.com/open-mrp/apikit/endpoint"
 )
 
 // Request to retrieve a consumption.
@@ -33,9 +34,9 @@ func (e *RetrieveConsumptionEndpoint) Materialize() *apiendpoint.APIEndpoint[*Re
 		AgentTool:         true,
 		Preview:           true,
 		ObjectType:        constants.ObjectTypeConsumption,
-		RequiredPermissions: []types.Permission{
+		Auth: authz.Policy{Permissions: []types.Permission{
 			{Domain: types.PermissionDomainProductionSteps, Action: types.ActionRead},
-		},
+		}},
 		ServiceHandler: func(svc any) func(ctx context.Context, req *RetrieveConsumptionRequest) (*apiresource.Consumption, *apierror.APIError) {
 			return svc.(ConsumptionSvc).GetConsumption
 		},

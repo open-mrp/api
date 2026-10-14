@@ -1,9 +1,9 @@
 package analyticsep
 
 import (
-	apiexample "github.com/open-mrp/api/services/api-gateway/pkg/example"
 	apiresource "github.com/open-mrp/api/services/api-gateway/pkg/resource"
 	"github.com/open-mrp/api/shared/constants"
+	apiexample "github.com/open-mrp/apikit/example"
 	"github.com/open-mrp/apikit/field"
 	"github.com/open-mrp/apikit/pagination"
 )

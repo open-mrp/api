@@ -4,11 +4,12 @@ import (
 	"context"
 	"net/http"
 
-	apiendpoint "github.com/open-mrp/api/services/api-gateway/pkg/endpoint"
+	"github.com/open-mrp/api/services/api-gateway/pkg/authz"
 	apiresource "github.com/open-mrp/api/services/api-gateway/pkg/resource"
 	"github.com/open-mrp/api/services/auth-service/pkg/types"
 	"github.com/open-mrp/api/shared/constants"
 	apierror "github.com/open-mrp/apikit/apierror"
+	apiendpoint "github.com/open-mrp/apikit/endpoint"
 )
 
 // Request to retrieve a service level.
@@ -32,10 +33,9 @@ func (e *RetrieveServiceLevelEndpoint) Materialize() *apiendpoint.APIEndpoint[*R
 		Public:            true,
 		AgentTool:         true,
 		// Service-level reads reuse the carrier relation helper (checkCarrierReadPermission).
-		RequiredPermissions:     []types.Permission{{Domain: types.PermissionDomainCarriers, Action: types.ActionRead}},
-		CounterpartyPermissions: apiendpoint.Counterparties(types.ActionRead),
-		Preview:                 true,
-		ObjectType:              constants.ObjectTypeServiceLevel,
+		Auth:       authz.Policy{Permissions: []types.Permission{{Domain: types.PermissionDomainCarriers, Action: types.ActionRead}}, Counterparty: authz.Counterparties(types.ActionRead)},
+		Preview:    true,
+		ObjectType: constants.ObjectTypeServiceLevel,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *RetrieveServiceLevelRequest) (*apiresource.ServiceLevel, *apierror.APIError) {
 			return svc.(ServiceLevelSvc).GetServiceLevel
 		},

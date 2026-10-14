@@ -2,11 +2,11 @@ package resourceloaders
 
 import (
 	"context"
+	"github.com/open-mrp/apikit/include"
 
 	"github.com/open-mrp/api/services/api-gateway/internal/domain"
 	grpcutil "github.com/open-mrp/api/services/api-gateway/internal/grpc"
 	apiresource "github.com/open-mrp/api/services/api-gateway/pkg/resource"
-	"github.com/open-mrp/api/services/api-gateway/pkg/resourcekit"
 	"github.com/open-mrp/api/shared/constants"
 	pb "github.com/open-mrp/api/shared/proto/core"
 	apierror "github.com/open-mrp/apikit/apierror"
@@ -37,7 +37,7 @@ func LoadAccountUsers(ctx context.Context, ids []string) (map[string]any, *apier
 
 // AccountUserFromDetail maps an account user and stashes the references its includes resolve from.
 func AccountUserFromDetail(ctx context.Context, au *pb.AccountUserDetail) *apiresource.AccountUser {
-	meta := resourcekit.GetLoadMeta(ctx)
+	meta := include.GetLoadMeta(ctx)
 	meta.Set(constants.ObjectTypeAccountUser, au.Id, "user_id", au.UserId)
 
 	var roleID string

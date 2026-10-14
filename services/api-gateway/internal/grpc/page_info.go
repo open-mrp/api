@@ -13,8 +13,6 @@ import (
 type ProtoPageInfo interface {
 	GetNextCursor() string
 	GetPrevCursor() string
-	GetHasNextPage() bool
-	GetHasPrevPage() bool
 }
 
 // MapProtoPageInfo converts any proto PageInfo into an API resource PageInfo, building relative pagination URLs from the current request URL stored in ctx.
@@ -26,8 +24,6 @@ func MapProtoPageInfo(ctx context.Context, pi ProtoPageInfo) apiresource.PageInf
 	return apiresource.PageInfo{
 		NextPageURL:     buildPageURL(requestURL, pi.GetNextCursor()),
 		PreviousPageURL: buildPageURL(requestURL, pi.GetPrevCursor()),
-		HasNextPage:     pi.GetHasNextPage(),
-		HasPrevPage:     pi.GetHasPrevPage(),
 	}
 }
 
@@ -39,8 +35,6 @@ func MapProtoPageInfoForPath(canonicalPath string, pi ProtoPageInfo) apiresource
 	return apiresource.PageInfo{
 		NextPageURL:     buildCursorURL(canonicalPath, pi.GetNextCursor()),
 		PreviousPageURL: buildCursorURL(canonicalPath, pi.GetPrevCursor()),
-		HasNextPage:     pi.GetHasNextPage(),
-		HasPrevPage:     pi.GetHasPrevPage(),
 	}
 }
 

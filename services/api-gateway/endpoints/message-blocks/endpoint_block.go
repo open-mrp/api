@@ -4,12 +4,13 @@ import (
 	"context"
 	"net/http"
 
-	apiendpoint "github.com/open-mrp/api/services/api-gateway/pkg/endpoint"
-	apiexample "github.com/open-mrp/api/services/api-gateway/pkg/example"
+	"github.com/open-mrp/api/services/api-gateway/pkg/authz"
 	apiresource "github.com/open-mrp/api/services/api-gateway/pkg/resource"
 	"github.com/open-mrp/api/services/auth-service/pkg/types"
 	"github.com/open-mrp/api/shared/constants"
 	apierror "github.com/open-mrp/apikit/apierror"
+	apiendpoint "github.com/open-mrp/apikit/endpoint"
+	apiexample "github.com/open-mrp/apikit/example"
 )
 
 // Request to block another account user from messaging the caller.
@@ -35,15 +36,15 @@ type BlockEndpoint struct{}
 
 func (e *BlockEndpoint) Materialize() *apiendpoint.APIEndpoint[*BlockRequest, *apiresource.MessagingBlock] {
 	return (&apiendpoint.APIEndpoint[*BlockRequest, *apiresource.MessagingBlock]{
-		Title:               "Block User",
-		Method:              http.MethodPost,
-		ContentType:         "application/json",
-		Route:               "/v1/messaging/blocks",
-		SuccessStatusCode:   http.StatusCreated,
-		Public:              true,
-		Preview:             true,
-		ObjectType:          constants.ObjectTypeMessagingBlock,
-		RequiredPermissions: []types.Permission{{Domain: types.PermissionDomainMessaging, Action: types.ActionCreate}},
+		Title:             "Block User",
+		Method:            http.MethodPost,
+		ContentType:       "application/json",
+		Route:             "/v1/messaging/blocks",
+		SuccessStatusCode: http.StatusCreated,
+		Public:            true,
+		Preview:           true,
+		ObjectType:        constants.ObjectTypeMessagingBlock,
+		Auth:              authz.Policy{Permissions: []types.Permission{{Domain: types.PermissionDomainMessaging, Action: types.ActionCreate}}},
 		ServiceHandler: func(svc any) func(ctx context.Context, req *BlockRequest) (*apiresource.MessagingBlock, *apierror.APIError) {
 			return svc.(BlockSvc).Block
 		},

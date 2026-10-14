@@ -4,10 +4,11 @@ import (
 	"context"
 	"net/http"
 
-	apiendpoint "github.com/open-mrp/api/services/api-gateway/pkg/endpoint"
+	"github.com/open-mrp/api/services/api-gateway/pkg/authz"
 	apiresource "github.com/open-mrp/api/services/api-gateway/pkg/resource"
 	"github.com/open-mrp/api/services/auth-service/pkg/types"
 	apierror "github.com/open-mrp/apikit/apierror"
+	apiendpoint "github.com/open-mrp/apikit/endpoint"
 )
 
 // Request to delete a shipping term.
@@ -23,15 +24,15 @@ type DeleteShippingTermEndpoint struct{}
 
 func (e *DeleteShippingTermEndpoint) Materialize() *apiendpoint.APIEndpoint[*DeleteShippingTermRequest, *apiresource.EmptyResource] {
 	return (&apiendpoint.APIEndpoint[*DeleteShippingTermRequest, *apiresource.EmptyResource]{
-		Title:               "Delete Shipping Term",
-		Method:              http.MethodDelete,
-		Route:               "/v1/operations/shipping-terms/{id}",
-		ContentType:         "application/json",
-		SuccessStatusCode:   http.StatusOK,
-		Public:              true,
-		AgentTool:           true,
-		RequiredPermissions: []types.Permission{{Domain: types.PermissionDomainShippingTerms, Action: types.ActionDelete}},
-		Preview:             true,
+		Title:             "Delete Shipping Term",
+		Method:            http.MethodDelete,
+		Route:             "/v1/operations/shipping-terms/{id}",
+		ContentType:       "application/json",
+		SuccessStatusCode: http.StatusOK,
+		Public:            true,
+		AgentTool:         true,
+		Auth:              authz.Policy{Permissions: []types.Permission{{Domain: types.PermissionDomainShippingTerms, Action: types.ActionDelete}}},
+		Preview:           true,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *DeleteShippingTermRequest) (*apiresource.EmptyResource, *apierror.APIError) {
 			return svc.(ShippingTermSvc).DeleteShippingTerm
 		},

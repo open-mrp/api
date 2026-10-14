@@ -3,12 +3,12 @@ package batchep
 import (
 	"context"
 	"fmt"
+	"github.com/open-mrp/apikit/include"
 	"strings"
 
 	"github.com/open-mrp/api/services/api-gateway/internal/domain"
 	grpcutil "github.com/open-mrp/api/services/api-gateway/internal/grpc"
 	apiresource "github.com/open-mrp/api/services/api-gateway/pkg/resource"
-	"github.com/open-mrp/api/services/api-gateway/pkg/resourcekit"
 	pb "github.com/open-mrp/api/shared/proto/core"
 	apierror "github.com/open-mrp/apikit/apierror"
 	"github.com/open-mrp/apikit/field"
@@ -78,7 +78,7 @@ func (m *batchSvcImpl) GetBatchFlow(ctx context.Context, req *GetBatchFlowReques
 
 	nodes := make([]apiresource.BatchFlowNode, len(resp.Nodes))
 	for i, n := range resp.Nodes {
-		nodes[i] = BatchFlowNodePresenter(resourcekit.GetLoadMeta(ctx), n)
+		nodes[i] = BatchFlowNodePresenter(include.GetLoadMeta(ctx), n)
 	}
 
 	return apiresource.NewList(nodes, apiresource.PageInfo{}), nil
@@ -194,7 +194,7 @@ func (m *batchSvcImpl) InitializeBatch(ctx context.Context, req *InitializeBatch
 		return nil, apiErr
 	}
 
-	result := BaseBatchPresenter(resourcekit.GetLoadMeta(ctx), resp.Batch)
+	result := BaseBatchPresenter(include.GetLoadMeta(ctx), resp.Batch)
 	return &result, nil
 }
 
@@ -214,7 +214,7 @@ func (m *batchSvcImpl) MoveBatches(ctx context.Context, req *MoveBatchesRequest)
 		return nil, apiErr
 	}
 
-	result := BaseBatchPresenter(resourcekit.GetLoadMeta(ctx), resp.Batch)
+	result := BaseBatchPresenter(include.GetLoadMeta(ctx), resp.Batch)
 	return &result, nil
 }
 
@@ -234,7 +234,7 @@ func (m *batchSvcImpl) MergeBatches(ctx context.Context, req *MergeBatchesReques
 		return nil, apiErr
 	}
 
-	result := BaseBatchPresenter(resourcekit.GetLoadMeta(ctx), resp.Batch)
+	result := BaseBatchPresenter(include.GetLoadMeta(ctx), resp.Batch)
 	return &result, nil
 }
 
@@ -290,7 +290,7 @@ func (m *batchSvcImpl) SplitBatch(ctx context.Context, req *SplitBatchRequest) (
 		return nil, apiErr
 	}
 
-	result := BaseBatchPresenter(resourcekit.GetLoadMeta(ctx), resp.Batch)
+	result := BaseBatchPresenter(include.GetLoadMeta(ctx), resp.Batch)
 	return &result, nil
 }
 
@@ -309,7 +309,7 @@ func (m *batchSvcImpl) GetRemainingQuantityToSplit(ctx context.Context, req *Get
 		return nil, apiErr
 	}
 
-	return BatchQuantityPresenter(resourcekit.GetLoadMeta(ctx), resp.Quantity), nil
+	return BatchQuantityPresenter(include.GetLoadMeta(ctx), resp.Quantity), nil
 }
 
 func (m *batchSvcImpl) GetScanningStationConsumption(ctx context.Context, req *GetScanningStationConsumptionRequest) (*apiresource.List[apiresource.ScanningConsumption], *apierror.APIError) {
@@ -366,7 +366,7 @@ func (m *batchSvcImpl) CloseBatch(ctx context.Context, req *CloseBatchRequest) (
 		return nil, apiErr
 	}
 
-	result := BaseBatchPresenter(resourcekit.GetLoadMeta(ctx), resp.Batch)
+	result := BaseBatchPresenter(include.GetLoadMeta(ctx), resp.Batch)
 	return &result, nil
 }
 
@@ -384,7 +384,7 @@ func (m *batchSvcImpl) DeleteBatch(ctx context.Context, req *DeleteBatchRequest)
 		return nil, apiErr
 	}
 
-	result := BaseBatchPresenter(resourcekit.GetLoadMeta(ctx), resp.Batch)
+	result := BaseBatchPresenter(include.GetLoadMeta(ctx), resp.Batch)
 	return &result, nil
 }
 

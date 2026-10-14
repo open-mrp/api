@@ -2,10 +2,10 @@ package transactionep
 
 import (
 	"context"
+	"github.com/open-mrp/apikit/include"
 
 	grpcutil "github.com/open-mrp/api/services/api-gateway/internal/grpc"
 	apiresource "github.com/open-mrp/api/services/api-gateway/pkg/resource"
-	"github.com/open-mrp/api/services/api-gateway/pkg/resourcekit"
 	"github.com/open-mrp/api/shared/constants"
 	pb "github.com/open-mrp/api/shared/proto/core"
 )
@@ -22,7 +22,7 @@ func TransactionDetailPresenter(ctx context.Context, d *pb.TransactionInfo) apir
 
 	createdAt := grpcutil.TimestampToTime(d.CreatedAt)
 	updatedAt := grpcutil.TimestampToTime(d.UpdatedAt)
-	meta := resourcekit.GetLoadMeta(ctx)
+	meta := include.GetLoadMeta(ctx)
 
 	tx := apiresource.TransactionDetail{
 		ID:               d.Id,
@@ -173,7 +173,7 @@ func TransactionSummaryPresenter(d *pb.TransactionSummaryInfo) apiresource.Trans
 	return ts
 }
 
-func TransactionAllocationPresenter(meta *resourcekit.LoadMeta, a *pb.TransactionAllocationInfo) apiresource.TransactionAllocation {
+func TransactionAllocationPresenter(meta *include.LoadMeta, a *pb.TransactionAllocationInfo) apiresource.TransactionAllocation {
 	if a == nil {
 		return apiresource.TransactionAllocation{}
 	}
@@ -213,7 +213,7 @@ func TransactionListPresenter(ctx context.Context, resp *pb.ListTransactionsResp
 		// customer is an expandable reference: stash the FK id so LoadCustomers
 		// fetches the real Customer on ?include=customer. Never fabricate.
 		if d.CustomerId != nil && *d.CustomerId != "" {
-			resourcekit.GetLoadMeta(ctx).Set(constants.ObjectTypeTransactionSummary, d.Id, "customer_id", *d.CustomerId)
+			include.GetLoadMeta(ctx).Set(constants.ObjectTypeTransactionSummary, d.Id, "customer_id", *d.CustomerId)
 		}
 	}
 

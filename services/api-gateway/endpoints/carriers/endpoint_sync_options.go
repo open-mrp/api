@@ -4,11 +4,12 @@ import (
 	"context"
 	"net/http"
 
-	apiendpoint "github.com/open-mrp/api/services/api-gateway/pkg/endpoint"
+	"github.com/open-mrp/api/services/api-gateway/pkg/authz"
 	apiresource "github.com/open-mrp/api/services/api-gateway/pkg/resource"
 	"github.com/open-mrp/api/services/auth-service/pkg/types"
 	"github.com/open-mrp/api/shared/constants"
 	apierror "github.com/open-mrp/apikit/apierror"
+	apiendpoint "github.com/open-mrp/apikit/endpoint"
 )
 
 // Request to sync a carrier's service levels from Shippo.
@@ -24,16 +25,16 @@ type SyncOptionsEndpoint struct{}
 
 func (e *SyncOptionsEndpoint) Materialize() *apiendpoint.APIEndpoint[*SyncOptionsRequest, *apiresource.Carrier] {
 	return (&apiendpoint.APIEndpoint[*SyncOptionsRequest, *apiresource.Carrier]{
-		Title:               "Sync Carrier Service Levels",
-		Method:              http.MethodPost,
-		ContentType:         "application/json",
-		Route:               "/v1/operations/carriers/{id}/actions/sync-options",
-		SuccessStatusCode:   http.StatusOK,
-		Public:              false,
-		AgentTool:           true,
-		Preview:             true,
-		RequiredPermissions: []types.Permission{{Domain: types.PermissionDomainCarriers, Action: types.ActionUpdate}},
-		ObjectType:          constants.ObjectTypeCarrier,
+		Title:             "Sync Carrier Service Levels",
+		Method:            http.MethodPost,
+		ContentType:       "application/json",
+		Route:             "/v1/operations/carriers/{id}/actions/sync-options",
+		SuccessStatusCode: http.StatusOK,
+		Public:            false,
+		AgentTool:         true,
+		Preview:           true,
+		Auth:              authz.Policy{Permissions: []types.Permission{{Domain: types.PermissionDomainCarriers, Action: types.ActionUpdate}}},
+		ObjectType:        constants.ObjectTypeCarrier,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *SyncOptionsRequest) (*apiresource.Carrier, *apierror.APIError) {
 			return svc.(CarrierSvc).SyncOptions
 		},

@@ -4,16 +4,23 @@ import (
 	"context"
 	"net/http"
 
-	apiendpoint "github.com/open-mrp/api/services/api-gateway/pkg/endpoint"
+	"github.com/open-mrp/apikit/object"
+
+	"github.com/open-mrp/api/services/api-gateway/pkg/authz"
 	apiresource "github.com/open-mrp/api/services/api-gateway/pkg/resource"
 	"github.com/open-mrp/api/services/auth-service/pkg/types"
 	"github.com/open-mrp/api/shared/constants"
 	apierror "github.com/open-mrp/apikit/apierror"
+	apiendpoint "github.com/open-mrp/apikit/endpoint"
 )
 
 // Request to list picks.
 type ListPicksRequest struct {
-	apiresource.PaginationRequest
+	object.ListRequest
+	// Free-text search term used to filter results.
+	//
+	// Which fields are matched against the term varies by endpoint.
+	Query *string `query:"q" validate:"omitempty,max=500"`
 	// Restricts results to picks in this state.
 	//
 	// - `open`: picks that have not been finished.
@@ -47,17 +54,16 @@ type ListPicksEndpoint struct{}
 
 func (e *ListPicksEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListPicksRequest, *apiresource.List[apiresource.Pick]] {
 	return (&apiendpoint.APIEndpoint[*ListPicksRequest, *apiresource.List[apiresource.Pick]]{
-		Title:                   "List Picks",
-		Method:                  http.MethodGet,
-		ContentType:             "application/json",
-		Route:                   "/v1/operations/picks",
-		SuccessStatusCode:       http.StatusOK,
-		Public:                  true,
-		Preview:                 true,
-		AgentTool:               true,
-		ObjectType:              constants.ObjectTypePick,
-		RequiredPermissions:     []types.Permission{{Domain: types.PermissionDomainPicks, Action: types.ActionRead}},
-		CounterpartyPermissions: apiendpoint.Counterparties(types.ActionRead),
+		Title:             "List Picks",
+		Method:            http.MethodGet,
+		ContentType:       "application/json",
+		Route:             "/v1/operations/picks",
+		SuccessStatusCode: http.StatusOK,
+		Public:            true,
+		Preview:           true,
+		AgentTool:         true,
+		ObjectType:        constants.ObjectTypePick,
+		Auth:              authz.Policy{Permissions: []types.Permission{{Domain: types.PermissionDomainPicks, Action: types.ActionRead}}, Counterparty: authz.Counterparties(types.ActionRead)},
 		ServiceHandler: func(svc any) func(ctx context.Context, req *ListPicksRequest) (*apiresource.List[apiresource.Pick], *apierror.APIError) {
 			return svc.(PickSvc).ListPicks
 		},

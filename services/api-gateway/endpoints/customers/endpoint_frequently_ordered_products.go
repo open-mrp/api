@@ -4,10 +4,11 @@ import (
 	"context"
 	"net/http"
 
-	apiendpoint "github.com/open-mrp/api/services/api-gateway/pkg/endpoint"
+	"github.com/open-mrp/api/services/api-gateway/pkg/authz"
 	apiresource "github.com/open-mrp/api/services/api-gateway/pkg/resource"
 	"github.com/open-mrp/api/services/auth-service/pkg/types"
 	apierror "github.com/open-mrp/apikit/apierror"
+	apiendpoint "github.com/open-mrp/apikit/endpoint"
 )
 
 // Request to get frequently ordered products for a customer.
@@ -25,16 +26,15 @@ type GetFrequentlyOrderedProductsEndpoint struct{}
 
 func (e *GetFrequentlyOrderedProductsEndpoint) Materialize() *apiendpoint.APIEndpoint[*GetFrequentlyOrderedProductsRequest, *apiresource.List[apiresource.FrequentlyOrderedProduct]] {
 	return (&apiendpoint.APIEndpoint[*GetFrequentlyOrderedProductsRequest, *apiresource.List[apiresource.FrequentlyOrderedProduct]]{
-		Title:                   "Get Frequently Ordered Products",
-		Method:                  http.MethodGet,
-		ContentType:             "application/json",
-		Route:                   "/v1/sales/customers/{id}/frequently-ordered-products",
-		SuccessStatusCode:       http.StatusOK,
-		Public:                  false,
-		AgentTool:               true,
-		Preview:                 true,
-		RequiredPermissions:     []types.Permission{{Domain: types.PermissionDomainItems, Action: types.ActionRead}},
-		CounterpartyPermissions: apiendpoint.Counterparties(types.ActionRead),
+		Title:             "Get Frequently Ordered Products",
+		Method:            http.MethodGet,
+		ContentType:       "application/json",
+		Route:             "/v1/sales/customers/{id}/frequently-ordered-products",
+		SuccessStatusCode: http.StatusOK,
+		Public:            false,
+		AgentTool:         true,
+		Preview:           true,
+		Auth:              authz.Policy{Permissions: []types.Permission{{Domain: types.PermissionDomainItems, Action: types.ActionRead}}, Counterparty: authz.Counterparties(types.ActionRead)},
 		ServiceHandler: func(svc any) func(ctx context.Context, req *GetFrequentlyOrderedProductsRequest) (*apiresource.List[apiresource.FrequentlyOrderedProduct], *apierror.APIError) {
 			return svc.(CustomerSvc).GetFrequentlyOrderedProducts
 		},

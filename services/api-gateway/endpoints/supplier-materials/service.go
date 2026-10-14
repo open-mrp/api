@@ -3,12 +3,12 @@ package suppliermaterialep
 import (
 	"context"
 	"fmt"
+	"github.com/open-mrp/apikit/include"
 
 	materialep "github.com/open-mrp/api/services/api-gateway/endpoints/materials"
 	"github.com/open-mrp/api/services/api-gateway/internal/domain"
 	grpcutil "github.com/open-mrp/api/services/api-gateway/internal/grpc"
 	apiresource "github.com/open-mrp/api/services/api-gateway/pkg/resource"
-	"github.com/open-mrp/api/services/api-gateway/pkg/resourcekit"
 	"github.com/open-mrp/api/shared/constants"
 	pb "github.com/open-mrp/api/shared/proto/core"
 	apierror "github.com/open-mrp/apikit/apierror"
@@ -176,7 +176,7 @@ func stashSupplierMaterialMeta(ctx context.Context, sm *pb.SupplierMaterialInfo,
 	}
 	m := materialep.MaterialPresenter(sm.Material)
 	m.Item = nil
-	meta := resourcekit.GetLoadMeta(ctx)
+	meta := include.GetLoadMeta(ctx)
 	meta.Set(constants.ObjectTypeSupplierMaterial, d.ID, "material", &m)
 	if sm.Material.ItemId != "" {
 		meta.Set(constants.ObjectTypeMaterial, m.ID, "item_id", sm.Material.ItemId)

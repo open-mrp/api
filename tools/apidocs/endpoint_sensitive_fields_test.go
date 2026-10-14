@@ -8,8 +8,8 @@ import (
 	"testing"
 
 	"github.com/open-mrp/api/services/api-gateway/pkg/costguard"
-	"github.com/open-mrp/api/shared/redact"
 	"github.com/open-mrp/apikit/field"
+	"github.com/open-mrp/apikit/redact"
 )
 
 // TestEndpointSensitiveFieldsAreRedactable walks the request and response type of every registered endpoint and fails when a sensitive:"true" field does not resolve to a path redact.SensitiveFields reports.

@@ -5,16 +5,23 @@ import (
 	"net/http"
 	"time"
 
-	apiendpoint "github.com/open-mrp/api/services/api-gateway/pkg/endpoint"
+	"github.com/open-mrp/apikit/object"
+
+	"github.com/open-mrp/api/services/api-gateway/pkg/authz"
 	apiresource "github.com/open-mrp/api/services/api-gateway/pkg/resource"
 	"github.com/open-mrp/api/services/auth-service/pkg/types"
 	"github.com/open-mrp/api/shared/constants"
 	apierror "github.com/open-mrp/apikit/apierror"
+	apiendpoint "github.com/open-mrp/apikit/endpoint"
 )
 
 // Request to list parts.
 type ListPartsRequest struct {
-	apiresource.PaginationRequest
+	object.ListRequest
+	// Free-text search term used to filter results.
+	//
+	// Which fields are matched against the term varies by endpoint.
+	Query *string `query:"q" validate:"omitempty,max=500"`
 	// Only return parts belonging to any of these item categories.
 	CategoryIDs []string `query:"category_ids"`
 	// Only return parts carrying at least one of these attributes.
@@ -32,16 +39,15 @@ type ListPartsEndpoint struct{}
 
 func (e *ListPartsEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListPartsRequest, *apiresource.List[apiresource.Part]] {
 	return (&apiendpoint.APIEndpoint[*ListPartsRequest, *apiresource.List[apiresource.Part]]{
-		Title:                   "List Parts",
-		Method:                  http.MethodGet,
-		ContentType:             "application/json",
-		Route:                   "/v1/catalog/parts",
-		SuccessStatusCode:       http.StatusOK,
-		Public:                  true,
-		AgentTool:               true,
-		RequiredPermissions:     []types.Permission{{Domain: types.PermissionDomainParts, Action: types.ActionRead}},
-		CounterpartyPermissions: apiendpoint.Counterparties(types.ActionRead),
-		Preview:                 true,
+		Title:             "List Parts",
+		Method:            http.MethodGet,
+		ContentType:       "application/json",
+		Route:             "/v1/catalog/parts",
+		SuccessStatusCode: http.StatusOK,
+		Public:            true,
+		AgentTool:         true,
+		Auth:              authz.Policy{Permissions: []types.Permission{{Domain: types.PermissionDomainParts, Action: types.ActionRead}}, Counterparty: authz.Counterparties(types.ActionRead)},
+		Preview:           true,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *ListPartsRequest) (*apiresource.List[apiresource.Part], *apierror.APIError) {
 			return svc.(PartSvc).ListParts
 		},

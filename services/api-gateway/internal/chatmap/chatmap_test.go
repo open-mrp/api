@@ -2,10 +2,10 @@ package chatmap
 
 import (
 	"context"
+	"github.com/open-mrp/apikit/include"
 	"testing"
 
 	apiresource "github.com/open-mrp/api/services/api-gateway/pkg/resource"
-	"github.com/open-mrp/api/services/api-gateway/pkg/resourcekit"
 	"github.com/open-mrp/api/shared/constants"
 	pb "github.com/open-mrp/api/shared/proto/notification"
 
@@ -16,7 +16,7 @@ import (
 
 func strptr(s string) *string { return &s }
 
-func metaCtx() context.Context { return resourcekit.WithLoadMeta(context.Background()) }
+func metaCtx() context.Context { return include.WithLoadMeta(context.Background()) }
 
 func TestConversationStatusFromProto(t *testing.T) {
 	assert.Equal(t, constants.ConversationStatusActive, ConversationStatusFromProto("", false), "empty defaults to active")
@@ -69,7 +69,7 @@ func TestStashConversationMeta(t *testing.T) {
 	}
 	c := ConversationFromProto(info)
 	StashConversationMeta(ctx, info, &c)
-	meta := resourcekit.GetLoadMeta(ctx)
+	meta := include.GetLoadMeta(ctx)
 
 	av, ok := meta.Get(constants.ObjectTypeConversation, "cv_1", "assignee")
 	require.True(t, ok)
@@ -138,7 +138,7 @@ func TestStashMessageMeta_FullMapping(t *testing.T) {
 	}
 	m := MessageFromProto(info)
 	StashMessageMeta(ctx, info, &m)
-	meta := resourcekit.GetLoadMeta(ctx)
+	meta := include.GetLoadMeta(ctx)
 	ot := constants.ObjectTypeChatMessage
 
 	sv, ok := meta.Get(ot, "mg_1", "sender")
@@ -175,7 +175,7 @@ func TestStashMessageMeta_NilSenderAndResource(t *testing.T) {
 	}
 	m := MessageFromProto(info)
 	StashMessageMeta(ctx, info, &m)
-	meta := resourcekit.GetLoadMeta(ctx)
+	meta := include.GetLoadMeta(ctx)
 	ot := constants.ObjectTypeChatMessage
 
 	_, ok := meta.Get(ot, "mg_x", "sender")
@@ -197,7 +197,7 @@ func TestStashMessageMeta_AliasSender(t *testing.T) {
 	}
 	m := MessageFromProto(info)
 	StashMessageMeta(ctx, info, &m)
-	meta := resourcekit.GetLoadMeta(ctx)
+	meta := include.GetLoadMeta(ctx)
 	ot := constants.ObjectTypeChatMessage
 
 	sv, _ := meta.Get(ot, "mg_a", "sender")
@@ -223,7 +223,7 @@ func TestStashMessageMeta_Attachments(t *testing.T) {
 	}
 	m := MessageFromProto(info)
 	StashMessageMeta(ctx, info, &m)
-	av, ok := resourcekit.GetLoadMeta(ctx).Get(constants.ObjectTypeChatMessage, "mg_att", "attachments")
+	av, ok := include.GetLoadMeta(ctx).Get(constants.ObjectTypeChatMessage, "mg_att", "attachments")
 	require.True(t, ok)
 	list := av.(*apiresource.List[apiresource.MessageAttachment])
 	require.Len(t, list.Data, 2)
@@ -234,7 +234,7 @@ func TestStashMessageMeta_Attachments(t *testing.T) {
 	res := list.Data[1]
 	// resource is expandable: nil on the base attachment, stashed for ?include=attachments.resource.
 	assert.Nil(t, res.Resource)
-	rv, ok := resourcekit.GetLoadMeta(ctx).Get(constants.ObjectTypeMessageAttachment, "mgah_2", "resource")
+	rv, ok := include.GetLoadMeta(ctx).Get(constants.ObjectTypeMessageAttachment, "mgah_2", "resource")
 	require.True(t, ok)
 	assert.Equal(t, "so_1", rv.(*apiresource.Entity).ID)
 	assert.Nil(t, res.URL)

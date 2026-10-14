@@ -2,22 +2,22 @@ package resourceregistry
 
 import (
 	"context"
+	"github.com/open-mrp/apikit/include"
 
 	"github.com/open-mrp/api/services/api-gateway/internal/resourceloaders"
 	apiresource "github.com/open-mrp/api/services/api-gateway/pkg/resource"
-	"github.com/open-mrp/api/services/api-gateway/pkg/resourcekit"
 	"github.com/open-mrp/api/shared/constants"
 )
 
 func init() {
-	resourcekit.Register(&resourcekit.Definition{
+	include.Register(&include.Definition{
 		ObjectType: constants.ObjectTypeReceivingOrder,
 		Load:       resourceloaders.LoadReceivingOrders,
-		Subs: []resourcekit.SubField{
+		Subs: []include.SubField{
 			{
 				Key:         "supplier",
 				Target:      constants.ObjectTypeSupplier,
-				Cardinality: resourcekit.CardinalityOnePtr,
+				Cardinality: include.CardinalityOnePtr,
 				ExtractIDs:  extractSupplierIDFromReceivingOrder,
 				Populate:    populateSupplierOnReceivingOrder,
 			},
@@ -39,14 +39,14 @@ func init() {
 			},
 		},
 	})
-	resourcekit.Register(&resourcekit.Definition{
+	include.Register(&include.Definition{
 		ObjectType: constants.ObjectTypeReceivingOrderLine,
 		Load:       resourceloaders.LoadReceivingOrderLines,
-		Subs: []resourcekit.SubField{
+		Subs: []include.SubField{
 			{
 				Key:         "item",
 				Target:      constants.ObjectTypeItem,
-				Cardinality: resourcekit.CardinalityOnePtr,
+				Cardinality: include.CardinalityOnePtr,
 				ExtractIDs:  extractItemIDFromReceivingOrderLine,
 				Populate:    populateItemOnReceivingOrderLine,
 			},
@@ -54,14 +54,14 @@ func init() {
 				// Carried from the purchase order line alongside the receiving line, so there is nothing to fetch. Traversed rather than loaded so `quantity_ordered.unit` still resolves.
 				Key:         "quantity_ordered",
 				Target:      constants.ObjectTypeQuantity,
-				Cardinality: resourcekit.CardinalityOnePtr,
+				Cardinality: include.CardinalityOnePtr,
 				Populate:    populateQuantityOrderedOnReceivingOrderLine,
 				ExtractRefs: extractQuantityOrderedRefFromReceivingOrderLine,
 			},
 			{
 				Key:         "order_line",
 				Target:      constants.ObjectTypePurchaseOrderLine,
-				Cardinality: resourcekit.CardinalityOnePtr,
+				Cardinality: include.CardinalityOnePtr,
 				ExtractIDs:  extractOrderLineIDFromReceivingOrderLine,
 				Populate:    populateOrderLineOnReceivingOrderLine,
 			},
@@ -69,7 +69,7 @@ func init() {
 				// The quantity is already on the line — this exists so a caller can reach through it to the unit.
 				Key:         "quantity",
 				Target:      constants.ObjectTypeQuantity,
-				Cardinality: resourcekit.CardinalityOnePtr,
+				Cardinality: include.CardinalityOnePtr,
 				ExtractRefs: extractQuantityRefFromReceivingOrderLine,
 			},
 		},
@@ -95,7 +95,7 @@ func extractQuantityRefFromReceivingOrderLine(_ context.Context, parent any) []a
 
 func extractSupplierIDFromReceivingOrder(ctx context.Context, parent any) []string {
 	ro := parent.(*apiresource.ReceivingOrder)
-	id, _ := resourcekit.GetLoadMeta(ctx).GetString(constants.ObjectTypeReceivingOrder, ro.ID, "supplier_id")
+	id, _ := include.GetLoadMeta(ctx).GetString(constants.ObjectTypeReceivingOrder, ro.ID, "supplier_id")
 	if id == "" {
 		return nil
 	}
@@ -104,7 +104,7 @@ func extractSupplierIDFromReceivingOrder(ctx context.Context, parent any) []stri
 
 func populateSupplierOnReceivingOrder(ctx context.Context, parent any, loaded map[string]any) {
 	ro := parent.(*apiresource.ReceivingOrder)
-	id, _ := resourcekit.GetLoadMeta(ctx).GetString(constants.ObjectTypeReceivingOrder, ro.ID, "supplier_id")
+	id, _ := include.GetLoadMeta(ctx).GetString(constants.ObjectTypeReceivingOrder, ro.ID, "supplier_id")
 	if v, ok := loaded[id]; ok {
 		ro.Supplier = v.(*apiresource.Supplier)
 	}
@@ -124,7 +124,7 @@ func extractLineRefsFromReceivingOrder(_ context.Context, parent any) []any {
 
 func populateLinesOnReceivingOrder(ctx context.Context, parent any, _ map[string]any) {
 	ro := parent.(*apiresource.ReceivingOrder)
-	v, ok := resourcekit.GetLoadMeta(ctx).
+	v, ok := include.GetLoadMeta(ctx).
 		Get(constants.ObjectTypeReceivingOrder, ro.ID, "lines")
 	if !ok {
 		return
@@ -134,7 +134,7 @@ func populateLinesOnReceivingOrder(ctx context.Context, parent any, _ map[string
 
 func populateTotalsOnReceivingOrder(ctx context.Context, parent any, _ map[string]any) {
 	ro := parent.(*apiresource.ReceivingOrder)
-	v, ok := resourcekit.GetLoadMeta(ctx).Get(constants.ObjectTypeReceivingOrder, ro.ID, "totals")
+	v, ok := include.GetLoadMeta(ctx).Get(constants.ObjectTypeReceivingOrder, ro.ID, "totals")
 	if !ok {
 		return
 	}
@@ -164,7 +164,7 @@ func populateDeliveriesOnRORelated(ctx context.Context, parent any, _ map[string
 }
 
 func stashedRORelated(ctx context.Context, orderID string) *apiresource.ReceivingOrderRelated {
-	v, ok := resourcekit.GetLoadMeta(ctx).Get(constants.ObjectTypeReceivingOrder, orderID, "related")
+	v, ok := include.GetLoadMeta(ctx).Get(constants.ObjectTypeReceivingOrder, orderID, "related")
 	if !ok {
 		return nil
 	}
@@ -182,7 +182,7 @@ func roRelated(ro *apiresource.ReceivingOrder) *apiresource.ReceivingOrderRelate
 
 func extractItemIDFromReceivingOrderLine(ctx context.Context, parent any) []string {
 	l := parent.(*apiresource.ReceivingOrderLine)
-	id, _ := resourcekit.GetLoadMeta(ctx).GetString(constants.ObjectTypeReceivingOrderLine, l.ID, "item_id")
+	id, _ := include.GetLoadMeta(ctx).GetString(constants.ObjectTypeReceivingOrderLine, l.ID, "item_id")
 	if id == "" {
 		return nil
 	}
@@ -191,7 +191,7 @@ func extractItemIDFromReceivingOrderLine(ctx context.Context, parent any) []stri
 
 func populateItemOnReceivingOrderLine(ctx context.Context, parent any, loaded map[string]any) {
 	l := parent.(*apiresource.ReceivingOrderLine)
-	id, _ := resourcekit.GetLoadMeta(ctx).GetString(constants.ObjectTypeReceivingOrderLine, l.ID, "item_id")
+	id, _ := include.GetLoadMeta(ctx).GetString(constants.ObjectTypeReceivingOrderLine, l.ID, "item_id")
 	if id == "" {
 		return
 	}
@@ -202,7 +202,7 @@ func populateItemOnReceivingOrderLine(ctx context.Context, parent any, loaded ma
 
 func populateQuantityOrderedOnReceivingOrderLine(ctx context.Context, parent any, _ map[string]any) {
 	l := parent.(*apiresource.ReceivingOrderLine)
-	v, ok := resourcekit.GetLoadMeta(ctx).Get(constants.ObjectTypeReceivingOrderLine, l.ID, "quantity_ordered")
+	v, ok := include.GetLoadMeta(ctx).Get(constants.ObjectTypeReceivingOrderLine, l.ID, "quantity_ordered")
 	if !ok {
 		return
 	}
@@ -211,7 +211,7 @@ func populateQuantityOrderedOnReceivingOrderLine(ctx context.Context, parent any
 
 func extractOrderLineIDFromReceivingOrderLine(ctx context.Context, parent any) []string {
 	l := parent.(*apiresource.ReceivingOrderLine)
-	id, _ := resourcekit.GetLoadMeta(ctx).GetString(constants.ObjectTypeReceivingOrderLine, l.ID, "order_line_id")
+	id, _ := include.GetLoadMeta(ctx).GetString(constants.ObjectTypeReceivingOrderLine, l.ID, "order_line_id")
 	if id == "" {
 		return nil
 	}
@@ -220,7 +220,7 @@ func extractOrderLineIDFromReceivingOrderLine(ctx context.Context, parent any) [
 
 func populateOrderLineOnReceivingOrderLine(ctx context.Context, parent any, loaded map[string]any) {
 	l := parent.(*apiresource.ReceivingOrderLine)
-	id, _ := resourcekit.GetLoadMeta(ctx).GetString(constants.ObjectTypeReceivingOrderLine, l.ID, "order_line_id")
+	id, _ := include.GetLoadMeta(ctx).GetString(constants.ObjectTypeReceivingOrderLine, l.ID, "order_line_id")
 	if id == "" {
 		return
 	}

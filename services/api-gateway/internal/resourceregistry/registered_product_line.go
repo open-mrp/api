@@ -2,23 +2,23 @@ package resourceregistry
 
 import (
 	"context"
+	"github.com/open-mrp/apikit/include"
 
 	"github.com/open-mrp/api/services/api-gateway/internal/resourceloaders"
 	apiresource "github.com/open-mrp/api/services/api-gateway/pkg/resource"
-	"github.com/open-mrp/api/services/api-gateway/pkg/resourcekit"
 	"github.com/open-mrp/api/shared/constants"
 )
 
 func init() {
-	resourcekit.Register(&resourcekit.Definition{
+	include.Register(&include.Definition{
 		ObjectType: constants.ObjectTypeProductLine,
 		Load:       resourceloaders.LoadProductLines,
-		Subs: []resourcekit.SubField{
+		Subs: []include.SubField{
 			{Key: "owner", Populate: populateOwnerOnProductLine},
 			{
 				Key:         "owner.account",
 				Target:      constants.ObjectTypeAccount,
-				Cardinality: resourcekit.CardinalityOnePtr,
+				Cardinality: include.CardinalityOnePtr,
 				ExtractIDs:  extractOwnerAccountIDFromProductLine,
 				Populate:    populateOwnerAccountOnProductLine,
 			},
@@ -41,14 +41,14 @@ func init() {
 
 func populateOwnerOnProductLine(ctx context.Context, parent any, _ map[string]any) {
 	pl := parent.(*apiresource.ProductLine)
-	id, _ := resourcekit.GetLoadMeta(ctx).
+	id, _ := include.GetLoadMeta(ctx).
 		GetString(constants.ObjectTypeProductLine, pl.ID, "owner_account_id")
 	pl.Owner = buildOwnerShell(id)
 }
 
 func extractOwnerAccountIDFromProductLine(ctx context.Context, parent any) []string {
 	pl := parent.(*apiresource.ProductLine)
-	id, _ := resourcekit.GetLoadMeta(ctx).
+	id, _ := include.GetLoadMeta(ctx).
 		GetString(constants.ObjectTypeProductLine, pl.ID, "owner_account_id")
 	if id == "" {
 		return nil
@@ -61,7 +61,7 @@ func populateOwnerAccountOnProductLine(ctx context.Context, parent any, loaded m
 	if pl.Owner == nil {
 		return
 	}
-	id, _ := resourcekit.GetLoadMeta(ctx).
+	id, _ := include.GetLoadMeta(ctx).
 		GetString(constants.ObjectTypeProductLine, pl.ID, "owner_account_id")
 	if id == "" {
 		return
@@ -81,7 +81,7 @@ func extractUnitGroupRefsFromProductLine(_ context.Context, parent any) []any {
 
 func populateUnitGroupOnProductLine(ctx context.Context, parent any, _ map[string]any) {
 	pl := parent.(*apiresource.ProductLine)
-	v, ok := resourcekit.GetLoadMeta(ctx).
+	v, ok := include.GetLoadMeta(ctx).
 		Get(constants.ObjectTypeProductLine, pl.ID, "unit_group")
 	if !ok || v == nil {
 		return
@@ -91,7 +91,7 @@ func populateUnitGroupOnProductLine(ctx context.Context, parent any, _ map[strin
 
 func populateDefaultLotOnProductLine(ctx context.Context, parent any, _ map[string]any) {
 	pl := parent.(*apiresource.ProductLine)
-	v, ok := resourcekit.GetLoadMeta(ctx).
+	v, ok := include.GetLoadMeta(ctx).
 		Get(constants.ObjectTypeProductLine, pl.ID, "default_lot")
 	if !ok || v == nil {
 		return

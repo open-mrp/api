@@ -2,36 +2,36 @@ package resourceregistry
 
 import (
 	"context"
+	"github.com/open-mrp/apikit/include"
 
 	"github.com/open-mrp/api/services/api-gateway/internal/resourceloaders"
 	apiresource "github.com/open-mrp/api/services/api-gateway/pkg/resource"
-	"github.com/open-mrp/api/services/api-gateway/pkg/resourcekit"
 	"github.com/open-mrp/api/shared/constants"
 )
 
 func init() {
-	resourcekit.Register(&resourcekit.Definition{
+	include.Register(&include.Definition{
 		ObjectType: constants.ObjectTypeAccountUser,
 		Load:       resourceloaders.LoadAccountUsers,
-		Subs: []resourcekit.SubField{
+		Subs: []include.SubField{
 			{
 				Key:         "user",
 				Target:      constants.ObjectTypeUser,
-				Cardinality: resourcekit.CardinalityOnePtr,
+				Cardinality: include.CardinalityOnePtr,
 				ExtractIDs:  extractUserIDFromAccountUser,
 				Populate:    populateUserOnAccountUser,
 			},
 			{
 				Key:         "role",
 				Target:      constants.ObjectTypeRole,
-				Cardinality: resourcekit.CardinalityOnePtr,
+				Cardinality: include.CardinalityOnePtr,
 				ExtractIDs:  extractRoleIDFromAccountUser,
 				Populate:    populateRoleOnAccountUser,
 			},
 			{
 				Key:         "department",
 				Target:      constants.ObjectTypeDepartment,
-				Cardinality: resourcekit.CardinalityOnePtr,
+				Cardinality: include.CardinalityOnePtr,
 				ExtractIDs:  extractDepartmentIDFromAccountUser,
 				Populate:    populateDepartmentOnAccountUser,
 			},
@@ -41,7 +41,7 @@ func init() {
 
 func extractUserIDFromAccountUser(ctx context.Context, parent any) []string {
 	au := parent.(*apiresource.AccountUser)
-	id, _ := resourcekit.GetLoadMeta(ctx).
+	id, _ := include.GetLoadMeta(ctx).
 		GetString(constants.ObjectTypeAccountUser, au.ID, "user_id")
 	if id == "" {
 		return nil
@@ -51,7 +51,7 @@ func extractUserIDFromAccountUser(ctx context.Context, parent any) []string {
 
 func populateUserOnAccountUser(ctx context.Context, parent any, loaded map[string]any) {
 	au := parent.(*apiresource.AccountUser)
-	id, _ := resourcekit.GetLoadMeta(ctx).
+	id, _ := include.GetLoadMeta(ctx).
 		GetString(constants.ObjectTypeAccountUser, au.ID, "user_id")
 	if id == "" {
 		return
@@ -63,7 +63,7 @@ func populateUserOnAccountUser(ctx context.Context, parent any, loaded map[strin
 
 func extractRoleIDFromAccountUser(ctx context.Context, parent any) []string {
 	au := parent.(*apiresource.AccountUser)
-	id, _ := resourcekit.GetLoadMeta(ctx).
+	id, _ := include.GetLoadMeta(ctx).
 		GetString(constants.ObjectTypeAccountUser, au.ID, "role_id")
 	if id == "" {
 		return nil
@@ -73,7 +73,7 @@ func extractRoleIDFromAccountUser(ctx context.Context, parent any) []string {
 
 func populateRoleOnAccountUser(ctx context.Context, parent any, loaded map[string]any) {
 	au := parent.(*apiresource.AccountUser)
-	id, _ := resourcekit.GetLoadMeta(ctx).
+	id, _ := include.GetLoadMeta(ctx).
 		GetString(constants.ObjectTypeAccountUser, au.ID, "role_id")
 	if id == "" {
 		return
@@ -85,7 +85,7 @@ func populateRoleOnAccountUser(ctx context.Context, parent any, loaded map[strin
 
 func extractDepartmentIDFromAccountUser(ctx context.Context, parent any) []string {
 	au := parent.(*apiresource.AccountUser)
-	id, _ := resourcekit.GetLoadMeta(ctx).
+	id, _ := include.GetLoadMeta(ctx).
 		GetString(constants.ObjectTypeAccountUser, au.ID, "department_id")
 	if id == "" {
 		return nil
@@ -95,7 +95,7 @@ func extractDepartmentIDFromAccountUser(ctx context.Context, parent any) []strin
 
 func populateDepartmentOnAccountUser(ctx context.Context, parent any, loaded map[string]any) {
 	au := parent.(*apiresource.AccountUser)
-	id, _ := resourcekit.GetLoadMeta(ctx).
+	id, _ := include.GetLoadMeta(ctx).
 		GetString(constants.ObjectTypeAccountUser, au.ID, "department_id")
 	if id == "" {
 		return

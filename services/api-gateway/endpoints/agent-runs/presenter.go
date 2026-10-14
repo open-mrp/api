@@ -3,12 +3,12 @@ package agentrunep
 import (
 	"context"
 	"encoding/json"
+	"github.com/open-mrp/apikit/include"
 	"time"
 
 	agentep "github.com/open-mrp/api/services/api-gateway/endpoints/agents"
 	"github.com/open-mrp/api/services/api-gateway/internal/resourceloaders"
 	apiresource "github.com/open-mrp/api/services/api-gateway/pkg/resource"
-	"github.com/open-mrp/api/services/api-gateway/pkg/resourcekit"
 	"github.com/open-mrp/api/shared/constants"
 	pb "github.com/open-mrp/api/shared/proto/agent"
 	"github.com/open-mrp/apikit/timeutil"
@@ -47,7 +47,7 @@ func stashAgentRunMeta(ctx context.Context, run *apiresource.AgentRun, r *pb.Age
 		return
 	}
 
-	meta := resourcekit.GetLoadMeta(ctx)
+	meta := include.GetLoadMeta(ctx)
 
 	// triggered_by is expandable: left nil on the base resource, stashed for ?include=triggered_by.
 	if triggeredBy := lightActorPresenter(r); triggeredBy != nil {

@@ -3,12 +3,12 @@ package invoiceep
 import (
 	"context"
 	"fmt"
+	"github.com/open-mrp/apikit/include"
 
 	"github.com/open-mrp/api/services/api-gateway/internal/domain"
 	grpcutil "github.com/open-mrp/api/services/api-gateway/internal/grpc"
 	"github.com/open-mrp/api/services/api-gateway/internal/resourceloaders"
 	apiresource "github.com/open-mrp/api/services/api-gateway/pkg/resource"
-	"github.com/open-mrp/api/services/api-gateway/pkg/resourcekit"
 	"github.com/open-mrp/api/shared/constants"
 	"github.com/open-mrp/api/shared/fieldpb"
 	"github.com/open-mrp/api/shared/metadatapb"
@@ -71,7 +71,7 @@ func (m *invoiceSvcImpl) ListInvoices(ctx context.Context, req *ListInvoicesRequ
 		Numbers:          req.Numbers,
 		// Ask the backend to expand lines when requested (the rest of the includes
 		// are resolved gateway-side).
-		Includes: resourcekit.FilterIncludes(ctx, "lines"),
+		Includes: include.FilterIncludes(ctx, "lines"),
 	}
 
 	if req.StartDate != nil {
@@ -111,7 +111,7 @@ func (m *invoiceSvcImpl) ListInvoices(ctx context.Context, req *ListInvoicesRequ
 func (m *invoiceSvcImpl) GetInvoice(ctx context.Context, req *RetrieveInvoiceRequest) (*apiresource.Invoice, *apierror.APIError) {
 	pbReq := &pb.GetInvoiceRequest{
 		Id:       req.InvoiceID,
-		Includes: resourcekit.FilterIncludes(ctx, invoiceIncludes...),
+		Includes: include.FilterIncludes(ctx, invoiceIncludes...),
 	}
 
 	resp, apiErr := grpcutil.CallRPC(ctx, invoiceSvcTracer, "service.invoices.get", domain.ServiceName,
@@ -132,7 +132,7 @@ func (m *invoiceSvcImpl) GetInvoice(ctx context.Context, req *RetrieveInvoiceReq
 // allocations' transaction include is filled from them: they are part of the invoice a caller was
 // allowed to read, so they are not loaded again under transactions:read.
 func stashAllocationTransactions(ctx context.Context, transactions []*pb.TransactionInfo) {
-	meta := resourcekit.GetLoadMeta(ctx)
+	meta := include.GetLoadMeta(ctx)
 	for _, t := range transactions {
 		meta.Set(constants.ObjectTypeTransaction, t.Id, "allocation_transaction", resourceloaders.TransactionReferenceFromProto(meta, t))
 	}
@@ -145,7 +145,7 @@ func (m *invoiceSvcImpl) UpdateInvoice(ctx context.Context, req *UpdateInvoiceRe
 		HasBeenSent:  req.HasBeenSent.Ptr(),
 		IsPaidInFull: req.IsPaidInFull.Ptr(),
 		Metadata:     metadatapb.PatchToProto(req.Metadata),
-		Includes:     resourcekit.FilterIncludes(ctx, invoiceIncludes...),
+		Includes:     include.FilterIncludes(ctx, invoiceIncludes...),
 	}
 
 	resp, apiErr := grpcutil.CallRPC(ctx, invoiceSvcTracer, "service.invoices.update", domain.ServiceName,
@@ -170,7 +170,7 @@ func (m *invoiceSvcImpl) ListCustomerInvoices(ctx context.Context, req *ListCust
 		Cursor:            req.Cursor,
 		Limit:             req.Limit,
 		Query:             req.Query,
-		Includes:          resourcekit.FilterIncludes(ctx, "allocations"),
+		Includes:          include.FilterIncludes(ctx, "allocations"),
 	}
 
 	resp, apiErr := grpcutil.CallRPC(ctx, invoiceSvcTracer, "service.invoices.list_customer", domain.ServiceName,
@@ -242,7 +242,7 @@ func stashInvoiceMeta(ctx context.Context, d *pb.InvoiceInfo, inv *apiresource.I
 		return
 	}
 
-	meta := resourcekit.GetLoadMeta(ctx)
+	meta := include.GetLoadMeta(ctx)
 
 	// order / shipment / customer are expandable references, loaded by the stashed id on ?include=.
 	if d.OrderId != "" {
@@ -306,7 +306,7 @@ func invoiceLineFromProto(ctx context.Context, l *pb.InvoiceLineInfo) apiresourc
 		UpdatedAt: grpcutil.TimestampToTime(l.UpdatedAt),
 	}
 
-	meta := resourcekit.GetLoadMeta(ctx)
+	meta := include.GetLoadMeta(ctx)
 
 	// The quantity and the price ride on the line, but the units they are counted in are records of
 	// their own — stashed as ids so `lines.quantity.unit` and the price's two units resolve in full,
@@ -354,7 +354,7 @@ func buildSalesOrderLineForInvoice(l *pb.InvoiceLineInfo) *apiresource.SalesOrde
 	}
 }
 
-func invoiceAllocationFromProto(meta *resourcekit.LoadMeta, a *pb.InvoiceAllocationInfo) apiresource.InvoiceAllocation {
+func invoiceAllocationFromProto(meta *include.LoadMeta, a *pb.InvoiceAllocationInfo) apiresource.InvoiceAllocation {
 	if a == nil {
 		return apiresource.InvoiceAllocation{}
 	}
@@ -390,7 +390,7 @@ func invoiceForPaymentFromProto(ctx context.Context, d *pb.InvoiceForPaymentInfo
 
 	createdAt := grpcutil.TimestampToTime(d.CreatedAt)
 
-	meta := resourcekit.GetLoadMeta(ctx)
+	meta := include.GetLoadMeta(ctx)
 	allocations := make([]apiresource.InvoiceAllocation, len(d.Allocations))
 	for i, a := range d.Allocations {
 		allocations[i] = invoiceAllocationFromProto(meta, a)

@@ -3,8 +3,8 @@ package apiresource
 import (
 	"time"
 
-	apiexample "github.com/open-mrp/api/services/api-gateway/pkg/example"
 	"github.com/open-mrp/api/shared/constants"
+	apiexample "github.com/open-mrp/apikit/example"
 )
 
 // What was invoiced over a period, as one figure and day by day, alongside a comparison period when one was asked for.

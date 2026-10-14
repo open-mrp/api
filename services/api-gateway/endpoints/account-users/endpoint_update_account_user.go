@@ -4,12 +4,13 @@ import (
 	"context"
 	"net/http"
 
-	apiendpoint "github.com/open-mrp/api/services/api-gateway/pkg/endpoint"
-	apiexample "github.com/open-mrp/api/services/api-gateway/pkg/example"
+	"github.com/open-mrp/api/services/api-gateway/pkg/authz"
 	apiresource "github.com/open-mrp/api/services/api-gateway/pkg/resource"
 	"github.com/open-mrp/api/services/auth-service/pkg/types"
 	"github.com/open-mrp/api/shared/constants"
 	apierror "github.com/open-mrp/apikit/apierror"
+	apiendpoint "github.com/open-mrp/apikit/endpoint"
+	apiexample "github.com/open-mrp/apikit/example"
 	"github.com/open-mrp/apikit/field"
 )
 
@@ -72,16 +73,15 @@ type UpdateAccountUserEndpoint struct{}
 
 func (e *UpdateAccountUserEndpoint) Materialize() *apiendpoint.APIEndpoint[*UpdateAccountUserRequest, *apiresource.AccountUser] {
 	return (&apiendpoint.APIEndpoint[*UpdateAccountUserRequest, *apiresource.AccountUser]{
-		Title:                   "Update Account User",
-		Method:                  http.MethodPatch,
-		ContentType:             "application/json",
-		Route:                   "/v1/identity/account-users/{id}",
-		SuccessStatusCode:       http.StatusOK,
-		Public:                  true,
-		AgentTool:               true,
-		RequiredPermissions:     []types.Permission{{Domain: types.PermissionDomainTeamUsers, Action: types.ActionUpdate}},
-		CounterpartyPermissions: apiendpoint.Counterparties(types.ActionUpdate),
-		Preview:                 true,
+		Title:             "Update Account User",
+		Method:            http.MethodPatch,
+		ContentType:       "application/json",
+		Route:             "/v1/identity/account-users/{id}",
+		SuccessStatusCode: http.StatusOK,
+		Public:            true,
+		AgentTool:         true,
+		Auth:              authz.Policy{Permissions: []types.Permission{{Domain: types.PermissionDomainTeamUsers, Action: types.ActionUpdate}}, Counterparty: authz.Counterparties(types.ActionUpdate)},
+		Preview:           true,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *UpdateAccountUserRequest) (*apiresource.AccountUser, *apierror.APIError) {
 			return svc.(AccountUserSvc).UpdateAccountUser
 		},

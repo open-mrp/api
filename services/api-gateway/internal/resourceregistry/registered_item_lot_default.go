@@ -2,23 +2,23 @@ package resourceregistry
 
 import (
 	"context"
+	"github.com/open-mrp/apikit/include"
 
 	apiresource "github.com/open-mrp/api/services/api-gateway/pkg/resource"
-	"github.com/open-mrp/api/services/api-gateway/pkg/resourcekit"
 	"github.com/open-mrp/api/shared/constants"
 	apierror "github.com/open-mrp/apikit/apierror"
 )
 
 func init() {
-	resourcekit.Register(&resourcekit.Definition{
+	include.Register(&include.Definition{
 		ObjectType: constants.ObjectTypeItemLotDefault,
 		// A lot default is never fetched by id — it is only ever the body of the endpoint that resolves it — but the registry requires a loader, so this one answers nothing. Only the unit sub-field does real work.
 		Load: loadItemLotDefaults,
-		Subs: []resourcekit.SubField{
+		Subs: []include.SubField{
 			{
 				Key:         "unit",
 				Target:      constants.ObjectTypeUnit,
-				Cardinality: resourcekit.CardinalityOnePtr,
+				Cardinality: include.CardinalityOnePtr,
 				ExtractIDs:  extractUnitIDFromItemLotDefault,
 				Populate:    populateUnitOnItemLotDefault,
 			},
@@ -35,7 +35,7 @@ func itemLotDefaultUnitID(ctx context.Context, lot *apiresource.ItemLotDefault) 
 	if lot.Item == nil {
 		return "", false
 	}
-	return resourcekit.GetLoadMeta(ctx).GetString(constants.ObjectTypeItemLotDefault, lot.Item.ID, "unit_id")
+	return include.GetLoadMeta(ctx).GetString(constants.ObjectTypeItemLotDefault, lot.Item.ID, "unit_id")
 }
 
 func extractUnitIDFromItemLotDefault(ctx context.Context, parent any) []string {

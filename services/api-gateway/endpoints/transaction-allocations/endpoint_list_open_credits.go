@@ -4,16 +4,23 @@ import (
 	"context"
 	"net/http"
 
-	apiendpoint "github.com/open-mrp/api/services/api-gateway/pkg/endpoint"
+	"github.com/open-mrp/apikit/object"
+
+	"github.com/open-mrp/api/services/api-gateway/pkg/authz"
 	apiresource "github.com/open-mrp/api/services/api-gateway/pkg/resource"
 	types "github.com/open-mrp/api/services/auth-service/pkg/types"
 	"github.com/open-mrp/api/shared/constants"
 	apierror "github.com/open-mrp/apikit/apierror"
+	apiendpoint "github.com/open-mrp/apikit/endpoint"
 )
 
 // Request to list open credit transactions.
 type ListOpenCreditsRequest struct {
-	apiresource.PaginationRequest
+	object.ListRequest
+	// Free-text search term used to filter results.
+	//
+	// Which fields are matched against the term varies by endpoint.
+	Query *string `query:"q" validate:"omitempty,max=500"`
 	// Only include credits whose funds were received on or after this date (`YYYY-MM-DD`, UTC). A full timestamp (RFC 3339) is also accepted, to bound the range at a local midnight.
 	StartDate *string `query:"starts_at"`
 	// Only include credits whose funds were received before the end of this date (`YYYY-MM-DD`, UTC). A full timestamp (RFC 3339) is also accepted, to bound the range at a local midnight.
@@ -37,9 +44,9 @@ func (e *ListOpenCreditsEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListOp
 		Public:            false,
 		AgentTool:         true,
 		Preview:           true,
-		RequiredPermissions: []types.Permission{
+		Auth: authz.Policy{Permissions: []types.Permission{
 			{Domain: types.PermissionDomainSettlements, Action: types.ActionRead},
-		},
+		}},
 		ObjectType: constants.ObjectTypeOpenCreditEntry,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *ListOpenCreditsRequest) (*apiresource.List[apiresource.OpenCreditEntry], *apierror.APIError) {
 			return svc.(TransactionAllocationSvc).ListOpenCredits

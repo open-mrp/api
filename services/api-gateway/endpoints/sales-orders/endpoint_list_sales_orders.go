@@ -4,16 +4,23 @@ import (
 	"context"
 	"net/http"
 
-	apiendpoint "github.com/open-mrp/api/services/api-gateway/pkg/endpoint"
+	"github.com/open-mrp/apikit/object"
+
+	"github.com/open-mrp/api/services/api-gateway/pkg/authz"
 	apiresource "github.com/open-mrp/api/services/api-gateway/pkg/resource"
 	"github.com/open-mrp/api/services/auth-service/pkg/types"
 	"github.com/open-mrp/api/shared/constants"
 	apierror "github.com/open-mrp/apikit/apierror"
+	apiendpoint "github.com/open-mrp/apikit/endpoint"
 )
 
 // Request to list sales orders.
 type ListSalesOrdersRequest struct {
-	apiresource.PaginationRequest
+	object.ListRequest
+	// Free-text search term used to filter results.
+	//
+	// Which fields are matched against the term varies by endpoint.
+	Query *string `query:"q" validate:"omitempty,max=500"`
 	// Restricts results to orders in any of these lifecycle statuses.
 	StatusCodes []constants.SalesOrderStatusCode `query:"status_codes"`
 	// Restricts results to orders that have at least one line for any of these inventory items.
@@ -49,17 +56,16 @@ type ListSalesOrdersEndpoint struct{}
 
 func (e *ListSalesOrdersEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListSalesOrdersRequest, *apiresource.List[apiresource.SalesOrder]] {
 	return (&apiendpoint.APIEndpoint[*ListSalesOrdersRequest, *apiresource.List[apiresource.SalesOrder]]{
-		Title:                   "List Sales Orders",
-		Method:                  http.MethodGet,
-		ContentType:             "application/json",
-		Route:                   "/v1/sales/sales-orders",
-		SuccessStatusCode:       http.StatusOK,
-		Public:                  true,
-		Preview:                 true,
-		AgentTool:               true,
-		RequiredPermissions:     []types.Permission{{Domain: types.PermissionDomainSalesOrders, Action: types.ActionRead}},
-		CounterpartyPermissions: apiendpoint.Counterparties(types.ActionRead),
-		ObjectType:              constants.ObjectTypeSalesOrder,
+		Title:             "List Sales Orders",
+		Method:            http.MethodGet,
+		ContentType:       "application/json",
+		Route:             "/v1/sales/sales-orders",
+		SuccessStatusCode: http.StatusOK,
+		Public:            true,
+		Preview:           true,
+		AgentTool:         true,
+		Auth:              authz.Policy{Permissions: []types.Permission{{Domain: types.PermissionDomainSalesOrders, Action: types.ActionRead}}, Counterparty: authz.Counterparties(types.ActionRead)},
+		ObjectType:        constants.ObjectTypeSalesOrder,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *ListSalesOrdersRequest) (*apiresource.List[apiresource.SalesOrder], *apierror.APIError) {
 			return svc.(SalesOrderSvc).ListSalesOrders
 		},

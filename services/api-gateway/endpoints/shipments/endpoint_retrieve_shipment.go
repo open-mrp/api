@@ -4,11 +4,12 @@ import (
 	"context"
 	"net/http"
 
-	apiendpoint "github.com/open-mrp/api/services/api-gateway/pkg/endpoint"
+	"github.com/open-mrp/api/services/api-gateway/pkg/authz"
 	apiresource "github.com/open-mrp/api/services/api-gateway/pkg/resource"
 	types "github.com/open-mrp/api/services/auth-service/pkg/types"
 	"github.com/open-mrp/api/shared/constants"
 	apierror "github.com/open-mrp/apikit/apierror"
+	apiendpoint "github.com/open-mrp/apikit/endpoint"
 )
 
 // Request to retrieve a shipment by ID.
@@ -24,17 +25,16 @@ type RetrieveShipmentEndpoint struct{}
 
 func (e *RetrieveShipmentEndpoint) Materialize() *apiendpoint.APIEndpoint[*RetrieveShipmentRequest, *apiresource.Shipment] {
 	return (&apiendpoint.APIEndpoint[*RetrieveShipmentRequest, *apiresource.Shipment]{
-		Title:                   "Retrieve Shipment",
-		Method:                  http.MethodGet,
-		ContentType:             "application/json",
-		Route:                   "/v1/operations/shipments/{id}",
-		SuccessStatusCode:       http.StatusOK,
-		Public:                  false,
-		AgentTool:               true,
-		CounterpartyPermissions: apiendpoint.Counterparties(types.ActionRead),
-		Preview:                 true,
-		RequiredPermissions:     []types.Permission{{Domain: types.PermissionDomainShipments, Action: types.ActionRead}},
-		ObjectType:              constants.ObjectTypeShipment,
+		Title:             "Retrieve Shipment",
+		Method:            http.MethodGet,
+		ContentType:       "application/json",
+		Route:             "/v1/operations/shipments/{id}",
+		SuccessStatusCode: http.StatusOK,
+		Public:            false,
+		AgentTool:         true,
+		Auth:              authz.Policy{Permissions: []types.Permission{{Domain: types.PermissionDomainShipments, Action: types.ActionRead}}, Counterparty: authz.Counterparties(types.ActionRead)},
+		Preview:           true,
+		ObjectType:        constants.ObjectTypeShipment,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *RetrieveShipmentRequest) (*apiresource.Shipment, *apierror.APIError) {
 			return svc.(ShipmentSvc).GetShipment
 		},

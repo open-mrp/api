@@ -4,11 +4,12 @@ import (
 	"context"
 	"net/http"
 
-	apiendpoint "github.com/open-mrp/api/services/api-gateway/pkg/endpoint"
+	"github.com/open-mrp/api/services/api-gateway/pkg/authz"
 	apiresource "github.com/open-mrp/api/services/api-gateway/pkg/resource"
 	"github.com/open-mrp/api/services/auth-service/pkg/types"
 	"github.com/open-mrp/api/shared/constants"
 	apierror "github.com/open-mrp/apikit/apierror"
+	apiendpoint "github.com/open-mrp/apikit/endpoint"
 )
 
 // Request to change an item's category.
@@ -32,16 +33,16 @@ type ChangeItemCategoryEndpoint struct{}
 
 func (e *ChangeItemCategoryEndpoint) Materialize() *apiendpoint.APIEndpoint[*ChangeItemCategoryRequest, *apiresource.Item] {
 	return (&apiendpoint.APIEndpoint[*ChangeItemCategoryRequest, *apiresource.Item]{
-		Title:               "Change Item Category",
-		Method:              http.MethodPut,
-		ContentType:         "application/json",
-		Route:               "/v1/catalog/items/{id}/category/{category_id}",
-		SDKMethodKey:        "change_category",
-		SuccessStatusCode:   http.StatusOK,
-		Public:              true,
-		AgentTool:           true,
-		RequiredPermissions: []types.Permission{{Domain: types.PermissionDomainItems, Action: types.ActionUpdate}},
-		Preview:             true,
+		Title:             "Change Item Category",
+		Method:            http.MethodPut,
+		ContentType:       "application/json",
+		Route:             "/v1/catalog/items/{id}/category/{category_id}",
+		SDKMethodKey:      "change_category",
+		SuccessStatusCode: http.StatusOK,
+		Public:            true,
+		AgentTool:         true,
+		Auth:              authz.Policy{Permissions: []types.Permission{{Domain: types.PermissionDomainItems, Action: types.ActionUpdate}}},
+		Preview:           true,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *ChangeItemCategoryRequest) (*apiresource.Item, *apierror.APIError) {
 			return svc.(ItemSvc).ChangeItemCategory
 		},

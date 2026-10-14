@@ -7,11 +7,11 @@ import (
 	"net/http"
 
 	"github.com/open-mrp/api/services/api-gateway/internal/header"
-	httptransport "github.com/open-mrp/api/services/api-gateway/internal/http"
 	"github.com/open-mrp/api/services/auth-service/pkg/types"
 	apierror "github.com/open-mrp/apikit/apierror"
 	"github.com/open-mrp/apikit/appctx"
 	"github.com/open-mrp/apikit/tracing"
+	httptransport "github.com/open-mrp/apikit/transport"
 
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/trace"

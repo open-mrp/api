@@ -2,24 +2,24 @@ package resourceregistry
 
 import (
 	"context"
+	"github.com/open-mrp/apikit/include"
 
 	"github.com/open-mrp/api/services/api-gateway/internal/resourceloaders"
 	apiresource "github.com/open-mrp/api/services/api-gateway/pkg/resource"
-	"github.com/open-mrp/api/services/api-gateway/pkg/resourcekit"
 	"github.com/open-mrp/api/shared/constants"
 )
 
 func init() {
-	resourcekit.Register(&resourcekit.Definition{
+	include.Register(&include.Definition{
 		ObjectType: constants.ObjectTypeInventoryItem,
 		Load:       resourceloaders.LoadInventoryItems,
 		// `quantity` is a ComputedQuantity whose unit the presenter resolves in full, so `quantity.unit`
 		// is not offered: the stored-quantity resolver it would point at panics on a computed one.
-		Subs: []resourcekit.SubField{
+		Subs: []include.SubField{
 			{
 				Key:         "product_line",
 				Target:      constants.ObjectTypeProductLine,
-				Cardinality: resourcekit.CardinalityOnePtr,
+				Cardinality: include.CardinalityOnePtr,
 				ExtractIDs:  extractProductLineIDFromInventoryItem,
 				Populate:    populateProductLineOnInventoryItem,
 			},
@@ -32,7 +32,7 @@ func inventoryItemProductLineID(ctx context.Context, row *apiresource.InventoryI
 	if row.Item == nil {
 		return ""
 	}
-	id, _ := resourcekit.GetLoadMeta(ctx).GetString(constants.ObjectTypeInventoryItem, row.Item.ID, "product_line_id")
+	id, _ := include.GetLoadMeta(ctx).GetString(constants.ObjectTypeInventoryItem, row.Item.ID, "product_line_id")
 	return id
 }
 

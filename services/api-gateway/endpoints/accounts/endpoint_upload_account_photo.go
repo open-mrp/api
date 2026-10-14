@@ -4,11 +4,12 @@ import (
 	"context"
 	"net/http"
 
-	apiendpoint "github.com/open-mrp/api/services/api-gateway/pkg/endpoint"
+	"github.com/open-mrp/api/services/api-gateway/pkg/authz"
 	apiresource "github.com/open-mrp/api/services/api-gateway/pkg/resource"
 	"github.com/open-mrp/api/services/auth-service/pkg/types"
 	"github.com/open-mrp/api/shared/imageupload"
 	apierror "github.com/open-mrp/apikit/apierror"
+	apiendpoint "github.com/open-mrp/apikit/endpoint"
 )
 
 // Request to upload an account logo.
@@ -30,14 +31,14 @@ type UploadAccountPhotoEndpoint struct{}
 
 func (e *UploadAccountPhotoEndpoint) Materialize() *apiendpoint.APIEndpoint[*UploadAccountPhotoRequest, *apiresource.AccountPhotoUploadResult] {
 	return (&apiendpoint.APIEndpoint[*UploadAccountPhotoRequest, *apiresource.AccountPhotoUploadResult]{
-		Title:               "Upload Account Logo",
-		Method:              http.MethodPut,
-		ContentType:         "application/json",
-		Route:               "/v1/identity/accounts/{id}/photo",
-		SuccessStatusCode:   http.StatusOK,
-		Public:              false,
-		Preview:             true,
-		RequiredPermissions: []types.Permission{{Domain: types.PermissionDomainAccount, Action: types.ActionUpdate}},
+		Title:             "Upload Account Logo",
+		Method:            http.MethodPut,
+		ContentType:       "application/json",
+		Route:             "/v1/identity/accounts/{id}/photo",
+		SuccessStatusCode: http.StatusOK,
+		Public:            false,
+		Preview:           true,
+		Auth:              authz.Policy{Permissions: []types.Permission{{Domain: types.PermissionDomainAccount, Action: types.ActionUpdate}}},
 		Extras: apiendpoint.APIEndpointExtras{
 			SkipRequestBodyParsing: true,
 			MaxRawBodyBytes:        imageupload.MaxBytes,

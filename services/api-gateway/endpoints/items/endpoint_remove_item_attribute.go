@@ -4,11 +4,12 @@ import (
 	"context"
 	"net/http"
 
-	apiendpoint "github.com/open-mrp/api/services/api-gateway/pkg/endpoint"
+	"github.com/open-mrp/api/services/api-gateway/pkg/authz"
 	apiresource "github.com/open-mrp/api/services/api-gateway/pkg/resource"
 	"github.com/open-mrp/api/services/auth-service/pkg/types"
 	"github.com/open-mrp/api/shared/constants"
 	apierror "github.com/open-mrp/apikit/apierror"
+	apiendpoint "github.com/open-mrp/apikit/endpoint"
 )
 
 // Request to remove an attribute from an item.
@@ -26,15 +27,15 @@ type RemoveItemAttributeEndpoint struct{}
 
 func (e *RemoveItemAttributeEndpoint) Materialize() *apiendpoint.APIEndpoint[*RemoveItemAttributeRequest, *apiresource.Item] {
 	return (&apiendpoint.APIEndpoint[*RemoveItemAttributeRequest, *apiresource.Item]{
-		Title:               "Remove Item Attribute",
-		Method:              http.MethodDelete,
-		ContentType:         "application/json",
-		Route:               "/v1/catalog/items/{id}/attributes/{attribute_id}",
-		SuccessStatusCode:   http.StatusOK,
-		Public:              true,
-		AgentTool:           true,
-		RequiredPermissions: []types.Permission{{Domain: types.PermissionDomainItems, Action: types.ActionUpdate}},
-		Preview:             true,
+		Title:             "Remove Item Attribute",
+		Method:            http.MethodDelete,
+		ContentType:       "application/json",
+		Route:             "/v1/catalog/items/{id}/attributes/{attribute_id}",
+		SuccessStatusCode: http.StatusOK,
+		Public:            true,
+		AgentTool:         true,
+		Auth:              authz.Policy{Permissions: []types.Permission{{Domain: types.PermissionDomainItems, Action: types.ActionUpdate}}},
+		Preview:           true,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *RemoveItemAttributeRequest) (*apiresource.Item, *apierror.APIError) {
 			return svc.(ItemSvc).RemoveItemAttribute
 		},

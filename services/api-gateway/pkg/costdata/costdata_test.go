@@ -1,4 +1,4 @@
-package costguard
+package costdata
 
 import (
 	"context"
@@ -12,6 +12,7 @@ import (
 	"github.com/open-mrp/api/services/auth-service/pkg/types"
 	"github.com/open-mrp/api/shared/constants"
 	"github.com/open-mrp/apikit/appctx"
+	"github.com/open-mrp/apikit/sensitive"
 )
 
 type rate struct {
@@ -140,7 +141,7 @@ func TestRedact_ByCaller(t *testing.T) {
 			if tt.identity != nil {
 				ctx = ctxWith(tt.identity)
 			}
-			got := Redact(ctx, sampleOrder()).(*order)
+			got := sensitive.Redact(ctx, sampleOrder()).(*order)
 
 			lines := got.Lines.Data
 			if tt.visible {
@@ -163,7 +164,7 @@ func TestRedact_ByCaller(t *testing.T) {
 func TestStrip_SerializesNull(t *testing.T) {
 	t.Parallel()
 
-	body, err := json.Marshal(Strip(sampleOrder()))
+	body, err := json.Marshal(sensitive.Strip(sampleOrder(), sensitive.Of(TagCost)))
 	require.NoError(t, err)
 	assert.JSONEq(t, `{"id":"so_1","lines":{"data":[
 		{"id":"sol_1","product":{"id":"pd_1","item":{"id":"itm_1","unit_value":{"id":"rt_v","value":"5"},"unit_cost":null}},"unit_cost":null},
@@ -184,7 +185,7 @@ func TestStrip_RecursiveTypesMapsAndInterfaces(t *testing.T) {
 		ByCode: map[string]item{"a": {ID: "itm_a", UnitCost: &rate{Value: "1"}}},
 		Extra:  &item{ID: "itm_x", UnitCost: &rate{Value: "9"}},
 	}
-	Strip(root)
+	sensitive.Strip(root, sensitive.Of(TagCost))
 
 	assert.Nil(t, root.Margin)
 	assert.Nil(t, root.Children[0].Margin)
@@ -197,15 +198,15 @@ func TestStrip_RecursiveTypesMapsAndInterfaces(t *testing.T) {
 func TestStrip_ValueRootAndInterfaceHoldingAValue(t *testing.T) {
 	t.Parallel()
 
-	got := Strip(item{ID: "itm_v", UnitCost: &rate{Value: "1"}}).(item)
+	got := sensitive.Strip(item{ID: "itm_v", UnitCost: &rate{Value: "1"}}, sensitive.Of(TagCost)).(item)
 	assert.Nil(t, got.UnitCost)
 
 	holder := &account{Extra: item{ID: "itm_i", UnitCost: &rate{Value: "1"}}}
-	Strip(holder)
+	sensitive.Strip(holder, sensitive.Of(TagCost))
 	assert.Nil(t, holder.Extra.(item).UnitCost)
 
 	inMap := map[string]any{"x": item{UnitCost: &rate{Value: "1"}}, "y": &item{UnitCost: &rate{Value: "2"}}}
-	Strip(inMap)
+	sensitive.Strip(inMap, sensitive.Of(TagCost))
 	assert.Nil(t, inMap["x"].(item).UnitCost)
 	assert.Nil(t, inMap["y"].(*item).UnitCost)
 }
@@ -213,14 +214,14 @@ func TestStrip_ValueRootAndInterfaceHoldingAValue(t *testing.T) {
 func TestStrip_NilSafety(t *testing.T) {
 	t.Parallel()
 
-	assert.Nil(t, Strip(nil))
+	assert.Nil(t, sensitive.Strip(nil, sensitive.Of(TagCost)))
 	assert.NotPanics(t, func() {
-		Strip((*order)(nil))
-		Strip(&order{})
-		Strip(&order{Lines: &list[line]{}})
-		Strip([]*item{nil, {}})
-		Strip(&account{Extra: (*item)(nil)})
-		Redact(context.Background(), (*item)(nil))
+		sensitive.Strip((*order)(nil), sensitive.Of(TagCost))
+		sensitive.Strip(&order{}, sensitive.Of(TagCost))
+		sensitive.Strip(&order{Lines: &list[line]{}}, sensitive.Of(TagCost))
+		sensitive.Strip([]*item{nil, {}}, sensitive.Of(TagCost))
+		sensitive.Strip(&account{Extra: (*item)(nil)}, sensitive.Of(TagCost))
+		sensitive.Redact(context.Background(), (*item)(nil))
 	})
 }
 
@@ -243,7 +244,7 @@ func BenchmarkRedact_List(b *testing.B) {
 	resp := &list[item]{Data: items}
 	b.ResetTimer()
 	for range b.N {
-		Redact(ctx, resp)
+		sensitive.Redact(ctx, resp)
 	}
 }
 
@@ -252,8 +253,8 @@ type change struct {
 	NewValue json.RawMessage `json:"new_value"`
 }
 
-func (c *change) RedactCosts() {
-	if IsCostName(c.Field) {
+func (c *change) RedactSensitive(hidden sensitive.Set) {
+	if hidden.Hides(TagCost) && IsCostName(c.Field) {
 		c.NewValue = nil
 	}
 }
@@ -275,7 +276,7 @@ func TestStrip_CallsRedactorsWhereverTheyAppear(t *testing.T) {
 		}},
 		Pinned: map[string]change{"x": {Field: "gross_margin", NewValue: json.RawMessage(`"0.3"`)}},
 	}
-	Strip(ev)
+	sensitive.Strip(ev, sensitive.Of(TagCost))
 
 	assert.Nil(t, ev.Changes.Data[0].NewValue)
 	assert.Nil(t, ev.Changes.Data[1].NewValue)
@@ -355,7 +356,7 @@ func TestRedact_InternalFieldsReachOnlyTheSellersOwnActors(t *testing.T) {
 			if tt.identity != nil {
 				ctx = ctxWith(tt.identity)
 			}
-			got := Redact(ctx, &releasedWeek{Run: sampleRun()}).(*releasedWeek).Run
+			got := sensitive.Redact(ctx, &releasedWeek{Run: sampleRun()}).(*releasedWeek).Run
 
 			assert.Equal(t, "prru_1", got.ID)
 			assert.Equal(t, "7", got.Number, "the run's number is never withheld")
@@ -379,7 +380,7 @@ func TestRedact_InternalFieldsReachOnlyTheSellersOwnActors(t *testing.T) {
 func TestRedact_InternalFieldsSerializeNull(t *testing.T) {
 	t.Parallel()
 
-	body, err := json.Marshal(Redact(ctxWith(relationIdentity(types.IdentityRelationTypeCustomer)), sampleRun()))
+	body, err := json.Marshal(sensitive.Redact(ctxWith(relationIdentity(types.IdentityRelationTypeCustomer)), sampleRun()))
 	require.NoError(t, err)
 	assert.JSONEq(t, `{"id":"prru_1","number":"7","batch_count":null,"summaries":null,"responsible":null,
 		"lines":{"data":[{"id":"sol_1","product":null,"unit_cost":null}]}}`, string(body))
@@ -388,7 +389,7 @@ func TestRedact_InternalFieldsSerializeNull(t *testing.T) {
 func TestStrip_LeavesInternalFields(t *testing.T) {
 	t.Parallel()
 
-	got := Strip(sampleRun()).(*run)
+	got := sensitive.Strip(sampleRun(), sensitive.Of(TagCost)).(*run)
 	assert.NotNil(t, got.BatchCount)
 	assert.NotNil(t, got.Summaries)
 	require.NotNil(t, got.Responsible)
@@ -435,7 +436,7 @@ func TestRedact_CostKeysFollowCostsRead(t *testing.T) {
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
-			got := Redact(ctxWith(tt.identity), sampleSchedule()).(*schedule).Settings
+			got := sensitive.Redact(ctxWith(tt.identity), sampleSchedule()).(*schedule).Settings
 
 			require.Contains(t, got, "changeover_labor_rate", "the key stays, so the snapshot keeps its shape")
 			assert.Equal(t, tt.visible, got["changeover_labor_rate"] != nil)

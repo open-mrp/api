@@ -4,13 +4,14 @@ import (
 	"context"
 	"net/http"
 
-	apiendpoint "github.com/open-mrp/api/services/api-gateway/pkg/endpoint"
-	apiexample "github.com/open-mrp/api/services/api-gateway/pkg/example"
+	"github.com/open-mrp/api/services/api-gateway/pkg/authz"
 	apirequest "github.com/open-mrp/api/services/api-gateway/pkg/request"
 	apiresource "github.com/open-mrp/api/services/api-gateway/pkg/resource"
 	"github.com/open-mrp/api/services/auth-service/pkg/types"
 	"github.com/open-mrp/api/shared/constants"
 	apierror "github.com/open-mrp/apikit/apierror"
+	apiendpoint "github.com/open-mrp/apikit/endpoint"
+	apiexample "github.com/open-mrp/apikit/example"
 	"github.com/open-mrp/apikit/field"
 )
 
@@ -65,16 +66,15 @@ type CreatePartEndpoint struct{}
 
 func (e *CreatePartEndpoint) Materialize() *apiendpoint.APIEndpoint[*CreatePartRequest, *apiresource.Part] {
 	return (&apiendpoint.APIEndpoint[*CreatePartRequest, *apiresource.Part]{
-		Title:                   "Create Part",
-		Method:                  http.MethodPost,
-		Route:                   "/v1/catalog/parts",
-		ContentType:             "application/json",
-		SuccessStatusCode:       http.StatusCreated,
-		Public:                  true,
-		AgentTool:               true,
-		RequiredPermissions:     []types.Permission{{Domain: types.PermissionDomainParts, Action: types.ActionCreate}},
-		CounterpartyPermissions: apiendpoint.Counterparties(types.ActionUpdate),
-		Preview:                 true,
+		Title:             "Create Part",
+		Method:            http.MethodPost,
+		Route:             "/v1/catalog/parts",
+		ContentType:       "application/json",
+		SuccessStatusCode: http.StatusCreated,
+		Public:            true,
+		AgentTool:         true,
+		Auth:              authz.Policy{Permissions: []types.Permission{{Domain: types.PermissionDomainParts, Action: types.ActionCreate}}, Counterparty: authz.Counterparties(types.ActionUpdate)},
+		Preview:           true,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *CreatePartRequest) (*apiresource.Part, *apierror.APIError) {
 			return svc.(PartSvc).CreatePart
 		},

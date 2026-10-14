@@ -3,10 +3,10 @@ package agentep
 import (
 	"context"
 	"encoding/json"
+	"github.com/open-mrp/apikit/include"
 
 	grpcutil "github.com/open-mrp/api/services/api-gateway/internal/grpc"
 	apiresource "github.com/open-mrp/api/services/api-gateway/pkg/resource"
-	"github.com/open-mrp/api/services/api-gateway/pkg/resourcekit"
 	"github.com/open-mrp/api/shared/constants"
 	pb "github.com/open-mrp/api/shared/proto/agent"
 	"github.com/open-mrp/apikit/timeutil"
@@ -76,7 +76,7 @@ func AgentDefinitionPresenter(a *pb.AgentDefinitionInfo) apiresource.AgentDefini
 // StashAgentDefinitionMeta stashes the definition's expandable sub-resources (config, tools, and the
 // role FK id) into the request-scoped load meta. The role is loaded with real data via LoadRoles only
 // when ?include=role is requested; never fabricate role data here.
-func StashAgentDefinitionMeta(meta *resourcekit.LoadMeta, a *pb.AgentDefinitionInfo) {
+func StashAgentDefinitionMeta(meta *include.LoadMeta, a *pb.AgentDefinitionInfo) {
 	if a == nil {
 		return
 	}
@@ -117,7 +117,7 @@ func AgentDefinitionListPresenter(ctx context.Context, resp *pb.ListAgentDefinit
 		return apiresource.NewList[apiresource.AgentDefinition](nil, apiresource.PageInfo{})
 	}
 
-	meta := resourcekit.GetLoadMeta(ctx)
+	meta := include.GetLoadMeta(ctx)
 	agents := make([]apiresource.AgentDefinition, len(resp.Agents))
 	for i, a := range resp.Agents {
 		agents[i] = AgentDefinitionPresenter(a)

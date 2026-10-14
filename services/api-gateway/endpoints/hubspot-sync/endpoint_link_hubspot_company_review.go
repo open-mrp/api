@@ -4,12 +4,13 @@ import (
 	"context"
 	"net/http"
 
-	apiendpoint "github.com/open-mrp/api/services/api-gateway/pkg/endpoint"
-	apiexample "github.com/open-mrp/api/services/api-gateway/pkg/example"
+	"github.com/open-mrp/api/services/api-gateway/pkg/authz"
 	apiresource "github.com/open-mrp/api/services/api-gateway/pkg/resource"
 	"github.com/open-mrp/api/services/auth-service/pkg/types"
 	"github.com/open-mrp/api/shared/constants"
 	apierror "github.com/open-mrp/apikit/apierror"
+	apiendpoint "github.com/open-mrp/apikit/endpoint"
+	apiexample "github.com/open-mrp/apikit/example"
 )
 
 // Request to link a company review to an existing HubSpot company.
@@ -35,16 +36,16 @@ type LinkHubspotCompanyReviewEndpoint struct{}
 
 func (e *LinkHubspotCompanyReviewEndpoint) Materialize() *apiendpoint.APIEndpoint[*LinkHubspotCompanyReviewRequest, *apiresource.HubspotCompanyReview] {
 	return (&apiendpoint.APIEndpoint[*LinkHubspotCompanyReviewRequest, *apiresource.HubspotCompanyReview]{
-		Title:               "Link HubSpot Company Review",
-		Method:              http.MethodPost,
-		ContentType:         "application/json",
-		Route:               "/v1/settings/integrations/hubspot/sync/{id}/company-reviews/{review_id}/actions/link",
-		SuccessStatusCode:   http.StatusOK,
-		Public:              false,
-		AgentTool:           true,
-		Preview:             true,
-		ObjectType:          constants.ObjectTypeHubspotCompanyReview,
-		RequiredPermissions: []types.Permission{{Domain: types.PermissionDomainIntegrations, Action: types.ActionUpdate}},
+		Title:             "Link HubSpot Company Review",
+		Method:            http.MethodPost,
+		ContentType:       "application/json",
+		Route:             "/v1/settings/integrations/hubspot/sync/{id}/company-reviews/{review_id}/actions/link",
+		SuccessStatusCode: http.StatusOK,
+		Public:            false,
+		AgentTool:         true,
+		Preview:           true,
+		ObjectType:        constants.ObjectTypeHubspotCompanyReview,
+		Auth:              authz.Policy{Permissions: []types.Permission{{Domain: types.PermissionDomainIntegrations, Action: types.ActionUpdate}}},
 		ServiceHandler: func(svc any) func(ctx context.Context, req *LinkHubspotCompanyReviewRequest) (*apiresource.HubspotCompanyReview, *apierror.APIError) {
 			return svc.(HubspotSyncSvc).LinkCompanyReview
 		},

@@ -2,22 +2,22 @@ package resourceregistry
 
 import (
 	"context"
+	"github.com/open-mrp/apikit/include"
 
 	"github.com/open-mrp/api/services/api-gateway/internal/resourceloaders"
 	apiresource "github.com/open-mrp/api/services/api-gateway/pkg/resource"
-	"github.com/open-mrp/api/services/api-gateway/pkg/resourcekit"
 	"github.com/open-mrp/api/shared/constants"
 )
 
 func init() {
-	resourcekit.Register(&resourcekit.Definition{
+	include.Register(&include.Definition{
 		ObjectType: constants.ObjectTypeJob,
 		Load:       resourceloaders.LoadJobs,
-		Subs: []resourcekit.SubField{
+		Subs: []include.SubField{
 			{
 				Key:         "created_by",
 				Target:      constants.ObjectTypeActor,
-				Cardinality: resourcekit.CardinalityOnePtr,
+				Cardinality: include.CardinalityOnePtr,
 				ExtractIDs:  extractCreatedByIDFromJob,
 				Populate:    populateCreatedByOnJob,
 			},
@@ -32,7 +32,7 @@ func jobCreatedByID(ctx context.Context, parent any) string {
 	if !ok {
 		return ""
 	}
-	id, _ := resourcekit.GetLoadMeta(ctx).GetString(constants.ObjectTypeJob, job.ID, "created_by_id")
+	id, _ := include.GetLoadMeta(ctx).GetString(constants.ObjectTypeJob, job.ID, "created_by_id")
 	return id
 }
 

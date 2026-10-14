@@ -2,23 +2,23 @@ package resourceregistry
 
 import (
 	"context"
+	"github.com/open-mrp/apikit/include"
 
 	"github.com/open-mrp/api/services/api-gateway/internal/resourceloaders"
 	apiresource "github.com/open-mrp/api/services/api-gateway/pkg/resource"
-	"github.com/open-mrp/api/services/api-gateway/pkg/resourcekit"
 	"github.com/open-mrp/api/shared/constants"
 )
 
 func init() {
-	resourcekit.Register(&resourcekit.Definition{
+	include.Register(&include.Definition{
 		ObjectType: constants.ObjectTypeUnit,
 		Load:       resourceloaders.LoadUnits,
-		Subs: []resourcekit.SubField{
+		Subs: []include.SubField{
 			{Key: "owner", Populate: populateOwnerOnUnit},
 			{
 				Key:         "owner.account",
 				Target:      constants.ObjectTypeAccount,
-				Cardinality: resourcekit.CardinalityOnePtr,
+				Cardinality: include.CardinalityOnePtr,
 				ExtractIDs:  extractOwnerAccountIDFromUnit,
 				Populate:    populateOwnerAccountOnUnit,
 			},
@@ -28,14 +28,14 @@ func init() {
 
 func populateOwnerOnUnit(ctx context.Context, parent any, _ map[string]any) {
 	u := parent.(*apiresource.Unit)
-	id, _ := resourcekit.GetLoadMeta(ctx).
+	id, _ := include.GetLoadMeta(ctx).
 		GetString(constants.ObjectTypeUnit, u.ID, "owner_account_id")
 	u.Owner = buildOwnerShell(id)
 }
 
 func extractOwnerAccountIDFromUnit(ctx context.Context, parent any) []string {
 	u := parent.(*apiresource.Unit)
-	id, _ := resourcekit.GetLoadMeta(ctx).
+	id, _ := include.GetLoadMeta(ctx).
 		GetString(constants.ObjectTypeUnit, u.ID, "owner_account_id")
 	if id == "" {
 		return nil
@@ -48,7 +48,7 @@ func populateOwnerAccountOnUnit(ctx context.Context, parent any, loaded map[stri
 	if u.Owner == nil {
 		return
 	}
-	id, _ := resourcekit.GetLoadMeta(ctx).
+	id, _ := include.GetLoadMeta(ctx).
 		GetString(constants.ObjectTypeUnit, u.ID, "owner_account_id")
 	if id == "" {
 		return

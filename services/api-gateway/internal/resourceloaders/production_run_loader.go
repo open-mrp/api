@@ -2,11 +2,11 @@ package resourceloaders
 
 import (
 	"context"
+	"github.com/open-mrp/apikit/include"
 
 	"github.com/open-mrp/api/services/api-gateway/internal/domain"
 	grpcutil "github.com/open-mrp/api/services/api-gateway/internal/grpc"
 	apiresource "github.com/open-mrp/api/services/api-gateway/pkg/resource"
-	"github.com/open-mrp/api/services/api-gateway/pkg/resourcekit"
 	"github.com/open-mrp/api/shared/constants"
 	pb "github.com/open-mrp/api/shared/proto/core"
 	apierror "github.com/open-mrp/apikit/apierror"
@@ -21,7 +21,7 @@ func LoadProductionRuns(ctx context.Context, ids []string) (map[string]any, *api
 	if len(ids) == 0 {
 		return nil, nil
 	}
-	meta := resourcekit.GetLoadMeta(ctx)
+	meta := include.GetLoadMeta(ctx)
 	out := make(map[string]any, len(ids))
 	for _, id := range ids {
 		resp, apiErr := grpcutil.CallRPC(ctx, productionRunLoaderTracer, "loader.production_runs.get", domain.ServiceName,

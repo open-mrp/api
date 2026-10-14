@@ -4,11 +4,11 @@ import (
 	"net/http"
 	"strings"
 
-	httptransport "github.com/open-mrp/api/services/api-gateway/internal/http"
 	"github.com/open-mrp/api/services/auth-service/pkg/types"
 	"github.com/open-mrp/api/shared/apperr"
 	"github.com/open-mrp/api/shared/constants"
 	"github.com/open-mrp/apikit/appctx"
+	httptransport "github.com/open-mrp/apikit/transport"
 )
 
 func SubscriptionMiddleware() func(http.HandlerFunc) http.HandlerFunc {

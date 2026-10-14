@@ -7,7 +7,6 @@ import (
 	grpcclient "github.com/open-mrp/api/services/api-gateway/grpc-client"
 	"github.com/open-mrp/api/services/api-gateway/internal/cookie"
 	"github.com/open-mrp/api/services/api-gateway/internal/header"
-	httptransport "github.com/open-mrp/api/services/api-gateway/internal/http"
 	"github.com/open-mrp/api/services/auth-service/pkg/types"
 	"github.com/open-mrp/api/shared/contracts"
 	"github.com/open-mrp/api/shared/omrpctx"
@@ -15,6 +14,8 @@ import (
 	apierror "github.com/open-mrp/apikit/apierror"
 	"github.com/open-mrp/apikit/appctx"
 	"github.com/open-mrp/apikit/tracing"
+	"github.com/open-mrp/apikit/transport"
+	httptransport "github.com/open-mrp/apikit/transport"
 
 	"go.opentelemetry.io/otel"
 )
@@ -48,7 +49,7 @@ func AuthMiddleware(config *AuthMiddlewareConfig) func(http.HandlerFunc) http.Ha
 			spanName := fmt.Sprintf("HTTP %s %s", r.Method, r.URL.Path)
 			ctx, span := tracer.Start(r.Context(), spanName)
 
-			authHeader := r.Header.Get(header.AuthorizationHeader)
+			authHeader := r.Header.Get(transport.AuthorizationHeader)
 			openMRPAccountIDHeader := r.Header.Get(header.TargetAccountIDHeader)
 			actorAccountIDHeader := r.Header.Get(header.ActorAccountIDHeader)
 
@@ -68,7 +69,7 @@ func AuthMiddleware(config *AuthMiddlewareConfig) func(http.HandlerFunc) http.Ha
 			var authToken string
 
 			if authHeader != "" {
-				authResult, apiErr := header.ValidateAndExtractAuthHeader(authHeader)
+				authResult, apiErr := transport.ValidateAndExtractAuthHeader(authHeader)
 				if apiErr != nil {
 					httptransport.RespondWithAPIError(r.Context(), w, apiErr)
 					tracing.RecordControllerError(span, apiErr)

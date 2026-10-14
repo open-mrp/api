@@ -4,9 +4,11 @@ import (
 	"context"
 	"net/http"
 
-	apiendpoint "github.com/open-mrp/api/services/api-gateway/pkg/endpoint"
+	"github.com/open-mrp/apikit/object"
+
 	apiresource "github.com/open-mrp/api/services/api-gateway/pkg/resource"
 	apierror "github.com/open-mrp/apikit/apierror"
+	apiendpoint "github.com/open-mrp/apikit/endpoint"
 )
 
 // Returns a paginated list of the authenticated user's registration sessions that are still in progress, newest first.
@@ -14,8 +16,8 @@ import (
 // The list is empty once the user has finished registering.
 type ListSessionsEndpoint struct{}
 
-func (e *ListSessionsEndpoint) Materialize() *apiendpoint.APIEndpoint[*apiresource.PaginationRequest, *apiresource.List[apiresource.RegistrationSession]] {
-	return (&apiendpoint.APIEndpoint[*apiresource.PaginationRequest, *apiresource.List[apiresource.RegistrationSession]]{
+func (e *ListSessionsEndpoint) Materialize() *apiendpoint.APIEndpoint[*object.ListRequest, *apiresource.List[apiresource.RegistrationSession]] {
+	return (&apiendpoint.APIEndpoint[*object.ListRequest, *apiresource.List[apiresource.RegistrationSession]]{
 		Title:             "List Registration Sessions",
 		Method:            http.MethodGet,
 		ContentType:       "application/json",
@@ -23,7 +25,7 @@ func (e *ListSessionsEndpoint) Materialize() *apiendpoint.APIEndpoint[*apiresour
 		SuccessStatusCode: http.StatusOK,
 		Public:            false,
 		Preview:           true,
-		ServiceHandler: func(svc any) func(ctx context.Context, req *apiresource.PaginationRequest) (*apiresource.List[apiresource.RegistrationSession], *apierror.APIError) {
+		ServiceHandler: func(svc any) func(ctx context.Context, req *object.ListRequest) (*apiresource.List[apiresource.RegistrationSession], *apierror.APIError) {
 			return svc.(RegistrationSessionSvc).ListSessions
 		},
 	})

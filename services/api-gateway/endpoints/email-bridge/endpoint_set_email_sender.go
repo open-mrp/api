@@ -4,12 +4,13 @@ import (
 	"context"
 	"net/http"
 
-	apiendpoint "github.com/open-mrp/api/services/api-gateway/pkg/endpoint"
-	apiexample "github.com/open-mrp/api/services/api-gateway/pkg/example"
+	"github.com/open-mrp/api/services/api-gateway/pkg/authz"
 	apiresource "github.com/open-mrp/api/services/api-gateway/pkg/resource"
 	"github.com/open-mrp/api/services/auth-service/pkg/types"
 	"github.com/open-mrp/api/shared/constants"
 	apierror "github.com/open-mrp/apikit/apierror"
+	apiendpoint "github.com/open-mrp/apikit/endpoint"
+	apiexample "github.com/open-mrp/apikit/example"
 	"github.com/open-mrp/apikit/field"
 )
 
@@ -44,16 +45,16 @@ type SetEmailSenderEndpoint struct{}
 
 func (e *SetEmailSenderEndpoint) Materialize() *apiendpoint.APIEndpoint[*SetEmailSenderRequest, *apiresource.EmailSender] {
 	return (&apiendpoint.APIEndpoint[*SetEmailSenderRequest, *apiresource.EmailSender]{
-		Title:               "Set Email Sender",
-		Method:              http.MethodPut,
-		ContentType:         "application/json",
-		Route:               "/v1/messaging/email-sender",
-		SuccessStatusCode:   http.StatusOK,
-		Public:              true,
-		AgentTool:           true,
-		Preview:             true,
-		ObjectType:          constants.ObjectTypeEmailSender,
-		RequiredPermissions: []types.Permission{{Domain: types.PermissionDomainMessaging, Action: types.ActionUpdate}},
+		Title:             "Set Email Sender",
+		Method:            http.MethodPut,
+		ContentType:       "application/json",
+		Route:             "/v1/messaging/email-sender",
+		SuccessStatusCode: http.StatusOK,
+		Public:            true,
+		AgentTool:         true,
+		Preview:           true,
+		ObjectType:        constants.ObjectTypeEmailSender,
+		Auth:              authz.Policy{Permissions: []types.Permission{{Domain: types.PermissionDomainMessaging, Action: types.ActionUpdate}}},
 		ServiceHandler: func(svc any) func(ctx context.Context, req *SetEmailSenderRequest) (*apiresource.EmailSender, *apierror.APIError) {
 			return svc.(EmailBridgeSvc).SetSender
 		},

@@ -4,10 +4,11 @@ import (
 	"context"
 	"net/http"
 
-	apiendpoint "github.com/open-mrp/api/services/api-gateway/pkg/endpoint"
+	"github.com/open-mrp/api/services/api-gateway/pkg/authz"
 	apiresource "github.com/open-mrp/api/services/api-gateway/pkg/resource"
 	"github.com/open-mrp/api/services/auth-service/pkg/types"
 	apierror "github.com/open-mrp/apikit/apierror"
+	apiendpoint "github.com/open-mrp/apikit/endpoint"
 )
 
 // Request to delete an operating calendar.
@@ -30,9 +31,9 @@ func (e *DeleteOperatingCalendarEndpoint) Materialize() *apiendpoint.APIEndpoint
 		Public:            true,
 		AgentTool:         true,
 		Preview:           true,
-		RequiredPermissions: []types.Permission{
+		Auth: authz.Policy{Permissions: []types.Permission{
 			{Domain: types.PermissionDomainProductionSchedules, Action: types.ActionDelete},
-		},
+		}},
 		ServiceHandler: func(svc any) func(ctx context.Context, req *DeleteOperatingCalendarRequest) (*apiresource.EmptyResource, *apierror.APIError) {
 			return svc.(OperatingCalendarSvc).DeleteOperatingCalendar
 		},

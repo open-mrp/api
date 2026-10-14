@@ -5,11 +5,12 @@ import (
 	"net/http"
 	"time"
 
-	apiendpoint "github.com/open-mrp/api/services/api-gateway/pkg/endpoint"
+	"github.com/open-mrp/api/services/api-gateway/pkg/authz"
 	apiresource "github.com/open-mrp/api/services/api-gateway/pkg/resource"
 	"github.com/open-mrp/api/services/auth-service/pkg/types"
 	"github.com/open-mrp/api/shared/constants"
 	apierror "github.com/open-mrp/apikit/apierror"
+	apiendpoint "github.com/open-mrp/apikit/endpoint"
 )
 
 // AnalyzeSalesBreakdownRequest is the request to total invoiced sales by one dimension.
@@ -35,16 +36,16 @@ type AnalyzeSalesBreakdownEndpoint struct{}
 
 func (e *AnalyzeSalesBreakdownEndpoint) Materialize() *apiendpoint.APIEndpoint[*AnalyzeSalesBreakdownRequest, *apiresource.List[apiresource.SalesBreakdown]] {
 	return (&apiendpoint.APIEndpoint[*AnalyzeSalesBreakdownRequest, *apiresource.List[apiresource.SalesBreakdown]]{
-		Title:               "Analyze Sales Breakdown",
-		Method:              http.MethodPut,
-		Route:               "/v1/core/analytics/sales-breakdown",
-		ContentType:         "application/json",
-		SuccessStatusCode:   http.StatusOK,
-		Public:              false,
-		AgentTool:           true,
-		Preview:             true,
-		ReadOnly:            true,
-		RequiredPermissions: []types.Permission{{Domain: types.PermissionDomainInvoices, Action: types.ActionRead}},
+		Title:             "Analyze Sales Breakdown",
+		Method:            http.MethodPut,
+		Route:             "/v1/core/analytics/sales-breakdown",
+		ContentType:       "application/json",
+		SuccessStatusCode: http.StatusOK,
+		Public:            false,
+		AgentTool:         true,
+		Preview:           true,
+		ReadOnly:          true,
+		Auth:              authz.Policy{Permissions: []types.Permission{{Domain: types.PermissionDomainInvoices, Action: types.ActionRead}}},
 		ServiceHandler: func(svc any) func(ctx context.Context, req *AnalyzeSalesBreakdownRequest) (*apiresource.List[apiresource.SalesBreakdown], *apierror.APIError) {
 			return svc.(AnalyticsSvc).AnalyzeSalesBreakdown
 		},

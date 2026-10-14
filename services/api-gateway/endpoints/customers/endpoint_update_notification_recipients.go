@@ -4,12 +4,13 @@ import (
 	"context"
 	"net/http"
 
-	apiendpoint "github.com/open-mrp/api/services/api-gateway/pkg/endpoint"
-	apiexample "github.com/open-mrp/api/services/api-gateway/pkg/example"
+	"github.com/open-mrp/api/services/api-gateway/pkg/authz"
 	apiresource "github.com/open-mrp/api/services/api-gateway/pkg/resource"
 	"github.com/open-mrp/api/services/auth-service/pkg/types"
 	"github.com/open-mrp/api/shared/constants"
 	apierror "github.com/open-mrp/apikit/apierror"
+	apiendpoint "github.com/open-mrp/apikit/endpoint"
+	apiexample "github.com/open-mrp/apikit/example"
 )
 
 // A notification recipient to configure for a customer.
@@ -57,16 +58,15 @@ type UpdateNotificationRecipientsEndpoint struct{}
 
 func (e *UpdateNotificationRecipientsEndpoint) Materialize() *apiendpoint.APIEndpoint[*UpdateNotificationRecipientsRequest, *apiresource.List[apiresource.OrderNotificationRecipient]] {
 	return (&apiendpoint.APIEndpoint[*UpdateNotificationRecipientsRequest, *apiresource.List[apiresource.OrderNotificationRecipient]]{
-		Title:                   "Update Customer Notification Recipients",
-		Method:                  http.MethodPatch,
-		ContentType:             "application/json",
-		Route:                   "/v1/sales/customers/{id}/notification-recipients",
-		SuccessStatusCode:       http.StatusOK,
-		Public:                  false,
-		AgentTool:               true,
-		Preview:                 true,
-		RequiredPermissions:     []types.Permission{{Domain: types.PermissionDomainCustomers, Action: types.ActionUpdate}},
-		CounterpartyPermissions: apiendpoint.Counterparties(types.ActionUpdate),
+		Title:             "Update Customer Notification Recipients",
+		Method:            http.MethodPatch,
+		ContentType:       "application/json",
+		Route:             "/v1/sales/customers/{id}/notification-recipients",
+		SuccessStatusCode: http.StatusOK,
+		Public:            false,
+		AgentTool:         true,
+		Preview:           true,
+		Auth:              authz.Policy{Permissions: []types.Permission{{Domain: types.PermissionDomainCustomers, Action: types.ActionUpdate}}, Counterparty: authz.Counterparties(types.ActionUpdate)},
 		ServiceHandler: func(svc any) func(ctx context.Context, req *UpdateNotificationRecipientsRequest) (*apiresource.List[apiresource.OrderNotificationRecipient], *apierror.APIError) {
 			return svc.(CustomerSvc).UpdateNotificationRecipients
 		},

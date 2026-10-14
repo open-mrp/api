@@ -4,10 +4,11 @@ import (
 	"context"
 	"net/http"
 
-	apiendpoint "github.com/open-mrp/api/services/api-gateway/pkg/endpoint"
+	"github.com/open-mrp/api/services/api-gateway/pkg/authz"
 	apiresource "github.com/open-mrp/api/services/api-gateway/pkg/resource"
 	"github.com/open-mrp/api/services/auth-service/pkg/types"
 	apierror "github.com/open-mrp/apikit/apierror"
+	apiendpoint "github.com/open-mrp/apikit/endpoint"
 )
 
 // Request to remove an account user.
@@ -23,16 +24,15 @@ type RemoveAccountUserEndpoint struct{}
 
 func (e *RemoveAccountUserEndpoint) Materialize() *apiendpoint.APIEndpoint[*RemoveAccountUserRequest, *apiresource.EmptyResource] {
 	return (&apiendpoint.APIEndpoint[*RemoveAccountUserRequest, *apiresource.EmptyResource]{
-		Title:                   "Remove Account User",
-		Method:                  http.MethodPut,
-		ContentType:             "application/json",
-		Route:                   "/v1/identity/account-users/{id}/actions/remove",
-		SuccessStatusCode:       http.StatusOK,
-		Public:                  true,
-		AgentTool:               true,
-		RequiredPermissions:     []types.Permission{{Domain: types.PermissionDomainTeamUsers, Action: types.ActionDelete}},
-		CounterpartyPermissions: apiendpoint.Counterparties(types.ActionDelete),
-		Preview:                 true,
+		Title:             "Remove Account User",
+		Method:            http.MethodPut,
+		ContentType:       "application/json",
+		Route:             "/v1/identity/account-users/{id}/actions/remove",
+		SuccessStatusCode: http.StatusOK,
+		Public:            true,
+		AgentTool:         true,
+		Auth:              authz.Policy{Permissions: []types.Permission{{Domain: types.PermissionDomainTeamUsers, Action: types.ActionDelete}}, Counterparty: authz.Counterparties(types.ActionDelete)},
+		Preview:           true,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *RemoveAccountUserRequest) (*apiresource.EmptyResource, *apierror.APIError) {
 			return svc.(AccountUserSvc).RemoveAccountUser
 		},

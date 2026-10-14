@@ -2,43 +2,43 @@ package resourceregistry
 
 import (
 	"context"
+	"github.com/open-mrp/apikit/include"
 
 	"github.com/open-mrp/api/services/api-gateway/internal/resourceloaders"
 	apiresource "github.com/open-mrp/api/services/api-gateway/pkg/resource"
-	"github.com/open-mrp/api/services/api-gateway/pkg/resourcekit"
 	"github.com/open-mrp/api/shared/constants"
 )
 
 func init() {
-	resourcekit.Register(&resourcekit.Definition{
+	include.Register(&include.Definition{
 		ObjectType: constants.ObjectTypeMachineDowntimeEvent,
 		Load:       resourceloaders.LoadMachineDowntimeEvents,
-		Subs: []resourcekit.SubField{
+		Subs: []include.SubField{
 			{
 				Key:         "machine",
 				Target:      constants.ObjectTypeMachine,
-				Cardinality: resourcekit.CardinalityOnePtr,
+				Cardinality: include.CardinalityOnePtr,
 				ExtractIDs:  extractDowntimeRefIDs("machine_id"),
 				Populate:    populateDowntimeMachine,
 			},
 			{
 				Key:         "department",
 				Target:      constants.ObjectTypeDepartment,
-				Cardinality: resourcekit.CardinalityOnePtr,
+				Cardinality: include.CardinalityOnePtr,
 				ExtractIDs:  extractDowntimeRefIDs("department_id"),
 				Populate:    populateDowntimeDepartment,
 			},
 			{
 				Key:         "item",
 				Target:      constants.ObjectTypeItem,
-				Cardinality: resourcekit.CardinalityOnePtr,
+				Cardinality: include.CardinalityOnePtr,
 				ExtractIDs:  extractDowntimeRefIDs("item_id"),
 				Populate:    populateDowntimeItem,
 			},
 			{
 				Key:         "reported_by",
 				Target:      constants.ObjectTypeActor,
-				Cardinality: resourcekit.CardinalityOnePtr,
+				Cardinality: include.CardinalityOnePtr,
 				ExtractIDs:  extractDowntimeRefIDs("reported_by_id"),
 				Populate:    populateDowntimeReportedBy,
 			},
@@ -59,7 +59,7 @@ func downtimeRefID(ctx context.Context, parent any, key string) string {
 	if eventID == "" {
 		return ""
 	}
-	id, _ := resourcekit.GetLoadMeta(ctx).
+	id, _ := include.GetLoadMeta(ctx).
 		GetString(constants.ObjectTypeMachineDowntimeEvent, eventID, key)
 	return id
 }

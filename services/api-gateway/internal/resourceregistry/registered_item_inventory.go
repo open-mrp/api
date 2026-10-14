@@ -2,18 +2,18 @@ package resourceregistry
 
 import (
 	"context"
+	"github.com/open-mrp/apikit/include"
 
 	"github.com/open-mrp/api/services/api-gateway/internal/resourceloaders"
 	apiresource "github.com/open-mrp/api/services/api-gateway/pkg/resource"
-	"github.com/open-mrp/api/services/api-gateway/pkg/resourcekit"
 	"github.com/open-mrp/api/shared/constants"
 )
 
 func init() {
-	resourcekit.Register(&resourcekit.Definition{
+	include.Register(&include.Definition{
 		ObjectType: constants.ObjectTypeItemInventory,
 		Load:       resourceloaders.LoadItemInventories,
-		Subs: []resourcekit.SubField{
+		Subs: []include.SubField{
 			{Key: "on_hand", Populate: populateOnHandOnItemInventory},
 			{Key: "reserved", Populate: populateReservedOnItemInventory},
 			{Key: "available_to_promise", Populate: populateATPOnItemInventory},
@@ -24,7 +24,7 @@ func init() {
 
 func populateOnHandOnItemInventory(ctx context.Context, parent any, _ map[string]any) {
 	inv := parent.(*apiresource.ItemInventory)
-	v, ok := resourcekit.GetLoadMeta(ctx).Get(constants.ObjectTypeItemInventory, "singleton", "on_hand")
+	v, ok := include.GetLoadMeta(ctx).Get(constants.ObjectTypeItemInventory, "singleton", "on_hand")
 	if !ok {
 		return
 	}
@@ -33,7 +33,7 @@ func populateOnHandOnItemInventory(ctx context.Context, parent any, _ map[string
 
 func populateReservedOnItemInventory(ctx context.Context, parent any, _ map[string]any) {
 	inv := parent.(*apiresource.ItemInventory)
-	v, ok := resourcekit.GetLoadMeta(ctx).Get(constants.ObjectTypeItemInventory, "singleton", "reserved")
+	v, ok := include.GetLoadMeta(ctx).Get(constants.ObjectTypeItemInventory, "singleton", "reserved")
 	if !ok {
 		return
 	}
@@ -42,7 +42,7 @@ func populateReservedOnItemInventory(ctx context.Context, parent any, _ map[stri
 
 func populateATPOnItemInventory(ctx context.Context, parent any, _ map[string]any) {
 	inv := parent.(*apiresource.ItemInventory)
-	v, ok := resourcekit.GetLoadMeta(ctx).Get(constants.ObjectTypeItemInventory, "singleton", "available_to_promise")
+	v, ok := include.GetLoadMeta(ctx).Get(constants.ObjectTypeItemInventory, "singleton", "available_to_promise")
 	if !ok {
 		return
 	}
@@ -51,7 +51,7 @@ func populateATPOnItemInventory(ctx context.Context, parent any, _ map[string]an
 
 func populateShortOnItemInventory(ctx context.Context, parent any, _ map[string]any) {
 	inv := parent.(*apiresource.ItemInventory)
-	v, ok := resourcekit.GetLoadMeta(ctx).Get(constants.ObjectTypeItemInventory, "singleton", "short")
+	v, ok := include.GetLoadMeta(ctx).Get(constants.ObjectTypeItemInventory, "singleton", "short")
 	if !ok {
 		return
 	}

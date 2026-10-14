@@ -4,10 +4,11 @@ import (
 	"context"
 	"net/http"
 
-	apiendpoint "github.com/open-mrp/api/services/api-gateway/pkg/endpoint"
+	"github.com/open-mrp/api/services/api-gateway/pkg/authz"
 	apiresource "github.com/open-mrp/api/services/api-gateway/pkg/resource"
 	"github.com/open-mrp/api/services/auth-service/pkg/types"
 	apierror "github.com/open-mrp/apikit/apierror"
+	apiendpoint "github.com/open-mrp/apikit/endpoint"
 )
 
 // Request to delete a reusable roster.
@@ -23,13 +24,13 @@ type DeleteMessagingGroupEndpoint struct{}
 
 func (e *DeleteMessagingGroupEndpoint) Materialize() *apiendpoint.APIEndpoint[*DeleteMessagingGroupRequest, *apiresource.EmptyResource] {
 	return (&apiendpoint.APIEndpoint[*DeleteMessagingGroupRequest, *apiresource.EmptyResource]{
-		Title:               "Delete Messaging Group",
-		Method:              http.MethodDelete,
-		Route:               "/v1/messaging/groups/{id}",
-		SuccessStatusCode:   http.StatusOK,
-		Public:              true,
-		Preview:             true,
-		RequiredPermissions: []types.Permission{{Domain: types.PermissionDomainMessaging, Action: types.ActionDelete}},
+		Title:             "Delete Messaging Group",
+		Method:            http.MethodDelete,
+		Route:             "/v1/messaging/groups/{id}",
+		SuccessStatusCode: http.StatusOK,
+		Public:            true,
+		Preview:           true,
+		Auth:              authz.Policy{Permissions: []types.Permission{{Domain: types.PermissionDomainMessaging, Action: types.ActionDelete}}},
 		ServiceHandler: func(svc any) func(ctx context.Context, req *DeleteMessagingGroupRequest) (*apiresource.EmptyResource, *apierror.APIError) {
 			return svc.(MessagingGroupSvc).DeleteMessagingGroup
 		},

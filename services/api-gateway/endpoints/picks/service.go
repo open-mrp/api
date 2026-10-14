@@ -3,11 +3,11 @@ package pickep
 import (
 	"context"
 	"fmt"
+	"github.com/open-mrp/apikit/include"
 
 	jobep "github.com/open-mrp/api/services/api-gateway/endpoints/jobs"
 	grpcutil "github.com/open-mrp/api/services/api-gateway/internal/grpc"
 	apiresource "github.com/open-mrp/api/services/api-gateway/pkg/resource"
-	"github.com/open-mrp/api/services/api-gateway/pkg/resourcekit"
 	"github.com/open-mrp/api/shared/constants"
 	pb "github.com/open-mrp/api/shared/proto/core"
 	apierror "github.com/open-mrp/apikit/apierror"
@@ -68,7 +68,7 @@ func (m *pickSvcImpl) ListPicks(ctx context.Context, req *ListPicksRequest) (*ap
 		Sort:  string(sort),
 		// List and detail return the same resource, so the backend gets the same include set
 		// (related.sales_order / customer are resolved gateway-side from stashed FK ids).
-		Includes: resourcekit.FilterIncludes(ctx, pickDetailIncludes...),
+		Includes: include.FilterIncludes(ctx, pickDetailIncludes...),
 	}
 	if req.Cursor != nil {
 		pbReq.Cursor = req.Cursor
@@ -113,7 +113,7 @@ func (m *pickSvcImpl) ListPicks(ctx context.Context, req *ListPicksRequest) (*ap
 }
 
 func (m *pickSvcImpl) GetPick(ctx context.Context, req *RetrievePickRequest) (*apiresource.Pick, *apierror.APIError) {
-	pbReq := &pb.GetPickRequest{Id: req.PickID, Includes: resourcekit.FilterIncludes(ctx, pickDetailIncludes...)}
+	pbReq := &pb.GetPickRequest{Id: req.PickID, Includes: include.FilterIncludes(ctx, pickDetailIncludes...)}
 
 	resp, apiErr := grpcutil.CallRPC(ctx, pickEpSvcTracer, "service.picks.get", domain.ServiceName,
 		func(ctx context.Context, opts ...grpc.CallOption) (*pb.GetPickResponse, error) {
@@ -356,7 +356,7 @@ func portalVisibility(enabled *bool) constants.CustomerPortalVisibility {
 }
 
 func stashPickDetailMeta(ctx context.Context, d *apiresource.Pick, info *pb.PickInfo) {
-	meta := resourcekit.GetLoadMeta(ctx)
+	meta := include.GetLoadMeta(ctx)
 
 	// related.sales_order and customer are expandable references: stash the FK ids so
 	// LoadSalesOrders / LoadCustomers fetch real data on ?include=. Never fabricate.
@@ -418,7 +418,7 @@ func pickLineDetailFromProto(info *pb.PickLineInfo) apiresource.PickLine {
 }
 
 func stashPickLineDetailMeta(ctx context.Context, d *apiresource.PickLine, info *pb.PickLineInfo) {
-	meta := resourcekit.GetLoadMeta(ctx)
+	meta := include.GetLoadMeta(ctx)
 	line := buildSalesOrderLineForPick(info)
 	meta.Set(constants.ObjectTypePickLine, d.ID, "sales_order_line", line)
 

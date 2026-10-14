@@ -2,23 +2,23 @@ package resourceregistry
 
 import (
 	"context"
+	"github.com/open-mrp/apikit/include"
 
 	"github.com/open-mrp/api/services/api-gateway/internal/resourceloaders"
 	apiresource "github.com/open-mrp/api/services/api-gateway/pkg/resource"
-	"github.com/open-mrp/api/services/api-gateway/pkg/resourcekit"
 	"github.com/open-mrp/api/shared/constants"
 )
 
 func init() {
-	resourcekit.Register(&resourcekit.Definition{
+	include.Register(&include.Definition{
 		ObjectType: constants.ObjectTypeMessagingBlock,
 		Load:       resourceloaders.LoadMessagingBlocks,
-		Subs: []resourcekit.SubField{
+		Subs: []include.SubField{
 			// blocked_user carries only its id inline (the block gRPC returns no profile), so it is fetched by id via the global account_user loader — which in turn stashes its own user/role/department FKs, letting blocked_user.user/role/department recurse.
 			{
 				Key:         "blocked_user",
 				Target:      constants.ObjectTypeAccountUser,
-				Cardinality: resourcekit.CardinalityOnePtr,
+				Cardinality: include.CardinalityOnePtr,
 				ExtractIDs:  extractBlockedUserIDFromBlock,
 				Populate:    populateBlockedUserOnBlock,
 			},
@@ -28,7 +28,7 @@ func init() {
 
 func extractBlockedUserIDFromBlock(ctx context.Context, parent any) []string {
 	b := parent.(*apiresource.MessagingBlock)
-	id, _ := resourcekit.GetLoadMeta(ctx).GetString(constants.ObjectTypeMessagingBlock, b.ID, "blocked_user_id")
+	id, _ := include.GetLoadMeta(ctx).GetString(constants.ObjectTypeMessagingBlock, b.ID, "blocked_user_id")
 	if id == "" {
 		return nil
 	}
@@ -37,7 +37,7 @@ func extractBlockedUserIDFromBlock(ctx context.Context, parent any) []string {
 
 func populateBlockedUserOnBlock(ctx context.Context, parent any, loaded map[string]any) {
 	b := parent.(*apiresource.MessagingBlock)
-	id, _ := resourcekit.GetLoadMeta(ctx).GetString(constants.ObjectTypeMessagingBlock, b.ID, "blocked_user_id")
+	id, _ := include.GetLoadMeta(ctx).GetString(constants.ObjectTypeMessagingBlock, b.ID, "blocked_user_id")
 	if id == "" {
 		return
 	}

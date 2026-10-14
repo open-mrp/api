@@ -2,7 +2,6 @@ package main
 
 import (
 	grpcclient "github.com/open-mrp/api/services/api-gateway/grpc-client"
-	apiendpoint "github.com/open-mrp/api/services/api-gateway/pkg/endpoint"
 	httpgroup "github.com/open-mrp/api/services/api-gateway/pkg/group"
 	agentpb "github.com/open-mrp/api/shared/proto/agent"
 	authpb "github.com/open-mrp/api/shared/proto/auth"
@@ -10,6 +9,7 @@ import (
 	pbgrpc "github.com/open-mrp/api/shared/proto/core"
 	notificationpb "github.com/open-mrp/api/shared/proto/notification"
 	platformpb "github.com/open-mrp/api/shared/proto/platform"
+	apiendpoint "github.com/open-mrp/apikit/endpoint"
 )
 
 // openAPIEndpointGroups returns the same endpoint groups used to generate OpenAPI specs, with dummy gRPC clients suitable for static reflection only.

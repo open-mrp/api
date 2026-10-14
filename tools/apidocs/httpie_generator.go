@@ -11,8 +11,8 @@ import (
 	"runtime/debug"
 	"strings"
 
-	apiendpoint "github.com/open-mrp/api/services/api-gateway/pkg/endpoint"
 	"github.com/open-mrp/api/shared/contracts"
+	apiendpoint "github.com/open-mrp/apikit/endpoint"
 )
 
 // noAccountHeaderGroups are groups where the OpenMRP-Account-ID header should be omitted.

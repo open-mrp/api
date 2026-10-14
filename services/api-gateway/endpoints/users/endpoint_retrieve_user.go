@@ -4,11 +4,12 @@ import (
 	"context"
 	"net/http"
 
-	apiendpoint "github.com/open-mrp/api/services/api-gateway/pkg/endpoint"
+	"github.com/open-mrp/api/services/api-gateway/pkg/authz"
 	apiresource "github.com/open-mrp/api/services/api-gateway/pkg/resource"
 	"github.com/open-mrp/api/services/auth-service/pkg/types"
 	"github.com/open-mrp/api/shared/constants"
 	apierror "github.com/open-mrp/apikit/apierror"
+	apiendpoint "github.com/open-mrp/apikit/endpoint"
 )
 
 // Request to retrieve a user.
@@ -37,10 +38,9 @@ func (e *RetrieveUserEndpoint) Materialize() *apiendpoint.APIEndpoint[*RetrieveU
 		AgentTool:         true,
 		Preview:           true,
 		ObjectType:        constants.ObjectTypeUser,
-		RequiredPermissions: []types.Permission{
+		Auth: authz.Policy{Permissions: []types.Permission{
 			{Domain: types.PermissionDomainTeamUsers, Action: types.ActionRead},
-		},
-		SelfPathParam: "id",
+		}, SelfPathParam: "id"},
 		ServiceHandler: func(svc any) func(ctx context.Context, req *RetrieveUserRequest) (*apiresource.User, *apierror.APIError) {
 			return svc.(UserSvc).GetUser
 		},

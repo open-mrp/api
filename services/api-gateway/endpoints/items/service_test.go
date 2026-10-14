@@ -2,12 +2,12 @@ package itemep
 
 import (
 	"context"
+	"github.com/open-mrp/apikit/include"
 	"slices"
 	"testing"
 
 	"github.com/open-mrp/api/services/api-gateway/internal/resourceloaders"
 	_ "github.com/open-mrp/api/services/api-gateway/internal/resourceregistry"
-	"github.com/open-mrp/api/services/api-gateway/pkg/resourcekit"
 	"github.com/open-mrp/api/shared/constants"
 	"github.com/open-mrp/api/shared/contracts"
 	pb "github.com/open-mrp/api/shared/proto/core"
@@ -71,7 +71,7 @@ func TestGetItem_ReadsTheRecordTheListReads(t *testing.T) {
 		UnitCost:     &pb.RateInfo{Id: "rt_cost", Value: "2.5"},
 	}}
 	svc := NewItemSvc(&ItemSvcConfig{CoreClient: core})
-	ctx := resourcekit.WithLoadMeta(context.Background())
+	ctx := include.WithLoadMeta(context.Background())
 
 	item, apiErr := svc.GetItem(ctx, &RetrieveItemRequest{ItemID: "itm_1"})
 	if apiErr != nil {
@@ -93,7 +93,7 @@ func TestGetItem_ReadsTheRecordTheListReads(t *testing.T) {
 	if core.request.GetWithCategories() || core.request.GetWithAttributeProperties() {
 		t.Errorf("asked core for the item's category or attribute properties though nothing included them: %v", core.request)
 	}
-	meta := resourcekit.GetLoadMeta(ctx)
+	meta := include.GetLoadMeta(ctx)
 	if v, ok := meta.Get(constants.ObjectTypeItem, "itm_1", "unit_cost"); !ok || v == nil {
 		t.Error("unit cost not stashed for ?include=unit_cost")
 	}
@@ -113,8 +113,8 @@ func TestGetItem_EmbedsTheCategoryAndAttributePropertiesReadWithTheItem(t *testi
 		properties: []*pb.PropertyInfo{{Id: "pp_1", Name: "Color"}},
 	}
 	svc := NewItemSvc(&ItemSvcConfig{CoreClient: core})
-	ctx := resourcekit.WithLoadMeta(context.Background())
-	ctx = resourcekit.WithRequestedIncludes(ctx, []string{"category", "category.properties", "attributes"})
+	ctx := include.WithLoadMeta(context.Background())
+	ctx = include.WithRequestedIncludes(ctx, []string{"category", "category.properties", "attributes"})
 
 	item, apiErr := svc.GetItem(ctx, &RetrieveItemRequest{ItemID: "itm_1"})
 	if apiErr != nil {
@@ -124,11 +124,11 @@ func TestGetItem_EmbedsTheCategoryAndAttributePropertiesReadWithTheItem(t *testi
 		t.Fatalf("core was not asked for the embedded records: %v", core.request)
 	}
 
-	tree := resourcekit.NewIncludeTree()
+	tree := include.NewIncludeTree()
 	for _, key := range []string{"category", "category.properties", "attributes"} {
 		tree.Add(key)
 	}
-	if apiErr := resourcekit.ResolveIncludes(ctx, []any{item}, constants.ObjectTypeItem, tree); apiErr != nil {
+	if apiErr := include.ResolveIncludes(ctx, []any{item}, constants.ObjectTypeItem, tree); apiErr != nil {
 		t.Fatalf("ResolveIncludes() error = %v", apiErr)
 	}
 	if item.Category == nil || item.Category.Name != "Socks" {

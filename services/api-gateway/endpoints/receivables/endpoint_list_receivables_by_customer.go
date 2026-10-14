@@ -5,16 +5,23 @@ import (
 	"net/http"
 	"time"
 
-	apiendpoint "github.com/open-mrp/api/services/api-gateway/pkg/endpoint"
+	"github.com/open-mrp/apikit/object"
+
+	"github.com/open-mrp/api/services/api-gateway/pkg/authz"
 	apiresource "github.com/open-mrp/api/services/api-gateway/pkg/resource"
 	"github.com/open-mrp/api/services/auth-service/pkg/types"
 	"github.com/open-mrp/api/shared/constants"
 	apierror "github.com/open-mrp/apikit/apierror"
+	apiendpoint "github.com/open-mrp/apikit/endpoint"
 )
 
 // Request to list receivable entries for a specific customer.
 type ListReceivablesByCustomerRequest struct {
-	apiresource.PaginationRequest
+	object.ListRequest
+	// Free-text search term used to filter results.
+	//
+	// Which fields are matched against the term varies by endpoint.
+	Query *string `query:"q" validate:"omitempty,max=500"`
 	// ID of the customer account whose outstanding balances are listed.
 	AccountID string `json:"-" path:"account_id" validate:"required"`
 	// Compute receivable balances as of this timestamp.
@@ -39,9 +46,9 @@ func (e *ListReceivablesByCustomerEndpoint) Materialize() *apiendpoint.APIEndpoi
 		AgentTool:         true,
 		Preview:           true,
 		ObjectType:        constants.ObjectTypeReceivableEntry,
-		RequiredPermissions: []types.Permission{
+		Auth: authz.Policy{Permissions: []types.Permission{
 			{Domain: types.PermissionDomainCustomers, Action: types.ActionRead},
-		},
+		}},
 		ServiceHandler: func(svc any) func(ctx context.Context, req *ListReceivablesByCustomerRequest) (*apiresource.List[apiresource.ReceivableEntry], *apierror.APIError) {
 			return svc.(ReceivableSvc).ListReceivablesByCustomer
 		},

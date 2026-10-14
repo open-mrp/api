@@ -2,12 +2,12 @@ package resourceloaders
 
 import (
 	"context"
+	"github.com/open-mrp/apikit/include"
 	"time"
 
 	"github.com/open-mrp/api/services/api-gateway/internal/domain"
 	grpcutil "github.com/open-mrp/api/services/api-gateway/internal/grpc"
 	apiresource "github.com/open-mrp/api/services/api-gateway/pkg/resource"
-	"github.com/open-mrp/api/services/api-gateway/pkg/resourcekit"
 	"github.com/open-mrp/api/shared/constants"
 	pb "github.com/open-mrp/api/shared/proto/core"
 	apierror "github.com/open-mrp/apikit/apierror"
@@ -43,7 +43,7 @@ func LoadShipments(ctx context.Context, ids []string) (map[string]any, *apierror
 		// date) so lightweight Record references to this shipment — e.g. a sales order's
 		// related.shipments — can carry a shipment preview without expanding the full resource.
 		if meta := shipmentRecordMetadata(resp.Shipment); len(meta) > 0 {
-			resourcekit.GetLoadMeta(ctx).Set(constants.ObjectTypeShipment, resp.Shipment.Id, "record_metadata", meta)
+			include.GetLoadMeta(ctx).Set(constants.ObjectTypeShipment, resp.Shipment.Id, "record_metadata", meta)
 		}
 	}
 	return out, nil

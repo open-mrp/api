@@ -2,11 +2,11 @@ package resourceloaders
 
 import (
 	"context"
+	"github.com/open-mrp/apikit/include"
 
 	"github.com/open-mrp/api/services/api-gateway/internal/domain"
 	grpcutil "github.com/open-mrp/api/services/api-gateway/internal/grpc"
 	apiresource "github.com/open-mrp/api/services/api-gateway/pkg/resource"
-	"github.com/open-mrp/api/services/api-gateway/pkg/resourcekit"
 	"github.com/open-mrp/api/shared/constants"
 	pb "github.com/open-mrp/api/shared/proto/core"
 	apierror "github.com/open-mrp/apikit/apierror"
@@ -38,7 +38,7 @@ func LoadAccountGroupProductLineAccess(ctx context.Context, ids []string) (map[s
 		groupIDs[i] = item.AccountGroupId
 		granted[i] = item.ProductLines
 	}
-	embedCtx := resourcekit.WithIncludeReads(ctx)
+	embedCtx := include.WithIncludeReads(ctx)
 	groups, apiErr := LoadAccountGroups(embedCtx, groupIDs)
 	if apiErr != nil {
 		return nil, apiErr

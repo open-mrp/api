@@ -4,12 +4,13 @@ import (
 	"context"
 	"net/http"
 
-	apiendpoint "github.com/open-mrp/api/services/api-gateway/pkg/endpoint"
-	apiexample "github.com/open-mrp/api/services/api-gateway/pkg/example"
+	"github.com/open-mrp/api/services/api-gateway/pkg/authz"
 	apiresource "github.com/open-mrp/api/services/api-gateway/pkg/resource"
 	"github.com/open-mrp/api/services/auth-service/pkg/types"
 	"github.com/open-mrp/api/shared/constants"
 	apierror "github.com/open-mrp/apikit/apierror"
+	apiendpoint "github.com/open-mrp/apikit/endpoint"
+	apiexample "github.com/open-mrp/apikit/example"
 )
 
 // Request to set the triage lane of a customer-service case.
@@ -43,17 +44,17 @@ type SetWorkflowStatusEndpoint struct{}
 
 func (e *SetWorkflowStatusEndpoint) Materialize() *apiendpoint.APIEndpoint[*SetWorkflowStatusRequest, *apiresource.Conversation] {
 	return (&apiendpoint.APIEndpoint[*SetWorkflowStatusRequest, *apiresource.Conversation]{
-		Title:               "Set Case Status",
-		Method:              http.MethodPost,
-		ContentType:         "application/json",
-		Route:               "/v1/messaging/conversations/{id}/actions/set-status",
-		SuccessStatusCode:   http.StatusOK,
-		Public:              true,
-		AgentTool:           true,
-		Preview:             true,
-		ObjectType:          constants.ObjectTypeConversation,
-		IncludeConfig:       conversationIncludeConfig(),
-		RequiredPermissions: []types.Permission{{Domain: types.PermissionDomainMessaging, Action: types.ActionUpdate}},
+		Title:             "Set Case Status",
+		Method:            http.MethodPost,
+		ContentType:       "application/json",
+		Route:             "/v1/messaging/conversations/{id}/actions/set-status",
+		SuccessStatusCode: http.StatusOK,
+		Public:            true,
+		AgentTool:         true,
+		Preview:           true,
+		ObjectType:        constants.ObjectTypeConversation,
+		IncludeConfig:     conversationIncludeConfig(),
+		Auth:              authz.Policy{Permissions: []types.Permission{{Domain: types.PermissionDomainMessaging, Action: types.ActionUpdate}}},
 		ServiceHandler: func(svc any) func(ctx context.Context, req *SetWorkflowStatusRequest) (*apiresource.Conversation, *apierror.APIError) {
 			return svc.(ConversationSvc).SetWorkflowStatus
 		},

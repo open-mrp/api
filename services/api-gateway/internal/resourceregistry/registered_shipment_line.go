@@ -2,18 +2,18 @@ package resourceregistry
 
 import (
 	"context"
+	"github.com/open-mrp/apikit/include"
 
 	"github.com/open-mrp/api/services/api-gateway/internal/resourceloaders"
 	apiresource "github.com/open-mrp/api/services/api-gateway/pkg/resource"
-	"github.com/open-mrp/api/services/api-gateway/pkg/resourcekit"
 	"github.com/open-mrp/api/shared/constants"
 )
 
 func init() {
-	resourcekit.Register(&resourcekit.Definition{
+	include.Register(&include.Definition{
 		ObjectType: constants.ObjectTypeShipmentLine,
 		Load:       resourceloaders.LoadShipmentLines,
-		Subs: []resourcekit.SubField{
+		Subs: []include.SubField{
 			// ExtractRefs (not a loader Target) because the line is already stashed by the shipment
 			// presenter; it exists so the resolver descends into it for lines.sales_order_line.product.
 			{
@@ -25,7 +25,7 @@ func init() {
 			{
 				Key:         "item",
 				Target:      constants.ObjectTypeItem,
-				Cardinality: resourcekit.CardinalityOnePtr,
+				Cardinality: include.CardinalityOnePtr,
 				ExtractIDs:  extractItemIDFromShipmentLine,
 				Populate:    populateItemOnShipmentLine,
 			},
@@ -33,7 +33,7 @@ func init() {
 				// The quantity is already on the line — this exists so a caller can reach through it to the unit.
 				Key:         "quantity",
 				Target:      constants.ObjectTypeQuantity,
-				Cardinality: resourcekit.CardinalityOnePtr,
+				Cardinality: include.CardinalityOnePtr,
 				ExtractRefs: extractQuantityRefFromShipmentLine,
 			},
 		},
@@ -42,7 +42,7 @@ func init() {
 
 func extractItemIDFromShipmentLine(ctx context.Context, parent any) []string {
 	l := parent.(*apiresource.ShipmentLine)
-	id, _ := resourcekit.GetLoadMeta(ctx).GetString(constants.ObjectTypeShipmentLine, l.ID, "item_id")
+	id, _ := include.GetLoadMeta(ctx).GetString(constants.ObjectTypeShipmentLine, l.ID, "item_id")
 	if id == "" {
 		return nil
 	}
@@ -51,7 +51,7 @@ func extractItemIDFromShipmentLine(ctx context.Context, parent any) []string {
 
 func populateItemOnShipmentLine(ctx context.Context, parent any, loaded map[string]any) {
 	l := parent.(*apiresource.ShipmentLine)
-	id, _ := resourcekit.GetLoadMeta(ctx).GetString(constants.ObjectTypeShipmentLine, l.ID, "item_id")
+	id, _ := include.GetLoadMeta(ctx).GetString(constants.ObjectTypeShipmentLine, l.ID, "item_id")
 	if id == "" {
 		return
 	}
@@ -70,7 +70,7 @@ func extractQuantityRefFromShipmentLine(_ context.Context, parent any) []any {
 
 func populateSalesOrderLineOnShipmentLine(ctx context.Context, parent any, _ map[string]any) {
 	l := parent.(*apiresource.ShipmentLine)
-	v, ok := resourcekit.GetLoadMeta(ctx).Get(constants.ObjectTypeShipmentLine, l.ID, "sales_order_line")
+	v, ok := include.GetLoadMeta(ctx).Get(constants.ObjectTypeShipmentLine, l.ID, "sales_order_line")
 	if !ok {
 		return
 	}

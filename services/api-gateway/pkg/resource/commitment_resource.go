@@ -3,8 +3,8 @@ package apiresource
 import (
 	"time"
 
-	apiexample "github.com/open-mrp/api/services/api-gateway/pkg/example"
 	"github.com/open-mrp/api/shared/constants"
+	apiexample "github.com/open-mrp/apikit/example"
 )
 
 // Commitment describes when a record is due to ship: what was asked for, what that resolved to, and which rule decided.

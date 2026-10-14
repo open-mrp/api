@@ -129,13 +129,13 @@ func TestSearchReadPermissions(t *testing.T) {
 
 func TestSearchQueryFromRequest(t *testing.T) {
 	q := "  PO-1001  "
-	assert.Equal(t, "PO-1001", searchQueryFromRequest(&SearchRequest{PaginationRequest: apiresource.PaginationRequest{Query: &q}}))
+	assert.Equal(t, "PO-1001", searchQueryFromRequest(&SearchRequest{Query: &q}))
 
 	// A missing or whitespace-only query normalizes to empty; whether that is allowed is decided by the caller (only when scoped with types).
 	assert.Equal(t, "", searchQueryFromRequest(&SearchRequest{}))
 
 	empty := "   "
-	assert.Equal(t, "", searchQueryFromRequest(&SearchRequest{PaginationRequest: apiresource.PaginationRequest{Query: &empty}}))
+	assert.Equal(t, "", searchQueryFromRequest(&SearchRequest{Query: &empty}))
 }
 
 func TestSearchTypeFilterFromRequest(t *testing.T) {

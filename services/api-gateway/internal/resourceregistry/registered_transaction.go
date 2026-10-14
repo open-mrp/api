@@ -2,53 +2,53 @@ package resourceregistry
 
 import (
 	"context"
+	"github.com/open-mrp/apikit/include"
 
 	"github.com/open-mrp/api/services/api-gateway/internal/resourceloaders"
 	apiresource "github.com/open-mrp/api/services/api-gateway/pkg/resource"
-	"github.com/open-mrp/api/services/api-gateway/pkg/resourcekit"
 	"github.com/open-mrp/api/shared/constants"
 )
 
 func init() {
-	resourcekit.Register(&resourcekit.Definition{
+	include.Register(&include.Definition{
 		ObjectType: constants.ObjectTypeTransaction,
 		Load:       resourceloaders.LoadTransactions,
-		Subs: []resourcekit.SubField{
+		Subs: []include.SubField{
 			{
 				Key:         "customer",
 				Target:      constants.ObjectTypeCustomer,
-				Cardinality: resourcekit.CardinalityOnePtr,
+				Cardinality: include.CardinalityOnePtr,
 				ExtractIDs:  extractCustomerIDFromTransaction,
 				Populate:    populateCustomerOnTransaction,
 			},
 			{
 				Key:         "responsible_user",
 				Target:      constants.ObjectTypeAccountUser,
-				Cardinality: resourcekit.CardinalityOnePtr,
+				Cardinality: include.CardinalityOnePtr,
 				ExtractIDs:  extractResponsibleUserIDFromTransaction,
 				Populate:    populateResponsibleUserOnTransaction,
 			},
-			{Key: "allocations", Cardinality: resourcekit.CardinalityList, Target: constants.ObjectTypeTransactionAllocation, ExtractRefs: extractAllocationRefsFromTransaction, Populate: populateAllocationsOnTransaction},
+			{Key: "allocations", Cardinality: include.CardinalityList, Target: constants.ObjectTypeTransactionAllocation, ExtractRefs: extractAllocationRefsFromTransaction, Populate: populateAllocationsOnTransaction},
 			{
 				// The amount is already on the transaction — this exists so a caller can reach
 				// through it to the currency it is counted in.
 				Key:         "amount",
 				Target:      constants.ObjectTypeQuantity,
-				Cardinality: resourcekit.CardinalityOnePtr,
+				Cardinality: include.CardinalityOnePtr,
 				ExtractRefs: extractAmountRefFromTransaction,
 			},
 		},
 	})
 	// The transactions LIST returns TransactionSummary (a distinct resource), so it needs its own definition — the detail's customer funcs cast to *TransactionDetail.
-	resourcekit.Register(&resourcekit.Definition{
+	include.Register(&include.Definition{
 		ObjectType: constants.ObjectTypeTransactionSummary,
 		// transaction_summary only ever appears as a top-level list root, never as an include target, so Load is never invoked; reuse the transaction loader to satisfy the registry's non-nil Load requirement.
 		Load: resourceloaders.LoadTransactions,
-		Subs: []resourcekit.SubField{
+		Subs: []include.SubField{
 			{
 				Key:         "customer",
 				Target:      constants.ObjectTypeCustomer,
-				Cardinality: resourcekit.CardinalityOnePtr,
+				Cardinality: include.CardinalityOnePtr,
 				ExtractIDs:  extractCustomerIDFromTransactionSummary,
 				Populate:    populateCustomerOnTransactionSummary,
 			},
@@ -58,7 +58,7 @@ func init() {
 
 func extractCustomerIDFromTransactionSummary(ctx context.Context, parent any) []string {
 	tx := parent.(*apiresource.TransactionSummary)
-	id, _ := resourcekit.GetLoadMeta(ctx).GetString(constants.ObjectTypeTransactionSummary, tx.ID, "customer_id")
+	id, _ := include.GetLoadMeta(ctx).GetString(constants.ObjectTypeTransactionSummary, tx.ID, "customer_id")
 	if id == "" {
 		return nil
 	}
@@ -67,7 +67,7 @@ func extractCustomerIDFromTransactionSummary(ctx context.Context, parent any) []
 
 func populateCustomerOnTransactionSummary(ctx context.Context, parent any, loaded map[string]any) {
 	tx := parent.(*apiresource.TransactionSummary)
-	id, _ := resourcekit.GetLoadMeta(ctx).GetString(constants.ObjectTypeTransactionSummary, tx.ID, "customer_id")
+	id, _ := include.GetLoadMeta(ctx).GetString(constants.ObjectTypeTransactionSummary, tx.ID, "customer_id")
 	if id == "" {
 		return
 	}
@@ -78,7 +78,7 @@ func populateCustomerOnTransactionSummary(ctx context.Context, parent any, loade
 
 func extractCustomerIDFromTransaction(ctx context.Context, parent any) []string {
 	tx := parent.(*apiresource.TransactionDetail)
-	id, _ := resourcekit.GetLoadMeta(ctx).GetString(constants.ObjectTypeTransaction, tx.ID, "customer_id")
+	id, _ := include.GetLoadMeta(ctx).GetString(constants.ObjectTypeTransaction, tx.ID, "customer_id")
 	if id == "" {
 		return nil
 	}
@@ -87,7 +87,7 @@ func extractCustomerIDFromTransaction(ctx context.Context, parent any) []string 
 
 func populateCustomerOnTransaction(ctx context.Context, parent any, loaded map[string]any) {
 	tx := parent.(*apiresource.TransactionDetail)
-	id, _ := resourcekit.GetLoadMeta(ctx).GetString(constants.ObjectTypeTransaction, tx.ID, "customer_id")
+	id, _ := include.GetLoadMeta(ctx).GetString(constants.ObjectTypeTransaction, tx.ID, "customer_id")
 	if id == "" {
 		return
 	}
@@ -98,7 +98,7 @@ func populateCustomerOnTransaction(ctx context.Context, parent any, loaded map[s
 
 func extractResponsibleUserIDFromTransaction(ctx context.Context, parent any) []string {
 	tx := parent.(*apiresource.TransactionDetail)
-	id, _ := resourcekit.GetLoadMeta(ctx).
+	id, _ := include.GetLoadMeta(ctx).
 		GetString(constants.ObjectTypeTransaction, tx.ID, "responsible_user_id")
 	if id == "" {
 		return nil
@@ -108,7 +108,7 @@ func extractResponsibleUserIDFromTransaction(ctx context.Context, parent any) []
 
 func populateResponsibleUserOnTransaction(ctx context.Context, parent any, loaded map[string]any) {
 	tx := parent.(*apiresource.TransactionDetail)
-	id, _ := resourcekit.GetLoadMeta(ctx).
+	id, _ := include.GetLoadMeta(ctx).
 		GetString(constants.ObjectTypeTransaction, tx.ID, "responsible_user_id")
 	if id == "" {
 		return
@@ -120,7 +120,7 @@ func populateResponsibleUserOnTransaction(ctx context.Context, parent any, loade
 
 func populateAllocationsOnTransaction(ctx context.Context, parent any, _ map[string]any) {
 	tx := parent.(*apiresource.TransactionDetail)
-	v, ok := resourcekit.GetLoadMeta(ctx).
+	v, ok := include.GetLoadMeta(ctx).
 		Get(constants.ObjectTypeTransaction, tx.ID, "allocations")
 	if !ok {
 		return

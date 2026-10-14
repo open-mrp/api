@@ -3,11 +3,11 @@ package deliveryep
 import (
 	"context"
 	"fmt"
+	"github.com/open-mrp/apikit/include"
 
 	"github.com/open-mrp/api/services/api-gateway/internal/domain"
 	grpcutil "github.com/open-mrp/api/services/api-gateway/internal/grpc"
 	apiresource "github.com/open-mrp/api/services/api-gateway/pkg/resource"
-	"github.com/open-mrp/api/services/api-gateway/pkg/resourcekit"
 	"github.com/open-mrp/api/shared/constants"
 	pb "github.com/open-mrp/api/shared/proto/core"
 	apierror "github.com/open-mrp/apikit/apierror"
@@ -59,7 +59,7 @@ func (m *deliverySvcImpl) ListDeliveries(ctx context.Context, req *ListDeliverie
 		ItemIds:     req.ItemIDs,
 		SupplierIds: req.SupplierIDs,
 		// Only lines cost the backend anything; the related purchase order is carried on the row the query already returns.
-		Includes: resourcekit.FilterIncludes(ctx, "lines"),
+		Includes: include.FilterIncludes(ctx, "lines"),
 	}
 
 	if req.StartDate != nil {
@@ -135,9 +135,9 @@ func stashDeliverySummaryMeta(ctx context.Context, d *apiresource.Delivery, info
 		lines := make([]apiresource.DeliveryLine, len(info.Lines))
 		for i, l := range info.Lines {
 			lines[i] = deliveryLineFromProto(l)
-			stashDeliveryLineMeta(resourcekit.GetLoadMeta(ctx), l, &lines[i])
+			stashDeliveryLineMeta(include.GetLoadMeta(ctx), l, &lines[i])
 		}
-		resourcekit.GetLoadMeta(ctx).Set(constants.ObjectTypeDelivery, d.ID, "lines",
+		include.GetLoadMeta(ctx).Set(constants.ObjectTypeDelivery, d.ID, "lines",
 			apiresource.NewList(lines, apiresource.PageInfo{}))
 	}
 }
@@ -165,7 +165,7 @@ func stashDeliveryMeta(ctx context.Context, d *apiresource.Delivery, info *pb.De
 	if info == nil {
 		return
 	}
-	meta := resourcekit.GetLoadMeta(ctx)
+	meta := include.GetLoadMeta(ctx)
 
 	stashDeliveryRelated(ctx, d.ID, info.PurchaseOrderId, info.PurchaseOrderNumber, info.PurchaseOrderStatus, info.ReceivingOrderId, info.ReceivingOrderNumber, info.ReceivingOrderStatus)
 
@@ -173,7 +173,7 @@ func stashDeliveryMeta(ctx context.Context, d *apiresource.Delivery, info *pb.De
 		lines := make([]apiresource.DeliveryLine, len(info.Lines))
 		for i, l := range info.Lines {
 			lines[i] = deliveryLineFromProto(l)
-			stashDeliveryLineMeta(resourcekit.GetLoadMeta(ctx), l, &lines[i])
+			stashDeliveryLineMeta(include.GetLoadMeta(ctx), l, &lines[i])
 		}
 		meta.Set(constants.ObjectTypeDelivery, d.ID, "lines",
 			apiresource.NewList(lines, apiresource.PageInfo{}))
@@ -205,7 +205,7 @@ func deliveryLineFromProto(l *pb.DeliveryLineInfo) apiresource.DeliveryLine {
 }
 
 // stashDeliveryLineMeta carries each expandable sub-object of a line from what the query returned, so the include resolver can reveal the ones a caller asked for.
-func stashDeliveryLineMeta(meta *resourcekit.LoadMeta, l *pb.DeliveryLineInfo, line *apiresource.DeliveryLine) {
+func stashDeliveryLineMeta(meta *include.LoadMeta, l *pb.DeliveryLineInfo, line *apiresource.DeliveryLine) {
 	if l == nil || line.Quantity == nil {
 		return
 	}
@@ -286,5 +286,5 @@ func stashDeliveryRelated(ctx context.Context, deliveryID, purchaseOrderID, purc
 	if related.PurchaseOrder == nil && related.ReceivingOrder == nil {
 		return
 	}
-	resourcekit.GetLoadMeta(ctx).Set(constants.ObjectTypeDelivery, deliveryID, "related", related)
+	include.GetLoadMeta(ctx).Set(constants.ObjectTypeDelivery, deliveryID, "related", related)
 }

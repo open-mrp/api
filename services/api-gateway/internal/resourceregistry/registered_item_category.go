@@ -2,23 +2,23 @@ package resourceregistry
 
 import (
 	"context"
+	"github.com/open-mrp/apikit/include"
 
 	"github.com/open-mrp/api/services/api-gateway/internal/resourceloaders"
 	apiresource "github.com/open-mrp/api/services/api-gateway/pkg/resource"
-	"github.com/open-mrp/api/services/api-gateway/pkg/resourcekit"
 	"github.com/open-mrp/api/shared/constants"
 )
 
 func init() {
-	resourcekit.Register(&resourcekit.Definition{
+	include.Register(&include.Definition{
 		ObjectType: constants.ObjectTypeItemCategory,
 		Load:       resourceloaders.LoadItemCategories,
-		Subs: []resourcekit.SubField{
+		Subs: []include.SubField{
 			{Key: "owner", Populate: populateOwnerOnItemCategory},
 			{
 				Key:         "owner.account",
 				Target:      constants.ObjectTypeAccount,
-				Cardinality: resourcekit.CardinalityOnePtr,
+				Cardinality: include.CardinalityOnePtr,
 				ExtractIDs:  extractOwnerAccountIDFromItemCategory,
 				Populate:    populateOwnerAccountOnItemCategory,
 			},
@@ -35,14 +35,14 @@ func init() {
 
 func populateOwnerOnItemCategory(ctx context.Context, parent any, _ map[string]any) {
 	ic := parent.(*apiresource.ItemCategory)
-	id, _ := resourcekit.GetLoadMeta(ctx).
+	id, _ := include.GetLoadMeta(ctx).
 		GetString(constants.ObjectTypeItemCategory, ic.ID, "owner_account_id")
 	ic.Owner = buildOwnerShell(id)
 }
 
 func extractOwnerAccountIDFromItemCategory(ctx context.Context, parent any) []string {
 	ic := parent.(*apiresource.ItemCategory)
-	id, _ := resourcekit.GetLoadMeta(ctx).
+	id, _ := include.GetLoadMeta(ctx).
 		GetString(constants.ObjectTypeItemCategory, ic.ID, "owner_account_id")
 	if id == "" {
 		return nil
@@ -55,7 +55,7 @@ func populateOwnerAccountOnItemCategory(ctx context.Context, parent any, loaded 
 	if ic.Owner == nil {
 		return
 	}
-	id, _ := resourcekit.GetLoadMeta(ctx).
+	id, _ := include.GetLoadMeta(ctx).
 		GetString(constants.ObjectTypeItemCategory, ic.ID, "owner_account_id")
 	if id == "" {
 		return
@@ -67,7 +67,7 @@ func populateOwnerAccountOnItemCategory(ctx context.Context, parent any, loaded 
 
 func populatePropertiesOnItemCategory(ctx context.Context, parent any, _ map[string]any) {
 	ic := parent.(*apiresource.ItemCategory)
-	v, ok := resourcekit.GetLoadMeta(ctx).
+	v, ok := include.GetLoadMeta(ctx).
 		Get(constants.ObjectTypeItemCategory, ic.ID, "properties_list")
 	if !ok || v == nil {
 		return
@@ -85,7 +85,7 @@ func extractUnitGroupRefsFromItemCategory(_ context.Context, parent any) []any {
 
 func populateUnitGroupOnItemCategory(ctx context.Context, parent any, _ map[string]any) {
 	ic := parent.(*apiresource.ItemCategory)
-	v, ok := resourcekit.GetLoadMeta(ctx).
+	v, ok := include.GetLoadMeta(ctx).
 		Get(constants.ObjectTypeItemCategory, ic.ID, "unit_group")
 	if !ok || v == nil {
 		return

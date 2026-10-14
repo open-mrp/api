@@ -2,13 +2,13 @@ package resourceloaders
 
 import (
 	"context"
+	"github.com/open-mrp/apikit/include"
 	"strings"
 	"time"
 
 	"github.com/open-mrp/api/services/api-gateway/internal/domain"
 	grpcutil "github.com/open-mrp/api/services/api-gateway/internal/grpc"
 	apiresource "github.com/open-mrp/api/services/api-gateway/pkg/resource"
-	"github.com/open-mrp/api/services/api-gateway/pkg/resourcekit"
 	"github.com/open-mrp/api/shared/constants"
 	pb "github.com/open-mrp/api/shared/proto/core"
 	apierror "github.com/open-mrp/apikit/apierror"
@@ -86,7 +86,7 @@ func salesOrderReferenceFromProto(info *pb.SalesOrderInfo) *apiresource.SalesOrd
 // Translates the caller's `sales_order.*` include keys into the names core understands, so a
 // nested order fetches the relations its detail projection does not already carry.
 func nestedSalesOrderIncludes(ctx context.Context) []string {
-	requested := resourcekit.FilterIncludes(ctx, nestedSalesOrderIncludeKeys...)
+	requested := include.FilterIncludes(ctx, nestedSalesOrderIncludeKeys...)
 	out := make([]string, 0, len(requested))
 	for _, key := range requested {
 		out = append(out, strings.TrimPrefix(key, "sales_order."))
@@ -114,7 +114,7 @@ func stashNestedSalesOrderMeta(ctx context.Context, info *pb.SalesOrderInfo) {
 	if info == nil {
 		return
 	}
-	meta := resourcekit.GetLoadMeta(ctx)
+	meta := include.GetLoadMeta(ctx)
 
 	// The customer is resolved by id, so stash the FK: without it order.customer stays nil on every
 	// order reached as a nested include.

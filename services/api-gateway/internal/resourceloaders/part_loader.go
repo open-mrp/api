@@ -2,11 +2,11 @@ package resourceloaders
 
 import (
 	"context"
+	"github.com/open-mrp/apikit/include"
 
 	"github.com/open-mrp/api/services/api-gateway/internal/domain"
 	grpcutil "github.com/open-mrp/api/services/api-gateway/internal/grpc"
 	apiresource "github.com/open-mrp/api/services/api-gateway/pkg/resource"
-	"github.com/open-mrp/api/services/api-gateway/pkg/resourcekit"
 	"github.com/open-mrp/api/shared/constants"
 	pb "github.com/open-mrp/api/shared/proto/core"
 	apierror "github.com/open-mrp/apikit/apierror"
@@ -41,7 +41,7 @@ func StashPartMeta(ctx context.Context, p *pb.PartInfo) {
 	if p == nil {
 		return
 	}
-	resourcekit.GetLoadMeta(ctx).Set(constants.ObjectTypePart, p.Id, "item_id", p.ItemId)
+	include.GetLoadMeta(ctx).Set(constants.ObjectTypePart, p.Id, "item_id", p.ItemId)
 }
 
 // PartFromProto builds the gated Part resource: the expandable item is left nil and populated only when explicitly requested via the include resolver. Use this — never the full PartPresenter — when building a JSON API response.

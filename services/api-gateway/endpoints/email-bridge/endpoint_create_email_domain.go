@@ -4,12 +4,13 @@ import (
 	"context"
 	"net/http"
 
-	apiendpoint "github.com/open-mrp/api/services/api-gateway/pkg/endpoint"
-	apiexample "github.com/open-mrp/api/services/api-gateway/pkg/example"
+	"github.com/open-mrp/api/services/api-gateway/pkg/authz"
 	apiresource "github.com/open-mrp/api/services/api-gateway/pkg/resource"
 	"github.com/open-mrp/api/services/auth-service/pkg/types"
 	"github.com/open-mrp/api/shared/constants"
 	apierror "github.com/open-mrp/apikit/apierror"
+	apiendpoint "github.com/open-mrp/apikit/endpoint"
+	apiexample "github.com/open-mrp/apikit/example"
 )
 
 // Request to register a sending/receiving domain with the email bridge.
@@ -37,16 +38,16 @@ type CreateEmailDomainEndpoint struct{}
 
 func (e *CreateEmailDomainEndpoint) Materialize() *apiendpoint.APIEndpoint[*CreateEmailDomainRequest, *apiresource.EmailDomain] {
 	return (&apiendpoint.APIEndpoint[*CreateEmailDomainRequest, *apiresource.EmailDomain]{
-		Title:               "Create Email Domain",
-		Method:              http.MethodPost,
-		ContentType:         "application/json",
-		Route:               "/v1/messaging/email-domains",
-		SuccessStatusCode:   http.StatusCreated,
-		Public:              true,
-		AgentTool:           true,
-		Preview:             true,
-		ObjectType:          constants.ObjectTypeEmailDomain,
-		RequiredPermissions: []types.Permission{{Domain: types.PermissionDomainMessaging, Action: types.ActionCreate}},
+		Title:             "Create Email Domain",
+		Method:            http.MethodPost,
+		ContentType:       "application/json",
+		Route:             "/v1/messaging/email-domains",
+		SuccessStatusCode: http.StatusCreated,
+		Public:            true,
+		AgentTool:         true,
+		Preview:           true,
+		ObjectType:        constants.ObjectTypeEmailDomain,
+		Auth:              authz.Policy{Permissions: []types.Permission{{Domain: types.PermissionDomainMessaging, Action: types.ActionCreate}}},
 		ServiceHandler: func(svc any) func(ctx context.Context, req *CreateEmailDomainRequest) (*apiresource.EmailDomain, *apierror.APIError) {
 			return svc.(EmailBridgeSvc).CreateDomain
 		},

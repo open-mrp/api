@@ -2,44 +2,44 @@ package resourceregistry
 
 import (
 	"context"
+	"github.com/open-mrp/apikit/include"
 
 	"github.com/open-mrp/api/services/api-gateway/internal/resourceloaders"
 	apiresource "github.com/open-mrp/api/services/api-gateway/pkg/resource"
-	"github.com/open-mrp/api/services/api-gateway/pkg/resourcekit"
 	"github.com/open-mrp/api/shared/constants"
 )
 
 func init() {
-	resourcekit.Register(&resourcekit.Definition{
+	include.Register(&include.Definition{
 		ObjectType: constants.ObjectTypeShippingTerm,
 		Load:       resourceloaders.LoadShippingTerms,
-		Subs: []resourcekit.SubField{
+		Subs: []include.SubField{
 			{Key: "owner", Populate: populateOwnerOnShippingTerm},
 			{
 				Key:         "owner.account",
 				Target:      constants.ObjectTypeAccount,
-				Cardinality: resourcekit.CardinalityOnePtr,
+				Cardinality: include.CardinalityOnePtr,
 				ExtractIDs:  extractOwnerAccountIDFromShippingTerm,
 				Populate:    populateOwnerAccountOnShippingTerm,
 			},
 			{
 				Key:         "flat_rate.unit",
 				Target:      constants.ObjectTypeUnit,
-				Cardinality: resourcekit.CardinalityOnePtr,
+				Cardinality: include.CardinalityOnePtr,
 				ExtractIDs:  extractFlatRateUnitIDFromShippingTerm,
 				Populate:    populateFlatRateUnitOnShippingTerm,
 			},
 			{
 				Key:         "minimum_order_value.unit",
 				Target:      constants.ObjectTypeUnit,
-				Cardinality: resourcekit.CardinalityOnePtr,
+				Cardinality: include.CardinalityOnePtr,
 				ExtractIDs:  extractMinimumOrderValueUnitIDFromShippingTerm,
 				Populate:    populateMinimumOrderValueUnitOnShippingTerm,
 			},
 			{
 				Key:         "free_shipping_service_levels",
 				Target:      constants.ObjectTypeServiceLevel,
-				Cardinality: resourcekit.CardinalityList,
+				Cardinality: include.CardinalityList,
 				ExtractIDs:  extractFreeShippingServiceLevelIDsFromShippingTerm,
 				Populate:    populateFreeShippingServiceLevelsOnShippingTerm,
 			},
@@ -49,14 +49,14 @@ func init() {
 
 func populateOwnerOnShippingTerm(ctx context.Context, parent any, _ map[string]any) {
 	st := parent.(*apiresource.ShippingTerm)
-	id, _ := resourcekit.GetLoadMeta(ctx).
+	id, _ := include.GetLoadMeta(ctx).
 		GetString(constants.ObjectTypeShippingTerm, st.ID, "owner_account_id")
 	st.Owner = buildOwnerShell(id)
 }
 
 func extractOwnerAccountIDFromShippingTerm(ctx context.Context, parent any) []string {
 	st := parent.(*apiresource.ShippingTerm)
-	id, _ := resourcekit.GetLoadMeta(ctx).
+	id, _ := include.GetLoadMeta(ctx).
 		GetString(constants.ObjectTypeShippingTerm, st.ID, "owner_account_id")
 	if id == "" {
 		return nil
@@ -69,7 +69,7 @@ func populateOwnerAccountOnShippingTerm(ctx context.Context, parent any, loaded 
 	if st.Owner == nil {
 		return
 	}
-	id, _ := resourcekit.GetLoadMeta(ctx).
+	id, _ := include.GetLoadMeta(ctx).
 		GetString(constants.ObjectTypeShippingTerm, st.ID, "owner_account_id")
 	if id == "" {
 		return
@@ -81,7 +81,7 @@ func populateOwnerAccountOnShippingTerm(ctx context.Context, parent any, loaded 
 
 func extractFlatRateUnitIDFromShippingTerm(ctx context.Context, parent any) []string {
 	st := parent.(*apiresource.ShippingTerm)
-	id, _ := resourcekit.GetLoadMeta(ctx).
+	id, _ := include.GetLoadMeta(ctx).
 		GetString(constants.ObjectTypeShippingTerm, st.ID, "flat_rate_unit_id")
 	if id == "" {
 		return nil
@@ -94,7 +94,7 @@ func populateFlatRateUnitOnShippingTerm(ctx context.Context, parent any, loaded 
 	if st.FlatRate == nil {
 		return
 	}
-	id, _ := resourcekit.GetLoadMeta(ctx).
+	id, _ := include.GetLoadMeta(ctx).
 		GetString(constants.ObjectTypeShippingTerm, st.ID, "flat_rate_unit_id")
 	if id == "" {
 		return
@@ -106,7 +106,7 @@ func populateFlatRateUnitOnShippingTerm(ctx context.Context, parent any, loaded 
 
 func extractMinimumOrderValueUnitIDFromShippingTerm(ctx context.Context, parent any) []string {
 	st := parent.(*apiresource.ShippingTerm)
-	id, _ := resourcekit.GetLoadMeta(ctx).
+	id, _ := include.GetLoadMeta(ctx).
 		GetString(constants.ObjectTypeShippingTerm, st.ID, "minimum_order_value_unit_id")
 	if id == "" {
 		return nil
@@ -119,7 +119,7 @@ func populateMinimumOrderValueUnitOnShippingTerm(ctx context.Context, parent any
 	if st.MinimumOrderValue == nil {
 		return
 	}
-	id, _ := resourcekit.GetLoadMeta(ctx).
+	id, _ := include.GetLoadMeta(ctx).
 		GetString(constants.ObjectTypeShippingTerm, st.ID, "minimum_order_value_unit_id")
 	if id == "" {
 		return
@@ -131,14 +131,14 @@ func populateMinimumOrderValueUnitOnShippingTerm(ctx context.Context, parent any
 
 func extractFreeShippingServiceLevelIDsFromShippingTerm(ctx context.Context, parent any) []string {
 	st := parent.(*apiresource.ShippingTerm)
-	ids, _ := resourcekit.GetLoadMeta(ctx).
+	ids, _ := include.GetLoadMeta(ctx).
 		GetStrings(constants.ObjectTypeShippingTerm, st.ID, "free_shipping_service_level_ids")
 	return ids
 }
 
 func populateFreeShippingServiceLevelsOnShippingTerm(ctx context.Context, parent any, loaded map[string]any) {
 	st := parent.(*apiresource.ShippingTerm)
-	ids, _ := resourcekit.GetLoadMeta(ctx).
+	ids, _ := include.GetLoadMeta(ctx).
 		GetStrings(constants.ObjectTypeShippingTerm, st.ID, "free_shipping_service_level_ids")
 
 	items := make([]apiresource.ServiceLevel, 0, len(ids))

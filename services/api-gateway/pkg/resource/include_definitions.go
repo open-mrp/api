@@ -1,11 +1,22 @@
-package apiendpoint
+package apiresource
 
-import "github.com/open-mrp/api/shared/constants"
+import (
+	"github.com/open-mrp/api/shared/constants"
+	apiendpoint "github.com/open-mrp/apikit/endpoint"
+)
+
+// includeRegistry is every include registration made here, by object type, for the adherence test.
+var includeRegistry = map[constants.ObjectType]*apiendpoint.ObjectIncludes{}
+
+func registerIncludes(oi *apiendpoint.ObjectIncludes) {
+	includeRegistry[oi.ObjectType] = oi
+	apiendpoint.RegisterIncludes(oi)
+}
 
 func init() {
-	RegisterIncludes(&ObjectIncludes{
+	registerIncludes(&apiendpoint.ObjectIncludes{
 		ObjectType: constants.ObjectTypeCustomerPricingFinding,
-		Fields: []IncludeFieldDef{
+		Fields: []apiendpoint.IncludeFieldDef{
 			{Key: "customer", ObjectType: constants.ObjectTypeCustomer},
 			{Key: "product_line", ObjectType: constants.ObjectTypeProductLine},
 			{Key: "attributes", ObjectType: constants.ObjectTypeAttribute},
@@ -14,9 +25,9 @@ func init() {
 		},
 	})
 
-	RegisterIncludes(&ObjectIncludes{
+	registerIncludes(&apiendpoint.ObjectIncludes{
 		ObjectType: constants.ObjectTypeRealizedMarginFinding,
-		Fields: []IncludeFieldDef{
+		Fields: []apiendpoint.IncludeFieldDef{
 			{Key: "customer", ObjectType: constants.ObjectTypeCustomer},
 			{Key: "customer_group", ObjectType: constants.ObjectTypeAccountGroup},
 			{Key: "item", ObjectType: constants.ObjectTypeItem},
@@ -24,26 +35,26 @@ func init() {
 		},
 	})
 
-	RegisterIncludes(&ObjectIncludes{
+	registerIncludes(&apiendpoint.ObjectIncludes{
 		ObjectType: constants.ObjectTypeRole,
-		Fields: []IncludeFieldDef{
+		Fields: []apiendpoint.IncludeFieldDef{
 			{Key: "owner", ObjectType: constants.ObjectTypeOwner},
 			{Key: "permissions", ObjectType: constants.ObjectTypeRolePermission},
 		},
 	})
 
-	RegisterIncludes(&ObjectIncludes{
+	registerIncludes(&apiendpoint.ObjectIncludes{
 		ObjectType: constants.ObjectTypeAgentDefinition,
-		Fields: []IncludeFieldDef{
+		Fields: []apiendpoint.IncludeFieldDef{
 			{Key: "config", ObjectType: constants.ObjectTypeAgentDefinition},
 			{Key: "tools", ObjectType: constants.ObjectTypeAgentDefinitionTool},
 			{Key: "role", ObjectType: constants.ObjectTypeRole},
 		},
 	})
 
-	RegisterIncludes(&ObjectIncludes{
+	registerIncludes(&apiendpoint.ObjectIncludes{
 		ObjectType: constants.ObjectTypeAgentRun,
-		Fields: []IncludeFieldDef{
+		Fields: []apiendpoint.IncludeFieldDef{
 			{Key: "triggered_by", ObjectType: constants.ObjectTypeActor},
 			{Key: "actions", ObjectType: constants.ObjectTypeAgentAction},
 			{Key: "definition", ObjectType: constants.ObjectTypeAgentDefinition},
@@ -51,51 +62,51 @@ func init() {
 		},
 	})
 
-	RegisterIncludes(&ObjectIncludes{
+	registerIncludes(&apiendpoint.ObjectIncludes{
 		ObjectType: constants.ObjectTypeNotification,
-		Fields: []IncludeFieldDef{
+		Fields: []apiendpoint.IncludeFieldDef{
 			{Key: "sender", ObjectType: constants.ObjectTypeActor},
 			{Key: "resource", ObjectType: constants.ObjectTypeEntity},
 		},
 	})
 
-	RegisterIncludes(&ObjectIncludes{
+	registerIncludes(&apiendpoint.ObjectIncludes{
 		ObjectType: constants.ObjectTypeAnnouncement,
-		Fields: []IncludeFieldDef{
+		Fields: []apiendpoint.IncludeFieldDef{
 			{Key: "resource", ObjectType: constants.ObjectTypeEntity},
 		},
 	})
 
-	RegisterIncludes(&ObjectIncludes{
+	registerIncludes(&apiendpoint.ObjectIncludes{
 		ObjectType: constants.ObjectTypeAPIKey,
-		Fields: []IncludeFieldDef{
+		Fields: []apiendpoint.IncludeFieldDef{
 			{Key: "role", ObjectType: constants.ObjectTypeRole},
 		},
 	})
 
-	RegisterIncludes(&ObjectIncludes{
+	registerIncludes(&apiendpoint.ObjectIncludes{
 		ObjectType: constants.ObjectTypeActor,
-		Fields: []IncludeFieldDef{
+		Fields: []apiendpoint.IncludeFieldDef{
 			{Key: "role", ObjectType: constants.ObjectTypeRole},
 		},
 	})
 
-	RegisterIncludes(&ObjectIncludes{
+	registerIncludes(&apiendpoint.ObjectIncludes{
 		ObjectType: constants.ObjectTypeRequestLog,
-		Fields: []IncludeFieldDef{
+		Fields: []apiendpoint.IncludeFieldDef{
 			{Key: "account", ObjectType: constants.ObjectTypeAccount},
 			{Key: "query_params", ObjectType: constants.ObjectTypeRequestLog},
 			{Key: "request_body", ObjectType: constants.ObjectTypeRequestLog},
 			{Key: "response_body", ObjectType: constants.ObjectTypeRequestLog},
-			{Key: "actor", ObjectType: constants.ObjectTypeActor, Children: []IncludeFieldDef{
+			{Key: "actor", ObjectType: constants.ObjectTypeActor, Children: []apiendpoint.IncludeFieldDef{
 				{Key: "role", ObjectType: constants.ObjectTypeRole},
 			}},
 		},
 	})
 
-	RegisterIncludes(&ObjectIncludes{
+	registerIncludes(&apiendpoint.ObjectIncludes{
 		ObjectType: constants.ObjectTypeAuditEvent,
-		Fields: []IncludeFieldDef{
+		Fields: []apiendpoint.IncludeFieldDef{
 			{Key: "actor", ObjectType: constants.ObjectTypeActor},
 			{Key: "account", ObjectType: constants.ObjectTypeAccount},
 			{Key: "changes", ObjectType: constants.ObjectTypeAuditEvent},
@@ -104,43 +115,43 @@ func init() {
 		},
 	})
 
-	RegisterIncludes(&ObjectIncludes{
+	registerIncludes(&apiendpoint.ObjectIncludes{
 		ObjectType: constants.ObjectTypeEmailLog,
-		Fields: []IncludeFieldDef{
+		Fields: []apiendpoint.IncludeFieldDef{
 			{Key: "sent_by", ObjectType: constants.ObjectTypeActor},
 		},
 	})
 
-	RegisterIncludes(&ObjectIncludes{
+	registerIncludes(&apiendpoint.ObjectIncludes{
 		ObjectType: constants.ObjectTypeSandbox,
-		Fields: []IncludeFieldDef{
+		Fields: []apiendpoint.IncludeFieldDef{
 			{Key: "owner_account", ObjectType: constants.ObjectTypeAccount},
 		},
 	})
 
-	RegisterIncludes(&ObjectIncludes{
+	registerIncludes(&apiendpoint.ObjectIncludes{
 		ObjectType: constants.ObjectTypeToolGroup,
-		Fields: []IncludeFieldDef{
+		Fields: []apiendpoint.IncludeFieldDef{
 			{Key: "tools", ObjectType: constants.ObjectTypeAvailableTool},
 		},
 	})
 
-	RegisterIncludes(&ObjectIncludes{
+	registerIncludes(&apiendpoint.ObjectIncludes{
 		ObjectType: constants.ObjectTypeAccountUser,
-		Fields: []IncludeFieldDef{
+		Fields: []apiendpoint.IncludeFieldDef{
 			{Key: "user", ObjectType: constants.ObjectTypeUser},
 			{Key: "role", ObjectType: constants.ObjectTypeRole},
 			{Key: "department", ObjectType: constants.ObjectTypeDepartment},
 		},
 	})
 
-	RegisterIncludes(&ObjectIncludes{
+	registerIncludes(&apiendpoint.ObjectIncludes{
 		ObjectType: constants.ObjectTypeContactMatch,
-		Fields: []IncludeFieldDef{
+		Fields: []apiendpoint.IncludeFieldDef{
 			{
 				Key:        "account_user",
 				ObjectType: constants.ObjectTypeAccountUser,
-				Children: []IncludeFieldDef{
+				Children: []apiendpoint.IncludeFieldDef{
 					{Key: "user", ObjectType: constants.ObjectTypeUser},
 					{Key: "role", ObjectType: constants.ObjectTypeRole},
 					{Key: "department", ObjectType: constants.ObjectTypeDepartment},
@@ -150,20 +161,20 @@ func init() {
 		},
 	})
 
-	RegisterIncludes(&ObjectIncludes{
+	registerIncludes(&apiendpoint.ObjectIncludes{
 		ObjectType: constants.ObjectTypeOrderNotificationRecipient,
-		Fields: []IncludeFieldDef{
+		Fields: []apiendpoint.IncludeFieldDef{
 			{Key: "account_user", ObjectType: constants.ObjectTypeAccountUser},
 		},
 	})
 
-	RegisterIncludes(&ObjectIncludes{
+	registerIncludes(&apiendpoint.ObjectIncludes{
 		ObjectType: constants.ObjectTypeMessagingBlock,
-		Fields: []IncludeFieldDef{
+		Fields: []apiendpoint.IncludeFieldDef{
 			{
 				Key:        "blocked_user",
 				ObjectType: constants.ObjectTypeAccountUser,
-				Children: []IncludeFieldDef{
+				Children: []apiendpoint.IncludeFieldDef{
 					{Key: "user", ObjectType: constants.ObjectTypeUser},
 					{Key: "role", ObjectType: constants.ObjectTypeRole},
 					{Key: "department", ObjectType: constants.ObjectTypeDepartment},
@@ -172,27 +183,27 @@ func init() {
 		},
 	})
 
-	RegisterIncludes(&ObjectIncludes{
+	registerIncludes(&apiendpoint.ObjectIncludes{
 		ObjectType: constants.ObjectTypeDepartment,
-		Fields: []IncludeFieldDef{
+		Fields: []apiendpoint.IncludeFieldDef{
 			{Key: "location", ObjectType: constants.ObjectTypeLocation},
 			{Key: "scanning_stations", ObjectType: constants.ObjectTypeScanningStation},
 			{Key: "machines", ObjectType: constants.ObjectTypeMachine},
 		},
 	})
 
-	RegisterIncludes(&ObjectIncludes{
+	registerIncludes(&apiendpoint.ObjectIncludes{
 		ObjectType: constants.ObjectTypeConsumption,
-		Fields: []IncludeFieldDef{
+		Fields: []apiendpoint.IncludeFieldDef{
 			{Key: "quantity", ObjectType: constants.ObjectTypeQuantity},
 			{Key: "waste_quantity", ObjectType: constants.ObjectTypeQuantity},
 			{Key: "consumed_item", ObjectType: constants.ObjectTypeItem},
 		},
 	})
 
-	RegisterIncludes(&ObjectIncludes{
+	registerIncludes(&apiendpoint.ObjectIncludes{
 		ObjectType: constants.ObjectTypeCustomer,
-		Fields: []IncludeFieldDef{
+		Fields: []apiendpoint.IncludeFieldDef{
 			{Key: "bill_to_address", ObjectType: constants.ObjectTypeAddress},
 			{Key: "ship_to_address", ObjectType: constants.ObjectTypeAddress},
 			{Key: "type", ObjectType: constants.ObjectTypeAccountGroup},
@@ -200,7 +211,7 @@ func init() {
 			{
 				Key:        "freight_preferences",
 				ObjectType: constants.ObjectTypeCustomer,
-				Children: []IncludeFieldDef{
+				Children: []apiendpoint.IncludeFieldDef{
 					{Key: "carrier", ObjectType: constants.ObjectTypeCarrier},
 					{Key: "service_level", ObjectType: constants.ObjectTypeServiceLevel},
 				},
@@ -208,7 +219,7 @@ func init() {
 			{
 				Key:        "defaults",
 				ObjectType: constants.ObjectTypeCustomer,
-				Children: []IncludeFieldDef{
+				Children: []apiendpoint.IncludeFieldDef{
 					{Key: "payment_term", ObjectType: constants.ObjectTypePaymentTerm},
 					{Key: "shipping_term", ObjectType: constants.ObjectTypeShippingTerm},
 					{Key: "priority", ObjectType: constants.ObjectTypePriority},
@@ -219,44 +230,44 @@ func init() {
 			{Key: "notification_preferences", ObjectType: constants.ObjectTypeCustomerNotificationPreferences},
 			{Key: "price_groups", ObjectType: constants.ObjectTypeAccountGroup},
 			{Key: "child_accounts", ObjectType: constants.ObjectTypeCustomer},
-			{Key: "credit_limit", ObjectType: constants.ObjectTypeQuantity, Children: []IncludeFieldDef{
+			{Key: "credit_limit", ObjectType: constants.ObjectTypeQuantity, Children: []apiendpoint.IncludeFieldDef{
 				{Key: "unit", ObjectType: constants.ObjectTypeUnit},
 			}},
 		},
 	})
 
-	RegisterIncludes(&ObjectIncludes{
+	registerIncludes(&apiendpoint.ObjectIncludes{
 		ObjectType: constants.ObjectTypeQuantity,
-		Fields: []IncludeFieldDef{
+		Fields: []apiendpoint.IncludeFieldDef{
 			{Key: "unit", ObjectType: constants.ObjectTypeUnit},
 		},
 	})
 
-	RegisterIncludes(&ObjectIncludes{
+	registerIncludes(&apiendpoint.ObjectIncludes{
 		ObjectType: constants.ObjectTypeInventoryItem,
-		Fields: []IncludeFieldDef{
+		Fields: []apiendpoint.IncludeFieldDef{
 			{Key: "product_line", ObjectType: constants.ObjectTypeProductLine},
 		},
 	})
 
-	RegisterIncludes(&ObjectIncludes{
+	registerIncludes(&apiendpoint.ObjectIncludes{
 		ObjectType: constants.ObjectTypeItemLotDefault,
-		Fields: []IncludeFieldDef{
+		Fields: []apiendpoint.IncludeFieldDef{
 			{Key: "unit", ObjectType: constants.ObjectTypeUnit},
 		},
 	})
 
-	RegisterIncludes(&ObjectIncludes{
+	registerIncludes(&apiendpoint.ObjectIncludes{
 		ObjectType: constants.ObjectTypeCustomerLeadTime,
-		Fields: []IncludeFieldDef{
+		Fields: []apiendpoint.IncludeFieldDef{
 			{Key: "account_group", ObjectType: constants.ObjectTypeAccountGroup},
 			{Key: "parent_customer", ObjectType: constants.ObjectTypeCustomer},
 		},
 	})
 
-	RegisterIncludes(&ObjectIncludes{
+	registerIncludes(&apiendpoint.ObjectIncludes{
 		ObjectType: constants.ObjectTypeItemInventory,
-		Fields: []IncludeFieldDef{
+		Fields: []apiendpoint.IncludeFieldDef{
 			{Key: "on_hand", ObjectType: constants.ObjectTypeComputedQuantity},
 			{Key: "reserved", ObjectType: constants.ObjectTypeComputedQuantity},
 			{Key: "available_to_promise", ObjectType: constants.ObjectTypeComputedQuantity},
@@ -264,15 +275,15 @@ func init() {
 		},
 	})
 
-	RegisterIncludes(&ObjectIncludes{
+	registerIncludes(&apiendpoint.ObjectIncludes{
 		ObjectType: constants.ObjectTypeShippingTerm,
-		Fields: []IncludeFieldDef{
+		Fields: []apiendpoint.IncludeFieldDef{
 			{Key: "owner", ObjectType: constants.ObjectTypeOwner},
 			{Key: "flat_rate", ObjectType: constants.ObjectTypeQuantity},
 			{
 				Key:        "minimum_order_value",
 				ObjectType: constants.ObjectTypeQuantity,
-				Children: []IncludeFieldDef{
+				Children: []apiendpoint.IncludeFieldDef{
 					{Key: "unit", ObjectType: constants.ObjectTypeUnit},
 				},
 			},
@@ -280,17 +291,17 @@ func init() {
 		},
 	})
 
-	RegisterIncludes(&ObjectIncludes{
+	registerIncludes(&apiendpoint.ObjectIncludes{
 		ObjectType: constants.ObjectTypeCarrier,
-		Fields: []IncludeFieldDef{
+		Fields: []apiendpoint.IncludeFieldDef{
 			{Key: "owner", ObjectType: constants.ObjectTypeOwner},
 			{Key: "service_levels", ObjectType: constants.ObjectTypeServiceLevel},
 		},
 	})
 
-	RegisterIncludes(&ObjectIncludes{
+	registerIncludes(&apiendpoint.ObjectIncludes{
 		ObjectType: constants.ObjectTypeAccountPrice,
-		Fields: []IncludeFieldDef{
+		Fields: []apiendpoint.IncludeFieldDef{
 			{Key: "recipient_account", ObjectType: constants.ObjectTypeAccount},
 			{Key: "product_line", ObjectType: constants.ObjectTypeProductLine},
 			{Key: "categories", ObjectType: constants.ObjectTypeItemCategory},
@@ -298,16 +309,16 @@ func init() {
 		},
 	})
 
-	RegisterIncludes(&ObjectIncludes{
+	registerIncludes(&apiendpoint.ObjectIncludes{
 		ObjectType: constants.ObjectTypeProperty,
-		Fields: []IncludeFieldDef{
+		Fields: []apiendpoint.IncludeFieldDef{
 			{Key: "attributes", ObjectType: constants.ObjectTypeAttribute},
 		},
 	})
 
-	RegisterIncludes(&ObjectIncludes{
+	registerIncludes(&apiendpoint.ObjectIncludes{
 		ObjectType: constants.ObjectTypeAccount,
-		Fields: []IncludeFieldDef{
+		Fields: []apiendpoint.IncludeFieldDef{
 			{Key: "default_billing_address", ObjectType: constants.ObjectTypeAddress},
 			{Key: "default_shipping_address", ObjectType: constants.ObjectTypeAddress},
 			{Key: "branding", ObjectType: constants.ObjectTypeAccountBranding},
@@ -315,9 +326,9 @@ func init() {
 		},
 	})
 
-	RegisterIncludes(&ObjectIncludes{
+	registerIncludes(&apiendpoint.ObjectIncludes{
 		ObjectType: constants.ObjectTypeItem,
-		Fields: []IncludeFieldDef{
+		Fields: []apiendpoint.IncludeFieldDef{
 			{Key: "category", ObjectType: constants.ObjectTypeItemCategory},
 			{Key: "attributes", ObjectType: constants.ObjectTypeAttribute},
 			{Key: "unit_value", ObjectType: constants.ObjectTypeRate},
@@ -326,9 +337,9 @@ func init() {
 		},
 	})
 
-	RegisterIncludes(&ObjectIncludes{
+	registerIncludes(&apiendpoint.ObjectIncludes{
 		ObjectType: constants.ObjectTypePart,
-		Fields: []IncludeFieldDef{
+		Fields: []apiendpoint.IncludeFieldDef{
 			{Key: "item", ObjectType: constants.ObjectTypeItem},
 			{Key: "category", ObjectType: constants.ObjectTypeItemCategory},
 			{Key: "attributes", ObjectType: constants.ObjectTypeAttribute},
@@ -338,34 +349,34 @@ func init() {
 		},
 	})
 
-	RegisterIncludes(&ObjectIncludes{
+	registerIncludes(&apiendpoint.ObjectIncludes{
 		ObjectType: constants.ObjectTypeItemCategory,
-		Fields: []IncludeFieldDef{
+		Fields: []apiendpoint.IncludeFieldDef{
 			{Key: "owner", ObjectType: constants.ObjectTypeOwner},
 			{Key: "properties", ObjectType: constants.ObjectTypeProperty},
 			{Key: "unit_group", ObjectType: constants.ObjectTypeUnitGroup},
 		},
 	})
 
-	RegisterIncludes(&ObjectIncludes{
+	registerIncludes(&apiendpoint.ObjectIncludes{
 		ObjectType: constants.ObjectTypeUnitGroup,
-		Fields: []IncludeFieldDef{
+		Fields: []apiendpoint.IncludeFieldDef{
 			{Key: "owner", ObjectType: constants.ObjectTypeOwner},
 			{Key: "base_unit", ObjectType: constants.ObjectTypeUnit},
 			{Key: "associated_units", ObjectType: constants.ObjectTypeUnitGroupUnit},
 		},
 	})
 
-	RegisterIncludes(&ObjectIncludes{
+	registerIncludes(&apiendpoint.ObjectIncludes{
 		ObjectType: constants.ObjectTypeUnitGroupUnit,
-		Fields: []IncludeFieldDef{
+		Fields: []apiendpoint.IncludeFieldDef{
 			{Key: "unit", ObjectType: constants.ObjectTypeUnit},
 		},
 	})
 
-	RegisterIncludes(&ObjectIncludes{
+	registerIncludes(&apiendpoint.ObjectIncludes{
 		ObjectType: constants.ObjectTypeSalesOrder,
-		Fields: []IncludeFieldDef{
+		Fields: []apiendpoint.IncludeFieldDef{
 			{Key: "customer", ObjectType: constants.ObjectTypeCustomer},
 			{Key: "sales_rep", ObjectType: constants.ObjectTypeActor},
 			{Key: "created_by", ObjectType: constants.ObjectTypeCreatedBy},
@@ -380,7 +391,7 @@ func init() {
 			{
 				Key:        "related",
 				ObjectType: constants.ObjectTypeSalesOrderRelated,
-				Children: []IncludeFieldDef{
+				Children: []apiendpoint.IncludeFieldDef{
 					{Key: "pick", ObjectType: constants.ObjectTypeRecord},
 					{Key: "production_run", ObjectType: constants.ObjectTypeRecord},
 					{Key: "shipments", ObjectType: constants.ObjectTypeRecord},
@@ -391,9 +402,9 @@ func init() {
 		},
 	})
 
-	RegisterIncludes(&ObjectIncludes{
+	registerIncludes(&apiendpoint.ObjectIncludes{
 		ObjectType: constants.ObjectTypeSalesOrderLine,
-		Fields: []IncludeFieldDef{
+		Fields: []apiendpoint.IncludeFieldDef{
 			{Key: "product", ObjectType: constants.ObjectTypeProduct},
 			{Key: "quantity_ordered", ObjectType: constants.ObjectTypeQuantity},
 			{Key: "unit_price", ObjectType: constants.ObjectTypeRate},
@@ -402,9 +413,9 @@ func init() {
 		},
 	})
 
-	RegisterIncludes(&ObjectIncludes{
+	registerIncludes(&apiendpoint.ObjectIncludes{
 		ObjectType: constants.ObjectTypeInvoice,
-		Fields: []IncludeFieldDef{
+		Fields: []apiendpoint.IncludeFieldDef{
 			{Key: "customer", ObjectType: constants.ObjectTypeCustomer},
 			{Key: "order", ObjectType: constants.ObjectTypeSalesOrder},
 			{Key: "shipment", ObjectType: constants.ObjectTypeShipment},
@@ -415,7 +426,7 @@ func init() {
 			{
 				Key:        "related",
 				ObjectType: constants.ObjectTypeInvoiceRelated,
-				Children: []IncludeFieldDef{
+				Children: []apiendpoint.IncludeFieldDef{
 					{Key: "sales_order", ObjectType: constants.ObjectTypeRecord},
 					{Key: "shipment", ObjectType: constants.ObjectTypeRecord},
 				},
@@ -423,9 +434,9 @@ func init() {
 		},
 	})
 
-	RegisterIncludes(&ObjectIncludes{
+	registerIncludes(&apiendpoint.ObjectIncludes{
 		ObjectType: constants.ObjectTypeInvoiceForPayment,
-		Fields: []IncludeFieldDef{
+		Fields: []apiendpoint.IncludeFieldDef{
 			{Key: "customer", ObjectType: constants.ObjectTypeCustomer},
 			{Key: "parent_account", ObjectType: constants.ObjectTypeAccount},
 			{Key: "billing_address", ObjectType: constants.ObjectTypeAddress},
@@ -433,9 +444,9 @@ func init() {
 		},
 	})
 
-	RegisterIncludes(&ObjectIncludes{
+	registerIncludes(&apiendpoint.ObjectIncludes{
 		ObjectType: constants.ObjectTypeInvoiceLine,
-		Fields: []IncludeFieldDef{
+		Fields: []apiendpoint.IncludeFieldDef{
 			{Key: "order_line", ObjectType: constants.ObjectTypeSalesOrderLine},
 			{Key: "item", ObjectType: constants.ObjectTypeItem},
 			// The quantity and the price are always on the line; naming them here is what lets a caller reach through to the units they are counted in.
@@ -444,35 +455,35 @@ func init() {
 		},
 	})
 
-	RegisterIncludes(&ObjectIncludes{
+	registerIncludes(&apiendpoint.ObjectIncludes{
 		ObjectType: constants.ObjectTypeInvoiceAllocation,
-		Fields: []IncludeFieldDef{
+		Fields: []apiendpoint.IncludeFieldDef{
 			{Key: "transaction", ObjectType: constants.ObjectTypeTransaction},
 			// The amount is always on the allocation; naming it here is what lets a caller reach through to the currency it is counted in.
 			{Key: "amount", ObjectType: constants.ObjectTypeQuantity},
 		},
 	})
 
-	RegisterIncludes(&ObjectIncludes{
+	registerIncludes(&apiendpoint.ObjectIncludes{
 		ObjectType: constants.ObjectTypeTransactionAllocation,
-		Fields: []IncludeFieldDef{
+		Fields: []apiendpoint.IncludeFieldDef{
 			{Key: "transaction", ObjectType: constants.ObjectTypeTransaction},
 			// The amount is always on the allocation; naming it here is what lets a caller reach through to the currency it is counted in.
 			{Key: "amount", ObjectType: constants.ObjectTypeQuantity},
 		},
 	})
 
-	RegisterIncludes(&ObjectIncludes{
+	registerIncludes(&apiendpoint.ObjectIncludes{
 		ObjectType: constants.ObjectTypeDelivery,
-		Fields: []IncludeFieldDef{
+		Fields: []apiendpoint.IncludeFieldDef{
 			{Key: "related", ObjectType: constants.ObjectTypeDeliveryRelated},
 			{Key: "lines", ObjectType: constants.ObjectTypeDeliveryLine},
 		},
 	})
 
-	RegisterIncludes(&ObjectIncludes{
+	registerIncludes(&apiendpoint.ObjectIncludes{
 		ObjectType: constants.ObjectTypeDeliveryLine,
-		Fields: []IncludeFieldDef{
+		Fields: []apiendpoint.IncludeFieldDef{
 			{Key: "order_line", ObjectType: constants.ObjectTypePurchaseOrderLine},
 			{Key: "item", ObjectType: constants.ObjectTypeItem},
 			// The quantity is always on the line; naming it here is what lets a caller reach through it to the unit it is counted in.
@@ -483,17 +494,17 @@ func init() {
 		},
 	})
 
-	RegisterIncludes(&ObjectIncludes{
+	registerIncludes(&apiendpoint.ObjectIncludes{
 		ObjectType: constants.ObjectTypeDeliveryRelated,
-		Fields: []IncludeFieldDef{
+		Fields: []apiendpoint.IncludeFieldDef{
 			{Key: "purchase_order", ObjectType: constants.ObjectTypeRecord},
 			{Key: "receiving_order", ObjectType: constants.ObjectTypeRecord},
 		},
 	})
 
-	RegisterIncludes(&ObjectIncludes{
+	registerIncludes(&apiendpoint.ObjectIncludes{
 		ObjectType: constants.ObjectTypeReceivingOrder,
-		Fields: []IncludeFieldDef{
+		Fields: []apiendpoint.IncludeFieldDef{
 			{Key: "supplier", ObjectType: constants.ObjectTypeSupplier},
 			{Key: "lines", ObjectType: constants.ObjectTypeReceivingOrderLine},
 			{Key: "totals", ObjectType: constants.ObjectTypeReceivingOrderTotals},
@@ -501,17 +512,17 @@ func init() {
 		},
 	})
 
-	RegisterIncludes(&ObjectIncludes{
+	registerIncludes(&apiendpoint.ObjectIncludes{
 		ObjectType: constants.ObjectTypeReceivingOrderRelated,
-		Fields: []IncludeFieldDef{
+		Fields: []apiendpoint.IncludeFieldDef{
 			{Key: "purchase_order", ObjectType: constants.ObjectTypeRecord},
 			{Key: "deliveries", ObjectType: constants.ObjectTypeRecord},
 		},
 	})
 
-	RegisterIncludes(&ObjectIncludes{
+	registerIncludes(&apiendpoint.ObjectIncludes{
 		ObjectType: constants.ObjectTypeReceivingOrderLine,
-		Fields: []IncludeFieldDef{
+		Fields: []apiendpoint.IncludeFieldDef{
 			{Key: "order_line", ObjectType: constants.ObjectTypePurchaseOrderLine},
 			{Key: "item", ObjectType: constants.ObjectTypeItem},
 			// Both quantities are always on the line; naming them here is what lets a caller reach through to the units they are counted in. The rejected figure needs no entry — it is computed, and arrives with its unit already.
@@ -520,32 +531,32 @@ func init() {
 		},
 	})
 
-	RegisterIncludes(&ObjectIncludes{
+	registerIncludes(&apiendpoint.ObjectIncludes{
 		ObjectType: constants.ObjectTypeInventoryChangeLog,
-		Fields: []IncludeFieldDef{
+		Fields: []apiendpoint.IncludeFieldDef{
 			{Key: "item", ObjectType: constants.ObjectTypeItem},
 			{Key: "responsible_user", ObjectType: constants.ObjectTypeUser},
 			{Key: "responsible_scanning_station", ObjectType: constants.ObjectTypeScanningStation},
 		},
 	})
 
-	RegisterIncludes(&ObjectIncludes{
+	registerIncludes(&apiendpoint.ObjectIncludes{
 		ObjectType: constants.ObjectTypeMachine,
-		Fields: []IncludeFieldDef{
+		Fields: []apiendpoint.IncludeFieldDef{
 			{Key: "department", ObjectType: constants.ObjectTypeDepartment},
 		},
 	})
 
-	RegisterIncludes(&ObjectIncludes{
+	registerIncludes(&apiendpoint.ObjectIncludes{
 		ObjectType: constants.ObjectTypeMachineItemScanSuggestion,
-		Fields: []IncludeFieldDef{
+		Fields: []apiendpoint.IncludeFieldDef{
 			{Key: "item", ObjectType: constants.ObjectTypeItem},
 		},
 	})
 
-	RegisterIncludes(&ObjectIncludes{
+	registerIncludes(&apiendpoint.ObjectIncludes{
 		ObjectType: constants.ObjectTypeMachineDowntimeEvent,
-		Fields: []IncludeFieldDef{
+		Fields: []apiendpoint.IncludeFieldDef{
 			{Key: "machine", ObjectType: constants.ObjectTypeMachine},
 			{Key: "department", ObjectType: constants.ObjectTypeDepartment},
 			{Key: "item", ObjectType: constants.ObjectTypeItem},
@@ -553,23 +564,23 @@ func init() {
 		},
 	})
 
-	RegisterIncludes(&ObjectIncludes{
+	registerIncludes(&apiendpoint.ObjectIncludes{
 		ObjectType: constants.ObjectTypeDemandOverride,
-		Fields: []IncludeFieldDef{
+		Fields: []apiendpoint.IncludeFieldDef{
 			{Key: "scope", ObjectType: constants.ObjectTypeEntity},
 		},
 	})
 
-	RegisterIncludes(&ObjectIncludes{
+	registerIncludes(&apiendpoint.ObjectIncludes{
 		ObjectType: constants.ObjectTypeJob,
-		Fields: []IncludeFieldDef{
+		Fields: []apiendpoint.IncludeFieldDef{
 			{Key: "created_by", ObjectType: constants.ObjectTypeActor},
 		},
 	})
 
-	RegisterIncludes(&ObjectIncludes{
+	registerIncludes(&apiendpoint.ObjectIncludes{
 		ObjectType: constants.ObjectTypePick,
-		Fields: []IncludeFieldDef{
+		Fields: []apiendpoint.IncludeFieldDef{
 			{Key: "customer", ObjectType: constants.ObjectTypeCustomer},
 			{Key: "created_by", ObjectType: constants.ObjectTypeCreatedBy},
 			{Key: "freight", ObjectType: constants.ObjectTypeFreight},
@@ -577,7 +588,7 @@ func init() {
 			{
 				Key:        "related",
 				ObjectType: constants.ObjectTypePickRelated,
-				Children: []IncludeFieldDef{
+				Children: []apiendpoint.IncludeFieldDef{
 					{Key: "sales_order", ObjectType: constants.ObjectTypeRecord},
 					{Key: "shipments", ObjectType: constants.ObjectTypeRecord},
 				},
@@ -585,50 +596,50 @@ func init() {
 		},
 	})
 
-	RegisterIncludes(&ObjectIncludes{
+	registerIncludes(&apiendpoint.ObjectIncludes{
 		ObjectType: constants.ObjectTypePickLine,
-		Fields: []IncludeFieldDef{
+		Fields: []apiendpoint.IncludeFieldDef{
 			{Key: "item", ObjectType: constants.ObjectTypeItem},
 			{Key: "sales_order_line", ObjectType: constants.ObjectTypeSalesOrderLine},
-			{Key: "quantity", ObjectType: constants.ObjectTypeQuantity, Children: []IncludeFieldDef{
+			{Key: "quantity", ObjectType: constants.ObjectTypeQuantity, Children: []apiendpoint.IncludeFieldDef{
 				{Key: "unit", ObjectType: constants.ObjectTypeUnit},
 			}},
-			{Key: "ordered_quantity", ObjectType: constants.ObjectTypeQuantity, Children: []IncludeFieldDef{
+			{Key: "ordered_quantity", ObjectType: constants.ObjectTypeQuantity, Children: []apiendpoint.IncludeFieldDef{
 				{Key: "unit", ObjectType: constants.ObjectTypeUnit},
 			}},
 		},
 	})
 
-	RegisterIncludes(&ObjectIncludes{
+	registerIncludes(&apiendpoint.ObjectIncludes{
 		ObjectType: constants.ObjectTypeMaterial,
-		Fields: []IncludeFieldDef{
+		Fields: []apiendpoint.IncludeFieldDef{
 			{Key: "item", ObjectType: constants.ObjectTypeItem},
 		},
 	})
 
-	RegisterIncludes(&ObjectIncludes{
+	registerIncludes(&apiendpoint.ObjectIncludes{
 		ObjectType: constants.ObjectTypeProductLine,
-		Fields: []IncludeFieldDef{
+		Fields: []apiendpoint.IncludeFieldDef{
 			{Key: "owner", ObjectType: constants.ObjectTypeOwner},
 			{Key: "unit_group", ObjectType: constants.ObjectTypeUnitGroup},
-			{Key: "default_lot", ObjectType: constants.ObjectTypeQuantity, Children: []IncludeFieldDef{
+			{Key: "default_lot", ObjectType: constants.ObjectTypeQuantity, Children: []apiendpoint.IncludeFieldDef{
 				{Key: "unit", ObjectType: constants.ObjectTypeUnit},
 			}},
 		},
 	})
 
-	RegisterIncludes(&ObjectIncludes{
+	registerIncludes(&apiendpoint.ObjectIncludes{
 		ObjectType: constants.ObjectTypeProduct,
-		Fields: []IncludeFieldDef{
+		Fields: []apiendpoint.IncludeFieldDef{
 			{Key: "product_type", ObjectType: constants.ObjectTypeProductType},
 			{Key: "product_line", ObjectType: constants.ObjectTypeProductLine},
 			{Key: "item", ObjectType: constants.ObjectTypeItem},
 		},
 	})
 
-	RegisterIncludes(&ObjectIncludes{
+	registerIncludes(&apiendpoint.ObjectIncludes{
 		ObjectType: constants.ObjectTypePurchaseOrder,
-		Fields: []IncludeFieldDef{
+		Fields: []apiendpoint.IncludeFieldDef{
 			{Key: "supplier", ObjectType: constants.ObjectTypeSupplier},
 			{Key: "created_by", ObjectType: constants.ObjectTypeCreatedBy},
 			{Key: "bill_to_address", ObjectType: constants.ObjectTypeAddress},
@@ -642,9 +653,9 @@ func init() {
 		},
 	})
 
-	RegisterIncludes(&ObjectIncludes{
+	registerIncludes(&apiendpoint.ObjectIncludes{
 		ObjectType: constants.ObjectTypePurchaseOrderLine,
-		Fields: []IncludeFieldDef{
+		Fields: []apiendpoint.IncludeFieldDef{
 			{Key: "item", ObjectType: constants.ObjectTypeItem},
 			// The quantity and the two rates are always on the line; naming them here is what lets a caller reach through to the units they are counted in.
 			{Key: "quantity_ordered", ObjectType: constants.ObjectTypeQuantity},
@@ -653,56 +664,56 @@ func init() {
 		},
 	})
 
-	RegisterIncludes(&ObjectIncludes{
+	registerIncludes(&apiendpoint.ObjectIncludes{
 		ObjectType: constants.ObjectTypePurchaseOrderRelated,
-		Fields: []IncludeFieldDef{
+		Fields: []apiendpoint.IncludeFieldDef{
 			{Key: "receiving_order", ObjectType: constants.ObjectTypeRecord},
 			{Key: "deliveries", ObjectType: constants.ObjectTypeRecord},
 		},
 	})
 
-	RegisterIncludes(&ObjectIncludes{
+	registerIncludes(&apiendpoint.ObjectIncludes{
 		ObjectType: constants.ObjectTypeTerritory,
-		Fields: []IncludeFieldDef{
+		Fields: []apiendpoint.IncludeFieldDef{
 			{Key: "sales_rep", ObjectType: constants.ObjectTypeAccountUser},
 			{Key: "product_line", ObjectType: constants.ObjectTypeProductLine},
 		},
 	})
 
-	RegisterIncludes(&ObjectIncludes{
+	registerIncludes(&apiendpoint.ObjectIncludes{
 		ObjectType: constants.ObjectTypeSupplier,
-		Fields: []IncludeFieldDef{
+		Fields: []apiendpoint.IncludeFieldDef{
 			{Key: "bill_to_address", ObjectType: constants.ObjectTypeAddress},
 			{Key: "ship_to_address", ObjectType: constants.ObjectTypeAddress},
 		},
 	})
 
-	RegisterIncludes(&ObjectIncludes{
+	registerIncludes(&apiendpoint.ObjectIncludes{
 		ObjectType: constants.ObjectTypeLocation,
-		Fields: []IncludeFieldDef{
+		Fields: []apiendpoint.IncludeFieldDef{
 			{Key: "parent", ObjectType: constants.ObjectTypeLocation},
 			{Key: "children", ObjectType: constants.ObjectTypeLocation},
 		},
 	})
 
-	RegisterIncludes(&ObjectIncludes{
+	registerIncludes(&apiendpoint.ObjectIncludes{
 		ObjectType: constants.ObjectTypeScanningStation,
-		Fields: []IncludeFieldDef{
+		Fields: []apiendpoint.IncludeFieldDef{
 			{Key: "department", ObjectType: constants.ObjectTypeDepartment},
 			{Key: "production_steps", ObjectType: constants.ObjectTypeProductionStep},
 		},
 	})
 
-	RegisterIncludes(&ObjectIncludes{
+	registerIncludes(&apiendpoint.ObjectIncludes{
 		ObjectType: constants.ObjectTypeProductionRun,
-		Fields: []IncludeFieldDef{
+		Fields: []apiendpoint.IncludeFieldDef{
 			{Key: "responsible_user", ObjectType: constants.ObjectTypeAccountUser},
 		},
 	})
 
-	RegisterIncludes(&ObjectIncludes{
+	registerIncludes(&apiendpoint.ObjectIncludes{
 		ObjectType: constants.ObjectTypeVolumeDiscount,
-		Fields: []IncludeFieldDef{
+		Fields: []apiendpoint.IncludeFieldDef{
 			{Key: "customer_groups", ObjectType: constants.ObjectTypeAccountGroup},
 			{Key: "product_lines", ObjectType: constants.ObjectTypeProductLine},
 			{Key: "categories", ObjectType: constants.ObjectTypeItemCategory},
@@ -711,23 +722,23 @@ func init() {
 		},
 	})
 
-	RegisterIncludes(&ObjectIncludes{
+	registerIncludes(&apiendpoint.ObjectIncludes{
 		ObjectType: constants.ObjectTypeShippingCase,
-		Fields: []IncludeFieldDef{
+		Fields: []apiendpoint.IncludeFieldDef{
 			{Key: "carrier", ObjectType: constants.ObjectTypeCarrier},
 			{Key: "shipment", ObjectType: constants.ObjectTypeShipment},
-			{Key: "freight_amount", ObjectType: constants.ObjectTypeQuantity, Children: []IncludeFieldDef{
+			{Key: "freight_amount", ObjectType: constants.ObjectTypeQuantity, Children: []apiendpoint.IncludeFieldDef{
 				{Key: "unit", ObjectType: constants.ObjectTypeUnit},
 			}},
-			{Key: "freight_weight", ObjectType: constants.ObjectTypeQuantity, Children: []IncludeFieldDef{
+			{Key: "freight_weight", ObjectType: constants.ObjectTypeQuantity, Children: []apiendpoint.IncludeFieldDef{
 				{Key: "unit", ObjectType: constants.ObjectTypeUnit},
 			}},
 		},
 	})
 
-	RegisterIncludes(&ObjectIncludes{
+	registerIncludes(&apiendpoint.ObjectIncludes{
 		ObjectType: constants.ObjectTypeShipmentLine,
-		Fields: []IncludeFieldDef{
+		Fields: []apiendpoint.IncludeFieldDef{
 			{Key: "sales_order_line", ObjectType: constants.ObjectTypeSalesOrderLine},
 			{Key: "item", ObjectType: constants.ObjectTypeItem},
 			// The quantity is always on the line; naming it here is what lets a caller reach through it to the unit it is counted in.
@@ -735,9 +746,9 @@ func init() {
 		},
 	})
 
-	RegisterIncludes(&ObjectIncludes{
+	registerIncludes(&apiendpoint.ObjectIncludes{
 		ObjectType: constants.ObjectTypeShipment,
-		Fields: []IncludeFieldDef{
+		Fields: []apiendpoint.IncludeFieldDef{
 			{Key: "lines", ObjectType: constants.ObjectTypeShipmentLine},
 			{Key: "shipping_cases", ObjectType: constants.ObjectTypeShippingCase},
 			{Key: "freight", ObjectType: constants.ObjectTypeFreight},
@@ -747,7 +758,7 @@ func init() {
 			{
 				Key:        "related",
 				ObjectType: constants.ObjectTypeShipmentRelated,
-				Children: []IncludeFieldDef{
+				Children: []apiendpoint.IncludeFieldDef{
 					{Key: "sales_order", ObjectType: constants.ObjectTypeRecord},
 					{Key: "pick", ObjectType: constants.ObjectTypeRecord},
 					{Key: "invoice", ObjectType: constants.ObjectTypeRecord},
@@ -756,9 +767,9 @@ func init() {
 		},
 	})
 
-	RegisterIncludes(&ObjectIncludes{
+	registerIncludes(&apiendpoint.ObjectIncludes{
 		ObjectType: constants.ObjectTypeTransaction,
-		Fields: []IncludeFieldDef{
+		Fields: []apiendpoint.IncludeFieldDef{
 			{Key: "allocations", ObjectType: constants.ObjectTypeTransactionAllocation},
 			{Key: "customer", ObjectType: constants.ObjectTypeCustomer},
 			{Key: "responsible_user", ObjectType: constants.ObjectTypeAccountUser},
@@ -771,24 +782,24 @@ func init() {
 	})
 
 	// The transactions LIST returns transaction_summary (distinct from the detail).
-	RegisterIncludes(&ObjectIncludes{
+	registerIncludes(&apiendpoint.ObjectIncludes{
 		ObjectType: constants.ObjectTypeTransactionSummary,
-		Fields: []IncludeFieldDef{
+		Fields: []apiendpoint.IncludeFieldDef{
 			{Key: "customer", ObjectType: constants.ObjectTypeCustomer},
 		},
 	})
 
-	RegisterIncludes(&ObjectIncludes{
+	registerIncludes(&apiendpoint.ObjectIncludes{
 		ObjectType: constants.ObjectTypeSettlement,
-		Fields: []IncludeFieldDef{
+		Fields: []apiendpoint.IncludeFieldDef{
 			{Key: "responsible_user", ObjectType: constants.ObjectTypeAccountUser},
 			{Key: "allocations", ObjectType: constants.ObjectTypeTransactionAllocation},
 		},
 	})
 
-	RegisterIncludes(&ObjectIncludes{
+	registerIncludes(&apiendpoint.ObjectIncludes{
 		ObjectType: constants.ObjectTypeBatch,
-		Fields: []IncludeFieldDef{
+		Fields: []apiendpoint.IncludeFieldDef{
 			// The three measures are always on the batch; naming them here is what lets a caller reach through to the unit each is counted in.
 			{Key: "quantity", ObjectType: constants.ObjectTypeQuantity},
 			{Key: "seconds", ObjectType: constants.ObjectTypeQuantity},
@@ -796,104 +807,104 @@ func init() {
 		},
 	})
 
-	RegisterIncludes(&ObjectIncludes{
+	registerIncludes(&apiendpoint.ObjectIncludes{
 		ObjectType: constants.ObjectTypeBatchFlowNode,
-		Fields: []IncludeFieldDef{
+		Fields: []apiendpoint.IncludeFieldDef{
 			// The batch is already on the node; naming it is what lets a caller reach through to its measures' units.
 			{Key: "batch", ObjectType: constants.ObjectTypeBatch},
 		},
 	})
 
-	RegisterIncludes(&ObjectIncludes{
+	registerIncludes(&apiendpoint.ObjectIncludes{
 		ObjectType: constants.ObjectTypeRate,
-		Fields: []IncludeFieldDef{
+		Fields: []apiendpoint.IncludeFieldDef{
 			{Key: "numerator_unit", ObjectType: constants.ObjectTypeUnit},
 			{Key: "denominator_unit", ObjectType: constants.ObjectTypeUnit},
 		},
 	})
 
-	RegisterIncludes(&ObjectIncludes{
+	registerIncludes(&apiendpoint.ObjectIncludes{
 		ObjectType: constants.ObjectTypeSupplierMaterial,
-		Fields: []IncludeFieldDef{
+		Fields: []apiendpoint.IncludeFieldDef{
 			{Key: "material", ObjectType: constants.ObjectTypeMaterial},
 		},
 	})
 
-	RegisterIncludes(&ObjectIncludes{
+	registerIncludes(&apiendpoint.ObjectIncludes{
 		ObjectType: constants.ObjectTypeOwner,
-		Fields: []IncludeFieldDef{
+		Fields: []apiendpoint.IncludeFieldDef{
 			{Key: "account", ObjectType: constants.ObjectTypeAccount},
 		},
 	})
 
-	RegisterIncludes(&ObjectIncludes{
+	registerIncludes(&apiendpoint.ObjectIncludes{
 		ObjectType: constants.ObjectTypeUnit,
-		Fields: []IncludeFieldDef{
+		Fields: []apiendpoint.IncludeFieldDef{
 			{Key: "owner", ObjectType: constants.ObjectTypeOwner},
 		},
 	})
 
-	RegisterIncludes(&ObjectIncludes{
+	registerIncludes(&apiendpoint.ObjectIncludes{
 		ObjectType: constants.ObjectTypeServiceLevel,
-		Fields: []IncludeFieldDef{
+		Fields: []apiendpoint.IncludeFieldDef{
 			{Key: "owner", ObjectType: constants.ObjectTypeOwner},
 		},
 	})
 
-	RegisterIncludes(&ObjectIncludes{
+	registerIncludes(&apiendpoint.ObjectIncludes{
 		ObjectType: constants.ObjectTypePaymentTerm,
-		Fields: []IncludeFieldDef{
+		Fields: []apiendpoint.IncludeFieldDef{
 			{Key: "owner", ObjectType: constants.ObjectTypeOwner},
 		},
 	})
 
-	RegisterIncludes(&ObjectIncludes{
+	registerIncludes(&apiendpoint.ObjectIncludes{
 		ObjectType: constants.ObjectTypePriority,
-		Fields: []IncludeFieldDef{
+		Fields: []apiendpoint.IncludeFieldDef{
 			{Key: "owner", ObjectType: constants.ObjectTypeOwner},
 		},
 	})
 
-	RegisterIncludes(&ObjectIncludes{
+	registerIncludes(&apiendpoint.ObjectIncludes{
 		ObjectType: constants.ObjectTypeAccountStatus,
-		Fields: []IncludeFieldDef{
+		Fields: []apiendpoint.IncludeFieldDef{
 			{Key: "owner", ObjectType: constants.ObjectTypeOwner},
 		},
 	})
 
-	RegisterIncludes(&ObjectIncludes{
+	registerIncludes(&apiendpoint.ObjectIncludes{
 		ObjectType: constants.ObjectTypeSalesOrderStatus,
-		Fields: []IncludeFieldDef{
+		Fields: []apiendpoint.IncludeFieldDef{
 			{Key: "owner", ObjectType: constants.ObjectTypeOwner},
 		},
 	})
 
-	RegisterIncludes(&ObjectIncludes{
+	registerIncludes(&apiendpoint.ObjectIncludes{
 		ObjectType: constants.ObjectTypeAdjustmentType,
-		Fields: []IncludeFieldDef{
+		Fields: []apiendpoint.IncludeFieldDef{
 			{Key: "owner", ObjectType: constants.ObjectTypeOwner},
 		},
 	})
 
-	RegisterIncludes(&ObjectIncludes{
+	registerIncludes(&apiendpoint.ObjectIncludes{
 		ObjectType: constants.ObjectTypePermissionGroup,
-		Fields: []IncludeFieldDef{
+		Fields: []apiendpoint.IncludeFieldDef{
 			{Key: "owner", ObjectType: constants.ObjectTypeOwner},
 		},
 	})
 
-	RegisterIncludes(&ObjectIncludes{
+	registerIncludes(&apiendpoint.ObjectIncludes{
 		ObjectType: constants.ObjectTypeProduction,
-		Fields: []IncludeFieldDef{
+		Fields: []apiendpoint.IncludeFieldDef{
 			{Key: "produced_item", ObjectType: constants.ObjectTypeItem},
 			// The quantity is always on the production; naming it lets a caller reach its unit.
 			{Key: "quantity", ObjectType: constants.ObjectTypeQuantity},
 		},
 	})
 
-	RegisterIncludes(&ObjectIncludes{
+	registerIncludes(&apiendpoint.ObjectIncludes{
 		ObjectType: constants.ObjectTypeProductionStep,
-		Fields: []IncludeFieldDef{
+		Fields: []apiendpoint.IncludeFieldDef{
 			{Key: "production", ObjectType: constants.ObjectTypeProduction},
 			{Key: "consumptions", ObjectType: constants.ObjectTypeConsumption},
 			{Key: "machines", ObjectType: constants.ObjectTypeMachine},
@@ -909,16 +920,16 @@ func init() {
 		},
 	})
 
-	RegisterIncludes(&ObjectIncludes{
+	registerIncludes(&apiendpoint.ObjectIncludes{
 		ObjectType: constants.ObjectTypeProductionFlow,
-		Fields: []IncludeFieldDef{
+		Fields: []apiendpoint.IncludeFieldDef{
 			{Key: "steps", ObjectType: constants.ObjectTypeProductionStep},
 		},
 	})
 
-	RegisterIncludes(&ObjectIncludes{
+	registerIncludes(&apiendpoint.ObjectIncludes{
 		ObjectType: constants.ObjectTypeConversation,
-		Fields: []IncludeFieldDef{
+		Fields: []apiendpoint.IncludeFieldDef{
 			{Key: "assignee", ObjectType: constants.ObjectTypeActor},
 			{Key: "group", ObjectType: constants.ObjectTypeMessagingGroup},
 			{Key: "participants", ObjectType: constants.ObjectTypeConversationParticipant},
@@ -927,16 +938,16 @@ func init() {
 		},
 	})
 
-	RegisterIncludes(&ObjectIncludes{
+	registerIncludes(&apiendpoint.ObjectIncludes{
 		ObjectType: constants.ObjectTypeConversationLink,
-		Fields: []IncludeFieldDef{
+		Fields: []apiendpoint.IncludeFieldDef{
 			{Key: "conversation", ObjectType: constants.ObjectTypeConversation},
 		},
 	})
 
-	RegisterIncludes(&ObjectIncludes{
+	registerIncludes(&apiendpoint.ObjectIncludes{
 		ObjectType: constants.ObjectTypeChatMessage,
-		Fields: []IncludeFieldDef{
+		Fields: []apiendpoint.IncludeFieldDef{
 			{Key: "sender", ObjectType: constants.ObjectTypeActor},
 			{Key: "author", ObjectType: constants.ObjectTypeActor},
 			{Key: "resource", ObjectType: constants.ObjectTypeEntity},
@@ -947,23 +958,23 @@ func init() {
 		},
 	})
 
-	RegisterIncludes(&ObjectIncludes{
+	registerIncludes(&apiendpoint.ObjectIncludes{
 		ObjectType: constants.ObjectTypeMessageAttachment,
-		Fields: []IncludeFieldDef{
+		Fields: []apiendpoint.IncludeFieldDef{
 			{Key: "resource", ObjectType: constants.ObjectTypeEntity},
 		},
 	})
 
-	RegisterIncludes(&ObjectIncludes{
+	registerIncludes(&apiendpoint.ObjectIncludes{
 		ObjectType: constants.ObjectTypeAttachmentUploadTarget,
-		Fields: []IncludeFieldDef{
+		Fields: []apiendpoint.IncludeFieldDef{
 			{Key: "attachment", ObjectType: constants.ObjectTypeMessageAttachment},
 		},
 	})
 
-	RegisterIncludes(&ObjectIncludes{
+	registerIncludes(&apiendpoint.ObjectIncludes{
 		ObjectType: constants.ObjectTypeEmailInbox,
-		Fields: []IncludeFieldDef{
+		Fields: []apiendpoint.IncludeFieldDef{
 			{Key: "email_domain", ObjectType: constants.ObjectTypeEmailDomain},
 			{Key: "agent_config", ObjectType: constants.ObjectTypeAgentDefinition},
 		},

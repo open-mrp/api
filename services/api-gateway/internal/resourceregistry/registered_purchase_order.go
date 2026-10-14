@@ -2,29 +2,29 @@ package resourceregistry
 
 import (
 	"context"
+	"github.com/open-mrp/apikit/include"
 
 	"github.com/open-mrp/api/services/api-gateway/internal/resourceloaders"
 	apiresource "github.com/open-mrp/api/services/api-gateway/pkg/resource"
-	"github.com/open-mrp/api/services/api-gateway/pkg/resourcekit"
 	"github.com/open-mrp/api/shared/constants"
 )
 
 func init() {
-	resourcekit.Register(&resourcekit.Definition{
+	include.Register(&include.Definition{
 		ObjectType: constants.ObjectTypePurchaseOrder,
 		Load:       resourceloaders.LoadPurchaseOrders,
-		Subs: []resourcekit.SubField{
+		Subs: []include.SubField{
 			{
 				Key:         "supplier",
 				Target:      constants.ObjectTypeSupplier,
-				Cardinality: resourcekit.CardinalityOnePtr,
+				Cardinality: include.CardinalityOnePtr,
 				ExtractIDs:  extractSupplierIDFromPO,
 				Populate:    populateSupplierOnPO,
 			},
 			{
 				Key:         "created_by",
 				Target:      constants.ObjectTypeCreatedBy,
-				Cardinality: resourcekit.CardinalityOnePtr,
+				Cardinality: include.CardinalityOnePtr,
 				ExtractIDs:  extractSelfIDForCreatedByOnPO,
 				Populate:    populateCreatedByOnPO,
 			},
@@ -43,21 +43,21 @@ func init() {
 			{
 				Key:         "lines",
 				Target:      constants.ObjectTypePurchaseOrderLine,
-				Cardinality: resourcekit.CardinalityList,
+				Cardinality: include.CardinalityList,
 				Populate:    populateLinesOnPO,
 				ExtractRefs: extractLineRefsFromPO,
 			},
 			{Key: "contacts", Populate: populateContactsOnPO},
 		},
 	})
-	resourcekit.Register(&resourcekit.Definition{
+	include.Register(&include.Definition{
 		ObjectType: constants.ObjectTypePurchaseOrderLine,
 		Load:       resourceloaders.LoadPurchaseOrderLines,
-		Subs: []resourcekit.SubField{
+		Subs: []include.SubField{
 			{
 				Key:         "item",
 				Target:      constants.ObjectTypeItem,
-				Cardinality: resourcekit.CardinalityOnePtr,
+				Cardinality: include.CardinalityOnePtr,
 				ExtractIDs:  extractItemIDFromPOLine,
 				Populate:    populateItemOnPOLine,
 			},
@@ -66,20 +66,20 @@ func init() {
 			{
 				Key:         "quantity_ordered",
 				Target:      constants.ObjectTypeQuantity,
-				Cardinality: resourcekit.CardinalityOnePtr,
+				Cardinality: include.CardinalityOnePtr,
 				ExtractRefs: extractQuantityOrderedRefFromPOLine,
 			},
 			{
 				Key:         "unit_price",
 				Target:      constants.ObjectTypeRate,
-				Cardinality: resourcekit.CardinalityOnePtr,
+				Cardinality: include.CardinalityOnePtr,
 				ExtractRefs: extractUnitPriceRefFromPOLine,
 			},
 			// Carried inline: the order read fetched them with the lines when they were included.
 			{
 				Key:         "delivery_lines",
 				Target:      constants.ObjectTypeDeliveryLine,
-				Cardinality: resourcekit.CardinalityList,
+				Cardinality: include.CardinalityList,
 				Populate:    populateDeliveryLinesOnPOLine,
 				ExtractRefs: extractDeliveryLineRefsFromPOLine,
 			},
@@ -101,7 +101,7 @@ func extractLineRefsFromPO(_ context.Context, parent any) []any {
 
 func extractItemIDFromPOLine(ctx context.Context, parent any) []string {
 	l := parent.(*apiresource.PurchaseOrderLine)
-	id, _ := resourcekit.GetLoadMeta(ctx).GetString(constants.ObjectTypePurchaseOrderLine, l.ID, "item_id")
+	id, _ := include.GetLoadMeta(ctx).GetString(constants.ObjectTypePurchaseOrderLine, l.ID, "item_id")
 	if id == "" {
 		return nil
 	}
@@ -110,7 +110,7 @@ func extractItemIDFromPOLine(ctx context.Context, parent any) []string {
 
 func populateItemOnPOLine(ctx context.Context, parent any, loaded map[string]any) {
 	l := parent.(*apiresource.PurchaseOrderLine)
-	id, _ := resourcekit.GetLoadMeta(ctx).GetString(constants.ObjectTypePurchaseOrderLine, l.ID, "item_id")
+	id, _ := include.GetLoadMeta(ctx).GetString(constants.ObjectTypePurchaseOrderLine, l.ID, "item_id")
 	if id == "" {
 		return
 	}
@@ -137,7 +137,7 @@ func extractUnitPriceRefFromPOLine(_ context.Context, parent any) []any {
 
 func extractSupplierIDFromPO(ctx context.Context, parent any) []string {
 	po := parent.(*apiresource.PurchaseOrder)
-	id, _ := resourcekit.GetLoadMeta(ctx).GetString(constants.ObjectTypePurchaseOrder, po.ID, "supplier_id")
+	id, _ := include.GetLoadMeta(ctx).GetString(constants.ObjectTypePurchaseOrder, po.ID, "supplier_id")
 	if id == "" {
 		return nil
 	}
@@ -146,7 +146,7 @@ func extractSupplierIDFromPO(ctx context.Context, parent any) []string {
 
 func populateSupplierOnPO(ctx context.Context, parent any, loaded map[string]any) {
 	po := parent.(*apiresource.PurchaseOrder)
-	id, _ := resourcekit.GetLoadMeta(ctx).GetString(constants.ObjectTypePurchaseOrder, po.ID, "supplier_id")
+	id, _ := include.GetLoadMeta(ctx).GetString(constants.ObjectTypePurchaseOrder, po.ID, "supplier_id")
 	if v, ok := loaded[id]; ok {
 		po.Supplier = v.(*apiresource.Supplier)
 	}
@@ -154,7 +154,7 @@ func populateSupplierOnPO(ctx context.Context, parent any, loaded map[string]any
 
 func populateBillToAddressOnPO(ctx context.Context, parent any, _ map[string]any) {
 	po := parent.(*apiresource.PurchaseOrder)
-	v, ok := resourcekit.GetLoadMeta(ctx).Get(constants.ObjectTypePurchaseOrder, po.ID, "bill_to_address")
+	v, ok := include.GetLoadMeta(ctx).Get(constants.ObjectTypePurchaseOrder, po.ID, "bill_to_address")
 	if !ok {
 		return
 	}
@@ -163,7 +163,7 @@ func populateBillToAddressOnPO(ctx context.Context, parent any, _ map[string]any
 
 func populateShipToAddressOnPO(ctx context.Context, parent any, _ map[string]any) {
 	po := parent.(*apiresource.PurchaseOrder)
-	v, ok := resourcekit.GetLoadMeta(ctx).Get(constants.ObjectTypePurchaseOrder, po.ID, "ship_to_address")
+	v, ok := include.GetLoadMeta(ctx).Get(constants.ObjectTypePurchaseOrder, po.ID, "ship_to_address")
 	if !ok {
 		return
 	}
@@ -172,7 +172,7 @@ func populateShipToAddressOnPO(ctx context.Context, parent any, _ map[string]any
 
 func populateFreightOnPO(ctx context.Context, parent any, _ map[string]any) {
 	po := parent.(*apiresource.PurchaseOrder)
-	v, ok := resourcekit.GetLoadMeta(ctx).Get(constants.ObjectTypePurchaseOrder, po.ID, "freight")
+	v, ok := include.GetLoadMeta(ctx).Get(constants.ObjectTypePurchaseOrder, po.ID, "freight")
 	if !ok {
 		return
 	}
@@ -181,7 +181,7 @@ func populateFreightOnPO(ctx context.Context, parent any, _ map[string]any) {
 
 func populatePaymentTermOnPO(ctx context.Context, parent any, _ map[string]any) {
 	po := parent.(*apiresource.PurchaseOrder)
-	v, ok := resourcekit.GetLoadMeta(ctx).Get(constants.ObjectTypePurchaseOrder, po.ID, "payment_term")
+	v, ok := include.GetLoadMeta(ctx).Get(constants.ObjectTypePurchaseOrder, po.ID, "payment_term")
 	if !ok {
 		return
 	}
@@ -190,7 +190,7 @@ func populatePaymentTermOnPO(ctx context.Context, parent any, _ map[string]any) 
 
 func populateShippingTermOnPO(ctx context.Context, parent any, _ map[string]any) {
 	po := parent.(*apiresource.PurchaseOrder)
-	v, ok := resourcekit.GetLoadMeta(ctx).Get(constants.ObjectTypePurchaseOrder, po.ID, "shipping_term")
+	v, ok := include.GetLoadMeta(ctx).Get(constants.ObjectTypePurchaseOrder, po.ID, "shipping_term")
 	if !ok {
 		return
 	}
@@ -220,7 +220,7 @@ func populateDeliveriesOnPORelated(ctx context.Context, parent any, _ map[string
 }
 
 func stashedPORelated(ctx context.Context, orderID string) *apiresource.PurchaseOrderRelated {
-	v, ok := resourcekit.GetLoadMeta(ctx).Get(constants.ObjectTypePurchaseOrder, orderID, "related")
+	v, ok := include.GetLoadMeta(ctx).Get(constants.ObjectTypePurchaseOrder, orderID, "related")
 	if !ok {
 		return nil
 	}
@@ -238,7 +238,7 @@ func poRelated(po *apiresource.PurchaseOrder) *apiresource.PurchaseOrderRelated 
 
 func populateLinesOnPO(ctx context.Context, parent any, _ map[string]any) {
 	po := parent.(*apiresource.PurchaseOrder)
-	v, ok := resourcekit.GetLoadMeta(ctx).Get(constants.ObjectTypePurchaseOrder, po.ID, "lines")
+	v, ok := include.GetLoadMeta(ctx).Get(constants.ObjectTypePurchaseOrder, po.ID, "lines")
 	if !ok {
 		return
 	}
@@ -247,7 +247,7 @@ func populateLinesOnPO(ctx context.Context, parent any, _ map[string]any) {
 
 func populateContactsOnPO(ctx context.Context, parent any, _ map[string]any) {
 	po := parent.(*apiresource.PurchaseOrder)
-	v, ok := resourcekit.GetLoadMeta(ctx).Get(constants.ObjectTypePurchaseOrder, po.ID, "contacts")
+	v, ok := include.GetLoadMeta(ctx).Get(constants.ObjectTypePurchaseOrder, po.ID, "contacts")
 	if !ok {
 		return
 	}
@@ -256,7 +256,7 @@ func populateContactsOnPO(ctx context.Context, parent any, _ map[string]any) {
 
 func populateDeliveryLinesOnPOLine(ctx context.Context, parent any, _ map[string]any) {
 	l := parent.(*apiresource.PurchaseOrderLine)
-	v, ok := resourcekit.GetLoadMeta(ctx).Get(constants.ObjectTypePurchaseOrderLine, l.ID, "delivery_lines")
+	v, ok := include.GetLoadMeta(ctx).Get(constants.ObjectTypePurchaseOrderLine, l.ID, "delivery_lines")
 	if !ok {
 		return
 	}

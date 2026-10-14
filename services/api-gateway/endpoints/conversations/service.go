@@ -3,13 +3,13 @@ package conversationep
 import (
 	"context"
 	"fmt"
+	"github.com/open-mrp/apikit/include"
 
 	"github.com/open-mrp/api/services/api-gateway/internal/chatmap"
 	"github.com/open-mrp/api/services/api-gateway/internal/domain"
 	grpcutil "github.com/open-mrp/api/services/api-gateway/internal/grpc"
 	"github.com/open-mrp/api/services/api-gateway/internal/resourceloaders"
 	apiresource "github.com/open-mrp/api/services/api-gateway/pkg/resource"
-	"github.com/open-mrp/api/services/api-gateway/pkg/resourcekit"
 	"github.com/open-mrp/api/shared/constants"
 	pb "github.com/open-mrp/api/shared/proto/notification"
 	apierror "github.com/open-mrp/apikit/apierror"
@@ -102,11 +102,11 @@ func (s *conversationSvcImpl) toResourceList(ctx context.Context, cs []*pb.Conve
 // service stores actors and rosters by id only, so names are resolved here (users via core, agents via
 // agent-service, rosters via the chat service). Best-effort and a no-op when nothing relevant was requested.
 func (s *conversationSvcImpl) hydrateConversations(ctx context.Context, convs ...*apiresource.Conversation) {
-	requested := resourcekit.RequestedIncludeSet(ctx)
+	requested := include.RequestedIncludeSet(ctx)
 	if len(requested) == 0 {
 		return
 	}
-	meta := resourcekit.GetLoadMeta(ctx)
+	meta := include.GetLoadMeta(ctx)
 	var actors []*apiresource.Actor
 	var groups []*apiresource.MessagingGroup
 	var topics []*apiresource.Entity

@@ -2,18 +2,18 @@ package resourceregistry
 
 import (
 	"context"
+	"github.com/open-mrp/apikit/include"
 
 	"github.com/open-mrp/api/services/api-gateway/internal/resourceloaders"
 	apiresource "github.com/open-mrp/api/services/api-gateway/pkg/resource"
-	"github.com/open-mrp/api/services/api-gateway/pkg/resourcekit"
 	"github.com/open-mrp/api/shared/constants"
 )
 
 func init() {
-	resourcekit.Register(&resourcekit.Definition{
+	include.Register(&include.Definition{
 		ObjectType: constants.ObjectTypeServiceLevel,
 		Load:       resourceloaders.LoadServiceLevels,
-		Subs: []resourcekit.SubField{
+		Subs: []include.SubField{
 			// owner: no fetch — projects the Owner shell from the SL's account_id stashed in LoadMeta. type=system or type=account.
 			{
 				Key:      "owner",
@@ -23,7 +23,7 @@ func init() {
 			{
 				Key:         "owner.account",
 				Target:      constants.ObjectTypeAccount,
-				Cardinality: resourcekit.CardinalityOnePtr,
+				Cardinality: include.CardinalityOnePtr,
 				ExtractIDs:  extractOwnerAccountIDFromServiceLevel,
 				Populate:    populateOwnerAccountOnServiceLevel,
 			},
@@ -33,14 +33,14 @@ func init() {
 
 func populateOwnerOnServiceLevel(ctx context.Context, parent any, _ map[string]any) {
 	sl := parent.(*apiresource.ServiceLevel)
-	accountID, _ := resourcekit.GetLoadMeta(ctx).
+	accountID, _ := include.GetLoadMeta(ctx).
 		GetString(constants.ObjectTypeServiceLevel, sl.ID, "owner_account_id")
 	sl.Owner = buildOwnerShell(accountID)
 }
 
 func extractOwnerAccountIDFromServiceLevel(ctx context.Context, parent any) []string {
 	sl := parent.(*apiresource.ServiceLevel)
-	id, _ := resourcekit.GetLoadMeta(ctx).
+	id, _ := include.GetLoadMeta(ctx).
 		GetString(constants.ObjectTypeServiceLevel, sl.ID, "owner_account_id")
 	if id == "" {
 		return nil
@@ -53,7 +53,7 @@ func populateOwnerAccountOnServiceLevel(ctx context.Context, parent any, loaded 
 	if sl.Owner == nil {
 		return
 	}
-	id, _ := resourcekit.GetLoadMeta(ctx).
+	id, _ := include.GetLoadMeta(ctx).
 		GetString(constants.ObjectTypeServiceLevel, sl.ID, "owner_account_id")
 	if id == "" {
 		return

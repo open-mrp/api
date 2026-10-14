@@ -4,11 +4,12 @@ import (
 	"context"
 	"net/http"
 
-	apiendpoint "github.com/open-mrp/api/services/api-gateway/pkg/endpoint"
+	"github.com/open-mrp/api/services/api-gateway/pkg/authz"
 	apiresource "github.com/open-mrp/api/services/api-gateway/pkg/resource"
 	"github.com/open-mrp/api/services/auth-service/pkg/types"
 	"github.com/open-mrp/api/shared/constants"
 	apierror "github.com/open-mrp/apikit/apierror"
+	apiendpoint "github.com/open-mrp/apikit/endpoint"
 	"github.com/open-mrp/apikit/field"
 )
 
@@ -35,15 +36,15 @@ type AnalyzeCustomerPricingEndpoint struct{}
 
 func (e *AnalyzeCustomerPricingEndpoint) Materialize() *apiendpoint.APIEndpoint[*AnalyzeCustomerPricingRequest, *apiresource.AnalyzeCustomerPricingResponse] {
 	return (&apiendpoint.APIEndpoint[*AnalyzeCustomerPricingRequest, *apiresource.AnalyzeCustomerPricingResponse]{
-		Title:               "Analyze Customer Pricing",
-		Method:              http.MethodPut,
-		Route:               "/v1/core/analytics/customer-pricing",
-		ContentType:         "application/json",
-		SuccessStatusCode:   http.StatusOK,
-		Public:              false,
-		AgentTool:           true,
-		Preview:             true,
-		RequiredPermissions: []types.Permission{{Domain: types.PermissionDomainCosts, Action: types.ActionRead}},
+		Title:             "Analyze Customer Pricing",
+		Method:            http.MethodPut,
+		Route:             "/v1/core/analytics/customer-pricing",
+		ContentType:       "application/json",
+		SuccessStatusCode: http.StatusOK,
+		Public:            false,
+		AgentTool:         true,
+		Preview:           true,
+		Auth:              authz.Policy{Permissions: []types.Permission{{Domain: types.PermissionDomainCosts, Action: types.ActionRead}}},
 		// The roots the include resolver walks are the findings, not the response wrapper, so ObjectType names the finding and ExtractRoots reaches into the list.
 		ObjectType:    constants.ObjectTypeCustomerPricingFinding,
 		IncludeConfig: customerPricingIncludeConfig(),

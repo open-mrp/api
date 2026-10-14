@@ -4,10 +4,11 @@ import (
 	"context"
 	"net/http"
 
-	apiendpoint "github.com/open-mrp/api/services/api-gateway/pkg/endpoint"
+	"github.com/open-mrp/api/services/api-gateway/pkg/authz"
 	apiresource "github.com/open-mrp/api/services/api-gateway/pkg/resource"
 	"github.com/open-mrp/api/services/auth-service/pkg/types"
 	apierror "github.com/open-mrp/apikit/apierror"
+	apiendpoint "github.com/open-mrp/apikit/endpoint"
 )
 
 // Request to retrieve a shipping case label URL.
@@ -33,7 +34,7 @@ func (e *GetShippingCaseLabelEndpoint) Materialize() *apiendpoint.APIEndpoint[*G
 		Preview:           true,
 		// GetShippingCaseLabel enforces shipments:read in the service (shipping cases
 		// are a facet of shipments). Declared here to match that enforcement.
-		RequiredPermissions: []types.Permission{{Domain: types.PermissionDomainShipments, Action: types.ActionRead}},
+		Auth: authz.Policy{Permissions: []types.Permission{{Domain: types.PermissionDomainShipments, Action: types.ActionRead}}},
 		ServiceHandler: func(svc any) func(ctx context.Context, req *GetShippingCaseLabelRequest) (*apiresource.ShippingCaseLabelURL, *apierror.APIError) {
 			return svc.(ShippingCaseSvc).GetShippingCaseLabel
 		},

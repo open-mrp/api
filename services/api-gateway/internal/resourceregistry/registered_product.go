@@ -2,29 +2,29 @@ package resourceregistry
 
 import (
 	"context"
+	"github.com/open-mrp/apikit/include"
 
 	"github.com/open-mrp/api/services/api-gateway/internal/resourceloaders"
 	apiresource "github.com/open-mrp/api/services/api-gateway/pkg/resource"
-	"github.com/open-mrp/api/services/api-gateway/pkg/resourcekit"
 	"github.com/open-mrp/api/shared/constants"
 )
 
 func init() {
-	resourcekit.Register(&resourcekit.Definition{
+	include.Register(&include.Definition{
 		ObjectType: constants.ObjectTypeProduct,
 		Load:       resourceloaders.LoadProducts,
-		Subs: []resourcekit.SubField{
+		Subs: []include.SubField{
 			{
 				Key:         "item",
 				Target:      constants.ObjectTypeItem,
-				Cardinality: resourcekit.CardinalityOnePtr,
+				Cardinality: include.CardinalityOnePtr,
 				ExtractIDs:  extractItemIDFromProduct,
 				Populate:    populateItemOnProduct,
 			},
 			{
 				Key:         "product_line",
 				Target:      constants.ObjectTypeProductLine,
-				Cardinality: resourcekit.CardinalityOnePtr,
+				Cardinality: include.CardinalityOnePtr,
 				ExtractIDs:  extractProductLineIDFromProduct,
 				Populate:    populateProductLineOnProduct,
 			},
@@ -34,7 +34,7 @@ func init() {
 
 func extractItemIDFromProduct(ctx context.Context, parent any) []string {
 	p := parent.(*apiresource.Product)
-	id, _ := resourcekit.GetLoadMeta(ctx).
+	id, _ := include.GetLoadMeta(ctx).
 		GetString(constants.ObjectTypeProduct, p.ID, "item_id")
 	if id == "" {
 		return nil
@@ -44,7 +44,7 @@ func extractItemIDFromProduct(ctx context.Context, parent any) []string {
 
 func populateItemOnProduct(ctx context.Context, parent any, loaded map[string]any) {
 	p := parent.(*apiresource.Product)
-	id, _ := resourcekit.GetLoadMeta(ctx).
+	id, _ := include.GetLoadMeta(ctx).
 		GetString(constants.ObjectTypeProduct, p.ID, "item_id")
 	if id == "" {
 		return
@@ -56,7 +56,7 @@ func populateItemOnProduct(ctx context.Context, parent any, loaded map[string]an
 
 func extractProductLineIDFromProduct(ctx context.Context, parent any) []string {
 	p := parent.(*apiresource.Product)
-	id, _ := resourcekit.GetLoadMeta(ctx).
+	id, _ := include.GetLoadMeta(ctx).
 		GetString(constants.ObjectTypeProduct, p.ID, "product_line_id")
 	if id == "" {
 		return nil
@@ -66,7 +66,7 @@ func extractProductLineIDFromProduct(ctx context.Context, parent any) []string {
 
 func populateProductLineOnProduct(ctx context.Context, parent any, loaded map[string]any) {
 	p := parent.(*apiresource.Product)
-	id, _ := resourcekit.GetLoadMeta(ctx).
+	id, _ := include.GetLoadMeta(ctx).
 		GetString(constants.ObjectTypeProduct, p.ID, "product_line_id")
 	if id == "" {
 		return

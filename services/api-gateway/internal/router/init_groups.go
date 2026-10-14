@@ -1,56 +1,43 @@
 package router
 
 import (
-	"log"
-	"net/http"
-	"time"
-
-	"github.com/open-mrp/api/services/api-gateway/internal/middleware"
+	gatewaymw "github.com/open-mrp/api/services/api-gateway/internal/middleware"
 	httpgroup "github.com/open-mrp/api/services/api-gateway/pkg/group"
+	"github.com/open-mrp/apikit/middleware"
+	kitrouter "github.com/open-mrp/apikit/router"
 )
 
 func (r *router) InitEndpointGroups(config MainRouterConfig) {
-	registry := NewRegistry()
+	registry := kitrouter.NewRegistry()
 
 	// Main endpoints backed by the Auth gRPC service.
 	if config.AuthClient == nil {
 		panic("Main router: Auth client is a nil pointer")
 	}
 
-	// Setup middleware
-	middlewareLogger := log.New(config.LogWriter, config.LogPrefix, config.LogFlags)
-	requestLogSaver := middleware.NewRequestLogSaver(config.RequestLogPublisher)
-	loggingMiddleware := func(next http.HandlerFunc) http.HandlerFunc {
-		return middleware.LoggingMiddleware(middlewareLogger, next, requestLogSaver, r, config.TrustedProxyHops)
-	}
-	authMiddlewareConfig := &middleware.AuthMiddlewareConfig{
-		AuthClient: config.AuthClient,
-	}
-	idempotencyMiddlewareConfig := &middleware.IdempotencyMiddlewareConfig{
-		PlatformClient: config.PlatformClient,
-	}
-
 	// Middlewares
-	r.AddMiddleware(middleware.TracingMiddleware())
-	r.AddMiddleware(middleware.IPBlockMiddleware(config.TrustedProxyHops))
-	r.AddMiddleware(middleware.PlatformMiddleware(config.PlatformMode))
-	r.AddMiddleware(middleware.ExternalHostMiddleware())
-	r.AddMiddleware(loggingMiddleware)
-	r.AddMiddleware(middleware.CORSMiddleware())
-	r.AddMiddleware(middleware.RateLimitMiddleware(config.TrustedProxyHops))
+	r.AddMiddleware(middleware.Tracing())
+	r.AddMiddleware(middleware.IPBlock(blockedIPs, config.TrustedProxyHops))
+	r.AddMiddleware(gatewaymw.PlatformMiddleware(config.PlatformMode))
+	r.AddMiddleware(gatewaymw.ExternalHostMiddleware())
+	r.AddMiddleware(middleware.CORS(corsConfig))
+	r.AddMiddleware(rateLimit(20, config.TrustedProxyHops))
 	if config.Internal {
 		// Internal listener: trust the agent identity supplied by agent-service (gated by the shared service token) instead of validating a user credential against auth-service.
-		r.AddMiddleware(middleware.InternalAuthMiddleware(&middleware.InternalAuthMiddlewareConfig{
+		r.AddMiddleware(gatewaymw.InternalAuthMiddleware(&gatewaymw.InternalAuthMiddlewareConfig{
 			ServiceToken: config.InternalServiceToken,
 		}))
 	} else {
-		r.AddMiddleware(middleware.AuthMiddleware(authMiddlewareConfig))
+		r.AddMiddleware(gatewaymw.AuthMiddleware(&gatewaymw.AuthMiddlewareConfig{AuthClient: config.AuthClient}))
 	}
-	r.AddMiddleware(middleware.SubscriptionMiddleware())
-	r.AddMiddleware(middleware.SandboxBillingMiddleware())
-	r.AddMiddleware(middleware.VersionMiddleware())
-	r.AddMiddleware(middleware.IdempotencyMiddleware(idempotencyMiddlewareConfig))
-	r.AddMiddleware(middleware.RecoverMiddleware())
+	r.AddMiddleware(gatewaymw.SubscriptionMiddleware())
+	r.AddMiddleware(gatewaymw.SandboxBillingMiddleware())
+	r.AddMiddleware(middleware.Version("/healthz"))
+	r.AddMiddleware(middleware.Idempotency(middleware.IdempotencyConfig{
+		Store: gatewaymw.NewIdempotencyStore(config.PlatformClient),
+		Scope: gatewaymw.IdempotencyScope,
+	}))
+	r.AddMiddleware(middleware.Recover())
 
 	// Healthz
 	healthGroup := (&httpgroup.HealthEndpointGroup{}).Materialize(httpgroup.HealthEndpointGroupConfig{})
@@ -910,26 +897,19 @@ func (r *router) InitEndpointGroups(config MainRouterConfig) {
 		registry.RegisterGroup(recordsGroup.APIEndpointGroup)
 	}
 
-	registry.RegisterEndpoints(r)
+	registry.RegisterEndpoints(r.Router)
 }
 
 func (r *router) InitWebhookEndpointGroups(config WebhookRouterConfig) {
-	registry := NewRegistry()
+	registry := kitrouter.NewRegistry()
 
-	// Setup middleware — minimal chain for webhooks: no auth, no CORS, no idempotency
-	middlewareLogger := log.New(config.LogWriter, config.LogPrefix, config.LogFlags)
-	requestLogSaver := middleware.NewRequestLogSaver(config.RequestLogPublisher)
-	loggingMiddleware := func(next http.HandlerFunc) http.HandlerFunc {
-		return middleware.LoggingMiddleware(middlewareLogger, next, requestLogSaver, r, config.TrustedProxyHops)
-	}
-
-	r.AddMiddleware(middleware.TracingMiddleware())
-	r.AddMiddleware(middleware.IPBlockMiddleware(config.TrustedProxyHops))
-	r.AddMiddleware(middleware.PlatformMiddleware(config.PlatformMode))
-	r.AddMiddleware(middleware.ExternalHostMiddleware())
-	r.AddMiddleware(middleware.RateLimitMiddlewareWithConfig(100, time.Second, config.TrustedProxyHops))
-	r.AddMiddleware(loggingMiddleware)
-	r.AddMiddleware(middleware.RecoverMiddleware())
+	// Minimal chain for webhooks: no auth, no CORS, no idempotency.
+	r.AddMiddleware(middleware.Tracing())
+	r.AddMiddleware(middleware.IPBlock(blockedIPs, config.TrustedProxyHops))
+	r.AddMiddleware(gatewaymw.PlatformMiddleware(config.PlatformMode))
+	r.AddMiddleware(gatewaymw.ExternalHostMiddleware())
+	r.AddMiddleware(rateLimit(100, config.TrustedProxyHops))
+	r.AddMiddleware(middleware.Recover())
 
 	// Webhooks
 	webhooksGroup := (&httpgroup.WebhooksEndpointGroup{}).Materialize(&httpgroup.WebhooksEndpointGroupConfig{
@@ -940,38 +920,31 @@ func (r *router) InitWebhookEndpointGroups(config WebhookRouterConfig) {
 		registry.RegisterGroup(webhooksGroup.APIEndpointGroup)
 	}
 
-	registry.RegisterEndpoints(r)
+	registry.RegisterEndpoints(r.Router)
 }
 
 func (r *router) InitAuthEndpointGroups(config AuthRouterConfig) {
-	registry := NewRegistry()
+	registry := kitrouter.NewRegistry()
 
 	// Auth endpoints backed by the Auth gRPC service.
 	if config.AuthClient == nil {
 		panic("Auth router: Auth client is a nil pointer")
 	}
 
-	middlewareLogger := log.New(config.LogWriter, config.LogPrefix, config.LogFlags)
-	requestLogSaver := middleware.NewRequestLogSaver(config.RequestLogPublisher)
-	loggingMiddleware := func(next http.HandlerFunc) http.HandlerFunc {
-		return middleware.LoggingMiddleware(middlewareLogger, next, requestLogSaver, r, config.TrustedProxyHops)
-	}
-	idempotencyMiddlewareConfig := &middleware.IdempotencyMiddlewareConfig{
-		PlatformClient: config.PlatformClient,
-	}
-
 	// Middlewares
-	r.AddMiddleware(middleware.TracingMiddleware())
-	r.AddMiddleware(middleware.IPBlockMiddleware(config.TrustedProxyHops))
-	r.AddMiddleware(middleware.PlatformMiddleware(config.PlatformMode))
-	r.AddMiddleware(middleware.ExternalHostMiddleware())
-	r.AddMiddleware(loggingMiddleware)
-	r.AddMiddleware(middleware.CORSMiddleware())
-	r.AddMiddleware(middleware.RateLimitMiddleware(config.TrustedProxyHops))
-	r.AddMiddleware(middleware.AuthSecurityMiddleware())
-	r.AddMiddleware(middleware.VersionMiddleware())
-	r.AddMiddleware(middleware.IdempotencyMiddleware(idempotencyMiddlewareConfig))
-	r.AddMiddleware(middleware.RecoverMiddleware())
+	r.AddMiddleware(middleware.Tracing())
+	r.AddMiddleware(middleware.IPBlock(blockedIPs, config.TrustedProxyHops))
+	r.AddMiddleware(gatewaymw.PlatformMiddleware(config.PlatformMode))
+	r.AddMiddleware(gatewaymw.ExternalHostMiddleware())
+	r.AddMiddleware(middleware.CORS(corsConfig))
+	r.AddMiddleware(rateLimit(20, config.TrustedProxyHops))
+	r.AddMiddleware(middleware.SecurityHeaders())
+	r.AddMiddleware(middleware.Version("/healthz"))
+	r.AddMiddleware(middleware.Idempotency(middleware.IdempotencyConfig{
+		Store: gatewaymw.NewIdempotencyStore(config.PlatformClient),
+		Scope: gatewaymw.IdempotencyScope,
+	}))
+	r.AddMiddleware(middleware.Recover())
 
 	// Auth
 	authGroup := (&httpgroup.AuthEndpointGroup{}).Materialize(&httpgroup.AuthEndpointGroupConfig{
@@ -998,5 +971,5 @@ func (r *router) InitAuthEndpointGroups(config AuthRouterConfig) {
 		registry.RegisterGroup(registrationSessionsGroup.APIEndpointGroup)
 	}
 
-	registry.RegisterEndpoints(r)
+	registry.RegisterEndpoints(r.Router)
 }

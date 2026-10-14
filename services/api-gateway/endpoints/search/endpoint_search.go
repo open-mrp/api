@@ -4,15 +4,22 @@ import (
 	"context"
 	"net/http"
 
-	apiendpoint "github.com/open-mrp/api/services/api-gateway/pkg/endpoint"
+	"github.com/open-mrp/apikit/object"
+
+	"github.com/open-mrp/api/services/api-gateway/pkg/authz"
 	apiresource "github.com/open-mrp/api/services/api-gateway/pkg/resource"
 	"github.com/open-mrp/api/shared/constants"
 	apierror "github.com/open-mrp/apikit/apierror"
+	apiendpoint "github.com/open-mrp/apikit/endpoint"
 )
 
 // Request to search across resource types for a free-text term.
 type SearchRequest struct {
-	apiresource.PaginationRequest
+	object.ListRequest
+	// Free-text search term used to filter results.
+	//
+	// Which fields are matched against the term varies by endpoint.
+	Query *string `query:"q" validate:"omitempty,max=500"`
 	// Filter the search to specific resource types.
 	//
 	// Only a subset of resource types is searchable: `sales_order`, `purchase_order`, `invoice`, `customer`, `item`, `product`, `shipment`, `messaging_contact`, and `agent_definition`. Any other value is rejected. Types you lack read permission for are silently dropped rather than rejected, so narrowing to a type you cannot read simply returns no results. Omit to search every searchable type you can read.
@@ -32,17 +39,17 @@ type SearchEndpoint struct{}
 
 func (e *SearchEndpoint) Materialize() *apiendpoint.APIEndpoint[*SearchRequest, *apiresource.List[apiresource.Entity]] {
 	return (&apiendpoint.APIEndpoint[*SearchRequest, *apiresource.List[apiresource.Entity]]{
-		Title:               "Search",
-		Method:              http.MethodGet,
-		ContentType:         "application/json",
-		Route:               "/v1/core/search",
-		SuccessStatusCode:   http.StatusOK,
-		Public:              true,
-		Preview:             true,
-		AgentTool:           true,
-		RequiredPermissions: searchReadPermissions,
-		ObjectType:          constants.ObjectTypeEntity,
-		Extras:              apiendpoint.APIEndpointExtras{HideFromRequestLog: true},
+		Title:             "Search",
+		Method:            http.MethodGet,
+		ContentType:       "application/json",
+		Route:             "/v1/core/search",
+		SuccessStatusCode: http.StatusOK,
+		Public:            true,
+		Preview:           true,
+		AgentTool:         true,
+		Auth:              authz.Policy{Permissions: searchReadPermissions},
+		ObjectType:        constants.ObjectTypeEntity,
+		Extras:            apiendpoint.APIEndpointExtras{HideFromRequestLog: true},
 		ServiceHandler: func(svc any) func(ctx context.Context, req *SearchRequest) (*apiresource.List[apiresource.Entity], *apierror.APIError) {
 			return svc.(SearchSvc).Search
 		},

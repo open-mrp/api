@@ -2,13 +2,13 @@ package invoiceep
 
 import (
 	"context"
+	"github.com/open-mrp/apikit/include"
 	"testing"
 
 	// Registers the invoice definitions whose sub-fields these tests resolve.
 	_ "github.com/open-mrp/api/services/api-gateway/internal/resourceregistry"
 	apiresource "github.com/open-mrp/api/services/api-gateway/pkg/resource"
 	"github.com/open-mrp/api/services/api-gateway/pkg/resource/resourcetest"
-	"github.com/open-mrp/api/services/api-gateway/pkg/resourcekit"
 	"github.com/open-mrp/api/shared/constants"
 	pb "github.com/open-mrp/api/shared/proto/core"
 	"github.com/stretchr/testify/assert"
@@ -108,7 +108,7 @@ func TestInvoicePresenterCarriesPaidMarkBesideOverpaid(t *testing.T) {
 
 func resolveInvoiceIncludes(t *testing.T, ctx context.Context, inv *apiresource.Invoice, keys ...string) {
 	t.Helper()
-	apiErr := resourcekit.ResolveIncludes(ctx, []any{inv}, constants.ObjectTypeInvoice, resourcekit.ParseIncludeTree(keys))
+	apiErr := include.ResolveIncludes(ctx, []any{inv}, constants.ObjectTypeInvoice, include.ParseIncludeTree(keys))
 	require.Nil(t, apiErr)
 }
 
@@ -126,7 +126,7 @@ func TestInvoicePresenterEmbedsBillingAddressAndPaymentTerm(t *testing.T) {
 	}
 	info.PaymentTerm = &pb.PaymentTermInfo{Id: "pytm_01abc", Name: "Net 30", Status: "active", CreatedAt: timestamppb.Now(), UpdatedAt: timestamppb.Now()}
 
-	ctx := resourcekit.WithLoadMeta(context.Background())
+	ctx := include.WithLoadMeta(context.Background())
 	inv := invoiceFromProto(ctx, info)
 	assert.Nil(t, inv.BillingAddress, "expandable fields stay null until requested")
 	assert.Nil(t, inv.PaymentTerm, "expandable fields stay null until requested")
@@ -155,7 +155,7 @@ func TestInvoicePresenterLeavesMissingPaymentTermNull(t *testing.T) {
 	info := sampleInvoiceInfo()
 	info.PaymentTerm = nil
 
-	ctx := resourcekit.WithLoadMeta(context.Background())
+	ctx := include.WithLoadMeta(context.Background())
 	inv := invoiceFromProto(ctx, info)
 	resolveInvoiceIncludes(t, ctx, &inv, "payment_term")
 
@@ -174,7 +174,7 @@ func TestInvoicePresenterOrderLineCarriesNumberAndDescription(t *testing.T) {
 		CreatedAt: timestamppb.Now(), UpdatedAt: timestamppb.Now(),
 	}}
 
-	ctx := resourcekit.WithLoadMeta(context.Background())
+	ctx := include.WithLoadMeta(context.Background())
 	inv := invoiceFromProto(ctx, info)
 	resolveInvoiceIncludes(t, ctx, &inv, "lines", "lines.order_line")
 
@@ -198,7 +198,7 @@ func TestInvoicePresenterAllocationCarriesSettlement(t *testing.T) {
 		{Id: "tral_loose", TransactionId: "tr_2", AmountId: "qt_2", AmountValue: "5"},
 	}
 
-	ctx := resourcekit.WithLoadMeta(context.Background())
+	ctx := include.WithLoadMeta(context.Background())
 	inv := invoiceFromProto(ctx, info)
 	resolveInvoiceIncludes(t, ctx, &inv, "allocations")
 
@@ -214,14 +214,14 @@ func TestInvoicePresenterAllocationCarriesSettlement(t *testing.T) {
 func TestInvoiceForPaymentPresenterEmbedsBillingAddress(t *testing.T) {
 	t.Parallel()
 
-	ctx := resourcekit.WithLoadMeta(context.Background())
+	ctx := include.WithLoadMeta(context.Background())
 	inv := invoiceForPaymentFromProto(ctx, &pb.InvoiceForPaymentInfo{
 		Id: "inv_01abc", Number: "1001", CustomerId: "ac_01abc", InvoiceTotal: "10.00",
 		BillingAddress: &pb.AddressInfo{Id: "addr_01abc", Name: "HQ", Geolocation: &pb.GeolocationInfo{Id: "geo_01abc", Country: "US"}},
 	})
 	assert.Nil(t, inv.BillingAddress, "expandable fields stay null until requested")
 
-	apiErr := resourcekit.ResolveIncludes(ctx, []any{&inv}, constants.ObjectTypeInvoiceForPayment, resourcekit.ParseIncludeTree([]string{"billing_address"}))
+	apiErr := include.ResolveIncludes(ctx, []any{&inv}, constants.ObjectTypeInvoiceForPayment, include.ParseIncludeTree([]string{"billing_address"}))
 	require.Nil(t, apiErr)
 
 	require.NotNil(t, inv.BillingAddress)

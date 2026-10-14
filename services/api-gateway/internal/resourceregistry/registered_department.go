@@ -2,33 +2,33 @@ package resourceregistry
 
 import (
 	"context"
+	"github.com/open-mrp/apikit/include"
 
 	"github.com/open-mrp/api/services/api-gateway/internal/resourceloaders"
 	apiresource "github.com/open-mrp/api/services/api-gateway/pkg/resource"
-	"github.com/open-mrp/api/services/api-gateway/pkg/resourcekit"
 	"github.com/open-mrp/api/shared/constants"
 )
 
 func init() {
-	resourcekit.Register(&resourcekit.Definition{
+	include.Register(&include.Definition{
 		ObjectType: constants.ObjectTypeDepartment,
 		Load:       resourceloaders.LoadDepartments,
-		Subs: []resourcekit.SubField{
+		Subs: []include.SubField{
 			{
 				Key:         "location",
 				Target:      constants.ObjectTypeLocation,
-				Cardinality: resourcekit.CardinalityOnePtr,
+				Cardinality: include.CardinalityOnePtr,
 				ExtractIDs:  extractLocationIDFromDepartment,
 				Populate:    populateLocationOnDepartment,
 			},
 			{
 				Key:         "scanning_stations",
-				Cardinality: resourcekit.CardinalityList,
+				Cardinality: include.CardinalityList,
 				Populate:    populateScanningStationsOnDepartment,
 			},
 			{
 				Key:         "machines",
-				Cardinality: resourcekit.CardinalityList,
+				Cardinality: include.CardinalityList,
 				Populate:    populateMachinesOnDepartment,
 			},
 		},
@@ -37,7 +37,7 @@ func init() {
 
 func extractLocationIDFromDepartment(ctx context.Context, parent any) []string {
 	dept := parent.(*apiresource.Department)
-	id, _ := resourcekit.GetLoadMeta(ctx).
+	id, _ := include.GetLoadMeta(ctx).
 		GetString(constants.ObjectTypeDepartment, dept.ID, "location_id")
 	if id == "" {
 		return nil
@@ -47,7 +47,7 @@ func extractLocationIDFromDepartment(ctx context.Context, parent any) []string {
 
 func populateLocationOnDepartment(ctx context.Context, parent any, loaded map[string]any) {
 	dept := parent.(*apiresource.Department)
-	id, _ := resourcekit.GetLoadMeta(ctx).
+	id, _ := include.GetLoadMeta(ctx).
 		GetString(constants.ObjectTypeDepartment, dept.ID, "location_id")
 	if id == "" {
 		return
@@ -59,7 +59,7 @@ func populateLocationOnDepartment(ctx context.Context, parent any, loaded map[st
 
 func populateScanningStationsOnDepartment(ctx context.Context, parent any, _ map[string]any) {
 	dept := parent.(*apiresource.Department)
-	v, ok := resourcekit.GetLoadMeta(ctx).
+	v, ok := include.GetLoadMeta(ctx).
 		Get(constants.ObjectTypeDepartment, dept.ID, "scanning_stations")
 	if !ok {
 		return
@@ -70,7 +70,7 @@ func populateScanningStationsOnDepartment(ctx context.Context, parent any, _ map
 
 func populateMachinesOnDepartment(ctx context.Context, parent any, _ map[string]any) {
 	dept := parent.(*apiresource.Department)
-	v, ok := resourcekit.GetLoadMeta(ctx).
+	v, ok := include.GetLoadMeta(ctx).
 		Get(constants.ObjectTypeDepartment, dept.ID, "machines")
 	if !ok {
 		return

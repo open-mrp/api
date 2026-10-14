@@ -2,12 +2,12 @@ package resourceloaders
 
 import (
 	"context"
+	"github.com/open-mrp/apikit/include"
 	"strconv"
 
 	"github.com/open-mrp/api/services/api-gateway/internal/domain"
 	grpcutil "github.com/open-mrp/api/services/api-gateway/internal/grpc"
 	apiresource "github.com/open-mrp/api/services/api-gateway/pkg/resource"
-	"github.com/open-mrp/api/services/api-gateway/pkg/resourcekit"
 	"github.com/open-mrp/api/shared/constants"
 	pb "github.com/open-mrp/api/shared/proto/core"
 	apierror "github.com/open-mrp/apikit/apierror"
@@ -31,7 +31,7 @@ func LoadUnitGroups(ctx context.Context, ids []string) (map[string]any, *apierro
 	if apiErr != nil {
 		return nil, apiErr
 	}
-	meta := resourcekit.GetLoadMeta(ctx)
+	meta := include.GetLoadMeta(ctx)
 	out := make(map[string]any, len(resp.UnitGroups))
 	for _, ug := range resp.UnitGroups {
 		out[ug.Id] = unitGroupFromProto(ug)
@@ -89,7 +89,7 @@ func LoadUnitGroupUnits(ctx context.Context, ids []string) (map[string]any, *api
 	if apiErr != nil {
 		return nil, apiErr
 	}
-	meta := resourcekit.GetLoadMeta(ctx)
+	meta := include.GetLoadMeta(ctx)
 	out := make(map[string]any, len(resp.UnitGroupUnits))
 	for _, u := range resp.UnitGroupUnits {
 		out[u.Id] = unitGroupUnitFromProtoFlat(u)

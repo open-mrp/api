@@ -3,12 +3,12 @@ package blockep
 import (
 	"context"
 	"fmt"
+	"github.com/open-mrp/apikit/include"
 
 	"github.com/open-mrp/api/services/api-gateway/internal/chatmap"
 	"github.com/open-mrp/api/services/api-gateway/internal/domain"
 	grpcutil "github.com/open-mrp/api/services/api-gateway/internal/grpc"
 	apiresource "github.com/open-mrp/api/services/api-gateway/pkg/resource"
-	"github.com/open-mrp/api/services/api-gateway/pkg/resourcekit"
 	"github.com/open-mrp/api/shared/constants"
 	pb "github.com/open-mrp/api/shared/proto/notification"
 	apierror "github.com/open-mrp/apikit/apierror"
@@ -57,7 +57,7 @@ func (s *blockSvcImpl) Block(ctx context.Context, req *BlockRequest) (*apiresour
 		return nil, rpcErr
 	}
 	// blocked_user is fetched by id on ?include=blocked_user; stash the FK for the resolver.
-	resourcekit.GetLoadMeta(ctx).Set(constants.ObjectTypeMessagingBlock, resp.Id, "blocked_user_id", resp.BlockedAccountUserId)
+	include.GetLoadMeta(ctx).Set(constants.ObjectTypeMessagingBlock, resp.Id, "blocked_user_id", resp.BlockedAccountUserId)
 	return &apiresource.MessagingBlock{
 		ID:        resp.Id,
 		Object:    constants.ObjectTypeMessagingBlock,
@@ -84,7 +84,7 @@ func (s *blockSvcImpl) ListBlocks(ctx context.Context, _ *ListBlocksRequest) (*a
 	if rpcErr != nil {
 		return nil, rpcErr
 	}
-	meta := resourcekit.GetLoadMeta(ctx)
+	meta := include.GetLoadMeta(ctx)
 	items := make([]apiresource.MessagingBlock, 0, len(resp.Blocks))
 	for _, b := range resp.Blocks {
 		// blocked_user is fetched by id on ?include=blocked_user; stash the FK for the resolver.

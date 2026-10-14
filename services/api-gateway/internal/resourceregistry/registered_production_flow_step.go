@@ -2,9 +2,9 @@ package resourceregistry
 
 import (
 	"context"
+	"github.com/open-mrp/apikit/include"
 
 	apiresource "github.com/open-mrp/api/services/api-gateway/pkg/resource"
-	"github.com/open-mrp/api/services/api-gateway/pkg/resourcekit"
 	"github.com/open-mrp/api/shared/constants"
 	apierror "github.com/open-mrp/apikit/apierror"
 )
@@ -18,10 +18,10 @@ func stubLoader(_ context.Context, _ []string) (map[string]any, *apierror.APIErr
 }
 
 func init() {
-	resourcekit.Register(&resourcekit.Definition{
+	include.Register(&include.Definition{
 		ObjectType: productionFlowStepType,
 		Load:       stubLoader,
-		Subs: []resourcekit.SubField{
+		Subs: []include.SubField{
 			{Key: "production", Target: productionFlowProductionType, Populate: populateProductionOnFlowStep, ExtractRefs: extractProductionRefsFromFlowStep},
 			{Key: "consumptions", Target: productionFlowConsumptionType, Populate: populateConsumptionsOnFlowStep, ExtractRefs: extractConsumptionRefsFromFlowStep},
 			{Key: "machines", Target: constants.ObjectTypeMachine, ExtractIDs: extractMachineIDsFromFlowStep, Populate: populateMachinesOnFlowStep},
@@ -32,19 +32,19 @@ func init() {
 		},
 	})
 
-	resourcekit.Register(&resourcekit.Definition{
+	include.Register(&include.Definition{
 		ObjectType: productionFlowProductionType,
 		Load:       stubLoader,
-		Subs: []resourcekit.SubField{
-			{Key: "produced_item", Target: constants.ObjectTypeItem, Cardinality: resourcekit.CardinalityOnePtr, ExtractIDs: extractProducedItemIDFromFlowProduction, Populate: populateProducedItemOnFlowProduction},
+		Subs: []include.SubField{
+			{Key: "produced_item", Target: constants.ObjectTypeItem, Cardinality: include.CardinalityOnePtr, ExtractIDs: extractProducedItemIDFromFlowProduction, Populate: populateProducedItemOnFlowProduction},
 		},
 	})
 
-	resourcekit.Register(&resourcekit.Definition{
+	include.Register(&include.Definition{
 		ObjectType: productionFlowConsumptionType,
 		Load:       stubLoader,
-		Subs: []resourcekit.SubField{
-			{Key: "consumed_item", Target: constants.ObjectTypeItem, Cardinality: resourcekit.CardinalityOnePtr, ExtractIDs: extractConsumedItemIDFromFlowConsumption, Populate: populateConsumedItemOnFlowConsumption},
+		Subs: []include.SubField{
+			{Key: "consumed_item", Target: constants.ObjectTypeItem, Cardinality: include.CardinalityOnePtr, ExtractIDs: extractConsumedItemIDFromFlowConsumption, Populate: populateConsumedItemOnFlowConsumption},
 			{Key: "quantity", Populate: populateQuantityOnFlowConsumption},
 			{Key: "waste_quantity", Populate: populateWasteQuantityOnFlowConsumption},
 		},
@@ -73,7 +73,7 @@ func extractConsumptionRefsFromFlowStep(_ context.Context, parent any) []any {
 
 func populateProductionOnFlowStep(ctx context.Context, parent any, _ map[string]any) {
 	ps := parent.(*apiresource.ProductionFlowStep)
-	v, ok := resourcekit.GetLoadMeta(ctx).
+	v, ok := include.GetLoadMeta(ctx).
 		Get(constants.ObjectTypeProductionStep, ps.ID, "production")
 	if !ok {
 		return
@@ -83,7 +83,7 @@ func populateProductionOnFlowStep(ctx context.Context, parent any, _ map[string]
 
 func populateConsumptionsOnFlowStep(ctx context.Context, parent any, _ map[string]any) {
 	ps := parent.(*apiresource.ProductionFlowStep)
-	v, ok := resourcekit.GetLoadMeta(ctx).
+	v, ok := include.GetLoadMeta(ctx).
 		Get(constants.ObjectTypeProductionStep, ps.ID, "consumptions")
 	if !ok {
 		return
@@ -92,7 +92,7 @@ func populateConsumptionsOnFlowStep(ctx context.Context, parent any, _ map[strin
 }
 
 func flowStepMachineIDs(ctx context.Context, stepID string) []string {
-	v, ok := resourcekit.GetLoadMeta(ctx).Get(constants.ObjectTypeProductionStep, stepID, "machine_ids")
+	v, ok := include.GetLoadMeta(ctx).Get(constants.ObjectTypeProductionStep, stepID, "machine_ids")
 	if !ok {
 		return nil
 	}
@@ -117,7 +117,7 @@ func populateMachinesOnFlowStep(ctx context.Context, parent any, loaded map[stri
 
 func extractScanningStationIDFromFlowStep(ctx context.Context, parent any) []string {
 	ps := parent.(*apiresource.ProductionFlowStep)
-	id, _ := resourcekit.GetLoadMeta(ctx).
+	id, _ := include.GetLoadMeta(ctx).
 		GetString(constants.ObjectTypeProductionStep, ps.ID, "scanning_station_id")
 	if id == "" {
 		return nil
@@ -127,7 +127,7 @@ func extractScanningStationIDFromFlowStep(ctx context.Context, parent any) []str
 
 func populateScanningStationOnFlowStep(ctx context.Context, parent any, loaded map[string]any) {
 	ps := parent.(*apiresource.ProductionFlowStep)
-	id, _ := resourcekit.GetLoadMeta(ctx).
+	id, _ := include.GetLoadMeta(ctx).
 		GetString(constants.ObjectTypeProductionStep, ps.ID, "scanning_station_id")
 	if id == "" {
 		return
@@ -139,7 +139,7 @@ func populateScanningStationOnFlowStep(ctx context.Context, parent any, loaded m
 
 func extractDepartmentIDFromFlowStep(ctx context.Context, parent any) []string {
 	ps := parent.(*apiresource.ProductionFlowStep)
-	id, _ := resourcekit.GetLoadMeta(ctx).
+	id, _ := include.GetLoadMeta(ctx).
 		GetString(constants.ObjectTypeProductionStep, ps.ID, "department_id")
 	if id == "" {
 		return nil
@@ -149,7 +149,7 @@ func extractDepartmentIDFromFlowStep(ctx context.Context, parent any) []string {
 
 func populateDepartmentOnFlowStep(ctx context.Context, parent any, loaded map[string]any) {
 	ps := parent.(*apiresource.ProductionFlowStep)
-	id, _ := resourcekit.GetLoadMeta(ctx).
+	id, _ := include.GetLoadMeta(ctx).
 		GetString(constants.ObjectTypeProductionStep, ps.ID, "department_id")
 	if id == "" {
 		return
@@ -161,7 +161,7 @@ func populateDepartmentOnFlowStep(ctx context.Context, parent any, loaded map[st
 
 func populateInStepsOnFlowStep(ctx context.Context, parent any, _ map[string]any) {
 	ps := parent.(*apiresource.ProductionFlowStep)
-	v, ok := resourcekit.GetLoadMeta(ctx).
+	v, ok := include.GetLoadMeta(ctx).
 		Get(constants.ObjectTypeProductionStep, ps.ID, "in_steps")
 	if !ok {
 		return
@@ -171,7 +171,7 @@ func populateInStepsOnFlowStep(ctx context.Context, parent any, _ map[string]any
 
 func populateOutStepsOnFlowStep(ctx context.Context, parent any, _ map[string]any) {
 	ps := parent.(*apiresource.ProductionFlowStep)
-	v, ok := resourcekit.GetLoadMeta(ctx).
+	v, ok := include.GetLoadMeta(ctx).
 		Get(constants.ObjectTypeProductionStep, ps.ID, "out_steps")
 	if !ok {
 		return
@@ -181,7 +181,7 @@ func populateOutStepsOnFlowStep(ctx context.Context, parent any, _ map[string]an
 
 func extractProducedItemIDFromFlowProduction(ctx context.Context, parent any) []string {
 	p := parent.(*apiresource.ProductionFlowProduction)
-	id, _ := resourcekit.GetLoadMeta(ctx).
+	id, _ := include.GetLoadMeta(ctx).
 		GetString(constants.ObjectTypeProduction, p.ID, "produced_item_id")
 	if id == "" {
 		return nil
@@ -191,7 +191,7 @@ func extractProducedItemIDFromFlowProduction(ctx context.Context, parent any) []
 
 func populateProducedItemOnFlowProduction(ctx context.Context, parent any, loaded map[string]any) {
 	p := parent.(*apiresource.ProductionFlowProduction)
-	id, _ := resourcekit.GetLoadMeta(ctx).
+	id, _ := include.GetLoadMeta(ctx).
 		GetString(constants.ObjectTypeProduction, p.ID, "produced_item_id")
 	if id == "" {
 		return
@@ -203,7 +203,7 @@ func populateProducedItemOnFlowProduction(ctx context.Context, parent any, loade
 
 func extractConsumedItemIDFromFlowConsumption(ctx context.Context, parent any) []string {
 	c := parent.(*apiresource.ProductionFlowConsumption)
-	id, _ := resourcekit.GetLoadMeta(ctx).
+	id, _ := include.GetLoadMeta(ctx).
 		GetString(constants.ObjectTypeConsumption, c.ID, "consumed_item_id")
 	if id == "" {
 		return nil
@@ -213,7 +213,7 @@ func extractConsumedItemIDFromFlowConsumption(ctx context.Context, parent any) [
 
 func populateConsumedItemOnFlowConsumption(ctx context.Context, parent any, loaded map[string]any) {
 	c := parent.(*apiresource.ProductionFlowConsumption)
-	id, _ := resourcekit.GetLoadMeta(ctx).
+	id, _ := include.GetLoadMeta(ctx).
 		GetString(constants.ObjectTypeConsumption, c.ID, "consumed_item_id")
 	if id == "" {
 		return

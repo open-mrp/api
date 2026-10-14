@@ -5,12 +5,13 @@ import (
 	"net/http"
 	"time"
 
-	apiendpoint "github.com/open-mrp/api/services/api-gateway/pkg/endpoint"
-	apiexample "github.com/open-mrp/api/services/api-gateway/pkg/example"
+	"github.com/open-mrp/api/services/api-gateway/pkg/authz"
 	apiresource "github.com/open-mrp/api/services/api-gateway/pkg/resource"
 	"github.com/open-mrp/api/services/auth-service/pkg/types"
 	"github.com/open-mrp/api/shared/constants"
 	apierror "github.com/open-mrp/apikit/apierror"
+	apiendpoint "github.com/open-mrp/apikit/endpoint"
+	apiexample "github.com/open-mrp/apikit/example"
 	"github.com/open-mrp/apikit/field"
 )
 
@@ -143,17 +144,17 @@ type SendMessageEndpoint struct{}
 
 func (e *SendMessageEndpoint) Materialize() *apiendpoint.APIEndpoint[*SendMessageRequest, *apiresource.Message] {
 	return (&apiendpoint.APIEndpoint[*SendMessageRequest, *apiresource.Message]{
-		Title:               "Send Message",
-		Method:              http.MethodPost,
-		ContentType:         "application/json",
-		Route:               "/v1/messaging/conversations/{id}/messages",
-		SuccessStatusCode:   http.StatusCreated,
-		Public:              true,
-		AgentTool:           true,
-		Preview:             true,
-		ObjectType:          constants.ObjectTypeChatMessage,
-		IncludeConfig:       messageIncludeConfig(),
-		RequiredPermissions: []types.Permission{{Domain: types.PermissionDomainMessaging, Action: types.ActionCreate}},
+		Title:             "Send Message",
+		Method:            http.MethodPost,
+		ContentType:       "application/json",
+		Route:             "/v1/messaging/conversations/{id}/messages",
+		SuccessStatusCode: http.StatusCreated,
+		Public:            true,
+		AgentTool:         true,
+		Preview:           true,
+		ObjectType:        constants.ObjectTypeChatMessage,
+		IncludeConfig:     messageIncludeConfig(),
+		Auth:              authz.Policy{Permissions: []types.Permission{{Domain: types.PermissionDomainMessaging, Action: types.ActionCreate}}},
 		ServiceHandler: func(svc any) func(ctx context.Context, req *SendMessageRequest) (*apiresource.Message, *apierror.APIError) {
 			return svc.(MessageSvc).SendMessage
 		},

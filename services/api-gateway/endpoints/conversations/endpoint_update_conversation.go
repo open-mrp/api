@@ -4,12 +4,13 @@ import (
 	"context"
 	"net/http"
 
-	apiendpoint "github.com/open-mrp/api/services/api-gateway/pkg/endpoint"
-	apiexample "github.com/open-mrp/api/services/api-gateway/pkg/example"
+	"github.com/open-mrp/api/services/api-gateway/pkg/authz"
 	apiresource "github.com/open-mrp/api/services/api-gateway/pkg/resource"
 	"github.com/open-mrp/api/services/auth-service/pkg/types"
 	"github.com/open-mrp/api/shared/constants"
 	apierror "github.com/open-mrp/apikit/apierror"
+	apiendpoint "github.com/open-mrp/apikit/endpoint"
+	apiexample "github.com/open-mrp/apikit/example"
 	"github.com/open-mrp/apikit/field"
 )
 
@@ -39,17 +40,17 @@ type UpdateConversationEndpoint struct{}
 
 func (e *UpdateConversationEndpoint) Materialize() *apiendpoint.APIEndpoint[*UpdateConversationRequest, *apiresource.Conversation] {
 	return (&apiendpoint.APIEndpoint[*UpdateConversationRequest, *apiresource.Conversation]{
-		Title:               "Update Conversation",
-		Method:              http.MethodPatch,
-		ContentType:         "application/json",
-		Route:               "/v1/messaging/conversations/{id}",
-		SuccessStatusCode:   http.StatusOK,
-		Public:              true,
-		AgentTool:           false,
-		Preview:             true,
-		ObjectType:          constants.ObjectTypeConversation,
-		IncludeConfig:       conversationIncludeConfig(),
-		RequiredPermissions: []types.Permission{{Domain: types.PermissionDomainMessaging, Action: types.ActionUpdate}},
+		Title:             "Update Conversation",
+		Method:            http.MethodPatch,
+		ContentType:       "application/json",
+		Route:             "/v1/messaging/conversations/{id}",
+		SuccessStatusCode: http.StatusOK,
+		Public:            true,
+		AgentTool:         false,
+		Preview:           true,
+		ObjectType:        constants.ObjectTypeConversation,
+		IncludeConfig:     conversationIncludeConfig(),
+		Auth:              authz.Policy{Permissions: []types.Permission{{Domain: types.PermissionDomainMessaging, Action: types.ActionUpdate}}},
 		ServiceHandler: func(svc any) func(ctx context.Context, req *UpdateConversationRequest) (*apiresource.Conversation, *apierror.APIError) {
 			return svc.(ConversationSvc).UpdateConversation
 		},

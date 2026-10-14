@@ -8,9 +8,9 @@ import (
 
 	"github.com/open-mrp/api/services/api-gateway/internal/domain"
 	grpcutil "github.com/open-mrp/api/services/api-gateway/internal/grpc"
-	httptransport "github.com/open-mrp/api/services/api-gateway/internal/http"
 	apiresource "github.com/open-mrp/api/services/api-gateway/pkg/resource"
 	"github.com/open-mrp/api/shared/constants"
+	"github.com/open-mrp/api/shared/omrpctx"
 	pb "github.com/open-mrp/api/shared/proto/core"
 	apierror "github.com/open-mrp/apikit/apierror"
 	"github.com/open-mrp/apikit/tracing"
@@ -50,7 +50,7 @@ func NewTenancySvc(config *TenancySvcConfig) TenancySvc {
 }
 
 func (m *tenancySvcImpl) GetTenancy(ctx context.Context, req *GetTenancyRequest) (*apiresource.Tenancy, *apierror.APIError) {
-	identity, apiErr := httptransport.GetIdentity(ctx)
+	identity, apiErr := omrpctx.RequireIdentity(ctx)
 	if apiErr != nil {
 		return nil, apiErr
 	}
@@ -86,7 +86,7 @@ func (m *tenancySvcImpl) GetTenancy(ctx context.Context, req *GetTenancyRequest)
 }
 
 func (m *tenancySvcImpl) SwitchAccount(ctx context.Context, req *SwitchAccountRequest) (*apiresource.Tenancy, *apierror.APIError) {
-	identity, apiErr := httptransport.GetIdentity(ctx)
+	identity, apiErr := omrpctx.RequireIdentity(ctx)
 	if apiErr != nil {
 		return nil, apiErr
 	}
@@ -112,7 +112,7 @@ func (m *tenancySvcImpl) SwitchAccount(ctx context.Context, req *SwitchAccountRe
 }
 
 func (m *tenancySvcImpl) GetCurrentUser(ctx context.Context, req *GetCurrentUserRequest) (*apiresource.User, *apierror.APIError) {
-	identity, apiErr := httptransport.GetIdentity(ctx)
+	identity, apiErr := omrpctx.RequireIdentity(ctx)
 	if apiErr != nil {
 		return nil, apiErr
 	}
@@ -143,7 +143,7 @@ func (m *tenancySvcImpl) GetCurrentUser(ctx context.Context, req *GetCurrentUser
 }
 
 func (m *tenancySvcImpl) ListCustomerAccounts(ctx context.Context, req *ListCustomerAccountsRequest) (*apiresource.List[apiresource.CustomerAccountSummary], *apierror.APIError) {
-	identity, apiErr := httptransport.GetIdentity(ctx)
+	identity, apiErr := omrpctx.RequireIdentity(ctx)
 	if apiErr != nil {
 		return nil, apiErr
 	}

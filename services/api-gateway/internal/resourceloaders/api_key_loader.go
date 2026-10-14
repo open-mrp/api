@@ -2,11 +2,11 @@ package resourceloaders
 
 import (
 	"context"
+	"github.com/open-mrp/apikit/include"
 
 	"github.com/open-mrp/api/services/api-gateway/internal/domain"
 	grpcutil "github.com/open-mrp/api/services/api-gateway/internal/grpc"
 	apiresource "github.com/open-mrp/api/services/api-gateway/pkg/resource"
-	"github.com/open-mrp/api/services/api-gateway/pkg/resourcekit"
 	"github.com/open-mrp/api/shared/constants"
 	authpb "github.com/open-mrp/api/shared/proto/auth"
 	apierror "github.com/open-mrp/apikit/apierror"
@@ -28,7 +28,7 @@ func LoadAPIKeys(ctx context.Context, ids []string) (map[string]any, *apierror.A
 		return nil, apiErr
 	}
 
-	meta := resourcekit.GetLoadMeta(ctx)
+	meta := include.GetLoadMeta(ctx)
 	out := make(map[string]any, len(resp.ApiKeys))
 	for _, k := range resp.ApiKeys {
 		out[k.Id] = apiKeyFromProto(k)
@@ -42,7 +42,7 @@ func LoadAPIKeys(ctx context.Context, ids []string) (map[string]any, *apierror.A
 // APIKeyFromProto builds the APIKey resource from the proto and stashes the role FK in LoadMeta so ?include=role resolves. List presenters use this directly so the response comes from the list RPC's single snapshot instead of a second batch read that can observe concurrent mutations.
 func APIKeyFromProto(ctx context.Context, k *authpb.APIKeyInfo) *apiresource.APIKey {
 	if k.RoleId != nil {
-		resourcekit.GetLoadMeta(ctx).Set(constants.ObjectTypeAPIKey, k.Id, "role_id", *k.RoleId)
+		include.GetLoadMeta(ctx).Set(constants.ObjectTypeAPIKey, k.Id, "role_id", *k.RoleId)
 	}
 	return apiKeyFromProto(k)
 }

@@ -2,11 +2,11 @@ package resourceloaders
 
 import (
 	"context"
+	"github.com/open-mrp/apikit/include"
 
 	"github.com/open-mrp/api/services/api-gateway/internal/domain"
 	grpcutil "github.com/open-mrp/api/services/api-gateway/internal/grpc"
 	apiresource "github.com/open-mrp/api/services/api-gateway/pkg/resource"
-	"github.com/open-mrp/api/services/api-gateway/pkg/resourcekit"
 	"github.com/open-mrp/api/shared/constants"
 	pb "github.com/open-mrp/api/shared/proto/core"
 	apierror "github.com/open-mrp/apikit/apierror"
@@ -27,7 +27,7 @@ func LoadTransactions(ctx context.Context, ids []string) (map[string]any, *apier
 	if len(ids) == 0 {
 		return nil, nil
 	}
-	meta := resourcekit.GetLoadMeta(ctx)
+	meta := include.GetLoadMeta(ctx)
 	out := make(map[string]any, len(ids))
 	for _, id := range ids {
 		resp, apiErr := grpcutil.CallRPC(ctx, transactionLoaderTracer, "loader.transactions.get", domain.ServiceName,
@@ -51,7 +51,7 @@ func LoadTransactions(ctx context.Context, ids []string) (map[string]any, *apier
 
 // TransactionReferenceFromProto builds the TransactionDetail a transaction include carries, stashing its
 // customer and responsible user as ids for their own includes.
-func TransactionReferenceFromProto(meta *resourcekit.LoadMeta, d *pb.TransactionInfo) *apiresource.TransactionDetail {
+func TransactionReferenceFromProto(meta *include.LoadMeta, d *pb.TransactionInfo) *apiresource.TransactionDetail {
 	tx := &apiresource.TransactionDetail{
 		ID:               d.Id,
 		Object:           constants.ObjectTypeTransaction,

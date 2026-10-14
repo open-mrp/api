@@ -3,8 +3,8 @@ package apiresource
 import (
 	"time"
 
-	apiexample "github.com/open-mrp/api/services/api-gateway/pkg/example"
 	"github.com/open-mrp/api/shared/constants"
+	apiexample "github.com/open-mrp/apikit/example"
 )
 
 // The authenticated user's tenancy context: which account they are currently acting in and every other account they can switch to.

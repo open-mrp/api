@@ -3,18 +3,18 @@ package itemep
 import (
 	"context"
 	"fmt"
+	"github.com/open-mrp/apikit/include"
 
 	"github.com/open-mrp/api/services/api-gateway/internal/domain"
 	"github.com/open-mrp/api/services/api-gateway/internal/export"
 	grpcutil "github.com/open-mrp/api/services/api-gateway/internal/grpc"
-	httptransport "github.com/open-mrp/api/services/api-gateway/internal/http"
 	"github.com/open-mrp/api/services/api-gateway/internal/resourceloaders"
 	apiresource "github.com/open-mrp/api/services/api-gateway/pkg/resource"
-	"github.com/open-mrp/api/services/api-gateway/pkg/resourcekit"
 	"github.com/open-mrp/api/shared/constants"
 	pb "github.com/open-mrp/api/shared/proto/core"
 	apierror "github.com/open-mrp/apikit/apierror"
 	"github.com/open-mrp/apikit/tracing"
+	httptransport "github.com/open-mrp/apikit/transport"
 	"google.golang.org/grpc"
 	"google.golang.org/protobuf/types/known/timestamppb"
 )
@@ -181,7 +181,7 @@ func (m *itemSvcImpl) GetItemLotDefault(ctx context.Context, req *RetrieveItemLo
 	// The unit id is loader-side metadata rather than a public field: the `unit` include
 	// resolves it into the nested sub-resource, keyed by the item the lot was resolved for.
 	if resp.UnitId != nil && *resp.UnitId != "" {
-		resourcekit.GetLoadMeta(ctx).Set(constants.ObjectTypeItemLotDefault, resp.ItemId, "unit_id", *resp.UnitId)
+		include.GetLoadMeta(ctx).Set(constants.ObjectTypeItemLotDefault, resp.ItemId, "unit_id", *resp.UnitId)
 	}
 	return lot, nil
 }

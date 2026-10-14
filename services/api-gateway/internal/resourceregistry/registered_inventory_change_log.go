@@ -2,22 +2,22 @@ package resourceregistry
 
 import (
 	"context"
+	"github.com/open-mrp/apikit/include"
 
 	"github.com/open-mrp/api/services/api-gateway/internal/resourceloaders"
 	apiresource "github.com/open-mrp/api/services/api-gateway/pkg/resource"
-	"github.com/open-mrp/api/services/api-gateway/pkg/resourcekit"
 	"github.com/open-mrp/api/shared/constants"
 )
 
 func init() {
-	resourcekit.Register(&resourcekit.Definition{
+	include.Register(&include.Definition{
 		ObjectType: constants.ObjectTypeInventoryChangeLog,
 		Load:       resourceloaders.LoadInventoryChangeLogs,
-		Subs: []resourcekit.SubField{
+		Subs: []include.SubField{
 			{
 				Key:         "item",
 				Target:      constants.ObjectTypeItem,
-				Cardinality: resourcekit.CardinalityOnePtr,
+				Cardinality: include.CardinalityOnePtr,
 				ExtractIDs:  extractItemIDFromInventoryChangeLog,
 				Populate:    populateItemOnInventoryChangeLog,
 			},
@@ -25,14 +25,14 @@ func init() {
 			{
 				Key:         "responsible_user",
 				Target:      constants.ObjectTypeUser,
-				Cardinality: resourcekit.CardinalityOnePtr,
+				Cardinality: include.CardinalityOnePtr,
 				ExtractIDs:  extractResponsibleUserIDFromInventoryChangeLog,
 				Populate:    populateResponsibleUserOnInventoryChangeLog,
 			},
 			{
 				Key:         "responsible_scanning_station",
 				Target:      constants.ObjectTypeScanningStation,
-				Cardinality: resourcekit.CardinalityOnePtr,
+				Cardinality: include.CardinalityOnePtr,
 				ExtractIDs:  extractScanningStationIDFromInventoryChangeLog,
 				Populate:    populateResponsibleScanningStationOnInventoryChangeLog,
 			},
@@ -43,7 +43,7 @@ func init() {
 // itemIDOnInventoryChangeLog reads the affected item's id off LoadMeta so the item is hydrated through the shared batched item loader, which carries every base field (description, notes) and the item's own expandables — rather than a thin stub synthesized from the change-log join.
 func itemIDOnInventoryChangeLog(ctx context.Context, parent any) string {
 	icl := parent.(*apiresource.InventoryChangeLog)
-	id, _ := resourcekit.GetLoadMeta(ctx).
+	id, _ := include.GetLoadMeta(ctx).
 		GetString(constants.ObjectTypeInventoryChangeLog, icl.ID, "item_id")
 	return id
 }
@@ -65,7 +65,7 @@ func populateItemOnInventoryChangeLog(ctx context.Context, parent any, loaded ma
 
 func populateQuantityOnInventoryChangeLog(ctx context.Context, parent any, _ map[string]any) {
 	icl := parent.(*apiresource.InventoryChangeLog)
-	v, ok := resourcekit.GetLoadMeta(ctx).
+	v, ok := include.GetLoadMeta(ctx).
 		Get(constants.ObjectTypeInventoryChangeLog, icl.ID, "quantity")
 	if !ok {
 		return
@@ -76,7 +76,7 @@ func populateQuantityOnInventoryChangeLog(ctx context.Context, parent any, _ map
 // responsibleUserIDOnInventoryChangeLog reads the recording user's id off LoadMeta so the user is hydrated through the shared batched user loader, which carries every base field (email, username, image url) — rather than a stub built from the change-log join.
 func responsibleUserIDOnInventoryChangeLog(ctx context.Context, parent any) string {
 	icl := parent.(*apiresource.InventoryChangeLog)
-	id, _ := resourcekit.GetLoadMeta(ctx).
+	id, _ := include.GetLoadMeta(ctx).
 		GetString(constants.ObjectTypeInventoryChangeLog, icl.ID, "responsible_user_id")
 	return id
 }
@@ -98,7 +98,7 @@ func populateResponsibleUserOnInventoryChangeLog(ctx context.Context, parent any
 
 func extractScanningStationIDFromInventoryChangeLog(ctx context.Context, parent any) []string {
 	icl := parent.(*apiresource.InventoryChangeLog)
-	id, _ := resourcekit.GetLoadMeta(ctx).
+	id, _ := include.GetLoadMeta(ctx).
 		GetString(constants.ObjectTypeInventoryChangeLog, icl.ID, "responsible_scanning_station_id")
 	if id == "" {
 		return nil
@@ -108,7 +108,7 @@ func extractScanningStationIDFromInventoryChangeLog(ctx context.Context, parent 
 
 func populateResponsibleScanningStationOnInventoryChangeLog(ctx context.Context, parent any, loaded map[string]any) {
 	icl := parent.(*apiresource.InventoryChangeLog)
-	id, _ := resourcekit.GetLoadMeta(ctx).
+	id, _ := include.GetLoadMeta(ctx).
 		GetString(constants.ObjectTypeInventoryChangeLog, icl.ID, "responsible_scanning_station_id")
 	if id == "" {
 		return

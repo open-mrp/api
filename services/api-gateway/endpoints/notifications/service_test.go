@@ -2,11 +2,11 @@ package notificationep
 
 import (
 	"context"
+	"github.com/open-mrp/apikit/include"
 	"testing"
 	"time"
 
 	apiresource "github.com/open-mrp/api/services/api-gateway/pkg/resource"
-	"github.com/open-mrp/api/services/api-gateway/pkg/resourcekit"
 	"github.com/open-mrp/api/shared/constants"
 	pb "github.com/open-mrp/api/shared/proto/notification"
 
@@ -18,7 +18,7 @@ import (
 // stashedResource returns the notification's expandable `resource` entity stashed in the request
 // LoadMeta (the base resource leaves the field nil; it is surfaced only on ?include=resource).
 func stashedResource(ctx context.Context, id string) *apiresource.Entity {
-	v, ok := resourcekit.GetLoadMeta(ctx).Get(constants.ObjectTypeNotification, id, "resource")
+	v, ok := include.GetLoadMeta(ctx).Get(constants.ObjectTypeNotification, id, "resource")
 	if !ok {
 		return nil
 	}
@@ -28,7 +28,7 @@ func stashedResource(ctx context.Context, id string) *apiresource.Entity {
 // stashedSender returns the notification's expandable `sender` actor stashed in the request LoadMeta
 // (the base resource leaves the field nil; it is surfaced only on ?include=sender).
 func stashedSender(ctx context.Context, id string) *apiresource.Actor {
-	v, ok := resourcekit.GetLoadMeta(ctx).Get(constants.ObjectTypeNotification, id, "sender")
+	v, ok := include.GetLoadMeta(ctx).Get(constants.ObjectTypeNotification, id, "sender")
 	if !ok {
 		return nil
 	}
@@ -78,7 +78,7 @@ func TestNotificationFromProto_FullMapping(t *testing.T) {
 		ChangeCount:      new(uint32(5)),
 	}
 
-	ctx := resourcekit.WithLoadMeta(context.Background())
+	ctx := include.WithLoadMeta(context.Background())
 	n := notificationFromProto(ctx, info)
 
 	assert.Equal(t, "nf_abc", n.ID)
@@ -148,7 +148,7 @@ func TestNotificationFromProto_Sender(t *testing.T) {
 		SenderType: strptr("agent"), SenderId: strptr("agtc_9"), SenderName: strptr("Forecaster"),
 		CreatedAt: timestamppb.Now(), UpdatedAt: timestamppb.Now(),
 	}
-	ctx := resourcekit.WithLoadMeta(context.Background())
+	ctx := include.WithLoadMeta(context.Background())
 	n := notificationFromProto(ctx, info)
 
 	// The sender is expandable: nil on the base resource, stashed for ?include=sender as an Actor.
@@ -169,7 +169,7 @@ func TestNotificationFromProto_NilsAndEmpties(t *testing.T) {
 		UpdatedAt: timestamppb.Now(),
 		// no body, link, or status timestamps
 	}
-	ctx := resourcekit.WithLoadMeta(context.Background())
+	ctx := include.WithLoadMeta(context.Background())
 	n := notificationFromProto(ctx, info)
 
 	assert.Equal(t, constants.NotificationStatusUnseen, n.Status)
@@ -190,13 +190,13 @@ func TestNotificationFromProto_PartialLinkIgnored(t *testing.T) {
 		CreatedAt:        timestamppb.Now(),
 		UpdatedAt:        timestamppb.Now(),
 	}
-	ctx := resourcekit.WithLoadMeta(context.Background())
+	ctx := include.WithLoadMeta(context.Background())
 	n := notificationFromProto(ctx, info)
 	assert.Nil(t, n.Resource)
 	assert.Nil(t, stashedResource(ctx, "nf_x"), "a link type without an id must not produce a partial Entity")
 }
 
 func TestNotificationFromProto_Nil(t *testing.T) {
-	n := notificationFromProto(resourcekit.WithLoadMeta(context.Background()), nil)
+	n := notificationFromProto(include.WithLoadMeta(context.Background()), nil)
 	assert.Equal(t, apiresource.Notification{}, n, "nil proto → zero-value resource")
 }

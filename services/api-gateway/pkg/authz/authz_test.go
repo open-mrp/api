@@ -1,4 +1,4 @@
-package apiendpoint
+package authz
 
 import (
 	"context"
@@ -27,13 +27,13 @@ func ctxWithPerms(perms map[string]bool, roleType string) context.Context {
 	return appctx.WithIdentity(context.Background(), id)
 }
 
-func ep(perms types.AnyOfPermissions, role constants.RoleType) *APIEndpoint[any, any] {
-	return &APIEndpoint[any, any]{RequiredPermissions: perms, RequiredRoleType: role}
+func ep(perms types.AnyOfPermissions, role constants.RoleType) Policy {
+	return Policy{Permissions: perms, RoleType: role}
 }
 
 func TestAuthorize_NoDeclaration_Allows(t *testing.T) {
 	// An endpoint that declares nothing is not gated here (downstream enforces).
-	if err := ep(nil, "").authorize(context.Background()); err != nil {
+	if err := ep(nil, "").check(context.Background()); err != nil {
 		t.Errorf("undeclared endpoint should pass the gate, got %v", err)
 	}
 }
@@ -47,27 +47,27 @@ func TestAuthorize_Permissions_OR(t *testing.T) {
 	}
 
 	// Holds the exact permission → allowed.
-	if err := ep(read, "").authorize(ctxWithPerms(map[string]bool{"customers:read": true}, "")); err != nil {
+	if err := ep(read, "").check(ctxWithPerms(map[string]bool{"customers:read": true}, "")); err != nil {
 		t.Errorf("caller with customers:read should pass, got %v", err)
 	}
 	// Holds none of the declared → rejected fast.
-	if err := ep(read, "").authorize(ctxWithPerms(map[string]bool{"products:read": true}, "")); err == nil {
+	if err := ep(read, "").check(ctxWithPerms(map[string]bool{"products:read": true}, "")); err == nil {
 		t.Error("caller without customers:read should be rejected")
 	}
 	// OR: holds ONE of the relation set (the customer-contact case) → allowed,
 	// even though it lacks team/suppliers. The precise check happens downstream.
-	if err := ep(orSet, "").authorize(ctxWithPerms(map[string]bool{"customers:update": true}, "")); err != nil {
+	if err := ep(orSet, "").check(ctxWithPerms(map[string]bool{"customers:update": true}, "")); err != nil {
 		t.Errorf("caller with one of the OR set should pass, got %v", err)
 	}
 	// Holds none of the OR set → rejected.
-	if err := ep(orSet, "").authorize(ctxWithPerms(map[string]bool{"products:update": true}, "")); err == nil {
+	if err := ep(orSet, "").check(ctxWithPerms(map[string]bool{"products:update": true}, "")); err == nil {
 		t.Error("caller with none of the OR set should be rejected")
 	}
 }
 
 func TestAuthorize_AdminBypassesPermissions(t *testing.T) {
 	read := types.AnyOfPermissions{{Domain: types.PermissionDomainCustomers, Action: types.ActionRead}}
-	if err := ep(read, "").authorize(ctxWithPerms(map[string]bool{}, string(constants.RoleTypeAdmin))); err != nil {
+	if err := ep(read, "").check(ctxWithPerms(map[string]bool{}, string(constants.RoleTypeAdmin))); err != nil {
 		t.Errorf("admin should bypass the permission gate, got %v", err)
 	}
 }
@@ -75,18 +75,18 @@ func TestAuthorize_AdminBypassesPermissions(t *testing.T) {
 func TestAuthorize_RoleType(t *testing.T) {
 	adminOnly := ep(nil, constants.RoleTypeAdmin)
 	// Non-admin → rejected.
-	if err := adminOnly.authorize(ctxWithPerms(map[string]bool{}, string(constants.RoleTypeCustom))); err == nil {
+	if err := adminOnly.check(ctxWithPerms(map[string]bool{}, string(constants.RoleTypeCustom))); err == nil {
 		t.Error("non-admin should be rejected from an admin-only endpoint")
 	}
 	// Admin → allowed.
-	if err := adminOnly.authorize(ctxWithPerms(map[string]bool{}, string(constants.RoleTypeAdmin))); err != nil {
+	if err := adminOnly.check(ctxWithPerms(map[string]bool{}, string(constants.RoleTypeAdmin))); err != nil {
 		t.Errorf("admin should pass an admin-only endpoint, got %v", err)
 	}
 }
 
 func TestAuthorize_MissingIdentity_Rejected(t *testing.T) {
 	read := types.AnyOfPermissions{{Domain: types.PermissionDomainCustomers, Action: types.ActionRead}}
-	err := ep(read, "").authorize(context.Background())
+	err := ep(read, "").check(context.Background())
 	if err == nil {
 		t.Fatal("a permissioned endpoint with no identity in context should be rejected")
 	}
@@ -103,7 +103,7 @@ func TestAuthorize_MissingIdentity_Rejected(t *testing.T) {
 func TestAuthorize_Unauthenticated_Returns401(t *testing.T) {
 	read := types.AnyOfPermissions{{Domain: types.PermissionDomainCustomers, Action: types.ActionRead}}
 	ctx := appctx.WithIdentity(context.Background(), types.GetUnauthenticatedIdentity(nil))
-	err := ep(read, "").authorize(ctx)
+	err := ep(read, "").check(ctx)
 	if err == nil {
 		t.Fatal("unauthenticated caller should be rejected from a permissioned endpoint")
 	}
@@ -140,7 +140,7 @@ func TestAuthorize_RelationActor_BypassesGate(t *testing.T) {
 		types.IdentityRelationTypeCustomer,
 		types.IdentityRelationTypeSupplier,
 	} {
-		if err := ep(read, "").authorize(ctxWithRelationActor(relation)); err != nil {
+		if err := ep(read, "").check(ctxWithRelationActor(relation)); err != nil {
 			t.Errorf("%s relation actor should bypass the gateway permission gate, got: %v", relation, err)
 		}
 	}
@@ -150,7 +150,7 @@ func TestAuthorize_RelationActor_BypassesGate(t *testing.T) {
 // gate — the bypass is scoped to customer/supplier relations only.
 func TestAuthorize_InternalActorWithoutPermission_Rejected(t *testing.T) {
 	read := types.AnyOfPermissions{{Domain: types.PermissionDomainSalesOrders, Action: types.ActionRead}}
-	if err := ep(read, "").authorize(ctxWithRelationActor(types.IdentityRelationTypeInternal)); err == nil {
+	if err := ep(read, "").check(ctxWithRelationActor(types.IdentityRelationTypeInternal)); err == nil {
 		t.Error("an internal actor holding none of the declared permissions should be rejected")
 	}
 }
@@ -165,7 +165,7 @@ func TestActsOnSelf(t *testing.T) {
 	}
 	withoutPerms := ctxWithPerms(map[string]bool{}, "")
 
-	self := &APIEndpoint[any, any]{RequiredPermissions: update, SelfPathParam: "id"}
+	self := Policy{Permissions: update, SelfPathParam: "id"}
 	if !self.actsOnSelf(request(withoutPerms, "user_1")) {
 		t.Error("the caller's own ID in the path should count as acting on themselves")
 	}
@@ -187,23 +187,23 @@ func TestActsOnSelf(t *testing.T) {
 }
 
 func TestAuthorize_RequiresAllPermissions(t *testing.T) {
-	both := &APIEndpoint[any, any]{
-		RequiredPermissions: types.AnyOfPermissions{
+	both := Policy{
+		Permissions: types.AnyOfPermissions{
 			{Domain: types.PermissionDomainCustomers, Action: types.ActionUpdate},
 			{Domain: types.PermissionDomainCustomers, Action: types.ActionDelete},
 		},
-		RequiresAllPermissions: true,
+		RequireAll: true,
 	}
 
 	for _, perms := range []map[string]bool{{"customers:update": true}, {"customers:delete": true}} {
-		if err := both.authorize(ctxWithPerms(perms, "")); err == nil || err.Code != apierror.CodeInsufficientPermissions {
+		if err := both.check(ctxWithPerms(perms, "")); err == nil || err.Code != apierror.CodeInsufficientPermissions {
 			t.Errorf("caller with only %v should be refused, got %v", perms, err)
 		}
 	}
-	if err := both.authorize(ctxWithPerms(map[string]bool{"customers:update": true, "customers:delete": true}, "")); err != nil {
+	if err := both.check(ctxWithPerms(map[string]bool{"customers:update": true, "customers:delete": true}, "")); err != nil {
 		t.Errorf("caller with both should pass, got %v", err)
 	}
-	if err := both.authorize(ctxWithPerms(map[string]bool{}, string(constants.RoleTypeAdmin))); err != nil {
+	if err := both.check(ctxWithPerms(map[string]bool{}, string(constants.RoleTypeAdmin))); err != nil {
 		t.Errorf("admin should bypass the permission gate, got %v", err)
 	}
 }
@@ -221,23 +221,23 @@ func ctxActingIn(relation types.IdentityRelationType, perms map[string]bool, rol
 
 // A counterparty-routed endpoint asks for exactly one permission per request: its own in the caller's account, and the customers or suppliers permission when acting in one of those accounts.
 func TestAuthorize_CounterpartyPermissions(t *testing.T) {
-	readOrders := &APIEndpoint[any, any]{
-		RequiredPermissions:     types.AnyOfPermissions{{Domain: types.PermissionDomainSalesOrders, Action: types.ActionRead}},
-		CounterpartyPermissions: Counterparties(types.ActionRead),
+	readOrders := Policy{
+		Permissions:  types.AnyOfPermissions{{Domain: types.PermissionDomainSalesOrders, Action: types.ActionRead}},
+		Counterparty: Counterparties(types.ActionRead),
 	}
-	createMaterials := &APIEndpoint[any, any]{
-		RequiredPermissions:     types.AnyOfPermissions{{Domain: types.PermissionDomainMaterials, Action: types.ActionCreate}},
-		CounterpartyPermissions: Counterparties(types.ActionUpdate),
+	createMaterials := Policy{
+		Permissions:  types.AnyOfPermissions{{Domain: types.PermissionDomainMaterials, Action: types.ActionCreate}},
+		Counterparty: Counterparties(types.ActionUpdate),
 	}
-	poLines := &APIEndpoint[any, any]{
-		RequiredPermissions:     types.AnyOfPermissions{{Domain: types.PermissionDomainPurchaseOrders, Action: types.ActionUpdate}},
-		CounterpartyPermissions: CounterpartyPermissions{Supplier: types.Permission{Domain: types.PermissionDomainSuppliers, Action: types.ActionUpdate}},
+	poLines := Policy{
+		Permissions:  types.AnyOfPermissions{{Domain: types.PermissionDomainPurchaseOrders, Action: types.ActionUpdate}},
+		Counterparty: CounterpartyPermissions{Supplier: types.Permission{Domain: types.PermissionDomainSuppliers, Action: types.ActionUpdate}},
 	}
 	own, customer, supplier := types.IdentityRelationType(""), types.IdentityRelationTypeCustomer, types.IdentityRelationTypeSupplier
 
 	cases := []struct {
 		name     string
-		endpoint *APIEndpoint[any, any]
+		endpoint Policy
 		relation types.IdentityRelationType
 		holds    string
 		allowed  bool
@@ -263,7 +263,7 @@ func TestAuthorize_CounterpartyPermissions(t *testing.T) {
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			err := tc.endpoint.authorize(ctxActingIn(tc.relation, map[string]bool{tc.holds: true}, ""))
+			err := tc.endpoint.check(ctxActingIn(tc.relation, map[string]bool{tc.holds: true}, ""))
 			if tc.allowed {
 				if err != nil {
 					t.Fatalf("holding %s should pass, got %v", tc.holds, err)
@@ -280,11 +280,11 @@ func TestAuthorize_CounterpartyPermissions(t *testing.T) {
 	}
 
 	for _, relation := range []types.IdentityRelationType{own, customer, supplier} {
-		if err := readOrders.authorize(ctxActingIn(relation, map[string]bool{}, string(constants.RoleTypeAdmin))); err != nil {
+		if err := readOrders.check(ctxActingIn(relation, map[string]bool{}, string(constants.RoleTypeAdmin))); err != nil {
 			t.Errorf("admin acting in a %q account should pass, got %v", relation, err)
 		}
 	}
-	if err := readOrders.authorize(ctxWithRelationActor(customer)); err != nil {
+	if err := readOrders.check(ctxWithRelationActor(customer)); err != nil {
 		t.Errorf("a customer-relation actor is authorized downstream, got %v", err)
 	}
 }

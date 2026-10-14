@@ -2,8 +2,8 @@ package httpgroup
 
 import (
 	healthep "github.com/open-mrp/api/services/api-gateway/endpoints/health"
-	apiendpoint "github.com/open-mrp/api/services/api-gateway/pkg/endpoint"
 	apiresource "github.com/open-mrp/api/services/api-gateway/pkg/resource"
+	apiendpoint "github.com/open-mrp/apikit/endpoint"
 )
 
 type HealthEndpointGroup struct {

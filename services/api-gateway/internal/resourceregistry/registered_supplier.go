@@ -2,30 +2,30 @@ package resourceregistry
 
 import (
 	"context"
+	"github.com/open-mrp/apikit/include"
 	"strings"
 
 	"github.com/open-mrp/api/services/api-gateway/internal/resourceloaders"
 	apiresource "github.com/open-mrp/api/services/api-gateway/pkg/resource"
-	"github.com/open-mrp/api/services/api-gateway/pkg/resourcekit"
 	"github.com/open-mrp/api/shared/constants"
 )
 
 func init() {
-	resourcekit.Register(&resourcekit.Definition{
+	include.Register(&include.Definition{
 		ObjectType: constants.ObjectTypeSupplier,
 		Load:       resourceloaders.LoadSuppliers,
-		Subs: []resourcekit.SubField{
+		Subs: []include.SubField{
 			{
 				Key:         "bill_to_address",
 				Target:      constants.ObjectTypeAddress,
-				Cardinality: resourcekit.CardinalityOnePtr,
+				Cardinality: include.CardinalityOnePtr,
 				ExtractIDs:  extractBillToAddressIDFromSupplier,
 				Populate:    populateBillToAddressOnSupplier,
 			},
 			{
 				Key:         "ship_to_address",
 				Target:      constants.ObjectTypeAddress,
-				Cardinality: resourcekit.CardinalityOnePtr,
+				Cardinality: include.CardinalityOnePtr,
 				ExtractIDs:  extractShipToAddressIDFromSupplier,
 				Populate:    populateShipToAddressOnSupplier,
 			},
@@ -53,7 +53,7 @@ func populateShipToAddressOnSupplier(ctx context.Context, parent any, loaded map
 
 func supplierAddressID(ctx context.Context, parent any, key string) []string {
 	s := parent.(*apiresource.Supplier)
-	meta := resourcekit.GetLoadMeta(ctx)
+	meta := include.GetLoadMeta(ctx)
 	// Nothing to fetch when the backend already expanded the record.
 	if _, ok := meta.Get(constants.ObjectTypeSupplier, s.ID, strings.TrimSuffix(key, "_id")); ok {
 		return nil
@@ -69,7 +69,7 @@ func supplierAddressID(ctx context.Context, parent any, key string) []string {
 // stashed; the id path remains for a caller that reaches a supplier from a document, where only the
 // id is known. Either way the caller sees the same address.
 func supplierAddress(ctx context.Context, supplierID, key string, loaded map[string]any) *apiresource.Address {
-	meta := resourcekit.GetLoadMeta(ctx)
+	meta := include.GetLoadMeta(ctx)
 	if v, ok := meta.Get(constants.ObjectTypeSupplier, supplierID, key); ok {
 		return v.(*apiresource.Address)
 	}

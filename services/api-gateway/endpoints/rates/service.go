@@ -3,11 +3,11 @@ package rateep
 import (
 	"context"
 	"fmt"
+	"github.com/open-mrp/apikit/include"
 
 	"github.com/open-mrp/api/services/api-gateway/internal/domain"
 	grpcutil "github.com/open-mrp/api/services/api-gateway/internal/grpc"
 	apiresource "github.com/open-mrp/api/services/api-gateway/pkg/resource"
-	"github.com/open-mrp/api/services/api-gateway/pkg/resourcekit"
 	"github.com/open-mrp/api/shared/constants"
 	pb "github.com/open-mrp/api/shared/proto/core"
 	apierror "github.com/open-mrp/apikit/apierror"
@@ -66,7 +66,7 @@ func (m *rateSvcImpl) UpdateRate(ctx context.Context, req *UpdateRateRequest) (*
 		return nil, apiErr
 	}
 
-	meta := resourcekit.GetLoadMeta(ctx)
+	meta := include.GetLoadMeta(ctx)
 	result := rateFromProto(resp.Rate)
 	stashRateMeta(meta, resp.Rate)
 	return &result, nil
@@ -88,7 +88,7 @@ func rateFromProto(r *pb.RateInfo) apiresource.Rate {
 	}
 }
 
-func stashRateMeta(meta *resourcekit.LoadMeta, r *pb.RateInfo) {
+func stashRateMeta(meta *include.LoadMeta, r *pb.RateInfo) {
 	if r == nil {
 		return
 	}

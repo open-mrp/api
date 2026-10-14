@@ -2,11 +2,11 @@ package resourceloaders
 
 import (
 	"context"
+	"github.com/open-mrp/apikit/include"
 
 	"github.com/open-mrp/api/services/api-gateway/internal/domain"
 	grpcutil "github.com/open-mrp/api/services/api-gateway/internal/grpc"
 	apiresource "github.com/open-mrp/api/services/api-gateway/pkg/resource"
-	"github.com/open-mrp/api/services/api-gateway/pkg/resourcekit"
 	"github.com/open-mrp/api/shared/constants"
 	pb "github.com/open-mrp/api/shared/proto/core"
 	apierror "github.com/open-mrp/apikit/apierror"
@@ -43,7 +43,7 @@ func LoadPurchaseOrderLines(ctx context.Context, ids []string) (map[string]any, 
 		return nil, apiErr
 	}
 
-	meta := resourcekit.GetLoadMeta(ctx)
+	meta := include.GetLoadMeta(ctx)
 	out := make(map[string]any, len(resp.Lines))
 	for _, l := range resp.Lines {
 		out[l.Id] = purchaseOrderLineFromProto(meta, l, units)
@@ -53,7 +53,7 @@ func LoadPurchaseOrderLines(ctx context.Context, ids []string) (map[string]any, 
 
 // The line's own quantity and price ride on it; the units they are counted in and the item it orders
 // are stashed as ids, so a caller can reach through to them the same way they would from the order.
-func purchaseOrderLineFromProto(meta *resourcekit.LoadMeta, info *pb.PurchaseOrderLineInfo, units map[string]*apiresource.Unit) *apiresource.PurchaseOrderLine {
+func purchaseOrderLineFromProto(meta *include.LoadMeta, info *pb.PurchaseOrderLineInfo, units map[string]*apiresource.Unit) *apiresource.PurchaseOrderLine {
 	line := &apiresource.PurchaseOrderLine{
 		ID:                 info.Id,
 		Object:             constants.ObjectTypePurchaseOrderLine,

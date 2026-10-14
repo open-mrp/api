@@ -2,17 +2,17 @@ package resourceregistry
 
 import (
 	"context"
+	"github.com/open-mrp/apikit/include"
 	"testing"
 
 	apiresource "github.com/open-mrp/api/services/api-gateway/pkg/resource"
-	"github.com/open-mrp/api/services/api-gateway/pkg/resourcekit"
 	"github.com/open-mrp/api/shared/constants"
 )
 
 // The sales-order line's product include is driven entirely by the product_id stashed in meta — never by a prebuilt stub on the line. These tests lock that wiring: with no stashed id the product stays nil (the leak we fixed), and with a stashed id it populates from the loaded map.
 
 func TestSOLineProductInclude_NoMeta_StaysNil(t *testing.T) {
-	ctx := resourcekit.WithLoadMeta(context.Background())
+	ctx := include.WithLoadMeta(context.Background())
 	line := &apiresource.SalesOrderLine{ID: "sol_1"}
 
 	if ids := extractProductIDFromSOLine(ctx, line); ids != nil {
@@ -29,8 +29,8 @@ func TestSOLineProductInclude_NoMeta_StaysNil(t *testing.T) {
 }
 
 func TestSOLineProductInclude_WithMeta_Populates(t *testing.T) {
-	ctx := resourcekit.WithLoadMeta(context.Background())
-	resourcekit.GetLoadMeta(ctx).Set(constants.ObjectTypeSalesOrderLine, "sol_1", "product_id", "prod_1")
+	ctx := include.WithLoadMeta(context.Background())
+	include.GetLoadMeta(ctx).Set(constants.ObjectTypeSalesOrderLine, "sol_1", "product_id", "prod_1")
 	line := &apiresource.SalesOrderLine{ID: "sol_1"}
 
 	ids := extractProductIDFromSOLine(ctx, line)

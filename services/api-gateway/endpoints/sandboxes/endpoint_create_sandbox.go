@@ -4,12 +4,13 @@ import (
 	"context"
 	"net/http"
 
-	apiendpoint "github.com/open-mrp/api/services/api-gateway/pkg/endpoint"
-	apiexample "github.com/open-mrp/api/services/api-gateway/pkg/example"
+	"github.com/open-mrp/api/services/api-gateway/pkg/authz"
 	apiresource "github.com/open-mrp/api/services/api-gateway/pkg/resource"
 	"github.com/open-mrp/api/services/auth-service/pkg/types"
 	"github.com/open-mrp/api/shared/constants"
 	apierror "github.com/open-mrp/apikit/apierror"
+	apiendpoint "github.com/open-mrp/apikit/endpoint"
+	apiexample "github.com/open-mrp/apikit/example"
 	"github.com/open-mrp/apikit/field"
 )
 
@@ -44,16 +45,16 @@ type CreateSandboxEndpoint struct{}
 
 func (e *CreateSandboxEndpoint) Materialize() *apiendpoint.APIEndpoint[*CreateSandboxRequest, *apiresource.Sandbox] {
 	return (&apiendpoint.APIEndpoint[*CreateSandboxRequest, *apiresource.Sandbox]{
-		Title:               "Create Sandbox",
-		Method:              http.MethodPost,
-		ContentType:         "application/json",
-		Route:               "/v1/core/sandboxes",
-		SuccessStatusCode:   http.StatusCreated,
-		Public:              true,
-		AgentTool:           true,
-		RequiredPermissions: []types.Permission{{Domain: types.PermissionDomainSandbox, Action: types.ActionCreate}},
-		Preview:             true,
-		ObjectType:          constants.ObjectTypeSandbox,
+		Title:             "Create Sandbox",
+		Method:            http.MethodPost,
+		ContentType:       "application/json",
+		Route:             "/v1/core/sandboxes",
+		SuccessStatusCode: http.StatusCreated,
+		Public:            true,
+		AgentTool:         true,
+		Auth:              authz.Policy{Permissions: []types.Permission{{Domain: types.PermissionDomainSandbox, Action: types.ActionCreate}}},
+		Preview:           true,
+		ObjectType:        constants.ObjectTypeSandbox,
 		IncludeConfig: apiendpoint.IncludesFor(apiendpoint.IncludesParams{
 			ObjectType: constants.ObjectTypeSandbox,
 			Fields:     []string{"owner_account"},

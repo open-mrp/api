@@ -2,12 +2,12 @@ package resourceloaders
 
 import (
 	"context"
+	"github.com/open-mrp/apikit/include"
 	"strings"
 
 	"github.com/open-mrp/api/services/api-gateway/internal/domain"
 	grpcutil "github.com/open-mrp/api/services/api-gateway/internal/grpc"
 	apiresource "github.com/open-mrp/api/services/api-gateway/pkg/resource"
-	"github.com/open-mrp/api/services/api-gateway/pkg/resourcekit"
 	"github.com/open-mrp/api/shared/constants"
 	pb "github.com/open-mrp/api/shared/proto/core"
 	apierror "github.com/open-mrp/apikit/apierror"
@@ -43,7 +43,7 @@ func LoadItems(ctx context.Context, ids []string) (map[string]any, *apierror.API
 //
 // categories and properties were read with the items, so whoever may read an item sees them without their own permissions.
 func ItemsFromProto(ctx context.Context, items []*pb.ItemInfo, categories []*pb.ItemCategoryInfo, properties []*pb.PropertyInfo) map[string]any {
-	meta := resourcekit.GetLoadMeta(ctx)
+	meta := include.GetLoadMeta(ctx)
 	out := make(map[string]any, len(items))
 
 	categoryMap := ItemCategoriesFromProto(ctx, categories)
@@ -102,7 +102,7 @@ func ItemsFromProto(ctx context.Context, items []*pb.ItemInfo, categories []*pb.
 
 // ItemEmbedsRequested reports whether some requested include reaches an item's category or its attributes, at any depth.
 func ItemEmbedsRequested(ctx context.Context) (categories, attributeProperties bool) {
-	for _, include := range resourcekit.RequestedIncludes(ctx) {
+	for _, include := range include.RequestedIncludes(ctx) {
 		if include == "category" || strings.HasSuffix(include, ".category") {
 			categories = true
 		}

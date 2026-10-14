@@ -3,13 +3,13 @@ package purchaseorderep
 import (
 	"context"
 	"fmt"
+	"github.com/open-mrp/apikit/include"
 
 	"github.com/open-mrp/api/services/api-gateway/internal/domain"
 	grpcutil "github.com/open-mrp/api/services/api-gateway/internal/grpc"
 	"github.com/open-mrp/api/services/api-gateway/internal/resourceloaders"
 	apirequest "github.com/open-mrp/api/services/api-gateway/pkg/request"
 	apiresource "github.com/open-mrp/api/services/api-gateway/pkg/resource"
-	"github.com/open-mrp/api/services/api-gateway/pkg/resourcekit"
 	"github.com/open-mrp/api/shared/constants"
 	pb "github.com/open-mrp/api/shared/proto/core"
 	apierror "github.com/open-mrp/apikit/apierror"
@@ -128,7 +128,7 @@ func (m *purchaseOrderSvcImpl) ListPurchaseOrders(ctx context.Context, req *List
 		EndDate:     req.EndDate,
 		// Ask the backend to expand lines when the caller requested them (the rest
 		// of the includes are resolved gateway-side from the summary stash).
-		Includes: resourcekit.FilterIncludes(ctx, purchaseOrderIncludes...),
+		Includes: include.FilterIncludes(ctx, purchaseOrderIncludes...),
 	}
 
 	resp, apiErr := grpcutil.CallRPC(ctx, purchaseOrderEpSvcTracer, "service.purchase_orders.list", domain.ServiceName,
@@ -161,7 +161,7 @@ func (m *purchaseOrderSvcImpl) ListPurchaseOrders(ctx context.Context, req *List
 func (m *purchaseOrderSvcImpl) GetPurchaseOrder(ctx context.Context, req *RetrievePurchaseOrderRequest) (*apiresource.PurchaseOrder, *apierror.APIError) {
 	pbReq := &pb.GetPurchaseOrderRequest{
 		Id:       req.PurchaseOrderID,
-		Includes: resourcekit.FilterIncludes(ctx, purchaseOrderIncludes...),
+		Includes: include.FilterIncludes(ctx, purchaseOrderIncludes...),
 	}
 
 	resp, apiErr := grpcutil.CallRPC(ctx, purchaseOrderEpSvcTracer, "service.purchase_orders.get", domain.ServiceName,
@@ -230,7 +230,7 @@ func (m *purchaseOrderSvcImpl) CreatePurchaseOrder(ctx context.Context, req *Cre
 		ShipToAddressId:       req.ShipToAddressID.Ptr(),
 		BillToAddress:         apirequest.InlineAddressToProto(req.BillToAddress),
 		ShipToAddress:         apirequest.InlineAddressToProto(req.ShipToAddress),
-		Includes:              resourcekit.FilterIncludes(ctx, purchaseOrderIncludes...),
+		Includes:              include.FilterIncludes(ctx, purchaseOrderIncludes...),
 	}
 
 	resp, apiErr := grpcutil.CallRPC(ctx, purchaseOrderEpSvcTracer, "service.purchase_orders.create", domain.ServiceName,
@@ -263,7 +263,7 @@ func (m *purchaseOrderSvcImpl) UpdatePurchaseOrder(ctx context.Context, req *Upd
 		ShippingAddress:       apirequest.InlineAddressToProto(req.ShippingAddress),
 		ContactAccountUserIds: contactAccountUserIDs,
 		ReplaceContacts:       replaceContacts,
-		Includes:              resourcekit.FilterIncludes(ctx, purchaseOrderIncludes...),
+		Includes:              include.FilterIncludes(ctx, purchaseOrderIncludes...),
 	}
 	pbReq.PromisedAt = req.PromisedAt.ValuePtr()
 	pbReq.ClearPromisedAt = req.PromisedAt.IsClear()
@@ -318,7 +318,7 @@ func (m *purchaseOrderSvcImpl) ChangePurchaseOrderStatus(ctx context.Context, re
 		Id:           req.PurchaseOrderID,
 		StatusChange: string(req.StatusChange),
 		SendEmail:    req.SendEmail,
-		Includes:     resourcekit.FilterIncludes(ctx, purchaseOrderIncludes...),
+		Includes:     include.FilterIncludes(ctx, purchaseOrderIncludes...),
 	}
 
 	resp, apiErr := grpcutil.CallRPC(ctx, purchaseOrderEpSvcTracer, "service.purchase_orders.change_status", domain.ServiceName,
@@ -530,7 +530,7 @@ func stashPurchaseOrderSummaryMeta(ctx context.Context, info *pb.PurchaseOrderSu
 		return
 	}
 
-	meta := resourcekit.GetLoadMeta(ctx)
+	meta := include.GetLoadMeta(ctx)
 
 	if info.SupplierId != "" {
 		meta.Set(constants.ObjectTypePurchaseOrder, d.ID, "supplier_id", info.SupplierId)
@@ -571,7 +571,7 @@ func stashPurchaseOrderDetailMeta(ctx context.Context, info *pb.PurchaseOrderInf
 		return
 	}
 
-	meta := resourcekit.GetLoadMeta(ctx)
+	meta := include.GetLoadMeta(ctx)
 
 	if info.SupplierId != "" {
 		meta.Set(constants.ObjectTypePurchaseOrder, d.ID, "supplier_id", info.SupplierId)
@@ -760,7 +760,7 @@ func purchaseOrderLineDetailFromProto(ctx context.Context, info *pb.PurchaseOrde
 		CreatedAt:          grpcutil.TimestampToTime(info.CreatedAt),
 		UpdatedAt:          grpcutil.TimestampToTime(info.UpdatedAt),
 	}
-	meta := resourcekit.GetLoadMeta(ctx)
+	meta := include.GetLoadMeta(ctx)
 
 	// The item is expandable: the line knows its id, and the item loader fills the rest.
 	if info.ItemId != nil && *info.ItemId != "" {

@@ -3,12 +3,12 @@ package announcementep
 import (
 	"context"
 	"fmt"
+	"github.com/open-mrp/apikit/include"
 	"time"
 
 	"github.com/open-mrp/api/services/api-gateway/internal/domain"
 	grpcutil "github.com/open-mrp/api/services/api-gateway/internal/grpc"
 	apiresource "github.com/open-mrp/api/services/api-gateway/pkg/resource"
-	"github.com/open-mrp/api/services/api-gateway/pkg/resourcekit"
 	"github.com/open-mrp/api/shared/constants"
 	pb "github.com/open-mrp/api/shared/proto/notification"
 	apierror "github.com/open-mrp/apikit/apierror"
@@ -138,7 +138,7 @@ func announcementFromProto(ctx context.Context, a *pb.AnnouncementInfo) apiresou
 	}
 	if a.LinkResourceType != nil && a.LinkResourceId != nil {
 		// resource is expandable: left nil on the base resource, stashed for ?include=resource.
-		resourcekit.GetLoadMeta(ctx).Set(constants.ObjectTypeAnnouncement, result.ID, "resource",
+		include.GetLoadMeta(ctx).Set(constants.ObjectTypeAnnouncement, result.ID, "resource",
 			apiresource.NewEntity(*a.LinkResourceId, constants.ObjectType(*a.LinkResourceType), nil, nil))
 	}
 	return result

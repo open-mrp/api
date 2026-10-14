@@ -133,7 +133,7 @@ func NewMainRouter(baseCfg *BaseConfig) *router {
 		panic(err)
 	}
 
-	r := NewRouter()
+	r := newRouter(baseCfg)
 	r.InitEndpointGroups(MainRouterConfig{BaseConfig: *baseCfg})
 	return r
 }
@@ -146,7 +146,7 @@ func NewInternalRouter(baseCfg *BaseConfig, serviceToken string) *router {
 		panic(err)
 	}
 
-	r := NewRouter()
+	r := newRouter(baseCfg)
 	r.InitEndpointGroups(cfg)
 	return r
 }
@@ -157,7 +157,7 @@ func NewAuthRouter(baseCfg *BaseConfig) *router {
 		panic(err)
 	}
 
-	r := NewRouter()
+	r := newRouter(baseCfg)
 	r.InitAuthEndpointGroups(AuthRouterConfig{BaseConfig: *baseCfg})
 	return r
 }
@@ -172,7 +172,7 @@ func NewWebhookRouter(baseCfg *BaseConfig) *router {
 		panic(err)
 	}
 
-	r := NewRouter()
+	r := newRouter(baseCfg)
 	r.InitWebhookEndpointGroups(WebhookRouterConfig{BaseConfig: *baseCfg})
 	return r
 }

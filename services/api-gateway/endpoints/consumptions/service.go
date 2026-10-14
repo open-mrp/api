@@ -3,11 +3,11 @@ package consumptionep
 import (
 	"context"
 	"fmt"
+	"github.com/open-mrp/apikit/include"
 
 	"github.com/open-mrp/api/services/api-gateway/internal/domain"
 	grpcutil "github.com/open-mrp/api/services/api-gateway/internal/grpc"
 	apiresource "github.com/open-mrp/api/services/api-gateway/pkg/resource"
-	"github.com/open-mrp/api/services/api-gateway/pkg/resourcekit"
 	"github.com/open-mrp/api/shared/constants"
 	pb "github.com/open-mrp/api/shared/proto/core"
 	apierror "github.com/open-mrp/apikit/apierror"
@@ -55,7 +55,7 @@ func (m *consumptionSvcImpl) GetConsumption(ctx context.Context, req *RetrieveCo
 	pbReq := &pb.GetConsumptionRequest{
 		ProductionStepId: req.ProductionStepID,
 		Id:               req.ConsumptionID,
-		Includes:         resourcekit.FilterIncludes(ctx, consumptionIncludes...),
+		Includes:         include.FilterIncludes(ctx, consumptionIncludes...),
 	}
 
 	resp, apiErr := grpcutil.CallRPC(ctx, consumptionSvcTracer, "service.consumptions.get", domain.ServiceName,
@@ -67,7 +67,7 @@ func (m *consumptionSvcImpl) GetConsumption(ctx context.Context, req *RetrieveCo
 		return nil, apiErr
 	}
 
-	meta := resourcekit.GetLoadMeta(ctx)
+	meta := include.GetLoadMeta(ctx)
 	result := consumptionFromProto(resp.Consumption)
 	stashConsumptionMeta(meta, resp.Consumption)
 	return &result, nil
@@ -82,7 +82,7 @@ func (m *consumptionSvcImpl) CreateConsumption(ctx context.Context, req *CreateC
 		WasteQuantityValue:  req.WasteQuantityValue,
 		WasteQuantityUnitId: req.WasteQuantityUnitID,
 		Instructions:        req.Instructions.Ptr(),
-		Includes:            resourcekit.FilterIncludes(ctx, consumptionIncludes...),
+		Includes:            include.FilterIncludes(ctx, consumptionIncludes...),
 	}
 
 	resp, apiErr := grpcutil.CallRPC(ctx, consumptionSvcTracer, "service.consumptions.create", domain.ServiceName,
@@ -94,7 +94,7 @@ func (m *consumptionSvcImpl) CreateConsumption(ctx context.Context, req *CreateC
 		return nil, apiErr
 	}
 
-	meta := resourcekit.GetLoadMeta(ctx)
+	meta := include.GetLoadMeta(ctx)
 	result := consumptionFromProto(resp.Consumption)
 	stashConsumptionMeta(meta, resp.Consumption)
 	return &result, nil
@@ -110,7 +110,7 @@ func (m *consumptionSvcImpl) UpdateConsumption(ctx context.Context, req *UpdateC
 		WasteQuantityValue:  req.WasteQuantityValue.Ptr(),
 		WasteQuantityUnitId: req.WasteQuantityUnitID.Ptr(),
 		Instructions:        clearableInstructionsToProto(req.Instructions),
-		Includes:            resourcekit.FilterIncludes(ctx, consumptionIncludes...),
+		Includes:            include.FilterIncludes(ctx, consumptionIncludes...),
 	}
 
 	resp, apiErr := grpcutil.CallRPC(ctx, consumptionSvcTracer, "service.consumptions.update", domain.ServiceName,
@@ -122,7 +122,7 @@ func (m *consumptionSvcImpl) UpdateConsumption(ctx context.Context, req *UpdateC
 		return nil, apiErr
 	}
 
-	meta := resourcekit.GetLoadMeta(ctx)
+	meta := include.GetLoadMeta(ctx)
 	result := consumptionFromProto(resp.Consumption)
 	stashConsumptionMeta(meta, resp.Consumption)
 	return &result, nil
@@ -143,7 +143,7 @@ func (m *consumptionSvcImpl) DeleteConsumption(ctx context.Context, req *DeleteC
 		return nil, apiErr
 	}
 
-	meta := resourcekit.GetLoadMeta(ctx)
+	meta := include.GetLoadMeta(ctx)
 	result := consumptionFromProto(resp.Consumption)
 	stashConsumptionMeta(meta, resp.Consumption)
 	return &result, nil
@@ -180,7 +180,7 @@ func consumptionFromProto(c *pb.ConsumptionInfo) apiresource.Consumption {
 	}
 }
 
-func stashConsumptionMeta(meta *resourcekit.LoadMeta, c *pb.ConsumptionInfo) {
+func stashConsumptionMeta(meta *include.LoadMeta, c *pb.ConsumptionInfo) {
 	if c == nil {
 		return
 	}

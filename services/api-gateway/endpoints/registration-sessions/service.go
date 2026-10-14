@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/open-mrp/apikit/object"
+
 	"github.com/open-mrp/api/services/api-gateway/internal/cookie"
 	"github.com/open-mrp/api/services/api-gateway/internal/domain"
 	grpcutil "github.com/open-mrp/api/services/api-gateway/internal/grpc"
@@ -26,7 +28,7 @@ type RegistrationSessionSvc interface {
 	GetSession(ctx context.Context, req *RetrieveSessionRequest) (*apiresource.RegistrationSession, *apierror.APIError)
 	CreateUser(ctx context.Context, req *CreateUserRequest) (*apiresource.CreateUserResponse, *apierror.APIError)
 	UpdateSession(ctx context.Context, req *UpdateSessionRequest) (*apiresource.RegistrationSession, *apierror.APIError)
-	ListSessions(ctx context.Context, req *apiresource.PaginationRequest) (*apiresource.List[apiresource.RegistrationSession], *apierror.APIError)
+	ListSessions(ctx context.Context, req *object.ListRequest) (*apiresource.List[apiresource.RegistrationSession], *apierror.APIError)
 	SetupBilling(ctx context.Context, req *SetupBillingRequest) (*apiresource.SetupBillingResponse, *apierror.APIError)
 	ConfirmPayment(ctx context.Context, req *ConfirmPaymentRequest) (*apiresource.ConfirmPaymentResponse, *apierror.APIError)
 	CompleteRegistration(ctx context.Context, req *CompleteRegistrationRequest) (*apiresource.CompleteRegistrationResponse, *apierror.APIError)
@@ -181,7 +183,7 @@ func (m *registrationSessionSvcImpl) UpdateSession(ctx context.Context, req *Upd
 	return mapProtoToRegistrationSession(resp.Session), nil
 }
 
-func (m *registrationSessionSvcImpl) ListSessions(ctx context.Context, req *apiresource.PaginationRequest) (*apiresource.List[apiresource.RegistrationSession], *apierror.APIError) {
+func (m *registrationSessionSvcImpl) ListSessions(ctx context.Context, req *object.ListRequest) (*apiresource.List[apiresource.RegistrationSession], *apierror.APIError) {
 	pbReq := &pb.ListRegistrationSessionsRequest{
 		Cursor: req.Cursor,
 		Limit:  req.Limit,

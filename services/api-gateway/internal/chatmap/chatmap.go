@@ -6,10 +6,10 @@ package chatmap
 
 import (
 	"context"
+	"github.com/open-mrp/apikit/include"
 	"time"
 
 	apiresource "github.com/open-mrp/api/services/api-gateway/pkg/resource"
-	"github.com/open-mrp/api/services/api-gateway/pkg/resourcekit"
 	"github.com/open-mrp/api/shared/constants"
 	pb "github.com/open-mrp/api/shared/proto/notification"
 	apierror "github.com/open-mrp/apikit/apierror"
@@ -63,7 +63,7 @@ func StashConversationMeta(ctx context.Context, c *pb.ConversationInfo, d *apire
 	if c == nil || d == nil {
 		return
 	}
-	meta := resourcekit.GetLoadMeta(ctx)
+	meta := include.GetLoadMeta(ctx)
 	ot := constants.ObjectTypeConversation
 
 	// The assignee is a single polymorphic case owner — a user or a team. Map the stored resource type
@@ -159,7 +159,7 @@ func StashConversationLinkMeta(ctx context.Context, l *pb.ConversationLinkInfo, 
 	if l == nil || d == nil {
 		return
 	}
-	resourcekit.GetLoadMeta(ctx).Set(constants.ObjectTypeConversationLink, d.ID, "conversation_id", l.ConversationId)
+	include.GetLoadMeta(ctx).Set(constants.ObjectTypeConversationLink, d.ID, "conversation_id", l.ConversationId)
 }
 
 // MessageFromProto maps a chat message to its base API resource. Expandable sub-objects (conversation, sender, author, resource, reply_to, attachments) are left nil — call StashMessageMeta to make them resolvable via ?include=.
@@ -198,7 +198,7 @@ func StashMessageMeta(ctx context.Context, m *pb.MessageInfo, d *apiresource.Mes
 	if m == nil || d == nil {
 		return
 	}
-	meta := resourcekit.GetLoadMeta(ctx)
+	meta := include.GetLoadMeta(ctx)
 	ot := constants.ObjectTypeChatMessage
 
 	attachments := make([]apiresource.MessageAttachment, 0, len(m.Attachments))
@@ -289,7 +289,7 @@ func AttachmentFromProto(ctx context.Context, a *pb.AttachmentInfo) apiresource.
 	}
 	if a.ResourceType != nil && *a.ResourceType != "" && a.ResourceId != nil && *a.ResourceId != "" {
 		// resource is expandable: left nil on the base attachment, stashed for ?include=attachments.resource.
-		resourcekit.GetLoadMeta(ctx).Set(constants.ObjectTypeMessageAttachment, result.ID, "resource",
+		include.GetLoadMeta(ctx).Set(constants.ObjectTypeMessageAttachment, result.ID, "resource",
 			apiresource.NewEntity(*a.ResourceId, constants.ObjectType(*a.ResourceType), nil, nil))
 	}
 	return result

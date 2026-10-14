@@ -2,11 +2,11 @@ package resourceloaders
 
 import (
 	"context"
+	"github.com/open-mrp/apikit/include"
 
 	"github.com/open-mrp/api/services/api-gateway/internal/domain"
 	grpcutil "github.com/open-mrp/api/services/api-gateway/internal/grpc"
 	apiresource "github.com/open-mrp/api/services/api-gateway/pkg/resource"
-	"github.com/open-mrp/api/services/api-gateway/pkg/resourcekit"
 	pb "github.com/open-mrp/api/shared/proto/notification"
 	"github.com/open-mrp/apikit/tracing"
 	"google.golang.org/grpc"
@@ -26,7 +26,7 @@ func HydrateMessagingGroups(ctx context.Context, groups []*apiresource.Messaging
 	if len(groups) == 0 {
 		return
 	}
-	embedCtx := resourcekit.WithIncludeReads(ctx)
+	embedCtx := include.WithIncludeReads(ctx)
 	loaded := make(map[string]*pb.MessagingGroupInfo)
 	for _, g := range groups {
 		if g == nil || g.ID == "" {

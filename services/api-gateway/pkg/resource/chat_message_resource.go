@@ -3,9 +3,9 @@ package apiresource
 import (
 	"time"
 
-	apiexample "github.com/open-mrp/api/services/api-gateway/pkg/example"
 	"github.com/open-mrp/api/shared/constants"
 	apierror "github.com/open-mrp/apikit/apierror"
+	apiexample "github.com/open-mrp/apikit/example"
 	"github.com/open-mrp/apikit/timeutil"
 )
 

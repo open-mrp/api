@@ -5,10 +5,11 @@ import (
 	"net/http"
 	"time"
 
-	apiendpoint "github.com/open-mrp/api/services/api-gateway/pkg/endpoint"
+	"github.com/open-mrp/api/services/api-gateway/pkg/authz"
 	apiresource "github.com/open-mrp/api/services/api-gateway/pkg/resource"
 	"github.com/open-mrp/api/services/auth-service/pkg/types"
 	apierror "github.com/open-mrp/apikit/apierror"
+	apiendpoint "github.com/open-mrp/apikit/endpoint"
 	"github.com/open-mrp/apikit/field"
 )
 
@@ -31,16 +32,16 @@ type AnalyzeSalesSummaryEndpoint struct{}
 
 func (e *AnalyzeSalesSummaryEndpoint) Materialize() *apiendpoint.APIEndpoint[*AnalyzeSalesSummaryRequest, *apiresource.AnalyzeSalesSummaryResponse] {
 	return (&apiendpoint.APIEndpoint[*AnalyzeSalesSummaryRequest, *apiresource.AnalyzeSalesSummaryResponse]{
-		Title:               "Analyze Sales Summary",
-		Method:              http.MethodPut,
-		Route:               "/v1/core/analytics/sales-summary",
-		ContentType:         "application/json",
-		SuccessStatusCode:   http.StatusOK,
-		Public:              false,
-		AgentTool:           true,
-		Preview:             true,
-		ReadOnly:            true,
-		RequiredPermissions: []types.Permission{{Domain: types.PermissionDomainInvoices, Action: types.ActionRead}},
+		Title:             "Analyze Sales Summary",
+		Method:            http.MethodPut,
+		Route:             "/v1/core/analytics/sales-summary",
+		ContentType:       "application/json",
+		SuccessStatusCode: http.StatusOK,
+		Public:            false,
+		AgentTool:         true,
+		Preview:           true,
+		ReadOnly:          true,
+		Auth:              authz.Policy{Permissions: []types.Permission{{Domain: types.PermissionDomainInvoices, Action: types.ActionRead}}},
 		ServiceHandler: func(svc any) func(ctx context.Context, req *AnalyzeSalesSummaryRequest) (*apiresource.AnalyzeSalesSummaryResponse, *apierror.APIError) {
 			return svc.(AnalyticsSvc).AnalyzeSalesSummary
 		},

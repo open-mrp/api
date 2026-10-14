@@ -4,12 +4,13 @@ import (
 	"context"
 	"net/http"
 
-	apiendpoint "github.com/open-mrp/api/services/api-gateway/pkg/endpoint"
-	apiexample "github.com/open-mrp/api/services/api-gateway/pkg/example"
+	"github.com/open-mrp/api/services/api-gateway/pkg/authz"
 	apiresource "github.com/open-mrp/api/services/api-gateway/pkg/resource"
 	"github.com/open-mrp/api/services/auth-service/pkg/types"
 	"github.com/open-mrp/api/shared/constants"
 	apierror "github.com/open-mrp/apikit/apierror"
+	apiendpoint "github.com/open-mrp/apikit/endpoint"
+	apiexample "github.com/open-mrp/apikit/example"
 )
 
 // Request to resume a paused agent run.
@@ -53,16 +54,16 @@ type ContinueRunEndpoint struct{}
 
 func (e *ContinueRunEndpoint) Materialize() *apiendpoint.APIEndpoint[*ContinueRunRequest, *apiresource.AgentRun] {
 	return (&apiendpoint.APIEndpoint[*ContinueRunRequest, *apiresource.AgentRun]{
-		Title:               "Continue Agent Run",
-		Method:              http.MethodPost,
-		ContentType:         "application/json",
-		Route:               "/v1/ai/runs/{id}/actions/continue",
-		SuccessStatusCode:   http.StatusOK,
-		Public:              true,
-		AgentTool:           true,
-		Preview:             true,
-		ObjectType:          constants.ObjectTypeAgentRun,
-		RequiredPermissions: []types.Permission{{Domain: types.PermissionDomainAgentRuns, Action: types.ActionUpdate}},
+		Title:             "Continue Agent Run",
+		Method:            http.MethodPost,
+		ContentType:       "application/json",
+		Route:             "/v1/ai/runs/{id}/actions/continue",
+		SuccessStatusCode: http.StatusOK,
+		Public:            true,
+		AgentTool:         true,
+		Preview:           true,
+		ObjectType:        constants.ObjectTypeAgentRun,
+		Auth:              authz.Policy{Permissions: []types.Permission{{Domain: types.PermissionDomainAgentRuns, Action: types.ActionUpdate}}},
 		ServiceHandler: func(svc any) func(ctx context.Context, req *ContinueRunRequest) (*apiresource.AgentRun, *apierror.APIError) {
 			return svc.(AgentRunSvc).ContinueAgentRun
 		},

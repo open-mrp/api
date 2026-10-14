@@ -4,10 +4,11 @@ import (
 	"context"
 	"net/http"
 
-	apiendpoint "github.com/open-mrp/api/services/api-gateway/pkg/endpoint"
+	"github.com/open-mrp/api/services/api-gateway/pkg/authz"
 	apiresource "github.com/open-mrp/api/services/api-gateway/pkg/resource"
 	"github.com/open-mrp/api/shared/constants"
 	apierror "github.com/open-mrp/apikit/apierror"
+	apiendpoint "github.com/open-mrp/apikit/endpoint"
 )
 
 // Asks the OpenMRP sales team to get in touch about an enterprise plan.
@@ -23,7 +24,7 @@ func (e *CreateEnterpriseInquiryEndpoint) Materialize() *apiendpoint.APIEndpoint
 		ContentType:       "application/json",
 		SuccessStatusCode: http.StatusCreated,
 		Public:            false,
-		RequiredRoleType:  constants.RoleTypeAdmin,
+		Auth:              authz.Policy{RoleType: constants.RoleTypeAdmin},
 		Preview:           true,
 		ObjectType:        constants.ObjectTypeEnterpriseInquiry,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *apiresource.EmptyResource) (*apiresource.EnterpriseInquiry, *apierror.APIError) {

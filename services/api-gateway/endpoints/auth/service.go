@@ -10,13 +10,13 @@ import (
 	"github.com/open-mrp/api/services/api-gateway/internal/cookie"
 	"github.com/open-mrp/api/services/api-gateway/internal/domain"
 	grpcutil "github.com/open-mrp/api/services/api-gateway/internal/grpc"
-	"github.com/open-mrp/api/services/api-gateway/internal/middleware"
 	apiresource "github.com/open-mrp/api/services/api-gateway/pkg/resource"
 	"github.com/open-mrp/api/shared/constants"
 	pb "github.com/open-mrp/api/shared/proto/auth"
 	corepb "github.com/open-mrp/api/shared/proto/core"
 	apierror "github.com/open-mrp/apikit/apierror"
 	"github.com/open-mrp/apikit/appctx"
+	"github.com/open-mrp/apikit/ratelimit"
 	"github.com/open-mrp/apikit/tracing"
 	"google.golang.org/grpc"
 	"google.golang.org/protobuf/types/known/emptypb"
@@ -57,7 +57,7 @@ type AuthSvcConfig struct {
 type authSvcImpl struct {
 	authClient          pb.AuthServiceClient
 	coreClient          corepb.CoreServiceClient
-	loginFailureLimiter *middleware.RateLimiter
+	loginFailureLimiter *ratelimit.Memory
 }
 
 var authSvcTracer = tracing.GetTracer("api-gateway.endpoints.auth.service")
@@ -80,7 +80,7 @@ func NewAuthSvc(config *AuthSvcConfig) AuthSvc {
 	return &authSvcImpl{
 		authClient:          config.AuthClient,
 		coreClient:          config.CoreClient,
-		loginFailureLimiter: middleware.NewRateLimiter(loginFailureLimit, loginFailureWindow),
+		loginFailureLimiter: ratelimit.NewMemory(loginFailureLimit, loginFailureWindow),
 	}
 }
 

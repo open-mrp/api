@@ -4,16 +4,23 @@ import (
 	"context"
 	"net/http"
 
-	apiendpoint "github.com/open-mrp/api/services/api-gateway/pkg/endpoint"
+	"github.com/open-mrp/apikit/object"
+
+	"github.com/open-mrp/api/services/api-gateway/pkg/authz"
 	apiresource "github.com/open-mrp/api/services/api-gateway/pkg/resource"
 	"github.com/open-mrp/api/services/auth-service/pkg/types"
 	"github.com/open-mrp/api/shared/constants"
 	apierror "github.com/open-mrp/apikit/apierror"
+	apiendpoint "github.com/open-mrp/apikit/endpoint"
 )
 
 // Request to list settlements.
 type ListSettlementsRequest struct {
-	apiresource.PaginationRequest
+	object.ListRequest
+	// Free-text search term used to filter results.
+	//
+	// Which fields are matched against the term varies by endpoint.
+	Query *string `query:"q" validate:"omitempty,max=500"`
 	// Only return settlements that allocate at least one of these transactions.
 	TransactionIDs []string `query:"transaction_ids"`
 	// Only return settlements that allocate to at least one of these invoices.
@@ -33,16 +40,16 @@ type ListSettlementsEndpoint struct{}
 
 func (e *ListSettlementsEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListSettlementsRequest, *apiresource.List[apiresource.SettlementSummary]] {
 	return (&apiendpoint.APIEndpoint[*ListSettlementsRequest, *apiresource.List[apiresource.SettlementSummary]]{
-		Title:               "List Settlements",
-		Method:              http.MethodGet,
-		ContentType:         "application/json",
-		Route:               "/v1/finance/settlements",
-		SuccessStatusCode:   http.StatusOK,
-		Public:              false,
-		AgentTool:           true,
-		Preview:             true,
-		RequiredPermissions: []types.Permission{{Domain: types.PermissionDomainSettlements, Action: types.ActionRead}},
-		ObjectType:          constants.ObjectTypeSettlementSummary,
+		Title:             "List Settlements",
+		Method:            http.MethodGet,
+		ContentType:       "application/json",
+		Route:             "/v1/finance/settlements",
+		SuccessStatusCode: http.StatusOK,
+		Public:            false,
+		AgentTool:         true,
+		Preview:           true,
+		Auth:              authz.Policy{Permissions: []types.Permission{{Domain: types.PermissionDomainSettlements, Action: types.ActionRead}}},
+		ObjectType:        constants.ObjectTypeSettlementSummary,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *ListSettlementsRequest) (*apiresource.List[apiresource.SettlementSummary], *apierror.APIError) {
 			return svc.(SettlementSvc).ListSettlements
 		},

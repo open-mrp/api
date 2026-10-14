@@ -3,18 +3,18 @@ package resourceregistry
 import (
 	"context"
 	"encoding/json"
+	"github.com/open-mrp/apikit/include"
 
 	"github.com/open-mrp/api/services/api-gateway/internal/resourceloaders"
 	apiresource "github.com/open-mrp/api/services/api-gateway/pkg/resource"
-	"github.com/open-mrp/api/services/api-gateway/pkg/resourcekit"
 	"github.com/open-mrp/api/shared/constants"
 )
 
 func init() {
-	resourcekit.Register(&resourcekit.Definition{
+	include.Register(&include.Definition{
 		ObjectType: constants.ObjectTypeAuditEvent,
 		Load:       resourceloaders.LoadAuditEvents,
-		Subs: []resourcekit.SubField{
+		Subs: []include.SubField{
 			{Key: "actor", Populate: populateActorOnAuditEvent},
 			{Key: "account", Populate: populateAccountOnAuditEvent},
 			{Key: "changes", Populate: populateChangesOnAuditEvent},
@@ -22,7 +22,7 @@ func init() {
 			{
 				Key:         "request",
 				Target:      constants.ObjectTypeRequestLog,
-				Cardinality: resourcekit.CardinalityOnePtr,
+				Cardinality: include.CardinalityOnePtr,
 				ExtractIDs:  extractRequestIDFromAuditEvent,
 				Populate:    populateRequestOnAuditEvent,
 			},
@@ -32,7 +32,7 @@ func init() {
 
 func populateActorOnAuditEvent(ctx context.Context, parent any, _ map[string]any) {
 	ae := parent.(*apiresource.AuditEvent)
-	v, ok := resourcekit.GetLoadMeta(ctx).
+	v, ok := include.GetLoadMeta(ctx).
 		Get(constants.ObjectTypeAuditEvent, ae.ID, "actor")
 	if !ok {
 		return
@@ -42,7 +42,7 @@ func populateActorOnAuditEvent(ctx context.Context, parent any, _ map[string]any
 
 func populateAccountOnAuditEvent(ctx context.Context, parent any, _ map[string]any) {
 	ae := parent.(*apiresource.AuditEvent)
-	v, ok := resourcekit.GetLoadMeta(ctx).
+	v, ok := include.GetLoadMeta(ctx).
 		Get(constants.ObjectTypeAuditEvent, ae.ID, "account")
 	if !ok {
 		return
@@ -52,7 +52,7 @@ func populateAccountOnAuditEvent(ctx context.Context, parent any, _ map[string]a
 
 func populateChangesOnAuditEvent(ctx context.Context, parent any, _ map[string]any) {
 	ae := parent.(*apiresource.AuditEvent)
-	v, ok := resourcekit.GetLoadMeta(ctx).
+	v, ok := include.GetLoadMeta(ctx).
 		Get(constants.ObjectTypeAuditEvent, ae.ID, "changes")
 	if !ok {
 		return
@@ -62,7 +62,7 @@ func populateChangesOnAuditEvent(ctx context.Context, parent any, _ map[string]a
 
 func populateMetadataOnAuditEvent(ctx context.Context, parent any, _ map[string]any) {
 	ae := parent.(*apiresource.AuditEvent)
-	v, ok := resourcekit.GetLoadMeta(ctx).
+	v, ok := include.GetLoadMeta(ctx).
 		Get(constants.ObjectTypeAuditEvent, ae.ID, "metadata")
 	if !ok {
 		return
@@ -72,7 +72,7 @@ func populateMetadataOnAuditEvent(ctx context.Context, parent any, _ map[string]
 
 func extractRequestIDFromAuditEvent(ctx context.Context, parent any) []string {
 	ae := parent.(*apiresource.AuditEvent)
-	id, ok := resourcekit.GetLoadMeta(ctx).
+	id, ok := include.GetLoadMeta(ctx).
 		GetString(constants.ObjectTypeAuditEvent, ae.ID, "request_id")
 	if !ok || id == "" {
 		return nil
@@ -82,7 +82,7 @@ func extractRequestIDFromAuditEvent(ctx context.Context, parent any) []string {
 
 func populateRequestOnAuditEvent(ctx context.Context, parent any, loaded map[string]any) {
 	ae := parent.(*apiresource.AuditEvent)
-	id, ok := resourcekit.GetLoadMeta(ctx).
+	id, ok := include.GetLoadMeta(ctx).
 		GetString(constants.ObjectTypeAuditEvent, ae.ID, "request_id")
 	if !ok || id == "" {
 		return

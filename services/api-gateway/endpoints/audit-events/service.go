@@ -4,12 +4,12 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"github.com/open-mrp/apikit/include"
 
 	"github.com/open-mrp/api/services/api-gateway/internal/domain"
 	grpcutil "github.com/open-mrp/api/services/api-gateway/internal/grpc"
 	"github.com/open-mrp/api/services/api-gateway/internal/resourceloaders"
 	apiresource "github.com/open-mrp/api/services/api-gateway/pkg/resource"
-	"github.com/open-mrp/api/services/api-gateway/pkg/resourcekit"
 	"github.com/open-mrp/api/shared/constants"
 	pb "github.com/open-mrp/api/shared/proto/platform"
 	apierror "github.com/open-mrp/apikit/apierror"
@@ -69,7 +69,7 @@ func (m *auditEventSvcImpl) ListAuditEvents(ctx context.Context, req *ListAuditE
 		Query:            req.Query,
 		Cursor:           req.Cursor,
 		Limit:            req.Limit,
-		Includes:         resourcekit.FilterIncludes(ctx, "actor", "changes", "metadata"),
+		Includes:         include.FilterIncludes(ctx, "actor", "changes", "metadata"),
 	}
 
 	if req.RootResourceType != nil {
@@ -100,7 +100,7 @@ func (m *auditEventSvcImpl) ListAuditEvents(ctx context.Context, req *ListAuditE
 		return apiresource.NewList[apiresource.AuditEvent](nil, apiresource.PageInfo{}), nil
 	}
 
-	meta := resourcekit.GetLoadMeta(ctx)
+	meta := include.GetLoadMeta(ctx)
 	events := make([]apiresource.AuditEvent, len(resp.AuditEvents))
 	var agentActors []*apiresource.Actor
 	for i, ev := range resp.AuditEvents {
@@ -138,7 +138,7 @@ func (m *auditEventSvcImpl) ListAuditEventResourceTypes(ctx context.Context, _ *
 func (m *auditEventSvcImpl) GetAuditEvent(ctx context.Context, req *RetrieveAuditEventRequest) (*apiresource.AuditEvent, *apierror.APIError) {
 	pbReq := &pb.GetAuditEventRequest{
 		Id:       req.ID,
-		Includes: resourcekit.FilterIncludes(ctx, "actor", "changes", "metadata"),
+		Includes: include.FilterIncludes(ctx, "actor", "changes", "metadata"),
 	}
 
 	resp, apiErr := grpcutil.CallRPC(ctx, auditEventSvcTracer, "service.audit_events.get", domain.ServiceName,
@@ -150,7 +150,7 @@ func (m *auditEventSvcImpl) GetAuditEvent(ctx context.Context, req *RetrieveAudi
 		return nil, apiErr
 	}
 
-	meta := resourcekit.GetLoadMeta(ctx)
+	meta := include.GetLoadMeta(ctx)
 	result := auditEventFromProto(resp.AuditEvent)
 	if actor := stashAuditEventMeta(ctx, meta, resp.AuditEvent); actor != nil && actor.Type == constants.ActorTypeAgent {
 		hydrateAgentActors(ctx, []*apiresource.Actor{actor})
@@ -164,7 +164,7 @@ func (m *auditEventSvcImpl) GetAuditEvent(ctx context.Context, req *RetrieveAudi
 // Best-effort and a no-op unless the caller expanded the actor (the only case where
 // the name is rendered), avoiding a needless agent-service round-trip otherwise.
 func hydrateAgentActors(ctx context.Context, actors []*apiresource.Actor) {
-	if len(actors) == 0 || !resourcekit.RequestedIncludeSet(ctx)["actor"] {
+	if len(actors) == 0 || !include.RequestedIncludeSet(ctx)["actor"] {
 		return
 	}
 	resourceloaders.HydrateActorNames(ctx, actors)
@@ -191,7 +191,7 @@ func auditEventFromProto(ev *pb.AuditEventInfo) apiresource.AuditEvent {
 // stashAuditEventMeta stashes the event's expandable sub-resources into the load
 // meta and returns the event's actor (or nil) so the caller can hydrate agent
 // actors' names from agent-service, mirroring the request-log path.
-func stashAuditEventMeta(ctx context.Context, meta *resourcekit.LoadMeta, ev *pb.AuditEventInfo) *apiresource.Actor {
+func stashAuditEventMeta(ctx context.Context, meta *include.LoadMeta, ev *pb.AuditEventInfo) *apiresource.Actor {
 	if ev == nil {
 		return nil
 	}
@@ -210,7 +210,7 @@ func stashAuditEventMeta(ctx context.Context, meta *resourcekit.LoadMeta, ev *pb
 			name,
 			stringPtrFromOptional(ev.Actor.Handle),
 		)
-		resourcekit.PreheatCache(ctx, constants.ObjectTypeActor, actor.ID, actor)
+		include.PreheatCache(ctx, constants.ObjectTypeActor, actor.ID, actor)
 		meta.Set(constants.ObjectTypeAuditEvent, ev.Id, "actor", actor)
 	}
 

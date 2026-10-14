@@ -4,11 +4,12 @@ import (
 	"context"
 	"net/http"
 
-	apiendpoint "github.com/open-mrp/api/services/api-gateway/pkg/endpoint"
+	"github.com/open-mrp/api/services/api-gateway/pkg/authz"
 	apiresource "github.com/open-mrp/api/services/api-gateway/pkg/resource"
 	"github.com/open-mrp/api/services/auth-service/pkg/types"
 	"github.com/open-mrp/api/shared/constants"
 	apierror "github.com/open-mrp/apikit/apierror"
+	apiendpoint "github.com/open-mrp/apikit/endpoint"
 )
 
 // Request to retrieve an agent definition.
@@ -24,16 +25,16 @@ type RetrieveAgentEndpoint struct{}
 
 func (e *RetrieveAgentEndpoint) Materialize() *apiendpoint.APIEndpoint[*RetrieveAgentRequest, *apiresource.AgentDefinition] {
 	return (&apiendpoint.APIEndpoint[*RetrieveAgentRequest, *apiresource.AgentDefinition]{
-		Title:               "Retrieve Agent",
-		Method:              http.MethodGet,
-		ContentType:         "application/json",
-		Route:               "/v1/ai/agents/{id}",
-		SuccessStatusCode:   http.StatusOK,
-		Public:              true,
-		AgentTool:           true,
-		Preview:             true,
-		ObjectType:          constants.ObjectTypeAgentDefinition,
-		RequiredPermissions: []types.Permission{{Domain: types.PermissionDomainAgents, Action: types.ActionRead}},
+		Title:             "Retrieve Agent",
+		Method:            http.MethodGet,
+		ContentType:       "application/json",
+		Route:             "/v1/ai/agents/{id}",
+		SuccessStatusCode: http.StatusOK,
+		Public:            true,
+		AgentTool:         true,
+		Preview:           true,
+		ObjectType:        constants.ObjectTypeAgentDefinition,
+		Auth:              authz.Policy{Permissions: []types.Permission{{Domain: types.PermissionDomainAgents, Action: types.ActionRead}}},
 		ServiceHandler: func(svc any) func(ctx context.Context, req *RetrieveAgentRequest) (*apiresource.AgentDefinition, *apierror.APIError) {
 			return svc.(AgentSvc).GetAgent
 		},

@@ -2,29 +2,29 @@ package resourceregistry
 
 import (
 	"context"
+	"github.com/open-mrp/apikit/include"
 
 	"github.com/open-mrp/api/services/api-gateway/internal/resourceloaders"
 	apiresource "github.com/open-mrp/api/services/api-gateway/pkg/resource"
-	"github.com/open-mrp/api/services/api-gateway/pkg/resourcekit"
 	"github.com/open-mrp/api/shared/constants"
 )
 
 func init() {
-	resourcekit.Register(&resourcekit.Definition{
+	include.Register(&include.Definition{
 		ObjectType: constants.ObjectTypeShippingCase,
 		Load:       resourceloaders.LoadShippingCases,
-		Subs: []resourcekit.SubField{
+		Subs: []include.SubField{
 			{
 				Key:         "carrier",
 				Target:      constants.ObjectTypeCarrier,
-				Cardinality: resourcekit.CardinalityOnePtr,
+				Cardinality: include.CardinalityOnePtr,
 				ExtractIDs:  extractCarrierIDFromShippingCase,
 				Populate:    populateCarrierOnShippingCase,
 			},
 			{
 				Key:         "shipment",
 				Target:      constants.ObjectTypeShipment,
-				Cardinality: resourcekit.CardinalityOnePtr,
+				Cardinality: include.CardinalityOnePtr,
 				ExtractIDs:  extractShipmentIDFromShippingCase,
 				Populate:    populateShipmentOnShippingCase,
 			},
@@ -36,7 +36,7 @@ func init() {
 
 func extractCarrierIDFromShippingCase(ctx context.Context, parent any) []string {
 	sc := parent.(*apiresource.ShippingCase)
-	id, _ := resourcekit.GetLoadMeta(ctx).
+	id, _ := include.GetLoadMeta(ctx).
 		GetString(constants.ObjectTypeShippingCase, sc.ID, "carrier_id")
 	if id == "" {
 		return nil
@@ -46,7 +46,7 @@ func extractCarrierIDFromShippingCase(ctx context.Context, parent any) []string 
 
 func populateCarrierOnShippingCase(ctx context.Context, parent any, loaded map[string]any) {
 	sc := parent.(*apiresource.ShippingCase)
-	id, _ := resourcekit.GetLoadMeta(ctx).
+	id, _ := include.GetLoadMeta(ctx).
 		GetString(constants.ObjectTypeShippingCase, sc.ID, "carrier_id")
 	if v, ok := loaded[id]; ok {
 		sc.Carrier = v.(*apiresource.Carrier)
@@ -55,7 +55,7 @@ func populateCarrierOnShippingCase(ctx context.Context, parent any, loaded map[s
 
 func extractShipmentIDFromShippingCase(ctx context.Context, parent any) []string {
 	sc := parent.(*apiresource.ShippingCase)
-	id, _ := resourcekit.GetLoadMeta(ctx).
+	id, _ := include.GetLoadMeta(ctx).
 		GetString(constants.ObjectTypeShippingCase, sc.ID, "shipment_id")
 	if id == "" {
 		return nil
@@ -65,7 +65,7 @@ func extractShipmentIDFromShippingCase(ctx context.Context, parent any) []string
 
 func populateShipmentOnShippingCase(ctx context.Context, parent any, loaded map[string]any) {
 	sc := parent.(*apiresource.ShippingCase)
-	id, _ := resourcekit.GetLoadMeta(ctx).
+	id, _ := include.GetLoadMeta(ctx).
 		GetString(constants.ObjectTypeShippingCase, sc.ID, "shipment_id")
 	if v, ok := loaded[id]; ok {
 		sc.Shipment = v.(*apiresource.Shipment)
@@ -74,7 +74,7 @@ func populateShipmentOnShippingCase(ctx context.Context, parent any, loaded map[
 
 func populateFreightAmountOnShippingCase(ctx context.Context, parent any, _ map[string]any) {
 	sc := parent.(*apiresource.ShippingCase)
-	v, ok := resourcekit.GetLoadMeta(ctx).
+	v, ok := include.GetLoadMeta(ctx).
 		Get(constants.ObjectTypeShippingCase, sc.ID, "freight_amount")
 	if !ok {
 		return
@@ -84,7 +84,7 @@ func populateFreightAmountOnShippingCase(ctx context.Context, parent any, _ map[
 
 func populateFreightWeightOnShippingCase(ctx context.Context, parent any, _ map[string]any) {
 	sc := parent.(*apiresource.ShippingCase)
-	v, ok := resourcekit.GetLoadMeta(ctx).
+	v, ok := include.GetLoadMeta(ctx).
 		Get(constants.ObjectTypeShippingCase, sc.ID, "freight_weight")
 	if !ok {
 		return

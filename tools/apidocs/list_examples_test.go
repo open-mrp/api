@@ -5,6 +5,8 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/open-mrp/apikit/object"
+
 	apiresource "github.com/open-mrp/api/services/api-gateway/pkg/resource"
 	"github.com/open-mrp/apikit/pagination"
 )
@@ -37,7 +39,7 @@ func TestBuildListSchemaExample_PaginatedListURL(t *testing.T) {
 	components.Schemas["Material"] = generateSchema(reflect.TypeOf(apiresource.Material{}), components, reader)
 
 	listType := reflect.TypeOf(apiresource.List[apiresource.Material]{})
-	reqType := reflect.TypeOf(apiresource.PaginationRequest{})
+	reqType := reflect.TypeOf(object.ListRequest{})
 	ex := buildListSchemaExample(components, reader, listType, "/v1/catalog/materials", reqType)
 
 	pageInfo, ok := ex["page_info"].(map[string]any)

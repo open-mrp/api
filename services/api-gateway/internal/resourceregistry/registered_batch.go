@@ -2,31 +2,31 @@ package resourceregistry
 
 import (
 	"context"
+	"github.com/open-mrp/apikit/include"
 
 	"github.com/open-mrp/api/services/api-gateway/internal/resourceloaders"
 	apiresource "github.com/open-mrp/api/services/api-gateway/pkg/resource"
-	"github.com/open-mrp/api/services/api-gateway/pkg/resourcekit"
 	"github.com/open-mrp/api/shared/constants"
 )
 
 func init() {
-	resourcekit.Register(&resourcekit.Definition{
+	include.Register(&include.Definition{
 		ObjectType: constants.ObjectTypeBatch,
 		Load:       resourceloaders.LoadBatches,
-		Subs: []resourcekit.SubField{
+		Subs: []include.SubField{
 			// The measures are already on the batch — these exist so a caller can reach through them
 			// to the unit each is counted in.
-			{Key: "quantity", Target: constants.ObjectTypeQuantity, Cardinality: resourcekit.CardinalityOnePtr, ExtractRefs: extractQuantityRefFromBatch},
-			{Key: "seconds", Target: constants.ObjectTypeQuantity, Cardinality: resourcekit.CardinalityOnePtr, ExtractRefs: extractSecondsRefFromBatch},
-			{Key: "waste", Target: constants.ObjectTypeQuantity, Cardinality: resourcekit.CardinalityOnePtr, ExtractRefs: extractWasteRefFromBatch},
+			{Key: "quantity", Target: constants.ObjectTypeQuantity, Cardinality: include.CardinalityOnePtr, ExtractRefs: extractQuantityRefFromBatch},
+			{Key: "seconds", Target: constants.ObjectTypeQuantity, Cardinality: include.CardinalityOnePtr, ExtractRefs: extractSecondsRefFromBatch},
+			{Key: "waste", Target: constants.ObjectTypeQuantity, Cardinality: include.CardinalityOnePtr, ExtractRefs: extractWasteRefFromBatch},
 		},
 	})
 
-	resourcekit.Register(&resourcekit.Definition{
+	include.Register(&include.Definition{
 		ObjectType: constants.ObjectTypeBatchFlowNode,
 		Load:       resourceloaders.LoadBatchFlowNodes,
-		Subs: []resourcekit.SubField{
-			{Key: "batch", Target: constants.ObjectTypeBatch, Cardinality: resourcekit.CardinalityOnePtr, ExtractRefs: extractBatchRefFromFlowNode},
+		Subs: []include.SubField{
+			{Key: "batch", Target: constants.ObjectTypeBatch, Cardinality: include.CardinalityOnePtr, ExtractRefs: extractBatchRefFromFlowNode},
 		},
 	})
 }

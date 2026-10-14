@@ -5,16 +5,23 @@ import (
 	"net/http"
 	"time"
 
-	apiendpoint "github.com/open-mrp/api/services/api-gateway/pkg/endpoint"
+	"github.com/open-mrp/apikit/object"
+
+	"github.com/open-mrp/api/services/api-gateway/pkg/authz"
 	apiresource "github.com/open-mrp/api/services/api-gateway/pkg/resource"
 	"github.com/open-mrp/api/services/auth-service/pkg/types"
 	"github.com/open-mrp/api/shared/constants"
 	apierror "github.com/open-mrp/apikit/apierror"
+	apiendpoint "github.com/open-mrp/apikit/endpoint"
 )
 
 // Request to list products.
 type ListProductsRequest struct {
-	apiresource.PaginationRequest
+	object.ListRequest
+	// Free-text search term used to filter results.
+	//
+	// Which fields are matched against the term varies by endpoint.
+	Query *string `query:"q" validate:"omitempty,max=500"`
 	// Restrict results to products these customer accounts are entitled to buy.
 	//
 	// A product matches when its product line has been granted to the customer directly, through the customer's account group, or through the account group used for the customer's pricing. Combined with `product_line_ids` this widens the results rather than narrowing them: products matching either filter are returned.
@@ -44,16 +51,15 @@ type ListProductsEndpoint struct{}
 
 func (e *ListProductsEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListProductsRequest, *apiresource.List[apiresource.Product]] {
 	return (&apiendpoint.APIEndpoint[*ListProductsRequest, *apiresource.List[apiresource.Product]]{
-		Title:                   "List Products",
-		Method:                  http.MethodGet,
-		ContentType:             "application/json",
-		Route:                   "/v1/catalog/products",
-		SuccessStatusCode:       http.StatusOK,
-		Public:                  true,
-		AgentTool:               true,
-		RequiredPermissions:     []types.Permission{{Domain: types.PermissionDomainItems, Action: types.ActionRead}},
-		CounterpartyPermissions: apiendpoint.Counterparties(types.ActionRead),
-		Preview:                 true,
+		Title:             "List Products",
+		Method:            http.MethodGet,
+		ContentType:       "application/json",
+		Route:             "/v1/catalog/products",
+		SuccessStatusCode: http.StatusOK,
+		Public:            true,
+		AgentTool:         true,
+		Auth:              authz.Policy{Permissions: []types.Permission{{Domain: types.PermissionDomainItems, Action: types.ActionRead}}, Counterparty: authz.Counterparties(types.ActionRead)},
+		Preview:           true,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *ListProductsRequest) (*apiresource.List[apiresource.Product], *apierror.APIError) {
 			return svc.(ProductSvc).ListProducts
 		},

@@ -5,8 +5,8 @@ import (
 
 	agentrunep "github.com/open-mrp/api/services/api-gateway/endpoints/agent-runs"
 	grpcclient "github.com/open-mrp/api/services/api-gateway/grpc-client"
-	apiendpoint "github.com/open-mrp/api/services/api-gateway/pkg/endpoint"
 	apiresource "github.com/open-mrp/api/services/api-gateway/pkg/resource"
+	apiendpoint "github.com/open-mrp/apikit/endpoint"
 )
 
 type AgentRunsEndpointGroup struct {

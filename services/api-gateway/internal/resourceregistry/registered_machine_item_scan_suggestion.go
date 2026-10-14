@@ -2,22 +2,22 @@ package resourceregistry
 
 import (
 	"context"
+	"github.com/open-mrp/apikit/include"
 
 	apiresource "github.com/open-mrp/api/services/api-gateway/pkg/resource"
-	"github.com/open-mrp/api/services/api-gateway/pkg/resourcekit"
 	"github.com/open-mrp/api/shared/constants"
 )
 
 func init() {
-	resourcekit.Register(&resourcekit.Definition{
+	include.Register(&include.Definition{
 		ObjectType: constants.ObjectTypeMachineItemScanSuggestion,
 		// A suggestion is computed by its endpoint, never fetched by id.
 		Load: stubLoader,
-		Subs: []resourcekit.SubField{
+		Subs: []include.SubField{
 			{
 				Key:         "item",
 				Target:      constants.ObjectTypeItem,
-				Cardinality: resourcekit.CardinalityOnePtr,
+				Cardinality: include.CardinalityOnePtr,
 				ExtractIDs:  extractItemIDFromMachineItemScanSuggestion,
 				Populate:    populateItemOnMachineItemScanSuggestion,
 			},
@@ -27,7 +27,7 @@ func init() {
 
 func extractItemIDFromMachineItemScanSuggestion(ctx context.Context, parent any) []string {
 	s := parent.(*apiresource.MachineItemScanSuggestion)
-	id, _ := resourcekit.GetLoadMeta(ctx).
+	id, _ := include.GetLoadMeta(ctx).
 		GetString(constants.ObjectTypeMachineItemScanSuggestion, s.ID, "item_id")
 	if id == "" {
 		return nil
@@ -37,7 +37,7 @@ func extractItemIDFromMachineItemScanSuggestion(ctx context.Context, parent any)
 
 func populateItemOnMachineItemScanSuggestion(ctx context.Context, parent any, loaded map[string]any) {
 	s := parent.(*apiresource.MachineItemScanSuggestion)
-	id, _ := resourcekit.GetLoadMeta(ctx).
+	id, _ := include.GetLoadMeta(ctx).
 		GetString(constants.ObjectTypeMachineItemScanSuggestion, s.ID, "item_id")
 	if id == "" {
 		return

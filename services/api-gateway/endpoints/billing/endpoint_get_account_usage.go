@@ -4,11 +4,12 @@ import (
 	"context"
 	"net/http"
 
-	apiendpoint "github.com/open-mrp/api/services/api-gateway/pkg/endpoint"
+	"github.com/open-mrp/api/services/api-gateway/pkg/authz"
 	apiresource "github.com/open-mrp/api/services/api-gateway/pkg/resource"
 	"github.com/open-mrp/api/services/auth-service/pkg/types"
 	"github.com/open-mrp/api/shared/constants"
 	apierror "github.com/open-mrp/apikit/apierror"
+	apiendpoint "github.com/open-mrp/apikit/endpoint"
 )
 
 // Returns the account's resource usage against its plan limits, along with subscription status, plan pricing, and estimated agent spending.
@@ -31,9 +32,9 @@ func (e *GetAccountUsageEndpoint) Materialize() *apiendpoint.APIEndpoint[*apires
 		AgentTool:         true,
 		Preview:           true,
 		// Account-scoped read; mirrors retrieve_account's account:read (self:read) gate.
-		RequiredPermissions: []types.Permission{{Domain: types.PermissionDomainAccount, Action: types.ActionRead}},
-		ObjectType:          constants.ObjectTypeAccountUsageResponse,
-		Extras:              apiendpoint.APIEndpointExtras{HideFromRequestLog: true},
+		Auth:       authz.Policy{Permissions: []types.Permission{{Domain: types.PermissionDomainAccount, Action: types.ActionRead}}},
+		ObjectType: constants.ObjectTypeAccountUsageResponse,
+		Extras:     apiendpoint.APIEndpointExtras{HideFromRequestLog: true},
 		ServiceHandler: func(svc any) func(ctx context.Context, req *apiresource.EmptyResource) (*apiresource.AccountUsageResponse, *apierror.APIError) {
 			return svc.(BillingSvc).GetAccountUsage
 		},

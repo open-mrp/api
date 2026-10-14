@@ -17,7 +17,7 @@ import (
 )
 
 type SandboxSvc interface {
-	ListSandboxes(ctx context.Context, req *apiresource.PaginationRequest) (*apiresource.List[apiresource.Sandbox], *apierror.APIError)
+	ListSandboxes(ctx context.Context, req *ListSandboxesRequest) (*apiresource.List[apiresource.Sandbox], *apierror.APIError)
 	GetSandbox(ctx context.Context, req *RetrieveSandboxRequest) (*apiresource.Sandbox, *apierror.APIError)
 	CreateSandbox(ctx context.Context, req *CreateSandboxRequest) (*apiresource.Sandbox, *apierror.APIError)
 	DeleteSandbox(ctx context.Context, req *DeleteSandboxRequest) (*apiresource.EmptyResource, *apierror.APIError)
@@ -48,7 +48,7 @@ func NewSandboxSvc(config *SandboxSvcConfig) SandboxSvc {
 	return &sandboxSvcImpl{coreClient: config.CoreClient}
 }
 
-func (m *sandboxSvcImpl) ListSandboxes(ctx context.Context, req *apiresource.PaginationRequest) (*apiresource.List[apiresource.Sandbox], *apierror.APIError) {
+func (m *sandboxSvcImpl) ListSandboxes(ctx context.Context, req *ListSandboxesRequest) (*apiresource.List[apiresource.Sandbox], *apierror.APIError) {
 	pbReq := &pb.ListSandboxAccountsRequest{
 		Cursor: req.Cursor,
 		Limit:  req.Limit,

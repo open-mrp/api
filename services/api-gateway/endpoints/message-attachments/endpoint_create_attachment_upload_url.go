@@ -4,12 +4,13 @@ import (
 	"context"
 	"net/http"
 
-	apiendpoint "github.com/open-mrp/api/services/api-gateway/pkg/endpoint"
-	apiexample "github.com/open-mrp/api/services/api-gateway/pkg/example"
+	"github.com/open-mrp/api/services/api-gateway/pkg/authz"
 	apiresource "github.com/open-mrp/api/services/api-gateway/pkg/resource"
 	"github.com/open-mrp/api/services/auth-service/pkg/types"
 	"github.com/open-mrp/api/shared/constants"
 	apierror "github.com/open-mrp/apikit/apierror"
+	apiendpoint "github.com/open-mrp/apikit/endpoint"
+	apiexample "github.com/open-mrp/apikit/example"
 	"github.com/open-mrp/apikit/field"
 )
 
@@ -44,17 +45,17 @@ type CreateAttachmentUploadURLEndpoint struct{}
 
 func (e *CreateAttachmentUploadURLEndpoint) Materialize() *apiendpoint.APIEndpoint[*CreateAttachmentUploadURLRequest, *apiresource.AttachmentUploadTarget] {
 	return (&apiendpoint.APIEndpoint[*CreateAttachmentUploadURLRequest, *apiresource.AttachmentUploadTarget]{
-		Title:               "Create Attachment Upload URL",
-		Method:              http.MethodPost,
-		ContentType:         "application/json",
-		Route:               "/v1/messaging/conversations/{id}/attachments/actions/upload-url",
-		SuccessStatusCode:   http.StatusOK,
-		Public:              true,
-		AgentTool:           true,
-		Preview:             true,
-		ObjectType:          constants.ObjectTypeAttachmentUploadTarget,
-		RequiredPermissions: []types.Permission{{Domain: types.PermissionDomainMessaging, Action: types.ActionCreate}},
-		IncludeConfig:       attachmentUploadTargetIncludeConfig(),
+		Title:             "Create Attachment Upload URL",
+		Method:            http.MethodPost,
+		ContentType:       "application/json",
+		Route:             "/v1/messaging/conversations/{id}/attachments/actions/upload-url",
+		SuccessStatusCode: http.StatusOK,
+		Public:            true,
+		AgentTool:         true,
+		Preview:           true,
+		ObjectType:        constants.ObjectTypeAttachmentUploadTarget,
+		Auth:              authz.Policy{Permissions: []types.Permission{{Domain: types.PermissionDomainMessaging, Action: types.ActionCreate}}},
+		IncludeConfig:     attachmentUploadTargetIncludeConfig(),
 		ServiceHandler: func(svc any) func(ctx context.Context, req *CreateAttachmentUploadURLRequest) (*apiresource.AttachmentUploadTarget, *apierror.APIError) {
 			return svc.(AttachmentSvc).CreateAttachmentUploadURL
 		},

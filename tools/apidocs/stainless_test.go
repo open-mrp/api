@@ -7,7 +7,7 @@ import (
 	"reflect"
 	"testing"
 
-	apiendpoint "github.com/open-mrp/api/services/api-gateway/pkg/endpoint"
+	apiendpoint "github.com/open-mrp/apikit/endpoint"
 	"gopkg.in/yaml.v3"
 )
 

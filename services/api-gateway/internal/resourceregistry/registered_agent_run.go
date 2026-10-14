@@ -2,18 +2,18 @@ package resourceregistry
 
 import (
 	"context"
+	"github.com/open-mrp/apikit/include"
 
 	"github.com/open-mrp/api/services/api-gateway/internal/resourceloaders"
 	apiresource "github.com/open-mrp/api/services/api-gateway/pkg/resource"
-	"github.com/open-mrp/api/services/api-gateway/pkg/resourcekit"
 	"github.com/open-mrp/api/shared/constants"
 )
 
 func init() {
-	resourcekit.Register(&resourcekit.Definition{
+	include.Register(&include.Definition{
 		ObjectType: constants.ObjectTypeAgentRun,
 		Load:       resourceloaders.LoadAgentRuns,
-		Subs: []resourcekit.SubField{
+		Subs: []include.SubField{
 			{Key: "triggered_by", Populate: populateTriggeredByOnAgentRun},
 			{Key: "actions", Populate: populateActionsOnAgentRun},
 			{
@@ -29,7 +29,7 @@ func init() {
 
 func populateTriggeredByOnAgentRun(ctx context.Context, parent any, _ map[string]any) {
 	r := parent.(*apiresource.AgentRun)
-	v, ok := resourcekit.GetLoadMeta(ctx).Get(constants.ObjectTypeAgentRun, r.ID, "triggered_by")
+	v, ok := include.GetLoadMeta(ctx).Get(constants.ObjectTypeAgentRun, r.ID, "triggered_by")
 	if !ok {
 		return
 	}
@@ -38,7 +38,7 @@ func populateTriggeredByOnAgentRun(ctx context.Context, parent any, _ map[string
 
 func populateActionsOnAgentRun(ctx context.Context, parent any, _ map[string]any) {
 	r := parent.(*apiresource.AgentRun)
-	v, ok := resourcekit.GetLoadMeta(ctx).Get(constants.ObjectTypeAgentRun, r.ID, "actions")
+	v, ok := include.GetLoadMeta(ctx).Get(constants.ObjectTypeAgentRun, r.ID, "actions")
 	if !ok {
 		return
 	}
@@ -55,7 +55,7 @@ func extractDefinitionRefsFromAgentRun(_ context.Context, parent any) []any {
 
 func populateDefinitionOnAgentRun(ctx context.Context, parent any, _ map[string]any) {
 	r := parent.(*apiresource.AgentRun)
-	v, ok := resourcekit.GetLoadMeta(ctx).Get(constants.ObjectTypeAgentRun, r.ID, "definition")
+	v, ok := include.GetLoadMeta(ctx).Get(constants.ObjectTypeAgentRun, r.ID, "definition")
 	if !ok {
 		return
 	}
@@ -64,7 +64,7 @@ func populateDefinitionOnAgentRun(ctx context.Context, parent any, _ map[string]
 
 func populateStepsOnAgentRun(ctx context.Context, parent any, _ map[string]any) {
 	r := parent.(*apiresource.AgentRun)
-	v, ok := resourcekit.GetLoadMeta(ctx).Get(constants.ObjectTypeAgentRun, r.ID, "steps")
+	v, ok := include.GetLoadMeta(ctx).Get(constants.ObjectTypeAgentRun, r.ID, "steps")
 	if !ok {
 		return
 	}

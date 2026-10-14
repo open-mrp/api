@@ -4,16 +4,23 @@ import (
 	"context"
 	"net/http"
 
-	apiendpoint "github.com/open-mrp/api/services/api-gateway/pkg/endpoint"
+	"github.com/open-mrp/apikit/object"
+
+	"github.com/open-mrp/api/services/api-gateway/pkg/authz"
 	apiresource "github.com/open-mrp/api/services/api-gateway/pkg/resource"
 	"github.com/open-mrp/api/services/auth-service/pkg/types"
 	"github.com/open-mrp/api/shared/constants"
 	apierror "github.com/open-mrp/apikit/apierror"
+	apiendpoint "github.com/open-mrp/apikit/endpoint"
 )
 
 // Request to list demand overrides.
 type ListDemandOverridesRequest struct {
-	apiresource.PaginationRequest
+	object.ListRequest
+	// Free-text search term used to filter results.
+	//
+	// Which fields are matched against the term varies by endpoint.
+	Query *string `query:"q" validate:"omitempty,max=500"`
 	// Only return overrides with these kinds of target.
 	ScopeTypes []constants.DemandOverrideScope `query:"scope_types"`
 	// Only return overrides targeting these items or product lines.
@@ -44,9 +51,9 @@ func (e *ListDemandOverridesEndpoint) Materialize() *apiendpoint.APIEndpoint[*Li
 		Preview:           true,
 		AgentTool:         true,
 		ObjectType:        constants.ObjectTypeDemandOverride,
-		RequiredPermissions: []types.Permission{
+		Auth: authz.Policy{Permissions: []types.Permission{
 			{Domain: types.PermissionDomainDemandOverrides, Action: types.ActionRead},
-		},
+		}},
 		ServiceHandler: func(svc any) func(ctx context.Context, req *ListDemandOverridesRequest) (*apiresource.List[apiresource.DemandOverride], *apierror.APIError) {
 			return svc.(DemandOverridesSvc).ListDemandOverrides
 		},

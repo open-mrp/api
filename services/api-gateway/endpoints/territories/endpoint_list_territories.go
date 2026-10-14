@@ -4,11 +4,14 @@ import (
 	"context"
 	"net/http"
 
-	apiendpoint "github.com/open-mrp/api/services/api-gateway/pkg/endpoint"
+	"github.com/open-mrp/apikit/object"
+
+	"github.com/open-mrp/api/services/api-gateway/pkg/authz"
 	apiresource "github.com/open-mrp/api/services/api-gateway/pkg/resource"
 	"github.com/open-mrp/api/services/auth-service/pkg/types"
 	"github.com/open-mrp/api/shared/constants"
 	apierror "github.com/open-mrp/apikit/apierror"
+	apiendpoint "github.com/open-mrp/apikit/endpoint"
 )
 
 // Request to list territories.
@@ -17,7 +20,11 @@ type ListTerritoriesRequest struct {
 	//
 	// A path naming any other account returns a not-found error.
 	AccountID string `path:"account_id" validate:"required"`
-	apiresource.PaginationRequest
+	object.ListRequest
+	// Free-text search term used to filter results.
+	//
+	// Which fields are matched against the term varies by endpoint.
+	Query *string `query:"q" validate:"omitempty,max=500"`
 }
 
 // Returns a paginated list of territories in your account, most recently created first.
@@ -27,16 +34,16 @@ type ListTerritoriesEndpoint struct{}
 
 func (e *ListTerritoriesEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListTerritoriesRequest, *apiresource.List[apiresource.Territory]] {
 	return (&apiendpoint.APIEndpoint[*ListTerritoriesRequest, *apiresource.List[apiresource.Territory]]{
-		Title:               "List Territories",
-		Method:              http.MethodGet,
-		ContentType:         "application/json",
-		Route:               "/v1/sales/accounts/{account_id}/territories",
-		SuccessStatusCode:   http.StatusOK,
-		Public:              false,
-		AgentTool:           true,
-		Preview:             true,
-		ObjectType:          constants.ObjectTypeTerritory,
-		RequiredPermissions: []types.Permission{{Domain: types.PermissionDomainTerritories, Action: types.ActionRead}},
+		Title:             "List Territories",
+		Method:            http.MethodGet,
+		ContentType:       "application/json",
+		Route:             "/v1/sales/accounts/{account_id}/territories",
+		SuccessStatusCode: http.StatusOK,
+		Public:            false,
+		AgentTool:         true,
+		Preview:           true,
+		ObjectType:        constants.ObjectTypeTerritory,
+		Auth:              authz.Policy{Permissions: []types.Permission{{Domain: types.PermissionDomainTerritories, Action: types.ActionRead}}},
 		ServiceHandler: func(svc any) func(ctx context.Context, req *ListTerritoriesRequest) (*apiresource.List[apiresource.Territory], *apierror.APIError) {
 			return svc.(TerritorySvc).ListTerritories
 		},

@@ -2,22 +2,22 @@ package resourceregistry
 
 import (
 	"context"
+	"github.com/open-mrp/apikit/include"
 
 	"github.com/open-mrp/api/services/api-gateway/internal/resourceloaders"
 	apiresource "github.com/open-mrp/api/services/api-gateway/pkg/resource"
-	"github.com/open-mrp/api/services/api-gateway/pkg/resourcekit"
 	"github.com/open-mrp/api/shared/constants"
 )
 
 func init() {
-	resourcekit.Register(&resourcekit.Definition{
+	include.Register(&include.Definition{
 		ObjectType: constants.ObjectTypeMachine,
 		Load:       resourceloaders.LoadMachines,
-		Subs: []resourcekit.SubField{
+		Subs: []include.SubField{
 			{
 				Key:         "department",
 				Target:      constants.ObjectTypeDepartment,
-				Cardinality: resourcekit.CardinalityOnePtr,
+				Cardinality: include.CardinalityOnePtr,
 				ExtractIDs:  extractDepartmentIDFromMachine,
 				Populate:    populateDepartmentOnMachine,
 			},
@@ -27,7 +27,7 @@ func init() {
 
 func extractDepartmentIDFromMachine(ctx context.Context, parent any) []string {
 	m := parent.(*apiresource.Machine)
-	id, _ := resourcekit.GetLoadMeta(ctx).
+	id, _ := include.GetLoadMeta(ctx).
 		GetString(constants.ObjectTypeMachine, m.ID, "department_id")
 	if id == "" {
 		return nil
@@ -37,7 +37,7 @@ func extractDepartmentIDFromMachine(ctx context.Context, parent any) []string {
 
 func populateDepartmentOnMachine(ctx context.Context, parent any, loaded map[string]any) {
 	m := parent.(*apiresource.Machine)
-	id, _ := resourcekit.GetLoadMeta(ctx).
+	id, _ := include.GetLoadMeta(ctx).
 		GetString(constants.ObjectTypeMachine, m.ID, "department_id")
 	if id == "" {
 		return

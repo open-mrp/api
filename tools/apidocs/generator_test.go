@@ -11,11 +11,12 @@ import (
 	"strings"
 	"testing"
 
-	apiendpoint "github.com/open-mrp/api/services/api-gateway/pkg/endpoint"
-	apiexample "github.com/open-mrp/api/services/api-gateway/pkg/example"
+	"github.com/open-mrp/api/services/api-gateway/pkg/authz"
 	apiresource "github.com/open-mrp/api/services/api-gateway/pkg/resource"
 	"github.com/open-mrp/api/services/auth-service/pkg/types"
 	"github.com/open-mrp/api/shared/constants"
+	apiendpoint "github.com/open-mrp/apikit/endpoint"
+	apiexample "github.com/open-mrp/apikit/example"
 	"github.com/open-mrp/apikit/field"
 
 	invoiceep "github.com/open-mrp/api/services/api-gateway/endpoints/invoices"
@@ -992,12 +993,12 @@ func TestAuthRequirementParagraph_AllOfReadsAsAnd(t *testing.T) {
 	update := types.Permission{Domain: types.PermissionDomainCustomers, Action: types.ActionUpdate}
 	del := types.Permission{Domain: types.PermissionDomainCustomers, Action: types.ActionDelete}
 
-	anyOf := &apiendpoint.APIEndpoint[any, any]{RequiredPermissions: types.AnyOfPermissions{update, del}}
+	anyOf := &apiendpoint.APIEndpoint[any, any]{Auth: authz.Policy{Permissions: types.AnyOfPermissions{update, del}}}
 	if got, want := authRequirementParagraph(reflect.ValueOf(anyOf).Elem()), "This endpoint requires the permissions: `customers:update`, `customers:delete`."; got != want {
 		t.Errorf("any-of = %q, want %q", got, want)
 	}
 
-	allOf := &apiendpoint.APIEndpoint[any, any]{RequiredPermissions: types.AnyOfPermissions{update, del}, RequiresAllPermissions: true}
+	allOf := &apiendpoint.APIEndpoint[any, any]{Auth: authz.Policy{Permissions: types.AnyOfPermissions{update, del}, RequireAll: true}}
 	if got, want := authRequirementParagraph(reflect.ValueOf(allOf).Elem()), "This endpoint requires the permissions: `customers:update` and `customers:delete`."; got != want {
 		t.Errorf("all-of = %q, want %q", got, want)
 	}
@@ -1006,8 +1007,7 @@ func TestAuthRequirementParagraph_AllOfReadsAsAnd(t *testing.T) {
 // Acting in a customer's or supplier's account is stated in its own paragraph, and the requirement sentence still ends the text and names only the endpoint's own permission.
 func TestAuthRequirementParagraph_CounterpartyPermissions(t *testing.T) {
 	readOrders := &apiendpoint.APIEndpoint[any, any]{
-		RequiredPermissions:     types.AnyOfPermissions{{Domain: types.PermissionDomainSalesOrders, Action: types.ActionRead}},
-		CounterpartyPermissions: apiendpoint.Counterparties(types.ActionRead),
+		Auth: authz.Policy{Permissions: types.AnyOfPermissions{{Domain: types.PermissionDomainSalesOrders, Action: types.ActionRead}}, Counterparty: authz.Counterparties(types.ActionRead)},
 	}
 	want := "Acting in a customer's account requires `customers:read`, and acting in a supplier's account requires `suppliers:read`, instead of the permission this endpoint requires in your own account.\n\nThis endpoint requires the permission: `sales_orders:read`."
 	if got := authRequirementParagraph(reflect.ValueOf(readOrders).Elem()); got != want {
@@ -1015,8 +1015,7 @@ func TestAuthRequirementParagraph_CounterpartyPermissions(t *testing.T) {
 	}
 
 	readCustomer := &apiendpoint.APIEndpoint[any, any]{
-		RequiredPermissions:     types.AnyOfPermissions{{Domain: types.PermissionDomainCustomers, Action: types.ActionRead}},
-		CounterpartyPermissions: apiendpoint.Counterparties(types.ActionRead),
+		Auth: authz.Policy{Permissions: types.AnyOfPermissions{{Domain: types.PermissionDomainCustomers, Action: types.ActionRead}}, Counterparty: authz.Counterparties(types.ActionRead)},
 	}
 	want = "Acting in a supplier's account requires `suppliers:read` instead of the permission this endpoint requires in your own account.\n\nThis endpoint requires the permission: `customers:read`."
 	if got := authRequirementParagraph(reflect.ValueOf(readCustomer).Elem()); got != want {
@@ -1024,15 +1023,14 @@ func TestAuthRequirementParagraph_CounterpartyPermissions(t *testing.T) {
 	}
 
 	poLines := &apiendpoint.APIEndpoint[any, any]{
-		RequiredPermissions:     types.AnyOfPermissions{{Domain: types.PermissionDomainPurchaseOrders, Action: types.ActionUpdate}},
-		CounterpartyPermissions: apiendpoint.CounterpartyPermissions{Supplier: types.Permission{Domain: types.PermissionDomainSuppliers, Action: types.ActionUpdate}},
+		Auth: authz.Policy{Permissions: types.AnyOfPermissions{{Domain: types.PermissionDomainPurchaseOrders, Action: types.ActionUpdate}}, Counterparty: authz.CounterpartyPermissions{Supplier: types.Permission{Domain: types.PermissionDomainSuppliers, Action: types.ActionUpdate}}},
 	}
 	want = "Acting in a supplier's account requires `suppliers:update` instead of the permission this endpoint requires in your own account.\n\nThis endpoint requires the permission: `purchase_orders:update`."
 	if got := authRequirementParagraph(reflect.ValueOf(poLines).Elem()); got != want {
 		t.Errorf("supplier only = %q, want %q", got, want)
 	}
 
-	plain := &apiendpoint.APIEndpoint[any, any]{RequiredPermissions: types.AnyOfPermissions{{Domain: types.PermissionDomainSalesOrders, Action: types.ActionRead}}}
+	plain := &apiendpoint.APIEndpoint[any, any]{Auth: authz.Policy{Permissions: types.AnyOfPermissions{{Domain: types.PermissionDomainSalesOrders, Action: types.ActionRead}}}}
 	if got, want := authRequirementParagraph(reflect.ValueOf(plain).Elem()), "This endpoint requires the permission: `sales_orders:read`."; got != want {
 		t.Errorf("no counterparty permissions = %q, want %q", got, want)
 	}

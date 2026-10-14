@@ -2,18 +2,18 @@ package resourceregistry
 
 import (
 	"context"
+	"github.com/open-mrp/apikit/include"
 
 	"github.com/open-mrp/api/services/api-gateway/internal/resourceloaders"
 	apiresource "github.com/open-mrp/api/services/api-gateway/pkg/resource"
-	"github.com/open-mrp/api/services/api-gateway/pkg/resourcekit"
 	"github.com/open-mrp/api/shared/constants"
 )
 
 func init() {
-	resourcekit.Register(&resourcekit.Definition{
+	include.Register(&include.Definition{
 		ObjectType: constants.ObjectTypeSupplierMaterial,
 		Load:       resourceloaders.LoadSupplierMaterials,
-		Subs: []resourcekit.SubField{
+		Subs: []include.SubField{
 			{
 				Key:         "material",
 				Target:      constants.ObjectTypeMaterial,
@@ -34,7 +34,7 @@ func extractMaterialRefsFromSupplierMaterial(_ context.Context, parent any) []an
 
 func populateMaterialOnSupplierMaterial(ctx context.Context, parent any, _ map[string]any) {
 	sm := parent.(*apiresource.SupplierMaterial)
-	v, ok := resourcekit.GetLoadMeta(ctx).Get(constants.ObjectTypeSupplierMaterial, sm.ID, "material")
+	v, ok := include.GetLoadMeta(ctx).Get(constants.ObjectTypeSupplierMaterial, sm.ID, "material")
 	if !ok {
 		return
 	}

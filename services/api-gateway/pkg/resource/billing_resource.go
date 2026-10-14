@@ -1,8 +1,8 @@
 package apiresource
 
 import (
-	apiexample "github.com/open-mrp/api/services/api-gateway/pkg/example"
 	"github.com/open-mrp/api/shared/constants"
+	apiexample "github.com/open-mrp/apikit/example"
 )
 
 const SampleStripeCustomerID = "cus_OG9R5zKr5xJHHp"

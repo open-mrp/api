@@ -5,11 +5,12 @@ import (
 	"net/http"
 	"time"
 
-	apiendpoint "github.com/open-mrp/api/services/api-gateway/pkg/endpoint"
+	"github.com/open-mrp/api/services/api-gateway/pkg/authz"
 	apiresource "github.com/open-mrp/api/services/api-gateway/pkg/resource"
 	"github.com/open-mrp/api/services/auth-service/pkg/types"
 	"github.com/open-mrp/api/shared/constants"
 	apierror "github.com/open-mrp/apikit/apierror"
+	apiendpoint "github.com/open-mrp/apikit/endpoint"
 	"github.com/open-mrp/apikit/field"
 )
 
@@ -29,16 +30,16 @@ type ExportSalesLinesEndpoint struct{}
 
 func (e *ExportSalesLinesEndpoint) Materialize() *apiendpoint.APIEndpoint[*ExportSalesLinesRequest, *apiresource.Job] {
 	return (&apiendpoint.APIEndpoint[*ExportSalesLinesRequest, *apiresource.Job]{
-		Title:               "Export Sales Lines",
-		Method:              http.MethodPost,
-		ContentType:         "application/json",
-		Route:               "/v1/core/analytics/sales-lines/actions/export",
-		SuccessStatusCode:   http.StatusAccepted,
-		Public:              false,
-		AgentTool:           true,
-		Preview:             true,
-		ObjectType:          constants.ObjectTypeJob,
-		RequiredPermissions: []types.Permission{{Domain: types.PermissionDomainInvoices, Action: types.ActionRead}},
+		Title:             "Export Sales Lines",
+		Method:            http.MethodPost,
+		ContentType:       "application/json",
+		Route:             "/v1/core/analytics/sales-lines/actions/export",
+		SuccessStatusCode: http.StatusAccepted,
+		Public:            false,
+		AgentTool:         true,
+		Preview:           true,
+		ObjectType:        constants.ObjectTypeJob,
+		Auth:              authz.Policy{Permissions: []types.Permission{{Domain: types.PermissionDomainInvoices, Action: types.ActionRead}}},
 		IncludeConfig: apiendpoint.IncludesFor(apiendpoint.IncludesParams{
 			ObjectType: constants.ObjectTypeJob,
 			Fields:     []string{"created_by", "created_by.role"},

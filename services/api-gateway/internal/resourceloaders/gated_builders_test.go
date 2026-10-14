@@ -2,10 +2,10 @@ package resourceloaders
 
 import (
 	"context"
+	"github.com/open-mrp/apikit/include"
 	"testing"
 
 	"github.com/open-mrp/api/services/api-gateway/pkg/resource/resourcetest"
-	"github.com/open-mrp/api/services/api-gateway/pkg/resourcekit"
 	"github.com/open-mrp/api/shared/constants"
 	pb "github.com/open-mrp/api/shared/proto/core"
 	"google.golang.org/protobuf/types/known/timestamppb"
@@ -95,7 +95,7 @@ func TestPartFromProto_LeavesExpandablesNil(t *testing.T) {
 
 func TestStashProductMeta_RecordsIncludeIDs(t *testing.T) {
 	t.Parallel()
-	ctx := resourcekit.WithLoadMeta(context.Background())
+	ctx := include.WithLoadMeta(context.Background())
 	productLineID := "prl_01abc"
 	StashProductMeta(ctx, &pb.ProductFullInfo{
 		Id:            "prod_01abc",
@@ -103,7 +103,7 @@ func TestStashProductMeta_RecordsIncludeIDs(t *testing.T) {
 		ProductLineId: &productLineID,
 	})
 
-	meta := resourcekit.GetLoadMeta(ctx)
+	meta := include.GetLoadMeta(ctx)
 	if v, _ := meta.GetString(constants.ObjectTypeProduct, "prod_01abc", "item_id"); v != "item_01abc" {
 		t.Errorf("item_id meta = %q, want item_01abc", v)
 	}
@@ -114,20 +114,20 @@ func TestStashProductMeta_RecordsIncludeIDs(t *testing.T) {
 
 func TestStashMaterialMeta_RecordsItemID(t *testing.T) {
 	t.Parallel()
-	ctx := resourcekit.WithLoadMeta(context.Background())
+	ctx := include.WithLoadMeta(context.Background())
 	StashMaterialMeta(ctx, &pb.MaterialInfo{Id: "mat_01abc", ItemId: "item_01abc"})
 
-	if v, _ := resourcekit.GetLoadMeta(ctx).GetString(constants.ObjectTypeMaterial, "mat_01abc", "item_id"); v != "item_01abc" {
+	if v, _ := include.GetLoadMeta(ctx).GetString(constants.ObjectTypeMaterial, "mat_01abc", "item_id"); v != "item_01abc" {
 		t.Errorf("item_id meta = %q, want item_01abc", v)
 	}
 }
 
 func TestStashPartMeta_RecordsItemID(t *testing.T) {
 	t.Parallel()
-	ctx := resourcekit.WithLoadMeta(context.Background())
+	ctx := include.WithLoadMeta(context.Background())
 	StashPartMeta(ctx, &pb.PartInfo{Id: "part_01abc", ItemId: "item_01abc"})
 
-	if v, _ := resourcekit.GetLoadMeta(ctx).GetString(constants.ObjectTypePart, "part_01abc", "item_id"); v != "item_01abc" {
+	if v, _ := include.GetLoadMeta(ctx).GetString(constants.ObjectTypePart, "part_01abc", "item_id"); v != "item_01abc" {
 		t.Errorf("item_id meta = %q, want item_01abc", v)
 	}
 }

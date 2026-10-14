@@ -2,17 +2,17 @@ package batchep
 
 import (
 	"context"
+	"github.com/open-mrp/apikit/include"
 
 	grpcutil "github.com/open-mrp/api/services/api-gateway/internal/grpc"
 	apiresource "github.com/open-mrp/api/services/api-gateway/pkg/resource"
-	"github.com/open-mrp/api/services/api-gateway/pkg/resourcekit"
 	"github.com/open-mrp/api/shared/constants"
 	pb "github.com/open-mrp/api/shared/proto/core"
 	"github.com/open-mrp/apikit/ptrutil"
 )
 
 // BatchQuantityPresenter converts a proto BatchQuantityInfo to an apiresource.Quantity.
-func BatchQuantityPresenter(meta *resourcekit.LoadMeta, q *pb.BatchQuantityInfo) *apiresource.Quantity {
+func BatchQuantityPresenter(meta *include.LoadMeta, q *pb.BatchQuantityInfo) *apiresource.Quantity {
 	if q == nil {
 		return nil
 	}
@@ -38,7 +38,7 @@ func BatchQuantityPresenter(meta *resourcekit.LoadMeta, q *pb.BatchQuantityInfo)
 }
 
 // BatchPresenter converts a proto BatchInfo to an apiresource.Batch.
-func BatchPresenter(meta *resourcekit.LoadMeta, b *pb.BatchInfo) apiresource.Batch {
+func BatchPresenter(meta *include.LoadMeta, b *pb.BatchInfo) apiresource.Batch {
 	if b == nil {
 		return apiresource.Batch{}
 	}
@@ -87,7 +87,7 @@ func BatchPresenter(meta *resourcekit.LoadMeta, b *pb.BatchInfo) apiresource.Bat
 
 // BaseBatchPresenter converts a proto BaseBatchInfo to an apiresource.Batch.
 // BaseBatchInfo is used for mutation responses; it carries no flow edges.
-func BaseBatchPresenter(meta *resourcekit.LoadMeta, b *pb.BaseBatchInfo) apiresource.Batch {
+func BaseBatchPresenter(meta *include.LoadMeta, b *pb.BaseBatchInfo) apiresource.Batch {
 	if b == nil {
 		return apiresource.Batch{}
 	}
@@ -130,7 +130,7 @@ func BaseBatchPresenter(meta *resourcekit.LoadMeta, b *pb.BaseBatchInfo) apireso
 }
 
 // BatchFlowNodePresenter converts a proto BatchFlowNodeInfo to an apiresource.BatchFlowNode.
-func BatchFlowNodePresenter(meta *resourcekit.LoadMeta, n *pb.BatchFlowNodeInfo) apiresource.BatchFlowNode {
+func BatchFlowNodePresenter(meta *include.LoadMeta, n *pb.BatchFlowNodeInfo) apiresource.BatchFlowNode {
 	if n == nil {
 		return apiresource.BatchFlowNode{}
 	}
@@ -234,7 +234,7 @@ func ScanningProductionStepInfoPresenter(s *pb.ScanningProductionStepInfoProto) 
 
 // BatchListPresenter converts a proto ListBatchesByScanningStationResponse to a paginated list.
 func BatchListPresenter(ctx context.Context, resp *pb.ListBatchesByScanningStationResponse) *apiresource.List[apiresource.Batch] {
-	meta := resourcekit.GetLoadMeta(ctx)
+	meta := include.GetLoadMeta(ctx)
 	if resp == nil {
 		return apiresource.NewList[apiresource.Batch](nil, apiresource.PageInfo{})
 	}

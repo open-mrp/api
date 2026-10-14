@@ -2,37 +2,37 @@ package resourceregistry
 
 import (
 	"context"
+	"github.com/open-mrp/apikit/include"
 
 	"github.com/open-mrp/api/services/api-gateway/internal/resourceloaders"
 	apiresource "github.com/open-mrp/api/services/api-gateway/pkg/resource"
-	"github.com/open-mrp/api/services/api-gateway/pkg/resourcekit"
 	"github.com/open-mrp/api/shared/constants"
 	apierror "github.com/open-mrp/apikit/apierror"
 )
 
 func init() {
-	resourcekit.Register(&resourcekit.Definition{
+	include.Register(&include.Definition{
 		ObjectType: constants.ObjectTypeInvoice,
 		Load:       resourceloaders.LoadInvoices,
-		Subs: []resourcekit.SubField{
+		Subs: []include.SubField{
 			{
 				Key:         "customer",
 				Target:      constants.ObjectTypeCustomer,
-				Cardinality: resourcekit.CardinalityOnePtr,
+				Cardinality: include.CardinalityOnePtr,
 				ExtractIDs:  extractCustomerIDFromInvoice,
 				Populate:    populateCustomerOnInvoice,
 			},
 			{
 				Key:         "order",
 				Target:      constants.ObjectTypeSalesOrder,
-				Cardinality: resourcekit.CardinalityOnePtr,
+				Cardinality: include.CardinalityOnePtr,
 				ExtractIDs:  extractOrderIDFromInvoice,
 				Populate:    populateOrderOnInvoice,
 			},
 			{
 				Key:         "shipment",
 				Target:      constants.ObjectTypeShipment,
-				Cardinality: resourcekit.CardinalityOnePtr,
+				Cardinality: include.CardinalityOnePtr,
 				ExtractIDs:  extractShipmentIDFromInvoice,
 				Populate:    populateShipmentOnInvoice,
 			},
@@ -42,14 +42,14 @@ func init() {
 			{
 				Key:         "related.sales_order",
 				Target:      constants.ObjectTypeSalesOrder,
-				Cardinality: resourcekit.CardinalityOnePtr,
+				Cardinality: include.CardinalityOnePtr,
 				ExtractIDs:  extractOrderIDFromInvoice,
 				Populate:    populateOrderOnInvoiceRelated,
 			},
 			{
 				Key:         "related.shipment",
 				Target:      constants.ObjectTypeShipment,
-				Cardinality: resourcekit.CardinalityOnePtr,
+				Cardinality: include.CardinalityOnePtr,
 				ExtractIDs:  extractShipmentIDFromInvoice,
 				Populate:    populateShipmentOnInvoiceRelated,
 			},
@@ -58,16 +58,16 @@ func init() {
 		},
 	})
 
-	resourcekit.Register(&resourcekit.Definition{
+	include.Register(&include.Definition{
 		ObjectType: constants.ObjectTypeInvoiceAllocation,
 		Load:       stubLoadInvoiceAllocations,
-		Subs: []resourcekit.SubField{
+		Subs: []include.SubField{
 			{
 				// The amount is already on the allocation — this exists so a caller can reach through
 				// it to the currency it is counted in.
 				Key:         "amount",
 				Target:      constants.ObjectTypeQuantity,
-				Cardinality: resourcekit.CardinalityOnePtr,
+				Cardinality: include.CardinalityOnePtr,
 				ExtractRefs: extractAmountRefFromInvoiceAllocation,
 			},
 			{
@@ -75,17 +75,17 @@ func init() {
 				// of its permissions; the refs let the resolver descend into transaction.amount.
 				Key:         "transaction",
 				Target:      constants.ObjectTypeTransaction,
-				Cardinality: resourcekit.CardinalityOnePtr,
+				Cardinality: include.CardinalityOnePtr,
 				ExtractRefs: extractTransactionRefFromInvoiceAllocation,
 				Populate:    populateTransactionOnInvoiceAllocation,
 			},
 		},
 	})
 
-	resourcekit.Register(&resourcekit.Definition{
+	include.Register(&include.Definition{
 		ObjectType: constants.ObjectTypeInvoiceLine,
 		Load:       stubLoadInvoiceLines,
-		Subs: []resourcekit.SubField{
+		Subs: []include.SubField{
 			// Target + ExtractRefs (not a loader) because the line is already stashed by the invoice
 			// presenter; they exist so the resolver descends into it for lines.order_line.product.
 			{
@@ -97,7 +97,7 @@ func init() {
 			{
 				Key:         "item",
 				Target:      constants.ObjectTypeItem,
-				Cardinality: resourcekit.CardinalityOnePtr,
+				Cardinality: include.CardinalityOnePtr,
 				ExtractIDs:  extractItemIDFromInvoiceLine,
 				Populate:    populateItemOnInvoiceLine,
 			},
@@ -106,33 +106,33 @@ func init() {
 				// reach through them to the units they are counted in.
 				Key:         "quantity",
 				Target:      constants.ObjectTypeQuantity,
-				Cardinality: resourcekit.CardinalityOnePtr,
+				Cardinality: include.CardinalityOnePtr,
 				ExtractRefs: extractQuantityRefFromInvoiceLine,
 			},
 			{
 				Key:         "unit_price",
 				Target:      constants.ObjectTypeRate,
-				Cardinality: resourcekit.CardinalityOnePtr,
+				Cardinality: include.CardinalityOnePtr,
 				ExtractRefs: extractUnitPriceRefFromInvoiceLine,
 			},
 		},
 	})
 
-	resourcekit.Register(&resourcekit.Definition{
+	include.Register(&include.Definition{
 		ObjectType: constants.ObjectTypeInvoiceForPayment,
 		Load:       resourceloaders.LoadInvoices,
-		Subs: []resourcekit.SubField{
+		Subs: []include.SubField{
 			{
 				Key:         "customer",
 				Target:      constants.ObjectTypeCustomer,
-				Cardinality: resourcekit.CardinalityOnePtr,
+				Cardinality: include.CardinalityOnePtr,
 				ExtractIDs:  extractCustomerIDFromInvoiceForPayment,
 				Populate:    populateCustomerOnInvoiceForPayment,
 			},
 			{
 				Key:         "parent_account",
 				Target:      constants.ObjectTypeAccount,
-				Cardinality: resourcekit.CardinalityOnePtr,
+				Cardinality: include.CardinalityOnePtr,
 				ExtractIDs:  extractParentAccountIDFromInvoiceForPayment,
 				Populate:    populateParentAccountOnInvoiceForPayment,
 			},
@@ -144,7 +144,7 @@ func init() {
 
 func extractCustomerIDFromInvoice(ctx context.Context, parent any) []string {
 	inv := parent.(*apiresource.Invoice)
-	id, _ := resourcekit.GetLoadMeta(ctx).GetString(constants.ObjectTypeInvoice, inv.ID, "customer_id")
+	id, _ := include.GetLoadMeta(ctx).GetString(constants.ObjectTypeInvoice, inv.ID, "customer_id")
 	if id == "" {
 		return nil
 	}
@@ -153,7 +153,7 @@ func extractCustomerIDFromInvoice(ctx context.Context, parent any) []string {
 
 func populateCustomerOnInvoice(ctx context.Context, parent any, loaded map[string]any) {
 	inv := parent.(*apiresource.Invoice)
-	id, _ := resourcekit.GetLoadMeta(ctx).GetString(constants.ObjectTypeInvoice, inv.ID, "customer_id")
+	id, _ := include.GetLoadMeta(ctx).GetString(constants.ObjectTypeInvoice, inv.ID, "customer_id")
 	if id == "" {
 		return
 	}
@@ -164,7 +164,7 @@ func populateCustomerOnInvoice(ctx context.Context, parent any, loaded map[strin
 
 func extractOrderIDFromInvoice(ctx context.Context, parent any) []string {
 	inv := parent.(*apiresource.Invoice)
-	id, _ := resourcekit.GetLoadMeta(ctx).GetString(constants.ObjectTypeInvoice, inv.ID, "order_id")
+	id, _ := include.GetLoadMeta(ctx).GetString(constants.ObjectTypeInvoice, inv.ID, "order_id")
 	if id == "" {
 		return nil
 	}
@@ -173,7 +173,7 @@ func extractOrderIDFromInvoice(ctx context.Context, parent any) []string {
 
 func populateOrderOnInvoice(ctx context.Context, parent any, loaded map[string]any) {
 	inv := parent.(*apiresource.Invoice)
-	id, _ := resourcekit.GetLoadMeta(ctx).GetString(constants.ObjectTypeInvoice, inv.ID, "order_id")
+	id, _ := include.GetLoadMeta(ctx).GetString(constants.ObjectTypeInvoice, inv.ID, "order_id")
 	if id == "" {
 		return
 	}
@@ -184,7 +184,7 @@ func populateOrderOnInvoice(ctx context.Context, parent any, loaded map[string]a
 
 func extractShipmentIDFromInvoice(ctx context.Context, parent any) []string {
 	inv := parent.(*apiresource.Invoice)
-	id, _ := resourcekit.GetLoadMeta(ctx).GetString(constants.ObjectTypeInvoice, inv.ID, "shipment_id")
+	id, _ := include.GetLoadMeta(ctx).GetString(constants.ObjectTypeInvoice, inv.ID, "shipment_id")
 	if id == "" {
 		return nil
 	}
@@ -193,7 +193,7 @@ func extractShipmentIDFromInvoice(ctx context.Context, parent any) []string {
 
 func populateShipmentOnInvoice(ctx context.Context, parent any, loaded map[string]any) {
 	inv := parent.(*apiresource.Invoice)
-	id, _ := resourcekit.GetLoadMeta(ctx).GetString(constants.ObjectTypeInvoice, inv.ID, "shipment_id")
+	id, _ := include.GetLoadMeta(ctx).GetString(constants.ObjectTypeInvoice, inv.ID, "shipment_id")
 	if id == "" {
 		return
 	}
@@ -204,14 +204,14 @@ func populateShipmentOnInvoice(ctx context.Context, parent any, loaded map[strin
 
 func populateBillingAddressOnInvoice(ctx context.Context, parent any, _ map[string]any) {
 	inv := parent.(*apiresource.Invoice)
-	if v, ok := resourcekit.GetLoadMeta(ctx).Get(constants.ObjectTypeInvoice, inv.ID, "billing_address"); ok {
+	if v, ok := include.GetLoadMeta(ctx).Get(constants.ObjectTypeInvoice, inv.ID, "billing_address"); ok {
 		inv.BillingAddress = v.(*apiresource.Address)
 	}
 }
 
 func populatePaymentTermOnInvoice(ctx context.Context, parent any, _ map[string]any) {
 	inv := parent.(*apiresource.Invoice)
-	if v, ok := resourcekit.GetLoadMeta(ctx).Get(constants.ObjectTypeInvoice, inv.ID, "payment_term"); ok {
+	if v, ok := include.GetLoadMeta(ctx).Get(constants.ObjectTypeInvoice, inv.ID, "payment_term"); ok {
 		inv.PaymentTerm = v.(*apiresource.PaymentTerm)
 	}
 }
@@ -230,7 +230,7 @@ func extractLineRefsFromInvoice(_ context.Context, parent any) []any {
 
 func populateLinesOnInvoice(ctx context.Context, parent any, _ map[string]any) {
 	inv := parent.(*apiresource.Invoice)
-	v, ok := resourcekit.GetLoadMeta(ctx).Get(constants.ObjectTypeInvoice, inv.ID, "lines")
+	v, ok := include.GetLoadMeta(ctx).Get(constants.ObjectTypeInvoice, inv.ID, "lines")
 	if !ok {
 		return
 	}
@@ -239,7 +239,7 @@ func populateLinesOnInvoice(ctx context.Context, parent any, _ map[string]any) {
 
 func populateAllocationsOnInvoice(ctx context.Context, parent any, _ map[string]any) {
 	inv := parent.(*apiresource.Invoice)
-	v, ok := resourcekit.GetLoadMeta(ctx).Get(constants.ObjectTypeInvoice, inv.ID, "allocations")
+	v, ok := include.GetLoadMeta(ctx).Get(constants.ObjectTypeInvoice, inv.ID, "allocations")
 	if !ok {
 		return
 	}
@@ -278,7 +278,7 @@ func extractTransactionRefFromInvoiceAllocation(_ context.Context, parent any) [
 
 func populateTransactionOnInvoiceAllocation(ctx context.Context, parent any, _ map[string]any) {
 	a := parent.(*apiresource.InvoiceAllocation)
-	meta := resourcekit.GetLoadMeta(ctx)
+	meta := include.GetLoadMeta(ctx)
 	id, _ := meta.GetString(constants.ObjectTypeInvoiceAllocation, a.ID, "transaction_id")
 	if id == "" {
 		return
@@ -298,7 +298,7 @@ func extractAmountRefFromInvoiceAllocation(_ context.Context, parent any) []any 
 
 func extractItemIDFromInvoiceLine(ctx context.Context, parent any) []string {
 	l := parent.(*apiresource.InvoiceLine)
-	id, _ := resourcekit.GetLoadMeta(ctx).GetString(constants.ObjectTypeInvoiceLine, l.ID, "item_id")
+	id, _ := include.GetLoadMeta(ctx).GetString(constants.ObjectTypeInvoiceLine, l.ID, "item_id")
 	if id == "" {
 		return nil
 	}
@@ -307,7 +307,7 @@ func extractItemIDFromInvoiceLine(ctx context.Context, parent any) []string {
 
 func populateItemOnInvoiceLine(ctx context.Context, parent any, loaded map[string]any) {
 	l := parent.(*apiresource.InvoiceLine)
-	id, _ := resourcekit.GetLoadMeta(ctx).GetString(constants.ObjectTypeInvoiceLine, l.ID, "item_id")
+	id, _ := include.GetLoadMeta(ctx).GetString(constants.ObjectTypeInvoiceLine, l.ID, "item_id")
 	if id == "" {
 		return
 	}
@@ -335,7 +335,7 @@ func extractUnitPriceRefFromInvoiceLine(_ context.Context, parent any) []any {
 // Hands the resolver the stashed order line so nested includes below it resolve.
 func extractOrderLineRefFromInvoiceLine(ctx context.Context, parent any) []any {
 	l := parent.(*apiresource.InvoiceLine)
-	v, ok := resourcekit.GetLoadMeta(ctx).Get(constants.ObjectTypeInvoiceLine, l.ID, "order_line")
+	v, ok := include.GetLoadMeta(ctx).Get(constants.ObjectTypeInvoiceLine, l.ID, "order_line")
 	if !ok {
 		return nil
 	}
@@ -344,7 +344,7 @@ func extractOrderLineRefFromInvoiceLine(ctx context.Context, parent any) []any {
 
 func populateOrderLineOnInvoiceLine(ctx context.Context, parent any, _ map[string]any) {
 	l := parent.(*apiresource.InvoiceLine)
-	v, ok := resourcekit.GetLoadMeta(ctx).Get(constants.ObjectTypeInvoiceLine, l.ID, "order_line")
+	v, ok := include.GetLoadMeta(ctx).Get(constants.ObjectTypeInvoiceLine, l.ID, "order_line")
 	if !ok {
 		return
 	}
@@ -353,7 +353,7 @@ func populateOrderLineOnInvoiceLine(ctx context.Context, parent any, _ map[strin
 
 func extractCustomerIDFromInvoiceForPayment(ctx context.Context, parent any) []string {
 	inv := parent.(*apiresource.InvoiceForPayment)
-	id, _ := resourcekit.GetLoadMeta(ctx).GetString(constants.ObjectTypeInvoiceForPayment, inv.ID, "customer_id")
+	id, _ := include.GetLoadMeta(ctx).GetString(constants.ObjectTypeInvoiceForPayment, inv.ID, "customer_id")
 	if id == "" {
 		return nil
 	}
@@ -362,7 +362,7 @@ func extractCustomerIDFromInvoiceForPayment(ctx context.Context, parent any) []s
 
 func populateCustomerOnInvoiceForPayment(ctx context.Context, parent any, loaded map[string]any) {
 	inv := parent.(*apiresource.InvoiceForPayment)
-	id, _ := resourcekit.GetLoadMeta(ctx).GetString(constants.ObjectTypeInvoiceForPayment, inv.ID, "customer_id")
+	id, _ := include.GetLoadMeta(ctx).GetString(constants.ObjectTypeInvoiceForPayment, inv.ID, "customer_id")
 	if id == "" {
 		return
 	}
@@ -373,7 +373,7 @@ func populateCustomerOnInvoiceForPayment(ctx context.Context, parent any, loaded
 
 func extractParentAccountIDFromInvoiceForPayment(ctx context.Context, parent any) []string {
 	inv := parent.(*apiresource.InvoiceForPayment)
-	id, _ := resourcekit.GetLoadMeta(ctx).GetString(constants.ObjectTypeInvoiceForPayment, inv.ID, "parent_account_id")
+	id, _ := include.GetLoadMeta(ctx).GetString(constants.ObjectTypeInvoiceForPayment, inv.ID, "parent_account_id")
 	if id == "" {
 		return nil
 	}
@@ -382,7 +382,7 @@ func extractParentAccountIDFromInvoiceForPayment(ctx context.Context, parent any
 
 func populateParentAccountOnInvoiceForPayment(ctx context.Context, parent any, loaded map[string]any) {
 	inv := parent.(*apiresource.InvoiceForPayment)
-	id, _ := resourcekit.GetLoadMeta(ctx).GetString(constants.ObjectTypeInvoiceForPayment, inv.ID, "parent_account_id")
+	id, _ := include.GetLoadMeta(ctx).GetString(constants.ObjectTypeInvoiceForPayment, inv.ID, "parent_account_id")
 	if id == "" {
 		return
 	}
@@ -393,7 +393,7 @@ func populateParentAccountOnInvoiceForPayment(ctx context.Context, parent any, l
 
 func populateBillingAddressOnInvoiceForPayment(ctx context.Context, parent any, _ map[string]any) {
 	inv := parent.(*apiresource.InvoiceForPayment)
-	if v, ok := resourcekit.GetLoadMeta(ctx).Get(constants.ObjectTypeInvoiceForPayment, inv.ID, "billing_address"); ok {
+	if v, ok := include.GetLoadMeta(ctx).Get(constants.ObjectTypeInvoiceForPayment, inv.ID, "billing_address"); ok {
 		inv.BillingAddress = v.(*apiresource.Address)
 	}
 }
@@ -402,7 +402,7 @@ func populateBillingAddressOnInvoiceForPayment(ctx context.Context, parent any, 
 // invoice's paid amount without a second request per invoice.
 func populateAllocationsOnInvoiceForPayment(ctx context.Context, parent any, _ map[string]any) {
 	inv := parent.(*apiresource.InvoiceForPayment)
-	v, ok := resourcekit.GetLoadMeta(ctx).Get(constants.ObjectTypeInvoiceForPayment, inv.ID, "allocations")
+	v, ok := include.GetLoadMeta(ctx).Get(constants.ObjectTypeInvoiceForPayment, inv.ID, "allocations")
 	if !ok {
 		return
 	}
@@ -420,7 +420,7 @@ func ensureInvoiceRelated(inv *apiresource.Invoice) *apiresource.InvoiceRelated 
 
 func populateOrderOnInvoiceRelated(ctx context.Context, parent any, loaded map[string]any) {
 	inv := parent.(*apiresource.Invoice)
-	id, _ := resourcekit.GetLoadMeta(ctx).GetString(constants.ObjectTypeInvoice, inv.ID, "order_id")
+	id, _ := include.GetLoadMeta(ctx).GetString(constants.ObjectTypeInvoice, inv.ID, "order_id")
 	if id == "" {
 		return
 	}
@@ -438,7 +438,7 @@ func populateOrderOnInvoiceRelated(ctx context.Context, parent any, loaded map[s
 
 func populateShipmentOnInvoiceRelated(ctx context.Context, parent any, loaded map[string]any) {
 	inv := parent.(*apiresource.Invoice)
-	id, _ := resourcekit.GetLoadMeta(ctx).GetString(constants.ObjectTypeInvoice, inv.ID, "shipment_id")
+	id, _ := include.GetLoadMeta(ctx).GetString(constants.ObjectTypeInvoice, inv.ID, "shipment_id")
 	if id == "" {
 		return
 	}

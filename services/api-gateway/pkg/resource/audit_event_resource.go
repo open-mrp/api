@@ -4,9 +4,10 @@ import (
 	"encoding/json"
 	"time"
 
-	"github.com/open-mrp/api/services/api-gateway/pkg/costguard"
-	apiexample "github.com/open-mrp/api/services/api-gateway/pkg/example"
+	"github.com/open-mrp/api/services/api-gateway/pkg/costdata"
 	"github.com/open-mrp/api/shared/constants"
+	apiexample "github.com/open-mrp/apikit/example"
+	"github.com/open-mrp/apikit/sensitive"
 	"github.com/open-mrp/apikit/timeutil"
 )
 
@@ -42,9 +43,9 @@ type AuditFieldChange struct {
 	NewValue json.RawMessage `json:"new_value"`
 }
 
-// RedactCosts clears the values of a change to a cost field.
-func (c *AuditFieldChange) RedactCosts() {
-	if costguard.IsCostName(c.Field) {
+// RedactSensitive clears the values of a change to a cost field from a caller who may not see costs.
+func (c *AuditFieldChange) RedactSensitive(hidden sensitive.Set) {
+	if hidden.Hides(costdata.TagCost) && costdata.IsCostName(c.Field) {
 		c.OldValue, c.NewValue = nil, nil
 	}
 }

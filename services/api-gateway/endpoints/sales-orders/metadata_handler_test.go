@@ -14,9 +14,9 @@ import (
 	"google.golang.org/grpc"
 	"google.golang.org/protobuf/types/known/timestamppb"
 
-	apiendpoint "github.com/open-mrp/api/services/api-gateway/pkg/endpoint"
 	pb "github.com/open-mrp/api/shared/proto/core"
 	"github.com/open-mrp/apikit/appctx"
+	apiendpoint "github.com/open-mrp/apikit/endpoint"
 	"github.com/open-mrp/apikit/metadata"
 )
 
@@ -69,7 +69,7 @@ func serveMetadata[TReq, TResp any, T interface {
 }](t *testing.T, source T, client *captureSalesClient, path, body string) *httptest.ResponseRecorder {
 	t.Helper()
 	ep := apiendpoint.From(source)
-	ep.RequiredPermissions = nil
+	ep.Auth = nil
 	ep.WithService(nil, NewSalesOrderSvc(&SalesOrderSvcConfig{CoreClient: client}))
 
 	r := httptest.NewRequest(ep.GetMethod(), path, strings.NewReader(body))

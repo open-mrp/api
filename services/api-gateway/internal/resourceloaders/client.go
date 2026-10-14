@@ -1,4 +1,4 @@
-// Package resourceloaders holds the gRPC-backed loaders used by the api-gateway resourcekit include resolver. Each loader is a plain function that takes a slice of IDs and returns a map[id]*apiresource (typed as any to fit resourcekit's signature). Loaders build clean apiresource values and stash any FK metadata the SubField closures will need into the request-scoped resourcekit.LoadMeta side-table.
+// Package resourceloaders holds the gRPC-backed loaders used by the api-gateway resourcekit include resolver. Each loader is a plain function that takes a slice of IDs and returns a map[id]*apiresource (typed as any to fit resourcekit's signature). Loaders build clean apiresource values and stash any FK metadata the SubField closures will need into the request-scoped include.LoadMeta side-table.
 //
 // The core client is set once at process startup via SetCoreClient — the loaders cannot be invoked before that.
 package resourceloaders

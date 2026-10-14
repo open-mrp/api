@@ -4,16 +4,23 @@ import (
 	"context"
 	"net/http"
 
-	apiendpoint "github.com/open-mrp/api/services/api-gateway/pkg/endpoint"
+	"github.com/open-mrp/apikit/object"
+
+	"github.com/open-mrp/api/services/api-gateway/pkg/authz"
 	apiresource "github.com/open-mrp/api/services/api-gateway/pkg/resource"
 	"github.com/open-mrp/api/services/auth-service/pkg/types"
 	"github.com/open-mrp/api/shared/constants"
 	apierror "github.com/open-mrp/apikit/apierror"
+	apiendpoint "github.com/open-mrp/apikit/endpoint"
 )
 
 // Request to list a conversation's messages.
 type ListMessagesRequest struct {
-	apiresource.PaginationRequest
+	object.ListRequest
+	// Free-text search term used to filter results.
+	//
+	// Which fields are matched against the term varies by endpoint.
+	Query *string `query:"q" validate:"omitempty,max=500"`
 	// Conversation ID.
 	ConversationID string `path:"id" validate:"required"`
 	// Which set of the conversation's messages to return.
@@ -33,17 +40,17 @@ type ListMessagesEndpoint struct{}
 
 func (e *ListMessagesEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListMessagesRequest, *apiresource.List[apiresource.Message]] {
 	return (&apiendpoint.APIEndpoint[*ListMessagesRequest, *apiresource.List[apiresource.Message]]{
-		Title:               "List Messages",
-		Method:              http.MethodGet,
-		ContentType:         "application/json",
-		Route:               "/v1/messaging/conversations/{id}/messages",
-		SuccessStatusCode:   http.StatusOK,
-		Public:              true,
-		AgentTool:           true,
-		Preview:             true,
-		ObjectType:          constants.ObjectTypeChatMessage,
-		IncludeConfig:       messageIncludeConfig(),
-		RequiredPermissions: []types.Permission{{Domain: types.PermissionDomainMessaging, Action: types.ActionRead}},
+		Title:             "List Messages",
+		Method:            http.MethodGet,
+		ContentType:       "application/json",
+		Route:             "/v1/messaging/conversations/{id}/messages",
+		SuccessStatusCode: http.StatusOK,
+		Public:            true,
+		AgentTool:         true,
+		Preview:           true,
+		ObjectType:        constants.ObjectTypeChatMessage,
+		IncludeConfig:     messageIncludeConfig(),
+		Auth:              authz.Policy{Permissions: []types.Permission{{Domain: types.PermissionDomainMessaging, Action: types.ActionRead}}},
 		ServiceHandler: func(svc any) func(ctx context.Context, req *ListMessagesRequest) (*apiresource.List[apiresource.Message], *apierror.APIError) {
 			return svc.(MessageSvc).ListMessages
 		},

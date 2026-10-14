@@ -4,11 +4,12 @@ import (
 	"context"
 	"net/http"
 
-	apiendpoint "github.com/open-mrp/api/services/api-gateway/pkg/endpoint"
+	"github.com/open-mrp/api/services/api-gateway/pkg/authz"
 	apiresource "github.com/open-mrp/api/services/api-gateway/pkg/resource"
 	"github.com/open-mrp/api/services/auth-service/pkg/types"
 	"github.com/open-mrp/api/shared/constants"
 	apierror "github.com/open-mrp/apikit/apierror"
+	apiendpoint "github.com/open-mrp/apikit/endpoint"
 )
 
 // Request to check whether the calling customer can contact support.
@@ -33,7 +34,7 @@ func (e *SupportAvailabilityEndpoint) Materialize() *apiendpoint.APIEndpoint[*Su
 		Extras:            apiendpoint.APIEndpointExtras{HideFromRequestLog: true},
 		ObjectType:        constants.ObjectTypeSupportAvailability,
 		// Parity with Contact Support: this probes the same create-a-support-thread capability, so the same relation actors who can open support can check availability first.
-		RequiredPermissions: []types.Permission{{Domain: types.PermissionDomainMessaging, Action: types.ActionCreate}},
+		Auth: authz.Policy{Permissions: []types.Permission{{Domain: types.PermissionDomainMessaging, Action: types.ActionCreate}}},
 		ServiceHandler: func(svc any) func(ctx context.Context, req *SupportAvailabilityRequest) (*apiresource.SupportAvailability, *apierror.APIError) {
 			return svc.(ConversationSvc).SupportAvailability
 		},

@@ -43,7 +43,6 @@ func TestMapProtoPageInfo_BuildsNextPageURL(t *testing.T) {
 	assert.Contains(t, *result.NextPageURL, "cursor=eyJpZCI6IjEwMCJ9")
 	assert.Contains(t, *result.NextPageURL, "limit=10")
 	assert.Contains(t, *result.NextPageURL, "q=high")
-	assert.True(t, result.HasNextPage)
 }
 
 func TestMapProtoPageInfo_BuildsPreviousPageURL(t *testing.T) {
@@ -55,7 +54,6 @@ func TestMapProtoPageInfo_BuildsPreviousPageURL(t *testing.T) {
 	result := grpcutil.MapProtoPageInfo(ctx, pi)
 	require.NotNil(t, result.PreviousPageURL)
 	assert.Contains(t, *result.PreviousPageURL, "cursor=eyJpZCI6IjEifQ")
-	assert.True(t, result.HasPrevPage)
 }
 
 func TestMapProtoPageInfo_NilWhenNoCursor(t *testing.T) {
@@ -96,7 +94,6 @@ func TestMapProtoPageInfo_NilRequestURLReturnsNilURLs(t *testing.T) {
 	}
 	result := grpcutil.MapProtoPageInfo(context.Background(), pi)
 	assert.Nil(t, result.NextPageURL)
-	assert.True(t, result.HasNextPage)
 }
 
 func TestMapProtoPageInfo_URLIsRelativePath(t *testing.T) {
@@ -137,7 +134,6 @@ func TestMapProtoPageInfoForPath_BuildsNextPageURL(t *testing.T) {
 	result := grpcutil.MapProtoPageInfoForPath("/v1/catalog/properties/prop_123/attributes", pi)
 	require.NotNil(t, result.NextPageURL)
 	assert.Equal(t, "/v1/catalog/properties/prop_123/attributes?cursor=eyJpZCI6IjUwIn0", *result.NextPageURL)
-	assert.True(t, result.HasNextPage)
 }
 
 func TestMapProtoPageInfoForPath_BuildsPreviousPageURL(t *testing.T) {
@@ -148,7 +144,6 @@ func TestMapProtoPageInfoForPath_BuildsPreviousPageURL(t *testing.T) {
 	result := grpcutil.MapProtoPageInfoForPath("/v1/catalog/properties/prop_123/attributes", pi)
 	require.NotNil(t, result.PreviousPageURL)
 	assert.Equal(t, "/v1/catalog/properties/prop_123/attributes?cursor=eyJpZCI6IjEifQ", *result.PreviousPageURL)
-	assert.True(t, result.HasPrevPage)
 }
 
 func TestMapProtoPageInfoForPath_DoesNotInheritParentQueryParams(t *testing.T) {

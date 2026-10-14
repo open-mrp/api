@@ -2,18 +2,18 @@ package resourceregistry
 
 import (
 	"context"
+	"github.com/open-mrp/apikit/include"
 
 	"github.com/open-mrp/api/services/api-gateway/internal/resourceloaders"
 	apiresource "github.com/open-mrp/api/services/api-gateway/pkg/resource"
-	"github.com/open-mrp/api/services/api-gateway/pkg/resourcekit"
 	"github.com/open-mrp/api/shared/constants"
 )
 
 func init() {
-	resourcekit.Register(&resourcekit.Definition{
+	include.Register(&include.Definition{
 		ObjectType: constants.ObjectTypeDelivery,
 		Load:       resourceloaders.LoadDeliveries,
-		Subs: []resourcekit.SubField{
+		Subs: []include.SubField{
 			// `related` is expandable and so is each reference on it. The bare key reveals the object;
 			// the child keys fill in one reference each. A single sub attaching every reference it holds
 			// would make the children unconditional, which is the same as not having made them
@@ -32,28 +32,28 @@ func init() {
 			},
 		},
 	})
-	resourcekit.Register(&resourcekit.Definition{
+	include.Register(&include.Definition{
 		ObjectType: constants.ObjectTypeDeliveryLine,
 		Load:       resourceloaders.LoadDeliveryLines,
-		Subs: []resourcekit.SubField{
+		Subs: []include.SubField{
 			{
 				Key:         "order_line",
 				Target:      constants.ObjectTypePurchaseOrderLine,
-				Cardinality: resourcekit.CardinalityOnePtr,
+				Cardinality: include.CardinalityOnePtr,
 				ExtractIDs:  extractOrderLineIDFromDeliveryLine,
 				Populate:    populateOrderLineOnDeliveryLine,
 			},
 			{
 				Key:         "item",
 				Target:      constants.ObjectTypeItem,
-				Cardinality: resourcekit.CardinalityOnePtr,
+				Cardinality: include.CardinalityOnePtr,
 				ExtractIDs:  extractItemIDFromDeliveryLine,
 				Populate:    populateItemOnDeliveryLine,
 			},
 			{
 				Key:         "location",
 				Target:      constants.ObjectTypeLocation,
-				Cardinality: resourcekit.CardinalityOnePtr,
+				Cardinality: include.CardinalityOnePtr,
 				ExtractIDs:  extractLocationIDFromDeliveryLine,
 				Populate:    populateLocationOnDeliveryLine,
 			},
@@ -66,7 +66,7 @@ func init() {
 				// Carried inline: the delivery query already returns the cost the goods were stocked at, in full. Traversed rather than loaded so `unit_cost.numerator_unit` still resolves.
 				Key:         "unit_cost",
 				Target:      constants.ObjectTypeRate,
-				Cardinality: resourcekit.CardinalityOnePtr,
+				Cardinality: include.CardinalityOnePtr,
 				Populate:    populateUnitCostOnDeliveryLine,
 				ExtractRefs: extractUnitCostRefFromDeliveryLine,
 			},
@@ -74,7 +74,7 @@ func init() {
 				// The quantity is already on the line — this exists so a caller can reach through it to the unit.
 				Key:         "quantity",
 				Target:      constants.ObjectTypeQuantity,
-				Cardinality: resourcekit.CardinalityOnePtr,
+				Cardinality: include.CardinalityOnePtr,
 				ExtractRefs: extractQuantityRefFromDeliveryLine,
 			},
 		},
@@ -125,7 +125,7 @@ func populateReceivingOrderOnDeliveryRelated(ctx context.Context, parent any, _ 
 }
 
 func stashedDeliveryRelated(ctx context.Context, deliveryID string) *apiresource.DeliveryRelated {
-	v, ok := resourcekit.GetLoadMeta(ctx).Get(constants.ObjectTypeDelivery, deliveryID, "related")
+	v, ok := include.GetLoadMeta(ctx).Get(constants.ObjectTypeDelivery, deliveryID, "related")
 	if !ok {
 		return nil
 	}
@@ -143,7 +143,7 @@ func deliveryRelated(d *apiresource.Delivery) *apiresource.DeliveryRelated {
 
 func populateLinesOnDelivery(ctx context.Context, parent any, _ map[string]any) {
 	d := parent.(*apiresource.Delivery)
-	v, ok := resourcekit.GetLoadMeta(ctx).Get(constants.ObjectTypeDelivery, d.ID, "lines")
+	v, ok := include.GetLoadMeta(ctx).Get(constants.ObjectTypeDelivery, d.ID, "lines")
 	if !ok {
 		return
 	}
@@ -186,7 +186,7 @@ func populateLocationOnDeliveryLine(ctx context.Context, parent any, loaded map[
 
 func populateLotOnDeliveryLine(ctx context.Context, parent any, _ map[string]any) {
 	l := parent.(*apiresource.DeliveryLine)
-	v, ok := resourcekit.GetLoadMeta(ctx).Get(constants.ObjectTypeDeliveryLine, l.ID, "lot")
+	v, ok := include.GetLoadMeta(ctx).Get(constants.ObjectTypeDeliveryLine, l.ID, "lot")
 	if !ok {
 		return
 	}
@@ -195,7 +195,7 @@ func populateLotOnDeliveryLine(ctx context.Context, parent any, _ map[string]any
 
 func populateUnitCostOnDeliveryLine(ctx context.Context, parent any, _ map[string]any) {
 	l := parent.(*apiresource.DeliveryLine)
-	v, ok := resourcekit.GetLoadMeta(ctx).Get(constants.ObjectTypeDeliveryLine, l.ID, "unit_cost")
+	v, ok := include.GetLoadMeta(ctx).Get(constants.ObjectTypeDeliveryLine, l.ID, "unit_cost")
 	if !ok {
 		return
 	}
@@ -204,7 +204,7 @@ func populateUnitCostOnDeliveryLine(ctx context.Context, parent any, _ map[strin
 
 func deliveryLineMetaID(ctx context.Context, parent any, key string) []string {
 	l := parent.(*apiresource.DeliveryLine)
-	id, _ := resourcekit.GetLoadMeta(ctx).GetString(constants.ObjectTypeDeliveryLine, l.ID, key)
+	id, _ := include.GetLoadMeta(ctx).GetString(constants.ObjectTypeDeliveryLine, l.ID, key)
 	if id == "" {
 		return nil
 	}
@@ -212,7 +212,7 @@ func deliveryLineMetaID(ctx context.Context, parent any, key string) []string {
 }
 
 func loadedByMetaID(ctx context.Context, lineID, key string, loaded map[string]any) (any, bool) {
-	id, _ := resourcekit.GetLoadMeta(ctx).GetString(constants.ObjectTypeDeliveryLine, lineID, key)
+	id, _ := include.GetLoadMeta(ctx).GetString(constants.ObjectTypeDeliveryLine, lineID, key)
 	if id == "" {
 		return nil, false
 	}
@@ -222,7 +222,7 @@ func loadedByMetaID(ctx context.Context, lineID, key string, loaded map[string]a
 
 func extractOrderLineIDFromDeliveryLine(ctx context.Context, parent any) []string {
 	l := parent.(*apiresource.DeliveryLine)
-	id, _ := resourcekit.GetLoadMeta(ctx).GetString(constants.ObjectTypeDeliveryLine, l.ID, "order_line_id")
+	id, _ := include.GetLoadMeta(ctx).GetString(constants.ObjectTypeDeliveryLine, l.ID, "order_line_id")
 	if id == "" {
 		return nil
 	}
@@ -231,7 +231,7 @@ func extractOrderLineIDFromDeliveryLine(ctx context.Context, parent any) []strin
 
 func populateOrderLineOnDeliveryLine(ctx context.Context, parent any, loaded map[string]any) {
 	l := parent.(*apiresource.DeliveryLine)
-	id, _ := resourcekit.GetLoadMeta(ctx).GetString(constants.ObjectTypeDeliveryLine, l.ID, "order_line_id")
+	id, _ := include.GetLoadMeta(ctx).GetString(constants.ObjectTypeDeliveryLine, l.ID, "order_line_id")
 	if id == "" {
 		return
 	}

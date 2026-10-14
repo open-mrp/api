@@ -2,10 +2,10 @@ package resourceregistry
 
 import (
 	"context"
+	"github.com/open-mrp/apikit/include"
 	"testing"
 
 	apiresource "github.com/open-mrp/api/services/api-gateway/pkg/resource"
-	"github.com/open-mrp/api/services/api-gateway/pkg/resourcekit"
 	"github.com/open-mrp/api/shared/constants"
 )
 
@@ -26,7 +26,7 @@ func discountWithCategories(ids ...string) *apiresource.VolumeDiscount {
 }
 
 func TestExtractCategoryIDsFromVolumeDiscount(t *testing.T) {
-	ctx := resourcekit.WithLoadMeta(context.Background())
+	ctx := include.WithLoadMeta(context.Background())
 
 	ids := extractCategoryIDsFromVolumeDiscount(ctx, discountWithCategories("itcg_1", "itcg_2"))
 	if len(ids) != 2 || ids[0] != "itcg_1" || ids[1] != "itcg_2" {
@@ -39,11 +39,11 @@ func TestExtractCategoryIDsFromVolumeDiscount(t *testing.T) {
 }
 
 func TestPopulatePropertiesOnVolumeDiscountCategories(t *testing.T) {
-	ctx := resourcekit.WithLoadMeta(context.Background())
+	ctx := include.WithLoadMeta(context.Background())
 	props := apiresource.NewList([]apiresource.Property{
 		{ID: "prop_1", Object: constants.ObjectTypeProperty, Name: "Color"},
 	}, apiresource.PageInfo{})
-	resourcekit.GetLoadMeta(ctx).
+	include.GetLoadMeta(ctx).
 		Set(constants.ObjectTypeItemCategory, "itcg_1", "properties_list", props)
 
 	vd := discountWithCategories("itcg_1", "itcg_2")
@@ -64,8 +64,8 @@ func TestPopulatePropertiesOnVolumeDiscountCategories(t *testing.T) {
 }
 
 func TestPopulatePropertiesOnVolumeDiscountCategories_SkipsUnloaded(t *testing.T) {
-	ctx := resourcekit.WithLoadMeta(context.Background())
-	resourcekit.GetLoadMeta(ctx).Set(constants.ObjectTypeItemCategory, "itcg_1", "properties_list",
+	ctx := include.WithLoadMeta(context.Background())
+	include.GetLoadMeta(ctx).Set(constants.ObjectTypeItemCategory, "itcg_1", "properties_list",
 		apiresource.NewList([]apiresource.Property{{ID: "prop_1"}}, apiresource.PageInfo{}))
 
 	vd := discountWithCategories("itcg_1")

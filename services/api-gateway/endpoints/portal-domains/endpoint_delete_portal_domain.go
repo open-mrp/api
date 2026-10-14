@@ -4,11 +4,12 @@ import (
 	"context"
 	"net/http"
 
-	apiendpoint "github.com/open-mrp/api/services/api-gateway/pkg/endpoint"
+	"github.com/open-mrp/api/services/api-gateway/pkg/authz"
 	apiresource "github.com/open-mrp/api/services/api-gateway/pkg/resource"
 	"github.com/open-mrp/api/services/auth-service/pkg/types"
 	"github.com/open-mrp/api/shared/constants"
 	apierror "github.com/open-mrp/apikit/apierror"
+	apiendpoint "github.com/open-mrp/apikit/endpoint"
 )
 
 // Request to disconnect a portal domain.
@@ -24,16 +25,16 @@ type DeletePortalDomainEndpoint struct{}
 
 func (e *DeletePortalDomainEndpoint) Materialize() *apiendpoint.APIEndpoint[*DeletePortalDomainRequest, *apiresource.EmptyResource] {
 	return (&apiendpoint.APIEndpoint[*DeletePortalDomainRequest, *apiresource.EmptyResource]{
-		Title:               "Delete Portal Domain",
-		Method:              http.MethodDelete,
-		ContentType:         "application/json",
-		Route:               "/v1/settings/portal-domains/{id}",
-		SuccessStatusCode:   http.StatusOK,
-		Public:              true,
-		AgentTool:           true,
-		Preview:             true,
-		ObjectType:          constants.ObjectTypePortalDomain,
-		RequiredPermissions: []types.Permission{{Domain: types.PermissionDomainAccount, Action: types.ActionUpdate}},
+		Title:             "Delete Portal Domain",
+		Method:            http.MethodDelete,
+		ContentType:       "application/json",
+		Route:             "/v1/settings/portal-domains/{id}",
+		SuccessStatusCode: http.StatusOK,
+		Public:            true,
+		AgentTool:         true,
+		Preview:           true,
+		ObjectType:        constants.ObjectTypePortalDomain,
+		Auth:              authz.Policy{Permissions: []types.Permission{{Domain: types.PermissionDomainAccount, Action: types.ActionUpdate}}},
 		ServiceHandler: func(svc any) func(ctx context.Context, req *DeletePortalDomainRequest) (*apiresource.EmptyResource, *apierror.APIError) {
 			return svc.(PortalDomainSvc).DeletePortalDomain
 		},

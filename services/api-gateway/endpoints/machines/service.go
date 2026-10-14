@@ -3,6 +3,7 @@ package machineep
 import (
 	"context"
 	"fmt"
+	"github.com/open-mrp/apikit/include"
 
 	jobep "github.com/open-mrp/api/services/api-gateway/endpoints/jobs"
 	"github.com/open-mrp/api/services/api-gateway/internal/domain"
@@ -10,7 +11,6 @@ import (
 	"github.com/open-mrp/api/services/api-gateway/internal/resourceloaders"
 	apirequest "github.com/open-mrp/api/services/api-gateway/pkg/request"
 	apiresource "github.com/open-mrp/api/services/api-gateway/pkg/resource"
-	"github.com/open-mrp/api/services/api-gateway/pkg/resourcekit"
 	"github.com/open-mrp/api/shared/constants"
 	"github.com/open-mrp/api/shared/fieldpb"
 	pb "github.com/open-mrp/api/shared/proto/core"
@@ -289,7 +289,7 @@ func (m *machineSvcImpl) SuggestMachineItemsFromScans(ctx context.Context, req *
 			LastScannedAt: s.LastScannedAt.AsTime(),
 			BatchCount:    s.BatchCount,
 		}
-		resourcekit.GetLoadMeta(ctx).Set(constants.ObjectTypeMachineItemScanSuggestion, s.ItemId, "item_id", s.ItemId)
+		include.GetLoadMeta(ctx).Set(constants.ObjectTypeMachineItemScanSuggestion, s.ItemId, "item_id", s.ItemId)
 		suggestions = append(suggestions, row)
 	}
 	return apiresource.NewList(suggestions, apiresource.PageInfo{}), nil

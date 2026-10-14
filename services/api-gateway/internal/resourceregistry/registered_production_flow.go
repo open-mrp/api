@@ -2,18 +2,18 @@ package resourceregistry
 
 import (
 	"context"
+	"github.com/open-mrp/apikit/include"
 
 	"github.com/open-mrp/api/services/api-gateway/internal/resourceloaders"
 	apiresource "github.com/open-mrp/api/services/api-gateway/pkg/resource"
-	"github.com/open-mrp/api/services/api-gateway/pkg/resourcekit"
 	"github.com/open-mrp/api/shared/constants"
 )
 
 func init() {
-	resourcekit.Register(&resourcekit.Definition{
+	include.Register(&include.Definition{
 		ObjectType: constants.ObjectTypeProductionFlow,
 		Load:       resourceloaders.LoadProductionFlows,
-		Subs: []resourcekit.SubField{
+		Subs: []include.SubField{
 			{
 				Key:         "steps",
 				Target:      productionFlowStepType,
@@ -26,7 +26,7 @@ func init() {
 
 func populateStepsOnProductionFlow(ctx context.Context, parent any, _ map[string]any) {
 	flow := parent.(*apiresource.ProductionFlow)
-	v, ok := resourcekit.GetLoadMeta(ctx).Get(constants.ObjectTypeProductionFlow, "singleton", "steps")
+	v, ok := include.GetLoadMeta(ctx).Get(constants.ObjectTypeProductionFlow, "singleton", "steps")
 	if !ok {
 		return
 	}

@@ -2,29 +2,29 @@ package resourceregistry
 
 import (
 	"context"
+	"github.com/open-mrp/apikit/include"
 
 	"github.com/open-mrp/api/services/api-gateway/internal/resourceloaders"
 	apiresource "github.com/open-mrp/api/services/api-gateway/pkg/resource"
-	"github.com/open-mrp/api/services/api-gateway/pkg/resourcekit"
 	"github.com/open-mrp/api/shared/constants"
 )
 
 func init() {
-	resourcekit.Register(&resourcekit.Definition{
+	include.Register(&include.Definition{
 		ObjectType: constants.ObjectTypeTerritory,
 		Load:       resourceloaders.LoadTerritories,
-		Subs: []resourcekit.SubField{
+		Subs: []include.SubField{
 			{
 				Key:         "sales_rep",
 				Target:      constants.ObjectTypeAccountUser,
-				Cardinality: resourcekit.CardinalityOnePtr,
+				Cardinality: include.CardinalityOnePtr,
 				ExtractIDs:  extractSalesRepIDFromTerritory,
 				Populate:    populateSalesRepOnTerritory,
 			},
 			{
 				Key:         "product_line",
 				Target:      constants.ObjectTypeProductLine,
-				Cardinality: resourcekit.CardinalityOnePtr,
+				Cardinality: include.CardinalityOnePtr,
 				ExtractIDs:  extractProductLineIDFromTerritory,
 				Populate:    populateProductLineOnTerritory,
 			},
@@ -34,7 +34,7 @@ func init() {
 
 func extractSalesRepIDFromTerritory(ctx context.Context, parent any) []string {
 	t := parent.(*apiresource.Territory)
-	id, _ := resourcekit.GetLoadMeta(ctx).
+	id, _ := include.GetLoadMeta(ctx).
 		GetString(constants.ObjectTypeTerritory, t.ID, "sales_rep_id")
 	if id == "" {
 		return nil
@@ -44,7 +44,7 @@ func extractSalesRepIDFromTerritory(ctx context.Context, parent any) []string {
 
 func populateSalesRepOnTerritory(ctx context.Context, parent any, loaded map[string]any) {
 	t := parent.(*apiresource.Territory)
-	id, _ := resourcekit.GetLoadMeta(ctx).
+	id, _ := include.GetLoadMeta(ctx).
 		GetString(constants.ObjectTypeTerritory, t.ID, "sales_rep_id")
 	if id == "" {
 		return
@@ -56,7 +56,7 @@ func populateSalesRepOnTerritory(ctx context.Context, parent any, loaded map[str
 
 func extractProductLineIDFromTerritory(ctx context.Context, parent any) []string {
 	t := parent.(*apiresource.Territory)
-	id, _ := resourcekit.GetLoadMeta(ctx).
+	id, _ := include.GetLoadMeta(ctx).
 		GetString(constants.ObjectTypeTerritory, t.ID, "product_line_id")
 	if id == "" {
 		return nil
@@ -66,7 +66,7 @@ func extractProductLineIDFromTerritory(ctx context.Context, parent any) []string
 
 func populateProductLineOnTerritory(ctx context.Context, parent any, loaded map[string]any) {
 	t := parent.(*apiresource.Territory)
-	id, _ := resourcekit.GetLoadMeta(ctx).
+	id, _ := include.GetLoadMeta(ctx).
 		GetString(constants.ObjectTypeTerritory, t.ID, "product_line_id")
 	if id == "" {
 		return

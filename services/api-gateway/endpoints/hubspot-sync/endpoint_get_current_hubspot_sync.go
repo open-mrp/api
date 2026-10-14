@@ -4,11 +4,12 @@ import (
 	"context"
 	"net/http"
 
-	apiendpoint "github.com/open-mrp/api/services/api-gateway/pkg/endpoint"
+	"github.com/open-mrp/api/services/api-gateway/pkg/authz"
 	apiresource "github.com/open-mrp/api/services/api-gateway/pkg/resource"
 	"github.com/open-mrp/api/services/auth-service/pkg/types"
 	"github.com/open-mrp/api/shared/constants"
 	apierror "github.com/open-mrp/apikit/apierror"
+	apiendpoint "github.com/open-mrp/apikit/endpoint"
 )
 
 // Request to retrieve the account's current HubSpot sync job.
@@ -21,16 +22,16 @@ type GetCurrentHubspotSyncEndpoint struct{}
 
 func (e *GetCurrentHubspotSyncEndpoint) Materialize() *apiendpoint.APIEndpoint[*GetCurrentHubspotSyncRequest, *apiresource.HubspotSyncJob] {
 	return (&apiendpoint.APIEndpoint[*GetCurrentHubspotSyncRequest, *apiresource.HubspotSyncJob]{
-		Title:               "Get Current HubSpot Sync",
-		Method:              http.MethodGet,
-		ContentType:         "application/json",
-		Route:               "/v1/settings/integrations/hubspot/sync/current",
-		SuccessStatusCode:   http.StatusOK,
-		Public:              false,
-		AgentTool:           true,
-		Preview:             true,
-		ObjectType:          constants.ObjectTypeHubspotSyncJob,
-		RequiredPermissions: []types.Permission{{Domain: types.PermissionDomainIntegrations, Action: types.ActionRead}},
+		Title:             "Get Current HubSpot Sync",
+		Method:            http.MethodGet,
+		ContentType:       "application/json",
+		Route:             "/v1/settings/integrations/hubspot/sync/current",
+		SuccessStatusCode: http.StatusOK,
+		Public:            false,
+		AgentTool:         true,
+		Preview:           true,
+		ObjectType:        constants.ObjectTypeHubspotSyncJob,
+		Auth:              authz.Policy{Permissions: []types.Permission{{Domain: types.PermissionDomainIntegrations, Action: types.ActionRead}}},
 		ServiceHandler: func(svc any) func(ctx context.Context, req *GetCurrentHubspotSyncRequest) (*apiresource.HubspotSyncJob, *apierror.APIError) {
 			return svc.(HubspotSyncSvc).GetCurrentSyncJob
 		},

@@ -2,27 +2,27 @@ package resourceregistry
 
 import (
 	"context"
+	"github.com/open-mrp/apikit/include"
 
 	"github.com/open-mrp/api/services/api-gateway/internal/resourceloaders"
 	apiresource "github.com/open-mrp/api/services/api-gateway/pkg/resource"
-	"github.com/open-mrp/api/services/api-gateway/pkg/resourcekit"
 	"github.com/open-mrp/api/shared/constants"
 )
 
 func init() {
-	resourcekit.Register(&resourcekit.Definition{
+	include.Register(&include.Definition{
 		ObjectType: constants.ObjectTypeRate,
 		Load:       resourceloaders.LoadRates,
-		Subs: []resourcekit.SubField{
-			{Key: "numerator_unit", Target: constants.ObjectTypeUnit, Cardinality: resourcekit.CardinalityOnePtr, ExtractIDs: extractNumeratorUnitIDFromRate, Populate: populateNumeratorUnitOnRate},
-			{Key: "denominator_unit", Target: constants.ObjectTypeUnit, Cardinality: resourcekit.CardinalityOnePtr, ExtractIDs: extractDenominatorUnitIDFromRate, Populate: populateDenominatorUnitOnRate},
+		Subs: []include.SubField{
+			{Key: "numerator_unit", Target: constants.ObjectTypeUnit, Cardinality: include.CardinalityOnePtr, ExtractIDs: extractNumeratorUnitIDFromRate, Populate: populateNumeratorUnitOnRate},
+			{Key: "denominator_unit", Target: constants.ObjectTypeUnit, Cardinality: include.CardinalityOnePtr, ExtractIDs: extractDenominatorUnitIDFromRate, Populate: populateDenominatorUnitOnRate},
 		},
 	})
 }
 
 func extractNumeratorUnitIDFromRate(ctx context.Context, parent any) []string {
 	r := parent.(*apiresource.Rate)
-	id, _ := resourcekit.GetLoadMeta(ctx).GetString(constants.ObjectTypeRate, r.ID, "numerator_unit_id")
+	id, _ := include.GetLoadMeta(ctx).GetString(constants.ObjectTypeRate, r.ID, "numerator_unit_id")
 	if id == "" {
 		return nil
 	}
@@ -31,7 +31,7 @@ func extractNumeratorUnitIDFromRate(ctx context.Context, parent any) []string {
 
 func populateNumeratorUnitOnRate(ctx context.Context, parent any, loaded map[string]any) {
 	r := parent.(*apiresource.Rate)
-	meta := resourcekit.GetLoadMeta(ctx)
+	meta := include.GetLoadMeta(ctx)
 	if id, _ := meta.GetString(constants.ObjectTypeRate, r.ID, "numerator_unit_id"); id != "" {
 		if v, ok := loaded[id]; ok {
 			r.NumeratorUnit = v.(*apiresource.Unit)
@@ -45,7 +45,7 @@ func populateNumeratorUnitOnRate(ctx context.Context, parent any, loaded map[str
 
 func extractDenominatorUnitIDFromRate(ctx context.Context, parent any) []string {
 	r := parent.(*apiresource.Rate)
-	id, _ := resourcekit.GetLoadMeta(ctx).GetString(constants.ObjectTypeRate, r.ID, "denominator_unit_id")
+	id, _ := include.GetLoadMeta(ctx).GetString(constants.ObjectTypeRate, r.ID, "denominator_unit_id")
 	if id == "" {
 		return nil
 	}
@@ -54,7 +54,7 @@ func extractDenominatorUnitIDFromRate(ctx context.Context, parent any) []string 
 
 func populateDenominatorUnitOnRate(ctx context.Context, parent any, loaded map[string]any) {
 	r := parent.(*apiresource.Rate)
-	meta := resourcekit.GetLoadMeta(ctx)
+	meta := include.GetLoadMeta(ctx)
 	if id, _ := meta.GetString(constants.ObjectTypeRate, r.ID, "denominator_unit_id"); id != "" {
 		if v, ok := loaded[id]; ok {
 			r.DenominatorUnit = v.(*apiresource.Unit)

@@ -4,11 +4,12 @@ import (
 	"context"
 	"net/http"
 
-	apiendpoint "github.com/open-mrp/api/services/api-gateway/pkg/endpoint"
+	"github.com/open-mrp/api/services/api-gateway/pkg/authz"
 	apiresource "github.com/open-mrp/api/services/api-gateway/pkg/resource"
 	"github.com/open-mrp/api/services/auth-service/pkg/types"
 	"github.com/open-mrp/api/shared/constants"
 	apierror "github.com/open-mrp/apikit/apierror"
+	apiendpoint "github.com/open-mrp/apikit/endpoint"
 )
 
 // ListOpenOrderLinesRequest names the sales order whose lines to list.
@@ -24,15 +25,15 @@ type ListOpenOrderLinesEndpoint struct{}
 
 func (e *ListOpenOrderLinesEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListOpenOrderLinesRequest, *apiresource.List[apiresource.OpenOrderLine]] {
 	return (&apiendpoint.APIEndpoint[*ListOpenOrderLinesRequest, *apiresource.List[apiresource.OpenOrderLine]]{
-		Title:               "List Open Order Lines",
-		Method:              http.MethodGet,
-		Route:               "/v1/core/analytics/open-orders/{id}/lines",
-		SuccessStatusCode:   http.StatusOK,
-		Public:              false,
-		AgentTool:           true,
-		Preview:             true,
-		ObjectType:          constants.ObjectTypeOpenOrderLine,
-		RequiredPermissions: []types.Permission{{Domain: types.PermissionDomainSalesOrders, Action: types.ActionRead}},
+		Title:             "List Open Order Lines",
+		Method:            http.MethodGet,
+		Route:             "/v1/core/analytics/open-orders/{id}/lines",
+		SuccessStatusCode: http.StatusOK,
+		Public:            false,
+		AgentTool:         true,
+		Preview:           true,
+		ObjectType:        constants.ObjectTypeOpenOrderLine,
+		Auth:              authz.Policy{Permissions: []types.Permission{{Domain: types.PermissionDomainSalesOrders, Action: types.ActionRead}}},
 		ServiceHandler: func(svc any) func(ctx context.Context, req *ListOpenOrderLinesRequest) (*apiresource.List[apiresource.OpenOrderLine], *apierror.APIError) {
 			return svc.(AnalyticsSvc).ListOpenOrderLines
 		},

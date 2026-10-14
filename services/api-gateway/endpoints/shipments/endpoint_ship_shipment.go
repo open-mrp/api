@@ -4,12 +4,13 @@ import (
 	"context"
 	"net/http"
 
-	apiendpoint "github.com/open-mrp/api/services/api-gateway/pkg/endpoint"
-	apiexample "github.com/open-mrp/api/services/api-gateway/pkg/example"
+	"github.com/open-mrp/api/services/api-gateway/pkg/authz"
 	apiresource "github.com/open-mrp/api/services/api-gateway/pkg/resource"
 	types "github.com/open-mrp/api/services/auth-service/pkg/types"
 	"github.com/open-mrp/api/shared/constants"
 	apierror "github.com/open-mrp/apikit/apierror"
+	apiendpoint "github.com/open-mrp/apikit/endpoint"
+	apiexample "github.com/open-mrp/apikit/example"
 )
 
 // Request to mark a shipment as shipped.
@@ -39,16 +40,16 @@ type ShipShipmentEndpoint struct{}
 
 func (e *ShipShipmentEndpoint) Materialize() *apiendpoint.APIEndpoint[*ShipShipmentRequest, *apiresource.Job] {
 	return (&apiendpoint.APIEndpoint[*ShipShipmentRequest, *apiresource.Job]{
-		Title:               "Ship Shipment",
-		Method:              http.MethodPost,
-		Route:               "/v1/operations/shipments/{id}/actions/ship",
-		ContentType:         "application/json",
-		SuccessStatusCode:   http.StatusAccepted,
-		Public:              false,
-		AgentTool:           true,
-		Preview:             true,
-		RequiredPermissions: []types.Permission{{Domain: types.PermissionDomainShipments, Action: types.ActionUpdate}},
-		ObjectType:          constants.ObjectTypeJob,
+		Title:             "Ship Shipment",
+		Method:            http.MethodPost,
+		Route:             "/v1/operations/shipments/{id}/actions/ship",
+		ContentType:       "application/json",
+		SuccessStatusCode: http.StatusAccepted,
+		Public:            false,
+		AgentTool:         true,
+		Preview:           true,
+		Auth:              authz.Policy{Permissions: []types.Permission{{Domain: types.PermissionDomainShipments, Action: types.ActionUpdate}}},
+		ObjectType:        constants.ObjectTypeJob,
 		IncludeConfig: apiendpoint.IncludesFor(apiendpoint.IncludesParams{
 			ObjectType: constants.ObjectTypeJob,
 			Fields:     []string{"created_by", "created_by.role"},

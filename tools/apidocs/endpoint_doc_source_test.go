@@ -6,13 +6,13 @@ import (
 	"testing"
 
 	grpcclient "github.com/open-mrp/api/services/api-gateway/grpc-client"
-	apiendpoint "github.com/open-mrp/api/services/api-gateway/pkg/endpoint"
 	httpgroup "github.com/open-mrp/api/services/api-gateway/pkg/group"
 	agentpb "github.com/open-mrp/api/shared/proto/agent"
 	authpb "github.com/open-mrp/api/shared/proto/auth"
 	billingpb "github.com/open-mrp/api/shared/proto/billing"
 	pbgrpc "github.com/open-mrp/api/shared/proto/core"
 	platformpb "github.com/open-mrp/api/shared/proto/platform"
+	apiendpoint "github.com/open-mrp/apikit/endpoint"
 )
 
 // TestAllEndpointsHaveDocSource verifies that every endpoint registered in every

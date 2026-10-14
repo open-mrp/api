@@ -4,15 +4,16 @@ import (
 	"context"
 	"net/http"
 
-	httptransport "github.com/open-mrp/api/services/api-gateway/internal/http"
-	apiendpoint "github.com/open-mrp/api/services/api-gateway/pkg/endpoint"
-	apiexample "github.com/open-mrp/api/services/api-gateway/pkg/example"
+	"github.com/open-mrp/api/services/api-gateway/pkg/authz"
 	apirequest "github.com/open-mrp/api/services/api-gateway/pkg/request"
 	apiresource "github.com/open-mrp/api/services/api-gateway/pkg/resource"
 	"github.com/open-mrp/api/services/auth-service/pkg/types"
 	"github.com/open-mrp/api/shared/constants"
 	apierror "github.com/open-mrp/apikit/apierror"
+	apiendpoint "github.com/open-mrp/apikit/endpoint"
+	apiexample "github.com/open-mrp/apikit/example"
 	"github.com/open-mrp/apikit/field"
+	httptransport "github.com/open-mrp/apikit/transport"
 )
 
 // Property name + value pair attached to a product. The property and its value (an
@@ -82,17 +83,16 @@ type BulkUpsertProductsEndpoint struct{}
 
 func (e *BulkUpsertProductsEndpoint) Materialize() *apiendpoint.APIEndpoint[*BulkUpsertProductsRequest, *apiresource.Job] {
 	return (&apiendpoint.APIEndpoint[*BulkUpsertProductsRequest, *apiresource.Job]{
-		Title:                  "Bulk Upsert Products",
-		Method:                 http.MethodPost,
-		Route:                  "/v1/catalog/products/actions/bulk-upsert",
-		ContentType:            "application/json",
-		SuccessStatusCode:      http.StatusAccepted,
-		Public:                 true,
-		AgentTool:              true,
-		RequiredPermissions:    []types.Permission{{Domain: types.PermissionDomainItems, Action: types.ActionCreate}, {Domain: types.PermissionDomainItems, Action: types.ActionUpdate}},
-		RequiresAllPermissions: true,
-		Preview:                true,
-		ObjectType:             constants.ObjectTypeJob,
+		Title:             "Bulk Upsert Products",
+		Method:            http.MethodPost,
+		Route:             "/v1/catalog/products/actions/bulk-upsert",
+		ContentType:       "application/json",
+		SuccessStatusCode: http.StatusAccepted,
+		Public:            true,
+		AgentTool:         true,
+		Auth:              authz.Policy{Permissions: []types.Permission{{Domain: types.PermissionDomainItems, Action: types.ActionCreate}, {Domain: types.PermissionDomainItems, Action: types.ActionUpdate}}, RequireAll: true},
+		Preview:           true,
+		ObjectType:        constants.ObjectTypeJob,
 		IncludeConfig: apiendpoint.IncludesFor(apiendpoint.IncludesParams{
 			ObjectType: constants.ObjectTypeJob,
 			Fields:     []string{"created_by", "created_by.role"},

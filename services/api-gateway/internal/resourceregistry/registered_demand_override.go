@@ -2,31 +2,31 @@ package resourceregistry
 
 import (
 	"context"
+	"github.com/open-mrp/apikit/include"
 
 	"github.com/open-mrp/api/services/api-gateway/internal/resourceloaders"
 	apiresource "github.com/open-mrp/api/services/api-gateway/pkg/resource"
-	"github.com/open-mrp/api/services/api-gateway/pkg/resourcekit"
 	"github.com/open-mrp/api/shared/constants"
 )
 
 func init() {
-	resourcekit.Register(&resourcekit.Definition{
+	include.Register(&include.Definition{
 		ObjectType: constants.ObjectTypeDemandOverride,
 		Load:       resourceloaders.LoadDemandOverrides,
-		Subs: []resourcekit.SubField{
+		Subs: []include.SubField{
 			// The scope is polymorphic (item or product line), so it resolves to an Entity stashed upstream rather than through a typed loader — a SubField can only name one Target, and either typed include would be null for half the rows.
-			{Key: "scope", Cardinality: resourcekit.CardinalityOnePtr, Populate: populateScopeOnDemandOverride},
+			{Key: "scope", Cardinality: include.CardinalityOnePtr, Populate: populateScopeOnDemandOverride},
 			{
 				Key:         "unit",
 				Target:      constants.ObjectTypeUnit,
-				Cardinality: resourcekit.CardinalityOnePtr,
+				Cardinality: include.CardinalityOnePtr,
 				ExtractIDs:  extractDemandOverrideRefIDs("unit_id"),
 				Populate:    populateDemandOverrideUnit,
 			},
 			{
 				Key:         "created_by",
 				Target:      constants.ObjectTypeActor,
-				Cardinality: resourcekit.CardinalityOnePtr,
+				Cardinality: include.CardinalityOnePtr,
 				ExtractIDs:  extractDemandOverrideRefIDs("created_by_id"),
 				Populate:    populateDemandOverrideCreatedBy,
 			},
@@ -39,7 +39,7 @@ func populateScopeOnDemandOverride(ctx context.Context, parent any, _ map[string
 	if !ok {
 		return
 	}
-	v, ok := resourcekit.GetLoadMeta(ctx).Get(constants.ObjectTypeDemandOverride, o.ID, "scope")
+	v, ok := include.GetLoadMeta(ctx).Get(constants.ObjectTypeDemandOverride, o.ID, "scope")
 	if !ok {
 		return
 	}
@@ -52,7 +52,7 @@ func demandOverrideRefID(ctx context.Context, parent any, key string) string {
 	if !ok {
 		return ""
 	}
-	id, _ := resourcekit.GetLoadMeta(ctx).
+	id, _ := include.GetLoadMeta(ctx).
 		GetString(constants.ObjectTypeDemandOverride, o.ID, key)
 	return id
 }

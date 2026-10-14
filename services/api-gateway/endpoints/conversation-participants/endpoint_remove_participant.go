@@ -4,10 +4,11 @@ import (
 	"context"
 	"net/http"
 
-	apiendpoint "github.com/open-mrp/api/services/api-gateway/pkg/endpoint"
+	"github.com/open-mrp/api/services/api-gateway/pkg/authz"
 	apiresource "github.com/open-mrp/api/services/api-gateway/pkg/resource"
 	"github.com/open-mrp/api/services/auth-service/pkg/types"
 	apierror "github.com/open-mrp/apikit/apierror"
+	apiendpoint "github.com/open-mrp/apikit/endpoint"
 )
 
 // Request to remove a participant from a group conversation.
@@ -27,14 +28,14 @@ type RemoveParticipantEndpoint struct{}
 
 func (e *RemoveParticipantEndpoint) Materialize() *apiendpoint.APIEndpoint[*RemoveParticipantRequest, *apiresource.EmptyResource] {
 	return (&apiendpoint.APIEndpoint[*RemoveParticipantRequest, *apiresource.EmptyResource]{
-		Title:               "Remove Participant",
-		Method:              http.MethodDelete,
-		ContentType:         "application/json",
-		Route:               "/v1/messaging/conversations/{id}/participants/{pid}",
-		SuccessStatusCode:   http.StatusOK,
-		Public:              true,
-		Preview:             true,
-		RequiredPermissions: []types.Permission{{Domain: types.PermissionDomainMessaging, Action: types.ActionUpdate}},
+		Title:             "Remove Participant",
+		Method:            http.MethodDelete,
+		ContentType:       "application/json",
+		Route:             "/v1/messaging/conversations/{id}/participants/{pid}",
+		SuccessStatusCode: http.StatusOK,
+		Public:            true,
+		Preview:           true,
+		Auth:              authz.Policy{Permissions: []types.Permission{{Domain: types.PermissionDomainMessaging, Action: types.ActionUpdate}}},
 		ServiceHandler: func(svc any) func(ctx context.Context, req *RemoveParticipantRequest) (*apiresource.EmptyResource, *apierror.APIError) {
 			return svc.(ParticipantSvc).RemoveParticipant
 		},

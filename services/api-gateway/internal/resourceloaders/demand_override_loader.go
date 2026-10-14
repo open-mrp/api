@@ -2,11 +2,11 @@ package resourceloaders
 
 import (
 	"context"
+	"github.com/open-mrp/apikit/include"
 
 	"github.com/open-mrp/api/services/api-gateway/internal/domain"
 	grpcutil "github.com/open-mrp/api/services/api-gateway/internal/grpc"
 	apiresource "github.com/open-mrp/api/services/api-gateway/pkg/resource"
-	"github.com/open-mrp/api/services/api-gateway/pkg/resourcekit"
 	"github.com/open-mrp/api/shared/constants"
 	pb "github.com/open-mrp/api/shared/proto/core"
 	apierror "github.com/open-mrp/apikit/apierror"
@@ -28,7 +28,7 @@ func LoadDemandOverrides(ctx context.Context, ids []string) (map[string]any, *ap
 		return nil, apiErr
 	}
 
-	meta := resourcekit.GetLoadMeta(ctx)
+	meta := include.GetLoadMeta(ctx)
 	out := make(map[string]any, len(resp.Overrides))
 	for _, o := range resp.Overrides {
 		out[o.Id] = DemandOverrideFromProto(o)
@@ -60,7 +60,7 @@ func DemandOverrideFromProto(o *pb.DemandOverrideInfo) *apiresource.DemandOverri
 // stashDemandOverrideRefs stashes the reference data for the expandable scope, unit and
 // created_by sub-resources. The creator is a bare identity-actor id, so its Actor is
 // built from the id's prefix and preheated — LoadActors has no backing store.
-func stashDemandOverrideRefs(ctx context.Context, meta *resourcekit.LoadMeta, o *pb.DemandOverrideInfo) {
+func stashDemandOverrideRefs(ctx context.Context, meta *include.LoadMeta, o *pb.DemandOverrideInfo) {
 	if entity := demandOverrideScopeEntity(o); entity != nil {
 		meta.Set(constants.ObjectTypeDemandOverride, o.Id, "scope", entity)
 	}
@@ -69,7 +69,7 @@ func stashDemandOverrideRefs(ctx context.Context, meta *resourcekit.LoadMeta, o 
 	}
 	if actor := ActorRefFromID(o.CreatedById); actor != nil {
 		meta.Set(constants.ObjectTypeDemandOverride, o.Id, "created_by_id", actor.ID)
-		resourcekit.PreheatCache(ctx, constants.ObjectTypeActor, actor.ID, actor)
+		include.PreheatCache(ctx, constants.ObjectTypeActor, actor.ID, actor)
 	}
 }
 

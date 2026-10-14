@@ -4,10 +4,11 @@ import (
 	"context"
 	"net/http"
 
-	apiendpoint "github.com/open-mrp/api/services/api-gateway/pkg/endpoint"
+	"github.com/open-mrp/api/services/api-gateway/pkg/authz"
 	apiresource "github.com/open-mrp/api/services/api-gateway/pkg/resource"
 	"github.com/open-mrp/api/services/auth-service/pkg/types"
 	apierror "github.com/open-mrp/apikit/apierror"
+	apiendpoint "github.com/open-mrp/apikit/endpoint"
 )
 
 // Request to activate an account user.
@@ -23,16 +24,15 @@ type ActivateAccountUserEndpoint struct{}
 
 func (e *ActivateAccountUserEndpoint) Materialize() *apiendpoint.APIEndpoint[*ActivateAccountUserRequest, *apiresource.EmptyResource] {
 	return (&apiendpoint.APIEndpoint[*ActivateAccountUserRequest, *apiresource.EmptyResource]{
-		Title:                   "Activate Account User",
-		Method:                  http.MethodPut,
-		ContentType:             "application/json",
-		Route:                   "/v1/identity/account-users/{id}/actions/activate",
-		SuccessStatusCode:       http.StatusOK,
-		Public:                  true,
-		AgentTool:               true,
-		RequiredPermissions:     []types.Permission{{Domain: types.PermissionDomainTeamUsers, Action: types.ActionUpdate}},
-		CounterpartyPermissions: apiendpoint.Counterparties(types.ActionUpdate),
-		Preview:                 true,
+		Title:             "Activate Account User",
+		Method:            http.MethodPut,
+		ContentType:       "application/json",
+		Route:             "/v1/identity/account-users/{id}/actions/activate",
+		SuccessStatusCode: http.StatusOK,
+		Public:            true,
+		AgentTool:         true,
+		Auth:              authz.Policy{Permissions: []types.Permission{{Domain: types.PermissionDomainTeamUsers, Action: types.ActionUpdate}}, Counterparty: authz.Counterparties(types.ActionUpdate)},
+		Preview:           true,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *ActivateAccountUserRequest) (*apiresource.EmptyResource, *apierror.APIError) {
 			return svc.(AccountUserSvc).ActivateAccountUser
 		},

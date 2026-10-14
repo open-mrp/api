@@ -2,23 +2,23 @@ package resourceregistry
 
 import (
 	"context"
+	"github.com/open-mrp/apikit/include"
 
 	"github.com/open-mrp/api/services/api-gateway/internal/resourceloaders"
 	apiresource "github.com/open-mrp/api/services/api-gateway/pkg/resource"
-	"github.com/open-mrp/api/services/api-gateway/pkg/resourcekit"
 	"github.com/open-mrp/api/shared/constants"
 )
 
 func init() {
-	resourcekit.Register(&resourcekit.Definition{
+	include.Register(&include.Definition{
 		ObjectType: constants.ObjectTypePaymentTerm,
 		Load:       resourceloaders.LoadPaymentTerms,
-		Subs: []resourcekit.SubField{
+		Subs: []include.SubField{
 			{Key: "owner", Populate: populateOwnerOnPaymentTerm},
 			{
 				Key:         "owner.account",
 				Target:      constants.ObjectTypeAccount,
-				Cardinality: resourcekit.CardinalityOnePtr,
+				Cardinality: include.CardinalityOnePtr,
 				ExtractIDs:  extractOwnerAccountIDFromPaymentTerm,
 				Populate:    populateOwnerAccountOnPaymentTerm,
 			},
@@ -28,14 +28,14 @@ func init() {
 
 func populateOwnerOnPaymentTerm(ctx context.Context, parent any, _ map[string]any) {
 	pt := parent.(*apiresource.PaymentTerm)
-	id, _ := resourcekit.GetLoadMeta(ctx).
+	id, _ := include.GetLoadMeta(ctx).
 		GetString(constants.ObjectTypePaymentTerm, pt.ID, "owner_account_id")
 	pt.Owner = buildOwnerShell(id)
 }
 
 func extractOwnerAccountIDFromPaymentTerm(ctx context.Context, parent any) []string {
 	pt := parent.(*apiresource.PaymentTerm)
-	id, _ := resourcekit.GetLoadMeta(ctx).
+	id, _ := include.GetLoadMeta(ctx).
 		GetString(constants.ObjectTypePaymentTerm, pt.ID, "owner_account_id")
 	if id == "" {
 		return nil
@@ -48,7 +48,7 @@ func populateOwnerAccountOnPaymentTerm(ctx context.Context, parent any, loaded m
 	if pt.Owner == nil {
 		return
 	}
-	id, _ := resourcekit.GetLoadMeta(ctx).
+	id, _ := include.GetLoadMeta(ctx).
 		GetString(constants.ObjectTypePaymentTerm, pt.ID, "owner_account_id")
 	if id == "" {
 		return

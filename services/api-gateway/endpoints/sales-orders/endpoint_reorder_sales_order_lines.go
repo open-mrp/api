@@ -4,11 +4,12 @@ import (
 	"context"
 	"net/http"
 
-	apiendpoint "github.com/open-mrp/api/services/api-gateway/pkg/endpoint"
-	apiexample "github.com/open-mrp/api/services/api-gateway/pkg/example"
+	"github.com/open-mrp/api/services/api-gateway/pkg/authz"
 	apiresource "github.com/open-mrp/api/services/api-gateway/pkg/resource"
 	"github.com/open-mrp/api/services/auth-service/pkg/types"
 	apierror "github.com/open-mrp/apikit/apierror"
+	apiendpoint "github.com/open-mrp/apikit/endpoint"
+	apiexample "github.com/open-mrp/apikit/example"
 )
 
 // Request to reorder a sales order's lines.
@@ -36,16 +37,15 @@ type ReorderSalesOrderLinesEndpoint struct{}
 
 func (e *ReorderSalesOrderLinesEndpoint) Materialize() *apiendpoint.APIEndpoint[*ReorderSalesOrderLinesRequest, *apiresource.EmptyResource] {
 	return (&apiendpoint.APIEndpoint[*ReorderSalesOrderLinesRequest, *apiresource.EmptyResource]{
-		Title:                   "Reorder Sales Order Lines",
-		Method:                  http.MethodPost,
-		ContentType:             "application/json",
-		Route:                   "/v1/sales/sales-orders/{id}/lines/actions/reorder",
-		SuccessStatusCode:       http.StatusOK,
-		Public:                  true,
-		AgentTool:               true,
-		Preview:                 true,
-		RequiredPermissions:     []types.Permission{{Domain: types.PermissionDomainSalesOrders, Action: types.ActionUpdate}},
-		CounterpartyPermissions: apiendpoint.Counterparties(types.ActionUpdate),
+		Title:             "Reorder Sales Order Lines",
+		Method:            http.MethodPost,
+		ContentType:       "application/json",
+		Route:             "/v1/sales/sales-orders/{id}/lines/actions/reorder",
+		SuccessStatusCode: http.StatusOK,
+		Public:            true,
+		AgentTool:         true,
+		Preview:           true,
+		Auth:              authz.Policy{Permissions: []types.Permission{{Domain: types.PermissionDomainSalesOrders, Action: types.ActionUpdate}}, Counterparty: authz.Counterparties(types.ActionUpdate)},
 		ServiceHandler: func(svc any) func(ctx context.Context, req *ReorderSalesOrderLinesRequest) (*apiresource.EmptyResource, *apierror.APIError) {
 			return svc.(SalesOrderSvc).ReorderSalesOrderLines
 		},

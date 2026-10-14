@@ -3,6 +3,7 @@ package productionstepep
 import (
 	"context"
 	"fmt"
+	"github.com/open-mrp/apikit/include"
 
 	"time"
 
@@ -11,7 +12,6 @@ import (
 	grpcutil "github.com/open-mrp/api/services/api-gateway/internal/grpc"
 	apirequest "github.com/open-mrp/api/services/api-gateway/pkg/request"
 	apiresource "github.com/open-mrp/api/services/api-gateway/pkg/resource"
-	"github.com/open-mrp/api/services/api-gateway/pkg/resourcekit"
 	"github.com/open-mrp/api/shared/constants"
 	"github.com/open-mrp/api/shared/fieldpb"
 	pb "github.com/open-mrp/api/shared/proto/core"
@@ -101,7 +101,7 @@ func (m *productionStepSvcImpl) ListProductionSteps(ctx context.Context, req *Li
 		return nil, apiErr
 	}
 
-	meta := resourcekit.GetLoadMeta(ctx)
+	meta := include.GetLoadMeta(ctx)
 	steps := make([]apiresource.ProductionStep, len(resp.ProductionSteps))
 	for i, s := range resp.ProductionSteps {
 		steps[i] = productionStepFromProto(s)
@@ -125,7 +125,7 @@ func (m *productionStepSvcImpl) GetProductionStep(ctx context.Context, req *Retr
 		return nil, apiErr
 	}
 
-	meta := resourcekit.GetLoadMeta(ctx)
+	meta := include.GetLoadMeta(ctx)
 	result := productionStepFromProto(resp.ProductionStep)
 	stashProductionStepMeta(meta, resp.ProductionStep)
 	return &result, nil
@@ -183,7 +183,7 @@ func (m *productionStepSvcImpl) CreateProductionStep(ctx context.Context, req *C
 		return nil, apiErr
 	}
 
-	meta := resourcekit.GetLoadMeta(ctx)
+	meta := include.GetLoadMeta(ctx)
 	result := productionStepFromProto(resp.ProductionStep)
 	stashProductionStepMeta(meta, resp.ProductionStep)
 	return &result, nil
@@ -211,7 +211,7 @@ func (m *productionStepSvcImpl) UpdateProductionStep(ctx context.Context, req *U
 		return nil, apiErr
 	}
 
-	meta := resourcekit.GetLoadMeta(ctx)
+	meta := include.GetLoadMeta(ctx)
 	result := productionStepFromProto(resp.ProductionStep)
 	stashProductionStepMeta(meta, resp.ProductionStep)
 	return &result, nil
@@ -249,7 +249,7 @@ func (m *productionStepSvcImpl) GetProduction(ctx context.Context, req *Retrieve
 		return nil, apiErr
 	}
 
-	meta := resourcekit.GetLoadMeta(ctx)
+	meta := include.GetLoadMeta(ctx)
 	result := productionOutputFromProto(resp.Production)
 	stashProductionOutputMeta(meta, resp.Production)
 	return result, nil
@@ -273,7 +273,7 @@ func (m *productionStepSvcImpl) UpdateProduction(ctx context.Context, req *Updat
 		return nil, apiErr
 	}
 
-	meta := resourcekit.GetLoadMeta(ctx)
+	meta := include.GetLoadMeta(ctx)
 	result := productionOutputFromProto(resp.Production)
 	stashProductionOutputMeta(meta, resp.Production)
 	return result, nil
@@ -477,7 +477,7 @@ func productionOutputFromProto(p *pb.ProductionInfo) *apiresource.ProductionOutp
 	}
 }
 
-func stashProductionOutputMeta(meta *resourcekit.LoadMeta, p *pb.ProductionInfo) {
+func stashProductionOutputMeta(meta *include.LoadMeta, p *pb.ProductionInfo) {
 	if p == nil {
 		return
 	}
@@ -491,7 +491,7 @@ func stashProductionOutputMeta(meta *resourcekit.LoadMeta, p *pb.ProductionInfo)
 	meta.Set(constants.ObjectTypeProduction, p.Id, "produced_item_id", p.ItemId)
 }
 
-func stashProductionStepMeta(meta *resourcekit.LoadMeta, s *pb.ProductionStepInfo) {
+func stashProductionStepMeta(meta *include.LoadMeta, s *pb.ProductionStepInfo) {
 	if s == nil {
 		return
 	}
@@ -569,7 +569,7 @@ func stashProductionStepMeta(meta *resourcekit.LoadMeta, s *pb.ProductionStepInf
 	meta.Set(constants.ObjectTypeProductionStep, s.Id, "out_steps", apiresource.NewList(outSteps, apiresource.PageInfo{}))
 }
 
-func stepConsumptionFromProto(meta *resourcekit.LoadMeta, c *pb.ConsumptionInfo) apiresource.Consumption {
+func stepConsumptionFromProto(meta *include.LoadMeta, c *pb.ConsumptionInfo) apiresource.Consumption {
 	if c == nil {
 		return apiresource.Consumption{}
 	}
@@ -627,7 +627,7 @@ func lightProductionStepToResource(st *pb.LightProductionStepInfo, fallback time
 }
 
 // stashStepRateUnits records the ids of a rate's units so they resolve on `?include=`.
-func stashStepRateUnits(meta *resourcekit.LoadMeta, r *pb.ProductionStepRateInfo) {
+func stashStepRateUnits(meta *include.LoadMeta, r *pb.ProductionStepRateInfo) {
 	if r == nil || r.Id == "" {
 		return
 	}
@@ -636,7 +636,7 @@ func stashStepRateUnits(meta *resourcekit.LoadMeta, r *pb.ProductionStepRateInfo
 }
 
 // stashStepQuantityUnit records the id of a quantity's unit so it resolves on `?include=`.
-func stashStepQuantityUnit(meta *resourcekit.LoadMeta, q *pb.QuantityInfo) {
+func stashStepQuantityUnit(meta *include.LoadMeta, q *pb.QuantityInfo) {
 	if q == nil || q.Id == "" {
 		return
 	}

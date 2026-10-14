@@ -9,6 +9,7 @@ import (
 
 	"github.com/open-mrp/api/services/auth-service/pkg/types"
 	"github.com/open-mrp/api/shared/constants"
+	"github.com/open-mrp/apikit/apierror"
 	"github.com/open-mrp/apikit/appctx"
 )
 
@@ -63,4 +64,12 @@ func CapBody(body *string, limit int) *string {
 	}
 	marker := fmt.Sprintf(`{"_truncated":true,"_original_size":%d}`, len(*body))
 	return &marker
+}
+
+// RequireIdentity returns the caller's identity, or a 401 when ctx carries none.
+func RequireIdentity(ctx context.Context) (*types.Identity, *apierror.APIError) {
+	if identity, ok := appctx.Identity[*types.Identity](ctx); ok {
+		return identity, nil
+	}
+	return nil, apierror.NewAuthenticationError("Identity not found in context")
 }

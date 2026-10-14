@@ -4,11 +4,12 @@ import (
 	"context"
 	"net/http"
 
-	apiendpoint "github.com/open-mrp/api/services/api-gateway/pkg/endpoint"
+	"github.com/open-mrp/api/services/api-gateway/pkg/authz"
 	apiresource "github.com/open-mrp/api/services/api-gateway/pkg/resource"
 	"github.com/open-mrp/api/services/auth-service/pkg/types"
 	"github.com/open-mrp/api/shared/imageupload"
 	apierror "github.com/open-mrp/apikit/apierror"
+	apiendpoint "github.com/open-mrp/apikit/endpoint"
 )
 
 // Request to upload a user profile photo.
@@ -37,10 +38,9 @@ func (e *UploadUserPhotoEndpoint) Materialize() *apiendpoint.APIEndpoint[*Upload
 		SuccessStatusCode: http.StatusOK,
 		Public:            false,
 		Preview:           true,
-		RequiredPermissions: []types.Permission{
+		Auth: authz.Policy{Permissions: []types.Permission{
 			{Domain: types.PermissionDomainTeamUsers, Action: types.ActionUpdate},
-		},
-		SelfPathParam: "id",
+		}, SelfPathParam: "id"},
 		Extras: apiendpoint.APIEndpointExtras{
 			SkipRequestBodyParsing: true,
 			MaxRawBodyBytes:        imageupload.MaxBytes,

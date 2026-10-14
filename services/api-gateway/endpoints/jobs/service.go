@@ -4,13 +4,13 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"github.com/open-mrp/apikit/include"
 	"log/slog"
 
 	"github.com/open-mrp/api/services/api-gateway/internal/domain"
 	grpcutil "github.com/open-mrp/api/services/api-gateway/internal/grpc"
 	"github.com/open-mrp/api/services/api-gateway/internal/resourceloaders"
 	apiresource "github.com/open-mrp/api/services/api-gateway/pkg/resource"
-	"github.com/open-mrp/api/services/api-gateway/pkg/resourcekit"
 	"github.com/open-mrp/api/shared/constants"
 	pb "github.com/open-mrp/api/shared/proto/core"
 	apierror "github.com/open-mrp/apikit/apierror"
@@ -82,7 +82,7 @@ func jobResultsFromProto(list *pb.JobResultList) *apiresource.List[apiresource.J
 		}
 		out = append(out, result)
 	}
-	return apiresource.NewList(out, apiresource.PageInfo{HasNextPage: list.GetTruncated()})
+	return apiresource.NewList(out, apiresource.PageInfo{})
 }
 
 // decodes the canonical error object an entry carries. Core-service marshals it from this
@@ -152,8 +152,8 @@ func StashJobMeta(ctx context.Context, info *pb.JobInfo, jobID string) *apiresou
 	if actor == nil {
 		return nil
 	}
-	resourcekit.GetLoadMeta(ctx).Set(constants.ObjectTypeJob, jobID, "created_by_id", actor.ID)
-	resourcekit.PreheatCache(ctx, constants.ObjectTypeActor, actor.ID, actor)
+	include.GetLoadMeta(ctx).Set(constants.ObjectTypeJob, jobID, "created_by_id", actor.ID)
+	include.PreheatCache(ctx, constants.ObjectTypeActor, actor.ID, actor)
 	return actor
 }
 
@@ -161,7 +161,7 @@ func StashJobMeta(ctx context.Context, info *pb.JobInfo, jobID string) *apiresou
 // expanded created_by — the only case where the name is rendered — avoiding a needless
 // loader round-trip on the 202 of every async operation.
 func hydrateCreator(ctx context.Context, creator *apiresource.Actor) {
-	if creator == nil || !resourcekit.RequestedIncludeSet(ctx)["created_by"] {
+	if creator == nil || !include.RequestedIncludeSet(ctx)["created_by"] {
 		return
 	}
 	resourceloaders.HydrateIdentityActorNames(ctx, []*apiresource.Actor{creator})

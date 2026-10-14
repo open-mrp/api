@@ -2,13 +2,13 @@ package productionflowep
 
 import (
 	"context"
+	"github.com/open-mrp/apikit/include"
 	"time"
 
 	quantityep "github.com/open-mrp/api/services/api-gateway/endpoints/quantities"
 	grpcutil "github.com/open-mrp/api/services/api-gateway/internal/grpc"
 	"github.com/open-mrp/api/services/api-gateway/internal/resourceloaders"
 	apiresource "github.com/open-mrp/api/services/api-gateway/pkg/resource"
-	"github.com/open-mrp/api/services/api-gateway/pkg/resourcekit"
 	"github.com/open-mrp/api/shared/constants"
 	pb "github.com/open-mrp/api/shared/proto/core"
 	"google.golang.org/protobuf/types/known/timestamppb"
@@ -51,7 +51,7 @@ func flowProductionPresenter(ctx context.Context, p *pb.ProductionFlowProduction
 	if p.ItemId != "" {
 		// produced_item is expandable: stash only the FK id; LoadItems fetches the
 		// real Item on ?include=...produced_item. Never fabricate.
-		resourcekit.GetLoadMeta(ctx).Set(constants.ObjectTypeProduction, p.Id, "produced_item_id", p.ItemId)
+		include.GetLoadMeta(ctx).Set(constants.ObjectTypeProduction, p.Id, "produced_item_id", p.ItemId)
 	}
 	createdAt := ts
 	updatedAt := ts
@@ -79,7 +79,7 @@ func flowConsumptionPresenter(ctx context.Context, c *pb.ProductionFlowConsumpti
 	if c.ItemId != "" {
 		// consumed_item is expandable: stash only the FK id; LoadItems fetches the
 		// real Item on ?include=...consumed_item. Never fabricate.
-		resourcekit.GetLoadMeta(ctx).Set(constants.ObjectTypeConsumption, c.Id, "consumed_item_id", c.ItemId)
+		include.GetLoadMeta(ctx).Set(constants.ObjectTypeConsumption, c.Id, "consumed_item_id", c.ItemId)
 	}
 	createdAt := grpcutil.TimestampToTime(c.CreatedAt)
 	if createdAt.IsZero() {
@@ -127,7 +127,7 @@ func productionFlowStepFromProto(ctx context.Context, s *pb.ProductionFlowStepIn
 	}
 
 	stubTS := time.Date(2020, 1, 1, 0, 0, 0, 0, time.UTC)
-	meta := resourcekit.GetLoadMeta(ctx)
+	meta := include.GetLoadMeta(ctx)
 
 	production := flowProductionPresenter(ctx, s.Production, stubTS)
 	meta.Set(constants.ObjectTypeProductionStep, s.Id, "production", production)
@@ -195,7 +195,7 @@ func ProductionFlowPresenter(ctx context.Context, steps []*pb.ProductionFlowStep
 
 	enrichFlowUnits(ctx, flowSteps)
 
-	meta := resourcekit.GetLoadMeta(ctx)
+	meta := include.GetLoadMeta(ctx)
 	meta.Set(constants.ObjectTypeProductionFlow, "singleton", "steps",
 		apiresource.NewList(flowSteps, apiresource.PageInfo{}))
 
@@ -224,7 +224,7 @@ func enrichFlowUnits(ctx context.Context, steps []apiresource.ProductionFlowStep
 		}
 	}
 
-	meta := resourcekit.GetLoadMeta(ctx)
+	meta := include.GetLoadMeta(ctx)
 	for _, s := range steps {
 		collectRateUnits(s.LaborRate)
 		collectRateUnits(s.LaborTime)

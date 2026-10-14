@@ -2,10 +2,10 @@ package announcementep
 
 import (
 	"context"
+	"github.com/open-mrp/apikit/include"
 	"testing"
 
 	apiresource "github.com/open-mrp/api/services/api-gateway/pkg/resource"
-	"github.com/open-mrp/api/services/api-gateway/pkg/resourcekit"
 	"github.com/open-mrp/api/shared/constants"
 	pb "github.com/open-mrp/api/shared/proto/notification"
 
@@ -25,7 +25,7 @@ func TestAnnouncementFromProto(t *testing.T) {
 		PublishAt: now, CreatedAt: now, UpdatedAt: now,
 		SeenAt: now, // seen but not read → status seen
 	}
-	ctx := resourcekit.WithLoadMeta(context.Background())
+	ctx := include.WithLoadMeta(context.Background())
 	a := announcementFromProto(ctx, info)
 	assert.Equal(t, "an_1", a.ID)
 	assert.Equal(t, constants.ObjectTypeAnnouncement, a.Object)
@@ -34,7 +34,7 @@ func TestAnnouncementFromProto(t *testing.T) {
 	assert.Equal(t, constants.NotificationPriority("high"), a.Priority)
 	// resource is expandable: nil on the base resource, stashed for ?include=resource.
 	assert.Nil(t, a.Resource)
-	v, ok := resourcekit.GetLoadMeta(ctx).Get(constants.ObjectTypeAnnouncement, "an_1", "resource")
+	v, ok := include.GetLoadMeta(ctx).Get(constants.ObjectTypeAnnouncement, "an_1", "resource")
 	require.True(t, ok)
 	assert.Equal(t, "so_1", v.(*apiresource.Entity).ID)
 	require.NotNil(t, a.SeenAt)
@@ -50,5 +50,5 @@ func TestAnnouncementStatus_Precedence(t *testing.T) {
 }
 
 func TestAnnouncementFromProto_Nil(t *testing.T) {
-	assert.Equal(t, apiresource.Announcement{}, announcementFromProto(resourcekit.WithLoadMeta(context.Background()), nil))
+	assert.Equal(t, apiresource.Announcement{}, announcementFromProto(include.WithLoadMeta(context.Background()), nil))
 }

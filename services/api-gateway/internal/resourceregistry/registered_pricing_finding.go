@@ -2,22 +2,22 @@ package resourceregistry
 
 import (
 	"context"
+	"github.com/open-mrp/apikit/include"
 
 	"github.com/open-mrp/api/services/api-gateway/internal/resourceloaders"
 	apiresource "github.com/open-mrp/api/services/api-gateway/pkg/resource"
-	"github.com/open-mrp/api/services/api-gateway/pkg/resourcekit"
 	"github.com/open-mrp/api/shared/constants"
 )
 
 func init() {
-	resourcekit.Register(&resourcekit.Definition{
+	include.Register(&include.Definition{
 		ObjectType: constants.ObjectTypeCustomerPricingFinding,
 		Load:       resourceloaders.LoadCustomerPricingFindings,
-		Subs: []resourcekit.SubField{
+		Subs: []include.SubField{
 			{
 				Key:         "customer",
 				Target:      constants.ObjectTypeCustomer,
-				Cardinality: resourcekit.CardinalityOnePtr,
+				Cardinality: include.CardinalityOnePtr,
 				ExtractIDs:  extractIDFromPricingFinding("customer_id"),
 				Populate: func(ctx context.Context, parent any, loaded map[string]any) {
 					f := parent.(*apiresource.CustomerPricingFinding)
@@ -29,7 +29,7 @@ func init() {
 			{
 				Key:         "product_line",
 				Target:      constants.ObjectTypeProductLine,
-				Cardinality: resourcekit.CardinalityOnePtr,
+				Cardinality: include.CardinalityOnePtr,
 				ExtractIDs:  extractIDFromPricingFinding("product_line_id"),
 				Populate: func(ctx context.Context, parent any, loaded map[string]any) {
 					f := parent.(*apiresource.CustomerPricingFinding)
@@ -41,11 +41,11 @@ func init() {
 			{
 				Key:         "attributes",
 				Target:      constants.ObjectTypeAttribute,
-				Cardinality: resourcekit.CardinalityList,
+				Cardinality: include.CardinalityList,
 				ExtractIDs:  extractIDsFromPricingFinding("attribute_ids"),
 				Populate: func(ctx context.Context, parent any, loaded map[string]any) {
 					f := parent.(*apiresource.CustomerPricingFinding)
-					ids, _ := resourcekit.GetLoadMeta(ctx).GetStrings(constants.ObjectTypeCustomerPricingFinding, f.ID, "attribute_ids")
+					ids, _ := include.GetLoadMeta(ctx).GetStrings(constants.ObjectTypeCustomerPricingFinding, f.ID, "attribute_ids")
 					items := make([]apiresource.Attribute, 0, len(ids))
 					for _, id := range ids {
 						if v, ok := loaded[id]; ok {
@@ -58,28 +58,28 @@ func init() {
 			{
 				Key:         "unit_price.numerator_unit",
 				Target:      constants.ObjectTypeUnit,
-				Cardinality: resourcekit.CardinalityOnePtr,
+				Cardinality: include.CardinalityOnePtr,
 				ExtractIDs:  extractIDFromPricingFinding("numerator_unit_id"),
 				Populate:    populateUnitOnPricingFinding("numerator_unit_id", true),
 			},
 			{
 				Key:         "unit_price.denominator_unit",
 				Target:      constants.ObjectTypeUnit,
-				Cardinality: resourcekit.CardinalityOnePtr,
+				Cardinality: include.CardinalityOnePtr,
 				ExtractIDs:  extractIDFromPricingFinding("denominator_unit_id"),
 				Populate:    populateUnitOnPricingFinding("denominator_unit_id", false),
 			},
 		},
 	})
 
-	resourcekit.Register(&resourcekit.Definition{
+	include.Register(&include.Definition{
 		ObjectType: constants.ObjectTypeRealizedMarginFinding,
 		Load:       resourceloaders.LoadRealizedMarginFindings,
-		Subs: []resourcekit.SubField{
+		Subs: []include.SubField{
 			{
 				Key:         "customer",
 				Target:      constants.ObjectTypeCustomer,
-				Cardinality: resourcekit.CardinalityOnePtr,
+				Cardinality: include.CardinalityOnePtr,
 				ExtractIDs:  extractIDFromMarginFinding("customer_id"),
 				Populate: func(ctx context.Context, parent any, loaded map[string]any) {
 					f := parent.(*apiresource.RealizedMarginFinding)
@@ -91,7 +91,7 @@ func init() {
 			{
 				Key:         "customer_group",
 				Target:      constants.ObjectTypeAccountGroup,
-				Cardinality: resourcekit.CardinalityOnePtr,
+				Cardinality: include.CardinalityOnePtr,
 				ExtractIDs:  extractIDFromMarginFinding("customer_group_id"),
 				Populate: func(ctx context.Context, parent any, loaded map[string]any) {
 					f := parent.(*apiresource.RealizedMarginFinding)
@@ -103,7 +103,7 @@ func init() {
 			{
 				Key:         "item",
 				Target:      constants.ObjectTypeItem,
-				Cardinality: resourcekit.CardinalityOnePtr,
+				Cardinality: include.CardinalityOnePtr,
 				ExtractIDs:  extractIDFromMarginFinding("item_id"),
 				Populate: func(ctx context.Context, parent any, loaded map[string]any) {
 					f := parent.(*apiresource.RealizedMarginFinding)
@@ -115,7 +115,7 @@ func init() {
 			{
 				Key:         "product_line",
 				Target:      constants.ObjectTypeProductLine,
-				Cardinality: resourcekit.CardinalityOnePtr,
+				Cardinality: include.CardinalityOnePtr,
 				ExtractIDs:  extractIDFromMarginFinding("product_line_id"),
 				Populate: func(ctx context.Context, parent any, loaded map[string]any) {
 					f := parent.(*apiresource.RealizedMarginFinding)
@@ -130,7 +130,7 @@ func init() {
 
 // loadedOne resolves the single FK stashed under key and returns the loaded resource for it.
 func loadedOne(ctx context.Context, ot constants.ObjectType, id, key string, loaded map[string]any) (any, bool) {
-	fk, _ := resourcekit.GetLoadMeta(ctx).GetString(ot, id, key)
+	fk, _ := include.GetLoadMeta(ctx).GetString(ot, id, key)
 	if fk == "" {
 		return nil, false
 	}
@@ -141,7 +141,7 @@ func loadedOne(ctx context.Context, ot constants.ObjectType, id, key string, loa
 func extractIDFromPricingFinding(key string) func(context.Context, any) []string {
 	return func(ctx context.Context, parent any) []string {
 		f := parent.(*apiresource.CustomerPricingFinding)
-		id, _ := resourcekit.GetLoadMeta(ctx).GetString(constants.ObjectTypeCustomerPricingFinding, f.ID, key)
+		id, _ := include.GetLoadMeta(ctx).GetString(constants.ObjectTypeCustomerPricingFinding, f.ID, key)
 		if id == "" {
 			return nil
 		}
@@ -152,7 +152,7 @@ func extractIDFromPricingFinding(key string) func(context.Context, any) []string
 func extractIDsFromPricingFinding(key string) func(context.Context, any) []string {
 	return func(ctx context.Context, parent any) []string {
 		f := parent.(*apiresource.CustomerPricingFinding)
-		ids, _ := resourcekit.GetLoadMeta(ctx).GetStrings(constants.ObjectTypeCustomerPricingFinding, f.ID, key)
+		ids, _ := include.GetLoadMeta(ctx).GetStrings(constants.ObjectTypeCustomerPricingFinding, f.ID, key)
 		return ids
 	}
 }
@@ -160,7 +160,7 @@ func extractIDsFromPricingFinding(key string) func(context.Context, any) []strin
 func extractIDFromMarginFinding(key string) func(context.Context, any) []string {
 	return func(ctx context.Context, parent any) []string {
 		f := parent.(*apiresource.RealizedMarginFinding)
-		id, _ := resourcekit.GetLoadMeta(ctx).GetString(constants.ObjectTypeRealizedMarginFinding, f.ID, key)
+		id, _ := include.GetLoadMeta(ctx).GetString(constants.ObjectTypeRealizedMarginFinding, f.ID, key)
 		if id == "" {
 			return nil
 		}

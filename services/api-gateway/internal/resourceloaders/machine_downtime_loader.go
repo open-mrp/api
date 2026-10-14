@@ -2,11 +2,11 @@ package resourceloaders
 
 import (
 	"context"
+	"github.com/open-mrp/apikit/include"
 
 	"github.com/open-mrp/api/services/api-gateway/internal/domain"
 	grpcutil "github.com/open-mrp/api/services/api-gateway/internal/grpc"
 	apiresource "github.com/open-mrp/api/services/api-gateway/pkg/resource"
-	"github.com/open-mrp/api/services/api-gateway/pkg/resourcekit"
 	"github.com/open-mrp/api/shared/constants"
 	pb "github.com/open-mrp/api/shared/proto/core"
 	apierror "github.com/open-mrp/apikit/apierror"
@@ -28,7 +28,7 @@ func LoadMachineDowntimeEvents(ctx context.Context, ids []string) (map[string]an
 		return nil, apiErr
 	}
 
-	meta := resourcekit.GetLoadMeta(ctx)
+	meta := include.GetLoadMeta(ctx)
 	out := make(map[string]any, len(resp.Events))
 	for _, e := range resp.Events {
 		out[e.Id] = MachineDowntimeEventFromProto(e)
@@ -69,7 +69,7 @@ func MachineDowntimeEventFromProto(e *pb.MachineDowntimeEventInfo) *apiresource.
 	return out
 }
 
-func stashDowntimeRefs(ctx context.Context, meta *resourcekit.LoadMeta, e *pb.MachineDowntimeEventInfo) {
+func stashDowntimeRefs(ctx context.Context, meta *include.LoadMeta, e *pb.MachineDowntimeEventInfo) {
 	if e.MachineId != "" {
 		meta.Set(constants.ObjectTypeMachineDowntimeEvent, e.Id, "machine_id", e.MachineId)
 	}
@@ -82,6 +82,6 @@ func stashDowntimeRefs(ctx context.Context, meta *resourcekit.LoadMeta, e *pb.Ma
 	// The reporter is stored as a bare identity-actor id, so the Actor is built here from its prefix and preheated — LoadActors has no backing store.
 	if actor := ActorRefFromID(e.ReportedById); actor != nil {
 		meta.Set(constants.ObjectTypeMachineDowntimeEvent, e.Id, "reported_by_id", actor.ID)
-		resourcekit.PreheatCache(ctx, constants.ObjectTypeActor, actor.ID, actor)
+		include.PreheatCache(ctx, constants.ObjectTypeActor, actor.ID, actor)
 	}
 }

@@ -3,6 +3,7 @@ package receivingorderep
 import (
 	"context"
 	"fmt"
+	"github.com/open-mrp/apikit/include"
 
 	"github.com/shopspring/decimal"
 
@@ -10,7 +11,6 @@ import (
 	grpcutil "github.com/open-mrp/api/services/api-gateway/internal/grpc"
 	"github.com/open-mrp/api/services/api-gateway/internal/resourceloaders"
 	apiresource "github.com/open-mrp/api/services/api-gateway/pkg/resource"
-	"github.com/open-mrp/api/services/api-gateway/pkg/resourcekit"
 	"github.com/open-mrp/api/shared/constants"
 	pb "github.com/open-mrp/api/shared/proto/core"
 	apierror "github.com/open-mrp/apikit/apierror"
@@ -66,7 +66,7 @@ func (m *receivingOrderSvcImpl) ListReceivingOrders(ctx context.Context, req *Li
 		SupplierIds: req.SupplierIDs,
 		// Ask the backend to expand lines when requested (supplier/purchase_order
 		// are resolved gateway-side).
-		Includes: resourcekit.FilterIncludes(ctx, "lines"),
+		Includes: include.FilterIncludes(ctx, "lines"),
 	}
 
 	if req.StartDate != nil {
@@ -242,7 +242,7 @@ func (m *receivingOrderSvcImpl) UpdateReceivingOrderLine(ctx context.Context, re
 	}
 
 	result := receivingOrderLineFromProto(resp.Line, units)
-	stashReceivingOrderLineMeta(resourcekit.GetLoadMeta(ctx), resp.Line, &result)
+	stashReceivingOrderLineMeta(include.GetLoadMeta(ctx), resp.Line, &result)
 	return &result, nil
 }
 
@@ -266,7 +266,7 @@ func (m *receivingOrderSvcImpl) VoidReceivingOrderLine(ctx context.Context, req 
 	}
 
 	result := receivingOrderLineFromProto(resp.Line, units)
-	stashReceivingOrderLineMeta(resourcekit.GetLoadMeta(ctx), resp.Line, &result)
+	stashReceivingOrderLineMeta(include.GetLoadMeta(ctx), resp.Line, &result)
 	return &result, nil
 }
 
@@ -290,7 +290,7 @@ func (m *receivingOrderSvcImpl) ReceiveReceivingOrderLine(ctx context.Context, r
 	}
 
 	result := receivingOrderLineFromProto(resp.Line, units)
-	stashReceivingOrderLineMeta(resourcekit.GetLoadMeta(ctx), resp.Line, &result)
+	stashReceivingOrderLineMeta(include.GetLoadMeta(ctx), resp.Line, &result)
 	return &result, nil
 }
 
@@ -316,7 +316,7 @@ func receivingOrderSummaryFromProto(ctx context.Context, info *pb.ReceivingOrder
 
 	// Lines are populated on the summary only when the list includes them.
 	if len(info.Lines) > 0 {
-		meta := resourcekit.GetLoadMeta(ctx)
+		meta := include.GetLoadMeta(ctx)
 		lines := make([]apiresource.ReceivingOrderLine, len(info.Lines))
 		for i, l := range info.Lines {
 			lines[i] = receivingOrderLineFromProto(l, units)
@@ -354,7 +354,7 @@ func receivingOrderFromProto(ctx context.Context, info *pb.ReceivingOrderInfo, u
 	// reference so the include resolver can populate them on ?include=lines and
 	// ?include=lines.order_line.
 	if len(info.Lines) > 0 {
-		meta := resourcekit.GetLoadMeta(ctx)
+		meta := include.GetLoadMeta(ctx)
 		lines := make([]apiresource.ReceivingOrderLine, len(info.Lines))
 		for i, l := range info.Lines {
 			lines[i] = receivingOrderLineFromProto(l, units)
@@ -371,7 +371,7 @@ func receivingOrderFromProto(ctx context.Context, info *pb.ReceivingOrderInfo, u
 //
 // The supplier is loaded by id; totals and related are computed with the order rather than fetched, so they are carried inline from what the query already returned. Never fabricate the referenced documents.
 func stashReceivingOrderFKs(ctx context.Context, id string, supplierID *string, purchaseOrderID, purchaseOrderNumber, purchaseOrderStatus string, totals *pb.ReceivingOrderTotalsInfo, deliveries []*pb.DocumentRefInfo) {
-	meta := resourcekit.GetLoadMeta(ctx)
+	meta := include.GetLoadMeta(ctx)
 	if supplierID != nil {
 		meta.Set(constants.ObjectTypeReceivingOrder, id, "supplier_id", *supplierID)
 	}
@@ -492,7 +492,7 @@ func receivingOrderLineUnitIDs(lines ...*pb.ReceivingOrderLineInfo) []string {
 }
 
 // stashReceivingOrderLineMeta stashes the sub-objects a line reveals on request: the item it receives, and the quantity the purchase order asked for.
-func stashReceivingOrderLineMeta(meta *resourcekit.LoadMeta, info *pb.ReceivingOrderLineInfo, line *apiresource.ReceivingOrderLine) {
+func stashReceivingOrderLineMeta(meta *include.LoadMeta, info *pb.ReceivingOrderLineInfo, line *apiresource.ReceivingOrderLine) {
 	if info == nil || line.Quantity == nil {
 		return
 	}

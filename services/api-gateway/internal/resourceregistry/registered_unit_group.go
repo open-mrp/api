@@ -2,30 +2,30 @@ package resourceregistry
 
 import (
 	"context"
+	"github.com/open-mrp/apikit/include"
 
 	"github.com/open-mrp/api/services/api-gateway/internal/resourceloaders"
 	apiresource "github.com/open-mrp/api/services/api-gateway/pkg/resource"
-	"github.com/open-mrp/api/services/api-gateway/pkg/resourcekit"
 	"github.com/open-mrp/api/shared/constants"
 )
 
 func init() {
-	resourcekit.Register(&resourcekit.Definition{
+	include.Register(&include.Definition{
 		ObjectType: constants.ObjectTypeUnitGroup,
 		Load:       resourceloaders.LoadUnitGroups,
-		Subs: []resourcekit.SubField{
+		Subs: []include.SubField{
 			{Key: "owner", Populate: populateOwnerOnUnitGroup},
 			{
 				Key:         "owner.account",
 				Target:      constants.ObjectTypeAccount,
-				Cardinality: resourcekit.CardinalityOnePtr,
+				Cardinality: include.CardinalityOnePtr,
 				ExtractIDs:  extractOwnerAccountIDFromUnitGroup,
 				Populate:    populateOwnerAccountOnUnitGroup,
 			},
 			{
 				Key:         "base_unit",
 				Target:      constants.ObjectTypeUnit,
-				Cardinality: resourcekit.CardinalityOnePtr,
+				Cardinality: include.CardinalityOnePtr,
 				ExtractIDs:  extractBaseUnitIDFromUnitGroup,
 				Populate:    populateBaseUnitOnUnitGroup,
 			},
@@ -41,14 +41,14 @@ func init() {
 
 func populateOwnerOnUnitGroup(ctx context.Context, parent any, _ map[string]any) {
 	ug := parent.(*apiresource.UnitGroup)
-	id, _ := resourcekit.GetLoadMeta(ctx).
+	id, _ := include.GetLoadMeta(ctx).
 		GetString(constants.ObjectTypeUnitGroup, ug.ID, "owner_account_id")
 	ug.Owner = buildOwnerShell(id)
 }
 
 func extractOwnerAccountIDFromUnitGroup(ctx context.Context, parent any) []string {
 	ug := parent.(*apiresource.UnitGroup)
-	id, _ := resourcekit.GetLoadMeta(ctx).
+	id, _ := include.GetLoadMeta(ctx).
 		GetString(constants.ObjectTypeUnitGroup, ug.ID, "owner_account_id")
 	if id == "" {
 		return nil
@@ -61,7 +61,7 @@ func populateOwnerAccountOnUnitGroup(ctx context.Context, parent any, loaded map
 	if ug.Owner == nil {
 		return
 	}
-	id, _ := resourcekit.GetLoadMeta(ctx).
+	id, _ := include.GetLoadMeta(ctx).
 		GetString(constants.ObjectTypeUnitGroup, ug.ID, "owner_account_id")
 	if id == "" {
 		return
@@ -73,7 +73,7 @@ func populateOwnerAccountOnUnitGroup(ctx context.Context, parent any, loaded map
 
 func extractBaseUnitIDFromUnitGroup(ctx context.Context, parent any) []string {
 	ug := parent.(*apiresource.UnitGroup)
-	id, _ := resourcekit.GetLoadMeta(ctx).
+	id, _ := include.GetLoadMeta(ctx).
 		GetString(constants.ObjectTypeUnitGroup, ug.ID, "base_unit_id")
 	if id == "" {
 		return nil
@@ -83,7 +83,7 @@ func extractBaseUnitIDFromUnitGroup(ctx context.Context, parent any) []string {
 
 func populateBaseUnitOnUnitGroup(ctx context.Context, parent any, loaded map[string]any) {
 	ug := parent.(*apiresource.UnitGroup)
-	id, _ := resourcekit.GetLoadMeta(ctx).
+	id, _ := include.GetLoadMeta(ctx).
 		GetString(constants.ObjectTypeUnitGroup, ug.ID, "base_unit_id")
 	if id == "" {
 		return
@@ -107,7 +107,7 @@ func extractAssociatedUnitRefsFromUnitGroup(_ context.Context, parent any) []any
 
 func populateAssociatedUnitsOnUnitGroup(ctx context.Context, parent any, _ map[string]any) {
 	ug := parent.(*apiresource.UnitGroup)
-	v, ok := resourcekit.GetLoadMeta(ctx).
+	v, ok := include.GetLoadMeta(ctx).
 		Get(constants.ObjectTypeUnitGroup, ug.ID, "associated_units_data")
 	if !ok || v == nil {
 		ug.AssociatedUnits = apiresource.NewList([]apiresource.UnitGroupUnit{}, apiresource.PageInfo{})

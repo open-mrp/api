@@ -1,8 +1,8 @@
 package messageep
 
 import (
-	apiendpoint "github.com/open-mrp/api/services/api-gateway/pkg/endpoint"
 	"github.com/open-mrp/api/shared/constants"
+	apiendpoint "github.com/open-mrp/apikit/endpoint"
 )
 
 // messageIncludeFields is the whitelist of ?include= keys exposed by the message endpoints. sender,

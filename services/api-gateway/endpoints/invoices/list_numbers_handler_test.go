@@ -13,8 +13,8 @@ import (
 	"github.com/stretchr/testify/require"
 	"google.golang.org/grpc"
 
-	apiendpoint "github.com/open-mrp/api/services/api-gateway/pkg/endpoint"
 	pb "github.com/open-mrp/api/shared/proto/core"
+	apiendpoint "github.com/open-mrp/apikit/endpoint"
 )
 
 type captureListClient struct {
@@ -31,7 +31,7 @@ func (c *captureListClient) ListInvoices(_ context.Context, in *pb.ListInvoicesR
 func listInvoices(t *testing.T, client *captureListClient, query url.Values) *httptest.ResponseRecorder {
 	t.Helper()
 	ep := apiendpoint.From(&ListInvoicesEndpoint{})
-	ep.RequiredPermissions = nil
+	ep.Auth = nil
 	ep.WithService(nil, NewInvoiceSvc(&InvoiceSvcConfig{CoreClient: client}))
 
 	r := httptest.NewRequest(http.MethodGet, "/v1/finance/invoices?"+query.Encode(), nil)

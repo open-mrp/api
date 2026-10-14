@@ -4,11 +4,12 @@ import (
 	"context"
 	"net/http"
 
-	apiendpoint "github.com/open-mrp/api/services/api-gateway/pkg/endpoint"
+	"github.com/open-mrp/api/services/api-gateway/pkg/authz"
 	apiresource "github.com/open-mrp/api/services/api-gateway/pkg/resource"
 	"github.com/open-mrp/api/services/auth-service/pkg/types"
 	"github.com/open-mrp/api/shared/constants"
 	apierror "github.com/open-mrp/apikit/apierror"
+	apiendpoint "github.com/open-mrp/apikit/endpoint"
 )
 
 // Request to create a production run from a sales order.
@@ -24,16 +25,16 @@ type CreateProductionRunEndpoint struct{}
 
 func (e *CreateProductionRunEndpoint) Materialize() *apiendpoint.APIEndpoint[*CreateProductionRunRequest, *apiresource.ProductionRun] {
 	return (&apiendpoint.APIEndpoint[*CreateProductionRunRequest, *apiresource.ProductionRun]{
-		Title:               "Create Production Run from Sales Order",
-		Method:              http.MethodPost,
-		ContentType:         "application/json",
-		Route:               "/v1/sales/sales-orders/{id}/actions/create-production-run",
-		SuccessStatusCode:   http.StatusCreated,
-		Public:              true,
-		AgentTool:           true,
-		Preview:             true,
-		ObjectType:          constants.ObjectTypeProductionRun,
-		RequiredPermissions: []types.Permission{{Domain: types.PermissionDomainProductionRuns, Action: types.ActionCreate}},
+		Title:             "Create Production Run from Sales Order",
+		Method:            http.MethodPost,
+		ContentType:       "application/json",
+		Route:             "/v1/sales/sales-orders/{id}/actions/create-production-run",
+		SuccessStatusCode: http.StatusCreated,
+		Public:            true,
+		AgentTool:         true,
+		Preview:           true,
+		ObjectType:        constants.ObjectTypeProductionRun,
+		Auth:              authz.Policy{Permissions: []types.Permission{{Domain: types.PermissionDomainProductionRuns, Action: types.ActionCreate}}},
 		ServiceHandler: func(svc any) func(ctx context.Context, req *CreateProductionRunRequest) (*apiresource.ProductionRun, *apierror.APIError) {
 			return svc.(SalesOrderSvc).CreateSalesOrderProductionRun
 		},

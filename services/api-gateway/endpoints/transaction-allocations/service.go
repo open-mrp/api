@@ -3,11 +3,11 @@ package transactionallocationep
 import (
 	"context"
 	"fmt"
+	"github.com/open-mrp/apikit/include"
 
 	"github.com/open-mrp/api/services/api-gateway/internal/domain"
 	grpcutil "github.com/open-mrp/api/services/api-gateway/internal/grpc"
 	apiresource "github.com/open-mrp/api/services/api-gateway/pkg/resource"
-	"github.com/open-mrp/api/services/api-gateway/pkg/resourcekit"
 	"github.com/open-mrp/api/shared/constants"
 	pb "github.com/open-mrp/api/shared/proto/core"
 	apierror "github.com/open-mrp/apikit/apierror"
@@ -102,7 +102,7 @@ func (m *transactionAllocationSvcImpl) UpdateTransactionAllocation(ctx context.C
 		return nil, apiErr
 	}
 
-	result := transactionAllocationFromProto(resourcekit.GetLoadMeta(ctx), resp.Allocation)
+	result := transactionAllocationFromProto(include.GetLoadMeta(ctx), resp.Allocation)
 	return &result, nil
 }
 
@@ -206,7 +206,7 @@ func allocationEntryListFromProto(ctx context.Context, resp *pb.ListAllocationEn
 	return apiresource.NewList(entries, grpcutil.MapProtoPageInfo(ctx, resp.PageInfo))
 }
 
-func transactionAllocationFromProto(meta *resourcekit.LoadMeta, a *pb.TransactionAllocationInfo) apiresource.TransactionAllocation {
+func transactionAllocationFromProto(meta *include.LoadMeta, a *pb.TransactionAllocationInfo) apiresource.TransactionAllocation {
 	if a == nil {
 		return apiresource.TransactionAllocation{}
 	}

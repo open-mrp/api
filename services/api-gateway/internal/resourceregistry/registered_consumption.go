@@ -2,19 +2,19 @@ package resourceregistry
 
 import (
 	"context"
+	"github.com/open-mrp/apikit/include"
 
 	"github.com/open-mrp/api/services/api-gateway/internal/resourceloaders"
 	apiresource "github.com/open-mrp/api/services/api-gateway/pkg/resource"
-	"github.com/open-mrp/api/services/api-gateway/pkg/resourcekit"
 	"github.com/open-mrp/api/shared/constants"
 )
 
 func init() {
-	resourcekit.Register(&resourcekit.Definition{
+	include.Register(&include.Definition{
 		ObjectType: constants.ObjectTypeConsumption,
 		Load:       resourceloaders.LoadConsumptions,
-		Subs: []resourcekit.SubField{
-			{Key: "consumed_item", Target: constants.ObjectTypeItem, Cardinality: resourcekit.CardinalityOnePtr, ExtractIDs: extractConsumedItemIDFromConsumption, Populate: populateConsumedItemOnConsumption},
+		Subs: []include.SubField{
+			{Key: "consumed_item", Target: constants.ObjectTypeItem, Cardinality: include.CardinalityOnePtr, ExtractIDs: extractConsumedItemIDFromConsumption, Populate: populateConsumedItemOnConsumption},
 			// The quantities are always on the consumption; these let the resolver descend to their units.
 			{Key: "quantity", Target: constants.ObjectTypeQuantity, ExtractRefs: func(_ context.Context, parent any) []any {
 				return quantityRef(parent.(*apiresource.Consumption).Quantity)
@@ -28,7 +28,7 @@ func init() {
 
 func extractConsumedItemIDFromConsumption(ctx context.Context, parent any) []string {
 	c := parent.(*apiresource.Consumption)
-	id, _ := resourcekit.GetLoadMeta(ctx).
+	id, _ := include.GetLoadMeta(ctx).
 		GetString(constants.ObjectTypeConsumption, c.ID, "consumed_item_id")
 	if id == "" {
 		return nil
@@ -38,7 +38,7 @@ func extractConsumedItemIDFromConsumption(ctx context.Context, parent any) []str
 
 func populateConsumedItemOnConsumption(ctx context.Context, parent any, loaded map[string]any) {
 	c := parent.(*apiresource.Consumption)
-	id, _ := resourcekit.GetLoadMeta(ctx).
+	id, _ := include.GetLoadMeta(ctx).
 		GetString(constants.ObjectTypeConsumption, c.ID, "consumed_item_id")
 	if id == "" {
 		return

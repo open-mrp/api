@@ -1,12 +1,14 @@
 package middleware
 
 import (
+	"context"
 	"encoding/json"
-	"io"
-	"log"
+	"log/slog"
 	"net/http"
 	"net/http/httptest"
 	"testing"
+
+	kitmiddleware "github.com/open-mrp/apikit/middleware"
 
 	"github.com/open-mrp/api/services/api-gateway/internal/header"
 	"github.com/open-mrp/api/services/auth-service/pkg/types"
@@ -169,16 +171,15 @@ func TestInternalAuthMiddleware_SkipsHealthz(t *testing.T) {
 // list: the account-scoped list query matches on (account_id OR target_account_id),
 // so both must be populated from the agent identity before the log is saved.
 func TestInternalAuthMiddleware_PopulatesRequestLog(t *testing.T) {
-	logger := log.New(io.Discard, "", 0)
 	saver := &stubSaver{}
 
 	internalAuth := InternalAuthMiddleware(&InternalAuthMiddlewareConfig{ServiceToken: testServiceToken})
-	// Compose exactly as the router does: logging wraps internal-auth, so the
-	// request log created by logging is in context when internal-auth populates it,
-	// and logging's deferred Save sees the populated struct.
-	chain := LoggingMiddleware(logger, internalAuth(func(w http.ResponseWriter, _ *http.Request) {
+	// Compose exactly as the router does: the request log wraps internal-auth, so the
+	// log is in context when internal-auth populates it, and its deferred Save sees
+	// the populated struct.
+	chain := kitmiddleware.RequestLog(kitmiddleware.RequestLogConfig{Saver: saver, Logger: slog.New(slog.DiscardHandler)})(internalAuth(func(w http.ResponseWriter, _ *http.Request) {
 		w.WriteHeader(http.StatusOK)
-	}), saver, nil, 0)
+	}))
 
 	req := httptest.NewRequest(http.MethodGet, "/v1/sales/sales-orders", nil)
 	req.Header.Set(header.InternalServiceTokenHeader, testServiceToken)
@@ -219,4 +220,11 @@ func TestInternalAuthMiddleware_PanicsWithoutToken(t *testing.T) {
 		}
 	}()
 	InternalAuthMiddleware(&InternalAuthMiddlewareConfig{ServiceToken: ""})
+}
+
+type stubSaver struct{ savedRL *appctx.RequestLog }
+
+func (s *stubSaver) Save(_ context.Context, rl *appctx.RequestLog) error {
+	s.savedRL = rl
+	return nil
 }

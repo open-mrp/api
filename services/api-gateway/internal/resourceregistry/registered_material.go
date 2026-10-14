@@ -2,22 +2,22 @@ package resourceregistry
 
 import (
 	"context"
+	"github.com/open-mrp/apikit/include"
 
 	"github.com/open-mrp/api/services/api-gateway/internal/resourceloaders"
 	apiresource "github.com/open-mrp/api/services/api-gateway/pkg/resource"
-	"github.com/open-mrp/api/services/api-gateway/pkg/resourcekit"
 	"github.com/open-mrp/api/shared/constants"
 )
 
 func init() {
-	resourcekit.Register(&resourcekit.Definition{
+	include.Register(&include.Definition{
 		ObjectType: constants.ObjectTypeMaterial,
 		Load:       resourceloaders.LoadMaterials,
-		Subs: []resourcekit.SubField{
+		Subs: []include.SubField{
 			{
 				Key:         "item",
 				Target:      constants.ObjectTypeItem,
-				Cardinality: resourcekit.CardinalityOnePtr,
+				Cardinality: include.CardinalityOnePtr,
 				ExtractIDs:  extractItemIDFromMaterial,
 				Populate:    populateItemOnMaterial,
 			},
@@ -27,7 +27,7 @@ func init() {
 
 func extractItemIDFromMaterial(ctx context.Context, parent any) []string {
 	m := parent.(*apiresource.Material)
-	id, _ := resourcekit.GetLoadMeta(ctx).
+	id, _ := include.GetLoadMeta(ctx).
 		GetString(constants.ObjectTypeMaterial, m.ID, "item_id")
 	if id == "" {
 		return nil
@@ -37,7 +37,7 @@ func extractItemIDFromMaterial(ctx context.Context, parent any) []string {
 
 func populateItemOnMaterial(ctx context.Context, parent any, loaded map[string]any) {
 	m := parent.(*apiresource.Material)
-	id, _ := resourcekit.GetLoadMeta(ctx).
+	id, _ := include.GetLoadMeta(ctx).
 		GetString(constants.ObjectTypeMaterial, m.ID, "item_id")
 	if id == "" {
 		return

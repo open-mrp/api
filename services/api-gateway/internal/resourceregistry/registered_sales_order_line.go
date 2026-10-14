@@ -2,23 +2,23 @@ package resourceregistry
 
 import (
 	"context"
+	"github.com/open-mrp/apikit/include"
 
 	apiresource "github.com/open-mrp/api/services/api-gateway/pkg/resource"
-	"github.com/open-mrp/api/services/api-gateway/pkg/resourcekit"
 	"github.com/open-mrp/api/shared/constants"
 	apierror "github.com/open-mrp/apikit/apierror"
 )
 
 func init() {
-	resourcekit.Register(&resourcekit.Definition{
+	include.Register(&include.Definition{
 		ObjectType: constants.ObjectTypeSalesOrderLine,
 		Load:       stubLoadSalesOrderLines,
-		Subs: []resourcekit.SubField{
+		Subs: []include.SubField{
 			{
 				// The product id is stashed in meta (not on a prebuilt stub) so the line's product field stays nil unless lines.product is requested. Loading via LoadProducts (rather than recursing into a stub) also stashes the product's item_id/product_line_id meta so nested includes (lines.product.item / lines.product.product_line) resolve.
 				Key:         "product",
 				Target:      constants.ObjectTypeProduct,
-				Cardinality: resourcekit.CardinalityOnePtr,
+				Cardinality: include.CardinalityOnePtr,
 				ExtractIDs:  extractProductIDFromSOLine,
 				Populate:    populateProductOnSOLine,
 			},
@@ -28,9 +28,9 @@ func init() {
 			// (quantity_ordered.unit, unit_price.numerator_unit, ...) resolve via LoadUnits —
 			// the unit FKs are stashed on the Quantity/Rate in stashSalesOrderLineMeta. Mirrors
 			// how customer.credit_limit (also a Quantity) enables credit_limit.unit.
-			{Key: "quantity_ordered", Target: constants.ObjectTypeQuantity, Cardinality: resourcekit.CardinalityOnePtr, ExtractRefs: extractQuantityOrderedRefFromSOLine, Populate: populateQuantityOrderedOnSOLine},
-			{Key: "unit_price", Target: constants.ObjectTypeRate, Cardinality: resourcekit.CardinalityOnePtr, ExtractRefs: extractUnitPriceRefFromSOLine, Populate: populateUnitPriceOnSOLine},
-			{Key: "unit_cost", Target: constants.ObjectTypeRate, Cardinality: resourcekit.CardinalityOnePtr, ExtractRefs: extractUnitCostRefFromSOLine, Populate: populateUnitCostOnSOLine},
+			{Key: "quantity_ordered", Target: constants.ObjectTypeQuantity, Cardinality: include.CardinalityOnePtr, ExtractRefs: extractQuantityOrderedRefFromSOLine, Populate: populateQuantityOrderedOnSOLine},
+			{Key: "unit_price", Target: constants.ObjectTypeRate, Cardinality: include.CardinalityOnePtr, ExtractRefs: extractUnitPriceRefFromSOLine, Populate: populateUnitPriceOnSOLine},
+			{Key: "unit_cost", Target: constants.ObjectTypeRate, Cardinality: include.CardinalityOnePtr, ExtractRefs: extractUnitCostRefFromSOLine, Populate: populateUnitCostOnSOLine},
 			{Key: "totals", Populate: populateTotalsOnSOLine},
 		},
 	})
@@ -62,7 +62,7 @@ func extractUnitCostRefFromSOLine(_ context.Context, parent any) []any {
 
 func populateQuantityOrderedOnSOLine(ctx context.Context, parent any, _ map[string]any) {
 	l := parent.(*apiresource.SalesOrderLine)
-	v, ok := resourcekit.GetLoadMeta(ctx).Get(constants.ObjectTypeSalesOrderLine, l.ID, "quantity_ordered")
+	v, ok := include.GetLoadMeta(ctx).Get(constants.ObjectTypeSalesOrderLine, l.ID, "quantity_ordered")
 	if !ok {
 		return
 	}
@@ -71,7 +71,7 @@ func populateQuantityOrderedOnSOLine(ctx context.Context, parent any, _ map[stri
 
 func populateUnitPriceOnSOLine(ctx context.Context, parent any, _ map[string]any) {
 	l := parent.(*apiresource.SalesOrderLine)
-	v, ok := resourcekit.GetLoadMeta(ctx).Get(constants.ObjectTypeSalesOrderLine, l.ID, "unit_price")
+	v, ok := include.GetLoadMeta(ctx).Get(constants.ObjectTypeSalesOrderLine, l.ID, "unit_price")
 	if !ok {
 		return
 	}
@@ -80,7 +80,7 @@ func populateUnitPriceOnSOLine(ctx context.Context, parent any, _ map[string]any
 
 func populateUnitCostOnSOLine(ctx context.Context, parent any, _ map[string]any) {
 	l := parent.(*apiresource.SalesOrderLine)
-	v, ok := resourcekit.GetLoadMeta(ctx).Get(constants.ObjectTypeSalesOrderLine, l.ID, "unit_cost")
+	v, ok := include.GetLoadMeta(ctx).Get(constants.ObjectTypeSalesOrderLine, l.ID, "unit_cost")
 	if !ok {
 		return
 	}
@@ -89,7 +89,7 @@ func populateUnitCostOnSOLine(ctx context.Context, parent any, _ map[string]any)
 
 func populateTotalsOnSOLine(ctx context.Context, parent any, _ map[string]any) {
 	l := parent.(*apiresource.SalesOrderLine)
-	v, ok := resourcekit.GetLoadMeta(ctx).Get(constants.ObjectTypeSalesOrderLine, l.ID, "totals")
+	v, ok := include.GetLoadMeta(ctx).Get(constants.ObjectTypeSalesOrderLine, l.ID, "totals")
 	if !ok {
 		return
 	}
@@ -102,7 +102,7 @@ func stubLoadSalesOrderLines(_ context.Context, _ []string) (map[string]any, *ap
 
 func extractProductIDFromSOLine(ctx context.Context, parent any) []string {
 	l := parent.(*apiresource.SalesOrderLine)
-	v, ok := resourcekit.GetLoadMeta(ctx).Get(constants.ObjectTypeSalesOrderLine, l.ID, "product_id")
+	v, ok := include.GetLoadMeta(ctx).Get(constants.ObjectTypeSalesOrderLine, l.ID, "product_id")
 	if !ok {
 		return nil
 	}
@@ -111,7 +111,7 @@ func extractProductIDFromSOLine(ctx context.Context, parent any) []string {
 
 func populateProductOnSOLine(ctx context.Context, parent any, loaded map[string]any) {
 	l := parent.(*apiresource.SalesOrderLine)
-	v, ok := resourcekit.GetLoadMeta(ctx).Get(constants.ObjectTypeSalesOrderLine, l.ID, "product_id")
+	v, ok := include.GetLoadMeta(ctx).Get(constants.ObjectTypeSalesOrderLine, l.ID, "product_id")
 	if !ok {
 		return
 	}

@@ -1,4 +1,4 @@
-package apiendpoint
+package authz
 
 import "github.com/open-mrp/api/services/auth-service/pkg/types"
 

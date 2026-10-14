@@ -1,8 +1,8 @@
 package apiresource
 
 import (
-	apiexample "github.com/open-mrp/api/services/api-gateway/pkg/example"
 	"github.com/open-mrp/api/shared/constants"
+	apiexample "github.com/open-mrp/apikit/example"
 )
 
 // A contact found by email on an account you have a relationship with — one of your customers, your suppliers, or your own account.

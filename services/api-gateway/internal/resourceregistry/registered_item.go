@@ -2,23 +2,23 @@ package resourceregistry
 
 import (
 	"context"
+	"github.com/open-mrp/apikit/include"
 
 	"github.com/open-mrp/api/services/api-gateway/internal/resourceloaders"
 	apiresource "github.com/open-mrp/api/services/api-gateway/pkg/resource"
-	"github.com/open-mrp/api/services/api-gateway/pkg/resourcekit"
 	"github.com/open-mrp/api/shared/constants"
 )
 
 func init() {
-	resourcekit.Register(&resourcekit.Definition{
+	include.Register(&include.Definition{
 		ObjectType: constants.ObjectTypeItem,
 		Load:       resourceloaders.LoadItems,
-		Subs: []resourcekit.SubField{
+		Subs: []include.SubField{
 			{
 				// Read with the item, so no loader and no item_categories:read; the ref lets nested includes resolve.
 				Key:         "category",
 				Target:      constants.ObjectTypeItemCategory,
-				Cardinality: resourcekit.CardinalityOnePtr,
+				Cardinality: include.CardinalityOnePtr,
 				ExtractRefs: extractCategoryRefFromItem,
 				Populate:    populateCategoryOnItem,
 			},
@@ -40,14 +40,14 @@ func extractCategoryRefFromItem(_ context.Context, parent any) []any {
 
 func populateCategoryOnItem(ctx context.Context, parent any, _ map[string]any) {
 	item := parent.(*apiresource.Item)
-	if v, ok := resourcekit.GetLoadMeta(ctx).Get(constants.ObjectTypeItem, item.ID, "category"); ok && v != nil {
+	if v, ok := include.GetLoadMeta(ctx).Get(constants.ObjectTypeItem, item.ID, "category"); ok && v != nil {
 		item.Category = v.(*apiresource.ItemCategory)
 	}
 }
 
 func populateUnitValueOnItem(ctx context.Context, parent any, _ map[string]any) {
 	item := parent.(*apiresource.Item)
-	v, ok := resourcekit.GetLoadMeta(ctx).
+	v, ok := include.GetLoadMeta(ctx).
 		Get(constants.ObjectTypeItem, item.ID, "unit_value")
 	if !ok || v == nil {
 		return
@@ -57,7 +57,7 @@ func populateUnitValueOnItem(ctx context.Context, parent any, _ map[string]any) 
 
 func populateUnitCostOnItem(ctx context.Context, parent any, _ map[string]any) {
 	item := parent.(*apiresource.Item)
-	v, ok := resourcekit.GetLoadMeta(ctx).
+	v, ok := include.GetLoadMeta(ctx).
 		Get(constants.ObjectTypeItem, item.ID, "unit_cost")
 	if !ok || v == nil {
 		return
@@ -67,7 +67,7 @@ func populateUnitCostOnItem(ctx context.Context, parent any, _ map[string]any) {
 
 func populateBurnRateOnItem(ctx context.Context, parent any, _ map[string]any) {
 	item := parent.(*apiresource.Item)
-	v, ok := resourcekit.GetLoadMeta(ctx).
+	v, ok := include.GetLoadMeta(ctx).
 		Get(constants.ObjectTypeItem, item.ID, "burn_rate")
 	if !ok || v == nil {
 		return
@@ -77,7 +77,7 @@ func populateBurnRateOnItem(ctx context.Context, parent any, _ map[string]any) {
 
 func populateAttributesOnItem(ctx context.Context, parent any, _ map[string]any) {
 	item := parent.(*apiresource.Item)
-	v, ok := resourcekit.GetLoadMeta(ctx).
+	v, ok := include.GetLoadMeta(ctx).
 		Get(constants.ObjectTypeItem, item.ID, "attributes_list")
 	if !ok || v == nil {
 		return

@@ -2,40 +2,40 @@ package resourceregistry
 
 import (
 	"context"
+	"github.com/open-mrp/apikit/include"
 
 	"github.com/open-mrp/api/services/api-gateway/internal/resourceloaders"
 	apiresource "github.com/open-mrp/api/services/api-gateway/pkg/resource"
-	"github.com/open-mrp/api/services/api-gateway/pkg/resourcekit"
 	"github.com/open-mrp/api/shared/constants"
 )
 
 func init() {
-	resourcekit.Register(&resourcekit.Definition{
+	include.Register(&include.Definition{
 		ObjectType: constants.ObjectTypeVolumeDiscount,
 		Load:       resourceloaders.LoadVolumeDiscounts,
-		Subs: []resourcekit.SubField{
-			{Key: "customer_groups", Cardinality: resourcekit.CardinalityList, Populate: populateCustomerGroupsOnVolumeDiscount},
-			{Key: "product_lines", Cardinality: resourcekit.CardinalityList, Populate: populateProductLinesOnVolumeDiscount},
-			{Key: "categories", Cardinality: resourcekit.CardinalityList, Populate: populateCategoriesOnVolumeDiscount},
+		Subs: []include.SubField{
+			{Key: "customer_groups", Cardinality: include.CardinalityList, Populate: populateCustomerGroupsOnVolumeDiscount},
+			{Key: "product_lines", Cardinality: include.CardinalityList, Populate: populateProductLinesOnVolumeDiscount},
+			{Key: "categories", Cardinality: include.CardinalityList, Populate: populateCategoriesOnVolumeDiscount},
 			// The discount's own category rows carry no properties, so this one hop
 			// through the category loader is what makes the attribute pickers on the
 			// discount page render at all.
 			{
 				Key:         "categories.properties",
 				Target:      constants.ObjectTypeItemCategory,
-				Cardinality: resourcekit.CardinalityList,
+				Cardinality: include.CardinalityList,
 				ExtractIDs:  extractCategoryIDsFromVolumeDiscount,
 				Populate:    populatePropertiesOnVolumeDiscountCategories,
 			},
-			{Key: "attributes", Cardinality: resourcekit.CardinalityList, Populate: populateAttributesOnVolumeDiscount},
-			{Key: "acceptable_units", Cardinality: resourcekit.CardinalityList, Populate: populateAcceptableUnitsOnVolumeDiscount},
+			{Key: "attributes", Cardinality: include.CardinalityList, Populate: populateAttributesOnVolumeDiscount},
+			{Key: "acceptable_units", Cardinality: include.CardinalityList, Populate: populateAcceptableUnitsOnVolumeDiscount},
 		},
 	})
 }
 
 func populateCustomerGroupsOnVolumeDiscount(ctx context.Context, parent any, _ map[string]any) {
 	vd := parent.(*apiresource.VolumeDiscount)
-	v, ok := resourcekit.GetLoadMeta(ctx).
+	v, ok := include.GetLoadMeta(ctx).
 		Get(constants.ObjectTypeVolumeDiscount, vd.ID, "customer_groups")
 	if !ok {
 		return
@@ -45,7 +45,7 @@ func populateCustomerGroupsOnVolumeDiscount(ctx context.Context, parent any, _ m
 
 func populateProductLinesOnVolumeDiscount(ctx context.Context, parent any, _ map[string]any) {
 	vd := parent.(*apiresource.VolumeDiscount)
-	v, ok := resourcekit.GetLoadMeta(ctx).
+	v, ok := include.GetLoadMeta(ctx).
 		Get(constants.ObjectTypeVolumeDiscount, vd.ID, "product_lines")
 	if !ok {
 		return
@@ -55,7 +55,7 @@ func populateProductLinesOnVolumeDiscount(ctx context.Context, parent any, _ map
 
 func populateCategoriesOnVolumeDiscount(ctx context.Context, parent any, _ map[string]any) {
 	vd := parent.(*apiresource.VolumeDiscount)
-	v, ok := resourcekit.GetLoadMeta(ctx).
+	v, ok := include.GetLoadMeta(ctx).
 		Get(constants.ObjectTypeVolumeDiscount, vd.ID, "categories")
 	if !ok {
 		return
@@ -80,7 +80,7 @@ func populatePropertiesOnVolumeDiscountCategories(ctx context.Context, parent an
 	if vd.Categories == nil {
 		return
 	}
-	meta := resourcekit.GetLoadMeta(ctx)
+	meta := include.GetLoadMeta(ctx)
 	for i := range vd.Categories.Data {
 		cat := &vd.Categories.Data[i]
 		if _, ok := loaded[cat.ID]; !ok {
@@ -96,7 +96,7 @@ func populatePropertiesOnVolumeDiscountCategories(ctx context.Context, parent an
 
 func populateAttributesOnVolumeDiscount(ctx context.Context, parent any, _ map[string]any) {
 	vd := parent.(*apiresource.VolumeDiscount)
-	v, ok := resourcekit.GetLoadMeta(ctx).
+	v, ok := include.GetLoadMeta(ctx).
 		Get(constants.ObjectTypeVolumeDiscount, vd.ID, "attributes")
 	if !ok {
 		return
@@ -106,7 +106,7 @@ func populateAttributesOnVolumeDiscount(ctx context.Context, parent any, _ map[s
 
 func populateAcceptableUnitsOnVolumeDiscount(ctx context.Context, parent any, _ map[string]any) {
 	vd := parent.(*apiresource.VolumeDiscount)
-	v, ok := resourcekit.GetLoadMeta(ctx).
+	v, ok := include.GetLoadMeta(ctx).
 		Get(constants.ObjectTypeVolumeDiscount, vd.ID, "acceptable_units")
 	if !ok {
 		return

@@ -4,11 +4,12 @@ import (
 	"context"
 	"net/http"
 
-	apiendpoint "github.com/open-mrp/api/services/api-gateway/pkg/endpoint"
+	"github.com/open-mrp/api/services/api-gateway/pkg/authz"
 	apiresource "github.com/open-mrp/api/services/api-gateway/pkg/resource"
 	"github.com/open-mrp/api/services/auth-service/pkg/types"
 	"github.com/open-mrp/api/shared/constants"
 	apierror "github.com/open-mrp/apikit/apierror"
+	apiendpoint "github.com/open-mrp/apikit/endpoint"
 )
 
 // Request to delete a settlement.
@@ -28,16 +29,16 @@ type DeleteSettlementEndpoint struct{}
 
 func (e *DeleteSettlementEndpoint) Materialize() *apiendpoint.APIEndpoint[*DeleteSettlementRequest, *apiresource.Settlement] {
 	return (&apiendpoint.APIEndpoint[*DeleteSettlementRequest, *apiresource.Settlement]{
-		Title:               "Delete Settlement",
-		Method:              http.MethodDelete,
-		ContentType:         "application/json",
-		Route:               "/v1/finance/settlements/{id}",
-		SuccessStatusCode:   http.StatusOK,
-		Public:              false,
-		AgentTool:           true,
-		Preview:             true,
-		RequiredPermissions: []types.Permission{{Domain: types.PermissionDomainSettlements, Action: types.ActionDelete}},
-		ObjectType:          constants.ObjectTypeSettlement,
+		Title:             "Delete Settlement",
+		Method:            http.MethodDelete,
+		ContentType:       "application/json",
+		Route:             "/v1/finance/settlements/{id}",
+		SuccessStatusCode: http.StatusOK,
+		Public:            false,
+		AgentTool:         true,
+		Preview:           true,
+		Auth:              authz.Policy{Permissions: []types.Permission{{Domain: types.PermissionDomainSettlements, Action: types.ActionDelete}}},
+		ObjectType:        constants.ObjectTypeSettlement,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *DeleteSettlementRequest) (*apiresource.Settlement, *apierror.APIError) {
 			return svc.(SettlementSvc).DeleteSettlement
 		},

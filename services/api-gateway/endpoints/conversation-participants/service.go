@@ -3,13 +3,13 @@ package participantep
 import (
 	"context"
 	"fmt"
+	"github.com/open-mrp/apikit/include"
 
 	"github.com/open-mrp/api/services/api-gateway/internal/chatmap"
 	"github.com/open-mrp/api/services/api-gateway/internal/domain"
 	grpcutil "github.com/open-mrp/api/services/api-gateway/internal/grpc"
 	"github.com/open-mrp/api/services/api-gateway/internal/resourceloaders"
 	apiresource "github.com/open-mrp/api/services/api-gateway/pkg/resource"
-	"github.com/open-mrp/api/services/api-gateway/pkg/resourcekit"
 	"github.com/open-mrp/api/shared/constants"
 	pb "github.com/open-mrp/api/shared/proto/notification"
 	apierror "github.com/open-mrp/apikit/apierror"
@@ -74,10 +74,10 @@ func (s *participantSvcImpl) AddParticipant(ctx context.Context, req *AddPartici
 // hydrateConversationParticipants fills participant actor names on a conversation when the caller
 // requested ?include=participants, reading the stashed participants list from LoadMeta. Best-effort.
 func hydrateConversationParticipants(ctx context.Context, conv *apiresource.Conversation) {
-	if !resourcekit.RequestedIncludeSet(ctx)["participants"] {
+	if !include.RequestedIncludeSet(ctx)["participants"] {
 		return
 	}
-	v, ok := resourcekit.GetLoadMeta(ctx).Get(constants.ObjectTypeConversation, conv.ID, "participants")
+	v, ok := include.GetLoadMeta(ctx).Get(constants.ObjectTypeConversation, conv.ID, "participants")
 	if !ok {
 		return
 	}

@@ -5,7 +5,7 @@ import (
 
 	checkoutsessionep "github.com/open-mrp/api/services/api-gateway/endpoints/checkout-sessions"
 	grpcclient "github.com/open-mrp/api/services/api-gateway/grpc-client"
-	apiendpoint "github.com/open-mrp/api/services/api-gateway/pkg/endpoint"
+	apiendpoint "github.com/open-mrp/apikit/endpoint"
 )
 
 type CheckoutSessionsEndpointGroup struct {

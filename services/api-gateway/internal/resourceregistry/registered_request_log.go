@@ -3,23 +3,23 @@ package resourceregistry
 import (
 	"context"
 	"encoding/json"
+	"github.com/open-mrp/apikit/include"
 
 	"github.com/open-mrp/api/services/api-gateway/internal/resourceloaders"
 	apiresource "github.com/open-mrp/api/services/api-gateway/pkg/resource"
-	"github.com/open-mrp/api/services/api-gateway/pkg/resourcekit"
 	"github.com/open-mrp/api/shared/constants"
 )
 
 func init() {
-	resourcekit.Register(&resourcekit.Definition{
+	include.Register(&include.Definition{
 		ObjectType: constants.ObjectTypeRequestLog,
 		Load:       resourceloaders.LoadRequestLogs,
-		Subs: []resourcekit.SubField{
+		Subs: []include.SubField{
 			{Key: "account", Populate: populateAccountOnRequestLog},
 			{
 				Key:         "actor",
 				Target:      constants.ObjectTypeActor,
-				Cardinality: resourcekit.CardinalityOnePtr,
+				Cardinality: include.CardinalityOnePtr,
 				ExtractIDs:  extractActorIDFromRequestLog,
 				Populate:    populateActorOnRequestLog,
 			},
@@ -32,7 +32,7 @@ func init() {
 
 func populateAccountOnRequestLog(ctx context.Context, parent any, _ map[string]any) {
 	rl := parent.(*apiresource.RequestLog)
-	v, ok := resourcekit.GetLoadMeta(ctx).
+	v, ok := include.GetLoadMeta(ctx).
 		Get(constants.ObjectTypeRequestLog, rl.ID, "account")
 	if !ok {
 		return
@@ -42,7 +42,7 @@ func populateAccountOnRequestLog(ctx context.Context, parent any, _ map[string]a
 
 func extractActorIDFromRequestLog(ctx context.Context, parent any) []string {
 	rl := parent.(*apiresource.RequestLog)
-	id, ok := resourcekit.GetLoadMeta(ctx).
+	id, ok := include.GetLoadMeta(ctx).
 		GetString(constants.ObjectTypeRequestLog, rl.ID, "actor_id")
 	if !ok || id == "" {
 		return nil
@@ -52,7 +52,7 @@ func extractActorIDFromRequestLog(ctx context.Context, parent any) []string {
 
 func populateActorOnRequestLog(ctx context.Context, parent any, loaded map[string]any) {
 	rl := parent.(*apiresource.RequestLog)
-	id, ok := resourcekit.GetLoadMeta(ctx).
+	id, ok := include.GetLoadMeta(ctx).
 		GetString(constants.ObjectTypeRequestLog, rl.ID, "actor_id")
 	if !ok || id == "" {
 		return
@@ -64,7 +64,7 @@ func populateActorOnRequestLog(ctx context.Context, parent any, loaded map[strin
 
 func populateQueryParamsOnRequestLog(ctx context.Context, parent any, _ map[string]any) {
 	rl := parent.(*apiresource.RequestLog)
-	v, ok := resourcekit.GetLoadMeta(ctx).
+	v, ok := include.GetLoadMeta(ctx).
 		Get(constants.ObjectTypeRequestLog, rl.ID, "query_params")
 	if !ok {
 		return
@@ -74,7 +74,7 @@ func populateQueryParamsOnRequestLog(ctx context.Context, parent any, _ map[stri
 
 func populateRequestBodyOnRequestLog(ctx context.Context, parent any, _ map[string]any) {
 	rl := parent.(*apiresource.RequestLog)
-	v, ok := resourcekit.GetLoadMeta(ctx).
+	v, ok := include.GetLoadMeta(ctx).
 		Get(constants.ObjectTypeRequestLog, rl.ID, "request_body")
 	if !ok {
 		return
@@ -84,7 +84,7 @@ func populateRequestBodyOnRequestLog(ctx context.Context, parent any, _ map[stri
 
 func populateResponseBodyOnRequestLog(ctx context.Context, parent any, _ map[string]any) {
 	rl := parent.(*apiresource.RequestLog)
-	v, ok := resourcekit.GetLoadMeta(ctx).
+	v, ok := include.GetLoadMeta(ctx).
 		Get(constants.ObjectTypeRequestLog, rl.ID, "response_body")
 	if !ok {
 		return

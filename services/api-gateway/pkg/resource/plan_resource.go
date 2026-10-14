@@ -1,8 +1,8 @@
 package apiresource
 
 import (
-	apiexample "github.com/open-mrp/api/services/api-gateway/pkg/example"
 	"github.com/open-mrp/api/shared/constants"
+	apiexample "github.com/open-mrp/apikit/example"
 )
 
 const SamplePlanTypeIDFree = "pl_1nz4huuc8n5n"

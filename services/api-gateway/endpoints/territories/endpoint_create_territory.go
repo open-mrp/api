@@ -4,12 +4,13 @@ import (
 	"context"
 	"net/http"
 
-	apiendpoint "github.com/open-mrp/api/services/api-gateway/pkg/endpoint"
-	apiexample "github.com/open-mrp/api/services/api-gateway/pkg/example"
+	"github.com/open-mrp/api/services/api-gateway/pkg/authz"
 	apiresource "github.com/open-mrp/api/services/api-gateway/pkg/resource"
 	"github.com/open-mrp/api/services/auth-service/pkg/types"
 	"github.com/open-mrp/api/shared/constants"
 	apierror "github.com/open-mrp/apikit/apierror"
+	apiendpoint "github.com/open-mrp/apikit/endpoint"
+	apiexample "github.com/open-mrp/apikit/example"
 	"github.com/open-mrp/apikit/field"
 )
 
@@ -62,16 +63,16 @@ type CreateTerritoryEndpoint struct{}
 
 func (e *CreateTerritoryEndpoint) Materialize() *apiendpoint.APIEndpoint[*CreateTerritoryRequest, *apiresource.Territory] {
 	return (&apiendpoint.APIEndpoint[*CreateTerritoryRequest, *apiresource.Territory]{
-		Title:               "Create Territory",
-		Method:              http.MethodPost,
-		ContentType:         "application/json",
-		Route:               "/v1/sales/accounts/{account_id}/territories",
-		SuccessStatusCode:   http.StatusCreated,
-		Public:              false,
-		AgentTool:           true,
-		Preview:             true,
-		ObjectType:          constants.ObjectTypeTerritory,
-		RequiredPermissions: []types.Permission{{Domain: types.PermissionDomainTerritories, Action: types.ActionCreate}},
+		Title:             "Create Territory",
+		Method:            http.MethodPost,
+		ContentType:       "application/json",
+		Route:             "/v1/sales/accounts/{account_id}/territories",
+		SuccessStatusCode: http.StatusCreated,
+		Public:            false,
+		AgentTool:         true,
+		Preview:           true,
+		ObjectType:        constants.ObjectTypeTerritory,
+		Auth:              authz.Policy{Permissions: []types.Permission{{Domain: types.PermissionDomainTerritories, Action: types.ActionCreate}}},
 		ServiceHandler: func(svc any) func(ctx context.Context, req *CreateTerritoryRequest) (*apiresource.Territory, *apierror.APIError) {
 			return svc.(TerritorySvc).CreateTerritory
 		},

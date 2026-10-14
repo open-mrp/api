@@ -2,18 +2,18 @@ package resourceregistry
 
 import (
 	"context"
+	"github.com/open-mrp/apikit/include"
 
 	"github.com/open-mrp/api/services/api-gateway/internal/resourceloaders"
 	apiresource "github.com/open-mrp/api/services/api-gateway/pkg/resource"
-	"github.com/open-mrp/api/services/api-gateway/pkg/resourcekit"
 	"github.com/open-mrp/api/shared/constants"
 )
 
 func init() {
-	resourcekit.Register(&resourcekit.Definition{
+	include.Register(&include.Definition{
 		ObjectType: constants.ObjectTypeCustomer,
 		Load:       resourceloaders.LoadCustomers,
-		Subs: []resourcekit.SubField{
+		Subs: []include.SubField{
 			// credit_limit is a Quantity built inline from the customer proto; declaring its Target lets the
 			// resolver recurse into credit_limit.unit (the Quantity's unit_id is stashed under ObjectTypeQuantity).
 			{Key: "credit_limit", Target: constants.ObjectTypeQuantity, ExtractRefs: extractCreditLimitRefFromCustomer, Populate: populateCreditLimitOnCustomer},
@@ -21,7 +21,7 @@ func init() {
 			{Key: "freight_preferences", Populate: populateFreightPreferencesOnCustomer},
 			// freight_preferences.carrier is fetched by id via LoadCarriers (not built inline) so the loaded
 			// Carrier carries its service_level_ids preview, enabling the nested freight_preferences.carrier.service_levels include.
-			{Key: "freight_preferences.carrier", Target: constants.ObjectTypeCarrier, Cardinality: resourcekit.CardinalityOnePtr, ExtractIDs: extractFPCarrierIDFromCustomer, Populate: populateCarrierOnCustomerFP},
+			{Key: "freight_preferences.carrier", Target: constants.ObjectTypeCarrier, Cardinality: include.CardinalityOnePtr, ExtractIDs: extractFPCarrierIDFromCustomer, Populate: populateCarrierOnCustomerFP},
 			{Key: "freight_preferences.service_level", Populate: populateServiceLevelOnCustomerFP},
 			{Key: "defaults", Populate: populateDefaultsOnCustomer},
 			{Key: "defaults.payment_term", Populate: populatePaymentTermOnCustomerDefaults},
@@ -30,7 +30,7 @@ func init() {
 			{
 				Key:         "defaults.sales_rep",
 				Target:      constants.ObjectTypeAccountUser,
-				Cardinality: resourcekit.CardinalityOnePtr,
+				Cardinality: include.CardinalityOnePtr,
 				ExtractIDs:  extractSalesRepIDFromCustomerDefaults,
 				Populate:    populateSalesRepOnCustomerDefaults,
 			},
@@ -39,15 +39,15 @@ func init() {
 			{Key: "ship_to_address", Populate: populateShipToAddressOnCustomer},
 			{Key: "type", Populate: populateTypeOnCustomer},
 			{Key: "price_groups", Populate: populatePriceGroupsOnCustomer},
-			{Key: "parent_account", Target: constants.ObjectTypeCustomer, Cardinality: resourcekit.CardinalityOnePtr, ExtractIDs: extractParentAccountIDFromCustomer, Populate: populateParentAccountOnCustomer},
-			{Key: "child_accounts", Target: constants.ObjectTypeCustomer, Cardinality: resourcekit.CardinalityList, ExtractIDs: extractChildAccountIDsFromCustomer, Populate: populateChildAccountsOnCustomer},
+			{Key: "parent_account", Target: constants.ObjectTypeCustomer, Cardinality: include.CardinalityOnePtr, ExtractIDs: extractParentAccountIDFromCustomer, Populate: populateParentAccountOnCustomer},
+			{Key: "child_accounts", Target: constants.ObjectTypeCustomer, Cardinality: include.CardinalityList, ExtractIDs: extractChildAccountIDsFromCustomer, Populate: populateChildAccountsOnCustomer},
 		},
 	})
 }
 
 func populateCreditLimitOnCustomer(ctx context.Context, parent any, _ map[string]any) {
 	c := parent.(*apiresource.Customer)
-	v, ok := resourcekit.GetLoadMeta(ctx).Get(constants.ObjectTypeCustomer, c.ID, "credit_limit")
+	v, ok := include.GetLoadMeta(ctx).Get(constants.ObjectTypeCustomer, c.ID, "credit_limit")
 	if !ok {
 		return
 	}
@@ -65,7 +65,7 @@ func extractCreditLimitRefFromCustomer(_ context.Context, parent any) []any {
 
 func populateContactInfoOnCustomer(ctx context.Context, parent any, _ map[string]any) {
 	c := parent.(*apiresource.Customer)
-	v, ok := resourcekit.GetLoadMeta(ctx).Get(constants.ObjectTypeCustomer, c.ID, "contact_info")
+	v, ok := include.GetLoadMeta(ctx).Get(constants.ObjectTypeCustomer, c.ID, "contact_info")
 	if !ok {
 		return
 	}
@@ -74,7 +74,7 @@ func populateContactInfoOnCustomer(ctx context.Context, parent any, _ map[string
 
 func populateFreightPreferencesOnCustomer(ctx context.Context, parent any, _ map[string]any) {
 	c := parent.(*apiresource.Customer)
-	v, ok := resourcekit.GetLoadMeta(ctx).Get(constants.ObjectTypeCustomer, c.ID, "freight_preferences")
+	v, ok := include.GetLoadMeta(ctx).Get(constants.ObjectTypeCustomer, c.ID, "freight_preferences")
 	if !ok {
 		return
 	}
@@ -83,7 +83,7 @@ func populateFreightPreferencesOnCustomer(ctx context.Context, parent any, _ map
 
 func populateDefaultsOnCustomer(ctx context.Context, parent any, _ map[string]any) {
 	c := parent.(*apiresource.Customer)
-	v, ok := resourcekit.GetLoadMeta(ctx).Get(constants.ObjectTypeCustomer, c.ID, "defaults")
+	v, ok := include.GetLoadMeta(ctx).Get(constants.ObjectTypeCustomer, c.ID, "defaults")
 	if !ok {
 		return
 	}
@@ -92,7 +92,7 @@ func populateDefaultsOnCustomer(ctx context.Context, parent any, _ map[string]an
 
 func populateNotificationPreferencesOnCustomer(ctx context.Context, parent any, _ map[string]any) {
 	c := parent.(*apiresource.Customer)
-	v, ok := resourcekit.GetLoadMeta(ctx).Get(constants.ObjectTypeCustomer, c.ID, "notification_preferences")
+	v, ok := include.GetLoadMeta(ctx).Get(constants.ObjectTypeCustomer, c.ID, "notification_preferences")
 	if !ok {
 		return
 	}
@@ -101,7 +101,7 @@ func populateNotificationPreferencesOnCustomer(ctx context.Context, parent any, 
 
 func populateBillToAddressOnCustomer(ctx context.Context, parent any, _ map[string]any) {
 	c := parent.(*apiresource.Customer)
-	v, ok := resourcekit.GetLoadMeta(ctx).Get(constants.ObjectTypeCustomer, c.ID, "bill_to_address")
+	v, ok := include.GetLoadMeta(ctx).Get(constants.ObjectTypeCustomer, c.ID, "bill_to_address")
 	if !ok {
 		return
 	}
@@ -110,7 +110,7 @@ func populateBillToAddressOnCustomer(ctx context.Context, parent any, _ map[stri
 
 func populateShipToAddressOnCustomer(ctx context.Context, parent any, _ map[string]any) {
 	c := parent.(*apiresource.Customer)
-	v, ok := resourcekit.GetLoadMeta(ctx).Get(constants.ObjectTypeCustomer, c.ID, "ship_to_address")
+	v, ok := include.GetLoadMeta(ctx).Get(constants.ObjectTypeCustomer, c.ID, "ship_to_address")
 	if !ok {
 		return
 	}
@@ -119,7 +119,7 @@ func populateShipToAddressOnCustomer(ctx context.Context, parent any, _ map[stri
 
 func populateTypeOnCustomer(ctx context.Context, parent any, _ map[string]any) {
 	c := parent.(*apiresource.Customer)
-	v, ok := resourcekit.GetLoadMeta(ctx).Get(constants.ObjectTypeCustomer, c.ID, "type")
+	v, ok := include.GetLoadMeta(ctx).Get(constants.ObjectTypeCustomer, c.ID, "type")
 	if !ok {
 		return
 	}
@@ -128,7 +128,7 @@ func populateTypeOnCustomer(ctx context.Context, parent any, _ map[string]any) {
 
 func populatePriceGroupsOnCustomer(ctx context.Context, parent any, _ map[string]any) {
 	c := parent.(*apiresource.Customer)
-	v, ok := resourcekit.GetLoadMeta(ctx).Get(constants.ObjectTypeCustomer, c.ID, "price_groups")
+	v, ok := include.GetLoadMeta(ctx).Get(constants.ObjectTypeCustomer, c.ID, "price_groups")
 	if !ok {
 		return
 	}
@@ -137,7 +137,7 @@ func populatePriceGroupsOnCustomer(ctx context.Context, parent any, _ map[string
 
 func extractParentAccountIDFromCustomer(ctx context.Context, parent any) []string {
 	c := parent.(*apiresource.Customer)
-	id, _ := resourcekit.GetLoadMeta(ctx).GetString(constants.ObjectTypeCustomer, c.ID, "parent_account_id")
+	id, _ := include.GetLoadMeta(ctx).GetString(constants.ObjectTypeCustomer, c.ID, "parent_account_id")
 	if id == "" {
 		return nil
 	}
@@ -146,7 +146,7 @@ func extractParentAccountIDFromCustomer(ctx context.Context, parent any) []strin
 
 func populateParentAccountOnCustomer(ctx context.Context, parent any, loaded map[string]any) {
 	c := parent.(*apiresource.Customer)
-	id, _ := resourcekit.GetLoadMeta(ctx).GetString(constants.ObjectTypeCustomer, c.ID, "parent_account_id")
+	id, _ := include.GetLoadMeta(ctx).GetString(constants.ObjectTypeCustomer, c.ID, "parent_account_id")
 	if id == "" {
 		return
 	}
@@ -157,13 +157,13 @@ func populateParentAccountOnCustomer(ctx context.Context, parent any, loaded map
 
 func extractChildAccountIDsFromCustomer(ctx context.Context, parent any) []string {
 	c := parent.(*apiresource.Customer)
-	ids, _ := resourcekit.GetLoadMeta(ctx).GetStrings(constants.ObjectTypeCustomer, c.ID, "child_account_ids")
+	ids, _ := include.GetLoadMeta(ctx).GetStrings(constants.ObjectTypeCustomer, c.ID, "child_account_ids")
 	return ids
 }
 
 func populateChildAccountsOnCustomer(ctx context.Context, parent any, loaded map[string]any) {
 	c := parent.(*apiresource.Customer)
-	ids, _ := resourcekit.GetLoadMeta(ctx).GetStrings(constants.ObjectTypeCustomer, c.ID, "child_account_ids")
+	ids, _ := include.GetLoadMeta(ctx).GetStrings(constants.ObjectTypeCustomer, c.ID, "child_account_ids")
 	items := make([]apiresource.Customer, 0, len(ids))
 	for _, id := range ids {
 		if v, ok := loaded[id]; ok {
@@ -176,7 +176,7 @@ func populateChildAccountsOnCustomer(ctx context.Context, parent any, loaded map
 // extractFPCarrierIDFromCustomer returns the customer's default-carrier id (stashed by stashCustomerMeta) so the resolver fetches the full Carrier via LoadCarriers — which carries the service_level_ids preview the nested freight_preferences.carrier.service_levels include needs.
 func extractFPCarrierIDFromCustomer(ctx context.Context, parent any) []string {
 	c := parent.(*apiresource.Customer)
-	id, _ := resourcekit.GetLoadMeta(ctx).GetString(constants.ObjectTypeCustomer, c.ID, "fp_carrier_id")
+	id, _ := include.GetLoadMeta(ctx).GetString(constants.ObjectTypeCustomer, c.ID, "fp_carrier_id")
 	if id == "" {
 		return nil
 	}
@@ -188,7 +188,7 @@ func populateCarrierOnCustomerFP(ctx context.Context, parent any, loaded map[str
 	if c.FreightPreferences == nil {
 		return
 	}
-	id, _ := resourcekit.GetLoadMeta(ctx).GetString(constants.ObjectTypeCustomer, c.ID, "fp_carrier_id")
+	id, _ := include.GetLoadMeta(ctx).GetString(constants.ObjectTypeCustomer, c.ID, "fp_carrier_id")
 	if id == "" {
 		return
 	}
@@ -202,7 +202,7 @@ func populateServiceLevelOnCustomerFP(ctx context.Context, parent any, _ map[str
 	if c.FreightPreferences == nil {
 		return
 	}
-	v, ok := resourcekit.GetLoadMeta(ctx).Get(constants.ObjectTypeCustomer, c.ID, "fp_service_level")
+	v, ok := include.GetLoadMeta(ctx).Get(constants.ObjectTypeCustomer, c.ID, "fp_service_level")
 	if !ok {
 		return
 	}
@@ -214,7 +214,7 @@ func populatePaymentTermOnCustomerDefaults(ctx context.Context, parent any, _ ma
 	if c.Defaults == nil {
 		return
 	}
-	v, ok := resourcekit.GetLoadMeta(ctx).Get(constants.ObjectTypeCustomer, c.ID, "defaults_payment_term")
+	v, ok := include.GetLoadMeta(ctx).Get(constants.ObjectTypeCustomer, c.ID, "defaults_payment_term")
 	if !ok {
 		return
 	}
@@ -226,7 +226,7 @@ func populateShippingTermOnCustomerDefaults(ctx context.Context, parent any, _ m
 	if c.Defaults == nil {
 		return
 	}
-	v, ok := resourcekit.GetLoadMeta(ctx).Get(constants.ObjectTypeCustomer, c.ID, "defaults_shipping_term")
+	v, ok := include.GetLoadMeta(ctx).Get(constants.ObjectTypeCustomer, c.ID, "defaults_shipping_term")
 	if !ok {
 		return
 	}
@@ -238,7 +238,7 @@ func populatePriorityOnCustomerDefaults(ctx context.Context, parent any, _ map[s
 	if c.Defaults == nil {
 		return
 	}
-	v, ok := resourcekit.GetLoadMeta(ctx).Get(constants.ObjectTypeCustomer, c.ID, "defaults_priority")
+	v, ok := include.GetLoadMeta(ctx).Get(constants.ObjectTypeCustomer, c.ID, "defaults_priority")
 	if !ok {
 		return
 	}
@@ -247,7 +247,7 @@ func populatePriorityOnCustomerDefaults(ctx context.Context, parent any, _ map[s
 
 func extractSalesRepIDFromCustomerDefaults(ctx context.Context, parent any) []string {
 	c := parent.(*apiresource.Customer)
-	id, _ := resourcekit.GetLoadMeta(ctx).
+	id, _ := include.GetLoadMeta(ctx).
 		GetString(constants.ObjectTypeCustomer, c.ID, "defaults_sales_rep_id")
 	if id == "" {
 		return nil
@@ -260,7 +260,7 @@ func populateSalesRepOnCustomerDefaults(ctx context.Context, parent any, loaded 
 	if c.Defaults == nil {
 		return
 	}
-	id, _ := resourcekit.GetLoadMeta(ctx).
+	id, _ := include.GetLoadMeta(ctx).
 		GetString(constants.ObjectTypeCustomer, c.ID, "defaults_sales_rep_id")
 	if id == "" {
 		return

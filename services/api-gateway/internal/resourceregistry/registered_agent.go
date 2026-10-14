@@ -2,24 +2,24 @@ package resourceregistry
 
 import (
 	"context"
+	"github.com/open-mrp/apikit/include"
 
 	"github.com/open-mrp/api/services/api-gateway/internal/resourceloaders"
 	apiresource "github.com/open-mrp/api/services/api-gateway/pkg/resource"
-	"github.com/open-mrp/api/services/api-gateway/pkg/resourcekit"
 	"github.com/open-mrp/api/shared/constants"
 )
 
 func init() {
-	resourcekit.Register(&resourcekit.Definition{
+	include.Register(&include.Definition{
 		ObjectType: constants.ObjectTypeAgentDefinition,
 		Load:       resourceloaders.LoadAgentDefinitions,
-		Subs: []resourcekit.SubField{
+		Subs: []include.SubField{
 			{Key: "config", Populate: populateConfigOnAgent},
 			{Key: "tools", Populate: populateToolsOnAgent},
 			{
 				Key:         "role",
 				Target:      constants.ObjectTypeRole,
-				Cardinality: resourcekit.CardinalityOnePtr,
+				Cardinality: include.CardinalityOnePtr,
 				ExtractIDs:  extractRoleIDFromAgent,
 				Populate:    populateRoleOnAgent,
 			},
@@ -29,7 +29,7 @@ func init() {
 
 func populateConfigOnAgent(ctx context.Context, parent any, _ map[string]any) {
 	a := parent.(*apiresource.AgentDefinition)
-	v, ok := resourcekit.GetLoadMeta(ctx).
+	v, ok := include.GetLoadMeta(ctx).
 		Get(constants.ObjectTypeAgentDefinition, a.ID, "config")
 	if !ok {
 		return
@@ -39,7 +39,7 @@ func populateConfigOnAgent(ctx context.Context, parent any, _ map[string]any) {
 
 func populateToolsOnAgent(ctx context.Context, parent any, _ map[string]any) {
 	a := parent.(*apiresource.AgentDefinition)
-	v, ok := resourcekit.GetLoadMeta(ctx).
+	v, ok := include.GetLoadMeta(ctx).
 		Get(constants.ObjectTypeAgentDefinition, a.ID, "tools")
 	if !ok {
 		return
@@ -49,7 +49,7 @@ func populateToolsOnAgent(ctx context.Context, parent any, _ map[string]any) {
 
 func extractRoleIDFromAgent(ctx context.Context, parent any) []string {
 	a := parent.(*apiresource.AgentDefinition)
-	id, _ := resourcekit.GetLoadMeta(ctx).
+	id, _ := include.GetLoadMeta(ctx).
 		GetString(constants.ObjectTypeAgentDefinition, a.ID, "role_id")
 	if id == "" {
 		return nil
@@ -59,7 +59,7 @@ func extractRoleIDFromAgent(ctx context.Context, parent any) []string {
 
 func populateRoleOnAgent(ctx context.Context, parent any, loaded map[string]any) {
 	a := parent.(*apiresource.AgentDefinition)
-	id, _ := resourcekit.GetLoadMeta(ctx).
+	id, _ := include.GetLoadMeta(ctx).
 		GetString(constants.ObjectTypeAgentDefinition, a.ID, "role_id")
 	if id == "" {
 		return

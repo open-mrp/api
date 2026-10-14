@@ -3,6 +3,7 @@
 package api_test
 
 import (
+	"github.com/open-mrp/apikit/include"
 	"net/url"
 	"testing"
 
@@ -13,7 +14,7 @@ import (
 // ──────────────────────────────────────────────
 // Include isolation: every endpoint must only return expandable sub-objects
 // when the client explicitly asks for them via ?include=. The gateway forwards
-// only the requested includes to the backend (see resourcekit.FilterIncludes),
+// only the requested includes to the backend (see include.FilterIncludes),
 // so a request with no include param must yield null/absent sub-objects.
 //
 // Per-resource GET coverage lives in the crud_*_test.go files. The cases below

@@ -14,9 +14,9 @@ import (
 	"google.golang.org/grpc"
 	"google.golang.org/protobuf/types/known/timestamppb"
 
-	apiendpoint "github.com/open-mrp/api/services/api-gateway/pkg/endpoint"
 	pb "github.com/open-mrp/api/shared/proto/core"
 	"github.com/open-mrp/apikit/appctx"
+	apiendpoint "github.com/open-mrp/apikit/endpoint"
 	"github.com/open-mrp/apikit/metadata"
 )
 
@@ -40,7 +40,7 @@ func (c *captureInvoiceClient) UpdateInvoice(_ context.Context, in *pb.UpdateInv
 func patchInvoice(t *testing.T, client *captureInvoiceClient, body string) *httptest.ResponseRecorder {
 	t.Helper()
 	ep := apiendpoint.From(&UpdateInvoiceEndpoint{})
-	ep.RequiredPermissions = nil
+	ep.Auth = nil
 	ep.WithService(nil, NewInvoiceSvc(&InvoiceSvcConfig{CoreClient: client}))
 
 	r := httptest.NewRequest(http.MethodPatch, "/v1/finance/invoices/iv_meta", strings.NewReader(body))

@@ -2,11 +2,11 @@ package resourceloaders
 
 import (
 	"context"
+	"github.com/open-mrp/apikit/include"
 
 	"github.com/open-mrp/api/services/api-gateway/internal/domain"
 	grpcutil "github.com/open-mrp/api/services/api-gateway/internal/grpc"
 	apiresource "github.com/open-mrp/api/services/api-gateway/pkg/resource"
-	"github.com/open-mrp/api/services/api-gateway/pkg/resourcekit"
 	"github.com/open-mrp/api/shared/constants"
 	pb "github.com/open-mrp/api/shared/proto/core"
 	apierror "github.com/open-mrp/apikit/apierror"
@@ -41,7 +41,7 @@ func StashProductMeta(ctx context.Context, p *pb.ProductFullInfo) {
 	if p == nil {
 		return
 	}
-	meta := resourcekit.GetLoadMeta(ctx)
+	meta := include.GetLoadMeta(ctx)
 	meta.Set(constants.ObjectTypeProduct, p.Id, "item_id", p.ItemId)
 	if p.ProductLineId != nil {
 		meta.Set(constants.ObjectTypeProduct, p.Id, "product_line_id", *p.ProductLineId)

@@ -3,13 +3,13 @@ package agenttoolep
 import (
 	"context"
 	"fmt"
+	"github.com/open-mrp/apikit/include"
 
 	"encoding/json"
 
 	"github.com/open-mrp/api/services/api-gateway/internal/domain"
 	grpcutil "github.com/open-mrp/api/services/api-gateway/internal/grpc"
 	apiresource "github.com/open-mrp/api/services/api-gateway/pkg/resource"
-	"github.com/open-mrp/api/services/api-gateway/pkg/resourcekit"
 	"github.com/open-mrp/api/shared/constants"
 	apierror "github.com/open-mrp/apikit/apierror"
 
@@ -92,7 +92,7 @@ func (m *agentToolSvcImpl) ListToolGroups(ctx context.Context, req *ListToolGrou
 		return nil, rpcErr
 	}
 
-	meta := resourcekit.GetLoadMeta(ctx)
+	meta := include.GetLoadMeta(ctx)
 
 	toolsByGroup := make(map[string][]apiresource.AvailableTool, len(resp.Groups))
 	for _, t := range resp.Tools {

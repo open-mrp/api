@@ -6,9 +6,9 @@ import (
 	"sync/atomic"
 	"testing"
 
-	"github.com/open-mrp/api/services/api-gateway/internal/middleware"
 	pb "github.com/open-mrp/api/shared/proto/auth"
 	apierror "github.com/open-mrp/apikit/apierror"
+	"github.com/open-mrp/apikit/ratelimit"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -33,7 +33,7 @@ func (s *stubAuthClient) Login(_ context.Context, _ *pb.LoginRequest, _ ...grpc.
 
 func newAuthSvcForTest() *authSvcImpl {
 	return &authSvcImpl{
-		loginFailureLimiter: middleware.NewRateLimiter(loginFailureLimit, loginFailureWindow),
+		loginFailureLimiter: ratelimit.NewMemory(loginFailureLimit, loginFailureWindow),
 	}
 }
 
@@ -101,7 +101,7 @@ func TestLoginEndToEndThrottle(t *testing.T) {
 	}
 	svc := &authSvcImpl{
 		authClient:          stub,
-		loginFailureLimiter: middleware.NewRateLimiter(loginFailureLimit, loginFailureWindow),
+		loginFailureLimiter: ratelimit.NewMemory(loginFailureLimit, loginFailureWindow),
 	}
 
 	ctx := context.Background()
@@ -174,7 +174,7 @@ func TestLoginSuccessDoesNotIncrementThrottle(t *testing.T) {
 	}
 	svc := &authSvcImpl{
 		authClient:          stub,
-		loginFailureLimiter: middleware.NewRateLimiter(loginFailureLimit, loginFailureWindow),
+		loginFailureLimiter: ratelimit.NewMemory(loginFailureLimit, loginFailureWindow),
 	}
 
 	// 1 failure leaves the bucket non-empty.

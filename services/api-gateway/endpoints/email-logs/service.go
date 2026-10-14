@@ -3,11 +3,11 @@ package emaillogep
 import (
 	"context"
 	"fmt"
+	"github.com/open-mrp/apikit/include"
 
 	"github.com/open-mrp/api/services/api-gateway/internal/domain"
 	grpcutil "github.com/open-mrp/api/services/api-gateway/internal/grpc"
 	apiresource "github.com/open-mrp/api/services/api-gateway/pkg/resource"
-	"github.com/open-mrp/api/services/api-gateway/pkg/resourcekit"
 	"github.com/open-mrp/api/shared/constants"
 	pb "github.com/open-mrp/api/shared/proto/core"
 	apierror "github.com/open-mrp/apikit/apierror"
@@ -53,7 +53,7 @@ func (m *emailLogSvcImpl) ListEmailLogs(ctx context.Context, req *ListEmailLogsR
 		Cursor:   req.Cursor,
 		Limit:    req.Limit,
 		Query:    req.Query,
-		Includes: resourcekit.FilterIncludes(ctx, "sent_by"),
+		Includes: include.FilterIncludes(ctx, "sent_by"),
 	}
 
 	resp, apiErr := grpcutil.CallRPC(ctx, emailLogSvcTracer, "service.email_logs.list", domain.ServiceName,
@@ -69,7 +69,7 @@ func (m *emailLogSvcImpl) ListEmailLogs(ctx context.Context, req *ListEmailLogsR
 		return apiresource.NewList[apiresource.EmailLog](nil, apiresource.PageInfo{}), nil
 	}
 
-	meta := resourcekit.GetLoadMeta(ctx)
+	meta := include.GetLoadMeta(ctx)
 	emailLogs := make([]apiresource.EmailLog, len(resp.EmailLogs))
 	for i, el := range resp.EmailLogs {
 		emailLogs[i] = emailLogFromProto(el)
@@ -82,7 +82,7 @@ func (m *emailLogSvcImpl) ListEmailLogs(ctx context.Context, req *ListEmailLogsR
 func (m *emailLogSvcImpl) GetEmailLog(ctx context.Context, req *RetrieveEmailLogRequest) (*apiresource.EmailLog, *apierror.APIError) {
 	pbReq := &pb.GetEmailLogRequest{
 		Id:       req.EmailLogID,
-		Includes: resourcekit.FilterIncludes(ctx, "sent_by"),
+		Includes: include.FilterIncludes(ctx, "sent_by"),
 	}
 
 	resp, apiErr := grpcutil.CallRPC(ctx, emailLogSvcTracer, "service.email_logs.get", domain.ServiceName,
@@ -94,7 +94,7 @@ func (m *emailLogSvcImpl) GetEmailLog(ctx context.Context, req *RetrieveEmailLog
 		return nil, apiErr
 	}
 
-	meta := resourcekit.GetLoadMeta(ctx)
+	meta := include.GetLoadMeta(ctx)
 	result := emailLogFromProto(resp.EmailLog)
 	stashEmailLogMeta(meta, resp.EmailLog)
 	return &result, nil
@@ -123,7 +123,7 @@ func emailLogFromProto(el *pb.EmailLogInfo) apiresource.EmailLog {
 	return result
 }
 
-func stashEmailLogMeta(meta *resourcekit.LoadMeta, el *pb.EmailLogInfo) {
+func stashEmailLogMeta(meta *include.LoadMeta, el *pb.EmailLogInfo) {
 	if el == nil || el.SentBy == nil || el.SentBy.Id == "" {
 		return
 	}

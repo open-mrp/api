@@ -4,10 +4,11 @@ import (
 	"context"
 	"net/http"
 
-	apiendpoint "github.com/open-mrp/api/services/api-gateway/pkg/endpoint"
+	"github.com/open-mrp/api/services/api-gateway/pkg/authz"
 	apiresource "github.com/open-mrp/api/services/api-gateway/pkg/resource"
 	"github.com/open-mrp/api/services/auth-service/pkg/types"
 	apierror "github.com/open-mrp/apikit/apierror"
+	apiendpoint "github.com/open-mrp/apikit/endpoint"
 )
 
 // Request to delete a part.
@@ -23,16 +24,15 @@ type DeletePartEndpoint struct{}
 
 func (e *DeletePartEndpoint) Materialize() *apiendpoint.APIEndpoint[*DeletePartRequest, *apiresource.Part] {
 	return (&apiendpoint.APIEndpoint[*DeletePartRequest, *apiresource.Part]{
-		Title:                   "Delete Part",
-		Method:                  http.MethodDelete,
-		ContentType:             "application/json",
-		Route:                   "/v1/catalog/parts/{id}",
-		SuccessStatusCode:       http.StatusOK,
-		Public:                  true,
-		AgentTool:               true,
-		RequiredPermissions:     []types.Permission{{Domain: types.PermissionDomainParts, Action: types.ActionDelete}},
-		CounterpartyPermissions: apiendpoint.Counterparties(types.ActionUpdate),
-		Preview:                 true,
+		Title:             "Delete Part",
+		Method:            http.MethodDelete,
+		ContentType:       "application/json",
+		Route:             "/v1/catalog/parts/{id}",
+		SuccessStatusCode: http.StatusOK,
+		Public:            true,
+		AgentTool:         true,
+		Auth:              authz.Policy{Permissions: []types.Permission{{Domain: types.PermissionDomainParts, Action: types.ActionDelete}}, Counterparty: authz.Counterparties(types.ActionUpdate)},
+		Preview:           true,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *DeletePartRequest) (*apiresource.Part, *apierror.APIError) {
 			return svc.(PartSvc).DeletePart
 		},

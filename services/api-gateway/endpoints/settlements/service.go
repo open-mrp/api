@@ -3,11 +3,11 @@ package settlementep
 import (
 	"context"
 	"fmt"
+	"github.com/open-mrp/apikit/include"
 
 	"github.com/open-mrp/api/services/api-gateway/internal/domain"
 	grpcutil "github.com/open-mrp/api/services/api-gateway/internal/grpc"
 	apiresource "github.com/open-mrp/api/services/api-gateway/pkg/resource"
-	"github.com/open-mrp/api/services/api-gateway/pkg/resourcekit"
 	"github.com/open-mrp/api/shared/constants"
 	pb "github.com/open-mrp/api/shared/proto/core"
 	apierror "github.com/open-mrp/apikit/apierror"
@@ -89,7 +89,7 @@ func (m *settlementSvcImpl) ListSettlements(ctx context.Context, req *ListSettle
 func (m *settlementSvcImpl) GetSettlement(ctx context.Context, req *RetrieveSettlementRequest) (*apiresource.Settlement, *apierror.APIError) {
 	pbReq := &pb.GetSettlementRequest{
 		Id:       req.SettlementID,
-		Includes: resourcekit.FilterIncludes(ctx, settlementIncludes...),
+		Includes: include.FilterIncludes(ctx, settlementIncludes...),
 	}
 
 	resp, apiErr := grpcutil.CallRPC(ctx, settlementSvcTracer, "service.settlements.get", domain.ServiceName,
@@ -101,7 +101,7 @@ func (m *settlementSvcImpl) GetSettlement(ctx context.Context, req *RetrieveSett
 		return nil, apiErr
 	}
 
-	meta := resourcekit.GetLoadMeta(ctx)
+	meta := include.GetLoadMeta(ctx)
 	result := settlementFromProto(resp.Settlement)
 	stashSettlementMeta(meta, resp.Settlement)
 	return &result, nil
@@ -148,7 +148,7 @@ func (m *settlementSvcImpl) CreateSettlement(ctx context.Context, req *CreateSet
 		return nil, apiErr
 	}
 
-	meta := resourcekit.GetLoadMeta(ctx)
+	meta := include.GetLoadMeta(ctx)
 	result := settlementFromProto(resp.Settlement)
 	stashSettlementMeta(meta, resp.Settlement)
 	return &result, nil
@@ -172,7 +172,7 @@ func (m *settlementSvcImpl) UpdateSettlement(ctx context.Context, req *UpdateSet
 		return nil, apiErr
 	}
 
-	meta := resourcekit.GetLoadMeta(ctx)
+	meta := include.GetLoadMeta(ctx)
 	result := settlementFromProto(resp.Settlement)
 	stashSettlementMeta(meta, resp.Settlement)
 	return &result, nil
@@ -192,7 +192,7 @@ func (m *settlementSvcImpl) DeleteSettlement(ctx context.Context, req *DeleteSet
 		return nil, apiErr
 	}
 
-	meta := resourcekit.GetLoadMeta(ctx)
+	meta := include.GetLoadMeta(ctx)
 	result := settlementFromProto(resp.Settlement)
 	stashSettlementMeta(meta, resp.Settlement)
 	return &result, nil
@@ -215,7 +215,7 @@ func settlementFromProto(d *pb.SettlementInfo) apiresource.Settlement {
 	}
 }
 
-func stashSettlementMeta(meta *resourcekit.LoadMeta, d *pb.SettlementInfo) {
+func stashSettlementMeta(meta *include.LoadMeta, d *pb.SettlementInfo) {
 	if d == nil {
 		return
 	}
@@ -233,7 +233,7 @@ func stashSettlementMeta(meta *resourcekit.LoadMeta, d *pb.SettlementInfo) {
 		apiresource.NewList(allocations, apiresource.PageInfo{}))
 }
 
-func transactionAllocationFromProto(meta *resourcekit.LoadMeta, a *pb.TransactionAllocationInfo) apiresource.TransactionAllocation {
+func transactionAllocationFromProto(meta *include.LoadMeta, a *pb.TransactionAllocationInfo) apiresource.TransactionAllocation {
 	if a == nil {
 		return apiresource.TransactionAllocation{}
 	}

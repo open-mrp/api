@@ -1,8 +1,8 @@
 package salesorderep
 
 import (
-	apiexample "github.com/open-mrp/api/services/api-gateway/pkg/example"
 	apiresource "github.com/open-mrp/api/services/api-gateway/pkg/resource"
+	apiexample "github.com/open-mrp/apikit/example"
 )
 
 func (*CheckoutSalesOrderRequest) SchemaExample() any {

@@ -3,16 +3,16 @@ package transactionep
 import (
 	"context"
 	"fmt"
+	"github.com/open-mrp/apikit/include"
 	"strings"
 	"time"
 
 	"github.com/open-mrp/api/services/api-gateway/internal/domain"
 	grpcutil "github.com/open-mrp/api/services/api-gateway/internal/grpc"
-	httptransport "github.com/open-mrp/api/services/api-gateway/internal/http"
 	apiresource "github.com/open-mrp/api/services/api-gateway/pkg/resource"
-	"github.com/open-mrp/api/services/api-gateway/pkg/resourcekit"
 	"github.com/open-mrp/api/shared/constants"
 	"github.com/open-mrp/api/shared/id"
+	"github.com/open-mrp/api/shared/omrpctx"
 	pb "github.com/open-mrp/api/shared/proto/core"
 	apierror "github.com/open-mrp/apikit/apierror"
 	"github.com/open-mrp/apikit/tracing"
@@ -101,7 +101,7 @@ func (m *transactionSvcImpl) ListTransactions(ctx context.Context, req *ListTran
 func (m *transactionSvcImpl) GetTransaction(ctx context.Context, req *RetrieveTransactionRequest) (*apiresource.TransactionDetail, *apierror.APIError) {
 	pbReq := &pb.GetTransactionRequest{
 		Id:       req.TransactionID,
-		Includes: resourcekit.FilterIncludes(ctx, "allocations"),
+		Includes: include.FilterIncludes(ctx, "allocations"),
 	}
 
 	resp, apiErr := grpcutil.CallRPC(ctx, transactionSvcTracer, "service.transactions.get", domain.ServiceName,
@@ -290,7 +290,7 @@ var staticTransactionMethods = []apiresource.TransactionMethod{
 }
 
 func (m *transactionSvcImpl) ListTransactionTypes(ctx context.Context, req *ListTransactionTypesRequest) (*apiresource.List[apiresource.TransactionType], *apierror.APIError) {
-	identity, idErr := httptransport.GetIdentity(ctx)
+	identity, idErr := omrpctx.RequireIdentity(ctx)
 	if idErr != nil {
 		return nil, idErr
 	}
@@ -320,7 +320,7 @@ func (m *transactionSvcImpl) ListTransactionTypes(ctx context.Context, req *List
 }
 
 func (m *transactionSvcImpl) ListTransactionMethods(ctx context.Context, req *ListTransactionMethodsRequest) (*apiresource.List[apiresource.TransactionMethod], *apierror.APIError) {
-	identity, idErr := httptransport.GetIdentity(ctx)
+	identity, idErr := omrpctx.RequireIdentity(ctx)
 	if idErr != nil {
 		return nil, idErr
 	}

@@ -3,12 +3,12 @@ package demandoverridesep
 import (
 	"context"
 	"fmt"
+	"github.com/open-mrp/apikit/include"
 
 	"github.com/open-mrp/api/services/api-gateway/internal/domain"
 	grpcutil "github.com/open-mrp/api/services/api-gateway/internal/grpc"
 	"github.com/open-mrp/api/services/api-gateway/internal/resourceloaders"
 	apiresource "github.com/open-mrp/api/services/api-gateway/pkg/resource"
-	"github.com/open-mrp/api/services/api-gateway/pkg/resourcekit"
 	"github.com/open-mrp/api/shared/constants"
 	"github.com/open-mrp/api/shared/fieldpb"
 	pb "github.com/open-mrp/api/shared/proto/core"
@@ -94,7 +94,7 @@ func (m *demandOverridesSvcImpl) ListDemandOverrides(ctx context.Context, req *L
 		return nil, apiErr
 	}
 
-	meta := resourcekit.GetLoadMeta(ctx)
+	meta := include.GetLoadMeta(ctx)
 	overrides := make([]apiresource.DemandOverride, len(resp.Overrides))
 	creators := make([]*apiresource.Actor, 0, len(resp.Overrides))
 	for i, o := range resp.Overrides {
@@ -117,7 +117,7 @@ func (m *demandOverridesSvcImpl) GetDemandOverride(ctx context.Context, req *Ret
 		return nil, apiErr
 	}
 
-	meta := resourcekit.GetLoadMeta(ctx)
+	meta := include.GetLoadMeta(ctx)
 	result := DemandOverrideFromProto(resp.Override)
 	hydrateCreators(ctx, []*apiresource.Actor{StashDemandOverrideMeta(ctx, meta, resp.Override)})
 	return &result, nil
@@ -151,7 +151,7 @@ func (m *demandOverridesSvcImpl) CreateDemandOverride(ctx context.Context, req *
 		return nil, apiErr
 	}
 
-	meta := resourcekit.GetLoadMeta(ctx)
+	meta := include.GetLoadMeta(ctx)
 	result := DemandOverrideFromProto(resp.Override)
 	hydrateCreators(ctx, []*apiresource.Actor{StashDemandOverrideMeta(ctx, meta, resp.Override)})
 	return &result, nil
@@ -195,7 +195,7 @@ func (m *demandOverridesSvcImpl) UpdateDemandOverride(ctx context.Context, req *
 		return nil, apiErr
 	}
 
-	meta := resourcekit.GetLoadMeta(ctx)
+	meta := include.GetLoadMeta(ctx)
 	result := DemandOverrideFromProto(resp.Override)
 	hydrateCreators(ctx, []*apiresource.Actor{StashDemandOverrideMeta(ctx, meta, resp.Override)})
 	return &result, nil
@@ -249,7 +249,7 @@ func DemandOverrideFromProto(info *pb.DemandOverrideInfo) apiresource.DemandOver
 }
 
 // StashDemandOverrideMeta stashes the reference data for the expandable sub-resources. The scope is polymorphic, so it resolves to an Entity rather than to a typed sub-resource: an include that can only ever populate for half the rows is not an include. The creator is stored as a bare identity-actor id, so its Actor is built from the id's prefix and preheated — LoadActors has no backing store. The built actor is returned (nil when absent) so the caller can batch-hydrate display names.
-func StashDemandOverrideMeta(ctx context.Context, meta *resourcekit.LoadMeta, info *pb.DemandOverrideInfo) *apiresource.Actor {
+func StashDemandOverrideMeta(ctx context.Context, meta *include.LoadMeta, info *pb.DemandOverrideInfo) *apiresource.Actor {
 	if info == nil {
 		return nil
 	}
@@ -262,14 +262,14 @@ func StashDemandOverrideMeta(ctx context.Context, meta *resourcekit.LoadMeta, in
 	actor := resourceloaders.ActorRefFromID(info.CreatedById)
 	if actor != nil {
 		meta.Set(constants.ObjectTypeDemandOverride, info.Id, "created_by_id", actor.ID)
-		resourcekit.PreheatCache(ctx, constants.ObjectTypeActor, actor.ID, actor)
+		include.PreheatCache(ctx, constants.ObjectTypeActor, actor.ID, actor)
 	}
 	return actor
 }
 
 // hydrateCreators fills the creators' display names + handles. A no-op unless the caller expanded created_by — the only case where the names are rendered — avoiding needless loader round-trips otherwise.
 func hydrateCreators(ctx context.Context, creators []*apiresource.Actor) {
-	if !resourcekit.RequestedIncludeSet(ctx)["created_by"] {
+	if !include.RequestedIncludeSet(ctx)["created_by"] {
 		return
 	}
 	resourceloaders.HydrateIdentityActorNames(ctx, creators)

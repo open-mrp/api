@@ -2,13 +2,13 @@ package analyticsep
 
 import (
 	"context"
+	"github.com/open-mrp/apikit/include"
 
 	"google.golang.org/grpc"
 
 	"github.com/open-mrp/api/services/api-gateway/internal/domain"
 	grpcutil "github.com/open-mrp/api/services/api-gateway/internal/grpc"
 	apiresource "github.com/open-mrp/api/services/api-gateway/pkg/resource"
-	"github.com/open-mrp/api/services/api-gateway/pkg/resourcekit"
 	"github.com/open-mrp/api/shared/constants"
 	pb "github.com/open-mrp/api/shared/proto/core"
 	apierror "github.com/open-mrp/apikit/apierror"
@@ -38,7 +38,7 @@ func (m *analyticsSvcImpl) AnalyzeCustomerPricing(ctx context.Context, req *Anal
 
 // presentCustomerPricing builds the response, leaving every expandable field nil and stashing the foreign keys the include resolver needs. Nothing here fabricates a sub-resource: an unexpanded relation serializes as null.
 func presentCustomerPricing(ctx context.Context, resp *pb.AnalyzeCustomerPricingResponse) *apiresource.AnalyzeCustomerPricingResponse {
-	meta := resourcekit.GetLoadMeta(ctx)
+	meta := include.GetLoadMeta(ctx)
 	presented := make([]apiresource.CustomerPricingFinding, 0, len(resp.GetFindings()))
 
 	for _, f := range resp.GetFindings() {

@@ -3,6 +3,7 @@ package shipmentep
 import (
 	"context"
 	"fmt"
+	"github.com/open-mrp/apikit/include"
 	"strconv"
 	"time"
 
@@ -12,7 +13,6 @@ import (
 	"github.com/open-mrp/api/services/api-gateway/internal/resourceloaders"
 	apirequest "github.com/open-mrp/api/services/api-gateway/pkg/request"
 	apiresource "github.com/open-mrp/api/services/api-gateway/pkg/resource"
-	"github.com/open-mrp/api/services/api-gateway/pkg/resourcekit"
 	"github.com/open-mrp/api/shared/constants"
 	"github.com/open-mrp/api/shared/fieldpb"
 	pb "github.com/open-mrp/api/shared/proto/core"
@@ -90,7 +90,7 @@ func (m *shipmentSvcImpl) ListShipments(ctx context.Context, req *ListShipmentsR
 		EndDate:          req.EndDate,
 		// Ask the backend to expand lines when requested (other includes are
 		// resolved gateway-side from stashed FK ids).
-		Includes: resourcekit.FilterIncludes(ctx, "lines"),
+		Includes: include.FilterIncludes(ctx, "lines"),
 	}
 
 	resp, apiErr := grpcutil.CallRPC(ctx, shipmentSvcTracer, "service.shipments.list", domain.ServiceName,
@@ -118,7 +118,7 @@ func (m *shipmentSvcImpl) ListShipments(ctx context.Context, req *ListShipmentsR
 func (m *shipmentSvcImpl) GetShipment(ctx context.Context, req *RetrieveShipmentRequest) (*apiresource.Shipment, *apierror.APIError) {
 	pbReq := &pb.GetShipmentRequest{
 		Id:       req.ShipmentID,
-		Includes: resourcekit.FilterIncludes(ctx, shipmentIncludes...),
+		Includes: include.FilterIncludes(ctx, shipmentIncludes...),
 	}
 
 	resp, apiErr := grpcutil.CallRPC(ctx, shipmentSvcTracer, "service.shipments.get", domain.ServiceName,
@@ -143,7 +143,7 @@ func (m *shipmentSvcImpl) UpdateShipment(ctx context.Context, req *UpdateShipmen
 		MasterTrackingNumber: trackingNumberToProto(req.MasterTrackingNumber),
 		CarrierId:            req.CarrierID.Ptr(),
 		ServiceLevelId:       fieldpb.StringClearableToProto(req.ServiceLevelID),
-		Includes:             resourcekit.FilterIncludes(ctx, shipmentIncludes...),
+		Includes:             include.FilterIncludes(ctx, shipmentIncludes...),
 	}
 
 	resp, apiErr := grpcutil.CallRPC(ctx, shipmentSvcTracer, "service.shipments.update", domain.ServiceName,
@@ -166,7 +166,7 @@ func (m *shipmentSvcImpl) AdminUpdateShipmentTracking(ctx context.Context, req *
 		MasterTrackingNumber: trackingNumberToProto(req.MasterTrackingNumber),
 		CarrierId:            req.CarrierID.Ptr(),
 		ServiceLevelId:       fieldpb.StringClearableToProto(req.ServiceLevelID),
-		Includes:             resourcekit.FilterIncludes(ctx, shipmentIncludes...),
+		Includes:             include.FilterIncludes(ctx, shipmentIncludes...),
 	}
 
 	resp, apiErr := grpcutil.CallRPC(ctx, shipmentSvcTracer, "service.shipments.admin_update_tracking", domain.ServiceName,
@@ -483,7 +483,7 @@ func stashShipmentMeta(ctx context.Context, s *pb.ShipmentInfo, d *apiresource.S
 		return
 	}
 
-	meta := resourcekit.GetLoadMeta(ctx)
+	meta := include.GetLoadMeta(ctx)
 
 	// Document-level cross-references: stash only the FK id so the loader
 	// fetches the real document on ?include=. Never fabricate.
@@ -653,7 +653,7 @@ func shipmentLineFromProto(ctx context.Context, l *pb.ShipmentLineInfo) apiresou
 		UpdatedAt: grpcutil.TimestampToTime(l.UpdatedAt),
 	}
 
-	meta := resourcekit.GetLoadMeta(ctx)
+	meta := include.GetLoadMeta(ctx)
 	meta.Set(constants.ObjectTypeQuantity, l.QuantityId, "unit_id", l.QuantityUnitId)
 	// The item is the order line's, and expandable: the line carries its id and the item loader
 	// fills the rest, rather than the line shipping an item that is only an id and a SKU.
@@ -667,7 +667,7 @@ func shipmentLineFromProto(ctx context.Context, l *pb.ShipmentLineInfo) apiresou
 // Stashes the order line a shipment line fulfills, plus that line's product FK, so the resolver can
 // serve lines.sales_order_line and its product on ?include=.
 func stashShipmentLineMeta(ctx context.Context, d *apiresource.ShipmentLine, l *pb.ShipmentLineInfo) {
-	meta := resourcekit.GetLoadMeta(ctx)
+	meta := include.GetLoadMeta(ctx)
 	line := buildSalesOrderLineForShipmentLine(l)
 	meta.Set(constants.ObjectTypeShipmentLine, d.ID, "sales_order_line", line)
 

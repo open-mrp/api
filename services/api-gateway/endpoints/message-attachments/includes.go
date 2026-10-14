@@ -1,8 +1,8 @@
 package attachmentep
 
 import (
-	apiendpoint "github.com/open-mrp/api/services/api-gateway/pkg/endpoint"
 	"github.com/open-mrp/api/shared/constants"
+	apiendpoint "github.com/open-mrp/apikit/endpoint"
 )
 
 func attachmentUploadTargetIncludeConfig() *apiendpoint.IncludeConfig {

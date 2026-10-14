@@ -4,10 +4,11 @@ import (
 	"context"
 	"net/http"
 
-	httptransport "github.com/open-mrp/api/services/api-gateway/internal/http"
-	apiendpoint "github.com/open-mrp/api/services/api-gateway/pkg/endpoint"
+	"github.com/open-mrp/api/services/api-gateway/pkg/authz"
 	"github.com/open-mrp/api/services/auth-service/pkg/types"
 	apierror "github.com/open-mrp/apikit/apierror"
+	apiendpoint "github.com/open-mrp/apikit/endpoint"
+	httptransport "github.com/open-mrp/apikit/transport"
 )
 
 // Request to export items.
@@ -22,14 +23,14 @@ type ExportItemsEndpoint struct{}
 
 func (e *ExportItemsEndpoint) Materialize() *apiendpoint.APIEndpoint[*ExportItemsRequest, *httptransport.FileDownload] {
 	return (&apiendpoint.APIEndpoint[*ExportItemsRequest, *httptransport.FileDownload]{
-		Title:               "Export Items",
-		Method:              http.MethodGet,
-		ContentType:         "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-		Route:               "/v1/catalog/items/actions/export",
-		SuccessStatusCode:   http.StatusOK,
-		Public:              false,
-		Preview:             true,
-		RequiredPermissions: []types.Permission{{Domain: types.PermissionDomainItems, Action: types.ActionRead}},
+		Title:             "Export Items",
+		Method:            http.MethodGet,
+		ContentType:       "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+		Route:             "/v1/catalog/items/actions/export",
+		SuccessStatusCode: http.StatusOK,
+		Public:            false,
+		Preview:           true,
+		Auth:              authz.Policy{Permissions: []types.Permission{{Domain: types.PermissionDomainItems, Action: types.ActionRead}}},
 		ServiceHandler: func(svc any) func(ctx context.Context, req *ExportItemsRequest) (*httptransport.FileDownload, *apierror.APIError) {
 			return svc.(ItemSvc).ExportItems
 		},

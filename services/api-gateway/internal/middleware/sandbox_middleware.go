@@ -4,11 +4,11 @@ import (
 	"net/http"
 	"strings"
 
-	httptransport "github.com/open-mrp/api/services/api-gateway/internal/http"
 	"github.com/open-mrp/api/services/auth-service/pkg/types"
 	"github.com/open-mrp/api/shared/constants"
 	apierror "github.com/open-mrp/apikit/apierror"
 	"github.com/open-mrp/apikit/appctx"
+	httptransport "github.com/open-mrp/apikit/transport"
 )
 
 // SandboxBillingMiddleware blocks sandbox accounts from accessing billing endpoints. Sandbox accounts inherit their owner's plan and should never interact with Stripe directly.

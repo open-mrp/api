@@ -5,10 +5,11 @@ import (
 	"net/http"
 	"time"
 
-	httptransport "github.com/open-mrp/api/services/api-gateway/internal/http"
-	apiendpoint "github.com/open-mrp/api/services/api-gateway/pkg/endpoint"
+	"github.com/open-mrp/api/services/api-gateway/pkg/authz"
 	"github.com/open-mrp/api/services/auth-service/pkg/types"
 	apierror "github.com/open-mrp/apikit/apierror"
+	apiendpoint "github.com/open-mrp/apikit/endpoint"
+	httptransport "github.com/open-mrp/apikit/transport"
 )
 
 // Request to export receivable entries for a specific customer as CSV.
@@ -35,9 +36,9 @@ func (e *ExportReceivablesByCustomerEndpoint) Materialize() *apiendpoint.APIEndp
 		SuccessStatusCode: http.StatusOK,
 		Public:            false,
 		Preview:           true,
-		RequiredPermissions: []types.Permission{
+		Auth: authz.Policy{Permissions: []types.Permission{
 			{Domain: types.PermissionDomainCustomers, Action: types.ActionRead},
-		},
+		}},
 		ServiceHandler: func(svc any) func(ctx context.Context, req *ExportReceivablesByCustomerRequest) (*httptransport.FileDownload, *apierror.APIError) {
 			return svc.(ReceivableSvc).ExportReceivablesByCustomer
 		},

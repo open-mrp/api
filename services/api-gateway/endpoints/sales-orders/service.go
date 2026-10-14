@@ -3,6 +3,7 @@ package salesorderep
 import (
 	"context"
 	"fmt"
+	"github.com/open-mrp/apikit/include"
 	"time"
 
 	productionrunep "github.com/open-mrp/api/services/api-gateway/endpoints/production-runs"
@@ -11,7 +12,6 @@ import (
 	"github.com/open-mrp/api/services/api-gateway/internal/resourceloaders"
 	apirequest "github.com/open-mrp/api/services/api-gateway/pkg/request"
 	apiresource "github.com/open-mrp/api/services/api-gateway/pkg/resource"
-	"github.com/open-mrp/api/services/api-gateway/pkg/resourcekit"
 	"github.com/open-mrp/api/shared/constants"
 	"github.com/open-mrp/api/shared/fieldpb"
 	"github.com/open-mrp/api/shared/metadatapb"
@@ -130,7 +130,7 @@ func (m *salesOrderSvcImpl) ListSalesOrders(ctx context.Context, req *ListSalesO
 		PastDue:          req.PastDue,
 		// The list returns the full sales-order resource; ask the backend to
 		// expand only what the caller requested (inline fields always present).
-		Includes: resourcekit.FilterIncludes(ctx, salesOrderIncludes...),
+		Includes: include.FilterIncludes(ctx, salesOrderIncludes...),
 	}
 
 	resp, apiErr := grpcutil.CallRPC(ctx, salesOrderEpSvcTracer, "service.sales_orders.list", domain.ServiceName,
@@ -157,7 +157,7 @@ func (m *salesOrderSvcImpl) ListSalesOrders(ctx context.Context, req *ListSalesO
 func (m *salesOrderSvcImpl) GetSalesOrder(ctx context.Context, req *RetrieveSalesOrderRequest) (*apiresource.SalesOrder, *apierror.APIError) {
 	pbReq := &pb.GetSalesOrderRequest{
 		Id:       req.SalesOrderID,
-		Includes: resourcekit.FilterIncludes(ctx, salesOrderIncludes...),
+		Includes: include.FilterIncludes(ctx, salesOrderIncludes...),
 	}
 
 	resp, apiErr := grpcutil.CallRPC(ctx, salesOrderEpSvcTracer, "service.sales_orders.get", domain.ServiceName,
@@ -221,7 +221,7 @@ func (m *salesOrderSvcImpl) CreateSalesOrder(ctx context.Context, req *CreateSal
 		Lines:                        lines,
 		AcknowledgementEmailContacts: toSalesOrderEmailContactInputs(req.AcknowledgementEmailContacts),
 		InvoiceEmailContacts:         toSalesOrderEmailContactInputs(req.InvoiceEmailContacts),
-		Includes:                     resourcekit.FilterIncludes(ctx, salesOrderIncludes...),
+		Includes:                     include.FilterIncludes(ctx, salesOrderIncludes...),
 	}
 
 	if v, ok := req.PromisedAt.Value(); ok {
@@ -284,7 +284,7 @@ func (m *salesOrderSvcImpl) UpdateSalesOrder(ctx context.Context, req *UpdateSal
 		CustomerId:                   req.CustomerID.Ptr(),
 		AcknowledgementEmailContacts: toSalesOrderEmailContactList(req.AcknowledgementEmailContacts.Ptr()),
 		InvoiceEmailContacts:         toSalesOrderEmailContactList(req.InvoiceEmailContacts.Ptr()),
-		Includes:                     resourcekit.FilterIncludes(ctx, salesOrderIncludes...),
+		Includes:                     include.FilterIncludes(ctx, salesOrderIncludes...),
 	}
 
 	if v, ok := req.AcknowledgmentStatus.Value(); ok {
@@ -358,7 +358,7 @@ func (m *salesOrderSvcImpl) changeSalesOrderStatus(ctx context.Context, id strin
 		Id:           id,
 		StatusChange: string(action),
 		SendEmail:    notifyCustomer,
-		Includes:     resourcekit.FilterIncludes(ctx, salesOrderIncludes...),
+		Includes:     include.FilterIncludes(ctx, salesOrderIncludes...),
 	}
 
 	resp, apiErr := grpcutil.CallRPC(ctx, salesOrderEpSvcTracer, "service.sales_orders.change_status", domain.ServiceName,
@@ -608,7 +608,7 @@ func (m *salesOrderSvcImpl) CreateSalesOrderProductionRun(ctx context.Context, r
 		return nil, apiErr
 	}
 
-	meta := resourcekit.GetLoadMeta(ctx)
+	meta := include.GetLoadMeta(ctx)
 	run := productionrunep.ProductionRunFromProto(resp.ProductionRun)
 	productionrunep.StashProductionRunMeta(meta, resp.ProductionRun)
 	return &run, nil
@@ -641,7 +641,7 @@ func (m *salesOrderSvcImpl) CreateSalesOrderLine(ctx context.Context, req *Creat
 	}
 
 	result := salesOrderLineDetailFromProto(resp.SalesOrderLine)
-	stashSalesOrderLineMeta(resourcekit.GetLoadMeta(ctx), resp.SalesOrderLine, &result)
+	stashSalesOrderLineMeta(include.GetLoadMeta(ctx), resp.SalesOrderLine, &result)
 	return &result, nil
 }
 
@@ -694,7 +694,7 @@ func (m *salesOrderSvcImpl) UpdateSalesOrderLine(ctx context.Context, req *Updat
 	}
 
 	result := salesOrderLineDetailFromProto(resp.SalesOrderLine)
-	stashSalesOrderLineMeta(resourcekit.GetLoadMeta(ctx), resp.SalesOrderLine, &result)
+	stashSalesOrderLineMeta(include.GetLoadMeta(ctx), resp.SalesOrderLine, &result)
 	return &result, nil
 }
 
@@ -903,7 +903,7 @@ func stashSalesOrderMeta(ctx context.Context, info *pb.SalesOrderInfo, d *apires
 		return
 	}
 
-	meta := resourcekit.GetLoadMeta(ctx)
+	meta := include.GetLoadMeta(ctx)
 
 	// customer is an expandable reference: stash the FK id so LoadCustomers
 	// fetches the real Customer on ?include=customer. Never fabricate.
@@ -1128,10 +1128,10 @@ func stashSalesOrderMeta(ctx context.Context, info *pb.SalesOrderInfo, d *apires
 // batches all reps into a single account-user fetch. Best-effort: on failure each rep
 // keeps its id + name.
 func hydrateSalesReps(ctx context.Context, orderIDs []string) {
-	if !resourcekit.RequestedIncludeSet(ctx)["sales_rep"] {
+	if !include.RequestedIncludeSet(ctx)["sales_rep"] {
 		return
 	}
-	meta := resourcekit.GetLoadMeta(ctx)
+	meta := include.GetLoadMeta(ctx)
 	actors := make([]*apiresource.Actor, 0, len(orderIDs))
 	for _, id := range orderIDs {
 		if v, ok := meta.Get(constants.ObjectTypeSalesOrder, id, "sales_rep"); ok {
@@ -1273,7 +1273,7 @@ func completionFraction(part, whole decimal.Decimal) float64 {
 // stashSalesOrderLineMeta stashes a line's expandable sub-resources
 // (quantity_ordered, unit_price, unit_cost, totals) so the include resolver can
 // populate them when requested.
-func stashSalesOrderLineMeta(meta *resourcekit.LoadMeta, info *pb.SalesOrderLineInfo, line *apiresource.SalesOrderLine) {
+func stashSalesOrderLineMeta(meta *include.LoadMeta, info *pb.SalesOrderLineInfo, line *apiresource.SalesOrderLine) {
 	if info.ProductId != nil {
 		meta.Set(constants.ObjectTypeSalesOrderLine, line.ID, "product_id", *info.ProductId)
 	}

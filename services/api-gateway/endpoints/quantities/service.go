@@ -3,11 +3,11 @@ package quantityep
 import (
 	"context"
 	"fmt"
+	"github.com/open-mrp/apikit/include"
 
 	"github.com/open-mrp/api/services/api-gateway/internal/domain"
 	grpcutil "github.com/open-mrp/api/services/api-gateway/internal/grpc"
 	apiresource "github.com/open-mrp/api/services/api-gateway/pkg/resource"
-	"github.com/open-mrp/api/services/api-gateway/pkg/resourcekit"
 	"github.com/open-mrp/api/shared/constants"
 	pb "github.com/open-mrp/api/shared/proto/core"
 	apierror "github.com/open-mrp/apikit/apierror"
@@ -65,7 +65,7 @@ func (m *quantitySvcImpl) UpdateQuantity(ctx context.Context, req *UpdateQuantit
 		return nil, apiErr
 	}
 
-	meta := resourcekit.GetLoadMeta(ctx)
+	meta := include.GetLoadMeta(ctx)
 	result := quantityFromProto(resp.Quantity)
 	stashQuantityMeta(meta, resp.Quantity)
 	return &result, nil
@@ -85,7 +85,7 @@ func quantityFromProto(q *pb.QuantityInfo) apiresource.Quantity {
 	}
 }
 
-func stashQuantityMeta(meta *resourcekit.LoadMeta, q *pb.QuantityInfo) {
+func stashQuantityMeta(meta *include.LoadMeta, q *pb.QuantityInfo) {
 	if q == nil {
 		return
 	}

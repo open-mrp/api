@@ -3,18 +3,18 @@ package inventorychangelogep
 import (
 	"context"
 	"fmt"
+	"github.com/open-mrp/apikit/include"
 
 	jobep "github.com/open-mrp/api/services/api-gateway/endpoints/jobs"
 	"github.com/open-mrp/api/services/api-gateway/internal/domain"
 	"github.com/open-mrp/api/services/api-gateway/internal/export"
 	grpcutil "github.com/open-mrp/api/services/api-gateway/internal/grpc"
-	httptransport "github.com/open-mrp/api/services/api-gateway/internal/http"
 	apiresource "github.com/open-mrp/api/services/api-gateway/pkg/resource"
-	"github.com/open-mrp/api/services/api-gateway/pkg/resourcekit"
 	"github.com/open-mrp/api/shared/constants"
 	pb "github.com/open-mrp/api/shared/proto/core"
 	apierror "github.com/open-mrp/apikit/apierror"
 	"github.com/open-mrp/apikit/tracing"
+	httptransport "github.com/open-mrp/apikit/transport"
 	"google.golang.org/grpc"
 	"google.golang.org/protobuf/types/known/timestamppb"
 )
@@ -80,7 +80,7 @@ func (m *inventoryChangeLogSvcImpl) ListInventoryChangeLogs(ctx context.Context,
 		return nil, apiErr
 	}
 
-	meta := resourcekit.GetLoadMeta(ctx)
+	meta := include.GetLoadMeta(ctx)
 	items := make([]apiresource.InventoryChangeLog, len(resp.InventoryChangeLogs))
 	for i, icl := range resp.InventoryChangeLogs {
 		items[i] = inventoryChangeLogFromProto(icl)
@@ -104,7 +104,7 @@ func (m *inventoryChangeLogSvcImpl) GetInventoryChangeLog(ctx context.Context, r
 		return nil, apiErr
 	}
 
-	meta := resourcekit.GetLoadMeta(ctx)
+	meta := include.GetLoadMeta(ctx)
 	result := inventoryChangeLogFromProto(resp.InventoryChangeLog)
 	stashInventoryChangeLogMeta(meta, resp.InventoryChangeLog)
 	return &result, nil
@@ -230,7 +230,7 @@ func inventoryChangeLogQuantity(icl *pb.InventoryChangeLogInfo) *apiresource.Qua
 	}
 }
 
-func stashInventoryChangeLogMeta(meta *resourcekit.LoadMeta, icl *pb.InventoryChangeLogInfo) {
+func stashInventoryChangeLogMeta(meta *include.LoadMeta, icl *pb.InventoryChangeLogInfo) {
 	if icl == nil {
 		return
 	}

@@ -7,10 +7,10 @@ import (
 
 	"github.com/open-mrp/api/services/api-gateway/internal/domain"
 	grpcutil "github.com/open-mrp/api/services/api-gateway/internal/grpc"
-	httptransport "github.com/open-mrp/api/services/api-gateway/internal/http"
 	apiresource "github.com/open-mrp/api/services/api-gateway/pkg/resource"
 	"github.com/open-mrp/api/shared/constants"
 	"github.com/open-mrp/api/shared/id"
+	"github.com/open-mrp/api/shared/omrpctx"
 	pb "github.com/open-mrp/api/shared/proto/billing"
 	corepb "github.com/open-mrp/api/shared/proto/core"
 	apierror "github.com/open-mrp/apikit/apierror"
@@ -19,7 +19,7 @@ import (
 )
 
 type BillingSvc interface {
-	GetPricingPlans(ctx context.Context, req *apiresource.PaginationRequest) (*apiresource.List[apiresource.PricingPlan], *apierror.APIError)
+	GetPricingPlans(ctx context.Context, req *ListPricingPlansRequest) (*apiresource.List[apiresource.PricingPlan], *apierror.APIError)
 	GetAccountUsage(ctx context.Context, req *apiresource.EmptyResource) (*apiresource.AccountUsageResponse, *apierror.APIError)
 	CreateBillingPortalSession(ctx context.Context, req *apiresource.EmptyResource) (*apiresource.BillingPortalSessionResponse, *apierror.APIError)
 	GetPlanChangePreview(ctx context.Context, req *GetPlanProrationRequest) (*apiresource.PlanChangeProration, *apierror.APIError)
@@ -94,7 +94,7 @@ func (m *billingSvcImpl) GetAccountUsage(ctx context.Context, _ *apiresource.Emp
 	// Fetch spending cap from core-service to include in agent spend info. The
 	// downstream GetAccountContext RPC is unguarded (auth bootstrap plumbing),
 	// so require an authenticated identity here before calling it.
-	identity, idErr := httptransport.GetIdentity(ctx)
+	identity, idErr := omrpctx.RequireIdentity(ctx)
 	if idErr == nil && identity.IsAuthenticated() && identity.IsTargetAccountSet() {
 		acctResp, capErr := grpcutil.CallRPC(ctx, billingSvcTracer, "service.billing.get_spending_cap_for_usage", domain.ServiceName,
 			func(ctx context.Context, opts ...grpc.CallOption) (*corepb.GetAccountContextResponse, error) {
@@ -110,7 +110,7 @@ func (m *billingSvcImpl) GetAccountUsage(ctx context.Context, _ *apiresource.Emp
 	return result, nil
 }
 
-func (m *billingSvcImpl) GetPricingPlans(ctx context.Context, req *apiresource.PaginationRequest) (*apiresource.List[apiresource.PricingPlan], *apierror.APIError) {
+func (m *billingSvcImpl) GetPricingPlans(ctx context.Context, req *ListPricingPlansRequest) (*apiresource.List[apiresource.PricingPlan], *apierror.APIError) {
 	pbReq := &pb.ListPricingPlansRequest{
 		Cursor: req.Cursor,
 		Limit:  req.Limit,
@@ -200,7 +200,7 @@ func (m *billingSvcImpl) SwitchPlan(ctx context.Context, req *SwitchPlanRequest)
 }
 
 func (m *billingSvcImpl) GetSpendingCap(ctx context.Context, _ *apiresource.EmptyResource) (*apiresource.SpendingCapResponse, *apierror.APIError) {
-	identity, idErr := httptransport.GetIdentity(ctx)
+	identity, idErr := omrpctx.RequireIdentity(ctx)
 	if idErr != nil {
 		return nil, idErr
 	}

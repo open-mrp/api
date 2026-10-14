@@ -4,11 +4,12 @@ import (
 	"context"
 	"net/http"
 
-	apiendpoint "github.com/open-mrp/api/services/api-gateway/pkg/endpoint"
+	"github.com/open-mrp/api/services/api-gateway/pkg/authz"
 	apiresource "github.com/open-mrp/api/services/api-gateway/pkg/resource"
 	"github.com/open-mrp/api/services/auth-service/pkg/types"
 	"github.com/open-mrp/api/shared/constants"
 	apierror "github.com/open-mrp/apikit/apierror"
+	apiendpoint "github.com/open-mrp/apikit/endpoint"
 )
 
 // Request to retrieve a sandbox.
@@ -24,16 +25,16 @@ type RetrieveSandboxEndpoint struct{}
 
 func (e *RetrieveSandboxEndpoint) Materialize() *apiendpoint.APIEndpoint[*RetrieveSandboxRequest, *apiresource.Sandbox] {
 	return (&apiendpoint.APIEndpoint[*RetrieveSandboxRequest, *apiresource.Sandbox]{
-		Title:               "Retrieve Sandbox",
-		Method:              http.MethodGet,
-		Route:               "/v1/core/sandboxes/{id}",
-		ContentType:         "application/json",
-		SuccessStatusCode:   http.StatusOK,
-		Public:              true,
-		AgentTool:           true,
-		RequiredPermissions: []types.Permission{{Domain: types.PermissionDomainSandbox, Action: types.ActionRead}},
-		Preview:             true,
-		ObjectType:          constants.ObjectTypeSandbox,
+		Title:             "Retrieve Sandbox",
+		Method:            http.MethodGet,
+		Route:             "/v1/core/sandboxes/{id}",
+		ContentType:       "application/json",
+		SuccessStatusCode: http.StatusOK,
+		Public:            true,
+		AgentTool:         true,
+		Auth:              authz.Policy{Permissions: []types.Permission{{Domain: types.PermissionDomainSandbox, Action: types.ActionRead}}},
+		Preview:           true,
+		ObjectType:        constants.ObjectTypeSandbox,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *RetrieveSandboxRequest) (*apiresource.Sandbox, *apierror.APIError) {
 			return svc.(SandboxSvc).GetSandbox
 		},

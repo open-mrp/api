@@ -3,6 +3,7 @@ package productionrunep
 import (
 	"context"
 	"fmt"
+	"github.com/open-mrp/apikit/include"
 
 	batchep "github.com/open-mrp/api/services/api-gateway/endpoints/batches"
 	jobep "github.com/open-mrp/api/services/api-gateway/endpoints/jobs"
@@ -10,7 +11,6 @@ import (
 	grpcutil "github.com/open-mrp/api/services/api-gateway/internal/grpc"
 	apirequest "github.com/open-mrp/api/services/api-gateway/pkg/request"
 	apiresource "github.com/open-mrp/api/services/api-gateway/pkg/resource"
-	"github.com/open-mrp/api/services/api-gateway/pkg/resourcekit"
 	"github.com/open-mrp/api/shared/constants"
 	pb "github.com/open-mrp/api/shared/proto/core"
 	apierror "github.com/open-mrp/apikit/apierror"
@@ -109,7 +109,7 @@ func (m *productionRunSvcImpl) GetProductionRun(ctx context.Context, req *Retrie
 		return nil, apiErr
 	}
 
-	meta := resourcekit.GetLoadMeta(ctx)
+	meta := include.GetLoadMeta(ctx)
 	result := ProductionRunFromProto(resp.ProductionRun)
 	StashProductionRunMeta(meta, resp.ProductionRun)
 	return &result, nil
@@ -129,7 +129,7 @@ func (m *productionRunSvcImpl) CreateProductionRun(ctx context.Context, req *Cre
 		return nil, apiErr
 	}
 
-	meta := resourcekit.GetLoadMeta(ctx)
+	meta := include.GetLoadMeta(ctx)
 	result := ProductionRunFromProto(resp.ProductionRun)
 	StashProductionRunMeta(meta, resp.ProductionRun)
 	return &result, nil
@@ -150,7 +150,7 @@ func (m *productionRunSvcImpl) UpdateProductionRun(ctx context.Context, req *Upd
 		return nil, apiErr
 	}
 
-	meta := resourcekit.GetLoadMeta(ctx)
+	meta := include.GetLoadMeta(ctx)
 	result := ProductionRunFromProto(resp.ProductionRun)
 	StashProductionRunMeta(meta, resp.ProductionRun)
 	return &result, nil
@@ -287,7 +287,7 @@ func productionRunFromSummaryProto(info *pb.ProductionRunSummaryInfo) apiresourc
 }
 
 func productionRunListFromProto(ctx context.Context, resp *pb.ListProductionRunsResponse) *apiresource.List[apiresource.ProductionRun] {
-	meta := resourcekit.GetLoadMeta(ctx)
+	meta := include.GetLoadMeta(ctx)
 	runs := make([]apiresource.ProductionRun, len(resp.ProductionRuns))
 	for i, pr := range resp.ProductionRuns {
 		runs[i] = productionRunFromSummaryProto(pr)
@@ -321,7 +321,7 @@ func ProductionRunFromProto(info *pb.ProductionRunInfo) apiresource.ProductionRu
 
 // StashProductionRunMeta stashes the responsible_user FK id in LoadMeta so
 // LoadAccountUsers can resolve the expandable responsible_user on ?include=responsible_user.
-func StashProductionRunMeta(meta *resourcekit.LoadMeta, info *pb.ProductionRunInfo) {
+func StashProductionRunMeta(meta *include.LoadMeta, info *pb.ProductionRunInfo) {
 	if info == nil || info.ResponsibleUserId == "" {
 		return
 	}
@@ -332,7 +332,7 @@ func StashProductionRunMeta(meta *resourcekit.LoadMeta, info *pb.ProductionRunIn
 }
 
 func addBatchesFromProto(ctx context.Context, resp *pb.AddBatchesToProductionRunResponse) *apiresource.List[apiresource.Batch] {
-	meta := resourcekit.GetLoadMeta(ctx)
+	meta := include.GetLoadMeta(ctx)
 	batches := make([]apiresource.Batch, len(resp.Batches))
 	for i, b := range resp.Batches {
 		batches[i] = batchep.BaseBatchPresenter(meta, b)
@@ -342,7 +342,7 @@ func addBatchesFromProto(ctx context.Context, resp *pb.AddBatchesToProductionRun
 }
 
 func listBatchesFromProto(ctx context.Context, resp *pb.ListBatchesByProductionRunResponse) *apiresource.List[apiresource.Batch] {
-	meta := resourcekit.GetLoadMeta(ctx)
+	meta := include.GetLoadMeta(ctx)
 	batches := make([]apiresource.Batch, len(resp.Batches))
 	for i, b := range resp.Batches {
 		batches[i] = batchep.BatchPresenter(meta, b)

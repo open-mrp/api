@@ -5,10 +5,11 @@ import (
 	"net/http"
 	"time"
 
-	apiendpoint "github.com/open-mrp/api/services/api-gateway/pkg/endpoint"
+	"github.com/open-mrp/api/services/api-gateway/pkg/authz"
 	apiresource "github.com/open-mrp/api/services/api-gateway/pkg/resource"
 	"github.com/open-mrp/api/shared/constants"
 	apierror "github.com/open-mrp/apikit/apierror"
+	apiendpoint "github.com/open-mrp/apikit/endpoint"
 	"github.com/open-mrp/apikit/field"
 )
 
@@ -51,7 +52,7 @@ func (e *RotateAPIKeyEndpoint) Materialize() *apiendpoint.APIEndpoint[*RotateAPI
 		SuccessStatusCode: http.StatusCreated,
 		Public:            true,
 		AgentTool:         false,
-		RequiredRoleType:  constants.RoleTypeAdmin,
+		Auth:              authz.Policy{RoleType: constants.RoleTypeAdmin},
 		Preview:           true,
 		ObjectType:        constants.ObjectTypeCreatedAPIKey,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *RotateAPIKeyRequest) (*apiresource.CreatedAPIKey, *apierror.APIError) {

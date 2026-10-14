@@ -3,6 +3,7 @@ package productep
 import (
 	"context"
 	"fmt"
+	"github.com/open-mrp/apikit/include"
 
 	jobep "github.com/open-mrp/api/services/api-gateway/endpoints/jobs"
 	"github.com/open-mrp/api/services/api-gateway/internal/domain"
@@ -10,7 +11,6 @@ import (
 	"github.com/open-mrp/api/services/api-gateway/internal/resourceloaders"
 	apirequest "github.com/open-mrp/api/services/api-gateway/pkg/request"
 	apiresource "github.com/open-mrp/api/services/api-gateway/pkg/resource"
-	"github.com/open-mrp/api/services/api-gateway/pkg/resourcekit"
 	"github.com/open-mrp/api/shared/constants"
 	"github.com/open-mrp/api/shared/fieldpb"
 	pb "github.com/open-mrp/api/shared/proto/core"
@@ -267,7 +267,7 @@ func (m *productSvcImpl) ChangeProductProductLine(ctx context.Context, req *Chan
 func (m *productSvcImpl) ValidateProducts(ctx context.Context, req *ValidateProductsRequest) (*apiresource.ValidateProductsResponse, *apierror.APIError) {
 	pbReq := &pb.ValidateProductsRequest{
 		ProductsMap: req.ProductsMap,
-		Includes:    resourcekit.FilterIncludes(ctx, validateProductIncludes...),
+		Includes:    include.FilterIncludes(ctx, validateProductIncludes...),
 	}
 
 	resp, apiErr := grpcutil.CallRPC(ctx, productSvcTracer, "service.products.validate", domain.ServiceName,
@@ -279,7 +279,7 @@ func (m *productSvcImpl) ValidateProducts(ctx context.Context, req *ValidateProd
 		return nil, apiErr
 	}
 
-	meta := resourcekit.GetLoadMeta(ctx)
+	meta := include.GetLoadMeta(ctx)
 	for _, proto := range resp.Products {
 		meta.Set(constants.ObjectTypeProduct, proto.Id, "item_id", proto.ItemId)
 		if proto.ProductLineId != nil {

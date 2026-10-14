@@ -6,8 +6,8 @@ import (
 	apikeyep "github.com/open-mrp/api/services/api-gateway/endpoints/api-keys"
 	grpcclient "github.com/open-mrp/api/services/api-gateway/grpc-client"
 	"github.com/open-mrp/api/services/api-gateway/internal/middleware"
-	apiendpoint "github.com/open-mrp/api/services/api-gateway/pkg/endpoint"
 	apiresource "github.com/open-mrp/api/services/api-gateway/pkg/resource"
+	apiendpoint "github.com/open-mrp/apikit/endpoint"
 )
 
 type APIKeysEndpointGroup struct {

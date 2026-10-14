@@ -2,22 +2,22 @@ package resourceregistry
 
 import (
 	"context"
+	"github.com/open-mrp/apikit/include"
 
 	"github.com/open-mrp/api/services/api-gateway/internal/resourceloaders"
 	apiresource "github.com/open-mrp/api/services/api-gateway/pkg/resource"
-	"github.com/open-mrp/api/services/api-gateway/pkg/resourcekit"
 	"github.com/open-mrp/api/shared/constants"
 )
 
 func init() {
-	resourcekit.Register(&resourcekit.Definition{
+	include.Register(&include.Definition{
 		ObjectType: constants.ObjectTypeQuantity,
 		Load:       resourceloaders.LoadQuantities,
-		Subs: []resourcekit.SubField{
+		Subs: []include.SubField{
 			{
 				Key:         "unit",
 				Target:      constants.ObjectTypeUnit,
-				Cardinality: resourcekit.CardinalityOnePtr,
+				Cardinality: include.CardinalityOnePtr,
 				ExtractIDs:  extractUnitIDFromQuantity,
 				Populate:    populateUnitOnQuantity,
 			},
@@ -27,7 +27,7 @@ func init() {
 
 func extractUnitIDFromQuantity(ctx context.Context, parent any) []string {
 	q := parent.(*apiresource.Quantity)
-	id, _ := resourcekit.GetLoadMeta(ctx).
+	id, _ := include.GetLoadMeta(ctx).
 		GetString(constants.ObjectTypeQuantity, q.ID, "unit_id")
 	if id == "" {
 		return nil
@@ -37,7 +37,7 @@ func extractUnitIDFromQuantity(ctx context.Context, parent any) []string {
 
 func populateUnitOnQuantity(ctx context.Context, parent any, loaded map[string]any) {
 	q := parent.(*apiresource.Quantity)
-	meta := resourcekit.GetLoadMeta(ctx)
+	meta := include.GetLoadMeta(ctx)
 	// Loader path: a "unit_id" was stashed (proto carried only the id) — use the real Unit fetched by LoadUnits.
 	if id, _ := meta.GetString(constants.ObjectTypeQuantity, q.ID, "unit_id"); id != "" {
 		if v, ok := loaded[id]; ok {

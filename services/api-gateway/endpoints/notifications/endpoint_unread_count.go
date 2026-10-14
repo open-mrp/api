@@ -4,11 +4,12 @@ import (
 	"context"
 	"net/http"
 
-	apiendpoint "github.com/open-mrp/api/services/api-gateway/pkg/endpoint"
+	"github.com/open-mrp/api/services/api-gateway/pkg/authz"
 	apiresource "github.com/open-mrp/api/services/api-gateway/pkg/resource"
 	"github.com/open-mrp/api/services/auth-service/pkg/types"
 	"github.com/open-mrp/api/shared/constants"
 	apierror "github.com/open-mrp/apikit/apierror"
+	apiendpoint "github.com/open-mrp/apikit/endpoint"
 )
 
 // Request for the caller's unread notification tallies.
@@ -21,17 +22,17 @@ type UnreadCountEndpoint struct{}
 
 func (e *UnreadCountEndpoint) Materialize() *apiendpoint.APIEndpoint[*UnreadCountRequest, *apiresource.NotificationUnreadCount] {
 	return (&apiendpoint.APIEndpoint[*UnreadCountRequest, *apiresource.NotificationUnreadCount]{
-		Title:               "Get Notification Unread Count",
-		Method:              http.MethodGet,
-		ContentType:         "application/json",
-		Route:               "/v1/messaging/notifications/unread-count",
-		SuccessStatusCode:   http.StatusOK,
-		Public:              true,
-		AgentTool:           true,
-		Preview:             true,
-		ObjectType:          constants.ObjectTypeNotificationUnreadCount,
-		RequiredPermissions: []types.Permission{{Domain: types.PermissionDomainMessaging, Action: types.ActionRead}},
-		Extras:              apiendpoint.APIEndpointExtras{HideFromRequestLog: true},
+		Title:             "Get Notification Unread Count",
+		Method:            http.MethodGet,
+		ContentType:       "application/json",
+		Route:             "/v1/messaging/notifications/unread-count",
+		SuccessStatusCode: http.StatusOK,
+		Public:            true,
+		AgentTool:         true,
+		Preview:           true,
+		ObjectType:        constants.ObjectTypeNotificationUnreadCount,
+		Auth:              authz.Policy{Permissions: []types.Permission{{Domain: types.PermissionDomainMessaging, Action: types.ActionRead}}},
+		Extras:            apiendpoint.APIEndpointExtras{HideFromRequestLog: true},
 		ServiceHandler: func(svc any) func(ctx context.Context, req *UnreadCountRequest) (*apiresource.NotificationUnreadCount, *apierror.APIError) {
 			return svc.(NotificationSvc).GetUnreadCount
 		},

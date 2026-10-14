@@ -3,12 +3,12 @@ package volumediscountep
 import (
 	"context"
 	"fmt"
+	"github.com/open-mrp/apikit/include"
 
 	"github.com/open-mrp/api/services/api-gateway/internal/domain"
 	grpcutil "github.com/open-mrp/api/services/api-gateway/internal/grpc"
 	"github.com/open-mrp/api/services/api-gateway/internal/resourceloaders"
 	apiresource "github.com/open-mrp/api/services/api-gateway/pkg/resource"
-	"github.com/open-mrp/api/services/api-gateway/pkg/resourcekit"
 	"github.com/open-mrp/api/shared/constants"
 	pb "github.com/open-mrp/api/shared/proto/core"
 	apierror "github.com/open-mrp/apikit/apierror"
@@ -58,7 +58,7 @@ func (m *volumeDiscountSvcImpl) ListVolumeDiscounts(ctx context.Context, req *Li
 		Cursor:   req.Cursor,
 		Limit:    req.Limit,
 		Query:    req.Query,
-		Includes: resourcekit.FilterIncludes(ctx, volumeDiscountIncludes...),
+		Includes: include.FilterIncludes(ctx, volumeDiscountIncludes...),
 	}
 
 	resp, apiErr := grpcutil.CallRPC(ctx, volumeDiscountSvcTracer, "service.volume_discounts.list", domain.ServiceName,
@@ -76,7 +76,7 @@ func (m *volumeDiscountSvcImpl) ListVolumeDiscounts(ctx context.Context, req *Li
 func (m *volumeDiscountSvcImpl) GetVolumeDiscount(ctx context.Context, req *RetrieveVolumeDiscountRequest) (*apiresource.VolumeDiscount, *apierror.APIError) {
 	pbReq := &pb.GetVolumeDiscountRequest{
 		Id:       req.VolumeDiscountID,
-		Includes: resourcekit.FilterIncludes(ctx, volumeDiscountIncludes...),
+		Includes: include.FilterIncludes(ctx, volumeDiscountIncludes...),
 	}
 
 	resp, apiErr := grpcutil.CallRPC(ctx, volumeDiscountSvcTracer, "service.volume_discounts.get", domain.ServiceName,
@@ -93,7 +93,7 @@ func (m *volumeDiscountSvcImpl) GetVolumeDiscount(ctx context.Context, req *Retr
 		return nil, apiErr
 	}
 
-	meta := resourcekit.GetLoadMeta(ctx)
+	meta := include.GetLoadMeta(ctx)
 	result := volumeDiscountFromProto(resp.VolumeDiscount)
 	stashVolumeDiscountMeta(ctx, meta, resp.VolumeDiscount, properties)
 	return &result, nil
@@ -118,7 +118,7 @@ func (m *volumeDiscountSvcImpl) CreateVolumeDiscount(ctx context.Context, req *C
 		CategoryIds:      req.CategoryIDs,
 		AttributeIds:     req.AttributeIDs,
 		UnitIds:          req.UnitIDs,
-		Includes:         resourcekit.FilterIncludes(ctx, volumeDiscountIncludes...),
+		Includes:         include.FilterIncludes(ctx, volumeDiscountIncludes...),
 	}
 
 	resp, apiErr := grpcutil.CallRPC(ctx, volumeDiscountSvcTracer, "service.volume_discounts.create", domain.ServiceName,
@@ -135,7 +135,7 @@ func (m *volumeDiscountSvcImpl) CreateVolumeDiscount(ctx context.Context, req *C
 		return nil, apiErr
 	}
 
-	meta := resourcekit.GetLoadMeta(ctx)
+	meta := include.GetLoadMeta(ctx)
 	result := volumeDiscountFromProto(resp.VolumeDiscount)
 	stashVolumeDiscountMeta(ctx, meta, resp.VolumeDiscount, properties)
 	return &result, nil
@@ -168,7 +168,7 @@ func (m *volumeDiscountSvcImpl) UpdateVolumeDiscount(ctx context.Context, req *U
 		HasCategories:     req.HasCategories,
 		HasAttributes:     req.HasAttributes,
 		HasUnits:          req.HasUnits,
-		Includes:          resourcekit.FilterIncludes(ctx, volumeDiscountIncludes...),
+		Includes:          include.FilterIncludes(ctx, volumeDiscountIncludes...),
 	}
 
 	resp, apiErr := grpcutil.CallRPC(ctx, volumeDiscountSvcTracer, "service.volume_discounts.update", domain.ServiceName,
@@ -185,7 +185,7 @@ func (m *volumeDiscountSvcImpl) UpdateVolumeDiscount(ctx context.Context, req *U
 		return nil, apiErr
 	}
 
-	meta := resourcekit.GetLoadMeta(ctx)
+	meta := include.GetLoadMeta(ctx)
 	result := volumeDiscountFromProto(resp.VolumeDiscount)
 	stashVolumeDiscountMeta(ctx, meta, resp.VolumeDiscount, properties)
 	return &result, nil
@@ -262,7 +262,7 @@ func loadVolumeDiscountProperties(ctx context.Context, discounts ...*pb.VolumeDi
 	return resourceloaders.LoadPropertiesByID(ctx, volumeDiscountPropertyIDs(discounts)...)
 }
 
-func stashVolumeDiscountMeta(ctx context.Context, meta *resourcekit.LoadMeta, d *pb.VolumeDiscountInfo, properties map[string]*apiresource.Property) {
+func stashVolumeDiscountMeta(ctx context.Context, meta *include.LoadMeta, d *pb.VolumeDiscountInfo, properties map[string]*apiresource.Property) {
 	if d == nil {
 		return
 	}
@@ -373,7 +373,7 @@ func volumeDiscountListFromProto(ctx context.Context, resp *pb.ListVolumeDiscoun
 		return nil, apiErr
 	}
 
-	meta := resourcekit.GetLoadMeta(ctx)
+	meta := include.GetLoadMeta(ctx)
 	discounts := make([]apiresource.VolumeDiscount, len(resp.VolumeDiscounts))
 	for i, d := range resp.VolumeDiscounts {
 		discounts[i] = volumeDiscountFromProto(d)

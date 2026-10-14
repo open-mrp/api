@@ -3,12 +3,12 @@ package accountpriceep
 import (
 	"context"
 	"fmt"
+	"github.com/open-mrp/apikit/include"
 
 	jobep "github.com/open-mrp/api/services/api-gateway/endpoints/jobs"
 	"github.com/open-mrp/api/services/api-gateway/internal/domain"
 	grpcutil "github.com/open-mrp/api/services/api-gateway/internal/grpc"
 	apiresource "github.com/open-mrp/api/services/api-gateway/pkg/resource"
-	"github.com/open-mrp/api/services/api-gateway/pkg/resourcekit"
 	"github.com/open-mrp/api/shared/constants"
 	pb "github.com/open-mrp/api/shared/proto/core"
 	apierror "github.com/open-mrp/apikit/apierror"
@@ -79,7 +79,7 @@ func (m *accountPriceSvcImpl) ListAccountPrices(ctx context.Context, req *ListAc
 		return nil, apiErr
 	}
 
-	meta := resourcekit.GetLoadMeta(ctx)
+	meta := include.GetLoadMeta(ctx)
 	prices := make([]apiresource.AccountPrice, len(resp.AccountPrices))
 	for i, ap := range resp.AccountPrices {
 		prices[i] = accountPriceFromProto(ap)
@@ -103,7 +103,7 @@ func (m *accountPriceSvcImpl) GetAccountPrice(ctx context.Context, req *Retrieve
 		return nil, apiErr
 	}
 
-	meta := resourcekit.GetLoadMeta(ctx)
+	meta := include.GetLoadMeta(ctx)
 	result := accountPriceFromProto(resp.AccountPrice)
 	stashAccountPriceMeta(meta, resp.AccountPrice)
 	return &result, nil
@@ -129,7 +129,7 @@ func (m *accountPriceSvcImpl) CreateAccountPrice(ctx context.Context, req *Creat
 		return nil, apiErr
 	}
 
-	meta := resourcekit.GetLoadMeta(ctx)
+	meta := include.GetLoadMeta(ctx)
 	result := accountPriceFromProto(resp.AccountPrice)
 	stashAccountPriceMeta(meta, resp.AccountPrice)
 	return &result, nil
@@ -165,7 +165,7 @@ func (m *accountPriceSvcImpl) UpdateAccountPrice(ctx context.Context, req *Updat
 		return nil, apiErr
 	}
 
-	meta := resourcekit.GetLoadMeta(ctx)
+	meta := include.GetLoadMeta(ctx)
 	result := accountPriceFromProto(resp.AccountPrice)
 	stashAccountPriceMeta(meta, resp.AccountPrice)
 	return &result, nil
@@ -250,7 +250,7 @@ func accountPriceFromProto(ap *pb.AccountPriceInfo) apiresource.AccountPrice {
 	}
 }
 
-func stashAccountPriceMeta(meta *resourcekit.LoadMeta, ap *pb.AccountPriceInfo) {
+func stashAccountPriceMeta(meta *include.LoadMeta, ap *pb.AccountPriceInfo) {
 	if ap == nil {
 		return
 	}

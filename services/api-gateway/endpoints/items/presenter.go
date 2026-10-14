@@ -2,10 +2,10 @@ package itemep
 
 import (
 	"context"
+	"github.com/open-mrp/apikit/include"
 
 	grpcutil "github.com/open-mrp/api/services/api-gateway/internal/grpc"
 	apiresource "github.com/open-mrp/api/services/api-gateway/pkg/resource"
-	"github.com/open-mrp/api/services/api-gateway/pkg/resourcekit"
 	"github.com/open-mrp/api/shared/constants"
 	pb "github.com/open-mrp/api/shared/proto/core"
 )
@@ -134,7 +134,7 @@ func ItemInventoryPresenter(ctx context.Context, resp *pb.GetItemInventoryRespon
 	if resp == nil {
 		return nil
 	}
-	meta := resourcekit.GetLoadMeta(ctx)
+	meta := include.GetLoadMeta(ctx)
 	stashItemInventoryQuantity(meta, "on_hand", resp.OnHand, units)
 	stashItemInventoryQuantity(meta, "reserved", resp.Reserved, units)
 	stashItemInventoryQuantity(meta, "available_to_promise", resp.AvailableToPromise, units)
@@ -161,7 +161,7 @@ func ItemInventoryUnitIDs(resp *pb.GetItemInventoryResponse) []string {
 
 // The four inventory figures are netted out of the ledger at read time, so each is a computed
 // quantity: there is no row behind it to carry an id, but it still arrives with its unit.
-func stashItemInventoryQuantity(meta *resourcekit.LoadMeta, key string, q *pb.QuantityInfo, units map[string]*apiresource.Unit) {
+func stashItemInventoryQuantity(meta *include.LoadMeta, key string, q *pb.QuantityInfo, units map[string]*apiresource.Unit) {
 	if q == nil {
 		return
 	}

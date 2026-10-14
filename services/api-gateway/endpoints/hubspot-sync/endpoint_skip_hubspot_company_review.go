@@ -4,11 +4,12 @@ import (
 	"context"
 	"net/http"
 
-	apiendpoint "github.com/open-mrp/api/services/api-gateway/pkg/endpoint"
+	"github.com/open-mrp/api/services/api-gateway/pkg/authz"
 	apiresource "github.com/open-mrp/api/services/api-gateway/pkg/resource"
 	"github.com/open-mrp/api/services/auth-service/pkg/types"
 	"github.com/open-mrp/api/shared/constants"
 	apierror "github.com/open-mrp/apikit/apierror"
+	apiendpoint "github.com/open-mrp/apikit/endpoint"
 )
 
 // Request to skip a company review.
@@ -24,16 +25,16 @@ type SkipHubspotCompanyReviewEndpoint struct{}
 
 func (e *SkipHubspotCompanyReviewEndpoint) Materialize() *apiendpoint.APIEndpoint[*SkipHubspotCompanyReviewRequest, *apiresource.HubspotCompanyReview] {
 	return (&apiendpoint.APIEndpoint[*SkipHubspotCompanyReviewRequest, *apiresource.HubspotCompanyReview]{
-		Title:               "Skip HubSpot Company Review",
-		Method:              http.MethodPost,
-		ContentType:         "application/json",
-		Route:               "/v1/settings/integrations/hubspot/sync/{id}/company-reviews/{review_id}/actions/skip",
-		SuccessStatusCode:   http.StatusOK,
-		Public:              false,
-		AgentTool:           true,
-		Preview:             true,
-		ObjectType:          constants.ObjectTypeHubspotCompanyReview,
-		RequiredPermissions: []types.Permission{{Domain: types.PermissionDomainIntegrations, Action: types.ActionUpdate}},
+		Title:             "Skip HubSpot Company Review",
+		Method:            http.MethodPost,
+		ContentType:       "application/json",
+		Route:             "/v1/settings/integrations/hubspot/sync/{id}/company-reviews/{review_id}/actions/skip",
+		SuccessStatusCode: http.StatusOK,
+		Public:            false,
+		AgentTool:         true,
+		Preview:           true,
+		ObjectType:        constants.ObjectTypeHubspotCompanyReview,
+		Auth:              authz.Policy{Permissions: []types.Permission{{Domain: types.PermissionDomainIntegrations, Action: types.ActionUpdate}}},
 		ServiceHandler: func(svc any) func(ctx context.Context, req *SkipHubspotCompanyReviewRequest) (*apiresource.HubspotCompanyReview, *apierror.APIError) {
 			return svc.(HubspotSyncSvc).SkipCompanyReview
 		},

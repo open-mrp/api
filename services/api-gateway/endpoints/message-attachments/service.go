@@ -3,12 +3,12 @@ package attachmentep
 import (
 	"context"
 	"fmt"
+	"github.com/open-mrp/apikit/include"
 
 	"github.com/open-mrp/api/services/api-gateway/internal/chatmap"
 	"github.com/open-mrp/api/services/api-gateway/internal/domain"
 	grpcutil "github.com/open-mrp/api/services/api-gateway/internal/grpc"
 	apiresource "github.com/open-mrp/api/services/api-gateway/pkg/resource"
-	"github.com/open-mrp/api/services/api-gateway/pkg/resourcekit"
 	"github.com/open-mrp/api/shared/constants"
 	pb "github.com/open-mrp/api/shared/proto/notification"
 	apierror "github.com/open-mrp/apikit/apierror"
@@ -68,7 +68,7 @@ func (s *attachmentSvcImpl) CreateAttachmentUploadURL(ctx context.Context, req *
 	}
 	if resp.Attachment != nil {
 		att := chatmap.AttachmentFromProto(ctx, resp.Attachment)
-		resourcekit.GetLoadMeta(ctx).Set(constants.ObjectTypeAttachmentUploadTarget, resp.S3Key, "attachment", &att)
+		include.GetLoadMeta(ctx).Set(constants.ObjectTypeAttachmentUploadTarget, resp.S3Key, "attachment", &att)
 	}
 	return result, nil
 }

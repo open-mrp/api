@@ -5,8 +5,8 @@ import (
 
 	utilsep "github.com/open-mrp/api/services/api-gateway/endpoints/utils"
 	grpcclient "github.com/open-mrp/api/services/api-gateway/grpc-client"
-	apiendpoint "github.com/open-mrp/api/services/api-gateway/pkg/endpoint"
 	apiresource "github.com/open-mrp/api/services/api-gateway/pkg/resource"
+	apiendpoint "github.com/open-mrp/apikit/endpoint"
 )
 
 type UtilsEndpointGroup struct {

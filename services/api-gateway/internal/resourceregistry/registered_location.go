@@ -2,29 +2,29 @@ package resourceregistry
 
 import (
 	"context"
+	"github.com/open-mrp/apikit/include"
 
 	"github.com/open-mrp/api/services/api-gateway/internal/resourceloaders"
 	apiresource "github.com/open-mrp/api/services/api-gateway/pkg/resource"
-	"github.com/open-mrp/api/services/api-gateway/pkg/resourcekit"
 	"github.com/open-mrp/api/shared/constants"
 )
 
 func init() {
-	resourcekit.Register(&resourcekit.Definition{
+	include.Register(&include.Definition{
 		ObjectType: constants.ObjectTypeLocation,
 		Load:       resourceloaders.LoadLocations,
-		Subs: []resourcekit.SubField{
+		Subs: []include.SubField{
 			{
 				Key:         "parent",
 				Target:      constants.ObjectTypeLocation,
-				Cardinality: resourcekit.CardinalityOnePtr,
+				Cardinality: include.CardinalityOnePtr,
 				ExtractIDs:  extractParentIDFromLocation,
 				Populate:    populateParentOnLocation,
 			},
 			{
 				Key:         "children",
 				Target:      constants.ObjectTypeLocation,
-				Cardinality: resourcekit.CardinalityList,
+				Cardinality: include.CardinalityList,
 				ExtractIDs:  extractChildIDsFromLocation,
 				Populate:    populateChildrenOnLocation,
 			},
@@ -34,7 +34,7 @@ func init() {
 
 func extractParentIDFromLocation(ctx context.Context, parent any) []string {
 	loc := parent.(*apiresource.Location)
-	id, _ := resourcekit.GetLoadMeta(ctx).
+	id, _ := include.GetLoadMeta(ctx).
 		GetString(constants.ObjectTypeLocation, loc.ID, "parent_id")
 	if id == "" {
 		return nil
@@ -44,7 +44,7 @@ func extractParentIDFromLocation(ctx context.Context, parent any) []string {
 
 func populateParentOnLocation(ctx context.Context, parent any, loaded map[string]any) {
 	loc := parent.(*apiresource.Location)
-	id, _ := resourcekit.GetLoadMeta(ctx).
+	id, _ := include.GetLoadMeta(ctx).
 		GetString(constants.ObjectTypeLocation, loc.ID, "parent_id")
 	if id == "" {
 		return
@@ -56,14 +56,14 @@ func populateParentOnLocation(ctx context.Context, parent any, loaded map[string
 
 func extractChildIDsFromLocation(ctx context.Context, parent any) []string {
 	loc := parent.(*apiresource.Location)
-	ids, _ := resourcekit.GetLoadMeta(ctx).
+	ids, _ := include.GetLoadMeta(ctx).
 		GetStrings(constants.ObjectTypeLocation, loc.ID, "child_ids")
 	return ids
 }
 
 func populateChildrenOnLocation(ctx context.Context, parent any, loaded map[string]any) {
 	loc := parent.(*apiresource.Location)
-	ids, _ := resourcekit.GetLoadMeta(ctx).
+	ids, _ := include.GetLoadMeta(ctx).
 		GetStrings(constants.ObjectTypeLocation, loc.ID, "child_ids")
 
 	items := make([]apiresource.Location, 0, len(ids))

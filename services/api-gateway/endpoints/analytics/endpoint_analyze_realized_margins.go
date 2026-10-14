@@ -5,11 +5,12 @@ import (
 	"net/http"
 	"time"
 
-	apiendpoint "github.com/open-mrp/api/services/api-gateway/pkg/endpoint"
+	"github.com/open-mrp/api/services/api-gateway/pkg/authz"
 	apiresource "github.com/open-mrp/api/services/api-gateway/pkg/resource"
 	"github.com/open-mrp/api/services/auth-service/pkg/types"
 	"github.com/open-mrp/api/shared/constants"
 	apierror "github.com/open-mrp/apikit/apierror"
+	apiendpoint "github.com/open-mrp/apikit/endpoint"
 	"github.com/open-mrp/apikit/field"
 )
 
@@ -51,7 +52,7 @@ func (e *AnalyzeRealizedMarginsEndpoint) Materialize() *apiendpoint.APIEndpoint[
 		AgentTool:         true,
 		Preview:           true,
 		// Invoiced revenue per customer is exactly what Analyze Sales gates behind invoices:read, and this endpoint reads the same rows. Permissions are any-of, so listing discounts:read alongside it would let a discount reader see invoiced revenue they cannot read directly.
-		RequiredPermissions: []types.Permission{{Domain: types.PermissionDomainCosts, Action: types.ActionRead}},
+		Auth: authz.Policy{Permissions: []types.Permission{{Domain: types.PermissionDomainCosts, Action: types.ActionRead}}},
 		// The roots the include resolver walks are the findings, not the response wrapper.
 		ObjectType:    constants.ObjectTypeRealizedMarginFinding,
 		IncludeConfig: realizedMarginIncludeConfig(),

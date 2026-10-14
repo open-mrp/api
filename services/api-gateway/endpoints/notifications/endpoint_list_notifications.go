@@ -4,16 +4,23 @@ import (
 	"context"
 	"net/http"
 
-	apiendpoint "github.com/open-mrp/api/services/api-gateway/pkg/endpoint"
+	"github.com/open-mrp/apikit/object"
+
+	"github.com/open-mrp/api/services/api-gateway/pkg/authz"
 	apiresource "github.com/open-mrp/api/services/api-gateway/pkg/resource"
 	"github.com/open-mrp/api/services/auth-service/pkg/types"
 	"github.com/open-mrp/api/shared/constants"
 	apierror "github.com/open-mrp/apikit/apierror"
+	apiendpoint "github.com/open-mrp/apikit/endpoint"
 )
 
 // Request to list the caller's notifications.
 type ListNotificationsRequest struct {
-	apiresource.PaginationRequest
+	object.ListRequest
+	// Free-text search term used to filter results.
+	//
+	// Which fields are matched against the term varies by endpoint.
+	Query *string `query:"q" validate:"omitempty,max=500"`
 	// Return only notifications of this category, such as `chat.mention` or `order.updated`.
 	Category *constants.NotificationCategory `query:"category"`
 	// Return only notifications in this lifecycle state.
@@ -37,17 +44,17 @@ type ListNotificationsEndpoint struct{}
 
 func (e *ListNotificationsEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListNotificationsRequest, *apiresource.List[apiresource.Notification]] {
 	return (&apiendpoint.APIEndpoint[*ListNotificationsRequest, *apiresource.List[apiresource.Notification]]{
-		Title:               "List Notifications",
-		Method:              http.MethodGet,
-		ContentType:         "application/json",
-		Route:               "/v1/messaging/notifications",
-		SuccessStatusCode:   http.StatusOK,
-		Public:              true,
-		AgentTool:           true,
-		Preview:             true,
-		ObjectType:          constants.ObjectTypeNotification,
-		RequiredPermissions: []types.Permission{{Domain: types.PermissionDomainMessaging, Action: types.ActionRead}},
-		Extras:              apiendpoint.APIEndpointExtras{HideFromRequestLog: true},
+		Title:             "List Notifications",
+		Method:            http.MethodGet,
+		ContentType:       "application/json",
+		Route:             "/v1/messaging/notifications",
+		SuccessStatusCode: http.StatusOK,
+		Public:            true,
+		AgentTool:         true,
+		Preview:           true,
+		ObjectType:        constants.ObjectTypeNotification,
+		Auth:              authz.Policy{Permissions: []types.Permission{{Domain: types.PermissionDomainMessaging, Action: types.ActionRead}}},
+		Extras:            apiendpoint.APIEndpointExtras{HideFromRequestLog: true},
 		ServiceHandler: func(svc any) func(ctx context.Context, req *ListNotificationsRequest) (*apiresource.List[apiresource.Notification], *apierror.APIError) {
 			return svc.(NotificationSvc).ListNotifications
 		},

@@ -4,11 +4,12 @@ import (
 	"context"
 	"net/http"
 
-	apiendpoint "github.com/open-mrp/api/services/api-gateway/pkg/endpoint"
+	"github.com/open-mrp/api/services/api-gateway/pkg/authz"
 	apiresource "github.com/open-mrp/api/services/api-gateway/pkg/resource"
 	"github.com/open-mrp/api/services/auth-service/pkg/types"
 	"github.com/open-mrp/api/shared/constants"
 	apierror "github.com/open-mrp/apikit/apierror"
+	apiendpoint "github.com/open-mrp/apikit/endpoint"
 )
 
 // Request to delete a batch.
@@ -24,16 +25,16 @@ type DeleteBatchEndpoint struct{}
 
 func (e *DeleteBatchEndpoint) Materialize() *apiendpoint.APIEndpoint[*DeleteBatchRequest, *apiresource.Batch] {
 	return (&apiendpoint.APIEndpoint[*DeleteBatchRequest, *apiresource.Batch]{
-		Title:               "Delete Batch",
-		Method:              http.MethodDelete,
-		ContentType:         "application/json",
-		Route:               "/v1/operations/batches/{id}",
-		SuccessStatusCode:   http.StatusOK,
-		Public:              false,
-		AgentTool:           true,
-		Preview:             true,
-		RequiredPermissions: []types.Permission{{Domain: types.PermissionDomainBatches, Action: types.ActionDelete}},
-		ObjectType:          constants.ObjectTypeBatch,
+		Title:             "Delete Batch",
+		Method:            http.MethodDelete,
+		ContentType:       "application/json",
+		Route:             "/v1/operations/batches/{id}",
+		SuccessStatusCode: http.StatusOK,
+		Public:            false,
+		AgentTool:         true,
+		Preview:           true,
+		Auth:              authz.Policy{Permissions: []types.Permission{{Domain: types.PermissionDomainBatches, Action: types.ActionDelete}}},
+		ObjectType:        constants.ObjectTypeBatch,
 		// A batch reports three measures; the units they are counted in are records of their own.
 		IncludeConfig: apiendpoint.IncludesFor(apiendpoint.IncludesParams{
 			ObjectType: constants.ObjectTypeBatch,

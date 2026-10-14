@@ -2,19 +2,19 @@ package resourceregistry
 
 import (
 	"context"
+	"github.com/open-mrp/apikit/include"
 	"testing"
 	"time"
 
 	apiresource "github.com/open-mrp/api/services/api-gateway/pkg/resource"
-	"github.com/open-mrp/api/services/api-gateway/pkg/resourcekit"
 	"github.com/open-mrp/api/shared/constants"
 )
 
 // The sales order's related records (pick / production_run / shipments) carry only ids on SalesOrderInfo; their number and status must be loaded from the owning service via the include resolver. These tests lock the extract/populate wiring that turns a loaded resource into a Record with number + status.
 
 func TestRelatedPick_PopulatesNumberAndStatus(t *testing.T) {
-	ctx := resourcekit.WithLoadMeta(context.Background())
-	resourcekit.GetLoadMeta(ctx).Set(constants.ObjectTypeSalesOrder, "or_1", "related_pick_id", "pk_1")
+	ctx := include.WithLoadMeta(context.Background())
+	include.GetLoadMeta(ctx).Set(constants.ObjectTypeSalesOrder, "or_1", "related_pick_id", "pk_1")
 	so := &apiresource.SalesOrder{ID: "or_1"}
 
 	if ids := extractPickIDFromSORelated(ctx, so); len(ids) != 1 || ids[0] != "pk_1" {
@@ -39,8 +39,8 @@ func TestRelatedPick_PopulatesNumberAndStatus(t *testing.T) {
 }
 
 func TestRelatedPick_OpenWhenNotFinished(t *testing.T) {
-	ctx := resourcekit.WithLoadMeta(context.Background())
-	resourcekit.GetLoadMeta(ctx).Set(constants.ObjectTypeSalesOrder, "or_1", "related_pick_id", "pk_1")
+	ctx := include.WithLoadMeta(context.Background())
+	include.GetLoadMeta(ctx).Set(constants.ObjectTypeSalesOrder, "or_1", "related_pick_id", "pk_1")
 	so := &apiresource.SalesOrder{ID: "or_1"}
 
 	populatePickOnSORelated(ctx, so, map[string]any{
@@ -53,8 +53,8 @@ func TestRelatedPick_OpenWhenNotFinished(t *testing.T) {
 }
 
 func TestRelatedProductionRun_PopulatesNumberAndStatus(t *testing.T) {
-	ctx := resourcekit.WithLoadMeta(context.Background())
-	resourcekit.GetLoadMeta(ctx).Set(constants.ObjectTypeSalesOrder, "or_1", "related_production_run_id", "pr_1")
+	ctx := include.WithLoadMeta(context.Background())
+	include.GetLoadMeta(ctx).Set(constants.ObjectTypeSalesOrder, "or_1", "related_production_run_id", "pr_1")
 	so := &apiresource.SalesOrder{ID: "or_1"}
 
 	completed := time.Now()
@@ -72,8 +72,8 @@ func TestRelatedProductionRun_PopulatesNumberAndStatus(t *testing.T) {
 }
 
 func TestRelatedShipments_PopulateNumberAndStatus(t *testing.T) {
-	ctx := resourcekit.WithLoadMeta(context.Background())
-	resourcekit.GetLoadMeta(ctx).Set(constants.ObjectTypeSalesOrder, "or_1", "related_shipment_ids", []string{"sh_1", "sh_2"})
+	ctx := include.WithLoadMeta(context.Background())
+	include.GetLoadMeta(ctx).Set(constants.ObjectTypeSalesOrder, "or_1", "related_shipment_ids", []string{"sh_1", "sh_2"})
 	so := &apiresource.SalesOrder{ID: "or_1"}
 
 	if ids := extractShipmentIDsFromSORelated(ctx, so); len(ids) != 2 {
@@ -99,7 +99,7 @@ func TestRelatedShipments_PopulateNumberAndStatus(t *testing.T) {
 
 // When the order references no related records (nothing stashed), the related group must stay nil so it serializes to null rather than an empty object.
 func TestRelated_NilWhenNothingStashed(t *testing.T) {
-	ctx := resourcekit.WithLoadMeta(context.Background())
+	ctx := include.WithLoadMeta(context.Background())
 	so := &apiresource.SalesOrder{ID: "or_1"}
 
 	populatePickOnSORelated(ctx, so, nil)

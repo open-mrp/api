@@ -3,6 +3,7 @@ package messageep
 import (
 	"context"
 	"fmt"
+	"github.com/open-mrp/apikit/include"
 	"strings"
 
 	"github.com/open-mrp/api/services/api-gateway/internal/chatmap"
@@ -10,7 +11,6 @@ import (
 	grpcutil "github.com/open-mrp/api/services/api-gateway/internal/grpc"
 	"github.com/open-mrp/api/services/api-gateway/internal/resourceloaders"
 	apiresource "github.com/open-mrp/api/services/api-gateway/pkg/resource"
-	"github.com/open-mrp/api/services/api-gateway/pkg/resourcekit"
 	"github.com/open-mrp/api/shared/constants"
 	pb "github.com/open-mrp/api/shared/proto/notification"
 	apierror "github.com/open-mrp/apikit/apierror"
@@ -275,11 +275,11 @@ func (s *messageSvcImpl) RescheduleMessage(ctx context.Context, req *RescheduleM
 // included, and the linked resource's name when `resource` is included. Best-effort and a no-op when
 // nothing relevant was requested.
 func (s *messageSvcImpl) hydrateMessages(ctx context.Context, msgs ...*apiresource.Message) {
-	requested := resourcekit.RequestedIncludeSet(ctx)
+	requested := include.RequestedIncludeSet(ctx)
 	if len(requested) == 0 {
 		return
 	}
-	meta := resourcekit.GetLoadMeta(ctx)
+	meta := include.GetLoadMeta(ctx)
 	var actors []*apiresource.Actor
 	if requested["sender"] {
 		for _, m := range msgs {

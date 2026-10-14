@@ -3,12 +3,12 @@ package notificationep
 import (
 	"context"
 	"fmt"
+	"github.com/open-mrp/apikit/include"
 	"time"
 
 	"github.com/open-mrp/api/services/api-gateway/internal/domain"
 	grpcutil "github.com/open-mrp/api/services/api-gateway/internal/grpc"
 	apiresource "github.com/open-mrp/api/services/api-gateway/pkg/resource"
-	"github.com/open-mrp/api/services/api-gateway/pkg/resourcekit"
 	"github.com/open-mrp/api/shared/constants"
 	pb "github.com/open-mrp/api/shared/proto/notification"
 	apierror "github.com/open-mrp/apikit/apierror"
@@ -250,7 +250,7 @@ func notificationFromProto(ctx context.Context, n *pb.NotificationInfo) apiresou
 // ?include=sender / ?include=resource. The fields are left nil on the base resource.
 func stashNotificationMeta(ctx context.Context, d *apiresource.Notification, n *pb.NotificationInfo) {
 	if sender := senderFromProto(n.SenderType, n.SenderId, n.SenderName); sender != nil {
-		resourcekit.GetLoadMeta(ctx).Set(constants.ObjectTypeNotification, d.ID, "sender", sender)
+		include.GetLoadMeta(ctx).Set(constants.ObjectTypeNotification, d.ID, "sender", sender)
 	}
 
 	var resource *apiresource.Entity
@@ -262,7 +262,7 @@ func stashNotificationMeta(ctx context.Context, d *apiresource.Notification, n *
 		resource = apiresource.NewEntity(*n.ConversationId, constants.ObjectTypeConversation, nil, nil)
 	}
 	if resource != nil {
-		resourcekit.GetLoadMeta(ctx).Set(constants.ObjectTypeNotification, d.ID, "resource", resource)
+		include.GetLoadMeta(ctx).Set(constants.ObjectTypeNotification, d.ID, "resource", resource)
 	}
 }
 

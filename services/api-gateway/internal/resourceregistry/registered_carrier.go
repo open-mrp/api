@@ -2,10 +2,10 @@ package resourceregistry
 
 import (
 	"context"
+	"github.com/open-mrp/apikit/include"
 
 	"github.com/open-mrp/api/services/api-gateway/internal/resourceloaders"
 	apiresource "github.com/open-mrp/api/services/api-gateway/pkg/resource"
-	"github.com/open-mrp/api/services/api-gateway/pkg/resourcekit"
 	"github.com/open-mrp/api/shared/constants"
 )
 
@@ -13,10 +13,10 @@ import (
 const serviceLevelsCanonicalPath = "/v1/operations/carriers"
 
 func init() {
-	resourcekit.Register(&resourcekit.Definition{
+	include.Register(&include.Definition{
 		ObjectType: constants.ObjectTypeCarrier,
 		Load:       resourceloaders.LoadCarriers,
-		Subs: []resourcekit.SubField{
+		Subs: []include.SubField{
 			// owner: no fetch. Builds the Owner shell from the carrier's account_id in LoadMeta (set by the carrier loader). type=system for NULL, type=account for a populated id with a stub Account.
 			{
 				Key:      "owner",
@@ -26,7 +26,7 @@ func init() {
 			{
 				Key:         "owner.account",
 				Target:      constants.ObjectTypeAccount,
-				Cardinality: resourcekit.CardinalityOnePtr,
+				Cardinality: include.CardinalityOnePtr,
 				ExtractIDs:  extractOwnerAccountIDFromCarrier,
 				Populate:    populateOwnerAccountOnCarrier,
 			},
@@ -34,7 +34,7 @@ func init() {
 			{
 				Key:         "service_levels",
 				Target:      constants.ObjectTypeServiceLevel,
-				Cardinality: resourcekit.CardinalityList,
+				Cardinality: include.CardinalityList,
 				ExtractIDs:  extractServiceLevelIDsFromCarrier,
 				Populate:    populateServiceLevelsOnCarrier,
 			},
@@ -44,14 +44,14 @@ func init() {
 
 func populateOwnerOnCarrier(ctx context.Context, parent any, _ map[string]any) {
 	c := parent.(*apiresource.Carrier)
-	accountID, _ := resourcekit.GetLoadMeta(ctx).
+	accountID, _ := include.GetLoadMeta(ctx).
 		GetString(constants.ObjectTypeCarrier, c.ID, "owner_account_id")
 	c.Owner = buildOwnerShell(accountID)
 }
 
 func extractOwnerAccountIDFromCarrier(ctx context.Context, parent any) []string {
 	c := parent.(*apiresource.Carrier)
-	id, _ := resourcekit.GetLoadMeta(ctx).
+	id, _ := include.GetLoadMeta(ctx).
 		GetString(constants.ObjectTypeCarrier, c.ID, "owner_account_id")
 	if id == "" {
 		return nil
@@ -65,7 +65,7 @@ func populateOwnerAccountOnCarrier(ctx context.Context, parent any, loaded map[s
 	if c.Owner == nil {
 		return
 	}
-	id, _ := resourcekit.GetLoadMeta(ctx).
+	id, _ := include.GetLoadMeta(ctx).
 		GetString(constants.ObjectTypeCarrier, c.ID, "owner_account_id")
 	if id == "" {
 		return
@@ -77,14 +77,14 @@ func populateOwnerAccountOnCarrier(ctx context.Context, parent any, loaded map[s
 
 func extractServiceLevelIDsFromCarrier(ctx context.Context, parent any) []string {
 	c := parent.(*apiresource.Carrier)
-	ids, _ := resourcekit.GetLoadMeta(ctx).
+	ids, _ := include.GetLoadMeta(ctx).
 		GetStrings(constants.ObjectTypeCarrier, c.ID, "service_level_ids")
 	return ids
 }
 
 func populateServiceLevelsOnCarrier(ctx context.Context, parent any, loaded map[string]any) {
 	c := parent.(*apiresource.Carrier)
-	meta := resourcekit.GetLoadMeta(ctx)
+	meta := include.GetLoadMeta(ctx)
 	ids, _ := meta.GetStrings(constants.ObjectTypeCarrier, c.ID, "service_level_ids")
 	hasMore, _ := meta.GetBool(constants.ObjectTypeCarrier, c.ID, "service_levels_has_more")
 
@@ -95,7 +95,7 @@ func populateServiceLevelsOnCarrier(ctx context.Context, parent any, loaded map[
 		}
 	}
 
-	pageInfo := apiresource.PageInfo{HasNextPage: hasMore}
+	var pageInfo apiresource.PageInfo
 	if hasMore {
 		// The inline preview isn't cursor-based, just a head-N projection of the full SL list. next_page_url therefore points at the first page of the dedicated paginated endpoint (no cursor query param); clients walk forward from there using its own cursors.
 		nextURL := serviceLevelsCanonicalPath + "/" + c.ID + "/service-levels"

@@ -4,11 +4,12 @@ import (
 	"context"
 	"net/http"
 
-	apiendpoint "github.com/open-mrp/api/services/api-gateway/pkg/endpoint"
+	"github.com/open-mrp/api/services/api-gateway/pkg/authz"
 	apiresource "github.com/open-mrp/api/services/api-gateway/pkg/resource"
 	"github.com/open-mrp/api/services/auth-service/pkg/types"
 	"github.com/open-mrp/api/shared/constants"
 	apierror "github.com/open-mrp/apikit/apierror"
+	apiendpoint "github.com/open-mrp/apikit/endpoint"
 )
 
 // Request to retrieve an email log.
@@ -22,15 +23,15 @@ type RetrieveEmailLogEndpoint struct{}
 
 func (e *RetrieveEmailLogEndpoint) Materialize() *apiendpoint.APIEndpoint[*RetrieveEmailLogRequest, *apiresource.EmailLog] {
 	return (&apiendpoint.APIEndpoint[*RetrieveEmailLogRequest, *apiresource.EmailLog]{
-		Title:               "Retrieve Email Log",
-		Method:              http.MethodGet,
-		ContentType:         "application/json",
-		Route:               "/v1/core/email-logs/{id}",
-		SuccessStatusCode:   http.StatusOK,
-		Public:              true,
-		AgentTool:           true,
-		RequiredPermissions: []types.Permission{{Domain: types.PermissionDomainEmailLogs, Action: types.ActionRead}},
-		Preview:             true,
+		Title:             "Retrieve Email Log",
+		Method:            http.MethodGet,
+		ContentType:       "application/json",
+		Route:             "/v1/core/email-logs/{id}",
+		SuccessStatusCode: http.StatusOK,
+		Public:            true,
+		AgentTool:         true,
+		Auth:              authz.Policy{Permissions: []types.Permission{{Domain: types.PermissionDomainEmailLogs, Action: types.ActionRead}}},
+		Preview:           true,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *RetrieveEmailLogRequest) (*apiresource.EmailLog, *apierror.APIError) {
 			return svc.(EmailLogSvc).GetEmailLog
 		},

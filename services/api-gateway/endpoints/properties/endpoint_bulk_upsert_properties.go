@@ -4,12 +4,13 @@ import (
 	"context"
 	"net/http"
 
-	apiendpoint "github.com/open-mrp/api/services/api-gateway/pkg/endpoint"
-	apiexample "github.com/open-mrp/api/services/api-gateway/pkg/example"
+	"github.com/open-mrp/api/services/api-gateway/pkg/authz"
 	apiresource "github.com/open-mrp/api/services/api-gateway/pkg/resource"
 	"github.com/open-mrp/api/services/auth-service/pkg/types"
 	"github.com/open-mrp/api/shared/constants"
 	apierror "github.com/open-mrp/apikit/apierror"
+	apiendpoint "github.com/open-mrp/apikit/endpoint"
+	apiexample "github.com/open-mrp/apikit/example"
 	"github.com/open-mrp/apikit/field"
 )
 
@@ -62,17 +63,16 @@ type BulkUpsertPropertiesEndpoint struct{}
 
 func (e *BulkUpsertPropertiesEndpoint) Materialize() *apiendpoint.APIEndpoint[*BulkUpsertPropertiesRequest, *apiresource.Job] {
 	return (&apiendpoint.APIEndpoint[*BulkUpsertPropertiesRequest, *apiresource.Job]{
-		Title:                  "Bulk Upsert Properties",
-		Method:                 http.MethodPost,
-		ContentType:            "application/json",
-		Route:                  "/v1/catalog/properties/actions/bulk-upsert",
-		SuccessStatusCode:      http.StatusAccepted,
-		Public:                 true,
-		AgentTool:              true,
-		RequiredPermissions:    []types.Permission{{Domain: types.PermissionDomainProperties, Action: types.ActionCreate}, {Domain: types.PermissionDomainProperties, Action: types.ActionUpdate}},
-		RequiresAllPermissions: true,
-		Preview:                true,
-		ObjectType:             constants.ObjectTypeJob,
+		Title:             "Bulk Upsert Properties",
+		Method:            http.MethodPost,
+		ContentType:       "application/json",
+		Route:             "/v1/catalog/properties/actions/bulk-upsert",
+		SuccessStatusCode: http.StatusAccepted,
+		Public:            true,
+		AgentTool:         true,
+		Auth:              authz.Policy{Permissions: []types.Permission{{Domain: types.PermissionDomainProperties, Action: types.ActionCreate}, {Domain: types.PermissionDomainProperties, Action: types.ActionUpdate}}, RequireAll: true},
+		Preview:           true,
+		ObjectType:        constants.ObjectTypeJob,
 		IncludeConfig: apiendpoint.IncludesFor(apiendpoint.IncludesParams{
 			ObjectType: constants.ObjectTypeJob,
 			Fields:     []string{"created_by", "created_by.role"},

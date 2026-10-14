@@ -13,7 +13,7 @@ import (
 	"github.com/open-mrp/api/services/auth-service/pkg/types"
 	"github.com/open-mrp/api/shared/appctx"
 	"github.com/open-mrp/api/shared/constants"
-	apierror "github.com/open-mrp/api/shared/errors"
+	apierror "github.com/open-mrp/apikit/apierror"
 
 	"github.com/stretchr/testify/suite"
 	"go.uber.org/mock/gomock"
@@ -181,7 +181,7 @@ func (s *DocAPIKeySvcTestSuite) TestGetOrCreateDocAPIKey_RetriesOnConcurrentCrea
 	gomock.InOrder(
 		s.docAPIKeyMed.EXPECT().
 			Resolve(gomock.Any(), testSandboxAccountID).
-			Return(nil, apierror.NewResourceExistsError("Resource already exists.")).
+			Return(nil, apierror.NewExistsError("", "Resource already exists.")).
 			Times(1),
 		s.docAPIKeyMed.EXPECT().
 			Resolve(gomock.Any(), testSandboxAccountID).
@@ -271,6 +271,6 @@ func (s *DocAPIKeySvcTestSuite) TestGetOrCreateDocAPIKey_RejectsProductionAccoun
 
 	s.Nil(result)
 	s.Require().NotNil(apiErr)
-	s.Equal(apierror.ErrorCodeValidationFailed, apiErr.Code)
+	s.Equal(apierror.CodeValidationFailed, apiErr.Code)
 	s.Contains(apiErr.PublicMessage, "sandbox")
 }

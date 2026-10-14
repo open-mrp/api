@@ -9,9 +9,9 @@ import (
 	grpcutil "github.com/open-mrp/api/services/api-gateway/internal/grpc"
 	apiresource "github.com/open-mrp/api/services/api-gateway/pkg/resource"
 	"github.com/open-mrp/api/shared/constants"
-	apierror "github.com/open-mrp/api/shared/errors"
 	pb "github.com/open-mrp/api/shared/proto/core"
-	"github.com/open-mrp/api/shared/tracing"
+	apierror "github.com/open-mrp/apikit/apierror"
+	"github.com/open-mrp/apikit/tracing"
 	"google.golang.org/grpc"
 )
 
@@ -48,7 +48,7 @@ func NewSalesTargetSvc(config *SalesTargetSvcConfig) SalesTargetSvc {
 
 func (m *salesTargetSvcImpl) ListSalesTargets(ctx context.Context, req *ListSalesTargetsRequest) (*apiresource.List[apiresource.SalesTarget], *apierror.APIError) {
 	if req.Cursor != nil && *req.Cursor != "" {
-		return nil, apierror.NewValidationErrorWithParam("Invalid pagination cursor.", "cursor")
+		return nil, apierror.NewFieldError("cursor", apierror.CodeInvalidFormat, "Invalid pagination cursor.")
 	}
 
 	pbReq := &pb.ListSalesTargetsRequest{

@@ -4,7 +4,7 @@ import (
 	"context"
 
 	"github.com/open-mrp/api/services/core-service/internal/infrastructure/sqlc"
-	"github.com/open-mrp/api/shared/db/backfill"
+	"github.com/open-mrp/apikit/db/backfill"
 )
 
 // LineCopyBackfill fills the copies of order lines written before they existed, with their invoice and

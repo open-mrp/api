@@ -5,8 +5,8 @@ import (
 	"database/sql"
 
 	"github.com/open-mrp/api/services/core-service/internal/infrastructure/sqlc"
-	"github.com/open-mrp/api/shared/db"
-	apierror "github.com/open-mrp/api/shared/errors"
+	apierror "github.com/open-mrp/apikit/apierror"
+	"github.com/open-mrp/apikit/db"
 )
 
 // selectedProductionParts expands the selected items and product lines to the parts their production consumes, as the dashboard's open-batches and production-costs reports did: every part consumed upstream, recursively, plus any selected item no step produces, plus the selected items themselves. Nothing selected, or a selection that expands to nothing, filters nothing.

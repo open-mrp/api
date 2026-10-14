@@ -10,7 +10,7 @@ import (
 	mediatormock "github.com/open-mrp/api/services/core-service/internal/domain/mock/mediator"
 	repositorymock "github.com/open-mrp/api/services/core-service/internal/domain/mock/repository"
 	"github.com/open-mrp/api/shared/appctx"
-	apierror "github.com/open-mrp/api/shared/errors"
+	apierror "github.com/open-mrp/apikit/apierror"
 	"github.com/open-mrp/apikit/field"
 
 	"github.com/stretchr/testify/assert"
@@ -67,22 +67,22 @@ func TestCheckPurchaseOrderAddressChoices(t *testing.T) {
 	for _, tc := range []struct {
 		name   string
 		params domain.CreatePurchaseOrderParams
-		code   apierror.ErrorCode
+		code   apierror.Code
 		param  string
 	}{
 		{"ids", domain.CreatePurchaseOrderParams{BillToAddressID: new("ad_a"), ShipToAddressID: new("ad_b")}, "", ""},
 		{"inline", domain.CreatePurchaseOrderParams{BillToAddress: inlineName("Office"), ShipToAddress: inlineName("Dock")}, "", ""},
 		{"flat fields", domain.CreatePurchaseOrderParams{BillToName: new("Office"), BillToCountry: new("US"), ShipToName: new("Dock"), ShipToCountry: new("US")}, "", ""},
 		{"an id with partial flat fields, which it overrides", domain.CreatePurchaseOrderParams{BillToAddressID: new("ad_a"), BillToState: new("OH"), ShipToAddress: inlineName("Dock")}, "", ""},
-		{"id and inline", domain.CreatePurchaseOrderParams{BillToAddressID: new("ad_dock"), BillToAddress: inlineName("Dock"), ShipToAddressID: new("ad_b")}, apierror.ErrorCodeValidationFailed, "bill_to_address"},
-		{"flat fields and inline", domain.CreatePurchaseOrderParams{BillToAddressID: new("ad_a"), ShipToName: new("Flat"), ShipToAddress: inlineName("Dock")}, apierror.ErrorCodeValidationFailed, "ship_to_address"},
-		{"a conflict is reported before a missing side", domain.CreatePurchaseOrderParams{ShipToName: new("Flat"), ShipToAddress: inlineName("Dock")}, apierror.ErrorCodeValidationFailed, "ship_to_address"},
-		{"no bill-to", domain.CreatePurchaseOrderParams{ShipToAddressID: new("ad_b")}, apierror.ErrorCodeMissingField, "bill_to_address_id"},
-		{"no ship-to", domain.CreatePurchaseOrderParams{BillToAddress: inlineName("Office")}, apierror.ErrorCodeMissingField, "ship_to_address_id"},
-		{"no address at all", domain.CreatePurchaseOrderParams{}, apierror.ErrorCodeMissingField, "bill_to_address_id"},
-		{"flat fields without a country", domain.CreatePurchaseOrderParams{BillToName: new("Office"), BillToLocality: new("Columbus"), ShipToAddressID: new("ad_b")}, apierror.ErrorCodeMissingField, "bill_to_country"},
-		{"flat fields without a name", domain.CreatePurchaseOrderParams{BillToAddressID: new("ad_a"), ShipToStreetLine1: new("1 Dock Rd"), ShipToCountry: new("US")}, apierror.ErrorCodeMissingField, "ship_to_name"},
-		{"a blank flat name", domain.CreatePurchaseOrderParams{BillToName: new("  "), BillToCountry: new("US"), ShipToAddressID: new("ad_b")}, apierror.ErrorCodeMissingField, "bill_to_name"},
+		{"id and inline", domain.CreatePurchaseOrderParams{BillToAddressID: new("ad_dock"), BillToAddress: inlineName("Dock"), ShipToAddressID: new("ad_b")}, apierror.CodeValidationFailed, "bill_to_address"},
+		{"flat fields and inline", domain.CreatePurchaseOrderParams{BillToAddressID: new("ad_a"), ShipToName: new("Flat"), ShipToAddress: inlineName("Dock")}, apierror.CodeValidationFailed, "ship_to_address"},
+		{"a conflict is reported before a missing side", domain.CreatePurchaseOrderParams{ShipToName: new("Flat"), ShipToAddress: inlineName("Dock")}, apierror.CodeValidationFailed, "ship_to_address"},
+		{"no bill-to", domain.CreatePurchaseOrderParams{ShipToAddressID: new("ad_b")}, apierror.CodeMissingField, "bill_to_address_id"},
+		{"no ship-to", domain.CreatePurchaseOrderParams{BillToAddress: inlineName("Office")}, apierror.CodeMissingField, "ship_to_address_id"},
+		{"no address at all", domain.CreatePurchaseOrderParams{}, apierror.CodeMissingField, "bill_to_address_id"},
+		{"flat fields without a country", domain.CreatePurchaseOrderParams{BillToName: new("Office"), BillToLocality: new("Columbus"), ShipToAddressID: new("ad_b")}, apierror.CodeMissingField, "bill_to_country"},
+		{"flat fields without a name", domain.CreatePurchaseOrderParams{BillToAddressID: new("ad_a"), ShipToStreetLine1: new("1 Dock Rd"), ShipToCountry: new("US")}, apierror.CodeMissingField, "ship_to_name"},
+		{"a blank flat name", domain.CreatePurchaseOrderParams{BillToName: new("  "), BillToCountry: new("US"), ShipToAddressID: new("ad_b")}, apierror.CodeMissingField, "bill_to_name"},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			apiErr := checkPurchaseOrderAddressChoices(tc.params)
@@ -91,7 +91,10 @@ func TestCheckPurchaseOrderAddressChoices(t *testing.T) {
 				return
 			}
 			require.NotNil(t, apiErr)
-			assert.Equal(t, tc.code, apiErr.Code)
+			assert.Equal(t, apierror.CodeValidationFailed, apiErr.Code)
+			if tc.code != apierror.CodeValidationFailed {
+				assert.Equal(t, tc.code, apiErr.Errors[0].Code)
+			}
 			assert.Equal(t, tc.param, apiErr.Param)
 		})
 	}
@@ -102,14 +105,14 @@ func TestCheckSalesOrderCreateAddressChoices(t *testing.T) {
 	for _, tc := range []struct {
 		name   string
 		params domain.CreateSalesOrderParams
-		code   apierror.ErrorCode
+		code   apierror.Code
 		param  string
 	}{
 		{"ids", domain.CreateSalesOrderParams{BillToAddressID: "ad_a", ShipToAddressID: "ad_b"}, "", ""},
 		{"inline", domain.CreateSalesOrderParams{BillToAddress: inlineName("A"), ShipToAddress: inlineName("B")}, "", ""},
-		{"neither for the bill-to", domain.CreateSalesOrderParams{ShipToAddressID: "ad_b"}, apierror.ErrorCodeMissingField, "bill_to_address_id"},
-		{"neither for the ship-to", domain.CreateSalesOrderParams{BillToAddress: inlineName("A")}, apierror.ErrorCodeMissingField, "ship_to_address_id"},
-		{"both for the ship-to", domain.CreateSalesOrderParams{BillToAddressID: "ad_a", ShipToAddressID: "ad_b", ShipToAddress: inlineName("B")}, apierror.ErrorCodeValidationFailed, "ship_to_address"},
+		{"neither for the bill-to", domain.CreateSalesOrderParams{ShipToAddressID: "ad_b"}, apierror.CodeMissingField, "bill_to_address_id"},
+		{"neither for the ship-to", domain.CreateSalesOrderParams{BillToAddress: inlineName("A")}, apierror.CodeMissingField, "ship_to_address_id"},
+		{"both for the ship-to", domain.CreateSalesOrderParams{BillToAddressID: "ad_a", ShipToAddressID: "ad_b", ShipToAddress: inlineName("B")}, apierror.CodeValidationFailed, "ship_to_address"},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			apiErr := checkSalesOrderCreateAddressChoices(tc.params)
@@ -118,7 +121,10 @@ func TestCheckSalesOrderCreateAddressChoices(t *testing.T) {
 				return
 			}
 			require.NotNil(t, apiErr)
-			assert.Equal(t, tc.code, apiErr.Code)
+			assert.Equal(t, apierror.CodeValidationFailed, apiErr.Code)
+			if tc.code != apierror.CodeValidationFailed {
+				assert.Equal(t, tc.code, apiErr.Errors[0].Code)
+			}
 			assert.Equal(t, tc.param, apiErr.Param)
 		})
 	}

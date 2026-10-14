@@ -3,7 +3,7 @@ package domain
 import (
 	"context"
 
-	apierror "github.com/open-mrp/api/shared/errors"
+	apierror "github.com/open-mrp/apikit/apierror"
 )
 
 // RunnerSvc orchestrates agent run execution.

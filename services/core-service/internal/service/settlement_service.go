@@ -12,10 +12,10 @@ import (
 	"github.com/open-mrp/api/shared/appctx"
 	"github.com/open-mrp/api/shared/audit"
 	"github.com/open-mrp/api/shared/constants"
-	apierror "github.com/open-mrp/api/shared/errors"
 	"github.com/open-mrp/api/shared/id"
-	"github.com/open-mrp/api/shared/idempotency"
-	"github.com/open-mrp/api/shared/tracing"
+	"github.com/open-mrp/api/shared/idemresponse"
+	apierror "github.com/open-mrp/apikit/apierror"
+	"github.com/open-mrp/apikit/tracing"
 )
 
 var settlementSvcTracer = tracing.GetTracer("core-service.settlement_service")
@@ -164,7 +164,7 @@ func (s *settlementSvcImpl) CreateSettlement(ctx context.Context, params domain.
 	accountUserRepo := s.repos.NewAccountUserRepo()
 	resolvedID, apiErr := accountUserRepo.ResolveAccountUserID(ctx, params.AccountID, params.ResponsibleUserID)
 	if apiErr != nil {
-		return nil, tracing.Trace(span, apierror.NewResourceNotFoundError("Account user not found."))
+		return nil, tracing.Trace(span, apierror.NewNotFoundError("Account user not found."))
 	}
 	params.ResponsibleUserID = resolvedID
 
@@ -181,7 +181,7 @@ func (s *settlementSvcImpl) CreateSettlement(ctx context.Context, params domain.
 
 	switch domain.RecoveryPoint(idempotencyKey.RecoveryPoint) {
 	case domain.RecoveryPointFinished:
-		cached, err := idempotency.UnmarshalCachedResponse[domain.Settlement](ctx, idempotencyKey.ResponseCode, idempotencyKey.ResponseBody)
+		cached, err := idemresponse.UnmarshalCachedResponse[domain.Settlement](ctx, idempotencyKey.ResponseCode, idempotencyKey.ResponseBody)
 		if err != nil {
 			return nil, tracing.Trace(span, apierror.NewInternalError(err, "Issue unmarshalling cached response."))
 		}
@@ -322,7 +322,7 @@ func (s *settlementSvcImpl) UpdateSettlement(ctx context.Context, params domain.
 	if params.ResponsibleUserID != nil {
 		resolvedID, apiErr := s.repos.NewAccountUserRepo().ResolveAccountUserID(ctx, params.AccountID, *params.ResponsibleUserID)
 		if apiErr != nil {
-			return nil, tracing.Trace(span, apierror.NewResourceNotFoundError("Account user not found."))
+			return nil, tracing.Trace(span, apierror.NewNotFoundError("Account user not found."))
 		}
 		params.ResponsibleUserID = &resolvedID
 	}
@@ -336,7 +336,7 @@ func (s *settlementSvcImpl) UpdateSettlement(ctx context.Context, params domain.
 
 	switch domain.RecoveryPoint(idempotencyKey.RecoveryPoint) {
 	case domain.RecoveryPointFinished:
-		cached, err := idempotency.UnmarshalCachedResponse[domain.Settlement](ctx, idempotencyKey.ResponseCode, idempotencyKey.ResponseBody)
+		cached, err := idemresponse.UnmarshalCachedResponse[domain.Settlement](ctx, idempotencyKey.ResponseCode, idempotencyKey.ResponseBody)
 		if err != nil {
 			return nil, tracing.Trace(span, apierror.NewInternalError(err, "Issue unmarshalling cached response."))
 		}
@@ -358,7 +358,7 @@ func (s *settlementSvcImpl) UpdateSettlement(ctx context.Context, params domain.
 					return apiErr
 				}
 				if isDuplicate {
-					return apierror.NewConflictErrorWithParam("A settlement with this number already exists.", "number")
+					return apierror.NewConflictErrorWithParam("number", "A settlement with this number already exists.")
 				}
 			}
 
@@ -417,13 +417,13 @@ func (s *settlementSvcImpl) DeleteSettlement(ctx context.Context, params domain.
 	// Fetch the settlement before deleting
 	settlement, apiErr := repo.Get(ctx, params.AccountID, params.SettlementID)
 	if apiErr != nil {
-		if apierror.IsNotFound(apiErr) {
+		if apierror.HasCode(apiErr, apierror.CodeResourceNotFound) {
 			wasDeleted, deletedCheckErr := s.repos.NewDeletedRecordRepo().ExistsInAccount(ctx, constants.DeletedRecordResourceTypeSettlement, params.SettlementID, params.AccountID)
 			if deletedCheckErr != nil {
 				return nil, tracing.Trace(span, deletedCheckErr)
 			}
 			if wasDeleted {
-				return nil, tracing.Trace(span, apierror.NewAlreadyDeletedError("This settlement has already been deleted and can no longer be modified."))
+				return nil, tracing.Trace(span, apierror.NewGoneError("This settlement has already been deleted and can no longer be modified."))
 			}
 		}
 		return nil, tracing.Trace(span, apiErr)
@@ -454,7 +454,7 @@ func (s *settlementSvcImpl) DeleteSettlement(ctx context.Context, params domain.
 		candidates := make([]*domain.Transaction, 0, len(transactionIDs))
 		for _, transactionID := range transactionIDs {
 			t, apiErr := txnRepo.Get(txCtx, params.AccountID, transactionID)
-			if apierror.IsNotFound(apiErr) {
+			if apierror.HasCode(apiErr, apierror.CodeResourceNotFound) {
 				continue
 			}
 			if apiErr != nil {
@@ -474,7 +474,7 @@ func (s *settlementSvcImpl) DeleteSettlement(ctx context.Context, params domain.
 			if apiErr == nil {
 				continue
 			}
-			if !apierror.IsNotFound(apiErr) {
+			if !apierror.HasCode(apiErr, apierror.CodeResourceNotFound) {
 				return apiErr
 			}
 			if apiErr := publishSettlementChild(txCtx, txSvc.repos, constants.AuditActionDelete, constants.ObjectTypeTransaction, t.ID, settlement.ID, audit.ComputeChanges(t, (*domain.Transaction)(nil))); apiErr != nil {

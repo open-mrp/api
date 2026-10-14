@@ -22,9 +22,9 @@ import (
 	"github.com/open-mrp/api/services/agent-service/internal/service"
 	"github.com/open-mrp/api/shared/contracts"
 	"github.com/open-mrp/api/shared/messaging"
-	"github.com/open-mrp/api/shared/tracing"
 	"github.com/open-mrp/apikit/lease"
 	"github.com/open-mrp/apikit/pagination"
+	"github.com/open-mrp/apikit/tracing"
 )
 
 func Run(

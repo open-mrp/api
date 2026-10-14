@@ -6,8 +6,8 @@ import (
 	"github.com/shopspring/decimal"
 
 	"github.com/open-mrp/api/services/core-service/internal/domain"
-	apierror "github.com/open-mrp/api/shared/errors"
 	"github.com/open-mrp/api/shared/pricing"
+	apierror "github.com/open-mrp/apikit/apierror"
 )
 
 // stockingTolerance is how far the allocated and refused quantities may exceed a line's received quantity, in the line's unit, before the request is refused. It is the dashboard stocking dialog's own allowance, so a split it accepts is never rejected here for rounding.
@@ -32,21 +32,21 @@ func validateStockingData(ctx context.Context, repos domain.RepoFactory, account
 	unitIDs := map[string]struct{}{}
 	for _, li := range data.LineItems {
 		if _, dup := seen[li.ReceivingOrderLineID]; dup {
-			return apierror.NewValidationErrorWithParam("A receiving order line can appear only once in a stocking request.", "line_items.receiving_order_line_id")
+			return apierror.NewFieldError("line_items.receiving_order_line_id", apierror.CodeInvalidFormat, "A receiving order line can appear only once in a stocking request.")
 		}
 		seen[li.ReceivingOrderLineID] = struct{}{}
 
 		line, ok := byID[li.ReceivingOrderLineID]
 		if !ok {
-			return apierror.NewValidationErrorWithParam("The receiving order line is not on this receiving order.", "line_items.receiving_order_line_id")
+			return apierror.NewFieldError("line_items.receiving_order_line_id", apierror.CodeInvalidFormat, "The receiving order line is not on this receiving order.")
 		}
 		if _, ok := stockable[line.ID]; !ok {
-			return apierror.NewValidationErrorWithParam("The receiving order line is already stocked or has nothing received on it.", "line_items.receiving_order_line_id")
+			return apierror.NewFieldError("line_items.receiving_order_line_id", apierror.CodeInvalidFormat, "The receiving order line is already stocked or has nothing received on it.")
 		}
 
 		for _, a := range li.Allocations {
 			if !a.Quantity.Value.IsPositive() {
-				return apierror.NewValidationErrorWithParam("An allocated quantity must be greater than zero.", "line_items.allocations.quantity.value")
+				return apierror.NewFieldError("line_items.allocations.quantity.value", apierror.CodeInvalidFormat, "An allocated quantity must be greater than zero.")
 			}
 			unitIDs[a.Quantity.UnitID] = struct{}{}
 			if a.LocationID != nil {
@@ -55,7 +55,7 @@ func validateStockingData(ctx context.Context, repos domain.RepoFactory, account
 		}
 		if li.RejectedQuantity != nil {
 			if li.RejectedQuantity.Value.IsNegative() {
-				return apierror.NewValidationErrorWithParam("A rejected quantity must not be negative.", "line_items.rejected_quantity.value")
+				return apierror.NewFieldError("line_items.rejected_quantity.value", apierror.CodeInvalidFormat, "A rejected quantity must not be negative.")
 			}
 			unitIDs[li.RejectedQuantity.UnitID] = struct{}{}
 		}
@@ -116,7 +116,7 @@ func validateStockingData(ctx context.Context, repos domain.RepoFactory, account
 		add := func(q domain.ReceivedQuantity, param string) *apierror.APIError {
 			if allowed != nil {
 				if _, ok := allowed[q.UnitID]; !ok {
-					return apierror.NewValidationErrorWithParam("The unit is not valid for this item.", param)
+					return apierror.NewFieldError(param, apierror.CodeInvalidFormat, "The unit is not valid for this item.")
 				}
 			}
 			if q.UnitID == line.QuantityUnitID {
@@ -125,7 +125,7 @@ func validateStockingData(ctx context.Context, repos domain.RepoFactory, account
 			}
 			ratio, ok := ratios[q.UnitID]
 			if !ok {
-				return apierror.NewValidationErrorWithParam("The unit is not valid for this item.", param)
+				return apierror.NewFieldError(param, apierror.CodeInvalidFormat, "The unit is not valid for this item.")
 			}
 			accounted = accounted.Add(pricing.ConvertQuantity(q.Value, ratio, lineRatio))
 			return nil
@@ -143,7 +143,7 @@ func validateStockingData(ctx context.Context, repos domain.RepoFactory, account
 		}
 
 		if accounted.GreaterThan(lineValue.Add(stockingTolerance)) {
-			return apierror.NewValidationErrorWithParam("The allocated and rejected quantities add up to more than was received on the line.", "line_items.allocations")
+			return apierror.NewFieldError("line_items.allocations", apierror.CodeInvalidFormat, "The allocated and rejected quantities add up to more than was received on the line.")
 		}
 	}
 
@@ -165,7 +165,7 @@ func validateStockingLocations(ctx context.Context, repos domain.RepoFactory, ac
 	}
 	for _, id := range locationIDs {
 		if _, ok := found[id]; !ok {
-			return apierror.NewValidationErrorWithParam("The storage location was not found.", "line_items.allocations.location_id")
+			return apierror.NewFieldError("line_items.allocations.location_id", apierror.CodeInvalidFormat, "The storage location was not found.")
 		}
 	}
 	return nil
@@ -192,7 +192,7 @@ func validateReceivedQuantityUnit(ctx context.Context, repos domain.RepoFactory,
 		return nil
 	}
 	if _, ok := allowed[q.UnitID]; !ok {
-		return apierror.NewValidationErrorWithParam("The unit is not valid for this item.", param)
+		return apierror.NewFieldError(param, apierror.CodeInvalidFormat, "The unit is not valid for this item.")
 	}
 	return nil
 }

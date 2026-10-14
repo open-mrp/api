@@ -11,10 +11,10 @@ import (
 	"github.com/open-mrp/api/services/core-service/internal/event"
 	"github.com/open-mrp/api/shared/appctx"
 	"github.com/open-mrp/api/shared/constants"
-	apierror "github.com/open-mrp/api/shared/errors"
-	"github.com/open-mrp/api/shared/idempotency"
+	"github.com/open-mrp/api/shared/idemresponse"
 	"github.com/open-mrp/api/shared/messaging"
-	"github.com/open-mrp/api/shared/tracing"
+	apierror "github.com/open-mrp/apikit/apierror"
+	"github.com/open-mrp/apikit/tracing"
 )
 
 var receivableSvcTracer = tracing.GetTracer("core-service.service.receivable")
@@ -194,7 +194,7 @@ func (s *receivableSvcImpl) EmailReceivablesForCustomer(ctx context.Context, par
 
 	switch domain.RecoveryPoint(idempotencyKey.RecoveryPoint) {
 	case domain.RecoveryPointFinished:
-		cached, err := idempotency.UnmarshalCachedResponse[struct{}](ctx, idempotencyKey.ResponseCode, idempotencyKey.ResponseBody)
+		cached, err := idemresponse.UnmarshalCachedResponse[struct{}](ctx, idempotencyKey.ResponseCode, idempotencyKey.ResponseBody)
 		if err != nil {
 			return tracing.Trace(span, apierror.NewInternalError(err, "Issue unmarshalling cached response."))
 		}

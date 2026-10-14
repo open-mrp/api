@@ -6,10 +6,10 @@ import (
 
 	"github.com/open-mrp/api/services/auth-service/internal/domain"
 	"github.com/open-mrp/api/shared/contracts"
-	apierror "github.com/open-mrp/api/shared/errors"
 	pb "github.com/open-mrp/api/shared/proto/billing"
 	"github.com/open-mrp/api/shared/rpc"
-	"github.com/open-mrp/api/shared/tracing"
+	apierror "github.com/open-mrp/apikit/apierror"
+	"github.com/open-mrp/apikit/tracing"
 
 	"google.golang.org/grpc"
 )
@@ -60,7 +60,7 @@ func (c *AuthBillingClient) GetPlanByCode(ctx context.Context, planCode string) 
 
 	plan := resp.Plan
 	if plan == nil {
-		return nil, apierror.NewResourceNotFoundError("Pricing plan not found for code: " + planCode)
+		return nil, apierror.NewNotFoundError("Pricing plan not found for code: " + planCode)
 	}
 
 	info := &domain.PlanInfo{

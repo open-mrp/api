@@ -12,7 +12,7 @@ import (
 	"github.com/open-mrp/api/shared/appctx"
 	"github.com/open-mrp/api/shared/constants"
 	"github.com/open-mrp/api/shared/contracts"
-	apierror "github.com/open-mrp/api/shared/errors"
+	apierror "github.com/open-mrp/apikit/apierror"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -61,27 +61,27 @@ func TestEmailBridge_RejectsRelationActors(t *testing.T) {
 	t.Run("SetSender", func(t *testing.T) {
 		_, apiErr := svc.SetSender(ctx, domain.UpsertAccountEmailSenderInput{EmailDomainID: "emdn_1", LocalPart: "orders"})
 		require.NotNil(t, apiErr)
-		assert.Equal(t, apierror.ErrorCodeInsufficientPerms, apiErr.Code)
+		assert.Equal(t, apierror.CodeInsufficientPermissions, apiErr.Code)
 	})
 	t.Run("GetSender", func(t *testing.T) {
 		_, apiErr := svc.GetSender(ctx)
 		require.NotNil(t, apiErr)
-		assert.Equal(t, apierror.ErrorCodeInsufficientPerms, apiErr.Code)
+		assert.Equal(t, apierror.CodeInsufficientPermissions, apiErr.Code)
 	})
 	t.Run("DeleteSender", func(t *testing.T) {
 		apiErr := svc.DeleteSender(ctx)
 		require.NotNil(t, apiErr)
-		assert.Equal(t, apierror.ErrorCodeInsufficientPerms, apiErr.Code)
+		assert.Equal(t, apierror.CodeInsufficientPermissions, apiErr.Code)
 	})
 	t.Run("CreateDomain", func(t *testing.T) {
 		_, apiErr := svc.CreateDomain(ctx, "attacker.example.com")
 		require.NotNil(t, apiErr)
-		assert.Equal(t, apierror.ErrorCodeInsufficientPerms, apiErr.Code)
+		assert.Equal(t, apierror.CodeInsufficientPermissions, apiErr.Code)
 	})
 	t.Run("CreateInbox", func(t *testing.T) {
 		_, apiErr := svc.CreateInbox(ctx, domain.CreateEmailInboxInput{EmailDomainID: "emdn_1", Address: "x@theirco.com"})
 		require.NotNil(t, apiErr)
-		assert.Equal(t, apierror.ErrorCodeInsufficientPerms, apiErr.Code)
+		assert.Equal(t, apierror.CodeInsufficientPermissions, apiErr.Code)
 	})
 }
 
@@ -197,7 +197,7 @@ func TestDeleteDomain_BlocksWhenInboxesExist(t *testing.T) {
 
 	apiErr := svc.DeleteDomain(emailBridgeCtx(), "emdn_1")
 	require.NotNil(t, apiErr)
-	assert.Equal(t, apierror.ErrorCodeResourceConflict, apiErr.Code)
+	assert.Equal(t, apierror.CodeResourceConflict, apiErr.Code)
 }
 
 func TestDeleteDomain_DeletesWhenNoInboxes(t *testing.T) {

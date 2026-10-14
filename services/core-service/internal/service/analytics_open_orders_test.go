@@ -13,7 +13,7 @@ import (
 	repositorymock "github.com/open-mrp/api/services/core-service/internal/domain/mock/repository"
 	"github.com/open-mrp/api/shared/audit"
 	"github.com/open-mrp/api/shared/constants"
-	apierror "github.com/open-mrp/api/shared/errors"
+	apierror "github.com/open-mrp/apikit/apierror"
 )
 
 type orderBookFixture struct {
@@ -112,12 +112,12 @@ func TestOpenOrders_ScopeSalesRepsAndSplitPermissions(t *testing.T) {
 	// The order detail is gated on sales orders, the totals on invoices, as the dashboard gated them.
 	_, apiErr = f.svc.ListOpenOrderLines(invoices, "or_1")
 	require.NotNil(t, apiErr)
-	require.Equal(t, apierror.ErrorCodeInsufficientPerms, apiErr.Code)
+	require.Equal(t, apierror.CodeInsufficientPermissions, apiErr.Code)
 
 	salesOrders := salesCtx("ac_1", string(constants.RoleTypeCustom), map[string]bool{"sales_orders:read": true})
 	_, apiErr = f.svc.AnalyzeOpenOrdersSummary(salesOrders, domain.OpenOrderFilter{})
 	require.NotNil(t, apiErr)
-	require.Equal(t, apierror.ErrorCodeInsufficientPerms, apiErr.Code)
+	require.Equal(t, apierror.CodeInsufficientPermissions, apiErr.Code)
 }
 
 func TestListOpenOrderLines_ScopesRepsAndReportsAMissingOrder(t *testing.T) {
@@ -131,7 +131,7 @@ func TestListOpenOrderLines_ScopesRepsAndReportsAMissingOrder(t *testing.T) {
 	rep := salesCtx("ac_1", string(constants.RoleTypeSalesRep), map[string]bool{"sales_orders:read": true})
 	_, apiErr := f.svc.ListOpenOrderLines(rep, "or_theirs")
 	require.NotNil(t, apiErr)
-	require.Equal(t, apierror.ErrorCodeResourceNotFound, apiErr.Code)
+	require.Equal(t, apierror.CodeResourceNotFound, apiErr.Code)
 
 	admin := salesCtx("ac_1", string(constants.RoleTypeAdmin), nil)
 	lines, apiErr := f.svc.ListOpenOrderLines(admin, "or_1")

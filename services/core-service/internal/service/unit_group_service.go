@@ -9,10 +9,10 @@ import (
 	"github.com/open-mrp/api/shared/appctx"
 	"github.com/open-mrp/api/shared/audit"
 	"github.com/open-mrp/api/shared/constants"
-	apierror "github.com/open-mrp/api/shared/errors"
 	"github.com/open-mrp/api/shared/id"
-	"github.com/open-mrp/api/shared/idempotency"
-	"github.com/open-mrp/api/shared/tracing"
+	"github.com/open-mrp/api/shared/idemresponse"
+	apierror "github.com/open-mrp/apikit/apierror"
+	"github.com/open-mrp/apikit/tracing"
 )
 
 var unitGroupSvcTracer = tracing.GetTracer("core-service.unit_group_service")
@@ -192,7 +192,7 @@ func (s *unitGroupSvcImpl) CreateUnitGroup(ctx context.Context, params domain.Cr
 
 	switch domain.RecoveryPoint(idempotencyKey.RecoveryPoint) {
 	case domain.RecoveryPointFinished:
-		cached, err := idempotency.UnmarshalCachedResponse[domain.UnitGroupFull](ctx, idempotencyKey.ResponseCode, idempotencyKey.ResponseBody)
+		cached, err := idemresponse.UnmarshalCachedResponse[domain.UnitGroupFull](ctx, idempotencyKey.ResponseCode, idempotencyKey.ResponseBody)
 		if err != nil {
 			return nil, tracing.Trace(span, apierror.NewInternalError(err, "Issue unmarshalling cached response."))
 		}
@@ -208,7 +208,7 @@ func (s *unitGroupSvcImpl) CreateUnitGroup(ctx context.Context, params domain.Cr
 				return apiErr
 			}
 			if exists {
-				return apierror.NewConflictErrorWithParam("A unit group with this name already exists.", "name")
+				return apierror.NewConflictErrorWithParam("name", "A unit group with this name already exists.")
 			}
 
 			// Validate all unit conversions match the group's type
@@ -222,7 +222,7 @@ func (s *unitGroupSvcImpl) CreateUnitGroup(ctx context.Context, params domain.Cr
 				return apiErr
 			}
 			if baseUnit.Type != params.Type {
-				return apierror.NewValidationErrorWithParam("Base unit type does not match the unit group type.", "base_unit_id")
+				return apierror.NewFieldError("base_unit_id", apierror.CodeInvalidFormat, "Base unit type does not match the unit group type.")
 			}
 
 			if _, apiErr := txRepo.Create(txCtx, unitGroupID, params); apiErr != nil {
@@ -321,7 +321,7 @@ func (s *unitGroupSvcImpl) UpdateUnitGroup(ctx context.Context, params domain.Up
 
 	switch domain.RecoveryPoint(idempotencyKey.RecoveryPoint) {
 	case domain.RecoveryPointFinished:
-		cached, err := idempotency.UnmarshalCachedResponse[domain.UnitGroupFull](ctx, idempotencyKey.ResponseCode, idempotencyKey.ResponseBody)
+		cached, err := idemresponse.UnmarshalCachedResponse[domain.UnitGroupFull](ctx, idempotencyKey.ResponseCode, idempotencyKey.ResponseBody)
 		if err != nil {
 			return nil, tracing.Trace(span, apierror.NewInternalError(err, "Issue unmarshalling cached response."))
 		}
@@ -351,7 +351,7 @@ func (s *unitGroupSvcImpl) UpdateUnitGroup(ctx context.Context, params domain.Up
 					return apiErr
 				}
 				if exists {
-					return apierror.NewConflictErrorWithParam("A unit group with this name already exists.", "name")
+					return apierror.NewConflictErrorWithParam("name", "A unit group with this name already exists.")
 				}
 			}
 
@@ -370,7 +370,7 @@ func (s *unitGroupSvcImpl) UpdateUnitGroup(ctx context.Context, params domain.Up
 					return apiErr
 				}
 				if baseUnit.Type != existing.Type {
-					return apierror.NewValidationErrorWithParam("Base unit type does not match the unit group type.", "base_unit_id")
+					return apierror.NewFieldError("base_unit_id", apierror.CodeInvalidFormat, "Base unit type does not match the unit group type.")
 				}
 			}
 
@@ -465,13 +465,13 @@ func (s *unitGroupSvcImpl) DeleteUnitGroup(ctx context.Context, unitGroupID stri
 		UnitGroupID: unitGroupID,
 	})
 	if apiErr != nil {
-		if apierror.IsNotFound(apiErr) {
+		if apierror.HasCode(apiErr, apierror.CodeResourceNotFound) {
 			wasDeleted, deletedCheckErr := s.repos.NewDeletedRecordRepo().ExistsInAccount(ctx, constants.DeletedRecordResourceTypeUnitGroup, unitGroupID, accountID)
 			if deletedCheckErr != nil {
 				return tracing.Trace(span, deletedCheckErr)
 			}
 			if wasDeleted {
-				return tracing.Trace(span, apierror.NewAlreadyDeletedError("This unit group has already been deleted and can no longer be modified."))
+				return tracing.Trace(span, apierror.NewGoneError("This unit group has already been deleted and can no longer be modified."))
 			}
 		}
 		return tracing.Trace(span, apiErr)
@@ -548,7 +548,7 @@ func (s *unitGroupSvcImpl) UpsertUnitGroupUnit(ctx context.Context, params domai
 
 	switch domain.RecoveryPoint(idempotencyKey.RecoveryPoint) {
 	case domain.RecoveryPointFinished:
-		cached, err := idempotency.UnmarshalCachedResponse[domain.UnitGroupUnit](ctx, idempotencyKey.ResponseCode, idempotencyKey.ResponseBody)
+		cached, err := idemresponse.UnmarshalCachedResponse[domain.UnitGroupUnit](ctx, idempotencyKey.ResponseCode, idempotencyKey.ResponseBody)
 		if err != nil {
 			return nil, tracing.Trace(span, apierror.NewInternalError(err, "Issue unmarshalling cached response."))
 		}
@@ -602,7 +602,7 @@ func (s *unitGroupSvcImpl) UpsertUnitGroupUnit(ctx context.Context, params domai
 					}
 				}
 				if !found {
-					return apierror.NewResourceNotFoundError("Unit group unit not found.")
+					return apierror.NewNotFoundError("Unit group unit not found.")
 				}
 			}
 
@@ -618,7 +618,7 @@ func (s *unitGroupSvcImpl) UpsertUnitGroupUnit(ctx context.Context, params domai
 					return apiErr
 				}
 				if unit.Type != existing.Type {
-					return apierror.NewValidationErrorWithParam("Unit type does not match the unit group type.", "unit_id")
+					return apierror.NewFieldError("unit_id", apierror.CodeInvalidFormat, "Unit type does not match the unit group type.")
 				}
 			}
 
@@ -713,7 +713,7 @@ func (s *unitGroupSvcImpl) DeleteUnitGroupUnit(ctx context.Context, params domai
 			return tracing.Trace(span, deletedCheckErr)
 		}
 		if wasDeleted {
-			return tracing.Trace(span, apierror.NewAlreadyDeletedError("This unit group unit has already been deleted and can no longer be modified."))
+			return tracing.Trace(span, apierror.NewGoneError("This unit group unit has already been deleted and can no longer be modified."))
 		}
 	}
 
@@ -850,7 +850,7 @@ func (s *unitGroupSvcImpl) validateUnitConversionTypes(ctx context.Context, acco
 			return apiErr
 		}
 		if unit.Type != groupType {
-			return apierror.NewValidationErrorWithParam("Unit type does not match the unit group type.", "unit_conversions")
+			return apierror.NewFieldError("unit_conversions", apierror.CodeInvalidFormat, "Unit type does not match the unit group type.")
 		}
 	}
 	return nil

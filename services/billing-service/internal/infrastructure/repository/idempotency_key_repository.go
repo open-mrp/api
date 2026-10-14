@@ -7,9 +7,9 @@ import (
 
 	"github.com/open-mrp/api/services/billing-service/internal/domain"
 	"github.com/open-mrp/api/services/billing-service/internal/infrastructure/sqlc"
-	"github.com/open-mrp/api/shared/db"
-	apierror "github.com/open-mrp/api/shared/errors"
-	"github.com/open-mrp/api/shared/tracing"
+	apierror "github.com/open-mrp/apikit/apierror"
+	"github.com/open-mrp/apikit/db"
+	"github.com/open-mrp/apikit/tracing"
 )
 
 var idempotencyRepoTracer = tracing.GetTracer("billing-service.idempotency_key_repository")
@@ -32,7 +32,7 @@ func (r *idempotencyKeyRepoImpl) GetByScopeHash(ctx context.Context, scopeHash s
 	})
 
 	if apiErr := db.MapSQLError(err); apiErr != nil {
-		if apiErr.Code == apierror.ErrorCodeResourceNotFound {
+		if apiErr.Code == apierror.CodeResourceNotFound {
 			return nil, apiErr
 		}
 		return nil, tracing.Trace(span, apiErr)

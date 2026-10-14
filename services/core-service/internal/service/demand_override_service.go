@@ -10,10 +10,10 @@ import (
 	"github.com/open-mrp/api/shared/appctx"
 	"github.com/open-mrp/api/shared/audit"
 	"github.com/open-mrp/api/shared/constants"
-	apierror "github.com/open-mrp/api/shared/errors"
 	"github.com/open-mrp/api/shared/id"
-	"github.com/open-mrp/api/shared/idempotency"
-	"github.com/open-mrp/api/shared/tracing"
+	"github.com/open-mrp/api/shared/idemresponse"
+	apierror "github.com/open-mrp/apikit/apierror"
+	"github.com/open-mrp/apikit/tracing"
 )
 
 var demandOverrideSvcTracer = tracing.GetTracer("core-service.demand_override_service")
@@ -86,7 +86,7 @@ func dayStart(t time.Time) time.Time {
 
 func validateOverridePeriod(start, end time.Time) *apierror.APIError {
 	if end.Before(start) {
-		return apierror.NewValidationErrorWithParam("The period must end on or after it starts.", "period_ends_at")
+		return apierror.NewFieldError("period_ends_at", apierror.CodeInvalidFormat, "The period must end on or after it starts.")
 	}
 	return nil
 }
@@ -95,17 +95,17 @@ func validateOverrideValue(typeCode string, value float64) *apierror.APIError {
 	switch typeCode {
 	case string(constants.DemandOverrideAdjustmentAbsolute):
 		if value < 0 {
-			return apierror.NewValidationErrorWithParam("An absolute override cannot be negative.", "value")
+			return apierror.NewFieldError("value", apierror.CodeInvalidFormat, "An absolute override cannot be negative.")
 		}
 	case string(constants.DemandOverrideAdjustmentDeltaPercent):
 		// -100% zeroes the demand; anything below that would make it negative, which the solver would read as supply and plan against.
 		if value < -100 {
-			return apierror.NewValidationErrorWithParam("A percent override cannot reduce demand by more than 100%.", "value")
+			return apierror.NewFieldError("value", apierror.CodeInvalidFormat, "A percent override cannot reduce demand by more than 100%.")
 		}
 	case string(constants.DemandOverrideAdjustmentDeltaUnits):
 		// Negative unit deltas are legitimate: a cancelled program removes demand.
 	default:
-		return apierror.NewValidationErrorWithParam("Unknown override type.", "override_type_code")
+		return apierror.NewFieldError("override_type_code", apierror.CodeInvalidFormat, "Unknown override type.")
 	}
 	return nil
 }
@@ -117,11 +117,11 @@ func validateOverrideScope(scopeCode, typeCode string) *apierror.APIError {
 	case string(constants.DemandOverrideScopeAccount):
 		// An absolute value fanned out to every item would set the whole plan to one number; only relative adjustments make sense account-wide.
 		if typeCode == string(constants.DemandOverrideAdjustmentAbsolute) {
-			return apierror.NewValidationErrorWithParam("An account-wide override must be a delta, not an absolute value.", "override_type_code")
+			return apierror.NewFieldError("override_type_code", apierror.CodeInvalidFormat, "An account-wide override must be a delta, not an absolute value.")
 		}
 		return nil
 	default:
-		return apierror.NewValidationErrorWithParam("Unknown override scope.", "scope_code")
+		return apierror.NewFieldError("scope_code", apierror.CodeInvalidFormat, "Unknown override scope.")
 	}
 }
 
@@ -278,7 +278,7 @@ func (s *demandOverrideSvcImpl) CreateDemandOverride(ctx context.Context, params
 
 	switch domain.RecoveryPoint(idempotencyKey.RecoveryPoint) {
 	case domain.RecoveryPointFinished:
-		cached, err := idempotency.UnmarshalCachedResponse[domain.DemandOverride](ctx, idempotencyKey.ResponseCode, idempotencyKey.ResponseBody)
+		cached, err := idemresponse.UnmarshalCachedResponse[domain.DemandOverride](ctx, idempotencyKey.ResponseCode, idempotencyKey.ResponseBody)
 		if err != nil {
 			return nil, tracing.Trace(span, apierror.NewInternalError(err, "Issue unmarshalling cached response."))
 		}
@@ -351,19 +351,19 @@ func (s *demandOverrideSvcImpl) validateScopeRef(ctx context.Context, accountID,
 			AccountID: accountID,
 			ItemID:    scopeRefID,
 		}); apiErr != nil {
-			return apierror.NewValidationErrorWithParam("Unknown item.", "scope_ref_id")
+			return apierror.NewFieldError("scope_ref_id", apierror.CodeInvalidFormat, "Unknown item.")
 		}
 	case string(constants.DemandOverrideScopeProductLine):
 		if _, apiErr := s.repos.NewProductLineRepo().Get(ctx, domain.GetProductLineParams{
 			AccountID:     accountID,
 			ProductLineID: scopeRefID,
 		}); apiErr != nil {
-			return apierror.NewValidationErrorWithParam("Unknown product line.", "scope_ref_id")
+			return apierror.NewFieldError("scope_ref_id", apierror.CodeInvalidFormat, "Unknown product line.")
 		}
 	case string(constants.DemandOverrideScopeAccount):
 		// The account is its own referent; the ref is stamped server-side so nothing else needs pointing at.
 		if scopeRefID != accountID {
-			return apierror.NewValidationErrorWithParam("An account-wide override cannot reference anything.", "scope_ref_id")
+			return apierror.NewFieldError("scope_ref_id", apierror.CodeInvalidFormat, "An account-wide override cannot reference anything.")
 		}
 	}
 	return nil
@@ -410,7 +410,7 @@ func (s *demandOverrideSvcImpl) UpdateDemandOverride(ctx context.Context, params
 
 	switch domain.RecoveryPoint(idempotencyKey.RecoveryPoint) {
 	case domain.RecoveryPointFinished:
-		cached, err := idempotency.UnmarshalCachedResponse[domain.DemandOverride](ctx, idempotencyKey.ResponseCode, idempotencyKey.ResponseBody)
+		cached, err := idemresponse.UnmarshalCachedResponse[domain.DemandOverride](ctx, idempotencyKey.ResponseCode, idempotencyKey.ResponseBody)
 		if err != nil {
 			return nil, tracing.Trace(span, apierror.NewInternalError(err, "Issue unmarshalling cached response."))
 		}

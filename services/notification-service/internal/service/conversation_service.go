@@ -17,16 +17,16 @@ import (
 	"github.com/open-mrp/api/services/notification-service/internal/ratelimit"
 	"github.com/open-mrp/api/shared/appctx"
 	"github.com/open-mrp/api/shared/audit"
-	s3 "github.com/open-mrp/api/shared/cloud/s3"
 	"github.com/open-mrp/api/shared/constants"
 	"github.com/open-mrp/api/shared/contracts"
-	"github.com/open-mrp/api/shared/db"
-	apierror "github.com/open-mrp/api/shared/errors"
 	"github.com/open-mrp/api/shared/id"
-	"github.com/open-mrp/api/shared/idempotency"
+	"github.com/open-mrp/api/shared/idemresponse"
 	"github.com/open-mrp/api/shared/messaging"
-	"github.com/open-mrp/api/shared/tracing"
+	apierror "github.com/open-mrp/apikit/apierror"
+	s3 "github.com/open-mrp/apikit/cloud/s3"
+	"github.com/open-mrp/apikit/db"
 	"github.com/open-mrp/apikit/ptrutil"
+	"github.com/open-mrp/apikit/tracing"
 )
 
 var conversationSvcTracer = tracing.GetTracer("notification-service.conversation_service")
@@ -98,7 +98,7 @@ func (s *conversationSvcImpl) caller(ctx context.Context) (*types.Identity, stri
 	accountID := identity.Target.AccountID
 	accountUserID, apiErr := s.repoFactory.NewNotificationRepo().ResolveAccountUserID(ctx, identity.Actor.ID, accountID)
 	if apiErr != nil {
-		if apiErr.Code == apierror.ErrorCodeResourceNotFound {
+		if apiErr.Code == apierror.CodeResourceNotFound {
 			return nil, "", "", apierror.NewAuthorizationError("Chat is only available to users with an account membership.")
 		}
 		return nil, "", "", apiErr
@@ -117,7 +117,7 @@ func (s *conversationSvcImpl) CreateConversation(ctx context.Context, input doma
 
 	// Anti-abuse conversation-creation throttle (§12.10), keyed per actor.
 	if !s.createLimiter.Allow(callerAcus) {
-		return nil, tracing.Trace(span, apierror.NewRateLimitExceededError("You are creating conversations too quickly. Please slow down."))
+		return nil, tracing.Trace(span, apierror.NewRateLimitedError("You are creating conversations too quickly. Please slow down."))
 	}
 
 	switch constants.ConversationType(input.Type) {
@@ -126,25 +126,25 @@ func (s *conversationSvcImpl) CreateConversation(ctx context.Context, input doma
 	case constants.ConversationTypeGroup:
 		return s.createGroup(ctx, input, callerAcus, accountID)
 	default:
-		return nil, tracing.Trace(span, apierror.NewParameterInvalidError("Unsupported conversation type.", "type"))
+		return nil, tracing.Trace(span, apierror.NewParameterInvalidError("type", "Unsupported conversation type."))
 	}
 
 	if len(input.Participants) > 0 {
-		return nil, tracing.Trace(span, apierror.NewParameterInvalidError("A direct message has no roles to assign; name its other participant in participant_account_user_ids.", "participants"))
+		return nil, tracing.Trace(span, apierror.NewParameterInvalidError("participants", "A direct message has no roles to assign; name its other participant in participant_account_user_ids."))
 	}
 	if len(input.ParticipantAccountUserIDs) != 1 {
-		return nil, tracing.Trace(span, apierror.NewParameterInvalidError("A direct message requires exactly one other participant.", "participant_account_user_ids"))
+		return nil, tracing.Trace(span, apierror.NewParameterInvalidError("participant_account_user_ids", "A direct message requires exactly one other participant."))
 	}
 	target := input.ParticipantAccountUserIDs[0]
 	if target == "" {
-		return nil, tracing.Trace(span, apierror.NewParameterInvalidError("The target participant is invalid.", "participant_account_user_ids"))
+		return nil, tracing.Trace(span, apierror.NewParameterInvalidError("participant_account_user_ids", "The target participant is invalid."))
 	}
 	// A self-DM ("note to self") is an explicitly-allowed conversation where the pair is (caller, caller).
 	isSelfDM := target == callerAcus
 	// The target must be a real account_user of this account.
 	if _, apiErr := s.repoFactory.NewNotificationRepo().ResolveUserIDInAccount(ctx, target, accountID); apiErr != nil {
-		if apiErr.Code == apierror.ErrorCodeResourceNotFound {
-			return nil, tracing.Trace(span, apierror.NewParameterInvalidError("The target participant does not exist.", "participant_account_user_ids"))
+		if apiErr.Code == apierror.CodeResourceNotFound {
+			return nil, tracing.Trace(span, apierror.NewParameterInvalidError("participant_account_user_ids", "The target participant does not exist."))
 		}
 		return nil, tracing.Trace(span, apiErr)
 	}
@@ -162,7 +162,7 @@ func (s *conversationSvcImpl) CreateConversation(ctx context.Context, input doma
 	// Dedup fast path: an existing DM between this pair is returned as-is.
 	if existingID, apiErr := s.repoFactory.NewConversationRepo().GetDMConversationID(ctx, accountID, dmKey); apiErr == nil {
 		return s.loadConversation(ctx, existingID, callerAcus, accountID)
-	} else if apiErr.Code != apierror.ErrorCodeResourceNotFound {
+	} else if apiErr.Code != apierror.CodeResourceNotFound {
 		return nil, tracing.Trace(span, apiErr)
 	}
 
@@ -178,7 +178,7 @@ func (s *conversationSvcImpl) CreateConversation(ctx context.Context, input doma
 		}
 		if dmErr := convRepo.CreateDMKey(txCtx, accountID, dmKey, conversationID); dmErr != nil {
 			if db.IsDuplicateEntry(dmErr) {
-				return apierror.NewResourceConflictError("A direct message with this participant already exists.")
+				return apierror.NewConflictError("A direct message with this participant already exists.")
 			}
 			if mapped := db.MapSQLError(dmErr); mapped != nil {
 				return mapped
@@ -222,7 +222,7 @@ func (s *conversationSvcImpl) CreateConversation(ctx context.Context, input doma
 	})
 	if apiErr != nil {
 		// A concurrent create raced us to the DM key; return the winner.
-		if apiErr.Code == apierror.ErrorCodeResourceConflict {
+		if apiErr.Code == apierror.CodeResourceConflict {
 			if existingID, getErr := s.repoFactory.NewConversationRepo().GetDMConversationID(ctx, accountID, dmKey); getErr == nil {
 				return s.loadConversation(ctx, existingID, callerAcus, accountID)
 			}
@@ -241,7 +241,7 @@ func (s *conversationSvcImpl) listSupportConversationForRelation(ctx context.Con
 	}
 	existing, apiErr := s.repoFactory.NewConversationRepo().GetCustomerSupport(ctx, accountID, *customerAccount)
 	if apiErr != nil {
-		if apiErr.Code == apierror.ErrorCodeResourceNotFound {
+		if apiErr.Code == apierror.CodeResourceNotFound {
 			return &domain.ConversationPage{}, nil
 		}
 		return nil, apiErr
@@ -287,7 +287,7 @@ func (s *conversationSvcImpl) ListConversations(ctx context.Context, input domai
 
 	callerAcus, apiErr := s.repoFactory.NewNotificationRepo().ResolveAccountUserID(ctx, identity.Actor.ID, accountID)
 	if apiErr != nil {
-		if apiErr.Code == apierror.ErrorCodeResourceNotFound {
+		if apiErr.Code == apierror.CodeResourceNotFound {
 			return nil, tracing.Trace(span, apierror.NewAuthorizationError("Chat is only available to users with an account membership."))
 		}
 		return nil, tracing.Trace(span, apiErr)
@@ -305,7 +305,7 @@ func (s *conversationSvcImpl) ListConversations(ctx context.Context, input domai
 	}
 	listStatus := constants.ConversationListStatus(status)
 	if !listStatus.IsValid() {
-		return nil, tracing.Trace(span, apierror.NewParameterInvalidError("The status is invalid.", "status"))
+		return nil, tracing.Trace(span, apierror.NewParameterInvalidError("status", "The status is invalid."))
 	}
 
 	rows, apiErr := s.repoFactory.NewConversationRepo().ListForUser(ctx, domain.ConversationListFilter{
@@ -441,7 +441,7 @@ func (s *conversationSvcImpl) BatchGetConversations(ctx context.Context, ids []s
 		conv, apiErr := s.GetConversation(ctx, convID)
 		if apiErr != nil {
 			// Not a member / not found → omit. Surface only unexpected (non-404) failures.
-			if apiErr.Code == apierror.ErrorCodeResourceNotFound {
+			if apiErr.Code == apierror.CodeResourceNotFound {
 				continue
 			}
 			return nil, tracing.Trace(span, apiErr)
@@ -513,14 +513,14 @@ func (s *conversationSvcImpl) ContactSupport(ctx context.Context) (*domain.Conve
 	convRepo := s.repoFactory.NewConversationRepo()
 	if existing, apiErr := convRepo.GetCustomerSupport(ctx, vendorAccountID, *customerAccount); apiErr == nil {
 		return s.GetConversation(ctx, existing.ID)
-	} else if apiErr.Code != apierror.ErrorCodeResourceNotFound {
+	} else if apiErr.Code != apierror.CodeResourceNotFound {
 		return nil, tracing.Trace(span, apiErr)
 	}
 
 	// Resolve the designated support recipients (the configured support route's group-conversation participants) before creating anything. Support is only offered when the vendor has set up a route with at least one recipient — otherwise a customer would be messaging into a void, so we refuse to open the thread (the portal also hides the feature via SupportAvailability). Existing threads were already returned above, so this only gates first contact.
 	contactRecipients := s.resolveSupportContact(ctx, vendorAccountID, *customerAccount)
 	if len(contactRecipients) == 0 {
-		return nil, tracing.Trace(span, apierror.NewResourceNotFoundError("Support is not available for this account."))
+		return nil, tracing.Trace(span, apierror.NewNotFoundError("Support is not available for this account."))
 	}
 
 	conversationID, apiErr := id.GenID(id.ConversationIDPrefix, nil)
@@ -627,17 +627,17 @@ func (s *conversationSvcImpl) SetSupportRoute(ctx context.Context, relationAccou
 		return nil, tracing.Trace(span, apiErr)
 	}
 	if groupConversationID == "" {
-		return nil, tracing.Trace(span, apierror.NewParameterMissingError("A group_conversation_id is required.", "group_conversation_id"))
+		return nil, tracing.Trace(span, apierror.NewParameterMissingError("group_conversation_id", "A group_conversation_id is required."))
 	}
 	conv, apiErr := s.repoFactory.NewConversationRepo().GetByID(ctx, groupConversationID, accountID)
 	if apiErr != nil {
-		if apiErr.Code == apierror.ErrorCodeResourceNotFound {
-			return nil, tracing.Trace(span, apierror.NewParameterInvalidError("The group conversation does not exist in this account.", "group_conversation_id"))
+		if apiErr.Code == apierror.CodeResourceNotFound {
+			return nil, tracing.Trace(span, apierror.NewParameterInvalidError("group_conversation_id", "The group conversation does not exist in this account."))
 		}
 		return nil, tracing.Trace(span, apiErr)
 	}
 	if conv.Type != string(constants.ConversationTypeGroup) {
-		return nil, tracing.Trace(span, apierror.NewParameterInvalidError("The support route target must be a group conversation.", "group_conversation_id"))
+		return nil, tracing.Trace(span, apierror.NewParameterInvalidError("group_conversation_id", "The support route target must be a group conversation."))
 	}
 
 	routeID, apiErr := id.GenID(id.SupportRouteIDPrefix, nil)
@@ -696,7 +696,7 @@ func (s *conversationSvcImpl) ClearSupportRoute(ctx context.Context, relationAcc
 		return tracing.Trace(span, apiErr)
 	}
 	if existing == nil {
-		return tracing.Trace(span, apierror.NewResourceNotFoundError("Support route not found."))
+		return tracing.Trace(span, apierror.NewNotFoundError("Support route not found."))
 	}
 	apiErr = s.txManager.WithTx(ctx, func(txCtx context.Context, f domain.RepoFactory) *apierror.APIError {
 		deleted, apiErr := f.NewSupportRouteRepo().Delete(txCtx, accountID, relationAccountID)
@@ -704,7 +704,7 @@ func (s *conversationSvcImpl) ClearSupportRoute(ctx context.Context, relationAcc
 			return apiErr
 		}
 		if !deleted {
-			return apierror.NewResourceNotFoundError("Support route not found.")
+			return apierror.NewNotFoundError("Support route not found.")
 		}
 		return audit.NewPublisher().Publish(txCtx, f.NewOutboxRepo(), audit.EventData{
 			ServiceName:  domain.ServiceName,
@@ -734,7 +734,7 @@ func (s *conversationSvcImpl) GetSupportRoute(ctx context.Context, relationAccou
 		return nil, tracing.Trace(span, apiErr)
 	}
 	if route == nil {
-		return nil, tracing.Trace(span, apierror.NewResourceNotFoundError("Support route not found."))
+		return nil, tracing.Trace(span, apierror.NewNotFoundError("Support route not found."))
 	}
 	return route, nil
 }
@@ -767,31 +767,31 @@ func (s *conversationSvcImpl) resolveParticipant(ctx context.Context, conversati
 	if identity.IsRelationActor() {
 		customerAccount := identity.ActorAccountID()
 		if customerAccount == nil || *customerAccount == "" {
-			return nil, apierror.NewResourceNotFoundError("Conversation not found.")
+			return nil, apierror.NewNotFoundError("Conversation not found.")
 		}
 		part, apiErr := s.repoFactory.NewParticipantRepo().GetByRelationAccount(ctx, conversationID, *customerAccount)
 		if apiErr != nil {
-			if apiErr.Code == apierror.ErrorCodeResourceNotFound {
-				return nil, apierror.NewResourceNotFoundError("Conversation not found.")
+			if apiErr.Code == apierror.CodeResourceNotFound {
+				return nil, apierror.NewNotFoundError("Conversation not found.")
 			}
 			return nil, apiErr
 		}
 		if part.Membership != string(constants.ParticipantMembershipActive) {
-			return nil, apierror.NewResourceNotFoundError("Conversation not found.")
+			return nil, apierror.NewNotFoundError("Conversation not found.")
 		}
 		return &resolvedCaller{identity: identity, accountID: accountID, part: part, isCustomer: true}, nil
 	}
 
 	callerAcus, apiErr := s.repoFactory.NewNotificationRepo().ResolveAccountUserID(ctx, identity.Actor.ID, accountID)
 	if apiErr != nil {
-		if apiErr.Code == apierror.ErrorCodeResourceNotFound {
+		if apiErr.Code == apierror.CodeResourceNotFound {
 			return nil, apierror.NewAuthorizationError("Chat is only available to users with an account membership.")
 		}
 		return nil, apiErr
 	}
 	part, apiErr := s.repoFactory.NewParticipantRepo().Get(ctx, conversationID, callerAcus)
 	if apiErr != nil {
-		if apiErr.Code != apierror.ErrorCodeResourceNotFound {
+		if apiErr.Code != apierror.CodeResourceNotFound {
 			return nil, apiErr
 		}
 		// Internal staff with messaging permission may access a customer-audience case they have not joined yet; they lazy-join as a participant on first interaction so their replies carry a sender participant.
@@ -800,13 +800,13 @@ func (s *conversationSvcImpl) resolveParticipant(ctx context.Context, conversati
 			return nil, joinErr
 		}
 		if joined == nil {
-			return nil, apierror.NewResourceNotFoundError("Conversation not found.")
+			return nil, apierror.NewNotFoundError("Conversation not found.")
 		}
 		part = joined
 	}
 	if part.Membership != string(constants.ParticipantMembershipActive) &&
 		!(allowLeft && part.Membership == string(constants.ParticipantMembershipLeft)) {
-		return nil, apierror.NewResourceNotFoundError("Conversation not found.")
+		return nil, apierror.NewNotFoundError("Conversation not found.")
 	}
 	return &resolvedCaller{identity: identity, accountID: accountID, part: part, senderAcus: callerAcus}, nil
 }
@@ -815,7 +815,7 @@ func (s *conversationSvcImpl) resolveParticipant(ctx context.Context, conversati
 func (s *conversationSvcImpl) lazyJoinSupportStaff(ctx context.Context, conversationID, accountID, callerAcus string, identity *types.Identity) (*domain.ConversationParticipant, *apierror.APIError) {
 	conv, apiErr := s.repoFactory.NewConversationRepo().GetByID(ctx, conversationID, accountID)
 	if apiErr != nil {
-		if apiErr.Code == apierror.ErrorCodeResourceNotFound {
+		if apiErr.Code == apierror.CodeResourceNotFound {
 			return nil, nil
 		}
 		return nil, apiErr
@@ -900,13 +900,13 @@ func filterCustomerVisibleParticipants(participants []*domain.ConversationPartic
 func (s *conversationSvcImpl) loadConversation(ctx context.Context, conversationID, callerAcus, accountID string) (*domain.Conversation, *apierror.APIError) {
 	part, apiErr := s.repoFactory.NewParticipantRepo().Get(ctx, conversationID, callerAcus)
 	if apiErr != nil {
-		if apiErr.Code == apierror.ErrorCodeResourceNotFound {
-			return nil, apierror.NewResourceNotFoundError("Conversation not found.")
+		if apiErr.Code == apierror.CodeResourceNotFound {
+			return nil, apierror.NewNotFoundError("Conversation not found.")
 		}
 		return nil, apiErr
 	}
 	if part.Membership != string(constants.ParticipantMembershipActive) {
-		return nil, apierror.NewResourceNotFoundError("Conversation not found.") // left/removed: no access
+		return nil, apierror.NewNotFoundError("Conversation not found.") // left/removed: no access
 	}
 
 	conv, apiErr := s.repoFactory.NewConversationRepo().GetByID(ctx, conversationID, accountID)
@@ -935,12 +935,12 @@ func (s *conversationSvcImpl) loadConversation(ctx context.Context, conversation
 func resolveSendVisibility(audience string, isCustomer bool, requested string) (string, *apierror.APIError) {
 	requested = strings.TrimSpace(requested)
 	if requested != "" && !constants.MessageVisibility(requested).IsValid() {
-		return "", apierror.NewParameterInvalidError("Unknown message visibility.", "visibility")
+		return "", apierror.NewParameterInvalidError("visibility", "Unknown message visibility.")
 	}
 
 	if audience != string(constants.ConversationAudienceCustomer) {
 		if requested == string(constants.MessageVisibilityExternal) || requested == string(constants.MessageVisibilitySystem) {
-			return "", apierror.NewParameterInvalidError("This conversation has no customer; only internal messages are allowed.", "visibility")
+			return "", apierror.NewParameterInvalidError("visibility", "This conversation has no customer; only internal messages are allowed.")
 		}
 		return string(constants.MessageVisibilityInternal), nil
 	}
@@ -970,16 +970,16 @@ func (s *conversationSvcImpl) SendMessage(ctx context.Context, input domain.Send
 		sendLimiter, rateKey = s.customerSendLimiter, part.ID
 	}
 	if !sendLimiter.Allow(rateKey) {
-		return nil, tracing.Trace(span, apierror.NewRateLimitExceededError("You are sending messages too quickly. Please slow down."))
+		return nil, tracing.Trace(span, apierror.NewRateLimitedError("You are sending messages too quickly. Please slow down."))
 	}
 
 	// A message needs text, at least one attachment, or a resource link.
 	hasLink := input.LinkResourceID != nil && *input.LinkResourceID != ""
 	if (input.Body == nil || *input.Body == "") && len(input.Attachments) == 0 && !hasLink {
-		return nil, tracing.Trace(span, apierror.NewParameterMissingError("A message body, attachment, or link is required.", "body"))
+		return nil, tracing.Trace(span, apierror.NewParameterMissingError("body", "A message body, attachment, or link is required."))
 	}
 	if input.ClientMessageID == "" {
-		return nil, tracing.Trace(span, apierror.NewParameterMissingError("A client_message_id is required.", "client_message_id"))
+		return nil, tracing.Trace(span, apierror.NewParameterMissingError("client_message_id", "A client_message_id is required."))
 	}
 	if part.Role == string(constants.ParticipantRoleViewer) {
 		return nil, tracing.Trace(span, apierror.NewAuthorizationError("You cannot post to this conversation."))
@@ -995,8 +995,8 @@ func (s *conversationSvcImpl) SendMessage(ctx context.Context, input domain.Send
 	// Resolve the message's visibility against the conversation's audience. This is the safety gate that keeps an internal note out of the customer-visible timeline (and vice versa).
 	conv, apiErr := s.repoFactory.NewConversationRepo().GetByID(ctx, input.ConversationID, accountID)
 	if apiErr != nil {
-		if apiErr.Code == apierror.ErrorCodeResourceNotFound {
-			return nil, tracing.Trace(span, apierror.NewResourceNotFoundError("Conversation not found."))
+		if apiErr.Code == apierror.CodeResourceNotFound {
+			return nil, tracing.Trace(span, apierror.NewNotFoundError("Conversation not found."))
 		}
 		return nil, tracing.Trace(span, apiErr)
 	}
@@ -1009,7 +1009,7 @@ func (s *conversationSvcImpl) SendMessage(ctx context.Context, input domain.Send
 	if existing, apiErr := s.repoFactory.NewMessageRepo().GetByClientID(ctx, input.ConversationID, input.ClientMessageID); apiErr == nil {
 		s.resolveSenders(ctx, input.ConversationID, accountID, []*domain.Message{existing}, identity.IsRelationActor())
 		return existing, nil
-	} else if apiErr.Code != apierror.ErrorCodeResourceNotFound {
+	} else if apiErr.Code != apierror.CodeResourceNotFound {
 		return nil, tracing.Trace(span, apiErr)
 	}
 
@@ -1045,8 +1045,8 @@ func (s *conversationSvcImpl) SendMessage(ctx context.Context, input domain.Send
 		convRepo := f.NewConversationRepo()
 		seq, lockErr := convRepo.LockSequence(txCtx, input.ConversationID, accountID)
 		if lockErr != nil {
-			if lockErr.Code == apierror.ErrorCodeResourceNotFound {
-				return apierror.NewResourceNotFoundError("Conversation not found.")
+			if lockErr.Code == apierror.CodeResourceNotFound {
+				return apierror.NewNotFoundError("Conversation not found.")
 			}
 			return lockErr
 		}
@@ -1318,7 +1318,7 @@ func (s *conversationSvcImpl) effectivePreference(ctx context.Context, prefRepo 
 func (s *conversationSvcImpl) enqueueChatEmail(ctx context.Context, f domain.RepoFactory, outbox messaging.OutboxRepo, recipientAccountUserID, accountID, senderName, conversationTitle string, preview *string) *apierror.APIError {
 	contact, apiErr := f.NewNotificationRepo().ResolveRecipientContact(ctx, recipientAccountUserID)
 	if apiErr != nil {
-		if apiErr.Code == apierror.ErrorCodeResourceNotFound {
+		if apiErr.Code == apierror.CodeResourceNotFound {
 			return nil // no recipient row — nothing to email
 		}
 		return apiErr
@@ -1449,7 +1449,7 @@ func (s *conversationSvcImpl) chatSenderUserID(ctx context.Context, f domain.Rep
 	}
 	userID, apiErr = f.NewNotificationRepo().ResolveUserIDInAccount(ctx, senderAcus, accountID)
 	if apiErr != nil {
-		if apiErr.Code == apierror.ErrorCodeResourceNotFound {
+		if apiErr.Code == apierror.CodeResourceNotFound {
 			return "", false, nil
 		}
 		return "", false, apiErr
@@ -1757,7 +1757,7 @@ func (s *conversationSvcImpl) PostAgentReplyPatch(ctx context.Context, in domain
 func (s *conversationSvcImpl) resolveAgentReplyParticipant(ctx context.Context, conversationID, agentConfigID string) (*domain.ConversationParticipant, *apierror.APIError) {
 	part, apiErr := s.repoFactory.NewParticipantRepo().GetByAgentConfigID(ctx, conversationID, agentConfigID)
 	if apiErr != nil {
-		if apiErr.Code == apierror.ErrorCodeResourceNotFound {
+		if apiErr.Code == apierror.CodeResourceNotFound {
 			return nil, nil // agent no longer a participant — drop the reply
 		}
 		return nil, apiErr
@@ -1796,8 +1796,8 @@ func (s *conversationSvcImpl) createAgentReplyTx(txCtx context.Context, f domain
 	convRepo := f.NewConversationRepo()
 	seq, lockErr := convRepo.LockSequence(txCtx, in.ConversationID, in.AccountID)
 	if lockErr != nil {
-		if lockErr.Code == apierror.ErrorCodeResourceNotFound {
-			return nil, apierror.NewResourceNotFoundError("Conversation not found.")
+		if lockErr.Code == apierror.CodeResourceNotFound {
+			return nil, apierror.NewNotFoundError("Conversation not found.")
 		}
 		return nil, lockErr
 	}
@@ -2058,19 +2058,19 @@ func (s *conversationSvcImpl) CreateAttachmentUploadURL(ctx context.Context, con
 		return nil, tracing.Trace(span, apiErr)
 	}
 	if filename == "" {
-		return nil, tracing.Trace(span, apierror.NewParameterMissingError("A filename is required.", "filename"))
+		return nil, tracing.Trace(span, apierror.NewParameterMissingError("filename", "A filename is required."))
 	}
 
 	// Only an active participant may stage an upload for a conversation.
 	part, apiErr := s.repoFactory.NewParticipantRepo().Get(ctx, conversationID, callerAcus)
 	if apiErr != nil {
-		if apiErr.Code == apierror.ErrorCodeResourceNotFound {
-			return nil, tracing.Trace(span, apierror.NewResourceNotFoundError("Conversation not found."))
+		if apiErr.Code == apierror.CodeResourceNotFound {
+			return nil, tracing.Trace(span, apierror.NewNotFoundError("Conversation not found."))
 		}
 		return nil, tracing.Trace(span, apiErr)
 	}
 	if part.Membership != string(constants.ParticipantMembershipActive) {
-		return nil, tracing.Trace(span, apierror.NewResourceNotFoundError("Conversation not found."))
+		return nil, tracing.Trace(span, apierror.NewNotFoundError("Conversation not found."))
 	}
 
 	attachmentID, apiErr := id.GenID(id.MessageAttachmentIDPrefix, nil)
@@ -2129,7 +2129,7 @@ func (s *conversationSvcImpl) buildAttachments(ctx context.Context, conversation
 	for _, in := range inputs {
 		kind := constants.MessageAttachmentKind(in.Kind)
 		if !kind.IsValid() {
-			return nil, apierror.NewParameterInvalidError("An invalid attachment kind was supplied.", "attachments")
+			return nil, apierror.NewParameterInvalidError("attachments", "An invalid attachment kind was supplied.")
 		}
 		attachmentID, apiErr := id.GenID(id.MessageAttachmentIDPrefix, nil)
 		if apiErr != nil {
@@ -2147,17 +2147,17 @@ func (s *conversationSvcImpl) buildAttachments(ctx context.Context, conversation
 		switch {
 		case kind.IsUploaded():
 			if in.S3Key == nil || *in.S3Key == "" {
-				return nil, apierror.NewParameterMissingError("An uploaded attachment requires an s3_key.", "attachments")
+				return nil, apierror.NewParameterMissingError("attachments", "An uploaded attachment requires an s3_key.")
 			}
 			if !strings.HasPrefix(*in.S3Key, stagedPrefix) {
-				return nil, apierror.NewParameterInvalidError("The attachment does not belong to this conversation.", "attachments")
+				return nil, apierror.NewParameterInvalidError("attachments", "The attachment does not belong to this conversation.")
 			}
 			exists, apiErr := s.objectStore.FileExists(ctx, s.chatBucket, *in.S3Key)
 			if apiErr != nil {
 				return nil, apiErr
 			}
 			if !exists {
-				return nil, apierror.NewParameterInvalidError("The uploaded attachment was not found. Upload it before sending.", "attachments")
+				return nil, apierror.NewParameterInvalidError("attachments", "The uploaded attachment was not found. Upload it before sending.")
 			}
 			// Promote the staged object to its permanent key; the staged copy expires via lifecycle.
 			permanentKey := promoteStagedKey(*in.S3Key)
@@ -2167,12 +2167,12 @@ func (s *conversationSvcImpl) buildAttachments(ctx context.Context, conversation
 			a.S3Key = &permanentKey
 		case kind == constants.MessageAttachmentKindLink:
 			if in.URL == nil || *in.URL == "" {
-				return nil, apierror.NewParameterMissingError("A link attachment requires a url.", "attachments")
+				return nil, apierror.NewParameterMissingError("attachments", "A link attachment requires a url.")
 			}
 			a.URL = in.URL
 		case kind == constants.MessageAttachmentKindResource:
 			if in.ResourceType == nil || *in.ResourceType == "" || in.ResourceID == nil || *in.ResourceID == "" {
-				return nil, apierror.NewParameterMissingError("A resource attachment requires a resource_type and resource_id.", "attachments")
+				return nil, apierror.NewParameterMissingError("attachments", "A resource attachment requires a resource_type and resource_id.")
 			}
 			a.ResourceType = in.ResourceType
 			a.ResourceID = in.ResourceID
@@ -2222,21 +2222,21 @@ func (s *conversationSvcImpl) ScheduleMessage(ctx context.Context, input domain.
 		return nil, tracing.Trace(span, apiErr)
 	}
 	if input.Body == "" {
-		return nil, tracing.Trace(span, apierror.NewParameterMissingError("A message body is required.", "body"))
+		return nil, tracing.Trace(span, apierror.NewParameterMissingError("body", "A message body is required."))
 	}
 	if !input.ScheduledFor.After(time.Now()) {
-		return nil, tracing.Trace(span, apierror.NewParameterInvalidError("The scheduled_at time must be in the future.", "scheduled_at"))
+		return nil, tracing.Trace(span, apierror.NewParameterInvalidError("scheduled_at", "The scheduled_at time must be in the future."))
 	}
 
 	part, apiErr := s.repoFactory.NewParticipantRepo().Get(ctx, input.ConversationID, callerAcus)
 	if apiErr != nil {
-		if apiErr.Code == apierror.ErrorCodeResourceNotFound {
-			return nil, tracing.Trace(span, apierror.NewResourceNotFoundError("Conversation not found."))
+		if apiErr.Code == apierror.CodeResourceNotFound {
+			return nil, tracing.Trace(span, apierror.NewNotFoundError("Conversation not found."))
 		}
 		return nil, tracing.Trace(span, apiErr)
 	}
 	if part.Membership != string(constants.ParticipantMembershipActive) {
-		return nil, tracing.Trace(span, apierror.NewResourceNotFoundError("Conversation not found."))
+		return nil, tracing.Trace(span, apierror.NewNotFoundError("Conversation not found."))
 	}
 	if part.Role == string(constants.ParticipantRoleViewer) {
 		return nil, tracing.Trace(span, apierror.NewAuthorizationError("You cannot post to this conversation."))
@@ -2250,7 +2250,7 @@ func (s *conversationSvcImpl) ScheduleMessage(ctx context.Context, input domain.
 	}
 	switch domain.RecoveryPoint(idemKey.RecoveryPoint) {
 	case domain.RecoveryPointFinished:
-		cached, err := idempotency.UnmarshalCachedResponse[domain.Message](ctx, idemKey.ResponseCode, idemKey.ResponseBody)
+		cached, err := idemresponse.UnmarshalCachedResponse[domain.Message](ctx, idemKey.ResponseCode, idemKey.ResponseBody)
 		if err != nil {
 			return nil, tracing.Trace(span, apierror.NewInternalError(err, "Issue unmarshalling cached response."))
 		}
@@ -2334,7 +2334,7 @@ func (s *conversationSvcImpl) CancelScheduledMessage(ctx context.Context, schedu
 			// Either it does not exist / isn't the caller's, or it is no longer scheduled.
 			existing, getErr := repo.GetByID(txCtx, scheduledID, accountID)
 			if getErr != nil {
-				return apierror.NewResourceNotFoundError("Scheduled message not found.")
+				return apierror.NewNotFoundError("Scheduled message not found.")
 			}
 			return apierror.NewValidationError("This scheduled message can no longer be canceled (status: " + existing.Status + ").")
 		}
@@ -2364,10 +2364,10 @@ func (s *conversationSvcImpl) RescheduleMessage(ctx context.Context, input domai
 		return nil, tracing.Trace(span, apiErr)
 	}
 	if input.Body != nil && *input.Body == "" {
-		return nil, tracing.Trace(span, apierror.NewParameterInvalidError("A message body must not be blank.", "body"))
+		return nil, tracing.Trace(span, apierror.NewParameterInvalidError("body", "A message body must not be blank."))
 	}
 	if !input.ScheduledFor.After(time.Now()) {
-		return nil, tracing.Trace(span, apierror.NewParameterInvalidError("The scheduled_at time must be in the future.", "scheduled_at"))
+		return nil, tracing.Trace(span, apierror.NewParameterInvalidError("scheduled_at", "The scheduled_at time must be in the future."))
 	}
 
 	idemKey, apiErr := upsertIdempotencyKey(ctx, s.repoFactory, identity)
@@ -2376,7 +2376,7 @@ func (s *conversationSvcImpl) RescheduleMessage(ctx context.Context, input domai
 	}
 	switch domain.RecoveryPoint(idemKey.RecoveryPoint) {
 	case domain.RecoveryPointFinished:
-		cached, err := idempotency.UnmarshalCachedResponse[domain.Message](ctx, idemKey.ResponseCode, idemKey.ResponseBody)
+		cached, err := idemresponse.UnmarshalCachedResponse[domain.Message](ctx, idemKey.ResponseCode, idemKey.ResponseBody)
 		if err != nil {
 			return nil, tracing.Trace(span, apierror.NewInternalError(err, "Issue unmarshalling cached response."))
 		}
@@ -2422,10 +2422,10 @@ func (s *conversationSvcImpl) RescheduleMessage(ctx context.Context, input domai
 
 // rescheduleRefusal says why a scheduled message could not be moved: one the caller did not schedule reads as missing, and one sent, canceled or already due can no longer change.
 func rescheduleRefusal(ctx context.Context, f domain.RepoFactory, id, accountID, callerAcus string) *apierror.APIError {
-	notFound := apierror.NewResourceNotFoundError("Scheduled message not found.")
+	notFound := apierror.NewNotFoundError("Scheduled message not found.")
 	msg, apiErr := f.NewMessageRepo().GetByID(ctx, id, accountID)
 	if apiErr != nil {
-		if apiErr.Code == apierror.ErrorCodeResourceNotFound {
+		if apiErr.Code == apierror.CodeResourceNotFound {
 			return notFound
 		}
 		return apiErr
@@ -2435,7 +2435,7 @@ func rescheduleRefusal(ctx context.Context, f domain.RepoFactory, id, accountID,
 	}
 	sender, apiErr := f.NewParticipantRepo().GetByID(ctx, *msg.SenderParticipantID, msg.ConversationID)
 	if apiErr != nil {
-		if apiErr.Code == apierror.ErrorCodeResourceNotFound {
+		if apiErr.Code == apierror.CodeResourceNotFound {
 			return notFound
 		}
 		return apiErr
@@ -2614,14 +2614,14 @@ func (s *conversationSvcImpl) IsParticipant(ctx context.Context, conversationID,
 	if apiErr == nil {
 		part, partErr := participantRepo.Get(ctx, conversationID, accountUserID)
 		if partErr != nil {
-			if partErr.Code == apierror.ErrorCodeResourceNotFound {
+			if partErr.Code == apierror.CodeResourceNotFound {
 				return false, nil
 			}
 			return false, tracing.Trace(span, partErr)
 		}
 		return part.Membership == string(constants.ParticipantMembershipActive), nil
 	}
-	if apiErr.Code != apierror.ErrorCodeResourceNotFound {
+	if apiErr.Code != apierror.CodeResourceNotFound {
 		return false, tracing.Trace(span, apiErr)
 	}
 
@@ -2730,8 +2730,8 @@ func (s *conversationSvcImpl) createGroup(ctx context.Context, input domain.Crea
 	if input.GroupID != nil && *input.GroupID != "" {
 		group, apiErr := s.repoFactory.NewMessagingGroupRepo().Get(ctx, *input.GroupID, accountID)
 		if apiErr != nil {
-			if apiErr.Code == apierror.ErrorCodeResourceNotFound {
-				return nil, tracing.Trace(span, apierror.NewParameterInvalidError("The group does not exist.", "group_id"))
+			if apiErr.Code == apierror.CodeResourceNotFound {
+				return nil, tracing.Trace(span, apierror.NewParameterInvalidError("group_id", "The group does not exist."))
 			}
 			return nil, tracing.Trace(span, apiErr)
 		}
@@ -2765,8 +2765,8 @@ func (s *conversationSvcImpl) createGroup(ctx context.Context, input domain.Crea
 		seen[m] = struct{}{}
 		if _, resolved := roles[m]; !resolved {
 			if _, apiErr := s.repoFactory.NewNotificationRepo().ResolveUserIDInAccount(ctx, m, accountID); apiErr != nil {
-				if apiErr.Code == apierror.ErrorCodeResourceNotFound {
-					return nil, tracing.Trace(span, apierror.NewParameterInvalidError("A participant does not exist.", "participant_account_user_ids"))
+				if apiErr.Code == apierror.CodeResourceNotFound {
+					return nil, tracing.Trace(span, apierror.NewParameterInvalidError("participant_account_user_ids", "A participant does not exist."))
 				}
 				return nil, tracing.Trace(span, apiErr)
 			}
@@ -2789,7 +2789,7 @@ func (s *conversationSvcImpl) createGroup(ctx context.Context, input domain.Crea
 	// A group normally needs at least one other participant — a human member or an agent — but a record-anchored discussion may start solo: the creator posts and loops in the team afterward (via @mention or by adding participants).
 	hasTopic := input.TopicResourceID != nil && *input.TopicResourceID != ""
 	if len(members) == 0 && len(agents) == 0 && !hasTopic {
-		return nil, tracing.Trace(span, apierror.NewParameterInvalidError("A group requires at least one other participant.", "participant_account_user_ids"))
+		return nil, tracing.Trace(span, apierror.NewParameterInvalidError("participant_account_user_ids", "A group requires at least one other participant."))
 	}
 
 	conversationID, apiErr := id.GenID(id.ConversationIDPrefix, nil)
@@ -2884,20 +2884,20 @@ func (s *conversationSvcImpl) requestedParticipantRoles(ctx context.Context, par
 		param := fmt.Sprintf("participants[%d]", i)
 		switch {
 		case p.AccountUserID == "":
-			return nil, apierror.NewParameterMissingError("An account_user_id is required.", param+".account_user_id")
+			return nil, apierror.NewParameterMissingError(param+".account_user_id", "An account_user_id is required.")
 		case p.AccountUserID == callerAcus:
-			return nil, apierror.NewParameterInvalidError("You own the group you create, so you cannot be given another role in it.", param+".account_user_id")
+			return nil, apierror.NewParameterInvalidError(param+".account_user_id", "You own the group you create, so you cannot be given another role in it.")
 		}
 		if _, dup := roles[p.AccountUserID]; dup {
-			return nil, apierror.NewParameterInvalidError("This account user is listed more than once.", param+".account_user_id")
+			return nil, apierror.NewParameterInvalidError(param+".account_user_id", "This account user is listed more than once.")
 		}
 		role := constants.ParticipantRole(p.Role)
 		if !role.IsValid() {
-			return nil, apierror.NewParameterInvalidError("The role is invalid.", param+".role")
+			return nil, apierror.NewParameterInvalidError(param+".role", "The role is invalid.")
 		}
 		if _, apiErr := s.repoFactory.NewNotificationRepo().ResolveUserIDInAccount(ctx, p.AccountUserID, accountID); apiErr != nil {
-			if apiErr.Code == apierror.ErrorCodeResourceNotFound {
-				return nil, apierror.NewParameterInvalidError("The participant does not exist.", param+".account_user_id")
+			if apiErr.Code == apierror.CodeResourceNotFound {
+				return nil, apierror.NewParameterInvalidError(param+".account_user_id", "The participant does not exist.")
 			}
 			return nil, apiErr
 		}
@@ -2915,7 +2915,7 @@ func (s *conversationSvcImpl) UpdateConversation(ctx context.Context, conversati
 	if status != nil {
 		st := constants.ConversationStatus(*status)
 		if !st.IsValid() {
-			return nil, tracing.Trace(span, apierror.NewParameterInvalidError("The status is invalid.", "status"))
+			return nil, tracing.Trace(span, apierror.NewParameterInvalidError("status", "The status is invalid."))
 		}
 		archived := st == constants.ConversationStatusArchived
 		isArchived = &archived
@@ -2982,21 +2982,21 @@ func (s *conversationSvcImpl) AddParticipant(ctx context.Context, conversationID
 		newRole = constants.ParticipantRoleMember
 	}
 	if !newRole.IsValid() || newRole == constants.ParticipantRoleOwner {
-		return nil, tracing.Trace(span, apierror.NewParameterInvalidError("The role is invalid.", "role"))
+		return nil, tracing.Trace(span, apierror.NewParameterInvalidError("role", "The role is invalid."))
 	}
 	if targetAccountUserID == "" || targetAccountUserID == callerAcus {
-		return nil, tracing.Trace(span, apierror.NewParameterInvalidError("The participant is invalid.", "account_user_id"))
+		return nil, tracing.Trace(span, apierror.NewParameterInvalidError("account_user_id", "The participant is invalid."))
 	}
 	if _, apiErr := s.repoFactory.NewNotificationRepo().ResolveUserIDInAccount(ctx, targetAccountUserID, accountID); apiErr != nil {
-		if apiErr.Code == apierror.ErrorCodeResourceNotFound {
-			return nil, tracing.Trace(span, apierror.NewParameterInvalidError("The participant does not exist.", "account_user_id"))
+		if apiErr.Code == apierror.CodeResourceNotFound {
+			return nil, tracing.Trace(span, apierror.NewParameterInvalidError("account_user_id", "The participant does not exist."))
 		}
 		return nil, tracing.Trace(span, apiErr)
 	}
 
 	partRepo := s.repoFactory.NewParticipantRepo()
 	existing, getErr := partRepo.Get(ctx, conversationID, targetAccountUserID)
-	if getErr != nil && getErr.Code != apierror.ErrorCodeResourceNotFound {
+	if getErr != nil && getErr.Code != apierror.CodeResourceNotFound {
 		return nil, tracing.Trace(span, getErr)
 	}
 	// Already an active member: no mutation, no audit.
@@ -3136,7 +3136,7 @@ func (s *conversationSvcImpl) PostConversationSystemEvent(ctx context.Context, i
 		convRepo := f.NewConversationRepo()
 		seq, lockErr := convRepo.LockSequence(txCtx, in.ConversationID, in.AccountID)
 		if lockErr != nil {
-			if lockErr.Code == apierror.ErrorCodeResourceNotFound {
+			if lockErr.Code == apierror.CodeResourceNotFound {
 				return nil // conversation gone — drop the notice
 			}
 			return lockErr
@@ -3192,8 +3192,8 @@ func (s *conversationSvcImpl) RemoveParticipant(ctx context.Context, conversatio
 	}
 	target, apiErr := s.repoFactory.NewParticipantRepo().GetByID(ctx, participantID, conversationID)
 	if apiErr != nil {
-		if apiErr.Code == apierror.ErrorCodeResourceNotFound {
-			return tracing.Trace(span, apierror.NewResourceNotFoundError("Participant not found."))
+		if apiErr.Code == apierror.CodeResourceNotFound {
+			return tracing.Trace(span, apierror.NewNotFoundError("Participant not found."))
 		}
 		return tracing.Trace(span, apiErr)
 	}
@@ -3248,18 +3248,18 @@ func (s *conversationSvcImpl) AddAgentParticipant(ctx context.Context, input dom
 		return nil, tracing.Trace(span, apierror.NewAuthorizationError("Only an owner or admin can add an agent."))
 	}
 	if input.AgentConfigID == "" {
-		return nil, tracing.Trace(span, apierror.NewParameterMissingError("An agent is required.", "agent_config_id"))
+		return nil, tracing.Trace(span, apierror.NewParameterMissingError("agent_config_id", "An agent is required."))
 	}
 	if input.TriggerPolicy == "" {
 		input.TriggerPolicy = string(constants.AgentTriggerPolicyMention) // safest default
 	}
 	if !constants.AgentTriggerPolicy(input.TriggerPolicy).IsValid() {
-		return nil, tracing.Trace(span, apierror.NewParameterInvalidError("An invalid trigger policy was supplied.", "trigger_policy"))
+		return nil, tracing.Trace(span, apierror.NewParameterInvalidError("trigger_policy", "An invalid trigger policy was supplied."))
 	}
 
 	partRepo := s.repoFactory.NewParticipantRepo()
 	existing, getErr := partRepo.GetByAgentConfigID(ctx, input.ConversationID, input.AgentConfigID)
-	if getErr != nil && getErr.Code != apierror.ErrorCodeResourceNotFound {
+	if getErr != nil && getErr.Code != apierror.CodeResourceNotFound {
 		return nil, tracing.Trace(span, getErr)
 	}
 	// Already a participant (active or previously removed): update its trigger policy and ensure it's active. This makes add an idempotent upsert, so it doubles as "change when this agent responds" without removing and re-adding it.
@@ -3322,8 +3322,8 @@ func (s *conversationSvcImpl) RemoveAgentParticipant(ctx context.Context, conver
 	}
 	target, apiErr := s.repoFactory.NewParticipantRepo().GetByID(ctx, participantID, conversationID)
 	if apiErr != nil {
-		if apiErr.Code == apierror.ErrorCodeResourceNotFound {
-			return tracing.Trace(span, apierror.NewResourceNotFoundError("Agent participant not found."))
+		if apiErr.Code == apierror.CodeResourceNotFound {
+			return tracing.Trace(span, apierror.NewNotFoundError("Agent participant not found."))
 		}
 		return tracing.Trace(span, apiErr)
 	}
@@ -3362,12 +3362,12 @@ func (s *conversationSvcImpl) UpdateParticipantRole(ctx context.Context, convers
 	}
 	newRole := constants.ParticipantRole(role)
 	if !newRole.IsValid() {
-		return nil, tracing.Trace(span, apierror.NewParameterInvalidError("The role is invalid.", "role"))
+		return nil, tracing.Trace(span, apierror.NewParameterInvalidError("role", "The role is invalid."))
 	}
 	target, apiErr := s.repoFactory.NewParticipantRepo().GetByID(ctx, participantID, conversationID)
 	if apiErr != nil {
-		if apiErr.Code == apierror.ErrorCodeResourceNotFound {
-			return nil, tracing.Trace(span, apierror.NewResourceNotFoundError("Participant not found."))
+		if apiErr.Code == apierror.CodeResourceNotFound {
+			return nil, tracing.Trace(span, apierror.NewNotFoundError("Participant not found."))
 		}
 		return nil, tracing.Trace(span, apiErr)
 	}
@@ -3554,11 +3554,11 @@ func (s *conversationSvcImpl) Block(ctx context.Context, blockedAccountUserID st
 		return nil, tracing.Trace(span, apiErr)
 	}
 	if blockedAccountUserID == "" || blockedAccountUserID == callerAcus {
-		return nil, tracing.Trace(span, apierror.NewParameterInvalidError("The user to block is invalid.", "blocked_account_user_id"))
+		return nil, tracing.Trace(span, apierror.NewParameterInvalidError("blocked_account_user_id", "The user to block is invalid."))
 	}
 	if _, apiErr := s.repoFactory.NewNotificationRepo().ResolveUserIDInAccount(ctx, blockedAccountUserID, accountID); apiErr != nil {
-		if apiErr.Code == apierror.ErrorCodeResourceNotFound {
-			return nil, tracing.Trace(span, apierror.NewParameterInvalidError("The user to block does not exist.", "blocked_account_user_id"))
+		if apiErr.Code == apierror.CodeResourceNotFound {
+			return nil, tracing.Trace(span, apierror.NewParameterInvalidError("blocked_account_user_id", "The user to block does not exist."))
 		}
 		return nil, tracing.Trace(span, apiErr)
 	}
@@ -3669,7 +3669,7 @@ func (s *conversationSvcImpl) ReportConversation(ctx context.Context, conversati
 	defer span.End()
 
 	if reason == "" {
-		return nil, tracing.Trace(span, apierror.NewParameterMissingError("A reason is required.", "reason"))
+		return nil, tracing.Trace(span, apierror.NewParameterMissingError("reason", "A reason is required."))
 	}
 
 	// Participant gate (active members only) — supports internal and customer actors.
@@ -3686,7 +3686,7 @@ func (s *conversationSvcImpl) ReportConversation(ctx context.Context, conversati
 	}
 	switch domain.RecoveryPoint(idemKey.RecoveryPoint) {
 	case domain.RecoveryPointFinished:
-		cached, err := idempotency.UnmarshalCachedResponse[domain.MessageReport](ctx, idemKey.ResponseCode, idemKey.ResponseBody)
+		cached, err := idemresponse.UnmarshalCachedResponse[domain.MessageReport](ctx, idemKey.ResponseCode, idemKey.ResponseBody)
 		if err != nil {
 			return nil, tracing.Trace(span, apierror.NewInternalError(err, "Issue unmarshalling cached response."))
 		}
@@ -3735,13 +3735,13 @@ func (s *conversationSvcImpl) requireParticipant(ctx context.Context, conversati
 	}
 	part, apiErr := s.repoFactory.NewParticipantRepo().Get(ctx, conversationID, callerAcus)
 	if apiErr != nil {
-		if apiErr.Code == apierror.ErrorCodeResourceNotFound {
-			return "", "", nil, apierror.NewResourceNotFoundError("Conversation not found.")
+		if apiErr.Code == apierror.CodeResourceNotFound {
+			return "", "", nil, apierror.NewNotFoundError("Conversation not found.")
 		}
 		return "", "", nil, apiErr
 	}
 	if part.Membership != string(constants.ParticipantMembershipActive) {
-		return "", "", nil, apierror.NewResourceNotFoundError("Conversation not found.") // left/removed: no access
+		return "", "", nil, apierror.NewNotFoundError("Conversation not found.") // left/removed: no access
 	}
 	return callerAcus, accountID, part, nil
 }
@@ -4001,11 +4001,11 @@ func decodeSeqCursor(cursor *string) (*int64, *apierror.APIError) {
 	}
 	raw, err := base64.RawURLEncoding.DecodeString(*cursor)
 	if err != nil {
-		return nil, apierror.NewParameterInvalidError("The cursor is invalid.", "cursor")
+		return nil, apierror.NewParameterInvalidError("cursor", "The cursor is invalid.")
 	}
 	seq, err := strconv.ParseInt(string(raw), 10, 64)
 	if err != nil {
-		return nil, apierror.NewParameterInvalidError("The cursor is invalid.", "cursor")
+		return nil, apierror.NewParameterInvalidError("cursor", "The cursor is invalid.")
 	}
 	return &seq, nil
 }

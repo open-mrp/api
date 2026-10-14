@@ -12,9 +12,9 @@ import (
 	apiresource "github.com/open-mrp/api/services/api-gateway/pkg/resource"
 	"github.com/open-mrp/api/services/api-gateway/pkg/resourcekit"
 	"github.com/open-mrp/api/shared/constants"
-	apierror "github.com/open-mrp/api/shared/errors"
 	pb "github.com/open-mrp/api/shared/proto/notification"
-	"github.com/open-mrp/api/shared/tracing"
+	apierror "github.com/open-mrp/apikit/apierror"
+	"github.com/open-mrp/apikit/tracing"
 	"google.golang.org/grpc"
 	"google.golang.org/protobuf/types/known/timestamppb"
 )
@@ -139,7 +139,7 @@ func (s *messageSvcImpl) SendMessage(ctx context.Context, req *SendMessageReques
 	if mode, _ := req.Mode.Value(); mode == constants.MessageSendModeDraft {
 		channel, ok := req.Channel.Value()
 		if !ok {
-			return nil, apierror.NewParameterMissingError("A channel is required for a draft.", "channel")
+			return nil, apierror.NewParameterMissingError("channel", "A channel is required for a draft.")
 		}
 		pbReq := &pb.CreateReplyDraftRequest{
 			ConversationId:        req.ConversationID,
@@ -159,7 +159,7 @@ func (s *messageSvcImpl) SendMessage(ctx context.Context, req *SendMessageReques
 	}
 
 	if req.ClientMessageID == "" {
-		return nil, apierror.NewParameterMissingError("A client_message_id is required.", "client_message_id")
+		return nil, apierror.NewParameterMissingError("client_message_id", "A client_message_id is required.")
 	}
 
 	// Future delivery: dispatch to the scheduler. A scheduled message carries no immediate timeline slot.

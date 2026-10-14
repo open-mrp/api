@@ -13,9 +13,9 @@ import (
 	"github.com/open-mrp/api/shared/appctx"
 	"github.com/open-mrp/api/shared/audit"
 	"github.com/open-mrp/api/shared/constants"
-	apierror "github.com/open-mrp/api/shared/errors"
-	"github.com/open-mrp/api/shared/idempotency"
-	"github.com/open-mrp/api/shared/tracing"
+	"github.com/open-mrp/api/shared/idemresponse"
+	apierror "github.com/open-mrp/apikit/apierror"
+	"github.com/open-mrp/apikit/tracing"
 )
 
 var apiKeySvcTracer = tracing.GetTracer("auth-service.api_key_service")
@@ -124,7 +124,7 @@ func (s *apiKeySvcImpl) GetAPIKey(ctx context.Context, apiKeyID string, includes
 	}
 
 	if key.OwnerAccountID != ownerAccountID {
-		return nil, tracing.Trace(span, apierror.NewResourceNotFoundError("API key not found."))
+		return nil, tracing.Trace(span, apierror.NewNotFoundError("API key not found."))
 	}
 
 	return key, nil
@@ -164,7 +164,7 @@ func (s *apiKeySvcImpl) CreateAPIKey(ctx context.Context, input domain.CreateAPI
 
 	switch idempotencyKey.RecoveryPoint {
 	case domain.RecoveryPointFinished:
-		cached, err := idempotency.UnmarshalCachedResponse[domain.CreateAPIKeyResult](ctx, idempotencyKey.ResponseCode, idempotencyKey.ResponseBody)
+		cached, err := idemresponse.UnmarshalCachedResponse[domain.CreateAPIKeyResult](ctx, idempotencyKey.ResponseCode, idempotencyKey.ResponseBody)
 		if err != nil {
 			return nil, tracing.Trace(span, apierror.NewInternalError(err, "Issue unmarshalling cached response."))
 		}
@@ -292,7 +292,7 @@ func (s *apiKeySvcImpl) RevokeAPIKey(ctx context.Context, input domain.RevokeAPI
 
 	switch idempotencyKey.RecoveryPoint {
 	case domain.RecoveryPointFinished:
-		cached, err := idempotency.UnmarshalCachedResponse[struct{}](ctx, idempotencyKey.ResponseCode, idempotencyKey.ResponseBody)
+		cached, err := idemresponse.UnmarshalCachedResponse[struct{}](ctx, idempotencyKey.ResponseCode, idempotencyKey.ResponseBody)
 		if err != nil {
 			return tracing.Trace(span, apierror.NewInternalError(err, "Issue unmarshalling cached response."))
 		}
@@ -308,7 +308,7 @@ func (s *apiKeySvcImpl) RevokeAPIKey(ctx context.Context, input domain.RevokeAPI
 			}
 
 			if old.OwnerAccountID != identity.Target.AccountID {
-				return apierror.NewResourceNotFoundError("API key not found.")
+				return apierror.NewNotFoundError("API key not found.")
 			}
 
 			// Revoke the API key. The doc API key row is intentionally kept so that
@@ -381,7 +381,7 @@ func (s *apiKeySvcImpl) RotateAPIKey(ctx context.Context, input domain.RotateAPI
 
 	switch idempotencyKey.RecoveryPoint {
 	case domain.RecoveryPointFinished:
-		cached, err := idempotency.UnmarshalCachedResponse[domain.CreateAPIKeyResult](ctx, idempotencyKey.ResponseCode, idempotencyKey.ResponseBody)
+		cached, err := idemresponse.UnmarshalCachedResponse[domain.CreateAPIKeyResult](ctx, idempotencyKey.ResponseCode, idempotencyKey.ResponseBody)
 		if err != nil {
 			return nil, tracing.Trace(span, apierror.NewInternalError(err, "Issue unmarshalling cached response."))
 		}
@@ -398,7 +398,7 @@ func (s *apiKeySvcImpl) RotateAPIKey(ctx context.Context, input domain.RotateAPI
 			}
 
 			if oldKey.OwnerAccountID != identity.Target.AccountID {
-				return apierror.NewResourceNotFoundError("API key not found.")
+				return apierror.NewNotFoundError("API key not found.")
 			}
 
 			// Rotate the API key

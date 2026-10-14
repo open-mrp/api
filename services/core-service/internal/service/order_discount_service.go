@@ -9,10 +9,10 @@ import (
 	"github.com/open-mrp/api/shared/appctx"
 	"github.com/open-mrp/api/shared/audit"
 	"github.com/open-mrp/api/shared/constants"
-	apierror "github.com/open-mrp/api/shared/errors"
 	"github.com/open-mrp/api/shared/id"
-	"github.com/open-mrp/api/shared/idempotency"
-	"github.com/open-mrp/api/shared/tracing"
+	"github.com/open-mrp/api/shared/idemresponse"
+	apierror "github.com/open-mrp/apikit/apierror"
+	"github.com/open-mrp/apikit/tracing"
 )
 
 var orderDiscountSvcTracer = tracing.GetTracer("core-service.order_discount_service")
@@ -188,7 +188,7 @@ func (s *orderDiscountSvcImpl) CreateOrderDiscount(ctx context.Context, params d
 
 	switch domain.RecoveryPoint(idempotencyKey.RecoveryPoint) {
 	case domain.RecoveryPointFinished:
-		cached, err := idempotency.UnmarshalCachedResponse[domain.OrderDiscount](ctx, idempotencyKey.ResponseCode, idempotencyKey.ResponseBody)
+		cached, err := idemresponse.UnmarshalCachedResponse[domain.OrderDiscount](ctx, idempotencyKey.ResponseCode, idempotencyKey.ResponseBody)
 		if err != nil {
 			return nil, tracing.Trace(span, apierror.NewInternalError(err, "Issue unmarshalling cached response."))
 		}
@@ -204,7 +204,7 @@ func (s *orderDiscountSvcImpl) CreateOrderDiscount(ctx context.Context, params d
 				return apiErr
 			}
 			if exists {
-				return apierror.NewConflictErrorWithParam("A discount with this code already exists.", "code")
+				return apierror.NewConflictErrorWithParam("code", "A discount with this code already exists.")
 			}
 
 			created, apiErr := txRepo.Create(txCtx, discountID, params)
@@ -266,7 +266,7 @@ func (s *orderDiscountSvcImpl) UpdateOrderDiscount(ctx context.Context, params d
 
 	switch domain.RecoveryPoint(idempotencyKey.RecoveryPoint) {
 	case domain.RecoveryPointFinished:
-		cached, err := idempotency.UnmarshalCachedResponse[domain.OrderDiscount](ctx, idempotencyKey.ResponseCode, idempotencyKey.ResponseBody)
+		cached, err := idemresponse.UnmarshalCachedResponse[domain.OrderDiscount](ctx, idempotencyKey.ResponseCode, idempotencyKey.ResponseBody)
 		if err != nil {
 			return nil, tracing.Trace(span, apierror.NewInternalError(err, "Issue unmarshalling cached response."))
 		}
@@ -291,7 +291,7 @@ func (s *orderDiscountSvcImpl) UpdateOrderDiscount(ctx context.Context, params d
 					return apiErr
 				}
 				if exists {
-					return apierror.NewConflictErrorWithParam("A discount with this code already exists.", "code")
+					return apierror.NewConflictErrorWithParam("code", "A discount with this code already exists.")
 				}
 			}
 
@@ -348,13 +348,13 @@ func (s *orderDiscountSvcImpl) DeleteOrderDiscount(ctx context.Context, orderDis
 		OrderDiscountID: orderDiscountID,
 	})
 	if apiErr != nil {
-		if apierror.IsNotFound(apiErr) {
+		if apierror.HasCode(apiErr, apierror.CodeResourceNotFound) {
 			wasDeleted, deletedCheckErr := s.repos.NewDeletedRecordRepo().ExistsInAccount(ctx, constants.DeletedRecordResourceTypeOrderDiscount, orderDiscountID, identity.Target.AccountID)
 			if deletedCheckErr != nil {
 				return nil, tracing.Trace(span, deletedCheckErr)
 			}
 			if wasDeleted {
-				return nil, tracing.Trace(span, apierror.NewAlreadyDeletedError("This order discount has already been deleted and can no longer be modified."))
+				return nil, tracing.Trace(span, apierror.NewGoneError("This order discount has already been deleted and can no longer be modified."))
 			}
 		}
 		return nil, tracing.Trace(span, apiErr)
@@ -450,7 +450,7 @@ func (s *orderDiscountSvcImpl) FindOrderDiscountByCode(ctx context.Context, para
 			return nil, tracing.Trace(span, apiErr)
 		}
 		if isDuplicate {
-			return nil, tracing.Trace(span, apierror.NewResourceNotFoundError("Order discount not found."))
+			return nil, tracing.Trace(span, apierror.NewNotFoundError("Order discount not found."))
 		}
 	}
 

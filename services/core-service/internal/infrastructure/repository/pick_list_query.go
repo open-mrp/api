@@ -8,7 +8,7 @@ import (
 	"unicode/utf8"
 
 	"github.com/open-mrp/api/shared/constants"
-	"github.com/open-mrp/api/shared/db"
+	"github.com/open-mrp/apikit/db"
 	"github.com/open-mrp/apikit/pagination"
 )
 

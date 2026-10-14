@@ -10,7 +10,7 @@ import (
 	"database/sql"
 	"strings"
 
-	"github.com/open-mrp/api/shared/db"
+	"github.com/open-mrp/apikit/db"
 )
 
 const countUnseenNotifications = `-- name: CountUnseenNotifications :one

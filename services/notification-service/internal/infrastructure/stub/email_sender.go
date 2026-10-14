@@ -8,7 +8,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/open-mrp/api/services/notification-service/internal/domain"
-	apierror "github.com/open-mrp/api/shared/errors"
+	apierror "github.com/open-mrp/apikit/apierror"
 )
 
 // EmailSender is a no-op EmailSender implementation for use in test mode.

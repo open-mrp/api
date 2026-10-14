@@ -9,9 +9,9 @@ import (
 	"github.com/open-mrp/api/services/auth-service/internal/infrastructure/repository"
 	"github.com/open-mrp/api/services/auth-service/internal/infrastructure/sqlc"
 	"github.com/open-mrp/api/services/auth-service/internal/mediator"
-	apierror "github.com/open-mrp/api/shared/errors"
-	"github.com/open-mrp/api/shared/idempotency"
-	"github.com/open-mrp/api/shared/tracing"
+	"github.com/open-mrp/api/shared/idemresponse"
+	apierror "github.com/open-mrp/apikit/apierror"
+	"github.com/open-mrp/apikit/tracing"
 )
 
 var tokenSvcTracer = tracing.GetTracer("auth-service.token_service")
@@ -142,7 +142,7 @@ func (s *tokenSvcImpl) RevokeRefreshToken(ctx context.Context, refreshToken stri
 
 	switch idempotencyKey.RecoveryPoint {
 	case domain.RecoveryPointFinished:
-		cached, err := idempotency.UnmarshalCachedResponse[struct{}](ctx, idempotencyKey.ResponseCode, idempotencyKey.ResponseBody)
+		cached, err := idemresponse.UnmarshalCachedResponse[struct{}](ctx, idempotencyKey.ResponseCode, idempotencyKey.ResponseBody)
 		if err != nil {
 			return tracing.Trace(span, apierror.NewInternalError(err, "Issue unmarshalling cached response."))
 		}

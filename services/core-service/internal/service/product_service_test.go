@@ -13,9 +13,9 @@ import (
 	repositorymock "github.com/open-mrp/api/services/core-service/internal/domain/mock/repository"
 	"github.com/open-mrp/api/shared/appctx"
 	"github.com/open-mrp/api/shared/constants"
-	"github.com/open-mrp/api/shared/db"
-	apierror "github.com/open-mrp/api/shared/errors"
 	"github.com/open-mrp/api/shared/messaging"
+	apierror "github.com/open-mrp/apikit/apierror"
+	"github.com/open-mrp/apikit/db"
 	"github.com/open-mrp/apikit/field"
 	"github.com/open-mrp/apikit/pagination"
 
@@ -448,7 +448,7 @@ func (s *ProductSvcTestSuite) TestCreateProduct_AttributeOutsideCategoryProperti
 
 	s.Nil(result)
 	s.NotNil(err)
-	s.Equal(apierror.ErrorCodeValidationFailed, err.Code)
+	s.Equal(apierror.CodeValidationFailed, err.Code)
 	s.Equal("attribute_ids", err.Param)
 }
 
@@ -472,7 +472,7 @@ func (s *ProductSvcTestSuite) TestCreateProduct_DuplicateSKU_Conflict() {
 
 	s.Nil(result)
 	s.NotNil(err)
-	s.Equal(apierror.ErrorCodeResourceConflict, err.Code)
+	s.Equal(apierror.CodeResourceConflict, err.Code)
 	s.Equal("sku", err.Param)
 }
 
@@ -562,7 +562,7 @@ func (s *ProductSvcTestSuite) TestCreateProduct_RejectsNonCurrencyNumeratorOnUni
 
 	s.Nil(result)
 	s.NotNil(err)
-	s.Equal(apierror.ErrorCodeValidationFailed, err.Code)
+	s.Equal(apierror.CodeValidationFailed, err.Code)
 	s.Equal("unit_cost.numerator_unit_id", err.Param)
 }
 
@@ -589,7 +589,7 @@ func (s *ProductSvcTestSuite) TestCreateProduct_RejectsCurrencyDenominatorOnUnit
 
 	s.Nil(result)
 	s.NotNil(err)
-	s.Equal(apierror.ErrorCodeValidationFailed, err.Code)
+	s.Equal(apierror.CodeValidationFailed, err.Code)
 	s.Equal("unit_price.denominator_unit_id", err.Param)
 }
 
@@ -598,7 +598,7 @@ func (s *ProductSvcTestSuite) TestCreateProduct_MissingIdentity() {
 
 	s.Nil(result)
 	s.NotNil(err)
-	s.Equal(apierror.ErrorCodeInternalError, err.Code)
+	s.Equal(apierror.CodeInternalError, err.Code)
 }
 
 func (s *ProductSvcTestSuite) TestCreateProduct_NotInternalActor_Forbidden() {
@@ -612,7 +612,7 @@ func (s *ProductSvcTestSuite) TestCreateProduct_NotInternalActor_Forbidden() {
 
 	s.Nil(result)
 	s.NotNil(err)
-	s.Equal(apierror.ErrorCodeInsufficientPerms, err.Code)
+	s.Equal(apierror.CodeInsufficientPermissions, err.Code)
 }
 
 func (s *ProductSvcTestSuite) TestCreateProduct_MissingItemsCreatePermission_Forbidden() {
@@ -626,7 +626,7 @@ func (s *ProductSvcTestSuite) TestCreateProduct_MissingItemsCreatePermission_For
 
 	s.Nil(result)
 	s.NotNil(err)
-	s.Equal(apierror.ErrorCodeInsufficientPerms, err.Code)
+	s.Equal(apierror.CodeInsufficientPermissions, err.Code)
 }
 
 func (s *ProductSvcTestSuite) TestCreateProduct_IdempotencyReplay_ReturnsCached() {
@@ -665,7 +665,7 @@ func (s *ProductSvcTestSuite) TestCreateProduct_ErrorPath_CachesError() {
 
 	s.Nil(result)
 	s.NotNil(err)
-	s.Equal(apierror.ErrorCodeInternalError, err.Code)
+	s.Equal(apierror.CodeInternalError, err.Code)
 }
 
 // =============================================================================
@@ -774,7 +774,7 @@ func (s *ProductSvcTestSuite) TestUpdateProduct_DuplicateSKU_Conflict() {
 
 	s.Nil(result)
 	s.NotNil(err)
-	s.Equal(apierror.ErrorCodeResourceConflict, err.Code)
+	s.Equal(apierror.CodeResourceConflict, err.Code)
 	s.Equal("sku", err.Param)
 }
 
@@ -811,7 +811,7 @@ func (s *ProductSvcTestSuite) TestUpdateProduct_MissingIdentity() {
 
 	s.Nil(result)
 	s.NotNil(err)
-	s.Equal(apierror.ErrorCodeInternalError, err.Code)
+	s.Equal(apierror.CodeInternalError, err.Code)
 }
 
 func (s *ProductSvcTestSuite) TestUpdateProduct_NotInternalActor_Forbidden() {
@@ -821,7 +821,7 @@ func (s *ProductSvcTestSuite) TestUpdateProduct_NotInternalActor_Forbidden() {
 
 	s.Nil(result)
 	s.NotNil(err)
-	s.Equal(apierror.ErrorCodeInsufficientPerms, err.Code)
+	s.Equal(apierror.CodeInsufficientPermissions, err.Code)
 }
 
 func (s *ProductSvcTestSuite) TestUpdateProduct_MissingItemsUpdatePermission_Forbidden() {
@@ -831,7 +831,7 @@ func (s *ProductSvcTestSuite) TestUpdateProduct_MissingItemsUpdatePermission_For
 
 	s.Nil(result)
 	s.NotNil(err)
-	s.Equal(apierror.ErrorCodeInsufficientPerms, err.Code)
+	s.Equal(apierror.CodeInsufficientPermissions, err.Code)
 }
 
 func (s *ProductSvcTestSuite) TestUpdateProduct_NotFound() {
@@ -840,7 +840,7 @@ func (s *ProductSvcTestSuite) TestUpdateProduct_NotFound() {
 	s.expectIdempotencyStarted()
 	s.productRepo.EXPECT().
 		Get(gomock.Any(), gomock.Any()).
-		Return(nil, apierror.NewResourceNotFoundError("Product not found.")).
+		Return(nil, apierror.NewNotFoundError("Product not found.")).
 		Times(1)
 	s.expectCacheError()
 
@@ -851,7 +851,7 @@ func (s *ProductSvcTestSuite) TestUpdateProduct_NotFound() {
 
 	s.Nil(result)
 	s.NotNil(err)
-	s.Equal(apierror.ErrorCodeResourceNotFound, err.Code)
+	s.Equal(apierror.CodeResourceNotFound, err.Code)
 }
 
 func (s *ProductSvcTestSuite) TestUpdateProduct_IdempotencyReplay_ReturnsCached() {
@@ -955,7 +955,7 @@ func (s *ProductSvcTestSuite) TestDeleteProduct_AlreadyDeleted_Returns410() {
 
 	s.productRepo.EXPECT().
 		Get(gomock.Any(), gomock.Any()).
-		Return(nil, apierror.NewResourceNotFoundError("Product not found.")).
+		Return(nil, apierror.NewNotFoundError("Product not found.")).
 		Times(1)
 	s.deletedRecordRepo.EXPECT().
 		ExistsInAccount(gomock.Any(), constants.DeletedRecordResourceTypeProduct, "it_gone", "ac_test123").
@@ -967,7 +967,7 @@ func (s *ProductSvcTestSuite) TestDeleteProduct_AlreadyDeleted_Returns410() {
 
 	s.Nil(result)
 	s.NotNil(err)
-	s.Equal(apierror.ErrorCodeResourceGone, err.Code)
+	s.Equal(apierror.CodeResourceGone, err.Code)
 }
 
 func (s *ProductSvcTestSuite) TestDeleteProduct_GenuinelyNotFound_Returns404() {
@@ -975,7 +975,7 @@ func (s *ProductSvcTestSuite) TestDeleteProduct_GenuinelyNotFound_Returns404() {
 
 	s.productRepo.EXPECT().
 		Get(gomock.Any(), gomock.Any()).
-		Return(nil, apierror.NewResourceNotFoundError("Product not found.")).
+		Return(nil, apierror.NewNotFoundError("Product not found.")).
 		Times(1)
 	s.deletedRecordRepo.EXPECT().
 		ExistsInAccount(gomock.Any(), constants.DeletedRecordResourceTypeProduct, "it_missing", "ac_test123").
@@ -986,7 +986,7 @@ func (s *ProductSvcTestSuite) TestDeleteProduct_GenuinelyNotFound_Returns404() {
 
 	s.Nil(result)
 	s.NotNil(err)
-	s.Equal(apierror.ErrorCodeResourceNotFound, err.Code)
+	s.Equal(apierror.CodeResourceNotFound, err.Code)
 }
 
 func (s *ProductSvcTestSuite) TestDeleteProduct_NotInternalActor_Forbidden() {
@@ -996,7 +996,7 @@ func (s *ProductSvcTestSuite) TestDeleteProduct_NotInternalActor_Forbidden() {
 
 	s.Nil(result)
 	s.NotNil(err)
-	s.Equal(apierror.ErrorCodeInsufficientPerms, err.Code)
+	s.Equal(apierror.CodeInsufficientPermissions, err.Code)
 }
 
 func (s *ProductSvcTestSuite) TestDeleteProduct_MissingItemsDeletePermission_Forbidden() {
@@ -1006,7 +1006,7 @@ func (s *ProductSvcTestSuite) TestDeleteProduct_MissingItemsDeletePermission_For
 
 	s.Nil(result)
 	s.NotNil(err)
-	s.Equal(apierror.ErrorCodeInsufficientPerms, err.Code)
+	s.Equal(apierror.CodeInsufficientPermissions, err.Code)
 }
 
 func (s *ProductSvcTestSuite) TestDeleteProduct_DeletedRecordCreateFails_RollsBack() {
@@ -1027,7 +1027,7 @@ func (s *ProductSvcTestSuite) TestDeleteProduct_DeletedRecordCreateFails_RollsBa
 
 	s.Nil(result)
 	s.NotNil(err)
-	s.Equal(apierror.ErrorCodeInternalError, err.Code)
+	s.Equal(apierror.CodeInternalError, err.Code)
 }
 
 // =============================================================================
@@ -1083,7 +1083,7 @@ func (s *ProductSvcTestSuite) TestChangeProductLine_NotFound() {
 	s.expectIdempotencyStarted()
 	s.productRepo.EXPECT().
 		Get(gomock.Any(), gomock.Any()).
-		Return(nil, apierror.NewResourceNotFoundError("Product not found.")).
+		Return(nil, apierror.NewNotFoundError("Product not found.")).
 		Times(1)
 	// ChangeProductLine must not be called.
 
@@ -1094,7 +1094,7 @@ func (s *ProductSvcTestSuite) TestChangeProductLine_NotFound() {
 
 	s.Nil(result)
 	s.NotNil(err)
-	s.Equal(apierror.ErrorCodeResourceNotFound, err.Code)
+	s.Equal(apierror.CodeResourceNotFound, err.Code)
 }
 
 func (s *ProductSvcTestSuite) TestChangeProductLine_NotInternalActor_Forbidden() {
@@ -1107,7 +1107,7 @@ func (s *ProductSvcTestSuite) TestChangeProductLine_NotInternalActor_Forbidden()
 
 	s.Nil(result)
 	s.NotNil(err)
-	s.Equal(apierror.ErrorCodeInsufficientPerms, err.Code)
+	s.Equal(apierror.CodeInsufficientPermissions, err.Code)
 }
 
 func (s *ProductSvcTestSuite) TestChangeProductLine_MissingPermission_Forbidden() {
@@ -1120,7 +1120,7 @@ func (s *ProductSvcTestSuite) TestChangeProductLine_MissingPermission_Forbidden(
 
 	s.Nil(result)
 	s.NotNil(err)
-	s.Equal(apierror.ErrorCodeInsufficientPerms, err.Code)
+	s.Equal(apierror.CodeInsufficientPermissions, err.Code)
 }
 
 func (s *ProductSvcTestSuite) TestChangeProductLine_IdempotencyReplay_ReturnsCached() {
@@ -1156,7 +1156,7 @@ func (s *ProductSvcTestSuite) TestChangeProductLine_ProductLineCrossAccount_Reje
 	// existence check rejects it and ChangeProductLine is never called.
 	s.productLineRepo.EXPECT().
 		Get(gomock.Any(), domain.GetProductLineParams{AccountID: "ac_test123", ProductLineID: "pl_from_other_account"}).
-		Return(nil, apierror.NewResourceNotFoundError("Product line not found.")).
+		Return(nil, apierror.NewNotFoundError("Product line not found.")).
 		Times(1)
 
 	result, err := s.productSvc.ChangeProductProductLine(ctx, domain.ChangeProductProductLineParams{
@@ -1166,7 +1166,7 @@ func (s *ProductSvcTestSuite) TestChangeProductLine_ProductLineCrossAccount_Reje
 
 	s.Nil(result)
 	s.NotNil(err)
-	s.Equal(apierror.ErrorCodeResourceNotFound, err.Code)
+	s.Equal(apierror.CodeResourceNotFound, err.Code)
 }
 
 // =============================================================================
@@ -1243,7 +1243,7 @@ func (s *ProductSvcTestSuite) TestListProductsFull_MissingIdentity() {
 
 	s.Nil(result)
 	s.NotNil(err)
-	s.Equal(apierror.ErrorCodeInternalError, err.Code)
+	s.Equal(apierror.CodeInternalError, err.Code)
 }
 
 func (s *ProductSvcTestSuite) TestListProductsFull_MissingTargetAccount_AuthError() {
@@ -1265,7 +1265,7 @@ func (s *ProductSvcTestSuite) TestListProductsFull_MissingTargetAccount_AuthErro
 
 	s.Nil(result)
 	s.NotNil(err)
-	s.Equal(apierror.ErrorCodeInvalidCredentials, err.Code)
+	s.Equal(apierror.CodeInvalidCredentials, err.Code)
 }
 
 func (s *ProductSvcTestSuite) TestListProductsFull_ExternalTarget_ReadAccessDenied() {
@@ -1280,7 +1280,7 @@ func (s *ProductSvcTestSuite) TestListProductsFull_ExternalTarget_ReadAccessDeni
 
 	s.Nil(result)
 	s.NotNil(err)
-	s.Equal(apierror.ErrorCodeInsufficientPerms, err.Code)
+	s.Equal(apierror.CodeInsufficientPermissions, err.Code)
 }
 
 func (s *ProductSvcTestSuite) TestListProductsFull_AttachesAttributesAndUnitGroup() {
@@ -1431,7 +1431,7 @@ func (s *ProductSvcTestSuite) TestGetProduct_MissingTargetAccount_AuthError() {
 
 	s.Nil(result)
 	s.NotNil(err)
-	s.Equal(apierror.ErrorCodeInvalidCredentials, err.Code)
+	s.Equal(apierror.CodeInvalidCredentials, err.Code)
 }
 
 func (s *ProductSvcTestSuite) TestGetProduct_ExternalTarget_ChecksCounterpartyReadAccess() {
@@ -1446,7 +1446,7 @@ func (s *ProductSvcTestSuite) TestGetProduct_ExternalTarget_ChecksCounterpartyRe
 
 	s.Nil(result)
 	s.NotNil(err)
-	s.Equal(apierror.ErrorCodeInsufficientPerms, err.Code)
+	s.Equal(apierror.CodeInsufficientPermissions, err.Code)
 }
 
 func (s *ProductSvcTestSuite) TestGetProduct_NotFound() {
@@ -1454,14 +1454,14 @@ func (s *ProductSvcTestSuite) TestGetProduct_NotFound() {
 
 	s.productRepo.EXPECT().
 		Get(gomock.Any(), gomock.Any()).
-		Return(nil, apierror.NewResourceNotFoundError("Product not found.")).
+		Return(nil, apierror.NewNotFoundError("Product not found.")).
 		Times(1)
 
 	result, err := s.productSvc.GetProduct(ctx, domain.GetProductFullParams{ProductID: "it_missing"})
 
 	s.Nil(result)
 	s.NotNil(err)
-	s.Equal(apierror.ErrorCodeResourceNotFound, err.Code)
+	s.Equal(apierror.CodeResourceNotFound, err.Code)
 }
 
 // =============================================================================
@@ -1519,7 +1519,7 @@ func (s *ProductSvcTestSuite) TestValidateProducts_MissingTargetAccount_AuthErro
 
 	s.Nil(result)
 	s.NotNil(err)
-	s.Equal(apierror.ErrorCodeInvalidCredentials, err.Code)
+	s.Equal(apierror.CodeInvalidCredentials, err.Code)
 }
 
 func (s *ProductSvcTestSuite) TestValidateProducts_ExternalTarget_ChecksCounterpartyReadAccess() {
@@ -1534,7 +1534,7 @@ func (s *ProductSvcTestSuite) TestValidateProducts_ExternalTarget_ChecksCounterp
 
 	s.Nil(result)
 	s.NotNil(err)
-	s.Equal(apierror.ErrorCodeInsufficientPerms, err.Code)
+	s.Equal(apierror.CodeInsufficientPermissions, err.Code)
 }
 
 // --- BulkUpsertProducts validation guards (reject before idempotency / tx) ---

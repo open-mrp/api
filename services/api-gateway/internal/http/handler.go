@@ -18,7 +18,7 @@ import (
 	"github.com/open-mrp/api/services/api-gateway/internal/header"
 	"github.com/open-mrp/api/services/auth-service/pkg/types"
 	"github.com/open-mrp/api/shared/appctx"
-	apierror "github.com/open-mrp/api/shared/errors"
+	apierror "github.com/open-mrp/apikit/apierror"
 	"github.com/open-mrp/apikit/field"
 	"github.com/open-mrp/apikit/fuzzy"
 )
@@ -74,7 +74,7 @@ func DecodeJSONInto(dst any, r *http.Request, disallowUnknown bool) error {
 			if suggestion, dist := fuzzy.FindClosestByLevenshtein(field, candidates); suggestion != "" && dist <= 3 {
 				msg = fmt.Sprintf("Invalid JSON in request body: unknown field '%s'. Did you mean '%s'?", field, suggestion)
 			}
-			return apierror.NewParameterUnknownError(msg, field)
+			return apierror.NewParameterUnknownError(field, msg)
 		}
 
 		if serr, ok := errors.AsType[*json.SyntaxError](err); ok {
@@ -215,7 +215,7 @@ func bindHeadersInto(r *http.Request, fv reflect.Value, tag reflect.StructTag) e
 						return setFromString(fv, cookie.Value, tag)
 					}
 				}
-				return apierror.NewParameterInvalidError(fmt.Sprintf("Invalid %s header scheme: expected %s, got %s", h, expectedScheme, actualScheme), h)
+				return apierror.NewParameterInvalidError(h, fmt.Sprintf("Invalid %s header scheme: expected %s, got %s", h, expectedScheme, actualScheme))
 			}
 		}
 		return setFromString(fv, authResult.TokenString, tag)
@@ -239,7 +239,7 @@ func bindHeadersInto(r *http.Request, fv reflect.Value, tag reflect.StructTag) e
 	if scheme := tag.Get("scheme"); scheme != "" && fromHeader {
 		prefix := scheme + " "
 		if !strings.HasPrefix(val, prefix) {
-			return apierror.NewParameterInvalidError(fmt.Sprintf("Invalid %s header scheme", h), h)
+			return apierror.NewParameterInvalidError(h, fmt.Sprintf("Invalid %s header scheme", h))
 		}
 		val = strings.TrimPrefix(val, prefix)
 	}
@@ -251,9 +251,9 @@ func bindHeadersInto(r *http.Request, fv reflect.Value, tag reflect.StructTag) e
 			source = "cookie"
 		}
 		if param == "" {
-			return apierror.NewParameterInvalidError(fmt.Sprintf("Invalid value: %v", err), "")
+			return apierror.NewParameterInvalidError("", fmt.Sprintf("Invalid value: %v", err))
 		}
-		return apierror.NewParameterInvalidError(fmt.Sprintf("Invalid value for %s '%s': %v", source, param, err), param)
+		return apierror.NewParameterInvalidError(param, fmt.Sprintf("Invalid value for %s '%s': %v", source, param, err))
 	}
 	return nil
 }
@@ -272,7 +272,7 @@ func bindPathInto(get func(string) string, fv reflect.Value, tag reflect.StructT
 		}
 	}
 	if err := setFromString(fv, val, tag); err != nil {
-		return apierror.NewParameterInvalidError(fmt.Sprintf("Invalid value for path parameter '%s': %v", key, err), key)
+		return apierror.NewParameterInvalidError(key, fmt.Sprintf("Invalid value for path parameter '%s': %v", key, err))
 	}
 	return nil
 }
@@ -303,7 +303,7 @@ func bindQueryInto(q url.Values, fv reflect.Value, f bindField) error {
 				continue
 			}
 			if err := setFromString(slice.Index(i), v, tag); err != nil {
-				return apierror.NewParameterInvalidError(fmt.Sprintf("Invalid value for query parameter '%s': %v", key, err), key)
+				return apierror.NewParameterInvalidError(key, fmt.Sprintf("Invalid value for query parameter '%s': %v", key, err))
 			}
 		}
 		fv.Set(slice)
@@ -318,7 +318,7 @@ func bindQueryInto(q url.Values, fv reflect.Value, f bindField) error {
 		}
 	}
 	if err := setFromString(fv, val, tag); err != nil {
-		return apierror.NewParameterInvalidError(fmt.Sprintf("Invalid value for query parameter '%s': %v", key, err), key)
+		return apierror.NewParameterInvalidError(key, fmt.Sprintf("Invalid value for query parameter '%s': %v", key, err))
 	}
 	return nil
 }
@@ -332,10 +332,7 @@ func rejectUnknownAgainstPlan(plan *bindPlan, u *url.URL, allowInclude bool) *ap
 	}
 	for key := range u.Query() {
 		if _, ok := allowed[key]; !ok {
-			return apierror.NewParameterUnknownError(
-				fmt.Sprintf("Unknown query parameter '%s'.", key),
-				key,
-			)
+			return apierror.NewParameterUnknownError(key, fmt.Sprintf("Unknown query parameter '%s'.", key))
 		}
 	}
 	return nil
@@ -718,9 +715,9 @@ func isRequiredField(sf reflect.StructField) bool {
 func newMissingEnumFieldError(sf reflect.StructField) *apierror.APIError {
 	name := enumParamName(sf)
 	if sf.Tag.Get("json") != "" {
-		return apierror.NewMissingFieldError(fmt.Sprintf("Field '%s' is required.", name), name)
+		return apierror.NewMissingFieldError(name, fmt.Sprintf("Field '%s' is required.", name))
 	}
-	return apierror.NewParameterMissingError(fmt.Sprintf("Parameter '%s' is required.", name), name)
+	return apierror.NewParameterMissingError(name, fmt.Sprintf("Parameter '%s' is required.", name))
 }
 
 func ValidateEnumFields(dst any) *apierror.APIError {
@@ -809,10 +806,7 @@ func ValidateEnumFields(dst any) *apierror.APIError {
 				}
 				if !isValid {
 					fieldName := enumParamName(sf)
-					return apierror.NewParameterInvalidError(
-						fmt.Sprintf("Field '%s' must be one of: %s", fieldName, strings.Join(allowedValues, ", ")),
-						fieldName,
-					)
+					return apierror.NewParameterInvalidError(fieldName, fmt.Sprintf("Field '%s' must be one of: %s", fieldName, strings.Join(allowedValues, ", ")))
 				}
 			}
 			continue
@@ -865,10 +859,7 @@ func ValidateEnumFields(dst any) *apierror.APIError {
 			// Read every tag, not just json: a scalar enum is as often a query filter as a body
 			// field, and naming it "Type" instead of "type" told the caller nothing.
 			fieldName := enumParamName(sf)
-			return apierror.NewParameterInvalidError(
-				fmt.Sprintf("Field '%s' must be one of: %s", fieldName, strings.Join(allowedValues, ", ")),
-				fieldName,
-			)
+			return apierror.NewParameterInvalidError(fieldName, fmt.Sprintf("Field '%s' must be one of: %s", fieldName, strings.Join(allowedValues, ", ")))
 		}
 	}
 

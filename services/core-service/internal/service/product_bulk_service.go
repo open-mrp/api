@@ -8,10 +8,10 @@ import (
 	"github.com/open-mrp/api/services/auth-service/pkg/types"
 	"github.com/open-mrp/api/services/core-service/internal/domain"
 	"github.com/open-mrp/api/shared/constants"
-	"github.com/open-mrp/api/shared/db"
-	apierror "github.com/open-mrp/api/shared/errors"
 	"github.com/open-mrp/api/shared/excel"
 	"github.com/open-mrp/api/shared/messaging"
+	apierror "github.com/open-mrp/apikit/apierror"
+	"github.com/open-mrp/apikit/db"
 )
 
 // hands the async bulk engine the plumbing it runs on
@@ -30,7 +30,7 @@ func validateBulkUpsertProductRows(rows []domain.UpsertProductParams) *apierror.
 	var rowErrs apierror.RowErrors
 	for i, p := range rows {
 		if _, dup := skuSpace[p.SKU]; dup {
-			rowErrs.AddValidation(i, fmt.Sprintf("products[%d].sku", i), fmt.Sprintf("duplicate SKU %q in request", p.SKU))
+			rowErrs.AddField(i, "sku", apierror.CodeInvalidFormat, fmt.Sprintf("duplicate SKU %q in request", p.SKU))
 		}
 		skuSpace[p.SKU] = struct{}{}
 	}
@@ -194,7 +194,7 @@ func (s *productSvcImpl) writeBulkUpsertProducts(txCtx context.Context, txRepos 
 			return nil
 		})
 		if rowErr != nil {
-			rowErrors = append(rowErrors, apierror.NewRowError(i, rowErr))
+			rowErrors = append(rowErrors, apierror.RowError{Index: i, Error: rowErr.Object()})
 			continue
 		}
 

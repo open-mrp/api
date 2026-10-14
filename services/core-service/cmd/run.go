@@ -26,16 +26,16 @@ import (
 	"github.com/open-mrp/api/services/core-service/internal/service"
 	"github.com/open-mrp/api/services/core-service/internal/stripesync"
 	"github.com/open-mrp/api/shared/audit"
-	"github.com/open-mrp/api/shared/blobstore"
-	"github.com/open-mrp/api/shared/cache"
-	s3client "github.com/open-mrp/api/shared/cloud/s3"
 	"github.com/open-mrp/api/shared/contracts"
-	dbpkg "github.com/open-mrp/api/shared/db"
-	"github.com/open-mrp/api/shared/db/backfill"
 	"github.com/open-mrp/api/shared/messaging"
-	"github.com/open-mrp/api/shared/tracing"
+	"github.com/open-mrp/apikit/blobstore"
+	"github.com/open-mrp/apikit/cache"
+	s3client "github.com/open-mrp/apikit/cloud/s3"
+	dbpkg "github.com/open-mrp/apikit/db"
+	"github.com/open-mrp/apikit/db/backfill"
 	"github.com/open-mrp/apikit/lease"
 	"github.com/open-mrp/apikit/pagination"
+	"github.com/open-mrp/apikit/tracing"
 )
 
 // reportMaxOpenConnections caps the report pool. Reports are few, short and cached, so a small pool

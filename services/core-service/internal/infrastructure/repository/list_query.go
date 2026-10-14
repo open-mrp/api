@@ -5,7 +5,7 @@ import (
 	"strings"
 
 	"github.com/open-mrp/api/services/core-service/internal/infrastructure/sqlc"
-	apierror "github.com/open-mrp/api/shared/errors"
+	apierror "github.com/open-mrp/apikit/apierror"
 	"github.com/open-mrp/apikit/pagination"
 )
 
@@ -67,7 +67,7 @@ func decodeListCursor(cursor *string) (*pagination.StringCursor, *apierror.APIEr
 	}
 	c, err := pagination.DecodeStringCursor(*cursor)
 	if err != nil {
-		return nil, apierror.NewValidationErrorWithParam("Invalid pagination cursor.", "cursor")
+		return nil, apierror.NewFieldError("cursor", apierror.CodeInvalidFormat, "Invalid pagination cursor.")
 	}
 	return &c, nil
 }

@@ -9,8 +9,8 @@ import (
 	"github.com/open-mrp/api/services/core-service/internal/domain"
 	"github.com/open-mrp/api/shared/appctx"
 	"github.com/open-mrp/api/shared/constants"
-	apierror "github.com/open-mrp/api/shared/errors"
-	"github.com/open-mrp/api/shared/tracing"
+	apierror "github.com/open-mrp/apikit/apierror"
+	"github.com/open-mrp/apikit/tracing"
 )
 
 var analyticsSvcTracer = tracing.GetTracer("core-service.service.analytics")
@@ -323,7 +323,7 @@ func (s *analyticsSvcImpl) AnalyzeQuarterlyOrders(ctx context.Context, params do
 		}
 	}
 	if params.YearsBack < 0 {
-		return nil, tracing.Trace(span, apierror.NewValidationErrorWithParam("years_back must be at least 1.", "years_back"))
+		return nil, tracing.Trace(span, apierror.NewFieldError("years_back", apierror.CodeInvalidFormat, "years_back must be at least 1."))
 	}
 	if params.YearsBack == 0 {
 		params.YearsBack = domain.DefaultQuarterlyOrdersYearsBack
@@ -493,7 +493,7 @@ func (s *analyticsSvcImpl) AnalyzeOee(ctx context.Context, params domain.Analyze
 	}
 
 	if params.EndDate.Before(params.StartDate) {
-		return nil, tracing.Trace(span, apierror.NewValidationErrorWithParam("The period must end on or after it starts.", "ends_at"))
+		return nil, tracing.Trace(span, apierror.NewFieldError("ends_at", apierror.CodeInvalidFormat, "The period must end on or after it starts."))
 	}
 
 	params.AccountID = identity.Target.AccountID
@@ -527,7 +527,7 @@ func (s *analyticsSvcImpl) AnalyzeOeeTrend(ctx context.Context, params domain.An
 	}
 
 	if params.EndDate.Before(params.StartDate) {
-		return nil, tracing.Trace(span, apierror.NewValidationErrorWithParam("The period must end on or after it starts.", "ends_at"))
+		return nil, tracing.Trace(span, apierror.NewFieldError("ends_at", apierror.CodeInvalidFormat, "The period must end on or after it starts."))
 	}
 
 	params.AccountID = identity.Target.AccountID
@@ -707,7 +707,7 @@ func (s *analyticsSvcImpl) AnalyzeScheduleAttainment(ctx context.Context, params
 	}
 
 	if params.EndDate.Before(params.StartDate) {
-		return nil, tracing.Trace(span, apierror.NewValidationErrorWithParam("The period must end on or after it starts.", "ends_at"))
+		return nil, tracing.Trace(span, apierror.NewFieldError("ends_at", apierror.CodeInvalidFormat, "The period must end on or after it starts."))
 	}
 
 	params.AccountID = identity.Target.AccountID

@@ -12,9 +12,9 @@ import (
 	factorymock "github.com/open-mrp/api/services/core-service/internal/domain/mock/factory"
 	repositorymock "github.com/open-mrp/api/services/core-service/internal/domain/mock/repository"
 	"github.com/open-mrp/api/services/core-service/internal/ledgerlock"
-	"github.com/open-mrp/api/shared/db"
-	apierror "github.com/open-mrp/api/shared/errors"
-	"github.com/open-mrp/api/shared/tracing"
+	apierror "github.com/open-mrp/apikit/apierror"
+	"github.com/open-mrp/apikit/db"
+	"github.com/open-mrp/apikit/tracing"
 )
 
 const (
@@ -76,7 +76,7 @@ func (s *UndoBatchScanConsumerTestSuite) SetupTest() {
 	// The reversal writes an audit trail; these keep it from failing the test without making it the subject of one.
 	itemRepo := repositorymock.NewMockItemRepo(s.ctrl)
 	itemRepo.EXPECT().Get(gomock.Any(), gomock.Any()).
-		Return(nil, apierror.NewResourceNotFoundError("item")).AnyTimes()
+		Return(nil, apierror.NewNotFoundError("item")).AnyTimes()
 	s.inventoryQuery.EXPECT().FetchPhysicalInventory(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
 		Return(decimal.Zero, nil).AnyTimes()
 	s.inventoryMutRepo.EXPECT().CreateInventoryLog(gomock.Any(), gomock.Any()).Return(nil).AnyTimes()

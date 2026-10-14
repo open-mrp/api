@@ -9,8 +9,6 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-
-	apierror "github.com/open-mrp/api/shared/errors"
 )
 
 type lastInsertID int64
@@ -102,5 +100,5 @@ func TestNumberCounter_GivesUpWhenEveryNumberItTriesIsTaken(t *testing.T) {
 	_, apiErr := c.next(context.Background(), "sprp_1")
 
 	require.NotNil(t, apiErr)
-	assert.Equal(t, http.StatusConflict, apierror.GetHTTPStatusCode(apiErr.Code))
+	assert.Equal(t, http.StatusConflict, apiErr.Code.Status())
 }

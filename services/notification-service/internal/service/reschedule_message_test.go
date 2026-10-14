@@ -10,8 +10,8 @@ import (
 	repositorymock "github.com/open-mrp/api/services/notification-service/internal/domain/mock/repository"
 	"github.com/open-mrp/api/shared/appctx"
 	"github.com/open-mrp/api/shared/constants"
-	"github.com/open-mrp/api/shared/db"
-	apierror "github.com/open-mrp/api/shared/errors"
+	apierror "github.com/open-mrp/apikit/apierror"
+	"github.com/open-mrp/apikit/db"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/mock/gomock"
@@ -100,13 +100,13 @@ func TestRescheduleMessage_RefusesWhatItCannotMove(t *testing.T) {
 		message  *domain.Message
 		getErr   *apierror.APIError
 		sender   *string
-		wantCode apierror.ErrorCode
+		wantCode apierror.Code
 	}{
-		{"a message that does not exist", nil, apierror.NewResourceNotFoundError("not found"), nil, apierror.ErrorCodeResourceNotFound},
-		{"someone else's scheduled message", &domain.Message{ID: "mg_x", ConversationID: "cv_x", Status: string(constants.MessageStatusScheduled), SenderParticipantID: &senderPID}, nil, &other, apierror.ErrorCodeResourceNotFound},
-		{"a message already sent", &domain.Message{ID: "mg_x", ConversationID: "cv_x", Status: string(constants.MessageStatusSent), SenderParticipantID: &senderPID}, nil, &mine, apierror.ErrorCodeValidationFailed},
-		{"a canceled message", &domain.Message{ID: "mg_x", ConversationID: "cv_x", Status: string(constants.MessageStatusCanceled), SenderParticipantID: &senderPID}, nil, &mine, apierror.ErrorCodeValidationFailed},
-		{"a message whose time has come", &domain.Message{ID: "mg_x", ConversationID: "cv_x", Status: string(constants.MessageStatusScheduled), SenderParticipantID: &senderPID}, nil, &mine, apierror.ErrorCodeValidationFailed},
+		{"a message that does not exist", nil, apierror.NewNotFoundError("not found"), nil, apierror.CodeResourceNotFound},
+		{"someone else's scheduled message", &domain.Message{ID: "mg_x", ConversationID: "cv_x", Status: string(constants.MessageStatusScheduled), SenderParticipantID: &senderPID}, nil, &other, apierror.CodeResourceNotFound},
+		{"a message already sent", &domain.Message{ID: "mg_x", ConversationID: "cv_x", Status: string(constants.MessageStatusSent), SenderParticipantID: &senderPID}, nil, &mine, apierror.CodeValidationFailed},
+		{"a canceled message", &domain.Message{ID: "mg_x", ConversationID: "cv_x", Status: string(constants.MessageStatusCanceled), SenderParticipantID: &senderPID}, nil, &mine, apierror.CodeValidationFailed},
+		{"a message whose time has come", &domain.Message{ID: "mg_x", ConversationID: "cv_x", Status: string(constants.MessageStatusScheduled), SenderParticipantID: &senderPID}, nil, &mine, apierror.CodeValidationFailed},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -142,7 +142,7 @@ func TestRescheduleMessage_ValidatesBeforeTouchingTheMessage(t *testing.T) {
 			_, apiErr := h.svc.RescheduleMessage(rescheduleCtx(), input)
 
 			require.NotNil(t, apiErr)
-			assert.Equal(t, apierror.ErrorCodeParameterInvalid, apiErr.Code)
+			assert.Equal(t, apierror.CodeParameterInvalid, apiErr.Code)
 		})
 	}
 }

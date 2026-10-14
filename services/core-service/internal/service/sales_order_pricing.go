@@ -8,8 +8,8 @@ import (
 	"github.com/shopspring/decimal"
 
 	"github.com/open-mrp/api/services/core-service/internal/domain"
-	apierror "github.com/open-mrp/api/shared/errors"
-	"github.com/open-mrp/api/shared/tracing"
+	apierror "github.com/open-mrp/apikit/apierror"
+	"github.com/open-mrp/apikit/tracing"
 )
 
 // computeSalesOrderLinePrices prices every line of a sales order at once. The volume-discount stage sums quantities across all lines that share a chosen discount, so the whole line set must be priced together.
@@ -116,7 +116,7 @@ func resolveSalesOrderCreateLines(
 	for i, line := range lines {
 		product := bundle.Products[line.ProductID]
 		if product == nil {
-			return nil, tracing.Trace(span, apierror.NewValidationErrorWithParam("Product not found.", "product_id"))
+			return nil, tracing.Trace(span, apierror.NewFieldError("product_id", apierror.CodeInvalidFormat, "Product not found."))
 		}
 
 		// The quantity unit must belong to the product's unit group (the product line's group when present, else the item category's).
@@ -129,7 +129,7 @@ func resolveSalesOrderCreateLines(
 			return nil, tracing.Trace(span, apierror.NewValidationError("The product's unit group is not configured."))
 		}
 		if _, ok := groupUnits[line.QuantityUnitID]; !ok {
-			return nil, tracing.Trace(span, apierror.NewValidationErrorWithParam("The unit is not valid for this product.", "quantity_unit_id"))
+			return nil, tracing.Trace(span, apierror.NewFieldError("quantity_unit_id", apierror.CodeInvalidFormat, "The unit is not valid for this product."))
 		}
 
 		// Unit price: internal override, else computed via the pricing algorithm.

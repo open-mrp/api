@@ -9,9 +9,9 @@ import (
 	grpcutil "github.com/open-mrp/api/services/api-gateway/internal/grpc"
 	"github.com/open-mrp/api/services/api-gateway/internal/resourceloaders"
 	apiresource "github.com/open-mrp/api/services/api-gateway/pkg/resource"
-	apierror "github.com/open-mrp/api/shared/errors"
 	pb "github.com/open-mrp/api/shared/proto/core"
-	"github.com/open-mrp/api/shared/tracing"
+	apierror "github.com/open-mrp/apikit/apierror"
+	"github.com/open-mrp/apikit/tracing"
 	"google.golang.org/grpc"
 	"google.golang.org/protobuf/types/known/emptypb"
 )
@@ -229,7 +229,7 @@ func loadUnitByID(ctx context.Context, id string) (*apiresource.Unit, *apierror.
 	}
 	v, ok := loaded[id]
 	if !ok {
-		return nil, apierror.NewResourceNotFoundError("Unit not found.")
+		return nil, apierror.NewNotFoundError("Unit not found.")
 	}
 	return v.(*apiresource.Unit), nil
 }

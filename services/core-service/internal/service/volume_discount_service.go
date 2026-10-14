@@ -9,10 +9,10 @@ import (
 	"github.com/open-mrp/api/shared/appctx"
 	"github.com/open-mrp/api/shared/audit"
 	"github.com/open-mrp/api/shared/constants"
-	apierror "github.com/open-mrp/api/shared/errors"
 	"github.com/open-mrp/api/shared/id"
-	"github.com/open-mrp/api/shared/idempotency"
-	"github.com/open-mrp/api/shared/tracing"
+	"github.com/open-mrp/api/shared/idemresponse"
+	apierror "github.com/open-mrp/apikit/apierror"
+	"github.com/open-mrp/apikit/tracing"
 )
 
 var volumeDiscountSvcTracer = tracing.GetTracer("core-service.volume_discount_service")
@@ -161,7 +161,7 @@ func (s *volumeDiscountSvcImpl) GetVolumeDiscount(ctx context.Context, params do
 			return nil, tracing.Trace(span, apiErr)
 		}
 		if !applies {
-			return nil, tracing.Trace(span, apierror.NewResourceNotFoundError("Volume discount not found."))
+			return nil, tracing.Trace(span, apierror.NewNotFoundError("Volume discount not found."))
 		}
 	}
 
@@ -218,7 +218,7 @@ func (s *volumeDiscountSvcImpl) CreateVolumeDiscount(ctx context.Context, params
 
 	switch domain.RecoveryPoint(idempotencyKey.RecoveryPoint) {
 	case domain.RecoveryPointFinished:
-		cached, err := idempotency.UnmarshalCachedResponse[domain.VolumeDiscount](ctx, idempotencyKey.ResponseCode, idempotencyKey.ResponseBody)
+		cached, err := idemresponse.UnmarshalCachedResponse[domain.VolumeDiscount](ctx, idempotencyKey.ResponseCode, idempotencyKey.ResponseBody)
 		if err != nil {
 			return nil, tracing.Trace(span, apierror.NewInternalError(err, "Issue unmarshalling cached response."))
 		}
@@ -234,7 +234,7 @@ func (s *volumeDiscountSvcImpl) CreateVolumeDiscount(ctx context.Context, params
 				return apiErr
 			}
 			if exists {
-				return apierror.NewConflictErrorWithParam("A volume discount with this name already exists.", "name")
+				return apierror.NewConflictErrorWithParam("name", "A volume discount with this name already exists.")
 			}
 
 			created, apiErr := txRepo.Create(txCtx, discountID, params)
@@ -325,7 +325,7 @@ func (s *volumeDiscountSvcImpl) UpdateVolumeDiscount(ctx context.Context, params
 
 	switch domain.RecoveryPoint(idempotencyKey.RecoveryPoint) {
 	case domain.RecoveryPointFinished:
-		cached, err := idempotency.UnmarshalCachedResponse[domain.VolumeDiscount](ctx, idempotencyKey.ResponseCode, idempotencyKey.ResponseBody)
+		cached, err := idemresponse.UnmarshalCachedResponse[domain.VolumeDiscount](ctx, idempotencyKey.ResponseCode, idempotencyKey.ResponseBody)
 		if err != nil {
 			return nil, tracing.Trace(span, apierror.NewInternalError(err, "Issue unmarshalling cached response."))
 		}
@@ -351,7 +351,7 @@ func (s *volumeDiscountSvcImpl) UpdateVolumeDiscount(ctx context.Context, params
 					return apiErr
 				}
 				if exists {
-					return apierror.NewConflictErrorWithParam("A volume discount with this name already exists.", "name")
+					return apierror.NewConflictErrorWithParam("name", "A volume discount with this name already exists.")
 				}
 			}
 
@@ -424,13 +424,13 @@ func (s *volumeDiscountSvcImpl) DeleteVolumeDiscount(ctx context.Context, volume
 		VolumeDiscountID: volumeDiscountID,
 	})
 	if apiErr != nil {
-		if apierror.IsNotFound(apiErr) {
+		if apierror.HasCode(apiErr, apierror.CodeResourceNotFound) {
 			wasDeleted, deletedCheckErr := s.repos.NewDeletedRecordRepo().ExistsInAccount(ctx, constants.DeletedRecordResourceTypeVolumeDiscount, volumeDiscountID, accountID)
 			if deletedCheckErr != nil {
 				return tracing.Trace(span, deletedCheckErr)
 			}
 			if wasDeleted {
-				return tracing.Trace(span, apierror.NewAlreadyDeletedError("This volume discount has already been deleted and can no longer be modified."))
+				return tracing.Trace(span, apierror.NewGoneError("This volume discount has already been deleted and can no longer be modified."))
 			}
 		}
 		return tracing.Trace(span, apiErr)

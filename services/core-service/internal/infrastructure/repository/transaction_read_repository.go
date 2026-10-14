@@ -8,11 +8,11 @@ import (
 
 	"github.com/open-mrp/api/services/core-service/internal/domain"
 	"github.com/open-mrp/api/services/core-service/internal/infrastructure/sqlc"
-	"github.com/open-mrp/api/shared/db"
-	apierror "github.com/open-mrp/api/shared/errors"
-	"github.com/open-mrp/api/shared/tracing"
+	apierror "github.com/open-mrp/apikit/apierror"
+	"github.com/open-mrp/apikit/db"
 	"github.com/open-mrp/apikit/pagination"
 	"github.com/open-mrp/apikit/safeconv"
+	"github.com/open-mrp/apikit/tracing"
 )
 
 // Transaction reads are assembled here rather than in sqlc: every list filter is optional, and a
@@ -387,7 +387,7 @@ func decodeTransactionCursor(cursor *string) (*pagination.StringCursor, *apierro
 	}
 	cur, err := pagination.DecodeStringCursor(*cursor)
 	if err != nil {
-		return nil, apierror.NewValidationErrorWithParam("Invalid pagination cursor.", "cursor")
+		return nil, apierror.NewFieldError("cursor", apierror.CodeInvalidFormat, "Invalid pagination cursor.")
 	}
 	return &cur, nil
 }
@@ -471,7 +471,7 @@ func (r *transactionRepoImpl) Get(ctx context.Context, accountID, transactionID 
 		return nil, tracing.Trace(span, apiErr)
 	}
 	if len(rows) == 0 {
-		return nil, tracing.Trace(span, apierror.NewResourceNotFoundError("Transaction not found."))
+		return nil, tracing.Trace(span, apierror.NewNotFoundError("Transaction not found."))
 	}
 	return rows[0], nil
 }

@@ -7,9 +7,9 @@ import (
 	"github.com/open-mrp/api/services/core-service/internal/domain"
 	"github.com/open-mrp/api/services/core-service/internal/infrastructure/sqlc"
 	"github.com/open-mrp/api/shared/constants"
-	"github.com/open-mrp/api/shared/db"
-	apierror "github.com/open-mrp/api/shared/errors"
-	"github.com/open-mrp/api/shared/tracing"
+	apierror "github.com/open-mrp/apikit/apierror"
+	"github.com/open-mrp/apikit/db"
+	"github.com/open-mrp/apikit/tracing"
 )
 
 var portalDomainRepoTracer = tracing.GetTracer("core-service.portal_domain_repository")
@@ -44,7 +44,7 @@ func (r *portalDomainRepoImpl) GetByID(ctx context.Context, accountID, portalDom
 
 	row, err := r.queries.GetPortalDomainByID(ctx, sqlc.GetPortalDomainByIDParams{ID: portalDomainID, AccountID: accountID})
 	if apiErr := db.MapSQLError(err); apiErr != nil {
-		if apiErr.Code == apierror.ErrorCodeResourceNotFound {
+		if apiErr.Code == apierror.CodeResourceNotFound {
 			return nil, nil
 		}
 		return nil, tracing.Trace(span, apiErr)
@@ -64,7 +64,7 @@ func (r *portalDomainRepoImpl) GetByAccountID(ctx context.Context, accountID str
 		return queryErr
 	})
 	if apiErr := db.MapSQLError(err); apiErr != nil {
-		if apiErr.Code == apierror.ErrorCodeResourceNotFound {
+		if apiErr.Code == apierror.CodeResourceNotFound {
 			return nil, nil
 		}
 		return nil, tracing.Trace(span, apiErr)
@@ -78,7 +78,7 @@ func (r *portalDomainRepoImpl) GetByDomain(ctx context.Context, domainName strin
 
 	row, err := r.queries.GetPortalDomainByDomain(ctx, domainName)
 	if apiErr := db.MapSQLError(err); apiErr != nil {
-		if apiErr.Code == apierror.ErrorCodeResourceNotFound {
+		if apiErr.Code == apierror.CodeResourceNotFound {
 			return nil, nil
 		}
 		return nil, tracing.Trace(span, apiErr)

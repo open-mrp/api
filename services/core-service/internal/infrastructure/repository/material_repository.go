@@ -8,10 +8,11 @@ import (
 
 	"github.com/open-mrp/api/services/core-service/internal/domain"
 	"github.com/open-mrp/api/services/core-service/internal/infrastructure/sqlc"
-	"github.com/open-mrp/api/shared/db"
-	apierror "github.com/open-mrp/api/shared/errors"
-	"github.com/open-mrp/api/shared/tracing"
+	"github.com/open-mrp/api/shared/catalogsearch"
+	apierror "github.com/open-mrp/apikit/apierror"
+	"github.com/open-mrp/apikit/db"
 	"github.com/open-mrp/apikit/pagination"
+	"github.com/open-mrp/apikit/tracing"
 )
 
 var materialRepoTracer = tracing.GetTracer("core-service.material_repository")
@@ -240,11 +241,11 @@ func (r *materialRepoImpl) List(ctx context.Context, params domain.ListMaterials
 	ctx, span := materialRepoTracer.Start(ctx, "repository.material.list")
 	defer span.End()
 
-	catSearch := db.NewCatalogSearch(params.Query)
+	catSearch := catalogsearch.New(params.Query)
 	searchQuery := catSearch.Contains
 	searchRankEnabled := catSearch.Contains.Valid
 	materialSearchRank := func(m *domain.Material) int32 {
-		return db.CatalogSearchRank(m.Item.SKU, catSearch)
+		return catalogsearch.Rank(m.Item.SKU, catSearch)
 	}
 	includeCategoryFilter := len(params.CategoryIDs) > 0
 	includeAttributeFilter := len(params.AttributeIDs) > 0
@@ -271,7 +272,7 @@ func (r *materialRepoImpl) List(ctx context.Context, params domain.ListMaterials
 	if params.Cursor != nil {
 		cur, err := pagination.DecodeStringCursor(*params.Cursor)
 		if err != nil {
-			return nil, apierror.NewValidationErrorWithParam("Invalid pagination cursor.", "cursor")
+			return nil, apierror.NewFieldError("cursor", apierror.CodeInvalidFormat, "Invalid pagination cursor.")
 		}
 		cursorDir = &cur.Direction
 
@@ -287,7 +288,7 @@ func (r *materialRepoImpl) List(ctx context.Context, params domain.ListMaterials
 				AttributeIds:           attributeIDs,
 				StartDate:              startDate,
 				EndDate:                endDate,
-				CursorMatchTier:        db.NullTierInt64Param(cur.MatchTier),
+				CursorMatchTier:        catalogsearch.NullTierInt64Param(cur.MatchTier),
 				CursorCreatedAt:        cur.OccurredAt,
 				CursorID:               cur.ID,
 				Limit:                  params.Limit + 1,
@@ -319,7 +320,7 @@ func (r *materialRepoImpl) List(ctx context.Context, params domain.ListMaterials
 			StartDate:              startDate,
 			EndDate:                endDate,
 			CursorCreatedAt:        gosql.NullTime{Time: cur.OccurredAt, Valid: true},
-			CursorMatchTier:        db.NullTierInt64Param(cur.MatchTier),
+			CursorMatchTier:        catalogsearch.NullTierInt64Param(cur.MatchTier),
 			CursorID:               gosql.NullString{String: cur.ID, Valid: true},
 			Limit:                  params.Limit + 1,
 		})
@@ -524,7 +525,7 @@ func (r *materialRepoImpl) DeleteByID(ctx context.Context, accountID, materialID
 		return tracing.Trace(span, apierror.NewInternalError(err, "Failed to check rows affected."))
 	}
 	if rowsAffected == 0 {
-		return tracing.Trace(span, apierror.NewResourceNotFoundError("Material not found."))
+		return tracing.Trace(span, apierror.NewNotFoundError("Material not found."))
 	}
 
 	return nil
@@ -638,7 +639,7 @@ func (r *materialRepoImpl) Export(ctx context.Context, params domain.ExportMater
 	ctx, span := materialRepoTracer.Start(ctx, "repository.material.export")
 	defer span.End()
 
-	catSearch := db.NewCatalogSearch(params.Query)
+	catSearch := catalogsearch.New(params.Query)
 	searchQuery := catSearch.Contains
 
 	includeCategoryFilter := len(params.CategoryIDs) > 0

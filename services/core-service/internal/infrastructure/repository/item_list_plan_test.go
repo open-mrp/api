@@ -12,7 +12,7 @@ import (
 
 	"github.com/open-mrp/api/services/core-service/internal/domain"
 	"github.com/open-mrp/api/services/core-service/internal/infrastructure/sqlc"
-	"github.com/open-mrp/api/shared/db"
+	"github.com/open-mrp/api/shared/catalogsearch"
 	"github.com/open-mrp/apikit/pagination"
 )
 
@@ -112,7 +112,7 @@ func itemPlanFloor(t *testing.T, sqlDB *sql.DB, p domain.ListItemsParams) float6
 	if p.EndDate != nil {
 		where, args = append(where, "i.created_at <= ?"), append(args, *p.EndDate)
 	}
-	if db.NewCatalogSearch(p.Query).Contains.Valid {
+	if catalogsearch.New(p.Query).Contains.Valid {
 		return planCount(t, sqlDB, "SELECT COUNT(*) FROM item i WHERE "+strings.Join(where, " AND "), args...)
 	}
 	joined := false

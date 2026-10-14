@@ -11,7 +11,7 @@ import (
 	publishermock "github.com/open-mrp/api/services/core-service/internal/domain/mock/publisher"
 	repositorymock "github.com/open-mrp/api/services/core-service/internal/domain/mock/repository"
 	"github.com/open-mrp/api/shared/appctx"
-	apierror "github.com/open-mrp/api/shared/errors"
+	apierror "github.com/open-mrp/apikit/apierror"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -101,7 +101,7 @@ func TestInvoiceSvc_RefusesAnyoneButTheSellersOwnUsers(t *testing.T) {
 			svc, _ := newGatedInvoiceSvc(t)
 			apiErr := c.call(ctx, svc)
 			if assert.NotNil(t, apiErr, "%s: %s", name, c.name) {
-				assert.Equal(t, apierror.ErrorCodeInsufficientPerms, apiErr.Code, "%s: %s", name, c.name)
+				assert.Equal(t, apierror.CodeInsufficientPermissions, apiErr.Code, "%s: %s", name, c.name)
 			}
 		}
 	}
@@ -116,7 +116,7 @@ func TestInvoiceSvc_RequiresTheInvoicesPermission(t *testing.T) {
 		ctx := invoiceActorCtx(types.IdentityRelationTypeInternal, invoiceSellerID, invoiceSellerID, "customers:read", "customers:update")
 		apiErr := c.call(ctx, svc)
 		if assert.NotNil(t, apiErr, c.name) {
-			assert.Equal(t, apierror.ErrorCodeInsufficientPerms, apiErr.Code, c.name)
+			assert.Equal(t, apierror.CodeInsufficientPermissions, apiErr.Code, c.name)
 		}
 	}
 
@@ -125,7 +125,7 @@ func TestInvoiceSvc_RequiresTheInvoicesPermission(t *testing.T) {
 	paid := true
 	_, apiErr := svc.UpdateInvoice(readOnly, domain.UpdateInvoiceParams{InvoiceID: "iv_1", IsPaidInFull: &paid})
 	require.NotNil(t, apiErr, "reading does not grant updating")
-	assert.Equal(t, apierror.ErrorCodeInsufficientPerms, apiErr.Code)
+	assert.Equal(t, apierror.CodeInsufficientPermissions, apiErr.Code)
 }
 
 // A seller's user with invoices:read reads its own account's invoices, scoped to that account.
@@ -179,7 +179,7 @@ func TestEmailRecord_InvoiceOutsideTheAccountIsNotFound(t *testing.T) {
 	idempotency.EXPECT().UpsertIdempotencyKey(gomock.Any(), gomock.Any()).
 		Return(&domain.IdempotencyKey{TypeID: "idk_1", RecoveryPoint: string(domain.RecoveryPointStarted)}, nil)
 	invoiceRepo.EXPECT().Get(gomock.Any(), domain.GetInvoiceParams{AccountID: invoiceSellerID, InvoiceID: "iv_elsewhere"}).
-		Return(nil, apierror.NewResourceNotFoundError("Invoice not found."))
+		Return(nil, apierror.NewNotFoundError("Invoice not found."))
 	idempotency.EXPECT().CacheErrorResponse(gomock.Any(), "idk_1", gomock.Any()).
 		DoAndReturn(func(_ context.Context, _ string, apiErr *apierror.APIError) *apierror.APIError { return apiErr })
 
@@ -187,14 +187,14 @@ func TestEmailRecord_InvoiceOutsideTheAccountIsNotFound(t *testing.T) {
 	apiErr := svc.EmailRecord(ctx, domain.EmailRecordParams{Type: domain.EmailRecordTypeInvoice, ID: "iv_elsewhere"})
 
 	require.NotNil(t, apiErr)
-	assert.Equal(t, apierror.ErrorCodeResourceNotFound, apiErr.Code)
+	assert.Equal(t, apierror.CodeResourceNotFound, apiErr.Code)
 }
 
 // An id that is not one of the account's orders of the type sent is a 404, read before the recipients, which are looked up by id alone.
 func TestEmailRecord_OrderOutsideTheAccountIsNotFound(t *testing.T) {
 	t.Parallel()
 
-	notFound := apierror.NewResourceNotFoundError("Resource not found.")
+	notFound := apierror.NewNotFoundError("Resource not found.")
 	for _, tc := range []struct {
 		typ    domain.EmailRecordType
 		perm   string
@@ -235,7 +235,7 @@ func TestEmailRecord_OrderOutsideTheAccountIsNotFound(t *testing.T) {
 			apiErr := svc.EmailRecord(ctx, domain.EmailRecordParams{Type: tc.typ, ID: "or_elsewhere"})
 
 			require.NotNil(t, apiErr)
-			assert.Equal(t, apierror.ErrorCodeResourceNotFound, apiErr.Code)
+			assert.Equal(t, apierror.CodeResourceNotFound, apiErr.Code)
 		})
 	}
 }

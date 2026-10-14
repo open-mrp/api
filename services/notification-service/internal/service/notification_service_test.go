@@ -12,7 +12,7 @@ import (
 	"github.com/open-mrp/api/services/notification-service/internal/email"
 	"github.com/open-mrp/api/shared/appctx"
 	"github.com/open-mrp/api/shared/constants"
-	apierror "github.com/open-mrp/api/shared/errors"
+	apierror "github.com/open-mrp/apikit/apierror"
 
 	"github.com/stretchr/testify/suite"
 	"go.uber.org/mock/gomock"
@@ -194,7 +194,7 @@ func (suite *NotificationServiceTestSuite) TestLogFailedEmail_WritesUnsentLogWit
 
 	suite.emailLogRepo.EXPECT().
 		FindBySesMessageID(gomock.Any(), "failed_mg_abc").
-		Return(nil, apierror.NewResourceNotFoundError("not found"))
+		Return(nil, apierror.NewNotFoundError("not found"))
 
 	var created *domain.EmailLog
 	suite.emailLogRepo.EXPECT().
@@ -251,7 +251,7 @@ func (suite *NotificationServiceTestSuite) TestLogEmail_PersistsRecipients() {
 
 	suite.emailLogRepo.EXPECT().
 		FindBySesMessageID(gomock.Any(), "ses_1").
-		Return(nil, apierror.NewResourceNotFoundError("not found"))
+		Return(nil, apierror.NewNotFoundError("not found"))
 
 	var created *domain.EmailLog
 	suite.emailLogRepo.EXPECT().

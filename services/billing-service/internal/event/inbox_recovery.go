@@ -4,8 +4,8 @@ import (
 	"context"
 
 	"github.com/open-mrp/api/services/billing-service/internal/domain"
-	apierror "github.com/open-mrp/api/shared/errors"
 	"github.com/open-mrp/api/shared/messaging"
+	apierror "github.com/open-mrp/apikit/apierror"
 )
 
 // completeInboxRecord commits this delivery's inbox recovery point inside the caller's transaction, so the marker and the work it describes commit together or not at all.

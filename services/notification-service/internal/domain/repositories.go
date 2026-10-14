@@ -6,7 +6,7 @@ import (
 	"time"
 
 	"github.com/open-mrp/api/shared/constants"
-	apierror "github.com/open-mrp/api/shared/errors"
+	apierror "github.com/open-mrp/apikit/apierror"
 )
 
 // AccountRepo reads the sending account. The send path uses it to decide sandbox suppression from

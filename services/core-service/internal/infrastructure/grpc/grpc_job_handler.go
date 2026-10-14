@@ -8,8 +8,8 @@ import (
 
 	"github.com/open-mrp/api/services/core-service/internal/domain"
 	"github.com/open-mrp/api/shared/contracts"
-	apierror "github.com/open-mrp/api/shared/errors"
 	pb "github.com/open-mrp/api/shared/proto/core"
+	apierror "github.com/open-mrp/apikit/apierror"
 	"github.com/open-mrp/apikit/safeconv"
 
 	"google.golang.org/grpc"
@@ -61,7 +61,7 @@ func jobResultsToProto(results []domain.RowResult, truncated bool) *pb.JobResult
 // straight back into this same shared type, so there is no second definition to keep in
 // step. ResponseError is plain data, so this cannot fail in practice; an entry that says
 // nothing would be worse than one that says something, hence the fallback.
-func marshalResponseError(e apierror.ResponseError) string {
+func marshalResponseError(e apierror.ErrorObject) string {
 	raw, err := json.Marshal(e)
 	if err != nil {
 		slog.Error("Failed to encode a job error for the wire", "error", err, "code", e.Code)

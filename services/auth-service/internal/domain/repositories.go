@@ -8,7 +8,7 @@ import (
 	"github.com/open-mrp/api/services/auth-service/internal/apikey"
 	"github.com/open-mrp/api/services/auth-service/pkg/types"
 	"github.com/open-mrp/api/shared/constants"
-	apierror "github.com/open-mrp/api/shared/errors"
+	apierror "github.com/open-mrp/apikit/apierror"
 	"github.com/open-mrp/apikit/pagination"
 )
 

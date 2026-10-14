@@ -9,10 +9,10 @@ import (
 	"github.com/open-mrp/api/shared/appctx"
 	"github.com/open-mrp/api/shared/audit"
 	"github.com/open-mrp/api/shared/constants"
-	apierror "github.com/open-mrp/api/shared/errors"
 	"github.com/open-mrp/api/shared/id"
-	"github.com/open-mrp/api/shared/idempotency"
-	"github.com/open-mrp/api/shared/tracing"
+	"github.com/open-mrp/api/shared/idemresponse"
+	apierror "github.com/open-mrp/apikit/apierror"
+	"github.com/open-mrp/apikit/tracing"
 )
 
 var territorySvcTracer = tracing.GetTracer("core-service.territory_service")
@@ -178,7 +178,7 @@ func (s *territorySvcImpl) CreateTerritory(ctx context.Context, params domain.Cr
 		params.EndZipcode = nil
 	}
 	if params.EndZipcode != nil && *params.EndZipcode < *params.StartZipcode {
-		return nil, tracing.Trace(span, apierror.NewValidationErrorWithParam("End zipcode must not be before the start zipcode.", "end_zipcode"))
+		return nil, tracing.Trace(span, apierror.NewFieldError("end_zipcode", apierror.CodeInvalidFormat, "End zipcode must not be before the start zipcode."))
 	}
 	params.Includes = territoryAuditIncludes
 
@@ -196,7 +196,7 @@ func (s *territorySvcImpl) CreateTerritory(ctx context.Context, params domain.Cr
 
 	switch domain.RecoveryPoint(idempotencyKey.RecoveryPoint) {
 	case domain.RecoveryPointFinished:
-		cached, err := idempotency.UnmarshalCachedResponse[domain.Territory](ctx, idempotencyKey.ResponseCode, idempotencyKey.ResponseBody)
+		cached, err := idemresponse.UnmarshalCachedResponse[domain.Territory](ctx, idempotencyKey.ResponseCode, idempotencyKey.ResponseBody)
 		if err != nil {
 			return nil, tracing.Trace(span, apierror.NewInternalError(err, "Issue unmarshalling cached response."))
 		}
@@ -278,7 +278,7 @@ func (s *territorySvcImpl) UpdateTerritory(ctx context.Context, params domain.Up
 
 	switch domain.RecoveryPoint(idempotencyKey.RecoveryPoint) {
 	case domain.RecoveryPointFinished:
-		cached, err := idempotency.UnmarshalCachedResponse[domain.Territory](ctx, idempotencyKey.ResponseCode, idempotencyKey.ResponseBody)
+		cached, err := idemresponse.UnmarshalCachedResponse[domain.Territory](ctx, idempotencyKey.ResponseCode, idempotencyKey.ResponseBody)
 		if err != nil {
 			return nil, tracing.Trace(span, apierror.NewInternalError(err, "Issue unmarshalling cached response."))
 		}
@@ -378,13 +378,13 @@ func (s *territorySvcImpl) DeleteTerritory(ctx context.Context, params domain.De
 		Includes:    territoryAuditIncludes,
 	})
 	if apiErr != nil {
-		if apierror.IsNotFound(apiErr) {
+		if apierror.HasCode(apiErr, apierror.CodeResourceNotFound) {
 			wasDeleted, deletedCheckErr := s.repos.NewDeletedRecordRepo().ExistsInAccount(ctx, constants.DeletedRecordResourceTypeTerritory, params.TerritoryID, params.AccountID)
 			if deletedCheckErr != nil {
 				return tracing.Trace(span, deletedCheckErr)
 			}
 			if wasDeleted {
-				return tracing.Trace(span, apierror.NewAlreadyDeletedError("This territory has already been deleted and can no longer be modified."))
+				return tracing.Trace(span, apierror.NewGoneError("This territory has already been deleted and can no longer be modified."))
 			}
 		}
 		return tracing.Trace(span, apiErr)
@@ -424,7 +424,7 @@ func (s *territorySvcImpl) DeleteTerritory(ctx context.Context, params domain.De
 // checkTerritoryAccount refuses a path naming an account other than the one acted for as not found, like another tenant's territory.
 func checkTerritoryAccount(identity *types.Identity, accountID string) *apierror.APIError {
 	if accountID != identity.Target.AccountID {
-		return apierror.NewResourceNotFoundError("Resource not found.")
+		return apierror.NewNotFoundError("Resource not found.")
 	}
 	return nil
 }
@@ -437,7 +437,7 @@ func (s *territorySvcImpl) validateTerritoryReferences(ctx context.Context, acco
 			return territoryReferenceError(apiErr, "Sales rep not found.", "sales_rep_id")
 		}
 		if rep.StatusCode == constants.AccountUserStatusRemoved {
-			return apierror.NewValidationErrorWithParam("Sales rep has been removed from the account.", "sales_rep_id")
+			return apierror.NewFieldError("sales_rep_id", apierror.CodeInvalidFormat, "Sales rep has been removed from the account.")
 		}
 	}
 	if productLineID != nil {
@@ -449,18 +449,18 @@ func (s *territorySvcImpl) validateTerritoryReferences(ctx context.Context, acco
 }
 
 func territoryReferenceError(apiErr *apierror.APIError, notFoundMsg, param string) *apierror.APIError {
-	if apierror.IsNotFound(apiErr) {
-		return apierror.NewValidationErrorWithParam(notFoundMsg, param)
+	if apierror.HasCode(apiErr, apierror.CodeResourceNotFound) {
+		return apierror.NewFieldError(param, apierror.CodeInvalidFormat, notFoundMsg)
 	}
 	return apiErr
 }
 
 func validateTerritoryZipcodes(start, end *int32) *apierror.APIError {
 	if start != nil && (*start < 501 || *start > 99999) {
-		return apierror.NewValidationErrorWithParam("Start zipcode must be between 501 and 99999.", "start_zipcode")
+		return apierror.NewFieldError("start_zipcode", apierror.CodeInvalidFormat, "Start zipcode must be between 501 and 99999.")
 	}
 	if end != nil && (*end < 501 || *end > 99999) {
-		return apierror.NewValidationErrorWithParam("End zipcode must be between 501 and 99999.", "end_zipcode")
+		return apierror.NewFieldError("end_zipcode", apierror.CodeInvalidFormat, "End zipcode must be between 501 and 99999.")
 	}
 	return nil
 }
@@ -469,11 +469,11 @@ func validateTerritoryZipcodes(start, end *int32) *apierror.APIError {
 func checkTerritoryClears(params domain.UpdateTerritoryParams) *apierror.APIError {
 	switch {
 	case params.ClearStartZipcode && params.StartZipcode != nil:
-		return apierror.NewValidationErrorWithParam("Send either start_zipcode or clear_start_zipcode, not both.", "clear_start_zipcode")
+		return apierror.NewFieldError("clear_start_zipcode", apierror.CodeInvalidFormat, "Send either start_zipcode or clear_start_zipcode, not both.")
 	case params.ClearEndZipcode && params.EndZipcode != nil:
-		return apierror.NewValidationErrorWithParam("Send either end_zipcode or clear_end_zipcode, not both.", "clear_end_zipcode")
+		return apierror.NewFieldError("clear_end_zipcode", apierror.CodeInvalidFormat, "Send either end_zipcode or clear_end_zipcode, not both.")
 	case params.ClearProductLine && params.ProductLineID != nil:
-		return apierror.NewValidationErrorWithParam("Send either product_line_id or clear_product_line, not both.", "clear_product_line")
+		return apierror.NewFieldError("clear_product_line", apierror.CodeInvalidFormat, "Send either product_line_id or clear_product_line, not both.")
 	}
 	return nil
 }
@@ -502,7 +502,7 @@ func resolveUpdatedZipcodes(old *domain.Territory, params *domain.UpdateTerritor
 		return nil
 	}
 	if params.EndZipcode != nil {
-		return apierror.NewValidationErrorWithParam("End zipcode must not be before the start zipcode.", "end_zipcode")
+		return apierror.NewFieldError("end_zipcode", apierror.CodeInvalidFormat, "End zipcode must not be before the start zipcode.")
 	}
-	return apierror.NewValidationErrorWithParam("Start zipcode must not be after the end zipcode.", "start_zipcode")
+	return apierror.NewFieldError("start_zipcode", apierror.CodeInvalidFormat, "Start zipcode must not be after the end zipcode.")
 }

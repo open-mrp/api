@@ -10,7 +10,7 @@ import (
 	"github.com/open-mrp/api/services/auth-service/pkg/types"
 	"github.com/open-mrp/api/shared/appctx"
 	"github.com/open-mrp/api/shared/constants"
-	apierror "github.com/open-mrp/api/shared/errors"
+	apierror "github.com/open-mrp/apikit/apierror"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
 	"google.golang.org/grpc/health"
@@ -61,8 +61,8 @@ func TestGetIdentityFromMetadata_Errors(t *testing.T) {
 			if apiErr == nil {
 				t.Fatal("expected an APIError, got nil")
 			}
-			if apiErr.Code != apierror.ErrorCodeInternalError {
-				t.Errorf("expected code %q, got %q", apierror.ErrorCodeInternalError, apiErr.Code)
+			if apiErr.Code != apierror.CodeInternalError {
+				t.Errorf("expected code %q, got %q", apierror.CodeInternalError, apiErr.Code)
 			}
 		})
 	}

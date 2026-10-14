@@ -6,9 +6,9 @@ import (
 
 	"github.com/open-mrp/api/services/notification-service/internal/domain"
 	"github.com/open-mrp/api/services/notification-service/internal/infrastructure/sqlc"
-	"github.com/open-mrp/api/shared/db"
-	apierror "github.com/open-mrp/api/shared/errors"
-	"github.com/open-mrp/api/shared/tracing"
+	apierror "github.com/open-mrp/apikit/apierror"
+	"github.com/open-mrp/apikit/db"
+	"github.com/open-mrp/apikit/tracing"
 )
 
 var emailRepoTracer = tracing.GetTracer("notification-service.email_repository")
@@ -67,7 +67,7 @@ func (r *emailDomainRepoImpl) GetByID(ctx context.Context, id, accountID string)
 	defer span.End()
 	row, err := r.db.GetEmailDomainByID(ctx, sqlc.GetEmailDomainByIDParams{ID: id, AccountID: accountID})
 	if apiErr := db.MapSQLError(err); apiErr != nil {
-		if apiErr.Code == apierror.ErrorCodeResourceNotFound {
+		if apiErr.Code == apierror.CodeResourceNotFound {
 			return nil, apiErr
 		}
 		return nil, tracing.Trace(span, apiErr)
@@ -80,7 +80,7 @@ func (r *emailDomainRepoImpl) GetByDomain(ctx context.Context, dom string) (*dom
 	defer span.End()
 	row, err := r.db.GetEmailDomainByDomain(ctx, dom)
 	if apiErr := db.MapSQLError(err); apiErr != nil {
-		if apiErr.Code == apierror.ErrorCodeResourceNotFound {
+		if apiErr.Code == apierror.CodeResourceNotFound {
 			return nil, apiErr
 		}
 		return nil, tracing.Trace(span, apiErr)
@@ -198,7 +198,7 @@ func (r *accountEmailSenderRepoImpl) GetByAccount(ctx context.Context, accountID
 	defer span.End()
 	row, err := r.db.GetEmailSenderByAccount(ctx, accountID)
 	if apiErr := db.MapSQLError(err); apiErr != nil {
-		if apiErr.Code == apierror.ErrorCodeResourceNotFound {
+		if apiErr.Code == apierror.CodeResourceNotFound {
 			return nil, nil
 		}
 		return nil, tracing.Trace(span, apiErr)
@@ -273,7 +273,7 @@ func (r *emailInboxRepoImpl) GetByID(ctx context.Context, id, accountID string) 
 	defer span.End()
 	row, err := r.db.GetEmailInboxByID(ctx, sqlc.GetEmailInboxByIDParams{ID: id, AccountID: accountID})
 	if apiErr := db.MapSQLError(err); apiErr != nil {
-		if apiErr.Code == apierror.ErrorCodeResourceNotFound {
+		if apiErr.Code == apierror.CodeResourceNotFound {
 			return nil, apiErr
 		}
 		return nil, tracing.Trace(span, apiErr)
@@ -286,7 +286,7 @@ func (r *emailInboxRepoImpl) GetByAddress(ctx context.Context, address string) (
 	defer span.End()
 	row, err := r.db.GetEmailInboxByAddress(ctx, address)
 	if apiErr := db.MapSQLError(err); apiErr != nil {
-		if apiErr.Code == apierror.ErrorCodeResourceNotFound {
+		if apiErr.Code == apierror.CodeResourceNotFound {
 			return nil, apiErr
 		}
 		return nil, tracing.Trace(span, apiErr)
@@ -299,7 +299,7 @@ func (r *emailInboxRepoImpl) GetByIDSystem(ctx context.Context, id string) (*dom
 	defer span.End()
 	row, err := r.db.GetEmailInboxByIDSystem(ctx, id)
 	if apiErr := db.MapSQLError(err); apiErr != nil {
-		if apiErr.Code == apierror.ErrorCodeResourceNotFound {
+		if apiErr.Code == apierror.CodeResourceNotFound {
 			return nil, apiErr
 		}
 		return nil, tracing.Trace(span, apiErr)
@@ -418,7 +418,7 @@ func (r *emailMessageRepoImpl) GetByRfcID(ctx context.Context, rfcMessageID stri
 	defer span.End()
 	row, err := r.db.GetEmailMessageByRfcID(ctx, rfcMessageID)
 	if apiErr := db.MapSQLError(err); apiErr != nil {
-		if apiErr.Code == apierror.ErrorCodeResourceNotFound {
+		if apiErr.Code == apierror.CodeResourceNotFound {
 			return nil, apiErr
 		}
 		return nil, tracing.Trace(span, apiErr)
@@ -430,11 +430,11 @@ func (r *emailMessageRepoImpl) FindThreadConversation(ctx context.Context, rfcMe
 	ctx, span := emailRepoTracer.Start(ctx, "repository.email_message.find_thread_conversation")
 	defer span.End()
 	if len(rfcMessageIDs) == 0 {
-		return nil, apierror.NewResourceNotFoundError("No thread match.")
+		return nil, apierror.NewNotFoundError("No thread match.")
 	}
 	row, err := r.db.FindEmailThreadConversation(ctx, rfcMessageIDs)
 	if apiErr := db.MapSQLError(err); apiErr != nil {
-		if apiErr.Code == apierror.ErrorCodeResourceNotFound {
+		if apiErr.Code == apierror.CodeResourceNotFound {
 			return nil, apiErr
 		}
 		return nil, tracing.Trace(span, apiErr)
@@ -447,7 +447,7 @@ func (r *emailMessageRepoImpl) GetLatestInbound(ctx context.Context, conversatio
 	defer span.End()
 	row, err := r.db.GetLatestInboundEmailMessage(ctx, conversationID)
 	if apiErr := db.MapSQLError(err); apiErr != nil {
-		if apiErr.Code == apierror.ErrorCodeResourceNotFound {
+		if apiErr.Code == apierror.CodeResourceNotFound {
 			return nil, apiErr
 		}
 		return nil, tracing.Trace(span, apiErr)

@@ -4,7 +4,7 @@ import (
 	"context"
 
 	"github.com/open-mrp/api/services/notification-service/internal/domain"
-	apierror "github.com/open-mrp/api/shared/errors"
+	apierror "github.com/open-mrp/apikit/apierror"
 )
 
 // TODO: This should be rethought as it seems much of this is no longer in use.

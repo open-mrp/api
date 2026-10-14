@@ -10,13 +10,13 @@ import (
 	"github.com/open-mrp/api/services/core-service/internal/domain"
 	"github.com/open-mrp/api/shared/audit"
 	"github.com/open-mrp/api/shared/constants"
-	"github.com/open-mrp/api/shared/db"
-	apierror "github.com/open-mrp/api/shared/errors"
 	"github.com/open-mrp/api/shared/excel"
 	"github.com/open-mrp/api/shared/id"
 	"github.com/open-mrp/api/shared/messaging"
-	"github.com/open-mrp/api/shared/tracing"
+	apierror "github.com/open-mrp/apikit/apierror"
+	"github.com/open-mrp/apikit/db"
 	"github.com/open-mrp/apikit/field"
+	"github.com/open-mrp/apikit/tracing"
 )
 
 // asyncBulkDeps hands the async bulk engine the plumbing it runs on.
@@ -109,7 +109,7 @@ func validateBulkUpsertLocationRows(rows []domain.UpsertLocationParams) *apierro
 	for i, loc := range rows {
 		lower := strings.ToLower(loc.Name)
 		if _, exists := nameInputSpace[lower]; exists {
-			rowErrs.AddValidation(i, fmt.Sprintf("locations[%d].name", i), fmt.Sprintf("duplicate name %q in request", loc.Name))
+			rowErrs.AddField(i, "name", apierror.CodeInvalidFormat, fmt.Sprintf("duplicate name %q in request", loc.Name))
 		}
 		nameInputSpace[lower] = struct{}{}
 	}
@@ -258,7 +258,7 @@ func writeBulkUpsertLocations(txCtx context.Context, txRepos domain.RepoFactory,
 			return nil
 		})
 		if rowErr != nil {
-			rowErrors = append(rowErrors, apierror.NewRowError(i, rowErr))
+			rowErrors = append(rowErrors, apierror.RowError{Index: i, Error: rowErr.Object()})
 			continue
 		}
 		upserted[i] = true
@@ -307,7 +307,7 @@ func writeBulkUpsertLocations(txCtx context.Context, txRepos domain.RepoFactory,
 			return nil
 		})
 		if rowErr != nil {
-			rowErrors = append(rowErrors, apierror.NewRowError(i, rowErr))
+			rowErrors = append(rowErrors, apierror.RowError{Index: i, Error: rowErr.Object()})
 		}
 	}
 

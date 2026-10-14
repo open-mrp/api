@@ -12,7 +12,7 @@ import (
 	"github.com/open-mrp/api/services/auth-service/internal/testutil"
 	"github.com/open-mrp/api/services/auth-service/pkg/types"
 	"github.com/open-mrp/api/shared/appctx"
-	apierror "github.com/open-mrp/api/shared/errors"
+	apierror "github.com/open-mrp/apikit/apierror"
 
 	"github.com/stretchr/testify/suite"
 	"go.uber.org/mock/gomock"

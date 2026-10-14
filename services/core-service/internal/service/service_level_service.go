@@ -9,10 +9,10 @@ import (
 	"github.com/open-mrp/api/shared/appctx"
 	"github.com/open-mrp/api/shared/audit"
 	"github.com/open-mrp/api/shared/constants"
-	apierror "github.com/open-mrp/api/shared/errors"
 	"github.com/open-mrp/api/shared/id"
-	"github.com/open-mrp/api/shared/idempotency"
-	"github.com/open-mrp/api/shared/tracing"
+	"github.com/open-mrp/api/shared/idemresponse"
+	apierror "github.com/open-mrp/apikit/apierror"
+	"github.com/open-mrp/apikit/tracing"
 )
 
 var serviceLevelSvcTracer = tracing.GetTracer("core-service.service_level_service")
@@ -145,7 +145,7 @@ func (s *serviceLevelSvcImpl) GetServiceLevel(ctx context.Context, carrierID, se
 		return nil, tracing.Trace(span, apiErr)
 	}
 	if !isInCarrier {
-		return nil, tracing.Trace(span, apierror.NewResourceNotFoundError("Service level not found."))
+		return nil, tracing.Trace(span, apierror.NewNotFoundError("Service level not found."))
 	}
 
 	return s.repos.NewServiceLevelRepo().Get(ctx, accountID, serviceLevelID)
@@ -183,7 +183,7 @@ func (s *serviceLevelSvcImpl) CreateServiceLevel(ctx context.Context, params dom
 
 	switch domain.RecoveryPoint(idempotencyKey.RecoveryPoint) {
 	case domain.RecoveryPointFinished:
-		cached, err := idempotency.UnmarshalCachedResponse[domain.ServiceLevel](ctx, idempotencyKey.ResponseCode, idempotencyKey.ResponseBody)
+		cached, err := idemresponse.UnmarshalCachedResponse[domain.ServiceLevel](ctx, idempotencyKey.ResponseCode, idempotencyKey.ResponseBody)
 		if err != nil {
 			return nil, tracing.Trace(span, apierror.NewInternalError(err, "Issue unmarshalling cached response."))
 		}
@@ -205,7 +205,7 @@ func (s *serviceLevelSvcImpl) CreateServiceLevel(ctx context.Context, params dom
 				return apiErr
 			}
 			if exists {
-				return apierror.NewConflictErrorWithParam("A service level with this code already exists in this carrier.", "code")
+				return apierror.NewConflictErrorWithParam("code", "A service level with this code already exists in this carrier.")
 			}
 
 			if params.IsDefault {
@@ -273,7 +273,7 @@ func (s *serviceLevelSvcImpl) UpdateServiceLevel(ctx context.Context, params dom
 
 	switch domain.RecoveryPoint(idempotencyKey.RecoveryPoint) {
 	case domain.RecoveryPointFinished:
-		cached, err := idempotency.UnmarshalCachedResponse[domain.ServiceLevel](ctx, idempotencyKey.ResponseCode, idempotencyKey.ResponseBody)
+		cached, err := idemresponse.UnmarshalCachedResponse[domain.ServiceLevel](ctx, idempotencyKey.ResponseCode, idempotencyKey.ResponseBody)
 		if err != nil {
 			return nil, tracing.Trace(span, apierror.NewInternalError(err, "Issue unmarshalling cached response."))
 		}
@@ -295,9 +295,9 @@ func (s *serviceLevelSvcImpl) UpdateServiceLevel(ctx context.Context, params dom
 					return deletedCheckErr
 				}
 				if wasDeleted {
-					return apierror.NewAlreadyDeletedError("This service level has already been deleted and can no longer be modified.")
+					return apierror.NewGoneError("This service level has already been deleted and can no longer be modified.")
 				}
-				return apierror.NewResourceNotFoundError("Service level not found.")
+				return apierror.NewNotFoundError("Service level not found.")
 			}
 
 			existing, apiErr := serviceLevelRepo.Get(txCtx, params.AccountID, params.ServiceLevelID)
@@ -322,7 +322,7 @@ func (s *serviceLevelSvcImpl) UpdateServiceLevel(ctx context.Context, params dom
 					return apiErr
 				}
 				if exists {
-					return apierror.NewConflictErrorWithParam("A service level with this code already exists in this carrier.", "code")
+					return apierror.NewConflictErrorWithParam("code", "A service level with this code already exists in this carrier.")
 				}
 			}
 
@@ -395,21 +395,21 @@ func (s *serviceLevelSvcImpl) DeleteServiceLevel(ctx context.Context, carrierID,
 			return tracing.Trace(span, deletedCheckErr)
 		}
 		if wasDeleted {
-			return tracing.Trace(span, apierror.NewAlreadyDeletedError("This service level has already been deleted and can no longer be modified."))
+			return tracing.Trace(span, apierror.NewGoneError("This service level has already been deleted and can no longer be modified."))
 		}
-		return tracing.Trace(span, apierror.NewResourceNotFoundError("Service level not found."))
+		return tracing.Trace(span, apierror.NewNotFoundError("Service level not found."))
 	}
 
 	// Check if service level is a default — defaults cannot be deleted
 	existing, apiErr := serviceLevelRepo.Get(ctx, accountID, serviceLevelID)
 	if apiErr != nil {
-		if apierror.IsNotFound(apiErr) {
+		if apierror.HasCode(apiErr, apierror.CodeResourceNotFound) {
 			wasDeleted, deletedCheckErr := s.repos.NewDeletedRecordRepo().ExistsInAccount(ctx, constants.DeletedRecordResourceTypeServiceLevel, serviceLevelID, accountID)
 			if deletedCheckErr != nil {
 				return tracing.Trace(span, deletedCheckErr)
 			}
 			if wasDeleted {
-				return tracing.Trace(span, apierror.NewAlreadyDeletedError("This service level has already been deleted and can no longer be modified."))
+				return tracing.Trace(span, apierror.NewGoneError("This service level has already been deleted and can no longer be modified."))
 			}
 		}
 		return tracing.Trace(span, apiErr)

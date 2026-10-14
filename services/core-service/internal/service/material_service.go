@@ -12,10 +12,10 @@ import (
 	"github.com/open-mrp/api/shared/appctx"
 	"github.com/open-mrp/api/shared/audit"
 	"github.com/open-mrp/api/shared/constants"
-	apierror "github.com/open-mrp/api/shared/errors"
 	"github.com/open-mrp/api/shared/id"
-	"github.com/open-mrp/api/shared/idempotency"
-	"github.com/open-mrp/api/shared/tracing"
+	"github.com/open-mrp/api/shared/idemresponse"
+	apierror "github.com/open-mrp/apikit/apierror"
+	"github.com/open-mrp/apikit/tracing"
 )
 
 var materialSvcTracer = tracing.GetTracer("core-service.material_service")
@@ -211,7 +211,7 @@ func (s *materialSvcImpl) CreateMaterial(ctx context.Context, params domain.Crea
 
 	switch domain.RecoveryPoint(idempotencyKey.RecoveryPoint) {
 	case domain.RecoveryPointFinished:
-		cached, err := idempotency.UnmarshalCachedResponse[domain.Material](ctx, idempotencyKey.ResponseCode, idempotencyKey.ResponseBody)
+		cached, err := idemresponse.UnmarshalCachedResponse[domain.Material](ctx, idempotencyKey.ResponseCode, idempotencyKey.ResponseBody)
 		if err != nil {
 			return nil, tracing.Trace(span, apierror.NewInternalError(err, "Issue unmarshalling cached response."))
 		}
@@ -283,7 +283,7 @@ func (s *materialSvcImpl) createMaterialInTx(txCtx context.Context, params domai
 		return nil, apiErr
 	}
 	if exists {
-		return nil, apierror.NewConflictErrorWithParam(fmt.Sprintf("An item with the SKU '%s' already exists.", params.SKU), "sku")
+		return nil, apierror.NewConflictErrorWithParam("sku", fmt.Sprintf("An item with the SKU '%s' already exists.", params.SKU))
 	}
 
 	// Get base unit for rates from category, and enforce that materials only use
@@ -291,13 +291,13 @@ func (s *materialSvcImpl) createMaterialInTx(txCtx context.Context, params domai
 	baseUnitID, categoryTypeCode, apiErr := txItemRepo.GetCategoryBaseUnitID(txCtx, params.CategoryID)
 	if apiErr != nil {
 		// A category that does not exist is a bad caller-supplied reference, so it is reported against the field like the other foreign keys on this request rather than as a bare not-found for the material itself.
-		if apiErr.Code == apierror.ErrorCodeResourceNotFound {
-			return nil, apierror.NewValidationErrorWithParam("The category does not exist.", "category_id")
+		if apiErr.Code == apierror.CodeResourceNotFound {
+			return nil, apierror.NewFieldError("category_id", apierror.CodeInvalidFormat, "The category does not exist.")
 		}
 		return nil, apiErr
 	}
 	if !categoryTypeMatchesItem(string(constants.ItemTypeCodeMaterial), categoryTypeCode) {
-		return nil, apierror.NewValidationErrorWithParam("This category type cannot be assigned to this item type.", "category_id")
+		return nil, apierror.NewFieldError("category_id", apierror.CodeInvalidFormat, "This category type cannot be assigned to this item type.")
 	}
 
 	// Insert rates for item (unit_value, unit_cost, burn_rate). Caller-supplied
@@ -473,7 +473,7 @@ func (s *materialSvcImpl) UpdateMaterial(ctx context.Context, params domain.Upda
 
 	switch domain.RecoveryPoint(idempotencyKey.RecoveryPoint) {
 	case domain.RecoveryPointFinished:
-		cached, err := idempotency.UnmarshalCachedResponse[domain.Material](ctx, idempotencyKey.ResponseCode, idempotencyKey.ResponseBody)
+		cached, err := idemresponse.UnmarshalCachedResponse[domain.Material](ctx, idempotencyKey.ResponseCode, idempotencyKey.ResponseBody)
 		if err != nil {
 			return nil, tracing.Trace(span, apierror.NewInternalError(err, "Issue unmarshalling cached response."))
 		}
@@ -535,7 +535,7 @@ func (s *materialSvcImpl) updateMaterialInTx(txCtx context.Context, params domai
 			return nil, apiErr
 		}
 		if exists {
-			return nil, apierror.NewConflictErrorWithParam(fmt.Sprintf("An item with the SKU '%s' already exists.", *params.SKU), "sku")
+			return nil, apierror.NewConflictErrorWithParam("sku", fmt.Sprintf("An item with the SKU '%s' already exists.", *params.SKU))
 		}
 	}
 
@@ -662,7 +662,7 @@ func (s *materialSvcImpl) DeleteMaterial(ctx context.Context, materialID string)
 	// Fetch existing material before deletion.
 	material, apiErr := s.repos.NewMaterialRepo().GetByID(ctx, domain.GetMaterialParams{AccountID: accountID, MaterialID: materialID})
 	if apiErr != nil {
-		if apierror.IsNotFound(apiErr) {
+		if apierror.HasCode(apiErr, apierror.CodeResourceNotFound) {
 			wasDeleted, deletedCheckErr := s.repos.NewDeletedRecordRepo().ExistsInAccount(ctx, constants.DeletedRecordResourceTypeMaterial, materialID, accountID)
 			if deletedCheckErr != nil {
 				return nil, tracing.Trace(span, deletedCheckErr)
@@ -670,7 +670,7 @@ func (s *materialSvcImpl) DeleteMaterial(ctx context.Context, materialID string)
 			if wasDeleted {
 				return nil, tracing.Trace(
 					span,
-					apierror.NewAlreadyDeletedError("This material has already been deleted and can no longer be modified."),
+					apierror.NewGoneError("This material has already been deleted and can no longer be modified."),
 				)
 			}
 		}

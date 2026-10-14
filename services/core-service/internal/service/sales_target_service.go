@@ -10,10 +10,10 @@ import (
 	"github.com/open-mrp/api/shared/appctx"
 	"github.com/open-mrp/api/shared/audit"
 	"github.com/open-mrp/api/shared/constants"
-	apierror "github.com/open-mrp/api/shared/errors"
 	"github.com/open-mrp/api/shared/id"
-	"github.com/open-mrp/api/shared/idempotency"
-	"github.com/open-mrp/api/shared/tracing"
+	"github.com/open-mrp/api/shared/idemresponse"
+	apierror "github.com/open-mrp/apikit/apierror"
+	"github.com/open-mrp/apikit/tracing"
 )
 
 var salesTargetSvcTracer = tracing.GetTracer("core-service.sales_target_service")
@@ -78,12 +78,12 @@ func (s *salesTargetSvcImpl) withTx(ctx context.Context, fn func(context.Context
 // checkNewSalesTarget validates what only a new target takes: a period that does not end before it starts, and a unit the account may use.
 func (s *salesTargetSvcImpl) checkNewSalesTarget(ctx context.Context, accountID string, start, end time.Time, unitID string) *apierror.APIError {
 	if end.Before(start) {
-		return apierror.NewValidationErrorWithParam("'ends_at' must not be before 'starts_at'.", "ends_at")
+		return apierror.NewFieldError("ends_at", apierror.CodeInvalidFormat, "'ends_at' must not be before 'starts_at'.")
 	}
 	// The platform's units serve every account; an account's own units serve only it.
 	if _, apiErr := s.repos.NewUnitRepo().Get(ctx, domain.GetUnitParams{AccountID: accountID, UnitID: unitID}); apiErr != nil {
-		if apierror.IsNotFound(apiErr) {
-			return apierror.NewResourceNotFoundError("Unit not found.").WithParam("amount_unit_id")
+		if apierror.HasCode(apiErr, apierror.CodeResourceNotFound) {
+			return apierror.NewNotFoundError("Unit not found.").WithParam("amount_unit_id")
 		}
 		return apiErr
 	}
@@ -117,7 +117,7 @@ func (s *salesTargetSvcImpl) ListSalesTargets(ctx context.Context, params domain
 		return nil, tracing.Trace(span, apiErr)
 	}
 	if !salesRepExists {
-		return nil, tracing.Trace(span, apierror.NewResourceNotFoundError("Account user not found."))
+		return nil, tracing.Trace(span, apierror.NewNotFoundError("Account user not found."))
 	}
 
 	return repo.List(ctx, params)
@@ -149,7 +149,7 @@ func (s *salesTargetSvcImpl) CreateSalesTarget(ctx context.Context, params domai
 		return nil, tracing.Trace(span, apiErr)
 	}
 	if !salesRepExists {
-		return nil, tracing.Trace(span, apierror.NewResourceNotFoundError("Account user not found."))
+		return nil, tracing.Trace(span, apierror.NewNotFoundError("Account user not found."))
 	}
 	if apiErr := s.checkNewSalesTarget(ctx, params.AccountID, params.StartDate, params.EndDate, params.AmountUnitID); apiErr != nil {
 		return nil, tracing.Trace(span, apiErr)
@@ -174,7 +174,7 @@ func (s *salesTargetSvcImpl) CreateSalesTarget(ctx context.Context, params domai
 
 	switch domain.RecoveryPoint(idempotencyKey.RecoveryPoint) {
 	case domain.RecoveryPointFinished:
-		cached, err := idempotency.UnmarshalCachedResponse[domain.SalesTarget](ctx, idempotencyKey.ResponseCode, idempotencyKey.ResponseBody)
+		cached, err := idemresponse.UnmarshalCachedResponse[domain.SalesTarget](ctx, idempotencyKey.ResponseCode, idempotencyKey.ResponseBody)
 		if err != nil {
 			return nil, tracing.Trace(span, apierror.NewInternalError(err, "Issue unmarshalling cached response."))
 		}
@@ -252,7 +252,7 @@ func (s *salesTargetSvcImpl) UpsertSalesTarget(ctx context.Context, params domai
 		return nil, tracing.Trace(span, apiErr)
 	}
 	if !salesRepExists {
-		return nil, tracing.Trace(span, apierror.NewResourceNotFoundError("Account user not found."))
+		return nil, tracing.Trace(span, apierror.NewNotFoundError("Account user not found."))
 	}
 
 	exists, apiErr := repo.Exists(ctx, params.TargetID)
@@ -267,7 +267,7 @@ func (s *salesTargetSvcImpl) UpsertSalesTarget(ctx context.Context, params domai
 			return nil, tracing.Trace(span, apiErr)
 		}
 		if !inAccount {
-			return nil, tracing.Trace(span, apierror.NewResourceNotFoundError("Sales target not found."))
+			return nil, tracing.Trace(span, apierror.NewNotFoundError("Sales target not found."))
 		}
 
 		// Get the existing target to find its amount_id for quantity update.
@@ -277,7 +277,7 @@ func (s *salesTargetSvcImpl) UpsertSalesTarget(ctx context.Context, params domai
 		}
 		// A target is reached only through the rep it is filed under.
 		if existing.SalesRepID != params.SalesRepID {
-			return nil, tracing.Trace(span, apierror.NewResourceNotFoundError("Sales target not found."))
+			return nil, tracing.Trace(span, apierror.NewNotFoundError("Sales target not found."))
 		}
 
 		// Dashboard only updates the quantity measure (value) on existing targets. Dates and unit are not changed on update.

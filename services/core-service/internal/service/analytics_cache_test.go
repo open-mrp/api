@@ -15,9 +15,9 @@ import (
 	repositorymock "github.com/open-mrp/api/services/core-service/internal/domain/mock/repository"
 	"github.com/open-mrp/api/shared/appctx"
 	"github.com/open-mrp/api/shared/audit"
-	"github.com/open-mrp/api/shared/cache"
 	"github.com/open-mrp/api/shared/constants"
-	apierror "github.com/open-mrp/api/shared/errors"
+	apierror "github.com/open-mrp/apikit/apierror"
+	"github.com/open-mrp/apikit/cache"
 
 	"github.com/stretchr/testify/require"
 	"go.uber.org/mock/gomock"
@@ -325,7 +325,7 @@ func TestAnalyzeManufacturing_CostMetricsNeedCostsRead(t *testing.T) {
 	for _, metric := range []string{"costsPerUnit", "margin"} {
 		_, apiErr := f.svc.AnalyzeManufacturing(reader, domain.AnalyzeManufacturingParams{Type: metric})
 		require.NotNil(t, apiErr, metric)
-		require.Equal(t, 403, apierror.GetHTTPStatusCode(apiErr.Code), metric)
+		require.Equal(t, 403, apiErr.Code.Status(), metric)
 
 		value, apiErr := f.svc.AnalyzeManufacturing(costReader, domain.AnalyzeManufacturingParams{Type: metric})
 		require.Nil(t, apiErr, metric)

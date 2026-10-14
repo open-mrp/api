@@ -7,11 +7,11 @@ import (
 
 	"github.com/open-mrp/api/services/core-service/internal/domain"
 	"github.com/open-mrp/api/services/core-service/internal/infrastructure/sqlc"
-	"github.com/open-mrp/api/shared/db"
-	apierror "github.com/open-mrp/api/shared/errors"
 	"github.com/open-mrp/api/shared/id"
-	"github.com/open-mrp/api/shared/tracing"
+	apierror "github.com/open-mrp/apikit/apierror"
+	"github.com/open-mrp/apikit/db"
 	"github.com/open-mrp/apikit/pagination"
+	"github.com/open-mrp/apikit/tracing"
 )
 
 var accountGroupProductLineAccessRepoTracer = tracing.GetTracer("core-service.account_group_product_line_access_repository")
@@ -103,7 +103,7 @@ func (r *accountGroupProductLineAccessRepoImpl) List(ctx context.Context, params
 	if params.Cursor != nil {
 		cur, err := pagination.DecodeStringCursor(*params.Cursor)
 		if err != nil {
-			return nil, apierror.NewValidationErrorWithParam("Invalid pagination cursor.", "cursor")
+			return nil, apierror.NewFieldError("cursor", apierror.CodeInvalidFormat, "Invalid pagination cursor.")
 		}
 		cursorDir = &cur.Direction
 
@@ -176,7 +176,7 @@ func (r *accountGroupProductLineAccessRepoImpl) Get(ctx context.Context, account
 	// A group's access record is its product lines; with none, there is no record, as Update and
 	// Delete already hold.
 	if len(plRows) == 0 {
-		return nil, tracing.Trace(span, apierror.NewResourceNotFoundError("No product line access found for this account group."))
+		return nil, tracing.Trace(span, apierror.NewNotFoundError("No product line access found for this account group."))
 	}
 
 	productLines := make([]domain.ProductLineInfo, len(plRows))
@@ -215,7 +215,7 @@ func (r *accountGroupProductLineAccessRepoImpl) Create(ctx context.Context, para
 		return nil, tracing.Trace(span, apiErr)
 	}
 	if count > 0 {
-		return nil, tracing.Trace(span, apierror.NewConflictErrorWithParam("Product line access already exists for this account group. Use update instead.", "account_group_id"))
+		return nil, tracing.Trace(span, apierror.NewConflictErrorWithParam("account_group_id", "Product line access already exists for this account group. Use update instead."))
 	}
 
 	// Verify each product line exists and belongs to this account.
@@ -228,7 +228,7 @@ func (r *accountGroupProductLineAccessRepoImpl) Create(ctx context.Context, para
 			return nil, tracing.Trace(span, apiErr)
 		}
 		if plCount == 0 {
-			return nil, tracing.Trace(span, apierror.NewResourceNotFoundError("Product line not found: "+plID))
+			return nil, tracing.Trace(span, apierror.NewNotFoundError("Product line not found: "+plID))
 		}
 	}
 
@@ -272,7 +272,7 @@ func (r *accountGroupProductLineAccessRepoImpl) Update(ctx context.Context, para
 		return nil, tracing.Trace(span, apiErr)
 	}
 	if count == 0 {
-		return nil, tracing.Trace(span, apierror.NewResourceNotFoundError("No product line access found for this account group."))
+		return nil, tracing.Trace(span, apierror.NewNotFoundError("No product line access found for this account group."))
 	}
 
 	// Verify each product line exists and belongs to this account.
@@ -285,7 +285,7 @@ func (r *accountGroupProductLineAccessRepoImpl) Update(ctx context.Context, para
 			return nil, tracing.Trace(span, apiErr)
 		}
 		if plCount == 0 {
-			return nil, tracing.Trace(span, apierror.NewResourceNotFoundError("Product line not found: "+plID))
+			return nil, tracing.Trace(span, apierror.NewNotFoundError("Product line not found: "+plID))
 		}
 	}
 
@@ -335,7 +335,7 @@ func (r *accountGroupProductLineAccessRepoImpl) Delete(ctx context.Context, acco
 		return tracing.Trace(span, apiErr)
 	}
 	if count == 0 {
-		return tracing.Trace(span, apierror.NewResourceNotFoundError("No product line access found for this account group."))
+		return tracing.Trace(span, apierror.NewNotFoundError("No product line access found for this account group."))
 	}
 
 	// Delete all rows.
@@ -356,7 +356,7 @@ func (r *accountGroupProductLineAccessRepoImpl) ExistsByAccountGroupID(ctx conte
 		OwnerAccountID: accountID,
 	})
 	if apiErr := db.MapSQLError(err); apiErr != nil {
-		if apierror.IsNotFound(apiErr) {
+		if apierror.HasCode(apiErr, apierror.CodeResourceNotFound) {
 			return false, nil
 		}
 		return false, tracing.Trace(span, apiErr)

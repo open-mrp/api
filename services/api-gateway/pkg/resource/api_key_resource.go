@@ -5,7 +5,7 @@ import (
 
 	apiexample "github.com/open-mrp/api/services/api-gateway/pkg/example"
 	"github.com/open-mrp/api/shared/constants"
-	"github.com/open-mrp/api/shared/timeutil"
+	"github.com/open-mrp/apikit/timeutil"
 )
 
 const SampleAPIKeyID = "apke_eiylmwr6q7oz"                   // #nosec G101 - sample data for API docs

@@ -16,9 +16,9 @@ import (
 	"github.com/open-mrp/api/shared/audit"
 	"github.com/open-mrp/api/shared/constants"
 	"github.com/open-mrp/api/shared/contracts"
-	apierror "github.com/open-mrp/api/shared/errors"
 	"github.com/open-mrp/api/shared/messaging"
-	"github.com/open-mrp/api/shared/tracing"
+	apierror "github.com/open-mrp/apikit/apierror"
+	"github.com/open-mrp/apikit/tracing"
 )
 
 var batchSvcTracer = tracing.GetTracer("core-service.batch_service")
@@ -298,7 +298,7 @@ func (s *batchSvcImpl) DeleteManyBatches(ctx context.Context, batchIDs []string)
 	}
 
 	if len(foundBatches) == 0 {
-		return tracing.Trace(span, apierror.NewResourceNotFoundError("Batches not found."))
+		return tracing.Trace(span, apierror.NewNotFoundError("Batches not found."))
 	}
 
 	ordered, apiErr := s.orderForUndo(ctx, foundBatches)
@@ -366,7 +366,7 @@ func (s *batchSvcImpl) orderForUndo(ctx context.Context, batches []*domain.Batch
 
 // missingBatchError answers for a batch that could not be found: one that was deleted says so.
 func (s *batchSvcImpl) missingBatchError(ctx context.Context, accountID, batchID string, findErr *apierror.APIError) *apierror.APIError {
-	if !apierror.IsNotFound(findErr) {
+	if !apierror.HasCode(findErr, apierror.CodeResourceNotFound) {
 		return findErr
 	}
 	wasDeleted, apiErr := s.repos.NewDeletedRecordRepo().ExistsInAccount(ctx, constants.DeletedRecordResourceTypeBatch, batchID, accountID)
@@ -374,7 +374,7 @@ func (s *batchSvcImpl) missingBatchError(ctx context.Context, accountID, batchID
 		return apiErr
 	}
 	if wasDeleted {
-		return apierror.NewAlreadyDeletedError("This batch has already been deleted and can no longer be modified.")
+		return apierror.NewGoneError("This batch has already been deleted and can no longer be modified.")
 	}
 	return findErr
 }
@@ -399,7 +399,7 @@ func (s *batchSvcImpl) holdForUndo(ctx context.Context, accountID string, batch 
 		return s.missingBatchError(ctx, accountID, batch.ID, findErr)
 	}
 	if !sameInstant(now.scannedAt, batch.ScannedAt) {
-		return apierror.NewResourceConflictError("This batch changed while it was being undone. Refresh and try again.")
+		return apierror.NewConflictError("This batch changed while it was being undone. Refresh and try again.")
 	}
 
 	downstream, apiErr := batchRepo.CountDownstreamBatches(ctx, batch.ID)
@@ -572,7 +572,7 @@ func (s *batchSvcImpl) revertSplitRecounts(ctx context.Context, accountID, closi
 	for _, adjustment := range adjustments {
 		before, apiErr := batchRepo.Find(ctx, accountID, adjustment.BatchID)
 		if apiErr != nil {
-			if apierror.IsNotFound(apiErr) {
+			if apierror.HasCode(apiErr, apierror.CodeResourceNotFound) {
 				continue
 			}
 			return apiErr

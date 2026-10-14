@@ -9,10 +9,10 @@ import (
 	"github.com/open-mrp/api/shared/appctx"
 	"github.com/open-mrp/api/shared/audit"
 	"github.com/open-mrp/api/shared/constants"
-	apierror "github.com/open-mrp/api/shared/errors"
 	"github.com/open-mrp/api/shared/id"
-	"github.com/open-mrp/api/shared/idempotency"
-	"github.com/open-mrp/api/shared/tracing"
+	"github.com/open-mrp/api/shared/idemresponse"
+	apierror "github.com/open-mrp/apikit/apierror"
+	"github.com/open-mrp/apikit/tracing"
 )
 
 var supplierSvcTracer = tracing.GetTracer("core-service.supplier_service")
@@ -195,7 +195,7 @@ func (s *supplierSvcImpl) CreateSupplier(ctx context.Context, params domain.Crea
 
 	switch domain.RecoveryPoint(idempotencyKey.RecoveryPoint) {
 	case domain.RecoveryPointFinished:
-		cached, err := idempotency.UnmarshalCachedResponse[domain.Supplier](ctx, idempotencyKey.ResponseCode, idempotencyKey.ResponseBody)
+		cached, err := idemresponse.UnmarshalCachedResponse[domain.Supplier](ctx, idempotencyKey.ResponseCode, idempotencyKey.ResponseBody)
 		if err != nil {
 			return nil, tracing.Trace(span, apierror.NewInternalError(err, "Issue unmarshalling cached response."))
 		}
@@ -216,7 +216,7 @@ func (s *supplierSvcImpl) CreateSupplier(ctx context.Context, params domain.Crea
 				return apiErr
 			}
 			if exists {
-				return apierror.NewConflictErrorWithParam("A supplier with this number already exists.", "number")
+				return apierror.NewConflictErrorWithParam("number", "A supplier with this number already exists.")
 			}
 
 			// Create bill-to address if provided.
@@ -317,7 +317,7 @@ func (s *supplierSvcImpl) UpdateSupplier(ctx context.Context, params domain.Upda
 
 	switch domain.RecoveryPoint(idempotencyKey.RecoveryPoint) {
 	case domain.RecoveryPointFinished:
-		cached, err := idempotency.UnmarshalCachedResponse[domain.Supplier](ctx, idempotencyKey.ResponseCode, idempotencyKey.ResponseBody)
+		cached, err := idemresponse.UnmarshalCachedResponse[domain.Supplier](ctx, idempotencyKey.ResponseCode, idempotencyKey.ResponseBody)
 		if err != nil {
 			return nil, tracing.Trace(span, apierror.NewInternalError(err, "Issue unmarshalling cached response."))
 		}
@@ -362,7 +362,7 @@ func (s *supplierSvcImpl) UpdateSupplier(ctx context.Context, params domain.Upda
 					return apiErr
 				}
 				if exists {
-					return apierror.NewConflictErrorWithParam("A supplier with this number already exists.", "number")
+					return apierror.NewConflictErrorWithParam("number", "A supplier with this number already exists.")
 				}
 			}
 
@@ -421,13 +421,13 @@ func (s *supplierSvcImpl) DeleteSupplier(ctx context.Context, params domain.Dele
 
 	supplier, apiErr := s.repos.NewSupplierRepo().Get(ctx, domain.GetSupplierParams{OwnerAccountID: params.OwnerAccountID, SupplierID: params.SupplierID, Includes: supplierAddressIncludes})
 	if apiErr != nil {
-		if apierror.IsNotFound(apiErr) {
+		if apierror.HasCode(apiErr, apierror.CodeResourceNotFound) {
 			wasDeleted, deletedCheckErr := s.repos.NewDeletedRecordRepo().ExistsInAccount(ctx, constants.DeletedRecordResourceTypeSupplier, params.SupplierID, params.OwnerAccountID)
 			if deletedCheckErr != nil {
 				return nil, tracing.Trace(span, deletedCheckErr)
 			}
 			if wasDeleted {
-				return nil, tracing.Trace(span, apierror.NewAlreadyDeletedError("This supplier has already been deleted and can no longer be modified."))
+				return nil, tracing.Trace(span, apierror.NewGoneError("This supplier has already been deleted and can no longer be modified."))
 			}
 		}
 		return nil, tracing.Trace(span, apiErr)
@@ -546,7 +546,7 @@ func (s *supplierSvcImpl) checkSupplierAddress(ctx context.Context, supplierID s
 		return apiErr
 	}
 	if !inAccount {
-		return apierror.NewResourceNotFoundError("No address of this supplier has the provided ID.").WithParam(param)
+		return apierror.NewNotFoundError("No address of this supplier has the provided ID.").WithParam(param)
 	}
 	return nil
 }

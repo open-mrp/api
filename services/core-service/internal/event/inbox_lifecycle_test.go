@@ -18,10 +18,10 @@ import (
 	factorymock "github.com/open-mrp/api/services/core-service/internal/domain/mock/factory"
 	repositorymock "github.com/open-mrp/api/services/core-service/internal/domain/mock/repository"
 	"github.com/open-mrp/api/shared/contracts"
-	"github.com/open-mrp/api/shared/db"
-	apierror "github.com/open-mrp/api/shared/errors"
 	"github.com/open-mrp/api/shared/messaging"
-	"github.com/open-mrp/api/shared/tracing"
+	apierror "github.com/open-mrp/apikit/apierror"
+	"github.com/open-mrp/apikit/db"
+	"github.com/open-mrp/apikit/tracing"
 )
 
 // These tests are about the delivery lifecycle rather than the inventory arithmetic, which
@@ -273,7 +273,7 @@ func (s *InboxLifecycleTestSuite) SetupTest() {
 
 	itemRepo := repositorymock.NewMockItemRepo(s.ctrl)
 	itemRepo.EXPECT().Get(gomock.Any(), gomock.Any()).
-		Return(nil, apierror.NewResourceNotFoundError("item")).AnyTimes()
+		Return(nil, apierror.NewNotFoundError("item")).AnyTimes()
 
 	inventoryQuery := repositorymock.NewMockInventoryQueryRepo(s.ctrl)
 	inventoryQuery.EXPECT().FetchPhysicalInventory(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).

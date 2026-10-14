@@ -10,7 +10,7 @@ import (
 	mediatormock "github.com/open-mrp/api/services/core-service/internal/domain/mock/mediator"
 	repositorymock "github.com/open-mrp/api/services/core-service/internal/domain/mock/repository"
 	"github.com/open-mrp/api/shared/appctx"
-	apierror "github.com/open-mrp/api/shared/errors"
+	apierror "github.com/open-mrp/apikit/apierror"
 
 	"github.com/stretchr/testify/suite"
 	"go.uber.org/mock/gomock"
@@ -139,7 +139,7 @@ func (suite *ShipmentSvcGetTestSuite) TestGetShipment_CustomerActor_OtherBuyerNo
 	result, apiErr := suite.svc.GetShipment(ctx, domain.GetShipmentParams{ShipmentID: "sh_other"})
 	suite.Nil(result)
 	suite.Require().NotNil(apiErr)
-	suite.Equal(apierror.ErrorCodeResourceNotFound, apiErr.Code)
+	suite.Equal(apierror.CodeResourceNotFound, apiErr.Code)
 }
 
 func (suite *ShipmentSvcGetTestSuite) TestGetShipment_CustomerActor_NoRelation() {
@@ -153,5 +153,5 @@ func (suite *ShipmentSvcGetTestSuite) TestGetShipment_CustomerActor_NoRelation()
 	result, apiErr := suite.svc.GetShipment(ctx, domain.GetShipmentParams{ShipmentID: "sh_1"})
 	suite.Nil(result)
 	suite.Require().NotNil(apiErr)
-	suite.Equal(apierror.ErrorCodeInsufficientPerms, apiErr.Code)
+	suite.Equal(apierror.CodeInsufficientPermissions, apiErr.Code)
 }

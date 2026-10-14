@@ -9,9 +9,9 @@ import (
 
 	"github.com/open-mrp/api/services/core-service/internal/domain"
 	"github.com/open-mrp/api/shared/constants"
-	apierror "github.com/open-mrp/api/shared/errors"
 	"github.com/open-mrp/api/shared/messaging"
-	"github.com/open-mrp/api/shared/tracing"
+	apierror "github.com/open-mrp/apikit/apierror"
+	"github.com/open-mrp/apikit/tracing"
 	"go.opentelemetry.io/otel/trace"
 )
 
@@ -25,18 +25,18 @@ func findExistingCustomer(ctx context.Context, repo domain.CustomerRegistrationR
 		lookup.Type = constants.PortalRegistrationLookupTypeCustomerNumber
 	}
 	if !lookup.Type.IsValid() {
-		return "", apierror.NewValidationErrorWithParam("Lookup type must be one of: "+strings.Join(lookup.Type.EnumValues(), ", ")+".", "lookup_type")
+		return "", apierror.NewFieldError("lookup_type", apierror.CodeInvalidFormat, "Lookup type must be one of: "+strings.Join(lookup.Type.EnumValues(), ", ")+".")
 	}
 	number := strings.TrimSpace(lookup.Number)
 	if number == "" && lookup.Type == constants.PortalRegistrationLookupTypeCustomerNumber && params.CustomerData.Number != nil {
 		number = strings.TrimSpace(*params.CustomerData.Number)
 	}
 	if number == "" {
-		return "", apierror.NewValidationErrorWithParam("Enter your customer, order, or invoice number.", "lookup_number")
+		return "", apierror.NewFieldError("lookup_number", apierror.CodeInvalidFormat, "Enter your customer, order, or invoice number.")
 	}
 	postalCode := normalizePostalCode(lookup.PostalCode)
 	if postalCode == "" {
-		return "", apierror.NewValidationErrorWithParam("Enter the ZIP code on your account.", "lookup_postal_code")
+		return "", apierror.NewFieldError("lookup_postal_code", apierror.CodeInvalidFormat, "Enter the ZIP code on your account.")
 	}
 
 	var customerAccountID string
@@ -49,22 +49,22 @@ func findExistingCustomer(ctx context.Context, repo domain.CustomerRegistrationR
 	default:
 		customerAccountID, apiErr = repo.FindCustomerAccountByExternalNumber(ctx, ownerAccountID, number)
 	}
-	if apierror.IsNotFound(apiErr) {
-		return "", apierror.NewResourceNotFoundError(existingCustomerNotFoundMessage)
+	if apierror.HasCode(apiErr, apierror.CodeResourceNotFound) {
+		return "", apierror.NewNotFoundError(existingCustomerNotFoundMessage)
 	}
 	if apiErr != nil {
 		return "", apiErr
 	}
 
 	codes, apiErr := repo.GetCustomerDefaultPostalCodes(ctx, ownerAccountID, customerAccountID)
-	if apierror.IsNotFound(apiErr) {
-		return "", apierror.NewResourceNotFoundError(existingCustomerNotFoundMessage)
+	if apierror.HasCode(apiErr, apierror.CodeResourceNotFound) {
+		return "", apierror.NewNotFoundError(existingCustomerNotFoundMessage)
 	}
 	if apiErr != nil {
 		return "", apiErr
 	}
 	if !slices.ContainsFunc(codes, func(code string) bool { return normalizePostalCode(code) == postalCode }) {
-		return "", apierror.NewResourceNotFoundError(existingCustomerNotFoundMessage)
+		return "", apierror.NewNotFoundError(existingCustomerNotFoundMessage)
 	}
 	return customerAccountID, nil
 }

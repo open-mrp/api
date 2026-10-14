@@ -18,15 +18,16 @@ import (
 	"github.com/open-mrp/api/services/agent-service/internal/llm"
 	types "github.com/open-mrp/api/services/auth-service/pkg/types"
 	"github.com/open-mrp/api/shared/appctx"
+	"github.com/open-mrp/api/shared/apperr"
 	"github.com/open-mrp/api/shared/constants"
 	"github.com/open-mrp/api/shared/contracts"
-	apierror "github.com/open-mrp/api/shared/errors"
 	"github.com/open-mrp/api/shared/id"
 	"github.com/open-mrp/api/shared/messaging"
-	"github.com/open-mrp/api/shared/retry"
-	"github.com/open-mrp/api/shared/tracing"
+	apierror "github.com/open-mrp/apikit/apierror"
 	"github.com/open-mrp/apikit/ptrutil"
+	"github.com/open-mrp/apikit/retry"
 	"github.com/open-mrp/apikit/safeconv"
+	"github.com/open-mrp/apikit/tracing"
 )
 
 // llmCallTimeout bounds a single LLM turn (streaming or not) as a backstop against a connection that stalls without a clean close — e.g. a streaming response silently severed by an egress NAT/firewall, where the read would otherwise block forever and pin the run in "running". The gateway streaming path has a tighter idle watchdog (streamIdleTimeout); this is the absolute ceiling for the whole attempt. One turn caps at 4096 output tokens, so minutes is generous.
@@ -204,7 +205,7 @@ func (s *runnerSvc) resolveBillingContext(ctx context.Context, accountID, model 
 
 		if bc.currentSpendCents >= *bc.spendingCapCents {
 			capDollars := float64(*bc.spendingCapCents) / 100.0
-			return nil, apierror.NewAgentSpendingCapReachedError(fmt.Sprintf("Monthly agent spending cap of $%.2f has been reached. Raise your spending limit to run agents.", capDollars))
+			return nil, apperr.NewAgentSpendingCapReachedError(fmt.Sprintf("Monthly agent spending cap of $%.2f has been reached. Raise your spending limit to run agents.", capDollars))
 		}
 	}
 
@@ -2909,8 +2910,8 @@ func (s *runnerSvc) failRunWithCode(ctx context.Context, runRepo domain.AgentRun
 		s.writeChatFailureReply(ctx, run, runID, run.AccountID, errMsg, errorCode)
 	}
 
-	if errorCode == string(apierror.ErrorCodeAgentSpendingCapReached) {
-		return apierror.NewAgentSpendingCapReachedError(errMsg)
+	if errorCode == string(apperr.CodeAgentSpendingCapReached) {
+		return apperr.NewAgentSpendingCapReachedError(errMsg)
 	}
 	return apierror.NewInternalError(errors.New(errMsg), "agent run failed: "+errMsg)
 }
@@ -2943,7 +2944,7 @@ func (s *runnerSvc) writeChatFailureReply(ctx context.Context, run *sqlc.AgentRu
 	}
 	// The spending-cap message is a user-safe public message, so surface it verbatim (with a raise-limit prompt keyed off the code); other errors may carry internal detail, so chat sees only a generic notice.
 	msg := "Sorry — I ran into an error and couldn't finish that request. Please try again."
-	if errorCode == string(apierror.ErrorCodeAgentSpendingCapReached) && errMsg != "" {
+	if errorCode == string(apperr.CodeAgentSpendingCapReached) && errMsg != "" {
 		msg = errMsg
 	}
 	s.finalizeChatReply(ctx, run, runID, accountID, msg, replyTo, true, errorCode)

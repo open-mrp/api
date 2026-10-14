@@ -11,9 +11,9 @@ import (
 	"github.com/open-mrp/api/services/auth-service/internal/mediator"
 	"github.com/open-mrp/api/shared/appctx"
 	"github.com/open-mrp/api/shared/constants"
-	apierror "github.com/open-mrp/api/shared/errors"
-	"github.com/open-mrp/api/shared/idempotency"
-	"github.com/open-mrp/api/shared/tracing"
+	"github.com/open-mrp/api/shared/idemresponse"
+	apierror "github.com/open-mrp/apikit/apierror"
+	"github.com/open-mrp/apikit/tracing"
 )
 
 var docAPIKeySvcTracer = tracing.GetTracer("auth-service.doc_api_key_service")
@@ -140,7 +140,7 @@ func (s *docAPIKeySvcImpl) GetOrCreateDocAPIKey(ctx context.Context) (*domain.Ge
 
 	switch idempotencyKey.RecoveryPoint {
 	case domain.RecoveryPointFinished:
-		cached, err := idempotency.UnmarshalCachedResponse[domain.GetOrCreateDocAPIKeyResult](ctx, idempotencyKey.ResponseCode, idempotencyKey.ResponseBody)
+		cached, err := idemresponse.UnmarshalCachedResponse[domain.GetOrCreateDocAPIKeyResult](ctx, idempotencyKey.ResponseCode, idempotencyKey.ResponseBody)
 		if err != nil {
 			return nil, tracing.Trace(span, apierror.NewInternalError(err, "Issue unmarshalling cached response."))
 		}
@@ -160,7 +160,7 @@ func (s *docAPIKeySvcImpl) GetOrCreateDocAPIKey(ctx context.Context) (*domain.Ge
 			})
 		}
 		apiErr = resolveTx()
-		if apiErr != nil && apiErr.Code == apierror.ErrorCodeResourceExists {
+		if apiErr != nil && apiErr.Code == apierror.CodeResourceExists {
 			// A concurrent request created the doc API key first (unique key on owner_account_id). Re-resolve in a fresh transaction to return the winner's key instead of propagating the conflict.
 			apiErr = resolveTx()
 		}

@@ -7,7 +7,7 @@ import (
 
 	"github.com/open-mrp/api/services/core-service/internal/domain"
 	"github.com/open-mrp/api/shared/constants"
-	apierror "github.com/open-mrp/api/shared/errors"
+	apierror "github.com/open-mrp/apikit/apierror"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -68,7 +68,7 @@ func TestEstimateShippingRate_MissingRateIsUnavailableNotFree(t *testing.T) {
 
 	rate, apiErr := estimateShippingRate(context.Background(), h.repoFactory, h.svc.shippoFactory, testEncryptionKey(), estimateParams())
 	require.NotNil(t, apiErr)
-	assert.Equal(t, apierror.ErrorCodeSvcUnavailable, apiErr.Code)
+	assert.Equal(t, apierror.CodeServiceUnavailable, apiErr.Code)
 	assert.True(t, apiErr.IsTransient, "the carrier may answer on a retry")
 	assert.Zero(t, rate)
 }

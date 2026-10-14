@@ -7,8 +7,8 @@ import (
 	"github.com/open-mrp/api/services/core-service/internal/domain"
 	"github.com/open-mrp/api/services/core-service/internal/scheduling"
 	"github.com/open-mrp/api/shared/appctx"
-	apierror "github.com/open-mrp/api/shared/errors"
-	"github.com/open-mrp/api/shared/tracing"
+	apierror "github.com/open-mrp/apikit/apierror"
+	"github.com/open-mrp/apikit/tracing"
 )
 
 // maxLotInheritanceDepth bounds the walk from an intermediate item to something sellable. It matches the solver's own max_flow_depth default: past that the item being made and the line it is inherited from have little to do with each other.

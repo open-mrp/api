@@ -11,12 +11,12 @@ import (
 	"github.com/open-mrp/api/services/core-service/internal/domain"
 	"github.com/open-mrp/api/services/core-service/internal/infrastructure/sqlc"
 	"github.com/open-mrp/api/shared/constants"
-	"github.com/open-mrp/api/shared/db"
-	apierror "github.com/open-mrp/api/shared/errors"
 	"github.com/open-mrp/api/shared/id"
-	"github.com/open-mrp/api/shared/tracing"
+	apierror "github.com/open-mrp/apikit/apierror"
+	"github.com/open-mrp/apikit/db"
 	"github.com/open-mrp/apikit/pagination"
 	"github.com/open-mrp/apikit/safeconv"
+	"github.com/open-mrp/apikit/tracing"
 	"github.com/shopspring/decimal"
 	"go.opentelemetry.io/otel/trace"
 )
@@ -653,7 +653,7 @@ func paginateByCreatedAt[T any](items []T, createdAt func(T) time.Time, idOf fun
 	if cursor != nil && *cursor != "" {
 		cur, err := pagination.DecodeStringCursor(*cursor)
 		if err != nil {
-			return nil, pagination.PageInfo{}, apierror.NewValidationErrorWithParam("Invalid pagination cursor.", "cursor")
+			return nil, pagination.PageInfo{}, apierror.NewFieldError("cursor", apierror.CodeInvalidFormat, "Invalid pagination cursor.")
 		}
 		cursorDir = &cur.Direction
 		found := false

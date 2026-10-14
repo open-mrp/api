@@ -12,10 +12,10 @@ import (
 	"github.com/open-mrp/api/shared/appctx"
 	"github.com/open-mrp/api/shared/audit"
 	"github.com/open-mrp/api/shared/constants"
-	apierror "github.com/open-mrp/api/shared/errors"
-	"github.com/open-mrp/api/shared/idempotency"
+	"github.com/open-mrp/api/shared/idemresponse"
 	"github.com/open-mrp/api/shared/messaging"
-	"github.com/open-mrp/api/shared/tracing"
+	apierror "github.com/open-mrp/apikit/apierror"
+	"github.com/open-mrp/apikit/tracing"
 )
 
 var hubspotSyncSvcTracer = tracing.GetTracer("core-service.hubspot_sync_service")
@@ -97,7 +97,7 @@ func (s *hubspotSyncSvcImpl) StartBackfill(ctx context.Context, params domain.St
 
 	switch domain.RecoveryPoint(idempotencyKey.RecoveryPoint) {
 	case domain.RecoveryPointFinished:
-		cached, err := idempotency.UnmarshalCachedResponse[domain.HubspotSyncJob](ctx, idempotencyKey.ResponseCode, idempotencyKey.ResponseBody)
+		cached, err := idemresponse.UnmarshalCachedResponse[domain.HubspotSyncJob](ctx, idempotencyKey.ResponseCode, idempotencyKey.ResponseBody)
 		if err != nil {
 			return nil, tracing.Trace(span, apierror.NewInternalError(err, "Issue unmarshalling cached response."))
 		}
@@ -164,7 +164,7 @@ func (s *hubspotSyncSvcImpl) GetCurrentJob(ctx context.Context) (*domain.Hubspot
 		return nil, tracing.Trace(span, apiErr)
 	}
 	if job == nil {
-		return nil, tracing.Trace(span, apierror.NewResourceNotFoundError("No HubSpot sync has been started for this account."))
+		return nil, tracing.Trace(span, apierror.NewNotFoundError("No HubSpot sync has been started for this account."))
 	}
 	return job, nil
 }
@@ -226,7 +226,7 @@ func (s *hubspotSyncSvcImpl) ResolveReview(ctx context.Context, params domain.Re
 	switch params.Action {
 	case hubspotsync.ReviewResolutionLink:
 		if params.ResolvedHubspotID == nil || *params.ResolvedHubspotID == "" {
-			return nil, tracing.Trace(span, apierror.NewValidationErrorWithParam("A HubSpot company id is required when linking.", "resolved_hubspot_id"))
+			return nil, tracing.Trace(span, apierror.NewFieldError("resolved_hubspot_id", apierror.CodeInvalidFormat, "A HubSpot company id is required when linking."))
 		}
 		resolveParams.Status = hubspotsync.ReviewStatusResolved
 		resolution := hubspotsync.ReviewResolutionLink
@@ -239,7 +239,7 @@ func (s *hubspotSyncSvcImpl) ResolveReview(ctx context.Context, params domain.Re
 	case hubspotsync.ReviewActionSkip:
 		resolveParams.Status = hubspotsync.ReviewStatusSkipped
 	default:
-		return nil, tracing.Trace(span, apierror.NewValidationErrorWithParam("Action must be one of: link, create_new, skip.", "action"))
+		return nil, tracing.Trace(span, apierror.NewFieldError("action", apierror.CodeInvalidFormat, "Action must be one of: link, create_new, skip."))
 	}
 
 	meds := s.mediators()
@@ -250,7 +250,7 @@ func (s *hubspotSyncSvcImpl) ResolveReview(ctx context.Context, params domain.Re
 
 	switch domain.RecoveryPoint(idempotencyKey.RecoveryPoint) {
 	case domain.RecoveryPointFinished:
-		cached, err := idempotency.UnmarshalCachedResponse[domain.HubspotCompanyReview](ctx, idempotencyKey.ResponseCode, idempotencyKey.ResponseBody)
+		cached, err := idemresponse.UnmarshalCachedResponse[domain.HubspotCompanyReview](ctx, idempotencyKey.ResponseCode, idempotencyKey.ResponseBody)
 		if err != nil {
 			return nil, tracing.Trace(span, apierror.NewInternalError(err, "Issue unmarshalling cached response."))
 		}
@@ -314,7 +314,7 @@ func (s *hubspotSyncSvcImpl) StartExecute(ctx context.Context, jobID string) (*d
 
 	switch domain.RecoveryPoint(idempotencyKey.RecoveryPoint) {
 	case domain.RecoveryPointFinished:
-		cached, err := idempotency.UnmarshalCachedResponse[domain.HubspotSyncJob](ctx, idempotencyKey.ResponseCode, idempotencyKey.ResponseBody)
+		cached, err := idemresponse.UnmarshalCachedResponse[domain.HubspotSyncJob](ctx, idempotencyKey.ResponseCode, idempotencyKey.ResponseBody)
 		if err != nil {
 			return nil, tracing.Trace(span, apierror.NewInternalError(err, "Issue unmarshalling cached response."))
 		}
@@ -391,7 +391,7 @@ func (s *hubspotSyncSvcImpl) CancelJob(ctx context.Context, jobID string) (*doma
 
 	switch domain.RecoveryPoint(idempotencyKey.RecoveryPoint) {
 	case domain.RecoveryPointFinished:
-		cached, err := idempotency.UnmarshalCachedResponse[domain.HubspotSyncJob](ctx, idempotencyKey.ResponseCode, idempotencyKey.ResponseBody)
+		cached, err := idemresponse.UnmarshalCachedResponse[domain.HubspotSyncJob](ctx, idempotencyKey.ResponseCode, idempotencyKey.ResponseBody)
 		if err != nil {
 			return nil, tracing.Trace(span, apierror.NewInternalError(err, "Issue unmarshalling cached response."))
 		}

@@ -6,7 +6,7 @@ import (
 	"github.com/open-mrp/api/services/notification-service/internal/domain"
 	"github.com/open-mrp/api/services/notification-service/internal/infrastructure/repository"
 	"github.com/open-mrp/api/services/notification-service/internal/infrastructure/sqlc"
-	"github.com/open-mrp/api/shared/db"
+	"github.com/open-mrp/apikit/db"
 )
 
 // TransactionManager runs a function against a transaction-bound RepoFactory so multi-repo writes (sequence allocation, message insert, conversation denormalization, notification rows, realtime outbox) commit atomically.

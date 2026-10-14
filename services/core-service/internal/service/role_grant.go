@@ -8,7 +8,7 @@ import (
 	"github.com/open-mrp/api/services/auth-service/pkg/types"
 	"github.com/open-mrp/api/services/core-service/internal/domain"
 	"github.com/open-mrp/api/shared/constants"
-	apierror "github.com/open-mrp/api/shared/errors"
+	apierror "github.com/open-mrp/apikit/apierror"
 )
 
 // A role's holders act with every permission it grants, so a non-admin may only hand out, or widen a role by, permissions they already hold. Admins are unbounded.
@@ -88,7 +88,7 @@ func (s *accountUserSvcImpl) checkCurrentRoleChangeable(ctx context.Context, ide
 	}
 	role, apiErr := s.repos.NewRoleRepo().Get(ctx, roleID, accountID)
 	if apiErr != nil {
-		if apiErr.Code == apierror.ErrorCodeResourceNotFound {
+		if apiErr.Code == apierror.CodeResourceNotFound {
 			return nil
 		}
 		return apiErr

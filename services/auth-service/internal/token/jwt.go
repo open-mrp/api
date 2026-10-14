@@ -5,9 +5,9 @@ import (
 	"errors"
 	"time"
 
-	apierror "github.com/open-mrp/api/shared/errors"
 	"github.com/open-mrp/api/shared/sanitize"
-	"github.com/open-mrp/api/shared/tracing"
+	apierror "github.com/open-mrp/apikit/apierror"
+	"github.com/open-mrp/apikit/tracing"
 
 	"github.com/golang-jwt/jwt/v5"
 )

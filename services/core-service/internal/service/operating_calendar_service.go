@@ -11,9 +11,9 @@ import (
 	"github.com/open-mrp/api/shared/appctx"
 	"github.com/open-mrp/api/shared/audit"
 	"github.com/open-mrp/api/shared/constants"
-	apierror "github.com/open-mrp/api/shared/errors"
 	"github.com/open-mrp/api/shared/id"
-	"github.com/open-mrp/api/shared/tracing"
+	apierror "github.com/open-mrp/apikit/apierror"
+	"github.com/open-mrp/apikit/tracing"
 )
 
 var operatingCalendarSvcTracer = tracing.GetTracer("core-service.operating_calendar_service")
@@ -260,7 +260,7 @@ func (s *operatingCalendarSvcImpl) DeleteOperatingCalendar(ctx context.Context, 
 			return apiErr
 		}
 		if refs.Total() > 0 {
-			return apierror.NewResourceConflictError("This calendar is still in use. Point the addresses, customers, groups, or account settings that reference it somewhere else first.")
+			return apierror.NewConflictError("This calendar is still in use. Point the addresses, customers, groups, or account settings that reference it somewhere else first.")
 		}
 
 		if apiErr := repo.Delete(txCtx, accountID, calendarID); apiErr != nil {
@@ -398,7 +398,7 @@ func validateCalendarKind(kindCode *string) *apierror.APIError {
 		return nil
 	}
 	if !constants.OperatingCalendarKind(*kindCode).IsValid() {
-		return apierror.NewValidationErrorWithParam("Unknown operating calendar kind.", "kind_code")
+		return apierror.NewFieldError("kind_code", apierror.CodeInvalidFormat, "Unknown operating calendar kind.")
 	}
 	return nil
 }
@@ -408,22 +408,22 @@ func validateCalendarKind(kindCode *string) *apierror.APIError {
 // The day mask is parsed rather than pattern-matched so the write path and the engine agree exactly on what a valid mask is — including the all-closed case, which would send every commitment to the snap-back limit.
 func validateCalendarShape(kindCode, daysOfWeek string, cutoffAt, timezone *string) *apierror.APIError {
 	if !constants.OperatingCalendarKind(kindCode).IsValid() {
-		return apierror.NewValidationErrorWithParam("Unknown operating calendar kind.", "kind_code")
+		return apierror.NewFieldError("kind_code", apierror.CodeInvalidFormat, "Unknown operating calendar kind.")
 	}
 	if _, err := scheduling.ParseDayMask(daysOfWeek); err != nil {
-		return apierror.NewValidationErrorWithParam("days_of_week must be seven characters of '0' or '1', Monday first, with at least one open day.", "days_of_week")
+		return apierror.NewFieldError("days_of_week", apierror.CodeInvalidFormat, "days_of_week must be seven characters of '0' or '1', Monday first, with at least one open day.")
 	}
 	if cutoffAt != nil && *cutoffAt != "" {
 		if kindCode != string(constants.OperatingCalendarKindShip) {
-			return apierror.NewValidationErrorWithParam("Only a shipping calendar carries a pickup cutoff.", "cutoff_at")
+			return apierror.NewFieldError("cutoff_at", apierror.CodeInvalidFormat, "Only a shipping calendar carries a pickup cutoff.")
 		}
 		if _, err := time.Parse("15:04", *cutoffAt); err != nil {
-			return apierror.NewValidationErrorWithParam("cutoff_at must be a 24-hour local time, such as \"15:00\".", "cutoff_at")
+			return apierror.NewFieldError("cutoff_at", apierror.CodeInvalidFormat, "cutoff_at must be a 24-hour local time, such as \"15:00\".")
 		}
 	}
 	if timezone != nil && *timezone != "" {
 		if _, err := time.LoadLocation(*timezone); err != nil {
-			return apierror.NewValidationErrorWithParam("timezone must be an IANA zone name, such as \"America/Chicago\".", "timezone")
+			return apierror.NewFieldError("timezone", apierror.CodeInvalidFormat, "timezone must be an IANA zone name, such as \"America/Chicago\".")
 		}
 	}
 	return nil

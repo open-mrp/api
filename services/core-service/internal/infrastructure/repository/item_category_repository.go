@@ -8,10 +8,10 @@ import (
 
 	"github.com/open-mrp/api/services/core-service/internal/domain"
 	"github.com/open-mrp/api/services/core-service/internal/infrastructure/sqlc"
-	"github.com/open-mrp/api/shared/db"
-	apierror "github.com/open-mrp/api/shared/errors"
-	"github.com/open-mrp/api/shared/tracing"
+	apierror "github.com/open-mrp/apikit/apierror"
+	"github.com/open-mrp/apikit/db"
 	"github.com/open-mrp/apikit/pagination"
+	"github.com/open-mrp/apikit/tracing"
 )
 
 var itemCategoryRepoTracer = tracing.GetTracer("core-service.item_category_repository")
@@ -222,7 +222,7 @@ func (r *itemCategoryRepoImpl) List(ctx context.Context, params domain.ListItemC
 	if params.Cursor != nil {
 		cur, err := pagination.DecodeStringCursor(*params.Cursor)
 		if err != nil {
-			return nil, apierror.NewValidationErrorWithParam("Invalid pagination cursor.", "cursor")
+			return nil, apierror.NewFieldError("cursor", apierror.CodeInvalidFormat, "Invalid pagination cursor.")
 		}
 		cursorDir = &cur.Direction
 
@@ -312,7 +312,7 @@ func (r *itemCategoryRepoImpl) Create(ctx context.Context, id string, params dom
 	})
 	if apiErr := db.MapSQLErrorWithDuplicateKeys(err, db.DuplicateKeyMapping{
 		"item_category_account_id_name_key": func() *apierror.APIError {
-			return apierror.NewConflictErrorWithParam("An item category with this name already exists.", "name")
+			return apierror.NewConflictErrorWithParam("name", "An item category with this name already exists.")
 		},
 	}); apiErr != nil {
 		return nil, tracing.Trace(span, apiErr)
@@ -340,7 +340,7 @@ func (r *itemCategoryRepoImpl) Update(ctx context.Context, params domain.UpdateI
 		return nil, tracing.Trace(span, apierror.NewInternalError(err, "Failed to check rows affected."))
 	}
 	if rowsAffected == 0 {
-		return nil, tracing.Trace(span, apierror.NewResourceNotFoundError("Item category not found."))
+		return nil, tracing.Trace(span, apierror.NewNotFoundError("Item category not found."))
 	}
 
 	return r.Get(ctx, domain.GetItemCategoryParams{AccountID: params.AccountID, ItemCategoryID: params.ItemCategoryID})
@@ -366,7 +366,7 @@ func (r *itemCategoryRepoImpl) UpdateWithUnitGroup(ctx context.Context, params d
 		return nil, tracing.Trace(span, apierror.NewInternalError(err, "Failed to check rows affected."))
 	}
 	if rowsAffected == 0 {
-		return nil, tracing.Trace(span, apierror.NewResourceNotFoundError("Item category not found."))
+		return nil, tracing.Trace(span, apierror.NewNotFoundError("Item category not found."))
 	}
 
 	return r.Get(ctx, domain.GetItemCategoryParams{AccountID: params.AccountID, ItemCategoryID: params.ItemCategoryID})
@@ -389,7 +389,7 @@ func (r *itemCategoryRepoImpl) Delete(ctx context.Context, params domain.DeleteI
 		return tracing.Trace(span, apierror.NewInternalError(err, "Failed to check rows affected."))
 	}
 	if rowsAffected == 0 {
-		return tracing.Trace(span, apierror.NewResourceNotFoundError("Item category not found."))
+		return tracing.Trace(span, apierror.NewNotFoundError("Item category not found."))
 	}
 
 	return nil
@@ -472,7 +472,7 @@ func (r *itemCategoryRepoImpl) ChangeUnitGroup(ctx context.Context, params domai
 		return tracing.Trace(span, apierror.NewInternalError(err, "Failed to check rows affected."))
 	}
 	if rowsAffected == 0 {
-		return tracing.Trace(span, apierror.NewResourceNotFoundError("Item category not found."))
+		return tracing.Trace(span, apierror.NewNotFoundError("Item category not found."))
 	}
 
 	return nil

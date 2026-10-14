@@ -12,9 +12,9 @@ import (
 	"github.com/open-mrp/api/services/api-gateway/internal/resourceloaders"
 	apiresource "github.com/open-mrp/api/services/api-gateway/pkg/resource"
 	"github.com/open-mrp/api/shared/constants"
-	apierror "github.com/open-mrp/api/shared/errors"
 	pb "github.com/open-mrp/api/shared/proto/core"
-	"github.com/open-mrp/api/shared/tracing"
+	apierror "github.com/open-mrp/apikit/apierror"
+	"github.com/open-mrp/apikit/tracing"
 	"google.golang.org/grpc"
 	"google.golang.org/protobuf/types/known/emptypb"
 )
@@ -253,7 +253,7 @@ func (m *propertySvcImpl) CreateAttribute(ctx context.Context, req *CreateAttrib
 	var sortOrder int32 = -1
 	if v, ok := req.SortOrder.Value(); ok {
 		if v < 1 {
-			return nil, apierror.NewValidationErrorWithParam("Field 'sort_order' must be at least 1.", "sort_order")
+			return nil, apierror.NewFieldError("sort_order", apierror.CodeInvalidFormat, "Field 'sort_order' must be at least 1.")
 		}
 		sortOrder = v
 	}
@@ -285,7 +285,7 @@ func (m *propertySvcImpl) UpdateAttribute(ctx context.Context, req *UpdateAttrib
 	}
 
 	if v, ok := req.SortOrder.Value(); ok && v < 1 {
-		return nil, apierror.NewValidationErrorWithParam("Field 'sort_order' must be at least 1.", "sort_order")
+		return nil, apierror.NewFieldError("sort_order", apierror.CodeInvalidFormat, "Field 'sort_order' must be at least 1.")
 	}
 
 	pbReq := &pb.UpdateAttributeRequest{
@@ -352,7 +352,7 @@ func loadPropertyByID(ctx context.Context, id string) (*apiresource.Property, *a
 	}
 	v, ok := loaded[id]
 	if !ok {
-		return nil, apierror.NewResourceNotFoundError("Property not found.")
+		return nil, apierror.NewNotFoundError("Property not found.")
 	}
 	return v.(*apiresource.Property), nil
 }
@@ -364,7 +364,7 @@ func loadAttributeByID(ctx context.Context, id string) (*apiresource.Attribute, 
 	}
 	v, ok := loaded[id]
 	if !ok {
-		return nil, apierror.NewResourceNotFoundError("Attribute not found.")
+		return nil, apierror.NewNotFoundError("Attribute not found.")
 	}
 	return v.(*apiresource.Attribute), nil
 }

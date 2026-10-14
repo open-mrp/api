@@ -6,8 +6,8 @@ import (
 	"github.com/open-mrp/api/services/platform-service/internal/domain"
 	"github.com/open-mrp/api/services/platform-service/internal/infrastructure/repository"
 	"github.com/open-mrp/api/services/platform-service/internal/infrastructure/sqlc"
-	"github.com/open-mrp/api/shared/blobstore"
-	"github.com/open-mrp/api/shared/db"
+	"github.com/open-mrp/apikit/blobstore"
+	"github.com/open-mrp/apikit/db"
 )
 
 // TransactionManager runs a function against a transaction-bound RepoFactory, so a state change and the outbox message announcing it commit together.

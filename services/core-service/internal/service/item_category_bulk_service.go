@@ -10,11 +10,11 @@ import (
 	"github.com/open-mrp/api/services/core-service/internal/domain"
 	"github.com/open-mrp/api/shared/audit"
 	"github.com/open-mrp/api/shared/constants"
-	"github.com/open-mrp/api/shared/db"
-	apierror "github.com/open-mrp/api/shared/errors"
 	"github.com/open-mrp/api/shared/excel"
 	"github.com/open-mrp/api/shared/id"
 	"github.com/open-mrp/api/shared/messaging"
+	apierror "github.com/open-mrp/apikit/apierror"
+	"github.com/open-mrp/apikit/db"
 )
 
 // hands the async bulk engine the plumbing it runs on
@@ -35,11 +35,11 @@ func validateBulkUpsertItemCategoryRows(rows []domain.UpsertItemCategoryParams) 
 	for i, ic := range rows {
 		lower := strings.ToLower(ic.Name)
 		if _, dup := nameInputSpace[lower]; dup {
-			rowErrs.AddValidation(i, fmt.Sprintf("item_categories[%d].name", i), fmt.Sprintf("duplicate name %q in request", ic.Name))
+			rowErrs.AddField(i, "name", apierror.CodeInvalidFormat, fmt.Sprintf("duplicate name %q in request", ic.Name))
 		}
 		nameInputSpace[lower] = struct{}{}
 	}
-	return rowErrs.Summary("item categories")
+	return rowErrs.Summary("item_categories")
 }
 
 // resolves each row's unit group reference by id or name. Property names are left as
@@ -147,7 +147,7 @@ func writeBulkUpsertItemCategories(txCtx context.Context, txRepos domain.RepoFac
 			return nil
 		})
 		if rowErr != nil {
-			rowErrors = append(rowErrors, apierror.NewRowError(i, rowErr))
+			rowErrors = append(rowErrors, apierror.RowError{Index: i, Error: rowErr.Object()})
 			continue
 		}
 
@@ -213,8 +213,7 @@ func upsertItemCategoryInTx(txCtx context.Context, txRepos domain.RepoFactory, a
 	}
 
 	if old.AccountID == nil {
-		return "", apierror.NewValidationErrorWithParam(
-			fmt.Sprintf("System item category %q cannot be modified.", row.Name), "name")
+		return "", apierror.NewFieldError("name", apierror.CodeInvalidFormat, fmt.Sprintf("System item category %q cannot be modified.", row.Name))
 	}
 
 	// The incoming group is resolved so it is in the type map; a miss on the stored one is
@@ -226,8 +225,7 @@ func upsertItemCategoryInTx(txCtx context.Context, txRepos domain.RepoFactory, a
 				fmt.Sprintf("Current unit group %q for item category %q not found.", old.UnitGroupID, row.Name))
 		}
 		if newType := unitGroupTypes[row.UnitGroupID]; currentType != newType {
-			return "", apierror.NewValidationErrorWithParam(
-				fmt.Sprintf("The new unit group must have the same unit type as the current unit group (%s).", currentType), "unit_group")
+			return "", apierror.NewFieldError("unit_group", apierror.CodeInvalidFormat, fmt.Sprintf("The new unit group must have the same unit type as the current unit group (%s).", currentType))
 		}
 	}
 

@@ -11,7 +11,7 @@ import (
 	repositorymock "github.com/open-mrp/api/services/core-service/internal/domain/mock/repository"
 	"github.com/open-mrp/api/services/core-service/internal/mediator"
 	"github.com/open-mrp/api/shared/appctx"
-	apierror "github.com/open-mrp/api/shared/errors"
+	apierror "github.com/open-mrp/apikit/apierror"
 	"github.com/open-mrp/apikit/field"
 
 	"github.com/stretchr/testify/suite"
@@ -189,7 +189,7 @@ func (suite *AddressSvcScopeTestSuite) TestCreateAddress_InternalActor_Customers
 	_, apiErr := suite.svc.CreateAddress(ctx, domain.CreateAddressParams{Name: "Ship To", Country: "US"})
 
 	suite.Require().NotNil(apiErr)
-	suite.Equal(apierror.ErrorCodeInsufficientPerms, apiErr.Code)
+	suite.Equal(apierror.CodeInsufficientPermissions, apiErr.Code)
 	suite.Contains(apiErr.PublicMessage, "addresses:create")
 }
 

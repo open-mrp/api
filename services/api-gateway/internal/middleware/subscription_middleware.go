@@ -6,8 +6,8 @@ import (
 
 	httptransport "github.com/open-mrp/api/services/api-gateway/internal/http"
 	"github.com/open-mrp/api/shared/appctx"
+	"github.com/open-mrp/api/shared/apperr"
 	"github.com/open-mrp/api/shared/constants"
-	apierror "github.com/open-mrp/api/shared/errors"
 )
 
 func SubscriptionMiddleware() func(http.HandlerFunc) http.HandlerFunc {
@@ -29,7 +29,7 @@ func SubscriptionMiddleware() func(http.HandlerFunc) http.HandlerFunc {
 			switch status {
 			case constants.SubscriptionStatusPastDue, constants.SubscriptionStatusCanceled, constants.SubscriptionStatusUnpaid:
 				httptransport.RespondWithAPIError(r.Context(), w,
-					apierror.NewPaymentRequiredError("Your subscription is "+string(status)+". Please update your billing information to continue."),
+					apperr.NewPaymentRequiredError("Your subscription is "+string(status)+". Please update your billing information to continue."),
 				)
 				return
 			}

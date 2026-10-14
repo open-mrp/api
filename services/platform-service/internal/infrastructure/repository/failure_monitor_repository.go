@@ -4,9 +4,9 @@ import (
 	"context"
 
 	"github.com/open-mrp/api/services/platform-service/internal/infrastructure/sqlc"
-	"github.com/open-mrp/api/shared/db"
 	"github.com/open-mrp/api/shared/messaging"
-	"github.com/open-mrp/api/shared/tracing"
+	"github.com/open-mrp/apikit/db"
+	"github.com/open-mrp/apikit/tracing"
 )
 
 var failureMonitorRepoTracer = tracing.GetTracer("platform-service.failure_monitor_repository")

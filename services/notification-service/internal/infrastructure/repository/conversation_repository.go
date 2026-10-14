@@ -9,9 +9,9 @@ import (
 	"github.com/open-mrp/api/services/notification-service/internal/domain"
 	"github.com/open-mrp/api/services/notification-service/internal/infrastructure/sqlc"
 	"github.com/open-mrp/api/shared/constants"
-	"github.com/open-mrp/api/shared/db"
-	apierror "github.com/open-mrp/api/shared/errors"
-	"github.com/open-mrp/api/shared/tracing"
+	apierror "github.com/open-mrp/apikit/apierror"
+	"github.com/open-mrp/apikit/db"
+	"github.com/open-mrp/apikit/tracing"
 )
 
 var conversationRepoTracer = tracing.GetTracer("notification-service.conversation_repository")
@@ -54,7 +54,7 @@ func (r *conversationRepoImpl) GetByID(ctx context.Context, id, accountID string
 
 	row, err := r.db.GetConversationByID(ctx, sqlc.GetConversationByIDParams{ID: id, AccountID: accountID})
 	if apiErr := db.MapSQLError(err); apiErr != nil {
-		if apiErr.Code == apierror.ErrorCodeResourceNotFound {
+		if apiErr.Code == apierror.CodeResourceNotFound {
 			return nil, apiErr
 		}
 		return nil, tracing.Trace(span, apiErr)
@@ -118,7 +118,7 @@ func (r *conversationRepoImpl) LockSequence(ctx context.Context, id, accountID s
 
 	seq, err := r.db.LockConversationSequence(ctx, sqlc.LockConversationSequenceParams{ID: id, AccountID: accountID})
 	if apiErr := db.MapSQLError(err); apiErr != nil {
-		if apiErr.Code == apierror.ErrorCodeResourceNotFound {
+		if apiErr.Code == apierror.CodeResourceNotFound {
 			return 0, apiErr
 		}
 		return 0, tracing.Trace(span, apiErr)
@@ -163,7 +163,7 @@ func (r *conversationRepoImpl) GetDMConversationID(ctx context.Context, accountI
 
 	id, err := r.db.GetDMConversationID(ctx, sqlc.GetDMConversationIDParams{AccountID: accountID, DmKey: dmKey})
 	if apiErr := db.MapSQLError(err); apiErr != nil {
-		if apiErr.Code == apierror.ErrorCodeResourceNotFound {
+		if apiErr.Code == apierror.CodeResourceNotFound {
 			return "", apiErr
 		}
 		return "", tracing.Trace(span, apiErr)
@@ -238,7 +238,7 @@ func (r *conversationRepoImpl) GetCustomerSupport(ctx context.Context, vendorAcc
 		RelationAccountID: db.NullString(customerAccountID),
 	})
 	if apiErr := db.MapSQLError(err); apiErr != nil {
-		if apiErr.Code == apierror.ErrorCodeResourceNotFound {
+		if apiErr.Code == apierror.CodeResourceNotFound {
 			return nil, apiErr
 		}
 		return nil, tracing.Trace(span, apiErr)
@@ -417,7 +417,7 @@ func (r *participantRepoImpl) GetByAgentConfigID(ctx context.Context, conversati
 		AgentConfigID:  db.NullString(agentConfigID),
 	})
 	if apiErr := db.MapSQLError(err); apiErr != nil {
-		if apiErr.Code == apierror.ErrorCodeResourceNotFound {
+		if apiErr.Code == apierror.CodeResourceNotFound {
 			return nil, apiErr
 		}
 		return nil, tracing.Trace(span, apiErr)
@@ -477,7 +477,7 @@ func (r *participantRepoImpl) GetByRelationAccount(ctx context.Context, conversa
 		RelationAccountID: db.NullString(customerAccountID),
 	})
 	if apiErr := db.MapSQLError(err); apiErr != nil {
-		if apiErr.Code == apierror.ErrorCodeResourceNotFound {
+		if apiErr.Code == apierror.CodeResourceNotFound {
 			return nil, apiErr
 		}
 		return nil, tracing.Trace(span, apiErr)
@@ -521,7 +521,7 @@ func (r *participantRepoImpl) Get(ctx context.Context, conversationID, accountUs
 		AccountUserID:  db.NullStringPtr(&accountUserID),
 	})
 	if apiErr := db.MapSQLError(err); apiErr != nil {
-		if apiErr.Code == apierror.ErrorCodeResourceNotFound {
+		if apiErr.Code == apierror.CodeResourceNotFound {
 			return nil, apiErr
 		}
 		return nil, tracing.Trace(span, apiErr)
@@ -582,7 +582,7 @@ func (r *participantRepoImpl) GetByID(ctx context.Context, participantID, conver
 
 	row, err := r.db.GetParticipantByID(ctx, sqlc.GetParticipantByIDParams{ID: participantID, ConversationID: conversationID})
 	if apiErr := db.MapSQLError(err); apiErr != nil {
-		if apiErr.Code == apierror.ErrorCodeResourceNotFound {
+		if apiErr.Code == apierror.CodeResourceNotFound {
 			return nil, apiErr
 		}
 		return nil, tracing.Trace(span, apiErr)

@@ -10,10 +10,10 @@ import (
 	"github.com/open-mrp/api/shared/appctx"
 	"github.com/open-mrp/api/shared/audit"
 	"github.com/open-mrp/api/shared/constants"
-	apierror "github.com/open-mrp/api/shared/errors"
 	"github.com/open-mrp/api/shared/id"
-	"github.com/open-mrp/api/shared/idempotency"
-	"github.com/open-mrp/api/shared/tracing"
+	"github.com/open-mrp/api/shared/idemresponse"
+	apierror "github.com/open-mrp/apikit/apierror"
+	"github.com/open-mrp/apikit/tracing"
 )
 
 var departmentSvcTracer = tracing.GetTracer("core-service.department_service")
@@ -163,7 +163,7 @@ func (s *departmentSvcImpl) CreateDepartment(ctx context.Context, params domain.
 
 	switch domain.RecoveryPoint(idempotencyKey.RecoveryPoint) {
 	case domain.RecoveryPointFinished:
-		cached, err := idempotency.UnmarshalCachedResponse[domain.Department](ctx, idempotencyKey.ResponseCode, idempotencyKey.ResponseBody)
+		cached, err := idemresponse.UnmarshalCachedResponse[domain.Department](ctx, idempotencyKey.ResponseCode, idempotencyKey.ResponseBody)
 		if err != nil {
 			return nil, tracing.Trace(span, apierror.NewInternalError(err, "Issue unmarshalling cached response."))
 		}
@@ -179,7 +179,7 @@ func (s *departmentSvcImpl) CreateDepartment(ctx context.Context, params domain.
 				return apiErr
 			}
 			if exists {
-				return apierror.NewConflictErrorWithParam("A department with this name already exists.", "name")
+				return apierror.NewConflictErrorWithParam("name", "A department with this name already exists.")
 			}
 
 			if params.LaborRate != nil {
@@ -275,7 +275,7 @@ func (s *departmentSvcImpl) UpdateDepartment(ctx context.Context, params domain.
 
 	switch domain.RecoveryPoint(idempotencyKey.RecoveryPoint) {
 	case domain.RecoveryPointFinished:
-		cached, err := idempotency.UnmarshalCachedResponse[domain.Department](ctx, idempotencyKey.ResponseCode, idempotencyKey.ResponseBody)
+		cached, err := idemresponse.UnmarshalCachedResponse[domain.Department](ctx, idempotencyKey.ResponseCode, idempotencyKey.ResponseBody)
 		if err != nil {
 			return nil, tracing.Trace(span, apierror.NewInternalError(err, "Issue unmarshalling cached response."))
 		}
@@ -300,7 +300,7 @@ func (s *departmentSvcImpl) UpdateDepartment(ctx context.Context, params domain.
 					return apiErr
 				}
 				if exists {
-					return apierror.NewConflictErrorWithParam("A department with this name already exists.", "name")
+					return apierror.NewConflictErrorWithParam("name", "A department with this name already exists.")
 				}
 			}
 
@@ -429,7 +429,7 @@ func resolveDepartmentIdentifiersInTx(txCtx context.Context, repos domain.RepoFa
 	idByIdentifier := make(map[domain.ObjectIdentifier]string, len(identifiers))
 	var rowErrs apierror.RowErrors
 	for i, identifier := range identifiers {
-		param := fmt.Sprintf("%s[%d].department", rowsField, i)
+		param := "department"
 		var resolvedID string
 		switch {
 		case identifier.ID != "":
@@ -439,16 +439,16 @@ func resolveDepartmentIdentifiersInTx(txCtx context.Context, repos domain.RepoFa
 		case identifier.Name != "":
 			resolvedID = idByName[strings.ToLower(identifier.Name)]
 		default:
-			rowErrs.AddValidation(i, param, "a department id or name is required")
+			rowErrs.AddField(i, param, apierror.CodeInvalidFormat, "a department id or name is required")
 			continue
 		}
 		if resolvedID == "" {
-			rowErrs.AddValidation(i, param, fmt.Sprintf("department %q was not found", objectIdentifierLabel(identifier.ID, identifier.Name)))
+			rowErrs.AddField(i, param, apierror.CodeInvalidFormat, fmt.Sprintf("department %q was not found", objectIdentifierLabel(identifier.ID, identifier.Name)))
 			continue
 		}
 		idByIdentifier[identifier] = resolvedID
 	}
-	if apiErr := rowErrs.Summary("departments"); apiErr != nil {
+	if apiErr := rowErrs.Summary(rowsField); apiErr != nil {
 		return nil, apiErr
 	}
 	return idByIdentifier, nil
@@ -477,7 +477,7 @@ func (s *departmentSvcImpl) DeleteDepartment(ctx context.Context, departmentID s
 		DepartmentID: departmentID,
 	})
 	if apiErr != nil {
-		if apierror.IsNotFound(apiErr) {
+		if apierror.HasCode(apiErr, apierror.CodeResourceNotFound) {
 			wasDeleted, deletedCheckErr := s.repos.NewDeletedRecordRepo().ExistsInAccount(ctx, constants.DeletedRecordResourceTypeDepartment, departmentID, accountID)
 			if deletedCheckErr != nil {
 				return tracing.Trace(span, deletedCheckErr)
@@ -485,7 +485,7 @@ func (s *departmentSvcImpl) DeleteDepartment(ctx context.Context, departmentID s
 			if wasDeleted {
 				return tracing.Trace(
 					span,
-					apierror.NewAlreadyDeletedError("This department has already been deleted and can no longer be modified."),
+					apierror.NewGoneError("This department has already been deleted and can no longer be modified."),
 				)
 			}
 		}

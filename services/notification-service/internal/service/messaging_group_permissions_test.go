@@ -10,7 +10,7 @@ import (
 	repositorymock "github.com/open-mrp/api/services/notification-service/internal/domain/mock/repository"
 	"github.com/open-mrp/api/shared/appctx"
 	"github.com/open-mrp/api/shared/constants"
-	apierror "github.com/open-mrp/api/shared/errors"
+	apierror "github.com/open-mrp/apikit/apierror"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/mock/gomock"
@@ -90,7 +90,7 @@ func TestMessagingGroups_RequireTheirMessagingPermission(t *testing.T) {
 			apiErr := op.call(svc, groupCallerCtx(types.IdentityRelationTypeInternal, others...))
 
 			require.NotNil(t, apiErr)
-			assert.Equal(t, apierror.ErrorCodeInsufficientPerms, apiErr.Code)
+			assert.Equal(t, apierror.CodeInsufficientPermissions, apiErr.Code)
 		})
 
 		t.Run(op.name+" by a customer actor", func(t *testing.T) {
@@ -101,7 +101,7 @@ func TestMessagingGroups_RequireTheirMessagingPermission(t *testing.T) {
 			apiErr := op.call(svc, groupCallerCtx(types.IdentityRelationTypeCustomer, op.perm))
 
 			require.NotNil(t, apiErr)
-			assert.Equal(t, apierror.ErrorCodeInsufficientPerms, apiErr.Code)
+			assert.Equal(t, apierror.CodeInsufficientPermissions, apiErr.Code)
 		})
 	}
 }

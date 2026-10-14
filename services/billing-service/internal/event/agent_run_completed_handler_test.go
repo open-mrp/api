@@ -17,9 +17,9 @@ import (
 	factorymock "github.com/open-mrp/api/services/billing-service/internal/domain/mock/factory"
 	repositorymock "github.com/open-mrp/api/services/billing-service/internal/domain/mock/repository"
 	"github.com/open-mrp/api/shared/contracts"
-	"github.com/open-mrp/api/shared/db"
-	apierror "github.com/open-mrp/api/shared/errors"
 	"github.com/open-mrp/api/shared/messaging"
+	apierror "github.com/open-mrp/apikit/apierror"
+	"github.com/open-mrp/apikit/db"
 )
 
 // The token accumulator is the one write in this service whose duplicate is additive rather than

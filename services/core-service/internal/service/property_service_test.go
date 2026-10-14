@@ -12,8 +12,8 @@ import (
 	repositorymock "github.com/open-mrp/api/services/core-service/internal/domain/mock/repository"
 	"github.com/open-mrp/api/shared/appctx"
 	"github.com/open-mrp/api/shared/constants"
-	apierror "github.com/open-mrp/api/shared/errors"
 	"github.com/open-mrp/api/shared/excel"
+	apierror "github.com/open-mrp/apikit/apierror"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/suite"
@@ -114,7 +114,7 @@ func (suite *PropertySvcTestSuite) TestBulkUpsertProperties_MissingIdentity() {
 
 	suite.Nil(result)
 	suite.NotNil(err)
-	suite.Equal(apierror.ErrorCodeInternalError, err.Code)
+	suite.Equal(apierror.CodeInternalError, err.Code)
 }
 
 func (suite *PropertySvcTestSuite) TestBulkUpsertProperties_InsufficientPermissions() {
@@ -126,7 +126,7 @@ func (suite *PropertySvcTestSuite) TestBulkUpsertProperties_InsufficientPermissi
 
 	suite.Nil(result)
 	suite.NotNil(err)
-	suite.Equal(apierror.ErrorCodeInsufficientPerms, err.Code)
+	suite.Equal(apierror.CodeInsufficientPermissions, err.Code)
 }
 
 func (suite *PropertySvcTestSuite) TestBulkUpsertProperties_MissingTargetAccount() {
@@ -150,7 +150,7 @@ func (suite *PropertySvcTestSuite) TestBulkUpsertProperties_MissingTargetAccount
 
 	suite.Nil(result)
 	suite.NotNil(err)
-	suite.Equal(apierror.ErrorCodeInvalidCredentials, err.Code)
+	suite.Equal(apierror.CodeInvalidCredentials, err.Code)
 }
 
 func (suite *PropertySvcTestSuite) TestBulkUpsertProperties_Empty() {
@@ -162,7 +162,7 @@ func (suite *PropertySvcTestSuite) TestBulkUpsertProperties_Empty() {
 
 	suite.Nil(result)
 	suite.NotNil(err)
-	suite.Equal(apierror.ErrorCodeValidationFailed, err.Code)
+	suite.Equal(apierror.CodeValidationFailed, err.Code)
 	suite.Contains(err.PublicMessage, "No properties provided")
 }
 
@@ -176,7 +176,7 @@ func (suite *PropertySvcTestSuite) TestBulkUpsertProperties_TooMany() {
 
 	suite.Nil(result)
 	suite.NotNil(err)
-	suite.Equal(apierror.ErrorCodeValidationFailed, err.Code)
+	suite.Equal(apierror.CodeValidationFailed, err.Code)
 	suite.Contains(err.PublicMessage, "1000")
 }
 
@@ -192,8 +192,8 @@ func (suite *PropertySvcTestSuite) TestBulkUpsertProperties_DuplicateNameInReque
 
 	suite.Nil(result)
 	suite.NotNil(err)
-	suite.Equal(apierror.ErrorCodeValidationFailed, err.Code)
-	suite.Contains(err.PublicMessage, `duplicate name "color" in request`)
+	suite.Equal(apierror.CodeValidationFailed, err.Code)
+	suite.Contains(err.Errors[0].Message, `duplicate name "color" in request`)
 	suite.Equal("properties[1].name", err.Param)
 }
 
@@ -210,8 +210,8 @@ func (suite *PropertySvcTestSuite) TestBulkUpsertProperties_RejectsValueClaimedB
 
 	suite.Nil(result)
 	suite.NotNil(err)
-	suite.Equal(apierror.ErrorCodeValidationFailed, err.Code)
-	suite.Contains(err.PublicMessage, `already used under property "Color"`)
+	suite.Equal(apierror.CodeValidationFailed, err.Code)
+	suite.Contains(err.Errors[0].Message, `already used under property "Color"`)
 	suite.Equal("properties[1].attributes[0].value", err.Param)
 }
 
@@ -226,8 +226,8 @@ func (suite *PropertySvcTestSuite) TestBulkUpsertProperties_RejectsDuplicateValu
 
 	suite.Nil(result)
 	suite.NotNil(err)
-	suite.Equal(apierror.ErrorCodeValidationFailed, err.Code)
-	suite.Contains(err.PublicMessage, `duplicate value`)
+	suite.Equal(apierror.CodeValidationFailed, err.Code)
+	suite.Contains(err.Errors[0].Message, `duplicate value`)
 }
 
 // --- resolveBulkUpsertPropertyRows (the engine's Resolve hook) ---
@@ -390,7 +390,7 @@ func (suite *PropertySvcTestSuite) TestWriteBulkUpsertProperties_FindByNamesErro
 	)
 
 	suite.NotNil(err)
-	suite.Equal(apierror.ErrorCodeInternalError, err.Code)
+	suite.Equal(apierror.CodeInternalError, err.Code)
 	suite.Empty(created)
 	suite.Empty(updated)
 	suite.Empty(rowErrs)

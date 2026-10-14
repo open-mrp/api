@@ -8,8 +8,8 @@ import (
 
 	"github.com/open-mrp/api/services/api-gateway/internal/header"
 	"github.com/open-mrp/api/shared/appctx"
-	apierror "github.com/open-mrp/api/shared/errors"
 	"github.com/open-mrp/api/shared/version"
+	apierror "github.com/open-mrp/apikit/apierror"
 )
 
 func TestVersionMiddleware_MissingHeader(t *testing.T) {
@@ -31,13 +31,13 @@ func TestVersionMiddleware_MissingHeader(t *testing.T) {
 		t.Errorf("Expected status %d, got %d", http.StatusBadRequest, rr.Code)
 	}
 
-	var response apierror.APIErrorResponse
+	var response apierror.Response
 	if err := json.NewDecoder(rr.Body).Decode(&response); err != nil {
 		t.Fatalf("Failed to decode response: %v", err)
 	}
 
-	if response.Error.Code != apierror.ErrorCodeAPIVersionRequired {
-		t.Errorf("Expected error code %s, got %s", apierror.ErrorCodeAPIVersionRequired, response.Error.Code)
+	if response.Error.Code != apierror.CodeAPIVersionRequired {
+		t.Errorf("Expected error code %s, got %s", apierror.CodeAPIVersionRequired, response.Error.Code)
 	}
 }
 
@@ -61,13 +61,13 @@ func TestVersionMiddleware_InvalidVersion(t *testing.T) {
 		t.Errorf("Expected status %d, got %d", http.StatusBadRequest, rr.Code)
 	}
 
-	var response apierror.APIErrorResponse
+	var response apierror.Response
 	if err := json.NewDecoder(rr.Body).Decode(&response); err != nil {
 		t.Fatalf("Failed to decode response: %v", err)
 	}
 
-	if response.Error.Code != apierror.ErrorCodeAPIVersionInvalid {
-		t.Errorf("Expected error code %s, got %s", apierror.ErrorCodeAPIVersionInvalid, response.Error.Code)
+	if response.Error.Code != apierror.CodeAPIVersionInvalid {
+		t.Errorf("Expected error code %s, got %s", apierror.CodeAPIVersionInvalid, response.Error.Code)
 	}
 }
 
@@ -92,13 +92,13 @@ func TestVersionMiddleware_InvalidFormat(t *testing.T) {
 		t.Errorf("Expected status %d, got %d", http.StatusBadRequest, rr.Code)
 	}
 
-	var response apierror.APIErrorResponse
+	var response apierror.Response
 	if err := json.NewDecoder(rr.Body).Decode(&response); err != nil {
 		t.Fatalf("Failed to decode response: %v", err)
 	}
 
-	if response.Error.Code != apierror.ErrorCodeAPIVersionInvalid {
-		t.Errorf("Expected error code %s, got %s", apierror.ErrorCodeAPIVersionInvalid, response.Error.Code)
+	if response.Error.Code != apierror.CodeAPIVersionInvalid {
+		t.Errorf("Expected error code %s, got %s", apierror.CodeAPIVersionInvalid, response.Error.Code)
 	}
 }
 

@@ -8,9 +8,9 @@ import (
 	grpcutil "github.com/open-mrp/api/services/api-gateway/internal/grpc"
 	"github.com/open-mrp/api/services/api-gateway/internal/resourceloaders"
 	apiresource "github.com/open-mrp/api/services/api-gateway/pkg/resource"
-	apierror "github.com/open-mrp/api/shared/errors"
 	pb "github.com/open-mrp/api/shared/proto/core"
-	"github.com/open-mrp/api/shared/tracing"
+	apierror "github.com/open-mrp/apikit/apierror"
+	"github.com/open-mrp/apikit/tracing"
 	"google.golang.org/grpc"
 )
 
@@ -159,7 +159,7 @@ func loadOrderDiscountByID(ctx context.Context, id string) (*apiresource.OrderDi
 	}
 	v, ok := loaded[id]
 	if !ok {
-		return nil, apierror.NewResourceNotFoundError("Order discount not found.")
+		return nil, apierror.NewNotFoundError("Order discount not found.")
 	}
 	return v.(*apiresource.OrderDiscount), nil
 }

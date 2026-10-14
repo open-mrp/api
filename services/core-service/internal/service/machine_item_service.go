@@ -7,9 +7,9 @@ import (
 	"github.com/open-mrp/api/services/auth-service/pkg/types"
 	"github.com/open-mrp/api/services/core-service/internal/domain"
 	"github.com/open-mrp/api/shared/appctx"
-	apierror "github.com/open-mrp/api/shared/errors"
-	"github.com/open-mrp/api/shared/idempotency"
-	"github.com/open-mrp/api/shared/tracing"
+	"github.com/open-mrp/api/shared/idemresponse"
+	apierror "github.com/open-mrp/apikit/apierror"
+	"github.com/open-mrp/apikit/tracing"
 )
 
 const defaultSuggestWindowMonths int32 = 24
@@ -70,7 +70,7 @@ func (s *machineSvcImpl) ReplaceMachineItems(ctx context.Context, params domain.
 
 	switch domain.RecoveryPoint(idempotencyKey.RecoveryPoint) {
 	case domain.RecoveryPointFinished:
-		cached, err := idempotency.UnmarshalCachedResponse[domain.ListMachineItemsResult](ctx, idempotencyKey.ResponseCode, idempotencyKey.ResponseBody)
+		cached, err := idemresponse.UnmarshalCachedResponse[domain.ListMachineItemsResult](ctx, idempotencyKey.ResponseCode, idempotencyKey.ResponseBody)
 		if err != nil {
 			return nil, tracing.Trace(span, apierror.NewInternalError(err, "Issue unmarshalling cached response."))
 		}
@@ -93,7 +93,7 @@ func (s *machineSvcImpl) ReplaceMachineItems(ctx context.Context, params domain.
 					return apiErr
 				}
 				if len(items) != len(uniqueIDs) {
-					return apierror.NewValidationErrorWithParam("One or more items were not found.", "item_ids")
+					return apierror.NewFieldError("item_ids", apierror.CodeInvalidFormat, "One or more items were not found.")
 				}
 			}
 

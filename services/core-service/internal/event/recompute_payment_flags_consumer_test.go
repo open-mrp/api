@@ -14,7 +14,7 @@ import (
 	repositorymock "github.com/open-mrp/api/services/core-service/internal/domain/mock/repository"
 	"github.com/open-mrp/api/shared/contracts"
 	"github.com/open-mrp/api/shared/messaging"
-	"github.com/open-mrp/api/shared/tracing"
+	"github.com/open-mrp/apikit/tracing"
 )
 
 func paymentFlagsDelivery(t *testing.T, envelope contracts.AmqpMessage, evt domain.RecomputePaymentFlagsEvent) amqp.Delivery {

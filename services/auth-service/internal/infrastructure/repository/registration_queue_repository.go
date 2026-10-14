@@ -5,9 +5,9 @@ import (
 
 	"github.com/open-mrp/api/services/auth-service/internal/domain"
 	"github.com/open-mrp/api/services/auth-service/internal/infrastructure/sqlc"
-	"github.com/open-mrp/api/shared/db"
-	apierror "github.com/open-mrp/api/shared/errors"
-	"github.com/open-mrp/api/shared/tracing"
+	apierror "github.com/open-mrp/apikit/apierror"
+	"github.com/open-mrp/apikit/db"
+	"github.com/open-mrp/apikit/tracing"
 )
 
 var registrationQueueRepoTracer = tracing.GetTracer("auth-service.registration_queue_repository")

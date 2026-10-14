@@ -11,10 +11,10 @@ import (
 
 	"github.com/open-mrp/api/shared/appctx"
 	"github.com/open-mrp/api/shared/constants"
-	"github.com/open-mrp/api/shared/db"
-	"github.com/open-mrp/api/shared/retry"
+	"github.com/open-mrp/apikit/db"
 	"github.com/open-mrp/apikit/lease"
 	"github.com/open-mrp/apikit/querytag"
+	"github.com/open-mrp/apikit/retry"
 )
 
 // EnqueuerConfig holds the configuration for the outbox enqueuer.

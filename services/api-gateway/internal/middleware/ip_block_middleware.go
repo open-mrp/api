@@ -6,7 +6,7 @@ import (
 
 	"github.com/open-mrp/api/services/api-gateway/internal/header"
 	httptransport "github.com/open-mrp/api/services/api-gateway/internal/http"
-	apierror "github.com/open-mrp/api/shared/errors"
+	apierror "github.com/open-mrp/apikit/apierror"
 )
 
 // blockedIPs is the hardcoded set of IP addresses that are denied access to every router. Entries should be exact-match IP literals (IPv4 or IPv6).

@@ -14,8 +14,8 @@ import (
 	mediatormock "github.com/open-mrp/api/services/core-service/internal/domain/mock/mediator"
 	publishermock "github.com/open-mrp/api/services/core-service/internal/domain/mock/publisher"
 	repositorymock "github.com/open-mrp/api/services/core-service/internal/domain/mock/repository"
-	apierror "github.com/open-mrp/api/shared/errors"
 	"github.com/open-mrp/api/shared/messaging"
+	apierror "github.com/open-mrp/apikit/apierror"
 )
 
 // A manual send is attributed to whoever sent it, as a statement is; only the platform's own sends go unattributed.

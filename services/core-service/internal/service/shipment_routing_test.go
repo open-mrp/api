@@ -12,7 +12,7 @@ import (
 	repositorymock "github.com/open-mrp/api/services/core-service/internal/domain/mock/repository"
 	"github.com/open-mrp/api/shared/appctx"
 	"github.com/open-mrp/api/shared/constants"
-	apierror "github.com/open-mrp/api/shared/errors"
+	apierror "github.com/open-mrp/apikit/apierror"
 	"github.com/open-mrp/apikit/field"
 
 	"github.com/stretchr/testify/suite"
@@ -105,7 +105,7 @@ func (suite *ShipmentRoutingTestSuite) TestUpdate_RefusesACarrierOutsideTheAccou
 	suite.expectShipment(&domain.Shipment{ID: "sh_1", CarrierID: "cr_own"})
 	suite.carrierRepo.EXPECT().
 		Get(gomock.Any(), domain.GetCarrierParams{AccountID: "ac_seller", CarrierID: "cr_foreign"}).
-		Return(nil, apierror.NewResourceNotFoundError("Resource not found."))
+		Return(nil, apierror.NewNotFoundError("Resource not found."))
 
 	_, apiErr := suite.svc.UpdateShipment(shipmentWriterCtx("ac_seller", constants.RoleTypeAdmin), domain.UpdateShipmentParams{
 		ShipmentID: "sh_1",
@@ -113,7 +113,7 @@ func (suite *ShipmentRoutingTestSuite) TestUpdate_RefusesACarrierOutsideTheAccou
 	})
 
 	suite.Require().NotNil(apiErr)
-	suite.True(apierror.IsNotFound(apiErr))
+	suite.True(apierror.HasCode(apiErr, apierror.CodeResourceNotFound))
 	suite.Equal("carrier_id", apiErr.Param)
 }
 
@@ -121,7 +121,7 @@ func (suite *ShipmentRoutingTestSuite) TestUpdate_RefusesAServiceLevelOutsideThe
 	suite.expectShipment(&domain.Shipment{ID: "sh_1", CarrierID: "cr_own"})
 	suite.serviceLevelRepo.EXPECT().
 		Get(gomock.Any(), "ac_seller", "crop_foreign").
-		Return(nil, apierror.NewResourceNotFoundError("Resource not found."))
+		Return(nil, apierror.NewNotFoundError("Resource not found."))
 
 	_, apiErr := suite.svc.UpdateShipment(shipmentWriterCtx("ac_seller", constants.RoleTypeAdmin), domain.UpdateShipmentParams{
 		ShipmentID:     "sh_1",
@@ -129,7 +129,7 @@ func (suite *ShipmentRoutingTestSuite) TestUpdate_RefusesAServiceLevelOutsideThe
 	})
 
 	suite.Require().NotNil(apiErr)
-	suite.True(apierror.IsNotFound(apiErr))
+	suite.True(apierror.HasCode(apiErr, apierror.CodeResourceNotFound))
 	suite.Equal("service_level_id", apiErr.Param)
 }
 
@@ -152,7 +152,7 @@ func (suite *ShipmentRoutingTestSuite) TestAdminTracking_RefusesACarrierOutsideT
 	suite.expectShipment(&domain.Shipment{ID: "sh_1", CarrierID: "cr_own", ShippedAt: new(time.Now())})
 	suite.carrierRepo.EXPECT().
 		Get(gomock.Any(), domain.GetCarrierParams{AccountID: "ac_seller", CarrierID: "cr_foreign"}).
-		Return(nil, apierror.NewResourceNotFoundError("Resource not found."))
+		Return(nil, apierror.NewNotFoundError("Resource not found."))
 
 	_, apiErr := suite.svc.AdminUpdateShipmentTracking(shipmentWriterCtx("ac_seller", constants.RoleTypeAdmin), domain.AdminUpdateShipmentTrackingParams{
 		ShipmentID: "sh_1",
@@ -160,7 +160,7 @@ func (suite *ShipmentRoutingTestSuite) TestAdminTracking_RefusesACarrierOutsideT
 	})
 
 	suite.Require().NotNil(apiErr)
-	suite.True(apierror.IsNotFound(apiErr))
+	suite.True(apierror.HasCode(apiErr, apierror.CodeResourceNotFound))
 	suite.Equal("carrier_id", apiErr.Param)
 }
 
@@ -175,7 +175,7 @@ func (suite *ShipmentRoutingTestSuite) TestUpdate_RefusesAServiceLevelOffTheHeld
 	})
 
 	suite.Require().NotNil(apiErr)
-	suite.Equal(apierror.ErrorCodeValidationFailed, apiErr.Code)
+	suite.Equal(apierror.CodeValidationFailed, apiErr.Code)
 	suite.Equal("service_level_id", apiErr.Param)
 }
 
@@ -192,7 +192,7 @@ func (suite *ShipmentRoutingTestSuite) TestUpdate_RefusesACarrierTheHeldServiceL
 	})
 
 	suite.Require().NotNil(apiErr)
-	suite.Equal(apierror.ErrorCodeValidationFailed, apiErr.Code)
+	suite.Equal(apierror.CodeValidationFailed, apiErr.Code)
 	suite.Equal("service_level_id", apiErr.Param)
 }
 
@@ -209,6 +209,6 @@ func (suite *ShipmentRoutingTestSuite) TestAdminTracking_RefusesACarrierTheHeldS
 	})
 
 	suite.Require().NotNil(apiErr)
-	suite.Equal(apierror.ErrorCodeValidationFailed, apiErr.Code)
+	suite.Equal(apierror.CodeValidationFailed, apiErr.Code)
 	suite.Equal("service_level_id", apiErr.Param)
 }

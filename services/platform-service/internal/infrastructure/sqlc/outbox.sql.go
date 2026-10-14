@@ -12,7 +12,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/open-mrp/api/shared/db"
+	"github.com/open-mrp/apikit/db"
 )
 
 const cleanupExpiredOutboxLocksByIDs = `-- name: CleanupExpiredOutboxLocksByIDs :execresult

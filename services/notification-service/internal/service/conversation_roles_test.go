@@ -9,7 +9,7 @@ import (
 	factorymock "github.com/open-mrp/api/services/notification-service/internal/domain/mock/factory"
 	repositorymock "github.com/open-mrp/api/services/notification-service/internal/domain/mock/repository"
 	"github.com/open-mrp/api/shared/constants"
-	apierror "github.com/open-mrp/api/shared/errors"
+	apierror "github.com/open-mrp/apikit/apierror"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/mock/gomock"
@@ -23,14 +23,14 @@ func TestRequestedParticipantRoles_ValidatesEachEntryAsSetRoleDoes(t *testing.T)
 		name     string
 		entries  []domain.ParticipantRoleInput
 		unknown  string
-		wantCode apierror.ErrorCode
+		wantCode apierror.Code
 		param    string
 	}{
-		{"no account user", []domain.ParticipantRoleInput{{Role: "admin"}}, "", apierror.ErrorCodeParameterMissing, "participants[0].account_user_id"},
-		{"the creator", []domain.ParticipantRoleInput{{AccountUserID: owner, Role: "admin"}}, "", apierror.ErrorCodeParameterInvalid, "participants[0].account_user_id"},
-		{"a user listed twice", []domain.ParticipantRoleInput{{AccountUserID: "acus_a", Role: "admin"}, {AccountUserID: "acus_a", Role: "viewer"}}, "", apierror.ErrorCodeParameterInvalid, "participants[1].account_user_id"},
-		{"an unknown role", []domain.ParticipantRoleInput{{AccountUserID: "acus_a", Role: "boss"}}, "", apierror.ErrorCodeParameterInvalid, "participants[0].role"},
-		{"a user that is not one of the account's", []domain.ParticipantRoleInput{{AccountUserID: "acus_elsewhere", Role: "admin"}}, "acus_elsewhere", apierror.ErrorCodeParameterInvalid, "participants[0].account_user_id"},
+		{"no account user", []domain.ParticipantRoleInput{{Role: "admin"}}, "", apierror.CodeParameterMissing, "participants[0].account_user_id"},
+		{"the creator", []domain.ParticipantRoleInput{{AccountUserID: owner, Role: "admin"}}, "", apierror.CodeParameterInvalid, "participants[0].account_user_id"},
+		{"a user listed twice", []domain.ParticipantRoleInput{{AccountUserID: "acus_a", Role: "admin"}, {AccountUserID: "acus_a", Role: "viewer"}}, "", apierror.CodeParameterInvalid, "participants[1].account_user_id"},
+		{"an unknown role", []domain.ParticipantRoleInput{{AccountUserID: "acus_a", Role: "boss"}}, "", apierror.CodeParameterInvalid, "participants[0].role"},
+		{"a user that is not one of the account's", []domain.ParticipantRoleInput{{AccountUserID: "acus_elsewhere", Role: "admin"}}, "acus_elsewhere", apierror.CodeParameterInvalid, "participants[0].account_user_id"},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -39,7 +39,7 @@ func TestRequestedParticipantRoles_ValidatesEachEntryAsSetRoleDoes(t *testing.T)
 			notifRepo := repositorymock.NewMockNotificationRepo(ctrl)
 			notifRepo.EXPECT().ResolveUserIDInAccount(gomock.Any(), gomock.Any(), "ac_team").DoAndReturn(func(_ context.Context, acus, _ string) (string, *apierror.APIError) {
 				if acus == tt.unknown {
-					return "", apierror.NewResourceNotFoundError("not found")
+					return "", apierror.NewNotFoundError("not found")
 				}
 				return "us_" + acus, nil
 			}).AnyTimes()
@@ -135,6 +135,6 @@ func TestCreateConversation_DirectMessageTakesNoRoles(t *testing.T) {
 	})
 
 	require.NotNil(t, apiErr)
-	assert.Equal(t, apierror.ErrorCodeParameterInvalid, apiErr.Code)
+	assert.Equal(t, apierror.CodeParameterInvalid, apiErr.Code)
 	assert.Equal(t, "participants", apiErr.Param)
 }

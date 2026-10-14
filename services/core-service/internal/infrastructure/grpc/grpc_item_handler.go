@@ -7,8 +7,8 @@ import (
 
 	"github.com/open-mrp/api/services/core-service/internal/domain"
 	"github.com/open-mrp/api/shared/contracts"
-	apierror "github.com/open-mrp/api/shared/errors"
 	pb "github.com/open-mrp/api/shared/proto/core"
+	apierror "github.com/open-mrp/apikit/apierror"
 	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
@@ -558,7 +558,7 @@ func (h *gRPCHandler) UpdateItemInventory(ctx context.Context, req *pb.UpdateIte
 	measure, parseErr := decimal.NewFromString(req.Measure)
 	if parseErr != nil {
 		return nil, contracts.ConvertAPIErrorToGRPC(
-			apierror.NewInvalidFormatError("Quantity must be a decimal number.", "quantity"),
+			apierror.NewInvalidFormatError("quantity", "Quantity must be a decimal number."),
 		)
 	}
 
@@ -593,7 +593,7 @@ func (h *gRPCHandler) BulkReconcileItems(ctx context.Context, req *pb.BulkReconc
 		measure, parseErr := decimal.NewFromString(d.Measure)
 		if parseErr != nil {
 			return nil, contracts.ConvertAPIErrorToGRPC(
-				apierror.NewInvalidFormatError("Quantity for SKU "+d.Sku+" must be a decimal number.", "quantity"),
+				apierror.NewInvalidFormatError("quantity", "Quantity for SKU "+d.Sku+" must be a decimal number."),
 			)
 		}
 		data[i] = domain.BulkReconcileItemInput{

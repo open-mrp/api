@@ -13,7 +13,7 @@ import (
 	"github.com/open-mrp/api/shared/appctx"
 	"github.com/open-mrp/api/shared/audit"
 	"github.com/open-mrp/api/shared/constants"
-	apierror "github.com/open-mrp/api/shared/errors"
+	apierror "github.com/open-mrp/apikit/apierror"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/mock/gomock"
@@ -102,7 +102,7 @@ func territoryZip(v int32) *int32 { return &v }
 func assertTerritoryParam(t *testing.T, apiErr *apierror.APIError, param string) {
 	t.Helper()
 	require.NotNil(t, apiErr)
-	assert.Equal(t, apierror.ErrorCodeValidationFailed, apiErr.Code)
+	assert.Equal(t, apierror.CodeValidationFailed, apiErr.Code)
 	assert.Equal(t, param, apiErr.Param)
 }
 
@@ -125,16 +125,16 @@ func TestTerritorySvc_APathNamingAnotherAccountIsNotFound(t *testing.T) {
 	ctx := territoryInternalCtx("ac_mine")
 
 	_, apiErr := s.svc.ListTerritories(ctx, domain.ListTerritoriesParams{AccountID: "ac_other"})
-	assert.True(t, apierror.IsNotFound(apiErr), "list: %v", apiErr)
+	assert.True(t, apierror.HasCode(apiErr, apierror.CodeResourceNotFound), "list: %v", apiErr)
 	_, apiErr = s.svc.GetTerritory(ctx, domain.GetTerritoryParams{AccountID: "ac_other", TerritoryID: "tr_1"})
-	assert.True(t, apierror.IsNotFound(apiErr), "get: %v", apiErr)
+	assert.True(t, apierror.HasCode(apiErr, apierror.CodeResourceNotFound), "get: %v", apiErr)
 	_, apiErr = s.svc.CreateTerritory(ctx, domain.CreateTerritoryParams{AccountID: "ac_other", State: "NY", SalesRepID: "acu_1"})
-	assert.True(t, apierror.IsNotFound(apiErr), "create: %v", apiErr)
+	assert.True(t, apierror.HasCode(apiErr, apierror.CodeResourceNotFound), "create: %v", apiErr)
 	state := "NY"
 	_, apiErr = s.svc.UpdateTerritory(ctx, domain.UpdateTerritoryParams{AccountID: "ac_other", TerritoryID: "tr_1", State: &state})
-	assert.True(t, apierror.IsNotFound(apiErr), "update: %v", apiErr)
+	assert.True(t, apierror.HasCode(apiErr, apierror.CodeResourceNotFound), "update: %v", apiErr)
 	apiErr = s.svc.DeleteTerritory(ctx, domain.DeleteTerritoryParams{AccountID: "ac_other", TerritoryID: "tr_1"})
-	assert.True(t, apierror.IsNotFound(apiErr), "delete: %v", apiErr)
+	assert.True(t, apierror.HasCode(apiErr, apierror.CodeResourceNotFound), "delete: %v", apiErr)
 }
 
 func TestTerritorySvc_CreateRejectsARangeThatEndsBeforeItStarts(t *testing.T) {
@@ -149,7 +149,7 @@ func TestTerritorySvc_CreateRejectsARangeThatEndsBeforeItStarts(t *testing.T) {
 
 func TestTerritorySvc_CreateRejectsReferencesTheAccountDoesNotHave(t *testing.T) {
 	t.Parallel()
-	notFound := apierror.NewResourceNotFoundError("Resource not found.")
+	notFound := apierror.NewNotFoundError("Resource not found.")
 	plID := "pdln_1"
 
 	t.Run("a sales rep not in the account", func(t *testing.T) {
@@ -254,7 +254,7 @@ func TestTerritorySvc_UpdateRejectsClearingAndSettingTheSameField(t *testing.T) 
 func TestTerritorySvc_UpdateChecksOnlyTheReferencesItChanges(t *testing.T) {
 	t.Parallel()
 	plID, otherPL := "pdln_1", "pdln_2"
-	notFound := apierror.NewResourceNotFoundError("Resource not found.")
+	notFound := apierror.NewNotFoundError("Resource not found.")
 
 	t.Run("an unchanged rep and product line are not looked up", func(t *testing.T) {
 		t.Parallel()
@@ -372,7 +372,7 @@ func TestTerritorySvc_DeleteSnapshotsTheOwningAccount(t *testing.T) {
 
 func TestTerritorySvc_DeleteOfAnAlreadyDeletedTerritoryIsGoneOnlyToItsOwner(t *testing.T) {
 	t.Parallel()
-	notFound := apierror.NewResourceNotFoundError("Resource not found.")
+	notFound := apierror.NewNotFoundError("Resource not found.")
 
 	for _, tc := range []struct {
 		name         string
@@ -391,8 +391,8 @@ func TestTerritorySvc_DeleteOfAnAlreadyDeletedTerritoryIsGoneOnlyToItsOwner(t *t
 
 			apiErr := s.svc.DeleteTerritory(territoryInternalCtx("ac_1"), domain.DeleteTerritoryParams{AccountID: "ac_1", TerritoryID: "tr_1"})
 			require.NotNil(t, apiErr)
-			assert.Equal(t, tc.wantGone, apiErr.Code == apierror.ErrorCodeResourceGone, "code %s", apiErr.Code)
-			assert.Equal(t, tc.wantNotFound, apierror.IsNotFound(apiErr), "code %s", apiErr.Code)
+			assert.Equal(t, tc.wantGone, apiErr.Code == apierror.CodeResourceGone, "code %s", apiErr.Code)
+			assert.Equal(t, tc.wantNotFound, apierror.HasCode(apiErr, apierror.CodeResourceNotFound), "code %s", apiErr.Code)
 		})
 	}
 }

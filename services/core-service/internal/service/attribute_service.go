@@ -10,11 +10,11 @@ import (
 	"github.com/open-mrp/api/shared/appctx"
 	"github.com/open-mrp/api/shared/audit"
 	"github.com/open-mrp/api/shared/constants"
-	apierror "github.com/open-mrp/api/shared/errors"
 	"github.com/open-mrp/api/shared/id"
-	"github.com/open-mrp/api/shared/idempotency"
-	"github.com/open-mrp/api/shared/tracing"
+	"github.com/open-mrp/api/shared/idemresponse"
+	apierror "github.com/open-mrp/apikit/apierror"
 	"github.com/open-mrp/apikit/safeconv"
+	"github.com/open-mrp/apikit/tracing"
 )
 
 type AttributeSvcConfig struct {
@@ -84,7 +84,7 @@ func (s *attributeSvcImpl) checkPropertyInAccount(ctx context.Context, accountID
 		return apiErr
 	}
 	if !inAccount {
-		return apierror.NewResourceNotFoundError("Property not found.")
+		return apierror.NewNotFoundError("Property not found.")
 	}
 	return nil
 }
@@ -187,7 +187,7 @@ func (s *attributeSvcImpl) CreateAttribute(ctx context.Context, params domain.Cr
 	params.AccountID = identity.Target.AccountID
 	params.Value = strings.TrimSpace(params.Value)
 	if params.Value == "" {
-		return nil, tracing.Trace(span, apierror.NewValidationErrorWithParam("Attribute must have a name.", "value"))
+		return nil, tracing.Trace(span, apierror.NewFieldError("value", apierror.CodeInvalidFormat, "Attribute must have a name."))
 	}
 
 	meds := s.mediators()
@@ -199,7 +199,7 @@ func (s *attributeSvcImpl) CreateAttribute(ctx context.Context, params domain.Cr
 
 	switch domain.RecoveryPoint(idempotencyKey.RecoveryPoint) {
 	case domain.RecoveryPointFinished:
-		cached, err := idempotency.UnmarshalCachedResponse[domain.Attribute](ctx, idempotencyKey.ResponseCode, idempotencyKey.ResponseBody)
+		cached, err := idemresponse.UnmarshalCachedResponse[domain.Attribute](ctx, idempotencyKey.ResponseCode, idempotencyKey.ResponseBody)
 		if err != nil {
 			return nil, tracing.Trace(span, apierror.NewInternalError(err, "Issue unmarshalling cached response."))
 		}
@@ -219,7 +219,7 @@ func (s *attributeSvcImpl) CreateAttribute(ctx context.Context, params domain.Cr
 				return apiErr
 			}
 			if exists {
-				return apierror.NewConflictErrorWithParam(fmt.Sprintf("Attribute %s already exists.", params.Value), "value")
+				return apierror.NewConflictErrorWithParam("value", fmt.Sprintf("Attribute %s already exists.", params.Value))
 			}
 
 			count, apiErr := txRepo.CountByProperty(txCtx, params.PropertyID, params.AccountID)
@@ -231,10 +231,7 @@ func (s *attributeSvcImpl) CreateAttribute(ctx context.Context, params domain.Cr
 			if params.SortOrder <= 0 {
 				params.SortOrder = nextOrder
 			} else if params.SortOrder > nextOrder {
-				return apierror.NewValidationErrorWithParam(
-					fmt.Sprintf("Order %d is out of range. The maximum allowed order is %d.", params.SortOrder, nextOrder),
-					"sort_order",
-				)
+				return apierror.NewFieldError("sort_order", apierror.CodeInvalidFormat, fmt.Sprintf("Order %d is out of range. The maximum allowed order is %d.", params.SortOrder, nextOrder))
 			} else {
 				if apiErr := txRepo.ShiftOrdersUp(txCtx, params.PropertyID, params.AccountID, params.SortOrder); apiErr != nil {
 					return apiErr
@@ -299,7 +296,7 @@ func (s *attributeSvcImpl) UpdateAttribute(ctx context.Context, params domain.Up
 
 	switch domain.RecoveryPoint(idempotencyKey.RecoveryPoint) {
 	case domain.RecoveryPointFinished:
-		cached, err := idempotency.UnmarshalCachedResponse[domain.Attribute](ctx, idempotencyKey.ResponseCode, idempotencyKey.ResponseBody)
+		cached, err := idemresponse.UnmarshalCachedResponse[domain.Attribute](ctx, idempotencyKey.ResponseCode, idempotencyKey.ResponseBody)
 		if err != nil {
 			return nil, tracing.Trace(span, apierror.NewInternalError(err, "Issue unmarshalling cached response."))
 		}
@@ -309,7 +306,7 @@ func (s *attributeSvcImpl) UpdateAttribute(ctx context.Context, params domain.Up
 		if params.Value != nil {
 			trimmed := strings.TrimSpace(*params.Value)
 			if trimmed == "" {
-				return nil, tracing.Trace(span, apierror.NewValidationErrorWithParam("Attribute must have a name.", "value"))
+				return nil, tracing.Trace(span, apierror.NewFieldError("value", apierror.CodeInvalidFormat, "Attribute must have a name."))
 			}
 			params.Value = &trimmed
 		}
@@ -337,7 +334,7 @@ func (s *attributeSvcImpl) UpdateAttribute(ctx context.Context, params domain.Up
 					return apiErr
 				}
 				if exists {
-					return apierror.NewConflictErrorWithParam(fmt.Sprintf("Attribute name \"%s\" already taken.", *params.Value), "value")
+					return apierror.NewConflictErrorWithParam("value", fmt.Sprintf("Attribute name \"%s\" already taken.", *params.Value))
 				}
 			}
 
@@ -350,10 +347,7 @@ func (s *attributeSvcImpl) UpdateAttribute(ctx context.Context, params domain.Up
 				maxOrder := safeconv.Int64ToInt32(count)
 
 				if newOrder > maxOrder {
-					return apierror.NewValidationErrorWithParam(
-						fmt.Sprintf("Order %d is out of range. The maximum allowed order is %d.", newOrder, maxOrder),
-						"sort_order",
-					)
+					return apierror.NewFieldError("sort_order", apierror.CodeInvalidFormat, fmt.Sprintf("Order %d is out of range. The maximum allowed order is %d.", newOrder, maxOrder))
 				}
 
 				if newOrder < old.SortOrder {
@@ -422,13 +416,13 @@ func (s *attributeSvcImpl) DeleteAttribute(ctx context.Context, params domain.De
 
 	attribute, apiErr := s.repos.NewAttributeRepo().Get(ctx, domain.GetAttributeParams(params))
 	if apiErr != nil {
-		if apierror.IsNotFound(apiErr) {
+		if apierror.HasCode(apiErr, apierror.CodeResourceNotFound) {
 			wasDeleted, deletedCheckErr := s.repos.NewDeletedRecordRepo().ExistsInAccount(ctx, constants.DeletedRecordResourceTypeAttribute, params.AttributeID, params.AccountID)
 			if deletedCheckErr != nil {
 				return tracing.Trace(span, deletedCheckErr)
 			}
 			if wasDeleted {
-				return tracing.Trace(span, apierror.NewAlreadyDeletedError("This attribute has already been deleted and can no longer be modified."))
+				return tracing.Trace(span, apierror.NewGoneError("This attribute has already been deleted and can no longer be modified."))
 			}
 		}
 		return tracing.Trace(span, apiErr)

@@ -10,10 +10,10 @@ import (
 
 	"github.com/open-mrp/api/services/platform-service/internal/domain"
 	"github.com/open-mrp/api/services/platform-service/internal/infrastructure/sqlc"
-	"github.com/open-mrp/api/shared/blobstore"
-	"github.com/open-mrp/api/shared/db"
-	apierror "github.com/open-mrp/api/shared/errors"
-	"github.com/open-mrp/api/shared/tracing"
+	apierror "github.com/open-mrp/apikit/apierror"
+	"github.com/open-mrp/apikit/blobstore"
+	"github.com/open-mrp/apikit/db"
+	"github.com/open-mrp/apikit/tracing"
 )
 
 var idempotencyKeyRepoTracer = tracing.GetTracer("platform-service.idempotency_key_repository")
@@ -160,7 +160,7 @@ func (r *idempotencyKeyRepoImpl) upsertAndLockOnce(ctx context.Context, key *dom
 	existingKey := idempotencyKeyToDomain(&existing)
 
 	if existingKey.RequestBodyHash != key.RequestBodyHash {
-		return nil, apierror.NewIdempotencyHashMismatchError(key.IdempotencyKey), false
+		return nil, apierror.NewIdempotencyKeyReusedError(key.IdempotencyKey), false
 	}
 
 	if existingKey.HasResponse() {

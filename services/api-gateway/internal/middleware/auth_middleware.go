@@ -11,9 +11,9 @@ import (
 	"github.com/open-mrp/api/services/auth-service/pkg/types"
 	"github.com/open-mrp/api/shared/appctx"
 	"github.com/open-mrp/api/shared/contracts"
-	apierror "github.com/open-mrp/api/shared/errors"
 	pb "github.com/open-mrp/api/shared/proto/auth"
-	"github.com/open-mrp/api/shared/tracing"
+	apierror "github.com/open-mrp/apikit/apierror"
+	"github.com/open-mrp/apikit/tracing"
 
 	"go.opentelemetry.io/otel"
 )
@@ -96,10 +96,7 @@ func AuthMiddleware(config *AuthMiddlewareConfig) func(http.HandlerFunc) http.Ha
 			}
 
 			if authToken != "" && header.IsAPIKey(authToken) && actorAccountIDHeader != "" {
-				apiErr := apierror.NewValidationErrorWithParam(
-					"OpenMRP-Actor-Account header is not allowed when authenticating with an API key. API keys always act on behalf of the account they were created by.",
-					header.ActorAccountIDHeader,
-				)
+				apiErr := apierror.NewFieldError(header.ActorAccountIDHeader, apierror.CodeInvalidFormat, "OpenMRP-Actor-Account header is not allowed when authenticating with an API key. API keys always act on behalf of the account they were created by.")
 				httptransport.RespondWithAPIError(r.Context(), w, apiErr)
 				tracing.RecordControllerError(span, apiErr)
 				span.End()

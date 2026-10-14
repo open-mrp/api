@@ -7,7 +7,7 @@ import (
 	httptransport "github.com/open-mrp/api/services/api-gateway/internal/http"
 	apiendpoint "github.com/open-mrp/api/services/api-gateway/pkg/endpoint"
 	"github.com/open-mrp/api/services/auth-service/pkg/types"
-	apierror "github.com/open-mrp/api/shared/errors"
+	apierror "github.com/open-mrp/apikit/apierror"
 )
 
 // Request to export items.

@@ -3,7 +3,7 @@ package types
 import (
 	"testing"
 
-	apierror "github.com/open-mrp/api/shared/errors"
+	apierror "github.com/open-mrp/apikit/apierror"
 )
 
 func internalIdentityWithout(perms map[string]bool) *Identity {
@@ -96,8 +96,8 @@ func TestCheckHasAnyPermission_IncludeReadsPassReadsOnly(t *testing.T) {
 				if apiErr == nil {
 					t.Fatalf("%s must never pass on the flag", write)
 				}
-				if apiErr.Code != apierror.ErrorCodeInsufficientPerms {
-					t.Errorf("%s: code = %q, want %q", write, apiErr.Code, apierror.ErrorCodeInsufficientPerms)
+				if apiErr.Code != apierror.CodeInsufficientPermissions {
+					t.Errorf("%s: code = %q, want %q", write, apiErr.Code, apierror.CodeInsufficientPermissions)
 				}
 			}
 			if apiErr := flagged.CheckHasAnyPermission(create, update); apiErr == nil {
@@ -142,8 +142,8 @@ func TestCheckHasAnyPermission_IncludeReadsNeverAdmitAnUnauthenticatedCaller(t *
 	if apiErr == nil {
 		t.Fatal("an unauthenticated caller must not read on the flag")
 	}
-	if apiErr.Code != apierror.ErrorCodeInvalidCredentials {
-		t.Fatalf("code = %q, want %q", apiErr.Code, apierror.ErrorCodeInvalidCredentials)
+	if apiErr.Code != apierror.CodeInvalidCredentials {
+		t.Fatalf("code = %q, want %q", apiErr.Code, apierror.CodeInvalidCredentials)
 	}
 	if identity.IsIncludeRead() {
 		t.Fatal("an unauthenticated caller is never an include read")

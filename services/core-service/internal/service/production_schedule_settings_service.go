@@ -7,10 +7,10 @@ import (
 	"github.com/open-mrp/api/services/core-service/internal/domain"
 	"github.com/open-mrp/api/shared/audit"
 	"github.com/open-mrp/api/shared/constants"
-	apierror "github.com/open-mrp/api/shared/errors"
 	"github.com/open-mrp/api/shared/id"
 	"github.com/open-mrp/api/shared/messaging"
-	"github.com/open-mrp/api/shared/tracing"
+	apierror "github.com/open-mrp/apikit/apierror"
+	"github.com/open-mrp/apikit/tracing"
 	"github.com/robfig/cron/v3"
 )
 
@@ -34,39 +34,39 @@ func (s *productionScheduleSvcImpl) GetProductionScheduleSettings(ctx context.Co
 func validateSettings(s domain.ProductionScheduleSettings) *apierror.APIError {
 	switch {
 	case s.PlanningHorizonWeeks < 1 || s.PlanningHorizonWeeks > 104:
-		return apierror.NewValidationErrorWithParam("The planning horizon must be between 1 and 104 weeks.", "planning_horizon_weeks")
+		return apierror.NewFieldError("planning_horizon_weeks", apierror.CodeInvalidFormat, "The planning horizon must be between 1 and 104 weeks.")
 	case s.FrozenWeeks < 0 || s.FrozenWeeks > s.PlanningHorizonWeeks:
-		return apierror.NewValidationErrorWithParam("The frozen window cannot be longer than the horizon.", "frozen_weeks")
+		return apierror.NewFieldError("frozen_weeks", apierror.CodeInvalidFormat, "The frozen window cannot be longer than the horizon.")
 	case s.ShiftsPerDay < 1:
-		return apierror.NewValidationErrorWithParam("There must be at least one shift per day.", "shifts_per_day")
+		return apierror.NewFieldError("shifts_per_day", apierror.CodeInvalidFormat, "There must be at least one shift per day.")
 	case s.HoursPerShift <= 0:
-		return apierror.NewValidationErrorWithParam("A shift must be longer than zero hours.", "hours_per_shift")
+		return apierror.NewFieldError("hours_per_shift", apierror.CodeInvalidFormat, "A shift must be longer than zero hours.")
 	case s.WorkDaysPerWeek < 1 || s.WorkDaysPerWeek > 7:
-		return apierror.NewValidationErrorWithParam("Work days per week must be between 1 and 7.", "work_days_per_week")
+		return apierror.NewFieldError("work_days_per_week", apierror.CodeInvalidFormat, "Work days per week must be between 1 and 7.")
 	case s.CapacityHeadroomPct <= 0 || s.CapacityHeadroomPct > 1:
-		return apierror.NewValidationErrorWithParam("Capacity headroom must be greater than 0 and at most 1.", "capacity_headroom_pct")
+		return apierror.NewFieldError("capacity_headroom_pct", apierror.CodeInvalidFormat, "Capacity headroom must be greater than 0 and at most 1.")
 	case s.DefaultLotUnits <= 0:
-		return apierror.NewValidationErrorWithParam("The default lot size must be greater than zero.", "default_lot_units")
+		return apierror.NewFieldError("default_lot_units", apierror.CodeInvalidFormat, "The default lot size must be greater than zero.")
 	case s.ChangeoverMinMinutes > s.ChangeoverMaxMinutes:
-		return apierror.NewValidationErrorWithParam("The minimum changeover cannot exceed the maximum.", "changeover_min_minutes")
+		return apierror.NewFieldError("changeover_min_minutes", apierror.CodeInvalidFormat, "The minimum changeover cannot exceed the maximum.")
 	case s.MaxWeeksSupply <= 0:
-		return apierror.NewValidationErrorWithParam("Maximum weeks of supply must be greater than zero.", "max_weeks_supply")
+		return apierror.NewFieldError("max_weeks_supply", apierror.CodeInvalidFormat, "Maximum weeks of supply must be greater than zero.")
 	case s.WeekStartDay < 0 || s.WeekStartDay > 6:
-		return apierror.NewValidationErrorWithParam("The week start day must be between 0 and 6.", "week_start_day")
+		return apierror.NewFieldError("week_start_day", apierror.CodeInvalidFormat, "The week start day must be between 0 and 6.")
 	// Zero is allowed — same-day shipping is a real commitment — but a negative would date every order's ship-by before the order itself.
 	case s.DefaultCustomerLeadTimeDays < 0:
-		return apierror.NewValidationErrorWithParam("The default customer lead time cannot be negative.", "default_customer_lead_time_days")
+		return apierror.NewFieldError("default_customer_lead_time_days", apierror.CodeInvalidFormat, "The default customer lead time cannot be negative.")
 	case s.DefaultFulfillmentPolicyCode != "" && !constants.FulfillmentPolicy(s.DefaultFulfillmentPolicyCode).IsValid():
-		return apierror.NewValidationErrorWithParam("Unknown fulfillment policy.", "default_fulfillment_policy")
+		return apierror.NewFieldError("default_fulfillment_policy", apierror.CodeInvalidFormat, "Unknown fulfillment policy.")
 	}
 
 	// A cadence with an unparseable cron would fail silently on every tick, and the merchant would see nothing rather than an error.
 	if s.IsEnabled {
 		if s.GenerationCron == nil || *s.GenerationCron == "" {
-			return apierror.NewValidationErrorWithParam("A generation schedule is required when the cadence is enabled.", "generation_cron")
+			return apierror.NewFieldError("generation_cron", apierror.CodeInvalidFormat, "A generation schedule is required when the cadence is enabled.")
 		}
 		if _, err := cron.ParseStandard(*s.GenerationCron); err != nil {
-			return apierror.NewValidationErrorWithParam("The generation schedule is not a valid cron expression.", "generation_cron")
+			return apierror.NewFieldError("generation_cron", apierror.CodeInvalidFormat, "The generation schedule is not a valid cron expression.")
 		}
 	}
 
@@ -158,7 +158,7 @@ func (s *productionScheduleSvcImpl) UpsertResourceSetting(ctx context.Context, p
 	switch params.ScopeCode {
 	case domain.ScheduleResourceScopeMachine, domain.ScheduleResourceScopeDepartment, domain.ScheduleResourceScopeProductionStep:
 	default:
-		return nil, tracing.Trace(span, apierror.NewValidationErrorWithParam("Unknown resource scope.", "scope_type"))
+		return nil, tracing.Trace(span, apierror.NewFieldError("scope_type", apierror.CodeInvalidFormat, "Unknown resource scope."))
 	}
 
 	settingID, apiErr := id.GenID(id.ProductionScheduleResourceSettingIDPrefix, nil)
@@ -254,7 +254,7 @@ func (s *productionScheduleSvcImpl) DeleteResourceSetting(ctx context.Context, s
 			return apiErr
 		}
 		if before == nil {
-			return apierror.NewResourceNotFoundError("Production schedule resource setting not found.")
+			return apierror.NewNotFoundError("Production schedule resource setting not found.")
 		}
 		if apiErr := txSvc.repos.NewProductionScheduleRepo().DeleteResourceSetting(txCtx, accountID, settingID); apiErr != nil {
 			return apiErr
@@ -296,7 +296,7 @@ func (s *productionScheduleSvcImpl) GetItemSetting(ctx context.Context, itemID s
 		return nil, tracing.Trace(span, apiErr)
 	}
 	if setting == nil {
-		return nil, tracing.Trace(span, apierror.NewResourceNotFoundError("This item has no planning override."))
+		return nil, tracing.Trace(span, apierror.NewNotFoundError("This item has no planning override."))
 	}
 	return setting, nil
 }
@@ -315,11 +315,11 @@ func (s *productionScheduleSvcImpl) UpsertItemSetting(ctx context.Context, param
 	// An unknown policy would be stored and then silently ignored by the solver, leaving a merchant looking at a setting that does nothing.
 	if params.FulfillmentPolicyCode != nil {
 		if !constants.FulfillmentPolicy(*params.FulfillmentPolicyCode).IsValid() {
-			return nil, tracing.Trace(span, apierror.NewValidationErrorWithParam("Unknown fulfillment policy.", "fulfillment_policy"))
+			return nil, tracing.Trace(span, apierror.NewFieldError("fulfillment_policy", apierror.CodeInvalidFormat, "Unknown fulfillment policy."))
 		}
 	}
 	if params.LotMultipleUnits != nil && *params.LotMultipleUnits <= 0 {
-		return nil, tracing.Trace(span, apierror.NewValidationErrorWithParam("The lot multiple must be greater than zero.", "lot_multiple_units"))
+		return nil, tracing.Trace(span, apierror.NewFieldError("lot_multiple_units", apierror.CodeInvalidFormat, "The lot multiple must be greater than zero."))
 	}
 
 	// A setting pointing at an item that does not exist would be invisible to the solver and unexplainable to whoever wrote it.
@@ -328,7 +328,7 @@ func (s *productionScheduleSvcImpl) UpsertItemSetting(ctx context.Context, param
 		return nil, tracing.Trace(span, apiErr)
 	}
 	if len(items) == 0 {
-		return nil, tracing.Trace(span, apierror.NewValidationErrorWithParam("Item not found.", "item_id"))
+		return nil, tracing.Trace(span, apierror.NewFieldError("item_id", apierror.CodeInvalidFormat, "Item not found."))
 	}
 
 	var setting *domain.ProductionScheduleItemPlanningSetting
@@ -387,14 +387,14 @@ func (s *productionScheduleSvcImpl) DeleteItemSetting(ctx context.Context, itemI
 		}
 		// A delete that matched nothing is a 404: telling a caller their override is gone when it never existed hides a mistyped id.
 		if before == nil {
-			return apierror.NewResourceNotFoundError("This item has no planning override.")
+			return apierror.NewNotFoundError("This item has no planning override.")
 		}
 		deleted, apiErr := repo.DeleteItemSetting(txCtx, accountID, itemID)
 		if apiErr != nil {
 			return apiErr
 		}
 		if !deleted {
-			return apierror.NewResourceNotFoundError("This item has no planning override.")
+			return apierror.NewNotFoundError("This item has no planning override.")
 		}
 		return publishSettingDelete(txCtx, txSvc.repos.NewOutboxRepo(), constants.ObjectTypeProductionScheduleItemSetting, before.ID, before)
 	}))

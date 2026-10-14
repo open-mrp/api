@@ -10,7 +10,7 @@ import (
 	"database/sql"
 	"time"
 
-	"github.com/open-mrp/api/shared/db"
+	"github.com/open-mrp/apikit/db"
 )
 
 const advanceConversationAfterMessage = `-- name: AdvanceConversationAfterMessage :exec

@@ -7,12 +7,13 @@ import (
 
 	"github.com/open-mrp/api/services/core-service/internal/domain"
 	"github.com/open-mrp/api/services/core-service/internal/infrastructure/sqlc"
-	"github.com/open-mrp/api/shared/db"
-	apierror "github.com/open-mrp/api/shared/errors"
-	"github.com/open-mrp/api/shared/tracing"
+	"github.com/open-mrp/api/shared/catalogsearch"
+	apierror "github.com/open-mrp/apikit/apierror"
+	"github.com/open-mrp/apikit/db"
 	"github.com/open-mrp/apikit/field"
 	"github.com/open-mrp/apikit/pagination"
 	"github.com/open-mrp/apikit/safeconv"
+	"github.com/open-mrp/apikit/tracing"
 )
 
 var machineRepoTracer = tracing.GetTracer("core-service.machine_repository")
@@ -46,7 +47,7 @@ func machBuildSearchParams(query *string) gosql.NullString {
 // machCursorMatchTier is the cursor's match tier; a cursor without one is from a list every machine of
 // which is tier 0.
 func machCursorMatchTier(cur pagination.StringCursor) gosql.NullInt64 {
-	tier := db.NullTierInt64Param(cur.MatchTier)
+	tier := catalogsearch.NullTierInt64Param(cur.MatchTier)
 	tier.Valid = true
 	return tier
 }
@@ -247,7 +248,7 @@ func (r *machineRepoImpl) List(ctx context.Context, params domain.ListMachinesPa
 
 	cur, err := pagination.DecodeStringCursor(*params.Cursor)
 	if err != nil {
-		return nil, apierror.NewValidationErrorWithParam("Invalid pagination cursor.", "cursor")
+		return nil, apierror.NewFieldError("cursor", apierror.CodeInvalidFormat, "Invalid pagination cursor.")
 	}
 
 	if cur.Direction == pagination.DirectionBackward {
@@ -379,7 +380,7 @@ func (r *machineRepoImpl) Update(ctx context.Context, params domain.UpdateMachin
 		return nil, tracing.Trace(span, apierror.NewInternalError(err, "Failed to check rows affected."))
 	}
 	if rowsAffected == 0 {
-		return nil, tracing.Trace(span, apierror.NewResourceNotFoundError("Machine not found."))
+		return nil, tracing.Trace(span, apierror.NewNotFoundError("Machine not found."))
 	}
 
 	return r.Get(ctx, domain.GetMachineParams{AccountID: params.AccountID, MachineID: params.MachineID})
@@ -402,7 +403,7 @@ func (r *machineRepoImpl) Delete(ctx context.Context, params domain.DeleteMachin
 		return tracing.Trace(span, apierror.NewInternalError(err, "Failed to check rows affected."))
 	}
 	if rowsAffected == 0 {
-		return tracing.Trace(span, apierror.NewResourceNotFoundError("Machine not found."))
+		return tracing.Trace(span, apierror.NewNotFoundError("Machine not found."))
 	}
 
 	return nil
@@ -501,7 +502,7 @@ func (r *machineRepoImpl) ListItems(ctx context.Context, params domain.ListMachi
 	if params.Cursor != nil {
 		decoded, err := pagination.DecodeStringCursor(*params.Cursor)
 		if err != nil {
-			return nil, tracing.Trace(span, apierror.NewValidationErrorWithParam("Invalid pagination cursor.", "cursor"))
+			return nil, tracing.Trace(span, apierror.NewFieldError("cursor", apierror.CodeInvalidFormat, "Invalid pagination cursor."))
 		}
 		cur = &decoded
 	}

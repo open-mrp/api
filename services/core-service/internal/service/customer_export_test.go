@@ -15,8 +15,8 @@ import (
 	repositorymock "github.com/open-mrp/api/services/core-service/internal/domain/mock/repository"
 	servicemock "github.com/open-mrp/api/services/core-service/internal/domain/mock/service"
 	"github.com/open-mrp/api/shared/constants"
-	apierror "github.com/open-mrp/api/shared/errors"
 	"github.com/open-mrp/api/shared/messaging"
+	apierror "github.com/open-mrp/apikit/apierror"
 	"github.com/open-mrp/apikit/pagination"
 )
 
@@ -259,7 +259,7 @@ func (suite *CustomerExportTestSuite) TestExport_StopsReadingOncePastTheRowLimit
 	export, apiErr := suite.build(ctx, domain.ListCustomersParams{})
 	suite.Nil(export)
 	suite.Require().NotNil(apiErr)
-	suite.Equal(apierror.ErrorTypeInvalidRequest, apiErr.Type)
+	suite.Equal(apierror.TypeInvalidRequest, apiErr.Type)
 }
 
 // The accept phase records only the list's filters: paging and includes belong to the export, and the

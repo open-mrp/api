@@ -10,11 +10,11 @@ import (
 	"github.com/open-mrp/api/services/core-service/internal/domain"
 	"github.com/open-mrp/api/shared/audit"
 	"github.com/open-mrp/api/shared/constants"
-	"github.com/open-mrp/api/shared/db"
-	apierror "github.com/open-mrp/api/shared/errors"
 	"github.com/open-mrp/api/shared/excel"
 	"github.com/open-mrp/api/shared/id"
 	"github.com/open-mrp/api/shared/messaging"
+	apierror "github.com/open-mrp/apikit/apierror"
+	"github.com/open-mrp/apikit/db"
 )
 
 // asyncBulkDeps hands the async bulk engine the plumbing it runs on.
@@ -34,11 +34,11 @@ func validateBulkUpsertProductLineRows(rows []domain.UpsertProductLineParams) *a
 	for i, pl := range rows {
 		lower := strings.ToLower(pl.Name)
 		if _, dup := nameInputSpace[lower]; dup {
-			rowErrs.AddValidation(i, fmt.Sprintf("product_lines[%d].name", i), fmt.Sprintf("duplicate name %q in request", pl.Name))
+			rowErrs.AddField(i, "name", apierror.CodeInvalidFormat, fmt.Sprintf("duplicate name %q in request", pl.Name))
 		}
 		nameInputSpace[lower] = struct{}{}
 	}
-	return rowErrs.Summary("product lines")
+	return rowErrs.Summary("product_lines")
 }
 
 // resolves each row's unit group reference by id or name
@@ -108,7 +108,7 @@ func writeBulkUpsertProductLines(txCtx context.Context, txRepos domain.RepoFacto
 			return nil
 		})
 		if rowErr != nil {
-			rowErrors = append(rowErrors, apierror.NewRowError(i, rowErr))
+			rowErrors = append(rowErrors, apierror.RowError{Index: i, Error: rowErr.Object()})
 			continue
 		}
 
@@ -157,8 +157,7 @@ func upsertProductLineInTx(txCtx context.Context, txRepos domain.RepoFactory, ac
 	}
 
 	if old.AccountID == nil || domain.IsDefaultProductLine(old.ID) {
-		return "", apierror.NewValidationErrorWithParam(
-			fmt.Sprintf("System product line %q cannot be modified.", row.Name), "name")
+		return "", apierror.NewFieldError("name", apierror.CodeInvalidFormat, fmt.Sprintf("System product line %q cannot be modified.", row.Name))
 	}
 
 	updated, apiErr := txRepo.Update(ctx, domain.UpdateProductLineParams{

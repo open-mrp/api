@@ -9,10 +9,10 @@ import (
 	"github.com/open-mrp/api/shared/appctx"
 	"github.com/open-mrp/api/shared/audit"
 	"github.com/open-mrp/api/shared/constants"
-	apierror "github.com/open-mrp/api/shared/errors"
 	"github.com/open-mrp/api/shared/id"
-	"github.com/open-mrp/api/shared/idempotency"
-	"github.com/open-mrp/api/shared/tracing"
+	"github.com/open-mrp/api/shared/idemresponse"
+	apierror "github.com/open-mrp/apikit/apierror"
+	"github.com/open-mrp/apikit/tracing"
 )
 
 var supplierMaterialSvcTracer = tracing.GetTracer("core-service.supplier_material_service")
@@ -174,7 +174,7 @@ func (s *supplierMaterialSvcImpl) CreateSupplierMaterial(ctx context.Context, pa
 
 	switch domain.RecoveryPoint(idempotencyKey.RecoveryPoint) {
 	case domain.RecoveryPointFinished:
-		cached, err := idempotency.UnmarshalCachedResponse[domain.SupplierMaterial](ctx, idempotencyKey.ResponseCode, idempotencyKey.ResponseBody)
+		cached, err := idemresponse.UnmarshalCachedResponse[domain.SupplierMaterial](ctx, idempotencyKey.ResponseCode, idempotencyKey.ResponseBody)
 		if err != nil {
 			return nil, tracing.Trace(span, apierror.NewInternalError(err, "Issue unmarshalling cached response."))
 		}
@@ -187,14 +187,14 @@ func (s *supplierMaterialSvcImpl) CreateSupplierMaterial(ctx context.Context, pa
 
 			// Both ends of the link must be the owner's: the supplier one of its suppliers, the material one of its items.
 			if _, apiErr := txSvc.repos.NewSupplierRepo().Get(txCtx, domain.GetSupplierParams{OwnerAccountID: params.OwnerAccountID, SupplierID: params.SupplierAccountID}); apiErr != nil {
-				if apierror.IsNotFound(apiErr) {
-					return apierror.NewResourceNotFoundError("No supplier found with the provided ID.").WithParam("supplier_id")
+				if apierror.HasCode(apiErr, apierror.CodeResourceNotFound) {
+					return apierror.NewNotFoundError("No supplier found with the provided ID.").WithParam("supplier_id")
 				}
 				return apiErr
 			}
 			if _, apiErr := txSvc.repos.NewMaterialRepo().GetByID(txCtx, domain.GetMaterialParams{AccountID: params.OwnerAccountID, MaterialID: params.MaterialID}); apiErr != nil {
-				if apierror.IsNotFound(apiErr) {
-					return apierror.NewResourceNotFoundError("No material found with the provided ID.").WithParam("material_id")
+				if apierror.HasCode(apiErr, apierror.CodeResourceNotFound) {
+					return apierror.NewNotFoundError("No material found with the provided ID.").WithParam("material_id")
 				}
 				return apiErr
 			}
@@ -204,7 +204,7 @@ func (s *supplierMaterialSvcImpl) CreateSupplierMaterial(ctx context.Context, pa
 				return apiErr
 			}
 			if exists {
-				return apierror.NewConflictErrorWithParam("A supplier material with this material and supplier already exists.", "material_id")
+				return apierror.NewConflictErrorWithParam("material_id", "A supplier material with this material and supplier already exists.")
 			}
 
 			created, apiErr := txRepo.Create(txCtx, supplierMaterialID, params)
@@ -267,7 +267,7 @@ func (s *supplierMaterialSvcImpl) UpdateSupplierMaterial(ctx context.Context, pa
 
 	switch domain.RecoveryPoint(idempotencyKey.RecoveryPoint) {
 	case domain.RecoveryPointFinished:
-		cached, err := idempotency.UnmarshalCachedResponse[domain.SupplierMaterial](ctx, idempotencyKey.ResponseCode, idempotencyKey.ResponseBody)
+		cached, err := idemresponse.UnmarshalCachedResponse[domain.SupplierMaterial](ctx, idempotencyKey.ResponseCode, idempotencyKey.ResponseBody)
 		if err != nil {
 			return nil, tracing.Trace(span, apierror.NewInternalError(err, "Issue unmarshalling cached response."))
 		}
@@ -365,7 +365,7 @@ func (s *supplierMaterialSvcImpl) DeleteSupplierMaterial(ctx context.Context, pa
 // character can take up to four bytes.
 func checkSupplierDescription(description *string) *apierror.APIError {
 	if description != nil && len(*description) > supplierDescriptionMaxBytes {
-		return apierror.NewValidationErrorWithParam("The supplier description must be at most 65,535 bytes.", "supplier_description")
+		return apierror.NewFieldError("supplier_description", apierror.CodeInvalidFormat, "The supplier description must be at most 65,535 bytes.")
 	}
 	return nil
 }

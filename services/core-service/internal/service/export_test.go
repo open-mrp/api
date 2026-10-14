@@ -11,8 +11,8 @@ import (
 	"github.com/open-mrp/api/services/core-service/internal/domain"
 	factorymock "github.com/open-mrp/api/services/core-service/internal/domain/mock/factory"
 	servicemock "github.com/open-mrp/api/services/core-service/internal/domain/mock/service"
-	apierror "github.com/open-mrp/api/shared/errors"
 	"github.com/open-mrp/api/shared/excel"
+	apierror "github.com/open-mrp/apikit/apierror"
 
 	"github.com/stretchr/testify/suite"
 	"github.com/xuri/excelize/v2"

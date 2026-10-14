@@ -10,13 +10,13 @@ import (
 	"github.com/open-mrp/api/services/core-service/internal/domain"
 	"github.com/open-mrp/api/services/core-service/internal/infrastructure/sqlc"
 	"github.com/open-mrp/api/shared/constants"
-	"github.com/open-mrp/api/shared/db"
-	apierror "github.com/open-mrp/api/shared/errors"
 	"github.com/open-mrp/api/shared/id"
-	"github.com/open-mrp/api/shared/tracing"
+	apierror "github.com/open-mrp/apikit/apierror"
+	"github.com/open-mrp/apikit/db"
 	"github.com/open-mrp/apikit/field"
 	"github.com/open-mrp/apikit/pagination"
 	"github.com/open-mrp/apikit/safeconv"
+	"github.com/open-mrp/apikit/tracing"
 )
 
 var customerRepoTracer = tracing.GetTracer("core-service.infrastructure.repository.customer")
@@ -456,7 +456,7 @@ func (r *customerRepoImpl) List(ctx context.Context, params domain.ListCustomers
 	if params.Cursor != nil {
 		cur, err := pagination.DecodeStringCursor(*params.Cursor)
 		if err != nil {
-			return nil, apierror.NewValidationErrorWithParam("Invalid pagination cursor.", "cursor")
+			return nil, apierror.NewFieldError("cursor", apierror.CodeInvalidFormat, "Invalid pagination cursor.")
 		}
 		cursorDir = &cur.Direction
 
@@ -1840,7 +1840,7 @@ func (r *customerRepoImpl) GetCustomerEmail(ctx context.Context, customerAccount
 
 	email, err := r.queries.GetCustomerEmail(ctx, customerAccountID)
 	if apiErr := db.MapSQLError(err); apiErr != nil {
-		if apiErr.Code == apierror.ErrorCodeResourceNotFound {
+		if apiErr.Code == apierror.CodeResourceNotFound {
 			return nil, nil
 		}
 		return nil, tracing.Trace(span, apiErr)

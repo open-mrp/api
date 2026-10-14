@@ -10,9 +10,9 @@ import (
 	grpcutil "github.com/open-mrp/api/services/api-gateway/internal/grpc"
 	apiresource "github.com/open-mrp/api/services/api-gateway/pkg/resource"
 	"github.com/open-mrp/api/shared/constants"
-	"github.com/open-mrp/api/shared/db"
-	apierror "github.com/open-mrp/api/shared/errors"
 	pb "github.com/open-mrp/api/shared/proto/core"
+	apierror "github.com/open-mrp/apikit/apierror"
+	"github.com/open-mrp/apikit/db"
 )
 
 func (m *analyticsSvcImpl) AnalyzeOpenOrdersSummary(ctx context.Context, req *AnalyzeOpenOrdersSummaryRequest) (*apiresource.AnalyzeOpenOrdersSummaryResponse, *apierror.APIError) {

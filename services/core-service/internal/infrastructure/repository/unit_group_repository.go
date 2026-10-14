@@ -8,11 +8,11 @@ import (
 
 	"github.com/open-mrp/api/services/core-service/internal/domain"
 	"github.com/open-mrp/api/services/core-service/internal/infrastructure/sqlc"
-	"github.com/open-mrp/api/shared/db"
-	apierror "github.com/open-mrp/api/shared/errors"
-	"github.com/open-mrp/api/shared/tracing"
+	apierror "github.com/open-mrp/apikit/apierror"
+	"github.com/open-mrp/apikit/db"
 	"github.com/open-mrp/apikit/field"
 	"github.com/open-mrp/apikit/pagination"
+	"github.com/open-mrp/apikit/tracing"
 )
 
 var unitGroupRepoTracer = tracing.GetTracer("core-service.unit_group_repository")
@@ -336,7 +336,7 @@ func (r *unitGroupRepoImpl) List(ctx context.Context, params domain.ListUnitGrou
 	if params.Cursor != nil {
 		cur, err := pagination.DecodeStringCursor(*params.Cursor)
 		if err != nil {
-			return nil, apierror.NewValidationErrorWithParam("Invalid pagination cursor.", "cursor")
+			return nil, apierror.NewFieldError("cursor", apierror.CodeInvalidFormat, "Invalid pagination cursor.")
 		}
 		cursorDir = &cur.Direction
 
@@ -473,7 +473,7 @@ func (r *unitGroupRepoImpl) Update(ctx context.Context, params domain.UpdateUnit
 		return nil, tracing.Trace(span, apierror.NewInternalError(err, "Failed to check rows affected."))
 	}
 	if rowsAffected == 0 {
-		return nil, tracing.Trace(span, apierror.NewResourceNotFoundError("Unit group not found."))
+		return nil, tracing.Trace(span, apierror.NewNotFoundError("Unit group not found."))
 	}
 
 	return r.Get(ctx, domain.GetUnitGroupParams{
@@ -500,7 +500,7 @@ func (r *unitGroupRepoImpl) Delete(ctx context.Context, params domain.DeleteUnit
 		return tracing.Trace(span, apierror.NewInternalError(err, "Failed to check rows affected."))
 	}
 	if rowsAffected == 0 {
-		return tracing.Trace(span, apierror.NewResourceNotFoundError("Unit group not found."))
+		return tracing.Trace(span, apierror.NewNotFoundError("Unit group not found."))
 	}
 
 	return nil
@@ -611,7 +611,7 @@ func (r *unitGroupRepoImpl) DeleteUnitGroupUnit(ctx context.Context, params doma
 		return tracing.Trace(span, apierror.NewInternalError(err, "Failed to check rows affected."))
 	}
 	if rowsAffected == 0 {
-		return tracing.Trace(span, apierror.NewResourceNotFoundError("Unit group unit not found."))
+		return tracing.Trace(span, apierror.NewNotFoundError("Unit group unit not found."))
 	}
 
 	return nil

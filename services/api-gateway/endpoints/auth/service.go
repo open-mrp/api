@@ -14,10 +14,10 @@ import (
 	apiresource "github.com/open-mrp/api/services/api-gateway/pkg/resource"
 	"github.com/open-mrp/api/shared/appctx"
 	"github.com/open-mrp/api/shared/constants"
-	apierror "github.com/open-mrp/api/shared/errors"
 	pb "github.com/open-mrp/api/shared/proto/auth"
 	corepb "github.com/open-mrp/api/shared/proto/core"
-	"github.com/open-mrp/api/shared/tracing"
+	apierror "github.com/open-mrp/apikit/apierror"
+	"github.com/open-mrp/apikit/tracing"
 	"google.golang.org/grpc"
 	"google.golang.org/protobuf/types/known/emptypb"
 )
@@ -94,7 +94,7 @@ func loginThrottleKey(identifier string) string {
 func (m *authSvcImpl) Login(ctx context.Context, req *LoginRequest) (*apiresource.User, *apierror.APIError) {
 	throttleKey := loginThrottleKey(req.Identifier)
 	if allowed, _ := m.loginFailureLimiter.Check(throttleKey); !allowed {
-		return nil, apierror.NewRateLimitExceededError("Too many failed login attempts for this account. Please try again later.")
+		return nil, apierror.NewRateLimitedError("Too many failed login attempts for this account. Please try again later.")
 	}
 
 	resp, apiErr := grpcutil.CallRPC(ctx, authSvcTracer, "service.auth.login", domain.ServiceName,

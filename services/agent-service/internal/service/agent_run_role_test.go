@@ -18,8 +18,8 @@ import (
 	"github.com/open-mrp/api/shared/appctx"
 	"github.com/open-mrp/api/shared/constants"
 	"github.com/open-mrp/api/shared/contracts"
-	apierror "github.com/open-mrp/api/shared/errors"
 	"github.com/open-mrp/api/shared/messaging"
+	apierror "github.com/open-mrp/apikit/apierror"
 	"go.uber.org/mock/gomock"
 )
 
@@ -113,7 +113,7 @@ func assertDriveResult(t *testing.T, tc driveCase, apiErr *apierror.APIError) {
 	if apiErr == nil || apiErr == errReachedTx {
 		t.Fatalf("expected a 403, got %+v", apiErr)
 	}
-	if got := apierror.GetHTTPStatusCode(apiErr.Code); got != http.StatusForbidden {
+	if got := apiErr.Code.Status(); got != http.StatusForbidden {
 		t.Errorf("status = %d, want 403", got)
 	}
 	if !strings.Contains(apiErr.PublicMessage, tc.wantMsg) {

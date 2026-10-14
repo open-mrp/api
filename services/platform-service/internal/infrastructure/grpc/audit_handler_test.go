@@ -11,8 +11,8 @@ import (
 	servicemock "github.com/open-mrp/api/services/platform-service/internal/domain/mock/service"
 	"github.com/open-mrp/api/shared/appctx"
 	"github.com/open-mrp/api/shared/constants"
-	apierror "github.com/open-mrp/api/shared/errors"
 	pb "github.com/open-mrp/api/shared/proto/platform"
+	apierror "github.com/open-mrp/apikit/apierror"
 	"github.com/open-mrp/apikit/pagination"
 
 	"github.com/stretchr/testify/suite"
@@ -346,7 +346,7 @@ func (s *AuditHandlerTestSuite) TestGetAuditEvent_Success() {
 
 func (s *AuditHandlerTestSuite) TestGetAuditEvent_ServiceError() {
 	s.auditSvc.EXPECT().GetAuditEvent(gomock.Any(), "aevt_1", gomock.Any()).
-		Return(nil, apierror.NewResourceNotFoundError("not found")).Times(1)
+		Return(nil, apierror.NewNotFoundError("not found")).Times(1)
 
 	resp, err := s.handler.GetAuditEvent(context.Background(), &pb.GetAuditEventRequest{Id: "aevt_1"})
 	s.Nil(resp)

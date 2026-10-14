@@ -6,7 +6,7 @@ import (
 	"reflect"
 
 	"github.com/open-mrp/api/services/core-service/internal/domain"
-	apierror "github.com/open-mrp/api/shared/errors"
+	apierror "github.com/open-mrp/apikit/apierror"
 )
 
 // inlineAddressChoice is one address a request may name by ID or send inline, but not both.
@@ -21,7 +21,7 @@ type inlineAddressChoice struct {
 func checkInlineAddressChoices(choices ...inlineAddressChoice) *apierror.APIError {
 	for _, c := range choices {
 		if c.hasID && c.inline != nil {
-			return apierror.NewValidationErrorWithParam(fmt.Sprintf("Send either %s or %s, not both.", c.idParam, c.inlineParam), c.inlineParam)
+			return apierror.NewFieldError(c.inlineParam, apierror.CodeInvalidFormat, fmt.Sprintf("Send either %s or %s, not both.", c.idParam, c.inlineParam))
 		}
 	}
 	return nil
@@ -35,7 +35,7 @@ func checkInlineAddressPair(bill, ship *domain.InlineAddressParams, shipParam st
 	if reflect.DeepEqual(*bill, *ship) {
 		return nil
 	}
-	return apierror.NewValidationErrorWithParam("The ship-to address updates the same address as the bill-to address with different fields.", shipParam+".id")
+	return apierror.NewFieldError(shipParam+".id", apierror.CodeInvalidFormat, "The ship-to address updates the same address as the bill-to address with different fields.")
 }
 
 // saveInlineAddresses saves a record's inline bill-to and ship-to addresses into accountID and returns their IDs, "" for a side sent without one. Identical inline addresses are saved once and shared, so one new address entered for both sides is not created twice.

@@ -5,8 +5,8 @@ import (
 	"time"
 
 	"github.com/open-mrp/api/services/auth-service/internal/infrastructure/sqlc"
-	"github.com/open-mrp/api/shared/tracing"
 	"github.com/open-mrp/apikit/lease"
+	"github.com/open-mrp/apikit/tracing"
 )
 
 var leaseRepoTracer = tracing.GetTracer("auth-service.lease_repository")

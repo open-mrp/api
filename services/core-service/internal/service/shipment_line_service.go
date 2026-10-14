@@ -9,10 +9,10 @@ import (
 	"github.com/open-mrp/api/shared/appctx"
 	"github.com/open-mrp/api/shared/audit"
 	"github.com/open-mrp/api/shared/constants"
-	apierror "github.com/open-mrp/api/shared/errors"
 	"github.com/open-mrp/api/shared/id"
-	"github.com/open-mrp/api/shared/idempotency"
-	"github.com/open-mrp/api/shared/tracing"
+	"github.com/open-mrp/api/shared/idemresponse"
+	apierror "github.com/open-mrp/apikit/apierror"
+	"github.com/open-mrp/apikit/tracing"
 	"github.com/shopspring/decimal"
 )
 
@@ -154,7 +154,7 @@ func (s *shipmentLineSvcImpl) GetShipmentLine(ctx context.Context, accountID, sh
 		return nil, tracing.Trace(span, apiErr)
 	}
 	if !inShipment {
-		return nil, tracing.Trace(span, apierror.NewResourceNotFoundError("Shipment line not found in this shipment."))
+		return nil, tracing.Trace(span, apierror.NewNotFoundError("Shipment line not found in this shipment."))
 	}
 
 	return lineRepo.Get(ctx, shipmentLineID)
@@ -187,7 +187,7 @@ func (s *shipmentLineSvcImpl) CreateShipmentLine(ctx context.Context, params dom
 
 	switch domain.RecoveryPoint(idempotencyKey.RecoveryPoint) {
 	case domain.RecoveryPointFinished:
-		cached, err := idempotency.UnmarshalCachedResponse[domain.ShipmentLine](ctx, idempotencyKey.ResponseCode, idempotencyKey.ResponseBody)
+		cached, err := idemresponse.UnmarshalCachedResponse[domain.ShipmentLine](ctx, idempotencyKey.ResponseCode, idempotencyKey.ResponseBody)
 		if err != nil {
 			return nil, tracing.Trace(span, apierror.NewInternalError(err, "Issue unmarshalling cached response."))
 		}
@@ -214,7 +214,7 @@ func (s *shipmentLineSvcImpl) CreateShipmentLine(ctx context.Context, params dom
 				return apiErr
 			}
 			if !inAccount {
-				return apierror.NewResourceNotFoundError("Shipment not found.")
+				return apierror.NewNotFoundError("Shipment not found.")
 			}
 
 			// Resolve the parent sales order so the audit event can be scoped to the order's history tree.
@@ -290,7 +290,7 @@ func (s *shipmentLineSvcImpl) UpdateShipmentLine(ctx context.Context, params dom
 
 	switch domain.RecoveryPoint(idempotencyKey.RecoveryPoint) {
 	case domain.RecoveryPointFinished:
-		cached, err := idempotency.UnmarshalCachedResponse[domain.ShipmentLine](ctx, idempotencyKey.ResponseCode, idempotencyKey.ResponseBody)
+		cached, err := idemresponse.UnmarshalCachedResponse[domain.ShipmentLine](ctx, idempotencyKey.ResponseCode, idempotencyKey.ResponseBody)
 		if err != nil {
 			return nil, tracing.Trace(span, apierror.NewInternalError(err, "Issue unmarshalling cached response."))
 		}
@@ -307,7 +307,7 @@ func (s *shipmentLineSvcImpl) UpdateShipmentLine(ctx context.Context, params dom
 				return apiErr
 			}
 			if !inAccount {
-				return apierror.NewResourceNotFoundError("Shipment not found.")
+				return apierror.NewNotFoundError("Shipment not found.")
 			}
 
 			txLineRepo := txSvc.repos.NewShipmentLineRepo()
@@ -318,7 +318,7 @@ func (s *shipmentLineSvcImpl) UpdateShipmentLine(ctx context.Context, params dom
 				return apiErr
 			}
 			if !inShipment {
-				return apierror.NewResourceNotFoundError("Shipment line not found in this shipment.")
+				return apierror.NewNotFoundError("Shipment line not found in this shipment.")
 			}
 
 			old, apiErr := txLineRepo.Get(txCtx, params.ShipmentLineID)
@@ -405,18 +405,18 @@ func (s *shipmentLineSvcImpl) DeleteShipmentLine(ctx context.Context, params dom
 		return tracing.Trace(span, apiErr)
 	}
 	if !inShipment {
-		return tracing.Trace(span, apierror.NewResourceNotFoundError("Shipment line not found in this shipment."))
+		return tracing.Trace(span, apierror.NewNotFoundError("Shipment line not found in this shipment."))
 	}
 
 	shipmentLine, apiErr := lineRepo.Get(ctx, params.ShipmentLineID)
 	if apiErr != nil {
-		if apierror.IsNotFound(apiErr) {
+		if apierror.HasCode(apiErr, apierror.CodeResourceNotFound) {
 			wasDeleted, deletedCheckErr := s.repos.NewDeletedRecordRepo().ExistsInAccount(ctx, constants.DeletedRecordResourceTypeShipmentLine, params.ShipmentLineID, params.AccountID)
 			if deletedCheckErr != nil {
 				return tracing.Trace(span, deletedCheckErr)
 			}
 			if wasDeleted {
-				return tracing.Trace(span, apierror.NewAlreadyDeletedError("This shipment line has already been deleted and can no longer be modified."))
+				return tracing.Trace(span, apierror.NewGoneError("This shipment line has already been deleted and can no longer be modified."))
 			}
 		}
 		return tracing.Trace(span, apiErr)
@@ -472,7 +472,7 @@ func (s *shipmentLineSvcImpl) checkShipmentReadable(ctx context.Context, identit
 			return apiErr
 		}
 		if shipment.CustomerID != *own {
-			return apierror.NewResourceNotFoundError("Shipment not found.")
+			return apierror.NewNotFoundError("Shipment not found.")
 		}
 		return nil
 	}
@@ -481,7 +481,7 @@ func (s *shipmentLineSvcImpl) checkShipmentReadable(ctx context.Context, identit
 		return apiErr
 	}
 	if !inAccount {
-		return apierror.NewResourceNotFoundError("Shipment not found.")
+		return apierror.NewNotFoundError("Shipment not found.")
 	}
 	return nil
 }
@@ -515,25 +515,19 @@ func checkShipmentLineCapacity(
 	}
 
 	if capacity.SalesOrderID != shipmentSalesOrderID {
-		return apierror.NewParameterInvalidError(
-			"Sales order line does not belong to this shipment's sales order.",
-			"sales_order_line_id",
-		)
+		return apierror.NewParameterInvalidError("sales_order_line_id", "Sales order line does not belong to this shipment's sales order.")
 	}
 
 	requested, err := decimal.NewFromString(quantityValue)
 	if err != nil {
-		return apierror.NewParameterInvalidError("Quantity value is not a number.", "quantity_value")
+		return apierror.NewParameterInvalidError("quantity_value", "Quantity value is not a number.")
 	}
 	if requested.IsNegative() {
-		return apierror.NewParameterInvalidError("Quantity value cannot be negative.", "quantity_value")
+		return apierror.NewParameterInvalidError("quantity_value", "Quantity value cannot be negative.")
 	}
 
 	if remaining := capacity.Remaining(); requested.GreaterThan(remaining) {
-		return apierror.NewParameterInvalidError(
-			fmt.Sprintf("Quantity exceeds the %s remaining to ship on this sales order line.", remaining.String()),
-			"quantity_value",
-		)
+		return apierror.NewParameterInvalidError("quantity_value", fmt.Sprintf("Quantity exceeds the %s remaining to ship on this sales order line.", remaining.String()))
 	}
 
 	return nil

@@ -9,10 +9,10 @@ import (
 	"github.com/open-mrp/api/shared/appctx"
 	"github.com/open-mrp/api/shared/audit"
 	"github.com/open-mrp/api/shared/constants"
-	apierror "github.com/open-mrp/api/shared/errors"
 	"github.com/open-mrp/api/shared/id"
-	"github.com/open-mrp/api/shared/idempotency"
-	"github.com/open-mrp/api/shared/tracing"
+	"github.com/open-mrp/api/shared/idemresponse"
+	apierror "github.com/open-mrp/apikit/apierror"
+	"github.com/open-mrp/apikit/tracing"
 )
 
 var accountGroupSvcTracer = tracing.GetTracer("core-service.account_group_service")
@@ -174,7 +174,7 @@ func (s *accountGroupSvcImpl) CreateAccountGroup(ctx context.Context, params dom
 
 	switch domain.RecoveryPoint(idempotencyKey.RecoveryPoint) {
 	case domain.RecoveryPointFinished:
-		cached, err := idempotency.UnmarshalCachedResponse[domain.AccountGroup](ctx, idempotencyKey.ResponseCode, idempotencyKey.ResponseBody)
+		cached, err := idemresponse.UnmarshalCachedResponse[domain.AccountGroup](ctx, idempotencyKey.ResponseCode, idempotencyKey.ResponseBody)
 		if err != nil {
 			return nil, tracing.Trace(span, apierror.NewInternalError(err, "Issue unmarshalling cached response."))
 		}
@@ -190,7 +190,7 @@ func (s *accountGroupSvcImpl) CreateAccountGroup(ctx context.Context, params dom
 				return apiErr
 			}
 			if exists {
-				return apierror.NewConflictErrorWithParam("An account group with this name already exists.", "name")
+				return apierror.NewConflictErrorWithParam("name", "An account group with this name already exists.")
 			}
 
 			created, apiErr := txRepo.Create(txCtx, accountGroupID, params)
@@ -252,7 +252,7 @@ func (s *accountGroupSvcImpl) UpdateAccountGroup(ctx context.Context, params dom
 
 	switch domain.RecoveryPoint(idempotencyKey.RecoveryPoint) {
 	case domain.RecoveryPointFinished:
-		cached, err := idempotency.UnmarshalCachedResponse[domain.AccountGroup](ctx, idempotencyKey.ResponseCode, idempotencyKey.ResponseBody)
+		cached, err := idemresponse.UnmarshalCachedResponse[domain.AccountGroup](ctx, idempotencyKey.ResponseCode, idempotencyKey.ResponseBody)
 		if err != nil {
 			return nil, tracing.Trace(span, apierror.NewInternalError(err, "Issue unmarshalling cached response."))
 		}
@@ -277,7 +277,7 @@ func (s *accountGroupSvcImpl) UpdateAccountGroup(ctx context.Context, params dom
 					return apiErr
 				}
 				if exists {
-					return apierror.NewConflictErrorWithParam("An account group with this name already exists.", "name")
+					return apierror.NewConflictErrorWithParam("name", "An account group with this name already exists.")
 				}
 			}
 
@@ -333,7 +333,7 @@ func (s *accountGroupSvcImpl) DeleteAccountGroup(ctx context.Context, accountGro
 
 	accountGroup, apiErr := s.repos.NewAccountGroupRepo().Get(ctx, accountID, accountGroupID)
 	if apiErr != nil {
-		if apierror.IsNotFound(apiErr) {
+		if apierror.HasCode(apiErr, apierror.CodeResourceNotFound) {
 			wasDeleted, deletedCheckErr := s.repos.NewDeletedRecordRepo().ExistsInAccount(ctx, constants.DeletedRecordResourceTypeAccountGroup, accountGroupID, accountID)
 			if deletedCheckErr != nil {
 				return tracing.Trace(span, deletedCheckErr)
@@ -341,7 +341,7 @@ func (s *accountGroupSvcImpl) DeleteAccountGroup(ctx context.Context, accountGro
 			if wasDeleted {
 				return tracing.Trace(
 					span,
-					apierror.NewAlreadyDeletedError("This account group has already been deleted and can no longer be modified."),
+					apierror.NewGoneError("This account group has already been deleted and can no longer be modified."),
 				)
 			}
 		}

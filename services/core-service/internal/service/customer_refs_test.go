@@ -11,8 +11,8 @@ import (
 	"github.com/open-mrp/api/services/core-service/internal/domain"
 	factorymock "github.com/open-mrp/api/services/core-service/internal/domain/mock/factory"
 	repositorymock "github.com/open-mrp/api/services/core-service/internal/domain/mock/repository"
-	apierror "github.com/open-mrp/api/shared/errors"
 	"github.com/open-mrp/api/shared/fieldpb"
+	apierror "github.com/open-mrp/apikit/apierror"
 	"github.com/open-mrp/apikit/field"
 )
 
@@ -61,7 +61,7 @@ func TestCheckCustomerRefs_RefusesOnTheFieldThatNamedIt(t *testing.T) {
 	}))
 
 	require.NotNil(t, apiErr)
-	assert.Equal(t, apierror.ErrorCodeResourceNotFound, apiErr.Code)
+	assert.Equal(t, apierror.CodeResourceNotFound, apiErr.Code)
 	assert.Equal(t, "default_payment_term_id", apiErr.Param)
 }
 
@@ -76,7 +76,7 @@ func TestCheckCustomerRefs_ReadsTheTypeAndPriceGroupsTogether(t *testing.T) {
 	}))
 
 	require.NotNil(t, apiErr)
-	assert.Equal(t, apierror.ErrorCodeResourceNotFound, apiErr.Code)
+	assert.Equal(t, apierror.CodeResourceNotFound, apiErr.Code)
 	assert.Equal(t, "customer_price_group_ids", apiErr.Param)
 }
 
@@ -84,7 +84,7 @@ func TestCheckCustomerRefs_CalendarAndSalesRepMustBeTheAccounts(t *testing.T) {
 	s := newCustomerRefsSetup(t)
 	s.calendars.EXPECT().Get(gomock.Any(), "ac_seller", "opcal_own").Return(&domain.OperatingCalendar{ID: "opcal_own"}, nil)
 	s.accountUsers.EXPECT().GetDetailByAccountAndID(gomock.Any(), "ac_seller", "acus_other", nil).
-		Return(nil, apierror.NewResourceNotFoundError("Account user not found."))
+		Return(nil, apierror.NewNotFoundError("Account user not found."))
 
 	apiErr := checkCustomerRefs(context.Background(), s.repos, "ac_seller", newCustomerRefs(domain.CreateCustomerParams{
 		ReceiveCalendarID: refsPtr("opcal_own"),
@@ -104,7 +104,7 @@ func TestCheckCustomerRefs_PassesAnUnexpectedLookupError(t *testing.T) {
 	}))
 
 	require.NotNil(t, apiErr)
-	assert.Equal(t, apierror.ErrorCodeInternalError, apiErr.Code)
+	assert.Equal(t, apierror.CodeInternalError, apiErr.Code)
 }
 
 // A credit limit in a unit that does not exist would be stored and then leave the customer unreadable.
@@ -118,7 +118,7 @@ func TestCheckCustomerRefs_RefusesAnUnknownCreditLimitUnit(t *testing.T) {
 	apiErr := checkCustomerRefs(context.Background(), s.repos, "ac_seller", refs)
 
 	require.NotNil(t, apiErr)
-	assert.Equal(t, apierror.ErrorCodeResourceNotFound, apiErr.Code)
+	assert.Equal(t, apierror.CodeResourceNotFound, apiErr.Code)
 	assert.Equal(t, "credit_limit.unit_id", apiErr.Param)
 }
 

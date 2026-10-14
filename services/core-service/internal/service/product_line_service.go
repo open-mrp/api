@@ -11,10 +11,10 @@ import (
 	"github.com/open-mrp/api/shared/appctx"
 	"github.com/open-mrp/api/shared/audit"
 	"github.com/open-mrp/api/shared/constants"
-	apierror "github.com/open-mrp/api/shared/errors"
 	"github.com/open-mrp/api/shared/id"
-	"github.com/open-mrp/api/shared/idempotency"
-	"github.com/open-mrp/api/shared/tracing"
+	"github.com/open-mrp/api/shared/idemresponse"
+	apierror "github.com/open-mrp/apikit/apierror"
+	"github.com/open-mrp/apikit/tracing"
 )
 
 var productLineSvcTracer = tracing.GetTracer("core-service.product_line_service")
@@ -135,7 +135,7 @@ func (s *productLineSvcImpl) ListProductLines(ctx context.Context, params domain
 		// A group the tenant cannot see leaves that line's unit_group unpopulated rather than failing the page.
 		for _, pl := range result.ProductLines {
 			unitGroup, apiErr := repo.GetUnitGroup(ctx, params.AccountID, pl.UnitGroupID, params.Includes)
-			if apiErr != nil && !apierror.IsNotFound(apiErr) {
+			if apiErr != nil && !apierror.HasCode(apiErr, apierror.CodeResourceNotFound) {
 				return nil, tracing.Trace(span, apiErr)
 			}
 			pl.UnitGroup = unitGroup
@@ -190,7 +190,7 @@ func (s *productLineSvcImpl) GetProductLine(ctx context.Context, params domain.G
 	if slices.Contains(params.Includes, "unit_group") {
 		// The line itself was found, so a group the tenant cannot see leaves unit_group unpopulated rather than reporting the line as missing.
 		unitGroup, apiErr := repo.GetUnitGroup(ctx, params.AccountID, productLine.UnitGroupID, params.Includes)
-		if apiErr != nil && !apierror.IsNotFound(apiErr) {
+		if apiErr != nil && !apierror.HasCode(apiErr, apierror.CodeResourceNotFound) {
 			return nil, tracing.Trace(span, apiErr)
 		}
 		productLine.UnitGroup = unitGroup
@@ -212,18 +212,15 @@ func validateLotDefault(
 		return nil
 	}
 	if lot.UnitID == "" {
-		return apierror.NewValidationErrorWithParam(
-			"A default lot needs a unit as well as a value.", "default_lot")
+		return apierror.NewFieldError("default_lot", apierror.CodeInvalidFormat, "A default lot needs a unit as well as a value.")
 	}
 
 	value, err := strconv.ParseFloat(lot.Value, 64)
 	if err != nil {
-		return apierror.NewValidationErrorWithParam(
-			"The default lot value must be a number.", "default_lot")
+		return apierror.NewFieldError("default_lot", apierror.CodeInvalidFormat, "The default lot value must be a number.")
 	}
 	if value <= 0 {
-		return apierror.NewValidationErrorWithParam(
-			"The default lot value must be greater than zero.", "default_lot")
+		return apierror.NewFieldError("default_lot", apierror.CodeInvalidFormat, "The default lot value must be greater than zero.")
 	}
 
 	inGroup, apiErr := repo.IsUnitInGroup(ctx, unitGroupID, lot.UnitID)
@@ -231,8 +228,7 @@ func validateLotDefault(
 		return apiErr
 	}
 	if !inGroup {
-		return apierror.NewValidationErrorWithParam(
-			"The default lot unit must belong to this product line's unit group.", "default_lot")
+		return apierror.NewFieldError("default_lot", apierror.CodeInvalidFormat, "The default lot unit must belong to this product line's unit group.")
 	}
 	return nil
 }
@@ -277,7 +273,7 @@ func (s *productLineSvcImpl) CreateProductLine(ctx context.Context, params domai
 
 	switch domain.RecoveryPoint(idempotencyKey.RecoveryPoint) {
 	case domain.RecoveryPointFinished:
-		cached, err := idempotency.UnmarshalCachedResponse[domain.ProductLineFull](ctx, idempotencyKey.ResponseCode, idempotencyKey.ResponseBody)
+		cached, err := idemresponse.UnmarshalCachedResponse[domain.ProductLineFull](ctx, idempotencyKey.ResponseCode, idempotencyKey.ResponseBody)
 		if err != nil {
 			return nil, tracing.Trace(span, apierror.NewInternalError(err, "Issue unmarshalling cached response."))
 		}
@@ -293,7 +289,7 @@ func (s *productLineSvcImpl) CreateProductLine(ctx context.Context, params domai
 				return apiErr
 			}
 			if exists {
-				return apierror.NewConflictErrorWithParam("A product line with this name already exists.", "name")
+				return apierror.NewConflictErrorWithParam("name", "A product line with this name already exists.")
 			}
 
 			// Validate the referenced unit group exists before persisting so a bogus unit_group_id is rejected and the tx rolls back instead of committing a dangling reference.
@@ -386,7 +382,7 @@ func (s *productLineSvcImpl) UpdateProductLine(ctx context.Context, params domai
 
 	switch domain.RecoveryPoint(idempotencyKey.RecoveryPoint) {
 	case domain.RecoveryPointFinished:
-		cached, err := idempotency.UnmarshalCachedResponse[domain.ProductLineFull](ctx, idempotencyKey.ResponseCode, idempotencyKey.ResponseBody)
+		cached, err := idemresponse.UnmarshalCachedResponse[domain.ProductLineFull](ctx, idempotencyKey.ResponseCode, idempotencyKey.ResponseBody)
 		if err != nil {
 			return nil, tracing.Trace(span, apierror.NewInternalError(err, "Issue unmarshalling cached response."))
 		}
@@ -411,7 +407,7 @@ func (s *productLineSvcImpl) UpdateProductLine(ctx context.Context, params domai
 					return apiErr
 				}
 				if exists {
-					return apierror.NewConflictErrorWithParam("A product line with this name already exists.", "name")
+					return apierror.NewConflictErrorWithParam("name", "A product line with this name already exists.")
 				}
 			}
 
@@ -508,13 +504,13 @@ func (s *productLineSvcImpl) DeleteProductLine(ctx context.Context, productLineI
 		ProductLineID: productLineID,
 	})
 	if apiErr != nil {
-		if apierror.IsNotFound(apiErr) {
+		if apierror.HasCode(apiErr, apierror.CodeResourceNotFound) {
 			wasDeleted, deletedCheckErr := s.repos.NewDeletedRecordRepo().ExistsInAccount(ctx, constants.DeletedRecordResourceTypeProductLine, productLineID, accountID)
 			if deletedCheckErr != nil {
 				return tracing.Trace(span, deletedCheckErr)
 			}
 			if wasDeleted {
-				return tracing.Trace(span, apierror.NewAlreadyDeletedError("This product line has already been deleted and can no longer be modified."))
+				return tracing.Trace(span, apierror.NewGoneError("This product line has already been deleted and can no longer be modified."))
 			}
 		}
 		return tracing.Trace(span, apiErr)

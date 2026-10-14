@@ -5,7 +5,7 @@ import (
 	"encoding/json"
 	"time"
 
-	apierror "github.com/open-mrp/api/shared/errors"
+	apierror "github.com/open-mrp/apikit/apierror"
 	"github.com/open-mrp/apikit/pagination"
 )
 

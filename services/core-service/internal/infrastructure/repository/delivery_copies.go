@@ -5,8 +5,8 @@ import (
 	"strings"
 
 	"github.com/open-mrp/api/services/core-service/internal/infrastructure/sqlc"
-	"github.com/open-mrp/api/shared/db"
-	apierror "github.com/open-mrp/api/shared/errors"
+	apierror "github.com/open-mrp/apikit/apierror"
+	"github.com/open-mrp/apikit/db"
 )
 
 // deliveryOrders reads the window's measured orders from the quantities their lines carry once every line

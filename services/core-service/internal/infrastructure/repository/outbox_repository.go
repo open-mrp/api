@@ -8,10 +8,10 @@ import (
 
 	"github.com/open-mrp/api/services/core-service/internal/infrastructure/sqlc"
 	"github.com/open-mrp/api/shared/contracts"
-	"github.com/open-mrp/api/shared/db"
 	"github.com/open-mrp/api/shared/id"
 	"github.com/open-mrp/api/shared/messaging"
-	"github.com/open-mrp/api/shared/tracing"
+	"github.com/open-mrp/apikit/db"
+	"github.com/open-mrp/apikit/tracing"
 )
 
 var outboxRepoTracer = tracing.GetTracer("core-service.outbox_repository")

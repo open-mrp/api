@@ -13,7 +13,7 @@ import (
 	factorymock "github.com/open-mrp/api/services/core-service/internal/domain/mock/factory"
 	repositorymock "github.com/open-mrp/api/services/core-service/internal/domain/mock/repository"
 	"github.com/open-mrp/api/shared/constants"
-	apierror "github.com/open-mrp/api/shared/errors"
+	apierror "github.com/open-mrp/apikit/apierror"
 )
 
 var productionCostBaseUnits = map[string]string{"currency": "dollar", "time": "hour", "quantity": "each", "mass": "gram"}
@@ -326,7 +326,7 @@ func TestAnalyzeProductionCosts_ChecksAccessValidatesAndCaches(t *testing.T) {
 
 	_, apiErr = svc.AnalyzeProductionCosts(salesCtx("ac_1", string(constants.RoleTypeCustom), map[string]bool{"batches:read": true}), params)
 	require.NotNil(t, apiErr)
-	require.Equal(t, 403, apierror.GetHTTPStatusCode(apiErr.Code), "batches:read alone does not show what production cost")
+	require.Equal(t, 403, apiErr.Code.Status(), "batches:read alone does not show what production cost")
 
 	backwards := params
 	backwards.StartDate, backwards.EndDate = params.EndDate, params.StartDate

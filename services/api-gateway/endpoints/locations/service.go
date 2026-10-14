@@ -10,10 +10,10 @@ import (
 	"github.com/open-mrp/api/services/api-gateway/internal/resourceloaders"
 	apirequest "github.com/open-mrp/api/services/api-gateway/pkg/request"
 	apiresource "github.com/open-mrp/api/services/api-gateway/pkg/resource"
-	apierror "github.com/open-mrp/api/shared/errors"
 	"github.com/open-mrp/api/shared/fieldpb"
 	pb "github.com/open-mrp/api/shared/proto/core"
-	"github.com/open-mrp/api/shared/tracing"
+	apierror "github.com/open-mrp/apikit/apierror"
+	"github.com/open-mrp/apikit/tracing"
 	"google.golang.org/grpc"
 	"google.golang.org/protobuf/types/known/emptypb"
 )
@@ -171,7 +171,7 @@ func loadLocationByID(ctx context.Context, id string) (*apiresource.Location, *a
 	}
 	v, ok := loaded[id]
 	if !ok {
-		return nil, apierror.NewResourceNotFoundError("Location not found.")
+		return nil, apierror.NewNotFoundError("Location not found.")
 	}
 	return v.(*apiresource.Location), nil
 }

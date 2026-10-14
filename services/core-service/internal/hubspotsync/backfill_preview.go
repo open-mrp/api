@@ -6,8 +6,8 @@ import (
 	"strings"
 
 	"github.com/open-mrp/api/services/core-service/internal/domain"
-	apierror "github.com/open-mrp/api/shared/errors"
-	"github.com/open-mrp/api/shared/tracing"
+	apierror "github.com/open-mrp/apikit/apierror"
+	"github.com/open-mrp/apikit/tracing"
 )
 
 // Job status values (mirror the hubspot_sync_job.status column).

@@ -10,10 +10,10 @@ import (
 	"github.com/open-mrp/api/shared/appctx"
 	"github.com/open-mrp/api/shared/audit"
 	"github.com/open-mrp/api/shared/constants"
-	apierror "github.com/open-mrp/api/shared/errors"
 	"github.com/open-mrp/api/shared/id"
-	"github.com/open-mrp/api/shared/idempotency"
-	"github.com/open-mrp/api/shared/tracing"
+	"github.com/open-mrp/api/shared/idemresponse"
+	apierror "github.com/open-mrp/apikit/apierror"
+	"github.com/open-mrp/apikit/tracing"
 )
 
 var consumptionSvcTracer = tracing.GetTracer("core-service.consumption_service")
@@ -107,7 +107,7 @@ func (s *consumptionSvcImpl) GetConsumption(ctx context.Context, productionStepI
 		return nil, tracing.Trace(span, apiErr)
 	}
 	if !isInAccount {
-		return nil, tracing.Trace(span, apierror.NewResourceNotFoundError("Production step not found."))
+		return nil, tracing.Trace(span, apierror.NewNotFoundError("Production step not found."))
 	}
 
 	return s.repos.NewConsumptionRepo().Get(ctx, accountID, productionStepID, consumptionID)
@@ -144,7 +144,7 @@ func (s *consumptionSvcImpl) CreateConsumption(ctx context.Context, params domai
 		return nil, tracing.Trace(span, apiErr)
 	}
 	if !isInAccount {
-		return nil, tracing.Trace(span, apierror.NewResourceNotFoundError("Production step not found."))
+		return nil, tracing.Trace(span, apierror.NewNotFoundError("Production step not found."))
 	}
 
 	_, apiErr = s.repos.NewItemRepo().Get(ctx, domain.GetItemParams{
@@ -179,7 +179,7 @@ func (s *consumptionSvcImpl) CreateConsumption(ctx context.Context, params domai
 
 	switch domain.RecoveryPoint(idempotencyKey.RecoveryPoint) {
 	case domain.RecoveryPointFinished:
-		cached, err := idempotency.UnmarshalCachedResponse[domain.Consumption](ctx, idempotencyKey.ResponseCode, idempotencyKey.ResponseBody)
+		cached, err := idemresponse.UnmarshalCachedResponse[domain.Consumption](ctx, idempotencyKey.ResponseCode, idempotencyKey.ResponseBody)
 		if err != nil {
 			return nil, tracing.Trace(span, apierror.NewInternalError(err, "Issue unmarshalling cached response."))
 		}
@@ -259,7 +259,7 @@ func (s *consumptionSvcImpl) UpdateConsumption(ctx context.Context, params domai
 		return nil, tracing.Trace(span, apiErr)
 	}
 	if !isInAccount {
-		return nil, tracing.Trace(span, apierror.NewResourceNotFoundError("Production step not found."))
+		return nil, tracing.Trace(span, apierror.NewNotFoundError("Production step not found."))
 	}
 
 	meds := s.mediators()
@@ -271,7 +271,7 @@ func (s *consumptionSvcImpl) UpdateConsumption(ctx context.Context, params domai
 
 	switch domain.RecoveryPoint(idempotencyKey.RecoveryPoint) {
 	case domain.RecoveryPointFinished:
-		cached, err := idempotency.UnmarshalCachedResponse[domain.Consumption](ctx, idempotencyKey.ResponseCode, idempotencyKey.ResponseBody)
+		cached, err := idemresponse.UnmarshalCachedResponse[domain.Consumption](ctx, idempotencyKey.ResponseCode, idempotencyKey.ResponseBody)
 		if err != nil {
 			return nil, tracing.Trace(span, apierror.NewInternalError(err, "Issue unmarshalling cached response."))
 		}
@@ -457,18 +457,18 @@ func (s *consumptionSvcImpl) DeleteConsumption(ctx context.Context, params domai
 		return nil, tracing.Trace(span, apiErr)
 	}
 	if !isInAccount {
-		return nil, tracing.Trace(span, apierror.NewResourceNotFoundError("Production step not found."))
+		return nil, tracing.Trace(span, apierror.NewNotFoundError("Production step not found."))
 	}
 
 	consumption, apiErr := s.repos.NewConsumptionRepo().Get(ctx, accountID, params.ProductionStepID, params.ConsumptionID)
 	if apiErr != nil {
-		if apierror.IsNotFound(apiErr) {
+		if apierror.HasCode(apiErr, apierror.CodeResourceNotFound) {
 			wasDeleted, deletedCheckErr := s.repos.NewDeletedRecordRepo().ExistsInAccount(ctx, constants.DeletedRecordResourceTypeConsumption, params.ConsumptionID, accountID)
 			if deletedCheckErr != nil {
 				return nil, tracing.Trace(span, deletedCheckErr)
 			}
 			if wasDeleted {
-				return nil, tracing.Trace(span, apierror.NewAlreadyDeletedError("This consumption has already been deleted and can no longer be modified."))
+				return nil, tracing.Trace(span, apierror.NewGoneError("This consumption has already been deleted and can no longer be modified."))
 			}
 		}
 		return nil, tracing.Trace(span, apiErr)

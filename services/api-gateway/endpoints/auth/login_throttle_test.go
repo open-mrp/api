@@ -7,8 +7,8 @@ import (
 	"testing"
 
 	"github.com/open-mrp/api/services/api-gateway/internal/middleware"
-	apierror "github.com/open-mrp/api/shared/errors"
 	pb "github.com/open-mrp/api/shared/proto/auth"
+	apierror "github.com/open-mrp/apikit/apierror"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -114,7 +114,7 @@ func TestLoginEndToEndThrottle(t *testing.T) {
 		if apiErr == nil {
 			t.Fatalf("attempt %d: expected an error from the stub auth client, got nil", i+1)
 		}
-		if apiErr.Code == apierror.ErrorCodeRateLimitExceeded {
+		if apiErr.Code == apierror.CodeRateLimited {
 			t.Fatalf("attempt %d: throttle engaged too early (call should still reach gRPC)", i+1)
 		}
 	}
@@ -127,7 +127,7 @@ func TestLoginEndToEndThrottle(t *testing.T) {
 	if apiErr == nil {
 		t.Fatal("expected rate-limit error once throttle engages, got nil")
 	}
-	if apiErr.Code != apierror.ErrorCodeRateLimitExceeded {
+	if apiErr.Code != apierror.CodeRateLimited {
 		t.Fatalf("expected ErrorCodeRateLimitExceeded, got %s", apiErr.Code)
 	}
 	if got := stub.loginCalls.Load(); got != int32(loginFailureLimit) {
@@ -140,7 +140,7 @@ func TestLoginEndToEndThrottle(t *testing.T) {
 	if apiErr == nil {
 		t.Fatal("expected stub error for bystander, got nil")
 	}
-	if apiErr.Code == apierror.ErrorCodeRateLimitExceeded {
+	if apiErr.Code == apierror.CodeRateLimited {
 		t.Fatal("bystander identifier must not inherit victim's throttle")
 	}
 	if got := stub.loginCalls.Load(); got != bystanderCallsBefore+1 {
@@ -152,7 +152,7 @@ func TestLoginEndToEndThrottle(t *testing.T) {
 	// dodge the limit.
 	callsBefore := stub.loginCalls.Load()
 	_, apiErr = svc.Login(ctx, &LoginRequest{Identifier: "  Victim@Example.com  ", Password: "wrong"})
-	if apiErr == nil || apiErr.Code != apierror.ErrorCodeRateLimitExceeded {
+	if apiErr == nil || apiErr.Code != apierror.CodeRateLimited {
 		t.Fatalf("expected rate-limit error for case/whitespace variant, got %v", apiErr)
 	}
 	if got := stub.loginCalls.Load(); got != callsBefore {

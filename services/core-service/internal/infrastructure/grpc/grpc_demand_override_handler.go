@@ -6,9 +6,9 @@ import (
 
 	"github.com/open-mrp/api/services/core-service/internal/domain"
 	"github.com/open-mrp/api/shared/contracts"
-	apierror "github.com/open-mrp/api/shared/errors"
 	"github.com/open-mrp/api/shared/fieldpb"
 	pb "github.com/open-mrp/api/shared/proto/core"
+	apierror "github.com/open-mrp/apikit/apierror"
 
 	"google.golang.org/protobuf/types/known/emptypb"
 	"google.golang.org/protobuf/types/known/timestamppb"
@@ -92,14 +92,14 @@ func (h *demandOverrideGRPCHandler) ListDemandOverrides(ctx context.Context, req
 	if req.PeriodStart != nil {
 		parsed, err := time.Parse(time.RFC3339, *req.PeriodStart)
 		if err != nil {
-			return nil, contracts.ConvertAPIErrorToGRPC(apierror.NewValidationErrorWithParam("Invalid date format for starts_at.", "starts_at"))
+			return nil, contracts.ConvertAPIErrorToGRPC(apierror.NewFieldError("starts_at", apierror.CodeInvalidFormat, "Invalid date format for starts_at."))
 		}
 		params.PeriodStart = &parsed
 	}
 	if req.PeriodEnd != nil {
 		parsed, err := time.Parse(time.RFC3339, *req.PeriodEnd)
 		if err != nil {
-			return nil, contracts.ConvertAPIErrorToGRPC(apierror.NewValidationErrorWithParam("Invalid date format for ends_at.", "ends_at"))
+			return nil, contracts.ConvertAPIErrorToGRPC(apierror.NewFieldError("ends_at", apierror.CodeInvalidFormat, "Invalid date format for ends_at."))
 		}
 		params.PeriodEnd = &parsed
 	}
@@ -147,10 +147,10 @@ func (h *demandOverrideGRPCHandler) CreateDemandOverride(ctx context.Context, re
 	defer finalizeIdempotency()
 
 	if req.PeriodStartDate == nil {
-		return nil, contracts.ConvertAPIErrorToGRPC(apierror.NewValidationErrorWithParam("period_starts_at is required.", "period_starts_at"))
+		return nil, contracts.ConvertAPIErrorToGRPC(apierror.NewFieldError("period_starts_at", apierror.CodeInvalidFormat, "period_starts_at is required."))
 	}
 	if req.PeriodEndDate == nil {
-		return nil, contracts.ConvertAPIErrorToGRPC(apierror.NewValidationErrorWithParam("period_ends_at is required.", "period_ends_at"))
+		return nil, contracts.ConvertAPIErrorToGRPC(apierror.NewFieldError("period_ends_at", apierror.CodeInvalidFormat, "period_ends_at is required."))
 	}
 
 	params := domain.CreateDemandOverrideParams{

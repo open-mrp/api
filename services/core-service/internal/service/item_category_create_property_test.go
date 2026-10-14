@@ -12,7 +12,7 @@ import (
 	repositorymock "github.com/open-mrp/api/services/core-service/internal/domain/mock/repository"
 	"github.com/open-mrp/api/shared/appctx"
 	"github.com/open-mrp/api/shared/constants"
-	apierror "github.com/open-mrp/api/shared/errors"
+	apierror "github.com/open-mrp/apikit/apierror"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -144,7 +144,7 @@ func TestCreateItemCategoryProperty_RefusesATakenNameWithoutWriting(t *testing.T
 			_, apiErr := h.svc.CreateItemCategoryProperty(categoryEditorCtx("item_categories:update"), domain.CreateItemCategoryPropertyParams{ItemCategoryID: "ic_socks", Name: "Color"})
 
 			require.NotNil(t, apiErr)
-			assert.Equal(t, apierror.ErrorCodeResourceConflict, apiErr.Code)
+			assert.Equal(t, apierror.CodeResourceConflict, apiErr.Code)
 			assert.Equal(t, "name", apiErr.Param)
 			assert.Empty(t, h.audited(t))
 		})
@@ -159,7 +159,7 @@ func TestCreateItemCategoryProperty_RefusesBeforeTouchingTheCategory(t *testing.
 		h := newCategoryPropertyHarness(t)
 		_, apiErr := h.svc.CreateItemCategoryProperty(categoryEditorCtx("properties:create"), domain.CreateItemCategoryPropertyParams{ItemCategoryID: "ic_socks", Name: "Size"})
 		require.NotNil(t, apiErr)
-		assert.Equal(t, apierror.ErrorCodeInsufficientPerms, apiErr.Code)
+		assert.Equal(t, apierror.CodeInsufficientPermissions, apiErr.Code)
 		assert.Contains(t, apiErr.PublicMessage, "item_categories:update")
 	})
 
@@ -168,7 +168,7 @@ func TestCreateItemCategoryProperty_RefusesBeforeTouchingTheCategory(t *testing.
 		h := newCategoryPropertyHarness(t)
 		_, apiErr := h.svc.CreateItemCategoryProperty(categoryEditorCtx("item_categories:update"), domain.CreateItemCategoryPropertyParams{ItemCategoryID: domain.DefaultCategoryShipping, Name: "Size"})
 		require.NotNil(t, apiErr)
-		assert.Equal(t, apierror.ErrorCodeInsufficientPerms, apiErr.Code)
+		assert.Equal(t, apierror.CodeInsufficientPermissions, apiErr.Code)
 	})
 
 	t.Run("a category outside the account", func(t *testing.T) {
@@ -177,6 +177,6 @@ func TestCreateItemCategoryProperty_RefusesBeforeTouchingTheCategory(t *testing.
 		h.categories.EXPECT().IsInAccount(gomock.Any(), "ac_cat", "ic_elsewhere").Return(false, nil)
 		_, apiErr := h.svc.CreateItemCategoryProperty(categoryEditorCtx("item_categories:update"), domain.CreateItemCategoryPropertyParams{ItemCategoryID: "ic_elsewhere", Name: "Size"})
 		require.NotNil(t, apiErr)
-		assert.Equal(t, apierror.ErrorCodeResourceNotFound, apiErr.Code)
+		assert.Equal(t, apierror.CodeResourceNotFound, apiErr.Code)
 	})
 }

@@ -9,9 +9,9 @@ import (
 	"github.com/open-mrp/api/shared/appctx"
 	"github.com/open-mrp/api/shared/audit"
 	"github.com/open-mrp/api/shared/constants"
-	apierror "github.com/open-mrp/api/shared/errors"
-	"github.com/open-mrp/api/shared/idempotency"
-	"github.com/open-mrp/api/shared/tracing"
+	"github.com/open-mrp/api/shared/idemresponse"
+	apierror "github.com/open-mrp/apikit/apierror"
+	"github.com/open-mrp/apikit/tracing"
 
 	"github.com/open-mrp/api/services/auth-service/pkg/types"
 )
@@ -86,14 +86,14 @@ func (s *measureSvcImpl) checkObjectPermission(identity *types.Identity, objectT
 	case constants.ObjectTypeDepartment:
 		return identity.CheckHasPermission(types.PermissionDomainDepartments, types.ActionUpdate)
 	default:
-		return apierror.NewValidationErrorWithParam("Invalid object type.", "object_type")
+		return apierror.NewFieldError("object_type", apierror.CodeInvalidFormat, "Invalid object type.")
 	}
 }
 
 // checkOwnerPermission asks for the update permission of every resource the measure belongs to in the account, so editing an item's measure takes items:update whatever the request says it belongs to. A measure no such resource holds reads as not found.
 func (s *measureSvcImpl) checkOwnerPermission(identity *types.Identity, owners []constants.ObjectType, notFound string) *apierror.APIError {
 	if len(owners) == 0 {
-		return apierror.NewResourceNotFoundError(notFound)
+		return apierror.NewNotFoundError(notFound)
 	}
 	for _, owner := range owners {
 		if apiErr := s.checkObjectPermission(identity, owner); apiErr != nil {
@@ -121,7 +121,7 @@ func (s *measureSvcImpl) verifyObjectExists(ctx context.Context, accountID strin
 		})
 		return apiErr
 	default:
-		return apierror.NewValidationErrorWithParam("Invalid object type.", "object_type")
+		return apierror.NewFieldError("object_type", apierror.CodeInvalidFormat, "Invalid object type.")
 	}
 }
 
@@ -167,7 +167,7 @@ func (s *measureSvcImpl) UpdateQuantity(ctx context.Context, params domain.Updat
 
 	switch domain.RecoveryPoint(idempotencyKey.RecoveryPoint) {
 	case domain.RecoveryPointFinished:
-		cached, err := idempotency.UnmarshalCachedResponse[domain.Quantity](ctx, idempotencyKey.ResponseCode, idempotencyKey.ResponseBody)
+		cached, err := idemresponse.UnmarshalCachedResponse[domain.Quantity](ctx, idempotencyKey.ResponseCode, idempotencyKey.ResponseBody)
 		if err != nil {
 			return nil, tracing.Trace(span, apierror.NewInternalError(err, "Issue unmarshalling cached response."))
 		}
@@ -257,7 +257,7 @@ func (s *measureSvcImpl) UpdateRate(ctx context.Context, params domain.UpdateRat
 
 	switch domain.RecoveryPoint(idempotencyKey.RecoveryPoint) {
 	case domain.RecoveryPointFinished:
-		cached, err := idempotency.UnmarshalCachedResponse[domain.Rate](ctx, idempotencyKey.ResponseCode, idempotencyKey.ResponseBody)
+		cached, err := idemresponse.UnmarshalCachedResponse[domain.Rate](ctx, idempotencyKey.ResponseCode, idempotencyKey.ResponseBody)
 		if err != nil {
 			return nil, tracing.Trace(span, apierror.NewInternalError(err, "Issue unmarshalling cached response."))
 		}

@@ -9,8 +9,8 @@ import (
 
 	"github.com/open-mrp/api/services/core-service/internal/domain"
 	"github.com/open-mrp/api/services/core-service/internal/mediator"
-	"github.com/open-mrp/api/shared/tracing"
 	"github.com/open-mrp/apikit/lease"
+	"github.com/open-mrp/apikit/tracing"
 )
 
 var burnRateSweepTracer = tracing.GetTracer("core-service.burn_rate_scheduler")

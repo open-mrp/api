@@ -12,7 +12,7 @@ import (
 	repositorymock "github.com/open-mrp/api/services/core-service/internal/domain/mock/repository"
 	"github.com/open-mrp/api/shared/appctx"
 	"github.com/open-mrp/api/shared/constants"
-	apierror "github.com/open-mrp/api/shared/errors"
+	apierror "github.com/open-mrp/apikit/apierror"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -93,7 +93,7 @@ func TestAccountUserPermissions_FollowTheTargetAndAction(t *testing.T) {
 			}
 			apiErr := check(mustIdentity(t, sellerCtx(relation, others...)))
 			if assert.NotNil(t, apiErr, "%q target %s without %s", relation, action, granted) {
-				assert.Equal(t, apierror.ErrorCodeInsufficientPerms, apiErr.Code)
+				assert.Equal(t, apierror.CodeInsufficientPermissions, apiErr.Code)
 			}
 		}
 	}
@@ -270,7 +270,7 @@ func TestUpdateAccountUserStatus_RemoveNeedsDelete(t *testing.T) {
 
 	apiErr := svc.UpdateAccountUserStatus(sellerCtx(types.IdentityRelationTypeCustomer, "customers:update"), counterpartyAccountUser, constants.AccountUserStatusRemoved)
 	require.NotNil(t, apiErr)
-	assert.Equal(t, apierror.ErrorCodeInsufficientPerms, apiErr.Code)
+	assert.Equal(t, apierror.CodeInsufficientPermissions, apiErr.Code)
 }
 
 // Reading a customer's users' profiles takes customers:read, not the seller's team permission, and still requires a
@@ -317,6 +317,6 @@ func TestBatchGetUsersByIDs_FollowsTheTarget(t *testing.T) {
 		svc := &userSvcImpl{repos: factorymock.NewMockRepoFactory(ctrl)}
 		_, apiErr := svc.BatchGetUsersByIDs(sellerCtx("", "customers:read"), []string{counterpartyContactUser})
 		require.NotNil(t, apiErr)
-		assert.Equal(t, apierror.ErrorCodeInsufficientPerms, apiErr.Code)
+		assert.Equal(t, apierror.CodeInsufficientPermissions, apiErr.Code)
 	})
 }

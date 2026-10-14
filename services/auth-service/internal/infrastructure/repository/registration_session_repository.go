@@ -9,10 +9,10 @@ import (
 	"github.com/open-mrp/api/services/auth-service/internal/domain"
 	"github.com/open-mrp/api/services/auth-service/internal/infrastructure/sqlc"
 	"github.com/open-mrp/api/shared/constants"
-	"github.com/open-mrp/api/shared/db"
-	apierror "github.com/open-mrp/api/shared/errors"
-	"github.com/open-mrp/api/shared/tracing"
+	apierror "github.com/open-mrp/apikit/apierror"
+	"github.com/open-mrp/apikit/db"
 	"github.com/open-mrp/apikit/pagination"
+	"github.com/open-mrp/apikit/tracing"
 )
 
 var registrationSessionRepoTracer = tracing.GetTracer("auth-service.registration_session_repository")
@@ -31,7 +31,7 @@ func (r *registrationSessionRepoImpl) GetByEmail(ctx context.Context, email stri
 
 	row, err := r.queries.GetRegistrationSessionByEmail(ctx, email)
 	if apiErr := db.MapSQLError(err); apiErr != nil {
-		if apierror.IsNotFound(apiErr) {
+		if apierror.HasCode(apiErr, apierror.CodeResourceNotFound) {
 			return nil, apiErr
 		}
 		return nil, tracing.Trace(span, apiErr)
@@ -46,7 +46,7 @@ func (r *registrationSessionRepoImpl) GetByTypeID(ctx context.Context, typeID st
 
 	row, err := r.queries.GetRegistrationSessionByTypeID(ctx, typeID)
 	if apiErr := db.MapSQLError(err); apiErr != nil {
-		if apierror.IsNotFound(apiErr) {
+		if apierror.HasCode(apiErr, apierror.CodeResourceNotFound) {
 			return nil, apiErr
 		}
 		return nil, tracing.Trace(span, apiErr)
@@ -136,7 +136,7 @@ func (r *registrationSessionRepoImpl) GetByToken(ctx context.Context, token stri
 
 	row, err := r.queries.GetRegistrationSessionByToken(ctx, token)
 	if apiErr := db.MapSQLError(err); apiErr != nil {
-		if apierror.IsNotFound(apiErr) {
+		if apierror.HasCode(apiErr, apierror.CodeResourceNotFound) {
 			return nil, apiErr
 		}
 		return nil, tracing.Trace(span, apiErr)
@@ -151,7 +151,7 @@ func (r *registrationSessionRepoImpl) GetIncompleteByUserID(ctx context.Context,
 
 	row, err := r.queries.GetIncompleteRegistrationSessionByUserID(ctx, gosql.NullString{String: userID, Valid: true})
 	if apiErr := db.MapSQLError(err); apiErr != nil {
-		if apierror.IsNotFound(apiErr) {
+		if apierror.HasCode(apiErr, apierror.CodeResourceNotFound) {
 			return nil, nil
 		}
 		return nil, tracing.Trace(span, apiErr)
@@ -166,7 +166,7 @@ func (r *registrationSessionRepoImpl) GetByID(ctx context.Context, id int64) (*d
 
 	row, err := r.queries.GetRegistrationSessionByID(ctx, id)
 	if apiErr := db.MapSQLError(err); apiErr != nil {
-		if apierror.IsNotFound(apiErr) {
+		if apierror.HasCode(apiErr, apierror.CodeResourceNotFound) {
 			return nil, apiErr
 		}
 		return nil, tracing.Trace(span, apiErr)
@@ -307,7 +307,7 @@ func (r *registrationSessionRepoImpl) ListByUserID(ctx context.Context, userID s
 	if cursor != nil {
 		cur, err := pagination.DecodeCursor(*cursor)
 		if err != nil {
-			return nil, pagination.PageInfo{}, apierror.NewValidationErrorWithParam("Invalid pagination cursor.", "cursor")
+			return nil, pagination.PageInfo{}, apierror.NewFieldError("cursor", apierror.CodeInvalidFormat, "Invalid pagination cursor.")
 		}
 		cursorDir = &cur.Direction
 

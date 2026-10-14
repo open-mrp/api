@@ -9,9 +9,9 @@ import (
 	"github.com/open-mrp/api/shared/appctx"
 	"github.com/open-mrp/api/shared/audit"
 	"github.com/open-mrp/api/shared/constants"
-	apierror "github.com/open-mrp/api/shared/errors"
-	"github.com/open-mrp/api/shared/idempotency"
-	"github.com/open-mrp/api/shared/tracing"
+	"github.com/open-mrp/api/shared/idemresponse"
+	apierror "github.com/open-mrp/apikit/apierror"
+	"github.com/open-mrp/apikit/tracing"
 )
 
 var customerProductLineAccessSvcTracer = tracing.GetTracer("core-service.customer_product_line_access_service")
@@ -80,8 +80,7 @@ func (s *customerProductLineAccessSvcImpl) withTx(ctx context.Context, fn func(c
 // errNoProductLinesGranted refuses a grant of no product lines. An access record is its product lines,
 // so an empty set would leave nothing to read, edit or delete; revoking access is a delete.
 func errNoProductLinesGranted() *apierror.APIError {
-	return apierror.NewValidationErrorWithParam(
-		"Grant at least one product line. To revoke access entirely, delete the product line access.", "product_line_ids")
+	return apierror.NewFieldError("product_line_ids", apierror.CodeInvalidFormat, "Grant at least one product line. To revoke access entirely, delete the product line access.")
 }
 
 func (s *customerProductLineAccessSvcImpl) ListCustomerProductLineAccess(ctx context.Context, params domain.ListCustomerProductLineAccessParams) (*domain.ListCustomerProductLineAccessResult, *apierror.APIError) {
@@ -158,7 +157,7 @@ func (s *customerProductLineAccessSvcImpl) BatchGetCustomerProductLineAccessByID
 	for _, id := range customerIDs {
 		access, apiErr := repo.Get(ctx, identity.Target.AccountID, id)
 		if apiErr != nil {
-			if apierror.IsNotFound(apiErr) {
+			if apierror.HasCode(apiErr, apierror.CodeResourceNotFound) {
 				continue
 			}
 			return nil, tracing.Trace(span, apiErr)
@@ -203,7 +202,7 @@ func (s *customerProductLineAccessSvcImpl) CreateCustomerProductLineAccess(ctx c
 
 	switch domain.RecoveryPoint(idempotencyKey.RecoveryPoint) {
 	case domain.RecoveryPointFinished:
-		cached, err := idempotency.UnmarshalCachedResponse[domain.CustomerProductLineAccess](ctx, idempotencyKey.ResponseCode, idempotencyKey.ResponseBody)
+		cached, err := idemresponse.UnmarshalCachedResponse[domain.CustomerProductLineAccess](ctx, idempotencyKey.ResponseCode, idempotencyKey.ResponseBody)
 		if err != nil {
 			return nil, tracing.Trace(span, apierror.NewInternalError(err, "Issue unmarshalling cached response."))
 		}
@@ -219,7 +218,7 @@ func (s *customerProductLineAccessSvcImpl) CreateCustomerProductLineAccess(ctx c
 				return apiErr
 			}
 			if exists {
-				return apierror.NewConflictErrorWithParam("Product line access for this customer already exists.", "customer_id")
+				return apierror.NewConflictErrorWithParam("customer_id", "Product line access for this customer already exists.")
 			}
 
 			created, apiErr := txRepo.Create(txCtx, params)
@@ -289,7 +288,7 @@ func (s *customerProductLineAccessSvcImpl) UpdateCustomerProductLineAccess(ctx c
 
 	switch domain.RecoveryPoint(idempotencyKey.RecoveryPoint) {
 	case domain.RecoveryPointFinished:
-		cached, err := idempotency.UnmarshalCachedResponse[domain.CustomerProductLineAccess](ctx, idempotencyKey.ResponseCode, idempotencyKey.ResponseBody)
+		cached, err := idemresponse.UnmarshalCachedResponse[domain.CustomerProductLineAccess](ctx, idempotencyKey.ResponseCode, idempotencyKey.ResponseBody)
 		if err != nil {
 			return nil, tracing.Trace(span, apierror.NewInternalError(err, "Issue unmarshalling cached response."))
 		}
@@ -361,7 +360,7 @@ func (s *customerProductLineAccessSvcImpl) DeleteCustomerProductLineAccess(ctx c
 
 	existing, apiErr := s.repos.NewCustomerProductLineAccessRepo().Get(ctx, accountID, customerID)
 	if apiErr != nil {
-		if apierror.IsNotFound(apiErr) {
+		if apierror.HasCode(apiErr, apierror.CodeResourceNotFound) {
 			wasDeleted, deletedCheckErr := s.repos.NewDeletedRecordRepo().ExistsInAccount(ctx, constants.DeletedRecordResourceTypeCustomerProductLineAccess, customerID, accountID)
 			if deletedCheckErr != nil {
 				return tracing.Trace(span, deletedCheckErr)
@@ -369,7 +368,7 @@ func (s *customerProductLineAccessSvcImpl) DeleteCustomerProductLineAccess(ctx c
 			if wasDeleted {
 				return tracing.Trace(
 					span,
-					apierror.NewAlreadyDeletedError("This customer product line access has already been deleted and can no longer be modified."),
+					apierror.NewGoneError("This customer product line access has already been deleted and can no longer be modified."),
 				)
 			}
 		}

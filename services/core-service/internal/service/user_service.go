@@ -11,12 +11,12 @@ import (
 	"github.com/open-mrp/api/services/core-service/internal/domain"
 	"github.com/open-mrp/api/shared/appctx"
 	"github.com/open-mrp/api/shared/audit"
-	s3client "github.com/open-mrp/api/shared/cloud/s3"
 	"github.com/open-mrp/api/shared/constants"
-	apierror "github.com/open-mrp/api/shared/errors"
-	"github.com/open-mrp/api/shared/idempotency"
+	"github.com/open-mrp/api/shared/idemresponse"
 	"github.com/open-mrp/api/shared/imageupload"
-	"github.com/open-mrp/api/shared/tracing"
+	apierror "github.com/open-mrp/apikit/apierror"
+	s3client "github.com/open-mrp/apikit/cloud/s3"
+	"github.com/open-mrp/apikit/tracing"
 )
 
 var userSvcTracer = tracing.GetTracer("core-service.user_service")
@@ -116,10 +116,10 @@ func (s *userSvcImpl) GetUser(ctx context.Context, identifier string) (*domain.U
 
 	// Try finding by ID first, then fall back to email and username. This matches the Dashboard behavior where the identifier can be an ID, email, or username.
 	user, apiErr := userRepo.FindByID(ctx, identifier)
-	if apiErr != nil && apierror.IsNotFound(apiErr) {
+	if apiErr != nil && apierror.HasCode(apiErr, apierror.CodeResourceNotFound) {
 		user, apiErr = userRepo.FindByEmail(ctx, identifier)
 	}
-	if apiErr != nil && apierror.IsNotFound(apiErr) {
+	if apiErr != nil && apierror.HasCode(apiErr, apierror.CodeResourceNotFound) {
 		user, apiErr = userRepo.FindByUsername(ctx, identifier)
 	}
 	if apiErr != nil {
@@ -144,8 +144,8 @@ func (s *userSvcImpl) checkUserInTargetAccount(ctx context.Context, identity *ty
 		return nil
 	}
 	if _, apiErr := s.repos.NewAccountUserRepo().FindByAccountAndUserID(ctx, userID, identity.Target.AccountID); apiErr != nil {
-		if apierror.IsNotFound(apiErr) {
-			return apierror.NewResourceNotFoundError("User not found.")
+		if apierror.HasCode(apiErr, apierror.CodeResourceNotFound) {
+			return apierror.NewNotFoundError("User not found.")
 		}
 		return apiErr
 	}
@@ -243,7 +243,7 @@ func (s *userSvcImpl) UpdateUser(ctx context.Context, userID string, params doma
 
 	switch domain.RecoveryPoint(idempotencyKey.RecoveryPoint) {
 	case domain.RecoveryPointFinished:
-		cached, err := idempotency.UnmarshalCachedResponse[domain.UserRecord](ctx, idempotencyKey.ResponseCode, idempotencyKey.ResponseBody)
+		cached, err := idemresponse.UnmarshalCachedResponse[domain.UserRecord](ctx, idempotencyKey.ResponseCode, idempotencyKey.ResponseBody)
 		if err != nil {
 			return nil, tracing.Trace(span, apierror.NewInternalError(err, "Issue unmarshalling cached response."))
 		}

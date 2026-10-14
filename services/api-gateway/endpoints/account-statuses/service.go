@@ -8,9 +8,9 @@ import (
 	grpcutil "github.com/open-mrp/api/services/api-gateway/internal/grpc"
 	"github.com/open-mrp/api/services/api-gateway/internal/resourceloaders"
 	apiresource "github.com/open-mrp/api/services/api-gateway/pkg/resource"
-	apierror "github.com/open-mrp/api/shared/errors"
 	pb "github.com/open-mrp/api/shared/proto/core"
-	"github.com/open-mrp/api/shared/tracing"
+	apierror "github.com/open-mrp/apikit/apierror"
+	"github.com/open-mrp/apikit/tracing"
 	"google.golang.org/grpc"
 )
 
@@ -86,7 +86,7 @@ func (m *accountStatusSvcImpl) GetAccountStatus(ctx context.Context, req *Retrie
 	}
 	v, ok := loaded[resp.AccountStatus.Id]
 	if !ok {
-		return nil, apierror.NewResourceNotFoundError("Account status not found.")
+		return nil, apierror.NewNotFoundError("Account status not found.")
 	}
 	return v.(*apiresource.AccountStatus), nil
 }

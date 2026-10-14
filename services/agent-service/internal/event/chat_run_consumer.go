@@ -11,7 +11,7 @@ import (
 	"github.com/open-mrp/api/services/agent-service/internal/domain"
 	"github.com/open-mrp/api/shared/contracts"
 	"github.com/open-mrp/api/shared/messaging"
-	"github.com/open-mrp/api/shared/tracing"
+	"github.com/open-mrp/apikit/tracing"
 )
 
 // ChatRunConsumer handles chat-run commands from notification-service: create a chat-linked agent run and execute it. Inbox-deduped so a redelivery doesn't create a duplicate run.

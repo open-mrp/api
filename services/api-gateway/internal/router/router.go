@@ -8,7 +8,7 @@ import (
 	"github.com/open-mrp/api/shared/appctx"
 
 	httptransport "github.com/open-mrp/api/services/api-gateway/internal/http"
-	apierror "github.com/open-mrp/api/shared/errors"
+	apierror "github.com/open-mrp/apikit/apierror"
 	"github.com/open-mrp/apikit/querytag"
 )
 
@@ -107,7 +107,7 @@ func NewRouter() *router {
 		} else if len(allowedMethods) > 0 {
 			httptransport.RespondWithAPIError(req.Context(), w, apierror.NewMethodNotAllowedError(fmt.Sprintf("Method %s not allowed for path %s.", req.Method, req.URL.Path)))
 		} else {
-			httptransport.RespondWithAPIError(req.Context(), w, apierror.NewResourceNotFoundError(fmt.Sprintf("The requested endpoint %s %s was not found.", req.Method, req.URL.Path)))
+			httptransport.RespondWithAPIError(req.Context(), w, apierror.NewNotFoundError(fmt.Sprintf("The requested endpoint %s %s was not found.", req.Method, req.URL.Path)))
 		}
 	})
 

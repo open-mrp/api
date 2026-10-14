@@ -9,10 +9,10 @@ import (
 	"github.com/open-mrp/api/shared/appctx"
 	"github.com/open-mrp/api/shared/audit"
 	"github.com/open-mrp/api/shared/constants"
-	apierror "github.com/open-mrp/api/shared/errors"
 	"github.com/open-mrp/api/shared/id"
-	"github.com/open-mrp/api/shared/idempotency"
-	"github.com/open-mrp/api/shared/tracing"
+	"github.com/open-mrp/api/shared/idemresponse"
+	apierror "github.com/open-mrp/apikit/apierror"
+	"github.com/open-mrp/apikit/tracing"
 )
 
 var productTypeSvcTracer = tracing.GetTracer("core-service.product_type_service")
@@ -168,7 +168,7 @@ func (s *productTypeSvcImpl) CreateProductType(ctx context.Context, params domai
 
 	switch domain.RecoveryPoint(idempotencyKey.RecoveryPoint) {
 	case domain.RecoveryPointFinished:
-		cached, err := idempotency.UnmarshalCachedResponse[domain.ProductType](ctx, idempotencyKey.ResponseCode, idempotencyKey.ResponseBody)
+		cached, err := idemresponse.UnmarshalCachedResponse[domain.ProductType](ctx, idempotencyKey.ResponseCode, idempotencyKey.ResponseBody)
 		if err != nil {
 			return nil, tracing.Trace(span, apierror.NewInternalError(err, "Issue unmarshalling cached response."))
 		}
@@ -184,7 +184,7 @@ func (s *productTypeSvcImpl) CreateProductType(ctx context.Context, params domai
 				return apiErr
 			}
 			if exists {
-				return apierror.NewConflictErrorWithParam("A product type with this name already exists.", "name")
+				return apierror.NewConflictErrorWithParam("name", "A product type with this name already exists.")
 			}
 
 			exists, apiErr = txRepo.ExistsByCode(txCtx, params.Code, nil)
@@ -192,7 +192,7 @@ func (s *productTypeSvcImpl) CreateProductType(ctx context.Context, params domai
 				return apiErr
 			}
 			if exists {
-				return apierror.NewConflictErrorWithParam("A product type with this code already exists.", "code")
+				return apierror.NewConflictErrorWithParam("code", "A product type with this code already exists.")
 			}
 
 			created, apiErr := txRepo.Create(txCtx, productTypeID, params)
@@ -252,7 +252,7 @@ func (s *productTypeSvcImpl) UpdateProductType(ctx context.Context, params domai
 
 	switch domain.RecoveryPoint(idempotencyKey.RecoveryPoint) {
 	case domain.RecoveryPointFinished:
-		cached, err := idempotency.UnmarshalCachedResponse[domain.ProductType](ctx, idempotencyKey.ResponseCode, idempotencyKey.ResponseBody)
+		cached, err := idemresponse.UnmarshalCachedResponse[domain.ProductType](ctx, idempotencyKey.ResponseCode, idempotencyKey.ResponseBody)
 		if err != nil {
 			return nil, tracing.Trace(span, apierror.NewInternalError(err, "Issue unmarshalling cached response."))
 		}
@@ -274,7 +274,7 @@ func (s *productTypeSvcImpl) UpdateProductType(ctx context.Context, params domai
 					return apiErr
 				}
 				if exists {
-					return apierror.NewConflictErrorWithParam("A product type with this name already exists.", "name")
+					return apierror.NewConflictErrorWithParam("name", "A product type with this name already exists.")
 				}
 			}
 
@@ -284,7 +284,7 @@ func (s *productTypeSvcImpl) UpdateProductType(ctx context.Context, params domai
 					return apiErr
 				}
 				if exists {
-					return apierror.NewConflictErrorWithParam("A product type with this code already exists.", "code")
+					return apierror.NewConflictErrorWithParam("code", "A product type with this code already exists.")
 				}
 			}
 
@@ -338,13 +338,13 @@ func (s *productTypeSvcImpl) DeleteProductType(ctx context.Context, productTypeI
 
 	productType, apiErr := s.repos.NewProductTypeRepo().Get(ctx, productTypeID)
 	if apiErr != nil {
-		if apierror.IsNotFound(apiErr) {
+		if apierror.HasCode(apiErr, apierror.CodeResourceNotFound) {
 			wasDeleted, deletedCheckErr := s.repos.NewDeletedRecordRepo().Exists(ctx, constants.DeletedRecordResourceTypeProductType, productTypeID)
 			if deletedCheckErr != nil {
 				return tracing.Trace(span, deletedCheckErr)
 			}
 			if wasDeleted {
-				return tracing.Trace(span, apierror.NewAlreadyDeletedError("This product type has already been deleted and can no longer be modified."))
+				return tracing.Trace(span, apierror.NewGoneError("This product type has already been deleted and can no longer be modified."))
 			}
 		}
 		return tracing.Trace(span, apiErr)

@@ -12,7 +12,7 @@ import (
 	factorymock "github.com/open-mrp/api/services/auth-service/internal/domain/mock/factory"
 	mediatormock "github.com/open-mrp/api/services/auth-service/internal/domain/mock/mediator"
 	repositorymock "github.com/open-mrp/api/services/auth-service/internal/domain/mock/repository"
-	apierror "github.com/open-mrp/api/shared/errors"
+	apierror "github.com/open-mrp/apikit/apierror"
 	"github.com/open-mrp/apikit/crypto"
 
 	"github.com/stretchr/testify/suite"
@@ -122,7 +122,7 @@ func (s *DocAPIKeyMedTestSuite) TestResolve_CreateDocAPIKey_HasRedactedValue() {
 
 	s.docAPIKeyRepo.EXPECT().
 		FindBySandboxAccountID(gomock.Any(), sandboxAccountID).
-		Return(nil, apierror.NewResourceNotFoundError("not found"))
+		Return(nil, apierror.NewNotFoundError("not found"))
 
 	s.coreClient.EXPECT().
 		GetAdminRole(gomock.Any()).
@@ -225,6 +225,6 @@ func (s *DocAPIKeyMedTestSuite) TestResolve_RevokedKey_StillFetchable() {
 	// Resolve should return a validation error about revoked key, NOT a "not found" error.
 	s.Nil(result)
 	s.Require().NotNil(apiErr)
-	s.Equal(apierror.ErrorCodeValidationFailed, apiErr.Code)
+	s.Equal(apierror.CodeValidationFailed, apiErr.Code)
 	s.Contains(apiErr.PublicMessage, "revoked")
 }

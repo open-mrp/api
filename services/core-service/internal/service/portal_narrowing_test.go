@@ -8,7 +8,7 @@ import (
 	"github.com/open-mrp/api/services/core-service/internal/domain"
 	factorymock "github.com/open-mrp/api/services/core-service/internal/domain/mock/factory"
 	repositorymock "github.com/open-mrp/api/services/core-service/internal/domain/mock/repository"
-	apierror "github.com/open-mrp/api/shared/errors"
+	apierror "github.com/open-mrp/apikit/apierror"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -40,7 +40,7 @@ func (h *inclHarness) allowCounterpartyReads() {
 func requireNotFound(t *testing.T, apiErr *apierror.APIError, msgAndArgs ...any) {
 	t.Helper()
 	require.NotNil(t, apiErr, msgAndArgs...)
-	assert.Equal(t, apierror.ErrorCodeResourceNotFound, apiErr.Code, msgAndArgs...)
+	assert.Equal(t, apierror.CodeResourceNotFound, apiErr.Code, msgAndArgs...)
 }
 
 func (h *inclHarness) salesOrders() (domain.SalesOrderSvc, *repositorymock.MockSalesOrderRepo) {
@@ -76,7 +76,7 @@ func TestPortalNarrowing_SalesOrderRetrieveIsScopedToTheBuyer(t *testing.T) {
 		h := newInclHarness(t)
 		h.allowCounterpartyReads()
 		svc, repo := h.salesOrders()
-		repo.EXPECT().GetForCustomer(gomock.Any(), inclSellerID, portal.own, "so_other").Return(nil, apierror.NewResourceNotFoundError("Sales order not found."))
+		repo.EXPECT().GetForCustomer(gomock.Any(), inclSellerID, portal.own, "so_other").Return(nil, apierror.NewNotFoundError("Sales order not found."))
 
 		_, apiErr := svc.GetSalesOrder(portal.ctx(false), domain.GetSalesOrderParams{SalesOrderID: "so_other"})
 		requireNotFound(t, apiErr, name)
@@ -274,7 +274,7 @@ func TestPortalNarrowing_StaffOpenAnyVolumeDiscount(t *testing.T) {
 func (h *inclHarness) jobs() (domain.JobSvc, *repositorymock.MockJobRepo) {
 	repo := repositorymock.NewMockJobRepo(h.ctrl)
 	accountUsers := repositorymock.NewMockAccountUserRepo(h.ctrl)
-	accountUsers.EXPECT().ResolveAccountUserID(gomock.Any(), inclSellerID, gomock.Any()).Return("", apierror.NewResourceNotFoundError("Account user not found.")).AnyTimes()
+	accountUsers.EXPECT().ResolveAccountUserID(gomock.Any(), inclSellerID, gomock.Any()).Return("", apierror.NewNotFoundError("Account user not found.")).AnyTimes()
 	h.repos.EXPECT().NewJobRepo().Return(repo).AnyTimes()
 	h.repos.EXPECT().NewAccountUserRepo().Return(accountUsers).AnyTimes()
 	return NewJobSvc(&JobSvcConfig{Repos: h.repos}), repo

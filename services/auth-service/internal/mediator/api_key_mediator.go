@@ -7,9 +7,10 @@ import (
 
 	"github.com/open-mrp/api/services/auth-service/internal/apikey"
 	"github.com/open-mrp/api/services/auth-service/internal/domain"
-	apierror "github.com/open-mrp/api/shared/errors"
+	"github.com/open-mrp/api/shared/apperr"
 	"github.com/open-mrp/api/shared/id"
-	tracing "github.com/open-mrp/api/shared/tracing"
+	apierror "github.com/open-mrp/apikit/apierror"
+	tracing "github.com/open-mrp/apikit/tracing"
 )
 
 var apiKeyMedTracer = tracing.GetTracer("auth-service.api_key_mediator")
@@ -87,7 +88,7 @@ func (s *apiKeyMedImpl) FindAndValidate(ctx context.Context, apiKey string) (*ap
 	apiKeyRepo := s.repos.NewAPIKeyRepo()
 	apiKeyModel, err := apiKeyRepo.Find(ctx, parsedAPIKey.ID)
 	if err != nil {
-		if apierror.IsNotFound(err) {
+		if apierror.HasCode(err, apierror.CodeResourceNotFound) {
 			return nil, tracing.Trace(span, s.newAuthError(apiKey))
 		}
 		return nil, err
@@ -98,11 +99,11 @@ func (s *apiKeyMedImpl) FindAndValidate(ctx context.Context, apiKey string) (*ap
 	}
 
 	if apiKeyModel.IsExpired() {
-		return nil, tracing.Trace(span, apierror.NewExpiredAPIKeyError(apikey.ErrAPIKeyExpired))
+		return nil, tracing.Trace(span, apperr.NewExpiredAPIKeyError(apikey.ErrAPIKeyExpired))
 	}
 
 	if apiKeyModel.IsRevoked() {
-		return nil, tracing.Trace(span, apierror.NewRevokedAPIKeyError(apikey.ErrAPIKeyRevoked))
+		return nil, tracing.Trace(span, apperr.NewRevokedAPIKeyError(apikey.ErrAPIKeyRevoked))
 	}
 
 	return apiKeyModel, nil
@@ -144,7 +145,7 @@ func (s *apiKeyMedImpl) Create(ctx context.Context, input domain.APIKeyCreateInp
 		return "", nil, tracing.Trace(span, apiErr)
 	}
 	if roleCount == 0 {
-		return "", nil, tracing.Trace(span, apierror.NewResourceNotFoundError("Role not found."))
+		return "", nil, tracing.Trace(span, apierror.NewNotFoundError("Role not found."))
 	}
 
 	parsedKey, apiErr := apikey.GenParsedAPIKey(input.AccountMode, nil)
@@ -218,10 +219,10 @@ func (s *apiKeyMedImpl) Rotate(ctx context.Context, input domain.APIKeyRotateInp
 	}
 
 	if oldKey.OwnerAccountID != input.OwnerAccountID {
-		return "", nil, apierror.NewResourceNotFoundError("API key not found.")
+		return "", nil, apierror.NewNotFoundError("API key not found.")
 	}
 	if oldKey.IsRevoked() {
-		return "", nil, apierror.NewRevokedAPIKeyError(apikey.ErrAPIKeyRevoked)
+		return "", nil, apperr.NewRevokedAPIKeyError(apikey.ErrAPIKeyRevoked)
 	}
 
 	// Determine when the old key is revoked. Default is immediate (nil — the database clock is used); a future RevokeAt schedules revocation (the old key keeps working until then), capped at maxRevokeScheduleWindow. A past/now RevokeAt collapses to immediate.
@@ -229,8 +230,7 @@ func (s *apiKeyMedImpl) Rotate(ctx context.Context, input domain.APIKeyRotateInp
 	now := time.Now().UTC()
 	if input.RevokeAt != nil && input.RevokeAt.After(now) {
 		if input.RevokeAt.After(now.Add(maxRevokeScheduleWindow)) {
-			return "", nil, apierror.NewValidationErrorWithParam(
-				"Scheduled revocation must be no more than 30 days in the future.", "revoke_at")
+			return "", nil, apierror.NewFieldError("revoke_at", apierror.CodeInvalidFormat, "Scheduled revocation must be no more than 30 days in the future.")
 		}
 		scheduled := input.RevokeAt.UTC()
 		revokeAt = &scheduled
@@ -290,7 +290,7 @@ func (s *apiKeyMedImpl) GetKeyAccountAccess(ctx context.Context, input domain.AP
 	}
 
 	if apiKeyModel.OwnerAccountID != input.TargetAccountID {
-		return nil, apierror.NewResourceNotFoundError("API key not found.")
+		return nil, apierror.NewNotFoundError("API key not found.")
 	}
 
 	permissions := map[string]bool{}

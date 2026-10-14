@@ -6,7 +6,7 @@ import (
 
 	"github.com/shopspring/decimal"
 
-	apierror "github.com/open-mrp/api/shared/errors"
+	apierror "github.com/open-mrp/apikit/apierror"
 )
 
 // ConvertScanQuantity restates a measure in another unit of the same type, the way the scanning

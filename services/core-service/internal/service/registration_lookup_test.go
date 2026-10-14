@@ -11,8 +11,8 @@ import (
 	"github.com/open-mrp/api/services/core-service/internal/domain"
 	repositorymock "github.com/open-mrp/api/services/core-service/internal/domain/mock/repository"
 	"github.com/open-mrp/api/shared/constants"
-	apierror "github.com/open-mrp/api/shared/errors"
 	"github.com/open-mrp/api/shared/messaging"
+	apierror "github.com/open-mrp/apikit/apierror"
 )
 
 func TestNormalizePostalCode(t *testing.T) {
@@ -75,12 +75,12 @@ func TestFindExistingCustomer(t *testing.T) {
 		_, wrongZip := findExistingCustomer(ctx, repo, owner, lookup("", "104233", "62704"))
 
 		repo = newRepo(t)
-		repo.EXPECT().FindCustomerAccountByExternalNumber(ctx, owner, "999").Return("", apierror.NewResourceNotFoundError("Customer not found."))
+		repo.EXPECT().FindCustomerAccountByExternalNumber(ctx, owner, "999").Return("", apierror.NewNotFoundError("Customer not found."))
 		_, unknown := findExistingCustomer(ctx, repo, owner, lookup("", "999", "62701"))
 
 		require.NotNil(t, wrongZip)
 		require.NotNil(t, unknown)
-		assert.True(t, apierror.IsNotFound(wrongZip))
+		assert.True(t, apierror.HasCode(wrongZip, apierror.CodeResourceNotFound))
 		assert.Equal(t, unknown.PublicMessage, wrongZip.PublicMessage)
 	})
 

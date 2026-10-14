@@ -8,9 +8,9 @@ import (
 	grpcutil "github.com/open-mrp/api/services/api-gateway/internal/grpc"
 	"github.com/open-mrp/api/services/api-gateway/internal/resourceloaders"
 	apiresource "github.com/open-mrp/api/services/api-gateway/pkg/resource"
-	apierror "github.com/open-mrp/api/shared/errors"
 	pb "github.com/open-mrp/api/shared/proto/core"
-	"github.com/open-mrp/api/shared/tracing"
+	apierror "github.com/open-mrp/apikit/apierror"
+	"github.com/open-mrp/apikit/tracing"
 	"google.golang.org/grpc"
 	"google.golang.org/protobuf/types/known/emptypb"
 )
@@ -120,7 +120,7 @@ func loadPaymentTermByID(ctx context.Context, id string) (*apiresource.PaymentTe
 	}
 	v, ok := loaded[id]
 	if !ok {
-		return nil, apierror.NewResourceNotFoundError("Payment term not found.")
+		return nil, apierror.NewNotFoundError("Payment term not found.")
 	}
 	return v.(*apiresource.PaymentTerm), nil
 }

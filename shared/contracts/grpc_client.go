@@ -7,7 +7,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/open-mrp/api/shared/tracing"
+	"github.com/open-mrp/api/shared/rpctrace"
 
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/backoff"
@@ -114,7 +114,7 @@ func NewGRPCClientConn(target GRPCConnTarget, config *GRPCClientConfig) (*GRPCCl
 	}
 
 	dialOptions := append(
-		tracing.DialOptionsWithTracing(),
+		rpctrace.DialOptionsWithTracing(),
 		grpc.WithTransportCredentials(insecure.NewCredentials()),
 		grpc.WithKeepaliveParams(config.KeepaliveParams),
 		grpc.WithConnectParams(grpc.ConnectParams{

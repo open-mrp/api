@@ -8,10 +8,10 @@ import (
 
 	"github.com/open-mrp/api/services/notification-service/internal/domain"
 	"github.com/open-mrp/api/shared/constants"
-	apierror "github.com/open-mrp/api/shared/errors"
 	"github.com/open-mrp/api/shared/id"
-	"github.com/open-mrp/api/shared/tracing"
+	apierror "github.com/open-mrp/apikit/apierror"
 	"github.com/open-mrp/apikit/ptrutil"
+	"github.com/open-mrp/apikit/tracing"
 )
 
 // SendInboxReply sends an agent's outbound email through the conversation's bound inbox and records it in the thread + ledger. Recipient and threading are derived from the latest inbound mail, so the agent cannot redirect the reply to an arbitrary address.
@@ -36,14 +36,14 @@ func (s *conversationSvcImpl) deliverInboxReply(ctx context.Context, conversatio
 		return nil, apierror.NewInternalError(nil, "Email sending is not configured.")
 	}
 	if strings.TrimSpace(body) == "" {
-		return nil, apierror.NewParameterMissingError("An email body is required.", "body")
+		return nil, apierror.NewParameterMissingError("body", "An email body is required.")
 	}
 
 	// The latest inbound email anchors the reply: who to reply to + the threading headers.
 	latest, apiErr := s.repoFactory.NewEmailMessageRepo().GetLatestInbound(ctx, conversationID)
 	if apiErr != nil {
-		if apiErr.Code == apierror.ErrorCodeResourceNotFound {
-			return nil, apierror.NewParameterInvalidError("This conversation has no inbound email to reply to.", "conversation_id")
+		if apiErr.Code == apierror.CodeResourceNotFound {
+			return nil, apierror.NewParameterInvalidError("conversation_id", "This conversation has no inbound email to reply to.")
 		}
 		return nil, apiErr
 	}
@@ -162,7 +162,7 @@ func (s *conversationSvcImpl) PostReplyDraft(ctx context.Context, in domain.Post
 
 	body := strings.TrimSpace(in.Body)
 	if body == "" {
-		return nil, tracing.Trace(span, apierror.NewParameterMissingError("A draft body is required.", "body"))
+		return nil, tracing.Trace(span, apierror.NewParameterMissingError("body", "A draft body is required."))
 	}
 	// The draft is authored by the agent participant; a removed/inactive agent can't propose a reply.
 	part, apiErr := s.resolveAgentReplyParticipant(ctx, in.ConversationID, in.AgentConfigID)
@@ -179,7 +179,7 @@ func (s *conversationSvcImpl) PostReplyDraft(ctx context.Context, in domain.Post
 	}
 	// Drafts are an external-case affordance; on an internal conversation there's no external party to send to.
 	if conv.Audience != string(constants.ConversationAudienceCustomer) {
-		return nil, tracing.Trace(span, apierror.NewParameterInvalidError("Reply drafts are only supported on external cases.", "conversation_id"))
+		return nil, tracing.Trace(span, apierror.NewParameterInvalidError("conversation_id", "Reply drafts are only supported on external cases."))
 	}
 	messageID, apiErr := id.GenID(id.MessageIDPrefix, nil)
 	if apiErr != nil {

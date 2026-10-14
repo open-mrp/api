@@ -12,10 +12,10 @@ import (
 	"github.com/open-mrp/api/services/api-gateway/internal/resourceloaders"
 	apiresource "github.com/open-mrp/api/services/api-gateway/pkg/resource"
 	"github.com/open-mrp/api/shared/constants"
-	apierror "github.com/open-mrp/api/shared/errors"
 	pb "github.com/open-mrp/api/shared/proto/core"
-	"github.com/open-mrp/api/shared/tracing"
+	apierror "github.com/open-mrp/apikit/apierror"
 	"github.com/open-mrp/apikit/field"
+	"github.com/open-mrp/apikit/tracing"
 	"google.golang.org/grpc"
 	"google.golang.org/protobuf/types/known/emptypb"
 	"google.golang.org/protobuf/types/known/timestamppb"
@@ -306,7 +306,7 @@ func (m *productionScheduleSvcImpl) GetCurrentProductionSchedule(ctx context.Con
 	}
 	// No published version covering today is a normal state, but the caller asked for "the current schedule" — a 404 says that honestly, where an empty object would look like a real but blank plan.
 	if resp.Schedule == nil {
-		return nil, apierror.NewResourceNotFoundError("No published production schedule covers today.")
+		return nil, apierror.NewNotFoundError("No published production schedule covers today.")
 	}
 	return scheduleFromProto(resp.Schedule), nil
 }

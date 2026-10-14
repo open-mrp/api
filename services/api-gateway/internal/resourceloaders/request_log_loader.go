@@ -7,9 +7,9 @@ import (
 	grpcutil "github.com/open-mrp/api/services/api-gateway/internal/grpc"
 	apiresource "github.com/open-mrp/api/services/api-gateway/pkg/resource"
 	"github.com/open-mrp/api/shared/constants"
-	apierror "github.com/open-mrp/api/shared/errors"
 	pb "github.com/open-mrp/api/shared/proto/platform"
-	"github.com/open-mrp/api/shared/tracing"
+	apierror "github.com/open-mrp/apikit/apierror"
+	"github.com/open-mrp/apikit/tracing"
 	"google.golang.org/grpc"
 )
 
@@ -55,7 +55,7 @@ func requestLogFromProto(rl *pb.RequestLogInfo) *apiresource.RequestLog {
 		ClientIP:        rl.ClientIp,
 		UserAgent:       rl.UserAgent,
 		Referrer:        rl.Referrer,
-		ErrorCode:       constants.EnumPtr[apierror.ErrorCode](rl.ErrorCode),
+		ErrorCode:       constants.EnumPtr[apierror.Code](rl.ErrorCode),
 		ErrorMessage:    rl.ErrorMessage,
 		OccurredAt:      grpcutil.TimestampToTime(rl.OccurredAt),
 		CreatedAt:       grpcutil.TimestampToTime(rl.CreatedAt),

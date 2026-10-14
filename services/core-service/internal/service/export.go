@@ -9,10 +9,10 @@ import (
 
 	"github.com/open-mrp/api/services/core-service/internal/domain"
 	"github.com/open-mrp/api/shared/appctx"
-	s3client "github.com/open-mrp/api/shared/cloud/s3"
 	"github.com/open-mrp/api/shared/constants"
-	apierror "github.com/open-mrp/api/shared/errors"
-	"github.com/open-mrp/api/shared/tracing"
+	apierror "github.com/open-mrp/apikit/apierror"
+	s3client "github.com/open-mrp/apikit/cloud/s3"
+	"github.com/open-mrp/apikit/tracing"
 )
 
 // Everything that knows a rendered export lives in object storage: the seam that puts it

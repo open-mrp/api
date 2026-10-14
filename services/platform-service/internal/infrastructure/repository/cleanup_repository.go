@@ -5,7 +5,7 @@ import (
 
 	"github.com/open-mrp/api/services/platform-service/internal/infrastructure/sqlc"
 	"github.com/open-mrp/api/shared/messaging"
-	"github.com/open-mrp/api/shared/tracing"
+	"github.com/open-mrp/apikit/tracing"
 )
 
 var cleanupRepoTracer = tracing.GetTracer("platform-service.cleanup_repository")

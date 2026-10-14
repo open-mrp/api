@@ -18,9 +18,9 @@ import (
 	"github.com/open-mrp/api/shared/appctx"
 	"github.com/open-mrp/api/shared/constants"
 	"github.com/open-mrp/api/shared/contracts"
-	"github.com/open-mrp/api/shared/db"
-	apierror "github.com/open-mrp/api/shared/errors"
 	"github.com/open-mrp/api/shared/messaging"
+	apierror "github.com/open-mrp/apikit/apierror"
+	"github.com/open-mrp/apikit/db"
 )
 
 const (
@@ -373,7 +373,7 @@ func (s *BatchUndoTestSuite) TestAnUndoThatWaitedForAnotherFindsTheBatchDeleted(
 	batch := scannedBatch("bt_1")
 	s.expectScanUndoPlanned(batch)
 	s.batchRepo.EXPECT().LockScan(gomock.Any(), undoAccountID, batch.ID).Return(nil, false, nil)
-	s.batchRepo.EXPECT().Find(gomock.Any(), undoAccountID, batch.ID).Return(nil, apierror.NewResourceNotFoundError("Batch not found."))
+	s.batchRepo.EXPECT().Find(gomock.Any(), undoAccountID, batch.ID).Return(nil, apierror.NewNotFoundError("Batch not found."))
 	s.deletedRecordRepo.EXPECT().ExistsInAccount(gomock.Any(), constants.DeletedRecordResourceTypeBatch, batch.ID, undoAccountID).Return(true, nil)
 
 	_, apiErr := s.svc.DeleteBatch(undoIdentityCtx(), batch.ID)

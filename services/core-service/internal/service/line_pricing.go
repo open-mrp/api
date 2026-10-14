@@ -5,8 +5,8 @@ import (
 	"fmt"
 
 	"github.com/open-mrp/api/services/core-service/internal/domain"
-	apierror "github.com/open-mrp/api/shared/errors"
 	"github.com/open-mrp/api/shared/pricing"
+	apierror "github.com/open-mrp/apikit/apierror"
 )
 
 // lineConversions collects each line's price-unit conversion, keyed by line ID, so a document

@@ -4,7 +4,7 @@ import (
 	"context"
 
 	"github.com/open-mrp/api/services/auth-service/pkg/types"
-	apierror "github.com/open-mrp/api/shared/errors"
+	apierror "github.com/open-mrp/apikit/apierror"
 )
 
 type IdempotencyMed interface {

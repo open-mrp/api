@@ -16,7 +16,7 @@ import (
 	repositorymock "github.com/open-mrp/api/services/core-service/internal/domain/mock/repository"
 	"github.com/open-mrp/api/shared/appctx"
 	"github.com/open-mrp/api/shared/constants"
-	apierror "github.com/open-mrp/api/shared/errors"
+	apierror "github.com/open-mrp/apikit/apierror"
 )
 
 const (
@@ -97,7 +97,7 @@ func (suite *PickSvcTestSuite) TestPack_RefusesAFinishedPick() {
 	_, apiErr := suite.packInTx()
 
 	suite.Require().NotNil(apiErr)
-	suite.Equal(apierror.ErrorCodeValidationFailed, apiErr.Code)
+	suite.Equal(apierror.CodeValidationFailed, apiErr.Code)
 }
 
 func (suite *PickSvcTestSuite) TestPack_LockedBeforeLinesAreRead() {
@@ -109,7 +109,7 @@ func (suite *PickSvcTestSuite) TestPack_LockedBeforeLinesAreRead() {
 	_, apiErr := suite.packInTx()
 
 	suite.Require().NotNil(apiErr)
-	suite.Equal(apierror.ErrorCodeValidationFailed, apiErr.Code, "a pack that finds nothing left to pack is a bad request")
+	suite.Equal(apierror.CodeValidationFailed, apiErr.Code, "a pack that finds nothing left to pack is a bad request")
 }
 
 // A shortfall means another writer packed lines this pack read; shipping them would put them on two shipments.
@@ -124,7 +124,7 @@ func (suite *PickSvcTestSuite) TestPack_ConflictsWhenFewerLinesPackThanWereRead(
 	_, apiErr := suite.packInTx()
 
 	suite.Require().NotNil(apiErr)
-	suite.Equal(apierror.ErrorCodeResourceConflict, apiErr.Code)
+	suite.Equal(apierror.CodeResourceConflict, apiErr.Code)
 }
 
 func (suite *PickSvcTestSuite) TestPack_ShipsExactlyTheLinesItLocked() {
@@ -184,7 +184,7 @@ func (suite *PickSvcTestSuite) TestPackAccept_RefusesAFinishedPick() {
 
 	suite.Nil(job)
 	suite.Require().NotNil(apiErr)
-	suite.Equal(apierror.ErrorCodeValidationFailed, apiErr.Code, "the caller learns at accept, not from a failed job")
+	suite.Equal(apierror.CodeValidationFailed, apiErr.Code, "the caller learns at accept, not from a failed job")
 }
 
 // --- void ---
@@ -201,7 +201,7 @@ func (suite *PickSvcTestSuite) TestVoid_ChecksForShipmentsUnderThePickLock() {
 
 	suite.Nil(pick)
 	suite.Require().NotNil(apiErr)
-	suite.Equal(apierror.ErrorCodeValidationFailed, apiErr.Code)
+	suite.Equal(apierror.CodeValidationFailed, apiErr.Code)
 }
 
 // --- pick all ---

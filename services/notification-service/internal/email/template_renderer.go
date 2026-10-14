@@ -11,8 +11,8 @@ import (
 	texttemplate "text/template"
 
 	"github.com/open-mrp/api/shared/constants"
-	apierror "github.com/open-mrp/api/shared/errors"
-	"github.com/open-mrp/api/shared/tracing"
+	apierror "github.com/open-mrp/apikit/apierror"
+	"github.com/open-mrp/apikit/tracing"
 )
 
 //go:embed templates/*.html templates/*.txt templates/partials/*.html

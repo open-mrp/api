@@ -8,9 +8,9 @@ import (
 	"testing"
 
 	"github.com/open-mrp/api/services/core-service/internal/domain"
-	"github.com/open-mrp/api/shared/blobstore"
-	"github.com/open-mrp/api/shared/cloud/s3"
-	apierror "github.com/open-mrp/api/shared/errors"
+	apierror "github.com/open-mrp/apikit/apierror"
+	"github.com/open-mrp/apikit/blobstore"
+	"github.com/open-mrp/apikit/cloud/s3"
 )
 
 type memObjects struct {

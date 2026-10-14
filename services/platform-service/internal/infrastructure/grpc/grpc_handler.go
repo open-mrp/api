@@ -6,10 +6,10 @@ import (
 	"github.com/open-mrp/api/services/platform-service/internal/domain"
 	"github.com/open-mrp/api/services/platform-service/pkg/idempotency"
 	"github.com/open-mrp/api/shared/contracts"
-	apierror "github.com/open-mrp/api/shared/errors"
 	"github.com/open-mrp/api/shared/id"
 	pb "github.com/open-mrp/api/shared/proto/platform"
-	"github.com/open-mrp/api/shared/tracing"
+	apierror "github.com/open-mrp/apikit/apierror"
+	"github.com/open-mrp/apikit/tracing"
 
 	"google.golang.org/grpc"
 )
@@ -61,12 +61,12 @@ func (h *gRPCHandler) ProcessIdempotencyKey(ctx context.Context, req *pb.Process
 
 	result, apiErr := h.idempotencyRepo.UpsertAndLock(ctx, key)
 	if apiErr != nil {
-		if apiErr.Code == apierror.ErrorCodeValidationFailed && apiErr.Type == apierror.ErrorTypeIdempotency {
+		if apiErr.Code == apierror.CodeIdempotencyKeyReused {
 			return &pb.ProcessIdempotencyKeyResponse{
 				Result: pb.ProcessIdempotencyKeyResult_PROCESS_RESULT_HASH_MISMATCH,
 			}, nil
 		}
-		if apiErr.Code == apierror.ErrorCodeIdempotencyInProgress {
+		if apiErr.Code == apierror.CodeIdempotencyInProgress {
 			return &pb.ProcessIdempotencyKeyResponse{
 				Result: pb.ProcessIdempotencyKeyResult_PROCESS_RESULT_IN_PROGRESS,
 			}, nil

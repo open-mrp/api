@@ -10,9 +10,9 @@ import (
 	"github.com/open-mrp/api/services/platform-service/internal/domain"
 	servicemock "github.com/open-mrp/api/services/platform-service/internal/domain/mock/service"
 	"github.com/open-mrp/api/shared/contracts"
-	apierror "github.com/open-mrp/api/shared/errors"
 	loggingpb "github.com/open-mrp/api/shared/proto/platform"
-	"github.com/open-mrp/api/shared/tracing"
+	apierror "github.com/open-mrp/apikit/apierror"
+	"github.com/open-mrp/apikit/tracing"
 
 	amqp "github.com/rabbitmq/amqp091-go"
 	"github.com/stretchr/testify/suite"

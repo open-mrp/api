@@ -15,9 +15,9 @@ import (
 	repositorymock "github.com/open-mrp/api/services/core-service/internal/domain/mock/repository"
 	"github.com/open-mrp/api/services/core-service/internal/ledgerlock"
 	"github.com/open-mrp/api/shared/contracts"
-	apierror "github.com/open-mrp/api/shared/errors"
 	"github.com/open-mrp/api/shared/messaging"
-	"github.com/open-mrp/api/shared/tracing"
+	apierror "github.com/open-mrp/apikit/apierror"
+	"github.com/open-mrp/apikit/tracing"
 )
 
 type recordingOutboxRepo struct {
@@ -113,7 +113,7 @@ func (s *BatchScannedConsumerTestSuite) SetupTest() {
 	// The scan writes an audit trail; these keep it quiet rather than making it the subject of these tests.
 	itemRepo := repositorymock.NewMockItemRepo(s.ctrl)
 	itemRepo.EXPECT().Get(gomock.Any(), gomock.Any()).
-		Return(nil, apierror.NewResourceNotFoundError("item")).AnyTimes()
+		Return(nil, apierror.NewNotFoundError("item")).AnyTimes()
 	inventoryQuery := repositorymock.NewMockInventoryQueryRepo(s.ctrl)
 	inventoryQuery.EXPECT().FetchPhysicalInventory(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
 		Return(decimal.Zero, nil).AnyTimes()

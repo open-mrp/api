@@ -8,10 +8,10 @@ import (
 	"github.com/open-mrp/api/services/auth-service/internal/apikey"
 	"github.com/open-mrp/api/services/auth-service/internal/domain"
 	"github.com/open-mrp/api/shared/constants"
-	apierror "github.com/open-mrp/api/shared/errors"
 	"github.com/open-mrp/api/shared/id"
-	"github.com/open-mrp/api/shared/tracing"
+	apierror "github.com/open-mrp/apikit/apierror"
 	"github.com/open-mrp/apikit/crypto"
+	"github.com/open-mrp/apikit/tracing"
 )
 
 const (
@@ -84,7 +84,7 @@ func (m *docAPIKeyMedImpl) Resolve(ctx context.Context, sandboxAccountID string)
 
 	existing, apiErr := m.repos.NewDocAPIKeyRepo().FindBySandboxAccountID(ctx, sandboxAccountID)
 	if apiErr != nil {
-		if apiErr.Code == apierror.ErrorCodeResourceNotFound {
+		if apiErr.Code == apierror.CodeResourceNotFound {
 			return m.createDocAPIKey(ctx, sandboxAccountID)
 		}
 		return nil, tracing.Trace(span, apiErr)
@@ -120,7 +120,7 @@ func (m *docAPIKeyMedImpl) SyncRotatedAPIKey(ctx context.Context, input domain.D
 
 	existingDocKey, findErr := m.repos.NewDocAPIKeyRepo().FindByAPIKeyID(ctx, input.OldAPIKeyID)
 	if findErr != nil {
-		if findErr.Code == apierror.ErrorCodeResourceNotFound {
+		if findErr.Code == apierror.CodeResourceNotFound {
 			return nil
 		}
 		return tracing.Trace(span, findErr)

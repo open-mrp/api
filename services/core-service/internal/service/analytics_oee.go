@@ -6,8 +6,8 @@ import (
 	"time"
 
 	"github.com/open-mrp/api/services/core-service/internal/domain"
-	apierror "github.com/open-mrp/api/shared/errors"
-	"github.com/open-mrp/api/shared/tracing"
+	apierror "github.com/open-mrp/apikit/apierror"
+	"github.com/open-mrp/apikit/tracing"
 )
 
 // buildOeeByDepartment composes the per-department OEE result from the raw reads: unit counts, logged downtime and the shift-configuration capacity the scheduled machines carried.

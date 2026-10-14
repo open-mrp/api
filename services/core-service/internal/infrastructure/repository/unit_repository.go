@@ -8,20 +8,20 @@ import (
 
 	"github.com/open-mrp/api/services/core-service/internal/domain"
 	"github.com/open-mrp/api/services/core-service/internal/infrastructure/sqlc"
-	"github.com/open-mrp/api/shared/db"
-	apierror "github.com/open-mrp/api/shared/errors"
-	"github.com/open-mrp/api/shared/tracing"
+	apierror "github.com/open-mrp/apikit/apierror"
+	"github.com/open-mrp/apikit/db"
 	"github.com/open-mrp/apikit/pagination"
+	"github.com/open-mrp/apikit/tracing"
 )
 
 var unitRepoTracer = tracing.GetTracer("core-service.unit_repository")
 
 var unitDuplicateKeyMapping = db.DuplicateKeyMapping{
 	"unit_account_id_name_key": func() *apierror.APIError {
-		return apierror.NewConflictErrorWithParam("A unit with this name already exists.", "name")
+		return apierror.NewConflictErrorWithParam("name", "A unit with this name already exists.")
 	},
 	"unit_account_id_abbreviation_key": func() *apierror.APIError {
-		return apierror.NewConflictErrorWithParam("A unit with this abbreviation already exists.", "abbreviation")
+		return apierror.NewConflictErrorWithParam("abbreviation", "A unit with this abbreviation already exists.")
 	},
 }
 
@@ -174,7 +174,7 @@ func (r *unitRepoImpl) List(ctx context.Context, params domain.ListUnitsParams) 
 	if params.Cursor != nil {
 		cur, err := pagination.DecodeStringCursor(*params.Cursor)
 		if err != nil {
-			return nil, apierror.NewValidationErrorWithParam("Invalid pagination cursor.", "cursor")
+			return nil, apierror.NewFieldError("cursor", apierror.CodeInvalidFormat, "Invalid pagination cursor.")
 		}
 		cursorDir = &cur.Direction
 
@@ -365,7 +365,7 @@ func (r *unitRepoImpl) Update(ctx context.Context, params domain.UpdateUnitParam
 		return nil, tracing.Trace(span, apierror.NewInternalError(err, "Failed to check rows affected."))
 	}
 	if rowsAffected == 0 {
-		return nil, tracing.Trace(span, apierror.NewResourceNotFoundError("Unit not found."))
+		return nil, tracing.Trace(span, apierror.NewNotFoundError("Unit not found."))
 	}
 
 	return r.Get(ctx, domain.GetUnitParams{AccountID: params.AccountID, UnitID: params.UnitID})
@@ -494,7 +494,7 @@ func (r *unitRepoImpl) Delete(ctx context.Context, params domain.DeleteUnitParam
 		return tracing.Trace(span, apierror.NewInternalError(err, "Failed to check rows affected."))
 	}
 	if rowsAffected == 0 {
-		return tracing.Trace(span, apierror.NewResourceNotFoundError("Unit not found."))
+		return tracing.Trace(span, apierror.NewNotFoundError("Unit not found."))
 	}
 
 	return nil

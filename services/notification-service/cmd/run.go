@@ -19,13 +19,13 @@ import (
 	"github.com/open-mrp/api/services/notification-service/internal/reaper"
 	"github.com/open-mrp/api/services/notification-service/internal/scheduler"
 	"github.com/open-mrp/api/services/notification-service/internal/service"
-	s3client "github.com/open-mrp/api/shared/cloud/s3"
-	sqsclient "github.com/open-mrp/api/shared/cloud/sqs"
 	"github.com/open-mrp/api/shared/contracts"
-	"github.com/open-mrp/api/shared/db"
 	"github.com/open-mrp/api/shared/messaging"
-	"github.com/open-mrp/api/shared/tracing"
+	s3client "github.com/open-mrp/apikit/cloud/s3"
+	sqsclient "github.com/open-mrp/apikit/cloud/sqs"
+	"github.com/open-mrp/apikit/db"
 	"github.com/open-mrp/apikit/lease"
+	"github.com/open-mrp/apikit/tracing"
 )
 
 func Run(

@@ -5,9 +5,9 @@ import (
 	"testing"
 
 	"github.com/open-mrp/api/services/notification-service/internal/domain"
-	s3 "github.com/open-mrp/api/shared/cloud/s3"
 	"github.com/open-mrp/api/shared/constants"
-	apierror "github.com/open-mrp/api/shared/errors"
+	apierror "github.com/open-mrp/apikit/apierror"
+	s3 "github.com/open-mrp/apikit/cloud/s3"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -44,7 +44,7 @@ func TestBuildAttachments_WrongPrefixRejected(t *testing.T) {
 		{Kind: string(constants.MessageAttachmentKindImage), S3Key: ap("staged/ac_1/cv_OTHER/mgah_x/x.png")},
 	})
 	require.NotNil(t, apiErr)
-	assert.Equal(t, apierror.ErrorCodeParameterInvalid, apiErr.Code)
+	assert.Equal(t, apierror.CodeParameterInvalid, apiErr.Code)
 }
 
 func TestBuildAttachments_MissingObjectRejected(t *testing.T) {
@@ -53,7 +53,7 @@ func TestBuildAttachments_MissingObjectRejected(t *testing.T) {
 		{Kind: string(constants.MessageAttachmentKindImage), S3Key: ap("staged/ac_1/cv_1/mgah_x/x.png")},
 	})
 	require.NotNil(t, apiErr)
-	assert.Equal(t, apierror.ErrorCodeParameterInvalid, apiErr.Code)
+	assert.Equal(t, apierror.CodeParameterInvalid, apiErr.Code)
 }
 
 func TestBuildAttachments_UploadedMissingKeyRejected(t *testing.T) {
@@ -62,7 +62,7 @@ func TestBuildAttachments_UploadedMissingKeyRejected(t *testing.T) {
 		{Kind: string(constants.MessageAttachmentKindFile)},
 	})
 	require.NotNil(t, apiErr)
-	assert.Equal(t, apierror.ErrorCodeParameterMissing, apiErr.Code)
+	assert.Equal(t, apierror.CodeParameterMissing, apiErr.Code)
 }
 
 func TestBuildAttachments_LinkRequiresURL(t *testing.T) {
@@ -71,7 +71,7 @@ func TestBuildAttachments_LinkRequiresURL(t *testing.T) {
 		{Kind: string(constants.MessageAttachmentKindLink)},
 	})
 	require.NotNil(t, apiErr)
-	assert.Equal(t, apierror.ErrorCodeParameterMissing, apiErr.Code)
+	assert.Equal(t, apierror.CodeParameterMissing, apiErr.Code)
 }
 
 func TestBuildAttachments_ResourceHappyPath(t *testing.T) {
@@ -91,7 +91,7 @@ func TestBuildAttachments_InvalidKindRejected(t *testing.T) {
 		{Kind: "bogus"},
 	})
 	require.NotNil(t, apiErr)
-	assert.Equal(t, apierror.ErrorCodeParameterInvalid, apiErr.Code)
+	assert.Equal(t, apierror.CodeParameterInvalid, apiErr.Code)
 }
 
 func assertIDPrefix(t *testing.T, id, prefix string) {

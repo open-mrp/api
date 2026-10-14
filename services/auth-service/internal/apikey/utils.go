@@ -5,8 +5,8 @@ import (
 
 	"github.com/open-mrp/api/services/auth-service/pkg/types"
 	"github.com/open-mrp/api/shared/constants"
-	apierror "github.com/open-mrp/api/shared/errors"
 	"github.com/open-mrp/api/shared/sanitize"
+	apierror "github.com/open-mrp/apikit/apierror"
 	"github.com/open-mrp/apikit/crypto"
 )
 
@@ -17,7 +17,7 @@ func SanitizeAPIKey(apiKey string) string {
 
 func invalidAPIKeyError(key string) *apierror.APIError {
 	message := fmt.Sprintf("%s: %s. Valid API keys start with '%s'.", ErrAPIKeyInvalid, SanitizeAPIKey(key), string(types.APIKeyPrefixSecretKey))
-	return apierror.NewInvalidFormatError(message, "api_key")
+	return apierror.NewInvalidFormatError("api_key", message)
 }
 
 func genAPIKeyChecksum(id, secret string) string {

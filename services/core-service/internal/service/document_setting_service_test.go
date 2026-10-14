@@ -12,7 +12,7 @@ import (
 	repositorymock "github.com/open-mrp/api/services/core-service/internal/domain/mock/repository"
 	"github.com/open-mrp/api/shared/audit"
 	"github.com/open-mrp/api/shared/constants"
-	apierror "github.com/open-mrp/api/shared/errors"
+	apierror "github.com/open-mrp/apikit/apierror"
 	"github.com/open-mrp/apikit/field"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -120,7 +120,7 @@ func TestDocumentSettingSvc_GetUnknownTypeIsRejected(t *testing.T) {
 
 	_, apiErr := s.svc.GetDocumentSetting(territoryInternalCtx("ac_1"), "letterhead")
 	require.NotNil(t, apiErr)
-	assert.Equal(t, apierror.ErrorCodeValidationFailed, apiErr.Code)
+	assert.Equal(t, apierror.CodeValidationFailed, apiErr.Code)
 	assert.Equal(t, "document_type", apiErr.Param)
 }
 
@@ -216,5 +216,5 @@ func TestDocumentSettingSvc_UpdateUnknownTypeIsRejected(t *testing.T) {
 
 	_, apiErr := s.svc.UpdateDocumentSetting(territoryInternalCtx("ac_1"), domain.UpdateDocumentSettingParams{DocumentType: "letterhead"})
 	require.NotNil(t, apiErr)
-	assert.Equal(t, apierror.ErrorCodeValidationFailed, apiErr.Code)
+	assert.Equal(t, apierror.CodeValidationFailed, apiErr.Code)
 }

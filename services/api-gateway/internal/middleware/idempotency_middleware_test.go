@@ -14,9 +14,9 @@ import (
 	"github.com/open-mrp/api/services/api-gateway/internal/header"
 	"github.com/open-mrp/api/services/auth-service/pkg/types"
 	"github.com/open-mrp/api/shared/appctx"
-	apierror "github.com/open-mrp/api/shared/errors"
-	"github.com/open-mrp/api/shared/idempotency"
 	pb "github.com/open-mrp/api/shared/proto/platform"
+	apierror "github.com/open-mrp/apikit/apierror"
+	"github.com/open-mrp/apikit/idempotency"
 	"google.golang.org/grpc"
 )
 
@@ -134,7 +134,7 @@ func TestReadAndRestoreBody_RejectsOversizedBody(t *testing.T) {
 	if got != nil {
 		t.Errorf("expected nil body bytes when over the limit, got %d bytes", len(got))
 	}
-	if apiErr.Code != apierror.ErrorCodeRequestTooLarge {
+	if apiErr.Code != apierror.CodeRequestTooLarge {
 		t.Errorf("an oversized body is a 413 request_too_large, got %q: %q", apiErr.Code, apiErr.PublicMessage)
 	}
 }

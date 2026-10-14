@@ -10,7 +10,7 @@ import (
 	mediatormock "github.com/open-mrp/api/services/core-service/internal/domain/mock/mediator"
 	repositorymock "github.com/open-mrp/api/services/core-service/internal/domain/mock/repository"
 	"github.com/open-mrp/api/shared/appctx"
-	apierror "github.com/open-mrp/api/shared/errors"
+	apierror "github.com/open-mrp/apikit/apierror"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -66,7 +66,7 @@ func TestItemSvc_GetItemRefusesAnyoneButTheSellersOwnUsers(t *testing.T) {
 		svc, _, _ := newItemReadSvc(t)
 		_, _, apiErr := svc.GetItem(ctx, "itm_1", nil, domain.ItemEmbeds{})
 		if assert.NotNil(t, apiErr, name) {
-			assert.Equal(t, apierror.ErrorCodeInsufficientPerms, apiErr.Code, name)
+			assert.Equal(t, apierror.CodeInsufficientPermissions, apiErr.Code, name)
 		}
 	}
 }
@@ -88,11 +88,11 @@ func TestItemSvc_GetItemNotFoundNamesTheItem(t *testing.T) {
 	t.Parallel()
 
 	svc, itemRepo, _ := newItemReadSvc(t)
-	itemRepo.EXPECT().Get(gomock.Any(), gomock.Any()).Return(nil, apierror.NewResourceNotFoundError("Resource not found."))
+	itemRepo.EXPECT().Get(gomock.Any(), gomock.Any()).Return(nil, apierror.NewNotFoundError("Resource not found."))
 
 	_, _, apiErr := svc.GetItem(itemReadCtx(types.IdentityRelationTypeInternal, itemReadSellerID, itemReadSellerID, "items:read"), "itm_missing", nil, domain.ItemEmbeds{})
 	require.NotNil(t, apiErr)
-	assert.Equal(t, apierror.ErrorCodeResourceNotFound, apiErr.Code)
+	assert.Equal(t, apierror.CodeResourceNotFound, apiErr.Code)
 	assert.Equal(t, "Item not found.", apiErr.PublicMessage)
 }
 
@@ -165,5 +165,5 @@ func TestItemSvc_BatchGetItemsReadsNoEmbedsUnlessAskedAndStillNeedsItemsRead(t *
 	svc, _, _ = newItemReadSvc(t)
 	_, _, apiErr = svc.BatchGetItemsByIDs(itemReadCtx(types.IdentityRelationTypeInternal, itemReadSellerID, itemReadSellerID, "item_categories:read", "properties:read"), []string{"itm_1"}, domain.ItemEmbeds{Categories: true, AttributeProperties: true})
 	require.NotNil(t, apiErr)
-	assert.Equal(t, apierror.ErrorCodeInsufficientPerms, apiErr.Code)
+	assert.Equal(t, apierror.CodeInsufficientPermissions, apiErr.Code)
 }

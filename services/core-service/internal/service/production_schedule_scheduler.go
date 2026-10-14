@@ -8,8 +8,8 @@ import (
 	"time"
 
 	"github.com/open-mrp/api/services/core-service/internal/domain"
-	"github.com/open-mrp/api/shared/tracing"
 	"github.com/open-mrp/apikit/lease"
+	"github.com/open-mrp/apikit/tracing"
 	"github.com/robfig/cron/v3"
 )
 

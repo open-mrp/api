@@ -16,8 +16,8 @@ import (
 
 	apiendpoint "github.com/open-mrp/api/services/api-gateway/pkg/endpoint"
 	"github.com/open-mrp/api/shared/appctx"
-	"github.com/open-mrp/api/shared/metadata"
 	pb "github.com/open-mrp/api/shared/proto/core"
+	"github.com/open-mrp/apikit/metadata"
 )
 
 // captureInvoiceClient records the UpdateInvoice request and answers with a bare invoice carrying
@@ -130,7 +130,7 @@ func TestUpdateInvoice_InvalidMetadataIsRejected(t *testing.T) {
 			t.Parallel()
 			client := &captureInvoiceClient{}
 			w := patchInvoice(t, client, body)
-			require.Equal(t, http.StatusBadRequest, w.Code, w.Body.String())
+			require.Equal(t, http.StatusUnprocessableEntity, w.Code, w.Body.String())
 			assert.Nil(t, client.update, "an invalid body must not reach core")
 		})
 	}

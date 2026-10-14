@@ -10,9 +10,9 @@ import (
 
 	"github.com/open-mrp/api/services/notification-service/internal/domain"
 	"github.com/open-mrp/api/shared/constants"
-	apierror "github.com/open-mrp/api/shared/errors"
 	"github.com/open-mrp/api/shared/messaging"
-	"github.com/open-mrp/api/shared/tracing"
+	apierror "github.com/open-mrp/apikit/apierror"
+	"github.com/open-mrp/apikit/tracing"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
 	awsconfig "github.com/aws/aws-sdk-go-v2/config"
@@ -53,11 +53,11 @@ func (s *sesEmailSenderImpl) Send(ctx context.Context, data domain.EmailData) (*
 	defer span.End()
 
 	if len(data.To) == 0 {
-		err := apierror.NewMissingFieldError("At least one recipient must be provided.", "to")
+		err := apierror.NewMissingFieldError("to", "At least one recipient must be provided.")
 		return nil, err
 	}
 	if data.Body == "" {
-		err := apierror.NewMissingFieldError("Body must be provided.", "body")
+		err := apierror.NewMissingFieldError("body", "Body must be provided.")
 		span.RecordError(err)
 		span.SetStatus(codes.Error, err.Error())
 		return nil, err

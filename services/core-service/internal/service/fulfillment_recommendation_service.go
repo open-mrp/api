@@ -8,8 +8,8 @@ import (
 	"github.com/open-mrp/api/services/auth-service/pkg/types"
 	"github.com/open-mrp/api/services/core-service/internal/domain"
 	"github.com/open-mrp/api/services/core-service/internal/scheduling"
-	apierror "github.com/open-mrp/api/shared/errors"
-	"github.com/open-mrp/api/shared/tracing"
+	apierror "github.com/open-mrp/apikit/apierror"
+	"github.com/open-mrp/apikit/tracing"
 )
 
 // recommendationHistoryMonths is how far back demand shape is measured.
@@ -291,7 +291,7 @@ func (s *productionScheduleSvcImpl) ApplyFulfillmentRecommendations(ctx context.
 		return nil, tracing.Trace(span, apiErr)
 	}
 	if len(itemIDs) == 0 {
-		return nil, tracing.Trace(span, apierror.NewValidationErrorWithParam("At least one item is required.", "item_ids"))
+		return nil, tracing.Trace(span, apierror.NewFieldError("item_ids", apierror.CodeInvalidFormat, "At least one item is required."))
 	}
 
 	// Recomputed here rather than trusted from the request: a recommendation the caller read minutes ago may no longer be the advice, and applying a stale verdict would set a policy the engine would not give today.
@@ -308,7 +308,7 @@ func (s *productionScheduleSvcImpl) ApplyFulfillmentRecommendations(ctx context.
 	for _, itemID := range itemIDs {
 		rec, ok := byItem[itemID]
 		if !ok {
-			return nil, tracing.Trace(span, apierror.NewValidationErrorWithParam("No recommendation exists for item "+itemID+".", "item_ids"))
+			return nil, tracing.Trace(span, apierror.NewFieldError("item_ids", apierror.CodeInvalidFormat, "No recommendation exists for item "+itemID+"."))
 		}
 		applied = append(applied, rec)
 	}

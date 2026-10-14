@@ -5,7 +5,7 @@ import (
 	"testing"
 	"time"
 
-	apierror "github.com/open-mrp/api/shared/errors"
+	apierror "github.com/open-mrp/apikit/apierror"
 )
 
 func TestEncodeJWT_Success(t *testing.T) {
@@ -47,8 +47,8 @@ func TestEncodeJWT_EmptyUserID(t *testing.T) {
 	if err == nil {
 		t.Fatal("EncodeJWT() expected error for empty userID but got none")
 	}
-	if err.Type != apierror.ErrorTypeAPI {
-		t.Errorf("Expected error type to be %s, got %s", apierror.ErrorTypeAPI, err.Type)
+	if err.Type != apierror.TypeAPI {
+		t.Errorf("Expected error type to be %s, got %s", apierror.TypeAPI, err.Type)
 	}
 }
 
@@ -58,8 +58,8 @@ func TestEncodeJWT_EmptyTokenType(t *testing.T) {
 	if err == nil {
 		t.Fatal("EncodeJWT() expected error for empty token type but got none")
 	}
-	if err.Type != apierror.ErrorTypeAPI {
-		t.Errorf("Expected error type to be %s, got %s", apierror.ErrorTypeAPI, err.Type)
+	if err.Type != apierror.TypeAPI {
+		t.Errorf("Expected error type to be %s, got %s", apierror.TypeAPI, err.Type)
 	}
 }
 
@@ -107,8 +107,8 @@ func TestDecodeJWT_InvalidToken(t *testing.T) {
 			if err == nil {
 				t.Fatal("DecodeJWT() expected error for invalid token but got none")
 			}
-			if err.Type != apierror.ErrorTypeInvalidRequest {
-				t.Errorf("Expected error type to be %s, got %s", apierror.ErrorTypeInvalidRequest, err.Type)
+			if err.Type != apierror.TypeInvalidRequest {
+				t.Errorf("Expected error type to be %s, got %s", apierror.TypeInvalidRequest, err.Type)
 			}
 			if err.PublicMessage != ErrInvalidJWT {
 				t.Errorf("Expected error message to be '%s', got: %s", ErrInvalidJWT, err.PublicMessage)
@@ -172,8 +172,8 @@ func TestDecodeJWT_ExpiredToken(t *testing.T) {
 	if decodeErr.PublicMessage != ErrExpiredJWT {
 		t.Errorf("Expected error message to be '%s', got: %s", ErrExpiredJWT, decodeErr.PublicMessage)
 	}
-	if decodeErr.Code != apierror.ErrorCodeExpiredToken {
-		t.Errorf("Expected error code to be '%s', got: %s", apierror.ErrorCodeExpiredToken, decodeErr.Code)
+	if decodeErr.Code != apierror.CodeExpiredToken {
+		t.Errorf("Expected error code to be '%s', got: %s", apierror.CodeExpiredToken, decodeErr.Code)
 	}
 }
 

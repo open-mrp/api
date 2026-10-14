@@ -8,7 +8,7 @@ import (
 
 	"github.com/open-mrp/api/shared/appctx"
 	"github.com/open-mrp/api/shared/constants"
-	apierror "github.com/open-mrp/api/shared/errors"
+	apierror "github.com/open-mrp/apikit/apierror"
 )
 
 const (
@@ -92,7 +92,7 @@ func setRefreshTokenCookie(w http.ResponseWriter, token string, opts cookieOptio
 func GetAccessTokenFromRequest(r *http.Request) (string, *apierror.APIError) {
 	cookie, err := r.Cookie(accessTokenCookieName)
 	if err != nil || cookie == nil || cookie.Value == "" {
-		return "", apierror.NewResourceNotFoundError("Access token cookie not found")
+		return "", apierror.NewNotFoundError("Access token cookie not found")
 	}
 
 	return cookie.Value, nil
@@ -101,12 +101,12 @@ func GetAccessTokenFromRequest(r *http.Request) (string, *apierror.APIError) {
 func GetRefreshTokenFromRequest(r *http.Request) (string, *apierror.APIError) {
 	cookie, err := r.Cookie(refreshTokenCookieName)
 	if err != nil || cookie == nil || cookie.Value == "" {
-		return "", apierror.NewResourceNotFoundError("Refresh token cookie not found")
+		return "", apierror.NewNotFoundError("Refresh token cookie not found")
 	}
 
 	// Refresh tokens are restricted to auth routes.
 	if !strings.HasPrefix(r.URL.Path, authRoutePrefix) {
-		return "", apierror.NewResourceNotFoundError("Refresh token cookie not allowed for this route")
+		return "", apierror.NewNotFoundError("Refresh token cookie not allowed for this route")
 	}
 
 	return cookie.Value, nil

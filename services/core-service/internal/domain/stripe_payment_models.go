@@ -3,7 +3,7 @@ package domain
 import (
 	"context"
 
-	apierror "github.com/open-mrp/api/shared/errors"
+	apierror "github.com/open-mrp/apikit/apierror"
 )
 
 // StripeEventLog represents a deduplicated record of a processed Stripe event.

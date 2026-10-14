@@ -15,11 +15,11 @@ import (
 	"github.com/open-mrp/api/services/core-service/internal/event"
 	"github.com/open-mrp/api/shared/appctx"
 	"github.com/open-mrp/api/shared/constants"
-	apierror "github.com/open-mrp/api/shared/errors"
-	"github.com/open-mrp/api/shared/idempotency"
+	"github.com/open-mrp/api/shared/idemresponse"
 	"github.com/open-mrp/api/shared/messaging"
-	"github.com/open-mrp/api/shared/tracing"
+	apierror "github.com/open-mrp/apikit/apierror"
 	"github.com/open-mrp/apikit/ptrutil"
+	"github.com/open-mrp/apikit/tracing"
 )
 
 var utilsSvcTracer = tracing.GetTracer("core-service.service.utils")
@@ -167,7 +167,7 @@ func (s *utilsSvcImpl) CheckDuplicate(ctx context.Context, params domain.CheckDu
 	accountID := identity.Target.AccountID
 	recordNumber := strings.TrimSpace(params.RecordNumber)
 	if recordNumber == "" {
-		return nil, tracing.Trace(span, apierror.NewInvalidFormatError("Field 'record_number' must not be blank.", "record_number"))
+		return nil, tracing.Trace(span, apierror.NewInvalidFormatError("record_number", "Field 'record_number' must not be blank."))
 	}
 
 	var isDuplicate bool
@@ -198,7 +198,7 @@ func (s *utilsSvcImpl) CheckDuplicate(ctx context.Context, params domain.CheckDu
 
 	case domain.DuplicateCheckTypeCustomerPO:
 		if params.CustomerID == nil {
-			return nil, tracing.Trace(span, apierror.NewValidationErrorWithParam("Customer ID is required for customer PO number duplicate check.", "customer_id"))
+			return nil, tracing.Trace(span, apierror.NewFieldError("customer_id", apierror.CodeInvalidFormat, "Customer ID is required for customer PO number duplicate check."))
 		}
 		dup, apiErr := s.repos.NewSalesOrderRepo().IsDuplicateCustomerPO(ctx, accountID, *params.CustomerID, recordNumber, nil)
 		if apiErr != nil {
@@ -262,7 +262,7 @@ func (s *utilsSvcImpl) EmailRecord(ctx context.Context, params domain.EmailRecor
 
 	switch domain.RecoveryPoint(idempotencyKey.RecoveryPoint) {
 	case domain.RecoveryPointFinished:
-		cached, err := idempotency.UnmarshalCachedResponse[struct{}](ctx, idempotencyKey.ResponseCode, idempotencyKey.ResponseBody)
+		cached, err := idemresponse.UnmarshalCachedResponse[struct{}](ctx, idempotencyKey.ResponseCode, idempotencyKey.ResponseBody)
 		if err != nil {
 			return tracing.Trace(span, apierror.NewInternalError(err, "Issue unmarshalling cached response."))
 		}
@@ -485,7 +485,7 @@ func (s *utilsSvcImpl) SubmitFeedback(ctx context.Context, params domain.SubmitF
 	// The reply goes to the actor's address. An actor that is not a user (an API key) has none.
 	userEmail := ""
 	actorUser, apiErr := s.repos.NewUserRepo().FindByID(ctx, identity.Actor.ID)
-	if apiErr != nil && !apierror.IsNotFound(apiErr) {
+	if apiErr != nil && !apierror.HasCode(apiErr, apierror.CodeResourceNotFound) {
 		return tracing.Trace(span, apiErr)
 	}
 	if actorUser != nil {

@@ -12,7 +12,7 @@ import (
 	repositorymock "github.com/open-mrp/api/services/core-service/internal/domain/mock/repository"
 	"github.com/open-mrp/api/shared/appctx"
 	"github.com/open-mrp/api/shared/constants"
-	apierror "github.com/open-mrp/api/shared/errors"
+	apierror "github.com/open-mrp/apikit/apierror"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -132,14 +132,14 @@ func TestChangeItemCategoryInTx_RefusesWithoutWriting(t *testing.T) {
 		category *domain.ItemCategoryFull
 		catErr   *apierror.APIError
 		props    []*domain.ItemCategoryProperty
-		wantCode apierror.ErrorCode
+		wantCode apierror.Code
 		param    string
 	}{
 		{
 			name:     "a part to a material category",
 			item:     partItem("ic_old", "Old"),
 			category: &domain.ItemCategoryFull{ID: "ic_new", ItemCategoryTypeCode: string(constants.ItemCategoryTypeMaterial)},
-			wantCode: apierror.ErrorCodeValidationFailed,
+			wantCode: apierror.CodeValidationFailed,
 			param:    "category_id",
 		},
 		{
@@ -148,14 +148,14 @@ func TestChangeItemCategoryInTx_RefusesWithoutWriting(t *testing.T) {
 				Attributes: []*domain.ItemAttribute{{ID: "at_red", Value: "Red", PropertyID: "pp_color"}}},
 			category: &domain.ItemCategoryFull{ID: "ic_new", ItemCategoryTypeCode: string(constants.ItemCategoryTypeProduct)},
 			props:    []*domain.ItemCategoryProperty{{ID: "pp_size"}},
-			wantCode: apierror.ErrorCodeValidationFailed,
+			wantCode: apierror.CodeValidationFailed,
 			param:    "category_id",
 		},
 		{
 			name:     "a category outside the account",
 			item:     partItem("ic_old", "Old"),
-			catErr:   apierror.NewResourceNotFoundError("Resource not found."),
-			wantCode: apierror.ErrorCodeResourceNotFound,
+			catErr:   apierror.NewNotFoundError("Resource not found."),
+			wantCode: apierror.CodeResourceNotFound,
 		},
 	}
 

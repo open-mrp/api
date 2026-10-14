@@ -4,9 +4,9 @@ import (
 	"context"
 
 	"github.com/open-mrp/api/services/agent-service/internal/infrastructure/sqlc"
-	"github.com/open-mrp/api/shared/db"
-	apierror "github.com/open-mrp/api/shared/errors"
-	"github.com/open-mrp/api/shared/tracing"
+	apierror "github.com/open-mrp/apikit/apierror"
+	"github.com/open-mrp/apikit/db"
+	"github.com/open-mrp/apikit/tracing"
 )
 
 var adtRepoTracer = tracing.GetTracer("agent-service.agent_definition_tool_repository")

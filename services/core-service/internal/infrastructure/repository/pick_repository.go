@@ -10,12 +10,12 @@ import (
 	"github.com/open-mrp/api/services/core-service/internal/domain"
 	"github.com/open-mrp/api/services/core-service/internal/infrastructure/sqlc"
 	"github.com/open-mrp/api/shared/constants"
-	"github.com/open-mrp/api/shared/db"
-	apierror "github.com/open-mrp/api/shared/errors"
-	"github.com/open-mrp/api/shared/metadata"
-	"github.com/open-mrp/api/shared/tracing"
+	apierror "github.com/open-mrp/apikit/apierror"
+	"github.com/open-mrp/apikit/db"
+	"github.com/open-mrp/apikit/metadata"
 	"github.com/open-mrp/apikit/pagination"
 	"github.com/open-mrp/apikit/safeconv"
+	"github.com/open-mrp/apikit/tracing"
 )
 
 var pickRepoTracer = tracing.GetTracer("core-service.pick_repository")
@@ -198,7 +198,7 @@ func (r *pickRepoImpl) listQuery(ctx context.Context, params domain.ListPicksPar
 	if params.Cursor != nil {
 		cur, err := pagination.DecodeStringCursor(*params.Cursor)
 		if err != nil {
-			return q, nil, apierror.NewValidationErrorWithParam("Invalid pagination cursor.", "cursor")
+			return q, nil, apierror.NewFieldError("cursor", apierror.CodeInvalidFormat, "Invalid pagination cursor.")
 		}
 		cursorDir = &cur.Direction
 		q.Direction = cur.Direction
@@ -734,7 +734,7 @@ func (r *pickRepoImpl) Lock(ctx context.Context, accountID, pickID string) (bool
 
 	finishedAt, err := r.queries.LockPick(ctx, sqlc.LockPickParams{PickID: pickID, AccountID: accountID})
 	if errors.Is(err, gosql.ErrNoRows) {
-		return false, tracing.Trace(span, apierror.NewResourceNotFoundError("Pick not found."))
+		return false, tracing.Trace(span, apierror.NewNotFoundError("Pick not found."))
 	}
 	if apiErr := db.MapSQLError(err); apiErr != nil {
 		return false, tracing.Trace(span, apiErr)

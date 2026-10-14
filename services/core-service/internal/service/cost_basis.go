@@ -7,7 +7,7 @@ import (
 
 	"github.com/open-mrp/api/services/core-service/internal/domain"
 	"github.com/open-mrp/api/services/core-service/internal/event"
-	apierror "github.com/open-mrp/api/shared/errors"
+	apierror "github.com/open-mrp/apikit/apierror"
 )
 
 // publishStepCostBasisChanged announces that a step's inputs changed, naming the item the step
@@ -15,7 +15,7 @@ import (
 func publishStepCostBasisChanged(ctx context.Context, repos domain.RepoFactory, accountID, productionStepID, reason string) *apierror.APIError {
 	itemID, apiErr := repos.NewProductionStepQueryRepo().FindProducedItemID(ctx, accountID, productionStepID)
 	if apiErr != nil {
-		if apierror.IsNotFound(apiErr) {
+		if apierror.HasCode(apiErr, apierror.CodeResourceNotFound) {
 			return nil
 		}
 		return apiErr

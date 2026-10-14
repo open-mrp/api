@@ -9,8 +9,8 @@ import (
 	"github.com/open-mrp/api/services/core-service/internal/scheduling"
 	"github.com/open-mrp/api/shared/appctx"
 	"github.com/open-mrp/api/shared/constants"
-	apierror "github.com/open-mrp/api/shared/errors"
-	"github.com/open-mrp/api/shared/tracing"
+	apierror "github.com/open-mrp/apikit/apierror"
+	"github.com/open-mrp/apikit/tracing"
 )
 
 // AnalyzeDeliveryPerformance measures what was promised against what was shipped.
@@ -32,7 +32,7 @@ func (s *analyticsSvcImpl) AnalyzeDeliveryPerformance(ctx context.Context, param
 		return nil, tracing.Trace(span, apiErr)
 	}
 	if !params.EndDate.After(params.StartDate) {
-		return nil, tracing.Trace(span, apierror.NewValidationErrorWithParam("The end date must be after the start date.", "ends_at"))
+		return nil, tracing.Trace(span, apierror.NewFieldError("ends_at", apierror.CodeInvalidFormat, "The end date must be after the start date."))
 	}
 	accountID := identity.Target.AccountID
 

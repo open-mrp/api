@@ -5,7 +5,7 @@ import (
 	"strings"
 
 	"github.com/open-mrp/api/services/core-service/internal/domain"
-	apierror "github.com/open-mrp/api/shared/errors"
+	apierror "github.com/open-mrp/apikit/apierror"
 )
 
 // AddressValidationSvc is a stub AddressValidationSvc implementation for use in test mode. It returns realistic canned responses so that e2e tests can exercise the full address validation flow without an external Google Maps API key.
@@ -77,7 +77,7 @@ func (s *AddressValidationSvc) GetPlaceDetails(_ context.Context, placeID string
 	if details, ok := stubPlaces[placeID]; ok {
 		return &details, nil
 	}
-	return nil, apierror.NewResourceNotFoundError("Place not found.")
+	return nil, apierror.NewNotFoundError("Place not found.")
 }
 
 // stubCoveredRegions stands in for the countries Google Address Validation covers. Google rejects any

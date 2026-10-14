@@ -7,9 +7,9 @@ import (
 
 	"github.com/open-mrp/api/services/core-service/internal/domain"
 	"github.com/open-mrp/api/services/core-service/internal/infrastructure/sqlc"
-	"github.com/open-mrp/api/shared/db"
-	apierror "github.com/open-mrp/api/shared/errors"
-	"github.com/open-mrp/api/shared/tracing"
+	apierror "github.com/open-mrp/apikit/apierror"
+	"github.com/open-mrp/apikit/db"
+	"github.com/open-mrp/apikit/tracing"
 )
 
 var orderPaymentIntentRepoTracer = tracing.GetTracer("core-service.infrastructure.repository.order_payment_intent")
@@ -74,7 +74,7 @@ func (r *orderPaymentIntentRepoImpl) GetOrderAccountID(ctx context.Context, sale
 
 	accountID, err := r.queries.GetSalesOrderOwnerAccountID(ctx, salesOrderID)
 	if errors.Is(err, gosql.ErrNoRows) {
-		return "", tracing.Trace(span, apierror.NewResourceNotFoundError("Sales order not found."))
+		return "", tracing.Trace(span, apierror.NewNotFoundError("Sales order not found."))
 	}
 	if apiErr := db.MapSQLError(err); apiErr != nil {
 		return "", tracing.Trace(span, apiErr)

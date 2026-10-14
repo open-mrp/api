@@ -13,7 +13,7 @@ import (
 	repositorymock "github.com/open-mrp/api/services/core-service/internal/domain/mock/repository"
 	"github.com/open-mrp/api/shared/appctx"
 	"github.com/open-mrp/api/shared/constants"
-	apierror "github.com/open-mrp/api/shared/errors"
+	apierror "github.com/open-mrp/apikit/apierror"
 
 	"github.com/stretchr/testify/suite"
 	"go.uber.org/mock/gomock"
@@ -185,7 +185,7 @@ func (suite *PortalDomainSvcTestSuite) TestCreatePortalDomain_ConflictWhenAccoun
 
 	_, apiErr := suite.svc.CreatePortalDomain(ctx, "portal.acme.com")
 	suite.NotNil(apiErr)
-	suite.Equal(apierror.ErrorCodeResourceConflict, apiErr.Code)
+	suite.Equal(apierror.CodeResourceConflict, apiErr.Code)
 }
 
 func (suite *PortalDomainSvcTestSuite) TestCreatePortalDomain_RejectsInvalidAndOpenMRPDomains() {
@@ -194,7 +194,7 @@ func (suite *PortalDomainSvcTestSuite) TestCreatePortalDomain_RejectsInvalidAndO
 	for _, bad := range []string{"", "not-a-domain", "shop.openmrp.ai", "openmrp.ai", "http://shop.acme.com", "shop..acme.com"} {
 		_, apiErr := suite.svc.CreatePortalDomain(ctx, bad)
 		suite.NotNil(apiErr, "expected validation error for %q", bad)
-		suite.Equal(apierror.ErrorCodeValidationFailed, apiErr.Code, "domain %q", bad)
+		suite.Equal(apierror.CodeValidationFailed, apiErr.Code, "domain %q", bad)
 	}
 }
 
@@ -291,7 +291,7 @@ func (suite *PortalDomainSvcTestSuite) TestVerifyPortalDomain_NotFound() {
 
 	_, apiErr := suite.svc.VerifyPortalDomain(ctx, "podn_missing")
 	suite.NotNil(apiErr)
-	suite.Equal(apierror.ErrorCodeResourceNotFound, apiErr.Code)
+	suite.Equal(apierror.CodeResourceNotFound, apiErr.Code)
 }
 
 func (suite *PortalDomainSvcTestSuite) TestDeletePortalDomain_RemovesProviderFirst() {
@@ -314,7 +314,7 @@ func (suite *PortalDomainSvcTestSuite) TestDeletePortalDomain_NotFound() {
 
 	apiErr := suite.svc.DeletePortalDomain(ctx, "podn_missing")
 	suite.NotNil(apiErr)
-	suite.Equal(apierror.ErrorCodeResourceNotFound, apiErr.Code)
+	suite.Equal(apierror.CodeResourceNotFound, apiErr.Code)
 }
 
 func (suite *PortalDomainSvcTestSuite) TestResolvePortalHost_NormalizesAndResolves() {

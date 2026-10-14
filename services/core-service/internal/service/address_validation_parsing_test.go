@@ -4,7 +4,6 @@ import (
 	"net/http"
 	"testing"
 
-	apierror "github.com/open-mrp/api/shared/errors"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -16,7 +15,7 @@ func TestClassifyAddressValidationError_UnsupportedRegion(t *testing.T) {
 	apiErr := classifyAddressValidationError(http.StatusBadRequest, body, "BT")
 
 	require.NotNil(t, apiErr)
-	assert.Equal(t, http.StatusBadRequest, apierror.GetHTTPStatusCode(apiErr.Code))
+	assert.Equal(t, http.StatusUnprocessableEntity, apiErr.Code.Status())
 	assert.Equal(t, "country", apiErr.Param)
 	assert.Contains(t, apiErr.PublicMessage, "BT")
 }
@@ -28,7 +27,7 @@ func TestClassifyAddressValidationError_OtherBadRequest(t *testing.T) {
 	apiErr := classifyAddressValidationError(http.StatusBadRequest, body, "US")
 
 	require.NotNil(t, apiErr)
-	assert.Equal(t, http.StatusBadRequest, apierror.GetHTTPStatusCode(apiErr.Code))
+	assert.Equal(t, http.StatusUnprocessableEntity, apiErr.Code.Status())
 	assert.Empty(t, apiErr.Param)
 }
 
@@ -39,7 +38,7 @@ func TestClassifyAddressValidationError_UpstreamFailure(t *testing.T) {
 	apiErr := classifyAddressValidationError(http.StatusServiceUnavailable, body, "US")
 
 	require.NotNil(t, apiErr)
-	assert.Equal(t, http.StatusInternalServerError, apierror.GetHTTPStatusCode(apiErr.Code))
+	assert.Equal(t, http.StatusInternalServerError, apiErr.Code.Status())
 }
 
 func TestNormalizePlaceResourceName(t *testing.T) {

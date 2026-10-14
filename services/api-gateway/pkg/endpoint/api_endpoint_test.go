@@ -11,8 +11,8 @@ import (
 
 	"github.com/open-mrp/api/services/api-gateway/internal/header"
 	"github.com/open-mrp/api/shared/appctx"
-	apierror "github.com/open-mrp/api/shared/errors"
 	"github.com/open-mrp/api/shared/redact"
+	apierror "github.com/open-mrp/apikit/apierror"
 )
 
 type stubRequest struct {

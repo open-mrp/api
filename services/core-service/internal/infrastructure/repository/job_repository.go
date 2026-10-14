@@ -10,11 +10,11 @@ import (
 
 	"github.com/open-mrp/api/services/core-service/internal/domain"
 	"github.com/open-mrp/api/services/core-service/internal/infrastructure/sqlc"
-	"github.com/open-mrp/api/shared/blobstore"
 	"github.com/open-mrp/api/shared/constants"
-	"github.com/open-mrp/api/shared/db"
-	apierror "github.com/open-mrp/api/shared/errors"
-	"github.com/open-mrp/api/shared/tracing"
+	apierror "github.com/open-mrp/apikit/apierror"
+	"github.com/open-mrp/apikit/blobstore"
+	"github.com/open-mrp/apikit/db"
+	"github.com/open-mrp/apikit/tracing"
 )
 
 var jobRepoTracer = tracing.GetTracer("core-service.job_repository")
@@ -97,7 +97,7 @@ type storedRowResult struct {
 	ID           string                    `json:"id,omitempty"`
 	Name         *string                   `json:"name,omitempty"`
 	SubResources []storedSubResource       `json:"sub_resources,omitempty"`
-	Error        *apierror.ResponseError   `json:"error,omitempty"`
+	Error        *apierror.ErrorObject     `json:"error,omitempty"`
 }
 
 type storedSubResource struct {
@@ -118,8 +118,8 @@ type legacyStoredRowResult struct {
 }
 
 type legacyStoredRowError struct {
-	Index *int                   `json:"index"`
-	Error apierror.ResponseError `json:"error"`
+	Index *int                 `json:"index"`
+	Error apierror.ErrorObject `json:"error"`
 }
 
 func decodeJSON[T any](n db.NullableRawMessage, column string) (*T, *apierror.APIError) {
@@ -185,7 +185,7 @@ func encodeResults(results []domain.RowResult, truncated bool) (db.NullableRawMe
 // so a job written before the merge still reports one entry per submitted row. The
 // whole-job failure it may carry — the legacy entry with no index — is returned
 // separately, since that now settles on the job rather than among its rows.
-func decodeResults(rawResults, rawErrors db.NullableRawMessage, resourceType constants.ObjectType) ([]domain.RowResult, bool, *apierror.ResponseError, *apierror.APIError) {
+func decodeResults(rawResults, rawErrors db.NullableRawMessage, resourceType constants.ObjectType) ([]domain.RowResult, bool, *apierror.ErrorObject, *apierror.APIError) {
 	if isJSONArray(rawResults) {
 		return decodeLegacyResults(rawResults, rawErrors, resourceType)
 	}
@@ -217,7 +217,7 @@ func decodeResults(rawResults, rawErrors db.NullableRawMessage, resourceType con
 	return out, stored.Truncated, nil, nil
 }
 
-func decodeLegacyResults(rawResults, rawErrors db.NullableRawMessage, resourceType constants.ObjectType) ([]domain.RowResult, bool, *apierror.ResponseError, *apierror.APIError) {
+func decodeLegacyResults(rawResults, rawErrors db.NullableRawMessage, resourceType constants.ObjectType) ([]domain.RowResult, bool, *apierror.ErrorObject, *apierror.APIError) {
 	legacy, apiErr := decodeJSON[[]legacyStoredRowResult](rawResults, "results")
 	if apiErr != nil {
 		return nil, false, nil, apiErr
@@ -241,7 +241,7 @@ func decodeLegacyResults(rawResults, rawErrors db.NullableRawMessage, resourceTy
 	if apiErr != nil {
 		return nil, false, nil, apiErr
 	}
-	var jobError *apierror.ResponseError
+	var jobError *apierror.ErrorObject
 	if legacyErrs != nil {
 		for _, e := range *legacyErrs {
 			rowErr := e.Error
@@ -285,7 +285,7 @@ func mapGetJobRow(row sqlc.GetJobRow) (*domain.Job, *apierror.APIError) {
 		return nil, apiErr
 	}
 
-	jobError, apiErr := decodeJSON[apierror.ResponseError](row.Error, "error")
+	jobError, apiErr := decodeJSON[apierror.ErrorObject](row.Error, "error")
 	if apiErr != nil {
 		return nil, apiErr
 	}

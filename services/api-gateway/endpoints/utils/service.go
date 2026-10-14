@@ -8,9 +8,9 @@ import (
 	grpcutil "github.com/open-mrp/api/services/api-gateway/internal/grpc"
 	apiresource "github.com/open-mrp/api/services/api-gateway/pkg/resource"
 	"github.com/open-mrp/api/shared/constants"
-	apierror "github.com/open-mrp/api/shared/errors"
 	pb "github.com/open-mrp/api/shared/proto/core"
-	"github.com/open-mrp/api/shared/tracing"
+	apierror "github.com/open-mrp/apikit/apierror"
+	"github.com/open-mrp/apikit/tracing"
 	"google.golang.org/grpc"
 )
 
@@ -59,7 +59,7 @@ func (m *utilsSvcImpl) CheckDuplicate(ctx context.Context, req *CheckDuplicateRe
 	case constants.DuplicateCheckTypeCustomerPONumber:
 		pbType = pb.DuplicateCheckType_DUPLICATE_CHECK_TYPE_CUSTOMER_PO_NUMBER
 	default:
-		return nil, apierror.NewValidationErrorWithParam("Invalid duplicate check type. Must be one of: invoice_number, order_number, customer_po_number.", "type")
+		return nil, apierror.NewFieldError("type", apierror.CodeInvalidFormat, "Invalid duplicate check type. Must be one of: invoice_number, order_number, customer_po_number.")
 	}
 
 	pbReq := &pb.CheckDuplicateRequest{
@@ -98,7 +98,7 @@ func (m *utilsSvcImpl) EmailRecord(ctx context.Context, req *EmailRecordRequest)
 	case constants.EmailRecordTypePurchaseOrder:
 		pbType = pb.EmailRecordType_EMAIL_RECORD_TYPE_PURCHASE_ORDER
 	default:
-		return nil, apierror.NewValidationErrorWithParam("Invalid email record type. Must be one of: invoice, sales_order, purchase_order.", "type")
+		return nil, apierror.NewFieldError("type", apierror.CodeInvalidFormat, "Invalid email record type. Must be one of: invoice, sales_order, purchase_order.")
 	}
 
 	pbReq := &pb.EmailRecordRequest{

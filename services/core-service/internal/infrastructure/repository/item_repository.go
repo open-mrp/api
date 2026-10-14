@@ -13,10 +13,11 @@ import (
 
 	"github.com/open-mrp/api/services/core-service/internal/domain"
 	"github.com/open-mrp/api/services/core-service/internal/infrastructure/sqlc"
-	"github.com/open-mrp/api/shared/db"
-	apierror "github.com/open-mrp/api/shared/errors"
-	"github.com/open-mrp/api/shared/tracing"
+	"github.com/open-mrp/api/shared/catalogsearch"
+	apierror "github.com/open-mrp/apikit/apierror"
+	"github.com/open-mrp/apikit/db"
 	"github.com/open-mrp/apikit/pagination"
+	"github.com/open-mrp/apikit/tracing"
 )
 
 var itemRepoTracer = tracing.GetTracer("core-service.item_repository")
@@ -463,7 +464,7 @@ func (r *itemRepoImpl) List(ctx context.Context, params domain.ListItemsParams) 
 	if params.Cursor != nil {
 		decoded, err := pagination.DecodeStringCursor(*params.Cursor)
 		if err != nil {
-			return nil, apierror.NewValidationErrorWithParam("Invalid pagination cursor.", "cursor")
+			return nil, apierror.NewFieldError("cursor", apierror.CodeInvalidFormat, "Invalid pagination cursor.")
 		}
 		cur, cursorDir = &decoded, &decoded.Direction
 	}
@@ -486,7 +487,7 @@ func (r *itemRepoImpl) List(ctx context.Context, params domain.ListItemsParams) 
 
 	catSearch := q.search
 	itemSearchRank := func(it *domain.Item) int32 {
-		return db.CatalogSearchRank(it.SKU, catSearch)
+		return catalogsearch.Rank(it.SKU, catSearch)
 	}
 	result, pageInfo := pagination.BuildPageStringWithSearchRank(items, params.Limit, cursorDir, catSearch.Contains.Valid, itemCreatedAt, itemID, itemSearchRank)
 
@@ -912,7 +913,7 @@ func (r *itemRepoImpl) RemoveAttribute(ctx context.Context, params domain.Remove
 		return tracing.Trace(span, apierror.NewInternalError(err, "Failed to check rows affected."))
 	}
 	if rowsAffected == 0 {
-		return tracing.Trace(span, apierror.NewResourceNotFoundError("Item attribute relationship not found."))
+		return tracing.Trace(span, apierror.NewNotFoundError("Item attribute relationship not found."))
 	}
 
 	return nil
@@ -1060,7 +1061,7 @@ func (r *itemRepoImpl) FindBySKU(ctx context.Context, accountID, sku string) (*s
 		AccountID: accountID,
 	})
 	if err != nil {
-		if apiErr := db.MapSQLError(err); apierror.IsNotFound(apiErr) {
+		if apiErr := db.MapSQLError(err); apierror.HasCode(apiErr, apierror.CodeResourceNotFound) {
 			return nil, nil, nil
 		} else if apiErr != nil {
 			return nil, nil, tracing.Trace(span, apiErr)

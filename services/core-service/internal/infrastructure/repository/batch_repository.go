@@ -13,11 +13,11 @@ import (
 	"github.com/open-mrp/api/services/core-service/internal/domain"
 	"github.com/open-mrp/api/services/core-service/internal/infrastructure/sqlc"
 	"github.com/open-mrp/api/shared/constants"
-	"github.com/open-mrp/api/shared/db"
-	apierror "github.com/open-mrp/api/shared/errors"
 	"github.com/open-mrp/api/shared/id"
-	"github.com/open-mrp/api/shared/tracing"
+	apierror "github.com/open-mrp/apikit/apierror"
+	"github.com/open-mrp/apikit/db"
 	"github.com/open-mrp/apikit/pagination"
+	"github.com/open-mrp/apikit/tracing"
 )
 
 var batchRepoTracer = tracing.GetTracer("core-service.batch_repository")
@@ -482,7 +482,7 @@ func (r *batchRepoImpl) findByScanningStation(ctx context.Context, params domain
 	if params.Cursor != nil {
 		decoded, err := pagination.DecodeStringCursor(*params.Cursor)
 		if err != nil {
-			return nil, apierror.NewValidationErrorWithParam("Invalid pagination cursor.", "cursor")
+			return nil, apierror.NewFieldError("cursor", apierror.CodeInvalidFormat, "Invalid pagination cursor.")
 		}
 		cur, cursorDir = &decoded, &decoded.Direction
 	}
@@ -787,7 +787,7 @@ func (r *batchRepoImpl) FindFurthestRightBatchInFlow(ctx context.Context, accoun
 	}
 
 	if furthest == nil {
-		return nil, tracing.Trace(span, apierror.NewResourceNotFoundError("Batch not found."))
+		return nil, tracing.Trace(span, apierror.NewNotFoundError("Batch not found."))
 	}
 	return furthest, nil
 }

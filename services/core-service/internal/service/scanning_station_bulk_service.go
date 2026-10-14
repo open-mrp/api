@@ -10,11 +10,11 @@ import (
 	"github.com/open-mrp/api/services/core-service/internal/domain"
 	"github.com/open-mrp/api/shared/audit"
 	"github.com/open-mrp/api/shared/constants"
-	"github.com/open-mrp/api/shared/db"
-	apierror "github.com/open-mrp/api/shared/errors"
 	"github.com/open-mrp/api/shared/excel"
 	"github.com/open-mrp/api/shared/id"
 	"github.com/open-mrp/api/shared/messaging"
+	apierror "github.com/open-mrp/apikit/apierror"
+	"github.com/open-mrp/apikit/db"
 	"github.com/open-mrp/apikit/field"
 )
 
@@ -36,19 +36,19 @@ func validateBulkUpsertScanningStationRows(rows []domain.UpsertScanningStationPa
 	for i, ss := range rows {
 		lower := strings.ToLower(ss.Name)
 		if _, dup := nameInputSpace[lower]; dup {
-			rowErrs.AddValidation(i, fmt.Sprintf("scanning_stations[%d].name", i), fmt.Sprintf("duplicate name %q in request", ss.Name))
+			rowErrs.AddField(i, "name", apierror.CodeInvalidFormat, fmt.Sprintf("duplicate name %q in request", ss.Name))
 		}
 		nameInputSpace[lower] = struct{}{}
 
 		if !ss.Type.IsValid() {
-			rowErrs.AddValidation(i, fmt.Sprintf("scanning_stations[%d].type", i), fmt.Sprintf("invalid scanning station type %q", ss.Type))
+			rowErrs.AddField(i, "type", apierror.CodeInvalidFormat, fmt.Sprintf("invalid scanning station type %q", ss.Type))
 		}
 		if !ss.OperatorRequirement.IsValid() {
-			rowErrs.AddValidation(i, fmt.Sprintf("scanning_stations[%d].operator_requirement", i), fmt.Sprintf("invalid operator requirement %q", ss.OperatorRequirement))
+			rowErrs.AddField(i, "operator_requirement", apierror.CodeInvalidFormat, fmt.Sprintf("invalid operator requirement %q", ss.OperatorRequirement))
 		}
 	}
 
-	return rowErrs.Summary("scanning stations")
+	return rowErrs.Summary("scanning_stations")
 }
 
 // resolves each row's department reference
@@ -112,7 +112,7 @@ func writeBulkUpsertScanningStations(txCtx context.Context, txRepos domain.RepoF
 			return nil
 		})
 		if rowErr != nil {
-			rowErrors = append(rowErrors, apierror.NewRowError(i, rowErr))
+			rowErrors = append(rowErrors, apierror.RowError{Index: i, Error: rowErr.Object()})
 			continue
 		}
 
@@ -163,12 +163,10 @@ func upsertScanningStationInTx(txCtx context.Context, txRepos domain.RepoFactory
 	}
 
 	if old.DepartmentID != row.DepartmentID {
-		return "", apierror.NewValidationErrorWithParam(
-			fmt.Sprintf("Scanning station %q belongs to department %q and cannot be moved by bulk upsert.", old.Name, old.DepartmentName), "department")
+		return "", apierror.NewFieldError("department", apierror.CodeInvalidFormat, fmt.Sprintf("Scanning station %q belongs to department %q and cannot be moved by bulk upsert.", old.Name, old.DepartmentName))
 	}
 	if old.Type != row.Type {
-		return "", apierror.NewValidationErrorWithParam(
-			fmt.Sprintf("Scanning station %q has type %q, which cannot be changed by bulk upsert.", old.Name, old.Type), "type")
+		return "", apierror.NewFieldError("type", apierror.CodeInvalidFormat, fmt.Sprintf("Scanning station %q has type %q, which cannot be changed by bulk upsert.", old.Name, old.Type))
 	}
 
 	notes := field.Unset[string]()

@@ -5,7 +5,7 @@ import (
 	"strings"
 
 	"github.com/open-mrp/api/shared/constants"
-	apierror "github.com/open-mrp/api/shared/errors"
+	apierror "github.com/open-mrp/apikit/apierror"
 )
 
 // CheckIsUser checks that the identity is a user

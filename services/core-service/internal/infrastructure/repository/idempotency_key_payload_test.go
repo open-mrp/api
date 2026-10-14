@@ -10,8 +10,8 @@ import (
 	"github.com/DATA-DOG/go-sqlmock"
 	"github.com/open-mrp/api/services/core-service/internal/domain"
 	"github.com/open-mrp/api/services/core-service/internal/infrastructure/sqlc"
-	"github.com/open-mrp/api/shared/blobstore"
-	"github.com/open-mrp/api/shared/db"
+	"github.com/open-mrp/apikit/blobstore"
+	"github.com/open-mrp/apikit/db"
 )
 
 func largeResponse() json.RawMessage {

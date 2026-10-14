@@ -13,13 +13,14 @@ import (
 	apiresource "github.com/open-mrp/api/services/api-gateway/pkg/resource"
 	"github.com/open-mrp/api/services/api-gateway/pkg/resourcekit"
 	"github.com/open-mrp/api/shared/constants"
-	apierror "github.com/open-mrp/api/shared/errors"
 	"github.com/open-mrp/api/shared/fieldpb"
-	"github.com/open-mrp/api/shared/metadata"
+	"github.com/open-mrp/api/shared/metadatapb"
 	"github.com/open-mrp/api/shared/pricing"
 	pb "github.com/open-mrp/api/shared/proto/core"
-	"github.com/open-mrp/api/shared/tracing"
+	apierror "github.com/open-mrp/apikit/apierror"
+	"github.com/open-mrp/apikit/metadata"
 	"github.com/open-mrp/apikit/ptrutil"
+	"github.com/open-mrp/apikit/tracing"
 	"github.com/shopspring/decimal"
 	"google.golang.org/grpc"
 	"google.golang.org/protobuf/types/known/emptypb"
@@ -258,7 +259,7 @@ func (m *salesOrderSvcImpl) UpdateSalesOrder(ctx context.Context, req *UpdateSal
 	}
 
 	pbReq := &pb.UpdateSalesOrderRequest{
-		Metadata: metadata.PatchToProto(req.Metadata),
+		Metadata: metadatapb.PatchToProto(req.Metadata),
 		Id:       req.SalesOrderID,
 		// Clearable nullable fields → *Patch (clear / set / leave).
 		CustomerPoNumber:      fieldpb.StringClearableToProto(req.CustomerPurchaseOrderNumber),
@@ -663,7 +664,7 @@ func (m *salesOrderSvcImpl) ReorderSalesOrderLines(ctx context.Context, req *Reo
 
 func (m *salesOrderSvcImpl) UpdateSalesOrderLine(ctx context.Context, req *UpdateSalesOrderLineRequest) (*apiresource.SalesOrderLine, *apierror.APIError) {
 	pbReq := &pb.UpdateSalesOrderLineRequest{
-		Metadata:           metadata.PatchToProto(req.Metadata),
+		Metadata:           metadatapb.PatchToProto(req.Metadata),
 		SalesOrderId:       req.SalesOrderID,
 		Id:                 req.SalesOrderLineID,
 		ProductSku:         req.ProductSKU.Ptr(),

@@ -5,8 +5,8 @@ import (
 
 	apiexample "github.com/open-mrp/api/services/api-gateway/pkg/example"
 	"github.com/open-mrp/api/shared/constants"
-	apierror "github.com/open-mrp/api/shared/errors"
-	"github.com/open-mrp/api/shared/timeutil"
+	apierror "github.com/open-mrp/apikit/apierror"
+	"github.com/open-mrp/apikit/timeutil"
 )
 
 const SampleMessageID = "mg_fdny8633ebgw"
@@ -108,7 +108,7 @@ type Message struct {
 	// Machine-readable reason an agent reply failed.
 	//
 	// A client can react to the specific code rather than just showing the body — `agent_spending_cap_reached`, for example, is a cue to offer raising the agent spending limit.
-	AgentErrorCode *apierror.ErrorCode `json:"agent_error_code"`
+	AgentErrorCode *apierror.Code `json:"agent_error_code"`
 }
 
 var SampleMessage = &Message{

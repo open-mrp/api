@@ -9,9 +9,9 @@ import (
 	"github.com/open-mrp/api/shared/appctx"
 	"github.com/open-mrp/api/shared/audit"
 	"github.com/open-mrp/api/shared/constants"
-	apierror "github.com/open-mrp/api/shared/errors"
-	"github.com/open-mrp/api/shared/idempotency"
-	"github.com/open-mrp/api/shared/tracing"
+	"github.com/open-mrp/api/shared/idemresponse"
+	apierror "github.com/open-mrp/apikit/apierror"
+	"github.com/open-mrp/apikit/tracing"
 )
 
 var accountGroupProductLineAccessSvcTracer = tracing.GetTracer("core-service.account_group_product_line_access_service")
@@ -143,7 +143,7 @@ func (s *accountGroupProductLineAccessSvcImpl) BatchGetAccountGroupProductLineAc
 	for _, id := range accountGroupIDs {
 		access, apiErr := repo.Get(ctx, identity.Target.AccountID, id)
 		if apiErr != nil {
-			if apierror.IsNotFound(apiErr) {
+			if apierror.HasCode(apiErr, apierror.CodeResourceNotFound) {
 				continue
 			}
 			return nil, tracing.Trace(span, apiErr)
@@ -184,7 +184,7 @@ func (s *accountGroupProductLineAccessSvcImpl) CreateAccountGroupProductLineAcce
 
 	switch domain.RecoveryPoint(idempotencyKey.RecoveryPoint) {
 	case domain.RecoveryPointFinished:
-		cached, err := idempotency.UnmarshalCachedResponse[domain.AccountGroupProductLineAccess](ctx, idempotencyKey.ResponseCode, idempotencyKey.ResponseBody)
+		cached, err := idemresponse.UnmarshalCachedResponse[domain.AccountGroupProductLineAccess](ctx, idempotencyKey.ResponseCode, idempotencyKey.ResponseBody)
 		if err != nil {
 			return nil, tracing.Trace(span, apierror.NewInternalError(err, "Issue unmarshalling cached response."))
 		}
@@ -200,7 +200,7 @@ func (s *accountGroupProductLineAccessSvcImpl) CreateAccountGroupProductLineAcce
 				return apiErr
 			}
 			if exists {
-				return apierror.NewConflictErrorWithParam("Product line access for this account group already exists.", "account_group_id")
+				return apierror.NewConflictErrorWithParam("account_group_id", "Product line access for this account group already exists.")
 			}
 
 			created, apiErr := txRepo.Create(txCtx, params)
@@ -266,7 +266,7 @@ func (s *accountGroupProductLineAccessSvcImpl) UpdateAccountGroupProductLineAcce
 
 	switch domain.RecoveryPoint(idempotencyKey.RecoveryPoint) {
 	case domain.RecoveryPointFinished:
-		cached, err := idempotency.UnmarshalCachedResponse[domain.AccountGroupProductLineAccess](ctx, idempotencyKey.ResponseCode, idempotencyKey.ResponseBody)
+		cached, err := idemresponse.UnmarshalCachedResponse[domain.AccountGroupProductLineAccess](ctx, idempotencyKey.ResponseCode, idempotencyKey.ResponseBody)
 		if err != nil {
 			return nil, tracing.Trace(span, apierror.NewInternalError(err, "Issue unmarshalling cached response."))
 		}
@@ -334,13 +334,13 @@ func (s *accountGroupProductLineAccessSvcImpl) DeleteAccountGroupProductLineAcce
 
 	existing, apiErr := s.repos.NewAccountGroupProductLineAccessRepo().Get(ctx, accountID, accountGroupID)
 	if apiErr != nil {
-		if apierror.IsNotFound(apiErr) {
+		if apierror.HasCode(apiErr, apierror.CodeResourceNotFound) {
 			wasDeleted, deletedCheckErr := s.repos.NewDeletedRecordRepo().ExistsInAccount(ctx, constants.DeletedRecordResourceTypeAccountGroupProductLineAccess, accountGroupID, accountID)
 			if deletedCheckErr != nil {
 				return tracing.Trace(span, deletedCheckErr)
 			}
 			if wasDeleted {
-				return tracing.Trace(span, apierror.NewAlreadyDeletedError("This account group product line access has already been deleted and can no longer be modified."))
+				return tracing.Trace(span, apierror.NewGoneError("This account group product line access has already been deleted and can no longer be modified."))
 			}
 		}
 		return tracing.Trace(span, apiErr)

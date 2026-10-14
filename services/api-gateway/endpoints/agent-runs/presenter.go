@@ -11,7 +11,7 @@ import (
 	"github.com/open-mrp/api/services/api-gateway/pkg/resourcekit"
 	"github.com/open-mrp/api/shared/constants"
 	pb "github.com/open-mrp/api/shared/proto/agent"
-	"github.com/open-mrp/api/shared/timeutil"
+	"github.com/open-mrp/apikit/timeutil"
 )
 
 func AgentRunPresenter(r *pb.AgentRunInfo) apiresource.AgentRun {

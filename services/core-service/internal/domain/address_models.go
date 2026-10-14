@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"time"
 
-	apierror "github.com/open-mrp/api/shared/errors"
+	apierror "github.com/open-mrp/apikit/apierror"
 	"github.com/open-mrp/apikit/field"
 	"github.com/open-mrp/apikit/pagination"
 )
@@ -196,5 +196,5 @@ type ValidatedAddress struct {
 // UnsupportedAddressRegionError is the error for an address in a country Google Address Validation does
 // not cover: the caller's input, so a 400 against the country rather than a 500 clients retry.
 func UnsupportedAddressRegionError(country string) *apierror.APIError {
-	return apierror.NewValidationErrorWithParam(fmt.Sprintf("Address validation is not supported for country %q.", country), "country")
+	return apierror.NewFieldError("country", apierror.CodeInvalidFormat, fmt.Sprintf("Address validation is not supported for country %q.", country))
 }

@@ -9,7 +9,7 @@ import (
 	"context"
 
 	"github.com/jackc/pgx/v5/pgtype"
-	"github.com/open-mrp/api/shared/db"
+	"github.com/open-mrp/apikit/db"
 )
 
 const acquireOutboxMessages = `-- name: AcquireOutboxMessages :exec

@@ -11,7 +11,7 @@ import (
 	"time"
 
 	"github.com/open-mrp/api/shared/logging"
-	"github.com/open-mrp/api/shared/tracing"
+	"github.com/open-mrp/api/shared/rpctrace"
 
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/health"
@@ -59,7 +59,7 @@ func (c *GRPCServerConfig) WithDefaults(logger *slog.Logger) *GRPCServerConfig {
 
 	if len(c.UnaryInterceptors) == 0 {
 		c.UnaryInterceptors = []grpc.UnaryServerInterceptor{
-			tracing.UnarySpanRenamer(),
+			rpctrace.UnarySpanRenamer(),
 			RecoveryUnaryInterceptor(),
 			IdentityUnaryServerInterceptor(),
 			IdempotencyKeyUnaryServerInterceptor(),
@@ -115,7 +115,7 @@ func NewGRPCServer(serverName string, logger *slog.Logger, config *GRPCServerCon
 	}
 
 	serverOpts := append(
-		tracing.WithTracingInterceptors(),
+		rpctrace.WithTracingInterceptors(),
 		grpc.KeepaliveParams(config.KeepaliveParams),
 		grpc.KeepaliveEnforcementPolicy(config.EnforcementPolicy),
 		grpc.ChainUnaryInterceptor(config.UnaryInterceptors...),

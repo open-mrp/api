@@ -18,11 +18,11 @@ import (
 	"github.com/open-mrp/api/shared/audit"
 	"github.com/open-mrp/api/shared/constants"
 	"github.com/open-mrp/api/shared/contracts"
-	apierror "github.com/open-mrp/api/shared/errors"
 	"github.com/open-mrp/api/shared/id"
-	"github.com/open-mrp/api/shared/idempotency"
+	"github.com/open-mrp/api/shared/idemresponse"
 	"github.com/open-mrp/api/shared/messaging"
-	"github.com/open-mrp/api/shared/tracing"
+	apierror "github.com/open-mrp/apikit/apierror"
+	"github.com/open-mrp/apikit/tracing"
 
 	"github.com/jackc/pgx/v5/pgtype"
 )
@@ -172,7 +172,7 @@ func (s *agentDefSvcImpl) CreateCustomAgent(ctx context.Context, params domain.C
 
 	switch domain.RecoveryPoint(idempotencyKey.RecoveryPoint) {
 	case domain.RecoveryPointFinished:
-		cached, err := idempotency.UnmarshalCachedResponse[domain.AgentDefinitionInfo](ctx, idempotencyKey.ResponseCode, idempotencyKey.ResponseBody)
+		cached, err := idemresponse.UnmarshalCachedResponse[domain.AgentDefinitionInfo](ctx, idempotencyKey.ResponseCode, idempotencyKey.ResponseBody)
 		if err != nil {
 			return nil, tracing.Trace(span, apierror.NewInternalError(err, "Issue unmarshalling cached response."))
 		}
@@ -182,7 +182,7 @@ func (s *agentDefSvcImpl) CreateCustomAgent(ctx context.Context, params domain.C
 		for _, t := range params.Tools {
 			if _, ok := agents.LookupBuiltinTool(t.ToolSlug); !ok {
 				return nil, meds.Idempotency.CacheErrorResponse(ctx, idempotencyKey.TypeID,
-					apierror.NewValidationErrorWithParam("Tool not found: "+t.ToolSlug, "tools"))
+					apierror.NewFieldError("tools", apierror.CodeInvalidFormat, "Tool not found: "+t.ToolSlug))
 			}
 		}
 		if apiErr := validateAgentConfig(params.ConfigJSON, nil); apiErr != nil {
@@ -329,7 +329,7 @@ func (s *agentDefSvcImpl) UpdateCustomAgent(ctx context.Context, params domain.U
 
 	switch domain.RecoveryPoint(idempotencyKey.RecoveryPoint) {
 	case domain.RecoveryPointFinished:
-		cached, err := idempotency.UnmarshalCachedResponse[domain.AgentDefinitionInfo](ctx, idempotencyKey.ResponseCode, idempotencyKey.ResponseBody)
+		cached, err := idemresponse.UnmarshalCachedResponse[domain.AgentDefinitionInfo](ctx, idempotencyKey.ResponseCode, idempotencyKey.ResponseBody)
 		if err != nil {
 			return nil, tracing.Trace(span, apierror.NewInternalError(err, "Issue unmarshalling cached response."))
 		}
@@ -341,7 +341,7 @@ func (s *agentDefSvcImpl) UpdateCustomAgent(ctx context.Context, params domain.U
 		def, apiErr := defRepo.GetByID(ctx, params.AgentDefinitionID)
 		if apiErr != nil {
 			return nil, meds.Idempotency.CacheErrorResponse(ctx, idempotencyKey.TypeID,
-				apierror.NewResourceNotFoundError("Agent definition not found: "+params.AgentDefinitionID))
+				apierror.NewNotFoundError("Agent definition not found: "+params.AgentDefinitionID))
 		}
 		if def.DefinitionType != string(constants.AgentDefinitionTypeCustom) {
 			return nil, meds.Idempotency.CacheErrorResponse(ctx, idempotencyKey.TypeID,
@@ -370,7 +370,7 @@ func (s *agentDefSvcImpl) UpdateCustomAgent(ctx context.Context, params domain.U
 				}
 				if !alreadyLinked[t.ToolSlug] {
 					return nil, meds.Idempotency.CacheErrorResponse(ctx, idempotencyKey.TypeID,
-						apierror.NewValidationErrorWithParam("Tool not found: "+t.ToolSlug, "tools"))
+						apierror.NewFieldError("tools", apierror.CodeInvalidFormat, "Tool not found: "+t.ToolSlug))
 				}
 			}
 		}
@@ -524,10 +524,10 @@ func (s *agentDefSvcImpl) checkAssignableRole(ctx context.Context, identity *typ
 		if existing {
 			return nil
 		}
-		return apierror.NewValidationErrorWithParam("Role not found: "+roleID, "role_id")
+		return apierror.NewFieldError("role_id", apierror.CodeInvalidFormat, "Role not found: "+roleID)
 	}
 	if !existing && role.AccountID != nil && *role.AccountID != identity.Target.AccountID {
-		return apierror.NewValidationErrorWithParam("Role not found: "+roleID, "role_id")
+		return apierror.NewFieldError("role_id", apierror.CodeInvalidFormat, "Role not found: "+roleID)
 	}
 
 	grant := grantOf(identity)
@@ -609,7 +609,7 @@ func (s *agentDefSvcImpl) lookupRole(ctx context.Context, roleID string) (*domai
 	if err != nil {
 		var apiErr *apierror.APIError
 		if errors.As(err, &apiErr) {
-			if apiErr.Code == apierror.ErrorCodeResourceNotFound {
+			if apiErr.Code == apierror.CodeResourceNotFound {
 				return nil, nil
 			}
 			return nil, apiErr
@@ -660,22 +660,22 @@ func (s *agentDefSvcImpl) DeleteCustomAgent(ctx context.Context, params domain.D
 
 	def, apiErr := defRepo.GetByID(ctx, params.AgentDefinitionID)
 	if apiErr != nil {
-		if apierror.IsNotFound(apiErr) {
+		if apierror.HasCode(apiErr, apierror.CodeResourceNotFound) {
 			wasDeleted, deletedCheckErr := s.repos.NewDeletedRecordRepo().ExistsInAccount(ctx, constants.DeletedRecordResourceTypeCustomAgent, params.AgentDefinitionID, accountID)
 			if deletedCheckErr != nil {
 				return tracing.Trace(span, deletedCheckErr)
 			}
 			if wasDeleted {
-				return tracing.Trace(span, apierror.NewAlreadyDeletedError("This custom agent has already been deleted and can no longer be modified."))
+				return tracing.Trace(span, apierror.NewGoneError("This custom agent has already been deleted and can no longer be modified."))
 			}
 		}
-		return tracing.Trace(span, apierror.NewResourceNotFoundError("Agent definition not found: "+params.AgentDefinitionID))
+		return tracing.Trace(span, apierror.NewNotFoundError("Agent definition not found: "+params.AgentDefinitionID))
 	}
 	if def.DefinitionType != string(constants.AgentDefinitionTypeCustom) {
 		return tracing.Trace(span, apierror.NewAuthorizationError("Cannot delete system agent definitions."))
 	}
 	if !def.AccountID.Valid || def.AccountID.String != accountID {
-		return tracing.Trace(span, apierror.NewResourceNotFoundError("Agent definition not found: "+params.AgentDefinitionID))
+		return tracing.Trace(span, apierror.NewNotFoundError("Agent definition not found: "+params.AgentDefinitionID))
 	}
 
 	oldInfo, buildErr := s.buildResultForAccount(ctx, params.AgentDefinitionID, accountID, auditIncludes)
@@ -745,11 +745,11 @@ func (s *agentDefSvcImpl) GetAgentDefinition(ctx context.Context, agentDefinitio
 
 	def, apiErr := defRepo.GetByID(ctx, agentDefinitionID)
 	if apiErr != nil {
-		return nil, apierror.NewResourceNotFoundError("Agent definition not found: " + agentDefinitionID)
+		return nil, apierror.NewNotFoundError("Agent definition not found: " + agentDefinitionID)
 	}
 
 	if def.AccountID.Valid && def.AccountID.String != accountID {
-		return nil, apierror.NewResourceNotFoundError("Agent definition not found: " + agentDefinitionID)
+		return nil, apierror.NewNotFoundError("Agent definition not found: " + agentDefinitionID)
 	}
 
 	return s.buildResultForAccount(ctx, def.ID, accountID, includes)
@@ -942,7 +942,7 @@ func (s *agentDefSvcImpl) ListAvailableTools(ctx context.Context, params domain.
 			}
 
 			if gIdx == -1 {
-				return nil, nil, apierror.NewValidationErrorWithParam("Invalid pagination cursor.", "cursor")
+				return nil, nil, apierror.NewFieldError("cursor", apierror.CodeInvalidFormat, "Invalid pagination cursor.")
 			}
 
 			if gIdx+1 < len(domainGroups) {
@@ -969,7 +969,7 @@ func (s *agentDefSvcImpl) ListAvailableTools(ctx context.Context, params domain.
 			}
 
 			if idx == -1 {
-				return nil, nil, apierror.NewValidationErrorWithParam("Invalid pagination cursor.", "cursor")
+				return nil, nil, apierror.NewFieldError("cursor", apierror.CodeInvalidFormat, "Invalid pagination cursor.")
 			}
 
 			if idx+1 < len(results) {
@@ -1094,7 +1094,7 @@ func (s *agentDefSvcImpl) UpdateAgentAccountStatus(ctx context.Context, params d
 
 	switch domain.RecoveryPoint(idempotencyKey.RecoveryPoint) {
 	case domain.RecoveryPointFinished:
-		cached, err := idempotency.UnmarshalCachedResponse[domain.AgentAccountStatusInfo](ctx, idempotencyKey.ResponseCode, idempotencyKey.ResponseBody)
+		cached, err := idemresponse.UnmarshalCachedResponse[domain.AgentAccountStatusInfo](ctx, idempotencyKey.ResponseCode, idempotencyKey.ResponseBody)
 		if err != nil {
 			return nil, tracing.Trace(span, apierror.NewInternalError(err, "Issue unmarshalling cached response."))
 		}
@@ -1104,7 +1104,7 @@ func (s *agentDefSvcImpl) UpdateAgentAccountStatus(ctx context.Context, params d
 		defRepo := s.repos.NewAgentDefinitionRepo()
 		if _, apiErr := defRepo.GetByID(ctx, params.AgentDefinitionID); apiErr != nil {
 			return nil, meds.Idempotency.CacheErrorResponse(ctx, idempotencyKey.TypeID,
-				apierror.NewResourceNotFoundError("Agent definition not found: "+params.AgentDefinitionID))
+				apierror.NewNotFoundError("Agent definition not found: "+params.AgentDefinitionID))
 		}
 
 		statusID, genErr := id.GenID(id.AgentAccountStatusIDPrefix, nil)
@@ -1488,7 +1488,7 @@ func (s *agentDefSvcImpl) chatSenderMayDrive(ctx context.Context, in domain.Chat
 	if denial == nil {
 		return true, nil
 	}
-	if denial.Code != apierror.ErrorCodeInsufficientPerms {
+	if denial.Code != apierror.CodeInsufficientPermissions {
 		return false, denial
 	}
 	return false, s.postChatDenial(ctx, in, def, denial)
@@ -1583,7 +1583,7 @@ func (s *agentDefSvcImpl) TriggerRun(ctx context.Context, params domain.TriggerR
 
 	switch domain.RecoveryPoint(idempotencyKey.RecoveryPoint) {
 	case domain.RecoveryPointFinished:
-		cached, err := idempotency.UnmarshalCachedResponse[string](ctx, idempotencyKey.ResponseCode, idempotencyKey.ResponseBody)
+		cached, err := idemresponse.UnmarshalCachedResponse[string](ctx, idempotencyKey.ResponseCode, idempotencyKey.ResponseBody)
 		if err != nil {
 			return "", tracing.Trace(span, apierror.NewInternalError(err, "Issue unmarshalling cached response."))
 		}
@@ -1614,7 +1614,7 @@ func (s *agentDefSvcImpl) TriggerRun(ctx context.Context, params domain.TriggerR
 		def, defErr := defRepo.GetBySlug(ctx, params.AgentDefinitionCode)
 		if defErr != nil {
 			return "", meds.Idempotency.CacheErrorResponse(ctx, idempotencyKey.TypeID,
-				apierror.NewResourceNotFoundError("Agent definition not found: "+params.AgentDefinitionCode))
+				apierror.NewNotFoundError("Agent definition not found: "+params.AgentDefinitionCode))
 		}
 		if apiErr := s.checkCanDriveAgent(ctx, grantOf(identity), def.RoleID); apiErr != nil {
 			return "", meds.Idempotency.CacheErrorResponse(ctx, idempotencyKey.TypeID, apiErr)
@@ -1760,7 +1760,7 @@ func (s *agentDefSvcImpl) CancelRun(ctx context.Context, params domain.CancelRun
 
 	switch domain.RecoveryPoint(idempotencyKey.RecoveryPoint) {
 	case domain.RecoveryPointFinished:
-		cached, err := idempotency.UnmarshalCachedResponse[struct{}](ctx, idempotencyKey.ResponseCode, idempotencyKey.ResponseBody)
+		cached, err := idemresponse.UnmarshalCachedResponse[struct{}](ctx, idempotencyKey.ResponseCode, idempotencyKey.ResponseBody)
 		if err != nil {
 			return tracing.Trace(span, apierror.NewInternalError(err, "Issue unmarshalling cached response."))
 		}
@@ -1774,11 +1774,11 @@ func (s *agentDefSvcImpl) CancelRun(ctx context.Context, params domain.CancelRun
 		run, runErr := runRepo.GetByID(ctx, params.AgentRunID)
 		if runErr != nil {
 			return meds.Idempotency.CacheErrorResponse(ctx, idempotencyKey.TypeID,
-				apierror.NewResourceNotFoundError("Agent run not found."))
+				apierror.NewNotFoundError("Agent run not found."))
 		}
 		if run.AccountID != accountID {
 			return meds.Idempotency.CacheErrorResponse(ctx, idempotencyKey.TypeID,
-				apierror.NewResourceNotFoundError("Agent run not found."))
+				apierror.NewNotFoundError("Agent run not found."))
 		}
 		// A run can be stopped while it is doing or waiting to do work: actively running/pending, or paused awaiting the user (a chat run between turns, or one blocked on tool approval). Only the terminal states (completed/failed/cancelled/timed_out) reject — there is nothing left to stop.
 		if !domain.RunStatusIsCancellable(run.StatusCode) {
@@ -1907,7 +1907,7 @@ func (s *agentDefSvcImpl) ContinueRun(ctx context.Context, params domain.Continu
 
 	switch domain.RecoveryPoint(idempotencyKey.RecoveryPoint) {
 	case domain.RecoveryPointFinished:
-		cached, err := idempotency.UnmarshalCachedResponse[string](ctx, idempotencyKey.ResponseCode, idempotencyKey.ResponseBody)
+		cached, err := idemresponse.UnmarshalCachedResponse[string](ctx, idempotencyKey.ResponseCode, idempotencyKey.ResponseBody)
 		if err != nil {
 			return "", tracing.Trace(span, apierror.NewInternalError(err, "Issue unmarshalling cached response."))
 		}
@@ -1924,11 +1924,11 @@ func (s *agentDefSvcImpl) ContinueRun(ctx context.Context, params domain.Continu
 		run, runErr := runRepo.GetByID(ctx, params.AgentRunID)
 		if runErr != nil {
 			return "", meds.Idempotency.CacheErrorResponse(ctx, idempotencyKey.TypeID,
-				apierror.NewResourceNotFoundError("Agent run not found."))
+				apierror.NewNotFoundError("Agent run not found."))
 		}
 		if run.AccountID != accountID {
 			return "", meds.Idempotency.CacheErrorResponse(ctx, idempotencyKey.TypeID,
-				apierror.NewResourceNotFoundError("Agent run not found."))
+				apierror.NewNotFoundError("Agent run not found."))
 		}
 		if apiErr := s.checkCanDriveRun(ctx, grantOf(identity), run); apiErr != nil {
 			return "", meds.Idempotency.CacheErrorResponse(ctx, idempotencyKey.TypeID, apiErr)
@@ -2088,7 +2088,7 @@ func (s *agentDefSvcImpl) RetryRun(ctx context.Context, params domain.RetryRunPa
 
 	switch domain.RecoveryPoint(idempotencyKey.RecoveryPoint) {
 	case domain.RecoveryPointFinished:
-		cached, err := idempotency.UnmarshalCachedResponse[string](ctx, idempotencyKey.ResponseCode, idempotencyKey.ResponseBody)
+		cached, err := idemresponse.UnmarshalCachedResponse[string](ctx, idempotencyKey.ResponseCode, idempotencyKey.ResponseBody)
 		if err != nil {
 			return "", tracing.Trace(span, apierror.NewInternalError(err, "Issue unmarshalling cached response."))
 		}
@@ -2105,7 +2105,7 @@ func (s *agentDefSvcImpl) RetryRun(ctx context.Context, params domain.RetryRunPa
 		run, runErr := runRepo.GetByID(ctx, params.AgentRunID)
 		if runErr != nil || run.AccountID != accountID {
 			return "", meds.Idempotency.CacheErrorResponse(ctx, idempotencyKey.TypeID,
-				apierror.NewResourceNotFoundError("Agent run not found."))
+				apierror.NewNotFoundError("Agent run not found."))
 		}
 		if apiErr := s.checkCanDriveRun(ctx, grantOf(identity), run); apiErr != nil {
 			return "", meds.Idempotency.CacheErrorResponse(ctx, idempotencyKey.TypeID, apiErr)
@@ -2225,10 +2225,10 @@ func validateAgentConfig(configJSON string, stored []byte) *apierror.APIError {
 	}
 	var cfg agentToolGrants
 	if err := json.Unmarshal([]byte(configJSON), &cfg); err != nil {
-		return apierror.NewValidationErrorWithParam("Invalid agent config.", "config")
+		return apierror.NewFieldError("config", apierror.CodeInvalidFormat, "Invalid agent config.")
 	}
 	if cfg.MaxSteps != nil && (*cfg.MaxSteps < 1 || *cfg.MaxSteps > maxStepsCeiling) {
-		return apierror.NewValidationErrorWithParam(fmt.Sprintf("max_steps must be between 1 and %d.", maxStepsCeiling), "config.max_steps")
+		return apierror.NewFieldError("config.max_steps", apierror.CodeInvalidFormat, fmt.Sprintf("max_steps must be between 1 and %d.", maxStepsCeiling))
 	}
 	granted := map[string]bool{}
 	if len(stored) > 0 {
@@ -2247,7 +2247,7 @@ func validateAgentConfig(configJSON string, stored []byte) *apierror.APIError {
 			continue
 		}
 		if _, ok := agents.LookupEndpointTool(slug); !ok {
-			return apierror.NewValidationErrorWithParam("Tool not found: "+slug, "tools")
+			return apierror.NewFieldError("tools", apierror.CodeInvalidFormat, "Tool not found: "+slug)
 		}
 	}
 	for slug := range cfg.EndpointToolReview {
@@ -2255,7 +2255,7 @@ func validateAgentConfig(configJSON string, stored []byte) *apierror.APIError {
 			continue
 		}
 		if _, ok := agents.LookupEndpointTool(slug); !ok {
-			return apierror.NewValidationErrorWithParam("Tool not found: "+slug, "tools")
+			return apierror.NewFieldError("tools", apierror.CodeInvalidFormat, "Tool not found: "+slug)
 		}
 	}
 	return nil
@@ -2325,7 +2325,7 @@ func (s *agentDefSvcImpl) CreateAgentMemory(ctx context.Context, params domain.C
 
 	switch domain.RecoveryPoint(idempotencyKey.RecoveryPoint) {
 	case domain.RecoveryPointFinished:
-		cached, err := idempotency.UnmarshalCachedResponse[domain.AgentMemoryInfo](ctx, idempotencyKey.ResponseCode, idempotencyKey.ResponseBody)
+		cached, err := idemresponse.UnmarshalCachedResponse[domain.AgentMemoryInfo](ctx, idempotencyKey.ResponseCode, idempotencyKey.ResponseBody)
 		if err != nil {
 			return nil, tracing.Trace(span, apierror.NewInternalError(err, "Issue unmarshalling cached response."))
 		}
@@ -2349,7 +2349,7 @@ func (s *agentDefSvcImpl) CreateAgentMemory(ctx context.Context, params domain.C
 			t, parseErr := parseTimestamp(params.ExpiresAt)
 			if parseErr != nil {
 				return nil, meds.Idempotency.CacheErrorResponse(ctx, idempotencyKey.TypeID,
-					apierror.NewValidationErrorWithParam("Invalid expires_at: "+parseErr.Error(), "expires_at"))
+					apierror.NewFieldError("expires_at", apierror.CodeInvalidFormat, "Invalid expires_at: "+parseErr.Error()))
 			}
 			expiresAt = pgtype.Timestamptz{Time: t, Valid: true}
 		}
@@ -2434,7 +2434,7 @@ func (s *agentDefSvcImpl) UpdateAgentMemory(ctx context.Context, params domain.U
 
 	switch domain.RecoveryPoint(idempotencyKey.RecoveryPoint) {
 	case domain.RecoveryPointFinished:
-		cached, err := idempotency.UnmarshalCachedResponse[domain.AgentMemoryInfo](ctx, idempotencyKey.ResponseCode, idempotencyKey.ResponseBody)
+		cached, err := idemresponse.UnmarshalCachedResponse[domain.AgentMemoryInfo](ctx, idempotencyKey.ResponseCode, idempotencyKey.ResponseBody)
 		if err != nil {
 			return nil, tracing.Trace(span, apierror.NewInternalError(err, "Issue unmarshalling cached response."))
 		}
@@ -2452,7 +2452,7 @@ func (s *agentDefSvcImpl) UpdateAgentMemory(ctx context.Context, params domain.U
 			t, parseErr := parseTimestamp(*params.ExpiresAt)
 			if parseErr != nil {
 				return nil, meds.Idempotency.CacheErrorResponse(ctx, idempotencyKey.TypeID,
-					apierror.NewValidationErrorWithParam("Invalid expires_at: "+parseErr.Error(), "expires_at"))
+					apierror.NewFieldError("expires_at", apierror.CodeInvalidFormat, "Invalid expires_at: "+parseErr.Error()))
 			}
 			expiresAt = pgtype.Timestamptz{Time: t, Valid: true}
 		}
@@ -2468,13 +2468,13 @@ func (s *agentDefSvcImpl) UpdateAgentMemory(ctx context.Context, params domain.U
 
 			oldMemory, getErr := memoryRepo.GetByID(txCtx, params.MemoryID)
 			if getErr != nil {
-				if apierror.IsNotFound(getErr) {
-					return apierror.NewResourceNotFoundError("Agent memory not found.")
+				if apierror.HasCode(getErr, apierror.CodeResourceNotFound) {
+					return apierror.NewNotFoundError("Agent memory not found.")
 				}
 				return getErr
 			}
 			if oldMemory.AccountID != accountID {
-				return apierror.NewResourceNotFoundError("Agent memory not found.")
+				return apierror.NewNotFoundError("Agent memory not found.")
 			}
 			old := sqlcMemoryToDomain(oldMemory)
 
@@ -2557,7 +2557,7 @@ func (s *agentDefSvcImpl) DeleteAgentMemory(ctx context.Context, params domain.D
 
 		oldMemory, getErr := memoryRepo.GetByID(txCtx, params.MemoryID)
 		if getErr != nil {
-			if apierror.IsNotFound(getErr) {
+			if apierror.HasCode(getErr, apierror.CodeResourceNotFound) {
 				// The account-scoped delete has always been a silent no-op for missing rows; keep repeat deletes idempotent successes.
 				return nil
 			}

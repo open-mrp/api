@@ -18,16 +18,17 @@ import (
 	"github.com/open-mrp/api/services/core-service/internal/calendarseed"
 	"github.com/open-mrp/api/services/core-service/internal/domain"
 	"github.com/open-mrp/api/shared/appctx"
+	"github.com/open-mrp/api/shared/apperr"
 	"github.com/open-mrp/api/shared/audit"
-	s3client "github.com/open-mrp/api/shared/cloud/s3"
 	"github.com/open-mrp/api/shared/constants"
 	"github.com/open-mrp/api/shared/contracts"
-	apierror "github.com/open-mrp/api/shared/errors"
 	"github.com/open-mrp/api/shared/id"
-	"github.com/open-mrp/api/shared/idempotency"
+	"github.com/open-mrp/api/shared/idemresponse"
 	"github.com/open-mrp/api/shared/imageupload"
 	"github.com/open-mrp/api/shared/messaging"
-	"github.com/open-mrp/api/shared/tracing"
+	apierror "github.com/open-mrp/apikit/apierror"
+	s3client "github.com/open-mrp/apikit/cloud/s3"
+	"github.com/open-mrp/apikit/tracing"
 )
 
 var accountSvcTracer = tracing.GetTracer("core-service.account_service")
@@ -140,7 +141,7 @@ func (s *accountSvcImpl) GetUserAccountAccess(ctx context.Context, userID, accou
 
 	accountUser, apiErr := s.accountUserRepo.FindByAccountAndUserID(ctx, userID, accountID)
 	if apiErr != nil {
-		if apiErr.Code == apierror.ErrorCodeResourceNotFound {
+		if apiErr.Code == apierror.CodeResourceNotFound {
 			return nil, false, nil
 		}
 		return nil, false, tracing.Trace(span, apiErr)
@@ -212,7 +213,7 @@ func (s *accountSvcImpl) GetAccountRelationByUserID(ctx context.Context, targetA
 	// Try counterparty-side first (target is the relation owner, user belongs to counterparty).
 	relation, apiErr := s.accountRelationRepo.FindByOwnerAccountAndUserID(ctx, targetAccountID, userID)
 	if apiErr != nil {
-		if apiErr.Code != apierror.ErrorCodeResourceNotFound {
+		if apiErr.Code != apierror.CodeResourceNotFound {
 			return nil, tracing.Trace(span, apiErr)
 		}
 	}
@@ -228,7 +229,7 @@ func (s *accountSvcImpl) GetAccountRelationByUserID(ctx context.Context, targetA
 	// Try owner-side (target is the counterparty, user belongs to the actor account that owns the relation).
 	relation, apiErr = s.accountRelationRepo.FindByCounterpartyAccountAndUserID(ctx, targetAccountID, actorAccountID, userID)
 	if apiErr != nil {
-		if apiErr.Code == apierror.ErrorCodeResourceNotFound {
+		if apiErr.Code == apierror.CodeResourceNotFound {
 			return nil, nil
 		}
 		return nil, tracing.Trace(span, apiErr)
@@ -248,7 +249,7 @@ func (s *accountSvcImpl) GetAccountRelationByAPIKeyID(ctx context.Context, targe
 	// Try counterparty-side first (target is the relation owner, API key belongs to counterparty).
 	relation, apiErr := s.accountRelationRepo.FindByOwnerAccountAndAPIKeyID(ctx, targetAccountID, apiKeyID)
 	if apiErr != nil {
-		if apiErr.Code != apierror.ErrorCodeResourceNotFound {
+		if apiErr.Code != apierror.CodeResourceNotFound {
 			return nil, tracing.Trace(span, apiErr)
 		}
 	}
@@ -259,7 +260,7 @@ func (s *accountSvcImpl) GetAccountRelationByAPIKeyID(ctx context.Context, targe
 	// Try owner-side (target is the counterparty, API key belongs to the relation owner).
 	relation, apiErr = s.accountRelationRepo.FindByCounterpartyAccountAndAPIKeyID(ctx, targetAccountID, apiKeyID)
 	if apiErr != nil {
-		if apiErr.Code == apierror.ErrorCodeResourceNotFound {
+		if apiErr.Code == apierror.CodeResourceNotFound {
 			return nil, nil
 		}
 		return nil, tracing.Trace(span, apiErr)
@@ -606,7 +607,7 @@ func (s *accountSvcImpl) CompleteRegistration(ctx context.Context, input domain.
 			return nil, tracing.Trace(span, countErr)
 		}
 		if count >= limits.PublicLimit {
-			return nil, tracing.Trace(span, apierror.NewRegistrationClosedError(
+			return nil, tracing.Trace(span, apperr.NewRegistrationClosedError(
 				fmt.Sprintf("Registration for the %s plan is currently at capacity.", input.PlanCode)))
 		}
 	}
@@ -819,7 +820,7 @@ func (s *accountSvcImpl) UpdateAgentSpendingCap(ctx context.Context, capCents *i
 
 	switch domain.RecoveryPoint(idempotencyKey.RecoveryPoint) {
 	case domain.RecoveryPointFinished:
-		cached, err := idempotency.UnmarshalCachedResponse[agentCapUpdate](ctx, idempotencyKey.ResponseCode, idempotencyKey.ResponseBody)
+		cached, err := idemresponse.UnmarshalCachedResponse[agentCapUpdate](ctx, idempotencyKey.ResponseCode, idempotencyKey.ResponseBody)
 		if err != nil {
 			return nil, tracing.Trace(span, apierror.NewInternalError(err, "Issue unmarshalling cached response."))
 		}
@@ -1081,7 +1082,7 @@ func (s *accountSvcImpl) UpdateAccount(ctx context.Context, params domain.Update
 
 	switch domain.RecoveryPoint(idempotencyKey.RecoveryPoint) {
 	case domain.RecoveryPointFinished:
-		cached, err := idempotency.UnmarshalCachedResponse[domain.Account](ctx, idempotencyKey.ResponseCode, idempotencyKey.ResponseBody)
+		cached, err := idemresponse.UnmarshalCachedResponse[domain.Account](ctx, idempotencyKey.ResponseCode, idempotencyKey.ResponseBody)
 		if err != nil {
 			return nil, tracing.Trace(span, apierror.NewInternalError(err, "Issue unmarshalling cached response."))
 		}
@@ -1142,7 +1143,7 @@ func (s *accountSvcImpl) UpdateAccount(ctx context.Context, params domain.Update
 						return apiErr
 					}
 					if !linked {
-						return apierror.NewValidationErrorWithParam("The address is not one of the account's addresses.", f.param)
+						return apierror.NewFieldError(f.param, apierror.CodeInvalidFormat, "The address is not one of the account's addresses.")
 					}
 				}
 				if apiErr := txRepo.SetDefaultAddresses(txCtx, params.AccountID, params.DefaultBillingAddressID, params.DefaultShippingAddressID); apiErr != nil {
@@ -1158,7 +1159,7 @@ func (s *accountSvcImpl) UpdateAccount(ctx context.Context, params domain.Update
 					return apiErr
 				}
 				if exists {
-					return apierror.NewConflictErrorWithParam("A portal with this slug already exists.", "slug")
+					return apierror.NewConflictErrorWithParam("slug", "A portal with this slug already exists.")
 				}
 
 				if apiErr := txRepo.UpdatePortalSlug(txCtx, params.AccountID, slug); apiErr != nil {

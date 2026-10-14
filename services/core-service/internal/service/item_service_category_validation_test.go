@@ -8,7 +8,7 @@ import (
 	factorymock "github.com/open-mrp/api/services/core-service/internal/domain/mock/factory"
 	repositorymock "github.com/open-mrp/api/services/core-service/internal/domain/mock/repository"
 	"github.com/open-mrp/api/shared/constants"
-	apierror "github.com/open-mrp/api/shared/errors"
+	apierror "github.com/open-mrp/apikit/apierror"
 
 	"go.uber.org/mock/gomock"
 )
@@ -68,13 +68,13 @@ func TestValidateAttributesForCategory(t *testing.T) {
 		attributes []*domain.Attribute
 		properties []*domain.ItemCategoryProperty
 		ids        []string
-		wantCode   apierror.ErrorCode
+		wantCode   apierror.Code
 	}{
 		{"no attributes requested", nil, nil, nil, ""},
 		{"property carried by the category", []*domain.Attribute{red}, []*domain.ItemCategoryProperty{color, size}, []string{"at_red"}, ""},
-		{"property not carried by the category", []*domain.Attribute{red}, []*domain.ItemCategoryProperty{size}, []string{"at_red"}, apierror.ErrorCodeValidationFailed},
-		{"category carries nothing", []*domain.Attribute{red}, nil, []string{"at_red"}, apierror.ErrorCodeValidationFailed},
-		{"attribute outside the account", nil, []*domain.ItemCategoryProperty{color}, []string{"at_red"}, apierror.ErrorCodeResourceNotFound},
+		{"property not carried by the category", []*domain.Attribute{red}, []*domain.ItemCategoryProperty{size}, []string{"at_red"}, apierror.CodeValidationFailed},
+		{"category carries nothing", []*domain.Attribute{red}, nil, []string{"at_red"}, apierror.CodeValidationFailed},
+		{"attribute outside the account", nil, []*domain.ItemCategoryProperty{color}, []string{"at_red"}, apierror.CodeResourceNotFound},
 	}
 
 	for _, tt := range tests {
@@ -139,8 +139,8 @@ func TestValidateCategoryCarriesItemAttributes(t *testing.T) {
 			if !tt.wantErr && apiErr != nil {
 				t.Fatalf("validateCategoryCarriesItemAttributes() = %v, want nil", apiErr)
 			}
-			if tt.wantErr && apiErr.Code != apierror.ErrorCodeValidationFailed {
-				t.Fatalf("validateCategoryCarriesItemAttributes() code = %s, want %s", apiErr.Code, apierror.ErrorCodeValidationFailed)
+			if tt.wantErr && apiErr.Code != apierror.CodeValidationFailed {
+				t.Fatalf("validateCategoryCarriesItemAttributes() code = %s, want %s", apiErr.Code, apierror.CodeValidationFailed)
 			}
 		})
 	}

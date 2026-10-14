@@ -20,11 +20,11 @@ import (
 	"github.com/open-mrp/api/shared/audit"
 	"github.com/open-mrp/api/shared/constants"
 	"github.com/open-mrp/api/shared/contracts"
-	apierror "github.com/open-mrp/api/shared/errors"
 	"github.com/open-mrp/api/shared/id"
-	"github.com/open-mrp/api/shared/idempotency"
+	"github.com/open-mrp/api/shared/idemresponse"
 	"github.com/open-mrp/api/shared/messaging"
-	"github.com/open-mrp/api/shared/tracing"
+	apierror "github.com/open-mrp/apikit/apierror"
+	"github.com/open-mrp/apikit/tracing"
 )
 
 // The operations a scanning station performs on batches.
@@ -73,7 +73,7 @@ func (s *batchSvcImpl) idempotentScan(ctx context.Context, identity *types.Ident
 
 	switch domain.RecoveryPoint(key.RecoveryPoint) {
 	case domain.RecoveryPointFinished:
-		cached, err := idempotency.UnmarshalCachedResponse[domain.BaseBatch](ctx, key.ResponseCode, key.ResponseBody)
+		cached, err := idemresponse.UnmarshalCachedResponse[domain.BaseBatch](ctx, key.ResponseCode, key.ResponseBody)
 		if err != nil {
 			return nil, apierror.NewInternalError(err, "Issue unmarshalling cached response.")
 		}
@@ -150,20 +150,20 @@ func (s *batchSvcImpl) InitializeBatch(ctx context.Context, params domain.Initia
 func (s *batchSvcImpl) initializeBatch(ctx context.Context, identity *types.Identity, accountID string, params domain.InitializeBatchParams, key *domain.IdempotencyKey) (*domain.BaseBatch, *apierror.APIError) {
 	stationType, apiErr := s.repos.NewScanningStationQueryRepo().FindType(ctx, accountID, params.ScanningStationID)
 	if apiErr != nil {
-		if apierror.IsNotFound(apiErr) {
-			return nil, apierror.NewResourceNotFoundError("Scanning Station not found.")
+		if apierror.HasCode(apiErr, apierror.CodeResourceNotFound) {
+			return nil, apierror.NewNotFoundError("Scanning Station not found.")
 		}
 		return nil, apiErr
 	}
 	if stationType == "" {
-		return nil, apierror.NewResourceNotFoundError("Scanning Station not found.")
+		return nil, apierror.NewNotFoundError("Scanning Station not found.")
 	}
 
 	batchRepo := s.repos.NewBatchRepo()
 	batch, apiErr := batchRepo.Find(ctx, accountID, params.BatchID)
 	if apiErr != nil {
-		if apierror.IsNotFound(apiErr) {
-			return nil, apierror.NewResourceNotFoundError("Batch not found.")
+		if apierror.HasCode(apiErr, apierror.CodeResourceNotFound) {
+			return nil, apierror.NewNotFoundError("Batch not found.")
 		}
 		return nil, apiErr
 	}
@@ -188,7 +188,7 @@ func (s *batchSvcImpl) initializeBatch(ctx context.Context, identity *types.Iden
 	}
 
 	if batch.ProductionRun == nil {
-		return nil, apierror.NewResourceNotFoundError("Production run not found.")
+		return nil, apierror.NewNotFoundError("Production run not found.")
 	}
 
 	productionStepID, apiErr := s.resolveInitStep(ctx, accountID, params, batch, isOverriddenInit)
@@ -214,8 +214,8 @@ func (s *batchSvcImpl) initializeBatch(ctx context.Context, identity *types.Iden
 		}
 		held, apiErr := txBatchRepo.Find(txCtx, accountID, batch.ID)
 		if apiErr != nil {
-			if apierror.IsNotFound(apiErr) {
-				return apierror.NewResourceNotFoundError("Batch not found.")
+			if apierror.HasCode(apiErr, apierror.CodeResourceNotFound) {
+				return apierror.NewNotFoundError("Batch not found.")
 			}
 			return apiErr
 		}
@@ -313,7 +313,7 @@ func (s *batchSvcImpl) resolveInitStep(ctx context.Context, accountID string, pa
 
 		switch len(candidates) {
 		case 0:
-			return "", apierror.NewResourceNotFoundError("Production step not found.")
+			return "", apierror.NewNotFoundError("Production step not found.")
 		case 1:
 			return candidates[0].ID, nil
 		default:
@@ -323,8 +323,8 @@ func (s *batchSvcImpl) resolveInitStep(ctx context.Context, accountID string, pa
 
 	stepID, apiErr := s.repos.NewProductionStepQueryRepo().FindIDByScanningStationAndProducedBlock(ctx, accountID, params.ScanningStationID, batch.Item.ID)
 	if apiErr != nil {
-		if apierror.IsNotFound(apiErr) {
-			return "", apierror.NewResourceNotFoundError("Production step not found.")
+		if apierror.HasCode(apiErr, apierror.CodeResourceNotFound) {
+			return "", apierror.NewNotFoundError("Production step not found.")
 		}
 		return "", apiErr
 	}
@@ -376,7 +376,7 @@ func (s *batchSvcImpl) MoveBatches(ctx context.Context, params domain.MoveBatche
 		return nil, tracing.Trace(span, apiErr)
 	}
 	if !stepInAccount {
-		return nil, tracing.Trace(span, apierror.NewResourceNotFoundError("Production step not found."))
+		return nil, tracing.Trace(span, apierror.NewNotFoundError("Production step not found."))
 	}
 	isMultiPart, apiErr := stepRepo.IsMultiPart(ctx, accountID, params.ProductionStepID)
 	if apiErr != nil {
@@ -460,7 +460,7 @@ func (s *batchSvcImpl) planMultiPartMove(ctx context.Context, accountID string, 
 		return nil, apiErr
 	}
 	if measures[0].IsZero() {
-		return nil, apierror.NewResourceNotFoundError("Calculated measure not found.")
+		return nil, apierror.NewNotFoundError("Calculated measure not found.")
 	}
 
 	return &scanOutput{
@@ -532,7 +532,7 @@ func (s *batchSvcImpl) planSinglePartMerge(ctx context.Context, accountID string
 		return nil, apiErr
 	}
 	if unitGroup == nil {
-		return nil, apierror.NewResourceNotFoundError("Unit group not found.")
+		return nil, apierror.NewNotFoundError("Unit group not found.")
 	}
 
 	total, apiErr := s.totalInUnit(ctx, sources, unitGroup.BaseUnit)
@@ -579,7 +579,7 @@ func (s *batchSvcImpl) planMultiPartMerge(ctx context.Context, accountID string,
 		return nil, apiErr
 	}
 	if measures[0].IsZero() {
-		return nil, apierror.NewResourceNotFoundError("Output quantity not found.")
+		return nil, apierror.NewNotFoundError("Output quantity not found.")
 	}
 
 	return &scanOutput{
@@ -788,7 +788,7 @@ func (s *batchSvcImpl) remainingToSplitMany(ctx context.Context, accountID strin
 		return nil, apiErr
 	}
 	if next == nil {
-		return nil, apierror.NewResourceNotFoundError("Produced block or unit not found.")
+		return nil, apierror.NewNotFoundError("Produced block or unit not found.")
 	}
 
 	seen := make(map[string]bool)
@@ -808,8 +808,8 @@ func (s *batchSvcImpl) remainingToSplitMany(ctx context.Context, accountID strin
 
 	producedUnit, apiErr := s.findScanUnit(ctx, accountID, next.ProducedUnitID)
 	if apiErr != nil {
-		if apierror.IsNotFound(apiErr) {
-			return nil, apierror.NewResourceNotFoundError("Produced unit not found.")
+		if apierror.HasCode(apiErr, apierror.CodeResourceNotFound) {
+			return nil, apierror.NewNotFoundError("Produced unit not found.")
 		}
 		return nil, apiErr
 	}
@@ -826,7 +826,7 @@ func (s *batchSvcImpl) remainingToSplitMany(ctx context.Context, accountID strin
 	}
 
 	if measures[0].IsZero() {
-		return nil, apierror.NewResourceNotFoundError("Quantity to split not found.")
+		return nil, apierror.NewNotFoundError("Quantity to split not found.")
 	}
 
 	return &domain.BatchQuantity{Measure: measures[0].Sub(used), Unit: *producedUnit}, nil
@@ -864,13 +864,13 @@ func (s *batchSvcImpl) scanningStationConsumption(ctx context.Context, identity 
 	}
 	stationType, apiErr := s.repos.NewScanningStationQueryRepo().FindType(ctx, accountID, params.ScanningStationID)
 	if apiErr != nil {
-		if apierror.IsNotFound(apiErr) {
-			return nil, apierror.NewResourceNotFoundError("Scanning Station type not found.")
+		if apierror.HasCode(apiErr, apierror.CodeResourceNotFound) {
+			return nil, apierror.NewNotFoundError("Scanning Station type not found.")
 		}
 		return nil, apiErr
 	}
 	if stationType == "" {
-		return nil, apierror.NewResourceNotFoundError("Scanning Station type not found.")
+		return nil, apierror.NewNotFoundError("Scanning Station type not found.")
 	}
 	if !isScanningStationType(stationType) {
 		return nil, apierror.NewValidationError("Invalid scanning station type.")
@@ -892,7 +892,7 @@ func (s *batchSvcImpl) scanningStationConsumption(ctx context.Context, identity 
 	}
 
 	if params.ProductionStepID == nil || *params.ProductionStepID == "" {
-		return nil, apierror.NewResourceNotFoundError("Production step not found.")
+		return nil, apierror.NewNotFoundError("Production step not found.")
 	}
 	stepID := *params.ProductionStepID
 
@@ -921,8 +921,8 @@ func (s *batchSvcImpl) scanningStationConsumption(ctx context.Context, identity 
 func (s *batchSvcImpl) initConsumption(ctx context.Context, accountID string, params domain.GetConsumptionParams) ([]domain.ScanningConsumption, *apierror.APIError) {
 	batch, apiErr := s.repos.NewBatchRepo().Find(ctx, accountID, params.BatchIDs[0])
 	if apiErr != nil {
-		if apierror.IsNotFound(apiErr) {
-			return nil, apierror.NewResourceNotFoundError("Batch not found.")
+		if apierror.HasCode(apiErr, apierror.CodeResourceNotFound) {
+			return nil, apierror.NewNotFoundError("Batch not found.")
 		}
 		return nil, apiErr
 	}
@@ -947,8 +947,8 @@ func (s *batchSvcImpl) initConsumption(ctx context.Context, accountID string, pa
 	if step == nil {
 		step, apiErr = stepRepo.FindOneByScanningStationAndProducedBlock(ctx, accountID, params.ScanningStationID, batch.Item.ID)
 		if apiErr != nil {
-			if apierror.IsNotFound(apiErr) {
-				return nil, apierror.NewResourceNotFoundError("Production step not found.")
+			if apierror.HasCode(apiErr, apierror.CodeResourceNotFound) {
+				return nil, apierror.NewNotFoundError("Production step not found.")
 			}
 			return nil, apiErr
 		}
@@ -971,8 +971,8 @@ func (s *batchSvcImpl) moveConsumption(ctx context.Context, accountID, batchID, 
 	}
 	producedUnit, apiErr := s.findScanUnit(ctx, accountID, next.ProducedUnitID)
 	if apiErr != nil {
-		if apierror.IsNotFound(apiErr) {
-			return nil, apierror.NewResourceNotFoundError("Produced unit not found.")
+		if apierror.HasCode(apiErr, apierror.CodeResourceNotFound) {
+			return nil, apierror.NewNotFoundError("Produced unit not found.")
 		}
 		return nil, apiErr
 	}
@@ -1020,8 +1020,8 @@ func (s *batchSvcImpl) furthestOpenBatch(ctx context.Context, accountID, batchID
 
 	furthest, apiErr := s.repos.NewBatchRepo().FindFurthestRightBatchInFlow(ctx, accountID, batchID)
 	if apiErr != nil {
-		if apierror.IsNotFound(apiErr) {
-			return nil, apierror.NewResourceNotFoundError("Batch not found.")
+		if apierror.HasCode(apiErr, apierror.CodeResourceNotFound) {
+			return nil, apierror.NewNotFoundError("Batch not found.")
 		}
 		return nil, apiErr
 	}
@@ -1033,8 +1033,8 @@ func (s *batchSvcImpl) furthestOpenBatch(ctx context.Context, accountID, batchID
 
 func (s *batchSvcImpl) checkBatchExists(ctx context.Context, accountID, batchID string) *apierror.APIError {
 	if _, apiErr := s.repos.NewBatchRepo().Find(ctx, accountID, batchID); apiErr != nil {
-		if apierror.IsNotFound(apiErr) {
-			return apierror.NewResourceNotFoundError("Batch not found.")
+		if apierror.HasCode(apiErr, apierror.CodeResourceNotFound) {
+			return apierror.NewNotFoundError("Batch not found.")
 		}
 		return apiErr
 	}
@@ -1235,7 +1235,7 @@ type scanPlan func(ctx context.Context, svc *batchSvcImpl) (*scanOutput, *apierr
 
 // errScanSourcesMoved marks a scan whose plan, made again once its batches were held, takes from a batch
 // it did not hold.
-var errScanSourcesMoved = apierror.NewResourceConflictError("These batches changed while they were being scanned. Scan them again.")
+var errScanSourcesMoved = apierror.NewConflictError("These batches changed while they were being scanned. Scan them again.")
 
 // maxScanPlans bounds how often a scan starts over because the batches it takes from moved under it.
 const maxScanPlans = 3
@@ -1455,7 +1455,7 @@ func (s *batchSvcImpl) movedFromWhole(ctx context.Context, accountID string, bat
 		}
 		parent, apiErr := batchRepo.Find(ctx, accountID, inputIDs[0])
 		if apiErr != nil {
-			if apierror.IsNotFound(apiErr) {
+			if apierror.HasCode(apiErr, apierror.CodeResourceNotFound) {
 				break
 			}
 			return nil, apiErr
@@ -1475,7 +1475,7 @@ func (s *batchSvcImpl) movedFromWhole(ctx context.Context, accountID string, bat
 		expected, used, apiErr := batchRepo.SplitTally(ctx, accountID, *baseBatchOf(parent), *producedUnit, current.ProductionStep.ID)
 		if apiErr != nil {
 			// A step that no longer takes the parent cannot say how much of it was carried.
-			if !apierror.Is5XXErrorCode(apiErr.Code) {
+			if !(apiErr.Code.Status() >= 500) {
 				break
 			}
 			return nil, apiErr
@@ -1580,7 +1580,7 @@ func (s *batchSvcImpl) checkStationInAccount(ctx context.Context, accountID, sca
 		return apiErr
 	}
 	if !inAccount {
-		return apierror.NewResourceNotFoundError("Scanning Station not found.")
+		return apierror.NewNotFoundError("Scanning Station not found.")
 	}
 	return nil
 }
@@ -1601,7 +1601,7 @@ func (s *batchSvcImpl) findScanSources(ctx context.Context, accountID string, ba
 		seen[source.ID] = true
 	}
 	if len(sources) != len(batchIDs) {
-		return nil, apierror.NewResourceNotFoundError("One or more batches not found.")
+		return nil, apierror.NewNotFoundError("One or more batches not found.")
 	}
 	return sources, nil
 }
@@ -1609,13 +1609,13 @@ func (s *batchSvcImpl) findScanSources(ctx context.Context, accountID string, ba
 func (s *batchSvcImpl) findScanStep(ctx context.Context, accountID, productionStepID string) (*domain.ProductionStepDetail, *apierror.APIError) {
 	step, apiErr := s.repos.NewProductionStepQueryRepo().Find(ctx, accountID, productionStepID)
 	if apiErr != nil {
-		if apierror.IsNotFound(apiErr) {
-			return nil, apierror.NewResourceNotFoundError("Production step not found.")
+		if apierror.HasCode(apiErr, apierror.CodeResourceNotFound) {
+			return nil, apierror.NewNotFoundError("Production step not found.")
 		}
 		return nil, apiErr
 	}
 	if step == nil {
-		return nil, apierror.NewResourceNotFoundError("Production step not found.")
+		return nil, apierror.NewNotFoundError("Production step not found.")
 	}
 	return step, nil
 }
@@ -1623,8 +1623,8 @@ func (s *batchSvcImpl) findScanStep(ctx context.Context, accountID, productionSt
 func (s *batchSvcImpl) findScanUnit(ctx context.Context, accountID, unitID string) (*domain.LightUnit, *apierror.APIError) {
 	unit, apiErr := s.repos.NewUnitQueryRepo().Find(ctx, accountID, unitID)
 	if apiErr != nil {
-		if apierror.IsNotFound(apiErr) {
-			return nil, apierror.NewResourceNotFoundError("Unit not found.")
+		if apierror.HasCode(apiErr, apierror.CodeResourceNotFound) {
+			return nil, apierror.NewNotFoundError("Unit not found.")
 		}
 		return nil, apiErr
 	}
@@ -1635,7 +1635,7 @@ func (s *batchSvcImpl) findScanUnit(ctx context.Context, accountID, unitID strin
 func (s *batchSvcImpl) findItemUnitGroup(ctx context.Context, accountID, itemID string) (*domain.UnitGroup, *apierror.APIError) {
 	unitGroup, apiErr := s.repos.NewUnitGroupQueryRepo().FindByItem(ctx, accountID, itemID)
 	if apiErr != nil {
-		if apierror.IsNotFound(apiErr) {
+		if apierror.HasCode(apiErr, apierror.CodeResourceNotFound) {
 			return nil, nil
 		}
 		return nil, apiErr
@@ -1692,7 +1692,7 @@ func (s *batchSvcImpl) stepGroupsThrough(ctx context.Context, accountID string, 
 	measures := make([]decimal.Decimal, 0, len(groups))
 	for _, group := range groups {
 		if group.unitGroup == nil {
-			return nil, nil, apierror.NewResourceNotFoundError("Unit group not found.")
+			return nil, nil, apierror.NewNotFoundError("Unit group not found.")
 		}
 		total, apiErr := s.totalInUnit(ctx, group.batches, group.unitGroup.BaseUnit)
 		if apiErr != nil {

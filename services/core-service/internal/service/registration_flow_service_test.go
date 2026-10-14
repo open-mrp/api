@@ -15,7 +15,7 @@ import (
 	repositorymock "github.com/open-mrp/api/services/core-service/internal/domain/mock/repository"
 	"github.com/open-mrp/api/shared/appctx"
 	"github.com/open-mrp/api/shared/constants"
-	apierror "github.com/open-mrp/api/shared/errors"
+	apierror "github.com/open-mrp/apikit/apierror"
 )
 
 type registrationSvcSetup struct {
@@ -73,7 +73,7 @@ func TestRegisterCustomer_NeedsASignedInPerson(t *testing.T) {
 	})
 
 	require.NotNil(t, apiErr)
-	assert.Equal(t, apierror.ErrorCodeInsufficientPerms, apiErr.Code, "an API key has no user to link")
+	assert.Equal(t, apierror.CodeInsufficientPermissions, apiErr.Code, "an API key has no user to link")
 }
 
 func TestRegisterCustomer_ANewCustomersTermsMustBeTheSellers(t *testing.T) {
@@ -96,7 +96,7 @@ func TestRegisterCustomer_ANewCustomersTermsMustBeTheSellers(t *testing.T) {
 	})
 
 	require.NotNil(t, apiErr)
-	assert.Equal(t, apierror.ErrorCodeResourceNotFound, apiErr.Code)
+	assert.Equal(t, apierror.CodeResourceNotFound, apiErr.Code)
 	assert.Equal(t, "payment_term_id", apiErr.Param)
 }
 
@@ -126,7 +126,7 @@ func TestCreateRegistrationFlow_OffersOnlyTheAccountsTerms(t *testing.T) {
 	})
 
 	require.NotNil(t, apiErr)
-	assert.Equal(t, apierror.ErrorCodeResourceNotFound, apiErr.Code)
+	assert.Equal(t, apierror.CodeResourceNotFound, apiErr.Code)
 	assert.Equal(t, "shipping_term_ids", apiErr.Param)
 }
 
@@ -141,7 +141,7 @@ func TestUpdateRegistrationFlow_OffersOnlyTheAccountsTerms(t *testing.T) {
 	})
 
 	require.NotNil(t, apiErr)
-	assert.Equal(t, apierror.ErrorCodeResourceNotFound, apiErr.Code)
+	assert.Equal(t, apierror.CodeResourceNotFound, apiErr.Code)
 	assert.Equal(t, "payment_term_ids", apiErr.Param)
 }
 

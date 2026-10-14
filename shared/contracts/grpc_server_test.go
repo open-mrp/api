@@ -45,7 +45,7 @@ func chainUnaryInterceptors(interceptors []grpc.UnaryServerInterceptor) grpc.Una
 func TestGRPCServerConfig_WithDefaults_InterceptorChain(t *testing.T) {
 	t.Parallel()
 	wantInterceptors := []string{
-		"tracing.UnarySpanRenamer",
+		"rpctrace.UnarySpanRenamer",
 		"contracts.RecoveryUnaryInterceptor",
 		"contracts.IdentityUnaryServerInterceptor",
 		"contracts.IdempotencyKeyUnaryServerInterceptor",

@@ -8,7 +8,7 @@ package sqlc
 import (
 	"context"
 
-	"github.com/open-mrp/api/shared/db"
+	"github.com/open-mrp/apikit/db"
 )
 
 const createEmailDomain = `-- name: CreateEmailDomain :exec

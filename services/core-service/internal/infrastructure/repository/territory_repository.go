@@ -9,10 +9,10 @@ import (
 	"github.com/open-mrp/api/services/core-service/internal/domain"
 	"github.com/open-mrp/api/services/core-service/internal/infrastructure/sqlc"
 	"github.com/open-mrp/api/shared/constants"
-	"github.com/open-mrp/api/shared/db"
-	apierror "github.com/open-mrp/api/shared/errors"
-	"github.com/open-mrp/api/shared/tracing"
+	apierror "github.com/open-mrp/apikit/apierror"
+	"github.com/open-mrp/apikit/db"
 	"github.com/open-mrp/apikit/pagination"
+	"github.com/open-mrp/apikit/tracing"
 )
 
 var territoryRepoTracer = tracing.GetTracer("core-service.territory_repository")
@@ -285,7 +285,7 @@ func (r *territoryRepoImpl) FindSalesRepByZipcode(ctx context.Context, accountID
 		Zipcode:   gosql.NullInt32{Int32: zipcode, Valid: true},
 	})
 	if err != nil {
-		if apierror.IsNotFound(db.MapSQLError(err)) {
+		if apierror.HasCode(db.MapSQLError(err), apierror.CodeResourceNotFound) {
 			return nil, nil
 		}
 		return nil, tracing.Trace(span, apierror.NewInternalError(err, "Failed to look up sales rep by zipcode."))
@@ -302,7 +302,7 @@ func (r *territoryRepoImpl) FindSalesRepByState(ctx context.Context, accountID, 
 		State:     state,
 	})
 	if err != nil {
-		if apierror.IsNotFound(db.MapSQLError(err)) {
+		if apierror.HasCode(db.MapSQLError(err), apierror.CodeResourceNotFound) {
 			return nil, nil
 		}
 		return nil, tracing.Trace(span, apierror.NewInternalError(err, "Failed to look up sales rep by state."))

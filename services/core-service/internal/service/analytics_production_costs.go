@@ -10,8 +10,8 @@ import (
 	"github.com/open-mrp/api/services/core-service/internal/domain"
 	"github.com/open-mrp/api/shared/appctx"
 	"github.com/open-mrp/api/shared/constants"
-	apierror "github.com/open-mrp/api/shared/errors"
-	"github.com/open-mrp/api/shared/tracing"
+	apierror "github.com/open-mrp/apikit/apierror"
+	"github.com/open-mrp/apikit/tracing"
 )
 
 // productionCostDivisionScale is the decimal places a production cost report divides to: the scale every quantity and rate is stored at.
@@ -34,11 +34,11 @@ func (s *analyticsSvcImpl) AnalyzeProductionCosts(ctx context.Context, params do
 	}
 	switch {
 	case params.StartDate.IsZero():
-		return nil, tracing.Trace(span, apierror.NewValidationErrorWithParam("Required.", "starts_at"))
+		return nil, tracing.Trace(span, apierror.NewFieldError("starts_at", apierror.CodeInvalidFormat, "Required."))
 	case params.EndDate.IsZero():
-		return nil, tracing.Trace(span, apierror.NewValidationErrorWithParam("Required.", "ends_at"))
+		return nil, tracing.Trace(span, apierror.NewFieldError("ends_at", apierror.CodeInvalidFormat, "Required."))
 	case params.EndDate.Before(params.StartDate):
-		return nil, tracing.Trace(span, apierror.NewValidationErrorWithParam("Must not be before starts_at.", "ends_at"))
+		return nil, tracing.Trace(span, apierror.NewFieldError("ends_at", apierror.CodeInvalidFormat, "Must not be before starts_at."))
 	}
 
 	params.AccountID = identity.Target.AccountID

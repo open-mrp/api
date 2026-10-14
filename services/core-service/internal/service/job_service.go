@@ -13,9 +13,9 @@ import (
 	"github.com/open-mrp/api/shared/appctx"
 	"github.com/open-mrp/api/shared/audit"
 	"github.com/open-mrp/api/shared/constants"
-	apierror "github.com/open-mrp/api/shared/errors"
 	"github.com/open-mrp/api/shared/id"
-	"github.com/open-mrp/api/shared/tracing"
+	apierror "github.com/open-mrp/apikit/apierror"
+	"github.com/open-mrp/apikit/tracing"
 )
 
 var jobSvcTracer = tracing.GetTracer("core-service.job_service")
@@ -94,7 +94,7 @@ func (s *jobSvcImpl) GetJob(ctx context.Context, jobID string) (*domain.Job, *ap
 	}
 
 	if identity.IsRelationActor() && !raisedBy(job, jobCreatedByID(ctx, s.repos, accountID, identity)) {
-		return nil, tracing.Trace(span, apierror.NewResourceNotFoundError("Resource not found."))
+		return nil, tracing.Trace(span, apierror.NewNotFoundError("Resource not found."))
 	}
 
 	return job, nil
@@ -162,7 +162,7 @@ func (s *jobSvcImpl) CreateJob(ctx context.Context, params domain.CreateJobServi
 	}
 
 	if !params.Type.IsValid() {
-		return nil, tracing.Trace(span, apierror.NewValidationErrorWithParam("Unknown job type.", "type"))
+		return nil, tracing.Trace(span, apierror.NewFieldError("type", apierror.CodeInvalidFormat, "Unknown job type."))
 	}
 
 	jobID := params.JobID
@@ -339,7 +339,7 @@ func stampTransition(params *domain.UpdateJobRepositoryParams, status constants.
 	case constants.JobStatusCreated:
 		// The created state is the absence of every other timestamp; there is nothing to stamp.
 	default:
-		return apierror.NewValidationErrorWithParam("Unknown job status.", "status")
+		return apierror.NewFieldError("status", apierror.CodeInvalidFormat, "Unknown job status.")
 	}
 	return nil
 }
@@ -383,7 +383,7 @@ func (s *jobSvcImpl) FailJob(ctx context.Context, params domain.FailJobParams) {
 	// results. ToResponseError renders the client-facing view — the internal detail stays
 	// on the caller's log line and span.
 	if params.ApiErr != nil {
-		responseErr := params.ApiErr.ToResponseError()
+		responseErr := params.ApiErr.Object()
 		update.Error = &responseErr
 	}
 

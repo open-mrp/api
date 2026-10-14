@@ -12,9 +12,9 @@ import (
 
 	"github.com/open-mrp/api/services/core-service/internal/domain"
 	"github.com/open-mrp/api/services/core-service/internal/infrastructure/sqlc"
-	"github.com/open-mrp/api/shared/db"
-	apierror "github.com/open-mrp/api/shared/errors"
-	"github.com/open-mrp/api/shared/tracing"
+	apierror "github.com/open-mrp/apikit/apierror"
+	"github.com/open-mrp/apikit/db"
+	"github.com/open-mrp/apikit/tracing"
 	"go.opentelemetry.io/otel/trace"
 )
 
@@ -544,8 +544,7 @@ func (r *analyticsRepoImpl) GetManufacturingMetric(ctx context.Context, params d
 		return 0, nil
 
 	default:
-		return 0, tracing.Trace(span, apierror.NewValidationErrorWithParam(
-			fmt.Sprintf("Unsupported manufacturing analytics type: %s", params.Type), "type"))
+		return 0, tracing.Trace(span, apierror.NewFieldError("type", apierror.CodeInvalidFormat, fmt.Sprintf("Unsupported manufacturing analytics type: %s", params.Type)))
 	}
 }
 

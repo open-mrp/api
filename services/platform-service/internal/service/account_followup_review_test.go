@@ -9,8 +9,8 @@ import (
 
 	"github.com/open-mrp/api/services/platform-service/internal/domain"
 	"github.com/open-mrp/api/shared/constants"
-	apierror "github.com/open-mrp/api/shared/errors"
 	"github.com/open-mrp/api/shared/messaging"
+	apierror "github.com/open-mrp/apikit/apierror"
 
 	"github.com/stretchr/testify/require"
 	"go.uber.org/mock/gomock"
@@ -104,7 +104,7 @@ func TestAccountFollowupApproveRejectsBadInput(t *testing.T) {
 
 			_, apiErr := f.svc.Approve(context.Background(), "tok", tc.subject, tc.body)
 			require.NotNil(t, apiErr)
-			require.Equal(t, apierror.ErrorCodeValidationFailed, apiErr.Code)
+			require.Equal(t, apierror.CodeValidationFailed, apiErr.Code)
 			require.Empty(t, f.outbox.inputs)
 		})
 	}
@@ -120,9 +120,9 @@ func TestAccountFollowupReviewExpired(t *testing.T) {
 	f.repo.EXPECT().FindByReviewTokenHash(gomock.Any(), hash).Return(af, nil).Times(2)
 
 	_, apiErr := f.svc.GetReview(context.Background(), "tok")
-	require.Equal(t, apierror.ErrorCodeExpiredToken, apiErr.Code)
+	require.Equal(t, apierror.CodeExpiredToken, apiErr.Code)
 	_, apiErr = f.svc.Approve(context.Background(), "tok", "s", "b")
-	require.Equal(t, apierror.ErrorCodeExpiredToken, apiErr.Code)
+	require.Equal(t, apierror.CodeExpiredToken, apiErr.Code)
 	require.Empty(t, f.outbox.inputs)
 }
 
@@ -130,10 +130,10 @@ func TestAccountFollowupReviewUnknownToken(t *testing.T) {
 	t.Parallel()
 	f := newFollowupFixture(t)
 
-	f.repo.EXPECT().FindByReviewTokenHash(gomock.Any(), gomock.Any()).Return(nil, apierror.NewResourceNotFoundError("Account follow-up not found."))
+	f.repo.EXPECT().FindByReviewTokenHash(gomock.Any(), gomock.Any()).Return(nil, apierror.NewNotFoundError("Account follow-up not found."))
 
 	_, apiErr := f.svc.GetReview(context.Background(), "nope")
-	require.Equal(t, apierror.ErrorCodeResourceNotFound, apiErr.Code)
+	require.Equal(t, apierror.CodeResourceNotFound, apiErr.Code)
 	require.Equal(t, "This review link is invalid.", apiErr.PublicMessage)
 }
 

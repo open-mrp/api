@@ -8,7 +8,7 @@ import (
 	"github.com/open-mrp/api/services/platform-service/internal/domain"
 	"github.com/open-mrp/api/shared/contracts"
 	pb "github.com/open-mrp/api/shared/proto/platform"
-	"github.com/open-mrp/api/shared/tracing"
+	"github.com/open-mrp/apikit/tracing"
 
 	"google.golang.org/grpc"
 	"google.golang.org/protobuf/types/known/timestamppb"

@@ -14,11 +14,11 @@ import (
 	"github.com/open-mrp/api/services/auth-service/pkg/types"
 	"github.com/open-mrp/api/shared/appctx"
 	"github.com/open-mrp/api/shared/constants"
-	apierror "github.com/open-mrp/api/shared/errors"
 	agentpb "github.com/open-mrp/api/shared/proto/agent"
 	corepb "github.com/open-mrp/api/shared/proto/core"
 	notifpb "github.com/open-mrp/api/shared/proto/notification"
-	"github.com/open-mrp/api/shared/tracing"
+	apierror "github.com/open-mrp/apikit/apierror"
+	"github.com/open-mrp/apikit/tracing"
 	"google.golang.org/grpc"
 )
 
@@ -138,7 +138,7 @@ func (m *searchSvcImpl) Search(ctx context.Context, req *SearchRequest) (*apires
 
 	// An empty query lists recent rows of each type, which is useful for browsing a single scoped category (the chat `@`-picker drills into one type before the user types). Allowing it unscoped would fan a bare "list everything" across every type, so require a query unless the search is narrowed with `types`.
 	if query == "" && len(typeFilter) == 0 {
-		return nil, apierror.NewParameterMissingError("The q query parameter is required unless the search is scoped with the types parameter.", "q")
+		return nil, apierror.NewParameterMissingError("q", "The q query parameter is required unless the search is scoped with the types parameter.")
 	}
 
 	scope := searchScope{}
@@ -195,10 +195,7 @@ func searchTypeFilterFromRequest(req *SearchRequest) (map[constants.ObjectType]b
 	typeFilter := make(map[constants.ObjectType]bool, len(req.Types))
 	for _, objectType := range req.Types {
 		if !isSearchObjectType(objectType) {
-			return nil, apierror.NewParameterInvalidError(
-				fmt.Sprintf("Field 'types' must be one of the searchable resource types (for example %s or %s).", constants.ObjectTypeSalesOrder, constants.ObjectTypeCustomer),
-				"types",
-			)
+			return nil, apierror.NewParameterInvalidError("types", fmt.Sprintf("Field 'types' must be one of the searchable resource types (for example %s or %s).", constants.ObjectTypeSalesOrder, constants.ObjectTypeCustomer))
 		}
 		typeFilter[objectType] = true
 	}

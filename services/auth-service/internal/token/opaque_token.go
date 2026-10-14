@@ -3,9 +3,9 @@ package token
 import (
 	"context"
 
-	apierror "github.com/open-mrp/api/shared/errors"
-	"github.com/open-mrp/api/shared/tracing"
+	apierror "github.com/open-mrp/apikit/apierror"
 	"github.com/open-mrp/apikit/crypto"
+	"github.com/open-mrp/apikit/tracing"
 )
 
 var opaqueTokenTracer = tracing.GetTracer("auth-service.opaque_token")

@@ -11,10 +11,10 @@ import (
 	"github.com/open-mrp/api/shared/appctx"
 	"github.com/open-mrp/api/shared/constants"
 	"github.com/open-mrp/api/shared/contracts"
-	apierror "github.com/open-mrp/api/shared/errors"
 	"github.com/open-mrp/api/shared/messaging"
-	"github.com/open-mrp/api/shared/tracing"
+	apierror "github.com/open-mrp/apikit/apierror"
 	"github.com/open-mrp/apikit/ptrutil"
+	"github.com/open-mrp/apikit/tracing"
 )
 
 var productionRunActivityMedTracer = tracing.GetTracer("core-service.production_run_activity_mediator")
@@ -118,7 +118,7 @@ func (m *productionRunActivityMedImpl) notify(ctx context.Context, identity *typ
 	accountUserRepo := m.repos.NewAccountUserRepo()
 
 	recipientID, apiErr := accountUserRepo.ResolveAccountUserID(ctx, run.AccountID, run.ResponsibleUserID)
-	if apierror.IsNotFound(apiErr) {
+	if apierror.HasCode(apiErr, apierror.CodeResourceNotFound) {
 		return nil
 	}
 	if apiErr != nil {
@@ -127,7 +127,7 @@ func (m *productionRunActivityMedImpl) notify(ctx context.Context, identity *typ
 
 	if identity.HasUserActor() {
 		actorID, apiErr := accountUserRepo.ResolveAccountUserID(ctx, run.AccountID, identity.Actor.ID)
-		if apiErr != nil && !apierror.IsNotFound(apiErr) {
+		if apiErr != nil && !apierror.HasCode(apiErr, apierror.CodeResourceNotFound) {
 			return apiErr
 		}
 		if actorID == recipientID {

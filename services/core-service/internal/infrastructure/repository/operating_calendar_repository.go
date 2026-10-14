@@ -8,9 +8,9 @@ import (
 
 	"github.com/open-mrp/api/services/core-service/internal/domain"
 	"github.com/open-mrp/api/services/core-service/internal/infrastructure/sqlc"
-	"github.com/open-mrp/api/shared/db"
-	apierror "github.com/open-mrp/api/shared/errors"
-	"github.com/open-mrp/api/shared/tracing"
+	apierror "github.com/open-mrp/apikit/apierror"
+	"github.com/open-mrp/apikit/db"
+	"github.com/open-mrp/apikit/tracing"
 )
 
 var operatingCalendarRepoTracer = tracing.GetTracer("core-service.operating_calendar_repository")
@@ -51,7 +51,7 @@ func (r *operatingCalendarRepoImpl) Get(ctx context.Context, accountID, calendar
 	row, err := r.queries.GetOperatingCalendar(ctx, sqlc.GetOperatingCalendarParams{ID: calendarID, AccountID: accountID})
 	if err != nil {
 		if errors.Is(err, gosql.ErrNoRows) {
-			return nil, tracing.Trace(span, apierror.NewResourceNotFoundError("Operating calendar not found."))
+			return nil, tracing.Trace(span, apierror.NewNotFoundError("Operating calendar not found."))
 		}
 		return nil, tracing.Trace(span, mapCalendarError(err, "Failed to retrieve operating calendar."))
 	}
@@ -185,7 +185,7 @@ func (r *operatingCalendarRepoImpl) Create(ctx context.Context, params domain.Cr
 	})
 	if err != nil {
 		if db.IsDuplicateEntry(err) {
-			return tracing.Trace(span, apierror.NewResourceConflictError("An operating calendar with this code already exists."))
+			return tracing.Trace(span, apierror.NewConflictError("An operating calendar with this code already exists."))
 		}
 		return tracing.Trace(span, mapCalendarError(err, "Failed to create operating calendar."))
 	}
@@ -272,7 +272,7 @@ func (r *operatingCalendarRepoImpl) GetClosure(ctx context.Context, accountID, c
 	row, err := r.queries.GetOperatingCalendarClosure(ctx, sqlc.GetOperatingCalendarClosureParams{ID: closureID, AccountID: accountID})
 	if err != nil {
 		if errors.Is(err, gosql.ErrNoRows) {
-			return nil, tracing.Trace(span, apierror.NewResourceNotFoundError("Calendar closure not found."))
+			return nil, tracing.Trace(span, apierror.NewNotFoundError("Calendar closure not found."))
 		}
 		return nil, tracing.Trace(span, mapCalendarError(err, "Failed to retrieve calendar closure."))
 	}
@@ -299,7 +299,7 @@ func (r *operatingCalendarRepoImpl) GetClosureByDate(ctx context.Context, accoun
 	})
 	if err != nil {
 		if errors.Is(err, gosql.ErrNoRows) {
-			return nil, tracing.Trace(span, apierror.NewResourceNotFoundError("Calendar closure not found."))
+			return nil, tracing.Trace(span, apierror.NewNotFoundError("Calendar closure not found."))
 		}
 		return nil, tracing.Trace(span, mapCalendarError(err, "Failed to retrieve calendar closure."))
 	}

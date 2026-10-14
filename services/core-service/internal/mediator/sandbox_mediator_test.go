@@ -7,8 +7,9 @@ import (
 	"github.com/open-mrp/api/services/core-service/internal/domain"
 	factorymock "github.com/open-mrp/api/services/core-service/internal/domain/mock/factory"
 	repositorymock "github.com/open-mrp/api/services/core-service/internal/domain/mock/repository"
+	"github.com/open-mrp/api/shared/apperr"
 	"github.com/open-mrp/api/shared/constants"
-	apierror "github.com/open-mrp/api/shared/errors"
+	apierror "github.com/open-mrp/apikit/apierror"
 
 	"github.com/stretchr/testify/suite"
 	"go.uber.org/mock/gomock"
@@ -251,7 +252,7 @@ func (suite *SandboxMedTestSuite) TestSafety_Create_RejectsSandboxOwner() {
 
 	suite.Nil(result)
 	suite.NotNil(err)
-	suite.Equal(apierror.ErrorCodeValidationFailed, err.Code)
+	suite.Equal(apierror.CodeValidationFailed, err.Code)
 	suite.Contains(err.PublicMessage, "Sandbox accounts cannot create sandboxes.")
 }
 
@@ -261,7 +262,7 @@ func (suite *SandboxMedTestSuite) TestCreate_GetAccountContextError() {
 
 	suite.accountRepo.EXPECT().
 		GetAccountContext(gomock.Any(), ownerAccountID).
-		Return(nil, apierror.NewResourceNotFoundError("Account not found")).
+		Return(nil, apierror.NewNotFoundError("Account not found")).
 		Times(1)
 
 	result, err := suite.sandboxMed.Create(ctx, ownerAccountID, "usr_user1", "My Sandbox")
@@ -301,11 +302,8 @@ func (suite *SandboxMedTestSuite) TestCreate_MaxSandboxesReached() {
 
 	suite.Nil(result)
 	suite.NotNil(err)
-	suite.Equal(apierror.ErrorCodeLimitExceeded, err.Code)
-	suite.NotNil(err.Quota)
-	suite.Equal(int32(3), err.Quota.Limit)
-	suite.Equal(int32(3), err.Quota.Used)
-	suite.Nil(err.Quota.ResetAt)
+	suite.Equal(apperr.CodeLimitExceeded, err.Code)
+	suite.Equal(apperr.QuotaInfo{Limit: 3, Used: 3}, err.Details)
 }
 
 func (suite *SandboxMedTestSuite) TestCreate_GetPlanCodeError() {
@@ -329,7 +327,7 @@ func (suite *SandboxMedTestSuite) TestCreate_GetPlanCodeError() {
 
 	suite.Nil(result)
 	suite.NotNil(err)
-	suite.Equal(apierror.ErrorCodeInternalError, err.Code)
+	suite.Equal(apierror.CodeInternalError, err.Code)
 }
 
 func (suite *SandboxMedTestSuite) TestCreate_GetSandboxLimitError() {
@@ -358,7 +356,7 @@ func (suite *SandboxMedTestSuite) TestCreate_GetSandboxLimitError() {
 
 	suite.Nil(result)
 	suite.NotNil(err)
-	suite.Equal(apierror.ErrorCodeInternalError, err.Code)
+	suite.Equal(apierror.CodeInternalError, err.Code)
 }
 
 func (suite *SandboxMedTestSuite) TestCreate_GetSandboxLimitNotFound_ReturnsInternalError() {
@@ -380,14 +378,14 @@ func (suite *SandboxMedTestSuite) TestCreate_GetSandboxLimitNotFound_ReturnsInte
 
 	suite.accountRepo.EXPECT().
 		GetSandboxLimit(gomock.Any(), ownerAccountID).
-		Return(nil, apierror.NewResourceNotFoundError("Resource not found.")).
+		Return(nil, apierror.NewNotFoundError("Resource not found.")).
 		Times(1)
 
 	result, err := suite.sandboxMed.Create(ctx, ownerAccountID, "usr_user1", "My Sandbox")
 
 	suite.Nil(result)
 	suite.NotNil(err)
-	suite.Equal(apierror.ErrorCodeInternalError, err.Code)
+	suite.Equal(apierror.CodeInternalError, err.Code)
 }
 
 func (suite *SandboxMedTestSuite) TestCreate_UnlimitedSandboxes() {
@@ -502,12 +500,9 @@ func (suite *SandboxMedTestSuite) TestCreate_LimitOfOneReached() {
 
 	suite.Nil(result)
 	suite.NotNil(err)
-	suite.Equal(apierror.ErrorCodeLimitExceeded, err.Code)
+	suite.Equal(apperr.CodeLimitExceeded, err.Code)
 	suite.Contains(err.PublicMessage, "Maximum of 1 sandbox accounts per account reached.")
-	suite.NotNil(err.Quota)
-	suite.Equal(int32(1), err.Quota.Limit)
-	suite.Equal(int32(1), err.Quota.Used)
-	suite.Nil(err.Quota.ResetAt)
+	suite.Equal(apperr.QuotaInfo{Limit: 1, Used: 1}, err.Details)
 }
 
 func (suite *SandboxMedTestSuite) TestDelete_Success() {
@@ -597,7 +592,7 @@ func (suite *SandboxMedTestSuite) TestDelete_SandboxNotFound() {
 
 	suite.sandboxAccountRepo.EXPECT().
 		FindByTypeID(gomock.Any(), sandboxTypeID, gomock.Nil()).
-		Return(nil, apierror.NewResourceNotFoundError("Sandbox not found.")).
+		Return(nil, apierror.NewNotFoundError("Sandbox not found.")).
 		Times(1)
 
 	resultAccountID, err := suite.sandboxMed.Delete(ctx, ownerAccountID, sandboxTypeID)
@@ -625,7 +620,7 @@ func (suite *SandboxMedTestSuite) TestDelete_OwnerMismatch() {
 
 	suite.NotNil(err)
 	suite.Equal("", resultAccountID)
-	suite.Equal(apierror.ErrorCodeResourceNotFound, err.Code)
+	suite.Equal(apierror.CodeResourceNotFound, err.Code)
 }
 
 // SAFETY: DO NOT REMOVE — ensures Delete rejects non-sandbox accounts,
@@ -658,7 +653,7 @@ func (suite *SandboxMedTestSuite) TestSafety_Delete_RejectsNonSandboxAccount() {
 
 	suite.NotNil(err)
 	suite.Equal("", resultAccountID)
-	suite.Equal(apierror.ErrorCodeInternalError, err.Code)
+	suite.Equal(apierror.CodeInternalError, err.Code)
 }
 
 func (suite *SandboxMedTestSuite) TestDelete_GetAccountContextError() {
@@ -686,5 +681,5 @@ func (suite *SandboxMedTestSuite) TestDelete_GetAccountContextError() {
 
 	suite.NotNil(err)
 	suite.Equal("", resultAccountID)
-	suite.Equal(apierror.ErrorCodeInternalError, err.Code)
+	suite.Equal(apierror.CodeInternalError, err.Code)
 }

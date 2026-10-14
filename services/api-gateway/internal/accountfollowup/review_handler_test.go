@@ -10,8 +10,8 @@ import (
 	"time"
 
 	"github.com/open-mrp/api/shared/contracts"
-	apierror "github.com/open-mrp/api/shared/errors"
 	pb "github.com/open-mrp/api/shared/proto/platform"
+	apierror "github.com/open-mrp/apikit/apierror"
 
 	"github.com/stretchr/testify/require"
 	"google.golang.org/grpc"
@@ -109,7 +109,7 @@ func TestReviewSkip(t *testing.T) {
 
 func TestReviewValidationErrorKeepsEdits(t *testing.T) {
 	t.Parallel()
-	client := &fakeClient{review: pendingReview(), writeErr: apierror.NewValidationErrorWithParam("Subject must be a single line of at most 200 characters.", "subject")}
+	client := &fakeClient{review: pendingReview(), writeErr: apierror.NewFieldError("subject", apierror.CodeInvalidFormat, "Subject must be a single line of at most 200 characters.")}
 
 	rec := post(NewReviewHandler(client), url.Values{"token": {"tok"}, "action": {"approve"}, "subject": {""}, "body": {"my edited body"}})
 
@@ -125,7 +125,7 @@ func TestReviewBadLinks(t *testing.T) {
 		err    *apierror.APIError
 		status int
 	}{
-		"unknown token": {apierror.NewResourceNotFoundError("This review link is invalid."), http.StatusNotFound},
+		"unknown token": {apierror.NewNotFoundError("This review link is invalid."), http.StatusNotFound},
 		"expired":       {apierror.NewExpiredTokenError("This review link has expired."), http.StatusGone},
 	} {
 		t.Run(name, func(t *testing.T) {

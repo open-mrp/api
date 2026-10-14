@@ -11,7 +11,7 @@ import (
 	mediatormock "github.com/open-mrp/api/services/core-service/internal/domain/mock/mediator"
 	repositorymock "github.com/open-mrp/api/services/core-service/internal/domain/mock/repository"
 	"github.com/open-mrp/api/shared/appctx"
-	apierror "github.com/open-mrp/api/shared/errors"
+	apierror "github.com/open-mrp/apikit/apierror"
 
 	"github.com/stretchr/testify/suite"
 	"go.uber.org/mock/gomock"
@@ -92,19 +92,19 @@ func (suite *SalesTargetSvcTestSuite) TestANewTargetMayNotEndBeforeItStarts() {
 	_, apiErr := suite.svc.UpsertSalesTarget(salesTargetCtx(), params)
 
 	suite.Require().NotNil(apiErr)
-	suite.Equal(apierror.ErrorCodeValidationFailed, apiErr.Code)
+	suite.Equal(apierror.CodeValidationFailed, apiErr.Code)
 	suite.Equal("ends_at", apiErr.Param)
 }
 
 func (suite *SalesTargetSvcTestSuite) TestANewTargetIsNotMeasuredInAnotherAccountsUnit() {
 	params := suite.newTarget(salesTargetTestStart, salesTargetTestEnd, "un_elsewhere")
 	suite.unitRepo.EXPECT().Get(gomock.Any(), domain.GetUnitParams{AccountID: salesTargetTestAccount, UnitID: "un_elsewhere"}).
-		Return(nil, apierror.NewResourceNotFoundError("Resource not found."))
+		Return(nil, apierror.NewNotFoundError("Resource not found."))
 
 	_, apiErr := suite.svc.UpsertSalesTarget(salesTargetCtx(), params)
 
 	suite.Require().NotNil(apiErr)
-	suite.Equal(apierror.ErrorCodeResourceNotFound, apiErr.Code)
+	suite.Equal(apierror.CodeResourceNotFound, apiErr.Code)
 	suite.Equal("amount_unit_id", apiErr.Param)
 }
 
@@ -127,5 +127,5 @@ func (suite *SalesTargetSvcTestSuite) TestAnotherRepsPathDoesNotReachTheTarget()
 	})
 
 	suite.Require().NotNil(apiErr)
-	suite.Equal(apierror.ErrorCodeResourceNotFound, apiErr.Code)
+	suite.Equal(apierror.CodeResourceNotFound, apiErr.Code)
 }

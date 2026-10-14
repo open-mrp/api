@@ -4,7 +4,7 @@ import (
 	"testing"
 
 	"github.com/open-mrp/api/shared/constants"
-	apierror "github.com/open-mrp/api/shared/errors"
+	apierror "github.com/open-mrp/apikit/apierror"
 )
 
 func TestCheckHasUserActor(t *testing.T) {
@@ -15,7 +15,7 @@ func TestCheckHasUserActor(t *testing.T) {
 	tests := []struct {
 		name         string
 		identity     *Identity
-		expectedCode apierror.ErrorCode
+		expectedCode apierror.Code
 		expectNil    bool
 	}{
 		{
@@ -44,7 +44,7 @@ func TestCheckHasUserActor(t *testing.T) {
 			identity: &Identity{
 				Type: IdentityActorTypeUnauthenticated,
 			},
-			expectedCode: apierror.ErrorCodeInvalidCredentials,
+			expectedCode: apierror.CodeInvalidCredentials,
 		},
 		{
 			name: "rejects non-user actor (api key)",
@@ -53,7 +53,7 @@ func TestCheckHasUserActor(t *testing.T) {
 				AccountMode: constants.AccountModeProduction,
 				Actor:       &IdentityActor{ID: "key_123", AccountID: &accountID},
 			},
-			expectedCode: apierror.ErrorCodeInsufficientPerms,
+			expectedCode: apierror.CodeInsufficientPermissions,
 		},
 		{
 			name: "rejects user with no actor",
@@ -62,7 +62,7 @@ func TestCheckHasUserActor(t *testing.T) {
 				AccountMode: constants.AccountModeProduction,
 				Actor:       nil,
 			},
-			expectedCode: apierror.ErrorCodeInsufficientPerms,
+			expectedCode: apierror.CodeInsufficientPermissions,
 		},
 		{
 			name: "rejects user with empty actor id",
@@ -71,7 +71,7 @@ func TestCheckHasUserActor(t *testing.T) {
 				AccountMode: constants.AccountModeProduction,
 				Actor:       &IdentityActor{ID: ""},
 			},
-			expectedCode: apierror.ErrorCodeInsufficientPerms,
+			expectedCode: apierror.CodeInsufficientPermissions,
 		},
 	}
 

@@ -15,7 +15,7 @@ import (
 	"github.com/open-mrp/api/shared/appctx"
 	"github.com/open-mrp/api/shared/audit"
 	"github.com/open-mrp/api/shared/constants"
-	apierror "github.com/open-mrp/api/shared/errors"
+	apierror "github.com/open-mrp/apikit/apierror"
 	"github.com/open-mrp/apikit/field"
 )
 
@@ -107,17 +107,20 @@ func (s *AddressMedTestSuite) TestSaveWithoutIDNeedsANameAndCountry() {
 
 	for _, tc := range []struct {
 		input domain.InlineAddressParams
-		code  apierror.ErrorCode
+		code  apierror.Code
 		param string
 	}{
-		{domain.InlineAddressParams{Country: strPtr("US")}, apierror.ErrorCodeMissingField, "ship_to_address.name"},
-		{domain.InlineAddressParams{Name: strPtr("Dock")}, apierror.ErrorCodeMissingField, "ship_to_address.country"},
-		{domain.InlineAddressParams{Name: strPtr("Dock"), Country: strPtr(" ")}, apierror.ErrorCodeMissingField, "ship_to_address.country"},
-		{domain.InlineAddressParams{Name: strPtr("  "), Country: strPtr("US")}, apierror.ErrorCodeValidationFailed, "ship_to_address.name"},
+		{domain.InlineAddressParams{Country: strPtr("US")}, apierror.CodeMissingField, "ship_to_address.name"},
+		{domain.InlineAddressParams{Name: strPtr("Dock")}, apierror.CodeMissingField, "ship_to_address.country"},
+		{domain.InlineAddressParams{Name: strPtr("Dock"), Country: strPtr(" ")}, apierror.CodeMissingField, "ship_to_address.country"},
+		{domain.InlineAddressParams{Name: strPtr("  "), Country: strPtr("US")}, apierror.CodeValidationFailed, "ship_to_address.name"},
 	} {
 		_, apiErr := s.med.Save(s.ctx, inlineSupplierAccountID, tc.input, "ship_to_address")
 		s.Require().NotNil(apiErr)
-		s.Equal(tc.code, apiErr.Code)
+		s.Equal(apierror.CodeValidationFailed, apiErr.Code)
+		if tc.code != apierror.CodeValidationFailed {
+			s.Equal(tc.code, apiErr.Errors[0].Code)
+		}
 		s.Equal(tc.param, apiErr.Param)
 	}
 	s.Empty(s.outbox.messages)
@@ -130,7 +133,7 @@ func (s *AddressMedTestSuite) TestSaveWithAnIDOutsideTheAccountIsNotFoundOnTheID
 	_, apiErr := s.med.Save(s.ctx, inlineSupplierAccountID, domain.InlineAddressParams{ID: strPtr("ad_elsewhere"), Name: strPtr("x")}, "billing_address")
 
 	s.Require().NotNil(apiErr)
-	s.True(apierror.IsNotFound(apiErr))
+	s.True(apierror.HasCode(apiErr, apierror.CodeResourceNotFound))
 	s.Equal("billing_address.id", apiErr.Param)
 	s.Empty(s.outbox.messages)
 }

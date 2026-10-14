@@ -9,10 +9,10 @@ import (
 	"github.com/open-mrp/api/shared/appctx"
 	"github.com/open-mrp/api/shared/audit"
 	"github.com/open-mrp/api/shared/constants"
-	apierror "github.com/open-mrp/api/shared/errors"
 	"github.com/open-mrp/api/shared/id"
-	"github.com/open-mrp/api/shared/idempotency"
-	"github.com/open-mrp/api/shared/tracing"
+	"github.com/open-mrp/api/shared/idemresponse"
+	apierror "github.com/open-mrp/apikit/apierror"
+	"github.com/open-mrp/apikit/tracing"
 )
 
 var documentSettingSvcTracer = tracing.GetTracer("core-service.document_setting_service")
@@ -135,7 +135,7 @@ func (s *documentSettingSvcImpl) GetDocumentSetting(ctx context.Context, documen
 		return nil, tracing.Trace(span, apiErr)
 	}
 	if !documentType.IsValid() {
-		return nil, tracing.Trace(span, apierror.NewValidationErrorWithParam("Unknown document type.", "document_type"))
+		return nil, tracing.Trace(span, apierror.NewFieldError("document_type", apierror.CodeInvalidFormat, "Unknown document type."))
 	}
 
 	accountID := identity.Target.AccountID
@@ -161,7 +161,7 @@ func (s *documentSettingSvcImpl) UpdateDocumentSetting(ctx context.Context, para
 		return nil, tracing.Trace(span, apiErr)
 	}
 	if !params.DocumentType.IsValid() {
-		return nil, tracing.Trace(span, apierror.NewValidationErrorWithParam("Unknown document type.", "document_type"))
+		return nil, tracing.Trace(span, apierror.NewFieldError("document_type", apierror.CodeInvalidFormat, "Unknown document type."))
 	}
 
 	accountID := identity.Target.AccountID
@@ -174,7 +174,7 @@ func (s *documentSettingSvcImpl) UpdateDocumentSetting(ctx context.Context, para
 
 	switch domain.RecoveryPoint(idempotencyKey.RecoveryPoint) {
 	case domain.RecoveryPointFinished:
-		cached, err := idempotency.UnmarshalCachedResponse[domain.DocumentSetting](ctx, idempotencyKey.ResponseCode, idempotencyKey.ResponseBody)
+		cached, err := idemresponse.UnmarshalCachedResponse[domain.DocumentSetting](ctx, idempotencyKey.ResponseCode, idempotencyKey.ResponseBody)
 		if err != nil {
 			return nil, tracing.Trace(span, apierror.NewInternalError(err, "Issue unmarshalling cached response."))
 		}

@@ -9,7 +9,7 @@ import (
 	"testing"
 	"time"
 
-	apierror "github.com/open-mrp/api/shared/errors"
+	apierror "github.com/open-mrp/apikit/apierror"
 	"github.com/open-mrp/apikit/field"
 )
 
@@ -67,8 +67,8 @@ func TestDecodeJSONInto_valueErrorNamesTheField(t *testing.T) {
 			if !ok {
 				t.Fatalf("got %T %v, want *apierror.APIError", err, err)
 			}
-			if apiErr.Code != apierror.ErrorCodeInvalidFormat {
-				t.Errorf("code = %s, want %s", apiErr.Code, apierror.ErrorCodeInvalidFormat)
+			if apiErr.Code != apierror.CodeInvalidFormat {
+				t.Errorf("code = %s, want %s", apiErr.Code, apierror.CodeInvalidFormat)
 			}
 			if apiErr.Param != tt.wantParam {
 				t.Errorf("param = %q, want %q", apiErr.Param, tt.wantParam)

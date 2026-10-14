@@ -9,11 +9,11 @@ import (
 	"github.com/open-mrp/api/services/core-service/internal/domain"
 	"github.com/open-mrp/api/services/core-service/internal/infrastructure/sqlc"
 	"github.com/open-mrp/api/shared/constants"
-	"github.com/open-mrp/api/shared/db"
-	apierror "github.com/open-mrp/api/shared/errors"
-	"github.com/open-mrp/api/shared/tracing"
+	apierror "github.com/open-mrp/apikit/apierror"
+	"github.com/open-mrp/apikit/db"
 	"github.com/open-mrp/apikit/field"
 	"github.com/open-mrp/apikit/pagination"
+	"github.com/open-mrp/apikit/tracing"
 )
 
 var scanningStationRepoTracer = tracing.GetTracer("core-service.scanning_station_repository")
@@ -153,7 +153,7 @@ func (r *scanningStationRepoImpl) List(ctx context.Context, params domain.ListSc
 	if params.Cursor != nil {
 		cur, err := pagination.DecodeStringCursor(*params.Cursor)
 		if err != nil {
-			return nil, apierror.NewValidationErrorWithParam("Invalid pagination cursor.", "cursor")
+			return nil, apierror.NewFieldError("cursor", apierror.CodeInvalidFormat, "Invalid pagination cursor.")
 		}
 		cursorDir = &cur.Direction
 
@@ -468,7 +468,7 @@ func (r *scanningStationRepoImpl) Update(ctx context.Context, params domain.Upda
 		return nil, tracing.Trace(span, apierror.NewInternalError(err, "Failed to check rows affected."))
 	}
 	if rowsAffected == 0 {
-		return nil, tracing.Trace(span, apierror.NewResourceNotFoundError("Scanning station not found."))
+		return nil, tracing.Trace(span, apierror.NewNotFoundError("Scanning station not found."))
 	}
 
 	return r.Get(ctx, domain.GetScanningStationParams{AccountID: params.AccountID, ScanningStationID: params.ScanningStationID, Includes: params.Includes})
@@ -491,7 +491,7 @@ func (r *scanningStationRepoImpl) Delete(ctx context.Context, params domain.Dele
 		return tracing.Trace(span, apierror.NewInternalError(err, "Failed to check rows affected."))
 	}
 	if rowsAffected == 0 {
-		return tracing.Trace(span, apierror.NewResourceNotFoundError("Scanning station not found."))
+		return tracing.Trace(span, apierror.NewNotFoundError("Scanning station not found."))
 	}
 
 	return nil

@@ -11,10 +11,10 @@ import (
 	"github.com/open-mrp/api/shared/appctx"
 	"github.com/open-mrp/api/shared/audit"
 	"github.com/open-mrp/api/shared/constants"
-	apierror "github.com/open-mrp/api/shared/errors"
 	"github.com/open-mrp/api/shared/id"
-	"github.com/open-mrp/api/shared/idempotency"
-	"github.com/open-mrp/api/shared/tracing"
+	"github.com/open-mrp/api/shared/idemresponse"
+	apierror "github.com/open-mrp/apikit/apierror"
+	"github.com/open-mrp/apikit/tracing"
 )
 
 var roleSvcTracer = tracing.GetTracer("core-service.role_service")
@@ -191,7 +191,7 @@ func (s *roleSvcImpl) CreateRole(ctx context.Context, params domain.CreateRolePa
 
 	switch domain.RecoveryPoint(idempotencyKey.RecoveryPoint) {
 	case domain.RecoveryPointFinished:
-		cached, err := idempotency.UnmarshalCachedResponse[domain.RoleWithPermissions](ctx, idempotencyKey.ResponseCode, idempotencyKey.ResponseBody)
+		cached, err := idemresponse.UnmarshalCachedResponse[domain.RoleWithPermissions](ctx, idempotencyKey.ResponseCode, idempotencyKey.ResponseBody)
 		if err != nil {
 			return nil, tracing.Trace(span, apierror.NewInternalError(err, "Issue unmarshalling cached response."))
 		}
@@ -212,7 +212,7 @@ func (s *roleSvcImpl) CreateRole(ctx context.Context, params domain.CreateRolePa
 				return apiErr
 			}
 			if exists {
-				return apierror.NewConflictErrorWithParam(fmt.Sprintf("A role with the name '%s' already exists.", params.Name), "name")
+				return apierror.NewConflictErrorWithParam("name", fmt.Sprintf("A role with the name '%s' already exists.", params.Name))
 			}
 
 			if apiErr := txRoleRepo.Create(txCtx, roleID, params); apiErr != nil {
@@ -298,7 +298,7 @@ func (s *roleSvcImpl) UpdateRole(ctx context.Context, params domain.UpdateRolePa
 
 	switch domain.RecoveryPoint(idempotencyKey.RecoveryPoint) {
 	case domain.RecoveryPointFinished:
-		cached, err := idempotency.UnmarshalCachedResponse[domain.RoleWithPermissions](ctx, idempotencyKey.ResponseCode, idempotencyKey.ResponseBody)
+		cached, err := idemresponse.UnmarshalCachedResponse[domain.RoleWithPermissions](ctx, idempotencyKey.ResponseCode, idempotencyKey.ResponseBody)
 		if err != nil {
 			return nil, tracing.Trace(span, apierror.NewInternalError(err, "Issue unmarshalling cached response."))
 		}
@@ -338,7 +338,7 @@ func (s *roleSvcImpl) UpdateRole(ctx context.Context, params domain.UpdateRolePa
 					return apiErr
 				}
 				if exists {
-					return apierror.NewConflictErrorWithParam("A role with this name already exists.", "name")
+					return apierror.NewConflictErrorWithParam("name", "A role with this name already exists.")
 				}
 
 				if apiErr := txRoleRepo.UpdateName(txCtx, params.RoleID, params.AccountID, *params.Name); apiErr != nil {
@@ -429,13 +429,13 @@ func (s *roleSvcImpl) DeleteRole(ctx context.Context, roleID string) *apierror.A
 
 	role, apiErr := s.repos.NewRoleRepo().Get(ctx, roleID, accountID)
 	if apiErr != nil {
-		if apierror.IsNotFound(apiErr) {
+		if apierror.HasCode(apiErr, apierror.CodeResourceNotFound) {
 			wasDeleted, deletedCheckErr := s.repos.NewDeletedRecordRepo().ExistsInAccount(ctx, constants.DeletedRecordResourceTypeRole, roleID, accountID)
 			if deletedCheckErr != nil {
 				return tracing.Trace(span, deletedCheckErr)
 			}
 			if wasDeleted {
-				return tracing.Trace(span, apierror.NewAlreadyDeletedError("This role has already been deleted and can no longer be modified."))
+				return tracing.Trace(span, apierror.NewGoneError("This role has already been deleted and can no longer be modified."))
 			}
 		}
 		return tracing.Trace(span, apiErr)
@@ -449,7 +449,7 @@ func (s *roleSvcImpl) DeleteRole(ctx context.Context, roleID string) *apierror.A
 		return tracing.Trace(span, apiErr)
 	}
 	if assignedUserCount > 0 {
-		return tracing.Trace(span, apierror.NewResourceConflictError("This role cannot be deleted because it is assigned to one or more users."))
+		return tracing.Trace(span, apierror.NewConflictError("This role cannot be deleted because it is assigned to one or more users."))
 	}
 
 	apiErr = s.withTx(ctx, func(txCtx context.Context, txSvc *roleSvcImpl) *apierror.APIError {

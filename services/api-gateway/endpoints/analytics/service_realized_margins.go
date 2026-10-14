@@ -11,8 +11,8 @@ import (
 	apiresource "github.com/open-mrp/api/services/api-gateway/pkg/resource"
 	"github.com/open-mrp/api/services/api-gateway/pkg/resourcekit"
 	"github.com/open-mrp/api/shared/constants"
-	apierror "github.com/open-mrp/api/shared/errors"
 	pb "github.com/open-mrp/api/shared/proto/core"
+	apierror "github.com/open-mrp/apikit/apierror"
 )
 
 // AnalyzeRealizedMargins audits invoiced sales for thin margins and prices well below what other customers achieved.
@@ -20,7 +20,7 @@ import (
 // The roll-up happens in core-service: a year of trading across thousands of customers and SKUs is hundreds of thousands of invoiced lines, and pulling them here to group them in memory is what made this time out.
 func (m *analyticsSvcImpl) AnalyzeRealizedMargins(ctx context.Context, req *AnalyzeRealizedMarginsRequest) (*apiresource.AnalyzeRealizedMarginsResponse, *apierror.APIError) {
 	if req.EndDate.Before(req.StartDate) {
-		return nil, apierror.NewValidationErrorWithParam("Must not be before starts_at.", "ends_at")
+		return nil, apierror.NewFieldError("ends_at", apierror.CodeInvalidFormat, "Must not be before starts_at.")
 	}
 
 	pbReq := &pb.AnalyzeRealizedMarginsRequest{

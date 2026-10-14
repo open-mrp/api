@@ -9,10 +9,10 @@ import (
 
 	"github.com/open-mrp/api/services/billing-service/internal/domain"
 	"github.com/open-mrp/api/services/billing-service/internal/infrastructure/sqlc"
-	"github.com/open-mrp/api/shared/db"
-	apierror "github.com/open-mrp/api/shared/errors"
-	"github.com/open-mrp/api/shared/tracing"
+	apierror "github.com/open-mrp/apikit/apierror"
+	"github.com/open-mrp/apikit/db"
 	"github.com/open-mrp/apikit/pagination"
+	"github.com/open-mrp/apikit/tracing"
 )
 
 var pricingPlanRepoTracer = tracing.GetTracer("billing-service.pricing_plan_repository")

@@ -6,8 +6,8 @@ import (
 
 	"github.com/open-mrp/api/services/auth-service/internal/domain"
 	"github.com/open-mrp/api/services/auth-service/internal/token"
-	apierror "github.com/open-mrp/api/shared/errors"
-	tracing "github.com/open-mrp/api/shared/tracing"
+	apierror "github.com/open-mrp/apikit/apierror"
+	tracing "github.com/open-mrp/apikit/tracing"
 )
 
 var refreshTokenMedTracer = tracing.GetTracer("auth-service.refresh_token_mediator")
@@ -51,7 +51,7 @@ func (s *refreshTokenMedImpl) Validate(ctx context.Context, refreshToken string)
 	refreshTokenRepo := s.repos.NewRefreshTokenRepo()
 	refreshTokenModel, err := refreshTokenRepo.Find(ctx, refreshToken)
 	if err != nil {
-		if apierror.IsNotFound(err) {
+		if apierror.HasCode(err, apierror.CodeResourceNotFound) {
 			return "", tracing.Trace(span, apierror.NewAuthenticationError(ErrInvalidRefreshToken))
 		}
 		return "", tracing.Trace(span, err)
@@ -110,7 +110,7 @@ func (s *refreshTokenMedImpl) Revoke(ctx context.Context, refreshToken string) *
 	refreshTokenRepo := s.repos.NewRefreshTokenRepo()
 	refreshTokenModel, err := refreshTokenRepo.Find(ctx, refreshToken)
 	if err != nil {
-		if apierror.IsNotFound(err) {
+		if apierror.HasCode(err, apierror.CodeResourceNotFound) {
 			return tracing.Trace(span, apierror.NewAuthenticationError(ErrInvalidRefreshToken))
 		}
 		return tracing.Trace(span, err)

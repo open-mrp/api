@@ -10,11 +10,11 @@ import (
 	"github.com/open-mrp/api/services/core-service/internal/domain"
 	"github.com/open-mrp/api/shared/audit"
 	"github.com/open-mrp/api/shared/constants"
-	"github.com/open-mrp/api/shared/db"
-	apierror "github.com/open-mrp/api/shared/errors"
 	"github.com/open-mrp/api/shared/excel"
 	"github.com/open-mrp/api/shared/id"
 	"github.com/open-mrp/api/shared/messaging"
+	apierror "github.com/open-mrp/apikit/apierror"
+	"github.com/open-mrp/apikit/db"
 	"github.com/open-mrp/apikit/field"
 )
 
@@ -35,7 +35,7 @@ func validateBulkUpsertDepartmentRows(rows []domain.UpsertDepartmentParams) *api
 	for i, d := range rows {
 		lower := strings.ToLower(d.Name)
 		if _, dup := nameInputSpace[lower]; dup {
-			rowErrs.AddValidation(i, fmt.Sprintf("departments[%d].name", i), fmt.Sprintf("duplicate name %q in request", d.Name))
+			rowErrs.AddField(i, "name", apierror.CodeInvalidFormat, fmt.Sprintf("duplicate name %q in request", d.Name))
 		}
 		nameInputSpace[lower] = struct{}{}
 	}
@@ -113,7 +113,7 @@ func writeBulkUpsertDepartments(txCtx context.Context, txRepos domain.RepoFactor
 			return nil
 		})
 		if rowErr != nil {
-			rowErrors = append(rowErrors, apierror.NewRowError(i, rowErr))
+			rowErrors = append(rowErrors, apierror.RowError{Index: i, Error: rowErr.Object()})
 			continue
 		}
 

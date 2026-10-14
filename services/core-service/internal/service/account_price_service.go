@@ -10,10 +10,10 @@ import (
 	"github.com/open-mrp/api/shared/appctx"
 	"github.com/open-mrp/api/shared/audit"
 	"github.com/open-mrp/api/shared/constants"
-	apierror "github.com/open-mrp/api/shared/errors"
 	"github.com/open-mrp/api/shared/id"
-	"github.com/open-mrp/api/shared/idempotency"
-	"github.com/open-mrp/api/shared/tracing"
+	"github.com/open-mrp/api/shared/idemresponse"
+	apierror "github.com/open-mrp/apikit/apierror"
+	"github.com/open-mrp/apikit/tracing"
 )
 
 var accountPriceSvcTracer = tracing.GetTracer("core-service.account_price_service")
@@ -213,7 +213,7 @@ func (s *accountPriceSvcImpl) GetAccountPrice(ctx context.Context, accountPriceI
 			return nil, tracing.Trace(span, apiErr)
 		}
 		if !slices.Contains(recipientIDs, accountPrice.RecipientAccountID) {
-			return nil, tracing.Trace(span, apierror.NewResourceNotFoundError("Account price not found."))
+			return nil, tracing.Trace(span, apierror.NewNotFoundError("Account price not found."))
 		}
 	}
 
@@ -264,7 +264,7 @@ func (s *accountPriceSvcImpl) CreateAccountPrice(ctx context.Context, params dom
 
 	switch domain.RecoveryPoint(idempotencyKey.RecoveryPoint) {
 	case domain.RecoveryPointFinished:
-		cached, err := idempotency.UnmarshalCachedResponse[domain.AccountPrice](ctx, idempotencyKey.ResponseCode, idempotencyKey.ResponseBody)
+		cached, err := idemresponse.UnmarshalCachedResponse[domain.AccountPrice](ctx, idempotencyKey.ResponseCode, idempotencyKey.ResponseBody)
 		if err != nil {
 			return nil, tracing.Trace(span, apierror.NewInternalError(err, "Issue unmarshalling cached response."))
 		}
@@ -340,7 +340,7 @@ func (s *accountPriceSvcImpl) UpdateAccountPrice(ctx context.Context, params dom
 
 	switch domain.RecoveryPoint(idempotencyKey.RecoveryPoint) {
 	case domain.RecoveryPointFinished:
-		cached, err := idempotency.UnmarshalCachedResponse[domain.AccountPrice](ctx, idempotencyKey.ResponseCode, idempotencyKey.ResponseBody)
+		cached, err := idemresponse.UnmarshalCachedResponse[domain.AccountPrice](ctx, idempotencyKey.ResponseCode, idempotencyKey.ResponseBody)
 		if err != nil {
 			return nil, tracing.Trace(span, apierror.NewInternalError(err, "Issue unmarshalling cached response."))
 		}
@@ -413,7 +413,7 @@ func (s *accountPriceSvcImpl) DeleteAccountPrice(ctx context.Context, accountPri
 
 	accountPrice, apiErr := s.repos.NewAccountPriceRepo().Get(ctx, accountID, accountPriceID)
 	if apiErr != nil {
-		if apierror.IsNotFound(apiErr) {
+		if apierror.HasCode(apiErr, apierror.CodeResourceNotFound) {
 			wasDeleted, deletedCheckErr := s.repos.NewDeletedRecordRepo().ExistsInAccount(ctx, constants.DeletedRecordResourceTypeAccountPrice, accountPriceID, accountID)
 			if deletedCheckErr != nil {
 				return tracing.Trace(span, deletedCheckErr)
@@ -421,7 +421,7 @@ func (s *accountPriceSvcImpl) DeleteAccountPrice(ctx context.Context, accountPri
 			if wasDeleted {
 				return tracing.Trace(
 					span,
-					apierror.NewAlreadyDeletedError("This account price has already been deleted and can no longer be modified."),
+					apierror.NewGoneError("This account price has already been deleted and can no longer be modified."),
 				)
 			}
 		}

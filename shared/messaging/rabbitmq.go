@@ -16,10 +16,10 @@ import (
 	"time"
 
 	"github.com/open-mrp/api/shared/contracts"
-	apierror "github.com/open-mrp/api/shared/errors"
 	"github.com/open-mrp/api/shared/id"
-	"github.com/open-mrp/api/shared/retry"
-	"github.com/open-mrp/api/shared/tracing"
+	"github.com/open-mrp/api/shared/rpctrace"
+	apierror "github.com/open-mrp/apikit/apierror"
+	"github.com/open-mrp/apikit/retry"
 
 	amqp "github.com/rabbitmq/amqp091-go"
 )
@@ -362,7 +362,7 @@ func (r *rabbitMQ) processDelivery(ctx context.Context, queueName string, handle
 	default:
 	}
 
-	if err := tracing.TracedConsumer(msg, queueName, func(handlerCtx context.Context, d amqp.Delivery) error {
+	if err := rpctrace.TracedConsumer(msg, queueName, func(handlerCtx context.Context, d amqp.Delivery) error {
 		retryCfg := r.consumerRetry
 		if retryCfg == nil {
 			retryCfg = new(retry.Config).WithDefaults()
@@ -524,7 +524,7 @@ func (r *rabbitMQ) PublishMessage(ctx context.Context, exchange, routingKey stri
 	if err != nil {
 		return err
 	}
-	return tracing.TracedPublisher(ctx, exchange, routingKey, msg, r.publishWithReconnect)
+	return rpctrace.TracedPublisher(ctx, exchange, routingKey, msg, r.publishWithReconnect)
 }
 
 // PublishMessages sends every message before waiting on any confirm, so a batch costs about one broker round trip rather than one per message. A channel that dies mid-batch resolves the confirms still outstanding on it as un-acked, so those messages report errors and are retried like any failed publish.
@@ -537,7 +537,7 @@ func (r *rabbitMQ) PublishMessages(ctx context.Context, messages []OutboundMessa
 			errs[i] = err
 			continue
 		}
-		errs[i] = tracing.TracedPublisher(ctx, m.Exchange, m.RoutingKey, msg, func(ctx context.Context, exchange, routingKey string, msg amqp.Publishing) error {
+		errs[i] = rpctrace.TracedPublisher(ctx, m.Exchange, m.RoutingKey, msg, func(ctx context.Context, exchange, routingKey string, msg amqp.Publishing) error {
 			var err error
 			confirmations[i], err = r.sendWithReconnect(ctx, exchange, routingKey, msg)
 			return err

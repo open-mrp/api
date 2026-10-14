@@ -14,8 +14,8 @@ import (
 	repositorymock "github.com/open-mrp/api/services/core-service/internal/domain/mock/repository"
 	"github.com/open-mrp/api/shared/constants"
 	"github.com/open-mrp/api/shared/contracts"
-	apierror "github.com/open-mrp/api/shared/errors"
 	"github.com/open-mrp/api/shared/messaging"
+	apierror "github.com/open-mrp/apikit/apierror"
 )
 
 const (
@@ -114,7 +114,7 @@ func (s *ProductionRunActivityMedTestSuite) TestSkipsTheOwnersOwnChange() {
 }
 
 func (s *ProductionRunActivityMedTestSuite) TestSkipsAnOwnerNoLongerActiveInTheAccount() {
-	s.accountUserRepo.EXPECT().ResolveAccountUserID(gomock.Any(), activityAccountID, "us_owner").Return("", apierror.NewResourceNotFoundError("Account user not found."))
+	s.accountUserRepo.EXPECT().ResolveAccountUserID(gomock.Any(), activityAccountID, "us_owner").Return("", apierror.NewNotFoundError("Account user not found."))
 
 	apiErr := s.med.NotifyBatchesAdded(context.Background(), activityIdentity(types.IdentityActorTypeUser, "us_other"), s.run, 1)
 

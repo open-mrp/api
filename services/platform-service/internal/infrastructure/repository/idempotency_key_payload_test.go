@@ -10,7 +10,7 @@ import (
 	"github.com/DATA-DOG/go-sqlmock"
 	"github.com/open-mrp/api/services/platform-service/internal/domain"
 	"github.com/open-mrp/api/services/platform-service/internal/infrastructure/sqlc"
-	"github.com/open-mrp/api/shared/blobstore"
+	"github.com/open-mrp/apikit/blobstore"
 )
 
 func newTestPayloadStore(t *testing.T) *blobstore.Store {

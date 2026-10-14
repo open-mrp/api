@@ -8,10 +8,10 @@ import (
 	"github.com/open-mrp/api/services/agent-service/internal/domain"
 	"github.com/open-mrp/api/services/auth-service/pkg/types"
 	"github.com/open-mrp/api/shared/appctx"
-	apierror "github.com/open-mrp/api/shared/errors"
 	"github.com/open-mrp/api/shared/id"
-	"github.com/open-mrp/api/shared/idempotency"
-	"github.com/open-mrp/api/shared/tracing"
+	apierror "github.com/open-mrp/apikit/apierror"
+	"github.com/open-mrp/apikit/idempotency"
+	"github.com/open-mrp/apikit/tracing"
 )
 
 var idempotencyMedTracer = tracing.GetTracer("agent-service.idempotency_mediator")
@@ -81,7 +81,7 @@ func (m *idempotencyMedImpl) UpsertIdempotencyKey(ctx context.Context, identity 
 
 	repo := m.repos.NewIdempotencyKeyRepo()
 	existingKey, apiErr := repo.GetByScopeHash(ctx, scopeHash)
-	if apiErr != nil && !apierror.IsNotFound(apiErr) {
+	if apiErr != nil && !apierror.HasCode(apiErr, apierror.CodeResourceNotFound) {
 		return nil, apiErr
 	}
 
@@ -102,7 +102,7 @@ func (m *idempotencyMedImpl) UpsertIdempotencyKey(ctx context.Context, identity 
 
 	if apiErr != nil {
 		// A concurrent request may have inserted the same scope_hash first. Re-fetch the existing row instead of propagating the duplicate error.
-		if apiErr.Code == apierror.ErrorCodeResourceExists {
+		if apiErr.Code == apierror.CodeResourceExists {
 			existingKey, retryErr := repo.GetByScopeHash(ctx, scopeHash)
 			if retryErr != nil {
 				return nil, retryErr
@@ -128,7 +128,7 @@ func (m *idempotencyMedImpl) CacheErrorResponse(ctx context.Context, typeID stri
 	}
 	if !apiErr.IsTransient {
 		errorBody, _ := apiErr.ToJSON()
-		_ = m.repos.NewIdempotencyKeyRepo().SetResponse(ctx, typeID, apierror.GetHTTPStatusCode(apiErr.Code), errorBody, domain.RecoveryPointFinished)
+		_ = m.repos.NewIdempotencyKeyRepo().SetResponse(ctx, typeID, apiErr.Code.Status(), errorBody, domain.RecoveryPointFinished)
 	}
 	return apiErr
 }

@@ -9,8 +9,8 @@ import (
 	"github.com/open-mrp/api/shared/appctx"
 	"github.com/open-mrp/api/shared/audit"
 	"github.com/open-mrp/api/shared/constants"
-	apierror "github.com/open-mrp/api/shared/errors"
-	"github.com/open-mrp/api/shared/tracing"
+	apierror "github.com/open-mrp/apikit/apierror"
+	"github.com/open-mrp/apikit/tracing"
 )
 
 var childAccountSvcTracer = tracing.GetTracer("core-service.child_account_service")
@@ -151,8 +151,8 @@ const maxHierarchyDepth = 64
 // customerRelationID resolves one of the seller's customers to its relation, the node the hierarchy links.
 func (s *childAccountSvcImpl) customerRelationID(ctx context.Context, ownerAccountID, accountID, notFoundMessage string) (string, *apierror.APIError) {
 	relationID, apiErr := s.repos.NewCustomerRepo().GetRelationID(ctx, ownerAccountID, accountID)
-	if apierror.IsNotFound(apiErr) {
-		return "", apierror.NewResourceNotFoundError(notFoundMessage)
+	if apierror.HasCode(apiErr, apierror.CodeResourceNotFound) {
+		return "", apierror.NewNotFoundError(notFoundMessage)
 	}
 	return relationID, apiErr
 }
@@ -162,7 +162,7 @@ func checkNoHierarchyCycle(ctx context.Context, repo domain.AccountRelationRepo,
 	current := parentRelationID
 	for range maxHierarchyDepth {
 		if current == childRelationID {
-			return apierror.NewResourceConflictError("You cannot create a circular relationship: the child account is this account or one of its parents.")
+			return apierror.NewConflictError("You cannot create a circular relationship: the child account is this account or one of its parents.")
 		}
 		next, apiErr := repo.GetParentRelationID(ctx, current)
 		if apiErr != nil {
@@ -173,7 +173,7 @@ func checkNoHierarchyCycle(ctx context.Context, repo domain.AccountRelationRepo,
 		}
 		current = *next
 	}
-	return apierror.NewResourceConflictError("This account hierarchy is too deep to link another account beneath it.")
+	return apierror.NewConflictError("This account hierarchy is too deep to link another account beneath it.")
 }
 
 // AddChildAccount adds a child account relationship (the target account is the parent), setting parent_account_relation_id on the child within a transaction and publishing a child-account create audit event to the outbox. PUT semantics: idempotent — if already set to this parent, return success. Both accounts must be the seller's customers, and the child may be neither the parent nor any of its ancestors.

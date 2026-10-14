@@ -14,7 +14,6 @@ import (
 	grpcclient "github.com/open-mrp/api/services/api-gateway/grpc-client"
 	"github.com/open-mrp/api/services/api-gateway/internal/accountfollowup"
 	"github.com/open-mrp/api/services/api-gateway/internal/domain"
-	httptransport "github.com/open-mrp/api/services/api-gateway/internal/http"
 	"github.com/open-mrp/api/services/api-gateway/internal/infrastructure/publisher"
 	"github.com/open-mrp/api/services/api-gateway/internal/infrastructure/repository"
 	"github.com/open-mrp/api/services/api-gateway/internal/infrastructure/sqlc"
@@ -27,11 +26,11 @@ import (
 	// versiontransforms's init() registers the version.Transformer chain that downgrades responses (and upgrades requests) for callers on older API versions. Blank-imported so the init runs at startup.
 	_ "github.com/open-mrp/api/services/api-gateway/internal/versiontransforms"
 	"github.com/open-mrp/api/services/api-gateway/internal/ws"
-	"github.com/open-mrp/api/shared/blobstore"
-	"github.com/open-mrp/api/shared/db"
 	"github.com/open-mrp/api/shared/messaging"
-	"github.com/open-mrp/api/shared/tracing"
+	"github.com/open-mrp/apikit/blobstore"
+	"github.com/open-mrp/apikit/db"
 	"github.com/open-mrp/apikit/lease"
+	"github.com/open-mrp/apikit/tracing"
 )
 
 const (
@@ -57,9 +56,6 @@ func Run(
 	if err := cfg.validate(); err != nil {
 		return err
 	}
-
-	// Configure the frontend URL for request log links in error responses.
-	httptransport.SetFrontendURL(cfg.FrontendURL)
 
 	// Initialize the tracing provider.
 	tracerShutdown, err := tracing.InitProvider(ctx, domain.ServiceName, getenv)

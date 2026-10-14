@@ -9,10 +9,10 @@ import (
 	"github.com/open-mrp/api/shared/appctx"
 	"github.com/open-mrp/api/shared/audit"
 	"github.com/open-mrp/api/shared/constants"
-	apierror "github.com/open-mrp/api/shared/errors"
 	"github.com/open-mrp/api/shared/id"
-	"github.com/open-mrp/api/shared/idempotency"
-	"github.com/open-mrp/api/shared/tracing"
+	"github.com/open-mrp/api/shared/idemresponse"
+	apierror "github.com/open-mrp/apikit/apierror"
+	"github.com/open-mrp/apikit/tracing"
 )
 
 var paymentTermSvcTracer = tracing.GetTracer("core-service.payment_term_service")
@@ -177,7 +177,7 @@ func (s *paymentTermSvcImpl) CreatePaymentTerm(ctx context.Context, params domai
 
 	switch domain.RecoveryPoint(idempotencyKey.RecoveryPoint) {
 	case domain.RecoveryPointFinished:
-		cached, err := idempotency.UnmarshalCachedResponse[domain.PaymentTerm](ctx, idempotencyKey.ResponseCode, idempotencyKey.ResponseBody)
+		cached, err := idemresponse.UnmarshalCachedResponse[domain.PaymentTerm](ctx, idempotencyKey.ResponseCode, idempotencyKey.ResponseBody)
 		if err != nil {
 			return nil, tracing.Trace(span, apierror.NewInternalError(err, "Issue unmarshalling cached response."))
 		}
@@ -193,7 +193,7 @@ func (s *paymentTermSvcImpl) CreatePaymentTerm(ctx context.Context, params domai
 				return apiErr
 			}
 			if exists {
-				return apierror.NewConflictErrorWithParam("A payment term with this name already exists.", "name")
+				return apierror.NewConflictErrorWithParam("name", "A payment term with this name already exists.")
 			}
 
 			created, apiErr := txRepo.Create(txCtx, paymentTermID, params)
@@ -255,7 +255,7 @@ func (s *paymentTermSvcImpl) UpdatePaymentTerm(ctx context.Context, params domai
 
 	switch domain.RecoveryPoint(idempotencyKey.RecoveryPoint) {
 	case domain.RecoveryPointFinished:
-		cached, err := idempotency.UnmarshalCachedResponse[domain.PaymentTerm](ctx, idempotencyKey.ResponseCode, idempotencyKey.ResponseBody)
+		cached, err := idemresponse.UnmarshalCachedResponse[domain.PaymentTerm](ctx, idempotencyKey.ResponseCode, idempotencyKey.ResponseBody)
 		if err != nil {
 			return nil, tracing.Trace(span, apierror.NewInternalError(err, "Issue unmarshalling cached response."))
 		}
@@ -280,7 +280,7 @@ func (s *paymentTermSvcImpl) UpdatePaymentTerm(ctx context.Context, params domai
 					return apiErr
 				}
 				if exists {
-					return apierror.NewConflictErrorWithParam("A payment term with this name already exists.", "name")
+					return apierror.NewConflictErrorWithParam("name", "A payment term with this name already exists.")
 				}
 			}
 
@@ -336,13 +336,13 @@ func (s *paymentTermSvcImpl) DeletePaymentTerm(ctx context.Context, paymentTermI
 
 	paymentTerm, apiErr := s.repos.NewPaymentTermRepo().Get(ctx, domain.GetPaymentTermParams{AccountID: accountID, PaymentTermID: paymentTermID})
 	if apiErr != nil {
-		if apierror.IsNotFound(apiErr) {
+		if apierror.HasCode(apiErr, apierror.CodeResourceNotFound) {
 			wasDeleted, deletedCheckErr := s.repos.NewDeletedRecordRepo().ExistsInAccount(ctx, constants.DeletedRecordResourceTypePaymentTerm, paymentTermID, accountID)
 			if deletedCheckErr != nil {
 				return tracing.Trace(span, deletedCheckErr)
 			}
 			if wasDeleted {
-				return tracing.Trace(span, apierror.NewAlreadyDeletedError("This payment term has already been deleted and can no longer be modified."))
+				return tracing.Trace(span, apierror.NewGoneError("This payment term has already been deleted and can no longer be modified."))
 			}
 		}
 		return tracing.Trace(span, apiErr)

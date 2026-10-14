@@ -6,7 +6,7 @@ import (
 
 	apiexample "github.com/open-mrp/api/services/api-gateway/pkg/example"
 	"github.com/open-mrp/api/shared/constants"
-	"github.com/open-mrp/api/shared/timeutil"
+	"github.com/open-mrp/apikit/timeutil"
 )
 
 const SampleAgentRunID = "agrn_l6ob5relrd7t"

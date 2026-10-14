@@ -10,10 +10,10 @@ import (
 	"github.com/open-mrp/api/services/auth-service/internal/domain"
 	"github.com/open-mrp/api/services/auth-service/internal/infrastructure/sqlc"
 	"github.com/open-mrp/api/shared/constants"
-	"github.com/open-mrp/api/shared/db"
-	apierror "github.com/open-mrp/api/shared/errors"
-	"github.com/open-mrp/api/shared/tracing"
+	apierror "github.com/open-mrp/apikit/apierror"
+	"github.com/open-mrp/apikit/db"
 	"github.com/open-mrp/apikit/pagination"
+	"github.com/open-mrp/apikit/tracing"
 )
 
 var apiKeyRepoTracer = tracing.GetTracer("auth-service.api_key_repository")
@@ -32,7 +32,7 @@ func (r *apiKeyRepoImpl) Find(ctx context.Context, apiKeyID string) (*apikey.API
 
 	apiKeyRow, err := r.db.FindAPIKeyWithRoleByKeyID(ctx, apiKeyID)
 	if apiErr := db.MapSQLError(err); apiErr != nil {
-		if apiErr.Code == apierror.ErrorCodeResourceNotFound {
+		if apiErr.Code == apierror.CodeResourceNotFound {
 			return nil, apiErr
 		}
 		return nil, tracing.Trace(span, apiErr)
@@ -126,7 +126,7 @@ func (r *apiKeyRepoImpl) List(ctx context.Context, input domain.APIKeyListRepoIn
 	if input.Cursor != nil {
 		cur, err := pagination.DecodeCursor(*input.Cursor)
 		if err != nil {
-			return nil, apierror.NewValidationErrorWithParam("Invalid pagination cursor.", "cursor")
+			return nil, apierror.NewFieldError("cursor", apierror.CodeInvalidFormat, "Invalid pagination cursor.")
 		}
 		cursorDir = &cur.Direction
 
@@ -332,7 +332,7 @@ func (r *apiKeyRepoImpl) FindByTypeID(ctx context.Context, typeID string, includ
 	if includesContains(includes, "role") {
 		apiKeyRow, err := r.db.FindAPIKeyWithRoleByTypeID(ctx, typeID)
 		if apiErr := db.MapSQLError(err); apiErr != nil {
-			if apiErr.Code == apierror.ErrorCodeResourceNotFound {
+			if apiErr.Code == apierror.CodeResourceNotFound {
 				return nil, apiErr
 			}
 			return nil, tracing.Trace(span, apiErr)
@@ -342,7 +342,7 @@ func (r *apiKeyRepoImpl) FindByTypeID(ctx context.Context, typeID string, includ
 
 	row, err := r.db.FindAPIKeyBaseByTypeID(ctx, typeID)
 	if apiErr := db.MapSQLError(err); apiErr != nil {
-		if apiErr.Code == apierror.ErrorCodeResourceNotFound {
+		if apiErr.Code == apierror.CodeResourceNotFound {
 			return nil, apiErr
 		}
 		return nil, tracing.Trace(span, apiErr)
@@ -389,7 +389,7 @@ func (r *apiKeyRepoImpl) Revoke(ctx context.Context, typeID string, ownerAccount
 		return tracing.Trace(span, apierror.NewInternalError(err, "failed to read rows affected"))
 	}
 	if rows == 0 {
-		return tracing.Trace(span, apierror.NewResourceNotFoundError("API key not found."))
+		return tracing.Trace(span, apierror.NewNotFoundError("API key not found."))
 	}
 
 	return nil
@@ -402,7 +402,7 @@ func (r *apiKeyRepoImpl) FindByDatabaseID(ctx context.Context, id int64, include
 	if includesContains(includes, "role") {
 		apiKeyRow, err := r.db.FindAPIKeyWithRoleByDatabaseID(ctx, id)
 		if apiErr := db.MapSQLError(err); apiErr != nil {
-			if apiErr.Code == apierror.ErrorCodeResourceNotFound {
+			if apiErr.Code == apierror.CodeResourceNotFound {
 				return nil, apiErr
 			}
 			return nil, tracing.Trace(span, apiErr)
@@ -412,7 +412,7 @@ func (r *apiKeyRepoImpl) FindByDatabaseID(ctx context.Context, id int64, include
 
 	row, err := r.db.FindAPIKeyBaseByDatabaseID(ctx, id)
 	if apiErr := db.MapSQLError(err); apiErr != nil {
-		if apiErr.Code == apierror.ErrorCodeResourceNotFound {
+		if apiErr.Code == apierror.CodeResourceNotFound {
 			return nil, apiErr
 		}
 		return nil, tracing.Trace(span, apiErr)

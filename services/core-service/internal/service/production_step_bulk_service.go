@@ -13,13 +13,13 @@ import (
 	"github.com/open-mrp/api/shared/appctx"
 	"github.com/open-mrp/api/shared/audit"
 	"github.com/open-mrp/api/shared/constants"
-	"github.com/open-mrp/api/shared/db"
-	apierror "github.com/open-mrp/api/shared/errors"
 	"github.com/open-mrp/api/shared/excel"
 	"github.com/open-mrp/api/shared/id"
-	"github.com/open-mrp/api/shared/idempotency"
+	"github.com/open-mrp/api/shared/idemresponse"
 	"github.com/open-mrp/api/shared/messaging"
-	"github.com/open-mrp/api/shared/tracing"
+	apierror "github.com/open-mrp/apikit/apierror"
+	"github.com/open-mrp/apikit/db"
+	"github.com/open-mrp/apikit/tracing"
 )
 
 // asyncBulkDeps hands the async bulk engine the plumbing this service already holds.
@@ -62,7 +62,7 @@ func (s *productionStepSvcImpl) BulkCreateProductionSteps(ctx context.Context, p
 
 	switch domain.RecoveryPoint(idempotencyKey.RecoveryPoint) {
 	case domain.RecoveryPointFinished:
-		cached, err := idempotency.UnmarshalCachedResponse[[]domain.BulkCreateProductionStepResult](ctx, idempotencyKey.ResponseCode, idempotencyKey.ResponseBody)
+		cached, err := idemresponse.UnmarshalCachedResponse[[]domain.BulkCreateProductionStepResult](ctx, idempotencyKey.ResponseCode, idempotencyKey.ResponseBody)
 		if err != nil {
 			return nil, tracing.Trace(span, apierror.NewInternalError(err, "Issue unmarshalling cached response."))
 		}
@@ -154,24 +154,24 @@ func validateBulkUpsertStepRows(rows []domain.UpsertProductionStepParams) *apier
 	for i, row := range rows {
 		lowerName := strings.ToLower(row.Name)
 		if _, dup := nameInputSpace[lowerName]; dup {
-			rowErrs.AddValidation(i, fmt.Sprintf("production_steps[%d].name", i), fmt.Sprintf("duplicate name %q in request", row.Name))
+			rowErrs.AddField(i, "name", apierror.CodeInvalidFormat, fmt.Sprintf("duplicate name %q in request", row.Name))
 		}
 		nameInputSpace[lowerName] = struct{}{}
 
 		if row.Production.Item == (domain.ItemIdentifier{}) {
-			rowErrs.AddValidation(i, fmt.Sprintf("production_steps[%d].production", i), "a production is required")
+			rowErrs.AddField(i, "production", apierror.CodeInvalidFormat, "a production is required")
 		}
 
 		consumptionInputSpace := make(map[domain.ItemIdentifier]struct{}, len(row.Consumptions))
 		for j, c := range row.Consumptions {
 			key := domain.ItemIdentifier{ID: c.Item.ID, SKU: strings.ToLower(c.Item.SKU)}
 			if _, dup := consumptionInputSpace[key]; dup {
-				rowErrs.AddValidation(i, fmt.Sprintf("production_steps[%d].consumptions[%d].item", i, j), fmt.Sprintf("duplicate consumption item %q in the row", itemIdentifierLabel(c.Item)))
+				rowErrs.AddField(i, fmt.Sprintf("consumptions[%d].item", j), apierror.CodeInvalidFormat, fmt.Sprintf("duplicate consumption item %q in the row", itemIdentifierLabel(c.Item)))
 			}
 			consumptionInputSpace[key] = struct{}{}
 		}
 	}
-	return rowErrs.Summary("production steps")
+	return rowErrs.Summary("production_steps")
 }
 
 // resolveBulkUpsertStepRows resolves every fuzzy reference in the rows — units, items,
@@ -279,12 +279,10 @@ func resolveBulkUpsertStepRows(ctx context.Context, repos domain.RepoFactory, ac
 			}
 			if costRate {
 				if numerator.DimensionCode != unitDimensionCodeCurrency {
-					return domain.ResolvedUpsertRate{}, apierror.NewValidationErrorWithParam(
-						fmt.Sprintf("%s.numerator_unit must be a currency unit.", field), numParam)
+					return domain.ResolvedUpsertRate{}, apierror.NewFieldError(numParam, apierror.CodeInvalidFormat, fmt.Sprintf("%s.numerator_unit must be a currency unit.", field))
 				}
 				if denominator.DimensionCode == unitDimensionCodeCurrency {
-					return domain.ResolvedUpsertRate{}, apierror.NewValidationErrorWithParam(
-						fmt.Sprintf("%s.denominator_unit must not be a currency unit.", field), denParam)
+					return domain.ResolvedUpsertRate{}, apierror.NewFieldError(denParam, apierror.CodeInvalidFormat, fmt.Sprintf("%s.denominator_unit must not be a currency unit.", field))
 				}
 			}
 			return domain.ResolvedUpsertRate{Value: r.Value, NumeratorUnitID: numerator.ID, DenominatorUnitID: denominator.ID}, nil
@@ -636,10 +634,7 @@ func writeBulkUpsertProductionSteps(txCtx context.Context, txRepos domain.RepoFa
 			// rather than silently ignored.
 			if old != nil && row.DepartmentID != nil &&
 				!(old.DepartmentID != nil && *old.DepartmentID == *row.DepartmentID) {
-				return apierror.NewValidationErrorWithParam(
-					fmt.Sprintf("Production step %q's department cannot be changed by bulk upsert.", old.Name),
-					fmt.Sprintf("production_steps[%d].department", i),
-				)
+				return apierror.NewFieldError(fmt.Sprintf("production_steps[%d].department", i), apierror.CodeInvalidFormat, fmt.Sprintf("Production step %q's department cannot be changed by bulk upsert.", old.Name))
 			}
 
 			if old == nil {
@@ -765,7 +760,7 @@ func writeBulkUpsertProductionSteps(txCtx context.Context, txRepos domain.RepoFa
 			return nil
 		})
 		if rowErr != nil {
-			rowErrors = append(rowErrors, apierror.NewRowError(i, rowErr))
+			rowErrors = append(rowErrors, apierror.RowError{Index: i, Error: rowErr.Object()})
 			continue
 		}
 

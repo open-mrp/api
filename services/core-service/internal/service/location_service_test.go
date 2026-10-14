@@ -12,7 +12,7 @@ import (
 	repositorymock "github.com/open-mrp/api/services/core-service/internal/domain/mock/repository"
 	"github.com/open-mrp/api/shared/appctx"
 	"github.com/open-mrp/api/shared/constants"
-	apierror "github.com/open-mrp/api/shared/errors"
+	apierror "github.com/open-mrp/apikit/apierror"
 	"github.com/open-mrp/apikit/field"
 
 	"github.com/stretchr/testify/suite"
@@ -191,7 +191,7 @@ func (suite *LocationSvcTestSuite) TestListLocations_MissingIdentity() {
 
 	suite.Nil(result)
 	suite.NotNil(err)
-	suite.Equal(apierror.ErrorCodeInternalError, err.Code)
+	suite.Equal(apierror.CodeInternalError, err.Code)
 }
 
 func (suite *LocationSvcTestSuite) TestListLocations_MissingTargetAccount() {
@@ -199,7 +199,7 @@ func (suite *LocationSvcTestSuite) TestListLocations_MissingTargetAccount() {
 
 	suite.Nil(result)
 	suite.NotNil(err)
-	suite.Equal(apierror.ErrorCodeInvalidCredentials, err.Code)
+	suite.Equal(apierror.CodeInvalidCredentials, err.Code)
 }
 
 func (suite *LocationSvcTestSuite) TestListLocations_InsufficientPermissions() {
@@ -219,7 +219,7 @@ func (suite *LocationSvcTestSuite) TestListLocations_InsufficientPermissions() {
 
 	suite.Nil(result)
 	suite.NotNil(err)
-	suite.Equal(apierror.ErrorCodeInsufficientPerms, err.Code)
+	suite.Equal(apierror.CodeInsufficientPermissions, err.Code)
 }
 
 func (suite *LocationSvcTestSuite) TestListLocations_ExternalActorRejected() {
@@ -239,7 +239,7 @@ func (suite *LocationSvcTestSuite) TestListLocations_ExternalActorRejected() {
 
 	suite.Nil(result)
 	suite.NotNil(err)
-	suite.Equal(apierror.ErrorCodeInsufficientPerms, err.Code)
+	suite.Equal(apierror.CodeInsufficientPermissions, err.Code)
 }
 
 func (suite *LocationSvcTestSuite) TestListLocations_RepoError() {
@@ -254,7 +254,7 @@ func (suite *LocationSvcTestSuite) TestListLocations_RepoError() {
 
 	suite.Nil(result)
 	suite.NotNil(err)
-	suite.Equal(apierror.ErrorCodeInternalError, err.Code)
+	suite.Equal(apierror.CodeInternalError, err.Code)
 }
 
 // ── GetLocation ───────────────────────────────────────────────────────────────
@@ -279,7 +279,7 @@ func (suite *LocationSvcTestSuite) TestGetLocation_MissingIdentity() {
 
 	suite.Nil(result)
 	suite.NotNil(err)
-	suite.Equal(apierror.ErrorCodeInternalError, err.Code)
+	suite.Equal(apierror.CodeInternalError, err.Code)
 }
 
 func (suite *LocationSvcTestSuite) TestGetLocation_MissingTargetAccount() {
@@ -287,7 +287,7 @@ func (suite *LocationSvcTestSuite) TestGetLocation_MissingTargetAccount() {
 
 	suite.Nil(result)
 	suite.NotNil(err)
-	suite.Equal(apierror.ErrorCodeInvalidCredentials, err.Code)
+	suite.Equal(apierror.CodeInvalidCredentials, err.Code)
 }
 
 func (suite *LocationSvcTestSuite) TestGetLocation_InsufficientPermissions() {
@@ -307,7 +307,7 @@ func (suite *LocationSvcTestSuite) TestGetLocation_InsufficientPermissions() {
 
 	suite.Nil(result)
 	suite.NotNil(err)
-	suite.Equal(apierror.ErrorCodeInsufficientPerms, err.Code)
+	suite.Equal(apierror.CodeInsufficientPermissions, err.Code)
 }
 
 func (suite *LocationSvcTestSuite) TestGetLocation_NotFound() {
@@ -315,14 +315,14 @@ func (suite *LocationSvcTestSuite) TestGetLocation_NotFound() {
 
 	suite.locationRepo.EXPECT().
 		Get(gomock.Any(), domain.GetLocationParams{AccountID: "ac_loc1", LocationID: "loc_nf"}).
-		Return(nil, apierror.NewResourceNotFoundError("Location not found.")).
+		Return(nil, apierror.NewNotFoundError("Location not found.")).
 		Times(1)
 
 	result, err := suite.locationSvc.GetLocation(ctx, domain.GetLocationParams{LocationID: "loc_nf"})
 
 	suite.Nil(result)
 	suite.NotNil(err)
-	suite.Equal(apierror.ErrorCodeResourceNotFound, err.Code)
+	suite.Equal(apierror.CodeResourceNotFound, err.Code)
 }
 
 // ── ListLocationTypes ─────────────────────────────────────────────────────────
@@ -347,7 +347,7 @@ func (suite *LocationSvcTestSuite) TestListLocationTypes_MissingIdentity() {
 
 	suite.Nil(result)
 	suite.NotNil(err)
-	suite.Equal(apierror.ErrorCodeInternalError, err.Code)
+	suite.Equal(apierror.CodeInternalError, err.Code)
 }
 
 func (suite *LocationSvcTestSuite) TestListLocationTypes_InsufficientPermissions() {
@@ -367,7 +367,7 @@ func (suite *LocationSvcTestSuite) TestListLocationTypes_InsufficientPermissions
 
 	suite.Nil(result)
 	suite.NotNil(err)
-	suite.Equal(apierror.ErrorCodeInsufficientPerms, err.Code)
+	suite.Equal(apierror.CodeInsufficientPermissions, err.Code)
 }
 
 // ── GetLocationType ───────────────────────────────────────────────────────────
@@ -392,7 +392,7 @@ func (suite *LocationSvcTestSuite) TestGetLocationType_MissingIdentity() {
 
 	suite.Nil(result)
 	suite.NotNil(err)
-	suite.Equal(apierror.ErrorCodeInternalError, err.Code)
+	suite.Equal(apierror.CodeInternalError, err.Code)
 }
 
 func (suite *LocationSvcTestSuite) TestGetLocationType_NotFound() {
@@ -400,14 +400,14 @@ func (suite *LocationSvcTestSuite) TestGetLocationType_NotFound() {
 
 	suite.locationRepo.EXPECT().
 		GetType(gomock.Any(), "nonexistent").
-		Return(nil, apierror.NewResourceNotFoundError("Location type not found.")).
+		Return(nil, apierror.NewNotFoundError("Location type not found.")).
 		Times(1)
 
 	result, err := suite.locationSvc.GetLocationType(ctx, domain.GetLocationTypeParams{Identifier: "nonexistent"})
 
 	suite.Nil(result)
 	suite.NotNil(err)
-	suite.Equal(apierror.ErrorCodeResourceNotFound, err.Code)
+	suite.Equal(apierror.CodeResourceNotFound, err.Code)
 }
 
 // ── CreateLocation ────────────────────────────────────────────────────────────
@@ -491,7 +491,7 @@ func (suite *LocationSvcTestSuite) TestCreateLocation_MissingIdentity() {
 
 	suite.Nil(result)
 	suite.NotNil(err)
-	suite.Equal(apierror.ErrorCodeInternalError, err.Code)
+	suite.Equal(apierror.CodeInternalError, err.Code)
 }
 
 func (suite *LocationSvcTestSuite) TestCreateLocation_MissingTargetAccount() {
@@ -501,7 +501,7 @@ func (suite *LocationSvcTestSuite) TestCreateLocation_MissingTargetAccount() {
 
 	suite.Nil(result)
 	suite.NotNil(err)
-	suite.Equal(apierror.ErrorCodeInvalidCredentials, err.Code)
+	suite.Equal(apierror.CodeInvalidCredentials, err.Code)
 }
 
 func (suite *LocationSvcTestSuite) TestCreateLocation_InsufficientPermissions() {
@@ -511,7 +511,7 @@ func (suite *LocationSvcTestSuite) TestCreateLocation_InsufficientPermissions() 
 
 	suite.Nil(result)
 	suite.NotNil(err)
-	suite.Equal(apierror.ErrorCodeInsufficientPerms, err.Code)
+	suite.Equal(apierror.CodeInsufficientPermissions, err.Code)
 }
 
 func (suite *LocationSvcTestSuite) TestCreateLocation_ParentNotInAccount() {
@@ -532,7 +532,7 @@ func (suite *LocationSvcTestSuite) TestCreateLocation_ParentNotInAccount() {
 
 	suite.Nil(result)
 	suite.NotNil(err)
-	suite.Equal(apierror.ErrorCodeValidationFailed, err.Code)
+	suite.Equal(apierror.CodeValidationFailed, err.Code)
 	suite.Equal("parent_id", err.Param)
 }
 
@@ -554,7 +554,7 @@ func (suite *LocationSvcTestSuite) TestCreateLocation_ChildNotInAccount() {
 
 	suite.Nil(result)
 	suite.NotNil(err)
-	suite.Equal(apierror.ErrorCodeValidationFailed, err.Code)
+	suite.Equal(apierror.CodeValidationFailed, err.Code)
 	suite.Equal("child_ids", err.Param)
 }
 
@@ -575,7 +575,7 @@ func (suite *LocationSvcTestSuite) TestCreateLocation_RepoCreateError() {
 
 	suite.Nil(result)
 	suite.NotNil(err)
-	suite.Equal(apierror.ErrorCodeInternalError, err.Code)
+	suite.Equal(apierror.CodeInternalError, err.Code)
 }
 
 func (suite *LocationSvcTestSuite) TestCreateLocation_IdempotencyFinished() {
@@ -614,7 +614,7 @@ func (suite *LocationSvcTestSuite) TestCreateLocation_UnexpectedRecoveryPoint() 
 
 	suite.Nil(result)
 	suite.NotNil(err)
-	suite.Equal(apierror.ErrorCodeInternalError, err.Code)
+	suite.Equal(apierror.CodeInternalError, err.Code)
 }
 
 // ── UpdateLocation ────────────────────────────────────────────────────────────
@@ -653,7 +653,7 @@ func (suite *LocationSvcTestSuite) TestUpdateLocation_MissingIdentity() {
 
 	suite.Nil(result)
 	suite.NotNil(err)
-	suite.Equal(apierror.ErrorCodeInternalError, err.Code)
+	suite.Equal(apierror.CodeInternalError, err.Code)
 }
 
 func (suite *LocationSvcTestSuite) TestUpdateLocation_MissingTargetAccount() {
@@ -663,7 +663,7 @@ func (suite *LocationSvcTestSuite) TestUpdateLocation_MissingTargetAccount() {
 
 	suite.Nil(result)
 	suite.NotNil(err)
-	suite.Equal(apierror.ErrorCodeInvalidCredentials, err.Code)
+	suite.Equal(apierror.CodeInvalidCredentials, err.Code)
 }
 
 func (suite *LocationSvcTestSuite) TestUpdateLocation_InsufficientPermissions() {
@@ -673,7 +673,7 @@ func (suite *LocationSvcTestSuite) TestUpdateLocation_InsufficientPermissions() 
 
 	suite.Nil(result)
 	suite.NotNil(err)
-	suite.Equal(apierror.ErrorCodeInsufficientPerms, err.Code)
+	suite.Equal(apierror.CodeInsufficientPermissions, err.Code)
 }
 
 func (suite *LocationSvcTestSuite) TestUpdateLocation_LocationNotInAccount() {
@@ -692,7 +692,7 @@ func (suite *LocationSvcTestSuite) TestUpdateLocation_LocationNotInAccount() {
 
 	suite.Nil(result)
 	suite.NotNil(err)
-	suite.Equal(apierror.ErrorCodeResourceNotFound, err.Code)
+	suite.Equal(apierror.CodeResourceNotFound, err.Code)
 }
 
 func (suite *LocationSvcTestSuite) TestUpdateLocation_SelfParentRejected() {
@@ -717,7 +717,7 @@ func (suite *LocationSvcTestSuite) TestUpdateLocation_SelfParentRejected() {
 
 	suite.Nil(result)
 	suite.NotNil(err)
-	suite.Equal(apierror.ErrorCodeValidationFailed, err.Code)
+	suite.Equal(apierror.CodeValidationFailed, err.Code)
 	suite.Equal("parent_id", err.Param)
 }
 
@@ -749,7 +749,7 @@ func (suite *LocationSvcTestSuite) TestUpdateLocation_ParentNotInAccount() {
 
 	suite.Nil(result)
 	suite.NotNil(err)
-	suite.Equal(apierror.ErrorCodeValidationFailed, err.Code)
+	suite.Equal(apierror.CodeValidationFailed, err.Code)
 	suite.Equal("parent_id", err.Param)
 }
 
@@ -778,7 +778,7 @@ func (suite *LocationSvcTestSuite) TestUpdateLocation_ChildNotInAccount() {
 
 	suite.Nil(result)
 	suite.NotNil(err)
-	suite.Equal(apierror.ErrorCodeValidationFailed, err.Code)
+	suite.Equal(apierror.CodeValidationFailed, err.Code)
 	suite.Equal("child_ids", err.Param)
 }
 
@@ -890,7 +890,7 @@ func (suite *LocationSvcTestSuite) TestUpdateLocation_UnexpectedRecoveryPoint() 
 
 	suite.Nil(result)
 	suite.NotNil(err)
-	suite.Equal(apierror.ErrorCodeInternalError, err.Code)
+	suite.Equal(apierror.CodeInternalError, err.Code)
 }
 
 // ── DeleteLocation ────────────────────────────────────────────────────────────
@@ -924,14 +924,14 @@ func (suite *LocationSvcTestSuite) TestDeleteLocation_MissingIdentity() {
 	err := suite.locationSvc.DeleteLocation(context.Background(), domain.DeleteLocationParams{LocationID: "loc_d2"})
 
 	suite.NotNil(err)
-	suite.Equal(apierror.ErrorCodeInternalError, err.Code)
+	suite.Equal(apierror.CodeInternalError, err.Code)
 }
 
 func (suite *LocationSvcTestSuite) TestDeleteLocation_MissingTargetAccount() {
 	err := suite.locationSvc.DeleteLocation(noTargetLocationCtx(), domain.DeleteLocationParams{LocationID: "loc_d2"})
 
 	suite.NotNil(err)
-	suite.Equal(apierror.ErrorCodeInvalidCredentials, err.Code)
+	suite.Equal(apierror.CodeInvalidCredentials, err.Code)
 }
 
 func (suite *LocationSvcTestSuite) TestDeleteLocation_InsufficientPermissions() {
@@ -940,7 +940,7 @@ func (suite *LocationSvcTestSuite) TestDeleteLocation_InsufficientPermissions() 
 	err := suite.locationSvc.DeleteLocation(ctx, domain.DeleteLocationParams{LocationID: "loc_d2"})
 
 	suite.NotNil(err)
-	suite.Equal(apierror.ErrorCodeInsufficientPerms, err.Code)
+	suite.Equal(apierror.CodeInsufficientPermissions, err.Code)
 }
 
 func (suite *LocationSvcTestSuite) TestDeleteLocation_AlreadyDeleted() {
@@ -948,7 +948,7 @@ func (suite *LocationSvcTestSuite) TestDeleteLocation_AlreadyDeleted() {
 
 	suite.locationRepo.EXPECT().
 		Get(gomock.Any(), domain.GetLocationParams{AccountID: "ac_loc1", LocationID: "loc_gone"}).
-		Return(nil, apierror.NewResourceNotFoundError("not found")).
+		Return(nil, apierror.NewNotFoundError("not found")).
 		Times(1)
 	suite.deletedRecordRepo.EXPECT().
 		ExistsInAccount(gomock.Any(), constants.DeletedRecordResourceTypeLocation, "loc_gone", "ac_loc1").
@@ -958,7 +958,7 @@ func (suite *LocationSvcTestSuite) TestDeleteLocation_AlreadyDeleted() {
 	err := suite.locationSvc.DeleteLocation(ctx, domain.DeleteLocationParams{LocationID: "loc_gone"})
 
 	suite.NotNil(err)
-	suite.Equal(apierror.ErrorCodeResourceGone, err.Code)
+	suite.Equal(apierror.CodeResourceGone, err.Code)
 }
 
 func (suite *LocationSvcTestSuite) TestDeleteLocation_NotFound() {
@@ -966,7 +966,7 @@ func (suite *LocationSvcTestSuite) TestDeleteLocation_NotFound() {
 
 	suite.locationRepo.EXPECT().
 		Get(gomock.Any(), domain.GetLocationParams{AccountID: "ac_loc1", LocationID: "loc_nf2"}).
-		Return(nil, apierror.NewResourceNotFoundError("not found")).
+		Return(nil, apierror.NewNotFoundError("not found")).
 		Times(1)
 	suite.deletedRecordRepo.EXPECT().
 		ExistsInAccount(gomock.Any(), constants.DeletedRecordResourceTypeLocation, "loc_nf2", "ac_loc1").
@@ -976,7 +976,7 @@ func (suite *LocationSvcTestSuite) TestDeleteLocation_NotFound() {
 	err := suite.locationSvc.DeleteLocation(ctx, domain.DeleteLocationParams{LocationID: "loc_nf2"})
 
 	suite.NotNil(err)
-	suite.Equal(apierror.ErrorCodeResourceNotFound, err.Code)
+	suite.Equal(apierror.CodeResourceNotFound, err.Code)
 }
 
 func (suite *LocationSvcTestSuite) TestDeleteLocation_HasChildren() {
@@ -994,7 +994,7 @@ func (suite *LocationSvcTestSuite) TestDeleteLocation_HasChildren() {
 	err := suite.locationSvc.DeleteLocation(ctx, domain.DeleteLocationParams{LocationID: "loc_parent"})
 
 	suite.NotNil(err)
-	suite.Equal(apierror.ErrorCodeValidationFailed, err.Code)
+	suite.Equal(apierror.CodeValidationFailed, err.Code)
 	suite.Contains(err.PublicMessage, "child locations")
 }
 
@@ -1013,7 +1013,7 @@ func (suite *LocationSvcTestSuite) TestDeleteLocation_CountChildrenError() {
 	err := suite.locationSvc.DeleteLocation(ctx, domain.DeleteLocationParams{LocationID: "loc_d_err"})
 
 	suite.NotNil(err)
-	suite.Equal(apierror.ErrorCodeInternalError, err.Code)
+	suite.Equal(apierror.CodeInternalError, err.Code)
 }
 
 // ── BulkUpsertLocations ───────────────────────────────────────────────────────
@@ -1025,7 +1025,7 @@ func (suite *LocationSvcTestSuite) TestBulkUpsertLocations_MissingIdentity() {
 
 	suite.Nil(result)
 	suite.NotNil(err)
-	suite.Equal(apierror.ErrorCodeInternalError, err.Code)
+	suite.Equal(apierror.CodeInternalError, err.Code)
 }
 
 func (suite *LocationSvcTestSuite) TestBulkUpsertLocations_MissingTargetAccount() {
@@ -1037,7 +1037,7 @@ func (suite *LocationSvcTestSuite) TestBulkUpsertLocations_MissingTargetAccount(
 
 	suite.Nil(result)
 	suite.NotNil(err)
-	suite.Equal(apierror.ErrorCodeInvalidCredentials, err.Code)
+	suite.Equal(apierror.CodeInvalidCredentials, err.Code)
 }
 
 func (suite *LocationSvcTestSuite) TestBulkUpsertLocations_InsufficientPermissions_NoCreate() {
@@ -1049,7 +1049,7 @@ func (suite *LocationSvcTestSuite) TestBulkUpsertLocations_InsufficientPermissio
 
 	suite.Nil(result)
 	suite.NotNil(err)
-	suite.Equal(apierror.ErrorCodeInsufficientPerms, err.Code)
+	suite.Equal(apierror.CodeInsufficientPermissions, err.Code)
 }
 
 func (suite *LocationSvcTestSuite) TestBulkUpsertLocations_InsufficientPermissions_NoUpdate() {
@@ -1061,7 +1061,7 @@ func (suite *LocationSvcTestSuite) TestBulkUpsertLocations_InsufficientPermissio
 
 	suite.Nil(result)
 	suite.NotNil(err)
-	suite.Equal(apierror.ErrorCodeInsufficientPerms, err.Code)
+	suite.Equal(apierror.CodeInsufficientPermissions, err.Code)
 }
 
 func (suite *LocationSvcTestSuite) TestBulkUpsertLocations_Empty() {
@@ -1073,7 +1073,7 @@ func (suite *LocationSvcTestSuite) TestBulkUpsertLocations_Empty() {
 
 	suite.Nil(result)
 	suite.NotNil(err)
-	suite.Equal(apierror.ErrorCodeValidationFailed, err.Code)
+	suite.Equal(apierror.CodeValidationFailed, err.Code)
 	suite.Contains(err.PublicMessage, "No locations provided")
 }
 
@@ -1085,7 +1085,7 @@ func (suite *LocationSvcTestSuite) TestBulkUpsertLocations_TooMany() {
 
 	suite.Nil(result)
 	suite.NotNil(err)
-	suite.Equal(apierror.ErrorCodeValidationFailed, err.Code)
+	suite.Equal(apierror.CodeValidationFailed, err.Code)
 	suite.Contains(err.PublicMessage, "1000")
 }
 
@@ -1101,9 +1101,9 @@ func (suite *LocationSvcTestSuite) TestBulkUpsertLocations_DuplicateNameInReques
 
 	suite.Nil(result)
 	suite.NotNil(err)
-	suite.Equal(apierror.ErrorCodeValidationFailed, err.Code)
+	suite.Equal(apierror.CodeValidationFailed, err.Code)
 	suite.Equal("locations[1].name", err.Param)
-	suite.Contains(err.PublicMessage, "duplicate name")
+	suite.Contains(err.Errors[0].Message, "duplicate name")
 }
 
 // --- resolveBulkUpsertLocationRows (the engine's Resolve hook, exercised directly) ---
@@ -1129,7 +1129,7 @@ func (suite *LocationSvcTestSuite) TestResolveBulkUpsertLocations_UnknownParent(
 
 	suite.Nil(resolved)
 	suite.NotNil(err)
-	suite.Equal(apierror.ErrorCodeValidationFailed, err.Code)
+	suite.Equal(apierror.CodeValidationFailed, err.Code)
 }
 
 // A reference to a sibling defined in the same batch is an intra-batch link: it resolves to
@@ -1190,7 +1190,7 @@ func (suite *LocationSvcTestSuite) TestWriteBulkUpsertLocations_FindByNamesError
 	_, _, _, err := suite.writeLocations(domain.ResolvedUpsertLocationRow{Name: "Bin", TypeCode: "bin"})
 
 	suite.NotNil(err, "a failed bulk read is infrastructural — it fails the whole batch")
-	suite.Equal(apierror.ErrorCodeInternalError, err.Code)
+	suite.Equal(apierror.CodeInternalError, err.Code)
 }
 
 func (suite *LocationSvcTestSuite) TestWriteBulkUpsertLocations_AllCreates() {

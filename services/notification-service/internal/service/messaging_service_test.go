@@ -15,8 +15,8 @@ import (
 	"github.com/open-mrp/api/shared/appctx"
 	"github.com/open-mrp/api/shared/constants"
 	"github.com/open-mrp/api/shared/contracts"
-	apierror "github.com/open-mrp/api/shared/errors"
 	"github.com/open-mrp/api/shared/messaging"
+	apierror "github.com/open-mrp/apikit/apierror"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -114,7 +114,7 @@ func TestCursor_Malformed(t *testing.T) {
 			c := cursor
 			_, _, apiErr := decodeCursor(&c)
 			require.NotNil(t, apiErr, "malformed cursor should error")
-			assert.Equal(t, apierror.ErrorCodeParameterInvalid, apiErr.Code)
+			assert.Equal(t, apierror.CodeParameterInvalid, apiErr.Code)
 		})
 	}
 }
@@ -157,7 +157,7 @@ func TestConversationCursor_NoneAndMalformed(t *testing.T) {
 			c := cursor
 			_, apiErr := decodeConversationCursor(&c)
 			require.NotNil(t, apiErr)
-			assert.Equal(t, apierror.ErrorCodeParameterInvalid, apiErr.Code)
+			assert.Equal(t, apierror.CodeParameterInvalid, apiErr.Code)
 		})
 	}
 }
@@ -196,7 +196,7 @@ func TestSendNotification_PermissionDenied(t *testing.T) {
 		TargetID:   target,
 	})
 	require.NotNil(t, apiErr)
-	assert.Equal(t, apierror.ErrorCodeInsufficientPerms, apiErr.Code)
+	assert.Equal(t, apierror.CodeInsufficientPermissions, apiErr.Code)
 }
 
 func TestSendNotification_Validation(t *testing.T) {
@@ -207,14 +207,14 @@ func TestSendNotification_Validation(t *testing.T) {
 		svc := newSvc(t, nil, &fakeOutboxRepo{})
 		_, apiErr := svc.SendNotification(ctx, domain.SendNotificationInput{Category: "order.updated", TargetType: "account_user", TargetID: target})
 		require.NotNil(t, apiErr)
-		assert.Equal(t, apierror.ErrorCodeParameterMissing, apiErr.Code)
+		assert.Equal(t, apierror.CodeParameterMissing, apiErr.Code)
 	})
 
 	t.Run("missing target", func(t *testing.T) {
 		svc := newSvc(t, nil, &fakeOutboxRepo{})
 		_, apiErr := svc.SendNotification(ctx, domain.SendNotificationInput{Category: "order.updated", Title: "hi"})
 		require.NotNil(t, apiErr)
-		assert.Equal(t, apierror.ErrorCodeParameterMissing, apiErr.Code)
+		assert.Equal(t, apierror.CodeParameterMissing, apiErr.Code)
 	})
 
 	t.Run("broadcast creates an account-scoped announcement", func(t *testing.T) {
@@ -630,7 +630,7 @@ func TestList_GracefulEmptyWhenNoAccountUser(t *testing.T) {
 
 	// No account_user (e.g. an API key) → ResolveAccountUserID returns not-found.
 	notifRepo.EXPECT().ResolveAccountUserID(gomock.Any(), testUserID, testAccountID).
-		Return("", apierror.NewResourceNotFoundError("not found"))
+		Return("", apierror.NewNotFoundError("not found"))
 	// List is still called, but with an empty recipient (yields an empty feed).
 	notifRepo.EXPECT().List(gomock.Any(), gomock.Any()).
 		DoAndReturn(func(_ context.Context, f domain.NotificationListFilter) ([]*domain.Notification, *apierror.APIError) {
@@ -654,14 +654,14 @@ func TestRecipient_PropagatesNonNotFoundError(t *testing.T) {
 
 	_, apiErr := svc.GetUnreadCount(ctx)
 	require.NotNil(t, apiErr)
-	assert.Equal(t, apierror.ErrorCodeInternalError, apiErr.Code)
+	assert.Equal(t, apierror.CodeInternalError, apiErr.Code)
 }
 
 func TestActor_RequiresAuthentication(t *testing.T) {
 	svc := newSvc(t, nil, nil)
 	_, apiErr := svc.GetUnreadCount(context.Background()) // no identity
 	require.NotNil(t, apiErr)
-	assert.Equal(t, apierror.ErrorCodeInvalidCredentials, apiErr.Code)
+	assert.Equal(t, apierror.CodeInvalidCredentials, apiErr.Code)
 }
 
 // ── Announcements ──────────────────────────────────────────────────
@@ -790,7 +790,7 @@ func TestUpsertNotificationPreference_AuditsCreateThenUpdate(t *testing.T) {
 			prefRepo := repositorymock.NewMockNotificationPreferenceRepo(ctrl)
 			var existingErr *apierror.APIError
 			if tc.existing == nil {
-				existingErr = apierror.NewResourceNotFoundError("not found")
+				existingErr = apierror.NewNotFoundError("not found")
 			}
 			gomock.InOrder(
 				prefRepo.EXPECT().GetByUserCategory(gomock.Any(), testRecipient, "chat.message").Return(tc.existing, existingErr),

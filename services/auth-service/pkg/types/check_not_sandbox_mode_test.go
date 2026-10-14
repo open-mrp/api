@@ -4,7 +4,7 @@ import (
 	"testing"
 
 	"github.com/open-mrp/api/shared/constants"
-	apierror "github.com/open-mrp/api/shared/errors"
+	apierror "github.com/open-mrp/apikit/apierror"
 )
 
 func TestCheckNotSandboxMode(t *testing.T) {
@@ -13,7 +13,7 @@ func TestCheckNotSandboxMode(t *testing.T) {
 	tests := []struct {
 		name         string
 		identity     *Identity
-		expectedCode apierror.ErrorCode
+		expectedCode apierror.Code
 		expectNil    bool
 	}{
 		{
@@ -23,7 +23,7 @@ func TestCheckNotSandboxMode(t *testing.T) {
 				AccountMode: constants.AccountModeSandbox,
 				Actor:       &IdentityActor{ID: "usr_123"},
 			},
-			expectedCode: apierror.ErrorCodeInsufficientPerms,
+			expectedCode: apierror.CodeInsufficientPermissions,
 		},
 		{
 			name: "allows production mode",
@@ -39,7 +39,7 @@ func TestCheckNotSandboxMode(t *testing.T) {
 			identity: &Identity{
 				Type: IdentityActorTypeUnauthenticated,
 			},
-			expectedCode: apierror.ErrorCodeInvalidCredentials,
+			expectedCode: apierror.CodeInvalidCredentials,
 		},
 	}
 

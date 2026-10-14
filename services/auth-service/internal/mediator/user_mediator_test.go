@@ -15,7 +15,7 @@ import (
 	"github.com/open-mrp/api/services/auth-service/internal/token"
 	"github.com/open-mrp/api/services/auth-service/pkg/types"
 	"github.com/open-mrp/api/shared/constants"
-	apierror "github.com/open-mrp/api/shared/errors"
+	apierror "github.com/open-mrp/apikit/apierror"
 
 	"go.uber.org/mock/gomock"
 )
@@ -370,10 +370,10 @@ func TestValidateCredential_UserExpiredToken(t *testing.T) {
 	if err.PublicMessage != token.ErrExpiredJWT {
 		t.Fatalf("expected expired JWT message, got %s", err.PublicMessage)
 	}
-	if err.Code != apierror.ErrorCodeExpiredToken {
+	if err.Code != apierror.CodeExpiredToken {
 		t.Fatalf("expected expired token code, got %s", err.Code)
 	}
-	if err.Type != apierror.ErrorTypeInvalidRequest {
+	if err.Type != apierror.TypeInvalidRequest {
 		t.Fatalf("expected invalid request type, got %s", err.Type)
 	}
 }
@@ -386,7 +386,7 @@ func TestValidateCredential_EmptyToken_AccountNotFound(t *testing.T) {
 	coreClient := clientmock.NewMockAuthCoreClient(ctrl)
 
 	coreClient.EXPECT().GetAccountContext(gomock.Any(), "acct-nonexistent").
-		Return(nil, apierror.NewResourceNotFoundError("Account not found"))
+		Return(nil, apierror.NewNotFoundError("Account not found"))
 
 	med := &userMedImpl{
 		coreClient: coreClient,
@@ -399,7 +399,7 @@ func TestValidateCredential_EmptyToken_AccountNotFound(t *testing.T) {
 	if identity != nil {
 		t.Fatalf("expected nil identity on error, got %+v", identity)
 	}
-	if err.Code != apierror.ErrorCodeInsufficientPerms {
+	if err.Code != apierror.CodeInsufficientPermissions {
 		t.Fatalf("expected insufficient_permissions error code, got %s", err.Code)
 	}
 	if err.PublicMessage != errNoAccountAccess("acct-nonexistent") {
@@ -431,7 +431,7 @@ func TestValidateCredential_UserToken_AccountNotFound(t *testing.T) {
 
 	userRepo.EXPECT().Find(gomock.Any(), userID).Return(userModel, nil)
 	coreClient.EXPECT().GetAccountContext(gomock.Any(), "acct-nonexistent").
-		Return(nil, apierror.NewResourceNotFoundError("Account not found"))
+		Return(nil, apierror.NewNotFoundError("Account not found"))
 
 	med := &userMedImpl{
 		repos:      repoFactory,
@@ -447,7 +447,7 @@ func TestValidateCredential_UserToken_AccountNotFound(t *testing.T) {
 	if identity != nil {
 		t.Fatalf("expected nil identity on error, got %+v", identity)
 	}
-	if err.Code != apierror.ErrorCodeInsufficientPerms {
+	if err.Code != apierror.CodeInsufficientPermissions {
 		t.Fatalf("expected insufficient_permissions error code, got %s", err.Code)
 	}
 	if err.PublicMessage != errNoAccountAccess("acct-nonexistent") {
@@ -502,7 +502,7 @@ func TestValidateCredential_UserToken_UserAccountAccessNotFound(t *testing.T) {
 	if identity != nil {
 		t.Fatalf("expected nil identity on error, got %+v", identity)
 	}
-	if err.Code != apierror.ErrorCodeInsufficientPerms {
+	if err.Code != apierror.CodeInsufficientPermissions {
 		t.Fatalf("expected insufficient_permissions error code, got %s", err.Code)
 	}
 	if err.PublicMessage != errNoAccountAccess("acct-no-access") {
@@ -554,7 +554,7 @@ func TestValidateCredential_UserToken_ActorAccountHeader_RequiresAccountUser(t *
 	if identity != nil {
 		t.Fatalf("expected nil identity on error, got %+v", identity)
 	}
-	if err.Code != apierror.ErrorCodeInvalidCredentials {
+	if err.Code != apierror.CodeInvalidCredentials {
 		t.Fatalf("expected invalid_credentials (401), got %s", err.Code)
 	}
 	if err.PublicMessage != ErrActorAccountRequiresMember {
@@ -782,7 +782,7 @@ func TestValidateCredential_UserToken_NoActorAccountRejectsOwnerSide(t *testing.
 	if identity != nil {
 		t.Fatalf("expected nil identity on error, got %+v", identity)
 	}
-	if err.Code != apierror.ErrorCodeInsufficientPerms {
+	if err.Code != apierror.CodeInsufficientPermissions {
 		t.Fatalf("expected insufficient_permissions error code, got %s", err.Code)
 	}
 }

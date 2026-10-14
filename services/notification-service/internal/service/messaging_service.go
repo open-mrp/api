@@ -16,11 +16,11 @@ import (
 	"github.com/open-mrp/api/shared/audit"
 	"github.com/open-mrp/api/shared/constants"
 	"github.com/open-mrp/api/shared/contracts"
-	apierror "github.com/open-mrp/api/shared/errors"
 	"github.com/open-mrp/api/shared/id"
 	"github.com/open-mrp/api/shared/messaging"
-	"github.com/open-mrp/api/shared/tracing"
+	apierror "github.com/open-mrp/apikit/apierror"
 	"github.com/open-mrp/apikit/ptrutil"
+	"github.com/open-mrp/apikit/tracing"
 )
 
 var messagingSvcTracer = tracing.GetTracer("notification-service.messaging_service")
@@ -61,7 +61,7 @@ func (s *messagingSvcImpl) recipient(ctx context.Context) (string, *apierror.API
 	recipientID, apiErr := s.repoFactory.NewNotificationRepo().ResolveAccountUserID(ctx, identity.Actor.ID, identity.Target.AccountID)
 	if apiErr != nil {
 		// Actors without an account_user in the target account (e.g. API keys) have no personal feed. Return an empty recipient so reads yield an empty feed / zero counts rather than a 404 — a list endpoint should not 404 for an authed caller.
-		if apiErr.Code == apierror.ErrorCodeResourceNotFound {
+		if apiErr.Code == apierror.CodeResourceNotFound {
 			return "", nil
 		}
 		return "", apiErr
@@ -85,17 +85,17 @@ func (s *messagingSvcImpl) SendNotification(ctx context.Context, input domain.Se
 	}
 
 	if input.Title == "" {
-		return 0, tracing.Trace(span, apierror.NewParameterMissingError("A title is required.", "title"))
+		return 0, tracing.Trace(span, apierror.NewParameterMissingError("title", "A title is required."))
 	}
 	if input.TargetID == "" {
-		return 0, tracing.Trace(span, apierror.NewParameterMissingError("A target is required.", "target"))
+		return 0, tracing.Trace(span, apierror.NewParameterMissingError("target", "A target is required."))
 	}
 
 	switch constants.NotificationTargetType(input.TargetType) {
 	case constants.NotificationTargetTypeAccount:
 		// An account target is stored once as an account-scoped announcement (with per-user receipts), not per-user rows, so it scales to every user in the account. An admin may only broadcast to the account they are acting in.
 		if input.TargetID != identity.Target.AccountID {
-			return 0, tracing.Trace(span, apierror.NewParameterInvalidError("Broadcasts may only target the current account.", "target.id"))
+			return 0, tracing.Trace(span, apierror.NewParameterInvalidError("target.id", "Broadcasts may only target the current account."))
 		}
 		if apiErr := s.createBroadcastAnnouncement(ctx, identity, input); apiErr != nil {
 			return 0, tracing.Trace(span, apiErr)
@@ -104,7 +104,7 @@ func (s *messagingSvcImpl) SendNotification(ctx context.Context, input domain.Se
 	case constants.NotificationTargetTypeAccountUser:
 		// Fall through to the per-user fan-out below.
 	default:
-		return 0, tracing.Trace(span, apierror.NewParameterInvalidError("The target type is not supported.", "target.type"))
+		return 0, tracing.Trace(span, apierror.NewParameterInvalidError("target.type", "The target type is not supported."))
 	}
 
 	data := messaging.AlertFanoutData{
@@ -757,7 +757,7 @@ func (s *messagingSvcImpl) markAnnouncement(ctx context.Context, op, announcemen
 	}
 	if recipient == "" {
 		// No account_user (e.g. an API key) → no receipt to write; nothing to mark.
-		return nil, tracing.Trace(span, apierror.NewResourceNotFoundError("Announcement not found."))
+		return nil, tracing.Trace(span, apierror.NewNotFoundError("Announcement not found."))
 	}
 
 	repo := s.repoFactory.NewAnnouncementRepo()
@@ -789,15 +789,15 @@ func decodeCursor(cursor *string) (*time.Time, *string, *apierror.APIError) {
 	}
 	raw, err := base64.RawURLEncoding.DecodeString(*cursor)
 	if err != nil {
-		return nil, nil, apierror.NewParameterInvalidError("The cursor is invalid.", "cursor")
+		return nil, nil, apierror.NewParameterInvalidError("cursor", "The cursor is invalid.")
 	}
 	parts := strings.SplitN(string(raw), "|", 2)
 	if len(parts) != 2 {
-		return nil, nil, apierror.NewParameterInvalidError("The cursor is invalid.", "cursor")
+		return nil, nil, apierror.NewParameterInvalidError("cursor", "The cursor is invalid.")
 	}
 	createdAt, err := time.Parse(time.RFC3339Nano, parts[0])
 	if err != nil {
-		return nil, nil, apierror.NewParameterInvalidError("The cursor is invalid.", "cursor")
+		return nil, nil, apierror.NewParameterInvalidError("cursor", "The cursor is invalid.")
 	}
 	return &createdAt, &parts[1], nil
 }
@@ -870,7 +870,7 @@ func (s *messagingSvcImpl) UpsertNotificationPreference(ctx context.Context, inp
 	accountID := identity.Target.AccountID
 	recipientID, apiErr := s.repoFactory.NewNotificationRepo().ResolveAccountUserID(ctx, identity.Actor.ID, accountID)
 	if apiErr != nil {
-		if apiErr.Code == apierror.ErrorCodeResourceNotFound {
+		if apiErr.Code == apierror.CodeResourceNotFound {
 			return nil, tracing.Trace(span, apierror.NewAuthorizationError("Notification preferences are only available to users with an account membership."))
 		}
 		return nil, tracing.Trace(span, apiErr)
@@ -880,10 +880,10 @@ func (s *messagingSvcImpl) UpsertNotificationPreference(ctx context.Context, inp
 		input.Digest = string(constants.NotificationDigestInstant)
 	}
 	if !constants.NotificationDigest(input.Digest).IsValid() {
-		return nil, tracing.Trace(span, apierror.NewParameterInvalidError("An invalid digest was supplied.", "digest"))
+		return nil, tracing.Trace(span, apierror.NewParameterInvalidError("digest", "An invalid digest was supplied."))
 	}
 	if input.Category != "" && !constants.NotificationCategory(input.Category).IsValid() {
-		return nil, tracing.Trace(span, apierror.NewParameterInvalidError("An invalid category was supplied.", "category"))
+		return nil, tracing.Trace(span, apierror.NewParameterInvalidError("category", "An invalid category was supplied."))
 	}
 
 	prefID, apiErr := id.GenID(id.NotificationPreferenceIDPrefix, nil)
@@ -894,7 +894,7 @@ func (s *messagingSvcImpl) UpsertNotificationPreference(ctx context.Context, inp
 	apiErr = s.txManager.WithTx(ctx, func(txCtx context.Context, f domain.RepoFactory) *apierror.APIError {
 		prefRepo := f.NewNotificationPreferenceRepo()
 		before, apiErr := prefRepo.GetByUserCategory(txCtx, recipientID, input.Category)
-		if apiErr != nil && apiErr.Code != apierror.ErrorCodeResourceNotFound {
+		if apiErr != nil && apiErr.Code != apierror.CodeResourceNotFound {
 			return apiErr
 		}
 		if apiErr := prefRepo.Upsert(txCtx, prefID, accountID, recipientID, &input); apiErr != nil {

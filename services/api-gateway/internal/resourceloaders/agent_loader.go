@@ -7,10 +7,10 @@ import (
 	grpcutil "github.com/open-mrp/api/services/api-gateway/internal/grpc"
 	apiresource "github.com/open-mrp/api/services/api-gateway/pkg/resource"
 	"github.com/open-mrp/api/shared/constants"
-	apierror "github.com/open-mrp/api/shared/errors"
 	agentpb "github.com/open-mrp/api/shared/proto/agent"
-	"github.com/open-mrp/api/shared/timeutil"
-	"github.com/open-mrp/api/shared/tracing"
+	apierror "github.com/open-mrp/apikit/apierror"
+	"github.com/open-mrp/apikit/timeutil"
+	"github.com/open-mrp/apikit/tracing"
 	"google.golang.org/grpc"
 )
 
@@ -36,7 +36,7 @@ func LoadAgentDefinitions(ctx context.Context, ids []string) (map[string]any, *a
 				return agentClient.GetAgentDefinition(ctx, &agentpb.GetAgentDefinitionRequest{AgentDefinitionId: agentID}, opts...)
 			})
 		if apiErr != nil {
-			if apierror.IsNotFound(apiErr) {
+			if apierror.HasCode(apiErr, apierror.CodeResourceNotFound) {
 				continue
 			}
 			return nil, apiErr

@@ -11,11 +11,11 @@ import (
 	"github.com/open-mrp/api/shared/appctx"
 	"github.com/open-mrp/api/shared/audit"
 	"github.com/open-mrp/api/shared/constants"
-	apierror "github.com/open-mrp/api/shared/errors"
 	"github.com/open-mrp/api/shared/id"
-	"github.com/open-mrp/api/shared/idempotency"
-	"github.com/open-mrp/api/shared/tracing"
+	"github.com/open-mrp/api/shared/idemresponse"
+	apierror "github.com/open-mrp/apikit/apierror"
 	"github.com/open-mrp/apikit/crypto"
+	"github.com/open-mrp/apikit/tracing"
 )
 
 var carrierSvcTracer = tracing.GetTracer("core-service.carrier_service")
@@ -356,7 +356,7 @@ func (s *carrierSvcImpl) CreateCarrier(ctx context.Context, params domain.Create
 
 	switch domain.RecoveryPoint(idempotencyKey.RecoveryPoint) {
 	case domain.RecoveryPointFinished:
-		cached, err := idempotency.UnmarshalCachedResponse[domain.Carrier](ctx, idempotencyKey.ResponseCode, idempotencyKey.ResponseBody)
+		cached, err := idemresponse.UnmarshalCachedResponse[domain.Carrier](ctx, idempotencyKey.ResponseCode, idempotencyKey.ResponseBody)
 		if err != nil {
 			return nil, tracing.Trace(span, apierror.NewInternalError(err, "Issue unmarshalling cached response."))
 		}
@@ -445,7 +445,7 @@ func (s *carrierSvcImpl) CreateCarrier(ctx context.Context, params domain.Create
 				return apiErr
 			}
 			if exists {
-				return apierror.NewConflictErrorWithParam("A carrier with this name already exists.", "name")
+				return apierror.NewConflictErrorWithParam("name", "A carrier with this name already exists.")
 			}
 
 			created, apiErr := txRepo.Create(txCtx, carrierID, params)
@@ -524,7 +524,7 @@ func (s *carrierSvcImpl) UpdateCarrier(ctx context.Context, params domain.Update
 
 	switch domain.RecoveryPoint(idempotencyKey.RecoveryPoint) {
 	case domain.RecoveryPointFinished:
-		cached, err := idempotency.UnmarshalCachedResponse[domain.Carrier](ctx, idempotencyKey.ResponseCode, idempotencyKey.ResponseBody)
+		cached, err := idemresponse.UnmarshalCachedResponse[domain.Carrier](ctx, idempotencyKey.ResponseCode, idempotencyKey.ResponseBody)
 		if err != nil {
 			return nil, tracing.Trace(span, apierror.NewInternalError(err, "Issue unmarshalling cached response."))
 		}
@@ -553,7 +553,7 @@ func (s *carrierSvcImpl) UpdateCarrier(ctx context.Context, params domain.Update
 					return apiErr
 				}
 				if exists {
-					return apierror.NewConflictErrorWithParam("A carrier with this name already exists.", "name")
+					return apierror.NewConflictErrorWithParam("name", "A carrier with this name already exists.")
 				}
 			}
 
@@ -609,13 +609,13 @@ func (s *carrierSvcImpl) DeleteCarrier(ctx context.Context, carrierID string) *a
 
 	carrier, apiErr := s.repos.NewCarrierRepo().Get(ctx, domain.GetCarrierParams{AccountID: accountID, CarrierID: carrierID})
 	if apiErr != nil {
-		if apierror.IsNotFound(apiErr) {
+		if apierror.HasCode(apiErr, apierror.CodeResourceNotFound) {
 			wasDeleted, deletedCheckErr := s.repos.NewDeletedRecordRepo().ExistsInAccount(ctx, constants.DeletedRecordResourceTypeCarrier, carrierID, accountID)
 			if deletedCheckErr != nil {
 				return tracing.Trace(span, deletedCheckErr)
 			}
 			if wasDeleted {
-				return tracing.Trace(span, apierror.NewAlreadyDeletedError("This carrier has already been deleted and can no longer be modified."))
+				return tracing.Trace(span, apierror.NewGoneError("This carrier has already been deleted and can no longer be modified."))
 			}
 		}
 		return tracing.Trace(span, apiErr)
@@ -828,7 +828,7 @@ func (s *carrierSvcImpl) SyncOptions(ctx context.Context, carrierID string) (*do
 
 	switch domain.RecoveryPoint(idempotencyKey.RecoveryPoint) {
 	case domain.RecoveryPointFinished:
-		cached, err := idempotency.UnmarshalCachedResponse[domain.Carrier](ctx, idempotencyKey.ResponseCode, idempotencyKey.ResponseBody)
+		cached, err := idemresponse.UnmarshalCachedResponse[domain.Carrier](ctx, idempotencyKey.ResponseCode, idempotencyKey.ResponseBody)
 		if err != nil {
 			return nil, tracing.Trace(span, apierror.NewInternalError(err, "Issue unmarshalling cached response."))
 		}

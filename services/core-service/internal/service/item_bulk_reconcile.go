@@ -14,9 +14,9 @@ import (
 	"github.com/open-mrp/api/shared/appctx"
 	"github.com/open-mrp/api/shared/audit"
 	"github.com/open-mrp/api/shared/constants"
-	apierror "github.com/open-mrp/api/shared/errors"
-	"github.com/open-mrp/api/shared/idempotency"
-	"github.com/open-mrp/api/shared/tracing"
+	"github.com/open-mrp/api/shared/idemresponse"
+	apierror "github.com/open-mrp/apikit/apierror"
+	"github.com/open-mrp/apikit/tracing"
 )
 
 const (
@@ -65,8 +65,7 @@ func (s *itemSvcImpl) BulkReconcileItems(ctx context.Context, params domain.Bulk
 		return nil, tracing.Trace(span, apiErr)
 	}
 	if len(params.Data) > maxBulkReconcileRows {
-		return nil, tracing.Trace(span, apierror.NewValidationErrorWithParam(
-			fmt.Sprintf("Cannot reconcile more than %d rows at a time.", maxBulkReconcileRows), "data"))
+		return nil, tracing.Trace(span, apierror.NewFieldError("data", apierror.CodeInvalidFormat, fmt.Sprintf("Cannot reconcile more than %d rows at a time.", maxBulkReconcileRows)))
 	}
 
 	accountID := identity.Target.AccountID
@@ -84,7 +83,7 @@ func (s *itemSvcImpl) BulkReconcileItems(ctx context.Context, params domain.Bulk
 
 	switch domain.RecoveryPoint(idempotencyKey.RecoveryPoint) {
 	case domain.RecoveryPointFinished:
-		cached, err := idempotency.UnmarshalCachedResponse[domain.BulkReconcileItemsResult](ctx, idempotencyKey.ResponseCode, idempotencyKey.ResponseBody)
+		cached, err := idemresponse.UnmarshalCachedResponse[domain.BulkReconcileItemsResult](ctx, idempotencyKey.ResponseCode, idempotencyKey.ResponseBody)
 		if err != nil {
 			return nil, tracing.Trace(span, apierror.NewInternalError(err, "Issue unmarshalling cached response."))
 		}

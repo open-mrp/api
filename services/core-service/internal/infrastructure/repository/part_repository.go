@@ -8,11 +8,12 @@ import (
 
 	"github.com/open-mrp/api/services/core-service/internal/domain"
 	"github.com/open-mrp/api/services/core-service/internal/infrastructure/sqlc"
-	"github.com/open-mrp/api/shared/db"
-	apierror "github.com/open-mrp/api/shared/errors"
-	"github.com/open-mrp/api/shared/tracing"
+	"github.com/open-mrp/api/shared/catalogsearch"
+	apierror "github.com/open-mrp/apikit/apierror"
+	"github.com/open-mrp/apikit/db"
 	"github.com/open-mrp/apikit/field"
 	"github.com/open-mrp/apikit/pagination"
+	"github.com/open-mrp/apikit/tracing"
 )
 
 var partRepoTracer = tracing.GetTracer("core-service.part_repository")
@@ -236,11 +237,11 @@ func (r *partRepoImpl) List(ctx context.Context, params domain.ListPartsParams) 
 	ctx, span := partRepoTracer.Start(ctx, "repository.part.list")
 	defer span.End()
 
-	catSearch := db.NewCatalogSearch(params.Query)
+	catSearch := catalogsearch.New(params.Query)
 	searchQuery := catSearch.Contains
 	searchRankEnabled := catSearch.Contains.Valid
 	partSearchRank := func(p *domain.Part) int32 {
-		return db.CatalogSearchRank(p.Item.SKU, catSearch)
+		return catalogsearch.Rank(p.Item.SKU, catSearch)
 	}
 
 	includeCategoryFilter := len(params.CategoryIDs) > 0
@@ -268,7 +269,7 @@ func (r *partRepoImpl) List(ctx context.Context, params domain.ListPartsParams) 
 	if params.Cursor != nil {
 		cur, err := pagination.DecodeStringCursor(*params.Cursor)
 		if err != nil {
-			return nil, apierror.NewValidationErrorWithParam("Invalid pagination cursor.", "cursor")
+			return nil, apierror.NewFieldError("cursor", apierror.CodeInvalidFormat, "Invalid pagination cursor.")
 		}
 		cursorDir = &cur.Direction
 
@@ -284,7 +285,7 @@ func (r *partRepoImpl) List(ctx context.Context, params domain.ListPartsParams) 
 				SearchQuery:            searchQuery,
 				SearchExact:            catSearch.Exact,
 				SearchPrefix:           catSearch.Prefix,
-				CursorMatchTier:        db.NullTierInt64Param(cur.MatchTier),
+				CursorMatchTier:        catalogsearch.NullTierInt64Param(cur.MatchTier),
 				CursorCreatedAt:        cur.OccurredAt,
 				CursorID:               cur.ID,
 				Limit:                  params.Limit + 1,
@@ -316,7 +317,7 @@ func (r *partRepoImpl) List(ctx context.Context, params domain.ListPartsParams) 
 			SearchExact:            catSearch.Exact,
 			SearchPrefix:           catSearch.Prefix,
 			CursorCreatedAt:        gosql.NullTime{Time: cur.OccurredAt, Valid: true},
-			CursorMatchTier:        db.NullTierInt64Param(cur.MatchTier),
+			CursorMatchTier:        catalogsearch.NullTierInt64Param(cur.MatchTier),
 			CursorID:               gosql.NullString{String: cur.ID, Valid: true},
 			Limit:                  params.Limit + 1,
 		})
@@ -488,7 +489,7 @@ func (r *partRepoImpl) Export(ctx context.Context, params domain.ExportPartsPara
 	ctx, span := partRepoTracer.Start(ctx, "repository.part.export")
 	defer span.End()
 
-	catSearch := db.NewCatalogSearch(params.Query)
+	catSearch := catalogsearch.New(params.Query)
 	searchQuery := catSearch.Contains
 
 	includeCategoryFilter := len(params.CategoryIDs) > 0

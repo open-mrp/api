@@ -10,9 +10,9 @@ import (
 	"github.com/open-mrp/api/services/auth-service/internal/infrastructure/sqlc"
 	"github.com/open-mrp/api/services/auth-service/internal/mediator"
 	pwdutil "github.com/open-mrp/api/services/auth-service/internal/password"
-	apierror "github.com/open-mrp/api/shared/errors"
-	"github.com/open-mrp/api/shared/idempotency"
-	"github.com/open-mrp/api/shared/tracing"
+	"github.com/open-mrp/api/shared/idemresponse"
+	apierror "github.com/open-mrp/apikit/apierror"
+	"github.com/open-mrp/apikit/tracing"
 )
 
 var userSvcTracer = tracing.GetTracer("auth-service.user_service")
@@ -124,7 +124,7 @@ func (s *userSvcImpl) Login(ctx context.Context, identifier, password string) (*
 
 	switch idempotencyKey.RecoveryPoint {
 	case domain.RecoveryPointFinished:
-		cached, err := idempotency.UnmarshalCachedResponse[domain.LoginResult](ctx, idempotencyKey.ResponseCode, idempotencyKey.ResponseBody)
+		cached, err := idemresponse.UnmarshalCachedResponse[domain.LoginResult](ctx, idempotencyKey.ResponseCode, idempotencyKey.ResponseBody)
 		if err != nil {
 			return nil, tracing.Trace(span, apierror.NewInternalError(err, "Issue unmarshalling cached response."))
 		}
@@ -195,7 +195,7 @@ func (s *userSvcImpl) Register(ctx context.Context, input domain.RegisterInput) 
 
 	switch idempotencyKey.RecoveryPoint {
 	case domain.RecoveryPointFinished:
-		cached, err := idempotency.UnmarshalCachedResponse[domain.LoginResult](ctx, idempotencyKey.ResponseCode, idempotencyKey.ResponseBody)
+		cached, err := idemresponse.UnmarshalCachedResponse[domain.LoginResult](ctx, idempotencyKey.ResponseCode, idempotencyKey.ResponseBody)
 		if err != nil {
 			return nil, tracing.Trace(span, apierror.NewInternalError(err, "Issue unmarshalling cached response."))
 		}
@@ -205,7 +205,7 @@ func (s *userSvcImpl) Register(ctx context.Context, input domain.RegisterInput) 
 		// Check for existing user before the transaction so we can send the magic-login email outside the tx (outbox writes inside a rolled-back tx are lost).
 		userRepo := s.repos.NewUserRepo()
 		existingUser, findErr := userRepo.Find(ctx, input.Email)
-		if findErr != nil && !apierror.IsNotFound(findErr) {
+		if findErr != nil && !apierror.HasCode(findErr, apierror.CodeResourceNotFound) {
 			return nil, meds.Idempotency.CacheErrorResponse(ctx, idempotencyKey.TypeID, findErr)
 		}
 		if existingUser != nil {
@@ -282,7 +282,7 @@ func (s *userSvcImpl) MagicLogin(ctx context.Context, magicToken string) (*domai
 
 	switch idempotencyKey.RecoveryPoint {
 	case domain.RecoveryPointFinished:
-		cached, err := idempotency.UnmarshalCachedResponse[domain.LoginResult](ctx, idempotencyKey.ResponseCode, idempotencyKey.ResponseBody)
+		cached, err := idemresponse.UnmarshalCachedResponse[domain.LoginResult](ctx, idempotencyKey.ResponseCode, idempotencyKey.ResponseBody)
 		if err != nil {
 			return nil, tracing.Trace(span, apierror.NewInternalError(err, "Issue unmarshalling cached response."))
 		}

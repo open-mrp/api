@@ -4,7 +4,7 @@ import (
 	"bytes"
 	"testing"
 
-	apierror "github.com/open-mrp/api/shared/errors"
+	apierror "github.com/open-mrp/apikit/apierror"
 )
 
 var (
@@ -48,7 +48,7 @@ func TestPhoto_RefusesWhatIsNotARasterImage(t *testing.T) {
 			t.Errorf("%s: accepted", name)
 			continue
 		}
-		if apiErr.Code != apierror.ErrorCodeInvalidFormat || apiErr.Param != "body" {
+		if apiErr.Code != apierror.CodeValidationFailed || apiErr.Errors[0].Code != apierror.CodeInvalidFormat || apiErr.Param != "body" {
 			t.Errorf("%s: got %s on %q, want invalid_format on body", name, apiErr.Code, apiErr.Param)
 		}
 	}
@@ -68,7 +68,7 @@ func TestFavicon_AlsoTakesICO(t *testing.T) {
 func TestPhoto_RefusesAnEmptyBody(t *testing.T) {
 	t.Parallel()
 	_, apiErr := Photo(nil)
-	if apiErr == nil || apiErr.Code != apierror.ErrorCodeMissingField || apiErr.Param != "body" {
+	if apiErr == nil || apiErr.Code != apierror.CodeValidationFailed || apiErr.Errors[0].Code != apierror.CodeMissingField || apiErr.Param != "body" {
 		t.Fatalf("Photo(nil) = %v, want missing_field on body", apiErr)
 	}
 }
@@ -79,7 +79,7 @@ func TestPhoto_RefusesAnImageOverTheLimit(t *testing.T) {
 		t.Fatalf("an image of exactly MaxBytes was refused: %v", apiErr)
 	}
 	_, apiErr := Photo(append(bytes.Clone(png), make([]byte, MaxBytes)...))
-	if apiErr == nil || apierror.GetHTTPStatusCode(apiErr.Code) != 413 {
+	if apiErr == nil || apiErr.Code.Status() != 413 {
 		t.Fatalf("an image over MaxBytes = %v, want 413", apiErr)
 	}
 }

@@ -10,7 +10,7 @@ import (
 	"github.com/open-mrp/api/services/core-service/internal/domain"
 	factorymock "github.com/open-mrp/api/services/core-service/internal/domain/mock/factory"
 	repositorymock "github.com/open-mrp/api/services/core-service/internal/domain/mock/repository"
-	apierror "github.com/open-mrp/api/shared/errors"
+	apierror "github.com/open-mrp/apikit/apierror"
 )
 
 // The edge graph is read before the steps behind it are, so a step deleted in between is skipped. The
@@ -56,7 +56,7 @@ func TestComputeItemCosts_DeletedParentStepDoesNotFailTheRollup(t *testing.T) {
 	flowRepo.EXPECT().GetFlowStep(gomock.Any(), accountID, targetID).Return(target, nil).AnyTimes()
 	// ...and by the time it is read, it has been deleted.
 	flowRepo.EXPECT().GetFlowStep(gomock.Any(), accountID, parentID).
-		Return(nil, apierror.NewResourceNotFoundError("Production step not found.")).AnyTimes()
+		Return(nil, apierror.NewNotFoundError("Production step not found.")).AnyTimes()
 
 	itemRepo := repositorymock.NewMockItemRepo(ctrl)
 	itemRepo.EXPECT().GetCostFlowConsumptions(gomock.Any(), gomock.Any()).Return(nil, nil).AnyTimes()

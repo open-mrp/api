@@ -10,8 +10,8 @@ import (
 	"github.com/open-mrp/api/services/api-gateway/pkg/resourcekit"
 	"github.com/open-mrp/api/shared/constants"
 	"github.com/open-mrp/api/shared/contracts"
-	apierror "github.com/open-mrp/api/shared/errors"
 	pb "github.com/open-mrp/api/shared/proto/core"
+	apierror "github.com/open-mrp/apikit/apierror"
 	"google.golang.org/grpc"
 )
 
@@ -56,7 +56,7 @@ func TestGetItem_RefusalFromCoreGetItemStands(t *testing.T) {
 
 	item, apiErr := svc.GetItem(context.Background(), &RetrieveItemRequest{ItemID: "itm_1"})
 
-	if apiErr == nil || apiErr.Code != apierror.ErrorCodeInsufficientPerms {
+	if apiErr == nil || apiErr.Code != apierror.CodeInsufficientPermissions {
 		t.Fatalf("GetItem() = %v, %v; want insufficient_permissions", item, apiErr)
 	}
 }

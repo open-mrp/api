@@ -11,7 +11,7 @@ import (
 	repositorymock "github.com/open-mrp/api/services/core-service/internal/domain/mock/repository"
 	"github.com/open-mrp/api/shared/appctx"
 	"github.com/open-mrp/api/shared/constants"
-	apierror "github.com/open-mrp/api/shared/errors"
+	apierror "github.com/open-mrp/apikit/apierror"
 
 	"github.com/stretchr/testify/suite"
 	"go.uber.org/mock/gomock"
@@ -153,7 +153,7 @@ func (suite *RoleSvcTestSuite) TestListRoles_RequiresReadPermission() {
 		Limit: 10,
 	})
 	suite.NotNil(apiErr)
-	suite.Equal(apierror.ErrorCodeInsufficientPerms, apiErr.Code)
+	suite.Equal(apierror.CodeInsufficientPermissions, apiErr.Code)
 }
 
 // TestGetRole_Success verifies that get role returns role with permissions.
@@ -225,7 +225,7 @@ func (suite *RoleSvcTestSuite) TestDeleteRole_CannotDeleteGlobal() {
 
 	apiErr := suite.roleSvc.DeleteRole(ctx, "rl_global")
 	suite.NotNil(apiErr)
-	suite.Equal(apierror.ErrorCodeValidationFailed, apiErr.Code)
+	suite.Equal(apierror.CodeValidationFailed, apiErr.Code)
 }
 
 // TestDeleteRole_Success verifies that account-owned roles can be deleted.
@@ -289,5 +289,5 @@ func (suite *RoleSvcTestSuite) TestDeleteRole_BlockedWhenAssigned() {
 
 	apiErr := suite.roleSvc.DeleteRole(ctx, "rl_1")
 	suite.NotNil(apiErr)
-	suite.Equal(apierror.ErrorCodeResourceConflict, apiErr.Code)
+	suite.Equal(apierror.CodeResourceConflict, apiErr.Code)
 }

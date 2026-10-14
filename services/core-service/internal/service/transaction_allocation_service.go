@@ -9,9 +9,9 @@ import (
 	"github.com/open-mrp/api/shared/appctx"
 	"github.com/open-mrp/api/shared/audit"
 	"github.com/open-mrp/api/shared/constants"
-	apierror "github.com/open-mrp/api/shared/errors"
-	"github.com/open-mrp/api/shared/idempotency"
-	"github.com/open-mrp/api/shared/tracing"
+	"github.com/open-mrp/api/shared/idemresponse"
+	apierror "github.com/open-mrp/apikit/apierror"
+	"github.com/open-mrp/apikit/tracing"
 )
 
 var transactionAllocationSvcTracer = tracing.GetTracer("core-service.transaction_allocation_service")
@@ -121,7 +121,7 @@ func (s *transactionAllocationSvcImpl) UpdateTransactionAllocation(ctx context.C
 
 	switch domain.RecoveryPoint(idempotencyKey.RecoveryPoint) {
 	case domain.RecoveryPointFinished:
-		cached, err := idempotency.UnmarshalCachedResponse[domain.TransactionAllocation](ctx, idempotencyKey.ResponseCode, idempotencyKey.ResponseBody)
+		cached, err := idemresponse.UnmarshalCachedResponse[domain.TransactionAllocation](ctx, idempotencyKey.ResponseCode, idempotencyKey.ResponseBody)
 		if err != nil {
 			return nil, tracing.Trace(span, apierror.NewInternalError(err, "Issue unmarshalling cached response."))
 		}
@@ -210,13 +210,13 @@ func (s *transactionAllocationSvcImpl) DeleteTransactionAllocation(ctx context.C
 	// Verify the allocation exists and belongs to this account
 	allocation, apiErr := repo.GetByID(ctx, params.AccountID, params.AllocationID)
 	if apiErr != nil {
-		if apierror.IsNotFound(apiErr) {
+		if apierror.HasCode(apiErr, apierror.CodeResourceNotFound) {
 			wasDeleted, deletedCheckErr := s.repos.NewDeletedRecordRepo().ExistsInAccount(ctx, constants.DeletedRecordResourceTypeTransactionAllocation, params.AllocationID, params.AccountID)
 			if deletedCheckErr != nil {
 				return tracing.Trace(span, deletedCheckErr)
 			}
 			if wasDeleted {
-				return tracing.Trace(span, apierror.NewAlreadyDeletedError("This transaction allocation has already been deleted and can no longer be modified."))
+				return tracing.Trace(span, apierror.NewGoneError("This transaction allocation has already been deleted and can no longer be modified."))
 			}
 		}
 		return tracing.Trace(span, apiErr)

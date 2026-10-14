@@ -13,12 +13,12 @@ import (
 	"github.com/open-mrp/api/shared/appctx"
 	"github.com/open-mrp/api/shared/audit"
 	"github.com/open-mrp/api/shared/constants"
-	apierror "github.com/open-mrp/api/shared/errors"
 	"github.com/open-mrp/api/shared/id"
-	"github.com/open-mrp/api/shared/idempotency"
+	"github.com/open-mrp/api/shared/idemresponse"
 	"github.com/open-mrp/api/shared/messaging"
-	"github.com/open-mrp/api/shared/tracing"
+	apierror "github.com/open-mrp/apikit/apierror"
 	"github.com/open-mrp/apikit/ptrutil"
+	"github.com/open-mrp/apikit/tracing"
 )
 
 var purchaseOrderSvcTracer = tracing.GetTracer("core-service.purchase_order_service")
@@ -301,7 +301,7 @@ func (s *purchaseOrderSvcImpl) CreatePurchaseOrder(ctx context.Context, params d
 			return nil, tracing.Trace(span, apiErr)
 		}
 		if !inAccount {
-			return nil, tracing.Trace(span, apierror.NewValidationErrorWithParam("The address does not belong to this supplier.", ref.param))
+			return nil, tracing.Trace(span, apierror.NewFieldError(ref.param, apierror.CodeInvalidFormat, "The address does not belong to this supplier."))
 		}
 	}
 	if apiErr := previewInlineAddresses(ctx, s.mediators().Address, params.SupplierAccountID, params.BillToAddress, params.ShipToAddress, "bill_to_address", "ship_to_address"); apiErr != nil {
@@ -324,7 +324,7 @@ func (s *purchaseOrderSvcImpl) CreatePurchaseOrder(ctx context.Context, params d
 
 	switch domain.RecoveryPoint(idempotencyKey.RecoveryPoint) {
 	case domain.RecoveryPointFinished:
-		cached, err := idempotency.UnmarshalCachedResponse[domain.PurchaseOrder](ctx, idempotencyKey.ResponseCode, idempotencyKey.ResponseBody)
+		cached, err := idemresponse.UnmarshalCachedResponse[domain.PurchaseOrder](ctx, idempotencyKey.ResponseCode, idempotencyKey.ResponseBody)
 		if err != nil {
 			return nil, tracing.Trace(span, apierror.NewInternalError(err, "Issue unmarshalling cached response."))
 		}
@@ -359,7 +359,7 @@ func (s *purchaseOrderSvcImpl) CreatePurchaseOrder(ctx context.Context, params d
 				return apiErr
 			}
 			if isDup {
-				return apierror.NewConflictErrorWithParam("A purchase order with this number already exists.", "number")
+				return apierror.NewConflictErrorWithParam("number", "A purchase order with this number already exists.")
 			}
 
 			addressParams, apiErr := withSavedInlineAddresses(txCtx, txSvc.mediators().Address, params)
@@ -533,7 +533,7 @@ func (s *purchaseOrderSvcImpl) UpdatePurchaseOrder(ctx context.Context, params d
 
 	switch domain.RecoveryPoint(idempotencyKey.RecoveryPoint) {
 	case domain.RecoveryPointFinished:
-		cached, err := idempotency.UnmarshalCachedResponse[domain.PurchaseOrder](ctx, idempotencyKey.ResponseCode, idempotencyKey.ResponseBody)
+		cached, err := idemresponse.UnmarshalCachedResponse[domain.PurchaseOrder](ctx, idempotencyKey.ResponseCode, idempotencyKey.ResponseBody)
 		if err != nil {
 			return nil, tracing.Trace(span, apierror.NewInternalError(err, "Issue unmarshalling cached response."))
 		}
@@ -563,7 +563,7 @@ func (s *purchaseOrderSvcImpl) UpdatePurchaseOrder(ctx context.Context, params d
 					return apiErr
 				}
 				if acct == "" {
-					return apierror.NewValidationErrorWithParam("The address belongs to neither this supplier nor your account.", ref.param)
+					return apierror.NewFieldError(ref.param, apierror.CodeInvalidFormat, "The address belongs to neither this supplier nor your account.")
 				}
 			}
 
@@ -593,7 +593,7 @@ func (s *purchaseOrderSvcImpl) UpdatePurchaseOrder(ctx context.Context, params d
 					return apiErr
 				}
 				if isDup {
-					return apierror.NewConflictErrorWithParam("A purchase order with this number already exists.", "number")
+					return apierror.NewConflictErrorWithParam("number", "A purchase order with this number already exists.")
 				}
 			}
 
@@ -708,13 +708,13 @@ func (s *purchaseOrderSvcImpl) DeletePurchaseOrder(ctx context.Context, params d
 	// Validate order exists and is not fulfilled
 	order, apiErr := repo.Get(ctx, params.AccountID, params.PurchaseOrderID)
 	if apiErr != nil {
-		if apierror.IsNotFound(apiErr) {
+		if apierror.HasCode(apiErr, apierror.CodeResourceNotFound) {
 			wasDeleted, deletedCheckErr := s.repos.NewDeletedRecordRepo().ExistsInAccount(ctx, constants.DeletedRecordResourceTypePurchaseOrder, params.PurchaseOrderID, params.AccountID)
 			if deletedCheckErr != nil {
 				return tracing.Trace(span, deletedCheckErr)
 			}
 			if wasDeleted {
-				return tracing.Trace(span, apierror.NewAlreadyDeletedError("This purchase order has already been deleted and can no longer be modified."))
+				return tracing.Trace(span, apierror.NewGoneError("This purchase order has already been deleted and can no longer be modified."))
 			}
 		}
 		return tracing.Trace(span, apiErr)
@@ -1126,7 +1126,7 @@ func ensureSupplierMaterialLink(ctx context.Context, repos domain.RepoFactory, a
 
 	// Only a material can have a supplier, so an item that is not one has nothing to link.
 	material, apiErr := materialRepo.GetByItemID(ctx, accountID, itemID)
-	if apierror.IsNotFound(apiErr) {
+	if apierror.HasCode(apiErr, apierror.CodeResourceNotFound) {
 		return nil
 	}
 	if apiErr != nil {
@@ -1156,7 +1156,7 @@ func ensureSupplierMaterialLink(ctx context.Context, repos domain.RepoFactory, a
 		IsActive:           true,
 	})
 	// A concurrent order linked it first; a refused insert leaves a MySQL transaction usable.
-	if apiErr != nil && apiErr.Code == apierror.ErrorCodeResourceExists {
+	if apiErr != nil && apiErr.Code == apierror.CodeResourceExists {
 		return nil
 	}
 	if apiErr != nil {
@@ -1186,7 +1186,7 @@ func checkPurchaseOrderAddressChoices(params domain.CreatePurchaseOrderParams) *
 	}
 	for _, side := range sides {
 		if side.inline != nil && slices.ContainsFunc(side.flat, func(v *string) bool { return v != nil }) {
-			return apierror.NewValidationErrorWithParam(fmt.Sprintf("Send either %saddress or the flat %s* fields, not both.", side.prefix, side.prefix), side.prefix+"address")
+			return apierror.NewFieldError(side.prefix+"address", apierror.CodeInvalidFormat, fmt.Sprintf("Send either %saddress or the flat %s* fields, not both.", side.prefix, side.prefix))
 		}
 	}
 	for _, side := range sides {
@@ -1194,14 +1194,14 @@ func checkPurchaseOrderAddressChoices(params domain.CreatePurchaseOrderParams) *
 			continue
 		}
 		if !slices.ContainsFunc(side.flat, func(v *string) bool { return v != nil }) {
-			return apierror.NewMissingFieldError(fmt.Sprintf("A %s address is required: send %saddress_id, %saddress, or the %s* fields.", side.label, side.prefix, side.prefix, side.prefix), side.prefix+"address_id")
+			return apierror.NewMissingFieldError(side.prefix+"address_id", fmt.Sprintf("A %s address is required: send %saddress_id, %saddress, or the %s* fields.", side.label, side.prefix, side.prefix, side.prefix))
 		}
 		for _, required := range []struct {
 			value *string
 			param string
 		}{{side.name, side.prefix + "name"}, {side.country, side.prefix + "country"}} {
 			if required.value == nil || strings.TrimSpace(*required.value) == "" {
-				return apierror.NewMissingFieldError(fmt.Sprintf("Field '%s' is required when the %s address is given by the %s* fields.", required.param, side.label, side.prefix), required.param)
+				return apierror.NewMissingFieldError(required.param, fmt.Sprintf("Field '%s' is required when the %s address is given by the %s* fields.", required.param, side.label, side.prefix))
 			}
 		}
 	}

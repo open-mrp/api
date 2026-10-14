@@ -10,9 +10,9 @@ import (
 	"github.com/open-mrp/api/services/platform-service/internal/domain"
 	"github.com/open-mrp/api/shared/constants"
 	"github.com/open-mrp/api/shared/contracts"
-	apierror "github.com/open-mrp/api/shared/errors"
 	"github.com/open-mrp/api/shared/messaging"
-	"github.com/open-mrp/api/shared/tracing"
+	apierror "github.com/open-mrp/apikit/apierror"
+	"github.com/open-mrp/apikit/tracing"
 )
 
 const (
@@ -59,9 +59,9 @@ func (s *accountFollowupSvcImpl) Approve(ctx context.Context, token, subject, bo
 	body = strings.TrimSpace(strings.ReplaceAll(body, "\r\n", "\n"))
 	switch {
 	case subject == "" || strings.ContainsAny(subject, "\r\n") || utf8.RuneCountInString(subject) > maxFollowupSubjectChars:
-		return nil, tracing.Trace(span, apierror.NewValidationErrorWithParam("Subject must be a single line of at most 200 characters.", "subject"))
+		return nil, tracing.Trace(span, apierror.NewFieldError("subject", apierror.CodeInvalidFormat, "Subject must be a single line of at most 200 characters."))
 	case body == "" || utf8.RuneCountInString(body) > maxFollowupBodyChars:
-		return nil, tracing.Trace(span, apierror.NewValidationErrorWithParam("Body must be between 1 and 10,000 characters.", "body"))
+		return nil, tracing.Trace(span, apierror.NewFieldError("body", apierror.CodeInvalidFormat, "Body must be between 1 and 10,000 characters."))
 	}
 
 	email, apiErr := s.followupEmail(f, subject, body)
@@ -114,13 +114,13 @@ func (s *accountFollowupSvcImpl) Skip(ctx context.Context, token string) (*domai
 
 func (s *accountFollowupSvcImpl) findByReviewToken(ctx context.Context, token string) (*domain.AccountFollowup, *apierror.APIError) {
 	if token == "" {
-		return nil, apierror.NewResourceNotFoundError("This review link is invalid.")
+		return nil, apierror.NewNotFoundError("This review link is invalid.")
 	}
 	hash := sha256.Sum256([]byte(token))
 	f, apiErr := s.repos.NewAccountFollowupRepo().FindByReviewTokenHash(ctx, hash[:])
 	if apiErr != nil {
-		if apiErr.Code == apierror.ErrorCodeResourceNotFound {
-			return nil, apierror.NewResourceNotFoundError("This review link is invalid.")
+		if apiErr.Code == apierror.CodeResourceNotFound {
+			return nil, apierror.NewNotFoundError("This review link is invalid.")
 		}
 		return nil, apiErr
 	}

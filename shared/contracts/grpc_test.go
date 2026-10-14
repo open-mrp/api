@@ -8,7 +8,8 @@ import (
 	"testing"
 
 	"github.com/open-mrp/api/shared/appctx"
-	apierror "github.com/open-mrp/api/shared/errors"
+	"github.com/open-mrp/api/shared/apperr"
+	apierror "github.com/open-mrp/apikit/apierror"
 	"github.com/open-mrp/apikit/querytag"
 	"google.golang.org/grpc"
 	grpccodes "google.golang.org/grpc/codes"
@@ -33,12 +34,12 @@ func TestConvertAPIErrorToGRPC_AllErrorCodes(t *testing.T) {
 		},
 		{
 			name:     "ExpiredToken",
-			apiErr:   apierror.NewAPIError(apierror.ErrorCodeExpiredToken, apierror.ErrorTypeInvalidRequest, "Token expired", ""),
+			apiErr:   apierror.New(apierror.CodeExpiredToken, "Token expired"),
 			wantCode: grpccodes.Unauthenticated,
 		},
 		{
 			name:     "ExpiredAPIKey",
-			apiErr:   apierror.NewExpiredAPIKeyError("API key expired"),
+			apiErr:   apperr.NewExpiredAPIKeyError("API key expired"),
 			wantCode: grpccodes.Unauthenticated,
 		},
 		// Authorization errors
@@ -55,60 +56,60 @@ func TestConvertAPIErrorToGRPC_AllErrorCodes(t *testing.T) {
 		},
 		{
 			name:     "MissingField",
-			apiErr:   apierror.NewAPIError(apierror.ErrorCodeMissingField, apierror.ErrorTypeInvalidRequest, "Missing field", ""),
+			apiErr:   apierror.New(apierror.CodeMissingField, "Missing field"),
 			wantCode: grpccodes.InvalidArgument,
 		},
 		{
 			name:     "InvalidFormat",
-			apiErr:   apierror.NewAPIError(apierror.ErrorCodeInvalidFormat, apierror.ErrorTypeInvalidRequest, "Invalid format", ""),
+			apiErr:   apierror.New(apierror.CodeInvalidFormat, "Invalid format"),
 			wantCode: grpccodes.InvalidArgument,
 		},
 		{
 			name:     "ParameterMissing",
-			apiErr:   apierror.NewAPIError(apierror.ErrorCodeParameterMissing, apierror.ErrorTypeInvalidRequest, "Parameter missing", ""),
+			apiErr:   apierror.New(apierror.CodeParameterMissing, "Parameter missing"),
 			wantCode: grpccodes.InvalidArgument,
 		},
 		{
 			name:     "ParameterInvalid",
-			apiErr:   apierror.NewAPIError(apierror.ErrorCodeParameterInvalid, apierror.ErrorTypeInvalidRequest, "Parameter invalid", ""),
+			apiErr:   apierror.New(apierror.CodeParameterInvalid, "Parameter invalid"),
 			wantCode: grpccodes.InvalidArgument,
 		},
 		{
 			name:     "ParameterUnknown",
-			apiErr:   apierror.NewAPIError(apierror.ErrorCodeParameterUnknown, apierror.ErrorTypeInvalidRequest, "Parameter unknown", ""),
+			apiErr:   apierror.New(apierror.CodeParameterUnknown, "Parameter unknown"),
 			wantCode: grpccodes.InvalidArgument,
 		},
 		{
 			name:     "ParametersExclusive",
-			apiErr:   apierror.NewAPIError(apierror.ErrorCodeParametersExclusive, apierror.ErrorTypeInvalidRequest, "Parameters exclusive", ""),
+			apiErr:   apierror.New(apierror.CodeParametersExclusive, "Parameters exclusive"),
 			wantCode: grpccodes.InvalidArgument,
 		},
 		// Resource errors
 		{
 			name:     "ResourceNotFound",
-			apiErr:   apierror.NewResourceNotFoundError("Resource not found"),
+			apiErr:   apierror.NewNotFoundError("Resource not found"),
 			wantCode: grpccodes.NotFound,
 		},
 		{
 			name:     "ResourceExists",
-			apiErr:   apierror.NewAPIError(apierror.ErrorCodeResourceExists, apierror.ErrorTypeInvalidRequest, "Resource exists", ""),
+			apiErr:   apierror.New(apierror.CodeResourceExists, "Resource exists"),
 			wantCode: grpccodes.AlreadyExists,
 		},
 		{
 			name:     "ResourceConflict",
-			apiErr:   apierror.NewResourceConflictError("Resource conflict"),
+			apiErr:   apierror.NewConflictError("Resource conflict"),
 			wantCode: grpccodes.Aborted,
 		},
 		// Business logic errors
 		{
 			name:     "RateLimitExceeded",
-			apiErr:   apierror.NewRateLimitExceededError("Rate limit exceeded"),
+			apiErr:   apierror.NewRateLimitedError("Rate limit exceeded"),
 			wantCode: grpccodes.ResourceExhausted,
 		},
 		// Server errors
 		{
 			name:     "SvcUnavailable",
-			apiErr:   apierror.NewAPIError(apierror.ErrorCodeSvcUnavailable, apierror.ErrorTypeAPI, "Service unavailable", ""),
+			apiErr:   apierror.New(apierror.CodeServiceUnavailable, "Service unavailable"),
 			wantCode: grpccodes.Unavailable,
 		},
 		{
@@ -118,7 +119,7 @@ func TestConvertAPIErrorToGRPC_AllErrorCodes(t *testing.T) {
 		},
 		{
 			name:     "Timeout",
-			apiErr:   apierror.NewAPIError(apierror.ErrorCodeTimeout, apierror.ErrorTypeAPI, "Timeout", ""),
+			apiErr:   apierror.New(apierror.CodeTimeout, "Timeout"),
 			wantCode: grpccodes.DeadlineExceeded,
 		},
 		{
@@ -133,17 +134,17 @@ func TestConvertAPIErrorToGRPC_AllErrorCodes(t *testing.T) {
 		},
 		{
 			name:     "ExternalSvcError",
-			apiErr:   apierror.NewAPIError(apierror.ErrorCodeExternalSvcError, apierror.ErrorTypeAPI, "External service error", ""),
+			apiErr:   apierror.New(apierror.CodeExternalServiceError, "External service error"),
 			wantCode: grpccodes.Internal,
 		},
 		{
 			name:     "ConnectionError",
-			apiErr:   apierror.NewAPIError(apierror.ErrorCodeConnectionError, apierror.ErrorTypeAPI, "Connection error", ""),
+			apiErr:   apierror.New(apierror.CodeConnectionError, "Connection error"),
 			wantCode: grpccodes.Internal,
 		},
 		{
 			name:     "ClientClosedRequest",
-			apiErr:   apierror.NewClientClosedRequestError("Client closed request"),
+			apiErr:   apierror.NewClientClosedRequestError(),
 			wantCode: grpccodes.Internal,
 		},
 	}
@@ -173,13 +174,12 @@ func TestConvertAPIErrorToGRPC_AllErrorCodes(t *testing.T) {
 
 			// Parse and verify all fields are preserved
 			var decoded struct {
-				Code            apierror.ErrorCode `json:"code"`
-				Type            apierror.ErrorType `json:"type"`
-				PublicMessage   string             `json:"message"`
-				Param           string             `json:"param,omitempty"`
-				DocURL          string             `json:"doc_url,omitempty"`
-				InternalMessage string             `json:"internal_message,omitempty"`
-				InternalError   string             `json:"internal_error,omitempty"`
+				Code            apierror.Code `json:"code"`
+				Type            apierror.Type `json:"type"`
+				PublicMessage   string        `json:"message"`
+				Param           string        `json:"param,omitempty"`
+				InternalMessage string        `json:"internal_message,omitempty"`
+				InternalError   string        `json:"internal_error,omitempty"`
 			}
 			if err := json.Unmarshal([]byte(jsonData), &decoded); err != nil {
 				t.Errorf("failed to decode JSON: %v", err)
@@ -199,9 +199,6 @@ func TestConvertAPIErrorToGRPC_AllErrorCodes(t *testing.T) {
 			if decoded.Param != tc.apiErr.Param {
 				t.Errorf("expected param %q, got %q", tc.apiErr.Param, decoded.Param)
 			}
-			if decoded.DocURL != tc.apiErr.DocURL {
-				t.Errorf("expected doc_url %q, got %q", tc.apiErr.DocURL, decoded.DocURL)
-			}
 			if decoded.InternalMessage != tc.apiErr.InternalMessage {
 				t.Errorf("expected internal message %q, got %q", tc.apiErr.InternalMessage, decoded.InternalMessage)
 			}
@@ -216,87 +213,87 @@ func TestConvertAPIErrorToGRPC_RoundTrip(t *testing.T) {
 	testCases := []struct {
 		name              string
 		apiErr            *apierror.APIError
-		expectedRoundTrip apierror.ErrorCode // The error code we expect after round-trip
-		expectExactMatch  bool               // Whether we expect exact code match
+		expectedRoundTrip apierror.Code // The error code we expect after round-trip
+		expectExactMatch  bool          // Whether we expect exact code match
 	}{
 		// These should map exactly
 		{
 			name:              "InvalidCredentials",
 			apiErr:            apierror.NewAuthenticationError("Invalid credentials"),
-			expectedRoundTrip: apierror.ErrorCodeInvalidCredentials,
+			expectedRoundTrip: apierror.CodeInvalidCredentials,
 			expectExactMatch:  true,
 		},
 		{
 			name:              "InsufficientPerms",
 			apiErr:            apierror.NewAuthorizationError("Insufficient permissions"),
-			expectedRoundTrip: apierror.ErrorCodeInsufficientPerms,
+			expectedRoundTrip: apierror.CodeInsufficientPermissions,
 			expectExactMatch:  true,
 		},
 		{
 			name:              "ValidationFailed",
 			apiErr:            apierror.NewValidationError("Validation failed"),
-			expectedRoundTrip: apierror.ErrorCodeValidationFailed,
+			expectedRoundTrip: apierror.CodeValidationFailed,
 			expectExactMatch:  true,
 		},
 		{
 			name:              "ResourceNotFound",
-			apiErr:            apierror.NewResourceNotFoundError("Resource not found"),
-			expectedRoundTrip: apierror.ErrorCodeResourceNotFound,
+			apiErr:            apierror.NewNotFoundError("Resource not found"),
+			expectedRoundTrip: apierror.CodeResourceNotFound,
 			expectExactMatch:  true,
 		},
 		{
 			name:              "ResourceConflict",
-			apiErr:            apierror.NewResourceConflictError("Resource conflict"),
-			expectedRoundTrip: apierror.ErrorCodeResourceConflict,
+			apiErr:            apierror.NewConflictError("Resource conflict"),
+			expectedRoundTrip: apierror.CodeResourceConflict,
 			expectExactMatch:  true,
 		},
 		{
 			name:              "RateLimitExceeded",
-			apiErr:            apierror.NewRateLimitExceededError("Rate limit exceeded"),
-			expectedRoundTrip: apierror.ErrorCodeRateLimitExceeded,
+			apiErr:            apierror.NewRateLimitedError("Rate limit exceeded"),
+			expectedRoundTrip: apierror.CodeRateLimited,
 			expectExactMatch:  true,
 		},
 		{
 			name:              "SvcUnavailable",
-			apiErr:            apierror.NewAPIError(apierror.ErrorCodeSvcUnavailable, apierror.ErrorTypeAPI, "Service unavailable", "internal msg"),
-			expectedRoundTrip: apierror.ErrorCodeSvcUnavailable,
+			apiErr:            apierror.New(apierror.CodeServiceUnavailable, "Service unavailable", apierror.WithInternalMessage("internal msg")),
+			expectedRoundTrip: apierror.CodeServiceUnavailable,
 			expectExactMatch:  true, // Now with zero information loss
 		},
 		{
 			name:              "RequestTimeout",
 			apiErr:            apierror.NewRequestTimeoutError("Request timed out"),
-			expectedRoundTrip: apierror.ErrorCodeRequestTimeout,
+			expectedRoundTrip: apierror.CodeRequestTimeout,
 			expectExactMatch:  true,
 		},
 		// With zero information loss, all should match exactly
 		{
 			name:              "ExpiredToken",
-			apiErr:            apierror.NewAPIError(apierror.ErrorCodeExpiredToken, apierror.ErrorTypeInvalidRequest, "Token expired", ""),
-			expectedRoundTrip: apierror.ErrorCodeExpiredToken,
+			apiErr:            apierror.New(apierror.CodeExpiredToken, "Token expired"),
+			expectedRoundTrip: apierror.CodeExpiredToken,
 			expectExactMatch:  true,
 		},
 		{
 			name:              "ExpiredAPIKey",
-			apiErr:            apierror.NewExpiredAPIKeyError("API key expired"),
-			expectedRoundTrip: apierror.ErrorCodeExpiredAPIKey,
+			apiErr:            apperr.NewExpiredAPIKeyError("API key expired"),
+			expectedRoundTrip: apperr.CodeAPIKeyExpired,
 			expectExactMatch:  true,
 		},
 		{
 			name:              "MissingField",
-			apiErr:            apierror.NewAPIError(apierror.ErrorCodeMissingField, apierror.ErrorTypeInvalidRequest, "Missing field", ""),
-			expectedRoundTrip: apierror.ErrorCodeMissingField,
+			apiErr:            apierror.New(apierror.CodeMissingField, "Missing field"),
+			expectedRoundTrip: apierror.CodeMissingField,
 			expectExactMatch:  true,
 		},
 		{
 			name:              "MethodNotAllowed",
 			apiErr:            apierror.NewMethodNotAllowedError("Method not allowed"),
-			expectedRoundTrip: apierror.ErrorCodeMethodNotAllowed,
+			expectedRoundTrip: apierror.CodeMethodNotAllowed,
 			expectExactMatch:  true,
 		},
 		{
 			name:              "InternalError",
 			apiErr:            apierror.NewInternalError(errors.New("test"), "Internal error"),
-			expectedRoundTrip: apierror.ErrorCodeInternalError,
+			expectedRoundTrip: apierror.CodeInternalError,
 			expectExactMatch:  true,
 		},
 	}
@@ -330,9 +327,6 @@ func TestConvertAPIErrorToGRPC_RoundTrip(t *testing.T) {
 			}
 			if roundTripErr.Param != tc.apiErr.Param {
 				t.Errorf("expected param %q, got %q", tc.apiErr.Param, roundTripErr.Param)
-			}
-			if roundTripErr.DocURL != tc.apiErr.DocURL {
-				t.Errorf("expected doc_url %q, got %q", tc.apiErr.DocURL, roundTripErr.DocURL)
 			}
 			if roundTripErr.InternalMessage != tc.apiErr.InternalMessage {
 				t.Errorf("expected internal message %q, got %q", tc.apiErr.InternalMessage, roundTripErr.InternalMessage)
@@ -374,18 +368,13 @@ func TestConvertAPIErrorToGRPC_MessagePreservation(t *testing.T) {
 			description: "PublicMessage should be preserved",
 		},
 		{
-			name: "InternalMessage fallback",
-			apiErr: apierror.NewAPIError(
-				apierror.ErrorCodeValidationFailed,
-				apierror.ErrorTypeInvalidRequest,
-				"", // Empty public message
-				"Internal message",
-			),
+			name:        "InternalMessage fallback",
+			apiErr:      apierror.New(apierror.CodeValidationFailed, "", apierror.WithInternalMessage("Internal message")),
 			description: "InternalMessage should be preserved",
 		},
 		{
 			name:        "PublicMessage preferred",
-			apiErr:      apierror.NewAPIError(apierror.ErrorCodeValidationFailed, apierror.ErrorTypeInvalidRequest, "Public", "Internal"),
+			apiErr:      apierror.New(apierror.CodeValidationFailed, "Public", apierror.WithInternalMessage("Internal")),
 			description: "Both PublicMessage and InternalMessage should be preserved",
 		},
 	}
@@ -411,10 +400,10 @@ func TestConvertAPIErrorToGRPC_MessagePreservation(t *testing.T) {
 
 			// Parse and verify all fields are preserved
 			var decoded struct {
-				Code            apierror.ErrorCode `json:"code"`
-				Type            apierror.ErrorType `json:"type"`
-				PublicMessage   string             `json:"message"`
-				InternalMessage string             `json:"internal_message,omitempty"`
+				Code            apierror.Code `json:"code"`
+				Type            apierror.Type `json:"type"`
+				PublicMessage   string        `json:"message"`
+				InternalMessage string        `json:"internal_message,omitempty"`
 			}
 			if err := json.Unmarshal([]byte(jsonData), &decoded); err != nil {
 				t.Fatalf("failed to decode JSON: %v", err)
@@ -444,107 +433,107 @@ func TestConvertGRPCError_AllCodes(t *testing.T) {
 		name         string
 		grpcCode     grpccodes.Code
 		message      string
-		expectedCode apierror.ErrorCode
-		expectedType apierror.ErrorType
+		expectedCode apierror.Code
+		expectedType apierror.Type
 		description  string
 	}{
 		{
 			name:         "InvalidArgument",
 			grpcCode:     grpccodes.InvalidArgument,
 			message:      "Invalid argument",
-			expectedCode: apierror.ErrorCodeInternalError,
-			expectedType: apierror.ErrorTypeAPI,
+			expectedCode: apierror.CodeInternalError,
+			expectedType: apierror.TypeAPI,
 		},
 		{
 			name:         "NotFound",
 			grpcCode:     grpccodes.NotFound,
 			message:      "Not found",
-			expectedCode: apierror.ErrorCodeResourceNotFound,
-			expectedType: apierror.ErrorTypeInvalidRequest,
+			expectedCode: apierror.CodeResourceNotFound,
+			expectedType: apierror.TypeInvalidRequest,
 		},
 		{
 			name:         "AlreadyExists",
 			grpcCode:     grpccodes.AlreadyExists,
 			message:      "Already exists",
-			expectedCode: apierror.ErrorCodeInternalError,
-			expectedType: apierror.ErrorTypeAPI,
+			expectedCode: apierror.CodeInternalError,
+			expectedType: apierror.TypeAPI,
 		},
 		{
 			name:         "PermissionDenied",
 			grpcCode:     grpccodes.PermissionDenied,
 			message:      "Permission denied",
-			expectedCode: apierror.ErrorCodeInternalError,
-			expectedType: apierror.ErrorTypeAPI,
+			expectedCode: apierror.CodeInternalError,
+			expectedType: apierror.TypeAPI,
 		},
 		{
 			name:         "ResourceExhausted",
 			grpcCode:     grpccodes.ResourceExhausted,
 			message:      "Resource exhausted",
-			expectedCode: apierror.ErrorCodeInternalError,
-			expectedType: apierror.ErrorTypeAPI,
+			expectedCode: apierror.CodeInternalError,
+			expectedType: apierror.TypeAPI,
 		},
 		{
 			name:         "FailedPrecondition",
 			grpcCode:     grpccodes.FailedPrecondition,
 			message:      "Failed precondition",
-			expectedCode: apierror.ErrorCodeInternalError,
-			expectedType: apierror.ErrorTypeAPI,
+			expectedCode: apierror.CodeInternalError,
+			expectedType: apierror.TypeAPI,
 		},
 		{
 			name:         "Aborted",
 			grpcCode:     grpccodes.Aborted,
 			message:      "Aborted",
-			expectedCode: apierror.ErrorCodeInternalError,
-			expectedType: apierror.ErrorTypeAPI,
+			expectedCode: apierror.CodeInternalError,
+			expectedType: apierror.TypeAPI,
 		},
 		{
 			name:         "OutOfRange",
 			grpcCode:     grpccodes.OutOfRange,
 			message:      "Out of range",
-			expectedCode: apierror.ErrorCodeInternalError,
-			expectedType: apierror.ErrorTypeAPI,
+			expectedCode: apierror.CodeInternalError,
+			expectedType: apierror.TypeAPI,
 		},
 		{
 			name:         "Unauthenticated",
 			grpcCode:     grpccodes.Unauthenticated,
 			message:      "Unauthenticated",
-			expectedCode: apierror.ErrorCodeInternalError,
-			expectedType: apierror.ErrorTypeAPI,
+			expectedCode: apierror.CodeInternalError,
+			expectedType: apierror.TypeAPI,
 		},
 		{
 			name:         "Unavailable",
 			grpcCode:     grpccodes.Unavailable,
 			message:      "Unavailable",
-			expectedCode: apierror.ErrorCodeInternalError,
-			expectedType: apierror.ErrorTypeAPI,
+			expectedCode: apierror.CodeInternalError,
+			expectedType: apierror.TypeAPI,
 		},
 		{
 			name:         "DeadlineExceeded",
 			grpcCode:     grpccodes.DeadlineExceeded,
 			message:      "Deadline exceeded",
-			expectedCode: apierror.ErrorCodeRequestTimeout,
-			expectedType: apierror.ErrorTypeAPI,
+			expectedCode: apierror.CodeRequestTimeout,
+			expectedType: apierror.TypeAPI,
 		},
 		{
 			name:         "Internal",
 			grpcCode:     grpccodes.Internal,
 			message:      "Internal error",
-			expectedCode: apierror.ErrorCodeInternalError,
-			expectedType: apierror.ErrorTypeAPI,
+			expectedCode: apierror.CodeInternalError,
+			expectedType: apierror.TypeAPI,
 		},
 		{
 			name:         "Unimplemented",
 			grpcCode:     grpccodes.Unimplemented,
 			message:      "Unimplemented",
-			expectedCode: apierror.ErrorCodeInternalError,
-			expectedType: apierror.ErrorTypeAPI,
+			expectedCode: apierror.CodeInternalError,
+			expectedType: apierror.TypeAPI,
 		},
 		{
 			name:         "DataLoss",
 			grpcCode:     grpccodes.DataLoss,
 			message:      "Data loss",
-			expectedCode: apierror.ErrorCodeInternalError,
-			expectedType: apierror.ErrorTypeAPI,
+			expectedCode: apierror.CodeInternalError,
+			expectedType: apierror.TypeAPI,
 		},
 	}
 
@@ -590,8 +579,8 @@ func TestConvertGRPCError_NonStatusError(t *testing.T) {
 			t.Fatal("expected API error, got nil")
 		}
 
-		if apiErr.Code != apierror.ErrorCodeInternalError {
-			t.Errorf("expected error code %q, got %q", apierror.ErrorCodeInternalError, apiErr.Code)
+		if apiErr.Code != apierror.CodeInternalError {
+			t.Errorf("expected error code %q, got %q", apierror.CodeInternalError, apiErr.Code)
 		}
 	})
 
@@ -607,8 +596,8 @@ func TestConvertGRPCError_NonStatusError(t *testing.T) {
 			t.Fatal("expected API error, got nil")
 		}
 
-		if apiErr.Code != apierror.ErrorCodeRequestTimeout {
-			t.Errorf("expected error code %q, got %q", apierror.ErrorCodeRequestTimeout, apiErr.Code)
+		if apiErr.Code != apierror.CodeRequestTimeout {
+			t.Errorf("expected error code %q, got %q", apierror.CodeRequestTimeout, apiErr.Code)
 		}
 	})
 }
@@ -629,8 +618,8 @@ func TestConvertGRPCError_ClientCancellation(t *testing.T) {
 		if apiErr == nil {
 			t.Fatal("expected API error, got nil")
 		}
-		if apiErr.Code != apierror.ErrorCodeClientClosedRequest {
-			t.Errorf("expected error code %q, got %q", apierror.ErrorCodeClientClosedRequest, apiErr.Code)
+		if apiErr.Code != apierror.CodeClientClosedRequest {
+			t.Errorf("expected error code %q, got %q", apierror.CodeClientClosedRequest, apiErr.Code)
 		}
 	})
 
@@ -644,8 +633,8 @@ func TestConvertGRPCError_ClientCancellation(t *testing.T) {
 		if apiErr == nil {
 			t.Fatal("expected API error, got nil")
 		}
-		if apiErr.Code != apierror.ErrorCodeClientClosedRequest {
-			t.Errorf("expected error code %q, got %q", apierror.ErrorCodeClientClosedRequest, apiErr.Code)
+		if apiErr.Code != apierror.CodeClientClosedRequest {
+			t.Errorf("expected error code %q, got %q", apierror.CodeClientClosedRequest, apiErr.Code)
 		}
 	})
 
@@ -661,8 +650,8 @@ func TestConvertGRPCError_ClientCancellation(t *testing.T) {
 		if apiErr == nil {
 			t.Fatal("expected API error, got nil")
 		}
-		if apiErr.Code != apierror.ErrorCodeClientClosedRequest {
-			t.Errorf("expected error code %q, got %q", apierror.ErrorCodeClientClosedRequest, apiErr.Code)
+		if apiErr.Code != apierror.CodeClientClosedRequest {
+			t.Errorf("expected error code %q, got %q", apierror.CodeClientClosedRequest, apiErr.Code)
 		}
 	})
 
@@ -675,8 +664,8 @@ func TestConvertGRPCError_ClientCancellation(t *testing.T) {
 		if apiErr == nil {
 			t.Fatal("expected API error, got nil")
 		}
-		if apiErr.Code != apierror.ErrorCodeRequestTimeout {
-			t.Errorf("expected error code %q, got %q", apierror.ErrorCodeRequestTimeout, apiErr.Code)
+		if apiErr.Code != apierror.CodeRequestTimeout {
+			t.Errorf("expected error code %q, got %q", apierror.CodeRequestTimeout, apiErr.Code)
 		}
 	})
 
@@ -689,8 +678,8 @@ func TestConvertGRPCError_ClientCancellation(t *testing.T) {
 		if apiErr == nil {
 			t.Fatal("expected API error, got nil")
 		}
-		if apiErr.Code != apierror.ErrorCodeInternalError {
-			t.Errorf("expected error code %q, got %q", apierror.ErrorCodeInternalError, apiErr.Code)
+		if apiErr.Code != apierror.CodeInternalError {
+			t.Errorf("expected error code %q, got %q", apierror.CodeInternalError, apiErr.Code)
 		}
 	})
 }
@@ -711,80 +700,80 @@ func TestRoundTrip_AllAPIErrorCodes(t *testing.T) {
 	t.Parallel()
 	allErrorCodes := []struct {
 		name   string
-		code   apierror.ErrorCode
+		code   apierror.Code
 		create func() *apierror.APIError
 	}{
-		{name: "ExpiredToken", code: apierror.ErrorCodeExpiredToken, create: func() *apierror.APIError {
-			return apierror.NewAPIError(apierror.ErrorCodeExpiredToken, apierror.ErrorTypeInvalidRequest, "Token expired", "")
+		{name: "ExpiredToken", code: apierror.CodeExpiredToken, create: func() *apierror.APIError {
+			return apierror.New(apierror.CodeExpiredToken, "Token expired")
 		}},
-		{name: "ExpiredAPIKey", code: apierror.ErrorCodeExpiredAPIKey, create: func() *apierror.APIError {
-			return apierror.NewExpiredAPIKeyError("API key expired")
+		{name: "ExpiredAPIKey", code: apperr.CodeAPIKeyExpired, create: func() *apierror.APIError {
+			return apperr.NewExpiredAPIKeyError("API key expired")
 		}},
-		{name: "InvalidCredentials", code: apierror.ErrorCodeInvalidCredentials, create: func() *apierror.APIError {
+		{name: "InvalidCredentials", code: apierror.CodeInvalidCredentials, create: func() *apierror.APIError {
 			return apierror.NewAuthenticationError("Invalid credentials")
 		}},
-		{name: "InsufficientPerms", code: apierror.ErrorCodeInsufficientPerms, create: func() *apierror.APIError {
+		{name: "InsufficientPerms", code: apierror.CodeInsufficientPermissions, create: func() *apierror.APIError {
 			return apierror.NewAuthorizationError("Insufficient permissions")
 		}},
-		{name: "ValidationFailed", code: apierror.ErrorCodeValidationFailed, create: func() *apierror.APIError {
+		{name: "ValidationFailed", code: apierror.CodeValidationFailed, create: func() *apierror.APIError {
 			return apierror.NewValidationError("Validation failed")
 		}},
-		{name: "MissingField", code: apierror.ErrorCodeMissingField, create: func() *apierror.APIError {
-			return apierror.NewAPIError(apierror.ErrorCodeMissingField, apierror.ErrorTypeInvalidRequest, "Missing field", "")
+		{name: "MissingField", code: apierror.CodeMissingField, create: func() *apierror.APIError {
+			return apierror.New(apierror.CodeMissingField, "Missing field")
 		}},
-		{name: "InvalidFormat", code: apierror.ErrorCodeInvalidFormat, create: func() *apierror.APIError {
-			return apierror.NewAPIError(apierror.ErrorCodeInvalidFormat, apierror.ErrorTypeInvalidRequest, "Invalid format", "")
+		{name: "InvalidFormat", code: apierror.CodeInvalidFormat, create: func() *apierror.APIError {
+			return apierror.New(apierror.CodeInvalidFormat, "Invalid format")
 		}},
-		{name: "MethodNotAllowed", code: apierror.ErrorCodeMethodNotAllowed, create: func() *apierror.APIError {
+		{name: "MethodNotAllowed", code: apierror.CodeMethodNotAllowed, create: func() *apierror.APIError {
 			return apierror.NewMethodNotAllowedError("Method not allowed")
 		}},
-		{name: "RequestTooLarge", code: apierror.ErrorCodeRequestTooLarge, create: func() *apierror.APIError {
+		{name: "RequestTooLarge", code: apierror.CodeRequestTooLarge, create: func() *apierror.APIError {
 			return apierror.NewRequestTooLargeError("Request too large")
 		}},
-		{name: "ResourceNotFound", code: apierror.ErrorCodeResourceNotFound, create: func() *apierror.APIError {
-			return apierror.NewResourceNotFoundError("Resource not found")
+		{name: "ResourceNotFound", code: apierror.CodeResourceNotFound, create: func() *apierror.APIError {
+			return apierror.NewNotFoundError("Resource not found")
 		}},
-		{name: "ResourceExists", code: apierror.ErrorCodeResourceExists, create: func() *apierror.APIError {
-			return apierror.NewAPIError(apierror.ErrorCodeResourceExists, apierror.ErrorTypeInvalidRequest, "Resource exists", "")
+		{name: "ResourceExists", code: apierror.CodeResourceExists, create: func() *apierror.APIError {
+			return apierror.New(apierror.CodeResourceExists, "Resource exists")
 		}},
-		{name: "ResourceConflict", code: apierror.ErrorCodeResourceConflict, create: func() *apierror.APIError {
-			return apierror.NewResourceConflictError("Resource conflict")
+		{name: "ResourceConflict", code: apierror.CodeResourceConflict, create: func() *apierror.APIError {
+			return apierror.NewConflictError("Resource conflict")
 		}},
-		{name: "RateLimitExceeded", code: apierror.ErrorCodeRateLimitExceeded, create: func() *apierror.APIError {
-			return apierror.NewRateLimitExceededError("Rate limit exceeded")
+		{name: "RateLimitExceeded", code: apierror.CodeRateLimited, create: func() *apierror.APIError {
+			return apierror.NewRateLimitedError("Rate limit exceeded")
 		}},
-		{name: "ParameterMissing", code: apierror.ErrorCodeParameterMissing, create: func() *apierror.APIError {
-			return apierror.NewAPIError(apierror.ErrorCodeParameterMissing, apierror.ErrorTypeInvalidRequest, "Parameter missing", "")
+		{name: "ParameterMissing", code: apierror.CodeParameterMissing, create: func() *apierror.APIError {
+			return apierror.New(apierror.CodeParameterMissing, "Parameter missing")
 		}},
-		{name: "ParameterInvalid", code: apierror.ErrorCodeParameterInvalid, create: func() *apierror.APIError {
-			return apierror.NewAPIError(apierror.ErrorCodeParameterInvalid, apierror.ErrorTypeInvalidRequest, "Parameter invalid", "")
+		{name: "ParameterInvalid", code: apierror.CodeParameterInvalid, create: func() *apierror.APIError {
+			return apierror.New(apierror.CodeParameterInvalid, "Parameter invalid")
 		}},
-		{name: "ParameterUnknown", code: apierror.ErrorCodeParameterUnknown, create: func() *apierror.APIError {
-			return apierror.NewAPIError(apierror.ErrorCodeParameterUnknown, apierror.ErrorTypeInvalidRequest, "Parameter unknown", "")
+		{name: "ParameterUnknown", code: apierror.CodeParameterUnknown, create: func() *apierror.APIError {
+			return apierror.New(apierror.CodeParameterUnknown, "Parameter unknown")
 		}},
-		{name: "ParametersExclusive", code: apierror.ErrorCodeParametersExclusive, create: func() *apierror.APIError {
-			return apierror.NewAPIError(apierror.ErrorCodeParametersExclusive, apierror.ErrorTypeInvalidRequest, "Parameters exclusive", "")
+		{name: "ParametersExclusive", code: apierror.CodeParametersExclusive, create: func() *apierror.APIError {
+			return apierror.New(apierror.CodeParametersExclusive, "Parameters exclusive")
 		}},
-		{name: "InternalError", code: apierror.ErrorCodeInternalError, create: func() *apierror.APIError {
+		{name: "InternalError", code: apierror.CodeInternalError, create: func() *apierror.APIError {
 			return apierror.NewInternalError(errors.New("test"), "Internal error")
 		}},
-		{name: "SvcUnavailable", code: apierror.ErrorCodeSvcUnavailable, create: func() *apierror.APIError {
-			return apierror.NewAPIError(apierror.ErrorCodeSvcUnavailable, apierror.ErrorTypeAPI, "Service unavailable", "internal")
+		{name: "SvcUnavailable", code: apierror.CodeServiceUnavailable, create: func() *apierror.APIError {
+			return apierror.New(apierror.CodeServiceUnavailable, "Service unavailable", apierror.WithInternalMessage("internal"))
 		}},
-		{name: "ExternalSvcError", code: apierror.ErrorCodeExternalSvcError, create: func() *apierror.APIError {
-			return apierror.NewAPIError(apierror.ErrorCodeExternalSvcError, apierror.ErrorTypeAPI, "External service error", "")
+		{name: "ExternalSvcError", code: apierror.CodeExternalServiceError, create: func() *apierror.APIError {
+			return apierror.New(apierror.CodeExternalServiceError, "External service error")
 		}},
-		{name: "Timeout", code: apierror.ErrorCodeTimeout, create: func() *apierror.APIError {
-			return apierror.NewAPIError(apierror.ErrorCodeTimeout, apierror.ErrorTypeAPI, "Timeout", "")
+		{name: "Timeout", code: apierror.CodeTimeout, create: func() *apierror.APIError {
+			return apierror.New(apierror.CodeTimeout, "Timeout")
 		}},
-		{name: "ConnectionError", code: apierror.ErrorCodeConnectionError, create: func() *apierror.APIError {
-			return apierror.NewAPIError(apierror.ErrorCodeConnectionError, apierror.ErrorTypeAPI, "Connection error", "")
+		{name: "ConnectionError", code: apierror.CodeConnectionError, create: func() *apierror.APIError {
+			return apierror.New(apierror.CodeConnectionError, "Connection error")
 		}},
-		{name: "RequestTimeout", code: apierror.ErrorCodeRequestTimeout, create: func() *apierror.APIError {
+		{name: "RequestTimeout", code: apierror.CodeRequestTimeout, create: func() *apierror.APIError {
 			return apierror.NewRequestTimeoutError("Request timed out")
 		}},
-		{name: "ClientClosedRequest", code: apierror.ErrorCodeClientClosedRequest, create: func() *apierror.APIError {
-			return apierror.NewClientClosedRequestError("Client closed request")
+		{name: "ClientClosedRequest", code: apierror.CodeClientClosedRequest, create: func() *apierror.APIError {
+			return apierror.NewClientClosedRequestError()
 		}},
 	}
 
@@ -820,9 +809,6 @@ func TestRoundTrip_AllAPIErrorCodes(t *testing.T) {
 			}
 			if roundTrip.Param != original.Param {
 				t.Errorf("param not preserved: expected %q, got %q", original.Param, roundTrip.Param)
-			}
-			if roundTrip.DocURL != original.DocURL {
-				t.Errorf("doc_url not preserved: expected %q, got %q", original.DocURL, roundTrip.DocURL)
 			}
 			if roundTrip.InternalMessage != original.InternalMessage {
 				t.Errorf("internal message not preserved: expected %q, got %q",

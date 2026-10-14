@@ -3,7 +3,7 @@ package grpc
 import (
 	"context"
 
-	apierror "github.com/open-mrp/api/shared/errors"
+	apierror "github.com/open-mrp/apikit/apierror"
 
 	"github.com/open-mrp/api/services/core-service/internal/domain"
 	"github.com/open-mrp/api/shared/contracts"
@@ -189,14 +189,14 @@ func stockingDataFromProto(d *pb.StockingDataInfo) (domain.StockingData, *apierr
 
 func receivedQuantityFromProto(q *pb.QuantityInput, param string) (domain.ReceivedQuantity, *apierror.APIError) {
 	if q == nil {
-		return domain.ReceivedQuantity{}, apierror.NewValidationErrorWithParam("A quantity is required.", param)
+		return domain.ReceivedQuantity{}, apierror.NewFieldError(param, apierror.CodeInvalidFormat, "A quantity is required.")
 	}
 	value, err := decimal.NewFromString(q.Value)
 	if err != nil {
-		return domain.ReceivedQuantity{}, apierror.NewValidationErrorWithParam("The quantity must be a decimal number.", param+".value")
+		return domain.ReceivedQuantity{}, apierror.NewFieldError(param+".value", apierror.CodeInvalidFormat, "The quantity must be a decimal number.")
 	}
 	if q.UnitId == "" {
-		return domain.ReceivedQuantity{}, apierror.NewValidationErrorWithParam("A unit is required.", param+".unit_id")
+		return domain.ReceivedQuantity{}, apierror.NewFieldError(param+".unit_id", apierror.CodeInvalidFormat, "A unit is required.")
 	}
 	return domain.ReceivedQuantity{Value: value, UnitID: q.UnitId}, nil
 }

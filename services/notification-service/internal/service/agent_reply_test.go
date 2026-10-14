@@ -8,7 +8,7 @@ import (
 	factorymock "github.com/open-mrp/api/services/notification-service/internal/domain/mock/factory"
 	repositorymock "github.com/open-mrp/api/services/notification-service/internal/domain/mock/repository"
 	"github.com/open-mrp/api/shared/constants"
-	apierror "github.com/open-mrp/api/shared/errors"
+	apierror "github.com/open-mrp/apikit/apierror"
 	"github.com/stretchr/testify/assert"
 	"go.uber.org/mock/gomock"
 )
@@ -36,7 +36,7 @@ func TestPostAgentReply_DropsWhenAgentNotActiveParticipant(t *testing.T) {
 		partRepo := repositorymock.NewMockParticipantRepo(ctrl)
 		partRepo.EXPECT().
 			GetByAgentConfigID(gomock.Any(), conversationID, agentConfigID).
-			Return(nil, apierror.NewResourceNotFoundError("not a participant"))
+			Return(nil, apierror.NewNotFoundError("not a participant"))
 		factory := factorymock.NewMockRepoFactory(ctrl)
 		factory.EXPECT().NewParticipantRepo().Return(partRepo).AnyTimes()
 

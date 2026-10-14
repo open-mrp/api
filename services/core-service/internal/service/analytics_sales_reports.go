@@ -7,8 +7,8 @@ import (
 
 	"github.com/open-mrp/api/services/auth-service/pkg/types"
 	"github.com/open-mrp/api/services/core-service/internal/domain"
-	apierror "github.com/open-mrp/api/shared/errors"
-	"github.com/open-mrp/api/shared/tracing"
+	apierror "github.com/open-mrp/apikit/apierror"
+	"github.com/open-mrp/apikit/tracing"
 )
 
 // salesReportAccess is who a sales report is for: the account it reads, and what the caller may see of it.
@@ -32,9 +32,7 @@ func (s *analyticsSvcImpl) salesReportAccessFor(ctx context.Context) (*salesRepo
 		return nil, apiErr
 	}
 	if !ready {
-		return nil, apierror.NewAPIError(apierror.ErrorCodeSvcUnavailable, apierror.ErrorTypeAPI,
-			"Sales analytics are still being prepared. Try again in a few minutes.",
-			"sales_line_fact backfill has not completed a pass")
+		return nil, apierror.New(apierror.CodeServiceUnavailable, "Sales analytics are still being prepared. Try again in a few minutes.", apierror.WithInternalMessage("sales_line_fact backfill has not completed a pass"))
 	}
 	return access, nil
 }
@@ -78,7 +76,7 @@ func (s *analyticsSvcImpl) AnalyzeSalesBreakdown(ctx context.Context, params dom
 	defer span.End()
 
 	if !params.GroupBy.IsValid() {
-		return nil, tracing.Trace(span, apierror.NewParameterInvalidError("group_by must be one of: "+strings.Join(params.GroupBy.EnumValues(), ", ")+".", "group_by"))
+		return nil, tracing.Trace(span, apierror.NewParameterInvalidError("group_by", "group_by must be one of: "+strings.Join(params.GroupBy.EnumValues(), ", ")+"."))
 	}
 	access, apiErr := s.salesReportAccessFor(ctx)
 	if apiErr != nil {

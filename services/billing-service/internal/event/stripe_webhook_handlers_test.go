@@ -8,7 +8,7 @@ import (
 
 	"github.com/open-mrp/api/shared/appctx"
 	"github.com/open-mrp/api/shared/constants"
-	apierror "github.com/open-mrp/api/shared/errors"
+	apierror "github.com/open-mrp/apikit/apierror"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -239,7 +239,7 @@ func TestHandleCustomerDeleted_AccountNotFound_NoOp(t *testing.T) {
 	t.Parallel()
 	client := &stubCoreClient{
 		getAccountByStripeCustomerID: func(_ context.Context, _ string) (string, string, *apierror.APIError) {
-			return "", "", apierror.NewResourceNotFoundError("account not found")
+			return "", "", apierror.NewNotFoundError("account not found")
 		},
 	}
 

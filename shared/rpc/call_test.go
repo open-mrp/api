@@ -6,7 +6,7 @@ import (
 	"time"
 
 	"github.com/open-mrp/api/shared/contracts"
-	apierror "github.com/open-mrp/api/shared/errors"
+	apierror "github.com/open-mrp/apikit/apierror"
 
 	"go.opentelemetry.io/otel/trace"
 	"go.opentelemetry.io/otel/trace/noop"
@@ -130,14 +130,14 @@ func TestCallRPC_ErrorMapping(t *testing.T) {
 		name       string
 		ctx        func(t *testing.T) context.Context
 		callErr    error
-		wantCode   apierror.ErrorCode
+		wantCode   apierror.Code
 		wantStatus int
 	}{
 		{
 			name:       "not found maps to resource not found",
 			ctx:        func(t *testing.T) context.Context { return context.Background() },
 			callErr:    status.Error(codes.NotFound, "order not found"),
-			wantCode:   apierror.ErrorCodeResourceNotFound,
+			wantCode:   apierror.CodeResourceNotFound,
 			wantStatus: 404,
 		},
 		{
@@ -148,21 +148,21 @@ func TestCallRPC_ErrorMapping(t *testing.T) {
 				return ctx
 			},
 			callErr:    status.Error(codes.Canceled, "context canceled"),
-			wantCode:   apierror.ErrorCodeClientClosedRequest,
+			wantCode:   apierror.CodeClientClosedRequest,
 			wantStatus: 499,
 		},
 		{
 			name:       "expired rpc deadline maps to request timeout",
 			ctx:        func(t *testing.T) context.Context { return context.Background() },
 			callErr:    status.Error(codes.DeadlineExceeded, "context deadline exceeded"),
-			wantCode:   apierror.ErrorCodeRequestTimeout,
+			wantCode:   apierror.CodeRequestTimeout,
 			wantStatus: 504,
 		},
 		{
 			name:       "unrecognised code maps to internal error",
 			ctx:        func(t *testing.T) context.Context { return context.Background() },
 			callErr:    status.Error(codes.Unavailable, "connection refused"),
-			wantCode:   apierror.ErrorCodeInternalError,
+			wantCode:   apierror.CodeInternalError,
 			wantStatus: 500,
 		},
 	}
@@ -181,7 +181,7 @@ func TestCallRPC_ErrorMapping(t *testing.T) {
 			if apiErr.Code != tt.wantCode {
 				t.Errorf("expected code %q, got %q", tt.wantCode, apiErr.Code)
 			}
-			if got := apierror.GetHTTPStatusCode(apiErr.Code); got != tt.wantStatus {
+			if got := apiErr.Code.Status(); got != tt.wantStatus {
 				t.Errorf("expected HTTP status %d, got %d", tt.wantStatus, got)
 			}
 		})
@@ -205,7 +205,7 @@ func TestCallRPC_ReturnsZeroValueOnError(t *testing.T) {
 
 func TestCallRPC_PreservesEncodedAPIError(t *testing.T) {
 	t.Parallel()
-	original := apierror.NewValidationErrorWithParam("Quantity must be positive.", "quantity")
+	original := apierror.NewFieldError("quantity", apierror.CodeInvalidFormat, "Quantity must be positive.")
 	call := func(ctx context.Context, opts ...grpc.CallOption) (testResponse, error) {
 		return testResponse{}, contracts.ConvertAPIErrorToGRPC(original)
 	}

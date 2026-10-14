@@ -15,7 +15,7 @@ import (
 	apiendpoint "github.com/open-mrp/api/services/api-gateway/pkg/endpoint"
 	"github.com/open-mrp/api/shared/constants"
 	"github.com/open-mrp/api/shared/contracts"
-	apierror "github.com/open-mrp/api/shared/errors"
+	apierror "github.com/open-mrp/apikit/apierror"
 	"github.com/open-mrp/apikit/field"
 )
 
@@ -420,7 +420,7 @@ func buildOpenAPISpec(groups []apiendpoint.APIEndpointGroup, publicOnly bool, ve
 	}
 
 	// Register error response schema for documentation
-	apiErrorType := reflect.TypeFor[apierror.APIErrorResponse]()
+	apiErrorType := reflect.TypeFor[apierror.Response]()
 	if _, ok := spec.Components.Schemas["APIErrorResponse"]; !ok {
 		spec.Components.Schemas["APIErrorResponse"] = generateSchema(apiErrorType, &spec.Components, docReader)
 	}

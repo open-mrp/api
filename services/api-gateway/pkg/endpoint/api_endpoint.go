@@ -20,12 +20,12 @@ import (
 	"github.com/open-mrp/api/services/auth-service/pkg/types"
 	"github.com/open-mrp/api/shared/appctx"
 	"github.com/open-mrp/api/shared/constants"
-	apierror "github.com/open-mrp/api/shared/errors"
 	"github.com/open-mrp/api/shared/redact"
-	"github.com/open-mrp/api/shared/tracing"
-	"github.com/open-mrp/api/shared/validate"
 	"github.com/open-mrp/api/shared/version"
+	apierror "github.com/open-mrp/apikit/apierror"
 	"github.com/open-mrp/apikit/field"
+	"github.com/open-mrp/apikit/tracing"
+	"github.com/open-mrp/apikit/validate"
 
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/trace"
@@ -415,7 +415,7 @@ func (e *APIEndpoint[TReq, TResp]) Execute(w http.ResponseWriter, r *http.Reques
 		if err := httptransport.DecodeJSONInto(any(req), r, true); err != nil {
 			if errors.Is(err, field.ErrExplicitNull) {
 				if name, ok := field.ExplicitNullField(bytesForNull, any(req)); ok {
-					recordAndRespondAPIError(ctx, w, span, "json_decode", apierror.NewInvalidFormatError(fmt.Sprintf("Field '%s' cannot be null.", name), name))
+					recordAndRespondAPIError(ctx, w, span, "json_decode", apierror.NewInvalidFormatError(name, fmt.Sprintf("Field '%s' cannot be null.", name)))
 					return
 				}
 			}
@@ -467,7 +467,7 @@ func (e *APIEndpoint[TReq, TResp]) Execute(w http.ResponseWriter, r *http.Reques
 
 	// If the client disconnected during processing, report a 499 ("the client closed the connection before the server could respond") regardless of what error (if any) the handler returned. There's no point sending a response body — the client is gone — but we still write the status so the logging middleware records the correct code.
 	if r.Context().Err() == context.Canceled {
-		recordAndRespondAPIError(ctx, w, span, "client_closed", apierror.NewClientClosedRequestError("Client closed the connection."))
+		recordAndRespondAPIError(ctx, w, span, "client_closed", apierror.NewClientClosedRequestError())
 		return
 	}
 
@@ -619,10 +619,7 @@ func (e *APIEndpoint[TReq, TResp]) parseIncludeTree(r *http.Request) (*resourcek
 		return resourcekit.NewIncludeTree(), nil
 	}
 	if e.IncludeConfig == nil {
-		return nil, apierror.NewParameterInvalidError(
-			"This endpoint does not support the include parameter.",
-			"include[]",
-		)
+		return nil, apierror.NewParameterInvalidError("include[]", "This endpoint does not support the include parameter.")
 	}
 	if e.ObjectType != "" {
 		if def := resourcekit.Lookup(e.ObjectType); def == nil {
@@ -639,11 +636,8 @@ func (e *APIEndpoint[TReq, TResp]) parseIncludeTree(r *http.Request) (*resourcek
 	}
 	for _, v := range raw {
 		if !allowedSet[v] {
-			return nil, apierror.NewParameterInvalidError(
-				fmt.Sprintf("Invalid include value '%s'. Allowed values: %s",
-					v, strings.Join(allowed, ", ")),
-				"include[]",
-			)
+			return nil, apierror.NewParameterInvalidError("include[]", fmt.Sprintf("Invalid include value '%s'. Allowed values: %s",
+				v, strings.Join(allowed, ", ")))
 		}
 	}
 	return resourcekit.ParseIncludeTree(raw), nil

@@ -10,7 +10,7 @@ import (
 	"github.com/open-mrp/api/services/core-service/internal/domain"
 	factorymock "github.com/open-mrp/api/services/core-service/internal/domain/mock/factory"
 	repositorymock "github.com/open-mrp/api/services/core-service/internal/domain/mock/repository"
-	apierror "github.com/open-mrp/api/shared/errors"
+	apierror "github.com/open-mrp/apikit/apierror"
 )
 
 // A carton of eight, an each, and an item stocked by the carton whose only production step is written
@@ -232,8 +232,8 @@ func TestRecomputeItemCosts_RejectsAStepUnitOutsideTheItemsUnitGroup(t *testing.
 	if apiErr == nil {
 		t.Fatal("expected a validation error for a step unit outside the item's unit group")
 	}
-	if apiErr.Code != apierror.ErrorCodeValidationFailed {
-		t.Errorf("error code = %v, want %v", apiErr.Code, apierror.ErrorCodeValidationFailed)
+	if apiErr.Code != apierror.CodeValidationFailed {
+		t.Errorf("error code = %v, want %v", apiErr.Code, apierror.CodeValidationFailed)
 	}
 	if len(h.written) != 0 {
 		t.Errorf("expected no unit cost write, got %d", len(h.written))
@@ -268,10 +268,10 @@ func TestValidateCostDenominatorInUnitGroup(t *testing.T) {
 	tests := []struct {
 		name     string
 		inGroup  bool
-		wantCode apierror.ErrorCode
+		wantCode apierror.Code
 	}{
 		{"denominator in the item's unit group", true, ""},
-		{"denominator outside the item's unit group", false, apierror.ErrorCodeValidationFailed},
+		{"denominator outside the item's unit group", false, apierror.CodeValidationFailed},
 	}
 
 	for _, tt := range tests {

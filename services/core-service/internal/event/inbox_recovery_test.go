@@ -5,8 +5,8 @@ import (
 	"errors"
 	"testing"
 
-	apierror "github.com/open-mrp/api/shared/errors"
 	"github.com/open-mrp/api/shared/messaging"
+	apierror "github.com/open-mrp/apikit/apierror"
 )
 
 // The losing side of a completion race is recognized by the sentinel, not by the message text, and the sentinel has to survive being wrapped in an APIError to get there. If it stops unwrapping, a rolled-back duplicate is reported as a handler failure and retried forever instead of being acked.
@@ -50,9 +50,9 @@ func TestDiscardIfPermanent_OperatorFixableErrorsAreRetriedNotDiscarded(t *testi
 	t.Parallel()
 
 	cases := map[string]*apierror.APIError{
-		"not found":  apierror.NewResourceNotFoundError("Production step not found."),
+		"not found":  apierror.NewNotFoundError("Production step not found."),
 		"validation": apierror.NewValidationError("Measure cannot be interpreted."),
-		"conflict":   apierror.NewResourceConflictError("Item already reconciled."),
+		"conflict":   apierror.NewConflictError("Item already reconciled."),
 	}
 
 	for name, apiErr := range cases {

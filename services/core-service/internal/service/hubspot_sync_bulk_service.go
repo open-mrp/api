@@ -11,10 +11,10 @@ import (
 	"github.com/open-mrp/api/services/core-service/internal/hubspotsync"
 	"github.com/open-mrp/api/shared/audit"
 	"github.com/open-mrp/api/shared/constants"
-	"github.com/open-mrp/api/shared/db"
-	apierror "github.com/open-mrp/api/shared/errors"
 	"github.com/open-mrp/api/shared/excel"
 	"github.com/open-mrp/api/shared/messaging"
+	apierror "github.com/open-mrp/apikit/apierror"
+	"github.com/open-mrp/apikit/db"
 )
 
 // asyncBulkDeps hands the async bulk and export engines the plumbing they run on.
@@ -45,23 +45,23 @@ func validateBulkResolveReviewRows(rows []bulkResolveReviewInput) *apierror.APIE
 	var rowErrs apierror.RowErrors
 	for i, row := range rows {
 		if strings.TrimSpace(row.ReviewID) == "" {
-			rowErrs.AddValidation(i, fmt.Sprintf("reviews[%d].review_id", i), "is required")
+			rowErrs.AddField(i, "review_id", apierror.CodeInvalidFormat, "is required")
 		} else if _, dup := seen[row.ReviewID]; dup {
-			rowErrs.AddValidation(i, fmt.Sprintf("reviews[%d].review_id", i), fmt.Sprintf("duplicate review %q in request", row.ReviewID))
+			rowErrs.AddField(i, "review_id", apierror.CodeInvalidFormat, fmt.Sprintf("duplicate review %q in request", row.ReviewID))
 		}
 		seen[row.ReviewID] = struct{}{}
 
 		switch row.Action {
 		case hubspotsync.ReviewResolutionLink:
 			if row.ResolvedHubspotID == nil || strings.TrimSpace(*row.ResolvedHubspotID) == "" {
-				rowErrs.AddValidation(i, fmt.Sprintf("reviews[%d].resolved_hubspot_id", i), "is required when linking")
+				rowErrs.AddField(i, "resolved_hubspot_id", apierror.CodeInvalidFormat, "is required when linking")
 			}
 		case hubspotsync.ReviewResolutionCreateNew, hubspotsync.ReviewActionSkip:
 		default:
-			rowErrs.AddValidation(i, fmt.Sprintf("reviews[%d].action", i), "must be one of: link, create_new, skip")
+			rowErrs.AddField(i, "action", apierror.CodeInvalidFormat, "must be one of: link, create_new, skip")
 		}
 	}
-	return rowErrs.Summary("company reviews")
+	return rowErrs.Summary("reviews")
 }
 
 // confirms every named review exists on the sync being resolved, and settles each row's target state
@@ -86,11 +86,11 @@ func resolveBulkResolveReviewRows(ctx context.Context, repos domain.RepoFactory,
 		review, found := byID[row.ReviewID]
 		switch {
 		case !found:
-			rowErrs.AddValidation(i, fmt.Sprintf("reviews[%d].review_id", i), fmt.Sprintf("no company review with id %q", row.ReviewID))
+			rowErrs.AddField(i, "review_id", apierror.CodeInvalidFormat, fmt.Sprintf("no company review with id %q", row.ReviewID))
 			continue
 		// Scoped to the job named in the route, not just the account: the route is what the caller was authorized against, so a review from another sync must not be reachable through it.
 		case review.JobID != row.JobID:
-			rowErrs.AddValidation(i, fmt.Sprintf("reviews[%d].review_id", i), fmt.Sprintf("review %q belongs to a different sync", row.ReviewID))
+			rowErrs.AddField(i, "review_id", apierror.CodeInvalidFormat, fmt.Sprintf("review %q belongs to a different sync", row.ReviewID))
 			continue
 		}
 
@@ -109,7 +109,7 @@ func resolveBulkResolveReviewRows(ctx context.Context, repos domain.RepoFactory,
 			resolved[i].Status = hubspotsync.ReviewStatusSkipped
 		}
 	}
-	if apiErr := rowErrs.Summary("company reviews"); apiErr != nil {
+	if apiErr := rowErrs.Summary("reviews"); apiErr != nil {
 		return nil, apiErr
 	}
 	return resolved, nil
@@ -141,7 +141,7 @@ func writeBulkResolveReviews(txCtx context.Context, txRepos domain.RepoFactory, 
 		rowErr := sp.Run(txCtx, func(spCtx context.Context) *apierror.APIError {
 			old, found := byID[row.ReviewID]
 			if !found {
-				return apierror.NewResourceNotFoundError(fmt.Sprintf("Company review %q no longer exists.", row.ReviewID))
+				return apierror.NewNotFoundError(fmt.Sprintf("Company review %q no longer exists.", row.ReviewID))
 			}
 
 			if apiErr := repo.ResolveReview(spCtx, domain.ResolveHubspotCompanyReviewParams{
@@ -168,7 +168,7 @@ func writeBulkResolveReviews(txCtx context.Context, txRepos domain.RepoFactory, 
 			})
 		})
 		if rowErr != nil {
-			rowErrors = append(rowErrors, apierror.NewRowError(i, rowErr))
+			rowErrors = append(rowErrors, apierror.RowError{Index: i, Error: rowErr.Object()})
 			continue
 		}
 

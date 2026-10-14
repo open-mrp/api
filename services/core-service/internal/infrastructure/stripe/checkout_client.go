@@ -6,8 +6,8 @@ import (
 	"strconv"
 
 	"github.com/open-mrp/api/services/core-service/internal/domain"
-	apierror "github.com/open-mrp/api/shared/errors"
-	"github.com/open-mrp/api/shared/tracing"
+	apierror "github.com/open-mrp/apikit/apierror"
+	"github.com/open-mrp/apikit/tracing"
 
 	gostripe "github.com/stripe/stripe-go/v84"
 	"github.com/stripe/stripe-go/v84/checkout/session"
@@ -174,7 +174,7 @@ func (c *checkoutClientImpl) CreateEmbeddedCheckoutSession(ctx context.Context, 
 	}
 
 	if sess.ClientSecret == "" {
-		return nil, apierror.NewResourceNotFoundError("Stripe checkout session client secret not found.")
+		return nil, apierror.NewNotFoundError("Stripe checkout session client secret not found.")
 	}
 
 	return &domain.StripeEmbeddedCheckoutSession{

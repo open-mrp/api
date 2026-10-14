@@ -13,7 +13,7 @@ import (
 	repositorymock "github.com/open-mrp/api/services/core-service/internal/domain/mock/repository"
 	"github.com/open-mrp/api/shared/appctx"
 	"github.com/open-mrp/api/shared/constants"
-	apierror "github.com/open-mrp/api/shared/errors"
+	apierror "github.com/open-mrp/apikit/apierror"
 	"go.uber.org/mock/gomock"
 )
 
@@ -44,7 +44,7 @@ func requireForbidden(t *testing.T, apiErr *apierror.APIError, param, wantMsg st
 	if apiErr == nil {
 		t.Fatal("expected a 403, got nil")
 	}
-	if got := apierror.GetHTTPStatusCode(apiErr.Code); got != http.StatusForbidden {
+	if got := apiErr.Code.Status(); got != http.StatusForbidden {
 		t.Fatalf("status = %d (%s), want 403", got, apiErr.PublicMessage)
 	}
 	if apiErr.Param != param {
@@ -113,7 +113,7 @@ func TestCreateRoleWithinTheCallersGrantProceeds(t *testing.T) {
 			Name:        "Pricing",
 			Permissions: []domain.CreateRolePermissionInput{{PermissionCode: "products", Read: true, Update: true}},
 		})
-		if apiErr == nil || apiErr.Code == apierror.ErrorCodeInsufficientPerms {
+		if apiErr == nil || apiErr.Code == apierror.CodeInsufficientPermissions {
 			t.Fatalf("expected to pass the grant check and stop at the name conflict, got %+v", apiErr)
 		}
 	}

@@ -10,9 +10,9 @@ import (
 	"github.com/open-mrp/api/services/core-service/internal/domain"
 	"github.com/open-mrp/api/services/core-service/internal/infrastructure/sqlc"
 	"github.com/open-mrp/api/shared/constants"
-	"github.com/open-mrp/api/shared/db"
-	apierror "github.com/open-mrp/api/shared/errors"
-	"github.com/open-mrp/api/shared/tracing"
+	apierror "github.com/open-mrp/apikit/apierror"
+	"github.com/open-mrp/apikit/db"
+	"github.com/open-mrp/apikit/tracing"
 )
 
 var productionStepQueryRepoTracer = tracing.GetTracer("core-service.production_step_query_repository")
@@ -330,7 +330,7 @@ func (r *productionStepQueryRepoImpl) FindProducedUnit(ctx context.Context, acco
 		AccountID:        accountID,
 	})
 	if errors.Is(err, sql.ErrNoRows) {
-		return nil, tracing.Trace(span, apierror.NewResourceNotFoundError("Production not found for production step."))
+		return nil, tracing.Trace(span, apierror.NewNotFoundError("Production not found for production step."))
 	}
 	if apiErr := db.MapSQLError(err); apiErr != nil {
 		return nil, tracing.Trace(span, apiErr)
@@ -414,8 +414,8 @@ func (r *productionStepQueryRepoImpl) CalculateNextStepQuantities(ctx context.Co
 
 	step, apiErr := r.Find(ctx, accountID, stepID)
 	if apiErr != nil {
-		if apierror.IsNotFound(apiErr) {
-			return nil, tracing.Trace(span, apierror.NewResourceNotFoundError("Production step not found."))
+		if apierror.HasCode(apiErr, apierror.CodeResourceNotFound) {
+			return nil, tracing.Trace(span, apierror.NewNotFoundError("Production step not found."))
 		}
 		return nil, tracing.Trace(span, apiErr)
 	}
@@ -430,10 +430,10 @@ func (r *productionStepQueryRepoImpl) CalculateNextStepQuantities(ctx context.Co
 		}
 	}
 	if consumption == nil {
-		return nil, tracing.Trace(span, apierror.NewResourceNotFoundError("Consumption not found for production step."))
+		return nil, tracing.Trace(span, apierror.NewNotFoundError("Consumption not found for production step."))
 	}
 	if step.Production.ID == "" {
-		return nil, tracing.Trace(span, apierror.NewResourceNotFoundError("Production not found for production step."))
+		return nil, tracing.Trace(span, apierror.NewNotFoundError("Production not found for production step."))
 	}
 
 	conv := NewUnitConversionRepo(r.queries)

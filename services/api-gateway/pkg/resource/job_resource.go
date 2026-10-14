@@ -5,8 +5,8 @@ import (
 
 	apiexample "github.com/open-mrp/api/services/api-gateway/pkg/example"
 	"github.com/open-mrp/api/shared/constants"
-	apierror "github.com/open-mrp/api/shared/errors"
-	"github.com/open-mrp/api/shared/timeutil"
+	apierror "github.com/open-mrp/apikit/apierror"
+	"github.com/open-mrp/apikit/timeutil"
 )
 
 const SampleJobID = "jb_grz7cdpnz8jr"
@@ -38,7 +38,7 @@ type Job struct {
 	// response carries.
 	//
 	// A row rejected on its own merits reports its failure on its own entry in `results` instead, so this stays null even when some rows failed.
-	Error *apierror.ResponseError `json:"error"`
+	Error *apierror.ErrorObject `json:"error"`
 	// Where a completed export job's file can be downloaded.
 	//
 	// Null on every other job, and returned only to a caller asking for JSON — otherwise retrieving the job redirects to it.
@@ -89,7 +89,7 @@ type JobResult struct {
 	// Why the row was rejected, in the same shape a synchronous error response carries.
 	//
 	// Null unless `status` is `failed`.
-	Error *apierror.ResponseError `json:"error"`
+	Error *apierror.ErrorObject `json:"error"`
 }
 
 // NewJobExport builds the download reference a completed export job carries.

@@ -9,10 +9,10 @@ import (
 	grpcutil "github.com/open-mrp/api/services/api-gateway/internal/grpc"
 	apiresource "github.com/open-mrp/api/services/api-gateway/pkg/resource"
 	"github.com/open-mrp/api/services/api-gateway/pkg/resourcekit"
-	apierror "github.com/open-mrp/api/shared/errors"
 	pb "github.com/open-mrp/api/shared/proto/core"
-	"github.com/open-mrp/api/shared/tracing"
+	apierror "github.com/open-mrp/apikit/apierror"
 	"github.com/open-mrp/apikit/field"
+	"github.com/open-mrp/apikit/tracing"
 	"google.golang.org/grpc"
 	"google.golang.org/protobuf/types/known/emptypb"
 )
@@ -250,10 +250,10 @@ func validateSplitQuantity(q field.Optional[SplitQuantityInput], jsonField strin
 		return nil
 	}
 	if strings.TrimSpace(v.Measure) == "" {
-		return apierror.NewMissingFieldError(fmt.Sprintf("Field '%s.measure' is required.", jsonField), jsonField+".measure")
+		return apierror.NewMissingFieldError(jsonField+".measure", fmt.Sprintf("Field '%s.measure' is required.", jsonField))
 	}
 	if strings.TrimSpace(v.UnitID) == "" {
-		return apierror.NewMissingFieldError(fmt.Sprintf("Field '%s.unit_id' is required.", jsonField), jsonField+".unit_id")
+		return apierror.NewMissingFieldError(jsonField+".unit_id", fmt.Sprintf("Field '%s.unit_id' is required.", jsonField))
 	}
 	return nil
 }

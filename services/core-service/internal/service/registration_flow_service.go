@@ -12,11 +12,11 @@ import (
 	"github.com/open-mrp/api/shared/appctx"
 	"github.com/open-mrp/api/shared/audit"
 	"github.com/open-mrp/api/shared/constants"
-	apierror "github.com/open-mrp/api/shared/errors"
 	"github.com/open-mrp/api/shared/id"
-	"github.com/open-mrp/api/shared/idempotency"
+	"github.com/open-mrp/api/shared/idemresponse"
 	"github.com/open-mrp/api/shared/messaging"
-	"github.com/open-mrp/api/shared/tracing"
+	apierror "github.com/open-mrp/apikit/apierror"
+	"github.com/open-mrp/apikit/tracing"
 	"go.opentelemetry.io/otel/trace"
 )
 
@@ -159,7 +159,7 @@ func (s *registrationFlowSvcImpl) CreateRegistrationFlow(ctx context.Context, pa
 
 	switch domain.RecoveryPoint(idempotencyKey.RecoveryPoint) {
 	case domain.RecoveryPointFinished:
-		cached, err := idempotency.UnmarshalCachedResponse[domain.RegistrationFlow](ctx, idempotencyKey.ResponseCode, idempotencyKey.ResponseBody)
+		cached, err := idemresponse.UnmarshalCachedResponse[domain.RegistrationFlow](ctx, idempotencyKey.ResponseCode, idempotencyKey.ResponseBody)
 		if err != nil {
 			return nil, tracing.Trace(span, apierror.NewInternalError(err, "Issue unmarshalling cached response."))
 		}
@@ -233,7 +233,7 @@ func (s *registrationFlowSvcImpl) UpdateRegistrationFlow(ctx context.Context, pa
 
 	switch domain.RecoveryPoint(idempotencyKey.RecoveryPoint) {
 	case domain.RecoveryPointFinished:
-		cached, err := idempotency.UnmarshalCachedResponse[domain.RegistrationFlow](ctx, idempotencyKey.ResponseCode, idempotencyKey.ResponseBody)
+		cached, err := idemresponse.UnmarshalCachedResponse[domain.RegistrationFlow](ctx, idempotencyKey.ResponseCode, idempotencyKey.ResponseBody)
 		if err != nil {
 			return nil, tracing.Trace(span, apierror.NewInternalError(err, "Issue unmarshalling cached response."))
 		}
@@ -301,13 +301,13 @@ func (s *registrationFlowSvcImpl) DeleteRegistrationFlow(ctx context.Context, re
 
 	registrationFlow, apiErr := s.repos.NewRegistrationFlowRepo().Get(ctx, accountID, registrationFlowID)
 	if apiErr != nil {
-		if apierror.IsNotFound(apiErr) {
+		if apierror.HasCode(apiErr, apierror.CodeResourceNotFound) {
 			wasDeleted, deletedCheckErr := s.repos.NewDeletedRecordRepo().ExistsInAccount(ctx, constants.DeletedRecordResourceTypeRegistrationFlow, registrationFlowID, accountID)
 			if deletedCheckErr != nil {
 				return tracing.Trace(span, deletedCheckErr)
 			}
 			if wasDeleted {
-				return tracing.Trace(span, apierror.NewAlreadyDeletedError("This registration flow has already been deleted and can no longer be modified."))
+				return tracing.Trace(span, apierror.NewGoneError("This registration flow has already been deleted and can no longer be modified."))
 			}
 		}
 		return tracing.Trace(span, apiErr)
@@ -372,7 +372,7 @@ func (s *registrationFlowSvcImpl) GetRegistrationFlowBySlug(ctx context.Context,
 	}
 
 	if len(flows) == 0 {
-		return nil, tracing.Trace(span, apierror.NewResourceNotFoundError("Registration flow not found."))
+		return nil, tracing.Trace(span, apierror.NewNotFoundError("Registration flow not found."))
 	}
 
 	return flows[0], nil
@@ -409,7 +409,7 @@ func (s *registrationFlowSvcImpl) RegisterCustomer(ctx context.Context, params d
 
 	switch domain.RecoveryPoint(idempotencyKey.RecoveryPoint) {
 	case domain.RecoveryPointFinished:
-		_, err := idempotency.UnmarshalCachedResponse[any](ctx, idempotencyKey.ResponseCode, idempotencyKey.ResponseBody)
+		_, err := idemresponse.UnmarshalCachedResponse[any](ctx, idempotencyKey.ResponseCode, idempotencyKey.ResponseBody)
 		if err != nil {
 			return tracing.Trace(span, apierror.NewInternalError(err, "Issue unmarshalling cached response."))
 		}

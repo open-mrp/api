@@ -9,8 +9,8 @@ import (
 	"github.com/open-mrp/api/services/api-gateway/internal/header"
 	httptransport "github.com/open-mrp/api/services/api-gateway/internal/http"
 	"github.com/open-mrp/api/shared/appctx"
-	apierror "github.com/open-mrp/api/shared/errors"
-	"github.com/open-mrp/api/shared/retry"
+	apierror "github.com/open-mrp/apikit/apierror"
+	"github.com/open-mrp/apikit/retry"
 )
 
 // A rate limiter with exponential backoff and jitter
@@ -210,7 +210,7 @@ func rateLimitMiddleware(rateLimiter *RateLimiter, trustedProxyHops int) func(ht
 				w.Header().Set(header.ContentTypeHeader, "application/json")
 				w.Header().Set(header.RetryAfterHeader, fmt.Sprintf("%d", retryAfterSeconds))
 				w.WriteHeader(http.StatusTooManyRequests)
-				httptransport.RespondWithAPIError(r.Context(), w, apierror.NewRateLimitExceededError("Too many requests. Please try again later."))
+				httptransport.RespondWithAPIError(r.Context(), w, apierror.NewRateLimitedError("Too many requests. Please try again later."))
 				return
 			}
 

@@ -14,9 +14,9 @@ import (
 	"github.com/open-mrp/api/shared/appctx"
 	"github.com/open-mrp/api/shared/constants"
 	"github.com/open-mrp/api/shared/contracts"
-	apierror "github.com/open-mrp/api/shared/errors"
 	"github.com/open-mrp/api/shared/id"
 	"github.com/open-mrp/api/shared/messaging"
+	apierror "github.com/open-mrp/apikit/apierror"
 )
 
 // A no-op update (no changes, no metadata) must be skipped before any
@@ -386,8 +386,8 @@ func TestPublish_requiresTargetAccount(t *testing.T) {
 	if apiErr == nil {
 		t.Fatal("expected an error for an identity with no target account")
 	}
-	if apiErr.Code != apierror.ErrorCodeInvalidCredentials {
-		t.Errorf("Code: got %q want %q", apiErr.Code, apierror.ErrorCodeInvalidCredentials)
+	if apiErr.Code != apierror.CodeInvalidCredentials {
+		t.Errorf("Code: got %q want %q", apiErr.Code, apierror.CodeInvalidCredentials)
 	}
 	if len(repo.created) != 0 {
 		t.Errorf("outbox writes: got %d want 0", len(repo.created))
@@ -401,8 +401,8 @@ func TestPublish_nilOutboxRepoWithValidIdentity(t *testing.T) {
 	if apiErr == nil {
 		t.Fatal("expected an error when no outbox repo is supplied")
 	}
-	if apiErr.Code != apierror.ErrorCodeInternalError {
-		t.Errorf("Code: got %q want %q", apiErr.Code, apierror.ErrorCodeInternalError)
+	if apiErr.Code != apierror.CodeInternalError {
+		t.Errorf("Code: got %q want %q", apiErr.Code, apierror.CodeInternalError)
 	}
 }
 

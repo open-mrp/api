@@ -10,7 +10,7 @@ import (
 	mediatormock "github.com/open-mrp/api/services/core-service/internal/domain/mock/mediator"
 	repositorymock "github.com/open-mrp/api/services/core-service/internal/domain/mock/repository"
 	"github.com/open-mrp/api/shared/appctx"
-	apierror "github.com/open-mrp/api/shared/errors"
+	apierror "github.com/open-mrp/apikit/apierror"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -81,7 +81,7 @@ func (h *inclHarness) departments() (domain.DepartmentSvc, *repositorymock.MockD
 func requireRefused(t *testing.T, apiErr *apierror.APIError, msgAndArgs ...any) {
 	t.Helper()
 	require.NotNil(t, apiErr, msgAndArgs...)
-	assert.Equal(t, apierror.ErrorCodeInsufficientPerms, apiErr.Code, msgAndArgs...)
+	assert.Equal(t, apierror.CodeInsufficientPermissions, apiErr.Code, msgAndArgs...)
 }
 
 // A record an authorized request includes is read for staff without its own permission and for portal users, from the seller's account; without the flag both are refused before anything is read.

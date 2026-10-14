@@ -13,9 +13,9 @@ import (
 	"github.com/open-mrp/api/services/core-service/internal/domain"
 	"github.com/open-mrp/api/services/core-service/internal/infrastructure/sqlc"
 	"github.com/open-mrp/api/shared/constants"
-	"github.com/open-mrp/api/shared/db"
-	"github.com/open-mrp/api/shared/db/backfill"
-	apierror "github.com/open-mrp/api/shared/errors"
+	apierror "github.com/open-mrp/apikit/apierror"
+	"github.com/open-mrp/apikit/db"
+	"github.com/open-mrp/apikit/db/backfill"
 	"github.com/open-mrp/apikit/querytag"
 )
 
@@ -107,7 +107,7 @@ func TestVitessSmoke(t *testing.T) {
 			t.Errorf("stopped after %s, want about the 500ms limit", took)
 		}
 		t.Logf("stopped after %s: %v", time.Since(started).Round(time.Millisecond), err)
-		if apiErr := db.MapSQLError(err); apiErr.Code != apierror.ErrorCodeRequestTimeout {
+		if apiErr := db.MapSQLError(err); apiErr.Code != apierror.CodeRequestTimeout {
 			t.Errorf("maps to %s, want request_timeout", apiErr.Code)
 		}
 
@@ -118,7 +118,7 @@ func TestVitessSmoke(t *testing.T) {
 			t.Fatal("vtgate's QUERY_TIMEOUT_MS did not stop the query")
 		}
 		t.Logf("vtgate stopped it after %s: %v", time.Since(started).Round(time.Millisecond), err)
-		if apiErr := db.MapSQLError(err); apiErr.Code != apierror.ErrorCodeRequestTimeout {
+		if apiErr := db.MapSQLError(err); apiErr.Code != apierror.CodeRequestTimeout {
 			t.Errorf("vtgate's timeout maps to %s, want request_timeout", apiErr.Code)
 		}
 	})

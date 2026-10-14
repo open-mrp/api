@@ -8,7 +8,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/open-mrp/api/services/core-service/internal/domain"
-	apierror "github.com/open-mrp/api/shared/errors"
+	apierror "github.com/open-mrp/apikit/apierror"
 )
 
 // A yarn-like item stocked by the pound, whose group also carries grains, and the units an import
@@ -140,7 +140,7 @@ func TestRunReconcileBatches_AFailedBatchIsReportedRowByRowAndTheRestStillRun(t 
 	failures := runReconcileBatches(rows, result, func(batch []reconcileRow) ([]domain.ReconciledItem, *apierror.APIError) {
 		calls++
 		if calls == 2 {
-			return nil, apierror.NewConflictErrorWithParam("The ledger was busy.", "data")
+			return nil, apierror.NewConflictErrorWithParam("data", "The ledger was busy.")
 		}
 		out := make([]domain.ReconciledItem, len(batch))
 		for i, row := range batch {

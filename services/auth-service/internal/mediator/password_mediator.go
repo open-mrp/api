@@ -12,9 +12,9 @@ import (
 	tokenutil "github.com/open-mrp/api/services/auth-service/internal/token"
 	"github.com/open-mrp/api/services/auth-service/pkg/types"
 	"github.com/open-mrp/api/shared/constants"
-	apierror "github.com/open-mrp/api/shared/errors"
 	"github.com/open-mrp/api/shared/messaging"
-	tracing "github.com/open-mrp/api/shared/tracing"
+	apierror "github.com/open-mrp/apikit/apierror"
+	tracing "github.com/open-mrp/apikit/tracing"
 )
 
 var passwordMedTracer = tracing.GetTracer("auth-service.password_mediator")
@@ -100,7 +100,7 @@ func (s *passwordMedImpl) Validate(ctx context.Context, identifier, password str
 	user, err := userRepo.Find(ctx, identifier)
 
 	if err != nil {
-		if apierror.IsNotFound(err) {
+		if apierror.HasCode(err, apierror.CodeResourceNotFound) {
 			return nil, tracing.Trace(span, apierror.NewAuthenticationError(pwdutil.ErrInvalidCredentials))
 		}
 		return nil, tracing.Trace(span, err)
@@ -195,7 +195,7 @@ func (s *passwordMedImpl) ValidatePasswordResetToken(ctx context.Context, token 
 	user, err := userRepo.Find(ctx, claims.Subject)
 
 	if err != nil {
-		if apierror.IsNotFound(err) {
+		if apierror.HasCode(err, apierror.CodeResourceNotFound) {
 			return nil, tracing.Trace(span, apierror.NewAuthenticationError(pwdutil.ErrInvalidCredentials))
 		}
 		return nil, err
@@ -226,10 +226,10 @@ func (s *passwordMedImpl) RequestReset(ctx context.Context, identifier string, a
 	user, err := userRepo.Find(ctx, identifier)
 
 	if err != nil {
-		if apierror.IsNotFound(err) {
+		if apierror.HasCode(err, apierror.CodeResourceNotFound) {
 			return nil
 		}
-		if apierror.Is5XXErrorCode(err.Code) {
+		if err.Code.Status() >= 500 {
 			return err
 		}
 		return nil

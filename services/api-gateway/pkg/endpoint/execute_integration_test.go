@@ -14,17 +14,17 @@ import (
 	httptransport "github.com/open-mrp/api/services/api-gateway/internal/http"
 	"github.com/open-mrp/api/shared/appctx"
 	"github.com/open-mrp/api/shared/constants"
-	apierror "github.com/open-mrp/api/shared/errors"
 	"github.com/open-mrp/api/shared/version"
+	apierror "github.com/open-mrp/apikit/apierror"
 )
 
 func bindHandler[TReq, TResp any](ep *APIEndpoint[TReq, TResp]) {
 	ep.boundServiceHandler = ep.ServiceHandler(nil)
 }
 
-func decodeErrEnvelope(t *testing.T, w *httptest.ResponseRecorder) apierror.APIErrorResponse {
+func decodeErrEnvelope(t *testing.T, w *httptest.ResponseRecorder) apierror.Response {
 	t.Helper()
-	var envelope apierror.APIErrorResponse
+	var envelope apierror.Response
 	if err := json.Unmarshal(w.Body.Bytes(), &envelope); err != nil {
 		t.Fatalf("decode error envelope: %v body=%s", err, w.Body.String())
 	}
@@ -70,7 +70,7 @@ func TestExecute_MinVersion_rejectsOlderRequestVersion(t *testing.T) {
 		t.Fatalf("expected 400, got %d body=%s", w.Code, w.Body.String())
 	}
 	env := decodeErrEnvelope(t, w)
-	if env.Error.Code != apierror.ErrorCodeAPIVersionTooOld {
+	if env.Error.Code != apierror.CodeAPIVersionTooOld {
 		t.Fatalf("code=%q want api_version_too_old", env.Error.Code)
 	}
 }
@@ -495,7 +495,7 @@ func TestExecute_JSON_unknownField_returns400(t *testing.T) {
 		t.Fatalf("code=%d", w.Code)
 	}
 	env := decodeErrEnvelope(t, w)
-	if env.Error.Code != apierror.ErrorCodeParameterUnknown {
+	if env.Error.Code != apierror.CodeParameterUnknown {
 		t.Fatalf("code=%v", env.Error.Code)
 	}
 }
@@ -527,7 +527,7 @@ func TestExecute_JSON_wrongScalarType_returnsInvalidFormat(t *testing.T) {
 		t.Fatalf("code=%d body=%s", w.Code, w.Body.String())
 	}
 	env := decodeErrEnvelope(t, w)
-	if env.Error.Code != apierror.ErrorCodeInvalidFormat {
+	if env.Error.Code != apierror.CodeInvalidFormat {
 		t.Fatalf("code=%v", env.Error.Code)
 	}
 }
@@ -774,7 +774,7 @@ func TestExecute_handlerNotFoundError_noLocationHeader(t *testing.T) {
 		},
 		ServiceHandler: func(svc any) func(context.Context, *stubRequest) (*stubResponse, *apierror.APIError) {
 			return func(context.Context, *stubRequest) (*stubResponse, *apierror.APIError) {
-				return nil, apierror.NewResourceNotFoundError("missing")
+				return nil, apierror.NewNotFoundError("missing")
 			}
 		},
 	}
@@ -824,7 +824,7 @@ func TestExecute_clientDisconnect_returns499(t *testing.T) {
 		t.Fatalf("want 499 got %d body=%s", w.Code, w.Body.String())
 	}
 	env := decodeErrEnvelope(t, w)
-	if env.Error.Code != apierror.ErrorCodeClientClosedRequest {
+	if env.Error.Code != apierror.CodeClientClosedRequest {
 		t.Fatalf("code=%v", env.Error.Code)
 	}
 }

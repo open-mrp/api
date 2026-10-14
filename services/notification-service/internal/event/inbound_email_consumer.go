@@ -17,8 +17,8 @@ import (
 	"time"
 
 	"github.com/open-mrp/api/services/notification-service/internal/domain"
-	s3client "github.com/open-mrp/api/shared/cloud/s3"
-	sqsclient "github.com/open-mrp/api/shared/cloud/sqs"
+	s3client "github.com/open-mrp/apikit/cloud/s3"
+	sqsclient "github.com/open-mrp/apikit/cloud/sqs"
 
 	"go.opentelemetry.io/otel/trace"
 )

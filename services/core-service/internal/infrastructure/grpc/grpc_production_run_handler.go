@@ -9,8 +9,8 @@ import (
 	"github.com/open-mrp/api/services/core-service/internal/domain"
 	"github.com/open-mrp/api/shared/constants"
 	"github.com/open-mrp/api/shared/contracts"
-	apierror "github.com/open-mrp/api/shared/errors"
 	pb "github.com/open-mrp/api/shared/proto/core"
+	apierror "github.com/open-mrp/apikit/apierror"
 
 	"google.golang.org/protobuf/types/known/emptypb"
 	"google.golang.org/protobuf/types/known/timestamppb"
@@ -360,7 +360,7 @@ func addBatchInputsFromProto(in []*pb.AddBatchInput) ([]domain.AddBatchInput, *a
 	parse := func(value, param string) (decimal.Decimal, *apierror.APIError) {
 		d, err := decimal.NewFromString(value)
 		if err != nil {
-			return decimal.Decimal{}, apierror.NewValidationErrorWithParam(fmt.Sprintf("%q is not a decimal.", value), param)
+			return decimal.Decimal{}, apierror.NewFieldError(param, apierror.CodeInvalidFormat, fmt.Sprintf("%q is not a decimal.", value))
 		}
 		return d, nil
 	}

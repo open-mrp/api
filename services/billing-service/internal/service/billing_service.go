@@ -14,10 +14,10 @@ import (
 	"github.com/open-mrp/api/services/billing-service/internal/domain"
 	"github.com/open-mrp/api/shared/appctx"
 	"github.com/open-mrp/api/shared/constants"
-	apierror "github.com/open-mrp/api/shared/errors"
-	"github.com/open-mrp/api/shared/idempotency"
-	"github.com/open-mrp/api/shared/tracing"
+	"github.com/open-mrp/api/shared/idemresponse"
+	apierror "github.com/open-mrp/apikit/apierror"
 	"github.com/open-mrp/apikit/ptrutil"
+	"github.com/open-mrp/apikit/tracing"
 )
 
 var billingSvcTracer = tracing.GetTracer("billing-service.service")
@@ -640,7 +640,7 @@ func (s *billingSvcImpl) EnsureBillingCustomer(ctx context.Context, accountID st
 	for {
 		switch recoveryPoint {
 		case domain.RecoveryPointFinished:
-			cached, err := idempotency.UnmarshalCachedResponse[domain.EnsureBillingCustomerResult](ctx, iKey.ResponseCode, iKey.ResponseBody)
+			cached, err := idemresponse.UnmarshalCachedResponse[domain.EnsureBillingCustomerResult](ctx, iKey.ResponseCode, iKey.ResponseBody)
 			if err != nil {
 				return nil, tracing.Trace(span, apierror.NewInternalError(err, "Issue unmarshalling cached response."))
 			}
@@ -752,7 +752,7 @@ func (s *billingSvcImpl) SetupBillingProfile(ctx context.Context, accountID stri
 	for {
 		switch recoveryPoint {
 		case domain.RecoveryPointFinished:
-			cached, err := idempotency.UnmarshalCachedResponse[domain.BillingProfileResult](ctx, iKey.ResponseCode, iKey.ResponseBody)
+			cached, err := idemresponse.UnmarshalCachedResponse[domain.BillingProfileResult](ctx, iKey.ResponseCode, iKey.ResponseBody)
 			if err != nil {
 				return nil, tracing.Trace(span, apierror.NewInternalError(err, "Issue unmarshalling cached response."))
 			}
@@ -814,7 +814,7 @@ func (s *billingSvcImpl) SetupBillingProfile(ctx context.Context, accountID stri
 
 		case domain.RecoveryPointProfileCreated:
 			if state.ProfileID == "" {
-				cached, err := idempotency.UnmarshalCachedResponse[setupBillingProfileState](ctx, iKey.ResponseCode, iKey.ResponseBody)
+				cached, err := idemresponse.UnmarshalCachedResponse[setupBillingProfileState](ctx, iKey.ResponseCode, iKey.ResponseBody)
 				if err != nil {
 					return nil, tracing.Trace(span, apierror.NewInternalError(err, "Issue unmarshalling recovery point response."))
 				}
@@ -867,7 +867,7 @@ func (s *billingSvcImpl) SwitchPlan(ctx context.Context, accountID string, planI
 	for {
 		switch recoveryPoint {
 		case domain.RecoveryPointFinished:
-			cached, err := idempotency.UnmarshalCachedResponse[domain.SwitchPlanResult](ctx, iKey.ResponseCode, iKey.ResponseBody)
+			cached, err := idemresponse.UnmarshalCachedResponse[domain.SwitchPlanResult](ctx, iKey.ResponseCode, iKey.ResponseBody)
 			if err != nil {
 				return nil, tracing.Trace(span, apierror.NewInternalError(err, "Issue unmarshalling cached response."))
 			}
@@ -1066,7 +1066,7 @@ func (s *billingSvcImpl) SwitchPlan(ctx context.Context, accountID string, planI
 
 		case domain.RecoveryPointIntentCommitted:
 			if state.PlanCode == "" {
-				cached, err := idempotency.UnmarshalCachedResponse[switchPlanState](ctx, iKey.ResponseCode, iKey.ResponseBody)
+				cached, err := idemresponse.UnmarshalCachedResponse[switchPlanState](ctx, iKey.ResponseCode, iKey.ResponseBody)
 				if err != nil {
 					return nil, tracing.Trace(span, apierror.NewInternalError(err, "Issue unmarshalling recovery point response."))
 				}
@@ -1129,7 +1129,7 @@ func (s *billingSvcImpl) SubscribeToPricingPlan(ctx context.Context, stripeCusto
 	for {
 		switch recoveryPoint {
 		case domain.RecoveryPointFinished:
-			cached, err := idempotency.UnmarshalCachedResponse[struct{}](ctx, iKey.ResponseCode, iKey.ResponseBody)
+			cached, err := idemresponse.UnmarshalCachedResponse[struct{}](ctx, iKey.ResponseCode, iKey.ResponseBody)
 			if err != nil {
 				return tracing.Trace(span, apierror.NewInternalError(err, "Issue unmarshalling cached response."))
 			}
@@ -1204,7 +1204,7 @@ func (s *billingSvcImpl) SubscribeToPricingPlan(ctx context.Context, stripeCusto
 
 		case domain.RecoveryPointProfileCreated:
 			if state.AccountID == "" {
-				cached, err := idempotency.UnmarshalCachedResponse[subscribeToPricingPlanState](ctx, iKey.ResponseCode, iKey.ResponseBody)
+				cached, err := idemresponse.UnmarshalCachedResponse[subscribeToPricingPlanState](ctx, iKey.ResponseCode, iKey.ResponseBody)
 				if err != nil {
 					return tracing.Trace(span, apierror.NewInternalError(err, "Issue unmarshalling recovery point response."))
 				}
@@ -1294,7 +1294,7 @@ func (s *billingSvcImpl) SubscribeToPricingPlan(ctx context.Context, stripeCusto
 
 		case domain.RecoveryPointIntentCommitted:
 			if state.AccountID == "" {
-				cached, err := idempotency.UnmarshalCachedResponse[subscribeToPricingPlanState](ctx, iKey.ResponseCode, iKey.ResponseBody)
+				cached, err := idemresponse.UnmarshalCachedResponse[subscribeToPricingPlanState](ctx, iKey.ResponseCode, iKey.ResponseBody)
 				if err != nil {
 					return tracing.Trace(span, apierror.NewInternalError(err, "Issue unmarshalling recovery point response."))
 				}

@@ -10,10 +10,10 @@ import (
 	pwdutil "github.com/open-mrp/api/services/auth-service/internal/password"
 	tokenutil "github.com/open-mrp/api/services/auth-service/internal/token"
 	"github.com/open-mrp/api/shared/constants"
-	apierror "github.com/open-mrp/api/shared/errors"
 	"github.com/open-mrp/api/shared/id"
 	"github.com/open-mrp/api/shared/messaging"
-	"github.com/open-mrp/api/shared/tracing"
+	apierror "github.com/open-mrp/apikit/apierror"
+	"github.com/open-mrp/apikit/tracing"
 )
 
 const (
@@ -107,7 +107,7 @@ func (m *registrationMedImpl) CreateSession(ctx context.Context, input domain.Cr
 
 	// Return existing active session if one exists
 	existingSession, err := regSessionRepo.GetByEmail(ctx, input.Email)
-	if err != nil && !apierror.IsNotFound(err) {
+	if err != nil && !apierror.HasCode(err, apierror.CodeResourceNotFound) {
 		return nil, tracing.Trace(span, err)
 	}
 	if existingSession != nil {
@@ -325,7 +325,7 @@ func (m *registrationMedImpl) CreateUserForSession(ctx context.Context, input do
 
 	// New-user path only. Reject if an account already exists for this email — pre-existing accounts must authenticate via login, since the session id holder is not proven to be that user.
 	existingUser, findErr := userRepo.Find(ctx, session.Email)
-	if findErr != nil && !apierror.IsNotFound(findErr) {
+	if findErr != nil && !apierror.HasCode(findErr, apierror.CodeResourceNotFound) {
 		return nil, tracing.Trace(span, findErr)
 	}
 	if existingUser != nil {

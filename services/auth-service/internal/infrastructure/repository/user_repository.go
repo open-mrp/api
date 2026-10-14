@@ -6,9 +6,9 @@ import (
 	"github.com/open-mrp/api/services/auth-service/internal/domain"
 	"github.com/open-mrp/api/services/auth-service/internal/infrastructure/sqlc"
 	"github.com/open-mrp/api/services/auth-service/pkg/types"
-	"github.com/open-mrp/api/shared/db"
-	apierror "github.com/open-mrp/api/shared/errors"
-	"github.com/open-mrp/api/shared/tracing"
+	apierror "github.com/open-mrp/apikit/apierror"
+	"github.com/open-mrp/apikit/db"
+	"github.com/open-mrp/apikit/tracing"
 )
 
 var userRepoTracer = tracing.GetTracer("auth-service.user_repository")
@@ -40,7 +40,7 @@ func (r *userRepoImpl) Find(ctx context.Context, identifier string) (*types.User
 	})
 
 	if apiErr := db.MapSQLError(err); apiErr != nil {
-		if apierror.IsNotFound(apiErr) {
+		if apierror.HasCode(apiErr, apierror.CodeResourceNotFound) {
 			return nil, apiErr
 		}
 		return nil, tracing.Trace(span, apiErr)
@@ -100,7 +100,7 @@ func (r *userRepoImpl) FindLastUsedAccountID(ctx context.Context, userID string)
 
 	accountID, err := r.db.FindLastUsedAccountID(ctx, userID)
 	if apiErr := db.MapSQLError(err); apiErr != nil {
-		if apierror.IsNotFound(apiErr) {
+		if apierror.HasCode(apiErr, apierror.CodeResourceNotFound) {
 			return nil, nil
 		}
 		return nil, tracing.Trace(span, apiErr)

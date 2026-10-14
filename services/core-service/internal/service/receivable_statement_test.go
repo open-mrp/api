@@ -13,8 +13,8 @@ import (
 	mediatormock "github.com/open-mrp/api/services/core-service/internal/domain/mock/mediator"
 	publishermock "github.com/open-mrp/api/services/core-service/internal/domain/mock/publisher"
 	repositorymock "github.com/open-mrp/api/services/core-service/internal/domain/mock/repository"
-	apierror "github.com/open-mrp/api/shared/errors"
 	"github.com/open-mrp/api/shared/messaging"
+	apierror "github.com/open-mrp/apikit/apierror"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -68,7 +68,7 @@ func TestEmailReceivables_RefusesAnAccountThatIsNotACustomer(t *testing.T) {
 	t.Parallel()
 
 	f := newStatementFixture(t)
-	notFound := apierror.NewResourceNotFoundError("Customer not found.")
+	notFound := apierror.NewNotFoundError("Customer not found.")
 	f.customerRepo.EXPECT().Get(gomock.Any(), invoiceSellerID, "ac_stranger", gomock.Nil()).Return(nil, notFound)
 	f.idempotency.EXPECT().CacheErrorResponse(gomock.Any(), "idk_1", gomock.Any()).
 		DoAndReturn(func(_ context.Context, _ string, apiErr *apierror.APIError) *apierror.APIError { return apiErr })
@@ -79,7 +79,7 @@ func TestEmailReceivables_RefusesAnAccountThatIsNotACustomer(t *testing.T) {
 	})
 
 	require.NotNil(t, apiErr)
-	assert.Equal(t, apierror.ErrorCodeResourceNotFound, apiErr.Code)
+	assert.Equal(t, apierror.CodeResourceNotFound, apiErr.Code)
 }
 
 // The statement a customer is sent pads invoice and credit numbers and ages a credit from when its funds arrived.

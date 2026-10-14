@@ -10,10 +10,10 @@ import (
 	"github.com/open-mrp/api/shared/appctx"
 	"github.com/open-mrp/api/shared/audit"
 	"github.com/open-mrp/api/shared/constants"
-	apierror "github.com/open-mrp/api/shared/errors"
 	"github.com/open-mrp/api/shared/id"
-	"github.com/open-mrp/api/shared/idempotency"
-	"github.com/open-mrp/api/shared/tracing"
+	"github.com/open-mrp/api/shared/idemresponse"
+	apierror "github.com/open-mrp/apikit/apierror"
+	"github.com/open-mrp/apikit/tracing"
 )
 
 var transactionSvcTracer = tracing.GetTracer("core-service.transaction_service")
@@ -167,7 +167,7 @@ func (s *transactionSvcImpl) CreateTransaction(ctx context.Context, params domai
 
 	switch domain.RecoveryPoint(idempotencyKey.RecoveryPoint) {
 	case domain.RecoveryPointFinished:
-		cached, err := idempotency.UnmarshalCachedResponse[domain.Transaction](ctx, idempotencyKey.ResponseCode, idempotencyKey.ResponseBody)
+		cached, err := idemresponse.UnmarshalCachedResponse[domain.Transaction](ctx, idempotencyKey.ResponseCode, idempotencyKey.ResponseBody)
 		if err != nil {
 			return nil, tracing.Trace(span, apierror.NewInternalError(err, "Issue unmarshalling cached response."))
 		}
@@ -184,10 +184,7 @@ func (s *transactionSvcImpl) CreateTransaction(ctx context.Context, params domai
 			// account user its actor ID was never going to match.
 			if params.ResponsibleUserID == nil {
 				if !identity.HasUserActor() {
-					return apierror.NewValidationErrorWithParam(
-						"A responsible user is required when the caller is not a user.",
-						"responsible_user_id",
-					)
+					return apierror.NewFieldError("responsible_user_id", apierror.CodeInvalidFormat, "A responsible user is required when the caller is not a user.")
 				}
 
 				accountUserRepo := txSvc.repos.NewAccountUserRepo()
@@ -203,7 +200,7 @@ func (s *transactionSvcImpl) CreateTransaction(ctx context.Context, params domai
 				return apiErr
 			}
 			if !exists {
-				return apierror.NewResourceNotFoundError("Customer not found.")
+				return apierror.NewNotFoundError("Customer not found.")
 			}
 
 			// Generate transaction number
@@ -283,7 +280,7 @@ func (s *transactionSvcImpl) UpdateTransaction(ctx context.Context, params domai
 
 	switch domain.RecoveryPoint(idempotencyKey.RecoveryPoint) {
 	case domain.RecoveryPointFinished:
-		cached, err := idempotency.UnmarshalCachedResponse[domain.Transaction](ctx, idempotencyKey.ResponseCode, idempotencyKey.ResponseBody)
+		cached, err := idemresponse.UnmarshalCachedResponse[domain.Transaction](ctx, idempotencyKey.ResponseCode, idempotencyKey.ResponseBody)
 		if err != nil {
 			return nil, tracing.Trace(span, apierror.NewInternalError(err, "Issue unmarshalling cached response."))
 		}
@@ -302,7 +299,7 @@ func (s *transactionSvcImpl) UpdateTransaction(ctx context.Context, params domai
 			if params.Number != nil {
 				number := strings.TrimSpace(*params.Number)
 				if number == "" {
-					return apierror.NewValidationErrorWithParam("Number must not be blank.", "number")
+					return apierror.NewFieldError("number", apierror.CodeInvalidFormat, "Number must not be blank.")
 				}
 				params.Number = &number
 				exists, apiErr := txRepo.ExistsByNumber(txCtx, params.AccountID, number, &params.TransactionID)
@@ -310,7 +307,7 @@ func (s *transactionSvcImpl) UpdateTransaction(ctx context.Context, params domai
 					return apiErr
 				}
 				if exists {
-					return apierror.NewConflictErrorWithParam("A transaction with this number already exists.", "number")
+					return apierror.NewConflictErrorWithParam("number", "A transaction with this number already exists.")
 				}
 			}
 
@@ -323,7 +320,7 @@ func (s *transactionSvcImpl) UpdateTransaction(ctx context.Context, params domai
 					// has been deactivated: the dashboard saves a transaction whole.
 					params.ResponsibleUserID = nil
 				case apiErr != nil || !active:
-					return apierror.NewResourceNotFoundError("Account user not found.")
+					return apierror.NewNotFoundError("Account user not found.")
 				default:
 					params.ResponsibleUserID = &resolvedID
 				}
@@ -384,13 +381,13 @@ func (s *transactionSvcImpl) DeleteTransaction(ctx context.Context, params domai
 	// Fetch the transaction before deleting
 	transaction, apiErr := repo.Get(ctx, params.AccountID, params.TransactionID)
 	if apiErr != nil {
-		if apierror.IsNotFound(apiErr) {
+		if apierror.HasCode(apiErr, apierror.CodeResourceNotFound) {
 			wasDeleted, deletedCheckErr := s.repos.NewDeletedRecordRepo().ExistsInAccount(ctx, constants.DeletedRecordResourceTypeTransaction, params.TransactionID, params.AccountID)
 			if deletedCheckErr != nil {
 				return nil, tracing.Trace(span, deletedCheckErr)
 			}
 			if wasDeleted {
-				return nil, tracing.Trace(span, apierror.NewAlreadyDeletedError("This transaction has already been deleted and can no longer be modified."))
+				return nil, tracing.Trace(span, apierror.NewGoneError("This transaction has already been deleted and can no longer be modified."))
 			}
 		}
 		return nil, tracing.Trace(span, apiErr)

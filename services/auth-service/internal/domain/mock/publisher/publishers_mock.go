@@ -13,8 +13,8 @@ import (
 	context "context"
 	reflect "reflect"
 
-	apierror "github.com/open-mrp/api/shared/errors"
 	messaging "github.com/open-mrp/api/shared/messaging"
+	apierror "github.com/open-mrp/apikit/apierror"
 	gomock "go.uber.org/mock/gomock"
 )
 

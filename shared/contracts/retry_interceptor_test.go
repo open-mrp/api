@@ -7,7 +7,7 @@ import (
 	"testing"
 	"time"
 
-	apierror "github.com/open-mrp/api/shared/errors"
+	apierror "github.com/open-mrp/apikit/apierror"
 	"google.golang.org/grpc"
 	grpccodes "google.golang.org/grpc/codes"
 	grpcstatus "google.golang.org/grpc/status"
@@ -156,7 +156,7 @@ func TestRetryOnTransientUnaryClientInterceptor_ErrorClassification(t *testing.T
 		},
 		{
 			name:      "encoded rate limit is retried",
-			err:       ConvertAPIErrorToGRPC(apierror.NewRateLimitExceededError("slow down")),
+			err:       ConvertAPIErrorToGRPC(apierror.NewRateLimitedError("slow down")),
 			wantCalls: 2,
 		},
 		{
@@ -181,12 +181,12 @@ func TestRetryOnTransientUnaryClientInterceptor_ErrorClassification(t *testing.T
 		},
 		{
 			name:      "encoded resource conflict is not retried",
-			err:       ConvertAPIErrorToGRPC(apierror.NewResourceConflictError("already exists")),
+			err:       ConvertAPIErrorToGRPC(apierror.NewConflictError("already exists")),
 			wantCalls: 1,
 		},
 		{
 			name:      "encoded client closed request is not retried",
-			err:       ConvertAPIErrorToGRPC(apierror.NewClientClosedRequestError("client gone")),
+			err:       ConvertAPIErrorToGRPC(apierror.NewClientClosedRequestError()),
 			wantCalls: 1,
 		},
 		{

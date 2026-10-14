@@ -9,10 +9,10 @@ import (
 	"github.com/open-mrp/api/shared/appctx"
 	"github.com/open-mrp/api/shared/audit"
 	"github.com/open-mrp/api/shared/constants"
-	apierror "github.com/open-mrp/api/shared/errors"
 	"github.com/open-mrp/api/shared/id"
-	"github.com/open-mrp/api/shared/idempotency"
-	"github.com/open-mrp/api/shared/tracing"
+	"github.com/open-mrp/api/shared/idemresponse"
+	apierror "github.com/open-mrp/apikit/apierror"
+	"github.com/open-mrp/apikit/tracing"
 )
 
 var scanningStationSvcTracer = tracing.GetTracer("core-service.scanning_station_service")
@@ -169,7 +169,7 @@ func (s *scanningStationSvcImpl) CreateScanningStation(ctx context.Context, para
 	}
 
 	if !constants.ScanningStationType(params.Type).IsValid() {
-		return nil, tracing.Trace(span, apierror.NewValidationErrorWithParam("Invalid scanning station type.", "type"))
+		return nil, tracing.Trace(span, apierror.NewFieldError("type", apierror.CodeInvalidFormat, "Invalid scanning station type."))
 	}
 
 	scanningStationID, apiErr := id.GenID(id.ScanningStationIDPrefix, nil)
@@ -188,7 +188,7 @@ func (s *scanningStationSvcImpl) CreateScanningStation(ctx context.Context, para
 
 	switch domain.RecoveryPoint(idempotencyKey.RecoveryPoint) {
 	case domain.RecoveryPointFinished:
-		cached, err := idempotency.UnmarshalCachedResponse[domain.ScanningStation](ctx, idempotencyKey.ResponseCode, idempotencyKey.ResponseBody)
+		cached, err := idemresponse.UnmarshalCachedResponse[domain.ScanningStation](ctx, idempotencyKey.ResponseCode, idempotencyKey.ResponseBody)
 		if err != nil {
 			return nil, tracing.Trace(span, apierror.NewInternalError(err, "Issue unmarshalling cached response."))
 		}
@@ -204,7 +204,7 @@ func (s *scanningStationSvcImpl) CreateScanningStation(ctx context.Context, para
 				return apiErr
 			}
 			if exists {
-				return apierror.NewConflictErrorWithParam("A scanning station with this name already exists.", "name")
+				return apierror.NewConflictErrorWithParam("name", "A scanning station with this name already exists.")
 			}
 
 			// Verify the referenced department exists for the account so a nonexistent or cross-account department 404s instead of persisting a dangling reference (mirrors CreateMachine).
@@ -274,7 +274,7 @@ func (s *scanningStationSvcImpl) UpdateScanningStation(ctx context.Context, para
 
 	switch domain.RecoveryPoint(idempotencyKey.RecoveryPoint) {
 	case domain.RecoveryPointFinished:
-		cached, err := idempotency.UnmarshalCachedResponse[domain.ScanningStation](ctx, idempotencyKey.ResponseCode, idempotencyKey.ResponseBody)
+		cached, err := idemresponse.UnmarshalCachedResponse[domain.ScanningStation](ctx, idempotencyKey.ResponseCode, idempotencyKey.ResponseBody)
 		if err != nil {
 			return nil, tracing.Trace(span, apierror.NewInternalError(err, "Issue unmarshalling cached response."))
 		}
@@ -299,7 +299,7 @@ func (s *scanningStationSvcImpl) UpdateScanningStation(ctx context.Context, para
 					return apiErr
 				}
 				if exists {
-					return apierror.NewConflictErrorWithParam("A scanning station with this name already exists.", "name")
+					return apierror.NewConflictErrorWithParam("name", "A scanning station with this name already exists.")
 				}
 			}
 
@@ -362,7 +362,7 @@ func (s *scanningStationSvcImpl) DeleteScanningStation(ctx context.Context, scan
 		ScanningStationID: scanningStationID,
 	})
 	if apiErr != nil {
-		if apierror.IsNotFound(apiErr) {
+		if apierror.HasCode(apiErr, apierror.CodeResourceNotFound) {
 			wasDeleted, deletedCheckErr := s.repos.NewDeletedRecordRepo().ExistsInAccount(ctx, constants.DeletedRecordResourceTypeScanningStation, scanningStationID, accountID)
 			if deletedCheckErr != nil {
 				return tracing.Trace(span, deletedCheckErr)
@@ -370,7 +370,7 @@ func (s *scanningStationSvcImpl) DeleteScanningStation(ctx context.Context, scan
 			if wasDeleted {
 				return tracing.Trace(
 					span,
-					apierror.NewAlreadyDeletedError("This scanning station has already been deleted and can no longer be modified."),
+					apierror.NewGoneError("This scanning station has already been deleted and can no longer be modified."),
 				)
 			}
 		}

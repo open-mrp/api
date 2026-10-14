@@ -14,13 +14,13 @@ import (
 	"github.com/open-mrp/api/services/auth-service/internal/infrastructure/sqlc"
 	"github.com/open-mrp/api/services/auth-service/internal/service"
 	"github.com/open-mrp/api/shared/audit"
-	"github.com/open-mrp/api/shared/cache"
 	"github.com/open-mrp/api/shared/contracts"
-	"github.com/open-mrp/api/shared/db"
 	"github.com/open-mrp/api/shared/messaging"
-	"github.com/open-mrp/api/shared/tracing"
+	"github.com/open-mrp/apikit/cache"
+	"github.com/open-mrp/apikit/db"
 	"github.com/open-mrp/apikit/lease"
 	"github.com/open-mrp/apikit/pagination"
+	"github.com/open-mrp/apikit/tracing"
 )
 
 func Run(

@@ -14,9 +14,9 @@ import (
 	servicemock "github.com/open-mrp/api/services/core-service/internal/domain/mock/service"
 	"github.com/open-mrp/api/shared/appctx"
 	"github.com/open-mrp/api/shared/constants"
-	"github.com/open-mrp/api/shared/db"
-	apierror "github.com/open-mrp/api/shared/errors"
 	"github.com/open-mrp/api/shared/id"
+	apierror "github.com/open-mrp/apikit/apierror"
+	"github.com/open-mrp/apikit/db"
 
 	"github.com/stretchr/testify/suite"
 	"go.uber.org/mock/gomock"
@@ -213,7 +213,7 @@ func (suite *AsyncBulkEngineTestSuite) TestEnqueue_AttributesAnAPIKeyAsCreatedBy
 
 	suite.accountUserRepo.EXPECT().
 		ResolveAccountUserID(gomock.Any(), accountID, actorID).
-		Return("", apierror.NewResourceNotFoundError("not an account user")).
+		Return("", apierror.NewNotFoundError("not an account user")).
 		Times(1)
 	suite.startedKey()
 
@@ -246,7 +246,7 @@ func (suite *AsyncBulkEngineTestSuite) TestEnqueue_ValidationFailureRaisesNoJob(
 
 	suite.Nil(ack)
 	suite.NotNil(apiErr)
-	suite.Equal(apierror.ErrorCodeValidationFailed, apiErr.Code)
+	suite.Equal(apierror.CodeValidationFailed, apiErr.Code)
 }
 
 // A replay hands back the job the first attempt raised, even when the references it used are gone: the key is read before anything resolves.
@@ -291,7 +291,7 @@ func (suite *AsyncBulkEngineTestSuite) TestEnqueue_EmptyRejected() {
 
 	suite.Nil(ack)
 	suite.NotNil(apiErr)
-	suite.Equal(apierror.ErrorCodeValidationFailed, apiErr.Code)
+	suite.Equal(apierror.CodeValidationFailed, apiErr.Code)
 }
 
 // expectInlineJobPayloads keeps every staged payload inline. Where a payload is stored is the
@@ -426,7 +426,7 @@ func (suite *AsyncBulkEngineTestSuite) TestExecute_PartialFailureCompletesWithEr
 		}).Times(1)
 	// No FailJob is stubbed: a partly-failed batch must complete, not fail.
 
-	rowErrs := []apierror.RowError{apierror.NewRowError(1, apierror.NewValidationError("row b failed"))}
+	rowErrs := []apierror.RowError{apierror.RowError{Index: 1, Error: apierror.NewValidationError("row b failed").Object()}}
 	spec := fakeSpec(nil, []string{"cr_1"}, nil, nil, rowErrs, nil, nil)
 
 	apiErr := executeBulkOperation(ctx, suite.deps, spec, domain.BulkOperationJobEvent{JobID: jobID})

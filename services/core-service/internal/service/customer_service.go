@@ -14,12 +14,12 @@ import (
 	"github.com/open-mrp/api/shared/audit"
 	"github.com/open-mrp/api/shared/constants"
 	"github.com/open-mrp/api/shared/contracts"
-	apierror "github.com/open-mrp/api/shared/errors"
 	"github.com/open-mrp/api/shared/id"
-	"github.com/open-mrp/api/shared/idempotency"
+	"github.com/open-mrp/api/shared/idemresponse"
 	"github.com/open-mrp/api/shared/messaging"
-	"github.com/open-mrp/api/shared/tracing"
+	apierror "github.com/open-mrp/apikit/apierror"
 	"github.com/open-mrp/apikit/field"
+	"github.com/open-mrp/apikit/tracing"
 )
 
 var customerSvcTracer = tracing.GetTracer("core-service.service.customer")
@@ -139,7 +139,7 @@ func (s *customerSvcImpl) GetCustomer(ctx context.Context, customerAccountID str
 	}
 
 	if own := identity.PortalAccountID(); own != nil && customerAccountID != *own {
-		return nil, tracing.Trace(span, apierror.NewResourceNotFoundError("Customer not found."))
+		return nil, tracing.Trace(span, apierror.NewNotFoundError("Customer not found."))
 	}
 
 	if identity.IsExternalTarget() {
@@ -250,7 +250,7 @@ func (s *customerSvcImpl) CreateCustomer(ctx context.Context, params domain.Crea
 
 	switch domain.RecoveryPoint(idempotencyKey.RecoveryPoint) {
 	case domain.RecoveryPointFinished:
-		cached, err := idempotency.UnmarshalCachedResponse[domain.Customer](ctx, idempotencyKey.ResponseCode, idempotencyKey.ResponseBody)
+		cached, err := idemresponse.UnmarshalCachedResponse[domain.Customer](ctx, idempotencyKey.ResponseCode, idempotencyKey.ResponseBody)
 		if err != nil {
 			return nil, tracing.Trace(span, apierror.NewInternalError(err, "Issue unmarshalling cached response."))
 		}
@@ -285,7 +285,7 @@ func (s *customerSvcImpl) CreateCustomer(ctx context.Context, params domain.Crea
 					return apiErr
 				}
 				if exists {
-					return apierror.NewConflictErrorWithParam("A customer with this number already exists.", "number")
+					return apierror.NewConflictErrorWithParam("number", "A customer with this number already exists.")
 				}
 			} else {
 				// Auto-generate the next customer number, reserved in one locked statement so
@@ -440,7 +440,7 @@ func (s *customerSvcImpl) UpdateCustomer(ctx context.Context, params domain.Upda
 
 	switch domain.RecoveryPoint(idempotencyKey.RecoveryPoint) {
 	case domain.RecoveryPointFinished:
-		cached, err := idempotency.UnmarshalCachedResponse[domain.Customer](ctx, idempotencyKey.ResponseCode, idempotencyKey.ResponseBody)
+		cached, err := idemresponse.UnmarshalCachedResponse[domain.Customer](ctx, idempotencyKey.ResponseCode, idempotencyKey.ResponseBody)
 		if err != nil {
 			return nil, tracing.Trace(span, apierror.NewInternalError(err, "Issue unmarshalling cached response."))
 		}
@@ -528,7 +528,7 @@ func (s *customerSvcImpl) UpdateCustomer(ctx context.Context, params domain.Upda
 					return apiErr
 				}
 				if exists {
-					return apierror.NewConflictErrorWithParam("This customer number is already taken.", "number")
+					return apierror.NewConflictErrorWithParam("number", "This customer number is already taken.")
 				}
 			}
 
@@ -651,7 +651,7 @@ func (s *customerSvcImpl) DeleteCustomer(ctx context.Context, params domain.Dele
 	// Fetch the customer before deleting for audit trail.
 	customer, apiErr := repo.Get(ctx, params.OwnerAccountID, params.CustomerAccountID, []string{"price_groups", "notification_preferences"})
 	if apiErr != nil {
-		if apierror.IsNotFound(apiErr) {
+		if apierror.HasCode(apiErr, apierror.CodeResourceNotFound) {
 			wasDeleted, deletedCheckErr := s.repos.NewDeletedRecordRepo().ExistsInAccount(ctx, constants.DeletedRecordResourceTypeCustomer, params.CustomerAccountID, params.OwnerAccountID)
 			if deletedCheckErr != nil {
 				return tracing.Trace(span, deletedCheckErr)
@@ -659,7 +659,7 @@ func (s *customerSvcImpl) DeleteCustomer(ctx context.Context, params domain.Dele
 			if wasDeleted {
 				return tracing.Trace(
 					span,
-					apierror.NewAlreadyDeletedError("This customer has already been deleted and can no longer be modified."),
+					apierror.NewGoneError("This customer has already been deleted and can no longer be modified."),
 				)
 			}
 		}
@@ -672,7 +672,7 @@ func (s *customerSvcImpl) DeleteCustomer(ctx context.Context, params domain.Dele
 		return tracing.Trace(span, apiErr)
 	}
 	if orderCount > 0 {
-		return tracing.Trace(span, apierror.NewResourceConflictError(
+		return tracing.Trace(span, apierror.NewConflictError(
 			"Cannot delete this customer while sales orders still reference them. Delete or reassign those orders, or merge customers first.",
 		))
 	}
@@ -744,7 +744,7 @@ func (s *customerSvcImpl) BulkDeleteCustomers(ctx context.Context, params domain
 		return tracing.Trace(span, apiErr)
 	}
 	if orderCount > 0 {
-		return tracing.Trace(span, apierror.NewResourceConflictError(
+		return tracing.Trace(span, apierror.NewConflictError(
 			"Cannot delete customers while sales orders still reference them. Delete or reassign those orders, or merge customers first.",
 		))
 	}
@@ -808,7 +808,7 @@ func (s *customerSvcImpl) GetFrequentlyOrderedProducts(ctx context.Context, cust
 
 	if own := identity.PortalAccountID(); own != nil {
 		if customerAccountID != *own {
-			return nil, tracing.Trace(span, apierror.NewResourceNotFoundError("Customer not found."))
+			return nil, tracing.Trace(span, apierror.NewNotFoundError("Customer not found."))
 		}
 	} else if identity.IsInternalActor() {
 		if identity.IsTargetCustomerAccount() {
@@ -867,7 +867,7 @@ func (s *customerSvcImpl) authorizeCustomerNotificationRecipientAccess(ctx conte
 	if identity.IsCustomerUser() {
 		// Customer users may only read or manage the recipients on their own relationship.
 		if customerAccountID != *identity.ActorAccountID() {
-			return nil, apierror.NewResourceNotFoundError("Customer not found.")
+			return nil, apierror.NewNotFoundError("Customer not found.")
 		}
 		if write {
 			// Managing order-notification recipients is a customer-side capability tied to placing orders.
@@ -991,7 +991,7 @@ func (s *customerSvcImpl) UpdateCustomerNotificationRecipients(ctx context.Conte
 			}
 		}
 		if _, apiErr := s.repos.NewAccountUserRepo().GetDetailByAccountAndID(ctx, params.CustomerAccountID, r.AccountUserID, nil); apiErr != nil {
-			if apiErr.Code == apierror.ErrorCodeResourceNotFound {
+			if apiErr.Code == apierror.CodeResourceNotFound {
 				return nil, tracing.Trace(span, apierror.NewValidationError("Notification recipient account user not found on this account."))
 			}
 			return nil, tracing.Trace(span, apiErr)
@@ -1147,7 +1147,7 @@ func (s *customerSvcImpl) MergeCustomers(ctx context.Context, params domain.Merg
 
 	switch domain.RecoveryPoint(idempotencyKey.RecoveryPoint) {
 	case domain.RecoveryPointFinished:
-		cached, err := idempotency.UnmarshalCachedResponse[domain.Customer](ctx, idempotencyKey.ResponseCode, idempotencyKey.ResponseBody)
+		cached, err := idemresponse.UnmarshalCachedResponse[domain.Customer](ctx, idempotencyKey.ResponseCode, idempotencyKey.ResponseBody)
 		if err != nil {
 			return nil, tracing.Trace(span, apierror.NewInternalError(err, "Issue unmarshalling cached response."))
 		}
@@ -1456,7 +1456,7 @@ func checkCustomerDefaultAddresses(ctx context.Context, repo domain.CustomerRepo
 			held = append(ids, "")
 		}
 		if !slices.Contains(held, addressID) {
-			return apierror.NewResourceNotFoundError("No address of this customer has the provided ID.").WithParam(ref.param)
+			return apierror.NewNotFoundError("No address of this customer has the provided ID.").WithParam(ref.param)
 		}
 	}
 	return nil

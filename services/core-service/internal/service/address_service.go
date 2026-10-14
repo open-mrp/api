@@ -10,9 +10,9 @@ import (
 	"github.com/open-mrp/api/shared/appctx"
 	"github.com/open-mrp/api/shared/audit"
 	"github.com/open-mrp/api/shared/constants"
-	apierror "github.com/open-mrp/api/shared/errors"
-	"github.com/open-mrp/api/shared/idempotency"
-	"github.com/open-mrp/api/shared/tracing"
+	"github.com/open-mrp/api/shared/idemresponse"
+	apierror "github.com/open-mrp/apikit/apierror"
+	"github.com/open-mrp/apikit/tracing"
 )
 
 var addressSvcTracer = tracing.GetTracer("core-service.address_service")
@@ -221,7 +221,7 @@ func (s *addressSvcImpl) CreateAddress(ctx context.Context, params domain.Create
 
 	switch domain.RecoveryPoint(idempotencyKey.RecoveryPoint) {
 	case domain.RecoveryPointFinished:
-		cached, err := idempotency.UnmarshalCachedResponse[domain.Address](ctx, idempotencyKey.ResponseCode, idempotencyKey.ResponseBody)
+		cached, err := idemresponse.UnmarshalCachedResponse[domain.Address](ctx, idempotencyKey.ResponseCode, idempotencyKey.ResponseBody)
 		if err != nil {
 			return nil, tracing.Trace(span, apierror.NewInternalError(err, "Issue unmarshalling cached response."))
 		}
@@ -293,7 +293,7 @@ func (s *addressSvcImpl) UpdateAddress(ctx context.Context, params domain.Update
 
 	switch domain.RecoveryPoint(idempotencyKey.RecoveryPoint) {
 	case domain.RecoveryPointFinished:
-		cached, err := idempotency.UnmarshalCachedResponse[domain.Address](ctx, idempotencyKey.ResponseCode, idempotencyKey.ResponseBody)
+		cached, err := idemresponse.UnmarshalCachedResponse[domain.Address](ctx, idempotencyKey.ResponseCode, idempotencyKey.ResponseBody)
 		if err != nil {
 			return nil, tracing.Trace(span, apierror.NewInternalError(err, "Issue unmarshalling cached response."))
 		}
@@ -365,9 +365,9 @@ func (s *addressSvcImpl) DeleteAddress(ctx context.Context, params domain.Delete
 			return tracing.Trace(span, deletedCheckErr)
 		}
 		if wasDeleted {
-			return tracing.Trace(span, apierror.NewAlreadyDeletedError("This address has already been deleted and can no longer be modified."))
+			return tracing.Trace(span, apierror.NewGoneError("This address has already been deleted and can no longer be modified."))
 		}
-		return tracing.Trace(span, apierror.NewResourceNotFoundError("Address not found."))
+		return tracing.Trace(span, apierror.NewNotFoundError("Address not found."))
 	}
 
 	// Check not in use

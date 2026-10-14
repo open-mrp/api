@@ -5,7 +5,7 @@ import (
 
 	"github.com/open-mrp/api/services/auth-service/pkg/types"
 	"github.com/open-mrp/api/shared/constants"
-	apierror "github.com/open-mrp/api/shared/errors"
+	apierror "github.com/open-mrp/apikit/apierror"
 
 	"github.com/stretchr/testify/assert"
 )
@@ -33,7 +33,7 @@ func assertAddressPermission(t *testing.T, what string, check func(*types.Identi
 			continue
 		}
 		if assert.NotNil(t, apiErr, "%s in a %q account with %s", what, tc.relation, tc.holds) {
-			assert.Equal(t, apierror.ErrorCodeInsufficientPerms, apiErr.Code)
+			assert.Equal(t, apierror.CodeInsufficientPermissions, apiErr.Code)
 		}
 	}
 }

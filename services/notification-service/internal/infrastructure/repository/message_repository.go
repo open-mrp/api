@@ -9,9 +9,9 @@ import (
 	"github.com/open-mrp/api/services/notification-service/internal/domain"
 	"github.com/open-mrp/api/services/notification-service/internal/infrastructure/sqlc"
 	"github.com/open-mrp/api/shared/constants"
-	"github.com/open-mrp/api/shared/db"
-	apierror "github.com/open-mrp/api/shared/errors"
-	"github.com/open-mrp/api/shared/tracing"
+	apierror "github.com/open-mrp/apikit/apierror"
+	"github.com/open-mrp/apikit/db"
+	"github.com/open-mrp/apikit/tracing"
 )
 
 var messageRepoTracer = tracing.GetTracer("notification-service.message_repository")
@@ -81,7 +81,7 @@ func (r *messageRepoImpl) GetByID(ctx context.Context, id, accountID string) (*d
 
 	row, err := r.db.GetMessageByID(ctx, sqlc.GetMessageByIDParams{ID: id, AccountID: accountID})
 	if apiErr := db.MapSQLError(err); apiErr != nil {
-		if apiErr.Code == apierror.ErrorCodeResourceNotFound {
+		if apiErr.Code == apierror.CodeResourceNotFound {
 			return nil, apiErr
 		}
 		return nil, tracing.Trace(span, apiErr)
@@ -116,7 +116,7 @@ func (r *messageRepoImpl) GetByClientID(ctx context.Context, conversationID, cli
 		ClientMessageID: db.NullStringPtr(&clientMessageID),
 	})
 	if apiErr := db.MapSQLError(err); apiErr != nil {
-		if apiErr.Code == apierror.ErrorCodeResourceNotFound {
+		if apiErr.Code == apierror.CodeResourceNotFound {
 			return nil, apiErr
 		}
 		return nil, tracing.Trace(span, apiErr)
@@ -168,7 +168,7 @@ func (r *messageRepoImpl) GetLastVisible(ctx context.Context, conversationID str
 	defer span.End()
 	row, err := r.db.GetLastVisibleMessage(ctx, conversationID)
 	if apiErr := db.MapSQLError(err); apiErr != nil {
-		if apiErr.Code == apierror.ErrorCodeResourceNotFound {
+		if apiErr.Code == apierror.CodeResourceNotFound {
 			return nil, nil
 		}
 		return nil, tracing.Trace(span, apiErr)

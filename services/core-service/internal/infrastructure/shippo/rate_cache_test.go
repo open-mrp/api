@@ -8,7 +8,7 @@ import (
 	"testing"
 
 	"github.com/open-mrp/api/services/core-service/internal/domain"
-	"github.com/open-mrp/api/shared/cache"
+	"github.com/open-mrp/apikit/cache"
 )
 
 // countingShippo answers the carrier-account list and shipment rating, counting each.

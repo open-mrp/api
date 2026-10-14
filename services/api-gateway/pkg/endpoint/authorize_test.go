@@ -9,7 +9,7 @@ import (
 	"github.com/open-mrp/api/services/auth-service/pkg/types"
 	"github.com/open-mrp/api/shared/appctx"
 	"github.com/open-mrp/api/shared/constants"
-	apierror "github.com/open-mrp/api/shared/errors"
+	apierror "github.com/open-mrp/apikit/apierror"
 )
 
 func ctxWithPerms(perms map[string]bool, roleType string) context.Context {
@@ -91,7 +91,7 @@ func TestAuthorize_MissingIdentity_Rejected(t *testing.T) {
 		t.Fatal("a permissioned endpoint with no identity in context should be rejected")
 	}
 	// No identity means unauthenticated, not under-permissioned → 401, not 403.
-	if got := apierror.GetHTTPStatusCode(err.Code); got != http.StatusUnauthorized {
+	if got := err.Code.Status(); got != http.StatusUnauthorized {
 		t.Errorf("missing identity should yield 401, got %d", got)
 	}
 }
@@ -107,7 +107,7 @@ func TestAuthorize_Unauthenticated_Returns401(t *testing.T) {
 	if err == nil {
 		t.Fatal("unauthenticated caller should be rejected from a permissioned endpoint")
 	}
-	if got := apierror.GetHTTPStatusCode(err.Code); got != http.StatusUnauthorized {
+	if got := err.Code.Status(); got != http.StatusUnauthorized {
 		t.Errorf("unauthenticated caller should yield 401, got %d (%q)", got, err.PublicMessage)
 	}
 }
@@ -196,7 +196,7 @@ func TestAuthorize_RequiresAllPermissions(t *testing.T) {
 	}
 
 	for _, perms := range []map[string]bool{{"customers:update": true}, {"customers:delete": true}} {
-		if err := both.authorize(ctxWithPerms(perms, "")); err == nil || err.Code != apierror.ErrorCodeInsufficientPerms {
+		if err := both.authorize(ctxWithPerms(perms, "")); err == nil || err.Code != apierror.CodeInsufficientPermissions {
 			t.Errorf("caller with only %v should be refused, got %v", perms, err)
 		}
 	}
@@ -270,7 +270,7 @@ func TestAuthorize_CounterpartyPermissions(t *testing.T) {
 				}
 				return
 			}
-			if err == nil || err.Code != apierror.ErrorCodeInsufficientPerms {
+			if err == nil || err.Code != apierror.CodeInsufficientPermissions {
 				t.Fatalf("holding %s should be refused, got %v", tc.holds, err)
 			}
 			if !strings.Contains(err.PublicMessage, tc.names) {

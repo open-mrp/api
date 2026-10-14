@@ -8,10 +8,10 @@ import (
 
 	"github.com/open-mrp/api/services/core-service/internal/domain"
 	"github.com/open-mrp/api/services/core-service/internal/infrastructure/sqlc"
-	"github.com/open-mrp/api/shared/db"
-	apierror "github.com/open-mrp/api/shared/errors"
-	"github.com/open-mrp/api/shared/tracing"
+	apierror "github.com/open-mrp/apikit/apierror"
+	"github.com/open-mrp/apikit/db"
 	"github.com/open-mrp/apikit/pagination"
+	"github.com/open-mrp/apikit/tracing"
 )
 
 var shipmentRepoTracer = tracing.GetTracer("core-service.shipment_repository")
@@ -173,7 +173,7 @@ func (r *shipmentRepoImpl) List(ctx context.Context, params domain.ListShipments
 	if params.Cursor != nil {
 		cur, err := pagination.DecodeStringCursor(*params.Cursor)
 		if err != nil {
-			return nil, apierror.NewValidationErrorWithParam("Invalid pagination cursor.", "cursor")
+			return nil, apierror.NewFieldError("cursor", apierror.CodeInvalidFormat, "Invalid pagination cursor.")
 		}
 		cursorDir = &cur.Direction
 		q.Direction = cur.Direction
@@ -431,7 +431,7 @@ func (r *shipmentRepoImpl) MarkShipped(ctx context.Context, accountID, shipmentI
 		return tracing.Trace(span, apiErr)
 	}
 	if changed == 0 {
-		return tracing.Trace(span, apierror.NewConflictErrorWithParam("Shipment has already been shipped.", "id"))
+		return tracing.Trace(span, apierror.NewConflictErrorWithParam("id", "Shipment has already been shipped."))
 	}
 	return nil
 }
@@ -448,7 +448,7 @@ func (r *shipmentRepoImpl) MarkVoided(ctx context.Context, accountID, shipmentID
 		return tracing.Trace(span, apiErr)
 	}
 	if changed == 0 {
-		return tracing.Trace(span, apierror.NewConflictErrorWithParam("Shipment is not in shipped status.", "id"))
+		return tracing.Trace(span, apierror.NewConflictErrorWithParam("id", "Shipment is not in shipped status."))
 	}
 	return nil
 }

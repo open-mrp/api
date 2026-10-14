@@ -12,10 +12,10 @@ import (
 	"github.com/open-mrp/api/services/core-service/internal/domain"
 	"github.com/open-mrp/api/services/core-service/internal/infrastructure/sqlc"
 	"github.com/open-mrp/api/shared/constants"
-	"github.com/open-mrp/api/shared/db"
-	apierror "github.com/open-mrp/api/shared/errors"
-	"github.com/open-mrp/api/shared/tracing"
+	apierror "github.com/open-mrp/apikit/apierror"
+	"github.com/open-mrp/apikit/db"
 	"github.com/open-mrp/apikit/pagination"
+	"github.com/open-mrp/apikit/tracing"
 )
 
 var salesReportRepoTracer = tracing.GetTracer("core-service.infrastructure.repository.sales_report")
@@ -576,7 +576,7 @@ func decodeBreakdownCursor(cursor *string) (*pagination.ValueCursor, *apierror.A
 	}
 	c, err := pagination.DecodeValueCursor(*cursor)
 	if err != nil {
-		return nil, apierror.NewParameterInvalidError("The cursor is invalid.", "cursor")
+		return nil, apierror.NewParameterInvalidError("cursor", "The cursor is invalid.")
 	}
 	return &c, nil
 }
@@ -621,7 +621,7 @@ func keysetCursor(cursor *string) (*pagination.StringCursor, *apierror.APIError)
 	}
 	c, err := pagination.DecodeStringCursor(*cursor)
 	if err != nil {
-		return nil, apierror.NewParameterInvalidError("The cursor is invalid.", "cursor")
+		return nil, apierror.NewParameterInvalidError("cursor", "The cursor is invalid.")
 	}
 	return &c, nil
 }

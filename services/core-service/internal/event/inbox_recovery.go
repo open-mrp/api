@@ -6,8 +6,8 @@ import (
 	"fmt"
 
 	"github.com/open-mrp/api/services/core-service/internal/domain"
-	apierror "github.com/open-mrp/api/shared/errors"
 	"github.com/open-mrp/api/shared/messaging"
+	apierror "github.com/open-mrp/apikit/apierror"
 )
 
 // completeInboxRecord commits this delivery's inbox recovery point inside the caller's transaction, so the marker and the work it describes commit together or not at all.
@@ -37,7 +37,7 @@ var errPermanentDrop = errors.New("message describes work that can never be done
 
 // newPermanentDropError builds the failure a handler returns when the message describes work that can never be done — state the event no longer matches, a measure that cannot be interpreted. Returning it from inside a transaction rolls that transaction back; discardIfPermanent then records the message as terminal.
 func newPermanentDropError(reason string) *apierror.APIError {
-	return apierror.NewValidationError(reason).WithInternal(fmt.Errorf("%w: %s", errPermanentDrop, reason))
+	return apierror.New(apierror.CodeValidationFailed, reason, apierror.WithInternal(fmt.Errorf("%w: %s", errPermanentDrop, reason)))
 }
 
 // discardIfPermanent ends a message only when the handler said to, and otherwise lets it retry.

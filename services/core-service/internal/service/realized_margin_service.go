@@ -8,8 +8,8 @@ import (
 	"github.com/open-mrp/api/services/auth-service/pkg/types"
 	"github.com/open-mrp/api/services/core-service/internal/domain"
 	"github.com/open-mrp/api/shared/appctx"
-	apierror "github.com/open-mrp/api/shared/errors"
-	"github.com/open-mrp/api/shared/tracing"
+	apierror "github.com/open-mrp/apikit/apierror"
+	"github.com/open-mrp/apikit/tracing"
 )
 
 // AnalyzeRealizedMargins audits what customers were actually invoiced, flagging prices well below what other customers achieved on the same SKU and sales that do not clear a target gross margin.
@@ -175,10 +175,10 @@ func parseAnalysisFraction(raw *string, fallback, param string) (decimal.Decimal
 	}
 	parsed, err := decimal.NewFromString(value)
 	if err != nil {
-		return decimal.Zero, apierror.NewValidationErrorWithParam("Must be a decimal between 0 and 1.", param)
+		return decimal.Zero, apierror.NewFieldError(param, apierror.CodeInvalidFormat, "Must be a decimal between 0 and 1.")
 	}
 	if parsed.IsNegative() || parsed.GreaterThan(decimal.NewFromInt(1)) {
-		return decimal.Zero, apierror.NewValidationErrorWithParam("Must be between 0 and 1.", param)
+		return decimal.Zero, apierror.NewFieldError(param, apierror.CodeInvalidFormat, "Must be between 0 and 1.")
 	}
 	return parsed, nil
 }

@@ -5,7 +5,7 @@ import (
 
 	apiexample "github.com/open-mrp/api/services/api-gateway/pkg/example"
 	"github.com/open-mrp/api/shared/constants"
-	"github.com/open-mrp/api/shared/timeutil"
+	"github.com/open-mrp/apikit/timeutil"
 )
 
 // A pack-list document assembled for a shipment: the shipment's packed line items and shipping cases, the parent order's header, parties, and terms, and any order lines still back-ordered.

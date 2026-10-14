@@ -19,8 +19,8 @@ import (
 	ledgerlock "github.com/open-mrp/api/services/core-service/internal/ledgerlock"
 	scheduling "github.com/open-mrp/api/services/core-service/internal/scheduling"
 	constants "github.com/open-mrp/api/shared/constants"
-	apierror "github.com/open-mrp/api/shared/errors"
 	pricing "github.com/open-mrp/api/shared/pricing"
+	apierror "github.com/open-mrp/apikit/apierror"
 	decimal "github.com/shopspring/decimal"
 	gomock "go.uber.org/mock/gomock"
 )

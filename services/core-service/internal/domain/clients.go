@@ -4,7 +4,7 @@ import (
 	"context"
 	"time"
 
-	apierror "github.com/open-mrp/api/shared/errors"
+	apierror "github.com/open-mrp/apikit/apierror"
 )
 
 // IncompleteRegistrationSession is the subset of a pending registration session returned to the tenancy response.

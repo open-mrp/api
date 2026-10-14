@@ -16,10 +16,10 @@ import (
 	"github.com/open-mrp/api/services/auth-service/pkg/types"
 	"github.com/open-mrp/api/shared/appctx"
 	"github.com/open-mrp/api/shared/contracts"
-	apierror "github.com/open-mrp/api/shared/errors"
-	"github.com/open-mrp/api/shared/idempotency"
 	pb "github.com/open-mrp/api/shared/proto/platform"
-	"github.com/open-mrp/api/shared/tracing"
+	apierror "github.com/open-mrp/apikit/apierror"
+	"github.com/open-mrp/apikit/idempotency"
+	"github.com/open-mrp/apikit/tracing"
 )
 
 type SerializedCookie struct {
@@ -247,7 +247,7 @@ func IdempotencyMiddleware(config *IdempotencyMiddlewareConfig) func(http.Handle
 
 			switch resp.Result {
 			case pb.ProcessIdempotencyKeyResult_PROCESS_RESULT_HASH_MISMATCH:
-				apiErr := apierror.NewIdempotencyHashMismatchError(idempotencyKey)
+				apiErr := apierror.NewIdempotencyKeyReusedError(idempotencyKey)
 				httptransport.RespondWithAPIError(ctx, w, apiErr)
 				return
 

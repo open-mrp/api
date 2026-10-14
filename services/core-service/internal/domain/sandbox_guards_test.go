@@ -3,7 +3,7 @@ package domain
 import (
 	"testing"
 
-	apierror "github.com/open-mrp/api/shared/errors"
+	apierror "github.com/open-mrp/apikit/apierror"
 )
 
 // SAFETY: DO NOT REMOVE — these tests ensure sandbox guard functions
@@ -16,7 +16,7 @@ func TestSafety_RequireSandboxAccount_RejectsNonSandbox(t *testing.T) {
 	if err == nil {
 		t.Fatal("expected error for non-sandbox account, got nil")
 	}
-	if err.Code != apierror.ErrorCodeInternalError {
+	if err.Code != apierror.CodeInternalError {
 		t.Fatalf("expected ErrorCodeInternalError, got %s", err.Code)
 	}
 }
@@ -36,7 +36,7 @@ func TestSafety_RequireSandboxAccount_RejectsNil(t *testing.T) {
 	if err == nil {
 		t.Fatal("expected error for nil AccountContext, got nil")
 	}
-	if err.Code != apierror.ErrorCodeInternalError {
+	if err.Code != apierror.CodeInternalError {
 		t.Fatalf("expected ErrorCodeInternalError, got %s", err.Code)
 	}
 }
@@ -48,7 +48,7 @@ func TestSafety_RequireNotSandboxAccount_RejectsSandbox(t *testing.T) {
 	if err == nil {
 		t.Fatal("expected error for sandbox account, got nil")
 	}
-	if err.Code != apierror.ErrorCodeValidationFailed {
+	if err.Code != apierror.CodeValidationFailed {
 		t.Fatalf("expected ErrorCodeValidationFailed, got %s", err.Code)
 	}
 }
@@ -68,7 +68,7 @@ func TestSafety_RequireNotSandboxAccount_RejectsNil(t *testing.T) {
 	if err == nil {
 		t.Fatal("expected error for nil AccountContext, got nil")
 	}
-	if err.Code != apierror.ErrorCodeInternalError {
+	if err.Code != apierror.CodeInternalError {
 		t.Fatalf("expected ErrorCodeInternalError, got %s", err.Code)
 	}
 }

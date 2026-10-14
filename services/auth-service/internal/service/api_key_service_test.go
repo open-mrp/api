@@ -14,7 +14,7 @@ import (
 	"github.com/open-mrp/api/services/auth-service/pkg/types"
 	"github.com/open-mrp/api/shared/appctx"
 	"github.com/open-mrp/api/shared/constants"
-	apierror "github.com/open-mrp/api/shared/errors"
+	apierror "github.com/open-mrp/apikit/apierror"
 
 	"github.com/stretchr/testify/suite"
 	"go.uber.org/mock/gomock"
@@ -179,7 +179,7 @@ func (s *APIKeySvcTestSuite) TestRevokeAPIKey_CrossTenant_ReturnsNotFound() {
 	})
 
 	s.Require().NotNil(apiErr)
-	s.Equal(apierror.ErrorCodeResourceNotFound, apiErr.Code)
+	s.Equal(apierror.CodeResourceNotFound, apiErr.Code)
 }
 
 // TestRotateAPIKey_CrossTenant_ReturnsNotFound asserts that a caller targeting
@@ -220,7 +220,7 @@ func (s *APIKeySvcTestSuite) TestRotateAPIKey_CrossTenant_ReturnsNotFound() {
 
 	s.Nil(result)
 	s.Require().NotNil(apiErr)
-	s.Equal(apierror.ErrorCodeResourceNotFound, apiErr.Code)
+	s.Equal(apierror.CodeResourceNotFound, apiErr.Code)
 }
 
 func (s *APIKeySvcTestSuite) TestRotateAPIKey_SyncDocAPIKeyError() {

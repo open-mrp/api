@@ -7,7 +7,7 @@ import (
 	"github.com/open-mrp/api/shared/constants"
 	"github.com/open-mrp/api/shared/contracts"
 	"github.com/open-mrp/api/shared/fieldpb"
-	"github.com/open-mrp/api/shared/metadata"
+	"github.com/open-mrp/api/shared/metadatapb"
 	pb "github.com/open-mrp/api/shared/proto/core"
 	"google.golang.org/protobuf/types/known/timestamppb"
 )
@@ -107,7 +107,7 @@ func (h *gRPCHandler) UpdateInvoice(ctx context.Context, req *pb.UpdateInvoiceRe
 		InvoiceID: req.Id,
 		Includes:  req.Includes,
 		Note:      fieldpb.StringClearableFromProto(req.Note),
-		Metadata:  metadata.PatchFromProto(req.Metadata),
+		Metadata:  metadatapb.PatchFromProto(req.Metadata),
 	}
 	if req.HasBeenSent != nil {
 		params.HasBeenSent = req.HasBeenSent

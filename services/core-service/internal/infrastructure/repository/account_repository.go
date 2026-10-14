@@ -10,10 +10,10 @@ import (
 	"github.com/open-mrp/api/services/core-service/internal/domain"
 	"github.com/open-mrp/api/services/core-service/internal/infrastructure/sqlc"
 	"github.com/open-mrp/api/shared/constants"
-	"github.com/open-mrp/api/shared/db"
-	apierror "github.com/open-mrp/api/shared/errors"
 	"github.com/open-mrp/api/shared/id"
-	"github.com/open-mrp/api/shared/tracing"
+	apierror "github.com/open-mrp/apikit/apierror"
+	"github.com/open-mrp/apikit/db"
+	"github.com/open-mrp/apikit/tracing"
 )
 
 var accountRepoTracer = tracing.GetTracer("core-service.account_repository")
@@ -305,7 +305,7 @@ func (r *accountRepoImpl) GetPortalSlug(ctx context.Context, accountID string) (
 
 	slug, err := r.queries.GetAccountPortalSlugByAccountID(ctx, accountID)
 	if apiErr := db.MapSQLError(err); apiErr != nil {
-		if apiErr.Code == apierror.ErrorCodeResourceNotFound {
+		if apiErr.Code == apierror.CodeResourceNotFound {
 			return nil, nil
 		}
 		return nil, tracing.Trace(span, apiErr)
@@ -453,7 +453,7 @@ func (r *accountRepoImpl) UpdateName(ctx context.Context, accountID, name string
 		return tracing.Trace(span, apierror.NewInternalError(err, "Failed to check rows affected"))
 	}
 	if rowsAffected == 0 {
-		return tracing.Trace(span, apierror.NewResourceNotFoundError("Account not found."))
+		return tracing.Trace(span, apierror.NewNotFoundError("Account not found."))
 	}
 
 	return nil
@@ -600,7 +600,7 @@ func (r *accountRepoImpl) GetBrandingLogoKey(ctx context.Context, accountID stri
 
 	result, err := r.queries.GetAccountBrandingLogoKey(ctx, accountID)
 	if apiErr := db.MapSQLError(err); apiErr != nil {
-		if apiErr.Code == apierror.ErrorCodeResourceNotFound {
+		if apiErr.Code == apierror.CodeResourceNotFound {
 			return nil, nil
 		}
 		return nil, tracing.Trace(span, apiErr)
@@ -640,7 +640,7 @@ func (r *accountRepoImpl) GetBrandingFaviconKey(ctx context.Context, accountID s
 
 	result, err := r.queries.GetAccountBrandingFaviconKey(ctx, accountID)
 	if apiErr := db.MapSQLError(err); apiErr != nil {
-		if apiErr.Code == apierror.ErrorCodeResourceNotFound {
+		if apiErr.Code == apierror.CodeResourceNotFound {
 			return nil, nil
 		}
 		return nil, tracing.Trace(span, apiErr)

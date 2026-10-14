@@ -5,7 +5,7 @@ import (
 	"time"
 
 	"github.com/open-mrp/api/services/core-service/internal/domain"
-	"github.com/open-mrp/api/shared/db"
+	"github.com/open-mrp/apikit/db"
 )
 
 // stepListCursor is where a page of production steps starts: after (forward, newest first) or before

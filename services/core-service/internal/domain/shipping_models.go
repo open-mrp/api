@@ -3,7 +3,7 @@ package domain
 import (
 	"errors"
 
-	apierror "github.com/open-mrp/api/shared/errors"
+	apierror "github.com/open-mrp/apikit/apierror"
 )
 
 // EstimateRateParams holds the parameters for estimating a shipping rate.
@@ -192,7 +192,5 @@ var ErrShippingRateNotCached = apierror.NewInternalError(errors.New("shipping ra
 // NewShippingRateUnavailableError reports a carrier that answered without a rate for the requested
 // service: an outage or an unserved lane, never free freight. Transient, so the caller may retry.
 func NewShippingRateUnavailableError(internalMessage string) *apierror.APIError {
-	return apierror.NewAPIError(apierror.ErrorCodeSvcUnavailable, apierror.ErrorTypeAPI,
-		"No shipping rate is available for the selected carrier and service. The carrier may be temporarily unavailable; try again shortly or choose a different shipping option.",
-		internalMessage)
+	return apierror.New(apierror.CodeServiceUnavailable, "No shipping rate is available for the selected carrier and service. The carrier may be temporarily unavailable; try again shortly or choose a different shipping option.", apierror.WithInternalMessage(internalMessage))
 }

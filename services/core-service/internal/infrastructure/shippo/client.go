@@ -15,9 +15,9 @@ import (
 	"time"
 
 	"github.com/open-mrp/api/services/core-service/internal/domain"
-	"github.com/open-mrp/api/shared/cache"
-	apierror "github.com/open-mrp/api/shared/errors"
-	"github.com/open-mrp/api/shared/tracing"
+	apierror "github.com/open-mrp/apikit/apierror"
+	"github.com/open-mrp/apikit/cache"
+	"github.com/open-mrp/apikit/tracing"
 )
 
 const shippoBaseURL = "https://api.goshippo.com"
@@ -948,7 +948,7 @@ func (c *clientImpl) listParcelTransactions(ctx context.Context, rateObjectID st
 func boughtButUnreadable(ctx context.Context, transactionID, metadata string, cause *apierror.APIError) *apierror.APIError {
 	slog.ErrorContext(ctx, "shippo labels were bought but their parcel transactions could not be read",
 		"shippo_transaction_id", transactionID, "metadata", metadata, "error", cause.Error())
-	return apierror.NewResourceConflictError("SHIPPO: The labels were purchased but could not be read back (transaction " + transactionID + "). Contact support before shipping again.")
+	return apierror.NewConflictError("SHIPPO: The labels were purchased but could not be read back (transaction " + transactionID + "). Contact support before shipping again.")
 }
 
 // Lists the transactions Shippo created for one purchased rate — one per parcel.

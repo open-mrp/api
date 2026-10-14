@@ -10,8 +10,8 @@ import (
 	"github.com/open-mrp/api/services/core-service/internal/ledgerlock"
 	"github.com/open-mrp/api/services/core-service/internal/scheduling"
 	"github.com/open-mrp/api/shared/constants"
-	apierror "github.com/open-mrp/api/shared/errors"
 	"github.com/open-mrp/api/shared/pricing"
+	apierror "github.com/open-mrp/apikit/apierror"
 )
 
 type AccountRepo interface {

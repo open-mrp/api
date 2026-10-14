@@ -7,7 +7,7 @@ import (
 	"github.com/open-mrp/api/services/agent-service/internal/domain"
 	repositorymock "github.com/open-mrp/api/services/agent-service/internal/domain/mock/repository"
 	"github.com/open-mrp/api/services/agent-service/internal/infrastructure/sqlc"
-	apierror "github.com/open-mrp/api/shared/errors"
+	apierror "github.com/open-mrp/apikit/apierror"
 	"github.com/stretchr/testify/assert"
 	"go.uber.org/mock/gomock"
 )
@@ -24,7 +24,7 @@ func TestResolveHistoryAgentNames(t *testing.T) {
 		Return(&sqlc.AgentDefinition{ID: "agdf_groot", Name: "Groot"}, nil).Times(1)
 	// "agdf_gone" can't be loaded → falls back to the generic label.
 	defRepo.EXPECT().GetByID(gomock.Any(), "agdf_gone").
-		Return(nil, apierror.NewResourceNotFoundError("not found")).Times(1)
+		Return(nil, apierror.NewNotFoundError("not found")).Times(1)
 
 	history := []domain.ChatHistoryMessage{
 		{Role: "user", Name: "Alice", Body: "hi"},                       // person: no lookup

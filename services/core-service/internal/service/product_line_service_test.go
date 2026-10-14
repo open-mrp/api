@@ -14,7 +14,7 @@ import (
 	repositorymock "github.com/open-mrp/api/services/core-service/internal/domain/mock/repository"
 	"github.com/open-mrp/api/shared/appctx"
 	"github.com/open-mrp/api/shared/constants"
-	apierror "github.com/open-mrp/api/shared/errors"
+	apierror "github.com/open-mrp/apikit/apierror"
 )
 
 const productLineSheet = "Product Lines"
@@ -165,7 +165,7 @@ func (suite *ProductLineSvcTestSuite) TestList_UnresolvableUnitGroupLeavesTheLin
 	suite.productLineRepo.EXPECT().GetUnitGroup(gomock.Any(), "ac_tenant", "ungp_own", gomock.Any()).
 		Return(&domain.ProductLineUnitGroup{ID: "ungp_own"}, nil)
 	suite.productLineRepo.EXPECT().GetUnitGroup(gomock.Any(), "ac_tenant", "each_group", gomock.Any()).
-		Return(nil, apierror.NewResourceNotFoundError("Resource not found."))
+		Return(nil, apierror.NewNotFoundError("Resource not found."))
 
 	result, apiErr := suite.svc.ListProductLines(ctx, domain.ListProductLinesParams{Includes: []string{"unit_group"}})
 	suite.Require().Nil(apiErr)
@@ -187,7 +187,7 @@ func (suite *ProductLineSvcTestSuite) TestList_UnitGroupLookupFailurePropagates(
 	result, apiErr := suite.svc.ListProductLines(ctx, domain.ListProductLinesParams{Includes: []string{"unit_group"}})
 	suite.Nil(result)
 	suite.Require().NotNil(apiErr)
-	suite.Equal(apierror.ErrorCodeInternalError, apiErr.Code)
+	suite.Equal(apierror.CodeInternalError, apiErr.Code)
 }
 
 // the line was found; a group it points at that the tenant cannot see does not make the line missing
@@ -197,7 +197,7 @@ func (suite *ProductLineSvcTestSuite) TestGet_UnresolvableUnitGroupStillReturnsT
 
 	suite.productLineRepo.EXPECT().Get(gomock.Any(), gomock.Any()).Return(line, nil)
 	suite.productLineRepo.EXPECT().GetUnitGroup(gomock.Any(), "ac_tenant", "each_group", gomock.Any()).
-		Return(nil, apierror.NewResourceNotFoundError("Resource not found."))
+		Return(nil, apierror.NewNotFoundError("Resource not found."))
 
 	result, apiErr := suite.svc.GetProductLine(ctx, domain.GetProductLineParams{
 		ProductLineID: "shipping",

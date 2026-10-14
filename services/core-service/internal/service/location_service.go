@@ -9,10 +9,10 @@ import (
 	"github.com/open-mrp/api/shared/appctx"
 	"github.com/open-mrp/api/shared/audit"
 	"github.com/open-mrp/api/shared/constants"
-	apierror "github.com/open-mrp/api/shared/errors"
 	"github.com/open-mrp/api/shared/id"
-	"github.com/open-mrp/api/shared/idempotency"
-	"github.com/open-mrp/api/shared/tracing"
+	"github.com/open-mrp/api/shared/idemresponse"
+	apierror "github.com/open-mrp/apikit/apierror"
+	"github.com/open-mrp/apikit/tracing"
 )
 
 var locationSvcTracer = tracing.GetTracer("core-service.location_service")
@@ -170,7 +170,7 @@ func (s *locationSvcImpl) CreateLocation(ctx context.Context, params domain.Crea
 
 	switch domain.RecoveryPoint(idempotencyKey.RecoveryPoint) {
 	case domain.RecoveryPointFinished:
-		cached, err := idempotency.UnmarshalCachedResponse[domain.Location](ctx, idempotencyKey.ResponseCode, idempotencyKey.ResponseBody)
+		cached, err := idemresponse.UnmarshalCachedResponse[domain.Location](ctx, idempotencyKey.ResponseCode, idempotencyKey.ResponseBody)
 		if err != nil {
 			return nil, tracing.Trace(span, apierror.NewInternalError(err, "Issue unmarshalling cached response."))
 		}
@@ -188,7 +188,7 @@ func (s *locationSvcImpl) CreateLocation(ctx context.Context, params domain.Crea
 					return apiErr
 				}
 				if !inAccount {
-					return apierror.NewValidationErrorWithParam("Parent location not found.", "parent_id")
+					return apierror.NewFieldError("parent_id", apierror.CodeInvalidFormat, "Parent location not found.")
 				}
 			}
 
@@ -199,7 +199,7 @@ func (s *locationSvcImpl) CreateLocation(ctx context.Context, params domain.Crea
 					return apiErr
 				}
 				if !inAccount {
-					return apierror.NewValidationErrorWithParam("Child location not found.", "child_ids")
+					return apierror.NewFieldError("child_ids", apierror.CodeInvalidFormat, "Child location not found.")
 				}
 			}
 
@@ -265,7 +265,7 @@ func (s *locationSvcImpl) UpdateLocation(ctx context.Context, params domain.Upda
 
 	switch domain.RecoveryPoint(idempotencyKey.RecoveryPoint) {
 	case domain.RecoveryPointFinished:
-		cached, err := idempotency.UnmarshalCachedResponse[domain.Location](ctx, idempotencyKey.ResponseCode, idempotencyKey.ResponseBody)
+		cached, err := idemresponse.UnmarshalCachedResponse[domain.Location](ctx, idempotencyKey.ResponseCode, idempotencyKey.ResponseBody)
 		if err != nil {
 			return nil, tracing.Trace(span, apierror.NewInternalError(err, "Issue unmarshalling cached response."))
 		}
@@ -282,7 +282,7 @@ func (s *locationSvcImpl) UpdateLocation(ctx context.Context, params domain.Upda
 				return apiErr
 			}
 			if !inAccount {
-				return apierror.NewResourceNotFoundError("Location not found.")
+				return apierror.NewNotFoundError("Location not found.")
 			}
 
 			old, apiErr := txRepo.Get(txCtx, domain.GetLocationParams{
@@ -298,14 +298,14 @@ func (s *locationSvcImpl) UpdateLocation(ctx context.Context, params domain.Upda
 			if params.ParentID.IsSet() {
 				parentID, _ := params.ParentID.Value()
 				if parentID == params.LocationID {
-					return apierror.NewValidationErrorWithParam("A location cannot be its own parent.", "parent_id")
+					return apierror.NewFieldError("parent_id", apierror.CodeInvalidFormat, "A location cannot be its own parent.")
 				}
 				inAccount, apiErr := txRepo.IsInAccount(txCtx, params.AccountID, parentID)
 				if apiErr != nil {
 					return apiErr
 				}
 				if !inAccount {
-					return apierror.NewValidationErrorWithParam("Parent location not found.", "parent_id")
+					return apierror.NewFieldError("parent_id", apierror.CodeInvalidFormat, "Parent location not found.")
 				}
 			}
 
@@ -320,7 +320,7 @@ func (s *locationSvcImpl) UpdateLocation(ctx context.Context, params domain.Upda
 						return apiErr
 					}
 					if !inAccount {
-						return apierror.NewValidationErrorWithParam("Child location not found.", "child_ids")
+						return apierror.NewFieldError("child_ids", apierror.CodeInvalidFormat, "Child location not found.")
 					}
 				}
 			}
@@ -383,13 +383,13 @@ func (s *locationSvcImpl) DeleteLocation(ctx context.Context, params domain.Dele
 	// Verify location is in account and fetch for audit
 	location, apiErr := repo.Get(ctx, domain.GetLocationParams{AccountID: params.AccountID, LocationID: params.LocationID})
 	if apiErr != nil {
-		if apierror.IsNotFound(apiErr) {
+		if apierror.HasCode(apiErr, apierror.CodeResourceNotFound) {
 			wasDeleted, deletedCheckErr := s.repos.NewDeletedRecordRepo().ExistsInAccount(ctx, constants.DeletedRecordResourceTypeLocation, params.LocationID, params.AccountID)
 			if deletedCheckErr != nil {
 				return tracing.Trace(span, deletedCheckErr)
 			}
 			if wasDeleted {
-				return tracing.Trace(span, apierror.NewAlreadyDeletedError("This location has already been deleted and can no longer be modified."))
+				return tracing.Trace(span, apierror.NewGoneError("This location has already been deleted and can no longer be modified."))
 			}
 		}
 		return tracing.Trace(span, apiErr)

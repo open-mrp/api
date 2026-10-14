@@ -13,8 +13,8 @@ import (
 
 	"github.com/open-mrp/api/services/core-service/internal/domain"
 	"github.com/open-mrp/api/shared/constants"
-	apierror "github.com/open-mrp/api/shared/errors"
-	"github.com/open-mrp/api/shared/tracing"
+	apierror "github.com/open-mrp/apikit/apierror"
+	"github.com/open-mrp/apikit/tracing"
 )
 
 const (
@@ -86,9 +86,9 @@ func (p *providerImpl) AddDomain(ctx context.Context, domainName string) (*domai
 		// The domain is already attached to this project — an idempotent retry of a prior attempt. Fall through to reading its current state.
 		case "domain_already_exists", "domain_exists":
 		case "domain_already_in_use", "not_authorized":
-			return nil, tracing.Trace(span, apierror.NewConflictErrorWithParam("This domain is already in use by another project. Remove it there first or contact support.", "domain"))
+			return nil, tracing.Trace(span, apierror.NewConflictErrorWithParam("domain", "This domain is already in use by another project. Remove it there first or contact support."))
 		case "invalid_domain", "forbidden_domain":
-			return nil, tracing.Trace(span, apierror.NewValidationErrorWithParam("This domain cannot be used: "+vErr.Error.Message, "domain"))
+			return nil, tracing.Trace(span, apierror.NewFieldError("domain", apierror.CodeInvalidFormat, "This domain cannot be used: "+vErr.Error.Message))
 		default:
 			return nil, tracing.Trace(span, apierror.NewInternalError(fmt.Errorf("vercel add domain: %s (%s)", vErr.Error.Message, vErr.Error.Code), "The domain provider rejected the request."))
 		}
@@ -108,7 +108,7 @@ func (p *providerImpl) GetDomainState(ctx context.Context, domainName string) (*
 	defer closeBody(resp)
 
 	if resp.StatusCode == http.StatusNotFound {
-		return nil, tracing.Trace(span, apierror.NewResourceNotFoundError("Domain is not registered with the provider."))
+		return nil, tracing.Trace(span, apierror.NewNotFoundError("Domain is not registered with the provider."))
 	}
 	if resp.StatusCode >= 400 {
 		vErr := readVercelError(resp)

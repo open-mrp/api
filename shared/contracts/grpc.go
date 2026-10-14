@@ -11,8 +11,9 @@ import (
 
 	"github.com/open-mrp/api/services/auth-service/pkg/types"
 	"github.com/open-mrp/api/shared/appctx"
-	apierror "github.com/open-mrp/api/shared/errors"
+	"github.com/open-mrp/api/shared/apperr"
 	"github.com/open-mrp/api/shared/version"
+	apierror "github.com/open-mrp/apikit/apierror"
 	"github.com/open-mrp/apikit/querytag"
 	"google.golang.org/grpc"
 	grpccodes "google.golang.org/grpc/codes"
@@ -143,7 +144,7 @@ func ConvertGRPCError(ctx context.Context, err error, serviceName string) *apier
 	st, ok := grpcstatus.FromError(err)
 	if !ok {
 		if isClientCancellation(ctx, err) {
-			return apierror.NewClientClosedRequestError("Client closed the connection.")
+			return apierror.NewClientClosedRequestError()
 		}
 		if isDeadlineError(ctx, err) {
 			return apierror.NewRequestTimeoutError(serviceName + " request timed out.")
@@ -155,7 +156,7 @@ func ConvertGRPCError(ctx context.Context, err error, serviceName string) *apier
 
 	// Check if message contains encoded API error information
 	if jsonData, ok := strings.CutPrefix(message, apiErrorMarker); ok {
-		if apiErr, err := apierror.APIErrorFromJSON([]byte(jsonData)); err == nil {
+		if apiErr, err := apierror.FromJSON([]byte(jsonData)); err == nil {
 			return apiErr
 		}
 	}
@@ -163,15 +164,15 @@ func ConvertGRPCError(ctx context.Context, err error, serviceName string) *apier
 	// If there is not an API error, this is an uncaught gRPC error
 	switch st.Code() {
 	case grpccodes.NotFound:
-		return apierror.NewResourceNotFoundError(message)
+		return apierror.NewNotFoundError(message)
 	case grpccodes.Canceled:
 		if isClientCancellation(ctx, err) {
-			return apierror.NewClientClosedRequestError("Client closed the connection.")
+			return apierror.NewClientClosedRequestError()
 		}
 		return apierror.NewInternalError(err, fmt.Sprintf("Service %s encountered the error: %s.", serviceName, err.Error()))
 	case grpccodes.DeadlineExceeded:
 		if isClientCancellation(ctx, err) {
-			return apierror.NewClientClosedRequestError("Client closed the connection.")
+			return apierror.NewClientClosedRequestError()
 		}
 		return apierror.NewRequestTimeoutError(fmt.Sprintf("Service %s encountered the error: %s.", serviceName, err.Error()))
 	default:
@@ -204,44 +205,44 @@ func ConvertAPIErrorToGRPC(apiErr *apierror.APIError) error {
 	var grpcCode grpccodes.Code
 	switch apiErr.Code {
 	// Authentication errors
-	case apierror.ErrorCodeInvalidCredentials, apierror.ErrorCodeExpiredToken, apierror.ErrorCodeExpiredAPIKey:
+	case apierror.CodeInvalidCredentials, apierror.CodeExpiredToken, apperr.CodeAPIKeyExpired:
 		grpcCode = grpccodes.Unauthenticated
 
 	// Authorization errors
-	case apierror.ErrorCodeInsufficientPerms:
+	case apierror.CodeInsufficientPermissions:
 		grpcCode = grpccodes.PermissionDenied
 
 	// Validation errors
-	case apierror.ErrorCodeValidationFailed, apierror.ErrorCodeMissingField, apierror.ErrorCodeInvalidFormat,
-		apierror.ErrorCodeParameterMissing, apierror.ErrorCodeParameterInvalid, apierror.ErrorCodeParameterUnknown,
-		apierror.ErrorCodeParametersExclusive, apierror.ErrorCodeRequestTooLarge:
+	case apierror.CodeValidationFailed, apierror.CodeMissingField, apierror.CodeInvalidFormat,
+		apierror.CodeParameterMissing, apierror.CodeParameterInvalid, apierror.CodeParameterUnknown,
+		apierror.CodeParametersExclusive, apierror.CodeRequestTooLarge:
 		grpcCode = grpccodes.InvalidArgument
 
 	// Resource errors
-	case apierror.ErrorCodeResourceNotFound:
+	case apierror.CodeResourceNotFound:
 		grpcCode = grpccodes.NotFound
-	case apierror.ErrorCodeResourceGone:
+	case apierror.CodeResourceGone:
 		grpcCode = grpccodes.FailedPrecondition
-	case apierror.ErrorCodeResourceExists:
+	case apierror.CodeResourceExists:
 		grpcCode = grpccodes.AlreadyExists
-	case apierror.ErrorCodeResourceConflict:
+	case apierror.CodeResourceConflict:
 		grpcCode = grpccodes.Aborted
 
 	// Business logic errors
-	case apierror.ErrorCodeRateLimitExceeded, apierror.ErrorCodeLimitExceeded:
+	case apierror.CodeRateLimited, apperr.CodeLimitExceeded:
 		grpcCode = grpccodes.ResourceExhausted
 
 	// Server errors
-	case apierror.ErrorCodeSvcUnavailable:
+	case apierror.CodeServiceUnavailable:
 		grpcCode = grpccodes.Unavailable
-	case apierror.ErrorCodeRequestTimeout, apierror.ErrorCodeTimeout:
+	case apierror.CodeRequestTimeout, apierror.CodeTimeout:
 		grpcCode = grpccodes.DeadlineExceeded
-	case apierror.ErrorCodeMethodNotAllowed:
+	case apierror.CodeMethodNotAllowed:
 		grpcCode = grpccodes.Unimplemented
 
 	// Default to Internal for all other errors
-	case apierror.ErrorCodeInternalError, apierror.ErrorCodeExternalSvcError, apierror.ErrorCodeConnectionError,
-		apierror.ErrorCodeClientClosedRequest:
+	case apierror.CodeInternalError, apierror.CodeExternalServiceError, apierror.CodeConnectionError,
+		apierror.CodeClientClosedRequest:
 		fallthrough
 	default:
 		grpcCode = grpccodes.Internal

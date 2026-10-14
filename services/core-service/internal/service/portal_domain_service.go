@@ -10,10 +10,10 @@ import (
 	"github.com/open-mrp/api/shared/appctx"
 	"github.com/open-mrp/api/shared/audit"
 	"github.com/open-mrp/api/shared/constants"
-	apierror "github.com/open-mrp/api/shared/errors"
 	"github.com/open-mrp/api/shared/id"
-	"github.com/open-mrp/api/shared/idempotency"
-	"github.com/open-mrp/api/shared/tracing"
+	"github.com/open-mrp/api/shared/idemresponse"
+	apierror "github.com/open-mrp/apikit/apierror"
+	"github.com/open-mrp/apikit/tracing"
 )
 
 var portalDomainSvcTracer = tracing.GetTracer("core-service.portal_domain_service")
@@ -116,7 +116,7 @@ func (s *portalDomainSvcImpl) CreatePortalDomain(ctx context.Context, domainName
 
 	switch domain.RecoveryPoint(idempotencyKey.RecoveryPoint) {
 	case domain.RecoveryPointFinished:
-		cached, err := idempotency.UnmarshalCachedResponse[domain.PortalDomain](ctx, idempotencyKey.ResponseCode, idempotencyKey.ResponseBody)
+		cached, err := idemresponse.UnmarshalCachedResponse[domain.PortalDomain](ctx, idempotencyKey.ResponseCode, idempotencyKey.ResponseBody)
 		if err != nil {
 			return nil, tracing.Trace(span, apierror.NewInternalError(err, "Issue unmarshalling cached response."))
 		}
@@ -132,7 +132,7 @@ func (s *portalDomainSvcImpl) CreatePortalDomain(ctx context.Context, domainName
 				return apiErr
 			}
 			if existing != nil {
-				return apierror.NewConflictErrorWithParam("This account already has a custom portal domain. Remove it before adding another.", "domain")
+				return apierror.NewConflictErrorWithParam("domain", "This account already has a custom portal domain. Remove it before adding another.")
 			}
 
 			taken, apiErr := txRepo.GetByDomain(txCtx, normalized)
@@ -140,7 +140,7 @@ func (s *portalDomainSvcImpl) CreatePortalDomain(ctx context.Context, domainName
 				return apiErr
 			}
 			if taken != nil {
-				return apierror.NewConflictErrorWithParam("This domain is already in use.", "domain")
+				return apierror.NewConflictErrorWithParam("domain", "This domain is already in use.")
 			}
 
 			created, apiErr := txRepo.Create(txCtx, portalDomainID, accountID, normalized)
@@ -249,7 +249,7 @@ func (s *portalDomainSvcImpl) GetPortalDomain(ctx context.Context, portalDomainI
 		return nil, tracing.Trace(span, apiErr)
 	}
 	if row == nil {
-		return nil, tracing.Trace(span, apierror.NewResourceNotFoundError("Portal domain not found."))
+		return nil, tracing.Trace(span, apierror.NewNotFoundError("Portal domain not found."))
 	}
 	return row, nil
 }
@@ -284,7 +284,7 @@ func (s *portalDomainSvcImpl) VerifyPortalDomain(ctx context.Context, portalDoma
 
 	switch domain.RecoveryPoint(idempotencyKey.RecoveryPoint) {
 	case domain.RecoveryPointFinished:
-		cached, err := idempotency.UnmarshalCachedResponse[domain.PortalDomain](ctx, idempotencyKey.ResponseCode, idempotencyKey.ResponseBody)
+		cached, err := idemresponse.UnmarshalCachedResponse[domain.PortalDomain](ctx, idempotencyKey.ResponseCode, idempotencyKey.ResponseBody)
 		if err != nil {
 			return nil, tracing.Trace(span, apierror.NewInternalError(err, "Issue unmarshalling cached response."))
 		}
@@ -296,7 +296,7 @@ func (s *portalDomainSvcImpl) VerifyPortalDomain(ctx context.Context, portalDoma
 			return nil, meds.Idempotency.CacheErrorResponse(ctx, idempotencyKey.TypeID, apiErr)
 		}
 		if row == nil {
-			return nil, meds.Idempotency.CacheErrorResponse(ctx, idempotencyKey.TypeID, apierror.NewResourceNotFoundError("Portal domain not found."))
+			return nil, meds.Idempotency.CacheErrorResponse(ctx, idempotencyKey.TypeID, apierror.NewNotFoundError("Portal domain not found."))
 		}
 
 		if row.Status == constants.PortalDomainStatusVerified {
@@ -381,7 +381,7 @@ func (s *portalDomainSvcImpl) DeletePortalDomain(ctx context.Context, portalDoma
 		return tracing.Trace(span, apiErr)
 	}
 	if row == nil {
-		return tracing.Trace(span, apierror.NewResourceNotFoundError("Portal domain not found."))
+		return tracing.Trace(span, apierror.NewNotFoundError("Portal domain not found."))
 	}
 
 	// Foreign mutation first: detaching from the provider is idempotent, so a crash between this call and the row delete is safely retried end-to-end.
@@ -395,7 +395,7 @@ func (s *portalDomainSvcImpl) DeletePortalDomain(ctx context.Context, portalDoma
 			return apiErr
 		}
 		if !deleted {
-			return apierror.NewResourceNotFoundError("Portal domain not found.")
+			return apierror.NewNotFoundError("Portal domain not found.")
 		}
 
 		changes := audit.ComputeChanges(row, (*domain.PortalDomain)(nil))
@@ -488,13 +488,13 @@ func normalizePortalDomain(domainName string) (string, *apierror.APIError) {
 	normalized := strings.ToLower(strings.TrimSpace(strings.TrimSuffix(domainName, ".")))
 
 	if normalized == "" {
-		return "", apierror.NewValidationErrorWithParam("Domain is required.", "domain")
+		return "", apierror.NewFieldError("domain", apierror.CodeInvalidFormat, "Domain is required.")
 	}
 	if len(normalized) > 253 {
-		return "", apierror.NewValidationErrorWithParam("Domain is too long.", "domain")
+		return "", apierror.NewFieldError("domain", apierror.CodeInvalidFormat, "Domain is too long.")
 	}
 	if !strings.Contains(normalized, ".") || strings.ContainsAny(normalized, "@/\\:?#& ") || strings.Contains(normalized, "..") {
-		return "", apierror.NewValidationErrorWithParam("Domain must be a valid hostname like shop.example.com.", "domain")
+		return "", apierror.NewFieldError("domain", apierror.CodeInvalidFormat, "Domain must be a valid hostname like shop.example.com.")
 	}
 	// augno.com stays reserved even though the API no longer serves it: we still own it,
 	// it redirects to openmrp.ai, and it is the domain outbound mail is sent from. Letting
@@ -502,7 +502,7 @@ func normalizePortalDomain(domainName string) (string, *apierror.APIError) {
 	// authenticated against.
 	for _, reserved := range []string{"openmrp.ai", "augno.com"} {
 		if normalized == reserved || strings.HasSuffix(normalized, "."+reserved) {
-			return "", apierror.NewValidationErrorWithParam("OpenMRP domains cannot be used as a custom portal domain.", "domain")
+			return "", apierror.NewFieldError("domain", apierror.CodeInvalidFormat, "OpenMRP domains cannot be used as a custom portal domain.")
 		}
 	}
 

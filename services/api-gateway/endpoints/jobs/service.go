@@ -12,9 +12,9 @@ import (
 	apiresource "github.com/open-mrp/api/services/api-gateway/pkg/resource"
 	"github.com/open-mrp/api/services/api-gateway/pkg/resourcekit"
 	"github.com/open-mrp/api/shared/constants"
-	apierror "github.com/open-mrp/api/shared/errors"
 	pb "github.com/open-mrp/api/shared/proto/core"
-	"github.com/open-mrp/api/shared/tracing"
+	apierror "github.com/open-mrp/apikit/apierror"
+	"github.com/open-mrp/apikit/tracing"
 
 	"google.golang.org/grpc"
 )
@@ -87,16 +87,16 @@ func jobResultsFromProto(list *pb.JobResultList) *apiresource.List[apiresource.J
 
 // decodes the canonical error object an entry carries. Core-service marshals it from this
 // same shared type, so a decode failure is an invariant break rather than bad input.
-func responseErrorFromJSON(raw string) *apierror.ResponseError {
+func responseErrorFromJSON(raw string) *apierror.ErrorObject {
 	if raw == "" {
 		return nil
 	}
-	var e apierror.ResponseError
+	var e apierror.ErrorObject
 	if err := json.Unmarshal([]byte(raw), &e); err != nil {
 		slog.Error("A job error did not decode as the canonical error object", "error", err)
-		return &apierror.ResponseError{
-			Code:    apierror.ErrorCodeInternalError,
-			Type:    apierror.ErrorTypeAPI,
+		return &apierror.ErrorObject{
+			Code:    apierror.CodeInternalError,
+			Type:    apierror.TypeAPI,
 			Message: "Something went wrong.",
 		}
 	}

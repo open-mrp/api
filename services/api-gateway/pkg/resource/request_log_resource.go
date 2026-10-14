@@ -6,8 +6,8 @@ import (
 
 	apiexample "github.com/open-mrp/api/services/api-gateway/pkg/example"
 	"github.com/open-mrp/api/shared/constants"
-	apierror "github.com/open-mrp/api/shared/errors"
-	"github.com/open-mrp/api/shared/timeutil"
+	apierror "github.com/open-mrp/apikit/apierror"
+	"github.com/open-mrp/apikit/timeutil"
 )
 
 const SampleRequestLogID = "rq_0lhl3kkhme40"
@@ -62,7 +62,7 @@ type RequestLog struct {
 	// Machine-readable API error code.
 	//
 	// Matches the `code` of the error response the caller received. Populated only for failed requests.
-	ErrorCode *apierror.ErrorCode `json:"error_code"`
+	ErrorCode *apierror.Code `json:"error_code"`
 	// Human-readable error message.
 	//
 	// The same message the caller received. Populated only for failed requests.

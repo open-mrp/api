@@ -4,7 +4,7 @@ import (
 	"context"
 
 	"github.com/open-mrp/api/shared/constants"
-	apierror "github.com/open-mrp/api/shared/errors"
+	apierror "github.com/open-mrp/apikit/apierror"
 )
 
 // AccountContext represents the context of an account (sandbox status, mode, etc.)

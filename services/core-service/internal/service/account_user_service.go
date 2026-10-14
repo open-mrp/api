@@ -11,15 +11,15 @@ import (
 	"github.com/open-mrp/api/services/core-service/internal/event"
 	"github.com/open-mrp/api/shared/appctx"
 	"github.com/open-mrp/api/shared/audit"
-	s3client "github.com/open-mrp/api/shared/cloud/s3"
 	"github.com/open-mrp/api/shared/constants"
-	apierror "github.com/open-mrp/api/shared/errors"
 	"github.com/open-mrp/api/shared/id"
-	"github.com/open-mrp/api/shared/idempotency"
+	"github.com/open-mrp/api/shared/idemresponse"
 	"github.com/open-mrp/api/shared/messaging"
-	"github.com/open-mrp/api/shared/tracing"
+	apierror "github.com/open-mrp/apikit/apierror"
+	s3client "github.com/open-mrp/apikit/cloud/s3"
 	"github.com/open-mrp/apikit/crypto"
 	"github.com/open-mrp/apikit/ptrutil"
+	"github.com/open-mrp/apikit/tracing"
 )
 
 var accountUserSvcTracer = tracing.GetTracer("core-service.account_user_service")
@@ -304,7 +304,7 @@ func (s *accountUserSvcImpl) CreateAccountUser(ctx context.Context, params domai
 
 	switch domain.RecoveryPoint(idempotencyKey.RecoveryPoint) {
 	case domain.RecoveryPointFinished:
-		cached, err := idempotency.UnmarshalCachedResponse[domain.AccountUserDetail](ctx, idempotencyKey.ResponseCode, idempotencyKey.ResponseBody)
+		cached, err := idemresponse.UnmarshalCachedResponse[domain.AccountUserDetail](ctx, idempotencyKey.ResponseCode, idempotencyKey.ResponseBody)
 		if err != nil {
 			return nil, tracing.Trace(span, apierror.NewInternalError(err, "Issue unmarshalling cached response."))
 		}
@@ -367,14 +367,14 @@ func (s *accountUserSvcImpl) CreateAccountUser(ctx context.Context, params domai
 			var existingUser *domain.UserRecord
 			if params.Email != nil {
 				found, apiErr := txUserRepo.FindByEmail(txCtx, *params.Email)
-				if apiErr != nil && apiErr.Code != apierror.ErrorCodeResourceNotFound {
+				if apiErr != nil && apiErr.Code != apierror.CodeResourceNotFound {
 					return apiErr
 				}
 				existingUser = found
 			}
 			if existingUser == nil && params.Username != nil {
 				found, apiErr := txUserRepo.FindByUsername(txCtx, *params.Username)
-				if apiErr != nil && apiErr.Code != apierror.ErrorCodeResourceNotFound {
+				if apiErr != nil && apiErr.Code != apierror.CodeResourceNotFound {
 					return apiErr
 				}
 				existingUser = found
@@ -386,9 +386,9 @@ func (s *accountUserSvcImpl) CreateAccountUser(ctx context.Context, params domai
 				// Check if already linked to this account.
 				_, existErr := txAccountUserRepo.FindByAccountAndUserID(txCtx, userID, params.AccountID)
 				if existErr == nil {
-					return apierror.NewResourceConflictError("This user is already linked to this account.")
+					return apierror.NewConflictError("This user is already linked to this account.")
 				}
-				if existErr.Code != apierror.ErrorCodeResourceNotFound {
+				if existErr.Code != apierror.CodeResourceNotFound {
 					return existErr
 				}
 			} else {
@@ -457,7 +457,7 @@ func (s *accountUserSvcImpl) CreateAccountUser(ctx context.Context, params domai
 				if reErr == nil {
 					accountUserID = reactivatedID
 					reactivated = true
-				} else if reErr.Code != apierror.ErrorCodeResourceNotFound {
+				} else if reErr.Code != apierror.CodeResourceNotFound {
 					return reErr
 				}
 			}
@@ -624,7 +624,7 @@ func (s *accountUserSvcImpl) UpdateAccountUser(ctx context.Context, params domai
 
 	switch domain.RecoveryPoint(idempotencyKey.RecoveryPoint) {
 	case domain.RecoveryPointFinished:
-		cached, err := idempotency.UnmarshalCachedResponse[domain.AccountUserDetail](ctx, idempotencyKey.ResponseCode, idempotencyKey.ResponseBody)
+		cached, err := idemresponse.UnmarshalCachedResponse[domain.AccountUserDetail](ctx, idempotencyKey.ResponseCode, idempotencyKey.ResponseBody)
 		if err != nil {
 			return nil, tracing.Trace(span, apierror.NewInternalError(err, "Issue unmarshalling cached response."))
 		}
@@ -662,22 +662,22 @@ func (s *accountUserSvcImpl) UpdateAccountUser(ctx context.Context, params domai
 			// Check for duplicate email before updating.
 			if params.Email != nil {
 				existing, apiErr := txUserRepo.FindByEmail(txCtx, *params.Email)
-				if apiErr != nil && apiErr.Code != apierror.ErrorCodeResourceNotFound {
+				if apiErr != nil && apiErr.Code != apierror.CodeResourceNotFound {
 					return apiErr
 				}
 				if existing != nil && existing.ID != userID {
-					return apierror.NewConflictErrorWithParam("A user with this email already exists.", "email")
+					return apierror.NewConflictErrorWithParam("email", "A user with this email already exists.")
 				}
 			}
 
 			// Check for duplicate username before updating.
 			if params.Username != nil {
 				existing, apiErr := txUserRepo.FindByUsername(txCtx, *params.Username)
-				if apiErr != nil && apiErr.Code != apierror.ErrorCodeResourceNotFound {
+				if apiErr != nil && apiErr.Code != apierror.CodeResourceNotFound {
 					return apiErr
 				}
 				if existing != nil && existing.ID != userID {
-					return apierror.NewConflictErrorWithParam("A user with this username already exists.", "username")
+					return apierror.NewConflictErrorWithParam("username", "A user with this username already exists.")
 				}
 			}
 
@@ -839,13 +839,13 @@ func (s *accountUserSvcImpl) UpdateAccountUserStatus(ctx context.Context, accoun
 	// Include "role" so RoleType is always populated for the admin-lock guard below.
 	accountUser, apiErr := s.repos.NewAccountUserRepo().GetDetailByAccountAndID(ctx, accountID, accountUserID, []string{"role"})
 	if apiErr != nil {
-		if apierror.IsNotFound(apiErr) {
+		if apierror.HasCode(apiErr, apierror.CodeResourceNotFound) {
 			wasDeleted, deletedCheckErr := s.repos.NewDeletedRecordRepo().ExistsInAccount(ctx, constants.DeletedRecordResourceTypeAccountUser, accountUserID, accountID)
 			if deletedCheckErr != nil {
 				return tracing.Trace(span, deletedCheckErr)
 			}
 			if wasDeleted {
-				return tracing.Trace(span, apierror.NewAlreadyDeletedError("This account user has already been deleted and can no longer be modified."))
+				return tracing.Trace(span, apierror.NewGoneError("This account user has already been deleted and can no longer be modified."))
 			}
 		}
 		return tracing.Trace(span, apiErr)
@@ -972,7 +972,7 @@ func (s *accountUserSvcImpl) UpdateAccountUserPassword(ctx context.Context, acco
 
 	switch domain.RecoveryPoint(idempotencyKey.RecoveryPoint) {
 	case domain.RecoveryPointFinished:
-		cached, err := idempotency.UnmarshalCachedResponse[struct{}](ctx, idempotencyKey.ResponseCode, idempotencyKey.ResponseBody)
+		cached, err := idemresponse.UnmarshalCachedResponse[struct{}](ctx, idempotencyKey.ResponseCode, idempotencyKey.ResponseBody)
 		if err != nil {
 			return tracing.Trace(span, apierror.NewInternalError(err, "Issue unmarshalling cached response."))
 		}
@@ -1113,12 +1113,12 @@ func resolveCommissionEligibility(roleType string, requested *bool, current bool
 	switch constants.RoleType(roleType) {
 	case constants.RoleTypeSalesRep:
 		if requested != nil && !*requested {
-			return false, apierror.NewValidationErrorWithParam("Sales rep users are always eligible for commission.", "is_commission_eligible")
+			return false, apierror.NewFieldError("is_commission_eligible", apierror.CodeInvalidFormat, "Sales rep users are always eligible for commission.")
 		}
 		return true, nil
 	case constants.RoleTypeScanner, constants.RoleTypeAgent:
 		if requested != nil && *requested {
-			return false, apierror.NewValidationErrorWithParam("Scanning station and agent users cannot be eligible for commission.", "is_commission_eligible")
+			return false, apierror.NewFieldError("is_commission_eligible", apierror.CodeInvalidFormat, "Scanning station and agent users cannot be eligible for commission.")
 		}
 		return false, nil
 	default:

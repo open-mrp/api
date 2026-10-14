@@ -11,10 +11,10 @@ import (
 	"github.com/open-mrp/api/shared/appctx"
 	"github.com/open-mrp/api/shared/audit"
 	"github.com/open-mrp/api/shared/constants"
-	apierror "github.com/open-mrp/api/shared/errors"
 	"github.com/open-mrp/api/shared/id"
-	"github.com/open-mrp/api/shared/idempotency"
-	"github.com/open-mrp/api/shared/tracing"
+	"github.com/open-mrp/api/shared/idemresponse"
+	apierror "github.com/open-mrp/apikit/apierror"
+	"github.com/open-mrp/apikit/tracing"
 )
 
 var unitSvcTracer = tracing.GetTracer("core-service.unit_service")
@@ -186,10 +186,10 @@ func (s *unitSvcImpl) CreateUnit(ctx context.Context, params domain.CreateUnitPa
 	}
 
 	if isDenominatorZero(params.RatioDenominator) {
-		return nil, tracing.Trace(span, apierror.NewValidationErrorWithParam("RatioDenominator must be non-zero.", "ratio_denominator"))
+		return nil, tracing.Trace(span, apierror.NewFieldError("ratio_denominator", apierror.CodeInvalidFormat, "RatioDenominator must be non-zero."))
 	}
 	if isDenominatorZero(params.OffsetDenominator) {
-		return nil, tracing.Trace(span, apierror.NewValidationErrorWithParam("OffsetDenominator must be non-zero.", "offset_denominator"))
+		return nil, tracing.Trace(span, apierror.NewFieldError("offset_denominator", apierror.CodeInvalidFormat, "OffsetDenominator must be non-zero."))
 	}
 
 	unitID, apiErr := id.GenID(id.UnitIDPrefix, nil)
@@ -208,7 +208,7 @@ func (s *unitSvcImpl) CreateUnit(ctx context.Context, params domain.CreateUnitPa
 
 	switch domain.RecoveryPoint(idempotencyKey.RecoveryPoint) {
 	case domain.RecoveryPointFinished:
-		cached, err := idempotency.UnmarshalCachedResponse[domain.Unit](ctx, idempotencyKey.ResponseCode, idempotencyKey.ResponseBody)
+		cached, err := idemresponse.UnmarshalCachedResponse[domain.Unit](ctx, idempotencyKey.ResponseCode, idempotencyKey.ResponseBody)
 		if err != nil {
 			return nil, tracing.Trace(span, apierror.NewInternalError(err, "Issue unmarshalling cached response."))
 		}
@@ -224,7 +224,7 @@ func (s *unitSvcImpl) CreateUnit(ctx context.Context, params domain.CreateUnitPa
 				return apiErr
 			}
 			if exists {
-				return apierror.NewConflictErrorWithParam("A unit with this name already exists.", "name")
+				return apierror.NewConflictErrorWithParam("name", "A unit with this name already exists.")
 			}
 
 			exists, apiErr = txRepo.ExistsByAbbreviation(txCtx, accountID, params.Abbreviation, nil)
@@ -232,7 +232,7 @@ func (s *unitSvcImpl) CreateUnit(ctx context.Context, params domain.CreateUnitPa
 				return apiErr
 			}
 			if exists {
-				return apierror.NewConflictErrorWithParam("A unit with this abbreviation already exists.", "abbreviation")
+				return apierror.NewConflictErrorWithParam("abbreviation", "A unit with this abbreviation already exists.")
 			}
 
 			params.AccountID = accountID
@@ -293,10 +293,10 @@ func (s *unitSvcImpl) UpdateUnit(ctx context.Context, params domain.UpdateUnitPa
 	}
 
 	if params.RatioDenominator != nil && isDenominatorZero(*params.RatioDenominator) {
-		return nil, tracing.Trace(span, apierror.NewValidationErrorWithParam("RatioDenominator must be non-zero.", "ratio_denominator"))
+		return nil, tracing.Trace(span, apierror.NewFieldError("ratio_denominator", apierror.CodeInvalidFormat, "RatioDenominator must be non-zero."))
 	}
 	if params.OffsetDenominator != nil && isDenominatorZero(*params.OffsetDenominator) {
-		return nil, tracing.Trace(span, apierror.NewValidationErrorWithParam("OffsetDenominator must be non-zero.", "offset_denominator"))
+		return nil, tracing.Trace(span, apierror.NewFieldError("offset_denominator", apierror.CodeInvalidFormat, "OffsetDenominator must be non-zero."))
 	}
 
 	params.AccountID = identity.Target.AccountID
@@ -310,7 +310,7 @@ func (s *unitSvcImpl) UpdateUnit(ctx context.Context, params domain.UpdateUnitPa
 
 	switch domain.RecoveryPoint(idempotencyKey.RecoveryPoint) {
 	case domain.RecoveryPointFinished:
-		cached, err := idempotency.UnmarshalCachedResponse[domain.Unit](ctx, idempotencyKey.ResponseCode, idempotencyKey.ResponseBody)
+		cached, err := idemresponse.UnmarshalCachedResponse[domain.Unit](ctx, idempotencyKey.ResponseCode, idempotencyKey.ResponseBody)
 		if err != nil {
 			return nil, tracing.Trace(span, apierror.NewInternalError(err, "Issue unmarshalling cached response."))
 		}
@@ -335,7 +335,7 @@ func (s *unitSvcImpl) UpdateUnit(ctx context.Context, params domain.UpdateUnitPa
 					return apiErr
 				}
 				if exists {
-					return apierror.NewConflictErrorWithParam("A unit with this name already exists.", "name")
+					return apierror.NewConflictErrorWithParam("name", "A unit with this name already exists.")
 				}
 			}
 
@@ -345,7 +345,7 @@ func (s *unitSvcImpl) UpdateUnit(ctx context.Context, params domain.UpdateUnitPa
 					return apiErr
 				}
 				if exists {
-					return apierror.NewConflictErrorWithParam("A unit with this abbreviation already exists.", "abbreviation")
+					return apierror.NewConflictErrorWithParam("abbreviation", "A unit with this abbreviation already exists.")
 				}
 			}
 
@@ -406,13 +406,13 @@ func (s *unitSvcImpl) DeleteUnit(ctx context.Context, unitID string) *apierror.A
 
 	unit, apiErr := s.repos.NewUnitRepo().Get(ctx, domain.GetUnitParams{AccountID: accountID, UnitID: unitID})
 	if apiErr != nil {
-		if apierror.IsNotFound(apiErr) {
+		if apierror.HasCode(apiErr, apierror.CodeResourceNotFound) {
 			wasDeleted, deletedCheckErr := s.repos.NewDeletedRecordRepo().ExistsInAccount(ctx, constants.DeletedRecordResourceTypeUnit, unitID, accountID)
 			if deletedCheckErr != nil {
 				return tracing.Trace(span, deletedCheckErr)
 			}
 			if wasDeleted {
-				return tracing.Trace(span, apierror.NewAlreadyDeletedError("This unit has already been deleted and can no longer be modified."))
+				return tracing.Trace(span, apierror.NewGoneError("This unit has already been deleted and can no longer be modified."))
 			}
 		}
 		return tracing.Trace(span, apiErr)
@@ -429,7 +429,7 @@ func (s *unitSvcImpl) DeleteUnit(ctx context.Context, unitID string) *apierror.A
 			return apiErr
 		}
 		if isBase {
-			return apierror.NewResourceConflictError("This unit is the base unit of a unit group. Change the group's base unit or delete the group first.")
+			return apierror.NewConflictError("This unit is the base unit of a unit group. Change the group's base unit or delete the group first.")
 		}
 		// Every quantity or price recorded in the unit converts and displays through it.
 		referenced, apiErr := txSvc.repos.NewUnitRepo().IsReferenced(txCtx, unit.ID)
@@ -437,7 +437,7 @@ func (s *unitSvcImpl) DeleteUnit(ctx context.Context, unitID string) *apierror.A
 			return apiErr
 		}
 		if referenced {
-			return apierror.NewResourceConflictError("This unit is in use: quantities or prices are recorded in it. Remove it from its unit groups instead so it can no longer be chosen.")
+			return apierror.NewConflictError("This unit is in use: quantities or prices are recorded in it. Remove it from its unit groups instead so it can no longer be chosen.")
 		}
 
 		if apiErr := txSvc.repos.NewDeletedRecordRepo().CreateInAccount(txCtx, constants.DeletedRecordResourceTypeUnit, unit.ID, accountID, unit); apiErr != nil {

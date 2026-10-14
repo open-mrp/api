@@ -9,8 +9,8 @@ import (
 	"github.com/open-mrp/api/services/platform-service/internal/domain"
 	repositorymock "github.com/open-mrp/api/services/platform-service/internal/domain/mock/repository"
 	"github.com/open-mrp/api/services/platform-service/pkg/idempotency"
-	apierror "github.com/open-mrp/api/shared/errors"
 	pb "github.com/open-mrp/api/shared/proto/platform"
+	apierror "github.com/open-mrp/apikit/apierror"
 
 	"github.com/stretchr/testify/suite"
 	"go.uber.org/mock/gomock"
@@ -145,7 +145,7 @@ func (s *IdempotencyHandlerTestSuite) TestProcessIdempotencyKey_InProgress_Error
 func (s *IdempotencyHandlerTestSuite) TestProcessIdempotencyKey_HashMismatch() {
 	s.repo.EXPECT().
 		UpsertAndLock(gomock.Any(), gomock.Any()).
-		Return(nil, apierror.NewIdempotencyHashMismatchError("idem_abc")).Times(1)
+		Return(nil, apierror.NewIdempotencyKeyReusedError("idem_abc")).Times(1)
 
 	resp, err := s.handler.ProcessIdempotencyKey(context.Background(), validProcessRequest())
 	s.NoError(err)

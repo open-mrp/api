@@ -8,7 +8,7 @@ import (
 
 	"github.com/open-mrp/api/services/platform-service/internal/domain"
 	"github.com/open-mrp/api/services/platform-service/internal/infrastructure/sqlc"
-	"github.com/open-mrp/api/shared/db"
+	"github.com/open-mrp/apikit/db"
 	"github.com/open-mrp/apikit/pagination"
 )
 

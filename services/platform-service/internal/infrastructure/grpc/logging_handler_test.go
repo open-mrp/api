@@ -8,8 +8,8 @@ import (
 	"github.com/open-mrp/api/services/platform-service/internal/domain"
 	servicemock "github.com/open-mrp/api/services/platform-service/internal/domain/mock/service"
 	"github.com/open-mrp/api/shared/constants"
-	apierror "github.com/open-mrp/api/shared/errors"
 	pb "github.com/open-mrp/api/shared/proto/platform"
+	apierror "github.com/open-mrp/apikit/apierror"
 	"github.com/open-mrp/apikit/pagination"
 
 	"github.com/stretchr/testify/suite"
@@ -216,7 +216,7 @@ func (s *LoggingHandlerTestSuite) TestGetRequestLog_Success() {
 
 func (s *LoggingHandlerTestSuite) TestGetRequestLog_ServiceError() {
 	s.loggingSvc.EXPECT().GetRequestLog(gomock.Any(), "rlog_1", gomock.Any()).
-		Return(nil, apierror.NewResourceNotFoundError("not found")).Times(1)
+		Return(nil, apierror.NewNotFoundError("not found")).Times(1)
 
 	resp, err := s.handler.GetRequestLog(context.Background(), &pb.GetRequestLogRequest{Id: "rlog_1"})
 	s.Nil(resp)

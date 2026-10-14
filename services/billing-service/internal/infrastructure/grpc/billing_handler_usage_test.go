@@ -9,8 +9,8 @@ import (
 	servicemock "github.com/open-mrp/api/services/billing-service/internal/domain/mock/service"
 	"github.com/open-mrp/api/shared/appctx"
 	"github.com/open-mrp/api/shared/contracts"
-	apierror "github.com/open-mrp/api/shared/errors"
 	pb "github.com/open-mrp/api/shared/proto/billing"
+	apierror "github.com/open-mrp/apikit/apierror"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -40,7 +40,7 @@ func TestGetAccountUsage_PortalsAreRefused(t *testing.T) {
 		_, err := handler.GetAccountUsage(ctx, &pb.GetAccountUsageRequest{})
 		apiErr := contracts.ConvertGRPCError(ctx, err, "billing-service")
 		require.NotNil(t, apiErr, name)
-		assert.Equal(t, apierror.ErrorCodeInsufficientPerms, apiErr.Code, name)
+		assert.Equal(t, apierror.CodeInsufficientPermissions, apiErr.Code, name)
 	}
 }
 

@@ -16,8 +16,8 @@ import (
 
 	apiendpoint "github.com/open-mrp/api/services/api-gateway/pkg/endpoint"
 	"github.com/open-mrp/api/shared/appctx"
-	"github.com/open-mrp/api/shared/metadata"
 	pb "github.com/open-mrp/api/shared/proto/core"
+	"github.com/open-mrp/apikit/metadata"
 )
 
 // captureSalesClient records the request each sales RPC receives and answers with a bare order or
@@ -168,7 +168,7 @@ func TestCreateSalesOrder_MetadataReachesCore(t *testing.T) {
 		client := &captureSalesClient{}
 		w := serveMetadata(t, &CreateSalesOrderEndpoint{}, client, "/v1/sales/sales-orders",
 			createOrderWith("", fmt.Sprintf(`{%q: "v"}`, strings.Repeat("k", metadata.MaxKeyLength+1))))
-		require.Equal(t, http.StatusBadRequest, w.Code, w.Body.String())
+		require.Equal(t, http.StatusUnprocessableEntity, w.Code, w.Body.String())
 		assert.Nil(t, client.createOrder)
 	})
 }
@@ -268,7 +268,7 @@ func TestUpdateSalesOrder_InvalidMetadataIsRejected(t *testing.T) {
 			t.Parallel()
 			client := &captureSalesClient{}
 			w := serveMetadata(t, &UpdateSalesOrderEndpoint{}, client, "/v1/sales/sales-orders/or_meta", tc.body)
-			require.Equal(t, http.StatusBadRequest, w.Code, w.Body.String())
+			require.Equal(t, http.StatusUnprocessableEntity, w.Code, w.Body.String())
 			assert.Nil(t, client.updateOrder, "an invalid body must not reach core")
 			assert.Contains(t, errorParam(t, w), "metadata", w.Body.String())
 		})

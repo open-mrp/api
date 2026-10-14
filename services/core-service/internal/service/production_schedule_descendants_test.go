@@ -7,7 +7,7 @@ import (
 	"github.com/open-mrp/api/services/core-service/internal/domain"
 	repositorymock "github.com/open-mrp/api/services/core-service/internal/domain/mock/repository"
 	"github.com/open-mrp/api/services/core-service/internal/scheduling"
-	apierror "github.com/open-mrp/api/shared/errors"
+	apierror "github.com/open-mrp/apikit/apierror"
 
 	"github.com/stretchr/testify/assert"
 	"go.uber.org/mock/gomock"

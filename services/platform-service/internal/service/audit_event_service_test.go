@@ -11,8 +11,8 @@ import (
 	repositorymock "github.com/open-mrp/api/services/platform-service/internal/domain/mock/repository"
 	"github.com/open-mrp/api/shared/appctx"
 	"github.com/open-mrp/api/shared/constants"
-	apierror "github.com/open-mrp/api/shared/errors"
 	"github.com/open-mrp/api/shared/messaging"
+	apierror "github.com/open-mrp/apikit/apierror"
 	"github.com/open-mrp/apikit/pagination"
 
 	"github.com/stretchr/testify/suite"
@@ -173,7 +173,7 @@ func (s *AuditEventServiceTestSuite) TestGetAuditEvent_NoIdentity() {
 	result, apiErr := s.svc.GetAuditEvent(context.Background(), "aevt_1", nil)
 	s.Nil(result)
 	s.NotNil(apiErr)
-	s.Equal(apierror.ErrorCodeInternalError, apiErr.Code)
+	s.Equal(apierror.CodeInternalError, apiErr.Code)
 }
 
 func (s *AuditEventServiceTestSuite) TestGetAuditEvent_NotInternalActor() {
@@ -181,7 +181,7 @@ func (s *AuditEventServiceTestSuite) TestGetAuditEvent_NotInternalActor() {
 	result, apiErr := s.svc.GetAuditEvent(ctx, "aevt_1", nil)
 	s.Nil(result)
 	s.NotNil(apiErr)
-	s.Equal(apierror.ErrorCodeInsufficientPerms, apiErr.Code)
+	s.Equal(apierror.CodeInsufficientPermissions, apiErr.Code)
 }
 
 func (s *AuditEventServiceTestSuite) TestGetAuditEvent_MissingPermission() {
@@ -189,7 +189,7 @@ func (s *AuditEventServiceTestSuite) TestGetAuditEvent_MissingPermission() {
 	result, apiErr := s.svc.GetAuditEvent(ctx, "aevt_1", nil)
 	s.Nil(result)
 	s.NotNil(apiErr)
-	s.Equal(apierror.ErrorCodeInsufficientPerms, apiErr.Code)
+	s.Equal(apierror.CodeInsufficientPermissions, apiErr.Code)
 }
 
 func (s *AuditEventServiceTestSuite) TestGetAuditEvent_MissingTargetAccount() {
@@ -201,7 +201,7 @@ func (s *AuditEventServiceTestSuite) TestGetAuditEvent_MissingTargetAccount() {
 
 func (s *AuditEventServiceTestSuite) TestGetAuditEvent_RepoError() {
 	ctx := internalAuditCtx("acct_123")
-	expected := apierror.NewResourceNotFoundError("not found")
+	expected := apierror.NewNotFoundError("not found")
 	s.auditEventRepo.EXPECT().FindByID(gomock.Any(), "aevt_1", "acct_123", gomock.Any()).Return(nil, expected).Times(1)
 
 	result, apiErr := s.svc.GetAuditEvent(ctx, "aevt_1", nil)
@@ -234,7 +234,7 @@ func (s *AuditEventServiceTestSuite) TestListAuditEvents_NoIdentity() {
 	result, apiErr := s.svc.ListAuditEvents(context.Background(), filter, nil)
 	s.Nil(result)
 	s.NotNil(apiErr)
-	s.Equal(apierror.ErrorCodeInternalError, apiErr.Code)
+	s.Equal(apierror.CodeInternalError, apiErr.Code)
 }
 
 func (s *AuditEventServiceTestSuite) TestListAuditEvents_NotInternalActor() {
@@ -243,7 +243,7 @@ func (s *AuditEventServiceTestSuite) TestListAuditEvents_NotInternalActor() {
 	result, apiErr := s.svc.ListAuditEvents(ctx, filter, nil)
 	s.Nil(result)
 	s.NotNil(apiErr)
-	s.Equal(apierror.ErrorCodeInsufficientPerms, apiErr.Code)
+	s.Equal(apierror.CodeInsufficientPermissions, apiErr.Code)
 }
 
 func (s *AuditEventServiceTestSuite) TestListAuditEvents_MissingPermission() {
@@ -252,7 +252,7 @@ func (s *AuditEventServiceTestSuite) TestListAuditEvents_MissingPermission() {
 	result, apiErr := s.svc.ListAuditEvents(ctx, filter, nil)
 	s.Nil(result)
 	s.NotNil(apiErr)
-	s.Equal(apierror.ErrorCodeInsufficientPerms, apiErr.Code)
+	s.Equal(apierror.CodeInsufficientPermissions, apiErr.Code)
 }
 
 func (s *AuditEventServiceTestSuite) TestListAuditEvents_MissingTargetAccount() {
@@ -290,7 +290,7 @@ func (s *AuditEventServiceTestSuite) TestListAuditEventResourceTypes_NoIdentity(
 	result, apiErr := s.svc.ListAuditEventResourceTypes(context.Background())
 	s.Nil(result)
 	s.NotNil(apiErr)
-	s.Equal(apierror.ErrorCodeInternalError, apiErr.Code)
+	s.Equal(apierror.CodeInternalError, apiErr.Code)
 }
 
 func (s *AuditEventServiceTestSuite) TestListAuditEventResourceTypes_NotInternalActor() {
@@ -298,7 +298,7 @@ func (s *AuditEventServiceTestSuite) TestListAuditEventResourceTypes_NotInternal
 	result, apiErr := s.svc.ListAuditEventResourceTypes(ctx)
 	s.Nil(result)
 	s.NotNil(apiErr)
-	s.Equal(apierror.ErrorCodeInsufficientPerms, apiErr.Code)
+	s.Equal(apierror.CodeInsufficientPermissions, apiErr.Code)
 }
 
 func (s *AuditEventServiceTestSuite) TestListAuditEventResourceTypes_MissingPermission() {
@@ -306,7 +306,7 @@ func (s *AuditEventServiceTestSuite) TestListAuditEventResourceTypes_MissingPerm
 	result, apiErr := s.svc.ListAuditEventResourceTypes(ctx)
 	s.Nil(result)
 	s.NotNil(apiErr)
-	s.Equal(apierror.ErrorCodeInsufficientPerms, apiErr.Code)
+	s.Equal(apierror.CodeInsufficientPermissions, apiErr.Code)
 }
 
 // ---------------------------------------------------------------------------

@@ -10,11 +10,11 @@ import (
 	"github.com/open-mrp/api/services/core-service/internal/domain"
 	"github.com/open-mrp/api/shared/audit"
 	"github.com/open-mrp/api/shared/constants"
-	"github.com/open-mrp/api/shared/db"
-	apierror "github.com/open-mrp/api/shared/errors"
 	"github.com/open-mrp/api/shared/excel"
 	"github.com/open-mrp/api/shared/id"
 	"github.com/open-mrp/api/shared/messaging"
+	apierror "github.com/open-mrp/apikit/apierror"
+	"github.com/open-mrp/apikit/db"
 	"github.com/open-mrp/apikit/field"
 )
 
@@ -38,13 +38,13 @@ func validateBulkUpsertMachineRows(rows []domain.UpsertMachineParams) *apierror.
 	for i, m := range rows {
 		lower := strings.ToLower(m.Name)
 		if _, dup := nameInputSpace[lower]; dup {
-			rowErrs.AddValidation(i, fmt.Sprintf("machines[%d].name", i), fmt.Sprintf("duplicate name %q in request", m.Name))
+			rowErrs.AddField(i, "name", apierror.CodeInvalidFormat, fmt.Sprintf("duplicate name %q in request", m.Name))
 		}
 		nameInputSpace[lower] = struct{}{}
 
 		lowerSerial := strings.ToLower(m.SerialNumber)
 		if _, dup := serialInputSpace[lowerSerial]; dup {
-			rowErrs.AddValidation(i, fmt.Sprintf("machines[%d].serial_number", i), fmt.Sprintf("duplicate serial number %q in request", m.SerialNumber))
+			rowErrs.AddField(i, "serial_number", apierror.CodeInvalidFormat, fmt.Sprintf("duplicate serial number %q in request", m.SerialNumber))
 		}
 		serialInputSpace[lowerSerial] = struct{}{}
 	}
@@ -126,7 +126,7 @@ func writeBulkUpsertMachines(txCtx context.Context, txRepos domain.RepoFactory, 
 			return nil
 		})
 		if rowErr != nil {
-			rowErrors = append(rowErrors, apierror.NewRowError(i, rowErr))
+			rowErrors = append(rowErrors, apierror.RowError{Index: i, Error: rowErr.Object()})
 			continue
 		}
 
@@ -143,11 +143,8 @@ func writeBulkUpsertMachines(txCtx context.Context, txRepos domain.RepoFactory, 
 //     since department is create-only.
 func matchMachineForUpsert(row domain.ResolvedUpsertMachineRow, nameMatch, serialMatch *domain.Machine) (*domain.Machine, *apierror.APIError) {
 	if nameMatch != nil && serialMatch != nil && nameMatch.ID != serialMatch.ID {
-		return nil, apierror.NewConflictErrorWithParam(
-			fmt.Sprintf("The name %q matches existing machine %q but the serial number %q matches a different existing machine %q.",
-				row.Name, nameMatch.Name, row.SerialNumber, serialMatch.Name),
-			"name, serial_number",
-		)
+		return nil, apierror.NewConflictErrorWithParam("name, serial_number", fmt.Sprintf("The name %q matches existing machine %q but the serial number %q matches a different existing machine %q.",
+			row.Name, nameMatch.Name, row.SerialNumber, serialMatch.Name))
 	}
 
 	old := nameMatch
@@ -164,17 +161,11 @@ func matchMachineForUpsert(row domain.ResolvedUpsertMachineRow, nameMatch, seria
 	}
 	switch {
 	case nameMatch != nil && serialMatch != nil:
-		return nil, apierror.NewConflictErrorWithParam(
-			fmt.Sprintf("Machine %q (matched by name and serial number) belongs to department %q and cannot be moved.", old.Name, oldDept),
-			"department",
-		)
+		return nil, apierror.NewConflictErrorWithParam("department", fmt.Sprintf("Machine %q (matched by name and serial number) belongs to department %q and cannot be moved.", old.Name, oldDept))
 	case nameMatch != nil:
-		return nil, apierror.NewConflictErrorWithParam(fmt.Sprintf("A machine named %q already exists.", old.Name), "name")
+		return nil, apierror.NewConflictErrorWithParam("name", fmt.Sprintf("A machine named %q already exists.", old.Name))
 	default:
-		return nil, apierror.NewConflictErrorWithParam(
-			fmt.Sprintf("Serial number %q is already used by machine %q in department %q.", row.SerialNumber, old.Name, oldDept),
-			"serial_number",
-		)
+		return nil, apierror.NewConflictErrorWithParam("serial_number", fmt.Sprintf("Serial number %q is already used by machine %q in department %q.", row.SerialNumber, old.Name, oldDept))
 	}
 }
 

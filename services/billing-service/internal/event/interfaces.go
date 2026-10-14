@@ -4,7 +4,7 @@ import (
 	"context"
 	"time"
 
-	apierror "github.com/open-mrp/api/shared/errors"
+	apierror "github.com/open-mrp/apikit/apierror"
 )
 
 // WebhookCoreClient defines the core-service operations needed by the webhook consumer.

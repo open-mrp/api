@@ -5,8 +5,8 @@ import (
 	"testing"
 
 	"github.com/open-mrp/api/shared/constants"
-	apierror "github.com/open-mrp/api/shared/errors"
 	pb "github.com/open-mrp/api/shared/proto/auth"
+	apierror "github.com/open-mrp/apikit/apierror"
 )
 
 func TestNewSystemIdentity_AttributesToTheSourceAndTarget(t *testing.T) {

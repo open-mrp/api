@@ -7,7 +7,7 @@ import (
 
 	"github.com/open-mrp/api/services/core-service/internal/domain"
 	"github.com/open-mrp/api/shared/constants"
-	apierror "github.com/open-mrp/api/shared/errors"
+	apierror "github.com/open-mrp/apikit/apierror"
 )
 
 // PortalDomainProvider is an in-memory portal domain provider for test/dev mode. A domain walks the real lifecycle across successive state reads: read #1 is unverified (pending), read #2 is verified+routing but not yet serving (securing, as if the TLS certificate were still issuing), and reads #3+ are verified and serving. This lets tests exercise the pending, securing, and verified paths of the verify action.

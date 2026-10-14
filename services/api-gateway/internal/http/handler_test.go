@@ -13,7 +13,7 @@ import (
 
 	"github.com/open-mrp/api/shared/appctx"
 	"github.com/open-mrp/api/shared/constants"
-	apierror "github.com/open-mrp/api/shared/errors"
+	apierror "github.com/open-mrp/apikit/apierror"
 	"github.com/open-mrp/apikit/field"
 )
 
@@ -73,8 +73,8 @@ func TestValidateEnumFields(t *testing.T) {
 		if err == nil {
 			t.Fatal("expected error, got nil")
 		}
-		if err.Code != apierror.ErrorCodeMissingField {
-			t.Errorf("expected code %q, got %q", apierror.ErrorCodeMissingField, err.Code)
+		if err.Code != apierror.CodeMissingField {
+			t.Errorf("expected code %q, got %q", apierror.CodeMissingField, err.Errors[0].Code)
 		}
 		if err.Param != "mode" {
 			t.Errorf("expected param 'mode', got %s", err.Param)
@@ -220,7 +220,7 @@ func TestBindRawBody(t *testing.T) {
 		dst := &rawBodyTestRequest{}
 		err := BindRawBody(httptest.NewRequest(http.MethodPut, "/photo", bytes.NewReader(bytes.Repeat([]byte("a"), limit+1))), dst, limit)
 		apiErr, ok := errors.AsType[*apierror.APIError](err)
-		if !ok || apierror.GetHTTPStatusCode(apiErr.Code) != http.StatusRequestEntityTooLarge {
+		if !ok || apiErr.Code.Status() != http.StatusRequestEntityTooLarge {
 			t.Fatalf("expected a 413 APIError, got %v", err)
 		}
 		if dst.RawBody != nil {
@@ -304,7 +304,7 @@ func TestRejectUnknownQueryParams(t *testing.T) {
 		if apiErr == nil {
 			t.Fatal("expected error")
 		}
-		if apiErr.Code != apierror.ErrorCodeParameterUnknown {
+		if apiErr.Code != apierror.CodeParameterUnknown {
 			t.Fatalf("expected parameter_unknown, got %s", apiErr.Code)
 		}
 		if apiErr.Param != "unexpected" {
@@ -404,7 +404,7 @@ func TestDecodeJSONInto(t *testing.T) {
 type unwrapTestType struct{}
 
 func (*unwrapTestType) UnmarshalJSON([]byte) error {
-	return fmt.Errorf("wrap: %w", apierror.NewInvalidFormatError("bad", "field"))
+	return fmt.Errorf("wrap: %w", apierror.NewInvalidFormatError("field", "bad"))
 }
 
 func TestDecodeJSONInto_unwrapsWrappedAPIError(t *testing.T) {
@@ -420,7 +420,7 @@ func TestDecodeJSONInto_unwrapsWrappedAPIError(t *testing.T) {
 	if !errors.As(err, &ae) {
 		t.Fatalf("expected *apierror.APIError via errors.As, got %T: %v", err, err)
 	}
-	if ae.Code != apierror.ErrorCodeInvalidFormat {
+	if ae.Code != apierror.CodeInvalidFormat {
 		t.Fatalf("expected invalid_format, got %s", ae.Code)
 	}
 }

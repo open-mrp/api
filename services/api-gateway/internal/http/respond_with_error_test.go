@@ -9,7 +9,7 @@ import (
 	"testing"
 
 	"github.com/open-mrp/api/shared/appctx"
-	apierror "github.com/open-mrp/api/shared/errors"
+	apierror "github.com/open-mrp/apikit/apierror"
 )
 
 func TestRespondWithAPIError_NilErrorPanics(t *testing.T) {
@@ -52,8 +52,8 @@ func TestRespondWithAPIError_WithoutRequestLog(t *testing.T) {
 		t.Fatal("expected response to have 'error' key with map value")
 	}
 
-	if errorMap["code"] != string(apierror.ErrorCodeValidationFailed) {
-		t.Fatalf("expected error code %q, got %q", apierror.ErrorCodeValidationFailed, errorMap["code"])
+	if errorMap["code"] != string(apierror.CodeValidationFailed) {
+		t.Fatalf("expected error code %q, got %q", apierror.CodeValidationFailed, errorMap["code"])
 	}
 
 	if errorMap["message"] != "Invalid input" {
@@ -76,8 +76,8 @@ func TestRespondWithAPIError_WithRequestLog_NonInternalError(t *testing.T) {
 		t.Fatalf("expected status code %d, got %d", http.StatusBadRequest, w.Code)
 	}
 
-	if rl.ErrorCode == nil || *rl.ErrorCode != string(apierror.ErrorCodeValidationFailed) {
-		t.Fatalf("expected ErrorCode %q, got %v", apierror.ErrorCodeValidationFailed, rl.ErrorCode)
+	if rl.ErrorCode == nil || *rl.ErrorCode != string(apierror.CodeValidationFailed) {
+		t.Fatalf("expected ErrorCode %q, got %v", apierror.CodeValidationFailed, rl.ErrorCode)
 	}
 
 	if rl.ErrorMessage == nil || *rl.ErrorMessage != "Invalid input" {
@@ -102,8 +102,8 @@ func TestRespondWithAPIError_WithRequestLog_NonInternalError(t *testing.T) {
 		t.Fatal("expected response to have 'error' key with map value")
 	}
 
-	if errorMap["code"] != string(apierror.ErrorCodeValidationFailed) {
-		t.Fatalf("expected error code %q, got %q", apierror.ErrorCodeValidationFailed, errorMap["code"])
+	if errorMap["code"] != string(apierror.CodeValidationFailed) {
+		t.Fatalf("expected error code %q, got %q", apierror.CodeValidationFailed, errorMap["code"])
 	}
 }
 
@@ -122,8 +122,8 @@ func TestRespondWithAPIError_WithRequestLog_InternalError(t *testing.T) {
 		t.Fatalf("expected status code %d, got %d", http.StatusInternalServerError, w.Code)
 	}
 
-	if rl.ErrorCode == nil || *rl.ErrorCode != string(apierror.ErrorCodeInternalError) {
-		t.Fatalf("expected ErrorCode %q, got %v", apierror.ErrorCodeInternalError, rl.ErrorCode)
+	if rl.ErrorCode == nil || *rl.ErrorCode != string(apierror.CodeInternalError) {
+		t.Fatalf("expected ErrorCode %q, got %v", apierror.CodeInternalError, rl.ErrorCode)
 	}
 
 	if rl.ErrorMessage == nil || *rl.ErrorMessage != "Something went wrong." {
@@ -154,93 +154,8 @@ func TestRespondWithAPIError_WithRequestLog_InternalError(t *testing.T) {
 		t.Fatal("expected response to have 'error' key with map value")
 	}
 
-	if errorMap["code"] != string(apierror.ErrorCodeInternalError) {
-		t.Fatalf("expected error code %q, got %q", apierror.ErrorCodeInternalError, errorMap["code"])
-	}
-}
-
-func TestRespondWithAPIError_RequestLogURL_WithFrontendURL(t *testing.T) {
-	old := frontendURL
-	frontendURL = "https://www.openmrp.ai"
-	defer func() { frontendURL = old }()
-
-	apiErr := apierror.NewValidationError("Invalid input")
-	rl := &appctx.RequestLog{ID: "req_abc123"}
-	ctx := appctx.WithRequestLog(context.Background(), rl)
-	w := httptest.NewRecorder()
-
-	RespondWithAPIError(ctx, w, apiErr)
-
-	var response map[string]any
-	if err := json.Unmarshal(w.Body.Bytes(), &response); err != nil {
-		t.Fatalf("failed to unmarshal response: %v", err)
-	}
-
-	errorMap, ok := response["error"].(map[string]any)
-	if !ok {
-		t.Fatal("expected response to have 'error' key with map value")
-	}
-
-	url, ok := errorMap["request_log_url"].(string)
-	if !ok {
-		t.Fatal("expected request_log_url to be a string")
-	}
-	expected := "https://www.openmrp.ai/dashboard/request-logs/req_abc123"
-	if url != expected {
-		t.Fatalf("expected request_log_url %q, got %q", expected, url)
-	}
-}
-
-func TestRespondWithAPIError_RequestLogURL_WithoutFrontendURL(t *testing.T) {
-	old := frontendURL
-	frontendURL = ""
-	defer func() { frontendURL = old }()
-
-	apiErr := apierror.NewValidationError("Invalid input")
-	rl := &appctx.RequestLog{ID: "req_abc123"}
-	ctx := appctx.WithRequestLog(context.Background(), rl)
-	w := httptest.NewRecorder()
-
-	RespondWithAPIError(ctx, w, apiErr)
-
-	var response map[string]any
-	if err := json.Unmarshal(w.Body.Bytes(), &response); err != nil {
-		t.Fatalf("failed to unmarshal response: %v", err)
-	}
-
-	errorMap, ok := response["error"].(map[string]any)
-	if !ok {
-		t.Fatal("expected response to have 'error' key with map value")
-	}
-
-	if errorMap["request_log_url"] != nil {
-		t.Fatalf("expected request_log_url to be null, got %v", errorMap["request_log_url"])
-	}
-}
-
-func TestRespondWithAPIError_RequestLogURL_NoRequestLog(t *testing.T) {
-	old := frontendURL
-	frontendURL = "https://www.openmrp.ai"
-	defer func() { frontendURL = old }()
-
-	apiErr := apierror.NewValidationError("Invalid input")
-	ctx := context.Background()
-	w := httptest.NewRecorder()
-
-	RespondWithAPIError(ctx, w, apiErr)
-
-	var response map[string]any
-	if err := json.Unmarshal(w.Body.Bytes(), &response); err != nil {
-		t.Fatalf("failed to unmarshal response: %v", err)
-	}
-
-	errorMap, ok := response["error"].(map[string]any)
-	if !ok {
-		t.Fatal("expected response to have 'error' key with map value")
-	}
-
-	if errorMap["request_log_url"] != nil {
-		t.Fatalf("expected request_log_url to be null, got %v", errorMap["request_log_url"])
+	if errorMap["code"] != string(apierror.CodeInternalError) {
+		t.Fatalf("expected error code %q, got %q", apierror.CodeInternalError, errorMap["code"])
 	}
 }
 
@@ -263,17 +178,17 @@ func TestRespondWithAPIError_DifferentErrorCodes(t *testing.T) {
 		},
 		{
 			name:           "NotFound",
-			apiErr:         apierror.NewResourceNotFoundError("Resource not found"),
+			apiErr:         apierror.NewNotFoundError("Resource not found"),
 			expectedStatus: http.StatusNotFound,
 		},
 		{
 			name:           "Conflict",
-			apiErr:         apierror.NewResourceConflictError("Resource conflict"),
+			apiErr:         apierror.NewConflictError("Resource conflict"),
 			expectedStatus: http.StatusConflict,
 		},
 		{
 			name:           "TooManyRequests",
-			apiErr:         apierror.NewRateLimitExceededError("Rate limit exceeded"),
+			apiErr:         apierror.NewRateLimitedError("Rate limit exceeded"),
 			expectedStatus: http.StatusTooManyRequests,
 		},
 		{

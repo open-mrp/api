@@ -7,8 +7,8 @@ import (
 	"time"
 
 	"github.com/open-mrp/api/services/core-service/internal/domain"
-	apierror "github.com/open-mrp/api/shared/errors"
-	"github.com/open-mrp/api/shared/tracing"
+	apierror "github.com/open-mrp/apikit/apierror"
+	"github.com/open-mrp/apikit/tracing"
 )
 
 // buildOeeTrend measures the same OEE arithmetic as buildOeeByDepartment, one production week at a time, so a plant can see whether a number is moving rather than only what it is today.

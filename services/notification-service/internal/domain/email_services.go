@@ -3,7 +3,7 @@ package domain
 import (
 	"context"
 
-	apierror "github.com/open-mrp/api/shared/errors"
+	apierror "github.com/open-mrp/apikit/apierror"
 )
 
 // EmailBridgeSvc owns the self-serve email-domain verification flow and inbox CRUD that back the chat↔email bridge. All methods are account-scoped via the caller identity.

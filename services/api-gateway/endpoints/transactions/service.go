@@ -12,10 +12,10 @@ import (
 	apiresource "github.com/open-mrp/api/services/api-gateway/pkg/resource"
 	"github.com/open-mrp/api/services/api-gateway/pkg/resourcekit"
 	"github.com/open-mrp/api/shared/constants"
-	apierror "github.com/open-mrp/api/shared/errors"
 	"github.com/open-mrp/api/shared/id"
 	pb "github.com/open-mrp/api/shared/proto/core"
-	"github.com/open-mrp/api/shared/tracing"
+	apierror "github.com/open-mrp/apikit/apierror"
+	"github.com/open-mrp/apikit/tracing"
 	"google.golang.org/grpc"
 	"google.golang.org/protobuf/types/known/timestamppb"
 )
@@ -114,7 +114,7 @@ func (m *transactionSvcImpl) GetTransaction(ctx context.Context, req *RetrieveTr
 	}
 
 	if resp.Transaction == nil {
-		return nil, apierror.NewResourceNotFoundError("Transaction not found.")
+		return nil, apierror.NewNotFoundError("Transaction not found.")
 	}
 
 	tx := TransactionDetailPresenter(ctx, resp.Transaction)
@@ -299,7 +299,7 @@ func (m *transactionSvcImpl) ListTransactionTypes(ctx context.Context, req *List
 	}
 
 	if req.Cursor != nil && *req.Cursor != "" {
-		return nil, apierror.NewValidationErrorWithParam("Invalid pagination cursor.", "cursor")
+		return nil, apierror.NewFieldError("cursor", apierror.CodeInvalidFormat, "Invalid pagination cursor.")
 	}
 
 	results := staticTransactionTypes
@@ -329,7 +329,7 @@ func (m *transactionSvcImpl) ListTransactionMethods(ctx context.Context, req *Li
 	}
 
 	if req.Cursor != nil && *req.Cursor != "" {
-		return nil, apierror.NewValidationErrorWithParam("Invalid pagination cursor.", "cursor")
+		return nil, apierror.NewFieldError("cursor", apierror.CodeInvalidFormat, "Invalid pagination cursor.")
 	}
 
 	results := staticTransactionMethods

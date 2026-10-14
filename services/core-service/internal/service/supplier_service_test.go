@@ -13,7 +13,7 @@ import (
 	repositorymock "github.com/open-mrp/api/services/core-service/internal/domain/mock/repository"
 	"github.com/open-mrp/api/shared/appctx"
 	"github.com/open-mrp/api/shared/constants"
-	apierror "github.com/open-mrp/api/shared/errors"
+	apierror "github.com/open-mrp/apikit/apierror"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -78,7 +78,7 @@ func supplierAdminCtx() context.Context {
 	})
 }
 
-func notFound() *apierror.APIError { return apierror.NewResourceNotFoundError("Resource not found.") }
+func notFound() *apierror.APIError { return apierror.NewNotFoundError("Resource not found.") }
 
 // --- Supplier materials ---
 
@@ -92,7 +92,7 @@ func TestCreateSupplierMaterial_RefusesASupplierThatIsNotTheOwners(t *testing.T)
 	})
 
 	require.NotNil(t, apiErr)
-	assert.Equal(t, http.StatusNotFound, apierror.GetHTTPStatusCode(apiErr.Code))
+	assert.Equal(t, http.StatusNotFound, apiErr.Code.Status())
 	assert.Equal(t, "supplier_id", apiErr.Param)
 }
 
@@ -107,7 +107,7 @@ func TestCreateSupplierMaterial_RefusesAMaterialThatIsNotTheOwners(t *testing.T)
 	})
 
 	require.NotNil(t, apiErr)
-	assert.Equal(t, http.StatusNotFound, apierror.GetHTTPStatusCode(apiErr.Code))
+	assert.Equal(t, http.StatusNotFound, apiErr.Code.Status())
 	assert.Equal(t, "material_id", apiErr.Param)
 }
 
@@ -137,7 +137,7 @@ func TestSupplierMaterialDescription_RefusesMoreBytesThanTheColumnHolds(t *testi
 		SupplierAccountID: "ac_sup", MaterialID: "ml_1", SupplierPartNumber: "P-1", SupplierDescription: &tooLong,
 	})
 	require.NotNil(t, apiErr)
-	assert.Equal(t, http.StatusBadRequest, apierror.GetHTTPStatusCode(apiErr.Code))
+	assert.Equal(t, http.StatusUnprocessableEntity, apiErr.Code.Status())
 	assert.Equal(t, "supplier_description", apiErr.Param)
 
 	_, apiErr = d.supplierMatSvc.UpdateSupplierMaterial(supplierAdminCtx(), domain.UpdateSupplierMaterialParams{
@@ -159,7 +159,7 @@ func TestUpdateSupplier_RefusesAnAddressThatIsNotTheSuppliers(t *testing.T) {
 	_, apiErr := d.supplierSvc.UpdateSupplier(supplierAdminCtx(), domain.UpdateSupplierParams{SupplierID: "ac_sup", ShipToAddressID: &foreign})
 
 	require.NotNil(t, apiErr)
-	assert.Equal(t, http.StatusNotFound, apierror.GetHTTPStatusCode(apiErr.Code))
+	assert.Equal(t, http.StatusNotFound, apiErr.Code.Status())
 	assert.Equal(t, "ship_to_address_id", apiErr.Param)
 }
 
@@ -218,7 +218,7 @@ func TestCreateSupplier_ChecksTheNumberOnlyUnderTheOwnersLock(t *testing.T) {
 	_, apiErr := d.supplierSvc.CreateSupplier(supplierAdminCtx(), domain.CreateSupplierParams{Name: "Acme", Number: "S-1"})
 
 	require.NotNil(t, apiErr)
-	assert.Equal(t, http.StatusConflict, apierror.GetHTTPStatusCode(apiErr.Code))
+	assert.Equal(t, http.StatusConflict, apiErr.Code.Status())
 	assert.Equal(t, "number", apiErr.Param)
 }
 
@@ -237,7 +237,7 @@ func TestUpdateSupplier_LocksTheOwnersNumbersBeforeItsFirstRead(t *testing.T) {
 	_, apiErr := d.supplierSvc.UpdateSupplier(supplierAdminCtx(), domain.UpdateSupplierParams{SupplierID: self, Number: &number})
 
 	require.NotNil(t, apiErr)
-	assert.Equal(t, http.StatusConflict, apierror.GetHTTPStatusCode(apiErr.Code))
+	assert.Equal(t, http.StatusConflict, apiErr.Code.Status())
 	assert.Equal(t, "number", apiErr.Param)
 }
 
@@ -295,6 +295,6 @@ func TestSupplierSvc_BatchGetServesWhoeverMayReadADocumentNamingTheSupplier(t *t
 
 		_, apiErr := d.supplierSvc.BatchGetSuppliersByIDs(supplierRoleCtx("customers:read"), []string{"ac_sup1"})
 		require.NotNil(t, apiErr)
-		assert.Equal(t, http.StatusForbidden, apierror.GetHTTPStatusCode(apiErr.Code))
+		assert.Equal(t, http.StatusForbidden, apiErr.Code.Status())
 	})
 }

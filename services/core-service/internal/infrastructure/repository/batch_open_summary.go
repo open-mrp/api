@@ -8,9 +8,9 @@ import (
 	"github.com/shopspring/decimal"
 
 	"github.com/open-mrp/api/services/core-service/internal/domain"
-	"github.com/open-mrp/api/shared/db"
-	apierror "github.com/open-mrp/api/shared/errors"
-	"github.com/open-mrp/api/shared/tracing"
+	apierror "github.com/open-mrp/apikit/apierror"
+	"github.com/open-mrp/apikit/db"
+	"github.com/open-mrp/apikit/tracing"
 )
 
 // openBatchSummaryQuery totals the open, scanned batches waiting at each scanning station per item. Each counts for its quantity less what has already gone downstream into output batches, summed as recorded, without unit conversion, as the dashboard summed them; the unit is the earliest-scanned batch's.

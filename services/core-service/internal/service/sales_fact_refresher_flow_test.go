@@ -14,7 +14,7 @@ import (
 	repositorymock "github.com/open-mrp/api/services/core-service/internal/domain/mock/repository"
 	"github.com/open-mrp/api/shared/audit"
 	"github.com/open-mrp/api/shared/constants"
-	apierror "github.com/open-mrp/api/shared/errors"
+	apierror "github.com/open-mrp/apikit/apierror"
 )
 
 func newMockRefresher(t *testing.T) (*SalesFactRefresher, *repositorymock.MockSalesFactRepo, *[][]string) {

@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 	"testing"
 
-	"github.com/open-mrp/api/shared/validate"
+	"github.com/open-mrp/apikit/validate"
 )
 
 func TestRejectExplicitJSONNulls_updateAccountGroup_nameNull(t *testing.T) {

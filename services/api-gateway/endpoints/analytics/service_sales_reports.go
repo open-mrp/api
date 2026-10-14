@@ -12,13 +12,13 @@ import (
 	grpcutil "github.com/open-mrp/api/services/api-gateway/internal/grpc"
 	apiresource "github.com/open-mrp/api/services/api-gateway/pkg/resource"
 	"github.com/open-mrp/api/shared/constants"
-	apierror "github.com/open-mrp/api/shared/errors"
 	pb "github.com/open-mrp/api/shared/proto/core"
+	apierror "github.com/open-mrp/apikit/apierror"
 )
 
 func salesReportFilterToProto(startsAt, endsAt *timestamppb.Timestamp, cmp *SalesComparisonPeriod, f SalesReportFilters) (*pb.SalesReportFilterProto, *apierror.APIError) {
 	if startsAt != nil && endsAt != nil && endsAt.AsTime().Before(startsAt.AsTime()) {
-		return nil, apierror.NewValidationErrorWithParam("Must not be before starts_at.", "ends_at")
+		return nil, apierror.NewFieldError("ends_at", apierror.CodeInvalidFormat, "Must not be before starts_at.")
 	}
 	out := &pb.SalesReportFilterProto{
 		StartsAt:         startsAt,
@@ -33,10 +33,10 @@ func salesReportFilterToProto(startsAt, endsAt *timestamppb.Timestamp, cmp *Sale
 		start, hasStart := cmp.ComparisonStartDate.Value()
 		end, hasEnd := cmp.ComparisonEndDate.Value()
 		if hasStart != hasEnd {
-			return nil, apierror.NewParameterInvalidError("comparison_starts_at and comparison_ends_at must be set together.", "comparison_starts_at")
+			return nil, apierror.NewParameterInvalidError("comparison_starts_at", "comparison_starts_at and comparison_ends_at must be set together.")
 		}
 		if hasStart && end.Before(start) {
-			return nil, apierror.NewValidationErrorWithParam("Must not be before comparison_starts_at.", "comparison_ends_at")
+			return nil, apierror.NewFieldError("comparison_ends_at", apierror.CodeInvalidFormat, "Must not be before comparison_starts_at.")
 		}
 		if hasStart {
 			out.ComparisonStartsAt = timestamppb.New(start)
@@ -74,7 +74,7 @@ func (m *analyticsSvcImpl) AnalyzeSalesSummary(ctx context.Context, req *Analyze
 
 func (m *analyticsSvcImpl) AnalyzeSalesBreakdown(ctx context.Context, req *AnalyzeSalesBreakdownRequest) (*apiresource.List[apiresource.SalesBreakdown], *apierror.APIError) {
 	if !req.GroupBy.IsValid() {
-		return nil, apierror.NewParameterInvalidError("group_by is not a supported dimension.", "group_by")
+		return nil, apierror.NewParameterInvalidError("group_by", "group_by is not a supported dimension.")
 	}
 	filter, apiErr := salesReportFilterToProto(timestamppb.New(req.StartDate), timestamppb.New(req.EndDate), &req.SalesComparisonPeriod, req.SalesReportFilters)
 	if apiErr != nil {
@@ -181,7 +181,7 @@ func (m *analyticsSvcImpl) ListSalesLines(ctx context.Context, req *ListSalesLin
 	start, hasStart := req.StartDate.Value()
 	end, hasEnd := req.EndDate.Value()
 	if hasStart != hasEnd {
-		return nil, apierror.NewParameterInvalidError("starts_at and ends_at must be set together.", "starts_at")
+		return nil, apierror.NewParameterInvalidError("starts_at", "starts_at and ends_at must be set together.")
 	}
 	var startsAt, endsAt *timestamppb.Timestamp
 	if hasStart {
@@ -210,7 +210,7 @@ func (m *analyticsSvcImpl) ExportSalesLines(ctx context.Context, req *ExportSale
 	start, hasStart := req.StartDate.Value()
 	end, hasEnd := req.EndDate.Value()
 	if hasStart != hasEnd {
-		return nil, apierror.NewParameterInvalidError("starts_at and ends_at must be set together.", "starts_at")
+		return nil, apierror.NewParameterInvalidError("starts_at", "starts_at and ends_at must be set together.")
 	}
 	var startsAt, endsAt *timestamppb.Timestamp
 	if hasStart {

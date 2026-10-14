@@ -7,8 +7,8 @@ import (
 	"github.com/open-mrp/api/services/agent-service/internal/domain"
 	"github.com/open-mrp/api/services/agent-service/internal/infrastructure/repository"
 	"github.com/open-mrp/api/services/agent-service/internal/infrastructure/sqlc"
-	"github.com/open-mrp/api/shared/db"
-	apierror "github.com/open-mrp/api/shared/errors"
+	apierror "github.com/open-mrp/apikit/apierror"
+	"github.com/open-mrp/apikit/db"
 )
 
 type TransactionManager interface {

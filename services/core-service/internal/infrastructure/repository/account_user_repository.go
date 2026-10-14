@@ -10,10 +10,10 @@ import (
 	"github.com/open-mrp/api/services/core-service/internal/domain"
 	"github.com/open-mrp/api/services/core-service/internal/infrastructure/sqlc"
 	"github.com/open-mrp/api/shared/constants"
-	"github.com/open-mrp/api/shared/db"
-	apierror "github.com/open-mrp/api/shared/errors"
-	"github.com/open-mrp/api/shared/tracing"
+	apierror "github.com/open-mrp/apikit/apierror"
+	"github.com/open-mrp/apikit/db"
 	"github.com/open-mrp/apikit/pagination"
+	"github.com/open-mrp/apikit/tracing"
 )
 
 var accountUserRepoTracer = tracing.GetTracer("core-service.account_user_repository")
@@ -36,7 +36,7 @@ func (r *accountUserRepoImpl) FindByAccountAndUserID(ctx context.Context, userID
 	})
 
 	if apiErr := db.MapSQLError(err); apiErr != nil {
-		if apiErr.Code == apierror.ErrorCodeResourceNotFound {
+		if apiErr.Code == apierror.CodeResourceNotFound {
 			return nil, apiErr
 		}
 		return nil, tracing.Trace(span, apiErr)
@@ -65,7 +65,7 @@ func (r *accountUserRepoImpl) ResolveAccountUserID(ctx context.Context, accountI
 		UserOrAccountUserID: userOrAccountUserID,
 	})
 	if apiErr := db.MapSQLError(err); apiErr != nil {
-		if apiErr.Code == apierror.ErrorCodeResourceNotFound {
+		if apiErr.Code == apierror.CodeResourceNotFound {
 			return "", apiErr
 		}
 		return "", tracing.Trace(span, apiErr)
@@ -104,7 +104,7 @@ func (r *accountUserRepoImpl) FindLastUsedAccountID(ctx context.Context, userID 
 
 	accountID, err := r.queries.FindLastUsedAccountID(ctx, userID)
 	if apiErr := db.MapSQLError(err); apiErr != nil {
-		if apiErr.Code == apierror.ErrorCodeResourceNotFound {
+		if apiErr.Code == apierror.CodeResourceNotFound {
 			return "", nil
 		}
 		return "", tracing.Trace(span, apiErr)
@@ -267,7 +267,7 @@ func (r *accountUserRepoImpl) List(ctx context.Context, params domain.ListAccoun
 	if params.Cursor != nil {
 		cur, err := pagination.DecodeStringCursor(*params.Cursor)
 		if err != nil {
-			return nil, apierror.NewValidationErrorWithParam("Invalid pagination cursor.", "cursor")
+			return nil, apierror.NewFieldError("cursor", apierror.CodeInvalidFormat, "Invalid pagination cursor.")
 		}
 		cursorDir = &cur.Direction
 
@@ -563,7 +563,7 @@ func (r *accountUserRepoImpl) SoftDelete(ctx context.Context, accountUserID stri
 		return tracing.Trace(span, apierror.NewInternalError(err, "Failed to check rows affected."))
 	}
 	if rowsAffected == 0 {
-		return tracing.Trace(span, apierror.NewResourceNotFoundError("Account user not found."))
+		return tracing.Trace(span, apierror.NewNotFoundError("Account user not found."))
 	}
 
 	return nil

@@ -7,7 +7,7 @@ import (
 
 	"github.com/open-mrp/api/services/core-service/internal/domain"
 	"github.com/open-mrp/api/services/core-service/internal/infrastructure/sqlc"
-	"github.com/open-mrp/api/shared/db"
+	"github.com/open-mrp/api/shared/catalogsearch"
 	"github.com/open-mrp/apikit/pagination"
 )
 
@@ -29,7 +29,7 @@ type catalogFilter struct {
 	where []string
 	args  []any
 	// search is the active search, or the zero value; its SKU tier leads the sort.
-	search db.CatalogSearch
+	search catalogsearch.Search
 }
 
 func (f *catalogFilter) add(cond string, args ...any) {
@@ -87,7 +87,7 @@ type itemListQuery struct {
 
 // catalogSearchTier is the SQL for item i's search rank (0 exact SKU, 1 SKU token, 2 SKU prefix,
 // 3 other match), mirroring db.CatalogSearchRank, or 0 for every item when there is no search.
-func catalogSearchTier(search db.CatalogSearch) (string, []any) {
+func catalogSearchTier(search catalogsearch.Search) (string, []any) {
 	if !search.Contains.Valid {
 		return "0", nil
 	}
@@ -105,7 +105,7 @@ func catalogSearchTier(search db.CatalogSearch) (string, []any) {
 // newItemListQuery applies every filter but the page's cursor. lineIDs are the product lines the
 // items' products must be on, already narrowed to the customers' lines when customers are filtered.
 func newItemListQuery(params domain.ListItemsParams, lineIDs []string) *itemListQuery {
-	q := &itemListQuery{catalogFilter: catalogFilter{search: db.NewCatalogSearch(params.Query)}}
+	q := &itemListQuery{catalogFilter: catalogFilter{search: catalogsearch.New(params.Query)}}
 	q.add("i.account_id = ?", params.AccountID)
 	q.add("i.deleted_at IS NULL")
 	// The page holds only items the list hydrates, which inner-joins the category: one whose category was

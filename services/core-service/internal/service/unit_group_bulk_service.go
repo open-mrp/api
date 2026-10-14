@@ -11,13 +11,13 @@ import (
 	"github.com/open-mrp/api/services/core-service/internal/domain"
 	"github.com/open-mrp/api/shared/audit"
 	"github.com/open-mrp/api/shared/constants"
-	"github.com/open-mrp/api/shared/db"
-	apierror "github.com/open-mrp/api/shared/errors"
 	"github.com/open-mrp/api/shared/excel"
 	"github.com/open-mrp/api/shared/id"
 	"github.com/open-mrp/api/shared/messaging"
-	"github.com/open-mrp/api/shared/tracing"
+	apierror "github.com/open-mrp/apikit/apierror"
+	"github.com/open-mrp/apikit/db"
 	"github.com/open-mrp/apikit/field"
+	"github.com/open-mrp/apikit/tracing"
 )
 
 // asyncBulkDeps hands the async bulk engine the plumbing it runs on.
@@ -48,8 +48,7 @@ func upsertUnitGroupInTx(txCtx context.Context, txRepos domain.RepoFactory, acco
 			return nil, tracing.Trace(span, apiErr)
 		}
 		if exists {
-			return nil, tracing.Trace(span, apierror.NewConflictErrorWithParam(
-				fmt.Sprintf("A unit group with name %q already exists.", row.Name), "name"))
+			return nil, tracing.Trace(span, apierror.NewConflictErrorWithParam("name", fmt.Sprintf("A unit group with name %q already exists.", row.Name)))
 		}
 
 		ugID, apiErr := id.GenID(id.UnitGroupIDPrefix, nil)
@@ -117,8 +116,7 @@ func upsertUnitGroupInTx(txCtx context.Context, txRepos domain.RepoFactory, acco
 
 	// update
 	if oldGroup.AccountID == nil {
-		return nil, tracing.Trace(span, apierror.NewValidationErrorWithParam(
-			fmt.Sprintf("System unit group %q cannot be modified.", row.Name), "name"))
+		return nil, tracing.Trace(span, apierror.NewFieldError("name", apierror.CodeInvalidFormat, fmt.Sprintf("System unit group %q cannot be modified.", row.Name)))
 	}
 
 	existingByUnitID := make(map[string]*domain.UnitGroupUnit, len(oldGroup.UnitConversions))
@@ -259,11 +257,11 @@ func validateBulkUpsertUnitGroupRows(rows []domain.UpsertUnitGroupParams) *apier
 	for i, unitGroup := range rows {
 		lowerName := strings.ToLower(unitGroup.Name)
 		if _, exists := nameInputSpace[lowerName]; exists {
-			rowErrs.AddValidation(i, fmt.Sprintf("unit_groups[%d].name", i), fmt.Sprintf("duplicate name %q in request", unitGroup.Name))
+			rowErrs.AddField(i, "name", apierror.CodeInvalidFormat, fmt.Sprintf("duplicate name %q in request", unitGroup.Name))
 		}
 		nameInputSpace[lowerName] = struct{}{}
 	}
-	return rowErrs.Summary("unit groups")
+	return rowErrs.Summary("unit_groups")
 }
 
 // resolveBulkUpsertUnitGroupRows resolves every group's base unit and conversions to ids
@@ -304,8 +302,7 @@ func resolveBulkUpsertUnitGroupRows(ctx context.Context, repos domain.RepoFactor
 			// Duplicates are detected on the resolved id, so naming the same unit once by
 			// id and once by name is caught too.
 			if _, dup := seenUnitIDs[unit.ID]; dup {
-				return nil, apierror.NewValidationErrorWithParam(
-					fmt.Sprintf("Duplicate unit in unit group %q.", ug.Name), param)
+				return nil, apierror.NewFieldError(param, apierror.CodeInvalidFormat, fmt.Sprintf("Duplicate unit in unit group %q.", ug.Name))
 			}
 			seenUnitIDs[unit.ID] = struct{}{}
 			conversions = append(conversions, domain.ResolvedUnitGroupConversion{
@@ -499,15 +496,11 @@ func writeBulkUpsertUnitGroups(txCtx context.Context, txRepos domain.RepoFactory
 				groupType = oldGroup.Type
 			}
 			if row.BaseUnitDimensionCode != groupType {
-				return apierror.NewValidationErrorWithParam(
-					"Base unit type does not match the unit group type.",
-					fmt.Sprintf("unit_groups[%d].base_unit", i))
+				return apierror.NewFieldError(fmt.Sprintf("unit_groups[%d].base_unit", i), apierror.CodeInvalidFormat, "Base unit type does not match the unit group type.")
 			}
 			for j, conv := range row.Conversions {
 				if conv.DimensionCode != groupType {
-					return apierror.NewValidationErrorWithParam(
-						"Unit type does not match the unit group type.",
-						fmt.Sprintf("unit_groups[%d].unit_conversions[%d].unit", i, j))
+					return apierror.NewFieldError(fmt.Sprintf("unit_groups[%d].unit_conversions[%d].unit", i, j), apierror.CodeInvalidFormat, "Unit type does not match the unit group type.")
 				}
 			}
 
@@ -523,7 +516,7 @@ func writeBulkUpsertUnitGroups(txCtx context.Context, txRepos domain.RepoFactory
 			return nil
 		})
 		if rowErr != nil {
-			rowErrors = append(rowErrors, apierror.NewRowError(i, rowErr))
+			rowErrors = append(rowErrors, apierror.RowError{Index: i, Error: rowErr.Object()})
 			continue
 		}
 

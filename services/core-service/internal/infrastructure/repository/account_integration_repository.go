@@ -8,10 +8,10 @@ import (
 	"github.com/open-mrp/api/services/core-service/internal/domain"
 	"github.com/open-mrp/api/services/core-service/internal/infrastructure/sqlc"
 	"github.com/open-mrp/api/shared/constants"
-	"github.com/open-mrp/api/shared/db"
-	apierror "github.com/open-mrp/api/shared/errors"
-	"github.com/open-mrp/api/shared/tracing"
+	apierror "github.com/open-mrp/apikit/apierror"
+	"github.com/open-mrp/apikit/db"
 	"github.com/open-mrp/apikit/pagination"
+	"github.com/open-mrp/apikit/tracing"
 )
 
 var accountIntegrationRepoTracer = tracing.GetTracer("core-service.account_integration_repository")
@@ -38,7 +38,7 @@ func (r *accountIntegrationRepoImpl) List(ctx context.Context, params domain.Lis
 	if params.Cursor != nil {
 		cur, err := pagination.DecodeStringCursor(*params.Cursor)
 		if err != nil {
-			return nil, apierror.NewValidationErrorWithParam("Invalid pagination cursor.", "cursor")
+			return nil, apierror.NewFieldError("cursor", apierror.CodeInvalidFormat, "Invalid pagination cursor.")
 		}
 		cursorDir = &cur.Direction
 
@@ -246,7 +246,7 @@ func (r *accountIntegrationRepoImpl) UpdateCredentials(ctx context.Context, acco
 		return nil, tracing.Trace(span, db.MapSQLError(err))
 	}
 	if rowsAffected == 0 {
-		return nil, tracing.Trace(span, apierror.NewResourceNotFoundError("Account integration not found."))
+		return nil, tracing.Trace(span, apierror.NewNotFoundError("Account integration not found."))
 	}
 
 	return r.Get(ctx, accountID, id)
@@ -280,7 +280,7 @@ func (r *accountIntegrationRepoImpl) Update(ctx context.Context, params domain.U
 		return nil, tracing.Trace(span, db.MapSQLError(err))
 	}
 	if rowsAffected == 0 {
-		return nil, tracing.Trace(span, apierror.NewResourceNotFoundError("Account integration not found."))
+		return nil, tracing.Trace(span, apierror.NewNotFoundError("Account integration not found."))
 	}
 
 	return r.Get(ctx, params.AccountID, params.ID)
@@ -309,7 +309,7 @@ func (r *accountIntegrationRepoImpl) Delete(ctx context.Context, params domain.D
 		return nil, tracing.Trace(span, db.MapSQLError(err))
 	}
 	if rowsAffected == 0 {
-		return nil, tracing.Trace(span, apierror.NewResourceNotFoundError("Account integration not found."))
+		return nil, tracing.Trace(span, apierror.NewNotFoundError("Account integration not found."))
 	}
 
 	return integration, nil

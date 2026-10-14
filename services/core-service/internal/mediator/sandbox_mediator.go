@@ -8,9 +8,10 @@ import (
 
 	"github.com/open-mrp/api/services/core-service/internal/calendarseed"
 	"github.com/open-mrp/api/services/core-service/internal/domain"
-	apierror "github.com/open-mrp/api/shared/errors"
+	"github.com/open-mrp/api/shared/apperr"
 	"github.com/open-mrp/api/shared/id"
-	"github.com/open-mrp/api/shared/tracing"
+	apierror "github.com/open-mrp/apikit/apierror"
+	"github.com/open-mrp/apikit/tracing"
 )
 
 var sandboxMedTracer = tracing.GetTracer("core-service.sandbox_mediator")
@@ -72,7 +73,7 @@ func (m *sandboxMedImpl) Create(ctx context.Context, ownerAccountID, userID, nam
 
 	limit, limitErr := accountRepo.GetSandboxLimit(ctx, ownerAccountID)
 	if limitErr != nil {
-		if apierror.IsNotFound(limitErr) {
+		if apierror.HasCode(limitErr, apierror.CodeResourceNotFound) {
 			return nil, tracing.Trace(span, apierror.NewInternalError(nil, "Sandbox limit not configured for account plan."))
 		}
 		return nil, tracing.Trace(span, limitErr)
@@ -84,9 +85,10 @@ func (m *sandboxMedImpl) Create(ctx context.Context, ownerAccountID, userID, nam
 			return nil, tracing.Trace(span, countErr)
 		}
 		if count >= int64(*limit) {
-			return nil, tracing.Trace(span, apierror.NewLimitExceededError(
+			return nil, tracing.Trace(span, apperr.NewLimitExceededError(
 				fmt.Sprintf("Maximum of %d sandbox accounts per account reached.", *limit),
-			).WithQuota(*limit, int32(min(count, math.MaxInt32)), nil)) // #nosec G115 -- capped at MaxInt32
+				apierror.WithDetails(apperr.QuotaInfo{Limit: *limit, Used: int32(min(count, math.MaxInt32))}), // #nosec G115 -- capped at MaxInt32
+			))
 		}
 	}
 
@@ -167,7 +169,7 @@ func (m *sandboxMedImpl) Delete(ctx context.Context, ownerAccountID, sandboxType
 		return "", tracing.Trace(span, findErr)
 	}
 	if sandbox.OwnerAccountID != ownerAccountID {
-		return "", tracing.Trace(span, apierror.NewResourceNotFoundError("Sandbox not found."))
+		return "", tracing.Trace(span, apierror.NewNotFoundError("Sandbox not found."))
 	}
 
 	accountCtx, ctxErr := m.repos.NewAccountRepo().GetAccountContext(ctx, sandbox.AccountID)

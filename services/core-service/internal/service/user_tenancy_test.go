@@ -11,7 +11,7 @@ import (
 	factorymock "github.com/open-mrp/api/services/core-service/internal/domain/mock/factory"
 	repositorymock "github.com/open-mrp/api/services/core-service/internal/domain/mock/repository"
 	"github.com/open-mrp/api/shared/appctx"
-	apierror "github.com/open-mrp/api/shared/errors"
+	apierror "github.com/open-mrp/apikit/apierror"
 
 	"go.uber.org/mock/gomock"
 )
@@ -56,12 +56,12 @@ func teamAdminCtx() context.Context {
 func userInAnotherTenancy(ctrl *gomock.Controller) *factorymock.MockRepoFactory {
 	email := "someone@elsewhere.example"
 	userRepo := repositorymock.NewMockUserRepo(ctrl)
-	userRepo.EXPECT().FindByID(gomock.Any(), gomock.Any()).Return(nil, apierror.NewResourceNotFoundError("Resource not found.")).AnyTimes()
+	userRepo.EXPECT().FindByID(gomock.Any(), gomock.Any()).Return(nil, apierror.NewNotFoundError("Resource not found.")).AnyTimes()
 	userRepo.EXPECT().FindByEmail(gomock.Any(), email).Return(&domain.UserRecord{ID: tenancyOtherID, Email: &email}, nil).AnyTimes()
 
 	accountUserRepo := repositorymock.NewMockAccountUserRepo(ctrl)
 	accountUserRepo.EXPECT().FindByAccountAndUserID(gomock.Any(), tenancyOtherID, tenancyAccountID).
-		Return(nil, apierror.NewResourceNotFoundError("Resource not found.")).AnyTimes()
+		Return(nil, apierror.NewNotFoundError("Resource not found.")).AnyTimes()
 
 	repos := factorymock.NewMockRepoFactory(ctrl)
 	repos.EXPECT().NewUserRepo().Return(userRepo).AnyTimes()
@@ -92,7 +92,7 @@ func TestUserSvc_AUserInAnotherTenancyIsNotFound(t *testing.T) {
 
 func assertUserNotFound(t *testing.T, call string, apiErr *apierror.APIError) {
 	t.Helper()
-	if apiErr == nil || !apierror.IsNotFound(apiErr) {
+	if apiErr == nil || !apierror.HasCode(apiErr, apierror.CodeResourceNotFound) {
 		t.Errorf("%s: got %s, want resource_not_found", call, apierror.Describe(apiErr))
 		return
 	}
@@ -133,8 +133,8 @@ func TestUserSvc_UploadUserPhotoStoresOnlyImages(t *testing.T) {
 	svc := &userSvcImpl{repos: repos, s3Client: store, userPhotosBucket: "user-photos", txManager: &stubTxManager{factory: repos}}
 
 	for name, body := range map[string][]byte{"html": []byte("<html><script>alert(1)</script></html>"), "empty": nil} {
-		if apiErr := svc.UploadUserPhoto(teamAdminCtx(), tenancyActorID, body); apiErr == nil || apierror.GetHTTPStatusCode(apiErr.Code) != 400 {
-			t.Errorf("%s: got %v, want a 400", name, apiErr)
+		if apiErr := svc.UploadUserPhoto(teamAdminCtx(), tenancyActorID, body); apiErr == nil || apiErr.Code.Status() != 422 {
+			t.Errorf("%s: got %v, want a 422", name, apiErr)
 		}
 	}
 	if len(store.uploads) != 0 {

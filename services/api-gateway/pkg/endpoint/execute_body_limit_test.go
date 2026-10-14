@@ -9,7 +9,7 @@ import (
 	"testing"
 
 	httptransport "github.com/open-mrp/api/services/api-gateway/internal/http"
-	apierror "github.com/open-mrp/api/shared/errors"
+	apierror "github.com/open-mrp/apikit/apierror"
 )
 
 // nameBodyOfSize is a JSON body of exactly n bytes carrying one name.
@@ -62,7 +62,7 @@ func TestExecute_JSONBodyOverDefaultCap_is413(t *testing.T) {
 		t.Fatalf("got %d, want 413: %s", w.Code, w.Body.String())
 	}
 	env := decodeErrEnvelope(t, w)
-	if env.Error.Code != apierror.ErrorCodeRequestTooLarge {
+	if env.Error.Code != apierror.CodeRequestTooLarge {
 		t.Fatalf("code=%q, want request_too_large", env.Error.Code)
 	}
 	if !strings.Contains(env.Error.Message, "1 MB") {

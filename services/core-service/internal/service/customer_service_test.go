@@ -15,7 +15,7 @@ import (
 	repositorymock "github.com/open-mrp/api/services/core-service/internal/domain/mock/repository"
 	"github.com/open-mrp/api/shared/appctx"
 	"github.com/open-mrp/api/shared/constants"
-	apierror "github.com/open-mrp/api/shared/errors"
+	apierror "github.com/open-mrp/apikit/apierror"
 	"github.com/open-mrp/apikit/field"
 )
 
@@ -112,7 +112,7 @@ func TestUpdateCustomer_KeepsTheReceiveCalendarItWasNotSent(t *testing.T) {
 
 // The deleted-customer snapshot names its owner, and only the owner is told the customer was deleted.
 func TestDeleteCustomer_OnlyTheOwnerLearnsACustomerWasDeleted(t *testing.T) {
-	notFound := apierror.NewResourceNotFoundError("Customer not found.")
+	notFound := apierror.NewNotFoundError("Customer not found.")
 
 	t.Run("records the snapshot under the owner", func(t *testing.T) {
 		s := newCustomerSvcSetup(t)
@@ -132,7 +132,7 @@ func TestDeleteCustomer_OnlyTheOwnerLearnsACustomerWasDeleted(t *testing.T) {
 
 		apiErr := s.svc.DeleteCustomer(customerInternalCtx("ac_seller"), domain.DeleteCustomerParams{CustomerAccountID: "ac_buyer"})
 		require.NotNil(t, apiErr)
-		assert.Equal(t, apierror.ErrorCodeResourceGone, apiErr.Code)
+		assert.Equal(t, apierror.CodeResourceGone, apiErr.Code)
 	})
 
 	t.Run("another tenant is told it was never there", func(t *testing.T) {
@@ -142,7 +142,7 @@ func TestDeleteCustomer_OnlyTheOwnerLearnsACustomerWasDeleted(t *testing.T) {
 
 		apiErr := s.svc.DeleteCustomer(customerInternalCtx("ac_other"), domain.DeleteCustomerParams{CustomerAccountID: "ac_buyer"})
 		require.NotNil(t, apiErr)
-		assert.Equal(t, apierror.ErrorCodeResourceNotFound, apiErr.Code)
+		assert.Equal(t, apierror.CodeResourceNotFound, apiErr.Code)
 	})
 }
 
@@ -227,7 +227,7 @@ func TestCreateCustomer_RefusesADefaultServiceLevelOffTheDefaultCarrier(t *testi
 	})
 
 	require.NotNil(t, apiErr)
-	assert.Equal(t, apierror.ErrorCodeValidationFailed, apiErr.Code)
+	assert.Equal(t, apierror.CodeValidationFailed, apiErr.Code)
 	assert.Equal(t, "default_service_level_id", apiErr.Param)
 }
 
@@ -256,7 +256,7 @@ func TestUpdateCustomer_RefusesADefaultServiceLevelOffTheDefaultCarrier(t *testi
 			_, apiErr := s.svc.UpdateCustomer(customerInternalCtx("ac_seller"), params)
 
 			require.NotNil(t, apiErr)
-			assert.Equal(t, apierror.ErrorCodeValidationFailed, apiErr.Code)
+			assert.Equal(t, apierror.CodeValidationFailed, apiErr.Code)
 			assert.Equal(t, "default_service_level_id", apiErr.Param)
 		})
 	}

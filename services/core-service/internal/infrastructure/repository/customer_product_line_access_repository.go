@@ -7,11 +7,11 @@ import (
 
 	"github.com/open-mrp/api/services/core-service/internal/domain"
 	"github.com/open-mrp/api/services/core-service/internal/infrastructure/sqlc"
-	"github.com/open-mrp/api/shared/db"
-	apierror "github.com/open-mrp/api/shared/errors"
 	"github.com/open-mrp/api/shared/id"
-	"github.com/open-mrp/api/shared/tracing"
+	apierror "github.com/open-mrp/apikit/apierror"
+	"github.com/open-mrp/apikit/db"
 	"github.com/open-mrp/apikit/pagination"
+	"github.com/open-mrp/apikit/tracing"
 )
 
 var customerProductLineAccessRepoTracer = tracing.GetTracer("core-service.customer_product_line_access_repository")
@@ -103,7 +103,7 @@ func (r *customerProductLineAccessRepoImpl) List(ctx context.Context, params dom
 	if params.Cursor != nil {
 		cur, err := pagination.DecodeStringCursor(*params.Cursor)
 		if err != nil {
-			return nil, apierror.NewValidationErrorWithParam("Invalid pagination cursor.", "cursor")
+			return nil, apierror.NewFieldError("cursor", apierror.CodeInvalidFormat, "Invalid pagination cursor.")
 		}
 		cursorDir = &cur.Direction
 
@@ -174,7 +174,7 @@ func (r *customerProductLineAccessRepoImpl) Get(ctx context.Context, accountID, 
 	}
 
 	if len(plRows) == 0 {
-		return nil, tracing.Trace(span, apierror.NewResourceNotFoundError("Customer product line access not found."))
+		return nil, tracing.Trace(span, apierror.NewNotFoundError("Customer product line access not found."))
 	}
 
 	productLines := make([]domain.ProductLineInfo, len(plRows))
@@ -214,7 +214,7 @@ func (r *customerProductLineAccessRepoImpl) Create(ctx context.Context, params d
 		return nil, tracing.Trace(span, apiErr)
 	}
 	if count > 0 {
-		return nil, tracing.Trace(span, apierror.NewConflictErrorWithParam("Product line access already exists for this customer. Use update instead.", "customer_id"))
+		return nil, tracing.Trace(span, apierror.NewConflictErrorWithParam("customer_id", "Product line access already exists for this customer. Use update instead."))
 	}
 
 	// Verify each product line exists and belongs to this account.
@@ -227,7 +227,7 @@ func (r *customerProductLineAccessRepoImpl) Create(ctx context.Context, params d
 			return nil, tracing.Trace(span, apiErr)
 		}
 		if plCount == 0 {
-			return nil, tracing.Trace(span, apierror.NewResourceNotFoundError("Product line not found: "+plID))
+			return nil, tracing.Trace(span, apierror.NewNotFoundError("Product line not found: "+plID))
 		}
 	}
 
@@ -275,7 +275,7 @@ func (r *customerProductLineAccessRepoImpl) Update(ctx context.Context, params d
 			return nil, tracing.Trace(span, apiErr)
 		}
 		if plCount == 0 {
-			return nil, tracing.Trace(span, apierror.NewResourceNotFoundError("Product line not found: "+plID))
+			return nil, tracing.Trace(span, apierror.NewNotFoundError("Product line not found: "+plID))
 		}
 	}
 
@@ -325,7 +325,7 @@ func (r *customerProductLineAccessRepoImpl) Delete(ctx context.Context, accountI
 		return tracing.Trace(span, apiErr)
 	}
 	if count == 0 {
-		return tracing.Trace(span, apierror.NewResourceNotFoundError("No product line access found for this customer."))
+		return tracing.Trace(span, apierror.NewNotFoundError("No product line access found for this customer."))
 	}
 
 	// Delete all rows.

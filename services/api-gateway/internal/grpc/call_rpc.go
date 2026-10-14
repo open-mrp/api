@@ -9,7 +9,7 @@ import (
 	"github.com/open-mrp/api/shared/contracts"
 	"github.com/open-mrp/api/shared/rpc"
 
-	apierror "github.com/open-mrp/api/shared/errors"
+	apierror "github.com/open-mrp/apikit/apierror"
 
 	"go.opentelemetry.io/otel/trace"
 	"google.golang.org/grpc"

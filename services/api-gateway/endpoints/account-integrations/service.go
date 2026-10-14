@@ -9,9 +9,9 @@ import (
 	"github.com/open-mrp/api/services/api-gateway/internal/resourceloaders"
 	apiresource "github.com/open-mrp/api/services/api-gateway/pkg/resource"
 	"github.com/open-mrp/api/shared/constants"
-	apierror "github.com/open-mrp/api/shared/errors"
 	pb "github.com/open-mrp/api/shared/proto/core"
-	"github.com/open-mrp/api/shared/tracing"
+	apierror "github.com/open-mrp/apikit/apierror"
+	"github.com/open-mrp/apikit/tracing"
 	"google.golang.org/grpc"
 )
 
@@ -171,7 +171,7 @@ func loadAccountIntegrationByID(ctx context.Context, id string) (*apiresource.Ac
 	}
 	v, ok := loaded[id]
 	if !ok {
-		return nil, apierror.NewResourceNotFoundError("Account integration not found.")
+		return nil, apierror.NewNotFoundError("Account integration not found.")
 	}
 	return v.(*apiresource.AccountIntegration), nil
 }

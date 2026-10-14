@@ -10,10 +10,10 @@ import (
 	"github.com/open-mrp/api/shared/audit"
 	"github.com/open-mrp/api/shared/constants"
 	"github.com/open-mrp/api/shared/id"
-	"github.com/open-mrp/api/shared/idempotency"
+	"github.com/open-mrp/api/shared/idemresponse"
 
-	apierror "github.com/open-mrp/api/shared/errors"
-	"github.com/open-mrp/api/shared/tracing"
+	apierror "github.com/open-mrp/apikit/apierror"
+	"github.com/open-mrp/apikit/tracing"
 )
 
 // CreateMessagingGroup creates a named roster of users and/or agents. User members are validated to
@@ -30,7 +30,7 @@ func (s *conversationSvcImpl) CreateMessagingGroup(ctx context.Context, input do
 
 	name := strings.TrimSpace(input.Name)
 	if name == "" {
-		return nil, tracing.Trace(span, apierror.NewParameterMissingError("A group name is required.", "name"))
+		return nil, tracing.Trace(span, apierror.NewParameterMissingError("name", "A group name is required."))
 	}
 
 	userIDs, agentIDs, apiErr := s.dedupeAndValidateMembers(ctx, accountID, input.MemberAccountUserIDs, input.MemberAgentConfigIDs)
@@ -46,7 +46,7 @@ func (s *conversationSvcImpl) CreateMessagingGroup(ctx context.Context, input do
 	}
 	switch domain.RecoveryPoint(idemKey.RecoveryPoint) {
 	case domain.RecoveryPointFinished:
-		cached, err := idempotency.UnmarshalCachedResponse[domain.MessagingGroup](ctx, idemKey.ResponseCode, idemKey.ResponseBody)
+		cached, err := idemresponse.UnmarshalCachedResponse[domain.MessagingGroup](ctx, idemKey.ResponseCode, idemKey.ResponseBody)
 		if err != nil {
 			return nil, tracing.Trace(span, apierror.NewInternalError(err, "Issue unmarshalling cached response."))
 		}
@@ -147,13 +147,13 @@ func (s *conversationSvcImpl) UpdateMessagingGroup(ctx context.Context, groupID,
 	}
 	trimmed := strings.TrimSpace(name)
 	if trimmed == "" {
-		return nil, tracing.Trace(span, apierror.NewParameterMissingError("A group name is required.", "name"))
+		return nil, tracing.Trace(span, apierror.NewParameterMissingError("name", "A group name is required."))
 	}
 	// Capture the pre-image before the rename so the audit diff can surface the name change.
 	old, apiErr := s.repoFactory.NewMessagingGroupRepo().Get(ctx, groupID, accountID)
 	if apiErr != nil {
-		if apiErr.Code == apierror.ErrorCodeResourceNotFound {
-			return nil, tracing.Trace(span, apierror.NewResourceNotFoundError("The group was not found."))
+		if apiErr.Code == apierror.CodeResourceNotFound {
+			return nil, tracing.Trace(span, apierror.NewNotFoundError("The group was not found."))
 		}
 		return nil, tracing.Trace(span, apiErr)
 	}
@@ -163,7 +163,7 @@ func (s *conversationSvcImpl) UpdateMessagingGroup(ctx context.Context, groupID,
 			return rErr
 		}
 		if !renamed {
-			return apierror.NewResourceNotFoundError("The group was not found.")
+			return apierror.NewNotFoundError("The group was not found.")
 		}
 		updated := *old
 		updated.Name = trimmed
@@ -192,14 +192,14 @@ func (s *conversationSvcImpl) DeleteMessagingGroup(ctx context.Context, groupID 
 	// Load the pre-image before the delete for the audit ResourceID and change diff.
 	existing, apiErr := s.repoFactory.NewMessagingGroupRepo().Get(ctx, groupID, accountID)
 	if apiErr != nil {
-		if apiErr.Code == apierror.ErrorCodeResourceNotFound {
+		if apiErr.Code == apierror.CodeResourceNotFound {
 			// Distinguish an already-deleted roster (410) from one that never existed (404).
 			if wasDeleted, delErr := s.repoFactory.NewDeletedRecordRepo().ExistsInAccount(ctx, constants.DeletedRecordResourceTypeMessagingGroup, groupID, accountID); delErr != nil {
 				return tracing.Trace(span, delErr)
 			} else if wasDeleted {
-				return tracing.Trace(span, apierror.NewAlreadyDeletedError("This group has already been deleted and can no longer be modified."))
+				return tracing.Trace(span, apierror.NewGoneError("This group has already been deleted and can no longer be modified."))
 			}
-			return tracing.Trace(span, apierror.NewResourceNotFoundError("The group was not found."))
+			return tracing.Trace(span, apierror.NewNotFoundError("The group was not found."))
 		}
 		return tracing.Trace(span, apiErr)
 	}
@@ -218,7 +218,7 @@ func (s *conversationSvcImpl) DeleteMessagingGroup(ctx context.Context, groupID 
 			return dErr
 		}
 		if !deleted {
-			return apierror.NewResourceNotFoundError("The group was not found.")
+			return apierror.NewNotFoundError("The group was not found.")
 		}
 		// Snapshot membership means conversations are functionally unaffected; only the provenance link is detached.
 		if cErr := groupRepo.ClearConversationGroup(txCtx, accountID, groupID); cErr != nil {
@@ -249,8 +249,8 @@ func (s *conversationSvcImpl) AddMessagingGroupMember(ctx context.Context, input
 	groupRepo := s.repoFactory.NewMessagingGroupRepo()
 	// The roster must exist in the caller's account.
 	if _, apiErr := groupRepo.Get(ctx, input.GroupID, accountID); apiErr != nil {
-		if apiErr.Code == apierror.ErrorCodeResourceNotFound {
-			return nil, tracing.Trace(span, apierror.NewResourceNotFoundError("The group was not found."))
+		if apiErr.Code == apierror.CodeResourceNotFound {
+			return nil, tracing.Trace(span, apierror.NewNotFoundError("The group was not found."))
 		}
 		return nil, tracing.Trace(span, apiErr)
 	}
@@ -263,11 +263,11 @@ func (s *conversationSvcImpl) AddMessagingGroupMember(ctx context.Context, input
 	switch input.MemberType {
 	case domain.MessagingGroupMemberTypeUser:
 		if input.AccountUserID == "" {
-			return nil, tracing.Trace(span, apierror.NewParameterMissingError("A member account_user_id is required.", "account_user_id"))
+			return nil, tracing.Trace(span, apierror.NewParameterMissingError("account_user_id", "A member account_user_id is required."))
 		}
 		if _, apiErr := s.repoFactory.NewNotificationRepo().ResolveUserIDInAccount(ctx, input.AccountUserID, accountID); apiErr != nil {
-			if apiErr.Code == apierror.ErrorCodeResourceNotFound {
-				return nil, tracing.Trace(span, apierror.NewParameterInvalidError("The member does not exist.", "account_user_id"))
+			if apiErr.Code == apierror.CodeResourceNotFound {
+				return nil, tracing.Trace(span, apierror.NewParameterInvalidError("account_user_id", "The member does not exist."))
 			}
 			return nil, tracing.Trace(span, apiErr)
 		}
@@ -275,12 +275,12 @@ func (s *conversationSvcImpl) AddMessagingGroupMember(ctx context.Context, input
 		member.AccountUserID = &auid
 	case domain.MessagingGroupMemberTypeAgent:
 		if input.AgentConfigID == "" {
-			return nil, tracing.Trace(span, apierror.NewParameterMissingError("A member agent_config_id is required.", "agent_config_id"))
+			return nil, tracing.Trace(span, apierror.NewParameterMissingError("agent_config_id", "A member agent_config_id is required."))
 		}
 		acid := input.AgentConfigID
 		member.AgentConfigID = &acid
 	default:
-		return nil, tracing.Trace(span, apierror.NewParameterInvalidError("The member type is invalid.", "member_type"))
+		return nil, tracing.Trace(span, apierror.NewParameterInvalidError("member_type", "The member type is invalid."))
 	}
 
 	memberID, apiErr := id.GenID(id.MessagingGroupMemberIDPrefix, nil)
@@ -293,7 +293,7 @@ func (s *conversationSvcImpl) AddMessagingGroupMember(ctx context.Context, input
 		added := true
 		if aErr := txGroupRepo.AddMember(txCtx, member); aErr != nil {
 			// A duplicate (group, user/agent) is a benign no-op — the member is already present. db.MapSQLError maps the MySQL 1062 duplicate-key to ErrorCodeResourceExists.
-			if aErr.Code != apierror.ErrorCodeResourceExists {
+			if aErr.Code != apierror.CodeResourceExists {
 				return aErr
 			}
 			added = false
@@ -329,8 +329,8 @@ func (s *conversationSvcImpl) RemoveMessagingGroupMember(ctx context.Context, gr
 	}
 	groupRepo := s.repoFactory.NewMessagingGroupRepo()
 	if _, apiErr := groupRepo.Get(ctx, groupID, accountID); apiErr != nil {
-		if apiErr.Code == apierror.ErrorCodeResourceNotFound {
-			return nil, tracing.Trace(span, apierror.NewResourceNotFoundError("The group was not found."))
+		if apiErr.Code == apierror.CodeResourceNotFound {
+			return nil, tracing.Trace(span, apierror.NewNotFoundError("The group was not found."))
 		}
 		return nil, tracing.Trace(span, apiErr)
 	}
@@ -341,7 +341,7 @@ func (s *conversationSvcImpl) RemoveMessagingGroupMember(ctx context.Context, gr
 			return rErr
 		}
 		if !removed {
-			return apierror.NewResourceNotFoundError("The member was not found.")
+			return apierror.NewNotFoundError("The member was not found.")
 		}
 		if tErr := txGroupRepo.Touch(txCtx, groupID, accountID); tErr != nil {
 			return tErr
@@ -384,8 +384,8 @@ func (s *conversationSvcImpl) loadMessagingGroup(ctx context.Context, groupID, a
 	groupRepo := s.repoFactory.NewMessagingGroupRepo()
 	group, apiErr := groupRepo.Get(ctx, groupID, accountID)
 	if apiErr != nil {
-		if apiErr.Code == apierror.ErrorCodeResourceNotFound {
-			return nil, apierror.NewResourceNotFoundError("The group was not found.")
+		if apiErr.Code == apierror.CodeResourceNotFound {
+			return nil, apierror.NewNotFoundError("The group was not found.")
 		}
 		return nil, apiErr
 	}
@@ -411,8 +411,8 @@ func (s *conversationSvcImpl) dedupeAndValidateMembers(ctx context.Context, acco
 		}
 		seenUser[u] = struct{}{}
 		if _, apiErr := s.repoFactory.NewNotificationRepo().ResolveUserIDInAccount(ctx, u, accountID); apiErr != nil {
-			if apiErr.Code == apierror.ErrorCodeResourceNotFound {
-				return nil, nil, apierror.NewParameterInvalidError("A member does not exist.", "member_account_user_ids")
+			if apiErr.Code == apierror.CodeResourceNotFound {
+				return nil, nil, apierror.NewParameterInvalidError("member_account_user_ids", "A member does not exist.")
 			}
 			return nil, nil, apiErr
 		}

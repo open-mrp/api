@@ -4,7 +4,7 @@ import (
 	"context"
 
 	"github.com/open-mrp/api/services/core-service/internal/domain"
-	apierror "github.com/open-mrp/api/shared/errors"
+	apierror "github.com/open-mrp/apikit/apierror"
 )
 
 // validatePurchaseOrderLineUnits rejects a line whose quantity is expressed in a unit the product is not measured in.
@@ -28,7 +28,7 @@ func validatePurchaseOrderLineUnits(ctx context.Context, repos domain.RepoFactor
 		case line.ItemID != nil && *line.ItemID != "":
 			itemIDs = appendUnseen(itemIDs, seen, *line.ItemID)
 		default:
-			return apierror.NewValidationErrorWithParam("A line must name a product or an item.", "product_id")
+			return apierror.NewFieldError("product_id", apierror.CodeInvalidFormat, "A line must name a product or an item.")
 		}
 	}
 
@@ -47,17 +47,17 @@ func validatePurchaseOrderLineUnits(ctx context.Context, repos domain.RepoFactor
 		var ok bool
 		if line.ProductID != nil && *line.ProductID != "" {
 			if units, ok = unitsByProduct[*line.ProductID]; !ok {
-				return apierror.NewValidationErrorWithParam("Product not found.", "product_id")
+				return apierror.NewFieldError("product_id", apierror.CodeInvalidFormat, "Product not found.")
 			}
 		} else if units, ok = unitsByItem[*line.ItemID]; !ok {
-			return apierror.NewValidationErrorWithParam("Item not found.", "item_id")
+			return apierror.NewFieldError("item_id", apierror.CodeInvalidFormat, "Item not found.")
 		}
 		// An empty set means the unit group has no units configured, which is a catalog problem rather than a bad request. Saying so beats blaming the unit the caller sent.
 		if len(units) == 0 {
 			return apierror.NewValidationError("The product's unit group is not configured.")
 		}
 		if _, ok := units[line.QuantityUnitID]; !ok {
-			return apierror.NewValidationErrorWithParam("The unit is not valid for this product.", param)
+			return apierror.NewFieldError(param, apierror.CodeInvalidFormat, "The unit is not valid for this product.")
 		}
 	}
 

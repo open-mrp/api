@@ -9,9 +9,9 @@ import (
 	"github.com/open-mrp/api/services/core-service/internal/domain"
 	"github.com/open-mrp/api/shared/appctx"
 	"github.com/open-mrp/api/shared/constants"
-	apierror "github.com/open-mrp/api/shared/errors"
 	"github.com/open-mrp/api/shared/excel"
-	"github.com/open-mrp/api/shared/tracing"
+	apierror "github.com/open-mrp/apikit/apierror"
+	"github.com/open-mrp/apikit/tracing"
 )
 
 // orderReportAccessFor gates an order-book report as the dashboard's analytics did: internal actors with read access to permissionDomain; a sales rep sees only their own orders and no cost.
@@ -175,7 +175,7 @@ func (s *analyticsSvcImpl) ListOpenOrderLines(ctx context.Context, orderID strin
 		return nil, tracing.Trace(span, apiErr)
 	}
 	if !found {
-		return nil, tracing.Trace(span, apierror.NewResourceNotFoundError("Sales order not found."))
+		return nil, tracing.Trace(span, apierror.NewNotFoundError("Sales order not found."))
 	}
 	ids := make([]string, len(lines))
 	for i, l := range lines {

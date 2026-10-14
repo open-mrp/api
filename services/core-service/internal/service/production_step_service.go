@@ -10,10 +10,10 @@ import (
 	"github.com/open-mrp/api/shared/appctx"
 	"github.com/open-mrp/api/shared/audit"
 	"github.com/open-mrp/api/shared/constants"
-	apierror "github.com/open-mrp/api/shared/errors"
 	"github.com/open-mrp/api/shared/id"
-	"github.com/open-mrp/api/shared/idempotency"
-	"github.com/open-mrp/api/shared/tracing"
+	"github.com/open-mrp/api/shared/idemresponse"
+	apierror "github.com/open-mrp/apikit/apierror"
+	"github.com/open-mrp/apikit/tracing"
 )
 
 var productionStepSvcTracer = tracing.GetTracer("core-service.production_step_service")
@@ -182,7 +182,7 @@ func (s *productionStepSvcImpl) CreateProductionStep(ctx context.Context, params
 
 	switch domain.RecoveryPoint(idempotencyKey.RecoveryPoint) {
 	case domain.RecoveryPointFinished:
-		cached, err := idempotency.UnmarshalCachedResponse[domain.ProductionStep](ctx, idempotencyKey.ResponseCode, idempotencyKey.ResponseBody)
+		cached, err := idemresponse.UnmarshalCachedResponse[domain.ProductionStep](ctx, idempotencyKey.ResponseCode, idempotencyKey.ResponseBody)
 		if err != nil {
 			return nil, tracing.Trace(span, apierror.NewInternalError(err, "Issue unmarshalling cached response."))
 		}
@@ -336,7 +336,7 @@ func (s *productionStepSvcImpl) UpdateProductionStep(ctx context.Context, params
 
 	switch domain.RecoveryPoint(idempotencyKey.RecoveryPoint) {
 	case domain.RecoveryPointFinished:
-		cached, err := idempotency.UnmarshalCachedResponse[domain.ProductionStep](ctx, idempotencyKey.ResponseCode, idempotencyKey.ResponseBody)
+		cached, err := idemresponse.UnmarshalCachedResponse[domain.ProductionStep](ctx, idempotencyKey.ResponseCode, idempotencyKey.ResponseBody)
 		if err != nil {
 			return nil, tracing.Trace(span, apierror.NewInternalError(err, "Issue unmarshalling cached response."))
 		}
@@ -359,7 +359,7 @@ func (s *productionStepSvcImpl) UpdateProductionStep(ctx context.Context, params
 					return apiErr
 				}
 				if exists {
-					return apierror.NewConflictErrorWithParam("A production step with this name already exists.", "name")
+					return apierror.NewConflictErrorWithParam("name", "A production step with this name already exists.")
 				}
 			}
 
@@ -417,7 +417,7 @@ func (s *productionStepSvcImpl) setStepMachines(ctx context.Context, accountID s
 	ids := make([]string, 0, len(machineIDs))
 	for _, id := range machineIDs {
 		if id == "" {
-			return apierror.NewValidationErrorWithParam("Machine IDs cannot be blank.", "machine_ids")
+			return apierror.NewFieldError("machine_ids", apierror.CodeInvalidFormat, "Machine IDs cannot be blank.")
 		}
 		if !wanted[id] {
 			wanted[id] = true
@@ -435,7 +435,7 @@ func (s *productionStepSvcImpl) setStepMachines(ctx context.Context, accountID s
 			return apiErr
 		}
 		if len(machines) != len(ids) {
-			return apierror.NewResourceNotFoundError("Machine not found.")
+			return apierror.NewNotFoundError("Machine not found.")
 		}
 		for _, m := range machines {
 			previousStep[m.ID] = m.ProductionStepID
@@ -511,13 +511,13 @@ func (s *productionStepSvcImpl) DeleteProductionStep(ctx context.Context, stepID
 	// Fetch the step before deletion for the audit diff.
 	step, apiErr := s.repos.NewProductionStepRepo().Get(ctx, accountID, stepID)
 	if apiErr != nil {
-		if apierror.IsNotFound(apiErr) {
+		if apierror.HasCode(apiErr, apierror.CodeResourceNotFound) {
 			wasDeleted, deletedCheckErr := s.repos.NewDeletedRecordRepo().ExistsInAccount(ctx, constants.DeletedRecordResourceTypeProductionStep, stepID, accountID)
 			if deletedCheckErr != nil {
 				return tracing.Trace(span, deletedCheckErr)
 			}
 			if wasDeleted {
-				return tracing.Trace(span, apierror.NewAlreadyDeletedError("This production step has already been deleted and can no longer be modified."))
+				return tracing.Trace(span, apierror.NewGoneError("This production step has already been deleted and can no longer be modified."))
 			}
 		}
 		return tracing.Trace(span, apiErr)

@@ -11,10 +11,10 @@ import (
 	"github.com/open-mrp/api/shared/appctx"
 	"github.com/open-mrp/api/shared/audit"
 	"github.com/open-mrp/api/shared/constants"
-	apierror "github.com/open-mrp/api/shared/errors"
 	"github.com/open-mrp/api/shared/id"
-	"github.com/open-mrp/api/shared/idempotency"
-	"github.com/open-mrp/api/shared/tracing"
+	"github.com/open-mrp/api/shared/idemresponse"
+	apierror "github.com/open-mrp/apikit/apierror"
+	"github.com/open-mrp/apikit/tracing"
 	"github.com/shopspring/decimal"
 )
 
@@ -339,7 +339,7 @@ func (s *productSvcImpl) CreateProduct(ctx context.Context, params domain.Create
 
 	switch domain.RecoveryPoint(idempotencyKey.RecoveryPoint) {
 	case domain.RecoveryPointFinished:
-		cached, err := idempotency.UnmarshalCachedResponse[domain.ProductFull](ctx, idempotencyKey.ResponseCode, idempotencyKey.ResponseBody)
+		cached, err := idemresponse.UnmarshalCachedResponse[domain.ProductFull](ctx, idempotencyKey.ResponseCode, idempotencyKey.ResponseBody)
 		if err != nil {
 			return nil, tracing.Trace(span, apierror.NewInternalError(err, "Issue unmarshalling cached response."))
 		}
@@ -402,7 +402,7 @@ func (s *productSvcImpl) createProductInTx(txCtx context.Context, params domain.
 		return nil, apiErr
 	}
 	if exists {
-		return nil, apierror.NewConflictErrorWithParam(fmt.Sprintf("An item with the SKU '%s' already exists.", params.SKU), "sku")
+		return nil, apierror.NewConflictErrorWithParam("sku", fmt.Sprintf("An item with the SKU '%s' already exists.", params.SKU))
 	}
 
 	// Get base unit for rates from category, and enforce that products only use product
@@ -412,7 +412,7 @@ func (s *productSvcImpl) createProductInTx(txCtx context.Context, params domain.
 		return nil, apiErr
 	}
 	if !categoryTypeMatchesItem(string(constants.ItemTypeCodeProduct), categoryTypeCode) {
-		return nil, apierror.NewValidationErrorWithParam("This category type cannot be assigned to this item type.", "category_id")
+		return nil, apierror.NewFieldError("category_id", apierror.CodeInvalidFormat, "This category type cannot be assigned to this item type.")
 	}
 
 	// Insert rates for item (unit_value, unit_cost, burn_rate). Caller-supplied
@@ -559,7 +559,7 @@ func (s *productSvcImpl) UpdateProduct(ctx context.Context, params domain.Update
 
 	switch domain.RecoveryPoint(idempotencyKey.RecoveryPoint) {
 	case domain.RecoveryPointFinished:
-		cached, err := idempotency.UnmarshalCachedResponse[domain.ProductFull](ctx, idempotencyKey.ResponseCode, idempotencyKey.ResponseBody)
+		cached, err := idemresponse.UnmarshalCachedResponse[domain.ProductFull](ctx, idempotencyKey.ResponseCode, idempotencyKey.ResponseBody)
 		if err != nil {
 			return nil, tracing.Trace(span, apierror.NewInternalError(err, "Issue unmarshalling cached response."))
 		}
@@ -634,7 +634,7 @@ func (s *productSvcImpl) updateProductInTx(txCtx context.Context, params domain.
 			return nil, apiErr
 		}
 		if exists {
-			return nil, apierror.NewConflictErrorWithParam(fmt.Sprintf("An item with the SKU '%s' already exists.", *params.SKU), "sku")
+			return nil, apierror.NewConflictErrorWithParam("sku", fmt.Sprintf("An item with the SKU '%s' already exists.", *params.SKU))
 		}
 	}
 
@@ -722,13 +722,13 @@ func (s *productSvcImpl) DeleteProduct(ctx context.Context, params domain.Delete
 	// Fetch existing product before deletion.
 	product, apiErr := s.repos.NewProductRepo().Get(ctx, domain.GetProductFullParams{AccountID: params.AccountID, ProductID: params.ProductID})
 	if apiErr != nil {
-		if apierror.IsNotFound(apiErr) {
+		if apierror.HasCode(apiErr, apierror.CodeResourceNotFound) {
 			wasDeleted, deletedCheckErr := s.repos.NewDeletedRecordRepo().ExistsInAccount(ctx, constants.DeletedRecordResourceTypeProduct, params.ProductID, params.AccountID)
 			if deletedCheckErr != nil {
 				return nil, tracing.Trace(span, deletedCheckErr)
 			}
 			if wasDeleted {
-				return nil, tracing.Trace(span, apierror.NewAlreadyDeletedError("This product has already been deleted and can no longer be modified."))
+				return nil, tracing.Trace(span, apierror.NewGoneError("This product has already been deleted and can no longer be modified."))
 			}
 		}
 		return nil, tracing.Trace(span, apiErr)
@@ -794,7 +794,7 @@ func (s *productSvcImpl) ChangeProductProductLine(ctx context.Context, params do
 
 	switch domain.RecoveryPoint(idempotencyKey.RecoveryPoint) {
 	case domain.RecoveryPointFinished:
-		cached, err := idempotency.UnmarshalCachedResponse[domain.ProductFull](ctx, idempotencyKey.ResponseCode, idempotencyKey.ResponseBody)
+		cached, err := idemresponse.UnmarshalCachedResponse[domain.ProductFull](ctx, idempotencyKey.ResponseCode, idempotencyKey.ResponseBody)
 		if err != nil {
 			return nil, tracing.Trace(span, apierror.NewInternalError(err, "Issue unmarshalling cached response."))
 		}

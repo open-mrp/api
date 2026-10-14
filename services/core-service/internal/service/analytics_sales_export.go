@@ -9,9 +9,9 @@ import (
 	"github.com/open-mrp/api/services/auth-service/pkg/types"
 	"github.com/open-mrp/api/services/core-service/internal/domain"
 	"github.com/open-mrp/api/shared/constants"
-	apierror "github.com/open-mrp/api/shared/errors"
 	"github.com/open-mrp/api/shared/excel"
 	"github.com/open-mrp/api/shared/textutil"
+	apierror "github.com/open-mrp/apikit/apierror"
 )
 
 // salesExportRow is one invoiced line, carrying whether the export it belongs to hides cost: the worker that renders the file knows the stored filters, not the caller.

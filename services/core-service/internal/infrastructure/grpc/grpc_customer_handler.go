@@ -6,7 +6,6 @@ import (
 	"github.com/open-mrp/api/services/core-service/internal/domain"
 	"github.com/open-mrp/api/shared/constants"
 	"github.com/open-mrp/api/shared/contracts"
-	apierror "github.com/open-mrp/api/shared/errors"
 	"github.com/open-mrp/api/shared/fieldpb"
 	pb "github.com/open-mrp/api/shared/proto/core"
 	"github.com/open-mrp/apikit/safeconv"
@@ -380,7 +379,7 @@ func (h *gRPCHandler) BatchGetCustomersByIDs(ctx context.Context, req *pb.BatchG
 
 	customers, apiErr := h.customerSvc.BatchGetCustomers(ctx, req.Ids)
 	if apiErr != nil {
-		if apierror.Is5XXErrorCode(apiErr.Code) {
+		if apiErr.Code.Status() >= 500 {
 			return nil, contracts.ConvertAPIErrorToGRPC(apiErr)
 		}
 		return &pb.BatchGetCustomersByIDsResponse{}, nil

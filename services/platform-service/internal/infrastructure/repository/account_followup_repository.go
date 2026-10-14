@@ -9,9 +9,9 @@ import (
 
 	"github.com/open-mrp/api/services/platform-service/internal/domain"
 	"github.com/open-mrp/api/services/platform-service/internal/infrastructure/sqlc"
-	"github.com/open-mrp/api/shared/db"
-	apierror "github.com/open-mrp/api/shared/errors"
-	"github.com/open-mrp/api/shared/tracing"
+	apierror "github.com/open-mrp/apikit/apierror"
+	"github.com/open-mrp/apikit/db"
+	"github.com/open-mrp/apikit/tracing"
 )
 
 var accountFollowupRepoTracer = tracing.GetTracer("platform-service.account_followup_repository")
@@ -56,7 +56,7 @@ func (r *accountFollowupRepoImpl) FindByID(ctx context.Context, id string) (*dom
 
 	row, err := r.db.FindAccountFollowupByID(ctx, id)
 	if errors.Is(err, sql.ErrNoRows) {
-		return nil, tracing.Trace(span, apierror.NewResourceNotFoundError("Account follow-up not found."))
+		return nil, tracing.Trace(span, apierror.NewNotFoundError("Account follow-up not found."))
 	}
 	if err != nil {
 		return nil, tracing.Trace(span, apierror.NewInternalError(err, "Failed to find account follow-up."))
@@ -71,7 +71,7 @@ func (r *accountFollowupRepoImpl) FindByReviewTokenHash(ctx context.Context, has
 
 	row, err := r.db.FindAccountFollowupByReviewTokenHash(ctx, db.NullString(string(hash)))
 	if errors.Is(err, sql.ErrNoRows) {
-		return nil, tracing.Trace(span, apierror.NewResourceNotFoundError("Account follow-up not found."))
+		return nil, tracing.Trace(span, apierror.NewNotFoundError("Account follow-up not found."))
 	}
 	if err != nil {
 		return nil, tracing.Trace(span, apierror.NewInternalError(err, "Failed to find account follow-up."))

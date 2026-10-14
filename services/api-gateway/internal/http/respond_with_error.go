@@ -6,15 +6,8 @@ import (
 	"runtime"
 
 	"github.com/open-mrp/api/shared/appctx"
-	apierror "github.com/open-mrp/api/shared/errors"
+	apierror "github.com/open-mrp/apikit/apierror"
 )
-
-var frontendURL string
-
-// SetFrontendURL configures the frontend base URL used to build request log links in error responses. When empty, the request_log_url field will be null.
-func SetFrontendURL(url string) {
-	frontendURL = url
-}
 
 func RespondWithAPIError(ctx context.Context, w http.ResponseWriter, apiErr *apierror.APIError, opts ...RespondOption) {
 	if apiErr == nil {
@@ -27,7 +20,7 @@ func RespondWithAPIError(ctx context.Context, w http.ResponseWriter, apiErr *api
 		rl.ErrorCode = &errorCode
 		rl.ErrorMessage = &apiErr.PublicMessage
 		// Record the internal chain and stack for every 5xx, not just internal_error: timeouts, service-unavailable, etc. are equally in need of diagnosis in the error alert, and NewAPIError already captures a stack at the origin for all of them.
-		if apierror.Is5XXErrorCode(apiErr.Code) {
+		if apiErr.Code.Status() >= 500 {
 			// Record the full internal chain (InternalMessage + wrapped Internal error), not just the top-level message — otherwise the underlying cause (e.g. the real driver error behind "Database request failed for unknown reason.") is lost.
 			internalMessage := apiErr.Error()
 			rl.InternalErrorMessage = &internalMessage
@@ -44,16 +37,6 @@ func RespondWithAPIError(ctx context.Context, w http.ResponseWriter, apiErr *api
 		}
 	}
 
-	statusCode := apierror.GetHTTPStatusCode(apiErr.Code)
-	resp := apiErr.ToResponseMap()
-
-	if frontendURL != "" && hasRL && rl != nil {
-		if errResp, ok := resp.(apierror.APIErrorResponse); ok {
-			url := frontendURL + "/dashboard/request-logs/" + rl.ID
-			errResp.Error.RequestLogURL = &url
-			resp = errResp
-		}
-	}
-
-	RespondWithJSON(ctx, w, statusCode, resp, opts...)
+	statusCode := apiErr.Code.Status()
+	RespondWithJSON(ctx, w, statusCode, apiErr.Response(), opts...)
 }

@@ -9,9 +9,9 @@ import (
 	"github.com/open-mrp/api/services/core-service/internal/ledgerlock"
 	"github.com/open-mrp/api/shared/appctx"
 	"github.com/open-mrp/api/shared/contracts"
-	"github.com/open-mrp/api/shared/db"
-	apierror "github.com/open-mrp/api/shared/errors"
 	"github.com/open-mrp/api/shared/messaging"
+	apierror "github.com/open-mrp/apikit/apierror"
+	"github.com/open-mrp/apikit/db"
 )
 
 // EnqueueAllocateOpenIssues creates outbox messages telling the system to allocate available stock to open demand for each item. Because the outbox entry is written in the same transaction, the allocation request only exists if the inventory change successfully commits.

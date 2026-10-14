@@ -1,9 +1,6 @@
 package id
 
-import "strings"
-
-// IDPrefix is a 2-letter prefix for a type-specific ID. This will be used to compose the prefix for the ID. Since each word has a unique 2 letter vocabulary, we can ensure the type ID provides a machine-readable and human-readable identifier.
-type IDPrefix string
+import apikitid "github.com/open-mrp/apikit/id"
 
 // Vocabulary contains all 2-letter word codes used to compose ID prefixes. Each code represents a semantic word/concept.
 const (
@@ -161,381 +158,376 @@ const (
 	VocFinished     = "fi"
 )
 
-// composePrefix concatenates vocabulary words to form a prefix. This ensures consistency and makes prefix construction explicit.
-func composePrefix(words ...string) IDPrefix {
-	return IDPrefix(strings.Join(words, ""))
-}
-
 // IDPrefixes contains all the type ID prefix values used in the system. This serves as a centralized reference for all type ID prefix values. These constants can be used when creating new type ID structs or for validation.
 var (
 	// Account-related prefix values
-	AccountIDPrefix                               = composePrefix(VocAccount)
-	AccountAddressIDPrefix                        = composePrefix(VocAccount, VocAddress)
-	AccountBillingIDPrefix                        = composePrefix(VocAccount, VocBilling)
-	AccountBrandingIDPrefix                       = composePrefix(VocAccount, VocBranding)
-	AccountPortalIDPrefix                         = composePrefix(VocAccount, VocPortal)
-	AccountIntegrationIDPrefix                    = composePrefix(VocAccount, VocIntegration)
-	AccountGroupIDPrefix                          = composePrefix(VocAccount, VocGroup)
-	AccountGroupTypeIDPrefix                      = composePrefix(VocAccount, VocGroup, VocType)
-	AccountTypeIDPrefix                           = composePrefix(VocAccount, VocType)
-	AccountRelationIDPrefix                       = composePrefix(VocAccount, VocRelation)
-	AccountStatusIDPrefix                         = composePrefix(VocAccount, VocStatus)
-	AccountPriceIDPrefix                          = composePrefix(VocAccount, VocPrice)
-	AccountPriceItemCategoryIDPrefix              = composePrefix(VocAccount, VocPrice, VocItem, VocCategory)
-	AccountGroupQuantityDiscountIDPrefix          = composePrefix(VocAccount, VocGroup, VocQuantity, VocDiscount)
-	AccountPriceAttributeIDPrefix                 = composePrefix(VocAccount, VocPrice, VocAttribute)
-	AccountRelationProductLineIDPrefix            = composePrefix(VocAccount, VocRelation, VocProduct, VocLine)
-	AccountRelationPriceGroupIDPrefix             = composePrefix(VocAccount, VocRelation, VocPrice, VocGroup)
-	AccountRelationNotificationPreferenceIDPrefix = composePrefix(VocAccount, VocRelation, VocNotification, VocPreference)
-	AccountRelationNotificationTypeIDPrefix       = composePrefix(VocAccount, VocRelation, VocNotification, VocType)
-	AccountGroupProductLineIDPrefix               = composePrefix(VocAccount, VocGroup, VocProduct, VocLine)
-	AccountPreferenceIDPrefix                     = composePrefix(VocAccount, VocPreference)
-	AccountUserIDPrefix                           = composePrefix(VocAccount, VocUser)
+	AccountIDPrefix                               = apikitid.ComposePrefix(VocAccount)
+	AccountAddressIDPrefix                        = apikitid.ComposePrefix(VocAccount, VocAddress)
+	AccountBillingIDPrefix                        = apikitid.ComposePrefix(VocAccount, VocBilling)
+	AccountBrandingIDPrefix                       = apikitid.ComposePrefix(VocAccount, VocBranding)
+	AccountPortalIDPrefix                         = apikitid.ComposePrefix(VocAccount, VocPortal)
+	AccountIntegrationIDPrefix                    = apikitid.ComposePrefix(VocAccount, VocIntegration)
+	AccountGroupIDPrefix                          = apikitid.ComposePrefix(VocAccount, VocGroup)
+	AccountGroupTypeIDPrefix                      = apikitid.ComposePrefix(VocAccount, VocGroup, VocType)
+	AccountTypeIDPrefix                           = apikitid.ComposePrefix(VocAccount, VocType)
+	AccountRelationIDPrefix                       = apikitid.ComposePrefix(VocAccount, VocRelation)
+	AccountStatusIDPrefix                         = apikitid.ComposePrefix(VocAccount, VocStatus)
+	AccountPriceIDPrefix                          = apikitid.ComposePrefix(VocAccount, VocPrice)
+	AccountPriceItemCategoryIDPrefix              = apikitid.ComposePrefix(VocAccount, VocPrice, VocItem, VocCategory)
+	AccountGroupQuantityDiscountIDPrefix          = apikitid.ComposePrefix(VocAccount, VocGroup, VocQuantity, VocDiscount)
+	AccountPriceAttributeIDPrefix                 = apikitid.ComposePrefix(VocAccount, VocPrice, VocAttribute)
+	AccountRelationProductLineIDPrefix            = apikitid.ComposePrefix(VocAccount, VocRelation, VocProduct, VocLine)
+	AccountRelationPriceGroupIDPrefix             = apikitid.ComposePrefix(VocAccount, VocRelation, VocPrice, VocGroup)
+	AccountRelationNotificationPreferenceIDPrefix = apikitid.ComposePrefix(VocAccount, VocRelation, VocNotification, VocPreference)
+	AccountRelationNotificationTypeIDPrefix       = apikitid.ComposePrefix(VocAccount, VocRelation, VocNotification, VocType)
+	AccountGroupProductLineIDPrefix               = apikitid.ComposePrefix(VocAccount, VocGroup, VocProduct, VocLine)
+	AccountPreferenceIDPrefix                     = apikitid.ComposePrefix(VocAccount, VocPreference)
+	AccountUserIDPrefix                           = apikitid.ComposePrefix(VocAccount, VocUser)
 
 	// Action-related prefix values
-	ActionTypeIDPrefix = composePrefix(VocAction, VocType)
+	ActionTypeIDPrefix = apikitid.ComposePrefix(VocAction, VocType)
 
 	// Agent-related prefix values
-	AgentDefinitionIDPrefix     = composePrefix(VocAgent, VocDefinition)
-	AgentConfigIDPrefix         = composePrefix(VocAgent, VocAccount)
-	AgentRunIDPrefix            = composePrefix(VocAgent, VocRun)
-	AgentActionIDPrefix         = composePrefix(VocAgent, VocAction)
-	AgentArtifactIDPrefix       = composePrefix(VocAgent, VocArtifact)
-	AgentMemoryIDPrefix         = composePrefix(VocAgent, VocMemory)
-	AgentTokenUsageIDPrefix     = composePrefix(VocAgent, VocToken)
-	TokenPackPurchaseIDPrefix   = composePrefix(VocToken, VocPayment)
-	AgentDefinitionToolIDPrefix = composePrefix(VocAgent, VocDefinition, VocTool)
-	AgentAccountStatusIDPrefix  = composePrefix(VocAgent, VocAccount, VocStatus)
-	AgentRunEventIDPrefix       = composePrefix(VocAgent, VocRun, VocEvent)
-	ToolDefinitionIDPrefix      = composePrefix(VocTool, VocDefinition)
+	AgentDefinitionIDPrefix     = apikitid.ComposePrefix(VocAgent, VocDefinition)
+	AgentConfigIDPrefix         = apikitid.ComposePrefix(VocAgent, VocAccount)
+	AgentRunIDPrefix            = apikitid.ComposePrefix(VocAgent, VocRun)
+	AgentActionIDPrefix         = apikitid.ComposePrefix(VocAgent, VocAction)
+	AgentArtifactIDPrefix       = apikitid.ComposePrefix(VocAgent, VocArtifact)
+	AgentMemoryIDPrefix         = apikitid.ComposePrefix(VocAgent, VocMemory)
+	AgentTokenUsageIDPrefix     = apikitid.ComposePrefix(VocAgent, VocToken)
+	TokenPackPurchaseIDPrefix   = apikitid.ComposePrefix(VocToken, VocPayment)
+	AgentDefinitionToolIDPrefix = apikitid.ComposePrefix(VocAgent, VocDefinition, VocTool)
+	AgentAccountStatusIDPrefix  = apikitid.ComposePrefix(VocAgent, VocAccount, VocStatus)
+	AgentRunEventIDPrefix       = apikitid.ComposePrefix(VocAgent, VocRun, VocEvent)
+	ToolDefinitionIDPrefix      = apikitid.ComposePrefix(VocTool, VocDefinition)
 
 	// Address-related prefix values
-	AddressIDPrefix = composePrefix(VocAddress)
+	AddressIDPrefix = apikitid.ComposePrefix(VocAddress)
 
 	// API-related prefix values
-	APILocationIDPrefix = composePrefix(VocAPI, VocLocation)
-	APIKeyIDPrefix      = composePrefix(VocAPI, VocKey)
-	DocAPIKeyIDPrefix   = composePrefix(VocDocument, VocAPI, VocKey)
+	APILocationIDPrefix = apikitid.ComposePrefix(VocAPI, VocLocation)
+	APIKeyIDPrefix      = apikitid.ComposePrefix(VocAPI, VocKey)
+	DocAPIKeyIDPrefix   = apikitid.ComposePrefix(VocDocument, VocAPI, VocKey)
 
 	// Document-related prefix values
-	DocumentSettingIDPrefix = composePrefix(VocDocument, VocSetting)
+	DocumentSettingIDPrefix = apikitid.ComposePrefix(VocDocument, VocSetting)
 
 	// Attribute-related prefix values
-	AttributeIDPrefix = composePrefix(VocAttribute)
+	AttributeIDPrefix = apikitid.ComposePrefix(VocAttribute)
 
 	// Batch-related prefix values
-	BatchIDPrefix                = composePrefix(VocBatch)
-	BatchCountAdjustmentIDPrefix = composePrefix(VocBatch, VocAdjustment)
+	BatchIDPrefix                = apikitid.ComposePrefix(VocBatch)
+	BatchCountAdjustmentIDPrefix = apikitid.ComposePrefix(VocBatch, VocAdjustment)
 
 	// Carrier-related prefix values
-	CarrierIDPrefix                = composePrefix(VocCarrier)
-	CarrierTransitEstimateIDPrefix = composePrefix(VocCarrier, VocTransit, VocEstimate)
+	CarrierIDPrefix                = apikitid.ComposePrefix(VocCarrier)
+	CarrierTransitEstimateIDPrefix = apikitid.ComposePrefix(VocCarrier, VocTransit, VocEstimate)
 
 	// Operating calendar-related prefix values
-	OperatingCalendarIDPrefix        = composePrefix(VocOperating, VocCalendar)
-	OperatingCalendarClosureIDPrefix = composePrefix(VocOperating, VocCalendar, VocClosure)
+	OperatingCalendarIDPrefix        = apikitid.ComposePrefix(VocOperating, VocCalendar)
+	OperatingCalendarClosureIDPrefix = apikitid.ComposePrefix(VocOperating, VocCalendar, VocClosure)
 
 	// Service level-related prefix values
-	ServiceLevelIDPrefix = composePrefix(VocService, VocLevel)
+	ServiceLevelIDPrefix = apikitid.ComposePrefix(VocService, VocLevel)
 
 	// Color-related prefix values
-	ColorIDPrefix = composePrefix(VocColor)
+	ColorIDPrefix = apikitid.ComposePrefix(VocColor)
 
 	// Commission-related prefix values
-	CommissionPolicyIDPrefix = composePrefix(VocCommission, VocStatus)
+	CommissionPolicyIDPrefix = apikitid.ComposePrefix(VocCommission, VocStatus)
 
 	// Consumption-related prefix values
-	ConsumptionIDPrefix = composePrefix(VocConsumption)
+	ConsumptionIDPrefix = apikitid.ComposePrefix(VocConsumption)
 
 	// Contact-related prefix values
-	ContactIDPrefix     = composePrefix(VocContact)
-	ContactTypeIDPrefix = composePrefix(VocContact, VocType)
+	ContactIDPrefix     = apikitid.ComposePrefix(VocContact)
+	ContactTypeIDPrefix = apikitid.ComposePrefix(VocContact, VocType)
 
 	// Customer-related prefix values
 	// !Depreciated
-	// CustomerIDPrefix             = composePrefix(VocCustomer)
-	// CustomerGroupIDPrefix        = composePrefix(VocCustomer, VocGroup)
-	// CustomerGroupTypeIDPrefix    = composePrefix(VocCustomer, VocGroup, VocType)
-	// CustomerGroupProductIDPrefix = composePrefix(VocCustomer, VocGroup, VocProduct)
-	// CustomerProductIDPrefix      = composePrefix(VocCustomer, VocProduct)
-	// CustomerStatusIDPrefix       = composePrefix(VocCustomer, VocStatus)
-	// CustomerAddressesIDPrefix    = composePrefix(VocCustomer, VocAddress)
-	// CustomerEmailIDPrefix        = composePrefix(VocCustomer, VocEmail)
-	// CustomerPriceIDPrefix        = composePrefix(VocCustomer, VocPrice)
-	// CustomerPriceGroupsIDPrefix  = composePrefix(VocCustomer, VocPrice, VocGroup)
+	// CustomerIDPrefix             = apikitid.ComposePrefix(VocCustomer)
+	// CustomerGroupIDPrefix        = apikitid.ComposePrefix(VocCustomer, VocGroup)
+	// CustomerGroupTypeIDPrefix    = apikitid.ComposePrefix(VocCustomer, VocGroup, VocType)
+	// CustomerGroupProductIDPrefix = apikitid.ComposePrefix(VocCustomer, VocGroup, VocProduct)
+	// CustomerProductIDPrefix      = apikitid.ComposePrefix(VocCustomer, VocProduct)
+	// CustomerStatusIDPrefix       = apikitid.ComposePrefix(VocCustomer, VocStatus)
+	// CustomerAddressesIDPrefix    = apikitid.ComposePrefix(VocCustomer, VocAddress)
+	// CustomerEmailIDPrefix        = apikitid.ComposePrefix(VocCustomer, VocEmail)
+	// CustomerPriceIDPrefix        = apikitid.ComposePrefix(VocCustomer, VocPrice)
+	// CustomerPriceGroupsIDPrefix  = apikitid.ComposePrefix(VocCustomer, VocPrice, VocGroup)
 
 	// Delivery-related prefix values
-	DeliveryIDPrefix     = composePrefix(VocDelivery)
-	DeliveryLineIDPrefix = composePrefix(VocDelivery, VocLine)
+	DeliveryIDPrefix     = apikitid.ComposePrefix(VocDelivery)
+	DeliveryLineIDPrefix = apikitid.ComposePrefix(VocDelivery, VocLine)
 
 	// Department-related prefix values
-	DepartmentIDPrefix = composePrefix(VocDepartment)
+	DepartmentIDPrefix = apikitid.ComposePrefix(VocDepartment)
 
 	// Discount-related prefix values
-	DiscountTypeIDPrefix         = composePrefix(VocDiscount, VocStatus, VocType)
-	OrderDiscountIDPrefix        = composePrefix(VocOrder, VocDiscount)
-	QuantityDiscountIDPrefix     = composePrefix(VocQuantity, VocDiscount)
-	QuantityDiscountTierIDPrefix = composePrefix(VocQuantity, VocDiscount, VocTier)
+	DiscountTypeIDPrefix         = apikitid.ComposePrefix(VocDiscount, VocStatus, VocType)
+	OrderDiscountIDPrefix        = apikitid.ComposePrefix(VocOrder, VocDiscount)
+	QuantityDiscountIDPrefix     = apikitid.ComposePrefix(VocQuantity, VocDiscount)
+	QuantityDiscountTierIDPrefix = apikitid.ComposePrefix(VocQuantity, VocDiscount, VocTier)
 
 	// Error-related prefix values
-	ErrorSeverityIDPrefix = composePrefix(VocError, VocSeverity)
-	ErrorLogIDPrefix      = composePrefix(VocError, VocLog)
+	ErrorSeverityIDPrefix = apikitid.ComposePrefix(VocError, VocSeverity)
+	ErrorLogIDPrefix      = apikitid.ComposePrefix(VocError, VocLog)
 
 	// Freight-related prefix values
-	FreightPolicyIDPrefix = composePrefix(VocFreight, VocStatus)
+	FreightPolicyIDPrefix = apikitid.ComposePrefix(VocFreight, VocStatus)
 
 	// Geolocation-related prefix values
-	GeolocationIDPrefix = composePrefix(VocGeolocation)
+	GeolocationIDPrefix = apikitid.ComposePrefix(VocGeolocation)
 
 	// Integration-related prefix values
-	IntegrationIDPrefix = composePrefix(VocIntegration)
+	IntegrationIDPrefix = apikitid.ComposePrefix(VocIntegration)
 
 	// HubSpot sync (backfill/reconciliation) prefix values
-	HubspotSyncJobIDPrefix       = composePrefix(VocIntegration, VocJob)
-	HubspotSyncRecordIDPrefix    = composePrefix(VocIntegration, VocRecord)
-	HubspotCompanyReviewIDPrefix = composePrefix(VocIntegration, VocReview)
+	HubspotSyncJobIDPrefix       = apikitid.ComposePrefix(VocIntegration, VocJob)
+	HubspotSyncRecordIDPrefix    = apikitid.ComposePrefix(VocIntegration, VocRecord)
+	HubspotCompanyReviewIDPrefix = apikitid.ComposePrefix(VocIntegration, VocReview)
 
 	// Invoice-related prefix values
-	InvoiceIDPrefix     = composePrefix(VocInvoice)
-	InvoiceLineIDPrefix = composePrefix(VocInvoice, VocLine)
+	InvoiceIDPrefix     = apikitid.ComposePrefix(VocInvoice)
+	InvoiceLineIDPrefix = apikitid.ComposePrefix(VocInvoice, VocLine)
 
 	// Item-related prefix values
-	ItemIDPrefix             = composePrefix(VocItem)
-	ItemCategoryIDPrefix     = composePrefix(VocItem, VocCategory)
-	ItemCategoryTypeIDPrefix = composePrefix(VocItem, VocCategory, VocType)
-	ItemTypeIDPrefix         = composePrefix(VocItem, VocType)
+	ItemIDPrefix             = apikitid.ComposePrefix(VocItem)
+	ItemCategoryIDPrefix     = apikitid.ComposePrefix(VocItem, VocCategory)
+	ItemCategoryTypeIDPrefix = apikitid.ComposePrefix(VocItem, VocCategory, VocType)
+	ItemTypeIDPrefix         = apikitid.ComposePrefix(VocItem, VocType)
 
 	// Label-related prefix values
-	LabelSizeIDPrefix = composePrefix(VocLabel, VocSize)
-	LabelTypeIDPrefix = composePrefix(VocLabel, VocType)
+	LabelSizeIDPrefix = apikitid.ComposePrefix(VocLabel, VocSize)
+	LabelTypeIDPrefix = apikitid.ComposePrefix(VocLabel, VocType)
 
 	// Machine-related prefix values
-	MachineIDPrefix               = composePrefix(VocMachine)
-	MachineDowntimeEventIDPrefix  = composePrefix(VocMachine, VocDowntime)
-	MachineDowntimeReasonIDPrefix = composePrefix(VocMachine, VocDowntime, VocType)
+	MachineIDPrefix               = apikitid.ComposePrefix(VocMachine)
+	MachineDowntimeEventIDPrefix  = apikitid.ComposePrefix(VocMachine, VocDowntime)
+	MachineDowntimeReasonIDPrefix = apikitid.ComposePrefix(VocMachine, VocDowntime, VocType)
 
 	// Demand-override prefix values
-	DemandOverrideIDPrefix     = composePrefix(VocDemand, VocOverride)
-	DemandOverrideTypeIDPrefix = composePrefix(VocDemand, VocOverride, VocType)
+	DemandOverrideIDPrefix     = apikitid.ComposePrefix(VocDemand, VocOverride)
+	DemandOverrideTypeIDPrefix = apikitid.ComposePrefix(VocDemand, VocOverride, VocType)
 
 	// Material-related prefix values
-	MaterialIDPrefix         = composePrefix(VocMaterial)
-	SupplierMaterialIDPrefix = composePrefix(VocSupplier, VocMaterial)
+	MaterialIDPrefix         = apikitid.ComposePrefix(VocMaterial)
+	SupplierMaterialIDPrefix = apikitid.ComposePrefix(VocSupplier, VocMaterial)
 
 	// Organization-related prefix values
-	OrganizationIDPrefix = composePrefix(VocOrganization)
+	OrganizationIDPrefix = apikitid.ComposePrefix(VocOrganization)
 
 	// Part-related prefix values
-	PartIDPrefix = composePrefix(VocPart)
+	PartIDPrefix = apikitid.ComposePrefix(VocPart)
 
 	// Payment-related prefix values
-	PaymentTermIDPrefix        = composePrefix(VocPayment, VocTerm)
-	OrderPaymentIntentIDPrefix = composePrefix(VocOrder, VocPayment, VocIntent)
+	PaymentTermIDPrefix        = apikitid.ComposePrefix(VocPayment, VocTerm)
+	OrderPaymentIntentIDPrefix = apikitid.ComposePrefix(VocOrder, VocPayment, VocIntent)
 
 	// Permission-related prefix values
-	PermissionIDPrefix      = composePrefix(VocPermission)
-	PermissionGroupIDPrefix = composePrefix(VocPermission, VocGroup)
+	PermissionIDPrefix      = apikitid.ComposePrefix(VocPermission)
+	PermissionGroupIDPrefix = apikitid.ComposePrefix(VocPermission, VocGroup)
 
 	// Pick-related prefix values
-	PickIDPrefix           = composePrefix(VocPick)
-	PickLineIDPrefix       = composePrefix(VocPick, VocLine)
-	PickAssignmentIDPrefix = composePrefix(VocPick, VocAssignment)
+	PickIDPrefix           = apikitid.ComposePrefix(VocPick)
+	PickLineIDPrefix       = apikitid.ComposePrefix(VocPick, VocLine)
+	PickAssignmentIDPrefix = apikitid.ComposePrefix(VocPick, VocAssignment)
 
 	// Preference-related prefix values
-	PreferenceDefinitionIDPrefix = composePrefix(VocPreference, VocDefinition)
+	PreferenceDefinitionIDPrefix = apikitid.ComposePrefix(VocPreference, VocDefinition)
 
 	// Priority-related prefix values
-	PriorityIDPrefix = composePrefix(VocPriority)
+	PriorityIDPrefix = apikitid.ComposePrefix(VocPriority)
 
 	// Product-related prefix values
-	ProductIDPrefix           = composePrefix(VocProduct)
-	ProductLineIDPrefix       = composePrefix(VocProduct, VocLine)
-	ProductLineTargetIDPrefix = composePrefix(VocProduct, VocLine, VocTarget)
-	ProductTypeIDPrefix       = composePrefix(VocProduct, VocType)
-	ProductImageIDPrefix      = composePrefix(VocProduct, VocImage)
+	ProductIDPrefix           = apikitid.ComposePrefix(VocProduct)
+	ProductLineIDPrefix       = apikitid.ComposePrefix(VocProduct, VocLine)
+	ProductLineTargetIDPrefix = apikitid.ComposePrefix(VocProduct, VocLine, VocTarget)
+	ProductTypeIDPrefix       = apikitid.ComposePrefix(VocProduct, VocType)
+	ProductImageIDPrefix      = apikitid.ComposePrefix(VocProduct, VocImage)
 
 	// Production-related prefix values
-	ProductionIDPrefix                    = composePrefix(VocProduction)
-	ProductionFormulaIDPrefix             = composePrefix(VocProduction, VocFormula)
-	ProductionFormulaItemIDPrefix         = composePrefix(VocProduction, VocFormula, VocItem)
-	ProductionProcessIDPrefix             = composePrefix(VocProduction, VocProcess)
-	ProductionProcessItemCategoryIDPrefix = composePrefix(VocProduction, VocProcess, VocItem, VocCategory)
-	ProductionRunIDPrefix                 = composePrefix(VocProduction, VocRun)
-	ProductionStepIDPrefix                = composePrefix(VocProduction, VocStep)
-	ProductionStepTransformIDPrefix       = composePrefix(VocProduction, VocStep, VocTransform)
-	ProductionShiftIDPrefix               = composePrefix(VocProduction, VocShift)
+	ProductionIDPrefix                    = apikitid.ComposePrefix(VocProduction)
+	ProductionFormulaIDPrefix             = apikitid.ComposePrefix(VocProduction, VocFormula)
+	ProductionFormulaItemIDPrefix         = apikitid.ComposePrefix(VocProduction, VocFormula, VocItem)
+	ProductionProcessIDPrefix             = apikitid.ComposePrefix(VocProduction, VocProcess)
+	ProductionProcessItemCategoryIDPrefix = apikitid.ComposePrefix(VocProduction, VocProcess, VocItem, VocCategory)
+	ProductionRunIDPrefix                 = apikitid.ComposePrefix(VocProduction, VocRun)
+	ProductionStepIDPrefix                = apikitid.ComposePrefix(VocProduction, VocStep)
+	ProductionStepTransformIDPrefix       = apikitid.ComposePrefix(VocProduction, VocStep, VocTransform)
+	ProductionShiftIDPrefix               = apikitid.ComposePrefix(VocProduction, VocShift)
 
 	// Production-schedule prefix values
-	ProductionScheduleIDPrefix                = composePrefix(VocProduction, VocSchedule)
-	ProductionScheduleLineIDPrefix            = composePrefix(VocProduction, VocSchedule, VocLine)
-	ProductionScheduleLineOrderIDPrefix       = composePrefix(VocProduction, VocSchedule, VocLine, VocOrder)
-	ProductionScheduleItemPolicyIDPrefix      = composePrefix(VocProduction, VocSchedule, VocItem, VocPolicy)
-	ProductionScheduleFinishedPolicyIDPrefix  = composePrefix(VocProduction, VocSchedule, VocFinished, VocPolicy)
-	ProductionScheduleFinishingLineIDPrefix   = composePrefix(VocProduction, VocSchedule, VocFinished, VocLine)
-	ProductionScheduleDeviationIDPrefix       = composePrefix(VocProduction, VocSchedule, VocDeviation)
-	ScheduleDeviationTypeIDPrefix             = composePrefix(VocProduction, VocSchedule, VocDeviation, VocType)
-	ProductionScheduleDerivedLineIDPrefix     = composePrefix(VocProduction, VocSchedule, VocDerived)
-	AccountProductionScheduleSettingIDPrefix  = composePrefix(VocAccount, VocProduction, VocSchedule, VocSetting)
-	ProductionScheduleResourceSettingIDPrefix = composePrefix(VocProduction, VocSchedule, VocResource, VocSetting)
-	ProductionScheduleItemSettingIDPrefix     = composePrefix(VocProduction, VocSchedule, VocItem, VocSetting)
+	ProductionScheduleIDPrefix                = apikitid.ComposePrefix(VocProduction, VocSchedule)
+	ProductionScheduleLineIDPrefix            = apikitid.ComposePrefix(VocProduction, VocSchedule, VocLine)
+	ProductionScheduleLineOrderIDPrefix       = apikitid.ComposePrefix(VocProduction, VocSchedule, VocLine, VocOrder)
+	ProductionScheduleItemPolicyIDPrefix      = apikitid.ComposePrefix(VocProduction, VocSchedule, VocItem, VocPolicy)
+	ProductionScheduleFinishedPolicyIDPrefix  = apikitid.ComposePrefix(VocProduction, VocSchedule, VocFinished, VocPolicy)
+	ProductionScheduleFinishingLineIDPrefix   = apikitid.ComposePrefix(VocProduction, VocSchedule, VocFinished, VocLine)
+	ProductionScheduleDeviationIDPrefix       = apikitid.ComposePrefix(VocProduction, VocSchedule, VocDeviation)
+	ScheduleDeviationTypeIDPrefix             = apikitid.ComposePrefix(VocProduction, VocSchedule, VocDeviation, VocType)
+	ProductionScheduleDerivedLineIDPrefix     = apikitid.ComposePrefix(VocProduction, VocSchedule, VocDerived)
+	AccountProductionScheduleSettingIDPrefix  = apikitid.ComposePrefix(VocAccount, VocProduction, VocSchedule, VocSetting)
+	ProductionScheduleResourceSettingIDPrefix = apikitid.ComposePrefix(VocProduction, VocSchedule, VocResource, VocSetting)
+	ProductionScheduleItemSettingIDPrefix     = apikitid.ComposePrefix(VocProduction, VocSchedule, VocItem, VocSetting)
 
 	// Property-related prefix values
-	PropertyIDPrefix        = composePrefix(VocProperty)
-	SysPropertyIDPrefix     = composePrefix(VocSystem, VocProperty)
-	SysPropertyTypeIDPrefix = composePrefix(VocSystem, VocProperty, VocType)
+	PropertyIDPrefix        = apikitid.ComposePrefix(VocProperty)
+	SysPropertyIDPrefix     = apikitid.ComposePrefix(VocSystem, VocProperty)
+	SysPropertyTypeIDPrefix = apikitid.ComposePrefix(VocSystem, VocProperty, VocType)
 
 	// Quantity-related prefix values
-	QuantityIDPrefix = composePrefix(VocQuantity)
+	QuantityIDPrefix = apikitid.ComposePrefix(VocQuantity)
 
 	// Rate-related prefix values
-	RateIDPrefix = composePrefix(VocRate)
+	RateIDPrefix = apikitid.ComposePrefix(VocRate)
 
 	// Role-related prefix values
-	RoleIDPrefix           = composePrefix(VocRole)
-	RolePermissionIDPrefix = composePrefix(VocRole, VocPermission)
-	RoleTypeIDPrefix       = composePrefix(VocRole, VocType)
+	RoleIDPrefix           = apikitid.ComposePrefix(VocRole)
+	RolePermissionIDPrefix = apikitid.ComposePrefix(VocRole, VocPermission)
+	RoleTypeIDPrefix       = apikitid.ComposePrefix(VocRole, VocType)
 
 	// Order-related prefix values
-	OrderIDPrefix       = composePrefix(VocOrder)
-	OrderLineIDPrefix   = composePrefix(VocOrder, VocLine)
-	OrderStatusIDPrefix = composePrefix(VocOrder, VocStatus)
-	OrderTypeIDPrefix   = composePrefix(VocOrder, VocType)
+	OrderIDPrefix       = apikitid.ComposePrefix(VocOrder)
+	OrderLineIDPrefix   = apikitid.ComposePrefix(VocOrder, VocLine)
+	OrderStatusIDPrefix = apikitid.ComposePrefix(VocOrder, VocStatus)
+	OrderTypeIDPrefix   = apikitid.ComposePrefix(VocOrder, VocType)
 
 	// Territory-related prefix values
-	TerritoryIDPrefix = composePrefix(VocTerritory)
+	TerritoryIDPrefix = apikitid.ComposePrefix(VocTerritory)
 
 	// Target-related prefix values
-	TargetIDPrefix = composePrefix(VocTarget)
+	TargetIDPrefix = apikitid.ComposePrefix(VocTarget)
 
 	// Sandbox-related prefix values
-	SandboxAccountIDPrefix = composePrefix(VocSandbox, VocAccount)
+	SandboxAccountIDPrefix = apikitid.ComposePrefix(VocSandbox, VocAccount)
 
 	// Scanning Station-related prefix values
-	ScanningStationIDPrefix     = composePrefix(VocScanning, VocStation)
-	ScanningStationTypeIDPrefix = composePrefix(VocScanning, VocStation, VocType)
+	ScanningStationIDPrefix     = apikitid.ComposePrefix(VocScanning, VocStation)
+	ScanningStationTypeIDPrefix = apikitid.ComposePrefix(VocScanning, VocStation, VocType)
 
 	// Session-related prefix values
-	SessionIDPrefix = composePrefix(VocSession)
+	SessionIDPrefix = apikitid.ComposePrefix(VocSession)
 
 	// Shipment-related prefix values
-	ShipmentIDPrefix         = composePrefix(VocShipment)
-	ShipmentLineIDPrefix     = composePrefix(VocShipment, VocLine)
-	ShipmentStatusIDPrefix   = composePrefix(VocShipment, VocStatus)
-	ShippingCaseIDPrefix     = composePrefix(VocShipment, VocCase)
-	ShippingTermIDPrefix     = composePrefix(VocShipment, VocTerm)
-	FreeShippingRuleIDPrefix = composePrefix(VocFreight, VocShipment)
+	ShipmentIDPrefix         = apikitid.ComposePrefix(VocShipment)
+	ShipmentLineIDPrefix     = apikitid.ComposePrefix(VocShipment, VocLine)
+	ShipmentStatusIDPrefix   = apikitid.ComposePrefix(VocShipment, VocStatus)
+	ShippingCaseIDPrefix     = apikitid.ComposePrefix(VocShipment, VocCase)
+	ShippingTermIDPrefix     = apikitid.ComposePrefix(VocShipment, VocTerm)
+	FreeShippingRuleIDPrefix = apikitid.ComposePrefix(VocFreight, VocShipment)
 
 	// Unit-related prefix values
-	UnitIDPrefix            = composePrefix(VocUnit)
-	UnitDimensionIDPrefix   = composePrefix(VocUnit, VocDimension)
-	UnitGroupIDPrefix       = composePrefix(VocUnit, VocGroup)
-	UnitGroupsUnitsIDPrefix = composePrefix(VocUnit, VocGroup, VocUnit)
-	UnitConversionIDPrefix  = composePrefix(VocUnit, VocConversion)
+	UnitIDPrefix            = apikitid.ComposePrefix(VocUnit)
+	UnitDimensionIDPrefix   = apikitid.ComposePrefix(VocUnit, VocDimension)
+	UnitGroupIDPrefix       = apikitid.ComposePrefix(VocUnit, VocGroup)
+	UnitGroupsUnitsIDPrefix = apikitid.ComposePrefix(VocUnit, VocGroup, VocUnit)
+	UnitConversionIDPrefix  = apikitid.ComposePrefix(VocUnit, VocConversion)
 
 	// User-related prefix values
-	UserIDPrefix        = composePrefix(VocUser)
-	UserAccountIDPrefix = composePrefix(VocUser, VocAccount)
-	UserStatusIDPrefix  = composePrefix(VocUser, VocStatus)
-	UserTypeIDPrefix    = composePrefix(VocUser, VocType)
+	UserIDPrefix        = apikitid.ComposePrefix(VocUser)
+	UserAccountIDPrefix = apikitid.ComposePrefix(VocUser, VocAccount)
+	UserStatusIDPrefix  = apikitid.ComposePrefix(VocUser, VocStatus)
+	UserTypeIDPrefix    = apikitid.ComposePrefix(VocUser, VocType)
 
 	// Verification-related prefix values
-	VerificationTokenIDPrefix = composePrefix(VocVerification, VocToken)
+	VerificationTokenIDPrefix = apikitid.ComposePrefix(VocVerification, VocToken)
 
 	// Visibility-related prefix values
-	VisibilityTypeIDPrefix = composePrefix(VocVisibility, VocType)
+	VisibilityTypeIDPrefix = apikitid.ComposePrefix(VocVisibility, VocType)
 
 	// Adjustment-related prefix values
-	AdjustmentTypeIDPrefix = composePrefix(VocAdjustment, VocType)
+	AdjustmentTypeIDPrefix = apikitid.ComposePrefix(VocAdjustment, VocType)
 
 	// Change Log-related prefix values
-	ChangeLogIDPrefix = composePrefix(VocChange, VocLog)
+	ChangeLogIDPrefix = apikitid.ComposePrefix(VocChange, VocLog)
 
 	// Location-related prefix values
-	LocationIDPrefix = composePrefix(VocLocation)
+	LocationIDPrefix = apikitid.ComposePrefix(VocLocation)
 
 	// Email-related prefix values
-	EmailLogIDPrefix       = composePrefix(VocEmail, VocLog)
-	EmailRecipientIDPrefix = composePrefix(VocEmail, VocRecipient)
+	EmailLogIDPrefix       = apikitid.ComposePrefix(VocEmail, VocLog)
+	EmailRecipientIDPrefix = apikitid.ComposePrefix(VocEmail, VocRecipient)
 
 	// AccountFollowupIDPrefix identifies the personal follow-up a new registrant receives after signing up.
-	AccountFollowupIDPrefix = composePrefix(VocAccount, VocFollowup)
-	OrderEmailIDPrefix      = composePrefix(VocOrder, VocEmail)
-	EmailDomainIDPrefix     = composePrefix(VocEmail, VocDomain)
-	EmailInboxIDPrefix      = composePrefix(VocEmail, VocInbox)
-	EmailMessageIDPrefix    = composePrefix(VocEmail, VocMessage)
-	EmailSenderIDPrefix     = composePrefix(VocEmail, VocSender)
+	AccountFollowupIDPrefix = apikitid.ComposePrefix(VocAccount, VocFollowup)
+	OrderEmailIDPrefix      = apikitid.ComposePrefix(VocOrder, VocEmail)
+	EmailDomainIDPrefix     = apikitid.ComposePrefix(VocEmail, VocDomain)
+	EmailInboxIDPrefix      = apikitid.ComposePrefix(VocEmail, VocInbox)
+	EmailMessageIDPrefix    = apikitid.ComposePrefix(VocEmail, VocMessage)
+	EmailSenderIDPrefix     = apikitid.ComposePrefix(VocEmail, VocSender)
 
 	// Inventory-related prefix values
-	InventoryChangeLogIDPrefix  = composePrefix(VocInventory, VocChange, VocLog)
-	InventoryLogIDPrefix        = composePrefix(VocInventory, VocLog)
-	InventoryReceiptIDPrefix    = composePrefix(VocInventory, VocRecipient)
-	InventoryIssueIDPrefix      = composePrefix(VocInventory, VocIssue)
-	InventoryAllocationIDPrefix = composePrefix(VocInventory, VocAllocation)
+	InventoryChangeLogIDPrefix  = apikitid.ComposePrefix(VocInventory, VocChange, VocLog)
+	InventoryLogIDPrefix        = apikitid.ComposePrefix(VocInventory, VocLog)
+	InventoryReceiptIDPrefix    = apikitid.ComposePrefix(VocInventory, VocRecipient)
+	InventoryIssueIDPrefix      = apikitid.ComposePrefix(VocInventory, VocIssue)
+	InventoryAllocationIDPrefix = apikitid.ComposePrefix(VocInventory, VocAllocation)
 
 	// Portal-related prefix values
-	PortalDomainIDPrefix = composePrefix(VocPortal, VocDomain)
+	PortalDomainIDPrefix = apikitid.ComposePrefix(VocPortal, VocDomain)
 
 	// Registration-related prefix values
-	RegistrationFlowIDPrefix = composePrefix(VocRegistration, VocFlow)
+	RegistrationFlowIDPrefix = apikitid.ComposePrefix(VocRegistration, VocFlow)
 
-	PortalRegistrationSessionIDPrefix = composePrefix(VocPortal, VocRegistration, VocSession)
+	PortalRegistrationSessionIDPrefix = apikitid.ComposePrefix(VocPortal, VocRegistration, VocSession)
 
 	// Onboarding-related prefix values
-	OnboardingStatusIDPrefix = composePrefix(VocOnboarding, VocStatus)
+	OnboardingStatusIDPrefix = apikitid.ComposePrefix(VocOnboarding, VocStatus)
 
 	// Settlement-related prefix values
-	SettlementIDPrefix = composePrefix(VocSettlement)
+	SettlementIDPrefix = apikitid.ComposePrefix(VocSettlement)
 
 	// Stripe-related prefix values
-	StripeEventLogIDPrefix = composePrefix(VocStripe, VocEvent, VocLog)
+	StripeEventLogIDPrefix = apikitid.ComposePrefix(VocStripe, VocEvent, VocLog)
 
 	// Transaction-related prefix values
-	TransactionIDPrefix           = composePrefix(VocTransaction)
-	TransactionAllocationIDPrefix = composePrefix(VocTransaction, VocAllocation)
-	TransactionMethodIDPrefix     = composePrefix(VocTransaction, VocMethod)
-	TransactionTypeIDPrefix       = composePrefix(VocTransaction, VocType)
+	TransactionIDPrefix           = apikitid.ComposePrefix(VocTransaction)
+	TransactionAllocationIDPrefix = apikitid.ComposePrefix(VocTransaction, VocAllocation)
+	TransactionMethodIDPrefix     = apikitid.ComposePrefix(VocTransaction, VocMethod)
+	TransactionTypeIDPrefix       = apikitid.ComposePrefix(VocTransaction, VocType)
 
 	// Request-related prefix values
-	RequestIDPrefix = composePrefix(VocRequest)
+	RequestIDPrefix = apikitid.ComposePrefix(VocRequest)
 
 	// Audit-related prefix values
-	AuditEventIDPrefix = composePrefix(VocAudit, VocEvent)
+	AuditEventIDPrefix = apikitid.ComposePrefix(VocAudit, VocEvent)
 
 	// Plan-related prefix values
-	PricingPlanIDPrefix = composePrefix(VocPlan)
-	PlanChangeIDPrefix  = composePrefix(VocPlan, VocChange)
+	PricingPlanIDPrefix = apikitid.ComposePrefix(VocPlan)
+	PlanChangeIDPrefix  = apikitid.ComposePrefix(VocPlan, VocChange)
 
 	// Enterprise Inquiry-related prefix values
-	EnterpriseInquiryIDPrefix = composePrefix(VocEnterprise, VocInquiry)
+	EnterpriseInquiryIDPrefix = apikitid.ComposePrefix(VocEnterprise, VocInquiry)
 
 	// Idempotency-related prefix values
-	IdempotencyKeyIDPrefix        = composePrefix(VocIdempotency, VocKey)
-	ServiceIdempotencyKeyIDPrefix = composePrefix(VocService, VocIdempotency, VocKey)
+	IdempotencyKeyIDPrefix        = apikitid.ComposePrefix(VocIdempotency, VocKey)
+	ServiceIdempotencyKeyIDPrefix = apikitid.ComposePrefix(VocService, VocIdempotency, VocKey)
 
 	// Lot-related prefix values
-	LotIDPrefix = composePrefix(VocLot)
+	LotIDPrefix = apikitid.ComposePrefix(VocLot)
 
 	// Receiving-related prefix values
-	ReceivingOrderIDPrefix     = composePrefix(VocReceiving, VocOrder)
-	ReceivingOrderLineIDPrefix = composePrefix(VocReceiving, VocOrder, VocLine)
+	ReceivingOrderIDPrefix     = apikitid.ComposePrefix(VocReceiving, VocOrder)
+	ReceivingOrderLineIDPrefix = apikitid.ComposePrefix(VocReceiving, VocOrder, VocLine)
 
 	// Messaging-related prefix values
-	MessageIDPrefix                 = composePrefix(VocMessage)
-	JobIDPrefix                     = composePrefix(VocJob)
-	ConversationIDPrefix            = composePrefix(VocConversation)
-	ConversationParticipantIDPrefix = composePrefix(VocConversation, VocPart)
-	MessagingGroupIDPrefix          = composePrefix(VocConversation, VocGroup)
-	MessagingGroupMemberIDPrefix    = composePrefix(VocConversation, VocGroup, VocPart)
-	MessageAttachmentIDPrefix       = composePrefix(VocMessage, VocAttachment)
-	MessageReceiptIDPrefix          = composePrefix(VocMessage, VocReceiving)
-	MessageBlockIDPrefix            = composePrefix(VocMessage, VocBlock)
-	MessageReportIDPrefix           = composePrefix(VocMessage, VocReport)
-	NotificationIDPrefix            = composePrefix(VocNotification)
-	NotificationPreferenceIDPrefix  = composePrefix(VocNotification, VocPreference)
-	ScheduledMessageIDPrefix        = composePrefix(VocSchedule, VocMessage)
-	AnnouncementIDPrefix            = composePrefix(VocAnnouncement)
-	AnnouncementReceiptIDPrefix     = composePrefix(VocAnnouncement, VocReceiving)
-	SupportRouteIDPrefix            = composePrefix(VocSupport, VocRoute)
-	ReplyDraftIDPrefix              = composePrefix(VocReply, VocDraft)
-	ConversationLinkIDPrefix        = composePrefix(VocConversation, VocLink)
+	MessageIDPrefix                 = apikitid.ComposePrefix(VocMessage)
+	JobIDPrefix                     = apikitid.ComposePrefix(VocJob)
+	ConversationIDPrefix            = apikitid.ComposePrefix(VocConversation)
+	ConversationParticipantIDPrefix = apikitid.ComposePrefix(VocConversation, VocPart)
+	MessagingGroupIDPrefix          = apikitid.ComposePrefix(VocConversation, VocGroup)
+	MessagingGroupMemberIDPrefix    = apikitid.ComposePrefix(VocConversation, VocGroup, VocPart)
+	MessageAttachmentIDPrefix       = apikitid.ComposePrefix(VocMessage, VocAttachment)
+	MessageReceiptIDPrefix          = apikitid.ComposePrefix(VocMessage, VocReceiving)
+	MessageBlockIDPrefix            = apikitid.ComposePrefix(VocMessage, VocBlock)
+	MessageReportIDPrefix           = apikitid.ComposePrefix(VocMessage, VocReport)
+	NotificationIDPrefix            = apikitid.ComposePrefix(VocNotification)
+	NotificationPreferenceIDPrefix  = apikitid.ComposePrefix(VocNotification, VocPreference)
+	ScheduledMessageIDPrefix        = apikitid.ComposePrefix(VocSchedule, VocMessage)
+	AnnouncementIDPrefix            = apikitid.ComposePrefix(VocAnnouncement)
+	AnnouncementReceiptIDPrefix     = apikitid.ComposePrefix(VocAnnouncement, VocReceiving)
+	SupportRouteIDPrefix            = apikitid.ComposePrefix(VocSupport, VocRoute)
+	ReplyDraftIDPrefix              = apikitid.ComposePrefix(VocReply, VocDraft)
+	ConversationLinkIDPrefix        = apikitid.ComposePrefix(VocConversation, VocLink)
 )

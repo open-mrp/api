@@ -15,11 +15,11 @@ import (
 	"github.com/open-mrp/api/shared/appctx"
 	"github.com/open-mrp/api/shared/audit"
 	"github.com/open-mrp/api/shared/constants"
-	apierror "github.com/open-mrp/api/shared/errors"
 	"github.com/open-mrp/api/shared/id"
-	"github.com/open-mrp/api/shared/idempotency"
-	"github.com/open-mrp/api/shared/tracing"
+	"github.com/open-mrp/api/shared/idemresponse"
+	apierror "github.com/open-mrp/apikit/apierror"
 	"github.com/open-mrp/apikit/safeconv"
+	"github.com/open-mrp/apikit/tracing"
 )
 
 var productionScheduleSvcTracer = tracing.GetTracer("core-service.production_schedule_service")
@@ -450,7 +450,7 @@ func (s *productionScheduleSvcImpl) loadSolverInput(
 				AccountID: params.AccountID,
 				MachineID: preferredMachine,
 			})
-			if apiErr != nil && !apierror.IsNotFound(apiErr) {
+			if apiErr != nil && !apierror.HasCode(apiErr, apierror.CodeResourceNotFound) {
 				return nil, tracing.Trace(span, apiErr)
 			}
 			if machine != nil && machine.ProductionStepID != nil && *machine.ProductionStepID != "" {
@@ -1180,7 +1180,7 @@ func (s *productionScheduleSvcImpl) GenerateProductionSchedule(
 
 	switch domain.RecoveryPoint(idempotencyKey.RecoveryPoint) {
 	case domain.RecoveryPointFinished:
-		cached, err := idempotency.UnmarshalCachedResponse[domain.ProductionSchedule](ctx, idempotencyKey.ResponseCode, idempotencyKey.ResponseBody)
+		cached, err := idemresponse.UnmarshalCachedResponse[domain.ProductionSchedule](ctx, idempotencyKey.ResponseCode, idempotencyKey.ResponseBody)
 		if err != nil {
 			return nil, tracing.Trace(span, apierror.NewInternalError(err, "Issue unmarshalling cached response."))
 		}

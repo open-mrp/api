@@ -10,9 +10,9 @@ import (
 	"github.com/open-mrp/api/shared/appctx"
 	"github.com/open-mrp/api/shared/audit"
 	"github.com/open-mrp/api/shared/constants"
-	apierror "github.com/open-mrp/api/shared/errors"
-	"github.com/open-mrp/api/shared/idempotency"
-	"github.com/open-mrp/api/shared/tracing"
+	"github.com/open-mrp/api/shared/idemresponse"
+	apierror "github.com/open-mrp/apikit/apierror"
+	"github.com/open-mrp/apikit/tracing"
 )
 
 var productionFlowSvcTracer = tracing.GetTracer("core-service.production_flow_service")
@@ -266,7 +266,7 @@ func (s *productionFlowSvcImpl) ConnectSteps(ctx context.Context, sourceStepID, 
 		return tracing.Trace(span, apiErr)
 	}
 	if !sourceInAccount {
-		return tracing.Trace(span, apierror.NewResourceNotFoundError("Source production step not found."))
+		return tracing.Trace(span, apierror.NewNotFoundError("Source production step not found."))
 	}
 
 	targetInAccount, apiErr := stepQueryRepo.IsInAccount(ctx, accountID, targetStepID)
@@ -274,7 +274,7 @@ func (s *productionFlowSvcImpl) ConnectSteps(ctx context.Context, sourceStepID, 
 		return tracing.Trace(span, apiErr)
 	}
 	if !targetInAccount {
-		return tracing.Trace(span, apierror.NewResourceNotFoundError("Target production step not found."))
+		return tracing.Trace(span, apierror.NewNotFoundError("Target production step not found."))
 	}
 
 	meds := s.mediators()
@@ -286,7 +286,7 @@ func (s *productionFlowSvcImpl) ConnectSteps(ctx context.Context, sourceStepID, 
 
 	switch domain.RecoveryPoint(idempotencyKey.RecoveryPoint) {
 	case domain.RecoveryPointFinished:
-		cached, err := idempotency.UnmarshalCachedResponse[struct{}](ctx, idempotencyKey.ResponseCode, idempotencyKey.ResponseBody)
+		cached, err := idemresponse.UnmarshalCachedResponse[struct{}](ctx, idempotencyKey.ResponseCode, idempotencyKey.ResponseBody)
 		if err != nil {
 			return tracing.Trace(span, apierror.NewInternalError(err, "Issue unmarshalling cached response."))
 		}

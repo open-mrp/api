@@ -6,8 +6,8 @@ import (
 	"time"
 
 	"github.com/open-mrp/api/shared/constants"
-	"github.com/open-mrp/api/shared/db"
-	"github.com/open-mrp/api/shared/retry"
+	"github.com/open-mrp/apikit/db"
+	"github.com/open-mrp/apikit/retry"
 )
 
 // OutboxDBRetryConfig returns the short retry policy used for small outbox database operations that can safely be re-attempted after a lock conflict.

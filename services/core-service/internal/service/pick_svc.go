@@ -13,11 +13,11 @@ import (
 	"github.com/open-mrp/api/shared/audit"
 	"github.com/open-mrp/api/shared/constants"
 	"github.com/open-mrp/api/shared/contracts"
-	apierror "github.com/open-mrp/api/shared/errors"
 	"github.com/open-mrp/api/shared/id"
-	"github.com/open-mrp/api/shared/idempotency"
+	"github.com/open-mrp/api/shared/idemresponse"
 	"github.com/open-mrp/api/shared/messaging"
-	"github.com/open-mrp/api/shared/tracing"
+	apierror "github.com/open-mrp/apikit/apierror"
+	"github.com/open-mrp/apikit/tracing"
 )
 
 var pickSvcTracer = tracing.GetTracer("core-service.pick_service")
@@ -416,7 +416,7 @@ func (s *pickSvcImpl) PackPick(ctx context.Context, pickID string, shipmentCaseC
 
 	switch domain.RecoveryPoint(idempotencyKey.RecoveryPoint) {
 	case domain.RecoveryPointFinished:
-		cached, err := idempotency.UnmarshalCachedResponse[domain.Job](ctx, idempotencyKey.ResponseCode, idempotencyKey.ResponseBody)
+		cached, err := idemresponse.UnmarshalCachedResponse[domain.Job](ctx, idempotencyKey.ResponseCode, idempotencyKey.ResponseBody)
 		if err != nil {
 			return nil, tracing.Trace(span, apierror.NewInternalError(err, "Issue unmarshalling cached response."))
 		}
@@ -606,7 +606,7 @@ func packPickInTx(txCtx context.Context, txSvc *pickSvcImpl, accountID, pickID s
 	// Every line read is held by this transaction, so a shortfall means a writer that skipped the
 	// locks; shipping what was read would put lines on two shipments.
 	if packed != int64(len(lineIDs)) {
-		return apierror.NewResourceConflictError("The pick changed while it was being packed. Reload it and try again.")
+		return apierror.NewConflictError("The pick changed while it was being packed. Reload it and try again.")
 	}
 
 	// For each packed line's order line (deduplicated), calculate remaining and create new pick lines if needed

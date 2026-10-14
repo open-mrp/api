@@ -6,7 +6,7 @@ import (
 	"strings"
 
 	"github.com/open-mrp/api/services/core-service/internal/domain"
-	apierror "github.com/open-mrp/api/shared/errors"
+	apierror "github.com/open-mrp/apikit/apierror"
 )
 
 // Fuzzy reference resolution. A request may point at an existing entity by any one of
@@ -153,12 +153,11 @@ func (r *unitIdentifierResolver) resolve(identifier domain.UnitIdentifier) (reso
 // empty or unknown.
 func (r *unitIdentifierResolver) resolveOrError(identifier domain.UnitIdentifier, param string) (resolvedUnit, *apierror.APIError) {
 	if identifier == (domain.UnitIdentifier{}) {
-		return resolvedUnit{}, apierror.NewValidationErrorWithParam("A unit id, name, or abbreviation is required.", param)
+		return resolvedUnit{}, apierror.NewFieldError(param, apierror.CodeInvalidFormat, "A unit id, name, or abbreviation is required.")
 	}
 	u, ok := r.resolve(identifier)
 	if !ok {
-		return resolvedUnit{}, apierror.NewValidationErrorWithParam(
-			fmt.Sprintf("Unit %q was not found.", unitIdentifierLabel(identifier)), param)
+		return resolvedUnit{}, apierror.NewFieldError(param, apierror.CodeInvalidFormat, fmt.Sprintf("Unit %q was not found.", unitIdentifierLabel(identifier)))
 	}
 	return u, nil
 }
@@ -229,12 +228,11 @@ func (r *itemIdentifierResolver) resolve(identifier domain.ItemIdentifier) (stri
 // empty or unknown.
 func (r *itemIdentifierResolver) resolveOrError(identifier domain.ItemIdentifier, param string) (string, *apierror.APIError) {
 	if identifier == (domain.ItemIdentifier{}) {
-		return "", apierror.NewValidationErrorWithParam("An item id or SKU is required.", param)
+		return "", apierror.NewFieldError(param, apierror.CodeInvalidFormat, "An item id or SKU is required.")
 	}
 	id, ok := r.resolve(identifier)
 	if !ok {
-		return "", apierror.NewValidationErrorWithParam(
-			fmt.Sprintf("Item %q was not found.", itemIdentifierLabel(identifier)), param)
+		return "", apierror.NewFieldError(param, apierror.CodeInvalidFormat, fmt.Sprintf("Item %q was not found.", itemIdentifierLabel(identifier)))
 	}
 	return id, nil
 }
@@ -314,13 +312,11 @@ func (r *objectIdentifierResolver) resolve(identifier domain.ObjectIdentifier) (
 // empty or unknown.
 func (r *objectIdentifierResolver) resolveOrError(identifier domain.ObjectIdentifier, param string) (string, *apierror.APIError) {
 	if identifier == (domain.ObjectIdentifier{}) {
-		return "", apierror.NewValidationErrorWithParam(
-			fmt.Sprintf("A %s id or name is required.", r.entity), param)
+		return "", apierror.NewFieldError(param, apierror.CodeInvalidFormat, fmt.Sprintf("A %s id or name is required.", r.entity))
 	}
 	id, ok := r.resolve(identifier)
 	if !ok {
-		return "", apierror.NewValidationErrorWithParam(
-			fmt.Sprintf("%s %q was not found.", capitalize(r.entity), objectIdentifierLabel(identifier.ID, identifier.Name)), param)
+		return "", apierror.NewFieldError(param, apierror.CodeInvalidFormat, fmt.Sprintf("%s %q was not found.", capitalize(r.entity), objectIdentifierLabel(identifier.ID, identifier.Name)))
 	}
 	return id, nil
 }
@@ -364,15 +360,15 @@ func resolveObjectIdentifiers[T any](
 		if identifier == nil {
 			continue
 		}
-		param := fmt.Sprintf("%s[%d].%s", rowsField, i, refField)
+		param := refField
 		id, apiErr := resolver.resolveOrError(*identifier, param)
 		if apiErr != nil {
-			rowErrs.AddValidation(i, param, strings.TrimSuffix(apiErr.PublicMessage, "."))
+			rowErrs.AddField(i, param, apierror.CodeInvalidFormat, strings.TrimSuffix(apiErr.PublicMessage, "."))
 			continue
 		}
 		idByIdentifier[*identifier] = id
 	}
-	if apiErr := rowErrs.Summary(entityPlural); apiErr != nil {
+	if apiErr := rowErrs.Summary(rowsField); apiErr != nil {
 		return nil, apiErr
 	}
 	return idByIdentifier, nil

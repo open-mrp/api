@@ -6,8 +6,8 @@ import (
 	"time"
 
 	"github.com/open-mrp/api/shared/constants"
-	apierror "github.com/open-mrp/api/shared/errors"
 	"github.com/open-mrp/api/shared/messaging"
+	apierror "github.com/open-mrp/apikit/apierror"
 )
 
 // ConversationSvc is the 1:1/group chat surface (Phase 2: DM). Reads are participant-scoped; SendMessage allocates a per-conversation sequence and fans out realtime pushes.

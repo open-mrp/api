@@ -3,7 +3,7 @@ package mediator
 import (
 	"testing"
 
-	apierror "github.com/open-mrp/api/shared/errors"
+	apierror "github.com/open-mrp/apikit/apierror"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -17,11 +17,11 @@ func TestNormalizeAddressName(t *testing.T) {
 
 	_, apiErr = NormalizeAddressName("")
 	require.NotNil(t, apiErr)
-	assert.Equal(t, apierror.ErrorTypeInvalidRequest, apiErr.Type)
+	assert.Equal(t, apierror.TypeInvalidRequest, apiErr.Type)
 
 	_, apiErr = NormalizeAddressName("   ")
 	require.NotNil(t, apiErr)
-	assert.Equal(t, apierror.ErrorTypeInvalidRequest, apiErr.Type)
+	assert.Equal(t, apierror.TypeInvalidRequest, apiErr.Type)
 }
 
 func TestNormalizeOptionalAddressName(t *testing.T) {
@@ -40,5 +40,5 @@ func TestNormalizeOptionalAddressName(t *testing.T) {
 	blank := ""
 	_, apiErr = NormalizeOptionalAddressName(&blank)
 	require.NotNil(t, apiErr)
-	assert.Equal(t, apierror.ErrorTypeInvalidRequest, apiErr.Type)
+	assert.Equal(t, apierror.TypeInvalidRequest, apiErr.Type)
 }

@@ -8,7 +8,7 @@ import (
 	"github.com/open-mrp/api/shared/contracts"
 	pb "github.com/open-mrp/api/shared/proto/notification"
 	"github.com/open-mrp/api/shared/rpc"
-	"github.com/open-mrp/api/shared/tracing"
+	"github.com/open-mrp/apikit/tracing"
 
 	grpclib "google.golang.org/grpc"
 )

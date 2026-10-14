@@ -12,10 +12,10 @@ import (
 	apiresource "github.com/open-mrp/api/services/api-gateway/pkg/resource"
 	"github.com/open-mrp/api/services/api-gateway/pkg/resourcekit"
 	"github.com/open-mrp/api/shared/constants"
-	apierror "github.com/open-mrp/api/shared/errors"
 	pb "github.com/open-mrp/api/shared/proto/core"
-	"github.com/open-mrp/api/shared/tracing"
+	apierror "github.com/open-mrp/apikit/apierror"
 	"github.com/open-mrp/apikit/safeconv"
+	"github.com/open-mrp/apikit/tracing"
 	"google.golang.org/grpc"
 	"google.golang.org/protobuf/types/known/timestamppb"
 )
@@ -72,14 +72,14 @@ func (m *receivingOrderSvcImpl) ListReceivingOrders(ctx context.Context, req *Li
 	if req.StartDate != nil {
 		t, err := grpcutil.ParseDateString(*req.StartDate)
 		if err != nil {
-			return nil, apierror.NewValidationErrorWithParam("Must be a date (YYYY-MM-DD).", "starts_at")
+			return nil, apierror.NewFieldError("starts_at", apierror.CodeInvalidFormat, "Must be a date (YYYY-MM-DD).")
 		}
 		pbReq.StartDate = timestamppb.New(t)
 	}
 	if req.EndDate != nil {
 		t, err := grpcutil.ParseEndDateString(*req.EndDate)
 		if err != nil {
-			return nil, apierror.NewValidationErrorWithParam("Must be a date (YYYY-MM-DD).", "ends_at")
+			return nil, apierror.NewFieldError("ends_at", apierror.CodeInvalidFormat, "Must be a date (YYYY-MM-DD).")
 		}
 		pbReq.EndDate = timestamppb.New(t)
 	}

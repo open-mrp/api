@@ -7,10 +7,10 @@ import (
 
 	"github.com/open-mrp/api/services/core-service/internal/domain"
 	"github.com/open-mrp/api/services/core-service/internal/infrastructure/sqlc"
-	"github.com/open-mrp/api/shared/db"
-	apierror "github.com/open-mrp/api/shared/errors"
-	"github.com/open-mrp/api/shared/tracing"
+	apierror "github.com/open-mrp/apikit/apierror"
+	"github.com/open-mrp/apikit/db"
 	"github.com/open-mrp/apikit/pagination"
+	"github.com/open-mrp/apikit/tracing"
 )
 
 type propertyRepoImpl struct {
@@ -109,7 +109,7 @@ func (r *propertyRepoImpl) List(ctx context.Context, params domain.ListPropertie
 	if params.Cursor != nil {
 		cur, err := pagination.DecodeStringCursor(*params.Cursor)
 		if err != nil {
-			return nil, apierror.NewValidationErrorWithParam("Invalid pagination cursor.", "cursor")
+			return nil, apierror.NewFieldError("cursor", apierror.CodeInvalidFormat, "Invalid pagination cursor.")
 		}
 		cursorDir = &cur.Direction
 
@@ -244,7 +244,7 @@ func (r *propertyRepoImpl) Update(ctx context.Context, params domain.UpdatePrope
 		return nil, tracing.Trace(span, apierror.NewInternalError(err, "Failed to check rows affected."))
 	}
 	if rowsAffected == 0 {
-		return nil, tracing.Trace(span, apierror.NewResourceNotFoundError("Property not found."))
+		return nil, tracing.Trace(span, apierror.NewNotFoundError("Property not found."))
 	}
 
 	return r.Get(ctx, domain.GetPropertyParams{PropertyID: params.PropertyID, AccountID: params.AccountID})
@@ -267,7 +267,7 @@ func (r *propertyRepoImpl) Delete(ctx context.Context, params domain.DeletePrope
 		return tracing.Trace(span, apierror.NewInternalError(err, "Failed to check rows affected."))
 	}
 	if rowsAffected == 0 {
-		return tracing.Trace(span, apierror.NewResourceNotFoundError("Property not found."))
+		return tracing.Trace(span, apierror.NewNotFoundError("Property not found."))
 	}
 
 	return nil

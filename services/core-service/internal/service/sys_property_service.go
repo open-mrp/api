@@ -12,10 +12,10 @@ import (
 	"github.com/open-mrp/api/shared/appctx"
 	"github.com/open-mrp/api/shared/audit"
 	"github.com/open-mrp/api/shared/constants"
-	apierror "github.com/open-mrp/api/shared/errors"
 	"github.com/open-mrp/api/shared/id"
-	"github.com/open-mrp/api/shared/idempotency"
-	"github.com/open-mrp/api/shared/tracing"
+	"github.com/open-mrp/api/shared/idemresponse"
+	apierror "github.com/open-mrp/apikit/apierror"
+	"github.com/open-mrp/apikit/tracing"
 )
 
 var sysPropertySvcTracer = tracing.GetTracer("core-service.sys_property_service")
@@ -170,7 +170,7 @@ func (s *sysPropertySvcImpl) UpdateSysProperty(ctx context.Context, params domai
 
 	switch domain.RecoveryPoint(idempotencyKey.RecoveryPoint) {
 	case domain.RecoveryPointFinished:
-		cached, err := idempotency.UnmarshalCachedResponse[domain.SysProperty](ctx, idempotencyKey.ResponseCode, idempotencyKey.ResponseBody)
+		cached, err := idemresponse.UnmarshalCachedResponse[domain.SysProperty](ctx, idempotencyKey.ResponseCode, idempotencyKey.ResponseBody)
 		if err != nil {
 			return nil, tracing.Trace(span, apierror.NewInternalError(err, "Issue unmarshalling cached response."))
 		}
@@ -243,10 +243,7 @@ func (s *sysPropertySvcImpl) GetLatestSysPropertyValue(ctx context.Context, type
 	// written straight through to a foreign key that has no such row — surfacing as a
 	// "resource already exists" conflict, which tells the caller nothing about the typo.
 	if !typeCode.IsValid() {
-		return "", tracing.Trace(span, apierror.NewValidationErrorWithParam(
-			"Unknown system property type. Supported values: "+strings.Join(constants.SysPropertyTypeCode("").EnumValues(), ", "),
-			"type_code",
-		))
+		return "", tracing.Trace(span, apierror.NewFieldError("type_code", apierror.CodeInvalidFormat, "Unknown system property type. Supported values: "+strings.Join(constants.SysPropertyTypeCode("").EnumValues(), ", ")))
 	}
 
 	accountID := identity.Target.AccountID
@@ -254,7 +251,7 @@ func (s *sysPropertySvcImpl) GetLatestSysPropertyValue(ctx context.Context, type
 
 	sysProp, apiErr := repo.GetByTypeCode(ctx, accountID, typeCode)
 	if apiErr != nil {
-		if !apierror.IsNotFound(apiErr) {
+		if !apierror.HasCode(apiErr, apierror.CodeResourceNotFound) {
 			return "", tracing.Trace(span, apiErr)
 		}
 		first, apiErr := nextFreeNumber(ctx, repo, accountID, typeCode, 1)
@@ -324,7 +321,7 @@ func nextFreeNumber(ctx context.Context, repo domain.SysPropertyRepo, accountID 
 		}
 		start += int64(len(candidates))
 	}
-	return 0, apierror.NewResourceConflictError(fmt.Sprintf(
+	return 0, apierror.NewConflictError(fmt.Sprintf(
 		"Every number from %d to %d is already in use. Move the counter past the numbers already issued.", from, start-1,
 	))
 }

@@ -5,8 +5,8 @@ import (
 	"testing"
 
 	"github.com/open-mrp/api/shared/contracts"
-	apierror "github.com/open-mrp/api/shared/errors"
 	pb "github.com/open-mrp/api/shared/proto/core"
+	apierror "github.com/open-mrp/apikit/apierror"
 	"google.golang.org/grpc"
 )
 
@@ -86,7 +86,7 @@ func TestLoadPicks_RefusalFailsTheRequest(t *testing.T) {
 	corePickingClient = stubPickClient{err: contracts.ConvertAPIErrorToGRPC(apierror.NewAuthorizationError("No access."))}
 
 	out, apiErr := LoadPicks(context.Background(), []string{"pk_1"})
-	if apiErr == nil || apiErr.Code != apierror.ErrorCodeInsufficientPerms {
+	if apiErr == nil || apiErr.Code != apierror.CodeInsufficientPermissions {
 		t.Fatalf("LoadPicks returned %v, %v; want the refusal", out, apiErr)
 	}
 }

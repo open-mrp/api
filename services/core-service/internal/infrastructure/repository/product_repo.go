@@ -9,12 +9,13 @@ import (
 
 	"github.com/open-mrp/api/services/core-service/internal/domain"
 	"github.com/open-mrp/api/services/core-service/internal/infrastructure/sqlc"
+	"github.com/open-mrp/api/shared/catalogsearch"
 	"github.com/open-mrp/api/shared/constants"
-	"github.com/open-mrp/api/shared/db"
-	apierror "github.com/open-mrp/api/shared/errors"
-	"github.com/open-mrp/api/shared/tracing"
+	apierror "github.com/open-mrp/apikit/apierror"
+	"github.com/open-mrp/apikit/db"
 	"github.com/open-mrp/apikit/field"
 	"github.com/open-mrp/apikit/pagination"
+	"github.com/open-mrp/apikit/tracing"
 )
 
 var productRepoTracer = tracing.GetTracer("core-service.product_repository")
@@ -253,7 +254,7 @@ func (r *productRepoImpl) GetSystemProduct(ctx context.Context, accountID, produ
 		AccountID:       accountID,
 	})
 	if err != nil {
-		if apiErr := db.MapSQLError(err); apierror.IsNotFound(apiErr) {
+		if apiErr := db.MapSQLError(err); apierror.HasCode(apiErr, apierror.CodeResourceNotFound) {
 			return nil, nil
 		} else if apiErr != nil {
 			return nil, tracing.Trace(span, apiErr)
@@ -431,7 +432,7 @@ func (r *productRepoImpl) List(ctx context.Context, params domain.ListProductsFu
 	if params.Cursor != nil {
 		decoded, err := pagination.DecodeStringCursor(*params.Cursor)
 		if err != nil {
-			return nil, apierror.NewValidationErrorWithParam("Invalid pagination cursor.", "cursor")
+			return nil, apierror.NewFieldError("cursor", apierror.CodeInvalidFormat, "Invalid pagination cursor.")
 		}
 		cur, cursorDir = &decoded, &decoded.Direction
 	}
@@ -454,7 +455,7 @@ func (r *productRepoImpl) List(ctx context.Context, params domain.ListProductsFu
 
 	catSearch := q.search
 	productSearchRank := func(p *domain.ProductFull) int32 {
-		return db.CatalogSearchRank(p.Item.SKU, catSearch)
+		return catalogsearch.Rank(p.Item.SKU, catSearch)
 	}
 	result, pageInfo := pagination.BuildPageStringWithSearchRank(products, params.Limit, cursorDir, catSearch.Contains.Valid, productFullCreatedAt, productFullID, productSearchRank)
 	if apiErr := applyProductStitches(ctx, r.queries, result, params.Includes); apiErr != nil {
@@ -583,7 +584,7 @@ func (r *productRepoImpl) SoftDelete(ctx context.Context, params domain.DeletePr
 		return tracing.Trace(span, apierror.NewInternalError(err, "Failed to check rows affected."))
 	}
 	if rowsAffected == 0 {
-		return tracing.Trace(span, apierror.NewResourceNotFoundError("Product not found."))
+		return tracing.Trace(span, apierror.NewNotFoundError("Product not found."))
 	}
 
 	return nil
@@ -732,7 +733,7 @@ func (r *productRepoImpl) Export(ctx context.Context, params domain.ExportProduc
 	ctx, span := productRepoTracer.Start(ctx, "repository.product.export")
 	defer span.End()
 
-	catSearch := db.NewCatalogSearch(params.Query)
+	catSearch := catalogsearch.New(params.Query)
 	searchQuery := catSearch.Contains
 	includeProductLineFilter := len(params.ProductLineIDs) > 0
 	includeCategoryFilter := len(params.CategoryIDs) > 0

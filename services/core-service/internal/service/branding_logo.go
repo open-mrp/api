@@ -14,8 +14,8 @@ import (
 	"strings"
 	"time"
 
-	s3client "github.com/open-mrp/api/shared/cloud/s3"
-	apierror "github.com/open-mrp/api/shared/errors"
+	apierror "github.com/open-mrp/apikit/apierror"
+	s3client "github.com/open-mrp/apikit/cloud/s3"
 
 	_ "golang.org/x/image/webp" // register WEBP decoder (account logos are often .webp)
 )

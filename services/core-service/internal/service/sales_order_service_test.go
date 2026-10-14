@@ -17,8 +17,8 @@ import (
 	"github.com/open-mrp/api/shared/audit"
 	"github.com/open-mrp/api/shared/constants"
 	"github.com/open-mrp/api/shared/contracts"
-	apierror "github.com/open-mrp/api/shared/errors"
 	"github.com/open-mrp/api/shared/messaging"
+	apierror "github.com/open-mrp/apikit/apierror"
 	"github.com/open-mrp/apikit/crypto"
 	"github.com/open-mrp/apikit/field"
 	"github.com/shopspring/decimal"
@@ -456,7 +456,7 @@ func (suite *SalesOrderSvcTestSuite) TestListSalesOrders_InternalActorRequiresRe
 
 	_, apiErr := suite.svc.ListSalesOrders(ctx, domain.ListSalesOrdersParams{Limit: 10})
 	suite.NotNil(apiErr)
-	suite.Equal(apierror.ErrorCodeInsufficientPerms, apiErr.Code)
+	suite.Equal(apierror.CodeInsufficientPermissions, apiErr.Code)
 }
 
 // --- GetSalesOrder ---
@@ -813,7 +813,7 @@ func (suite *SalesOrderSvcTestSuite) TestCreateSalesOrder_RejectsNonInternalActo
 	_, apiErr := suite.svc.CreateSalesOrder(ctx, baseCreateOrderParams())
 	suite.NotNil(apiErr)
 	// CheckIsInternalActor returns an auth / permission-ish error; assert we reject the request.
-	suite.NotEqual(apierror.ErrorCodeResourceNotFound, apiErr.Code)
+	suite.NotEqual(apierror.CodeResourceNotFound, apiErr.Code)
 }
 
 // A customer entering an order for their own account but WITHOUT purchase_orders:create
@@ -826,7 +826,7 @@ func (suite *SalesOrderSvcTestSuite) TestCreateSalesOrder_CustomerWithoutPurchas
 
 	_, apiErr := suite.svc.CreateSalesOrder(ctx, params)
 	suite.Require().NotNil(apiErr)
-	suite.Equal(apierror.ErrorCodeInsufficientPerms, apiErr.Code)
+	suite.Equal(apierror.CodeInsufficientPermissions, apiErr.Code)
 }
 
 // A customer holding purchase_orders:create for their own buyer account clears
@@ -861,7 +861,7 @@ func (suite *SalesOrderSvcTestSuite) TestCreateSalesOrder_CustomerWithPurchaseOr
 	_, apiErr := suite.svc.CreateSalesOrder(ctx, params)
 	suite.Require().NotNil(apiErr)
 	// Not an auth rejection — we reached and failed the plan-limit check.
-	suite.Equal(apierror.ErrorCodeValidationFailed, apiErr.Code)
+	suite.Equal(apierror.CodeValidationFailed, apiErr.Code)
 }
 
 func (suite *SalesOrderSvcTestSuite) TestCreateSalesOrder_CustomerCannotReuseOrderDiscount() {
@@ -893,7 +893,7 @@ func (suite *SalesOrderSvcTestSuite) TestCreateSalesOrder_CustomerCannotReuseOrd
 
 	_, apiErr := suite.svc.CreateSalesOrder(ctx, params)
 	suite.Require().NotNil(apiErr)
-	suite.Equal(apierror.ErrorCodeResourceNotFound, apiErr.Code)
+	suite.Equal(apierror.CodeResourceNotFound, apiErr.Code)
 }
 
 func (suite *SalesOrderSvcTestSuite) TestCreateSalesOrder_PlanLimitExceeded_NonSandbox() {
@@ -915,7 +915,7 @@ func (suite *SalesOrderSvcTestSuite) TestCreateSalesOrder_PlanLimitExceeded_NonS
 
 	_, apiErr := suite.svc.CreateSalesOrder(ctx, baseCreateOrderParams())
 	suite.NotNil(apiErr)
-	suite.Equal(apierror.ErrorCodeValidationFailed, apiErr.Code)
+	suite.Equal(apierror.CodeValidationFailed, apiErr.Code)
 }
 
 func (suite *SalesOrderSvcTestSuite) TestCreateSalesOrder_DuplicateOrderNumber() {
@@ -935,7 +935,7 @@ func (suite *SalesOrderSvcTestSuite) TestCreateSalesOrder_DuplicateOrderNumber()
 
 	_, apiErr := suite.svc.CreateSalesOrder(ctx, baseCreateOrderParams())
 	suite.NotNil(apiErr)
-	suite.Equal(apierror.ErrorCodeResourceConflict, apiErr.Code)
+	suite.Equal(apierror.CodeResourceConflict, apiErr.Code)
 	suite.Equal("number", apiErr.Param)
 }
 
@@ -960,7 +960,7 @@ func (suite *SalesOrderSvcTestSuite) TestCreateSalesOrder_PreTransactionFailureD
 
 	_, apiErr := suite.svc.CreateSalesOrder(ctx, baseCreateOrderParams())
 	suite.NotNil(apiErr)
-	suite.Equal(apierror.ErrorCodeValidationFailed, apiErr.Code)
+	suite.Equal(apierror.CodeValidationFailed, apiErr.Code)
 }
 
 func (suite *SalesOrderSvcTestSuite) TestCreateSalesOrder_DuplicateCustomerPONumber() {
@@ -982,7 +982,7 @@ func (suite *SalesOrderSvcTestSuite) TestCreateSalesOrder_DuplicateCustomerPONum
 
 	_, apiErr := suite.svc.CreateSalesOrder(ctx, params)
 	suite.NotNil(apiErr)
-	suite.Equal(apierror.ErrorCodeResourceConflict, apiErr.Code)
+	suite.Equal(apierror.CodeResourceConflict, apiErr.Code)
 	suite.Equal("customer_po_number", apiErr.Param)
 }
 
@@ -1160,7 +1160,7 @@ func (suite *SalesOrderSvcTestSuite) TestCreateSalesOrder_MissingCarrierWithoutC
 
 	_, apiErr := suite.svc.CreateSalesOrder(ctx, params)
 	suite.Require().NotNil(apiErr)
-	suite.Equal(apierror.ErrorCodeValidationFailed, apiErr.Code)
+	suite.Equal(apierror.CodeValidationFailed, apiErr.Code)
 	suite.Equal("carrier_id", apiErr.Param)
 }
 
@@ -1178,7 +1178,7 @@ func (suite *SalesOrderSvcTestSuite) TestCreateSalesOrder_RefusesAServiceLevelOf
 
 	_, apiErr := suite.svc.CreateSalesOrder(ctx, baseCreateOrderParams())
 	suite.Require().NotNil(apiErr)
-	suite.Equal(apierror.ErrorCodeValidationFailed, apiErr.Code)
+	suite.Equal(apierror.CodeValidationFailed, apiErr.Code)
 	suite.Equal("service_level_id", apiErr.Param)
 }
 
@@ -1199,7 +1199,7 @@ func (suite *SalesOrderSvcTestSuite) TestCreateSalesOrder_RefusesACarrierOutside
 
 	_, apiErr := suite.svc.CreateSalesOrder(ctx, params)
 	suite.Require().NotNil(apiErr)
-	suite.True(apierror.IsNotFound(apiErr))
+	suite.True(apierror.HasCode(apiErr, apierror.CodeResourceNotFound))
 	suite.Equal("carrier_id", apiErr.Param)
 }
 
@@ -1294,7 +1294,7 @@ func (suite *SalesOrderSvcTestSuite) TestUpdateSalesOrder_DuplicateOrderNumberRe
 		Number:       &newNum,
 	})
 	suite.NotNil(apiErr)
-	suite.Equal(apierror.ErrorCodeResourceConflict, apiErr.Code)
+	suite.Equal(apierror.CodeResourceConflict, apiErr.Code)
 	suite.Equal("number", apiErr.Param)
 }
 
@@ -1387,7 +1387,7 @@ func (suite *SalesOrderSvcTestSuite) TestUpdateSalesOrder_RefusesRoutingAndTerms
 			_, apiErr := suite.svc.UpdateSalesOrder(ctx, params)
 
 			suite.Require().NotNil(apiErr)
-			suite.True(apierror.IsNotFound(apiErr))
+			suite.True(apierror.HasCode(apiErr, apierror.CodeResourceNotFound))
 			suite.Equal(tc.param, apiErr.Param)
 		})
 	}
@@ -1420,7 +1420,7 @@ func (suite *SalesOrderSvcTestSuite) TestUpdateSalesOrder_KeepsHeldRoutingWithou
 }
 
 func (suite *SalesOrderSvcTestSuite) TestUpdateSalesOrder_RefusesACustomerAddressOrDiscountTheAccountCannotUse() {
-	notFound := apierror.NewResourceNotFoundError("Resource not found.")
+	notFound := apierror.NewNotFoundError("Resource not found.")
 	for _, tc := range []struct {
 		param  string
 		params domain.UpdateSalesOrderParams
@@ -1456,7 +1456,7 @@ func (suite *SalesOrderSvcTestSuite) TestUpdateSalesOrder_RefusesACustomerAddres
 			_, apiErr := suite.svc.UpdateSalesOrder(ctx, params)
 
 			suite.Require().NotNil(apiErr)
-			suite.True(apierror.IsNotFound(apiErr))
+			suite.True(apierror.HasCode(apiErr, apierror.CodeResourceNotFound))
 			suite.Equal(tc.param, apiErr.Param)
 		})
 	}
@@ -1539,7 +1539,7 @@ func (suite *SalesOrderSvcTestSuite) TestUpdateSalesOrder_RefusesAServiceLevelOf
 			_, apiErr := suite.svc.UpdateSalesOrder(ctx, params)
 
 			suite.Require().NotNil(apiErr)
-			suite.Equal(apierror.ErrorCodeValidationFailed, apiErr.Code)
+			suite.Equal(apierror.CodeValidationFailed, apiErr.Code)
 			suite.Equal("service_level_id", apiErr.Param)
 		})
 	}
@@ -1628,14 +1628,14 @@ func (suite *SalesOrderSvcTestSuite) TestDeleteSalesOrder_BlockedWhenFulfilled()
 
 	apiErr := suite.svc.DeleteSalesOrder(ctx, domain.DeleteSalesOrderParams{SalesOrderID: "or_1"})
 	suite.NotNil(apiErr)
-	suite.Equal(apierror.ErrorCodeValidationFailed, apiErr.Code)
+	suite.Equal(apierror.CodeValidationFailed, apiErr.Code)
 }
 
 func (suite *SalesOrderSvcTestSuite) TestDeleteSalesOrder_AlreadyDeletedReturnsSemanticError() {
 	ctx := salesOrderInternalCtx("ac_test")
 
 	suite.orderRepo.EXPECT().Get(gomock.Any(), "ac_test", "or_1").
-		Return(nil, apierror.NewResourceNotFoundError("Sales order not found.")).Times(1)
+		Return(nil, apierror.NewNotFoundError("Sales order not found.")).Times(1)
 	suite.deletedRecordRepo.EXPECT().
 		ExistsInAccount(gomock.Any(), constants.DeletedRecordResourceTypeSalesOrder, "or_1", "ac_test").
 		Return(true, nil).Times(1)
@@ -1677,7 +1677,7 @@ func (suite *SalesOrderSvcTestSuite) TestBulkDeleteSalesOrders_RejectsIfAnyFulfi
 		SalesOrderIDs: []string{"or_ok", "or_fulfilled"},
 	})
 	suite.NotNil(apiErr)
-	suite.Equal(apierror.ErrorCodeValidationFailed, apiErr.Code)
+	suite.Equal(apierror.CodeValidationFailed, apiErr.Code)
 }
 
 // --- ChangeSalesOrderStatus ---
@@ -1769,7 +1769,7 @@ func (suite *SalesOrderSvcTestSuite) TestChangeStatus_IssueRejectsNonEstimate() 
 		StatusChange: "issue",
 	})
 	suite.NotNil(apiErr)
-	suite.Equal(apierror.ErrorCodeValidationFailed, apiErr.Code)
+	suite.Equal(apierror.CodeValidationFailed, apiErr.Code)
 }
 
 func (suite *SalesOrderSvcTestSuite) TestChangeStatus_Unissue_ReleasesInventory() {
@@ -2002,7 +2002,7 @@ func (suite *SalesOrderSvcTestSuite) TestChangeStatus_InvalidAction() {
 		StatusChange: "BOGUS_ACTION",
 	})
 	suite.NotNil(apiErr)
-	suite.Equal(apierror.ErrorCodeValidationFailed, apiErr.Code)
+	suite.Equal(apierror.CodeValidationFailed, apiErr.Code)
 }
 
 func (suite *SalesOrderSvcTestSuite) TestChangeStatus_IssueWithSendEmailPublishesAcknowledged() {
@@ -2318,7 +2318,7 @@ func (suite *SalesOrderSvcTestSuite) TestCheckoutSalesOrder_StripeIntegrationIna
 		Email:        "buyer@example.com",
 	})
 	suite.NotNil(apiErr)
-	suite.Equal(apierror.ErrorCodeValidationFailed, apiErr.Code)
+	suite.Equal(apierror.CodeValidationFailed, apiErr.Code)
 }
 
 func (suite *SalesOrderSvcTestSuite) TestCheckoutSalesOrder_AlreadyPaidRejected() {
@@ -2340,7 +2340,7 @@ func (suite *SalesOrderSvcTestSuite) TestCheckoutSalesOrder_AlreadyPaidRejected(
 		Email:        "buyer@example.com",
 	})
 	suite.NotNil(apiErr)
-	suite.Equal(apierror.ErrorCodeResourceConflict, apiErr.Code)
+	suite.Equal(apierror.CodeResourceConflict, apiErr.Code)
 }
 
 func (suite *SalesOrderSvcTestSuite) TestCreateCustomerCheckoutSession_ChargesStoredOrderTotal() {
@@ -2408,7 +2408,7 @@ func (suite *SalesOrderSvcTestSuite) TestCreateCustomerCheckoutSession_ForeignOr
 
 	suite.orderRepo.EXPECT().
 		GetForCustomer(gomock.Any(), "ac_target", "ac_customer", "or_foreign").
-		Return(nil, apierror.NewResourceNotFoundError("Sales order not found.")).Times(1)
+		Return(nil, apierror.NewNotFoundError("Sales order not found.")).Times(1)
 
 	_, apiErr := suite.svc.CreateCustomerCheckoutSession(ctx, domain.CreateCustomerCheckoutSessionParams{
 		OrderID:         "or_foreign",
@@ -2416,7 +2416,7 @@ func (suite *SalesOrderSvcTestSuite) TestCreateCustomerCheckoutSession_ForeignOr
 		OrderTotalCents: 100,
 	})
 	suite.NotNil(apiErr)
-	suite.Equal(apierror.ErrorCodeResourceNotFound, apiErr.Code)
+	suite.Equal(apierror.CodeResourceNotFound, apiErr.Code)
 }
 
 // --- CreateSalesOrderProductionRun ---
@@ -2438,7 +2438,7 @@ func (suite *SalesOrderSvcTestSuite) TestCreateProductionRun_RejectsIfOrderAlrea
 		SalesOrderID: "or_1",
 	})
 	suite.NotNil(apiErr)
-	suite.Equal(apierror.ErrorCodeResourceConflict, apiErr.Code)
+	suite.Equal(apierror.CodeResourceConflict, apiErr.Code)
 	suite.Equal("id", apiErr.Param)
 }
 

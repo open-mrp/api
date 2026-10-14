@@ -8,7 +8,7 @@ import (
 	factorymock "github.com/open-mrp/api/services/notification-service/internal/domain/mock/factory"
 	repositorymock "github.com/open-mrp/api/services/notification-service/internal/domain/mock/repository"
 	"github.com/open-mrp/api/shared/constants"
-	apierror "github.com/open-mrp/api/shared/errors"
+	apierror "github.com/open-mrp/apikit/apierror"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/mock/gomock"
@@ -59,7 +59,7 @@ func TestIsParticipant_RelationActorViaCustomerParticipant(t *testing.T) {
 	notifRepo := repositorymock.NewMockNotificationRepo(ctrl)
 	notifRepo.EXPECT().
 		ResolveAccountUserID(gomock.Any(), userID, vendorAccount).
-		Return("", apierror.NewResourceNotFoundError("not found"))
+		Return("", apierror.NewNotFoundError("not found"))
 	notifRepo.EXPECT().
 		ResolveAccountUserID(gomock.Any(), userID, customerAccount).
 		Return("acus_customer1234", nil)

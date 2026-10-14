@@ -12,10 +12,10 @@ import (
 	"github.com/open-mrp/api/shared/audit"
 	"github.com/open-mrp/api/shared/constants"
 	"github.com/open-mrp/api/shared/contracts"
-	apierror "github.com/open-mrp/api/shared/errors"
-	"github.com/open-mrp/api/shared/idempotency"
+	"github.com/open-mrp/api/shared/idemresponse"
 	"github.com/open-mrp/api/shared/messaging"
-	"github.com/open-mrp/api/shared/tracing"
+	apierror "github.com/open-mrp/apikit/apierror"
+	"github.com/open-mrp/apikit/tracing"
 )
 
 var sandboxSvcTracer = tracing.GetTracer("core-service.sandbox_service")
@@ -145,7 +145,7 @@ func (s *sandboxSvcImpl) CreateSandbox(ctx context.Context, name string, mode co
 	}
 
 	if strings.TrimSpace(name) == "" {
-		return nil, tracing.Trace(span, apierror.NewValidationErrorWithParam("Name is required.", "name"))
+		return nil, tracing.Trace(span, apierror.NewFieldError("name", apierror.CodeInvalidFormat, "Name is required."))
 	}
 
 	ownerAccountID := identity.Target.AccountID
@@ -159,7 +159,7 @@ func (s *sandboxSvcImpl) CreateSandbox(ctx context.Context, name string, mode co
 
 	switch domain.RecoveryPoint(idempotencyKey.RecoveryPoint) {
 	case domain.RecoveryPointFinished:
-		cached, err := idempotency.UnmarshalCachedResponse[domain.SandboxAccount](ctx, idempotencyKey.ResponseCode, idempotencyKey.ResponseBody)
+		cached, err := idemresponse.UnmarshalCachedResponse[domain.SandboxAccount](ctx, idempotencyKey.ResponseCode, idempotencyKey.ResponseBody)
 		if err != nil {
 			return nil, tracing.Trace(span, apierror.NewInternalError(err, "Issue unmarshalling cached response."))
 		}
@@ -258,7 +258,7 @@ func (s *sandboxSvcImpl) GetSandbox(ctx context.Context, sandboxTypeID string, i
 	}
 
 	if sandbox.OwnerAccountID != identity.Target.AccountID {
-		return nil, tracing.Trace(span, apierror.NewResourceNotFoundError("Sandbox not found."))
+		return nil, tracing.Trace(span, apierror.NewNotFoundError("Sandbox not found."))
 	}
 
 	return sandbox, nil
@@ -319,19 +319,19 @@ func (s *sandboxSvcImpl) DeleteSandbox(ctx context.Context, sandboxTypeID string
 
 	sandbox, apiErr := s.repos.NewSandboxAccountRepo().FindByTypeID(ctx, sandboxTypeID, nil)
 	if apiErr != nil {
-		if apierror.IsNotFound(apiErr) {
+		if apierror.HasCode(apiErr, apierror.CodeResourceNotFound) {
 			wasDeleted, deletedCheckErr := s.repos.NewDeletedRecordRepo().ExistsInAccount(ctx, constants.DeletedRecordResourceTypeSandbox, sandboxTypeID, ownerAccountID)
 			if deletedCheckErr != nil {
 				return tracing.Trace(span, deletedCheckErr)
 			}
 			if wasDeleted {
-				return tracing.Trace(span, apierror.NewAlreadyDeletedError("This sandbox has already been deleted and can no longer be modified."))
+				return tracing.Trace(span, apierror.NewGoneError("This sandbox has already been deleted and can no longer be modified."))
 			}
 		}
 		return tracing.Trace(span, apiErr)
 	}
 	if sandbox.OwnerAccountID != ownerAccountID {
-		return tracing.Trace(span, apierror.NewResourceNotFoundError("Sandbox not found."))
+		return tracing.Trace(span, apierror.NewNotFoundError("Sandbox not found."))
 	}
 
 	var accountID string

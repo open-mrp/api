@@ -13,8 +13,8 @@ import (
 	"github.com/open-mrp/api/services/auth-service/internal/testutil"
 	"github.com/open-mrp/api/services/auth-service/pkg/types"
 	"github.com/open-mrp/api/shared/appctx"
-	"github.com/open-mrp/api/shared/db"
-	apierror "github.com/open-mrp/api/shared/errors"
+	apierror "github.com/open-mrp/apikit/apierror"
+	"github.com/open-mrp/apikit/db"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/suite"
@@ -177,7 +177,7 @@ func (suite *UserSvcTestSuite) TestRegister_Success() {
 		Times(1)
 	suite.userRepo.EXPECT().
 		Find(gomock.Any(), input.Email).
-		Return(nil, apierror.NewResourceNotFoundError("not found")).
+		Return(nil, apierror.NewNotFoundError("not found")).
 		Times(1)
 	suite.userMed.EXPECT().
 		Register(gomock.Any(), gomock.AssignableToTypeOf(domain.RegisterUserInput{})).

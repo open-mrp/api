@@ -11,7 +11,7 @@ import (
 	"github.com/open-mrp/api/services/core-service/internal/domain"
 	factorymock "github.com/open-mrp/api/services/core-service/internal/domain/mock/factory"
 	repositorymock "github.com/open-mrp/api/services/core-service/internal/domain/mock/repository"
-	apierror "github.com/open-mrp/api/shared/errors"
+	apierror "github.com/open-mrp/apikit/apierror"
 )
 
 // A knit step makes twelve eaches of a component from twelve eaches of a $0.10 material; a sew step
@@ -146,5 +146,5 @@ func TestComputeItemCosts_ZeroProductionQuantityIsNotFound(t *testing.T) {
 
 	_, apiErr := svc.ComputeItemCosts(t.Context(), msAccount, msItem)
 	require.NotNil(t, apiErr)
-	assert.Equal(t, apierror.ErrorCodeResourceNotFound, apiErr.Code)
+	assert.Equal(t, apierror.CodeResourceNotFound, apiErr.Code)
 }

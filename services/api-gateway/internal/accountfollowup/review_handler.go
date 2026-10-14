@@ -13,8 +13,8 @@ import (
 	"time"
 
 	"github.com/open-mrp/api/shared/contracts"
-	apierror "github.com/open-mrp/api/shared/errors"
 	pb "github.com/open-mrp/api/shared/proto/platform"
+	apierror "github.com/open-mrp/apikit/apierror"
 )
 
 const (
@@ -97,7 +97,7 @@ func (h *reviewHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		}
 		if err != nil {
 			apiErr := contracts.ConvertGRPCError(ctx, err, "platform-service")
-			if apiErr.Code == apierror.ErrorCodeValidationFailed {
+			if apiErr.Code == apierror.CodeValidationFailed {
 				// Keep the reviewer's edits on screen alongside the problem.
 				review, getErr := h.client.GetAccountFollowupReview(ctx, &pb.GetAccountFollowupReviewRequest{Token: token})
 				if getErr != nil {
@@ -122,9 +122,9 @@ func (h *reviewHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 func (h *reviewHandler) renderError(w http.ResponseWriter, r *http.Request, err error) {
 	apiErr := contracts.ConvertGRPCError(r.Context(), err, "platform-service")
 	switch apiErr.Code {
-	case apierror.ErrorCodeResourceNotFound:
+	case apierror.CodeResourceNotFound:
 		h.render(w, http.StatusNotFound, reviewPage{Message: apiErr.PublicMessage})
-	case apierror.ErrorCodeExpiredToken:
+	case apierror.CodeExpiredToken:
 		h.render(w, http.StatusGone, reviewPage{Message: apiErr.PublicMessage})
 	default:
 		slog.ErrorContext(r.Context(), "Account follow-up review failed", "error", apiErr)

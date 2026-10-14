@@ -10,8 +10,8 @@ import (
 	"time"
 
 	"github.com/open-mrp/api/shared/appctx"
-	s3 "github.com/open-mrp/api/shared/cloud/s3"
 	"github.com/open-mrp/api/shared/constants"
+	s3 "github.com/open-mrp/apikit/cloud/s3"
 	"github.com/open-mrp/apikit/lease"
 )
 

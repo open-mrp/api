@@ -8,11 +8,11 @@ import (
 	"github.com/open-mrp/api/services/core-service/internal/domain"
 	"github.com/open-mrp/api/services/core-service/internal/infrastructure/sqlc"
 	"github.com/open-mrp/api/services/core-service/internal/scheduling"
-	"github.com/open-mrp/api/shared/db"
-	apierror "github.com/open-mrp/api/shared/errors"
 	"github.com/open-mrp/api/shared/id"
-	"github.com/open-mrp/api/shared/tracing"
+	apierror "github.com/open-mrp/apikit/apierror"
+	"github.com/open-mrp/apikit/db"
 	"github.com/open-mrp/apikit/safeconv"
+	"github.com/open-mrp/apikit/tracing"
 )
 
 // defaultShiftDaysOfWeek is Monday to Friday, matching both the column default and operating_calendar.days_of_week. It says which days the shift capacity falls on; without a start time and zone beside it, nothing reads it.
@@ -239,7 +239,7 @@ func (r *productionScheduleRepoImpl) DeleteResourceSetting(ctx context.Context, 
 	}
 	// A delete that matched nothing is reported rather than swallowed: a caller that mistypes an ID, or deletes an override a colleague already removed, would otherwise be told the resource is back on account defaults when nothing happened.
 	if rows == 0 {
-		return tracing.Trace(span, apierror.NewResourceNotFoundError("Production schedule resource setting not found."))
+		return tracing.Trace(span, apierror.NewNotFoundError("Production schedule resource setting not found."))
 	}
 	return nil
 }

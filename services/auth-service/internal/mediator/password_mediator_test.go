@@ -16,8 +16,8 @@ import (
 	"github.com/open-mrp/api/services/auth-service/internal/token"
 	"github.com/open-mrp/api/services/auth-service/pkg/types"
 	"github.com/open-mrp/api/shared/constants"
-	apierror "github.com/open-mrp/api/shared/errors"
 	"github.com/open-mrp/api/shared/messaging"
+	apierror "github.com/open-mrp/apikit/apierror"
 
 	"github.com/stretchr/testify/suite"
 	"go.uber.org/mock/gomock"
@@ -157,7 +157,7 @@ func (suite *PasswordMedTestSuite) TestUpdatePassword_UpdatePasswordError() {
 	apiErr := suite.passwordMed.Update(ctx, user, newPassword)
 
 	suite.NotNil(apiErr)
-	suite.Equal(apierror.ErrorCodeInternalError, apiErr.Code)
+	suite.Equal(apierror.CodeInternalError, apiErr.Code)
 }
 
 func (suite *PasswordMedTestSuite) TestUpdatePassword_RevokeAllError() {
@@ -179,7 +179,7 @@ func (suite *PasswordMedTestSuite) TestUpdatePassword_RevokeAllError() {
 	apiErr := suite.passwordMed.Update(ctx, user, newPassword)
 
 	suite.NotNil(apiErr)
-	suite.Equal(apierror.ErrorCodeInternalError, apiErr.Code)
+	suite.Equal(apierror.CodeInternalError, apiErr.Code)
 }
 
 func (suite *PasswordMedTestSuite) TestUpdatePassword_WithEmailNotification_Success() {
@@ -314,7 +314,7 @@ func (suite *PasswordMedTestSuite) TestValidatePasswordResetToken_RejectsAccessT
 
 	suite.Nil(result)
 	suite.NotNil(apiErr)
-	suite.Equal(apierror.ErrorTypeInvalidRequest, apiErr.Type)
+	suite.Equal(apierror.TypeInvalidRequest, apiErr.Type)
 	suite.Equal(token.ErrInvalidJWT, apiErr.PublicMessage)
 }
 
@@ -327,14 +327,14 @@ func (suite *PasswordMedTestSuite) TestValidatePasswordResetToken_UserNotFound()
 
 	suite.userRepo.EXPECT().
 		Find(gomock.Any(), userID).
-		Return(nil, apierror.NewResourceNotFoundError("User not found")).
+		Return(nil, apierror.NewNotFoundError("User not found")).
 		Times(1)
 
 	result, apiErr := suite.passwordMed.ValidatePasswordResetToken(ctx, resetToken)
 
 	suite.Nil(result)
 	suite.NotNil(apiErr)
-	suite.Equal(apierror.ErrorCodeInvalidCredentials, apiErr.Code)
+	suite.Equal(apierror.CodeInvalidCredentials, apiErr.Code)
 }
 
 func (suite *PasswordMedTestSuite) TestValidate_Success() {
@@ -371,14 +371,14 @@ func (suite *PasswordMedTestSuite) TestValidate_UserNotFound() {
 
 	suite.userRepo.EXPECT().
 		Find(gomock.Any(), identifier).
-		Return(nil, apierror.NewResourceNotFoundError("User not found")).
+		Return(nil, apierror.NewNotFoundError("User not found")).
 		Times(1)
 
 	result, apiErr := suite.passwordMed.Validate(ctx, identifier, "anything")
 
 	suite.Nil(result)
 	suite.NotNil(apiErr)
-	suite.Equal(apierror.ErrorCodeInvalidCredentials, apiErr.Code)
+	suite.Equal(apierror.CodeInvalidCredentials, apiErr.Code)
 }
 
 func (suite *PasswordMedTestSuite) TestValidate_NoHashedPassword_WithEmail_SendsResetEmail() {
@@ -418,7 +418,7 @@ func (suite *PasswordMedTestSuite) TestValidate_NoHashedPassword_WithEmail_Sends
 
 	suite.Nil(result)
 	suite.NotNil(apiErr)
-	suite.Equal(apierror.ErrorCodeInvalidCredentials, apiErr.Code)
+	suite.Equal(apierror.CodeInvalidCredentials, apiErr.Code)
 }
 
 func (suite *PasswordMedTestSuite) TestValidate_NoHashedPassword_WithoutEmail_NoEmailSent() {
@@ -445,7 +445,7 @@ func (suite *PasswordMedTestSuite) TestValidate_NoHashedPassword_WithoutEmail_No
 
 	suite.Nil(result)
 	suite.NotNil(apiErr)
-	suite.Equal(apierror.ErrorCodeInvalidCredentials, apiErr.Code)
+	suite.Equal(apierror.CodeInvalidCredentials, apiErr.Code)
 }
 
 func (suite *PasswordMedTestSuite) TestValidate_PasswordMismatch() {
@@ -472,5 +472,5 @@ func (suite *PasswordMedTestSuite) TestValidate_PasswordMismatch() {
 
 	suite.Nil(result)
 	suite.NotNil(apiErr)
-	suite.Equal(apierror.ErrorCodeInvalidCredentials, apiErr.Code)
+	suite.Equal(apierror.CodeInvalidCredentials, apiErr.Code)
 }

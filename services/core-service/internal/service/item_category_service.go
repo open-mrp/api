@@ -11,10 +11,10 @@ import (
 	"github.com/open-mrp/api/shared/appctx"
 	"github.com/open-mrp/api/shared/audit"
 	"github.com/open-mrp/api/shared/constants"
-	apierror "github.com/open-mrp/api/shared/errors"
 	"github.com/open-mrp/api/shared/id"
-	"github.com/open-mrp/api/shared/idempotency"
-	"github.com/open-mrp/api/shared/tracing"
+	"github.com/open-mrp/api/shared/idemresponse"
+	apierror "github.com/open-mrp/apikit/apierror"
+	"github.com/open-mrp/apikit/tracing"
 )
 
 var itemCategorySvcTracer = tracing.GetTracer("core-service.item_category_service")
@@ -207,18 +207,18 @@ func validateBulkCreateCategoriesInTx(txCtx context.Context, repos domain.RepoFa
 
 	var rowErrs apierror.RowErrors
 	for _, r := range identifiers {
-		param := fmt.Sprintf("%s[%d].%s", fieldName, r.Index, refField)
+		param := refField
 		switch category, exists := categories[r.CategoryID]; {
 		case r.CategoryID == "" || !exists:
-			rowErrs.AddValidation(r.Index, param, fmt.Sprintf("category %q was not found", r.CategoryID))
+			rowErrs.AddField(r.Index, param, apierror.CodeInvalidFormat, fmt.Sprintf("category %q was not found", r.CategoryID))
 		case !categoryTypeMatchesItem(itemTypeCode, category.ItemCategoryTypeCode):
-			rowErrs.AddValidation(r.Index, param, fmt.Sprintf("category %q is a %s and cannot be assigned to a %s", r.CategoryID, category.ItemCategoryTypeCode, itemTypeCode))
+			rowErrs.AddField(r.Index, param, apierror.CodeInvalidFormat, fmt.Sprintf("category %q is a %s and cannot be assigned to a %s", r.CategoryID, category.ItemCategoryTypeCode, itemTypeCode))
 		case category.BaseUnitID == "":
-			rowErrs.AddValidation(r.Index, param, fmt.Sprintf("category %q has no base unit; assign a base unit to its unit group", r.CategoryID))
+			rowErrs.AddField(r.Index, param, apierror.CodeInvalidFormat, fmt.Sprintf("category %q has no base unit; assign a base unit to its unit group", r.CategoryID))
 		}
 	}
 
-	return rowErrs.Summary("categories")
+	return rowErrs.Summary(fieldName)
 }
 
 func (s *itemCategorySvcImpl) BatchGetItemCategoriesByIDs(ctx context.Context, ids []string) ([]*domain.ItemCategoryFull, *apierror.APIError) {
@@ -416,7 +416,7 @@ func (s *itemCategorySvcImpl) CreateItemCategory(ctx context.Context, params dom
 
 	switch domain.RecoveryPoint(idempotencyKey.RecoveryPoint) {
 	case domain.RecoveryPointFinished:
-		cached, err := idempotency.UnmarshalCachedResponse[domain.ItemCategoryFull](ctx, idempotencyKey.ResponseCode, idempotencyKey.ResponseBody)
+		cached, err := idemresponse.UnmarshalCachedResponse[domain.ItemCategoryFull](ctx, idempotencyKey.ResponseCode, idempotencyKey.ResponseBody)
 		if err != nil {
 			return nil, tracing.Trace(span, apierror.NewInternalError(err, "Issue unmarshalling cached response."))
 		}
@@ -499,7 +499,7 @@ func (s *itemCategorySvcImpl) UpdateItemCategory(ctx context.Context, params dom
 
 	switch domain.RecoveryPoint(idempotencyKey.RecoveryPoint) {
 	case domain.RecoveryPointFinished:
-		cached, err := idempotency.UnmarshalCachedResponse[domain.ItemCategoryFull](ctx, idempotencyKey.ResponseCode, idempotencyKey.ResponseBody)
+		cached, err := idemresponse.UnmarshalCachedResponse[domain.ItemCategoryFull](ctx, idempotencyKey.ResponseCode, idempotencyKey.ResponseBody)
 		if err != nil {
 			return nil, tracing.Trace(span, apierror.NewInternalError(err, "Issue unmarshalling cached response."))
 		}
@@ -586,13 +586,13 @@ func (s *itemCategorySvcImpl) DeleteItemCategory(ctx context.Context, itemCatego
 		ItemCategoryID: itemCategoryID,
 	})
 	if apiErr != nil {
-		if apierror.IsNotFound(apiErr) {
+		if apierror.HasCode(apiErr, apierror.CodeResourceNotFound) {
 			wasDeleted, deletedCheckErr := s.repos.NewDeletedRecordRepo().ExistsInAccount(ctx, constants.DeletedRecordResourceTypeItemCategory, itemCategoryID, accountID)
 			if deletedCheckErr != nil {
 				return tracing.Trace(span, deletedCheckErr)
 			}
 			if wasDeleted {
-				return tracing.Trace(span, apierror.NewAlreadyDeletedError("This item category has already been deleted and can no longer be modified."))
+				return tracing.Trace(span, apierror.NewGoneError("This item category has already been deleted and can no longer be modified."))
 			}
 		}
 		return tracing.Trace(span, apiErr)
@@ -660,7 +660,7 @@ func (s *itemCategorySvcImpl) AddItemCategoryProperty(ctx context.Context, param
 		return tracing.Trace(span, apiErr)
 	}
 	if !isInAccount {
-		return tracing.Trace(span, apierror.NewResourceNotFoundError("Item category not found."))
+		return tracing.Trace(span, apierror.NewNotFoundError("Item category not found."))
 	}
 
 	isPropertyInAccount, apiErr := repo.IsPropertyInAccount(ctx, params.AccountID, params.PropertyID)
@@ -668,7 +668,7 @@ func (s *itemCategorySvcImpl) AddItemCategoryProperty(ctx context.Context, param
 		return tracing.Trace(span, apiErr)
 	}
 	if !isPropertyInAccount {
-		return tracing.Trace(span, apierror.NewResourceNotFoundError("Property not found."))
+		return tracing.Trace(span, apierror.NewNotFoundError("Property not found."))
 	}
 
 	meds := s.mediators()
@@ -680,7 +680,7 @@ func (s *itemCategorySvcImpl) AddItemCategoryProperty(ctx context.Context, param
 
 	switch domain.RecoveryPoint(idempotencyKey.RecoveryPoint) {
 	case domain.RecoveryPointFinished:
-		_, err := idempotency.UnmarshalCachedResponse[any](ctx, idempotencyKey.ResponseCode, idempotencyKey.ResponseBody)
+		_, err := idemresponse.UnmarshalCachedResponse[any](ctx, idempotencyKey.ResponseCode, idempotencyKey.ResponseBody)
 		if err != nil {
 			return tracing.Trace(span, apierror.NewInternalError(err, "Issue unmarshalling cached response."))
 		}
@@ -708,7 +708,7 @@ func (s *itemCategorySvcImpl) AddItemCategoryProperty(ctx context.Context, param
 				return apiErr
 			}
 			if exists {
-				return apierror.NewConflictErrorWithParam("A property with this name already exists in this category.", "property_id")
+				return apierror.NewConflictErrorWithParam("property_id", "A property with this name already exists in this category.")
 			}
 
 			if apiErr := txRepo.AddProperty(txCtx, params); apiErr != nil {
@@ -773,7 +773,7 @@ func (s *itemCategorySvcImpl) CreateItemCategoryProperty(ctx context.Context, pa
 		return nil, tracing.Trace(span, apiErr)
 	}
 	if !isInAccount {
-		return nil, tracing.Trace(span, apierror.NewResourceNotFoundError("Item category not found."))
+		return nil, tracing.Trace(span, apierror.NewNotFoundError("Item category not found."))
 	}
 
 	propertyID, apiErr := id.GenID(id.PropertyIDPrefix, nil)
@@ -790,7 +790,7 @@ func (s *itemCategorySvcImpl) CreateItemCategoryProperty(ctx context.Context, pa
 
 	switch domain.RecoveryPoint(idempotencyKey.RecoveryPoint) {
 	case domain.RecoveryPointFinished:
-		cached, err := idempotency.UnmarshalCachedResponse[domain.Property](ctx, idempotencyKey.ResponseCode, idempotencyKey.ResponseBody)
+		cached, err := idemresponse.UnmarshalCachedResponse[domain.Property](ctx, idempotencyKey.ResponseCode, idempotencyKey.ResponseBody)
 		if err != nil {
 			return nil, tracing.Trace(span, apierror.NewInternalError(err, "Issue unmarshalling cached response."))
 		}
@@ -812,14 +812,14 @@ func (s *itemCategorySvcImpl) CreateItemCategoryProperty(ctx context.Context, pa
 				return apiErr
 			}
 			if exists {
-				return apierror.NewConflictErrorWithParam("A property with this name already exists; add it to the category instead.", "name")
+				return apierror.NewConflictErrorWithParam("name", "A property with this name already exists; add it to the category instead.")
 			}
 			exists, apiErr = txRepo.PropertyExistsByNameInCategory(txCtx, params.AccountID, params.ItemCategoryID, params.Name, nil)
 			if apiErr != nil {
 				return apiErr
 			}
 			if exists {
-				return apierror.NewConflictErrorWithParam("A property with this name already exists in this category.", "name")
+				return apierror.NewConflictErrorWithParam("name", "A property with this name already exists in this category.")
 			}
 
 			created, apiErr := txPropertyRepo.Create(txCtx, propertyID, domain.CreatePropertyParams{AccountID: params.AccountID, Name: params.Name})
@@ -902,7 +902,7 @@ func (s *itemCategorySvcImpl) RemoveItemCategoryProperty(ctx context.Context, pa
 		return tracing.Trace(span, apiErr)
 	}
 	if !isInAccount {
-		return tracing.Trace(span, apierror.NewResourceNotFoundError("Item category not found."))
+		return tracing.Trace(span, apierror.NewNotFoundError("Item category not found."))
 	}
 
 	isPropertyInAccount, apiErr := repo.IsPropertyInAccount(ctx, params.AccountID, params.PropertyID)
@@ -910,7 +910,7 @@ func (s *itemCategorySvcImpl) RemoveItemCategoryProperty(ctx context.Context, pa
 		return tracing.Trace(span, apiErr)
 	}
 	if !isPropertyInAccount {
-		return tracing.Trace(span, apierror.NewResourceNotFoundError("Property not found."))
+		return tracing.Trace(span, apierror.NewNotFoundError("Property not found."))
 	}
 
 	meds := s.mediators()
@@ -922,7 +922,7 @@ func (s *itemCategorySvcImpl) RemoveItemCategoryProperty(ctx context.Context, pa
 
 	switch domain.RecoveryPoint(idempotencyKey.RecoveryPoint) {
 	case domain.RecoveryPointFinished:
-		_, err := idempotency.UnmarshalCachedResponse[any](ctx, idempotencyKey.ResponseCode, idempotencyKey.ResponseBody)
+		_, err := idemresponse.UnmarshalCachedResponse[any](ctx, idempotencyKey.ResponseCode, idempotencyKey.ResponseBody)
 		if err != nil {
 			return tracing.Trace(span, apierror.NewInternalError(err, "Issue unmarshalling cached response."))
 		}
@@ -999,7 +999,7 @@ func (s *itemCategorySvcImpl) ChangeItemCategoryUnitGroup(ctx context.Context, p
 		return tracing.Trace(span, apiErr)
 	}
 	if !isInAccount {
-		return tracing.Trace(span, apierror.NewResourceNotFoundError("Item category not found."))
+		return tracing.Trace(span, apierror.NewNotFoundError("Item category not found."))
 	}
 
 	// Validate the new unit group has the same unit type as the current one.
@@ -1030,10 +1030,7 @@ func (s *itemCategorySvcImpl) ChangeItemCategoryUnitGroup(ctx context.Context, p
 	}
 
 	if currentUnitGroup.Type != newUnitGroup.Type {
-		return tracing.Trace(span, apierror.NewValidationErrorWithParam(
-			fmt.Sprintf("The new unit group must have the same unit type as the current unit group (%s).", currentUnitGroup.Type),
-			"unit_group_id",
-		))
+		return tracing.Trace(span, apierror.NewFieldError("unit_group_id", apierror.CodeInvalidFormat, fmt.Sprintf("The new unit group must have the same unit type as the current unit group (%s).", currentUnitGroup.Type)))
 	}
 
 	meds := s.mediators()
@@ -1045,7 +1042,7 @@ func (s *itemCategorySvcImpl) ChangeItemCategoryUnitGroup(ctx context.Context, p
 
 	switch domain.RecoveryPoint(idempotencyKey.RecoveryPoint) {
 	case domain.RecoveryPointFinished:
-		_, err := idempotency.UnmarshalCachedResponse[any](ctx, idempotencyKey.ResponseCode, idempotencyKey.ResponseBody)
+		_, err := idemresponse.UnmarshalCachedResponse[any](ctx, idempotencyKey.ResponseCode, idempotencyKey.ResponseBody)
 		if err != nil {
 			return tracing.Trace(span, apierror.NewInternalError(err, "Issue unmarshalling cached response."))
 		}

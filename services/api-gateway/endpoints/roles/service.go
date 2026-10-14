@@ -11,9 +11,9 @@ import (
 	apiresource "github.com/open-mrp/api/services/api-gateway/pkg/resource"
 	"github.com/open-mrp/api/services/auth-service/pkg/types"
 	"github.com/open-mrp/api/shared/constants"
-	apierror "github.com/open-mrp/api/shared/errors"
 	pb "github.com/open-mrp/api/shared/proto/core"
-	"github.com/open-mrp/api/shared/tracing"
+	apierror "github.com/open-mrp/apikit/apierror"
+	"github.com/open-mrp/apikit/tracing"
 	"google.golang.org/grpc"
 	"google.golang.org/protobuf/types/known/emptypb"
 )
@@ -185,7 +185,7 @@ func loadRoleByID(ctx context.Context, id string) (*apiresource.Role, *apierror.
 	}
 	v, ok := loaded[id]
 	if !ok {
-		return nil, apierror.NewResourceNotFoundError("Role not found.")
+		return nil, apierror.NewNotFoundError("Role not found.")
 	}
 	return v.(*apiresource.Role), nil
 }
@@ -197,16 +197,12 @@ func parsePermissionStrings(perms []string) ([]*pb.CreateRolePermissionInput, *a
 	for _, p := range perms {
 		parts := strings.SplitN(p, ":", 2)
 		if len(parts) != 2 {
-			return nil, apierror.NewValidationErrorWithParam(
-				fmt.Sprintf("Invalid permission format %q: expected \"domain:action\".", p), "permissions",
-			)
+			return nil, apierror.NewFieldError("permissions", apierror.CodeInvalidFormat, fmt.Sprintf("Invalid permission format %q: expected \"domain:action\".", p))
 		}
 		domain, action := parts[0], parts[1]
 
 		if !types.PermissionDomain(domain).IsValid() {
-			return nil, apierror.NewValidationErrorWithParam(
-				fmt.Sprintf("Unknown permission %q: %q is not a recognized permission code.", p, domain), "permissions",
-			)
+			return nil, apierror.NewFieldError("permissions", apierror.CodeInvalidFormat, fmt.Sprintf("Unknown permission %q: %q is not a recognized permission code.", p, domain))
 		}
 
 		entry, ok := grouped[domain]
@@ -225,9 +221,7 @@ func parsePermissionStrings(perms []string) ([]*pb.CreateRolePermissionInput, *a
 		case "delete":
 			entry.Delete = true
 		default:
-			return nil, apierror.NewValidationErrorWithParam(
-				fmt.Sprintf("Invalid permission action %q: must be create, read, update, or delete.", action), "permissions",
-			)
+			return nil, apierror.NewFieldError("permissions", apierror.CodeInvalidFormat, fmt.Sprintf("Invalid permission action %q: must be create, read, update, or delete.", action))
 		}
 	}
 

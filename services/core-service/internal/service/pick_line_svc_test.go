@@ -11,7 +11,7 @@ import (
 	factorymock "github.com/open-mrp/api/services/core-service/internal/domain/mock/factory"
 	mediatormock "github.com/open-mrp/api/services/core-service/internal/domain/mock/mediator"
 	repositorymock "github.com/open-mrp/api/services/core-service/internal/domain/mock/repository"
-	apierror "github.com/open-mrp/api/shared/errors"
+	apierror "github.com/open-mrp/apikit/apierror"
 )
 
 const pickLineTestLineID = "pkln_picktest"
@@ -84,7 +84,7 @@ func (suite *PickLineSvcTestSuite) TestUpdate_RefusesAPackedLine() {
 
 	suite.Nil(line)
 	suite.Require().NotNil(apiErr)
-	suite.Equal(apierror.ErrorCodeValidationFailed, apiErr.Code)
+	suite.Equal(apierror.CodeValidationFailed, apiErr.Code)
 }
 
 func (suite *PickLineSvcTestSuite) TestUpdate_LocksTheLineBeforeWriting() {
@@ -114,7 +114,7 @@ func (suite *PickLineSvcTestSuite) TestVoid_RefusesAPackedLine() {
 
 	suite.Nil(line)
 	suite.Require().NotNil(apiErr)
-	suite.Equal(apierror.ErrorCodeValidationFailed, apiErr.Code)
+	suite.Equal(apierror.CodeValidationFailed, apiErr.Code)
 }
 
 func (suite *PickLineSvcTestSuite) TestVoid_ZeroesAnOpenLine() {

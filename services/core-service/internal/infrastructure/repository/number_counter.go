@@ -6,8 +6,8 @@ import (
 	"strconv"
 
 	"github.com/open-mrp/api/services/core-service/internal/infrastructure/sqlc"
-	"github.com/open-mrp/api/shared/db"
-	apierror "github.com/open-mrp/api/shared/errors"
+	apierror "github.com/open-mrp/apikit/apierror"
+	"github.com/open-mrp/apikit/db"
 	"github.com/open-mrp/apikit/safeconv"
 )
 
@@ -28,13 +28,13 @@ type numberCounter struct {
 
 var customerNumberDuplicateKeyMapping = db.DuplicateKeyMapping{
 	"account_relation_owner_role_external_number_key": func() *apierror.APIError {
-		return apierror.NewConflictErrorWithParam("A customer with this number already exists.", "number")
+		return apierror.NewConflictErrorWithParam("number", "A customer with this number already exists.")
 	},
 }
 
 var supplierNumberDuplicateKeyMapping = db.DuplicateKeyMapping{
 	"account_relation_owner_role_external_number_key": func() *apierror.APIError {
-		return apierror.NewConflictErrorWithParam("A supplier with this number already exists.", "number")
+		return apierror.NewConflictErrorWithParam("number", "A supplier with this number already exists.")
 	},
 }
 
@@ -77,7 +77,7 @@ func (c numberCounter) next(ctx context.Context, sysPropertyID string) (int64, *
 			return 0, apiErr
 		}
 	}
-	return 0, apierror.NewResourceConflictError("Could not reserve a free number. Try again.")
+	return 0, apierror.NewConflictError("Could not reserve a free number. Try again.")
 }
 
 // catchUp moves the counter to the highest number in use when that is at or past number, and reports

@@ -14,9 +14,9 @@ import (
 	"github.com/open-mrp/api/services/auth-service/internal/token"
 	"github.com/open-mrp/api/services/auth-service/pkg/types"
 	"github.com/open-mrp/api/shared/constants"
-	"github.com/open-mrp/api/shared/db"
-	apierror "github.com/open-mrp/api/shared/errors"
 	"github.com/open-mrp/api/shared/messaging"
+	apierror "github.com/open-mrp/apikit/apierror"
+	"github.com/open-mrp/apikit/db"
 
 	"github.com/stretchr/testify/suite"
 	"go.uber.org/mock/gomock"
@@ -409,7 +409,7 @@ func (suite *AuthSvcTestSuite) TestValidateCredential_JWT_Expired() {
 
 	identity, err := suite.authSvc.ValidateCredential(ctx, token, new(testutil.EntityIDAccount), nil)
 	suite.NotNil(err)
-	suite.Equal(apierror.ErrorCodeInvalidCredentials, err.Code)
+	suite.Equal(apierror.CodeInvalidCredentials, err.Code)
 	suite.Nil(identity)
 }
 
@@ -423,7 +423,7 @@ func (suite *AuthSvcTestSuite) TestValidateCredential_JWT_Invalid() {
 
 	identity, err := suite.authSvc.ValidateCredential(ctx, invalidToken, new(testutil.EntityIDAccount), nil)
 	suite.NotNil(err)
-	suite.Equal(apierror.ErrorCodeInvalidCredentials, err.Code)
+	suite.Equal(apierror.CodeInvalidCredentials, err.Code)
 	suite.Nil(identity)
 }
 
@@ -440,7 +440,7 @@ func (suite *AuthSvcTestSuite) TestValidateCredential_JWT_UserNotFound() {
 
 	identity, err := suite.authSvc.ValidateCredential(ctx, token, new(testutil.EntityIDAccount), nil)
 	suite.NotNil(err)
-	suite.Equal(apierror.ErrorCodeInvalidCredentials, err.Code)
+	suite.Equal(apierror.CodeInvalidCredentials, err.Code)
 	suite.Nil(identity)
 }
 
@@ -454,6 +454,6 @@ func (suite *AuthSvcTestSuite) TestValidateCredential_APIKey_Invalid() {
 
 	identity, err := suite.authSvc.ValidateCredential(ctx, testutil.APIKeyValidProdMode, new(testutil.EntityIDAccount), nil)
 	suite.NotNil(err)
-	suite.Equal(apierror.ErrorCodeInvalidCredentials, err.Code)
+	suite.Equal(apierror.CodeInvalidCredentials, err.Code)
 	suite.Nil(identity)
 }

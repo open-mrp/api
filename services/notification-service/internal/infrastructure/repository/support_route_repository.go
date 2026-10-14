@@ -5,9 +5,9 @@ import (
 
 	"github.com/open-mrp/api/services/notification-service/internal/domain"
 	"github.com/open-mrp/api/services/notification-service/internal/infrastructure/sqlc"
-	"github.com/open-mrp/api/shared/db"
-	apierror "github.com/open-mrp/api/shared/errors"
-	"github.com/open-mrp/api/shared/tracing"
+	apierror "github.com/open-mrp/apikit/apierror"
+	"github.com/open-mrp/apikit/db"
+	"github.com/open-mrp/apikit/tracing"
 )
 
 var supportRouteRepoTracer = tracing.GetTracer("notification-service.support_route_repository")
@@ -40,7 +40,7 @@ func (r *supportRouteRepoImpl) Get(ctx context.Context, accountID, relationAccou
 	defer span.End()
 	row, err := r.db.GetSupportRoute(ctx, sqlc.GetSupportRouteParams{AccountID: accountID, RelationAccountID: relationAccountID})
 	if apiErr := db.MapSQLError(err); apiErr != nil {
-		if apierror.IsNotFound(apiErr) {
+		if apierror.HasCode(apiErr, apierror.CodeResourceNotFound) {
 			return nil, nil
 		}
 		return nil, tracing.Trace(span, apiErr)
@@ -53,7 +53,7 @@ func (r *supportRouteRepoImpl) Resolve(ctx context.Context, accountID, relationA
 	defer span.End()
 	row, err := r.db.ResolveSupportRoute(ctx, sqlc.ResolveSupportRouteParams{AccountID: accountID, RelationAccountID: relationAccountID})
 	if apiErr := db.MapSQLError(err); apiErr != nil {
-		if apierror.IsNotFound(apiErr) {
+		if apierror.HasCode(apiErr, apierror.CodeResourceNotFound) {
 			return nil, nil
 		}
 		return nil, tracing.Trace(span, apiErr)

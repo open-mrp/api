@@ -11,8 +11,8 @@ import (
 	agentdb "github.com/open-mrp/api/services/agent-service/internal/infrastructure/db"
 	"github.com/open-mrp/api/services/agent-service/internal/infrastructure/sqlc"
 	"github.com/open-mrp/api/shared/contracts"
-	apierror "github.com/open-mrp/api/shared/errors"
 	"github.com/open-mrp/api/shared/messaging"
+	apierror "github.com/open-mrp/apikit/apierror"
 	"go.uber.org/mock/gomock"
 )
 
@@ -50,7 +50,7 @@ func TestContinueChatRun_FallsThrough(t *testing.T) {
 	}{
 		{
 			name:   "missing run starts fresh",
-			runErr: apierror.NewResourceNotFoundError("nope"),
+			runErr: apierror.NewNotFoundError("nope"),
 		},
 		{
 			name: "wrong account starts fresh",

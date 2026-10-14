@@ -11,7 +11,7 @@ import (
 	repositorymock "github.com/open-mrp/api/services/core-service/internal/domain/mock/repository"
 	"github.com/open-mrp/api/shared/appctx"
 	"github.com/open-mrp/api/shared/constants"
-	apierror "github.com/open-mrp/api/shared/errors"
+	apierror "github.com/open-mrp/apikit/apierror"
 	"go.uber.org/mock/gomock"
 )
 
@@ -141,7 +141,7 @@ func TestGetLatestSysPropertyValue_boundedSearch(t *testing.T) {
 		}).AnyTimes()
 
 	_, apiErr := svc.GetLatestSysPropertyValue(latestValueCtx(), constants.SysPropertyTypeCodeSupplierNumber)
-	if apiErr == nil || apiErr.Code != apierror.ErrorCodeResourceConflict {
+	if apiErr == nil || apiErr.Code != apierror.CodeResourceConflict {
 		t.Fatalf("got %v, want resource_conflict", apiErr)
 	}
 	if queries > 20 {
@@ -158,7 +158,7 @@ func TestGetLatestSysPropertyValue_stopsAtTheCounterMaximum(t *testing.T) {
 	repo.EXPECT().TakenNumbers(gomock.Any(), gomock.Any(), gomock.Any(), last).Return(last, nil)
 
 	_, apiErr := svc.GetLatestSysPropertyValue(latestValueCtx(), constants.SysPropertyTypeCodeSupplierNumber)
-	if apiErr == nil || apiErr.Code != apierror.ErrorCodeResourceConflict {
+	if apiErr == nil || apiErr.Code != apierror.CodeResourceConflict {
 		t.Fatalf("got %v, want resource_conflict", apiErr)
 	}
 }
@@ -168,7 +168,7 @@ func TestGetLatestSysPropertyValue_createsTheCounterAtTheFirstFreeNumber(t *test
 	t.Parallel()
 	svc, repo := newLatestValueSvc(t)
 	var queries int
-	repo.EXPECT().GetByTypeCode(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil, apierror.NewResourceNotFoundError("System property not found."))
+	repo.EXPECT().GetByTypeCode(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil, apierror.NewNotFoundError("System property not found."))
 	repo.EXPECT().TakenNumbers(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
 		DoAndReturn(takenNumbers(map[int]bool{1: true, 2: true}, &queries)).AnyTimes()
 	repo.EXPECT().Create(gomock.Any(), gomock.Any(), latestValueAccountID, constants.SysPropertyTypeCodeSupplierNumber, int32(3)).Return(supplierCounter(3), nil)

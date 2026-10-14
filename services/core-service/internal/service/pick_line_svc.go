@@ -9,9 +9,9 @@ import (
 	"github.com/open-mrp/api/shared/appctx"
 	"github.com/open-mrp/api/shared/audit"
 	"github.com/open-mrp/api/shared/constants"
-	apierror "github.com/open-mrp/api/shared/errors"
-	"github.com/open-mrp/api/shared/idempotency"
-	"github.com/open-mrp/api/shared/tracing"
+	"github.com/open-mrp/api/shared/idemresponse"
+	apierror "github.com/open-mrp/apikit/apierror"
+	"github.com/open-mrp/apikit/tracing"
 )
 
 var pickLineSvcTracer = tracing.GetTracer("core-service.pick_line_service")
@@ -99,7 +99,7 @@ func (s *pickLineSvcImpl) UpdatePickLine(ctx context.Context, params domain.Upda
 		return nil, tracing.Trace(span, apiErr)
 	}
 	if !inAccount {
-		return nil, tracing.Trace(span, apierror.NewResourceNotFoundError("Pick not found."))
+		return nil, tracing.Trace(span, apierror.NewNotFoundError("Pick not found."))
 	}
 
 	// Verify line is in pick
@@ -108,7 +108,7 @@ func (s *pickLineSvcImpl) UpdatePickLine(ctx context.Context, params domain.Upda
 		return nil, tracing.Trace(span, apiErr)
 	}
 	if !inPick {
-		return nil, tracing.Trace(span, apierror.NewResourceNotFoundError("Pick line not found."))
+		return nil, tracing.Trace(span, apierror.NewNotFoundError("Pick line not found."))
 	}
 
 	// Resolve the parent sales order so the audit event can be scoped to the order's history tree.
@@ -126,7 +126,7 @@ func (s *pickLineSvcImpl) UpdatePickLine(ctx context.Context, params domain.Upda
 
 	switch domain.RecoveryPoint(idempotencyKey.RecoveryPoint) {
 	case domain.RecoveryPointFinished:
-		cached, err := idempotency.UnmarshalCachedResponse[domain.PickLine](ctx, idempotencyKey.ResponseCode, idempotencyKey.ResponseBody)
+		cached, err := idemresponse.UnmarshalCachedResponse[domain.PickLine](ctx, idempotencyKey.ResponseCode, idempotencyKey.ResponseBody)
 		if err != nil {
 			return nil, tracing.Trace(span, apierror.NewInternalError(err, "Issue unmarshalling cached response."))
 		}
@@ -217,7 +217,7 @@ func (s *pickLineSvcImpl) PickPickLine(ctx context.Context, pickID, pickLineID s
 		return nil, tracing.Trace(span, apiErr)
 	}
 	if !inAccount {
-		return nil, tracing.Trace(span, apierror.NewResourceNotFoundError("Pick not found."))
+		return nil, tracing.Trace(span, apierror.NewNotFoundError("Pick not found."))
 	}
 
 	// Verify line is in pick
@@ -226,7 +226,7 @@ func (s *pickLineSvcImpl) PickPickLine(ctx context.Context, pickID, pickLineID s
 		return nil, tracing.Trace(span, apiErr)
 	}
 	if !inPick {
-		return nil, tracing.Trace(span, apierror.NewResourceNotFoundError("Pick line not found."))
+		return nil, tracing.Trace(span, apierror.NewNotFoundError("Pick line not found."))
 	}
 
 	// Resolve the parent sales order so the audit event can be scoped to the order's history tree.
@@ -244,7 +244,7 @@ func (s *pickLineSvcImpl) PickPickLine(ctx context.Context, pickID, pickLineID s
 
 	switch domain.RecoveryPoint(idempotencyKey.RecoveryPoint) {
 	case domain.RecoveryPointFinished:
-		cached, err := idempotency.UnmarshalCachedResponse[domain.PickLine](ctx, idempotencyKey.ResponseCode, idempotencyKey.ResponseBody)
+		cached, err := idemresponse.UnmarshalCachedResponse[domain.PickLine](ctx, idempotencyKey.ResponseCode, idempotencyKey.ResponseBody)
 		if err != nil {
 			return nil, tracing.Trace(span, apierror.NewInternalError(err, "Issue unmarshalling cached response."))
 		}
@@ -330,7 +330,7 @@ func (s *pickLineSvcImpl) VoidPickLine(ctx context.Context, pickID, pickLineID s
 		return nil, tracing.Trace(span, apiErr)
 	}
 	if !inAccount {
-		return nil, tracing.Trace(span, apierror.NewResourceNotFoundError("Pick not found."))
+		return nil, tracing.Trace(span, apierror.NewNotFoundError("Pick not found."))
 	}
 
 	// Verify line is in pick
@@ -339,7 +339,7 @@ func (s *pickLineSvcImpl) VoidPickLine(ctx context.Context, pickID, pickLineID s
 		return nil, tracing.Trace(span, apiErr)
 	}
 	if !inPick {
-		return nil, tracing.Trace(span, apierror.NewResourceNotFoundError("Pick line not found."))
+		return nil, tracing.Trace(span, apierror.NewNotFoundError("Pick line not found."))
 	}
 
 	// Resolve the parent sales order so the audit event can be scoped to the order's history tree.
@@ -357,7 +357,7 @@ func (s *pickLineSvcImpl) VoidPickLine(ctx context.Context, pickID, pickLineID s
 
 	switch domain.RecoveryPoint(idempotencyKey.RecoveryPoint) {
 	case domain.RecoveryPointFinished:
-		cached, err := idempotency.UnmarshalCachedResponse[domain.PickLine](ctx, idempotencyKey.ResponseCode, idempotencyKey.ResponseBody)
+		cached, err := idemresponse.UnmarshalCachedResponse[domain.PickLine](ctx, idempotencyKey.ResponseCode, idempotencyKey.ResponseBody)
 		if err != nil {
 			return nil, tracing.Trace(span, apierror.NewInternalError(err, "Issue unmarshalling cached response."))
 		}

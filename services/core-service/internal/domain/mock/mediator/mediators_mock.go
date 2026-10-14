@@ -15,7 +15,7 @@ import (
 
 	types "github.com/open-mrp/api/services/auth-service/pkg/types"
 	domain "github.com/open-mrp/api/services/core-service/internal/domain"
-	apierror "github.com/open-mrp/api/shared/errors"
+	apierror "github.com/open-mrp/apikit/apierror"
 	gomock "go.uber.org/mock/gomock"
 )
 

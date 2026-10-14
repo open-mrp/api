@@ -7,7 +7,7 @@ import (
 	"strings"
 
 	"github.com/open-mrp/api/services/core-service/internal/domain"
-	apierror "github.com/open-mrp/api/shared/errors"
+	apierror "github.com/open-mrp/apikit/apierror"
 )
 
 // classifyAddressValidationError maps a non-200 response from Google Address Validation into an APIError. A 400 from Google means the request we built from caller input was rejected — most often an unsupported region code for a country Google cannot validate — which is the caller's problem, not ours, so it must surface as a 400 against the offending field rather than a transient 500 that clients retry forever. Any other status is a genuine upstream failure and stays an internal error.

@@ -11,7 +11,7 @@ import (
 	"sort"
 	"sync"
 
-	apierror "github.com/open-mrp/api/shared/errors"
+	apierror "github.com/open-mrp/apikit/apierror"
 )
 
 // Locker is the repository side of the root. Both the reservation and mutation repositories implement it, because both write the ledger and either may be the first to reach it in a given transaction.

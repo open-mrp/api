@@ -10,8 +10,8 @@ import (
 	"github.com/open-mrp/api/services/auth-service/internal/infrastructure/sqlc"
 	"github.com/open-mrp/api/services/auth-service/internal/mediator"
 	"github.com/open-mrp/api/services/auth-service/pkg/types"
-	apierror "github.com/open-mrp/api/shared/errors"
-	"github.com/open-mrp/api/shared/tracing"
+	apierror "github.com/open-mrp/apikit/apierror"
+	"github.com/open-mrp/apikit/tracing"
 )
 
 var authSvcTracer = tracing.GetTracer("auth-service.auth_service")

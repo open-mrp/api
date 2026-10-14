@@ -11,7 +11,7 @@ import (
 
 	"github.com/open-mrp/api/shared/appctx"
 	"github.com/open-mrp/api/shared/constants"
-	apierror "github.com/open-mrp/api/shared/errors"
+	apierror "github.com/open-mrp/apikit/apierror"
 )
 
 // customerObject is the minimal fields parsed from a Stripe customer data.object.
@@ -42,7 +42,7 @@ func (c *StripeWebhookConsumer) handleCustomerDeleted(ctx context.Context, event
 
 	accountID, _, apiErr := c.coreClient.GetAccountByStripeCustomerID(ctx, cust.ID)
 	if apiErr != nil {
-		if apiErr.Code == apierror.ErrorCodeResourceNotFound {
+		if apiErr.Code == apierror.CodeResourceNotFound {
 			log.Printf("[stripe_webhook] Customer deleted for Stripe customer %s: no account in DB, skipping", cust.ID)
 			return nil
 		}

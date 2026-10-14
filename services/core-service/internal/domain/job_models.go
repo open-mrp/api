@@ -5,7 +5,7 @@ import (
 	"time"
 
 	"github.com/open-mrp/api/shared/constants"
-	apierror "github.com/open-mrp/api/shared/errors"
+	apierror "github.com/open-mrp/apikit/apierror"
 )
 
 type Job struct {
@@ -24,7 +24,7 @@ type Job struct {
 	ResultsTruncated bool
 	// Error is the failure that sank the job as a whole. A row that failed carries its
 	// own on its RowResult instead.
-	Error       *apierror.ResponseError
+	Error       *apierror.ErrorObject
 	StartedAt   *time.Time `audit:"started_at"`
 	CompletedAt *time.Time `audit:"completed_at"`
 	FailedAt    *time.Time `audit:"failed_at"`
@@ -44,7 +44,7 @@ type RowResult struct {
 	// operation has one to hand, so a client can name what it wrote without a second read.
 	Name         *string
 	SubResources []SubResourceRef
-	Error        *apierror.ResponseError
+	Error        *apierror.ErrorObject
 }
 
 // references one resource produced alongside a result row's own — a production run's
@@ -132,7 +132,7 @@ type UpdateJobServiceParams struct {
 	JobID   string
 	Status  constants.JobStatus
 	Results []RowResult
-	Error   *apierror.ResponseError
+	Error   *apierror.ErrorObject
 }
 
 type UpdateJobRepositoryParams struct {
@@ -140,7 +140,7 @@ type UpdateJobRepositoryParams struct {
 	AccountID        string
 	Results          []RowResult
 	ResultsTruncated bool
-	Error            *apierror.ResponseError
+	Error            *apierror.ErrorObject
 	StartedAt        *time.Time
 	CompletedAt      *time.Time
 	FailedAt         *time.Time

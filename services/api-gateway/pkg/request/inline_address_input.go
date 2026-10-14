@@ -5,8 +5,8 @@ import (
 	"github.com/open-mrp/api/shared/constants"
 	"github.com/open-mrp/api/shared/fieldpb"
 	pb "github.com/open-mrp/api/shared/proto/core"
-	"github.com/open-mrp/api/shared/validate"
 	"github.com/open-mrp/apikit/field"
+	"github.com/open-mrp/apikit/validate"
 )
 
 func init() {

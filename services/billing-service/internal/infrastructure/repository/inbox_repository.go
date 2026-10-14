@@ -5,9 +5,9 @@ import (
 	"time"
 
 	"github.com/open-mrp/api/services/billing-service/internal/infrastructure/sqlc"
-	"github.com/open-mrp/api/shared/db"
 	"github.com/open-mrp/api/shared/messaging"
-	"github.com/open-mrp/api/shared/tracing"
+	"github.com/open-mrp/apikit/db"
+	"github.com/open-mrp/apikit/tracing"
 )
 
 var inboxRepoTracer = tracing.GetTracer("billing-service.inbox_repository")

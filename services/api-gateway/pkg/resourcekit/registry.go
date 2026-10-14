@@ -14,7 +14,7 @@ import (
 	"sync"
 
 	"github.com/open-mrp/api/shared/constants"
-	apierror "github.com/open-mrp/api/shared/errors"
+	apierror "github.com/open-mrp/apikit/apierror"
 )
 
 // Cardinality describes the shape of a sub-resource field on a parent.

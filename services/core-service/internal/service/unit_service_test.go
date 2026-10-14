@@ -12,9 +12,9 @@ import (
 	repositorymock "github.com/open-mrp/api/services/core-service/internal/domain/mock/repository"
 	"github.com/open-mrp/api/shared/appctx"
 	"github.com/open-mrp/api/shared/constants"
-	"github.com/open-mrp/api/shared/db"
-	apierror "github.com/open-mrp/api/shared/errors"
 	"github.com/open-mrp/api/shared/messaging"
+	apierror "github.com/open-mrp/apikit/apierror"
+	"github.com/open-mrp/apikit/db"
 
 	"github.com/stretchr/testify/suite"
 	"go.uber.org/mock/gomock"
@@ -187,7 +187,7 @@ func (suite *UnitSvcTestSuite) TestGetUnit_MissingIdentity() {
 
 	suite.Nil(result)
 	suite.NotNil(err)
-	suite.Equal(apierror.ErrorCodeInternalError, err.Code)
+	suite.Equal(apierror.CodeInternalError, err.Code)
 }
 
 func (suite *UnitSvcTestSuite) TestGetUnit_MissingTargetAccount() {
@@ -206,7 +206,7 @@ func (suite *UnitSvcTestSuite) TestGetUnit_MissingTargetAccount() {
 
 	suite.Nil(result)
 	suite.NotNil(err)
-	suite.Equal(apierror.ErrorCodeInvalidCredentials, err.Code)
+	suite.Equal(apierror.CodeInvalidCredentials, err.Code)
 }
 
 func (suite *UnitSvcTestSuite) TestGetUnit_InsufficientPermissions() {
@@ -226,7 +226,7 @@ func (suite *UnitSvcTestSuite) TestGetUnit_InsufficientPermissions() {
 
 	suite.Nil(result)
 	suite.NotNil(err)
-	suite.Equal(apierror.ErrorCodeInsufficientPerms, err.Code)
+	suite.Equal(apierror.CodeInsufficientPermissions, err.Code)
 }
 
 func (suite *UnitSvcTestSuite) TestGetUnit_RepoError() {
@@ -234,14 +234,14 @@ func (suite *UnitSvcTestSuite) TestGetUnit_RepoError() {
 
 	suite.unitRepo.EXPECT().
 		Get(gomock.Any(), gomock.Any()).
-		Return(nil, apierror.NewResourceNotFoundError("Unit not found.")).
+		Return(nil, apierror.NewNotFoundError("Unit not found.")).
 		Times(1)
 
 	result, err := suite.unitSvc.GetUnit(ctx, "un_nonexistent")
 
 	suite.Nil(result)
 	suite.NotNil(err)
-	suite.Equal(apierror.ErrorCodeResourceNotFound, err.Code)
+	suite.Equal(apierror.CodeResourceNotFound, err.Code)
 }
 
 // --- CreateUnit ---
@@ -289,7 +289,7 @@ func (suite *UnitSvcTestSuite) TestCreateUnit_MissingIdentity() {
 
 	suite.Nil(result)
 	suite.NotNil(err)
-	suite.Equal(apierror.ErrorCodeInternalError, err.Code)
+	suite.Equal(apierror.CodeInternalError, err.Code)
 }
 
 func (suite *UnitSvcTestSuite) TestCreateUnit_InsufficientPermissions() {
@@ -299,7 +299,7 @@ func (suite *UnitSvcTestSuite) TestCreateUnit_InsufficientPermissions() {
 
 	suite.Nil(result)
 	suite.NotNil(err)
-	suite.Equal(apierror.ErrorCodeInsufficientPerms, err.Code)
+	suite.Equal(apierror.CodeInsufficientPermissions, err.Code)
 }
 
 func (suite *UnitSvcTestSuite) TestCreateUnit_RepoError() {
@@ -316,7 +316,7 @@ func (suite *UnitSvcTestSuite) TestCreateUnit_RepoError() {
 		Times(1)
 	suite.unitRepo.EXPECT().
 		Create(gomock.Any(), gomock.Any(), gomock.Any()).
-		Return(nil, apierror.NewConflictErrorWithParam("A unit with this name already exists.", "name")).
+		Return(nil, apierror.NewConflictErrorWithParam("name", "A unit with this name already exists.")).
 		Times(1)
 	suite.expectCacheError()
 
@@ -324,7 +324,7 @@ func (suite *UnitSvcTestSuite) TestCreateUnit_RepoError() {
 
 	suite.Nil(result)
 	suite.NotNil(err)
-	suite.Equal(apierror.ErrorCodeResourceConflict, err.Code)
+	suite.Equal(apierror.CodeResourceConflict, err.Code)
 	suite.Equal("name", err.Param)
 }
 
@@ -345,7 +345,7 @@ func (suite *UnitSvcTestSuite) TestCreateUnit_DuplicateName() {
 
 	suite.Nil(result)
 	suite.NotNil(err)
-	suite.Equal(apierror.ErrorCodeResourceConflict, err.Code)
+	suite.Equal(apierror.CodeResourceConflict, err.Code)
 	suite.Equal("name", err.Param)
 }
 
@@ -370,7 +370,7 @@ func (suite *UnitSvcTestSuite) TestCreateUnit_DuplicateAbbreviation() {
 
 	suite.Nil(result)
 	suite.NotNil(err)
-	suite.Equal(apierror.ErrorCodeResourceConflict, err.Code)
+	suite.Equal(apierror.CodeResourceConflict, err.Code)
 	suite.Equal("abbreviation", err.Param)
 }
 
@@ -414,7 +414,7 @@ func (suite *UnitSvcTestSuite) TestUpdateUnit_MissingIdentity() {
 
 	suite.Nil(result)
 	suite.NotNil(err)
-	suite.Equal(apierror.ErrorCodeInternalError, err.Code)
+	suite.Equal(apierror.CodeInternalError, err.Code)
 }
 
 func (suite *UnitSvcTestSuite) TestUpdateUnit_InsufficientPermissions() {
@@ -424,7 +424,7 @@ func (suite *UnitSvcTestSuite) TestUpdateUnit_InsufficientPermissions() {
 
 	suite.Nil(result)
 	suite.NotNil(err)
-	suite.Equal(apierror.ErrorCodeInsufficientPerms, err.Code)
+	suite.Equal(apierror.CodeInsufficientPermissions, err.Code)
 }
 
 func (suite *UnitSvcTestSuite) TestUpdateUnit_NotFound() {
@@ -433,7 +433,7 @@ func (suite *UnitSvcTestSuite) TestUpdateUnit_NotFound() {
 	suite.expectIdempotencyStarted()
 	suite.unitRepo.EXPECT().
 		Get(gomock.Any(), domain.GetUnitParams{AccountID: "ac_test123", UnitID: "un_nonexistent"}).
-		Return(nil, apierror.NewResourceNotFoundError("Unit not found.")).
+		Return(nil, apierror.NewNotFoundError("Unit not found.")).
 		Times(1)
 	suite.expectCacheError()
 
@@ -444,7 +444,7 @@ func (suite *UnitSvcTestSuite) TestUpdateUnit_NotFound() {
 
 	suite.Nil(result)
 	suite.NotNil(err)
-	suite.Equal(apierror.ErrorCodeResourceNotFound, err.Code)
+	suite.Equal(apierror.CodeResourceNotFound, err.Code)
 }
 
 func (suite *UnitSvcTestSuite) TestUpdateUnit_SystemUnitRejected() {
@@ -464,7 +464,7 @@ func (suite *UnitSvcTestSuite) TestUpdateUnit_SystemUnitRejected() {
 
 	suite.Nil(result)
 	suite.NotNil(err)
-	suite.Equal(apierror.ErrorCodeValidationFailed, err.Code)
+	suite.Equal(apierror.CodeValidationFailed, err.Code)
 	suite.Contains(err.PublicMessage, "System units cannot be modified")
 }
 
@@ -489,7 +489,7 @@ func (suite *UnitSvcTestSuite) TestUpdateUnit_DuplicateName() {
 
 	suite.Nil(result)
 	suite.NotNil(err)
-	suite.Equal(apierror.ErrorCodeResourceConflict, err.Code)
+	suite.Equal(apierror.CodeResourceConflict, err.Code)
 	suite.Equal("name", err.Param)
 }
 
@@ -514,7 +514,7 @@ func (suite *UnitSvcTestSuite) TestUpdateUnit_DuplicateAbbreviation() {
 
 	suite.Nil(result)
 	suite.NotNil(err)
-	suite.Equal(apierror.ErrorCodeResourceConflict, err.Code)
+	suite.Equal(apierror.CodeResourceConflict, err.Code)
 	suite.Equal("abbreviation", err.Param)
 }
 
@@ -565,7 +565,7 @@ func (suite *UnitSvcTestSuite) TestDeleteUnit_BaseUnitOfAGroupConflicts() {
 	err := suite.unitSvc.DeleteUnit(ctx, "un_abc123")
 
 	suite.NotNil(err)
-	suite.Equal(apierror.ErrorCodeResourceConflict, err.Code)
+	suite.Equal(apierror.CodeResourceConflict, err.Code)
 }
 
 // Quantities and prices convert and display through their unit, so a unit any of them names stays.
@@ -588,14 +588,14 @@ func (suite *UnitSvcTestSuite) TestDeleteUnit_ReferencedUnitConflicts() {
 	err := suite.unitSvc.DeleteUnit(ctx, "un_abc123")
 
 	suite.NotNil(err)
-	suite.Equal(apierror.ErrorCodeResourceConflict, err.Code)
+	suite.Equal(apierror.CodeResourceConflict, err.Code)
 }
 
 func (suite *UnitSvcTestSuite) TestDeleteUnit_MissingIdentity() {
 	err := suite.unitSvc.DeleteUnit(context.Background(), "un_abc123")
 
 	suite.NotNil(err)
-	suite.Equal(apierror.ErrorCodeInternalError, err.Code)
+	suite.Equal(apierror.CodeInternalError, err.Code)
 }
 
 func (suite *UnitSvcTestSuite) TestDeleteUnit_InsufficientPermissions() {
@@ -604,7 +604,7 @@ func (suite *UnitSvcTestSuite) TestDeleteUnit_InsufficientPermissions() {
 	err := suite.unitSvc.DeleteUnit(ctx, "un_abc123")
 
 	suite.NotNil(err)
-	suite.Equal(apierror.ErrorCodeInsufficientPerms, err.Code)
+	suite.Equal(apierror.CodeInsufficientPermissions, err.Code)
 }
 
 func (suite *UnitSvcTestSuite) TestDeleteUnit_NotFound() {
@@ -612,7 +612,7 @@ func (suite *UnitSvcTestSuite) TestDeleteUnit_NotFound() {
 
 	suite.unitRepo.EXPECT().
 		Get(gomock.Any(), domain.GetUnitParams{AccountID: "ac_test123", UnitID: "un_nonexistent"}).
-		Return(nil, apierror.NewResourceNotFoundError("Unit not found.")).
+		Return(nil, apierror.NewNotFoundError("Unit not found.")).
 		Times(1)
 
 	suite.deletedRecordRepo.EXPECT().
@@ -623,7 +623,7 @@ func (suite *UnitSvcTestSuite) TestDeleteUnit_NotFound() {
 	err := suite.unitSvc.DeleteUnit(ctx, "un_nonexistent")
 
 	suite.NotNil(err)
-	suite.Equal(apierror.ErrorCodeResourceNotFound, err.Code)
+	suite.Equal(apierror.CodeResourceNotFound, err.Code)
 }
 
 func (suite *UnitSvcTestSuite) TestDeleteUnit_SystemUnitRejected() {
@@ -637,7 +637,7 @@ func (suite *UnitSvcTestSuite) TestDeleteUnit_SystemUnitRejected() {
 	err := suite.unitSvc.DeleteUnit(ctx, "un_system")
 
 	suite.NotNil(err)
-	suite.Equal(apierror.ErrorCodeValidationFailed, err.Code)
+	suite.Equal(apierror.CodeValidationFailed, err.Code)
 	suite.Contains(err.PublicMessage, "System units cannot be deleted")
 }
 
@@ -675,7 +675,7 @@ func (suite *UnitSvcTestSuite) TestDeleteUnit_ExternalActorRejected() {
 	err := suite.unitSvc.DeleteUnit(ctx, "un_abc123")
 
 	suite.NotNil(err)
-	suite.Equal(apierror.ErrorCodeInsufficientPerms, err.Code)
+	suite.Equal(apierror.CodeInsufficientPermissions, err.Code)
 }
 
 // --- BulkUpsertUnits ---
@@ -687,7 +687,7 @@ func (suite *UnitSvcTestSuite) TestBulkUpsertUnits_MissingIdentity() {
 
 	suite.Nil(result)
 	suite.NotNil(err)
-	suite.Equal(apierror.ErrorCodeInternalError, err.Code)
+	suite.Equal(apierror.CodeInternalError, err.Code)
 }
 
 func (suite *UnitSvcTestSuite) TestBulkUpsertUnits_InsufficientPermissions_NoCreate() {
@@ -699,7 +699,7 @@ func (suite *UnitSvcTestSuite) TestBulkUpsertUnits_InsufficientPermissions_NoCre
 
 	suite.Nil(result)
 	suite.NotNil(err)
-	suite.Equal(apierror.ErrorCodeInsufficientPerms, err.Code)
+	suite.Equal(apierror.CodeInsufficientPermissions, err.Code)
 }
 
 func (suite *UnitSvcTestSuite) TestBulkUpsertUnits_InsufficientPermissions_NoUpdate() {
@@ -711,7 +711,7 @@ func (suite *UnitSvcTestSuite) TestBulkUpsertUnits_InsufficientPermissions_NoUpd
 
 	suite.Nil(result)
 	suite.NotNil(err)
-	suite.Equal(apierror.ErrorCodeInsufficientPerms, err.Code)
+	suite.Equal(apierror.CodeInsufficientPermissions, err.Code)
 }
 
 func (suite *UnitSvcTestSuite) TestBulkUpsertUnits_EmptyUnits() {
@@ -723,7 +723,7 @@ func (suite *UnitSvcTestSuite) TestBulkUpsertUnits_EmptyUnits() {
 
 	suite.Nil(result)
 	suite.NotNil(err)
-	suite.Equal(apierror.ErrorCodeValidationFailed, err.Code)
+	suite.Equal(apierror.CodeValidationFailed, err.Code)
 	suite.Contains(err.PublicMessage, "No units provided")
 }
 
@@ -735,7 +735,7 @@ func (suite *UnitSvcTestSuite) TestBulkUpsertUnits_TooManyUnits() {
 
 	suite.Nil(result)
 	suite.NotNil(err)
-	suite.Equal(apierror.ErrorCodeValidationFailed, err.Code)
+	suite.Equal(apierror.CodeValidationFailed, err.Code)
 	suite.Contains(err.PublicMessage, "1000")
 }
 
@@ -751,9 +751,9 @@ func (suite *UnitSvcTestSuite) TestBulkUpsertUnits_DuplicateNameInRequest() {
 
 	suite.Nil(result)
 	suite.NotNil(err)
-	suite.Equal(apierror.ErrorCodeValidationFailed, err.Code)
+	suite.Equal(apierror.CodeValidationFailed, err.Code)
 	suite.Equal("units[1].name", err.Param)
-	suite.Contains(err.PublicMessage, "duplicate name")
+	suite.Contains(err.Errors[0].Message, "duplicate name")
 }
 
 func (suite *UnitSvcTestSuite) TestBulkUpsertUnits_DuplicateAbbreviationInRequest() {
@@ -768,9 +768,9 @@ func (suite *UnitSvcTestSuite) TestBulkUpsertUnits_DuplicateAbbreviationInReques
 
 	suite.Nil(result)
 	suite.NotNil(err)
-	suite.Equal(apierror.ErrorCodeValidationFailed, err.Code)
+	suite.Equal(apierror.CodeValidationFailed, err.Code)
 	suite.Equal("units[1].abbreviation", err.Param)
-	suite.Contains(err.PublicMessage, "duplicate abbreviation")
+	suite.Contains(err.Errors[0].Message, "duplicate abbreviation")
 }
 
 // --- writeBulkUpsertUnits (the engine's Write hook, exercised directly) ---
@@ -803,7 +803,7 @@ func (suite *UnitSvcTestSuite) TestWriteBulkUpsertUnits_FindByAbbreviationsOrNam
 	_, _, _, err := suite.writeUnits(domain.UpsertUnitParams{Name: "Gram", Abbreviation: "g"})
 
 	suite.NotNil(err, "a failed bulk read is infrastructural — it fails the whole batch")
-	suite.Equal(apierror.ErrorCodeInternalError, err.Code)
+	suite.Equal(apierror.CodeInternalError, err.Code)
 }
 
 func (suite *UnitSvcTestSuite) TestWriteBulkUpsertUnits_EmptyIDInExistingUnit() {
@@ -815,7 +815,7 @@ func (suite *UnitSvcTestSuite) TestWriteBulkUpsertUnits_EmptyIDInExistingUnit() 
 	_, _, _, err := suite.writeUnits(domain.UpsertUnitParams{Name: "Gram", Abbreviation: "g"})
 
 	suite.NotNil(err, "a corrupt existing row is an invariant violation, not a per-row failure")
-	suite.Equal(apierror.ErrorCodeInternalError, err.Code)
+	suite.Equal(apierror.CodeInternalError, err.Code)
 }
 
 func (suite *UnitSvcTestSuite) TestWriteBulkUpsertUnits_NameAndAbbrBelongToDifferentUnits() {
@@ -1093,7 +1093,7 @@ func (suite *UnitSvcTestSuite) TestCreateUnit_ZeroRatioDenominator() {
 
 	suite.Nil(result)
 	suite.NotNil(err)
-	suite.Equal(apierror.ErrorCodeValidationFailed, err.Code)
+	suite.Equal(apierror.CodeValidationFailed, err.Code)
 	suite.Equal("ratio_denominator", err.Param)
 }
 
@@ -1112,7 +1112,7 @@ func (suite *UnitSvcTestSuite) TestCreateUnit_ZeroOffsetDenominator() {
 
 	suite.Nil(result)
 	suite.NotNil(err)
-	suite.Equal(apierror.ErrorCodeValidationFailed, err.Code)
+	suite.Equal(apierror.CodeValidationFailed, err.Code)
 	suite.Equal("offset_denominator", err.Param)
 }
 
@@ -1128,7 +1128,7 @@ func (suite *UnitSvcTestSuite) TestUpdateUnit_ZeroRatioDenominator() {
 
 	suite.Nil(result)
 	suite.NotNil(err)
-	suite.Equal(apierror.ErrorCodeValidationFailed, err.Code)
+	suite.Equal(apierror.CodeValidationFailed, err.Code)
 	suite.Equal("ratio_denominator", err.Param)
 }
 
@@ -1142,7 +1142,7 @@ func (suite *UnitSvcTestSuite) TestUpdateUnit_ZeroOffsetDenominator() {
 
 	suite.Nil(result)
 	suite.NotNil(err)
-	suite.Equal(apierror.ErrorCodeValidationFailed, err.Code)
+	suite.Equal(apierror.CodeValidationFailed, err.Code)
 	suite.Equal("offset_denominator", err.Param)
 }
 
@@ -1196,9 +1196,9 @@ func (suite *UnitSvcTestSuite) TestBulkUpsertUnits_ZeroRatioDenominator() {
 
 	suite.Nil(result)
 	suite.NotNil(err)
-	suite.Equal(apierror.ErrorCodeValidationFailed, err.Code)
+	suite.Equal(apierror.CodeValidationFailed, err.Code)
 	suite.Equal("units[0].ratio_denominator", err.Param)
-	suite.Contains(err.PublicMessage, "ratio denominator cannot be zero")
+	suite.Contains(err.Errors[0].Message, "ratio denominator cannot be zero")
 }
 
 func (suite *UnitSvcTestSuite) TestBulkUpsertUnits_ZeroOffsetDenominator() {
@@ -1220,9 +1220,9 @@ func (suite *UnitSvcTestSuite) TestBulkUpsertUnits_ZeroOffsetDenominator() {
 
 	suite.Nil(result)
 	suite.NotNil(err)
-	suite.Equal(apierror.ErrorCodeValidationFailed, err.Code)
+	suite.Equal(apierror.CodeValidationFailed, err.Code)
 	suite.Equal("units[0].offset_denominator", err.Param)
-	suite.Contains(err.PublicMessage, "offset denominator cannot be zero")
+	suite.Contains(err.Errors[0].Message, "offset denominator cannot be zero")
 }
 
 func (suite *UnitSvcTestSuite) TestBulkUpsertUnits_ZeroDenominatorOnSecondUnit() {
@@ -1237,9 +1237,9 @@ func (suite *UnitSvcTestSuite) TestBulkUpsertUnits_ZeroDenominatorOnSecondUnit()
 
 	suite.Nil(result)
 	suite.NotNil(err)
-	suite.Equal(apierror.ErrorCodeValidationFailed, err.Code)
+	suite.Equal(apierror.CodeValidationFailed, err.Code)
 	suite.Equal("units[1].ratio_denominator", err.Param)
-	suite.Contains(err.PublicMessage, "ratio denominator cannot be zero")
+	suite.Contains(err.Errors[0].Message, "ratio denominator cannot be zero")
 }
 
 // ---------------------------------------------------------------------------

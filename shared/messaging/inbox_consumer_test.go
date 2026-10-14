@@ -8,7 +8,7 @@ import (
 	"testing"
 	"time"
 
-	apierror "github.com/open-mrp/api/shared/errors"
+	apierror "github.com/open-mrp/apikit/apierror"
 
 	"github.com/go-sql-driver/mysql"
 	"github.com/open-mrp/api/shared/contracts"

@@ -13,7 +13,7 @@ import (
 	repositorymock "github.com/open-mrp/api/services/billing-service/internal/domain/mock/repository"
 	servicemock "github.com/open-mrp/api/services/billing-service/internal/domain/mock/service"
 	"github.com/open-mrp/api/shared/appctx"
-	apierror "github.com/open-mrp/api/shared/errors"
+	apierror "github.com/open-mrp/apikit/apierror"
 
 	authtypes "github.com/open-mrp/api/services/auth-service/pkg/types"
 
@@ -310,7 +310,7 @@ func (s *BillingSvcTestSuite) TestSubscribeToPricingPlan_CommitFails() {
 
 func (s *BillingSvcTestSuite) TestSubscribeToPricingPlan_PlanNotFound() {
 	s.expectIdempotency()
-	s.pricingPlanRepo.EXPECT().GetPlanByCode(anyCtx, "nonexistent").Return(nil, apierror.NewResourceNotFoundError("plan not found"))
+	s.pricingPlanRepo.EXPECT().GetPlanByCode(anyCtx, "nonexistent").Return(nil, apierror.NewNotFoundError("plan not found"))
 
 	apiErr := s.billingSvc.SubscribeToPricingPlan(testIdentityCtx(), "cus_abc", "nonexistent")
 	s.NotNil(apiErr)
@@ -420,7 +420,7 @@ func (s *BillingSvcTestSuite) TestSwitchPlan_DowngradeToFree() {
 
 func (s *BillingSvcTestSuite) TestSwitchPlan_PlanNotFound() {
 	s.expectIdempotency()
-	s.pricingPlanRepo.EXPECT().GetPlanByTypeID(anyCtx, "bad_plan").Return(nil, apierror.NewResourceNotFoundError("plan not found"))
+	s.pricingPlanRepo.EXPECT().GetPlanByTypeID(anyCtx, "bad_plan").Return(nil, apierror.NewNotFoundError("plan not found"))
 
 	_, apiErr := s.billingSvc.SwitchPlan(testIdentityCtx(), "acct_1", "bad_plan")
 	s.NotNil(apiErr)

@@ -6,7 +6,6 @@ import (
 	"github.com/open-mrp/api/services/core-service/internal/domain"
 	"github.com/open-mrp/api/shared/constants"
 	"github.com/open-mrp/api/shared/contracts"
-	apierror "github.com/open-mrp/api/shared/errors"
 	pb "github.com/open-mrp/api/shared/proto/core"
 
 	"google.golang.org/protobuf/types/known/emptypb"
@@ -409,7 +408,7 @@ func (h *purchaseGRPCHandler) BatchGetPurchaseOrdersByIDs(ctx context.Context, r
 
 	orders, apiErr := h.purchaseOrderSvc.BatchGetPurchaseOrders(ctx, req.Ids)
 	if apiErr != nil {
-		if apierror.Is5XXErrorCode(apiErr.Code) {
+		if apiErr.Code.Status() >= 500 {
 			return nil, contracts.ConvertAPIErrorToGRPC(apiErr)
 		}
 		return &pb.BatchGetPurchaseOrdersByIDsResponse{}, nil

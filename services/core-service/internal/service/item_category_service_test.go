@@ -12,7 +12,7 @@ import (
 	repositorymock "github.com/open-mrp/api/services/core-service/internal/domain/mock/repository"
 	"github.com/open-mrp/api/shared/appctx"
 	"github.com/open-mrp/api/shared/constants"
-	apierror "github.com/open-mrp/api/shared/errors"
+	apierror "github.com/open-mrp/apikit/apierror"
 
 	"github.com/stretchr/testify/suite"
 	"go.uber.org/mock/gomock"
@@ -420,7 +420,7 @@ func (suite *ItemCategorySvcTestSuite) TestWriteBulkUpsertItemCategories_Propert
 	)
 
 	suite.NotNil(err)
-	suite.Equal(apierror.ErrorCodeInternalError, err.Code)
+	suite.Equal(apierror.CodeInternalError, err.Code)
 }
 
 func (suite *ItemCategorySvcTestSuite) TestWriteBulkUpsertItemCategories_PropertyCreateError() {
@@ -452,7 +452,7 @@ func (suite *ItemCategorySvcTestSuite) TestWriteBulkUpsertItemCategories_Propert
 	)
 
 	suite.NotNil(err)
-	suite.Equal(apierror.ErrorCodeInternalError, err.Code)
+	suite.Equal(apierror.CodeInternalError, err.Code)
 }
 
 // A failure inside the row's savepoint drops only that row — the batch still completes.

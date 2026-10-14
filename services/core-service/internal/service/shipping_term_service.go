@@ -9,10 +9,10 @@ import (
 	"github.com/open-mrp/api/shared/appctx"
 	"github.com/open-mrp/api/shared/audit"
 	"github.com/open-mrp/api/shared/constants"
-	apierror "github.com/open-mrp/api/shared/errors"
 	"github.com/open-mrp/api/shared/id"
-	"github.com/open-mrp/api/shared/idempotency"
-	"github.com/open-mrp/api/shared/tracing"
+	"github.com/open-mrp/api/shared/idemresponse"
+	apierror "github.com/open-mrp/apikit/apierror"
+	"github.com/open-mrp/apikit/tracing"
 )
 
 var shippingTermSvcTracer = tracing.GetTracer("core-service.shipping_term_service")
@@ -93,7 +93,7 @@ func (s *shippingTermSvcImpl) validateServiceLevelsExist(ctx context.Context, ac
 	}
 	for _, serviceLevelID := range ids {
 		if _, ok := got[serviceLevelID]; !ok {
-			return apierror.NewValidationErrorWithParam("Free shipping service level not found.", "free_shipping_service_level_ids")
+			return apierror.NewFieldError("free_shipping_service_level_ids", apierror.CodeInvalidFormat, "Free shipping service level not found.")
 		}
 	}
 	return nil
@@ -196,7 +196,7 @@ func (s *shippingTermSvcImpl) CreateShippingTerm(ctx context.Context, params dom
 
 	switch domain.RecoveryPoint(idempotencyKey.RecoveryPoint) {
 	case domain.RecoveryPointFinished:
-		cached, err := idempotency.UnmarshalCachedResponse[domain.ShippingTerm](ctx, idempotencyKey.ResponseCode, idempotencyKey.ResponseBody)
+		cached, err := idemresponse.UnmarshalCachedResponse[domain.ShippingTerm](ctx, idempotencyKey.ResponseCode, idempotencyKey.ResponseBody)
 		if err != nil {
 			return nil, tracing.Trace(span, apierror.NewInternalError(err, "Issue unmarshalling cached response."))
 		}
@@ -326,7 +326,7 @@ func (s *shippingTermSvcImpl) UpdateShippingTerm(ctx context.Context, params dom
 
 	switch domain.RecoveryPoint(idempotencyKey.RecoveryPoint) {
 	case domain.RecoveryPointFinished:
-		cached, err := idempotency.UnmarshalCachedResponse[domain.ShippingTerm](ctx, idempotencyKey.ResponseCode, idempotencyKey.ResponseBody)
+		cached, err := idemresponse.UnmarshalCachedResponse[domain.ShippingTerm](ctx, idempotencyKey.ResponseCode, idempotencyKey.ResponseBody)
 		if err != nil {
 			return nil, tracing.Trace(span, apierror.NewInternalError(err, "Issue unmarshalling cached response."))
 		}
@@ -505,13 +505,13 @@ func (s *shippingTermSvcImpl) DeleteShippingTerm(ctx context.Context, shippingTe
 		Includes:       []string{"free_shipping_service_levels"},
 	})
 	if apiErr != nil {
-		if apierror.IsNotFound(apiErr) {
+		if apierror.HasCode(apiErr, apierror.CodeResourceNotFound) {
 			wasDeleted, deletedCheckErr := s.repos.NewDeletedRecordRepo().ExistsInAccount(ctx, constants.DeletedRecordResourceTypeShippingTerm, shippingTermID, accountID)
 			if deletedCheckErr != nil {
 				return tracing.Trace(span, deletedCheckErr)
 			}
 			if wasDeleted {
-				return tracing.Trace(span, apierror.NewAlreadyDeletedError("This shipping term has already been deleted and can no longer be modified."))
+				return tracing.Trace(span, apierror.NewGoneError("This shipping term has already been deleted and can no longer be modified."))
 			}
 		}
 		return tracing.Trace(span, apiErr)

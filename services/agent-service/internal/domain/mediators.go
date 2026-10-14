@@ -4,7 +4,7 @@ import (
 	"context"
 
 	types "github.com/open-mrp/api/services/auth-service/pkg/types"
-	apierror "github.com/open-mrp/api/shared/errors"
+	apierror "github.com/open-mrp/apikit/apierror"
 )
 
 // IdempotencyMed provides idempotency logic for service operations.

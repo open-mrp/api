@@ -4,7 +4,7 @@ import (
 	"testing"
 
 	"github.com/open-mrp/api/shared/constants"
-	apierror "github.com/open-mrp/api/shared/errors"
+	apierror "github.com/open-mrp/apikit/apierror"
 
 	"github.com/stretchr/testify/assert"
 )
@@ -19,16 +19,16 @@ func TestMeasureOwnerPermission(t *testing.T) {
 		name   string
 		owners []constants.ObjectType
 		holds  []string
-		want   apierror.ErrorCode
+		want   apierror.Code
 	}{
 		{"an item's measure with items:update", []constants.ObjectType{item}, []string{"items:update"}, ""},
-		{"an item's measure with production_steps:update", []constants.ObjectType{item}, []string{"production_steps:update"}, apierror.ErrorCodeInsufficientPerms},
+		{"an item's measure with production_steps:update", []constants.ObjectType{item}, []string{"production_steps:update"}, apierror.CodeInsufficientPermissions},
 		{"a step's measure with production_steps:update", []constants.ObjectType{step}, []string{"production_steps:update"}, ""},
-		{"a step's measure with items:update", []constants.ObjectType{step}, []string{"items:update"}, apierror.ErrorCodeInsufficientPerms},
+		{"a step's measure with items:update", []constants.ObjectType{step}, []string{"items:update"}, apierror.CodeInsufficientPermissions},
 		{"a department's measure with departments:update", []constants.ObjectType{constants.ObjectTypeDepartment}, []string{"departments:update"}, ""},
-		{"a measure two resources share with one of their permissions", []constants.ObjectType{item, step}, []string{"items:update"}, apierror.ErrorCodeInsufficientPerms},
+		{"a measure two resources share with one of their permissions", []constants.ObjectType{item, step}, []string{"items:update"}, apierror.CodeInsufficientPermissions},
 		{"a measure two resources share with both permissions", []constants.ObjectType{item, step}, []string{"items:update", "production_steps:update"}, ""},
-		{"a measure nothing in the account holds", nil, []string{"items:update", "production_steps:update"}, apierror.ErrorCodeResourceNotFound},
+		{"a measure nothing in the account holds", nil, []string{"items:update", "production_steps:update"}, apierror.CodeResourceNotFound},
 	}
 	for _, tc := range cases {
 		identity := mustIdentity(t, sellerCtx("", tc.holds...))

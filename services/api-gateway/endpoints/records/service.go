@@ -10,9 +10,9 @@ import (
 	grpcutil "github.com/open-mrp/api/services/api-gateway/internal/grpc"
 	apiresource "github.com/open-mrp/api/services/api-gateway/pkg/resource"
 	"github.com/open-mrp/api/shared/constants"
-	apierror "github.com/open-mrp/api/shared/errors"
 	pb "github.com/open-mrp/api/shared/proto/core"
-	"github.com/open-mrp/api/shared/tracing"
+	apierror "github.com/open-mrp/apikit/apierror"
+	"github.com/open-mrp/apikit/tracing"
 	"github.com/shopspring/decimal"
 	"google.golang.org/grpc"
 )
@@ -82,7 +82,7 @@ func (m *recordsSvcImpl) GenPackList(ctx context.Context, req *GenPackListReques
 		return nil, apiErr
 	}
 	if shipResp == nil || shipResp.Shipment == nil {
-		return nil, apierror.NewResourceNotFoundError("Shipment not found.")
+		return nil, apierror.NewNotFoundError("Shipment not found.")
 	}
 	s := shipResp.Shipment
 
@@ -97,7 +97,7 @@ func (m *recordsSvcImpl) GenPackList(ctx context.Context, req *GenPackListReques
 		return nil, apiErr
 	}
 	if orderResp == nil || orderResp.SalesOrder == nil {
-		return nil, apierror.NewResourceNotFoundError("Sales order not found.")
+		return nil, apierror.NewNotFoundError("Sales order not found.")
 	}
 	o := orderResp.SalesOrder
 

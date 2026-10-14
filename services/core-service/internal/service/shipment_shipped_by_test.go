@@ -11,7 +11,7 @@ import (
 	"github.com/open-mrp/api/services/auth-service/pkg/types"
 	factorymock "github.com/open-mrp/api/services/core-service/internal/domain/mock/factory"
 	repositorymock "github.com/open-mrp/api/services/core-service/internal/domain/mock/repository"
-	apierror "github.com/open-mrp/api/shared/errors"
+	apierror "github.com/open-mrp/apikit/apierror"
 )
 
 // Wires just the account-user repo the shipped_by lookup touches, so each test owns its own
@@ -65,7 +65,7 @@ func TestResolveShippedByID_UnlinkedUserIsRejected(t *testing.T) {
 
 	accountUserRepo.EXPECT().
 		ResolveAccountUserID(gomock.Any(), testLabelAccountID, "usr_internal").
-		Return("", apierror.NewResourceNotFoundError("Account user not found."))
+		Return("", apierror.NewNotFoundError("Account user not found."))
 
 	got, apiErr := svc.resolveShippedByID(context.Background(),
 		shippedByIdentity(types.IdentityActorTypeUser, "usr_internal", testLabelAccountID), testLabelAccountID)
@@ -82,7 +82,7 @@ func TestResolveShippedByID_APIKeyShipsUnattributed(t *testing.T) {
 
 	accountUserRepo.EXPECT().
 		ResolveAccountUserID(gomock.Any(), testLabelAccountID, "apky_test").
-		Return("", apierror.NewResourceNotFoundError("Account user not found."))
+		Return("", apierror.NewNotFoundError("Account user not found."))
 
 	got, apiErr := svc.resolveShippedByID(context.Background(),
 		shippedByIdentity(types.IdentityActorTypeAPIKey, "apky_test", testLabelAccountID), testLabelAccountID)

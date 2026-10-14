@@ -5,9 +5,9 @@ import (
 
 	"github.com/open-mrp/api/services/core-service/internal/domain"
 	"github.com/open-mrp/api/services/core-service/internal/infrastructure/sqlc"
-	"github.com/open-mrp/api/shared/db"
-	apierror "github.com/open-mrp/api/shared/errors"
-	"github.com/open-mrp/api/shared/tracing"
+	apierror "github.com/open-mrp/apikit/apierror"
+	"github.com/open-mrp/apikit/db"
+	"github.com/open-mrp/apikit/tracing"
 )
 
 // GetOeeDepartmentData returns the unit counts and the standard time earned per department in the window. When the caller names machines, only production on those machines is counted — the scheduled-machine restriction OEE Performance needs — via a separate query so the unrestricted path carries no filter predicate. An empty IN list would be invalid SQL, so an empty set means no restriction and uses the whole-floor query.

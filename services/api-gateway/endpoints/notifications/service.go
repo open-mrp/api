@@ -10,9 +10,9 @@ import (
 	apiresource "github.com/open-mrp/api/services/api-gateway/pkg/resource"
 	"github.com/open-mrp/api/services/api-gateway/pkg/resourcekit"
 	"github.com/open-mrp/api/shared/constants"
-	apierror "github.com/open-mrp/api/shared/errors"
 	pb "github.com/open-mrp/api/shared/proto/notification"
-	"github.com/open-mrp/api/shared/tracing"
+	apierror "github.com/open-mrp/apikit/apierror"
+	"github.com/open-mrp/apikit/tracing"
 	"google.golang.org/grpc"
 	"google.golang.org/protobuf/types/known/timestamppb"
 )
@@ -57,10 +57,10 @@ func NewNotificationSvc(config *NotificationSvcConfig) NotificationSvc {
 
 func (s *notificationSvcImpl) SendNotification(ctx context.Context, req *SendNotificationRequest) (*apiresource.NotificationSendResult, *apierror.APIError) {
 	if req.Target.ID == "" {
-		return nil, apierror.NewParameterMissingError("A target is required.", "target")
+		return nil, apierror.NewParameterMissingError("target", "A target is required.")
 	}
 	if !req.Target.Type.IsValid() {
-		return nil, apierror.NewParameterInvalidError("The target type is not supported.", "target.type")
+		return nil, apierror.NewParameterInvalidError("target.type", "The target type is not supported.")
 	}
 
 	pbReq := &pb.SendNotificationRequest{

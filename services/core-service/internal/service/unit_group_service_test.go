@@ -13,7 +13,7 @@ import (
 	repositorymock "github.com/open-mrp/api/services/core-service/internal/domain/mock/repository"
 	"github.com/open-mrp/api/shared/appctx"
 	"github.com/open-mrp/api/shared/constants"
-	apierror "github.com/open-mrp/api/shared/errors"
+	apierror "github.com/open-mrp/apikit/apierror"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/suite"
@@ -211,7 +211,7 @@ func (suite *UnitGroupSvcTestSuite) TestGetUnitGroup_MissingIdentity() {
 
 	suite.Nil(result)
 	suite.NotNil(err)
-	suite.Equal(apierror.ErrorCodeInternalError, err.Code)
+	suite.Equal(apierror.CodeInternalError, err.Code)
 }
 
 func (suite *UnitGroupSvcTestSuite) TestGetUnitGroup_MissingTargetAccount() {
@@ -230,7 +230,7 @@ func (suite *UnitGroupSvcTestSuite) TestGetUnitGroup_MissingTargetAccount() {
 
 	suite.Nil(result)
 	suite.NotNil(err)
-	suite.Equal(apierror.ErrorCodeInvalidCredentials, err.Code)
+	suite.Equal(apierror.CodeInvalidCredentials, err.Code)
 }
 
 func (suite *UnitGroupSvcTestSuite) TestGetUnitGroup_InsufficientPermissions() {
@@ -250,7 +250,7 @@ func (suite *UnitGroupSvcTestSuite) TestGetUnitGroup_InsufficientPermissions() {
 
 	suite.Nil(result)
 	suite.NotNil(err)
-	suite.Equal(apierror.ErrorCodeInsufficientPerms, err.Code)
+	suite.Equal(apierror.CodeInsufficientPermissions, err.Code)
 }
 
 func (suite *UnitGroupSvcTestSuite) TestGetUnitGroup_NotFound() {
@@ -258,14 +258,14 @@ func (suite *UnitGroupSvcTestSuite) TestGetUnitGroup_NotFound() {
 
 	suite.unitGroupRepo.EXPECT().
 		Get(gomock.Any(), domain.GetUnitGroupParams{AccountID: "ac_test123", UnitGroupID: "ug_notfound"}).
-		Return(nil, apierror.NewResourceNotFoundError("Unit group not found.")).
+		Return(nil, apierror.NewNotFoundError("Unit group not found.")).
 		Times(1)
 
 	result, err := suite.unitGroupSvc.GetUnitGroup(ctx, domain.GetUnitGroupParams{UnitGroupID: "ug_notfound"})
 
 	suite.Nil(result)
 	suite.NotNil(err)
-	suite.Equal(apierror.ErrorCodeResourceNotFound, err.Code)
+	suite.Equal(apierror.CodeResourceNotFound, err.Code)
 }
 
 // --- ListUnitGroups ---
@@ -290,7 +290,7 @@ func (suite *UnitGroupSvcTestSuite) TestListUnitGroups_MissingIdentity() {
 
 	suite.Nil(result)
 	suite.NotNil(err)
-	suite.Equal(apierror.ErrorCodeInternalError, err.Code)
+	suite.Equal(apierror.CodeInternalError, err.Code)
 }
 
 func (suite *UnitGroupSvcTestSuite) TestListUnitGroups_InsufficientPermissions() {
@@ -310,7 +310,7 @@ func (suite *UnitGroupSvcTestSuite) TestListUnitGroups_InsufficientPermissions()
 
 	suite.Nil(result)
 	suite.NotNil(err)
-	suite.Equal(apierror.ErrorCodeInsufficientPerms, err.Code)
+	suite.Equal(apierror.CodeInsufficientPermissions, err.Code)
 }
 
 func (suite *UnitGroupSvcTestSuite) TestListUnitGroups_Success_WithGroups() {
@@ -448,7 +448,7 @@ func (suite *UnitGroupSvcTestSuite) TestCreateUnitGroup_TypeMismatch() {
 
 	suite.Nil(result)
 	suite.NotNil(err)
-	suite.Equal(apierror.ErrorCodeValidationFailed, err.Code)
+	suite.Equal(apierror.CodeValidationFailed, err.Code)
 	suite.Equal("unit_conversions", err.Param)
 }
 
@@ -457,7 +457,7 @@ func (suite *UnitGroupSvcTestSuite) TestCreateUnitGroup_MissingIdentity() {
 
 	suite.Nil(result)
 	suite.NotNil(err)
-	suite.Equal(apierror.ErrorCodeInternalError, err.Code)
+	suite.Equal(apierror.CodeInternalError, err.Code)
 }
 
 func (suite *UnitGroupSvcTestSuite) TestCreateUnitGroup_InsufficientPermissions() {
@@ -467,7 +467,7 @@ func (suite *UnitGroupSvcTestSuite) TestCreateUnitGroup_InsufficientPermissions(
 
 	suite.Nil(result)
 	suite.NotNil(err)
-	suite.Equal(apierror.ErrorCodeInsufficientPerms, err.Code)
+	suite.Equal(apierror.CodeInsufficientPermissions, err.Code)
 }
 
 func (suite *UnitGroupSvcTestSuite) TestCreateUnitGroup_DuplicateName() {
@@ -488,7 +488,7 @@ func (suite *UnitGroupSvcTestSuite) TestCreateUnitGroup_DuplicateName() {
 
 	suite.Nil(result)
 	suite.NotNil(err)
-	suite.Equal(apierror.ErrorCodeResourceConflict, err.Code)
+	suite.Equal(apierror.CodeResourceConflict, err.Code)
 	suite.Equal("name", err.Param)
 }
 
@@ -537,7 +537,7 @@ func (suite *UnitGroupSvcTestSuite) TestCreateUnitGroup_UnexpectedRecoveryPoint(
 
 	suite.Nil(result)
 	suite.NotNil(err)
-	suite.Equal(apierror.ErrorCodeInternalError, err.Code)
+	suite.Equal(apierror.CodeInternalError, err.Code)
 }
 
 func (suite *UnitGroupSvcTestSuite) TestCreateUnitGroup_RepoCreateError() {
@@ -566,7 +566,7 @@ func (suite *UnitGroupSvcTestSuite) TestCreateUnitGroup_RepoCreateError() {
 
 	suite.Nil(result)
 	suite.NotNil(err)
-	suite.Equal(apierror.ErrorCodeInternalError, err.Code)
+	suite.Equal(apierror.CodeInternalError, err.Code)
 }
 
 // --- UpdateUnitGroup ---
@@ -610,7 +610,7 @@ func (suite *UnitGroupSvcTestSuite) TestUpdateUnitGroup_MissingIdentity() {
 
 	suite.Nil(result)
 	suite.NotNil(err)
-	suite.Equal(apierror.ErrorCodeInternalError, err.Code)
+	suite.Equal(apierror.CodeInternalError, err.Code)
 }
 
 func (suite *UnitGroupSvcTestSuite) TestUpdateUnitGroup_InsufficientPermissions() {
@@ -620,7 +620,7 @@ func (suite *UnitGroupSvcTestSuite) TestUpdateUnitGroup_InsufficientPermissions(
 
 	suite.Nil(result)
 	suite.NotNil(err)
-	suite.Equal(apierror.ErrorCodeInsufficientPerms, err.Code)
+	suite.Equal(apierror.CodeInsufficientPermissions, err.Code)
 }
 
 func (suite *UnitGroupSvcTestSuite) TestUpdateUnitGroup_SystemGroupRejected() {
@@ -639,7 +639,7 @@ func (suite *UnitGroupSvcTestSuite) TestUpdateUnitGroup_SystemGroupRejected() {
 
 	suite.Nil(result)
 	suite.NotNil(err)
-	suite.Equal(apierror.ErrorCodeValidationFailed, err.Code)
+	suite.Equal(apierror.CodeValidationFailed, err.Code)
 	suite.Contains(err.PublicMessage, "System unit groups cannot be modified")
 }
 
@@ -666,7 +666,7 @@ func (suite *UnitGroupSvcTestSuite) TestUpdateUnitGroup_DuplicateName() {
 
 	suite.Nil(result)
 	suite.NotNil(err)
-	suite.Equal(apierror.ErrorCodeResourceConflict, err.Code)
+	suite.Equal(apierror.CodeResourceConflict, err.Code)
 	suite.Equal("name", err.Param)
 }
 
@@ -676,7 +676,7 @@ func (suite *UnitGroupSvcTestSuite) TestUpdateUnitGroup_NotFound() {
 	suite.expectUGIdempotencyStarted()
 	suite.unitGroupRepo.EXPECT().
 		Get(gomock.Any(), domain.GetUnitGroupParams{AccountID: "ac_test123", UnitGroupID: "ug_notfound2"}).
-		Return(nil, apierror.NewResourceNotFoundError("Unit group not found.")).
+		Return(nil, apierror.NewNotFoundError("Unit group not found.")).
 		Times(1)
 	suite.expectUGCacheError()
 
@@ -686,7 +686,7 @@ func (suite *UnitGroupSvcTestSuite) TestUpdateUnitGroup_NotFound() {
 
 	suite.Nil(result)
 	suite.NotNil(err)
-	suite.Equal(apierror.ErrorCodeResourceNotFound, err.Code)
+	suite.Equal(apierror.CodeResourceNotFound, err.Code)
 }
 
 func (suite *UnitGroupSvcTestSuite) TestUpdateUnitGroup_IdempotencyFinished() {
@@ -730,7 +730,7 @@ func (suite *UnitGroupSvcTestSuite) TestUpdateUnitGroup_UnexpectedRecoveryPoint(
 
 	suite.Nil(result)
 	suite.NotNil(err)
-	suite.Equal(apierror.ErrorCodeInternalError, err.Code)
+	suite.Equal(apierror.CodeInternalError, err.Code)
 }
 
 // --- DeleteUnitGroup ---
@@ -765,7 +765,7 @@ func (suite *UnitGroupSvcTestSuite) TestDeleteUnitGroup_MissingIdentity() {
 	err := suite.unitGroupSvc.DeleteUnitGroup(context.Background(), "ug_d2")
 
 	suite.NotNil(err)
-	suite.Equal(apierror.ErrorCodeInternalError, err.Code)
+	suite.Equal(apierror.CodeInternalError, err.Code)
 }
 
 func (suite *UnitGroupSvcTestSuite) TestDeleteUnitGroup_InsufficientPermissions() {
@@ -774,7 +774,7 @@ func (suite *UnitGroupSvcTestSuite) TestDeleteUnitGroup_InsufficientPermissions(
 	err := suite.unitGroupSvc.DeleteUnitGroup(ctx, "ug_d3")
 
 	suite.NotNil(err)
-	suite.Equal(apierror.ErrorCodeInsufficientPerms, err.Code)
+	suite.Equal(apierror.CodeInsufficientPermissions, err.Code)
 }
 
 func (suite *UnitGroupSvcTestSuite) TestDeleteUnitGroup_SystemGroupRejected() {
@@ -788,7 +788,7 @@ func (suite *UnitGroupSvcTestSuite) TestDeleteUnitGroup_SystemGroupRejected() {
 	err := suite.unitGroupSvc.DeleteUnitGroup(ctx, "ug_sys")
 
 	suite.NotNil(err)
-	suite.Equal(apierror.ErrorCodeValidationFailed, err.Code)
+	suite.Equal(apierror.CodeValidationFailed, err.Code)
 	suite.Contains(err.PublicMessage, "System unit groups cannot be deleted")
 }
 
@@ -797,7 +797,7 @@ func (suite *UnitGroupSvcTestSuite) TestDeleteUnitGroup_AlreadyDeleted() {
 
 	suite.unitGroupRepo.EXPECT().
 		Get(gomock.Any(), domain.GetUnitGroupParams{AccountID: "ac_test123", UnitGroupID: "ug_gone"}).
-		Return(nil, apierror.NewResourceNotFoundError("Unit group not found.")).
+		Return(nil, apierror.NewNotFoundError("Unit group not found.")).
 		Times(1)
 	suite.deletedRecordRepo.EXPECT().
 		ExistsInAccount(gomock.Any(), constants.DeletedRecordResourceTypeUnitGroup, "ug_gone", "ac_test123").
@@ -807,7 +807,7 @@ func (suite *UnitGroupSvcTestSuite) TestDeleteUnitGroup_AlreadyDeleted() {
 	err := suite.unitGroupSvc.DeleteUnitGroup(ctx, "ug_gone")
 
 	suite.NotNil(err)
-	suite.Equal(apierror.ErrorCodeResourceGone, err.Code)
+	suite.Equal(apierror.CodeResourceGone, err.Code)
 }
 
 func (suite *UnitGroupSvcTestSuite) TestDeleteUnitGroup_NotFound() {
@@ -815,7 +815,7 @@ func (suite *UnitGroupSvcTestSuite) TestDeleteUnitGroup_NotFound() {
 
 	suite.unitGroupRepo.EXPECT().
 		Get(gomock.Any(), domain.GetUnitGroupParams{AccountID: "ac_test123", UnitGroupID: "ug_d_nf"}).
-		Return(nil, apierror.NewResourceNotFoundError("Unit group not found.")).
+		Return(nil, apierror.NewNotFoundError("Unit group not found.")).
 		Times(1)
 	suite.deletedRecordRepo.EXPECT().
 		ExistsInAccount(gomock.Any(), constants.DeletedRecordResourceTypeUnitGroup, "ug_d_nf", "ac_test123").
@@ -825,7 +825,7 @@ func (suite *UnitGroupSvcTestSuite) TestDeleteUnitGroup_NotFound() {
 	err := suite.unitGroupSvc.DeleteUnitGroup(ctx, "ug_d_nf")
 
 	suite.NotNil(err)
-	suite.Equal(apierror.ErrorCodeResourceNotFound, err.Code)
+	suite.Equal(apierror.CodeResourceNotFound, err.Code)
 }
 
 // --- UpsertUnitGroupUnit ---
@@ -835,7 +835,7 @@ func (suite *UnitGroupSvcTestSuite) TestUpsertUnitGroupUnit_MissingIdentity() {
 
 	suite.Nil(result)
 	suite.NotNil(err)
-	suite.Equal(apierror.ErrorCodeInternalError, err.Code)
+	suite.Equal(apierror.CodeInternalError, err.Code)
 }
 
 func (suite *UnitGroupSvcTestSuite) TestUpsertUnitGroupUnit_InsufficientPermissions() {
@@ -847,7 +847,7 @@ func (suite *UnitGroupSvcTestSuite) TestUpsertUnitGroupUnit_InsufficientPermissi
 
 	suite.Nil(result)
 	suite.NotNil(err)
-	suite.Equal(apierror.ErrorCodeInsufficientPerms, err.Code)
+	suite.Equal(apierror.CodeInsufficientPermissions, err.Code)
 }
 
 func (suite *UnitGroupSvcTestSuite) TestUpsertUnitGroupUnit_SystemGroupRejected() {
@@ -869,7 +869,7 @@ func (suite *UnitGroupSvcTestSuite) TestUpsertUnitGroupUnit_SystemGroupRejected(
 
 	suite.Nil(result)
 	suite.NotNil(err)
-	suite.Equal(apierror.ErrorCodeValidationFailed, err.Code)
+	suite.Equal(apierror.CodeValidationFailed, err.Code)
 	suite.Contains(err.PublicMessage, "System unit groups cannot be modified")
 }
 
@@ -902,7 +902,7 @@ func (suite *UnitGroupSvcTestSuite) TestUpsertUnitGroupUnit_TypeMismatch() {
 
 	suite.Nil(result)
 	suite.NotNil(err)
-	suite.Equal(apierror.ErrorCodeValidationFailed, err.Code)
+	suite.Equal(apierror.CodeValidationFailed, err.Code)
 	suite.Equal("unit_id", err.Param)
 }
 
@@ -972,7 +972,7 @@ func (suite *UnitGroupSvcTestSuite) TestDeleteUnitGroupUnit_MissingIdentity() {
 	err := suite.unitGroupSvc.DeleteUnitGroupUnit(context.Background(), domain.DeleteUnitGroupUnitParams{})
 
 	suite.NotNil(err)
-	suite.Equal(apierror.ErrorCodeInternalError, err.Code)
+	suite.Equal(apierror.CodeInternalError, err.Code)
 }
 
 func (suite *UnitGroupSvcTestSuite) TestDeleteUnitGroupUnit_InsufficientPermissions() {
@@ -983,7 +983,7 @@ func (suite *UnitGroupSvcTestSuite) TestDeleteUnitGroupUnit_InsufficientPermissi
 	})
 
 	suite.NotNil(err)
-	suite.Equal(apierror.ErrorCodeInsufficientPerms, err.Code)
+	suite.Equal(apierror.CodeInsufficientPermissions, err.Code)
 }
 
 func (suite *UnitGroupSvcTestSuite) TestDeleteUnitGroupUnit_SystemGroupRejected() {
@@ -1000,7 +1000,7 @@ func (suite *UnitGroupSvcTestSuite) TestDeleteUnitGroupUnit_SystemGroupRejected(
 	})
 
 	suite.NotNil(err)
-	suite.Equal(apierror.ErrorCodeValidationFailed, err.Code)
+	suite.Equal(apierror.CodeValidationFailed, err.Code)
 	suite.Contains(err.PublicMessage, "System unit groups cannot be modified")
 }
 
@@ -1027,7 +1027,7 @@ func (suite *UnitGroupSvcTestSuite) TestDeleteUnitGroupUnit_AlreadyDeleted() {
 	})
 
 	suite.NotNil(err)
-	suite.Equal(apierror.ErrorCodeResourceGone, err.Code)
+	suite.Equal(apierror.CodeResourceGone, err.Code)
 }
 
 func (suite *UnitGroupSvcTestSuite) TestDeleteUnitGroupUnit_Success() {
@@ -1073,7 +1073,7 @@ func (suite *UnitGroupSvcTestSuite) TestListUnitGroupUnits_MissingIdentity() {
 
 	suite.Nil(result)
 	suite.NotNil(err)
-	suite.Equal(apierror.ErrorCodeInternalError, err.Code)
+	suite.Equal(apierror.CodeInternalError, err.Code)
 }
 
 func (suite *UnitGroupSvcTestSuite) TestListUnitGroupUnits_GroupNotFound() {
@@ -1081,14 +1081,14 @@ func (suite *UnitGroupSvcTestSuite) TestListUnitGroupUnits_GroupNotFound() {
 
 	suite.unitGroupRepo.EXPECT().
 		Get(gomock.Any(), domain.GetUnitGroupParams{AccountID: "ac_test123", UnitGroupID: "ug_lu_nf"}).
-		Return(nil, apierror.NewResourceNotFoundError("not found")).
+		Return(nil, apierror.NewNotFoundError("not found")).
 		Times(1)
 
 	result, err := suite.unitGroupSvc.ListUnitGroupUnits(ctx, "ug_lu_nf", nil)
 
 	suite.Nil(result)
 	suite.NotNil(err)
-	suite.Equal(apierror.ErrorCodeResourceNotFound, err.Code)
+	suite.Equal(apierror.CodeResourceNotFound, err.Code)
 }
 
 func (suite *UnitGroupSvcTestSuite) TestListUnitGroupUnits_Success() {
@@ -1121,7 +1121,7 @@ func (suite *UnitGroupSvcTestSuite) TestGetUnitGroupUnit_MissingIdentity() {
 
 	suite.Nil(result)
 	suite.NotNil(err)
-	suite.Equal(apierror.ErrorCodeInternalError, err.Code)
+	suite.Equal(apierror.CodeInternalError, err.Code)
 }
 
 func (suite *UnitGroupSvcTestSuite) TestGetUnitGroupUnit_GroupNotFound() {
@@ -1129,7 +1129,7 @@ func (suite *UnitGroupSvcTestSuite) TestGetUnitGroupUnit_GroupNotFound() {
 
 	suite.unitGroupRepo.EXPECT().
 		Get(gomock.Any(), domain.GetUnitGroupParams{AccountID: "ac_test123", UnitGroupID: "ug_gu_nf"}).
-		Return(nil, apierror.NewResourceNotFoundError("not found")).
+		Return(nil, apierror.NewNotFoundError("not found")).
 		Times(1)
 
 	result, err := suite.unitGroupSvc.GetUnitGroupUnit(ctx, domain.GetUnitGroupUnitParams{
@@ -1139,7 +1139,7 @@ func (suite *UnitGroupSvcTestSuite) TestGetUnitGroupUnit_GroupNotFound() {
 
 	suite.Nil(result)
 	suite.NotNil(err)
-	suite.Equal(apierror.ErrorCodeResourceNotFound, err.Code)
+	suite.Equal(apierror.CodeResourceNotFound, err.Code)
 }
 
 func (suite *UnitGroupSvcTestSuite) TestGetUnitGroupUnit_Success() {
@@ -1178,7 +1178,7 @@ func (suite *UnitGroupSvcTestSuite) TestBulkUpsertUnitGroups_MissingIdentity() {
 
 	suite.Nil(result)
 	suite.NotNil(err)
-	suite.Equal(apierror.ErrorCodeInternalError, err.Code)
+	suite.Equal(apierror.CodeInternalError, err.Code)
 }
 
 func (suite *UnitGroupSvcTestSuite) TestBulkUpsertUnitGroups_InsufficientPermissions_NoCreate() {
@@ -1190,7 +1190,7 @@ func (suite *UnitGroupSvcTestSuite) TestBulkUpsertUnitGroups_InsufficientPermiss
 
 	suite.Nil(result)
 	suite.NotNil(err)
-	suite.Equal(apierror.ErrorCodeInsufficientPerms, err.Code)
+	suite.Equal(apierror.CodeInsufficientPermissions, err.Code)
 }
 
 func (suite *UnitGroupSvcTestSuite) TestBulkUpsertUnitGroups_InsufficientPermissions_NoUpdate() {
@@ -1202,7 +1202,7 @@ func (suite *UnitGroupSvcTestSuite) TestBulkUpsertUnitGroups_InsufficientPermiss
 
 	suite.Nil(result)
 	suite.NotNil(err)
-	suite.Equal(apierror.ErrorCodeInsufficientPerms, err.Code)
+	suite.Equal(apierror.CodeInsufficientPermissions, err.Code)
 }
 
 func (suite *UnitGroupSvcTestSuite) TestBulkUpsertUnitGroups_Empty() {
@@ -1214,7 +1214,7 @@ func (suite *UnitGroupSvcTestSuite) TestBulkUpsertUnitGroups_Empty() {
 
 	suite.Nil(result)
 	suite.NotNil(err)
-	suite.Equal(apierror.ErrorCodeValidationFailed, err.Code)
+	suite.Equal(apierror.CodeValidationFailed, err.Code)
 	suite.Contains(err.PublicMessage, "No unit groups provided")
 }
 
@@ -1228,7 +1228,7 @@ func (suite *UnitGroupSvcTestSuite) TestBulkUpsertUnitGroups_TooMany() {
 
 	suite.Nil(result)
 	suite.NotNil(err)
-	suite.Equal(apierror.ErrorCodeValidationFailed, err.Code)
+	suite.Equal(apierror.CodeValidationFailed, err.Code)
 	suite.Contains(err.PublicMessage, "1000")
 }
 
@@ -1244,9 +1244,9 @@ func (suite *UnitGroupSvcTestSuite) TestBulkUpsertUnitGroups_DuplicateNameInRequ
 
 	suite.Nil(result)
 	suite.NotNil(err)
-	suite.Equal(apierror.ErrorCodeValidationFailed, err.Code)
+	suite.Equal(apierror.CodeValidationFailed, err.Code)
 	suite.Equal("unit_groups[1].name", err.Param)
-	suite.Contains(err.PublicMessage, "duplicate name")
+	suite.Contains(err.Errors[0].Message, "duplicate name")
 }
 
 // --- resolveBulkUpsertUnitGroupRows (the engine's Resolve hook, exercised directly) ---
@@ -1278,7 +1278,7 @@ func (suite *UnitGroupSvcTestSuite) TestResolveBulkUpsertUnitGroups_DuplicateUni
 
 	suite.Nil(resolved)
 	suite.NotNil(err)
-	suite.Equal(apierror.ErrorCodeValidationFailed, err.Code)
+	suite.Equal(apierror.CodeValidationFailed, err.Code)
 	suite.Contains(err.PublicMessage, "Duplicate unit")
 	suite.Equal("unit_groups[0].unit_conversions[1].unit", err.Param)
 }
@@ -1300,7 +1300,7 @@ func (suite *UnitGroupSvcTestSuite) TestResolveBulkUpsertUnitGroups_UnitNotFound
 
 	suite.Nil(resolved)
 	suite.NotNil(err)
-	suite.Equal(apierror.ErrorCodeValidationFailed, err.Code)
+	suite.Equal(apierror.CodeValidationFailed, err.Code)
 	suite.Equal("unit_groups[0].base_unit", err.Param)
 }
 
@@ -1390,7 +1390,7 @@ func (suite *UnitGroupSvcTestSuite) TestWriteBulkUpsertUnitGroups_FindByNamesErr
 	_, _, _, err := suite.writeUnitGroups(domain.ResolvedUpsertUnitGroupRow{Name: "Test BU4", Type: "mass", BaseUnitID: "un_b8"})
 
 	suite.NotNil(err, "a failed bulk read is infrastructural — it fails the whole batch")
-	suite.Equal(apierror.ErrorCodeInternalError, err.Code)
+	suite.Equal(apierror.CodeInternalError, err.Code)
 }
 
 func (suite *UnitGroupSvcTestSuite) TestWriteBulkUpsertUnitGroups_EmptyIDInExistingGroup() {
@@ -1402,7 +1402,7 @@ func (suite *UnitGroupSvcTestSuite) TestWriteBulkUpsertUnitGroups_EmptyIDInExist
 	_, _, _, err := suite.writeUnitGroups(domain.ResolvedUpsertUnitGroupRow{Name: "Test BU5", Type: "mass", BaseUnitID: "un_b9"})
 
 	suite.NotNil(err, "a corrupt existing row is an invariant violation, not a per-row failure")
-	suite.Equal(apierror.ErrorCodeInternalError, err.Code)
+	suite.Equal(apierror.CodeInternalError, err.Code)
 }
 
 func (suite *UnitGroupSvcTestSuite) TestWriteBulkUpsertUnitGroups_AllCreates() {

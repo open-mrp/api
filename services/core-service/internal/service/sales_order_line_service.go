@@ -13,11 +13,11 @@ import (
 	"github.com/open-mrp/api/shared/appctx"
 	"github.com/open-mrp/api/shared/audit"
 	"github.com/open-mrp/api/shared/constants"
-	apierror "github.com/open-mrp/api/shared/errors"
 	"github.com/open-mrp/api/shared/id"
-	"github.com/open-mrp/api/shared/idempotency"
-	"github.com/open-mrp/api/shared/metadata"
-	"github.com/open-mrp/api/shared/tracing"
+	"github.com/open-mrp/api/shared/idemresponse"
+	apierror "github.com/open-mrp/apikit/apierror"
+	"github.com/open-mrp/apikit/metadata"
+	"github.com/open-mrp/apikit/tracing"
 )
 
 var salesOrderLineSvcTracer = tracing.GetTracer("core-service.sales_order_line_service")
@@ -124,7 +124,7 @@ func (s *salesOrderLineSvcImpl) CreateSalesOrderLine(ctx context.Context, params
 
 	switch domain.RecoveryPoint(idempotencyKey.RecoveryPoint) {
 	case domain.RecoveryPointFinished:
-		cached, err := idempotency.UnmarshalCachedResponse[domain.SalesOrderLine](ctx, idempotencyKey.ResponseCode, idempotencyKey.ResponseBody)
+		cached, err := idemresponse.UnmarshalCachedResponse[domain.SalesOrderLine](ctx, idempotencyKey.ResponseCode, idempotencyKey.ResponseBody)
 		if err != nil {
 			return nil, tracing.Trace(span, apierror.NewInternalError(err, "Issue unmarshalling cached response."))
 		}
@@ -258,7 +258,7 @@ func (s *salesOrderLineSvcImpl) lineItemIDsToLockForUpdate(ctx context.Context, 
 	line, apiErr := s.repos.NewSalesOrderLineRepo().Get(ctx, params.SalesOrderLineID)
 	if apiErr != nil {
 		// The transaction reports the missing line with its own check.
-		if apierror.IsNotFound(apiErr) {
+		if apierror.HasCode(apiErr, apierror.CodeResourceNotFound) {
 			return nil, true, nil
 		}
 		return nil, false, apiErr
@@ -597,7 +597,7 @@ func (s *salesOrderLineSvcImpl) UpdateSalesOrderLine(ctx context.Context, params
 
 	switch domain.RecoveryPoint(idempotencyKey.RecoveryPoint) {
 	case domain.RecoveryPointFinished:
-		cached, err := idempotency.UnmarshalCachedResponse[domain.SalesOrderLine](ctx, idempotencyKey.ResponseCode, idempotencyKey.ResponseBody)
+		cached, err := idemresponse.UnmarshalCachedResponse[domain.SalesOrderLine](ctx, idempotencyKey.ResponseCode, idempotencyKey.ResponseBody)
 		if err != nil {
 			return nil, tracing.Trace(span, apierror.NewInternalError(err, "Issue unmarshalling cached response."))
 		}
@@ -633,7 +633,7 @@ func (s *salesOrderLineSvcImpl) UpdateSalesOrderLine(ctx context.Context, params
 				return apiErr
 			}
 			if !isInOrder {
-				return apierror.NewResourceNotFoundError("Sales order line not found in this order.")
+				return apierror.NewNotFoundError("Sales order line not found in this order.")
 			}
 
 			old, apiErr := txLineRepo.Get(txCtx, params.SalesOrderLineID)
@@ -776,7 +776,7 @@ func (s *salesOrderLineSvcImpl) DeleteSalesOrderLine(ctx context.Context, params
 		return tracing.Trace(span, apiErr)
 	}
 	if !isInOrder {
-		return tracing.Trace(span, apierror.NewResourceNotFoundError("Sales order line not found in this order."))
+		return tracing.Trace(span, apierror.NewNotFoundError("Sales order line not found in this order."))
 	}
 
 	// Block deletion of lines from a fulfilled order (hard block, no admin override).
@@ -785,7 +785,7 @@ func (s *salesOrderLineSvcImpl) DeleteSalesOrderLine(ctx context.Context, params
 		return tracing.Trace(span, apiErr)
 	}
 	if order.SalesOrderStatusCode == string(constants.SalesOrderStatusCodeFulfilled) {
-		return tracing.Trace(span, apierror.NewResourceConflictError("Cannot delete lines from a fulfilled order."))
+		return tracing.Trace(span, apierror.NewConflictError("Cannot delete lines from a fulfilled order."))
 	}
 
 	// Block deletion once the line is part of any shipment (packed or shipped). A packed
@@ -795,7 +795,7 @@ func (s *salesOrderLineSvcImpl) DeleteSalesOrderLine(ctx context.Context, params
 		return tracing.Trace(span, apiErr)
 	}
 	if hasShipment {
-		return tracing.Trace(span, apierror.NewResourceConflictError("Cannot delete a line item that has a shipment against it."))
+		return tracing.Trace(span, apierror.NewConflictError("Cannot delete a line item that has a shipment against it."))
 	}
 
 	// Matches Dashboard's OrderUtils.isEditable admin gate: a completed-but-not-fulfilled order, or an order with any shipped shipment, may still have lines deleted — but only by an admin.
@@ -811,13 +811,13 @@ func (s *salesOrderLineSvcImpl) DeleteSalesOrderLine(ctx context.Context, params
 
 	salesOrderLine, apiErr := lineRepo.Get(ctx, params.SalesOrderLineID)
 	if apiErr != nil {
-		if apierror.IsNotFound(apiErr) {
+		if apierror.HasCode(apiErr, apierror.CodeResourceNotFound) {
 			wasDeleted, deletedCheckErr := s.repos.NewDeletedRecordRepo().ExistsInAccount(ctx, constants.DeletedRecordResourceTypeSalesOrderLine, params.SalesOrderLineID, params.AccountID)
 			if deletedCheckErr != nil {
 				return tracing.Trace(span, deletedCheckErr)
 			}
 			if wasDeleted {
-				return tracing.Trace(span, apierror.NewAlreadyDeletedError("This sales order line has already been deleted and can no longer be modified."))
+				return tracing.Trace(span, apierror.NewGoneError("This sales order line has already been deleted and can no longer be modified."))
 			}
 		}
 		return tracing.Trace(span, apiErr)

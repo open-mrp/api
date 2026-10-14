@@ -8,7 +8,7 @@ import (
 	"net/http"
 	"slices"
 
-	apierror "github.com/open-mrp/api/shared/errors"
+	apierror "github.com/open-mrp/apikit/apierror"
 )
 
 // MaxBytes is the largest image an upload accepts: the 10 MB the dashboard API's upload routes took.
@@ -38,14 +38,14 @@ func Favicon(data []byte) (string, *apierror.APIError) {
 
 func detect(data []byte, allowed []string, formats string) (string, *apierror.APIError) {
 	if len(data) == 0 {
-		return "", apierror.NewMissingFieldError("The request body is empty. Send the image itself as the raw request body.", bodyParam)
+		return "", apierror.NewMissingFieldError(bodyParam, "The request body is empty. Send the image itself as the raw request body.")
 	}
 	if len(data) > MaxBytes {
 		return "", apierror.NewRequestTooLargeError(fmt.Sprintf("The image is larger than the %d MB limit.", MaxBytes>>20))
 	}
 	contentType := http.DetectContentType(data)
 	if !slices.Contains(allowed, contentType) {
-		return "", apierror.NewInvalidFormatError(fmt.Sprintf("The request body is not a %s image.", formats), bodyParam)
+		return "", apierror.NewInvalidFormatError(bodyParam, fmt.Sprintf("The request body is not a %s image.", formats))
 	}
 	return contentType, nil
 }

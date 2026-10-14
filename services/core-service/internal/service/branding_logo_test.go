@@ -10,7 +10,7 @@ import (
 	"testing"
 	"time"
 
-	apierror "github.com/open-mrp/api/shared/errors"
+	apierror "github.com/open-mrp/apikit/apierror"
 )
 
 // stubBrandingStore implements s3.ObjectStore, recording what a branding lookup asked the bucket for.
@@ -111,7 +111,7 @@ func TestBrandingAssets_DegradesToNoLogo(t *testing.T) {
 	}{
 		{"no stored reference", NewBrandingAssets(&stubBrandingStore{}, "account-photos"), ""},
 		{"blank stored reference", NewBrandingAssets(&stubBrandingStore{}, "account-photos"), "   "},
-		{"object missing from the bucket", NewBrandingAssets(&stubBrandingStore{getErr: apierror.NewResourceNotFoundError("gone")}, "account-photos"), "ac_1/logo.png"},
+		{"object missing from the bucket", NewBrandingAssets(&stubBrandingStore{getErr: apierror.NewNotFoundError("gone")}, "account-photos"), "ac_1/logo.png"},
 		{"object is not a decodable image", NewBrandingAssets(&stubBrandingStore{object: []byte("not an image")}, "account-photos"), "ac_1/logo.png"},
 		{"no object store wired", BrandingAssets{}, "ac_1/logo.png"},
 	}

@@ -14,11 +14,11 @@ import (
 	"github.com/open-mrp/api/services/auth-service/pkg/types"
 	"github.com/open-mrp/api/shared/appctx"
 	"github.com/open-mrp/api/shared/contracts"
-	apierror "github.com/open-mrp/api/shared/errors"
 	pb "github.com/open-mrp/api/shared/proto/agent"
-	"github.com/open-mrp/api/shared/tracing"
+	apierror "github.com/open-mrp/apikit/apierror"
 	"github.com/open-mrp/apikit/pagination"
 	"github.com/open-mrp/apikit/safeconv"
+	"github.com/open-mrp/apikit/tracing"
 
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
@@ -129,11 +129,11 @@ func (h *agentHandler) GetRunStatus(ctx context.Context, req *pb.GetRunStatusReq
 	runRepo := h.repos.NewAgentRunRepo()
 	run, runErr := runRepo.GetByID(ctx, req.AgentRunId)
 	if runErr != nil {
-		return nil, contracts.ConvertAPIErrorToGRPC(apierror.NewResourceNotFoundError("Agent run not found."))
+		return nil, contracts.ConvertAPIErrorToGRPC(apierror.NewNotFoundError("Agent run not found."))
 	}
 
 	if run.AccountID != accountID {
-		return nil, contracts.ConvertAPIErrorToGRPC(apierror.NewResourceNotFoundError("Agent run not found."))
+		return nil, contracts.ConvertAPIErrorToGRPC(apierror.NewNotFoundError("Agent run not found."))
 	}
 
 	var outputSummary string
@@ -714,11 +714,11 @@ func (h *agentHandler) GetRun(ctx context.Context, req *pb.GetRunRequest) (*pb.G
 	runRepo := h.repos.NewAgentRunRepo()
 	run, runErr := runRepo.GetByID(ctx, req.AgentRunId)
 	if runErr != nil {
-		return nil, contracts.ConvertAPIErrorToGRPC(apierror.NewResourceNotFoundError("Agent run not found."))
+		return nil, contracts.ConvertAPIErrorToGRPC(apierror.NewNotFoundError("Agent run not found."))
 	}
 
 	if run.AccountID != accountID {
-		return nil, contracts.ConvertAPIErrorToGRPC(apierror.NewResourceNotFoundError("Agent run not found."))
+		return nil, contracts.ConvertAPIErrorToGRPC(apierror.NewNotFoundError("Agent run not found."))
 	}
 
 	pbRun := sqlcRunToProto(run)
@@ -1126,11 +1126,11 @@ func (h *agentHandler) GetAgentMemory(ctx context.Context, req *pb.GetAgentMemor
 	memoryRepo := h.repos.NewAgentMemoryRepo()
 	memory, memErr := memoryRepo.GetByID(ctx, req.Id)
 	if memErr != nil {
-		return nil, contracts.ConvertAPIErrorToGRPC(apierror.NewResourceNotFoundError("Agent memory not found."))
+		return nil, contracts.ConvertAPIErrorToGRPC(apierror.NewNotFoundError("Agent memory not found."))
 	}
 
 	if memory.AccountID != accountID {
-		return nil, contracts.ConvertAPIErrorToGRPC(apierror.NewResourceNotFoundError("Agent memory not found."))
+		return nil, contracts.ConvertAPIErrorToGRPC(apierror.NewNotFoundError("Agent memory not found."))
 	}
 
 	return &pb.GetAgentMemoryResponse{Memory: sqlcMemoryToProto(memory)}, nil

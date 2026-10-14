@@ -5,9 +5,9 @@ import (
 
 	"github.com/open-mrp/api/services/api-gateway/internal/domain"
 	grpcutil "github.com/open-mrp/api/services/api-gateway/internal/grpc"
-	apierror "github.com/open-mrp/api/shared/errors"
 	agentpb "github.com/open-mrp/api/shared/proto/agent"
-	"github.com/open-mrp/api/shared/tracing"
+	apierror "github.com/open-mrp/apikit/apierror"
+	"github.com/open-mrp/apikit/tracing"
 	"google.golang.org/grpc"
 )
 
@@ -47,7 +47,7 @@ func AgentDefinitionExists(ctx context.Context, id string) (bool, *apierror.APIE
 			return agentClient.GetAgentDefinition(ctx, &agentpb.GetAgentDefinitionRequest{AgentDefinitionId: id}, opts...)
 		})
 	if apiErr != nil {
-		if apiErr.Code == apierror.ErrorCodeResourceNotFound {
+		if apiErr.Code == apierror.CodeResourceNotFound {
 			return false, nil
 		}
 		return false, apiErr

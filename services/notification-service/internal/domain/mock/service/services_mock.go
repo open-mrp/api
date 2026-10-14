@@ -15,8 +15,8 @@ import (
 	time "time"
 
 	domain "github.com/open-mrp/api/services/notification-service/internal/domain"
-	apierror "github.com/open-mrp/api/shared/errors"
 	messaging "github.com/open-mrp/api/shared/messaging"
+	apierror "github.com/open-mrp/apikit/apierror"
 	gomock "go.uber.org/mock/gomock"
 )
 

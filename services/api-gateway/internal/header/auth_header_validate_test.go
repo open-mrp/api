@@ -6,7 +6,7 @@ import (
 	"testing"
 
 	"github.com/open-mrp/api/services/api-gateway/internal/testutil"
-	apierror "github.com/open-mrp/api/shared/errors"
+	apierror "github.com/open-mrp/apikit/apierror"
 )
 
 func TestValidateAndExtractAuthHeader(t *testing.T) {
@@ -213,57 +213,57 @@ func TestValidateAndExtractAuthHeader_ErrorMessages(t *testing.T) {
 	tests := []struct {
 		name                string
 		authHeader          string
-		expectedErrorCode   apierror.ErrorCode
-		expectedErrorType   apierror.ErrorType
+		expectedErrorCode   apierror.Code
+		expectedErrorType   apierror.Type
 		expectedMessagePart string
 	}{
 		{
 			name:                "empty auth header error",
 			authHeader:          "",
-			expectedErrorCode:   apierror.ErrorCodeInvalidCredentials,
-			expectedErrorType:   apierror.ErrorTypeInvalidRequest,
+			expectedErrorCode:   apierror.CodeInvalidCredentials,
+			expectedErrorType:   apierror.TypeInvalidRequest,
 			expectedMessagePart: "Authorization header is required",
 		},
 		{
 			name:                "bearer without token error",
 			authHeader:          "Bearer",
-			expectedErrorCode:   apierror.ErrorCodeInvalidCredentials,
-			expectedErrorType:   apierror.ErrorTypeInvalidRequest,
+			expectedErrorCode:   apierror.CodeInvalidCredentials,
+			expectedErrorType:   apierror.TypeInvalidRequest,
 			expectedMessagePart: "You provided 'Bearer' but no token",
 		},
 		{
 			name:                "basic without token error",
 			authHeader:          "Basic",
-			expectedErrorCode:   apierror.ErrorCodeInvalidCredentials,
-			expectedErrorType:   apierror.ErrorTypeInvalidRequest,
+			expectedErrorCode:   apierror.CodeInvalidCredentials,
+			expectedErrorType:   apierror.TypeInvalidRequest,
 			expectedMessagePart: "You provided 'Basic' but no token",
 		},
 		{
 			name:                "invalid auth scheme error",
 			authHeader:          "Digest token123",
-			expectedErrorCode:   apierror.ErrorCodeInvalidCredentials,
-			expectedErrorType:   apierror.ErrorTypeInvalidRequest,
+			expectedErrorCode:   apierror.CodeInvalidCredentials,
+			expectedErrorType:   apierror.TypeInvalidRequest,
 			expectedMessagePart: "Expected 'Basic <token>:' or 'Bearer <token>'",
 		},
 		{
 			name:                "bearer with undefined token error",
 			authHeader:          "Bearer undefined",
-			expectedErrorCode:   apierror.ErrorCodeInvalidCredentials,
-			expectedErrorType:   apierror.ErrorTypeInvalidRequest,
+			expectedErrorCode:   apierror.CodeInvalidCredentials,
+			expectedErrorType:   apierror.TypeInvalidRequest,
 			expectedMessagePart: "If you are sending the request with JavaScript",
 		},
 		{
 			name:                "bearer with null token error",
 			authHeader:          "Bearer null",
-			expectedErrorCode:   apierror.ErrorCodeInvalidCredentials,
-			expectedErrorType:   apierror.ErrorTypeInvalidRequest,
+			expectedErrorCode:   apierror.CodeInvalidCredentials,
+			expectedErrorType:   apierror.TypeInvalidRequest,
 			expectedMessagePart: "If you are sending the request with Java",
 		},
 		{
 			name:                "bearer with None token error",
 			authHeader:          "Bearer None",
-			expectedErrorCode:   apierror.ErrorCodeInvalidCredentials,
-			expectedErrorType:   apierror.ErrorTypeInvalidRequest,
+			expectedErrorCode:   apierror.CodeInvalidCredentials,
+			expectedErrorType:   apierror.TypeInvalidRequest,
 			expectedMessagePart: "If you are sending the request with Python",
 		},
 	}

@@ -9,11 +9,11 @@ import (
 	"github.com/open-mrp/api/services/core-service/internal/domain"
 	"github.com/open-mrp/api/shared/audit"
 	"github.com/open-mrp/api/shared/constants"
-	"github.com/open-mrp/api/shared/db"
-	apierror "github.com/open-mrp/api/shared/errors"
 	"github.com/open-mrp/api/shared/excel"
 	"github.com/open-mrp/api/shared/id"
 	"github.com/open-mrp/api/shared/messaging"
+	apierror "github.com/open-mrp/apikit/apierror"
+	"github.com/open-mrp/apikit/db"
 	"github.com/shopspring/decimal"
 )
 
@@ -138,10 +138,7 @@ func resolveBulkRunIdentifiers(ctx context.Context, repos domain.RepoFactory, ac
 						return nil, apiErr
 					}
 					if !inAccount {
-						return nil, apierror.NewValidationErrorWithParam(
-							fmt.Sprintf("Production step %q was not found.", *b.ProductionStepID),
-							param("production_step_id"),
-						)
+						return nil, apierror.NewFieldError(param("production_step_id"), apierror.CodeInvalidFormat, fmt.Sprintf("Production step %q was not found.", *b.ProductionStepID))
 					}
 					validStepIDs[*b.ProductionStepID] = struct{}{}
 				}
@@ -199,25 +196,25 @@ func validateBulkCreateRunRows(rows []domain.BulkCreateProductionRunParams) *api
 	var rowErrs apierror.RowErrors
 	for i, run := range rows {
 		if len(run.Batches) == 0 {
-			rowErrs.AddValidation(i, fmt.Sprintf("production_runs[%d].batches", i), "at least one batch is required")
+			rowErrs.AddField(i, "batches", apierror.CodeInvalidFormat, "at least one batch is required")
 		}
 		for j, b := range run.Batches {
 			if _, err := decimal.NewFromString(b.QuantityValue); err != nil {
-				rowErrs.AddValidation(i, fmt.Sprintf("production_runs[%d].batches[%d].quantity_value", i, j), fmt.Sprintf("quantity value %q is not a decimal", b.QuantityValue))
+				rowErrs.AddField(i, fmt.Sprintf("batches[%d].quantity_value", j), apierror.CodeInvalidFormat, fmt.Sprintf("quantity value %q is not a decimal", b.QuantityValue))
 			}
 			if b.SecondsValue != nil && b.SecondsUnit != nil {
 				if _, err := decimal.NewFromString(*b.SecondsValue); err != nil {
-					rowErrs.AddValidation(i, fmt.Sprintf("production_runs[%d].batches[%d].seconds_value", i, j), fmt.Sprintf("seconds value %q is not a decimal", *b.SecondsValue))
+					rowErrs.AddField(i, fmt.Sprintf("batches[%d].seconds_value", j), apierror.CodeInvalidFormat, fmt.Sprintf("seconds value %q is not a decimal", *b.SecondsValue))
 				}
 			}
 			if b.WasteValue != nil && b.WasteUnit != nil {
 				if _, err := decimal.NewFromString(*b.WasteValue); err != nil {
-					rowErrs.AddValidation(i, fmt.Sprintf("production_runs[%d].batches[%d].waste_value", i, j), fmt.Sprintf("waste value %q is not a decimal", *b.WasteValue))
+					rowErrs.AddField(i, fmt.Sprintf("batches[%d].waste_value", j), apierror.CodeInvalidFormat, fmt.Sprintf("waste value %q is not a decimal", *b.WasteValue))
 				}
 			}
 		}
 	}
-	return rowErrs.Summary("production runs")
+	return rowErrs.Summary("production_runs")
 }
 
 // resolveBulkCreateRunRows resolves responsible users and every fuzzy reference, then
@@ -235,10 +232,7 @@ func resolveBulkCreateRunRows(ctx context.Context, repos domain.RepoFactory, acc
 		}
 		resolvedID, apiErr := accountUserRepo.ResolveAccountUserID(ctx, accountID, run.ResponsibleUserID)
 		if apiErr != nil {
-			return nil, apierror.NewValidationErrorWithParam(
-				"The responsible user was not found in this account.",
-				fmt.Sprintf("production_runs[%d].responsible_user_id", i),
-			)
+			return nil, apierror.NewFieldError(fmt.Sprintf("production_runs[%d].responsible_user_id", i), apierror.CodeInvalidFormat, "The responsible user was not found in this account.")
 		}
 		resolvedUserByInput[run.ResponsibleUserID] = resolvedID
 	}
@@ -486,7 +480,7 @@ func writeBulkCreateProductionRuns(txCtx context.Context, txRepos domain.RepoFac
 			return nil
 		})
 		if rowErr != nil {
-			rowErrors = append(rowErrors, apierror.NewRowError(i, rowErr))
+			rowErrors = append(rowErrors, apierror.RowError{Index: i, Error: rowErr.Object()})
 			continue
 		}
 		// A rolled-back row wrote no number, so only a committed one consumes it.

@@ -26,20 +26,20 @@ import (
 	"github.com/open-mrp/api/services/core-service/internal/mediator"
 	"github.com/open-mrp/api/shared/appctx"
 	"github.com/open-mrp/api/shared/audit"
-	s3client "github.com/open-mrp/api/shared/cloud/s3"
 	"github.com/open-mrp/api/shared/constants"
 	"github.com/open-mrp/api/shared/contracts"
-	apierror "github.com/open-mrp/api/shared/errors"
 	"github.com/open-mrp/api/shared/id"
-	"github.com/open-mrp/api/shared/idempotency"
+	"github.com/open-mrp/api/shared/idemresponse"
 	"github.com/open-mrp/api/shared/messaging"
 	"github.com/open-mrp/api/shared/textutil"
-	"github.com/open-mrp/api/shared/timeutil"
-	"github.com/open-mrp/api/shared/tracing"
+	apierror "github.com/open-mrp/apikit/apierror"
+	s3client "github.com/open-mrp/apikit/cloud/s3"
 	"github.com/open-mrp/apikit/crypto"
 	"github.com/open-mrp/apikit/field"
 	"github.com/open-mrp/apikit/lease"
 	"github.com/open-mrp/apikit/ptrutil"
+	"github.com/open-mrp/apikit/timeutil"
+	"github.com/open-mrp/apikit/tracing"
 )
 
 // decryptShippoAPIKey decrypts and unwraps a stored Shippo integration credential blob, returning the plaintext API key to hand to the Shippo client factory. The credential is sealed with the account ID as additional authenticated data (see account_integration_service.go), so the same accountID must be supplied here.
@@ -264,7 +264,7 @@ func (s *shipmentSvcImpl) GetShipment(ctx context.Context, params domain.GetShip
 
 	// A portal retrieves only the shipments of orders it bought, unless a request it was allowed to make includes another.
 	if own := identity.PortalAccountID(); own != nil && !identity.IsIncludeRead() && shipment.CustomerID != *own {
-		return nil, tracing.Trace(span, apierror.NewResourceNotFoundError("Shipment not found."))
+		return nil, tracing.Trace(span, apierror.NewNotFoundError("Shipment not found."))
 	}
 
 	// Load includes
@@ -315,7 +315,7 @@ func (s *shipmentSvcImpl) UpdateShipment(ctx context.Context, params domain.Upda
 
 	switch domain.RecoveryPoint(idempotencyKey.RecoveryPoint) {
 	case domain.RecoveryPointFinished:
-		cached, err := idempotency.UnmarshalCachedResponse[domain.Shipment](ctx, idempotencyKey.ResponseCode, idempotencyKey.ResponseBody)
+		cached, err := idemresponse.UnmarshalCachedResponse[domain.Shipment](ctx, idempotencyKey.ResponseCode, idempotencyKey.ResponseBody)
 		if err != nil {
 			return nil, tracing.Trace(span, apierror.NewInternalError(err, "Issue unmarshalling cached response."))
 		}
@@ -442,7 +442,7 @@ func (s *shipmentSvcImpl) AdminUpdateShipmentTracking(ctx context.Context, param
 
 	switch domain.RecoveryPoint(idempotencyKey.RecoveryPoint) {
 	case domain.RecoveryPointFinished:
-		cached, err := idempotency.UnmarshalCachedResponse[domain.Shipment](ctx, idempotencyKey.ResponseCode, idempotencyKey.ResponseBody)
+		cached, err := idemresponse.UnmarshalCachedResponse[domain.Shipment](ctx, idempotencyKey.ResponseCode, idempotencyKey.ResponseBody)
 		if err != nil {
 			return nil, tracing.Trace(span, apierror.NewInternalError(err, "Issue unmarshalling cached response."))
 		}
@@ -542,9 +542,9 @@ func (s *shipmentSvcImpl) resolveShippedByID(ctx context.Context, identity *type
 
 	accountUserID, apiErr := s.repos.NewAccountUserRepo().ResolveAccountUserID(ctx, accountID, identity.Actor.ID)
 	if apiErr != nil {
-		if apierror.IsNotFound(apiErr) {
+		if apierror.HasCode(apiErr, apierror.CodeResourceNotFound) {
 			if identity.Type == types.IdentityActorTypeUser {
-				return "", apierror.NewResourceNotFoundError("Account user not found.")
+				return "", apierror.NewNotFoundError("Account user not found.")
 			}
 			return "", nil
 		}
@@ -560,16 +560,16 @@ func (s *shipmentSvcImpl) resolveShippedByID(ctx context.Context, identity *type
 func (s *shipmentSvcImpl) checkShipmentRoutingInAccount(txCtx context.Context, accountID string, old *domain.Shipment, carrierID *string, serviceLevelID field.Clearable[string]) *apierror.APIError {
 	if carrierID != nil && *carrierID != old.CarrierID {
 		if _, apiErr := s.repos.NewCarrierRepo().Get(txCtx, domain.GetCarrierParams{AccountID: accountID, CarrierID: *carrierID}); apiErr != nil {
-			if apierror.IsNotFound(apiErr) {
-				return apierror.NewResourceNotFoundError("No carrier found with the provided ID.").WithParam("carrier_id")
+			if apierror.HasCode(apiErr, apierror.CodeResourceNotFound) {
+				return apierror.NewNotFoundError("No carrier found with the provided ID.").WithParam("carrier_id")
 			}
 			return apiErr
 		}
 	}
 	if id, ok := serviceLevelID.Value(); ok && !equalStringPtr(&id, old.ServiceLevelID) {
 		if _, apiErr := s.repos.NewServiceLevelRepo().Get(txCtx, accountID, id); apiErr != nil {
-			if apierror.IsNotFound(apiErr) {
-				return apierror.NewResourceNotFoundError("No service level found with the provided ID.").WithParam("service_level_id")
+			if apierror.HasCode(apiErr, apierror.CodeResourceNotFound) {
+				return apierror.NewNotFoundError("No service level found with the provided ID.").WithParam("service_level_id")
 			}
 			return apiErr
 		}
@@ -609,7 +609,7 @@ func (s *shipmentSvcImpl) DeleteShipment(ctx context.Context, params domain.Dele
 		ShipmentID: params.ShipmentID,
 	})
 	if apiErr != nil {
-		if apierror.IsNotFound(apiErr) {
+		if apierror.HasCode(apiErr, apierror.CodeResourceNotFound) {
 			wasDeleted, deletedCheckErr := s.repos.NewDeletedRecordRepo().ExistsInAccount(ctx, constants.DeletedRecordResourceTypeShipment, params.ShipmentID, params.AccountID)
 			if deletedCheckErr != nil {
 				return tracing.Trace(span, deletedCheckErr)
@@ -617,7 +617,7 @@ func (s *shipmentSvcImpl) DeleteShipment(ctx context.Context, params domain.Dele
 			if wasDeleted {
 				return tracing.Trace(
 					span,
-					apierror.NewAlreadyDeletedError("This shipment has already been deleted and can no longer be modified."),
+					apierror.NewGoneError("This shipment has already been deleted and can no longer be modified."),
 				)
 			}
 		}
@@ -626,7 +626,7 @@ func (s *shipmentSvcImpl) DeleteShipment(ctx context.Context, params domain.Dele
 
 	// A shipped shipment carries an invoice and possibly bought labels; void is what unwinds those.
 	if shipment.StatusCode == string(constants.ShipmentStatusShipped) {
-		return tracing.Trace(span, apierror.NewConflictErrorWithParam("A shipped shipment cannot be deleted; void it first.", "id"))
+		return tracing.Trace(span, apierror.NewConflictErrorWithParam("id", "A shipped shipment cannot be deleted; void it first."))
 	}
 
 	return s.withTx(ctx, func(txCtx context.Context, txSvc *shipmentSvcImpl) *apierror.APIError {
@@ -709,7 +709,7 @@ func (s *shipmentSvcImpl) ShipShipment(ctx context.Context, params domain.ShipSh
 
 	switch domain.RecoveryPoint(idempotencyKey.RecoveryPoint) {
 	case domain.RecoveryPointFinished:
-		cached, err := idempotency.UnmarshalCachedResponse[domain.Job](ctx, idempotencyKey.ResponseCode, idempotencyKey.ResponseBody)
+		cached, err := idemresponse.UnmarshalCachedResponse[domain.Job](ctx, idempotencyKey.ResponseCode, idempotencyKey.ResponseBody)
 		if err != nil {
 			return nil, tracing.Trace(span, apierror.NewInternalError(err, "Issue unmarshalling cached response."))
 		}
@@ -724,7 +724,7 @@ func (s *shipmentSvcImpl) ShipShipment(ctx context.Context, params domain.ShipSh
 			return nil, tracing.Trace(span, apiErr)
 		}
 		if shipment.StatusCode == string(constants.ShipmentStatusShipped) {
-			return nil, tracing.Trace(span, apierror.NewConflictErrorWithParam("Shipment has already been shipped.", "id"))
+			return nil, tracing.Trace(span, apierror.NewConflictErrorWithParam("id", "Shipment has already been shipped."))
 		}
 		if apiErr := enforceInvoicesPerPeriodLimit(ctx, s.repos, params.AccountID); apiErr != nil {
 			return nil, tracing.Trace(span, apiErr)
@@ -856,7 +856,7 @@ func (s *shipmentSvcImpl) shipClaimed(ctx context.Context, identity *types.Ident
 		return apiErr
 	}
 	if shipment.StatusCode == string(constants.ShipmentStatusShipped) {
-		return apierror.NewConflictErrorWithParam("Shipment has already been shipped.", "id")
+		return apierror.NewConflictErrorWithParam("id", "Shipment has already been shipped.")
 	}
 
 	shippedByID, apiErr := s.resolveShippedByID(ctx, identity, params.AccountID)
@@ -985,7 +985,7 @@ func checkInvoiceNumberFree(ctx context.Context, repos domain.RepoFactory, shipm
 		return apiErr
 	}
 	if isDuplicate {
-		return apierror.NewResourceConflictError("An invoice already exists for this shipment number.")
+		return apierror.NewConflictError("An invoice already exists for this shipment number.")
 	}
 	return nil
 }
@@ -1017,7 +1017,7 @@ func (s *shipmentSvcImpl) VoidShipment(ctx context.Context, params domain.VoidSh
 
 	switch domain.RecoveryPoint(idempotencyKey.RecoveryPoint) {
 	case domain.RecoveryPointFinished:
-		cached, err := idempotency.UnmarshalCachedResponse[domain.Shipment](ctx, idempotencyKey.ResponseCode, idempotencyKey.ResponseBody)
+		cached, err := idemresponse.UnmarshalCachedResponse[domain.Shipment](ctx, idempotencyKey.ResponseCode, idempotencyKey.ResponseBody)
 		if err != nil {
 			return nil, tracing.Trace(span, apierror.NewInternalError(err, "Issue unmarshalling cached response."))
 		}
@@ -1055,7 +1055,7 @@ func (s *shipmentSvcImpl) voidClaimed(ctx context.Context, params domain.VoidShi
 			return nil, apiErr
 		}
 		if shipment.StatusCode != string(constants.ShipmentStatusShipped) {
-			return nil, apierror.NewConflictErrorWithParam("Shipment is not in shipped status.", "id")
+			return nil, apierror.NewConflictErrorWithParam("id", "Shipment is not in shipped status.")
 		}
 
 		if apiErr := s.refundShippingLabels(ctx, shipment, idempotencyKey.TypeID); apiErr != nil {
@@ -1769,10 +1769,10 @@ func checkShipmentRoutingStillMutable(old *domain.Shipment, params domain.Update
 		return nil
 	}
 	if params.CarrierID != nil && *params.CarrierID != old.CarrierID {
-		return apierror.NewConflictErrorWithParam("Cannot change the carrier of a shipped shipment.", "carrier_id")
+		return apierror.NewConflictErrorWithParam("carrier_id", "Cannot change the carrier of a shipped shipment.")
 	}
 	if params.ServiceLevelID.WasProvided() && !equalStringPtr(params.ServiceLevelID.ValuePtr(), old.ServiceLevelID) {
-		return apierror.NewConflictErrorWithParam("Cannot change the service level of a shipped shipment.", "service_level_id")
+		return apierror.NewConflictErrorWithParam("service_level_id", "Cannot change the service level of a shipped shipment.")
 	}
 	return nil
 }
@@ -1923,7 +1923,7 @@ func (s *shipmentSvcImpl) createInvoiceAndStampOrderOnShip(txCtx context.Context
 		return apiErr
 	}
 	if isDuplicate {
-		return apierror.NewResourceConflictError("An invoice already exists for this shipment number.")
+		return apierror.NewConflictError("An invoice already exists for this shipment number.")
 	}
 
 	invoiceID, apiErr := id.GenID(id.InvoiceIDPrefix, nil)
@@ -2248,7 +2248,7 @@ func boughtShipmentLabels(shipment *domain.Shipment, cases []*domain.ShippingCas
 		}
 		return shipLabels{MasterTracking: tracking, CostRecorded: true}, true, nil
 	default:
-		return shipLabels{}, false, apierror.NewConflictErrorWithParam("Labels were already bought for some of this shipment's cases but not the rest; the rest cannot be bought on their own.", "id")
+		return shipLabels{}, false, apierror.NewConflictErrorWithParam("id", "Labels were already bought for some of this shipment's cases but not the rest; the rest cannot be bought on their own.")
 	}
 }
 
@@ -2358,7 +2358,7 @@ func boughtButUnrecorded(ctx context.Context, shipment *domain.Shipment, result 
 	slog.ErrorContext(ctx, "shipping labels were bought but could not be recorded",
 		"account_id", shipment.AccountID, "shipment_id", shipment.ID,
 		"shippo_transaction_ids", strings.Join(transactionIDs, ","), "error", cause.Error())
-	return apierror.NewResourceConflictError("The shipping labels were purchased but could not be recorded. Contact support before shipping this shipment again.")
+	return apierror.NewConflictError("The shipping labels were purchased but could not be recorded. Contact support before shipping this shipment again.")
 }
 
 // Bound the attempts at recording a purchase: the labels are paid for, so a database blip is retried
@@ -2708,7 +2708,7 @@ func (s *shipmentSvcImpl) claimDispatch(ctx context.Context, shipmentID string) 
 		return nil, apierror.NewInternalError(err, "Failed to claim the shipment.")
 	}
 	if !acquired {
-		return nil, apierror.NewConflictErrorWithParam("This shipment is already being shipped, voided or deleted by another request; retry once it finishes.", "id")
+		return nil, apierror.NewConflictErrorWithParam("id", "This shipment is already being shipped, voided or deleted by another request; retry once it finishes.")
 	}
 
 	return func() {

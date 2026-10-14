@@ -6,7 +6,7 @@ import (
 	"github.com/shopspring/decimal"
 
 	"github.com/open-mrp/api/services/core-service/internal/domain"
-	apierror "github.com/open-mrp/api/shared/errors"
+	apierror "github.com/open-mrp/apikit/apierror"
 )
 
 // validateSettlementAllocations checks that every transaction and invoice a settlement
@@ -28,10 +28,10 @@ func validateSettlementAllocations(ctx context.Context, repos domain.RepoFactory
 	newTransactions := make(map[string]bool, len(params.NewTransactions))
 	for _, nt := range params.NewTransactions {
 		if nt.Key == "" {
-			return apierror.NewValidationErrorWithParam("Each new transaction needs a key.", "new_transactions")
+			return apierror.NewFieldError("new_transactions", apierror.CodeInvalidFormat, "Each new transaction needs a key.")
 		}
 		if _, dup := newTransactions[nt.Key]; dup {
-			return apierror.NewValidationErrorWithParam("New transaction keys must be unique.", "new_transactions")
+			return apierror.NewFieldError("new_transactions", apierror.CodeInvalidFormat, "New transaction keys must be unique.")
 		}
 		newTransactions[nt.Key] = false
 		exists, apiErr := transactionRepo.CustomerExists(ctx, accountID, nt.CustomerID)
@@ -39,7 +39,7 @@ func validateSettlementAllocations(ctx context.Context, repos domain.RepoFactory
 			return apiErr
 		}
 		if !exists {
-			return apierror.NewResourceNotFoundError("Customer not found.")
+			return apierror.NewNotFoundError("Customer not found.")
 		}
 	}
 
@@ -49,10 +49,10 @@ func validateSettlementAllocations(ctx context.Context, repos domain.RepoFactory
 	for _, alloc := range params.Allocations {
 		switch {
 		case (alloc.TransactionID == "") == (alloc.TransactionKey == ""):
-			return apierror.NewValidationErrorWithParam("Each allocation names either a transaction_id or a transaction_key.", "allocations")
+			return apierror.NewFieldError("allocations", apierror.CodeInvalidFormat, "Each allocation names either a transaction_id or a transaction_key.")
 		case alloc.TransactionKey != "":
 			if _, ok := newTransactions[alloc.TransactionKey]; !ok {
-				return apierror.NewValidationErrorWithParam("An allocation names a transaction_key that is not among new_transactions.", "allocations")
+				return apierror.NewFieldError("allocations", apierror.CodeInvalidFormat, "An allocation names a transaction_key that is not among new_transactions.")
 			}
 			newTransactions[alloc.TransactionKey] = true
 		default:
@@ -63,13 +63,13 @@ func validateSettlementAllocations(ctx context.Context, repos domain.RepoFactory
 					return apiErr
 				}
 				if tx.FundsReceivedAt == nil {
-					return apierror.NewValidationErrorWithParam("Cannot settle transactions that have not yet been received as cash.", "allocations")
+					return apierror.NewFieldError("allocations", apierror.CodeInvalidFormat, "Cannot settle transactions that have not yet been received as cash.")
 				}
 			}
 		}
 
 		if _, err := decimal.NewFromString(alloc.Amount); err != nil {
-			return apierror.NewValidationErrorWithParam("Allocation amount must be a number.", "allocations")
+			return apierror.NewFieldError("allocations", apierror.CodeInvalidFormat, "Allocation amount must be a number.")
 		}
 
 		if _, done := seenInvoices[alloc.InvoiceID]; !done {
@@ -85,7 +85,7 @@ func validateSettlementAllocations(ctx context.Context, repos domain.RepoFactory
 
 	for _, used := range newTransactions {
 		if !used {
-			return apierror.NewValidationErrorWithParam("Every new transaction must be drawn on by an allocation.", "new_transactions")
+			return apierror.NewFieldError("new_transactions", apierror.CodeInvalidFormat, "Every new transaction must be drawn on by an allocation.")
 		}
 	}
 

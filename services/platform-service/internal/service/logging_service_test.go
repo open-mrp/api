@@ -10,7 +10,7 @@ import (
 	factorymock "github.com/open-mrp/api/services/platform-service/internal/domain/mock/factory"
 	repositorymock "github.com/open-mrp/api/services/platform-service/internal/domain/mock/repository"
 	"github.com/open-mrp/api/shared/appctx"
-	apierror "github.com/open-mrp/api/shared/errors"
+	apierror "github.com/open-mrp/apikit/apierror"
 	"github.com/open-mrp/apikit/pagination"
 
 	"github.com/stretchr/testify/suite"
@@ -142,7 +142,7 @@ func (s *LoggingServiceTestSuite) TestGetRequestLog_NoIdentity() {
 	result, apiErr := s.svc.GetRequestLog(context.Background(), "rlog_1", nil)
 	s.Nil(result)
 	s.NotNil(apiErr)
-	s.Equal(apierror.ErrorCodeInternalError, apiErr.Code)
+	s.Equal(apierror.CodeInternalError, apiErr.Code)
 }
 
 func (s *LoggingServiceTestSuite) TestGetRequestLog_NotInternalActor() {
@@ -150,7 +150,7 @@ func (s *LoggingServiceTestSuite) TestGetRequestLog_NotInternalActor() {
 	result, apiErr := s.svc.GetRequestLog(ctx, "rlog_1", nil)
 	s.Nil(result)
 	s.NotNil(apiErr)
-	s.Equal(apierror.ErrorCodeInsufficientPerms, apiErr.Code)
+	s.Equal(apierror.CodeInsufficientPermissions, apiErr.Code)
 }
 
 func (s *LoggingServiceTestSuite) TestGetRequestLog_MissingPermission() {
@@ -158,7 +158,7 @@ func (s *LoggingServiceTestSuite) TestGetRequestLog_MissingPermission() {
 	result, apiErr := s.svc.GetRequestLog(ctx, "rlog_1", nil)
 	s.Nil(result)
 	s.NotNil(apiErr)
-	s.Equal(apierror.ErrorCodeInsufficientPerms, apiErr.Code)
+	s.Equal(apierror.CodeInsufficientPermissions, apiErr.Code)
 }
 
 func (s *LoggingServiceTestSuite) TestGetRequestLog_MissingTargetAccount() {
@@ -170,7 +170,7 @@ func (s *LoggingServiceTestSuite) TestGetRequestLog_MissingTargetAccount() {
 
 func (s *LoggingServiceTestSuite) TestGetRequestLog_RepoError() {
 	ctx := internalLoggingCtx("acct_123")
-	expected := apierror.NewResourceNotFoundError("not found")
+	expected := apierror.NewNotFoundError("not found")
 	s.requestLogRepo.EXPECT().FindByID(gomock.Any(), "rlog_1", "acct_123", gomock.Any()).Return(nil, expected).Times(1)
 
 	result, apiErr := s.svc.GetRequestLog(ctx, "rlog_1", nil)
@@ -233,7 +233,7 @@ func (s *LoggingServiceTestSuite) TestListRequestLogs_NoIdentity() {
 	result, apiErr := s.svc.ListRequestLogs(context.Background(), filter, nil)
 	s.Nil(result)
 	s.NotNil(apiErr)
-	s.Equal(apierror.ErrorCodeInternalError, apiErr.Code)
+	s.Equal(apierror.CodeInternalError, apiErr.Code)
 }
 
 func (s *LoggingServiceTestSuite) TestListRequestLogs_NotInternalActor() {
@@ -242,7 +242,7 @@ func (s *LoggingServiceTestSuite) TestListRequestLogs_NotInternalActor() {
 	result, apiErr := s.svc.ListRequestLogs(ctx, filter, nil)
 	s.Nil(result)
 	s.NotNil(apiErr)
-	s.Equal(apierror.ErrorCodeInsufficientPerms, apiErr.Code)
+	s.Equal(apierror.CodeInsufficientPermissions, apiErr.Code)
 }
 
 func (s *LoggingServiceTestSuite) TestListRequestLogs_MissingPermission() {
@@ -251,7 +251,7 @@ func (s *LoggingServiceTestSuite) TestListRequestLogs_MissingPermission() {
 	result, apiErr := s.svc.ListRequestLogs(ctx, filter, nil)
 	s.Nil(result)
 	s.NotNil(apiErr)
-	s.Equal(apierror.ErrorCodeInsufficientPerms, apiErr.Code)
+	s.Equal(apierror.CodeInsufficientPermissions, apiErr.Code)
 }
 
 func (s *LoggingServiceTestSuite) TestListRequestLogs_MissingTargetAccount() {

@@ -23,18 +23,18 @@ import (
 	"github.com/open-mrp/api/shared/audit"
 	"github.com/open-mrp/api/shared/constants"
 	"github.com/open-mrp/api/shared/contracts"
-	apierror "github.com/open-mrp/api/shared/errors"
 	"github.com/open-mrp/api/shared/id"
-	"github.com/open-mrp/api/shared/idempotency"
+	"github.com/open-mrp/api/shared/idemresponse"
 	"github.com/open-mrp/api/shared/messaging"
-	"github.com/open-mrp/api/shared/metadata"
 	"github.com/open-mrp/api/shared/pricing"
 	"github.com/open-mrp/api/shared/textutil"
-	"github.com/open-mrp/api/shared/tracing"
+	apierror "github.com/open-mrp/apikit/apierror"
 	"github.com/open-mrp/apikit/crypto"
 	"github.com/open-mrp/apikit/field"
+	"github.com/open-mrp/apikit/metadata"
 	"github.com/open-mrp/apikit/ptrutil"
 	"github.com/open-mrp/apikit/safeconv"
+	"github.com/open-mrp/apikit/tracing"
 )
 
 var salesOrderSvcTracer = tracing.GetTracer("core-service.sales_order_service")
@@ -455,7 +455,7 @@ func (s *salesOrderSvcImpl) CreateSalesOrder(ctx context.Context, params domain.
 
 	switch domain.RecoveryPoint(idempotencyKey.RecoveryPoint) {
 	case domain.RecoveryPointFinished:
-		cached, err := idempotency.UnmarshalCachedResponse[domain.SalesOrder](ctx, idempotencyKey.ResponseCode, idempotencyKey.ResponseBody)
+		cached, err := idemresponse.UnmarshalCachedResponse[domain.SalesOrder](ctx, idempotencyKey.ResponseCode, idempotencyKey.ResponseBody)
 		if err != nil {
 			return nil, tracing.Trace(span, apierror.NewInternalError(err, "Issue unmarshalling cached response."))
 		}
@@ -485,7 +485,7 @@ func (s *salesOrderSvcImpl) CreateSalesOrder(ctx context.Context, params domain.
 				return nil, cacheErr(apiErr)
 			}
 			if isDup {
-				return nil, cacheErr(apierror.NewConflictErrorWithParam("A sales order with this customer PO number already exists.", "customer_po_number"))
+				return nil, cacheErr(apierror.NewConflictErrorWithParam("customer_po_number", "A sales order with this customer PO number already exists."))
 			}
 		}
 
@@ -519,7 +519,7 @@ func (s *salesOrderSvcImpl) CreateSalesOrder(ctx context.Context, params domain.
 					return nil, cacheErr(apiErr)
 				}
 				if isDuplicate {
-					return nil, cacheErr(apierror.NewResourceNotFoundError("Order discount not found."))
+					return nil, cacheErr(apierror.NewNotFoundError("Order discount not found."))
 				}
 			}
 		}
@@ -581,7 +581,7 @@ func (s *salesOrderSvcImpl) CreateSalesOrder(ctx context.Context, params domain.
 				return apiErr
 			}
 			if isDup {
-				return apierror.NewConflictErrorWithParam("A sales order with this number already exists.", "number")
+				return apierror.NewConflictErrorWithParam("number", "A sales order with this number already exists.")
 			}
 
 			billingAddressID, shippingAddressID, apiErr := savedOrderAddressIDs(txCtx, txSvc.mediators().Address, params)
@@ -784,7 +784,7 @@ func (s *salesOrderSvcImpl) UpdateSalesOrder(ctx context.Context, params domain.
 
 	switch domain.RecoveryPoint(idempotencyKey.RecoveryPoint) {
 	case domain.RecoveryPointFinished:
-		cached, err := idempotency.UnmarshalCachedResponse[domain.SalesOrder](ctx, idempotencyKey.ResponseCode, idempotencyKey.ResponseBody)
+		cached, err := idemresponse.UnmarshalCachedResponse[domain.SalesOrder](ctx, idempotencyKey.ResponseCode, idempotencyKey.ResponseBody)
 		if err != nil {
 			return nil, tracing.Trace(span, apierror.NewInternalError(err, "Issue unmarshalling cached response."))
 		}
@@ -893,7 +893,7 @@ func (s *salesOrderSvcImpl) UpdateSalesOrder(ctx context.Context, params domain.
 					return apiErr
 				}
 				if isDuplicate {
-					return apierror.NewConflictErrorWithParam("This order number is already taken.", "number")
+					return apierror.NewConflictErrorWithParam("number", "This order number is already taken.")
 				}
 			}
 
@@ -1039,13 +1039,13 @@ func (s *salesOrderSvcImpl) DeleteSalesOrder(ctx context.Context, params domain.
 	// Validate order exists and is not fulfilled
 	order, apiErr := repo.Get(ctx, params.AccountID, params.SalesOrderID)
 	if apiErr != nil {
-		if apierror.IsNotFound(apiErr) {
+		if apierror.HasCode(apiErr, apierror.CodeResourceNotFound) {
 			wasDeleted, deletedCheckErr := s.repos.NewDeletedRecordRepo().ExistsInAccount(ctx, constants.DeletedRecordResourceTypeSalesOrder, params.SalesOrderID, params.AccountID)
 			if deletedCheckErr != nil {
 				return tracing.Trace(span, deletedCheckErr)
 			}
 			if wasDeleted {
-				return tracing.Trace(span, apierror.NewAlreadyDeletedError("This sales order has already been deleted and can no longer be modified."))
+				return tracing.Trace(span, apierror.NewGoneError("This sales order has already been deleted and can no longer be modified."))
 			}
 		}
 		return tracing.Trace(span, apiErr)
@@ -1137,7 +1137,7 @@ func (s *salesOrderSvcImpl) BulkDeleteSalesOrders(ctx context.Context, params do
 
 	switch domain.RecoveryPoint(idempotencyKey.RecoveryPoint) {
 	case domain.RecoveryPointFinished:
-		cached, err := idempotency.UnmarshalCachedResponse[struct{}](ctx, idempotencyKey.ResponseCode, idempotencyKey.ResponseBody)
+		cached, err := idemresponse.UnmarshalCachedResponse[struct{}](ctx, idempotencyKey.ResponseCode, idempotencyKey.ResponseBody)
 		if err != nil {
 			return tracing.Trace(span, apierror.NewInternalError(err, "Issue unmarshalling cached response."))
 		}
@@ -1714,7 +1714,7 @@ func (s *salesOrderSvcImpl) FinishPendingFreight(ctx context.Context, accountID,
 	defer span.End()
 
 	pending, apiErr := s.repos.NewSalesOrderRepo().IsFreightPending(ctx, accountID, salesOrderID, false)
-	if apierror.IsNotFound(apiErr) {
+	if apierror.HasCode(apiErr, apierror.CodeResourceNotFound) {
 		// Deleted before its freight was quoted: nothing is owed.
 		return nil
 	}
@@ -2297,13 +2297,13 @@ func (s *salesOrderSvcImpl) resolveOrderDiscountID(ctx context.Context, accountI
 	discountRepo := s.repos.NewOrderDiscountRepo()
 	if d, apiErr := discountRepo.Get(ctx, domain.GetOrderDiscountParams{AccountID: accountID, OrderDiscountID: idOrCode}); apiErr == nil {
 		return d.ID, nil
-	} else if !apierror.IsNotFound(apiErr) {
+	} else if !apierror.HasCode(apiErr, apierror.CodeResourceNotFound) {
 		return "", apiErr
 	}
 	d, apiErr := discountRepo.FindByCode(ctx, accountID, idOrCode)
 	if apiErr != nil {
-		if apierror.IsNotFound(apiErr) {
-			return "", apierror.NewValidationErrorWithParam("Order discount not found.", "order_discount_id")
+		if apierror.HasCode(apiErr, apierror.CodeResourceNotFound) {
+			return "", apierror.NewFieldError("order_discount_id", apierror.CodeInvalidFormat, "Order discount not found.")
 		}
 		return "", apiErr
 	}
@@ -2365,8 +2365,8 @@ func checkSalesOrderCounterpartyRefs(ctx context.Context, repos domain.RepoFacto
 	buyerAccountID := existing.BuyerAccountID
 	if params.BuyerAccountID != nil && *params.BuyerAccountID != existing.BuyerAccountID {
 		if _, apiErr := repos.NewCustomerRepo().Get(ctx, params.AccountID, *params.BuyerAccountID, nil); apiErr != nil {
-			if apierror.IsNotFound(apiErr) {
-				return apierror.NewResourceNotFoundError("No customer found with the provided ID.").WithParam("customer_id")
+			if apierror.HasCode(apiErr, apierror.CodeResourceNotFound) {
+				return apierror.NewNotFoundError("No customer found with the provided ID.").WithParam("customer_id")
 			}
 			return apiErr
 		}
@@ -2388,14 +2388,14 @@ func checkSalesOrderCounterpartyRefs(ctx context.Context, repos domain.RepoFacto
 			return apiErr
 		}
 		if acct == "" {
-			return apierror.NewResourceNotFoundError("No address found with the provided ID.").WithParam(address.param)
+			return apierror.NewNotFoundError("No address found with the provided ID.").WithParam(address.param)
 		}
 	}
 
 	if discountID, ok := params.OrderDiscountID.Value(); ok && !equalStringPtr(&discountID, existing.OrderDiscountID) {
 		if _, apiErr := repos.NewOrderDiscountRepo().Get(ctx, domain.GetOrderDiscountParams{AccountID: params.AccountID, OrderDiscountID: discountID}); apiErr != nil {
-			if apierror.IsNotFound(apiErr) {
-				return apierror.NewResourceNotFoundError("No order discount found with the provided ID.").WithParam("order_discount_id")
+			if apierror.HasCode(apiErr, apierror.CodeResourceNotFound) {
+				return apierror.NewNotFoundError("No order discount found with the provided ID.").WithParam("order_discount_id")
 			}
 			return apiErr
 		}
@@ -2419,8 +2419,8 @@ func (s *salesOrderSvcImpl) validateEmailContactAccountUsers(ctx context.Context
 // mapSalesOrderReferenceError turns a not-found lookup into a field-scoped 400
 // validation error and passes any other error through unchanged.
 func mapSalesOrderReferenceError(apiErr *apierror.APIError, notFoundMsg, param string) *apierror.APIError {
-	if apierror.IsNotFound(apiErr) {
-		return apierror.NewValidationErrorWithParam(notFoundMsg, param)
+	if apierror.HasCode(apiErr, apierror.CodeResourceNotFound) {
+		return apierror.NewFieldError(param, apierror.CodeInvalidFormat, notFoundMsg)
 	}
 	return apiErr
 }
@@ -2436,7 +2436,7 @@ func (s *salesOrderSvcImpl) synthesizeDiscountLine(ctx context.Context, orderID 
 		OrderDiscountID: *params.OrderDiscountID,
 	})
 	if apiErr != nil {
-		if apierror.IsNotFound(apiErr) {
+		if apierror.HasCode(apiErr, apierror.CodeResourceNotFound) {
 			return nil
 		}
 		return apiErr
@@ -2540,13 +2540,13 @@ func (s *salesOrderSvcImpl) applyCustomerOrderDefaults(ctx context.Context, para
 	}
 
 	if params.CarrierID == nil {
-		return apierror.NewValidationErrorWithParam("Carrier is required and the customer has no default carrier.", "carrier_id")
+		return apierror.NewFieldError("carrier_id", apierror.CodeInvalidFormat, "Carrier is required and the customer has no default carrier.")
 	}
 	if params.ShippingTermID == nil {
-		return apierror.NewValidationErrorWithParam("Shipping term is required and the customer has no default shipping term.", "shipping_term_id")
+		return apierror.NewFieldError("shipping_term_id", apierror.CodeInvalidFormat, "Shipping term is required and the customer has no default shipping term.")
 	}
 	if params.PaymentTermID == nil {
-		return apierror.NewValidationErrorWithParam("Payment term is required and the customer has no default payment term.", "payment_term_id")
+		return apierror.NewFieldError("payment_term_id", apierror.CodeInvalidFormat, "Payment term is required and the customer has no default payment term.")
 	}
 	return nil
 }
@@ -2610,10 +2610,10 @@ func checkSalesOrderCreateAddressChoices(params domain.CreateSalesOrderParams) *
 		return apiErr
 	}
 	if params.BillToAddressID == "" && params.BillToAddress == nil {
-		return apierror.NewMissingFieldError("Either bill_to_address_id or bill_to_address is required.", "bill_to_address_id")
+		return apierror.NewMissingFieldError("bill_to_address_id", "Either bill_to_address_id or bill_to_address is required.")
 	}
 	if params.ShipToAddressID == "" && params.ShipToAddress == nil {
-		return apierror.NewMissingFieldError("Either ship_to_address_id or ship_to_address is required.", "ship_to_address_id")
+		return apierror.NewMissingFieldError("ship_to_address_id", "Either ship_to_address_id or ship_to_address is required.")
 	}
 	return nil
 }
@@ -2754,7 +2754,7 @@ func (s *salesOrderSvcImpl) CheckoutSalesOrder(ctx context.Context, params domai
 
 	switch domain.RecoveryPoint(idempotencyKey.RecoveryPoint) {
 	case domain.RecoveryPointFinished:
-		cached, err := idempotency.UnmarshalCachedResponse[domain.CheckoutSalesOrderResult](ctx, idempotencyKey.ResponseCode, idempotencyKey.ResponseBody)
+		cached, err := idemresponse.UnmarshalCachedResponse[domain.CheckoutSalesOrderResult](ctx, idempotencyKey.ResponseCode, idempotencyKey.ResponseBody)
 		if err != nil {
 			return nil, tracing.Trace(span, apierror.NewInternalError(err, "Issue unmarshalling cached response."))
 		}
@@ -2778,7 +2778,7 @@ func (s *salesOrderSvcImpl) CheckoutSalesOrder(ctx context.Context, params domai
 			return nil, tracing.Trace(span, apiErr)
 		}
 		if hasPaid {
-			return nil, tracing.Trace(span, apierror.NewConflictErrorWithParam("This order already has a payment intent.", "id"))
+			return nil, tracing.Trace(span, apierror.NewConflictErrorWithParam("id", "This order already has a payment intent."))
 		}
 
 		// Fetch the order
@@ -2915,7 +2915,7 @@ func (s *salesOrderSvcImpl) CheckoutSalesOrder(ctx context.Context, params domai
 			return nil, tracing.Trace(span, apiErr)
 		}
 		if slug == nil || *slug == "" {
-			return nil, tracing.Trace(span, apierror.NewResourceNotFoundError("Account portal slug not found."))
+			return nil, tracing.Trace(span, apierror.NewNotFoundError("Account portal slug not found."))
 		}
 		portalBase := cmp.Or(verifiedPortalOrigin(ctx, s.repos, params.AccountID), slugPortalBase(s.portalURL, slug))
 		orderPageURL := fmt.Sprintf("%s/dashboard/sales-orders/%s", portalBase, order.ID)
@@ -3037,7 +3037,7 @@ func (s *salesOrderSvcImpl) CreateCustomerCheckoutSession(ctx context.Context, p
 
 	switch domain.RecoveryPoint(idempotencyKey.RecoveryPoint) {
 	case domain.RecoveryPointFinished:
-		cached, err := idempotency.UnmarshalCachedResponse[domain.CreateCustomerCheckoutSessionResult](ctx, idempotencyKey.ResponseCode, idempotencyKey.ResponseBody)
+		cached, err := idemresponse.UnmarshalCachedResponse[domain.CreateCustomerCheckoutSessionResult](ctx, idempotencyKey.ResponseCode, idempotencyKey.ResponseBody)
 		if err != nil {
 			return nil, tracing.Trace(span, apierror.NewInternalError(err, "Issue unmarshalling cached response."))
 		}
@@ -3141,7 +3141,7 @@ func (s *salesOrderSvcImpl) CreateCustomerCheckoutSession(ctx context.Context, p
 		}
 
 		if stripeCustomerID == nil || *stripeCustomerID == "" {
-			return nil, tracing.Trace(span, apierror.NewResourceNotFoundError("Stripe customer not found."))
+			return nil, tracing.Trace(span, apierror.NewNotFoundError("Stripe customer not found."))
 		}
 
 		// 5. Get account slug for return URL
@@ -3151,7 +3151,7 @@ func (s *salesOrderSvcImpl) CreateCustomerCheckoutSession(ctx context.Context, p
 			return nil, tracing.Trace(span, apiErr)
 		}
 		if slug == nil {
-			return nil, tracing.Trace(span, apierror.NewResourceNotFoundError("Account not found."))
+			return nil, tracing.Trace(span, apierror.NewNotFoundError("Account not found."))
 		}
 
 		portalBase := cmp.Or(verifiedPortalOrigin(ctx, s.repos, targetAccountID), slugPortalBase(s.portalURL, slug))
@@ -3409,7 +3409,7 @@ func (s *salesOrderSvcImpl) handleAccountPaymentIntentSucceeded(ctx context.Cont
 	orderRepo := s.repos.NewSalesOrderRepo()
 	order, apiErr := orderRepo.Get(ctx, accountID, orderID)
 	if apiErr != nil {
-		if apiErr.Code == apierror.ErrorCodeResourceNotFound {
+		if apiErr.Code == apierror.CodeResourceNotFound {
 			slog.WarnContext(ctx, "account stripe webhook references an unknown order for this account, skipping",
 				"account_id", accountID,
 				"order_id", orderID,
@@ -3553,7 +3553,7 @@ func (s *salesOrderSvcImpl) stripeTransaction(ctx context.Context, accountID, pa
 	}
 	existing, apiErr := txRepo.Get(ctx, accountID, record.ID)
 	if apiErr != nil {
-		if apiErr.Code == apierror.ErrorCodeResourceNotFound {
+		if apiErr.Code == apierror.CodeResourceNotFound {
 			slog.WarnContext(ctx, "account stripe webhook references another account's transaction, skipping",
 				"account_id", accountID,
 				"payment_intent_id", paymentIntentID,
@@ -3709,7 +3709,7 @@ func (s *salesOrderSvcImpl) CreateSalesOrderProductionRun(ctx context.Context, p
 
 	switch domain.RecoveryPoint(idempotencyKey.RecoveryPoint) {
 	case domain.RecoveryPointFinished:
-		cached, err := idempotency.UnmarshalCachedResponse[domain.CreateSalesOrderProductionRunResult](ctx, idempotencyKey.ResponseCode, idempotencyKey.ResponseBody)
+		cached, err := idemresponse.UnmarshalCachedResponse[domain.CreateSalesOrderProductionRunResult](ctx, idempotencyKey.ResponseCode, idempotencyKey.ResponseBody)
 		if err != nil {
 			return nil, tracing.Trace(span, apierror.NewInternalError(err, "Issue unmarshalling cached response."))
 		}
@@ -3736,7 +3736,7 @@ func (s *salesOrderSvcImpl) CreateSalesOrderProductionRun(ctx context.Context, p
 
 		// Validate that the order doesn't already have a production run
 		if order.ProductionRunID != nil {
-			return nil, tracing.Trace(span, apierror.NewConflictErrorWithParam("This order already has a production run.", "id"))
+			return nil, tracing.Trace(span, apierror.NewConflictErrorWithParam("id", "This order already has a production run."))
 		}
 
 		// Get order lines for BOM

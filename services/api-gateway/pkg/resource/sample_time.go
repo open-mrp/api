@@ -1,7 +1,7 @@
 package apiresource
 
 import (
-	"github.com/open-mrp/api/shared/timeutil"
+	"github.com/open-mrp/apikit/timeutil"
 )
 
 const sampleYear = "2026"

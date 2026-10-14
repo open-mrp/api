@@ -5,8 +5,8 @@ import (
 	"testing"
 
 	"github.com/open-mrp/api/shared/contracts"
-	apierror "github.com/open-mrp/api/shared/errors"
 	pb "github.com/open-mrp/api/shared/proto/core"
+	apierror "github.com/open-mrp/apikit/apierror"
 	"google.golang.org/grpc"
 )
 
@@ -21,7 +21,7 @@ func (s stubInvoiceClient) GetInvoice(_ context.Context, req *pb.GetInvoiceReque
 	if invoice, ok := s.known[req.Id]; ok {
 		return &pb.GetInvoiceResponse{Invoice: invoice}, nil
 	}
-	return nil, contracts.ConvertAPIErrorToGRPC(apierror.NewResourceNotFoundError("Resource not found."))
+	return nil, contracts.ConvertAPIErrorToGRPC(apierror.NewNotFoundError("Resource not found."))
 }
 
 // Voiding a shipment deletes its invoice, so a shipments page read moments earlier can name an

@@ -11,11 +11,11 @@ import (
 	"github.com/open-mrp/api/shared/appctx"
 	"github.com/open-mrp/api/shared/audit"
 	"github.com/open-mrp/api/shared/constants"
-	apierror "github.com/open-mrp/api/shared/errors"
 	"github.com/open-mrp/api/shared/id"
-	"github.com/open-mrp/api/shared/idempotency"
-	"github.com/open-mrp/api/shared/tracing"
+	"github.com/open-mrp/api/shared/idemresponse"
+	apierror "github.com/open-mrp/apikit/apierror"
 	"github.com/open-mrp/apikit/ptrutil"
+	"github.com/open-mrp/apikit/tracing"
 )
 
 var productionRunSvcTracer = tracing.GetTracer("core-service.production_run_service")
@@ -153,7 +153,7 @@ func (s *productionRunSvcImpl) CreateProductionRun(ctx context.Context, params d
 	accountUserRepo := s.repos.NewAccountUserRepo()
 	resolvedID, apiErr := accountUserRepo.ResolveAccountUserID(ctx, params.AccountID, params.ResponsibleUserID)
 	if apiErr != nil {
-		return nil, tracing.Trace(span, apierror.NewValidationErrorWithParam("The responsible user was not found in this account.", "responsible_user_id"))
+		return nil, tracing.Trace(span, apierror.NewFieldError("responsible_user_id", apierror.CodeInvalidFormat, "The responsible user was not found in this account."))
 	}
 	params.ResponsibleUserID = resolvedID
 
@@ -175,7 +175,7 @@ func (s *productionRunSvcImpl) CreateProductionRun(ctx context.Context, params d
 
 	switch domain.RecoveryPoint(idempotencyKey.RecoveryPoint) {
 	case domain.RecoveryPointFinished:
-		cached, err := idempotency.UnmarshalCachedResponse[domain.ProductionRun](ctx, idempotencyKey.ResponseCode, idempotencyKey.ResponseBody)
+		cached, err := idemresponse.UnmarshalCachedResponse[domain.ProductionRun](ctx, idempotencyKey.ResponseCode, idempotencyKey.ResponseBody)
 		if err != nil {
 			return nil, tracing.Trace(span, apierror.NewInternalError(err, "Issue unmarshalling cached response."))
 		}
@@ -269,7 +269,7 @@ func (s *productionRunSvcImpl) UpdateProductionRun(ctx context.Context, params d
 			return nil, tracing.Trace(span, apiErr)
 		}
 		if exists {
-			return nil, tracing.Trace(span, apierror.NewConflictErrorWithParam("A production run with this number already exists.", "number"))
+			return nil, tracing.Trace(span, apierror.NewConflictErrorWithParam("number", "A production run with this number already exists."))
 		}
 	}
 
@@ -278,7 +278,7 @@ func (s *productionRunSvcImpl) UpdateProductionRun(ctx context.Context, params d
 		accountUserRepo := s.repos.NewAccountUserRepo()
 		resolvedID, apiErr := accountUserRepo.ResolveAccountUserID(ctx, params.AccountID, *params.ResponsibleUserID)
 		if apiErr != nil {
-			return nil, tracing.Trace(span, apierror.NewValidationErrorWithParam("The responsible user was not found in this account.", "responsible_user_id"))
+			return nil, tracing.Trace(span, apierror.NewFieldError("responsible_user_id", apierror.CodeInvalidFormat, "The responsible user was not found in this account."))
 		}
 		params.ResponsibleUserID = &resolvedID
 	}
@@ -292,7 +292,7 @@ func (s *productionRunSvcImpl) UpdateProductionRun(ctx context.Context, params d
 
 	switch domain.RecoveryPoint(idempotencyKey.RecoveryPoint) {
 	case domain.RecoveryPointFinished:
-		cached, err := idempotency.UnmarshalCachedResponse[domain.ProductionRun](ctx, idempotencyKey.ResponseCode, idempotencyKey.ResponseBody)
+		cached, err := idemresponse.UnmarshalCachedResponse[domain.ProductionRun](ctx, idempotencyKey.ResponseCode, idempotencyKey.ResponseBody)
 		if err != nil {
 			return nil, tracing.Trace(span, apierror.NewInternalError(err, "Issue unmarshalling cached response."))
 		}
@@ -366,13 +366,13 @@ func (s *productionRunSvcImpl) DeleteProductionRun(ctx context.Context, params d
 	// Verify the run exists (Get will 404 if not found).
 	productionRun, apiErr := repo.Get(ctx, domain.GetProductionRunParams(params))
 	if apiErr != nil {
-		if apierror.IsNotFound(apiErr) {
+		if apierror.HasCode(apiErr, apierror.CodeResourceNotFound) {
 			wasDeleted, deletedCheckErr := s.repos.NewDeletedRecordRepo().ExistsInAccount(ctx, constants.DeletedRecordResourceTypeProductionRun, params.ProductionRunID, params.AccountID)
 			if deletedCheckErr != nil {
 				return tracing.Trace(span, deletedCheckErr)
 			}
 			if wasDeleted {
-				return tracing.Trace(span, apierror.NewAlreadyDeletedError("This production run has already been deleted and can no longer be modified."))
+				return tracing.Trace(span, apierror.NewGoneError("This production run has already been deleted and can no longer be modified."))
 			}
 		}
 		return tracing.Trace(span, apiErr)
@@ -409,7 +409,7 @@ func (s *productionRunSvcImpl) DeleteProductionRun(ctx context.Context, params d
 			return apiErr
 		}
 		if hasScanned {
-			return apierror.NewResourceConflictError("This production run has scanned batches. Delete those batches first to reverse their scans.")
+			return apierror.NewConflictError("This production run has scanned batches. Delete those batches first to reverse their scans.")
 		}
 
 		// Delete all batches for this run.
@@ -523,7 +523,7 @@ func (s *productionRunSvcImpl) AddBatchesToProductionRun(ctx context.Context, pa
 
 	switch domain.RecoveryPoint(idempotencyKey.RecoveryPoint) {
 	case domain.RecoveryPointFinished:
-		cached, err := idempotency.UnmarshalCachedResponse[[]*domain.BaseBatch](ctx, idempotencyKey.ResponseCode, idempotencyKey.ResponseBody)
+		cached, err := idemresponse.UnmarshalCachedResponse[[]*domain.BaseBatch](ctx, idempotencyKey.ResponseCode, idempotencyKey.ResponseBody)
 		if err != nil {
 			return nil, tracing.Trace(span, apierror.NewInternalError(err, "Issue unmarshalling cached response."))
 		}
@@ -652,13 +652,13 @@ func validateAddBatchInputs(ctx context.Context, repos domain.RepoFactory, accou
 		param := func(field string) string { return fmt.Sprintf("batches[%d].%s", j, field) }
 
 		if !b.Quantity.Measure.IsPositive() {
-			return apierror.NewValidationErrorWithParam("Quantity must be greater than zero.", param("quantity_value"))
+			return apierror.NewFieldError(param("quantity_value"), apierror.CodeInvalidFormat, "Quantity must be greater than zero.")
 		}
 		if b.Seconds != nil && b.Seconds.Measure.IsNegative() {
-			return apierror.NewValidationErrorWithParam("Seconds cannot be negative.", param("seconds_value"))
+			return apierror.NewFieldError(param("seconds_value"), apierror.CodeInvalidFormat, "Seconds cannot be negative.")
 		}
 		if b.Waste != nil && b.Waste.Measure.IsNegative() {
-			return apierror.NewValidationErrorWithParam("Waste cannot be negative.", param("waste_value"))
+			return apierror.NewFieldError(param("waste_value"), apierror.CodeInvalidFormat, "Waste cannot be negative.")
 		}
 
 		if _, apiErr := items.resolveOrError(domain.ItemIdentifier{ID: b.ItemID}, param("item_id")); apiErr != nil {
@@ -684,8 +684,7 @@ func validateAddBatchInputs(ctx context.Context, repos domain.RepoFactory, accou
 		}
 		for k, machineID := range b.MachineIDs {
 			if _, ok := validMachineIDs[machineID]; !ok {
-				return apierror.NewValidationErrorWithParam(
-					fmt.Sprintf("Machine %q was not found.", machineID), param(fmt.Sprintf("machine_ids[%d]", k)))
+				return apierror.NewFieldError(param(fmt.Sprintf("machine_ids[%d]", k)), apierror.CodeInvalidFormat, fmt.Sprintf("Machine %q was not found.", machineID))
 			}
 		}
 		if b.ProductionStepID != nil && *b.ProductionStepID != "" {
@@ -695,8 +694,7 @@ func validateAddBatchInputs(ctx context.Context, repos domain.RepoFactory, accou
 					return apiErr
 				}
 				if !inAccount {
-					return apierror.NewValidationErrorWithParam(
-						fmt.Sprintf("Production step %q was not found.", *b.ProductionStepID), param("production_step_id"))
+					return apierror.NewFieldError(param("production_step_id"), apierror.CodeInvalidFormat, fmt.Sprintf("Production step %q was not found.", *b.ProductionStepID))
 				}
 				validStepIDs[*b.ProductionStepID] = struct{}{}
 			}

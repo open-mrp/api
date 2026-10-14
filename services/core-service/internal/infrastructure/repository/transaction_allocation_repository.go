@@ -7,9 +7,9 @@ import (
 
 	"github.com/open-mrp/api/services/core-service/internal/domain"
 	"github.com/open-mrp/api/services/core-service/internal/infrastructure/sqlc"
-	"github.com/open-mrp/api/shared/db"
-	apierror "github.com/open-mrp/api/shared/errors"
-	"github.com/open-mrp/api/shared/tracing"
+	apierror "github.com/open-mrp/apikit/apierror"
+	"github.com/open-mrp/apikit/db"
+	"github.com/open-mrp/apikit/tracing"
 )
 
 var transactionAllocationRepoTracer = tracing.GetTracer("core-service.transaction_allocation_repository")
@@ -31,7 +31,7 @@ func (r *transactionAllocationRepoImpl) GetByID(ctx context.Context, accountID, 
 		return nil, tracing.Trace(span, apiErr)
 	}
 	if len(allocations) == 0 {
-		return nil, tracing.Trace(span, apierror.NewResourceNotFoundError("Transaction allocation not found."))
+		return nil, tracing.Trace(span, apierror.NewNotFoundError("Transaction allocation not found."))
 	}
 	return allocations[0], nil
 }

@@ -4,7 +4,7 @@ import (
 	"testing"
 
 	"github.com/open-mrp/api/shared/constants"
-	apierror "github.com/open-mrp/api/shared/errors"
+	apierror "github.com/open-mrp/apikit/apierror"
 )
 
 func TestNormalizeShippoDecimal(t *testing.T) {
@@ -50,7 +50,7 @@ func TestPickShippingRate_MissingRateIsUnavailable(t *testing.T) {
 			if apiErr == nil {
 				t.Fatalf("a missing rate must not quote %v as free freight", rate)
 			}
-			if apiErr.Code != apierror.ErrorCodeSvcUnavailable || !apiErr.IsTransient {
+			if apiErr.Code != apierror.CodeServiceUnavailable || !apiErr.IsTransient {
 				t.Errorf("want a transient 503, got %s (transient %v)", apiErr.Code, apiErr.IsTransient)
 			}
 		})

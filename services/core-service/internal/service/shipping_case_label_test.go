@@ -9,7 +9,7 @@ import (
 	factorymock "github.com/open-mrp/api/services/core-service/internal/domain/mock/factory"
 	repositorymock "github.com/open-mrp/api/services/core-service/internal/domain/mock/repository"
 	"github.com/open-mrp/api/shared/appctx"
-	apierror "github.com/open-mrp/api/shared/errors"
+	apierror "github.com/open-mrp/apikit/apierror"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -85,5 +85,5 @@ func TestDeleteShippingCase_RefusesACaseWithABoughtLabel(t *testing.T) {
 	svc := &shippingCaseSvcImpl{repos: repoFactory}
 	apiErr := svc.DeleteShippingCase(ctx, testLabelAccountID, "shc_1")
 	require.NotNil(t, apiErr)
-	assert.Equal(t, apierror.ErrorCodeResourceConflict, apiErr.Code)
+	assert.Equal(t, apierror.CodeResourceConflict, apiErr.Code)
 }

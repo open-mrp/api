@@ -13,7 +13,7 @@ import (
 	"github.com/open-mrp/api/shared/appctx"
 	"github.com/open-mrp/api/shared/constants"
 	"github.com/open-mrp/api/shared/contracts"
-	apierror "github.com/open-mrp/api/shared/errors"
+	apierror "github.com/open-mrp/apikit/apierror"
 
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
@@ -450,7 +450,7 @@ func (suite *SalesOrderLineSvcTestSuite) TestCreateSalesOrderLine_SkipsPickLineW
 func (suite *SalesOrderLineSvcTestSuite) TestCreateSalesOrderLine_MissingIdentity() {
 	_, apiErr := suite.svc.CreateSalesOrderLine(context.Background(), baseCreateLineParams())
 	suite.NotNil(apiErr)
-	suite.Equal(apierror.ErrorCodeInternalError, apiErr.Code)
+	suite.Equal(apierror.CodeInternalError, apiErr.Code)
 }
 
 func (suite *SalesOrderLineSvcTestSuite) TestCreateSalesOrderLine_InsufficientPermissions() {
@@ -469,7 +469,7 @@ func (suite *SalesOrderLineSvcTestSuite) TestCreateSalesOrderLine_InsufficientPe
 
 	_, apiErr := suite.svc.CreateSalesOrderLine(ctx, baseCreateLineParams())
 	suite.NotNil(apiErr)
-	suite.Equal(apierror.ErrorCodeInsufficientPerms, apiErr.Code)
+	suite.Equal(apierror.CodeInsufficientPermissions, apiErr.Code)
 }
 
 func (suite *SalesOrderLineSvcTestSuite) TestCreateSalesOrderLine_ExternalTargetChecksEditAccess() {
@@ -503,7 +503,7 @@ func (suite *SalesOrderLineSvcTestSuite) TestCreateSalesOrderLine_ExternalTarget
 
 	_, apiErr := suite.svc.CreateSalesOrderLine(ctx, baseCreateLineParams())
 	suite.NotNil(apiErr)
-	suite.Equal(apierror.ErrorCodeInsufficientPerms, apiErr.Code)
+	suite.Equal(apierror.CodeInsufficientPermissions, apiErr.Code)
 }
 
 func (suite *SalesOrderLineSvcTestSuite) TestCreateSalesOrderLine_OrderNotFound() {
@@ -516,14 +516,14 @@ func (suite *SalesOrderLineSvcTestSuite) TestCreateSalesOrderLine_OrderNotFound(
 
 	suite.orderRepo.EXPECT().
 		Get(gomock.Any(), "ac_test", "or_test").
-		Return(nil, apierror.NewResourceNotFoundError("Sales order not found.")).
+		Return(nil, apierror.NewNotFoundError("Sales order not found.")).
 		Times(1)
 
 	suite.expectCacheError()
 
 	_, apiErr := suite.svc.CreateSalesOrderLine(ctx, baseCreateLineParams())
 	suite.NotNil(apiErr)
-	suite.Equal(apierror.ErrorCodeResourceNotFound, apiErr.Code)
+	suite.Equal(apierror.CodeResourceNotFound, apiErr.Code)
 }
 
 // --- UpdateSalesOrderLine ---
@@ -595,7 +595,7 @@ func (suite *SalesOrderLineSvcTestSuite) TestUpdateSalesOrderLine_LineNotInOrder
 
 	_, apiErr := suite.svc.UpdateSalesOrderLine(ctx, baseUpdateLineParams())
 	suite.NotNil(apiErr)
-	suite.Equal(apierror.ErrorCodeResourceNotFound, apiErr.Code)
+	suite.Equal(apierror.CodeResourceNotFound, apiErr.Code)
 }
 
 func (suite *SalesOrderLineSvcTestSuite) TestUpdateSalesOrderLine_RecomputesPickLineWhenPickExists() {
@@ -1089,7 +1089,7 @@ func (suite *SalesOrderLineSvcTestSuite) TestDeleteSalesOrderLine_BlockedWhenHas
 		SalesOrderID:     "or_test",
 	})
 	suite.NotNil(apiErr)
-	suite.Equal(apierror.ErrorCodeInsufficientPerms, apiErr.Code)
+	suite.Equal(apierror.CodeInsufficientPermissions, apiErr.Code)
 }
 
 func (suite *SalesOrderLineSvcTestSuite) TestDeleteSalesOrderLine_BlockedWhenOrderFulfilled() {
@@ -1110,7 +1110,7 @@ func (suite *SalesOrderLineSvcTestSuite) TestDeleteSalesOrderLine_BlockedWhenOrd
 		SalesOrderID:     "or_test",
 	})
 	suite.NotNil(apiErr)
-	suite.Equal(apierror.ErrorCodeResourceConflict, apiErr.Code)
+	suite.Equal(apierror.CodeResourceConflict, apiErr.Code)
 }
 
 func (suite *SalesOrderLineSvcTestSuite) TestDeleteSalesOrderLine_BlockedWhenShipmentAgainst() {
@@ -1138,7 +1138,7 @@ func (suite *SalesOrderLineSvcTestSuite) TestDeleteSalesOrderLine_BlockedWhenShi
 		SalesOrderID:     "or_test",
 	})
 	suite.NotNil(apiErr)
-	suite.Equal(apierror.ErrorCodeResourceConflict, apiErr.Code)
+	suite.Equal(apierror.CodeResourceConflict, apiErr.Code)
 }
 
 func (suite *SalesOrderLineSvcTestSuite) TestDeleteSalesOrderLine_LineNotInOrder() {
@@ -1154,7 +1154,7 @@ func (suite *SalesOrderLineSvcTestSuite) TestDeleteSalesOrderLine_LineNotInOrder
 		SalesOrderID:     "or_test",
 	})
 	suite.NotNil(apiErr)
-	suite.Equal(apierror.ErrorCodeResourceNotFound, apiErr.Code)
+	suite.Equal(apierror.CodeResourceNotFound, apiErr.Code)
 }
 
 func (suite *SalesOrderLineSvcTestSuite) TestDeleteSalesOrderLine_AlreadyDeleted() {
@@ -1184,7 +1184,7 @@ func (suite *SalesOrderLineSvcTestSuite) TestDeleteSalesOrderLine_AlreadyDeleted
 	// Get on the line returns not-found → service checks the tombstone.
 	suite.lineRepo.EXPECT().
 		Get(gomock.Any(), "orl_test").
-		Return(nil, apierror.NewResourceNotFoundError("Sales order line not found.")).
+		Return(nil, apierror.NewNotFoundError("Sales order line not found.")).
 		Times(1)
 
 	// Tombstone present → service surfaces the "already deleted" semantic error.

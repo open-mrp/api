@@ -1,190 +1,15 @@
 package id
 
 import (
-	"fmt"
 	"go/ast"
 	"go/parser"
 	"go/token"
 	"strconv"
 	"strings"
 	"testing"
+
+	apikitid "github.com/open-mrp/apikit/id"
 )
-
-// --- GenID tests ---
-
-func TestGenID_DefaultLength(t *testing.T) {
-	t.Parallel()
-	id, apiErr := GenID(UserIDPrefix, nil)
-	if apiErr != nil {
-		t.Fatalf("unexpected error: %v", apiErr)
-	}
-
-	prefix := string(UserIDPrefix) + "_"
-	if !strings.HasPrefix(id, prefix) {
-		t.Errorf("expected prefix %q, got %q", prefix, id)
-	}
-
-	// Default length is 12, so total = len(prefix) + 12
-	nanoIDPart := strings.TrimPrefix(id, prefix)
-	if len(nanoIDPart) != int(IDLength12) {
-		t.Errorf("expected nano ID length %d, got %d (%q)", IDLength12, len(nanoIDPart), nanoIDPart)
-	}
-}
-
-func TestGenID_CustomLengths(t *testing.T) {
-	t.Parallel()
-	tests := []struct {
-		name   string
-		length IDLength
-	}{
-		{"IDLength12", IDLength12},
-		{"IDLength19", IDLength19},
-		{"IDLength22", IDLength22},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			length := tt.length
-			id, apiErr := GenID(AccountIDPrefix, &length)
-			if apiErr != nil {
-				t.Fatalf("unexpected error: %v", apiErr)
-			}
-
-			prefix := string(AccountIDPrefix) + "_"
-			nanoIDPart := strings.TrimPrefix(id, prefix)
-			if len(nanoIDPart) != int(tt.length) {
-				t.Errorf("expected nano ID length %d, got %d (%q)", tt.length, len(nanoIDPart), nanoIDPart)
-			}
-		})
-	}
-}
-
-func TestGenID_UsesCorrectCharset(t *testing.T) {
-	t.Parallel()
-	for range 50 {
-		id, apiErr := GenID(UserIDPrefix, nil)
-		if apiErr != nil {
-			t.Fatalf("unexpected error: %v", apiErr)
-		}
-
-		nanoIDPart := strings.TrimPrefix(id, string(UserIDPrefix)+"_")
-		for _, c := range nanoIDPart {
-			if !strings.ContainsRune(charset, c) {
-				t.Errorf("character %c not in charset %q (id: %q)", c, charset, id)
-			}
-		}
-	}
-}
-
-func TestGenID_Uniqueness(t *testing.T) {
-	t.Parallel()
-	const count = 1000
-	seen := make(map[string]struct{}, count)
-
-	for range count {
-		id, apiErr := GenID(OrderIDPrefix, nil)
-		if apiErr != nil {
-			t.Fatalf("unexpected error: %v", apiErr)
-		}
-		if _, exists := seen[id]; exists {
-			t.Fatalf("duplicate ID generated: %q", id)
-		}
-		seen[id] = struct{}{}
-	}
-}
-
-func TestGenID_DifferentPrefixes(t *testing.T) {
-	t.Parallel()
-	tests := []struct {
-		prefix   IDPrefix
-		expected string
-	}{
-		{UserIDPrefix, "us_"},
-		{AccountIDPrefix, "ac_"},
-		{OrderIDPrefix, "or_"},
-		{OrganizationIDPrefix, "og_"},
-		{APIKeyIDPrefix, "apke_"},
-		{ProductionFormulaItemIDPrefix, "pnfmit_"},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.expected, func(t *testing.T) {
-			id, apiErr := GenID(tt.prefix, nil)
-			if apiErr != nil {
-				t.Fatalf("unexpected error: %v", apiErr)
-			}
-			if !strings.HasPrefix(id, tt.expected) {
-				t.Errorf("expected prefix %q, got %q", tt.expected, id)
-			}
-		})
-	}
-}
-
-// --- composePrefix tests ---
-
-func TestComposePrefix_SingleWord(t *testing.T) {
-	t.Parallel()
-	prefix := composePrefix(VocUser)
-	if prefix != "us" {
-		t.Errorf("expected %q, got %q", "us", prefix)
-	}
-}
-
-func TestComposePrefix_MultipleWords(t *testing.T) {
-	t.Parallel()
-	tests := []struct {
-		words    []string
-		expected IDPrefix
-	}{
-		{[]string{VocAccount, VocAddress}, "acad"},
-		{[]string{VocAPI, VocKey}, "apke"},
-		{[]string{VocProduction, VocFormula, VocItem}, "pnfmit"},
-		{[]string{VocUnit, VocGroup, VocUnit}, "ungpun"},
-	}
-
-	for _, tt := range tests {
-		t.Run(string(tt.expected), func(t *testing.T) {
-			result := composePrefix(tt.words...)
-			if result != tt.expected {
-				t.Errorf("expected %q, got %q", tt.expected, result)
-			}
-		})
-	}
-}
-
-// --- genNanoID tests ---
-
-func TestGenNanoID_Length(t *testing.T) {
-	t.Parallel()
-	for _, length := range []IDLength{IDLength12, IDLength19, IDLength22} {
-		t.Run(fmt.Sprintf("length_%d", length), func(t *testing.T) {
-			id, apiErr := genNanoID(length)
-			if apiErr != nil {
-				t.Fatalf("unexpected error: %v", apiErr)
-			}
-			if len(id) != int(length) {
-				t.Errorf("expected length %d, got %d (%q)", length, len(id), id)
-			}
-		})
-	}
-}
-
-func TestGenNanoID_Charset(t *testing.T) {
-	t.Parallel()
-	for range 50 {
-		id, apiErr := genNanoID(IDLength22)
-		if apiErr != nil {
-			t.Fatalf("unexpected error: %v", apiErr)
-		}
-		for _, c := range id {
-			if !strings.ContainsRune(charset, c) {
-				t.Errorf("character %c not in charset %q (id: %q)", c, charset, id)
-			}
-		}
-	}
-}
-
-// --- IDPrefix uniqueness test ---
 
 func TestIDPrefixes_NoDuplicates(t *testing.T) {
 	t.Parallel(
@@ -953,7 +778,7 @@ func TestGenID_UnvalidatedPrefixes(t *testing.T) {
 
 // --- Source-derived completeness tests ---
 
-// parsePrefixSource reads every Voc* constant and every composePrefix var straight out of id_prefix_values.go, so the checks below cover the full set rather than a hand-copied list that drifts behind the source.
+// parsePrefixSource reads every Voc* constant and every ComposePrefix var straight out of id_prefix_values.go, so the checks below cover the full set rather than a hand-copied list that drifts behind the source.
 func parsePrefixSource(t *testing.T) (vocab map[string]string, prefixes map[string]IDPrefix) {
 	t.Helper()
 
@@ -1000,22 +825,22 @@ func parsePrefixSource(t *testing.T) (vocab map[string]string, prefixes map[stri
 					// A prefix built any other way would never reach the uniqueness checks below.
 					call, ok := valueSpec.Values[i].(*ast.CallExpr)
 					if !ok {
-						t.Fatalf("%s is not declared with composePrefix", name.Name)
+						t.Fatalf("%s is not declared with ComposePrefix", name.Name)
 					}
-					fn, ok := call.Fun.(*ast.Ident)
-					if !ok || fn.Name != "composePrefix" {
-						t.Fatalf("%s is not declared with composePrefix", name.Name)
+					fn, ok := call.Fun.(*ast.SelectorExpr)
+					if !ok || fn.Sel.Name != "ComposePrefix" {
+						t.Fatalf("%s is not declared with ComposePrefix", name.Name)
 					}
 
 					var words []string
 					for _, arg := range call.Args {
 						ident, ok := arg.(*ast.Ident)
 						if !ok {
-							t.Fatalf("%s: composePrefix argument is not a vocabulary identifier", name.Name)
+							t.Fatalf("%s: ComposePrefix argument is not a vocabulary identifier", name.Name)
 						}
 						words = append(words, ident.Name)
 					}
-					prefixes[name.Name] = composePrefixFromNames(t, vocab, name.Name, words)
+					prefixes[name.Name] = ComposePrefixFromNames(t, vocab, name.Name, words)
 				}
 			}
 		}
@@ -1025,13 +850,13 @@ func parsePrefixSource(t *testing.T) (vocab map[string]string, prefixes map[stri
 		t.Fatal("no vocabulary constants found in id_prefix_values.go")
 	}
 	if len(prefixes) == 0 {
-		t.Fatal("no composePrefix variables found in id_prefix_values.go")
+		t.Fatal("no ComposePrefix variables found in id_prefix_values.go")
 	}
 
 	return vocab, prefixes
 }
 
-func composePrefixFromNames(t *testing.T, vocab map[string]string, prefixName string, words []string) IDPrefix {
+func ComposePrefixFromNames(t *testing.T, vocab map[string]string, prefixName string, words []string) IDPrefix {
 	t.Helper()
 
 	values := make([]string, 0, len(words))
@@ -1043,7 +868,7 @@ func composePrefixFromNames(t *testing.T, vocab map[string]string, prefixName st
 		values = append(values, value)
 	}
 
-	return composePrefix(values...)
+	return apikitid.ComposePrefix(values...)
 }
 
 func TestVocabulary_AllCodesUniqueAndWellFormed(t *testing.T) {

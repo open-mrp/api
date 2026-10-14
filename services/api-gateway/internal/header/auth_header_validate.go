@@ -6,8 +6,8 @@ import (
 	"strings"
 
 	authsvctypes "github.com/open-mrp/api/services/auth-service/pkg/types"
-	apierror "github.com/open-mrp/api/shared/errors"
 	"github.com/open-mrp/api/shared/sanitize"
+	apierror "github.com/open-mrp/apikit/apierror"
 )
 
 var (

@@ -13,9 +13,9 @@ import (
 	"github.com/open-mrp/api/services/notification-service/internal/infrastructure/stub"
 	"github.com/open-mrp/api/shared/appctx"
 	"github.com/open-mrp/api/shared/constants"
-	apierror "github.com/open-mrp/api/shared/errors"
 	"github.com/open-mrp/api/shared/id"
-	"github.com/open-mrp/api/shared/tracing"
+	apierror "github.com/open-mrp/apikit/apierror"
+	"github.com/open-mrp/apikit/tracing"
 )
 
 var notificationSvcTracer = tracing.GetTracer("notification-service.notification_service")
@@ -207,7 +207,7 @@ func (s *notificationSvcImpl) LogEmail(ctx context.Context, data domain.EmailLog
 	defer span.End()
 
 	existing, apiErr := s.emailLogRepo.FindBySesMessageID(ctx, data.SesMessageID)
-	if apiErr != nil && apiErr.Code != apierror.ErrorCodeResourceNotFound {
+	if apiErr != nil && apiErr.Code != apierror.CodeResourceNotFound {
 		return apiErr
 	}
 
@@ -254,7 +254,7 @@ func (s *notificationSvcImpl) LogFailedEmail(ctx context.Context, messageID stri
 	placeholderID := "failed_" + messageID
 
 	existing, apiErr := s.emailLogRepo.FindBySesMessageID(ctx, placeholderID)
-	if apiErr != nil && apiErr.Code != apierror.ErrorCodeResourceNotFound {
+	if apiErr != nil && apiErr.Code != apierror.CodeResourceNotFound {
 		return apiErr
 	}
 

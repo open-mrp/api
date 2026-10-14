@@ -12,11 +12,11 @@ import (
 	"github.com/open-mrp/api/shared/appctx"
 	"github.com/open-mrp/api/shared/audit"
 	"github.com/open-mrp/api/shared/constants"
-	apierror "github.com/open-mrp/api/shared/errors"
 	"github.com/open-mrp/api/shared/id"
-	"github.com/open-mrp/api/shared/idempotency"
-	"github.com/open-mrp/api/shared/tracing"
+	"github.com/open-mrp/api/shared/idemresponse"
+	apierror "github.com/open-mrp/apikit/apierror"
 	"github.com/open-mrp/apikit/safeconv"
+	"github.com/open-mrp/apikit/tracing"
 )
 
 // lineSnapshot is what a deviation records before and after a change. It is a flat copy rather than a reference so the log stays readable after the line is deleted — the whole point of an append-only record is that it outlives its subject.
@@ -184,7 +184,7 @@ func requireFrozenReason(frozen bool, reasonCode *string) *apierror.APIError {
 		return nil
 	}
 	if reasonCode == nil || *reasonCode == "" {
-		return apierror.NewValidationErrorWithParam("A reason is required to change a frozen week.", "reason_code")
+		return apierror.NewFieldError("reason_code", apierror.CodeInvalidFormat, "A reason is required to change a frozen week.")
 	}
 	return nil
 }
@@ -356,7 +356,7 @@ func (s *productionScheduleSvcImpl) CreateProductionScheduleLine(ctx context.Con
 
 	switch domain.RecoveryPoint(idempotencyKey.RecoveryPoint) {
 	case domain.RecoveryPointFinished:
-		cached, err := idempotency.UnmarshalCachedResponse[domain.ProductionScheduleLine](ctx, idempotencyKey.ResponseCode, idempotencyKey.ResponseBody)
+		cached, err := idemresponse.UnmarshalCachedResponse[domain.ProductionScheduleLine](ctx, idempotencyKey.ResponseCode, idempotencyKey.ResponseBody)
 		if err != nil {
 			return nil, tracing.Trace(span, apierror.NewInternalError(err, "Issue unmarshalling cached response."))
 		}
@@ -396,7 +396,7 @@ func (s *productionScheduleSvcImpl) createProductionScheduleLineTx(
 			return apiErr
 		}
 		if params.WeekIndex < 0 || params.WeekIndex >= schedule.HorizonWeeks {
-			return apierror.NewValidationErrorWithParam("The week is outside this schedule's horizon.", "week_index")
+			return apierror.NewFieldError("week_index", apierror.CodeInvalidFormat, "The week is outside this schedule's horizon.")
 		}
 
 		weekStart := weekStartFor(schedule, params.WeekIndex)
@@ -410,7 +410,7 @@ func (s *productionScheduleSvcImpl) createProductionScheduleLineTx(
 			MachineID: params.MachineID,
 		})
 		if apiErr != nil {
-			return apierror.NewValidationErrorWithParam("Unknown machine.", "machine_id")
+			return apierror.NewFieldError("machine_id", apierror.CodeInvalidFormat, "Unknown machine.")
 		}
 
 		sequenceIndex, apiErr := repo.NextSequenceIndex(txCtx, accountID, params.ScheduleID, params.WeekIndex)
@@ -531,7 +531,7 @@ func (s *productionScheduleSvcImpl) UpdateProductionScheduleLine(ctx context.Con
 
 	switch domain.RecoveryPoint(idempotencyKey.RecoveryPoint) {
 	case domain.RecoveryPointFinished:
-		cached, err := idempotency.UnmarshalCachedResponse[domain.ProductionScheduleLine](ctx, idempotencyKey.ResponseCode, idempotencyKey.ResponseBody)
+		cached, err := idemresponse.UnmarshalCachedResponse[domain.ProductionScheduleLine](ctx, idempotencyKey.ResponseCode, idempotencyKey.ResponseBody)
 		if err != nil {
 			return nil, tracing.Trace(span, apierror.NewInternalError(err, "Issue unmarshalling cached response."))
 		}
@@ -576,12 +576,12 @@ func (s *productionScheduleSvcImpl) updateProductionScheduleLineTx(
 			return apiErr
 		}
 		if existing.ProductionScheduleID != params.ScheduleID {
-			return apierror.NewResourceNotFoundError("Schedule line not found.")
+			return apierror.NewNotFoundError("Schedule line not found.")
 		}
 
 		// A campaign builds something by definition. Zeroing one would leave a job on the plan that produces nothing while still holding its machine hours, its lots and its slot against a regenerate — the plan would read as busy for work nobody is doing.
 		if params.Quantity != nil && *params.Quantity <= 0 {
-			return apierror.NewValidationErrorWithParam("A campaign must build at least one unit. Delete the campaign to take it off the plan.", "quantity")
+			return apierror.NewFieldError("quantity", apierror.CodeInvalidFormat, "A campaign must build at least one unit. Delete the campaign to take it off the plan.")
 		}
 
 		before := snapshotLine(existing)
@@ -602,7 +602,7 @@ func (s *productionScheduleSvcImpl) updateProductionScheduleLineTx(
 		}
 		if params.WeekIndex != nil {
 			if *params.WeekIndex < 0 || *params.WeekIndex >= schedule.HorizonWeeks {
-				return apierror.NewValidationErrorWithParam("The week is outside this schedule's horizon.", "week_index")
+				return apierror.NewFieldError("week_index", apierror.CodeInvalidFormat, "The week is outside this schedule's horizon.")
 			}
 			targetWeekStart := weekStartFor(schedule, *params.WeekIndex)
 			frozen = frozen || isWeekFrozen(schedule, targetWeekStart)
@@ -619,7 +619,7 @@ func (s *productionScheduleSvcImpl) updateProductionScheduleLineTx(
 				AccountID: accountID,
 				MachineID: *params.MachineID,
 			}); apiErr != nil {
-				return apierror.NewValidationErrorWithParam("Unknown machine.", "machine_id")
+				return apierror.NewFieldError("machine_id", apierror.CodeInvalidFormat, "Unknown machine.")
 			}
 		}
 
@@ -726,7 +726,7 @@ func (s *productionScheduleSvcImpl) DeleteProductionScheduleLine(ctx context.Con
 			return apiErr
 		}
 		if existing.ProductionScheduleID != params.ScheduleID {
-			return apierror.NewResourceNotFoundError("Schedule line not found.")
+			return apierror.NewNotFoundError("Schedule line not found.")
 		}
 
 		frozen := isWeekFrozen(schedule, existing.WeekStartDate)

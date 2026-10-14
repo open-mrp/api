@@ -8,8 +8,8 @@ import (
 
 	"github.com/open-mrp/api/services/core-service/internal/domain"
 	"github.com/open-mrp/api/shared/contracts"
-	apierror "github.com/open-mrp/api/shared/errors"
-	"github.com/open-mrp/api/shared/tracing"
+	apierror "github.com/open-mrp/apikit/apierror"
+	"github.com/open-mrp/apikit/tracing"
 
 	amqp "github.com/rabbitmq/amqp091-go"
 )
@@ -63,7 +63,7 @@ func TestBulkOperationConsumer_RetriesOnlyTransientFailures(t *testing.T) {
 		},
 		{
 			name:       "a conflict is acknowledged, not retried",
-			executeErr: apierror.NewResourceConflictError("The name matches a different existing unit."),
+			executeErr: apierror.NewConflictError("The name matches a different existing unit."),
 			wantRetry:  false,
 		},
 	}

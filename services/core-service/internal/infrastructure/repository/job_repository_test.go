@@ -9,7 +9,7 @@ import (
 	"github.com/open-mrp/api/services/core-service/internal/domain"
 	"github.com/open-mrp/api/services/core-service/internal/infrastructure/sqlc"
 	"github.com/open-mrp/api/shared/constants"
-	apierror "github.com/open-mrp/api/shared/errors"
+	apierror "github.com/open-mrp/apikit/apierror"
 
 	"github.com/DATA-DOG/go-sqlmock"
 )
@@ -126,7 +126,7 @@ func TestJobRepo_Get_DecodesRowOutcomes(t *testing.T) {
 	if failed.Index != 1 || failed.Status != constants.JobResultStatusFailed {
 		t.Errorf("rejected row did not decode: %+v", failed)
 	}
-	if failed.Error == nil || failed.Error.Code != apierror.ErrorCodeValidationFailed || failed.Error.Message != "bad row" {
+	if failed.Error == nil || failed.Error.Code != apierror.CodeValidationFailed || failed.Error.Message != "bad row" {
 		t.Errorf("the row's error did not decode: %+v", failed.Error)
 	}
 	// A row's own failure never doubles as the job's — the two are different scopes.

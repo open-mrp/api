@@ -4,7 +4,7 @@ import (
 	"time"
 
 	"github.com/open-mrp/api/shared/constants"
-	"github.com/open-mrp/api/shared/timeutil"
+	"github.com/open-mrp/apikit/timeutil"
 )
 
 // MachineItemScanSuggestion is a scan-history candidate for curating a machine's runnable items.

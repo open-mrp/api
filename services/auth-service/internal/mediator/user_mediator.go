@@ -12,10 +12,10 @@ import (
 	"github.com/open-mrp/api/services/auth-service/internal/token"
 	"github.com/open-mrp/api/services/auth-service/pkg/types"
 	"github.com/open-mrp/api/shared/constants"
-	apierror "github.com/open-mrp/api/shared/errors"
 	"github.com/open-mrp/api/shared/id"
 	"github.com/open-mrp/api/shared/messaging"
-	tracing "github.com/open-mrp/api/shared/tracing"
+	apierror "github.com/open-mrp/apikit/apierror"
+	tracing "github.com/open-mrp/apikit/tracing"
 
 	"go.opentelemetry.io/otel/trace"
 )
@@ -125,7 +125,7 @@ func (s *userMedImpl) Register(ctx context.Context, input domain.RegisterUserInp
 	userRepo := s.repos.NewUserRepo()
 
 	existingUser, err := userRepo.Find(ctx, input.Email)
-	if err != nil && !apierror.IsNotFound(err) { // These will be 500 errors
+	if err != nil && !apierror.HasCode(err, apierror.CodeResourceNotFound) { // These will be 500 errors
 		return nil, err
 	}
 
@@ -178,7 +178,7 @@ func (s *userMedImpl) ValidateMagicLoginToken(ctx context.Context, magicToken st
 	userRepo := s.repos.NewUserRepo()
 	user, err := userRepo.Find(ctx, claims.Subject)
 	if err != nil {
-		if apierror.IsNotFound(err) {
+		if apierror.HasCode(err, apierror.CodeResourceNotFound) {
 			return nil, tracing.Trace(span, apierror.NewAuthenticationError(token.ErrInvalidJWT))
 		}
 		return nil, err
@@ -248,7 +248,7 @@ func (s *userMedImpl) ValidateCredential(ctx context.Context, authToken string, 
 		if targetAccountID != nil {
 			accountCtx, err := s.coreClient.GetAccountContext(ctx, *targetAccountID)
 			if err != nil {
-				if err.Code == apierror.ErrorCodeResourceNotFound {
+				if err.Code == apierror.CodeResourceNotFound {
 					return nil, tracing.Trace(span, apierror.NewAuthorizationError(errNoAccountAccess(*targetAccountID)))
 				}
 				return nil, err
@@ -364,7 +364,7 @@ func (s *userMedImpl) validateAPIKeyCredential(ctx context.Context, span trace.S
 	// Fetch account context for subscription status
 	accountCtx, err := s.coreClient.GetAccountContext(ctx, finalTargetAccountID)
 	if err != nil {
-		if err.Code == apierror.ErrorCodeResourceNotFound {
+		if err.Code == apierror.CodeResourceNotFound {
 			return nil, tracing.Trace(span, apierror.NewAuthorizationError(errNoAccountAccess(finalTargetAccountID)))
 		}
 		return nil, err
@@ -380,7 +380,7 @@ func (s *userMedImpl) validateAPIKeyCredential(ctx context.Context, span trace.S
 			TargetAccountID: finalTargetAccountID,
 		})
 		if err != nil {
-			if err.Code == apierror.ErrorCodeResourceNotFound {
+			if err.Code == apierror.CodeResourceNotFound {
 				return nil, tracing.Trace(span, apierror.NewAuthorizationError(errNoAccountAccess(finalTargetAccountID)))
 			}
 			return nil, err
@@ -415,7 +415,7 @@ func (s *userMedImpl) validateAPIKeyCredential(ctx context.Context, span trace.S
 			TargetAccountID: apiKeyModel.OwnerAccountID,
 		})
 		if err != nil {
-			if err.Code == apierror.ErrorCodeResourceNotFound {
+			if err.Code == apierror.CodeResourceNotFound {
 				return nil, tracing.Trace(span, apierror.NewAuthorizationError(errNoAccountAccess(finalTargetAccountID)))
 			}
 			return nil, err
@@ -452,7 +452,7 @@ func (s *userMedImpl) validateAPIKeyCredential(ctx context.Context, span trace.S
 		TargetAccountID: apiKeyModel.OwnerAccountID,
 	})
 	if err != nil {
-		if err.Code == apierror.ErrorCodeResourceNotFound {
+		if err.Code == apierror.CodeResourceNotFound {
 			return nil, tracing.Trace(span, apierror.NewAuthorizationError(errNoAccountAccess(finalTargetAccountID)))
 		}
 		return nil, err
@@ -482,7 +482,7 @@ func (s *userMedImpl) validateUserCredential(ctx context.Context, span trace.Spa
 	// Get the account context to determine if this is a sandbox (cached)
 	accountCtx, err := s.coreClient.GetAccountContext(ctx, finalTargetAccountID)
 	if err != nil {
-		if err.Code == apierror.ErrorCodeResourceNotFound {
+		if err.Code == apierror.CodeResourceNotFound {
 			return nil, tracing.Trace(span, apierror.NewAuthorizationError(errNoAccountAccess(finalTargetAccountID)))
 		}
 		return nil, err
@@ -562,7 +562,7 @@ func (s *userMedImpl) findUserByToken(ctx context.Context, accessToken string) (
 	userModel, err := userRepo.Find(ctx, authToken.Subject)
 
 	if err != nil {
-		if apierror.IsNotFound(err) {
+		if apierror.HasCode(err, apierror.CodeResourceNotFound) {
 			return nil, tracing.Trace(span, apierror.NewAuthenticationError(ErrAccessTokenInvalid))
 		}
 		return nil, tracing.Trace(span, err)

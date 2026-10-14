@@ -14,11 +14,12 @@ import (
 	"github.com/open-mrp/api/services/auth-service/internal/mediator"
 	"github.com/open-mrp/api/services/auth-service/pkg/types"
 	"github.com/open-mrp/api/shared/appctx"
+	"github.com/open-mrp/api/shared/apperr"
 	"github.com/open-mrp/api/shared/constants"
-	apierror "github.com/open-mrp/api/shared/errors"
-	"github.com/open-mrp/api/shared/idempotency"
+	"github.com/open-mrp/api/shared/idemresponse"
 	"github.com/open-mrp/api/shared/messaging"
-	"github.com/open-mrp/api/shared/tracing"
+	apierror "github.com/open-mrp/apikit/apierror"
+	"github.com/open-mrp/apikit/tracing"
 )
 
 var registrationSessionSvcTracer = tracing.GetTracer("auth-service.registration_session_service")
@@ -159,7 +160,7 @@ func (s *registrationSessionSvcImpl) CreateSession(ctx context.Context, input do
 
 	switch idempotencyKey.RecoveryPoint {
 	case domain.RecoveryPointFinished:
-		cached, err := idempotency.UnmarshalCachedResponse[domain.CreateRegistrationSessionResult](ctx, idempotencyKey.ResponseCode, idempotencyKey.ResponseBody)
+		cached, err := idemresponse.UnmarshalCachedResponse[domain.CreateRegistrationSessionResult](ctx, idempotencyKey.ResponseCode, idempotencyKey.ResponseBody)
 		if err != nil {
 			return nil, tracing.Trace(span, apierror.NewInternalError(err, "Issue unmarshalling cached response."))
 		}
@@ -241,7 +242,7 @@ func (s *registrationSessionSvcImpl) CreateUserForSession(ctx context.Context, i
 
 	switch idempotencyKey.RecoveryPoint {
 	case domain.RecoveryPointFinished:
-		cached, err := idempotency.UnmarshalCachedResponse[domain.CreateUserForRegistrationOutput](ctx, idempotencyKey.ResponseCode, idempotencyKey.ResponseBody)
+		cached, err := idemresponse.UnmarshalCachedResponse[domain.CreateUserForRegistrationOutput](ctx, idempotencyKey.ResponseCode, idempotencyKey.ResponseBody)
 		if err != nil {
 			return nil, tracing.Trace(span, apierror.NewInternalError(err, "Issue unmarshalling cached response."))
 		}
@@ -344,7 +345,7 @@ func (s *registrationSessionSvcImpl) UpdateSession(ctx context.Context, input do
 
 	switch idempotencyKey.RecoveryPoint {
 	case domain.RecoveryPointFinished:
-		cached, err := idempotency.UnmarshalCachedResponse[domain.RegistrationSession](ctx, idempotencyKey.ResponseCode, idempotencyKey.ResponseBody)
+		cached, err := idemresponse.UnmarshalCachedResponse[domain.RegistrationSession](ctx, idempotencyKey.ResponseCode, idempotencyKey.ResponseBody)
 		if err != nil {
 			return nil, tracing.Trace(span, apierror.NewInternalError(err, "Issue unmarshalling cached response."))
 		}
@@ -422,7 +423,7 @@ func (s *registrationSessionSvcImpl) ResendVerificationEmail(ctx context.Context
 
 	switch idempotencyKey.RecoveryPoint {
 	case domain.RecoveryPointFinished:
-		cached, err := idempotency.UnmarshalCachedResponse[struct{}](ctx, idempotencyKey.ResponseCode, idempotencyKey.ResponseBody)
+		cached, err := idemresponse.UnmarshalCachedResponse[struct{}](ctx, idempotencyKey.ResponseCode, idempotencyKey.ResponseBody)
 		if err != nil {
 			return tracing.Trace(span, apierror.NewInternalError(err, "Issue unmarshalling cached response."))
 		}
@@ -489,7 +490,7 @@ func (s *registrationSessionSvcImpl) CompleteRegistration(ctx context.Context, s
 	for {
 		switch recoveryPoint {
 		case domain.RecoveryPointFinished:
-			cached, err := idempotency.UnmarshalCachedResponse[domain.CompleteRegistrationOutput](ctx, idempotencyKey.ResponseCode, idempotencyKey.ResponseBody)
+			cached, err := idemresponse.UnmarshalCachedResponse[domain.CompleteRegistrationOutput](ctx, idempotencyKey.ResponseCode, idempotencyKey.ResponseBody)
 			if err != nil {
 				return nil, tracing.Trace(span, apierror.NewInternalError(err, "Issue unmarshalling cached response."))
 			}
@@ -518,7 +519,7 @@ func (s *registrationSessionSvcImpl) CompleteRegistration(ctx context.Context, s
 
 			if session.CompletedAt != nil {
 				return nil, meds.Idempotency.CacheErrorResponse(ctx, idempotencyKey.TypeID,
-					apierror.NewResourceConflictError("Registration session is already completed."))
+					apierror.NewConflictError("Registration session is already completed."))
 			}
 
 			// 3. Validate session state
@@ -579,7 +580,7 @@ func (s *registrationSessionSvcImpl) CompleteRegistration(ctx context.Context, s
 			// 6. Call core-service to create the account (point of no return)
 			accountResult, coreErr := s.coreClient.CompleteRegistration(ctx, coreInput)
 			if coreErr != nil {
-				if coreErr.Code == apierror.ErrorCodeRegistrationClosed {
+				if coreErr.Code == apperr.CodeRegistrationClosed {
 					s.handleRegistrationLimitHit(ctx, session)
 				}
 				return nil, meds.Idempotency.CacheErrorResponse(ctx, idempotencyKey.TypeID, coreErr)
@@ -611,7 +612,7 @@ func (s *registrationSessionSvcImpl) CompleteRegistration(ctx context.Context, s
 		case domain.RecoveryPointCoreAccountCreated:
 			// Recover result from idempotency key cached response if entering from a retry.
 			if result == nil {
-				cached, err := idempotency.UnmarshalCachedResponse[domain.CompleteRegistrationOutput](ctx, idempotencyKey.ResponseCode, idempotencyKey.ResponseBody)
+				cached, err := idemresponse.UnmarshalCachedResponse[domain.CompleteRegistrationOutput](ctx, idempotencyKey.ResponseCode, idempotencyKey.ResponseBody)
 				if err != nil {
 					return nil, tracing.Trace(span, apierror.NewInternalError(err, "Issue unmarshalling recovery point response."))
 				}
@@ -662,7 +663,7 @@ func (s *registrationSessionSvcImpl) CompleteRegistration(ctx context.Context, s
 		case domain.RecoveryPointAccountsCreated:
 			// Session is already complete (guaranteed by the transaction in RecoveryPointCoreAccountCreated). Recover the result if entering this phase from a retry.
 			if result == nil {
-				cached, err := idempotency.UnmarshalCachedResponse[domain.CompleteRegistrationOutput](ctx, idempotencyKey.ResponseCode, idempotencyKey.ResponseBody)
+				cached, err := idemresponse.UnmarshalCachedResponse[domain.CompleteRegistrationOutput](ctx, idempotencyKey.ResponseCode, idempotencyKey.ResponseBody)
 				if err != nil {
 					return nil, tracing.Trace(span, apierror.NewInternalError(err, "Issue unmarshalling recovery point response."))
 				}
@@ -756,7 +757,7 @@ func (s *registrationSessionSvcImpl) ConfirmPayment(ctx context.Context, input d
 
 	switch idempotencyKey.RecoveryPoint {
 	case domain.RecoveryPointFinished:
-		cached, err := idempotency.UnmarshalCachedResponse[domain.ConfirmPaymentOutput](ctx, idempotencyKey.ResponseCode, idempotencyKey.ResponseBody)
+		cached, err := idemresponse.UnmarshalCachedResponse[domain.ConfirmPaymentOutput](ctx, idempotencyKey.ResponseCode, idempotencyKey.ResponseBody)
 		if err != nil {
 			return nil, tracing.Trace(span, apierror.NewInternalError(err, "Issue unmarshalling cached response."))
 		}
@@ -869,7 +870,7 @@ func (s *registrationSessionSvcImpl) SetupBilling(ctx context.Context, input dom
 	for {
 		switch recoveryPoint {
 		case domain.RecoveryPointFinished:
-			cached, err := idempotency.UnmarshalCachedResponse[domain.SetupBillingOutput](ctx, idempotencyKey.ResponseCode, idempotencyKey.ResponseBody)
+			cached, err := idemresponse.UnmarshalCachedResponse[domain.SetupBillingOutput](ctx, idempotencyKey.ResponseCode, idempotencyKey.ResponseBody)
 			if err != nil {
 				return nil, tracing.Trace(span, apierror.NewInternalError(err, "Issue unmarshalling cached response."))
 			}
@@ -883,7 +884,7 @@ func (s *registrationSessionSvcImpl) SetupBilling(ctx context.Context, input dom
 			}
 
 			if session.CompletedAt != nil {
-				return nil, tracing.Trace(span, apierror.NewResourceConflictError("Registration session is already completed."))
+				return nil, tracing.Trace(span, apierror.NewConflictError("Registration session is already completed."))
 			}
 
 			// If customer already exists from a previous attempt, skip to phase 2

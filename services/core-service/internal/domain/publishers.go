@@ -3,8 +3,8 @@ package domain
 import (
 	"context"
 
-	apierror "github.com/open-mrp/api/shared/errors"
 	"github.com/open-mrp/api/shared/messaging"
+	apierror "github.com/open-mrp/apikit/apierror"
 )
 
 // NotificationPublisher publishes email notification messages via the outbox pattern.

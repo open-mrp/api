@@ -11,11 +11,11 @@ import (
 	"github.com/open-mrp/api/shared/appctx"
 	"github.com/open-mrp/api/shared/audit"
 	"github.com/open-mrp/api/shared/constants"
-	apierror "github.com/open-mrp/api/shared/errors"
 	"github.com/open-mrp/api/shared/id"
-	"github.com/open-mrp/api/shared/idempotency"
-	"github.com/open-mrp/api/shared/tracing"
+	"github.com/open-mrp/api/shared/idemresponse"
+	apierror "github.com/open-mrp/apikit/apierror"
 	"github.com/open-mrp/apikit/ptrutil"
+	"github.com/open-mrp/apikit/tracing"
 )
 
 // supportAliasDisplayName is the branded party a customer sees behind every staff reply on an external
@@ -29,7 +29,7 @@ func (s *conversationSvcImpl) UpdateWorkflowStatus(ctx context.Context, conversa
 	defer span.End()
 
 	if !constants.ConversationWorkflowStatus(status).IsValid() {
-		return nil, tracing.Trace(span, apierror.NewParameterInvalidError("Unknown workflow status.", "status"))
+		return nil, tracing.Trace(span, apierror.NewParameterInvalidError("status", "Unknown workflow status."))
 	}
 	accountID, apiErr := s.requireMessagingAdmin(ctx, types.ActionUpdate)
 	if apiErr != nil {
@@ -106,7 +106,7 @@ func (s *conversationSvcImpl) ListInbox(ctx context.Context, input domain.Suppor
 		return nil, tracing.Trace(span, apiErr)
 	}
 	if input.WorkflowStatus != nil && !constants.ConversationWorkflowStatus(*input.WorkflowStatus).IsValid() {
-		return nil, tracing.Trace(span, apierror.NewParameterInvalidError("Unknown workflow status.", "status"))
+		return nil, tracing.Trace(span, apierror.NewParameterInvalidError("status", "Unknown workflow status."))
 	}
 	limit := clampLimit(input.Limit, defaultNotificationPageSize, maxNotificationPageSize)
 	cursor, apiErr := decodeConversationCursor(input.Cursor)
@@ -177,7 +177,7 @@ func (s *conversationSvcImpl) AddConversationLink(ctx context.Context, conversat
 	defer span.End()
 
 	if resourceType == "" || resourceID == "" {
-		return nil, tracing.Trace(span, apierror.NewParameterMissingError("A resource_type and resource_id are required.", "resource_type"))
+		return nil, tracing.Trace(span, apierror.NewParameterMissingError("resource_type", "A resource_type and resource_id are required."))
 	}
 	accountID, part, apiErr := s.requireCaseAdmin(ctx, conversationID, types.ActionUpdate)
 	if apiErr != nil {
@@ -228,7 +228,7 @@ func (s *conversationSvcImpl) RemoveConversationLink(ctx context.Context, conver
 			return apiErr
 		}
 		if !removed {
-			return apierror.NewResourceNotFoundError("Link not found.")
+			return apierror.NewNotFoundError("Link not found.")
 		}
 		return audit.NewPublisher().Publish(txCtx, f.NewOutboxRepo(), audit.EventData{
 			ServiceName:  domain.ServiceName,
@@ -261,7 +261,7 @@ func (s *conversationSvcImpl) ListConversationsByResource(ctx context.Context, r
 	defer span.End()
 
 	if resourceType == "" || resourceID == "" {
-		return nil, tracing.Trace(span, apierror.NewParameterMissingError("A resource_type and resource_id are required.", "resource_type"))
+		return nil, tracing.Trace(span, apierror.NewParameterMissingError("resource_type", "A resource_type and resource_id are required."))
 	}
 	accountID, apiErr := s.requireMessagingAdmin(ctx, types.ActionRead)
 	if apiErr != nil {
@@ -277,10 +277,10 @@ func (s *conversationSvcImpl) CreateReplyDraft(ctx context.Context, input domain
 	defer span.End()
 
 	if !constants.MessageChannel(input.Channel).IsValid() {
-		return nil, tracing.Trace(span, apierror.NewParameterInvalidError("Unknown message channel.", "channel"))
+		return nil, tracing.Trace(span, apierror.NewParameterInvalidError("channel", "Unknown message channel."))
 	}
 	if input.Body == "" {
-		return nil, tracing.Trace(span, apierror.NewParameterMissingError("A draft body is required.", "body"))
+		return nil, tracing.Trace(span, apierror.NewParameterMissingError("body", "A draft body is required."))
 	}
 	accountID, part, apiErr := s.requireCaseAdmin(ctx, input.ConversationID, types.ActionCreate)
 	if apiErr != nil {
@@ -297,7 +297,7 @@ func (s *conversationSvcImpl) CreateReplyDraft(ctx context.Context, input domain
 	}
 	switch domain.RecoveryPoint(idemKey.RecoveryPoint) {
 	case domain.RecoveryPointFinished:
-		cached, err := idempotency.UnmarshalCachedResponse[domain.Message](ctx, idemKey.ResponseCode, idemKey.ResponseBody)
+		cached, err := idemresponse.UnmarshalCachedResponse[domain.Message](ctx, idemKey.ResponseCode, idemKey.ResponseBody)
 		if err != nil {
 			return nil, tracing.Trace(span, apierror.NewInternalError(err, "Issue unmarshalling cached response."))
 		}
@@ -366,7 +366,7 @@ func (s *conversationSvcImpl) UpdateReplyDraft(ctx context.Context, draftID, bod
 	defer span.End()
 
 	if body == "" {
-		return nil, tracing.Trace(span, apierror.NewParameterMissingError("A draft body is required.", "body"))
+		return nil, tracing.Trace(span, apierror.NewParameterMissingError("body", "A draft body is required."))
 	}
 	accountID, apiErr := s.requireMessagingAdmin(ctx, types.ActionUpdate)
 	if apiErr != nil {
@@ -381,7 +381,7 @@ func (s *conversationSvcImpl) UpdateReplyDraft(ctx context.Context, draftID, bod
 			return apiErr
 		}
 		if draft.Status != string(constants.MessageStatusDraft) {
-			return apierror.NewResourceConflictError("This draft can no longer be edited.")
+			return apierror.NewConflictError("This draft can no longer be edited.")
 		}
 		if apiErr := repo.UpdateDraftContent(txCtx, draftID, accountID, body, subject, preview); apiErr != nil {
 			return apiErr
@@ -455,7 +455,7 @@ func (s *conversationSvcImpl) RejectReplyDraft(ctx context.Context, draftID stri
 			return apiErr
 		}
 		if !applied {
-			return apierror.NewResourceConflictError("This draft is no longer open.")
+			return apierror.NewConflictError("This draft is no longer open.")
 		}
 		after, apiErr := repo.GetByID(txCtx, draftID, accountID)
 		if apiErr != nil {
@@ -495,7 +495,7 @@ func (s *conversationSvcImpl) ApproveAndSendReplyDraft(ctx context.Context, draf
 		return nil, tracing.Trace(span, apiErr)
 	}
 	if draft.Status != string(constants.MessageStatusDraft) {
-		return nil, tracing.Trace(span, apierror.NewResourceConflictError("This draft is no longer open."))
+		return nil, tracing.Trace(span, apierror.NewConflictError("This draft is no longer open."))
 	}
 	conv, apiErr := s.requireCustomerCase(ctx, draft.ConversationID, accountID)
 	if apiErr != nil {
@@ -574,8 +574,8 @@ func (s *conversationSvcImpl) promoteDraftViaEmail(ctx context.Context, draft *d
 	// The latest inbound email anchors the reply: who to reply to + the threading headers.
 	latest, apiErr := s.repoFactory.NewEmailMessageRepo().GetLatestInbound(ctx, draft.ConversationID)
 	if apiErr != nil {
-		if apiErr.Code == apierror.ErrorCodeResourceNotFound {
-			return apierror.NewParameterInvalidError("This conversation has no inbound email to reply to.", "conversation_id")
+		if apiErr.Code == apierror.CodeResourceNotFound {
+			return apierror.NewParameterInvalidError("conversation_id", "This conversation has no inbound email to reply to.")
 		}
 		return apiErr
 	}
@@ -674,7 +674,7 @@ func (s *conversationSvcImpl) requireCustomerCase(ctx context.Context, conversat
 		return nil, apiErr
 	}
 	if conv.Audience != string(constants.ConversationAudienceCustomer) {
-		return nil, apierror.NewParameterInvalidError("This conversation is not a customer-facing case.", "conversation_id")
+		return nil, apierror.NewParameterInvalidError("conversation_id", "This conversation is not a customer-facing case.")
 	}
 	return conv, nil
 }

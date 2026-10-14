@@ -10,7 +10,7 @@ import (
 	"github.com/open-mrp/api/shared/id"
 	pb "github.com/open-mrp/api/shared/proto/billing"
 	"github.com/open-mrp/api/shared/rpc"
-	"github.com/open-mrp/api/shared/tracing"
+	"github.com/open-mrp/apikit/tracing"
 
 	grpclib "google.golang.org/grpc"
 )

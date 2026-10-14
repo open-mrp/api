@@ -7,8 +7,8 @@ import (
 	"github.com/open-mrp/api/services/core-service/internal/domain"
 	"github.com/open-mrp/api/services/core-service/internal/scheduling"
 	"github.com/open-mrp/api/shared/appctx"
-	apierror "github.com/open-mrp/api/shared/errors"
-	"github.com/open-mrp/api/shared/tracing"
+	apierror "github.com/open-mrp/apikit/apierror"
+	"github.com/open-mrp/apikit/tracing"
 )
 
 // GetCustomerLeadTime resolves the ship-by lead time a new order for this customer would be committed to, and names the rule that produced it.
@@ -40,7 +40,7 @@ func (s *customerSvcImpl) GetCustomerLeadTime(ctx context.Context, customerAccou
 	}
 	// Unlike the issue path, a missing relation is an error here rather than a fallback: the caller asked about a specific customer, and answering with the account default would describe a customer that does not exist.
 	if chain == nil {
-		return nil, tracing.Trace(span, apierror.NewResourceNotFoundError("Customer not found."))
+		return nil, tracing.Trace(span, apierror.NewNotFoundError("Customer not found."))
 	}
 
 	settings, apiErr := s.repos.NewProductionScheduleRepo().GetSettings(ctx, accountID)

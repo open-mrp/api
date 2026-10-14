@@ -5,7 +5,7 @@ import (
 	"encoding/json"
 
 	"github.com/open-mrp/api/services/core-service/internal/domain"
-	apierror "github.com/open-mrp/api/shared/errors"
+	apierror "github.com/open-mrp/apikit/apierror"
 )
 
 // StripeCheckoutClientFactory is a no-op factory for use in test mode.

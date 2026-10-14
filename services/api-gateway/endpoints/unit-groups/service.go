@@ -12,10 +12,10 @@ import (
 	apirequest "github.com/open-mrp/api/services/api-gateway/pkg/request"
 	apiresource "github.com/open-mrp/api/services/api-gateway/pkg/resource"
 	"github.com/open-mrp/api/shared/constants"
-	apierror "github.com/open-mrp/api/shared/errors"
 	"github.com/open-mrp/api/shared/fieldpb"
 	pb "github.com/open-mrp/api/shared/proto/core"
-	"github.com/open-mrp/api/shared/tracing"
+	apierror "github.com/open-mrp/apikit/apierror"
+	"github.com/open-mrp/apikit/tracing"
 	"google.golang.org/grpc"
 	"google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/types/known/emptypb"
@@ -348,7 +348,7 @@ func loadUnitGroupByID(ctx context.Context, id string) (*apiresource.UnitGroup, 
 	}
 	v, ok := loaded[id]
 	if !ok {
-		return nil, apierror.NewResourceNotFoundError("Unit group not found.")
+		return nil, apierror.NewNotFoundError("Unit group not found.")
 	}
 	return v.(*apiresource.UnitGroup), nil
 }
@@ -362,7 +362,7 @@ func loadUnitGroupUnitByID(ctx context.Context, id string) (*apiresource.UnitGro
 	}
 	v, ok := loaded[id]
 	if !ok {
-		return nil, apierror.NewResourceNotFoundError("Unit group unit not found.")
+		return nil, apierror.NewNotFoundError("Unit group unit not found.")
 	}
 	return v.(*apiresource.UnitGroupUnit), nil
 }

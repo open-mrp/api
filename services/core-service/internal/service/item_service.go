@@ -18,12 +18,12 @@ import (
 	"github.com/open-mrp/api/shared/audit"
 	"github.com/open-mrp/api/shared/constants"
 	"github.com/open-mrp/api/shared/contracts"
-	apierror "github.com/open-mrp/api/shared/errors"
 	"github.com/open-mrp/api/shared/excel"
 	"github.com/open-mrp/api/shared/id"
-	"github.com/open-mrp/api/shared/idempotency"
+	"github.com/open-mrp/api/shared/idemresponse"
 	"github.com/open-mrp/api/shared/messaging"
-	"github.com/open-mrp/api/shared/tracing"
+	apierror "github.com/open-mrp/apikit/apierror"
+	"github.com/open-mrp/apikit/tracing"
 )
 
 // enqueueInventoryReceived hands allocation to the consumer that owns it.
@@ -222,8 +222,8 @@ func (s *itemSvcImpl) GetItem(ctx context.Context, itemID string, includes []str
 		ItemID:    itemID,
 		Includes:  includes,
 	})
-	if apierror.IsNotFound(apiErr) {
-		return nil, nil, tracing.Trace(span, apierror.NewResourceNotFoundError("Item not found."))
+	if apierror.HasCode(apiErr, apierror.CodeResourceNotFound) {
+		return nil, nil, tracing.Trace(span, apierror.NewNotFoundError("Item not found."))
 	}
 	if apiErr != nil {
 		return nil, nil, tracing.Trace(span, apiErr)
@@ -322,7 +322,7 @@ func (s *itemSvcImpl) ComputeItemCosts(ctx context.Context, accountID, itemID st
 		return nil, tracing.Trace(span, apiErr)
 	}
 	if len(initialStepIDs) == 0 {
-		return nil, tracing.Trace(span, apierror.NewResourceNotFoundError("Production flow not found."))
+		return nil, tracing.Trace(span, apierror.NewNotFoundError("Production flow not found."))
 	}
 
 	// 2. Get the full edge graph for the account and BFS backward.
@@ -367,7 +367,7 @@ func (s *itemSvcImpl) ComputeItemCosts(ctx context.Context, accountID, itemID st
 		// The graph was read a moment ago and steps come and go under it; a step deleted since then
 		// simply is not part of the flow any more, and must not fail the whole rollup.
 		step, apiErr := flowRepo.GetFlowStep(ctx, accountID, stepID)
-		if apierror.IsNotFound(apiErr) {
+		if apierror.HasCode(apiErr, apierror.CodeResourceNotFound) {
 			continue
 		}
 		if apiErr != nil {
@@ -421,7 +421,7 @@ func (s *itemSvcImpl) ComputeItemCosts(ctx context.Context, accountID, itemID st
 		}
 	}
 	if targetStepID == "" {
-		return nil, tracing.Trace(span, apierror.NewResourceNotFoundError("Production flow not found."))
+		return nil, tracing.Trace(span, apierror.NewNotFoundError("Production flow not found."))
 	}
 	targetStep := stepDataMap[targetStepID].step
 	targetProdQty := targetStep.Production.Quantity.Measure
@@ -431,7 +431,7 @@ func (s *itemSvcImpl) ComputeItemCosts(ctx context.Context, accountID, itemID st
 	// Target step normalization: 1 / production quantity (cost per 1 unit of output). A step that
 	// makes nothing cannot be costed per unit, which is the same answer as there being no flow.
 	if targetProdQty.IsZero() {
-		return nil, tracing.Trace(span, apierror.NewResourceNotFoundError("Production flow not found: the step that produces this item has a zero production quantity."))
+		return nil, tracing.Trace(span, apierror.NewNotFoundError("Production flow not found: the step that produces this item has a zero production quantity."))
 	}
 	normMap[targetStepID] = decimal.NewFromInt(1).Div(targetProdQty)
 
@@ -694,10 +694,7 @@ func (s *itemSvcImpl) GetItemTrends(ctx context.Context, itemID string, trendTyp
 
 	// Reject unknown trend types — matches Dashboard's guard rail.
 	if !constants.ItemTrendType(trendType).IsValid() {
-		return nil, tracing.Trace(span, apierror.NewValidationErrorWithParam(
-			"Unsupported trend type. Supported values: "+strings.Join(constants.ItemTrendType("").EnumValues(), ", "),
-			"trend_type",
-		))
+		return nil, tracing.Trace(span, apierror.NewFieldError("trend_type", apierror.CodeInvalidFormat, "Unsupported trend type. Supported values: "+strings.Join(constants.ItemTrendType("").EnumValues(), ", ")))
 	}
 
 	accountID := identity.Target.AccountID
@@ -705,8 +702,8 @@ func (s *itemSvcImpl) GetItemTrends(ctx context.Context, itemID string, trendTyp
 
 	// Scoped to the account, so another account's item ID is not answered with a flat series of zeros.
 	stocking, apiErr := itemRepo.GetStockingUnit(ctx, accountID, itemID)
-	if apierror.IsNotFound(apiErr) {
-		return nil, tracing.Trace(span, apierror.NewResourceNotFoundError("Item not found."))
+	if apierror.HasCode(apiErr, apierror.CodeResourceNotFound) {
+		return nil, tracing.Trace(span, apierror.NewNotFoundError("Item not found."))
 	}
 	if apiErr != nil {
 		return nil, tracing.Trace(span, apiErr)
@@ -843,7 +840,7 @@ func (s *itemSvcImpl) UpdateItem(ctx context.Context, params domain.UpdateItemPa
 
 	switch domain.RecoveryPoint(idempotencyKey.RecoveryPoint) {
 	case domain.RecoveryPointFinished:
-		cached, err := idempotency.UnmarshalCachedResponse[domain.Item](ctx, idempotencyKey.ResponseCode, idempotencyKey.ResponseBody)
+		cached, err := idemresponse.UnmarshalCachedResponse[domain.Item](ctx, idempotencyKey.ResponseCode, idempotencyKey.ResponseBody)
 		if err != nil {
 			return nil, tracing.Trace(span, apierror.NewInternalError(err, "Issue unmarshalling cached response."))
 		}
@@ -869,7 +866,7 @@ func (s *itemSvcImpl) UpdateItem(ctx context.Context, params domain.UpdateItemPa
 					return apiErr
 				}
 				if exists {
-					return apierror.NewConflictErrorWithParam(fmt.Sprintf("Item sku %s already exists.", *params.SKU), "sku")
+					return apierror.NewConflictErrorWithParam("sku", fmt.Sprintf("Item sku %s already exists.", *params.SKU))
 				}
 			}
 
@@ -940,7 +937,7 @@ func (s *itemSvcImpl) AddItemAttribute(ctx context.Context, itemID, attributeID 
 
 	switch domain.RecoveryPoint(idempotencyKey.RecoveryPoint) {
 	case domain.RecoveryPointFinished:
-		cached, err := idempotency.UnmarshalCachedResponse[domain.Item](ctx, idempotencyKey.ResponseCode, idempotencyKey.ResponseBody)
+		cached, err := idemresponse.UnmarshalCachedResponse[domain.Item](ctx, idempotencyKey.ResponseCode, idempotencyKey.ResponseBody)
 		if err != nil {
 			return nil, tracing.Trace(span, apierror.NewInternalError(err, "Issue unmarshalling cached response."))
 		}
@@ -1041,7 +1038,7 @@ func (s *itemSvcImpl) RemoveItemAttribute(ctx context.Context, itemID, attribute
 
 	switch domain.RecoveryPoint(idempotencyKey.RecoveryPoint) {
 	case domain.RecoveryPointFinished:
-		cached, err := idempotency.UnmarshalCachedResponse[domain.Item](ctx, idempotencyKey.ResponseCode, idempotencyKey.ResponseBody)
+		cached, err := idemresponse.UnmarshalCachedResponse[domain.Item](ctx, idempotencyKey.ResponseCode, idempotencyKey.ResponseBody)
 		if err != nil {
 			return nil, tracing.Trace(span, apierror.NewInternalError(err, "Issue unmarshalling cached response."))
 		}
@@ -1123,7 +1120,7 @@ func validateChangeItemCategoryTypes(item *domain.Item, category *domain.ItemCat
 		return apierror.NewInvariantViolationError("Item and category are required for category change validation.")
 	}
 	if !categoryTypeMatchesItem(item.ItemTypeCode, category.ItemCategoryTypeCode) {
-		return apierror.NewValidationErrorWithParam("This category type cannot be assigned to this item type.", "category_id")
+		return apierror.NewFieldError("category_id", apierror.CodeInvalidFormat, "This category type cannot be assigned to this item type.")
 	}
 	return nil
 }
@@ -1230,7 +1227,7 @@ func (s *itemSvcImpl) ChangeItemCategory(ctx context.Context, itemID, categoryID
 
 	switch domain.RecoveryPoint(idempotencyKey.RecoveryPoint) {
 	case domain.RecoveryPointFinished:
-		cached, err := idempotency.UnmarshalCachedResponse[domain.Item](ctx, idempotencyKey.ResponseCode, idempotencyKey.ResponseBody)
+		cached, err := idemresponse.UnmarshalCachedResponse[domain.Item](ctx, idempotencyKey.ResponseCode, idempotencyKey.ResponseBody)
 		if err != nil {
 			return nil, tracing.Trace(span, apierror.NewInternalError(err, "Issue unmarshalling cached response."))
 		}
@@ -1382,7 +1379,7 @@ func (s *itemSvcImpl) UpdateItemInventory(ctx context.Context, params domain.Upd
 		return tracing.Trace(span, apiErr)
 	}
 	if item == nil {
-		return tracing.Trace(span, apierror.NewResourceNotFoundError("Item not found."))
+		return tracing.Trace(span, apierror.NewNotFoundError("Item not found."))
 	}
 
 	// The quantity converts to the item's base unit through its unit group; a unit outside it has no conversion.
@@ -1395,7 +1392,7 @@ func (s *itemSvcImpl) UpdateItemInventory(ctx context.Context, params domain.Upd
 		return tracing.Trace(span, apiErr)
 	}
 	if !inGroup {
-		return tracing.Trace(span, apierror.NewValidationErrorWithParam("quantity.unit_id must be a unit in the item's unit group.", "quantity.unit_id"))
+		return tracing.Trace(span, apierror.NewFieldError("quantity.unit_id", apierror.CodeInvalidFormat, "quantity.unit_id must be a unit in the item's unit group."))
 	}
 
 	// If customerID is provided, verify edit access.
@@ -1427,7 +1424,7 @@ func (s *itemSvcImpl) UpdateItemInventory(ctx context.Context, params domain.Upd
 			return tracing.Trace(span, apiErr)
 		}
 		if !inAccount {
-			return tracing.Trace(span, apierror.NewResourceNotFoundError("Location not found."))
+			return tracing.Trace(span, apierror.NewNotFoundError("Location not found."))
 		}
 	}
 
@@ -1440,7 +1437,7 @@ func (s *itemSvcImpl) UpdateItemInventory(ctx context.Context, params domain.Upd
 
 	switch domain.RecoveryPoint(idempotencyKey.RecoveryPoint) {
 	case domain.RecoveryPointFinished:
-		cached, err := idempotency.UnmarshalCachedResponse[struct{}](ctx, idempotencyKey.ResponseCode, idempotencyKey.ResponseBody)
+		cached, err := idemresponse.UnmarshalCachedResponse[struct{}](ctx, idempotencyKey.ResponseCode, idempotencyKey.ResponseBody)
 		if err != nil {
 			return tracing.Trace(span, apierror.NewInternalError(err, "Issue unmarshalling cached response."))
 		}
@@ -1590,7 +1587,7 @@ func (s *itemSvcImpl) BulkCreateItems(ctx context.Context, params domain.BulkCre
 	switch params.Type {
 	case "product", "material", "part":
 	default:
-		return nil, tracing.Trace(span, apierror.NewValidationErrorWithParam("Invalid item type. Must be 'product', 'material', or 'part'.", "type"))
+		return nil, tracing.Trace(span, apierror.NewFieldError("type", apierror.CodeInvalidFormat, "Invalid item type. Must be 'product', 'material', or 'part'."))
 	}
 
 	meds := s.mediators()
@@ -1602,7 +1599,7 @@ func (s *itemSvcImpl) BulkCreateItems(ctx context.Context, params domain.BulkCre
 
 	switch domain.RecoveryPoint(idempotencyKey.RecoveryPoint) {
 	case domain.RecoveryPointFinished:
-		cached, err := idempotency.UnmarshalCachedResponse[[]domain.BulkCreateItemResult](ctx, idempotencyKey.ResponseCode, idempotencyKey.ResponseBody)
+		cached, err := idemresponse.UnmarshalCachedResponse[[]domain.BulkCreateItemResult](ctx, idempotencyKey.ResponseCode, idempotencyKey.ResponseBody)
 		if err != nil {
 			return nil, tracing.Trace(span, apierror.NewInternalError(err, "Issue unmarshalling cached response."))
 		}
@@ -1682,10 +1679,10 @@ func validateAttributesForCategory(ctx context.Context, repos domain.RepoFactory
 	for _, attrID := range attributeIDs {
 		attr, ok := byID[attrID]
 		if !ok {
-			return apierror.NewResourceNotFoundError("Attribute not found.")
+			return apierror.NewNotFoundError("Attribute not found.")
 		}
 		if _, ok := linked[attr.PropertyID]; !ok {
-			return apierror.NewValidationErrorWithParam(fmt.Sprintf("Attribute %q is not available on this item's category; link its property to the category first.", attr.Value), param)
+			return apierror.NewFieldError(param, apierror.CodeInvalidFormat, fmt.Sprintf("Attribute %q is not available on this item's category; link its property to the category first.", attr.Value))
 		}
 	}
 
@@ -1719,7 +1716,7 @@ func validateCategoryCarriesItemAttributes(ctx context.Context, repos domain.Rep
 
 	for _, attr := range item.Attributes {
 		if _, ok := linked[attr.PropertyID]; !ok {
-			return apierror.NewValidationErrorWithParam(fmt.Sprintf("The item carries the attribute %q, whose property the target category does not have; unlink the attribute or add its property to the category first.", attr.Value), param)
+			return apierror.NewFieldError(param, apierror.CodeInvalidFormat, fmt.Sprintf("The item carries the attribute %q, whose property the target category does not have; unlink the attribute or add its property to the category first.", attr.Value))
 		}
 	}
 

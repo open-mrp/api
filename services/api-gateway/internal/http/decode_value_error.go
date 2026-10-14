@@ -7,7 +7,7 @@ import (
 	"reflect"
 	"time"
 
-	apierror "github.com/open-mrp/api/shared/errors"
+	apierror "github.com/open-mrp/apikit/apierror"
 	"github.com/open-mrp/apikit/field"
 )
 
@@ -25,20 +25,20 @@ func valueDecodeError(body []byte, dst any, err error) error {
 
 	if uterr, ok := errors.AsType[*json.UnmarshalTypeError](cause); ok {
 		if path == "" {
-			return apierror.NewInvalidFormatError(fmt.Sprintf("Invalid request body: expected %s, got %s.", jsonTypeName(uterr.Type), uterr.Value), "")
+			return apierror.NewInvalidFormatError("", fmt.Sprintf("Invalid request body: expected %s, got %s.", jsonTypeName(uterr.Type), uterr.Value))
 		}
-		return apierror.NewInvalidFormatError(fmt.Sprintf("Invalid type for field '%s': expected %s, got %s.", path, jsonTypeName(uterr.Type), uterr.Value), path)
+		return apierror.NewInvalidFormatError(path, fmt.Sprintf("Invalid type for field '%s': expected %s, got %s.", path, jsonTypeName(uterr.Type), uterr.Value))
 	}
 	if path == "" {
 		return err
 	}
 	if _, ok := errors.AsType[*time.ParseError](cause); ok {
-		return apierror.NewInvalidFormatError(fmt.Sprintf("Invalid format for field '%s': expected an RFC 3339 timestamp, such as 2024-01-15T10:30:00Z.", path), path)
+		return apierror.NewInvalidFormatError(path, fmt.Sprintf("Invalid format for field '%s': expected an RFC 3339 timestamp, such as 2024-01-15T10:30:00Z.", path))
 	}
 	if errors.Is(cause, field.ErrExplicitNull) {
-		return apierror.NewInvalidFormatError(fmt.Sprintf("Field '%s' cannot be null.", path), path)
+		return apierror.NewInvalidFormatError(path, fmt.Sprintf("Field '%s' cannot be null.", path))
 	}
-	return apierror.NewInvalidFormatError(fmt.Sprintf("Invalid value for field '%s'.", path), path)
+	return apierror.NewInvalidFormatError(path, fmt.Sprintf("Invalid value for field '%s'.", path))
 }
 
 var timeType = reflect.TypeFor[time.Time]()

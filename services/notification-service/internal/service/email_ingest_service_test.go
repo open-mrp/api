@@ -11,8 +11,8 @@ import (
 	"github.com/open-mrp/api/shared/appctx"
 	"github.com/open-mrp/api/shared/audit"
 	"github.com/open-mrp/api/shared/constants"
-	apierror "github.com/open-mrp/api/shared/errors"
 	"github.com/open-mrp/api/shared/messaging"
+	apierror "github.com/open-mrp/apikit/apierror"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -31,7 +31,7 @@ func TestIngestInboundEmail_UnknownInboxDropped(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	inboxRepo := repositorymock.NewMockEmailInboxRepo(ctrl)
 	inboxRepo.EXPECT().GetByAddress(gomock.Any(), "support@openmrp-test.com").
-		Return(nil, apierror.NewResourceNotFoundError("nope"))
+		Return(nil, apierror.NewNotFoundError("nope"))
 
 	factory := factorymock.NewMockRepoFactory(ctrl)
 	factory.EXPECT().NewEmailInboxRepo().Return(inboxRepo).AnyTimes()

@@ -10,12 +10,12 @@ import (
 	"github.com/open-mrp/api/services/core-service/internal/domain"
 	"github.com/open-mrp/api/shared/audit"
 	"github.com/open-mrp/api/shared/constants"
-	"github.com/open-mrp/api/shared/db"
-	apierror "github.com/open-mrp/api/shared/errors"
 	"github.com/open-mrp/api/shared/excel"
 	"github.com/open-mrp/api/shared/id"
 	"github.com/open-mrp/api/shared/messaging"
-	"github.com/open-mrp/api/shared/tracing"
+	apierror "github.com/open-mrp/apikit/apierror"
+	"github.com/open-mrp/apikit/db"
+	"github.com/open-mrp/apikit/tracing"
 )
 
 // asyncBulkDeps hands the async bulk engine the plumbing it runs on.
@@ -128,21 +128,21 @@ func validateBulkUpsertUnitRows(rows []domain.UpsertUnitParams) *apierror.APIErr
 	for i, unit := range rows {
 		lowerName := strings.ToLower(unit.Name)
 		if _, exists := nameInputSpace[lowerName]; exists {
-			rowErrs.AddValidation(i, fmt.Sprintf("units[%d].name", i), fmt.Sprintf("duplicate name %q in request", unit.Name))
+			rowErrs.AddField(i, "name", apierror.CodeInvalidFormat, fmt.Sprintf("duplicate name %q in request", unit.Name))
 		}
 		nameInputSpace[lowerName] = struct{}{}
 
 		lowerAbbr := strings.ToLower(unit.Abbreviation)
 		if _, exists := abbrInputSpace[lowerAbbr]; exists {
-			rowErrs.AddValidation(i, fmt.Sprintf("units[%d].abbreviation", i), fmt.Sprintf("duplicate abbreviation %q in request", unit.Abbreviation))
+			rowErrs.AddField(i, "abbreviation", apierror.CodeInvalidFormat, fmt.Sprintf("duplicate abbreviation %q in request", unit.Abbreviation))
 		}
 		abbrInputSpace[lowerAbbr] = struct{}{}
 
 		if isDenominatorZero(unit.RatioDenominator) {
-			rowErrs.AddValidation(i, fmt.Sprintf("units[%d].ratio_denominator", i), "ratio denominator cannot be zero")
+			rowErrs.AddField(i, "ratio_denominator", apierror.CodeInvalidFormat, "ratio denominator cannot be zero")
 		}
 		if isDenominatorZero(unit.OffsetDenominator) {
-			rowErrs.AddValidation(i, fmt.Sprintf("units[%d].offset_denominator", i), "offset denominator cannot be zero")
+			rowErrs.AddField(i, "offset_denominator", apierror.CodeInvalidFormat, "offset denominator cannot be zero")
 		}
 	}
 	return rowErrs.Summary("units")
@@ -282,14 +282,11 @@ func writeBulkUpsertUnits(txCtx context.Context, txRepos domain.RepoFactory, sp 
 			nameUnit := unitsByName[names[i]]
 			abbrUnit := unitsByAbbr[abbreviations[i]]
 			if nameUnit != nil && abbrUnit != nil && nameUnit.ID != abbrUnit.ID {
-				return apierror.NewConflictErrorWithParam(
-					fmt.Sprintf(
-						"The name %q matches existing unit %q (%s) and the abbreviation %q matches a different existing unit %q (%s).",
-						unit.Name, nameUnit.Name, nameUnit.Abbreviation,
-						unit.Abbreviation, abbrUnit.Name, abbrUnit.Abbreviation,
-					),
-					"name, abbreviation",
-				)
+				return apierror.NewConflictErrorWithParam("name, abbreviation", fmt.Sprintf(
+					"The name %q matches existing unit %q (%s) and the abbreviation %q matches a different existing unit %q (%s).",
+					unit.Name, nameUnit.Name, nameUnit.Abbreviation,
+					unit.Abbreviation, abbrUnit.Name, abbrUnit.Abbreviation,
+				))
 			}
 
 			oldUnit := nameUnit
@@ -312,7 +309,7 @@ func writeBulkUpsertUnits(txCtx context.Context, txRepos domain.RepoFactory, sp 
 			return nil
 		})
 		if rowErr != nil {
-			rowErrors = append(rowErrors, apierror.NewRowError(i, rowErr))
+			rowErrors = append(rowErrors, apierror.RowError{Index: i, Error: rowErr.Object()})
 			continue
 		}
 

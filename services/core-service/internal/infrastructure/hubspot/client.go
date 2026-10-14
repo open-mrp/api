@@ -15,8 +15,8 @@ import (
 	"time"
 
 	"github.com/open-mrp/api/services/core-service/internal/domain"
-	apierror "github.com/open-mrp/api/shared/errors"
-	"github.com/open-mrp/api/shared/tracing"
+	apierror "github.com/open-mrp/apikit/apierror"
+	"github.com/open-mrp/apikit/tracing"
 
 	"go.opentelemetry.io/otel/trace"
 )
@@ -119,7 +119,7 @@ func (c *clientImpl) parseError(resp *http.Response) *apierror.APIError {
 
 	switch {
 	case resp.StatusCode == http.StatusTooManyRequests:
-		return apierror.NewRateLimitExceededError("HubSpot API rate limit exceeded.")
+		return apierror.NewRateLimitedError("HubSpot API rate limit exceeded.")
 	case resp.StatusCode >= 500:
 		return apierror.NewInternalError(fmt.Errorf("hubspot status %d: %s", resp.StatusCode, msg), "HubSpot API server error.")
 	case resp.StatusCode == http.StatusUnauthorized:

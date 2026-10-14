@@ -5,9 +5,9 @@ import (
 
 	"github.com/open-mrp/api/services/notification-service/internal/domain"
 	"github.com/open-mrp/api/services/notification-service/internal/infrastructure/sqlc"
-	"github.com/open-mrp/api/shared/db"
-	apierror "github.com/open-mrp/api/shared/errors"
-	"github.com/open-mrp/api/shared/tracing"
+	apierror "github.com/open-mrp/apikit/apierror"
+	"github.com/open-mrp/apikit/db"
+	"github.com/open-mrp/apikit/tracing"
 )
 
 var conversationLinkRepoTracer = tracing.GetTracer("notification-service.conversation_link_repository")
@@ -34,7 +34,7 @@ func (r *conversationLinkRepoImpl) Create(ctx context.Context, l *domain.Convers
 	})
 	if err != nil {
 		if db.IsDuplicateEntry(err) {
-			return tracing.Trace(span, apierror.NewResourceExistsError("That record is already linked to this conversation."))
+			return tracing.Trace(span, apierror.NewExistsError("", "That record is already linked to this conversation."))
 		}
 		if apiErr := db.MapSQLError(err); apiErr != nil {
 			return tracing.Trace(span, apiErr)

@@ -12,10 +12,10 @@ import (
 
 	apiresource "github.com/open-mrp/api/services/api-gateway/pkg/resource"
 	"github.com/open-mrp/api/shared/constants"
-	apierror "github.com/open-mrp/api/shared/errors"
+	apierror "github.com/open-mrp/apikit/apierror"
 )
 
-func requireAPIErr(t *testing.T, err error, wantCode apierror.ErrorCode, wantParam string) {
+func requireAPIErr(t *testing.T, err error, wantCode apierror.Code, wantParam string) {
 	t.Helper()
 	var ae *apierror.APIError
 	if !errors.As(err, &ae) {
@@ -66,7 +66,7 @@ func Test_planFor_invalidDestination(t *testing.T) {
 		if apiErr == nil {
 			t.Fatal("expected error")
 		}
-		if apiErr.Code != apierror.ErrorCodeInternalError {
+		if apiErr.Code != apierror.CodeInternalError {
 			t.Fatalf("got code %v", apiErr.Code)
 		}
 	})
@@ -328,7 +328,7 @@ func TestBindFromQuery_uint_scalar(t *testing.T) {
 		t.Fatalf("got %d", dst.N)
 	}
 	err := BindFromQuery(mustParseURL(t, "/x?n=-1"), dst)
-	requireAPIErr(t, err, apierror.ErrorCodeParameterInvalid, "n")
+	requireAPIErr(t, err, apierror.CodeParameterInvalid, "n")
 }
 
 func TestBindFromQuery_invalidTimePointerParse(t *testing.T) {
@@ -339,7 +339,7 @@ func TestBindFromQuery_invalidTimePointerParse(t *testing.T) {
 	}
 	dst := &req{}
 	err := BindFromQuery(mustParseURL(t, "/x?since=not-a-time"), dst)
-	requireAPIErr(t, err, apierror.ErrorCodeParameterInvalid, "since")
+	requireAPIErr(t, err, apierror.CodeParameterInvalid, "since")
 }
 
 func TestBindFromHeaders_cookieUsedWhenAuthorizationHeaderAbsent(t *testing.T) {
@@ -396,7 +396,7 @@ func TestBindFromQuery_invalidFloatScalar(t *testing.T) {
 		Pi float64 `query:"pi"`
 	}
 	err := BindFromQuery(mustParseURL(t, "/x?pi=notnum"), &req{})
-	requireAPIErr(t, err, apierror.ErrorCodeParameterInvalid, "pi")
+	requireAPIErr(t, err, apierror.CodeParameterInvalid, "pi")
 }
 
 func TestBindFromQuery_sliceRepeatedEmptyFirstElementParsesInts(t *testing.T) {
@@ -408,7 +408,7 @@ func TestBindFromQuery_sliceRepeatedEmptyFirstElementParsesInts(t *testing.T) {
 	// '?ids=&ids=7' repeats the parameter; URL parsing yields ids=["" ""]
 	dst := &req{}
 	err := BindFromQuery(mustParseURL(t, "/x?ids=&ids=7"), dst)
-	requireAPIErr(t, err, apierror.ErrorCodeParameterInvalid, "ids")
+	requireAPIErr(t, err, apierror.CodeParameterInvalid, "ids")
 }
 
 func TestBindFromQuery_repeatedScalarQueryKey_firstValueWins(t *testing.T) {
@@ -446,7 +446,7 @@ func TestBindFromQuery_errorPaths_extended(t *testing.T) {
 		t.Parallel()
 		dst := &testRequest{}
 		err := BindFromQuery(mustParseURL(t, "/bad?id=oops"), dst)
-		requireAPIErr(t, err, apierror.ErrorCodeParameterInvalid, "id")
+		requireAPIErr(t, err, apierror.CodeParameterInvalid, "id")
 	})
 
 	t.Run("invalid slice element", func(t *testing.T) {
@@ -456,7 +456,7 @@ func TestBindFromQuery_errorPaths_extended(t *testing.T) {
 		}
 		dst := &body{}
 		err := BindFromQuery(mustParseURL(t, "/bad?ids=1&ids=nope"), dst)
-		requireAPIErr(t, err, apierror.ErrorCodeParameterInvalid, "ids")
+		requireAPIErr(t, err, apierror.CodeParameterInvalid, "ids")
 	})
 
 	t.Run("invalid bool", func(t *testing.T) {
@@ -466,7 +466,7 @@ func TestBindFromQuery_errorPaths_extended(t *testing.T) {
 		}
 		dst := &body{}
 		err := BindFromQuery(mustParseURL(t, "/bad?active=perhaps"), dst)
-		requireAPIErr(t, err, apierror.ErrorCodeParameterInvalid, "active")
+		requireAPIErr(t, err, apierror.CodeParameterInvalid, "active")
 	})
 }
 
@@ -482,7 +482,7 @@ func TestRejectUnknownQueryParams_extended(t *testing.T) {
 		u := mustParseURL(t, "/x?a=1&include=role")
 		dst := &listReq{}
 		apiErr := RejectUnknownQueryParams(u, dst, false)
-		if apiErr == nil || apiErr.Code != apierror.ErrorCodeParameterUnknown || apiErr.Param != "include" {
+		if apiErr == nil || apiErr.Code != apierror.CodeParameterUnknown || apiErr.Param != "include" {
 			t.Fatalf("got %v", apiErr)
 		}
 	})
@@ -563,7 +563,7 @@ func TestBindFromPath_extended(t *testing.T) {
 		}
 		dst := &r{}
 		req := newRequestWithPathParams(http.MethodGet, "/", nil, map[string]string{"num": "zzz"})
-		requireAPIErr(t, BindFromPath(req, dst), apierror.ErrorCodeParameterInvalid, "num")
+		requireAPIErr(t, BindFromPath(req, dst), apierror.CodeParameterInvalid, "num")
 	})
 }
 
@@ -695,7 +695,7 @@ func TestBindFromHeaders_errorPaths_extended(t *testing.T) {
 		}
 		req := httptest.NewRequest(http.MethodGet, "/", nil)
 		req.Header.Set("X-Tok", "Wrong noprefix")
-		requireAPIErr(t, BindFromHeaders(req, &r{}), apierror.ErrorCodeParameterInvalid, "X-Tok")
+		requireAPIErr(t, BindFromHeaders(req, &r{}), apierror.CodeParameterInvalid, "X-Tok")
 	})
 
 	t.Run("integer header parses failure", func(t *testing.T) {
@@ -705,7 +705,7 @@ func TestBindFromHeaders_errorPaths_extended(t *testing.T) {
 		}
 		req := httptest.NewRequest(http.MethodGet, "/", nil)
 		req.Header.Set("X-Num", "nan")
-		requireAPIErr(t, BindFromHeaders(req, &r{}), apierror.ErrorCodeParameterInvalid, "X-Num")
+		requireAPIErr(t, BindFromHeaders(req, &r{}), apierror.CodeParameterInvalid, "X-Num")
 	})
 
 	t.Run("bad Authorization header and no cookie yields invalid credentials", func(t *testing.T) {
@@ -715,7 +715,7 @@ func TestBindFromHeaders_errorPaths_extended(t *testing.T) {
 		}
 		req := httptest.NewRequest(http.MethodPost, "/", nil)
 		req.Header.Set("Authorization", "Garbage")
-		requireAPIErr(t, BindFromHeaders(req, &r{}), apierror.ErrorCodeInvalidCredentials, "Authorization")
+		requireAPIErr(t, BindFromHeaders(req, &r{}), apierror.CodeInvalidCredentials, "Authorization")
 	})
 }
 
@@ -765,5 +765,5 @@ func TestBindIncomingRequest_rejectsUndeclaredQueryKeys(t *testing.T) {
 	}
 	req := httptest.NewRequest(http.MethodGet, "/items?cursor=c1&junk=bad", nil)
 	err := BindIncomingRequest(req, &list{}, false)
-	requireAPIErr(t, err, apierror.ErrorCodeParameterUnknown, "junk")
+	requireAPIErr(t, err, apierror.CodeParameterUnknown, "junk")
 }

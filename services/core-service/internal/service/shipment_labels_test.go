@@ -18,7 +18,7 @@ import (
 	servicemock "github.com/open-mrp/api/services/core-service/internal/domain/mock/service"
 	"github.com/open-mrp/api/shared/appctx"
 	"github.com/open-mrp/api/shared/constants"
-	apierror "github.com/open-mrp/api/shared/errors"
+	apierror "github.com/open-mrp/apikit/apierror"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -325,7 +325,7 @@ func TestPlanShipmentLabels_RefusesAnUnweighedCase(t *testing.T) {
 
 	purchase, _, apiErr := h.svc.planShipmentLabels(context.Background(), h.shipment)
 	require.NotNil(t, apiErr, "a case with no weight cannot be rated, so its label is refused before buying")
-	assert.Equal(t, apierror.ErrorCodeValidationFailed, apiErr.Code)
+	assert.Equal(t, apierror.CodeValidationFailed, apiErr.Code)
 	assert.Nil(t, purchase)
 }
 
@@ -387,7 +387,7 @@ func TestPlanShipmentLabels_RefusesPartlyBoughtLabels(t *testing.T) {
 
 	purchase, _, apiErr := h.svc.planShipmentLabels(context.Background(), h.shipment)
 	require.NotNil(t, apiErr)
-	assert.Equal(t, apierror.ErrorCodeResourceConflict, apiErr.Code)
+	assert.Equal(t, apierror.CodeResourceConflict, apiErr.Code)
 	assert.Nil(t, purchase)
 }
 
@@ -803,7 +803,7 @@ func TestShipShipment_DuplicateInvoiceNumberIsRefusedBeforeEnqueue(t *testing.T)
 
 	_, apiErr := svc.ShipShipment(shipmentShipCtx(testLabelAccountID), domain.ShipShipmentParams{ShipmentID: testLabelShipmentID})
 	require.NotNil(t, apiErr)
-	assert.Equal(t, apierror.ErrorCodeResourceConflict, apiErr.Code)
+	assert.Equal(t, apierror.CodeResourceConflict, apiErr.Code)
 }
 
 // Two executes of one shipment at once: the first holds the claim while it buys, so the second is
@@ -845,7 +845,7 @@ func TestExecuteShipShipment_ConcurrentShipIsRefusedWhileTheFirstBuys(t *testing
 	<-buying
 	secondErr := svc.ExecuteShipShipment(shipmentShipCtx(testLabelAccountID), domain.BulkOperationJobEvent{JobID: "job_b"})
 	require.NotNil(t, secondErr)
-	assert.Equal(t, apierror.ErrorCodeResourceConflict, secondErr.Code)
+	assert.Equal(t, apierror.CodeResourceConflict, secondErr.Code)
 
 	close(finish)
 	<-done
@@ -861,7 +861,7 @@ func TestClaimDispatch_HoldsTheShipmentUntilReleased(t *testing.T) {
 
 	_, apiErr = svc.claimDispatch(context.Background(), testLabelShipmentID)
 	require.NotNil(t, apiErr, "each attempt holds its own claim, so even a replay of the same request conflicts")
-	assert.Equal(t, apierror.ErrorCodeResourceConflict, apiErr.Code)
+	assert.Equal(t, apierror.CodeResourceConflict, apiErr.Code)
 
 	release()
 	release, apiErr = svc.claimDispatch(context.Background(), testLabelShipmentID)
@@ -879,7 +879,7 @@ func TestDeleteShipment_RefusesAShippedShipment(t *testing.T) {
 
 	apiErr := svc.DeleteShipment(shipmentShipCtx(testLabelAccountID), domain.DeleteShipmentParams{ShipmentID: testLabelShipmentID})
 	require.NotNil(t, apiErr)
-	assert.Equal(t, apierror.ErrorCodeResourceConflict, apiErr.Code)
+	assert.Equal(t, apierror.CodeResourceConflict, apiErr.Code)
 }
 
 // --- void: refunds ---

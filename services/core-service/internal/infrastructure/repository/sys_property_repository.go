@@ -10,10 +10,10 @@ import (
 	"github.com/open-mrp/api/services/core-service/internal/domain"
 	"github.com/open-mrp/api/services/core-service/internal/infrastructure/sqlc"
 	"github.com/open-mrp/api/shared/constants"
-	"github.com/open-mrp/api/shared/db"
-	apierror "github.com/open-mrp/api/shared/errors"
-	"github.com/open-mrp/api/shared/tracing"
+	apierror "github.com/open-mrp/apikit/apierror"
+	"github.com/open-mrp/apikit/db"
 	"github.com/open-mrp/apikit/pagination"
+	"github.com/open-mrp/apikit/tracing"
 )
 
 var sysPropertyRepoTracer = tracing.GetTracer("core-service.sys_property_repository")
@@ -79,7 +79,7 @@ func (r *sysPropertyRepoImpl) List(ctx context.Context, params domain.ListSysPro
 	if params.Cursor != nil {
 		cur, err := pagination.DecodeStringCursor(*params.Cursor)
 		if err != nil {
-			return nil, apierror.NewValidationErrorWithParam("Invalid pagination cursor.", "cursor")
+			return nil, apierror.NewFieldError("cursor", apierror.CodeInvalidFormat, "Invalid pagination cursor.")
 		}
 		cursorDir = &cur.Direction
 
@@ -214,8 +214,8 @@ func (r *sysPropertyRepoImpl) UpdateValue(ctx context.Context, accountID, id str
 	}
 	// Not the rows affected: MySQL counts none when a concurrent request already wrote the same value in the same millisecond.
 	updated, apiErr := r.Get(ctx, accountID, id)
-	if apierror.IsNotFound(apiErr) {
-		return nil, tracing.Trace(span, apierror.NewResourceNotFoundError("System property not found."))
+	if apierror.HasCode(apiErr, apierror.CodeResourceNotFound) {
+		return nil, tracing.Trace(span, apierror.NewNotFoundError("System property not found."))
 	}
 	return updated, apiErr
 }

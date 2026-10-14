@@ -15,9 +15,9 @@ import (
 	servicemock "github.com/open-mrp/api/services/core-service/internal/domain/mock/service"
 	"github.com/open-mrp/api/shared/appctx"
 	"github.com/open-mrp/api/shared/constants"
-	apierror "github.com/open-mrp/api/shared/errors"
 	"github.com/open-mrp/api/shared/id"
 	"github.com/open-mrp/api/shared/messaging"
+	apierror "github.com/open-mrp/apikit/apierror"
 
 	"github.com/stretchr/testify/suite"
 	"go.uber.org/mock/gomock"
@@ -270,12 +270,12 @@ func (suite *ProductionRunBulkCreateTestSuite) TestBulkCreateProductionRuns_Iden
 	cases := []struct {
 		name string
 		ctx  context.Context
-		code apierror.ErrorCode
+		code apierror.Code
 	}{
-		{"missing identity", context.Background(), apierror.ErrorCodeInternalError},
-		{"missing target account", internalProductionRunCtx(suite.T(), "", suite.actorID), apierror.ErrorCodeInvalidCredentials},
-		{"external actor", identityCtx(types.IdentityRelationTypeCustomer, map[string]bool{"production_runs:create": true}), apierror.ErrorCodeInsufficientPerms},
-		{"missing create permission", identityCtx(types.IdentityRelationTypeInternal, map[string]bool{}), apierror.ErrorCodeInsufficientPerms},
+		{"missing identity", context.Background(), apierror.CodeInternalError},
+		{"missing target account", internalProductionRunCtx(suite.T(), "", suite.actorID), apierror.CodeInvalidCredentials},
+		{"external actor", identityCtx(types.IdentityRelationTypeCustomer, map[string]bool{"production_runs:create": true}), apierror.CodeInsufficientPermissions},
+		{"missing create permission", identityCtx(types.IdentityRelationTypeInternal, map[string]bool{}), apierror.CodeInsufficientPermissions},
 	}
 	for _, tc := range cases {
 		suite.Run(tc.name, func() {
@@ -324,7 +324,7 @@ func (suite *ProductionRunBulkCreateTestSuite) TestBulkCreateProductionRuns_Stru
 
 			suite.Nil(result)
 			suite.NotNil(err)
-			suite.Equal(apierror.ErrorCodeValidationFailed, err.Code)
+			suite.Equal(apierror.CodeValidationFailed, err.Code)
 			suite.Equal(tc.param, err.Param)
 		})
 	}
@@ -333,7 +333,7 @@ func (suite *ProductionRunBulkCreateTestSuite) TestBulkCreateProductionRuns_Stru
 		result, err := suite.bulkCreate(ctx)
 		suite.Nil(result)
 		suite.NotNil(err)
-		suite.Equal(apierror.ErrorCodeValidationFailed, err.Code)
+		suite.Equal(apierror.CodeValidationFailed, err.Code)
 	})
 
 	suite.Run("too many", func() {
@@ -344,7 +344,7 @@ func (suite *ProductionRunBulkCreateTestSuite) TestBulkCreateProductionRuns_Stru
 		result, err := suite.bulkCreate(ctx, runs...)
 		suite.Nil(result)
 		suite.NotNil(err)
-		suite.Equal(apierror.ErrorCodeValidationFailed, err.Code)
+		suite.Equal(apierror.CodeValidationFailed, err.Code)
 	})
 }
 
@@ -356,16 +356,16 @@ func (suite *ProductionRunBulkCreateTestSuite) TestBulkCreateProductionRuns_Depe
 	cases := []struct {
 		name  string
 		setup func(accountID string, run domain.BulkCreateProductionRunParams)
-		code  apierror.ErrorCode
+		code  apierror.Code
 	}{
 		// These lookups all run inside Resolve, which follows the key claim, so each case stubs the key as started.
 		{"responsible user lookup", func(accountID string, run domain.BulkCreateProductionRunParams) {
 			suite.expectIdempotencyStarted("idk_bulk_test")
 			suite.accountUserRepo.EXPECT().
 				ResolveAccountUserID(gomock.Any(), accountID, run.ResponsibleUserID).
-				Return("", apierror.NewResourceNotFoundError("not found")).
+				Return("", apierror.NewNotFoundError("not found")).
 				Times(1)
-		}, apierror.ErrorCodeValidationFailed},
+		}, apierror.CodeValidationFailed},
 		{"item repo", func(accountID string, run domain.BulkCreateProductionRunParams) {
 			suite.expectIdempotencyStarted("idk_bulk_test")
 			suite.expectResponsibleUserResolved(accountID, run.ResponsibleUserID, genTestID(suite.T(), id.AccountUserIDPrefix))
@@ -373,7 +373,7 @@ func (suite *ProductionRunBulkCreateTestSuite) TestBulkCreateProductionRuns_Depe
 				FetchItemsBySKU(gomock.Any(), accountID, gomock.Any()).
 				Return(nil, depErr).
 				Times(1)
-		}, apierror.ErrorCodeValidationFailed},
+		}, apierror.CodeValidationFailed},
 		{"unit repo", func(accountID string, run domain.BulkCreateProductionRunParams) {
 			suite.expectIdempotencyStarted("idk_bulk_test")
 			suite.expectResponsibleUserResolved(accountID, run.ResponsibleUserID, genTestID(suite.T(), id.AccountUserIDPrefix))
@@ -385,7 +385,7 @@ func (suite *ProductionRunBulkCreateTestSuite) TestBulkCreateProductionRuns_Depe
 				GetByIDs(gomock.Any(), accountID, gomock.Any()).
 				Return(nil, depErr).
 				Times(1)
-		}, apierror.ErrorCodeValidationFailed},
+		}, apierror.CodeValidationFailed},
 		{"step repo", func(accountID string, run domain.BulkCreateProductionRunParams) {
 			suite.expectIdempotencyStarted("idk_bulk_test")
 			suite.expectResponsibleUserResolved(accountID, run.ResponsibleUserID, genTestID(suite.T(), id.AccountUserIDPrefix))
@@ -395,7 +395,7 @@ func (suite *ProductionRunBulkCreateTestSuite) TestBulkCreateProductionRuns_Depe
 				IsInAccount(gomock.Any(), accountID, *run.Batches[0].ProductionStepID).
 				Return(false, depErr).
 				Times(1)
-		}, apierror.ErrorCodeValidationFailed},
+		}, apierror.CodeValidationFailed},
 		// Station lookup is batched before the row-by-row pass, so a failure here
 		// surfaces before the production-step check ever runs.
 		{"station repo", func(accountID string, run domain.BulkCreateProductionRunParams) {
@@ -406,20 +406,20 @@ func (suite *ProductionRunBulkCreateTestSuite) TestBulkCreateProductionRuns_Depe
 				GetByIDs(gomock.Any(), accountID, gomock.Any()).
 				Return(nil, depErr).
 				Times(1)
-		}, apierror.ErrorCodeValidationFailed},
+		}, apierror.CodeValidationFailed},
 		// Claiming the key comes first, so nothing is resolved before it fails.
 		{"idempotency upsert", func(_ string, _ domain.BulkCreateProductionRunParams) {
 			suite.idempotencyMed.EXPECT().
 				UpsertIdempotencyKey(gomock.Any(), gomock.Any()).
 				Return(nil, depErr).
 				Times(1)
-		}, apierror.ErrorCodeValidationFailed},
+		}, apierror.CodeValidationFailed},
 		{"outbox insert", func(accountID string, run domain.BulkCreateProductionRunParams) {
 			suite.outboxRepo = &failingOutboxRepo{}
 			suite.expectFullyResolved(accountID, run)
 			suite.expectIdempotencyStarted("idk_bulk_test")
 			suite.expectCacheErrorResponsePassthrough()
-		}, apierror.ErrorCodeInternalError},
+		}, apierror.CodeInternalError},
 		{"cache success response", func(accountID string, run domain.BulkCreateProductionRunParams) {
 			suite.expectFullyResolved(accountID, run)
 			suite.expectIdempotencyStarted("idk_bulk_test")
@@ -428,7 +428,7 @@ func (suite *ProductionRunBulkCreateTestSuite) TestBulkCreateProductionRuns_Depe
 				Return(depErr).
 				Times(1)
 			suite.expectCacheErrorResponsePassthrough()
-		}, apierror.ErrorCodeValidationFailed},
+		}, apierror.CodeValidationFailed},
 	}
 	for _, tc := range cases {
 		suite.Run(tc.name, func() {
@@ -499,7 +499,7 @@ func (suite *ProductionRunBulkCreateTestSuite) TestBulkCreateProductionRuns_Idem
 	cases := []struct {
 		name    string
 		key     *domain.IdempotencyKey
-		errCode apierror.ErrorCode // zero value means success expected
+		errCode apierror.Code // zero value means success expected
 	}{
 		{"finished replays cached response", &domain.IdempotencyKey{
 			TypeID:        "idk_bulk_test",
@@ -512,11 +512,11 @@ func (suite *ProductionRunBulkCreateTestSuite) TestBulkCreateProductionRuns_Idem
 			RecoveryPoint: string(domain.RecoveryPointFinished),
 			ResponseCode:  &code,
 			ResponseBody:  nil,
-		}, apierror.ErrorCodeInternalError},
+		}, apierror.CodeInternalError},
 		{"unexpected recovery point", &domain.IdempotencyKey{
 			TypeID:        "idk_bulk_test",
 			RecoveryPoint: "core:confused",
-		}, apierror.ErrorCodeInternalError},
+		}, apierror.CodeInternalError},
 	}
 	for _, tc := range cases {
 		suite.Run(tc.name, func() {

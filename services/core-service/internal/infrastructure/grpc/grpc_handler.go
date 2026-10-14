@@ -7,9 +7,9 @@ import (
 	"github.com/open-mrp/api/services/core-service/internal/domain"
 	"github.com/open-mrp/api/shared/constants"
 	"github.com/open-mrp/api/shared/contracts"
-	apierror "github.com/open-mrp/api/shared/errors"
 	"github.com/open-mrp/api/shared/fieldpb"
 	pb "github.com/open-mrp/api/shared/proto/core"
+	apierror "github.com/open-mrp/apikit/apierror"
 	"github.com/open-mrp/apikit/field"
 	"github.com/open-mrp/apikit/ptrutil"
 
@@ -442,7 +442,7 @@ func (h *gRPCHandler) GetAccountRelation(ctx context.Context, req *pb.GetAccount
 	case *pb.GetAccountRelationRequest_ApiKeyId:
 		relation, apiErr = h.accountSvc.GetAccountRelationByAPIKeyID(ctx, req.OwnerAccountId, lookup.ApiKeyId)
 	default:
-		return nil, contracts.ConvertAPIErrorToGRPC(apierror.NewParameterMissingError("Either user_id or api_key_id must be provided", "lookup"))
+		return nil, contracts.ConvertAPIErrorToGRPC(apierror.NewParameterMissingError("lookup", "Either user_id or api_key_id must be provided"))
 	}
 
 	if apiErr != nil {

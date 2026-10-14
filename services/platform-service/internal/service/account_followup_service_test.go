@@ -15,9 +15,9 @@ import (
 	servicemock "github.com/open-mrp/api/services/platform-service/internal/domain/mock/service"
 	"github.com/open-mrp/api/shared/constants"
 	"github.com/open-mrp/api/shared/contracts"
-	"github.com/open-mrp/api/shared/db"
-	apierror "github.com/open-mrp/api/shared/errors"
 	"github.com/open-mrp/api/shared/messaging"
+	apierror "github.com/open-mrp/apikit/apierror"
+	"github.com/open-mrp/apikit/db"
 
 	"github.com/stretchr/testify/require"
 	"go.uber.org/mock/gomock"

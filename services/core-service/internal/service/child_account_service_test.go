@@ -10,7 +10,7 @@ import (
 	mediatormock "github.com/open-mrp/api/services/core-service/internal/domain/mock/mediator"
 	repositorymock "github.com/open-mrp/api/services/core-service/internal/domain/mock/repository"
 	"github.com/open-mrp/api/shared/appctx"
-	apierror "github.com/open-mrp/api/shared/errors"
+	apierror "github.com/open-mrp/apikit/apierror"
 
 	"github.com/stretchr/testify/suite"
 	"go.uber.org/mock/gomock"
@@ -92,7 +92,7 @@ func (suite *ChildAccountSvcTestSuite) TestAnAccountCannotBeItsOwnParent() {
 	_, apiErr := suite.svc.AddChildAccount(sellerStaffOn("ac_a"), "ac_a")
 
 	suite.Require().NotNil(apiErr)
-	suite.Equal(apierror.ErrorCodeResourceConflict, apiErr.Code)
+	suite.Equal(apierror.CodeResourceConflict, apiErr.Code)
 }
 
 func (suite *ChildAccountSvcTestSuite) TestAnAccountCannotBeLinkedBeneathItsGrandchild() {
@@ -103,7 +103,7 @@ func (suite *ChildAccountSvcTestSuite) TestAnAccountCannotBeLinkedBeneathItsGran
 	_, apiErr := suite.svc.AddChildAccount(sellerStaffOn("ac_c"), "ac_a")
 
 	suite.Require().NotNil(apiErr)
-	suite.Equal(apierror.ErrorCodeResourceConflict, apiErr.Code)
+	suite.Equal(apierror.CodeResourceConflict, apiErr.Code)
 }
 
 func (suite *ChildAccountSvcTestSuite) TestAWalkThroughCorruptDataStops() {
@@ -114,18 +114,18 @@ func (suite *ChildAccountSvcTestSuite) TestAWalkThroughCorruptDataStops() {
 	_, apiErr := suite.svc.AddChildAccount(sellerStaffOn("ac_x"), "ac_a")
 
 	suite.Require().NotNil(apiErr)
-	suite.Equal(apierror.ErrorCodeResourceConflict, apiErr.Code)
+	suite.Equal(apierror.CodeResourceConflict, apiErr.Code)
 }
 
 func (suite *ChildAccountSvcTestSuite) TestTheChildMustBeOneOfTheSellersCustomers() {
 	suite.customers("ac_parent")
 	suite.customerRepo.EXPECT().GetRelationID(gomock.Any(), childAccountTestSeller, "ac_supplier").
-		Return("", apierror.NewResourceNotFoundError("Resource not found."))
+		Return("", apierror.NewNotFoundError("Resource not found."))
 
 	_, apiErr := suite.svc.AddChildAccount(sellerStaffOn("ac_parent"), "ac_supplier")
 
 	suite.Require().NotNil(apiErr)
-	suite.Equal(apierror.ErrorCodeResourceNotFound, apiErr.Code)
+	suite.Equal(apierror.CodeResourceNotFound, apiErr.Code)
 	suite.Equal("Child account not found.", apiErr.PublicMessage)
 }
 

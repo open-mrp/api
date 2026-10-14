@@ -6,9 +6,9 @@ import (
 
 	"github.com/open-mrp/api/services/core-service/internal/domain"
 	"github.com/open-mrp/api/shared/contracts"
-	apierror "github.com/open-mrp/api/shared/errors"
 	"github.com/open-mrp/api/shared/fieldpb"
 	pb "github.com/open-mrp/api/shared/proto/core"
+	apierror "github.com/open-mrp/apikit/apierror"
 	"github.com/open-mrp/apikit/field"
 
 	"google.golang.org/protobuf/types/known/emptypb"
@@ -110,14 +110,14 @@ func (h *machineDowntimeGRPCHandler) ListMachineDowntimeEvents(ctx context.Conte
 	if req.StartDate != nil {
 		parsed, err := time.Parse(time.RFC3339, *req.StartDate)
 		if err != nil {
-			return nil, contracts.ConvertAPIErrorToGRPC(apierror.NewValidationErrorWithParam("Invalid date format for starts_at.", "starts_at"))
+			return nil, contracts.ConvertAPIErrorToGRPC(apierror.NewFieldError("starts_at", apierror.CodeInvalidFormat, "Invalid date format for starts_at."))
 		}
 		params.StartDate = &parsed
 	}
 	if req.EndDate != nil {
 		parsed, err := time.Parse(time.RFC3339, *req.EndDate)
 		if err != nil {
-			return nil, contracts.ConvertAPIErrorToGRPC(apierror.NewValidationErrorWithParam("Invalid date format for ends_at.", "ends_at"))
+			return nil, contracts.ConvertAPIErrorToGRPC(apierror.NewFieldError("ends_at", apierror.CodeInvalidFormat, "Invalid date format for ends_at."))
 		}
 		params.EndDate = &parsed
 	}
@@ -161,7 +161,7 @@ func (h *machineDowntimeGRPCHandler) CreateMachineDowntimeEvent(ctx context.Cont
 		return nil, contracts.NewMissingGRPCRequestDataError()
 	}
 	if req.StartedAt == nil {
-		return nil, contracts.ConvertAPIErrorToGRPC(apierror.NewValidationErrorWithParam("started_at is required.", "started_at"))
+		return nil, contracts.ConvertAPIErrorToGRPC(apierror.NewFieldError("started_at", apierror.CodeInvalidFormat, "started_at is required."))
 	}
 
 	ctx, finalizeIdempotency := contracts.WithIdempotencyTracking(ctx)

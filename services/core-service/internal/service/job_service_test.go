@@ -13,8 +13,8 @@ import (
 	repositorymock "github.com/open-mrp/api/services/core-service/internal/domain/mock/repository"
 	"github.com/open-mrp/api/shared/appctx"
 	"github.com/open-mrp/api/shared/constants"
-	apierror "github.com/open-mrp/api/shared/errors"
 	"github.com/open-mrp/api/shared/id"
+	apierror "github.com/open-mrp/apikit/apierror"
 
 	"github.com/stretchr/testify/suite"
 	"go.uber.org/mock/gomock"
@@ -181,7 +181,7 @@ func (suite *JobSvcSystemSurfaceTestSuite) TestCreateJob_RejectsUnknownType() {
 
 	suite.Nil(job)
 	suite.NotNil(apiErr)
-	suite.Equal(apierror.ErrorCodeValidationFailed, apiErr.Code)
+	suite.Equal(apierror.CodeValidationFailed, apiErr.Code)
 	suite.Equal("type", apiErr.Param)
 }
 
@@ -198,7 +198,7 @@ func (suite *JobSvcSystemSurfaceTestSuite) TestGetJob_RequiresReadPermission() {
 
 	suite.Nil(job)
 	suite.NotNil(apiErr)
-	suite.Equal(apierror.ErrorCodeInsufficientPerms, apiErr.Code)
+	suite.Equal(apierror.CodeInsufficientPermissions, apiErr.Code)
 }
 
 // The worker reading the job it was handed is not exercising a permission — that was
@@ -230,14 +230,14 @@ func (suite *JobSvcSystemSurfaceTestSuite) TestGetJobForExecution_StillScopesToT
 
 	suite.jobRepo.EXPECT().
 		Get(gomock.Any(), jobID, accountID).
-		Return(nil, apierror.NewResourceNotFoundError("Job not found.")).
+		Return(nil, apierror.NewNotFoundError("Job not found.")).
 		Times(1)
 
 	job, apiErr := suite.jobSvc.GetJobForExecution(ctx, jobID)
 
 	suite.Nil(job)
 	suite.NotNil(apiErr)
-	suite.Equal(apierror.ErrorCodeResourceNotFound, apiErr.Code)
+	suite.Equal(apierror.CodeResourceNotFound, apiErr.Code)
 }
 
 // The read is scoped to the account the caller is acting for, so a job ID from
@@ -328,13 +328,13 @@ func (suite *JobSvcSystemSurfaceTestSuite) TestTransitions_RejectAMarkOnAJobThat
 	// No Update is stubbed: reaching one would fail this test.
 	suite.jobRepo.EXPECT().
 		Get(gomock.Any(), jobID, accountID).
-		Return(nil, apierror.NewResourceNotFoundError("Job not found.")).
+		Return(nil, apierror.NewNotFoundError("Job not found.")).
 		Times(1)
 
 	_, apiErr := suite.jobSvc.StartJob(ctx, domain.StartJobParams{JobID: jobID})
 
 	suite.NotNil(apiErr)
-	suite.Equal(apierror.ErrorCodeResourceNotFound, apiErr.Code)
+	suite.Equal(apierror.CodeResourceNotFound, apiErr.Code)
 }
 
 // A settled job is done being written to.
@@ -352,7 +352,7 @@ func (suite *JobSvcSystemSurfaceTestSuite) TestTransitions_RejectASettledJob() {
 	apiErr := suite.jobSvc.CompleteJob(ctx, domain.CompleteJobParams{JobID: jobID})
 
 	suite.NotNil(apiErr)
-	suite.Equal(apierror.ErrorCodeValidationFailed, apiErr.Code)
+	suite.Equal(apierror.CodeValidationFailed, apiErr.Code)
 }
 
 // CompleteJob carries the outcome a client polling the job reads back.
@@ -413,7 +413,7 @@ func (suite *JobSvcSystemSurfaceTestSuite) TestCancelJob_RequiresDeletePermissio
 
 	suite.Nil(job)
 	suite.NotNil(apiErr)
-	suite.Equal(apierror.ErrorCodeInsufficientPerms, apiErr.Code)
+	suite.Equal(apierror.CodeInsufficientPermissions, apiErr.Code)
 }
 
 // Cancelling settles the job, and a settled job refuses further marks. That is what
@@ -435,7 +435,7 @@ func (suite *JobSvcSystemSurfaceTestSuite) TestCancelJob_StopsAnInFlightJobFromC
 	apiErr := suite.jobSvc.CompleteJob(ctx, domain.CompleteJobParams{JobID: jobID})
 
 	suite.NotNil(apiErr)
-	suite.Equal(apierror.ErrorCodeValidationFailed, apiErr.Code)
+	suite.Equal(apierror.CodeValidationFailed, apiErr.Code)
 }
 
 // The race the pre-read cannot catch: the job still looks live when the transition
@@ -459,7 +459,7 @@ func (suite *JobSvcSystemSurfaceTestSuite) TestTransitions_RefuseWhenGuardedUpda
 	apiErr := suite.jobSvc.CompleteJob(ctx, domain.CompleteJobParams{JobID: jobID})
 
 	suite.NotNil(apiErr)
-	suite.Equal(apierror.ErrorCodeValidationFailed, apiErr.Code)
+	suite.Equal(apierror.CodeValidationFailed, apiErr.Code)
 }
 
 // --- FailJob ---
@@ -544,7 +544,7 @@ func (suite *JobSvcSystemSurfaceTestSuite) TestCompleteJob_CapsTheRowResultsItRe
 	for i := range 1000 {
 		row := domain.RowResult{Index: i, ID: "pr_1", Status: constants.JobResultStatusCreated}
 		if i >= 990 {
-			responseErr := apierror.NewValidationError("bad row").ToResponseError()
+			responseErr := apierror.NewValidationError("bad row").Object()
 			row = domain.RowResult{Index: i, Status: constants.JobResultStatusFailed, Error: &responseErr}
 		}
 		results = append(results, row)

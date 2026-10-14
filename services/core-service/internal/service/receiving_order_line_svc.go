@@ -9,9 +9,9 @@ import (
 	"github.com/open-mrp/api/shared/appctx"
 	"github.com/open-mrp/api/shared/audit"
 	"github.com/open-mrp/api/shared/constants"
-	apierror "github.com/open-mrp/api/shared/errors"
-	"github.com/open-mrp/api/shared/idempotency"
-	"github.com/open-mrp/api/shared/tracing"
+	"github.com/open-mrp/api/shared/idemresponse"
+	apierror "github.com/open-mrp/apikit/apierror"
+	"github.com/open-mrp/apikit/tracing"
 )
 
 var receivingOrderLineSvcTracer = tracing.GetTracer("core-service.receiving_order_line_service")
@@ -102,7 +102,7 @@ func (s *receivingOrderLineSvcImpl) UpdateReceivingOrderLine(ctx context.Context
 		return nil, tracing.Trace(span, apiErr)
 	}
 	if !inAccount {
-		return nil, tracing.Trace(span, apierror.NewResourceNotFoundError("Receiving order not found."))
+		return nil, tracing.Trace(span, apierror.NewNotFoundError("Receiving order not found."))
 	}
 
 	// Verify line is in receiving order
@@ -111,7 +111,7 @@ func (s *receivingOrderLineSvcImpl) UpdateReceivingOrderLine(ctx context.Context
 		return nil, tracing.Trace(span, apiErr)
 	}
 	if !inOrder {
-		return nil, tracing.Trace(span, apierror.NewResourceNotFoundError("Receiving order line not found."))
+		return nil, tracing.Trace(span, apierror.NewNotFoundError("Receiving order line not found."))
 	}
 
 	meds := s.mediators()
@@ -123,7 +123,7 @@ func (s *receivingOrderLineSvcImpl) UpdateReceivingOrderLine(ctx context.Context
 
 	switch domain.RecoveryPoint(idempotencyKey.RecoveryPoint) {
 	case domain.RecoveryPointFinished:
-		cached, err := idempotency.UnmarshalCachedResponse[domain.ReceivingOrderLine](ctx, idempotencyKey.ResponseCode, idempotencyKey.ResponseBody)
+		cached, err := idemresponse.UnmarshalCachedResponse[domain.ReceivingOrderLine](ctx, idempotencyKey.ResponseCode, idempotencyKey.ResponseBody)
 		if err != nil {
 			return nil, tracing.Trace(span, apierror.NewInternalError(err, "Issue unmarshalling cached response."))
 		}
@@ -141,7 +141,7 @@ func (s *receivingOrderLineSvcImpl) UpdateReceivingOrderLine(ctx context.Context
 
 			if q := params.Quantity; q != nil {
 				if q.Value.IsNegative() {
-					return apierror.NewValidationErrorWithParam("The quantity must not be negative.", "quantity.value")
+					return apierror.NewFieldError("quantity.value", apierror.CodeInvalidFormat, "The quantity must not be negative.")
 				}
 				if apiErr := validateReceivedQuantityUnit(txCtx, txSvc.repos, params.AccountID, old, *q, "quantity.unit_id"); apiErr != nil {
 					return apiErr
@@ -213,7 +213,7 @@ func (s *receivingOrderLineSvcImpl) VoidReceivingOrderLine(ctx context.Context, 
 		return nil, tracing.Trace(span, apiErr)
 	}
 	if !inAccount {
-		return nil, tracing.Trace(span, apierror.NewResourceNotFoundError("Receiving order not found."))
+		return nil, tracing.Trace(span, apierror.NewNotFoundError("Receiving order not found."))
 	}
 
 	// Verify line is in receiving order
@@ -222,7 +222,7 @@ func (s *receivingOrderLineSvcImpl) VoidReceivingOrderLine(ctx context.Context, 
 		return nil, tracing.Trace(span, apiErr)
 	}
 	if !inOrder {
-		return nil, tracing.Trace(span, apierror.NewResourceNotFoundError("Receiving order line not found."))
+		return nil, tracing.Trace(span, apierror.NewNotFoundError("Receiving order line not found."))
 	}
 
 	meds := s.mediators()
@@ -234,7 +234,7 @@ func (s *receivingOrderLineSvcImpl) VoidReceivingOrderLine(ctx context.Context, 
 
 	switch domain.RecoveryPoint(idempotencyKey.RecoveryPoint) {
 	case domain.RecoveryPointFinished:
-		cached, err := idempotency.UnmarshalCachedResponse[domain.ReceivingOrderLine](ctx, idempotencyKey.ResponseCode, idempotencyKey.ResponseBody)
+		cached, err := idemresponse.UnmarshalCachedResponse[domain.ReceivingOrderLine](ctx, idempotencyKey.ResponseCode, idempotencyKey.ResponseBody)
 		if err != nil {
 			return nil, tracing.Trace(span, apierror.NewInternalError(err, "Issue unmarshalling cached response."))
 		}
@@ -316,7 +316,7 @@ func (s *receivingOrderLineSvcImpl) ReceiveReceivingOrderLine(ctx context.Contex
 		return nil, tracing.Trace(span, apiErr)
 	}
 	if !inAccount {
-		return nil, tracing.Trace(span, apierror.NewResourceNotFoundError("Receiving order not found."))
+		return nil, tracing.Trace(span, apierror.NewNotFoundError("Receiving order not found."))
 	}
 
 	// Verify line is in receiving order
@@ -325,7 +325,7 @@ func (s *receivingOrderLineSvcImpl) ReceiveReceivingOrderLine(ctx context.Contex
 		return nil, tracing.Trace(span, apiErr)
 	}
 	if !inOrder {
-		return nil, tracing.Trace(span, apierror.NewResourceNotFoundError("Receiving order line not found."))
+		return nil, tracing.Trace(span, apierror.NewNotFoundError("Receiving order line not found."))
 	}
 
 	meds := s.mediators()
@@ -337,7 +337,7 @@ func (s *receivingOrderLineSvcImpl) ReceiveReceivingOrderLine(ctx context.Contex
 
 	switch domain.RecoveryPoint(idempotencyKey.RecoveryPoint) {
 	case domain.RecoveryPointFinished:
-		cached, err := idempotency.UnmarshalCachedResponse[domain.ReceivingOrderLine](ctx, idempotencyKey.ResponseCode, idempotencyKey.ResponseBody)
+		cached, err := idemresponse.UnmarshalCachedResponse[domain.ReceivingOrderLine](ctx, idempotencyKey.ResponseCode, idempotencyKey.ResponseBody)
 		if err != nil {
 			return nil, tracing.Trace(span, apierror.NewInternalError(err, "Issue unmarshalling cached response."))
 		}
@@ -416,5 +416,5 @@ func changeableLine(ctx context.Context, repo domain.ReceivingOrderRepo, account
 		}
 		return line, nil
 	}
-	return nil, apierror.NewResourceNotFoundError("Receiving order line not found.")
+	return nil, apierror.NewNotFoundError("Receiving order line not found.")
 }

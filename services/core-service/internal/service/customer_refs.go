@@ -6,7 +6,7 @@ import (
 	"slices"
 
 	"github.com/open-mrp/api/services/core-service/internal/domain"
-	apierror "github.com/open-mrp/api/shared/errors"
+	apierror "github.com/open-mrp/apikit/apierror"
 	"github.com/open-mrp/apikit/field"
 )
 
@@ -102,7 +102,7 @@ func checkCustomerRefs(ctx context.Context, repos domain.RepoFactory, accountID 
 		}
 		for _, ref := range refs {
 			if ref.kind == kind && !found[ref.id] {
-				return apierror.NewResourceNotFoundError(fmt.Sprintf("No %s found with the provided ID.", kind)).WithParam(ref.param)
+				return apierror.NewNotFoundError(fmt.Sprintf("No %s found with the provided ID.", kind)).WithParam(ref.param)
 			}
 		}
 	}
@@ -119,7 +119,7 @@ func checkServiceLevelOnCarrier(ctx context.Context, repos domain.RepoFactory, c
 		return apiErr
 	}
 	if !onCarrier {
-		return apierror.NewValidationErrorWithParam("The service level does not belong to the carrier.", param)
+		return apierror.NewFieldError(param, apierror.CodeInvalidFormat, "The service level does not belong to the carrier.")
 	}
 	return nil
 }
@@ -195,7 +195,7 @@ func findCustomerRefs(ctx context.Context, repos domain.RepoFactory, accountID s
 	case customerRefReceiveCalendar:
 		for _, calendarID := range ids {
 			_, apiErr := repos.NewOperatingCalendarRepo().Get(ctx, accountID, calendarID)
-			if apiErr != nil && !apierror.IsNotFound(apiErr) {
+			if apiErr != nil && !apierror.HasCode(apiErr, apierror.CodeResourceNotFound) {
 				return nil, apiErr
 			}
 			found[calendarID] = apiErr == nil
@@ -203,7 +203,7 @@ func findCustomerRefs(ctx context.Context, repos domain.RepoFactory, accountID s
 	case customerRefSalesRep:
 		for _, accountUserID := range ids {
 			_, apiErr := repos.NewAccountUserRepo().GetDetailByAccountAndID(ctx, accountID, accountUserID, nil)
-			if apiErr != nil && !apierror.IsNotFound(apiErr) {
+			if apiErr != nil && !apierror.HasCode(apiErr, apierror.CodeResourceNotFound) {
 				return nil, apiErr
 			}
 			found[accountUserID] = apiErr == nil

@@ -4,7 +4,7 @@ import (
 	"context"
 	"testing"
 
-	"github.com/open-mrp/api/shared/db"
+	"github.com/open-mrp/apikit/db"
 	"github.com/stretchr/testify/assert"
 )
 

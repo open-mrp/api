@@ -5,9 +5,8 @@ import (
 
 	"github.com/open-mrp/api/services/core-service/internal/domain"
 	"github.com/open-mrp/api/shared/contracts"
-	apierror "github.com/open-mrp/api/shared/errors"
 	"github.com/open-mrp/api/shared/fieldpb"
-	"github.com/open-mrp/api/shared/metadata"
+	"github.com/open-mrp/api/shared/metadatapb"
 	pb "github.com/open-mrp/api/shared/proto/core"
 	"github.com/open-mrp/apikit/safeconv"
 
@@ -580,7 +579,7 @@ func (h *salesGRPCHandler) BatchGetSalesOrdersByIDs(ctx context.Context, req *pb
 	// server-side failure is returned rather than passed off as missing orders.
 	orders, apiErr := h.salesOrderSvc.BatchGetSalesOrders(ctx, req.Ids, req.Includes)
 	if apiErr != nil {
-		if apierror.Is5XXErrorCode(apiErr.Code) {
+		if apiErr.Code.Status() >= 500 {
 			return nil, contracts.ConvertAPIErrorToGRPC(apiErr)
 		}
 		return &pb.BatchGetSalesOrdersByIDsResponse{}, nil
@@ -695,7 +694,7 @@ func (h *salesGRPCHandler) UpdateSalesOrder(ctx context.Context, req *pb.UpdateS
 	defer finalizeIdempotency()
 
 	params := domain.UpdateSalesOrderParams{
-		Metadata:             metadata.PatchFromProto(req.Metadata),
+		Metadata:             metadatapb.PatchFromProto(req.Metadata),
 		SalesOrderID:         req.Id,
 		Number:               req.Number,
 		CarrierID:            req.CarrierId,
@@ -995,7 +994,7 @@ func (h *salesGRPCHandler) UpdateSalesOrderLine(ctx context.Context, req *pb.Upd
 	defer finalizeIdempotency()
 
 	params := domain.UpdateSalesOrderLineParams{
-		Metadata:                   metadata.PatchFromProto(req.Metadata),
+		Metadata:                   metadatapb.PatchFromProto(req.Metadata),
 		SalesOrderLineID:           req.Id,
 		SalesOrderID:               req.SalesOrderId,
 		ProductID:                  req.ProductId,

@@ -2,7 +2,7 @@ package repository
 
 import (
 	"github.com/open-mrp/api/services/core-service/internal/infrastructure/sqlc"
-	"github.com/open-mrp/api/shared/blobstore"
+	"github.com/open-mrp/apikit/blobstore"
 )
 
 // Payloads is where repositories keep documents too large for their rows. A nil *Payloads keeps

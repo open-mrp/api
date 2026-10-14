@@ -13,8 +13,9 @@ import (
 	factorymock "github.com/open-mrp/api/services/auth-service/internal/domain/mock/factory"
 	repositorymock "github.com/open-mrp/api/services/auth-service/internal/domain/mock/repository"
 	"github.com/open-mrp/api/services/auth-service/internal/testutil"
+	"github.com/open-mrp/api/shared/apperr"
 	"github.com/open-mrp/api/shared/constants"
-	apierror "github.com/open-mrp/api/shared/errors"
+	apierror "github.com/open-mrp/apikit/apierror"
 	"github.com/open-mrp/apikit/crypto"
 
 	"github.com/stretchr/testify/suite"
@@ -172,7 +173,7 @@ func (suite *APIKeyMedTestSuite) TestFind_ExpiredAPIKey() {
 	apiKey, err := suite.apiKeyMed.FindAndValidate(ctx, testutil.ApiKeyExpired)
 
 	suite.NotNil(err)
-	suite.Equal(apierror.ErrorCodeExpiredAPIKey, err.Code)
+	suite.Equal(apperr.CodeAPIKeyExpired, err.Code)
 	suite.Nil(apiKey)
 }
 
@@ -204,7 +205,7 @@ func (suite *APIKeyMedTestSuite) TestFind_BadSecret() {
 	apiKey, err := suite.apiKeyMed.FindAndValidate(ctx, keyString)
 
 	suite.NotNil(err)
-	suite.Equal(apierror.ErrorCodeInvalidCredentials, err.Code)
+	suite.Equal(apierror.CodeInvalidCredentials, err.Code)
 	suite.Nil(apiKey)
 }
 
@@ -212,13 +213,13 @@ func (suite *APIKeyMedTestSuite) TestFind_InvalidAPIKey() {
 	ctx := context.Background()
 	suite.apiKeyRepo.EXPECT().
 		Find(gomock.Any(), testutil.EntityIDAPIKeyInvalid).
-		Return(nil, apierror.NewResourceNotFoundError("API key not found")).
+		Return(nil, apierror.NewNotFoundError("API key not found")).
 		Times(1)
 
 	apiKey, err := suite.apiKeyMed.FindAndValidate(ctx, testutil.ApiKeyInvalid)
 
 	suite.NotNil(err)
-	suite.Equal(apierror.ErrorCodeInvalidCredentials, err.Code)
+	suite.Equal(apierror.CodeInvalidCredentials, err.Code)
 	suite.Nil(apiKey)
 }
 
@@ -232,7 +233,7 @@ func (suite *APIKeyMedTestSuite) TestFind_RepoError() {
 	apiKey, err := suite.apiKeyMed.FindAndValidate(ctx, testutil.APIKeyValidSandboxMode)
 
 	suite.NotNil(err)
-	suite.Equal(apierror.ErrorCodeInternalError, err.Code)
+	suite.Equal(apierror.CodeInternalError, err.Code)
 	suite.Nil(apiKey)
 }
 
@@ -241,7 +242,7 @@ func (suite *APIKeyMedTestSuite) TestFind_InvalidFormat() {
 	apiKey, err := suite.apiKeyMed.FindAndValidate(ctx, "not-an-api-key")
 
 	suite.NotNil(err)
-	suite.Equal(apierror.ErrorCodeInvalidFormat, err.Code)
+	suite.Equal(apierror.CodeInvalidFormat, err.Errors[0].Code)
 	suite.Nil(apiKey)
 }
 
@@ -250,7 +251,7 @@ func (suite *APIKeyMedTestSuite) TestFind_EmptyString() {
 	apiKey, err := suite.apiKeyMed.FindAndValidate(ctx, "")
 
 	suite.NotNil(err)
-	suite.Equal(apierror.ErrorCodeInvalidFormat, err.Code)
+	suite.Equal(apierror.CodeInvalidFormat, err.Errors[0].Code)
 	suite.Nil(apiKey)
 }
 
@@ -259,7 +260,7 @@ func (suite *APIKeyMedTestSuite) TestFind_TooShort() {
 	apiKey, err := suite.apiKeyMed.FindAndValidate(ctx, testutil.ApiKeyTooShort)
 
 	suite.NotNil(err)
-	suite.Equal(apierror.ErrorCodeInvalidFormat, err.Code)
+	suite.Equal(apierror.CodeInvalidFormat, err.Errors[0].Code)
 	suite.Nil(apiKey)
 }
 
@@ -268,7 +269,7 @@ func (suite *APIKeyMedTestSuite) TestFind_TooLong() {
 	apiKey, err := suite.apiKeyMed.FindAndValidate(ctx, testutil.ApiKeyTooLong)
 
 	suite.NotNil(err)
-	suite.Equal(apierror.ErrorCodeInvalidFormat, err.Code)
+	suite.Equal(apierror.CodeInvalidFormat, err.Errors[0].Code)
 	suite.Nil(apiKey)
 }
 
@@ -277,7 +278,7 @@ func (suite *APIKeyMedTestSuite) TestFind_InvalidPrefix() {
 	apiKey, err := suite.apiKeyMed.FindAndValidate(ctx, testutil.ApiKeyInvalidPrefix)
 
 	suite.NotNil(err)
-	suite.Equal(apierror.ErrorCodeInvalidFormat, err.Code)
+	suite.Equal(apierror.CodeInvalidFormat, err.Errors[0].Code)
 	suite.Nil(apiKey)
 }
 
@@ -286,7 +287,7 @@ func (suite *APIKeyMedTestSuite) TestFind_InvalidChecksum() {
 	apiKey, err := suite.apiKeyMed.FindAndValidate(ctx, testutil.ApiKeyInvalidChecksum)
 
 	suite.NotNil(err)
-	suite.Equal(apierror.ErrorCodeInvalidFormat, err.Code)
+	suite.Equal(apierror.CodeInvalidFormat, err.Errors[0].Code)
 	suite.Nil(apiKey)
 }
 
@@ -323,7 +324,7 @@ func (suite *APIKeyMedTestSuite) TestFind_VerifySecretError() {
 	apiKey, err := apiKeyMed.FindAndValidate(ctx, testutil.APIKeyValidSandboxMode)
 
 	suite.NotNil(err)
-	suite.Equal(apierror.ErrorCodeInvalidCredentials, err.Code)
+	suite.Equal(apierror.CodeInvalidCredentials, err.Code)
 	suite.Nil(apiKey)
 }
 
@@ -766,7 +767,7 @@ func (suite *APIKeyMedTestSuite) TestRotate_AlreadyRevoked_ReturnsError() {
 	})
 
 	suite.Require().NotNil(err, "already-revoked API keys must not be rotated")
-	suite.Equal(apierror.ErrorCodeRevokedAPIKey, err.Code)
+	suite.Equal(apperr.CodeAPIKeyRevoked, err.Code)
 }
 
 func (suite *APIKeyMedTestSuite) TestRotate_RevokeAtBeyondCap_ReturnsError() {

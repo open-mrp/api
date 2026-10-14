@@ -1,8 +1,8 @@
 package pagination
 
 import (
-	apierror "github.com/open-mrp/api/shared/errors"
 	pb "github.com/open-mrp/api/shared/proto/agent"
+	apierror "github.com/open-mrp/apikit/apierror"
 	sharedpagination "github.com/open-mrp/apikit/pagination"
 )
 
@@ -14,10 +14,10 @@ func ParseOptionalStringCursor(raw *string) (cursorID string, cursorDir *sharedp
 
 	cur, err := sharedpagination.DecodeStringCursor(*raw)
 	if err != nil {
-		return "", nil, apierror.NewParameterInvalidError("Invalid pagination cursor.", "cursor")
+		return "", nil, apierror.NewParameterInvalidError("cursor", "Invalid pagination cursor.")
 	}
 	if cur.Direction == sharedpagination.DirectionBackward {
-		return "", nil, apierror.NewValidationErrorWithParam("Invalid pagination cursor.", "cursor")
+		return "", nil, apierror.NewFieldError("cursor", apierror.CodeInvalidFormat, "Invalid pagination cursor.")
 	}
 
 	dir := cur.Direction

@@ -11,8 +11,8 @@ import (
 	"github.com/open-mrp/api/shared/audit"
 	"github.com/open-mrp/api/shared/constants"
 	"github.com/open-mrp/api/shared/contracts"
-	apierror "github.com/open-mrp/api/shared/errors"
 	"github.com/open-mrp/api/shared/messaging"
+	apierror "github.com/open-mrp/apikit/apierror"
 	"github.com/open-mrp/apikit/crypto"
 
 	"github.com/stretchr/testify/assert"
@@ -117,7 +117,7 @@ func (suite *SalesOrderSvcTestSuite) TestAccountWebhook_IntegrationInactiveRejec
 
 	apiErr := suite.svc.ProcessAccountStripeWebhook(context.Background(), "ac_test", []byte("{}"), "sig_test")
 	suite.Require().NotNil(apiErr)
-	suite.Equal(apierror.ErrorCodeValidationFailed, apiErr.Code)
+	suite.Equal(apierror.CodeValidationFailed, apiErr.Code)
 }
 
 func (suite *SalesOrderSvcTestSuite) TestAccountWebhook_MissingWebhookSecretRejected() {
@@ -132,7 +132,7 @@ func (suite *SalesOrderSvcTestSuite) TestAccountWebhook_MissingWebhookSecretReje
 
 	apiErr := suite.svc.ProcessAccountStripeWebhook(context.Background(), "ac_test", []byte("{}"), "sig_test")
 	suite.Require().NotNil(apiErr)
-	suite.Equal(apierror.ErrorCodeValidationFailed, apiErr.Code)
+	suite.Equal(apierror.CodeValidationFailed, apiErr.Code)
 }
 
 func (suite *SalesOrderSvcTestSuite) TestAccountWebhook_BadSignatureRejected() {
@@ -143,7 +143,7 @@ func (suite *SalesOrderSvcTestSuite) TestAccountWebhook_BadSignatureRejected() {
 
 	apiErr := suite.svc.ProcessAccountStripeWebhook(context.Background(), "ac_test", []byte("{}"), "sig_test")
 	suite.Require().NotNil(apiErr)
-	suite.Equal(apierror.ErrorCodeValidationFailed, apiErr.Code)
+	suite.Equal(apierror.CodeValidationFailed, apiErr.Code)
 }
 
 func (suite *SalesOrderSvcTestSuite) TestAccountWebhook_UnhandledEventTypeAcked() {
@@ -230,7 +230,7 @@ func (suite *SalesOrderSvcTestSuite) TestAccountWebhook_Succeeded_UnknownOrderAc
 	suite.expectWebhookEvent(&domain.StripeWebhookEvent{ID: "evt_1", Type: "payment_intent.succeeded"}, webhookPaymentIntent("or_other_tenant", "ac_buyer"))
 
 	suite.orderRepo.EXPECT().Get(gomock.Any(), "ac_test", "or_other_tenant").
-		Return(nil, apierror.NewResourceNotFoundError("Resource not found.")).Times(1)
+		Return(nil, apierror.NewNotFoundError("Resource not found.")).Times(1)
 
 	suite.Nil(suite.svc.ProcessAccountStripeWebhook(context.Background(), "ac_test", []byte("{}"), "sig_test"))
 }
@@ -244,7 +244,7 @@ func (suite *SalesOrderSvcTestSuite) TestAccountWebhook_Succeeded_OrderLookupErr
 
 	apiErr := suite.svc.ProcessAccountStripeWebhook(context.Background(), "ac_test", []byte("{}"), "sig_test")
 	suite.Require().NotNil(apiErr)
-	suite.Equal(apierror.ErrorCodeInternalError, apiErr.Code)
+	suite.Equal(apierror.CodeInternalError, apiErr.Code)
 }
 
 func (suite *SalesOrderSvcTestSuite) TestAccountWebhook_Succeeded_RedeliveryBackfillsMissingTransaction() {
@@ -334,7 +334,7 @@ func (suite *SalesOrderSvcTestSuite) TestAccountWebhook_Succeeded_TransactionCre
 
 	apiErr := suite.svc.ProcessAccountStripeWebhook(context.Background(), "ac_test", []byte("{}"), "sig_test")
 	suite.Require().NotNil(apiErr)
-	suite.Equal(apierror.ErrorCodeInternalError, apiErr.Code)
+	suite.Equal(apierror.CodeInternalError, apiErr.Code)
 }
 
 // --- payment_intent.payment_failed ---
@@ -377,7 +377,7 @@ func (suite *SalesOrderSvcTestSuite) TestAccountWebhook_PaymentFailed_OtherAccou
 	suite.transactionRepo.EXPECT().FindByStripePaymentID(gomock.Any(), "pi_test").
 		Return(&domain.TransactionRecord{ID: "tr_1", Number: "1001", AmountID: "qt_1"}, nil).Times(1)
 	suite.transactionRepo.EXPECT().Get(gomock.Any(), "ac_test", "tr_1").
-		Return(nil, apierror.NewResourceNotFoundError("Transaction not found.")).Times(1)
+		Return(nil, apierror.NewNotFoundError("Transaction not found.")).Times(1)
 
 	suite.Nil(suite.svc.ProcessAccountStripeWebhook(context.Background(), "ac_test", []byte("{}"), "sig_test"))
 	suite.requireStripeAudits()
@@ -527,11 +527,11 @@ func (suite *SalesOrderSvcTestSuite) TestRecordOrderPayment_AlreadyLinkedWritesN
 
 func (suite *SalesOrderSvcTestSuite) TestRecordOrderPayment_UnknownOrderIsNotFound() {
 	suite.opiRepo.EXPECT().GetOrderAccountID(gomock.Any(), "or_missing").
-		Return("", apierror.NewResourceNotFoundError("Sales order not found.")).Times(1)
+		Return("", apierror.NewNotFoundError("Sales order not found.")).Times(1)
 
 	apiErr := suite.svc.RecordOrderPayment(context.Background(), "or_missing", "pi_test")
 	suite.Require().NotNil(apiErr)
-	suite.Equal(apierror.ErrorCodeResourceNotFound, apiErr.Code)
+	suite.Equal(apierror.CodeResourceNotFound, apiErr.Code)
 	suite.requireStripeAudits()
 }
 
@@ -563,7 +563,7 @@ func (suite *SalesOrderSvcTestSuite) TestReconcileAccountStripePayout_StripeErro
 
 	apiErr := suite.svc.ReconcileAccountStripePayout(context.Background(), "ac_test", rawPayout)
 	suite.Require().NotNil(apiErr)
-	suite.Equal(apierror.ErrorCodeInternalError, apiErr.Code)
+	suite.Equal(apierror.CodeInternalError, apiErr.Code)
 }
 
 // --- method mapping ---

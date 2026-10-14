@@ -10,7 +10,7 @@ import (
 	repositorymock "github.com/open-mrp/api/services/core-service/internal/domain/mock/repository"
 	"github.com/open-mrp/api/shared/appctx"
 	"github.com/open-mrp/api/shared/constants"
-	apierror "github.com/open-mrp/api/shared/errors"
+	apierror "github.com/open-mrp/apikit/apierror"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -52,7 +52,7 @@ func deletedScopeCtx(accountID string) context.Context {
 }
 
 func deletedScopeNotFound() *apierror.APIError {
-	return apierror.NewResourceNotFoundError("Not found.")
+	return apierror.NewNotFoundError("Not found.")
 }
 
 // assertOnlyTheOwnerLearnsItWasDeleted deletes a record that is already gone, as the account it was deleted from and as another account; del makes the record's lookup answer not found for accountID and calls the delete.
@@ -65,7 +65,7 @@ func assertOnlyTheOwnerLearnsItWasDeleted(t *testing.T, resourceType constants.D
 
 		apiErr := del(h, "ac_owner")
 		require.NotNil(t, apiErr)
-		assert.Equal(t, apierror.ErrorCodeResourceGone, apiErr.Code)
+		assert.Equal(t, apierror.CodeResourceGone, apiErr.Code)
 	})
 
 	t.Run("another tenant is told it was never there", func(t *testing.T) {
@@ -74,6 +74,6 @@ func assertOnlyTheOwnerLearnsItWasDeleted(t *testing.T, resourceType constants.D
 
 		apiErr := del(h, "ac_other")
 		require.NotNil(t, apiErr)
-		assert.Equal(t, apierror.ErrorCodeResourceNotFound, apiErr.Code)
+		assert.Equal(t, apierror.CodeResourceNotFound, apiErr.Code)
 	})
 }

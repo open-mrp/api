@@ -8,9 +8,9 @@ import (
 	"github.com/open-mrp/api/services/core-service/internal/domain"
 	"github.com/open-mrp/api/shared/audit"
 	"github.com/open-mrp/api/shared/constants"
-	apierror "github.com/open-mrp/api/shared/errors"
 	"github.com/open-mrp/api/shared/id"
-	"github.com/open-mrp/api/shared/tracing"
+	apierror "github.com/open-mrp/apikit/apierror"
+	"github.com/open-mrp/apikit/tracing"
 )
 
 var addressMedTracer = tracing.GetTracer("core-service.address_mediator")
@@ -82,7 +82,7 @@ func (m *addressMedImpl) Update(ctx context.Context, params domain.UpdateAddress
 		return nil, tracing.Trace(span, apiErr)
 	}
 	if !inAccount {
-		return nil, tracing.Trace(span, apierror.NewResourceNotFoundError("Address not found."))
+		return nil, tracing.Trace(span, apierror.NewNotFoundError("Address not found."))
 	}
 
 	updated, apiErr := m.update(ctx, params)
@@ -165,7 +165,7 @@ func (m *addressMedImpl) inlineUpdate(ctx context.Context, accountID string, inp
 		return params, apiErr
 	}
 	if !inAccount {
-		return params, apierror.NewResourceNotFoundError("No address found with the provided ID.").WithParam(param + ".id")
+		return params, apierror.NewNotFoundError("No address found with the provided ID.").WithParam(param + ".id")
 	}
 	return params, nil
 }
@@ -174,10 +174,10 @@ func (m *addressMedImpl) inlineUpdate(ctx context.Context, accountID string, inp
 func newInlineAddress(accountID string, input domain.InlineAddressParams, param string) (domain.CreateAddressParams, *apierror.APIError) {
 	params := input.CreateParams(accountID)
 	if input.Name == nil {
-		return params, apierror.NewMissingFieldError(fmt.Sprintf("Field '%s.name' is required when no id is given.", param), param+".name")
+		return params, apierror.NewMissingFieldError(param+".name", fmt.Sprintf("Field '%s.name' is required when no id is given.", param))
 	}
 	if strings.TrimSpace(params.Country) == "" {
-		return params, apierror.NewMissingFieldError(fmt.Sprintf("Field '%s.country' is required when no id is given.", param), param+".country")
+		return params, apierror.NewMissingFieldError(param+".country", fmt.Sprintf("Field '%s.country' is required when no id is given.", param))
 	}
 
 	name, apiErr := NormalizeAddressName(params.Name)
@@ -379,7 +379,7 @@ func applyAddressUpdate(stored *domain.Address, params domain.UpdateAddressParam
 func NormalizeAddressName(name string) (string, *apierror.APIError) {
 	trimmed := strings.TrimSpace(name)
 	if trimmed == "" {
-		return "", apierror.NewValidationErrorWithParam("Address name is required.", "name")
+		return "", apierror.NewFieldError("name", apierror.CodeInvalidFormat, "Address name is required.")
 	}
 	return trimmed, nil
 }

@@ -11,11 +11,11 @@ import (
 	"github.com/open-mrp/api/services/core-service/internal/domain"
 	"github.com/open-mrp/api/shared/audit"
 	"github.com/open-mrp/api/shared/constants"
-	"github.com/open-mrp/api/shared/db"
-	apierror "github.com/open-mrp/api/shared/errors"
 	"github.com/open-mrp/api/shared/excel"
 	"github.com/open-mrp/api/shared/id"
 	"github.com/open-mrp/api/shared/messaging"
+	apierror "github.com/open-mrp/apikit/apierror"
+	"github.com/open-mrp/apikit/db"
 )
 
 // hands the async bulk engine the plumbing it runs on
@@ -39,28 +39,28 @@ func validateBulkUpsertPropertyRows(rows []domain.UpsertPropertyParams) *apierro
 	for i, property := range rows {
 		lowerName := strings.ToLower(strings.TrimSpace(property.Name))
 		if _, dup := nameInputSpace[lowerName]; dup {
-			rowErrs.AddValidation(i, fmt.Sprintf("properties[%d].name", i), fmt.Sprintf("duplicate name %q in request", property.Name))
+			rowErrs.AddField(i, "name", apierror.CodeInvalidFormat, fmt.Sprintf("duplicate name %q in request", property.Name))
 		}
 		nameInputSpace[lowerName] = struct{}{}
 
 		valueInputSpace := make(map[string]struct{}, len(property.Attributes))
 		for j, attribute := range property.Attributes {
-			param := fmt.Sprintf("properties[%d].attributes[%d].value", i, j)
+			param := fmt.Sprintf("attributes[%d].value", j)
 			value := strings.TrimSpace(attribute.Value)
 			if value == "" {
-				rowErrs.AddValidation(i, param, "value cannot be blank")
+				rowErrs.AddField(i, param, apierror.CodeInvalidFormat, "value cannot be blank")
 				continue
 			}
 
 			lowerValue := strings.ToLower(value)
 			if _, dup := valueInputSpace[lowerValue]; dup {
-				rowErrs.AddValidation(i, param, fmt.Sprintf("duplicate value %q in property %q", attribute.Value, property.Name))
+				rowErrs.AddField(i, param, apierror.CodeInvalidFormat, fmt.Sprintf("duplicate value %q in property %q", attribute.Value, property.Name))
 				continue
 			}
 			valueInputSpace[lowerValue] = struct{}{}
 
 			if owner, claimed := propertyByValue[lowerValue]; claimed && !strings.EqualFold(owner, property.Name) {
-				rowErrs.AddValidation(i, param, fmt.Sprintf("value %q is already used under property %q in this request", attribute.Value, owner))
+				rowErrs.AddField(i, param, apierror.CodeInvalidFormat, fmt.Sprintf("value %q is already used under property %q in this request", attribute.Value, owner))
 				continue
 			}
 			propertyByValue[lowerValue] = property.Name
@@ -122,7 +122,7 @@ func writeBulkUpsertProperties(txCtx context.Context, txRepos domain.RepoFactory
 			return nil
 		})
 		if rowErr != nil {
-			rowErrors = append(rowErrors, apierror.NewRowError(i, rowErr))
+			rowErrors = append(rowErrors, apierror.RowError{Index: i, Error: rowErr.Object()})
 			continue
 		}
 
@@ -267,9 +267,7 @@ func writeRowAttributesInTx(txCtx context.Context, txRepos domain.RepoFactory, a
 
 		// One value belongs to one property per account; the single create path 409s too.
 		if owner, taken := state.propertyNameByValue[lowerValue]; taken && !strings.EqualFold(owner, row.Name) {
-			return apierror.NewConflictErrorWithParam(
-				fmt.Sprintf("Attribute value %q already exists under property %q.", attribute.Value, owner),
-				fmt.Sprintf("properties[%d].attributes[%d].value", rowIndex, j))
+			return apierror.NewConflictErrorWithParam(fmt.Sprintf("properties[%d].attributes[%d].value", rowIndex, j), fmt.Sprintf("Attribute value %q already exists under property %q.", attribute.Value, owner))
 		}
 
 		attributeID, apiErr := id.GenID(id.AttributeIDPrefix, nil)

@@ -8,8 +8,8 @@ import (
 	"github.com/open-mrp/api/services/auth-service/pkg/types"
 	"github.com/open-mrp/api/services/core-service/internal/domain"
 	"github.com/open-mrp/api/shared/constants"
-	apierror "github.com/open-mrp/api/shared/errors"
 	"github.com/open-mrp/api/shared/excel"
+	apierror "github.com/open-mrp/apikit/apierror"
 )
 
 // inventoryChangeLogExportPageSize keeps each read of the walk well inside the query budget, even under a filter naming many users or items, whose page costs several times an unfiltered one.

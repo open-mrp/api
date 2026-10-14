@@ -12,8 +12,8 @@ import (
 	"github.com/open-mrp/api/services/core-service/internal/domain"
 	factorymock "github.com/open-mrp/api/services/core-service/internal/domain/mock/factory"
 	repositorymock "github.com/open-mrp/api/services/core-service/internal/domain/mock/repository"
-	apierror "github.com/open-mrp/api/shared/errors"
 	"github.com/open-mrp/api/shared/pricing"
+	apierror "github.com/open-mrp/apikit/apierror"
 )
 
 type stockingValidationFixture struct {
@@ -60,7 +60,7 @@ func TestValidateStockingData_RefusesALocationOutsideTheAccount(t *testing.T) {
 
 	apiErr := stockFourPairsAt(f, "sglc_own", "sglc_elsewhere", "sglc_own")
 	require.NotNil(t, apiErr)
-	assert.Equal(t, apierror.ErrorCodeValidationFailed, apiErr.Code)
+	assert.Equal(t, apierror.CodeValidationFailed, apiErr.Code)
 	assert.Equal(t, "line_items.allocations.location_id", apiErr.Param)
 }
 

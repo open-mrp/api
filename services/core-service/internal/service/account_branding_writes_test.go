@@ -12,7 +12,7 @@ import (
 	repositorymock "github.com/open-mrp/api/services/core-service/internal/domain/mock/repository"
 	"github.com/open-mrp/api/shared/appctx"
 	"github.com/open-mrp/api/shared/audit"
-	apierror "github.com/open-mrp/api/shared/errors"
+	apierror "github.com/open-mrp/apikit/apierror"
 
 	"go.uber.org/mock/gomock"
 )
@@ -154,8 +154,8 @@ func TestAccountSvc_BrandingUploadsStoreOnlyImages(t *testing.T) {
 			svc := &accountSvcImpl{accountRepo: accountRepo, repos: repos, txManager: &stubTxManager{factory: repos}, s3Client: store, accountPhotosBucket: "account-photos"}
 
 			for name, body := range tc.refuse {
-				if apiErr := tc.upload(svc, body); apiErr == nil || apierror.GetHTTPStatusCode(apiErr.Code) != 400 {
-					t.Errorf("%s: got %v, want a 400", name, apiErr)
+				if apiErr := tc.upload(svc, body); apiErr == nil || apiErr.Code.Status() != 422 {
+					t.Errorf("%s: got %v, want a 422", name, apiErr)
 				}
 			}
 			if len(store.uploads) != 0 || len(outbox.created) != 0 {

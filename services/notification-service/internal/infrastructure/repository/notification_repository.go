@@ -7,9 +7,9 @@ import (
 
 	"github.com/open-mrp/api/services/notification-service/internal/domain"
 	"github.com/open-mrp/api/services/notification-service/internal/infrastructure/sqlc"
-	"github.com/open-mrp/api/shared/db"
-	apierror "github.com/open-mrp/api/shared/errors"
-	"github.com/open-mrp/api/shared/tracing"
+	apierror "github.com/open-mrp/apikit/apierror"
+	"github.com/open-mrp/apikit/db"
+	"github.com/open-mrp/apikit/tracing"
 )
 
 var notificationRepoTracer = tracing.GetTracer("notification-service.notification_repository")
@@ -128,7 +128,7 @@ func (r *notificationRepoImpl) GetByID(ctx context.Context, id, recipientAccount
 		RecipientAccountUserID: recipientAccountUserID,
 	})
 	if apiErr := db.MapSQLError(err); apiErr != nil {
-		if apiErr.Code == apierror.ErrorCodeResourceNotFound {
+		if apiErr.Code == apierror.CodeResourceNotFound {
 			return nil, apiErr
 		}
 		return nil, tracing.Trace(span, apiErr)
@@ -270,7 +270,7 @@ func (r *notificationRepoImpl) ResolveAccountUserID(ctx context.Context, userID,
 		AccountID: accountID,
 	})
 	if apiErr := db.MapSQLError(err); apiErr != nil {
-		if apiErr.Code == apierror.ErrorCodeResourceNotFound {
+		if apiErr.Code == apierror.CodeResourceNotFound {
 			return "", apiErr
 		}
 		return "", tracing.Trace(span, apiErr)
@@ -284,7 +284,7 @@ func (r *notificationRepoImpl) ResolveUserID(ctx context.Context, accountUserID 
 
 	userID, err := r.db.GetUserIDByAccountUserID(ctx, accountUserID)
 	if apiErr := db.MapSQLError(err); apiErr != nil {
-		if apiErr.Code == apierror.ErrorCodeResourceNotFound {
+		if apiErr.Code == apierror.CodeResourceNotFound {
 			return "", apiErr
 		}
 		return "", tracing.Trace(span, apiErr)
@@ -298,7 +298,7 @@ func (r *notificationRepoImpl) ResolveUserIDInAccount(ctx context.Context, accou
 
 	userID, err := r.db.GetUserIDByAccountUserIDInAccount(ctx, sqlc.GetUserIDByAccountUserIDInAccountParams{ID: accountUserID, AccountID: accountID})
 	if apiErr := db.MapSQLError(err); apiErr != nil {
-		if apiErr.Code == apierror.ErrorCodeResourceNotFound {
+		if apiErr.Code == apierror.CodeResourceNotFound {
 			return "", apiErr
 		}
 		return "", tracing.Trace(span, apiErr)
@@ -312,7 +312,7 @@ func (r *notificationRepoImpl) ResolveRecipientContact(ctx context.Context, acco
 
 	row, err := r.db.GetUserContactByAccountUserID(ctx, accountUserID)
 	if apiErr := db.MapSQLError(err); apiErr != nil {
-		if apiErr.Code == apierror.ErrorCodeResourceNotFound {
+		if apiErr.Code == apierror.CodeResourceNotFound {
 			return nil, apiErr
 		}
 		return nil, tracing.Trace(span, apiErr)

@@ -14,11 +14,11 @@ import (
 	"github.com/open-mrp/api/shared/appctx"
 	"github.com/open-mrp/api/shared/audit"
 	"github.com/open-mrp/api/shared/constants"
-	apierror "github.com/open-mrp/api/shared/errors"
 	"github.com/open-mrp/api/shared/id"
-	"github.com/open-mrp/api/shared/idempotency"
-	"github.com/open-mrp/api/shared/tracing"
+	"github.com/open-mrp/api/shared/idemresponse"
+	apierror "github.com/open-mrp/apikit/apierror"
 	"github.com/open-mrp/apikit/safeconv"
+	"github.com/open-mrp/apikit/tracing"
 )
 
 // MaxBatchesPerRelease bounds one release, independently of the per-campaign cap.
@@ -121,8 +121,7 @@ func (s *productionScheduleSvcImpl) buildReleasePlan(
 		return nil, apiErr
 	}
 	if weekIndex < 0 || weekIndex >= schedule.HorizonWeeks {
-		return nil, apierror.NewValidationErrorWithParam(
-			fmt.Sprintf("This schedule covers weeks 0 to %d.", schedule.HorizonWeeks-1), "week_index")
+		return nil, apierror.NewFieldError("week_index", apierror.CodeInvalidFormat, fmt.Sprintf("This schedule covers weeks 0 to %d.", schedule.HorizonWeeks-1))
 	}
 
 	plan := &releasePlan{
@@ -432,7 +431,7 @@ func (s *productionScheduleSvcImpl) ReleaseProductionScheduleWeek(
 
 	switch domain.RecoveryPoint(idempotencyKey.RecoveryPoint) {
 	case domain.RecoveryPointFinished:
-		cached, err := idempotency.UnmarshalCachedResponse[domain.ReleaseScheduleWeekResult](ctx, idempotencyKey.ResponseCode, idempotencyKey.ResponseBody)
+		cached, err := idemresponse.UnmarshalCachedResponse[domain.ReleaseScheduleWeekResult](ctx, idempotencyKey.ResponseCode, idempotencyKey.ResponseBody)
 		if err != nil {
 			return nil, tracing.Trace(span, apierror.NewInternalError(err, "Issue unmarshalling cached response."))
 		}
@@ -475,7 +474,7 @@ func (s *productionScheduleSvcImpl) releaseProductionScheduleWeekTx(
 		accountUserRepo := txSvc.repos.NewAccountUserRepo()
 		responsibleID, apiErr := accountUserRepo.ResolveAccountUserID(txCtx, accountID, params.ResponsibleUserID)
 		if apiErr != nil {
-			return apierror.NewResourceNotFoundError("The responsible user was not found in this account.")
+			return apierror.NewNotFoundError("The responsible user was not found in this account.")
 		}
 
 		runRepo := txSvc.repos.NewProductionRunRepo()

@@ -9,7 +9,7 @@ import (
 	"strings"
 
 	"github.com/open-mrp/api/services/core-service/internal/infrastructure/queries"
-	"github.com/open-mrp/api/shared/tracing"
+	"github.com/open-mrp/apikit/tracing"
 )
 
 var seederRepoTracer = tracing.GetTracer("core-service.sandbox_seeder")

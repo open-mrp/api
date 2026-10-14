@@ -9,7 +9,7 @@ import (
 	"context"
 	"database/sql"
 
-	"github.com/open-mrp/api/shared/db"
+	"github.com/open-mrp/apikit/db"
 )
 
 const advanceRecoveryPoint = `-- name: AdvanceRecoveryPoint :exec

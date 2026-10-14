@@ -6,7 +6,7 @@ import (
 	"time"
 
 	"github.com/open-mrp/api/shared/constants"
-	apierror "github.com/open-mrp/api/shared/errors"
+	apierror "github.com/open-mrp/apikit/apierror"
 	"github.com/open-mrp/apikit/crypto"
 )
 
@@ -178,7 +178,7 @@ func TestParseAPIKey_InvalidKeys(t *testing.T) {
 			if err == nil {
 				t.Errorf("ParseAPIKey() expected error but got none for key: %s", tt.key)
 			}
-			if err != nil && err.Type != apierror.ErrorTypeInvalidRequest {
+			if err != nil && err.Type != apierror.TypeInvalidRequest {
 				t.Errorf("ParseAPIKey() expected invalid request error, got: %s", err.Type)
 			}
 		})

@@ -10,7 +10,7 @@ import (
 	clientmock "github.com/open-mrp/api/services/agent-service/internal/domain/mock/client"
 	"github.com/open-mrp/api/services/auth-service/pkg/types"
 	"github.com/open-mrp/api/shared/constants"
-	apierror "github.com/open-mrp/api/shared/errors"
+	apierror "github.com/open-mrp/apikit/apierror"
 	"go.uber.org/mock/gomock"
 )
 
@@ -83,7 +83,7 @@ func TestCheckAssignableRole(t *testing.T) {
 			name:       "another account's role is not found, even for an admin",
 			identity:   roleTestIdentity(constants.RoleTypeAdmin),
 			role:       &domain.RoleInfo{ID: "rl_foreign", RoleType: string(constants.RoleTypeCustom), AccountID: &otherAccount},
-			wantStatus: http.StatusBadRequest,
+			wantStatus: http.StatusUnprocessableEntity,
 			wantMsg:    "Role not found",
 		},
 	}
@@ -108,7 +108,7 @@ func TestCheckAssignableRole(t *testing.T) {
 			if apiErr == nil {
 				t.Fatal("expected an error, got nil")
 			}
-			if got := apierror.GetHTTPStatusCode(apiErr.Code); got != tt.wantStatus {
+			if got := apiErr.Code.Status(); got != tt.wantStatus {
 				t.Errorf("status = %d, want %d", got, tt.wantStatus)
 			}
 			if apiErr.Param != "role_id" {
@@ -124,12 +124,12 @@ func TestCheckAssignableRole(t *testing.T) {
 func TestCheckAssignableRoleUnknownRole(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	core := clientmock.NewMockCoreClient(ctrl)
-	core.EXPECT().GetRoleInfo(gomock.Any(), "rl_missing").Return(nil, apierror.NewResourceNotFoundError("role not found"))
+	core.EXPECT().GetRoleInfo(gomock.Any(), "rl_missing").Return(nil, apierror.NewNotFoundError("role not found"))
 	s := &agentDefSvcImpl{coreClient: core}
 
 	apiErr := s.checkAssignableRole(context.Background(), roleTestIdentity(constants.RoleTypeAdmin), "rl_missing", false)
-	if apiErr == nil || apierror.GetHTTPStatusCode(apiErr.Code) != http.StatusBadRequest || apiErr.Param != "role_id" {
-		t.Fatalf("expected a 400 on role_id, got %+v", apiErr)
+	if apiErr == nil || apiErr.Code.Status() != http.StatusUnprocessableEntity || apiErr.Param != "role_id" {
+		t.Fatalf("expected a 422 on role_id, got %+v", apiErr)
 	}
 }
 
@@ -150,7 +150,7 @@ func TestCheckAssignableRoleExistingRoleMessage(t *testing.T) {
 func TestCheckAssignableRoleExistingRoleThatNoLongerExists(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	core := clientmock.NewMockCoreClient(ctrl)
-	core.EXPECT().GetRoleInfo(gomock.Any(), "rl_gone").Return(nil, apierror.NewResourceNotFoundError("role not found"))
+	core.EXPECT().GetRoleInfo(gomock.Any(), "rl_gone").Return(nil, apierror.NewNotFoundError("role not found"))
 	s := &agentDefSvcImpl{coreClient: core}
 
 	if apiErr := s.checkAssignableRole(context.Background(), roleTestIdentity(constants.RoleTypeCustom, "agents:update"), "rl_gone", true); apiErr != nil {

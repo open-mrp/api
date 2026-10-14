@@ -9,7 +9,7 @@ import (
 	apiresource "github.com/open-mrp/api/services/api-gateway/pkg/resource"
 	"github.com/open-mrp/api/services/auth-service/pkg/types"
 	"github.com/open-mrp/api/shared/constants"
-	apierror "github.com/open-mrp/api/shared/errors"
+	apierror "github.com/open-mrp/apikit/apierror"
 )
 
 // Request to list request logs.
@@ -30,11 +30,11 @@ type ListRequestLogsRequest struct {
 	// Combined with `status_codes` using OR — e.g. `status_codes=401` and `status_code_classes=5` matches 401 responses and any 5xx response.
 	StatusCodeClasses []int32 `query:"status_code_classes"`
 	// Filter by API error code.
-	ErrorCodes []apierror.ErrorCode `query:"error_codes"`
+	ErrorCodes []apierror.Code `query:"error_codes"`
 	// Exclude request logs whose API error code is in this set.
 	//
 	// Applied as a negative filter after all other filters. Successful requests (which have no error code) are always kept. The OpenMRP dashboard uses this to hide routine `expired_token` 401s — the noise from short-lived access tokens expiring and clients silently refreshing — while still surfacing genuine auth failures like `invalid_credentials`.
-	ExcludeErrorCodes []apierror.ErrorCode `query:"exclude_error_codes"`
+	ExcludeErrorCodes []apierror.Code `query:"exclude_error_codes"`
 	// Filter by the _acting_ account: the account the actor belongs to (the log's `account.id`).
 	//
 	// Results are always scoped to logs where your account is either the acting account or the target account; this narrows that set to specific acting accounts. For example, pass a customer's account ID to see only requests that customer's actors made against your account.

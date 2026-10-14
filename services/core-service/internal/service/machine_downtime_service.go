@@ -13,10 +13,10 @@ import (
 	"github.com/open-mrp/api/shared/appctx"
 	"github.com/open-mrp/api/shared/audit"
 	"github.com/open-mrp/api/shared/constants"
-	apierror "github.com/open-mrp/api/shared/errors"
 	"github.com/open-mrp/api/shared/id"
-	"github.com/open-mrp/api/shared/idempotency"
-	"github.com/open-mrp/api/shared/tracing"
+	"github.com/open-mrp/api/shared/idemresponse"
+	apierror "github.com/open-mrp/apikit/apierror"
+	"github.com/open-mrp/apikit/tracing"
 )
 
 var machineDowntimeSvcTracer = tracing.GetTracer("core-service.machine_downtime_service")
@@ -111,10 +111,10 @@ const maxDowntimeDuration = 365 * 24 * time.Hour
 func (s *machineDowntimeSvcImpl) resolveDowntimeEnd(ctx context.Context, accountID string, startedAt time.Time, duration domain.DowntimeDurationInput) (*time.Time, *apierror.APIError) {
 	value, err := decimal.NewFromString(strings.TrimSpace(duration.Value))
 	if err != nil {
-		return nil, apierror.NewValidationErrorWithParam("The downtime duration is not a number.", "duration")
+		return nil, apierror.NewFieldError("duration", apierror.CodeInvalidFormat, "The downtime duration is not a number.")
 	}
 	if value.LessThanOrEqual(decimal.Zero) {
-		return nil, apierror.NewValidationErrorWithParam("The downtime duration must be greater than zero.", "duration")
+		return nil, apierror.NewFieldError("duration", apierror.CodeInvalidFormat, "The downtime duration must be greater than zero.")
 	}
 
 	factors, apiErr := s.repos.NewUnitConversionRepo().GetUnitFactors(ctx, accountID, []string{duration.UnitID})
@@ -123,10 +123,10 @@ func (s *machineDowntimeSvcImpl) resolveDowntimeEnd(ctx context.Context, account
 	}
 	unit, ok := factors[duration.UnitID]
 	if !ok {
-		return nil, apierror.NewValidationErrorWithParam("Unknown unit for the downtime duration.", "duration")
+		return nil, apierror.NewFieldError("duration", apierror.CodeInvalidFormat, "Unknown unit for the downtime duration.")
 	}
 	if unit.DimensionCode != string(constants.UnitTypeTime) {
-		return nil, apierror.NewValidationErrorWithParam("The downtime duration must be expressed in a unit of time.", "duration")
+		return nil, apierror.NewFieldError("duration", apierror.CodeInvalidFormat, "The downtime duration must be expressed in a unit of time.")
 	}
 
 	// The time dimension's base unit is the hour, so converting to base gives hours and the event's own
@@ -134,11 +134,11 @@ func (s *machineDowntimeSvcImpl) resolveDowntimeEnd(ctx context.Context, account
 	// left every availability figure it fed reading as though the machine had barely stopped.
 	seconds := unit.ToBase(value).Mul(decimal.NewFromInt(downtimeSecondsPerHour))
 	if seconds.LessThanOrEqual(decimal.Zero) {
-		return nil, apierror.NewValidationErrorWithParam("The downtime duration must be greater than zero.", "duration")
+		return nil, apierror.NewFieldError("duration", apierror.CodeInvalidFormat, "The downtime duration must be greater than zero.")
 	}
 	elapsed := time.Duration(seconds.InexactFloat64() * float64(time.Second))
 	if elapsed > maxDowntimeDuration {
-		return nil, apierror.NewValidationErrorWithParam("The downtime duration is longer than a year. Check the unit.", "duration")
+		return nil, apierror.NewFieldError("duration", apierror.CodeInvalidFormat, "The downtime duration is longer than a year. Check the unit.")
 	}
 
 	endedAt := startedAt.Add(elapsed)
@@ -147,10 +147,10 @@ func (s *machineDowntimeSvcImpl) resolveDowntimeEnd(ctx context.Context, account
 
 func validateDowntimeWindow(startedAt time.Time, endedAt *time.Time) *apierror.APIError {
 	if startedAt.After(time.Now().UTC().Add(maxDowntimeClockSkew)) {
-		return apierror.NewValidationErrorWithParam("Downtime cannot start in the future.", "started_at")
+		return apierror.NewFieldError("started_at", apierror.CodeInvalidFormat, "Downtime cannot start in the future.")
 	}
 	if endedAt != nil && !endedAt.After(startedAt) {
-		return apierror.NewValidationErrorWithParam("Downtime must end after it starts.", "ended_at")
+		return apierror.NewFieldError("ended_at", apierror.CodeInvalidFormat, "Downtime must end after it starts.")
 	}
 	return nil
 }
@@ -268,7 +268,7 @@ func (s *machineDowntimeSvcImpl) CreateDowntimeEvent(ctx context.Context, params
 	// A duration is the other way of saying when the stoppage ended, so it is resolved into one before anything downstream sees the event.
 	if params.Duration != nil {
 		if params.EndedAt != nil {
-			return nil, tracing.Trace(span, apierror.NewValidationErrorWithParam("Send either an end time or a duration, not both.", "duration"))
+			return nil, tracing.Trace(span, apierror.NewFieldError("duration", apierror.CodeInvalidFormat, "Send either an end time or a duration, not both."))
 		}
 		endedAt, apiErr := s.resolveDowntimeEnd(ctx, params.AccountID, params.StartedAt, *params.Duration)
 		if apiErr != nil {
@@ -302,7 +302,7 @@ func (s *machineDowntimeSvcImpl) CreateDowntimeEvent(ctx context.Context, params
 
 	switch domain.RecoveryPoint(idempotencyKey.RecoveryPoint) {
 	case domain.RecoveryPointFinished:
-		cached, err := idempotency.UnmarshalCachedResponse[domain.MachineDowntimeEvent](ctx, idempotencyKey.ResponseCode, idempotencyKey.ResponseBody)
+		cached, err := idemresponse.UnmarshalCachedResponse[domain.MachineDowntimeEvent](ctx, idempotencyKey.ResponseCode, idempotencyKey.ResponseBody)
 		if err != nil {
 			return nil, tracing.Trace(span, apierror.NewInternalError(err, "Issue unmarshalling cached response."))
 		}
@@ -315,7 +315,7 @@ func (s *machineDowntimeSvcImpl) CreateDowntimeEvent(ctx context.Context, params
 
 			// The reason taxonomy is what maps a stoppage onto an OEE term, so an unknown code has to fail loudly rather than silently land outside every bucket.
 			if _, apiErr := downtimeRepo.GetReason(txCtx, params.ReasonCode); apiErr != nil {
-				return apierror.NewValidationErrorWithParam("Unknown downtime reason.", "reason_code")
+				return apierror.NewFieldError("reason_code", apierror.CodeInvalidFormat, "Unknown downtime reason.")
 			}
 
 			machine, apiErr := txSvc.repos.NewMachineRepo().Get(txCtx, domain.GetMachineParams{
@@ -333,7 +333,7 @@ func (s *machineDowntimeSvcImpl) CreateDowntimeEvent(ctx context.Context, params
 					return apiErr
 				}
 				if open != nil {
-					return apierror.NewConflictErrorWithParam("This machine already has an open downtime event. Close it before logging another.", "machine_id")
+					return apierror.NewConflictErrorWithParam("machine_id", "This machine already has an open downtime event. Close it before logging another.")
 				}
 			}
 
@@ -421,7 +421,7 @@ func (s *machineDowntimeSvcImpl) UpdateDowntimeEvent(ctx context.Context, params
 
 	switch domain.RecoveryPoint(idempotencyKey.RecoveryPoint) {
 	case domain.RecoveryPointFinished:
-		cached, err := idempotency.UnmarshalCachedResponse[domain.MachineDowntimeEvent](ctx, idempotencyKey.ResponseCode, idempotencyKey.ResponseBody)
+		cached, err := idemresponse.UnmarshalCachedResponse[domain.MachineDowntimeEvent](ctx, idempotencyKey.ResponseCode, idempotencyKey.ResponseBody)
 		if err != nil {
 			return nil, tracing.Trace(span, apierror.NewInternalError(err, "Issue unmarshalling cached response."))
 		}
@@ -444,7 +444,7 @@ func (s *machineDowntimeSvcImpl) UpdateDowntimeEvent(ctx context.Context, params
 
 			if params.ReasonCode != nil {
 				if _, apiErr := downtimeRepo.GetReason(txCtx, *params.ReasonCode); apiErr != nil {
-					return apierror.NewValidationErrorWithParam("Unknown downtime reason.", "reason_code")
+					return apierror.NewFieldError("reason_code", apierror.CodeInvalidFormat, "Unknown downtime reason.")
 				}
 				existing.ReasonCode = *params.ReasonCode
 			}
@@ -474,12 +474,12 @@ func (s *machineDowntimeSvcImpl) UpdateDowntimeEvent(ctx context.Context, params
 			// A duration restates the end relative to the start, so it is applied after any new start and refuses to compete with an end time sent in the same request.
 			if params.Duration.IsClear() {
 				if params.EndedAt.WasProvided() {
-					return apierror.NewValidationErrorWithParam("Send either an end time or a duration, not both.", "duration")
+					return apierror.NewFieldError("duration", apierror.CodeInvalidFormat, "Send either an end time or a duration, not both.")
 				}
 				existing.EndedAt = nil
 			} else if duration := params.Duration.ValuePtr(); duration != nil {
 				if params.EndedAt.WasProvided() {
-					return apierror.NewValidationErrorWithParam("Send either an end time or a duration, not both.", "duration")
+					return apierror.NewFieldError("duration", apierror.CodeInvalidFormat, "Send either an end time or a duration, not both.")
 				}
 				endedAt, apiErr := txSvc.resolveDowntimeEnd(txCtx, accountID, existing.StartedAt, *duration)
 				if apiErr != nil {
@@ -520,7 +520,7 @@ func (s *machineDowntimeSvcImpl) UpdateDowntimeEvent(ctx context.Context, params
 					return apiErr
 				}
 				if open != nil && open.ID != existing.ID {
-					return apierror.NewConflictErrorWithParam("This machine already has an open downtime event.", "machine_id")
+					return apierror.NewConflictErrorWithParam("machine_id", "This machine already has an open downtime event.")
 				}
 			}
 

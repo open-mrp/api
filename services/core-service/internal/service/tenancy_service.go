@@ -9,10 +9,10 @@ import (
 
 	"github.com/open-mrp/api/services/core-service/internal/domain"
 	"github.com/open-mrp/api/shared/appctx"
-	s3client "github.com/open-mrp/api/shared/cloud/s3"
-	apierror "github.com/open-mrp/api/shared/errors"
-	"github.com/open-mrp/api/shared/tracing"
+	apierror "github.com/open-mrp/apikit/apierror"
+	s3client "github.com/open-mrp/apikit/cloud/s3"
 	"github.com/open-mrp/apikit/ptrutil"
+	"github.com/open-mrp/apikit/tracing"
 )
 
 var tenancySvcTracer = tracing.GetTracer("core-service.tenancy_service")
@@ -221,8 +221,8 @@ func (s *tenancySvcImpl) GetCurrentUser(ctx context.Context, userID string, targ
 
 	user, apiErr := s.userRepo.FindByID(ctx, userID)
 	if apiErr != nil {
-		if apiErr.Code == apierror.ErrorCodeResourceNotFound {
-			return nil, tracing.Trace(span, apierror.NewResourceNotFoundError("User not found."))
+		if apiErr.Code == apierror.CodeResourceNotFound {
+			return nil, tracing.Trace(span, apierror.NewNotFoundError("User not found."))
 		}
 		return nil, tracing.Trace(span, apiErr)
 	}

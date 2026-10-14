@@ -7,7 +7,7 @@ import (
 	factorymock "github.com/open-mrp/api/services/notification-service/internal/domain/mock/factory"
 	repomock "github.com/open-mrp/api/services/notification-service/internal/domain/mock/repository"
 	"github.com/open-mrp/api/shared/constants"
-	apierror "github.com/open-mrp/api/shared/errors"
+	apierror "github.com/open-mrp/apikit/apierror"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -58,7 +58,7 @@ func TestChatSenderUserID(t *testing.T) {
 		f := factorymock.NewMockRepoFactory(ctrl)
 		notifRepo := repomock.NewMockNotificationRepo(ctrl)
 		f.EXPECT().NewNotificationRepo().Return(notifRepo)
-		notifRepo.EXPECT().ResolveUserIDInAccount(gomock.Any(), "acus_gone", "ac_chat").Return("", apierror.NewResourceNotFoundError("not found"))
+		notifRepo.EXPECT().ResolveUserIDInAccount(gomock.Any(), "acus_gone", "ac_chat").Return("", apierror.NewNotFoundError("not found"))
 
 		_, ok, apiErr := (&conversationSvcImpl{}).chatSenderUserID(ctx, f, "ac_chat", string(constants.ParticipantTypeUser), "acus_gone")
 		require.Nil(t, apiErr)

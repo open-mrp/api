@@ -9,10 +9,10 @@ import (
 	"github.com/open-mrp/api/services/api-gateway/internal/resourceloaders"
 	apirequest "github.com/open-mrp/api/services/api-gateway/pkg/request"
 	apiresource "github.com/open-mrp/api/services/api-gateway/pkg/resource"
-	apierror "github.com/open-mrp/api/shared/errors"
 	"github.com/open-mrp/api/shared/fieldpb"
 	pb "github.com/open-mrp/api/shared/proto/core"
-	"github.com/open-mrp/api/shared/tracing"
+	apierror "github.com/open-mrp/apikit/apierror"
+	"github.com/open-mrp/apikit/tracing"
 	"google.golang.org/grpc"
 	"google.golang.org/protobuf/types/known/emptypb"
 )
@@ -98,10 +98,10 @@ func (m *shippingTermSvcImpl) CreateShippingTerm(ctx context.Context, req *Creat
 	}
 	if q, ok := req.FlatRate.Value(); ok {
 		if q.Value == "" {
-			return nil, apierror.NewMissingFieldError("Field 'flat_rate.value' is required.", "flat_rate.value")
+			return nil, apierror.NewMissingFieldError("flat_rate.value", "Field 'flat_rate.value' is required.")
 		}
 		if q.UnitID == "" {
-			return nil, apierror.NewMissingFieldError("Field 'flat_rate.unit_id' is required.", "flat_rate.unit_id")
+			return nil, apierror.NewMissingFieldError("flat_rate.unit_id", "Field 'flat_rate.unit_id' is required.")
 		}
 		pbReq.FlatRate = &pb.QuantityInput{
 			Value:  q.Value,
@@ -110,10 +110,10 @@ func (m *shippingTermSvcImpl) CreateShippingTerm(ctx context.Context, req *Creat
 	}
 	if q, ok := req.MinimumOrderValue.Value(); ok {
 		if q.Value == "" {
-			return nil, apierror.NewMissingFieldError("Field 'minimum_order_value.value' is required.", "minimum_order_value.value")
+			return nil, apierror.NewMissingFieldError("minimum_order_value.value", "Field 'minimum_order_value.value' is required.")
 		}
 		if q.UnitID == "" {
-			return nil, apierror.NewMissingFieldError("Field 'minimum_order_value.unit_id' is required.", "minimum_order_value.unit_id")
+			return nil, apierror.NewMissingFieldError("minimum_order_value.unit_id", "Field 'minimum_order_value.unit_id' is required.")
 		}
 		pbReq.MinimumOrderValue = &pb.QuantityInput{
 			Value:  q.Value,
@@ -144,18 +144,18 @@ func (m *shippingTermSvcImpl) UpdateShippingTerm(ctx context.Context, req *Updat
 	}
 	if q, ok := req.FlatRate.Value(); ok {
 		if q.Value == "" {
-			return nil, apierror.NewMissingFieldError("Field 'flat_rate.value' is required.", "flat_rate.value")
+			return nil, apierror.NewMissingFieldError("flat_rate.value", "Field 'flat_rate.value' is required.")
 		}
 		if q.UnitID == "" {
-			return nil, apierror.NewMissingFieldError("Field 'flat_rate.unit_id' is required.", "flat_rate.unit_id")
+			return nil, apierror.NewMissingFieldError("flat_rate.unit_id", "Field 'flat_rate.unit_id' is required.")
 		}
 	}
 	if q, ok := req.MinimumOrderValue.Value(); ok {
 		if q.Value == "" {
-			return nil, apierror.NewMissingFieldError("Field 'minimum_order_value.value' is required.", "minimum_order_value.value")
+			return nil, apierror.NewMissingFieldError("minimum_order_value.value", "Field 'minimum_order_value.value' is required.")
 		}
 		if q.UnitID == "" {
-			return nil, apierror.NewMissingFieldError("Field 'minimum_order_value.unit_id' is required.", "minimum_order_value.unit_id")
+			return nil, apierror.NewMissingFieldError("minimum_order_value.unit_id", "Field 'minimum_order_value.unit_id' is required.")
 		}
 	}
 	pbReq.FlatRate = apirequest.QuantityFieldToProto(req.FlatRate)
@@ -198,7 +198,7 @@ func loadShippingTermByID(ctx context.Context, id string) (*apiresource.Shipping
 	}
 	v, ok := loaded[id]
 	if !ok {
-		return nil, apierror.NewResourceNotFoundError("Shipping term not found.")
+		return nil, apierror.NewNotFoundError("Shipping term not found.")
 	}
 	return v.(*apiresource.ShippingTerm), nil
 }

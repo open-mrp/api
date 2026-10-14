@@ -4,9 +4,9 @@ import (
 	"time"
 
 	"github.com/open-mrp/api/shared/constants"
-	"github.com/open-mrp/api/shared/metadata"
 	"github.com/open-mrp/api/shared/pricing"
 	"github.com/open-mrp/apikit/field"
+	"github.com/open-mrp/apikit/metadata"
 	"github.com/open-mrp/apikit/pagination"
 )
 

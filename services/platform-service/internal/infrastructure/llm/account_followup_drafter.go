@@ -10,7 +10,7 @@ import (
 	"time"
 
 	"github.com/open-mrp/api/services/platform-service/internal/domain"
-	"github.com/open-mrp/api/shared/tracing"
+	"github.com/open-mrp/apikit/tracing"
 
 	"github.com/anthropics/anthropic-sdk-go"
 	"github.com/anthropics/anthropic-sdk-go/option"

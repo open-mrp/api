@@ -9,9 +9,9 @@ import (
 	"github.com/open-mrp/api/services/core-service/internal/domain"
 	"github.com/open-mrp/api/shared/appctx"
 	"github.com/open-mrp/api/shared/constants"
-	apierror "github.com/open-mrp/api/shared/errors"
 	"github.com/open-mrp/api/shared/id"
-	"github.com/open-mrp/api/shared/tracing"
+	apierror "github.com/open-mrp/apikit/apierror"
+	"github.com/open-mrp/apikit/tracing"
 )
 
 // portalRegistrationSessionTTL bounds how long an incomplete session can be resumed. Applied logically at read time (no cleanup job), mirroring the SaaS registration session.
@@ -74,7 +74,7 @@ func (s *portalRegistrationSessionSvcImpl) getOwned(ctx context.Context, userID,
 		return nil, apiErr
 	}
 	if session == nil {
-		return nil, apierror.NewResourceNotFoundError("Registration session not found.")
+		return nil, apierror.NewNotFoundError("Registration session not found.")
 	}
 	if session.UserID != userID {
 		return nil, apierror.NewAuthorizationError("You are not authorized to access this registration session.")
@@ -134,7 +134,7 @@ func (s *portalRegistrationSessionSvcImpl) GetSession(ctx context.Context, typeI
 	}
 	// An expired, still-incomplete session reads as not found.
 	if session.CompletedAt == nil && session.AbandonedAt == nil && time.Since(session.CreatedAt) >= portalRegistrationSessionTTL {
-		return nil, tracing.Trace(span, apierror.NewResourceNotFoundError("Registration session has expired."))
+		return nil, tracing.Trace(span, apierror.NewNotFoundError("Registration session has expired."))
 	}
 	return session, nil
 }

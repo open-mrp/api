@@ -12,9 +12,9 @@ import (
 	"github.com/open-mrp/api/shared/appctx"
 	"github.com/open-mrp/api/shared/audit"
 	"github.com/open-mrp/api/shared/constants"
-	apierror "github.com/open-mrp/api/shared/errors"
 	"github.com/open-mrp/api/shared/id"
-	"github.com/open-mrp/api/shared/tracing"
+	apierror "github.com/open-mrp/apikit/apierror"
+	"github.com/open-mrp/apikit/tracing"
 )
 
 // messageExternalSender is stashed on an inbound email message's metadata so the read, chat-history, and
@@ -74,7 +74,7 @@ func (s *conversationSvcImpl) IngestInboundEmail(ctx context.Context, in domain.
 	defer span.End()
 
 	if in.RfcMessageID == "" {
-		return tracing.Trace(span, apierror.NewParameterMissingError("An rfc message id is required.", "rfc_message_id"))
+		return tracing.Trace(span, apierror.NewParameterMissingError("rfc_message_id", "An rfc message id is required."))
 	}
 
 	// Resolve the inbox the mail was delivered to, trying every candidate recipient. Unknown/disabled
@@ -98,7 +98,7 @@ func (s *conversationSvcImpl) IngestInboundEmail(ctx context.Context, in domain.
 	// Redelivery dedup: if this rfc Message-ID is already recorded, ack and skip.
 	if _, apiErr := s.repoFactory.NewEmailMessageRepo().GetByRfcID(ctx, in.RfcMessageID); apiErr == nil {
 		return nil
-	} else if apiErr.Code != apierror.ErrorCodeResourceNotFound {
+	} else if apiErr.Code != apierror.CodeResourceNotFound {
 		return tracing.Trace(span, apiErr)
 	}
 
@@ -108,7 +108,7 @@ func (s *conversationSvcImpl) IngestInboundEmail(ctx context.Context, in domain.
 		match, apiErr := s.repoFactory.NewEmailMessageRepo().FindThreadConversation(ctx, candidates)
 		if apiErr == nil {
 			conversationID = match.ConversationID
-		} else if apiErr.Code != apierror.ErrorCodeResourceNotFound {
+		} else if apiErr.Code != apierror.CodeResourceNotFound {
 			return tracing.Trace(span, apiErr)
 		}
 	}
@@ -196,7 +196,7 @@ func (s *conversationSvcImpl) IngestInboundEmail(ctx context.Context, in domain.
 			return emErr
 		}
 		if !emInserted {
-			return apierror.NewResourceConflictError("This email was already ingested.")
+			return apierror.NewConflictError("This email was already ingested.")
 		}
 
 		if rtErr := s.fanoutMessageRealtime(txCtx, f, conversationID, accountID, messageID, seq, string(constants.MessageVisibilityExternal)); rtErr != nil {
@@ -211,7 +211,7 @@ func (s *conversationSvcImpl) IngestInboundEmail(ctx context.Context, in domain.
 	})
 	if apiErr != nil {
 		// A losing concurrent delivery rolled back; treat as success so the message is acked.
-		if apiErr.Code == apierror.ErrorCodeResourceConflict {
+		if apiErr.Code == apierror.CodeResourceConflict {
 			return nil
 		}
 		return tracing.Trace(span, apiErr)
@@ -255,7 +255,7 @@ func (s *conversationSvcImpl) resolveInbox(ctx context.Context, recipients []str
 		if apiErr == nil {
 			return inbox, nil
 		}
-		if apiErr.Code != apierror.ErrorCodeResourceNotFound {
+		if apiErr.Code != apierror.CodeResourceNotFound {
 			return nil, apiErr
 		}
 	}

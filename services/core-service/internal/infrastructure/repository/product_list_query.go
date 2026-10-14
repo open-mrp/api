@@ -8,7 +8,7 @@ import (
 
 	"github.com/open-mrp/api/services/core-service/internal/domain"
 	"github.com/open-mrp/api/services/core-service/internal/infrastructure/sqlc"
-	"github.com/open-mrp/api/shared/db"
+	"github.com/open-mrp/api/shared/catalogsearch"
 )
 
 const productListColumns = `
@@ -32,7 +32,7 @@ type productListQuery struct {
 // newProductListQuery applies every filter but the page's cursor. lineIDs are the product lines the
 // products must be on, or nil for any.
 func newProductListQuery(params domain.ListProductsFullParams, lineIDs []string) *productListQuery {
-	q := &productListQuery{catalogFilter: catalogFilter{search: db.NewCatalogSearch(params.Query)}}
+	q := &productListQuery{catalogFilter: catalogFilter{search: catalogsearch.New(params.Query)}}
 	q.add("i.account_id = ?", params.AccountID)
 	q.add("i.deleted_at IS NULL")
 	// The page holds only items the list hydrates, which inner-joins the category: one whose category was

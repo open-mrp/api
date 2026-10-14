@@ -9,7 +9,7 @@ import (
 	factorymock "github.com/open-mrp/api/services/auth-service/internal/domain/mock/factory"
 	repositorymock "github.com/open-mrp/api/services/auth-service/internal/domain/mock/repository"
 	"github.com/open-mrp/api/services/auth-service/internal/testutil"
-	apierror "github.com/open-mrp/api/shared/errors"
+	apierror "github.com/open-mrp/apikit/apierror"
 
 	"github.com/stretchr/testify/suite"
 	"go.uber.org/mock/gomock"
@@ -80,7 +80,7 @@ func (suite *RefreshTokenMedTestSuite) TestValidateRefreshToken_InvalidToken() {
 	ctx := context.Background()
 	userID, err := suite.refreshTokenMed.Validate(ctx, "invalid-refresh-token")
 	suite.NotNil(err)
-	suite.Equal(apierror.ErrorCodeInvalidCredentials, err.Code)
+	suite.Equal(apierror.CodeInvalidCredentials, err.Code)
 	suite.Equal("", userID)
 }
 

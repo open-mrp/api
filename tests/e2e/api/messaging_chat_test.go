@@ -31,7 +31,7 @@ var conversationIncludeQuery = url.Values{"include": {"group", "participants", "
 // assertions read.
 var participantIncludeQuery = url.Values{"include": {"participants"}}
 
-var messageIncludeQuery = url.Values{"include": {"sender", "author", "attachments", "resource"}}
+var messageIncludeQuery = url.Values{"include": {"sender", "author", "attachments", "related.record"}}
 
 // withQuery appends an encoded query string to a path (for include= on POST/PUT actions).
 func withQuery(path string, q url.Values) string {
@@ -62,12 +62,11 @@ func listData(m map[string]any, key string) ([]any, bool) {
 	return data, ok
 }
 
-// createDM creates (or returns the existing) direct message with the target account_user.
+// createDM starts a new direct message with the target account_user.
 func createDM(t *testing.T, c *Client, targetAccountUserID string) map[string]any {
 	t.Helper()
 	resp, err := c.PostFull(withQuery(conversationsPath, conversationIncludeQuery), map[string]any{
-		"type":                         "direct_message",
-		"participant_account_user_ids": []string{targetAccountUserID},
+		"participants": []map[string]any{{"account_user_id": targetAccountUserID}},
 	}, newIdempotencyKey())
 	require.NoError(t, err)
 	requireStatus(t, 201, resp.StatusCode, resp.Body)
@@ -86,7 +85,7 @@ func sendMessage(t *testing.T, c *Client, conversationID, body, clientMessageID 
 	return parseJSON(resp.Body)
 }
 
-func TestChat_CreateDMIsDeduped(t *testing.T) {
+func TestChat_CreateDMAlwaysStartsANewConversation(t *testing.T) {
 	t.Parallel()
 	user := chatUserClient(t)
 	dm := createDM(t, user, SeedAccountUser2ID)
@@ -95,9 +94,15 @@ func TestChat_CreateDMIsDeduped(t *testing.T) {
 	id := jsonField(dm, "id")
 	assertIDFormat(t, id, "cv")
 
-	// Creating the same DM again returns the same conversation (deduped, not a duplicate).
+	// Every create starts a new conversation, even with the same person.
 	again := createDM(t, user, SeedAccountUser2ID)
-	assert.Equal(t, id, jsonField(again, "id"), "a repeat DM create must return the existing conversation")
+	assert.NotEqual(t, id, jsonField(again, "id"), "a repeat create must start a new conversation")
+
+	// participant_ids[] with limit=1 finds the latest conversation with them.
+	list, _, err := user.GetList(conversationsPath, url.Values{"participant_ids[]": {SeedAccountUser2ID}, "limit": {"1"}})
+	require.NoError(t, err)
+	require.Len(t, list.Data, 1)
+	assert.Equal(t, jsonField(again, "id"), jsonField(parseJSON(list.Data[0]), "id"), "the newest conversation with them comes first")
 
 	// Both users appear as participants.
 	participants, ok := listData(dm, "participants")
@@ -177,7 +182,7 @@ func TestChat_UnreadAndReadCursor(t *testing.T) {
 		}
 		requireStatus(t, 200, resp.StatusCode, resp.Body)
 		convForOther = parseJSON(resp.Body)
-		if jsonField(convForOther, "unread") == "0" {
+		if jsonField(convForOther, "unread_count") == "0" {
 			return fmt.Errorf("expected unread > 0 for the recipient")
 		}
 		return nil
@@ -187,7 +192,7 @@ func TestChat_UnreadAndReadCursor(t *testing.T) {
 	senderResp, err := user.GetFull(conversationsPath+"/"+convID, nil)
 	require.NoError(t, err)
 	requireStatus(t, 200, senderResp.StatusCode, senderResp.Body)
-	assert.Equal(t, "0", jsonField(parseJSON(senderResp.Body), "unread"), "the author has no unread in their own conversation")
+	assert.Equal(t, "0", jsonField(parseJSON(senderResp.Body), "unread_count"), "the author has no unread in their own conversation")
 
 	// The recipient marks the conversation read up to the latest sequence → unread clears.
 	msgs, _, err := other.GetList(conversationsPath+"/"+convID+"/messages", url.Values{"limit": {"1"}})
@@ -200,7 +205,7 @@ func TestChat_UnreadAndReadCursor(t *testing.T) {
 		map[string]any{"up_to_sequence": latestSeq}, newIdempotencyKey())
 	require.NoError(t, err)
 	requireStatus(t, 200, resp.StatusCode, resp.Body)
-	assert.Equal(t, "0", jsonField(parseJSON(resp.Body), "unread"), "after marking read, unread is zero")
+	assert.Equal(t, "0", jsonField(parseJSON(resp.Body), "unread_count"), "after marking read, unread is zero")
 }
 
 func TestChat_NonParticipantCannotRead(t *testing.T) {

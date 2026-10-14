@@ -56,7 +56,6 @@ func TestConversationCreate_SeatsAdminsUnderMessagingCreateAlone(t *testing.T) {
 	creator, creatorID := customRoleChatUser(t, "messaging:create")
 
 	status, body := createConversationAs(t, creator, map[string]any{
-		"type":  "group",
 		"title": uniqueName("e2e-roles-team"),
 		"participants": []map[string]any{
 			{"account_user_id": SeedAccountUser2ID, "role": "admin"},
@@ -97,7 +96,7 @@ func TestConversationCreate_ParticipantRoleRefusals(t *testing.T) {
 	creator, creatorID := customRoleChatUser(t, "messaging:create")
 	updater, _ := customRoleChatUser(t, "messaging:update")
 	group := func(participants ...map[string]any) map[string]any {
-		return map[string]any{"type": "group", "title": uniqueName("e2e-roles-ref"), "participants": participants}
+		return map[string]any{"title": uniqueName("e2e-roles-ref"), "participants": participants}
 	}
 
 	cases := []struct {
@@ -114,12 +113,8 @@ func TestConversationCreate_ParticipantRoleRefusals(t *testing.T) {
 			map[string]any{"account_user_id": SeedAccountUser2ID, "role": "admin"},
 			map[string]any{"account_user_id": SeedAccountUser2ID, "role": "viewer"},
 		), http.StatusUnprocessableEntity, "validation_failed", "participants[1].account_user_id"},
-		{"an account user that does not exist", creator, group(map[string]any{"account_user_id": "acus_01e2edoesnotexist0", "role": "admin"}), http.StatusBadRequest, "parameter_invalid", "participants[0].account_user_id"},
-		{"no role", creator, group(map[string]any{"account_user_id": SeedAccountUser2ID}), http.StatusUnprocessableEntity, "", "participants[0].role"},
-		{"roles on a direct message", creator, map[string]any{
-			"type": "direct_message", "participant_account_user_ids": []string{SeedAccountUser2ID},
-			"participants": []map[string]any{{"account_user_id": SeedAccountUser2ID, "role": "admin"}},
-		}, http.StatusUnprocessableEntity, "validation_failed", "participants"},
+		{"an account user that does not exist", creator, group(map[string]any{"account_user_id": "acus_01e2edoesnotexist0", "role": "admin"}), http.StatusUnprocessableEntity, "validation_failed", "participants[0].account_user_id"},
+		{"no account user", creator, group(map[string]any{"role": "admin"}), http.StatusUnprocessableEntity, "validation_failed", "participants[0].account_user_id"},
 	}
 	for _, tc := range cases {
 		status, body := createConversationAs(t, tc.client, tc.body)

@@ -43,8 +43,8 @@ func TestCovMessagingAnnouncements_AllFieldsPopulated(t *testing.T) {
 	assert.Equal(t, "All hands at 3pm.", jsonField(ann, "body"))
 	assert.Equal(t, "unseen", jsonField(ann, "status"))
 	assert.Equal(t, "high", jsonField(ann, "priority"))
-	// resource is expandable: nil without ?include=resource even though a link was set.
-	assertNilField(t, ann, "resource")
+	// resource is expandable: nil without ?include=related.record even though a link was set.
+	assertNilField(t, jsonObject(ann, "related"), "record")
 	assertValidTimestamp(t, jsonField(ann, "publish_at"), "publish_at")
 	// expires_at is unreachable via the public send API today (no field on SendNotificationRequest) — always null for API-created announcements.
 	assertNilField(t, ann, "expires_at")
@@ -54,20 +54,19 @@ func TestCovMessagingAnnouncements_AllFieldsPopulated(t *testing.T) {
 	assertValidTimestamp(t, jsonField(ann, "created_at"), "created_at")
 	assertValidTimestamp(t, jsonField(ann, "updated_at"), "updated_at")
 
-	// Mark seen with ?include=resource: the resource expandable populates on a mark action too.
-	seen, err := user.PostFull(announcementsPath+"/"+id+"/actions/seen?include=resource", map[string]any{}, newIdempotencyKey())
+	// Mark seen with ?include=related.record: the resource expandable populates on a mark action too.
+	seen, err := user.PostFull(announcementsPath+"/"+id+"/actions/seen?include=related.record", map[string]any{}, newIdempotencyKey())
 	require.NoError(t, err)
 	requireStatus(t, 200, seen.StatusCode, seen.Body)
 	seenM := parseJSON(seen.Body)
 	assert.Equal(t, "seen", jsonField(seenM, "status"))
 	assertValidTimestamp(t, jsonField(seenM, "seen_at"), "seen_at")
-	resourceObj := jsonObject(seenM, "resource")
-	require.NotNil(t, resourceObj, "resource should populate with ?include=resource: %s", string(seen.Body))
-	assertObjectField(t, resourceObj, "entity")
+	resourceObj := jsonObject(jsonObject(seenM, "related"), "record")
+	require.NotNil(t, resourceObj, "resource should populate with ?include=related.record: %s", string(seen.Body))
+	assertObjectField(t, resourceObj, "record")
 	assert.Equal(t, "sales_order", jsonField(resourceObj, "type"))
 	assert.Equal(t, SeedSalesOrderID, jsonField(resourceObj, "id"))
-	assertNilField(t, resourceObj, "name")
-	assertNilField(t, resourceObj, "handle")
+	assert.NotEmpty(t, jsonField(resourceObj, "number"))
 
 	// Mark read (no include this time).
 	read, err := user.PostFull(announcementsPath+"/"+id+"/actions/read", map[string]any{}, newIdempotencyKey())
@@ -89,12 +88,12 @@ func TestCovMessagingAnnouncements_AllFieldsPopulated(t *testing.T) {
 	assertValidTimestamp(t, jsonField(dismissM, "read_at"), "read_at")
 
 	// A dismissed announcement is still directly retrievable by id (only the active *list* excludes it); include=resource still gates the sub-field.
-	getResp, err := user.GetFull(announcementsPath+"/"+id+"?include=resource", nil)
+	getResp, err := user.GetFull(announcementsPath+"/"+id+"?include=related.record", nil)
 	require.NoError(t, err)
 	requireStatus(t, 200, getResp.StatusCode, getResp.Body)
 	getM := parseJSON(getResp.Body)
 	assert.Equal(t, "dismissed", jsonField(getM, "status"))
-	getResource := jsonObject(getM, "resource")
+	getResource := jsonObject(jsonObject(getM, "related"), "record")
 	require.NotNil(t, getResource)
 	assert.Equal(t, SeedSalesOrderID, jsonField(getResource, "id"))
 }
@@ -120,18 +119,18 @@ func TestCovMessagingAnnouncements_OmittedFieldsDefaults(t *testing.T) {
 
 	assertNilField(t, ann, "body")
 	assert.Equal(t, "normal", jsonField(ann, "priority"), "priority should default to normal when omitted")
-	assertNilField(t, ann, "resource")
+	assertNilField(t, jsonObject(ann, "related"), "record")
 	assertNilField(t, ann, "expires_at")
 	assertNilField(t, ann, "seen_at")
 	assertNilField(t, ann, "read_at")
 	assertNilField(t, ann, "dismissed_at")
 	assert.Equal(t, "unseen", jsonField(ann, "status"))
 
-	// Even with ?include=resource requested, resource stays null when no link_resource_type/id were set at send time — there is nothing stashed for resourceloaders to populate.
-	getResp, err := user.GetFull(announcementsPath+"/"+id+"?include=resource", nil)
+	// Even with ?include=related.record requested, resource stays null when no link_resource_type/id were set at send time — there is nothing stashed for resourceloaders to populate.
+	getResp, err := user.GetFull(announcementsPath+"/"+id+"?include=related.record", nil)
 	require.NoError(t, err)
 	requireStatus(t, 200, getResp.StatusCode, getResp.Body)
-	assertNilField(t, parseJSON(getResp.Body), "resource")
+	assertNilField(t, jsonObject(parseJSON(getResp.Body), "related"), "record")
 }
 
 // ── Expandable resource via list ────────────────────────────────────
@@ -151,12 +150,12 @@ func TestCovMessagingAnnouncements_ResourceExpandableViaList(t *testing.T) {
 	require.NoError(t, err)
 	requireStatus(t, 202, resp.StatusCode, resp.Body)
 
-	// Without ?include=resource: nil on the list row too.
+	// Without ?include=related.record: nil on the list row too.
 	ann := findAnnouncement(t, user, title)
-	assertNilField(t, ann, "resource")
+	assertNilField(t, jsonObject(ann, "related"), "record")
 
-	// With ?include=resource: populated on the list row.
-	list, _, err := user.GetList(announcementsPath, url.Values{"limit": {"100"}, "include": {"resource"}})
+	// With ?include=related.record: populated on the list row.
+	list, _, err := user.GetList(announcementsPath, url.Values{"limit": {"100"}, "include": {"related.record"}})
 	require.NoError(t, err)
 	var found map[string]any
 	for _, raw := range list.Data {
@@ -167,9 +166,9 @@ func TestCovMessagingAnnouncements_ResourceExpandableViaList(t *testing.T) {
 		}
 	}
 	require.NotNil(t, found, "announcement %q should appear in the include=resource list", title)
-	resourceObj := jsonObject(found, "resource")
-	require.NotNil(t, resourceObj, "resource should populate on the list row with ?include=resource")
-	assertObjectField(t, resourceObj, "entity")
+	resourceObj := jsonObject(jsonObject(found, "related"), "record")
+	require.NotNil(t, resourceObj, "resource should populate on the list row with ?include=related.record")
+	assertObjectField(t, resourceObj, "record")
 	assert.Equal(t, "sales_order", jsonField(resourceObj, "type"))
 	assert.Equal(t, SeedSalesOrderID, jsonField(resourceObj, "id"))
 }

@@ -13,10 +13,10 @@ import (
 // Coverage for the per-caller conversation visibility actions (hide/unhide) and
 // the ephemeral typing indicator — none of which had dedicated e2e tests.
 // Hiding is a per-participant flag: a hidden conversation drops out of the
-// owner's default (status=active) list and surfaces only under status=hidden,
-// without affecting the other participant's view.
+// member's default (memberships[]=active) list and surfaces only under
+// memberships[]=hidden, without affecting the other participant's view.
 
-var hiddenListQuery = url.Values{"status": {"hidden"}}
+var hiddenListQuery = url.Values{"memberships[]": {"hidden"}}
 
 func TestChat_HideAndUnhide(t *testing.T) {
 	t.Parallel()
@@ -30,12 +30,19 @@ func TestChat_HideAndUnhide(t *testing.T) {
 	require.True(t, listContainsConversation(t, member, convID, nil), "the conversation starts in the member's active list")
 
 	// Hide it for the member.
-	hideResp, err := member.PostFull(conversationsPath+"/"+convID+"/actions/hide", map[string]any{}, newIdempotencyKey())
+	hideResp, err := member.PostFull(withQuery(conversationsPath+"/"+convID+"/actions/hide", url.Values{"include": {"participants"}}), map[string]any{}, newIdempotencyKey())
 	require.NoError(t, err)
 	requireStatus(t, 200, hideResp.StatusCode, hideResp.Body)
 	hidden := parseJSON(hideResp.Body)
 	assert.Equal(t, "conversation", jsonField(hidden, "object"), "hide returns the refreshed conversation")
 	assert.Equal(t, convID, jsonField(hidden, "id"))
+	assert.Equal(t, "active", jsonField(hidden, "status"), "hiding is the member's own state, not the conversation's")
+	_, _, membership := participantInfo(t, hidden, SeedAccountUser2ID)
+	assert.Equal(t, "hidden", membership, "the member's participant reads hidden")
+	_, _, ownerMembership := participantInfo(t, hidden, SeedAccountUserID)
+	assert.Equal(t, "active", ownerMembership)
+	both := url.Values{"memberships[]": {"active", "hidden"}}
+	assert.True(t, listContainsConversation(t, member, convID, both), "asking for both memberships lists hidden conversations too")
 
 	assert.False(t, listContainsConversation(t, member, convID, nil),
 		"a hidden conversation drops out of the member's default (active) list")

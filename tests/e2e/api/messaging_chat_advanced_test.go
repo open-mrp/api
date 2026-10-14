@@ -121,7 +121,7 @@ func TestChat_BidirectionalReply(t *testing.T) {
 
 	conv, err := user.GetFull(conversationsPath+"/"+convID, nil)
 	require.NoError(t, err)
-	unread, parseErr := strconv.Atoi(jsonField(parseJSON(conv.Body), "unread"))
+	unread, parseErr := strconv.Atoi(jsonField(parseJSON(conv.Body), "unread_count"))
 	require.NoError(t, parseErr)
 	assert.GreaterOrEqual(t, unread, 1, "the reply is unread for the original sender")
 }
@@ -177,14 +177,14 @@ func TestChat_ReadCursorIsForwardOnly(t *testing.T) {
 		map[string]any{"up_to_sequence": latestSeq}, newIdempotencyKey())
 	require.NoError(t, err)
 	requireStatus(t, 200, resp.StatusCode, resp.Body)
-	assert.Equal(t, "0", jsonField(parseJSON(resp.Body), "unread"))
+	assert.Equal(t, "0", jsonField(parseJSON(resp.Body), "unread_count"))
 
 	// Marking an earlier sequence must NOT rewind the cursor.
 	resp2, err := other.PostFull(conversationsPath+"/"+convID+"/actions/read",
 		map[string]any{"up_to_sequence": 1}, newIdempotencyKey())
 	require.NoError(t, err)
 	requireStatus(t, 200, resp2.StatusCode, resp2.Body)
-	assert.Equal(t, "0", jsonField(parseJSON(resp2.Body), "unread"),
+	assert.Equal(t, "0", jsonField(parseJSON(resp2.Body), "unread_count"),
 		"a lower up_to_sequence must not rewind the read cursor")
 }
 

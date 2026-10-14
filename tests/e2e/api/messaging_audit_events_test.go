@@ -143,7 +143,7 @@ func TestEmailSender_AuditEvents(t *testing.T) {
 		return id
 	}
 	setSender := func(domainID, localPart string) string {
-		status, body, err := owner.Put(emailSenderPath, map[string]any{"email_domain_id": domainID, "local_part": localPart})
+		status, body, err := owner.Patch(emailSenderPath, map[string]any{"email_domain_id": domainID, "local_part": localPart}, newIdempotencyKey())
 		require.NoError(t, err)
 		requireStatus(t, 200, status, body)
 		return jsonField(parseJSON(body), "id")
@@ -161,7 +161,8 @@ func TestEmailSender_AuditEvents(t *testing.T) {
 
 	status, body, err := owner.Delete(emailSenderPath)
 	require.NoError(t, err)
-	requireStatus(t, 204, status, body)
+	requireStatus(t, 200, status, body)
+	assert.Equal(t, map[string]any{"id": senderID, "object": "email_sender", "deleted": true}, parseJSON(body))
 	findAuditEvent(t, owner, since, senderID, "email_sender", "delete", anyEvent)
 
 	// Deleting a domain also removes the sender bound to it, and both deletions are recorded.
@@ -258,10 +259,8 @@ func TestChatMessages_AuditEvents(t *testing.T) {
 	user := chatUserClient(t)
 
 	resp, err := user.PostFull(conversationsPath, map[string]any{
-		"type":                         "group",
-		"participant_account_user_ids": []string{SeedAccountUser2ID},
-		"topic_resource_type":          "sales_order",
-		"topic_resource_id":            SeedSalesOrderID,
+		"participants": []map[string]any{{"account_user_id": SeedAccountUser2ID}},
+		"record":       map[string]any{"type": "sales_order", "id": SeedSalesOrderID},
 	}, newIdempotencyKey())
 	require.NoError(t, err)
 	requireStatus(t, 201, resp.StatusCode, resp.Body)
@@ -270,10 +269,9 @@ func TestChatMessages_AuditEvents(t *testing.T) {
 	text := uniqueName("audited message")
 	clientMessageID := uniqueName("cmid")
 	status, body, err := user.Post(conversationsPath+"/"+convID+"/messages", map[string]any{
-		"body":               text,
-		"client_message_id":  clientMessageID,
-		"link_resource_type": "sales_order",
-		"link_resource_id":   SeedSalesOrderID,
+		"body":              text,
+		"client_message_id": clientMessageID,
+		"record":            map[string]any{"type": "sales_order", "id": SeedSalesOrderID},
 	}, newIdempotencyKey())
 	require.NoError(t, err)
 	requireStatus(t, 201, status, body)

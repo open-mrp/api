@@ -123,13 +123,13 @@ func TestAttachments_ResourceAttachment(t *testing.T) {
 	dm := createDM(t, dane, SeedAccountUser2ID)
 	convID := jsonField(dm, "id")
 
-	// attachments.resource is expandable — request the nested include so the linked entity is materialized.
-	attachmentIncludeQuery := url.Values{"include": {"attachments", "attachments.resource"}}
+	// attachments.record is expandable — request the nested include so the linked record's stub is loaded.
+	attachmentIncludeQuery := url.Values{"include": {"attachments", "attachments.record"}}
 	resp, err := dane.PostFull(withQuery(conversationsPath+"/"+convID+"/messages", attachmentIncludeQuery), map[string]any{
 		"body":              "linking an order",
 		"client_message_id": uniqueName("cmid"),
 		"attachments": []map[string]any{
-			{"kind": "resource", "resource_type": "sales_order", "resource_id": "so_01h9z8q1w2e3r4t5y6u7i8o9"},
+			{"kind": "resource", "record": map[string]any{"type": "sales_order", "id": SeedSalesOrderID}},
 		},
 	}, newIdempotencyKey())
 	require.NoError(t, err)
@@ -139,7 +139,10 @@ func TestAttachments_ResourceAttachment(t *testing.T) {
 	require.Len(t, atts, 1)
 	att, _ := atts[0].(map[string]any)
 	assert.Equal(t, "resource", jsonField(att, "kind"))
-	res, _ := att["resource"].(map[string]any)
-	require.NotNil(t, res, "resource attachment carries the linked entity")
-	assert.Equal(t, "so_01h9z8q1w2e3r4t5y6u7i8o9", jsonField(res, "id"))
+	res, _ := att["record"].(map[string]any)
+	require.NotNil(t, res, "a resource attachment carries the linked record")
+	assert.Equal(t, "record", jsonField(res, "object"))
+	assert.Equal(t, "sales_order", jsonField(res, "type"))
+	assert.Equal(t, SeedSalesOrderID, jsonField(res, "id"))
+	assert.NotEmpty(t, jsonField(res, "number"))
 }

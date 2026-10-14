@@ -78,19 +78,26 @@ func TestChat_LinkResourceOnMessage(t *testing.T) {
 	user := chatUserClient(t)
 	convID := jsonField(createDM(t, user, SeedAccountUser2ID), "id")
 
-	resp, err := user.PostFull(withQuery(conversationsPath+"/"+convID+"/messages", url.Values{"include": {"resource"}}), map[string]any{
-		"body":               uniqueName("see order"),
-		"client_message_id":  newIdempotencyKey(),
-		"link_resource_type": "sales_order",
-		"link_resource_id":   SeedSalesOrderID,
+	resp, err := user.PostFull(withQuery(conversationsPath+"/"+convID+"/messages", url.Values{"include": {"related.record"}}), map[string]any{
+		"body":              uniqueName("see order"),
+		"client_message_id": newIdempotencyKey(),
+		"record":            map[string]any{"type": "sales_order", "id": SeedSalesOrderID},
 	}, newIdempotencyKey())
 	require.NoError(t, err)
 	requireStatus(t, 201, resp.StatusCode, resp.Body)
 
 	msg := parseJSON(resp.Body)
-	resource := jsonObject(msg, "resource")
-	require.NotNil(t, resource, "a linked message carries the resource when ?include=resource")
-	assert.Equal(t, SeedSalesOrderID, jsonField(resource, "id"), "the linked resource id round-trips")
+	record := jsonObject(jsonObject(msg, "related"), "record")
+	require.NotNil(t, record, "a linked message carries the record when ?include=related.record")
+	assert.Equal(t, "record", jsonField(record, "object"))
+	assert.Equal(t, "sales_order", jsonField(record, "type"))
+	assert.Equal(t, SeedSalesOrderID, jsonField(record, "id"), "the linked record id round-trips")
+
+	// Without the include, related.record is null.
+	plain, _, err := user.GetList(conversationsPath+"/"+convID+"/messages", nil)
+	require.NoError(t, err)
+	require.NotEmpty(t, plain.Data)
+	assertNilField(t, jsonObject(parseJSON(plain.Data[0]), "related"), "record")
 }
 
 func TestChat_NonParticipantCannotSend(t *testing.T) {

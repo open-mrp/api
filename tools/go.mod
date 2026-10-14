@@ -10,8 +10,8 @@ replace github.com/open-mrp/api => ../
 // Required by tools/apidocs (OpenAPI spec generator)
 require (
 	github.com/go-sql-driver/mysql v1.10.1
-	github.com/ohler55/ojg v1.28.6
 	github.com/open-mrp/api v1.1.6
+	github.com/open-mrp/apikit v0.2.0
 	github.com/stretchr/testify v1.12.1
 	golang.org/x/tools v0.51.0
 	gopkg.in/yaml.v3 v3.0.1
@@ -40,8 +40,10 @@ require (
 	github.com/lmittmann/tint v1.1.3 // indirect
 	github.com/matoous/go-nanoid/v2 v2.1.0 // indirect
 	github.com/mattn/go-isatty v0.0.21 // indirect
+	github.com/ohler55/ojg v1.28.7 // indirect
 	github.com/planetscale/vtprotobuf v0.6.1-0.20250313105119-ba97887b0a25 // indirect
 	github.com/rabbitmq/amqp091-go v1.15.0 // indirect
+	github.com/redis/go-redis/v9 v9.23.0 // indirect
 	github.com/richardlehane/mscfb v1.0.8 // indirect
 	github.com/richardlehane/msoleps v1.0.6 // indirect
 	github.com/shopspring/decimal v1.5.0 // indirect
@@ -65,6 +67,7 @@ require (
 	go.opentelemetry.io/otel/sdk/metric v1.47.0 // indirect
 	go.opentelemetry.io/otel/trace v1.47.0 // indirect
 	go.opentelemetry.io/proto/otlp v1.11.0 // indirect
+	go.uber.org/atomic v1.12.0 // indirect
 	go.yaml.in/yaml/v3 v3.0.5 // indirect
 	golang.org/x/crypto v0.57.0 // indirect
 	golang.org/x/mod v0.41.0 // indirect

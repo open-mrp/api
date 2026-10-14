@@ -85,7 +85,7 @@ func (e *UpdateProductLineEndpoint) Materialize() *apiendpoint.APIEndpoint[*Upda
 		},
 		IncludeConfig: apiendpoint.IncludesFor(apiendpoint.IncludesParams{
 			ObjectType: constants.ObjectTypeProductLine,
-			Fields:     []string{"owner", "owner.account", "unit_group", "default_lot", "default_lot.unit"},
+			Fields:     []string{"owner", "owner.account", "unit_group", "default_lot"},
 		}),
 	})
 }

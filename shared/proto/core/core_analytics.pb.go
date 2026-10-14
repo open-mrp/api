@@ -3028,8 +3028,8 @@ type ShippingTermInfo struct {
 	Id                        string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
 	Name                      string                 `protobuf:"bytes,2,opt,name=name,proto3" json:"name,omitempty"`
 	Type                      string                 `protobuf:"bytes,3,opt,name=type,proto3" json:"type,omitempty"`
-	FlatRate                  *QuantityInfo          `protobuf:"bytes,4,opt,name=flat_rate,json=flatRate,proto3,oneof" json:"flat_rate,omitempty"`
-	MinimumOrderValue         *QuantityInfo          `protobuf:"bytes,5,opt,name=minimum_order_value,json=minimumOrderValue,proto3,oneof" json:"minimum_order_value,omitempty"`
+	FlatRate                  *Money                 `protobuf:"bytes,10,opt,name=flat_rate,json=flatRate,proto3" json:"flat_rate,omitempty"`
+	MinimumOrderValue         *Money                 `protobuf:"bytes,11,opt,name=minimum_order_value,json=minimumOrderValue,proto3" json:"minimum_order_value,omitempty"`
 	FreeShippingServiceLevels []*ServiceLevelInfo    `protobuf:"bytes,6,rep,name=free_shipping_service_levels,json=freeShippingServiceLevels,proto3" json:"free_shipping_service_levels,omitempty"`
 	CreatedAt                 *timestamppb.Timestamp `protobuf:"bytes,7,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
 	UpdatedAt                 *timestamppb.Timestamp `protobuf:"bytes,8,opt,name=updated_at,json=updatedAt,proto3" json:"updated_at,omitempty"`
@@ -3089,14 +3089,14 @@ func (x *ShippingTermInfo) GetType() string {
 	return ""
 }
 
-func (x *ShippingTermInfo) GetFlatRate() *QuantityInfo {
+func (x *ShippingTermInfo) GetFlatRate() *Money {
 	if x != nil {
 		return x.FlatRate
 	}
 	return nil
 }
 
-func (x *ShippingTermInfo) GetMinimumOrderValue() *QuantityInfo {
+func (x *ShippingTermInfo) GetMinimumOrderValue() *Money {
 	if x != nil {
 		return x.MinimumOrderValue
 	}
@@ -3399,72 +3399,12 @@ func (x *QuantityInput) GetUnitId() string {
 	return ""
 }
 
-type CreateRateInput struct {
-	state             protoimpl.MessageState `protogen:"open.v1"`
-	Value             string                 `protobuf:"bytes,1,opt,name=value,proto3" json:"value,omitempty"`
-	NumeratorUnitId   string                 `protobuf:"bytes,2,opt,name=numerator_unit_id,json=numeratorUnitId,proto3" json:"numerator_unit_id,omitempty"`
-	DenominatorUnitId string                 `protobuf:"bytes,3,opt,name=denominator_unit_id,json=denominatorUnitId,proto3" json:"denominator_unit_id,omitempty"`
-	unknownFields     protoimpl.UnknownFields
-	sizeCache         protoimpl.SizeCache
-}
-
-func (x *CreateRateInput) Reset() {
-	*x = CreateRateInput{}
-	mi := &file_core_core_analytics_proto_msgTypes[50]
-	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-	ms.StoreMessageInfo(mi)
-}
-
-func (x *CreateRateInput) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*CreateRateInput) ProtoMessage() {}
-
-func (x *CreateRateInput) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_analytics_proto_msgTypes[50]
-	if x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-// Deprecated: Use CreateRateInput.ProtoReflect.Descriptor instead.
-func (*CreateRateInput) Descriptor() ([]byte, []int) {
-	return file_core_core_analytics_proto_rawDescGZIP(), []int{50}
-}
-
-func (x *CreateRateInput) GetValue() string {
-	if x != nil {
-		return x.Value
-	}
-	return ""
-}
-
-func (x *CreateRateInput) GetNumeratorUnitId() string {
-	if x != nil {
-		return x.NumeratorUnitId
-	}
-	return ""
-}
-
-func (x *CreateRateInput) GetDenominatorUnitId() string {
-	if x != nil {
-		return x.DenominatorUnitId
-	}
-	return ""
-}
-
 type CreateShippingTermRequest struct {
 	state                       protoimpl.MessageState `protogen:"open.v1"`
 	Name                        string                 `protobuf:"bytes,1,opt,name=name,proto3" json:"name,omitempty"`
 	Type                        string                 `protobuf:"bytes,2,opt,name=type,proto3" json:"type,omitempty"`
-	FlatRate                    *QuantityInput         `protobuf:"bytes,3,opt,name=flat_rate,json=flatRate,proto3,oneof" json:"flat_rate,omitempty"`
-	MinimumOrderValue           *QuantityInput         `protobuf:"bytes,4,opt,name=minimum_order_value,json=minimumOrderValue,proto3,oneof" json:"minimum_order_value,omitempty"`
+	FlatRate                    *Money                 `protobuf:"bytes,7,opt,name=flat_rate,json=flatRate,proto3" json:"flat_rate,omitempty"`
+	MinimumOrderValue           *Money                 `protobuf:"bytes,8,opt,name=minimum_order_value,json=minimumOrderValue,proto3" json:"minimum_order_value,omitempty"`
 	FreeShippingServiceLevelIds []string               `protobuf:"bytes,5,rep,name=free_shipping_service_level_ids,json=freeShippingServiceLevelIds,proto3" json:"free_shipping_service_level_ids,omitempty"`
 	Includes                    []string               `protobuf:"bytes,6,rep,name=includes,proto3" json:"includes,omitempty"`
 	unknownFields               protoimpl.UnknownFields
@@ -3473,7 +3413,7 @@ type CreateShippingTermRequest struct {
 
 func (x *CreateShippingTermRequest) Reset() {
 	*x = CreateShippingTermRequest{}
-	mi := &file_core_core_analytics_proto_msgTypes[51]
+	mi := &file_core_core_analytics_proto_msgTypes[50]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3485,7 +3425,7 @@ func (x *CreateShippingTermRequest) String() string {
 func (*CreateShippingTermRequest) ProtoMessage() {}
 
 func (x *CreateShippingTermRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_analytics_proto_msgTypes[51]
+	mi := &file_core_core_analytics_proto_msgTypes[50]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3498,7 +3438,7 @@ func (x *CreateShippingTermRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CreateShippingTermRequest.ProtoReflect.Descriptor instead.
 func (*CreateShippingTermRequest) Descriptor() ([]byte, []int) {
-	return file_core_core_analytics_proto_rawDescGZIP(), []int{51}
+	return file_core_core_analytics_proto_rawDescGZIP(), []int{50}
 }
 
 func (x *CreateShippingTermRequest) GetName() string {
@@ -3515,14 +3455,14 @@ func (x *CreateShippingTermRequest) GetType() string {
 	return ""
 }
 
-func (x *CreateShippingTermRequest) GetFlatRate() *QuantityInput {
+func (x *CreateShippingTermRequest) GetFlatRate() *Money {
 	if x != nil {
 		return x.FlatRate
 	}
 	return nil
 }
 
-func (x *CreateShippingTermRequest) GetMinimumOrderValue() *QuantityInput {
+func (x *CreateShippingTermRequest) GetMinimumOrderValue() *Money {
 	if x != nil {
 		return x.MinimumOrderValue
 	}
@@ -3552,7 +3492,7 @@ type CreateShippingTermResponse struct {
 
 func (x *CreateShippingTermResponse) Reset() {
 	*x = CreateShippingTermResponse{}
-	mi := &file_core_core_analytics_proto_msgTypes[52]
+	mi := &file_core_core_analytics_proto_msgTypes[51]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3564,7 +3504,7 @@ func (x *CreateShippingTermResponse) String() string {
 func (*CreateShippingTermResponse) ProtoMessage() {}
 
 func (x *CreateShippingTermResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_analytics_proto_msgTypes[52]
+	mi := &file_core_core_analytics_proto_msgTypes[51]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3577,7 +3517,7 @@ func (x *CreateShippingTermResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CreateShippingTermResponse.ProtoReflect.Descriptor instead.
 func (*CreateShippingTermResponse) Descriptor() ([]byte, []int) {
-	return file_core_core_analytics_proto_rawDescGZIP(), []int{52}
+	return file_core_core_analytics_proto_rawDescGZIP(), []int{51}
 }
 
 func (x *CreateShippingTermResponse) GetShippingTerm() *ShippingTermInfo {
@@ -3592,8 +3532,8 @@ type UpdateShippingTermRequest struct {
 	Id                          string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
 	Name                        *string                `protobuf:"bytes,2,opt,name=name,proto3,oneof" json:"name,omitempty"`
 	Type                        *string                `protobuf:"bytes,3,opt,name=type,proto3,oneof" json:"type,omitempty"`
-	FlatRate                    *QuantityPatch         `protobuf:"bytes,4,opt,name=flat_rate,json=flatRate,proto3,oneof" json:"flat_rate,omitempty"`
-	MinimumOrderValue           *QuantityPatch         `protobuf:"bytes,5,opt,name=minimum_order_value,json=minimumOrderValue,proto3,oneof" json:"minimum_order_value,omitempty"`
+	FlatRate                    *MoneyPatch            `protobuf:"bytes,8,opt,name=flat_rate,json=flatRate,proto3" json:"flat_rate,omitempty"`
+	MinimumOrderValue           *MoneyPatch            `protobuf:"bytes,9,opt,name=minimum_order_value,json=minimumOrderValue,proto3" json:"minimum_order_value,omitempty"`
 	FreeShippingServiceLevelIds *StringListPatch       `protobuf:"bytes,6,opt,name=free_shipping_service_level_ids,json=freeShippingServiceLevelIds,proto3,oneof" json:"free_shipping_service_level_ids,omitempty"`
 	Includes                    []string               `protobuf:"bytes,7,rep,name=includes,proto3" json:"includes,omitempty"`
 	unknownFields               protoimpl.UnknownFields
@@ -3602,7 +3542,7 @@ type UpdateShippingTermRequest struct {
 
 func (x *UpdateShippingTermRequest) Reset() {
 	*x = UpdateShippingTermRequest{}
-	mi := &file_core_core_analytics_proto_msgTypes[53]
+	mi := &file_core_core_analytics_proto_msgTypes[52]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3614,7 +3554,7 @@ func (x *UpdateShippingTermRequest) String() string {
 func (*UpdateShippingTermRequest) ProtoMessage() {}
 
 func (x *UpdateShippingTermRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_analytics_proto_msgTypes[53]
+	mi := &file_core_core_analytics_proto_msgTypes[52]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3627,7 +3567,7 @@ func (x *UpdateShippingTermRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use UpdateShippingTermRequest.ProtoReflect.Descriptor instead.
 func (*UpdateShippingTermRequest) Descriptor() ([]byte, []int) {
-	return file_core_core_analytics_proto_rawDescGZIP(), []int{53}
+	return file_core_core_analytics_proto_rawDescGZIP(), []int{52}
 }
 
 func (x *UpdateShippingTermRequest) GetId() string {
@@ -3651,14 +3591,14 @@ func (x *UpdateShippingTermRequest) GetType() string {
 	return ""
 }
 
-func (x *UpdateShippingTermRequest) GetFlatRate() *QuantityPatch {
+func (x *UpdateShippingTermRequest) GetFlatRate() *MoneyPatch {
 	if x != nil {
 		return x.FlatRate
 	}
 	return nil
 }
 
-func (x *UpdateShippingTermRequest) GetMinimumOrderValue() *QuantityPatch {
+func (x *UpdateShippingTermRequest) GetMinimumOrderValue() *MoneyPatch {
 	if x != nil {
 		return x.MinimumOrderValue
 	}
@@ -3688,7 +3628,7 @@ type UpdateShippingTermResponse struct {
 
 func (x *UpdateShippingTermResponse) Reset() {
 	*x = UpdateShippingTermResponse{}
-	mi := &file_core_core_analytics_proto_msgTypes[54]
+	mi := &file_core_core_analytics_proto_msgTypes[53]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3700,7 +3640,7 @@ func (x *UpdateShippingTermResponse) String() string {
 func (*UpdateShippingTermResponse) ProtoMessage() {}
 
 func (x *UpdateShippingTermResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_analytics_proto_msgTypes[54]
+	mi := &file_core_core_analytics_proto_msgTypes[53]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3713,7 +3653,7 @@ func (x *UpdateShippingTermResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use UpdateShippingTermResponse.ProtoReflect.Descriptor instead.
 func (*UpdateShippingTermResponse) Descriptor() ([]byte, []int) {
-	return file_core_core_analytics_proto_rawDescGZIP(), []int{54}
+	return file_core_core_analytics_proto_rawDescGZIP(), []int{53}
 }
 
 func (x *UpdateShippingTermResponse) GetShippingTerm() *ShippingTermInfo {
@@ -3732,7 +3672,7 @@ type DeleteShippingTermRequest struct {
 
 func (x *DeleteShippingTermRequest) Reset() {
 	*x = DeleteShippingTermRequest{}
-	mi := &file_core_core_analytics_proto_msgTypes[55]
+	mi := &file_core_core_analytics_proto_msgTypes[54]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3744,7 +3684,7 @@ func (x *DeleteShippingTermRequest) String() string {
 func (*DeleteShippingTermRequest) ProtoMessage() {}
 
 func (x *DeleteShippingTermRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_analytics_proto_msgTypes[55]
+	mi := &file_core_core_analytics_proto_msgTypes[54]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3757,7 +3697,7 @@ func (x *DeleteShippingTermRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use DeleteShippingTermRequest.ProtoReflect.Descriptor instead.
 func (*DeleteShippingTermRequest) Descriptor() ([]byte, []int) {
-	return file_core_core_analytics_proto_rawDescGZIP(), []int{55}
+	return file_core_core_analytics_proto_rawDescGZIP(), []int{54}
 }
 
 func (x *DeleteShippingTermRequest) GetId() string {
@@ -3776,7 +3716,7 @@ type BatchGetShippingTermsByIDsRequest struct {
 
 func (x *BatchGetShippingTermsByIDsRequest) Reset() {
 	*x = BatchGetShippingTermsByIDsRequest{}
-	mi := &file_core_core_analytics_proto_msgTypes[56]
+	mi := &file_core_core_analytics_proto_msgTypes[55]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3788,7 +3728,7 @@ func (x *BatchGetShippingTermsByIDsRequest) String() string {
 func (*BatchGetShippingTermsByIDsRequest) ProtoMessage() {}
 
 func (x *BatchGetShippingTermsByIDsRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_analytics_proto_msgTypes[56]
+	mi := &file_core_core_analytics_proto_msgTypes[55]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3801,7 +3741,7 @@ func (x *BatchGetShippingTermsByIDsRequest) ProtoReflect() protoreflect.Message 
 
 // Deprecated: Use BatchGetShippingTermsByIDsRequest.ProtoReflect.Descriptor instead.
 func (*BatchGetShippingTermsByIDsRequest) Descriptor() ([]byte, []int) {
-	return file_core_core_analytics_proto_rawDescGZIP(), []int{56}
+	return file_core_core_analytics_proto_rawDescGZIP(), []int{55}
 }
 
 func (x *BatchGetShippingTermsByIDsRequest) GetIds() []string {
@@ -3820,7 +3760,7 @@ type BatchGetShippingTermsByIDsResponse struct {
 
 func (x *BatchGetShippingTermsByIDsResponse) Reset() {
 	*x = BatchGetShippingTermsByIDsResponse{}
-	mi := &file_core_core_analytics_proto_msgTypes[57]
+	mi := &file_core_core_analytics_proto_msgTypes[56]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3832,7 +3772,7 @@ func (x *BatchGetShippingTermsByIDsResponse) String() string {
 func (*BatchGetShippingTermsByIDsResponse) ProtoMessage() {}
 
 func (x *BatchGetShippingTermsByIDsResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_analytics_proto_msgTypes[57]
+	mi := &file_core_core_analytics_proto_msgTypes[56]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3845,7 +3785,7 @@ func (x *BatchGetShippingTermsByIDsResponse) ProtoReflect() protoreflect.Message
 
 // Deprecated: Use BatchGetShippingTermsByIDsResponse.ProtoReflect.Descriptor instead.
 func (*BatchGetShippingTermsByIDsResponse) Descriptor() ([]byte, []int) {
-	return file_core_core_analytics_proto_rawDescGZIP(), []int{57}
+	return file_core_core_analytics_proto_rawDescGZIP(), []int{56}
 }
 
 func (x *BatchGetShippingTermsByIDsResponse) GetShippingTerms() []*ShippingTermInfo {
@@ -3873,7 +3813,7 @@ type GeolocationInfo struct {
 
 func (x *GeolocationInfo) Reset() {
 	*x = GeolocationInfo{}
-	mi := &file_core_core_analytics_proto_msgTypes[58]
+	mi := &file_core_core_analytics_proto_msgTypes[57]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3885,7 +3825,7 @@ func (x *GeolocationInfo) String() string {
 func (*GeolocationInfo) ProtoMessage() {}
 
 func (x *GeolocationInfo) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_analytics_proto_msgTypes[58]
+	mi := &file_core_core_analytics_proto_msgTypes[57]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3898,7 +3838,7 @@ func (x *GeolocationInfo) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GeolocationInfo.ProtoReflect.Descriptor instead.
 func (*GeolocationInfo) Descriptor() ([]byte, []int) {
-	return file_core_core_analytics_proto_rawDescGZIP(), []int{58}
+	return file_core_core_analytics_proto_rawDescGZIP(), []int{57}
 }
 
 func (x *GeolocationInfo) GetId() string {
@@ -3989,7 +3929,7 @@ type AddressInfo struct {
 
 func (x *AddressInfo) Reset() {
 	*x = AddressInfo{}
-	mi := &file_core_core_analytics_proto_msgTypes[59]
+	mi := &file_core_core_analytics_proto_msgTypes[58]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -4001,7 +3941,7 @@ func (x *AddressInfo) String() string {
 func (*AddressInfo) ProtoMessage() {}
 
 func (x *AddressInfo) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_analytics_proto_msgTypes[59]
+	mi := &file_core_core_analytics_proto_msgTypes[58]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -4014,7 +3954,7 @@ func (x *AddressInfo) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use AddressInfo.ProtoReflect.Descriptor instead.
 func (*AddressInfo) Descriptor() ([]byte, []int) {
-	return file_core_core_analytics_proto_rawDescGZIP(), []int{59}
+	return file_core_core_analytics_proto_rawDescGZIP(), []int{58}
 }
 
 func (x *AddressInfo) GetId() string {
@@ -4089,7 +4029,7 @@ type GetAddressRequest struct {
 
 func (x *GetAddressRequest) Reset() {
 	*x = GetAddressRequest{}
-	mi := &file_core_core_analytics_proto_msgTypes[60]
+	mi := &file_core_core_analytics_proto_msgTypes[59]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -4101,7 +4041,7 @@ func (x *GetAddressRequest) String() string {
 func (*GetAddressRequest) ProtoMessage() {}
 
 func (x *GetAddressRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_analytics_proto_msgTypes[60]
+	mi := &file_core_core_analytics_proto_msgTypes[59]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -4114,7 +4054,7 @@ func (x *GetAddressRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetAddressRequest.ProtoReflect.Descriptor instead.
 func (*GetAddressRequest) Descriptor() ([]byte, []int) {
-	return file_core_core_analytics_proto_rawDescGZIP(), []int{60}
+	return file_core_core_analytics_proto_rawDescGZIP(), []int{59}
 }
 
 func (x *GetAddressRequest) GetId() string {
@@ -4133,7 +4073,7 @@ type GetAddressResponse struct {
 
 func (x *GetAddressResponse) Reset() {
 	*x = GetAddressResponse{}
-	mi := &file_core_core_analytics_proto_msgTypes[61]
+	mi := &file_core_core_analytics_proto_msgTypes[60]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -4145,7 +4085,7 @@ func (x *GetAddressResponse) String() string {
 func (*GetAddressResponse) ProtoMessage() {}
 
 func (x *GetAddressResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_analytics_proto_msgTypes[61]
+	mi := &file_core_core_analytics_proto_msgTypes[60]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -4158,7 +4098,7 @@ func (x *GetAddressResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetAddressResponse.ProtoReflect.Descriptor instead.
 func (*GetAddressResponse) Descriptor() ([]byte, []int) {
-	return file_core_core_analytics_proto_rawDescGZIP(), []int{61}
+	return file_core_core_analytics_proto_rawDescGZIP(), []int{60}
 }
 
 func (x *GetAddressResponse) GetAddress() *AddressInfo {
@@ -4180,7 +4120,7 @@ type ListAddressesRequest struct {
 
 func (x *ListAddressesRequest) Reset() {
 	*x = ListAddressesRequest{}
-	mi := &file_core_core_analytics_proto_msgTypes[62]
+	mi := &file_core_core_analytics_proto_msgTypes[61]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -4192,7 +4132,7 @@ func (x *ListAddressesRequest) String() string {
 func (*ListAddressesRequest) ProtoMessage() {}
 
 func (x *ListAddressesRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_analytics_proto_msgTypes[62]
+	mi := &file_core_core_analytics_proto_msgTypes[61]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -4205,7 +4145,7 @@ func (x *ListAddressesRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListAddressesRequest.ProtoReflect.Descriptor instead.
 func (*ListAddressesRequest) Descriptor() ([]byte, []int) {
-	return file_core_core_analytics_proto_rawDescGZIP(), []int{62}
+	return file_core_core_analytics_proto_rawDescGZIP(), []int{61}
 }
 
 func (x *ListAddressesRequest) GetCursor() string {
@@ -4246,7 +4186,7 @@ type ListAddressesResponse struct {
 
 func (x *ListAddressesResponse) Reset() {
 	*x = ListAddressesResponse{}
-	mi := &file_core_core_analytics_proto_msgTypes[63]
+	mi := &file_core_core_analytics_proto_msgTypes[62]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -4258,7 +4198,7 @@ func (x *ListAddressesResponse) String() string {
 func (*ListAddressesResponse) ProtoMessage() {}
 
 func (x *ListAddressesResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_analytics_proto_msgTypes[63]
+	mi := &file_core_core_analytics_proto_msgTypes[62]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -4271,7 +4211,7 @@ func (x *ListAddressesResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListAddressesResponse.ProtoReflect.Descriptor instead.
 func (*ListAddressesResponse) Descriptor() ([]byte, []int) {
-	return file_core_core_analytics_proto_rawDescGZIP(), []int{63}
+	return file_core_core_analytics_proto_rawDescGZIP(), []int{62}
 }
 
 func (x *ListAddressesResponse) GetAddresses() []*AddressInfo {
@@ -4307,7 +4247,7 @@ type CreateAddressRequest struct {
 
 func (x *CreateAddressRequest) Reset() {
 	*x = CreateAddressRequest{}
-	mi := &file_core_core_analytics_proto_msgTypes[64]
+	mi := &file_core_core_analytics_proto_msgTypes[63]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -4319,7 +4259,7 @@ func (x *CreateAddressRequest) String() string {
 func (*CreateAddressRequest) ProtoMessage() {}
 
 func (x *CreateAddressRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_analytics_proto_msgTypes[64]
+	mi := &file_core_core_analytics_proto_msgTypes[63]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -4332,7 +4272,7 @@ func (x *CreateAddressRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CreateAddressRequest.ProtoReflect.Descriptor instead.
 func (*CreateAddressRequest) Descriptor() ([]byte, []int) {
-	return file_core_core_analytics_proto_rawDescGZIP(), []int{64}
+	return file_core_core_analytics_proto_rawDescGZIP(), []int{63}
 }
 
 func (x *CreateAddressRequest) GetName() string {
@@ -4421,7 +4361,7 @@ type CreateAddressResponse struct {
 
 func (x *CreateAddressResponse) Reset() {
 	*x = CreateAddressResponse{}
-	mi := &file_core_core_analytics_proto_msgTypes[65]
+	mi := &file_core_core_analytics_proto_msgTypes[64]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -4433,7 +4373,7 @@ func (x *CreateAddressResponse) String() string {
 func (*CreateAddressResponse) ProtoMessage() {}
 
 func (x *CreateAddressResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_analytics_proto_msgTypes[65]
+	mi := &file_core_core_analytics_proto_msgTypes[64]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -4446,7 +4386,7 @@ func (x *CreateAddressResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CreateAddressResponse.ProtoReflect.Descriptor instead.
 func (*CreateAddressResponse) Descriptor() ([]byte, []int) {
-	return file_core_core_analytics_proto_rawDescGZIP(), []int{65}
+	return file_core_core_analytics_proto_rawDescGZIP(), []int{64}
 }
 
 func (x *CreateAddressResponse) GetAddress() *AddressInfo {
@@ -4476,7 +4416,7 @@ type UpdateAddressRequest struct {
 
 func (x *UpdateAddressRequest) Reset() {
 	*x = UpdateAddressRequest{}
-	mi := &file_core_core_analytics_proto_msgTypes[66]
+	mi := &file_core_core_analytics_proto_msgTypes[65]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -4488,7 +4428,7 @@ func (x *UpdateAddressRequest) String() string {
 func (*UpdateAddressRequest) ProtoMessage() {}
 
 func (x *UpdateAddressRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_analytics_proto_msgTypes[66]
+	mi := &file_core_core_analytics_proto_msgTypes[65]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -4501,7 +4441,7 @@ func (x *UpdateAddressRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use UpdateAddressRequest.ProtoReflect.Descriptor instead.
 func (*UpdateAddressRequest) Descriptor() ([]byte, []int) {
-	return file_core_core_analytics_proto_rawDescGZIP(), []int{66}
+	return file_core_core_analytics_proto_rawDescGZIP(), []int{65}
 }
 
 func (x *UpdateAddressRequest) GetId() string {
@@ -4597,7 +4537,7 @@ type UpdateAddressResponse struct {
 
 func (x *UpdateAddressResponse) Reset() {
 	*x = UpdateAddressResponse{}
-	mi := &file_core_core_analytics_proto_msgTypes[67]
+	mi := &file_core_core_analytics_proto_msgTypes[66]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -4609,7 +4549,7 @@ func (x *UpdateAddressResponse) String() string {
 func (*UpdateAddressResponse) ProtoMessage() {}
 
 func (x *UpdateAddressResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_analytics_proto_msgTypes[67]
+	mi := &file_core_core_analytics_proto_msgTypes[66]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -4622,7 +4562,7 @@ func (x *UpdateAddressResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use UpdateAddressResponse.ProtoReflect.Descriptor instead.
 func (*UpdateAddressResponse) Descriptor() ([]byte, []int) {
-	return file_core_core_analytics_proto_rawDescGZIP(), []int{67}
+	return file_core_core_analytics_proto_rawDescGZIP(), []int{66}
 }
 
 func (x *UpdateAddressResponse) GetAddress() *AddressInfo {
@@ -4641,7 +4581,7 @@ type DeleteAddressRequest struct {
 
 func (x *DeleteAddressRequest) Reset() {
 	*x = DeleteAddressRequest{}
-	mi := &file_core_core_analytics_proto_msgTypes[68]
+	mi := &file_core_core_analytics_proto_msgTypes[67]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -4653,7 +4593,7 @@ func (x *DeleteAddressRequest) String() string {
 func (*DeleteAddressRequest) ProtoMessage() {}
 
 func (x *DeleteAddressRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_analytics_proto_msgTypes[68]
+	mi := &file_core_core_analytics_proto_msgTypes[67]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -4666,7 +4606,7 @@ func (x *DeleteAddressRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use DeleteAddressRequest.ProtoReflect.Descriptor instead.
 func (*DeleteAddressRequest) Descriptor() ([]byte, []int) {
-	return file_core_core_analytics_proto_rawDescGZIP(), []int{68}
+	return file_core_core_analytics_proto_rawDescGZIP(), []int{67}
 }
 
 func (x *DeleteAddressRequest) GetId() string {
@@ -4686,7 +4626,7 @@ type BatchGetAddressesByIDsRequest struct {
 
 func (x *BatchGetAddressesByIDsRequest) Reset() {
 	*x = BatchGetAddressesByIDsRequest{}
-	mi := &file_core_core_analytics_proto_msgTypes[69]
+	mi := &file_core_core_analytics_proto_msgTypes[68]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -4698,7 +4638,7 @@ func (x *BatchGetAddressesByIDsRequest) String() string {
 func (*BatchGetAddressesByIDsRequest) ProtoMessage() {}
 
 func (x *BatchGetAddressesByIDsRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_analytics_proto_msgTypes[69]
+	mi := &file_core_core_analytics_proto_msgTypes[68]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -4711,7 +4651,7 @@ func (x *BatchGetAddressesByIDsRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use BatchGetAddressesByIDsRequest.ProtoReflect.Descriptor instead.
 func (*BatchGetAddressesByIDsRequest) Descriptor() ([]byte, []int) {
-	return file_core_core_analytics_proto_rawDescGZIP(), []int{69}
+	return file_core_core_analytics_proto_rawDescGZIP(), []int{68}
 }
 
 func (x *BatchGetAddressesByIDsRequest) GetIds() []string {
@@ -4730,7 +4670,7 @@ type BatchGetAddressesByIDsResponse struct {
 
 func (x *BatchGetAddressesByIDsResponse) Reset() {
 	*x = BatchGetAddressesByIDsResponse{}
-	mi := &file_core_core_analytics_proto_msgTypes[70]
+	mi := &file_core_core_analytics_proto_msgTypes[69]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -4742,7 +4682,7 @@ func (x *BatchGetAddressesByIDsResponse) String() string {
 func (*BatchGetAddressesByIDsResponse) ProtoMessage() {}
 
 func (x *BatchGetAddressesByIDsResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_analytics_proto_msgTypes[70]
+	mi := &file_core_core_analytics_proto_msgTypes[69]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -4755,7 +4695,7 @@ func (x *BatchGetAddressesByIDsResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use BatchGetAddressesByIDsResponse.ProtoReflect.Descriptor instead.
 func (*BatchGetAddressesByIDsResponse) Descriptor() ([]byte, []int) {
-	return file_core_core_analytics_proto_rawDescGZIP(), []int{70}
+	return file_core_core_analytics_proto_rawDescGZIP(), []int{69}
 }
 
 func (x *BatchGetAddressesByIDsResponse) GetAddresses() []*AddressInfo {
@@ -4775,7 +4715,7 @@ type AutocompleteAddressRequest struct {
 
 func (x *AutocompleteAddressRequest) Reset() {
 	*x = AutocompleteAddressRequest{}
-	mi := &file_core_core_analytics_proto_msgTypes[71]
+	mi := &file_core_core_analytics_proto_msgTypes[70]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -4787,7 +4727,7 @@ func (x *AutocompleteAddressRequest) String() string {
 func (*AutocompleteAddressRequest) ProtoMessage() {}
 
 func (x *AutocompleteAddressRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_analytics_proto_msgTypes[71]
+	mi := &file_core_core_analytics_proto_msgTypes[70]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -4800,7 +4740,7 @@ func (x *AutocompleteAddressRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use AutocompleteAddressRequest.ProtoReflect.Descriptor instead.
 func (*AutocompleteAddressRequest) Descriptor() ([]byte, []int) {
-	return file_core_core_analytics_proto_rawDescGZIP(), []int{71}
+	return file_core_core_analytics_proto_rawDescGZIP(), []int{70}
 }
 
 func (x *AutocompleteAddressRequest) GetInput() string {
@@ -4829,7 +4769,7 @@ type AddressSuggestion struct {
 
 func (x *AddressSuggestion) Reset() {
 	*x = AddressSuggestion{}
-	mi := &file_core_core_analytics_proto_msgTypes[72]
+	mi := &file_core_core_analytics_proto_msgTypes[71]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -4841,7 +4781,7 @@ func (x *AddressSuggestion) String() string {
 func (*AddressSuggestion) ProtoMessage() {}
 
 func (x *AddressSuggestion) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_analytics_proto_msgTypes[72]
+	mi := &file_core_core_analytics_proto_msgTypes[71]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -4854,7 +4794,7 @@ func (x *AddressSuggestion) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use AddressSuggestion.ProtoReflect.Descriptor instead.
 func (*AddressSuggestion) Descriptor() ([]byte, []int) {
-	return file_core_core_analytics_proto_rawDescGZIP(), []int{72}
+	return file_core_core_analytics_proto_rawDescGZIP(), []int{71}
 }
 
 func (x *AddressSuggestion) GetId() string {
@@ -4894,7 +4834,7 @@ type AutocompleteAddressResponse struct {
 
 func (x *AutocompleteAddressResponse) Reset() {
 	*x = AutocompleteAddressResponse{}
-	mi := &file_core_core_analytics_proto_msgTypes[73]
+	mi := &file_core_core_analytics_proto_msgTypes[72]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -4906,7 +4846,7 @@ func (x *AutocompleteAddressResponse) String() string {
 func (*AutocompleteAddressResponse) ProtoMessage() {}
 
 func (x *AutocompleteAddressResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_analytics_proto_msgTypes[73]
+	mi := &file_core_core_analytics_proto_msgTypes[72]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -4919,7 +4859,7 @@ func (x *AutocompleteAddressResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use AutocompleteAddressResponse.ProtoReflect.Descriptor instead.
 func (*AutocompleteAddressResponse) Descriptor() ([]byte, []int) {
-	return file_core_core_analytics_proto_rawDescGZIP(), []int{73}
+	return file_core_core_analytics_proto_rawDescGZIP(), []int{72}
 }
 
 func (x *AutocompleteAddressResponse) GetSuggestions() []*AddressSuggestion {
@@ -4939,7 +4879,7 @@ type GetAddressDetailsRequest struct {
 
 func (x *GetAddressDetailsRequest) Reset() {
 	*x = GetAddressDetailsRequest{}
-	mi := &file_core_core_analytics_proto_msgTypes[74]
+	mi := &file_core_core_analytics_proto_msgTypes[73]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -4951,7 +4891,7 @@ func (x *GetAddressDetailsRequest) String() string {
 func (*GetAddressDetailsRequest) ProtoMessage() {}
 
 func (x *GetAddressDetailsRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_analytics_proto_msgTypes[74]
+	mi := &file_core_core_analytics_proto_msgTypes[73]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -4964,7 +4904,7 @@ func (x *GetAddressDetailsRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetAddressDetailsRequest.ProtoReflect.Descriptor instead.
 func (*GetAddressDetailsRequest) Descriptor() ([]byte, []int) {
-	return file_core_core_analytics_proto_rawDescGZIP(), []int{74}
+	return file_core_core_analytics_proto_rawDescGZIP(), []int{73}
 }
 
 func (x *GetAddressDetailsRequest) GetPlaceId() string {
@@ -4996,7 +4936,7 @@ type AddressComponentsInfo struct {
 
 func (x *AddressComponentsInfo) Reset() {
 	*x = AddressComponentsInfo{}
-	mi := &file_core_core_analytics_proto_msgTypes[75]
+	mi := &file_core_core_analytics_proto_msgTypes[74]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -5008,7 +4948,7 @@ func (x *AddressComponentsInfo) String() string {
 func (*AddressComponentsInfo) ProtoMessage() {}
 
 func (x *AddressComponentsInfo) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_analytics_proto_msgTypes[75]
+	mi := &file_core_core_analytics_proto_msgTypes[74]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -5021,7 +4961,7 @@ func (x *AddressComponentsInfo) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use AddressComponentsInfo.ProtoReflect.Descriptor instead.
 func (*AddressComponentsInfo) Descriptor() ([]byte, []int) {
-	return file_core_core_analytics_proto_rawDescGZIP(), []int{75}
+	return file_core_core_analytics_proto_rawDescGZIP(), []int{74}
 }
 
 func (x *AddressComponentsInfo) GetAddressLine_1() string {
@@ -5083,7 +5023,7 @@ type GetAddressDetailsResponse struct {
 
 func (x *GetAddressDetailsResponse) Reset() {
 	*x = GetAddressDetailsResponse{}
-	mi := &file_core_core_analytics_proto_msgTypes[76]
+	mi := &file_core_core_analytics_proto_msgTypes[75]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -5095,7 +5035,7 @@ func (x *GetAddressDetailsResponse) String() string {
 func (*GetAddressDetailsResponse) ProtoMessage() {}
 
 func (x *GetAddressDetailsResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_analytics_proto_msgTypes[76]
+	mi := &file_core_core_analytics_proto_msgTypes[75]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -5108,7 +5048,7 @@ func (x *GetAddressDetailsResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetAddressDetailsResponse.ProtoReflect.Descriptor instead.
 func (*GetAddressDetailsResponse) Descriptor() ([]byte, []int) {
-	return file_core_core_analytics_proto_rawDescGZIP(), []int{76}
+	return file_core_core_analytics_proto_rawDescGZIP(), []int{75}
 }
 
 func (x *GetAddressDetailsResponse) GetAddress() *AddressComponentsInfo {
@@ -5139,7 +5079,7 @@ type ValidateAddressRequest struct {
 
 func (x *ValidateAddressRequest) Reset() {
 	*x = ValidateAddressRequest{}
-	mi := &file_core_core_analytics_proto_msgTypes[77]
+	mi := &file_core_core_analytics_proto_msgTypes[76]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -5151,7 +5091,7 @@ func (x *ValidateAddressRequest) String() string {
 func (*ValidateAddressRequest) ProtoMessage() {}
 
 func (x *ValidateAddressRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_analytics_proto_msgTypes[77]
+	mi := &file_core_core_analytics_proto_msgTypes[76]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -5164,7 +5104,7 @@ func (x *ValidateAddressRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ValidateAddressRequest.ProtoReflect.Descriptor instead.
 func (*ValidateAddressRequest) Descriptor() ([]byte, []int) {
-	return file_core_core_analytics_proto_rawDescGZIP(), []int{77}
+	return file_core_core_analytics_proto_rawDescGZIP(), []int{76}
 }
 
 func (x *ValidateAddressRequest) GetAddressLine_1() string {
@@ -5221,7 +5161,7 @@ type ValidateAddressResponse struct {
 
 func (x *ValidateAddressResponse) Reset() {
 	*x = ValidateAddressResponse{}
-	mi := &file_core_core_analytics_proto_msgTypes[78]
+	mi := &file_core_core_analytics_proto_msgTypes[77]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -5233,7 +5173,7 @@ func (x *ValidateAddressResponse) String() string {
 func (*ValidateAddressResponse) ProtoMessage() {}
 
 func (x *ValidateAddressResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_analytics_proto_msgTypes[78]
+	mi := &file_core_core_analytics_proto_msgTypes[77]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -5246,7 +5186,7 @@ func (x *ValidateAddressResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ValidateAddressResponse.ProtoReflect.Descriptor instead.
 func (*ValidateAddressResponse) Descriptor() ([]byte, []int) {
-	return file_core_core_analytics_proto_rawDescGZIP(), []int{78}
+	return file_core_core_analytics_proto_rawDescGZIP(), []int{77}
 }
 
 func (x *ValidateAddressResponse) GetIsValid() bool {
@@ -5290,7 +5230,7 @@ type AccountStatusInfo struct {
 
 func (x *AccountStatusInfo) Reset() {
 	*x = AccountStatusInfo{}
-	mi := &file_core_core_analytics_proto_msgTypes[79]
+	mi := &file_core_core_analytics_proto_msgTypes[78]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -5302,7 +5242,7 @@ func (x *AccountStatusInfo) String() string {
 func (*AccountStatusInfo) ProtoMessage() {}
 
 func (x *AccountStatusInfo) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_analytics_proto_msgTypes[79]
+	mi := &file_core_core_analytics_proto_msgTypes[78]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -5315,7 +5255,7 @@ func (x *AccountStatusInfo) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use AccountStatusInfo.ProtoReflect.Descriptor instead.
 func (*AccountStatusInfo) Descriptor() ([]byte, []int) {
-	return file_core_core_analytics_proto_rawDescGZIP(), []int{79}
+	return file_core_core_analytics_proto_rawDescGZIP(), []int{78}
 }
 
 func (x *AccountStatusInfo) GetId() string {
@@ -5364,7 +5304,7 @@ type ListAccountStatusesRequest struct {
 
 func (x *ListAccountStatusesRequest) Reset() {
 	*x = ListAccountStatusesRequest{}
-	mi := &file_core_core_analytics_proto_msgTypes[80]
+	mi := &file_core_core_analytics_proto_msgTypes[79]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -5376,7 +5316,7 @@ func (x *ListAccountStatusesRequest) String() string {
 func (*ListAccountStatusesRequest) ProtoMessage() {}
 
 func (x *ListAccountStatusesRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_analytics_proto_msgTypes[80]
+	mi := &file_core_core_analytics_proto_msgTypes[79]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -5389,7 +5329,7 @@ func (x *ListAccountStatusesRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListAccountStatusesRequest.ProtoReflect.Descriptor instead.
 func (*ListAccountStatusesRequest) Descriptor() ([]byte, []int) {
-	return file_core_core_analytics_proto_rawDescGZIP(), []int{80}
+	return file_core_core_analytics_proto_rawDescGZIP(), []int{79}
 }
 
 func (x *ListAccountStatusesRequest) GetCursor() string {
@@ -5423,7 +5363,7 @@ type ListAccountStatusesResponse struct {
 
 func (x *ListAccountStatusesResponse) Reset() {
 	*x = ListAccountStatusesResponse{}
-	mi := &file_core_core_analytics_proto_msgTypes[81]
+	mi := &file_core_core_analytics_proto_msgTypes[80]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -5435,7 +5375,7 @@ func (x *ListAccountStatusesResponse) String() string {
 func (*ListAccountStatusesResponse) ProtoMessage() {}
 
 func (x *ListAccountStatusesResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_analytics_proto_msgTypes[81]
+	mi := &file_core_core_analytics_proto_msgTypes[80]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -5448,7 +5388,7 @@ func (x *ListAccountStatusesResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListAccountStatusesResponse.ProtoReflect.Descriptor instead.
 func (*ListAccountStatusesResponse) Descriptor() ([]byte, []int) {
-	return file_core_core_analytics_proto_rawDescGZIP(), []int{81}
+	return file_core_core_analytics_proto_rawDescGZIP(), []int{80}
 }
 
 func (x *ListAccountStatusesResponse) GetAccountStatuses() []*AccountStatusInfo {
@@ -5474,7 +5414,7 @@ type GetAccountStatusRequest struct {
 
 func (x *GetAccountStatusRequest) Reset() {
 	*x = GetAccountStatusRequest{}
-	mi := &file_core_core_analytics_proto_msgTypes[82]
+	mi := &file_core_core_analytics_proto_msgTypes[81]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -5486,7 +5426,7 @@ func (x *GetAccountStatusRequest) String() string {
 func (*GetAccountStatusRequest) ProtoMessage() {}
 
 func (x *GetAccountStatusRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_analytics_proto_msgTypes[82]
+	mi := &file_core_core_analytics_proto_msgTypes[81]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -5499,7 +5439,7 @@ func (x *GetAccountStatusRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetAccountStatusRequest.ProtoReflect.Descriptor instead.
 func (*GetAccountStatusRequest) Descriptor() ([]byte, []int) {
-	return file_core_core_analytics_proto_rawDescGZIP(), []int{82}
+	return file_core_core_analytics_proto_rawDescGZIP(), []int{81}
 }
 
 func (x *GetAccountStatusRequest) GetIdentifier() string {
@@ -5518,7 +5458,7 @@ type GetAccountStatusResponse struct {
 
 func (x *GetAccountStatusResponse) Reset() {
 	*x = GetAccountStatusResponse{}
-	mi := &file_core_core_analytics_proto_msgTypes[83]
+	mi := &file_core_core_analytics_proto_msgTypes[82]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -5530,7 +5470,7 @@ func (x *GetAccountStatusResponse) String() string {
 func (*GetAccountStatusResponse) ProtoMessage() {}
 
 func (x *GetAccountStatusResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_analytics_proto_msgTypes[83]
+	mi := &file_core_core_analytics_proto_msgTypes[82]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -5543,7 +5483,7 @@ func (x *GetAccountStatusResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetAccountStatusResponse.ProtoReflect.Descriptor instead.
 func (*GetAccountStatusResponse) Descriptor() ([]byte, []int) {
-	return file_core_core_analytics_proto_rawDescGZIP(), []int{83}
+	return file_core_core_analytics_proto_rawDescGZIP(), []int{82}
 }
 
 func (x *GetAccountStatusResponse) GetAccountStatus() *AccountStatusInfo {
@@ -5563,7 +5503,7 @@ type BatchGetAccountStatusesByIDsRequest struct {
 
 func (x *BatchGetAccountStatusesByIDsRequest) Reset() {
 	*x = BatchGetAccountStatusesByIDsRequest{}
-	mi := &file_core_core_analytics_proto_msgTypes[84]
+	mi := &file_core_core_analytics_proto_msgTypes[83]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -5575,7 +5515,7 @@ func (x *BatchGetAccountStatusesByIDsRequest) String() string {
 func (*BatchGetAccountStatusesByIDsRequest) ProtoMessage() {}
 
 func (x *BatchGetAccountStatusesByIDsRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_analytics_proto_msgTypes[84]
+	mi := &file_core_core_analytics_proto_msgTypes[83]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -5588,7 +5528,7 @@ func (x *BatchGetAccountStatusesByIDsRequest) ProtoReflect() protoreflect.Messag
 
 // Deprecated: Use BatchGetAccountStatusesByIDsRequest.ProtoReflect.Descriptor instead.
 func (*BatchGetAccountStatusesByIDsRequest) Descriptor() ([]byte, []int) {
-	return file_core_core_analytics_proto_rawDescGZIP(), []int{84}
+	return file_core_core_analytics_proto_rawDescGZIP(), []int{83}
 }
 
 func (x *BatchGetAccountStatusesByIDsRequest) GetIds() []string {
@@ -5607,7 +5547,7 @@ type BatchGetAccountStatusesByIDsResponse struct {
 
 func (x *BatchGetAccountStatusesByIDsResponse) Reset() {
 	*x = BatchGetAccountStatusesByIDsResponse{}
-	mi := &file_core_core_analytics_proto_msgTypes[85]
+	mi := &file_core_core_analytics_proto_msgTypes[84]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -5619,7 +5559,7 @@ func (x *BatchGetAccountStatusesByIDsResponse) String() string {
 func (*BatchGetAccountStatusesByIDsResponse) ProtoMessage() {}
 
 func (x *BatchGetAccountStatusesByIDsResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_analytics_proto_msgTypes[85]
+	mi := &file_core_core_analytics_proto_msgTypes[84]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -5632,7 +5572,7 @@ func (x *BatchGetAccountStatusesByIDsResponse) ProtoReflect() protoreflect.Messa
 
 // Deprecated: Use BatchGetAccountStatusesByIDsResponse.ProtoReflect.Descriptor instead.
 func (*BatchGetAccountStatusesByIDsResponse) Descriptor() ([]byte, []int) {
-	return file_core_core_analytics_proto_rawDescGZIP(), []int{85}
+	return file_core_core_analytics_proto_rawDescGZIP(), []int{84}
 }
 
 func (x *BatchGetAccountStatusesByIDsResponse) GetAccountStatuses() []*AccountStatusInfo {
@@ -5657,7 +5597,7 @@ type AnalyzeDeliveryPerformanceRequest struct {
 
 func (x *AnalyzeDeliveryPerformanceRequest) Reset() {
 	*x = AnalyzeDeliveryPerformanceRequest{}
-	mi := &file_core_core_analytics_proto_msgTypes[86]
+	mi := &file_core_core_analytics_proto_msgTypes[85]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -5669,7 +5609,7 @@ func (x *AnalyzeDeliveryPerformanceRequest) String() string {
 func (*AnalyzeDeliveryPerformanceRequest) ProtoMessage() {}
 
 func (x *AnalyzeDeliveryPerformanceRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_analytics_proto_msgTypes[86]
+	mi := &file_core_core_analytics_proto_msgTypes[85]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -5682,7 +5622,7 @@ func (x *AnalyzeDeliveryPerformanceRequest) ProtoReflect() protoreflect.Message 
 
 // Deprecated: Use AnalyzeDeliveryPerformanceRequest.ProtoReflect.Descriptor instead.
 func (*AnalyzeDeliveryPerformanceRequest) Descriptor() ([]byte, []int) {
-	return file_core_core_analytics_proto_rawDescGZIP(), []int{86}
+	return file_core_core_analytics_proto_rawDescGZIP(), []int{85}
 }
 
 func (x *AnalyzeDeliveryPerformanceRequest) GetStartsAt() *timestamppb.Timestamp {
@@ -5756,7 +5696,7 @@ type DeliveryPerformanceProto struct {
 
 func (x *DeliveryPerformanceProto) Reset() {
 	*x = DeliveryPerformanceProto{}
-	mi := &file_core_core_analytics_proto_msgTypes[87]
+	mi := &file_core_core_analytics_proto_msgTypes[86]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -5768,7 +5708,7 @@ func (x *DeliveryPerformanceProto) String() string {
 func (*DeliveryPerformanceProto) ProtoMessage() {}
 
 func (x *DeliveryPerformanceProto) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_analytics_proto_msgTypes[87]
+	mi := &file_core_core_analytics_proto_msgTypes[86]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -5781,7 +5721,7 @@ func (x *DeliveryPerformanceProto) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use DeliveryPerformanceProto.ProtoReflect.Descriptor instead.
 func (*DeliveryPerformanceProto) Descriptor() ([]byte, []int) {
-	return file_core_core_analytics_proto_rawDescGZIP(), []int{87}
+	return file_core_core_analytics_proto_rawDescGZIP(), []int{86}
 }
 
 func (x *DeliveryPerformanceProto) GetPeriodStart() *timestamppb.Timestamp {
@@ -5881,7 +5821,7 @@ type DeliveryBacklogBucketProto struct {
 
 func (x *DeliveryBacklogBucketProto) Reset() {
 	*x = DeliveryBacklogBucketProto{}
-	mi := &file_core_core_analytics_proto_msgTypes[88]
+	mi := &file_core_core_analytics_proto_msgTypes[87]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -5893,7 +5833,7 @@ func (x *DeliveryBacklogBucketProto) String() string {
 func (*DeliveryBacklogBucketProto) ProtoMessage() {}
 
 func (x *DeliveryBacklogBucketProto) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_analytics_proto_msgTypes[88]
+	mi := &file_core_core_analytics_proto_msgTypes[87]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -5906,7 +5846,7 @@ func (x *DeliveryBacklogBucketProto) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use DeliveryBacklogBucketProto.ProtoReflect.Descriptor instead.
 func (*DeliveryBacklogBucketProto) Descriptor() ([]byte, []int) {
-	return file_core_core_analytics_proto_rawDescGZIP(), []int{88}
+	return file_core_core_analytics_proto_rawDescGZIP(), []int{87}
 }
 
 func (x *DeliveryBacklogBucketProto) GetLabel() string {
@@ -5959,7 +5899,7 @@ type DeliveryLatenessBucketProto struct {
 
 func (x *DeliveryLatenessBucketProto) Reset() {
 	*x = DeliveryLatenessBucketProto{}
-	mi := &file_core_core_analytics_proto_msgTypes[89]
+	mi := &file_core_core_analytics_proto_msgTypes[88]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -5971,7 +5911,7 @@ func (x *DeliveryLatenessBucketProto) String() string {
 func (*DeliveryLatenessBucketProto) ProtoMessage() {}
 
 func (x *DeliveryLatenessBucketProto) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_analytics_proto_msgTypes[89]
+	mi := &file_core_core_analytics_proto_msgTypes[88]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -5984,7 +5924,7 @@ func (x *DeliveryLatenessBucketProto) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use DeliveryLatenessBucketProto.ProtoReflect.Descriptor instead.
 func (*DeliveryLatenessBucketProto) Descriptor() ([]byte, []int) {
-	return file_core_core_analytics_proto_rawDescGZIP(), []int{89}
+	return file_core_core_analytics_proto_rawDescGZIP(), []int{88}
 }
 
 func (x *DeliveryLatenessBucketProto) GetLabel() string {
@@ -6041,7 +5981,7 @@ type DeliveryBreakdownProto struct {
 
 func (x *DeliveryBreakdownProto) Reset() {
 	*x = DeliveryBreakdownProto{}
-	mi := &file_core_core_analytics_proto_msgTypes[90]
+	mi := &file_core_core_analytics_proto_msgTypes[89]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -6053,7 +5993,7 @@ func (x *DeliveryBreakdownProto) String() string {
 func (*DeliveryBreakdownProto) ProtoMessage() {}
 
 func (x *DeliveryBreakdownProto) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_analytics_proto_msgTypes[90]
+	mi := &file_core_core_analytics_proto_msgTypes[89]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -6066,7 +6006,7 @@ func (x *DeliveryBreakdownProto) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use DeliveryBreakdownProto.ProtoReflect.Descriptor instead.
 func (*DeliveryBreakdownProto) Descriptor() ([]byte, []int) {
-	return file_core_core_analytics_proto_rawDescGZIP(), []int{90}
+	return file_core_core_analytics_proto_rawDescGZIP(), []int{89}
 }
 
 func (x *DeliveryBreakdownProto) GetKey() string {
@@ -6107,7 +6047,7 @@ type AnalyzeDeliveryPerformanceResponse struct {
 
 func (x *AnalyzeDeliveryPerformanceResponse) Reset() {
 	*x = AnalyzeDeliveryPerformanceResponse{}
-	mi := &file_core_core_analytics_proto_msgTypes[91]
+	mi := &file_core_core_analytics_proto_msgTypes[90]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -6119,7 +6059,7 @@ func (x *AnalyzeDeliveryPerformanceResponse) String() string {
 func (*AnalyzeDeliveryPerformanceResponse) ProtoMessage() {}
 
 func (x *AnalyzeDeliveryPerformanceResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_analytics_proto_msgTypes[91]
+	mi := &file_core_core_analytics_proto_msgTypes[90]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -6132,7 +6072,7 @@ func (x *AnalyzeDeliveryPerformanceResponse) ProtoReflect() protoreflect.Message
 
 // Deprecated: Use AnalyzeDeliveryPerformanceResponse.ProtoReflect.Descriptor instead.
 func (*AnalyzeDeliveryPerformanceResponse) Descriptor() ([]byte, []int) {
-	return file_core_core_analytics_proto_rawDescGZIP(), []int{91}
+	return file_core_core_analytics_proto_rawDescGZIP(), []int{90}
 }
 
 func (x *AnalyzeDeliveryPerformanceResponse) GetOverall() *DeliveryPerformanceProto {
@@ -6211,7 +6151,7 @@ type AnalyzeScheduleAttainmentRequest struct {
 
 func (x *AnalyzeScheduleAttainmentRequest) Reset() {
 	*x = AnalyzeScheduleAttainmentRequest{}
-	mi := &file_core_core_analytics_proto_msgTypes[92]
+	mi := &file_core_core_analytics_proto_msgTypes[91]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -6223,7 +6163,7 @@ func (x *AnalyzeScheduleAttainmentRequest) String() string {
 func (*AnalyzeScheduleAttainmentRequest) ProtoMessage() {}
 
 func (x *AnalyzeScheduleAttainmentRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_analytics_proto_msgTypes[92]
+	mi := &file_core_core_analytics_proto_msgTypes[91]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -6236,7 +6176,7 @@ func (x *AnalyzeScheduleAttainmentRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use AnalyzeScheduleAttainmentRequest.ProtoReflect.Descriptor instead.
 func (*AnalyzeScheduleAttainmentRequest) Descriptor() ([]byte, []int) {
-	return file_core_core_analytics_proto_rawDescGZIP(), []int{92}
+	return file_core_core_analytics_proto_rawDescGZIP(), []int{91}
 }
 
 func (x *AnalyzeScheduleAttainmentRequest) GetStartDate() *timestamppb.Timestamp {
@@ -6297,7 +6237,7 @@ type AttainmentBucketInfo struct {
 
 func (x *AttainmentBucketInfo) Reset() {
 	*x = AttainmentBucketInfo{}
-	mi := &file_core_core_analytics_proto_msgTypes[93]
+	mi := &file_core_core_analytics_proto_msgTypes[92]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -6309,7 +6249,7 @@ func (x *AttainmentBucketInfo) String() string {
 func (*AttainmentBucketInfo) ProtoMessage() {}
 
 func (x *AttainmentBucketInfo) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_analytics_proto_msgTypes[93]
+	mi := &file_core_core_analytics_proto_msgTypes[92]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -6322,7 +6262,7 @@ func (x *AttainmentBucketInfo) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use AttainmentBucketInfo.ProtoReflect.Descriptor instead.
 func (*AttainmentBucketInfo) Descriptor() ([]byte, []int) {
-	return file_core_core_analytics_proto_rawDescGZIP(), []int{93}
+	return file_core_core_analytics_proto_rawDescGZIP(), []int{92}
 }
 
 func (x *AttainmentBucketInfo) GetKey() string {
@@ -6436,7 +6376,7 @@ type FrozenAdherenceInfo struct {
 
 func (x *FrozenAdherenceInfo) Reset() {
 	*x = FrozenAdherenceInfo{}
-	mi := &file_core_core_analytics_proto_msgTypes[94]
+	mi := &file_core_core_analytics_proto_msgTypes[93]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -6448,7 +6388,7 @@ func (x *FrozenAdherenceInfo) String() string {
 func (*FrozenAdherenceInfo) ProtoMessage() {}
 
 func (x *FrozenAdherenceInfo) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_analytics_proto_msgTypes[94]
+	mi := &file_core_core_analytics_proto_msgTypes[93]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -6461,7 +6401,7 @@ func (x *FrozenAdherenceInfo) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use FrozenAdherenceInfo.ProtoReflect.Descriptor instead.
 func (*FrozenAdherenceInfo) Descriptor() ([]byte, []int) {
-	return file_core_core_analytics_proto_rawDescGZIP(), []int{94}
+	return file_core_core_analytics_proto_rawDescGZIP(), []int{93}
 }
 
 func (x *FrozenAdherenceInfo) GetScheduleId() string {
@@ -6565,7 +6505,7 @@ type AnalyzeScheduleAttainmentResponse struct {
 
 func (x *AnalyzeScheduleAttainmentResponse) Reset() {
 	*x = AnalyzeScheduleAttainmentResponse{}
-	mi := &file_core_core_analytics_proto_msgTypes[95]
+	mi := &file_core_core_analytics_proto_msgTypes[94]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -6577,7 +6517,7 @@ func (x *AnalyzeScheduleAttainmentResponse) String() string {
 func (*AnalyzeScheduleAttainmentResponse) ProtoMessage() {}
 
 func (x *AnalyzeScheduleAttainmentResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_analytics_proto_msgTypes[95]
+	mi := &file_core_core_analytics_proto_msgTypes[94]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -6590,7 +6530,7 @@ func (x *AnalyzeScheduleAttainmentResponse) ProtoReflect() protoreflect.Message 
 
 // Deprecated: Use AnalyzeScheduleAttainmentResponse.ProtoReflect.Descriptor instead.
 func (*AnalyzeScheduleAttainmentResponse) Descriptor() ([]byte, []int) {
-	return file_core_core_analytics_proto_rawDescGZIP(), []int{95}
+	return file_core_core_analytics_proto_rawDescGZIP(), []int{94}
 }
 
 func (x *AnalyzeScheduleAttainmentResponse) GetStartDate() *timestamppb.Timestamp {
@@ -6674,7 +6614,7 @@ type SalesReportFilterProto struct {
 
 func (x *SalesReportFilterProto) Reset() {
 	*x = SalesReportFilterProto{}
-	mi := &file_core_core_analytics_proto_msgTypes[96]
+	mi := &file_core_core_analytics_proto_msgTypes[95]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -6686,7 +6626,7 @@ func (x *SalesReportFilterProto) String() string {
 func (*SalesReportFilterProto) ProtoMessage() {}
 
 func (x *SalesReportFilterProto) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_analytics_proto_msgTypes[96]
+	mi := &file_core_core_analytics_proto_msgTypes[95]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -6699,7 +6639,7 @@ func (x *SalesReportFilterProto) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use SalesReportFilterProto.ProtoReflect.Descriptor instead.
 func (*SalesReportFilterProto) Descriptor() ([]byte, []int) {
-	return file_core_core_analytics_proto_rawDescGZIP(), []int{96}
+	return file_core_core_analytics_proto_rawDescGZIP(), []int{95}
 }
 
 func (x *SalesReportFilterProto) GetStartsAt() *timestamppb.Timestamp {
@@ -6776,7 +6716,7 @@ type AnalyzeSalesSummaryRequest struct {
 
 func (x *AnalyzeSalesSummaryRequest) Reset() {
 	*x = AnalyzeSalesSummaryRequest{}
-	mi := &file_core_core_analytics_proto_msgTypes[97]
+	mi := &file_core_core_analytics_proto_msgTypes[96]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -6788,7 +6728,7 @@ func (x *AnalyzeSalesSummaryRequest) String() string {
 func (*AnalyzeSalesSummaryRequest) ProtoMessage() {}
 
 func (x *AnalyzeSalesSummaryRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_analytics_proto_msgTypes[97]
+	mi := &file_core_core_analytics_proto_msgTypes[96]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -6801,7 +6741,7 @@ func (x *AnalyzeSalesSummaryRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use AnalyzeSalesSummaryRequest.ProtoReflect.Descriptor instead.
 func (*AnalyzeSalesSummaryRequest) Descriptor() ([]byte, []int) {
-	return file_core_core_analytics_proto_rawDescGZIP(), []int{97}
+	return file_core_core_analytics_proto_rawDescGZIP(), []int{96}
 }
 
 func (x *AnalyzeSalesSummaryRequest) GetFilter() *SalesReportFilterProto {
@@ -6834,7 +6774,7 @@ type SalesTotalsProto struct {
 
 func (x *SalesTotalsProto) Reset() {
 	*x = SalesTotalsProto{}
-	mi := &file_core_core_analytics_proto_msgTypes[98]
+	mi := &file_core_core_analytics_proto_msgTypes[97]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -6846,7 +6786,7 @@ func (x *SalesTotalsProto) String() string {
 func (*SalesTotalsProto) ProtoMessage() {}
 
 func (x *SalesTotalsProto) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_analytics_proto_msgTypes[98]
+	mi := &file_core_core_analytics_proto_msgTypes[97]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -6859,7 +6799,7 @@ func (x *SalesTotalsProto) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use SalesTotalsProto.ProtoReflect.Descriptor instead.
 func (*SalesTotalsProto) Descriptor() ([]byte, []int) {
-	return file_core_core_analytics_proto_rawDescGZIP(), []int{98}
+	return file_core_core_analytics_proto_rawDescGZIP(), []int{97}
 }
 
 func (x *SalesTotalsProto) GetPeriodStart() *timestamppb.Timestamp {
@@ -6916,7 +6856,7 @@ type AnalyzeSalesSummaryResponse struct {
 
 func (x *AnalyzeSalesSummaryResponse) Reset() {
 	*x = AnalyzeSalesSummaryResponse{}
-	mi := &file_core_core_analytics_proto_msgTypes[99]
+	mi := &file_core_core_analytics_proto_msgTypes[98]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -6928,7 +6868,7 @@ func (x *AnalyzeSalesSummaryResponse) String() string {
 func (*AnalyzeSalesSummaryResponse) ProtoMessage() {}
 
 func (x *AnalyzeSalesSummaryResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_analytics_proto_msgTypes[99]
+	mi := &file_core_core_analytics_proto_msgTypes[98]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -6941,7 +6881,7 @@ func (x *AnalyzeSalesSummaryResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use AnalyzeSalesSummaryResponse.ProtoReflect.Descriptor instead.
 func (*AnalyzeSalesSummaryResponse) Descriptor() ([]byte, []int) {
-	return file_core_core_analytics_proto_rawDescGZIP(), []int{99}
+	return file_core_core_analytics_proto_rawDescGZIP(), []int{98}
 }
 
 func (x *AnalyzeSalesSummaryResponse) GetCurrent() *SalesTotalsProto {
@@ -6984,7 +6924,7 @@ type AnalyzeSalesBreakdownRequest struct {
 
 func (x *AnalyzeSalesBreakdownRequest) Reset() {
 	*x = AnalyzeSalesBreakdownRequest{}
-	mi := &file_core_core_analytics_proto_msgTypes[100]
+	mi := &file_core_core_analytics_proto_msgTypes[99]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -6996,7 +6936,7 @@ func (x *AnalyzeSalesBreakdownRequest) String() string {
 func (*AnalyzeSalesBreakdownRequest) ProtoMessage() {}
 
 func (x *AnalyzeSalesBreakdownRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_analytics_proto_msgTypes[100]
+	mi := &file_core_core_analytics_proto_msgTypes[99]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -7009,7 +6949,7 @@ func (x *AnalyzeSalesBreakdownRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use AnalyzeSalesBreakdownRequest.ProtoReflect.Descriptor instead.
 func (*AnalyzeSalesBreakdownRequest) Descriptor() ([]byte, []int) {
-	return file_core_core_analytics_proto_rawDescGZIP(), []int{100}
+	return file_core_core_analytics_proto_rawDescGZIP(), []int{99}
 }
 
 func (x *AnalyzeSalesBreakdownRequest) GetFilter() *SalesReportFilterProto {
@@ -7054,7 +6994,7 @@ type SalesBreakdownGroupProto struct {
 
 func (x *SalesBreakdownGroupProto) Reset() {
 	*x = SalesBreakdownGroupProto{}
-	mi := &file_core_core_analytics_proto_msgTypes[101]
+	mi := &file_core_core_analytics_proto_msgTypes[100]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -7066,7 +7006,7 @@ func (x *SalesBreakdownGroupProto) String() string {
 func (*SalesBreakdownGroupProto) ProtoMessage() {}
 
 func (x *SalesBreakdownGroupProto) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_analytics_proto_msgTypes[101]
+	mi := &file_core_core_analytics_proto_msgTypes[100]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -7079,7 +7019,7 @@ func (x *SalesBreakdownGroupProto) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use SalesBreakdownGroupProto.ProtoReflect.Descriptor instead.
 func (*SalesBreakdownGroupProto) Descriptor() ([]byte, []int) {
-	return file_core_core_analytics_proto_rawDescGZIP(), []int{101}
+	return file_core_core_analytics_proto_rawDescGZIP(), []int{100}
 }
 
 func (x *SalesBreakdownGroupProto) GetKey() string {
@@ -7134,7 +7074,7 @@ type AnalyzeSalesBreakdownResponse struct {
 
 func (x *AnalyzeSalesBreakdownResponse) Reset() {
 	*x = AnalyzeSalesBreakdownResponse{}
-	mi := &file_core_core_analytics_proto_msgTypes[102]
+	mi := &file_core_core_analytics_proto_msgTypes[101]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -7146,7 +7086,7 @@ func (x *AnalyzeSalesBreakdownResponse) String() string {
 func (*AnalyzeSalesBreakdownResponse) ProtoMessage() {}
 
 func (x *AnalyzeSalesBreakdownResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_analytics_proto_msgTypes[102]
+	mi := &file_core_core_analytics_proto_msgTypes[101]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -7159,7 +7099,7 @@ func (x *AnalyzeSalesBreakdownResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use AnalyzeSalesBreakdownResponse.ProtoReflect.Descriptor instead.
 func (*AnalyzeSalesBreakdownResponse) Descriptor() ([]byte, []int) {
-	return file_core_core_analytics_proto_rawDescGZIP(), []int{102}
+	return file_core_core_analytics_proto_rawDescGZIP(), []int{101}
 }
 
 func (x *AnalyzeSalesBreakdownResponse) GetGroups() []*SalesBreakdownGroupProto {
@@ -7187,7 +7127,7 @@ type AnalyzeSalesInvoicesRequest struct {
 
 func (x *AnalyzeSalesInvoicesRequest) Reset() {
 	*x = AnalyzeSalesInvoicesRequest{}
-	mi := &file_core_core_analytics_proto_msgTypes[103]
+	mi := &file_core_core_analytics_proto_msgTypes[102]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -7199,7 +7139,7 @@ func (x *AnalyzeSalesInvoicesRequest) String() string {
 func (*AnalyzeSalesInvoicesRequest) ProtoMessage() {}
 
 func (x *AnalyzeSalesInvoicesRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_analytics_proto_msgTypes[103]
+	mi := &file_core_core_analytics_proto_msgTypes[102]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -7212,7 +7152,7 @@ func (x *AnalyzeSalesInvoicesRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use AnalyzeSalesInvoicesRequest.ProtoReflect.Descriptor instead.
 func (*AnalyzeSalesInvoicesRequest) Descriptor() ([]byte, []int) {
-	return file_core_core_analytics_proto_rawDescGZIP(), []int{103}
+	return file_core_core_analytics_proto_rawDescGZIP(), []int{102}
 }
 
 func (x *AnalyzeSalesInvoicesRequest) GetFilter() *SalesReportFilterProto {
@@ -7251,7 +7191,7 @@ type SalesInvoiceSummaryProto struct {
 
 func (x *SalesInvoiceSummaryProto) Reset() {
 	*x = SalesInvoiceSummaryProto{}
-	mi := &file_core_core_analytics_proto_msgTypes[104]
+	mi := &file_core_core_analytics_proto_msgTypes[103]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -7263,7 +7203,7 @@ func (x *SalesInvoiceSummaryProto) String() string {
 func (*SalesInvoiceSummaryProto) ProtoMessage() {}
 
 func (x *SalesInvoiceSummaryProto) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_analytics_proto_msgTypes[104]
+	mi := &file_core_core_analytics_proto_msgTypes[103]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -7276,7 +7216,7 @@ func (x *SalesInvoiceSummaryProto) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use SalesInvoiceSummaryProto.ProtoReflect.Descriptor instead.
 func (*SalesInvoiceSummaryProto) Descriptor() ([]byte, []int) {
-	return file_core_core_analytics_proto_rawDescGZIP(), []int{104}
+	return file_core_core_analytics_proto_rawDescGZIP(), []int{103}
 }
 
 func (x *SalesInvoiceSummaryProto) GetInvoiceId() string {
@@ -7338,7 +7278,7 @@ type AnalyzeSalesInvoicesResponse struct {
 
 func (x *AnalyzeSalesInvoicesResponse) Reset() {
 	*x = AnalyzeSalesInvoicesResponse{}
-	mi := &file_core_core_analytics_proto_msgTypes[105]
+	mi := &file_core_core_analytics_proto_msgTypes[104]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -7350,7 +7290,7 @@ func (x *AnalyzeSalesInvoicesResponse) String() string {
 func (*AnalyzeSalesInvoicesResponse) ProtoMessage() {}
 
 func (x *AnalyzeSalesInvoicesResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_analytics_proto_msgTypes[105]
+	mi := &file_core_core_analytics_proto_msgTypes[104]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -7363,7 +7303,7 @@ func (x *AnalyzeSalesInvoicesResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use AnalyzeSalesInvoicesResponse.ProtoReflect.Descriptor instead.
 func (*AnalyzeSalesInvoicesResponse) Descriptor() ([]byte, []int) {
-	return file_core_core_analytics_proto_rawDescGZIP(), []int{105}
+	return file_core_core_analytics_proto_rawDescGZIP(), []int{104}
 }
 
 func (x *AnalyzeSalesInvoicesResponse) GetInvoices() []*SalesInvoiceSummaryProto {
@@ -7395,7 +7335,7 @@ type ListNewCustomersRequest struct {
 
 func (x *ListNewCustomersRequest) Reset() {
 	*x = ListNewCustomersRequest{}
-	mi := &file_core_core_analytics_proto_msgTypes[106]
+	mi := &file_core_core_analytics_proto_msgTypes[105]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -7407,7 +7347,7 @@ func (x *ListNewCustomersRequest) String() string {
 func (*ListNewCustomersRequest) ProtoMessage() {}
 
 func (x *ListNewCustomersRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_analytics_proto_msgTypes[106]
+	mi := &file_core_core_analytics_proto_msgTypes[105]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -7420,7 +7360,7 @@ func (x *ListNewCustomersRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListNewCustomersRequest.ProtoReflect.Descriptor instead.
 func (*ListNewCustomersRequest) Descriptor() ([]byte, []int) {
-	return file_core_core_analytics_proto_rawDescGZIP(), []int{106}
+	return file_core_core_analytics_proto_rawDescGZIP(), []int{105}
 }
 
 func (x *ListNewCustomersRequest) GetStartsAt() *timestamppb.Timestamp {
@@ -7483,7 +7423,7 @@ type NewCustomerProto struct {
 
 func (x *NewCustomerProto) Reset() {
 	*x = NewCustomerProto{}
-	mi := &file_core_core_analytics_proto_msgTypes[107]
+	mi := &file_core_core_analytics_proto_msgTypes[106]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -7495,7 +7435,7 @@ func (x *NewCustomerProto) String() string {
 func (*NewCustomerProto) ProtoMessage() {}
 
 func (x *NewCustomerProto) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_analytics_proto_msgTypes[107]
+	mi := &file_core_core_analytics_proto_msgTypes[106]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -7508,7 +7448,7 @@ func (x *NewCustomerProto) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use NewCustomerProto.ProtoReflect.Descriptor instead.
 func (*NewCustomerProto) Descriptor() ([]byte, []int) {
-	return file_core_core_analytics_proto_rawDescGZIP(), []int{107}
+	return file_core_core_analytics_proto_rawDescGZIP(), []int{106}
 }
 
 func (x *NewCustomerProto) GetCustomerId() string {
@@ -7584,7 +7524,7 @@ type ListNewCustomersResponse struct {
 
 func (x *ListNewCustomersResponse) Reset() {
 	*x = ListNewCustomersResponse{}
-	mi := &file_core_core_analytics_proto_msgTypes[108]
+	mi := &file_core_core_analytics_proto_msgTypes[107]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -7596,7 +7536,7 @@ func (x *ListNewCustomersResponse) String() string {
 func (*ListNewCustomersResponse) ProtoMessage() {}
 
 func (x *ListNewCustomersResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_analytics_proto_msgTypes[108]
+	mi := &file_core_core_analytics_proto_msgTypes[107]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -7609,7 +7549,7 @@ func (x *ListNewCustomersResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListNewCustomersResponse.ProtoReflect.Descriptor instead.
 func (*ListNewCustomersResponse) Descriptor() ([]byte, []int) {
-	return file_core_core_analytics_proto_rawDescGZIP(), []int{108}
+	return file_core_core_analytics_proto_rawDescGZIP(), []int{107}
 }
 
 func (x *ListNewCustomersResponse) GetCustomers() []*NewCustomerProto {
@@ -7639,7 +7579,7 @@ type ListSalesLinesRequest struct {
 
 func (x *ListSalesLinesRequest) Reset() {
 	*x = ListSalesLinesRequest{}
-	mi := &file_core_core_analytics_proto_msgTypes[109]
+	mi := &file_core_core_analytics_proto_msgTypes[108]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -7651,7 +7591,7 @@ func (x *ListSalesLinesRequest) String() string {
 func (*ListSalesLinesRequest) ProtoMessage() {}
 
 func (x *ListSalesLinesRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_analytics_proto_msgTypes[109]
+	mi := &file_core_core_analytics_proto_msgTypes[108]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -7664,7 +7604,7 @@ func (x *ListSalesLinesRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListSalesLinesRequest.ProtoReflect.Descriptor instead.
 func (*ListSalesLinesRequest) Descriptor() ([]byte, []int) {
-	return file_core_core_analytics_proto_rawDescGZIP(), []int{109}
+	return file_core_core_analytics_proto_rawDescGZIP(), []int{108}
 }
 
 func (x *ListSalesLinesRequest) GetFilter() *SalesReportFilterProto {
@@ -7705,7 +7645,7 @@ type ListSalesLinesResponse struct {
 
 func (x *ListSalesLinesResponse) Reset() {
 	*x = ListSalesLinesResponse{}
-	mi := &file_core_core_analytics_proto_msgTypes[110]
+	mi := &file_core_core_analytics_proto_msgTypes[109]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -7717,7 +7657,7 @@ func (x *ListSalesLinesResponse) String() string {
 func (*ListSalesLinesResponse) ProtoMessage() {}
 
 func (x *ListSalesLinesResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_analytics_proto_msgTypes[110]
+	mi := &file_core_core_analytics_proto_msgTypes[109]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -7730,7 +7670,7 @@ func (x *ListSalesLinesResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListSalesLinesResponse.ProtoReflect.Descriptor instead.
 func (*ListSalesLinesResponse) Descriptor() ([]byte, []int) {
-	return file_core_core_analytics_proto_rawDescGZIP(), []int{110}
+	return file_core_core_analytics_proto_rawDescGZIP(), []int{109}
 }
 
 func (x *ListSalesLinesResponse) GetLines() []*SalesEntryProto {
@@ -7758,7 +7698,7 @@ type ExportSalesLinesRequest struct {
 
 func (x *ExportSalesLinesRequest) Reset() {
 	*x = ExportSalesLinesRequest{}
-	mi := &file_core_core_analytics_proto_msgTypes[111]
+	mi := &file_core_core_analytics_proto_msgTypes[110]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -7770,7 +7710,7 @@ func (x *ExportSalesLinesRequest) String() string {
 func (*ExportSalesLinesRequest) ProtoMessage() {}
 
 func (x *ExportSalesLinesRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_analytics_proto_msgTypes[111]
+	mi := &file_core_core_analytics_proto_msgTypes[110]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -7783,7 +7723,7 @@ func (x *ExportSalesLinesRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ExportSalesLinesRequest.ProtoReflect.Descriptor instead.
 func (*ExportSalesLinesRequest) Descriptor() ([]byte, []int) {
-	return file_core_core_analytics_proto_rawDescGZIP(), []int{111}
+	return file_core_core_analytics_proto_rawDescGZIP(), []int{110}
 }
 
 func (x *ExportSalesLinesRequest) GetFilter() *SalesReportFilterProto {
@@ -7809,7 +7749,7 @@ type ExportSalesLinesResponse struct {
 
 func (x *ExportSalesLinesResponse) Reset() {
 	*x = ExportSalesLinesResponse{}
-	mi := &file_core_core_analytics_proto_msgTypes[112]
+	mi := &file_core_core_analytics_proto_msgTypes[111]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -7821,7 +7761,7 @@ func (x *ExportSalesLinesResponse) String() string {
 func (*ExportSalesLinesResponse) ProtoMessage() {}
 
 func (x *ExportSalesLinesResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_analytics_proto_msgTypes[112]
+	mi := &file_core_core_analytics_proto_msgTypes[111]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -7834,7 +7774,7 @@ func (x *ExportSalesLinesResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ExportSalesLinesResponse.ProtoReflect.Descriptor instead.
 func (*ExportSalesLinesResponse) Descriptor() ([]byte, []int) {
-	return file_core_core_analytics_proto_rawDescGZIP(), []int{112}
+	return file_core_core_analytics_proto_rawDescGZIP(), []int{111}
 }
 
 func (x *ExportSalesLinesResponse) GetJob() *JobInfo {
@@ -7858,7 +7798,7 @@ type OpenOrderFilterProto struct {
 
 func (x *OpenOrderFilterProto) Reset() {
 	*x = OpenOrderFilterProto{}
-	mi := &file_core_core_analytics_proto_msgTypes[113]
+	mi := &file_core_core_analytics_proto_msgTypes[112]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -7870,7 +7810,7 @@ func (x *OpenOrderFilterProto) String() string {
 func (*OpenOrderFilterProto) ProtoMessage() {}
 
 func (x *OpenOrderFilterProto) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_analytics_proto_msgTypes[113]
+	mi := &file_core_core_analytics_proto_msgTypes[112]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -7883,7 +7823,7 @@ func (x *OpenOrderFilterProto) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use OpenOrderFilterProto.ProtoReflect.Descriptor instead.
 func (*OpenOrderFilterProto) Descriptor() ([]byte, []int) {
-	return file_core_core_analytics_proto_rawDescGZIP(), []int{113}
+	return file_core_core_analytics_proto_rawDescGZIP(), []int{112}
 }
 
 func (x *OpenOrderFilterProto) GetCustomerIds() []string {
@@ -7930,7 +7870,7 @@ type AnalyzeOpenOrdersSummaryRequest struct {
 
 func (x *AnalyzeOpenOrdersSummaryRequest) Reset() {
 	*x = AnalyzeOpenOrdersSummaryRequest{}
-	mi := &file_core_core_analytics_proto_msgTypes[114]
+	mi := &file_core_core_analytics_proto_msgTypes[113]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -7942,7 +7882,7 @@ func (x *AnalyzeOpenOrdersSummaryRequest) String() string {
 func (*AnalyzeOpenOrdersSummaryRequest) ProtoMessage() {}
 
 func (x *AnalyzeOpenOrdersSummaryRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_analytics_proto_msgTypes[114]
+	mi := &file_core_core_analytics_proto_msgTypes[113]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -7955,7 +7895,7 @@ func (x *AnalyzeOpenOrdersSummaryRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use AnalyzeOpenOrdersSummaryRequest.ProtoReflect.Descriptor instead.
 func (*AnalyzeOpenOrdersSummaryRequest) Descriptor() ([]byte, []int) {
-	return file_core_core_analytics_proto_rawDescGZIP(), []int{114}
+	return file_core_core_analytics_proto_rawDescGZIP(), []int{113}
 }
 
 func (x *AnalyzeOpenOrdersSummaryRequest) GetFilter() *OpenOrderFilterProto {
@@ -7977,7 +7917,7 @@ type AnalyzeOpenOrdersSummaryResponse struct {
 
 func (x *AnalyzeOpenOrdersSummaryResponse) Reset() {
 	*x = AnalyzeOpenOrdersSummaryResponse{}
-	mi := &file_core_core_analytics_proto_msgTypes[115]
+	mi := &file_core_core_analytics_proto_msgTypes[114]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -7989,7 +7929,7 @@ func (x *AnalyzeOpenOrdersSummaryResponse) String() string {
 func (*AnalyzeOpenOrdersSummaryResponse) ProtoMessage() {}
 
 func (x *AnalyzeOpenOrdersSummaryResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_analytics_proto_msgTypes[115]
+	mi := &file_core_core_analytics_proto_msgTypes[114]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -8002,7 +7942,7 @@ func (x *AnalyzeOpenOrdersSummaryResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use AnalyzeOpenOrdersSummaryResponse.ProtoReflect.Descriptor instead.
 func (*AnalyzeOpenOrdersSummaryResponse) Descriptor() ([]byte, []int) {
-	return file_core_core_analytics_proto_rawDescGZIP(), []int{115}
+	return file_core_core_analytics_proto_rawDescGZIP(), []int{114}
 }
 
 func (x *AnalyzeOpenOrdersSummaryResponse) GetOrdered() string {
@@ -8037,7 +7977,7 @@ type AnalyzeOpenOrderProductsRequest struct {
 
 func (x *AnalyzeOpenOrderProductsRequest) Reset() {
 	*x = AnalyzeOpenOrderProductsRequest{}
-	mi := &file_core_core_analytics_proto_msgTypes[116]
+	mi := &file_core_core_analytics_proto_msgTypes[115]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -8049,7 +7989,7 @@ func (x *AnalyzeOpenOrderProductsRequest) String() string {
 func (*AnalyzeOpenOrderProductsRequest) ProtoMessage() {}
 
 func (x *AnalyzeOpenOrderProductsRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_analytics_proto_msgTypes[116]
+	mi := &file_core_core_analytics_proto_msgTypes[115]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -8062,7 +8002,7 @@ func (x *AnalyzeOpenOrderProductsRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use AnalyzeOpenOrderProductsRequest.ProtoReflect.Descriptor instead.
 func (*AnalyzeOpenOrderProductsRequest) Descriptor() ([]byte, []int) {
-	return file_core_core_analytics_proto_rawDescGZIP(), []int{116}
+	return file_core_core_analytics_proto_rawDescGZIP(), []int{115}
 }
 
 func (x *AnalyzeOpenOrderProductsRequest) GetFilter() *OpenOrderFilterProto {
@@ -8104,7 +8044,7 @@ type OpenOrderProductProto struct {
 
 func (x *OpenOrderProductProto) Reset() {
 	*x = OpenOrderProductProto{}
-	mi := &file_core_core_analytics_proto_msgTypes[117]
+	mi := &file_core_core_analytics_proto_msgTypes[116]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -8116,7 +8056,7 @@ func (x *OpenOrderProductProto) String() string {
 func (*OpenOrderProductProto) ProtoMessage() {}
 
 func (x *OpenOrderProductProto) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_analytics_proto_msgTypes[117]
+	mi := &file_core_core_analytics_proto_msgTypes[116]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -8129,7 +8069,7 @@ func (x *OpenOrderProductProto) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use OpenOrderProductProto.ProtoReflect.Descriptor instead.
 func (*OpenOrderProductProto) Descriptor() ([]byte, []int) {
-	return file_core_core_analytics_proto_rawDescGZIP(), []int{117}
+	return file_core_core_analytics_proto_rawDescGZIP(), []int{116}
 }
 
 func (x *OpenOrderProductProto) GetItemId() string {
@@ -8198,7 +8138,7 @@ type AnalyzeOpenOrderProductsResponse struct {
 
 func (x *AnalyzeOpenOrderProductsResponse) Reset() {
 	*x = AnalyzeOpenOrderProductsResponse{}
-	mi := &file_core_core_analytics_proto_msgTypes[118]
+	mi := &file_core_core_analytics_proto_msgTypes[117]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -8210,7 +8150,7 @@ func (x *AnalyzeOpenOrderProductsResponse) String() string {
 func (*AnalyzeOpenOrderProductsResponse) ProtoMessage() {}
 
 func (x *AnalyzeOpenOrderProductsResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_analytics_proto_msgTypes[118]
+	mi := &file_core_core_analytics_proto_msgTypes[117]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -8223,7 +8163,7 @@ func (x *AnalyzeOpenOrderProductsResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use AnalyzeOpenOrderProductsResponse.ProtoReflect.Descriptor instead.
 func (*AnalyzeOpenOrderProductsResponse) Descriptor() ([]byte, []int) {
-	return file_core_core_analytics_proto_rawDescGZIP(), []int{118}
+	return file_core_core_analytics_proto_rawDescGZIP(), []int{117}
 }
 
 func (x *AnalyzeOpenOrderProductsResponse) GetProducts() []*OpenOrderProductProto {
@@ -8251,7 +8191,7 @@ type ListOpenOrdersRequest struct {
 
 func (x *ListOpenOrdersRequest) Reset() {
 	*x = ListOpenOrdersRequest{}
-	mi := &file_core_core_analytics_proto_msgTypes[119]
+	mi := &file_core_core_analytics_proto_msgTypes[118]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -8263,7 +8203,7 @@ func (x *ListOpenOrdersRequest) String() string {
 func (*ListOpenOrdersRequest) ProtoMessage() {}
 
 func (x *ListOpenOrdersRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_analytics_proto_msgTypes[119]
+	mi := &file_core_core_analytics_proto_msgTypes[118]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -8276,7 +8216,7 @@ func (x *ListOpenOrdersRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListOpenOrdersRequest.ProtoReflect.Descriptor instead.
 func (*ListOpenOrdersRequest) Descriptor() ([]byte, []int) {
-	return file_core_core_analytics_proto_rawDescGZIP(), []int{119}
+	return file_core_core_analytics_proto_rawDescGZIP(), []int{118}
 }
 
 func (x *ListOpenOrdersRequest) GetFilter() *OpenOrderFilterProto {
@@ -8320,7 +8260,7 @@ type OpenOrderProto struct {
 
 func (x *OpenOrderProto) Reset() {
 	*x = OpenOrderProto{}
-	mi := &file_core_core_analytics_proto_msgTypes[120]
+	mi := &file_core_core_analytics_proto_msgTypes[119]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -8332,7 +8272,7 @@ func (x *OpenOrderProto) String() string {
 func (*OpenOrderProto) ProtoMessage() {}
 
 func (x *OpenOrderProto) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_analytics_proto_msgTypes[120]
+	mi := &file_core_core_analytics_proto_msgTypes[119]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -8345,7 +8285,7 @@ func (x *OpenOrderProto) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use OpenOrderProto.ProtoReflect.Descriptor instead.
 func (*OpenOrderProto) Descriptor() ([]byte, []int) {
-	return file_core_core_analytics_proto_rawDescGZIP(), []int{120}
+	return file_core_core_analytics_proto_rawDescGZIP(), []int{119}
 }
 
 func (x *OpenOrderProto) GetId() string {
@@ -8435,7 +8375,7 @@ type ListOpenOrdersResponse struct {
 
 func (x *ListOpenOrdersResponse) Reset() {
 	*x = ListOpenOrdersResponse{}
-	mi := &file_core_core_analytics_proto_msgTypes[121]
+	mi := &file_core_core_analytics_proto_msgTypes[120]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -8447,7 +8387,7 @@ func (x *ListOpenOrdersResponse) String() string {
 func (*ListOpenOrdersResponse) ProtoMessage() {}
 
 func (x *ListOpenOrdersResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_analytics_proto_msgTypes[121]
+	mi := &file_core_core_analytics_proto_msgTypes[120]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -8460,7 +8400,7 @@ func (x *ListOpenOrdersResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListOpenOrdersResponse.ProtoReflect.Descriptor instead.
 func (*ListOpenOrdersResponse) Descriptor() ([]byte, []int) {
-	return file_core_core_analytics_proto_rawDescGZIP(), []int{121}
+	return file_core_core_analytics_proto_rawDescGZIP(), []int{120}
 }
 
 func (x *ListOpenOrdersResponse) GetOrders() []*OpenOrderProto {
@@ -8486,7 +8426,7 @@ type ListOpenOrderLinesRequest struct {
 
 func (x *ListOpenOrderLinesRequest) Reset() {
 	*x = ListOpenOrderLinesRequest{}
-	mi := &file_core_core_analytics_proto_msgTypes[122]
+	mi := &file_core_core_analytics_proto_msgTypes[121]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -8498,7 +8438,7 @@ func (x *ListOpenOrderLinesRequest) String() string {
 func (*ListOpenOrderLinesRequest) ProtoMessage() {}
 
 func (x *ListOpenOrderLinesRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_analytics_proto_msgTypes[122]
+	mi := &file_core_core_analytics_proto_msgTypes[121]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -8511,7 +8451,7 @@ func (x *ListOpenOrderLinesRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListOpenOrderLinesRequest.ProtoReflect.Descriptor instead.
 func (*ListOpenOrderLinesRequest) Descriptor() ([]byte, []int) {
-	return file_core_core_analytics_proto_rawDescGZIP(), []int{122}
+	return file_core_core_analytics_proto_rawDescGZIP(), []int{121}
 }
 
 func (x *ListOpenOrderLinesRequest) GetOrderId() string {
@@ -8545,7 +8485,7 @@ type OpenOrderLineProto struct {
 
 func (x *OpenOrderLineProto) Reset() {
 	*x = OpenOrderLineProto{}
-	mi := &file_core_core_analytics_proto_msgTypes[123]
+	mi := &file_core_core_analytics_proto_msgTypes[122]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -8557,7 +8497,7 @@ func (x *OpenOrderLineProto) String() string {
 func (*OpenOrderLineProto) ProtoMessage() {}
 
 func (x *OpenOrderLineProto) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_analytics_proto_msgTypes[123]
+	mi := &file_core_core_analytics_proto_msgTypes[122]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -8570,7 +8510,7 @@ func (x *OpenOrderLineProto) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use OpenOrderLineProto.ProtoReflect.Descriptor instead.
 func (*OpenOrderLineProto) Descriptor() ([]byte, []int) {
-	return file_core_core_analytics_proto_rawDescGZIP(), []int{123}
+	return file_core_core_analytics_proto_rawDescGZIP(), []int{122}
 }
 
 func (x *OpenOrderLineProto) GetId() string {
@@ -8680,7 +8620,7 @@ type ListOpenOrderLinesResponse struct {
 
 func (x *ListOpenOrderLinesResponse) Reset() {
 	*x = ListOpenOrderLinesResponse{}
-	mi := &file_core_core_analytics_proto_msgTypes[124]
+	mi := &file_core_core_analytics_proto_msgTypes[123]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -8692,7 +8632,7 @@ func (x *ListOpenOrderLinesResponse) String() string {
 func (*ListOpenOrderLinesResponse) ProtoMessage() {}
 
 func (x *ListOpenOrderLinesResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_analytics_proto_msgTypes[124]
+	mi := &file_core_core_analytics_proto_msgTypes[123]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -8705,7 +8645,7 @@ func (x *ListOpenOrderLinesResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListOpenOrderLinesResponse.ProtoReflect.Descriptor instead.
 func (*ListOpenOrderLinesResponse) Descriptor() ([]byte, []int) {
-	return file_core_core_analytics_proto_rawDescGZIP(), []int{124}
+	return file_core_core_analytics_proto_rawDescGZIP(), []int{123}
 }
 
 func (x *ListOpenOrderLinesResponse) GetLines() []*OpenOrderLineProto {
@@ -8724,7 +8664,7 @@ type ExportOpenOrderLinesRequest struct {
 
 func (x *ExportOpenOrderLinesRequest) Reset() {
 	*x = ExportOpenOrderLinesRequest{}
-	mi := &file_core_core_analytics_proto_msgTypes[125]
+	mi := &file_core_core_analytics_proto_msgTypes[124]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -8736,7 +8676,7 @@ func (x *ExportOpenOrderLinesRequest) String() string {
 func (*ExportOpenOrderLinesRequest) ProtoMessage() {}
 
 func (x *ExportOpenOrderLinesRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_analytics_proto_msgTypes[125]
+	mi := &file_core_core_analytics_proto_msgTypes[124]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -8749,7 +8689,7 @@ func (x *ExportOpenOrderLinesRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ExportOpenOrderLinesRequest.ProtoReflect.Descriptor instead.
 func (*ExportOpenOrderLinesRequest) Descriptor() ([]byte, []int) {
-	return file_core_core_analytics_proto_rawDescGZIP(), []int{125}
+	return file_core_core_analytics_proto_rawDescGZIP(), []int{124}
 }
 
 func (x *ExportOpenOrderLinesRequest) GetFilter() *OpenOrderFilterProto {
@@ -8768,7 +8708,7 @@ type ExportOpenOrderLinesResponse struct {
 
 func (x *ExportOpenOrderLinesResponse) Reset() {
 	*x = ExportOpenOrderLinesResponse{}
-	mi := &file_core_core_analytics_proto_msgTypes[126]
+	mi := &file_core_core_analytics_proto_msgTypes[125]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -8780,7 +8720,7 @@ func (x *ExportOpenOrderLinesResponse) String() string {
 func (*ExportOpenOrderLinesResponse) ProtoMessage() {}
 
 func (x *ExportOpenOrderLinesResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_analytics_proto_msgTypes[126]
+	mi := &file_core_core_analytics_proto_msgTypes[125]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -8793,7 +8733,7 @@ func (x *ExportOpenOrderLinesResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ExportOpenOrderLinesResponse.ProtoReflect.Descriptor instead.
 func (*ExportOpenOrderLinesResponse) Descriptor() ([]byte, []int) {
-	return file_core_core_analytics_proto_rawDescGZIP(), []int{126}
+	return file_core_core_analytics_proto_rawDescGZIP(), []int{125}
 }
 
 func (x *ExportOpenOrderLinesResponse) GetJob() *JobInfo {
@@ -8807,7 +8747,7 @@ var File_core_core_analytics_proto protoreflect.FileDescriptor
 
 const file_core_core_analytics_proto_rawDesc = "" +
 	"\n" +
-	"\x19core/core_analytics.proto\x12\x04core\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\x15core/core_patch.proto\x1a!core/core_accounts_carriers.proto\x1a core/core_identity_context.proto\x1a\x15core/core_async.proto\"j\n" +
+	"\x19core/core_analytics.proto\x12\x04core\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\x15core/core_patch.proto\x1a!core/core_accounts_carriers.proto\x1a core/core_identity_context.proto\x1a\x15core/core_async.proto\x1a\x17core/value_shapes.proto\"j\n" +
 	"\x12QuarterlyDataProto\x12\x0e\n" +
 	"\x02q1\x18\x01 \x01(\x01R\x02q1\x12\x0e\n" +
 	"\x02q2\x18\x02 \x01(\x01R\x02q2\x12\x0e\n" +
@@ -9075,24 +9015,22 @@ const file_core_core_analytics_proto_rawDesc = "" +
 	"\tunit_name\x18\b \x01(\tR\bunitName\x124\n" +
 	"\vunit_detail\x18\t \x01(\v2\x0e.core.UnitInfoH\x00R\n" +
 	"unitDetail\x88\x01\x01B\x0e\n" +
-	"\f_unit_detail\"\xf1\x03\n" +
+	"\f_unit_detail\"\xbf\x03\n" +
 	"\x10ShippingTermInfo\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x12\n" +
 	"\x04name\x18\x02 \x01(\tR\x04name\x12\x12\n" +
-	"\x04type\x18\x03 \x01(\tR\x04type\x124\n" +
-	"\tflat_rate\x18\x04 \x01(\v2\x12.core.QuantityInfoH\x00R\bflatRate\x88\x01\x01\x12G\n" +
-	"\x13minimum_order_value\x18\x05 \x01(\v2\x12.core.QuantityInfoH\x01R\x11minimumOrderValue\x88\x01\x01\x12W\n" +
+	"\x04type\x18\x03 \x01(\tR\x04type\x12(\n" +
+	"\tflat_rate\x18\n" +
+	" \x01(\v2\v.core.MoneyR\bflatRate\x12;\n" +
+	"\x13minimum_order_value\x18\v \x01(\v2\v.core.MoneyR\x11minimumOrderValue\x12W\n" +
 	"\x1cfree_shipping_service_levels\x18\x06 \x03(\v2\x16.core.ServiceLevelInfoR\x19freeShippingServiceLevels\x129\n" +
 	"\n" +
 	"created_at\x18\a \x01(\v2\x1a.google.protobuf.TimestampR\tcreatedAt\x129\n" +
 	"\n" +
 	"updated_at\x18\b \x01(\v2\x1a.google.protobuf.TimestampR\tupdatedAt\x12\"\n" +
 	"\n" +
-	"account_id\x18\t \x01(\tH\x02R\taccountId\x88\x01\x01B\f\n" +
-	"\n" +
-	"_flat_rateB\x16\n" +
-	"\x14_minimum_order_valueB\r\n" +
-	"\v_account_id\"\x99\x01\n" +
+	"account_id\x18\t \x01(\tH\x00R\taccountId\x88\x01\x01B\r\n" +
+	"\v_account_idJ\x04\b\x04\x10\x05J\x04\b\x05\x10\x06\"\x99\x01\n" +
 	"\x18ListShippingTermsRequest\x12\x1b\n" +
 	"\x06cursor\x18\x01 \x01(\tH\x00R\x06cursor\x88\x01\x01\x12\x14\n" +
 	"\x05limit\x18\x02 \x01(\x05R\x05limit\x12\x19\n" +
@@ -9110,37 +9048,27 @@ const file_core_core_analytics_proto_rawDesc = "" +
 	"\rshipping_term\x18\x01 \x01(\v2\x16.core.ShippingTermInfoR\fshippingTerm\">\n" +
 	"\rQuantityInput\x12\x14\n" +
 	"\x05value\x18\x01 \x01(\tR\x05value\x12\x17\n" +
-	"\aunit_id\x18\x02 \x01(\tR\x06unitId\"\x83\x01\n" +
-	"\x0fCreateRateInput\x12\x14\n" +
-	"\x05value\x18\x01 \x01(\tR\x05value\x12*\n" +
-	"\x11numerator_unit_id\x18\x02 \x01(\tR\x0fnumeratorUnitId\x12.\n" +
-	"\x13denominator_unit_id\x18\x03 \x01(\tR\x11denominatorUnitId\"\xcc\x02\n" +
+	"\aunit_id\x18\x02 \x01(\tR\x06unitId\"\x98\x02\n" +
 	"\x19CreateShippingTermRequest\x12\x12\n" +
 	"\x04name\x18\x01 \x01(\tR\x04name\x12\x12\n" +
-	"\x04type\x18\x02 \x01(\tR\x04type\x125\n" +
-	"\tflat_rate\x18\x03 \x01(\v2\x13.core.QuantityInputH\x00R\bflatRate\x88\x01\x01\x12H\n" +
-	"\x13minimum_order_value\x18\x04 \x01(\v2\x13.core.QuantityInputH\x01R\x11minimumOrderValue\x88\x01\x01\x12D\n" +
+	"\x04type\x18\x02 \x01(\tR\x04type\x12(\n" +
+	"\tflat_rate\x18\a \x01(\v2\v.core.MoneyR\bflatRate\x12;\n" +
+	"\x13minimum_order_value\x18\b \x01(\v2\v.core.MoneyR\x11minimumOrderValue\x12D\n" +
 	"\x1ffree_shipping_service_level_ids\x18\x05 \x03(\tR\x1bfreeShippingServiceLevelIds\x12\x1a\n" +
-	"\bincludes\x18\x06 \x03(\tR\bincludesB\f\n" +
-	"\n" +
-	"_flat_rateB\x16\n" +
-	"\x14_minimum_order_value\"Y\n" +
+	"\bincludes\x18\x06 \x03(\tR\bincludesJ\x04\b\x03\x10\x04J\x04\b\x04\x10\x05\"Y\n" +
 	"\x1aCreateShippingTermResponse\x12;\n" +
-	"\rshipping_term\x18\x01 \x01(\v2\x16.core.ShippingTermInfoR\fshippingTerm\"\xb8\x03\n" +
+	"\rshipping_term\x18\x01 \x01(\v2\x16.core.ShippingTermInfoR\fshippingTerm\"\x8e\x03\n" +
 	"\x19UpdateShippingTermRequest\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x17\n" +
 	"\x04name\x18\x02 \x01(\tH\x00R\x04name\x88\x01\x01\x12\x17\n" +
-	"\x04type\x18\x03 \x01(\tH\x01R\x04type\x88\x01\x01\x125\n" +
-	"\tflat_rate\x18\x04 \x01(\v2\x13.core.QuantityPatchH\x02R\bflatRate\x88\x01\x01\x12H\n" +
-	"\x13minimum_order_value\x18\x05 \x01(\v2\x13.core.QuantityPatchH\x03R\x11minimumOrderValue\x88\x01\x01\x12`\n" +
-	"\x1ffree_shipping_service_level_ids\x18\x06 \x01(\v2\x15.core.StringListPatchH\x04R\x1bfreeShippingServiceLevelIds\x88\x01\x01\x12\x1a\n" +
+	"\x04type\x18\x03 \x01(\tH\x01R\x04type\x88\x01\x01\x12-\n" +
+	"\tflat_rate\x18\b \x01(\v2\x10.core.MoneyPatchR\bflatRate\x12@\n" +
+	"\x13minimum_order_value\x18\t \x01(\v2\x10.core.MoneyPatchR\x11minimumOrderValue\x12`\n" +
+	"\x1ffree_shipping_service_level_ids\x18\x06 \x01(\v2\x15.core.StringListPatchH\x02R\x1bfreeShippingServiceLevelIds\x88\x01\x01\x12\x1a\n" +
 	"\bincludes\x18\a \x03(\tR\bincludesB\a\n" +
 	"\x05_nameB\a\n" +
-	"\x05_typeB\f\n" +
-	"\n" +
-	"_flat_rateB\x16\n" +
-	"\x14_minimum_order_valueB\"\n" +
-	" _free_shipping_service_level_ids\"Y\n" +
+	"\x05_typeB\"\n" +
+	" _free_shipping_service_level_idsJ\x04\b\x04\x10\x05J\x04\b\x05\x10\x06\"Y\n" +
 	"\x1aUpdateShippingTermResponse\x12;\n" +
 	"\rshipping_term\x18\x01 \x01(\v2\x16.core.ShippingTermInfoR\fshippingTerm\"+\n" +
 	"\x19DeleteShippingTermRequest\x12\x0e\n" +
@@ -9663,7 +9591,7 @@ func file_core_core_analytics_proto_rawDescGZIP() []byte {
 	return file_core_core_analytics_proto_rawDescData
 }
 
-var file_core_core_analytics_proto_msgTypes = make([]protoimpl.MessageInfo, 128)
+var file_core_core_analytics_proto_msgTypes = make([]protoimpl.MessageInfo, 127)
 var file_core_core_analytics_proto_goTypes = []any{
 	(*QuarterlyDataProto)(nil),                   // 0: core.QuarterlyDataProto
 	(*AnalyzeQuarterlyOrdersResponse)(nil),       // 1: core.AnalyzeQuarterlyOrdersResponse
@@ -9715,126 +9643,126 @@ var file_core_core_analytics_proto_goTypes = []any{
 	(*GetShippingTermRequest)(nil),               // 47: core.GetShippingTermRequest
 	(*GetShippingTermResponse)(nil),              // 48: core.GetShippingTermResponse
 	(*QuantityInput)(nil),                        // 49: core.QuantityInput
-	(*CreateRateInput)(nil),                      // 50: core.CreateRateInput
-	(*CreateShippingTermRequest)(nil),            // 51: core.CreateShippingTermRequest
-	(*CreateShippingTermResponse)(nil),           // 52: core.CreateShippingTermResponse
-	(*UpdateShippingTermRequest)(nil),            // 53: core.UpdateShippingTermRequest
-	(*UpdateShippingTermResponse)(nil),           // 54: core.UpdateShippingTermResponse
-	(*DeleteShippingTermRequest)(nil),            // 55: core.DeleteShippingTermRequest
-	(*BatchGetShippingTermsByIDsRequest)(nil),    // 56: core.BatchGetShippingTermsByIDsRequest
-	(*BatchGetShippingTermsByIDsResponse)(nil),   // 57: core.BatchGetShippingTermsByIDsResponse
-	(*GeolocationInfo)(nil),                      // 58: core.GeolocationInfo
-	(*AddressInfo)(nil),                          // 59: core.AddressInfo
-	(*GetAddressRequest)(nil),                    // 60: core.GetAddressRequest
-	(*GetAddressResponse)(nil),                   // 61: core.GetAddressResponse
-	(*ListAddressesRequest)(nil),                 // 62: core.ListAddressesRequest
-	(*ListAddressesResponse)(nil),                // 63: core.ListAddressesResponse
-	(*CreateAddressRequest)(nil),                 // 64: core.CreateAddressRequest
-	(*CreateAddressResponse)(nil),                // 65: core.CreateAddressResponse
-	(*UpdateAddressRequest)(nil),                 // 66: core.UpdateAddressRequest
-	(*UpdateAddressResponse)(nil),                // 67: core.UpdateAddressResponse
-	(*DeleteAddressRequest)(nil),                 // 68: core.DeleteAddressRequest
-	(*BatchGetAddressesByIDsRequest)(nil),        // 69: core.BatchGetAddressesByIDsRequest
-	(*BatchGetAddressesByIDsResponse)(nil),       // 70: core.BatchGetAddressesByIDsResponse
-	(*AutocompleteAddressRequest)(nil),           // 71: core.AutocompleteAddressRequest
-	(*AddressSuggestion)(nil),                    // 72: core.AddressSuggestion
-	(*AutocompleteAddressResponse)(nil),          // 73: core.AutocompleteAddressResponse
-	(*GetAddressDetailsRequest)(nil),             // 74: core.GetAddressDetailsRequest
-	(*AddressComponentsInfo)(nil),                // 75: core.AddressComponentsInfo
-	(*GetAddressDetailsResponse)(nil),            // 76: core.GetAddressDetailsResponse
-	(*ValidateAddressRequest)(nil),               // 77: core.ValidateAddressRequest
-	(*ValidateAddressResponse)(nil),              // 78: core.ValidateAddressResponse
-	(*AccountStatusInfo)(nil),                    // 79: core.AccountStatusInfo
-	(*ListAccountStatusesRequest)(nil),           // 80: core.ListAccountStatusesRequest
-	(*ListAccountStatusesResponse)(nil),          // 81: core.ListAccountStatusesResponse
-	(*GetAccountStatusRequest)(nil),              // 82: core.GetAccountStatusRequest
-	(*GetAccountStatusResponse)(nil),             // 83: core.GetAccountStatusResponse
-	(*BatchGetAccountStatusesByIDsRequest)(nil),  // 84: core.BatchGetAccountStatusesByIDsRequest
-	(*BatchGetAccountStatusesByIDsResponse)(nil), // 85: core.BatchGetAccountStatusesByIDsResponse
-	(*AnalyzeDeliveryPerformanceRequest)(nil),    // 86: core.AnalyzeDeliveryPerformanceRequest
-	(*DeliveryPerformanceProto)(nil),             // 87: core.DeliveryPerformanceProto
-	(*DeliveryBacklogBucketProto)(nil),           // 88: core.DeliveryBacklogBucketProto
-	(*DeliveryLatenessBucketProto)(nil),          // 89: core.DeliveryLatenessBucketProto
-	(*DeliveryBreakdownProto)(nil),               // 90: core.DeliveryBreakdownProto
-	(*AnalyzeDeliveryPerformanceResponse)(nil),   // 91: core.AnalyzeDeliveryPerformanceResponse
-	(*AnalyzeScheduleAttainmentRequest)(nil),     // 92: core.AnalyzeScheduleAttainmentRequest
-	(*AttainmentBucketInfo)(nil),                 // 93: core.AttainmentBucketInfo
-	(*FrozenAdherenceInfo)(nil),                  // 94: core.FrozenAdherenceInfo
-	(*AnalyzeScheduleAttainmentResponse)(nil),    // 95: core.AnalyzeScheduleAttainmentResponse
-	(*SalesReportFilterProto)(nil),               // 96: core.SalesReportFilterProto
-	(*AnalyzeSalesSummaryRequest)(nil),           // 97: core.AnalyzeSalesSummaryRequest
-	(*SalesTotalsProto)(nil),                     // 98: core.SalesTotalsProto
-	(*AnalyzeSalesSummaryResponse)(nil),          // 99: core.AnalyzeSalesSummaryResponse
-	(*AnalyzeSalesBreakdownRequest)(nil),         // 100: core.AnalyzeSalesBreakdownRequest
-	(*SalesBreakdownGroupProto)(nil),             // 101: core.SalesBreakdownGroupProto
-	(*AnalyzeSalesBreakdownResponse)(nil),        // 102: core.AnalyzeSalesBreakdownResponse
-	(*AnalyzeSalesInvoicesRequest)(nil),          // 103: core.AnalyzeSalesInvoicesRequest
-	(*SalesInvoiceSummaryProto)(nil),             // 104: core.SalesInvoiceSummaryProto
-	(*AnalyzeSalesInvoicesResponse)(nil),         // 105: core.AnalyzeSalesInvoicesResponse
-	(*ListNewCustomersRequest)(nil),              // 106: core.ListNewCustomersRequest
-	(*NewCustomerProto)(nil),                     // 107: core.NewCustomerProto
-	(*ListNewCustomersResponse)(nil),             // 108: core.ListNewCustomersResponse
-	(*ListSalesLinesRequest)(nil),                // 109: core.ListSalesLinesRequest
-	(*ListSalesLinesResponse)(nil),               // 110: core.ListSalesLinesResponse
-	(*ExportSalesLinesRequest)(nil),              // 111: core.ExportSalesLinesRequest
-	(*ExportSalesLinesResponse)(nil),             // 112: core.ExportSalesLinesResponse
-	(*OpenOrderFilterProto)(nil),                 // 113: core.OpenOrderFilterProto
-	(*AnalyzeOpenOrdersSummaryRequest)(nil),      // 114: core.AnalyzeOpenOrdersSummaryRequest
-	(*AnalyzeOpenOrdersSummaryResponse)(nil),     // 115: core.AnalyzeOpenOrdersSummaryResponse
-	(*AnalyzeOpenOrderProductsRequest)(nil),      // 116: core.AnalyzeOpenOrderProductsRequest
-	(*OpenOrderProductProto)(nil),                // 117: core.OpenOrderProductProto
-	(*AnalyzeOpenOrderProductsResponse)(nil),     // 118: core.AnalyzeOpenOrderProductsResponse
-	(*ListOpenOrdersRequest)(nil),                // 119: core.ListOpenOrdersRequest
-	(*OpenOrderProto)(nil),                       // 120: core.OpenOrderProto
-	(*ListOpenOrdersResponse)(nil),               // 121: core.ListOpenOrdersResponse
-	(*ListOpenOrderLinesRequest)(nil),            // 122: core.ListOpenOrderLinesRequest
-	(*OpenOrderLineProto)(nil),                   // 123: core.OpenOrderLineProto
-	(*ListOpenOrderLinesResponse)(nil),           // 124: core.ListOpenOrderLinesResponse
-	(*ExportOpenOrderLinesRequest)(nil),          // 125: core.ExportOpenOrderLinesRequest
-	(*ExportOpenOrderLinesResponse)(nil),         // 126: core.ExportOpenOrderLinesResponse
-	nil,                                          // 127: core.AnalyzeQuarterlyOrdersResponse.DataEntry
-	(*BaseQuantity)(nil),                         // 128: core.BaseQuantity
-	(*BasicInfoProto)(nil),                       // 129: core.BasicInfoProto
-	(*timestamppb.Timestamp)(nil),                // 130: google.protobuf.Timestamp
-	(*PageInfo)(nil),                             // 131: core.PageInfo
-	(*UnitInfo)(nil),                             // 132: core.UnitInfo
+	(*CreateShippingTermRequest)(nil),            // 50: core.CreateShippingTermRequest
+	(*CreateShippingTermResponse)(nil),           // 51: core.CreateShippingTermResponse
+	(*UpdateShippingTermRequest)(nil),            // 52: core.UpdateShippingTermRequest
+	(*UpdateShippingTermResponse)(nil),           // 53: core.UpdateShippingTermResponse
+	(*DeleteShippingTermRequest)(nil),            // 54: core.DeleteShippingTermRequest
+	(*BatchGetShippingTermsByIDsRequest)(nil),    // 55: core.BatchGetShippingTermsByIDsRequest
+	(*BatchGetShippingTermsByIDsResponse)(nil),   // 56: core.BatchGetShippingTermsByIDsResponse
+	(*GeolocationInfo)(nil),                      // 57: core.GeolocationInfo
+	(*AddressInfo)(nil),                          // 58: core.AddressInfo
+	(*GetAddressRequest)(nil),                    // 59: core.GetAddressRequest
+	(*GetAddressResponse)(nil),                   // 60: core.GetAddressResponse
+	(*ListAddressesRequest)(nil),                 // 61: core.ListAddressesRequest
+	(*ListAddressesResponse)(nil),                // 62: core.ListAddressesResponse
+	(*CreateAddressRequest)(nil),                 // 63: core.CreateAddressRequest
+	(*CreateAddressResponse)(nil),                // 64: core.CreateAddressResponse
+	(*UpdateAddressRequest)(nil),                 // 65: core.UpdateAddressRequest
+	(*UpdateAddressResponse)(nil),                // 66: core.UpdateAddressResponse
+	(*DeleteAddressRequest)(nil),                 // 67: core.DeleteAddressRequest
+	(*BatchGetAddressesByIDsRequest)(nil),        // 68: core.BatchGetAddressesByIDsRequest
+	(*BatchGetAddressesByIDsResponse)(nil),       // 69: core.BatchGetAddressesByIDsResponse
+	(*AutocompleteAddressRequest)(nil),           // 70: core.AutocompleteAddressRequest
+	(*AddressSuggestion)(nil),                    // 71: core.AddressSuggestion
+	(*AutocompleteAddressResponse)(nil),          // 72: core.AutocompleteAddressResponse
+	(*GetAddressDetailsRequest)(nil),             // 73: core.GetAddressDetailsRequest
+	(*AddressComponentsInfo)(nil),                // 74: core.AddressComponentsInfo
+	(*GetAddressDetailsResponse)(nil),            // 75: core.GetAddressDetailsResponse
+	(*ValidateAddressRequest)(nil),               // 76: core.ValidateAddressRequest
+	(*ValidateAddressResponse)(nil),              // 77: core.ValidateAddressResponse
+	(*AccountStatusInfo)(nil),                    // 78: core.AccountStatusInfo
+	(*ListAccountStatusesRequest)(nil),           // 79: core.ListAccountStatusesRequest
+	(*ListAccountStatusesResponse)(nil),          // 80: core.ListAccountStatusesResponse
+	(*GetAccountStatusRequest)(nil),              // 81: core.GetAccountStatusRequest
+	(*GetAccountStatusResponse)(nil),             // 82: core.GetAccountStatusResponse
+	(*BatchGetAccountStatusesByIDsRequest)(nil),  // 83: core.BatchGetAccountStatusesByIDsRequest
+	(*BatchGetAccountStatusesByIDsResponse)(nil), // 84: core.BatchGetAccountStatusesByIDsResponse
+	(*AnalyzeDeliveryPerformanceRequest)(nil),    // 85: core.AnalyzeDeliveryPerformanceRequest
+	(*DeliveryPerformanceProto)(nil),             // 86: core.DeliveryPerformanceProto
+	(*DeliveryBacklogBucketProto)(nil),           // 87: core.DeliveryBacklogBucketProto
+	(*DeliveryLatenessBucketProto)(nil),          // 88: core.DeliveryLatenessBucketProto
+	(*DeliveryBreakdownProto)(nil),               // 89: core.DeliveryBreakdownProto
+	(*AnalyzeDeliveryPerformanceResponse)(nil),   // 90: core.AnalyzeDeliveryPerformanceResponse
+	(*AnalyzeScheduleAttainmentRequest)(nil),     // 91: core.AnalyzeScheduleAttainmentRequest
+	(*AttainmentBucketInfo)(nil),                 // 92: core.AttainmentBucketInfo
+	(*FrozenAdherenceInfo)(nil),                  // 93: core.FrozenAdherenceInfo
+	(*AnalyzeScheduleAttainmentResponse)(nil),    // 94: core.AnalyzeScheduleAttainmentResponse
+	(*SalesReportFilterProto)(nil),               // 95: core.SalesReportFilterProto
+	(*AnalyzeSalesSummaryRequest)(nil),           // 96: core.AnalyzeSalesSummaryRequest
+	(*SalesTotalsProto)(nil),                     // 97: core.SalesTotalsProto
+	(*AnalyzeSalesSummaryResponse)(nil),          // 98: core.AnalyzeSalesSummaryResponse
+	(*AnalyzeSalesBreakdownRequest)(nil),         // 99: core.AnalyzeSalesBreakdownRequest
+	(*SalesBreakdownGroupProto)(nil),             // 100: core.SalesBreakdownGroupProto
+	(*AnalyzeSalesBreakdownResponse)(nil),        // 101: core.AnalyzeSalesBreakdownResponse
+	(*AnalyzeSalesInvoicesRequest)(nil),          // 102: core.AnalyzeSalesInvoicesRequest
+	(*SalesInvoiceSummaryProto)(nil),             // 103: core.SalesInvoiceSummaryProto
+	(*AnalyzeSalesInvoicesResponse)(nil),         // 104: core.AnalyzeSalesInvoicesResponse
+	(*ListNewCustomersRequest)(nil),              // 105: core.ListNewCustomersRequest
+	(*NewCustomerProto)(nil),                     // 106: core.NewCustomerProto
+	(*ListNewCustomersResponse)(nil),             // 107: core.ListNewCustomersResponse
+	(*ListSalesLinesRequest)(nil),                // 108: core.ListSalesLinesRequest
+	(*ListSalesLinesResponse)(nil),               // 109: core.ListSalesLinesResponse
+	(*ExportSalesLinesRequest)(nil),              // 110: core.ExportSalesLinesRequest
+	(*ExportSalesLinesResponse)(nil),             // 111: core.ExportSalesLinesResponse
+	(*OpenOrderFilterProto)(nil),                 // 112: core.OpenOrderFilterProto
+	(*AnalyzeOpenOrdersSummaryRequest)(nil),      // 113: core.AnalyzeOpenOrdersSummaryRequest
+	(*AnalyzeOpenOrdersSummaryResponse)(nil),     // 114: core.AnalyzeOpenOrdersSummaryResponse
+	(*AnalyzeOpenOrderProductsRequest)(nil),      // 115: core.AnalyzeOpenOrderProductsRequest
+	(*OpenOrderProductProto)(nil),                // 116: core.OpenOrderProductProto
+	(*AnalyzeOpenOrderProductsResponse)(nil),     // 117: core.AnalyzeOpenOrderProductsResponse
+	(*ListOpenOrdersRequest)(nil),                // 118: core.ListOpenOrdersRequest
+	(*OpenOrderProto)(nil),                       // 119: core.OpenOrderProto
+	(*ListOpenOrdersResponse)(nil),               // 120: core.ListOpenOrdersResponse
+	(*ListOpenOrderLinesRequest)(nil),            // 121: core.ListOpenOrderLinesRequest
+	(*OpenOrderLineProto)(nil),                   // 122: core.OpenOrderLineProto
+	(*ListOpenOrderLinesResponse)(nil),           // 123: core.ListOpenOrderLinesResponse
+	(*ExportOpenOrderLinesRequest)(nil),          // 124: core.ExportOpenOrderLinesRequest
+	(*ExportOpenOrderLinesResponse)(nil),         // 125: core.ExportOpenOrderLinesResponse
+	nil,                                          // 126: core.AnalyzeQuarterlyOrdersResponse.DataEntry
+	(*BaseQuantity)(nil),                         // 127: core.BaseQuantity
+	(*BasicInfoProto)(nil),                       // 128: core.BasicInfoProto
+	(*timestamppb.Timestamp)(nil),                // 129: google.protobuf.Timestamp
+	(*PageInfo)(nil),                             // 130: core.PageInfo
+	(*UnitInfo)(nil),                             // 131: core.UnitInfo
+	(*Money)(nil),                                // 132: core.Money
 	(*ServiceLevelInfo)(nil),                     // 133: core.ServiceLevelInfo
-	(*QuantityPatch)(nil),                        // 134: core.QuantityPatch
+	(*MoneyPatch)(nil),                           // 134: core.MoneyPatch
 	(*StringListPatch)(nil),                      // 135: core.StringListPatch
 	(*StringPatch)(nil),                          // 136: core.StringPatch
 	(*SalesEntryProto)(nil),                      // 137: core.SalesEntryProto
 	(*JobInfo)(nil),                              // 138: core.JobInfo
 }
 var file_core_core_analytics_proto_depIdxs = []int32{
-	127, // 0: core.AnalyzeQuarterlyOrdersResponse.data:type_name -> core.AnalyzeQuarterlyOrdersResponse.DataEntry
+	126, // 0: core.AnalyzeQuarterlyOrdersResponse.data:type_name -> core.AnalyzeQuarterlyOrdersResponse.DataEntry
 	3,   // 1: core.AnalyticsUnitGroup.units:type_name -> core.AnalyticsUnitGroupUnitProto
-	128, // 2: core.MaterialAnalyticsEntryProto.quantity_in_inventory:type_name -> core.BaseQuantity
-	128, // 3: core.MaterialAnalyticsEntryProto.quantity_in_demand:type_name -> core.BaseQuantity
-	128, // 4: core.MaterialAnalyticsEntryProto.order_point:type_name -> core.BaseQuantity
-	128, // 5: core.MaterialAnalyticsEntryProto.lead_time:type_name -> core.BaseQuantity
+	127, // 2: core.MaterialAnalyticsEntryProto.quantity_in_inventory:type_name -> core.BaseQuantity
+	127, // 3: core.MaterialAnalyticsEntryProto.quantity_in_demand:type_name -> core.BaseQuantity
+	127, // 4: core.MaterialAnalyticsEntryProto.order_point:type_name -> core.BaseQuantity
+	127, // 5: core.MaterialAnalyticsEntryProto.lead_time:type_name -> core.BaseQuantity
 	4,   // 6: core.MaterialAnalyticsEntryProto.unit_group:type_name -> core.AnalyticsUnitGroup
 	5,   // 7: core.AnalyzeMaterialsResponse.entries:type_name -> core.MaterialAnalyticsEntryProto
-	128, // 8: core.AnalyticsRateProto.numerator:type_name -> core.BaseQuantity
-	128, // 9: core.AnalyticsRateProto.denominator:type_name -> core.BaseQuantity
+	127, // 8: core.AnalyticsRateProto.numerator:type_name -> core.BaseQuantity
+	127, // 9: core.AnalyticsRateProto.denominator:type_name -> core.BaseQuantity
 	8,   // 10: core.InventoryReceiptEntryProto.item:type_name -> core.LightItemProto
-	129, // 11: core.InventoryReceiptEntryProto.owner_account:type_name -> core.BasicInfoProto
-	129, // 12: core.InventoryReceiptEntryProto.holder_account:type_name -> core.BasicInfoProto
-	128, // 13: core.InventoryReceiptEntryProto.remaining_quantity:type_name -> core.BaseQuantity
+	128, // 11: core.InventoryReceiptEntryProto.owner_account:type_name -> core.BasicInfoProto
+	128, // 12: core.InventoryReceiptEntryProto.holder_account:type_name -> core.BasicInfoProto
+	127, // 13: core.InventoryReceiptEntryProto.remaining_quantity:type_name -> core.BaseQuantity
 	10,  // 14: core.InventoryReceiptEntryProto.weighted_average_unit_cost:type_name -> core.AnalyticsRateProto
-	130, // 15: core.InventoryReceiptEntryProto.oldest_receipt_at:type_name -> google.protobuf.Timestamp
-	130, // 16: core.InventoryReceiptEntryProto.newest_receipt_at:type_name -> google.protobuf.Timestamp
-	129, // 17: core.InventoryReceiptEntryProto.location:type_name -> core.BasicInfoProto
+	129, // 15: core.InventoryReceiptEntryProto.oldest_receipt_at:type_name -> google.protobuf.Timestamp
+	129, // 16: core.InventoryReceiptEntryProto.newest_receipt_at:type_name -> google.protobuf.Timestamp
+	128, // 17: core.InventoryReceiptEntryProto.location:type_name -> core.BasicInfoProto
 	9,   // 18: core.InventoryReceiptEntryProto.lot:type_name -> core.AnalyticsLotProto
-	128, // 19: core.InventoryReceiptEntryProto.inventory_value:type_name -> core.BaseQuantity
+	127, // 19: core.InventoryReceiptEntryProto.inventory_value:type_name -> core.BaseQuantity
 	11,  // 20: core.AnalyzeInventoryReceiptsResponse.entries:type_name -> core.InventoryReceiptEntryProto
-	130, // 21: core.DateTimeCoordinateProto.x:type_name -> google.protobuf.Timestamp
+	129, // 21: core.DateTimeCoordinateProto.x:type_name -> google.protobuf.Timestamp
 	13,  // 22: core.NewCustomersChartDataProto.data:type_name -> core.DateTimeCoordinateProto
-	130, // 23: core.AnalyzeNewCustomersRequest.start_date:type_name -> google.protobuf.Timestamp
-	130, // 24: core.AnalyzeNewCustomersRequest.end_date:type_name -> google.protobuf.Timestamp
+	129, // 23: core.AnalyzeNewCustomersRequest.start_date:type_name -> google.protobuf.Timestamp
+	129, // 24: core.AnalyzeNewCustomersRequest.end_date:type_name -> google.protobuf.Timestamp
 	14,  // 25: core.AnalyzeNewCustomersResponse.new_customers:type_name -> core.NewCustomersChartDataProto
-	130, // 26: core.DemandHistoryPointProto.date:type_name -> google.protobuf.Timestamp
-	130, // 27: core.DemandForecastPointProto.date:type_name -> google.protobuf.Timestamp
-	130, // 28: core.RevenueHistoryPointProto.date:type_name -> google.protobuf.Timestamp
+	129, // 26: core.DemandHistoryPointProto.date:type_name -> google.protobuf.Timestamp
+	129, // 27: core.DemandForecastPointProto.date:type_name -> google.protobuf.Timestamp
+	129, // 28: core.RevenueHistoryPointProto.date:type_name -> google.protobuf.Timestamp
 	17,  // 29: core.DemandForecastRowProto.history:type_name -> core.DemandHistoryPointProto
 	18,  // 30: core.DemandForecastRowProto.forecast:type_name -> core.DemandForecastPointProto
 	19,  // 31: core.DemandForecastRowProto.revenue_history:type_name -> core.RevenueHistoryPointProto
@@ -9843,127 +9771,127 @@ var file_core_core_analytics_proto_depIdxs = []int32{
 	18,  // 34: core.DemandForecastRowProto.sales_forecast:type_name -> core.DemandForecastPointProto
 	20,  // 35: core.AnalyzeDemandForecastResponse.rows:type_name -> core.DemandForecastRowProto
 	23,  // 36: core.OeeDepartmentProto.downtime_breakdown:type_name -> core.OeeDowntimeReasonProto
-	130, // 37: core.AnalyzeOeeRequest.start_date:type_name -> google.protobuf.Timestamp
-	130, // 38: core.AnalyzeOeeRequest.end_date:type_name -> google.protobuf.Timestamp
+	129, // 37: core.AnalyzeOeeRequest.start_date:type_name -> google.protobuf.Timestamp
+	129, // 38: core.AnalyzeOeeRequest.end_date:type_name -> google.protobuf.Timestamp
 	25,  // 39: core.AnalyzeOeeRequest.planned_time:type_name -> core.OeeDepartmentPlannedTimeProto
 	24,  // 40: core.AnalyzeOeeResponse.departments:type_name -> core.OeeDepartmentProto
-	130, // 41: core.AnalyzeOeeTrendRequest.start_date:type_name -> google.protobuf.Timestamp
-	130, // 42: core.AnalyzeOeeTrendRequest.end_date:type_name -> google.protobuf.Timestamp
-	130, // 43: core.OeeTrendPeriodProto.starts_at:type_name -> google.protobuf.Timestamp
-	130, // 44: core.OeeTrendPeriodProto.ends_at:type_name -> google.protobuf.Timestamp
+	129, // 41: core.AnalyzeOeeTrendRequest.start_date:type_name -> google.protobuf.Timestamp
+	129, // 42: core.AnalyzeOeeTrendRequest.end_date:type_name -> google.protobuf.Timestamp
+	129, // 43: core.OeeTrendPeriodProto.starts_at:type_name -> google.protobuf.Timestamp
+	129, // 44: core.OeeTrendPeriodProto.ends_at:type_name -> google.protobuf.Timestamp
 	29,  // 45: core.AnalyzeOeeTrendResponse.periods:type_name -> core.OeeTrendPeriodProto
-	130, // 46: core.PaymentTermInfo.created_at:type_name -> google.protobuf.Timestamp
-	130, // 47: core.PaymentTermInfo.updated_at:type_name -> google.protobuf.Timestamp
+	129, // 46: core.PaymentTermInfo.created_at:type_name -> google.protobuf.Timestamp
+	129, // 47: core.PaymentTermInfo.updated_at:type_name -> google.protobuf.Timestamp
 	31,  // 48: core.ListPaymentTermsResponse.payment_terms:type_name -> core.PaymentTermInfo
-	131, // 49: core.ListPaymentTermsResponse.page_info:type_name -> core.PageInfo
+	130, // 49: core.ListPaymentTermsResponse.page_info:type_name -> core.PageInfo
 	31,  // 50: core.GetPaymentTermResponse.payment_term:type_name -> core.PaymentTermInfo
 	31,  // 51: core.CreatePaymentTermResponse.payment_term:type_name -> core.PaymentTermInfo
 	31,  // 52: core.UpdatePaymentTermResponse.payment_term:type_name -> core.PaymentTermInfo
 	31,  // 53: core.BatchGetPaymentTermsByIDsResponse.payment_terms:type_name -> core.PaymentTermInfo
-	130, // 54: core.QuantityInfo.created_at:type_name -> google.protobuf.Timestamp
-	130, // 55: core.QuantityInfo.updated_at:type_name -> google.protobuf.Timestamp
-	132, // 56: core.QuantityInfo.unit_detail:type_name -> core.UnitInfo
-	43,  // 57: core.ShippingTermInfo.flat_rate:type_name -> core.QuantityInfo
-	43,  // 58: core.ShippingTermInfo.minimum_order_value:type_name -> core.QuantityInfo
+	129, // 54: core.QuantityInfo.created_at:type_name -> google.protobuf.Timestamp
+	129, // 55: core.QuantityInfo.updated_at:type_name -> google.protobuf.Timestamp
+	131, // 56: core.QuantityInfo.unit_detail:type_name -> core.UnitInfo
+	132, // 57: core.ShippingTermInfo.flat_rate:type_name -> core.Money
+	132, // 58: core.ShippingTermInfo.minimum_order_value:type_name -> core.Money
 	133, // 59: core.ShippingTermInfo.free_shipping_service_levels:type_name -> core.ServiceLevelInfo
-	130, // 60: core.ShippingTermInfo.created_at:type_name -> google.protobuf.Timestamp
-	130, // 61: core.ShippingTermInfo.updated_at:type_name -> google.protobuf.Timestamp
+	129, // 60: core.ShippingTermInfo.created_at:type_name -> google.protobuf.Timestamp
+	129, // 61: core.ShippingTermInfo.updated_at:type_name -> google.protobuf.Timestamp
 	44,  // 62: core.ListShippingTermsResponse.shipping_terms:type_name -> core.ShippingTermInfo
-	131, // 63: core.ListShippingTermsResponse.page_info:type_name -> core.PageInfo
+	130, // 63: core.ListShippingTermsResponse.page_info:type_name -> core.PageInfo
 	44,  // 64: core.GetShippingTermResponse.shipping_term:type_name -> core.ShippingTermInfo
-	49,  // 65: core.CreateShippingTermRequest.flat_rate:type_name -> core.QuantityInput
-	49,  // 66: core.CreateShippingTermRequest.minimum_order_value:type_name -> core.QuantityInput
+	132, // 65: core.CreateShippingTermRequest.flat_rate:type_name -> core.Money
+	132, // 66: core.CreateShippingTermRequest.minimum_order_value:type_name -> core.Money
 	44,  // 67: core.CreateShippingTermResponse.shipping_term:type_name -> core.ShippingTermInfo
-	134, // 68: core.UpdateShippingTermRequest.flat_rate:type_name -> core.QuantityPatch
-	134, // 69: core.UpdateShippingTermRequest.minimum_order_value:type_name -> core.QuantityPatch
+	134, // 68: core.UpdateShippingTermRequest.flat_rate:type_name -> core.MoneyPatch
+	134, // 69: core.UpdateShippingTermRequest.minimum_order_value:type_name -> core.MoneyPatch
 	135, // 70: core.UpdateShippingTermRequest.free_shipping_service_level_ids:type_name -> core.StringListPatch
 	44,  // 71: core.UpdateShippingTermResponse.shipping_term:type_name -> core.ShippingTermInfo
 	44,  // 72: core.BatchGetShippingTermsByIDsResponse.shipping_terms:type_name -> core.ShippingTermInfo
-	58,  // 73: core.AddressInfo.geolocation:type_name -> core.GeolocationInfo
-	130, // 74: core.AddressInfo.created_at:type_name -> google.protobuf.Timestamp
-	130, // 75: core.AddressInfo.updated_at:type_name -> google.protobuf.Timestamp
-	59,  // 76: core.GetAddressResponse.address:type_name -> core.AddressInfo
-	59,  // 77: core.ListAddressesResponse.addresses:type_name -> core.AddressInfo
-	131, // 78: core.ListAddressesResponse.page_info:type_name -> core.PageInfo
-	59,  // 79: core.CreateAddressResponse.address:type_name -> core.AddressInfo
+	57,  // 73: core.AddressInfo.geolocation:type_name -> core.GeolocationInfo
+	129, // 74: core.AddressInfo.created_at:type_name -> google.protobuf.Timestamp
+	129, // 75: core.AddressInfo.updated_at:type_name -> google.protobuf.Timestamp
+	58,  // 76: core.GetAddressResponse.address:type_name -> core.AddressInfo
+	58,  // 77: core.ListAddressesResponse.addresses:type_name -> core.AddressInfo
+	130, // 78: core.ListAddressesResponse.page_info:type_name -> core.PageInfo
+	58,  // 79: core.CreateAddressResponse.address:type_name -> core.AddressInfo
 	136, // 80: core.UpdateAddressRequest.phone:type_name -> core.StringPatch
 	136, // 81: core.UpdateAddressRequest.email:type_name -> core.StringPatch
 	136, // 82: core.UpdateAddressRequest.receive_calendar_id:type_name -> core.StringPatch
 	136, // 83: core.UpdateAddressRequest.street_line_2:type_name -> core.StringPatch
-	59,  // 84: core.UpdateAddressResponse.address:type_name -> core.AddressInfo
-	59,  // 85: core.BatchGetAddressesByIDsResponse.addresses:type_name -> core.AddressInfo
-	72,  // 86: core.AutocompleteAddressResponse.suggestions:type_name -> core.AddressSuggestion
-	75,  // 87: core.GetAddressDetailsResponse.address:type_name -> core.AddressComponentsInfo
-	75,  // 88: core.ValidateAddressResponse.components:type_name -> core.AddressComponentsInfo
-	130, // 89: core.AccountStatusInfo.created_at:type_name -> google.protobuf.Timestamp
-	130, // 90: core.AccountStatusInfo.updated_at:type_name -> google.protobuf.Timestamp
-	79,  // 91: core.ListAccountStatusesResponse.account_statuses:type_name -> core.AccountStatusInfo
-	131, // 92: core.ListAccountStatusesResponse.page_info:type_name -> core.PageInfo
-	79,  // 93: core.GetAccountStatusResponse.account_status:type_name -> core.AccountStatusInfo
-	79,  // 94: core.BatchGetAccountStatusesByIDsResponse.account_statuses:type_name -> core.AccountStatusInfo
-	130, // 95: core.AnalyzeDeliveryPerformanceRequest.starts_at:type_name -> google.protobuf.Timestamp
-	130, // 96: core.AnalyzeDeliveryPerformanceRequest.ends_at:type_name -> google.protobuf.Timestamp
-	130, // 97: core.DeliveryPerformanceProto.period_start:type_name -> google.protobuf.Timestamp
-	87,  // 98: core.DeliveryBreakdownProto.performance:type_name -> core.DeliveryPerformanceProto
-	87,  // 99: core.AnalyzeDeliveryPerformanceResponse.overall:type_name -> core.DeliveryPerformanceProto
-	87,  // 100: core.AnalyzeDeliveryPerformanceResponse.periods:type_name -> core.DeliveryPerformanceProto
-	88,  // 101: core.AnalyzeDeliveryPerformanceResponse.backlog:type_name -> core.DeliveryBacklogBucketProto
-	89,  // 102: core.AnalyzeDeliveryPerformanceResponse.lateness:type_name -> core.DeliveryLatenessBucketProto
-	90,  // 103: core.AnalyzeDeliveryPerformanceResponse.by_customer:type_name -> core.DeliveryBreakdownProto
-	90,  // 104: core.AnalyzeDeliveryPerformanceResponse.by_customer_group:type_name -> core.DeliveryBreakdownProto
-	90,  // 105: core.AnalyzeDeliveryPerformanceResponse.by_product_line:type_name -> core.DeliveryBreakdownProto
-	90,  // 106: core.AnalyzeDeliveryPerformanceResponse.by_commitment_source:type_name -> core.DeliveryBreakdownProto
-	130, // 107: core.AnalyzeScheduleAttainmentRequest.start_date:type_name -> google.protobuf.Timestamp
-	130, // 108: core.AnalyzeScheduleAttainmentRequest.end_date:type_name -> google.protobuf.Timestamp
-	130, // 109: core.AttainmentBucketInfo.week_start_date:type_name -> google.protobuf.Timestamp
-	130, // 110: core.FrozenAdherenceInfo.frozen_through_date:type_name -> google.protobuf.Timestamp
-	130, // 111: core.AnalyzeScheduleAttainmentResponse.start_date:type_name -> google.protobuf.Timestamp
-	130, // 112: core.AnalyzeScheduleAttainmentResponse.end_date:type_name -> google.protobuf.Timestamp
-	93,  // 113: core.AnalyzeScheduleAttainmentResponse.buckets:type_name -> core.AttainmentBucketInfo
-	93,  // 114: core.AnalyzeScheduleAttainmentResponse.totals:type_name -> core.AttainmentBucketInfo
-	94,  // 115: core.AnalyzeScheduleAttainmentResponse.frozen_adherence:type_name -> core.FrozenAdherenceInfo
-	130, // 116: core.SalesReportFilterProto.starts_at:type_name -> google.protobuf.Timestamp
-	130, // 117: core.SalesReportFilterProto.ends_at:type_name -> google.protobuf.Timestamp
-	130, // 118: core.SalesReportFilterProto.comparison_starts_at:type_name -> google.protobuf.Timestamp
-	130, // 119: core.SalesReportFilterProto.comparison_ends_at:type_name -> google.protobuf.Timestamp
-	96,  // 120: core.AnalyzeSalesSummaryRequest.filter:type_name -> core.SalesReportFilterProto
-	130, // 121: core.SalesTotalsProto.period_start:type_name -> google.protobuf.Timestamp
-	98,  // 122: core.AnalyzeSalesSummaryResponse.current:type_name -> core.SalesTotalsProto
-	98,  // 123: core.AnalyzeSalesSummaryResponse.daily:type_name -> core.SalesTotalsProto
-	98,  // 124: core.AnalyzeSalesSummaryResponse.comparison:type_name -> core.SalesTotalsProto
-	98,  // 125: core.AnalyzeSalesSummaryResponse.comparison_daily:type_name -> core.SalesTotalsProto
-	96,  // 126: core.AnalyzeSalesBreakdownRequest.filter:type_name -> core.SalesReportFilterProto
-	98,  // 127: core.SalesBreakdownGroupProto.totals:type_name -> core.SalesTotalsProto
-	98,  // 128: core.SalesBreakdownGroupProto.comparison:type_name -> core.SalesTotalsProto
-	101, // 129: core.AnalyzeSalesBreakdownResponse.groups:type_name -> core.SalesBreakdownGroupProto
-	131, // 130: core.AnalyzeSalesBreakdownResponse.page_info:type_name -> core.PageInfo
-	96,  // 131: core.AnalyzeSalesInvoicesRequest.filter:type_name -> core.SalesReportFilterProto
-	130, // 132: core.SalesInvoiceSummaryProto.invoiced_at:type_name -> google.protobuf.Timestamp
-	104, // 133: core.AnalyzeSalesInvoicesResponse.invoices:type_name -> core.SalesInvoiceSummaryProto
-	131, // 134: core.AnalyzeSalesInvoicesResponse.page_info:type_name -> core.PageInfo
-	130, // 135: core.ListNewCustomersRequest.starts_at:type_name -> google.protobuf.Timestamp
-	130, // 136: core.ListNewCustomersRequest.ends_at:type_name -> google.protobuf.Timestamp
-	130, // 137: core.NewCustomerProto.first_ordered_at:type_name -> google.protobuf.Timestamp
-	130, // 138: core.NewCustomerProto.customer_created_at:type_name -> google.protobuf.Timestamp
-	107, // 139: core.ListNewCustomersResponse.customers:type_name -> core.NewCustomerProto
-	131, // 140: core.ListNewCustomersResponse.page_info:type_name -> core.PageInfo
-	96,  // 141: core.ListSalesLinesRequest.filter:type_name -> core.SalesReportFilterProto
+	58,  // 84: core.UpdateAddressResponse.address:type_name -> core.AddressInfo
+	58,  // 85: core.BatchGetAddressesByIDsResponse.addresses:type_name -> core.AddressInfo
+	71,  // 86: core.AutocompleteAddressResponse.suggestions:type_name -> core.AddressSuggestion
+	74,  // 87: core.GetAddressDetailsResponse.address:type_name -> core.AddressComponentsInfo
+	74,  // 88: core.ValidateAddressResponse.components:type_name -> core.AddressComponentsInfo
+	129, // 89: core.AccountStatusInfo.created_at:type_name -> google.protobuf.Timestamp
+	129, // 90: core.AccountStatusInfo.updated_at:type_name -> google.protobuf.Timestamp
+	78,  // 91: core.ListAccountStatusesResponse.account_statuses:type_name -> core.AccountStatusInfo
+	130, // 92: core.ListAccountStatusesResponse.page_info:type_name -> core.PageInfo
+	78,  // 93: core.GetAccountStatusResponse.account_status:type_name -> core.AccountStatusInfo
+	78,  // 94: core.BatchGetAccountStatusesByIDsResponse.account_statuses:type_name -> core.AccountStatusInfo
+	129, // 95: core.AnalyzeDeliveryPerformanceRequest.starts_at:type_name -> google.protobuf.Timestamp
+	129, // 96: core.AnalyzeDeliveryPerformanceRequest.ends_at:type_name -> google.protobuf.Timestamp
+	129, // 97: core.DeliveryPerformanceProto.period_start:type_name -> google.protobuf.Timestamp
+	86,  // 98: core.DeliveryBreakdownProto.performance:type_name -> core.DeliveryPerformanceProto
+	86,  // 99: core.AnalyzeDeliveryPerformanceResponse.overall:type_name -> core.DeliveryPerformanceProto
+	86,  // 100: core.AnalyzeDeliveryPerformanceResponse.periods:type_name -> core.DeliveryPerformanceProto
+	87,  // 101: core.AnalyzeDeliveryPerformanceResponse.backlog:type_name -> core.DeliveryBacklogBucketProto
+	88,  // 102: core.AnalyzeDeliveryPerformanceResponse.lateness:type_name -> core.DeliveryLatenessBucketProto
+	89,  // 103: core.AnalyzeDeliveryPerformanceResponse.by_customer:type_name -> core.DeliveryBreakdownProto
+	89,  // 104: core.AnalyzeDeliveryPerformanceResponse.by_customer_group:type_name -> core.DeliveryBreakdownProto
+	89,  // 105: core.AnalyzeDeliveryPerformanceResponse.by_product_line:type_name -> core.DeliveryBreakdownProto
+	89,  // 106: core.AnalyzeDeliveryPerformanceResponse.by_commitment_source:type_name -> core.DeliveryBreakdownProto
+	129, // 107: core.AnalyzeScheduleAttainmentRequest.start_date:type_name -> google.protobuf.Timestamp
+	129, // 108: core.AnalyzeScheduleAttainmentRequest.end_date:type_name -> google.protobuf.Timestamp
+	129, // 109: core.AttainmentBucketInfo.week_start_date:type_name -> google.protobuf.Timestamp
+	129, // 110: core.FrozenAdherenceInfo.frozen_through_date:type_name -> google.protobuf.Timestamp
+	129, // 111: core.AnalyzeScheduleAttainmentResponse.start_date:type_name -> google.protobuf.Timestamp
+	129, // 112: core.AnalyzeScheduleAttainmentResponse.end_date:type_name -> google.protobuf.Timestamp
+	92,  // 113: core.AnalyzeScheduleAttainmentResponse.buckets:type_name -> core.AttainmentBucketInfo
+	92,  // 114: core.AnalyzeScheduleAttainmentResponse.totals:type_name -> core.AttainmentBucketInfo
+	93,  // 115: core.AnalyzeScheduleAttainmentResponse.frozen_adherence:type_name -> core.FrozenAdherenceInfo
+	129, // 116: core.SalesReportFilterProto.starts_at:type_name -> google.protobuf.Timestamp
+	129, // 117: core.SalesReportFilterProto.ends_at:type_name -> google.protobuf.Timestamp
+	129, // 118: core.SalesReportFilterProto.comparison_starts_at:type_name -> google.protobuf.Timestamp
+	129, // 119: core.SalesReportFilterProto.comparison_ends_at:type_name -> google.protobuf.Timestamp
+	95,  // 120: core.AnalyzeSalesSummaryRequest.filter:type_name -> core.SalesReportFilterProto
+	129, // 121: core.SalesTotalsProto.period_start:type_name -> google.protobuf.Timestamp
+	97,  // 122: core.AnalyzeSalesSummaryResponse.current:type_name -> core.SalesTotalsProto
+	97,  // 123: core.AnalyzeSalesSummaryResponse.daily:type_name -> core.SalesTotalsProto
+	97,  // 124: core.AnalyzeSalesSummaryResponse.comparison:type_name -> core.SalesTotalsProto
+	97,  // 125: core.AnalyzeSalesSummaryResponse.comparison_daily:type_name -> core.SalesTotalsProto
+	95,  // 126: core.AnalyzeSalesBreakdownRequest.filter:type_name -> core.SalesReportFilterProto
+	97,  // 127: core.SalesBreakdownGroupProto.totals:type_name -> core.SalesTotalsProto
+	97,  // 128: core.SalesBreakdownGroupProto.comparison:type_name -> core.SalesTotalsProto
+	100, // 129: core.AnalyzeSalesBreakdownResponse.groups:type_name -> core.SalesBreakdownGroupProto
+	130, // 130: core.AnalyzeSalesBreakdownResponse.page_info:type_name -> core.PageInfo
+	95,  // 131: core.AnalyzeSalesInvoicesRequest.filter:type_name -> core.SalesReportFilterProto
+	129, // 132: core.SalesInvoiceSummaryProto.invoiced_at:type_name -> google.protobuf.Timestamp
+	103, // 133: core.AnalyzeSalesInvoicesResponse.invoices:type_name -> core.SalesInvoiceSummaryProto
+	130, // 134: core.AnalyzeSalesInvoicesResponse.page_info:type_name -> core.PageInfo
+	129, // 135: core.ListNewCustomersRequest.starts_at:type_name -> google.protobuf.Timestamp
+	129, // 136: core.ListNewCustomersRequest.ends_at:type_name -> google.protobuf.Timestamp
+	129, // 137: core.NewCustomerProto.first_ordered_at:type_name -> google.protobuf.Timestamp
+	129, // 138: core.NewCustomerProto.customer_created_at:type_name -> google.protobuf.Timestamp
+	106, // 139: core.ListNewCustomersResponse.customers:type_name -> core.NewCustomerProto
+	130, // 140: core.ListNewCustomersResponse.page_info:type_name -> core.PageInfo
+	95,  // 141: core.ListSalesLinesRequest.filter:type_name -> core.SalesReportFilterProto
 	137, // 142: core.ListSalesLinesResponse.lines:type_name -> core.SalesEntryProto
-	131, // 143: core.ListSalesLinesResponse.page_info:type_name -> core.PageInfo
-	96,  // 144: core.ExportSalesLinesRequest.filter:type_name -> core.SalesReportFilterProto
+	130, // 143: core.ListSalesLinesResponse.page_info:type_name -> core.PageInfo
+	95,  // 144: core.ExportSalesLinesRequest.filter:type_name -> core.SalesReportFilterProto
 	138, // 145: core.ExportSalesLinesResponse.job:type_name -> core.JobInfo
-	113, // 146: core.AnalyzeOpenOrdersSummaryRequest.filter:type_name -> core.OpenOrderFilterProto
-	113, // 147: core.AnalyzeOpenOrderProductsRequest.filter:type_name -> core.OpenOrderFilterProto
-	132, // 148: core.OpenOrderProductProto.unit:type_name -> core.UnitInfo
-	117, // 149: core.AnalyzeOpenOrderProductsResponse.products:type_name -> core.OpenOrderProductProto
-	131, // 150: core.AnalyzeOpenOrderProductsResponse.page_info:type_name -> core.PageInfo
-	113, // 151: core.ListOpenOrdersRequest.filter:type_name -> core.OpenOrderFilterProto
-	130, // 152: core.OpenOrderProto.issued_at:type_name -> google.protobuf.Timestamp
-	120, // 153: core.ListOpenOrdersResponse.orders:type_name -> core.OpenOrderProto
-	131, // 154: core.ListOpenOrdersResponse.page_info:type_name -> core.PageInfo
-	132, // 155: core.OpenOrderLineProto.unit:type_name -> core.UnitInfo
-	123, // 156: core.ListOpenOrderLinesResponse.lines:type_name -> core.OpenOrderLineProto
-	113, // 157: core.ExportOpenOrderLinesRequest.filter:type_name -> core.OpenOrderFilterProto
+	112, // 146: core.AnalyzeOpenOrdersSummaryRequest.filter:type_name -> core.OpenOrderFilterProto
+	112, // 147: core.AnalyzeOpenOrderProductsRequest.filter:type_name -> core.OpenOrderFilterProto
+	131, // 148: core.OpenOrderProductProto.unit:type_name -> core.UnitInfo
+	116, // 149: core.AnalyzeOpenOrderProductsResponse.products:type_name -> core.OpenOrderProductProto
+	130, // 150: core.AnalyzeOpenOrderProductsResponse.page_info:type_name -> core.PageInfo
+	112, // 151: core.ListOpenOrdersRequest.filter:type_name -> core.OpenOrderFilterProto
+	129, // 152: core.OpenOrderProto.issued_at:type_name -> google.protobuf.Timestamp
+	119, // 153: core.ListOpenOrdersResponse.orders:type_name -> core.OpenOrderProto
+	130, // 154: core.ListOpenOrdersResponse.page_info:type_name -> core.PageInfo
+	131, // 155: core.OpenOrderLineProto.unit:type_name -> core.UnitInfo
+	122, // 156: core.ListOpenOrderLinesResponse.lines:type_name -> core.OpenOrderLineProto
+	112, // 157: core.ExportOpenOrderLinesRequest.filter:type_name -> core.OpenOrderFilterProto
 	138, // 158: core.ExportOpenOrderLinesResponse.job:type_name -> core.JobInfo
 	0,   // 159: core.AnalyzeQuarterlyOrdersResponse.DataEntry.value:type_name -> core.QuarterlyDataProto
 	160, // [160:160] is the sub-list for method output_type
@@ -9982,6 +9910,7 @@ func file_core_core_analytics_proto_init() {
 	file_core_core_accounts_carriers_proto_init()
 	file_core_core_identity_context_proto_init()
 	file_core_core_async_proto_init()
+	file_core_value_shapes_proto_init()
 	file_core_core_analytics_proto_msgTypes[21].OneofWrappers = []any{}
 	file_core_core_analytics_proto_msgTypes[24].OneofWrappers = []any{}
 	file_core_core_analytics_proto_msgTypes[29].OneofWrappers = []any{}
@@ -9991,43 +9920,42 @@ func file_core_core_analytics_proto_init() {
 	file_core_core_analytics_proto_msgTypes[43].OneofWrappers = []any{}
 	file_core_core_analytics_proto_msgTypes[44].OneofWrappers = []any{}
 	file_core_core_analytics_proto_msgTypes[45].OneofWrappers = []any{}
-	file_core_core_analytics_proto_msgTypes[51].OneofWrappers = []any{}
-	file_core_core_analytics_proto_msgTypes[53].OneofWrappers = []any{}
+	file_core_core_analytics_proto_msgTypes[52].OneofWrappers = []any{}
+	file_core_core_analytics_proto_msgTypes[57].OneofWrappers = []any{}
 	file_core_core_analytics_proto_msgTypes[58].OneofWrappers = []any{}
-	file_core_core_analytics_proto_msgTypes[59].OneofWrappers = []any{}
-	file_core_core_analytics_proto_msgTypes[62].OneofWrappers = []any{}
-	file_core_core_analytics_proto_msgTypes[64].OneofWrappers = []any{}
-	file_core_core_analytics_proto_msgTypes[66].OneofWrappers = []any{}
-	file_core_core_analytics_proto_msgTypes[71].OneofWrappers = []any{}
+	file_core_core_analytics_proto_msgTypes[61].OneofWrappers = []any{}
+	file_core_core_analytics_proto_msgTypes[63].OneofWrappers = []any{}
+	file_core_core_analytics_proto_msgTypes[65].OneofWrappers = []any{}
+	file_core_core_analytics_proto_msgTypes[70].OneofWrappers = []any{}
+	file_core_core_analytics_proto_msgTypes[73].OneofWrappers = []any{}
 	file_core_core_analytics_proto_msgTypes[74].OneofWrappers = []any{}
-	file_core_core_analytics_proto_msgTypes[75].OneofWrappers = []any{}
+	file_core_core_analytics_proto_msgTypes[76].OneofWrappers = []any{}
 	file_core_core_analytics_proto_msgTypes[77].OneofWrappers = []any{}
-	file_core_core_analytics_proto_msgTypes[78].OneofWrappers = []any{}
-	file_core_core_analytics_proto_msgTypes[80].OneofWrappers = []any{}
-	file_core_core_analytics_proto_msgTypes[87].OneofWrappers = []any{}
+	file_core_core_analytics_proto_msgTypes[79].OneofWrappers = []any{}
+	file_core_core_analytics_proto_msgTypes[86].OneofWrappers = []any{}
+	file_core_core_analytics_proto_msgTypes[92].OneofWrappers = []any{}
 	file_core_core_analytics_proto_msgTypes[93].OneofWrappers = []any{}
-	file_core_core_analytics_proto_msgTypes[94].OneofWrappers = []any{}
-	file_core_core_analytics_proto_msgTypes[96].OneofWrappers = []any{}
+	file_core_core_analytics_proto_msgTypes[95].OneofWrappers = []any{}
+	file_core_core_analytics_proto_msgTypes[97].OneofWrappers = []any{}
 	file_core_core_analytics_proto_msgTypes[98].OneofWrappers = []any{}
 	file_core_core_analytics_proto_msgTypes[99].OneofWrappers = []any{}
 	file_core_core_analytics_proto_msgTypes[100].OneofWrappers = []any{}
-	file_core_core_analytics_proto_msgTypes[101].OneofWrappers = []any{}
-	file_core_core_analytics_proto_msgTypes[103].OneofWrappers = []any{}
+	file_core_core_analytics_proto_msgTypes[102].OneofWrappers = []any{}
+	file_core_core_analytics_proto_msgTypes[105].OneofWrappers = []any{}
 	file_core_core_analytics_proto_msgTypes[106].OneofWrappers = []any{}
-	file_core_core_analytics_proto_msgTypes[107].OneofWrappers = []any{}
-	file_core_core_analytics_proto_msgTypes[109].OneofWrappers = []any{}
+	file_core_core_analytics_proto_msgTypes[108].OneofWrappers = []any{}
+	file_core_core_analytics_proto_msgTypes[115].OneofWrappers = []any{}
 	file_core_core_analytics_proto_msgTypes[116].OneofWrappers = []any{}
-	file_core_core_analytics_proto_msgTypes[117].OneofWrappers = []any{}
+	file_core_core_analytics_proto_msgTypes[118].OneofWrappers = []any{}
 	file_core_core_analytics_proto_msgTypes[119].OneofWrappers = []any{}
-	file_core_core_analytics_proto_msgTypes[120].OneofWrappers = []any{}
-	file_core_core_analytics_proto_msgTypes[123].OneofWrappers = []any{}
+	file_core_core_analytics_proto_msgTypes[122].OneofWrappers = []any{}
 	type x struct{}
 	out := protoimpl.TypeBuilder{
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_core_core_analytics_proto_rawDesc), len(file_core_core_analytics_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   128,
+			NumMessages:   127,
 			NumExtensions: 0,
 			NumServices:   0,
 		},

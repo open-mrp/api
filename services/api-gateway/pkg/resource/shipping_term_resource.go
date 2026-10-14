@@ -34,11 +34,11 @@ type ShippingTerm struct {
 	// Fixed shipping charge applied to the order.
 	//
 	// Used only when `type` is `flat_rate_freight`; ignored for other freight pricing models. A `flat_rate_freight` term with no flat rate falls through to the carrier's quoted rate.
-	FlatRate *Quantity `json:"flat_rate"`
+	FlatRate *Money `json:"flat_rate"`
 	// Order total a buyer must exceed for this term's free-shipping rules to apply.
 	//
 	// Above this total, freight is free for the service levels in `free_shipping_service_levels`.
-	MinimumOrderValue *Quantity `json:"minimum_order_value"`
+	MinimumOrderValue *Money `json:"minimum_order_value"`
 	// Service levels that ship for free once an order exceeds `minimum_order_value`.
 	//
 	// When this list is empty, every service level ships free above the threshold. When it is not empty, an order that picks a service level outside the list is not shipped free even above the threshold.

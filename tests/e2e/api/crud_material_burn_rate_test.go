@@ -75,9 +75,10 @@ func TestMaterials_BurnRate_IgnoresManualInventoryCorrections(t *testing.T) {
 	// had run yet, and the test would pass whether or not corrections were excluded.
 	burnRate := requireBurnRateStaysZero(t, materialID, burnRateSettleWindow)
 
-	denUnit := jsonObject(burnRate, "denominator_unit")
-	require.NotNil(t, denUnit, "burn rate denominator_unit should be present")
-	assert.Equal(t, "day", jsonField(denUnit, "id"))
+	perUnit := jsonObject(burnRate, "per_unit")
+	require.NotNil(t, perUnit, "burn rate per_unit should be present")
+	assert.Equal(t, "day", jsonField(perUnit, "id"))
+	assert.NotEmpty(t, jsonField(jsonObject(burnRate, "unit"), "id"), "burn rate unit should be present")
 }
 
 // burnRateSettleWindow is how long the rate is watched for a recompute that must never arrive. It is

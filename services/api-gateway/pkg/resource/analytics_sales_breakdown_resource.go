@@ -29,16 +29,16 @@ type SalesTotals struct {
 	Object constants.ObjectType `json:"object" validate:"required,enum=sales_totals"`
 	// First day of the period, as midnight UTC of the caller's local day; null on a whole-window figure.
 	PeriodStart *time.Time `json:"period_start"`
-	// Revenue invoiced, priced from each line's order price. `value` is exact, unrounded.
-	Revenue *ComputedQuantity `json:"revenue" validate:"required"`
+	// Revenue invoiced, priced from each line's order price. `amount` is exact, unrounded.
+	Revenue *Money `json:"revenue" validate:"required"`
 	// Cost of goods for what was invoiced, from each line's order cost; a line with no recorded cost counts as zero.
 	//
 	// Null when the caller may not see cost (sales reps).
 	//
 	// Null unless the caller holds `costs:read`; customer and supplier portal users never see it.
-	Cost *ComputedQuantity `json:"cost" sensitive:"cost"`
-	// Quantity invoiced, normalized to each item category's base unit so unlike units can be added.
-	QuantityInvoiced *ComputedQuantity `json:"quantity_invoiced" validate:"required"`
+	Cost *Money `json:"cost" sensitive:"cost"`
+	// Quantity invoiced, as a decimal string: each line is counted in its item category's base unit so unlike units can be added, which leaves the sum with no single unit.
+	QuantityInvoiced string `json:"quantity_invoiced" validate:"required" format:"decimal"`
 	// Number of distinct invoices behind these totals.
 	InvoiceCount int64 `json:"invoice_count"`
 	// Number of invoiced lines behind these totals.
@@ -79,31 +79,19 @@ type SalesInvoice struct {
 	InvoicedAt time.Time `json:"invoiced_at" validate:"required"`
 	// Number of distinct items on the invoice's matching lines.
 	ItemCount int64 `json:"item_count"`
-	// Revenue invoiced on the matching lines. `value` is exact, unrounded.
-	Revenue *ComputedQuantity `json:"revenue" validate:"required"`
+	// Revenue invoiced on the matching lines. `amount` is exact, unrounded.
+	Revenue *Money `json:"revenue" validate:"required"`
 }
 
 var sampleSalesDay = time.Date(2026, 3, 2, 0, 0, 0, 0, time.UTC)
 
 var SampleSalesTotals = &SalesTotals{
-	Object: constants.ObjectTypeSalesTotals,
-	Revenue: &ComputedQuantity{
-		Object:       constants.ObjectTypeComputedQuantity,
-		Value:        "16200.5",
-		DisplayValue: "16,200.50",
-	},
-	Cost: &ComputedQuantity{
-		Object:       constants.ObjectTypeComputedQuantity,
-		Value:        "12800.125",
-		DisplayValue: "12,800.13",
-	},
-	QuantityInvoiced: &ComputedQuantity{
-		Object:       constants.ObjectTypeComputedQuantity,
-		Value:        "1200",
-		DisplayValue: "1,200",
-	},
-	InvoiceCount: 42,
-	LineCount:    118,
+	Object:           constants.ObjectTypeSalesTotals,
+	Revenue:          &Money{Amount: "16200.5", Currency: constants.CurrencyUSD},
+	Cost:             &Money{Amount: "12800.125", Currency: constants.CurrencyUSD},
+	QuantityInvoiced: "1200",
+	InvoiceCount:     42,
+	LineCount:        118,
 }
 
 var SampleSalesDailyTotals = func() *SalesTotals {

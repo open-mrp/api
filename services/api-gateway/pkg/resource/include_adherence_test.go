@@ -45,8 +45,6 @@ var includeAdherenceResources = map[constants.ObjectType]any{
 	constants.ObjectTypeProductionRun:             ProductionRun{},
 	constants.ObjectTypeProperty:                  Property{},
 	constants.ObjectTypePurchaseOrder:             PurchaseOrder{},
-	constants.ObjectTypeQuantity:                  Quantity{},
-	constants.ObjectTypeRate:                      Rate{},
 	constants.ObjectTypeRequestLog:                RequestLog{},
 	constants.ObjectTypeRole:                      Role{},
 	constants.ObjectTypeSalesOrder:                SalesOrder{},

@@ -31,9 +31,9 @@ type PurchaseOrderLine struct {
 	// Quantity booked against this line on the order's receiving order.
 	//
 	// Rolled up from the receiving order lines linked to this line, so it stays at zero until the order is issued and receiving lines are created for it. Summed at read time rather than stored: it carries no id, and arrives with the unit it was summed in.
-	QuantityReceived *ComputedQuantity `json:"quantity_received"`
+	QuantityReceived *Quantity `json:"quantity_received"`
 	// Agreed purchase price per unit for this line.
-	UnitPrice *Rate `json:"unit_price" validate:"required"`
+	UnitPrice *UnitPrice `json:"unit_price" validate:"required"`
 	// Delivery lines booked against this line, oldest first.
 	//
 	// Each is a receipt of goods for the line: accepted into inventory, refused on inspection, or still awaiting inspection. Only the quantity and the accepted and refused times are carried.
@@ -54,8 +54,8 @@ var SamplePurchaseOrderLine = &PurchaseOrderLine{
 	ProductDescription: &samplePurchaseOrderLineProductDescription,
 	Item:               SampleItem,
 	QuantityOrdered:    SampleQuantity,
-	QuantityReceived:   SampleComputedQuantity,
-	UnitPrice:          SampleRate,
+	QuantityReceived:   SampleQuantity,
+	UnitPrice:          SampleUnitPrice,
 	CreatedAt:          timeutil.TimestampToTime(sampleCreatedAtTimestamp),
 	UpdatedAt:          timeutil.TimestampToTime(sampleUpdatedAtTimestamp),
 }

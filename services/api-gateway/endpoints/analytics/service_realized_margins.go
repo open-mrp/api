@@ -61,15 +61,14 @@ func presentRealizedMargins(ctx context.Context, resp *pb.AnalyzeRealizedMargins
 			ID:               id,
 			Object:           constants.ObjectTypeRealizedMarginFinding,
 			Reason:           constants.PricingFindingReason(f.GetReason()),
-			QuantityInvoiced: computedQuantity(f.GetQuantityInvoiced(), f.GetUnitAbbreviation()),
-			// The invoiced-sales payload carries no currency unit, so money renders as a plain formatted amount rather than guessing a symbol.
-			Revenue:          computedQuantity(f.GetRevenue(), ""),
-			Cost:             computedQuantity(f.GetCost(), ""),
-			AverageUnitPrice: computedRate(f.GetAverageUnitPrice(), "", f.GetUnitAbbreviation()),
+			QuantityInvoiced: analyticsQuantity(f.GetQuantityInvoiced(), f.GetUnitId()),
+			Revenue:          apiresource.NewMoney(f.GetRevenue()),
+			Cost:             apiresource.NewMoney(f.GetCost()),
+			AverageUnitPrice: analyticsPrice(f.GetAverageUnitPrice(), f.GetUnitId()),
 			LineCount:        int(f.GetLineCount()),
 		}
 		if f.PeerMedianPrice != nil {
-			item.PeerMedianPrice = computedRate(f.GetPeerMedianPrice(), "", f.GetUnitAbbreviation())
+			item.PeerMedianPrice = analyticsPrice(f.GetPeerMedianPrice(), f.GetUnitId())
 			item.BelowPeerMedianFraction = f.BelowPeerMedianFraction
 		}
 		item.GrossMargin = f.GrossMargin

@@ -22,7 +22,7 @@ func parityYarn(t *testing.T, orderPoint map[string]any) (materialID, itemID str
 	t.Helper()
 	sku := uniqueName("e2e-parity-yarn")
 	body := validMaterialBody(sku)
-	body["unit_cost"] = map[string]any{"value": "2.00", "numerator_unit_id": dollarUnitID, "denominator_unit_id": poundUnitID}
+	body["unit_cost"] = map[string]any{"amount": "2.00", "currency": "usd", "per_unit_id": poundUnitID}
 	body["lead_time"] = map[string]any{"value": "3", "unit_id": "day"}
 	if orderPoint != nil {
 		body["order_point"] = orderPoint
@@ -77,16 +77,28 @@ func awaitRemaining(t *testing.T, itemID, remaining string) map[string]any {
 	return row
 }
 
-func assertMeasure(t *testing.T, obj map[string]any, field, value, display, unitAbbr, unitType string) {
+func assertMeasure(t *testing.T, obj map[string]any, field, value, unitAbbr, unitType string) {
 	t.Helper()
 	q := jsonObject(obj, field)
 	require.NotNil(t, q, "%s: %v", field, obj)
 	assert.Equal(t, value, jsonField(q, "value"), field)
-	assert.Equal(t, display, jsonField(q, "display_value"), field)
 	unit := jsonObject(q, "unit")
 	require.NotNil(t, unit, field)
 	assert.Equal(t, unitAbbr, jsonField(unit, "abbreviation"), field)
 	assert.Equal(t, unitType, jsonField(unit, "type"), field)
+}
+
+// assertCostPerUnit checks a unit price: the amount in dollars, per a unit given by abbreviation and type.
+func assertCostPerUnit(t *testing.T, obj map[string]any, field, amount, perUnitAbbr, perUnitType string) {
+	t.Helper()
+	price := jsonObject(obj, field)
+	require.NotNil(t, price, "%s: %v", field, obj)
+	assertDecimalEqual(t, amount, jsonField(price, "amount"), field)
+	assert.Equal(t, "usd", jsonField(price, "currency"), field)
+	perUnit := jsonObject(price, "per_unit")
+	require.NotNil(t, perUnit, "%s carries the unit it is per", field)
+	assert.Equal(t, perUnitAbbr, jsonField(perUnit, "abbreviation"), field)
+	assert.Equal(t, perUnitType, jsonField(perUnit, "type"), field)
 }
 
 // allocateAgainst draws value of unitID against the item's only available receipt, the way a fulfilled issue
@@ -135,14 +147,11 @@ func TestAnalyticsParityInventoryReceipts_GroupsAcrossUnitsInTheBaseUnit(t *test
 	assertNilField(t, row, "lot")
 	assert.Equal(t, SeedAccountID, jsonField(jsonObject(row, "owner_account"), "id"))
 	assert.Equal(t, SeedAccountID, jsonField(jsonObject(row, "holder_account"), "id"))
-	assertMeasure(t, row, "remaining_quantity", "2.5", "2.5 lbs", "lbs", "mass")
+	assertMeasure(t, row, "remaining_quantity", "2.5", "lbs", "mass")
 
 	// $2 a pound, the grains included: priced per pound, not per grain.
-	cost := jsonObject(row, "weighted_average_unit_cost")
-	require.NotNil(t, cost)
-	assertMeasure(t, cost, "numerator", "2.00", "$2.00", "$", "currency")
-	assertMeasure(t, cost, "denominator", "1", "1 lbs", "lbs", "mass")
-	assertMeasure(t, row, "inventory_value", "5.00", "$5.00", "$", "currency")
+	assertCostPerUnit(t, row, "weighted_average_unit_cost", "2", "lbs", "mass")
+	assertReportMoney(t, row, "inventory_value", "5.00")
 	assertValidTimestamp(t, jsonField(row, "oldest_receipt_at"), "oldest_receipt_at")
 	assertValidTimestamp(t, jsonField(row, "newest_receipt_at"), "newest_receipt_at")
 	assert.Less(t, jsonField(row, "oldest_receipt_at"), jsonField(row, "newest_receipt_at"))
@@ -156,9 +165,9 @@ func TestAnalyticsParityInventoryReceipts_NothingLeftHasNoValue(t *testing.T) {
 
 	rows := receiptSummaries(t, apiClient, map[string]any{"item_ids": []string{item}})
 	require.Len(t, rows, 1, "an available receipt with nothing left is still listed")
-	assertMeasure(t, rows[0], "remaining_quantity", "0", "0 lbs", "lbs", "mass")
+	assertMeasure(t, rows[0], "remaining_quantity", "0", "lbs", "mass")
 	assertNilField(t, rows[0], "inventory_value")
-	assertMeasure(t, jsonObject(rows[0], "weighted_average_unit_cost"), "numerator", "0.00", "$0.00", "$", "currency")
+	assertCostPerUnit(t, rows[0], "weighted_average_unit_cost", "0", "lbs", "mass")
 }
 
 func TestAnalyticsParityInventoryReceipts_OldestFirstAndFilteredInSQL(t *testing.T) {
@@ -219,17 +228,17 @@ func TestAnalyticsParityMaterials_StockAndDemandInTheOrderPointUnit(t *testing.T
 	row := materialRow(t, stocked)
 	assert.Equal(t, stockedItem, jsonField(row, "item_id"))
 	// 2 lb + 7000 gr - 0.5 lb = 2.5 lb, stated in the order point's grains.
-	assertMeasure(t, row, "quantity_in_inventory", "17500", "17,500 gr", "gr", "mass")
-	assertMeasure(t, row, "quantity_in_demand", "0", "0 gr", "gr", "mass")
-	assertMeasure(t, row, "order_point", "14000", "14,000 gr", "gr", "mass")
-	assertMeasure(t, row, "lead_time", "3", "3 day", "day", "time")
+	assertMeasure(t, row, "quantity_in_inventory", "17500", "gr", "mass")
+	assertMeasure(t, row, "quantity_in_demand", "0", "gr", "mass")
+	assertMeasure(t, row, "order_point", "14000", "gr", "mass")
+	assertMeasure(t, row, "lead_time", "3", "day", "time")
 
 	// Demand with no stock to cover it: nothing can allocate, so it stays open, and stock goes negative rather than clamping at zero.
 	short, shortItem := parityYarn(t, map[string]any{"value": "14000", "unit_id": grainUnitID})
 	seedOpenIssue(t, shortItem, "0.25", poundUnitID)
 	row = materialRow(t, short)
-	assertMeasure(t, row, "quantity_in_inventory", "-1750", "-1,750 gr", "gr", "mass")
-	assertMeasure(t, row, "quantity_in_demand", "1750", "1,750 gr", "gr", "mass")
+	assertMeasure(t, row, "quantity_in_inventory", "-1750", "gr", "mass")
+	assertMeasure(t, row, "quantity_in_demand", "1750", "gr", "mass")
 }
 
 // A material whose order-point row is gone is still listed, its stock in the item's base unit.
@@ -249,6 +258,6 @@ func TestAnalyticsParityMaterials_KeepsAMaterialWithoutAnOrderPoint(t *testing.T
 
 	row := materialRow(t, material)
 	assertNilField(t, row, "order_point")
-	assertMeasure(t, row, "quantity_in_inventory", "1", "1 lbs", "lbs", "mass")
-	assertMeasure(t, row, "quantity_in_demand", "0", "0 lbs", "lbs", "mass")
+	assertMeasure(t, row, "quantity_in_inventory", "1", "lbs", "mass")
+	assertMeasure(t, row, "quantity_in_demand", "0", "lbs", "mass")
 }

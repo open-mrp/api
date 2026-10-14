@@ -611,16 +611,14 @@ func TestItemParity_CostsScaleUpstreamStepsThroughTheirUnits(t *testing.T) {
 // createZeroLaborStep makes a step producing produced from consumed, priced by its material alone.
 func createZeroLaborStep(t *testing.T, name, produced, producedQty, producedUnit, consumed, consumedQty, consumedUnit string) string {
 	t.Helper()
-	zeroRate := func(num, den string) map[string]any {
-		return map[string]any{"value": "0", "numerator_unit_id": num, "denominator_unit_id": den}
-	}
+	zeroPrice := map[string]any{"amount": "0", "currency": "usd", "per_unit_id": unitHour}
 	status, body, err := apiClient.Post(productionStepsPath, map[string]any{
 		"name":            uniqueName(name),
 		"leveling_factor": "0",
 		"allowances":      "0",
-		"labor_time":      zeroRate(unitSecond, unitEach),
-		"labor_rate":      zeroRate(unitDollar, unitHour),
-		"overhead_rate":   zeroRate(unitDollar, unitHour),
+		"labor_time":      map[string]any{"value": "0", "unit_id": unitSecond, "per_unit_id": unitEach},
+		"labor_rate":      zeroPrice,
+		"overhead_rate":   zeroPrice,
 		"production":      map[string]any{"item_id": produced, "quantity_value": producedQty, "quantity_unit_id": producedUnit},
 		"consumptions": []map[string]any{{"item_id": consumed, "quantity_value": consumedQty, "quantity_unit_id": consumedUnit,
 			"waste_quantity_value": "0", "waste_quantity_unit_id": consumedUnit}},

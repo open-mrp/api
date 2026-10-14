@@ -32,15 +32,21 @@ func (h *gRPCHandler) CreatePart(ctx context.Context, req *pb.CreatePartRequest)
 	ctx, finalizeIdempotency := contracts.WithIdempotencyTracking(ctx)
 	defer finalizeIdempotency()
 
+	money := newMoneyRows(ctx)
+
 	params := domain.CreatePartParams{
 		SKU:          req.Sku,
 		Description:  req.Description,
 		Notes:        req.Notes,
 		CategoryID:   req.CategoryId,
-		UnitPrice:    protoToCreateRateInput(req.UnitPrice),
-		UnitCost:     protoToCreateRateInput(req.UnitCost),
+		UnitPrice:    money.rate("unit_price", req.UnitPrice),
+		UnitCost:     money.rate("unit_cost", req.UnitCost),
 		AttributeIDs: req.AttributeIds,
 		Includes:     req.Includes,
+	}
+
+	if apiErr := money.err(); apiErr != nil {
+		return nil, contracts.ConvertAPIErrorToGRPC(apiErr)
 	}
 
 	part, apiErr := h.partSvc.CreatePart(ctx, params)
@@ -61,6 +67,8 @@ func (h *gRPCHandler) BulkUpsertParts(ctx context.Context, req *pb.BulkUpsertPar
 	ctx, finalizeIdempotency := contracts.WithIdempotencyTracking(ctx)
 	defer finalizeIdempotency()
 
+	money := newMoneyRows(ctx)
+
 	parts := make([]domain.UpsertPartParams, len(req.Parts))
 	for i, p := range req.Parts {
 		props := make([]domain.UpsertItemPropertyParams, len(p.Properties))
@@ -72,10 +80,14 @@ func (h *gRPCHandler) BulkUpsertParts(ctx context.Context, req *pb.BulkUpsertPar
 			Description: p.Description,
 			Notes:       p.Notes,
 			Category:    objectIdentifierFromProto(p.Category),
-			UnitPrice:   protoToCreateRateInput(p.UnitPrice),
-			UnitCost:    protoToCreateRateInput(p.UnitCost),
+			UnitPrice:   money.rate("unit_price", p.UnitPrice),
+			UnitCost:    money.rate("unit_cost", p.UnitCost),
 			Properties:  props,
 		}
+	}
+
+	if apiErr := money.err(); apiErr != nil {
+		return nil, contracts.ConvertAPIErrorToGRPC(apiErr)
 	}
 
 	job, apiErr := h.partSvc.BulkUpsertParts(ctx, domain.BulkUpsertPartsParams{Parts: parts})

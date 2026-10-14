@@ -69,7 +69,7 @@ func createProductionCostPlant(t *testing.T) productionCostPlant {
 	status, body, err := apiClient.Post(materialsPath+"?include=item", map[string]any{
 		"sku":         uniqueName("e2e-pcost-material"),
 		"category_id": packagingID,
-		"unit_cost":   map[string]any{"value": "0.50", "numerator_unit_id": unitDollar, "denominator_unit_id": unitEach},
+		"unit_cost":   map[string]any{"amount": "0.50", "currency": "usd", "per_unit_id": unitEach},
 	}, newIdempotencyKey())
 	require.NoError(t, err)
 	requireStatus(t, 201, status, body)
@@ -108,8 +108,8 @@ func createProductionCostPlant(t *testing.T) productionCostPlant {
 			"leveling_factor": "0",
 			"allowances":      "0",
 			"labor_time":      laborTime,
-			"labor_rate":      map[string]any{"value": "24", "numerator_unit_id": unitDollar, "denominator_unit_id": unitHour},
-			"overhead_rate":   map[string]any{"value": "12", "numerator_unit_id": unitDollar, "denominator_unit_id": unitHour},
+			"labor_rate":      map[string]any{"amount": "24", "currency": "usd", "per_unit_id": unitHour},
+			"overhead_rate":   map[string]any{"amount": "12", "currency": "usd", "per_unit_id": unitHour},
 			"production":      map[string]any{"item_id": item, "quantity_value": qty, "quantity_unit_id": unit},
 			"consumptions":    consumptions,
 		}, newIdempotencyKey())
@@ -122,11 +122,11 @@ func createProductionCostPlant(t *testing.T) productionCostPlant {
 	consume := func(item, qty, waste string) map[string]any {
 		return map[string]any{"item_id": item, "quantity_value": qty, "quantity_unit_id": unitEach, "waste_quantity_value": waste, "waste_quantity_unit_id": unitEach}
 	}
-	p.knit = step(map[string]any{"value": "30", "numerator_unit_id": unitSecond, "denominator_unit_id": SeedPairUnitID},
+	p.knit = step(map[string]any{"value": "30", "unit_id": unitSecond, "per_unit_id": SeedPairUnitID},
 		p.partX, "6", SeedPairUnitID, consume(materialItem, "12", "0"))
-	p.sew = step(map[string]any{"value": "1", "numerator_unit_id": unitMinute, "denominator_unit_id": SeedPairUnitID},
+	p.sew = step(map[string]any{"value": "1", "unit_id": unitMinute, "per_unit_id": SeedPairUnitID},
 		p.partY, "10", unitEach, consume(materialItem, "10", "2"))
-	p.finish = step(map[string]any{"value": "0.1", "numerator_unit_id": unitHour, "denominator_unit_id": unitDozen},
+	p.finish = step(map[string]any{"value": "0.1", "unit_id": unitHour, "per_unit_id": unitDozen},
 		p.good, "2", unitEach, consume(p.partY, "2", "0"))
 	return p
 }
@@ -229,7 +229,7 @@ func assertProductionCost(t *testing.T, label string, got map[string]any, want p
 	assertDecimal(t, want.laborTime, jsonField(got, "labor_time"), label+" labor_time")
 	produced := listRows(t, jsonObject(got, "produced"))
 	require.Len(t, produced, 1, "%s produces in one dimension: %v", label, produced)
-	assert.Equal(t, "computed_quantity", jsonField(produced[0], "object"))
+	assertValueShapeBare(t, produced[0], label+" produced")
 	assertDecimal(t, want.produced, jsonField(produced[0], "value"), label+" produced")
 	assert.Equal(t, "each", jsonField(jsonObject(produced[0], "unit"), "id"), label+" produced unit")
 	assert.Equal(t, "ea", jsonField(jsonObject(produced[0], "unit"), "abbreviation"))

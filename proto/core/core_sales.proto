@@ -9,6 +9,7 @@ import "google/protobuf/empty.proto";
 import "core/core.proto";
 import "core/core_patch.proto";
 import "core/core_production_run.proto";
+import "core/value_shapes.proto";
 
 option go_package = "shared/proto/core;core";
 
@@ -482,6 +483,8 @@ message SalesOrderLineInfo {
   bool pricing_unavailable = 38;
   // Client-owned key/value pairs, returned unchanged. See shared/metadata.
   map<string, string> metadata = 39;
+  UnitPrice unit_price = 40;
+  UnitPrice unit_cost = 41;
 }
 
 // --- Sales Order Request/Response messages ---
@@ -585,9 +588,8 @@ message CreateSalesOrderLineInput {
   string quantity_unit_id = 6;
   // Unit price override (optional). Honored only for internal users; for customer
   // actors it is ignored and the price is computed server-side.
-  optional string unit_price_value = 7;
-  optional string unit_price_numerator_unit_id = 8;
-  optional string unit_price_denominator_unit_id = 9;
+  reserved 7, 8, 9;
+  UnitPrice unit_price = 15;
   // Client-owned key/value pairs, returned unchanged. See shared/metadata.
   map<string, string> metadata = 14;
 }
@@ -690,9 +692,8 @@ message QuoteSalesOrderLinePricesRequest {
 
 message SalesOrderLineQuote {
   string product_id = 1;
-  string unit_price_value = 2;
-  string unit_price_numerator_unit_id = 3;
-  string unit_price_denominator_unit_id = 4;
+  reserved 2, 3, 4;
+  UnitPrice unit_price = 5;
 }
 
 message QuoteSalesOrderLinePricesResponse {
@@ -704,9 +705,8 @@ message QuoteSalesOrderFreightRequest {
 }
 
 message QuoteSalesOrderFreightResponse {
-  string unit_price_value = 1;
-  string unit_price_numerator_unit_id = 2;
-  string unit_price_denominator_unit_id = 3;
+  reserved 1, 2, 3;
+  Money unit_price = 4;
 }
 
 message QuoteSalesOrderCommitmentRequest {
@@ -763,12 +763,10 @@ message CreateSalesOrderLineRequest {
   optional string product_description = 5;
   string quantity_value = 6;
   string quantity_unit_id = 7;
-  string unit_price_value = 8;
-  string unit_price_numerator_unit_id = 9;
-  string unit_price_denominator_unit_id = 10;
-  optional string unit_cost_value = 11;
-  optional string unit_cost_numerator_unit_id = 12;
-  optional string unit_cost_denominator_unit_id = 13;
+  reserved 8, 9, 10;
+  UnitPrice unit_price = 16;
+  reserved 11, 12, 13;
+  UnitPrice unit_cost = 17;
   reserved 14; // formerly edi_line_item_id (dropped with the legacy EDI pipeline)
   // Client-owned key/value pairs, returned unchanged. See shared/metadata.
   map<string, string> metadata = 15;
@@ -791,12 +789,10 @@ message UpdateSalesOrderLineRequest {
   StringPatch product_description = 16;
   optional string quantity_value = 7;
   optional string quantity_unit_id = 8;
-  optional string unit_price_value = 9;
-  optional string unit_price_numerator_unit_id = 10;
-  optional string unit_price_denominator_unit_id = 11;
-  optional string unit_cost_value = 12;
-  optional string unit_cost_numerator_unit_id = 13;
-  optional string unit_cost_denominator_unit_id = 14;
+  reserved 9, 10, 11;
+  UnitPrice unit_price = 18;
+  reserved 12, 13, 14;
+  UnitPrice unit_cost = 19;
   reserved 15; // formerly edi_line_item_id (dropped with the legacy EDI pipeline)
   MetadataPatch metadata = 17;
 }

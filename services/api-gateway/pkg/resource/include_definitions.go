@@ -20,8 +20,6 @@ func init() {
 			{Key: "customer", ObjectType: constants.ObjectTypeCustomer},
 			{Key: "product_line", ObjectType: constants.ObjectTypeProductLine},
 			{Key: "attributes", ObjectType: constants.ObjectTypeAttribute},
-			{Key: "unit_price.numerator_unit", ObjectType: constants.ObjectTypeUnit},
-			{Key: "unit_price.denominator_unit", ObjectType: constants.ObjectTypeUnit},
 		},
 	})
 
@@ -195,8 +193,6 @@ func init() {
 	registerIncludes(&apiendpoint.ObjectIncludes{
 		ObjectType: constants.ObjectTypeConsumption,
 		Fields: []apiendpoint.IncludeFieldDef{
-			{Key: "quantity", ObjectType: constants.ObjectTypeQuantity},
-			{Key: "waste_quantity", ObjectType: constants.ObjectTypeQuantity},
 			{Key: "consumed_item", ObjectType: constants.ObjectTypeItem},
 		},
 	})
@@ -230,16 +226,7 @@ func init() {
 			{Key: "notification_preferences", ObjectType: constants.ObjectTypeCustomerNotificationPreferences},
 			{Key: "price_groups", ObjectType: constants.ObjectTypeAccountGroup},
 			{Key: "child_accounts", ObjectType: constants.ObjectTypeCustomer},
-			{Key: "credit_limit", ObjectType: constants.ObjectTypeQuantity, Children: []apiendpoint.IncludeFieldDef{
-				{Key: "unit", ObjectType: constants.ObjectTypeUnit},
-			}},
-		},
-	})
-
-	registerIncludes(&apiendpoint.ObjectIncludes{
-		ObjectType: constants.ObjectTypeQuantity,
-		Fields: []apiendpoint.IncludeFieldDef{
-			{Key: "unit", ObjectType: constants.ObjectTypeUnit},
+			{Key: "credit_limit", ObjectType: ""},
 		},
 	})
 
@@ -268,10 +255,10 @@ func init() {
 	registerIncludes(&apiendpoint.ObjectIncludes{
 		ObjectType: constants.ObjectTypeItemInventory,
 		Fields: []apiendpoint.IncludeFieldDef{
-			{Key: "on_hand", ObjectType: constants.ObjectTypeComputedQuantity},
-			{Key: "reserved", ObjectType: constants.ObjectTypeComputedQuantity},
-			{Key: "available_to_promise", ObjectType: constants.ObjectTypeComputedQuantity},
-			{Key: "short", ObjectType: constants.ObjectTypeComputedQuantity},
+			{Key: "on_hand", ObjectType: ""},
+			{Key: "reserved", ObjectType: ""},
+			{Key: "available_to_promise", ObjectType: ""},
+			{Key: "short", ObjectType: ""},
 		},
 	})
 
@@ -279,14 +266,6 @@ func init() {
 		ObjectType: constants.ObjectTypeShippingTerm,
 		Fields: []apiendpoint.IncludeFieldDef{
 			{Key: "owner", ObjectType: constants.ObjectTypeOwner},
-			{Key: "flat_rate", ObjectType: constants.ObjectTypeQuantity},
-			{
-				Key:        "minimum_order_value",
-				ObjectType: constants.ObjectTypeQuantity,
-				Children: []apiendpoint.IncludeFieldDef{
-					{Key: "unit", ObjectType: constants.ObjectTypeUnit},
-				},
-			},
 			{Key: "free_shipping_service_levels", ObjectType: constants.ObjectTypeServiceLevel},
 		},
 	})
@@ -331,9 +310,9 @@ func init() {
 		Fields: []apiendpoint.IncludeFieldDef{
 			{Key: "category", ObjectType: constants.ObjectTypeItemCategory},
 			{Key: "attributes", ObjectType: constants.ObjectTypeAttribute},
-			{Key: "unit_value", ObjectType: constants.ObjectTypeRate},
-			{Key: "unit_cost", ObjectType: constants.ObjectTypeRate},
-			{Key: "burn_rate", ObjectType: constants.ObjectTypeRate},
+			{Key: "unit_value", ObjectType: ""},
+			{Key: "unit_cost", ObjectType: ""},
+			{Key: "burn_rate", ObjectType: ""},
 		},
 	})
 
@@ -343,9 +322,9 @@ func init() {
 			{Key: "item", ObjectType: constants.ObjectTypeItem},
 			{Key: "category", ObjectType: constants.ObjectTypeItemCategory},
 			{Key: "attributes", ObjectType: constants.ObjectTypeAttribute},
-			{Key: "unit_value", ObjectType: constants.ObjectTypeRate},
-			{Key: "unit_cost", ObjectType: constants.ObjectTypeRate},
-			{Key: "burn_rate", ObjectType: constants.ObjectTypeRate},
+			{Key: "unit_value", ObjectType: ""},
+			{Key: "unit_cost", ObjectType: ""},
+			{Key: "burn_rate", ObjectType: ""},
 		},
 	})
 
@@ -406,9 +385,9 @@ func init() {
 		ObjectType: constants.ObjectTypeSalesOrderLine,
 		Fields: []apiendpoint.IncludeFieldDef{
 			{Key: "product", ObjectType: constants.ObjectTypeProduct},
-			{Key: "quantity_ordered", ObjectType: constants.ObjectTypeQuantity},
-			{Key: "unit_price", ObjectType: constants.ObjectTypeRate},
-			{Key: "unit_cost", ObjectType: constants.ObjectTypeRate},
+			{Key: "quantity_ordered", ObjectType: ""},
+			{Key: "unit_price", ObjectType: ""},
+			{Key: "unit_cost", ObjectType: ""},
 			{Key: "totals", ObjectType: constants.ObjectTypeSalesOrderTotals},
 		},
 	})
@@ -449,9 +428,6 @@ func init() {
 		Fields: []apiendpoint.IncludeFieldDef{
 			{Key: "order_line", ObjectType: constants.ObjectTypeSalesOrderLine},
 			{Key: "item", ObjectType: constants.ObjectTypeItem},
-			// The quantity and the price are always on the line; naming them here is what lets a caller reach through to the units they are counted in.
-			{Key: "quantity", ObjectType: constants.ObjectTypeQuantity},
-			{Key: "unit_price", ObjectType: constants.ObjectTypeRate},
 		},
 	})
 
@@ -459,8 +435,6 @@ func init() {
 		ObjectType: constants.ObjectTypeInvoiceAllocation,
 		Fields: []apiendpoint.IncludeFieldDef{
 			{Key: "transaction", ObjectType: constants.ObjectTypeTransaction},
-			// The amount is always on the allocation; naming it here is what lets a caller reach through to the currency it is counted in.
-			{Key: "amount", ObjectType: constants.ObjectTypeQuantity},
 		},
 	})
 
@@ -468,8 +442,6 @@ func init() {
 		ObjectType: constants.ObjectTypeTransactionAllocation,
 		Fields: []apiendpoint.IncludeFieldDef{
 			{Key: "transaction", ObjectType: constants.ObjectTypeTransaction},
-			// The amount is always on the allocation; naming it here is what lets a caller reach through to the currency it is counted in.
-			{Key: "amount", ObjectType: constants.ObjectTypeQuantity},
 		},
 	})
 
@@ -486,9 +458,7 @@ func init() {
 		Fields: []apiendpoint.IncludeFieldDef{
 			{Key: "order_line", ObjectType: constants.ObjectTypePurchaseOrderLine},
 			{Key: "item", ObjectType: constants.ObjectTypeItem},
-			// The quantity is always on the line; naming it here is what lets a caller reach through it to the unit it is counted in.
-			{Key: "quantity", ObjectType: constants.ObjectTypeQuantity},
-			{Key: "unit_cost", ObjectType: constants.ObjectTypeRate},
+			{Key: "unit_cost", ObjectType: ""},
 			{Key: "location", ObjectType: constants.ObjectTypeLocation},
 			{Key: "lot", ObjectType: constants.ObjectTypeLot},
 		},
@@ -525,9 +495,7 @@ func init() {
 		Fields: []apiendpoint.IncludeFieldDef{
 			{Key: "order_line", ObjectType: constants.ObjectTypePurchaseOrderLine},
 			{Key: "item", ObjectType: constants.ObjectTypeItem},
-			// Both quantities are always on the line; naming them here is what lets a caller reach through to the units they are counted in. The rejected figure needs no entry — it is computed, and arrives with its unit already.
-			{Key: "quantity", ObjectType: constants.ObjectTypeQuantity},
-			{Key: "quantity_ordered", ObjectType: constants.ObjectTypeQuantity},
+			{Key: "quantity_ordered", ObjectType: ""},
 		},
 	})
 
@@ -601,12 +569,6 @@ func init() {
 		Fields: []apiendpoint.IncludeFieldDef{
 			{Key: "item", ObjectType: constants.ObjectTypeItem},
 			{Key: "sales_order_line", ObjectType: constants.ObjectTypeSalesOrderLine},
-			{Key: "quantity", ObjectType: constants.ObjectTypeQuantity, Children: []apiendpoint.IncludeFieldDef{
-				{Key: "unit", ObjectType: constants.ObjectTypeUnit},
-			}},
-			{Key: "ordered_quantity", ObjectType: constants.ObjectTypeQuantity, Children: []apiendpoint.IncludeFieldDef{
-				{Key: "unit", ObjectType: constants.ObjectTypeUnit},
-			}},
 		},
 	})
 
@@ -622,9 +584,7 @@ func init() {
 		Fields: []apiendpoint.IncludeFieldDef{
 			{Key: "owner", ObjectType: constants.ObjectTypeOwner},
 			{Key: "unit_group", ObjectType: constants.ObjectTypeUnitGroup},
-			{Key: "default_lot", ObjectType: constants.ObjectTypeQuantity, Children: []apiendpoint.IncludeFieldDef{
-				{Key: "unit", ObjectType: constants.ObjectTypeUnit},
-			}},
+			{Key: "default_lot", ObjectType: ""},
 		},
 	})
 
@@ -657,9 +617,6 @@ func init() {
 		ObjectType: constants.ObjectTypePurchaseOrderLine,
 		Fields: []apiendpoint.IncludeFieldDef{
 			{Key: "item", ObjectType: constants.ObjectTypeItem},
-			// The quantity and the two rates are always on the line; naming them here is what lets a caller reach through to the units they are counted in.
-			{Key: "quantity_ordered", ObjectType: constants.ObjectTypeQuantity},
-			{Key: "unit_price", ObjectType: constants.ObjectTypeRate},
 			{Key: "delivery_lines", ObjectType: constants.ObjectTypeDeliveryLine},
 		},
 	})
@@ -727,12 +684,8 @@ func init() {
 		Fields: []apiendpoint.IncludeFieldDef{
 			{Key: "carrier", ObjectType: constants.ObjectTypeCarrier},
 			{Key: "shipment", ObjectType: constants.ObjectTypeShipment},
-			{Key: "freight_amount", ObjectType: constants.ObjectTypeQuantity, Children: []apiendpoint.IncludeFieldDef{
-				{Key: "unit", ObjectType: constants.ObjectTypeUnit},
-			}},
-			{Key: "freight_weight", ObjectType: constants.ObjectTypeQuantity, Children: []apiendpoint.IncludeFieldDef{
-				{Key: "unit", ObjectType: constants.ObjectTypeUnit},
-			}},
+			{Key: "freight_amount", ObjectType: ""},
+			{Key: "freight_weight", ObjectType: ""},
 		},
 	})
 
@@ -741,8 +694,6 @@ func init() {
 		Fields: []apiendpoint.IncludeFieldDef{
 			{Key: "sales_order_line", ObjectType: constants.ObjectTypeSalesOrderLine},
 			{Key: "item", ObjectType: constants.ObjectTypeItem},
-			// The quantity is always on the line; naming it here is what lets a caller reach through it to the unit it is counted in.
-			{Key: "quantity", ObjectType: constants.ObjectTypeQuantity},
 		},
 	})
 
@@ -773,11 +724,6 @@ func init() {
 			{Key: "allocations", ObjectType: constants.ObjectTypeTransactionAllocation},
 			{Key: "customer", ObjectType: constants.ObjectTypeCustomer},
 			{Key: "responsible_user", ObjectType: constants.ObjectTypeAccountUser},
-			// The amount is always on the transaction, so it is never requested on its own — an
-			// endpoint that returns a transaction directly offers no `amount` key. It is named here
-			// only so a caller reaching a transaction through an allocation can go on to the
-			// currency the amount is counted in.
-			{Key: "amount", ObjectType: constants.ObjectTypeQuantity},
 		},
 	})
 
@@ -794,32 +740,6 @@ func init() {
 		Fields: []apiendpoint.IncludeFieldDef{
 			{Key: "responsible_user", ObjectType: constants.ObjectTypeAccountUser},
 			{Key: "allocations", ObjectType: constants.ObjectTypeTransactionAllocation},
-		},
-	})
-
-	registerIncludes(&apiendpoint.ObjectIncludes{
-		ObjectType: constants.ObjectTypeBatch,
-		Fields: []apiendpoint.IncludeFieldDef{
-			// The three measures are always on the batch; naming them here is what lets a caller reach through to the unit each is counted in.
-			{Key: "quantity", ObjectType: constants.ObjectTypeQuantity},
-			{Key: "seconds", ObjectType: constants.ObjectTypeQuantity},
-			{Key: "waste", ObjectType: constants.ObjectTypeQuantity},
-		},
-	})
-
-	registerIncludes(&apiendpoint.ObjectIncludes{
-		ObjectType: constants.ObjectTypeBatchFlowNode,
-		Fields: []apiendpoint.IncludeFieldDef{
-			// The batch is already on the node; naming it is what lets a caller reach through to its measures' units.
-			{Key: "batch", ObjectType: constants.ObjectTypeBatch},
-		},
-	})
-
-	registerIncludes(&apiendpoint.ObjectIncludes{
-		ObjectType: constants.ObjectTypeRate,
-		Fields: []apiendpoint.IncludeFieldDef{
-			{Key: "numerator_unit", ObjectType: constants.ObjectTypeUnit},
-			{Key: "denominator_unit", ObjectType: constants.ObjectTypeUnit},
 		},
 	})
 
@@ -897,8 +817,6 @@ func init() {
 		ObjectType: constants.ObjectTypeProduction,
 		Fields: []apiendpoint.IncludeFieldDef{
 			{Key: "produced_item", ObjectType: constants.ObjectTypeItem},
-			// The quantity is always on the production; naming it lets a caller reach its unit.
-			{Key: "quantity", ObjectType: constants.ObjectTypeQuantity},
 		},
 	})
 
@@ -912,11 +830,6 @@ func init() {
 			{Key: "department", ObjectType: constants.ObjectTypeDepartment},
 			{Key: "in_steps", ObjectType: constants.ObjectTypeProductionStep},
 			{Key: "out_steps", ObjectType: constants.ObjectTypeProductionStep},
-			// The rates are always on the step; naming them here is what lets a caller reach through
-			// to the units they are counted in.
-			{Key: "labor_rate", ObjectType: constants.ObjectTypeRate},
-			{Key: "labor_time", ObjectType: constants.ObjectTypeRate},
-			{Key: "overhead_rate", ObjectType: constants.ObjectTypeRate},
 		},
 	})
 

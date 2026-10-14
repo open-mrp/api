@@ -63,14 +63,6 @@ func init() {
 		Load:       stubLoadInvoiceAllocations,
 		Subs: []include.SubField{
 			{
-				// The amount is already on the allocation — this exists so a caller can reach through
-				// it to the currency it is counted in.
-				Key:         "amount",
-				Target:      constants.ObjectTypeQuantity,
-				Cardinality: include.CardinalityOnePtr,
-				ExtractRefs: extractAmountRefFromInvoiceAllocation,
-			},
-			{
 				// Read with the invoice (see stashAllocationTransactions), so it needs no loader and none
 				// of its permissions; the refs let the resolver descend into transaction.amount.
 				Key:         "transaction",
@@ -100,20 +92,6 @@ func init() {
 				Cardinality: include.CardinalityOnePtr,
 				ExtractIDs:  extractItemIDFromInvoiceLine,
 				Populate:    populateItemOnInvoiceLine,
-			},
-			{
-				// The quantity and the price are already on the line — these exist so a caller can
-				// reach through them to the units they are counted in.
-				Key:         "quantity",
-				Target:      constants.ObjectTypeQuantity,
-				Cardinality: include.CardinalityOnePtr,
-				ExtractRefs: extractQuantityRefFromInvoiceLine,
-			},
-			{
-				Key:         "unit_price",
-				Target:      constants.ObjectTypeRate,
-				Cardinality: include.CardinalityOnePtr,
-				ExtractRefs: extractUnitPriceRefFromInvoiceLine,
 			},
 		},
 	})
@@ -288,14 +266,6 @@ func populateTransactionOnInvoiceAllocation(ctx context.Context, parent any, _ m
 	}
 }
 
-func extractAmountRefFromInvoiceAllocation(_ context.Context, parent any) []any {
-	a := parent.(*apiresource.InvoiceAllocation)
-	if a.Amount == nil {
-		return nil
-	}
-	return []any{a.Amount}
-}
-
 func extractItemIDFromInvoiceLine(ctx context.Context, parent any) []string {
 	l := parent.(*apiresource.InvoiceLine)
 	id, _ := include.GetLoadMeta(ctx).GetString(constants.ObjectTypeInvoiceLine, l.ID, "item_id")
@@ -314,22 +284,6 @@ func populateItemOnInvoiceLine(ctx context.Context, parent any, loaded map[strin
 	if v, ok := loaded[id]; ok {
 		l.Item = v.(*apiresource.Item)
 	}
-}
-
-func extractQuantityRefFromInvoiceLine(_ context.Context, parent any) []any {
-	l := parent.(*apiresource.InvoiceLine)
-	if l.Quantity == nil {
-		return nil
-	}
-	return []any{l.Quantity}
-}
-
-func extractUnitPriceRefFromInvoiceLine(_ context.Context, parent any) []any {
-	l := parent.(*apiresource.InvoiceLine)
-	if l.UnitPrice == nil {
-		return nil
-	}
-	return []any{l.UnitPrice}
 }
 
 // Hands the resolver the stashed order line so nested includes below it resolve.

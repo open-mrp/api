@@ -4,19 +4,17 @@ package api_test
 
 import (
 	"net/url"
-	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/require"
 )
 
-// bulkCurrencyRate builds a unit_price/unit_cost rate input with a currency
-// numerator and a non-currency denominator (the valid shape).
+// bulkCurrencyRate builds a unit_price/unit_cost price input per a non-currency unit (the valid shape).
 func bulkCurrencyRate(value string) map[string]any {
 	return map[string]any{
-		"value":               value,
-		"numerator_unit_id":   currencyUnitID,
-		"denominator_unit_id": nonCurrencyUnitID,
+		"amount":      value,
+		"currency":    "usd",
+		"per_unit_id": nonCurrencyUnitID,
 	}
 }
 
@@ -34,19 +32,6 @@ func catalogItem(t *testing.T, basePath, id string) map[string]any {
 	item := jsonObject(parseJSON(body), "item")
 	require.NotNil(t, item, "item should be populated with ?include=item")
 	return item
-}
-
-// catalogRateValue fetches a part/product and returns the decimal value of a nested
-// rate. rateInclude is e.g. "item.unit_value" or "item.unit_cost".
-func catalogRateValue(t *testing.T, basePath, id, rateInclude string) string {
-	t.Helper()
-	status, body, err := apiClient.GetListRaw(basePath+"/"+id, url.Values{"include": {rateInclude}})
-	require.NoError(t, err)
-	requireStatus(t, 200, status, body)
-	rateKey := strings.TrimPrefix(rateInclude, "item.")
-	rate := jsonObject(jsonObject(parseJSON(body), "item"), rateKey)
-	require.NotNil(t, rate, "%s should be populated with ?include=%s", rateKey, rateInclude)
-	return jsonField(rate, "value")
 }
 
 // catalogItemAttributeValues returns the `value` of every attribute attached to an item.

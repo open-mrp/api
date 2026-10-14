@@ -5,6 +5,7 @@ import (
 	"net/http"
 
 	"github.com/open-mrp/api/services/api-gateway/pkg/authz"
+	apirequest "github.com/open-mrp/api/services/api-gateway/pkg/request"
 	apiresource "github.com/open-mrp/api/services/api-gateway/pkg/resource"
 	"github.com/open-mrp/api/services/auth-service/pkg/types"
 	"github.com/open-mrp/api/shared/constants"
@@ -32,23 +33,18 @@ type UpdatePurchaseOrderLineRequest struct {
 	QuantityValue field.Optional[string] `json:"quantity_value,omitzero" format:"decimal"`
 	// ID of the unit the quantity is measured in.
 	QuantityUnitID field.Optional[string] `json:"quantity_unit_id,omitzero" validate:"omitempty"`
-	// Purchase price per unit, as a decimal string.
-	UnitPriceValue field.Optional[string] `json:"unit_price_value,omitzero" format:"decimal"`
-	// ID of the unit price's numerator unit (e.g. a currency unit).
-	UnitPriceNumeratorUnitID field.Optional[string] `json:"unit_price_numerator_unit_id,omitzero" validate:"omitempty"`
-	// ID of the unit price's denominator unit (the unit the price is per).
-	UnitPriceDenominatorUnitID field.Optional[string] `json:"unit_price_denominator_unit_id,omitzero" validate:"omitempty"`
+	// Purchase price per unit.
+	UnitPrice field.Optional[apirequest.UnitPriceInput] `json:"unit_price,omitzero"`
 }
 
 var sampleUpdatePOLineProductID = apiresource.SampleProductID
 var sampleUpdatePOLineQuantityValue = "250"
-var sampleUpdatePOLineUnitPriceValue = "15.00"
 var sampleUpdatePOLineProductSKU = "RAW-100"
 var sampleUpdatePurchaseOrderLineRequest = &UpdatePurchaseOrderLineRequest{
-	ProductID:      field.Some(sampleUpdatePOLineProductID),
-	ProductSKU:     field.Some(sampleUpdatePOLineProductSKU),
-	QuantityValue:  field.Some(sampleUpdatePOLineQuantityValue),
-	UnitPriceValue: field.Some(sampleUpdatePOLineUnitPriceValue),
+	ProductID:     field.Some(sampleUpdatePOLineProductID),
+	ProductSKU:    field.Some(sampleUpdatePOLineProductSKU),
+	QuantityValue: field.Some(sampleUpdatePOLineQuantityValue),
+	UnitPrice:     field.Some(apirequest.UnitPriceInput{Amount: "15.00", Currency: "usd", PerUnitID: apiresource.SampleUnitID}),
 }
 
 func (*UpdatePurchaseOrderLineRequest) SchemaExample() any {

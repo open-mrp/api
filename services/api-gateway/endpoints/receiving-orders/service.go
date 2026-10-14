@@ -453,26 +453,17 @@ func receivingOrderLineFromProto(info *pb.ReceivingOrderLineInfo, units map[stri
 		ID:             info.Id,
 		Object:         constants.ObjectTypeReceivingOrderLine,
 		LineItemNumber: info.OrderLineItemNumber,
-		Quantity: &apiresource.Quantity{
-			ID:           info.QuantityId,
-			Object:       constants.ObjectTypeQuantity,
-			Value:        info.QuantityValue,
-			DisplayValue: apiresource.FormatDisplayValue(info.QuantityValue, info.QuantityUnitAbbreviation, ""),
-			// Unit left nil: expandable, loaded with real data via `lines.quantity.unit`; never fabricated.
-		},
-		StockedAt: grpcutil.TimestampToTimePtr(info.StockedAt),
-		CreatedAt: grpcutil.TimestampToTime(info.CreatedAt),
-		UpdatedAt: grpcutil.TimestampToTime(info.UpdatedAt),
+		Quantity:       apiresource.NewQuantity(info.QuantityValue, info.QuantityUnitId),
+		StockedAt:      grpcutil.TimestampToTimePtr(info.StockedAt),
+		CreatedAt:      grpcutil.TimestampToTime(info.CreatedAt),
+		UpdatedAt:      grpcutil.TimestampToTime(info.UpdatedAt),
 	}
 
-	// What was refused is summed across the line's deliveries rather than stored, so it is a
-	// computed quantity — no id, and it carries the unit it was summed in.
+	// What was refused is summed across the line's deliveries rather than stored.
 	if info.RejectedQuantityValue != nil {
-		line.RejectedQuantity = &apiresource.ComputedQuantity{
-			Object:       constants.ObjectTypeComputedQuantity,
-			Value:        *info.RejectedQuantityValue,
-			DisplayValue: apiresource.FormatDisplayValue(*info.RejectedQuantityValue, info.QuantityUnitAbbreviation, ""),
-			Unit:         units[info.QuantityUnitId],
+		line.RejectedQuantity = &apiresource.Quantity{
+			Value: *info.RejectedQuantityValue,
+			Unit:  units[info.QuantityUnitId],
 		}
 	}
 
@@ -501,18 +492,9 @@ func stashReceivingOrderLineMeta(meta *include.LoadMeta, info *pb.ReceivingOrder
 	}
 	// The purchase order line this line receives against, resolved through the PO line loader.
 	meta.Set(constants.ObjectTypeReceivingOrderLine, line.ID, "order_line_id", info.OrderLineId)
-	// The unit the line's own quantity is counted in, for `lines.quantity.unit`.
-	meta.Set(constants.ObjectTypeQuantity, line.Quantity.ID, "unit_id", info.QuantityUnitId)
 
-	// What the purchase order asked for is the order line's own quantity, reported here under that
-	// quantity's id rather than as a copy of its value.
-	meta.Set(constants.ObjectTypeReceivingOrderLine, line.ID, "quantity_ordered", &apiresource.Quantity{
-		ID:           info.OrderLineQuantityId,
-		Object:       constants.ObjectTypeQuantity,
-		Value:        info.OrderLineQuantityOrdered,
-		DisplayValue: apiresource.FormatDisplayValue(info.OrderLineQuantityOrdered, info.OrderLineUnitAbbreviation, ""),
-	})
-	meta.Set(constants.ObjectTypeQuantity, info.OrderLineQuantityId, "unit_id", info.OrderLineUnitId)
+	// What the purchase order asked for is the order line's own quantity.
+	meta.Set(constants.ObjectTypeReceivingOrderLine, line.ID, "quantity_ordered", apiresource.NewQuantity(info.OrderLineQuantityOrdered, info.OrderLineUnitId))
 }
 
 // documentRecords turns the cross-links a purchasing document carries into record references. The ids, numbers and statuses are what the query already returned, so nothing here is invented.

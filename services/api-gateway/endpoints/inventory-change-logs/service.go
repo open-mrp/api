@@ -3,6 +3,7 @@ package inventorychangelogep
 import (
 	"context"
 	"fmt"
+
 	"github.com/open-mrp/apikit/include"
 
 	jobep "github.com/open-mrp/api/services/api-gateway/endpoints/jobs"
@@ -205,29 +206,7 @@ func inventoryChangeLogFromProto(icl *pb.InventoryChangeLogInfo) apiresource.Inv
 
 // inventoryChangeLogQuantity builds the signed amount the entry recorded. Carried inline rather than stashed for an include: the amount is what the entry is, and an entry reporting null for it says nothing.
 func inventoryChangeLogQuantity(icl *pb.InventoryChangeLogInfo) *apiresource.Quantity {
-	return &apiresource.Quantity{
-		ID:     icl.QuantityId,
-		Object: constants.ObjectTypeQuantity,
-		Value:  icl.QuantityValue,
-		DisplayValue: apiresource.FormatDisplayValue(
-			icl.QuantityValue,
-			icl.QuantityUnitAbbreviation,
-			icl.QuantityUnitType,
-		),
-		Unit: &apiresource.Unit{
-			ID:                icl.QuantityUnitId,
-			Object:            constants.ObjectTypeUnit,
-			Name:              icl.QuantityUnitName,
-			Abbreviation:      icl.QuantityUnitAbbreviation,
-			Type:              constants.UnitType(icl.QuantityUnitType),
-			RatioNumerator:    icl.QuantityUnitRatioNumerator,
-			RatioDenominator:  icl.QuantityUnitRatioDenominator,
-			OffsetNumerator:   icl.QuantityUnitOffsetNumerator,
-			OffsetDenominator: icl.QuantityUnitOffsetDenominator,
-			CreatedAt:         grpcutil.TimestampToTime(icl.QuantityUnitCreatedAt),
-			UpdatedAt:         grpcutil.TimestampToTime(icl.QuantityUnitUpdatedAt),
-		},
-	}
+	return apiresource.NewQuantity(icl.QuantityValue, icl.QuantityUnitId)
 }
 
 func stashInventoryChangeLogMeta(meta *include.LoadMeta, icl *pb.InventoryChangeLogInfo) {

@@ -50,14 +50,9 @@ func init() {
 				ExtractIDs:  extractItemIDFromReceivingOrderLine,
 				Populate:    populateItemOnReceivingOrderLine,
 			},
-			{
-				// Carried from the purchase order line alongside the receiving line, so there is nothing to fetch. Traversed rather than loaded so `quantity_ordered.unit` still resolves.
-				Key:         "quantity_ordered",
-				Target:      constants.ObjectTypeQuantity,
-				Cardinality: include.CardinalityOnePtr,
-				Populate:    populateQuantityOrderedOnReceivingOrderLine,
-				ExtractRefs: extractQuantityOrderedRefFromReceivingOrderLine,
-			},
+			valueShapeSub(constants.ObjectTypeReceivingOrderLine, "quantity_ordered", func(p any) string { return p.(*apiresource.ReceivingOrderLine).ID }, func(p, v any) {
+				p.(*apiresource.ReceivingOrderLine).QuantityOrdered = v.(*apiresource.Quantity)
+			}),
 			{
 				Key:         "order_line",
 				Target:      constants.ObjectTypePurchaseOrderLine,
@@ -65,32 +60,8 @@ func init() {
 				ExtractIDs:  extractOrderLineIDFromReceivingOrderLine,
 				Populate:    populateOrderLineOnReceivingOrderLine,
 			},
-			{
-				// The quantity is already on the line — this exists so a caller can reach through it to the unit.
-				Key:         "quantity",
-				Target:      constants.ObjectTypeQuantity,
-				Cardinality: include.CardinalityOnePtr,
-				ExtractRefs: extractQuantityRefFromReceivingOrderLine,
-			},
 		},
 	})
-}
-
-// The resolver runs Populate before gathering refs, so the ordered quantity is already on the line by the time this is called.
-func extractQuantityOrderedRefFromReceivingOrderLine(_ context.Context, parent any) []any {
-	l := parent.(*apiresource.ReceivingOrderLine)
-	if l.QuantityOrdered == nil {
-		return nil
-	}
-	return []any{l.QuantityOrdered}
-}
-
-func extractQuantityRefFromReceivingOrderLine(_ context.Context, parent any) []any {
-	l := parent.(*apiresource.ReceivingOrderLine)
-	if l.Quantity == nil {
-		return nil
-	}
-	return []any{l.Quantity}
 }
 
 func extractSupplierIDFromReceivingOrder(ctx context.Context, parent any) []string {
@@ -198,15 +169,6 @@ func populateItemOnReceivingOrderLine(ctx context.Context, parent any, loaded ma
 	if v, ok := loaded[id]; ok {
 		l.Item = v.(*apiresource.Item)
 	}
-}
-
-func populateQuantityOrderedOnReceivingOrderLine(ctx context.Context, parent any, _ map[string]any) {
-	l := parent.(*apiresource.ReceivingOrderLine)
-	v, ok := include.GetLoadMeta(ctx).Get(constants.ObjectTypeReceivingOrderLine, l.ID, "quantity_ordered")
-	if !ok {
-		return
-	}
-	l.QuantityOrdered = v.(*apiresource.Quantity)
 }
 
 func extractOrderLineIDFromReceivingOrderLine(ctx context.Context, parent any) []string {

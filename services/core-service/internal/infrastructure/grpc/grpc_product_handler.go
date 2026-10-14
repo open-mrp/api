@@ -144,6 +144,8 @@ func (h *gRPCHandler) CreateProduct(ctx context.Context, req *pb.CreateProductRe
 	ctx, finalizeIdempotency := contracts.WithIdempotencyTracking(ctx)
 	defer finalizeIdempotency()
 
+	money := newMoneyRows(ctx)
+
 	params := domain.CreateProductParams{
 		SKU:             req.Sku,
 		ProductTypeCode: req.ProductTypeCode,
@@ -159,10 +161,14 @@ func (h *gRPCHandler) CreateProduct(ctx context.Context, req *pb.CreateProductRe
 	if req.Notes != nil {
 		params.Notes = req.Notes
 	}
-	params.UnitPrice = protoToCreateRateInput(req.UnitPrice)
-	params.UnitCost = protoToCreateRateInput(req.UnitCost)
+	params.UnitPrice = money.rate("unit_price", req.UnitPrice)
+	params.UnitCost = money.rate("unit_cost", req.UnitCost)
 	if len(req.AttributeIds) > 0 {
 		params.AttributeIDs = req.AttributeIds
+	}
+
+	if apiErr := money.err(); apiErr != nil {
+		return nil, contracts.ConvertAPIErrorToGRPC(apiErr)
 	}
 
 	product, apiErr := h.productSvc.CreateProduct(ctx, params)
@@ -183,6 +189,8 @@ func (h *gRPCHandler) BulkUpsertProducts(ctx context.Context, req *pb.BulkUpsert
 	ctx, finalizeIdempotency := contracts.WithIdempotencyTracking(ctx)
 	defer finalizeIdempotency()
 
+	money := newMoneyRows(ctx)
+
 	products := make([]domain.UpsertProductParams, len(req.Products))
 	for i, p := range req.Products {
 		props := make([]domain.UpsertItemPropertyParams, len(p.Properties))
@@ -201,10 +209,14 @@ func (h *gRPCHandler) BulkUpsertProducts(ctx context.Context, req *pb.BulkUpsert
 			Category:        objectIdentifierFromProto(p.Category),
 			ProductLine:     objectIdentifierPtrFromProto(p.ProductLine),
 			IsPortalReady:   p.IsPortalReady,
-			UnitPrice:       protoToCreateRateInput(p.UnitPrice),
-			UnitCost:        protoToCreateRateInput(p.UnitCost),
+			UnitPrice:       money.rate("unit_price", p.UnitPrice),
+			UnitCost:        money.rate("unit_cost", p.UnitCost),
 			Properties:      props,
 		}
+	}
+
+	if apiErr := money.err(); apiErr != nil {
+		return nil, contracts.ConvertAPIErrorToGRPC(apiErr)
 	}
 
 	job, apiErr := h.productSvc.BulkUpsertProducts(ctx, domain.BulkUpsertProductsParams{Products: products})
@@ -223,15 +235,21 @@ func (h *gRPCHandler) UpdateProduct(ctx context.Context, req *pb.UpdateProductRe
 	ctx, finalizeIdempotency := contracts.WithIdempotencyTracking(ctx)
 	defer finalizeIdempotency()
 
+	money := newMoneyRows(ctx)
+
 	params := domain.UpdateProductParams{
 		ProductID:     req.Id,
 		SKU:           req.Sku,
 		Description:   fieldpb.StringClearableFromProto(req.Description),
 		Notes:         fieldpb.StringClearableFromProto(req.Notes),
 		IsPortalReady: req.IsPortalReady,
-		UnitPrice:     protoToCreateRateInput(req.UnitPrice),
+		UnitPrice:     money.rate("unit_price", req.UnitPrice),
 		CategoryID:    req.CategoryId,
 		Includes:      req.Includes,
+	}
+
+	if apiErr := money.err(); apiErr != nil {
+		return nil, contracts.ConvertAPIErrorToGRPC(apiErr)
 	}
 
 	product, apiErr := h.productSvc.UpdateProduct(ctx, params)

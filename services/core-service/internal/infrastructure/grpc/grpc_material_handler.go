@@ -19,18 +19,6 @@ func protoToQuantityInput(q *pb.QuantityInput) *domain.QuantityInput {
 	}
 }
 
-// protoToCreateRateInput converts an optional CreateRateInput proto into the domain CreateRateParams shape. Returns nil when the proto is nil so callers can fall back to default-rate behavior in service layer.
-func protoToCreateRateInput(r *pb.CreateRateInput) *domain.CreateRateParams {
-	if r == nil {
-		return nil
-	}
-	return &domain.CreateRateParams{
-		Value:             r.Value,
-		NumeratorUnitID:   r.NumeratorUnitId,
-		DenominatorUnitID: r.DenominatorUnitId,
-	}
-}
-
 func materialToProto(m *domain.Material) *pb.MaterialInfo {
 	if m == nil {
 		return nil
@@ -163,13 +151,15 @@ func (h *gRPCHandler) CreateMaterial(ctx context.Context, req *pb.CreateMaterial
 	ctx, finalizeIdempotency := contracts.WithIdempotencyTracking(ctx)
 	defer finalizeIdempotency()
 
+	money := newMoneyRows(ctx)
+
 	params := domain.CreateMaterialParams{
 		SKU:          req.Sku,
 		CategoryID:   req.CategoryId,
 		OrderPoint:   protoToQuantityInput(req.OrderPoint),
 		LeadTime:     protoToQuantityInput(req.LeadTime),
-		UnitPrice:    protoToCreateRateInput(req.UnitPrice),
-		UnitCost:     protoToCreateRateInput(req.UnitCost),
+		UnitPrice:    money.rate("unit_price", req.UnitPrice),
+		UnitCost:     money.rate("unit_cost", req.UnitCost),
 		AttributeIDs: req.AttributeIds,
 		Includes:     req.Includes,
 	}
@@ -179,6 +169,10 @@ func (h *gRPCHandler) CreateMaterial(ctx context.Context, req *pb.CreateMaterial
 	}
 	if req.Notes != nil {
 		params.Notes = req.Notes
+	}
+
+	if apiErr := money.err(); apiErr != nil {
+		return nil, contracts.ConvertAPIErrorToGRPC(apiErr)
 	}
 
 	material, apiErr := h.materialSvc.CreateMaterial(ctx, params)
@@ -199,6 +193,8 @@ func (h *gRPCHandler) BulkUpsertMaterials(ctx context.Context, req *pb.BulkUpser
 	ctx, finalizeIdempotency := contracts.WithIdempotencyTracking(ctx)
 	defer finalizeIdempotency()
 
+	money := newMoneyRows(ctx)
+
 	materials := make([]domain.UpsertMaterialParams, len(req.Materials))
 	for i, m := range req.Materials {
 		props := make([]domain.UpsertItemPropertyParams, len(m.Properties))
@@ -212,10 +208,14 @@ func (h *gRPCHandler) BulkUpsertMaterials(ctx context.Context, req *pb.BulkUpser
 			Category:    objectIdentifierFromProto(m.Category),
 			OrderPoint:  protoToQuantityInput(m.OrderPoint),
 			LeadTime:    protoToQuantityInput(m.LeadTime),
-			UnitPrice:   protoToCreateRateInput(m.UnitPrice),
-			UnitCost:    protoToCreateRateInput(m.UnitCost),
+			UnitPrice:   money.rate("unit_price", m.UnitPrice),
+			UnitCost:    money.rate("unit_cost", m.UnitCost),
 			Properties:  props,
 		}
+	}
+
+	if apiErr := money.err(); apiErr != nil {
+		return nil, contracts.ConvertAPIErrorToGRPC(apiErr)
 	}
 
 	job, apiErr := h.materialSvc.BulkUpsertMaterials(ctx, domain.BulkUpsertMaterialsParams{Materials: materials})
@@ -234,6 +234,8 @@ func (h *gRPCHandler) UpdateMaterial(ctx context.Context, req *pb.UpdateMaterial
 	ctx, finalizeIdempotency := contracts.WithIdempotencyTracking(ctx)
 	defer finalizeIdempotency()
 
+	money := newMoneyRows(ctx)
+
 	params := domain.UpdateMaterialParams{
 		MaterialID:        req.Id,
 		SKU:               req.Sku,
@@ -243,9 +245,13 @@ func (h *gRPCHandler) UpdateMaterial(ctx context.Context, req *pb.UpdateMaterial
 		UpdateNotes:       req.UpdateNotes,
 		OrderPoint:        protoToQuantityInput(req.OrderPoint),
 		LeadTime:          protoToQuantityInput(req.LeadTime),
-		UnitCost:          protoToCreateRateInput(req.UnitCost),
+		UnitCost:          money.rate("unit_cost", req.UnitCost),
 		CategoryID:        req.CategoryId,
 		Includes:          req.Includes,
+	}
+
+	if apiErr := money.err(); apiErr != nil {
+		return nil, contracts.ConvertAPIErrorToGRPC(apiErr)
 	}
 
 	material, apiErr := h.materialSvc.UpdateMaterial(ctx, params)

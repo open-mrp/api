@@ -55,8 +55,8 @@ func requireNewCostBasisReason(t *testing.T, itemID string, before int, reason s
 type editableStep struct {
 	fixture      laborCostFixture
 	id           string
+	name         string
 	productionID string
-	laborRateID  string
 	consumption  string
 }
 
@@ -66,13 +66,14 @@ func createEditableStep(t *testing.T) editableStep {
 	t.Helper()
 	f := createLaborCostFixture(t)
 
+	name := uniqueName("e2e-step-edits")
 	status, body, err := apiClient.Post(productionStepsPath+"?include=production&include=consumptions", map[string]any{
-		"name":            uniqueName("e2e-step-edits"),
+		"name":            name,
 		"leveling_factor": "0",
 		"allowances":      "0",
-		"labor_time":      map[string]any{"value": "30", "numerator_unit_id": unitSecond, "denominator_unit_id": unitEach},
-		"labor_rate":      map[string]any{"value": "25", "numerator_unit_id": unitDollar, "denominator_unit_id": unitHour},
-		"overhead_rate":   map[string]any{"value": "20", "numerator_unit_id": unitDollar, "denominator_unit_id": unitHour},
+		"labor_time":      map[string]any{"value": "30", "unit_id": unitSecond, "per_unit_id": unitEach},
+		"labor_rate":      map[string]any{"amount": "25", "currency": "usd", "per_unit_id": unitHour},
+		"overhead_rate":   map[string]any{"amount": "20", "currency": "usd", "per_unit_id": unitHour},
 		"production":      map[string]any{"item_id": f.partItemID, "quantity_value": "1", "quantity_unit_id": unitEach},
 		"consumptions": []map[string]any{
 			{"item_id": f.materialItemID, "quantity_value": "1", "quantity_unit_id": unitEach,
@@ -93,8 +94,8 @@ func createEditableStep(t *testing.T) editableStep {
 	return editableStep{
 		fixture:      f,
 		id:           id,
+		name:         name,
 		productionID: jsonField(production, "id"),
-		laborRateID:  jsonField(jsonObject(step, "labor_rate"), "id"),
 		consumption:  jsonField(consumptions[0].(map[string]any), "id"),
 	}
 }
@@ -114,13 +115,6 @@ func TestProductionSteps_EditsRestateWhatTheItemCosts(t *testing.T) {
 	require.NoError(t, err)
 	requireStatus(t, 200, status, body)
 	n = requireNewCostBasisReason(t, part, n, "production_step_updated")
-
-	status, body, err = apiClient.Patch("/v1/operations/rates/"+s.laborRateID, map[string]any{
-		"value": "30", "object_id": s.id, "object_type": "production_step",
-	}, newIdempotencyKey())
-	require.NoError(t, err)
-	requireStatus(t, 200, status, body)
-	n = requireNewCostBasisReason(t, part, n, "rate_updated")
 
 	consumptionPath := fmt.Sprintf("%s/%s/consumptions/%s", productionStepsPath, s.id, s.consumption)
 	status, body, err = apiClient.Patch(consumptionPath, map[string]any{"quantity_value": "2"}, newIdempotencyKey())
@@ -152,7 +146,7 @@ func TestProductionSteps_EditsRestateWhatTheItemCosts(t *testing.T) {
 	material := s.fixture.materialItemID
 	before := len(costBasisReasons(t, material))
 	status, body, err = apiClient.Patch(materialsPath+"/"+s.fixture.materialID, map[string]any{
-		"unit_cost": map[string]any{"value": "0.25", "numerator_unit_id": unitDollar, "denominator_unit_id": unitEach},
+		"unit_cost": map[string]any{"amount": "0.25", "currency": "usd", "per_unit_id": unitEach},
 	}, newIdempotencyKey())
 	require.NoError(t, err)
 	requireStatus(t, 200, status, body)
@@ -164,7 +158,8 @@ func TestProductionSteps_EditsRestateWhatTheItemCosts(t *testing.T) {
 	requireNewCostBasisReason(t, part, n, "production_step_deleted")
 }
 
-// The consumer recosts the part once the edits land: labor follows the step's rate and time.
+// The consumer recosts the part once the edits land: labor follows the step's rate and time. A step's
+// rates are rewritten through bulk upsert, which matches the step by name.
 func TestProductionSteps_RateEditRecostsTheItem(t *testing.T) {
 	t.Parallel()
 	s := createEditableStep(t)
@@ -173,11 +168,22 @@ func TestProductionSteps_RateEditRecostsTheItem(t *testing.T) {
 	// 30 s an each at $25 an hour is $0.208333… an each, $0.416666… a pair.
 	waitForDecimal(t, part, "direct_labor_cost", "0.416666666666666667")
 
-	status, body, err := apiClient.Patch("/v1/operations/rates/"+s.laborRateID, map[string]any{
-		"value": "50", "object_id": s.id, "object_type": "production_step",
-	}, newIdempotencyKey())
-	require.NoError(t, err)
-	requireStatus(t, 200, status, body)
+	unit := func(id string) map[string]any { return map[string]any{"id": id} }
+	rate := func(value, num, den string) map[string]any {
+		return map[string]any{"value": value, "numerator_unit": unit(num), "denominator_unit": unit(den)}
+	}
+	_, updated := acceptBulkUpsertSteps(t, map[string]any{
+		"name":            s.name,
+		"leveling_factor": "0",
+		"allowances":      "0",
+		"labor_time":      rate("30", unitSecond, unitEach),
+		"labor_rate":      rate("50", unitDollar, unitHour),
+		"overhead_rate":   rate("20", unitDollar, unitHour),
+		"production":      map[string]any{"item": map[string]any{"id": part}, "quantity_value": "1", "quantity_unit": unit(unitEach)},
+		"consumptions": []any{map[string]any{"item": map[string]any{"id": s.fixture.materialItemID},
+			"quantity_value": "1", "quantity_unit": unit(unitEach)}},
+	})
+	require.Equal(t, []string{s.id}, updated, "the step is matched by name and updated")
 
 	waitForDecimal(t, part, "direct_labor_cost", "0.833333333333333333")
 }
@@ -204,19 +210,17 @@ func waitForDecimal(t *testing.T, itemID, field, want string) {
 }
 
 // The step page costs a step client-side, so the units every rate and quantity is counted in, and the
-// unit group and unit cost of every item, have to come back as objects.
+// unit group and unit cost of every item, have to come back as objects. Rate and quantity units always
+// come with their values; only the items' unit groups and costs need including.
 func TestProductionSteps_IncludeUnitsForCosting(t *testing.T) {
 	t.Parallel()
 	s := createEditableStep(t)
 
 	includes := url.Values{"include": {
-		"labor_rate.numerator_unit", "labor_rate.denominator_unit",
-		"labor_time.numerator_unit", "labor_time.denominator_unit",
-		"overhead_rate.numerator_unit", "overhead_rate.denominator_unit",
-		"production.quantity.unit",
+		"production",
 		"production.produced_item.category.unit_group.base_unit",
 		"production.produced_item.category.unit_group.associated_units.unit",
-		"consumptions.quantity.unit", "consumptions.waste_quantity.unit",
+		"consumptions",
 		"consumptions.consumed_item.unit_cost",
 		"consumptions.consumed_item.category.unit_group.base_unit",
 		"machines.department",
@@ -234,13 +238,19 @@ func TestProductionSteps_IncludeUnitsForCosting(t *testing.T) {
 			step = list[0].(map[string]any)
 		}
 
-		for _, rate := range []string{"labor_rate", "labor_time", "overhead_rate"} {
+		for rate, amount := range map[string]string{"labor_rate": "25", "overhead_rate": "20"} {
 			r := jsonObject(step, rate)
 			require.NotNil(t, r, "%s on %s", rate, path)
-			assert.Equal(t, "unit", jsonField(jsonObject(r, "numerator_unit"), "object"), "%s.numerator_unit on %s", rate, path)
-			assert.Equal(t, "unit", jsonField(jsonObject(r, "denominator_unit"), "object"), "%s.denominator_unit on %s", rate, path)
+			assertDecimalEqual(t, amount, jsonField(r, "amount"), "%s.amount on %s", rate, path)
+			assert.Equal(t, "usd", jsonField(r, "currency"), "%s.currency on %s", rate, path)
+			assert.Equal(t, unitHour, jsonField(jsonObject(r, "per_unit"), "id"), "%s.per_unit on %s", rate, path)
+			assert.Equal(t, "unit", jsonField(jsonObject(r, "per_unit"), "object"), "%s.per_unit on %s", rate, path)
 		}
-		assert.Equal(t, "hour", jsonField(jsonObject(jsonObject(step, "labor_rate"), "denominator_unit"), "id"))
+		laborTime := jsonObject(step, "labor_time")
+		require.NotNil(t, laborTime, "labor_time on %s", path)
+		assertDecimalEqual(t, "30", jsonField(laborTime, "value"), "labor_time.value on %s", path)
+		assert.Equal(t, unitSecond, jsonField(jsonObject(laborTime, "unit"), "id"), "labor_time.unit on %s", path)
+		assert.Equal(t, unitEach, jsonField(jsonObject(laborTime, "per_unit"), "id"), "labor_time.per_unit on %s", path)
 
 		production := jsonObject(step, "production")
 		assert.Equal(t, unitEach, jsonField(jsonObject(jsonObject(production, "quantity"), "unit"), "id"), "production.quantity.unit on %s", path)
@@ -254,7 +264,9 @@ func TestProductionSteps_IncludeUnitsForCosting(t *testing.T) {
 		assert.Equal(t, unitEach, jsonField(jsonObject(jsonObject(consumption, "waste_quantity"), "unit"), "id"))
 		unitCost := jsonObject(jsonObject(consumption, "consumed_item"), "unit_cost")
 		require.NotNil(t, unitCost, "consumed item unit cost on %s: %s", path, body)
-		assertDecimalEqual(t, "0.10", jsonField(unitCost, "value"), "consumed item unit cost")
+		assertDecimalEqual(t, "0.10", jsonField(unitCost, "amount"), "consumed item unit cost")
+		assert.Equal(t, "usd", jsonField(unitCost, "currency"))
+		assert.NotNil(t, jsonObject(unitCost, "per_unit"), "consumed item unit cost carries its unit")
 	}
 }
 
@@ -423,16 +435,13 @@ func createPartItem(t *testing.T, prefix string) string {
 // links it to the steps around it by item, as the dashboard did.
 func createLinkedStep(t *testing.T, name, produced, consumed string) string {
 	t.Helper()
-	rate := func(value, num, den string) map[string]any {
-		return map[string]any{"value": value, "numerator_unit_id": num, "denominator_unit_id": den}
-	}
 	status, body, err := apiClient.Post(productionStepsPath, map[string]any{
 		"name":            uniqueName(name),
 		"leveling_factor": "0",
 		"allowances":      "0",
-		"labor_time":      rate("30", unitSecond, unitEach),
-		"labor_rate":      rate("25", unitDollar, unitHour),
-		"overhead_rate":   rate("20", unitDollar, unitHour),
+		"labor_time":      map[string]any{"value": "30", "unit_id": unitSecond, "per_unit_id": unitEach},
+		"labor_rate":      map[string]any{"amount": "25", "currency": "usd", "per_unit_id": unitHour},
+		"overhead_rate":   map[string]any{"amount": "20", "currency": "usd", "per_unit_id": unitHour},
 		"production":      map[string]any{"item_id": produced, "quantity_value": "1", "quantity_unit_id": unitEach},
 		"consumptions": []map[string]any{{"item_id": consumed, "quantity_value": "1", "quantity_unit_id": unitEach,
 			"waste_quantity_value": "0", "waste_quantity_unit_id": unitEach}},

@@ -28,7 +28,7 @@ type AccountPrice struct {
 	ProductLine *ProductLine `json:"product_line" expandable:"true"`
 	// The price, expressed as a rate.
 	//
-	// The rate's numerator unit is typically a currency and its denominator unit is the quantity unit being priced (e.g. `$25.50 / kg`). A matching order line takes both its unit price and its price units from this rate, exactly as entered.
+	// The rate's unit is typically a currency and its per-unit is the quantity unit being priced (e.g. `$25.50 / kg`). A matching order line takes both its unit price and its price units from this rate, exactly as entered.
 	Rate *Rate `json:"rate" validate:"required"`
 	// Item categories recorded on this price.
 	//

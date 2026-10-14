@@ -110,12 +110,12 @@ func TestBulkReconcileItems_ResponseShape(t *testing.T) {
 		quantity := jsonObject(row, key)
 		require.NotNil(t, quantity, "%s is required on a reconciled row: %v", key, row)
 		assert.NotEmpty(t, jsonField(quantity, "value"))
-		assertObjectField(t, quantity, "computed_quantity")
+		assertValueShapeBare(t, quantity, key)
 	}
 }
 
 // A reconciled figure is meaningless without the unit it was recorded in, and the unit is not
-// behind an include — a computed quantity carries it. Before this, the unit came back as an id
+// behind an include — the quantity carries it. Before this, the unit came back as an id
 // with every other field blank, which the importer could not render.
 func TestBulkReconcileItems_ReconciledQuantitiesCarryAFullyResolvedUnit(t *testing.T) {
 	t.Parallel()

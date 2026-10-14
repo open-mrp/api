@@ -415,8 +415,7 @@ func TestItems_IncludeUnitValue(t *testing.T) {
 	_, ok := got["unit_value"]
 	assert.True(t, ok, "unit_value key should be present with ?include=unit_value")
 	if uv := jsonObject(got, "unit_value"); uv != nil {
-		assert.Equal(t, "rate", jsonField(uv, "object"))
-		assert.NotEmpty(t, jsonField(uv, "id"))
+		assertItemUnitPriceShape(t, uv)
 	}
 }
 
@@ -430,8 +429,7 @@ func TestItems_IncludeUnitCost(t *testing.T) {
 	_, ok := got["unit_cost"]
 	assert.True(t, ok, "unit_cost key should be present with ?include=unit_cost")
 	if uc := jsonObject(got, "unit_cost"); uc != nil {
-		assert.Equal(t, "rate", jsonField(uc, "object"))
-		assert.NotEmpty(t, jsonField(uc, "id"))
+		assertItemUnitPriceShape(t, uc)
 	}
 }
 
@@ -445,8 +443,7 @@ func TestItems_IncludeBurnRate(t *testing.T) {
 	_, ok := got["burn_rate"]
 	assert.True(t, ok, "burn_rate key should be present with ?include=burn_rate")
 	if br := jsonObject(got, "burn_rate"); br != nil {
-		assert.Equal(t, "rate", jsonField(br, "object"))
-		assert.NotEmpty(t, jsonField(br, "id"))
+		assertItemRateShape(t, br)
 	}
 }
 
@@ -516,8 +513,7 @@ func TestItems_ListIncludeUnitValue(t *testing.T) {
 	_, ok = first["unit_value"]
 	assert.True(t, ok, "unit_value key should be present on list items with ?include=unit_value")
 	if uv := jsonObject(first, "unit_value"); uv != nil {
-		assert.Equal(t, "rate", jsonField(uv, "object"))
-		assert.NotEmpty(t, jsonField(uv, "id"))
+		assertItemUnitPriceShape(t, uv)
 	}
 }
 
@@ -537,8 +533,7 @@ func TestItems_ListIncludeUnitCost(t *testing.T) {
 	_, ok = first["unit_cost"]
 	assert.True(t, ok, "unit_cost key should be present on list items with ?include=unit_cost")
 	if uc := jsonObject(first, "unit_cost"); uc != nil {
-		assert.Equal(t, "rate", jsonField(uc, "object"))
-		assert.NotEmpty(t, jsonField(uc, "id"))
+		assertItemUnitPriceShape(t, uc)
 	}
 }
 
@@ -558,8 +553,7 @@ func TestItems_ListIncludeBurnRate(t *testing.T) {
 	_, ok = first["burn_rate"]
 	assert.True(t, ok, "burn_rate key should be present on list items with ?include=burn_rate")
 	if br := jsonObject(first, "burn_rate"); br != nil {
-		assert.Equal(t, "rate", jsonField(br, "object"))
-		assert.NotEmpty(t, jsonField(br, "id"))
+		assertItemRateShape(t, br)
 	}
 }
 
@@ -695,4 +689,24 @@ func TestItems_ChangeCategoryIncludesCategory(t *testing.T) {
 	require.NotNil(t, cat, "category should be present on change-category response with ?include=category")
 	assert.Equal(t, "item_category", jsonField(cat, "object"))
 	assert.Equal(t, SeedItemCategoryID, jsonField(cat, "id"))
+}
+
+// assertItemUnitPriceShape checks an item price is a value shape: an amount in dollars per a unit, with no id of its own.
+func assertItemUnitPriceShape(t *testing.T, price map[string]any) {
+	t.Helper()
+	assert.NotEmpty(t, jsonField(price, "amount"))
+	assert.Equal(t, "usd", jsonField(price, "currency"))
+	assert.NotEmpty(t, jsonField(jsonObject(price, "per_unit"), "id"), "per_unit is always present")
+	assert.NotContains(t, price, "id")
+	assert.NotContains(t, price, "object")
+}
+
+// assertItemRateShape checks a rate is a value shape: a value in one unit per another, with no id of its own.
+func assertItemRateShape(t *testing.T, rate map[string]any) {
+	t.Helper()
+	assert.NotEmpty(t, jsonField(rate, "value"))
+	assert.NotEmpty(t, jsonField(jsonObject(rate, "unit"), "id"), "unit is always present")
+	assert.NotEmpty(t, jsonField(jsonObject(rate, "per_unit"), "id"), "per_unit is always present")
+	assert.NotContains(t, rate, "id")
+	assert.NotContains(t, rate, "object")
 }

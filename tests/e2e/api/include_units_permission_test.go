@@ -22,7 +22,7 @@ func TestIncludes_RunBatchesCarryTheirUnitsWithoutUnitsRead(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, http.StatusForbidden, status, "the role cannot list units on their own: %s", string(body))
 
-	params := url.Values{"scope": {"run"}, "limit": {"100"}, "include": {"quantity.unit", "seconds.unit", "waste.unit"}}
+	params := url.Values{"scope": {"run"}, "limit": {"100"}}
 	path := productionRunBatchesPath(SeedProductionRunID)
 	got := parseJSON(mustGetAs(t, reader, path, params))
 	want := parseJSON(mustGetAs(t, apiClient, path, params))
@@ -34,7 +34,7 @@ func TestIncludes_RunBatchesCarryTheirUnitsWithoutUnitsRead(t *testing.T) {
 		quantity := jsonObject(raw.(map[string]any), "quantity")
 		require.NotNil(t, quantity)
 		unit := jsonObject(quantity, "unit")
-		require.NotNil(t, unit, "the batch quantity's unit is expanded")
+		require.NotNil(t, unit, "the batch quantity carries its unit")
 		assert.NotEmpty(t, jsonField(unit, "abbreviation"))
 	}
 }

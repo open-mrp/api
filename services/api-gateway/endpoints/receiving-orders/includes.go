@@ -9,9 +9,7 @@ import (
 //
 // The item's unit group is offered because the receiving screens measure against it: a line is checked off in the unit it was ordered in, and the stocking dialog offers that group's units to put it away in.
 var receivingOrderLineIncludeFields = []string{
-	"item", "item.category", "item.category.unit_group", "item.category.unit_group.base_unit", "item.category.unit_group.associated_units", "item.category.unit_group.associated_units.unit",
-	"order_line", "order_line.item", "order_line.quantity_ordered", "order_line.quantity_ordered.unit", "order_line.unit_price", "order_line.unit_price.numerator_unit", "order_line.unit_price.denominator_unit",
-	"quantity", "quantity.unit", "quantity_ordered", "quantity_ordered.unit",
+	"item", "item.category", "item.category.unit_group", "item.category.unit_group.base_unit", "item.category.unit_group.associated_units", "item.category.unit_group.associated_units.unit", "order_line", "order_line.item", "quantity_ordered",
 }
 
 // receivingOrderIncludes is the include set of every endpoint that returns a receiving order. The actions return the same order the retrieve endpoint does, so a client can refresh its screen from the action's response rather than fetching the order again.

@@ -403,12 +403,6 @@ func buildAllGroups() []apiendpoint.APIEndpointGroup {
 		*(&httpgroup.PermissionGroupsEndpointGroup{}).Materialize(&httpgroup.PermissionGroupsEndpointGroupConfig{
 			CoreClient: coreClient,
 		}).APIEndpointGroup,
-		*(&httpgroup.QuantitiesEndpointGroup{}).Materialize(&httpgroup.QuantitiesEndpointGroupConfig{
-			CoreClient: coreClient,
-		}).APIEndpointGroup,
-		*(&httpgroup.RatesEndpointGroup{}).Materialize(&httpgroup.RatesEndpointGroupConfig{
-			CoreClient: coreClient,
-		}).APIEndpointGroup,
 		*(&httpgroup.CatalogEndpointGroup{}).Materialize(&httpgroup.CatalogEndpointGroupConfig{
 			CoreClient: coreClient,
 		}).APIEndpointGroup,

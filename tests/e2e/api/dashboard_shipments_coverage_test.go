@@ -699,12 +699,12 @@ func TestDashShipments_AdminTrackingReplayDoesNotReapply(t *testing.T) {
 
 // --- shipping cases ---
 
-// The cases card edits the freight cost and weight; units relabel without converting the number.
+// The cases card edits the freight cost and weight; a weight unit relabels without converting the number.
 func TestDashShipments_CaseUpdateFreightAmountWeightAndUnits(t *testing.T) {
 	t.Parallel()
 
 	_, _, shipmentID := dashShipmentsPacked(t)
-	path := shippingCasesPath + "/" + shipmentCaseIDs(t, shipmentID)[0] + "?include=freight_amount.unit&include=freight_weight.unit"
+	path := shippingCasesPath + "/" + shipmentCaseIDs(t, shipmentID)[0] + "?include=freight_amount&include=freight_weight"
 	patch := func(body map[string]any) map[string]any {
 		t.Helper()
 		status, resp, err := apiClient.Patch(path, body, newIdempotencyKey())
@@ -718,21 +718,28 @@ func TestDashShipments_CaseUpdateFreightAmountWeightAndUnits(t *testing.T) {
 		require.NotNil(t, q, "%s expands: %v", field, got)
 		return dashShipmentsFloat(t, jsonField(q, "value")), jsonField(jsonObject(q, "unit"), "id")
 	}
+	money := func(got map[string]any) string {
+		t.Helper()
+		m := jsonObject(got, "freight_amount")
+		require.NotNil(t, m, "freight_amount expands: %v", got)
+		assert.Equal(t, "usd", jsonField(m, "currency"))
+		return jsonField(m, "amount")
+	}
 
-	got := patch(map[string]any{"freight_amount_value": "7.25", "freight_weight_value": "3.5", "freight_weight_unit_id": "gram"})
-	value, unit := measure(got, "freight_amount")
-	assert.InDelta(t, 7.25, value, 0.0001)
-	assert.Equal(t, "dollar", unit)
-	value, unit = measure(got, "freight_weight")
+	got := patch(map[string]any{
+		"freight_amount":       map[string]any{"amount": "7.25", "currency": "usd"},
+		"freight_weight_value": "3.5", "freight_weight_unit_id": "gram",
+	})
+	assert.Equal(t, "7.25", money(got))
+	value, unit := measure(got, "freight_weight")
 	assert.InDelta(t, 3.5, value, 0.0001)
 	assert.Equal(t, "gram", unit)
 
-	got = patch(map[string]any{"freight_weight_unit_id": "pound", "freight_amount_unit_id": "dollar"})
+	got = patch(map[string]any{"freight_weight_unit_id": "pound"})
 	value, unit = measure(got, "freight_weight")
 	assert.InDelta(t, 3.5, value, 0.0001, "a unit change keeps the number")
 	assert.Equal(t, "pound", unit)
-	value, _ = measure(got, "freight_amount")
-	assert.InDelta(t, 7.25, value, 0.0001)
+	assert.Equal(t, "7.25", money(got), "an unsent amount is kept")
 	assert.Nil(t, got["tracking_number"], "an unsent tracking number stays blank")
 }
 
@@ -749,7 +756,9 @@ func TestDashShipments_CaseUpdateValidation(t *testing.T) {
 		status int
 	}{
 		{"non-numeric weight", map[string]any{"freight_weight_value": "heavy"}, 422},
-		{"non-numeric amount", map[string]any{"freight_amount_value": "lots"}, 422},
+		{"non-numeric amount", map[string]any{"freight_amount": map[string]any{"amount": "lots", "currency": "usd"}}, 422},
+		{"amount without a currency", map[string]any{"freight_amount": map[string]any{"amount": "5"}}, 422},
+		{"unsupported currency", map[string]any{"freight_amount": map[string]any{"amount": "5", "currency": "eur"}}, 422},
 		{"null weight", map[string]any{"freight_weight_value": nil}, 422},
 		{"tracking over 255", map[string]any{"tracking_number": strings.Repeat("x", 256)}, 422},
 		{"unknown weight unit", map[string]any{"freight_weight_unit_id": "un_doesnotexist0000"}, 404},
@@ -933,7 +942,7 @@ func dashShipmentsTermCustomer(t *testing.T, term map[string]any) string {
 }
 
 func dashShipmentsDollars(value string) map[string]any {
-	return map[string]any{"value": value, "unit_id": "dollar"}
+	return map[string]any{"amount": value, "currency": "usd"}
 }
 
 // The checkout sends the customer, order total and product lines, and the customer's freight terms

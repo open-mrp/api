@@ -156,6 +156,8 @@ func TestAccountPrices_ListResponseShape(t *testing.T) {
 		rate := jsonObject(m, "rate")
 		require.NotNil(t, rate, "rate should always be present")
 		assert.NotEmpty(t, jsonField(rate, "value"))
+		assert.NotEmpty(t, jsonField(jsonObject(rate, "unit"), "id"), "rate.unit is always present")
+		assert.NotEmpty(t, jsonField(jsonObject(rate, "per_unit"), "id"), "rate.per_unit is always present")
 	}
 }
 
@@ -262,9 +264,9 @@ func createAccountPrice(t *testing.T, recipientAccountID, rateValue string) map[
 		"recipient_account_id": recipientAccountID,
 		"product_line_id":      SeedProductLineID,
 		"rate": map[string]any{
-			"value":               rateValue,
-			"numerator_unit_id":   e2eCurrencyUnitID,
-			"denominator_unit_id": SeedUnitID,
+			"value":       rateValue,
+			"unit_id":     e2eCurrencyUnitID,
+			"per_unit_id": SeedUnitID,
 		},
 	})
 }
@@ -277,9 +279,9 @@ func TestAccountPrices_CreateAllFieldsAndResponseShape(t *testing.T) {
 		"recipient_account_id": SeedCustomerAccountID,
 		"product_line_id":      SeedProductLineID,
 		"rate": map[string]any{
-			"value":               "33.33",
-			"numerator_unit_id":   e2eCurrencyUnitID,
-			"denominator_unit_id": SeedUnitID,
+			"value":       "33.33",
+			"unit_id":     e2eCurrencyUnitID,
+			"per_unit_id": SeedUnitID,
 		},
 		"category_ids":  []string{SeedItemCategoryID},
 		"attribute_ids": []string{SeedAttributeID},
@@ -300,10 +302,10 @@ func TestAccountPrices_CreateAllFieldsAndResponseShape(t *testing.T) {
 
 	rate := jsonObject(got, "rate")
 	require.NotNil(t, rate)
-	assert.Equal(t, "rate", jsonField(rate, "object"))
+	assert.NotContains(t, rate, "object", "a rate is a value shape, not an object")
 	assertDecimalEquals(t, 33.33, jsonField(rate, "value"), "rate.value")
-	assert.Equal(t, e2eCurrencyUnitID, jsonField(jsonObject(rate, "numerator_unit"), "id"))
-	assert.Equal(t, SeedUnitID, jsonField(jsonObject(rate, "denominator_unit"), "id"))
+	assert.Equal(t, e2eCurrencyUnitID, jsonField(jsonObject(rate, "unit"), "id"))
+	assert.Equal(t, SeedUnitID, jsonField(jsonObject(rate, "per_unit"), "id"))
 
 	recipient := jsonObject(got, "recipient_account")
 	require.NotNil(t, recipient)
@@ -326,9 +328,9 @@ func TestAccountPrices_CreateValidation(t *testing.T) {
 	t.Parallel()
 
 	validRate := map[string]any{
-		"value":               "1.00",
-		"numerator_unit_id":   e2eCurrencyUnitID,
-		"denominator_unit_id": SeedUnitID,
+		"value":       "1.00",
+		"unit_id":     e2eCurrencyUnitID,
+		"per_unit_id": SeedUnitID,
 	}
 
 	cases := []struct {
@@ -341,12 +343,12 @@ func TestAccountPrices_CreateValidation(t *testing.T) {
 		{"rate missing value", map[string]any{
 			"recipient_account_id": SeedCustomerAccountID,
 			"product_line_id":      SeedProductLineID,
-			"rate":                 map[string]any{"numerator_unit_id": e2eCurrencyUnitID, "denominator_unit_id": SeedUnitID},
+			"rate":                 map[string]any{"unit_id": e2eCurrencyUnitID, "per_unit_id": SeedUnitID},
 		}},
-		{"rate missing denominator unit", map[string]any{
+		{"rate missing per unit", map[string]any{
 			"recipient_account_id": SeedCustomerAccountID,
 			"product_line_id":      SeedProductLineID,
-			"rate":                 map[string]any{"value": "1.00", "numerator_unit_id": e2eCurrencyUnitID},
+			"rate":                 map[string]any{"value": "1.00", "unit_id": e2eCurrencyUnitID},
 		}},
 	}
 
@@ -367,9 +369,9 @@ func TestAccountPrices_CreateRejectsUnknownField(t *testing.T) {
 		"recipient_account_id": SeedCustomerAccountID,
 		"product_line_id":      SeedProductLineID,
 		"rate": map[string]any{
-			"value":               "1.00",
-			"numerator_unit_id":   e2eCurrencyUnitID,
-			"denominator_unit_id": SeedUnitID,
+			"value":       "1.00",
+			"unit_id":     e2eCurrencyUnitID,
+			"per_unit_id": SeedUnitID,
 		},
 		// The pre-RateInput spelling: it must not be silently accepted now that the
 		// rate is taken as one object.
@@ -389,9 +391,9 @@ func TestAccountPrices_CreateIdempotent(t *testing.T) {
 		"recipient_account_id": SeedCustomerAccountID,
 		"product_line_id":      SeedProductLineID,
 		"rate": map[string]any{
-			"value":               "44.44",
-			"numerator_unit_id":   e2eCurrencyUnitID,
-			"denominator_unit_id": SeedUnitID,
+			"value":       "44.44",
+			"unit_id":     e2eCurrencyUnitID,
+			"per_unit_id": SeedUnitID,
 		},
 	}
 
@@ -420,9 +422,9 @@ func TestAccountPrices_UpdateReplacesRateWhole(t *testing.T) {
 
 	status, body, err := apiClient.Patch(accountPricesPath+"/"+priceID, map[string]any{
 		"rate": map[string]any{
-			"value":               "66.66",
-			"numerator_unit_id":   e2eCurrencyUnitID,
-			"denominator_unit_id": SeedUnitID,
+			"value":       "66.66",
+			"unit_id":     e2eCurrencyUnitID,
+			"per_unit_id": SeedUnitID,
 		},
 	}, newIdempotencyKey())
 	require.NoError(t, err)
@@ -468,9 +470,9 @@ func TestAccountPrices_UpdateReplacesCategoriesAndAttributes(t *testing.T) {
 		"recipient_account_id": SeedCustomerAccountID,
 		"product_line_id":      SeedProductLineID,
 		"rate": map[string]any{
-			"value":               "88.88",
-			"numerator_unit_id":   e2eCurrencyUnitID,
-			"denominator_unit_id": SeedUnitID,
+			"value":       "88.88",
+			"unit_id":     e2eCurrencyUnitID,
+			"per_unit_id": SeedUnitID,
 		},
 		"category_ids":  []string{SeedItemCategoryID},
 		"attribute_ids": []string{SeedAttributeID},
@@ -494,9 +496,9 @@ func TestAccountPrices_UpdateNonexistentReturns404(t *testing.T) {
 	missingID := mustGenID(t, id.AccountPriceIDPrefix)
 	status, body, err := apiClient.Patch(accountPricesPath+"/"+missingID, map[string]any{
 		"rate": map[string]any{
-			"value":               "1.00",
-			"numerator_unit_id":   e2eCurrencyUnitID,
-			"denominator_unit_id": SeedUnitID,
+			"value":       "1.00",
+			"unit_id":     e2eCurrencyUnitID,
+			"per_unit_id": SeedUnitID,
 		},
 	}, newIdempotencyKey())
 	require.NoError(t, err)

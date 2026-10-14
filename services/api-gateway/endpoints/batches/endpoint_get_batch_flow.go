@@ -35,11 +35,6 @@ func (e *GetBatchFlowEndpoint) Materialize() *apiendpoint.APIEndpoint[*GetBatchF
 		Preview:           true,
 		Auth:              authz.Policy{Permissions: []types.Permission{{Domain: types.PermissionDomainBatches, Action: types.ActionRead}}},
 		ObjectType:        constants.ObjectTypeBatchFlowNode,
-		// Each node carries a whole batch, so its measures are reached through that batch.
-		IncludeConfig: apiendpoint.IncludesFor(apiendpoint.IncludesParams{
-			ObjectType: constants.ObjectTypeBatchFlowNode,
-			Fields:     []string{"batch.quantity.unit", "batch.seconds.unit", "batch.waste.unit"},
-		}),
 		ServiceHandler: func(svc any) func(ctx context.Context, req *GetBatchFlowRequest) (*apiresource.List[apiresource.BatchFlowNode], *apierror.APIError) {
 			return svc.(BatchSvc).GetBatchFlow
 		},

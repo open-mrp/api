@@ -14,7 +14,7 @@ type InventoryItem struct {
 	// The item's quantity, in the base unit of its category.
 	//
 	// Derived rather than stored. Normally the current on-hand stock: available receipts less anything already allocated. When the list was asked for `as_of` a past instant, the last inventory level logged by then instead. Items with no recorded inventory report zero.
-	Quantity *ComputedQuantity `json:"quantity" validate:"required"`
+	Quantity *Quantity `json:"quantity" validate:"required"`
 	// The product line the item sells under.
 	//
 	// Null for an item that is not a product or has no line, and unless requested with `include=product_line`.
@@ -24,7 +24,7 @@ type InventoryItem struct {
 var SampleInventoryItem = &InventoryItem{
 	Object:      constants.ObjectTypeInventoryItem,
 	Item:        SampleItem,
-	Quantity:    SampleComputedQuantity,
+	Quantity:    SampleQuantity,
 	ProductLine: SampleProductLine,
 }
 

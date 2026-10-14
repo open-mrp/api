@@ -55,20 +55,6 @@ func init() {
 					f.Attributes = apiresource.NewList(items, apiresource.PageInfo{})
 				},
 			},
-			{
-				Key:         "unit_price.numerator_unit",
-				Target:      constants.ObjectTypeUnit,
-				Cardinality: include.CardinalityOnePtr,
-				ExtractIDs:  extractIDFromPricingFinding("numerator_unit_id"),
-				Populate:    populateUnitOnPricingFinding("numerator_unit_id", true),
-			},
-			{
-				Key:         "unit_price.denominator_unit",
-				Target:      constants.ObjectTypeUnit,
-				Cardinality: include.CardinalityOnePtr,
-				ExtractIDs:  extractIDFromPricingFinding("denominator_unit_id"),
-				Populate:    populateUnitOnPricingFinding("denominator_unit_id", false),
-			},
 		},
 	})
 
@@ -138,17 +124,6 @@ func loadedOne(ctx context.Context, ot constants.ObjectType, id, key string, loa
 	return v, ok
 }
 
-func extractIDFromPricingFinding(key string) func(context.Context, any) []string {
-	return func(ctx context.Context, parent any) []string {
-		f := parent.(*apiresource.CustomerPricingFinding)
-		id, _ := include.GetLoadMeta(ctx).GetString(constants.ObjectTypeCustomerPricingFinding, f.ID, key)
-		if id == "" {
-			return nil
-		}
-		return []string{id}
-	}
-}
-
 func extractIDsFromPricingFinding(key string) func(context.Context, any) []string {
 	return func(ctx context.Context, parent any) []string {
 		f := parent.(*apiresource.CustomerPricingFinding)
@@ -168,24 +143,13 @@ func extractIDFromMarginFinding(key string) func(context.Context, any) []string 
 	}
 }
 
-// populateUnitOnPricingFinding writes a loaded unit onto the finding's price rate. The rate is always built by the presenter, so there is nothing to create here — only the unit to attach.
-func populateUnitOnPricingFinding(key string, numerator bool) func(context.Context, any, map[string]any) {
-	return func(ctx context.Context, parent any, loaded map[string]any) {
+func extractIDFromPricingFinding(key string) func(context.Context, any) []string {
+	return func(ctx context.Context, parent any) []string {
 		f := parent.(*apiresource.CustomerPricingFinding)
-		v, ok := loadedOne(ctx, constants.ObjectTypeCustomerPricingFinding, f.ID, key, loaded)
-		if !ok {
-			return
+		id, _ := include.GetLoadMeta(ctx).GetString(constants.ObjectTypeCustomerPricingFinding, f.ID, key)
+		if id == "" {
+			return nil
 		}
-		unit := v.(*apiresource.Unit)
-		for _, rate := range []*apiresource.ComputedRate{f.UnitPrice, f.PeerMedianPrice} {
-			if rate == nil {
-				continue
-			}
-			if numerator {
-				rate.NumeratorUnit = unit
-			} else {
-				rate.DenominatorUnit = unit
-			}
-		}
+		return []string{id}
 	}
 }

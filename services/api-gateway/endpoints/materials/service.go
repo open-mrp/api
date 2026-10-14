@@ -17,15 +17,11 @@ import (
 	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
-func rateInputToProto(r *apirequest.RateInput) *pb.CreateRateInput {
+func rateInputToProto(r *apirequest.UnitPriceInput) *pb.UnitPrice {
 	if r == nil {
 		return nil
 	}
-	return &pb.CreateRateInput{
-		Value:             r.Value,
-		NumeratorUnitId:   r.NumeratorUnitID,
-		DenominatorUnitId: r.DenominatorUnitID,
-	}
+	return r.ToProto()
 }
 
 type MaterialSvc interface {

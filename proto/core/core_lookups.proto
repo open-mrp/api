@@ -11,6 +11,7 @@ import "core/core_analytics.proto";
 import "core/core_accounts_carriers.proto";
 import "core/core_invoices.proto";
 import "core/core_fuzzy_identifiers.proto";
+import "core/value_shapes.proto";
 option go_package = "shared/proto/core;core";
 
 message ListProductTypesResponse {
@@ -64,9 +65,11 @@ message ProductionFlowStepInfo {
   optional string scanning_station_id = 7;
   string leveling_factor = 8;
   string allowances = 9;
-  optional RateInfo labor_rate = 10;
+  reserved 10;
+  UnitPrice labor_rate = 18;
   optional RateInfo labor_time = 11;
-  optional RateInfo overhead_rate = 12;
+  reserved 12;
+  UnitPrice overhead_rate = 19;
   optional string department_id = 13;
   repeated string machine_ids = 14;
   optional string notes = 15;
@@ -92,27 +95,6 @@ message ProductionFlowConsumptionInfo {
 message ConnectProductionStepsRequest {
   string source_production_step_id = 1;
   string target_production_step_id = 2;
-}
-message UpdateQuantityRequest {
-  string id = 1;
-  optional string value = 2;
-  optional string unit_id = 3;
-  optional string object_id = 4;
-  optional string object_type = 5;
-}
-message UpdateQuantityResponse {
-  QuantityInfo quantity = 1;
-}
-message UpdateRateRequest {
-  string id = 1;
-  optional string value = 2;
-  optional string numerator_unit_id = 3;
-  optional string denominator_unit_id = 4;
-  optional string object_id = 5;
-  optional string object_type = 6;
-}
-message UpdateRateResponse {
-  RateInfo rate = 1;
 }
 message ReceivableEntryProto {
   string invoice_id = 1;
@@ -812,6 +794,8 @@ message WeeksOfSalesItemProto {
   string average_sales_quantity_unit_type = 7;
   double weeks_of_sales = 8;
   double quantity_on_hand = 9;
+  string quantity_on_hand_unit_id = 10;
+  string average_sales_quantity_unit_id = 11;
 }
 message AnalyzeWeeksOfSalesResponse {
   repeated WeeksOfSalesItemProto items = 1;

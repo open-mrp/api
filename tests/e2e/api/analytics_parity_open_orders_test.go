@@ -57,20 +57,32 @@ func (b openOrderBook) filter(extra map[string]any) map[string]any {
 	return body
 }
 
-func assertQuantity(t *testing.T, obj map[string]any, field, value, display, unitAbbr string) {
+// assertReportMoney checks an exact report amount.
+func assertReportMoney(t *testing.T, obj map[string]any, field, amount string) {
+	t.Helper()
+	m := jsonObject(obj, field)
+	require.NotNil(t, m, "%s: %v", field, obj)
+	assert.Equal(t, amount, jsonField(m, "amount"), field)
+	assert.Equal(t, "usd", jsonField(m, "currency"), field)
+}
+
+func assertQuantity(t *testing.T, obj map[string]any, field, value, unitID string) {
 	t.Helper()
 	q := jsonObject(obj, field)
 	require.NotNil(t, q, "%s: %v", field, obj)
-	assert.Equal(t, "computed_quantity", jsonField(q, "object"), field)
 	assert.Equal(t, value, jsonField(q, "value"), field)
-	assert.Equal(t, display, jsonField(q, "display_value"), field)
-	if unitAbbr == "" {
-		assertNilField(t, q, "unit")
-		return
-	}
 	unit := jsonObject(q, "unit")
 	require.NotNil(t, unit, "%s carries its unit", field)
-	assert.Equal(t, unitAbbr, jsonField(unit, "abbreviation"), field)
+	assert.Equal(t, unitID, jsonField(unit, "id"), field)
+	assert.Equal(t, "unit", jsonField(unit, "object"), field)
+}
+
+func reportMoneyAmount(t *testing.T, obj map[string]any, field string) string {
+	t.Helper()
+	m := jsonObject(obj, field)
+	require.NotNil(t, m, "%s must be present: %v", field, obj)
+	assert.Equal(t, "usd", jsonField(m, "currency"), field)
+	return jsonField(m, "amount")
 }
 
 func assertItem(t *testing.T, row map[string]any, itemID, sku string) {
@@ -92,17 +104,17 @@ func TestAnalyticsParityOpenOrders_SummaryCountsOnlyOpenSaleLines(t *testing.T) 
 	summary := mustPutAnalytics(t, apiClient, openOrdersSummaryPath, nil, book.filter(nil))
 	assert.Equal(t, "open_orders_summary", jsonField(summary, "object"))
 	// 21.25 + 36 + 20; the shipped order, the estimate and the freight lines are not counted.
-	assertQuantity(t, summary, "ordered", "77.25", "77.25", "")
+	assertReportMoney(t, summary, "ordered", "77.25")
 	// A is wholly back-ordered (57.25); B has 6 of its 10 pr left (12).
-	assertQuantity(t, summary, "back_ordered", "69.25", "69.25", "")
-	assertQuantity(t, summary, "invoiced", "8", "8.00", "")
+	assertReportMoney(t, summary, "back_ordered", "69.25")
+	assertReportMoney(t, summary, "invoiced", "8")
 
 	// The line filters narrow what is counted.
 	summary = mustPutAnalytics(t, apiClient, openOrdersSummaryPath, nil, book.filter(map[string]any{"item_ids": []string{parityItemSCK002}}))
-	assertQuantity(t, summary, "ordered", "36", "36.00", "")
-	assertQuantity(t, summary, "invoiced", "0", "0.00", "")
+	assertReportMoney(t, summary, "ordered", "36")
+	assertReportMoney(t, summary, "invoiced", "0")
 	summary = mustPutAnalytics(t, apiClient, openOrdersSummaryPath, nil, book.filter(map[string]any{"product_line_ids": []string{SeedProductLineID}}))
-	assertQuantity(t, summary, "ordered", "77.25", "77.25", "")
+	assertReportMoney(t, summary, "ordered", "77.25")
 }
 
 // --- Breakdown ---
@@ -120,19 +132,19 @@ func TestAnalyticsParityOpenOrders_BreakdownTotalsEachItemInItsBaseUnit(t *testi
 	assertItem(t, sck002, parityItemSCK002, "SCK-002")
 	assert.Equal(t, "pr", jsonField(jsonObject(sck002, "unit"), "abbreviation"))
 	assert.Equal(t, SeedUnitID, jsonField(jsonObject(sck002, "unit"), "id"))
-	assertQuantity(t, sck002, "quantity_ordered", "12", "12 pr", "pr")
-	assertQuantity(t, sck002, "quantity_back_ordered", "12", "12 pr", "pr")
-	assertQuantity(t, sck002, "quantity_invoiced", "0", "0 pr", "pr")
+	assertQuantity(t, sck002, "quantity_ordered", "12", SeedUnitID)
+	assertQuantity(t, sck002, "quantity_back_ordered", "12", SeedUnitID)
+	assertQuantity(t, sck002, "quantity_invoiced", "0", SeedUnitID)
 
 	assertItem(t, sck001, SeedItemID, "SCK-001")
-	assertQuantity(t, sck001, "quantity_ordered", "15", "15 pr", "pr")
-	assertQuantity(t, sck001, "quantity_back_ordered", "11", "11 pr", "pr")
-	assertQuantity(t, sck001, "quantity_invoiced", "4", "4 pr", "pr")
+	assertQuantity(t, sck001, "quantity_ordered", "15", SeedUnitID)
+	assertQuantity(t, sck001, "quantity_back_ordered", "11", SeedUnitID)
+	assertQuantity(t, sck001, "quantity_invoiced", "4", SeedUnitID)
 
 	rows = listRows(t, mustPutAnalytics(t, apiClient, openOrdersBreakdownPath, nil, book.filter(map[string]any{"item_ids": []string{SeedItemID}})))
 	require.Len(t, rows, 1)
 	assertItem(t, rows[0], SeedItemID, "SCK-001")
-	assertQuantity(t, rows[0], "quantity_ordered", "15", "15 pr", "pr")
+	assertQuantity(t, rows[0], "quantity_ordered", "15", SeedUnitID)
 }
 
 func TestAnalyticsParityOpenOrders_BreakdownPagesByCursor(t *testing.T) {
@@ -167,7 +179,7 @@ func TestAnalyticsParityOpenOrders_BreakdownPagesByCursor(t *testing.T) {
 
 // --- List ---
 
-func assertOpenOrderRow(t *testing.T, row map[string]any, book openOrderBook, order map[string]any, lineCount, total, display string) {
+func assertOpenOrderRow(t *testing.T, row map[string]any, book openOrderBook, order map[string]any, lineCount, total string) {
 	t.Helper()
 	assert.Equal(t, "open_order", jsonField(row, "object"))
 	o := jsonObject(row, "order")
@@ -188,7 +200,7 @@ func assertOpenOrderRow(t *testing.T, row map[string]any, book openOrderBook, or
 	assert.Equal(t, "CA", jsonField(shipTo, "state"))
 	assert.Equal(t, "US", jsonField(shipTo, "country"))
 	assert.Equal(t, lineCount, jsonField(row, "line_count"))
-	assertQuantity(t, row, "total_ordered", total, display, "")
+	assertReportMoney(t, row, "total_ordered", total)
 }
 
 func TestAnalyticsParityOpenOrders_ListShowsOpenOrdersNewestFirst(t *testing.T) {
@@ -197,13 +209,13 @@ func TestAnalyticsParityOpenOrders_ListShowsOpenOrdersNewestFirst(t *testing.T) 
 
 	rows := listRows(t, mustPutAnalytics(t, apiClient, openOrdersPath, nil, book.filter(nil)))
 	require.Len(t, rows, 2, "the shipped order and the estimate are not open: %v", rows)
-	assertOpenOrderRow(t, rows[0], book, book.b, "1", "20", "20.00")
-	assertOpenOrderRow(t, rows[1], book, book.a, "2", "57.25", "57.25")
+	assertOpenOrderRow(t, rows[0], book, book.b, "1", "20")
+	assertOpenOrderRow(t, rows[1], book, book.a, "2", "57.25")
 
 	// A line filter counts only matching lines, and an order with none drops out.
 	rows = listRows(t, mustPutAnalytics(t, apiClient, openOrdersPath, nil, book.filter(map[string]any{"item_ids": []string{parityItemSCK002}})))
 	require.Len(t, rows, 1)
-	assertOpenOrderRow(t, rows[0], book, book.a, "1", "36", "36.00")
+	assertOpenOrderRow(t, rows[0], book, book.a, "1", "36")
 
 	rows = listRows(t, mustPutAnalytics(t, apiClient, openOrdersPath, nil, book.filter(map[string]any{"product_line_ids": []string{SeedProductLineID}})))
 	require.Len(t, rows, 2)
@@ -249,15 +261,17 @@ func openOrderLines(t *testing.T, client *Client, orderID string) (int, []map[st
 	return status, listRows(t, parseJSON(body)), body
 }
 
-func assertUnitPrice(t *testing.T, row map[string]any, value, display string) {
+// assertUnitPrice checks a line's price, which is per the base unit of the price's own dimension (each), not
+// per the line's unit.
+func assertUnitPrice(t *testing.T, row map[string]any, amount string) {
 	t.Helper()
 	price := jsonObject(row, "unit_price")
 	require.NotNil(t, price)
-	assert.Equal(t, "computed_rate", jsonField(price, "object"))
-	assert.Equal(t, value, jsonField(price, "value"))
-	assert.Equal(t, display, jsonField(price, "display_value"))
-	assertNilField(t, price, "numerator_unit")
-	assertNilField(t, price, "denominator_unit")
+	assert.Equal(t, amount, jsonField(price, "amount"))
+	assert.Equal(t, "usd", jsonField(price, "currency"))
+	perUnit := jsonObject(price, "per_unit")
+	require.NotNil(t, perUnit, "a price always carries the unit it is per")
+	assert.Equal(t, seedEachUnitID, jsonField(perUnit, "id"))
 }
 
 func TestAnalyticsParityOpenOrders_LinesPriceEachLinePerBaseUnit(t *testing.T) {
@@ -274,36 +288,36 @@ func TestAnalyticsParityOpenOrders_LinesPriceEachLinePerBaseUnit(t *testing.T) {
 	assertItem(t, l, SeedItemID, "SCK-001")
 	assert.Equal(t, "pr", jsonField(jsonObject(l, "unit"), "abbreviation"))
 	// $4.25 per pair is $2.125 per each.
-	assertUnitPrice(t, l, "2.125", "$2.13 / ea")
-	assertQuantity(t, l, "quantity_back_ordered", "5", "5 pr", "pr")
-	assertQuantity(t, l, "quantity_invoiced", "0", "0 pr", "pr")
-	assertQuantity(t, l, "total_ordered", "21.25", "21.25", "")
+	assertUnitPrice(t, l, "2.125")
+	assertQuantity(t, l, "quantity_back_ordered", "5", SeedUnitID)
+	assertQuantity(t, l, "quantity_invoiced", "0", SeedUnitID)
+	assertReportMoney(t, l, "total_ordered", "21.25")
 
 	l = lines[1]
 	assertItem(t, l, parityItemSCK002, "SCK-002")
-	assertUnitPrice(t, l, "1.5", "$1.50 / ea")
-	assertQuantity(t, l, "quantity_back_ordered", "12", "12 pr", "pr")
-	assertQuantity(t, l, "total_ordered", "36", "36.00", "")
+	assertUnitPrice(t, l, "1.5")
+	assertQuantity(t, l, "quantity_back_ordered", "12", SeedUnitID)
+	assertReportMoney(t, l, "total_ordered", "36")
 
 	status, lines, raw = openOrderLines(t, apiClient, jsonField(book.b, "id"))
 	requireStatus(t, 200, status, raw)
 	require.Len(t, lines, 1)
-	assertUnitPrice(t, lines[0], "1", "$1.00 / ea")
-	assertQuantity(t, lines[0], "quantity_back_ordered", "6", "6 pr", "pr")
-	assertQuantity(t, lines[0], "quantity_invoiced", "4", "4 pr", "pr")
-	assertQuantity(t, lines[0], "total_ordered", "20", "20.00", "")
+	assertUnitPrice(t, lines[0], "1")
+	assertQuantity(t, lines[0], "quantity_back_ordered", "6", SeedUnitID)
+	assertQuantity(t, lines[0], "quantity_invoiced", "4", SeedUnitID)
+	assertReportMoney(t, lines[0], "total_ordered", "20")
 
 	// The detail reads any of the account's sales orders, open or not, as the dashboard's did.
 	status, lines, raw = openOrderLines(t, apiClient, jsonField(book.done, "id"))
 	requireStatus(t, 200, status, raw)
 	require.Len(t, lines, 1)
-	assertQuantity(t, lines[0], "quantity_back_ordered", "0", "0 pr", "pr")
-	assertQuantity(t, lines[0], "quantity_invoiced", "3", "3 pr", "pr")
-	assertQuantity(t, lines[0], "total_ordered", "3", "3.00", "")
+	assertQuantity(t, lines[0], "quantity_back_ordered", "0", SeedUnitID)
+	assertQuantity(t, lines[0], "quantity_invoiced", "3", SeedUnitID)
+	assertReportMoney(t, lines[0], "total_ordered", "3")
 	status, lines, raw = openOrderLines(t, apiClient, jsonField(book.estimate, "id"))
 	requireStatus(t, 200, status, raw)
 	require.Len(t, lines, 1)
-	assertQuantity(t, lines[0], "quantity_back_ordered", "7", "7 pr", "pr")
+	assertQuantity(t, lines[0], "quantity_back_ordered", "7", SeedUnitID)
 }
 
 func TestAnalyticsParityOpenOrders_LinesOfAnythingButTheAccountsSalesOrderAre404(t *testing.T) {
@@ -338,12 +352,12 @@ func TestAnalyticsParityOpenOrders_CustomerFilterIncludesChildAccountsAndGroupsN
 		"parent and the group": {"customer_ids": []string{parent}, "customer_group_ids": []string{group}},
 	} {
 		summary := mustPutAnalytics(t, apiClient, openOrdersSummaryPath, nil, body)
-		assert.Equal(t, "6", computedValue(t, summary, "ordered"), name)
+		assert.Equal(t, "6", reportMoneyAmount(t, summary, "ordered"), name)
 	}
 
 	other := newAccountGroup(t)
 	summary := mustPutAnalytics(t, apiClient, openOrdersSummaryPath, nil, map[string]any{"customer_ids": []string{parent}, "customer_group_ids": []string{other}})
-	assert.Equal(t, "0", computedValue(t, summary, "ordered"), "the customer and group filters combine with AND")
+	assert.Equal(t, "0", reportMoneyAmount(t, summary, "ordered"), "the customer and group filters combine with AND")
 	rows := listRows(t, mustPutAnalytics(t, apiClient, openOrdersPath, nil, map[string]any{"customer_group_ids": []string{other}}))
 	assert.Empty(t, rows)
 }
@@ -372,7 +386,7 @@ func TestAnalyticsParityOpenOrders_AnotherTenantsCustomerYieldsNothing(t *testin
 	require.NoError(t, authDB(t).QueryRow(`SELECT buyer_account_id FROM sales_order WHERE owner_account_id <> ? AND sales_order_type_code = 'sales_order' LIMIT 1`, SeedAccountID).Scan(&foreignBuyer))
 	body := map[string]any{"customer_ids": []string{foreignBuyer, parityCustomer(t, "")}}
 	summary := mustPutAnalytics(t, apiClient, openOrdersSummaryPath, nil, body)
-	assert.Equal(t, "0", computedValue(t, summary, "ordered"))
+	assert.Equal(t, "0", reportMoneyAmount(t, summary, "ordered"))
 	assert.Empty(t, listRows(t, mustPutAnalytics(t, apiClient, openOrdersPath, nil, body)))
 	assert.Empty(t, listRows(t, mustPutAnalytics(t, apiClient, openOrdersBreakdownPath, nil, body)))
 }
@@ -388,12 +402,12 @@ func TestAnalyticsParityOpenOrders_SalesRepsSeeOnlyTheirOwnOrders(t *testing.T) 
 	body := map[string]any{"customer_ids": []string{customer}}
 
 	admin := mustPutAnalytics(t, apiClient, openOrdersSummaryPath, nil, body)
-	assert.Equal(t, "10", computedValue(t, admin, "ordered"))
+	assert.Equal(t, "10", reportMoneyAmount(t, admin, "ordered"))
 	byRep := mustPutAnalytics(t, apiClient, openOrdersSummaryPath, nil, map[string]any{"customer_ids": []string{customer}, "sales_rep_ids": []string{repID}})
-	assert.Equal(t, "4", computedValue(t, byRep, "ordered"), "an admin can filter to one rep")
+	assert.Equal(t, "4", reportMoneyAmount(t, byRep, "ordered"), "an admin can filter to one rep")
 
 	repSummary := mustPutAnalytics(t, rep, openOrdersSummaryPath, nil, map[string]any{"customer_ids": []string{customer}, "sales_rep_ids": []string{SeedAccountUserID}})
-	assert.Equal(t, "4", computedValue(t, repSummary, "ordered"), "a rep sees only their own orders, whatever they ask for")
+	assert.Equal(t, "4", reportMoneyAmount(t, repSummary, "ordered"), "a rep sees only their own orders, whatever they ask for")
 
 	rows := listRows(t, mustPutAnalytics(t, rep, openOrdersPath, nil, body))
 	require.Len(t, rows, 1)

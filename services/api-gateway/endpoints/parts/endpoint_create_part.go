@@ -31,12 +31,12 @@ type CreatePartRequest struct {
 	CategoryID string `json:"category_id" validate:"required"`
 	// Initial selling price per unit.
 	//
-	// `numerator_unit_id` must reference a currency unit and `denominator_unit_id` must reference a non-currency unit (e.g. `$5` per `ea`). When omitted, the price is initialized to a zero rate in the category's base unit.
-	UnitPrice field.Optional[apirequest.RateInput] `json:"unit_price,omitzero"`
+	// `per_unit_id` must not be a currency unit (e.g. `$5` per `ea`). When omitted, the price is initialized to a zero price per the category's base unit.
+	UnitPrice field.Optional[apirequest.UnitPriceInput] `json:"unit_price,omitzero"`
 	// Initial cost per unit.
 	//
-	// Follows the same unit rule as `unit_price`: currency numerator, non-currency denominator. When omitted, the cost is initialized to a zero rate in the category's base unit.
-	UnitCost field.Optional[apirequest.RateInput] `json:"unit_cost,omitzero" sensitive:"cost"`
+	// Follows the same `per_unit_id` rule as `unit_price`. When omitted, the cost is initialized to a zero price per the category's base unit.
+	UnitCost field.Optional[apirequest.UnitPriceInput] `json:"unit_cost,omitzero" sensitive:"cost"`
 	// IDs of existing attributes to link to the part at creation time.
 	//
 	// Each attribute's property must be one the part's category carries; an attribute from any other property fails the whole request.
@@ -50,8 +50,8 @@ var sampleCreatePartRequest = &CreatePartRequest{
 	Description:  field.SomePtr(&sampleCreatePartDescription),
 	Notes:        field.Some(sampleCreatePartNotes),
 	CategoryID:   apiresource.SampleItemCategoryID,
-	UnitPrice:    field.Some(apirequest.RateInput{Value: "14.99", NumeratorUnitID: apiresource.SampleUnitID, DenominatorUnitID: apiresource.SampleUnitID}),
-	UnitCost:     field.Some(apirequest.RateInput{Value: "9.40", NumeratorUnitID: apiresource.SampleUnitID, DenominatorUnitID: apiresource.SampleUnitID}),
+	UnitPrice:    field.Some(apirequest.UnitPriceInput{Amount: "14.99", Currency: "usd", PerUnitID: apiresource.SampleUnitID}),
+	UnitCost:     field.Some(apirequest.UnitPriceInput{Amount: "9.40", Currency: "usd", PerUnitID: apiresource.SampleUnitID}),
 	AttributeIDs: []string{apiresource.SampleAttributeID},
 }
 

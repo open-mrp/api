@@ -66,7 +66,6 @@ type gRPCHandler struct {
 	productLineSvc                   domain.ProductLineSvc
 	productTypeSvc                   domain.ProductTypeSvc
 	productionFlowSvc                domain.ProductionFlowSvc
-	measureSvc                       domain.MeasureSvc
 	receivableSvc                    domain.ReceivableSvc
 	registrationFlowSvc              domain.RegistrationFlowSvc
 	portalRegistrationSessionSvc     domain.PortalRegistrationSessionSvc
@@ -1281,8 +1280,8 @@ func shippingTermToProto(st *domain.ShippingTerm) *pb.ShippingTermInfo {
 		Id:                        st.ID,
 		Name:                      st.Name,
 		Type:                      string(st.Type),
-		FlatRate:                  quantityToProto(st.FlatRate),
-		MinimumOrderValue:         quantityToProto(st.MinimumOrderValue),
+		FlatRate:                  moneyQuantityToProto(st.FlatRate),
+		MinimumOrderValue:         moneyQuantityToProto(st.MinimumOrderValue),
 		FreeShippingServiceLevels: pbLevels,
 		CreatedAt:                 timestamppb.New(st.CreatedAt),
 		UpdatedAt:                 timestamppb.New(st.UpdatedAt),
@@ -1341,16 +1340,6 @@ func (h *gRPCHandler) GetShippingTerm(ctx context.Context, req *pb.GetShippingTe
 	}, nil
 }
 
-func protoQuantityInputToDomain(input *pb.QuantityInput) *domain.QuantityInput {
-	if input == nil {
-		return nil
-	}
-	return &domain.QuantityInput{
-		Value:  input.Value,
-		UnitID: input.UnitId,
-	}
-}
-
 func (h *gRPCHandler) CreateShippingTerm(ctx context.Context, req *pb.CreateShippingTermRequest) (*pb.CreateShippingTermResponse, error) {
 	if req == nil {
 		return nil, contracts.NewMissingGRPCRequestDataError()
@@ -1359,13 +1348,19 @@ func (h *gRPCHandler) CreateShippingTerm(ctx context.Context, req *pb.CreateShip
 	ctx, finalizeIdempotency := contracts.WithIdempotencyTracking(ctx)
 	defer finalizeIdempotency()
 
+	money := newMoneyRows(ctx)
+
 	params := domain.CreateShippingTermParams{
 		Name:                        req.Name,
 		Type:                        constants.ShippingTermType(req.Type),
-		FlatRate:                    protoQuantityInputToDomain(req.FlatRate),
-		MinimumOrderValue:           protoQuantityInputToDomain(req.MinimumOrderValue),
+		FlatRate:                    money.quantity("flat_rate", req.FlatRate),
+		MinimumOrderValue:           money.quantity("minimum_order_value", req.MinimumOrderValue),
 		FreeShippingServiceLevelIDs: req.FreeShippingServiceLevelIds,
 		Includes:                    req.Includes,
+	}
+
+	if apiErr := money.err(); apiErr != nil {
+		return nil, contracts.ConvertAPIErrorToGRPC(apiErr)
 	}
 
 	shippingTerm, apiErr := h.shippingTermSvc.CreateShippingTerm(ctx, params)
@@ -1386,17 +1381,23 @@ func (h *gRPCHandler) UpdateShippingTerm(ctx context.Context, req *pb.UpdateShip
 	ctx, finalizeIdempotency := contracts.WithIdempotencyTracking(ctx)
 	defer finalizeIdempotency()
 
+	money := newMoneyRows(ctx)
+
 	params := domain.UpdateShippingTermParams{
 		ShippingTermID:              req.Id,
 		Name:                        req.Name,
-		FlatRate:                    quantityPatchToDomain(req.FlatRate),
-		MinimumOrderValue:           quantityPatchToDomain(req.MinimumOrderValue),
+		FlatRate:                    money.patch("flat_rate", req.FlatRate),
+		MinimumOrderValue:           money.patch("minimum_order_value", req.MinimumOrderValue),
 		FreeShippingServiceLevelIDs: stringListPatchToSliceField(req.FreeShippingServiceLevelIds),
 		Includes:                    req.Includes,
 	}
 	if req.Type != nil {
 		t := constants.ShippingTermType(*req.Type)
 		params.Type = &t
+	}
+
+	if apiErr := money.err(); apiErr != nil {
+		return nil, contracts.ConvertAPIErrorToGRPC(apiErr)
 	}
 
 	shippingTerm, apiErr := h.shippingTermSvc.UpdateShippingTerm(ctx, params)

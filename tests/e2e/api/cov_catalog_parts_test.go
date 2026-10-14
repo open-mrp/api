@@ -122,9 +122,9 @@ func TestCovCatalogParts_CreateNonexistentUnitPriceUnit(t *testing.T) {
 
 	body := validPartBody(uniqueName("e2e-cov-part-badunit-price"))
 	body["unit_price"] = map[string]any{
-		"value":               "5.00",
-		"numerator_unit_id":   currencyUnitID,
-		"denominator_unit_id": "nonexistent_unit_id",
+		"amount":      "5.00",
+		"currency":    "usd",
+		"per_unit_id": "nonexistent_unit_id",
 	}
 
 	status, respBody, err := apiClient.Post(partsPath, body, newIdempotencyKey())
@@ -132,7 +132,7 @@ func TestCovCatalogParts_CreateNonexistentUnitPriceUnit(t *testing.T) {
 	requireStatus(t, 422, status, respBody)
 
 	errObj := requireErrorResponse(t, respBody, "validation_failed", "invalid_request_error")
-	assertErrorParam(t, errObj, "unit_price.denominator_unit_id")
+	assertErrorParam(t, errObj, "unit_price.per_unit_id")
 }
 
 func TestCovCatalogParts_CreateNonexistentUnitCostUnit(t *testing.T) {
@@ -140,9 +140,9 @@ func TestCovCatalogParts_CreateNonexistentUnitCostUnit(t *testing.T) {
 
 	body := validPartBody(uniqueName("e2e-cov-part-badunit-cost"))
 	body["unit_cost"] = map[string]any{
-		"value":               "2.50",
-		"numerator_unit_id":   "nonexistent_unit_id",
-		"denominator_unit_id": nonCurrencyUnitID,
+		"amount":      "2.50",
+		"currency":    "usd",
+		"per_unit_id": "nonexistent_unit_id",
 	}
 
 	status, respBody, err := apiClient.Post(partsPath, body, newIdempotencyKey())
@@ -150,7 +150,26 @@ func TestCovCatalogParts_CreateNonexistentUnitCostUnit(t *testing.T) {
 	requireStatus(t, 422, status, respBody)
 
 	errObj := requireErrorResponse(t, respBody, "validation_failed", "invalid_request_error")
-	assertErrorParam(t, errObj, "unit_cost.numerator_unit_id")
+	assertErrorParam(t, errObj, "unit_cost.per_unit_id")
+}
+
+// Only dollars are accepted; the currency takes the place of the old numerator unit.
+func TestCovCatalogParts_CreateUnsupportedUnitCostCurrency(t *testing.T) {
+	t.Parallel()
+
+	body := validPartBody(uniqueName("e2e-cov-part-badcurrency-cost"))
+	body["unit_cost"] = map[string]any{
+		"amount":      "2.50",
+		"currency":    "eur",
+		"per_unit_id": nonCurrencyUnitID,
+	}
+
+	status, respBody, err := apiClient.Post(partsPath, body, newIdempotencyKey())
+	require.NoError(t, err)
+	requireStatus(t, 422, status, respBody)
+
+	errObj := requireErrorResponse(t, respBody, "currency_not_supported", "invalid_request_error")
+	assertErrorParam(t, errObj, "unit_cost.currency")
 }
 
 // ──────────────────────────────────────────────
@@ -267,8 +286,8 @@ func TestCovCatalogParts_UpdateRejectsGetOnlyIncludeKey(t *testing.T) {
 }
 
 // ──────────────────────────────────────────────
-// Part — item.unit_value.value concrete round trip (previously only
-// item.unit_cost.value was asserted to a specific number).
+// Part — item.unit_value.amount concrete round trip (previously only
+// item.unit_cost was asserted to a specific number).
 // ──────────────────────────────────────────────
 
 func TestCovCatalogParts_CreateWithValidRates_UnitValueRoundTrip(t *testing.T) {
@@ -276,9 +295,9 @@ func TestCovCatalogParts_CreateWithValidRates_UnitValueRoundTrip(t *testing.T) {
 
 	body := validPartBody(uniqueName("e2e-cov-part-unitvalue"))
 	body["unit_price"] = map[string]any{
-		"value":               "5.00",
-		"numerator_unit_id":   currencyUnitID,
-		"denominator_unit_id": nonCurrencyUnitID,
+		"amount":      "5.00",
+		"currency":    "usd",
+		"per_unit_id": nonCurrencyUnitID,
 	}
 
 	resp, err := apiClient.PostFull(partsPath, body, newIdempotencyKey())
@@ -296,16 +315,22 @@ func TestCovCatalogParts_CreateWithValidRates_UnitValueRoundTrip(t *testing.T) {
 
 	uv := jsonObject(jsonObject(parseJSON(respBody), "item"), "unit_value")
 	require.NotNil(t, uv, "item.unit_value should be populated with ?include=item.unit_value")
-	assert.Equal(t, "rate", jsonField(uv, "object"))
-	assert.Equal(t, "5.00", jsonField(uv, "value"))
-	assert.NotEmpty(t, jsonField(uv, "id"))
-	assertValidTimestamp(t, jsonField(uv, "created_at"), "item.unit_value.created_at")
-	assertValidTimestamp(t, jsonField(uv, "updated_at"), "item.unit_value.updated_at")
+	assertCatalogPartPrice(t, uv, "5.00", "item.unit_value")
+}
+
+// assertCatalogPartPrice checks a unit price fully: amount, dollars, and the per-each unit it was set in.
+func assertCatalogPartPrice(t *testing.T, price map[string]any, amount, field string) {
+	t.Helper()
+	require.NotNil(t, price, "%s", field)
+	assert.Equal(t, amount, jsonField(price, "amount"), "%s.amount", field)
+	assert.Equal(t, "usd", jsonField(price, "currency"), "%s.currency", field)
+	assert.Equal(t, nonCurrencyUnitID, jsonField(jsonObject(price, "per_unit"), "id"), "%s.per_unit", field)
+	assert.NotContains(t, price, "id", "%s is a value, not a stored row", field)
 }
 
 // ──────────────────────────────────────────────
 // Part — allFields: every Part + Item field with concrete expected values for
-// both item.unit_value.value and item.unit_cost.value in a single response.
+// both item.unit_value.amount and item.unit_cost.amount in a single response.
 // ──────────────────────────────────────────────
 
 func TestCovCatalogParts_CreateAndUpdateAllFields_ConcreteRateValues(t *testing.T) {
@@ -318,14 +343,14 @@ func TestCovCatalogParts_CreateAndUpdateAllFields_ConcreteRateValues(t *testing.
 	body["description"] = desc
 	body["notes"] = notes
 	body["unit_price"] = map[string]any{
-		"value":               "5.00",
-		"numerator_unit_id":   currencyUnitID,
-		"denominator_unit_id": nonCurrencyUnitID,
+		"amount":      "5.00",
+		"currency":    "usd",
+		"per_unit_id": nonCurrencyUnitID,
 	}
 	body["unit_cost"] = map[string]any{
-		"value":               "2.50",
-		"numerator_unit_id":   currencyUnitID,
-		"denominator_unit_id": nonCurrencyUnitID,
+		"amount":      "2.50",
+		"currency":    "usd",
+		"per_unit_id": nonCurrencyUnitID,
 	}
 	body["attribute_ids"] = []string{SeedAttributeID}
 
@@ -362,20 +387,14 @@ func TestCovCatalogParts_CreateAndUpdateAllFields_ConcreteRateValues(t *testing.
 	require.NotNil(t, cat)
 	assert.Equal(t, SeedItemCategoryID, jsonField(cat, "id"))
 
-	uv := jsonObject(item, "unit_value")
-	require.NotNil(t, uv)
-	assert.Equal(t, "rate", jsonField(uv, "object"))
-	assert.Equal(t, "5.00", jsonField(uv, "value"))
-
-	uc := jsonObject(item, "unit_cost")
-	require.NotNil(t, uc)
-	assert.Equal(t, "rate", jsonField(uc, "object"))
-	assert.Equal(t, "2.50", jsonField(uc, "value"))
+	assertCatalogPartPrice(t, jsonObject(item, "unit_value"), "5.00", "item.unit_value")
+	assertCatalogPartPrice(t, jsonObject(item, "unit_cost"), "2.50", "item.unit_cost")
 
 	br := jsonObject(item, "burn_rate")
 	require.NotNil(t, br)
-	assert.Equal(t, "rate", jsonField(br, "object"))
-	assert.Equal(t, "0.00", jsonField(br, "value"), "burn_rate is always initialized to 0 per day at part creation")
+	assertDecimalEqual(t, "0", jsonField(br, "value"), "burn_rate is always initialized to 0 per day at part creation")
+	assert.Equal(t, "unit", jsonField(jsonObject(br, "unit"), "object"), "burn_rate.unit")
+	assert.Equal(t, "unit", jsonField(jsonObject(br, "per_unit"), "object"), "burn_rate.per_unit")
 
 	attrs := jsonObject(item, "attributes")
 	require.NotNil(t, attrs)
@@ -394,7 +413,7 @@ func TestCovCatalogParts_CreateAndUpdateAllFields_ConcreteRateValues(t *testing.
 
 	// Update the sku and description, re-fetch with the same includes, and
 	// confirm every field (including the two rate values) is preserved or
-	// updated as expected — closing the gap where only unit_cost.value was
+	// updated as expected — closing the gap where only unit_cost was
 	// checked against a concrete number.
 	newSKU := uniqueName("e2e-cov-part-allf2-upd")
 	patchStatus, patchBody, err := apiClient.Patch(
@@ -417,11 +436,7 @@ func TestCovCatalogParts_CreateAndUpdateAllFields_ConcreteRateValues(t *testing.
 	assert.Equal(t, desc, jsonField(itemU, "description"), "description should be preserved across the sku-only patch")
 	assert.Equal(t, notes, jsonField(itemU, "notes"), "notes should be preserved across the sku-only patch")
 
-	uvU := jsonObject(itemU, "unit_value")
-	require.NotNil(t, uvU)
-	assert.Equal(t, "5.00", jsonField(uvU, "value"), "unit_value should be unaffected by an sku-only patch")
-
-	ucU := jsonObject(itemU, "unit_cost")
-	require.NotNil(t, ucU)
-	assert.Equal(t, "2.50", jsonField(ucU, "value"), "unit_cost should be unaffected by an sku-only patch")
+	// unit_value and unit_cost are unaffected by an sku-only patch.
+	assertCatalogPartPrice(t, jsonObject(itemU, "unit_value"), "5.00", "item.unit_value")
+	assertCatalogPartPrice(t, jsonObject(itemU, "unit_cost"), "2.50", "item.unit_cost")
 }

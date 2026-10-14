@@ -43,10 +43,9 @@ func TestSalesTargets_ListResponseShape(t *testing.T) {
 	path := salesTargetsPathFor(userID)
 
 	createBody := map[string]any{
-		"starts_at":      "2028-01-01T00:00:00Z",
-		"ends_at":        "2028-03-31T00:00:00Z",
-		"amount_value":   "10000.00",
-		"amount_unit_id": SeedUnitID,
+		"starts_at": "2028-01-01T00:00:00Z",
+		"ends_at":   "2028-03-31T00:00:00Z",
+		"amount":    map[string]any{"amount": "10000.00", "currency": "usd"},
 	}
 	status, respBody, err := apiClient.Post(path, createBody, newIdempotencyKey())
 	require.NoError(t, err)
@@ -67,21 +66,7 @@ func TestSalesTargets_ListResponseShape(t *testing.T) {
 	assert.Equal(t, "entity", jsonField(salesRep, "object"))
 	assert.Equal(t, "account_user", jsonField(salesRep, "type"))
 
-	amount := jsonObject(m, "amount")
-	require.NotNil(t, amount, "amount should be present")
-	assert.NotEmpty(t, jsonField(amount, "id"))
-	assert.Equal(t, "quantity", jsonField(amount, "object"))
-	assert.NotEmpty(t, jsonField(amount, "value"))
-	assert.NotEmpty(t, jsonField(amount, "display_value"), "a quantity renders its own value with the unit")
-
-	unit := jsonObject(amount, "unit")
-	require.NotNil(t, unit, "amount.unit should be present")
-	assert.NotEmpty(t, jsonField(unit, "id"))
-	assert.Equal(t, "unit", jsonField(unit, "object"))
-	assert.NotEmpty(t, jsonField(unit, "name"), "the unit is the whole record, not an id-only shell")
-	assert.NotEmpty(t, jsonField(unit, "abbreviation"))
-	assert.NotEmpty(t, jsonField(unit, "ratio_numerator"))
-	assertValidTimestamp(t, jsonField(unit, "created_at"), "unit.created_at")
+	assert.Equal(t, map[string]any{"amount": "10000.00", "currency": "usd"}, m["amount"], "a target is money: its amount and currency, nothing more")
 }
 
 func TestSalesTargets_CreateAndUpsert(t *testing.T) {
@@ -90,10 +75,9 @@ func TestSalesTargets_CreateAndUpsert(t *testing.T) {
 	path := salesTargetsPathFor(userID)
 
 	createBody := map[string]any{
-		"starts_at":      "2027-01-01T00:00:00Z",
-		"ends_at":        "2027-03-31T00:00:00Z",
-		"amount_value":   "50000.00",
-		"amount_unit_id": SeedUnitID,
+		"starts_at": "2027-01-01T00:00:00Z",
+		"ends_at":   "2027-03-31T00:00:00Z",
+		"amount":    map[string]any{"amount": "50000.00", "currency": "usd"},
 	}
 	status, respBody, err := apiClient.Post(path, createBody, newIdempotencyKey())
 	require.NoError(t, err)
@@ -108,15 +92,12 @@ func TestSalesTargets_CreateAndUpsert(t *testing.T) {
 	require.NotNil(t, salesRep)
 	assert.Equal(t, userID, jsonField(salesRep, "id"))
 
-	amount := jsonObject(created, "amount")
-	require.NotNil(t, amount)
-	assert.Contains(t, jsonField(amount, "value"), "50000")
+	assert.Equal(t, map[string]any{"amount": "50000.00", "currency": "usd"}, created["amount"])
 
 	upsertBody := map[string]any{
-		"starts_at":      "2027-04-01T00:00:00Z",
-		"ends_at":        "2027-06-30T00:00:00Z",
-		"amount_value":   "75000.00",
-		"amount_unit_id": SeedUnitID,
+		"starts_at": "2027-04-01T00:00:00Z",
+		"ends_at":   "2027-06-30T00:00:00Z",
+		"amount":    map[string]any{"amount": "75000.00", "currency": "usd"},
 	}
 	upsertPath := path + "/" + targetID
 	uStatus, uBody, err := apiClient.Put(upsertPath, upsertBody)
@@ -127,7 +108,5 @@ func TestSalesTargets_CreateAndUpsert(t *testing.T) {
 	assert.Equal(t, targetID, jsonField(updated, "id"))
 	assert.Equal(t, "sales_target", jsonField(updated, "object"))
 
-	updatedAmount := jsonObject(updated, "amount")
-	require.NotNil(t, updatedAmount)
-	assert.Contains(t, jsonField(updatedAmount, "value"), "75000")
+	assert.Equal(t, map[string]any{"amount": "75000.00", "currency": "usd"}, updated["amount"])
 }

@@ -7,6 +7,7 @@ import "google/protobuf/timestamp.proto";
 import "core/core_patch.proto";
 import "core/core_identity_context.proto";
 import "core/core_async.proto";
+import "core/value_shapes.proto";
 option go_package = "shared/proto/core;core";
 
 message AccountGroupInfo {
@@ -216,6 +217,7 @@ message SalesTargetProto {
   string amount_unit_offset_denominator = 17;
   string amount_unit_created_at = 18;
   string amount_unit_updated_at = 19;
+  Money amount = 20;
 }
 message ListSalesTargetsRequest {
   string sales_rep_id = 1;
@@ -231,8 +233,8 @@ message CreateSalesTargetRequest {
   string sales_rep_id = 1;
   string start_date = 2;
   string end_date = 3;
-  string amount_value = 4;
-  string amount_unit_id = 5;
+  reserved 4, 5;
+  Money amount = 6;
 }
 message CreateSalesTargetResponse {
   SalesTargetProto sales_target = 1;
@@ -242,8 +244,8 @@ message UpsertSalesTargetRequest {
   string sales_rep_id = 2;
   string start_date = 3;
   string end_date = 4;
-  string amount_value = 5;
-  string amount_unit_id = 6;
+  reserved 5, 6;
+  Money amount = 7;
 }
 message UpsertSalesTargetResponse {
   SalesTargetProto sales_target = 1;

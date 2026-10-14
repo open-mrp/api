@@ -161,6 +161,7 @@ func deliveryLineToProto(l *domain.DeliveryLine) *pb.DeliveryLineInfo {
 		UnitCostDenominatorUnitAbbreviation: l.UnitCostDenominatorUnitAbbreviation,
 		UnitCostCreatedAt:                   timestamppb.New(l.UnitCostCreatedAt),
 		UnitCostUpdatedAt:                   timestamppb.New(l.UnitCostUpdatedAt),
+		UnitCost:                            unitPriceToProto(l.UnitCostValue, l.UnitCostDenominatorUnitID),
 		CreatedAt:                           timestamppb.New(l.CreatedAt),
 		UpdatedAt:                           timestamppb.New(l.UpdatedAt),
 	}

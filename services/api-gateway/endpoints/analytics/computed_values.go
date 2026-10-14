@@ -4,35 +4,22 @@ import (
 	"github.com/shopspring/decimal"
 
 	apiresource "github.com/open-mrp/api/services/api-gateway/pkg/resource"
-	"github.com/open-mrp/api/shared/constants"
 )
 
-// computedRate renders a price as an unpersisted rate. The unit sub-objects are left for the include resolver; display_value carries the readable form so a caller that does not expand them still sees the basis.
-func computedRate(value, numeratorAbbr, denominatorAbbr string) *apiresource.ComputedRate {
-	amount, err := decimal.NewFromString(value)
-	if err != nil {
-		amount = decimal.Zero
-	}
-	return &apiresource.ComputedRate{
-		Object:       constants.ObjectTypeComputedRate,
-		Value:        amount.StringFixed(4),
-		DisplayValue: apiresource.FormatRateDisplay(value, numeratorAbbr, denominatorAbbr),
-	}
+// analyticsPrice renders a computed price per perUnitID, to four decimal places. Its unit loads before the response is written.
+func analyticsPrice(value, perUnitID string) *apiresource.UnitPrice {
+	return apiresource.NewUnitPrice(fixed4(value), perUnitID)
 }
 
-// computedQuantity renders an amount as an unpersisted quantity.
-func computedQuantity(value, unitAbbr string) *apiresource.ComputedQuantity {
+// analyticsQuantity renders a computed quantity in unitID, to four decimal places. Its unit loads before the response is written.
+func analyticsQuantity(value, unitID string) *apiresource.Quantity {
+	return apiresource.NewQuantity(fixed4(value), unitID)
+}
+
+func fixed4(value string) string {
 	amount, err := decimal.NewFromString(value)
 	if err != nil {
 		amount = decimal.Zero
 	}
-	display := amount.StringFixed(2)
-	if unitAbbr != "" {
-		display += " " + unitAbbr
-	}
-	return &apiresource.ComputedQuantity{
-		Object:       constants.ObjectTypeComputedQuantity,
-		Value:        amount.StringFixed(4),
-		DisplayValue: display,
-	}
+	return amount.StringFixed(4)
 }

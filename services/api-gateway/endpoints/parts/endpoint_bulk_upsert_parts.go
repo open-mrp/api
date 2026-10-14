@@ -37,11 +37,11 @@ type UpsertPartInput struct {
 	// Item category to place the part in, referenced by `id` or `name`. Create-only; its
 	// unit group determines the base unit of the part's rates.
 	Category apirequest.ObjectIdentifier `json:"category" validate:"required"`
-	// Selling price per unit — a currency numerator over a per-unit denominator. Omitted, it
-	// defaults to a zero rate in the category's base unit and is left unchanged on update.
-	UnitPrice field.Optional[apirequest.RateInput] `json:"unit_price,omitzero"`
+	// Selling price per unit; `per_unit_id` must not be a currency unit. Omitted, it
+	// defaults to a zero price per the category's base unit and is left unchanged on update.
+	UnitPrice field.Optional[apirequest.UnitPriceInput] `json:"unit_price,omitzero"`
 	// Cost per unit. Same unit rule and omission behavior as `unit_price`.
-	UnitCost field.Optional[apirequest.RateInput] `json:"unit_cost,omitzero" sensitive:"cost"`
+	UnitCost field.Optional[apirequest.UnitPriceInput] `json:"unit_cost,omitzero" sensitive:"cost"`
 	// Properties to attach to the part, matched/created by name + value. Additive —
 	// existing attributes are not removed.
 	Properties []UpsertPartProperty `json:"properties" default:"[]" validate:"dive"`

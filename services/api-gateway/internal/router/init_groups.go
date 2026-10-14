@@ -4,11 +4,10 @@ import (
 	gatewaymw "github.com/open-mrp/api/services/api-gateway/internal/middleware"
 	httpgroup "github.com/open-mrp/api/services/api-gateway/pkg/group"
 	"github.com/open-mrp/apikit/middleware"
-	kitrouter "github.com/open-mrp/apikit/router"
 )
 
 func (r *router) InitEndpointGroups(config MainRouterConfig) {
-	registry := kitrouter.NewRegistry()
+	registry := newGroupRegistry()
 
 	// Main endpoints backed by the Auth gRPC service.
 	if config.AuthClient == nil {
@@ -590,22 +589,6 @@ func (r *router) InitEndpointGroups(config MainRouterConfig) {
 		registry.RegisterGroup(auditEventsGroup.APIEndpointGroup)
 	}
 
-	// Quantities
-	quantitiesGroup := (&httpgroup.QuantitiesEndpointGroup{}).Materialize(&httpgroup.QuantitiesEndpointGroupConfig{
-		CoreClient: config.CoreClient,
-	})
-	if quantitiesGroup != nil {
-		registry.RegisterGroup(quantitiesGroup.APIEndpointGroup)
-	}
-
-	// Rates
-	ratesGroup := (&httpgroup.RatesEndpointGroup{}).Materialize(&httpgroup.RatesEndpointGroupConfig{
-		CoreClient: config.CoreClient,
-	})
-	if ratesGroup != nil {
-		registry.RegisterGroup(ratesGroup.APIEndpointGroup)
-	}
-
 	// Tenancy
 	tenancyGroup := (&httpgroup.TenancyEndpointGroup{}).Materialize(&httpgroup.TenancyEndpointGroupConfig{
 		CoreClient: config.CoreClient,
@@ -901,7 +884,7 @@ func (r *router) InitEndpointGroups(config MainRouterConfig) {
 }
 
 func (r *router) InitWebhookEndpointGroups(config WebhookRouterConfig) {
-	registry := kitrouter.NewRegistry()
+	registry := newGroupRegistry()
 
 	// Minimal chain for webhooks: no auth, no CORS, no idempotency.
 	r.AddMiddleware(middleware.Tracing())
@@ -924,7 +907,7 @@ func (r *router) InitWebhookEndpointGroups(config WebhookRouterConfig) {
 }
 
 func (r *router) InitAuthEndpointGroups(config AuthRouterConfig) {
-	registry := kitrouter.NewRegistry()
+	registry := newGroupRegistry()
 
 	// Auth endpoints backed by the Auth gRPC service.
 	if config.AuthClient == nil {

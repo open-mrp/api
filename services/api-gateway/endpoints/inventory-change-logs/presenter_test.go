@@ -47,10 +47,8 @@ func TestInventoryChangeLogFromProto(t *testing.T) {
 		ItemTypeCode: "product",
 	}
 	result.Quantity = &apiresource.Quantity{
-		ID:           icl.QuantityId,
-		Object:       "quantity",
-		Value:        icl.QuantityValue,
-		DisplayValue: apiresource.FormatDisplayValue(icl.QuantityValue, icl.QuantityUnitAbbreviation, icl.QuantityUnitType),
+		Value: icl.QuantityValue,
+		Unit:  apiresource.SampleEachUnit,
 	}
 	result.ResponsibleUser = &apiresource.User{
 		ID:     userID,

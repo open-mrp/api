@@ -10,6 +10,7 @@ import "core/core_analytics.proto";
 import "core/core_accounts_carriers.proto";
 import "core/core_fuzzy_identifiers.proto";
 import "core/core_async.proto";
+import "core/value_shapes.proto";
 option go_package = "shared/proto/core;core";
 
 message InvoiceLineInfo {
@@ -35,6 +36,7 @@ message InvoiceLineInfo {
   optional string order_line_description = 17;
   // The order line's metadata, so lines.order_line carries it without a second read.
   map<string, string> order_line_metadata = 18;
+  UnitPrice unit_price = 19;
 }
 message InvoiceAllocationInfo {
   string id = 1;
@@ -117,12 +119,13 @@ message CreateMaterialRequest {
   string category_id = 4;
   optional QuantityInput order_point = 5;
   optional QuantityInput lead_time = 6;
-  // Initial unit price. When omitted the rate defaults to "0" against the
-  // category's base unit on both sides. When set, the numerator must be a
-  // currency unit and the denominator must not be.
-  optional CreateRateInput unit_price = 7;
-  // Initial unit cost. Same currency-vs-non-currency rule as unit_price.
-  optional CreateRateInput unit_cost = 8;
+  // Initial unit price. When omitted the price defaults to "0" per the
+  // category's base unit. When set, per_unit_id must not be a currency unit.
+  reserved 7;
+  UnitPrice unit_price = 12;
+  // Initial unit cost. Same per_unit_id rule as unit_price.
+  reserved 8;
+  UnitPrice unit_cost = 13;
   // Attribute IDs to connect to the item at creation time.
   repeated string attribute_ids = 10;
   repeated string includes = 11;
@@ -142,7 +145,8 @@ message UpdateMaterialRequest {
   optional QuantityInput order_point = 7;
   optional QuantityInput lead_time = 8;
   // Updated unit cost. Same currency-vs-non-currency rule as on create.
-  optional CreateRateInput unit_cost = 9;
+  reserved 9;
+  UnitPrice unit_cost = 12;
   repeated string includes = 10;
   // Category to move the material to, as Change Item Category does.
   optional string category_id = 11;
@@ -263,12 +267,13 @@ message CreatePartRequest {
   optional string description = 2;
   string category_id = 3;
   optional string notes = 4;
-  // Initial unit price. When omitted the rate defaults to "0" against the
-  // category's base unit on both sides. When set, the numerator must be a
-  // currency unit and the denominator must not be.
-  optional CreateRateInput unit_price = 5;
-  // Initial unit cost. Same currency-vs-non-currency rule as unit_price.
-  optional CreateRateInput unit_cost = 6;
+  // Initial unit price. When omitted the price defaults to "0" per the
+  // category's base unit. When set, per_unit_id must not be a currency unit.
+  reserved 5;
+  UnitPrice unit_price = 10;
+  // Initial unit cost. Same per_unit_id rule as unit_price.
+  reserved 6;
+  UnitPrice unit_cost = 11;
   // Attribute IDs to connect to the item at creation time.
   repeated string attribute_ids = 8;
   repeated string includes = 9;
@@ -423,12 +428,13 @@ message CreateProductRequest {
   optional string product_line_id = 5;
   string category_id = 6;
   bool is_portal_ready = 7;
-  // Initial unit price. When omitted the rate defaults to "0" against the
-  // category's base unit on both sides. When set, the numerator must be a
-  // currency unit and the denominator must not be.
-  optional CreateRateInput unit_price = 8;
-  // Initial unit cost. Same currency-vs-non-currency rule as unit_price.
-  optional CreateRateInput unit_cost = 9;
+  // Initial unit price. When omitted the price defaults to "0" per the
+  // category's base unit. When set, per_unit_id must not be a currency unit.
+  reserved 8;
+  UnitPrice unit_price = 13;
+  // Initial unit cost. Same per_unit_id rule as unit_price.
+  reserved 9;
+  UnitPrice unit_cost = 14;
   // Attribute IDs to connect to the item at creation time.
   repeated string attribute_ids = 11;
   repeated string includes = 12;
@@ -445,7 +451,8 @@ message UpdateProductRequest {
   optional StringPatch notes = 4;
   optional bool is_portal_ready = 5;
   // Updated unit price. Same currency-vs-non-currency rule as on create.
-  optional CreateRateInput unit_price = 6;
+  reserved 6;
+  UnitPrice unit_price = 9;
   repeated string includes = 7;
   // Category to move the product to, as Change Item Category does.
   optional string category_id = 8;

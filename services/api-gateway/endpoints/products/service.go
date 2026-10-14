@@ -22,15 +22,11 @@ import (
 
 var validateProductIncludes = []string{"product_line", "item", "item.category", "item.unit_value", "item.unit_cost", "item.burn_rate", "item.attributes"}
 
-func rateInputToProto(r *apirequest.RateInput) *pb.CreateRateInput {
+func rateInputToProto(r *apirequest.UnitPriceInput) *pb.UnitPrice {
 	if r == nil {
 		return nil
 	}
-	return &pb.CreateRateInput{
-		Value:             r.Value,
-		NumeratorUnitId:   r.NumeratorUnitID,
-		DenominatorUnitId: r.DenominatorUnitID,
-	}
+	return r.ToProto()
 }
 
 type ProductSvc interface {

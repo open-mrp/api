@@ -36,13 +36,13 @@ type SalesOrderLine struct {
 	// Quantity ordered.
 	QuantityOrdered *Quantity `json:"quantity_ordered" expandable:"true"`
 	// Price charged per unit.
-	UnitPrice *Rate `json:"unit_price" expandable:"true"`
+	UnitPrice *UnitPrice `json:"unit_price" expandable:"true"`
 	// Internal cost per unit.
 	//
 	// Reflects what the business pays for the item, not what the customer is charged, and is used to derive line profitability.
 	//
 	// Null unless the caller holds `costs:read`; customer and supplier portal users never see it.
-	UnitCost *Rate `json:"unit_cost" expandable:"true" sensitive:"cost"`
+	UnitCost *UnitPrice `json:"unit_cost" expandable:"true" sensitive:"cost"`
 	// Derived monetary totals for this line.
 	Totals *SalesOrderTotals `json:"totals" expandable:"true"`
 	// Key-value pairs you attach to the line for your own references, such as its ID in another system.
@@ -64,8 +64,8 @@ var SampleSalesOrderLine = &SalesOrderLine{
 	Item:               SampleItem,
 	Product:            SampleProduct,
 	QuantityOrdered:    SampleQuantity,
-	UnitPrice:          SampleRate,
-	UnitCost:           SampleRate,
+	UnitPrice:          SampleUnitPrice,
+	UnitCost:           SampleUnitPrice,
 	Totals:             SampleSalesOrderTotals,
 	Metadata:           map[string]string{"edi_line_item_id": "00010"},
 	CreatedAt:          timeutil.TimestampToTime(sampleCreatedAtTimestamp),

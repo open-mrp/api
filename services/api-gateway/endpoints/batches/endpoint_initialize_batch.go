@@ -64,11 +64,6 @@ func (e *InitializeBatchEndpoint) Materialize() *apiendpoint.APIEndpoint[*Initia
 		Preview:           true,
 		Auth:              authz.Policy{Permissions: []types.Permission{{Domain: types.PermissionDomainBatches, Action: types.ActionCreate}}},
 		ObjectType:        constants.ObjectTypeBatch,
-		// A batch reports three measures; the units they are counted in are records of their own.
-		IncludeConfig: apiendpoint.IncludesFor(apiendpoint.IncludesParams{
-			ObjectType: constants.ObjectTypeBatch,
-			Fields:     []string{"quantity.unit", "seconds.unit", "waste.unit"},
-		}),
 		ServiceHandler: func(svc any) func(ctx context.Context, req *InitializeBatchRequest) (*apiresource.Batch, *apierror.APIError) {
 			return svc.(BatchSvc).InitializeBatch
 		},

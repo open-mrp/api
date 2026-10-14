@@ -17,24 +17,7 @@ func BatchQuantityPresenter(meta *include.LoadMeta, q *pb.BatchQuantityInfo) *ap
 		return nil
 	}
 
-	// Unit left nil: the batch query carries only the unit's id, abbreviation and dimension, so the
-	// id is stashed and the real unit is resolved on `?include=quantity.unit`; never fabricated.
-	if meta != nil {
-		meta.Set(constants.ObjectTypeQuantity, q.Id, "unit_id", q.UnitId)
-	}
-
-	norm := apiresource.NormalizeQuantityValue(q.Measure, q.UnitType)
-	displayValue := ""
-	if q.UnitAbbreviation != "" {
-		displayValue = apiresource.FormatDisplayValue(norm, q.UnitAbbreviation, q.UnitType)
-	}
-
-	return &apiresource.Quantity{
-		ID:           q.Id,
-		Object:       constants.ObjectTypeQuantity,
-		Value:        norm,
-		DisplayValue: displayValue,
-	}
+	return apiresource.NewQuantity(apiresource.NormalizeQuantityValue(q.Measure, q.UnitType), q.UnitId)
 }
 
 // BatchPresenter converts a proto BatchInfo to an apiresource.Batch.

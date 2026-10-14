@@ -50,14 +50,14 @@ func TestMaterials_Create_WithValidRates(t *testing.T) {
 	sku := uniqueName("e2e-mat-rates")
 	body := validMaterialBody(sku)
 	body["unit_price"] = map[string]any{
-		"value":               "1.50",
-		"numerator_unit_id":   currencyUnitID,
-		"denominator_unit_id": nonCurrencyUnitID,
+		"amount":      "1.50",
+		"currency":    "usd",
+		"per_unit_id": nonCurrencyUnitID,
 	}
 	body["unit_cost"] = map[string]any{
-		"value":               "0.75",
-		"numerator_unit_id":   currencyUnitID,
-		"denominator_unit_id": nonCurrencyUnitID,
+		"amount":      "0.75",
+		"currency":    "usd",
+		"per_unit_id": nonCurrencyUnitID,
 	}
 
 	resp, err := apiClient.PostFull(materialsPath, body, newIdempotencyKey())
@@ -70,32 +70,33 @@ func TestMaterials_Create_WithValidRates(t *testing.T) {
 	t.Cleanup(func() { apiClient.Delete(materialsPath + "/" + id) })
 }
 
-func TestMaterials_Create_RejectsNonCurrencyNumeratorOnUnitCost(t *testing.T) {
+// Money is dollars only, so a cost in any other currency is refused.
+func TestMaterials_Create_RejectsAnUnsupportedCurrencyOnUnitCost(t *testing.T) {
 	t.Parallel()
 
 	body := validMaterialBody(uniqueName("e2e-mat-bad-num"))
 	body["unit_cost"] = map[string]any{
-		"value":               "0.50",
-		"numerator_unit_id":   nonCurrencyUnitID, // wrong: must be currency
-		"denominator_unit_id": nonCurrencyUnitID,
+		"amount":      "0.50",
+		"currency":    "eur",
+		"per_unit_id": nonCurrencyUnitID,
 	}
 
 	status, respBody, err := apiClient.Post(materialsPath, body, newIdempotencyKey())
 	require.NoError(t, err)
 	requireStatus(t, 422, status, respBody)
 
-	errObj := requireErrorResponse(t, respBody, "validation_failed", "invalid_request_error")
-	assertErrorParam(t, errObj, "unit_cost.numerator_unit_id")
+	errObj := requireErrorResponse(t, respBody, "currency_not_supported", "invalid_request_error")
+	assertErrorParam(t, errObj, "unit_cost.currency")
 }
 
-func TestMaterials_Create_RejectsCurrencyDenominatorOnUnitPrice(t *testing.T) {
+func TestMaterials_Create_RejectsACurrencyPerUnitOnUnitPrice(t *testing.T) {
 	t.Parallel()
 
 	body := validMaterialBody(uniqueName("e2e-mat-bad-den"))
 	body["unit_price"] = map[string]any{
-		"value":               "1.00",
-		"numerator_unit_id":   currencyUnitID,
-		"denominator_unit_id": currencyUnitID, // wrong: must not be currency
+		"amount":      "1.00",
+		"currency":    "usd",
+		"per_unit_id": currencyUnitID, // wrong: must not be currency
 	}
 
 	status, respBody, err := apiClient.Post(materialsPath, body, newIdempotencyKey())
@@ -103,7 +104,7 @@ func TestMaterials_Create_RejectsCurrencyDenominatorOnUnitPrice(t *testing.T) {
 	requireStatus(t, 422, status, respBody)
 
 	errObj := requireErrorResponse(t, respBody, "validation_failed", "invalid_request_error")
-	assertErrorParam(t, errObj, "unit_price.denominator_unit_id")
+	assertErrorParam(t, errObj, "unit_price.per_unit_id")
 }
 
 // TestMaterials_Create_RejectsWrongCategoryType: materials may only be created in

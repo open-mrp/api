@@ -36,13 +36,13 @@ type Item struct {
 	// The category's unit group determines the base unit the item's rates (`unit_value`, `unit_cost`, `burn_rate`) are expressed in.
 	Category *ItemCategory `json:"category" expandable:"true"`
 	// Selling value per unit, expressed as a rate (e.g. `$25.50 / kg`).
-	UnitValue *Rate `json:"unit_value" expandable:"true"`
+	UnitValue *UnitPrice `json:"unit_value" expandable:"true"`
 	// Cost per unit, expressed as a rate (e.g. `$10.00 / kg`).
 	//
 	// For items a production flow produces, this is restated from the flow shortly after anything the item is built from changes, so it can change without the item having been edited.
 	//
 	// Null unless the caller holds `costs:read`; customer and supplier portal users never see it.
-	UnitCost *Rate `json:"unit_cost" expandable:"true" sensitive:"cost"`
+	UnitCost *UnitPrice `json:"unit_cost" expandable:"true" sensitive:"cost"`
 	// Rate at which this item is consumed in production, expressed as a quantity over time (e.g. `100 kg / hr`).
 	//
 	// Null to customer and supplier portal users: it is drawn from every customer's demand.
@@ -65,8 +65,8 @@ var SampleItem = &Item{
 	Notes:        nil,
 	ItemTypeCode: constants.ItemTypeCodeProduct,
 	Category:     SampleItemCategory,
-	UnitValue:    SampleRate,
-	UnitCost:     SampleRate,
+	UnitValue:    SampleUnitPrice,
+	UnitCost:     SampleUnitPrice,
 	BurnRate:     SampleRate,
 	Attributes:   NewList([]Attribute{*SampleAttribute}, PageInfo{}),
 	CreatedAt:    timeutil.TimestampToTime(sampleCreatedAtTimestamp),
@@ -86,21 +86,21 @@ type ItemInventory struct {
 	// Resource type identifier.
 	Object constants.ObjectType `json:"object" validate:"required,enum=item_inventory"`
 	// Physical quantity currently in stock.
-	OnHand *ComputedQuantity `json:"on_hand" expandable:"true"`
+	OnHand *Quantity `json:"on_hand" expandable:"true"`
 	// Quantity committed to existing orders and therefore not free to allocate.
-	Reserved *ComputedQuantity `json:"reserved" expandable:"true"`
+	Reserved *Quantity `json:"reserved" expandable:"true"`
 	// Quantity free to commit to new orders, i.e. on-hand minus reserved minus short.
-	AvailableToPromise *ComputedQuantity `json:"available_to_promise" expandable:"true"`
+	AvailableToPromise *Quantity `json:"available_to_promise" expandable:"true"`
 	// Quantity by which demand exceeds available supply (the unfulfillable shortfall).
-	Short *ComputedQuantity `json:"short" expandable:"true"`
+	Short *Quantity `json:"short" expandable:"true"`
 }
 
 var SampleItemInventory = &ItemInventory{
 	Object:             constants.ObjectTypeItemInventory,
-	OnHand:             SampleComputedQuantity,
-	Reserved:           SampleComputedQuantity,
-	AvailableToPromise: SampleComputedQuantity,
-	Short:              SampleComputedQuantity,
+	OnHand:             SampleQuantity,
+	Reserved:           SampleQuantity,
+	AvailableToPromise: SampleQuantity,
+	Short:              SampleQuantity,
 }
 
 func (*ItemInventory) SchemaExample() any {
@@ -275,9 +275,9 @@ type ReconciledItemResult struct {
 	// The item that was reconciled, named by id and SKU.
 	Item *Entity `json:"item" validate:"required"`
 	// Quantity before the reconciliation.
-	PreviousQuantity *ComputedQuantity `json:"previous_quantity" validate:"required"`
+	PreviousQuantity *Quantity `json:"previous_quantity" validate:"required"`
 	// Quantity after the reconciliation.
-	NewQuantity *ComputedQuantity `json:"new_quantity" validate:"required"`
+	NewQuantity *Quantity `json:"new_quantity" validate:"required"`
 }
 
 // A submitted row that was skipped rather than reconciled.
@@ -310,8 +310,8 @@ var SampleBulkReconcileItemsResponse = &BulkReconcileItemsResponse{
 		{
 			Object:           constants.ObjectTypeReconciledItemResult,
 			Item:             SampleItemEntity,
-			PreviousQuantity: SampleComputedQuantity,
-			NewQuantity:      SampleComputedQuantity,
+			PreviousQuantity: SampleQuantity,
+			NewQuantity:      SampleQuantity,
 		},
 	}, PageInfo{}),
 	SkippedItems: NewList([]SkippedItemResult{}, PageInfo{}),

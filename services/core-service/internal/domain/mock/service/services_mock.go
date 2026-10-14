@@ -317,6 +317,21 @@ func (mr *MockUnitSvcMockRecorder) CreateUnit(ctx, params any) *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateUnit", reflect.TypeOf((*MockUnitSvc)(nil).CreateUnit), ctx, params)
 }
 
+// CurrencyUnitID mocks base method.
+func (m *MockUnitSvc) CurrencyUnitID(ctx context.Context, currency constants.Currency) (string, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "CurrencyUnitID", ctx, currency)
+	ret0, _ := ret[0].(string)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
+}
+
+// CurrencyUnitID indicates an expected call of CurrencyUnitID.
+func (mr *MockUnitSvcMockRecorder) CurrencyUnitID(ctx, currency any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CurrencyUnitID", reflect.TypeOf((*MockUnitSvc)(nil).CurrencyUnitID), ctx, currency)
+}
+
 // DeleteUnit mocks base method.
 func (m *MockUnitSvc) DeleteUnit(ctx context.Context, unitID string) *apierror.APIError {
 	m.ctrl.T.Helper()
@@ -9349,60 +9364,6 @@ func (m *MockProductionSvc) UpdateProduction(ctx context.Context, params domain.
 func (mr *MockProductionSvcMockRecorder) UpdateProduction(ctx, params any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateProduction", reflect.TypeOf((*MockProductionSvc)(nil).UpdateProduction), ctx, params)
-}
-
-// MockMeasureSvc is a mock of MeasureSvc interface.
-type MockMeasureSvc struct {
-	ctrl     *gomock.Controller
-	recorder *MockMeasureSvcMockRecorder
-	isgomock struct{}
-}
-
-// MockMeasureSvcMockRecorder is the mock recorder for MockMeasureSvc.
-type MockMeasureSvcMockRecorder struct {
-	mock *MockMeasureSvc
-}
-
-// NewMockMeasureSvc creates a new mock instance.
-func NewMockMeasureSvc(ctrl *gomock.Controller) *MockMeasureSvc {
-	mock := &MockMeasureSvc{ctrl: ctrl}
-	mock.recorder = &MockMeasureSvcMockRecorder{mock}
-	return mock
-}
-
-// EXPECT returns an object that allows the caller to indicate expected use.
-func (m *MockMeasureSvc) EXPECT() *MockMeasureSvcMockRecorder {
-	return m.recorder
-}
-
-// UpdateQuantity mocks base method.
-func (m *MockMeasureSvc) UpdateQuantity(ctx context.Context, params domain.UpdateQuantityParams) (*domain.Quantity, *apierror.APIError) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "UpdateQuantity", ctx, params)
-	ret0, _ := ret[0].(*domain.Quantity)
-	ret1, _ := ret[1].(*apierror.APIError)
-	return ret0, ret1
-}
-
-// UpdateQuantity indicates an expected call of UpdateQuantity.
-func (mr *MockMeasureSvcMockRecorder) UpdateQuantity(ctx, params any) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateQuantity", reflect.TypeOf((*MockMeasureSvc)(nil).UpdateQuantity), ctx, params)
-}
-
-// UpdateRate mocks base method.
-func (m *MockMeasureSvc) UpdateRate(ctx context.Context, params domain.UpdateRateParams) (*domain.Rate, *apierror.APIError) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "UpdateRate", ctx, params)
-	ret0, _ := ret[0].(*domain.Rate)
-	ret1, _ := ret[1].(*apierror.APIError)
-	return ret0, ret1
-}
-
-// UpdateRate indicates an expected call of UpdateRate.
-func (mr *MockMeasureSvcMockRecorder) UpdateRate(ctx, params any) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateRate", reflect.TypeOf((*MockMeasureSvc)(nil).UpdateRate), ctx, params)
 }
 
 // MockUtilsSvc is a mock of UtilsSvc interface.

@@ -3,10 +3,12 @@ package consumptionep
 import (
 	"context"
 	"fmt"
+
 	"github.com/open-mrp/apikit/include"
 
 	"github.com/open-mrp/api/services/api-gateway/internal/domain"
 	grpcutil "github.com/open-mrp/api/services/api-gateway/internal/grpc"
+	"github.com/open-mrp/api/services/api-gateway/internal/resourceloaders"
 	apiresource "github.com/open-mrp/api/services/api-gateway/pkg/resource"
 	"github.com/open-mrp/api/shared/constants"
 	pb "github.com/open-mrp/api/shared/proto/core"
@@ -152,16 +154,7 @@ func (m *consumptionSvcImpl) DeleteConsumption(ctx context.Context, req *DeleteC
 var consumptionIncludes = []string{"consumed_item"}
 
 func consumptionQuantityFromProto(q *pb.QuantityInfo) *apiresource.Quantity {
-	if q == nil {
-		return nil
-	}
-	norm := apiresource.NormalizeQuantityValue(q.Value, q.UnitType)
-	return &apiresource.Quantity{
-		ID:           q.Id,
-		Object:       constants.ObjectTypeQuantity,
-		Value:        norm,
-		DisplayValue: apiresource.FormatDisplayValue(norm, q.UnitAbbreviation, q.UnitType),
-	}
+	return resourceloaders.QuantityFromProto(q)
 }
 
 func consumptionFromProto(c *pb.ConsumptionInfo) apiresource.Consumption {
@@ -192,12 +185,6 @@ func stashConsumptionMeta(meta *include.LoadMeta, c *pb.ConsumptionInfo) {
 		meta.Set(constants.ObjectTypeConsumption, c.Id, "consumed_item_id", c.ItemId)
 	}
 
-	// The quantities arrive with only their units' ids, stashed so `quantity.unit` resolves.
-	for _, q := range []*pb.QuantityInfo{c.Quantity, c.WasteQuantity} {
-		if q != nil && q.Id != "" {
-			meta.Set(constants.ObjectTypeQuantity, q.Id, "unit_id", q.UnitId)
-		}
-	}
 }
 
 // clearableInstructionsToProto maps the request's instructions onto the update: absent leaves them, a

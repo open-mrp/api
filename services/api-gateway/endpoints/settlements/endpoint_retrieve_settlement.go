@@ -40,7 +40,7 @@ func (e *RetrieveSettlementEndpoint) Materialize() *apiendpoint.APIEndpoint[*Ret
 		},
 		IncludeConfig: apiendpoint.IncludesFor(apiendpoint.IncludesParams{
 			ObjectType: constants.ObjectTypeSettlement,
-			Fields:     []string{"responsible_user", "responsible_user.user", "allocations", "allocations.amount", "allocations.amount.unit", "allocations.transaction", "allocations.transaction.amount", "allocations.transaction.amount.unit", "allocations.transaction.customer"},
+			Fields:     []string{"responsible_user", "responsible_user.user", "allocations", "allocations.transaction", "allocations.transaction.customer"},
 		}),
 	})
 }

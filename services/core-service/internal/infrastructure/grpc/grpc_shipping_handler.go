@@ -236,6 +236,7 @@ func shippingCaseDetailToProto(c *domain.ShippingCase) *pb.ShippingCaseDetailInf
 		Number:                        c.Number,
 		FreightAmountId:               c.FreightAmountID,
 		FreightAmountValue:            c.FreightAmountValue,
+		FreightAmount:                 freightAmountToProto(c.FreightAmountID, c.FreightAmountValue),
 		FreightAmountUnitId:           c.FreightAmountUnitID,
 		FreightAmountUnitName:         c.FreightAmountUnitName,
 		FreightAmountUnitAbbreviation: c.FreightAmountUnitAbbreviation,

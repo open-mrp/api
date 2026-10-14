@@ -324,6 +324,11 @@ func purchaseOrderLineToProto(l *domain.PurchaseOrderLine) *pb.PurchaseOrderLine
 		info.DeliveryLines = append(info.DeliveryLines, d)
 	}
 
+	info.UnitPrice = unitPriceToProto(l.UnitPriceValue, l.UnitPriceDenominatorUnitID)
+	if l.UnitCostValue != nil && l.UnitCostDenominatorUnitID != nil {
+		info.UnitCost = unitPriceToProto(*l.UnitCostValue, *l.UnitCostDenominatorUnitID)
+	}
+
 	return info
 }
 
@@ -451,8 +456,12 @@ func (h *purchaseGRPCHandler) CreatePurchaseOrder(ctx context.Context, req *pb.C
 	ctx, finalizeIdempotency := contracts.WithIdempotencyTracking(ctx)
 	defer finalizeIdempotency()
 
+	money := newMoneyRows(ctx)
+
 	lines := make([]domain.CreatePurchaseOrderLineInput, len(req.Lines))
 	for i, l := range req.Lines {
+		unitPrice := money.rate("unit_price", l.UnitPrice)
+		unitCost := money.rate("unit_cost", l.UnitCost)
 		lines[i] = domain.CreatePurchaseOrderLineInput{
 			ProductID:                  l.ProductId,
 			ItemID:                     l.ItemId,
@@ -460,12 +469,12 @@ func (h *purchaseGRPCHandler) CreatePurchaseOrder(ctx context.Context, req *pb.C
 			ProductDescription:         l.ProductDescription,
 			QuantityValue:              l.QuantityValue,
 			QuantityUnitID:             l.QuantityUnitId,
-			UnitPriceValue:             l.UnitPriceValue,
-			UnitPriceNumeratorUnitID:   l.UnitPriceNumeratorUnitId,
-			UnitPriceDenominatorUnitID: l.UnitPriceDenominatorUnitId,
-			UnitCostValue:              l.UnitCostValue,
-			UnitCostNumeratorUnitID:    l.UnitCostNumeratorUnitId,
-			UnitCostDenominatorUnitID:  l.UnitCostDenominatorUnitId,
+			UnitPriceValue:             rateValue(unitPrice),
+			UnitPriceNumeratorUnitID:   rateUnit(unitPrice),
+			UnitPriceDenominatorUnitID: ratePerUnit(unitPrice),
+			UnitCostValue:              rateValuePtr(unitCost),
+			UnitCostNumeratorUnitID:    rateUnitPtr(unitCost),
+			UnitCostDenominatorUnitID:  ratePerUnitPtr(unitCost),
 		}
 	}
 
@@ -502,6 +511,10 @@ func (h *purchaseGRPCHandler) CreatePurchaseOrder(ctx context.Context, req *pb.C
 		ShipToAddressID:       req.ShipToAddressId,
 		BillToAddress:         inlineAddressToDomain(req.BillToAddress),
 		ShipToAddress:         inlineAddressToDomain(req.ShipToAddress),
+	}
+
+	if apiErr := money.err(); apiErr != nil {
+		return nil, contracts.ConvertAPIErrorToGRPC(apiErr)
 	}
 
 	order, apiErr := h.purchaseOrderSvc.CreatePurchaseOrder(ctx, params)
@@ -606,6 +619,10 @@ func (h *purchaseGRPCHandler) CreatePurchaseOrderLine(ctx context.Context, req *
 	ctx, finalizeIdempotency := contracts.WithIdempotencyTracking(ctx)
 	defer finalizeIdempotency()
 
+	money := newMoneyRows(ctx)
+
+	unitPrice := money.rate("unit_price", req.UnitPrice)
+	unitCost := money.rate("unit_cost", req.UnitCost)
 	params := domain.CreatePurchaseOrderLineParams{
 		SalesOrderID:               req.PurchaseOrderId,
 		ProductID:                  req.ProductId,
@@ -614,12 +631,16 @@ func (h *purchaseGRPCHandler) CreatePurchaseOrderLine(ctx context.Context, req *
 		ProductDescription:         req.ProductDescription,
 		QuantityValue:              req.QuantityValue,
 		QuantityUnitID:             req.QuantityUnitId,
-		UnitPriceValue:             req.UnitPriceValue,
-		UnitPriceNumeratorUnitID:   req.UnitPriceNumeratorUnitId,
-		UnitPriceDenominatorUnitID: req.UnitPriceDenominatorUnitId,
-		UnitCostValue:              req.UnitCostValue,
-		UnitCostNumeratorUnitID:    req.UnitCostNumeratorUnitId,
-		UnitCostDenominatorUnitID:  req.UnitCostDenominatorUnitId,
+		UnitPriceValue:             rateValue(unitPrice),
+		UnitPriceNumeratorUnitID:   rateUnit(unitPrice),
+		UnitPriceDenominatorUnitID: ratePerUnit(unitPrice),
+		UnitCostValue:              rateValuePtr(unitCost),
+		UnitCostNumeratorUnitID:    rateUnitPtr(unitCost),
+		UnitCostDenominatorUnitID:  ratePerUnitPtr(unitCost),
+	}
+
+	if apiErr := money.err(); apiErr != nil {
+		return nil, contracts.ConvertAPIErrorToGRPC(apiErr)
 	}
 
 	line, apiErr := h.purchaseOrderLineSvc.CreatePurchaseOrderLine(ctx, params)
@@ -640,6 +661,10 @@ func (h *purchaseGRPCHandler) UpdatePurchaseOrderLine(ctx context.Context, req *
 	ctx, finalizeIdempotency := contracts.WithIdempotencyTracking(ctx)
 	defer finalizeIdempotency()
 
+	money := newMoneyRows(ctx)
+
+	unitPrice := money.rate("unit_price", req.UnitPrice)
+	unitCost := money.rate("unit_cost", req.UnitCost)
 	params := domain.UpdatePurchaseOrderLineParams{
 		PurchaseOrderLineID:        req.Id,
 		SalesOrderID:               req.PurchaseOrderId,
@@ -649,12 +674,16 @@ func (h *purchaseGRPCHandler) UpdatePurchaseOrderLine(ctx context.Context, req *
 		ProductDescription:         req.ProductDescription,
 		QuantityValue:              req.QuantityValue,
 		QuantityUnitID:             req.QuantityUnitId,
-		UnitPriceValue:             req.UnitPriceValue,
-		UnitPriceNumeratorUnitID:   req.UnitPriceNumeratorUnitId,
-		UnitPriceDenominatorUnitID: req.UnitPriceDenominatorUnitId,
-		UnitCostValue:              req.UnitCostValue,
-		UnitCostNumeratorUnitID:    req.UnitCostNumeratorUnitId,
-		UnitCostDenominatorUnitID:  req.UnitCostDenominatorUnitId,
+		UnitPriceValue:             rateValuePtr(unitPrice),
+		UnitPriceNumeratorUnitID:   rateUnitPtr(unitPrice),
+		UnitPriceDenominatorUnitID: ratePerUnitPtr(unitPrice),
+		UnitCostValue:              rateValuePtr(unitCost),
+		UnitCostNumeratorUnitID:    rateUnitPtr(unitCost),
+		UnitCostDenominatorUnitID:  ratePerUnitPtr(unitCost),
+	}
+
+	if apiErr := money.err(); apiErr != nil {
+		return nil, contracts.ConvertAPIErrorToGRPC(apiErr)
 	}
 
 	line, apiErr := h.purchaseOrderLineSvc.UpdatePurchaseOrderLine(ctx, params)

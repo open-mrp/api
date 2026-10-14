@@ -386,32 +386,12 @@ func stashPickDetailMeta(ctx context.Context, d *apiresource.Pick, info *pb.Pick
 
 func pickLineDetailFromProto(info *pb.PickLineInfo) apiresource.PickLine {
 	d := apiresource.PickLine{
-		ID:     info.Id,
-		Object: constants.ObjectTypePickLine,
-		Quantity: &apiresource.Quantity{
-			ID:     info.QuantityId,
-			Object: constants.ObjectTypeQuantity,
-			Value:  info.QuantityValue,
-			DisplayValue: apiresource.FormatDisplayValue(
-				info.QuantityValue,
-				info.QuantityUnitAbbreviation,
-				string(constants.UnitTypeQuantity),
-			),
-			// Unit left nil: expandable, loaded with real data via ?include=; never fabricated.
-		},
-		OrderedQuantity: &apiresource.Quantity{
-			ID:     info.OrderedQuantityId,
-			Object: constants.ObjectTypeQuantity,
-			Value:  info.OrderedQuantityValue,
-			DisplayValue: apiresource.FormatDisplayValue(
-				info.OrderedQuantityValue,
-				info.OrderedQuantityUnitAbbreviation,
-				string(constants.UnitTypeQuantity),
-			),
-			// Unit left nil: expandable, loaded with real data via ?include=; never fabricated.
-		},
-		CreatedAt: grpcutil.TimestampToTime(info.CreatedAt),
-		UpdatedAt: grpcutil.TimestampToTime(info.UpdatedAt),
+		ID:              info.Id,
+		Object:          constants.ObjectTypePickLine,
+		Quantity:        apiresource.NewQuantity(info.QuantityValue, info.QuantityUnitId),
+		OrderedQuantity: apiresource.NewQuantity(info.OrderedQuantityValue, info.OrderedQuantityUnitId),
+		CreatedAt:       grpcutil.TimestampToTime(info.CreatedAt),
+		UpdatedAt:       grpcutil.TimestampToTime(info.UpdatedAt),
 	}
 	d.PackedAt = grpcutil.TimestampToTimePtr(info.PackedAt)
 	return d
@@ -427,15 +407,6 @@ func stashPickLineDetailMeta(ctx context.Context, d *apiresource.PickLine, info 
 		meta.Set(constants.ObjectTypePickLine, d.ID, "item_id", *info.OrderLineItemId)
 	}
 
-	// The proto carries only the unit FK, so stash it on each quantity for LoadUnits to hydrate
-	// on ?include=lines.quantity.unit. Without it the unit reads null and callers cannot tell
-	// what the measure is denominated in.
-	if info.QuantityUnitId != "" {
-		meta.Set(constants.ObjectTypeQuantity, info.QuantityId, "unit_id", info.QuantityUnitId)
-	}
-	if info.OrderedQuantityUnitId != "" {
-		meta.Set(constants.ObjectTypeQuantity, info.OrderedQuantityId, "unit_id", info.OrderedQuantityUnitId)
-	}
 	// Keyed by the order line, not the pick line, because the product loader runs against the
 	// sales_order_line resource once the resolver recurses into it.
 	if info.OrderLineProductId != nil && *info.OrderLineProductId != "" {

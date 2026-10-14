@@ -1095,9 +1095,9 @@ func TestAccountPrices_AuditEvents(t *testing.T) {
 		"recipient_account_id": SeedCustomerAccountID,
 		"product_line_id":      SeedProductLineID,
 		"rate": map[string]any{
-			"value":               "13.13",
-			"numerator_unit_id":   e2eCurrencyUnitID,
-			"denominator_unit_id": SeedUnitID,
+			"value":       "13.13",
+			"unit_id":     e2eCurrencyUnitID,
+			"per_unit_id": SeedUnitID,
 		},
 	})
 	priceID := jsonField(created, "id")
@@ -1110,9 +1110,9 @@ func TestAccountPrices_AuditEvents(t *testing.T) {
 
 	patchStatus, patchBody, err := apiClient.Patch(accountPricesPath+"/"+priceID, map[string]any{
 		"rate": map[string]any{
-			"value":               "14.14",
-			"numerator_unit_id":   e2eCurrencyUnitID,
-			"denominator_unit_id": SeedUnitID,
+			"value":       "14.14",
+			"unit_id":     e2eCurrencyUnitID,
+			"per_unit_id": SeedUnitID,
 		},
 	}, newIdempotencyKey())
 	require.NoError(t, err)
@@ -1144,9 +1144,9 @@ func TestAccountPrices_AuditRecordsCategoryOnlyChange(t *testing.T) {
 		"recipient_account_id": SeedCustomerAccountID,
 		"product_line_id":      SeedProductLineID,
 		"rate": map[string]any{
-			"value":               "15.15",
-			"numerator_unit_id":   e2eCurrencyUnitID,
-			"denominator_unit_id": SeedUnitID,
+			"value":       "15.15",
+			"unit_id":     e2eCurrencyUnitID,
+			"per_unit_id": SeedUnitID,
 		},
 	})
 	priceID := jsonField(created, "id")

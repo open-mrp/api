@@ -1,13 +1,11 @@
 package apirequest
 
-// A value expressed as a ratio of two units, supplied on create and update requests.
-//
-// A unit price, for example, has a currency as its numerator unit and the unit the product is bought or sold by as its denominator.
+// A value measured per another unit, such as `100 kg / hr`.
 type RateInput struct {
-	// Decimal value of the rate, expressed as the amount of the numerator unit per one denominator unit.
+	// Decimal value, as a string to keep precision.
 	Value string `json:"value" validate:"required" format:"decimal"`
-	// ID of the unit for the rate's numerator (e.g. the currency of a price).
-	NumeratorUnitID string `json:"numerator_unit_id" validate:"required"`
-	// ID of the unit for the rate's denominator (the per-unit basis).
-	DenominatorUnitID string `json:"denominator_unit_id" validate:"required"`
+	// ID of the unit the value is measured in, such as kilograms in `100 kg / hr`.
+	UnitID string `json:"unit_id" validate:"required"`
+	// ID of the unit the rate is measured per, such as hours in `100 kg / hr`.
+	PerUnitID string `json:"per_unit_id" validate:"required"`
 }

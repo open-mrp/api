@@ -3,9 +3,10 @@ package shipmentep
 import (
 	"context"
 	"fmt"
-	"github.com/open-mrp/apikit/include"
 	"strconv"
 	"time"
+
+	"github.com/open-mrp/apikit/include"
 
 	jobep "github.com/open-mrp/api/services/api-gateway/endpoints/jobs"
 	"github.com/open-mrp/api/services/api-gateway/internal/domain"
@@ -640,21 +641,14 @@ func shipmentLineFromProto(ctx context.Context, l *pb.ShipmentLineInfo) apiresou
 	}
 
 	result := apiresource.ShipmentLine{
-		ID:     l.Id,
-		Object: constants.ObjectTypeShipmentLine,
-		Quantity: &apiresource.Quantity{
-			ID:           l.QuantityId,
-			Object:       constants.ObjectTypeQuantity,
-			Value:        l.QuantityValue,
-			DisplayValue: apiresource.FormatDisplayValue(l.QuantityValue, l.QuantityUnitAbbreviation, l.QuantityUnitType),
-			// Unit left nil: expandable, loaded with real data via `lines.quantity.unit`; never fabricated.
-		},
+		ID:        l.Id,
+		Object:    constants.ObjectTypeShipmentLine,
+		Quantity:  apiresource.NewQuantity(l.QuantityValue, l.QuantityUnitId),
 		CreatedAt: grpcutil.TimestampToTime(l.CreatedAt),
 		UpdatedAt: grpcutil.TimestampToTime(l.UpdatedAt),
 	}
 
 	meta := include.GetLoadMeta(ctx)
-	meta.Set(constants.ObjectTypeQuantity, l.QuantityId, "unit_id", l.QuantityUnitId)
 	// The item is the order line's, and expandable: the line carries its id and the item loader
 	// fills the rest, rather than the line shipping an item that is only an id and a SKU.
 	if l.OrderLineItemId != nil && *l.OrderLineItemId != "" {
@@ -715,22 +709,10 @@ func shippingCaseDetailFromProto(c *pb.ShippingCaseDetailInfo, shipment *pb.Ship
 		UpdatedAt:           grpcutil.TimestampToTime(c.UpdatedAt),
 	}
 
-	if c.FreightAmountId != "" {
-		result.FreightAmount = &apiresource.Quantity{
-			ID:           c.FreightAmountId,
-			Object:       constants.ObjectTypeQuantity,
-			Value:        c.FreightAmountValue,
-			DisplayValue: fmt.Sprintf("%s %s", c.FreightAmountValue, c.FreightAmountUnitAbbreviation),
-		}
-	}
+	result.FreightAmount = resourceloaders.MoneyFromProto(c.FreightAmount)
 
 	if c.FreightWeightId != "" {
-		result.FreightWeight = &apiresource.Quantity{
-			ID:           c.FreightWeightId,
-			Object:       constants.ObjectTypeQuantity,
-			Value:        c.FreightWeightValue,
-			DisplayValue: fmt.Sprintf("%s %s", c.FreightWeightValue, c.FreightWeightUnitAbbreviation),
-		}
+		result.FreightWeight = apiresource.NewQuantity(c.FreightWeightValue, c.FreightWeightUnitId)
 	}
 
 	if c.CarrierId != "" {

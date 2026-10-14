@@ -111,7 +111,7 @@ func (m *departmentSvcImpl) CreateDepartment(ctx context.Context, req *CreateDep
 		LocationId:         req.LocationID.Ptr(),
 		ScanningStationIds: req.ScanningStationIDs,
 		MachineIds:         req.MachineIDs,
-		LaborRate:          departmentRateInputToProto(req.LaborRate),
+		LaborRate:          apirequest.OptionalUnitPriceToProto(req.LaborRate),
 	}
 
 	resp, apiErr := grpcutil.CallRPC(ctx, departmentSvcTracer, "service.departments.create", domain.ServiceName,
@@ -154,7 +154,7 @@ func (m *departmentSvcImpl) UpdateDepartment(ctx context.Context, req *UpdateDep
 		LocationId:         req.LocationID.Ptr(),
 		ScanningStationIds: req.ScanningStationIDs,
 		MachineIds:         req.MachineIDs,
-		LaborRate:          departmentRateInputToProto(req.LaborRate),
+		LaborRate:          apirequest.OptionalUnitPriceToProto(req.LaborRate),
 	}
 
 	resp, apiErr := grpcutil.CallRPC(ctx, departmentSvcTracer, "service.departments.update", domain.ServiceName,
@@ -183,17 +183,6 @@ func (m *departmentSvcImpl) DeleteDepartment(ctx context.Context, req *DeleteDep
 	}
 
 	return &apiresource.EmptyResource{}, nil
-}
-
-func departmentRateInputToProto(in *DepartmentRateInput) *pb.DepartmentRateInput {
-	if in == nil {
-		return nil
-	}
-	return &pb.DepartmentRateInput{
-		Value:             in.Value,
-		NumeratorUnitId:   in.NumeratorUnitID,
-		DenominatorUnitId: in.DenominatorUnitID,
-	}
 }
 
 func loadDepartmentByID(ctx context.Context, id string) (*apiresource.Department, *apierror.APIError) {

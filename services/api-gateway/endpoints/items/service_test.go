@@ -68,7 +68,7 @@ func TestGetItem_ReadsTheRecordTheListReads(t *testing.T) {
 		Sku:          "SKU-1",
 		ItemTypeCode: "material",
 		Category:     &pb.ItemCategoryInfo{Id: "itcg_1"},
-		UnitCost:     &pb.RateInfo{Id: "rt_cost", Value: "2.5"},
+		UnitCost:     &pb.UnitPrice{Amount: "2.5", Currency: "usd", PerUnitId: "un_each"},
 	}}
 	svc := NewItemSvc(&ItemSvcConfig{CoreClient: core})
 	ctx := include.WithLoadMeta(context.Background())

@@ -42,11 +42,9 @@ func ListInventoriesPresenter(ctx context.Context, resp *pb.ListInventoriesRespo
 		items[i] = apiresource.InventoryItem{
 			Object: constants.ObjectTypeInventoryItem,
 			Item:   &presented,
-			// On-hand is computed per request, so it is not a stored quantity and carries no id.
-			Quantity: &apiresource.ComputedQuantity{
-				Object:       constants.ObjectTypeComputedQuantity,
+			// On-hand is computed per request.
+			Quantity: &apiresource.Quantity{
 				Value:        apiresource.NormalizeQuantityValue(valueStr, item.OnHandUnitType),
-				DisplayValue: apiresource.FormatDisplayValue(valueStr, item.OnHandUnitAbbreviation, item.OnHandUnitType),
 				Unit:         units[item.OnHandUnitId],
 			},
 		}

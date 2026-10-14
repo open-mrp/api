@@ -1449,6 +1449,9 @@ All resources
 - `display_value` is gone. The dashboard needs a shared formatter for money (`Intl.NumberFormat`), quantities and rates.
 - `ComputedQuantity` merges into `Quantity`.
 - Internal `PATCH /v1/operations/quantities/{id}` and `PATCH /v1/operations/rates/{id}` are removed.
+- A bad `cursor` is 400 `parameter_invalid` (was 422 `invalid_format` on most lists).
+- A body enum outside its set is 422 `validation_failed` with an `invalid_format` entry (was 400 `parameter_invalid`); query and path enums stay 400.
+- Messaging bodies (conversations, messages, groups, email inboxes and domains, notifications, preferences) report a missing field as 422 `missing_field` (was 400 `parameter_missing`) and a bad value as 422 `invalid_format` (was 400 `parameter_invalid`). On preview.9 these now read `missing_field` / `invalid_format` with status 400; key on the status and `param`, not the code.
 
 Payment terms
 - Create and update accept `status`; list accepts `statuses[]`.

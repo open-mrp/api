@@ -56,7 +56,7 @@ func TestPublisher_MapsAccountID(t *testing.T) {
 	identityType := "user"
 
 	rl := &appctx.RequestLog{
-		Identity:        &types.Identity{Type: types.IdentityActorType(identityType), Actor: &types.IdentityActor{AccountID: &accountID}, Target: &types.IdentityTarget{AccountID: *&targetAccountID}},
+		Identity:        &types.Identity{Type: types.IdentityActorType(identityType), Actor: &types.IdentityActor{AccountID: &accountID}, Target: &types.IdentityTarget{AccountID: targetAccountID}},
 		ID:              "rlog_test123",
 		Method:          "GET",
 		Host:            "api.example.com",
@@ -158,7 +158,7 @@ func TestPublisher_MapsAllFields(t *testing.T) {
 	clientIPString := "192.168.1.1"
 
 	rl := &appctx.RequestLog{
-		Identity:             &types.Identity{Type: types.IdentityActorType(identityType), Actor: &types.IdentityActor{AccountID: &accountID}, Target: &types.IdentityTarget{AccountID: *&targetAccountID}},
+		Identity:             &types.Identity{Type: types.IdentityActorType(identityType), Actor: &types.IdentityActor{AccountID: &accountID}, Target: &types.IdentityTarget{AccountID: targetAccountID}},
 		ID:                   "rlog_full",
 		Method:               "POST",
 		Host:                 "api.example.com",

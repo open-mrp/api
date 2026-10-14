@@ -14,7 +14,6 @@ import (
 	apierror "github.com/open-mrp/apikit/apierror"
 	"github.com/open-mrp/apikit/appctx"
 	"github.com/open-mrp/apikit/tracing"
-	"github.com/open-mrp/apikit/transport"
 	httptransport "github.com/open-mrp/apikit/transport"
 
 	"go.opentelemetry.io/otel"
@@ -49,7 +48,7 @@ func AuthMiddleware(config *AuthMiddlewareConfig) func(http.HandlerFunc) http.Ha
 			spanName := fmt.Sprintf("HTTP %s %s", r.Method, r.URL.Path)
 			ctx, span := tracer.Start(r.Context(), spanName)
 
-			authHeader := r.Header.Get(transport.AuthorizationHeader)
+			authHeader := r.Header.Get(httptransport.AuthorizationHeader)
 			openMRPAccountIDHeader := r.Header.Get(header.TargetAccountIDHeader)
 			actorAccountIDHeader := r.Header.Get(header.ActorAccountIDHeader)
 
@@ -69,7 +68,7 @@ func AuthMiddleware(config *AuthMiddlewareConfig) func(http.HandlerFunc) http.Ha
 			var authToken string
 
 			if authHeader != "" {
-				authResult, apiErr := transport.ValidateAndExtractAuthHeader(authHeader)
+				authResult, apiErr := httptransport.ValidateAndExtractAuthHeader(authHeader)
 				if apiErr != nil {
 					httptransport.RespondWithAPIError(r.Context(), w, apiErr)
 					tracing.RecordControllerError(span, apiErr)

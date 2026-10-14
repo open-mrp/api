@@ -25,9 +25,9 @@ func (m *analyticsSvcImpl) AnalyzeOpenOrdersSummary(ctx context.Context, req *An
 	}
 	return &apiresource.AnalyzeOpenOrdersSummaryResponse{
 		Object:      constants.ObjectTypeOpenOrdersSummary,
-		Ordered:     salesAmount(resp.GetOrdered(), nil),
-		BackOrdered: salesAmount(resp.GetBackOrdered(), nil),
-		Invoiced:    salesAmount(resp.GetInvoiced(), nil),
+		Ordered:     apiresource.NewMoney(resp.GetOrdered()),
+		BackOrdered: apiresource.NewMoney(resp.GetBackOrdered()),
+		Invoiced:    apiresource.NewMoney(resp.GetInvoiced()),
 	}, nil
 }
 
@@ -82,7 +82,7 @@ func (m *analyticsSvcImpl) ListOpenOrders(ctx context.Context, req *ListOpenOrde
 			Customer:     &apiresource.AnalyticsCustomer{ID: o.GetCustomerId(), Object: constants.ObjectTypeCustomer, Name: o.GetCustomerName(), Number: o.CustomerNumber},
 			ShipTo:       &apiresource.AnalyticsShipTo{State: o.ShipToState, Country: o.ShipToCountry},
 			LineCount:    o.GetLineCount(),
-			TotalOrdered: salesAmount(o.GetTotalOrdered(), nil),
+			TotalOrdered: apiresource.NewMoney(o.GetTotalOrdered()),
 		}
 	}
 	return apiresource.NewList(orders, grpcutil.MapProtoPageInfo(ctx, resp.GetPageInfo())), nil
@@ -105,14 +105,14 @@ func (m *analyticsSvcImpl) ListOpenOrderLines(ctx context.Context, req *ListOpen
 			ID:     l.GetId(),
 			Item:   &apiresource.AnalyticsItem{ID: l.GetItemId(), Object: constants.ObjectTypeItem, Sku: l.GetSku(), Description: l.Description},
 			Unit:   unit,
-			UnitPrice: &apiresource.ComputedRate{
-				Object:       constants.ObjectTypeComputedRate,
-				Value:        l.GetUnitPrice(),
-				DisplayValue: apiresource.FormatRateDisplay(l.GetUnitPrice(), l.GetUnitPriceNumeratorAbbreviation(), l.GetUnitPriceDenominatorAbbreviation()),
+			UnitPrice: &apiresource.UnitPrice{
+				Amount:   l.GetUnitPrice(),
+				Currency: constants.CurrencyUSD,
+				PerUnit:  unit,
 			},
 			QuantityBackOrdered: openOrderQuantity(l.GetQuantityBackOrdered(), unit),
 			QuantityInvoiced:    openOrderQuantity(l.GetQuantityInvoiced(), unit),
-			TotalOrdered:        salesAmount(l.GetTotalOrdered(), nil),
+			TotalOrdered:        apiresource.NewMoney(l.GetTotalOrdered()),
 		}
 	}
 	return apiresource.NewList(lines, apiresource.PageInfo{}), nil
@@ -130,14 +130,8 @@ func (m *analyticsSvcImpl) ExportOpenOrderLines(ctx context.Context, req *Export
 }
 
 // openOrderQuantity renders a quantity in the unit it is counted in, which travels with it.
-func openOrderQuantity(value string, unit *apiresource.Unit) *apiresource.ComputedQuantity {
-	var abbr *string
-	if unit != nil {
-		abbr = &unit.Abbreviation
-	}
-	q := salesQuantity(value, abbr)
-	q.Unit = unit
-	return q
+func openOrderQuantity(value string, unit *apiresource.Unit) *apiresource.Quantity {
+	return &apiresource.Quantity{Value: value, Unit: unit}
 }
 
 // reportUnit renders the unit a report's quantities are counted in, which core attaches to the report: a caller who may read the report need not also be allowed to browse units. Its owner is left to the include resolver.

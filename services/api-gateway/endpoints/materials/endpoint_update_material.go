@@ -33,8 +33,8 @@ type UpdateMaterialRequest struct {
 	LeadTime field.Optional[QuantityInputRequest] `json:"lead_time,omitzero"`
 	// New cost per unit.
 	//
-	// Follows the same unit rule as on create: `numerator_unit_id` must reference a currency unit and `denominator_unit_id` must reference a non-currency unit.
-	UnitCost field.Optional[apirequest.RateInput] `json:"unit_cost,omitzero" sensitive:"cost"`
+	// Follows the same rule as on create: `per_unit_id` must not be a currency unit.
+	UnitCost field.Optional[apirequest.UnitPriceInput] `json:"unit_cost,omitzero" sensitive:"cost"`
 	// ID of the item category to move the material to.
 	//
 	// The move is the one Change Item Category makes: the category has to be a material category and has to carry the properties of every attribute the material already has, and the material's rate and order-point units switch to the category's base unit while their numbers stay as they were. It is applied before the other fields in the request, so an `order_point` or `unit_cost` sent alongside is written after it.
@@ -49,7 +49,7 @@ var sampleUpdateMaterialRequest = &UpdateMaterialRequest{
 	Notes:       field.Some(sampleUpdateMaterialNotes),
 	OrderPoint:  field.Some(QuantityInputRequest{Value: "150.00", UnitID: apiresource.SampleUnitID}),
 	LeadTime:    field.Some(QuantityInputRequest{Value: "10.00", UnitID: apiresource.SampleUnitID}),
-	UnitCost:    field.Some(apirequest.RateInput{Value: "9.10", NumeratorUnitID: apiresource.SampleUnitID, DenominatorUnitID: apiresource.SampleUnitID}),
+	UnitCost:    field.Some(apirequest.UnitPriceInput{Amount: "9.10", Currency: "usd", PerUnitID: apiresource.SampleUnitID}),
 	CategoryID:  field.Some(apiresource.SampleItemCategoryID),
 }
 

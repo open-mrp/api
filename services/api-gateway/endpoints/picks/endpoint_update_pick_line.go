@@ -62,10 +62,7 @@ func (e *UpdatePickLineEndpoint) Materialize() *apiendpoint.APIEndpoint[*UpdateP
 		IncludeConfig: apiendpoint.IncludesFor(apiendpoint.IncludesParams{
 			ObjectType: constants.ObjectTypePickLine,
 			Fields: []string{
-				"sales_order_line",
-				"sales_order_line.product",
-				"quantity.unit",
-				"ordered_quantity.unit",
+				"sales_order_line", "sales_order_line.product",
 			},
 		}),
 	})

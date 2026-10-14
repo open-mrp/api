@@ -13,12 +13,12 @@ import (
 type AnalyzeOpenOrdersSummaryResponse struct {
 	// Resource type identifier.
 	Object constants.ObjectType `json:"object" validate:"required,enum=open_orders_summary"`
-	// Value of the counted lines as ordered. `value` is exact, unrounded.
-	Ordered *ComputedQuantity `json:"ordered" validate:"required"`
+	// Value of the counted lines as ordered. `amount` is exact, unrounded.
+	Ordered *Money `json:"ordered" validate:"required"`
 	// Value of what is ordered on them but not yet invoiced.
-	BackOrdered *ComputedQuantity `json:"back_ordered" validate:"required"`
+	BackOrdered *Money `json:"back_ordered" validate:"required"`
 	// Value of what has been invoiced against them so far.
-	Invoiced *ComputedQuantity `json:"invoiced" validate:"required"`
+	Invoiced *Money `json:"invoiced" validate:"required"`
 }
 
 // One item's quantities across the open sales orders, in the item's base unit.
@@ -30,11 +30,11 @@ type OpenOrderProduct struct {
 	// The item's base unit, which every quantity here is counted in. Null when the item's category has no base unit.
 	Unit *Unit `json:"unit"`
 	// Quantity ordered on the open lines.
-	QuantityOrdered *ComputedQuantity `json:"quantity_ordered" validate:"required"`
+	QuantityOrdered *Quantity `json:"quantity_ordered" validate:"required"`
 	// Quantity ordered on them but not yet invoiced.
-	QuantityBackOrdered *ComputedQuantity `json:"quantity_back_ordered" validate:"required"`
+	QuantityBackOrdered *Quantity `json:"quantity_back_ordered" validate:"required"`
 	// Quantity invoiced against them so far.
-	QuantityInvoiced *ComputedQuantity `json:"quantity_invoiced" validate:"required"`
+	QuantityInvoiced *Quantity `json:"quantity_invoiced" validate:"required"`
 }
 
 // A sales order as an analytics row names it.
@@ -83,8 +83,8 @@ type OpenOrder struct {
 	ShipTo *AnalyticsShipTo `json:"ship_to" validate:"required"`
 	// Number of the order's sale lines the filters count.
 	LineCount int64 `json:"line_count"`
-	// Value of those lines as ordered. `value` is exact, unrounded.
-	TotalOrdered *ComputedQuantity `json:"total_ordered" validate:"required"`
+	// Value of those lines as ordered. `amount` is exact, unrounded.
+	TotalOrdered *Money `json:"total_ordered" validate:"required"`
 }
 
 // One sale line of a sales order, as the open-orders report counts it.
@@ -97,22 +97,22 @@ type OpenOrderLine struct {
 	Item *AnalyticsItem `json:"item" validate:"required"`
 	// The item's base unit, which the quantities are counted in. Null when the item's category has no base unit.
 	Unit *Unit `json:"unit"`
-	// The line's price per the base unit of its dimension (per each, per gram), whatever unit it was quoted in. `value` is exact, unrounded.
-	UnitPrice *ComputedRate `json:"unit_price" validate:"required"`
+	// The line's price per the base unit of its dimension (per each, per gram), whatever unit it was quoted in. `amount` is exact, unrounded.
+	UnitPrice *UnitPrice `json:"unit_price" validate:"required"`
 	// Quantity ordered but not yet invoiced.
-	QuantityBackOrdered *ComputedQuantity `json:"quantity_back_ordered" validate:"required"`
+	QuantityBackOrdered *Quantity `json:"quantity_back_ordered" validate:"required"`
 	// Quantity invoiced so far.
-	QuantityInvoiced *ComputedQuantity `json:"quantity_invoiced" validate:"required"`
-	// Value of the line as ordered. `value` is exact, unrounded.
-	TotalOrdered *ComputedQuantity `json:"total_ordered" validate:"required"`
+	QuantityInvoiced *Quantity `json:"quantity_invoiced" validate:"required"`
+	// Value of the line as ordered. `amount` is exact, unrounded.
+	TotalOrdered *Money `json:"total_ordered" validate:"required"`
 }
 
-var sampleOpenOrderMoney = func(value, display string) *ComputedQuantity {
-	return &ComputedQuantity{Object: constants.ObjectTypeComputedQuantity, Value: value, DisplayValue: display}
+var sampleOpenOrderMoney = func(amount string) *Money {
+	return &Money{Amount: amount, Currency: constants.CurrencyUSD}
 }
 
-var sampleOpenOrderQuantity = func(value, display string) *ComputedQuantity {
-	return &ComputedQuantity{Object: constants.ObjectTypeComputedQuantity, Value: value, DisplayValue: display, Unit: SampleEachUnit}
+var sampleOpenOrderQuantity = func(value string) *Quantity {
+	return &Quantity{Value: value, Unit: SampleEachUnit}
 }
 
 var sampleOpenOrderItem = &AnalyticsItem{
@@ -124,18 +124,18 @@ var sampleOpenOrderItem = &AnalyticsItem{
 
 var SampleAnalyzeOpenOrdersSummaryResponse = &AnalyzeOpenOrdersSummaryResponse{
 	Object:      constants.ObjectTypeOpenOrdersSummary,
-	Ordered:     sampleOpenOrderMoney("48250.5", "48,250.50"),
-	BackOrdered: sampleOpenOrderMoney("30125.25", "30,125.25"),
-	Invoiced:    sampleOpenOrderMoney("18125.25", "18,125.25"),
+	Ordered:     sampleOpenOrderMoney("48250.5"),
+	BackOrdered: sampleOpenOrderMoney("30125.25"),
+	Invoiced:    sampleOpenOrderMoney("18125.25"),
 }
 
 var SampleOpenOrderProduct = &OpenOrderProduct{
 	Object:              constants.ObjectTypeOpenOrderProduct,
 	Item:                sampleOpenOrderItem,
 	Unit:                SampleEachUnit,
-	QuantityOrdered:     sampleOpenOrderQuantity("1200", "1,200 ea"),
-	QuantityBackOrdered: sampleOpenOrderQuantity("840", "840 ea"),
-	QuantityInvoiced:    sampleOpenOrderQuantity("360", "360 ea"),
+	QuantityOrdered:     sampleOpenOrderQuantity("1200"),
+	QuantityBackOrdered: sampleOpenOrderQuantity("840"),
+	QuantityInvoiced:    sampleOpenOrderQuantity("360"),
 }
 
 var SampleOpenOrder = &OpenOrder{
@@ -146,22 +146,18 @@ var SampleOpenOrder = &OpenOrder{
 	Customer:     &AnalyticsCustomer{ID: SampleCustomerID, Object: constants.ObjectTypeCustomer, Name: SampleCustomerName, Number: new("C-1001")},
 	ShipTo:       &AnalyticsShipTo{State: new("OR"), Country: new("US")},
 	LineCount:    3,
-	TotalOrdered: sampleOpenOrderMoney("4825.5", "4,825.50"),
+	TotalOrdered: sampleOpenOrderMoney("4825.5"),
 }
 
 var SampleOpenOrderLine = &OpenOrderLine{
-	Object: constants.ObjectTypeOpenOrderLine,
-	ID:     SampleSalesOrderLineID,
-	Item:   sampleOpenOrderItem,
-	Unit:   SampleEachUnit,
-	UnitPrice: &ComputedRate{
-		Object:       constants.ObjectTypeComputedRate,
-		Value:        "4.25",
-		DisplayValue: FormatRateDisplay("4.25", "$", "ea"),
-	},
-	QuantityBackOrdered: sampleOpenOrderQuantity("840", "840 ea"),
-	QuantityInvoiced:    sampleOpenOrderQuantity("360", "360 ea"),
-	TotalOrdered:        sampleOpenOrderMoney("5100", "5,100.00"),
+	Object:              constants.ObjectTypeOpenOrderLine,
+	ID:                  SampleSalesOrderLineID,
+	Item:                sampleOpenOrderItem,
+	Unit:                SampleEachUnit,
+	UnitPrice:           &UnitPrice{Amount: "4.25", Currency: constants.CurrencyUSD, PerUnit: SampleEachUnit},
+	QuantityBackOrdered: sampleOpenOrderQuantity("840"),
+	QuantityInvoiced:    sampleOpenOrderQuantity("360"),
+	TotalOrdered:        sampleOpenOrderMoney("5100"),
 }
 
 func (*AnalyzeOpenOrdersSummaryResponse) SchemaExample() any {

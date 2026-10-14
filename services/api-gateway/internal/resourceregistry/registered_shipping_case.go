@@ -28,8 +28,12 @@ func init() {
 				ExtractIDs:  extractShipmentIDFromShippingCase,
 				Populate:    populateShipmentOnShippingCase,
 			},
-			{Key: "freight_amount", Populate: populateFreightAmountOnShippingCase},
-			{Key: "freight_weight", Populate: populateFreightWeightOnShippingCase},
+			valueShapeSub(constants.ObjectTypeShippingCase, "freight_amount", func(p any) string { return p.(*apiresource.ShippingCase).ID }, func(p, v any) {
+				p.(*apiresource.ShippingCase).FreightAmount = v.(*apiresource.Money)
+			}),
+			valueShapeSub(constants.ObjectTypeShippingCase, "freight_weight", func(p any) string { return p.(*apiresource.ShippingCase).ID }, func(p, v any) {
+				p.(*apiresource.ShippingCase).FreightWeight = v.(*apiresource.Quantity)
+			}),
 		},
 	})
 }
@@ -70,24 +74,4 @@ func populateShipmentOnShippingCase(ctx context.Context, parent any, loaded map[
 	if v, ok := loaded[id]; ok {
 		sc.Shipment = v.(*apiresource.Shipment)
 	}
-}
-
-func populateFreightAmountOnShippingCase(ctx context.Context, parent any, _ map[string]any) {
-	sc := parent.(*apiresource.ShippingCase)
-	v, ok := include.GetLoadMeta(ctx).
-		Get(constants.ObjectTypeShippingCase, sc.ID, "freight_amount")
-	if !ok {
-		return
-	}
-	sc.FreightAmount = v.(*apiresource.Quantity)
-}
-
-func populateFreightWeightOnShippingCase(ctx context.Context, parent any, _ map[string]any) {
-	sc := parent.(*apiresource.ShippingCase)
-	v, ok := include.GetLoadMeta(ctx).
-		Get(constants.ObjectTypeShippingCase, sc.ID, "freight_weight")
-	if !ok {
-		return
-	}
-	sc.FreightWeight = v.(*apiresource.Quantity)
 }

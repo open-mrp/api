@@ -62,40 +62,11 @@ func init() {
 				Key:      "lot",
 				Populate: populateLotOnDeliveryLine,
 			},
-			{
-				// Carried inline: the delivery query already returns the cost the goods were stocked at, in full. Traversed rather than loaded so `unit_cost.numerator_unit` still resolves.
-				Key:         "unit_cost",
-				Target:      constants.ObjectTypeRate,
-				Cardinality: include.CardinalityOnePtr,
-				Populate:    populateUnitCostOnDeliveryLine,
-				ExtractRefs: extractUnitCostRefFromDeliveryLine,
-			},
-			{
-				// The quantity is already on the line — this exists so a caller can reach through it to the unit.
-				Key:         "quantity",
-				Target:      constants.ObjectTypeQuantity,
-				Cardinality: include.CardinalityOnePtr,
-				ExtractRefs: extractQuantityRefFromDeliveryLine,
-			},
+			valueShapeSub(constants.ObjectTypeDeliveryLine, "unit_cost", func(p any) string { return p.(*apiresource.DeliveryLine).ID }, func(p, v any) {
+				p.(*apiresource.DeliveryLine).UnitCost = v.(*apiresource.UnitPrice)
+			}),
 		},
 	})
-}
-
-// The resolver runs Populate before gathering refs, so the rate is already on the line by the time this is called.
-func extractUnitCostRefFromDeliveryLine(_ context.Context, parent any) []any {
-	l := parent.(*apiresource.DeliveryLine)
-	if l.UnitCost == nil {
-		return nil
-	}
-	return []any{l.UnitCost}
-}
-
-func extractQuantityRefFromDeliveryLine(_ context.Context, parent any) []any {
-	l := parent.(*apiresource.DeliveryLine)
-	if l.Quantity == nil {
-		return nil
-	}
-	return []any{l.Quantity}
 }
 
 // populateRelatedOnDelivery reveals the object itself, leaving every reference on it to its own key.
@@ -191,15 +162,6 @@ func populateLotOnDeliveryLine(ctx context.Context, parent any, _ map[string]any
 		return
 	}
 	l.Lot = v.(*apiresource.Lot)
-}
-
-func populateUnitCostOnDeliveryLine(ctx context.Context, parent any, _ map[string]any) {
-	l := parent.(*apiresource.DeliveryLine)
-	v, ok := include.GetLoadMeta(ctx).Get(constants.ObjectTypeDeliveryLine, l.ID, "unit_cost")
-	if !ok {
-		return
-	}
-	l.UnitCost = v.(*apiresource.Rate)
 }
 
 func deliveryLineMetaID(ctx context.Context, parent any, key string) []string {

@@ -62,7 +62,7 @@ func (e *UpdateTransactionAllocationEndpoint) Materialize() *apiendpoint.APIEndp
 		// report its id.
 		IncludeConfig: apiendpoint.IncludesFor(apiendpoint.IncludesParams{
 			ObjectType: constants.ObjectTypeTransactionAllocation,
-			Fields:     []string{"transaction", "transaction.amount", "transaction.amount.unit"},
+			Fields:     []string{"transaction"},
 		}),
 	})
 }

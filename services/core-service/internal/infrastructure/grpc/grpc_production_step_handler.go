@@ -42,6 +42,14 @@ func productionStepRateToProto(r *domain.ProductionStepRate) *pb.ProductionStepR
 	}
 }
 
+// productionStepPriceToProto presents a step's labor or overhead rate, stored as a currency rate, as a price.
+func productionStepPriceToProto(r *domain.ProductionStepRate) *pb.UnitPrice {
+	if r == nil {
+		return nil
+	}
+	return unitPriceToProto(r.Value, r.DenominatorUnit.ID)
+}
+
 func productionToProto(p *domain.Production) *pb.ProductionInfo {
 	if p == nil {
 		return nil
@@ -72,9 +80,9 @@ func productionStepToProto(s *domain.ProductionStep) *pb.ProductionStepInfo {
 		Name:           s.Name,
 		LevelingFactor: s.LevelingFactor,
 		Allowances:     s.Allowances,
-		LaborRate:      productionStepRateToProto(s.LaborRate),
+		LaborRate:      productionStepPriceToProto(s.LaborRate),
 		LaborTime:      productionStepRateToProto(s.LaborTime),
-		OverheadRate:   productionStepRateToProto(s.OverheadRate),
+		OverheadRate:   productionStepPriceToProto(s.OverheadRate),
 		Production:     productionToProto(s.Production),
 		CreatedAt:      timestamppb.New(s.CreatedAt),
 		UpdatedAt:      timestamppb.New(s.UpdatedAt),
@@ -220,6 +228,18 @@ func (h *productionStepGRPCHandler) CreateProductionStep(ctx context.Context, re
 		}
 	}
 
+	money := newMoneyRows(ctx)
+	var laborRate, overheadRate domain.CreateRateParams
+	if r := money.rate("labor_rate", req.LaborRate); r != nil {
+		laborRate = *r
+	}
+	if r := money.rate("overhead_rate", req.OverheadRate); r != nil {
+		overheadRate = *r
+	}
+	if apiErr := money.err(); apiErr != nil {
+		return nil, contracts.ConvertAPIErrorToGRPC(apiErr)
+	}
+
 	step, apiErr := h.productionStepSvc.CreateProductionStep(ctx, domain.CreateProductionStepParams{
 		Name:              req.Name,
 		Notes:             req.Notes,
@@ -227,21 +247,13 @@ func (h *productionStepGRPCHandler) CreateProductionStep(ctx context.Context, re
 		Allowances:        req.Allowances,
 		ScanningStationID: req.ScanningStationId,
 		DepartmentID:      req.DepartmentId,
-		LaborRate: domain.CreateRateParams{
-			Value:             req.LaborRate.Value,
-			NumeratorUnitID:   req.LaborRate.NumeratorUnitId,
-			DenominatorUnitID: req.LaborRate.DenominatorUnitId,
-		},
+		LaborRate:         laborRate,
 		LaborTime: domain.CreateRateParams{
-			Value:             req.LaborTime.Value,
-			NumeratorUnitID:   req.LaborTime.NumeratorUnitId,
-			DenominatorUnitID: req.LaborTime.DenominatorUnitId,
+			Value:             req.GetLaborTime().GetValue(),
+			NumeratorUnitID:   req.GetLaborTime().GetUnitId(),
+			DenominatorUnitID: req.GetLaborTime().GetPerUnitId(),
 		},
-		OverheadRate: domain.CreateRateParams{
-			Value:             req.OverheadRate.Value,
-			NumeratorUnitID:   req.OverheadRate.NumeratorUnitId,
-			DenominatorUnitID: req.OverheadRate.DenominatorUnitId,
-		},
+		OverheadRate: overheadRate,
 		Production: domain.CreateProductionParams{
 			ItemID:         req.Production.ItemId,
 			QuantityValue:  req.Production.QuantityValue,

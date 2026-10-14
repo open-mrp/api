@@ -29,14 +29,6 @@ func init() {
 				Populate:    populateResponsibleUserOnTransaction,
 			},
 			{Key: "allocations", Cardinality: include.CardinalityList, Target: constants.ObjectTypeTransactionAllocation, ExtractRefs: extractAllocationRefsFromTransaction, Populate: populateAllocationsOnTransaction},
-			{
-				// The amount is already on the transaction — this exists so a caller can reach
-				// through it to the currency it is counted in.
-				Key:         "amount",
-				Target:      constants.ObjectTypeQuantity,
-				Cardinality: include.CardinalityOnePtr,
-				ExtractRefs: extractAmountRefFromTransaction,
-			},
 		},
 	})
 	// The transactions LIST returns TransactionSummary (a distinct resource), so it needs its own definition — the detail's customer funcs cast to *TransactionDetail.
@@ -139,12 +131,4 @@ func extractAllocationRefsFromTransaction(_ context.Context, parent any) []any {
 		refs[i] = &tx.Allocations.Data[i]
 	}
 	return refs
-}
-
-func extractAmountRefFromTransaction(_ context.Context, parent any) []any {
-	tx := parent.(*apiresource.TransactionDetail)
-	if tx.Amount == nil {
-		return nil
-	}
-	return []any{tx.Amount}
 }

@@ -40,8 +40,8 @@ type UpdateAccountPriceRequest struct {
 var sampleUpdateAccountPriceRequest = &UpdateAccountPriceRequest{
 	Rate: field.Some(apirequest.RateInput{
 		Value:             "30.000000000000000000000000000000",
-		NumeratorUnitID:   apiresource.SampleUnitID,
-		DenominatorUnitID: apiresource.SampleUnitID,
+		UnitID:    apiresource.SampleUnitID,
+		PerUnitID: apiresource.SampleUnitID,
 	}),
 }
 

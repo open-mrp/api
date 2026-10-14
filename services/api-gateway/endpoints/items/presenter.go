@@ -2,6 +2,8 @@ package itemep
 
 import (
 	"context"
+
+	"github.com/open-mrp/api/services/api-gateway/internal/resourceloaders"
 	"github.com/open-mrp/apikit/include"
 
 	grpcutil "github.com/open-mrp/api/services/api-gateway/internal/grpc"
@@ -9,52 +11,6 @@ import (
 	"github.com/open-mrp/api/shared/constants"
 	pb "github.com/open-mrp/api/shared/proto/core"
 )
-
-func lightRatePresenter(r *pb.RateInfo) *apiresource.Rate {
-	if r == nil {
-		return nil
-	}
-	normalizedValue := apiresource.NormalizeRateValue(r.Value)
-	return &apiresource.Rate{
-		ID:     r.Id,
-		Object: constants.ObjectTypeRate,
-		Value:  normalizedValue,
-		NumeratorUnit: &apiresource.Unit{
-			ID:                r.NumeratorUnitId,
-			Object:            constants.ObjectTypeUnit,
-			Name:              r.NumeratorUnitName,
-			Abbreviation:      r.NumeratorUnitAbbreviation,
-			Type:              constants.UnitType(r.NumeratorUnitType),
-			RatioNumerator:    r.NumeratorUnitRatioNumerator,
-			RatioDenominator:  r.NumeratorUnitRatioDenominator,
-			OffsetNumerator:   r.NumeratorUnitOffsetNumerator,
-			OffsetDenominator: r.NumeratorUnitOffsetDenominator,
-			CreatedAt:         grpcutil.TimestampToTime(r.NumeratorUnitCreatedAt),
-			UpdatedAt:         grpcutil.TimestampToTime(r.NumeratorUnitUpdatedAt),
-		},
-		DenominatorUnit: &apiresource.Unit{
-			ID:                r.DenominatorUnitId,
-			Object:            constants.ObjectTypeUnit,
-			Name:              r.DenominatorUnitName,
-			Abbreviation:      r.DenominatorUnitAbbreviation,
-			Type:              constants.UnitType(r.DenominatorUnitType),
-			RatioNumerator:    r.DenominatorUnitRatioNumerator,
-			RatioDenominator:  r.DenominatorUnitRatioDenominator,
-			OffsetNumerator:   r.DenominatorUnitOffsetNumerator,
-			OffsetDenominator: r.DenominatorUnitOffsetDenominator,
-			CreatedAt:         grpcutil.TimestampToTime(r.DenominatorUnitCreatedAt),
-			UpdatedAt:         grpcutil.TimestampToTime(r.DenominatorUnitUpdatedAt),
-		},
-		DisplayValue: apiresource.FormatRateDisplayValue(
-			normalizedValue,
-			r.NumeratorUnitAbbreviation,
-			r.NumeratorUnitType,
-			r.DenominatorUnitAbbreviation,
-		),
-		CreatedAt: grpcutil.TimestampToTime(r.CreatedAt),
-		UpdatedAt: grpcutil.TimestampToTime(r.UpdatedAt),
-	}
-}
 
 func lightItemCategoryPresenter(c *pb.ItemCategoryInfo) *apiresource.ItemCategory {
 	if c == nil {
@@ -112,9 +68,9 @@ func ItemPresenter(i *pb.ItemInfo) apiresource.Item {
 		Notes:        i.Notes,
 		ItemTypeCode: constants.ItemTypeCode(i.ItemTypeCode),
 		Category:     lightItemCategoryPresenter(i.Category),
-		UnitValue:    lightRatePresenter(i.UnitValue),
-		UnitCost:     lightRatePresenter(i.UnitCost),
-		BurnRate:     lightRatePresenter(i.BurnRate),
+		UnitValue:    resourceloaders.UnitPriceFromProto(i.UnitValue),
+		UnitCost:     resourceloaders.UnitPriceFromProto(i.UnitCost),
+		BurnRate:     resourceloaders.RateFromProto(i.BurnRate),
 		CreatedAt:    grpcutil.TimestampToTime(i.CreatedAt),
 		UpdatedAt:    grpcutil.TimestampToTime(i.UpdatedAt),
 	}
@@ -159,17 +115,14 @@ func ItemInventoryUnitIDs(resp *pb.GetItemInventoryResponse) []string {
 	return ids
 }
 
-// The four inventory figures are netted out of the ledger at read time, so each is a computed
-// quantity: there is no row behind it to carry an id, but it still arrives with its unit.
+// The four inventory figures are netted out of the ledger at read time; each arrives with its unit.
 func stashItemInventoryQuantity(meta *include.LoadMeta, key string, q *pb.QuantityInfo, units map[string]*apiresource.Unit) {
 	if q == nil {
 		return
 	}
-	quantity := &apiresource.ComputedQuantity{
-		Object:       constants.ObjectTypeComputedQuantity,
-		Value:        apiresource.NormalizeQuantityValue(q.Value, q.UnitType),
-		DisplayValue: apiresource.FormatDisplayValue(q.Value, q.UnitAbbreviation, q.UnitType),
-		Unit:         units[q.UnitId],
+	quantity := &apiresource.Quantity{
+		Value: apiresource.NormalizeQuantityValue(q.Value, q.UnitType),
+		Unit:  units[q.UnitId],
 	}
 	meta.Set(constants.ObjectTypeItemInventory, "singleton", key, quantity)
 }
@@ -239,8 +192,8 @@ func BulkReconcileItemsPresenter(resp *pb.BulkReconcileItemsResponse, units map[
 		reconciled[i] = apiresource.ReconciledItemResult{
 			Object:           constants.ObjectTypeReconciledItemResult,
 			Item:             itemEntity(r.ItemId, r.Sku),
-			PreviousQuantity: reconciledQuantity(r.PreviousMeasure, r.UnitAbbreviation, units[r.UnitId]),
-			NewQuantity:      reconciledQuantity(r.NewMeasure, r.UnitAbbreviation, units[r.UnitId]),
+			PreviousQuantity: reconciledQuantity(r.PreviousMeasure, units[r.UnitId]),
+			NewQuantity:      reconciledQuantity(r.NewMeasure, units[r.UnitId]),
 		}
 	}
 
@@ -272,12 +225,7 @@ func itemEntity(id, sku string) *apiresource.Entity {
 	return apiresource.NewEntity(id, constants.ObjectTypeItem, &name, nil)
 }
 
-// reconciledQuantity presents a reconciled measure, which is computed against the ledger rather than stored, so it carries no id — but it does carry the unit it is counted in.
-func reconciledQuantity(value, unitAbbreviation string, unit *apiresource.Unit) *apiresource.ComputedQuantity {
-	return &apiresource.ComputedQuantity{
-		Object:       constants.ObjectTypeComputedQuantity,
-		Value:        value,
-		DisplayValue: apiresource.FormatDisplayValue(value, unitAbbreviation, ""),
-		Unit:         unit,
-	}
+// reconciledQuantity presents a reconciled measure, computed against the ledger, with the unit it is counted in.
+func reconciledQuantity(value string, unit *apiresource.Unit) *apiresource.Quantity {
+	return &apiresource.Quantity{Value: value, Unit: unit}
 }

@@ -252,6 +252,8 @@ func invoiceLineToProto(l *domain.InvoiceLine) *pb.InvoiceLineInfo {
 		UpdatedAt:                  timestamppb.New(l.UpdatedAt),
 	}
 
+	info.UnitPrice = unitPriceToProto(l.UnitPriceValue, l.UnitPriceDenUnit)
+
 	return info
 }
 

@@ -138,7 +138,7 @@ type InvoiceLine struct {
 	// Quantity billed on this line.
 	Quantity *Quantity `json:"quantity" validate:"required"`
 	// Price per unit billed on this line, carried over from the sales order line.
-	UnitPrice *Rate `json:"unit_price" validate:"required"`
+	UnitPrice *UnitPrice `json:"unit_price" validate:"required"`
 	// Sales order line this invoice line bills against.
 	//
 	// Expand with `lines.order_line` for the sold `product_sku` and the ordered quantities, and with `lines.order_line.product` for the product itself. To show only what was billed, expand `lines.item` instead.
@@ -155,13 +155,10 @@ var SampleInvoiceLine = &InvoiceLine{
 	ID:     SampleInvoiceLineID,
 	Object: constants.ObjectTypeInvoiceLine,
 	Quantity: &Quantity{
-		ID:           SampleQuantityID,
-		Object:       constants.ObjectTypeQuantity,
-		Value:        "100.000000000000000000000000000000",
-		DisplayValue: "100 lb",
-		Unit:         newSampleUnit(SampleUnitName, SampleUnitAbbreviation, constants.UnitTypeMass),
+		Value: "100.000000000000000000000000000000",
+		Unit:  newSampleUnit(SampleUnitName, SampleUnitAbbreviation, constants.UnitTypeMass),
 	},
-	UnitPrice: SampleRate,
+	UnitPrice: SampleUnitPrice,
 	OrderLine: SampleSalesOrderLine,
 	Item:      SampleItem,
 	CreatedAt: timeutil.TimestampToTime(sampleCreatedAtTimestamp),
@@ -202,11 +199,8 @@ var SampleInvoiceAllocation = &InvoiceAllocation{
 	Transaction: SampleTransactionDetail,
 	Note:        &sampleInvoiceAllocationNote,
 	Amount: &Quantity{
-		ID:           SampleQuantityID,
-		Object:       constants.ObjectTypeQuantity,
-		Value:        "500.000000000000000000000000000000",
-		DisplayValue: "$500.00",
-		Unit:         newSampleUnit("US Dollar", "$", constants.UnitTypeCurrency),
+		Value: "500.000000000000000000000000000000",
+		Unit:  newSampleUnit("US Dollar", "$", constants.UnitTypeCurrency),
 	},
 	Settlement: &AllocationSettlement{ID: SampleSettlementID, Object: constants.ObjectTypeSettlement, Number: "1"},
 	CreatedAt:  timeutil.TimestampToTime(sampleCreatedAtTimestamp),

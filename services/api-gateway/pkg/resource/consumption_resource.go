@@ -21,11 +21,11 @@ type Consumption struct {
 	// Resource type identifier.
 	Object constants.ObjectType `json:"object" validate:"required,enum=consumption"`
 	// Quantity of the material consumed by the production step.
-	Quantity *Quantity `json:"quantity" expandable:"true"`
+	Quantity *Quantity `json:"quantity" validate:"required"`
 	// Quantity of the material expected to be lost as waste.
 	//
 	// Tracked separately from the consumed quantity, but added to it when material requirements are worked out, since the waste has to be bought as well.
-	WasteQuantity *Quantity `json:"waste_quantity" expandable:"true"`
+	WasteQuantity *Quantity `json:"waste_quantity" validate:"required"`
 	// The item consumed by the production step.
 	ConsumedItem *Item `json:"consumed_item" expandable:"true"`
 	// Instructions for how this material is consumed.

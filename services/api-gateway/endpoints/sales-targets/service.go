@@ -7,6 +7,7 @@ import (
 
 	"github.com/open-mrp/api/services/api-gateway/internal/domain"
 	grpcutil "github.com/open-mrp/api/services/api-gateway/internal/grpc"
+	"github.com/open-mrp/api/services/api-gateway/internal/resourceloaders"
 	apiresource "github.com/open-mrp/api/services/api-gateway/pkg/resource"
 	"github.com/open-mrp/api/shared/constants"
 	pb "github.com/open-mrp/api/shared/proto/core"
@@ -81,11 +82,10 @@ func (m *salesTargetSvcImpl) ListSalesTargets(ctx context.Context, req *ListSale
 
 func (m *salesTargetSvcImpl) CreateSalesTarget(ctx context.Context, req *CreateSalesTargetRequest) (*apiresource.SalesTarget, *apierror.APIError) {
 	pbReq := &pb.CreateSalesTargetRequest{
-		SalesRepId:   req.SalesRepID,
-		StartDate:    req.StartDate.Format(time.RFC3339),
-		EndDate:      req.EndDate.Format(time.RFC3339),
-		AmountValue:  req.AmountValue,
-		AmountUnitId: req.AmountUnitID,
+		SalesRepId: req.SalesRepID,
+		StartDate:  req.StartDate.Format(time.RFC3339),
+		EndDate:    req.EndDate.Format(time.RFC3339),
+		Amount:     req.Amount.ToProto(),
 	}
 
 	resp, apiErr := grpcutil.CallRPC(ctx, salesTargetSvcTracer, "service.sales_targets.create", domain.ServiceName,
@@ -102,12 +102,11 @@ func (m *salesTargetSvcImpl) CreateSalesTarget(ctx context.Context, req *CreateS
 
 func (m *salesTargetSvcImpl) UpsertSalesTarget(ctx context.Context, req *UpsertSalesTargetRequest) (*apiresource.SalesTarget, *apierror.APIError) {
 	pbReq := &pb.UpsertSalesTargetRequest{
-		TargetId:     req.TargetID,
-		SalesRepId:   req.SalesRepID,
-		StartDate:    req.StartDate.Format(time.RFC3339),
-		EndDate:      req.EndDate.Format(time.RFC3339),
-		AmountValue:  req.AmountValue,
-		AmountUnitId: req.AmountUnitID,
+		TargetId:   req.TargetID,
+		SalesRepId: req.SalesRepID,
+		StartDate:  req.StartDate.Format(time.RFC3339),
+		EndDate:    req.EndDate.Format(time.RFC3339),
+		Amount:     req.Amount.ToProto(),
 	}
 
 	resp, apiErr := grpcutil.CallRPC(ctx, salesTargetSvcTracer, "service.sales_targets.upsert", domain.ServiceName,
@@ -120,12 +119,6 @@ func (m *salesTargetSvcImpl) UpsertSalesTarget(ctx context.Context, req *UpsertS
 
 	result := salesTargetFromProto(resp.SalesTarget)
 	return &result, nil
-}
-
-// parseRFC3339 tolerates an unset timestamp rather than failing the whole read; the caller's own required-field validation is what surfaces a genuinely missing one.
-func parseRFC3339(v string) time.Time {
-	t, _ := time.Parse(time.RFC3339, v)
-	return t
 }
 
 func salesTargetFromProto(st *pb.SalesTargetProto) apiresource.SalesTarget {
@@ -142,26 +135,8 @@ func salesTargetFromProto(st *pb.SalesTargetProto) apiresource.SalesTarget {
 		ID:     st.Id,
 		Object: constants.ObjectTypeSalesTarget,
 		// A reference, not a stub record: the sales rep id identifies an account user, and a partially-filled AccountUser would serialize with zero timestamps that read as real values.
-		SalesRep: apiresource.NewEntity(st.SalesRepId, constants.ObjectTypeAccountUser, nil, nil),
-		Amount: &apiresource.Quantity{
-			ID:           st.AmountId,
-			Object:       constants.ObjectTypeQuantity,
-			Value:        apiresource.NormalizeQuantityValue(st.AmountValue, st.AmountUnitType),
-			DisplayValue: apiresource.FormatDisplayValue(st.AmountValue, st.AmountUnitAbbreviation, st.AmountUnitType),
-			Unit: &apiresource.Unit{
-				ID:                st.AmountUnitId,
-				Object:            constants.ObjectTypeUnit,
-				Name:              st.AmountUnitName,
-				Abbreviation:      st.AmountUnitAbbreviation,
-				Type:              constants.UnitType(st.AmountUnitType),
-				RatioNumerator:    st.AmountUnitRatioNumerator,
-				RatioDenominator:  st.AmountUnitRatioDenominator,
-				OffsetNumerator:   st.AmountUnitOffsetNumerator,
-				OffsetDenominator: st.AmountUnitOffsetDenominator,
-				CreatedAt:         parseRFC3339(st.AmountUnitCreatedAt),
-				UpdatedAt:         parseRFC3339(st.AmountUnitUpdatedAt),
-			},
-		},
+		SalesRep:  apiresource.NewEntity(st.SalesRepId, constants.ObjectTypeAccountUser, nil, nil),
+		Amount:    resourceloaders.MoneyFromProto(st.Amount),
 		StartAt:   startAt,
 		EndAt:     endAt,
 		CreatedAt: createdAt,

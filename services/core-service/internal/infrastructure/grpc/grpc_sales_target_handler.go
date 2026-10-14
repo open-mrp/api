@@ -53,12 +53,21 @@ func (h *gRPCHandler) CreateSalesTarget(ctx context.Context, req *pb.CreateSales
 		return nil, contracts.ConvertAPIErrorToGRPC(apierror.NewFieldError("ends_at", apierror.CodeInvalidFormat, "Invalid date format for ends_at."))
 	}
 
+	money := newMoneyRows(ctx)
+	amount := money.quantity("amount", req.Amount)
+	if apiErr := money.err(); apiErr != nil {
+		return nil, contracts.ConvertAPIErrorToGRPC(apiErr)
+	}
+	if amount == nil {
+		return nil, contracts.ConvertAPIErrorToGRPC(apierror.NewMissingFieldError("amount", "amount is required."))
+	}
+
 	target, apiErr := h.salesTargetSvc.CreateSalesTarget(ctx, domain.CreateSalesTargetParams{
 		SalesRepID:   req.SalesRepId,
 		StartDate:    startDate,
 		EndDate:      endDate,
-		AmountValue:  req.AmountValue,
-		AmountUnitID: req.AmountUnitId,
+		AmountValue:  amount.Value,
+		AmountUnitID: amount.UnitID,
 	})
 	if apiErr != nil {
 		return nil, contracts.ConvertAPIErrorToGRPC(apiErr)
@@ -83,13 +92,22 @@ func (h *gRPCHandler) UpsertSalesTarget(ctx context.Context, req *pb.UpsertSales
 		return nil, contracts.ConvertAPIErrorToGRPC(apierror.NewFieldError("ends_at", apierror.CodeInvalidFormat, "Invalid date format for ends_at."))
 	}
 
+	money := newMoneyRows(ctx)
+	amount := money.quantity("amount", req.Amount)
+	if apiErr := money.err(); apiErr != nil {
+		return nil, contracts.ConvertAPIErrorToGRPC(apiErr)
+	}
+	if amount == nil {
+		return nil, contracts.ConvertAPIErrorToGRPC(apierror.NewMissingFieldError("amount", "amount is required."))
+	}
+
 	target, apiErr := h.salesTargetSvc.UpsertSalesTarget(ctx, domain.UpsertSalesTargetParams{
 		TargetID:     req.TargetId,
 		SalesRepID:   req.SalesRepId,
 		StartDate:    startDate,
 		EndDate:      endDate,
-		AmountValue:  req.AmountValue,
-		AmountUnitID: req.AmountUnitId,
+		AmountValue:  amount.Value,
+		AmountUnitID: amount.UnitID,
 	})
 	if apiErr != nil {
 		return nil, contracts.ConvertAPIErrorToGRPC(apiErr)
@@ -113,6 +131,7 @@ func salesTargetToProto(t *domain.SalesTarget) *pb.SalesTargetProto {
 		AmountValue:  t.AmountValue,
 		AmountUnitId: t.AmountUnitID,
 		AmountId:     t.AmountID,
+		Amount:       moneyToProto(t.AmountValue),
 		CreatedAt:    t.CreatedAt.Format(time.RFC3339),
 		UpdatedAt:    t.UpdatedAt.Format(time.RFC3339),
 

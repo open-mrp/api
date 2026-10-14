@@ -44,7 +44,7 @@ type ProductionCost struct {
 	// Labor time, after each step's leveling factor and allowances, in `time_unit`.
 	LaborTime string `json:"labor_time" validate:"required" format:"decimal"`
 	// What was produced, in the base unit of its dimension: one entry per dimension, so a report mixing pieces and weights states each rather than adding them.
-	Produced *List[ComputedQuantity] `json:"produced" validate:"required"`
+	Produced *List[Quantity] `json:"produced" validate:"required"`
 }
 
 // ProductionCostTotals is what a production cost report's batches cost, by the kind of output they went into.
@@ -119,12 +119,7 @@ func sampleProductionCost(materials, labor, overhead, total, laborTime, produced
 		Overhead:  overhead,
 		Total:     total,
 		LaborTime: laborTime,
-		Produced: NewList([]ComputedQuantity{{
-			Object:       constants.ObjectTypeComputedQuantity,
-			Value:        produced,
-			DisplayValue: produced + " ea",
-			Unit:         SampleEachUnit,
-		}}, PageInfo{}),
+		Produced:  NewList([]Quantity{{Value: produced, Unit: SampleEachUnit}}, PageInfo{}),
 	}
 }
 

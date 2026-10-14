@@ -283,37 +283,16 @@ func invoiceLineFromProto(ctx context.Context, l *pb.InvoiceLineInfo) apiresourc
 	ts := grpcutil.TimestampToTime(l.CreatedAt)
 
 	line := apiresource.InvoiceLine{
-		ID:     l.Id,
-		Object: constants.ObjectTypeInvoiceLine,
-		Quantity: &apiresource.Quantity{
-			ID:           l.QuantityId,
-			Object:       constants.ObjectTypeQuantity,
-			Value:        l.QuantityValue,
-			DisplayValue: apiresource.FormatDisplayValue(l.QuantityValue, l.QuantityUnitAbbreviation, ""),
-			// Unit left nil: expandable, loaded with real data via ?include=; never fabricated.
-		},
-		UnitPrice: &apiresource.Rate{
-			ID:     l.UnitPriceId,
-			Object: constants.ObjectTypeRate,
-			Value:  l.UnitPriceValue,
-			// numerator_unit / denominator_unit left nil: expandable, loaded real via ?include=.
-			DisplayValue: apiresource.FormatRateDisplayValue(l.UnitPriceValue, "$", string(constants.UnitTypeCurrency), l.QuantityUnitAbbreviation),
-			CreatedAt:    ts,
-			UpdatedAt:    ts,
-		},
+		ID:        l.Id,
+		Object:    constants.ObjectTypeInvoiceLine,
+		Quantity:  apiresource.NewQuantity(l.QuantityValue, l.QuantityUnitId),
+		UnitPrice: resourceloaders.UnitPriceFromProto(l.UnitPrice),
 		// OrderLine left nil: expandable, populated from the stashed pre-built object via ?include=lines.order_line.
 		CreatedAt: ts,
 		UpdatedAt: grpcutil.TimestampToTime(l.UpdatedAt),
 	}
 
 	meta := include.GetLoadMeta(ctx)
-
-	// The quantity and the price ride on the line, but the units they are counted in are records of
-	// their own — stashed as ids so `lines.quantity.unit` and the price's two units resolve in full,
-	// rather than the line shipping a unit carrying nothing but an abbreviation.
-	meta.Set(constants.ObjectTypeQuantity, l.QuantityId, "unit_id", l.QuantityUnitId)
-	meta.Set(constants.ObjectTypeRate, l.UnitPriceId, "numerator_unit_id", l.UnitPriceNumeratorUnitId)
-	meta.Set(constants.ObjectTypeRate, l.UnitPriceId, "denominator_unit_id", l.UnitPriceDenominatorUnitId)
 
 	// order_line is a line-level expandable reference. There is no standalone
 	// sales-order-line loader, so build a pre-built, new-shape SalesOrderLine from
@@ -359,10 +338,6 @@ func invoiceAllocationFromProto(meta *include.LoadMeta, a *pb.InvoiceAllocationI
 		return apiresource.InvoiceAllocation{}
 	}
 
-	// The currency the amount is counted in is a record of its own — stashed as an id so
-	// `allocations.amount.unit` resolves it in full rather than the allocation shipping a unit
-	// carrying nothing but an abbreviation.
-	meta.Set(constants.ObjectTypeQuantity, a.AmountId, "unit_id", a.AmountUnitId)
 	meta.Set(constants.ObjectTypeInvoiceAllocation, a.Id, "transaction_id", a.TransactionId)
 
 	_, settlement := apiresource.AllocationReferences(nil, nil, a.SettlementId, a.SettlementNumber)
@@ -370,16 +345,10 @@ func invoiceAllocationFromProto(meta *include.LoadMeta, a *pb.InvoiceAllocationI
 		ID:         a.Id,
 		Object:     constants.ObjectTypeInvoiceAllocation,
 		Settlement: settlement,
-		Amount: &apiresource.Quantity{
-			ID:           a.AmountId,
-			Object:       constants.ObjectTypeQuantity,
-			Value:        a.AmountValue,
-			DisplayValue: apiresource.FormatDisplayValue(a.AmountValue, a.AmountUnitAbbreviation, string(constants.UnitTypeCurrency)),
-			// Unit left nil: expandable, loaded with real data via ?include=; never fabricated.
-		},
-		Note:      a.Note,
-		CreatedAt: grpcutil.TimestampToTime(a.CreatedAt),
-		UpdatedAt: grpcutil.TimestampToTime(a.UpdatedAt),
+		Amount:     apiresource.NewQuantity(a.AmountValue, a.AmountUnitId),
+		Note:       a.Note,
+		CreatedAt:  grpcutil.TimestampToTime(a.CreatedAt),
+		UpdatedAt:  grpcutil.TimestampToTime(a.UpdatedAt),
 	}
 }
 

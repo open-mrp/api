@@ -28,63 +28,18 @@ func init() {
 			// (quantity_ordered.unit, unit_price.numerator_unit, ...) resolve via LoadUnits —
 			// the unit FKs are stashed on the Quantity/Rate in stashSalesOrderLineMeta. Mirrors
 			// how customer.credit_limit (also a Quantity) enables credit_limit.unit.
-			{Key: "quantity_ordered", Target: constants.ObjectTypeQuantity, Cardinality: include.CardinalityOnePtr, ExtractRefs: extractQuantityOrderedRefFromSOLine, Populate: populateQuantityOrderedOnSOLine},
-			{Key: "unit_price", Target: constants.ObjectTypeRate, Cardinality: include.CardinalityOnePtr, ExtractRefs: extractUnitPriceRefFromSOLine, Populate: populateUnitPriceOnSOLine},
-			{Key: "unit_cost", Target: constants.ObjectTypeRate, Cardinality: include.CardinalityOnePtr, ExtractRefs: extractUnitCostRefFromSOLine, Populate: populateUnitCostOnSOLine},
+			valueShapeSub(constants.ObjectTypeSalesOrderLine, "quantity_ordered", func(p any) string { return p.(*apiresource.SalesOrderLine).ID }, func(p, v any) {
+				p.(*apiresource.SalesOrderLine).QuantityOrdered = v.(*apiresource.Quantity)
+			}),
+			valueShapeSub(constants.ObjectTypeSalesOrderLine, "unit_price", func(p any) string { return p.(*apiresource.SalesOrderLine).ID }, func(p, v any) {
+				p.(*apiresource.SalesOrderLine).UnitPrice = v.(*apiresource.UnitPrice)
+			}),
+			valueShapeSub(constants.ObjectTypeSalesOrderLine, "unit_cost", func(p any) string { return p.(*apiresource.SalesOrderLine).ID }, func(p, v any) {
+				p.(*apiresource.SalesOrderLine).UnitCost = v.(*apiresource.UnitPrice)
+			}),
 			{Key: "totals", Populate: populateTotalsOnSOLine},
 		},
 	})
-}
-
-func extractQuantityOrderedRefFromSOLine(_ context.Context, parent any) []any {
-	l := parent.(*apiresource.SalesOrderLine)
-	if l.QuantityOrdered == nil {
-		return nil
-	}
-	return []any{l.QuantityOrdered}
-}
-
-func extractUnitPriceRefFromSOLine(_ context.Context, parent any) []any {
-	l := parent.(*apiresource.SalesOrderLine)
-	if l.UnitPrice == nil {
-		return nil
-	}
-	return []any{l.UnitPrice}
-}
-
-func extractUnitCostRefFromSOLine(_ context.Context, parent any) []any {
-	l := parent.(*apiresource.SalesOrderLine)
-	if l.UnitCost == nil {
-		return nil
-	}
-	return []any{l.UnitCost}
-}
-
-func populateQuantityOrderedOnSOLine(ctx context.Context, parent any, _ map[string]any) {
-	l := parent.(*apiresource.SalesOrderLine)
-	v, ok := include.GetLoadMeta(ctx).Get(constants.ObjectTypeSalesOrderLine, l.ID, "quantity_ordered")
-	if !ok {
-		return
-	}
-	l.QuantityOrdered = v.(*apiresource.Quantity)
-}
-
-func populateUnitPriceOnSOLine(ctx context.Context, parent any, _ map[string]any) {
-	l := parent.(*apiresource.SalesOrderLine)
-	v, ok := include.GetLoadMeta(ctx).Get(constants.ObjectTypeSalesOrderLine, l.ID, "unit_price")
-	if !ok {
-		return
-	}
-	l.UnitPrice = v.(*apiresource.Rate)
-}
-
-func populateUnitCostOnSOLine(ctx context.Context, parent any, _ map[string]any) {
-	l := parent.(*apiresource.SalesOrderLine)
-	v, ok := include.GetLoadMeta(ctx).Get(constants.ObjectTypeSalesOrderLine, l.ID, "unit_cost")
-	if !ok {
-		return
-	}
-	l.UnitCost = v.(*apiresource.Rate)
 }
 
 func populateTotalsOnSOLine(ctx context.Context, parent any, _ map[string]any) {

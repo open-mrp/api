@@ -296,8 +296,8 @@ func TestValidateCostDenominatorInUnitGroup(t *testing.T) {
 			if apiErr.Code != tt.wantCode {
 				t.Errorf("error code = %v, want %v", apiErr.Code, tt.wantCode)
 			}
-			if apiErr.Param != "unit_cost.denominator_unit_id" {
-				t.Errorf("error param = %q, want unit_cost.denominator_unit_id", apiErr.Param)
+			if apiErr.Param != "unit_cost.per_unit_id" {
+				t.Errorf("error param = %q, want unit_cost.per_unit_id", apiErr.Param)
 			}
 		})
 	}

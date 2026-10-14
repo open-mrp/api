@@ -52,6 +52,7 @@ SELECT
     ic.name AS category_name,
     pl.name AS product_line,
     bu_unit.abbreviation AS unit,
+    bu_unit.id AS unit_id,
     -- quantityInvoiced: convert invoice line quantity to base unit
     CAST(
         (
@@ -751,6 +752,7 @@ SELECT
         0
     ) AS DECIMAL(65,30)) AS total_quantity,
     COALESCE(bu.abbreviation, '') AS unit_abbreviation,
+    COALESCE(bu.id, '') AS unit_id,
     COALESCE(ug.unit_type_code, '') AS unit_type,
     CAST(COALESCE(bu.ratio_numerator / bu.ratio_denominator, 1) AS DECIMAL(65,30)) AS base_ratio
 FROM product_line pl
@@ -807,6 +809,7 @@ SELECT STRAIGHT_JOIN
     it.sku AS item_sku,
     it.description AS item_description,
     op_q.value AS order_point_value,
+    op_u.id AS order_point_unit_id,
     op_u.name AS order_point_unit_name,
     op_u.abbreviation AS order_point_unit_abbreviation,
     op_u.unit_dimension_code AS order_point_unit_type,
@@ -815,11 +818,13 @@ SELECT STRAIGHT_JOIN
     op_u.offset_numerator AS order_point_unit_offset_numerator,
     op_u.offset_denominator AS order_point_unit_offset_denominator,
     lt_q.value AS lead_time_value,
+    lt_u.id AS lead_time_unit_id,
     lt_u.name AS lead_time_unit_name,
     lt_u.abbreviation AS lead_time_unit_abbreviation,
     lt_u.unit_dimension_code AS lead_time_unit_type,
     ug.id AS unit_group_id,
     ug.name AS unit_group_name,
+    bu.id AS base_unit_id,
     bu.name AS base_unit_name,
     bu.abbreviation AS base_unit_abbreviation,
     bu.unit_dimension_code AS base_unit_type,

@@ -3,8 +3,9 @@ package salesorderep
 import (
 	"context"
 	"fmt"
-	"github.com/open-mrp/apikit/include"
 	"time"
+
+	"github.com/open-mrp/apikit/include"
 
 	productionrunep "github.com/open-mrp/api/services/api-gateway/endpoints/production-runs"
 	"github.com/open-mrp/api/services/api-gateway/internal/domain"
@@ -186,11 +187,7 @@ func (m *salesOrderSvcImpl) CreateSalesOrder(ctx context.Context, req *CreateSal
 			QuantityValue:      l.Quantity.Value,
 			QuantityUnitId:     l.Quantity.UnitID,
 		}
-		if up, ok := l.UnitPrice.Value(); ok {
-			line.UnitPriceValue = &up.Value
-			line.UnitPriceNumeratorUnitId = &up.NumeratorUnitID
-			line.UnitPriceDenominatorUnitId = &up.DenominatorUnitID
-		}
+		line.UnitPrice = apirequest.OptionalUnitPriceToProto(l.UnitPrice)
 		lines[i] = line
 	}
 
@@ -418,15 +415,9 @@ func (m *salesOrderSvcImpl) QuoteSalesOrderPrices(ctx context.Context, req *Quot
 		return nil, apiErr
 	}
 
-	unitIDs := make([]string, 0, len(resp.Lines)*2)
 	productIDs := make([]string, 0, len(resp.Lines))
 	for _, l := range resp.Lines {
-		unitIDs = append(unitIDs, l.UnitPriceNumeratorUnitId, l.UnitPriceDenominatorUnitId)
 		productIDs = append(productIDs, l.ProductId)
-	}
-	units, apiErr := m.hydrateQuoteUnits(ctx, unitIDs...)
-	if apiErr != nil {
-		return nil, apiErr
 	}
 	products, apiErr := m.hydrateQuoteProducts(ctx, productIDs...)
 	if apiErr != nil {
@@ -438,7 +429,7 @@ func (m *salesOrderSvcImpl) QuoteSalesOrderPrices(ctx context.Context, req *Quot
 		out[i] = QuotedSalesOrderLine{
 			Object:    constants.ObjectTypeSalesOrderPriceQuoteLine,
 			Product:   products[l.ProductId],
-			UnitPrice: apiresource.NewComputedRate(l.UnitPriceValue, units[l.UnitPriceNumeratorUnitId], units[l.UnitPriceDenominatorUnitId]),
+			UnitPrice: resourceloaders.ExactUnitPriceFromProto(l.UnitPrice),
 		}
 	}
 
@@ -446,38 +437,6 @@ func (m *salesOrderSvcImpl) QuoteSalesOrderPrices(ctx context.Context, req *Quot
 		Object: constants.ObjectTypeSalesOrderPriceQuote,
 		Lines:  apiresource.NewList(out, apiresource.PageInfo{}),
 	}, nil
-}
-
-// hydrateQuoteUnits batch-loads fully presented Unit resources for the given unit IDs so quote rates present their units the same way persisted resources do. The core quote RPCs return only unit IDs, so the gateway resolves them here. Returns a lookup keyed by unit ID; a missing ID simply maps to nil.
-func (m *salesOrderSvcImpl) hydrateQuoteUnits(ctx context.Context, ids ...string) (map[string]*apiresource.Unit, *apierror.APIError) {
-	unique := make([]string, 0, len(ids))
-	seen := make(map[string]struct{}, len(ids))
-	for _, id := range ids {
-		if id == "" {
-			continue
-		}
-		if _, ok := seen[id]; ok {
-			continue
-		}
-		seen[id] = struct{}{}
-		unique = append(unique, id)
-	}
-	if len(unique) == 0 {
-		return map[string]*apiresource.Unit{}, nil
-	}
-
-	loaded, apiErr := resourceloaders.LoadUnits(ctx, unique)
-	if apiErr != nil {
-		return nil, apiErr
-	}
-
-	out := make(map[string]*apiresource.Unit, len(loaded))
-	for id, v := range loaded {
-		if u, ok := v.(*apiresource.Unit); ok {
-			out[id] = u
-		}
-	}
-	return out, nil
 }
 
 // hydrateQuoteProducts batch-loads fully presented Product resources for the given product IDs so quote lines present the priced product the same way persisted resources do. The core quote RPC returns only product IDs, so the gateway resolves them here. Returns a lookup keyed by product ID; a missing ID simply maps to nil.
@@ -523,14 +482,9 @@ func (m *salesOrderSvcImpl) QuoteSalesOrderFreight(ctx context.Context, req *Quo
 		return nil, apiErr
 	}
 
-	units, apiErr := m.hydrateQuoteUnits(ctx, resp.UnitPriceNumeratorUnitId, resp.UnitPriceDenominatorUnitId)
-	if apiErr != nil {
-		return nil, apiErr
-	}
-
 	return &QuoteSalesOrderFreightResponse{
 		Object:    constants.ObjectTypeSalesOrderFreightQuote,
-		UnitPrice: apiresource.NewComputedRate(resp.UnitPriceValue, units[resp.UnitPriceNumeratorUnitId], units[resp.UnitPriceDenominatorUnitId]),
+		UnitPrice: resourceloaders.ExactMoneyFromProto(resp.UnitPrice),
 	}, nil
 }
 
@@ -626,11 +580,7 @@ func (m *salesOrderSvcImpl) CreateSalesOrderLine(ctx context.Context, req *Creat
 	}
 	// Unit price is an optional override. Leave it empty when omitted so the core
 	// service prices the line from the product (unit cost is always server-derived).
-	if up, ok := req.UnitPrice.Value(); ok {
-		pbReq.UnitPriceValue = up.Value
-		pbReq.UnitPriceNumeratorUnitId = up.NumeratorUnitID
-		pbReq.UnitPriceDenominatorUnitId = up.DenominatorUnitID
-	}
+	pbReq.UnitPrice = apirequest.OptionalUnitPriceToProto(req.UnitPrice)
 
 	resp, apiErr := grpcutil.CallRPC(ctx, salesOrderEpSvcTracer, "service.sales_orders.create_line", domain.ServiceName,
 		func(ctx context.Context, opts ...grpc.CallOption) (*pb.CreateSalesOrderLineResponse, error) {
@@ -674,16 +624,8 @@ func (m *salesOrderSvcImpl) UpdateSalesOrderLine(ctx context.Context, req *Updat
 		pbReq.QuantityValue = &v.Value
 		pbReq.QuantityUnitId = &v.UnitID
 	}
-	if v, ok := req.UnitPrice.Value(); ok {
-		pbReq.UnitPriceValue = &v.Value
-		pbReq.UnitPriceNumeratorUnitId = &v.NumeratorUnitID
-		pbReq.UnitPriceDenominatorUnitId = &v.DenominatorUnitID
-	}
-	if v, ok := req.UnitCost.Value(); ok {
-		pbReq.UnitCostValue = &v.Value
-		pbReq.UnitCostNumeratorUnitId = &v.NumeratorUnitID
-		pbReq.UnitCostDenominatorUnitId = &v.DenominatorUnitID
-	}
+	pbReq.UnitPrice = apirequest.OptionalUnitPriceToProto(req.UnitPrice)
+	pbReq.UnitCost = apirequest.OptionalUnitPriceToProto(req.UnitCost)
 
 	resp, apiErr := grpcutil.CallRPC(ctx, salesOrderEpSvcTracer, "service.sales_orders.update_line", domain.ServiceName,
 		func(ctx context.Context, opts ...grpc.CallOption) (*pb.UpdateSalesOrderLineResponse, error) {
@@ -1162,50 +1104,7 @@ func salesOrderLineDetailFromProto(info *pb.SalesOrderLineInfo) apiresource.Sale
 
 // buildLineQuantityOrdered builds the quantity-ordered sub-resource for a line.
 func buildLineQuantityOrdered(info *pb.SalesOrderLineInfo) *apiresource.Quantity {
-	return &apiresource.Quantity{
-		ID:           info.QuantityId,
-		Object:       constants.ObjectTypeQuantity,
-		Value:        info.QuantityValue,
-		DisplayValue: apiresource.FormatDisplayValue(info.QuantityValue, info.QuantityUnitAbbreviation, info.QuantityUnitType),
-	}
-}
-
-// buildLineUnitPrice builds the unit-price rate sub-resource for a line.
-func buildLineUnitPrice(info *pb.SalesOrderLineInfo, createdAt, updatedAt time.Time) *apiresource.Rate {
-	return &apiresource.Rate{
-		ID:           info.UnitPriceId,
-		Object:       constants.ObjectTypeRate,
-		Value:        info.UnitPriceValue,
-		DisplayValue: apiresource.FormatRateDisplayValue(info.UnitPriceValue, info.UnitPriceNumeratorUnitAbbreviation, "", info.UnitPriceDenominatorUnitAbbreviation),
-		CreatedAt:    createdAt,
-		UpdatedAt:    updatedAt,
-	}
-}
-
-// buildLineUnitCost builds the unit-cost rate sub-resource for a line, or nil
-// when the line has no unit cost.
-func buildLineUnitCost(info *pb.SalesOrderLineInfo, createdAt, updatedAt time.Time) *apiresource.Rate {
-	if info.UnitCostId == nil {
-		return nil
-	}
-	var unitCostValue, unitCostNumeratorAbbr, unitCostDenominatorAbbr string
-	if info.UnitCostValue != nil {
-		unitCostValue = *info.UnitCostValue
-	}
-	if info.UnitCostNumeratorUnitAbbreviation != nil {
-		unitCostNumeratorAbbr = *info.UnitCostNumeratorUnitAbbreviation
-	}
-	if info.UnitCostDenominatorUnitAbbreviation != nil {
-		unitCostDenominatorAbbr = *info.UnitCostDenominatorUnitAbbreviation
-	}
-	return &apiresource.Rate{
-		ID:           *info.UnitCostId,
-		Object:       constants.ObjectTypeRate,
-		Value:        unitCostValue,
-		DisplayValue: apiresource.FormatRateDisplayValue(unitCostValue, unitCostNumeratorAbbr, "", unitCostDenominatorAbbr),
-		CreatedAt:    createdAt,
-		UpdatedAt:    updatedAt,
-	}
+	return apiresource.NewQuantity(info.QuantityValue, info.QuantityUnitId)
 }
 
 // linePriceUnitConversion reads the factor that restates the line's quantities in
@@ -1277,32 +1176,14 @@ func stashSalesOrderLineMeta(meta *include.LoadMeta, info *pb.SalesOrderLineInfo
 	if info.ProductId != nil {
 		meta.Set(constants.ObjectTypeSalesOrderLine, line.ID, "product_id", *info.ProductId)
 	}
-	// Quantity + its unit. quantity_ordered.unit is expandable: the proto carries only the
-	// unit FK, so stash it on the Quantity for LoadUnits to hydrate on ?include=...unit.
 	qty := buildLineQuantityOrdered(info)
 	meta.Set(constants.ObjectTypeSalesOrderLine, line.ID, "quantity_ordered", qty)
-	if info.QuantityUnitId != "" {
-		meta.Set(constants.ObjectTypeQuantity, qty.ID, "unit_id", info.QuantityUnitId)
-	}
 
-	// Unit price + its numerator/denominator units (unit_price.numerator_unit, ...).
-	unitPrice := buildLineUnitPrice(info, line.CreatedAt, line.UpdatedAt)
+	unitPrice := resourceloaders.UnitPriceFromProto(info.UnitPrice)
 	meta.Set(constants.ObjectTypeSalesOrderLine, line.ID, "unit_price", unitPrice)
-	if info.UnitPriceNumeratorUnitId != "" {
-		meta.Set(constants.ObjectTypeRate, unitPrice.ID, "numerator_unit_id", info.UnitPriceNumeratorUnitId)
-	}
-	if info.UnitPriceDenominatorUnitId != "" {
-		meta.Set(constants.ObjectTypeRate, unitPrice.ID, "denominator_unit_id", info.UnitPriceDenominatorUnitId)
-	}
 
-	if unitCost := buildLineUnitCost(info, line.CreatedAt, line.UpdatedAt); unitCost != nil {
+	if unitCost := resourceloaders.UnitPriceFromProto(info.UnitCost); unitCost != nil {
 		meta.Set(constants.ObjectTypeSalesOrderLine, line.ID, "unit_cost", unitCost)
-		if info.UnitCostNumeratorUnitId != nil && *info.UnitCostNumeratorUnitId != "" {
-			meta.Set(constants.ObjectTypeRate, unitCost.ID, "numerator_unit_id", *info.UnitCostNumeratorUnitId)
-		}
-		if info.UnitCostDenominatorUnitId != nil && *info.UnitCostDenominatorUnitId != "" {
-			meta.Set(constants.ObjectTypeRate, unitCost.ID, "denominator_unit_id", *info.UnitCostDenominatorUnitId)
-		}
 	}
 	if totals := buildLineTotals(info); totals != nil {
 		meta.Set(constants.ObjectTypeSalesOrderLine, line.ID, "totals", totals)

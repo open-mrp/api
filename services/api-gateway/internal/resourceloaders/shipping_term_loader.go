@@ -38,13 +38,6 @@ func LoadShippingTerms(ctx context.Context, ids []string) (map[string]any, *apie
 		}
 		meta.Set(constants.ObjectTypeShippingTerm, st.Id, "owner_account_id", accountID)
 
-		if st.FlatRate != nil {
-			meta.Set(constants.ObjectTypeShippingTerm, st.Id, "flat_rate_unit_id", st.FlatRate.UnitId)
-		}
-		if st.MinimumOrderValue != nil {
-			meta.Set(constants.ObjectTypeShippingTerm, st.Id, "minimum_order_value_unit_id", st.MinimumOrderValue.UnitId)
-		}
-
 		slIDs := make([]string, len(st.FreeShippingServiceLevels))
 		for i, sl := range st.FreeShippingServiceLevels {
 			slIDs[i] = sl.Id
@@ -60,22 +53,10 @@ func shippingTermFromProto(st *pb.ShippingTermInfo) *apiresource.ShippingTerm {
 		Object:            constants.ObjectTypeShippingTerm,
 		Name:              st.Name,
 		Type:              constants.ShippingTermType(st.Type),
-		FlatRate:          quantityFromProto(st.FlatRate),
-		MinimumOrderValue: quantityFromProto(st.MinimumOrderValue),
+		FlatRate:          MoneyFromProto(st.FlatRate),
+		MinimumOrderValue: MoneyFromProto(st.MinimumOrderValue),
 		CreatedAt:         grpcutil.TimestampToTime(st.CreatedAt),
 		UpdatedAt:         grpcutil.TimestampToTime(st.UpdatedAt),
 	}
 }
 
-func quantityFromProto(q *pb.QuantityInfo) *apiresource.Quantity {
-	if q == nil {
-		return nil
-	}
-	norm := apiresource.NormalizeMonetaryQuantityValue(q.Value)
-	return &apiresource.Quantity{
-		ID:           q.Id,
-		Object:       constants.ObjectTypeQuantity,
-		Value:        norm,
-		DisplayValue: apiresource.FormatDisplayValue(norm, q.UnitAbbreviation, q.UnitType),
-	}
-}

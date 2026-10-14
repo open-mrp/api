@@ -61,13 +61,7 @@ func TransactionReferenceFromProto(meta *include.LoadMeta, d *pb.TransactionInfo
 		StripePaymentID:  d.StripePaymentId,
 		FundsReceivedAt:  grpcutil.TimestampToTimePtr(d.FundsReceivedAt),
 		AllocationCount:  d.AllocationCount,
-		Amount: &apiresource.Quantity{
-			ID:           d.AmountId,
-			Object:       constants.ObjectTypeQuantity,
-			Value:        d.AmountValue,
-			DisplayValue: apiresource.FormatDisplayValue(d.AmountValue, d.AmountUnitAbbreviation, string(constants.UnitTypeCurrency)),
-			// Unit left nil: its id is stashed so `…transaction.amount.unit` resolves the real unit.
-		},
+		Amount: apiresource.NewQuantity(d.AmountValue, d.AmountUnitId),
 		TransactionType: &apiresource.TransactionType{
 			ID:     d.TransactionTypeId,
 			Object: constants.ObjectTypeTransactionType,
@@ -78,7 +72,6 @@ func TransactionReferenceFromProto(meta *include.LoadMeta, d *pb.TransactionInfo
 		UpdatedAt: grpcutil.TimestampToTime(d.UpdatedAt),
 	}
 
-	meta.Set(constants.ObjectTypeQuantity, d.AmountId, "unit_id", d.AmountUnitId)
 
 	if d.TransactionMethodId != nil {
 		tx.TransactionMethod = &apiresource.TransactionMethod{

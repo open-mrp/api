@@ -20,10 +20,10 @@ const unitDimensionCodeCurrency = "currency"
 // fieldName is the request-body field this validation belongs to (e.g., "unit_cost", "labor_rate") and is surfaced in the error so clients can pin the failure to the right input.
 func ValidateCostRateUnits(ctx context.Context, repo domain.UnitRepo, numeratorUnitID, denominatorUnitID, fieldName string) *apierror.APIError {
 	if numeratorUnitID == "" {
-		return apierror.NewFieldError(fieldName+".numerator_unit_id", apierror.CodeInvalidFormat, fmt.Sprintf("%s.numerator_unit_id is required.", fieldName))
+		return apierror.NewFieldError(fieldName+".currency", apierror.CodeInvalidFormat, fmt.Sprintf("%s.currency is required.", fieldName))
 	}
 	if denominatorUnitID == "" {
-		return apierror.NewFieldError(fieldName+".denominator_unit_id", apierror.CodeInvalidFormat, fmt.Sprintf("%s.denominator_unit_id is required.", fieldName))
+		return apierror.NewFieldError(fieldName+".per_unit_id", apierror.CodeInvalidFormat, fmt.Sprintf("%s.per_unit_id is required.", fieldName))
 	}
 
 	ids := []string{numeratorUnitID}
@@ -38,18 +38,18 @@ func ValidateCostRateUnits(ctx context.Context, repo domain.UnitRepo, numeratorU
 
 	numDim, ok := dims[numeratorUnitID]
 	if !ok {
-		return apierror.NewFieldError(fieldName+".numerator_unit_id", apierror.CodeInvalidFormat, fmt.Sprintf("%s.numerator_unit_id references a unit that does not exist.", fieldName))
+		return apierror.NewFieldError(fieldName+".currency", apierror.CodeInvalidFormat, fmt.Sprintf("%s has no unit for its currency.", fieldName))
 	}
 	denDim, ok := dims[denominatorUnitID]
 	if !ok {
-		return apierror.NewFieldError(fieldName+".denominator_unit_id", apierror.CodeInvalidFormat, fmt.Sprintf("%s.denominator_unit_id references a unit that does not exist.", fieldName))
+		return apierror.NewFieldError(fieldName+".per_unit_id", apierror.CodeInvalidFormat, fmt.Sprintf("%s.per_unit_id references a unit that does not exist.", fieldName))
 	}
 
 	if numDim != unitDimensionCodeCurrency {
-		return apierror.NewFieldError(fieldName+".numerator_unit_id", apierror.CodeInvalidFormat, fmt.Sprintf("%s.numerator_unit_id must be a currency unit; got dimension %q.", fieldName, numDim))
+		return apierror.NewFieldError(fieldName+".currency", apierror.CodeInvalidFormat, fmt.Sprintf("%s must be priced in a currency; got dimension %q.", fieldName, numDim))
 	}
 	if denDim == unitDimensionCodeCurrency {
-		return apierror.NewFieldError(fieldName+".denominator_unit_id", apierror.CodeInvalidFormat, fmt.Sprintf("%s.denominator_unit_id must not be a currency unit.", fieldName))
+		return apierror.NewFieldError(fieldName+".per_unit_id", apierror.CodeInvalidFormat, fmt.Sprintf("%s.per_unit_id must not be a currency unit.", fieldName))
 	}
 
 	return nil
@@ -64,7 +64,7 @@ func ValidateCostDenominatorInUnitGroup(ctx context.Context, repo domain.UnitRep
 		return apiErr
 	}
 	if !inGroup {
-		return apierror.NewFieldError(fieldName+".denominator_unit_id", apierror.CodeInvalidFormat, fmt.Sprintf("%s.denominator_unit_id must be a unit in the item's unit group.", fieldName))
+		return apierror.NewFieldError(fieldName+".per_unit_id", apierror.CodeInvalidFormat, fmt.Sprintf("%s.per_unit_id must be a unit in the item's unit group.", fieldName))
 	}
 	return nil
 }

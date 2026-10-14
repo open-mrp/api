@@ -334,8 +334,6 @@ const (
 	CoreService_UpdateProductType_FullMethodName                          = "/core.CoreService/UpdateProductType"
 	CoreService_DeleteProductType_FullMethodName                          = "/core.CoreService/DeleteProductType"
 	CoreService_BatchGetProductTypesByIDs_FullMethodName                  = "/core.CoreService/BatchGetProductTypesByIDs"
-	CoreService_UpdateQuantity_FullMethodName                             = "/core.CoreService/UpdateQuantity"
-	CoreService_UpdateRate_FullMethodName                                 = "/core.CoreService/UpdateRate"
 	CoreService_ListReceivables_FullMethodName                            = "/core.CoreService/ListReceivables"
 	CoreService_ListReceivablesByCustomer_FullMethodName                  = "/core.CoreService/ListReceivablesByCustomer"
 	CoreService_ExportReceivablesByCustomer_FullMethodName                = "/core.CoreService/ExportReceivablesByCustomer"
@@ -978,8 +976,6 @@ type CoreServiceClient interface {
 	DeleteProductType(ctx context.Context, in *DeleteProductTypeRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
 	// Returns product types by ID for the api-gateway include resolver.
 	BatchGetProductTypesByIDs(ctx context.Context, in *BatchGetProductTypesByIDsRequest, opts ...grpc.CallOption) (*BatchGetProductTypesByIDsResponse, error)
-	UpdateQuantity(ctx context.Context, in *UpdateQuantityRequest, opts ...grpc.CallOption) (*UpdateQuantityResponse, error)
-	UpdateRate(ctx context.Context, in *UpdateRateRequest, opts ...grpc.CallOption) (*UpdateRateResponse, error)
 	// Returns unpaid invoices (receivables) for the caller's account.
 	ListReceivables(ctx context.Context, in *ListReceivablesRequest, opts ...grpc.CallOption) (*ListReceivablesResponse, error)
 	// Returns unpaid invoices for a specific customer.
@@ -4191,26 +4187,6 @@ func (c *coreServiceClient) BatchGetProductTypesByIDs(ctx context.Context, in *B
 	return out, nil
 }
 
-func (c *coreServiceClient) UpdateQuantity(ctx context.Context, in *UpdateQuantityRequest, opts ...grpc.CallOption) (*UpdateQuantityResponse, error) {
-	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(UpdateQuantityResponse)
-	err := c.cc.Invoke(ctx, CoreService_UpdateQuantity_FullMethodName, in, out, cOpts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
-func (c *coreServiceClient) UpdateRate(ctx context.Context, in *UpdateRateRequest, opts ...grpc.CallOption) (*UpdateRateResponse, error) {
-	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(UpdateRateResponse)
-	err := c.cc.Invoke(ctx, CoreService_UpdateRate_FullMethodName, in, out, cOpts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
 func (c *coreServiceClient) ListReceivables(ctx context.Context, in *ListReceivablesRequest, opts ...grpc.CallOption) (*ListReceivablesResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(ListReceivablesResponse)
@@ -5760,8 +5736,6 @@ type CoreServiceServer interface {
 	DeleteProductType(context.Context, *DeleteProductTypeRequest) (*emptypb.Empty, error)
 	// Returns product types by ID for the api-gateway include resolver.
 	BatchGetProductTypesByIDs(context.Context, *BatchGetProductTypesByIDsRequest) (*BatchGetProductTypesByIDsResponse, error)
-	UpdateQuantity(context.Context, *UpdateQuantityRequest) (*UpdateQuantityResponse, error)
-	UpdateRate(context.Context, *UpdateRateRequest) (*UpdateRateResponse, error)
 	// Returns unpaid invoices (receivables) for the caller's account.
 	ListReceivables(context.Context, *ListReceivablesRequest) (*ListReceivablesResponse, error)
 	// Returns unpaid invoices for a specific customer.
@@ -6823,12 +6797,6 @@ func (UnimplementedCoreServiceServer) DeleteProductType(context.Context, *Delete
 }
 func (UnimplementedCoreServiceServer) BatchGetProductTypesByIDs(context.Context, *BatchGetProductTypesByIDsRequest) (*BatchGetProductTypesByIDsResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method BatchGetProductTypesByIDs not implemented")
-}
-func (UnimplementedCoreServiceServer) UpdateQuantity(context.Context, *UpdateQuantityRequest) (*UpdateQuantityResponse, error) {
-	return nil, status.Error(codes.Unimplemented, "method UpdateQuantity not implemented")
-}
-func (UnimplementedCoreServiceServer) UpdateRate(context.Context, *UpdateRateRequest) (*UpdateRateResponse, error) {
-	return nil, status.Error(codes.Unimplemented, "method UpdateRate not implemented")
 }
 func (UnimplementedCoreServiceServer) ListReceivables(context.Context, *ListReceivablesRequest) (*ListReceivablesResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method ListReceivables not implemented")
@@ -12680,42 +12648,6 @@ func _CoreService_BatchGetProductTypesByIDs_Handler(srv interface{}, ctx context
 	return interceptor(ctx, in, info, handler)
 }
 
-func _CoreService_UpdateQuantity_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(UpdateQuantityRequest)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(CoreServiceServer).UpdateQuantity(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: CoreService_UpdateQuantity_FullMethodName,
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(CoreServiceServer).UpdateQuantity(ctx, req.(*UpdateQuantityRequest))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
-func _CoreService_UpdateRate_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(UpdateRateRequest)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(CoreServiceServer).UpdateRate(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: CoreService_UpdateRate_FullMethodName,
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(CoreServiceServer).UpdateRate(ctx, req.(*UpdateRateRequest))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
 func _CoreService_ListReceivables_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(ListReceivablesRequest)
 	if err := dec(in); err != nil {
@@ -15768,14 +15700,6 @@ var CoreService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "BatchGetProductTypesByIDs",
 			Handler:    _CoreService_BatchGetProductTypesByIDs_Handler,
-		},
-		{
-			MethodName: "UpdateQuantity",
-			Handler:    _CoreService_UpdateQuantity_Handler,
-		},
-		{
-			MethodName: "UpdateRate",
-			Handler:    _CoreService_UpdateRate_Handler,
 		},
 		{
 			MethodName: "ListReceivables",

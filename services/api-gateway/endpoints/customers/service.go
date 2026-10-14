@@ -262,10 +262,7 @@ func (m *customerSvcImpl) CreateCustomer(ctx context.Context, req *CreateCustome
 		Includes:              include.FilterIncludes(ctx, customerIncludes...),
 	}
 
-	if cl, ok := req.CreditLimit.Value(); ok {
-		pbReq.CreditLimitValue = &cl.Value
-		pbReq.CreditLimitUnitId = &cl.UnitID
-	}
+	pbReq.CreditLimit = apirequest.OptionalMoneyToProto(req.CreditLimit)
 
 	pbReq.BillToAddress = addressInputToCustomerProto(&req.BillToAddress)
 	pbReq.ShipToAddress = addressInputToCustomerProto(&req.ShipToAddress)
@@ -506,7 +503,7 @@ func (m *customerSvcImpl) UpdateCustomer(ctx context.Context, req *UpdateCustome
 		Includes:                 include.FilterIncludes(ctx, customerIncludes...),
 	}
 
-	pbReq.CreditLimit = apirequest.QuantityFieldToProto(req.CreditLimit)
+	pbReq.CreditLimit = apirequest.MoneyFieldToProto(req.CreditLimit)
 
 	resp, apiErr := grpcutil.CallRPC(ctx, customerSvcTracer, "service.customers.update", domain.ServiceName,
 		func(ctx context.Context, opts ...grpc.CallOption) (*pb.UpdateCustomerResponse, error) {
@@ -611,18 +608,7 @@ func stashCustomerMeta(ctx context.Context, cust *apiresource.Customer, c *pb.Cu
 	})
 
 	if c.CreditLimit != nil {
-		unitType := c.CreditLimit.UnitType
-		meta.Set(constants.ObjectTypeCustomer, cust.ID, "credit_limit", &apiresource.Quantity{
-			ID:           c.CreditLimit.Id,
-			Object:       constants.ObjectTypeQuantity,
-			Value:        apiresource.NormalizeQuantityValue(c.CreditLimit.Value, unitType),
-			DisplayValue: apiresource.FormatDisplayValue(c.CreditLimit.Value, c.CreditLimit.UnitAbbreviation, unitType),
-			// Unit left nil: stash the FK id so LoadUnits fetches the real Unit on
-			// ?include=credit_limit.unit. Never fabricate.
-		})
-		if c.CreditLimit.UnitId != "" {
-			meta.Set(constants.ObjectTypeQuantity, c.CreditLimit.Id, "unit_id", c.CreditLimit.UnitId)
-		}
+		meta.Set(constants.ObjectTypeCustomer, cust.ID, "credit_limit", resourceloaders.MoneyFromProto(c.CreditLimit))
 	}
 
 	if c.BillToAddress != nil {

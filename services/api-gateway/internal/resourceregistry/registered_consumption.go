@@ -15,13 +15,6 @@ func init() {
 		Load:       resourceloaders.LoadConsumptions,
 		Subs: []include.SubField{
 			{Key: "consumed_item", Target: constants.ObjectTypeItem, Cardinality: include.CardinalityOnePtr, ExtractIDs: extractConsumedItemIDFromConsumption, Populate: populateConsumedItemOnConsumption},
-			// The quantities are always on the consumption; these let the resolver descend to their units.
-			{Key: "quantity", Target: constants.ObjectTypeQuantity, ExtractRefs: func(_ context.Context, parent any) []any {
-				return quantityRef(parent.(*apiresource.Consumption).Quantity)
-			}},
-			{Key: "waste_quantity", Target: constants.ObjectTypeQuantity, ExtractRefs: func(_ context.Context, parent any) []any {
-				return quantityRef(parent.(*apiresource.Consumption).WasteQuantity)
-			}},
 		},
 	})
 }

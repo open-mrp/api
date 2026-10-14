@@ -32,69 +32,36 @@ func LoadPurchaseOrderLines(ctx context.Context, ids []string) (map[string]any, 
 		return nil, apiErr
 	}
 
-	// The received figure is computed, so it has no id and must carry its unit; resolve the units
-	// the lines are counted in before presenting.
-	unitIDs := make([]string, 0, len(resp.Lines))
-	for _, l := range resp.Lines {
-		unitIDs = append(unitIDs, l.QuantityUnitId)
-	}
-	units, apiErr := LoadUnitsByID(ctx, unitIDs...)
-	if apiErr != nil {
-		return nil, apiErr
-	}
-
 	meta := include.GetLoadMeta(ctx)
 	out := make(map[string]any, len(resp.Lines))
 	for _, l := range resp.Lines {
-		out[l.Id] = purchaseOrderLineFromProto(meta, l, units)
+		out[l.Id] = purchaseOrderLineFromProto(meta, l)
 	}
 	return out, nil
 }
 
-// The line's own quantity and price ride on it; the units they are counted in and the item it orders
-// are stashed as ids, so a caller can reach through to them the same way they would from the order.
-func purchaseOrderLineFromProto(meta *include.LoadMeta, info *pb.PurchaseOrderLineInfo, units map[string]*apiresource.Unit) *apiresource.PurchaseOrderLine {
+// The line's own quantity and price ride on it; the item it orders is stashed as an id, so a caller can
+// reach through to it the same way they would from the order.
+func purchaseOrderLineFromProto(meta *include.LoadMeta, info *pb.PurchaseOrderLineInfo) *apiresource.PurchaseOrderLine {
 	line := &apiresource.PurchaseOrderLine{
 		ID:                 info.Id,
 		Object:             constants.ObjectTypePurchaseOrderLine,
 		LineItemNumber:     info.LineItemNumber,
 		ProductSKU:         info.ProductSku,
 		ProductDescription: info.ProductDescription,
-		QuantityOrdered: &apiresource.Quantity{
-			ID:           info.QuantityId,
-			Object:       constants.ObjectTypeQuantity,
-			Value:        info.QuantityValue,
-			DisplayValue: apiresource.FormatDisplayValue(info.QuantityValue, info.QuantityUnitAbbreviation, info.QuantityUnitType),
-		},
-		UnitPrice: &apiresource.Rate{
-			ID:     info.UnitPriceId,
-			Object: constants.ObjectTypeRate,
-			Value:  info.UnitPriceValue,
-			DisplayValue: apiresource.FormatRateDisplayValue(
-				info.UnitPriceValue, info.UnitPriceNumeratorUnitAbbreviation, "", info.UnitPriceDenominatorUnitAbbreviation),
-			CreatedAt: grpcutil.TimestampToTime(info.UnitPriceCreatedAt),
-			UpdatedAt: grpcutil.TimestampToTime(info.UnitPriceUpdatedAt),
-		},
-		CreatedAt: grpcutil.TimestampToTime(info.CreatedAt),
-		UpdatedAt: grpcutil.TimestampToTime(info.UpdatedAt),
+		QuantityOrdered:    apiresource.NewQuantity(info.QuantityValue, info.QuantityUnitId),
+		UnitPrice:          UnitPriceFromProto(info.UnitPrice),
+		CreatedAt:          grpcutil.TimestampToTime(info.CreatedAt),
+		UpdatedAt:          grpcutil.TimestampToTime(info.UpdatedAt),
 	}
 
-	meta.Set(constants.ObjectTypeQuantity, info.QuantityId, "unit_id", info.QuantityUnitId)
-	meta.Set(constants.ObjectTypeRate, info.UnitPriceId, "numerator_unit_id", info.UnitPriceNumeratorUnitId)
-	meta.Set(constants.ObjectTypeRate, info.UnitPriceId, "denominator_unit_id", info.UnitPriceDenominatorUnitId)
 	if info.ItemId != nil && *info.ItemId != "" {
 		meta.Set(constants.ObjectTypePurchaseOrderLine, line.ID, "item_id", *info.ItemId)
 	}
 
-	// What has been received is rolled up from the receiving order rather than stored, so it is a
-	// computed quantity: no id, and the unit travels with it.
+	// What has been received is rolled up from the receiving order rather than stored.
 	if info.QuantityReceivedValue != nil {
-		line.QuantityReceived = &apiresource.ComputedQuantity{
-			Object:       constants.ObjectTypeComputedQuantity,
-			Value:        *info.QuantityReceivedValue,
-			DisplayValue: apiresource.FormatDisplayValue(*info.QuantityReceivedValue, info.QuantityUnitAbbreviation, info.QuantityUnitType),
-			Unit:         units[info.QuantityUnitId],
-		}
+		line.QuantityReceived = apiresource.NewQuantity(*info.QuantityReceivedValue, info.QuantityUnitId)
 	}
 
 	return line

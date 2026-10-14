@@ -14,9 +14,7 @@ func init() {
 		ObjectType: constants.ObjectTypeCustomer,
 		Load:       resourceloaders.LoadCustomers,
 		Subs: []include.SubField{
-			// credit_limit is a Quantity built inline from the customer proto; declaring its Target lets the
-			// resolver recurse into credit_limit.unit (the Quantity's unit_id is stashed under ObjectTypeQuantity).
-			{Key: "credit_limit", Target: constants.ObjectTypeQuantity, ExtractRefs: extractCreditLimitRefFromCustomer, Populate: populateCreditLimitOnCustomer},
+			valueShapeSub(constants.ObjectTypeCustomer, "credit_limit", customerID, func(p, v any) { p.(*apiresource.Customer).CreditLimit = v.(*apiresource.Money) }),
 			{Key: "contact_info", Populate: populateContactInfoOnCustomer},
 			{Key: "freight_preferences", Populate: populateFreightPreferencesOnCustomer},
 			// freight_preferences.carrier is fetched by id via LoadCarriers (not built inline) so the loaded
@@ -45,23 +43,7 @@ func init() {
 	})
 }
 
-func populateCreditLimitOnCustomer(ctx context.Context, parent any, _ map[string]any) {
-	c := parent.(*apiresource.Customer)
-	v, ok := include.GetLoadMeta(ctx).Get(constants.ObjectTypeCustomer, c.ID, "credit_limit")
-	if !ok {
-		return
-	}
-	c.CreditLimit = v.(*apiresource.Quantity)
-}
-
-// extractCreditLimitRefFromCustomer returns the inline credit_limit Quantity (attached by populateCreditLimitOnCustomer) so the resolver can recurse into credit_limit.unit.
-func extractCreditLimitRefFromCustomer(_ context.Context, parent any) []any {
-	c := parent.(*apiresource.Customer)
-	if c.CreditLimit == nil {
-		return nil
-	}
-	return []any{c.CreditLimit}
-}
+func customerID(p any) string { return p.(*apiresource.Customer).ID }
 
 func populateContactInfoOnCustomer(ctx context.Context, parent any, _ map[string]any) {
 	c := parent.(*apiresource.Customer)

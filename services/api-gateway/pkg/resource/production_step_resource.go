@@ -29,13 +29,13 @@ type ProductionStep struct {
 	// Cost of labor for this step, expressed as a rate of currency per unit of time (e.g. `$` per `hr`).
 	//
 	// Null unless the caller holds `costs:read`; customer and supplier portal users never see it.
-	LaborRate *Rate `json:"labor_rate" sensitive:"cost"`
+	LaborRate *UnitPrice `json:"labor_rate" sensitive:"cost"`
 	// Labor duration for this step, expressed as a rate (e.g. time per unit of output).
 	LaborTime *Rate `json:"labor_time"`
 	// Overhead cost for this step, expressed as a rate of currency per unit of time (e.g. `$` per `hr`).
 	//
 	// Null unless the caller holds `costs:read`; customer and supplier portal users never see it.
-	OverheadRate *Rate `json:"overhead_rate" sensitive:"cost"`
+	OverheadRate *UnitPrice `json:"overhead_rate" sensitive:"cost"`
 	// The item and quantity this step produces.
 	Production *ProductionOutput `json:"production" expandable:"true"`
 	// Materials this step consumes as inputs, with their quantities and expected waste.
@@ -65,9 +65,9 @@ var SampleProductionStep = &ProductionStep{
 	Notes:           &sampleProductionStepNotes,
 	LevelingFactor:  "1.000000000000000000000000000000",
 	Allowances:      "0.000000000000000000000000000000",
-	LaborRate:       SampleRate,
+	LaborRate:       SampleUnitPrice,
 	LaborTime:       SampleRate,
-	OverheadRate:    SampleRate,
+	OverheadRate:    SampleUnitPrice,
 	Production:      SampleProductionOutput,
 	Consumptions:    NewList([]Consumption{*SampleConsumption}, PageInfo{}),
 	Machines:        NewList([]Machine{*SampleMachine}, PageInfo{}),

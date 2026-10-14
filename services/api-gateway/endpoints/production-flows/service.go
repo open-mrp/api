@@ -61,8 +61,7 @@ func (m *productionFlowSvcImpl) GetProductionFlow(ctx context.Context, req *GetP
 		return nil, apiErr
 	}
 
-	result := ProductionFlowPresenter(ctx, resp.Steps)
-	return result, nil
+	return ProductionFlowPresenter(ctx, resp.Steps)
 }
 
 func (m *productionFlowSvcImpl) ConnectSteps(ctx context.Context, req *ConnectStepsRequest) (*apiresource.EmptyResource, *apierror.APIError) {

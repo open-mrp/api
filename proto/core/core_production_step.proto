@@ -8,6 +8,7 @@ import "core/core.proto";
 import "core/core_fuzzy_identifiers.proto";
 import "core/core_async.proto";
 import "core/core_patch.proto";
+import "core/value_shapes.proto";
 
 option go_package = "shared/proto/core;core";
 
@@ -49,9 +50,11 @@ message ProductionStepInfo {
   optional string notes = 3;
   string leveling_factor = 4;
   string allowances = 5;
-  ProductionStepRateInfo labor_rate = 6;
+  reserved 6;
+  UnitPrice labor_rate = 18;
   ProductionStepRateInfo labor_time = 7;
-  ProductionStepRateInfo overhead_rate = 8;
+  reserved 8;
+  UnitPrice overhead_rate = 19;
   ProductionInfo production = 9;
   repeated ConsumptionInfo consumptions = 10;
   repeated LightMachineInfo machines = 11;
@@ -136,9 +139,12 @@ message CreateProductionStepRequest {
   string allowances = 4;
   optional string scanning_station_id = 5;
   optional string department_id = 6;
-  CreateRateInput labor_rate = 7;
-  CreateRateInput labor_time = 8;
-  CreateRateInput overhead_rate = 9;
+  reserved 7;
+  UnitPrice labor_rate = 12;
+  reserved 8;
+  RateInput labor_time = 13;
+  reserved 9;
+  UnitPrice overhead_rate = 14;
   CreateProductionInput production = 10;
   repeated CreateStepConsumptionInput consumptions = 11;
 }

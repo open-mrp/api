@@ -47,8 +47,6 @@ func presentCustomerPricing(ctx context.Context, resp *pb.AnalyzeCustomerPricing
 		meta.Set(constants.ObjectTypeCustomerPricingFinding, id, "customer_id", f.GetCustomerId())
 		meta.Set(constants.ObjectTypeCustomerPricingFinding, id, "product_line_id", f.GetProductLineId())
 		meta.Set(constants.ObjectTypeCustomerPricingFinding, id, "attribute_ids", f.GetAttributeIds())
-		meta.Set(constants.ObjectTypeCustomerPricingFinding, id, "numerator_unit_id", f.GetNumeratorUnitId())
-		meta.Set(constants.ObjectTypeCustomerPricingFinding, id, "denominator_unit_id", f.GetDenominatorUnitId())
 
 		item := apiresource.CustomerPricingFinding{
 			ID:             id,
@@ -56,10 +54,10 @@ func presentCustomerPricing(ctx context.Context, resp *pb.AnalyzeCustomerPricing
 			AccountPriceID: f.GetAccountPriceId(),
 			Reason:         constants.PricingFindingReason(f.GetReason()),
 			Origin:         constants.AccountPriceOrigin(f.GetOrigin()),
-			UnitPrice:      computedRate(f.GetUnitPrice(), f.GetNumeratorUnitAbbr(), f.GetDenominatorAbbr()),
+			UnitPrice:      analyticsPrice(f.GetUnitPrice(), f.GetDenominatorUnitId()),
 		}
 		if f.PeerMedianPrice != nil {
-			item.PeerMedianPrice = computedRate(f.GetPeerMedianPrice(), f.GetNumeratorUnitAbbr(), f.GetDenominatorAbbr())
+			item.PeerMedianPrice = analyticsPrice(f.GetPeerMedianPrice(), f.GetDenominatorUnitId())
 			item.BelowPeerMedianFraction = f.BelowPeerMedianFraction
 		}
 		item.GrossMargin = f.GrossMargin

@@ -150,7 +150,7 @@ type ReceivingOrderLine struct {
 	// Quantity refused on inspection and never taken into inventory.
 	//
 	// Accumulated from the rejected quantities recorded against this line each time the order is stocked, so it is summed at read time rather than stored: it carries no id, and arrives with the unit it was summed in.
-	RejectedQuantity *ComputedQuantity `json:"rejected_quantity"`
+	RejectedQuantity *Quantity `json:"rejected_quantity"`
 	// Position of the originating purchase order line within its order, starting at 1.
 	LineItemNumber *int32 `json:"line_item_number"`
 	// The item being received.

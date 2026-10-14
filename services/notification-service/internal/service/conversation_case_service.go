@@ -29,7 +29,7 @@ func (s *conversationSvcImpl) UpdateWorkflowStatus(ctx context.Context, conversa
 	defer span.End()
 
 	if !constants.ConversationWorkflowStatus(status).IsValid() {
-		return nil, tracing.Trace(span, apierror.NewParameterInvalidError("status", "Unknown workflow status."))
+		return nil, tracing.Trace(span, apierror.NewInvalidFormatError("status", "Unknown workflow status."))
 	}
 	accountID, apiErr := s.requireMessagingAdmin(ctx, types.ActionUpdate)
 	if apiErr != nil {
@@ -177,7 +177,7 @@ func (s *conversationSvcImpl) AddConversationLink(ctx context.Context, conversat
 	defer span.End()
 
 	if resourceType == "" || resourceID == "" {
-		return nil, tracing.Trace(span, apierror.NewParameterMissingError("resource_type", "A resource_type and resource_id are required."))
+		return nil, tracing.Trace(span, apierror.NewMissingFieldError("resource_type", "A resource_type and resource_id are required."))
 	}
 	accountID, part, apiErr := s.requireCaseAdmin(ctx, conversationID, types.ActionUpdate)
 	if apiErr != nil {
@@ -261,7 +261,7 @@ func (s *conversationSvcImpl) ListConversationsByResource(ctx context.Context, r
 	defer span.End()
 
 	if resourceType == "" || resourceID == "" {
-		return nil, tracing.Trace(span, apierror.NewParameterMissingError("resource_type", "A resource_type and resource_id are required."))
+		return nil, tracing.Trace(span, apierror.NewMissingFieldError("resource_type", "A resource_type and resource_id are required."))
 	}
 	accountID, apiErr := s.requireMessagingAdmin(ctx, types.ActionRead)
 	if apiErr != nil {
@@ -277,10 +277,10 @@ func (s *conversationSvcImpl) CreateReplyDraft(ctx context.Context, input domain
 	defer span.End()
 
 	if !constants.MessageChannel(input.Channel).IsValid() {
-		return nil, tracing.Trace(span, apierror.NewParameterInvalidError("channel", "Unknown message channel."))
+		return nil, tracing.Trace(span, apierror.NewInvalidFormatError("channel", "Unknown message channel."))
 	}
 	if input.Body == "" {
-		return nil, tracing.Trace(span, apierror.NewParameterMissingError("body", "A draft body is required."))
+		return nil, tracing.Trace(span, apierror.NewMissingFieldError("body", "A draft body is required."))
 	}
 	accountID, part, apiErr := s.requireCaseAdmin(ctx, input.ConversationID, types.ActionCreate)
 	if apiErr != nil {
@@ -366,7 +366,7 @@ func (s *conversationSvcImpl) UpdateReplyDraft(ctx context.Context, draftID, bod
 	defer span.End()
 
 	if body == "" {
-		return nil, tracing.Trace(span, apierror.NewParameterMissingError("body", "A draft body is required."))
+		return nil, tracing.Trace(span, apierror.NewMissingFieldError("body", "A draft body is required."))
 	}
 	accountID, apiErr := s.requireMessagingAdmin(ctx, types.ActionUpdate)
 	if apiErr != nil {

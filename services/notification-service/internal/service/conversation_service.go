@@ -126,14 +126,14 @@ func (s *conversationSvcImpl) CreateConversation(ctx context.Context, input doma
 	case constants.ConversationTypeGroup:
 		return s.createGroup(ctx, input, callerAcus, accountID)
 	default:
-		return nil, tracing.Trace(span, apierror.NewParameterInvalidError("type", "Unsupported conversation type."))
+		return nil, tracing.Trace(span, apierror.NewInvalidFormatError("type", "Unsupported conversation type."))
 	}
 
 	if len(input.Participants) > 0 {
-		return nil, tracing.Trace(span, apierror.NewParameterInvalidError("participants", "A direct message has no roles to assign; name its other participant in participant_account_user_ids."))
+		return nil, tracing.Trace(span, apierror.NewInvalidFormatError("participants", "A direct message has no roles to assign; name its other participant in participant_account_user_ids."))
 	}
 	if len(input.ParticipantAccountUserIDs) != 1 {
-		return nil, tracing.Trace(span, apierror.NewParameterInvalidError("participant_account_user_ids", "A direct message requires exactly one other participant."))
+		return nil, tracing.Trace(span, apierror.NewInvalidFormatError("participant_account_user_ids", "A direct message requires exactly one other participant."))
 	}
 	target := input.ParticipantAccountUserIDs[0]
 	if target == "" {
@@ -627,7 +627,7 @@ func (s *conversationSvcImpl) SetSupportRoute(ctx context.Context, relationAccou
 		return nil, tracing.Trace(span, apiErr)
 	}
 	if groupConversationID == "" {
-		return nil, tracing.Trace(span, apierror.NewParameterMissingError("group_conversation_id", "A group_conversation_id is required."))
+		return nil, tracing.Trace(span, apierror.NewMissingFieldError("group_conversation_id", "A group_conversation_id is required."))
 	}
 	conv, apiErr := s.repoFactory.NewConversationRepo().GetByID(ctx, groupConversationID, accountID)
 	if apiErr != nil {
@@ -935,12 +935,12 @@ func (s *conversationSvcImpl) loadConversation(ctx context.Context, conversation
 func resolveSendVisibility(audience string, isCustomer bool, requested string) (string, *apierror.APIError) {
 	requested = strings.TrimSpace(requested)
 	if requested != "" && !constants.MessageVisibility(requested).IsValid() {
-		return "", apierror.NewParameterInvalidError("visibility", "Unknown message visibility.")
+		return "", apierror.NewInvalidFormatError("visibility", "Unknown message visibility.")
 	}
 
 	if audience != string(constants.ConversationAudienceCustomer) {
 		if requested == string(constants.MessageVisibilityExternal) || requested == string(constants.MessageVisibilitySystem) {
-			return "", apierror.NewParameterInvalidError("visibility", "This conversation has no customer; only internal messages are allowed.")
+			return "", apierror.NewInvalidFormatError("visibility", "This conversation has no customer; only internal messages are allowed.")
 		}
 		return string(constants.MessageVisibilityInternal), nil
 	}
@@ -976,10 +976,10 @@ func (s *conversationSvcImpl) SendMessage(ctx context.Context, input domain.Send
 	// A message needs text, at least one attachment, or a resource link.
 	hasLink := input.LinkResourceID != nil && *input.LinkResourceID != ""
 	if (input.Body == nil || *input.Body == "") && len(input.Attachments) == 0 && !hasLink {
-		return nil, tracing.Trace(span, apierror.NewParameterMissingError("body", "A message body, attachment, or link is required."))
+		return nil, tracing.Trace(span, apierror.NewMissingFieldError("body", "A message body, attachment, or link is required."))
 	}
 	if input.ClientMessageID == "" {
-		return nil, tracing.Trace(span, apierror.NewParameterMissingError("client_message_id", "A client_message_id is required."))
+		return nil, tracing.Trace(span, apierror.NewMissingFieldError("client_message_id", "A client_message_id is required."))
 	}
 	if part.Role == string(constants.ParticipantRoleViewer) {
 		return nil, tracing.Trace(span, apierror.NewAuthorizationError("You cannot post to this conversation."))
@@ -2058,7 +2058,7 @@ func (s *conversationSvcImpl) CreateAttachmentUploadURL(ctx context.Context, con
 		return nil, tracing.Trace(span, apiErr)
 	}
 	if filename == "" {
-		return nil, tracing.Trace(span, apierror.NewParameterMissingError("filename", "A filename is required."))
+		return nil, tracing.Trace(span, apierror.NewMissingFieldError("filename", "A filename is required."))
 	}
 
 	// Only an active participant may stage an upload for a conversation.
@@ -2129,7 +2129,7 @@ func (s *conversationSvcImpl) buildAttachments(ctx context.Context, conversation
 	for _, in := range inputs {
 		kind := constants.MessageAttachmentKind(in.Kind)
 		if !kind.IsValid() {
-			return nil, apierror.NewParameterInvalidError("attachments", "An invalid attachment kind was supplied.")
+			return nil, apierror.NewInvalidFormatError("attachments", "An invalid attachment kind was supplied.")
 		}
 		attachmentID, apiErr := id.GenID(id.MessageAttachmentIDPrefix, nil)
 		if apiErr != nil {
@@ -2147,7 +2147,7 @@ func (s *conversationSvcImpl) buildAttachments(ctx context.Context, conversation
 		switch {
 		case kind.IsUploaded():
 			if in.S3Key == nil || *in.S3Key == "" {
-				return nil, apierror.NewParameterMissingError("attachments", "An uploaded attachment requires an s3_key.")
+				return nil, apierror.NewMissingFieldError("attachments", "An uploaded attachment requires an s3_key.")
 			}
 			if !strings.HasPrefix(*in.S3Key, stagedPrefix) {
 				return nil, apierror.NewParameterInvalidError("attachments", "The attachment does not belong to this conversation.")
@@ -2167,12 +2167,12 @@ func (s *conversationSvcImpl) buildAttachments(ctx context.Context, conversation
 			a.S3Key = &permanentKey
 		case kind == constants.MessageAttachmentKindLink:
 			if in.URL == nil || *in.URL == "" {
-				return nil, apierror.NewParameterMissingError("attachments", "A link attachment requires a url.")
+				return nil, apierror.NewMissingFieldError("attachments", "A link attachment requires a url.")
 			}
 			a.URL = in.URL
 		case kind == constants.MessageAttachmentKindResource:
 			if in.ResourceType == nil || *in.ResourceType == "" || in.ResourceID == nil || *in.ResourceID == "" {
-				return nil, apierror.NewParameterMissingError("attachments", "A resource attachment requires a resource_type and resource_id.")
+				return nil, apierror.NewMissingFieldError("attachments", "A resource attachment requires a resource_type and resource_id.")
 			}
 			a.ResourceType = in.ResourceType
 			a.ResourceID = in.ResourceID
@@ -2222,10 +2222,10 @@ func (s *conversationSvcImpl) ScheduleMessage(ctx context.Context, input domain.
 		return nil, tracing.Trace(span, apiErr)
 	}
 	if input.Body == "" {
-		return nil, tracing.Trace(span, apierror.NewParameterMissingError("body", "A message body is required."))
+		return nil, tracing.Trace(span, apierror.NewMissingFieldError("body", "A message body is required."))
 	}
 	if !input.ScheduledFor.After(time.Now()) {
-		return nil, tracing.Trace(span, apierror.NewParameterInvalidError("scheduled_at", "The scheduled_at time must be in the future."))
+		return nil, tracing.Trace(span, apierror.NewInvalidFormatError("scheduled_at", "The scheduled_at time must be in the future."))
 	}
 
 	part, apiErr := s.repoFactory.NewParticipantRepo().Get(ctx, input.ConversationID, callerAcus)
@@ -2364,10 +2364,10 @@ func (s *conversationSvcImpl) RescheduleMessage(ctx context.Context, input domai
 		return nil, tracing.Trace(span, apiErr)
 	}
 	if input.Body != nil && *input.Body == "" {
-		return nil, tracing.Trace(span, apierror.NewParameterInvalidError("body", "A message body must not be blank."))
+		return nil, tracing.Trace(span, apierror.NewInvalidFormatError("body", "A message body must not be blank."))
 	}
 	if !input.ScheduledFor.After(time.Now()) {
-		return nil, tracing.Trace(span, apierror.NewParameterInvalidError("scheduled_at", "The scheduled_at time must be in the future."))
+		return nil, tracing.Trace(span, apierror.NewInvalidFormatError("scheduled_at", "The scheduled_at time must be in the future."))
 	}
 
 	idemKey, apiErr := upsertIdempotencyKey(ctx, s.repoFactory, identity)
@@ -2789,7 +2789,7 @@ func (s *conversationSvcImpl) createGroup(ctx context.Context, input domain.Crea
 	// A group normally needs at least one other participant — a human member or an agent — but a record-anchored discussion may start solo: the creator posts and loops in the team afterward (via @mention or by adding participants).
 	hasTopic := input.TopicResourceID != nil && *input.TopicResourceID != ""
 	if len(members) == 0 && len(agents) == 0 && !hasTopic {
-		return nil, tracing.Trace(span, apierror.NewParameterInvalidError("participant_account_user_ids", "A group requires at least one other participant."))
+		return nil, tracing.Trace(span, apierror.NewInvalidFormatError("participant_account_user_ids", "A group requires at least one other participant."))
 	}
 
 	conversationID, apiErr := id.GenID(id.ConversationIDPrefix, nil)
@@ -2884,20 +2884,20 @@ func (s *conversationSvcImpl) requestedParticipantRoles(ctx context.Context, par
 		param := fmt.Sprintf("participants[%d]", i)
 		switch {
 		case p.AccountUserID == "":
-			return nil, apierror.NewParameterMissingError(param+".account_user_id", "An account_user_id is required.")
+			return nil, apierror.NewMissingFieldError(param+".account_user_id", "An account_user_id is required.")
 		case p.AccountUserID == callerAcus:
-			return nil, apierror.NewParameterInvalidError(param+".account_user_id", "You own the group you create, so you cannot be given another role in it.")
+			return nil, apierror.NewInvalidFormatError(param+".account_user_id", "You own the group you create, so you cannot be given another role in it.")
 		}
 		if _, dup := roles[p.AccountUserID]; dup {
-			return nil, apierror.NewParameterInvalidError(param+".account_user_id", "This account user is listed more than once.")
+			return nil, apierror.NewInvalidFormatError(param+".account_user_id", "This account user is listed more than once.")
 		}
 		role := constants.ParticipantRole(p.Role)
 		if !role.IsValid() {
-			return nil, apierror.NewParameterInvalidError(param+".role", "The role is invalid.")
+			return nil, apierror.NewInvalidFormatError(param+".role", "The role is invalid.")
 		}
 		if _, apiErr := s.repoFactory.NewNotificationRepo().ResolveUserIDInAccount(ctx, p.AccountUserID, accountID); apiErr != nil {
 			if apiErr.Code == apierror.CodeResourceNotFound {
-				return nil, apierror.NewParameterInvalidError(param+".account_user_id", "The participant does not exist.")
+				return nil, apierror.NewInvalidFormatError(param+".account_user_id", "The participant does not exist.")
 			}
 			return nil, apiErr
 		}
@@ -2915,7 +2915,7 @@ func (s *conversationSvcImpl) UpdateConversation(ctx context.Context, conversati
 	if status != nil {
 		st := constants.ConversationStatus(*status)
 		if !st.IsValid() {
-			return nil, tracing.Trace(span, apierror.NewParameterInvalidError("status", "The status is invalid."))
+			return nil, tracing.Trace(span, apierror.NewInvalidFormatError("status", "The status is invalid."))
 		}
 		archived := st == constants.ConversationStatusArchived
 		isArchived = &archived
@@ -2982,10 +2982,10 @@ func (s *conversationSvcImpl) AddParticipant(ctx context.Context, conversationID
 		newRole = constants.ParticipantRoleMember
 	}
 	if !newRole.IsValid() || newRole == constants.ParticipantRoleOwner {
-		return nil, tracing.Trace(span, apierror.NewParameterInvalidError("role", "The role is invalid."))
+		return nil, tracing.Trace(span, apierror.NewInvalidFormatError("role", "The role is invalid."))
 	}
 	if targetAccountUserID == "" || targetAccountUserID == callerAcus {
-		return nil, tracing.Trace(span, apierror.NewParameterInvalidError("account_user_id", "The participant is invalid."))
+		return nil, tracing.Trace(span, apierror.NewInvalidFormatError("account_user_id", "The participant is invalid."))
 	}
 	if _, apiErr := s.repoFactory.NewNotificationRepo().ResolveUserIDInAccount(ctx, targetAccountUserID, accountID); apiErr != nil {
 		if apiErr.Code == apierror.CodeResourceNotFound {
@@ -3248,13 +3248,13 @@ func (s *conversationSvcImpl) AddAgentParticipant(ctx context.Context, input dom
 		return nil, tracing.Trace(span, apierror.NewAuthorizationError("Only an owner or admin can add an agent."))
 	}
 	if input.AgentConfigID == "" {
-		return nil, tracing.Trace(span, apierror.NewParameterMissingError("agent_config_id", "An agent is required."))
+		return nil, tracing.Trace(span, apierror.NewMissingFieldError("agent_config_id", "An agent is required."))
 	}
 	if input.TriggerPolicy == "" {
 		input.TriggerPolicy = string(constants.AgentTriggerPolicyMention) // safest default
 	}
 	if !constants.AgentTriggerPolicy(input.TriggerPolicy).IsValid() {
-		return nil, tracing.Trace(span, apierror.NewParameterInvalidError("trigger_policy", "An invalid trigger policy was supplied."))
+		return nil, tracing.Trace(span, apierror.NewInvalidFormatError("trigger_policy", "An invalid trigger policy was supplied."))
 	}
 
 	partRepo := s.repoFactory.NewParticipantRepo()
@@ -3362,7 +3362,7 @@ func (s *conversationSvcImpl) UpdateParticipantRole(ctx context.Context, convers
 	}
 	newRole := constants.ParticipantRole(role)
 	if !newRole.IsValid() {
-		return nil, tracing.Trace(span, apierror.NewParameterInvalidError("role", "The role is invalid."))
+		return nil, tracing.Trace(span, apierror.NewInvalidFormatError("role", "The role is invalid."))
 	}
 	target, apiErr := s.repoFactory.NewParticipantRepo().GetByID(ctx, participantID, conversationID)
 	if apiErr != nil {
@@ -3669,7 +3669,7 @@ func (s *conversationSvcImpl) ReportConversation(ctx context.Context, conversati
 	defer span.End()
 
 	if reason == "" {
-		return nil, tracing.Trace(span, apierror.NewParameterMissingError("reason", "A reason is required."))
+		return nil, tracing.Trace(span, apierror.NewMissingFieldError("reason", "A reason is required."))
 	}
 
 	// Participant gate (active members only) — supports internal and customer actors.

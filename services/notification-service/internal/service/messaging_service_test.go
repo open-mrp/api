@@ -207,14 +207,14 @@ func TestSendNotification_Validation(t *testing.T) {
 		svc := newSvc(t, nil, &fakeOutboxRepo{})
 		_, apiErr := svc.SendNotification(ctx, domain.SendNotificationInput{Category: "order.updated", TargetType: "account_user", TargetID: target})
 		require.NotNil(t, apiErr)
-		assert.Equal(t, apierror.CodeParameterMissing, apiErr.Code)
+		assert.Equal(t, apierror.CodeValidationFailed, apiErr.Code)
 	})
 
 	t.Run("missing target", func(t *testing.T) {
 		svc := newSvc(t, nil, &fakeOutboxRepo{})
 		_, apiErr := svc.SendNotification(ctx, domain.SendNotificationInput{Category: "order.updated", Title: "hi"})
 		require.NotNil(t, apiErr)
-		assert.Equal(t, apierror.CodeParameterMissing, apiErr.Code)
+		assert.Equal(t, apierror.CodeValidationFailed, apiErr.Code)
 	})
 
 	t.Run("broadcast creates an account-scoped announcement", func(t *testing.T) {

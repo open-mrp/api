@@ -142,7 +142,7 @@ func TestRescheduleMessage_ValidatesBeforeTouchingTheMessage(t *testing.T) {
 			_, apiErr := h.svc.RescheduleMessage(rescheduleCtx(), input)
 
 			require.NotNil(t, apiErr)
-			assert.Equal(t, apierror.CodeParameterInvalid, apiErr.Code)
+			assert.Equal(t, apierror.CodeValidationFailed, apiErr.Code)
 		})
 	}
 }

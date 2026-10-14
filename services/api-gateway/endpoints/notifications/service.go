@@ -57,10 +57,10 @@ func NewNotificationSvc(config *NotificationSvcConfig) NotificationSvc {
 
 func (s *notificationSvcImpl) SendNotification(ctx context.Context, req *SendNotificationRequest) (*apiresource.NotificationSendResult, *apierror.APIError) {
 	if req.Target.ID == "" {
-		return nil, apierror.NewParameterMissingError("target", "A target is required.")
+		return nil, apierror.NewMissingFieldError("target", "A target is required.")
 	}
 	if !req.Target.Type.IsValid() {
-		return nil, apierror.NewParameterInvalidError("target.type", "The target type is not supported.")
+		return nil, apierror.NewInvalidFormatError("target.type", "The target type is not supported.")
 	}
 
 	pbReq := &pb.SendNotificationRequest{

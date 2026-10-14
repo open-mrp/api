@@ -258,8 +258,8 @@ func TestCovMessagingGroups_OmittedFields(t *testing.T) {
 	t.Run("CreateWhitespaceName", func(t *testing.T) {
 		resp, err := owner.PostFull(messagingGroupsPath, map[string]any{"name": "   "}, newIdempotencyKey())
 		require.NoError(t, err)
-		requireStatus(t, 400, resp.StatusCode, resp.Body)
-		errObj := requireErrorResponse(t, resp.Body, "parameter_missing", "invalid_request_error")
+		requireStatus(t, 422, resp.StatusCode, resp.Body)
+		errObj := requireErrorResponse(t, resp.Body, "missing_field", "invalid_request_error")
 		assertErrorParam(t, errObj, "name")
 	})
 
@@ -298,8 +298,8 @@ func TestCovMessagingGroups_OmittedFields(t *testing.T) {
 
 		resp, err := owner.PatchFull(messagingGroupsPath+"/"+id, map[string]any{"name": "   "}, newIdempotencyKey())
 		require.NoError(t, err)
-		requireStatus(t, 400, resp.StatusCode, resp.Body)
-		errObj := requireErrorResponse(t, resp.Body, "parameter_missing", "invalid_request_error")
+		requireStatus(t, 422, resp.StatusCode, resp.Body)
+		errObj := requireErrorResponse(t, resp.Body, "missing_field", "invalid_request_error")
 		assertErrorParam(t, errObj, "name")
 	})
 
@@ -589,16 +589,16 @@ func TestCovMessagingGroups_AddMemberValidation(t *testing.T) {
 	t.Run("UserMissingAccountUserID", func(t *testing.T) {
 		resp, err := owner.PostFull(membersPath, map[string]any{"member_type": "user"}, newIdempotencyKey())
 		require.NoError(t, err)
-		requireStatus(t, 400, resp.StatusCode, resp.Body)
-		errObj := requireErrorResponse(t, resp.Body, "parameter_missing", "invalid_request_error")
+		requireStatus(t, 422, resp.StatusCode, resp.Body)
+		errObj := requireErrorResponse(t, resp.Body, "missing_field", "invalid_request_error")
 		assertErrorParam(t, errObj, "account_user_id")
 	})
 
 	t.Run("AgentMissingAgentConfigID", func(t *testing.T) {
 		resp, err := owner.PostFull(membersPath, map[string]any{"member_type": "agent"}, newIdempotencyKey())
 		require.NoError(t, err)
-		requireStatus(t, 400, resp.StatusCode, resp.Body)
-		errObj := requireErrorResponse(t, resp.Body, "parameter_missing", "invalid_request_error")
+		requireStatus(t, 422, resp.StatusCode, resp.Body)
+		errObj := requireErrorResponse(t, resp.Body, "missing_field", "invalid_request_error")
 		assertErrorParam(t, errObj, "agent_config_id")
 	})
 

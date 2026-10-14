@@ -109,7 +109,7 @@ func (s *emailBridgeSvcImpl) CreateDomain(ctx context.Context, domainName string
 	}
 	domainName = strings.ToLower(strings.TrimSpace(domainName))
 	if domainName == "" || !strings.Contains(domainName, ".") || strings.ContainsAny(domainName, "@ ") {
-		return nil, tracing.Trace(span, apierror.NewParameterInvalidError("domain", "A valid domain is required."))
+		return nil, tracing.Trace(span, apierror.NewInvalidFormatError("domain", "A valid domain is required."))
 	}
 
 	// Register the identity with SES first so a persistence failure doesn't leave a domain row with no
@@ -309,11 +309,11 @@ func (s *emailBridgeSvcImpl) CreateInbox(ctx context.Context, input domain.Creat
 	}
 	input.Address = strings.ToLower(strings.TrimSpace(input.Address))
 	if input.EmailDomainID == "" {
-		return nil, tracing.Trace(span, apierror.NewParameterMissingError("email_domain_id", "An email_domain is required."))
+		return nil, tracing.Trace(span, apierror.NewMissingFieldError("email_domain_id", "An email_domain is required."))
 	}
 	at := strings.LastIndex(input.Address, "@")
 	if at <= 0 || at == len(input.Address)-1 {
-		return nil, tracing.Trace(span, apierror.NewParameterInvalidError("address", "A valid email address is required."))
+		return nil, tracing.Trace(span, apierror.NewInvalidFormatError("address", "A valid email address is required."))
 	}
 
 	// The inbox address must sit on the caller's own verified domain.
@@ -322,7 +322,7 @@ func (s *emailBridgeSvcImpl) CreateInbox(ctx context.Context, input domain.Creat
 		return nil, tracing.Trace(span, apiErr)
 	}
 	if !strings.EqualFold(input.Address[at+1:], dom.Domain) {
-		return nil, tracing.Trace(span, apierror.NewParameterInvalidError("address", "The address must be on the selected domain."))
+		return nil, tracing.Trace(span, apierror.NewInvalidFormatError("address", "The address must be on the selected domain."))
 	}
 	if dom.Status != domain.EmailDomainStatusVerified {
 		return nil, tracing.Trace(span, apierror.NewParameterInvalidError("email_domain_id", "The domain must be verified before adding an inbox."))
@@ -386,7 +386,7 @@ func (s *emailBridgeSvcImpl) UpdateInbox(ctx context.Context, inboxID string, in
 		input.Status = domain.EmailInboxStatusActive
 	}
 	if input.Status != domain.EmailInboxStatusActive && input.Status != domain.EmailInboxStatusDisabled {
-		return nil, tracing.Trace(span, apierror.NewParameterInvalidError("status", "Invalid inbox status."))
+		return nil, tracing.Trace(span, apierror.NewInvalidFormatError("status", "Invalid inbox status."))
 	}
 	if apiErr := s.validateInboxGroup(ctx, accountID, input.GroupID); apiErr != nil {
 		return nil, tracing.Trace(span, apiErr)
@@ -491,21 +491,21 @@ func (s *emailBridgeSvcImpl) SetSender(ctx context.Context, input domain.UpsertA
 
 	input.LocalPart = strings.ToLower(strings.TrimSpace(input.LocalPart))
 	if !isValidLocalPart(input.LocalPart) {
-		return nil, tracing.Trace(span, apierror.NewParameterInvalidError("local_part", "A valid mailbox name is required, for example \"orders\"."))
+		return nil, tracing.Trace(span, apierror.NewInvalidFormatError("local_part", "A valid mailbox name is required, for example \"orders\"."))
 	}
 
 	// The display name is written into a header of every merchant-facing message. A control character there is never legitimate and is how header injection starts, so it is refused at the door rather than only neutralized at render time.
 	if input.FromName != nil {
 		trimmed := strings.TrimSpace(*input.FromName)
 		if containsControlChar(trimmed) {
-			return nil, tracing.Trace(span, apierror.NewParameterInvalidError("from_name", "The display name cannot contain line breaks or control characters."))
+			return nil, tracing.Trace(span, apierror.NewInvalidFormatError("from_name", "The display name cannot contain line breaks or control characters."))
 		}
 		input.FromName = &trimmed
 	}
 	if input.ReplyTo != nil {
 		trimmed := strings.TrimSpace(*input.ReplyTo)
 		if trimmed != "" && !isValidEmailAddress(trimmed) {
-			return nil, tracing.Trace(span, apierror.NewParameterInvalidError("reply_to", "A valid reply-to email address is required."))
+			return nil, tracing.Trace(span, apierror.NewInvalidFormatError("reply_to", "A valid reply-to email address is required."))
 		}
 		input.ReplyTo = &trimmed
 	}

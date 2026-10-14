@@ -139,7 +139,7 @@ func (s *messageSvcImpl) SendMessage(ctx context.Context, req *SendMessageReques
 	if mode, _ := req.Mode.Value(); mode == constants.MessageSendModeDraft {
 		channel, ok := req.Channel.Value()
 		if !ok {
-			return nil, apierror.NewParameterMissingError("channel", "A channel is required for a draft.")
+			return nil, apierror.NewMissingFieldError("channel", "A channel is required for a draft.")
 		}
 		pbReq := &pb.CreateReplyDraftRequest{
 			ConversationId:        req.ConversationID,
@@ -159,7 +159,7 @@ func (s *messageSvcImpl) SendMessage(ctx context.Context, req *SendMessageReques
 	}
 
 	if req.ClientMessageID == "" {
-		return nil, apierror.NewParameterMissingError("client_message_id", "A client_message_id is required.")
+		return nil, apierror.NewMissingFieldError("client_message_id", "A client_message_id is required.")
 	}
 
 	// Future delivery: dispatch to the scheduler. A scheduled message carries no immediate timeline slot.

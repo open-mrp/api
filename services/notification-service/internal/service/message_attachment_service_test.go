@@ -62,7 +62,7 @@ func TestBuildAttachments_UploadedMissingKeyRejected(t *testing.T) {
 		{Kind: string(constants.MessageAttachmentKindFile)},
 	})
 	require.NotNil(t, apiErr)
-	assert.Equal(t, apierror.CodeParameterMissing, apiErr.Code)
+	assert.Equal(t, apierror.CodeValidationFailed, apiErr.Code)
 }
 
 func TestBuildAttachments_LinkRequiresURL(t *testing.T) {
@@ -71,7 +71,7 @@ func TestBuildAttachments_LinkRequiresURL(t *testing.T) {
 		{Kind: string(constants.MessageAttachmentKindLink)},
 	})
 	require.NotNil(t, apiErr)
-	assert.Equal(t, apierror.CodeParameterMissing, apiErr.Code)
+	assert.Equal(t, apierror.CodeValidationFailed, apiErr.Code)
 }
 
 func TestBuildAttachments_ResourceHappyPath(t *testing.T) {
@@ -91,7 +91,7 @@ func TestBuildAttachments_InvalidKindRejected(t *testing.T) {
 		{Kind: "bogus"},
 	})
 	require.NotNil(t, apiErr)
-	assert.Equal(t, apierror.CodeParameterInvalid, apiErr.Code)
+	assert.Equal(t, apierror.CodeValidationFailed, apiErr.Code)
 }
 
 func assertIDPrefix(t *testing.T, id, prefix string) {

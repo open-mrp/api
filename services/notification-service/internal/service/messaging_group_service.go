@@ -30,7 +30,7 @@ func (s *conversationSvcImpl) CreateMessagingGroup(ctx context.Context, input do
 
 	name := strings.TrimSpace(input.Name)
 	if name == "" {
-		return nil, tracing.Trace(span, apierror.NewParameterMissingError("name", "A group name is required."))
+		return nil, tracing.Trace(span, apierror.NewMissingFieldError("name", "A group name is required."))
 	}
 
 	userIDs, agentIDs, apiErr := s.dedupeAndValidateMembers(ctx, accountID, input.MemberAccountUserIDs, input.MemberAgentConfigIDs)
@@ -147,7 +147,7 @@ func (s *conversationSvcImpl) UpdateMessagingGroup(ctx context.Context, groupID,
 	}
 	trimmed := strings.TrimSpace(name)
 	if trimmed == "" {
-		return nil, tracing.Trace(span, apierror.NewParameterMissingError("name", "A group name is required."))
+		return nil, tracing.Trace(span, apierror.NewMissingFieldError("name", "A group name is required."))
 	}
 	// Capture the pre-image before the rename so the audit diff can surface the name change.
 	old, apiErr := s.repoFactory.NewMessagingGroupRepo().Get(ctx, groupID, accountID)
@@ -263,7 +263,7 @@ func (s *conversationSvcImpl) AddMessagingGroupMember(ctx context.Context, input
 	switch input.MemberType {
 	case domain.MessagingGroupMemberTypeUser:
 		if input.AccountUserID == "" {
-			return nil, tracing.Trace(span, apierror.NewParameterMissingError("account_user_id", "A member account_user_id is required."))
+			return nil, tracing.Trace(span, apierror.NewMissingFieldError("account_user_id", "A member account_user_id is required."))
 		}
 		if _, apiErr := s.repoFactory.NewNotificationRepo().ResolveUserIDInAccount(ctx, input.AccountUserID, accountID); apiErr != nil {
 			if apiErr.Code == apierror.CodeResourceNotFound {
@@ -275,12 +275,12 @@ func (s *conversationSvcImpl) AddMessagingGroupMember(ctx context.Context, input
 		member.AccountUserID = &auid
 	case domain.MessagingGroupMemberTypeAgent:
 		if input.AgentConfigID == "" {
-			return nil, tracing.Trace(span, apierror.NewParameterMissingError("agent_config_id", "A member agent_config_id is required."))
+			return nil, tracing.Trace(span, apierror.NewMissingFieldError("agent_config_id", "A member agent_config_id is required."))
 		}
 		acid := input.AgentConfigID
 		member.AgentConfigID = &acid
 	default:
-		return nil, tracing.Trace(span, apierror.NewParameterInvalidError("member_type", "The member type is invalid."))
+		return nil, tracing.Trace(span, apierror.NewInvalidFormatError("member_type", "The member type is invalid."))
 	}
 
 	memberID, apiErr := id.GenID(id.MessagingGroupMemberIDPrefix, nil)

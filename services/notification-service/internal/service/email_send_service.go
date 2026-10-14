@@ -36,7 +36,7 @@ func (s *conversationSvcImpl) deliverInboxReply(ctx context.Context, conversatio
 		return nil, apierror.NewInternalError(nil, "Email sending is not configured.")
 	}
 	if strings.TrimSpace(body) == "" {
-		return nil, apierror.NewParameterMissingError("body", "An email body is required.")
+		return nil, apierror.NewMissingFieldError("body", "An email body is required.")
 	}
 
 	// The latest inbound email anchors the reply: who to reply to + the threading headers.
@@ -162,7 +162,7 @@ func (s *conversationSvcImpl) PostReplyDraft(ctx context.Context, in domain.Post
 
 	body := strings.TrimSpace(in.Body)
 	if body == "" {
-		return nil, tracing.Trace(span, apierror.NewParameterMissingError("body", "A draft body is required."))
+		return nil, tracing.Trace(span, apierror.NewMissingFieldError("body", "A draft body is required."))
 	}
 	// The draft is authored by the agent participant; a removed/inactive agent can't propose a reply.
 	part, apiErr := s.resolveAgentReplyParticipant(ctx, in.ConversationID, in.AgentConfigID)

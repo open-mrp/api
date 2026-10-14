@@ -85,17 +85,17 @@ func (s *messagingSvcImpl) SendNotification(ctx context.Context, input domain.Se
 	}
 
 	if input.Title == "" {
-		return 0, tracing.Trace(span, apierror.NewParameterMissingError("title", "A title is required."))
+		return 0, tracing.Trace(span, apierror.NewMissingFieldError("title", "A title is required."))
 	}
 	if input.TargetID == "" {
-		return 0, tracing.Trace(span, apierror.NewParameterMissingError("target", "A target is required."))
+		return 0, tracing.Trace(span, apierror.NewMissingFieldError("target", "A target is required."))
 	}
 
 	switch constants.NotificationTargetType(input.TargetType) {
 	case constants.NotificationTargetTypeAccount:
 		// An account target is stored once as an account-scoped announcement (with per-user receipts), not per-user rows, so it scales to every user in the account. An admin may only broadcast to the account they are acting in.
 		if input.TargetID != identity.Target.AccountID {
-			return 0, tracing.Trace(span, apierror.NewParameterInvalidError("target.id", "Broadcasts may only target the current account."))
+			return 0, tracing.Trace(span, apierror.NewInvalidFormatError("target.id", "Broadcasts may only target the current account."))
 		}
 		if apiErr := s.createBroadcastAnnouncement(ctx, identity, input); apiErr != nil {
 			return 0, tracing.Trace(span, apiErr)
@@ -104,7 +104,7 @@ func (s *messagingSvcImpl) SendNotification(ctx context.Context, input domain.Se
 	case constants.NotificationTargetTypeAccountUser:
 		// Fall through to the per-user fan-out below.
 	default:
-		return 0, tracing.Trace(span, apierror.NewParameterInvalidError("target.type", "The target type is not supported."))
+		return 0, tracing.Trace(span, apierror.NewInvalidFormatError("target.type", "The target type is not supported."))
 	}
 
 	data := messaging.AlertFanoutData{
@@ -880,10 +880,10 @@ func (s *messagingSvcImpl) UpsertNotificationPreference(ctx context.Context, inp
 		input.Digest = string(constants.NotificationDigestInstant)
 	}
 	if !constants.NotificationDigest(input.Digest).IsValid() {
-		return nil, tracing.Trace(span, apierror.NewParameterInvalidError("digest", "An invalid digest was supplied."))
+		return nil, tracing.Trace(span, apierror.NewInvalidFormatError("digest", "An invalid digest was supplied."))
 	}
 	if input.Category != "" && !constants.NotificationCategory(input.Category).IsValid() {
-		return nil, tracing.Trace(span, apierror.NewParameterInvalidError("category", "An invalid category was supplied."))
+		return nil, tracing.Trace(span, apierror.NewInvalidFormatError("category", "An invalid category was supplied."))
 	}
 
 	prefID, apiErr := id.GenID(id.NotificationPreferenceIDPrefix, nil)

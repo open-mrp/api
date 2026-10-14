@@ -21403,3 +21403,42 @@ func (mr *MockPortalDomainRepoMockRecorder) UpdateProviderState(ctx, portalDomai
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateProviderState", reflect.TypeOf((*MockPortalDomainRepo)(nil).UpdateProviderState), ctx, portalDomainID, status, dnsRecords)
 }
+
+// MockReferenceRepo is a mock of ReferenceRepo interface.
+type MockReferenceRepo struct {
+	ctrl     *gomock.Controller
+	recorder *MockReferenceRepoMockRecorder
+	isgomock struct{}
+}
+
+// MockReferenceRepoMockRecorder is the mock recorder for MockReferenceRepo.
+type MockReferenceRepoMockRecorder struct {
+	mock *MockReferenceRepo
+}
+
+// NewMockReferenceRepo creates a new mock instance.
+func NewMockReferenceRepo(ctrl *gomock.Controller) *MockReferenceRepo {
+	mock := &MockReferenceRepo{ctrl: ctrl}
+	mock.recorder = &MockReferenceRepoMockRecorder{mock}
+	return mock
+}
+
+// EXPECT returns an object that allows the caller to indicate expected use.
+func (m *MockReferenceRepo) EXPECT() *MockReferenceRepoMockRecorder {
+	return m.recorder
+}
+
+// InUseBy mocks base method.
+func (m *MockReferenceRepo) InUseBy(ctx context.Context, id string, probes []domain.ReferenceProbe) ([]string, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "InUseBy", ctx, id, probes)
+	ret0, _ := ret[0].([]string)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
+}
+
+// InUseBy indicates an expected call of InUseBy.
+func (mr *MockReferenceRepoMockRecorder) InUseBy(ctx, id, probes any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "InUseBy", reflect.TypeOf((*MockReferenceRepo)(nil).InUseBy), ctx, id, probes)
+}

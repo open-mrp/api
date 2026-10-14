@@ -2057,3 +2057,9 @@ type PortalDomainRepo interface {
 	// ResolveVerifiedHost returns the public account whose verified portal domain matches the given host, or a not-found error.
 	ResolveVerifiedHost(ctx context.Context, domainName string) (*PublicAccountBySlug, *apierror.APIError)
 }
+
+// ReferenceRepo finds what still references a resource before it is deleted.
+type ReferenceRepo interface {
+	// InUseBy returns the labels of the probes with at least one row referencing id, in probe order.
+	InUseBy(ctx context.Context, id string, probes []ReferenceProbe) ([]string, *apierror.APIError)
+}

@@ -1091,6 +1091,20 @@ func (mr *MockRepoFactoryMockRecorder) NewReceivingOrderRepo() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "NewReceivingOrderRepo", reflect.TypeOf((*MockRepoFactory)(nil).NewReceivingOrderRepo))
 }
 
+// NewReferenceRepo mocks base method.
+func (m *MockRepoFactory) NewReferenceRepo() domain.ReferenceRepo {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "NewReferenceRepo")
+	ret0, _ := ret[0].(domain.ReferenceRepo)
+	return ret0
+}
+
+// NewReferenceRepo indicates an expected call of NewReferenceRepo.
+func (mr *MockRepoFactoryMockRecorder) NewReferenceRepo() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "NewReferenceRepo", reflect.TypeOf((*MockRepoFactory)(nil).NewReferenceRepo))
+}
+
 // NewRegistrationFlowRepo mocks base method.
 func (m *MockRepoFactory) NewRegistrationFlowRepo() domain.RegistrationFlowRepo {
 	m.ctrl.T.Helper()

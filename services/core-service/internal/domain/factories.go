@@ -113,6 +113,7 @@ type RepoFactory interface {
 	NewJobRepo() JobRepo
 	NewPortalDomainRepo() PortalDomainRepo
 	NewPortalRegistrationSessionRepo() PortalRegistrationSessionRepo
+	NewReferenceRepo() ReferenceRepo
 }
 
 // Mediators groups all mediator dependencies built for a specific repository factory.

@@ -454,3 +454,7 @@ func (r *repoFactoryImpl) NewSalesFactRepo() domain.SalesFactRepo {
 func (r *repoFactoryImpl) NewSalesReportRepo() domain.SalesReportRepo {
 	return NewSalesReportRepo(r.queries)
 }
+
+func (r *repoFactoryImpl) NewReferenceRepo() domain.ReferenceRepo {
+	return NewReferenceRepo(r.queries)
+}
